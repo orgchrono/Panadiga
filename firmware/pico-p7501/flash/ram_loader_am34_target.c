@@ -27,12 +27,16 @@
  * @brief Direct Physical Uncached Region Base Address.
  *
  * CRITICAL ARCHITECTURAL REQUIREMENT:
- * The AM34 architecture caches accesses to the mirror at 0x00000000.
- * In order for JEDEC command cycles to be driven out to external memory
- * pins (CS0/SB0), all flash register accesses MUST target the physical
- * uncached aperture starting at 0x80000000.
+ * The AM34 architecture caches accesses to 0x80000000 and mirrors 0x00000000.
+ * Hardware JEDEC command cycles in BOOT.BIN (`FUN_4401e636`) and PROG061
+ * target the physical uncached aperture starting at 0x84000000.
+ *
+ * Interactive `PANAMON1` UART0 protocol (`SC0TXB=0xD4002008`, `SC0RXB=0xD4002009`,
+ * `SC0STR=0xD400200C`):
+ *   `'D'` dump 8 MB NOR -> `'R'` read range -> `'W'` write RAM ->
+ *   `'F'` format BGO (`0x84200000..0x843FFFFF` / `0x50401F3C`) -> `'J'` jump VA.
  */
-#define FLASH_UNCACHED_BASE         0x80000000UL
+#define FLASH_UNCACHED_BASE         0x84000000UL
 
 /**
  * @brief JEDEC Word-Mode Byte-Bus Address Offsets.
@@ -66,6 +70,9 @@
 /* =========================================================================
  * Spansion S29JL064H Top-Boot Partition Boundaries (EEMUL Region)
  * ========================================================================= */
+
+/** Base offset of the BGO NOR region (32 x 64 KB sectors: 0x84200000..0x843FFFFF). */
+#define SPANSION_BGO_BASE_ADDR      0x00200000UL
 
 /** Base address of the 8 x 8 KB parameter micro-sectors (SA134 to SA141). */
 #define SPANSION_NVRAM_BASE_ADDR    0x007F0000UL

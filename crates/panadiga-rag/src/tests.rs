@@ -322,4 +322,11 @@ fn test_vista_explodida_and_re_consolidation_indexed_in_rag() {
     assert!(!pass_ans.is_abstained);
     assert!(pass_ans.confidence > 0.0);
     assert!(pass_ans.critic_report.as_ref().unwrap().is_faithful);
+
+    let frm_ans = shared_query(
+        "Como funciona DIGADIAG.FRM vs PANA_DVD.FRM vs PANA__SD.FRM e panadiga_main_passthrough 0x515B2E40?",
+    );
+    assert!(!frm_ans.is_abstained);
+    assert!(frm_ans.confidence > 0.0);
+    assert!(frm_ans.critic_report.as_ref().unwrap().is_faithful);
 }

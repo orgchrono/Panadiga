@@ -183,12 +183,30 @@ static void panarsp_print_report(
            fifo_ovf ? "YES" : "NO");
 }
 
+static size_t panarsp_tx_sequence(
+    panarsp_rx_cap_t *cap,
+    const char *const *payloads,
+    size_t count,
+    uint32_t per_step_ms
+) {
+    size_t first_off = cap->len;
+    for (size_t i = 0u; i < count; ++i) {
+        const size_t step_off = cap->len;
+        if (i == 0u) {
+            first_off = step_off;
+        }
+        (void)panarsp_tx_frame(payloads[i]);
+        panarsp_drain_for_ms(cap, per_step_ms, true, step_off);
+    }
+    return first_off;
+}
+
 void p7501_cmd_pana_rsp(const char *arg) {
     static panarsp_rx_cap_t s_cap;
     p7501_pana_rsp_spec_t spec;
 
     if (!p7501_panarsp_parse_args(arg, &spec)) {
-        printf("PANARSP: ERROR (Usage: PANARSP [ms] [NORMAL|JIG[:ms]|NOPULL] [MAGIC] [NONAK] [WAIT:<trig>] [PROBESEQ|G|Z0|Z1|MEM:<addr>,<len>|XMEM:<addr>,<len>|NAK|RAW:<txt>|HEX:<hex>])\n");
+        printf("PANARSP: ERROR (Usage: PANARSP [ms] [NORMAL|JIG[:ms]|NOPULL] [MAGIC] [NONAK] [WAIT:<trig>] [PROBESEQ|G|Z0|Z1|MEM:<addr>,<len>|XMEM:<addr>,<len>|WMEM:<addr>,<hex>|WRITE32:<addr>,<u32>|PASSTHROUGH|CALL:<addr>|NAK|RAW:<txt>|HEX:<hex>])\n");
         return;
     }
 
@@ -229,10 +247,13 @@ void p7501_cmd_pana_rsp(const char *arg) {
     const size_t post_tx_off = s_cap.len;
     size_t primary_off = post_tx_off;
     if (triggered) {
-        if (spec.send_magic_prefix || spec.action == PANA_RSP_ACT_MAGIC) {
-            static const uint8_t k_magic[3] = { 0x0Eu, 0x04u, 0x02u };
+        const bool need_handshake = spec.send_magic_prefix ||
+                                    (spec.action == PANA_RSP_ACT_MAGIC) ||
+                                    (spec.action == PANA_RSP_ACT_PASSTHROUGH) ||
+                                    (spec.action == PANA_RSP_ACT_CALL);
+        if (need_handshake) {
             const size_t step_off = s_cap.len;
-            p7501_pio_tx_bytes(k_magic, sizeof(k_magic), false);
+            p7501_pio_tx_bytes(k_p7501_rsp_handshake, P7501_RSP_HANDSHAKE_LEN, false);
             panarsp_drain_for_ms(&s_cap, 30u, false, step_off);
         }
         if (spec.send_nak_prefix && spec.action != PANA_RSP_ACT_MAGIC) {
@@ -244,13 +265,26 @@ void p7501_cmd_pana_rsp(const char *arg) {
         primary_off = s_cap.len;
         switch (spec.action) {
             case PANA_RSP_ACT_SEQ: {
-                const size_t g_off = s_cap.len;
-                (void)panarsp_tx_frame("g");
-                panarsp_drain_for_ms(&s_cap, 300u, true, g_off);
-                const size_t z_off = s_cap.len;
-                (void)panarsp_tx_frame("Z0");
-                panarsp_drain_for_ms(&s_cap, 250u, true, z_off);
-                primary_off = g_off;
+                static const char *const k_probe_seq[] = { "g", "Z0" };
+                primary_off = panarsp_tx_sequence(&s_cap, k_probe_seq, 2u, 250u);
+                break;
+            }
+            case PANA_RSP_ACT_PASSTHROUGH: {
+                static const char *const k_pass_seq[] = {
+                    "M5771ABFB,6:8001f0fccbcb",
+                    "M574F7B8C,4:ccd000cb",
+                    "M574F7C5C,7:8000cbcbcbcbcb",
+                };
+                printf("[PANARSP] Applying 3 MAIN AV TBC E-E passthrough sites via $M...\n");
+                primary_off = panarsp_tx_sequence(&s_cap, k_pass_seq, 3u, 250u);
+                break;
+            }
+            case PANA_RSP_ACT_CALL: {
+                const char *call_seq[2] = { spec.payload, "g" };
+                printf("[PANARSP] Updating serial callback 0x%08X -> 0x%08X and triggering $g...\n",
+                       (unsigned)P7501_AM34_SERIAL_CB_PTR_ADDR,
+                       (unsigned)spec.addr);
+                primary_off = panarsp_tx_sequence(&s_cap, call_seq, 2u, 250u);
                 break;
             }
             case PANA_RSP_ACT_G:
@@ -258,6 +292,8 @@ void p7501_cmd_pana_rsp(const char *arg) {
             case PANA_RSP_ACT_Z1:
             case PANA_RSP_ACT_MEM:
             case PANA_RSP_ACT_XMEM:
+            case PANA_RSP_ACT_WMEM:
+            case PANA_RSP_ACT_WRITE32:
             case PANA_RSP_ACT_RAW:
                 (void)panarsp_tx_frame(spec.payload);
                 panarsp_drain_for_ms(&s_cap, (spec.timeout_ms < 700u) ? spec.timeout_ms : 700u, true, primary_off);

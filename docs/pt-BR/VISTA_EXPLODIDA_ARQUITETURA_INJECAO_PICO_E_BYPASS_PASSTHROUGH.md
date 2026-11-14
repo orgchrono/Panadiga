@@ -28,9 +28,9 @@ Uma pergunta recorrente em bancada é se *"o firmware já está 100% em texto cl
 
 ---
 
-## 2. Consolidação Python → Rust, MCP (`16` Tools) e RAG Zero-Error
+## 2. Consolidação Python → Rust, MCP (`17` Tools) e RAG Zero-Error
 
-As rotinas críticas de engenharia reversa e bancada que antes residiam dispersas em scripts Python foram consolidadas nativamente na crate `panadiga-core`, expostas pelo servidor MCP (`panadiga-mcp`, passando de **13 para 16 ferramentas**) e indexadas automaticamente pelo motor `panadiga-rag`:
+As rotinas críticas de engenharia reversa e bancada que antes residiam dispersas em scripts Python foram consolidadas nativamente na crate `panadiga-core`, expostas pelo servidor MCP (`panadiga-mcp`, **`17` ferramentas**) e indexadas automaticamente pelo motor `panadiga-rag`:
 
 | Origem Histórica (Python / Pesquisa) | Módulo Rust Consolidado (`crates/panadiga-core`) | Exposição MCP / Interface |
 | :--- | :--- | :--- |
@@ -39,6 +39,7 @@ As rotinas críticas de engenharia reversa e bancada que antes residiam dispersa
 | `scripts/bench/nor_dumper.py` | [`src/re/nor_dumper.rs`](../../crates/panadiga-core/src/re/nor_dumper.rs) (`build_readonly_nor_dumper_stub`, `decode_nor_dump_stream`, guarda estrita `0x80000000`/`0x84000000`) | **`panadiga_nor_dumper_stub`** (MCP Tool #15) |
 | Análise `src/hdd_cmd.c` (`MaxProductLBA`) | [`src/hdd/capacity_patch.rs`](../../crates/panadiga-core/src/hdd/capacity_patch.rs) (`inspect_main_hdd_capacity`, `patch_main_hdd_capacity`, `DynamicUnclamped`) | **`panadiga_hdd_capacity`** (MCP Tool #14) + CLI `panadiga-cli hdd-capacity` + Desktop UI |
 | Descoberta pré-MAIN BGO (`0x50401F3C` / `0x504230F0`) | [`src/re/bgo_unbrick.rs`](../../crates/panadiga-core/src/re/bgo_unbrick.rs) (`inspect_prog061_bgo_sites`, `patch_prog061_bgo_in_place`, `patch_prog061_or_build_digadiag`) | **`panadiga_bgo_unbrick`** (MCP Tool #16) — gera `DIGADIAG.FRM` (`131.072 B`) |
+| `MAIN` AV TBC (`E-E`) & `_dev_SERIAL` (`0x574F0775`) | [`src/re/main_passthrough.rs`](../../crates/panadiga-core/src/re/main_passthrough.rs) (`inspect_main_passthrough_sites`, `patch_main_passthrough_file`, `build_passthrough_rsp_plan`) | **`panadiga_main_passthrough`** (MCP Tool #17) + Pico `PANARSP PASSTHROUGH` / `CALL:` |
 | Manuais PDF + `docs/` + C11 + Rust | [`panadiga-rag`](../../crates/panadiga-rag/src/indexer/mod.rs) (indexação hierárquica automática + `FactCritic` + `HardwareSafetyValidator`) | `panadiga_rag_query`, `panadiga_search_code`, `panadiga_search_manuals`, `panadiga://docs/...` |
 
 ---
@@ -184,3 +185,37 @@ Muitos entusiastas utilizam gravadores Panasonic DIGA como **Time Base Corrector
 1. **Não descarte o HDD + `StarTech IDE2SAT2`:** deixe o jumper da placa StarTech estritamente em **`MASTER`**. Aplique o patch de capacidade (`panadiga_hdd_capacity` modo `dynamic` ou `cap` 250 GB) quando for preparar o `MAIN` no disco.
 2. **Ataque primeiro o brick pré-MAIN (`BGO driver init failed[1].`):** gere o `DIGADIAG.FRM` (`131.072 B`) com `panadiga_bgo_unbrick` (`auto_format`) e teste via `JIG:2500` em cartão **SDSC $\le 2\text{ GB}$ FAT16** (resolvendo primeiro a causa física do `-91006` nas vias `DAT1..DAT3` do flat `P6802` / leitor SD).
 3. **Se `SDDIAG` não subir por barramento 4-bit físico e o ODD continuar com `0x83A7`:** faça a leitura externa TSOP-48 da **`IC5001`** (8 MB) para backup integral antes de qualquer escrita, recupere a região BGO/NVRAM e então faça o dump de validação + passthrough TBC pelo **`MN2DS0009` + `IC3001`**.
+
+---
+
+## 8. Anatomia Comparativa dos Contêineres (`DIGADIAG.FRM` vs `PANA_DVD.FRM` vs `PANA__SD.FRM`) & Automação Autônoma via Pico (`17` Tools MCP)
+
+### 8.1 Como o Bootloader Carrega e Lê Cada Contêiner `.FRM`
+
+| Aspecto | `DIGADIAG.FRM` (Diagnóstico / Unbrick Direto) | `PANA_DVD.FRM` (Atualização Ótica CD/DVD) | `PANA__SD.FRM` (`PANA_*`, Atualização SD) |
+| :--- | :--- | :--- | :--- |
+| **Despachante no `/BOOT.BIN`** | `FUN_44007BA5` (`SDDIAG`) / `FUN_4400A97C` (`CDDIAG`) | `FUN_4400A6D0` (`CD-R / ISO9660`, acionado via disco de firmware) | `FUN_440075AA` (`PANA__SD.FRM` no diretório raiz FAT12/FAT16 do cartão SD) |
+| **Proteção de Cifra** | **100% Plaintext** (`EXTRHEAD` + stream `zlib` + `EXTRFOOT`) | **Feistel 64-bit ECB** (`FUN_4400a666`, 8 rodadas, S-Box `0x44035D84`, chave derivada de 7 B): TOC inteira cifrada; `DRV` cifra primeiros `0x400` B; `MAIN` cifra primeiros `0x400` B e últimos `0x400` B | **TOC em Plaintext** (`64` B / `0x40` no `/BOOT.BIN` `FUN_440075AA`; `48` B / `0x30` no `PROG061`) apontando para módulos `EXTRHEAD` |
+| **Estrutura de Cabeçalho / TOC** | Sem TOC global: começa em `0x00` com cabeçalho `EXTRHEAD` de `0x40` bytes (`tag = "FVU "` ou `"DIAG"`, `dst_addr = 0x50400000`, `adler_step = 4`) | Cabeçalho global de `16` bytes (`0x00..0x0F`) + **`3 x 48` bytes (`0x30`)** de registros `"Firm list"` (`list_sum` u16 em `+0x2E` e `fvu_checksum_u32` em `+0x24`) | Até `128` (`0x2000` B) ou `16` slots (`0x400` B) em `BOOT.BIN`: registros de `64` B (`0x40`) com soma 16-bit `list_sum_u16` em `+0x3E` |
+| **Orçamento de Leitura & RAM** | Em `SDDIAG`, `/BOOT.BIN` lê exatamente **`0x20000` bytes (`131.072` B = 128 KiB)** para o buffer temporário **`0x93FC0000`**, valida o checksum Adler-32 amostrado (`FUN_4401e5a3`, passo `4`) e descompacta `zlib` direto para **`0x50400000`** | Carrega a TOC (`0x90` B após o cabeçalho de `16` B), decifra em memória e lê os 3 módulos sequenciais: `PROG061` (`FVU` -> `0x50400000`), `DRV` (`EH55_DRV_S211.bin` -> ATAPI `WRITE BUFFER` do ODD) e `MAIN` (Partição 1 do HDD em `LBA 65536` / `0x02000000`) | Percorre as entradas com `list_sum_u16` válido, carrega os payloads `EXTRHEAD` via `FAT16` (`P6801`, `<= 2 GB SDSC`) para SDRAM e executa o atualizador `FVU` (`0x50400000`) |
+
+### 8.2 Consolidação das 4 Pontas Soltas e Upgrade Autônomo do Raspberry Pi Pico (`PANARSP`)
+
+Para eliminar a subutilização do microcontrolador **Raspberry Pi Pico (RP2040 / RP2350)** na bancada (`COM10`), o firmware C11 em `firmware/pico-p7501/` e o workspace Rust (`panadiga-core` + `panadiga-mcp`, agora com **`17` ferramentas MCP**) consolidam as soluções das 4 frentes críticas:
+
+1. **Destravamento Pré-MAIN (`SDDIAG -91006` / `CDDIAG 0x83A7`):**
+   * `DIGADIAG.FRM` (`panadiga_bgo_unbrick`) cabe dentro do teto estrito de `131.072` B (`0x20000`), mantendo o stub compacto com checksum Adler-32 strided válido em `0x50400000` após bypass de `0x504230F0`, `0x50405097` e chamada à rotina órfã `nfrom_format` (`0x50401F3C`).
+   * Requer barramento SD de 4 linhas (`DAT0..DAT3` entre `P6801` e `P53501`) íntegro na 2ª consulta `GetSD_Status` pós-`ACMD6`; caso `SW_OPT_BOOT` (`P65` / `DR_POWER_ON`) ou o pickup óptico (`0x83A7`) impeça `CDDIAG`, `SDDIAG` via `JIG:2500` permanece a rota primária sem dessolda.
+2. **Protocolo `_dev_SERIAL` (`0x574F0775`) & Execução Autônoma no Pico (`PANARSP`):**
+   * O Pico agora executa nativamente sobre a PIO1 (`115200 8N1`, TX `GP4`, RX `GP2`, `SW_UART` `GP26`, `XRESET` `GP5`, `NSW5V` Hi-Z `GP3`) os novos comandos autônomos de **`PANARSP`**:
+     * **Handshake 4-byte (`MAGIC`):** envia `0x0E, 0x02, 0x02, 0x04` (avançando a máquina de estados `0x515B2E60` de `0 -> 4`) seguido de `0x15` (`NAK`).
+     * **`PANARSP WMEM:<addr_hex>,<data_hex>` & `PANARSP WRITE32:<addr_hex>,<u32_hex>`:** constrói e transmite quadros GDB RSP `$M<addr>,<len>:<hex>#<csum>` diretamente da CLI do Pico sem exigir PC/Python externo.
+     * **`PANARSP CALL:<addr_hex>`:** executa o handshake + `0x15`, grava `<addr_hex>` (32 bits LE) no ponteiro do callback serial registrado **`0x515B2E40`** (`DEV_SERIAL_CALLBACK_VA`, alternativamente ao contexto salvo de ISR em `0x5316AE8C` + offset `0x64`) via `$M515B2E40,4:<le_hex>#<xx>`, e envia `$g#67` para acionar a rotina alvo em RAM (como `0x50401F3C` ou o dumper em `0x51800000`).
+     * **`PANARSP PASSTHROUGH`:** transmite sequencialmente o handshake + `0x15` e os 3 quadros `$M` que configuram o **`MAIN` (`EH55_MAIN_3410PQ.bin`, base VA `0x57000000`)** para operação AV TBC (`E-E`) contínua mesmo sem ODD:
+       * `0x5771ABFB` (`+0x0071ABFB`, 6 B, controle de status do painel frontal): `80 01 F0 FC CB CB` → `$M5771ABFB,6:8001f0fccbcb#7a`.
+       * `0x574F7B8C` (`+0x004F7B8C`, 4 B, desvio de estado do ODD): `CC D0 00 CB` (`jmp16 +0x00D0 -> 0x574F7C5C; nop`) → `$M574F7B8C,4:ccd000cb#40`.
+       * `0x574F7C5C` (`+0x004F7C5C`, 7 B, status de inicialização do ODD): `80 00 CB CB CB CB CB` (`clr d0; nop x5`) → `$M574F7C5C,7:8000cbcbcbcbcb#63`.
+3. **Módulo Rust `main_passthrough.rs` & Ferramenta MCP #17 (`panadiga_main_passthrough`):**
+   * O crate `panadiga-core::re::main_passthrough` inspeciona/aplica os 3 sítios acima em imagens `EH55_MAIN_3410PQ.bin` (com reversão segura para `FACTORY_ORIGINAL`) e gera planos `rsp_plan` exatos para a bancada Pico via ferramenta MCP **`panadiga_main_passthrough`**.
+4. **Leitura Segura de 8 MB NOR + Recuperação BGO (`0x84000000` / `0x84200000..0x843FFFFF`):**
+   * Unificação da janela read-only `0x84000000` (`panadiga_nor_dumper_stub` + Pico `DUMP` / `PANARSP XMEM`) e validação BGO (`panadiga_bgo_unbrick`), preservando integralmente o bootloader IPL sem tocar em setores fora de escopo.

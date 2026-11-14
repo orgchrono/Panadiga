@@ -1,6 +1,7 @@
 //! Reverse Engineering, MN103S Disassembly, UART NOR Dumper & BGO Unbrick Primitives
 
 pub mod bgo_unbrick;
+pub mod main_passthrough;
 pub mod mn10300;
 pub mod nor_dumper;
 
@@ -9,6 +10,16 @@ pub use bgo_unbrick::{
     PROG061_EXPECTED_SIZE, PROG061_NFROM_FORMAT_VA, Prog061BgoInspection, Prog061BgoPatchMode,
     Prog061BgoPatchReport, Prog061BgoSiteStatus, inspect_prog061_bgo_sites,
     patch_prog061_bgo_in_place, patch_prog061_or_build_digadiag,
+};
+pub use main_passthrough::{
+    DEV_SERIAL_CALLBACK_VA, DEV_SERIAL_HANDSHAKE_BYTES, DEV_SERIAL_ISR_CTX_PTR_VA,
+    DEV_SERIAL_PC_OFFSET, DEV_SERIAL_STATE_BASE_VA, EXPECTED_MAIN_3410PQ_SIZE, MAIN_BASE_VA,
+    MainPassthroughMode, MainPassthroughReport, MainPassthroughRspPlan, MainPassthroughSiteReport,
+    OFF_FPC_STATUS_CTRL, OFF_ODD_INIT_STATUS, OFF_ODD_STATE_BRANCH, ORIG_FPC_STATUS_CTRL,
+    ORIG_ODD_INIT_STATUS, ORIG_ODD_STATE_BRANCH, PATCH_FPC_STATUS_CTRL, PATCH_ODD_INIT_STATUS,
+    PATCH_ODD_STATE_BRANCH, apply_main_passthrough_in_place, build_passthrough_rsp_plan,
+    format_rsp_frame, format_rsp_write_mem_frame, format_rsp_write_u32_frame,
+    inspect_main_passthrough_sites, patch_main_passthrough_file, rsp_checksum,
 };
 pub use mn10300::{
     ImmediateLoadRef, InstructionRef, decode_branch_call_refs, find_callers_to,

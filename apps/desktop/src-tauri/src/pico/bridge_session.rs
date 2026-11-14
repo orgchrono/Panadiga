@@ -142,7 +142,7 @@ fn decode_hex_payload(raw_hex: &str) -> Result<Vec<u8>, String> {
         .filter(|c| !matches!(c, ':' | '-' | ',' | '_'))
         .collect();
 
-    if cleaned.is_empty() || cleaned.len() % 2 != 0 {
+    if cleaned.is_empty() || !cleaned.len().is_multiple_of(2) {
         return Err(format!(
             "Hexadecimal inválido (comprimento ímpar ou vazio): '{}'",
             raw_hex

@@ -116,61 +116,39 @@ flowchart TD
 ```text
 Panadiga/
 ├── package.json                                      <-- Unified Entrypoint (`npm start`, `npm run build:desktop`, `npm run validate`)
-├── Cargo.toml                                        <-- Master Rust Workspace Specification (2024 Edition)
-├── tauri.conf.json                                   <-- Tauri 2.0 Desktop & Mobile Configuration
-├── scripts/                                          <-- Cross-Platform Build, Packaging & 9-Gate Validation (`build.py`, `validate.py`)
-├── src/                                              <-- High-Performance Native Rust Core Engine
-│   ├── main.rs                                       <-- Unified Entrypoint (CLI Dispatcher & Tauri GUI)
-│   ├── lib.rs                                        <-- Core Library Crate Exporting All Engines
-│   ├── logger.rs                                     <-- Unified Multi-Sink Structured Logger
-│   ├── manuals.rs                                    <-- Service Manuals Indexer & Fast Regex Scanner
-│   ├── nvram/                                        <-- Multi-Geometry NVRAM & EEPROM Emulation Parser
-│   ├── hdd/                                          <-- MEIHDFS Storage & Partition Table Engine
-│   ├── frm/                                          <-- PANA_DVD.FRM Container Cryptanalysis Engine
-│   ├── rag/                                          <-- Zero-Error RAG Engine & 6 Invariant Shields
-│   └── desktop/                                      <-- Tauri 2.0 Native Rust Commands & GDB Bridge
-├── apps/desktop/                                     <-- Zero-Latency Modern Desktop UI (React 19 + Vite)
-│   ├── src/                                          <-- Strict MVVM Components & ViewModels
-│   │   ├── components/                               <-- Pure UI Panels (GDB, P7501 UART, HexViewer)
-│   │   ├── services/                                 <-- Typed Tauri IPC Transport & Native Bridges
-│   │   └── viewmodels/                               <-- Algebraic State Machines (Pure FP Logic)
-│   ├── package.json                                  <-- Node.js Dependencies & Build Scripts
+├── Cargo.toml                                        <-- Master Rust 5-Crate Workspace Specification (2024 Edition)
+├── crates/                                           <-- Modular Multi-Crate Rust Architecture
+│   ├── panadiga-core/                                <-- Core Engines: NVRAM, MEIHDFS + LBA48 `capacity_patch.rs`, Feistel/EXTRHEAD Crypto, RE (`mn10300.rs`, `nor_dumper.rs`, `bgo_unbrick.rs`, `main_passthrough.rs`), Hardware SSOT
+│   ├── panadiga-cli/                                 <-- `panadiga-cli` Binary & Interactive TUI Workbench
+│   ├── panadiga-rag/                                 <-- Zero-Error 6-Layer RAG Engine + `HardwareSafetyValidator` + `FactCritic`
+│   └── panadiga-mcp/                                 <-- JSON-RPC 2.0 MCP Stdio Server Exposing All 17 Native Tools
+├── apps/desktop/                                     <-- Tauri 2.0 Desktop & Android GUI (`panadiga-desktop` + React 19 + Vite MVVM)
+│   ├── src-tauri/                                    <-- Tauri 2.0 Native Rust Commands & GDB RSP Bridge
+│   ├── src/                                          <-- Strict MVVM Components, Services & ViewModels
+│   ├── package.json                                  <-- Node.js Dependencies, Vitest, uxlint & Playwright Scripts
 │   └── playwright.config.ts                          <-- End-to-End Browser Testing Configuration
 ├── docs/                                             <-- Official Technical Documentation Repository
 │   ├── INDEX.md                                      <-- Master Documentation Index & Gateway Portal
-│   ├── en-US/                                        <-- Canonical English Technical Dossiers (13 Docs)
-│   ├── pt-BR/                                        <-- Native Portuguese Technical Dossiers (13 Docs)
+│   ├── en-US/                                        <-- Canonical English Technical Dossiers
+│   ├── pt-BR/                                        <-- Native Portuguese Technical Dossiers (incl. `VISTA_EXPLODIDA_...md`)
 │   └── images/                                       <-- High-Resolution Schematics, Photos & Pinouts
-├── manuals_and_schematics/                           <-- Technical Library (30 Manuals, Schematics & Datasheets)
-│   ├── README.md                                     <-- Master Catalog Indexed by Model & Subsystem
-│   ├── datasheets/                                   <-- Silicon Datasheets (MN103, RP2040, RP2350, Spansion)
-│   ├── dmr-eh55/                                     <-- DMR-EH55 Manuals (Service, Schematics, User, Firmware)
-│   ├── dmr-eh56/                                     <-- DMR-EH56 European Operating Instructions
-│   ├── dmr-eh50/                                     <-- DMR-EH50 User & Operations Manual
-│   ├── dmr-eh65/                                     <-- DMR-EH65 High-Capacity HDD User Manual
-│   ├── dmr-eh80v/                                    <-- DMR-EH80V VHS+DVD+HDD Service Manual & Schematics
-│   ├── dmr-es10/                                     <-- DMR-ES10 Service Manual (U99 Code & Schematics)
-│   ├── dmr-es30v/                                    <-- DMR-ES30V Combo VHS+DVD User Manual
-│   ├── dmr-e55/                                      <-- DMR-E55 2MB Flash Optical User Manual
-│   ├── dmr-e85h/                                     <-- DMR-E85H 4MB Flash Pioneer HDD/DVD Manual
-│   ├── dmr-e500h/                                    <-- DMR-E500H Massive Storage HDD User Manual
-│   └── dmr-ex98v/                                    <-- DMR-EX98V DVB-T/HDMI Service Manual Vol 1
-├── tools/                                            <-- Lab Utilities, Ghidra Scripts & Windows Launchers
-│   ├── Abrir_HxD.cmd                                 <-- Fast HxD Hex Editor Benchmark Launcher (Windows)
-│   ├── conectar_gdb_multiarch.cmd                    <-- GDB Multiarch Target Connection Script (Windows)
-│   ├── iniciar_ponte_gdb.cmd                         <-- GDB RSP Server TCP Forwarder (:3333, Windows)
-│   ├── iniciar_ghidra.cmd                            <-- Ghidra Workspace Launcher (Windows)
-│   └── ghidra/                                       <-- Ghidra AM34/MN103S Scripts (Generated from Rust SSOT)
-├── scripts/                                          <-- Cross-Platform Build & 9-Gate Validation Suite
-│   ├── build.py                                      <-- Unified Desktop, Android APK & Pico UF2 Builder
-│   └── validate.py                                   <-- 9 Mandatory Quality Gates Runner
+├── manuals_and_schematics/                           <-- Technical Library (Manuals, Schematics & Datasheets)
+├── tools/                                            <-- Lab Utilities & Ghidra AM34/MN103S Scripts (Generated from Rust SSOT)
+├── scripts/                                          <-- Cross-Platform Build & 9-Gate Validation Suite (`build.py`, `validate.py`, `bench/`)
 └── firmware/
-    └── pico-p7501/                                   <-- RP2040/RP2350 C11 Modular P7501 UART & Legacy OCD Firmware
-        ├── p7501_uart.pio                            <-- PIO UART 115200 8N1 / Half-Duplex State Machine
-        ├── p7501_pico_main.c                         <-- Entrypoint & Serial Diagnostic Console (PANADIGA>)
-        ├── hal/                                      <-- Open-Drain, NSW5V Safety & Timing HAL
-        ├── gdb/                                      <-- Deterministic GDB RSP Protocol Codec & Handlers
-        └── CMakeLists.txt                            <-- Dual-Target Bare-Metal CMake Pipeline
+    └── pico-p7501/                                   <-- RP2040/RP2350 C11 Modular P7501 Async UART, PIO Logic & Autonomous `PANARSP` Firmware
+        ├── cli/                                      <-- Interactive USB-CDC / BLE `PANADIGA>` Command Parser & Help
+        ├── common/                                   <-- Pure C11 Hex & Checksum Utilities
+        ├── diag/                                     <-- `PIOLOGIC` 4-Ch Timing Sampler & Electrical Diagnostics
+        ├── flash/                                    <-- Spansion NOR CFI / Mirror Autodetect & Guarded Eraser
+        ├── gdb/                                      <-- Deterministic GDB RSP Protocol Codec & Server
+        ├── hal/                                      <-- Open-Drain `XRESET`, `SW_UART` (GP26), `NSW5V` (GP3 Hi-Z) & LED State HAL
+        ├── protocol/                                 <-- Boot Profile Sweep & Bus Handshake Routines
+        ├── uart/                                     <-- PIO1 UART Engine, `UARTSTREAM`, `WAITTX` & Autonomous `PANARSP` (`WMEM`/`WRITE32`/`PASSTHROUGH`/`CALL`)
+        ├── tests/                                    <-- Host C11 Unit Test Suite (`PICO_HOST_TEST=1`)
+        ├── p7501_uart*.pio / p7501_logic_sampler.pio <-- PIO State Machines (115200 8N1 UART & 2 MHz Edge Sampler)
+        ├── p7501_pico_main.c                         <-- Entrypoint & Main Diagnostic Loop
+        └── CMakeLists.txt                            <-- Dual-Target Bare-Metal RP2040/RP2350 CMake Pipeline
 ```
 
 ---
@@ -392,30 +370,26 @@ Verified DMR-EH55 Bench Boot Sequence (CDDIAG Trap via P7501):
 
 ---
 
-## 6. Physical Memory Map of Matsushita AM34 (`MN103S` / `VEP79138`)
+## 6. Memory Map of Matsushita AM34 (`MN103S` / `MN2DS0009` on `VEP79138`)
 
-```text
-+-------------------+-------------------+----------------------+--------------------------------------------+
-| Physical Range    | Mirrored Range    | Bus Type / Target    | Functional Description                     |
-+-------------------+-------------------+----------------------+--------------------------------------------+
-| 0x00000000..0FFF  | 0x40000000..0FFF  | On-Chip I-RAM/SRAM   | 4 KB Core Scratchpad & Exception Vectors   |
-| 0x00400000..07FF  | 0x40400000..07FF  | On-Chip D-RAM        | 64 KB High-Speed System Data Memory        |
-| 0x04000000..07FF  | 0x44000000..07FF  | DDR-SDRAM Controller | 64 MB Main System Memory (DDR 333/400)     |
-| 0x08000000..0FFF  | 0x48000000..0FFF  | MPEG / OSD Frame     | 32 MB Dedicated Framebuffer / Video Plane  |
-| 0x10000000..10FF  | 0x50000000..10FF  | IDE / PATA Master    | PATA ATA/ATAPI-5 Host Controller (HDD/DVD) |
-| 0x18000000..187F  | 0x58000000..187F  | External CS0 (NOR)   | Spansion S29JL064H Flash (8 MB - IPL)      |
-| 0x187F0000..187F  | 0x587F0000..187F  | External CS0 (NV)    | 64 KB NVRAM / EEMUL Sector (U99 Target)    |
-| 0x1F000000..1FFF  | 0x5F000000..1FFF  | Internal MMIO/SoC    | Peripheral Registers, Timers & OCD Module  |
-+-------------------+-------------------+----------------------+--------------------------------------------+
-```
+### 6.1. SSOT Hardware Bus Regions & Verified Firmware Virtual Addresses
 
-### 6.1. JEDEC Golden Rule for Injected RAM Loader
+| Address Range (Hex) | Region / Binary | Access / Purpose |
+| :--- | :--- | :--- |
+| `0x00000000..0x0003FFFF` | On-Chip Internal SRAM (`256 KB`) | Exception vectors & RAM loader aperture (`0x00004000`, `4 KB`) |
+| `0x10000000..0x1000FFFF` | Core MMIO Bus (`64 KB`) | Core timers & interrupt registers |
+| `0x40000000..0x43FFFFFF` | System SDRAM (`64 MB`) | Low-aperture cached SDRAM / `DRV_S211` `0x40000000` / `BOOT.BIN` at `0x44000000` |
+| `0x50400000..0x5043FFFF` | `PROG061` FVU Updater (`262,144 B`) | Stage-2 updater (`eh55_frm_PROG061_BOOT.bin`) & `DIGADIAG.FRM` jump target |
+| `0x515B2E00` / `0x515B2E40` | `_dev_SERIAL` State & Callback | UART0 RSP protocol state table (`0x515B2E60`: `0..4`) & serial callback pointer (`0x515B2E40`) |
+| `0x5316AE8C` (`+0x64`) | ISR Context Frame Pointer | Active ISR register save context frame (`PC` saved at offset `0x64`) |
+| `0x57000000..0x57C664EB` | `MAIN` OS (`EH55_MAIN_3410PQ.bin`) | Main AM34 OS kernel (`13,003,052 B`), AV codecs, `src/hdd_cmd.c`, `_dev_SERIAL` (`0x574F0775`) |
+| `0x80000000..0x807FFFFF` | Spansion `S29JL064H` NOR (`8 MB`, CS0) | Cached NOR window: IPL (`0x80000000..0x807EFFFF`) + mutable `64 KB` NVRAM (`0x807F0000..0x807FFFFF`, `SA134..SA141`) |
+| `0x84000000..0x847FFFFF` | Uncached NOR Flash & BGO Window | Read-only dump base (`PANADMP1` -> `0x84000000`) & BGO/DeviceInfo Flash region (`0x84200000..0x843FFFFF`) |
+| `0x89000500` / `0x89000D00` | `DAVIS` IDE Controllers (`ch=0` / `ch=1`) | Primary Master (`ch=0, dev=0`) = ODD ATAPI (`DRV S211`); Secondary **MASTER** (`ch=1, dev=0`) = HDD (`StarTech IDE2SAT2` `Marvell 88SA8052` in **MASTER**) |
+| `0xD4002008..0xD400200C` | `P7501` UART0 (`115200 8N1`) | `SC0TXB = 0xD4002008`, `SC0RXB = 0xD4002009`, `SC0STR = 0xD400200C` (TX busy `0xA0`, RX ready `0x10`) |
 
-When loading executable payloads into DDR-SDRAM or querying target registers over the P7501/GDB bridge:
-
-* **Target Load Address:** `0x04010000` (safe DDR buffer offset avoiding zero-page exception vectors).
-* **Stack Pointer Initializer:** `SP = 0x0040FFF0` (within high-speed on-chip SRAM).
-* **Watchdog Disable:** Write `0x00000000` to MMIO register `0x1F000104` within $100\text{ ms}$ of cold boot.
+> [!NOTE]
+> **`DMR-EH55` Unbrick Stub Aperture (`PANADMP1`):** The read-only MN103S NOR Flash dumper stub assembled by `panadiga_nor_dumper_stub` defaults to `0x51800000` in free SDRAM and reads strictly from the uncached `0x84000000` window (`8,388,608` bytes in `4096`-byte checksummed blocks) over UART0 `P7501`.
 
 ---
 
@@ -457,6 +431,15 @@ The LBA 0 superblock stores partition geometry inverted with bitwise NOT (`XOR 0
 
 * ASCII magic `"SH"` appears in raw disk hex as `0xAE 0xB7` (`~0x51 0x48`).
 * LBA offset counters and cluster sizes are similarly inverted, preventing standard partition managers from identifying or corrupting the volume.
+
+### 7.6. Plaintext Firmware Architecture (`DIGADIAG.FRM` vs `PANA_DVD.FRM` vs `PANA__SD.FRM`), HDD LBA48 & Autonomous Pico `PANARSP`
+
+* **Firmware Update Containers (`BOOT.BIN` / `PROG061`):**
+  * **`DIGADIAG.FRM`** (`SDDIAG` `FUN_44007BA5` / `CDDIAG` `FUN_4400A97C`): Single-module plaintext container (`0x40` B `EXTRHEAD` `"FVU "`/`"DIAG"`, `dst_addr = 0x50400000`, strided Adler-32 `step = 4` + `zlib` + `EXTRFOOT`). `SDDIAG` reads fixed `0x20000` (`131,072` B) into `0x93FC0000` before decompressing to `0x50400000`; `CDDIAG` loads via ATAPI/ODD.
+  * **`PANA_DVD.FRM`** (`FUN_4400A6D0`): `16` B global header + Feistel-encrypted `3 x 48` B `"Firm list"` TOC (`FUN_4400a666`, 8-round 64-bit ECB, S-Box `0x44035D84`, `list_sum` at `+0x2E`, `fvu_checksum_u32` at `+0x24`) + 3 `EXTRHEAD` modules (`PROG061` -> `0x50400000`; `DRV` S211 first `0x400` B encrypted -> ATAPI ODD; `MAIN` first/last `0x400` B encrypted -> HDD Partition 1 `LBA 65536` / `0x02000000`).
+  * **`PANA__SD.FRM`** (`FUN_440075AA`): Plaintext TOC (`0x40` B entries in `BOOT.BIN`, `list_sum_u16` at `+0x3E`, up to 128 slots in `0x2000` B; or `0x30` B entries in `PROG061`).
+* **PATA Topology & LBA48 Bridge:** ODD is Primary Master (`ch=0, dev=0`, `0x89000500`) and HDD is Secondary **MASTER** (`ch=1, dev=0`, `0x89000D00`). SATA drives require a **Marvell `88SA8052`** bridge (`StarTech IDE2SAT2`) jumpered strictly in **`MASTER`** plus dynamic LBA48 patching (`crates/panadiga-core/src/hdd/capacity_patch.rs`).
+* **Autonomous Pico `PANARSP` (`P7501` `115200 8N1`):** Supports `WMEM`, `WRITE32`, `PASSTHROUGH`, and `CALL` with automatic `0E 02 02 04` + `0x15` handshake targeting `0x515B2E60`, serial callback pointer updates at `0x515B2E40` (`$M515B2E40,4:3c1f4050#95`), and sequential GDB RSP memory write `$M` frames for the 3 `MAIN` AV TBC `E-E` passthrough sites (`0x5771ABFB` `#7a`, `0x574F7B8C` `#40`, `0x574F7C5C` `#63`).
 
 ---
 
@@ -583,6 +566,8 @@ The full repository of 14 bilingual engineering dossiers listed below is maintai
   *6-layer defense system (QueryGuard, CRAG, GroundedSynthesis, FactCritic, InvariantShield).*
 * 🔬 **[Deep Reverse Engineering Dossier: MN103S Bootloader, Optical Drive &amp; Live Telemetry](docs/en-US/REVERSE_ENGINEERING_BOOTLOADER_AND_OPTICAL_DRIVE_MN103S.md)** ([Portuguese Mirror](docs/pt-BR/DOSSIE_ENGENHARIA_REVERSA_BOOTLOADER_E_DRIVE_MN103S.md))
   *Live `DMR-EH55` bench telemetry (`P7501`/`CDDIAG`), MN103S disassembly of `BOOT.BIN` & `DRV_decomp.bin`, 74 ATAPI opcodes, 62 factory CLI commands, and the full 431-entry Shift-JIS error dictionary (`0x83A7`).*
+* 🧩 **[Exploded Architecture, Pico Injection & AV Passthrough](docs/pt-BR/VISTA_EXPLODIDA_ARQUITETURA_INJECAO_PICO_E_BYPASS_PASSTHROUGH.md)**
+  *`DIGADIAG.FRM` vs `PANA_DVD.FRM` vs `PANA__SD.FRM` container specs, autonomous Pico `PANARSP` (`WMEM`/`WRITE32`/`PASSTHROUGH`/`CALL`), `P7501` handshake (`0x515B2E60`), and the 3 `MAIN` AV TBC `E-E` passthrough sites (`0x5771ABFB`, `0x574F7B8C`, `0x574F7C5C`).*
 
 ---
 
@@ -646,7 +631,7 @@ The project configures 6 specialized subagents for autonomous engineering assist
 
 ### 14.2. Native Rust Model Context Protocol (MCP) Server (`panadiga mcp`)
 
-A standardized JSON-RPC 2.0 MCP stdio server (`panadiga mcp`) exposes native tools for AI agents:
+A standardized JSON-RPC 2.0 MCP stdio server (`panadiga mcp`) exposes **17 native tools** for AI agents:
 
 * `panadiga_memory_map`: Returns the official physical memory map of the Matsushita AM34 / MN103S (`VEP79138`) architecture.
 * `panadiga_safety_check`: Validates bench voltages (`<= 3.3V` LVTTL / `3.35V` ceiling) and memory write ranges.
@@ -654,8 +639,19 @@ A standardized JSON-RPC 2.0 MCP stdio server (`panadiga mcp`) exposes native too
 * `panadiga_clean_nvram`: Analyzes or sanitizes the 64 KB NVRAM/EEMUL region (`0x807F0000..0x807FFFFF`) on 8 MB Flash dumps.
 * `panadiga_search_manuals`: Searches the official technical manuals and schematics catalog under `manuals_and_schematics/`.
 * `panadiga_rag_query`: Queries the native Rust 6-layer Zero-Error RAG engine with factual grounding.
+* `panadiga_inspect_frm`: Inspects and decodes `.FRM` firmware containers (`DIGADIAG.FRM`, `PANA_DVD.FRM`, `PANA__SD.FRM`).
+* `panadiga_read_hex`: Reads raw hex slices with ASCII dumps from firmware images or disk dumps.
+* `panadiga_pico_catalog`: Lists Pico `P7501` firmware profiles, UF2 targets, and bench commands.
+* `panadiga_ghidra_symbols`: Queries exported Ghidra symbols and disassembly annotations across `BOOT`, `MAIN`, and `DRV`.
+* `panadiga_search_code`: Searches across the Panadiga Rust/C11/TypeScript workspace.
+* `panadiga_search_visuals`: Searches hardware board renders, oscilloscope captures, and schematic diagrams.
+* `panadiga_project_status`: Reports live workspace inventory, crate status, and bench readiness.
+* `panadiga_hdd_capacity`: Inspects or dynamically patches LBA48 capacity descriptors on extracted HDD firmware/images.
+* `panadiga_nor_dumper_stub`: Generates/validates the MN103S NOR flash dumper stub for 8 MB `P7501` capture.
+* `panadiga_bgo_unbrick`: Inspects or generates `DIGADIAG.FRM` BGO unbrick patches for the `0x84200000..0x843FFFFF` region.
+* `panadiga_main_passthrough`: Inspects, patches, or generates `$M` GDB RSP plans for `MAIN` AV TBC `E-E` passthrough sites (`0x5771ABFB`, `0x574F7B8C`, `0x574F7C5C`).
 
-### 14.3. Unified Logging Subsystem (`src/logger.rs`)
+### 14.3. Unified Logging Subsystem (`crates/panadiga-core/src/logger.rs`)
 
 All components log exclusively through structured sinks:
 

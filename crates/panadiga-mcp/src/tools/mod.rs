@@ -326,6 +326,37 @@ pub fn tool_definitions() -> Vec<Value> {
                 }
             }
         }),
+        json!({
+            "name": "panadiga_main_passthrough",
+            "description": "Inspects or patches the 3 verified MAIN (`EH55_MAIN_3410PQ.bin`, VA 0x57000000) AV TBC (`E-E`) passthrough sites (`0x5771ABFB`, `0x574F7B8C`, `0x574F7C5C`), or generates `_dev_SERIAL` GDB RSP `$M` frames (`rsp_plan`, no image required).",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "type": "string",
+                        "enum": ["inspect", "patch", "rsp_plan"],
+                        "description": "Operation mode: 'inspect' (default), 'patch', or 'rsp_plan' (generates Pico/UART RSP frames without an input binary)."
+                    },
+                    "input_path": {
+                        "type": "string",
+                        "description": "Path to unpacked `EH55_MAIN_3410PQ.bin` (required for 'inspect' and 'patch')."
+                    },
+                    "mode": {
+                        "type": "string",
+                        "enum": ["av_passthrough", "factory_original"],
+                        "description": "Patch mode when action='patch' (default 'av_passthrough')."
+                    },
+                    "output_path": {
+                        "type": "string",
+                        "description": "Optional non-destructive output path (must differ from input_path)."
+                    },
+                    "callback_target_va": {
+                        "type": ["string", "integer"],
+                        "description": "Optional MN103S target VA for `_dev_SERIAL` callback pointer (`0x515B2E40`) in 'rsp_plan' mode."
+                    }
+                }
+            }
+        }),
     ]
 }
 
@@ -342,6 +373,7 @@ pub fn execute_tool(name: &str, args: &Value, workspace_root: &Path) -> Result<V
         "panadiga_hdd_capacity" => forensics::handle_hdd_capacity(args, workspace_root),
         "panadiga_nor_dumper_stub" => forensics::handle_nor_dumper_stub(args, workspace_root),
         "panadiga_bgo_unbrick" => forensics::handle_bgo_unbrick(args, workspace_root),
+        "panadiga_main_passthrough" => forensics::handle_main_passthrough(args, workspace_root),
         "panadiga_search_manuals" => knowledge::handle_search_manuals(args, workspace_root),
         "panadiga_rag_query" => knowledge::handle_rag_query(args),
         "panadiga_search_code" => knowledge::handle_search_code(args),

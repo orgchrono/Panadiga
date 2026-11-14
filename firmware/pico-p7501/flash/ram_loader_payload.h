@@ -32,8 +32,15 @@ extern "C" {
 /** Base address of the internal SRAM where the loader binary is injected. */
 #define AM34_SRAM_LOADER_BASE_ADDR      0x00004000UL
 
-/** Physical uncached direct aperture for Spansion NOR Flash (CS0/SB0). */
+/** Physical uncached direct aperture used by GDB RSP memory-map (CS0/SB0). */
 #define SPANSION_FLASH_UNCACHED_BASE    0x80000000UL
+
+/** Real hardware uncached mirror used by BOOT.BIN / PROG061 JEDEC routines (`0x84000000..0x847FFFFF`). */
+#define SPANSION_FLASH_HW_UNCACHED_BASE 0x84000000UL
+#define SPANSION_BGO_BASE_OFFSET        0x00200000UL
+#define SPANSION_BGO_END_OFFSET         0x00400000UL
+#define SPANSION_BGO_SECTOR_SIZE_BYTES  0x00010000UL
+#define SPANSION_BGO_SECTOR_COUNT       32U
 
 /**
  * JEDEC Unlock Addresses in 16-Bit Word Mode (BYTE# = 3.3V / High):

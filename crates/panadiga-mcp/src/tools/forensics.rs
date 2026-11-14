@@ -18,8 +18,9 @@ use panadiga_core::hdd::{
 use panadiga_core::headers::hex_dump;
 use panadiga_core::nvram::{calculate_hashes, clean_flash_nvram_slice};
 use panadiga_core::re::{
-    DEFAULT_NOR_STUB_LOAD_ADDR, PROG061_EXPECTED_SIZE, Prog061BgoPatchMode,
-    build_readonly_nor_dumper_stub, inspect_prog061_bgo_sites, patch_prog061_or_build_digadiag,
+    DEFAULT_NOR_STUB_LOAD_ADDR, MainPassthroughMode, PROG061_EXPECTED_SIZE, Prog061BgoPatchMode,
+    build_passthrough_rsp_plan, build_readonly_nor_dumper_stub, inspect_main_passthrough_sites,
+    inspect_prog061_bgo_sites, patch_main_passthrough_file, patch_prog061_or_build_digadiag,
 };
 use serde_json::{Value, json};
 use std::fs::{self, File};
@@ -340,6 +341,41 @@ pub fn handle_bgo_unbrick(args: &Value, workspace_root: &Path) -> Result<Value> 
         |in_path, out_path| {
             let mode: Prog061BgoPatchMode = mode_str.parse()?;
             let report = patch_prog061_or_build_digadiag(in_path, out_path, mode, wrap)?;
+            Ok(serde_json::to_value(report)?)
+        },
+    )
+}
+
+pub fn handle_main_passthrough(args: &Value, workspace_root: &Path) -> Result<Value> {
+    let action = optional_non_empty_str(args, "action").unwrap_or("inspect");
+    if action.eq_ignore_ascii_case("rsp_plan") {
+        let cb_va = if args.get("callback_target_va").is_some_and(|v| !v.is_null()) {
+            Some(parse_u32_arg(args, "callback_target_va", 0)?)
+        } else {
+            None
+        };
+        return Ok(serde_json::to_value(build_passthrough_rsp_plan(cb_va))?);
+    }
+
+    let mode_str = optional_non_empty_str(args, "mode").unwrap_or("av_passthrough");
+    let mode = MainPassthroughMode::from_str_mode(mode_str)?;
+
+    dispatch_inspect_or_patch(
+        args,
+        workspace_root,
+        "Unpacked EH55_MAIN binary",
+        |in_path| {
+            let data = fs::read(in_path)?;
+            Ok(serde_json::to_value(inspect_main_passthrough_sites(
+                &data,
+            )?)?)
+        },
+        |in_path| {
+            let parent = in_path.parent().unwrap_or_else(|| Path::new("."));
+            Ok(parent.join(format!("EH55_MAIN_{}.bin", mode.as_str())))
+        },
+        |in_path, out_path| {
+            let report = patch_main_passthrough_file(in_path, out_path, mode)?;
             Ok(serde_json::to_value(report)?)
         },
     )

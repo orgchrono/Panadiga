@@ -80,7 +80,7 @@ mod tests {
     #[test]
     fn test_tool_definitions_and_memory_map() {
         let defs = tool_definitions();
-        assert_eq!(defs.len(), 16);
+        assert_eq!(defs.len(), 17);
 
         let all = execute_tool("panadiga_memory_map", &json!({}), Path::new(".")).unwrap();
         assert_eq!(all["total"], AM34_SYSTEM_MEMORY_REGIONS.len());
@@ -283,7 +283,7 @@ mod tests {
         assert!(r1["result"]["capabilities"]["prompts"].is_object());
 
         let r2: Value = serde_json::from_str(lines[1]).unwrap();
-        assert_eq!(r2["result"]["tools"].as_array().unwrap().len(), 16);
+        assert_eq!(r2["result"]["tools"].as_array().unwrap().len(), 17);
 
         let r3: Value = serde_json::from_str(lines[2]).unwrap();
         let body = r3["result"]["content"][0]["text"].as_str().unwrap();
@@ -365,6 +365,20 @@ mod tests {
         )
         .unwrap();
         assert!(cap_missing["error"].is_string());
+
+        // 4. Test panadiga_main_passthrough in `rsp_plan` mode (no input image required)
+        let rsp_plan = execute_tool(
+            "panadiga_main_passthrough",
+            &json!({
+                "action": "rsp_plan",
+                "callback_target_va": "0x50401F3C"
+            }),
+            &tmp,
+        )
+        .unwrap();
+        assert_eq!(rsp_plan["handshake_hex"], "0e020204");
+        assert_eq!(rsp_plan["passthrough_frames"].as_array().unwrap().len(), 3);
+        assert_eq!(rsp_plan["callback_write_frame"], "$M515B2E40,4:3c1f4050#95");
 
         let _ = fs::remove_dir_all(&tmp);
     }

@@ -39,10 +39,11 @@ static void test_pana_rsp_frame_codec(void) {
     assert(info.found && !info.checksum_ok);
 
     /* Ensure post-trigger slice ignores earlier bogus `$NO#9D` and finds real `$DEADBEEF#20` reply. */
-    const uint8_t mixed[] = "BOOT $NO#9D chatter... +$DEADBEEF#20";
+    uint8_t mixed[] = "BOOT $NO#9D chatter... +$DEADBEEF#20";
     assert(p7501_rsp_inspect_frame_from(mixed, sizeof(mixed) - 1u, 15u, &info));
     assert(info.found && info.ack_plus && info.checksum_ok);
-    assert(info.payload_len == 8u && memcmp(&mixed[info.payload_offset], "DEADBEEF", 8u) == 0);
+    assert(info.payload_offset == 25u && info.payload_len == 8u);
+    assert(memcmp(mixed + info.payload_offset, "DEADBEEF", 8u) == 0);
 
     /* Raw binary `$x` reply containing embedded `#9A`, NUL byte, `$` and `+` before real `#xx`. */
     const uint8_t bin_payload[] = { 0x41u, 0x00u, '#', '9', 'A', '$', '+', 0xFFu, 0x15u };
@@ -65,6 +66,36 @@ static void test_pana_rsp_frame_codec(void) {
     bin_frame[3u + sizeof(bin_payload)] = (bin_frame[3u + sizeof(bin_payload)] == '0') ? '1' : '0';
     assert(p7501_rsp_inspect_frame(bin_frame, bin_frame_len, &info));
     assert(info.found && !info.checksum_ok);
+
+    /* Verify 4-byte UART state-machine handshake & 32-bit LE `$M` write helper. */
+    assert(k_p7501_rsp_handshake[0] == 0x0Eu && k_p7501_rsp_handshake[1] == 0x02u);
+    assert(k_p7501_rsp_handshake[2] == 0x02u && k_p7501_rsp_handshake[3] == 0x04u);
+
+    char wr_frame[48];
+    const size_t wr_len = p7501_rsp_build_write_u32(
+        P7501_AM34_SERIAL_CB_PTR_ADDR,
+        0x51800000u,
+        wr_frame,
+        sizeof(wr_frame)
+    );
+    assert(wr_len > 0u);
+    assert(strncmp(wr_frame, "$M515B2E40,4:00008051#", 22u) == 0);
+    assert(p7501_rsp_inspect_frame((const uint8_t *)wr_frame, wr_len, &info));
+    assert(info.found && info.checksum_ok);
+    assert(p7501_rsp_build_write_u32(0x515B2E40u, 0x51800000u, wr_frame, 12u) == 0u);
+
+    const uint8_t pass_branch[4] = { 0xCCu, 0xD0u, 0x00u, 0xCBu };
+    const size_t wm_len = p7501_rsp_build_write_mem(
+        0x574F7B8Cu,
+        pass_branch,
+        sizeof(pass_branch),
+        wr_frame,
+        sizeof(wr_frame)
+    );
+    assert(wm_len > 0u);
+    assert(strncmp(wr_frame, "$M574F7B8C,4:ccd000cb#", 22u) == 0);
+    assert(p7501_rsp_inspect_frame((const uint8_t *)wr_frame, wm_len, &info));
+    assert(info.found && info.checksum_ok);
 }
 
 static void test_pana_rsp_arg_parser(void) {
@@ -85,6 +116,25 @@ static void test_pana_rsp_arg_parser(void) {
     assert(strcmp(spec.payload, "x84000000,440") == 0);
     assert(!p7501_panarsp_parse_args("XMEM:", &spec));
     assert(!p7501_panarsp_parse_args("XMEM:ZZZZ,10", &spec));
+
+    assert(p7501_panarsp_parse_args("WMEM:574F7B8C,CCD000CB", &spec));
+    assert(spec.action == PANA_RSP_ACT_WMEM && spec.addr == 0x574F7B8Cu && spec.data_len == 4u);
+    assert(strcmp(spec.payload, "M574F7B8C,4:ccd000cb") == 0);
+
+    assert(p7501_panarsp_parse_args("WRITE32:515B2E40,50401F3C", &spec));
+    assert(spec.action == PANA_RSP_ACT_WRITE32 && spec.addr == 0x515B2E40u && spec.value_u32 == 0x50401F3Cu);
+    assert(strcmp(spec.payload, "M515B2E40,4:3c1f4050") == 0);
+
+    assert(p7501_panarsp_parse_args("PASSTHROUGH", &spec));
+    assert(spec.action == PANA_RSP_ACT_PASSTHROUGH && spec.send_magic_prefix && spec.send_nak_prefix);
+
+    assert(p7501_panarsp_parse_args("CALL:50401F3C", &spec));
+    assert(spec.action == PANA_RSP_ACT_CALL && spec.addr == 0x50401F3Cu && spec.send_magic_prefix);
+    assert(strcmp(spec.payload, "M515B2E40,4:3c1f4050") == 0);
+
+    assert(!p7501_panarsp_parse_args("WMEM:", &spec));
+    assert(!p7501_panarsp_parse_args("WRITE32:ZZZZ,1234", &spec));
+    assert(!p7501_panarsp_parse_args("CALL:XYZ", &spec));
 
     assert(p7501_panarsp_parse_args("NONAK HEX:150E0402", &spec));
     assert(!spec.send_nak_prefix && spec.action == PANA_RSP_ACT_HEX && spec.raw_len == 4u);

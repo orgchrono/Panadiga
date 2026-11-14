@@ -12,6 +12,10 @@
 #include <stdio.h>
 #include <string.h>
 
+const uint8_t k_p7501_rsp_handshake[P7501_RSP_HANDSHAKE_LEN] = {
+    0x0Eu, 0x02u, 0x02u, 0x04u
+};
+
 static bool ascii_iprefix(const char *str, const char *prefix) {
     if (str == NULL || prefix == NULL) {
         return false;
@@ -100,6 +104,93 @@ size_t p7501_rsp_build_frame(const char *payload, char *out, size_t out_cap) {
     return 4u + plen;
 }
 
+static bool parse_hex_u32(const char *str, size_t max_chars, uint32_t *out_val) {
+    if (str == NULL || out_val == NULL || max_chars == 0u) {
+        return false;
+    }
+    if (str[0] == '0' && (str[1] == 'x' || str[1] == 'X')) {
+        str += 2;
+        if (max_chars < 2u) {
+            return false;
+        }
+    }
+    size_t count = 0u;
+    uint32_t acc = 0u;
+    while (count < max_chars && str[count] != '\0') {
+        const int nib = p7501_hex_char_to_nibble(str[count]);
+        if (nib < 0) {
+            return false;
+        }
+        acc = (acc << 4) | (uint32_t)nib;
+        count++;
+    }
+    if (count == 0u || str[count] != '\0' || count > 8u) {
+        return false;
+    }
+    *out_val = acc;
+    return true;
+}
+
+static bool parse_hex_u32_span(const char *start, size_t len, uint32_t *out_val) {
+    char tmp[12];
+    if (start == NULL || len == 0u || len >= sizeof(tmp)) {
+        return false;
+    }
+    memcpy(tmp, start, len);
+    tmp[len] = '\0';
+    return parse_hex_u32(tmp, len, out_val);
+}
+
+static bool build_write_mem_payload(
+    uint32_t addr,
+    const uint8_t *data,
+    size_t len,
+    char *out_payload,
+    size_t cap
+) {
+    if (data == NULL || len == 0u || len > 16u || out_payload == NULL) {
+        return false;
+    }
+    const int hdr = snprintf(out_payload, cap, "M%08X,%u:", (unsigned)addr, (unsigned)len);
+    if (hdr <= 0 || ((size_t)hdr + (len * 2u) + 1u) > cap) {
+        return false;
+    }
+    size_t pos = (size_t)hdr;
+    for (size_t i = 0u; i < len; ++i) {
+        out_payload[pos++] = p7501_nibble_to_hex_char((uint8_t)(data[i] >> 4));
+        out_payload[pos++] = p7501_nibble_to_hex_char((uint8_t)(data[i] & 0x0Fu));
+    }
+    out_payload[pos] = '\0';
+    return true;
+}
+
+size_t p7501_rsp_build_write_mem(
+    uint32_t addr,
+    const uint8_t *data,
+    size_t len,
+    char *out,
+    size_t out_cap
+) {
+    char payload[64];
+    if (!build_write_mem_payload(addr, data, len, payload, sizeof(payload))) {
+        return 0u;
+    }
+    return p7501_rsp_build_frame(payload, out, out_cap);
+}
+
+static void encode_u32_le(uint32_t value_le, uint8_t out_le[4]) {
+    out_le[0] = (uint8_t)(value_le & 0xFFu);
+    out_le[1] = (uint8_t)((value_le >> 8) & 0xFFu);
+    out_le[2] = (uint8_t)((value_le >> 16) & 0xFFu);
+    out_le[3] = (uint8_t)((value_le >> 24) & 0xFFu);
+}
+
+size_t p7501_rsp_build_write_u32(uint32_t addr, uint32_t value_le, char *out, size_t out_cap) {
+    uint8_t bytes[4];
+    encode_u32_le(value_le, bytes);
+    return p7501_rsp_build_write_mem(addr, bytes, sizeof(bytes), out, out_cap);
+}
+
 bool p7501_rsp_inspect_frame_from(
     const uint8_t *buf,
     size_t len,
@@ -179,6 +270,22 @@ bool p7501_rsp_inspect_frame(const uint8_t *buf, size_t len, p7501_rsp_frame_inf
     return p7501_rsp_inspect_frame_from(buf, len, 0u, out);
 }
 
+static bool assign_write_u32_payload(
+    uint32_t dest_addr,
+    uint32_t value_le,
+    p7501_pana_rsp_spec_t *out
+) {
+    uint8_t le[4];
+    encode_u32_le(value_le, le);
+    if (!build_write_mem_payload(dest_addr, le, sizeof(le), out->payload, sizeof(out->payload))) {
+        return false;
+    }
+    out->value_u32 = value_le;
+    memcpy(out->data_bytes, le, sizeof(le));
+    out->data_len = sizeof(le);
+    return true;
+}
+
 static bool apply_panarsp_action_token(const char *tok, p7501_pana_rsp_spec_t *out, bool *saw_action) {
     if (p7501_ascii_ieq(tok, "PROBESEQ") || p7501_ascii_ieq(tok, "PROBE") ||
         p7501_ascii_ieq(tok, "PING_STUB")) {
@@ -211,6 +318,62 @@ static bool apply_panarsp_action_token(const char *tok, p7501_pana_rsp_spec_t *o
             return false;
         }
         out->action = is_x ? PANA_RSP_ACT_XMEM : PANA_RSP_ACT_MEM;
+        *saw_action = true;
+        return true;
+    }
+    if (p7501_ascii_ieq(tok, "PASSTHROUGH")) {
+        out->action = PANA_RSP_ACT_PASSTHROUGH;
+        out->send_magic_prefix = true;
+        *saw_action = true;
+        return true;
+    }
+    if (ascii_iprefix(tok, "WMEM:")) {
+        const char *spec = tok + 5u;
+        const char *comma = strchr(spec, ',');
+        if (comma == NULL || comma == spec || comma[1] == '\0') {
+            return false;
+        }
+        uint32_t addr = 0u;
+        size_t data_len = 0u;
+        if (!parse_hex_u32_span(spec, (size_t)(comma - spec), &addr) ||
+            !p7501_decode_hex_bytes(comma + 1, out->data_bytes, sizeof(out->data_bytes), &data_len) ||
+            data_len == 0u ||
+            !build_write_mem_payload(addr, out->data_bytes, data_len, out->payload, sizeof(out->payload))) {
+            return false;
+        }
+        out->addr = addr;
+        out->data_len = data_len;
+        out->action = PANA_RSP_ACT_WMEM;
+        *saw_action = true;
+        return true;
+    }
+    if (ascii_iprefix(tok, "WRITE32:")) {
+        const char *spec = tok + 8u;
+        const char *comma = strchr(spec, ',');
+        if (comma == NULL || comma == spec || comma[1] == '\0') {
+            return false;
+        }
+        uint32_t addr = 0u;
+        uint32_t val = 0u;
+        if (!parse_hex_u32_span(spec, (size_t)(comma - spec), &addr) ||
+            !parse_hex_u32(comma + 1, 10u, &val) ||
+            !assign_write_u32_payload(addr, val, out)) {
+            return false;
+        }
+        out->addr = addr;
+        out->action = PANA_RSP_ACT_WRITE32;
+        *saw_action = true;
+        return true;
+    }
+    if (ascii_iprefix(tok, "CALL:") && tok[5] != '\0') {
+        uint32_t target = 0u;
+        if (!parse_hex_u32(tok + 5u, 10u, &target) ||
+            !assign_write_u32_payload((uint32_t)P7501_AM34_SERIAL_CB_PTR_ADDR, target, out)) {
+            return false;
+        }
+        out->addr = target;
+        out->send_magic_prefix = true;
+        out->action = PANA_RSP_ACT_CALL;
         *saw_action = true;
         return true;
     }
