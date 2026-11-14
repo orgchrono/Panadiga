@@ -357,6 +357,24 @@ mod tests {
         );
         assert!(tmp.join("DIGADIAG.FRM").is_file());
 
+        let mon_res = execute_tool(
+            "panadiga_bgo_unbrick",
+            &json!({
+                "input_path": "prog061.bin",
+                "action": "patch",
+                "mode": "uart_monitor",
+                "wrap_as_digadiag": true,
+                "output_path": "DIGADIAG_MON.FRM"
+            }),
+            &tmp,
+        )
+        .unwrap();
+        assert_eq!(
+            mon_res["inspection_after"]["detected_mode"],
+            "UART_MONITOR_PANAMON1"
+        );
+        assert!(tmp.join("DIGADIAG_MON.FRM").is_file());
+
         // 3. Test panadiga_hdd_capacity reject in-place & error handling cleanly
         let cap_missing = execute_tool(
             "panadiga_hdd_capacity",

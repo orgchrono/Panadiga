@@ -7,6 +7,9 @@
 
 #include "tests/test_pana_logic.h"
 #include "uart/p7501_pana_rsp.h"
+#include "uart/p7501_pana_dumpnor.h"
+#include "uart/p7501_diag_watch_codec.h"
+#include "flash/p7501_flash.h"
 #include "diag/p7501_piologic_codec.h"
 
 #include <assert.h>
@@ -171,10 +174,106 @@ static void test_piologic_analyzer(void) {
     assert(st.saw_tx_to_rx && st.min_tx_to_rx_us == 120u && st.max_tx_to_rx_us == 120u);
 }
 
+static void test_flash_geometry_and_bgo(void) {
+    const p7501_flash_geometry_t g8 = p7501_flash_get_geometry(8u * 1024u * 1024u);
+    assert(g8.bytes == 0x00800000UL && g8.mb == 8u);
+    assert(g8.nvram_base == 0x807F0000UL && g8.nvram_end == 0x80800000UL);
+    assert(g8.hw_uncached_base == 0x84000000UL);
+    assert(g8.hw_nvram_base == 0x847F0000UL && g8.hw_nvram_end == 0x84800000UL);
+    assert(g8.bgo_hw_base == 0x84200000UL && g8.bgo_hw_end == 0x84400000UL);
+    assert(g8.bgo_sector_count == 32u);
+
+    assert(p7501_flash_is_readonly_nor_range(g8.bytes, 0x80000000UL, 0x00800000UL));
+    assert(p7501_flash_is_readonly_nor_range(g8.bytes, 0x84000000UL, 0x00800000UL));
+    assert(p7501_flash_is_readonly_nor_range(g8.bytes, 0x84200000UL, 0x00200000UL));
+    assert(!p7501_flash_is_readonly_nor_range(g8.bytes, 0x84000000UL, 0u));
+    assert(!p7501_flash_is_readonly_nor_range(g8.bytes, 0x847F0000UL, 0x00020000UL));
+    assert(!p7501_flash_is_readonly_nor_range(g8.bytes, 0x50400000UL, 0x00010000UL));
+}
+
+static void test_pana_dumpnor_stub_and_args(void) {
+    uint8_t stub[P7501_DUMPNOR_STUB_SIZE];
+    assert(p7501_dumpnor_build_stub(0x84000000UL, 0x00800000UL, 0x51800000UL, stub, sizeof(stub)) == P7501_DUMPNOR_STUB_SIZE);
+    assert(stub[110] == 0xFCu && stub[111] == 0xACu && stub[116] == 0x1Cu && stub[131] == 0xDFu);
+    assert(memcmp(&stub[134], "PANADMP1", 8u) == 0);
+    assert(memcmp(&stub[154], "PANADONE", 8u) == 0);
+    assert(p7501_dumpnor_build_stub(0x00000000UL, 0x00010000UL, 0x51800000UL, stub, sizeof(stub)) == 0u);
+    assert(p7501_dumpnor_build_stub(0x84000000UL, 0x00800000UL, 0x51800000UL, stub, 64u) == 0u);
+
+    p7501_pana_rsp_spec_t spec;
+    assert(p7501_panarsp_parse_args("60000 JIG:350 DUMPNOR 84000000 10000", &spec));
+    assert(spec.action == PANA_RSP_ACT_DUMPNOR && spec.timeout_ms == 60000u);
+    assert(spec.boot_action == P7501_BOOT_ACTION_JIG && spec.jig_hold_ms == 350u);
+    assert(spec.addr == 0x84000000UL && spec.value_u32 == 0x00010000UL && spec.send_magic_prefix);
+
+    assert(p7501_panarsp_parse_args("DUMPNOR:847F0000,10000", &spec));
+    assert(spec.action == PANA_RSP_ACT_DUMPNOR && spec.addr == 0x847F0000UL && spec.value_u32 == 0x00010000UL);
+
+    assert(!p7501_panarsp_parse_args("DUMPNOR 00000000 1000", &spec));
+    assert(!p7501_panarsp_parse_args("DUMPNOR 847F0000", &spec));
+}
+
+static void test_diag_watch_codec(void) {
+    p7501_diag_watch_spec_t dw;
+    assert(p7501_diag_watch_parse_args("", &dw));
+    assert(dw.timeout_ms == 15000u && dw.boot_action == P7501_BOOT_ACTION_JIG);
+    assert(dw.jig_hold_ms == 2500u && dw.action == P7501_DIAG_ACT_AUTO && dw.release_on_ddr);
+
+    assert(p7501_diag_watch_parse_args("30000 NORMAL FORMAT HOLD", &dw));
+    assert(dw.timeout_ms == 30000u && dw.boot_action == P7501_BOOT_ACTION_NORMAL);
+    assert(dw.action == P7501_DIAG_ACT_FORMAT && !dw.release_on_ddr);
+
+    assert(p7501_diag_watch_parse_args("180000 NOPULL DUMP RELEASE", &dw));
+    assert(dw.timeout_ms == 180000u && dw.boot_action == P7501_BOOT_ACTION_PASSIVE);
+    assert(dw.action == P7501_DIAG_ACT_DUMP && dw.release_on_ddr);
+    assert(!p7501_diag_watch_parse_args("20000 BOGUS_DW", &dw));
+
+    assert(p7501_diag_watch_action_char(P7501_DIAG_ACT_AUTO) == 'B');
+    assert(p7501_diag_watch_action_char(P7501_DIAG_ACT_FORMAT) == 'F');
+    assert(p7501_diag_watch_action_char(P7501_DIAG_ACT_DUMP) == 'D');
+    assert(p7501_diag_watch_action_char(P7501_DIAG_ACT_NONE) == '\0');
+
+    assert(p7501_diag_watch_parse_args("25000 JIG:2500 AUTO RELEASE", &dw));
+    p7501_diag_watch_state_t st;
+    p7501_diag_watch_init(&st);
+    static const char k_boot_log[] =
+        "DDR CHECK: OK\r\n"
+        "***** serial boot mode *****\r\n"
+        "SetBusWidth -91006\r\n"
+        "** open tray ** 80040904\r\n"
+        "PANAMON1>";
+    int rel_count = 0;
+    int tx_count = 0;
+    char last_tx = '\0';
+    for (size_t i = 0u; k_boot_log[i] != '\0'; ++i) {
+        char tx_ch = '\0';
+        bool rel = false;
+        (void)p7501_diag_watch_feed_byte(&st, &dw, (uint8_t)k_boot_log[i], &tx_ch, &rel);
+        if (rel) {
+            rel_count += 1;
+        }
+        if (tx_ch != '\0') {
+            tx_count += 1;
+            last_tx = tx_ch;
+        }
+    }
+    assert(rel_count == 1 && st.sw_uart_released);
+    assert(tx_count == 1 && last_tx == 'B' && st.tx_dispatched);
+    assert((st.seen_events & P7501_DIAG_EVT_DDR_OK) != 0u);
+    assert((st.seen_events & P7501_DIAG_EVT_SERIAL_BOOT) != 0u);
+    assert((st.seen_events & P7501_DIAG_EVT_SD_ERR) != 0u);
+    assert((st.seen_events & P7501_DIAG_EVT_ODD_OPEN) != 0u);
+    assert((st.seen_events & P7501_DIAG_EVT_CD_APC_ERR) != 0u);
+    assert((st.seen_events & P7501_DIAG_EVT_PANAMON) != 0u);
+    assert(p7501_diag_watch_diagnosis(st.seen_events) != NULL);
+}
 int p7501_run_pana_logic_tests(void) {
     test_pana_rsp_frame_codec();
     test_pana_rsp_arg_parser();
     test_piologic_analyzer();
-    printf("[HOST-TEST] PANARSP codec + PIOLOGIC timing analyzer passed all assertions.\n");
+    test_flash_geometry_and_bgo();
+    test_pana_dumpnor_stub_and_args();
+    test_diag_watch_codec();
+    printf("[HOST-TEST] PANARSP + DUMPNOR + DIAGWATCH + FlashGeo + PIOLOGIC passed.\n");
     return 0;
 }

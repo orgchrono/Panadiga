@@ -34,6 +34,7 @@ add_executable(panasonic_p7501_uart
     gdb/gdb_rsp_memory.c
     gdb/gdb_rsp_cpu.c
     protocol/p7501_bus_protocol.c
+    flash/p7501_flash_geo.c
     flash/p7501_flash.c
     flash/p7501_ram_loader.c
     diag/p7501_diag_electrical.c
@@ -54,8 +55,11 @@ add_executable(panasonic_p7501_uart
     uart/p7501_uart_baud.c
     uart/p7501_uart_stream.c
     uart/p7501_uart_tx.c
+    uart/p7501_pana_dumpnor.c
     uart/p7501_pana_rsp_codec.c
     uart/p7501_pana_rsp.c
+    uart/p7501_diag_watch_codec.c
+    uart/p7501_diag_watch.c
     cli/p7501_cli_help.c
     cli/p7501_cli.c
 )

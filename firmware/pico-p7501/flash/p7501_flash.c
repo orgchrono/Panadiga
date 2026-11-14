@@ -24,33 +24,6 @@ static bool p7501_fingerprint_matches(uint32_t base_a, uint32_t base_b) {
     return true;
 }
 
-uint32_t p7501_flash_normalize_size(uint32_t flash_size_bytes) {
-    if ((flash_size_bytes == 0x00200000UL) ||
-        (flash_size_bytes == 0x00400000UL) ||
-        (flash_size_bytes == 0x00800000UL) ||
-        (flash_size_bytes == 0x01000000UL)) {
-        return flash_size_bytes;
-    }
-    return 0x00800000UL;
-}
-
-p7501_flash_geometry_t p7501_flash_get_geometry(uint32_t flash_size_bytes) {
-    const uint32_t eff_size = p7501_flash_normalize_size(flash_size_bytes);
-    const uint32_t nvram_size = (eff_size == 0x01000000UL) ? 0x00020000UL : 0x00010000UL;
-
-    p7501_flash_geometry_t geo;
-    geo.bytes = eff_size;
-    geo.mb = eff_size / (1024UL * 1024UL);
-    geo.nvram_size = nvram_size;
-    geo.nvram_base = SPANSION_FLASH_UNCACHED_BASE + (eff_size - nvram_size);
-    geo.nvram_end = SPANSION_FLASH_UNCACHED_BASE + eff_size;
-    geo.sector_count = nvram_size / SPANSION_MICROSECTOR_SIZE_BYTES;
-    geo.base_sector = (eff_size == 0x01000000UL) ? 254U :
-                      (eff_size == 0x00400000UL) ? 70U :
-                      (eff_size == 0x00200000UL) ? 38U : 134U;
-    return geo;
-}
-
 uint32_t p7501_hw_autodetect_flash_size(void) {
     const uint32_t w0 = p7501_hw_read_mem32(SPANSION_FLASH_UNCACHED_BASE);
     const uint32_t w1 = p7501_hw_read_mem32(SPANSION_FLASH_UNCACHED_BASE + 4UL);
@@ -117,7 +90,7 @@ bool p7501_hw_query_cfi(uint32_t *out_size_bytes) {
 p7501_flash_geometry_t p7501_probe_flash_geometry(void) {
     const uint32_t detected = p7501_hw_autodetect_flash_size();
     if (detected == 0U) {
-        p7501_flash_geometry_t none = {0U, 0U, 0U, 0U, 0U, 0U, 0U};
+        p7501_flash_geometry_t none = {0U};
         return none;
     }
     (void)gdb_rsp_set_flash_size(detected);

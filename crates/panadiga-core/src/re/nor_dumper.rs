@@ -24,7 +24,7 @@ const HEADER_PREFIX_LEN: usize = NOR_MAGIC_HEADER.len() + 12;
 
 /// Verified MN103S Sleigh subroutine: polls `SC0STR` (`0xD400200C`) bit mask `0xA0`,
 /// then writes `D3` to `SC0TXB` (`0xD4002008`).
-const PUTC_D3_BYTES: [u8; 24] = [
+pub(crate) const PUTC_D3_BYTES: [u8; 24] = [
     0xFC, 0xAC, 0x0C, 0x20, 0x00, 0xD4, // MOV (0xD400200C), D0
     0x1C, // MOV D0, D1? / shift setup
     0xF8, 0xE0, 0xA0, // AND 0xA0, D0

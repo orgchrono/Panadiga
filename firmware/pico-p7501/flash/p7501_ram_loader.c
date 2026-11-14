@@ -50,10 +50,11 @@ static void patch_u32_le(uint8_t *dst, size_t offset, uint32_t value) {
     dst[offset + 3U] = (uint8_t)((value >> 24) & 0xFFU);
 }
 
-p7501_status_t ram_loader_inject_for_flash_size(
+p7501_status_t ram_loader_inject_aperture(
     uint32_t target_sram_addr,
     bool verify,
-    uint32_t flash_size_bytes
+    uint32_t flash_size_bytes,
+    bool use_hw_uncached
 ) {
     if (!p7501_proto_is_monitor_online()) {
         printf("[INJECT_LOADER] ERROR: No synchronous AM34 monitor online (DCSR=0xFFFFFFFF). Aborting injection.\n");
@@ -74,19 +75,27 @@ p7501_status_t ram_loader_inject_for_flash_size(
     memcpy(patched_bin, am34_ram_loader_bin, AM34_RAM_LOADER_SIZE_BYTES);
 
     const p7501_flash_geometry_t geo = p7501_flash_get_geometry(flash_size_bytes);
-    patch_u32_le(patched_bin, 0x0EU, geo.nvram_base);
-    patch_u32_le(patched_bin, 0x14U, geo.nvram_end);
-    patch_u32_le(patched_bin, 0x44U, geo.nvram_end);
+    const uint32_t win_base = use_hw_uncached ? geo.hw_uncached_base : P7501_FLASH_CACHED_BASE;
+    const uint32_t nv_base = use_hw_uncached ? geo.hw_nvram_base : geo.nvram_base;
+    const uint32_t nv_end = use_hw_uncached ? geo.hw_nvram_end : geo.nvram_end;
+    if (use_hw_uncached) {
+        patch_u32_le(patched_bin, 0x02U, win_base + 0x0AAAUL);
+        patch_u32_le(patched_bin, 0x08U, win_base + 0x0554UL);
+    }
+    patch_u32_le(patched_bin, 0x0EU, nv_base);
+    patch_u32_le(patched_bin, 0x14U, nv_end);
+    patch_u32_le(patched_bin, 0x44U, nv_end);
 
     uint32_t words[AM34_RAM_LOADER_WORD_COUNT];
     memcpy(words, patched_bin, AM34_RAM_LOADER_SIZE_BYTES);
     const uint32_t sum = ram_loader_calc_sum32(words, AM34_RAM_LOADER_WORD_COUNT);
 
     printf("[INJECT_LOADER] Target Address : 0x%08lX (AM34 Internal SRAM)\n", (unsigned long)target_sram_addr);
-    printf("[INJECT_LOADER] Flash Geometry : %lu MB (NVRAM Window: 0x%08lX..0x%08lX)\n",
+    printf("[INJECT_LOADER] Flash Geometry : %lu MB (%s NVRAM: 0x%08lX..0x%08lX)\n",
            (unsigned long)geo.mb,
-           (unsigned long)geo.nvram_base,
-           (unsigned long)(geo.nvram_end - 1UL));
+           use_hw_uncached ? "Uncached 0x84" : "Cached/GDB 0x80",
+           (unsigned long)nv_base,
+           (unsigned long)(nv_end - 1UL));
     printf("[INJECT_LOADER] Payload Size   : %u bytes (%u x 32-bit words, Sum32=0x%08lX)\n",
            (unsigned)AM34_RAM_LOADER_SIZE_BYTES, (unsigned)AM34_RAM_LOADER_WORD_COUNT, (unsigned long)sum);
 
@@ -107,6 +116,14 @@ p7501_status_t ram_loader_inject_for_flash_size(
     printf("[INJECT_LOADER] Successfully injected %u bytes into SRAM.\n",
            (unsigned)AM34_RAM_LOADER_SIZE_BYTES);
     return P7501_OK;
+}
+
+p7501_status_t ram_loader_inject_for_flash_size(
+    uint32_t target_sram_addr,
+    bool verify,
+    uint32_t flash_size_bytes
+) {
+    return ram_loader_inject_aperture(target_sram_addr, verify, flash_size_bytes, false);
 }
 
 p7501_status_t ram_loader_inject(uint32_t target_sram_addr, bool verify) {

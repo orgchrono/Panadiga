@@ -144,7 +144,7 @@ Panadiga/
         ├── gdb/                                      <-- Deterministic GDB RSP Protocol Codec & Server
         ├── hal/                                      <-- Open-Drain `XRESET`, `SW_UART` (GP26), `NSW5V` (GP3 Hi-Z) & LED State HAL
         ├── protocol/                                 <-- Boot Profile Sweep & Bus Handshake Routines
-        ├── uart/                                     <-- PIO1 UART Engine, `UARTSTREAM`, `WAITTX` & Autonomous `PANARSP` (`WMEM`/`WRITE32`/`PASSTHROUGH`/`CALL`)
+        ├── uart/                                     <-- PIO1 UART Engine, `UARTSTREAM`, `WAITTX`, `DIAGWATCH` & `PANARSP` (`WMEM`/`WRITE32`/`PASSTHROUGH`/`DUMPNOR`/`CALL`)
         ├── tests/                                    <-- Host C11 Unit Test Suite (`PICO_HOST_TEST=1`)
         ├── p7501_uart*.pio / p7501_logic_sampler.pio <-- PIO State Machines (115200 8N1 UART & 2 MHz Edge Sampler)
         ├── p7501_pico_main.c                         <-- Entrypoint & Main Diagnostic Loop
@@ -435,11 +435,13 @@ The LBA 0 superblock stores partition geometry inverted with bitwise NOT (`XOR 0
 ### 7.6. Plaintext Firmware Architecture (`DIGADIAG.FRM` vs `PANA_DVD.FRM` vs `PANA__SD.FRM`), HDD LBA48 & Autonomous Pico `PANARSP`
 
 * **Firmware Update Containers (`BOOT.BIN` / `PROG061`):**
-  * **`DIGADIAG.FRM`** (`SDDIAG` `FUN_44007BA5` / `CDDIAG` `FUN_4400A97C`): Single-module plaintext container (`0x40` B `EXTRHEAD` `"FVU "`/`"DIAG"`, `dst_addr = 0x50400000`, strided Adler-32 `step = 4` + `zlib` + `EXTRFOOT`). `SDDIAG` reads fixed `0x20000` (`131,072` B) into `0x93FC0000` before decompressing to `0x50400000`; `CDDIAG` loads via ATAPI/ODD.
+  * **`DIGADIAG.FRM`** (`SDDIAG` `FUN_44007BA5` / `CDDIAG` `FUN_4400A97C`): Single-module plaintext container (`0x40` B `EXTRHEAD` `"FVU "`/`"DIAG"`, `dst_addr = 0x50400000`, strided Adler-32 `step = 4` + `zlib` + `EXTRFOOT`). `SDDIAG` reads fixed `0x20000` (`131,072` B) into `0x93FC0000` before decompressing to `0x50400000`; `panadiga_bgo_unbrick` also supports `"uart_monitor"` (`PANAMON1>[B/F/D/Q]` at `0x50439494`).
   * **`PANA_DVD.FRM`** (`FUN_4400A6D0`): `16` B global header + Feistel-encrypted `3 x 48` B `"Firm list"` TOC (`FUN_4400a666`, 8-round 64-bit ECB, S-Box `0x44035D84`, `list_sum` at `+0x2E`, `fvu_checksum_u32` at `+0x24`) + 3 `EXTRHEAD` modules (`PROG061` -> `0x50400000`; `DRV` S211 first `0x400` B encrypted -> ATAPI ODD; `MAIN` first/last `0x400` B encrypted -> HDD Partition 1 `LBA 65536` / `0x02000000`).
   * **`PANA__SD.FRM`** (`FUN_440075AA`): Plaintext TOC (`0x40` B entries in `BOOT.BIN`, `list_sum_u16` at `+0x3E`, up to 128 slots in `0x2000` B; or `0x30` B entries in `PROG061`).
 * **PATA Topology & LBA48 Bridge:** ODD is Primary Master (`ch=0, dev=0`, `0x89000500`) and HDD is Secondary **MASTER** (`ch=1, dev=0`, `0x89000D00`). SATA drives require a **Marvell `88SA8052`** bridge (`StarTech IDE2SAT2`) jumpered strictly in **`MASTER`** plus dynamic LBA48 patching (`crates/panadiga-core/src/hdd/capacity_patch.rs`).
-* **Autonomous Pico `PANARSP` (`P7501` `115200 8N1`):** Supports `WMEM`, `WRITE32`, `PASSTHROUGH`, and `CALL` with automatic `0E 02 02 04` + `0x15` handshake targeting `0x515B2E60`, serial callback pointer updates at `0x515B2E40` (`$M515B2E40,4:3c1f4050#95`), and sequential GDB RSP memory write `$M` frames for the 3 `MAIN` AV TBC `E-E` passthrough sites (`0x5771ABFB` `#7a`, `0x574F7B8C` `#40`, `0x574F7C5C` `#63`).
+* **Autonomous Pico `PANARSP`, `DIAGWATCH` & NOR Geometry (`P7501` `115200 8N1`):**
+  * **`PANARSP`:** Supports `WMEM`, `WRITE32`, `PASSTHROUGH`, `DUMPNOR [<addr_hex> [<len_hex>]]` (`PANADMP1..PANADONE` 8 MB read-only NOR stream from `0x84000000` via `$M` -> `0x51800000` + callback `0x515B2E40`), and `CALL` with automatic `0E 02 02 04` + `0x15` handshake targeting `0x515B2E60`, plus the 3 `MAIN` AV TBC `E-E` passthrough frames (`0x5771ABFB` `#7a`, `0x574F7B8C` `#40`, `0x574F7C5C` `#63`).
+  * **`DIAGWATCH` & Flash Aperture:** `DIAGWATCH [ms] [NORMAL|JIG[:ms]|NOPULL] [AUTO|BYPASS|FORMAT|DUMP|NONE] [RELEASE|HOLD]` monitors `SC0`, auto-releases `SW_UART` to Hi-Z on `DDR CHECK: OK` (`Q7514` TX ready), logs `-91006`/`83A7`/`BGO` failures, and dispatches `B`/`F`/`D` on `PANAMON1>`. `FLASH_SIZE` and `INJECT_LOADER [UNCACHED] CONFIRM` expose uncached `0x84000000` and the `BGO` partition (`0x84200000..0x843FFFFF`, 32 x 64 KB sectors).
 
 ---
 

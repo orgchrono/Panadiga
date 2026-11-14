@@ -7,6 +7,7 @@
  */
 
 #include "uart/p7501_pana_rsp.h"
+#include "uart/p7501_pana_dumpnor.h"
 #include "common/p7501_hex.h"
 
 #include <stdio.h>
@@ -377,6 +378,23 @@ static bool apply_panarsp_action_token(const char *tok, p7501_pana_rsp_spec_t *o
         *saw_action = true;
         return true;
     }
+    if (p7501_ascii_ieq(tok, "DUMPNOR")) {
+        out->action = PANA_RSP_ACT_DUMPNOR;
+        out->send_magic_prefix = true;
+        out->addr = P7501_DUMPNOR_DEFAULT_START;
+        out->value_u32 = P7501_DUMPNOR_DEFAULT_LEN;
+        *saw_action = true;
+        return true;
+    }
+    if (ascii_iprefix(tok, "DUMPNOR:")) {
+        if (!p7501_dumpnor_parse_colon_spec(tok + 8u, &out->addr, &out->value_u32)) {
+            return false;
+        }
+        out->action = PANA_RSP_ACT_DUMPNOR;
+        out->send_magic_prefix = true;
+        *saw_action = true;
+        return true;
+    }
     if (ascii_iprefix(tok, "RAW:") && tok[4] != '\0') {
         out->action = PANA_RSP_ACT_RAW;
         snprintf(out->payload, sizeof(out->payload), "%s", tok + 4);
@@ -414,13 +432,23 @@ bool p7501_panarsp_parse_args(const char *arg, p7501_pana_rsp_spec_t *out) {
     bool saw_action = false;
     bool explicit_nak_only = false;
     bool explicit_magic_only = false;
+    uint8_t dumpnor_argc = 0u;
 
     while ((cur = p7501_next_token(cur, tok, sizeof(tok))) != NULL) {
         if (tok[0] == '\0') {
             continue;
         }
-        if (is_digits_only(tok)) {
-            out->timeout_ms = p7501_parse_uint32_clamped(tok, 4000u, 150u, 30000u);
+        uint32_t dump_hex = 0u;
+        if (saw_action && (out->action == PANA_RSP_ACT_DUMPNOR) && (dumpnor_argc < 2u) &&
+            p7501_dumpnor_parse_hex_tok(tok, &dump_hex)) {
+            if (dumpnor_argc == 0u) {
+                out->addr = dump_hex;
+            } else {
+                out->value_u32 = dump_hex;
+            }
+            dumpnor_argc += 1u;
+        } else if (is_digits_only(tok)) {
+            out->timeout_ms = p7501_parse_uint32_clamped(tok, 4000u, 150u, 900000u);
         } else if (p7501_ascii_ieq(tok, "MAGIC")) {
             out->send_magic_prefix = true;
             explicit_magic_only = true;
@@ -448,6 +476,10 @@ bool p7501_panarsp_parse_args(const char *arg, p7501_pana_rsp_spec_t *out) {
         } else if (explicit_magic_only && !out->send_nak_prefix) {
             out->action = PANA_RSP_ACT_MAGIC;
         }
+    }
+    if ((out->action == PANA_RSP_ACT_DUMPNOR) &&
+        !p7501_dumpnor_validate_range(out->addr, out->value_u32)) {
+        return false;
     }
     return true;
 }

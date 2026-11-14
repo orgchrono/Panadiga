@@ -22,6 +22,7 @@
 #include "uart/p7501_uart_capture.h"
 #include "uart/p7501_fmu_probe.h"
 #include "uart/p7501_uart_interactive.h"
+#include "uart/p7501_diag_watch.h"
 #include "cli/p7501_cli_help.h"
 #include "uart/p7501_uart_stream.h"
 #include "uart/p7501_uart_baud.h"
@@ -235,6 +236,7 @@ static const p7501_cli_cmd_entry_t k_cli_commands[] = {
     { "PWRTRACE",      p7501_cmd_pwrtrace },
     { "PIOLOGIC",      p7501_cmd_piologic },
     { "PANARSP",       p7501_cmd_pana_rsp },
+    { "DIAGWATCH",     p7501_cmd_diag_watch },
     { "BRIDGE",        p7501_cmd_bridge },
     { "BOOTSEL",       cli_cmd_bootsel },
 };

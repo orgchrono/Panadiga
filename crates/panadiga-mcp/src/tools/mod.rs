@@ -312,8 +312,8 @@ pub fn tool_definitions() -> Vec<Value> {
                     },
                     "mode": {
                         "type": "string",
-                        "enum": ["bypass", "auto_format", "factory"],
-                        "description": "Patch strategy when action='patch' (default 'auto_format')."
+                        "enum": ["bypass", "auto_format", "uart_monitor", "factory"],
+                        "description": "Patch strategy when action='patch' (default 'auto_format'; 'uart_monitor' embeds interactive PANAMON1 UART0 monitor @ 0x50439494)."
                     },
                     "wrap_as_digadiag": {
                         "type": "boolean",

@@ -18,6 +18,10 @@ use std::path::Path;
 use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
 
+use super::prog061_uart_monitor::{
+    OFF_UART_MONITOR_SLACK, PATCH_A2CD_UART_MONITOR, PROG061_UART_MONITOR_VA,
+    build_prog061_uart_monitor_payload,
+};
 use crate::crypto::{ExtrheadCryptMode, build_digadiag_frm, unpack_extrhead};
 use crate::nvram::{calculate_hashes, resolve_input_path};
 
@@ -61,6 +65,8 @@ pub enum Prog061BgoPatchMode {
     BypassChecksOnly,
     /// Bypass checks AND wire `0x5040A2CD` to invoke orphan `nfrom_format` (`0x50401F3C`) on error.
     AutoFormatBgo,
+    /// Bypass checks AND embed interactive `PANAMON1` UART0 monitor at `0x50439494` (`B`/`F`/`D`/`Q`).
+    UartMonitor,
     /// Restore verbatim Panasonic factory bytes at all 3 sites.
     FactoryOriginal,
 }
@@ -72,9 +78,10 @@ impl std::str::FromStr for Prog061BgoPatchMode {
         match raw.trim().to_ascii_lowercase().as_str() {
             "bypass" | "bypass_checks" | "checks_only" => Ok(Self::BypassChecksOnly),
             "auto_format" | "autoformat" | "format" => Ok(Self::AutoFormatBgo),
+            "uart_monitor" | "monitor" | "panamon1" => Ok(Self::UartMonitor),
             "factory" | "factory_original" | "restore" => Ok(Self::FactoryOriginal),
             other => bail!(
-                "Unsupported BGO patch mode '{other}': expected bypass, auto_format, or factory"
+                "Unsupported BGO patch mode '{other}': expected bypass, auto_format, uart_monitor, or factory"
             ),
         }
     }
@@ -183,7 +190,7 @@ pub fn inspect_prog061_bgo_sites(data: &[u8]) -> Result<Prog061BgoInspection> {
         &PATCH_DEVINFO_BRA,
         "BYPASSED_BRA",
     )?;
-    let bgo_init_hook_site = classify_site(
+    let mut bgo_init_hook_site = classify_site(
         data,
         OFF_BGO_INIT_FAIL_HOOK,
         20,
@@ -191,6 +198,11 @@ pub fn inspect_prog061_bgo_sites(data: &[u8]) -> Result<Prog061BgoInspection> {
         &PATCH_A2CD_AUTOFORMAT,
         "AUTO_FORMAT_HOOK",
     )?;
+    if bgo_init_hook_site.state == "UNKNOWN_OR_MISMATCH"
+        && data[OFF_BGO_INIT_FAIL_HOOK..OFF_BGO_INIT_FAIL_HOOK + 20] == PATCH_A2CD_UART_MONITOR
+    {
+        bgo_init_hook_site.state = "UART_MONITOR_HOOK".to_string();
+    }
 
     let detected_mode = match (
         bgo_sum_site.state.as_str(),
@@ -200,6 +212,7 @@ pub fn inspect_prog061_bgo_sites(data: &[u8]) -> Result<Prog061BgoInspection> {
         ("FACTORY", "FACTORY", "FACTORY") => "FACTORY_ORIGINAL",
         ("BYPASSED_BRA", "BYPASSED_BRA", "FACTORY") => "BYPASS_CHECKS_ONLY",
         ("BYPASSED_BRA", "BYPASSED_BRA", "AUTO_FORMAT_HOOK") => "AUTO_FORMAT_BGO",
+        ("BYPASSED_BRA", "BYPASSED_BRA", "UART_MONITOR_HOOK") => "UART_MONITOR_PANAMON1",
         _ => "CUSTOM_OR_PARTIAL",
     };
 
@@ -234,12 +247,22 @@ pub fn patch_prog061_bgo_in_place(raw_prog061: &mut [u8], mode: Prog061BgoPatchM
         &PATCH_DEVINFO_BRA,
         "OFF_DEVINFO_CHECK_BEQ",
     )?;
-    ensure_known_site(
-        &raw_prog061[OFF_BGO_INIT_FAIL_HOOK..OFF_BGO_INIT_FAIL_HOOK + 20],
-        &ORIG_A2CD_HOOK,
-        &PATCH_A2CD_AUTOFORMAT,
-        "OFF_BGO_INIT_FAIL_HOOK",
-    )?;
+    if raw_prog061[OFF_BGO_INIT_FAIL_HOOK..OFF_BGO_INIT_FAIL_HOOK + 20] != PATCH_A2CD_UART_MONITOR {
+        ensure_known_site(
+            &raw_prog061[OFF_BGO_INIT_FAIL_HOOK..OFF_BGO_INIT_FAIL_HOOK + 20],
+            &ORIG_A2CD_HOOK,
+            &PATCH_A2CD_AUTOFORMAT,
+            "OFF_BGO_INIT_FAIL_HOOK",
+        )?;
+    }
+
+    let monitor_payload = build_prog061_uart_monitor_payload(PROG061_UART_MONITOR_VA)?;
+    let slack_end = OFF_UART_MONITOR_SLACK + monitor_payload.len();
+    let clear_slack_if_installed = |buf: &mut [u8]| {
+        if &buf[OFF_UART_MONITOR_SLACK..slack_end] == monitor_payload.as_slice() {
+            buf[OFF_UART_MONITOR_SLACK..slack_end].fill(0xFF);
+        }
+    };
 
     match mode {
         Prog061BgoPatchMode::BypassChecksOnly => {
@@ -248,6 +271,7 @@ pub fn patch_prog061_bgo_in_place(raw_prog061: &mut [u8], mode: Prog061BgoPatchM
                 .copy_from_slice(&PATCH_DEVINFO_BRA);
             raw_prog061[OFF_BGO_INIT_FAIL_HOOK..OFF_BGO_INIT_FAIL_HOOK + 20]
                 .copy_from_slice(&ORIG_A2CD_HOOK);
+            clear_slack_if_installed(raw_prog061);
         }
         Prog061BgoPatchMode::AutoFormatBgo => {
             raw_prog061[OFF_BGO_SUM_BEQ..OFF_BGO_SUM_BEQ + 2].copy_from_slice(&PATCH_SUM_BRA);
@@ -255,6 +279,22 @@ pub fn patch_prog061_bgo_in_place(raw_prog061: &mut [u8], mode: Prog061BgoPatchM
                 .copy_from_slice(&PATCH_DEVINFO_BRA);
             raw_prog061[OFF_BGO_INIT_FAIL_HOOK..OFF_BGO_INIT_FAIL_HOOK + 20]
                 .copy_from_slice(&PATCH_A2CD_AUTOFORMAT);
+            clear_slack_if_installed(raw_prog061);
+        }
+        Prog061BgoPatchMode::UartMonitor => {
+            let slack = &raw_prog061[OFF_UART_MONITOR_SLACK..slack_end];
+            if slack != monitor_payload.as_slice()
+                && !slack.iter().all(|&b| b == 0xFF)
+                && !slack.iter().all(|&b| b == 0x00)
+            {
+                bail!("PROG061 slack 0x{OFF_UART_MONITOR_SLACK:06X} is not erased (expected 0xFF)");
+            }
+            raw_prog061[OFF_BGO_SUM_BEQ..OFF_BGO_SUM_BEQ + 2].copy_from_slice(&PATCH_SUM_BRA);
+            raw_prog061[OFF_DEVINFO_CHECK_BEQ..OFF_DEVINFO_CHECK_BEQ + 2]
+                .copy_from_slice(&PATCH_DEVINFO_BRA);
+            raw_prog061[OFF_BGO_INIT_FAIL_HOOK..OFF_BGO_INIT_FAIL_HOOK + 20]
+                .copy_from_slice(&PATCH_A2CD_UART_MONITOR);
+            raw_prog061[OFF_UART_MONITOR_SLACK..slack_end].copy_from_slice(&monitor_payload);
         }
         Prog061BgoPatchMode::FactoryOriginal => {
             raw_prog061[OFF_BGO_SUM_BEQ..OFF_BGO_SUM_BEQ + 2].copy_from_slice(&ORIG_SUM_BEQ);
@@ -262,6 +302,7 @@ pub fn patch_prog061_bgo_in_place(raw_prog061: &mut [u8], mode: Prog061BgoPatchM
                 .copy_from_slice(&ORIG_DEVINFO_BEQ);
             raw_prog061[OFF_BGO_INIT_FAIL_HOOK..OFF_BGO_INIT_FAIL_HOOK + 20]
                 .copy_from_slice(&ORIG_A2CD_HOOK);
+            clear_slack_if_installed(raw_prog061);
         }
     }
     Ok(())
@@ -336,6 +377,7 @@ pub fn patch_prog061_or_build_digadiag(
     let mode_label = match mode {
         Prog061BgoPatchMode::BypassChecksOnly => "bypass",
         Prog061BgoPatchMode::AutoFormatBgo => "auto_format",
+        Prog061BgoPatchMode::UartMonitor => "uart_monitor",
         Prog061BgoPatchMode::FactoryOriginal => "factory",
     };
 
@@ -376,6 +418,18 @@ mod tests {
         assert_eq!(
             inspect_prog061_bgo_sites(&patched).unwrap().detected_mode,
             "BYPASS_CHECKS_ONLY"
+        );
+
+        patch_prog061_bgo_in_place(&mut patched, Prog061BgoPatchMode::UartMonitor).unwrap();
+        assert_eq!(
+            inspect_prog061_bgo_sites(&patched).unwrap().detected_mode,
+            "UART_MONITOR_PANAMON1"
+        );
+
+        patch_prog061_bgo_in_place(&mut patched, Prog061BgoPatchMode::FactoryOriginal).unwrap();
+        assert_eq!(
+            inspect_prog061_bgo_sites(&patched).unwrap().detected_mode,
+            "FACTORY_ORIGINAL"
         );
 
         patch_prog061_bgo_in_place(&mut patched, Prog061BgoPatchMode::AutoFormatBgo).unwrap();
@@ -421,8 +475,20 @@ mod tests {
         if !local.is_file() {
             return;
         }
-        let bytes = fs::read(local).unwrap();
+        let mut bytes = fs::read(local).unwrap();
         let insp = inspect_prog061_bgo_sites(&bytes).unwrap();
         assert_eq!(insp.detected_mode, "FACTORY_ORIGINAL");
+
+        patch_prog061_bgo_in_place(&mut bytes, Prog061BgoPatchMode::UartMonitor).unwrap();
+        let (frm, _) =
+            build_digadiag_frm(&bytes, PROG061_BASE_VA, "DIAG", "PANAMON1", 4, 0x2_0000).unwrap();
+        assert_eq!(frm.len(), 0x2_0000);
+        let unpacked = unpack_extrhead(&frm, ExtrheadCryptMode::Plain).unwrap();
+        assert_eq!(
+            inspect_prog061_bgo_sites(&unpacked.decompressed)
+                .unwrap()
+                .detected_mode,
+            "UART_MONITOR_PANAMON1"
+        );
     }
 }

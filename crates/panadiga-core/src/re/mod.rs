@@ -4,6 +4,7 @@ pub mod bgo_unbrick;
 pub mod main_passthrough;
 pub mod mn10300;
 pub mod nor_dumper;
+pub mod prog061_uart_monitor;
 
 pub use bgo_unbrick::{
     OFF_BGO_INIT_FAIL_HOOK, OFF_BGO_SUM_BEQ, OFF_DEVINFO_CHECK_BEQ, PROG061_BASE_VA,
@@ -28,4 +29,8 @@ pub use mn10300::{
 pub use nor_dumper::{
     DEFAULT_NOR_STUB_LOAD_ADDR, NOR_ALLOWED_WINDOWS, NOR_MAGIC_FOOTER, NOR_MAGIC_HEADER,
     NorDumpResult, build_readonly_nor_dumper_stub, decode_nor_dump_stream, validate_nor_dump_range,
+};
+pub use prog061_uart_monitor::{
+    OFF_UART_MONITOR_SLACK, PATCH_A2CD_UART_MONITOR, PROG061_UART_MONITOR_VA,
+    UART_MONITOR_MAX_SLACK_BYTES, build_prog061_uart_monitor_payload,
 };

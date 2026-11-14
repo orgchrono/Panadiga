@@ -203,19 +203,21 @@ Muitos entusiastas utilizam gravadores Panasonic DIGA como **Time Base Corrector
 
 Para eliminar a subutilização do microcontrolador **Raspberry Pi Pico (RP2040 / RP2350)** na bancada (`COM10`), o firmware C11 em `firmware/pico-p7501/` e o workspace Rust (`panadiga-core` + `panadiga-mcp`, agora com **`17` ferramentas MCP**) consolidam as soluções das 4 frentes críticas:
 
-1. **Destravamento Pré-MAIN (`SDDIAG -91006` / `CDDIAG 0x83A7`):**
-   * `DIGADIAG.FRM` (`panadiga_bgo_unbrick`) cabe dentro do teto estrito de `131.072` B (`0x20000`), mantendo o stub compacto com checksum Adler-32 strided válido em `0x50400000` após bypass de `0x504230F0`, `0x50405097` e chamada à rotina órfã `nfrom_format` (`0x50401F3C`).
+1. **Destravamento Pré-MAIN (`SDDIAG -91006` / `CDDIAG 0x83A7`) & Monitor `PANAMON1`:**
+   * `DIGADIAG.FRM` (`panadiga_bgo_unbrick`) cabe dentro do teto estrito de `131.072` B (`0x20000`), mantendo checksum Adler-32 strided válido em `0x50400000` nos modos `inspect`, `bypass_only`, `auto_format` (`0x50401F3C`) e **`uart_monitor`** (menu interativo **`PANAMON1>[B/F/D/Q]`** em `0x50439494` permitindo `B`=bypass BGO, `F`=executar `nfrom_format`, `D`=dump de 8 MB NOR em `0x84000000`, `Q`=abortar).
    * Requer barramento SD de 4 linhas (`DAT0..DAT3` entre `P6801` e `P53501`) íntegro na 2ª consulta `GetSD_Status` pós-`ACMD6`; caso `SW_OPT_BOOT` (`P65` / `DR_POWER_ON`) ou o pickup óptico (`0x83A7`) impeça `CDDIAG`, `SDDIAG` via `JIG:2500` permanece a rota primária sem dessolda.
-2. **Protocolo `_dev_SERIAL` (`0x574F0775`) & Execução Autônoma no Pico (`PANARSP`):**
-   * O Pico agora executa nativamente sobre a PIO1 (`115200 8N1`, TX `GP4`, RX `GP2`, `SW_UART` `GP26`, `XRESET` `GP5`, `NSW5V` Hi-Z `GP3`) os novos comandos autônomos de **`PANARSP`**:
+2. **Protocolo `_dev_SERIAL` (`0x574F0775`) & Execução Autônoma no Pico (`PANARSP` + `DIAGWATCH`):**
+   * O Pico agora executa nativamente sobre a PIO1 (`115200 8N1`, TX `GP4`, RX `GP2`, `SW_UART` `GP26`, `XRESET` `GP5`, `NSW5V` Hi-Z `GP3`) os comandos autônomos de **`PANARSP`** e **`DIAGWATCH`**:
      * **Handshake 4-byte (`MAGIC`):** envia `0x0E, 0x02, 0x02, 0x04` (avançando a máquina de estados `0x515B2E60` de `0 -> 4`) seguido de `0x15` (`NAK`).
      * **`PANARSP WMEM:<addr_hex>,<data_hex>` & `PANARSP WRITE32:<addr_hex>,<u32_hex>`:** constrói e transmite quadros GDB RSP `$M<addr>,<len>:<hex>#<csum>` diretamente da CLI do Pico sem exigir PC/Python externo.
+     * **`PANARSP DUMPNOR [<addr_hex> [<len_hex>]]` (`DUMPNOR:<start>,<len>`):** monta autonomamente os `162` B do stub read-only `PANADMP1..PANADONE`, faz upload em `0x51800000` via `$M`, redireciona `0x515B2E40 -> 0x51800000`, dispara `$g#67` e faz stream binário pela USB CDC.
      * **`PANARSP CALL:<addr_hex>`:** executa o handshake + `0x15`, grava `<addr_hex>` (32 bits LE) no ponteiro do callback serial registrado **`0x515B2E40`** (`DEV_SERIAL_CALLBACK_VA`, alternativamente ao contexto salvo de ISR em `0x5316AE8C` + offset `0x64`) via `$M515B2E40,4:<le_hex>#<xx>`, e envia `$g#67` para acionar a rotina alvo em RAM (como `0x50401F3C` ou o dumper em `0x51800000`).
      * **`PANARSP PASSTHROUGH`:** transmite sequencialmente o handshake + `0x15` e os 3 quadros `$M` que configuram o **`MAIN` (`EH55_MAIN_3410PQ.bin`, base VA `0x57000000`)** para operação AV TBC (`E-E`) contínua mesmo sem ODD:
        * `0x5771ABFB` (`+0x0071ABFB`, 6 B, controle de status do painel frontal): `80 01 F0 FC CB CB` → `$M5771ABFB,6:8001f0fccbcb#7a`.
        * `0x574F7B8C` (`+0x004F7B8C`, 4 B, desvio de estado do ODD): `CC D0 00 CB` (`jmp16 +0x00D0 -> 0x574F7C5C; nop`) → `$M574F7B8C,4:ccd000cb#40`.
        * `0x574F7C5C` (`+0x004F7C5C`, 7 B, status de inicialização do ODD): `80 00 CB CB CB CB CB` (`clr d0; nop x5`) → `$M574F7C5C,7:8000cbcbcbcbcb#63`.
+     * **`DIAGWATCH [ms] [NORMAL|JIG[:ms]|NOPULL] [AUTO|BYPASS|FORMAT|DUMP|NONE] [RELEASE|HOLD]`:** watchdog autônomo na PIO1 que libera `SW_UART` (`GP26` Hi-Z) imediatamente ao detectar `DDR CHECK: OK` (habilitando `Q7514`), classifica eventos `SDDIAG (-91006/-90002)`, `CDDIAG (80040904/83A7)` e `BGO` (`U99`), e envia `'B'`, `'F'` ou `'D'` ao aparecer `PANAMON1>`.
 3. **Módulo Rust `main_passthrough.rs` & Ferramenta MCP #17 (`panadiga_main_passthrough`):**
    * O crate `panadiga-core::re::main_passthrough` inspeciona/aplica os 3 sítios acima em imagens `EH55_MAIN_3410PQ.bin` (com reversão segura para `FACTORY_ORIGINAL`) e gera planos `rsp_plan` exatos para a bancada Pico via ferramenta MCP **`panadiga_main_passthrough`**.
-4. **Leitura Segura de 8 MB NOR + Recuperação BGO (`0x84000000` / `0x84200000..0x843FFFFF`):**
-   * Unificação da janela read-only `0x84000000` (`panadiga_nor_dumper_stub` + Pico `DUMP` / `PANARSP XMEM`) e validação BGO (`panadiga_bgo_unbrick`), preservando integralmente o bootloader IPL sem tocar em setores fora de escopo.
+4. **Leitura Segura de 8 MB NOR + Geometria BGO (`0x84000000` / `0x84200000..0x843FFFFF`):**
+   * Unificação da janela read-only `0x84000000` (`panadiga_nor_dumper_stub`, Pico `PANARSP XMEM`/`DUMPNOR`, `FLASH_SIZE` e `INJECT_LOADER [UNCACHED] CONFIRM`) + geometria da partição BGO (`0x84200000..0x843FFFFF`, `32 x 64 KB`), preservando integralmente o bootloader IPL sem tocar em setores fora de escopo.

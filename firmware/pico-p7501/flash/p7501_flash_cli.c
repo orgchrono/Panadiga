@@ -25,8 +25,8 @@ void p7501_flash_cmd_autodetect(const char *arg) {
         printf("[AUTODETECT] ERROR: No synchronous monitor online (DCSR=0xFFFFFFFF). Flash geometry unknown.\n");
         return;
     }
-    printf("[AUTODETECT] Passive Address Aliasing Probe: %" PRIu32 " MB NOR Flash detected (EEMUL NVRAM @ 0x%08" PRIX32 ").\n",
-           geo.mb, geo.nvram_base);
+    printf("[AUTODETECT] Passive Address Aliasing Probe: %" PRIu32 " MB NOR Flash detected (EEMUL NVRAM @ 0x%08" PRIX32 " / Uncached 0x%08" PRIX32 ").\n",
+           geo.mb, geo.nvram_base, geo.hw_nvram_base);
 }
 
 void p7501_flash_cmd_cfi(const char *arg) {
@@ -40,11 +40,22 @@ void p7501_flash_cmd_cfi(const char *arg) {
     }
 }
 
+static void flash_print_geometry_summary(const char *prefix, const p7501_flash_geometry_t *geo) {
+    printf("%s %" PRIu32 " MB (0x%08" PRIX32 ") | GDB NVRAM: 0x%08" PRIX32 "..0x%08" PRIX32
+           " | Uncached NOR: 0x%08" PRIX32 " (NVRAM 0x%08" PRIX32 "..0x%08" PRIX32 ")\n",
+           prefix, geo->mb, geo->bytes,
+           geo->nvram_base, geo->nvram_end - 1UL,
+           geo->hw_uncached_base, geo->hw_nvram_base, geo->hw_nvram_end - 1UL);
+    if (geo->bgo_sector_count > 0U) {
+        printf("[FLASH_GEO] BGO/[nfrom]: 0x%08" PRIX32 "..0x%08" PRIX32 " (%" PRIu32 " x 64 KB)\n",
+               geo->bgo_hw_base, geo->bgo_hw_end - 1UL, geo->bgo_sector_count);
+    }
+}
+
 void p7501_flash_cmd_size(const char *arg) {
     if ((arg == NULL) || (*arg == '\0')) {
         const p7501_flash_geometry_t geo = p7501_flash_get_geometry(gdb_rsp_get_flash_size());
-        printf("[FLASH_SIZE] Active: %" PRIu32 " MB (0x%08" PRIX32 ") | EEMUL NVRAM: 0x%08" PRIX32 "..0x%08" PRIX32 "\n",
-               geo.mb, geo.bytes, geo.nvram_base, geo.nvram_end - 1UL);
+        flash_print_geometry_summary("[FLASH_SIZE] Active:", &geo);
         return;
     }
 
@@ -54,24 +65,25 @@ void p7501_flash_cmd_size(const char *arg) {
     }
     if (gdb_rsp_set_flash_size(req)) {
         const p7501_flash_geometry_t geo = p7501_flash_get_geometry(req);
-        printf("[FLASH_SIZE] Configured %" PRIu32 " MB | EEMUL NVRAM: 0x%08" PRIX32 "..0x%08" PRIX32 "\n",
-               geo.mb, geo.nvram_base, geo.nvram_end - 1UL);
+        flash_print_geometry_summary("[FLASH_SIZE] Configured:", &geo);
     } else {
         printf("[FLASH_SIZE] ERROR: Unsupported size. Valid values: 2, 4, 8, 16 (MB).\n");
     }
 }
 
 void p7501_flash_cmd_inject_loader(const char *arg) {
-    if (!p7501_ascii_ieq(arg, "CONFIRM")) {
-        printf("[SAFETY INTERLOCK] Pass CONFIRM to inject AM34 SRAM loader: INJECT_LOADER CONFIRM\n");
+    const bool use_uncached = p7501_ascii_ieq(arg, "UNCACHED CONFIRM");
+    if (!use_uncached && !p7501_ascii_ieq(arg, "CONFIRM")) {
+        printf("[SAFETY INTERLOCK] Pass CONFIRM (or UNCACHED CONFIRM for 0x84000000): INJECT_LOADER [UNCACHED] CONFIRM\n");
         return;
     }
 
     p7501_led_set_auto_mode(LED_MODE_BUS_ACTIVE);
-    const p7501_status_t rc = ram_loader_inject_for_flash_size(
+    const p7501_status_t rc = ram_loader_inject_aperture(
         AM34_SRAM_LOADER_BASE_ADDR,
         true,
-        gdb_rsp_get_flash_size()
+        gdb_rsp_get_flash_size(),
+        use_uncached
     );
     p7501_led_set_auto_mode(LED_MODE_HEARTBEAT_IDLE);
 

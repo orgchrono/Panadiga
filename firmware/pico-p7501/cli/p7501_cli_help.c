@@ -48,7 +48,8 @@ void p7501_cli_print_help(void) {
     printf("  BRIDGE [baud] [NORMAL|JIG[:ms]|NOPULL]   - Raw USB-CDC <-> SC0 passthrough (~~~ exit)\n");
     printf("  PWRTRACE [ms] [boot]                 - Boot ADC0 rail & NSW5V/RXD/TXD glitch logger\n");
     printf("  PIOLOGIC [ms] [boot] [khz]           - PIO0 4-ch (GP2..5) edge & FMU timing sampler\n");
-    printf("  PANARSP [ms] [boot] [WAIT:x] <act>   - MAIN _dev_SERIAL RSP (MEM/WMEM/WRITE32/PASSTHROUGH/CALL)\n");
+    printf("  PANARSP [ms] [boot] [WAIT:x] <act>   - MAIN _dev_SERIAL RSP (MEM/WMEM/DUMPNOR/PASSTHROUGH/CALL)\n");
+    printf("  DIAGWATCH [ms] [boot] [act] [rel]    - Autonomous SC0 boot watchdog & PANAMON1 trigger\n");
     printf("  FMUSCAN / FMUTEST / FMUBATCH         - Bootrom FMU handshake sweep & batch probes\n");
     printf("  PINCHECK / BUSDIAG / SNIFF           - 6-pin electrical matrix & NSW5V Hi-Z guard\n");
     printf("  ISOLATE / ENGAGE / RESET             - Hi-Z isolate / TX idle HIGH / XRESET pulse\n");

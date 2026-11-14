@@ -59,7 +59,8 @@ typedef enum p7501_pana_rsp_action {
     PANA_RSP_ACT_WMEM,
     PANA_RSP_ACT_WRITE32,
     PANA_RSP_ACT_PASSTHROUGH,
-    PANA_RSP_ACT_CALL
+    PANA_RSP_ACT_CALL,
+    PANA_RSP_ACT_DUMPNOR
 } p7501_pana_rsp_action_t;
 
 typedef struct p7501_pana_rsp_spec {
