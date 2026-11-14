@@ -41,8 +41,11 @@ add_executable(panasonic_p7501_uart
     diag/p7501_diag_bus.c
     diag/p7501_diag_busdiag.c
     diag/p7501_diag_pwrtrace.c
+    diag/p7501_diag_boottrace.c
     diag/p7501_piologic_codec.c
     diag/p7501_diag_piologic.c
+    diag/p7501_jigsweep_codec.c
+    diag/p7501_diag_jigsweep.c
     flash/p7501_flash_cli.c
     uart/p7501_uart_bitbang.c
     uart/p7501_uart_codec.c

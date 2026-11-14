@@ -628,15 +628,48 @@
           "normal3": "3s NORMAL"
         }
       },
+      "BOOTTRACE": {
+        "label": "Perfilador Correlacionado Boot",
+        "description": "Funde stream UART PIO1 timestampado, eventos GP3/GP4/GP5 sem saturação e rail ADC0 (GP26) em única captura.",
+        "arg_label": "Janela & Boot",
+        "arg_placeholder": "4500 JIG:2500",
+        "options": {
+          "jig2500": "4.5s JIG:2500",
+          "normal4500": "4.5s NORMAL"
+        }
+      },
+      "FRAMING": {
+        "label": "Framing UART PIO1 (8N1/8E1/8O1)",
+        "description": "Configura ou consulta paridade por hardware (zero instruções PIO extras) na máquina RX/TX PIO1.",
+        "arg_label": "Modo Framing",
+        "arg_placeholder": "8N1",
+        "options": {
+          "8n1": "8N1 (Padrão SC0)",
+          "8e1": "8E1 (AMOBP Par)",
+          "8o1": "8O1 (Ímpar)"
+        }
+      },
       "PIOLOGIC": {
         "label": "Amostrador Lógico PIO0 4 Canais",
-        "description": "Captura bordas simultâneas GP2/GP3/GP4/GP5 em PIO0 (até 2 MHz) sem polling de CPU mantendo GP3 NSW5V em Hi-Z.",
+        "description": "Captura bordas simultâneas GP2/GP3/GP4/GP5 em PIO0 (até 2 MHz) com filtro opcional CTRL anti-saturação.",
         "arg_label": "Janela & Boot",
         "arg_placeholder": "4000 JIG:350",
         "options": {
           "jig4": "4s JIG:350 (1MHz)",
+          "jig2500ctrl": "4s JIG:2500 CTRL",
           "normal4": "4s NORMAL",
           "passive2": "2s Passivo"
+        }
+      },
+      "JIGSWEEP": {
+        "label": "Sweep Latch SW_UART & Pre-DDR",
+        "description": "Mapeia janela exata de latch P50 (HOLD/DELAY) e sonda janela 0..10ms pré-DDR (8E1 AMOBP / BREAK / ESC).",
+        "arg_label": "Modo Sweep",
+        "arg_placeholder": "HOLD",
+        "options": {
+          "hold": "HOLD Sweep",
+          "delay": "DELAY Sweep",
+          "preboot": "PREBOOT Sweep"
         }
       },
       "PANARSP": {

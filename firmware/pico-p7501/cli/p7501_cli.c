@@ -29,6 +29,8 @@
 #include "uart/p7501_uart_tx.h"
 #include "uart/p7501_pana_rsp.h"
 #include "diag/p7501_diag_pwrtrace.h"
+#include "diag/p7501_diag_boottrace.h"
+#include "diag/p7501_jigsweep_codec.h"
 #include "diag/p7501_piologic_codec.h"
 #include "hal/p7501_hw.h"
 #include "hal/p7501_led.h"
@@ -228,13 +230,16 @@ static const p7501_cli_cmd_entry_t k_cli_commands[] = {
     { "RESET",         cli_cmd_reset_pulse },
     { "LED",           cli_cmd_led },
     { "BAUD",          p7501_cmd_baud },
+    { "FRAMING",       p7501_cmd_framing },
     { "BAUDSCAN",      p7501_cmd_baudscan },
     { "UARTSTREAM",    p7501_cmd_uart_stream },
     { "HEXCAP",        p7501_cmd_hexcap },
     { "UARTTXHEX",     p7501_cmd_uart_tx_hex },
     { "WAITTX",        p7501_cmd_waittx },
     { "PWRTRACE",      p7501_cmd_pwrtrace },
+    { "BOOTTRACE",     p7501_cmd_boottrace },
     { "PIOLOGIC",      p7501_cmd_piologic },
+    { "JIGSWEEP",      p7501_cmd_jigsweep },
     { "PANARSP",       p7501_cmd_pana_rsp },
     { "DIAGWATCH",     p7501_cmd_diag_watch },
     { "BRIDGE",        p7501_cmd_bridge },

@@ -19,7 +19,6 @@ version = "0.1.0"
 edition = "2024"
 authors = ["Antigravity Systems Engineering Team"]
 license = "MIT"
-repository = "https://github.com/danie/Panadiga"
 
 [workspace.dependencies]
 anyhow = "1.0"

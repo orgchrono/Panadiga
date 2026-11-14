@@ -38,16 +38,19 @@ void p7501_cli_print_banner(void) {
 void p7501_cli_print_help(void) {
     printf("\n--- Panadiga P7501 Bench CLI Commands ---\n");
     printf("  PING / STATUS / VDD                  - Heartbeat & GP26 ADC0 SW_UART sense\n");
-    printf("  BOOTCAP / UARTMON / JIGBOOT          - Legacy 115200 8N1 boot/passive RX capture\n");
-    printf("  UARTSEND / UARTPROBE                 - Legacy P7501 TX (Q7514 Hi-Z default) & probe\n");
-    printf("  BAUD [bps] / BAUDSCAN [ms] [b] [APPLY] - PIO1 multi-baud & GP2 autobaud detector\n");
+    printf("  BOOTCAP / UARTMON / JIGBOOT          - PIO1 boot/passive/smart-JIG RX capture\n");
+    printf("  UARTSEND / UARTPROBE                 - PIO1 P7501 TX (Q7514 Hi-Z default) & probe\n");
+    printf("  BAUD [bps] / FRAMING [8N1|8E1|8O1]   - PIO1 baudrate & hardware parity framing\n");
+    printf("  BAUDSCAN [ms] [boot] [APPLY]         - GP2 pulse-width autobaud detector\n");
     printf("  UARTSTREAM [ms] [NORMAL|JIG[:ms]|NOPULL] - Live non-blocking PIO1 RX stream\n");
     printf("  HEXCAP [ms] [NORMAL|JIG[:ms]|NOPULL]     - Microsecond-delta hex+ASCII RX capture\n");
     printf("  UARTTXHEX [LOW:]<hex|BRK> [rx_ms]    - PIO1 arbitrary hex / 120ms BREAK inject\n");
     printf("  WAITTX <ms> <boot> \"<trig>\" <hex|BRK> [post] - Triggered TX inject on match\n");
     printf("  BRIDGE [baud] [NORMAL|JIG[:ms]|NOPULL]   - Raw USB-CDC <-> SC0 passthrough (~~~ exit)\n");
     printf("  PWRTRACE [ms] [boot]                 - Boot ADC0 rail & NSW5V/RXD/TXD glitch logger\n");
-    printf("  PIOLOGIC [ms] [boot] [khz]           - PIO0 4-ch (GP2..5) edge & FMU timing sampler\n");
+    printf("  BOOTTRACE [ms] [boot]                - Correlated PIO1 UART + GP3..5 + ADC0 profiler\n");
+    printf("  PIOLOGIC [ms] [boot] [khz] [CTRL]    - PIO0 4-ch (GP2..5) edge & FMU timing sampler\n");
+    printf("  JIGSWEEP [HOLD|DELAY|PREBOOT] [ms..] - SW_UART latch window & pre-DDR Bootrom sweep\n");
     printf("  PANARSP [ms] [boot] [WAIT:x] <act>   - MAIN _dev_SERIAL RSP (MEM/WMEM/DUMPNOR/PASSTHROUGH/CALL)\n");
     printf("  DIAGWATCH [ms] [boot] [act] [rel]    - Autonomous SC0 boot watchdog & PANAMON1 trigger\n");
     printf("  FMUSCAN / FMUTEST / FMUBATCH         - Bootrom FMU handshake sweep & batch probes\n");

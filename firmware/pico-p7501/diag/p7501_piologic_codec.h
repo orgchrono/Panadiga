@@ -45,11 +45,19 @@ typedef struct p7501_logic_stats {
     uint32_t reset_to_first_rxd_us;
 } p7501_logic_stats_t;
 
-/** Parse `PIOLOGIC [ms] [NORMAL|JIG[:ms]|NOPULL] [sample_khz]`. */
+/** Parse `PIOLOGIC [ms] [NORMAL|JIG[:ms]|NOPULL] [sample_khz] [CTRL]`. */
 void p7501_logic_parse_args(
     const char *arg,
     p7501_window_boot_spec_t *out_boot,
     uint32_t *out_sample_khz
+);
+
+/** Extended `PIOLOGIC` parser supporting `CTRL` (skip GP2 data chatter after first RXD fall). */
+void p7501_logic_parse_args_ex(
+    const char *arg,
+    p7501_window_boot_spec_t *out_boot,
+    uint32_t *out_sample_khz,
+    bool *out_ctrl_only
 );
 
 /** Analyze recorded state transitions across GP2..GP5 and derive FMU/boot timing metrics. */

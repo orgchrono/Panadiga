@@ -628,15 +628,48 @@
           "normal3": "3s NORMAL"
         }
       },
+      "BOOTTRACE": {
+        "label": "Correlated Boot Profiler",
+        "description": "Fuses timestamped PIO1 UART lines, GP3/GP4/GP5 control-pin edge events without GP2 overflow, and GP26 ADC0 rail monitoring.",
+        "arg_label": "Window & Boot",
+        "arg_placeholder": "4500 JIG:2500",
+        "options": {
+          "jig2500": "4.5s JIG:2500",
+          "normal4500": "4.5s NORMAL"
+        }
+      },
+      "FRAMING": {
+        "label": "PIO1 UART Framing (8N1/8E1/8O1)",
+        "description": "Queries or configures hardware-timed parity framing (zero extra PIO slots) on PIO1 RX/TX state machines.",
+        "arg_label": "Framing Mode",
+        "arg_placeholder": "8N1",
+        "options": {
+          "8n1": "8N1 (Default SC0)",
+          "8e1": "8E1 (AMOBP Even)",
+          "8o1": "8O1 (Odd Parity)"
+        }
+      },
       "PIOLOGIC": {
         "label": "4-Ch PIO0 Logic Edge Sampler",
-        "description": "Captures simultaneous GP2/GP3/GP4/GP5 edges on PIO0 (up to 2 MHz) without CPU polling while keeping GP3 NSW5V strictly Hi-Z.",
+        "description": "Captures simultaneous GP2/GP3/GP4/GP5 edges on PIO0 (up to 2 MHz) with optional CTRL filter while keeping GP3 NSW5V strictly Hi-Z.",
         "arg_label": "Window & Boot",
         "arg_placeholder": "4000 JIG:350",
         "options": {
           "jig4": "4s JIG:350 (1MHz)",
+          "jig2500ctrl": "4s JIG:2500 CTRL",
           "normal4": "4s NORMAL",
           "passive2": "2s Passive"
+        }
+      },
+      "JIGSWEEP": {
+        "label": "SW_UART Latch & Pre-DDR Sweep",
+        "description": "Maps exact P50 hardware latch window (HOLD/DELAY) and probes 0..10ms pre-DDR boot handshakes (8E1 AMOBP / BREAK / ESC).",
+        "arg_label": "Sweep Mode",
+        "arg_placeholder": "HOLD",
+        "options": {
+          "hold": "HOLD Sweep",
+          "delay": "DELAY Sweep",
+          "preboot": "PREBOOT Sweep"
         }
       },
       "PANARSP": {

@@ -15,6 +15,9 @@ extern "C" {
 /** Query or set PIO1 RX/TX baudrate (`BAUD [bps]`). */
 void p7501_cmd_baud(const char *arg);
 
+/** Query or set PIO1 RX/TX parity framing (`FRAMING [8N1|8E1|8O1]`). */
+void p7501_cmd_framing(const char *arg);
+
 /** Measure GP2 pulse widths during boot/window and snap to standard baudrate (`BAUDSCAN [ms] [boot] [APPLY]`). */
 void p7501_cmd_baudscan(const char *arg);
 

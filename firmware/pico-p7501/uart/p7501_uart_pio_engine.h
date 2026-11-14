@@ -19,6 +19,8 @@ extern "C" {
 
 uint32_t p7501_pio_get_baud(void);
 bool p7501_pio_set_baud(uint32_t baud);
+p7501_uart_framing_t p7501_pio_get_framing(void);
+bool p7501_pio_set_framing(p7501_uart_framing_t framing);
 
 void p7501_pio_enforce_nsw5v_hiz(void);
 void p7501_pio_set_sw_uart(bool drive_low);
@@ -37,6 +39,9 @@ bool p7501_pio_poll_jig_serial_release(
 void p7501_pio_end_session(void);
 
 bool p7501_pio_pop_rx_byte(uint8_t *out_byte);
+bool p7501_pio_pop_rx_byte_ex(uint8_t *out_byte, bool *out_parity_err);
+uint32_t p7501_pio_get_and_clear_parity_errors(void);
+void p7501_pio_drain_rx(void);
 bool p7501_pio_poll_and_clear_framing_err(void);
 bool p7501_pio_had_rx_overflow(void);
 

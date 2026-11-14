@@ -18,6 +18,9 @@ jobs:
   quality-gates-windows:
     name: Full 9 Quality Gates & Release (Windows)
     runs-on: windows-latest
+    env:
+      PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}\ms-playwright
+      CARGO_PROFILE_RELEASE_LTO: "false"
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -44,16 +47,30 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install Desktop UI Dependencies & Playwright
+      - name: Cache Playwright Chromium Browser
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}\ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('apps/desktop/package-lock.json') }}
+
+      - name: Install Desktop UI Dependencies
         working-directory: apps/desktop
-        run: |
-          npm ci
-          npx playwright install --with-deps chromium
+        run: npm ci
+
+      - name: Install Playwright Chromium (on cache miss)
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        working-directory: apps/desktop
+        run: npx playwright install --with-deps chromium
+
+      - name: Cache Python Quality Tools Wheels
+        uses: actions/cache@v4
+        with:
+          path: ~\AppData\Local\pip\Cache
+          key: pip-${{ runner.os }}-py311-mypy-pytest-matplotlib
 
       - name: Install Python Quality Tools
-        run: |
-          python -m pip install --upgrade pip
-          pip install mypy pytest matplotlib
+        run: python -m pip install --prefer-binary mypy pytest matplotlib
 
       - name: Execute Full 9 Commit Quality Gates & Windows Release Build
         run: .\build.cmd --ci --desktop --strict-toolchains

@@ -7,7 +7,7 @@ license.workspace = true
 description = "Tauri 2 Desktop (Windows/Linux/macOS) & Android Mobile Workbench for Panadiga"
 
 [lib]
-name = "panadiga"
+name = "panadiga_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [[bin]]

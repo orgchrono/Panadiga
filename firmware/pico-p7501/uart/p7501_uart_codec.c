@@ -101,3 +101,78 @@ bool p7501_rolling_match_push(
     }
     return memcmp(ring + (*ring_len - nlen), needle, nlen) == 0;
 }
+
+bool p7501_parse_framing(const char *token, p7501_uart_framing_t *out) {
+    if (token == NULL || out == NULL) {
+        return false;
+    }
+    if (p7501_ascii_ieq(token, "8N1")) {
+        *out = P7501_FRAMING_8N1;
+        return true;
+    }
+    if (p7501_ascii_ieq(token, "8E1")) {
+        *out = P7501_FRAMING_8E1;
+        return true;
+    }
+    if (p7501_ascii_ieq(token, "8O1")) {
+        *out = P7501_FRAMING_8O1;
+        return true;
+    }
+    return false;
+}
+
+const char *p7501_framing_name(p7501_uart_framing_t framing) {
+    switch (framing) {
+        case P7501_FRAMING_8E1:
+            return "8E1";
+        case P7501_FRAMING_8O1:
+            return "8O1";
+        case P7501_FRAMING_8N1:
+        default:
+            return "8N1";
+    }
+}
+
+uint8_t p7501_uart_even_parity_bit(uint8_t byte) {
+    uint8_t x = byte;
+    x ^= (uint8_t)(x >> 4u);
+    x ^= (uint8_t)(x >> 2u);
+    x ^= (uint8_t)(x >> 1u);
+    return (uint8_t)(x & 1u);
+}
+
+uint32_t p7501_uart_encode_tx_word(uint8_t byte, p7501_uart_framing_t framing) {
+    if (framing == P7501_FRAMING_8N1) {
+        return (uint32_t)byte;
+    }
+    const uint8_t even_p = p7501_uart_even_parity_bit(byte);
+    const uint8_t pbit = (framing == P7501_FRAMING_8O1) ? (uint8_t)(even_p ^ 1u) : even_p;
+    return (uint32_t)byte | ((uint32_t)pbit << 8u);
+}
+
+void p7501_uart_decode_rx_word(
+    uint32_t raw_isr_msb,
+    p7501_uart_framing_t framing,
+    uint8_t *out_byte,
+    bool *out_parity_ok
+) {
+    if (framing == P7501_FRAMING_8N1) {
+        if (out_byte != NULL) {
+            *out_byte = (uint8_t)(raw_isr_msb >> 24u);
+        }
+        if (out_parity_ok != NULL) {
+            *out_parity_ok = true;
+        }
+        return;
+    }
+    const uint8_t byte = (uint8_t)((raw_isr_msb >> 23u) & 0xFFu);
+    const uint8_t rx_p = (uint8_t)((raw_isr_msb >> 31u) & 1u);
+    const uint8_t exp_even = p7501_uart_even_parity_bit(byte);
+    const uint8_t exp_p = (framing == P7501_FRAMING_8O1) ? (uint8_t)(exp_even ^ 1u) : exp_even;
+    if (out_byte != NULL) {
+        *out_byte = byte;
+    }
+    if (out_parity_ok != NULL) {
+        *out_parity_ok = (rx_p == exp_p);
+    }
+}

@@ -15,6 +15,9 @@ extern "C" {
 /** Trace SW_UART ADC0 voltage min/max and NSW5V/RXD/TXD transitions during boot (`PWRTRACE [ms] [boot]`). */
 void p7501_cmd_pwrtrace(const char *arg);
 
+/** Sample GP26 ADC0 voltage when pin is Hi-Z ADC0 and update running min/max bounds. */
+void p7501_diag_sample_adc0_minmax(float *min_v, float *max_v);
+
 #ifdef __cplusplus
 }
 #endif

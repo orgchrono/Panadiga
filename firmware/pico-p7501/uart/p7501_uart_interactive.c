@@ -1,19 +1,24 @@
 /**
  * @file p7501_uart_interactive.c
- * @brief Interactive P7501 TX/RX and BREAK probes (`UARTSEND`, `UARTPROBE`).
+ * @brief Interactive P7501 PIO1 TX/RX and BREAK probes (`UARTSEND`, `UARTPROBE`).
  *
  * @standard ISO/IEC 9899:2011 (C11)
  */
 
 #include "uart/p7501_uart_interactive.h"
-#include "uart/p7501_uart_capture.h"
+#include "hal/p7501_hw.h"
+#include "hal/p7501_led.h"
 #include "uart/p7501_uart_bitbang.h"
+#include "uart/p7501_uart_capture.h"
+#include "uart/p7501_uart_codec.h"
+#include "uart/p7501_uart_pio_engine.h"
 
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "pico/stdlib.h"
+#include "pico/time.h"
 #include "hardware/gpio.h"
 
 void p7501_cmd_uart_send(const char *arg) {
@@ -33,67 +38,105 @@ void p7501_cmd_uart_send(const char *arg) {
         snprintf(tx_str, sizeof(tx_str), "\r\n");
     }
 
-    p7501_uart_configure_pins(sw_uart_out_low, true, true, false);
-    sleep_us(200U);
-
-    const size_t slen = strlen(tx_str);
-    p7501_uart_tx_bytes((const uint8_t *)tx_str, slen, 20U);
+    p7501_led_set_auto_mode(LED_MODE_BUS_ACTIVE);
+    p7501_pio_begin_rx_session(P7501_BOOT_ACTION_PASSIVE);
+    p7501_pio_drain_rx();
+    p7501_pio_tx_bytes((const uint8_t *)tx_str, strlen(tx_str), sw_uart_out_low);
 
     uint8_t *rx_buf = p7501_uart_rx_buffer(NULL);
     const uint32_t rx_len = p7501_uart_capture_window(2500000UL, 4096U);
-    p7501_uart_restore_default_state();
+    const uint32_t perr = p7501_pio_get_and_clear_parity_errors();
+    p7501_pio_end_session();
+    p7501_led_set_auto_mode(LED_MODE_HEARTBEAT_IDLE);
 
     printf(
-        "\n=== UARTSEND REPLY (%" PRIu32 " bytes, SW_UART=%s) ===\n",
+        "\n=== UARTSEND PIO1 REPLY (%" PRIu32 " bytes, %s @ %" PRIu32 ", SW_UART=%s, perr=%" PRIu32 ") ===\n",
         rx_len,
-        sw_uart_out_low ? "LOW" : "Hi-Z"
+        p7501_framing_name(p7501_pio_get_framing()),
+        p7501_pio_get_baud(),
+        sw_uart_out_low ? "LOW" : "Hi-Z",
+        perr
     );
     p7501_uart_print_ascii_stream(rx_buf, rx_len);
     printf("\nUARTSEND: OK\n");
 }
 
 void p7501_cmd_uart_probe(const char *arg) {
-    uint32_t pmode = 5U;
-    if ((arg != NULL) && (*arg != '\0')) {
-        pmode = (uint32_t)atoi(arg);
-    }
-
+    const uint32_t pmode = (arg != NULL && *arg != '\0') ? (uint32_t)atoi(arg) : 5U;
     const bool sw_uart_low = ((pmode == 5U) || (pmode == 6U) || (pmode == 7U));
     const bool start_sdata_low = ((pmode == 7U) || (pmode == 8U) || (pmode == 2U));
-    p7501_uart_configure_pins(sw_uart_low, true, !start_sdata_low, false);
-    p7501_uart_pulse_reset_and_settle();
 
-    uint8_t *rx_buf = p7501_uart_rx_buffer(NULL);
+    p7501_led_set_auto_mode(LED_MODE_BUS_ACTIVE);
+    /* Start PIO1 RX passively first so XRESET release edges and earliest bytes never drop. */
+    p7501_pio_begin_rx_session(P7501_BOOT_ACTION_PASSIVE);
+    p7501_pio_set_sw_uart(sw_uart_low);
+    if (start_sdata_low) {
+        gpio_init(P7501_PIN_TXD);
+        gpio_put(P7501_PIN_TXD, false);
+        gpio_set_dir(P7501_PIN_TXD, GPIO_OUT);
+    }
+    sleep_ms(5U);
+    p7501_pio_pulse_xreset_ms(15U);
+
+    size_t rx_cap = 0U;
+    uint8_t *rx_buf = p7501_uart_rx_buffer(&rx_cap);
     uint32_t rx_len = 0U;
-    const uint32_t t0_us = time_us_32();
-    bool prev_high = gpio_get(P7501_PIN_RXD);
-    bool break_released = false;
-    uint32_t last_probe_us = 0U;
+    uint32_t ferr = 0U;
+    uint8_t ring[24];
+    size_t ring_len = 0U;
+    bool sw_released = !sw_uart_low;
+    uint32_t sw_rel_ms = 0U;
+    bool break_released = !start_sdata_low;
     uint8_t probe_idx = 0U;
     static const uint8_t probe_chars[8] = { '\r', '\n', ' ', '?', 0x1BU, 0x03U, 'd', '\r' };
 
-    while ((time_us_32() - t0_us) < 4500000UL) {
-        const uint32_t now_us = time_us_32();
-        if (((pmode == 7U) || (pmode == 8U)) && (!break_released) && ((now_us - t0_us) >= 550000UL)) {
-            gpio_put(P7501_PIN_TXD, true);
+    const uint64_t t0_us = time_us_64();
+    const absolute_time_t end_t = make_timeout_time_ms(4500U);
+    absolute_time_t next_probe_t = make_timeout_time_ms(150U);
+
+    while (!time_reached(end_t)) {
+        const uint32_t elapsed_ms = (uint32_t)((time_us_64() - t0_us) / 1000ULL);
+        if (!sw_released && elapsed_ms >= 350U) {
+            p7501_pio_release_sw_uart_now();
+            sw_released = true;
+            sw_rel_ms = elapsed_ms;
+        }
+        if (!break_released && elapsed_ms >= 550U) {
+            gpio_set_dir(P7501_PIN_TXD, GPIO_IN);
+            gpio_pull_up(P7501_PIN_TXD);
             break_released = true;
         }
-        if ((pmode == 6U) && ((now_us - t0_us) >= 150000UL) && ((now_us - last_probe_us) >= 80000UL)) {
-            if (prev_high) {
-                p7501_uart_tx_byte(probe_chars[probe_idx % 8U]);
-                probe_idx++;
-                last_probe_us = time_us_32();
+        if ((pmode == 6U) && sw_released && time_reached(next_probe_t)) {
+            const uint8_t ch = probe_chars[probe_idx % 8U];
+            p7501_pio_tx_bytes(&ch, 1U, false);
+            probe_idx++;
+            next_probe_t = make_timeout_time_ms(80U);
+        }
+        if (p7501_pio_poll_and_clear_framing_err()) {
+            ++ferr;
+        }
+        uint8_t byte = 0U;
+        while (p7501_pio_pop_rx_byte(&byte)) {
+            if (!sw_released &&
+                p7501_rolling_match_push(ring, &ring_len, sizeof(ring), byte, "serial boot mode")) {
+                p7501_pio_release_sw_uart_now();
+                sw_released = true;
+                sw_rel_ms = (uint32_t)((time_us_64() - t0_us) / 1000ULL);
+            }
+            if (rx_len < (rx_cap - 1U) && rx_len < 8192U) {
+                rx_buf[rx_len++] = byte;
             }
         }
-
-        if (!p7501_uart_poll_capture_byte(&prev_high, &rx_len, 8192U)) {
-            tight_loop_contents();
-        }
+        p7501_led_tick();
     }
 
-    p7501_uart_restore_default_state();
+    const uint32_t perr = p7501_pio_get_and_clear_parity_errors();
+    const bool ovf = p7501_pio_had_rx_overflow();
+    p7501_pio_end_session();
+    p7501_led_set_auto_mode(LED_MODE_HEARTBEAT_IDLE);
 
-    printf("\n=== UARTPROBE MODE %" PRIu32 " CAPTURE (%" PRIu32 " bytes) ===\n", pmode, rx_len);
+    printf("\n=== UARTPROBE PIO1 MODE %" PRIu32 " (bytes=%" PRIu32 ", sw_rel=%" PRIu32 "ms, ferr=%" PRIu32 ", perr=%" PRIu32 ", ovf=%s) ===\n",
+           pmode, rx_len, sw_rel_ms, ferr, perr, ovf ? "YES" : "NO");
     p7501_uart_print_ascii_stream(rx_buf, rx_len);
     printf("\nUARTPROBE: OK\n");
 }

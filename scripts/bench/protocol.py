@@ -25,13 +25,17 @@ SAFE_BENCH_COMMANDS: Final[tuple[str, ...]] = (
     "UARTPROBE",
     "UARTSEND",
     "BAUD",
+    "FRAMING",
     "BAUDSCAN",
     "UARTSTREAM",
     "HEXCAP",
     "UARTTXHEX",
     "WAITTX",
     "PWRTRACE",
+    "BOOTTRACE",
     "PIOLOGIC",
+    "JIGSWEEP",
+    "DIAGWATCH",
     "PANARSP",
 )
 

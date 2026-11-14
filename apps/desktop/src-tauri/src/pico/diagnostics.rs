@@ -129,6 +129,7 @@ pub fn compose_diagnostic_command(
             | "BAUD"
             | "BAUDSCAN"
             | "PWRTRACE"
+            | "BOOTTRACE"
             | "PIOLOGIC"
             | "PANARSP"
             | "WAITTX"

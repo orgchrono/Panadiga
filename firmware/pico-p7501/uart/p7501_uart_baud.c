@@ -24,7 +24,8 @@ void p7501_cmd_baud(const char *arg) {
     char tok[24] = {0};
 
     if (p7501_next_token(arg, tok, sizeof(tok)) == NULL || tok[0] == '\0') {
-        printf("[BAUD] Active PIO1 baud: %" PRIu32 " bps (8N1)\n", p7501_pio_get_baud());
+        printf("[BAUD] Active PIO1 baud: %" PRIu32 " bps (%s)\n",
+               p7501_pio_get_baud(), p7501_framing_name(p7501_pio_get_framing()));
         printf("BAUD: OK\n");
         return;
     }
@@ -39,9 +40,29 @@ void p7501_cmd_baud(const char *arg) {
         return;
     }
 
-    printf("[BAUD] PIO1 RX/TX configured for %" PRIu32 " bps (bit_ns=%" PRIu32 ").\n",
-           p7501_pio_get_baud(), p7501_baud_to_bit_ns(p7501_pio_get_baud()));
+    printf("[BAUD] PIO1 RX/TX configured for %" PRIu32 " bps (%s, bit_ns=%" PRIu32 ").\n",
+           p7501_pio_get_baud(),
+           p7501_framing_name(p7501_pio_get_framing()),
+           p7501_baud_to_bit_ns(p7501_pio_get_baud()));
     printf("BAUD: OK\n");
+}
+
+void p7501_cmd_framing(const char *arg) {
+    char tok[16] = {0};
+    if (p7501_next_token(arg, tok, sizeof(tok)) == NULL || tok[0] == '\0') {
+        printf("[FRAMING] Active PIO1 framing: %s (baud=%" PRIu32 ")\n",
+               p7501_framing_name(p7501_pio_get_framing()), p7501_pio_get_baud());
+        printf("FRAMING: OK\n");
+        return;
+    }
+    p7501_uart_framing_t next_framing = P7501_FRAMING_8N1;
+    if (!p7501_parse_framing(tok, &next_framing) || !p7501_pio_set_framing(next_framing)) {
+        printf("[FRAMING] ERROR: Unsupported framing '%s' (expected 8N1, 8E1, or 8O1).\n", tok);
+        return;
+    }
+    printf("[FRAMING] PIO1 RX/TX configured for %s @ %" PRIu32 " bps.\n",
+           p7501_framing_name(p7501_pio_get_framing()), p7501_pio_get_baud());
+    printf("FRAMING: OK\n");
 }
 
 void p7501_cmd_baudscan(const char *arg) {

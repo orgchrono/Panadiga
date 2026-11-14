@@ -7,6 +7,8 @@
 
 #include "tests/test_uart_codec.h"
 #include "tests/test_pana_logic.h"
+#include "diag/p7501_jigsweep_codec.h"
+#include "diag/p7501_piologic_codec.h"
 #include "uart/p7501_uart_codec.h"
 #include "common/p7501_hex.h"
 #include "hal/p7501_led_logic.h"
@@ -152,11 +154,63 @@ static void test_hex_window_and_led_logic(void) {
     assert(!p7501_led_parse_arg("bogus", &parsed_mode, &is_auto, &is_query));
 }
 
+static void test_framing_ctrl_and_jigsweep(void) {
+    p7501_uart_framing_t f = P7501_FRAMING_8N1;
+    assert(p7501_parse_framing("8e1", &f) && f == P7501_FRAMING_8E1);
+    assert(strcmp(p7501_framing_name(f), "8E1") == 0);
+    assert(p7501_parse_framing("8O1", &f) && f == P7501_FRAMING_8O1);
+    assert(!p7501_parse_framing("7E1", &f));
+
+    /* 0x55 = 0b01010101 (4 ones -> even parity bit 0, odd parity bit 1) */
+    assert(p7501_uart_even_parity_bit(0x55u) == 0u);
+    assert(p7501_uart_even_parity_bit(0x57u) == 1u);
+    assert(p7501_uart_encode_tx_word(0x55u, P7501_FRAMING_8N1) == 0x055u);
+    assert(p7501_uart_encode_tx_word(0x55u, P7501_FRAMING_8E1) == 0x055u);
+    assert(p7501_uart_encode_tx_word(0x55u, P7501_FRAMING_8O1) == 0x155u);
+    assert(p7501_uart_encode_tx_word(0x57u, P7501_FRAMING_8E1) == 0x157u);
+
+    uint8_t rx_b = 0u;
+    bool rx_ok = false;
+    p7501_uart_decode_rx_word(0xAA000000u, P7501_FRAMING_8N1, &rx_b, &rx_ok);
+    assert(rx_b == 0xAAu && rx_ok);
+    /* Valid 8E1: byte=0x57 in [30:23], parity=1 in bit31 */
+    const uint32_t raw_57_p1 = (1u << 31u) | ((uint32_t)0x57u << 23u);
+    p7501_uart_decode_rx_word(raw_57_p1, P7501_FRAMING_8E1, &rx_b, &rx_ok);
+    assert(rx_b == 0x57u && rx_ok);
+    /* Corrupt parity bit -> 8O1 expects 0 for 0x57 */
+    p7501_uart_decode_rx_word(raw_57_p1, P7501_FRAMING_8O1, &rx_b, &rx_ok);
+    assert(rx_b == 0x57u && !rx_ok);
+
+    p7501_window_boot_spec_t boot;
+    uint32_t khz = 0u;
+    bool ctrl_only = false;
+    p7501_logic_parse_args_ex("4000 JIG:2500 CTRL", &boot, &khz, &ctrl_only);
+    assert(boot.window_ms == 4000u && boot.jig_hold_ms == 2500u && khz == 1000u && ctrl_only);
+    p7501_logic_parse_args_ex("4000 JIG:2500 500 CTRL", &boot, &khz, &ctrl_only);
+    assert(khz == 500u && ctrl_only);
+
+    p7501_jigsweep_spec_t sw;
+    assert(p7501_jigsweep_parse_args("", &sw) && sw.mode == P7501_JIGSWEEP_HOLD && sw.point_count == 8u);
+    assert(p7501_jigsweep_parse_args("DELAY 0 12 25", &sw));
+    assert(sw.mode == P7501_JIGSWEEP_DELAY && sw.point_count == 3u && sw.points_ms[1] == 12u);
+    assert(p7501_jigsweep_parse_args("PREBOOT", &sw) && sw.mode == P7501_JIGSWEEP_PREBOOT);
+    assert(!p7501_jigsweep_parse_args("DELAY bogus", &sw));
+
+    static const uint8_t k_ser[] = "DDR CHECK: OK\nserial boot mode\n";
+    static const uint8_t k_norm[] = "DDR CHECK: OK\nnormal mode\n";
+    static const uint8_t k_early[] = { 0x55u, 0xAAu };
+    assert(p7501_jigsweep_classify_rx(NULL, 0u) == P7501_SWEEP_OUTCOME_SILENT);
+    assert(p7501_jigsweep_classify_rx(k_ser, sizeof(k_ser) - 1u) == P7501_SWEEP_OUTCOME_SERIAL);
+    assert(p7501_jigsweep_classify_rx(k_norm, sizeof(k_norm) - 1u) == P7501_SWEEP_OUTCOME_NORMAL);
+    assert(p7501_jigsweep_classify_rx(k_early, sizeof(k_early)) == P7501_SWEEP_OUTCOME_EARLY_OTHER);
+}
+
 int p7501_run_uart_codec_tests(void) {
     test_timeout_and_tokens();
     test_hex_and_baud_math();
     test_trigger_and_waittx_parser();
     test_hex_window_and_led_logic();
-    printf("[HOST-TEST] test_uart_codec + LED logic + hex passed all assertions.\n");
+    test_framing_ctrl_and_jigsweep();
+    printf("[HOST-TEST] test_uart_codec + LED logic + hex + framing + jigsweep passed.\n");
     return p7501_run_pana_logic_tests();
 }

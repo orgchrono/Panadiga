@@ -10,18 +10,21 @@
 
 #include <string.h>
 
-void p7501_logic_parse_args(
+void p7501_logic_parse_args_ex(
     const char *arg,
     p7501_window_boot_spec_t *out_boot,
-    uint32_t *out_sample_khz
+    uint32_t *out_sample_khz,
+    bool *out_ctrl_only
 ) {
     if (out_boot != NULL) {
         p7501_parse_window_boot_args(arg, 4000u, 100u, 15000u, out_boot);
     }
-    if (out_sample_khz == NULL) {
-        return;
+    if (out_sample_khz != NULL) {
+        *out_sample_khz = 1000u;
     }
-    *out_sample_khz = 1000u;
+    if (out_ctrl_only != NULL) {
+        *out_ctrl_only = false;
+    }
     if (arg == NULL) {
         return;
     }
@@ -31,9 +34,23 @@ void p7501_logic_parse_args(
     if (cur != NULL) {
         cur = p7501_next_token(cur, tok, sizeof(tok));
     }
-    if (cur != NULL && p7501_next_token(cur, tok, sizeof(tok)) != NULL) {
-        *out_sample_khz = p7501_parse_uint32_clamped(tok, 1000u, 100u, 2000u);
+    while (cur != NULL && (cur = p7501_next_token(cur, tok, sizeof(tok))) != NULL && tok[0] != '\0') {
+        if (p7501_ascii_ieq(tok, "CTRL")) {
+            if (out_ctrl_only != NULL) {
+                *out_ctrl_only = true;
+            }
+        } else if (out_sample_khz != NULL) {
+            *out_sample_khz = p7501_parse_uint32_clamped(tok, 1000u, 100u, 2000u);
+        }
     }
+}
+
+void p7501_logic_parse_args(
+    const char *arg,
+    p7501_window_boot_spec_t *out_boot,
+    uint32_t *out_sample_khz
+) {
+    p7501_logic_parse_args_ex(arg, out_boot, out_sample_khz, NULL);
 }
 
 void p7501_logic_analyze_edges(

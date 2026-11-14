@@ -29,6 +29,12 @@ typedef enum p7501_boot_action {
     P7501_BOOT_ACTION_JIG = 2
 } p7501_boot_action_t;
 
+typedef enum p7501_uart_framing {
+    P7501_FRAMING_8N1 = 0,
+    P7501_FRAMING_8E1 = 1,
+    P7501_FRAMING_8O1 = 2
+} p7501_uart_framing_t;
+
 typedef struct p7501_waittx_spec {
     uint32_t timeout_ms;
     p7501_boot_action_t boot_action;
@@ -99,6 +105,17 @@ void p7501_parse_window_boot_args(
     uint32_t min_ms,
     uint32_t max_ms,
     p7501_window_boot_spec_t *out_spec
+);
+
+bool p7501_parse_framing(const char *token, p7501_uart_framing_t *out);
+const char *p7501_framing_name(p7501_uart_framing_t framing);
+uint8_t p7501_uart_even_parity_bit(uint8_t byte);
+uint32_t p7501_uart_encode_tx_word(uint8_t byte, p7501_uart_framing_t framing);
+void p7501_uart_decode_rx_word(
+    uint32_t raw_isr_msb,
+    p7501_uart_framing_t framing,
+    uint8_t *out_byte,
+    bool *out_parity_ok
 );
 
 #ifdef __cplusplus

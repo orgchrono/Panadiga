@@ -23,6 +23,20 @@
 #include <inttypes.h>
 #include <stdio.h>
 
+void p7501_diag_sample_adc0_minmax(float *min_v, float *max_v) {
+    if (gpio_is_dir_out(P7501_PIN_SW_UART_ADC)) {
+        return;
+    }
+    adc_select_input(P7501_ADC_CH_VDD);
+    const float v = ((float)adc_read()) * (P7501_ADC_VREF / P7501_ADC_RESOLUTION);
+    if (min_v != NULL && v < *min_v) {
+        *min_v = v;
+    }
+    if (max_v != NULL && v > *max_v) {
+        *max_v = v;
+    }
+}
+
 void p7501_cmd_pwrtrace(const char *arg) {
     p7501_window_boot_spec_t spec;
     p7501_parse_window_boot_args(arg, 4000u, 100u, 30000u, &spec);
@@ -77,16 +91,7 @@ void p7501_cmd_pwrtrace(const char *arg) {
         if (time_reached(next_adc_t)) {
             next_adc_t = make_timeout_time_ms(10u);
             p7501_led_tick();
-            if (!gpio_is_dir_out(P7501_PIN_SW_UART_ADC)) {
-                adc_select_input(P7501_ADC_CH_VDD);
-                const float v = ((float)adc_read()) * (P7501_ADC_VREF / P7501_ADC_RESOLUTION);
-                if (v < min_v) {
-                    min_v = v;
-                }
-                if (v > max_v) {
-                    max_v = v;
-                }
-            }
+            p7501_diag_sample_adc0_minmax(&min_v, &max_v);
         }
     }
 

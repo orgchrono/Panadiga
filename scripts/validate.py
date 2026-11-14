@@ -42,6 +42,7 @@ C11_HOST_SOURCES: Final[tuple[str, ...]] = (
     "firmware/pico-p7501/uart/p7501_pana_rsp_codec.c",
     "firmware/pico-p7501/uart/p7501_diag_watch_codec.c",
     "firmware/pico-p7501/diag/p7501_piologic_codec.c",
+    "firmware/pico-p7501/diag/p7501_jigsweep_codec.c",
     "firmware/pico-p7501/tests/test_uart_codec.c",
     "firmware/pico-p7501/tests/test_pana_logic.c",
     "firmware/pico-p7501/tests/test_gdb_rsp_host.c",

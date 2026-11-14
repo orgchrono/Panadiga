@@ -35,8 +35,9 @@ void p7501_cmd_piologic(const char *arg) {
     static p7501_logic_edge_t s_edges[PIOLOGIC_MAX_EDGES];
     p7501_window_boot_spec_t boot;
     uint32_t sample_khz = 1000u;
+    bool ctrl_only = false;
 
-    p7501_logic_parse_args(arg, &boot, &sample_khz);
+    p7501_logic_parse_args_ex(arg, &boot, &sample_khz, &ctrl_only);
 
     /* Hardware safety invariant: GP3 (NSW5V) MUST stay Hi-Z Input without pulls. */
     gpio_set_dir(P7501_PIN_NSW5V, GPIO_IN);
@@ -76,6 +77,8 @@ void p7501_cmd_piologic(const char *arg) {
     uint32_t rep_word = (uint32_t)last_state4 * 0x11111111u;
     size_t edge_count = 0u;
     bool overflow = false;
+    bool saw_reset_rise = (boot.boot_action == P7501_BOOT_ACTION_PASSIVE);
+    bool saw_first_rxd_fall = false;
 
     const uint64_t total_samples = ((uint64_t)boot.window_ms * (uint64_t)sample_khz);
     uint64_t sample_idx = 0u;
@@ -105,13 +108,28 @@ void p7501_cmd_piologic(const char *arg) {
             for (uint32_t nib = 0u; nib < 8u; ++nib) {
                 const uint8_t cur = (uint8_t)((w >> (nib * 4u)) & 0x0Fu);
                 if (cur != last_state4) {
-                    if (edge_count < PIOLOGIC_MAX_EDGES) {
-                        const uint64_t abs_sample = sample_idx + nib;
-                        s_edges[edge_count].t_us = (uint32_t)((abs_sample * 1000ULL) / sample_khz);
-                        s_edges[edge_count].state4 = cur;
-                        ++edge_count;
-                    } else {
-                        overflow = true;
+                    const uint8_t diff = (uint8_t)(last_state4 ^ cur);
+                    if ((diff & (1u << P7501_LOGIC_CH_XRESET)) != 0u &&
+                        (cur & (1u << P7501_LOGIC_CH_XRESET)) != 0u) {
+                        saw_reset_rise = true;
+                    }
+                    const bool is_first_rxd_fall =
+                        saw_reset_rise && !saw_first_rxd_fall &&
+                        ((diff & (1u << P7501_LOGIC_CH_RXD)) != 0u) &&
+                        ((cur & (1u << P7501_LOGIC_CH_RXD)) == 0u);
+                    if (is_first_rxd_fall) {
+                        saw_first_rxd_fall = true;
+                    }
+                    const bool store_edge = !ctrl_only || is_first_rxd_fall || ((diff & 0x0Eu) != 0u);
+                    if (store_edge) {
+                        if (edge_count < PIOLOGIC_MAX_EDGES) {
+                            const uint64_t abs_sample = sample_idx + nib;
+                            s_edges[edge_count].t_us = (uint32_t)((abs_sample * 1000ULL) / sample_khz);
+                            s_edges[edge_count].state4 = cur;
+                            ++edge_count;
+                        } else {
+                            overflow = true;
+                        }
                     }
                     last_state4 = cur;
                 }
@@ -135,8 +153,8 @@ void p7501_cmd_piologic(const char *arg) {
     p7501_logic_analyze_edges(s_edges, edge_count, initial_state4, &stats);
 
     const uint32_t span_us = (edge_count > 0u) ? s_edges[edge_count - 1u].t_us : 0u;
-    printf("=== PIOLOGIC PIO0 (%" PRIu32 "ms @ %" PRIu32 "kHz, boot=%d, hold=%" PRIu32 "ms) ===\n",
-           boot.window_ms, sample_khz, (int)boot.boot_action, boot.jig_hold_ms);
+    printf("=== PIOLOGIC PIO0 (%" PRIu32 "ms @ %" PRIu32 "kHz%s, boot=%d, hold=%" PRIu32 "ms) ===\n",
+           boot.window_ms, sample_khz, ctrl_only ? " CTRL" : "", (int)boot.boot_action, boot.jig_hold_ms);
     printf("Initial: RXD=%u NSW5V=%u TXD=%u XRESET=%u | fifo_stall=%s%s | edges=%u%s | span=%" PRIu32 "us\n",
            (initial_state4 >> 0) & 1u, (initial_state4 >> 1) & 1u,
            (initial_state4 >> 2) & 1u, (initial_state4 >> 3) & 1u,
