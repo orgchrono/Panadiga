@@ -73,6 +73,13 @@ pub fn run_desktop_app() {
             restore_hdd_mirrors,
             inspect_hdd_capacity_patch,
             apply_hdd_capacity_patch,
+            inspect_unbrick_workbench,
+            extract_frm_modules_command,
+            patch_bgo_unbrick_command,
+            patch_main_passthrough_command,
+            prepare_sd_unbrick_kit_command,
+            verify_sd_unbrick_media_command,
+            build_nor_dumper_stub_command,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

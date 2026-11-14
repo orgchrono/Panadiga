@@ -211,6 +211,48 @@ fn test_cli_args_parsing_matrix() {
         Some(Commands::Frm(_))
     ));
 
+    assert!(matches!(
+        Cli::try_parse_from(["panadiga", "unbrick", "status"])
+            .unwrap()
+            .command,
+        Some(Commands::Unbrick(_))
+    ));
+    assert!(matches!(
+        Cli::try_parse_from([
+            "panadiga",
+            "unbrick",
+            "prepare-sd",
+            "--outdir",
+            "sd_out",
+            "--bgo-mode",
+            "auto_format",
+            "--passthrough-mode",
+            "av_passthrough",
+        ])
+        .unwrap()
+        .command,
+        Some(Commands::Unbrick(_))
+    ));
+    assert!(matches!(
+        Cli::try_parse_from(["panadiga", "unbrick", "passthrough", "--rsp-plan"])
+            .unwrap()
+            .command,
+        Some(Commands::Unbrick(_))
+    ));
+    assert!(matches!(
+        Cli::try_parse_from([
+            "panadiga",
+            "unbrick",
+            "nor-stub",
+            "--wrap-digadiag",
+            "--out",
+            "DIGADIAG.FRM",
+        ])
+        .unwrap()
+        .command,
+        Some(Commands::Unbrick(_))
+    ));
+
     let cli = Cli::try_parse_from(["panadiga", "-i"]).unwrap();
     assert!(cli.interactive);
 

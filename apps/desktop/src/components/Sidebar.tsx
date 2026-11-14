@@ -13,6 +13,7 @@ import {
   Binary,
   Activity,
   Layers,
+  ShieldAlert,
 } from 'lucide-react';
 
 export type { ViewKey };
@@ -101,6 +102,14 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
       label: 'Inspetor Hexadecimal',
       sublabel: 'Navegação LBA & Offset ASCII',
       icon: <Binary className="w-4 h-4" />,
+    },
+    {
+      key: 'unbrick',
+      label: 'Centro Unbrick',
+      sublabel: 'SD Kit, DIGADIAG & TBC',
+      icon: <ShieldAlert className="w-4 h-4" />,
+      badge: 'UNBRICK',
+      badgeVariant: 'success',
     },
   ];
 

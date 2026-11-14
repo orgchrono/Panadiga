@@ -21,7 +21,9 @@
     "manuals": "Manuais Técnicos",
     "manuals.sub": "15 PDFs & Esquemáticos",
     "hexinspector": "Inspetor Hex",
-    "hexinspector.sub": "Alinhamento LBA & Offsets"
+    "hexinspector.sub": "Alinhamento LBA & Offsets",
+    "unbrick": "Centro Unbrick",
+    "unbrick.sub": "SD Kit, DIGADIAG & TBC"
   },
   "dashboard": {
     "alertTitle": "DIAGNÓSTICO CRÍTICO: {{errorCode}}",
@@ -777,6 +779,67 @@
         "label": "Reiniciar para BOOTSEL USB",
         "description": "Reinicia o Pico para bootloader USB Mass Storage (`RPI-RP2` / `RP2350`)."
       }
+    }
+  },
+  "unbrick": {
+    "header": {
+      "title": "Centro de Unbrick Pre-MAIN, Kit SD & TBC Autônomo",
+      "subtitle": "Geração integrada de DIGADIAG.FRM (128 KiB), PANA__SD.FRM (BGO + MAIN TBC Passthrough + HDD >200GB), verificação -91006, plano GDB RSP _dev_SERIAL e stub NOR dumper.",
+      "reloadBtn": "Reescanear Workspace",
+      "errorTitle": "Erro ao carregar bancada de Unbrick",
+      "loadingText": "Inspecionando binários do workspace e sites PROG061/MAIN..."
+    },
+    "arch": {
+      "title": "Arquitetura Pre-MAIN, Hardware & Vereditos Empíricos",
+      "desc": "Consumo de DIGADIAG.FRM vs PANA__SD.FRM/PANA_DVD.FRM, bloqueio SD -91006 (ACMD6) e limites elétricos do Digital PCB (MN2DS0009).",
+      "factsEmpty": "Nenhum veredito de arquitetura carregado.",
+      "frmInput": "Contêiner .FRM de Origem (ex: PANA_DVD.FRM)",
+      "extractDir": "Diretório de Extração/Decifragem",
+      "extractBtn": "Extrair & Decifrar .FRM"
+    },
+    "sdKit": {
+      "title": "Construtor & Verificador de Kit SD Unbrick",
+      "desc": "Extrai PROG061, MAIN3410PQ e DRV S211, aplica BGO + TBC Passthrough + HDD dinâmico e grava DIGADIAG.FRM + PANA__SD.FRM + SHA256SUMS.",
+      "outputDir": "Diretório de Saída do Cartão SD",
+      "sourceFrm": "Fonte PANA_DVD.FRM (opcional se autodescoberto)",
+      "bgoMode": "Modo BGO PROG061 (NVRAM U99)",
+      "mainMode": "Modo TBC MAIN 3410PQ",
+      "includePanaSd": "Gerar PANA__SD.FRM (Atualização completa + MAIN TBC)",
+      "unlockHddDynamic": "Desbloquear LBA48 dinâmico (>200GB)",
+      "building": "Gerando Kit SD...",
+      "submit": "Gerar Kit Unbrick SD",
+      "errorTitle": "Falha ao gerar Kit SD",
+      "successTitle": "Kit SD Unbrick gravado e verificado",
+      "verifyInputLabel": "Diretório SD para Verificar",
+      "verifyBtn": "Verificar Mídia SD",
+      "checksEmpty": "Nenhuma checagem executada ainda. Clique em Verificar Mídia SD."
+    },
+    "tbc": {
+      "title": "MAIN 3410PQ TBC Passthrough (E-E) & RSP _dev_SERIAL",
+      "desc": "Bypass de FPC/ODD em 0x5771ABFB, 0x574F7B8C e 0x574F7C5C para operação Digital PCB sem drive óptico, mais injeção viva via UART/RSP.",
+      "inputPath": "Binário MAIN 3410PQ (13.003.052 B)",
+      "outputPath": "Caminho de Saída Patchado",
+      "modeLabel": "Perfil Passthrough",
+      "inspectBtn": "Inspecionar Sites TBC",
+      "patchBtn": "Aplicar Patch TBC",
+      "patchedSuccess": "MAIN 3410PQ patchado para TBC Passthrough",
+      "sitesEmpty": "Nenhum site TBC carregado. Informe MAIN3410PQ e clique em Inspecionar."
+    },
+    "rsp": {
+      "title": "Plano de Injeção Viva GDB RSP (_dev_SERIAL @ 0x515B2E00)",
+      "callbackLabel": "Endereço opcional de callback UART (VA)",
+      "refreshBtn": "Recalcular Frames RSP",
+      "empty": "Nenhum frame RSP carregado."
+    },
+    "norStub": {
+      "buildBtn": "Gerar Stub Read-Only NOR Dumper (DIGADIAG 128K)"
+    },
+    "errors": {
+      "outputDirRequired": "Informe o diretório de saída do Kit SD.",
+      "verifyDirRequired": "Informe o diretório SD para verificação.",
+      "mainPathRequired": "Informe o caminho do binário MAIN 3410PQ.",
+      "mainOutRequired": "Informe o caminho de saída para gravar o MAIN patchado.",
+      "extractPathsRequired": "Informe o caminho do .FRM e o diretório de destino."
     }
   }
 }

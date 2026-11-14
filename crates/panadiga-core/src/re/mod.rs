@@ -5,6 +5,8 @@ pub mod main_passthrough;
 pub mod mn10300;
 pub mod nor_dumper;
 pub mod prog061_uart_monitor;
+pub mod unbrick_sd_kit;
+pub mod unbrick_workbench;
 
 pub use bgo_unbrick::{
     OFF_BGO_INIT_FAIL_HOOK, OFF_BGO_SUM_BEQ, OFF_DEVINFO_CHECK_BEQ, PROG061_BASE_VA,
@@ -33,4 +35,12 @@ pub use nor_dumper::{
 pub use prog061_uart_monitor::{
     OFF_UART_MONITOR_SLACK, PATCH_A2CD_UART_MONITOR, PROG061_UART_MONITOR_VA,
     UART_MONITOR_MAX_SLACK_BYTES, build_prog061_uart_monitor_payload,
+};
+pub use unbrick_sd_kit::{
+    SdMediaVerificationReport, SdUnbrickCheck, SdUnbrickKitReport, SdUnbrickKitRequest,
+    prepare_sd_unbrick_kit, verify_sd_unbrick_media,
+};
+pub use unbrick_workbench::{
+    ExtractedFrmModuleReport, FrmModuleExtractionReport, UnbrickHardwareFact,
+    UnbrickWorkspaceReport, extract_modules_from_frm, inspect_unbrick_workspace,
 };

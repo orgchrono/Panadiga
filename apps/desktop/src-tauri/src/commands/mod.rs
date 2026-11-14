@@ -14,6 +14,7 @@ pub mod hardware;
 pub mod hardware_bridge;
 pub mod hardware_diag;
 pub mod storage;
+pub mod unbrick;
 pub mod workspace;
 
 pub use crypto_manuals::*;
@@ -23,4 +24,5 @@ pub use hardware::*;
 pub use hardware_bridge::*;
 pub use hardware_diag::*;
 pub use storage::*;
+pub use unbrick::*;
 pub use workspace::*;

@@ -9,6 +9,7 @@ pub mod hdd;
 pub mod nvram;
 pub mod pico;
 pub mod system;
+pub mod unbrick;
 
 pub use crypto::{handle_frm, handle_headers, handle_scan};
 pub use ghidra::handle_ghidra;
@@ -18,6 +19,7 @@ pub use pico::{handle_gdb_config, handle_pico};
 pub use system::{
     handle_manuals, handle_mcp, handle_memory_map, handle_rag, handle_verify_artifact,
 };
+pub use unbrick::handle_unbrick;
 
 use super::args::Commands;
 use anyhow::Result;
@@ -76,5 +78,6 @@ pub fn dispatch(command: Commands) -> Result<()> {
             panadiga_core::pico::run_gdb_bridge(&port, baud, &listen)
         }
         Commands::Mcp(args) => handle_mcp(args),
+        Commands::Unbrick(args) => handle_unbrick(args),
     }
 }

@@ -48,7 +48,7 @@ pub struct ExtrheadUnpackReportDto {
     pub written_output_path: Option<String>,
 }
 
-fn resolve_read_path(raw: &str) -> PathBuf {
+pub(crate) fn resolve_read_path(raw: &str) -> PathBuf {
     let trimmed = raw.trim();
     let direct = PathBuf::from(trimmed);
     if direct.exists() || direct.is_absolute() {
@@ -66,7 +66,7 @@ fn resolve_read_path(raw: &str) -> PathBuf {
     ws_rel
 }
 
-fn resolve_write_path(raw: &str) -> Result<PathBuf, String> {
+pub(crate) fn resolve_write_path(raw: &str) -> Result<PathBuf, String> {
     let trimmed = raw.trim();
     if trimmed.is_empty() {
         return Err("Caminho de saída obrigatório.".to_string());

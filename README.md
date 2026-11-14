@@ -17,7 +17,7 @@
 > **Core Architecture:** Matsushita `AM34` / `MN103S` (32-bit RISC `MN10300` / UniPhier)
 > **Flash Memory Range:** 2 MB (16 Mbit) to 16 MB (128 Mbit) TSOP-48 / TSOP-56 Parallel NOR Flash
 > **Storage Subsystem:** PATA/IDE and SATA Hard Disk Drives with proprietary **MEIHDFS** partition tables
-> **Hardware Interface:** Asynchronous **P7501 UART (`115200 8N1`) + Discrete `SW_UART` / `XRESET` / `NSW5V` Sense** (with legacy `pico-p7501` PIO fallback)
+> **Hardware Interface:** Asynchronous **P7501 UART (`115200 8N1`) + Discrete `SW_UART` / `XRESET` / `NSW5V` Sense** (RP2040/RP2350 C11 + PIO + Autonomous `PANARSP` Engine)
 
 ---
 
@@ -121,7 +121,7 @@ Panadiga/
 │   ├── panadiga-core/                                <-- Core Engines: NVRAM, MEIHDFS + LBA48 `capacity_patch.rs`, Feistel/EXTRHEAD Crypto, RE (`mn10300.rs`, `nor_dumper.rs`, `bgo_unbrick.rs`, `main_passthrough.rs`), Hardware SSOT
 │   ├── panadiga-cli/                                 <-- `panadiga-cli` Binary & Interactive TUI Workbench
 │   ├── panadiga-rag/                                 <-- Zero-Error 6-Layer RAG Engine + `HardwareSafetyValidator` + `FactCritic`
-│   └── panadiga-mcp/                                 <-- JSON-RPC 2.0 MCP Stdio Server Exposing All 17 Native Tools
+│   └── panadiga-mcp/                                 <-- JSON-RPC 2.0 MCP Stdio Server Exposing All 18 Native Tools
 ├── apps/desktop/                                     <-- Tauri 2.0 Desktop & Android GUI (`panadiga-desktop` + React 19 + Vite MVVM)
 │   ├── src-tauri/                                    <-- Tauri 2.0 Native Rust Commands & GDB RSP Bridge
 │   ├── src/                                          <-- Strict MVVM Components, Services & ViewModels
@@ -237,7 +237,7 @@ panadiga hdd decode-descriptors --input hdd_100.bin
 
 ### 4.7. Command 6: Container Deconstruction & TOC Extraction (`frm dump-toc`)
 
-Splits `PANA_DVD.FRM` into its three functional payloads: Main CPU OS (AM34), Optical Drive Servo DSP (MN102), and OSD Graphics Engine.
+Splits `PANA_DVD.FRM` (48-byte Feistel `"Firm list"` TOC) or `PANA__SD.FRM` (64-byte plaintext TOC) into its three empirical firmware slots: `[0] DRV S211`, `[1] PROG061 `, and `[2] MAIN3060NP`.
 
 ```bash
 panadiga frm dump-toc --input firmware_and_images/PANA_DVD.FRM
@@ -280,6 +280,17 @@ Queries the local retrieval-augmented generation engine, enforcing the 6 physica
 ```bash
 panadiga rag query --question "Qual o pino de terra canônico do conector P7501?"
 panadiga rag query --question "What is the canonical ground pin of P7501?" --json
+```
+
+### 4.13. Command 12: Pre-MAIN Unbrick Center, SD Kit & TBC Passthrough (`unbrick`)
+
+Unified CLI orchestration for solderless recovery: workspace inspection, Feistel module extraction (`PANA_DVD.FRM`), SD Recovery Kit generation/verification (`DIGADIAG.FRM` + `PANA__SD.FRM` + `SHA256SUMS.txt`), `MAIN3410PQ` TBC Passthrough `E-E` patching, `_dev_SERIAL` GDB RSP frame generation, and 128 KiB `NOR_DMP` stub compilation.
+
+```bash
+panadiga unbrick status
+panadiga unbrick prepare-sd --outdir sd_card_eh55_kit --bgo-mode auto_format --passthrough-mode av_passthrough
+panadiga unbrick verify-sd sd_card_eh55_kit
+panadiga unbrick passthrough --rsp-plan --callback-va 0x50401F3C
 ```
 
 ---
@@ -414,9 +425,9 @@ Statistical analysis of both `PANA_DVD.FRM` and raw HDD dumps reveals that Matsu
 
 The update disc packaging decomposes cleanly into three discrete modules preceded by a 16-byte container header (`492F0560CEDE508CE3C08AFD49B64A9A`) and a 144-byte TOC (three 48-byte records):
 
-1. **Module 0 (`MOD_0`):** Main OS Kernel for the AM34 processor (operating system, GUI, filesystem drivers).
-2. **Module 1 (`MOD_1`):** Optical drive servo microcode for the MN102 DSP.
-3. **Module 2 (`MOD_2`):** OSD assets, font tables, graphics primitives, and multi-language strings.
+1. **Slot `[0]` (`DRV S211`, offset `0x001800`, `720,896 B` -> `1,441,792 B` @ `0x90202000`):** Optical drive servo & ATAPI controller firmware.
+2. **Slot `[1]` (`PROG061 `, offset `0x0B1800`, `262,144 B` raw @ `0x50400000`):** Stage-2 SD/DVD Upgrader & `BGO` / `NVRAM U99` initializer (`SDDIAG`).
+3. **Slot `[2]` (`MAIN3060NP`, offset `0x0F1800`, `6,542,560 B` -> `13,427,852 B` @ `0x57000000`):** MN103S Main OS kernel, OSD, MEIHDFS HDD driver, and TBC controller (HDD Partition 1 `0x02000000` unpacks to `13,003,052 B` `EH55_MAIN_3410PQ.bin`).
 
 ### 7.4. Irrefutable Cryptographic Link to the Internal HDD
 
@@ -469,10 +480,10 @@ The LBA 0 superblock stores partition geometry inverted with bitwise NOT (`XOR 0
 * Use `panadiga nvram clean --input dump.bin --output fixed.bin`.
 * Flash `fixed.bin` back to chip and resolder.
 
-### Route B: In-Circuit via `P7501` Async UART & GDB Bridge (Raspberry Pi Pico / RP2040 / RP2350)
+### Route B: In-Circuit via `P7501` Async UART, GDB `PANARSP` & SD Recovery Kit (`DIGADIAG.FRM` / `PANA__SD.FRM`)
 
-* Connect the 6-wire JST ZR bench probe from Pico to header `P7501` (confirm Pin 4 `GND` = $0.0\,\Omega$ and keep `GP3` / `NSW5V` strictly `Hi-Z`).
-* Execute `panadiga pico uart-probe` / `panadiga gdb-bridge` to capture live boot telemetry (`CD diag boot mode`) and service commands over `115200 8N1`.
+* **SD Card Pre-MAIN Unbrick (SDSC `<= 2 GiB` FAT16):** Generate `DIGADIAG.FRM` (128 KiB Stage-1 `/BOOT.BIN`) and `PANA__SD.FRM` via **`panadiga unbrick prepare-sd`** (or the Desktop **`Unbrick Center`** view) to run `AUTO_FORMAT_BGO` on `U99` and persist `MAIN3410PQ` TBC Passthrough + dynamic HDD sizing.
+* **UART / GDB `P7501` Injection:** Connect the 6-wire JST ZR bench probe from Pico to header `P7501` (confirm Pin 4 `GND` = $0.0\,\Omega$ and keep `GP3` / `NSW5V` strictly `Hi-Z`), then run `panadiga pico uart-probe` / `panadiga gdb-bridge` for live `115200 8N1` telemetry and `PANARSP` commands.
 
 ### Route C: Hard Drive Cloning & Sector Sanitization (Preserving MEIHDFS)
 
@@ -550,7 +561,7 @@ All official documentation is cataloged and hierarchically structured in `manual
 
 ## 11. Direct Links to Specialized Technical Dossiers (`docs/`)
 
-The full repository of 14 bilingual engineering dossiers listed below is maintained in `docs/en-US/` (with Portuguese mirrors in `docs/pt-BR/` and full portal index at `docs/INDEX.md`):
+The full repository of 16 bilingual engineering dossiers listed below is maintained in `docs/en-US/` (with Portuguese mirrors in `docs/pt-BR/` and full portal index at `docs/INDEX.md`):
 
 * 🏛️ **[Systems Architecture &amp; Engineering Blueprint](docs/en-US/SYSTEM_ARCHITECTURE_AND_ENGINEERING_BLUEPRINT.md)** ([Portuguese Mirror](docs/pt-BR/ARQUITETURA_E_BLUEPRINT_DE_ENGENHARIA.md))*Master specification: modular decomposition, Pure FP domain, strict MVVM, GDB ring buffer, and silicon invariants.*
 * 📱 **[Android APK &amp; Bluetooth Architecture](docs/en-US/ANDROID_APK_AND_BLUETOOTH_ARCHITECTURE.md)** ([Portuguese Mirror](docs/pt-BR/ARQUITETURA_MOBILE_ANDROID_E_BLUETOOTH.md))*Android APK build, Native Rust HAL (BLE NUS / USB-C OTG), and P7501 power safety rules.*
@@ -570,6 +581,8 @@ The full repository of 14 bilingual engineering dossiers listed below is maintai
   *Live `DMR-EH55` bench telemetry (`P7501`/`CDDIAG`), MN103S disassembly of `BOOT.BIN` & `DRV_decomp.bin`, 74 ATAPI opcodes, 62 factory CLI commands, and the full 431-entry Shift-JIS error dictionary (`0x83A7`).*
 * 🧩 **[Exploded Architecture, Pico Injection & AV Passthrough](docs/pt-BR/VISTA_EXPLODIDA_ARQUITETURA_INJECAO_PICO_E_BYPASS_PASSTHROUGH.md)**
   *`DIGADIAG.FRM` vs `PANA_DVD.FRM` vs `PANA__SD.FRM` container specs, autonomous Pico `PANARSP` (`WMEM`/`WRITE32`/`PASSTHROUGH`/`CALL`), `P7501` handshake (`0x515B2E60`), and the 3 `MAIN` AV TBC `E-E` passthrough sites (`0x5771ABFB`, `0x574F7B8C`, `0x574F7C5C`).*
+* 🛠️ **[`DIGADIAG.FRM` vs `PANA__SD.FRM`, SD `-91006` Gate & Standalone TBC Feasibility](docs/en-US/DIGADIAG_PANA_SD_AND_STANDALONE_TBC.md)** ([Portuguese Mirror](docs/pt-BR/DIGADIAG_PANA_SD_E_TBC_AUTONOMO.md))
+  *Stage-1 `/BOOT.BIN` (`SDDIAG`) vs Stage-2 `PROG061` container consumption, `-91006` `ACMD6` (`0x44027F79`) hardware proof, Digital PCB (`MN2DS0009` / `P59001`) Main PCB dependencies (`IC3001`/`IC7501`/`P7402`), and unified `panadiga unbrick` + Unbrick Center guide.*
 
 ---
 
@@ -588,24 +601,24 @@ The full repository of 14 bilingual engineering dossiers listed below is maintai
 The Panadiga engineering ecosystem enforces a strict **9 Quality Gates** anti-regression pipeline:
 
 ```text
-       Layer 5: End-to-End E2E Tests (Playwright Chromium 8/8)
-       Layer 4: Desktop UI Unit Tests (Vitest + React Testing Library 33/33)
-       Layer 3: C11 Pico Firmware Host Tests (GCC Host Test Harness 7/7)
-       Layer 2: Python Typer CLI & RAG Pytest Verification (Pytest 21/21, Mypy Strict)
-       Layer 1: Native Rust Core & RAG Integration Tests (Cargo Test 41/41)
+       Layer 5: End-to-End E2E Tests (Playwright Chromium 13/13)
+       Layer 4: Desktop UI Unit Tests (Vitest + React Testing Library 63/63)
+       Layer 3: C11 Pico Firmware Host Tests (GCC Host Test Harness 18/18)
+       Layer 2: Python Scripts & RE Pytest Verification (Pytest 16/16, Mypy Strict)
+       Layer 1: Native Rust Core, CLI, Desktop IPC, MCP & RAG Tests (Cargo Test 103/103)
 ```
 
 ### 13.1. The 9 Active Quality Gates
 
-1. **Rust Cargo Check & Test Gate:** Verifies formatting (`cargo fmt`), type safety, and all 41 unit/integration tests.
+1. **Rust Cargo Check & Test Gate:** Verifies formatting (`cargo fmt`), type safety, and all 103 workspace unit/integration tests.
 2. **TypeScript Strict Type-Check Gate:** `tsc --noEmit` verifies strict frontend types with zero `any` leaks.
-3. **Frontend Vitest Unit Suite:** 33 ViewModel and algebraic state transition tests.
+3. **Frontend Vitest Unit Suite:** 63 tests across 20 files covering ViewModels and algebraic state transitions.
 4. **Copy/Paste Detector (`jscpd`):** Enforces 0.00% code duplication threshold.
-5. **UI/UX Completeness Linter (`uxlint`):** Verifies loading, empty, and error state coverage across all views (100/100).
-6. **Playwright E2E Suite:** 8 browser-level functional tests running against headless Chromium.
+5. **UI/UX Completeness Linter (`uxlint`):** Audits React views for loading, empty, error, and form validation coverage.
+6. **Playwright E2E Suite:** 13 browser-level functional tests running against headless Chromium.
 7. **Ghidra Script Generator Gate:** Validates automatic export of memory maps and symbols from Rust SSOT.
-8. **C11 Firmware Host Test Gate:** Compiles and tests bare-metal Pico firmware with `-Wall -Wextra -Werror`.
-9. **Python Typer & Pytest Gate:** Verifies strict typing (`mypy --strict`) and 21 automated tests.
+8. **C11 Firmware Host Test Gate:** Compiles and tests 18 bare-metal Pico firmware unit tests with `-Wall -Wextra -Werror`.
+9. **Python & Pytest Gate:** Verifies strict typing (`mypy --strict`) and 16 automated tests across `scripts/tests/`.
 
 ### 13.2. Executing the Full Validation Suite
 
@@ -633,7 +646,7 @@ The project configures 6 specialized subagents for autonomous engineering assist
 
 ### 14.2. Native Rust Model Context Protocol (MCP) Server (`panadiga mcp`)
 
-A standardized JSON-RPC 2.0 MCP stdio server (`panadiga mcp`) exposes **17 native tools** for AI agents:
+A standardized JSON-RPC 2.0 MCP stdio server (`panadiga mcp`) exposes **18 native tools** for AI agents:
 
 * `panadiga_memory_map`: Returns the official physical memory map of the Matsushita AM34 / MN103S (`VEP79138`) architecture.
 * `panadiga_safety_check`: Validates bench voltages (`<= 3.3V` LVTTL / `3.35V` ceiling) and memory write ranges.
@@ -652,6 +665,7 @@ A standardized JSON-RPC 2.0 MCP stdio server (`panadiga mcp`) exposes **17 nativ
 * `panadiga_nor_dumper_stub`: Generates/validates the MN103S NOR flash dumper stub for 8 MB `P7501` capture.
 * `panadiga_bgo_unbrick`: Inspects or generates `DIGADIAG.FRM` BGO unbrick patches for the `0x84200000..0x843FFFFF` region.
 * `panadiga_main_passthrough`: Inspects, patches, or generates `$M` GDB RSP plans for `MAIN` AV TBC `E-E` passthrough sites (`0x5771ABFB`, `0x574F7B8C`, `0x574F7C5C`).
+* `panadiga_sd_unbrick_kit`: Unified unbrick diagnostics, Feistel `.FRM` extraction, full SD Kit generation (`DIGADIAG.FRM` + `PANA__SD.FRM` + `SHA256SUMS.txt`), and post-write verification.
 
 ### 14.3. Unified Logging Subsystem (`crates/panadiga-core/src/logger.rs`)
 

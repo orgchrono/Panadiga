@@ -9,6 +9,7 @@ pub mod hdd;
 pub mod nvram;
 pub mod pico;
 pub mod system;
+pub mod unbrick;
 
 pub use crypto::{FrmActions, FrmArgs, HeadersActions, HeadersArgs, ScanArgs};
 pub use ghidra::{GhidraActions, GhidraArgs};
@@ -16,6 +17,7 @@ pub use hdd::{HddActions, HddArgs};
 pub use nvram::{NvramActions, NvramArgs};
 pub use pico::{GdbConfigArgs, PicoActions, PicoArgs};
 pub use system::{ManualsArgs, McpArgs, MemoryMapArgs, RagActions, RagArgs, VerifyArtifactArgs};
+pub use unbrick::{UnbrickActions, UnbrickArgs};
 
 use clap::{Parser, Subcommand};
 
@@ -107,4 +109,7 @@ pub enum Commands {
 
     /// Start native Rust Model Context Protocol (MCP) stdio server
     Mcp(McpArgs),
+
+    /// Pre-MAIN Unbrick, SD Recovery Kit Builder, PROG061 BGO, & MAIN AV TBC Passthrough Workbench
+    Unbrick(UnbrickArgs),
 }

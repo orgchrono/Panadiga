@@ -80,7 +80,7 @@ mod tests {
     #[test]
     fn test_tool_definitions_and_memory_map() {
         let defs = tool_definitions();
-        assert_eq!(defs.len(), 17);
+        assert_eq!(defs.len(), 18);
 
         let all = execute_tool("panadiga_memory_map", &json!({}), Path::new(".")).unwrap();
         assert_eq!(all["total"], AM34_SYSTEM_MEMORY_REGIONS.len());
@@ -283,7 +283,7 @@ mod tests {
         assert!(r1["result"]["capabilities"]["prompts"].is_object());
 
         let r2: Value = serde_json::from_str(lines[1]).unwrap();
-        assert_eq!(r2["result"]["tools"].as_array().unwrap().len(), 17);
+        assert_eq!(r2["result"]["tools"].as_array().unwrap().len(), 18);
 
         let r3: Value = serde_json::from_str(lines[2]).unwrap();
         let body = r3["result"]["content"][0]["text"].as_str().unwrap();
@@ -397,6 +397,37 @@ mod tests {
         assert_eq!(rsp_plan["handshake_hex"], "0e020204");
         assert_eq!(rsp_plan["passthrough_frames"].as_array().unwrap().len(), 3);
         assert_eq!(rsp_plan["callback_write_frame"], "$M515B2E40,4:3c1f4050#95");
+
+        // 5. Test panadiga_sd_unbrick_kit `status` and `verify_sd` actions
+        let unbrick_status = execute_tool(
+            "panadiga_sd_unbrick_kit",
+            &json!({ "action": "status" }),
+            &tmp,
+        )
+        .unwrap();
+        assert_eq!(
+            unbrick_status["hardware_facts"].as_array().unwrap().len(),
+            3
+        );
+
+        let verify_res = execute_tool(
+            "panadiga_sd_unbrick_kit",
+            &json!({ "action": "verify_sd", "sd_root_dir": "." }),
+            &tmp,
+        )
+        .unwrap();
+        assert_eq!(verify_res["overall_status"], "READY_WITH_HW_WARNINGS");
+        assert_eq!(verify_res["digadiag_bgo_mode"], "AUTO_FORMAT_BGO");
+
+        let empty_sd = tmp.join("empty_sd");
+        fs::create_dir_all(&empty_sd).unwrap();
+        let verify_missing = execute_tool(
+            "panadiga_sd_unbrick_kit",
+            &json!({ "action": "verify_sd", "sd_root_dir": "empty_sd" }),
+            &tmp,
+        )
+        .unwrap();
+        assert_eq!(verify_missing["overall_status"], "INCOMPLETE_OR_INVALID");
 
         let _ = fs::remove_dir_all(&tmp);
     }

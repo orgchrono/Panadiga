@@ -40,5 +40,16 @@ test.describe('Panadiga Desktop Navigation & Layout E2E', () => {
     // 6. Inspetor Hexadecimal Module
     await page.click('button:has-text("Inspetor Hexadecimal")');
     await expect(page.locator('header')).toContainText('Inspetor Hexadecimal');
+
+    // 7. Centro Unbrick & TBC Passthrough Module
+    await page.click('button:has-text("Centro Unbrick")');
+    await expect(page.locator('header')).toContainText('Centro Unbrick');
+    await expect(page.getByText('DIGADIAG.FRM vs PANA__SD.FRM').first()).toBeVisible();
+  });
+
+  test('builds SD recovery kit from Centro Unbrick', async ({ page }) => {
+    await page.click('button:has-text("Centro Unbrick")');
+    await page.click('button[data-testid="sd-kit-submit-btn"]');
+    await expect(page.getByText(/sd_card_eh55_kit\/DIGADIAG\.FRM/).first()).toBeVisible();
   });
 });

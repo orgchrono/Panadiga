@@ -18,6 +18,7 @@ export type ViewKey =
   | 'hdd'
   | 'picobench'
   | 'frmcrypto'
+  | 'unbrick'
   | 'manuals'
   | 'hexinspector';
 

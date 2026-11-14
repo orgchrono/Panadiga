@@ -28,6 +28,9 @@ const ManualsView = lazy(() =>
 const HexInspectorView = lazy(() =>
   import('./views/HexInspectorView').then(m => ({ default: m.HexInspectorView }))
 );
+const UnbrickView = lazy(() =>
+  import('./views/UnbrickView').then(m => ({ default: m.UnbrickView }))
+);
 
 const ViewLoadingFallback: React.FC = () => (
   <div className="flex flex-col items-center justify-center min-h-[400px] h-full gap-3 text-slate-400">
@@ -54,6 +57,7 @@ export const App: React.FC = () => {
     frmcrypto: 'Criptoanálise Óptica PANA_DVD.FRM & Dicionário ECB',
     manuals: `Manuais de Serviço & Diagramas Esquemáticos (${ssot ? `${ssot.indexed_manuals_count} PDFs` : 'SSOT'})`,
     hexinspector: 'Inspetor Hexadecimal & Alinhamento LBA',
+    unbrick: 'Centro Unbrick Pre-MAIN, Kit SD & TBC Autônomo',
   };
 
   const handleRetry = () => {
@@ -128,6 +132,7 @@ export const App: React.FC = () => {
                 {currentView === 'frmcrypto' && <FrmCryptoView />}
                 {currentView === 'manuals' && <ManualsView />}
                 {currentView === 'hexinspector' && <HexInspectorView />}
+                {currentView === 'unbrick' && <UnbrickView />}
               </Suspense>
             </ErrorBoundary>
           </main>

@@ -8,8 +8,9 @@ import { logger } from '@/utils/logger';
 import { handleMockCryptoCommand } from './mockCryptoHandlers';
 import { subscribeMockChannel } from './mockEventBus';
 import { handleMockHddCommand } from './mockHddHandlers';
-import { buildMockPicoStatus, handleMockPicoCommand } from './mockPicoHandlers';
+import { handleMockPicoCommand, buildMockPicoStatus } from './mockPicoHandlers';
 import { handleMockSystemCommand } from './mockSystemHandlers';
+import { handleMockUnbrickCommand } from './mockUnbrickHandlers';
 
 type MockDomainHandler = (cmd: string, args?: Record<string, unknown>) => unknown | undefined;
 
@@ -18,6 +19,7 @@ const DOMAIN_HANDLERS: MockDomainHandler[] = [
   handleMockHddCommand,
   handleMockCryptoCommand,
   handleMockPicoCommand,
+  handleMockUnbrickCommand,
 ];
 
 export async function handleMockCommand<T>(

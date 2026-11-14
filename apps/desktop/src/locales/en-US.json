@@ -21,7 +21,9 @@
     "manuals": "Service Manuals",
     "manuals.sub": "15 PDFs & Schematics",
     "hexinspector": "Hex Inspector",
-    "hexinspector.sub": "LBA Alignment & Offsets"
+    "hexinspector.sub": "LBA Alignment & Offsets",
+    "unbrick": "Unbrick Center",
+    "unbrick.sub": "SD Kit, DIGADIAG & TBC"
   },
   "dashboard": {
     "alertTitle": "CRITICAL DIAGNOSIS: {{errorCode}}",
@@ -777,6 +779,67 @@
         "label": "Reboot to USB BOOTSEL",
         "description": "Reboots the Pico probe into USB Mass Storage bootloader (`RPI-RP2` / `RP2350`)."
       }
+    }
+  },
+  "unbrick": {
+    "header": {
+      "title": "Pre-MAIN Unbrick Center, SD Kit Builder & Standalone TBC",
+      "subtitle": "Unified generation of DIGADIAG.FRM (128 KiB), PANA__SD.FRM (BGO + MAIN TBC Passthrough + HDD >200GB), -91006 verification, _dev_SERIAL GDB RSP plan & NOR dumper stub.",
+      "reloadBtn": "Rescan Workspace",
+      "errorTitle": "Failed to load Unbrick workbench",
+      "loadingText": "Inspecting workspace firmware binaries & PROG061/MAIN sites..."
+    },
+    "arch": {
+      "title": "Pre-MAIN Architecture, Hardware & Empirical Verdicts",
+      "desc": "How DIGADIAG.FRM vs PANA__SD.FRM/PANA_DVD.FRM are consumed, SD -91006 (ACMD6) 4-bit gate, and Digital PCB (MN2DS0009) standalone TBC constraints.",
+      "factsEmpty": "No hardware architecture verdicts loaded yet.",
+      "frmInput": "Source .FRM Container (e.g. PANA_DVD.FRM)",
+      "extractDir": "Extraction / Decryption Output Dir",
+      "extractBtn": "Extract & Decrypt .FRM"
+    },
+    "sdKit": {
+      "title": "SD Unbrick Kit Builder & Media Verifier",
+      "desc": "Extracts PROG061, MAIN3410PQ, and DRV S211, applies BGO + TBC Passthrough + dynamic HDD limit, and writes DIGADIAG.FRM + PANA__SD.FRM + SHA256SUMS.",
+      "outputDir": "SD Card Output Directory",
+      "sourceFrm": "Source PANA_DVD.FRM (optional if auto-discovered)",
+      "bgoMode": "PROG061 BGO Mode (NVRAM U99)",
+      "mainMode": "MAIN 3410PQ TBC Profile",
+      "includePanaSd": "Write PANA__SD.FRM (Full Update + MAIN TBC)",
+      "unlockHddDynamic": "Unlock Dynamic LBA48 (>200GB)",
+      "building": "Building SD Kit...",
+      "submit": "Build SD Unbrick Kit",
+      "errorTitle": "SD Kit Generation Failed",
+      "successTitle": "SD Unbrick Kit Written & Verified",
+      "verifyInputLabel": "SD Directory to Verify",
+      "verifyBtn": "Verify SD Media",
+      "checksEmpty": "No SD verification checks run yet."
+    },
+    "tbc": {
+      "title": "MAIN 3410PQ TBC Passthrough (E-E) & _dev_SERIAL RSP",
+      "desc": "FPC/ODD bypass at 0x5771ABFB, 0x574F7B8C, and 0x574F7C5C for optical-drive-free Digital PCB operation, plus live UART/RSP injection frames.",
+      "inputPath": "MAIN 3410PQ Binary (13,003,052 B)",
+      "outputPath": "Patched Output Path",
+      "modeLabel": "Passthrough Profile",
+      "inspectBtn": "Inspect TBC Sites",
+      "patchBtn": "Apply TBC Patch",
+      "patchedSuccess": "MAIN 3410PQ patched for TBC Passthrough",
+      "sitesEmpty": "No TBC sites loaded. Provide MAIN3410PQ and click Inspect."
+    },
+    "rsp": {
+      "title": "Live GDB RSP Injection Plan (_dev_SERIAL @ 0x515B2E00)",
+      "callbackLabel": "Optional UART callback target address (VA)",
+      "refreshBtn": "Recalculate RSP Frames",
+      "empty": "No RSP frames loaded yet."
+    },
+    "norStub": {
+      "buildBtn": "Build Read-Only NOR Dumper Stub (DIGADIAG 128K)"
+    },
+    "errors": {
+      "outputDirRequired": "Please enter the SD kit output directory.",
+      "verifyDirRequired": "Please enter the SD directory to verify.",
+      "mainPathRequired": "Please enter the MAIN 3410PQ binary path.",
+      "mainOutRequired": "Please enter the output path for patched MAIN.",
+      "extractPathsRequired": "Please provide both source .FRM path and output directory."
     }
   }
 }

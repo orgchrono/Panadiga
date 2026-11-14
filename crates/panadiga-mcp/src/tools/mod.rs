@@ -3,6 +3,7 @@
 pub mod forensics;
 pub mod hardware;
 pub mod knowledge;
+pub mod unbrick;
 pub mod visuals;
 
 use anyhow::Result;
@@ -357,6 +358,46 @@ pub fn tool_definitions() -> Vec<Value> {
                 }
             }
         }),
+        json!({
+            "name": "panadiga_sd_unbrick_kit",
+            "description": "Unified Pre-MAIN Unbrick workbench tool: inspects workspace status/hardware facts, extracts modules from PANA_DVD.FRM, builds verified DIGADIAG.FRM + PANA__SD.FRM (BGO + MAIN AV TBC Passthrough + HDD LBA48), or verifies SD root media.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "type": "string",
+                        "enum": ["status", "extract_frm", "prepare_sd", "verify_sd"],
+                        "description": "Operation mode: 'status' (default), 'extract_frm', 'prepare_sd', or 'verify_sd'."
+                    },
+                    "output_dir": {
+                        "type": "string",
+                        "description": "Destination directory for 'prepare_sd' or 'extract_frm'."
+                    },
+                    "sd_root_dir": {
+                        "type": "string",
+                        "description": "SD root directory for 'verify_sd'."
+                    },
+                    "bgo_mode": {
+                        "type": "string",
+                        "enum": ["auto_format", "bypass", "uart_monitor", "factory"],
+                        "description": "PROG061 BGO patch mode for 'prepare_sd' (default 'auto_format')."
+                    },
+                    "passthrough_mode": {
+                        "type": "string",
+                        "enum": ["av_passthrough", "factory_original"],
+                        "description": "MAIN (3410PQ) TBC passthrough mode for 'prepare_sd' (default 'av_passthrough')."
+                    },
+                    "include_pana_sd": {
+                        "type": "boolean",
+                        "description": "Generate PANA__SD.FRM alongside DIGADIAG.FRM in 'prepare_sd' (default true)."
+                    },
+                    "unlock_hdd_dynamic": {
+                        "type": "boolean",
+                        "description": "Unlock LBA48 HDD capacity ceiling in MAIN when building PANA__SD.FRM (default true)."
+                    }
+                }
+            }
+        }),
     ]
 }
 
@@ -374,6 +415,7 @@ pub fn execute_tool(name: &str, args: &Value, workspace_root: &Path) -> Result<V
         "panadiga_nor_dumper_stub" => forensics::handle_nor_dumper_stub(args, workspace_root),
         "panadiga_bgo_unbrick" => forensics::handle_bgo_unbrick(args, workspace_root),
         "panadiga_main_passthrough" => forensics::handle_main_passthrough(args, workspace_root),
+        "panadiga_sd_unbrick_kit" => unbrick::handle_sd_unbrick_kit(args, workspace_root),
         "panadiga_search_manuals" => knowledge::handle_search_manuals(args, workspace_root),
         "panadiga_rag_query" => knowledge::handle_rag_query(args),
         "panadiga_search_code" => knowledge::handle_search_code(args),
