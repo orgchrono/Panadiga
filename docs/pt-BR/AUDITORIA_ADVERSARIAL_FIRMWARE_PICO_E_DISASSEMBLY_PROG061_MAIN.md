@@ -161,15 +161,102 @@ Todos os arquivos `.FRM` foram gerados e verificados via `panadiga frm pack` (in
      * Para bytes `!= 0x15`, armazena no ring buffer `0x5177f642` (`0x800` bytes) e reconhece a sequência de 3 bytes **`0x0E -> 0x04 -> 0x02`** (`bRam515b2e60: 0 -> 3 -> 0xc3 -> iRam515b2e64 = 1`), que suprime o register dump de `FUN_574ae930` no próximo evento (`if (iRam515b2e64 == 0) ... else iRam515b2e64 = 0`).
    * **Inicialização UART/Timer (`FUN_574efb97` & `FUN_574f0e82`) e correção de opcode:** **`FUN_574f0e82`** (`open` de `_dev_SERIAL` em `0x577e4d98`) configura `TMPSCNT = 0x80`, `TM2BR = 7`, `TM2MD = 0x41/1/0x81`, `SC0ICR`, `Ramd4002000 = 0xc085` (usando constante ROM `uRam577e5dc8 = 0x10`). Já **`FUN_574efb97`** registra os callbacks `0x574f0498`/`0x574f0464` via `FUN_574f052f` (`"_dev_SERIAL"`, `0x5177f640`), chama `func_0x574ef7d2()` e, se `(bRam515b2e39 & 2) != 0`, configura `TM2BR = 0x2b`, `Ramd4002000 = 0xc085` e os ring buffers em `0x5316a260`/`0x5316aa70` (consumidos por `FUN_574efad8`). Quanto às chamadas reais de 32 bits em MN103S, foram confirmados `DD-CALL` legítimos para `FUN_574f8242` (`0x574F7B71`) e `FUN_574f8278` (`0x574F7CF4` e `0x574FDFEB`), descartando em definitivo o falso positivo anterior em `0x574F828B`.
 
+### 5.5 Captura ao Vivo `CDDIAG` (`COM10`), Origem Exata do `0x83A7` (`80040904`) e Cadeia `BOOT.BIN` ↔ `DRV`
+
+Em captura ao vivo na bancada (`COM10`, `UARTSTREAM` `JIG:350` + `NOPULL`, `0` erros de framing e `overflow=NO`) com cartão **SDSC 1,86 GB FAT16** inserido no slot frontal, foi observada a sequência exata abaixo:
+
+1. **Falha SD em 4-bit (`-91006` / `-90002`) → Fallback Automático para `CDDIAG`:**
+   * `[SDCD]This SD Card is't memory card` → `SetBusWidth:SD Status ERROR -91006` → `SD init failed[-90002].` → `*** CD diag boot mode ***`.
+   * O `BOOT.BIN` (MN103S) descomprime o firmware MN103S do drive óptico (`F/E Address = 0x90202000 , Drive(compress) Size = 0xACC50`, `uncompress dst=90202000 len=160000 src=84080040 len=acc01`, `HEADER:5627DD54, DECOMP:5627DD54`), libera o F/E (`F/E reset release finish ...`) e executa `*** RTSC Initialize ***`.
+2. **Pacote Sense ATAPI (`80040904` / `0x83A7`) Capturado ao Vivo e Decodificado no `DRV_decomp.bin`:**
+   * Logo após `[RTSD] ATAPI Software Reset` e `[RTSD] Device Reset Occurred(0x62900)`, o `startup_drive @ 0x44009cea` (do `BOOT.BIN`, enviando `0x1B` + até `60` iterações de `FUN_44009835()` `TEST UNIT READY` / `FUN_44009e77()` / `FUN_4400f715(0, 1, 0)`) registra `X(80020401)` e falha em `=== DRIVE ACCESS ERROR === ( 80040904 )` com:
+     ```text
+     *** CDB  [00 00 00 00 00 00 00 00 00 00 00 00]
+     *** SENSE[70 00 04 00 00 00 00 0A 00 00 83 A7 09 04 00 00 00 00]
+     H_STAT [0] T_STAT [2]
+     ```
+   * **Falsos positivos descartados e causa raiz confirmada:** Os endereços `0x40005795` (bytes de opcode `83 a7` = `MOV D0,D3` / `CMP D1,D3`) e `0x40129307` (tabela FEP de velocidade) não eram a origem do erro. No runtime do drive (`/DRV_decomp.bin`), **`FUN_40015419`** monta o buffer Sense de 18 bytes em `DAT_889ed27e`: coloca `SK/ASC/ASCQ = 04/09/04` a partir de `(&DAT_400de35c)[_DAT_00000398 * 3]` (índice `0x38` em `0x400de404`) e grava `_DAT_00000392` nos bytes `[10..11]` (**`0x83A7`**, propagado de `_DAT_00000de8` por `FUN_40014eb8` / `FUN_40015356`; já o bootloader usa `FUN_40004852` com `_DAT_000001aa`/`0x1b0` e `&DAT_400089dc`).
+   * Na tabela **`drv_mecha_error_table @ 0x400e3736`** (431 entradas de `0x34` bytes formatadas por `FUN_40028c38`), a entrada **`0x83A7` (`a7 83`) em `0x400e8c1e`** contém a mensagem Shift-JIS **`0.5mW発光ができない(HFｵﾝ密調整)`** ("Não consegue emitir 0,5 mW de potência laser durante o ajuste fino de HF ON").
+   * **Por que o spindle não gira:** A cadeia servo/APC (`FUN_400919df` → `FUN_40092022` → `FUN_400db60c` → `FUN_400928f5` / `FUN_400929a0` / `FUN_40093974`, com `FUN_40093fad` na calibração 5.0mW/APC) aborta com `_DAT_00000de8 = 0x83A7` ao falhar o fechamento de malha da emissão de **0,5 mW** do laser — bloqueando o `startup_drive` antes mesmo de acionar o motor spindle.
+   * **Fluxo complementar no `BOOT.BIN`:** `FUN_4401e636` (chamada por `bgo_driver_init`) itera `1..4` (`FUN_4401f0bc(..., 4, 0x52, 0x14d)` → `FUN_4401ece7` / `FUN_44022f12` / `FUN_4401f044`), enquanto `boot_panic_or_halt_7812` → `FUN_44007836` aciona o painel frontal (`FUN_440054aa` → `FUN_4400599a` IPC `0xa3` para `IC7501`), tenta `FUN_44009c85()` (`close tray`) + `startup_drive(0)` e abre a bandeja (`FUN_44009bd7()`) se o retorno divergir de `0x80023a00`.
+
 ---
 
-## 6. Roadmap Técnico: Melhorias no Pico & Próximos Passos no Disassembly
+## 6. Roadmap Técnico, Auditoria `PANARSP` / `PIOLOGIC` / `BRIDGE` & Correções Aplicadas
 
-1. **Próxima Evolução no Firmware `pico-p7501`:**
-   * **Cliente / Sonda `PANA_RSP` (`+$...#XX`):** aproveitar `PIO1` + parser de checksum 8-bit já validado no `HEXCAP`/`WAITTX` para sondar o stub **`FUN_574f0590`** enviando **`0x15` (`NAK`)** seguido de **`$g#67`**, **`$Z0#8A`** / **`$Z1#8B`** ou **`0x0E 0x04 0x02`** no contexto em que `_dev_SERIAL` estiver inicializado no MAIN (`+$OK#9A` / `-$E01#A6`).
-   * **Amostrador PIO de alta resolução:** captura lógica simultânea em `GP2`/`GP3`/`GP4` sem polling por CPU para medir tempos de resposta do Timer-MCU (`IC7501`) vs `MN103S` durante janelas de atualização FMU (`0x84`/`0xB0`/`0xB3`).
-   * **Exposição de `BRIDGE` e `WAITTX` interativo no Frontend Tauri:** integrar o passthrough USB-CDC ↔ `SC0` (`~~~` para sair) e controle serial do drive (`PASS` + `START`/`LDD`/`DSCREG`) diretamente no painel de Bancada Desktop.
-2. **Continuação do Disassembly & Bancada Real (`DMR-EH55`):**
-   * **Isolar o motivo físico/EEPROM da falha pré-spindle (`0x83A7` em `LD_OFSCAN`):** mapear os campos lidos de `0x40160000` (`0xb97`, `0x50c`, `0x50a` e endereços referenciados por `DAT_40119778`..`DAT_401197c8`) e verificar na bancada a resposta do conjunto óptico (`0.5mW`, fotodiodo/FEP/driver de laser) via **`PASS`** + comandos `LDD`/`FEP`/`START` na serial do drive (ou via ponte no `MAIN`).
-   * **Rastrear os chamadores reais de `FUN_574efb97` e `func_0x574ef7d2` em `EH55_MAIN_3410PQ.bin`:** identificar o ponto do boot normal ou modo de fábrica em que `(bRam515b2e39 & 2)` / `FUN_574f0e82` habilitam a `SC0` (`puRam515b2e48`/`4c`/`50`) para o stub `0x15` (`FUN_574f0590`).
-   * Testar na bancada o cartão **SDSC ($\le 2\text{ GB}$, FAT16)** preparado em `sd_card_eh55\` com `DIGADIAG.FRM` + `PANA__SD.FRM` para ultrapassar o erro `-91006` e capturar a execução de `*** start diag ***` (`0x50400000`) na `COM10`.
+### 6.1 Estado da Bancada Física (`COM10`) & Validação Pós-Flash do Firmware Unificado
+
+* **UF2 Unificado Gravado em Hardware (`COM10` / `D:\` via `BOOTSEL`):** gravado [`panasonic_p7501_uart_unified.uf2`](../../crates/panadiga-core/src/pico/firmware_bins/panasonic_p7501_uart_unified.uf2) (`550.400` bytes, `SHA-256: 7704068D8898E35BD7569C1C3B3A0B1438659946EE3166A0013A92355858AE0F`) na placa física (`MCU Host : RP2040`, `VDD: 3.24V OK`), confirmando `PING -> PONG`, `BANNER` e `PIOLOGIC` / `PANARSP` em `HELP`.
+* **Validação ao Vivo de `PIOLOGIC` + Convivência `PIO0` `SM0`/`PIO1` (`COM10`):**
+  * **`PIOLOGIC 1500 JIG:350 1000`:** `Initial: RXD=1 NSW5V=1 TXD=1 XRESET=0 | fifo_stall=NO | edges=1024 (TRUNCATED) | span=1033800us`, **`RXD (GP2) Transitions=1023 (minLow=8us minHigh=8us)`**, **`NSW5V (GP3) Transitions=0`** (Hi-Z preservado), `TXD (GP4) Transitions=0`, `XRESET (GP5) Transitions=1` e **`[PIOLOGIC] XRESET_rise -> first_RXD_fall: 10130 us`**.
+  * Na sequência imediata (sem reset da Pico): `PING -> PONG` e `UARTSTREAM 1500 NORMAL -> UARTSTREAM: OK (348 bytes, framing_err=0, overflow=NO)`, provando em silício real que `pio_sm_claim()` protegeu a `SM0` da `PIO0`.
+* **Capturas Estendidas `CDDIAG`, `PANARSP` & `NORMAL` (`72 s`):**
+  * **`PANARSP 16000 JIG:350 WAIT:__NEVER__ NAK` + `UARTTXHEX 0D 1200`:** capturou `995 bytes` (`fifo_ovf=NO`) + `201 bytes`, registrando ao vivo `SENSE[70 00 04 00 00 00 00 0A 00 00 83 A7 09 04 00 00 00 00]` (`80040904`) nos segundos `52`/`51`.
+  * **`UARTSTREAM 72000 NORMAL` + `BAUDSCAN 3000 NOPULL`:** capturou **`11.488 bytes, framing_err=0, overflow=NO`** durante toda a contagem regressiva `59..0` com erro `80040904` (`83 A7 09 04`), observando diretamente ao chegar em `0,`: `** open tray **` → `** close tray **` → `** startup drive **` → `X(80020401)59,58,` e baud **`115200`** (`edges=885 min_low_us=8 max_low_us=53 raw_bps=125000`). Todas as sondas `PANARSP` (`G`, `MAGIC`, `NAK`) durante o boot retornaram `rsp=NO_REPLY, fifo_ovf=NO` pelo motivo provado na Seção 6.3.
+
+### 6.2 Auditoria & Correções Aplicadas em Código (`pico-p7501`, `scripts/bench/` & UI Desktop)
+
+1. **Proteção de SM0 na `PIO0` (`hal/p7501_hw.c` + `diag/p7501_diag_piologic.c`):**
+   * *Achado:* `p7501_hw_init()` carregava `p7501_uart_rx_program` na `pio0` SM0 sem chamar `pio_sm_claim()`. Ao rodar `PIOLOGIC`, `pio_claim_unused_sm(pio0, false)` capturava a SM0, sobrescrevia o programa RX legado e a desabilitava ao sair (`BOOTCAP`/`UARTMON`/`JIGBOOT` paravam de funcionar após `PIOLOGIC`), além de não chamar `p7501_hw_isolate_bus_hiz()` nem garantir release de `XRESET` em erro.
+   * *Correção:* `p7501_hw_init()` agora reivindica `pio_sm_claim(s_pio_inst, s_pio_sm)`, e `p7501_cmd_piologic` libera `XRESET` pendente + executa `p7501_hw_isolate_bus_hiz()`, além de sinalizar `(TIMING_SKEW)` em `fifo_stall=YES` e imprimir `span=<us>` da janela efetiva antes da saturação de `1024` bordas.
+2. **Sonda `PANARSP` Anti-Estouro Pós-Trigger & Extração Integral (`uart/p7501_pana_rsp*`):**
+   * *Achado:* `PANARSP_RX_RAM_CAP` de apenas `1536` bytes estourava durante os `~2,5–5,6 KB` de log do boot (`WAIT:<trig>`), descartando as respostas RSP reais; `p7501_rsp_inspect_frame()` varria sempre do offset `0` (fazendo `$Z0` na `PROBESEQ` sair cedo ao reencontrar `$g` ou ruído pré-trigger); e `ptext[96]` truncava respostas `$m` em `95` caracteres.
+   * *Correção:* Buffer ampliado para `4096` bytes com compactação deslizante pré-trigger (`PANARSP_PRETRIG_KEEP = 512`), inspeção por deslocamento (`p7501_rsp_inspect_frame_from`) passo a passo, linha integral `[PANARSP] PayloadHex: ...`, telemetria de LED + `fifo_ovf=NO/YES`, e novos testes C11 em `tests/test_pana_logic.c`.
+3. **`BRIDGE` USB-CDC ↔ `SC0` em Rajada Sem Perda Silenciosa (`uart/p7501_uart_tx.c`):**
+   * *Achado:* O loop anterior bloqueava `getchar_timeout_us(500u)` e transmitia byte a byte via `p7501_pio_tx_bytes(&tx_b, 1u, false)` (inserindo `200 us` + `drain_us` por caractere TX) sem verificar `framing_err` nem `p7501_pio_had_rx_overflow()`.
+   * *Correção:* Polling não bloqueante `getchar_timeout_us(0u)` com lote TX de até `16` bytes (`~~~` preservado), sono ocioso mínimo de `25 us`, e relatório final `BRIDGE: OK (rx=.. tx=.. framing_err=.. overflow=NO/YES)`.
+4. **Cliente Read-Only de Dump Completo, Decoders CI & Painel `Sc0BridgePanel`:**
+   * Adicionados `parse_piologic_output`, `parse_panarsp_output`, simulação no `MockBenchTransport`, e **`ReadOnlyRspDumper` + `BridgeByteStream` + `MockAm34RspStream`** em `scripts/bench/rsp_dump.py` para extração em chunks `$m<addr>,<len>` somente leitura sobre `BRIDGE` com validação de checksum 8-bit, retry automático em NAK (`-`), SHA-256 final e teardown garantido (`~~~` + `ISOLATE`).
+   * Em [`Sc0BridgePanel.tsx`](../../apps/desktop/src/components/pico/Sc0BridgePanel.tsx), [`pt-BR.json`](../../apps/desktop/src/locales/pt-BR.json) e [`en-US.json`](../../apps/desktop/src/locales/en-US.json), adicionado o atalho **`F/E Unlock`** (`PASS 0x4d415453 0x48495441`) e rotulada explicitamente a separação entre o stub `_dev_SERIAL` do `MAIN` (`P7501` `SC0`) e a CLI de serviço do drive (`UART F/E 0xB002/0xB004`, distinta do barramento ATAPI `0x880000c0`).
+
+### 6.3 Descobertas Finais de Disassembly (`NORMAL`, `0x83A7` Dinâmico, `UART 0xB002` & `TM2BR`)
+
+Análise conclusiva via PyGhidra (`Panadiga_MN103S`) explicando o comportamento medido na bancada:
+
+1. **Por que o modo `NORMAL` não alcança o `MAIN` (`EH55_MAIN_3410PQ.bin`) nem responde ao `PANARSP`:**
+   * **`FUN_440049eb` (`0x440049EB`, `/BOOT.BIN`):** após `***** normal mode *****`, chama `bgo_driver_init()` (`FUN_4400836f`). Como `bgo_driver_init()` retorna `!= 0` (`"BGO driver init failed[1]."`), `FUN_440049eb` **desvia antes de chamar `fmu_sd_dispatcher(1)` (`0x440065BC`)** e entra em **`boot_panic_or_halt_7812()` (`0x44007812`) → `FUN_44007836`**.
+   * `FUN_44007836` executa `FUN_44005cd0()` (`"Main hung-up time changed 255[s]."`), `FUN_44009c85()` (`** can not close tray **`), `startup_drive(0)` (`59..0` por `60 s` com `80040904`), abre a bandeja (`FUN_44009bd7()`), aguarda `_DAT_50503760 == 1`, tenta nova sequência `** close tray **` + `startup_drive(0)` e encerra em **`FUN_440079a4()`** (halt infinito).
+   * Já em modo `JIG` (`mode == 2`), `FUN_440049eb` entra em `fmu_sd_dispatcher(2)` → `FUN_44006cd9(0, 2)` (`FVU` / `SDDIAG`), também sem executar `MAIN`. Portanto, com `BGO` falhando e `0x83A7` ativo, **`_dev_SERIAL` (`FUN_574f0590` / `FUN_574f0775`) nunca chega a rodar na placa**.
+   * No próprio `EH55_MAIN_3410PQ.bin`, `FUN_57001fee @ 0x57001FEE` inicializa `Ramd4002000 |= 0xc085` e **`TM2BR = 0xc5`**, enquanto **`FUN_574efb97 @ 0x574EFB97`** (invocada por `FUN_57010c09`, `FUN_570cd208` e `FUN_574f46ba`) só configura **`TM2BR = 0x2b`** e o ring buffer `0x5316a260` quando `(bRam515b2e39 & 2) != 0` (ativado por `FUN_574ef7d7 @ 0x574EF7D7` via `param_1 | 10`); já os 4 chamadores estáticos de `SC0_getline` (`FUN_574ad90f`, `FUN_574ad995`, `FUN_574ada17`, `FUN_574ae5dc`) não possuem chamadas relativas/LE32 (`REL = []`, `LE32 = []`).
+2. **Origem Dinâmica do `0x83A7` em `/DRV_decomp.bin` (`Ram88000194`):**
+   * O hit estático anterior em `0x4006f5e2` (`a7 83`) era apenas operando de `CALL 0x40027988`. A origem real é **`FUN_400db60c @ 0x400DB60C`**: na interrupção de servo bit `0x800` (`FUN_400dd3a2(1)`), lê **`uVar4 = Ram88000194`** (`DRV_SERVO_MMIO`) e, quando `(uVar4 >> 16) & 0xf0ff == 1`, calcula **`_DAT_00000de8 = (ushort)uVar4 | 0x8000`**. Assim, o status **`0x000103A7`** do DSP de Servo gera `0x83A7` (`0.5mW発光ができない(HFｵﾝ密調整)` em `0x400e8c1e`), acionado após calibrações como `FUN_4008360f` (`_DAT_00000294 = 0x1ec9ec`, `_DAT_00000298 = 0x1ecaec`, `DAT_8800012a = 0xbf`). Trata-se de falha física real na emissão laser/APC/HF-on de `0,5 mW`.
+3. **Barramento Físico Real da CLI de Serviço do Drive (`0xB002..0xB004`) vs. ATAPI (`0x880000C0`):**
+   * `drv_serial_cli_dispatch @ 0x400280CA` lê e escreve em **`DAT_0000b002` (RX) / `DAT_0000b003` (status) / `DAT_0000b004` (TX)** — a **UART própria na placa F/E do drive óptico** — e **não** na `SC0` da `P7501` (`MAIN`/`BOOT.BIN` acessa o drive via ATAPI em `0x880000C0`).
+   * O comando de desbloqueio **`PASS`** (`FUN_4013420a @ 0x4013420A`) exige obrigatoriamente **dois argumentos** interpretados por `FUN_40027cd8` / `FUN_40027d30`: **`PASS 0x4d415453 0x48495441`** (`"MATS"` e `"HITA"`) para ativar `DAT_00000cd8 |= 1` e liberar os `0x71` (`113`) comandos (`START`, `LDD`, `DSCREG`, `FEP`, `PON`, `STOP`, `D`, `EEP`).
+
+### 6.4 O Novo Firmware Melhora Testes e Extração de Dump Completo?
+
+* **Melhoria nos testes:** Sim, comprovado na `COM10`: `PIOLOGIC` valida determinísticamente via `PIO0` que `GP3` (`NSW5V`) permanece com `0` transições e sem pulls, mede o bit mínimo UART (`8 us` a `115200` bps), a latência `XRESET -> RXD` (`10130 us`) e convive com `PIO1` (`UARTSTREAM` sem perda), enquanto C11/Python/Vitest/Playwright cobrem regressões do codec RSP e da UI.
+* **Extração de dump completo (Flash NOR 8 MB / DRAM / NVRAM) diante do estado atual da placa:**
+  * `PIOLOGIC` não serve para dumps longos (satura em `1024` bordas).
+  * `PANARSP` + `ReadOnlyRspDumper` sobre `BRIDGE` (`$m<addr>,<len>`) continuam prontos para extração integral **assim que `MAIN` (`_dev_SERIAL`) estiver em execução**, mas **não** respondem enquanto `BOOT.BIN` travar em `BGO driver init failed[1].`.
+  * Logo, os caminhos reais para extração completa nesta placa são:
+    1. **Cartão SDSC via `SDDIAG` (`DIGADIAG.FRM`):** investigar por que `FUN_4400a247` em `/BOOT.BIN` rejeita o cartão em `[SDCD]SetBusWidth:SD Status ERROR -91006` / `SD init failed[-90002]` (`ACMD13`/bus 4-bit ou cartão não aceito pelo driver legado `SDCD`) — permitindo carregar um dumper read-only em RAM `0x50400000` sem depender do laser óptico.
+    2. **Drive óptico (`0x83A7`) ou UART F/E `0xB002/0xB004`:** inspecionar fisicamente pickup/flat/circuito HF/APC (ou conectar a `BRIDGE` nos pads TX/RX da placa F/E usando **`F/E Unlock` → `PASS 0x4d415453 0x48495441`**) para diagnóstico/recuperação de mídia `CD-R`/`DVD-RAM` (`DIGADIAG.FRM` / `PANA_DVD.FRM`).
+    3. **Monitor síncrono externo:** utilizar `AUTODETECT` / `INJECT_LOADER` assim que o cabeçalho de depuração síncrona além do `P7501` estiver conectado (`DCSR=0xFFFFFFFF` atual indica ausência de clock/pinos síncronos no `P7501`).
+
+---
+
+### 6.5 Achados Finais Verificados: Injeção de Botões via Serial, Glitch no Pico, `-91006`, `$x`/`$g` e Tabela Completa do Drive (`0x71`)
+
+Validação direta adicional em `/BOOT.BIN`, `/DRV_decomp.bin` e `/EH55_MAIN_3410PQ.bin` responde de forma conclusiva às hipóteses de desvio/injeção na bancada:
+
+1. **Por que não é possível operar o gravador enviando sequência de botões pela `SC0` (`P7501`):**
+   * **Receptor serial órfão no `/BOOT.BIN`:** A rotina de leitura bloqueante **`uart0_getc @ 0x4400479F`** (consulta `(0xd400200c >> 4) & 1` e lê `SC0RXB = 0xd4002009`) e `console_getline @ 0x4400488A` têm **zero referências no código** (`rel_calls=[]`, `ptrs=[]`, `SC0RXB raw_refs=[]`), ou seja, o `/BOOT.BIN` não possui interpretador de comandos nem leitor de teclas na UART `SC0`.
+   * **Barramento dedicado para painel frontal (`IC7501`):** Os botões/comandos de painel passam pelo canal IPC de memória compartilhada com o microcontrolador Timer (`IC7501`) em **`FUN_4400534a`** (mailbox `DAT_dc010000`, pacote de `15` bytes + checksum `sum - 0x5b` em `DAT_dc010010`, interrupção `FUN_4400f400(0, 0x31, 0)`), e não pela UART do `P7501`.
+   * **Halt antes do `MAIN`:** Como `bgo_driver_init()` falha e trava em `boot_panic_or_halt_7812()` → `FUN_440079a4()`, o firmware principal `MAIN` (responsável por teclas/OSD e pelo stub `_dev_SERIAL`) nunca entra em execução.
+
+2. **Viabilidade de falha controlada ("glitch") com a Raspberry Pi Pico no salto do `BGO`:**
+   * O teste após `***** normal mode *****` ocorre em **`FUN_440049eb @ 0x44004ABD..0x44004ADD`**: `CALL 0x4400836f` (`bgo_driver_init`, retorna `-1` após `"BGO driver init failed[%u]."`) → `CMP 0x0, D0` (`a0 00` em `0x44004ACA`) → **`BEQ 0x44004AD7`** (`c8 0b` em `0x44004ACC`) → `fmu_sd_dispatcher(1)` vs. `CALL 0x44007812` (`boot_panic_or_halt_7812`).
+   * **Por que `XRESET` não serve e por que injeção de falha de tensão é contraindicada:** O pino `GP5` (`XRESET`) reinicia toda a CPU MN103S em `0x40000000`, não podendo fazer saltar a instrução `0x44004ACC`. Uma perturbação momentânea de alimentação no core (`VDD_CORE`) exigiria hardware externo dedicado (MOSFET em paralelo e remoção de capacitores de desacoplamento), comportar-se-ia de modo não determinístico com risco físico à placa e, mesmo pulando `0x44004ACC`, deixaria a flag/estrutura de `BGO` (`_DAT_50480d0c`) não inicializada e bateria logo adiante nas verificações de HDD de `fmu_sd_dispatcher(1)`.
+   * **Alternativa determinística e segura (`JIG` → `SDDIAG`):** Ao contrário do modo `NORMAL`, o modo `JIG` (`mode == 2` em `FUN_44006cd9`) desvia antes da checagem normal para **`0x44006DBC: JMP 0x50400000`** (`dc 44 92 3f 0c`), executando diretamente a imagem `DIGADIAG.FRM` (`EXTRHEAD` plaintext carregado em `0x50400000`) sem risco elétrico.
+
+3. **Motivo exato do `SDCD ERROR -91006` (`-0x1637E`) e limites do leitor SD em `/BOOT.BIN`:**
+   * **`GetSD_Status @ 0x44027826`:** Envia `CMD55` (`0x37`) + `ACMD13` (`0x4d`) e lê `0x40` bytes (`abStack_88[0..63]`). Exige estritamente **`cStack_86 == '\0'` (byte `[2]` do SD Status `== 0x00`)**; se diferente de zero, grava `_DAT_50574914 = 4`, imprime `"[SDCD]This SD Card is't memory card \n"` e retorna **`-0x1637e` (`-91006`)**, mesmo em cartões SDSC ≤ 2 GB cujo byte `[2]` não seja nulo.
+   * **`FUN_4402791a @ 0x4402791A`:** Em modo SDSC (`_DAT_505748f8 < 2`), exige `CSD_STRUCTURE == 0` e capacidade máxima de **`_DAT_5057491c <= 0x3F6004`** (`4.153.348` setores ≈ `2,126 GB`), rejeitando com `-0x16380` fora desse perfil.
+
+4. **Formato exato em linha dos comandos `$x`, `$g` (`EH55_MAIN`) e tabela completa `113` (`0x71`) do `DRV`:**
+   * **Leitura binária `$x<addr>,<len>` (`FUN_574f0a33 @ 0x574F0A33`):** Transmite `+` `$` seguido dos **bytes crus sem escape** (`0x00..0xFF`, logo `0x23` `'#'` pode ocorrer dentro do payload!), com flush em chunks de **`0x440` (`1.088`) bytes** (dobro da taxa efetiva de `$m` em `115200` bps) e sufixo `#<xx>` calculado pela soma módulo `256` dos bytes brutos.
+   * **Dump de registradores `$g` (`FUN_574f0da3 @ 0x574F0DA3`):** Lê **`0x70` (`112`) bytes** (`224` nibbles ASCII hex, `28` palavras `<I` de 32 bits LE) a partir de `*iRam5316ae8c`, copiando os dois ponteiros finais em `+0x68` e `+0x6c` ao redor de `+0x64` (`100`).
+   * **UART `BOOT.BIN` (`uart0_putc @ 0x440047C7`):** Faz polling em `MOVHU (0xd400200c), D0; EXTHU D0; AND 0xa0, D0; CMP 0, D0; BNE` e escreve `MOVBU D0, (0xd4002008)` (`SC0TXB`).
+   * **Tabela completa `drv_cli_cmd_table @ 0x400DF5C0` (`0x71` = `113` comandos):** Índices `[0..112]` (`SLOGON` até `JIT`), com inicialização UART F/E `FUN_400100b0` (`_DAT_0000b000 = 0xc083`, `DAT_0000a084 = 0x36`, `DAT_0000a080 = 0x80`). Comandos destrutivos de escrita/gravação de mídia ou RAM (`WB`, `WW`, `WRITE`, `WTLONG`, `ERASE`, `FORMAT` — os quatro últimos com `perm=0x38`) são bloqueados nas ferramentas do host.

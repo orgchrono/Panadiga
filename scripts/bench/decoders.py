@@ -63,6 +63,36 @@ class SensePacket:
 
 
 @dataclass(frozen=True)
+class PiologicReport:
+    """Decoded 4-channel PIO0 logic timing and NSW5V safety audit from `PIOLOGIC`."""
+
+    fifo_stall: bool
+    timing_skew: bool
+    edges_count: int
+    edges_truncated: bool
+    span_us: int | None
+    nsw5v_transitions: int | None
+    reset_to_first_rxd_us: int | None
+    min_tx_to_rx_us: int | None
+    max_tx_to_rx_us: int | None
+
+
+@dataclass(frozen=True)
+class PanarspReport:
+    """Decoded AM34 `_dev_SERIAL` RSP probe response from `PANARSP`."""
+
+    rx_bytes: int | None
+    ack_plus: bool
+    nak_minus: bool
+    nak_0x15: bool
+    payload: str | None
+    payload_hex: str | None
+    checksum_ok: bool | None
+    rsp_status: str
+    fifo_overflow: bool
+
+
+@dataclass(frozen=True)
 class UartBootReport:
     """Structured facts decoded from an AM34 115200 8N1 P7501 UART capture."""
 
@@ -197,4 +227,68 @@ def parse_am34_uart_log(text: str) -> UartBootReport:
         drive_error_codes=tuple(drive_errs),
         sense_packets=tuple(senses),
         notes=tuple(notes),
+    )
+
+
+def parse_piologic_output(text: str) -> PiologicReport:
+    """Parse `PIOLOGIC` edge counts, FIFO stall/truncation flags, and FMU/MN103S latencies."""
+    stall_m = re.search(r"fifo_stall=(YES|NO)", text, re.IGNORECASE)
+    edges_m = re.search(r"edges=(\d+)", text, re.IGNORECASE)
+    span_m = re.search(r"span=(\d+)us", text, re.IGNORECASE)
+    nsw_m = re.search(r"NSW5V[^\r\n]*Transitions=(\d+)", text, re.IGNORECASE)
+    rst_m = re.search(r"XRESET_rise\s*->\s*first_RXD_fall:\s*(\d+)\s*us", text, re.IGNORECASE)
+    tr_m = re.search(r"TXD_fall\s*->\s*RXD_fall\s*turnaround:\s*min=(\d+)\s*us\s*max=(\d+)\s*us", text, re.IGNORECASE)
+
+    return PiologicReport(
+        fifo_stall=bool(stall_m and stall_m.group(1).upper() == "YES"),
+        timing_skew="TIMING_SKEW" in text,
+        edges_count=int(edges_m.group(1)) if edges_m else 0,
+        edges_truncated="(TRUNCATED)" in text,
+        span_us=int(span_m.group(1)) if span_m else None,
+        nsw5v_transitions=int(nsw_m.group(1)) if nsw_m else None,
+        reset_to_first_rxd_us=int(rst_m.group(1)) if rst_m else None,
+        min_tx_to_rx_us=int(tr_m.group(1)) if tr_m else None,
+        max_tx_to_rx_us=int(tr_m.group(2)) if tr_m else None,
+    )
+
+
+def parse_panarsp_output(text: str) -> PanarspReport:
+    """Parse `PANARSP` RX byte count, frame verification, and untruncated `PayloadHex`."""
+    rx_m = re.search(r"PANARSP:\s*OK\s*\([^)]*rx=(\d+)\s+bytes", text, re.IGNORECASE)
+    status_m = re.search(r"rsp=([A-Z0-9_]+)", text, re.IGNORECASE)
+    ovf_m = re.search(r"fifo_ovf=(YES|NO)", text, re.IGNORECASE)
+    frame_m = re.search(
+        r"\[PANARSP\]\s*Frame:\s*ack=([^\s]+)\s+nak=([^\s]+)\s+nak0x15=([^\s|]+)\s*\|\s*payload=\"([^\"]*)\"",
+        text,
+    )
+    none_m = re.search(
+        r"\[PANARSP\]\s*Frame:\s*none\s*\(ack=([^\s]+)\s+nak=([^\s]+)\s+nak0x15=([^)\s]+)\)",
+        text,
+    )
+    full_m = re.search(r"\[PANARSP\]\s*PayloadHex:\s*([^\r\n]+)", text)
+
+    ack = nak = n15 = False
+    payload: str | None = None
+    csum_ok: bool | None = None
+    if frame_m:
+        ack = frame_m.group(1) == "+"
+        nak = frame_m.group(2) == "-"
+        n15 = frame_m.group(3).lower() == "yes"
+        payload = frame_m.group(4)
+        csum_ok = "(VALID)" in text
+    elif none_m:
+        ack = none_m.group(1) == "+"
+        nak = none_m.group(2) == "-"
+        n15 = none_m.group(3).lower() == "yes"
+
+    return PanarspReport(
+        rx_bytes=int(rx_m.group(1)) if rx_m else None,
+        ack_plus=ack,
+        nak_minus=nak,
+        nak_0x15=n15,
+        payload=payload,
+        payload_hex=full_m.group(1).strip() if full_m else None,
+        checksum_ok=csum_ok,
+        rsp_status=status_m.group(1).upper() if status_m else "UNKNOWN",
+        fifo_overflow=bool(ovf_m and ovf_m.group(1).upper() == "YES"),
     )

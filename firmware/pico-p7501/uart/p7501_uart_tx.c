@@ -176,38 +176,76 @@ void p7501_cmd_bridge(const char *arg) {
     p7501_led_set_auto_mode(LED_MODE_GDB_RSP);
     p7501_pio_begin_rx_session_ex(action, jig_hold_ms);
 
+    uint32_t rx_count = 0u;
+    uint32_t tx_count = 0u;
+    uint32_t ferr_count = 0u;
     uint8_t tilde_run = 0u;
     uint8_t rx_byte = 0u;
-    while (true) {
+    uint8_t tx_batch[16];
+    bool exit_requested = false;
+
+    while (!exit_requested) {
         p7501_led_tick();
         (void)p7501_pio_poll_sw_uart_release();
+        if (p7501_pio_poll_and_clear_framing_err()) {
+            ++ferr_count;
+        }
+
+        bool had_rx = false;
         while (p7501_pio_pop_rx_byte(&rx_byte)) {
             putchar_raw((int)rx_byte);
+            ++rx_count;
+            had_rx = true;
         }
-        fflush(stdout);
+        if (had_rx) {
+            fflush(stdout);
+        }
 
-        const int ch = getchar_timeout_us(500u);
-        if (ch == PICO_ERROR_TIMEOUT) {
-            continue;
-        }
-        if (ch == '~') {
-            ++tilde_run;
-            if (tilde_run >= 3u) {
+        size_t batch_len = 0u;
+        while (batch_len < sizeof(tx_batch)) {
+            const int ch = getchar_timeout_us(0u);
+            if (ch == PICO_ERROR_TIMEOUT) {
                 break;
             }
-            continue;
+            if (ch == '~') {
+                ++tilde_run;
+                if (tilde_run >= 3u) {
+                    exit_requested = true;
+                    break;
+                }
+                continue;
+            }
+            while (tilde_run > 0u) {
+                if (batch_len == sizeof(tx_batch)) {
+                    p7501_pio_tx_bytes(tx_batch, batch_len, false);
+                    tx_count += (uint32_t)batch_len;
+                    batch_len = 0u;
+                }
+                tx_batch[batch_len++] = (uint8_t)'~';
+                --tilde_run;
+            }
+            if (batch_len == sizeof(tx_batch)) {
+                p7501_pio_tx_bytes(tx_batch, batch_len, false);
+                tx_count += (uint32_t)batch_len;
+                batch_len = 0u;
+            }
+            tx_batch[batch_len++] = (uint8_t)ch;
         }
-        while (tilde_run > 0u) {
-            const uint8_t t = (uint8_t)'~';
-            p7501_pio_tx_bytes(&t, 1u, false);
-            --tilde_run;
+        if (batch_len > 0u) {
+            p7501_pio_tx_bytes(tx_batch, batch_len, false);
+            tx_count += (uint32_t)batch_len;
+        } else if (!had_rx && !exit_requested) {
+            sleep_us(25u);
         }
-        const uint8_t tx_b = (uint8_t)ch;
-        p7501_pio_tx_bytes(&tx_b, 1u, false);
     }
 
+    if (p7501_pio_poll_and_clear_framing_err()) {
+        ++ferr_count;
+    }
+    const bool ovf = p7501_pio_had_rx_overflow();
     p7501_pio_end_session();
     (void)p7501_pio_set_baud(orig_baud);
     p7501_led_set_auto_mode(LED_MODE_HEARTBEAT_IDLE);
-    printf("\nBRIDGE: OK\n");
+    printf("\nBRIDGE: OK (rx=%" PRIu32 " tx=%" PRIu32 " framing_err=%" PRIu32 " overflow=%s)\n",
+           rx_count, tx_count, ferr_count, ovf ? "YES" : "NO");
 }

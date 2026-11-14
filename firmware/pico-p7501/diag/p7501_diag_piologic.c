@@ -126,20 +126,25 @@ void p7501_cmd_piologic(const char *arg) {
     pio_remove_program(pio0, &p7501_logic_sampler_program, offset);
     pio_sm_unclaim(pio0, sm);
 
-    if (boot.boot_action == P7501_BOOT_ACTION_JIG) {
-        p7501_hw_sw_uart_set_low(false);
+    if (release_xreset_pending) {
+        p7501_hw_reset_release();
     }
+    p7501_hw_isolate_bus_hiz();
 
     p7501_logic_stats_t stats;
     p7501_logic_analyze_edges(s_edges, edge_count, initial_state4, &stats);
 
+    const uint32_t span_us = (edge_count > 0u) ? s_edges[edge_count - 1u].t_us : 0u;
     printf("=== PIOLOGIC PIO0 (%" PRIu32 "ms @ %" PRIu32 "kHz, boot=%d, hold=%" PRIu32 "ms) ===\n",
            boot.window_ms, sample_khz, (int)boot.boot_action, boot.jig_hold_ms);
-    printf("Initial: RXD=%u NSW5V=%u TXD=%u XRESET=%u | fifo_stall=%s | edges=%u%s\n",
+    printf("Initial: RXD=%u NSW5V=%u TXD=%u XRESET=%u | fifo_stall=%s%s | edges=%u%s | span=%" PRIu32 "us\n",
            (initial_state4 >> 0) & 1u, (initial_state4 >> 1) & 1u,
            (initial_state4 >> 2) & 1u, (initial_state4 >> 3) & 1u,
            rx_stall ? "YES" : "NO",
-           (unsigned)edge_count, overflow ? " (TRUNCATED)" : "");
+           rx_stall ? " (TIMING_SKEW)" : "",
+           (unsigned)edge_count,
+           overflow ? " (TRUNCATED)" : "",
+           span_us);
 
     static const char *const k_names[P7501_LOGIC_CH_COUNT] = {
         "RXD   (GP2)", "NSW5V (GP3)", "TXD   (GP4)", "XRESET(GP5)"

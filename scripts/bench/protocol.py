@@ -191,7 +191,39 @@ class MockBenchTransport:
             if self.simulate_gp26_sticky_low:
                 self._gp26_latched_low = True
             return self._render_capture(head)
+        if head == "PIOLOGIC":
+            return self._render_piologic()
+        if head == "PANARSP":
+            return self._render_panarsp(cmd)
         return f"{cmd}\r\nOK\r\nP7501> "
+
+    def _render_piologic(self) -> str:
+        return (
+            "PIOLOGIC\r\n"
+            "=== PIOLOGIC PIO0 (4000ms @ 1000kHz, boot=2, hold=350ms) ===\r\n"
+            "Initial: RXD=1 NSW5V=1 TXD=1 XRESET=0 | fifo_stall=NO | edges=28 | span=512000us\r\n"
+            "  RXD   (GP2) : Final=1, Transitions=24 (rise=12 fall=12 minLow=8us minHigh=9us)\r\n"
+            "  NSW5V (GP3) : Final=1, Transitions=0 (rise=0 fall=0 minLow=0us minHigh=0us)\r\n"
+            "  TXD   (GP4) : Final=1, Transitions=2 (rise=1 fall=1 minLow=40us minHigh=100us)\r\n"
+            "  XRESET(GP5) : Final=1, Transitions=2 (rise=1 fall=1 minLow=30000us minHigh=0us)\r\n"
+            "[PIOLOGIC] XRESET_rise -> first_RXD_fall: 482 us\r\n"
+            "[PIOLOGIC] TXD_fall -> RXD_fall turnaround: min=120 us max=120 us\r\n"
+            "PIOLOGIC: OK\r\n"
+            "P7501> "
+        )
+
+    def _render_panarsp(self, cmd: str) -> str:
+        payload = "DEADBEEF" if "MEM:" in cmd.upper() else "OK"
+        csum = sum(payload.encode("ascii")) & 0xFF
+        return (
+            f"{cmd}\r\n"
+            "=== PANARSP PIO1 (baud=115200 ms=6000 boot=2 hold=350 action=0) ===\r\n"
+            f"[PANARSP] RX ({len(payload) + 6} bytes, pretrig_dropped=0, inspect_from=0):\r\n"
+            f"[PANARSP] Frame: ack=+ nak=no nak0x15=yes | payload=\"{payload}\" | csum=0x{csum:02X}/0x{csum:02X} (VALID)\r\n"
+            f"[PANARSP] PayloadHex: {payload}\r\n"
+            f"PANARSP: OK (rx={len(payload) + 6} bytes, rsp=VALID, fifo_ovf=NO)\r\n"
+            "P7501> "
+        )
 
     def _render_pincheck(self) -> str:
         if self._gp26_latched_low:

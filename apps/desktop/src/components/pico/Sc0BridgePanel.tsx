@@ -45,14 +45,18 @@ const RSP_QUICK_PROBES: ReadonlyArray<{
   { label: '$Z1#8B', mode: 'rsp', bridgePayload: 'Z1', panarspArg: '4000 Z1' },
 ];
 
-const DRIVE_QUICK_COMMANDS: ReadonlyArray<string> = [
-  'PASS',
-  'START',
-  'LDD',
-  'DSCREG',
-  'FEP',
-  'PON',
-  'STOP',
+const DRIVE_QUICK_COMMANDS: ReadonlyArray<{
+  readonly label: string;
+  readonly cmd: string;
+}> = [
+  { label: 'F/E Unlock', cmd: 'PASS 0x4d415453 0x48495441' },
+  { label: 'PASS', cmd: 'PASS' },
+  { label: 'START', cmd: 'START' },
+  { label: 'LDD', cmd: 'LDD' },
+  { label: 'DSCREG', cmd: 'DSCREG' },
+  { label: 'FEP', cmd: 'FEP' },
+  { label: 'PON', cmd: 'PON' },
+  { label: 'STOP', cmd: 'STOP' },
 ];
 
 export const Sc0BridgePanel: React.FC<Sc0BridgePanelProps> = ({
@@ -226,17 +230,18 @@ export const Sc0BridgePanel: React.FC<Sc0BridgePanelProps> = ({
               <span>{t('pico.bridge.driveSection')}</span>
             </span>
             <div className="flex flex-wrap gap-1.5">
-              {DRIVE_QUICK_COMMANDS.map(cmd => (
+              {DRIVE_QUICK_COMMANDS.map(item => (
                 <Button
-                  key={cmd}
+                  key={item.label}
                   type="button"
                   size="sm"
                   variant="outline"
+                  title={item.cmd}
                   disabled={isBusy}
-                  onClick={() => onSendDriveCommand(cmd)}
+                  onClick={() => onSendDriveCommand(item.cmd)}
                   className="text-[11px] h-7 px-2.5 font-mono"
                 >
-                  {cmd}
+                  {item.label}
                 </Button>
               ))}
             </div>

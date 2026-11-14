@@ -149,10 +149,17 @@ impl FactCritic {
     }
 
     pub fn audit(&self, generated_text: &str, source_chunks: &[Chunk]) -> CriticReport {
+        // Generator cites `[doc_title, section_title]` verbatim in claims_body, so
+        // include those provenance headers alongside chunk text during grounding checks.
         let combined_source_text = source_chunks
             .iter()
-            .map(|c| c.text.as_str())
-            .collect::<Vec<&str>>()
+            .map(|c| {
+                format!(
+                    "{}\n{}\n{}",
+                    c.metadata.doc_title, c.metadata.section_title, c.text
+                )
+            })
+            .collect::<Vec<String>>()
             .join("\n");
 
         let mut verified_entities = Vec::new();

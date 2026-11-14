@@ -73,8 +73,8 @@ describe('useNvramViewModel MVVM Test', () => {
     expect(result.current.liveCapture).not.toBeNull();
     expect(result.current.liveCapture?.port).toBe('COM10');
 
-    act(() => {
-      result.current.clearLiveCapture();
+    await act(async () => {
+      await result.current.clearLiveCapture();
     });
 
     expect(result.current.liveCapture).toBeNull();

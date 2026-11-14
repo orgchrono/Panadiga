@@ -8,29 +8,52 @@
 #include "uart/p7501_pana_rsp.h"
 #include "uart/p7501_uart_pio_engine.h"
 #include "common/p7501_hex.h"
+#include "hal/p7501_led.h"
+#include "p7501_types.h"
 #include "pico/stdlib.h"
 
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
 
-#define PANARSP_RX_RAM_CAP 1536u
+#define PANARSP_RX_RAM_CAP 4096u
+#define PANARSP_PRETRIG_KEEP 512u
 
 typedef struct panarsp_rx_cap {
     uint8_t buf[PANARSP_RX_RAM_CAP];
     size_t len;
+    size_t pretrig_dropped;
     bool overflow;
 } panarsp_rx_cap_t;
 
-static void panarsp_push_rx(panarsp_rx_cap_t *cap, uint8_t b) {
-    if (cap->len < PANARSP_RX_RAM_CAP) {
-        cap->buf[cap->len++] = b;
-    } else {
-        cap->overflow = true;
+static void panarsp_compact_pretrig(panarsp_rx_cap_t *cap, size_t keep) {
+    if (cap->len <= keep) {
+        return;
     }
+    const size_t drop = cap->len - keep;
+    memmove(cap->buf, &cap->buf[drop], keep);
+    cap->len = keep;
+    cap->pretrig_dropped += drop;
 }
 
-static bool panarsp_drain_for_ms(panarsp_rx_cap_t *cap, uint32_t wait_ms, bool stop_on_rsp_frame) {
+static void panarsp_push_rx(panarsp_rx_cap_t *cap, uint8_t b, bool compact_pretrig) {
+    if (cap->len >= PANARSP_RX_RAM_CAP) {
+        if (compact_pretrig) {
+            panarsp_compact_pretrig(cap, PANARSP_PRETRIG_KEEP);
+        } else {
+            cap->overflow = true;
+            return;
+        }
+    }
+    cap->buf[cap->len++] = b;
+}
+
+static bool panarsp_drain_for_ms(
+    panarsp_rx_cap_t *cap,
+    uint32_t wait_ms,
+    bool stop_on_rsp_frame,
+    size_t inspect_from
+) {
     const uint64_t deadline_us = time_us_64() + ((uint64_t)wait_ms * 1000ULL);
     uint64_t frame_grace_us = 0ULL;
 
@@ -39,12 +62,12 @@ static bool panarsp_drain_for_ms(panarsp_rx_cap_t *cap, uint32_t wait_ms, bool s
         uint8_t b = 0u;
         bool pushed = false;
         while (p7501_pio_pop_rx_byte(&b)) {
-            panarsp_push_rx(cap, b);
+            panarsp_push_rx(cap, b, false);
             pushed = true;
         }
         if (stop_on_rsp_frame && pushed && frame_grace_us == 0ULL) {
             p7501_rsp_frame_info_t info;
-            if (p7501_rsp_inspect_frame(cap->buf, cap->len, &info)) {
+            if (p7501_rsp_inspect_frame_from(cap->buf, cap->len, inspect_from, &info)) {
                 frame_grace_us = time_us_64() + 40000ULL;
             }
         }
@@ -65,12 +88,24 @@ static uint32_t panarsp_tx_frame(const char *payload) {
     return (uint32_t)flen;
 }
 
-static void panarsp_print_report(const p7501_pana_rsp_spec_t *spec, const panarsp_rx_cap_t *cap, bool triggered) {
+static void panarsp_print_report(
+    const p7501_pana_rsp_spec_t *spec,
+    const panarsp_rx_cap_t *cap,
+    size_t post_tx_off,
+    size_t primary_off,
+    bool triggered,
+    bool fifo_ovf
+) {
     p7501_rsp_frame_info_t info;
-    const bool has_frame = p7501_rsp_inspect_frame(cap->buf, cap->len, &info);
+    bool has_frame = p7501_rsp_inspect_frame_from(cap->buf, cap->len, primary_off, &info);
+    if (!has_frame && post_tx_off < primary_off) {
+        has_frame = p7501_rsp_inspect_frame_from(cap->buf, cap->len, post_tx_off, &info);
+    }
 
-    printf("[PANARSP] RX (%u bytes%s):\n",
+    printf("[PANARSP] RX (%u bytes, pretrig_dropped=%u, inspect_from=%u%s):\n",
            (unsigned)cap->len,
+           (unsigned)cap->pretrig_dropped,
+           (unsigned)post_tx_off,
            cap->overflow ? ", TRUNCATED" : "");
     for (size_t off = 0u; off < cap->len; off += 16u) {
         const size_t chunk = (cap->len - off > 16u) ? 16u : (cap->len - off);
@@ -97,14 +132,20 @@ static void panarsp_print_report(const p7501_pana_rsp_spec_t *spec, const panars
                                     : (sizeof(ptext) - 1u);
         memcpy(ptext, &cap->buf[info.payload_offset], copy_len);
         ptext[copy_len] = '\0';
-        printf("[PANARSP] Frame: ack=%s nak=%s nak0x15=%s | payload=\"%s\" | csum=0x%02X/0x%02X (%s)\n",
-               info.ack_plus ? "+" : "-",
+        printf("[PANARSP] Frame: ack=%s nak=%s nak0x15=%s | payload=\"%s\"%s | csum=0x%02X/0x%02X (%s)\n",
+               info.ack_plus ? "+" : "no",
                info.nak_minus ? "-" : "no",
                info.raw_nak_0x15 ? "yes" : "no",
                ptext,
+               (info.payload_len > copy_len) ? "..." : "",
                info.actual_csum,
                info.expected_csum,
                info.checksum_ok ? "VALID" : "MISMATCH");
+        printf("[PANARSP] PayloadHex: ");
+        for (size_t i = 0u; i < info.payload_len; ++i) {
+            putchar((int)cap->buf[info.payload_offset + i]);
+        }
+        putchar('\n');
     } else {
         printf("[PANARSP] Frame: none (ack=%s nak=%s nak0x15=%s)\n",
                info.ack_plus ? "+" : "no",
@@ -113,14 +154,16 @@ static void panarsp_print_report(const p7501_pana_rsp_spec_t *spec, const panars
     }
 
     if (spec->wait_trigger_enabled && !triggered) {
-        printf("PANARSP: OK (triggered=NO, rx=%u bytes, rsp=%s)\n",
+        printf("PANARSP: OK (triggered=NO, rx=%u bytes, rsp=%s, fifo_ovf=%s)\n",
                (unsigned)cap->len,
-               has_frame ? (info.checksum_ok ? "VALID" : "BAD_CSUM") : "NO_REPLY");
+               has_frame ? (info.checksum_ok ? "VALID" : "BAD_CSUM") : "NO_REPLY",
+               fifo_ovf ? "YES" : "NO");
         return;
     }
-    printf("PANARSP: OK (rx=%u bytes, rsp=%s)\n",
+    printf("PANARSP: OK (rx=%u bytes, rsp=%s, fifo_ovf=%s)\n",
            (unsigned)cap->len,
-           has_frame ? (info.checksum_ok ? "VALID" : "BAD_CSUM") : "NO_REPLY");
+           has_frame ? (info.checksum_ok ? "VALID" : "BAD_CSUM") : "NO_REPLY",
+           fifo_ovf ? "YES" : "NO");
 }
 
 void p7501_cmd_pana_rsp(const char *arg) {
@@ -134,6 +177,7 @@ void p7501_cmd_pana_rsp(const char *arg) {
 
     memset(&s_cap, 0, sizeof(s_cap));
     p7501_pio_enforce_nsw5v_hiz();
+    p7501_led_set_auto_mode(LED_MODE_BUS_ACTIVE);
     printf("=== PANARSP PIO1 (baud=%" PRIu32 " ms=%" PRIu32 " boot=%d hold=%" PRIu32 " action=%d) ===\n",
            p7501_pio_get_baud(),
            spec.timeout_ms,
@@ -152,7 +196,7 @@ void p7501_cmd_pana_rsp(const char *arg) {
             p7501_pio_poll_sw_uart_release();
             uint8_t b = 0u;
             while (p7501_pio_pop_rx_byte(&b)) {
-                panarsp_push_rx(&s_cap, b);
+                panarsp_push_rx(&s_cap, b, true);
                 if (p7501_rolling_match_push(ring, &ring_len, sizeof(ring), b, spec.trigger)) {
                     triggered = true;
                     break;
@@ -160,45 +204,60 @@ void p7501_cmd_pana_rsp(const char *arg) {
             }
             tight_loop_contents();
         }
+        if (triggered) {
+            panarsp_compact_pretrig(&s_cap, PANARSP_PRETRIG_KEEP);
+        }
     }
 
+    const size_t post_tx_off = s_cap.len;
+    size_t primary_off = post_tx_off;
     if (triggered) {
         if (spec.send_magic_prefix || spec.action == PANA_RSP_ACT_MAGIC) {
             static const uint8_t k_magic[3] = { 0x0Eu, 0x04u, 0x02u };
+            const size_t step_off = s_cap.len;
             p7501_pio_tx_bytes(k_magic, sizeof(k_magic), false);
-            panarsp_drain_for_ms(&s_cap, 30u, false);
+            panarsp_drain_for_ms(&s_cap, 30u, false, step_off);
         }
         if (spec.send_nak_prefix && spec.action != PANA_RSP_ACT_MAGIC) {
             static const uint8_t k_nak = 0x15u;
+            const size_t step_off = s_cap.len;
             p7501_pio_tx_bytes(&k_nak, 1u, false);
-            panarsp_drain_for_ms(&s_cap, (spec.action == PANA_RSP_ACT_NAK) ? 350u : 80u, true);
+            panarsp_drain_for_ms(&s_cap, (spec.action == PANA_RSP_ACT_NAK) ? 350u : 80u, true, step_off);
         }
+        primary_off = s_cap.len;
         switch (spec.action) {
-            case PANA_RSP_ACT_SEQ:
+            case PANA_RSP_ACT_SEQ: {
+                const size_t g_off = s_cap.len;
                 (void)panarsp_tx_frame("g");
-                panarsp_drain_for_ms(&s_cap, 300u, true);
+                panarsp_drain_for_ms(&s_cap, 300u, true, g_off);
+                const size_t z_off = s_cap.len;
                 (void)panarsp_tx_frame("Z0");
-                panarsp_drain_for_ms(&s_cap, 250u, true);
+                panarsp_drain_for_ms(&s_cap, 250u, true, z_off);
+                primary_off = g_off;
                 break;
+            }
             case PANA_RSP_ACT_G:
             case PANA_RSP_ACT_Z0:
             case PANA_RSP_ACT_Z1:
             case PANA_RSP_ACT_MEM:
             case PANA_RSP_ACT_RAW:
                 (void)panarsp_tx_frame(spec.payload);
-                panarsp_drain_for_ms(&s_cap, (spec.timeout_ms < 700u) ? spec.timeout_ms : 700u, true);
+                panarsp_drain_for_ms(&s_cap, (spec.timeout_ms < 700u) ? spec.timeout_ms : 700u, true, primary_off);
                 break;
             case PANA_RSP_ACT_HEX:
                 p7501_pio_tx_bytes(spec.raw_bytes, spec.raw_len, false);
-                panarsp_drain_for_ms(&s_cap, 500u, true);
+                panarsp_drain_for_ms(&s_cap, 500u, true, primary_off);
                 break;
             case PANA_RSP_ACT_NAK:
             case PANA_RSP_ACT_MAGIC:
             default:
+                primary_off = post_tx_off;
                 break;
         }
     }
 
+    const bool fifo_ovf = p7501_pio_had_rx_overflow();
     p7501_pio_end_session();
-    panarsp_print_report(&spec, &s_cap, triggered);
+    p7501_led_set_auto_mode(LED_MODE_HEARTBEAT_IDLE);
+    panarsp_print_report(&spec, &s_cap, post_tx_off, primary_off, triggered, fifo_ovf);
 }

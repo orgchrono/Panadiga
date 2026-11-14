@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 
 import pytest
@@ -9,6 +10,8 @@ import pytest
 from scripts.bench.decoders import (
     parse_am34_uart_log,
     parse_busdiag_output,
+    parse_panarsp_output,
+    parse_piologic_output,
     parse_pincheck_output,
     parse_status_output,
     read_captured_log,
@@ -18,6 +21,11 @@ from scripts.bench.protocol import (
     BenchSession,
     MockBenchTransport,
     validate_safe_bench_command,
+)
+from scripts.bench.rsp_dump import (
+    MockAm34RspStream,
+    ReadOnlyRspDumper,
+    build_rsp_frame,
 )
 from scripts.bench.runner import main as bench_main, run_smoke_suite
 
@@ -71,3 +79,35 @@ def test_utf16le_log_decoding_and_cli_smoke(tmp_path: Path) -> None:
     assert validate_safe_bench_command("PIOLOGIC 4000 JIG:350") == "PIOLOGIC 4000 JIG:350"
     assert validate_safe_bench_command("PANARSP 6000 JIG:350 PROBESEQ") == "PANARSP 6000 JIG:350 PROBESEQ"
     assert bench_main(["smoke-suite"]) == 0
+
+
+def test_piologic_panarsp_decoders_and_readonly_rsp_dump() -> None:
+    """Validate PIOLOGIC/PANARSP decoders and chunked read-only RSP dump with retries."""
+    mock = MockBenchTransport()
+    with BenchSession(mock) as session:
+        pio_rep = parse_piologic_output(session.send("PIOLOGIC 4000 JIG:350"))
+        rsp_rep = parse_panarsp_output(session.send("PANARSP 4000 MEM:515B2E38,4"))
+
+    assert not pio_rep.fifo_stall
+    assert pio_rep.edges_count == 28
+    assert pio_rep.span_us == 512000
+    assert pio_rep.nsw5v_transitions == 0
+    assert pio_rep.reset_to_first_rxd_us == 482
+    assert pio_rep.min_tx_to_rx_us == 120
+    assert rsp_rep.rsp_status == "VALID"
+    assert rsp_rep.payload_hex == "DEADBEEF"
+    assert rsp_rep.checksum_ok is True
+    assert not rsp_rep.fifo_overflow
+
+    sample_image = bytes((i * 37) & 0xFF for i in range(600))
+    sim = MockAm34RspStream(0x90200000, sample_image, corrupt_chunk_index=2)
+    dumper = ReadOnlyRspDumper(sim, reply_timeout_s=0.5)
+    result = dumper.read_memory(0x90200000, len(sample_image), chunk_size=200, use_magic=True)
+
+    assert result.data == sample_image
+    assert result.sha256 == hashlib.sha256(sample_image).hexdigest()
+    assert result.chunks_ok == 3
+    assert result.retries == 1
+    assert result.exit_ok is True
+    with pytest.raises(ValueError):
+        build_rsp_frame("M80000000,4:deadbeef")

@@ -66,7 +66,15 @@ typedef struct p7501_pana_rsp_spec {
 /** Format `<payload>` as `$<payload>#<xx>` (lowercase hex checksum); returns byte count or 0 on overflow. */
 size_t p7501_rsp_build_frame(const char *payload, char *out, size_t out_cap);
 
-/** Inspect RX buffer for `$<payload>#<xx>` RSP reply (plus `+`/`-` or raw `0x15`) and validate 8-bit sum. */
+/** Inspect RX buffer from `start_offset` for `$<payload>#<xx>` RSP reply and validate 8-bit sum. */
+bool p7501_rsp_inspect_frame_from(
+    const uint8_t *buf,
+    size_t len,
+    size_t start_offset,
+    p7501_rsp_frame_info_t *out
+);
+
+/** Inspect RX buffer from index 0 for `$<payload>#<xx>` RSP reply (plus `+`/`-` or raw `0x15`). */
 bool p7501_rsp_inspect_frame(const uint8_t *buf, size_t len, p7501_rsp_frame_info_t *out);
 
 /** Parse `PANARSP [ms] [NORMAL|JIG[:ms]|NOPULL] [MAGIC] [NONAK|NAK] [WAIT:<trig>] <action>` args. */

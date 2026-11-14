@@ -44,6 +44,9 @@ describe('Sc0BridgePanel Component', () => {
     fireEvent.click(screen.getByRole('button', { name: '0x15 NAK' }));
     expect(onSendRsp).toHaveBeenCalledWith('hex', '15', '4000 JIG:350 NAK');
 
+    fireEvent.click(screen.getByRole('button', { name: 'F/E Unlock' }));
+    expect(onSendDrive).toHaveBeenCalledWith('PASS 0x4d415453 0x48495441');
+
     fireEvent.click(screen.getByRole('button', { name: 'PASS' }));
     expect(onSendDrive).toHaveBeenCalledWith('PASS');
 

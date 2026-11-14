@@ -100,12 +100,20 @@ size_t p7501_rsp_build_frame(const char *payload, char *out, size_t out_cap) {
     return 4u + plen;
 }
 
-bool p7501_rsp_inspect_frame(const uint8_t *buf, size_t len, p7501_rsp_frame_info_t *out) {
+bool p7501_rsp_inspect_frame_from(
+    const uint8_t *buf,
+    size_t len,
+    size_t start_offset,
+    p7501_rsp_frame_info_t *out
+) {
     if (buf == NULL || out == NULL) {
         return false;
     }
     memset(out, 0, sizeof(*out));
-    for (size_t i = 0u; i < len; ++i) {
+    if (start_offset >= len) {
+        return false;
+    }
+    for (size_t i = start_offset; i < len; ++i) {
         if (buf[i] == 0x15u) {
             out->raw_nak_0x15 = true;
         } else if (buf[i] == (uint8_t)'+') {
@@ -136,6 +144,10 @@ bool p7501_rsp_inspect_frame(const uint8_t *buf, size_t len, p7501_rsp_frame_inf
         }
     }
     return false;
+}
+
+bool p7501_rsp_inspect_frame(const uint8_t *buf, size_t len, p7501_rsp_frame_info_t *out) {
+    return p7501_rsp_inspect_frame_from(buf, len, 0u, out);
 }
 
 static bool apply_panarsp_action_token(const char *tok, p7501_pana_rsp_spec_t *out, bool *saw_action) {

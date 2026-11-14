@@ -37,6 +37,12 @@ static void test_pana_rsp_frame_codec(void) {
     const uint8_t bad_csum[] = "+$OK#00";
     assert(p7501_rsp_inspect_frame(bad_csum, sizeof(bad_csum) - 1u, &info));
     assert(info.found && !info.checksum_ok);
+
+    /* Ensure post-trigger slice ignores earlier bogus `$NO#9D` and finds real `$DEADBEEF#20` reply. */
+    const uint8_t mixed[] = "BOOT $NO#9D chatter... +$DEADBEEF#20";
+    assert(p7501_rsp_inspect_frame_from(mixed, sizeof(mixed) - 1u, 15u, &info));
+    assert(info.found && info.ack_plus && info.checksum_ok);
+    assert(info.payload_len == 8u && memcmp(&mixed[info.payload_offset], "DEADBEEF", 8u) == 0);
 }
 
 static void test_pana_rsp_arg_parser(void) {

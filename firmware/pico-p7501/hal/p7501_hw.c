@@ -66,6 +66,9 @@ p7501_status_t p7501_hw_init(void) {
         if (!pio_can_add_program(s_pio_inst, &p7501_uart_rx_program)) {
             return P7501_ERR_PIO_INIT_FAILED;
         }
+        if (!pio_sm_is_claimed(s_pio_inst, s_pio_sm)) {
+            pio_sm_claim(s_pio_inst, s_pio_sm);
+        }
         s_pio_offset = pio_add_program(s_pio_inst, &p7501_uart_rx_program);
         p7501_uart_rx_program_init(
             s_pio_inst,
