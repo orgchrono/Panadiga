@@ -307,3 +307,19 @@ fn test_visual_catalog_and_session_re_findings_indexed_in_rag() {
     assert!(!re_ans.is_abstained);
     assert!(re_ans.critic_report.as_ref().unwrap().is_faithful);
 }
+
+#[test]
+fn test_vista_explodida_and_re_consolidation_indexed_in_rag() {
+    let bgo_ans = shared_query(
+        "Como resolver BGO driver init failed[1] usando nfrom_format 0x50401F3C e StarTech IDE2SAT2 Marvell 88SA8052?",
+    );
+    assert!(!bgo_ans.is_abstained);
+    assert!(bgo_ans.confidence > 0.0);
+    assert!(bgo_ans.critic_report.as_ref().unwrap().is_faithful);
+
+    let pass_ans =
+        shared_query("Qual o papel do IC3001 C1AB00002379 no passthrough TBC com MN2DS0009?");
+    assert!(!pass_ans.is_abstained);
+    assert!(pass_ans.confidence > 0.0);
+    assert!(pass_ans.critic_report.as_ref().unwrap().is_faithful);
+}

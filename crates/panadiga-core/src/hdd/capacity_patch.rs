@@ -559,12 +559,7 @@ pub fn patch_main_hdd_capacity(
     let (_, original_sha256) = calculate_hashes(&raw);
     let in_label = resolved_in.to_string_lossy().into_owned();
 
-    if let Some(parent) = output_path.parent()
-        && !parent.as_os_str().is_empty()
-    {
-        fs::create_dir_all(parent)
-            .with_context(|| format!("Creating output directory {}", parent.display()))?;
-    }
+    crate::re::bgo_unbrick::ensure_parent_dir(output_path)?;
 
     let (container_format, before, after, applied_blocks, mbr_updated, repacked_len, out_bytes) =
         match load_main_source(raw)? {

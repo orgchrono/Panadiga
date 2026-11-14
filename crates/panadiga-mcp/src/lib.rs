@@ -80,7 +80,7 @@ mod tests {
     #[test]
     fn test_tool_definitions_and_memory_map() {
         let defs = tool_definitions();
-        assert_eq!(defs.len(), 13);
+        assert_eq!(defs.len(), 16);
 
         let all = execute_tool("panadiga_memory_map", &json!({}), Path::new(".")).unwrap();
         assert_eq!(all["total"], AM34_SYSTEM_MEMORY_REGIONS.len());
@@ -283,7 +283,7 @@ mod tests {
         assert!(r1["result"]["capabilities"]["prompts"].is_object());
 
         let r2: Value = serde_json::from_str(lines[1]).unwrap();
-        assert_eq!(r2["result"]["tools"].as_array().unwrap().len(), 13);
+        assert_eq!(r2["result"]["tools"].as_array().unwrap().len(), 16);
 
         let r3: Value = serde_json::from_str(lines[2]).unwrap();
         let body = r3["result"]["content"][0]["text"].as_str().unwrap();
@@ -298,5 +298,74 @@ mod tests {
 
         let r6: Value = serde_json::from_str(lines[5]).unwrap();
         assert_eq!(r6["id"], 6);
+    }
+
+    #[test]
+    fn test_new_re_bgo_nor_and_capacity_tools() {
+        let tmp = std::env::temp_dir().join(format!("panadiga_mcp_re_{}", std::process::id()));
+        fs::create_dir_all(&tmp).unwrap();
+
+        // 1. Test panadiga_nor_dumper_stub
+        let stub_res = execute_tool(
+            "panadiga_nor_dumper_stub",
+            &json!({
+                "start_addr": "0x84000000",
+                "total_len": 8192,
+                "block_size": 4096,
+                "output_path": "nor_stub.bin"
+            }),
+            &tmp,
+        )
+        .unwrap();
+        assert_eq!(stub_res["status"], "success");
+        assert!(tmp.join("nor_stub.bin").is_file());
+
+        // 2. Test panadiga_bgo_unbrick on synthetic factory PROG061
+        let mut prog = vec![0u8; panadiga_core::re::PROG061_EXPECTED_SIZE];
+        prog[panadiga_core::re::OFF_BGO_SUM_BEQ..panadiga_core::re::OFF_BGO_SUM_BEQ + 2]
+            .copy_from_slice(&[0xC8, 0x0A]);
+        prog[panadiga_core::re::OFF_DEVINFO_CHECK_BEQ
+            ..panadiga_core::re::OFF_DEVINFO_CHECK_BEQ + 2]
+            .copy_from_slice(&[0xC8, 0x15]);
+        prog[panadiga_core::re::OFF_BGO_INIT_FAIL_HOOK
+            ..panadiga_core::re::OFF_BGO_INIT_FAIL_HOOK + 20]
+            .copy_from_slice(&[
+                0xFC, 0xCC, 0xB0, 0x3E, 0x43, 0x50, 0xF8, 0x07, 0xFC, 0xDD, 0xF7, 0xAA, 0xFF, 0xFF,
+                0x00, 0x00, 0x80, 0xFF, 0xCA, 0x32,
+            ]);
+        fs::write(tmp.join("prog061.bin"), &prog).unwrap();
+
+        let bgo_res = execute_tool(
+            "panadiga_bgo_unbrick",
+            &json!({
+                "input_path": "prog061.bin",
+                "action": "patch",
+                "mode": "auto_format",
+                "wrap_as_digadiag": true,
+                "output_path": "DIGADIAG.FRM"
+            }),
+            &tmp,
+        )
+        .unwrap();
+        assert_eq!(
+            bgo_res["inspection_before"]["detected_mode"],
+            "FACTORY_ORIGINAL"
+        );
+        assert_eq!(
+            bgo_res["inspection_after"]["detected_mode"],
+            "AUTO_FORMAT_BGO"
+        );
+        assert!(tmp.join("DIGADIAG.FRM").is_file());
+
+        // 3. Test panadiga_hdd_capacity reject in-place & error handling cleanly
+        let cap_missing = execute_tool(
+            "panadiga_hdd_capacity",
+            &json!({ "input_path": "nonexistent_main.bin" }),
+            &tmp,
+        )
+        .unwrap();
+        assert!(cap_missing["error"].is_string());
+
+        let _ = fs::remove_dir_all(&tmp);
     }
 }

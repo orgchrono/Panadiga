@@ -233,6 +233,99 @@ pub fn tool_definitions() -> Vec<Value> {
                 }
             }
         }),
+        json!({
+            "name": "panadiga_hdd_capacity",
+            "description": "Inspects or patches Panasonic MAIN firmware (`src/hdd_cmd.c` MaxProductLBA clamp: 200 GB ceiling -> dynamic LBA48 or preset capacity) in RAW MAIN binaries, EXTRHEAD containers, or full HDD Partition-1 images.",
+            "inputSchema": {
+                "type": "object",
+                "required": ["input_path"],
+                "properties": {
+                    "input_path": {
+                        "type": "string",
+                        "description": "Path to RAW MAIN firmware (`EH55_MAIN_3410PQ.bin`), EXTRHEAD container, or full HDD `.bin` image."
+                    },
+                    "action": {
+                        "type": "string",
+                        "enum": ["inspect", "patch"],
+                        "description": "Operation mode: 'inspect' (default) reads slots/clamp opcode; 'patch' writes a non-destructive modified copy."
+                    },
+                    "mode": {
+                        "type": "string",
+                        "enum": ["dynamic", "cap", "factory_200gb"],
+                        "description": "Patch strategy when action='patch' (default 'dynamic')."
+                    },
+                    "target_gb": {
+                        "type": "integer",
+                        "description": "Target nominal capacity in GB when mode='cap' (e.g. 250, 320, 500)."
+                    },
+                    "output_path": {
+                        "type": "string",
+                        "description": "Optional non-destructive output file path (must differ from input_path)."
+                    }
+                }
+            }
+        }),
+        json!({
+            "name": "panadiga_nor_dumper_stub",
+            "description": "Assembles a read-only MN103S UART NOR flash dumper stub (`PANADMP1..PANADONE`, guarded strictly to 0x80000000/0x84000000 windows) for Pico RAM injection ($M/$G) or DIGADIAG.FRM.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "start_addr": {
+                        "type": "string",
+                        "description": "Hex or decimal NOR start VA (default '0x84000000')."
+                    },
+                    "total_len": {
+                        "type": ["string", "integer"],
+                        "description": "Total dump byte length, exact multiple of block_size (default '0x800000' = 8 MiB)."
+                    },
+                    "block_size": {
+                        "type": "integer",
+                        "description": "Checksummed block size in bytes (default 4096)."
+                    },
+                    "load_addr": {
+                        "type": "string",
+                        "description": "MN103S SDRAM stub load address (default '0x51800000')."
+                    },
+                    "output_path": {
+                        "type": "string",
+                        "description": "Optional path to write the assembled `.bin` stub."
+                    }
+                }
+            }
+        }),
+        json!({
+            "name": "panadiga_bgo_unbrick",
+            "description": "Inspects or patches the 3 verified BGO unbrick/bypass sites (`0x504230F0`, `0x50405097`, and `0x5040A2CD` -> `nfrom_format 0x50401F3C`) in `PROG061` / `DIGADIAG.FRM` to recover `BGO driver init failed[1].` (`U99`).",
+            "inputSchema": {
+                "type": "object",
+                "required": ["input_path"],
+                "properties": {
+                    "input_path": {
+                        "type": "string",
+                        "description": "Path to `eh55_frm_PROG061_BOOT.bin` or plaintext `EXTRHEAD`/`DIGADIAG.FRM`."
+                    },
+                    "action": {
+                        "type": "string",
+                        "enum": ["inspect", "patch"],
+                        "description": "Operation mode: 'inspect' (default) or 'patch'."
+                    },
+                    "mode": {
+                        "type": "string",
+                        "enum": ["bypass", "auto_format", "factory"],
+                        "description": "Patch strategy when action='patch' (default 'auto_format')."
+                    },
+                    "wrap_as_digadiag": {
+                        "type": "boolean",
+                        "description": "Wrap patched PROG061 in a bootable `DIGADIAG.FRM` (default true)."
+                    },
+                    "output_path": {
+                        "type": "string",
+                        "description": "Optional non-destructive output path (must differ from input_path)."
+                    }
+                }
+            }
+        }),
     ]
 }
 
@@ -246,6 +339,9 @@ pub fn execute_tool(name: &str, args: &Value, workspace_root: &Path) -> Result<V
         "panadiga_clean_nvram" => forensics::handle_clean_nvram(args, workspace_root),
         "panadiga_inspect_frm" => forensics::handle_inspect_frm(args, workspace_root),
         "panadiga_read_hex" => forensics::handle_read_hex(args, workspace_root),
+        "panadiga_hdd_capacity" => forensics::handle_hdd_capacity(args, workspace_root),
+        "panadiga_nor_dumper_stub" => forensics::handle_nor_dumper_stub(args, workspace_root),
+        "panadiga_bgo_unbrick" => forensics::handle_bgo_unbrick(args, workspace_root),
         "panadiga_search_manuals" => knowledge::handle_search_manuals(args, workspace_root),
         "panadiga_rag_query" => knowledge::handle_rag_query(args),
         "panadiga_search_code" => knowledge::handle_search_code(args),
