@@ -240,6 +240,13 @@ export interface DumpWordRow {
   ascii: string;
 }
 
+export interface DiagnosticFinding {
+  code: string;
+  severity: 'info' | 'warning' | 'error';
+  summary: string;
+  detail: string;
+}
+
 export interface PicoDiagnosticResult {
   command_id: string;
   raw_command: string;
@@ -254,6 +261,7 @@ export interface PicoDiagnosticResult {
   transition_rows: BusTransitionRow[];
   dump_rows: DumpWordRow[];
   captured_bytes?: number | null;
+  findings?: DiagnosticFinding[];
 }
 
 export interface FlashReport {

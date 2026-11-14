@@ -67,7 +67,7 @@ static bool panarsp_drain_for_ms(
         }
         if (stop_on_rsp_frame && pushed && frame_grace_us == 0ULL) {
             p7501_rsp_frame_info_t info;
-            if (p7501_rsp_inspect_frame_from(cap->buf, cap->len, inspect_from, &info)) {
+            if (p7501_rsp_inspect_frame_from(cap->buf, cap->len, inspect_from, &info) && info.checksum_ok) {
                 frame_grace_us = time_us_64() + 40000ULL;
             }
         }
@@ -126,11 +126,22 @@ static void panarsp_print_report(
     }
 
     if (has_frame) {
+        bool has_non_printable = false;
+        for (size_t i = 0u; i < info.payload_len; ++i) {
+            const uint8_t ch = cap->buf[info.payload_offset + i];
+            if (ch < 0x20u || ch > 0x7Eu) {
+                has_non_printable = true;
+                break;
+            }
+        }
         char ptext[96];
         const size_t copy_len = (info.payload_len < (sizeof(ptext) - 1u))
                                     ? info.payload_len
                                     : (sizeof(ptext) - 1u);
-        memcpy(ptext, &cap->buf[info.payload_offset], copy_len);
+        for (size_t i = 0u; i < copy_len; ++i) {
+            const uint8_t ch = cap->buf[info.payload_offset + i];
+            ptext[i] = (ch >= 0x20u && ch <= 0x7Eu) ? (char)ch : '.';
+        }
         ptext[copy_len] = '\0';
         printf("[PANARSP] Frame: ack=%s nak=%s nak0x15=%s | payload=\"%s\"%s | csum=0x%02X/0x%02X (%s)\n",
                info.ack_plus ? "+" : "no",
@@ -141,9 +152,15 @@ static void panarsp_print_report(
                info.actual_csum,
                info.expected_csum,
                info.checksum_ok ? "VALID" : "MISMATCH");
+        const bool print_hex_bytes = has_non_printable || (spec->action == PANA_RSP_ACT_XMEM);
         printf("[PANARSP] PayloadHex: ");
         for (size_t i = 0u; i < info.payload_len; ++i) {
-            putchar((int)cap->buf[info.payload_offset + i]);
+            const uint8_t b = cap->buf[info.payload_offset + i];
+            if (print_hex_bytes) {
+                printf("%02X", b);
+            } else {
+                putchar((int)b);
+            }
         }
         putchar('\n');
     } else {
@@ -171,7 +188,7 @@ void p7501_cmd_pana_rsp(const char *arg) {
     p7501_pana_rsp_spec_t spec;
 
     if (!p7501_panarsp_parse_args(arg, &spec)) {
-        printf("PANARSP: ERROR (Usage: PANARSP [ms] [NORMAL|JIG[:ms]|NOPULL] [MAGIC] [NONAK] [WAIT:<trig>] [PROBESEQ|G|Z0|Z1|MEM:<addr>,<len>|NAK|RAW:<txt>|HEX:<hex>])\n");
+        printf("PANARSP: ERROR (Usage: PANARSP [ms] [NORMAL|JIG[:ms]|NOPULL] [MAGIC] [NONAK] [WAIT:<trig>] [PROBESEQ|G|Z0|Z1|MEM:<addr>,<len>|XMEM:<addr>,<len>|NAK|RAW:<txt>|HEX:<hex>])\n");
         return;
     }
 
@@ -240,6 +257,7 @@ void p7501_cmd_pana_rsp(const char *arg) {
             case PANA_RSP_ACT_Z0:
             case PANA_RSP_ACT_Z1:
             case PANA_RSP_ACT_MEM:
+            case PANA_RSP_ACT_XMEM:
             case PANA_RSP_ACT_RAW:
                 (void)panarsp_tx_frame(spec.payload);
                 panarsp_drain_for_ms(&s_cap, (spec.timeout_ms < 700u) ? spec.timeout_ms : 700u, true, primary_off);

@@ -194,7 +194,54 @@ export function parseDiagnosticOutput(
     transition_rows: transitionRows,
     dump_rows: dumpRows,
     captured_bytes: parseCapturedBytes(rawOutput),
+    findings: extractTelemetryFindings(rawOutput),
   };
+}
+
+const TELEMETRY_FINDING_RULES: ReadonlyArray<{
+  readonly code: string;
+  readonly severity: 'info' | 'warning' | 'error';
+  readonly pattern: RegExp;
+  readonly summary: string;
+  readonly detail: string;
+}> = [
+  {
+    code: 'BGO_INIT_HALT',
+    severity: 'warning',
+    pattern: /BGO\s+driver\s+init\s+failed/i,
+    summary: 'BGO driver init failed -> BOOT halted in NORMAL mode (RSP offline)',
+    detail:
+      'FUN_4400836f (bgo_driver_init) failed and routed BOOT.BIN into boot_panic_or_halt_7812 before fmu_sd_dispatcher(1), leaving MAIN / _dev_SERIAL (PANARSP) unstarted.',
+  },
+  {
+    code: 'LASER_APC_05MW_83A7',
+    severity: 'error',
+    pattern: /\b80040904\b|\b0x83A7\b|\b83[\s:-]?A7\b/i,
+    summary: 'Drive laser APC fault 0x83A7 / 80040904 (0.5mW check prior to spin-up)',
+    detail:
+      'FUN_400db60c observed Ram88000194 = 0x000103A7 (0.5mW APC fault) prior to spindle motor actuation.',
+  },
+  {
+    code: 'SD_STATUS_MINUS_91006',
+    severity: 'warning',
+    pattern: /SD\s+Status\s+ERROR\s*-91006|Set\s+SD\s+Bus\s+Width\s+fail\s+ERROR:-91006|\b-0x1637e\b/i,
+    summary: 'GetSD_Status ACMD13 rejected SD card (-91006 / -0x1637e)',
+    detail:
+      'GetSD_Status inspected ACMD13 byte 2 (SD_CARD_TYPE) and returned -91006 (-0x1637e), blocking SD card bus initialization.',
+  },
+];
+
+export function extractTelemetryFindings(
+  rawOutput: string
+): NonNullable<PicoDiagnosticResult['findings']> {
+  return TELEMETRY_FINDING_RULES.filter((rule) => rule.pattern.test(rawOutput)).map(
+    ({ code, severity, summary, detail }) => ({
+      code,
+      severity,
+      summary,
+      detail,
+    })
+  );
 }
 
 /**

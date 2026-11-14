@@ -216,6 +216,17 @@ def parse_am34_uart_log(text: str) -> UartBootReport:
     for s in senses:
         if s.mecha_description:
             notes.append(f"Mecha 0x{s.vendor_mecha_code:04X}: {s.mecha_description}")
+    if bgo_failed is not None:
+        notes.append(
+            "FUN_4400836f (bgo_driver_init) halted before fmu_sd_dispatcher(1) "
+            "(boot_panic_or_halt_7812), so MAIN/_dev_SERIAL (PANARSP) does not start in NORMAL mode."
+        )
+    if any(s.vendor_mecha_code == 0x83A7 for s in senses) or re.search(
+        r"0x83a7|\b83\s+a7\b|0\.5\s*mw", text, re.IGNORECASE
+    ):
+        notes.append(
+            "FUN_400db60c reads Ram88000194 (0x000103A7) laser APC fault prior to spindle actuation."
+        )
 
     return UartBootReport(
         ddr_check_ok=ddr_ok,

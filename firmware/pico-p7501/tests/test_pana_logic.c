@@ -43,6 +43,28 @@ static void test_pana_rsp_frame_codec(void) {
     assert(p7501_rsp_inspect_frame_from(mixed, sizeof(mixed) - 1u, 15u, &info));
     assert(info.found && info.ack_plus && info.checksum_ok);
     assert(info.payload_len == 8u && memcmp(&mixed[info.payload_offset], "DEADBEEF", 8u) == 0);
+
+    /* Raw binary `$x` reply containing embedded `#9A`, NUL byte, `$` and `+` before real `#xx`. */
+    const uint8_t bin_payload[] = { 0x41u, 0x00u, '#', '9', 'A', '$', '+', 0xFFu, 0x15u };
+    const uint8_t bin_csum = p7501_rsp_checksum(bin_payload, sizeof(bin_payload));
+    uint8_t bin_frame[32];
+    bin_frame[0] = (uint8_t)'+';
+    bin_frame[1] = (uint8_t)'$';
+    memcpy(&bin_frame[2], bin_payload, sizeof(bin_payload));
+    bin_frame[2u + sizeof(bin_payload)] = (uint8_t)'#';
+    bin_frame[3u + sizeof(bin_payload)] = (uint8_t)p7501_nibble_to_hex_char((uint8_t)(bin_csum >> 4));
+    bin_frame[4u + sizeof(bin_payload)] = (uint8_t)p7501_nibble_to_hex_char((uint8_t)(bin_csum & 0x0Fu));
+    const size_t bin_frame_len = 5u + sizeof(bin_payload);
+
+    assert(p7501_rsp_inspect_frame(bin_frame, bin_frame_len, &info));
+    assert(info.found && info.ack_plus && info.checksum_ok);
+    assert(info.payload_len == sizeof(bin_payload));
+    assert(memcmp(&bin_frame[info.payload_offset], bin_payload, sizeof(bin_payload)) == 0);
+
+    /* If even the real trailer is corrupted, fall back cleanly to checksum mismatch. */
+    bin_frame[3u + sizeof(bin_payload)] = (bin_frame[3u + sizeof(bin_payload)] == '0') ? '1' : '0';
+    assert(p7501_rsp_inspect_frame(bin_frame, bin_frame_len, &info));
+    assert(info.found && !info.checksum_ok);
 }
 
 static void test_pana_rsp_arg_parser(void) {
@@ -57,6 +79,12 @@ static void test_pana_rsp_arg_parser(void) {
     assert(strcmp(spec.trigger, "wait 1") == 0);
     assert(spec.action == PANA_RSP_ACT_MEM);
     assert(strcmp(spec.payload, "m515B2E38,10") == 0);
+
+    assert(p7501_panarsp_parse_args("4000 XMEM:0x84000000,0x440", &spec));
+    assert(spec.timeout_ms == 4000u && spec.action == PANA_RSP_ACT_XMEM);
+    assert(strcmp(spec.payload, "x84000000,440") == 0);
+    assert(!p7501_panarsp_parse_args("XMEM:", &spec));
+    assert(!p7501_panarsp_parse_args("XMEM:ZZZZ,10", &spec));
 
     assert(p7501_panarsp_parse_args("NONAK HEX:150E0402", &spec));
     assert(!spec.send_nak_prefix && spec.action == PANA_RSP_ACT_HEX && spec.raw_len == 4u);

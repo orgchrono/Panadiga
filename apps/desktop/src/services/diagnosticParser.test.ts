@@ -96,4 +96,25 @@ describe('diagnosticParser & Hardware SSOT Consistency', () => {
     );
     expect(errParsed.success).toBe(false);
   });
+
+  it('extracts structured findings for BGO halt, 0x83A7/80040904 laser APC, and SD Status -91006', () => {
+    const raw = [
+      'BGO driver init failed[1].',
+      'ATAPI sense 80040904 / 83 A7 (Laser 0.5mW failed)',
+      '[SDCD] SD Status ERROR -91006',
+      'UARTSTREAM: OK',
+    ].join('\n');
+    const parsed = parseDiagnosticOutput('UARTSTREAM', 'UARTSTREAM 8000 JIG:350', raw, 8050);
+    const codes = (parsed.findings ?? []).map((f) => f.code);
+    expect(codes).toEqual([
+      'BGO_INIT_HALT',
+      'LASER_APC_05MW_83A7',
+      'SD_STATUS_MINUS_91006',
+    ]);
+    const details = (parsed.findings ?? []).map((f) => f.detail).join(' ');
+    expect(details).toContain('FUN_4400836f');
+    expect(details).toContain('FUN_400db60c');
+    expect(details).toContain('Ram88000194');
+    expect(details).toContain('-0x1637e');
+  });
 });

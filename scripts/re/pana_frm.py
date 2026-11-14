@@ -9,7 +9,46 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import struct
+from typing import Final
 import zlib
+
+DRV_UNLOCK_COMMAND: Final[str] = "PASS 0x4d415453 0x48495441"
+
+_DRV_WRITE_BLOCKED_NAMES: Final[frozenset[str]] = frozenset({
+    "WB",
+    "WW",
+    "WRITE",
+    "WTLONG",
+    "ERASE",
+    "FORMAT",
+})
+_DRV_READ_ONLY_NAMES: Final[frozenset[str]] = frozenset({
+    "VER",
+    "RB",
+    "RW",
+    "D",
+    "MLOG",
+    "DSCLOG",
+    "CLOG",
+    "ACSLOG",
+    "TMPLOG",
+    "LFMLOG",
+    "LINFO",
+    "RMD",
+    "RZONE",
+    "LPP",
+    "ADIP",
+    "TOC",
+    "TRACK",
+    "ZTBL",
+    "ODCSTS",
+    "SVER",
+    "RDPCA",
+    "RDLNG",
+    "TMP",
+    "DATAID",
+    "SUBQ",
+})
 
 
 @dataclass(frozen=True)
@@ -82,11 +121,23 @@ def find_extrhead_containers(buf: bytes, image_base: int = 0) -> list[ExtrheadMa
     return matches
 
 
+def classify_drv_cli_command(name: str, flags: int) -> str:
+    """Classify one DRV CLI entry (`0x400DF5C0..0x400DFE94`) by safety/privilege tier."""
+    norm = name.strip().upper()
+    if norm in _DRV_WRITE_BLOCKED_NAMES or flags == 0x38:
+        return "WRITE_BLOCKED"
+    if norm == "PASS":
+        return "UNLOCK_AUTH"
+    if norm in _DRV_READ_ONLY_NAMES:
+        return "READ_ONLY"
+    return "DIAGNOSTIC"
+
+
 def parse_drv_cli_table(
     drv_buf: bytes,
     table_offset: int,
     image_base: int = 0x40000000,
-    count: int = 62,
+    count: int = 113,
 ) -> list[DrvCliEntry]:
     """Decode the `<8sIII` factory serial monitor command table inside `DRV_decomp.bin`."""
     entries: list[DrvCliEntry] = []

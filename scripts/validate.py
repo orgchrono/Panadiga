@@ -59,6 +59,7 @@ PYTHON_COMPILE_TARGETS: Final[tuple[str, ...]] = (
     "scripts/bench/__init__.py",
     "scripts/bench/protocol.py",
     "scripts/bench/decoders.py",
+    "scripts/bench/nor_dumper.py",
     "scripts/bench/rsp_dump.py",
     "scripts/bench/runner.py",
 )

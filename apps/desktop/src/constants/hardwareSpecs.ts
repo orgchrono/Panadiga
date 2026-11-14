@@ -448,13 +448,14 @@ const PICO_COMMAND_BLUEPRINTS: readonly CommandBlueprint[] = Object.freeze([
   {
     id: 'PANARSP',
     category: 'uart_fmu',
-    syntax: 'PANARSP [ms] [boot] [MAGIC] [WAIT:<trig>] <PROBESEQ|G|Z0|Z1|MEM:addr,len|HEX:..>',
+    syntax: 'PANARSP [ms] [boot] [MAGIC] [WAIT:<trig>] <PROBESEQ|G|Z0|Z1|MEM:addr,len|XMEM:addr,len|HEX:..>',
     default_arg: '6000 JIG:350 PROBESEQ',
     optionPairs: [
       ['probeJig', '6000 JIG:350 PROBESEQ'],
       ['magicG', '6000 JIG:350 MAGIC G'],
       ['wait1Probe', '8000 JIG:350 "WAIT:wait 1" PROBESEQ'],
       ['mem515', '4000 MEM:515B2E38,10'],
+      ['xmem840', '4000 XMEM:84000000,40'],
     ],
     timeout_ms: 16000,
   },

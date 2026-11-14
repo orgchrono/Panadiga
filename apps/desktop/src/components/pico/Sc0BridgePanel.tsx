@@ -41,9 +41,39 @@ const RSP_QUICK_PROBES: ReadonlyArray<{
   { label: '0x15 NAK', mode: 'hex', bridgePayload: '15', panarspArg: '4000 JIG:350 NAK' },
   { label: 'Magic 0E0402', mode: 'hex', bridgePayload: '0E0402', panarspArg: '4000 JIG:350 MAGIC NONAK' },
   { label: '$g#67 Regs', mode: 'rsp', bridgePayload: 'g', panarspArg: '6000 JIG:350 G' },
+  { label: '$x#.. Bin', mode: 'rsp', bridgePayload: 'x84000000,40', panarspArg: '4000 XMEM:84000000,40' },
   { label: '$Z0#8A Exit', mode: 'rsp', bridgePayload: 'Z0', panarspArg: '4000 Z0' },
   { label: '$Z1#8B', mode: 'rsp', bridgePayload: 'Z1', panarspArg: '4000 Z1' },
 ];
+
+interface BridgeNoticeBannerProps {
+  readonly role: 'note' | 'alert';
+  readonly toneClass: string;
+  readonly titleClass: string;
+  readonly bodyClass: string;
+  readonly title: string;
+  readonly body: string;
+}
+
+function BridgeNoticeBanner({
+  role,
+  toneClass,
+  titleClass,
+  bodyClass,
+  title,
+  body,
+}: BridgeNoticeBannerProps) {
+  return (
+    <div
+      role={role}
+      aria-label={title}
+      className={`rounded-lg border px-3 py-2 space-y-0.5 ${toneClass}`}
+    >
+      <div className={`font-semibold ${titleClass}`}>{title}</div>
+      <p className={`leading-relaxed ${bodyClass}`}>{body}</p>
+    </div>
+  );
+}
 
 const DRIVE_QUICK_COMMANDS: ReadonlyArray<{
   readonly label: string;
@@ -165,6 +195,24 @@ export const Sc0BridgePanel: React.FC<Sc0BridgePanelProps> = ({
       </CardHeader>
 
       <CardContent className="pt-4 space-y-4">
+        <BridgeNoticeBanner
+          role="note"
+          toneClass="border-sky-500/30 bg-sky-500/10 text-[11px] text-sky-200"
+          titleClass="text-sky-100"
+          bodyClass="text-sky-200/90"
+          title={t('pico.bridge.busArchitectureTitle')}
+          body={t('pico.bridge.busArchitectureSummary')}
+        />
+        {logs.some((entry) => /BGO\s+driver\s+init\s+failed/i.test(entry.text)) && (
+          <BridgeNoticeBanner
+            role="alert"
+            toneClass="border-amber-500/40 bg-amber-500/10 text-xs text-amber-200"
+            titleClass="text-amber-100"
+            bodyClass="text-amber-200/90"
+            title={t('pico.bridge.bgoHaltWarningTitle')}
+            body={t('pico.bridge.bgoHaltWarningBody')}
+          />
+        )}
         {error && (
           <div
             role="alert"

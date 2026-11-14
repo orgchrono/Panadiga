@@ -3,7 +3,7 @@
  * @brief Panasonic AM34 `_dev_SERIAL` RSP client/probe (`FUN_574f0590` / `FUN_574f0775`).
  *
  * Implements pure C11 8-bit RSP frame construction/verification and PIO1 UART probe
- * sequences (`0x15` NAK, `0x0E 0x04 0x02`, `$g#67`, `$Z0#8A`, `$Z1#8B`, `$m<addr>,<len>#XX`).
+ * sequences (`0x15` NAK, `0x0E 0x04 0x02`, `$g#67`, `$Z0#8A`, `$Z1#8B`, `$m<addr>,<len>#XX`, `$x<addr>,<len>#XX`).
  *
  * @standard ISO/IEC 9899:2011 (C11)
  */
@@ -43,6 +43,7 @@ typedef enum p7501_pana_rsp_action {
     PANA_RSP_ACT_Z0,
     PANA_RSP_ACT_Z1,
     PANA_RSP_ACT_MEM,
+    PANA_RSP_ACT_XMEM,
     PANA_RSP_ACT_NAK,
     PANA_RSP_ACT_MAGIC,
     PANA_RSP_ACT_RAW,

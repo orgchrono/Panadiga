@@ -40,7 +40,7 @@ static bool is_digits_only(const char *tok) {
     return true;
 }
 
-static bool parse_mem_spec(const char *spec_text, char *out_payload, size_t cap) {
+static bool parse_mem_spec(const char *spec_text, char opcode, char *out_payload, size_t cap) {
     const char *comma = strchr(spec_text, ',');
     if (comma == NULL || comma == spec_text || comma[1] == '\0') {
         return false;
@@ -76,7 +76,7 @@ static bool parse_mem_spec(const char *spec_text, char *out_payload, size_t cap)
     char addr_buf[12];
     memcpy(addr_buf, addr_start, addr_len);
     addr_buf[addr_len] = '\0';
-    int n = snprintf(out_payload, cap, "m%s,%s", addr_buf, len_start);
+    int n = snprintf(out_payload, cap, "%c%s,%s", opcode, addr_buf, len_start);
     return n > 0 && (size_t)n < cap;
 }
 
@@ -113,13 +113,20 @@ bool p7501_rsp_inspect_frame_from(
     if (start_offset >= len) {
         return false;
     }
+
+    p7501_rsp_frame_info_t fallback;
+    memset(&fallback, 0, sizeof(fallback));
+    bool ack_plus = false;
+    bool nak_minus = false;
+    bool raw_nak_0x15 = false;
+
     for (size_t i = start_offset; i < len; ++i) {
         if (buf[i] == 0x15u) {
-            out->raw_nak_0x15 = true;
+            raw_nak_0x15 = true;
         } else if (buf[i] == (uint8_t)'+') {
-            out->ack_plus = true;
+            ack_plus = true;
         } else if (buf[i] == (uint8_t)'-') {
-            out->nak_minus = true;
+            nak_minus = true;
         }
         if (buf[i] != (uint8_t)'$') {
             continue;
@@ -134,15 +141,37 @@ bool p7501_rsp_inspect_frame_from(
             if (hi < 0 || lo < 0) {
                 continue;
             }
-            out->found = true;
-            out->payload_offset = start;
-            out->payload_len = j - start;
-            out->expected_csum = p7501_rsp_checksum(&buf[start], out->payload_len);
-            out->actual_csum = (uint8_t)((hi << 4) | lo);
-            out->checksum_ok = (out->expected_csum == out->actual_csum);
-            return true;
+            const size_t plen = j - start;
+            const uint8_t expected = p7501_rsp_checksum(&buf[start], plen);
+            const uint8_t actual = (uint8_t)((hi << 4) | lo);
+            const p7501_rsp_frame_info_t cand = {
+                .found = true,
+                .ack_plus = ack_plus,
+                .nak_minus = nak_minus,
+                .raw_nak_0x15 = raw_nak_0x15,
+                .checksum_ok = (expected == actual),
+                .expected_csum = expected,
+                .actual_csum = actual,
+                .payload_offset = start,
+                .payload_len = plen,
+            };
+            if (cand.checksum_ok) {
+                *out = cand;
+                return true;
+            }
+            if (!fallback.found) {
+                fallback = cand;
+            }
         }
     }
+
+    if (fallback.found) {
+        *out = fallback;
+        return true;
+    }
+    out->ack_plus = ack_plus;
+    out->nak_minus = nak_minus;
+    out->raw_nak_0x15 = raw_nak_0x15;
     return false;
 }
 
@@ -175,8 +204,13 @@ static bool apply_panarsp_action_token(const char *tok, p7501_pana_rsp_spec_t *o
         *saw_action = true;
         return true;
     }
-    if (ascii_iprefix(tok, "MEM:") && parse_mem_spec(tok + 4, out->payload, sizeof(out->payload))) {
-        out->action = PANA_RSP_ACT_MEM;
+    if (ascii_iprefix(tok, "MEM:") || ascii_iprefix(tok, "XMEM:")) {
+        const bool is_x = (tok[0] == 'X' || tok[0] == 'x');
+        const size_t prefix_len = is_x ? 5u : 4u;
+        if (!parse_mem_spec(tok + prefix_len, is_x ? 'x' : 'm', out->payload, sizeof(out->payload))) {
+            return false;
+        }
+        out->action = is_x ? PANA_RSP_ACT_XMEM : PANA_RSP_ACT_MEM;
         *saw_action = true;
         return true;
     }

@@ -9,11 +9,13 @@ from scripts.re.mn10300 import (
     find_pointer_xrefs,
 )
 from scripts.re.pana_frm import (
+    DRV_UNLOCK_COMMAND,
     AtapiDispatchEntry,
     DrvCliEntry,
     DrvMechaErrorEntry,
     ExtrheadMatch,
     SenseEntry,
+    classify_drv_cli_command,
     decompress_drv_payload,
     find_extrhead_containers,
     parse_atapi_cdb_dispatch,
@@ -23,6 +25,7 @@ from scripts.re.pana_frm import (
 )
 
 __all__ = [
+    "DRV_UNLOCK_COMMAND",
     "AtapiDispatchEntry",
     "DrvCliEntry",
     "DrvMechaErrorEntry",
@@ -30,6 +33,7 @@ __all__ = [
     "ImmediateLoadRef",
     "InstructionRef",
     "SenseEntry",
+    "classify_drv_cli_command",
     "decode_branch_call_refs",
     "decompress_drv_payload",
     "find_callers_to",

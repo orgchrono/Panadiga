@@ -1,10 +1,11 @@
-"""Read-only GDB RSP ($m) chunked memory dumper and bridge stream helpers for AM34."""
+"""Read-only GDB RSP (`$m` / `$x` / `$g`) memory dumper and bridge stream helpers for AM34."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 import hashlib
 import importlib
+import struct
 import time
 from typing import Final, Protocol
 
@@ -15,6 +16,11 @@ _E0X_ERRORS: Final[dict[str, str]] = {
     "E03": "RSP unsupported command",
     "E04": "RSP overrun / buffer limit",
 }
+_E0X_BYTES: Final[dict[bytes, str]] = {k.encode("ascii"): v for k, v in _E0X_ERRORS.items()}
+_MAX_M_CHUNK: Final[int] = 512
+_MAX_X_CHUNK: Final[int] = 0x440
+_G_REGISTER_BYTES: Final[int] = 0x70
+_G_REGISTER_WORDS: Final[int] = 28
 
 
 class RawByteStream(Protocol):
@@ -64,57 +70,142 @@ def build_rsp_frame(payload: str | bytes) -> bytes:
     return b"$" + raw + f"#{csum:02x}".encode("ascii")
 
 
-def parse_rsp_reply(stream: bytes) -> ParsedRspFrame | None:
-    """Find the first syntactically complete `$<payload>#<xx>` frame and validate checksum."""
-    ack_plus = b"+" in stream
-    nak_minus = b"-" in stream
-    raw_nak = b"\x15" in stream
+def _try_build_parsed_frame(
+    payload: bytes,
+    hex_pair: bytes,
+    *,
+    ack_plus: bool,
+    nak_minus: bool,
+    raw_nak: bool,
+) -> ParsedRspFrame | None:
+    if len(hex_pair) != 2:
+        return None
+    try:
+        actual = int(hex_pair.decode("ascii"), 16)
+    except (UnicodeDecodeError, ValueError):
+        return None
+    expected = rsp_checksum(payload)
+    return ParsedRspFrame(
+        payload=payload,
+        expected_csum=expected,
+        actual_csum=actual,
+        checksum_ok=(expected == actual),
+        ack_plus=ack_plus,
+        nak_minus=nak_minus,
+        raw_nak_0x15=raw_nak,
+    )
 
+
+def _raise_if_e0x(payload: bytes) -> None:
+    if payload in _E0X_BYTES:
+        code = payload.decode("ascii")
+        raise RuntimeError(f"Target returned {code}: {_E0X_BYTES[payload]}")
+
+
+def parse_rsp_reply(stream: bytes, *, expected_payload_len: int | None = None) -> ParsedRspFrame | None:
+    """Find a complete `$<payload>#<xx>` frame, preferring checksum-verified `#<hh>` for `$x` binary data."""
     search_idx = 0
+    first_mismatch: ParsedRspFrame | None = None
+
     while True:
         dollar = stream.find(b"$", search_idx)
         if dollar < 0:
-            return None
-        hash_pos = stream.find(b"#", dollar + 1)
-        if hash_pos < 0 or (hash_pos + 2) >= len(stream):
-            return None
-        hex_pair = stream[hash_pos + 1 : hash_pos + 3]
-        try:
-            actual = int(hex_pair.decode("ascii"), 16)
-        except (UnicodeDecodeError, ValueError):
-            search_idx = dollar + 1
-            continue
-        payload = stream[dollar + 1 : hash_pos]
-        expected = rsp_checksum(payload)
-        return ParsedRspFrame(
-            payload=payload,
-            expected_csum=expected,
-            actual_csum=actual,
-            checksum_ok=(expected == actual),
-            ack_plus=ack_plus,
-            nak_minus=nak_minus,
-            raw_nak_0x15=raw_nak,
-        )
+            return first_mismatch
+
+        prefix = stream[:dollar]
+        ack_plus = b"+" in prefix
+        nak_minus = b"-" in prefix
+        raw_nak = b"\x15" in prefix
+        start = dollar + 1
+
+        if expected_payload_len is not None:
+            if (start + 6) <= len(stream) and stream[start : start + 3] in _E0X_BYTES and stream[start + 3 : start + 4] == b"#":
+                err_frame = _try_build_parsed_frame(
+                    stream[start : start + 3],
+                    stream[start + 4 : start + 6],
+                    ack_plus=ack_plus,
+                    nak_minus=nak_minus,
+                    raw_nak=raw_nak,
+                )
+                if err_frame is not None and err_frame.checksum_ok:
+                    return err_frame
+
+            exact_hash = start + expected_payload_len
+            if (exact_hash + 3) > len(stream):
+                return first_mismatch
+            if stream[exact_hash : exact_hash + 1] == b"#":
+                exact_frame = _try_build_parsed_frame(
+                    stream[start:exact_hash],
+                    stream[exact_hash + 1 : exact_hash + 3],
+                    ack_plus=ack_plus,
+                    nak_minus=nak_minus,
+                    raw_nak=raw_nak,
+                )
+                if exact_frame is not None:
+                    return exact_frame
+
+        pos = start
+        while True:
+            hash_pos = stream.find(b"#", pos)
+            if hash_pos < 0 or (hash_pos + 2) >= len(stream):
+                break
+            cand = _try_build_parsed_frame(
+                stream[start:hash_pos],
+                stream[hash_pos + 1 : hash_pos + 3],
+                ack_plus=ack_plus,
+                nak_minus=nak_minus,
+                raw_nak=raw_nak,
+            )
+            if cand is not None:
+                if cand.checksum_ok:
+                    return cand
+                if first_mismatch is None:
+                    first_mismatch = cand
+            pos = hash_pos + 1
+
+        search_idx = dollar + 1
 
 
 def decode_rsp_hex_memory(payload: bytes) -> bytes:
     """Decode ASCII hex memory payload returned by `$m<addr>,<len>`, raising on `E0x` errors."""
+    _raise_if_e0x(payload)
     text = payload.decode("ascii", errors="strict")
-    if text in _E0X_ERRORS:
-        raise RuntimeError(f"Target returned {text}: {_E0X_ERRORS[text]}")
     if len(text) == 0 or (len(text) % 2) != 0:
         raise ValueError(f"Invalid even hex payload length: {len(text)}")
     return bytes.fromhex(text)
 
 
-def validate_dump_range(start_addr: int, total_bytes: int, chunk_size: int) -> None:
+def decode_mn103s_g_registers(payload: bytes) -> dict[str, int]:
+    """Decode an AM34 112-byte (`0x70`, `28 x <I` LE) `$g` register frame (`w00`..`w27`).
+
+    Word indices `[25]` (`0x64`), `[26]` (`0x68`), and `[27]` (`0x6c`) correspond
+    to the tail fields patched by `FUN_574f0da3` in `EH55_MAIN`.
+    """
+    raw = decode_rsp_hex_memory(payload)
+    if len(raw) != _G_REGISTER_BYTES:
+        raise ValueError(
+            f"Expected {_G_REGISTER_BYTES}-byte MN103S $g register frame, got {len(raw)} bytes"
+        )
+    words = struct.unpack(f"<{_G_REGISTER_WORDS}I", raw)
+    return {f"w{idx:02d}": int(val) for idx, val in enumerate(words)}
+
+
+def validate_dump_range(
+    start_addr: int,
+    total_bytes: int,
+    chunk_size: int,
+    *,
+    max_chunk_size: int = _MAX_M_CHUNK,
+) -> None:
     """Validate non-destructive RSP memory read bounds."""
     if start_addr < 0 or start_addr > 0xFFFFFFFF:
         raise ValueError(f"Invalid 32-bit target address: 0x{start_addr:X}")
     if total_bytes <= 0:
         raise ValueError("total_bytes must be positive")
-    if chunk_size <= 0 or chunk_size > 512:
-        raise ValueError("chunk_size must be in 1..512 for reliable UART RSP framing")
+    if chunk_size <= 0 or chunk_size > max_chunk_size:
+        raise ValueError(
+            f"chunk_size must be in 1..{max_chunk_size} for reliable UART RSP framing"
+        )
 
 
 class BridgeByteStream:
@@ -205,25 +296,29 @@ class MockAm34RspStream:
     def _handle_payload(self, payload: bytes) -> None:
         text = payload.decode("ascii", errors="replace")
         if text == "g":
-            regs = "00" * 32
+            regs = "00" * _G_REGISTER_BYTES
             self._rx.extend(b"+" + build_rsp_frame(regs))
         elif text in ("Z0", "Z1"):
             self._rx.extend(b"+" + build_rsp_frame(b"OK"))
             if text == "Z0":
                 self._in_loop = False
-        elif text.startswith("m") and "," in text:
+        elif text[:1] in ("m", "x") and "," in text:
             addr_s, len_s = text[1:].split(",", 1)
             addr = int(addr_s, 16)
             length = int(len_s, 16)
             off = addr - self._base
-            if off < 0 or (off + length) > len(self._mem):
+            max_chunk = _MAX_X_CHUNK if text[0] == "x" else _MAX_M_CHUNK
+            if off < 0 or length <= 0 or length > max_chunk or (off + length) > len(self._mem):
                 self._rx.extend(b"+" + build_rsp_frame(b"E01"))
                 return
             self._chunk_seen += 1
-            raw_reply = build_rsp_frame(self._mem[off : off + length].hex())
+            mem_slice = self._mem[off : off + length]
+            reply_payload: str | bytes = mem_slice if text[0] == "x" else mem_slice.hex()
+            raw_reply = build_rsp_frame(reply_payload)
             if self._corrupt_idx == self._chunk_seen:
                 self._corrupt_idx = None
-                raw_reply = raw_reply[:-2] + b"ff"
+                bad_csum = b"00" if raw_reply.endswith(b"ff") else b"ff"
+                raw_reply = raw_reply[:-2] + bad_csum
             self._rx.extend(b"+" + raw_reply)
         else:
             self._rx.extend(b"+" + build_rsp_frame(b"E03"))
@@ -246,14 +341,14 @@ class ReadOnlyRspDumper:
         self._stream = stream
         self._timeout_s = reply_timeout_s
 
-    def _read_frame(self) -> ParsedRspFrame:
+    def _read_frame(self, *, expected_payload_len: int | None = None) -> ParsedRspFrame:
         buf = bytearray()
         deadline = time.monotonic() + self._timeout_s
         while time.monotonic() < deadline:
             chunk = self._stream.read(512)
             if chunk:
                 buf.extend(chunk)
-                parsed = parse_rsp_reply(bytes(buf))
+                parsed = parse_rsp_reply(bytes(buf), expected_payload_len=expected_payload_len)
                 if parsed is not None:
                     return parsed
             else:
@@ -285,20 +380,28 @@ class ReadOnlyRspDumper:
                 raise RuntimeError(f"RSP checksum failure on '{payload}' after {max_retries + 1} attempts")
         raise AssertionError("unreachable")
 
+    def read_registers(self, *, max_retries: int = 3) -> dict[str, int]:
+        """Query `$g#67` within an active stub session and decode 28 MN103S register words."""
+        reply = self._exchange_with_retry("g", max_retries=max_retries)
+        return decode_mn103s_g_registers(reply.payload)
+
     def read_memory(
         self,
         start_addr: int,
         total_bytes: int,
-        chunk_size: int = 256,
+        chunk_size: int = 512,
         *,
         use_magic: bool = False,
+        use_binary_x: bool = False,
         exit_stub: bool = True,
         max_retries: int = 3,
     ) -> DumpExtractionResult:
-        """Read `[start_addr .. start_addr + total_bytes)` via `$m` chunks with CRC retries and SHA-256."""
-        validate_dump_range(start_addr, total_bytes, chunk_size)
+        """Read `[start_addr .. start_addr + total_bytes)` via `$m` or binary `$x` chunks with CRC retries."""
+        max_chunk = _MAX_X_CHUNK if use_binary_x else _MAX_M_CHUNK
+        validate_dump_range(start_addr, total_bytes, chunk_size, max_chunk_size=max_chunk)
         self.enter_stub(use_magic=use_magic)
 
+        opcode = "x" if use_binary_x else "m"
         assembled = bytearray()
         chunks_ok = 0
         retries = 0
@@ -307,15 +410,24 @@ class ReadOnlyRspDumper:
             offset = 0
             while offset < total_bytes:
                 req_len = min(chunk_size, total_bytes - offset)
-                req_payload = f"m{start_addr + offset:x},{req_len:x}"
+                req_payload = f"{opcode}{start_addr + offset:x},{req_len:x}"
                 req_bytes = build_rsp_frame(req_payload)
                 chunk_bytes: bytes | None = None
                 for attempt in range(max_retries + 1):
                     self._stream.write(req_bytes)
-                    reply = self._read_frame()
+                    reply = self._read_frame(expected_payload_len=req_len if use_binary_x else None)
                     if reply.checksum_ok:
                         self._stream.write(b"+")
-                        chunk_bytes = decode_rsp_hex_memory(reply.payload)
+                        if use_binary_x:
+                            if len(reply.payload) != req_len:
+                                _raise_if_e0x(reply.payload)
+                                raise RuntimeError(
+                                    f"Unexpected $x payload length at 0x{start_addr + offset:08X}: "
+                                    f"expected {req_len}, got {len(reply.payload)}"
+                                )
+                            chunk_bytes = reply.payload
+                        else:
+                            chunk_bytes = decode_rsp_hex_memory(reply.payload)
                         break
                     retries += 1
                     self._stream.write(b"-")
