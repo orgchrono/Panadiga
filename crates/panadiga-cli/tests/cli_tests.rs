@@ -123,6 +123,64 @@ fn test_cli_args_parsing_matrix() {
     assert!(matches!(
         Cli::try_parse_from([
             "panadiga",
+            "hdd",
+            "inspect-capacity",
+            "EH55_MAIN_3410PQ.bin"
+        ])
+        .unwrap()
+        .command,
+        Some(Commands::Hdd(_))
+    ));
+    assert!(matches!(
+        Cli::try_parse_from([
+            "panadiga",
+            "hdd",
+            "inspect-capacity",
+            "-i",
+            "hdd_partition_firmware_0x02000000.bin",
+            "--json",
+            "cap.json",
+        ])
+        .unwrap()
+        .command,
+        Some(Commands::Hdd(_))
+    ));
+    assert!(matches!(
+        Cli::try_parse_from([
+            "panadiga",
+            "hdd",
+            "patch-capacity",
+            "-i",
+            "hdd_partition_firmware_0x02000000.bin",
+            "--mode",
+            "dynamic",
+        ])
+        .unwrap()
+        .command,
+        Some(Commands::Hdd(_))
+    ));
+    assert!(matches!(
+        Cli::try_parse_from([
+            "panadiga",
+            "hdd",
+            "patch-capacity",
+            "-i",
+            "hdd_partition_firmware_0x02000000.bin",
+            "-o",
+            "out.bin",
+            "--mode",
+            "cap",
+            "--target-gb",
+            "250",
+        ])
+        .unwrap()
+        .command,
+        Some(Commands::Hdd(_))
+    ));
+
+    assert!(matches!(
+        Cli::try_parse_from([
+            "panadiga",
             "frm",
             "pack",
             "--mode",
@@ -136,6 +194,7 @@ fn test_cli_args_parsing_matrix() {
         .command,
         Some(Commands::Frm(_))
     ));
+
     assert!(matches!(
         Cli::try_parse_from([
             "panadiga",

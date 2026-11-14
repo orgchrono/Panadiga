@@ -226,6 +226,51 @@ pub fn restore_hdd_mirrors(
         .map_err(|e| e.to_string())
 }
 
+fn resolve_default_main_capacity_path(input_path: Option<String>) -> String {
+    if let Some(p) = input_path.filter(|s| !s.trim().is_empty()) {
+        return p;
+    }
+    resolve_candidate(
+        &[
+            "firmware_and_images/extracted_partitions/hdd_partition_firmware_0x02000000.bin",
+            "extracted_partitions/hdd_partition_firmware_0x02000000.bin",
+            panadiga_core::constants::DEFAULT_HDD_IMAGE_PATH,
+            "C:/ghidra/binaries/unpacked/EH55_MAIN_3410PQ.bin",
+            "firmware_and_images/extracted_partitions/frm_unpacked/main3060np_unpacked.bin",
+        ],
+        "firmware_and_images/extracted_partitions/hdd_partition_firmware_0x02000000.bin",
+    )
+}
+
+/// Inspects `src/hdd_cmd.c` (`MaxProductLBA`) HDD capacity ceiling in a MAIN binary, EXTRHEAD Partition 1, or HDD image.
+#[tauri::command]
+pub fn inspect_hdd_capacity_patch(
+    input_path: Option<String>,
+) -> Result<panadiga_core::hdd::MainCapacityInspectionReport, String> {
+    let resolved = resolve_default_main_capacity_path(input_path);
+    panadiga_core::hdd::inspect_main_hdd_capacity(Path::new(&resolved)).map_err(|e| e.to_string())
+}
+
+/// Applies a dynamic or fixed GB HDD capacity patch (`src/hdd_cmd.c` + EXTRHEAD repack + optional MEIHDFS MBR sync).
+#[tauri::command]
+pub fn apply_hdd_capacity_patch(
+    input_path: Option<String>,
+    output_path: Option<String>,
+    mode: String,
+    target_gb: Option<u32>,
+) -> Result<panadiga_core::hdd::MainCapacityPatchReport, String> {
+    let in_str = resolve_default_main_capacity_path(input_path);
+    let in_p = Path::new(&in_str);
+    let out_p = output_path
+        .filter(|s| !s.trim().is_empty())
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| {
+            panadiga_core::hdd::default_capacity_patched_output_path(in_p, &mode, target_gb)
+        });
+    panadiga_core::hdd::patch_main_hdd_capacity(in_p, &out_p, &mode, target_gb)
+        .map_err(|e| e.to_string())
+}
+
 /// Audits a live NVRAM byte slice captured in-circuit via Pico (P7501 UART) / Android USB-OTG / BLE NUS.
 #[tauri::command]
 pub fn analyze_live_nvram_bytes(

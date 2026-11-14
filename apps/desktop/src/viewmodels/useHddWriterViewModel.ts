@@ -10,7 +10,10 @@ interface HddOperationDescriptor {
   readonly invalidTokenSuffix: string;
   readonly successTitle: string;
   readonly errorTitle: string;
-  readonly buildArgs?: (drive: PhysicalDriveInfo) => Record<string, unknown>;
+  readonly buildArgs?: (
+    drive: PhysicalDriveInfo,
+    customSizeGb: number | null
+  ) => Record<string, unknown>;
 }
 
 const HDD_OPERATION_DESCRIPTORS: Readonly<Record<HddWriteCommand, HddOperationDescriptor>> = Object.freeze({
@@ -19,8 +22,13 @@ const HDD_OPERATION_DESCRIPTORS: Readonly<Record<HddWriteCommand, HddOperationDe
     invalidTokenSuffix: 'para desbloquear a gravação física.',
     successTitle: 'Formatação Concluída',
     errorTitle: 'Falha na Formatação MEIHDFS',
-    buildArgs: drive => ({
-      totalSectors: drive.size_bytes > 0 ? Math.floor(drive.size_bytes / 512) : 200_000,
+    buildArgs: (drive, customSizeGb) => ({
+      totalSectors:
+        customSizeGb !== null && customSizeGb >= 20
+          ? Math.floor((customSizeGb * 1_000_000_000) / 512)
+          : drive.size_bytes > 0
+            ? Math.floor(drive.size_bytes / 512)
+            : 488_281_250,
     }),
   },
   write_hdd_image: {
@@ -54,6 +62,7 @@ export function useHddWriterViewModel() {
   const [selectedDrive, setSelectedDrive] = useState<PhysicalDriveInfo | null>(null);
   const [loadingDrives, setLoadingDrives] = useState<boolean>(false);
   const [confirmInput, setConfirmInput] = useState<string>('');
+  const [customSizeGb, setCustomSizeGb] = useState<number | null>(null);
   const [executing, setExecuting] = useState<boolean>(false);
   const [writeReport, setWriteReport] = useState<DriveWriteReport | null>(null);
 
@@ -102,7 +111,7 @@ export function useHddWriterViewModel() {
         const res = await invokeCommand<DriveWriteReport>(descriptor.cmd, {
           devicePath: selectedDrive.device_path,
           confirmationToken: provided,
-          ...(descriptor.buildArgs ? descriptor.buildArgs(selectedDrive) : {}),
+          ...(descriptor.buildArgs ? descriptor.buildArgs(selectedDrive, customSizeGb) : {}),
         });
         setWriteReport(res);
         showToast({
@@ -120,7 +129,7 @@ export function useHddWriterViewModel() {
         setExecuting(false);
       }
     },
-    [selectedDrive, confirmInput, showToast]
+    [selectedDrive, confirmInput, customSizeGb, showToast]
   );
 
   const handleProceduralFormat = useCallback(
@@ -143,6 +152,16 @@ export function useHddWriterViewModel() {
     selectedDrive && selectedDrive.safe_to_write && confirmInput.trim() === expectedToken
   );
 
+  const resolvedTargetSectors = selectedDrive
+    ? customSizeGb !== null && customSizeGb >= 20
+      ? Math.floor((customSizeGb * 1_000_000_000) / 512)
+      : selectedDrive.size_bytes > 0
+        ? Math.floor(selectedDrive.size_bytes / 512)
+        : 488_281_250
+    : customSizeGb !== null && customSizeGb >= 20
+      ? Math.floor((customSizeGb * 1_000_000_000) / 512)
+      : 488_281_250;
+
   return {
     drives,
     selectedDrive,
@@ -150,6 +169,9 @@ export function useHddWriterViewModel() {
     loadingDrives,
     confirmInput,
     setConfirmInput,
+    customSizeGb,
+    setCustomSizeGb,
+    resolvedTargetSectors,
     executing,
     writeReport,
     expectedToken,

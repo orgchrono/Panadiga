@@ -11,6 +11,9 @@ export const HddWriterCard: React.FC = () => {
     loadingDrives,
     confirmInput,
     setConfirmInput,
+    customSizeGb,
+    setCustomSizeGb,
+    resolvedTargetSectors,
     executing,
     writeReport,
     expectedToken,
@@ -111,6 +114,54 @@ export const HddWriterCard: React.FC = () => {
           <div className="flex items-center gap-2 text-cyan-300 font-semibold text-xs">
             <ShieldCheck className="w-4 h-4 text-cyan-400" />
             <span>Confirmação Deliberada para Gravação em {selectedDrive.device_path}</span>
+          </div>
+
+          {/* Dynamic Capacity Selector for mkfs.meihdfs */}
+          <div className="p-3.5 rounded-xl bg-bench-900 border border-slate-800 space-y-2.5 text-xs">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-[11px] text-slate-300 font-semibold uppercase">
+                Tamanho Dinâmico do Superbloco MEIHDFS (`mkfs.meihdfs` Partição 3 AV):
+              </span>
+              <span className="text-[11px] text-emerald-300 font-bold">
+                {resolvedTargetSectors.toLocaleString()} setores ({((resolvedTargetSectors * 512) / 1e9).toFixed(1)} GB)
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {[
+                { label: 'Auto (Físico)', gb: null },
+                { label: '250 GB', gb: 250 },
+                { label: '300 GB', gb: 300 },
+                { label: '400 GB', gb: 400 },
+                { label: '500 GB', gb: 500 },
+                { label: '1 TB', gb: 1000 },
+                { label: '2 TB', gb: 2000 },
+              ].map(opt => (
+                <button
+                  key={opt.label}
+                  type="button"
+                  onClick={() => setCustomSizeGb(opt.gb)}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-colors ${
+                    customSizeGb === opt.gb
+                      ? 'bg-emerald-500 text-slate-950 border-emerald-400'
+                      : 'bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-700'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+              <input
+                type="number"
+                min={20}
+                max={2200}
+                placeholder="GB custom"
+                value={customSizeGb ?? ''}
+                onChange={e => {
+                  const val = e.target.value.trim();
+                  setCustomSizeGb(val === '' ? null : Math.max(20, Math.min(2200, Number(val) || 250)));
+                }}
+                className="w-24 px-2 py-1 rounded-lg bg-slate-950 border border-slate-700 text-[11px] text-cyan-300 focus:outline-none focus:border-cyan-400 ml-auto"
+              />
+            </div>
           </div>
 
           <div className="space-y-1.5">

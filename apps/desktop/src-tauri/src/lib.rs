@@ -71,6 +71,8 @@ pub fn run_desktop_app() {
             format_hdd_meihdfs,
             write_hdd_image,
             restore_hdd_mirrors,
+            inspect_hdd_capacity_patch,
+            apply_hdd_capacity_patch,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

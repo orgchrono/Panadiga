@@ -11,6 +11,7 @@ import {
   HddDensityMap,
   HddExtractManifestCard,
   HddWriterCard,
+  HddCapacityPatcherCard,
 } from '@/components/hdd';
 import {
   Layers,
@@ -20,6 +21,7 @@ import {
   BarChart3,
   FolderArchive,
   HardDrive,
+  Unlock,
 } from 'lucide-react';
 
 /**
@@ -195,6 +197,20 @@ export const HddStorageView: React.FC = () => {
         )}
 
         <button
+          onClick={() => setActiveTab('capacity')}
+          role="tab"
+          aria-selected={activeTab === 'capacity'}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
+            activeTab === 'capacity'
+              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Unlock className="w-3.5 h-3.5" />
+          <span>Desbloqueio de Capacidade (250GB / 2TB)</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('writer')}
           role="tab"
           aria-selected={activeTab === 'writer'}
@@ -210,7 +226,7 @@ export const HddStorageView: React.FC = () => {
       </div>
 
       {/* Empty State / Image Selector when no report is loaded */}
-      {!hddReport && activeTab !== 'writer' && (
+      {!hddReport && activeTab !== 'writer' && activeTab !== 'capacity' && (
         <div className="p-8 rounded-2xl bg-bench-900 border border-slate-800 text-center space-y-4 max-w-2xl mx-auto shadow-xl">
           <div className="w-12 h-12 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 flex items-center justify-center mx-auto">
             <HardDrive className="w-6 h-6" />
@@ -294,7 +310,12 @@ export const HddStorageView: React.FC = () => {
         />
       )}
 
-      {/* Tab 7: Physical Drive Writer & mkfs.meihdfs */}
+      {/* Tab 7: Dynamic HDD Capacity Patcher */}
+      {activeTab === 'capacity' && (
+        <HddCapacityPatcherCard />
+      )}
+
+      {/* Tab 8: Physical Drive Writer & mkfs.meihdfs */}
       {activeTab === 'writer' && (
         <HddWriterCard />
       )}

@@ -169,3 +169,54 @@ export interface DriveWriteReport {
   success: boolean;
   message: string;
 }
+
+export interface RtsdCapacityPreset {
+  menu_index: number;
+  label: string;
+  capacity_gb: number;
+  blocks_2kb: number;
+  blocks_2kb_hex: string;
+  sectors_512b: number;
+}
+
+export interface MainCapacityInspectionReport {
+  input_path: string;
+  container_format: string;
+  build_name?: string | null;
+  raw_main_size: number;
+  raw_main_sha256: string;
+  patch_site_file_offset: number;
+  patch_site_va_hex: string;
+  max_product_lba_var_va_hex: string;
+  physical_blocks_var_va_hex: string;
+  clamp_branch_opcode_hex: string;
+  is_dynamic_unclamped: boolean;
+  slot_400gb_blocks_2kb: number;
+  slot_400gb_hex: string;
+  slot_400gb_gb: number;
+  slot_200gb_blocks_2kb: number;
+  slot_200gb_hex: string;
+  slot_200gb_gb: number;
+  slot_fallback_blocks_2kb: number;
+  slot_fallback_hex: string;
+  slot_fallback_gb: number;
+  effective_default_limit_gb: number;
+  rtsd_presets: RtsdCapacityPreset[];
+}
+
+export interface MainCapacityPatchReport {
+  input_path: string;
+  output_path: string;
+  container_format: string;
+  mode: string;
+  target_gb?: number | null;
+  applied_blocks_2kb: number;
+  applied_blocks_2kb_hex: string;
+  applied_sectors_512b: number;
+  mbr_superblocks_updated: boolean;
+  repacked_container_size?: number | null;
+  original_sha256: string;
+  patched_sha256: string;
+  inspection_before: MainCapacityInspectionReport;
+  inspection_after: MainCapacityInspectionReport;
+}

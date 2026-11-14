@@ -392,7 +392,7 @@ Quando o disco original de um Panasonic DMR-EH55 falha mecanicamente ou quando o
    ```
    No Windows, utilize utilitários de escrita bruta em nível de setor (como `Win32DiskImager` ou `BalenaEtcher`).
 2. **Instalação no Chassi DIGA:**
-   Instale a mídia na gaveta de montagem do DMR-EH55, certificando-se de configurar os jumpers do disco PATA em **Master** ou **Cable Select** (conforme a fita flat original).
+   Instale a mídia na gaveta de montagem do DMR-EH55, certificando-se de configurar os jumpers do disco PATA ou da ponte SATA-PATA (`StarTech IDE2SAT2`) explicitamente em **`Master`** (`Device 0` no Canal Secundário `ch = 1` — **nunca** `CS`/`Cable Select` nem `Slave`).
 3. **Inicialização do Sistema:**
    Ao ligar o aparelho, o display frontal exibirá a sequência padrão `HELLO` $\rightarrow$ `PLEASE WAIT` e entrará normalmente em modo de operação ou exibirá o aviso `UNFORMAT`. O display **não exibirá mais `DRV NG` nem `HDDERR`**, pois o MBR e as partições de firmware necessárias ao AM34 estarão presentes.
 4. **Formatação Oficial do Volume de Gravação:**
@@ -403,7 +403,105 @@ Quando o disco original de um Panasonic DMR-EH55 falha mecanicamente ou quando o
 
 ---
 
-## 9. Conclusão Técnica
+## 9. Desbloqueio Dinâmico de Capacidade de HDD (`src/hdd_cmd.c` + MEIHDFS1.0)
+
+Por padrão de fábrica, a pilha de armazenamento MEIHDFS / LBA48 do Panasonic DMR-EH55 suporta discos rígidos grandes nativamente no nível ATA, mas o módulo principal (`MAIN`) executa um truncamento artificial em software compilado a partir de **`src/hdd_cmd.c`**. Nessa rotina, o número físico de blocos de 2 KB medidos via ATA `IDENTIFY DEVICE` (`PhysicalBlocks2KB`) é comparado com um teto global em SDRAM (`MaxProductLBA`); caso o disco ultrapasse esse teto (~200 GB na variante EU/retail), o firmware reduz `PhysicalBlocks2KB` para `MaxProductLBA - 1`.
+
+### 9.1 Anatomia Completa & Disassembly Byte-a-Byte MN103S (`src/hdd_cmd.c`)
+
+A análise em disassembly e bytes brutos identificou o bloco básico completo de **117 bytes (`+0x00..+0x74`)**, cuja janela estrutural fixa **`WIN_LEN = 0x72` (`114` bytes)** é ancorada pelos 14 bytes iniciais `FD AA 00 8A 00 00 FB E9 00 80 C8 1D FC CC` tanto no `MAIN3060NP` quanto no `EH55_MAIN_3410PQ`:
+
+| Campo / Símbolo | `MAIN3060NP` (`main3060np_unpacked.bin`) | `EH55_MAIN_3410PQ` (`EH55_MAIN_3410PQ.bin`) | Detalhe Técnico |
+| :--- | :--- | :--- | :--- |
+| **Tamanho / SHA-256 (`MAIN` raw)** | `13.427.852 B` / `075f552e...61ddcca7` | `13.003.052 B` / `c3275d39...5dc991b1` | Módulo `MAIN` descomprimido (base `0x57000000`) |
+| **Endereço Inicial (`VA` / File Off.)** | `0x574E499C` (`+0x004E499C`) | `0x574DD1FC` (`+0x004DD1FC`) | Início de `WIN_LEN = 0x72` (`114` B) em `src/hdd_cmd.c` |
+| **Variável Global `MaxProductLBA`** | `0x5300750C` | `0x5311B9AC` | Variável global em SDRAM com o teto em blocos 2 KB |
+| **Variável Global `PhysicalBlocks2KB`** | `0x530077E0` | `0x5311BC80` | Blocos físicos LBA48 detectados (`sectors_512b / 4`) |
+| **String `400GB` / `200GB`** | `0x579F9F13` / `0x579F9F2D` | `0x57A5E957` / `0x57A5E971` | `"[RTSD] M7920(HDD 400GB) \n"` / `"M7920(HDD 200GB) \n"` |
+| **Log Erro `DevInfo` / `MaxLBA`** | `0x579F9EEC` / `0x579F5853` | `0x57A5E930` / `0x57A5A299` | `"[RTSD] Read DevInfo(option) Err=%08x \n"` / `"[RTSD] MaxProductLBA = %08x \n"` |
+
+Sequência exata de instruções MN103S dentro do bloco (`+0x00..+0x74`, validada em ambos os binários):
+
+| Offset | Bytes (`EH55_MAIN_3410PQ`) | Instrução MN103S Equivalente | Semântica para o Engenheiro de Plantão |
+| :--- | :--- | :--- | :--- |
+| **`+0x00..+0x03`** | `FD AA 00 8A` | `movhu (0x8a, a2), d2` | Lê halfword de opção `DevInfo(option)+0x8A`. |
+| **`+0x04..+0x09`** | `00 00 FB E9 00 80` | `and 0x00008000, d2` | Testa bit `0x8000` de modelo de alta capacidade (`M7920` 400 GB). |
+| **`+0x0A..+0x0B`** | `C8 1D` | `beq +29` (`-> +0x27`) | Se bit `0x8000 == 0`, salta para o slot padrão de **200 GB**. |
+| **`+0x0C..+0x11`** | `FC CC 74 3B A4 0B` | `mov 0x0BA43B74, d0` | Carrega `slot_400gb` (`0x0BA43B74` = `195.312.500` × 2 KB = 400,00 GB). **`+0x0E` é o offset patcheado**. |
+| **`+0x12..+0x17`** | `FC 81 AC B9 11 53` | `mov d0, (0x5311B9AC)` | Grava `MaxProductLBA` (`0x5300750C` na `3060NP`). **`+0x14` = `MaxProductLBA` VA**. |
+| **`+0x18..+0x24`** | `FC CC <str> DD <disp32>` | `mov <str_400gb>, d0; call log` | Imprime `"[RTSD] M7920(HDD 400GB) \n"`. |
+| **`+0x25..+0x26`** | `CA 29` | `bra +41` (`-> +0x4E`) | Salta direto para a comparação final `MaxProductLBA` vs `PhysicalBlocks2KB`. |
+| **`+0x27..+0x2C`** | `FC CC BA 1D D2 05` | `mov 0x05D21DBA, d0` | Carrega `slot_200gb` (`0x05D21DBA` = `97.656.250` × 2 KB = 200,00 GB). **`+0x29` é o offset patcheado**. |
+| **`+0x2D..+0x3F`** | `FC 81 <var> FC CC <str> DD <disp32>` | `mov d0, (MaxProductLBA); call log` | Grava `MaxProductLBA = 200 GB` e imprime `"[RTSD] M7920(HDD 200GB) \n"`. |
+| **`+0x40..+0x41`** | `CA 0E` | `bra +14` (`-> +0x4E`) | Salta para a comparação final. |
+| **`+0x42..+0x4D`** | `FC CC <fb> FC 81 <var>` | `mov <slot_fb>, d0; mov d0, (MaxProductLBA)` | Fallback se não for `M7920`: `0x05D0DDBA` (~199,83 GB em `3060NP`) / `0x04A6D7C8` (~159,83 GB em `3410PQ`). **`+0x44` é o offset patcheado**. |
+| **`+0x4E..+0x53`** | `FC A5 AC B9 11 53` | `mov (MaxProductLBA), d1` | Carrega teto `MaxProductLBA` em `d1`. |
+| **`+0x54..+0x59`** | `FC A4 80 BC 11 53` | `mov (PhysicalBlocks2KB), d0` | Carrega capacidade física LBA48 real do disco em `d0`. **`+0x56` = `PhysicalBlocks2KB` VA**. |
+| **`+0x5A`** | `A1` | `cmp d1, d0` | Compara `d0` (`PhysicalBlocks2KB`) contra `d1` (`MaxProductLBA`). |
+| **`+0x5B..+0x5C`** | **`C6 0C`** (`0xC6` -> **`0xCA`**) | **`bls +12`** (`-> +0x67`) | Se `d0 <= d1`, salta o truncamento e mantém o disco físico real. **Ao patchear `+0x5B` para `0xCA` (`bra +12`), o truncamento é ignorado para qualquer HDD**. |
+| **`+0x5D..+0x64`** | `29 FF FC 85 80 BC 11 53` | `add -1, d1; mov d1, (PhysicalBlocks2KB)` | **Bloco de trava original:** se `d0 > d1`, sobrescreve `PhysicalBlocks2KB` com `MaxProductLBA - 1`. |
+| **`+0x65..+0x66`** | `CA 0A` | `bra +10` (`-> +0x6F`) | Encerra o bloco após aplicar o teto. |
+| **`+0x67..+0x6E`** | `28 FF FC 81 80 BC 11 53` | `add -1, d0; mov d0, (PhysicalBlocks2KB)` | **Caminho livre (desbloqueado):** ajusta `PhysicalBlocks2KB -= 1` mantendo **100% dos setores físicos do disco**. |
+| **`+0x6F..+0x74`** | `FC A4 80 BC 11 53` | `mov (PhysicalBlocks2KB), d0` | Recarrega o total final para as rotinas de inicialização MEIHDFS (primeiros 3 B `FC A4 80` compõem o byte `114` de `WIN_LEN`). |
+
+### 9.2 Estratégias de Desbloqueio (`dynamic`, `cap`, `factory_200gb`) & Fórmulas
+
+1. **Modo Dinâmico Auto-Detect (`dynamic`, recomendado):**
+   Substitui `+0x5B` de `0xC6` (`bls +12`) para **`0xCA`** (`bra +12` incondicional) e eleva `+0x0E`, `+0x29`, `+0x44` para `0x3FFFFFFF` (`~2.199 GB` em blocos de 2 KB) ou para o alvo calibrado quando `--target-gb` for informado. O sistema passa a aceitar **qualquer disco SATA/PATA LBA48 (250 GB, 320 GB, 500 GB, 1 TB, 2 TB+)** com 100% da capacidade física reportada via `IDENTIFY DEVICE`.
+2. **Modo Teto Explícito / Preset RTSD (`cap`):**
+   Mantém `0xC6` (`bls +12`) e crava os 3 slots de `MaxProductLBA` no limite escolhido (ex.: **`250 GB` = `0x07466528`**). Para tamanhos customizados fora da tabela oficial de 9 itens:
+   $$N_{\text{blocos 2KB}} = \left\lfloor \frac{\text{Capacidade}_{\text{GB}} \times 10^9}{2048} \right\rfloor, \qquad N_{\text{setores 512B}} = N_{\text{blocos 2KB}} \times 4$$
+3. **Modo Restauração (`factory_200gb`):**
+   Reverte `+0x5B` para `0xC6` e restaura `slot_400gb = 0x0BA43B74`, `slot_200gb = 0x05D21DBA` e `slot_fallback = 0x05D0DDBA`.
+
+### 9.3 Tabela Oficial RTSD `Change HDD Capacity`
+
+Além do clamp em `src/hdd_cmd.c`, o menu de serviço **RTSD (`Change HDD Capacity`)** possui um despachante `switch/case` com 9 presets descoberto em `0x574CA054` (`MAIN3060NP`) e `0x574C267B` (`EH55_MAIN_3410PQ`), gravando a escolha em RAM `0x52FEE95C` (`3060NP`) / `0x53102DFC` (`3410PQ`) e logando `"[RTSD] MaxProductLBA = %08x \n"`:
+
+| Item RTSD | Capacidade Comercial | Blocos 2 KB (Hex) | Blocos 2 KB (Dec) | Setores LBA 512 B (`× 4`) |
+| :---: | :---: | :---: | :---: | :---: |
+| `#1` | `400GB HDD (RTSD)` | `0x0BA3FB74` | `195.296.116` | `781.184.464` |
+| `#2` | `300GB HDD (RTSD)` | `0x08BAEC97` | `146.467.991` | `585.871.964` |
+| **`#3`** | **`250GB HDD (RTSD)`** | **`0x07466528`** | **`122.053.928`** | **`488.215.712`** |
+| `#4` | `200GB HDD (RTSD)` | `0x05D1DDBA` | `97.639.866` | `390.559.464` |
+| `#5` | `160GB HDD (RTSD)` | `0x04A7D7C8` | `78.108.616` | `312.434.464` |
+| `#6` | `137GB HDD (RTSD)` | `0x03FC7AC3` | `66.878.147` | `267.512.588` |
+| `#7` | `120GB HDD (RTSD)` | `0x037DD1D6` | `58.577.366` | `234.309.464` |
+| `#8` | `100GB HDD (RTSD)` | `0x02E8CEDD` | `48.811.741` | `195.246.964` |
+| `#9` | `80GB HDD (RTSD)` | `0x0253CBE4` | `39.046.116` | `156.184.464` |
+
+### 9.4 Pipeline Criptográfico (`EXTRHEAD`/`EXTRFOOT`) & Automação na Suíte Panadiga
+
+O módulo [`capacity_patch.rs`](../../crates/panadiga-core/src/hdd/capacity_patch.rs) detecta automaticamente a entrada e preserva integralmente a cadeia de validação do bootloader `BOOT.BIN`:
+1. **`RAW_MAIN_BINARY`**: binário `MAIN` plano descomprimido (ex.: `EH55_MAIN_3410PQ.bin`, `main3060np_unpacked.bin`).
+2. **`EXTRHEAD_CONTAINER`**: partição de firmware 1 (`hdd_partition_firmware_0x02000000.bin`). O código decifra o cabeçalho de `0x40` bytes (`EXTRHEAD` + tag + `dst_addr = 0x57000000` + `build_name`), descomprime `zlib`/raw deflate, aplica o patch MN103S, recomprime, recalcula o **Adler-32 strided (`step=16`, equivalente à rotina `FUN_4401e5a3`)**, assina o rodapé **`EXTRFOOT`**, cifra em **Feistel 64-bit ECB de 16 rodadas (`PANA_FEISTEL_ROUND_KEY_32B` + `PANA_FEISTEL_SBOX_256`)** e executa round-trip completo via `unpack_extrhead` garantindo `checksum_valid == true`.
+3. **`FULL_HDD_IMAGE_P1`**: imagem de 100 MB (como `panasonic DMR EH-55 Firmware hdd_100.bin` vinda do Internet Archive), regravando a Partição 1 (`0x02000000`) sem exceder o limite de `0x04000000` (`32 MB` de janela), preservando `zeros_after_header_clean` em imagens de fábrica e sincronizando os setores `total_sectors` em `LBA 0` e `LBA 57.344` apenas quando a imagem é procedural (`mkfs`).
+
+### 9.5 Runbook de Plantão: CLI, Desktop UI & Jumper Obrigatório `MASTER` (`StarTech IDE2SAT2`)
+
+> [!CAUTION]
+> **Alerta de Hardware (`Jumper OBRIGATÓRIO em MASTER — NUNCA CS e NUNCA Slave` na ponte `StarTech IDE2SAT2` / HDD do `DMR-EH55`):** Na arquitetura real do **`DMR-EH55`** (comprovada pelos esquemáticos `vol2_schematics.pdf` pp. 46, 52, 113, 125–126 e pelo disassembly de `eh55_frm_PROG061_BOOT.bin` e `EH55_MAIN_3410PQ.bin`), o **DVD-RAM ODD** e o **HDD NÃO compartilham o mesmo cabo IDE**: o ODD opera no **Canal Primário Master (`ch=0, dev=0`, MMIO `0x89000500`)** via front-end interno (`FEP`), e o HDD opera em cabo flat dedicado de 40 vias (`Extension FFC`) no **Canal Secundário MASTER (`ch=1, dev=0`, MMIO `0x89000D00`)**. Em `FUN_50414908` (`PROG061`) e `FUN_574d1de8` (`EH55_MAIN`), a tabela de topologia fixa `acStack_70[4] = { 2, 0, 1, 0 }` (`80 02 f8 92 34 0c f8 9e 35 80 01 f8 92 36 f8 9e 37`) define exclusivamente `acStack_70[2] = 1` (**Secondary Master**) e deixa `acStack_70[3] = 0` (**Secondary Slave** vazio/ignorado — a referência `DAT_505733d4 == 0` pertence apenas ao `DMR-EH58`, não existe no `DMR-EH55`).
+> - Se o jumper ficar em **`Slave` (`dev = 1`)**, o firmware do `DMR-EH55` ignora o disco em `acStack_70[3] == 0`.
+> - Se o jumper ficar em **`CS` (`Cable Select`, Pino 28 `CSEL`)** na ponte `StarTech IDE2SAT2`, `DAVIS_Connect_IDE(1)` (`FUN_5041f61b` / `FUN_5041f782` / `FUN_5710c6c3`) pode sofrer seleção indeterminada de `DEV` em `0x89000D38`, colisão `0x8000040d` ou travamento de `MultiWord DMA MODE2`. Desligar o gravador durante travamento/atualização no barramento IDE em `CS` pode corromper setores lógicos da região NOR Flash **BGO (`0x84200000..0x843FFFFF`)**, levando ao erro **`BGO driver init failed[1].`** e **`U99`**.
+> - **Regra de ouro no `DMR-EH55`:** configure o jumper do HDD / `StarTech IDE2SAT2` **SEMPRE explicitamente como `MASTER` (`Device 0`)** — **NUNCA use `CS` e NUNCA use `Slave`**.
+
+Comandos CLI (`panadiga-cli`, aceitando argumento posicional ou `-i`, e `-o` opcional):
+```bash
+# Inspecionar ponto de clamp e slots atuais (posicional ou via -i)
+panadiga hdd inspect-capacity -i firmware_and_images/extracted_partitions/hdd_partition_firmware_0x02000000.bin
+
+# Aplicar desbloqueio dinâmico LBA48 (250 GB até 2 TB+; -o é opcional -> *_PATCHED_DYNAMIC.bin)
+panadiga hdd patch-capacity -i hdd_partition_firmware_0x02000000.bin --mode dynamic
+
+# Ou gravar teto RTSD explícito de 250 GB (0x07466528 -> *_PATCHED_250GB.bin)
+panadiga hdd patch-capacity -i hdd_partition_firmware_0x02000000.bin --mode cap --target-gb 250
+```
+
+No **Panadiga Desktop (`HddStorageView`)**, a operação está disponível na aba **`Desbloqueio de Capacidade (250GB / 2TB)`** (`HddCapacityPatcherCard`), acompanhada pelo seletor de capacidade alvo (`Auto (Físico)`, `250 GB`, `300 GB`, `400 GB`, `500 GB`, `1 TB`, `2 TB` ou customizado) na aba **`Gravação Física & mkfs`** (`HddWriterCard`).
+
+---
+
+## 10. Conclusão Técnica
 
 A análise de engenharia reversa do arquivo `panasonic DMR EH-55 Firmware hdd_100.bin` comprova de maneira inequívoca a arquitetura simbiótica entre a memória Flash da placa principal e o disco rígido na plataforma Panasonic DIGA. 
 

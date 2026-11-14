@@ -4,8 +4,9 @@ use super::super::args::{HddActions, HddArgs};
 use anyhow::Result;
 use panadiga_core::constants::{DEFAULT_HDD_IMAGE_PATH, PANA_FRM_MOD3_START_OFFSET};
 use panadiga_core::hdd::{
-    decode_meihdfs_descriptors, extract_hdd_partitions, generate_meihdfs_layout, inspect_hdd_image,
-    list_physical_drives, open_image_buffer, restore_meihdfs_from_mirrors,
+    decode_meihdfs_descriptors, default_capacity_patched_output_path, export_report_to_json,
+    extract_hdd_partitions, generate_meihdfs_layout, inspect_hdd_image, inspect_main_hdd_capacity,
+    list_physical_drives, open_image_buffer, patch_main_hdd_capacity, restore_meihdfs_from_mirrors,
     write_meihdfs_procedural_to_drive, write_raw_image_to_drive,
 };
 use panadiga_core::log_println;
@@ -13,6 +14,19 @@ use std::path::PathBuf;
 
 fn resolve_hdd_path(image: Option<PathBuf>) -> PathBuf {
     image.unwrap_or_else(|| PathBuf::from(DEFAULT_HDD_IMAGE_PATH))
+}
+
+fn resolve_main_capacity_input(input: Option<PathBuf>) -> PathBuf {
+    input.unwrap_or_else(|| {
+        let p1 = PathBuf::from(
+            "firmware_and_images/extracted_partitions/hdd_partition_firmware_0x02000000.bin",
+        );
+        if p1.exists() {
+            p1
+        } else {
+            PathBuf::from(DEFAULT_HDD_IMAGE_PATH)
+        }
+    })
 }
 
 pub fn handle_hdd(args: HddArgs) -> Result<()> {
@@ -127,6 +141,96 @@ pub fn handle_hdd(args: HddArgs) -> Result<()> {
             );
             let report = restore_meihdfs_from_mirrors(&target, &confirm)?;
             log_println!("[OK] {}", report.message);
+        }
+        HddActions::InspectCapacity {
+            input,
+            input_flag,
+            json,
+        } => {
+            let in_path = resolve_main_capacity_input(input.or(input_flag));
+            let rep = inspect_main_hdd_capacity(&in_path)?;
+            log_println!("====================================================================");
+            log_println!("   PANASONIC DIGA `src/hdd_cmd.c` CAPACITY CLAMP INSPECTION");
+            log_println!("====================================================================");
+            log_println!("Input:            {}", rep.input_path);
+            log_println!(
+                "Format / Build:   {} ({})",
+                rep.container_format,
+                rep.build_name.as_deref().unwrap_or("RAW MAIN")
+            );
+            log_println!(
+                "MAIN Size / SHA:  {} bytes | {}",
+                rep.raw_main_size,
+                rep.raw_main_sha256
+            );
+            log_println!(
+                "Clamp Site:       {} (file offset 0x{:08X})",
+                rep.patch_site_va_hex,
+                rep.patch_site_file_offset
+            );
+            log_println!(
+                "MaxProductLBA VA: {} | PhysicalBlocks VA: {}",
+                rep.max_product_lba_var_va_hex,
+                rep.physical_blocks_var_va_hex
+            );
+            log_println!(
+                "Clamp Branch OP:  {} ({})",
+                rep.clamp_branch_opcode_hex,
+                if rep.is_dynamic_unclamped {
+                    "DYNAMIC UNCLAMPED (bra +12 -> FULL LBA48)"
+                } else {
+                    "FACTORY CLAMPED (bls +12)"
+                }
+            );
+            log_println!(
+                "Slots (2KB blks): 400GB={} ({:.2} GB) | 200GB={} ({:.2} GB) | Fallback={} ({:.2} GB)",
+                rep.slot_400gb_hex,
+                rep.slot_400gb_gb,
+                rep.slot_200gb_hex,
+                rep.slot_200gb_gb,
+                rep.slot_fallback_hex,
+                rep.slot_fallback_gb
+            );
+            log_println!("Effective Limit:  {:.2} GB", rep.effective_default_limit_gb);
+            if let Some(ref json_path) = json {
+                export_report_to_json(&rep, json_path, "HDD capacity inspection report")?;
+            }
+        }
+        HddActions::PatchCapacity {
+            input,
+            output,
+            mode,
+            target_gb,
+        } => {
+            let in_path = resolve_main_capacity_input(input);
+            let out_path = output.unwrap_or_else(|| {
+                default_capacity_patched_output_path(&in_path, &mode, target_gb)
+            });
+            let rep = patch_main_hdd_capacity(&in_path, &out_path, &mode, target_gb)?;
+            log_println!("====================================================================");
+            log_println!("   PANASONIC DIGA DYNAMIC HDD CAPACITY PATCHER");
+            log_println!("====================================================================");
+            log_println!("Input:            {}", rep.input_path);
+            log_println!("Output:           {}", rep.output_path);
+            log_println!(
+                "Format / Mode:    {} | mode={} | target_gb={:?}",
+                rep.container_format,
+                rep.mode,
+                rep.target_gb
+            );
+            log_println!(
+                "Applied Ceiling:  {} ({} blocks of 2KB = {} 512B sectors)",
+                rep.applied_blocks_2kb_hex,
+                rep.applied_blocks_2kb,
+                rep.applied_sectors_512b
+            );
+            log_println!(
+                "Clamp Branch OP:  {} -> {}",
+                rep.inspection_before.clamp_branch_opcode_hex,
+                rep.inspection_after.clamp_branch_opcode_hex
+            );
+            log_println!("MBR Mirror Sync:  {}", rep.mbr_superblocks_updated);
+            log_println!("Output SHA-256:   {}", rep.patched_sha256);
         }
     }
     Ok(())

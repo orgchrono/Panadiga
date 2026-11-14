@@ -8,3 +8,4 @@ export * from './HddJournalTable';
 export * from './HddDensityMap';
 export * from './HddExtractManifestCard';
 export * from './HddWriterCard';
+export * from './HddCapacityPatcherCard';

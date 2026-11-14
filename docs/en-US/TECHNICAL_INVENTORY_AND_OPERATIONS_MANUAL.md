@@ -53,3 +53,30 @@ The engineering recovery and reverse engineering ecosystem for the **Panasonic D
    ```
 2. Verify the top 64 KB NVRAM/EEMUL region (`0x807F0000..0x807FFFFF`, sectors `SA134..SA141`) is sanitized to virgin `0xFF` while `0x80000000..0x807EFFFF` (IPL) remains untouched.
 3. Keep `XRESET` released (`Hi-Z` / `ISOLATE`) and verify clean system startup with verified SHA-256 manifests.
+
+---
+
+## 4. Operational Route C: HDD Replacement & Dynamic Capacity Unlock (`250 GB` to `2 TB+`)
+
+When replacing the factory HDD with a larger PATA/SATA drive (e.g., `250 GB`, `320 GB`, `500 GB`, `1 TB`, `2 TB`) via a compatible bridge such as Marvell `88SA8052` (`StarTech IDE2SAT2`):
+
+> [!WARNING]
+> **Mandatory Hardware Rule (`DMR-EH55` HDD Jumper = `MASTER`, NEVER `CS` and NEVER `Slave`):**
+> `DMR-EH55` schematics (`vol2_schematics.pdf` pp. 46, 52, 113, 125–126) and firmware disassembly (`eh55_frm_PROG061_BOOT.bin` `FUN_50414908`, `EH55_MAIN_3410PQ.bin` `FUN_574d1de8`) hardcode `acStack_70[4] = { 2, 0, 1, 0 }`: the DVD-RAM ODD is on **Primary `ch=0, dev=0`** (`0x89000500`) via the internal Front-End (`FEP`), while the HDD sits on a dedicated 40-pin `Extension FFC` as **Secondary `MASTER` (`ch=1, dev=0`, `0x89000D00`)** — `DAT_505733d4` single-cable Slave remapping exists only in `DMR-EH58`, not `DMR-EH55`.
+
+1. **Always Jumper `StarTech IDE2SAT2` / HDD as `MASTER` (`Device 0` on Secondary IDE `ch = 1`):** Setting **`Slave`** maps to ignored slot `acStack_70[3] == 0`. Leaving **`CS` (`Cable Select`)** can cause indeterminate `DEV` selection, `0x8000040d` collision, or `MultiWord DMA MODE2` lockups (`FUN_5041f61b` / `FUN_5041f782`); power cycling during an IDE hang risks corrupting NOR **BGO sectors `0x84200000..0x843FFFFF`** (`BGO driver init failed[1].` / `U99`). **Never use `CS` and never use `Slave`.**
+2. **Unlock `src/hdd_cmd.c` (`200 GB` Clamp -> Dynamic LBA48) Before Writing the HDD:**
+   ```bash
+   # Inspect clamp opcode (0xC6 bls +12 vs 0xCA bra +12)
+   panadiga hdd inspect-capacity -i firmware_and_images/extracted_partitions/hdd_partition_firmware_0x02000000.bin
+
+   # Unlock full LBA48 capacity (-o optional -> *_PATCHED_DYNAMIC.bin) or apply RTSD 250 GB preset (0x07466528)
+   panadiga hdd patch-capacity -i "firmware_and_images/panasonic DMR EH-55 Firmware hdd_100.bin" --mode dynamic
+   ```
+   Or use the Panadiga Desktop **`Desbloqueio de Capacidade (250GB / 2TB)`** (`HddCapacityPatcherCard`) and **`Gravação Física & mkfs`** (`HddWriterCard`) tabs.
+3. **Write First 100 MB with System-Drive Lockout Protection & Format on Recorder:**
+   ```bash
+   panadiga hdd list-drives
+   panadiga hdd write-image --target \\.\PhysicalDrive1 --image "firmware_and_images/panasonic DMR EH-55 Firmware hdd_100_PATCHED_DYNAMIC.bin" --confirm CONFIRM-PhysicalDrive1
+   ```
+   Boot into the Panasonic Service Menu / `HDD Management -> Format` to initialize the remaining LBA48 space under `MEIHDFS1.0`.

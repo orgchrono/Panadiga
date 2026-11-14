@@ -2,6 +2,7 @@
 //!
 //! Ultra-high performance zero-copy analysis utilizing `memmap2::Mmap`.
 
+pub mod capacity_patch;
 pub mod inspect;
 pub mod meihdfs;
 pub mod mkfs;
@@ -10,6 +11,7 @@ pub mod types;
 pub mod utils;
 pub mod writer;
 
+pub use capacity_patch::*;
 pub use inspect::inspect_hdd_image;
 pub use meihdfs::*;
 pub use mkfs::*;

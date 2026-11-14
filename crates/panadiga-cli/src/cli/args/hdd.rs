@@ -108,4 +108,43 @@ pub enum HddActions {
         #[arg(long, value_name = "TOKEN")]
         confirm: String,
     },
+
+    /// Inspects `src/hdd_cmd.c` (`MaxProductLBA`) capacity limits in a MAIN binary, EXTRHEAD Partition 1, or full HDD image
+    InspectCapacity {
+        /// Path to MAIN raw binary, EXTRHEAD Partition 1 (`hdd_partition_firmware_0x02000000.bin`), or full HDD image
+        #[arg(value_name = "INPUT_PATH")]
+        input: Option<PathBuf>,
+
+        /// Optional `-i/--input` alias for INPUT_PATH
+        #[arg(
+            short = 'i',
+            long = "input",
+            visible_alias = "input-path",
+            value_name = "INPUT_PATH"
+        )]
+        input_flag: Option<PathBuf>,
+
+        /// Exports structured JSON report to specified file
+        #[arg(short, long, value_name = "JSON_FILE")]
+        json: Option<PathBuf>,
+    },
+
+    /// Patches `src/hdd_cmd.c` capacity ceiling (`dynamic` auto-detect up to 2TB+, `cap` target GB, or `factory_200gb`)
+    PatchCapacity {
+        /// Path to MAIN raw binary, EXTRHEAD Partition 1, or full HDD image
+        #[arg(short, long, visible_alias = "input-path", value_name = "INPUT_PATH")]
+        input: Option<PathBuf>,
+
+        /// Output path for the patched binary/container/image (auto-generated beside input if omitted)
+        #[arg(short, long, visible_alias = "output-path", value_name = "OUTPUT_PATH")]
+        output: Option<PathBuf>,
+
+        /// Patch mode: `dynamic` (bypass clamp for ANY HDD size), `cap` (RTSD/custom GB limit), or `factory_200gb`
+        #[arg(short, long, default_value = "dynamic", value_name = "MODE")]
+        mode: String,
+
+        /// Target capacity in GB (e.g. 250, 300, 320, 400, 500, 1000, 2000)
+        #[arg(short = 'g', long, visible_alias = "gb", value_name = "GB")]
+        target_gb: Option<u32>,
+    },
 }

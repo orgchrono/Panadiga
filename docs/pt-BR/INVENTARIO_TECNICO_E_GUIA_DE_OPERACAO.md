@@ -255,23 +255,33 @@ Esta rota permite capturar telemetria ao vivo do bootloader/kernel **AM34 / MN10
 
 Se o disco rígido original estiver com setores defeituosos (*bad sectors*), ruído mecânico de clique (*click of death*) ou se o técnico desejar instalar um SSD moderno com adaptador PATA-IDE:
 
-1. **Preparação do Disco Físico Alvo:**
-   * Utilize um disco rígido IDE de 3.5" (de 80 GB a 250 GB) ou um SSD de 2.5" acoplado a um adaptador IDE com chipset Marvell `88SA8052` ou Sunplus (adaptadores com chipset JM20330 costumam apresentar incompatibilidades de sincronismo no barramento DMA Matsushita).
+1. **Preparação do Disco Físico Alvo & Desbloqueio de Capacidade (250 GB até 2 TB+):**
+   * Utilize um disco rígido PATA/IDE ou HDD/SSD SATA de 2.5"/3.5" (inclusive `250 GB`, `320 GB`, `500 GB`, `1 TB` ou `2 TB`) acoplado a uma ponte PATA-to-SATA com chipset Marvell `88SA8052` (ex.: `StarTech IDE2SAT2`) ou Sunplus; adaptadores JM20330 costumam falhar no DMA legado Matsushita.
+   * **Regra Crítica de Jumper (`MASTER` Obrigatório — NUNCA `CS` e NUNCA `Slave`):**
+     > [!WARNING]
+     > **Topologia real do `DMR-EH55` (`ch=1, dev=0` = Secondary `MASTER`):** Os esquemáticos (`vol2_schematics.pdf` pp. 46, 52, 113, 125–126) e o disassembly real de `eh55_frm_PROG061_BOOT.bin` (`FUN_50414908`) e `EH55_MAIN_3410PQ.bin` (`FUN_574d1de8`) comprovam `acStack_70[4] = { 2, 0, 1, 0 }`: o drive óptico (ODD) é **Primary Master (`ch=0, dev=0`)** no Front-End interno, enquanto o HDD usa um cabo FFC dedicado de 40 vias como **Secondary `MASTER` (`ch=1, dev=0`, `0x89000D00`)** — a tabela de remapeamento `DAT_505733d4 == 0` pertence apenas ao `DMR-EH58`, não ao `DMR-EH55`. Configurar como **`Slave`** coloca o disco em `acStack_70[3] == 0` (ignorado pelo firmware); deixar em **`CS` (`Cable Select`)** na `StarTech IDE2SAT2` causa seleção indeterminada / colisão `0x8000040d` / travamento `MultiWord DMA MODE2`, podendo levar ao desligamento forçado e corrupção dos setores NOR **BGO (`0x84200000..0x843FFFFF`)** (`BGO driver init failed[1].` / `U99`). Configure **sempre explicitamente como `MASTER` (`Device 0`)**.
    * Conecte o novo disco a uma estação de trabalho Linux ou Windows.
+   * **Remoção da trava de 200 GB do firmware `MAIN` (`src/hdd_cmd.c`):** Antes de gravar a imagem ou Partição 1 no disco >200 GB, desbloqueie o limite via CLI ou aba **`Desbloqueio de Capacidade (250GB / 2TB)`** do Desktop:
+     ```bash
+     # 1. Inspecionar trava atual (0xC6 bls +12 vs 0xCA bra +12)
+     panadiga hdd inspect-capacity -i firmware_and_images/extracted_partitions/hdd_partition_firmware_0x02000000.bin
+     # 2. Desbloquear dinamicamente via LBA48 (-o opcional -> *_PATCHED_DYNAMIC.bin) ou cravar 250 GB (0x07466528)
+     panadiga hdd patch-capacity -i "firmware_and_images/panasonic DMR EH-55 Firmware hdd_100.bin" --mode dynamic
+     ```
 2. **Gravação da Imagem MEIHFS dos Primeiros 100 MB:**
-   * **Via CLI Nativa Panadiga (Multiplataforma com trava de sistema):**
+   * **Via Desktop (`Gravação Física & mkfs`) ou CLI Nativa Panadiga (com trava contra `PhysicalDrive0` / `/dev/sda`):**
      ```bash
      panadiga hdd list-drives
-     panadiga hdd write-image --target \\.\PhysicalDrive1 --image "firmware_and_images/panasonic DMR EH-55 Firmware hdd_100.bin" --confirm CONFIRM-PhysicalDrive1
+     panadiga hdd write-image --target \\.\PhysicalDrive1 --image "firmware_and_images/panasonic DMR EH-55 Firmware hdd_100_PATCHED_DYNAMIC.bin" --confirm CONFIRM-PhysicalDrive1
      ```
    * **No Linux (via comando `dd`):**
      ```bash
-     sudo dd if="panasonic DMR EH-55 Firmware hdd_100.bin" of=/dev/sdX bs=1M status=progress conv=fsync
+     sudo dd if="panasonic DMR EH-55 Firmware hdd_100_PATCHED_DYNAMIC.bin" of=/dev/sdX bs=1M status=progress conv=fsync
      ```
-     *(Certifique-se rigorosamente de que `/dev/sdX` corresponde ao disco alvo e não ao sistema operacional).*
+     *(Use o arquivo `_PATCHED_DYNAMIC.bin` gerado no passo anterior para discos >=250 GB, ou o original para <=200 GB. Certifique-se rigorosamente de que `/dev/sdX` corresponde ao disco alvo e não ao sistema operacional).*
 3. **Inicialização no Gravador e Formatação pelo Modo de Serviço:**
-   * Instale o disco no DMR-EH55 com o jumper configurado em **Master** ou **Cable Select**.
-   * Ligue o gravador. O aparelho reconhecerá a assinatura MEIHFS gravada nos 100 MB.
+   * Instale o disco no DMR-EH55 com jumper explicitamente configurado em **`MASTER` (`Device 0` no Canal IDE Secundário `ch = 1`) — nunca `CS` e nunca `Slave`**.
+   * Ligue o gravador. O aparelho reconhecerá a assinatura MEIHFS gravada nos 100 MB (ou nos 100 MB `_PATCHED_DYNAMIC.bin` para discos de 250 GB até 2 TB+).
    * Acesse o menu de serviço pelo controle remoto oficial ou controle de serviço Panasonic: pressione simultaneamente no painel frontal `[STOP]` e no controle remoto `[0]` e `[0]` por 5 segundos.
    * Selecione a opção **HDD Initialize / Format**. O microcódigo Matsushita particionará o restante da capacidade do disco para gravação de vídeo contínuo em tempo real.
 
