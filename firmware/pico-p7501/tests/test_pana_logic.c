@@ -213,6 +213,28 @@ static void test_pana_dumpnor_stub_and_args(void) {
     assert(!p7501_panarsp_parse_args("DUMPNOR 847F0000", &spec));
 }
 
+static void feed_str_and_count(
+    p7501_diag_watch_state_t *st,
+    const p7501_diag_watch_spec_t *dw,
+    const char *s,
+    int *rel_count,
+    int *tx_count,
+    char *last_tx
+) {
+    for (size_t i = 0u; s[i] != '\0'; ++i) {
+        char tx_ch = '\0';
+        bool rel = false;
+        (void)p7501_diag_watch_feed_byte(st, dw, (uint8_t)s[i], &tx_ch, &rel);
+        if (rel) {
+            *rel_count += 1;
+        }
+        if (tx_ch != '\0') {
+            *tx_count += 1;
+            *last_tx = tx_ch;
+        }
+    }
+}
+
 static void test_diag_watch_codec(void) {
     p7501_diag_watch_spec_t dw;
     assert(p7501_diag_watch_parse_args("", &dw));
@@ -236,36 +258,42 @@ static void test_diag_watch_codec(void) {
     assert(p7501_diag_watch_parse_args("25000 JIG:2500 AUTO RELEASE", &dw));
     p7501_diag_watch_state_t st;
     p7501_diag_watch_init(&st);
-    static const char k_boot_log[] =
-        "DDR CHECK: OK\r\n"
-        "***** serial boot mode *****\r\n"
-        "SetBusWidth -91006\r\n"
-        "** open tray ** 80040904\r\n"
-        "PANAMON1>";
     int rel_count = 0;
     int tx_count = 0;
     char last_tx = '\0';
-    for (size_t i = 0u; k_boot_log[i] != '\0'; ++i) {
-        char tx_ch = '\0';
-        bool rel = false;
-        (void)p7501_diag_watch_feed_byte(&st, &dw, (uint8_t)k_boot_log[i], &tx_ch, &rel);
-        if (rel) {
-            rel_count += 1;
-        }
-        if (tx_ch != '\0') {
-            tx_count += 1;
-            last_tx = tx_ch;
-        }
-    }
+
+    /* In JIG mode, DDR CHECK: OK arrives BEFORE P50 is sampled: must keep SW_UART LOW! */
+    feed_str_and_count(&st, &dw, "DDR CHECK: OK\r\n", &rel_count, &tx_count, &last_tx);
+    assert(rel_count == 0 && !st.sw_uart_released);
+    assert((st.seen_events & P7501_DIAG_EVT_DDR_OK) != 0u);
+
+    /* Release happens cleanly once "serial boot mode" confirms /BOOT.BIN sampled P50. */
+    feed_str_and_count(
+        &st, &dw,
+        "***** serial boot mode *****\r\nSetBusWidth -91006\r\n** open tray ** 80040904\r\nPANAMON1>",
+        &rel_count, &tx_count, &last_tx
+    );
     assert(rel_count == 1 && st.sw_uart_released);
     assert(tx_count == 1 && last_tx == 'B' && st.tx_dispatched);
-    assert((st.seen_events & P7501_DIAG_EVT_DDR_OK) != 0u);
     assert((st.seen_events & P7501_DIAG_EVT_SERIAL_BOOT) != 0u);
     assert((st.seen_events & P7501_DIAG_EVT_SD_ERR) != 0u);
     assert((st.seen_events & P7501_DIAG_EVT_ODD_OPEN) != 0u);
     assert((st.seen_events & P7501_DIAG_EVT_CD_APC_ERR) != 0u);
     assert((st.seen_events & P7501_DIAG_EVT_PANAMON) != 0u);
     assert(p7501_diag_watch_diagnosis(st.seen_events) != NULL);
+
+    /* In NORMAL mode, DDR CHECK: OK releases immediately and BGO beats ODD noise in diagnosis. */
+    assert(p7501_diag_watch_parse_args("12000 NORMAL NONE RELEASE", &dw));
+    p7501_diag_watch_init(&st);
+    rel_count = 0;
+    tx_count = 0;
+    feed_str_and_count(
+        &st, &dw,
+        "DDR CHECK: OK\r\n***** normal mode *****\r\nBGO driver init failed\r\n80040904\r\n",
+        &rel_count, &tx_count, &last_tx
+    );
+    assert(rel_count == 1 && st.sw_uart_released && tx_count == 0);
+    assert(strstr(p7501_diag_watch_diagnosis(st.seen_events), "BGO driver init failed") != NULL);
 }
 int p7501_run_pana_logic_tests(void) {
     test_pana_rsp_frame_codec();

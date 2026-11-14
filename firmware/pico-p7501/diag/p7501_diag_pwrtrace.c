@@ -34,13 +34,16 @@ void p7501_cmd_pwrtrace(const char *arg) {
     p7501_led_set_auto_mode(LED_MODE_BUS_ACTIVE);
     p7501_pio_begin_rx_session_ex(spec.boot_action, spec.jig_hold_ms);
 
-    if (spec.boot_action != P7501_BOOT_ACTION_JIG || spec.jig_hold_ms > 0u) {
+    if (spec.boot_action != P7501_BOOT_ACTION_JIG) {
         p7501_hw_restore_sw_uart_adc0();
     }
 
+    const uint64_t t0_us = time_us_64();
     const absolute_time_t end_t = make_timeout_time_ms(spec.window_ms);
     float min_v = 9.99f;
     float max_v = 0.00f;
+    uint32_t sw_rel_ms = 0u;
+    bool sw_rel_seen = false;
     uint32_t nsw5v_edges = 0u;
     uint32_t rxd_edges = 0u;
     uint32_t txd_edges = 0u;
@@ -51,7 +54,8 @@ void p7501_cmd_pwrtrace(const char *arg) {
 
     while (!time_reached(end_t)) {
         if (p7501_pio_poll_sw_uart_release()) {
-            p7501_hw_restore_sw_uart_adc0();
+            sw_rel_seen = true;
+            sw_rel_ms = (uint32_t)((time_us_64() - t0_us) / 1000ULL);
         }
         const bool cur_nsw = gpio_get(P7501_PIN_NSW5V);
         const bool cur_rxd = gpio_get(P7501_PIN_RXD);
@@ -89,9 +93,15 @@ void p7501_cmd_pwrtrace(const char *arg) {
     p7501_pio_end_session();
     p7501_led_set_auto_mode(LED_MODE_HEARTBEAT_IDLE);
 
-    printf("[PWRTRACE] GP26_SWUART: min=%.2fV max=%.2fV | Edges: RXD=%" PRIu32
-           " NSW5V=%" PRIu32 " TXD=%" PRIu32 " (final NSW5V=%d)\n",
-           (double)min_v, (double)max_v, rxd_edges, nsw5v_edges, txd_edges,
-           gpio_get(P7501_PIN_NSW5V) ? 1 : 0);
+    if (min_v > max_v) {
+        min_v = 0.00f;
+    }
+    printf("[PWRTRACE] GP26_SWUART: min=%.2fV max=%.2fV | sw_rel=%s",
+           (double)min_v, (double)max_v, sw_rel_seen ? "YES@" : "NO");
+    if (sw_rel_seen) {
+        printf("%" PRIu32 "ms", sw_rel_ms);
+    }
+    printf(" | Edges: RXD=%" PRIu32 " NSW5V=%" PRIu32 " TXD=%" PRIu32 " (final NSW5V=%d)\n",
+           rxd_edges, nsw5v_edges, txd_edges, gpio_get(P7501_PIN_NSW5V) ? 1 : 0);
     printf("PWRTRACE: OK\n");
 }

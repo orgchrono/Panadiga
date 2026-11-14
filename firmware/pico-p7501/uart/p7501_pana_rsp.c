@@ -310,13 +310,20 @@ void p7501_cmd_pana_rsp(const char *arg) {
     bool triggered = !spec.wait_trigger_enabled;
     if (spec.wait_trigger_enabled) {
         uint8_t ring[P7501_RSP_MAX_TRIG + 1u];
+        uint8_t jig_ring[24];
         size_t ring_len = 0u;
+        size_t jig_ring_len = 0u;
         const uint64_t wait_deadline = time_us_64() + ((uint64_t)spec.timeout_ms * 1000ULL);
         while (!triggered && time_us_64() < wait_deadline) {
             p7501_pio_poll_sw_uart_release();
             uint8_t b = 0u;
             while (p7501_pio_pop_rx_byte(&b)) {
                 panarsp_push_rx(&s_cap, b, true);
+                if (spec.boot_action == P7501_BOOT_ACTION_JIG) {
+                    (void)p7501_pio_poll_jig_serial_release(
+                        jig_ring, &jig_ring_len, sizeof(jig_ring), b
+                    );
+                }
                 if (p7501_rolling_match_push(ring, &ring_len, sizeof(ring), b, spec.trigger)) {
                     triggered = true;
                     break;

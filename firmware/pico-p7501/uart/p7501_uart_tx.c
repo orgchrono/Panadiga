@@ -103,7 +103,9 @@ void p7501_cmd_waittx(const char *arg) {
     p7501_pio_begin_rx_session_ex(spec.boot_action, spec.jig_hold_ms);
 
     uint8_t ring[P7501_WAITTX_MAX_TRIGGER + 1u];
+    uint8_t jig_ring[24];
     size_t ring_len = 0u;
+    size_t jig_ring_len = 0u;
     bool triggered = false;
     uint32_t rx_count = 0u;
     uint8_t byte = 0u;
@@ -117,6 +119,11 @@ void p7501_cmd_waittx(const char *arg) {
         while (p7501_pio_pop_rx_byte(&byte)) {
             ++rx_count;
             emit_printable_byte(byte);
+            if (spec.boot_action == P7501_BOOT_ACTION_JIG &&
+                p7501_pio_poll_jig_serial_release(jig_ring, &jig_ring_len, sizeof(jig_ring), byte)) {
+                printf("\n[SW_UART] serial boot mode -> Hi-Z\n");
+                fflush(stdout);
+            }
             if (!triggered && p7501_rolling_match_push(
                                   ring, &ring_len, sizeof(ring), byte, spec.trigger
                               )) {

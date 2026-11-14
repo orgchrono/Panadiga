@@ -136,6 +136,12 @@ void p7501_pio_begin_rx_session_ex(p7501_boot_action_t action, uint32_t jig_hold
     }
 }
 
+void p7501_pio_release_sw_uart_now(void) {
+    s_sw_uart_timed_hold = false;
+    p7501_pio_set_sw_uart(false);
+    p7501_hw_restore_sw_uart_adc0();
+}
+
 bool p7501_pio_poll_sw_uart_release(void) {
     if (!s_sw_uart_timed_hold) {
         return false;
@@ -143,9 +149,23 @@ bool p7501_pio_poll_sw_uart_release(void) {
     if (!time_reached(s_sw_uart_release_deadline)) {
         return false;
     }
-    s_sw_uart_timed_hold = false;
-    p7501_pio_set_sw_uart(false);
-    p7501_hw_restore_sw_uart_adc0();
+    p7501_pio_release_sw_uart_now();
+    return true;
+}
+
+bool p7501_pio_poll_jig_serial_release(
+    uint8_t *ring,
+    size_t *ring_len,
+    size_t ring_cap,
+    uint8_t rx_byte
+) {
+    if (!s_sw_uart_timed_hold || (ring == NULL) || (ring_len == NULL)) {
+        return false;
+    }
+    if (!p7501_rolling_match_push(ring, ring_len, ring_cap, rx_byte, "serial boot mode")) {
+        return false;
+    }
+    p7501_pio_release_sw_uart_now();
     return true;
 }
 

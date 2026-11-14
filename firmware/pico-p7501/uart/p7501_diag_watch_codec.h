@@ -68,8 +68,9 @@ char p7501_diag_watch_action_char(p7501_diag_action_t action);
  * @brief Feed one RX byte into the `DIAGWATCH` event classifier.
  *
  * Returns newly triggered event bitmask on this byte (0 if none), sets `*out_release_sw_uart`
- * cleanly on the first `DDR CHECK: OK` match (when `spec->release_on_ddr`), and sets
- * `*out_tx_char` once when `PANAMON1>` appears and an active TX action is configured.
+ * cleanly when `spec->release_on_ddr` is enabled (in `JIG` mode on `serial boot mode` or
+ * normal-mode fallback so `P50` stays LOW during sampling; in `NORMAL`/`NOPULL` on `DDR CHECK: OK`),
+ * and sets `*out_tx_char` once when `PANAMON1>` appears and an active TX action is configured.
  */
 uint32_t p7501_diag_watch_feed_byte(
     p7501_diag_watch_state_t *st,

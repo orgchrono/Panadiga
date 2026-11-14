@@ -174,7 +174,11 @@ uint32_t p7501_diag_watch_feed_byte(
         }
     }
 
-    if ((newly_hit & P7501_DIAG_EVT_DDR_OK) != 0u &&
+    const uint32_t release_mask = (spec->boot_action == P7501_BOOT_ACTION_JIG)
+        ? (P7501_DIAG_EVT_SERIAL_BOOT | P7501_DIAG_EVT_BGO_FAIL | P7501_DIAG_EVT_HUNG_U99)
+        : P7501_DIAG_EVT_DDR_OK;
+
+    if ((newly_hit & release_mask) != 0u &&
         spec->release_on_ddr && !st->sw_uart_released) {
         st->sw_uart_released = true;
         if (out_release_sw_uart != NULL) {
@@ -197,6 +201,14 @@ uint32_t p7501_diag_watch_feed_byte(
 const char *p7501_diag_watch_diagnosis(uint32_t events) {
     if ((events & P7501_DIAG_EVT_PANAMON) != 0u) {
         return "PANAMON1 active on SC0 (ready for B=bypass, F=nfrom_format, D=dump_nor)";
+    }
+    if ((events & P7501_DIAG_EVT_BGO_FAIL) != 0u && (events & P7501_DIAG_EVT_SERIAL_BOOT) == 0u) {
+        if ((events & P7501_DIAG_EVT_CD_APC_ERR) != 0u) {
+            return "BGO driver init failed[1] -> U99 hang (normal mode; ODD 80040904 also observed)";
+        }
+        return ((events & P7501_DIAG_EVT_HUNG_U99) != 0u)
+            ? "BGO driver init failed[1] -> U99 hang (load patched DIGADIAG.FRM)"
+            : "BGO driver init failed[1] (corrupt/erased BGO partition)";
     }
     if (((events & P7501_DIAG_EVT_SD_ERR) != 0u) && ((events & P7501_DIAG_EVT_CD_APC_ERR) != 0u)) {
         return "SDDIAG -91006 + CDDIAG 80040904 (SDSC 4-bit failed; ODD tray/laser APC failed)";
