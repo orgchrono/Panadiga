@@ -4,9 +4,12 @@ import { useHddWriterViewModel } from './useHddWriterViewModel';
 
 describe('useHddWriterViewModel MVVM Test', () => {
   it('resolves physical drive sectors by default and overrides totalSectors cleanly for customSizeGb (250 GB)', async () => {
-    const { result } = renderHook(() => useHddWriterViewModel());
+    const { result, unmount } = renderHook(() => useHddWriterViewModel());
 
-    await waitFor(() => expect(result.current.selectedDrive).not.toBeNull());
+    await waitFor(() => {
+      expect(result.current.selectedDrive).not.toBeNull();
+      expect(result.current.loadingDrives).toBe(false);
+    });
     expect(result.current.selectedDrive?.device_path).toBe('\\\\.\\PhysicalDrive1');
     expect(result.current.customSizeGb).toBeNull();
     // 80026361856 / 512 = 156301488
@@ -29,5 +32,6 @@ describe('useHddWriterViewModel MVVM Test', () => {
 
     expect(result.current.writeReport?.success).toBe(true);
     expect(result.current.writeReport?.sectors_written).toBe(488_281_250);
+    unmount();
   });
 });

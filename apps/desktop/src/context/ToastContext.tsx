@@ -52,17 +52,17 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   );
 };
 
+const noopToastAction = (): void => {};
+
+const NOOP_TOAST_CONTEXT: ToastContextType = Object.freeze({
+  toasts: Object.freeze([]) as unknown as ToastItem[],
+  showToast: noopToastAction,
+  removeToast: noopToastAction,
+});
+
 export function useToast(): ToastContextType {
   const ctx = useContext(ToastContext);
-  if (!ctx) {
-    // Graceful fallback if invoked outside provider
-    return {
-      toasts: [],
-      showToast: () => {},
-      removeToast: () => {},
-    };
-  }
-  return ctx;
+  return ctx ?? NOOP_TOAST_CONTEXT;
 }
 
 interface ToastContainerProps {

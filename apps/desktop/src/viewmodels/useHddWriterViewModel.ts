@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { DriveWriteReport, PhysicalDriveInfo } from '@/models';
 import { invokeCommand } from '@/services/ipc';
 import { useToast } from '@/context/ToastContext';
@@ -58,6 +58,7 @@ export function getExpectedDriveConfirmToken(devicePath: string): string {
  */
 export function useHddWriterViewModel() {
   const { showToast } = useToast();
+  const mountedRef = useRef(true);
   const [drives, setDrives] = useState<PhysicalDriveInfo[]>([]);
   const [selectedDrive, setSelectedDrive] = useState<PhysicalDriveInfo | null>(null);
   const [loadingDrives, setLoadingDrives] = useState<boolean>(false);
@@ -66,23 +67,36 @@ export function useHddWriterViewModel() {
   const [executing, setExecuting] = useState<boolean>(false);
   const [writeReport, setWriteReport] = useState<DriveWriteReport | null>(null);
 
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
   const fetchDrives = useCallback(async () => {
-    setLoadingDrives(true);
+    if (mountedRef.current) {
+      setLoadingDrives(true);
+    }
     try {
       const list = await invokeCommand<PhysicalDriveInfo[]>('list_physical_drives');
+      if (!mountedRef.current) return;
       setDrives(list);
       const safe = list.find(d => d.safe_to_write);
       if (safe) {
         setSelectedDrive(safe);
       }
     } catch (err) {
+      if (!mountedRef.current) return;
       showToast({
         type: 'error',
         title: 'Erro ao Listar Discos Físicos',
         message: err instanceof Error ? err.message : String(err),
       });
     } finally {
-      setLoadingDrives(false);
+      if (mountedRef.current) {
+        setLoadingDrives(false);
+      }
     }
   }, [showToast]);
 
@@ -106,13 +120,16 @@ export function useHddWriterViewModel() {
         return;
       }
 
-      setExecuting(true);
+      if (mountedRef.current) {
+        setExecuting(true);
+      }
       try {
         const res = await invokeCommand<DriveWriteReport>(descriptor.cmd, {
           devicePath: selectedDrive.device_path,
           confirmationToken: provided,
           ...(descriptor.buildArgs ? descriptor.buildArgs(selectedDrive, customSizeGb) : {}),
         });
+        if (!mountedRef.current) return;
         setWriteReport(res);
         showToast({
           type: 'success',
@@ -120,13 +137,16 @@ export function useHddWriterViewModel() {
           message: res.message,
         });
       } catch (err) {
+        if (!mountedRef.current) return;
         showToast({
           type: 'error',
           title: descriptor.errorTitle,
           message: err instanceof Error ? err.message : String(err),
         });
       } finally {
-        setExecuting(false);
+        if (mountedRef.current) {
+          setExecuting(false);
+        }
       }
     },
     [selectedDrive, confirmInput, customSizeGb, showToast]
