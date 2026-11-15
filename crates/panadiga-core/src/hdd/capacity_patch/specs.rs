@@ -1,0 +1,185 @@
+//! Pure immutable RTSD HDD capacity presets, DTO types, and total block-math conversions.
+
+use anyhow::{Result, bail};
+use serde::{Deserialize, Serialize};
+
+/// Default virtual load address for `MAIN` firmware binaries (`0x57000000`).
+pub const MAIN_DEFAULT_BASE_VA: u32 = 0x5700_0000;
+
+/// Expected `MaxProductLBA` constants in `src/hdd_cmd.c` (2 KB blocks = 2048 bytes/block).
+pub const HDD_CMD_M7920_400GB_BLOCKS: u32 = 0x0BA4_3B74; // 195,312,500 * 2KB = 400.00 GB
+pub const HDD_CMD_M7920_200GB_BLOCKS: u32 = 0x05D2_1DBA; //  97,656,250 * 2KB = 200.00 GB
+pub const DYNAMIC_UNCLAMPED_MAX_BLOCKS_2KB: u32 = 0x3FFF_FFFF; // ~2.199 TB (2KB blocks)
+
+/// Fixed byte offsets inside the 114-byte (`0x72`) `src/hdd_cmd.c` clamp window.
+pub(crate) const WIN_LEN: usize = 0x72;
+pub(crate) const PREFIX_SIG: [u8; 14] = [
+    0xFD, 0xAA, 0x00, 0x8A, 0x00, 0x00, 0xFB, 0xE9, 0x00, 0x80, 0xC8, 0x1D, 0xFC, 0xCC,
+];
+pub(crate) const OFF_SLOT_400GB: usize = 0x0E;
+pub(crate) const OFF_MAX_LBA_VAR_1: usize = 0x14;
+pub(crate) const OFF_SLOT_200GB: usize = 0x29;
+pub(crate) const OFF_SLOT_FALLBACK: usize = 0x44;
+pub(crate) const OFF_PHYS_VAR_1: usize = 0x56;
+pub(crate) const OFF_CLAMP_BRANCH_OP: usize = 0x5B;
+pub(crate) const OPCODE_BLS: u8 = 0xC6;
+pub(crate) const OPCODE_BRA: u8 = 0xCA;
+
+/// Official RTSD service menu preset (`Change HDD Capacity` @ `0x574CA054` / `0x574C267B`).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct RtsdCapacityPreset {
+    pub menu_index: u8,
+    pub label: String,
+    pub capacity_gb: u32,
+    pub blocks_2kb: u32,
+    pub blocks_2kb_hex: String,
+    pub sectors_512b: u64,
+}
+
+/// Complete forensic report for `src/hdd_cmd.c` HDD capacity ceiling inspection.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MainCapacityInspectionReport {
+    pub input_path: String,
+    pub container_format: String,
+    pub build_name: Option<String>,
+    pub raw_main_size: usize,
+    pub raw_main_sha256: String,
+    pub patch_site_file_offset: usize,
+    pub patch_site_va_hex: String,
+    pub max_product_lba_var_va_hex: String,
+    pub physical_blocks_var_va_hex: String,
+    pub clamp_branch_opcode_hex: String,
+    pub is_dynamic_unclamped: bool,
+    pub slot_400gb_blocks_2kb: u32,
+    pub slot_400gb_hex: String,
+    pub slot_400gb_gb: f64,
+    pub slot_200gb_blocks_2kb: u32,
+    pub slot_200gb_hex: String,
+    pub slot_200gb_gb: f64,
+    pub slot_fallback_blocks_2kb: u32,
+    pub slot_fallback_hex: String,
+    pub slot_fallback_gb: f64,
+    pub effective_default_limit_gb: f64,
+    pub rtsd_presets: Vec<RtsdCapacityPreset>,
+}
+
+/// Patch execution summary for `src/hdd_cmd.c` (+ optional `EXTRHEAD` / `MEIHDFS1.0` MBR update).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MainCapacityPatchReport {
+    pub input_path: String,
+    pub output_path: String,
+    pub container_format: String,
+    pub mode: String,
+    pub target_gb: Option<u32>,
+    pub applied_blocks_2kb: u32,
+    pub applied_blocks_2kb_hex: String,
+    pub applied_sectors_512b: u64,
+    pub mbr_superblocks_updated: bool,
+    pub repacked_container_size: Option<usize>,
+    pub original_sha256: String,
+    pub patched_sha256: String,
+    pub inspection_before: MainCapacityInspectionReport,
+    pub inspection_after: MainCapacityInspectionReport,
+}
+
+/// Supported patch strategies for the HDD capacity limit.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HddCapacityPatchMode {
+    /// Bypass the software clamp (`bls` -> `bra`) and raise slots so ANY physical drive works at 100%.
+    DynamicUnclamped,
+    /// Keep the clamp active (`bls`) and set all 3 slots to a specific preset or custom GB capacity.
+    FixedCapacity,
+    /// Restore factory DMR-EH55 defaults (`bls +12`, `0x0BA43B74` / `0x05D21DBA`).
+    Factory200Gb,
+}
+
+impl std::str::FromStr for HddCapacityPatchMode {
+    type Err = anyhow::Error;
+
+    fn from_str(raw: &str) -> Result<Self> {
+        match raw.trim().to_ascii_lowercase().as_str() {
+            "dynamic" | "unclamped" | "auto" => Ok(Self::DynamicUnclamped),
+            "cap" | "fixed" | "preset" | "limit" => Ok(Self::FixedCapacity),
+            "factory" | "factory_200gb" | "default" | "restore" => Ok(Self::Factory200Gb),
+            other => bail!(
+                "Unsupported capacity patch mode '{other}': expected dynamic, cap, or factory_200gb"
+            ),
+        }
+    }
+}
+
+/// Returns the 9 official RTSD `Change HDD Capacity` presets recovered from `MAIN` firmware.
+pub fn official_rtsd_presets() -> Vec<RtsdCapacityPreset> {
+    let raw: &[(u8, &str, u32, u32)] = &[
+        (1, "400GB HDD (RTSD)", 400, 0x0BA3_FB74),
+        (2, "300GB HDD (RTSD)", 300, 0x08BA_EC97),
+        (3, "250GB HDD (RTSD)", 250, 0x0746_6528),
+        (4, "200GB HDD (RTSD)", 200, 0x05D1_DDBA),
+        (5, "160GB HDD (RTSD)", 160, 0x04A7_D7C8),
+        (6, "137GB HDD (RTSD)", 137, 0x03FC_7AC3),
+        (7, "120GB HDD (RTSD)", 120, 0x037D_D1D6),
+        (8, "100GB HDD (RTSD)", 100, 0x02E8_CEDD),
+        (9, " 80GB HDD (RTSD)", 80, 0x0253_CBE4),
+    ];
+    raw.iter()
+        .map(|&(idx, label, gb, blocks)| RtsdCapacityPreset {
+            menu_index: idx,
+            label: label.to_string(),
+            capacity_gb: gb,
+            blocks_2kb: blocks,
+            blocks_2kb_hex: format!("0x{blocks:08X}"),
+            sectors_512b: (blocks as u64) * 4,
+        })
+        .collect()
+}
+
+/// Maps a nominal GB size to exact 2 KB blocks (`MaxProductLBA`), matching Panasonic's RTSD table
+/// for factory presets (`80..400 GB`) and computing SI decimal blocks `(gb * 1e9) / 2048` otherwise.
+pub fn blocks_2kb_for_gb(target_gb: u32) -> Result<u32> {
+    if target_gb < 20 {
+        bail!("Target capacity {target_gb} GB is too small (minimum 20 GB required for MEIHDFS)");
+    }
+    let blocks = match target_gb {
+        400 => HDD_CMD_M7920_400GB_BLOCKS,
+        300 => 0x08BA_EC97,
+        250 => 0x0746_6528,
+        200 => HDD_CMD_M7920_200GB_BLOCKS,
+        160 => 0x04A7_D7C8,
+        137 => 0x03FC_7AC3,
+        120 => 0x037D_D1D6,
+        100 => 0x02E8_CEDD,
+        80 => 0x0253_CBE4,
+        other => {
+            let computed = ((other as u64) * 1_000_000_000) / 2048;
+            if computed > 0x7FFF_FFFF {
+                0x7FFF_FFFF
+            } else {
+                computed as u32
+            }
+        }
+    };
+    Ok(blocks)
+}
+
+#[inline]
+pub(crate) fn blocks_2kb_to_gb(blocks: u32) -> f64 {
+    let gb = ((blocks as f64) * 2048.0) / 1_000_000_000.0;
+    (gb * 100.0).round() / 100.0
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rtsd_presets_and_gb_conversion_are_monotone_and_bounded() {
+        let presets = official_rtsd_presets();
+        assert_eq!(presets.len(), 9);
+        assert_eq!(blocks_2kb_for_gb(250).unwrap(), 0x0746_6528);
+        assert!(blocks_2kb_for_gb(10).is_err());
+        assert_eq!(
+            blocks_2kb_for_gb(500).unwrap() > blocks_2kb_for_gb(400).unwrap(),
+            true
+        );
+    }
+}

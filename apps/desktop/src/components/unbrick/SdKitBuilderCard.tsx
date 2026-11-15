@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { CheckCircle2, Disc3, HardDriveDownload, Loader2, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, Disc3, HardDriveDownload, Loader2 } from 'lucide-react';
 import type {
   SdMediaVerificationReport,
   SdUnbrickKitReport,
@@ -16,11 +16,17 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  EmptyState,
   Input,
   Select,
 } from '@/components/ui';
 import { useTranslation } from '@/i18n/useTranslation';
+import {
+  type BgoMode,
+  buildSdKitRequestPayload,
+  type MainPassthroughMode,
+  resolveSdOverallBadgeVariant,
+} from './unbrickDomain';
+import { SdVerificationPanel } from './SdVerificationPanel';
 
 interface SdKitBuilderCardProps {
   discoveredPanaDvd: string | null;
@@ -34,12 +40,6 @@ interface SdKitBuilderCardProps {
   onBuildKit: (request: SdUnbrickKitRequestDto) => Promise<SdUnbrickKitReport | null>;
   onVerifyMedia: (sdRootDir: string) => Promise<SdMediaVerificationReport | null>;
 }
-
-const SEVERITY_BADGE: Record<string, 'success' | 'warning' | 'destructive' | 'secondary'> = {
-  pass: 'success',
-  warn: 'warning',
-  fail: 'destructive',
-};
 
 export const SdKitBuilderCard: React.FC<SdKitBuilderCardProps> = ({
   discoveredPanaDvd,
@@ -59,15 +59,12 @@ export const SdKitBuilderCard: React.FC<SdKitBuilderCardProps> = ({
     discoveredPanaDvd ?? 'firmware_and_images/PANA_DVD.FRM'
   );
   const [verifyDir, setVerifyDir] = useState(discoveredSdDir ?? 'sd_card_eh55');
-  const [bgoMode, setBgoMode] = useState<'auto_format' | 'bypass' | 'uart_monitor' | 'factory'>(
-    'auto_format'
-  );
-  const [mainMode, setMainMode] = useState<'av_passthrough' | 'factory_original'>('av_passthrough');
+  const [bgoMode, setBgoMode] = useState<BgoMode>('auto_format');
+  const [mainMode, setMainMode] = useState<MainPassthroughMode>('av_passthrough');
   const [includePanaSd, setIncludePanaSd] = useState(true);
   const [unlockHddDynamic, setUnlockHddDynamic] = useState(true);
 
   const [outDirError, setOutDirError] = useState<string | null>(null);
-  const [verifyDirError, setVerifyDirError] = useState<string | null>(null);
   const [buildSuccessMessage, setBuildSuccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -80,38 +77,26 @@ export const SdKitBuilderCard: React.FC<SdKitBuilderCardProps> = ({
 
   const handleBuildSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanOut = outputDir.trim();
-    if (!cleanOut) {
-      setOutDirError(t('unbrick.errors.outputDirRequired'));
+    const { errorKey, request } = buildSdKitRequestPayload({
+      outputDir,
+      panaDvdPath,
+      bgoMode,
+      mainMode,
+      includePanaSd,
+      unlockHddDynamic,
+    });
+    if (errorKey || !request) {
+      setOutDirError(errorKey ? t(errorKey) : null);
       return;
     }
     setOutDirError(null);
     setBuildSuccessMessage(null);
-    const built = await onBuildKit({
-      output_dir: cleanOut,
-      pana_dvd_path: panaDvdPath.trim() || undefined,
-      bgo_mode: bgoMode,
-      main_passthrough_mode: mainMode,
-      include_pana_sd: includePanaSd,
-      unlock_hdd_dynamic: unlockHddDynamic,
-    });
+    const built = await onBuildKit(request);
     if (built) {
       setVerifyDir(built.output_dir);
       setBuildSuccessMessage(`${t('unbrick.sdKit.successTitle')}: ${built.digadiag_path}`);
     }
   };
-
-  const handleVerifyClick = async () => {
-    const cleanDir = verifyDir.trim();
-    if (!cleanDir) {
-      setVerifyDirError(t('unbrick.errors.verifyDirRequired'));
-      return;
-    }
-    setVerifyDirError(null);
-    await onVerifyMedia(cleanDir);
-  };
-
-  const checks = verifyResult?.checks ?? [];
 
   return (
     <Card className="h-full flex flex-col">
@@ -124,7 +109,7 @@ export const SdKitBuilderCard: React.FC<SdKitBuilderCardProps> = ({
             </CardTitle>
             <CardDescription className="mt-1">{t('unbrick.sdKit.desc')}</CardDescription>
           </div>
-          <Badge variant={verifyResult?.overall_status === 'FAIL' ? 'destructive' : 'success'}>
+          <Badge variant={resolveSdOverallBadgeVariant(verifyResult?.overall_status)}>
             {verifyResult?.overall_status ?? 'READY'}
           </Badge>
         </div>
@@ -174,7 +159,7 @@ export const SdKitBuilderCard: React.FC<SdKitBuilderCardProps> = ({
               <Select
                 id="sd-kit-bgo-mode"
                 value={bgoMode}
-                onChange={e => setBgoMode(e.target.value as typeof bgoMode)}
+                onChange={e => setBgoMode(e.target.value as BgoMode)}
               >
                 <option value="auto_format">auto_format (PROG061 -&gt; BGO Auto-Format U99)</option>
                 <option value="bypass">bypass (Skip U99 Boot Checks Only)</option>
@@ -190,7 +175,7 @@ export const SdKitBuilderCard: React.FC<SdKitBuilderCardProps> = ({
               <Select
                 id="sd-kit-main-mode"
                 value={mainMode}
-                onChange={e => setMainMode(e.target.value as typeof mainMode)}
+                onChange={e => setMainMode(e.target.value as MainPassthroughMode)}
               >
                 <option value="av_passthrough">av_passthrough (TBC E-E No-ODD/No-FPC)</option>
                 <option value="factory_original">factory_original (Stock MAIN3410PQ)</option>
@@ -256,69 +241,14 @@ export const SdKitBuilderCard: React.FC<SdKitBuilderCardProps> = ({
           </Alert>
         )}
 
-        <div className="border-t border-slate-800/80 pt-3 space-y-2.5">
-          <div className="flex flex-col sm:flex-row gap-2">
-            <div className="flex-1 space-y-1">
-              <Input
-                value={verifyDir}
-                aria-label={t('unbrick.sdKit.verifyInputLabel')}
-                aria-invalid={Boolean(verifyDirError)}
-                aria-describedby={verifyDirError ? 'sd-verify-dir-err' : undefined}
-                onChange={e => {
-                  setVerifyDir(e.target.value);
-                  if (verifyDirError) setVerifyDirError(null);
-                }}
-                placeholder="sd_card_eh55"
-              />
-              {verifyDirError && (
-                <p id="sd-verify-dir-err" className="text-[11px] text-rose-400 font-mono">
-                  {verifyDirError}
-                </p>
-              )}
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={verifyLoading}
-              onClick={handleVerifyClick}
-            >
-              {verifyLoading ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
-              ) : (
-                <ShieldCheck className="w-3.5 h-3.5 mr-1.5 text-cyan-400" />
-              )}
-              <span>{t('unbrick.sdKit.verifyBtn')}</span>
-            </Button>
-          </div>
-
-          {verifyError && (
-            <Alert variant="destructive">
-              <AlertDescription>{verifyError}</AlertDescription>
-            </Alert>
-          )}
-
-          {checks.length === 0 ? (
-            <EmptyState compact title={t('unbrick.sdKit.checksEmpty')} />
-          ) : (
-            <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1">
-              {checks.map(item => (
-                <div
-                  key={item.id}
-                  className="rounded-xl border border-slate-800 bg-slate-950/70 p-2.5 text-xs space-y-1"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-mono font-semibold text-slate-200">{item.title}</span>
-                    <Badge variant={SEVERITY_BADGE[item.severity] ?? 'secondary'}>
-                      {item.severity.toUpperCase()}
-                    </Badge>
-                  </div>
-                  <p className="text-[11px] text-slate-400 leading-relaxed">{item.detail}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <SdVerificationPanel
+          verifyDir={verifyDir}
+          onChangeVerifyDir={setVerifyDir}
+          verifyLoading={verifyLoading}
+          verifyResult={verifyResult}
+          verifyError={verifyError}
+          onVerifyMedia={onVerifyMedia}
+        />
       </CardContent>
     </Card>
   );

@@ -1,0 +1,128 @@
+//! Pure immutable DTOs, hardware fact catalog, and pure slug/label helpers for unbrick workbench.
+
+use serde::{Deserialize, Serialize};
+
+use crate::hdd::MainCapacityInspectionReport;
+
+use super::super::bgo_unbrick::{Prog061BgoInspection, Prog061BgoPatchMode};
+use super::super::main_passthrough::{MainPassthroughReport, MainPassthroughRspPlan};
+use super::super::unbrick_sd_kit::SdMediaVerificationReport;
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ExtractedFrmModuleReport {
+    pub name: String,
+    pub offset_hex: String,
+    pub encrypted_size: usize,
+    pub decrypted_path: String,
+    pub decrypted_sha256: String,
+    pub unpacked_path: Option<String>,
+    pub unpacked_size: Option<usize>,
+    pub dst_addr_hex: Option<String>,
+    pub checksum_valid: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct FrmModuleExtractionReport {
+    pub source_frm_path: String,
+    pub container_format: String,
+    pub output_dir: String,
+    pub modules: Vec<ExtractedFrmModuleReport>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct UnbrickHardwareFact {
+    pub topic: String,
+    pub verdict: String,
+    pub evidence: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UnbrickWorkspaceReport {
+    pub workspace_root: String,
+    pub discovered_pana_dvd: Option<String>,
+    pub discovered_prog061: Option<String>,
+    pub discovered_main_3410pq: Option<String>,
+    pub discovered_drv: Option<String>,
+    pub discovered_sd_dir: Option<String>,
+    pub prog061_bgo: Option<Prog061BgoInspection>,
+    pub main_passthrough: Option<MainPassthroughReport>,
+    pub main_capacity: Option<MainCapacityInspectionReport>,
+    pub rsp_plan: MainPassthroughRspPlan,
+    pub sd_verification: Option<SdMediaVerificationReport>,
+    pub hardware_facts: Vec<UnbrickHardwareFact>,
+    pub digadiag_vs_pana_notes: Vec<String>,
+}
+
+pub(crate) fn sanitize_module_slug(name: &str) -> String {
+    let mut slug = String::with_capacity(name.len());
+    let mut prev_us = false;
+    for ch in name.trim().chars() {
+        if ch.is_ascii_alphanumeric() {
+            slug.push(ch.to_ascii_lowercase());
+            prev_us = false;
+        } else if !prev_us && !slug.is_empty() {
+            slug.push('_');
+            prev_us = true;
+        }
+    }
+    if slug.is_empty() {
+        "module".to_string()
+    } else {
+        slug.trim_end_matches('_').to_string()
+    }
+}
+
+pub(crate) fn bgo_mode_label(mode: Prog061BgoPatchMode) -> &'static str {
+    match mode {
+        Prog061BgoPatchMode::BypassChecksOnly => "bypass",
+        Prog061BgoPatchMode::AutoFormatBgo => "auto_format",
+        Prog061BgoPatchMode::UartMonitor => "uart_monitor",
+        Prog061BgoPatchMode::FactoryOriginal => "factory",
+    }
+}
+
+pub(crate) fn hardware_facts_catalog() -> Vec<UnbrickHardwareFact> {
+    vec![
+        UnbrickHardwareFact {
+            topic: "DIGADIAG.FRM vs PANA__SD.FRM / PANA_DVD.FRM".to_string(),
+            verdict: "DISTINCT_STAGE15_VS_STAGE2_CONTAINERS".to_string(),
+            evidence: "DIGADIAG.FRM is a fixed 128 KiB (0x20000) single-payload plaintext EXTRHEAD ('FVU ', VA 0x50400000, adler_step=4) consumed by BOOT.BIN SDDIAG. PANA_DVD.FRM uses 48B Feistel TOC + full Feistel payload (optical disc). PANA__SD.FRM uses plaintext 64B TOC entries pointing to PROG/DRV/MAIN containers for SD Update.".to_string(),
+        },
+        UnbrickHardwareFact {
+            topic: "Forcing SD 1-bit Mode via Pico P7501 (-91006 Bypass)".to_string(),
+            verdict: "NOT_POSSIBLE_OVER_P7501_UART".to_string(),
+            evidence: "BOOT.BIN executes from NOR (0x44000000/0x80000000), passes 1st GetSD_Status @ 0x44027826 in 1-bit mode, then switches to 4-bit via ACMD6 @ 0x44027F79 before 2nd GetSD_Status @ 0x44027F93 (-91006). uart0_getc @ 0x4400479F has no active caller and P7501 lacks OCD clock (DCSR=0xFFFFFFFF). Fix via P6801/P6802 DAT1..3 + <=2GB SDSC FAT16 or TSOP-48 NOR patch.".to_string(),
+        },
+        UnbrickHardwareFact {
+            topic: "Standalone Digital PCB TBC Operation Outside Drive".to_string(),
+            verdict: "ODD_HDD_REMOVABLE_MAIN_PCB_REQUIRED".to_string(),
+            evidence: "Patching MAIN passthrough sites (0x5771ABFB, 0x574F7B8C, 0x574F7C5C) lets TBC (E-E) run without ODD/HDD checks (or with CF/SSD via IDE2SAT2). However, Digital PCB P59001 still requires Main PCB P7402 (schematics na_p49_blk1, vol2_p125) for IC3001 video clamps/75-ohm drivers, IC7501 Timer MCU TBUS handshake, and 8+ power rails.".to_string(),
+        },
+    ]
+}
+
+pub(crate) fn digadiag_vs_pana_notes() -> Vec<String> {
+    vec![
+        "DIGADIAG.FRM -> BOOT.BIN (NOR 0x44000000) loads 128 KiB plaintext EXTRHEAD 'FVU ' to 0x50400000 and jumps directly (zero BGO/NVRAM check).".to_string(),
+        "PANA__SD.FRM -> PROG061 reads 64B plaintext TOC slots to reflash DRV/PROG/MAIN when SD Update runs.".to_string(),
+        "PANA_DVD.FRM -> Optical update container with 48B Feistel TOC + full Feistel module layer over DRV S211 / PROG061 / MAIN3060NP.".to_string(),
+    ]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sanitize_slug_and_facts_catalog_are_deterministic() {
+        assert_eq!(sanitize_module_slug("DRV S211 "), "drv_s211");
+        assert_eq!(sanitize_module_slug("  MAIN3410PQ"), "main3410pq");
+        assert_eq!(sanitize_module_slug("---"), "module");
+        assert_eq!(
+            bgo_mode_label(Prog061BgoPatchMode::AutoFormatBgo),
+            "auto_format"
+        );
+        assert_eq!(hardware_facts_catalog().len(), 3);
+        assert_eq!(digadiag_vs_pana_notes().len(), 3);
+    }
+}

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Cpu, Loader2, Radio, Terminal, Wrench } from 'lucide-react';
+import { Cpu, Loader2, Radio, Wrench } from 'lucide-react';
 import type {
   MainPassthroughReport,
   MainPassthroughRspPlan,
@@ -21,6 +21,12 @@ import {
   Select,
 } from '@/components/ui';
 import { useTranslation } from '@/i18n/useTranslation';
+import {
+  buildTbcActionParams,
+  type MainPassthroughMode,
+  resolveTbcModeBadgeVariant,
+} from './unbrickDomain';
+import { RspPlanSection } from './RspPlanSection';
 
 interface TbcPassthroughCardProps {
   discoveredMainPath: string | null;
@@ -59,8 +65,7 @@ export const TbcPassthroughCard: React.FC<TbcPassthroughCardProps> = ({
     discoveredMainPath ?? 'firmware_and_images/extracted_partitions/hdd_partition_firmware_0x02000000.bin'
   );
   const [mainOutput, setMainOutput] = useState('unbrick_out/MAIN3410PQ_TBC_PASSTHROUGH.bin');
-  const [mode, setMode] = useState<'av_passthrough' | 'factory_original'>('av_passthrough');
-  const [callbackVa, setCallbackVa] = useState('0x50401F3C');
+  const [mode, setMode] = useState<MainPassthroughMode>('av_passthrough');
 
   const [inErr, setInErr] = useState<string | null>(null);
   const [outErr, setOutErr] = useState<string | null>(null);
@@ -70,29 +75,16 @@ export const TbcPassthroughCard: React.FC<TbcPassthroughCardProps> = ({
   }, [discoveredMainPath]);
 
   const handleInspectOrPatch = async (action: 'inspect' | 'patch') => {
-    if (!mainInput.trim()) {
-      setInErr(t('unbrick.errors.mainPathRequired'));
+    const res = buildTbcActionParams({ action, mainInput, mainOutput, mode });
+    setInErr(res.inErrorKey ? t(res.inErrorKey) : null);
+    setOutErr(res.outErrorKey ? t(res.outErrorKey) : null);
+    if (!res.params) {
       return;
     }
-    setInErr(null);
-
-    if (action === 'patch' && !mainOutput.trim()) {
-      setOutErr(t('unbrick.errors.mainOutRequired'));
-      return;
-    }
-    setOutErr(null);
-
-    await onRunTbc({
-      action,
-      inputPath: mainInput.trim(),
-      outPath: action === 'patch' ? mainOutput.trim() : undefined,
-      mode,
-    });
+    await onRunTbc(res.params);
   };
 
   const sites = tbcReport?.sites ?? [];
-  const rspFrames = rspPlan?.passthrough_frames ?? [];
-  const picoShortcuts = rspPlan?.pico_cli_shortcuts ?? [];
 
   return (
     <Card className="h-full flex flex-col">
@@ -105,7 +97,7 @@ export const TbcPassthroughCard: React.FC<TbcPassthroughCardProps> = ({
             </CardTitle>
             <CardDescription className="mt-1">{t('unbrick.tbc.desc')}</CardDescription>
           </div>
-          <Badge variant={tbcReport?.detected_mode === 'AV_PASSTHROUGH' ? 'success' : 'secondary'}>
+          <Badge variant={resolveTbcModeBadgeVariant(tbcReport?.detected_mode)}>
             {tbcReport?.detected_mode ?? 'MAIN 3410PQ'}
           </Badge>
         </div>
@@ -139,7 +131,8 @@ export const TbcPassthroughCard: React.FC<TbcPassthroughCardProps> = ({
                 value={mainOutput}
                 aria-invalid={Boolean(outErr)}
                 onChange={e => {
-                  setOutOutputSafe(e.target.value);
+                  setMainOutput(e.target.value);
+                  if (outErr) setOutErr(null);
                 }}
               />
               {outErr && <p className="text-[11px] text-rose-400 font-mono">{outErr}</p>}
@@ -152,7 +145,7 @@ export const TbcPassthroughCard: React.FC<TbcPassthroughCardProps> = ({
               <Select
                 id="tbc-patch-mode"
                 value={mode}
-                onChange={e => setMode(e.target.value as typeof mode)}
+                onChange={e => setMode(e.target.value as MainPassthroughMode)}
               >
                 <option value="av_passthrough">AV_PASSTHROUGH (Bypass FPC + ODD)</option>
                 <option value="factory_original">FACTORY_ORIGINAL (Restore Stock)</option>
@@ -223,80 +216,15 @@ export const TbcPassthroughCard: React.FC<TbcPassthroughCardProps> = ({
           </div>
         )}
 
-        <div className="border-t border-slate-800/80 pt-3 space-y-2.5 text-xs">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="font-mono font-bold text-slate-200 flex items-center gap-1.5">
-              <Terminal className="w-3.5 h-3.5 text-purple-400" />
-              <span>{t('unbrick.rsp.title')}</span>
-            </span>
-            <Badge variant="outline">MAGIC {rspPlan?.handshake_hex ?? '0e020204'}</Badge>
-          </div>
-
-          <div className="flex gap-2">
-            <Input
-              value={callbackVa}
-              aria-label={t('unbrick.rsp.callbackLabel')}
-              onChange={e => setCallbackVa(e.target.value)}
-              placeholder="0x50401F3C"
-            />
-            <Button
-              type="button"
-              size="sm"
-              variant="purple"
-              disabled={rspLoading}
-              onClick={() => void onRefreshRspPlan(callbackVa)}
-            >
-              {rspLoading && <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" />}
-              <span>{t('unbrick.rsp.refreshBtn')}</span>
-            </Button>
-          </div>
-
-          {rspFrames.length === 0 ? (
-            <EmptyState compact title={t('unbrick.rsp.empty')} />
-          ) : (
-            <div className="rounded-xl bg-slate-950/90 border border-slate-800 p-2.5 font-mono text-[11px] space-y-1 text-slate-300 break-all">
-              <div>
-                cb@{rspPlan?.serial_callback_va}: {rspPlan?.callback_write_frame ?? 'none'} | isr_pc_off:{' '}
-                {rspPlan?.isr_saved_pc_offset}
-              </div>
-              {picoShortcuts.map(cmd => (
-                <div key={cmd} className="text-emerald-300">
-                  &gt; {cmd}
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              disabled={norStubLoading}
-              onClick={() =>
-                void onBuildNorStub({
-                  wrapAsDigadiag: true,
-                  outPath: 'unbrick_out/DIGADIAG_NOR_DUMPER.FRM',
-                })
-              }
-            >
-              {norStubLoading && <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />}
-              <span>{t('unbrick.norStub.buildBtn')}</span>
-            </Button>
-            {norStubResult && (
-              <span className="font-mono text-[11px] text-cyan-300">
-                {norStubResult.raw_stub_bytes}B stub -&gt; {norStubResult.output_bytes}B (
-                {norStubResult.load_addr})
-              </span>
-            )}
-          </div>
-        </div>
+        <RspPlanSection
+          rspLoading={rspLoading}
+          rspPlan={rspPlan}
+          norStubLoading={norStubLoading}
+          norStubResult={norStubResult}
+          onRefreshRspPlan={onRefreshRspPlan}
+          onBuildNorStub={onBuildNorStub}
+        />
       </CardContent>
     </Card>
   );
-
-  function setOutOutputSafe(val: string) {
-    setMainOutput(val);
-    if (outErr) setOutErr(null);
-  }
 };

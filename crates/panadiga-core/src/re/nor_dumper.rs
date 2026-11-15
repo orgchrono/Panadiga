@@ -8,6 +8,8 @@ use anyhow::{Result, bail};
 use byteorder::{ByteOrder, LittleEndian};
 use serde::{Deserialize, Serialize};
 
+use crate::constants::PANA_DIGADIAG_FRM_SIZE;
+use crate::crypto::build_digadiag_frm;
 use crate::nvram::calculate_hashes;
 
 /// Magic header emitted at the start of every UART NOR flash dump stream.
@@ -203,6 +205,34 @@ pub fn build_readonly_nor_dumper_stub(
     }
 
     Ok(buf)
+}
+
+/// Builds either a raw AM34 read-only NOR dumper stub or a 128 KiB `DIGADIAG.FRM` container.
+///
+/// Returns `(raw_stub_bytes_len, final_payload_bytes)`.
+pub fn build_nor_dumper_artifact(
+    start_addr: u32,
+    total_len: u32,
+    block_size: u32,
+    load_addr: u32,
+    wrap_as_digadiag: bool,
+) -> Result<(usize, Vec<u8>)> {
+    let stub = build_readonly_nor_dumper_stub(start_addr, total_len, block_size, load_addr)?;
+    let stub_len = stub.len();
+    let payload = if wrap_as_digadiag {
+        let (frm, _) = build_digadiag_frm(
+            &stub,
+            load_addr,
+            "FVU ",
+            "NOR_DMP",
+            4,
+            PANA_DIGADIAG_FRM_SIZE,
+        )?;
+        frm
+    } else {
+        stub
+    };
+    Ok((stub_len, payload))
 }
 
 /// Parses and checksum-verifies a `PANADMP1..PANADONE` UART NOR capture stream.

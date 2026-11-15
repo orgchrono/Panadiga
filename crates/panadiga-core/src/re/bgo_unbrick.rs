@@ -319,6 +319,30 @@ pub fn ensure_parent_dir(path: &Path) -> Result<()> {
     Ok(())
 }
 
+/// Decodes raw `PROG061` binary bytes or an `EXTRHEAD` / `DIGADIAG.FRM` container into `(format, payload)`.
+pub fn decode_prog061_payload(raw: &[u8]) -> Result<(&'static str, Vec<u8>)> {
+    if raw.starts_with(b"EXTRHEAD") {
+        let unpacked = unpack_extrhead(raw, ExtrheadCryptMode::Plain)?;
+        Ok(("EXTRHEAD_CONTAINER", unpacked.decompressed))
+    } else if raw.len() == PROG061_EXPECTED_SIZE {
+        Ok(("RAW_PROG061", raw.to_vec()))
+    } else if raw.len() > 0x40 {
+        let unpacked = unpack_extrhead(raw, ExtrheadCryptMode::Auto)?;
+        Ok(("EXTRHEAD_CONTAINER", unpacked.decompressed))
+    } else {
+        bail!(
+            "Unrecognized PROG061 input size ({} bytes); expected raw 262144B PROG061 or EXTRHEAD",
+            raw.len()
+        );
+    }
+}
+
+/// Inspects an in-memory raw `PROG061` binary or `EXTRHEAD` (`DIGADIAG.FRM`) container.
+pub fn inspect_prog061_container_bytes(raw: &[u8]) -> Result<Prog061BgoInspection> {
+    let (_, payload) = decode_prog061_payload(raw)?;
+    inspect_prog061_bgo_sites(&payload)
+}
+
 /// Loads a raw `PROG061` binary or `EXTRHEAD` container, applies `mode`, and optionally wraps
 /// the patched binary into a bootable plaintext `DIGADIAG.FRM` targeting `0x50400000`.
 pub fn patch_prog061_or_build_digadiag(
@@ -332,21 +356,8 @@ pub fn patch_prog061_or_build_digadiag(
         .with_context(|| format!("Reading PROG061/DIGADIAG input {}", resolved_in.display()))?;
     let (_, original_sha256) = calculate_hashes(&raw);
 
-    let (container_format, mut payload) = if raw.starts_with(b"EXTRHEAD") {
-        let unpacked = unpack_extrhead(&raw, ExtrheadCryptMode::Plain)?;
-        ("EXTRHEAD_CONTAINER".to_string(), unpacked.decompressed)
-    } else if raw.len() == PROG061_EXPECTED_SIZE {
-        ("RAW_PROG061".to_string(), raw)
-    } else if raw.len() > 0x40 {
-        // Fallback: attempt encrypted/auto EXTRHEAD extraction
-        let unpacked = unpack_extrhead(&raw, ExtrheadCryptMode::Auto)?;
-        ("EXTRHEAD_CONTAINER".to_string(), unpacked.decompressed)
-    } else {
-        bail!(
-            "Unrecognized PROG061 input size ({} bytes); expected raw 262144B PROG061 or EXTRHEAD",
-            raw.len()
-        );
-    };
+    let (container_tag, mut payload) = decode_prog061_payload(&raw)?;
+    let container_format = container_tag.to_string();
 
     let inspection_before = inspect_prog061_bgo_sites(&payload)?;
     patch_prog061_bgo_in_place(&mut payload, mode)?;
