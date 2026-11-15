@@ -9,6 +9,7 @@
 #include "uart/p7501_fmu_internal.h"
 #include "uart/p7501_uart_capture.h"
 #include "uart/p7501_uart_bitbang.h"
+#include "uart/p7501_uart_pio_engine.h"
 #include "common/p7501_hex.h"
 #include "hal/p7501_hw.h"
 
@@ -69,12 +70,12 @@ void p7501_fmu_handle_phase_triggers(
 ) {
     if ((!st->sw_uart_flipped) && (fmode == 2U) &&
         p7501_fmu_buf_contains_tag_at_eol(rx_buf, rx_len, 20U, "seri", 4U)) {
-        p7501_hw_sw_uart_set_low(false);
+        p7501_pio_release_sw_uart_now();
         st->sw_uart_flipped = true;
     }
     if ((!st->sw_uart_flipped) && (fmode == 3U) &&
         fmu_buf_is_ddr_ok_eol(rx_buf, rx_len)) {
-        p7501_hw_sw_uart_set_low(false);
+        p7501_pio_release_sw_uart_now();
         st->sw_uart_flipped = true;
     }
     if ((!st->wait1_seen) && fmu_buf_is_wait1_eol(rx_buf, rx_len)) {
@@ -93,18 +94,24 @@ static size_t fmu_decode_or_default_cr(const char *hex_str, uint8_t *out, size_t
     return 1U;
 }
 
-void p7501_fmu_start_phase_session(
-    bool use_12ma,
-    bool *out_prev_high,
-    p7501_fmu_phase_state_t *out_st
-) {
-    p7501_uart_configure_pins(true, true, true, use_12ma);
-    p7501_uart_pulse_reset_and_settle();
-    *out_prev_high = gpio_get(P7501_PIN_RXD);
+void p7501_fmu_start_phase_session(p7501_fmu_phase_state_t *out_st) {
+    p7501_pio_begin_rx_session_ex(P7501_BOOT_ACTION_JIG, 2500u);
     out_st->sw_uart_flipped = false;
     out_st->sent_after_serial_msg = false;
     out_st->wait1_seen = false;
     out_st->wait1_us = 0U;
+}
+
+bool p7501_fmu_pop_rx_byte(uint8_t *rx_buf, uint32_t *rx_len, uint32_t max_cap) {
+    uint8_t b = 0u;
+    if (!p7501_pio_pop_rx_byte(&b)) {
+        return false;
+    }
+    if ((rx_buf != NULL) && (rx_len != NULL) && (*rx_len < max_cap)) {
+        rx_buf[*rx_len] = b;
+        ++(*rx_len);
+    }
+    return true;
 }
 
 void p7501_cmd_fmu_scan(const char *arg) {
@@ -113,10 +120,10 @@ void p7501_cmd_fmu_scan(const char *arg) {
         fmode = (uint32_t)atoi(arg);
     }
 
-    uint8_t *rx_buf = p7501_uart_rx_buffer(NULL);
-    bool prev_high = true;
+    size_t rx_cap = 0U;
+    uint8_t *rx_buf = p7501_uart_rx_buffer(&rx_cap);
     p7501_fmu_phase_state_t st;
-    p7501_fmu_start_phase_session(false, &prev_high, &st);
+    p7501_fmu_start_phase_session(&st);
 
     uint32_t rx_len = 0U;
     const uint32_t t0_us = time_us_32();
@@ -128,7 +135,7 @@ void p7501_cmd_fmu_scan(const char *arg) {
 
     while ((time_us_32() - t0_us) < 4000000UL) {
         const uint32_t now_us = time_us_32();
-        if (p7501_uart_poll_capture_byte(&prev_high, &rx_len, 8192U)) {
+        while (p7501_fmu_pop_rx_byte(rx_buf, &rx_len, (uint32_t)rx_cap)) {
             if (!listening_after_tx) {
                 const bool was_wait1 = st.wait1_seen;
                 p7501_fmu_handle_phase_triggers(&st, rx_buf, fmode, rx_len, now_us);
@@ -143,12 +150,12 @@ void p7501_cmd_fmu_scan(const char *arg) {
 
         if (st.wait1_seen && (!sweep_done) && (now_us >= next_tx_us) && ((int32_t)(now_us - st.wait1_us) < 1100000L)) {
             if ((bval == 0U) && (fmode == 1U) && (!st.sw_uart_flipped)) {
-                p7501_hw_sw_uart_set_low(false);
+                p7501_pio_release_sw_uart_now();
                 st.sw_uart_flipped = true;
-                sleep_us(50U);
             }
             if (bval < 256U) {
-                p7501_uart_tx_byte((uint8_t)bval);
+                const uint8_t tx_b = (uint8_t)bval;
+                p7501_pio_tx_bytes(&tx_b, 1u, !st.sw_uart_flipped);
                 bval++;
                 listening_after_tx = true;
                 next_tx_us = time_us_32() + 2200UL;
@@ -159,7 +166,7 @@ void p7501_cmd_fmu_scan(const char *arg) {
         tight_loop_contents();
     }
 
-    p7501_uart_restore_default_state();
+    p7501_pio_end_session();
 
     printf("\n=== FMUSCAN MODE %" PRIu32 " RESULT (hit=0x%02X/%d, bytes=%" PRIu32 ") ===\n",
            fmode, hit_byte >= 0 ? hit_byte : 0, hit_byte, rx_len);
@@ -188,10 +195,10 @@ void p7501_cmd_fmu_test(const char *arg) {
     uint8_t tx_bytes[64];
     const size_t tx_len = fmu_decode_or_default_cr(hex_str, tx_bytes, sizeof(tx_bytes));
 
-    uint8_t *rx_buf = p7501_uart_rx_buffer(NULL);
-    bool prev_high = true;
+    size_t rx_cap = 0U;
+    uint8_t *rx_buf = p7501_uart_rx_buffer(&rx_cap);
     p7501_fmu_phase_state_t st;
-    p7501_fmu_start_phase_session(true, &prev_high, &st);
+    p7501_fmu_start_phase_session(&st);
 
     uint32_t rx_len = 0U;
     uint32_t next_tx_us = 0U;
@@ -200,34 +207,33 @@ void p7501_cmd_fmu_test(const char *arg) {
 
     while ((time_us_32() - t0_us) < 4000000UL) {
         const uint32_t now_us = time_us_32();
-        if (p7501_uart_poll_capture_byte(&prev_high, &rx_len, 8192U) && (!st.wait1_seen)) {
+        while (p7501_fmu_pop_rx_byte(rx_buf, &rx_len, (uint32_t)rx_cap) && (!st.wait1_seen)) {
             p7501_fmu_handle_phase_triggers(&st, rx_buf, fmode, rx_len, now_us);
             if ((fmode == 4U) && (!st.sent_after_serial_msg) &&
                 p7501_fmu_buf_contains_tag_at_eol(rx_buf, rx_len, 20U, "seri", 4U)) {
-                p7501_uart_tx_bytes(tx_bytes, tx_len, 20U);
+                p7501_pio_tx_bytes(tx_bytes, tx_len, !st.sw_uart_flipped);
                 st.sent_after_serial_msg = true;
                 tx_count++;
             }
             if (st.wait1_seen) {
                 if ((fmode == 1U) && (!st.sw_uart_flipped)) {
-                    p7501_hw_sw_uart_set_low(false);
+                    p7501_pio_release_sw_uart_now();
                     st.sw_uart_flipped = true;
-                    sleep_us(50U);
                 }
                 next_tx_us = now_us + 2000UL;
             }
         }
 
-        if (st.wait1_seen && ((tx_count == 0U) || (repeat_25ms && prev_high)) &&
+        if (st.wait1_seen && ((tx_count == 0U) || repeat_25ms) &&
             (now_us >= next_tx_us) && ((uint32_t)(now_us - st.wait1_us) < 1050000UL)) {
-            p7501_uart_tx_bytes(tx_bytes, tx_len, 20U);
+            p7501_pio_tx_bytes(tx_bytes, tx_len, !st.sw_uart_flipped);
             tx_count++;
             next_tx_us = time_us_32() + 25000UL;
         }
         tight_loop_contents();
     }
 
-    p7501_uart_restore_default_state();
+    p7501_pio_end_session();
 
     printf("\n=== FMUTEST MODE %" PRIu32 " (%u tx bytes x%" PRIu32 ") CAPTURE (%" PRIu32 " bytes) ===\n",
            raw_mode, (unsigned)tx_len, tx_count, rx_len);

@@ -382,6 +382,40 @@ pub const AM34_PATA_MMIO_BASE: u32 = 0xD400_0000;
 /// PATA / IDE Controller Space Size (4 Kilobytes).
 pub const AM34_PATA_MMIO_SIZE: u32 = 0x0000_1000;
 
+/// Stage-1 `/BOOT.BIN` SDRAM Execution Window (0x4400_0000, 256 KiB).
+pub const AM34_BOOT_BIN_BASE: u32 = 0x4400_0000;
+pub const AM34_BOOT_BIN_SIZE: u32 = 0x0004_0000;
+
+/// Spansion NOR Flash Uncached Hardware Aperture (CS1, 0x8400_0000..0x8480_0000).
+pub const AM34_FLASH_UNCACHED_BASE: u32 = 0x8400_0000;
+/// Spansion NOR BGO Partition Base inside Uncached Aperture (`0x8420_0000..0x8440_0000`, 32x64 KiB).
+pub const AM34_FLASH_BGO_BASE: u32 = 0x8420_0000;
+pub const AM34_FLASH_BGO_SIZE: u32 = 0x0020_0000;
+/// Spansion NOR Main Application Region inside Uncached Aperture (`0x8440_0000..0x847F_0000`).
+pub const AM34_FLASH_UNCACHED_APP_BASE: u32 = 0x8440_0000;
+pub const AM34_FLASH_UNCACHED_APP_SIZE: u32 = 0x003F_0000;
+/// NVRAM Top-Boot Partition Uncached Aperture (`0x847F_0000..0x8480_0000`).
+pub const AM34_NVRAM_UNCACHED_BASE: u32 = 0x847F_0000;
+
+/// `DAVIS` Primary IDE / ATAPI Channel (`ch=0, dev=0` ODD) MMIO Base (`0x8900_0500`).
+pub const AM34_DAVIS_PRI_MMIO_BASE: u32 = 0x8900_0500;
+/// `DAVIS` Secondary IDE Channel (`ch=1, dev=0` HDD MASTER) MMIO Base (`0x8900_0D00`).
+pub const AM34_DAVIS_SEC_MMIO_BASE: u32 = 0x8900_0D00;
+pub const AM34_DAVIS_MMIO_SIZE: u32 = 0x0000_0100;
+
+/// `SDCD` SD/MMC Host Controller MMIO Base (`0x8900_1800`) and 1-bit/4-bit Bus Width Register (`0x8900_1850`).
+pub const AM34_SDCD_MMIO_BASE: u32 = 0x8900_1800;
+pub const AM34_SDCD_MMIO_SIZE: u32 = 0x0000_0100;
+pub const AM34_SDCD_BUS_CFG_VA: u32 = 0x8900_1850;
+
+/// Uncached System SDRAM Mirror Base (`0x9000_0000`) and `DRV S211` Decompression Target (`0x9020_2000`).
+pub const AM34_SDRAM_UNCACHED_BASE: u32 = 0x9000_0000;
+pub const AM34_DRV_S211_BASE: u32 = 0x9020_2000;
+
+/// UniPhier `SC0` UART0 Peripheral Base (`0xD400_2000`: `SC0CTR/+00`, `SC0ICR/+04`, `SC0TXB/+08`, `SC0RXB/+09`, `SC0STR/+0C`).
+pub const AM34_SC0_BASE: u32 = 0xD400_2000;
+pub const AM34_SC0_SIZE: u32 = 0x0000_0020;
+
 // ============================================================================
 // 8. Default System Paths, Network Settings & Hardware Parameters
 // ============================================================================

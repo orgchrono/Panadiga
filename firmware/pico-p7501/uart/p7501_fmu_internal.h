@@ -35,10 +35,9 @@ void p7501_fmu_handle_phase_triggers(
     uint32_t now_us
 );
 
-void p7501_fmu_start_phase_session(
-    bool use_12ma,
-    bool *out_prev_high,
-    p7501_fmu_phase_state_t *out_st
-);
+void p7501_fmu_start_phase_session(p7501_fmu_phase_state_t *out_st);
+
+/** Pop one byte from PIO1 RX FIFO into `rx_buf[*rx_len]` when room remains. */
+bool p7501_fmu_pop_rx_byte(uint8_t *rx_buf, uint32_t *rx_len, uint32_t max_cap);
 
 #endif /* P7501_FMU_INTERNAL_H */

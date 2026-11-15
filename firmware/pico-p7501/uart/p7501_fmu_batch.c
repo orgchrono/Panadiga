@@ -8,7 +8,7 @@
 #include "uart/p7501_fmu_probe.h"
 #include "uart/p7501_fmu_internal.h"
 #include "uart/p7501_uart_capture.h"
-#include "uart/p7501_uart_bitbang.h"
+#include "uart/p7501_uart_pio_engine.h"
 
 #include <inttypes.h>
 #include <stdbool.h>
@@ -35,12 +35,13 @@ void p7501_cmd_fmu_batch(const char *arg) {
     printf("\n=== FMUBATCH (0x%02" PRIX32 "..0x%02" PRIX32 ", offset=%" PRIu32 " ms after wait 1 second) ===\n",
            start_b, start_b + count_b - 1U, offset_ms);
 
-    uint8_t *rx_buf = p7501_uart_rx_buffer(NULL);
+    size_t rx_cap = 0U;
+    uint8_t *rx_buf = p7501_uart_rx_buffer(&rx_cap);
+    const uint32_t buf_lim = (rx_cap < 512U) ? (uint32_t)rx_cap : 512U;
     for (uint32_t b = start_b; b < (start_b + count_b); b++) {
         const uint8_t bval = (uint8_t)b;
-        bool prev_high = true;
         p7501_fmu_phase_state_t st;
-        p7501_fmu_start_phase_session(true, &prev_high, &st);
+        p7501_fmu_start_phase_session(&st);
 
         uint32_t rx_len = 0U;
         bool sent = false;
@@ -53,11 +54,11 @@ void p7501_cmd_fmu_batch(const char *arg) {
 
         while ((time_us_32() - t0_us) < 2000000UL) {
             const uint32_t now_us = time_us_32();
-            if (p7501_uart_poll_capture_byte(&prev_high, &rx_len, 512U)) {
+            while (p7501_fmu_pop_rx_byte(rx_buf, &rx_len, buf_lim)) {
                 if (!sent) {
                     if ((offset_ms == 8888U) &&
                         p7501_fmu_buf_contains_tag_at_eol(rx_buf, rx_len, 20U, "seri", 4U)) {
-                        p7501_uart_tx_byte(bval);
+                        p7501_pio_tx_bytes(&bval, 1u, false);
                         sent = true;
                         tx_us = time_us_32();
                     } else if (!st.wait1_seen) {
@@ -73,9 +74,12 @@ void p7501_cmd_fmu_batch(const char *arg) {
                     break;
                 }
             }
+            if (got_post) {
+                break;
+            }
 
             if (st.wait1_seen && (!sent) && (offset_ms != 8888U) && (now_us >= target_tx_us)) {
-                p7501_uart_tx_byte(bval);
+                p7501_pio_tx_bytes(&bval, 1u, false);
                 sent = true;
                 tx_us = time_us_32();
             }
@@ -91,6 +95,6 @@ void p7501_cmd_fmu_batch(const char *arg) {
         }
     }
 
-    p7501_uart_restore_default_state();
+    p7501_pio_end_session();
     printf("FMUBATCH: OK\n");
 }

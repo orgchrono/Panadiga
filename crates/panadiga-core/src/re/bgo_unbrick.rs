@@ -39,13 +39,13 @@ pub const OFF_DEVINFO_CHECK_BEQ: usize = 0x0000_5097;
 /// `0x5040A2CD`: 20-byte `BGO driver init failed[%u]` failure branch inside `bgo_init_A294`.
 pub const OFF_BGO_INIT_FAIL_HOOK: usize = 0x0000_A2CD;
 
-const ORIG_SUM_BEQ: [u8; 2] = [0xC8, 0x0A];
-const PATCH_SUM_BRA: [u8; 2] = [0xCA, 0x0A];
+pub const ORIG_SUM_BEQ: [u8; 2] = [0xC8, 0x0A];
+pub const PATCH_SUM_BRA: [u8; 2] = [0xCA, 0x0A];
 
-const ORIG_DEVINFO_BEQ: [u8; 2] = [0xC8, 0x15];
-const PATCH_DEVINFO_BRA: [u8; 2] = [0xCA, 0x15];
+pub const ORIG_DEVINFO_BEQ: [u8; 2] = [0xC8, 0x15];
+pub const PATCH_DEVINFO_BRA: [u8; 2] = [0xCA, 0x15];
 
-const ORIG_A2CD_HOOK: [u8; 20] = [
+pub const ORIG_A2CD_HOOK: [u8; 20] = [
     0xFC, 0xCC, 0xB0, 0x3E, 0x43, 0x50, 0xF8, 0x07, 0xFC, 0xDD, 0xF7, 0xAA, 0xFF, 0xFF, 0x00, 0x00,
     0x80, 0xFF, 0xCA, 0x32,
 ];
@@ -53,7 +53,7 @@ const ORIG_A2CD_HOOK: [u8; 20] = [
 /// `call32 0x50401F3C` (`dd 6f 7c ff ff 00 00`); `cmp 0, d0` (`a0 00`);
 /// `beq +11 -> 0x5040A2E1` (`c8 0b`); `mov -1, d0` (`80 ff`);
 /// `bra +0x37 -> 0x5040A311` (`ca 37`); `nop` x5 (`cb * 5`).
-const PATCH_A2CD_AUTOFORMAT: [u8; 20] = [
+pub const PATCH_A2CD_AUTOFORMAT: [u8; 20] = [
     0xDD, 0x6F, 0x7C, 0xFF, 0xFF, 0x00, 0x00, 0xA0, 0x00, 0xC8, 0x0B, 0x80, 0xFF, 0xCA, 0x37, 0xCB,
     0xCB, 0xCB, 0xCB, 0xCB,
 ];

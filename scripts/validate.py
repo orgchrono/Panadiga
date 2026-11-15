@@ -50,6 +50,8 @@ C11_HOST_SOURCES: Final[tuple[str, ...]] = (
 PYTHON_COMPILE_TARGETS: Final[tuple[str, ...]] = (
     "tools/ghidra/ghidra_am34_memory_map.py",
     "tools/ghidra/ghidra_import_symbols_panadiga.py",
+    "tools/ghidra/ghidra_importar_simbolos_panadiga.py",
+    "tools/ghidra/ghidra_auto_unbrick_audit.py",
     "tools/ghidra/ghidra_connect_debugger.py",
     "scripts/panadiga_ops.py",
     "scripts/panadiga_cache.py",

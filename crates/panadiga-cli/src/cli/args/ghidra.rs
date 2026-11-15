@@ -29,6 +29,17 @@ pub enum GhidraActions {
         output: PathBuf,
     },
 
+    /// Export automated stage detection & unbrick audit Jython script for Ghidra
+    Audit {
+        /// Target Python script file path
+        #[arg(
+            short,
+            long,
+            default_value = "tools/ghidra/ghidra_auto_unbrick_audit.py"
+        )]
+        output: PathBuf,
+    },
+
     /// Export all Ghidra automation scripts into a target directory
     ExportAll {
         /// Destination directory for generated Ghidra scripts

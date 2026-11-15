@@ -78,8 +78,10 @@ void p7501_cmd_boottrace(const char *arg) {
     bool first_byte_seen = false;
     bool sw_rel_seen = false;
     uint32_t sw_rel_us = 0u;
-    float min_v = 9.99f;
-    float max_v = 0.00f;
+    const char *sw_rel_reason = "NONE";
+    p7501_adc0_trace_t adc_trace;
+    p7501_diag_adc0_trace_init(&adc_trace);
+    p7501_diag_adc0_trace_sample(&adc_trace);
 
     char line[160];
     size_t line_len = 0u;
@@ -95,6 +97,8 @@ void p7501_cmd_boottrace(const char *arg) {
         if (p7501_pio_poll_sw_uart_release()) {
             sw_rel_seen = true;
             sw_rel_us = rel_us;
+            sw_rel_reason = "TIMER";
+            p7501_diag_adc0_trace_sample(&adc_trace);
         }
 
         const uint8_t cur_ctrl3 = read_ctrl3();
@@ -127,6 +131,8 @@ void p7501_cmd_boottrace(const char *arg) {
                 p7501_pio_poll_jig_serial_release(ring, &ring_len, sizeof(ring), byte)) {
                 sw_rel_seen = true;
                 sw_rel_us = b_rel_us;
+                sw_rel_reason = "SERIAL_BOOT";
+                p7501_diag_adc0_trace_sample(&adc_trace);
             }
 
             if (byte == '\r' || byte == '\n') {
@@ -147,7 +153,7 @@ void p7501_cmd_boottrace(const char *arg) {
         if (time_reached(next_adc_t)) {
             next_adc_t = make_timeout_time_ms(10u);
             p7501_led_tick();
-            p7501_diag_sample_adc0_minmax(&min_v, &max_v);
+            p7501_diag_adc0_trace_sample(&adc_trace);
         }
     }
 
@@ -157,20 +163,20 @@ void p7501_cmd_boottrace(const char *arg) {
     p7501_pio_end_session();
     p7501_led_set_auto_mode(LED_MODE_HEARTBEAT_IDLE);
 
-    if (min_v > max_v) {
-        min_v = 0.00f;
-    }
+    p7501_diag_adc0_trace_finalize(&adc_trace);
 
     printf("[BOOTTRACE] UART: bytes=%" PRIu32 " first_byte=%" PRIu32 "us ferr=%" PRIu32
            " perr=%" PRIu32 " ovf=%s | SW_rel=%s",
            rx_bytes, first_byte_us, ferr, perr, ovf ? "YES" : "NO",
            sw_rel_seen ? "YES@" : "NO");
     if (sw_rel_seen) {
-        printf("%" PRIu32 "us", sw_rel_us);
+        printf("%" PRIu32 "us(%s)", sw_rel_us, sw_rel_reason);
     }
-    printf("\n[BOOTTRACE] ADC0_SWUART: min=%.2fV max=%.2fV | CtrlEdges: NSW5V=%" PRIu32
+    printf("\n[BOOTTRACE] ADC0_SWUART: min=%.2fV max=%.2fV (low=%" PRIu32 " hiz=%.2f..%.2fV n=%" PRIu32 ") | CtrlEdges: NSW5V=%" PRIu32
            " TXD=%" PRIu32 " XRESET=%" PRIu32 " (logged=%u)\n",
-           (double)min_v, (double)max_v, nsw_edges, txd_edges, xrst_edges, (unsigned)ev_count);
+           (double)adc_trace.min_v, (double)adc_trace.max_v,
+           adc_trace.low_samples, (double)adc_trace.hiz_min_v, (double)adc_trace.hiz_max_v,
+           adc_trace.hiz_samples, nsw_edges, txd_edges, xrst_edges, (unsigned)ev_count);
 
     const size_t preview = (ev_count > 16u) ? 16u : ev_count;
     for (size_t i = 0u; i < preview; ++i) {

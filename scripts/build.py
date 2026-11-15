@@ -231,6 +231,15 @@ def _copy_release_binary(bin_name: str, dist_dir: Path) -> Path:
     return dest_bin
 
 
+def _sync_firmware_bins_to_dist(dist_dir: Path) -> None:
+    """Copy compiled P7501 UF2 images from firmware_bins/ into dist/ when dist/ is present."""
+    fw_bins_dir = ROOT / "crates" / "panadiga-core" / "src" / "pico" / "firmware_bins"
+    for uf2_name in UF2_NAMES:
+        uf2_src = fw_bins_dir / uf2_name
+        if uf2_src.is_file():
+            copy_if_changed(uf2_src, dist_dir / uf2_name)
+
+
 def build_desktop(
     env: Mapping[str, str],
     *,
@@ -270,12 +279,7 @@ def build_desktop(
     gui_bin = _copy_release_binary(panadiga_desktop_binary_name(), dist_dir)
 
     _stage_tools_directory(dist_dir)
-
-    fw_bins_dir = ROOT / "crates" / "panadiga-core" / "src" / "pico" / "firmware_bins"
-    for uf2_name in UF2_NAMES:
-        uf2_src = fw_bins_dir / uf2_name
-        if uf2_src.is_file():
-            shutil.copy2(uf2_src, dist_dir / uf2_name)
+    _sync_firmware_bins_to_dist(dist_dir)
 
     license_src = ROOT / "LICENSE"
     if license_src.is_file():
@@ -611,6 +615,9 @@ def _merge_and_sync_pico_uf2(
     changed_rp2040 = copy_if_changed(rp2040_uf2, dest_dir / "panasonic_p7501_uart_rp2040.uf2")
     changed_rp2350 = copy_if_changed(rp2350_uf2, dest_dir / "panasonic_p7501_uart_rp2350.uf2")
     changed_unified = copy_if_changed(staged_unified, dest_dir / "panasonic_p7501_uart_unified.uf2")
+    dist_dir = ROOT / "dist"
+    if dist_dir.is_dir():
+        _sync_firmware_bins_to_dist(dist_dir)
     record_step_cache(ROOT, "pico", digest, outputs)
     if changed_rp2040 or changed_rp2350 or changed_unified:
         print_status("OK", f"Synced updated UF2 binaries into {dest_dir}", "32")
@@ -629,6 +636,8 @@ def build_pico(
     pico_env = _prepare_pico_env(env)
     digest, outputs = pico_digest_and_outputs(ROOT, pico_env)
     if use_cache and is_step_fresh(ROOT, "pico", digest, outputs):
+        if (ROOT / "dist").is_dir():
+            _sync_firmware_bins_to_dist(ROOT / "dist")
         print_status("CACHE", "Pico firmware UF2 cache hit (firmware_bins unchanged).", "36")
         return True
 

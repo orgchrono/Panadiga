@@ -295,8 +295,39 @@ static void test_diag_watch_codec(void) {
     assert(rel_count == 1 && st.sw_uart_released && tx_count == 0);
     assert(strstr(p7501_diag_watch_diagnosis(st.seen_events), "BGO driver init failed") != NULL);
 }
+static void test_rsp_boot_prose_does_not_trip_nak(void) {
+    const char *boot_log =
+        "Main hung-up time changed 255[s].\r\n"
+        "[SDCD]SetBusWidth:SD Status ERROR -91006\r\n"
+        "SD init failed[-90002].\r\n";
+    p7501_rsp_frame_info_t info;
+    assert(!p7501_rsp_inspect_frame_from(
+        (const uint8_t *)boot_log, strlen(boot_log), 0u, &info
+    ));
+    assert(!info.found && !info.ack_plus && !info.nak_minus && !info.raw_nak_0x15);
+
+    const char *real_ack = "+$OK#9a";
+    assert(p7501_rsp_inspect_frame_from(
+        (const uint8_t *)real_ack, strlen(real_ack), 0u, &info
+    ));
+    assert(info.found && info.checksum_ok && info.ack_plus && !info.nak_minus);
+
+    const char *real_nak = "-$E01#A6";
+    assert(p7501_rsp_inspect_frame_from(
+        (const uint8_t *)real_nak, strlen(real_nak), 0u, &info
+    ));
+    assert(info.found && info.checksum_ok && !info.ack_plus && info.nak_minus);
+
+    const char *after_csum_nak = "#9a-";
+    assert(!p7501_rsp_inspect_frame_from(
+        (const uint8_t *)after_csum_nak, strlen(after_csum_nak), 0u, &info
+    ));
+    assert(!info.found && info.nak_minus && !info.ack_plus);
+}
+
 int p7501_run_pana_logic_tests(void) {
     test_pana_rsp_frame_codec();
+    test_rsp_boot_prose_does_not_trip_nak();
     test_pana_rsp_arg_parser();
     test_piologic_analyzer();
     test_flash_geometry_and_bgo();

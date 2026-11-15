@@ -218,35 +218,46 @@ pub fn handle_pico(args: PicoArgs) -> Result<()> {
             let target_drive = &bootsel_drives[0];
             log_println!("Found active BOOTSEL drive: {}", target_drive.display());
 
-            let uf2_data = if let Some(ref custom_path) = file {
-                std::fs::read(custom_path)?
+            let (uf2_source, uf2_data) = if let Some(ref custom_path) = file {
+                (
+                    custom_path.display().to_string(),
+                    std::fs::read(custom_path)?,
+                )
             } else {
                 let candidates = [
-                    PathBuf::from("dist/panasonic_p7501_uart_unified.uf2"),
                     PathBuf::from(
                         "crates/panadiga-core/src/pico/firmware_bins/panasonic_p7501_uart_unified.uf2",
                     ),
+                    PathBuf::from("target/pico-build/panasonic_p7501_uart_unified.uf2"),
                     PathBuf::from("firmware/pico-p7501/panasonic_p7501_uart_unified.uf2"),
-                    PathBuf::from("dist/panasonic_p7501_uart_rp2040.uf2"),
                     PathBuf::from(
                         "crates/panadiga-core/src/pico/firmware_bins/panasonic_p7501_uart_rp2040.uf2",
                     ),
-                    PathBuf::from("firmware/pico-p7501/panasonic_p7501_uart_rp2040.uf2"),
+                    PathBuf::from("dist/panasonic_p7501_uart_unified.uf2"),
+                    PathBuf::from("dist/panasonic_p7501_uart_rp2040.uf2"),
                 ];
                 let mut found = None;
                 for c in &candidates {
                     if c.exists()
                         && let Ok(data) = std::fs::read(c)
                     {
-                        found = Some(data);
+                        found = Some((c.display().to_string(), data));
                         break;
                     }
                 }
                 match found {
-                    Some(data) => data,
-                    None => panadiga_core::pico::flasher::EMBEDDED_UNIFIED_UF2.to_vec(),
+                    Some(pair) => pair,
+                    None => (
+                        "embedded(EMBEDDED_UNIFIED_UF2)".to_string(),
+                        panadiga_core::pico::flasher::EMBEDDED_UNIFIED_UF2.to_vec(),
+                    ),
                 }
             };
+            log_println!(
+                "Using UF2 source: {} ({} bytes)",
+                uf2_source,
+                uf2_data.len()
+            );
 
             let report = flash_uf2_to_drive(target_drive, &uf2_data)?;
             log_println!("[SUCCESS] {}", report.message);

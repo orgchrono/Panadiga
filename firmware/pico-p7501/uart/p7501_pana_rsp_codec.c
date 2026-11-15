@@ -192,6 +192,32 @@ size_t p7501_rsp_build_write_u32(uint32_t addr, uint32_t value_le, char *out, si
     return p7501_rsp_build_write_mem(addr, bytes, sizeof(bytes), out, out_cap);
 }
 
+/** Return true when `ch` is an ASCII letter or decimal digit. */
+static bool rsp_is_ascii_alnum(uint8_t ch) {
+    return ((ch >= (uint8_t)'0') && (ch <= (uint8_t)'9')) ||
+           ((ch >= (uint8_t)'A') && (ch <= (uint8_t)'Z')) ||
+           ((ch >= (uint8_t)'a') && (ch <= (uint8_t)'z'));
+}
+
+/** Distinguish GDB RSP ACK (`+`) / NAK (`-`) from ASCII hyphens/signs inside boot prose (`hung-up`, `-91006`). */
+static bool rsp_is_standalone_ack_or_nak(
+    const uint8_t *buf,
+    size_t start_offset,
+    size_t len,
+    size_t idx
+) {
+    if (((idx + 1u) < len) && rsp_is_ascii_alnum(buf[idx + 1u])) {
+        return false;
+    }
+    if ((idx > start_offset) && rsp_is_ascii_alnum(buf[idx - 1u])) {
+        const bool after_checksum = (idx >= (start_offset + 3u)) && (buf[idx - 3u] == (uint8_t)'#');
+        if (!after_checksum) {
+            return false;
+        }
+    }
+    return true;
+}
+
 bool p7501_rsp_inspect_frame_from(
     const uint8_t *buf,
     size_t len,
@@ -215,9 +241,9 @@ bool p7501_rsp_inspect_frame_from(
     for (size_t i = start_offset; i < len; ++i) {
         if (buf[i] == 0x15u) {
             raw_nak_0x15 = true;
-        } else if (buf[i] == (uint8_t)'+') {
+        } else if ((buf[i] == (uint8_t)'+') && rsp_is_standalone_ack_or_nak(buf, start_offset, len, i)) {
             ack_plus = true;
-        } else if (buf[i] == (uint8_t)'-') {
+        } else if ((buf[i] == (uint8_t)'-') && rsp_is_standalone_ack_or_nak(buf, start_offset, len, i)) {
             nak_minus = true;
         }
         if (buf[i] != (uint8_t)'$') {

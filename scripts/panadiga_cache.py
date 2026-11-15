@@ -477,11 +477,17 @@ def pico_digest_and_outputs(root: Path, env: Mapping[str, str]) -> tuple[str, tu
 
 def ghidra_digest_and_outputs(root: Path) -> tuple[str, tuple[Path, ...]]:
     """Compute input digest and generated Jython output paths for Ghidra SSOT scripts."""
-    inputs = (root / "crates" / "panadiga-core" / "src" / "ssot",)
+    inputs = (
+        root / "crates" / "panadiga-core" / "src" / "ssot",
+        root / "crates" / "panadiga-core" / "src" / "ghidra.rs",
+        root / "crates" / "panadiga-core" / "src" / "constants.rs",
+    )
     ghidra_dir = root / "tools" / "ghidra"
     outputs = (
         ghidra_dir / "ghidra_am34_memory_map.py",
         ghidra_dir / "ghidra_import_symbols_panadiga.py",
+        ghidra_dir / "ghidra_importar_simbolos_panadiga.py",
+        ghidra_dir / "ghidra_auto_unbrick_audit.py",
         ghidra_dir / "ghidra_connect_debugger.py",
     )
     return compute_tree_digest(root, inputs), outputs

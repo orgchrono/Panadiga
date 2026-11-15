@@ -76,3 +76,43 @@ def test_pana_frm_tables_and_cp932_mecha_dict() -> None:
     assert len(mecha) == 1
     assert mecha[0].code == 0x83A7
     assert "0.5mW発光ができない" in mecha[0].message_jp
+
+
+def test_ghidra_auto_unbrick_audit_helpers() -> None:
+    """Verify exported Ghidra auto-unbrick Jython script runs cleanly in CPython and classifies sites."""
+    import importlib
+
+    audit = importlib.import_module("tools.ghidra.ghidra_auto_unbrick_audit")
+
+    assert audit.detect_stage_from_metadata(0x44000000, "BOOT.BIN", (), 0) == "BOOT.BIN"
+    assert audit.detect_stage_from_metadata(0, "firmware", ("BGO driver init",), 262144) == "PROG061"
+    assert audit.detect_stage_from_metadata(0x57000000, "EH55_MAIN_3410PQ", (), 13003052) == "MAIN3410PQ"
+    assert audit.detect_stage_from_metadata(0, "EH55_MAIN_3060NP", (), 13427852) == "MAIN3060NP"
+
+    auto_bgo = audit.classify_prog061_sites(
+        audit.PATCH_SUM_BRA,
+        audit.PATCH_DEVINFO_BRA,
+        audit.PATCH_A2CD_AUTOFORMAT,
+    )
+    assert auto_bgo["mode"] == "AUTO_FORMAT_BGO"
+
+    factory_main = audit.classify_main3410_sites(
+        audit.ORIG_FPC_STATUS_CTRL,
+        audit.ORIG_ODD_STATE_BRANCH,
+        audit.ORIG_ODD_INIT_STATUS,
+    )
+    assert factory_main["mode"] == "FACTORY_ORIGINAL"
+
+    patched_main = audit.classify_main3410_sites(
+        audit.PATCH_FPC_STATUS_CTRL,
+        audit.PATCH_ODD_STATE_BRANCH,
+        audit.PATCH_ODD_INIT_STATUS,
+    )
+    assert patched_main["mode"] == "AV_PASSTHROUGH"
+
+    blob = bytearray(b"\x00" * 16 + b"SetBusWidth -91006" + b"\x00" * 8 + struct.pack("<I", 0x89001850))
+    kw_hits = audit.scan_ascii_keywords(blob, 0x44027800)
+    assert kw_hits["SetBusWidth"] == ["0x44027810"]
+    assert kw_hits["-91006"] == ["0x4402781C"]
+    mmio_hits = audit.scan_le32_constants(blob, 0x44027800)
+    assert mmio_hits["SDCD_BUS_WIDTH_CFG"] == ["0x4402782A"]

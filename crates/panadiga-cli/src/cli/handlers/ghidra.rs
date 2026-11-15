@@ -25,6 +25,10 @@ pub fn handle_ghidra(args: GhidraArgs) -> Result<()> {
             let script = panadiga_core::ghidra::generate_ghidra_symbols();
             write_ghidra_script(&output, "Ghidra Symbols", &script)?;
         }
+        GhidraActions::Audit { output } => {
+            let script = panadiga_core::ghidra::generate_ghidra_auto_unbrick_audit();
+            write_ghidra_script(&output, "Ghidra Auto Unbrick Audit", &script)?;
+        }
         GhidraActions::ExportAll { dir } => {
             panadiga_core::ghidra::export_all_ghidra_scripts(&dir)?;
             log_info!(
