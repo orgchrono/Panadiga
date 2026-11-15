@@ -1,8 +1,8 @@
 //! Thin imperative I/O shell for exporting generated Ghidra scripts to disk.
 
 use super::render::{
-    generate_ghidra_auto_unbrick_audit, generate_ghidra_memory_map, generate_ghidra_symbols,
-    render_pt_wrapper_script,
+    generate_ghidra_auto_unbrick_audit, generate_ghidra_memory_map,
+    generate_ghidra_mn103_fix_decompilation, generate_ghidra_symbols, render_pt_wrapper_script,
 };
 use anyhow::{Context, Result};
 use std::fs;
@@ -15,7 +15,7 @@ pub fn export_all_ghidra_scripts(target_dir: &Path) -> Result<()> {
             .with_context(|| format!("Failed creating directory {:?}", target_dir))?;
     }
 
-    let artifacts: [(&str, String); 4] = [
+    let artifacts: [(&str, String); 5] = [
         ("ghidra_am34_memory_map.py", generate_ghidra_memory_map()),
         (
             "ghidra_import_symbols_panadiga.py",
@@ -24,6 +24,10 @@ pub fn export_all_ghidra_scripts(target_dir: &Path) -> Result<()> {
         (
             "ghidra_auto_unbrick_audit.py",
             generate_ghidra_auto_unbrick_audit(),
+        ),
+        (
+            "ghidra_mn103_fix_decompilation.py",
+            generate_ghidra_mn103_fix_decompilation(),
         ),
         (
             "ghidra_importar_simbolos_panadiga.py",
@@ -53,6 +57,7 @@ mod tests {
             "ghidra_import_symbols_panadiga.py",
             "ghidra_importar_simbolos_panadiga.py",
             "ghidra_auto_unbrick_audit.py",
+            "ghidra_mn103_fix_decompilation.py",
         ] {
             assert!(dir.join(file).is_file(), "missing {}", file);
         }

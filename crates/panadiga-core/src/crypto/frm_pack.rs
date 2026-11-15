@@ -3,12 +3,14 @@
 //! Pure-Rust image packer matching `BOOT.BIN` (`FUN_440075aa`, `FUN_44007a12`,
 //! `FUN_4400a733`, `FUN_4400a6d0`, and `FUN_4400a97c`).
 
-use anyhow::{Result, bail};
+use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
 
 use super::codec::{pad_to_block, write_padded_ascii};
 use super::extrhead::{ExtrheadCryptMode, pack_extrhead, parse_extrhead_header};
-use super::feistel::feistel_encrypt_buffer;
+use super::feistel::{feistel_decrypt_buffer, feistel_encrypt_buffer};
+use super::toc::{decrypt_and_parse_frm_toc, parse_sd_frm_toc};
+use super::types::DecryptedFrmTocEntry;
 use crate::constants::*;
 
 /// Output container format for `.FRM` image generation.
@@ -218,4 +220,109 @@ pub fn pack_frm(
         modules: summaries,
     };
     Ok((image, report))
+}
+
+/// Re-parses a packed `dvd`, `sd`, or `sd48` `.FRM` image, checking TOC checksums and payload FVU sums.
+pub fn verify_packed_frm_roundtrip(
+    bytes: &[u8],
+    mode: FrmContainerMode,
+    expected_modules: usize,
+) -> Result<Vec<DecryptedFrmTocEntry>> {
+    let entries = match mode {
+        FrmContainerMode::Dvd => decrypt_and_parse_frm_toc(bytes),
+        FrmContainerMode::Sd | FrmContainerMode::Sd48 => parse_sd_frm_toc(bytes),
+    };
+    if entries.len() < expected_modules {
+        bail!(
+            "Packed .FRM TOC yielded {} slot(s), expected at least {}",
+            entries.len(),
+            expected_modules
+        );
+    }
+
+    let is_dvd = mode == FrmContainerMode::Dvd;
+    for entry in &entries[..expected_modules] {
+        if !entry.list_sum_valid {
+            bail!(
+                "Invalid TOC list_sum on slot {} ('{}'): expected 0x{:04X}, got 0x{:04X}",
+                entry.index,
+                entry.module_name,
+                entry.calculated_list_sum_u16,
+                entry.list_sum_u16
+            );
+        }
+        if entry.module_name.trim().is_empty() {
+            bail!("Empty module name on active TOC slot {}", entry.index);
+        }
+        let start = entry.module_offset as usize;
+        let len = entry.module_size as usize;
+        let end = start
+            .checked_add(len)
+            .context("TOC module range overflow")?;
+        if end > bytes.len() {
+            bail!(
+                "Module '{}' ({:#X}..{:#X}) exceeds container length {:#X}",
+                entry.module_name,
+                start,
+                end,
+                bytes.len()
+            );
+        }
+        let mut payload_buf;
+        let payload_slice: &[u8] = if is_dvd {
+            payload_buf = bytes[start..end].to_vec();
+            feistel_decrypt_buffer(
+                &mut payload_buf,
+                &PANA_FEISTEL_ROUND_KEY_32B,
+                &PANA_FEISTEL_SBOX_256,
+            );
+            &payload_buf
+        } else {
+            &bytes[start..end]
+        };
+        let actual_sum = payload_slice
+            .iter()
+            .fold(0u32, |acc, &b| acc.wrapping_add(u32::from(b)));
+        if actual_sum != entry.fvu_checksum_u32 {
+            bail!(
+                "FVU byte-sum mismatch for '{}': TOC 0x{:08X} vs computed 0x{:08X}",
+                entry.module_name,
+                entry.fvu_checksum_u32,
+                actual_sum
+            );
+        }
+    }
+
+    Ok(entries.into_iter().take(expected_modules).collect())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_verify_packed_frm_roundtrip_for_sd_sd48_and_dvd() {
+        let mut main_mod = FrmPackModule::new("MAIN3410PQ", vec![0xAB; 64]);
+        main_mod.target_flag = 1;
+        let mut prog_mod = FrmPackModule::new("PROG061 ", vec![0x11; 32]);
+        prog_mod.target_flag = 0;
+
+        for mode in [
+            FrmContainerMode::Sd,
+            FrmContainerMode::Sd48,
+            FrmContainerMode::Dvd,
+        ] {
+            let (mut image, _report) = pack_frm(&[main_mod.clone(), prog_mod.clone()], mode, None)
+                .expect("pack container");
+            let verified = verify_packed_frm_roundtrip(&image, mode, 2).expect("verify roundtrip");
+            assert_eq!(verified.len(), 2);
+            assert_eq!(verified[0].target_flag, 1);
+            assert!(verified[0].list_sum_valid);
+
+            // Corrupt last payload byte -> checksum mismatch must fail verification.
+            let last = image.len() - 1;
+            image[last] ^= 0x55;
+            assert!(verify_packed_frm_roundtrip(&image, mode, 2).is_err());
+        }
+    }
 }

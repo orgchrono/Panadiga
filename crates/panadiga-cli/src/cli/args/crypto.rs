@@ -109,6 +109,24 @@ pub struct FrmPackArgs {
     #[arg(long, default_value_t = 0)]
     pub target_flag: u8,
 
+    /// Set FormatFlag = 1 on MAIN* modules to force firmware update regardless of version
+    #[arg(long, default_value_t = false)]
+    pub patch_force: bool,
+
+    /// Set FormatFlag = 1 on PROG* modules to format HDD during update (destructive)
+    #[arg(long, default_value_t = false)]
+    pub patch_format_hdd: bool,
+
+    /// Re-parse and verify packed .FRM TOC & FVU checksums after packing (default: true)
+    #[arg(
+        long,
+        default_value_t = true,
+        action = clap::ArgAction::Set,
+        num_args = 0..=1,
+        default_missing_value = "true"
+    )]
+    pub verify: bool,
+
     /// Exports structured JSON pack report to specified file
     #[arg(short, long, value_name = "JSON_FILE")]
     pub json: Option<PathBuf>,

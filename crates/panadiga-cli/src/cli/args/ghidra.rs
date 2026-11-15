@@ -40,6 +40,17 @@ pub enum GhidraActions {
         output: PathBuf,
     },
 
+    /// Export MN103 call-frame, stack-purge & switch-recovery Jython script for Ghidra
+    FixMn103 {
+        /// Target Python script file path
+        #[arg(
+            short,
+            long,
+            default_value = "tools/ghidra/ghidra_mn103_fix_decompilation.py"
+        )]
+        output: PathBuf,
+    },
+
     /// Export all Ghidra automation scripts into a target directory
     ExportAll {
         /// Destination directory for generated Ghidra scripts

@@ -108,19 +108,25 @@ pub fn decrypt_and_parse_frm_toc(data: &[u8]) -> Vec<DecryptedFrmTocEntry> {
     parse_toc_entries_with_layout(&decrypted, count, &DVD_TOC_LAYOUT)
 }
 
+fn has_valid_named_entry(entries: &[DecryptedFrmTocEntry]) -> bool {
+    entries
+        .iter()
+        .any(|e| e.list_sum_valid && !e.module_name.trim().is_empty())
+}
+
 /// Parses the plaintext 64-byte (`0x40`, `BOOT.BIN`) or 48-byte (`0x30`, `PROG061`) TOC table of `PANA__SD.FRM`.
 pub fn parse_sd_frm_toc(data: &[u8]) -> Vec<DecryptedFrmTocEntry> {
     let count64 = (data.len() / PANA_SD_TOC_ENTRY_SIZE).min(PANA_SD_TOC_MAX_ENTRIES);
     if count64 > 0 {
         let entries64 = parse_toc_entries_with_layout(data, count64, &SD_TOC_LAYOUT);
-        if entries64.iter().any(|e| e.list_sum_valid) {
+        if has_valid_named_entry(&entries64) {
             return entries64;
         }
     }
     let count48 = (data.len() / PANA_FRM_TOC_ENTRY_SIZE).min(PANA_SD_TOC_MAX_ENTRIES);
     if count48 > 0 {
         let entries48 = parse_toc_entries_with_layout(data, count48, &SD48_TOC_LAYOUT);
-        if entries48.iter().any(|e| e.list_sum_valid) {
+        if has_valid_named_entry(&entries48) {
             return entries48;
         }
     }
@@ -153,6 +159,28 @@ pub fn analyze_toc(data: &[u8]) -> TocReport {
         common_subblock_1_matches: match_1,
         common_subblock_2_hex: subblock_2_hex,
         common_subblock_2_matches: match_2,
+    }
+}
+
+/// Interprets the TOC `FormatFlag` / `target_flag` byte using verified `pana-fw` / DIGA loader rules.
+pub fn interpret_frm_target_flag(module_name: &str, target_flag: u8) -> &'static str {
+    let upper = module_name.trim().to_ascii_uppercase();
+    if upper.starts_with("MAIN") {
+        if target_flag != 0 {
+            "FORCE_UPDATE"
+        } else {
+            "NORMAL_VERSION_CHECK"
+        }
+    } else if upper.starts_with("PROG") {
+        if target_flag != 0 {
+            "FORMAT_HDD"
+        } else {
+            "NORMAL_PRESERVE_HDD"
+        }
+    } else if target_flag != 0 {
+        "FLAG_SET"
+    } else {
+        "NORMAL"
     }
 }
 
@@ -469,4 +497,25 @@ pub fn dump_toc(frm_path: &Path, json_path: Option<&Path>) -> Result<FrmTocDumpR
     );
 
     Ok(report)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_interpret_frm_target_flag() {
+        assert_eq!(interpret_frm_target_flag("MAIN3410PQ", 1), "FORCE_UPDATE");
+        assert_eq!(
+            interpret_frm_target_flag("MAIN3060NP", 0),
+            "NORMAL_VERSION_CHECK"
+        );
+        assert_eq!(interpret_frm_target_flag("PROG061 ", 1), "FORMAT_HDD");
+        assert_eq!(
+            interpret_frm_target_flag("PROG061 ", 0),
+            "NORMAL_PRESERVE_HDD"
+        );
+        assert_eq!(interpret_frm_target_flag("DRV S211", 0), "NORMAL");
+        assert_eq!(interpret_frm_target_flag("DRV S211", 1), "FLAG_SET");
+    }
 }

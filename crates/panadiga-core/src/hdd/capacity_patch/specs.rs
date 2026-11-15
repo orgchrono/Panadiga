@@ -177,9 +177,6 @@ mod tests {
         assert_eq!(presets.len(), 9);
         assert_eq!(blocks_2kb_for_gb(250).unwrap(), 0x0746_6528);
         assert!(blocks_2kb_for_gb(10).is_err());
-        assert_eq!(
-            blocks_2kb_for_gb(500).unwrap() > blocks_2kb_for_gb(400).unwrap(),
-            true
-        );
+        assert!(blocks_2kb_for_gb(500).unwrap() > blocks_2kb_for_gb(400).unwrap());
     }
 }

@@ -52,6 +52,7 @@ PYTHON_COMPILE_TARGETS: Final[tuple[str, ...]] = (
     "tools/ghidra/ghidra_import_symbols_panadiga.py",
     "tools/ghidra/ghidra_importar_simbolos_panadiga.py",
     "tools/ghidra/ghidra_auto_unbrick_audit.py",
+    "tools/ghidra/ghidra_mn103_fix_decompilation.py",
     "tools/ghidra/ghidra_connect_debugger.py",
     "scripts/panadiga_ops.py",
     "scripts/panadiga_cache.py",

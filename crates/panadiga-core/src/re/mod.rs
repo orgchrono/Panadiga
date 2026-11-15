@@ -3,6 +3,7 @@
 pub mod bgo_unbrick;
 pub mod main_passthrough;
 pub mod mn10300;
+pub mod mn10300_emu;
 pub mod nor_dumper;
 pub mod prog061_uart_monitor;
 pub mod unbrick_sd_kit;
@@ -25,9 +26,11 @@ pub use main_passthrough::{
     inspect_main_passthrough_sites, patch_main_passthrough_file, rsp_checksum,
 };
 pub use mn10300::{
-    ImmediateLoadRef, InstructionRef, decode_branch_call_refs, find_callers_to,
-    find_fc_immediate_loads, find_pointer_xrefs,
+    CallFrameRef, HardwareLoopRef, ImmediateLoadRef, InstructionRef, condition_suffix,
+    decode_bcc_refs, decode_branch_call_refs, decode_call_frames, decode_regmask_names,
+    decode_setlb_loops, find_callers_to, find_fc_immediate_loads, find_pointer_xrefs,
 };
+pub use mn10300_emu::{Mn103Fault, Mn103Vm};
 pub use nor_dumper::{
     DEFAULT_NOR_STUB_LOAD_ADDR, NOR_ALLOWED_WINDOWS, NOR_MAGIC_FOOTER, NOR_MAGIC_HEADER,
     NorDumpResult, build_nor_dumper_artifact, build_readonly_nor_dumper_stub,

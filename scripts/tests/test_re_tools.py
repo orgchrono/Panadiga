@@ -6,7 +6,10 @@ import struct
 import zlib
 
 from scripts.re.mn10300 import (
+    decode_bcc_refs,
     decode_branch_call_refs,
+    decode_call_frames,
+    decode_setlb_loops,
     find_callers_to,
     find_fc_immediate_loads,
     find_pointer_xrefs,
@@ -116,3 +119,38 @@ def test_ghidra_auto_unbrick_audit_helpers() -> None:
     assert kw_hits["-91006"] == ["0x4402781C"]
     mmio_hits = audit.scan_le32_constants(blob, 0x44027800)
     assert mmio_hits["SDCD_BUS_WIDTH_CFG"] == ["0x4402782A"]
+
+
+def test_mn10300_frames_loops_and_ghidra_fix_decompilation() -> None:
+    """Verify MN103S call frames, Bcc, SETLB loops, and Ghidra MN103 fix helpers."""
+    import importlib
+
+    buf = bytearray([0xCB] * 0x80)
+    buf[0x40] = 0xCD
+    struct.pack_into("<hBB", buf, 0x41, -0x30, 0x98, 0x24)
+    buf[0x50] = 0xC8
+    struct.pack_into("<b", buf, 0x51, 0x08)
+    buf[0x60] = 0xDB
+    buf[0x65] = 0xD9
+
+    raw = bytes(buf)
+    frames = decode_call_frames(raw, 0x57000000)
+    assert len(frames) == 1
+    assert frames[0].target_va == 0x57000010
+    assert frames[0].frame_bytes == 0x24
+    assert frames[0].saved_groups == ("d2", "a3", "other")
+
+    bccs = decode_bcc_refs(raw, 0x57000000, 0x5700004E, 0x57000056)
+    assert [(b.mnemonic, b.target_va) for b in bccs] == [("beq", 0x57000058)]
+
+    loops = decode_setlb_loops(raw, 0x57000000)
+    assert len(loops) == 1
+    assert loops[0].mnemonic == "lne"
+    assert loops[0].loop_body_va == 0x57000061
+
+    fix_mod = importlib.import_module("tools.ghidra.ghidra_mn103_fix_decompilation")
+    assert fix_mod.decode_mn103_regmask(0x98) == ("d2", "a3", "other")
+    assert fix_mod.extract_mn103_call_frame([0xCD, 0xD0, 0xFF, 0x98, 0x24]) == (0x98, 0x24)
+    assert fix_mod.extract_mn103_call_frame([0xDD, 0x01, 0x00, 0x00, 0x00, 0xA0, 0x10]) == (0xA0, 0x10)
+    assert fix_mod.classify_stack_purge(-0x80000000) == "UNKNOWN"
+    assert fix_mod.classify_stack_purge(0) == "OK"

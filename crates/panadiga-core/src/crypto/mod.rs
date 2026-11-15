@@ -25,7 +25,9 @@ pub use feistel::{
 };
 pub use frm_pack::{
     FrmContainerMode, FrmPackModule, FrmPackReport, PackedFrmModuleSummary, build_digadiag_frm,
-    pack_frm,
+    pack_frm, verify_packed_frm_roundtrip,
 };
-pub use toc::{analyze_toc, decrypt_and_parse_frm_toc, dump_toc, parse_sd_frm_toc};
+pub use toc::{
+    analyze_toc, decrypt_and_parse_frm_toc, dump_toc, interpret_frm_target_flag, parse_sd_frm_toc,
+};
 pub use types::*;

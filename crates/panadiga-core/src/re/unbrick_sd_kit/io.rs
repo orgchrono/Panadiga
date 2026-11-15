@@ -55,7 +55,11 @@ fn find_extracted_module(
 /// Builds a complete verified SD Unbrick Kit (`DIGADIAG.FRM`, optional `PANA__SD.FRM`, & `SHA256SUMS.txt`).
 pub fn prepare_sd_unbrick_kit(req: &SdUnbrickKitRequest) -> Result<SdUnbrickKitReport> {
     let ws_root = resolve_workspace_root();
-    let (disc_frm, disc_prog, disc_main, disc_drv, _) = discover_sources(&ws_root);
+    let sources = discover_sources(&ws_root);
+    let disc_frm = sources.pana_dvd;
+    let disc_prog = sources.prog061;
+    let disc_main = sources.main_3410;
+    let disc_drv = sources.drv;
     let frm_path = req.pana_dvd_path.clone().or(disc_frm);
 
     let extracted_tmp = req.output_dir.join("_extracted_frm");

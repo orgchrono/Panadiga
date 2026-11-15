@@ -9,5 +9,6 @@ pub mod specs;
 
 pub use io::export_all_ghidra_scripts;
 pub use render::{
-    generate_ghidra_auto_unbrick_audit, generate_ghidra_memory_map, generate_ghidra_symbols,
+    generate_ghidra_auto_unbrick_audit, generate_ghidra_memory_map,
+    generate_ghidra_mn103_fix_decompilation, generate_ghidra_symbols,
 };

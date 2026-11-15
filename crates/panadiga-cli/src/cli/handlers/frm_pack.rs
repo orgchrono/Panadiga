@@ -5,7 +5,8 @@ use anyhow::{Context, Result, bail};
 use panadiga_core::constants::{PANA_DIGADIAG_FRM_SIZE, PANA_EXTRHEAD_DEFAULT_ADLER_STEP};
 use panadiga_core::crypto::{
     ExtrheadCryptMode, FrmContainerMode, FrmPackModule, FrmPackReport, build_digadiag_frm,
-    pack_frm, parse_u32_radix, unpack_extrhead,
+    interpret_frm_target_flag, pack_frm, parse_u32_radix, unpack_extrhead,
+    verify_packed_frm_roundtrip,
 };
 use serde::Serialize;
 use std::path::Path;
@@ -57,6 +58,20 @@ fn parse_module_spec(
     Ok((name, rest, default_ver, default_flag))
 }
 
+fn resolve_module_target_flag(
+    module_name: &str,
+    explicit_flag: u8,
+    patch_force: bool,
+    patch_format_hdd: bool,
+) -> u8 {
+    let upper = module_name.trim().to_ascii_uppercase();
+    if (patch_force && upper.starts_with("MAIN")) || (patch_format_hdd && upper.starts_with("PROG"))
+    {
+        return 1;
+    }
+    explicit_flag
+}
+
 fn parse_pack_modules(args: &FrmPackArgs) -> Result<Vec<FrmPackModule>> {
     if args.modules.is_empty() {
         bail!(
@@ -70,13 +85,15 @@ fn parse_pack_modules(args: &FrmPackArgs) -> Result<Vec<FrmPackModule>> {
     for spec in &args.modules {
         let (name, file_part, ver_u16, target_flag) =
             parse_module_spec(spec, default_ver, args.target_flag)?;
+        let effective_flag =
+            resolve_module_target_flag(name, target_flag, args.patch_force, args.patch_format_hdd);
         let payload = std::fs::read(file_part)
             .with_context(|| format!("Reading module '{name}' from {file_part}"))?;
         let mut m = FrmPackModule::new(name, payload);
         m.version_u16 = ver_u16;
         m.hardware_family = args.hw.clone();
         m.model_group = args.model.clone();
-        m.target_flag = target_flag;
+        m.target_flag = effective_flag;
         modules.push(m);
     }
     Ok(modules)
@@ -110,7 +127,23 @@ pub fn handle_frm_pack(args: &FrmPackArgs) -> Result<()> {
             } else {
                 FrmContainerMode::Sd
             };
-            pack_frm(&modules, container_mode, None)?
+            let (packed_bytes, pack_report) = pack_frm(&modules, container_mode, None)?;
+            if args.verify {
+                let verified =
+                    verify_packed_frm_roundtrip(&packed_bytes, container_mode, modules.len())?;
+                for slot in &verified {
+                    let flag_desc = interpret_frm_target_flag(&slot.module_name, slot.target_flag);
+                    println!(
+                        "  [VERIFIED TOC #{}] {} target_flag={} ({}) list_sum=0x{:04X}",
+                        slot.index,
+                        slot.module_name.trim(),
+                        slot.target_flag,
+                        flag_desc,
+                        slot.list_sum_u16
+                    );
+                }
+            }
+            (packed_bytes, pack_report)
         }
         other => bail!("Unsupported FRM pack mode '{other}': expected dvd, sd, sd48, or digadiag"),
     };
@@ -172,5 +205,45 @@ mod tests {
         );
 
         assert!(parse_module_spec("NO_DELIMITER", 0x0001, 0).is_err());
+    }
+
+    #[test]
+    fn test_handle_frm_pack_with_force_flags_and_roundtrip_verify() {
+        let dir =
+            std::env::temp_dir().join(format!("panadiga_frm_pack_test_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let main_bin = dir.join("main.bin");
+        let prog_bin = dir.join("prog.bin");
+        let out_frm = dir.join("PANA__SD.FRM");
+        std::fs::write(&main_bin, vec![0x55u8; 64]).unwrap();
+        std::fs::write(&prog_bin, vec![0x22u8; 64]).unwrap();
+
+        let args = FrmPackArgs {
+            mode: "sd".to_string(),
+            out: out_frm.clone(),
+            modules: vec![
+                format!("MAIN3410PQ:{}", main_bin.display()),
+                format!("PROG061 :{}", prog_bin.display()),
+            ],
+            input: None,
+            dst_addr: "0x50400000".to_string(),
+            tag: "FVU ".to_string(),
+            build: "DIAG01".to_string(),
+            hw: "M6930".to_string(),
+            model: "NP-309".to_string(),
+            version_u16: "0x0001".to_string(),
+            target_flag: 0,
+            patch_force: true,
+            patch_format_hdd: true,
+            verify: true,
+            json: None,
+        };
+        handle_frm_pack(&args).unwrap();
+        let bytes = std::fs::read(&out_frm).unwrap();
+        let entries = verify_packed_frm_roundtrip(&bytes, FrmContainerMode::Sd, 2).unwrap();
+        assert_eq!(entries[0].target_flag, 1);
+        assert_eq!(entries[1].target_flag, 1);
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

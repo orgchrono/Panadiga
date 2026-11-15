@@ -186,6 +186,14 @@ def scan_le32_constants(raw_bytes, base_addr, target_consts=AUDIT_MMIO_CONSTANTS
             results[label] = addrs
     return results
 
+def _alloc_jbyte_buf(count):
+    try:
+        import jarray
+        return jarray.zeros(count, "b")
+    except ImportError:
+        import jpype
+        return jpype.JArray(jpype.JByte)(count)
+
 def _read_prog_bytes(prog, addr_val, count):
     mem = prog.getMemory()
     addr = prog.getAddressFactory().getDefaultAddressSpace().getAddress(addr_val)
@@ -193,27 +201,28 @@ def _read_prog_bytes(prog, addr_val, count):
     if blk is None or not blk.isInitialized():
         return None
     try:
-        import jarray
-        buf = jarray.zeros(count, "b")
+        buf = _alloc_jbyte_buf(count)
         n = mem.getBytes(addr, buf)
         if n != count:
             return None
-        return [b & 0xFF for b in buf]
+        return [int(b) & 0xFF for b in buf]
     except Exception:
         return None
 
 def _read_initialized_block_u8(blk):
-    import jarray
     size = int(blk.getSize())
     data = bytearray(size)
     chunk_size = 0x100000
     offset = 0
     while offset < size:
         n = min(chunk_size, size - offset)
-        jbuf = jarray.zeros(n, "b")
+        jbuf = _alloc_jbyte_buf(n)
         addr = blk.getStart().add(offset)
         blk.getBytes(addr, jbuf)
-        data[offset:offset + n] = bytearray(b & 0xFF for b in jbuf)
+        try:
+            data[offset:offset + n] = memoryview(jbuf).cast("B")
+        except Exception:
+            data[offset:offset + n] = bytearray(int(b) & 0xFF for b in jbuf)
         offset += n
     return data
 

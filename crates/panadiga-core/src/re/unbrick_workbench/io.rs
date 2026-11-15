@@ -31,15 +31,15 @@ fn find_first_existing(base: &Path, candidates: &[&str]) -> Option<PathBuf> {
         .find(|p| p.exists())
 }
 
-pub(crate) fn discover_sources(
-    root: &Path,
-) -> (
-    Option<PathBuf>,
-    Option<PathBuf>,
-    Option<PathBuf>,
-    Option<PathBuf>,
-    Option<PathBuf>,
-) {
+pub(crate) struct DiscoveredUnbrickSources {
+    pub pana_dvd: Option<PathBuf>,
+    pub prog061: Option<PathBuf>,
+    pub main_3410: Option<PathBuf>,
+    pub drv: Option<PathBuf>,
+    pub sd_dir: Option<PathBuf>,
+}
+
+pub(crate) fn discover_sources(root: &Path) -> DiscoveredUnbrickSources {
     let pana_dvd = find_first_existing(root, &["firmware_and_images/PANA_DVD.FRM", "PANA_DVD.FRM"]);
     let prog061 = find_first_existing(
         root,
@@ -62,7 +62,13 @@ pub(crate) fn discover_sources(
     let sd_dir = [root.join("sd_card_eh55"), root.join("unbrick_sd_kit")]
         .into_iter()
         .find(|d| d.join("DIGADIAG.FRM").is_file() || d.join("PANA__SD.FRM").is_file());
-    (pana_dvd, prog061, main_3410, drv, sd_dir)
+    DiscoveredUnbrickSources {
+        pana_dvd,
+        prog061,
+        main_3410,
+        drv,
+        sd_dir,
+    }
 }
 
 /// Extracts all modules (`DRV S211`, `PROG061`, `MAIN*`) from `PANA_DVD.FRM` or `PANA__SD.FRM`.
@@ -137,7 +143,12 @@ pub fn inspect_unbrick_workspace(workspace_override: Option<&Path>) -> UnbrickWo
     let root = workspace_override
         .map(PathBuf::from)
         .unwrap_or_else(resolve_workspace_root);
-    let (pana_dvd, prog061, main_src, drv, sd_dir) = discover_sources(&root);
+    let sources = discover_sources(&root);
+    let pana_dvd = sources.pana_dvd;
+    let prog061 = sources.prog061;
+    let main_src = sources.main_3410;
+    let drv = sources.drv;
+    let sd_dir = sources.sd_dir;
 
     let prog061_bgo = prog061
         .as_ref()

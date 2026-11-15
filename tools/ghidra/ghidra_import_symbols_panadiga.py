@@ -5,8 +5,10 @@
 from __future__ import print_function
 
 try:
+    from ghidra.program.model.listing import CodeUnit
     from ghidra.program.model.symbol import SourceType
 except ImportError:
+    CodeUnit = None
     SourceType = None
 
 def get_panadiga_symbol_specs():
@@ -83,6 +85,7 @@ def import_symbols(prog=None):
     mem = prog.getMemory()
     addr_factory = prog.getAddressFactory()
     default_space = addr_factory.getDefaultAddressSpace()
+    plate_comment = CodeUnit.PLATE_COMMENT if CodeUnit is not None else 3
 
     symbols = get_panadiga_symbol_specs()
     print("[Panadiga] Annotating Panasonic DMR-EH55 Symbols and Peripherals...")
@@ -96,13 +99,13 @@ def import_symbols(prog=None):
             continue
         try:
             sym = sym_table.createLabel(addr, name, SourceType.USER_DEFINED)
-            if is_primary:
-                sym_table.setPrimary(sym)
-            listing.setComment(addr, listing.PLATE_COMMENT, comment)
+            if is_primary and sym is not None:
+                sym.setPrimary()
+            listing.setComment(addr, plate_comment, comment)
             imported_count += 1
             print("  [+] Labeled 0x%08X -> %s" % (addr_val, name))
         except Exception as e:
-            listing.setComment(addr, listing.PLATE_COMMENT, comment)
+            listing.setComment(addr, plate_comment, comment)
             print("  [*] Updated comment at 0x%08X -> %s (%s)" % (addr_val, name, str(e)))
 
     print("[Panadiga] Symbol import complete! Annotated %d symbols (%d unmapped skipped)." % (imported_count, skipped_unmapped))
