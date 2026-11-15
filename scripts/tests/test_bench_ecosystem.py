@@ -290,3 +290,34 @@ def test_digadiag_50400000_and_guarded_rsp_writes_and_pass_unlock() -> None:
     assert parsed_x is not None
     assert parsed_x.payload.startswith(b"X847f0000,4:")
     assert b"}]" in parsed_x.payload and b"}\x03" in parsed_x.payload
+
+
+def test_parse_am34_uart_log_sd_stage_funnel_not_masked_by_bgo() -> None:
+    """Ensure Stage-1 SD diag load failure overrides secondary post-reset BGO cascade."""
+    sample = (
+        "DDR CHECK: OK\r\n"
+        "***** Loader ver0.61 [06/03/06] *****\r\n"
+        "***** serial boot mode *****\r\n"
+        "startup reason = [5]\r\n"
+        "SD init start...\r\n"
+        "\tcapacity:3bb000[LBA](2002780160Byte)\t transfer speed:25000[Kbps]\r\n"
+        "\tRCA:2 \t Bus Width:4(current) 4(support)\r\n"
+        "SD = 0x3BB000[LBA]\r\n"
+        "... SD init end\r\n"
+        "SD diag load failed[0].\r\n"
+        "***** normal mode *****\r\n"
+        "BGO driver init failed[1].\r\n"
+        "** can not close tray **\r\n"
+    )
+    rep = parse_am34_uart_log(sample)
+    assert rep.sd_capacity_lba == 0x3BB000
+    assert rep.sd_capacity_bytes == 2002780160
+    assert rep.sd_bus_width == 4
+    assert rep.sd_transfer_kbps == 25000
+    assert rep.sd_hw_init_ok is True
+    assert rep.sd_diag_load_failed == 0
+    assert rep.odd_tray_failed is True
+    assert rep.bgo_failed_code == 1
+    assert "SD_HW_OK" in rep.boot_stages and "SD_DIAG_LOAD_FAIL" in rep.boot_stages
+    assert "SD diag load failed[0]" in rep.diagnosis
+    assert any("FUN_4400a97c" in n for n in rep.notes)

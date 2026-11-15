@@ -34,14 +34,20 @@ typedef enum p7501_diag_action {
 } p7501_diag_action_t;
 
 enum {
-    P7501_DIAG_EVT_DDR_OK      = (1u << 0),
-    P7501_DIAG_EVT_SERIAL_BOOT = (1u << 1),
-    P7501_DIAG_EVT_SD_ERR      = (1u << 2),
-    P7501_DIAG_EVT_ODD_OPEN    = (1u << 3),
-    P7501_DIAG_EVT_CD_APC_ERR  = (1u << 4),
-    P7501_DIAG_EVT_BGO_FAIL    = (1u << 5),
-    P7501_DIAG_EVT_HUNG_U99    = (1u << 6),
-    P7501_DIAG_EVT_PANAMON     = (1u << 7)
+    P7501_DIAG_EVT_DDR_OK             = (1u << 0),
+    P7501_DIAG_EVT_SERIAL_BOOT        = (1u << 1),
+    P7501_DIAG_EVT_SD_ERR             = (1u << 2),
+    P7501_DIAG_EVT_ODD_OPEN           = (1u << 3),
+    P7501_DIAG_EVT_CD_APC_ERR         = (1u << 4),
+    P7501_DIAG_EVT_BGO_FAIL           = (1u << 5),
+    P7501_DIAG_EVT_HUNG_U99           = (1u << 6),
+    P7501_DIAG_EVT_PANAMON            = (1u << 7),
+    P7501_DIAG_EVT_SD_HW_OK           = (1u << 8),
+    P7501_DIAG_EVT_SD_DIAG_LOAD_FAIL  = (1u << 9),
+    P7501_DIAG_EVT_SD_UNCOMPRESS_FAIL = (1u << 10),
+    P7501_DIAG_EVT_DIAG_EXEC          = (1u << 11),
+    P7501_DIAG_EVT_ODD_TRAY_FAIL      = (1u << 12),
+    P7501_DIAG_EVT_FAT_FAIL           = (1u << 13)
 };
 
 typedef struct p7501_diag_watch_spec {

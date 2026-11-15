@@ -125,10 +125,12 @@ void p7501_cmd_sdsniff(const char *arg) {
            sds.saw_acmd13 ? "YES" : "NO");
     printf("Transitions: CMD=%" PRIu32 " DAT0=%" PRIu32 " DAT1=%" PRIu32 " DAT2=%" PRIu32 " DAT3=%" PRIu32 "\n",
            sds.transitions[0], sds.transitions[1], sds.transitions[2], sds.transitions[3], sds.transitions[4]);
-    printf("CMD ok=%lu resp_ok=%lu cmd_crc_err=%lu | Data ok=%lu err=%lu | StartBadMask=0x%02X FailMask=0x%02X\n",
+    printf("CMD ok=%lu resp_ok=%lu cmd_crc_err=%lu CMD17=%lu CMD18=%lu | Data ok=%lu err=%lu | StartBadMask=0x%02X FailMask=0x%02X\n",
            (unsigned long)sds.host_cmds_ok,
            (unsigned long)sds.card_resps_ok,
            (unsigned long)sds.cmd_crc_err,
+           (unsigned long)sds.cmd17_count,
+           (unsigned long)sds.cmd18_count,
            (unsigned long)sds.data_blocks_ok,
            (unsigned long)sds.data_crc_err,
            (unsigned)sds.start_bit_bad_mask,
@@ -147,6 +149,30 @@ void p7501_cmd_sdsniff(const char *arg) {
             printf("%02X", (unsigned)sds.acmd13_raw[i]);
         }
         printf("\n");
+    }
+    if (sds.trace_count > 0u) {
+        printf("SD Trace (%u/%lu cmds; SDSC CMD17/18 byte_addr/512 -> LBA):\n",
+               (unsigned)sds.trace_count,
+               (unsigned long)sds.trace_total);
+        for (uint8_t i = 0u; i < sds.trace_count; ++i) {
+            const p7501_sds_trace_entry_t *ent = &sds.trace[i];
+            if (!ent->is_app && (ent->cmd == 17u || ent->cmd == 18u)) {
+                printf("  [%02u @clk=%lu] CMD%u arg=0x%08lX (SDSC_LBA=%lu rem=%lu)\n",
+                       (unsigned)i,
+                       (unsigned long)ent->clk,
+                       (unsigned)ent->cmd,
+                       (unsigned long)ent->arg,
+                       (unsigned long)(ent->arg / 512u),
+                       (unsigned long)(ent->arg % 512u));
+            } else {
+                printf("  [%02u @clk=%lu] %s%u arg=0x%08lX\n",
+                       (unsigned)i,
+                       (unsigned long)ent->clk,
+                       ent->is_app ? "ACMD" : "CMD",
+                       (unsigned)ent->cmd,
+                       (unsigned long)ent->arg);
+            }
+        }
     }
     printf("SDSNIFF: OK\n");
 }

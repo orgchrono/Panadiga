@@ -27,8 +27,16 @@ extern "C" {
 #define P7501_SDS_BIT_DAT0  0x02u
 #define P7501_SDS_BIT_DAT1  0x04u
 #define P7501_SDS_BIT_DAT2  0x08u
-#define P7501_SDS_BIT_DAT3  0x10u
-#define P7501_SDS_MAX_BLOCK 512u
+#define P7501_SDS_BIT_DAT3    0x10u
+#define P7501_SDS_MAX_BLOCK   512u
+#define P7501_SDS_TRACE_CAP   32u
+
+typedef struct p7501_sds_trace_entry {
+    uint32_t clk;
+    uint32_t arg;
+    uint8_t cmd;
+    bool is_app;
+} p7501_sds_trace_entry_t;
 
 typedef enum p7501_sds_data_phase {
     P7501_SDS_DATA_IDLE = 0,
@@ -86,6 +94,12 @@ typedef struct p7501_sds_state {
     uint8_t acmd13_dat_bus_width;
     uint16_t acmd13_sd_card_type;
     uint8_t acmd13_raw[64];
+
+    uint32_t cmd17_count;
+    uint32_t cmd18_count;
+    uint32_t trace_total;
+    uint8_t trace_count;
+    p7501_sds_trace_entry_t trace[P7501_SDS_TRACE_CAP];
 } p7501_sds_state_t;
 
 /** Compute 7-bit SD CRC7 (`poly 0x09`) over `len` bytes. */

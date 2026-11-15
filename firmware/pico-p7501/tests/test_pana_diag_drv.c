@@ -212,9 +212,60 @@ static void test_drv_pana_codec(void) {
     assert(!p7501_drv_pana_parse_args("4000 JIG:350", &drv));
 }
 
+static void test_diag_watch_stage_funnel_no_bgo_masking(void) {
+    p7501_diag_watch_spec_t dw;
+    assert(p7501_diag_watch_parse_args("10000 JIG NONE", &dw));
+
+    /* Real COM10 scenario: SD 4-bit HW succeeds, Stage-1 fails SD diag load[0], then reboots to BGO fail + tray fail. */
+    p7501_diag_watch_state_t st;
+    p7501_diag_watch_init(&st);
+    int rel_count = 0;
+    int tx_count = 0;
+    char last_tx = '\0';
+    feed_str_and_count(
+        &st, &dw,
+        "DDR CHECK: OK\r\n"
+        "***** Loader ver0.61 [06/03/06] *****\r\n"
+        "***** serial boot mode *****\r\n"
+        "SD = 0x3BB000[LBA]\r\n"
+        "... SD init end\r\n"
+        "SD diag load failed[0].\r\n"
+        "***** normal mode *****\r\n"
+        "BGO driver init failed[1].\r\n"
+        "Main hung-up time changed 255[s].\r\n"
+        "** can not close tray **\r\n",
+        &rel_count, &tx_count, &last_tx
+    );
+    assert(rel_count == 1 && tx_count == 0);
+    assert((st.seen_events & P7501_DIAG_EVT_SD_HW_OK) != 0u);
+    assert((st.seen_events & P7501_DIAG_EVT_SD_DIAG_LOAD_FAIL) != 0u);
+    assert((st.seen_events & P7501_DIAG_EVT_BGO_FAIL) != 0u);
+    assert((st.seen_events & P7501_DIAG_EVT_ODD_TRAY_FAIL) != 0u);
+    const char *diag = p7501_diag_watch_diagnosis(st.seen_events);
+    assert(strstr(diag, "SD diag load failed[0]") != NULL);
+    assert(strstr(diag, "SD HW OK") != NULL);
+
+    /* Uncompress failure stage also beats post-reset BGO. */
+    p7501_diag_watch_init(&st);
+    feed_str_and_count(
+        &st, &dw,
+        "***** serial boot mode *****\r\n... SD init end\r\ndiag loader uncompress failed...\r\nBGO driver init failed[1].\r\n",
+        &rel_count, &tx_count, &last_tx
+    );
+    assert((st.seen_events & P7501_DIAG_EVT_SD_UNCOMPRESS_FAIL) != 0u);
+    assert(strstr(p7501_diag_watch_diagnosis(st.seen_events), "EXTRHEAD/zlib unpack failed") != NULL);
+
+    /* Stage-1 *** start diag *** sets DIAG_EXEC. */
+    p7501_diag_watch_init(&st);
+    feed_str_and_count(&st, &dw, "***** serial boot mode *****\r\n... SD init end\r\n*** start diag ***\r\n", &rel_count, &tx_count, &last_tx);
+    assert((st.seen_events & P7501_DIAG_EVT_DIAG_EXEC) != 0u);
+    assert(strstr(p7501_diag_watch_diagnosis(st.seen_events), "decompressed") != NULL);
+}
+
 void p7501_run_pana_diag_drv_tests(void) {
     test_diag_watch_legacy_and_fsm();
     test_diag_watch_parameterized_tx_and_e05();
+    test_diag_watch_stage_funnel_no_bgo_masking();
     test_pana_rsp_regs_codec();
     test_drv_pana_codec();
 }

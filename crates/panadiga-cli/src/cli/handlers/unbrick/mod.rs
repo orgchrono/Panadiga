@@ -11,9 +11,9 @@ use panadiga_core::re::matshita_emu::{
 use panadiga_core::re::{
     MainPassthroughMode, Prog061BgoPatchMode, SdUnbrickKitRequest, build_nor_dumper_artifact,
     build_passthrough_rsp_plan, extract_modules_from_frm, inspect_main_passthrough_sites,
-    inspect_prog061_container_bytes, inspect_unbrick_workspace, patch_main_passthrough_file,
-    patch_prog061_or_build_digadiag_with_policy, prepare_sd_unbrick_kit,
-    resolve_nor_stub_load_addr, verify_sd_unbrick_media,
+    inspect_prog061_container_bytes, inspect_sd_target, inspect_unbrick_workspace,
+    patch_main_passthrough_file, patch_prog061_or_build_digadiag_with_policy,
+    prepare_sd_unbrick_kit, resolve_nor_stub_load_addr, verify_sd_unbrick_media,
 };
 use std::fs;
 
@@ -22,7 +22,8 @@ use render::{
     emit_json_if_requested, format_bgo_inspection_line, format_frm_extraction_lines,
     format_frm_unlock_verification_lines, format_matshita_boot_lines,
     format_matshita_injection_lines, format_passthrough_inspection_lines, format_rsp_plan_lines,
-    format_sd_kit_lines, format_sd_verification_lines, format_unbrick_status_lines, print_lines,
+    format_sd_disk_inspection_lines, format_sd_kit_lines, format_sd_verification_lines,
+    format_unbrick_status_lines, print_lines,
 };
 
 pub fn handle_unbrick(args: UnbrickArgs) -> Result<()> {
@@ -148,6 +149,15 @@ pub fn handle_unbrick(args: UnbrickArgs) -> Result<()> {
             emit_json_if_requested(&report, json.as_deref())?;
             if report.overall_status == "INCOMPLETE_OR_INVALID" {
                 bail!("SD media validation failed; inspect missing or corrupt artifacts above");
+            }
+            Ok(())
+        }
+        UnbrickActions::InspectSd { target, json } => {
+            let report = inspect_sd_target(&target)?;
+            print_lines(&format_sd_disk_inspection_lines(&report));
+            emit_json_if_requested(&report, json.as_deref())?;
+            if report.overall_status == "FAIL" {
+                bail!("SD raw MBR/BPB/FAT16 inspection failed; review [FAIL] checks above");
             }
             Ok(())
         }

@@ -118,6 +118,22 @@ static void sds_complete_cmd_frame(p7501_sds_state_t *st) {
 
     const bool was_app = st->in_app_cmd;
     st->in_app_cmd = false;
+    if (!was_app && cmd_idx == 17u) {
+        ++st->cmd17_count;
+    } else if (!was_app && cmd_idx == 18u) {
+        ++st->cmd18_count;
+    }
+    /* Record non-polling SD commands (skip ACMD41 poll loop so LBA reads fit in trace). */
+    if (!(was_app && cmd_idx == 41u)) {
+        ++st->trace_total;
+        if (st->trace_count < P7501_SDS_TRACE_CAP) {
+            p7501_sds_trace_entry_t *ent = &st->trace[st->trace_count++];
+            ent->clk = st->total_clocks;
+            ent->arg = arg;
+            ent->cmd = cmd_idx;
+            ent->is_app = was_app;
+        }
+    }
     if (was_app && cmd_idx == 6u) {
         if ((arg & 3u) == 2u) {
             st->bus_width = 4u;

@@ -29,6 +29,11 @@ class AbBootRun:
     sd_90001: bool
     odd_83a7: bool
     duration_ms: float
+    sd_hw_ok: bool = False
+    sd_diag_load_fail: bool = False
+    sd_uncompress_fail: bool = False
+    odd_tray_fail: bool = False
+    diagnosis: str = ""
 
 
 @dataclass(frozen=True)
@@ -43,6 +48,8 @@ class AbModeStats:
     sd_90001_count: int
     odd_83a7_count: int
     bgo_fail_count: int
+    sd_hw_ok_count: int = 0
+    sd_diag_load_fail_count: int = 0
 
 
 @dataclass(frozen=True)
@@ -89,6 +96,11 @@ def classify_ab_boot_log(
         sd_90001=(-90001 in report.sdcd_errors),
         odd_83a7=odd_83a7,
         duration_ms=round(duration_ms, 2),
+        sd_hw_ok=report.sd_hw_init_ok,
+        sd_diag_load_fail=(report.sd_diag_load_failed is not None),
+        sd_uncompress_fail=report.sd_uncompress_failed,
+        odd_tray_fail=report.odd_tray_failed,
+        diagnosis=report.diagnosis,
     )
 
 
@@ -106,6 +118,8 @@ def summarize_ab_runs(runs: Sequence[AbBootRun]) -> AbHarnessSummary:
             sd_90001_count=sum(1 for r in group if r.sd_90001),
             odd_83a7_count=sum(1 for r in group if r.odd_83a7),
             bgo_fail_count=sum(1 for r in group if r.bgo_failed_code is not None),
+            sd_hw_ok_count=sum(1 for r in group if r.sd_hw_ok),
+            sd_diag_load_fail_count=sum(1 for r in group if r.sd_diag_load_fail),
         )
     return AbHarnessSummary(runs=tuple(runs), by_mode=by_mode)
 
@@ -124,6 +138,11 @@ def format_ab_csv(runs: Sequence[AbBootRun]) -> str:
         "sd_90001",
         "odd_83a7",
         "duration_ms",
+        "sd_hw_ok",
+        "sd_diag_load_fail",
+        "sd_uncompress_fail",
+        "odd_tray_fail",
+        "diagnosis",
     )
     buf = io.StringIO()
     writer = csv.DictWriter(buf, fieldnames=fieldnames, lineterminator="\n")

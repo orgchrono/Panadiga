@@ -61,8 +61,26 @@ void p7501_cmd_diag_watch(const char *arg) {
                        elapsed_ms,
                        ((hit & P7501_DIAG_EVT_SERIAL_BOOT) != 0u) ? "serial boot mode" : "DDR CHECK: OK");
             }
+            if ((hit & P7501_DIAG_EVT_SD_HW_OK) != 0u) {
+                printf("\n[DIAGWATCH +%" PRIu32 "ms] STAGE: SD hardware 4-bit init OK (... SD init end)\n", elapsed_ms);
+            }
+            if ((hit & P7501_DIAG_EVT_FAT_FAIL) != 0u) {
+                printf("\n[DIAGWATCH +%" PRIu32 "ms] ALERT: FAT16 Mount/Open error emitted by bootloader\n", elapsed_ms);
+            }
+            if ((hit & P7501_DIAG_EVT_SD_DIAG_LOAD_FAIL) != 0u) {
+                printf("\n[DIAGWATCH +%" PRIu32 "ms] ALERT: SD diag load failed[0] (FUN_4400a97c FAT mount/open or <128KiB)\n", elapsed_ms);
+            }
+            if ((hit & P7501_DIAG_EVT_SD_UNCOMPRESS_FAIL) != 0u) {
+                printf("\n[DIAGWATCH +%" PRIu32 "ms] ALERT: DIGADIAG uncompress/header error detected\n", elapsed_ms);
+            }
+            if ((hit & P7501_DIAG_EVT_DIAG_EXEC) != 0u) {
+                printf("\n[DIAGWATCH +%" PRIu32 "ms] STAGE: DIGADIAG.FRM decompressed & launched\n", elapsed_ms);
+            }
             if ((hit & P7501_DIAG_EVT_SD_ERR) != 0u) {
-                printf("\n[DIAGWATCH +%" PRIu32 "ms] ALERT: SDDIAG 4-bit status failure detected (-91006/-90002)\n", elapsed_ms);
+                printf("\n[DIAGWATCH +%" PRIu32 "ms] ALERT: SDDIAG 4-bit status failure detected (-91006/-90002/-90001)\n", elapsed_ms);
+            }
+            if ((hit & P7501_DIAG_EVT_ODD_TRAY_FAIL) != 0u) {
+                printf("\n[DIAGWATCH +%" PRIu32 "ms] ALERT: ODD tray close error detected (** can not close tray ** / 80045300)\n", elapsed_ms);
             }
             if ((hit & P7501_DIAG_EVT_CD_APC_ERR) != 0u) {
                 printf("\n[DIAGWATCH +%" PRIu32 "ms] ALERT: CDDIAG laser APC error detected (80040904 / 0x83A7)\n", elapsed_ms);
@@ -101,7 +119,7 @@ void p7501_cmd_diag_watch(const char *arg) {
     p7501_pio_end_session();
     p7501_led_set_auto_mode(LED_MODE_HEARTBEAT_IDLE);
 
-    printf("\nDIAGWATCH: OK (rx=%" PRIu32 " bytes, ferr=%" PRIu32 ", events=0x%02" PRIX32 ", sw_rel=%s, tx=%s, ovf=%s)\n",
+    printf("\nDIAGWATCH: OK (rx=%" PRIu32 " bytes, ferr=%" PRIu32 ", events=0x%04" PRIX32 ", sw_rel=%s, tx=%s, ovf=%s)\n",
            rx_count,
            ferr_count,
            st.seen_events,

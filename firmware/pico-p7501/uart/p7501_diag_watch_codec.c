@@ -19,18 +19,36 @@ typedef struct diag_sig_rule {
     uint32_t flag;
 } diag_sig_rule_t;
 
+#define DIAG_RULE(lit, flag_val) { (lit), sizeof(lit) - 1u, (flag_val) }
+
 static const diag_sig_rule_t k_diag_rules[] = {
-    { "DDR CHECK: OK",          13u, P7501_DIAG_EVT_DDR_OK },
-    { "serial boot mode",       16u, P7501_DIAG_EVT_SERIAL_BOOT },
-    { "-91006",                  6u, P7501_DIAG_EVT_SD_ERR },
-    { "-90002",                  6u, P7501_DIAG_EVT_SD_ERR },
-    { "** open tray **",        15u, P7501_DIAG_EVT_ODD_OPEN },
-    { "80040904",                8u, P7501_DIAG_EVT_CD_APC_ERR },
-    { "83A7",                    4u, P7501_DIAG_EVT_CD_APC_ERR },
-    { "BGO driver init failed", 22u, P7501_DIAG_EVT_BGO_FAIL },
-    { "hung-up time changed",   20u, P7501_DIAG_EVT_HUNG_U99 },
-    { "PANAMON1>",               9u, P7501_DIAG_EVT_PANAMON },
+    DIAG_RULE("DDR CHECK: OK",                  P7501_DIAG_EVT_DDR_OK),
+    DIAG_RULE("serial boot mode",               P7501_DIAG_EVT_SERIAL_BOOT),
+    DIAG_RULE("... SD init end",                P7501_DIAG_EVT_SD_HW_OK),
+    DIAG_RULE("-91006",                         P7501_DIAG_EVT_SD_ERR),
+    DIAG_RULE("-90002",                         P7501_DIAG_EVT_SD_ERR),
+    DIAG_RULE("-90001",                         P7501_DIAG_EVT_SD_ERR),
+    DIAG_RULE("FAT Mount failed",               P7501_DIAG_EVT_FAT_FAIL),
+    DIAG_RULE("FAT Open(",                      P7501_DIAG_EVT_FAT_FAIL),
+    DIAG_RULE("SD diag load failed",            P7501_DIAG_EVT_SD_DIAG_LOAD_FAIL),
+    DIAG_RULE("diag loader uncompress failed",  P7501_DIAG_EVT_SD_UNCOMPRESS_FAIL),
+    DIAG_RULE("fvu uncompress failed",          P7501_DIAG_EVT_SD_UNCOMPRESS_FAIL),
+    DIAG_RULE("no header!",                     P7501_DIAG_EVT_SD_UNCOMPRESS_FAIL),
+    DIAG_RULE("no footer!",                     P7501_DIAG_EVT_SD_UNCOMPRESS_FAIL),
+    DIAG_RULE("check sum mismatch",             P7501_DIAG_EVT_SD_UNCOMPRESS_FAIL),
+    DIAG_RULE("*** start diag ***",             P7501_DIAG_EVT_DIAG_EXEC),
+    DIAG_RULE("diag loader is preserved",       P7501_DIAG_EVT_DIAG_EXEC),
+    DIAG_RULE("** open tray **",                P7501_DIAG_EVT_ODD_OPEN),
+    DIAG_RULE("can not close tray",             P7501_DIAG_EVT_ODD_TRAY_FAIL),
+    DIAG_RULE("80045300",                       P7501_DIAG_EVT_ODD_TRAY_FAIL),
+    DIAG_RULE("80040904",                       P7501_DIAG_EVT_CD_APC_ERR),
+    DIAG_RULE("83A7",                           P7501_DIAG_EVT_CD_APC_ERR),
+    DIAG_RULE("BGO driver init failed",         P7501_DIAG_EVT_BGO_FAIL),
+    DIAG_RULE("hung-up time changed",           P7501_DIAG_EVT_HUNG_U99),
+    DIAG_RULE("PANAMON1>",                      P7501_DIAG_EVT_PANAMON),
 };
+
+#undef DIAG_RULE
 
 static bool parse_diag_read_param(const char *spec, p7501_diag_watch_spec_t *out) {
     const char *comma = strchr(spec, ',');
@@ -302,9 +320,31 @@ const char *p7501_diag_watch_diagnosis(uint32_t events) {
     if ((events & P7501_DIAG_EVT_PANAMON) != 0u) {
         return "PANAMON1 active on SC0 (ready for [B/R/W/D/F/J/E/Q])";
     }
+    if ((events & P7501_DIAG_EVT_DIAG_EXEC) != 0u) {
+        return "Stage-1 DIGADIAG.FRM decompressed & jumped (waiting PANAMON1> / factory UI)";
+    }
+    if ((events & P7501_DIAG_EVT_SD_UNCOMPRESS_FAIL) != 0u) {
+        return ((events & P7501_DIAG_EVT_BGO_FAIL) != 0u)
+            ? "Stage-1 DIGADIAG.FRM opened, EXTRHEAD/zlib unpack failed (masked by post-reset BGO)"
+            : "Stage-1 DIGADIAG.FRM opened, EXTRHEAD/zlib unpack failed (check container header/footer)";
+    }
+    if ((events & P7501_DIAG_EVT_SD_DIAG_LOAD_FAIL) != 0u) {
+        if ((events & P7501_DIAG_EVT_FAT_FAIL) != 0u) {
+            return "Stage-1 SD HW OK (4-bit), FAT mount/open failed before BGO reboot";
+        }
+        if ((events & P7501_DIAG_EVT_SD_HW_OK) != 0u) {
+            return ((events & P7501_DIAG_EVT_BGO_FAIL) != 0u)
+                ? "Stage-1 SD HW OK (4-bit), FAILED at SD diag load failed[0] (MBR/FAT16/DIGADIAG.FRM) before BGO reboot"
+                : "Stage-1 SD HW OK (4-bit), FAILED at SD diag load failed[0] (MBR/FAT16/DIGADIAG.FRM 128KiB)";
+        }
+        return "Stage-1 FAILED at SD diag load failed[0] (FAT mount/open or size < 128KiB)";
+    }
     if ((events & P7501_DIAG_EVT_BGO_FAIL) != 0u && (events & P7501_DIAG_EVT_SERIAL_BOOT) == 0u) {
         if ((events & P7501_DIAG_EVT_CD_APC_ERR) != 0u) {
             return "BGO driver init failed[1] -> U99 hang (normal mode; ODD 80040904 also observed)";
+        }
+        if ((events & P7501_DIAG_EVT_ODD_TRAY_FAIL) != 0u) {
+            return "BGO driver init failed[1] -> U99 hang (normal mode; ODD tray 80045300 also observed)";
         }
         return ((events & P7501_DIAG_EVT_HUNG_U99) != 0u)
             ? "BGO driver init failed[1] -> U99 hang (load patched DIGADIAG.FRM)"
@@ -314,10 +354,15 @@ const char *p7501_diag_watch_diagnosis(uint32_t events) {
         return "SDDIAG -91006 + CDDIAG 80040904 (SDSC 4-bit failed; ODD tray/laser APC failed)";
     }
     if ((events & P7501_DIAG_EVT_SD_ERR) != 0u) {
-        return "SDDIAG -91006 (4-bit SD_STATUS mismatch)";
+        return ((events & P7501_DIAG_EVT_ODD_TRAY_FAIL) != 0u)
+            ? "SDDIAG SD init error + CDDIAG ODD tray 80045300 (check SDSC card/DAT lines)"
+            : "SDDIAG -91006 (4-bit SD_STATUS mismatch)";
     }
     if ((events & P7501_DIAG_EVT_CD_APC_ERR) != 0u) {
         return "CDDIAG 80040904 / 0x83A7 (Laser APC < 0.5mW)";
+    }
+    if ((events & P7501_DIAG_EVT_ODD_TRAY_FAIL) != 0u) {
+        return "ODD ** can not close tray ** (80045300 / no disc)";
     }
     if ((events & P7501_DIAG_EVT_BGO_FAIL) != 0u) {
         return ((events & P7501_DIAG_EVT_HUNG_U99) != 0u)
@@ -328,7 +373,9 @@ const char *p7501_diag_watch_diagnosis(uint32_t events) {
         return "Serial boot: ODD ** open tray ** state reported";
     }
     if ((events & P7501_DIAG_EVT_SERIAL_BOOT) != 0u) {
-        return "Serial boot mode entered (waiting SD/CD media)";
+        return ((events & P7501_DIAG_EVT_SD_HW_OK) != 0u)
+            ? "Serial boot: SD 4-bit init OK (waiting DIGADIAG load)"
+            : "Serial boot mode entered (waiting SD/CD media)";
     }
     if ((events & P7501_DIAG_EVT_DDR_OK) != 0u) {
         return "DDR CHECK: OK seen; normal boot progress";

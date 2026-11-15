@@ -350,6 +350,15 @@ static void test_sds_bus_sniffer_codec(void) {
     assert(st.data_crc_err == 1u && st.last_fail_lane_mask == 0x04u);
     assert(st.lane_crc_err[0] == 0u && st.lane_crc_err[1] == 0u);
     assert(st.lane_crc_err[2] == 1u && st.lane_crc_err[3] == 0u);
+
+    /* Emit CMD17 single-block read @ byte addr 0x00010000 (SDSC LBA 128) and CMD18 @ LBA 0. */
+    sds_emit_cmd_frame(&st, true, 17u, 0x00010000u);
+    sds_emit_cmd_frame(&st, false, 17u, 0x00000900u);
+    sds_emit_cmd_frame(&st, true, 18u, 0x00000000u);
+    assert(st.cmd17_count == 1u && st.cmd18_count == 1u);
+    assert(st.trace_count >= 2u);
+    assert(st.trace[st.trace_count - 2u].cmd == 17u && st.trace[st.trace_count - 2u].arg == 0x00010000u);
+    assert(st.trace[st.trace_count - 1u].cmd == 18u && st.trace[st.trace_count - 1u].arg == 0u);
 }
 
 int p7501_run_pana_logic_tests(void) {

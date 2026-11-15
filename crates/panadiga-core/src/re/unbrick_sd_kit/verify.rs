@@ -37,7 +37,7 @@ pub struct SdMediaVerificationReport {
     pub checks: Vec<SdUnbrickCheck>,
 }
 
-fn check(
+pub(crate) fn check(
     id: &str,
     severity: &str,
     title: impl Into<String>,

@@ -173,6 +173,17 @@ pub enum UnbrickActions {
         json: Option<PathBuf>,
     },
 
+    /// Audits raw SD card MBR/GPT/Superfloppy, FAT16 BPB, 8.3 root entries, and cluster chain
+    InspectSd {
+        /// Drive letter (`E:`), Windows volume (`\\.\E:`), `\\.\PhysicalDriveN`, or raw `.img` file
+        #[arg(value_name = "TARGET")]
+        target: String,
+
+        /// Exports structured JSON disk audit report
+        #[arg(short, long, value_name = "JSON_FILE")]
+        json: Option<PathBuf>,
+    },
+
     /// Assembles a read-only MN103S UART NOR flash dumper stub (optionally wrapped as 128 KiB DIGADIAG.FRM)
     NorStub {
         /// Physical/mapped NOR start VA (e.g. 0x84000000 or 0x80000000)

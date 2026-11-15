@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 import re
-from typing import Final
+from typing import Final, Sequence
 
 _MECHA_ERROR_GLOSSARY: Final[dict[int, str]] = {
     0x83A7: "0.5mW発光ができない(HFｵﾝ密調整) — 0.5mW laser emission failure during HF ON fine tuning",
@@ -105,6 +105,19 @@ class UartBootReport:
     drive_error_codes: tuple[str, ...]
     sense_packets: tuple[SensePacket, ...]
     notes: tuple[str, ...]
+    sd_capacity_lba: int | None = None
+    sd_capacity_bytes: int | None = None
+    sd_bus_width: int | None = None
+    sd_transfer_kbps: int | None = None
+    sd_hw_init_ok: bool = False
+    sd_diag_load_failed: int | None = None
+    sd_uncompress_failed: bool = False
+    diag_started: bool = False
+    fat_mount_failed: int | None = None
+    fat_open_failed: tuple[str, int] | None = None
+    odd_tray_failed: bool = False
+    boot_stages: tuple[str, ...] = ()
+    diagnosis: str = ""
 
 
 def read_captured_log(path: Path) -> str:
@@ -168,6 +181,60 @@ def parse_busdiag_output(text: str) -> BusDiagReport:
     return BusDiagReport(gp2, gp3, gp4, rise_us, sole_tx)
 
 
+def _classify_uart_boot_diagnosis(
+    *,
+    panamon_active: bool,
+    diag_started: bool,
+    sd_uncompress_failed: bool,
+    sd_diag_load_failed: int | None,
+    sd_hw_init_ok: bool,
+    fat_mount_failed: int | None,
+    fat_open_failed: tuple[str, int] | None,
+    bgo_failed: int | None,
+    boot_mode: str | None,
+    sdcd_errs: Sequence[int],
+    odd_tray_failed: bool,
+    odd_83a7: bool,
+    ddr_ok: bool,
+) -> str:
+    """Compute Stage-1 root-cause diagnosis without masking SD failures under post-reset BGO."""
+    if panamon_active:
+        return "PANAMON1 active on SC0 (ready for [B/R/W/D/F/J/E/Q])"
+    if diag_started:
+        return "Stage-1 DIGADIAG.FRM decompressed & jumped (waiting PANAMON1> / factory UI)"
+    if sd_uncompress_failed:
+        suffix = " (masked by post-reset BGO)" if bgo_failed is not None else " (check container header/footer)"
+        return f"Stage-1 DIGADIAG.FRM opened, EXTRHEAD/zlib unpack failed{suffix}"
+    if sd_diag_load_failed is not None:
+        if fat_mount_failed is not None:
+            return f"Stage-1 SD HW OK (4-bit), FAT Mount failed[{fat_mount_failed}] before BGO reboot"
+        if fat_open_failed is not None:
+            return f"Stage-1 SD HW OK (4-bit), FAT Open({fat_open_failed[0]}) failed[{fat_open_failed[1]}] before BGO reboot"
+        if sd_hw_init_ok:
+            extra = " before BGO reboot" if bgo_failed is not None else " (check MBR/FAT16/DIGADIAG.FRM 128KiB)"
+            return f"Stage-1 SD HW OK (4-bit), FAILED at SD diag load failed[{sd_diag_load_failed}] (FUN_4400a97c){extra}"
+        return f"Stage-1 FAILED at SD diag load failed[{sd_diag_load_failed}] (FUN_4400a97c)"
+    if bgo_failed is not None:
+        if odd_83a7:
+            return f"BGO driver init failed[{bgo_failed}] -> U99 hang (ODD 80040904 / 0x83A7 also observed)"
+        if odd_tray_failed:
+            return f"BGO driver init failed[{bgo_failed}] -> U99 hang (ODD tray 80045300 also observed)"
+        return f"BGO driver init failed[{bgo_failed}] -> U99 hang (load patched DIGADIAG.FRM)"
+    if -91006 in sdcd_errs:
+        return "SDDIAG -91006 (4-bit ACMD6/ACMD13 SD_STATUS mismatch)"
+    if sdcd_errs:
+        return f"SDDIAG SD init error ({sdcd_errs[0]})"
+    if odd_83a7:
+        return "CDDIAG 80040904 / 0x83A7 (Laser APC < 0.5mW)"
+    if odd_tray_failed:
+        return "ODD ** can not close tray ** (80045300 / no disc)"
+    if boot_mode == "serial boot mode":
+        return "Serial boot mode entered (waiting SD/CD media)"
+    if ddr_ok:
+        return "DDR CHECK: OK seen; boot in progress"
+    return "No known Panasonic boot signatures observed"
+
+
 def parse_am34_uart_log(text: str) -> UartBootReport:
     """Decode bootloader milestones, SD errors, ATAPI errors, and Sense packets from a UART log."""
     ddr_ok = "DDR CHECK: OK" in text
@@ -182,6 +249,40 @@ def parse_am34_uart_log(text: str) -> UartBootReport:
 
     reason_m = re.search(r"startup reason\s*=\s*\[([^\]]+)\]", text)
     startup_reason = reason_m.group(1) if reason_m else None
+
+    cap_m = re.search(r"capacity:([0-9a-fA-F]+)\[LBA\]\((\d+)\s*Byte\)", text)
+    sd_lba_m = re.search(r"SD\s*=\s*0x([0-9a-fA-F]+)\[LBA\]", text)
+    sd_capacity_lba = int(cap_m.group(1), 16) if cap_m else (int(sd_lba_m.group(1), 16) if sd_lba_m else None)
+    sd_capacity_bytes = int(cap_m.group(2)) if cap_m else (sd_capacity_lba * 512 if sd_capacity_lba is not None else None)
+
+    bw_m = re.search(r"Bus Width:(\d+)\(current\)", text)
+    sd_bus_width = int(bw_m.group(1)) if bw_m else None
+
+    spd_m = re.search(r"transfer speed:(\d+)\[Kbps\]", text)
+    sd_transfer_kbps = int(spd_m.group(1)) if spd_m else None
+
+    sd_hw_init_ok = "... SD init end" in text or (sd_capacity_lba is not None and sd_bus_width is not None)
+    load_fail_m = re.search(r"SD diag load failed\[(-?\d+)\]", text)
+    sd_diag_load_failed = int(load_fail_m.group(1)) if load_fail_m else None
+
+    fat_mount_m = re.search(r"FAT Mount failed\[(-?\d+)\]", text)
+    fat_mount_failed = int(fat_mount_m.group(1)) if fat_mount_m else None
+    fat_open_m = re.search(r"FAT Open\(([^)]+)\)\s*failed\[(-?\d+)\]", text)
+    fat_open_failed = (fat_open_m.group(1), int(fat_open_m.group(2))) if fat_open_m else None
+
+    sd_uncompress_failed = any(
+        tok in text
+        for tok in (
+            "diag loader uncompress failed",
+            "fvu uncompress failed",
+            "no header!",
+            "no footer!",
+            "check sum mismatch",
+        )
+    )
+    diag_started = "*** start diag ***" in text or "diag loader is preserved" in text
+    odd_tray_failed = "** can not close tray **" in text or "80045300" in text
+    panamon_active = "PANAMON1>" in text
 
     sdcd_errs: list[int] = []
     for pat in (
@@ -213,10 +314,70 @@ def parse_am34_uart_log(text: str) -> UartBootReport:
         mecha = (byte_vals[10] << 8) | byte_vals[11]
         senses.append(SensePacket(byte_vals, sk, asc, ascq, mecha, _MECHA_ERROR_GLOSSARY.get(mecha)))
 
+    odd_83a7 = any(s.vendor_mecha_code == 0x83A7 for s in senses) or bool(
+        re.search(r"0x83a7|\b83\s+a7\b|0\.5\s*mw", text, re.IGNORECASE)
+    )
+
+    stages: list[str] = []
+    if ddr_ok:
+        stages.append("DDR_OK")
+    if boot_mode == "serial boot mode" or "serial boot mode" in text:
+        stages.append("SERIAL_BOOT")
+    if sd_hw_init_ok:
+        stages.append("SD_HW_OK")
+    if sdcd_errs:
+        stages.extend(f"SD_ERR_{c}" for c in sdcd_errs)
+    if sd_diag_load_failed is not None:
+        stages.append("SD_DIAG_LOAD_FAIL")
+    if sd_uncompress_failed:
+        stages.append("SD_UNCOMPRESS_FAIL")
+    if diag_started:
+        stages.append("DIAG_EXEC")
+    if panamon_active:
+        stages.append("PANAMON_ACTIVE")
+    if "normal mode" in text:
+        stages.append("NORMAL_MODE")
+    if bgo_failed is not None:
+        stages.append("BGO_FAIL")
+    if odd_tray_failed:
+        stages.append("ODD_NO_TRAY_80045300")
+    if odd_83a7:
+        stages.append("ODD_APC_80040904")
+
+    diagnosis = _classify_uart_boot_diagnosis(
+        panamon_active=panamon_active,
+        diag_started=diag_started,
+        sd_uncompress_failed=sd_uncompress_failed,
+        sd_diag_load_failed=sd_diag_load_failed,
+        sd_hw_init_ok=sd_hw_init_ok,
+        fat_mount_failed=fat_mount_failed,
+        fat_open_failed=fat_open_failed,
+        bgo_failed=bgo_failed,
+        boot_mode=boot_mode,
+        sdcd_errs=sdcd_errs,
+        odd_tray_failed=odd_tray_failed,
+        odd_83a7=odd_83a7,
+        ddr_ok=ddr_ok,
+    )
+
     notes: list[str] = []
     for code in sdcd_errs:
         if code in _SDCD_ERROR_GLOSSARY:
             notes.append(f"SDCD {code}: {_SDCD_ERROR_GLOSSARY[code]}")
+    if sd_diag_load_failed is not None and sd_hw_init_ok:
+        notes.append(
+            "SD hardware 4-bit initialization SUCCEEDED; Stage-1 failed inside FUN_4400a97c "
+            "(silent FAT16 Mount FUN_4400c696 / Open DIGADIAG.FRM FUN_4400c879 / <131072 B read). "
+            "Check MBR partition table, cluster count <= 0xFFF5, and root 8.3 entry."
+        )
+    if sd_uncompress_failed:
+        notes.append(
+            "DIGADIAG.FRM was opened from SD, but EXTRHEAD/zlib decompression in FUN_44007ba5 failed."
+        )
+    if odd_tray_failed:
+        notes.append(
+            "ODD tray close failure (80045300 / ** can not close tray **): expected when 4-pin tray connector is unplugged or drive cannot close."
+        )
     for s in senses:
         if s.mecha_description:
             notes.append(f"Mecha 0x{s.vendor_mecha_code:04X}: {s.mecha_description}")
@@ -225,9 +386,7 @@ def parse_am34_uart_log(text: str) -> UartBootReport:
             "FUN_4400836f (bgo_driver_init) halted before fmu_sd_dispatcher(1) "
             "(boot_panic_or_halt_7812), so MAIN/_dev_SERIAL (PANARSP) does not start in NORMAL mode."
         )
-    if any(s.vendor_mecha_code == 0x83A7 for s in senses) or re.search(
-        r"0x83a7|\b83\s+a7\b|0\.5\s*mw", text, re.IGNORECASE
-    ):
+    if odd_83a7:
         notes.append(
             "FUN_400db60c reads Ram88000194 (0x000103A7) laser APC fault prior to spindle actuation."
         )
@@ -242,6 +401,19 @@ def parse_am34_uart_log(text: str) -> UartBootReport:
         drive_error_codes=tuple(drive_errs),
         sense_packets=tuple(senses),
         notes=tuple(notes),
+        sd_capacity_lba=sd_capacity_lba,
+        sd_capacity_bytes=sd_capacity_bytes,
+        sd_bus_width=sd_bus_width,
+        sd_transfer_kbps=sd_transfer_kbps,
+        sd_hw_init_ok=sd_hw_init_ok,
+        sd_diag_load_failed=sd_diag_load_failed,
+        sd_uncompress_failed=sd_uncompress_failed,
+        diag_started=diag_started,
+        fat_mount_failed=fat_mount_failed,
+        fat_open_failed=fat_open_failed,
+        odd_tray_failed=odd_tray_failed,
+        boot_stages=tuple(stages),
+        diagnosis=diagnosis,
     )
 
 

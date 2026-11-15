@@ -48,8 +48,10 @@ pub use prog061_uart_monitor::{
     UART_MONITOR_MAX_SLACK_BYTES, build_prog061_uart_monitor_payload,
 };
 pub use unbrick_sd_kit::{
+    FatBpbReport, MbrPartitionRecord, RootDirFileReport, SdDiskInspectionReport,
     SdMediaVerificationReport, SdUnbrickCheck, SdUnbrickKitReport, SdUnbrickKitRequest,
-    prepare_sd_unbrick_kit, verify_sd_buffers, verify_sd_unbrick_media,
+    inspect_sd_disk_bytes, inspect_sd_reader, inspect_sd_target, prepare_sd_unbrick_kit,
+    verify_sd_buffers, verify_sd_unbrick_media,
 };
 pub use unbrick_workbench::{
     ExtractedFrmModuleReport, FrmModuleExtractionReport, UnbrickHardwareFact,

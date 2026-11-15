@@ -7,7 +7,8 @@ use panadiga_core::re::matshita_emu::{
 };
 use panadiga_core::re::{
     FrmModuleExtractionReport, MainPassthroughReport, MainPassthroughRspPlan, Prog061BgoInspection,
-    SdMediaVerificationReport, SdUnbrickKitReport, UnbrickWorkspaceReport,
+    SdDiskInspectionReport, SdMediaVerificationReport, SdUnbrickCheck, SdUnbrickKitReport,
+    UnbrickWorkspaceReport,
 };
 use serde::Serialize;
 use std::fs;
@@ -136,12 +137,8 @@ pub fn format_sd_kit_lines(report: &SdUnbrickKitReport) -> Vec<String> {
     lines
 }
 
-pub fn format_sd_verification_lines(report: &SdMediaVerificationReport) -> Vec<String> {
-    let mut lines = vec![format!(
-        "SD Verification ({}): {}",
-        report.sd_root_dir, report.overall_status
-    )];
-    for chk in &report.checks {
+fn push_sd_checks(lines: &mut Vec<String>, checks: &[SdUnbrickCheck]) {
+    for chk in checks {
         lines.push(format!(
             "  [{}] {}: {}",
             chk.severity.to_uppercase(),
@@ -149,6 +146,51 @@ pub fn format_sd_verification_lines(report: &SdMediaVerificationReport) -> Vec<S
             chk.detail
         ));
     }
+}
+
+pub fn format_sd_verification_lines(report: &SdMediaVerificationReport) -> Vec<String> {
+    let mut lines = vec![format!(
+        "SD Verification ({}): {}",
+        report.sd_root_dir, report.overall_status
+    )];
+    push_sd_checks(&mut lines, &report.checks);
+    lines
+}
+
+pub fn format_sd_disk_inspection_lines(report: &SdDiskInspectionReport) -> Vec<String> {
+    let mut lines = vec![format!(
+        "SD Raw Inspection ({}) [{}]: {}",
+        report.target, report.partition_scheme, report.overall_status
+    )];
+    if !report.mbr_partitions.is_empty() {
+        for part in &report.mbr_partitions {
+            lines.push(format!(
+                "  MBR[{}] type=0x{:02X} ({}) boot=0x{:02X} start_lba={} sectors={}",
+                part.slot,
+                part.partition_type,
+                part.type_name,
+                part.boot_flag,
+                part.lba_start,
+                part.sector_count
+            ));
+        }
+    }
+    if let Some(ref bpb) = report.bpb {
+        lines.push(format!(
+            "  BPB: kind={} oem='{}' label='{}' spc={} ({}B/clus) reserved={} fats={} root_entries={} sectors/fat={} hidden={}",
+            bpb.computed_fat_kind,
+            bpb.oem_name,
+            bpb.volume_label,
+            bpb.sectors_per_cluster,
+            bpb.cluster_size_bytes,
+            bpb.reserved_sectors,
+            bpb.num_fats,
+            bpb.root_entry_count,
+            bpb.sectors_per_fat,
+            bpb.hidden_sectors
+        ));
+    }
+    push_sd_checks(&mut lines, &report.checks);
     lines
 }
 
@@ -223,7 +265,7 @@ pub fn print_lines(lines: &[String]) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use panadiga_core::re::build_passthrough_rsp_plan;
+    use panadiga_core::re::{build_passthrough_rsp_plan, inspect_sd_disk_bytes};
 
     #[test]
     fn pure_cli_formatters_emit_expected_headers() {
@@ -231,5 +273,22 @@ mod tests {
         let lines = format_rsp_plan_lines(&plan);
         assert!(lines.iter().any(|l| l.contains("0e0402")));
         assert!(lines.iter().any(|l| l.contains("RSP $M:")));
+    }
+
+    #[test]
+    fn format_sd_disk_inspection_emits_scheme_and_status() {
+        let gpt = {
+            let mut buf = vec![0u8; 4096];
+            buf[510] = 0x55;
+            buf[511] = 0xAA;
+            buf[0x1BE + 4] = 0xEE;
+            buf[0x1BE + 8..0x1BE + 12].copy_from_slice(&1u32.to_le_bytes());
+            buf[0x1BE + 12..0x1BE + 16].copy_from_slice(&1000u32.to_le_bytes());
+            buf
+        };
+        let rep = inspect_sd_disk_bytes("mem:gpt.img", &gpt).unwrap();
+        let lines = format_sd_disk_inspection_lines(&rep);
+        assert!(lines[0].contains("[GPT]: FAIL"));
+        assert!(lines.iter().any(|l| l.contains("MBR[0] type=0xEE")));
     }
 }
