@@ -58,22 +58,38 @@ export function useSc0Bridge({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let active = true;
     let unlisten: (() => void) | undefined;
-    listenEvent<Sc0BridgeDataEvent>('pico://bridge-data', chunk => {
-      if (!chunk) return;
-      const line: BridgeStreamLine = { ...chunk, id: formatLogId(chunk.stream) };
-      setBridgeLogs(prev => [...prev, line].slice(-MAX_BRIDGE_LINES));
-      if (chunk.stream === 'rx') {
-        setBridgeStatus(prev => ({ ...prev, bytes_rx: prev.bytes_rx + chunk.bytes.length }));
-      } else if (chunk.stream === 'tx') {
-        setBridgeStatus(prev => ({ ...prev, bytes_tx: prev.bytes_tx + chunk.bytes.length }));
-      } else if (chunk.text.includes('finalizada') || chunk.text.includes('BRIDGE: OK')) {
-        setBridgeStatus(prev => ({ ...prev, running: false, last_event: chunk.text }));
+
+    const subscribe = async (): Promise<void> => {
+      try {
+        const off = await listenEvent<Sc0BridgeDataEvent>('pico://bridge-data', chunk => {
+          if (!chunk) return;
+          const line: BridgeStreamLine = { ...chunk, id: formatLogId(chunk.stream) };
+          setBridgeLogs(prev => [...prev, line].slice(-MAX_BRIDGE_LINES));
+          if (chunk.stream === 'rx') {
+            setBridgeStatus(prev => ({ ...prev, bytes_rx: prev.bytes_rx + chunk.bytes.length }));
+          } else if (chunk.stream === 'tx') {
+            setBridgeStatus(prev => ({ ...prev, bytes_tx: prev.bytes_tx + chunk.bytes.length }));
+          } else if (chunk.text.includes('finalizada') || chunk.text.includes('BRIDGE: OK')) {
+            setBridgeStatus(prev => ({ ...prev, running: false, last_event: chunk.text }));
+          }
+        });
+        if (!active) {
+          off();
+        } else {
+          unlisten = off;
+        }
+      } catch (err) {
+        if (active) {
+          setError(`Falha ao escutar stream SC0: ${String(err)}`);
+        }
       }
-    }).then(fn => {
-      unlisten = fn;
-    });
+    };
+
+    void subscribe();
     return () => {
+      active = false;
       unlisten?.();
     };
   }, []);
@@ -187,7 +203,7 @@ export function useSc0Bridge({
       if (bridgeStatus.running) {
         await sendBridgePayload('line', driveCmd);
       } else {
-        await onExecuteDiagnostic('UARTSEND', driveCmd);
+        await onExecuteDiagnostic('DRVPANA', driveCmd);
       }
     },
     [bridgeStatus.running, sendBridgePayload, onExecuteDiagnostic]

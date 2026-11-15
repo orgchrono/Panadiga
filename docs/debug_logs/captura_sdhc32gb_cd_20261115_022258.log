@@ -1,0 +1,64 @@
+=== STATUS ===
+VDD: 3.24V (OK)
+PANADIGA> 
+=== UARTSTREAM JIG:2500 (SDHC 32GB + CD) ===
+=== UARTSTREAM: PIO1 115200 8N1 (window=24000 ms, hold=2500 ms) ===
+DDR CHECK: OK
+
+Chip select = 1
+
+***** Loader ver0.61 [06/03/06] *****
+***** serial boot mode *****
+
+!!! start fmu to read & exec fvu. !!!
+wait 1 second.
+*** timer correspond initialize ***
+startup reason = [70]
+Main hung-up time changed 255[s].
+SD init start...
+[SDCD] sdcd_insrmv_check:SD Card inserted 
+
+[SW_UART] Timed release -> Hi-Z ADC0 (Q7514 TX ready)
+[SDCD]SendOCR:TIMEOUT
+[SDCD]CMD2 command(ALL_SEND_CID) can't be sent 
+[SDCD]CMD3 command(SEND_RCA) can't be sent 
+[SDCD] === This Card can't be controled ==== 
+
+... SD init end
+SD init failed[-90002].
+*** CD diag boot mode ***
+F/E Address = 0x90202000 , Drive(compress) Size = 0xACC50
+uncompress dst=90202000 len=160000 src=84080040 len=acc01
+HEADER:5627DD54, DECOMP:5627DD54
+
+F/E reset release finish ...
+*** RTSC Initialize ***
+[RTSD] ATAPI Software Reset 
+[RTSD] Device Reset Occurred(0x62900) 
+X(80062900)X(80023a00)** startup drive **
+X(80020401)59,X(80020401)58,X(80020401)57,X(80020401)56,X(80020401)55,X(80020401)54,X(80020401)53,X(80020401)52,[RTSD] === DRIVE ACCESS ERROR === ( 80040904 )
+*** CDB  [00 00 00 00 00 00 00 00 00 00 00 00] 
+*** SENSE[70 00 04 00 00 00 00 0A 00 00 83 A7 09 04 00 00 00 00] 
+H_STAT [0] T_STAT [2]
+X(80040904)51,[RTSD] === DRIVE ACCESS ERROR === ( 80040904 )
+*** CDB  [00 00 00 00 00 00 00 00 00 00 00 00] 
+*** SENSE[70 00 04 00 00 00 00 0A 00 00 83 A7 09 04 00 00 00 00] 
+H_STAT [0] T_STAT [2]
+X(80040904)50,[RTSD] === DRIVE ACCESS ERROR === ( 80040904 )
+*** CDB  [00 00 00 00 00 00 00 00 00 00 00 00] 
+*** SENSE[70 00 04 00 00 00 00 0A 00 00 83 A7 09 04 00 00 00 00] 
+H_STAT [0] T_STAT [2]
+X(80040904)49,[RTSD] === DRIVE ACCESS ERROR === ( 80040904 )
+*** CDB  [00 00 00 00 00 00 00 00 00 00 00 00] 
+*** SENSE[70 00 04 00 00 00 00 0A 00 00 83 A7 09 04 00 00 00 00] 
+H_STAT [0] T_STAT [2]
+X(80040904)48,[RTSD] === DRIVE ACCESS ERROR === ( 80040904 )
+*** CDB  [00 00 00 00 00 00 00 00 00 00 00 00] 
+*** SENSE[70 00 04 00 00 00 00 0A 00 00 83 A7 09 04 00 00 00 00] 
+H_STAT [0] T_STAT [2]
+X(80040904)47,
+UARTSTREAM: OK (1994 bytes, framing_err=0, overflow=NO)
+PANADIGA> 
+=== ISOLATE ===
+[BUS] P7501 pins placed in High-Impedance Isolation (NSW5V/XRESET Hi-Z, GP26 ADC0).
+PANADIGA> 

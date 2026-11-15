@@ -28,6 +28,7 @@
 #include "uart/p7501_uart_baud.h"
 #include "uart/p7501_uart_tx.h"
 #include "uart/p7501_pana_rsp.h"
+#include "uart/p7501_drv_pana.h"
 #include "diag/p7501_diag_pwrtrace.h"
 #include "diag/p7501_diag_boottrace.h"
 #include "diag/p7501_jigsweep_codec.h"
@@ -244,6 +245,7 @@ static const p7501_cli_cmd_entry_t k_cli_commands[] = {
     { "JIGSWEEP",      p7501_cmd_jigsweep },
     { "PANARSP",       p7501_cmd_pana_rsp },
     { "DIAGWATCH",     p7501_cmd_diag_watch },
+    { "DRVPANA",       p7501_cmd_drv_pana },
     { "BRIDGE",        p7501_cmd_bridge },
     { "BOOTSEL",       cli_cmd_bootsel },
 };

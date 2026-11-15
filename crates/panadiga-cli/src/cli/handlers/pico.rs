@@ -275,6 +275,47 @@ pub fn handle_pico(args: PicoArgs) -> Result<()> {
                 sha256
             );
         }
+        PicoActions::DecodeLog { file, json } => {
+            let raw = std::fs::read(&file)?;
+            let text = panadiga_core::pico::decode_captured_log_bytes(&raw);
+            let report = panadiga_core::pico::parse_bench_log_text(&text);
+            log_println!("=== PANADIGA OFFLINE AM34 / PICO LOG DECODER ===");
+            log_println!("File           : {}", file.display());
+            log_println!(
+                "Loader         : {}",
+                report.loader_version.as_deref().unwrap_or("unknown")
+            );
+            log_println!(
+                "Boot Mode      : {}",
+                report.boot_mode.as_deref().unwrap_or("unknown")
+            );
+            if let Some(code) = report.bgo_failed_code {
+                log_println!("BGO Failed     : [{code}]");
+            }
+            if let Some(lba) = report.sd_capacity_lba {
+                log_println!("SD LBA Cap     : 0x{lba:X}");
+            }
+            if !report.sdcd_errors.is_empty() {
+                log_println!("SD Errors      : {:?}", report.sdcd_errors);
+            }
+            if !report.drive_error_codes.is_empty() {
+                log_println!("Drive Errors   : {:?}", report.drive_error_codes);
+            }
+            for s in &report.sense_packets {
+                log_println!(
+                    "SENSE          : {} -> {}",
+                    s.mecha_error_code.as_deref().unwrap_or("no-mecha-code"),
+                    s.interpretation
+                );
+            }
+            if let Some(v) = report.vdd_volts {
+                log_println!("VDD Telemetry  : {v:.2} V");
+            }
+            for n in &report.notes {
+                log_println!("Note           : {n}");
+            }
+            super::unbrick::render::emit_json_if_requested(&report, json.as_deref())?;
+        }
     }
     Ok(())
 }

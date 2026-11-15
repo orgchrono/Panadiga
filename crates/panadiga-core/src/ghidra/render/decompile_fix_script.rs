@@ -5,7 +5,7 @@
 /// (`0xCD`/`0xDD`), stack-purge normalization (`ret -> purge 0`), and computed
 /// switch jump-table recovery without repeating auto-analysis.
 pub fn generate_ghidra_mn103_fix_decompilation() -> String {
-    r#"# Ghidra Script: Panasonic MN103 / AM34 Decompilation Frame, Purge & Switch Recovery
+    let head = r#"# Ghidra Script: Panasonic MN103 / AM34 Decompilation Frame, Purge & Switch Recovery
 # @category Forensics.Panasonic
 # @author Panadiga Engineering Team (Generated from native Rust SSOT; MN103 ISA + nsud-dev/ghidra-mn103)
 #
@@ -231,10 +231,11 @@ def recover_mn103_switches(prog, targets=None, max_passes=2, timeout_secs=60, mo
         "cases_disassembled": cases_disassembled,
     }
 
-def run_mn103_decompilation_fixes(prog=None, apply_purge=True, do_switches=True):
+def run_mn103_decompilation_fixes(prog=None, apply_purge=True, do_switches=True, resolve_traps=True):
     if prog is None:
         prog = currentProgram
     mon = globals().get("monitor")
+    traps = resolve_all_seven_traps(prog, monitor_obj=mon) if resolve_traps else {}
     frames = fix_mn103_call_frames(prog, monitor_obj=mon)
     purge = fix_mn103_stack_purge(prog, apply_fix=apply_purge)
     switches = recover_mn103_switches(prog, monitor_obj=mon) if do_switches else {"candidates": 0, "passes": 0, "tables_recovered": 0, "cases_disassembled": 0}
@@ -251,9 +252,16 @@ def run_mn103_decompilation_fixes(prog=None, apply_purge=True, do_switches=True)
             switches["cases_disassembled"],
         )
     )
-    return {"call_frames": frames, "stack_purge": purge, "switches": switches}
+    return {"call_frames": frames, "stack_purge": purge, "switches": switches, "traps": traps}
 
 if __name__ == "__main__":
     run_mn103_decompilation_fixes()
-"#.to_string()
+"#;
+    let body = super::trap_resolvers::render_mn103_seven_traps_python();
+    let split_marker = "def run_mn103_decompilation_fixes(";
+    if let Some(pos) = head.rfind(split_marker) {
+        format!("{}{body}\n{}", &head[..pos], &head[pos..])
+    } else {
+        format!("{head}\n{body}")
+    }
 }

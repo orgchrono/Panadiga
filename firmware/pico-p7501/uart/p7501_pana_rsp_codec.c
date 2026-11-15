@@ -226,3 +226,24 @@ bool p7501_rsp_inspect_frame_from(
 bool p7501_rsp_inspect_frame(const uint8_t *buf, size_t len, p7501_rsp_frame_info_t *out) {
     return p7501_rsp_inspect_frame_from(buf, len, 0u, out);
 }
+
+bool p7501_rsp_decode_mn103_regs(const uint8_t *payload, size_t len, uint32_t out_regs[12]) {
+    if ((payload == NULL) || (out_regs == NULL) || (len != 96u)) {
+        return false;
+    }
+    for (size_t reg = 0u; reg < 12u; ++reg) {
+        uint32_t val = 0u;
+        const size_t base = reg * 8u;
+        for (size_t b = 0u; b < 4u; ++b) {
+            const int hi = p7501_hex_char_to_nibble((char)payload[base + (b * 2u)]);
+            const int lo = p7501_hex_char_to_nibble((char)payload[base + (b * 2u) + 1u]);
+            if ((hi < 0) || (lo < 0)) {
+                return false;
+            }
+            const uint32_t byte_val = (uint32_t)((hi << 4) | lo);
+            val |= byte_val << (b * 8u);
+        }
+        out_regs[reg] = val;
+    }
+    return true;
+}

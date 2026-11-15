@@ -1,0 +1,8 @@
+=== SESSAO INICIADA EM 2026-11-15T02:13:46.210016 ===
+Porta: COM10 @ 115200 bps
+
+PANADIGA> 
+=== UARTMON: PIO1 115200 8N1 UART CAPTURE ON GP2 (0 bytes, 30000 ms, ferr=0, perr=0, ovf=NO) ===
+
+UARTMON: OK (Bus kept in Hi-Z with pull-up so target continues running)
+PANADIGA> 

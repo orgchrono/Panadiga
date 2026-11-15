@@ -14,13 +14,13 @@ O repositório está estruturado em subsistemas integrados e desacoplados:
 1. **Rust Core Workspace & CLI (`crates/`, `Cargo.toml`)**:
    - **`panadiga-core`** (`crates/panadiga-core`): Núcleo de alta performance para parsing forense de storage (`hdd`), criptoanálise (`crypto`), reparo cirúrgico de NVRAM (`nvram`), ponte serial/CDC RP2040/RP2350 (`pico`), servidor GDB RSP introspectivo (`debugger`), gerador de scripts Ghidra (`ghidra`), catálogo visual e SSOT de hardware (`ssot`).
    - **`panadiga-rag`** (`crates/panadiga-rag`): Motor RAG Zero-Error nativo em Rust com 6 camadas de defesa, guardrails determinísticos de segurança física (`safety.rs`) e indexação híbrida (Markdown docs, 30 manuais PDF via `lopdf`, fontes Rust/C11/PIO/TS/Python e scripts Ghidra).
-   - **`panadiga-mcp`** (`crates/panadiga-mcp`): Servidor MCP nativo em Rust (`panadiga mcp` via JSON-RPC 2.0 `stdio`) com **13 tools**, **resources** (`panadiga://invariants`, `panadiga://memory-map`, pinouts, catálogo visual e docs/) e **prompts** guiados.
+   - **`panadiga-mcp`** (`crates/panadiga-mcp`): Servidor MCP nativo em Rust (`panadiga mcp` via JSON-RPC 2.0 `stdio`) com **18 tools**, **resources** (`panadiga://invariants`, `panadiga://memory-map`, pinouts, catálogo visual e docs/) e **prompts** guiados.
    - **`panadiga-cli`** (`crates/panadiga-cli`): Binário unificado multiplataforma (`panadiga` / `panadiga.exe`) com CLI Clap, modo TUI interativo e lançador do workbench.
 2. **Desktop & Mobile Workbench (`apps/desktop/`, `apps/desktop/src-tauri/` / `panadiga-desktop`)**:
-   - Interface gráfica **100% livre de mocks em produção** construída com **Tauri 2**, **React 18**, **TypeScript**, **Tailwind CSS**, **Vitest** e **Playwright** (mocks isolados estritamente em `apps/desktop/src/test/mocks/` para suítes de teste).
+   - Interface gráfica **100% livre de mocks em produção** construída com **Tauri 2**, **React 19**, **TypeScript**, **Tailwind CSS**, **Vitest** e **Playwright** (mocks isolados estritamente em `apps/desktop/src/test/mocks/` para suítes de teste).
    - **Alvo Desktop**: Windows (x64), Linux (`.deb` / `tar.gz`), macOS (ARM64) via binário `panadiga-desktop`.
    - **Alvo Mobile**: Android APK (`aarch64-linux-android`, crate `[lib] name = "panadiga"` permanente) com HAL nativa em Rust + bridge USB-OTG / BLE Nordic UART Service sem necessidade de mutação de `Cargo.toml`.
-   - Fornece módulos visuais para visualização do HDD MEIHFS, cirurgia de NVRAM Spansion com captura ao vivo via Pico (`CDDIAG`/`DUMP`/`pico://nvram-live-capture`), telemetria do Pico e terminal serial desacoplado.
+   - Fornece módulos visuais para visualização do HDD MEIHFS, cirurgia de NVRAM Spansion com captura ao vivo via Pico (`CDDIAG`/`DUMP`/`pico://nvram-live-capture`), telemetria do Pico, navegador interativo de documentação/logs/pseudocódigo e terminal serial desacoplado.
 3. **Firmware C11 & Sonda Pico (`firmware/pico-p7501/`)**:
    - Firmware C11 modular para Raspberry Pi Pico (RP2040) e Pico 2 (RP2350) com suporte a rádio sem fio (Pico W / Pico 2W via CYW43439).
    - Implementa a interface verificada **UART assíncrona `P7501` (`115200 8N1` + controle discreto `SW_UART` / `XRESET` / proteção `NSW5V` + PIO `p7501_uart.pio`)** e servidor GDB Remote Serial Protocol (RSP).
@@ -28,8 +28,8 @@ O repositório está estruturado em subsistemas integrados e desacoplados:
    - Orquestração cross-platform de build (`scripts/build.py`), validação (`scripts/validate.py`), tipagem estrita (`mypy --strict`) e testes em `scripts/tests/`.
    - Scripts Ghidra Jython (`tools/ghidra/`) gerados a partir da SSOT Rust e lançadores em `tools/`.
 5. **Acervo de Engenharia & Manuais (`manuals_and_schematics/`, `docs/`)**:
-   - 15 manuais de serviço oficiais esquematizados e indexados para busca automatizada.
-   - 13 dossiês técnicos bilíngues canônicos em `docs/pt-BR/` e `docs/en-US/`.
+   - **30 manuais de serviço e datasheets oficiais** em PDF catalogados em [`manuals_and_schematics/README.md`](manuals_and_schematics/README.md) e indexados para busca automatizada.
+   - **33 dossiês técnicos bilíngues canônicos** em `docs/pt-BR/` e `docs/en-US/` (mapa em [`docs/translation_pairs.json`](docs/translation_pairs.json)), auditorias na raiz ([`AUDITORIA_COMPLETA.md`](AUDITORIA_COMPLETA.md) / [`COMPLETE_AUDIT.md`](COMPLETE_AUDIT.md)) + históricas ([`docs/audits/`](docs/audits/README.md)), evidência integral de disassembly/pseudocódigo Ghidra ([`docs/pseudocode/`](docs/pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md)) e capturas reais de bancada ([`docs/debug_logs/`](docs/debug_logs/README.md)).
 
 ---
 
@@ -76,19 +76,23 @@ python scripts/validate.py
 ```
 
 O portão valida de forma automatizada:
-1. **Rust Workspace (5 crates)**: `cargo fmt --all -- --check`, `cargo check --workspace --all-targets` & `cargo test --workspace --verbose`.
+1. **Rust Workspace (5 crates)**: `cargo fmt --all -- --check`, `cargo check --workspace --all-targets` & `cargo test --workspace --verbose` (**142 testes**).
 2. **TypeScript Strict**: `npm run typecheck` em `apps/desktop` com zero erros.
-3. **Vitest Frontend**: `npm test` em `apps/desktop` (**47 testes unitários e de componentes**).
+3. **Vitest Frontend**: `npm test` em `apps/desktop` (**72 testes em 23 arquivos** em `apps/desktop/src/**/*.test.*`).
 4. **Detector de Duplicação (jscpd)**: `.jscpd.json` com limiar estrito de **0% de duplicação** (0 clones permitidos entre `apps/desktop/src`, `apps/desktop/src-tauri/src`, `crates`, `firmware/pico-p7501`, `tools`, `scripts`).
 5. **Linter de UX (uxlint)**: Auditoria completa de estados de interface.
-6. **Playwright E2E**: Testes ponta a ponta com Chromium headless (**10 testes**).
+6. **Playwright E2E**: Testes ponta a ponta com Chromium headless (**13 testes** em `apps/desktop/e2e/`).
 7. **Ghidra Native Generator**: Exportação idempotente de scripts a partir da SSOT em Rust (`cargo run -p panadiga-cli -- ghidra export-all`).
-8. **Pico C11 Host Test**: Compilação e execução dos testes unitários do servidor GDB RSP com C11 strict warnings.
-9. **Python Typer/CLI & Pytest**: Verificação `py_compile`, `mypy --strict scripts` e `pytest scripts/tests`.
+8. **Pico C11 Host Test**: Compilação e execução de **24 testes em 4 módulos C11** (`test_gdb_rsp_host`, `test_pana_logic`, `test_pana_diag_drv`, `test_uart_codec`) com `-Wall -Wextra -Werror` / `/W4 /WX`.
+9. **Python Typer/CLI & Pytest**: Verificação `py_compile`, `mypy --strict scripts` e `pytest scripts/tests` (**22 testes** em `4` arquivos).
 
 ---
 
-## 5. Acervo de Documentação Técnica
+## 5. Acervo de Documentação Técnica (Raiz + 33 Pares Bilíngues)
+
+* **Portal Mestre & Mapa Bilíngue:** [`docs/INDEX.md`](docs/INDEX.md) · [`docs/translation_pairs.json`](docs/translation_pairs.json)
+* **Auditorias na Raiz & Snapshots:** [`AUDITORIA_COMPLETA.md`](AUDITORIA_COMPLETA.md) ([English: `COMPLETE_AUDIT.md`](COMPLETE_AUDIT.md)) · [`docs/audits/README.md`](docs/audits/README.md)
+* **Pseudocódigo Ghidra & Capturas `COM10`:** [`docs/pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md`](docs/pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) · [`docs/pseudocode/GHIDRA_UNDEF_AUDIT_REPORT.md`](docs/pseudocode/GHIDRA_UNDEF_AUDIT_REPORT.md) · [`docs/debug_logs/README.md`](docs/debug_logs/README.md)
 
 | Localizador | Documento Canônico (Português) | Canonical Document (English) |
 | :--- | :--- | :--- |

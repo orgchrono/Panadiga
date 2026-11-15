@@ -9,5 +9,6 @@
 #define P7501_TEST_PANA_LOGIC_H
 
 int p7501_run_pana_logic_tests(void);
+void p7501_run_pana_diag_drv_tests(void);
 
 #endif /* P7501_TEST_PANA_LOGIC_H */

@@ -1,3 +1,6 @@
+> 🌐 **Idioma / Language:** [English (US)](../en-US/BENCH_GUIDE_P7501_NO_DESOLDERING.md) | **Português (BR)**
+> 🧭 **Portal:** [Índice da Documentação](../INDEX.md) | [Auditoria Completa](../../AUDITORIA_COMPLETA.md) | [Auditorias](../audits/README.md) | [Pseudocódigo Ghidra](../pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) | [Logs de Debug](../debug_logs/README.md)
+
 # GUIA CIRÚRGICO DE BANCADA: CONEXÃO `P7501` ASYNC UART SEM DESSOLDA
 ## Diagnóstico, Captura de Boot & Preparação de Bancada — Panasonic DMR-EH55 (`VEP79138`)
 ### Arquitetura Matsushita `AM34` / `MN103S` + Syscon `IC7501` $\leftrightarrow$ Raspberry Pi Pico (`RP2040` / `RP2350`)

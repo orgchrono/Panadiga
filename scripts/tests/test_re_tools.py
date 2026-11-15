@@ -158,3 +158,58 @@ def test_mn10300_frames_loops_and_ghidra_fix_decompilation() -> None:
     assert fix_mod.extract_mn103_call_frame([0xDD, 0x01, 0x00, 0x00, 0x00, 0xA0, 0x10]) == (0xA0, 0x10)
     assert fix_mod.classify_stack_purge(-0x80000000) == "UNKNOWN"
     assert fix_mod.classify_stack_purge(0) == "OK"
+    assert hasattr(fix_mod, "resolve_all_seven_traps")
+    assert len(fix_mod.KNOWN_DRV_ATAPI_SLOTS) >= 5
+
+
+def test_mn103_traps_1_to_7_helpers() -> None:
+    """Verify static Python Trap 1/4/5/6/7 helpers in scripts.re.mn103_traps."""
+    from scripts.re.mn103_traps import (
+        InstructionSpan,
+        build_instruction_spans,
+        detect_mid_instruction_overlaps,
+        filter_mid_instruction_constant_hits,
+        identify_drv_revision,
+        is_cfi_command_address,
+        scan_code_pointer_tables,
+    )
+
+    buf = bytearray(0x60)
+    # 0x50400010: JMP32 disp=-0x0F -> target = 0x50400001 (lands inside insn @ 0x50400000..0x50400006)
+    buf[0x10] = 0xDC
+    struct.pack_into("<i", buf, 0x11, -0x0F)
+    # 0x50400020: SETLB .. LNE loop
+    buf[0x20] = 0xDB
+    buf[0x25] = 0xD9
+    spans = build_instruction_spans(bytes(buf), 0x50400000)
+    assert any(sp.start_va == 0x50400010 and sp.end_va == 0x50400015 for sp in spans)
+    assert any(sp.start_va == 0x50400025 and sp.mnemonic == "lne" for sp in spans)
+
+    overlaps = detect_mid_instruction_overlaps(
+        bytes(buf),
+        0x50400000,
+        extra_spans=(InstructionSpan(0x50400000, 0x50400006, "mov"),),
+    )
+    assert len(overlaps) == 1
+    assert overlaps[0].target_va == 0x50400001
+
+    genuine, false_hits = filter_mid_instruction_constant_hits(
+        (0x50400001, 0x50400030),
+        (InstructionSpan(0x50400000, 0x50400006, "mov"),),
+    )
+    assert genuine == (0x50400030,)
+    assert false_hits == (0x50400001,)
+
+    assert is_cfi_command_address(0x84200554)
+    assert is_cfi_command_address(0x84200AAA)
+    assert not is_cfi_command_address(0x847F0000)
+
+    tbl = bytearray(32)
+    for idx, va in enumerate((0x50401000, 0x50401100, 0x50401200, 0x40014559, 0x50401300)):
+        struct.pack_into("<I", tbl, idx * 4, va)
+    ptrs = scan_code_pointer_tables(bytes(tbl), 0x5040EA30, 0x50400000, 0x50440000, min_run=3)
+    assert len(ptrs) == 3
+
+    fp = identify_drv_revision(b"\x00" * 16 + b"SLOGON\x00\x00" + b"\x00" * 16)
+    assert fp.revision == "DRV_decomp"
+    assert fp.pass_handler_va == 0x4013420A

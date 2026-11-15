@@ -169,8 +169,10 @@ pub fn compute_mock_rsp_response_pure(cmd: &str, current_regs: &Am34RegisterStat
         let rest = &cmd[1..];
         let addr_str = rest.split(',').next().unwrap_or("0");
         let addr = u32::from_str_radix(addr_str, 16).unwrap_or(0);
-        // Hardware safety invariant: IPL/OS Flash region (0x80000000..0x807EFFFF) is strictly Read-Only
-        if (0x8000_0000..=0x807E_FFFF).contains(&addr) {
+        // Hardware safety invariant: IPL/OS Flash regions (0x80000000..0x807EFFFF and mirror 0x84000000..0x847EFFFF) are strictly Read-Only
+        if (0x8000_0000..=0x807E_FFFF).contains(&addr)
+            || (0x8400_0000..=0x847E_FFFF).contains(&addr)
+        {
             build_rsp_packet("E05")
         } else {
             build_rsp_packet("OK")

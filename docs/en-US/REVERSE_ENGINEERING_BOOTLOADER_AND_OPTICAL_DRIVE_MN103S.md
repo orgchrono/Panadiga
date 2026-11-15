@@ -1,3 +1,6 @@
+> 🌐 **Language / Idioma:** **English** | [Português (BR)](../pt-BR/DOSSIE_ENGENHARIA_REVERSA_BOOTLOADER_E_DRIVE_MN103S.md)
+> 🧭 **Portal:** [Docs Index](../INDEX.md) | [Complete Audit](../../COMPLETE_AUDIT.md) | [Audits](../audits/README.md) | [Ghidra Pseudocode](../pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) | [Debug Logs](../debug_logs/README.md)
+
 # Deep Reverse Engineering Dossier: MN103S Bootloader, R6-MV4 Optical Drive (`DRV`), and Live Bench Telemetry
 
 > **Classification:** Empirical Silicon, Firmware, and Bench Hardware Reverse Engineering  
@@ -887,3 +890,72 @@ Cross-referencing open repositories and forums confirms that while Matsushita's 
    * Probe DC voltage on **`P1503`** Pin `1` (+12V) and Pin `4` (+5V) — and `P7402`/`P59001` (`Pins 14,16` +12V / `Pins 22,24` +5V).
    * If missing (`0V`): trace `DR_P_ON_H` (`IC7501` Pin 42), `QR1501`, and MOSFETs `Q1509` (`X_SW12V`) / `Q1501` (`X_SW5.8V`).
    * If `12V`/`5V` are present: check continuity across Digital PCB SMD fuses **`IP50001`** (`12V`) and **`IP50002`** (`5V`) before replacing the optical pickup laser diode (`OPU`). Note that `CDDIAG` fires the **780 nm near-IR** CD diode (invisible to the naked eye; inspect with a smartphone camera in darkness during the initial focus search).
+
+---
+
+## 10. Definitive Resolution of the `P7501` Protocol: 6-Pin UART (`115200 8N1`) vs. `DWire32A`
+
+A recurring open question during bench probe assembly was whether the 6-pin **`P7501` (`B6B-ZR-3R4`, `TO JIGU`)** header on the Panasonic DMR-EH55 main board used Matsushita's proprietary synchronous **`DWire32A`** debug protocol (`EXTRG`/`SCLK`/`SDATA`/`nRESET`) or an **asynchronous 6-pin UART with boot/reset control**. Full correlation of official service manuals (`NA CHM0605028CE` and `EU DSD0603003CE` Vol.1/Vol.2) with live electrical tests on `COM10` (`PINCHECK`, `BUSDIAG`, `UARTPROBE`, `JIGBOOT`) **resolves this definitively**:
+
+> **Verified Verdict:** Port **`P7501` on the Panasonic DMR-EH55 is a Dual-Target Asynchronous UART `115200 8N1` + Boot/Reset interface (`SW_UART`/`XRESET`) — NOT a synchronous `DWire32A` bus.**
+
+### 10.1 Documentary & Schematic Proof (`NA` / `EU Vol.2`)
+
+1. **Absence of `DWire32A` / `CN55001` in DMR-EH55 Schematics:**
+   * A full scan across `panasonic_dmr_eh55p9_eh55pc9_service_manual_north_america.pdf`, `panasonic_dmr_eh55ec_service_manual_europe.pdf`, and `panasonic_dmr_eh55ec_service_manual_vol2_schematics.pdf` returned **zero hits** for `MN2DS`, `MN2WS`, `CN55001`, `P55001`, `DWire`, or `IC55007` (identifiers from a different DIGA chassis).
+   * On the DMR-EH55: `VEP79138K` (`NA p.97`) designates the `DIGITAL P.C.B.` (`RTL`/module); `FP50002/3/4` (`EU Vol.2 p.113/126`) are the ribbon connectors to the DVD-RAM optical drive (OPU / Spindle / Tray); and **`P59001`** interconnects Main PCB $\leftrightarrow$ Digital PCB carrying **`UARTM2P`**, **`UARTP2M`**, **`XFWE`**, `SCLK`, `SBPTM`, `SBMTP`, `XMPREQ`, `XINTM`, and `XINTP`.
+2. **Complete Discrete Circuit of `P7501` (`NA p.55, p.62, p.63, p.64`):**
+   * **`NSW5V` Regulation (`NA p.55`, `IC1506` = `C0DAEYH00002` / `SI-3011ZFE`):** Fed from `X_SW5R8V` via `LB1503`, enabled on Pin 1 (`ON[H]`) by `P1501 Pin 18 (P_ON_H)` + `P_SAVE_H`, and regulated via resistor divider (`R1510 = 1.5 kΩ` + `R1509 = 39 kΩ`, `R1511 = 11 kΩ`) to **`~5.15V` nominal (`X_SW_5R2V`)**.
+   * **OR-Diode Network & Pull-ups (`NA p.63`, `D7510` = `B0JDCE000002`):** Anodes (Pins 2 and 3) receive `circle 12` (`X_SW_5R2V` = `P7501 Pin 5 NSW5V`). Cathode Pin 4 (`circle 13`) feeds pull-ups `R7570 (10 kΩ)` on `UARTM2P_T`, `R7572 (10 kΩ)` on `UARTP2M_T`, and `IC7514 5VDET`. Cathode Pin 1 feeds `circle 17` via `L7502` (`IC7501 Pin 9 VDD[5V]`, `Pin 24 VREF+[5V]`, `Pins 35/36 VDD2/3[5V]`), OR-ed with battery **`B7501`** (`CR2354` 3V via `D7509` + `R7560 1 kΩ`) and `C7538` (`470 µF`).
+   * **Reset Mesh & `3.3V` Domain (`NA p.62`):** `C7519 (0.1 µF 16V)` couples `IC7501 Pin 81 (RST_UART)` to `GND` (Pin 12) via jumper `K7503 (0 Ω)`. Switching stages `Q7504`, `Q7511`, `Q7513` and resistors `R7564/69/25/26` operate on rail `circle 11` = `(C)` = **`D3R3V (3.3V)`**.
+   * **Dual-Target Multiplexing via `SW_UART` (`NA p.64`, `Q7510`, `Q7514`, `QR7503`):**
+     * **`P7501 Pin 1 (SW_UART = (D))`** connects to the **Collector** of **`Q7510` (`2SD0601A0L`, NPN)** and the **Base** of **`QR7503` (`UNR511300L`, digital PNP)**.
+     * **`Q7510` Base** connects through **`R7562 (4.7 kΩ)`** to `(C)` (**`D3R3V = 3.3V`**); **`Q7510` Emitter** connects to **`XFWE`**, pull-up **`R7559 (10 kΩ)`** on `(C) 3.3V`, and through `R7528 (4.7 kΩ)` to **`Q7514` Base (`2SD0601A0L`)**.
+     * **`QR7503` Emitter** receives `(E)` (`NSW5V`), and its Collector drives `(F)` (`IC7501 Pin 15 MMOD`, with pull-down `R7513 = 4.7 kΩ`).
+     * **`Q7514`** directly gates **`P7501 Pin 3 (UARTM2P_T)`** (Collector with `R7570 10 kΩ` on `circle 13`) $\leftrightarrow$ **Main SoC `UARTM2P`** (Emitter with `R7527 4.7 kΩ` pull-up on `3.3V`).
+
+### 10.2 Electrical Truth Table for `P7501` ($\leftrightarrow$ Pico RP2040) & Signal Reconciliation
+
+| `P7501` Pin | Schematic Signal | Pico GPIO (`COM10`) | Verified Electrical Function | Empirical Evidence (`PINCHECK` / `BUSDIAG`) |
+| :---: | :--- | :---: | :--- | :--- |
+| **1** | `SW_UART` (`(D)`) | `GP26 / ADC0` | Dual-Target select + `XFWE` + `MMOD` (`IC7501`) via `Q7510`/`QR7503` | `Hi-Z: 3.24–3.25V`, `PD: 2.68–2.69V`, `PU: 3.26–3.27V` |
+| **2** | `XRESET` | `GP5` | Open-Drain reset (never push-pull HIGH!) | `STRONG HIGH`, Hi-Z rise in **`20 µs`**; `GP5=0` while asserted |
+| **3** | `UARTM2P_T` (`MAX RXD`) | `GP4` (Pico `TX`) | Target command RX (routed to SoC via `Q7514` **only when `SW_UART = Hi-Z`**) | **`0` transitions** in `BUSDIAG` (not bidirectional `SDATA`) |
+| **4** | `GND` | `GND` | Common `0V` ground reference | Direct chassis continuity (`0.0 Ω`) |
+| **5** | `NSW5V` (`X_SW_5R2V`) | `GP3` (**Keep `Hi-Z`!**) | Nominal **`~5.15V`** power rail (`IC1506`) — **NOT `SCLK`!** | **`0` transitions** in all `PINCHECK`/`BUSDIAG` phases (static `STRONG HIGH`) |
+| **6** | `UARTP2M_T` (`MAX TXD`) | `GP2` (Pico `RX`) | **Serial TX `115200 8N1` output** from SoC (`BOOT.BIN`) / `IC7501` | **`872`** (`PINCHECK`), **`2124`** (Normal 0–1.3s), **`3308`** (JIG 0–1.3s) valid ASCII edges |
+
+### 10.3 Mathematical Proof of `3.25V` / `2.69V` vs. `5.15V` & `UARTSEND` Blocking
+
+1. **Why `GP26` (`SW_UART`) reads `~3.25V` at `Hi-Z` and `~2.69V` at `Pull-Down` (safe for the 3.3V ADC):**
+   * Although `QR7503`'s emitter sits at `NSW5V` (`~5.15V`), NPN transistor **`Q7510`** (`2SD0601A0L`) has its **Base biased at `3.30V`** (`(C) D3R3V` via `R7562 4.7 kΩ`) and its Emitter (`XFWE`) pulled up to `3.30V` via `R7559 (10 kΩ)`.
+   * When the RP2040 enables its internal pull-down (`~50–80 kΩ`), **`Q7510`'s Base-Collector junction forward-biases** ($V_{BC} \approx 0.61\text{ V}$), clamping the collector (`P7501 Pin 1`) at $3.30\text{ V} - 0.61\text{ V} \approx \mathbf{2.68\text{–}2.69\text{ V}}$ — matching **`2.68V` / `2.69V`** measured by `PINCHECK` and `STATUS` on `COM10`. At `Hi-Z`, the floating collector sits at **`3.24–3.25V`** (safe 3.3V range matching DMM readings without saturating RP2040 GPIO).
+2. **Why `UARTSEND VER` returned `0 bytes` under `SW_UART=LOW` (`p7501_uart_interactive.c`):**
+   * Pulling `SW_UART = LOW` (`sw_uart_out_low = true`) pulls `XFWE` low through `Q7510`, dropping **`Q7514`'s Base** (via `R7528 4.7 kΩ`) below conduction relative to its Emitter (`UARTM2P` at `3.3V` via `R7527`).
+   * Consequently, **`Q7514` turns OFF and physically blocks any byte transmitted on `P7501 Pin 3 (UARTM2P_T)` from reaching the Main SoC** whenever `SW_UART = LOW`. To reach the Main SoC UART, `SW_UART` must remain in **`Hi-Z` (`normal mode`)**.
+
+---
+
+## 11. Continued Static Reverse Engineering & Live Bench Validation (`Steps 47–50`)
+
+### 11.1 Continuous `85s` Capture (`JIGBOOT` + `UARTMON`) & `UARTPROBE` / `UARTSEND` Tests (`COM10`)
+
+Recent live DMR-EH55 bench captures (`COM10`, sessions `task-15472`, `task-15485`, and post-`UARTSEND` electrical verification) mapped the complete boot cycle through the end of the `59..0` countdown:
+
+1. **Full Sequence at Countdown Completion (`CD diag boot mode` -> `0x80040904`):**
+   * During `startup drive`, the console initially logs `X(80062900)X(80023a00)** startup drive **` followed by **`X(80020401)59,58,...`** (`Sense 02/04/01`: *Logical Unit Is in Process of Becoming Ready*), later escalating to loops of `X(80040904)N,[RTSD] === DRIVE ACCESS ERROR ===` with `CDB [00 ...]` and `SENSE[70 00 04 00 00 00 00 0A 00 00 83 A7 09 04 00 00 00 00]` (`H_STAT [0] T_STAT [2]`).
+   * Reaching counter **`0`**, it prints **`X(80040904)0,Drive start failed[-2147219196].`** (`-2147219196 == (int32_t)0x80040904`) and triggers an **immediate cold reset (`<00>DDR CHECK: OK`)**, rebooting into `serial boot mode` -> `CD diag boot mode` (without executing `DIGADIAG.FRM`).
+2. **Operational Findings on the Flashed `COM10` Pico Firmware:**
+   * **Board build delta:** the RP2040 firmware currently flashed on `COM10` prints the legacy `DWire32A` `HELP` menu (omitting `BANNER`, `UARTPROBE`, `UARTSEND`, `UARTMON`, `JIGBOOT`), although those commands are compiled and active in the binary (`UARTPROBE` emits legacy format `=== UARTPROBE MODE %d (Captured %u bytes) ===`).
+   * **`GP26` latch after `UARTSEND` / `JIGBOOT`:** after executing `UARTSEND VER` (or `JIGBOOT`/`UARTMON`), even after `ISOLATE`, `STATUS` reads **`VDD: 0.02V (LOW)`** and `PINCHECK` reports `0.02V` across Hi-Z/PD/PU (increasing post-reset `GP2` edges from `872` to `1006`, indicating `SW_UART` remained driven LOW). Running **`UARTPROBE 8`** followed by `ISOLATE` cleanly releases `GP26`, restoring `STATUS` to **`VDD: 2.68–2.70V (OK)`** and `PINCHECK` to **`3.25V | 2.69V | 3.27V`** (`GP2=872`).
+
+### 11.2 Deep Static Analysis `Steps 47–50` (`BOOT.BIN` & `DRV_decomp.bin`)
+
+1. **`BOOT.BIN` — Post-`Drive start failed` Routine (`0x44007d09..0x44007e80`), `EXTRHEAD`, and Absence of Active RX Shell:**
+   * After printing `Drive start failed[%d].\n` (`0x44034b0d` at `0x44007d09`), code loads `0x84050000` (`0x44007d19`) and calls **`0x4400bcc2`** (`0x44007d1f`). This invokes **`0x4400b52e`** to validate the compressed **`EXTRHEAD`** header (`0x4403526e`, matched via `0x4402c2b6` — if absent, `0x4400bcea` references `Error! Fvu not compress header.\n` at `0x44035602`; if valid, `0x4400bd21` prints `Fvu Address = 0x%X , Size = 0x%X\n` at `0x44035623`).
+   * On failure (`!= 1`), `0x44007d32..0x44007d37` branches to system handlers **`0x440079a4`** / **`0x44009bd7`** (touching registers `0x50501518`, `0x50503760`, `0x50501514`, `0x5048025c`). Caller cross-references around `0x44007b80..0x44007c58` also map the full `SDDIAG` path (`Fvu check-sum invalid.\n`, `SD diag load failed[%d].\n`, `diag loader uncompress start...\n`, calling `0x44007c59` at `0x44007c0a` and `0x4400bcc2` at `0x44007c29`).
+   * Using exact PC-relative displacement (`VA_instr + disp`), we verified that **`0x4400489a`** and **`0x44004904`** (`call16`) target **`0x4400479f`** (`uart_getc`, polling `0xd400200c`/`0xd4002009`), whereas **`0x4400485c`** targets **`0x440047c7`** (`uart_putc`, writing `0xd400200c`/`0xd4002008`). Both `uart_getc` call sites live solely inside **`0x4400488a`** (`uart_gets` for `\r`/`\b`), which has **`0` callers** across all of `BOOT.BIN`.
+2. **`DRV_decomp.bin` — Corrected `0x83A7` Mapping, ATAPI `SLOG` Architecture, and `0x880000xx` Registers:**
+   * **`0x83A7` Xref Erratum:** raw byte matches `a7 83` at `0x4006f5e2` and `0x401385ec` belong to instructions `0x4006f5e1: dd a7 83 fb ff` (**`call32 0x40027988`**, `printf`) and `0x401385eb: dd a7 83 ed ff` (**`call32 0x40010992`**, `strlen`), **not** references to error `0x83A7`. The literal little-endian `0x83A7` table entry resides at **`0x400e8c1e`** inside the mechanical error table (`0x400e3736`, referenced at `0x40028ea7`: `'0.5mW発光ができない(HFｵﾝ密調整)'`), immediately after `0x83A5` (`0x400e8bb6`) and `0x83A6` (`0x400e8bea`).
+   * **Sense LUT `0x400de35c` Mapping:** entry **`idx 0x38`** (`+0xa8` at **`0x400de404`**) holds the exact tuple **`04 / 09 / 04`** (between `idx 0x37 = 04/09/03` and `idx 0x39 = 04/09/90`), referenced by `0x40011a6c`, `0x400154e1`, `0x40028c89`, `0x40028d03`, and `0x400c8166`. At **`0x40028c87..0x40028ee6`**, the internal error formatter renders Shift-JIS strings for Sense Errors (`0x400de35c`), Host Errors (`0x400e358b`), Access Errors (`0x400e35c8..`), and Mecha Errors (`0x400e3736`) via `0x40027988`.
+   * **Actual Drive Console/CLI Channel (`SLOG` in RAM -> ATAPI Vendor):** registers **`0x880000c0..0x880000df`** (including block `0x40027018..0x40027049` touching `0x880000c9/d7/d6/ca/c3/c7`) belong to servo/RF/ATAPI logic across `0x40003xxx..0x40004xxx` and `0x40010fxx..0x40012xxx` — CLI console helpers (`0x400277d0..0x40028020` and `0x400dd000..0x400de000`) make **zero** direct accesses to `0x880000xx` or `0xd40020xx`. Instead, `putc` (**`0x400277de`**) and `getc` (**`0x40027b8e`**) operate on **RAM ring buffers** (`0x889f1fe0` = `SLOG` buffer, alongside `0x889f47e0`, `0x889f4fe0`, `0x889f501c`, `0x889f50ab`), and `0x889f1fe0` is drained to the host over **factory ATAPI vendor command handlers** (**`0x40020b51`**, **`0x40020be4`**, **`0x40020c12`**, via descriptor `0x889fc9e0..e3`).

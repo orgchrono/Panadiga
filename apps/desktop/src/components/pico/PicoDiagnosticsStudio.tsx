@@ -117,12 +117,16 @@ export const PicoDiagnosticsStudio: React.FC<PicoDiagnosticsStudioProps> = ({
         }}
       >
         <TabsList className="w-full h-auto flex-wrap justify-start gap-1">
-          {COMMAND_TABS.map(({ value, label, Icon }) => (
-            <TabsTrigger key={value} value={value} className="gap-1.5">
-              <Icon className="w-3.5 h-3.5" />
-              <span>{label}</span>
-            </TabsTrigger>
-          ))}
+          {COMMAND_TABS.length === 0 ? (
+            <span className="text-xs text-slate-500 px-2 py-1">Nenhuma categoria disponível</span>
+          ) : (
+            COMMAND_TABS.map(({ value, label, Icon }) => (
+              <TabsTrigger key={value} value={value} className="gap-1.5">
+                <Icon className="w-3.5 h-3.5" />
+                <span>{label}</span>
+              </TabsTrigger>
+            ))
+          )}
           <TabsTrigger value="memory" className="gap-1.5">
             <Layers className="w-3.5 h-3.5" />
             <span>Mapa Memória AM34</span>

@@ -20,14 +20,22 @@ export const MemoryMapPanel: React.FC<MemoryMapPanelProps> = ({ ssot }) => (
             </tr>
           </thead>
           <tbody>
-            {ssot.memory_regions.map(reg => (
-              <tr key={reg.name} className="border-b border-slate-900 text-slate-300">
-                <td className="py-1.5 pr-2">{reg.name}</td>
-                <td className="py-1.5 pr-2 text-cyan-400">{reg.start}</td>
-                <td className="py-1.5 pr-2 text-slate-400">{reg.end}</td>
-                <td className="py-1.5 text-amber-300">{reg.perms}</td>
+            {ssot.memory_regions.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="py-2 text-slate-500">
+                  Nenhuma região de memória definida no SSOT.
+                </td>
               </tr>
-            ))}
+            ) : (
+              ssot.memory_regions.map(reg => (
+                <tr key={reg.name} className="border-b border-slate-900 text-slate-300">
+                  <td className="py-1.5 pr-2">{reg.name}</td>
+                  <td className="py-1.5 pr-2 text-cyan-400">{reg.start}</td>
+                  <td className="py-1.5 pr-2 text-slate-400">{reg.end}</td>
+                  <td className="py-1.5 text-amber-300">{reg.perms}</td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

@@ -6,9 +6,11 @@
  */
 
 #include "uart/p7501_diag_watch_codec.h"
-
+#include "uart/p7501_pana_rsp_internal.h"
+#include "flash/p7501_flash.h"
 #include "common/p7501_hex.h"
 
+#include <stdio.h>
 #include <string.h>
 
 typedef struct diag_sig_rule {
@@ -30,39 +32,68 @@ static const diag_sig_rule_t k_diag_rules[] = {
     { "PANAMON1>",               9u, P7501_DIAG_EVT_PANAMON },
 };
 
-static bool is_digits_tok(const char *s) {
-    if ((s == NULL) || (s[0] == '\0')) {
+static bool parse_diag_read_param(const char *spec, p7501_diag_watch_spec_t *out) {
+    const char *comma = strchr(spec, ',');
+    uint32_t addr = 0u;
+    if (comma == NULL) {
+        if (!p7501_rsp_parse_hex_u32(spec, 10u, &addr)) {
+            return false;
+        }
+        const int n = snprintf(out->tx_seq, sizeof(out->tx_seq), "R%X\r", (unsigned)addr);
+        return (n > 0) && ((size_t)n < sizeof(out->tx_seq));
+    }
+    if ((comma == spec) || (comma[1] == '\0')) {
         return false;
     }
-    for (size_t i = 0u; s[i] != '\0'; ++i) {
-        if ((s[i] < '0') || (s[i] > '9')) {
-            return false;
-        }
+    uint32_t len = 0u;
+    if (!p7501_rsp_parse_hex_u32_span(spec, (size_t)(comma - spec), &addr) ||
+        !p7501_rsp_parse_hex_u32(comma + 1, 6u, &len) ||
+        (len == 0u) || (len > 0xFFFFu)) {
+        return false;
     }
-    return true;
+    const int n = snprintf(out->tx_seq, sizeof(out->tx_seq), "R%X,%X\r", (unsigned)addr, (unsigned)len);
+    return (n > 0) && ((size_t)n < sizeof(out->tx_seq));
 }
 
-static bool has_ci_prefix(const char *s, const char *p) {
-    for (size_t i = 0u; p[i] != '\0'; ++i) {
-        char a = s[i];
-        char b = p[i];
-        if ((a >= 'a') && (a <= 'z')) {
-            a = (char)(a - ('a' - 'A'));
-        }
-        if ((b >= 'a') && (b <= 'z')) {
-            b = (char)(b - ('a' - 'A'));
-        }
-        if ((a == '\0') || (a != b)) {
-            return false;
-        }
+static bool parse_diag_write_param(const char *spec, p7501_diag_watch_spec_t *out) {
+    const char *comma = strchr(spec, ',');
+    if ((comma == NULL) || (comma == spec) || (comma[1] == '\0')) {
+        return false;
     }
-    return true;
+    uint32_t addr = 0u;
+    uint32_t val = 0u;
+    if (!p7501_rsp_parse_hex_u32_span(spec, (size_t)(comma - spec), &addr) ||
+        !p7501_rsp_parse_hex_u32(comma + 1, 4u, &val) ||
+        (val > 0xFFu) ||
+        p7501_flash_is_protected_ipl_range(addr, 1u)) {
+        return false;
+    }
+    const int n = snprintf(out->tx_seq, sizeof(out->tx_seq), "W%X,%02X\r", (unsigned)addr, (unsigned)val);
+    return (n > 0) && ((size_t)n < sizeof(out->tx_seq));
+}
+
+static bool parse_diag_single_addr_param(
+    const char *spec,
+    char opcode,
+    bool require_nvram,
+    p7501_diag_watch_spec_t *out
+) {
+    uint32_t addr = 0u;
+    if (!p7501_rsp_parse_hex_u32(spec, 10u, &addr)) {
+        return false;
+    }
+    if (require_nvram && !p7501_flash_is_nvram_microsector_addr(addr)) {
+        return false;
+    }
+    const int n = snprintf(out->tx_seq, sizeof(out->tx_seq), "%c%X\r", opcode, (unsigned)addr);
+    return (n > 0) && ((size_t)n < sizeof(out->tx_seq));
 }
 
 bool p7501_diag_watch_parse_args(const char *arg, p7501_diag_watch_spec_t *out) {
     if (out == NULL) {
         return false;
     }
+    memset(out, 0, sizeof(*out));
     out->timeout_ms = 15000u;
     out->boot_action = P7501_BOOT_ACTION_JIG;
     out->jig_hold_ms = 2500u;
@@ -82,11 +113,9 @@ bool p7501_diag_watch_parse_args(const char *arg, p7501_diag_watch_spec_t *out) 
         if (tok[0] == '\0') {
             continue;
         }
-        if (is_digits_tok(tok)) {
+        if (p7501_ascii_is_digits(tok)) {
             out->timeout_ms = p7501_parse_uint32_clamped(tok, 15000u, 1000u, 900000u);
-        } else if (!saw_boot && (p7501_ascii_ieq(tok, "NORMAL") || p7501_ascii_ieq(tok, "BOOT") ||
-                                 p7501_ascii_ieq(tok, "NOPULL") || p7501_ascii_ieq(tok, "PASSIVE") ||
-                                 p7501_ascii_ieq(tok, "JIG") || has_ci_prefix(tok, "JIG:"))) {
+        } else if (!saw_boot && p7501_is_boot_spec_token(tok)) {
             out->boot_action = p7501_parse_boot_spec(tok, &out->jig_hold_ms);
             saw_boot = true;
         } else if (!saw_action && p7501_ascii_ieq(tok, "AUTO")) {
@@ -100,6 +129,45 @@ bool p7501_diag_watch_parse_args(const char *arg, p7501_diag_watch_spec_t *out) 
             saw_action = true;
         } else if (!saw_action && p7501_ascii_ieq(tok, "DUMP")) {
             out->action = P7501_DIAG_ACT_DUMP;
+            saw_action = true;
+        } else if (!saw_action && p7501_ascii_ieq(tok, "READ")) {
+            out->action = P7501_DIAG_ACT_READ;
+            saw_action = true;
+        } else if (!saw_action && p7501_ascii_iprefix(tok, "READ:") && (tok[5] != '\0')) {
+            if (!parse_diag_read_param(tok + 5u, out)) {
+                return false;
+            }
+            out->action = P7501_DIAG_ACT_READ;
+            saw_action = true;
+        } else if (!saw_action && p7501_ascii_ieq(tok, "WRITE")) {
+            out->action = P7501_DIAG_ACT_WRITE;
+            saw_action = true;
+        } else if (!saw_action && p7501_ascii_iprefix(tok, "WRITE:") && (tok[6] != '\0')) {
+            if (!parse_diag_write_param(tok + 6u, out)) {
+                return false;
+            }
+            out->action = P7501_DIAG_ACT_WRITE;
+            saw_action = true;
+        } else if (!saw_action && p7501_ascii_ieq(tok, "JUMP")) {
+            out->action = P7501_DIAG_ACT_JUMP;
+            saw_action = true;
+        } else if (!saw_action && p7501_ascii_iprefix(tok, "JUMP:") && (tok[5] != '\0')) {
+            if (!parse_diag_single_addr_param(tok + 5u, 'J', false, out)) {
+                return false;
+            }
+            out->action = P7501_DIAG_ACT_JUMP;
+            saw_action = true;
+        } else if (!saw_action && p7501_ascii_ieq(tok, "ERASE")) {
+            out->action = P7501_DIAG_ACT_ERASE;
+            saw_action = true;
+        } else if (!saw_action && p7501_ascii_iprefix(tok, "ERASE:") && (tok[6] != '\0')) {
+            if (!parse_diag_single_addr_param(tok + 6u, 'E', true, out)) {
+                return false;
+            }
+            out->action = P7501_DIAG_ACT_ERASE;
+            saw_action = true;
+        } else if (!saw_action && p7501_ascii_ieq(tok, "QUIT")) {
+            out->action = P7501_DIAG_ACT_QUIT;
             saw_action = true;
         } else if (!saw_action && p7501_ascii_ieq(tok, "NONE")) {
             out->action = P7501_DIAG_ACT_NONE;
@@ -126,14 +194,46 @@ char p7501_diag_watch_action_char(p7501_diag_action_t action) {
         case P7501_DIAG_ACT_AUTO:
         case P7501_DIAG_ACT_BYPASS:
             return 'B';
+        case P7501_DIAG_ACT_READ:
+            return 'R';
+        case P7501_DIAG_ACT_WRITE:
+            return 'W';
         case P7501_DIAG_ACT_FORMAT:
             return 'F';
         case P7501_DIAG_ACT_DUMP:
             return 'D';
+        case P7501_DIAG_ACT_JUMP:
+            return 'J';
+        case P7501_DIAG_ACT_ERASE:
+            return 'E';
+        case P7501_DIAG_ACT_QUIT:
+            return 'Q';
         case P7501_DIAG_ACT_NONE:
         default:
             return '\0';
     }
+}
+
+size_t p7501_diag_watch_format_tx(const p7501_diag_watch_spec_t *spec, char *out, size_t cap) {
+    if ((spec == NULL) || (out == NULL) || (cap < 2u)) {
+        return 0u;
+    }
+    if (spec->tx_seq[0] != '\0') {
+        const size_t n = strlen(spec->tx_seq);
+        if ((n + 1u) > cap) {
+            return 0u;
+        }
+        memcpy(out, spec->tx_seq, n + 1u);
+        return n;
+    }
+    const char ch = p7501_diag_watch_action_char(spec->action);
+    if (ch == '\0') {
+        out[0] = '\0';
+        return 0u;
+    }
+    out[0] = ch;
+    out[1] = '\0';
+    return 1u;
 }
 
 uint32_t p7501_diag_watch_feed_byte(
@@ -200,7 +300,7 @@ uint32_t p7501_diag_watch_feed_byte(
 
 const char *p7501_diag_watch_diagnosis(uint32_t events) {
     if ((events & P7501_DIAG_EVT_PANAMON) != 0u) {
-        return "PANAMON1 active on SC0 (ready for B=bypass, F=nfrom_format, D=dump_nor)";
+        return "PANAMON1 active on SC0 (ready for [B/R/W/D/F/J/E/Q])";
     }
     if ((events & P7501_DIAG_EVT_BGO_FAIL) != 0u && (events & P7501_DIAG_EVT_SERIAL_BOOT) == 0u) {
         if ((events & P7501_DIAG_EVT_CD_APC_ERR) != 0u) {

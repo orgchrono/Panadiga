@@ -20,11 +20,20 @@ fn ssot_thresholds_match_firmware_and_platform_constants() {
     assert!(spec.pico_commands.len() >= 35);
     assert!(spec.pico_commands.iter().any(|c| c.id == "PIOLOGIC"));
     assert!(spec.pico_commands.iter().any(|c| c.id == "DIAGWATCH"));
+    assert!(spec.pico_commands.iter().any(|c| c.id == "DRVPANA"));
     assert!(
         spec.pico_commands
             .iter()
             .find(|c| c.id == "PANARSP")
-            .is_some_and(|c| c.syntax.contains("XMEM:") && c.syntax.contains("DUMPNOR"))
+            .is_some_and(|c| c.syntax.contains("XMEM:")
+                && c.syntax.contains("DUMPNOR")
+                && c.syntax.contains("REGS"))
+    );
+    assert!(
+        spec.pico_commands
+            .iter()
+            .find(|c| c.id == "DIAGWATCH")
+            .is_some_and(|c| c.syntax.contains("READ[:addr[,len]]"))
     );
     assert!(
         spec.pico_commands

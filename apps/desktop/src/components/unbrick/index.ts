@@ -4,3 +4,4 @@ export * from './SdVerificationPanel';
 export * from './TbcPassthroughCard';
 export * from './UnbrickArchitectureCard';
 export * from './unbrickDomain';
+export * from './MatshitaEmulatorCard';

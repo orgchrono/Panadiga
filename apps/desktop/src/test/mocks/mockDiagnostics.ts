@@ -89,12 +89,37 @@ export function simulateMockDiagnostic(commandId: string, arg?: string): PicoDia
       'PIOLOGIC: OK',
     ].join('\n');
   } else if (norm === 'PANARSP') {
+    const safeArg = cleanArg ?? '';
+    const isRegs = /\bREGS\b/i.test(safeArg);
     rawOutput = [
-      '=== PANARSP PIO1 (baud=115200 ms=6000 boot=2 hold=350 action=0) ===',
+      `=== PANARSP PIO1 (baud=115200 ms=6000 boot=2 hold=350 action=${isRegs ? 14 : 0}) ===`,
       '[PANARSP] RX (7 bytes):',
       '  0000: 15 2B 24 4F 4B 23 39 41                           |.+$OK#9A|',
       '[PANARSP] Frame: ack=+ nak=no nak0x15=yes | payload="OK" | csum=0x9A/0x9A (VALID)',
+      ...(isRegs
+        ? [
+            '[PANARSP] MN103S Regs: D0=0x00000000 D1=0x00000001 D2=0x00000000 D3=0x00000000 | A0=0x50400000 A1=0x515B2E40 A2=0x847F0000 A3=0xA0001000 | MDR=0x000000A5 PSW=0x00000F00 PC=0x44007BA5 SP=0x51BFFFC0',
+          ]
+        : []),
       'PANARSP: OK (rx=8 bytes, rsp=VALID)',
+    ].join('\n');
+  } else if (norm === 'DIAGWATCH') {
+    const safeArg = cleanArg ?? '';
+    rawOutput = [
+      '=== DIAGWATCH [PANAMON1] PIO1 (baud=115200 mode=0 ms=25000) ===',
+      '[PANAMON1] READY ver=1.2 safe_rw=1 ipl_ro=0x80000000..0x807EFFFF',
+      ...(safeArg.includes(':')
+        ? [`[DIAGWATCH +1250ms] PANAMON1> matched -> injected ${safeArg}`]
+        : []),
+      '[PANAMON1] B/R/W/D/F/J/E/Q OK (IPL writes -> E05)',
+      'DIAGWATCH: OK (mon=PANAMON1)',
+    ].join('\n');
+  } else if (norm === 'DRVPANA') {
+    const safeArg = cleanArg ?? '';
+    rawOutput = [
+      `=== DRVPANA PIO1 (baud=115200 ms=3000 boot=0 hold=0 pass=AUTO cmd="${safeArg || 'DSCREG'}") ===`,
+      'PASS OK | DRV R6-MV4 ACK',
+      `DRVPANA: OK (rx=24 bytes, ferr=0, pass=YES, ovf=NO, cmd="${safeArg || 'DSCREG'}")`,
     ].join('\n');
   } else if (norm === 'LED') {
     const req = (cleanArg || 'STATUS').toUpperCase();

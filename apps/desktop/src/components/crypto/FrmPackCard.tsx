@@ -42,25 +42,41 @@ export const FrmPackCard: React.FC<FrmPackCardProps> = ({
   const [dstAddr, setDstAddr] = useState('0x50400000');
   const [tag, setTag] = useState('FVU ');
   const [buildName, setBuildName] = useState('DIAG01');
+  const [formError, setFormError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const handleModeChange = (nextMode: 'sd' | 'dvd' | 'digadiag') => {
     setMode(nextMode);
+    setFormError(null);
     if (Object.values(DEFAULT_OUT_BY_MODE).includes(outPath)) {
       setOutPath(DEFAULT_OUT_BY_MODE[nextMode]);
     }
   };
 
   const validModules = modules.filter(m => m.name.trim() && m.path.trim());
-  const isSubmitDisabled =
-    packLoading ||
-    !outPath.trim() ||
-    (mode === 'digadiag' ? !diagInputPath.trim() : validModules.length === 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSubmitDisabled) return;
+    if (packLoading) return;
+    if (!outPath.trim()) {
+      setFormError('Informe o caminho de saída para gravar o contêiner .FRM.');
+      setSuccess(null);
+      return;
+    }
+    if (mode === 'digadiag' && !diagInputPath.trim()) {
+      setFormError('Informe o binário de entrada para encapsular no DIGADIAG.FRM.');
+      setSuccess(null);
+      return;
+    }
+    if (mode !== 'digadiag' && validModules.length === 0) {
+      setFormError('Preencha nome e caminho de ao menos um módulo de firmware.');
+      setSuccess(null);
+      return;
+    }
 
-    await onPack(
+    setFormError(null);
+    setSuccess(null);
+    const report = await onPack(
       mode === 'digadiag'
         ? {
             mode,
@@ -79,6 +95,11 @@ export const FrmPackCard: React.FC<FrmPackCardProps> = ({
             version_u16: versionU16.trim() || '0x0001',
           }
     );
+    if (report) {
+      setSuccess(
+        `Contêiner ${mode.toUpperCase()} gerado (${report.total_bytes.toLocaleString()} bytes) em ${outPath.trim()}.`
+      );
+    }
   };
 
   return (
@@ -94,7 +115,7 @@ export const FrmPackCard: React.FC<FrmPackCardProps> = ({
         <StatusBadge variant="info" label={mode.toUpperCase()} />
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-3 text-xs">
+      <form onSubmit={handleSubmit} className="space-y-3 text-xs" noValidate>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <label className="space-y-1 block">
             <span className="text-slate-400 block">{t('crypto.packager.packMode')}</span>
@@ -114,7 +135,12 @@ export const FrmPackCard: React.FC<FrmPackCardProps> = ({
             <input
               type="text"
               value={outPath}
-              onChange={e => setOutPath(e.target.value)}
+              aria-invalid={Boolean(formError && !outPath.trim())}
+              aria-describedby={formError ? 'frm-pack-validation-err' : undefined}
+              onChange={e => {
+                setOutPath(e.target.value);
+                if (formError) setFormError(null);
+              }}
               className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200"
             />
           </label>
@@ -225,8 +251,14 @@ export const FrmPackCard: React.FC<FrmPackCardProps> = ({
           </div>
         )}
 
+        {formError && (
+          <p id="frm-pack-validation-err" role="alert" className="text-[11px] text-rose-400">
+            {formError}
+          </p>
+        )}
+
         <div className="flex items-center gap-3 pt-1">
-          <Button type="submit" size="sm" disabled={isSubmitDisabled} className="gap-1.5 font-bold">
+          <Button type="submit" size="sm" disabled={packLoading} className="gap-1.5 font-bold">
             {packLoading && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
             <span>{t('crypto.packager.packSubmit')}</span>
           </Button>
@@ -243,6 +275,10 @@ export const FrmPackCard: React.FC<FrmPackCardProps> = ({
           )}
         </div>
       </form>
+
+      {success && !packError && (
+        <p className="text-[11px] text-emerald-300 font-mono">{success}</p>
+      )}
 
       {packError && (
         <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-xs text-rose-300 flex items-start gap-2">

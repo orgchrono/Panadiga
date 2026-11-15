@@ -1,6 +1,9 @@
+> 🌐 **Idioma / Language:** [English (US)](../en-US/FORENSIC_AUDIT_REPORT_CRYPTANALYSIS_AND_MEIHDFS.md) | **Português (BR)**
+> 🧭 **Portal:** [Índice da Documentação](../INDEX.md) | [Auditoria Completa](../../AUDITORIA_COMPLETA.md) | [Auditorias](../audits/README.md) | [Pseudocódigo Ghidra](../pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) | [Logs de Debug](../debug_logs/README.md)
+
 # PARECER CONCLUSIVO DE AUDITORIA FORENSE E CRIPTOANÁLISE DE FIRMWARE EMBARCADO
 **Alvo:** Ecossistema Óptico (`PANA_DVD.FRM`) e Armazenamento MEIHDFS (`hdd_100.bin`) — Panasonic DIGA DMR-EH55  
-**Base de Verdade Auditada (SSOT):** `src/constants.rs`, `src/crypto/toc.rs`, `src/crypto/codebook.rs` e `src/hdd/meihdfs.rs`.
+**Base de Verdade Auditada (SSOT):** [`crates/panadiga-core/src/constants.rs`](../../crates/panadiga-core/src/constants.rs), [`crates/panadiga-core/src/crypto/toc.rs`](../../crates/panadiga-core/src/crypto/toc.rs), [`crates/panadiga-core/src/crypto/codebook.rs`](../../crates/panadiga-core/src/crypto/codebook.rs) e [`crates/panadiga-core/src/hdd/meihdfs.rs`](../../crates/panadiga-core/src/hdd/meihdfs.rs).
 
 ---
 

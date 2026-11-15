@@ -57,7 +57,8 @@ typedef enum p7501_pana_rsp_action {
     PANA_RSP_ACT_WRITE32,
     PANA_RSP_ACT_PASSTHROUGH,
     PANA_RSP_ACT_CALL,
-    PANA_RSP_ACT_DUMPNOR
+    PANA_RSP_ACT_DUMPNOR,
+    PANA_RSP_ACT_REGS
 } p7501_pana_rsp_action_t;
 
 typedef struct p7501_pana_rsp_spec {
@@ -103,6 +104,9 @@ bool p7501_rsp_inspect_frame_from(
 
 /** Inspect RX buffer from index 0 for `$<payload>#<xx>` RSP reply (plus `+`/`-` or raw `0x15`). */
 bool p7501_rsp_inspect_frame(const uint8_t *buf, size_t len, p7501_rsp_frame_info_t *out);
+
+/** Decode 48-byte MN103S GDB `$g` register reply (96 ASCII hex chars -> 12 LE u32s: D0..D3, A0..A3, MDR, PSW, PC, SP). */
+bool p7501_rsp_decode_mn103_regs(const uint8_t *payload, size_t len, uint32_t out_regs[12]);
 
 /** Parse `PANARSP [ms] [NORMAL|JIG[:ms]|NOPULL] [MAGIC] [NONAK|NAK] [WAIT:<trig>] <action>` args. */
 bool p7501_panarsp_parse_args(const char *arg, p7501_pana_rsp_spec_t *out);

@@ -1,3 +1,6 @@
+> 🌐 **Idioma / Language:** [English (US)](../en-US/VISUAL_CATALOG_EH55_SCHEMATICS_AND_PCB.md) | **Português (BR)**
+> 🧭 **Portal:** [Índice da Documentação](../INDEX.md) | [Auditoria Completa](../../AUDITORIA_COMPLETA.md) | [Auditorias](../audits/README.md) | [Pseudocódigo Ghidra](../pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) | [Logs de Debug](../debug_logs/README.md)
+
 # Catálogo Visual Completo — Esquemas, PCBs e Diagramas RE (DMR-EH55)
 
 > Índice técnico consolidado para consulta rápida pelo `panadiga-rag` e `panadiga-mcp` (`panadiga_search_visuals`), eliminando a necessidade de reabrir os PDFs dos manuais de serviço ou re-executar scripts de recorte em `scratch/`.

@@ -1,3 +1,6 @@
+> 🌐 **Idioma / Language:** [English (US)](../en-US/EH55_REVERSE_ENGINEERING_SESSION_FAITHFUL_REPORT.md) | **Português (BR)**
+> 🧭 **Portal:** [Índice da Documentação](../INDEX.md) | [Auditoria Completa](../../AUDITORIA_COMPLETA.md) | [Auditorias](../audits/README.md) | [Pseudocódigo Ghidra](../pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) | [Logs de Debug](../debug_logs/README.md)
+
 # Relatório 100% Fiel da Sessão de Engenharia Reversa e Depuração ao Vivo (`DMR-EH55` / `COM10` / `P7501`)
 
 > **Período Documentado:** `2026-11-06` a `2026-11-13` (Etapas `1`–`50` de análise estática + capturas ao vivo via Pico RP2040 em `COM10` + auditoria elétrica CAD dos manuais Panasonic).  

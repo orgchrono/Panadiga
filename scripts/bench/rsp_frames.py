@@ -58,13 +58,54 @@ def rsp_checksum(payload: bytes) -> int:
     return sum(payload) & 0xFF
 
 
-def build_rsp_frame(payload: str | bytes) -> bytes:
-    """Encode a read-only RSP command payload as `$<payload>#<xx>`."""
+_IPL_READONLY_RANGES: Final[tuple[tuple[int, int], ...]] = (
+    (0x80000000, 0x807F0000),
+    (0x84000000, 0x847F0000),
+)
+
+
+def is_ipl_readonly_address(addr: int, length: int = 1) -> bool:
+    """Return True if [addr, addr + length) touches read-only IPL NOR flash (0x80000000..0x807EFFFF or 0x84..)."""
+    u = addr & 0xFFFFFFFF
+    end = (u + max(1, length)) & 0xFFFFFFFF
+    if end < u:
+        end = 0x100000000
+    return any(u < hi and end > lo for lo, hi in _IPL_READONLY_RANGES)
+
+
+def build_rsp_frame(payload: str | bytes, *, allow_write: bool = False) -> bytes:
+    """Encode a read-only (or explicitly guarded write) RSP command payload as `$<payload>#<xx>`."""
     raw = payload.encode("ascii") if isinstance(payload, str) else payload
     if raw[:1] in (b"M", b"X", b"c", b"s", b"k"):
-        raise ValueError(f"Mutating or execution RSP command '{raw[:1].decode('ascii')}' is forbidden")
+        if not allow_write:
+            raise ValueError(
+                f"Mutating or execution RSP command '{raw[:1].decode('ascii')}' requires allow_write=True"
+            )
     csum = rsp_checksum(raw)
     return b"$" + raw + f"#{csum:02x}".encode("ascii")
+
+
+def build_rsp_write_frame(addr: int, data: bytes, *, use_binary_x: bool = False) -> bytes:
+    """Build a hardware-guarded RSP memory write ($M or $X), rejecting IPL NOR regions."""
+    if not data:
+        raise ValueError("Write payload cannot be empty")
+    u = addr & 0xFFFFFFFF
+    if is_ipl_readonly_address(u, len(data)):
+        raise ValueError(
+            f"Hardware Safety Lockout (E05): refusing RSP write to read-only IPL NOR 0x{u:08X}"
+        )
+    if use_binary_x:
+        escaped = bytearray()
+        for b in data:
+            if b in (0x23, 0x24, 0x2A, 0x7D):
+                escaped.append(0x7D)
+                escaped.append(b ^ 0x20)
+            else:
+                escaped.append(b)
+        header = f"X{u:x},{len(data):x}:".encode("ascii")
+        return build_rsp_frame(header + bytes(escaped), allow_write=True)
+    header_hex = f"M{u:x},{len(data):x}:{data.hex()}"
+    return build_rsp_frame(header_hex, allow_write=True)
 
 
 def _try_build_parsed_frame(

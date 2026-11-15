@@ -79,4 +79,42 @@ describe('useNvramViewModel MVVM Test', () => {
 
     expect(result.current.liveCapture).toBeNull();
   });
+
+  it('enforces Copy-on-Write and blocks guarded patch beyond 64 KiB NVRAM / IPL boundary', async () => {
+    const { result } = await renderReadyNvramHook();
+
+    await act(async () => {
+      const samePath = await result.current.executeGuardedPatch({
+        inputPath: 'nor.bin',
+        outputPath: 'nor.bin',
+        nvramOffset: '0x0',
+        patchHex: 'FFFFFFFF',
+      });
+      expect(samePath).toBeNull();
+    });
+    expect(result.current.patchError).toContain('Copy-on-Write');
+
+    await act(async () => {
+      const iplBlocked = await result.current.executeGuardedPatch({
+        inputPath: 'nor.bin',
+        outputPath: 'nor.patched.bin',
+        nvramOffset: '0x10000',
+        patchHex: 'AA55',
+      });
+      expect(iplBlocked).toBeNull();
+    });
+    expect(result.current.patchError).toContain('E05');
+
+    await act(async () => {
+      const validPatch = await result.current.executeGuardedPatch({
+        inputPath: 'nor.bin',
+        outputPath: 'nor.patched.bin',
+        nvramOffset: '0x0',
+        patchHex: 'FFFFFFFF',
+      });
+      expect(validPatch).not.toBeNull();
+    });
+    expect(result.current.patchSuccess).toBe(true);
+    expect(result.current.report?.output_file).toBe('nor.patched.bin');
+  });
 });

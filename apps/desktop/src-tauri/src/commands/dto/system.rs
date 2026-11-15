@@ -61,3 +61,13 @@ pub struct LiveNvramCaptureEventDto {
     pub captured_bytes: usize,
     pub report: panadiga_core::nvram::NvramCleanReport,
 }
+
+/// Bilingual documentation catalog entry exposed from `<workspace>/docs/`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EngineeringDocEntryDto {
+    pub locale: String,
+    pub file_name: String,
+    pub relative_path: String,
+    pub title: String,
+    pub size_bytes: u64,
+}

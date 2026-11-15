@@ -1,3 +1,6 @@
+> 🌐 **Idioma / Language:** [English (US)](../en-US/REVERSE_ENGINEERING_BOOTLOADER_AND_OPTICAL_DRIVE_MN103S.md) | **Português (BR)**
+> 🧭 **Portal:** [Índice da Documentação](../INDEX.md) | [Auditoria Completa](../../AUDITORIA_COMPLETA.md) | [Auditorias](../audits/README.md) | [Pseudocódigo Ghidra](../pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) | [Logs de Debug](../debug_logs/README.md)
+
 # Dossiê de Engenharia Reversa Profunda: Bootloader MN103S, Controlador Óptico R6-MV4 (`DRV`) e Telemetria ao Vivo
 
 > **Classificação:** Pesquisa Empírica de Silício, Firmware e Hardware de Bancada  

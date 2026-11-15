@@ -1,3 +1,6 @@
+> 🌐 **Idioma / Language:** [English (US)](../en-US/STORAGE_ARCHITECTURE_MEIHDFS_PARTITIONS.md) | **Português (BR)**
+> 🧭 **Portal:** [Índice da Documentação](../INDEX.md) | [Auditoria Completa](../../AUDITORIA_COMPLETA.md) | [Auditorias](../audits/README.md) | [Pseudocódigo Ghidra](../pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) | [Logs de Debug](../debug_logs/README.md)
+
 # ARQUITETURA DE STORAGE, FILESYSTEM MEIHDFS E PARTICIONAMENTO
 ## Engenharia Reversa do Disco Rígido e Firmware do Gravador Panasonic DMR-EH55
 ### Plataforma Matsushita UniPhier / AM34 — Chassi DIGA (PCB: VEP79138)
@@ -135,7 +138,7 @@ Se o LBA 0 for corrompido por uma inicialização inadvertida no Windows, o firm
 ## 4. Metadados de Alocação e Journaling Transacional (MEIHDFS Allocation Table)
 
 ### Setores 24 a 31 (0x00003000 a 0x00003FFF — 4.096 Bytes): MEIHDFS Allocation Table Encodings
-The MEIHDFS allocation table and block descriptors encoded on the hard drive sectors LBA 24..31 (0x00003000..0x00003FFF) are bit-inverted using bitwise NOT / XOR 0xFF (`byte ^ 0xFF`).
+A tabela de alocação MEIHDFS e os descritores de blocos gravados nos setores `LBA 24..31` (`0x00003000..0x00003FFF`) armazenam seus campos invertidos bit a bit via complemento lógico `NOT` / `XOR 0xFF` (`byte ^ 0xFF`).
 Os 8 setores localizados entre LBA 24 e 31 contêm tabelas compactadas com registros de 16 bytes que mapeiam descritores de blocos de serviço do disco rígido (hard drive).
 
 * **Arquitetura Bit-Invertida (One's Complement / XOR 0xFF):**  
@@ -310,13 +313,17 @@ A engenharia reversa do MEIHDFS foi liderada por pesquisadores da comunidade de 
 
 ---
 
-## 7. Manual de Operação do Script `parse_panasonic_hdd_partitions.py`
+## 7. Referência Histórica Python vs Comando Nativo Rust (`panadiga hdd`)
 
-O script `scripts/parse_panasonic_hdd_partitions.py` foi desenvolvido especificamente para automatizar a auditoria, verificação de integridade e extração dos componentes do disco rígido do DMR-EH55.
+> [!NOTE]
+> O utilitário legado `scripts/parse_panasonic_hdd_partitions.py` foi consolidado integralmente na engine nativa em Rust ([`crates/panadiga-core/src/hdd/`](../../crates/panadiga-core/src/hdd/mod.rs)) via comando `panadiga hdd inspect` / `panadiga hdd inspect-capacity`. Os exemplos históricos abaixo são mantidos apenas como registro da fase inicial de pesquisa:
 
-### Sintaxe de Comando
 ```bash
-python scripts/parse_panasonic_hdd_partitions.py [OPÇÕES] [CAMINHO_DA_IMAGEM]
+# Comando atual em produção (Rust nativo):
+panadiga hdd inspect -i "firmware_and_images/panasonic DMR EH-55 Firmware hdd_100.bin"
+
+# Comando histórico legado (descontinuado após consolidação Python -> Rust):
+# python scripts/parse_panasonic_hdd_partitions.py [OPÇÕES] [CAMINHO_DA_IMAGEM]
 ```
 
 ### Argumentos Suportados
@@ -472,7 +479,7 @@ Além do clamp em `src/hdd_cmd.c`, o menu de serviço **RTSD (`Change HDD Capaci
 
 ### 9.4 Pipeline Criptográfico (`EXTRHEAD`/`EXTRFOOT`) & Automação na Suíte Panadiga
 
-O módulo [`capacity_patch.rs`](../../crates/panadiga-core/src/hdd/capacity_patch.rs) detecta automaticamente a entrada e preserva integralmente a cadeia de validação do bootloader `BOOT.BIN`:
+O módulo [`hdd/capacity_patch/`](../../crates/panadiga-core/src/hdd/capacity_patch/mod.rs) detecta automaticamente a entrada e preserva integralmente a cadeia de validação do bootloader `BOOT.BIN`:
 1. **`RAW_MAIN_BINARY`**: binário `MAIN` plano descomprimido (ex.: `EH55_MAIN_3410PQ.bin`, `main3060np_unpacked.bin`).
 2. **`EXTRHEAD_CONTAINER`**: partição de firmware 1 (`hdd_partition_firmware_0x02000000.bin`). O código decifra o cabeçalho de `0x40` bytes (`EXTRHEAD` + tag + `dst_addr = 0x57000000` + `build_name`), descomprime `zlib`/raw deflate, aplica o patch MN103S, recomprime, recalcula o **Adler-32 strided (`step=16`, equivalente à rotina `FUN_4401e5a3`)**, assina o rodapé **`EXTRFOOT`**, cifra em **Feistel 64-bit ECB de 16 rodadas (`PANA_FEISTEL_ROUND_KEY_32B` + `PANA_FEISTEL_SBOX_256`)** e executa round-trip completo via `unpack_extrhead` garantindo `checksum_valid == true`.
 3. **`FULL_HDD_IMAGE_P1`**: imagem de 100 MB (como `panasonic DMR EH-55 Firmware hdd_100.bin` vinda do Internet Archive), regravando a Partição 1 (`0x02000000`) sem exceder o limite de `0x04000000` (`32 MB` de janela), preservando `zeros_after_header_clean` em imagens de fábrica e sincronizando os setores `total_sectors` em `LBA 0` e `LBA 57.344` apenas quando a imagem é procedural (`mkfs`).

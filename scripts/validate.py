@@ -42,11 +42,13 @@ C11_HOST_SOURCES: Final[tuple[str, ...]] = (
     "firmware/pico-p7501/uart/p7501_pana_rsp_codec.c",
     "firmware/pico-p7501/uart/p7501_pana_rsp_parse.c",
     "firmware/pico-p7501/uart/p7501_diag_watch_codec.c",
+    "firmware/pico-p7501/uart/p7501_drv_pana_codec.c",
     "firmware/pico-p7501/diag/p7501_piologic_codec.c",
     "firmware/pico-p7501/diag/p7501_sds_codec.c",
     "firmware/pico-p7501/diag/p7501_jigsweep_codec.c",
     "firmware/pico-p7501/tests/test_uart_codec.c",
     "firmware/pico-p7501/tests/test_pana_logic.c",
+    "firmware/pico-p7501/tests/test_pana_diag_drv.c",
     "firmware/pico-p7501/tests/test_gdb_rsp_host.c",
 )
 PYTHON_COMPILE_TARGETS: Final[tuple[str, ...]] = (
@@ -76,6 +78,7 @@ PYTHON_COMPILE_TARGETS: Final[tuple[str, ...]] = (
     "scripts/dev/generate_schematics_and_cad.py",
     "scripts/re/__init__.py",
     "scripts/re/mn10300.py",
+    "scripts/re/mn103_traps.py",
     "scripts/re/pana_frm.py",
     "scripts/bench/__init__.py",
     "scripts/bench/protocol.py",

@@ -52,7 +52,9 @@ export const DiagnosticCommandCard: React.FC<DiagnosticCommandCardProps> = ({
       <div className="space-y-2 pt-1">
         {cmd.arg_label && (
           <div className="space-y-1.5">
-            {cmd.arg_options.length > 0 && (
+            {cmd.arg_options.length === 0 ? (
+              <p className="text-[10px] text-slate-500 font-mono">Parâmetro livre para este comando</p>
+            ) : (
               <div className="flex flex-wrap gap-1">
                 {cmd.arg_options.map(opt => (
                   <button

@@ -130,6 +130,18 @@ pub enum PicoActions {
         #[arg(short, long, value_name = "OUT_UF2")]
         out: PathBuf,
     },
+
+    /// Decodes offline COM10 / AM34 UART0 / Pico capture logs (UTF-16LE or UTF-8)
+    #[command(name = "decode-log", alias = "decode_log")]
+    DecodeLog {
+        /// Path to captured UART / Pico `.log` or `.txt` file
+        #[arg(short, long, value_name = "LOG_FILE")]
+        file: PathBuf,
+
+        /// Optional JSON output path
+        #[arg(long, value_name = "JSON_OUT")]
+        json: Option<PathBuf>,
+    },
 }
 
 #[derive(Args, Debug)]

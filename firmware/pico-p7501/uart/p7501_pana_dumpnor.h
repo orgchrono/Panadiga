@@ -22,6 +22,7 @@ extern "C" {
 #define P7501_DUMPNOR_DEFAULT_START 0x84000000UL
 #define P7501_DUMPNOR_DEFAULT_LEN   0x00800000UL
 #define P7501_DUMPNOR_STUB_ADDR     0x51800000UL
+#define P7501_DUMPNOR_DIGADIAG_ADDR 0x50400000UL
 #define P7501_DUMPNOR_STUB_SIZE     162u
 
 /** Choose verified stream block size (`4096`, else `256`) or `0` if unaligned/invalid. */

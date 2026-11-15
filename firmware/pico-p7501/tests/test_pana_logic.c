@@ -8,7 +8,6 @@
 #include "tests/test_pana_logic.h"
 #include "uart/p7501_pana_rsp.h"
 #include "uart/p7501_pana_dumpnor.h"
-#include "uart/p7501_diag_watch_codec.h"
 #include "flash/p7501_flash.h"
 #include "diag/p7501_piologic_codec.h"
 #include "diag/p7501_sds_codec.h"
@@ -138,6 +137,9 @@ static void test_pana_rsp_arg_parser(void) {
     assert(strcmp(spec.payload, "M515B2E40,4:3c1f4050") == 0);
 
     assert(!p7501_panarsp_parse_args("WMEM:", &spec));
+    assert(!p7501_panarsp_parse_args("WMEM:80000000,11223344", &spec));
+    assert(!p7501_panarsp_parse_args("WRITE32:847EFFF0,12345678", &spec));
+    assert(p7501_panarsp_parse_args("WMEM:847F0000,11223344", &spec));
     assert(!p7501_panarsp_parse_args("WRITE32:ZZZZ,1234", &spec));
     assert(!p7501_panarsp_parse_args("CALL:XYZ", &spec));
 
@@ -215,88 +217,6 @@ static void test_pana_dumpnor_stub_and_args(void) {
     assert(!p7501_panarsp_parse_args("DUMPNOR 847F0000", &spec));
 }
 
-static void feed_str_and_count(
-    p7501_diag_watch_state_t *st,
-    const p7501_diag_watch_spec_t *dw,
-    const char *s,
-    int *rel_count,
-    int *tx_count,
-    char *last_tx
-) {
-    for (size_t i = 0u; s[i] != '\0'; ++i) {
-        char tx_ch = '\0';
-        bool rel = false;
-        (void)p7501_diag_watch_feed_byte(st, dw, (uint8_t)s[i], &tx_ch, &rel);
-        if (rel) {
-            *rel_count += 1;
-        }
-        if (tx_ch != '\0') {
-            *tx_count += 1;
-            *last_tx = tx_ch;
-        }
-    }
-}
-
-static void test_diag_watch_codec(void) {
-    p7501_diag_watch_spec_t dw;
-    assert(p7501_diag_watch_parse_args("", &dw));
-    assert(dw.timeout_ms == 15000u && dw.boot_action == P7501_BOOT_ACTION_JIG);
-    assert(dw.jig_hold_ms == 2500u && dw.action == P7501_DIAG_ACT_AUTO && dw.release_on_ddr);
-
-    assert(p7501_diag_watch_parse_args("30000 NORMAL FORMAT HOLD", &dw));
-    assert(dw.timeout_ms == 30000u && dw.boot_action == P7501_BOOT_ACTION_NORMAL);
-    assert(dw.action == P7501_DIAG_ACT_FORMAT && !dw.release_on_ddr);
-
-    assert(p7501_diag_watch_parse_args("180000 NOPULL DUMP RELEASE", &dw));
-    assert(dw.timeout_ms == 180000u && dw.boot_action == P7501_BOOT_ACTION_PASSIVE);
-    assert(dw.action == P7501_DIAG_ACT_DUMP && dw.release_on_ddr);
-    assert(!p7501_diag_watch_parse_args("20000 BOGUS_DW", &dw));
-
-    assert(p7501_diag_watch_action_char(P7501_DIAG_ACT_AUTO) == 'B');
-    assert(p7501_diag_watch_action_char(P7501_DIAG_ACT_FORMAT) == 'F');
-    assert(p7501_diag_watch_action_char(P7501_DIAG_ACT_DUMP) == 'D');
-    assert(p7501_diag_watch_action_char(P7501_DIAG_ACT_NONE) == '\0');
-
-    assert(p7501_diag_watch_parse_args("25000 JIG:2500 AUTO RELEASE", &dw));
-    p7501_diag_watch_state_t st;
-    p7501_diag_watch_init(&st);
-    int rel_count = 0;
-    int tx_count = 0;
-    char last_tx = '\0';
-
-    /* In JIG mode, DDR CHECK: OK arrives BEFORE P50 is sampled: must keep SW_UART LOW! */
-    feed_str_and_count(&st, &dw, "DDR CHECK: OK\r\n", &rel_count, &tx_count, &last_tx);
-    assert(rel_count == 0 && !st.sw_uart_released);
-    assert((st.seen_events & P7501_DIAG_EVT_DDR_OK) != 0u);
-
-    /* Release happens cleanly once "serial boot mode" confirms /BOOT.BIN sampled P50. */
-    feed_str_and_count(
-        &st, &dw,
-        "***** serial boot mode *****\r\nSetBusWidth -91006\r\n** open tray ** 80040904\r\nPANAMON1>",
-        &rel_count, &tx_count, &last_tx
-    );
-    assert(rel_count == 1 && st.sw_uart_released);
-    assert(tx_count == 1 && last_tx == 'B' && st.tx_dispatched);
-    assert((st.seen_events & P7501_DIAG_EVT_SERIAL_BOOT) != 0u);
-    assert((st.seen_events & P7501_DIAG_EVT_SD_ERR) != 0u);
-    assert((st.seen_events & P7501_DIAG_EVT_ODD_OPEN) != 0u);
-    assert((st.seen_events & P7501_DIAG_EVT_CD_APC_ERR) != 0u);
-    assert((st.seen_events & P7501_DIAG_EVT_PANAMON) != 0u);
-    assert(p7501_diag_watch_diagnosis(st.seen_events) != NULL);
-
-    /* In NORMAL mode, DDR CHECK: OK releases immediately and BGO beats ODD noise in diagnosis. */
-    assert(p7501_diag_watch_parse_args("12000 NORMAL NONE RELEASE", &dw));
-    p7501_diag_watch_init(&st);
-    rel_count = 0;
-    tx_count = 0;
-    feed_str_and_count(
-        &st, &dw,
-        "DDR CHECK: OK\r\n***** normal mode *****\r\nBGO driver init failed\r\n80040904\r\n",
-        &rel_count, &tx_count, &last_tx
-    );
-    assert(rel_count == 1 && st.sw_uart_released && tx_count == 0);
-    assert(strstr(p7501_diag_watch_diagnosis(st.seen_events), "BGO driver init failed") != NULL);
-}
 static void test_rsp_boot_prose_does_not_trip_nak(void) {
     const char *boot_log =
         "Main hung-up time changed 255[s].\r\n"
@@ -439,8 +359,8 @@ int p7501_run_pana_logic_tests(void) {
     test_piologic_analyzer();
     test_flash_geometry_and_bgo();
     test_pana_dumpnor_stub_and_args();
-    test_diag_watch_codec();
+    p7501_run_pana_diag_drv_tests();
     test_sds_bus_sniffer_codec();
-    printf("[HOST-TEST] PANARSP + DUMPNOR + DIAGWATCH + FlashGeo + PIOLOGIC + SDSNIFF passed.\n");
+    printf("[HOST-TEST] PANARSP + REGS + DUMPNOR + DIAGWATCH + DRVPANA + FlashGeo + PIOLOGIC + SDSNIFF passed.\n");
     return 0;
 }

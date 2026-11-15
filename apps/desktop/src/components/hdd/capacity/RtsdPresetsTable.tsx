@@ -53,24 +53,32 @@ export const RtsdPresetsTable: React.FC<RtsdPresetsTableProps> = ({ presets }) =
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-800/60">
-          {presets.map(p => (
-            <tr
-              key={p.menu_index}
-              className={
-                p.capacity_gb === 250
-                  ? 'bg-cyan-500/10 text-cyan-200 font-semibold'
-                  : p.capacity_gb === 200
-                    ? 'bg-amber-500/5 text-amber-200'
-                    : 'text-slate-300'
-              }
-            >
-              <td className="py-2 pr-3">#{p.menu_index} — {p.label}</td>
-              <td className="py-2 pr-3">{p.capacity_gb} GB</td>
-              <td className="py-2 pr-3 font-bold text-emerald-300">{p.blocks_2kb_hex}</td>
-              <td className="py-2 pr-3">{p.blocks_2kb.toLocaleString()}</td>
-              <td className="py-2">{p.sectors_512b.toLocaleString()}</td>
+          {presets.length === 0 ? (
+            <tr>
+              <td colSpan={5} className="py-3 text-center text-slate-500">
+                Nenhum preset RTSD carregado.
+              </td>
             </tr>
-          ))}
+          ) : (
+            presets.map(p => (
+              <tr
+                key={p.menu_index}
+                className={
+                  p.capacity_gb === 250
+                    ? 'bg-cyan-500/10 text-cyan-200 font-semibold'
+                    : p.capacity_gb === 200
+                      ? 'bg-amber-500/5 text-amber-200'
+                      : 'text-slate-300'
+                }
+              >
+                <td className="py-2 pr-3">#{p.menu_index} — {p.label}</td>
+                <td className="py-2 pr-3">{p.capacity_gb} GB</td>
+                <td className="py-2 pr-3 font-bold text-emerald-300">{p.blocks_2kb_hex}</td>
+                <td className="py-2 pr-3">{p.blocks_2kb.toLocaleString()}</td>
+                <td className="py-2">{p.sectors_512b.toLocaleString()}</td>
+              </tr>
+            ))
+          )}
         </tbody>
       </table>
     </div>

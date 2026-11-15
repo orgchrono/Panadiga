@@ -1,3 +1,6 @@
+> 🌐 **Idioma / Language:** [English (US)](../en-US/PICO_P7501_FIRMWARE_GUIDE.md) | **Português (BR)**
+> 🧭 **Portal:** [Índice da Documentação](../INDEX.md) | [Auditoria Completa](../../AUDITORIA_COMPLETA.md) | [Auditorias](../audits/README.md) | [Pseudocódigo Ghidra](../pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) | [Logs de Debug](../debug_logs/README.md)
+
 # Panasonic P7501 Async UART & Boot Probe Firmware Engine (RP2040 / RP2350)
 
 Firmware oficial do controlador de bancada baseado em **Raspberry Pi Pico (RP2040)** e **Raspberry Pi Pico 2 (RP2350)** para captura de boot, diagnóstico elétrico e comunicação UART assíncrona (**`115200 8N1`**) através do conector de serviço **`P7501` (`B6B-ZR-3R4`, legenda `TO JIGU`)** do gravador **Panasonic DMR-EH55** (processador **Matsushita `AM34` / `MN103S`** + Syscon `IC7501`, placa `VEP79138`).

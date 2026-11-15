@@ -26,6 +26,6 @@ pub use panadiga_core::ssot::{
 pub use hdd::{ExtractedPartitionItemDto, PartitionExtractionManifestDto};
 pub use paths::{resolve_candidate, resolve_default_flash_path};
 pub use system::{
-    BinaryFileStatusDto, HexDumpRowDto, LiveNvramCaptureEventDto, ServiceManualCatalogItemDto,
-    SystemOverviewDto,
+    BinaryFileStatusDto, EngineeringDocEntryDto, HexDumpRowDto, LiveNvramCaptureEventDto,
+    ServiceManualCatalogItemDto, SystemOverviewDto,
 };

@@ -258,10 +258,11 @@
       "bytesRx": "RX: {{count}} B",
       "bytesTx": "TX: {{count}} B",
       "emptyStream": "No SC0 Bridge session running. Start the bridge for live passthrough or use the quick triggers above.",
-      "busArchitectureTitle": "Two-Bus Physical Architecture (Read-Only Guard)",
-      "busArchitectureSummary": "SC0 UART (P7501) <-> BOOT.BIN / MAIN (_dev_SERIAL RSP $m/$x/$g) <-> ATAPI 0x880000C0; separately, the 113 DRV CLI commands (PASS 0x4d415453 0x48495441 unlock) reside on the F/E Drive PCB UART (0xB002..0xB004). Destructive write commands remain blocked.",
+      "busArchitectureTitle": "Two-Bus Physical Architecture (E05 IPL RO / Safe NVRAM+RAM RW)",
+      "busArchitectureSummary": "SC0 UART (P7501) <-> BOOT.BIN / MAIN (_dev_SERIAL RSP ///) <-> ATAPI 0x880000C0; separately, the 113 DRV CLI commands (DRVPANA auto PASS 0x4d415453 0x48495441 unlock) reside on the F/E Drive PCB UART (0xB002..0xB004). IPL NOR writes remain blocked (E05); SRAM/NVRAM writes are guarded.",
       "bgoHaltWarningTitle": "BOOT.BIN halted on BGO driver init failed (boot_panic_or_halt_7812)",
-      "bgoHaltWarningBody": "FUN_4400836f (bgo_driver_init) failed in NORMAL mode before fmu_sd_dispatcher(1), so MAIN and _dev_SERIAL (PANARSP) are not running in this session."
+      "bgoHaltWarningBody": "FUN_4400836f (bgo_driver_init) failed in NORMAL mode before fmu_sd_dispatcher(1), so MAIN and _dev_SERIAL (PANARSP) are not running in this session.",
+      "diagwatchReadNvram": "DIAGWATCH Read NVRAM"
     }
   },
   "nvram": {
@@ -271,7 +272,15 @@
     "statusClean": "NVRAM SANITIZED (U99 RESOLVED)",
     "statusCorrupted": "NVRAM CORRUPTED (U99 ERROR ACTIVE)",
     "microsectorsTitle": "Boot Micro-Sectors Map (SA134 to SA141)",
-    "auditButton": "View Audit & SHA-256 Hashes"
+    "auditButton": "View Audit & SHA-256 Hashes",
+    "patchTitle": "Guarded CoW NVRAM Patch (SA134..SA141 | IPL Strictly Read-Only)",
+    "patchDesc": "Writes custom bytes copy-on-write inside the 64 KB NVRAM window (relative 0x0000..0xFFFF). Spansion IPL remains bit-for-bit untouched.",
+    "patchInputLabel": "Source 8MB Flash Dump",
+    "patchOutputLabel": "Copy-on-Write Output Path",
+    "patchOffsetLabel": "NVRAM Offset (hex/dec)",
+    "patchHexLabel": "Hex Payload Bytes",
+    "patchBtn": "Apply Guarded CoW Patch",
+    "patchSuccess": "Guarded CoW NVRAM patch written cleanly (IPL preserved)."
   },
   "manuals": {
     "header": {
@@ -303,6 +312,26 @@
       "totalPages": "Total Pages",
       "fileSize": "Corpus Size",
       "chipsTitle": "Critical Silicon & Connectors in Manual:"
+    },
+    "engDocs": {
+      "title": "Interactive Engineering Docs, Audits, Pseudocode & Logs",
+      "subtitle": "Cross-linked Markdown, Ghidra raw dumps (.txt), COM10 captures (.log), direct EN/PT-BR translation switcher, and live code references.",
+      "filterAll": "All",
+      "selectPrompt": "Select a document, raw dump, or capture log to inspect.",
+      "empty": "No documentation or reference files matched the filter.",
+      "loading": "Loading technical reference...",
+      "searchPlaceholder": "Filter docs, raw .txt, or .log...",
+      "back": "Back",
+      "forward": "Forward",
+      "switchLang": "Switch Language",
+      "tocPlaceholder": "Jump to section...",
+      "decodeSummaryTitle": "Decoded COM10 / AM34 Capture Telemetry",
+      "sourcePreviewBadge": "Workspace Source Reference",
+      "loader": "Loader",
+      "bootMode": "Boot Mode",
+      "sdLba": "SD LBA",
+      "errors": "Errors",
+      "vdd": "VDD"
     }
   },
   "rag": {
@@ -431,18 +460,44 @@
       }
     },
     "flashGeometries": {
-      "mb2": { "chip_name": "Spansion S29AL016J NOR Flash (2 MB / 16 Mbit)" },
-      "mb4": { "chip_name": "Spansion S29JL032H NOR Flash (4 MB / 32 Mbit)" },
-      "mb8": { "chip_name": "Spansion S29JL064H NOR Flash (8 MB / 64 Mbit)" },
-      "mb16": { "chip_name": "Spansion S29GL128P NOR Flash (16 MB / 128 Mbit)" }
+      "mb2": {
+        "chip_name": "Spansion S29AL016J NOR Flash (2 MB / 16 Mbit)"
+      },
+      "mb4": {
+        "chip_name": "Spansion S29JL032H NOR Flash (4 MB / 32 Mbit)"
+      },
+      "mb8": {
+        "chip_name": "Spansion S29JL064H NOR Flash (8 MB / 64 Mbit)"
+      },
+      "mb16": {
+        "chip_name": "Spansion S29GL128P NOR Flash (16 MB / 128 Mbit)"
+      }
     },
     "memoryRegions": {
-      "sram": { "name": "System SRAM / Work", "perms": "RWX" },
-      "mmio": { "name": "AM34 Internal OCD MMIO", "perms": "RW" },
-      "flash_ipl": { "name": "NOR Flash Bootloader / IPL", "perms": "RX (Protected)" },
-      "rtos_fw": { "name": "Main RTOS & AV Firmware", "perms": "RX (Protected)" },
-      "flash_nvram": { "name": "Top-Boot NVRAM (EEMUL / U99)", "perms": "RW (8x8KB)" },
-      "sdram": { "name": "DDR1 SDRAM (UniPhier)", "perms": "RWX" }
+      "sram": {
+        "name": "System SRAM / Work",
+        "perms": "RWX"
+      },
+      "mmio": {
+        "name": "AM34 Internal OCD MMIO",
+        "perms": "RW"
+      },
+      "flash_ipl": {
+        "name": "NOR Flash Bootloader / IPL",
+        "perms": "RX (Protected)"
+      },
+      "rtos_fw": {
+        "name": "Main RTOS & AV Firmware",
+        "perms": "RX (Protected)"
+      },
+      "flash_nvram": {
+        "name": "Top-Boot NVRAM (EEMUL / U99)",
+        "perms": "RW (8x8KB)"
+      },
+      "sdram": {
+        "name": "DDR1 SDRAM (UniPhier)",
+        "perms": "RWX"
+      }
     },
     "commands": {
       "PINCHECK": {
@@ -676,7 +731,7 @@
       },
       "PANARSP": {
         "label": "PANA_RSP Client Probe (MAIN)",
-        "description": "Probes MAIN _dev_SERIAL RSP stub (FUN_574f0590/0775) via PIO1 sending 0x15 NAK, 0E0402, $g#67, $Z0#8A/$Z1#8B, $m, and $x.",
+        "description": "Probes MAIN _dev_SERIAL RSP stub (FUN_574f0590/0775) via PIO1 (G/Z0/Z1/MEM/XMEM/WMEM/WRITE32/PASSTHROUGH/DUMPNOR/CALL).",
         "arg_label": "PANA_RSP Sequence",
         "arg_placeholder": "6000 JIG:350 PROBESEQ",
         "options": {
@@ -684,7 +739,38 @@
           "magicG": "MAGIC + $g#67",
           "wait1Probe": "WAIT:wait 1 + PROBESEQ",
           "mem515": "Mem @ 515B2E38",
-          "xmem840": "XMem Bin @ 84000000"
+          "xmem840": "XMem Bin @ 84000000",
+          "dumpnor": "Dump 8MB NOR (PANADMP1)",
+          "regsDecode": "REGS ( Decode 12x u32)"
+        }
+      },
+      "DIAGWATCH": {
+        "label": "Autonomous Boot Watchdog (DIAGWATCH)",
+        "description": "Monitors SC0 stream, releases SW_UART on serial boot (JIG) or DDR CHECK: OK (NORMAL), classifies SDDIAG/CDDIAG/BGO failures, and dispatches B/R/W/F/D/J/E/Q on PANAMON1>.",
+        "arg_label": "DIAGWATCH Mode",
+        "arg_placeholder": "25000 JIG:2500 AUTO RELEASE",
+        "options": {
+          "autoBypass": "Auto Bypass (JIG:2500)",
+          "readMem": "Read NOR/RAM (JIG:2500)",
+          "writeMem": "Write RAM/NVRAM (JIG:2500)",
+          "formatBgo": "Format BGO (JIG:2500)",
+          "dumpNor": "Dump 8MB NOR (JIG:2500)",
+          "passive": "Passive (Normal)",
+          "readNvram": "Read NVRAM @ 847F0000"
+        }
+      },
+      "DRVPANA": {
+        "label": "Drive Optical Serial CLI (DRVPANA)",
+        "description": "Sends F/E Factory CLI commands to Matshita R6-MV4 via PIO1 with automatic PASS 0x4d415453 0x48495441 unlock and RX capture.",
+        "arg_label": "Drive Command Spec",
+        "arg_placeholder": "DSCREG",
+        "options": {
+          "dscreg": "DSCREG (DSP Status)",
+          "passUnlock": "PASS Unlock",
+          "fep": "FEP (Front-End)",
+          "start": "START Spindle",
+          "pon": "PON (Laser Power)",
+          "stop": "STOP Spindle"
         }
       },
       "BRIDGE": {
@@ -833,6 +919,28 @@
     },
     "norStub": {
       "buildBtn": "Build Read-Only NOR Dumper Stub (DIGADIAG 128K)"
+    },
+    "matshita": {
+      "title": "Matshita R6-MV4 ODD Emulator, ATAPI Write Injection & Unlock .FRM",
+      "desc": "Verifies MN103S boot sequence against emulated ATAPI drive, injects 0x3B/0xED payloads (IPL strictly blocked by E05), drives PASS-unlocked DRV serial CLI, and builds/verifies SD (EXTRHEAD @ 0x50400000) & CD (MATSHITA) unlock containers.",
+      "bootTitle": "Boot Sequence Verification",
+      "scenarioLabel": "ODD Boot Scenario",
+      "runBootBtn": "Run Boot Sequence",
+      "injectTitle": "ATAPI Write Injection (0x3B / Vendor 0xED)",
+      "targetVaLabel": "Target VA (optional; IPL blocked by E05)",
+      "payloadHexLabel": "Hex Payload",
+      "vendorEdToggle": "Use Vendor CDB 0xED (FUN_400209f3)",
+      "injectBtn": "Inject ATAPI Payload",
+      "serialTitle": "Emulated DRV Factory Serial CLI",
+      "serialCmdLabel": "DRV Command",
+      "unlockPassToggle": "Auto-Unlock Secret PASS (0x4d415453 0x48495441)",
+      "sendSerialBtn": "Run Serial CLI",
+      "frmTitle": "Unlock .FRM Packer & Verifier (SD / CD)",
+      "containerKindLabel": "Container Type",
+      "frmPathLabel": "Verify Existing .FRM Path",
+      "outPathLabel": "Pack Output Path (optional)",
+      "verifyFrmBtn": "Verify Unlock .FRM",
+      "packFrmBtn": "Pack Unlock .FRM"
     },
     "errors": {
       "outputDirRequired": "Please enter the SD kit output directory.",

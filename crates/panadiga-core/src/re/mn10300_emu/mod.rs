@@ -22,6 +22,7 @@ mod ops;
 mod tests;
 
 use serde::{Deserialize, Serialize};
+use std::collections::VecDeque;
 
 pub const PSW_V: u16 = 0x0001;
 pub const PSW_C: u16 = 0x0002;
@@ -30,10 +31,20 @@ pub const PSW_Z: u16 = 0x0008;
 pub const PSW_FLAGS_MASK: u16 = 0x000F;
 pub const PSW_RESERVED_MASK: u16 = 0xC0F0;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum CfiStage {
+    #[default]
+    Normal,
+    Unlock555,
+    Unlock2AA,
+    Autoselect,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Mn103Fault {
     UnmappedRead(u32),
     UnmappedWrite(u32),
+    IplWriteProtected(u32),
     AlignError(u32),
     ReservedPswBits(u16),
     InvalidOpcode(u8),
@@ -65,6 +76,10 @@ pub struct Mn103Vm {
     pub psw: u16,
     pub psw_undef: u16,
     pub steps: u64,
+    pub sc0_enabled: bool,
+    pub cfi_stage: CfiStage,
+    pub uart_rx: VecDeque<u8>,
+    pub uart_tx: Vec<u8>,
     pub(super) segments: Vec<MemSegment>,
 }
 
@@ -87,8 +102,29 @@ impl Mn103Vm {
             psw: 0,
             psw_undef: 0,
             steps: 0,
+            sc0_enabled: false,
+            cfi_stage: CfiStage::Normal,
+            uart_rx: VecDeque::new(),
+            uart_tx: Vec::new(),
             segments: Vec::new(),
         }
+    }
+
+    /// Enables virtual AM34 `SC0` UART MMIO registers (`0xD4002008`/`2009`/`200C`).
+    pub fn enable_sc0_uart(&mut self, initial_rx: &[u8]) {
+        self.sc0_enabled = true;
+        self.uart_rx.extend(initial_rx);
+    }
+
+    /// Queues additional RX bytes onto virtual `SC0` (`0xD4002009`).
+    pub fn queue_uart_rx(&mut self, data: &[u8]) {
+        self.uart_rx.extend(data);
+    }
+
+    /// Drains all bytes transmitted via `SC0TXB` (`0xD4002008`) as UTF-8 (lossy).
+    pub fn take_uart_tx_utf8(&mut self) -> String {
+        let bytes = std::mem::take(&mut self.uart_tx);
+        String::from_utf8_lossy(&bytes).into_owned()
     }
 
     pub fn map_segment(&mut self, base: u32, data: Vec<u8>, writable: bool) {
@@ -116,6 +152,14 @@ impl Mn103Vm {
             }
             0x14..=0x17 => {
                 self.d[n] &= 0xFF;
+                self.pc = pc.wrapping_add(1);
+            }
+            0x18..=0x1B => {
+                self.d[n] = (self.d[n] as i16) as i32 as u32;
+                self.pc = pc.wrapping_add(1);
+            }
+            0x1C..=0x1F => {
+                self.d[n] &= 0xFFFF;
                 self.pc = pc.wrapping_add(1);
             }
             0x20..=0x23 => {
@@ -180,14 +224,18 @@ impl Mn103Vm {
                     self.pc = pc.wrapping_add(1);
                 }
             }
-            0xA0..=0xAF => {
+            0xA0..=0xBF => {
+                let is_addr = op >= 0xB0;
                 let len = if m == n { 2 } else { 1 };
                 let rhs = if m == n {
                     (self.read_u8(pc + 1)? as i8) as i32 as u32
+                } else if is_addr {
+                    self.a[m]
                 } else {
                     self.d[m]
                 };
-                let _ = self.alu_sub(self.d[n], rhs);
+                let lhs = if is_addr { self.a[n] } else { self.d[n] };
+                let _ = self.alu_sub(lhs, rhs);
                 self.pc = pc.wrapping_add(len);
             }
             0xC0..=0xC9 => {
@@ -292,9 +340,17 @@ impl Mn103Vm {
                 let p = self.read_u8(pc + 1)?;
                 self.step_f8(p)?;
             }
+            0xFA => {
+                let p = self.read_u8(pc + 1)?;
+                self.step_fa(p)?;
+            }
             0xFC => {
                 let p = self.read_u8(pc + 1)?;
                 self.step_fc(p)?;
+            }
+            0xFE => {
+                let p = self.read_u8(pc + 1)?;
+                self.step_fe(p)?;
             }
             _ => return Err(Mn103Fault::InvalidOpcode(op)),
         }

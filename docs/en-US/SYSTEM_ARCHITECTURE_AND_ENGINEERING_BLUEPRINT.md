@@ -1,3 +1,6 @@
+> 🌐 **Language / Idioma:** **English** | [Português (BR)](../pt-BR/ARQUITETURA_E_BLUEPRINT_DE_ENGENHARIA.md)
+> 🧭 **Portal:** [Docs Index](../INDEX.md) | [Complete Audit](../../COMPLETE_AUDIT.md) | [Audits](../audits/README.md) | [Ghidra Pseudocode](../pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) | [Debug Logs](../debug_logs/README.md)
+
 # Systems Architecture and Engineering Blueprint
 ## Panadiga — Master Specification on Modular Decomposition, Silicon, and Invariants
 
@@ -84,7 +87,7 @@ In the presentation layer (React 18 / TypeScript), loose boolean state flags (`i
     | { status: 'success'; sectorsErased: number; durationMs: number }
     | { status: 'failed'; error: string; code: string };
   ```
-- **Illegal States Are Unrepresentable**: Prevents UI deadlocks and guarantees 100/100 scores in `uxlint` audits.
+- **Illegal States Are Unrepresentable**: Prevents UI deadlocks and enforces explicit coverage across the UI states checked by `uxlint` (`ux-guard`).
 
 ### 2.3 Introspective GDB & Lossless Telemetry Ring Buffer
 In-circuit debugging over the P7501 header requires resilient telemetry handling:

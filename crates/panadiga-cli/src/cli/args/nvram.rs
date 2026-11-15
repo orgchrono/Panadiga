@@ -21,4 +21,23 @@ pub enum NvramActions {
         #[arg(value_name = "OUTPUT_CLEAN")]
         output: Option<PathBuf>,
     },
+
+    /// Copy-on-write guarded byte patch strictly inside writable NVRAM microsectors (blocks IPL NOR)
+    Patch {
+        /// Path to raw 8 MB / 4 MB Spansion NOR flash dump
+        #[arg(short, long, value_name = "INPUT_DUMP")]
+        input: PathBuf,
+
+        /// Destination copy-on-write path (cannot overwrite input; defaults to <INPUT>_PATCHED.<ext>)
+        #[arg(short, long, value_name = "OUTPUT_FILE")]
+        output: Option<PathBuf>,
+
+        /// NVRAM-relative byte offset (hex/dec inside 0..65535)
+        #[arg(long, value_name = "OFFSET")]
+        offset: String,
+
+        /// Hex bytes to write (e.g. "DEADBEEF" or "A5 FF")
+        #[arg(long, value_name = "HEX")]
+        hex: String,
+    },
 }

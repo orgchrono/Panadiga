@@ -1,8 +1,14 @@
+> 🌐 **Idioma / Language:** [English (US)](../en-US/FINAL_AUDIT_AND_MODULARIZATION_REPORT.md) | **Português (BR)**
+> 🧭 **Portal:** [Índice da Documentação](../INDEX.md) | [Auditoria Completa](../../AUDITORIA_COMPLETA.md) | [Auditorias](../audits/README.md) | [Pseudocódigo Ghidra](../pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) | [Logs de Debug](../debug_logs/README.md)
+
 # Relatório Oficial de Auditoria Arquitetural & Modularização Definitiva
 ## Ecossistema Panasonic DIGA (Panadiga) — Rust Core, Tauri 2 / React 18, C11 PIO & Python CLI
 
-> **Data de Homologação**: 07 de Novembro de 2026  
-> **Status dos 9 Quality Gates**: 100% Aprovado (35 Testes Rust, 26 Testes Vitest, 8 E2E Playwright, 27 Pytest, 0% Clones jscpd, 100/100 uxlint).  
+> [!NOTE]
+> **Registro Histórico de Marco (`07 de Novembro de 2026`):** Este relatório preserva a auditoria inicial de decomposição dos monólitos e implantação dos 9 Quality Gates. Após a migração para o workspace multi-crate (`crates/panadiga-core`, `crates/panadiga-cli`, `crates/panadiga-rag`, `crates/panadiga-mcp`, `apps/desktop/src-tauri/`), consulte a **Auditoria Técnica Viva na Raiz** ([`../../AUDITORIA_COMPLETA.md`](../../AUDITORIA_COMPLETA.md) | [English](../../COMPLETE_AUDIT.md)) e [`../audits/README.md`](../audits/README.md).
+
+> **Data de Homologação do Marco**: 07 de Novembro de 2026  
+> **Snapshot dos Gates no Marco**: 100% Aprovado (`35` Testes Rust, `26` Testes Vitest, `8` E2E Playwright, `27` Pytest, `0%` Clones `jscpd`, gate `uxlint` aprovado). Consulte [`ARQUITETURA_DE_TESTES_E_CONFORMIDADE.md`](./ARQUITETURA_DE_TESTES_E_CONFORMIDADE.md) para a contagem vigente.  
 > **Classificação**: Dossiê Técnico de Engenharia de Software e Arquitetura Limpa  
 > **Autores**: Equipe de Engenharia Reversa e Sistemas Panadiga  
 
@@ -22,7 +28,7 @@ A auditoria arquitetural exaustiva realizada no ecossistema **Panadiga** identif
 | **Lógica de Pipeline & IPC** | ⚠️ **Alerta de Segurança** | Fallback silencioso para dados de *mock* em falhas reais de hardware em Live Mode. | Rejeição explícita de erro (`throw new Error`) quando fora do modo demonstração. | ✅ **Proteção Ativa em Bancada** |
 | **Radix UI & shadcn** | ⚠️ **Inconsistente** | `Modal.tsx` artesanal com abas manuais em `<button>` convivendo com Radix. | Eliminação de `Modal.tsx`, adoção de `@radix-ui/react-dialog` e `@radix-ui/react-tabs`. | ✅ **Radix UI & shadcn Padronizados** |
 | **Estado, Redux & MVVM** | ⚠️ **Misto** | View misturando execução assíncrona do RAG com navegação de manuais. | Separação pura: `useRagViewModel.ts` + `RagAssistantPanel.tsx`. | ✅ **MVVM Puro sem Redux Desnecessário** |
-| **Acessibilidade (a11y)** | ❌ **Não Conforme** | Divs clicáveis sem teclado, falta de `aria-label`, terminal sem `role="log"`/`aria-live`. | Implementação completa de papéis semânticos, focus rings, teclado e `aria-live="polite"`. | ✅ **WCAG 2.1 AA Compliant (uxlint 100/100)** |
+| **Acessibilidade (a11y)** | ❌ **Não Conforme** | Divs clicáveis sem teclado, falta de `aria-label`, terminal sem `role="log"`/`aria-live`. | Implementação completa de papéis semânticos, focus rings, teclado e `aria-live="polite"`. | ✅ **WCAG 2.1 AA & Gate `uxlint`** |
 
 ---
 
@@ -83,7 +89,7 @@ flowchart LR
     end
 
     subgraph Frontend_Modular["Arquitetura Modular em Componentes"]
-        Mocks["services/mocks/
+        Mocks["test/mocks/
         ├── mockSystem.ts
         ├── mockNvram.ts
         ├── mockHdd.ts
@@ -140,7 +146,7 @@ A internacionalização foi migrada de um objeto TypeScript plano para uma solu�
 - **`apps/desktop/src/locales/pt-BR.json`**: Tabela canônica de verbetes em Português do Brasil.
 - **`apps/desktop/src/i18n/i18n.ts`**: Inicializador do `i18next` com detecção de idioma e fallback determinístico.
 - **`apps/desktop/src/i18n/translations.ts`**: Provedor de compatibilidade e tipagem estrita com TypeScript.
-- **`apps/desktop/src/hooks/useTranslation.ts`**: Hook universal de conveniência consumido pelas views e viewmodels.
+- **`apps/desktop/src/i18n/useTranslation.ts`**: Hook universal de conveniência consumido pelas views e viewmodels.
 
 ### 3.2. Cobertura Temática das Tabelas JSON
 As tabelas JSON contêm chaves estruturadas por namespace de aplicação:
@@ -151,7 +157,7 @@ As tabelas JSON contêm chaves estruturadas por namespace de aplicação:
 * `frmcrypto.*`: Inspeção de contêiner óptico FRM, entropia de Shannon, tabela de TOC e vazamentos ECB.
 * `nvram.*`: Cirurgia de parâmetros EEMUL, micro-setores Spansion e unbrick cirúrgico.
 * `pico.*`: Interface UART assíncrona `P7501` (`115200 8N1`), proteção `NSW5V` (`Hi-Z`), comandos de sondagem e console serial.
-* `manuals.*`: Catálogo dos 15 manuais de serviço e busca semântica em diagramas esquemáticos.
+* `manuals.*`: Catálogo de 30 manuais/datasheets PDF em `manuals_and_schematics/` e navegador interativo de `docs/`, logs `.log` e dumps `.txt`.
 * `rag.*`: Assistente de inteligência artificial com verificação de segurança física e citações.
 * `hexinspector.*`: Visualizador hexadecimal de setores LBA e endereçamento dual.
 * `common.*`: Ações globais (fechar, copiar, atualizar, erro, sucesso).
@@ -170,7 +176,7 @@ A interface Desktop foi submetida a uma auditoria estrita de acessibilidade para
    - Botões de ações rápidas (atualizar telemetria, copiar hash SHA-256, fechar modais) possuem `aria-label` contextuais.
    - O console serial em `TerminalView.tsx` foi enriquecido com `role="log"` e `aria-live="polite"`, permitindo que sintetizadores de voz anunciem novos pacotes sem bloquear a navegação.
 3. **Resiliência de Interface & Estados Vazios**:
-   - Todos os mapeamentos de listas (`.map(...)`) contam com estados vazios alternativos (*empty states*), garantindo pontuação **100/100 no linter de UX (`uxlint`)**.
+   - Todos os mapeamentos de listas (`.map(...)`) contam com estados vazios alternativos (*empty states*), eliminando projeções sem fallback explícito no linter de UX (`uxlint` / `ux-guard`).
 
 ---
 
@@ -214,7 +220,7 @@ python scripts/validate.py
   -> npx jscpd                             : OK (0 clones encontrados / 0.00% duplicação em 106 arquivos)
 
 [STEP 5/9] Running UI/UX Completeness Linter (uxlint)...
-  -> npm run uxlint (apps/desktop)         : OK (Pontuação: 100/100 - Zero pendências)
+  -> npm run uxlint (apps/desktop)         : OK (Gate ux-guard aprovado em modo warning)
 
 [STEP 6/9] Running Playwright End-to-End Test Suite...
   -> npx playwright test                   : OK (8/8 testes E2E aprovados em Chromium headless)
@@ -240,27 +246,27 @@ python scripts/validate.py
 
 Abaixo está o mapeamento exato de todos os novos módulos e estruturas incorporados ao repositório:
 
-| Subsistema | Caminho Relativo | Responsabilidade / Descrição |
+| Subsistema | Caminho Relativo Atual (Workspace) | Responsabilidade / Descrição |
 | :--- | :--- | :--- |
-| **Rust Storage** | `src/hdd/mod.rs` | Fachada pública e gerador de relatórios forenses MEIHFS |
-| **Rust Storage** | `src/hdd/types.rs` | Tipos, estruturas MBR e cabeçalhos MEIHFS |
-| **Rust Storage** | `src/hdd/utils.rs` | Utilitários de decodificação XOR 0xFF e parsing de bytes |
-| **Rust Storage** | `src/hdd/inspect.rs` | Inspeção de LBA 0, espelho de 28MB e journal de 8MB |
-| **Rust Storage** | `src/hdd/meihdfs.rs` | Parser dos 256 registros do sistema de arquivos MEIHFS |
-| **Rust Storage** | `src/hdd/partitions.rs` | Extrator e validador SHA-256 das partições de 32MB e 64MB |
-| **Rust Crypto** | `src/crypto/mod.rs` | Fachada pública e interface de criptoanálise do firmware |
-| **Rust Crypto** | `src/crypto/types.rs` | Estruturas de entrada da TOC de 48B e relatórios de entropia |
-| **Rust Crypto** | `src/crypto/entropy.rs` | Algoritmo de entropia de Shannon e janela deslizante |
-| **Rust Crypto** | `src/crypto/toc.rs` | Parser da tabela de conteúdos de 48 bytes do contêiner FRM |
-| **Rust Crypto** | `src/crypto/codebook.rs` | Análise de frequência de blocos ECB de 64 bits e vazamento |
-| **Rust Pico** | `src/pico/mod.rs` | Fachada de controle e despacho de comandos da bancada RP2040 |
+| **Rust Storage** | `crates/panadiga-core/src/hdd/mod.rs` | Fachada pública e gerador de relatórios forenses MEIHFS |
+| **Rust Storage** | `crates/panadiga-core/src/hdd/types.rs` | Tipos, estruturas MBR e cabeçalhos MEIHFS |
+| **Rust Storage** | `crates/panadiga-core/src/hdd/utils.rs` | Utilitários de decodificação XOR 0xFF e parsing de bytes |
+| **Rust Storage** | `crates/panadiga-core/src/hdd/inspect.rs` | Inspeção de LBA 0, espelho de 28MB e journal de 8MB |
+| **Rust Storage** | `crates/panadiga-core/src/hdd/meihdfs.rs` | Parser dos 256 registros do sistema de arquivos MEIHFS |
+| **Rust Storage** | `crates/panadiga-core/src/hdd/partitions.rs` | Extrator e validador SHA-256 das partições de 32MB e 64MB |
+| **Rust Crypto** | `crates/panadiga-core/src/crypto/mod.rs` | Fachada pública e interface de criptoanálise do firmware |
+| **Rust Crypto** | `crates/panadiga-core/src/crypto/types.rs` | Estruturas de entrada da TOC de 48B e relatórios de entropia |
+| **Rust Crypto** | `crates/panadiga-core/src/crypto/entropy.rs` | Algoritmo de entropia de Shannon e janela deslizante |
+| **Rust Crypto** | `crates/panadiga-core/src/crypto/toc.rs` | Parser da tabela de conteúdos de 48 bytes do contêiner FRM |
+| **Rust Crypto** | `crates/panadiga-core/src/crypto/codebook.rs` | Análise de frequência de blocos ECB de 64 bits e vazamento |
+| **Rust Pico** | `crates/panadiga-core/src/pico/mod.rs` | Fachada de controle e despacho de comandos da bancada RP2040/RP2350 |
 | **Rust Pico** | `crates/panadiga-core/src/pico/platforms.rs` | Definição de pinagem verificada do conector `P7501` e telemetria real |
-| **Rust Pico** | `src/pico/diagnostics.rs` | Interpretador de erros e códigos de diagnóstico Matsushita |
-| **Rust Pico** | `src/pico/bridge.rs` | Ponte serial USB CDC com o firmware C11 do RP2040 |
+| **Rust Pico** | `crates/panadiga-core/src/pico/diagnostics.rs` | Interpretador de erros e códigos de diagnóstico Matsushita |
+| **Rust Pico** | `crates/panadiga-core/src/pico/bridge.rs` | Ponte serial USB CDC com o firmware C11 do RP2040/RP2350 |
 | **Frontend i18n** | `apps/desktop/src/locales/en-US.json` | Tabela canônica de traduções em Inglês (i18next) |
 | **Frontend i18n** | `apps/desktop/src/locales/pt-BR.json` | Tabela canônica de traduções em Português (i18next) |
 | **Frontend i18n** | `apps/desktop/src/i18n/i18n.ts` | Inicializador e configurador do ecossistema i18next |
-| **Frontend Mocks** | `apps/desktop/src/services/mocks/` | Coleção de 7 mocks tipados por domínio de aplicação |
+| **Frontend Mocks** | `apps/desktop/src/test/mocks/` | Coleção isolada de mocks tipados para testes Vitest/Playwright |
 | **Frontend HDD** | `apps/desktop/src/components/hdd/` | 8 subcomponentes declarativos para visualização do MEIHFS |
 | **Frontend Crypto** | `apps/desktop/src/components/crypto/` | 6 subcomponentes declarativos para análise do PANA_DVD.FRM |
 | **Frontend Dash** | `apps/desktop/src/components/dashboard/` | 5 subcomponentes declarativos para o painel principal |

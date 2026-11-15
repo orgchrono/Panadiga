@@ -14,6 +14,7 @@ NOR_ALLOWED_WINDOWS: Final[tuple[tuple[int, int], ...]] = (
     (0x84000000, 0x84800000),
 )
 DEFAULT_NOR_STUB_LOAD_ADDR: Final[int] = 0x51800000
+DIGADIAG_STUB_LOAD_ADDR: Final[int] = 0x50400000
 
 # Verified MN103S Sleigh subroutine: polls SC0STR (0xD400200C) bit mask 0xA0, writes D3 to SC0TXB (0xD4002008).
 _PUTC_D3_BYTES: Final[bytes] = bytes.fromhex(
@@ -95,16 +96,30 @@ def _patch_call_rel16(buf: bytearray, call_insn_off: int, target_off: int) -> No
     buf[call_insn_off + 1 : call_insn_off + 3] = struct.pack("<h", disp)
 
 
+def resolve_nor_stub_load_addr(
+    load_addr: int | None = None,
+    *,
+    wrap_digadiag: bool = False,
+) -> int:
+    """Select the MN103S stub load VA: `0x50400000` for DIGADIAG or `0x51800000` for RSP RAM."""
+    if load_addr is not None:
+        return load_addr
+    return DIGADIAG_STUB_LOAD_ADDR if wrap_digadiag else DEFAULT_NOR_STUB_LOAD_ADDR
+
+
 def build_readonly_nor_dumper_stub(
     start_addr: int,
     total_len: int,
     block_size: int = 4096,
-    load_addr: int = DEFAULT_NOR_STUB_LOAD_ADDR,
+    load_addr: int | None = DEFAULT_NOR_STUB_LOAD_ADDR,
+    *,
+    wrap_digadiag: bool = False,
 ) -> bytes:
     """Assemble position-coupled MN103S PIC/PIC-relocated read-only NOR UART dumper code."""
+    resolved_load_addr = resolve_nor_stub_load_addr(load_addr, wrap_digadiag=wrap_digadiag)
     validate_nor_dump_range(start_addr, total_len, block_size)
-    if load_addr < 0 or load_addr > 0xFFF00000:
-        raise ValueError(f"Invalid MN103S load_addr: 0x{load_addr:08X}")
+    if resolved_load_addr < 0 or resolved_load_addr > 0xFFF00000:
+        raise ValueError(f"Invalid MN103S load_addr: 0x{resolved_load_addr:08X}")
 
     buf = bytearray()
     header_data = NOR_MAGIC_HEADER + struct.pack("<III", start_addr, total_len, block_size)
@@ -191,7 +206,9 @@ def build_readonly_nor_dumper_stub(
         (ftr_start_patch, ftr_off),
         (ftr_end_patch, end_off),
     ):
-        buf[patch_off : patch_off + 4] = struct.pack("<I", (load_addr + rel_off) & 0xFFFFFFFF)
+        buf[patch_off : patch_off + 4] = struct.pack(
+            "<I", (resolved_load_addr + rel_off) & 0xFFFFFFFF
+        )
 
     return bytes(buf)
 

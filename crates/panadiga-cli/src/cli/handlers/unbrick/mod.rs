@@ -4,19 +4,25 @@ pub mod render;
 
 use anyhow::{Context, Result, bail};
 use panadiga_core::crypto::parse_u32_radix;
+use panadiga_core::re::matshita_emu::{
+    MatshitaBootScenario, MatshitaOddEmulator, build_sample_unlock_frm, parse_hex_payload,
+    parse_unlock_container_mode, verify_unlock_frm_container,
+};
 use panadiga_core::re::{
     MainPassthroughMode, Prog061BgoPatchMode, SdUnbrickKitRequest, build_nor_dumper_artifact,
     build_passthrough_rsp_plan, extract_modules_from_frm, inspect_main_passthrough_sites,
     inspect_prog061_container_bytes, inspect_unbrick_workspace, patch_main_passthrough_file,
-    patch_prog061_or_build_digadiag_with_policy, prepare_sd_unbrick_kit, verify_sd_unbrick_media,
+    patch_prog061_or_build_digadiag_with_policy, prepare_sd_unbrick_kit,
+    resolve_nor_stub_load_addr, verify_sd_unbrick_media,
 };
 use std::fs;
 
-use crate::cli::args::unbrick::{UnbrickActions, UnbrickArgs};
+use crate::cli::args::unbrick::{MatshitaEmuAction, UnbrickActions, UnbrickArgs};
 use render::{
     emit_json_if_requested, format_bgo_inspection_line, format_frm_extraction_lines,
-    format_passthrough_inspection_lines, format_rsp_plan_lines, format_sd_kit_lines,
-    format_sd_verification_lines, format_unbrick_status_lines, print_lines,
+    format_frm_unlock_verification_lines, format_matshita_boot_lines,
+    format_matshita_injection_lines, format_passthrough_inspection_lines, format_rsp_plan_lines,
+    format_sd_kit_lines, format_sd_verification_lines, format_unbrick_status_lines, print_lines,
 };
 
 pub fn handle_unbrick(args: UnbrickArgs) -> Result<()> {
@@ -155,7 +161,8 @@ pub fn handle_unbrick(args: UnbrickArgs) -> Result<()> {
         } => {
             let start_u32 = parse_u32_radix(&start)?;
             let len_u32 = parse_u32_radix(&len)?;
-            let load_u32 = parse_u32_radix(&load_addr)?;
+            let explicit_load = load_addr.as_deref().map(parse_u32_radix).transpose()?;
+            let load_u32 = resolve_nor_stub_load_addr(explicit_load, wrap_digadiag);
             let (_, payload) =
                 build_nor_dumper_artifact(start_u32, len_u32, block_size, load_u32, wrap_digadiag)?;
             if let Some(p) = out {
@@ -183,5 +190,99 @@ pub fn handle_unbrick(args: UnbrickArgs) -> Result<()> {
             }
             Ok(())
         }
+        UnbrickActions::MatshitaEmu { action } => match action {
+            MatshitaEmuAction::Boot {
+                scenario,
+                frm,
+                json,
+            } => {
+                let parsed: MatshitaBootScenario = scenario.parse()?;
+                let mut emu = MatshitaOddEmulator::new(parsed);
+                if let Some(frm_path) = frm {
+                    let bytes = fs::read(&frm_path)
+                        .with_context(|| format!("Reading {}", frm_path.display()))?;
+                    let _ = emu.mount_unlock_frm("dvd", &bytes)?;
+                }
+                let report = emu.run_boot_sequence()?;
+                print_lines(&format_matshita_boot_lines(&report));
+                emit_json_if_requested(&report, json.as_deref())
+            }
+            MatshitaEmuAction::InjectWrite {
+                offset,
+                mode,
+                vendor_ed,
+                va,
+                payload_hex,
+                payload_file,
+                json,
+            } => {
+                let payload = match (payload_hex, payload_file) {
+                    (Some(h), None) => parse_hex_payload(&h)?,
+                    (None, Some(p)) => {
+                        fs::read(&p).with_context(|| format!("Reading {}", p.display()))?
+                    }
+                    (Some(_), Some(_)) => {
+                        bail!("Pass either --payload-hex or --payload-file, not both");
+                    }
+                    (None, None) => b"PANADIGA_INJECT".to_vec(),
+                };
+                let target_va = va.as_deref().map(parse_u32_radix).transpose()?;
+                let mut emu = MatshitaOddEmulator::default();
+                let (rec, snap) =
+                    emu.run_inject_write(target_va, offset, mode, vendor_ed, &payload)?;
+                print_lines(&format_matshita_injection_lines(&rec, &snap));
+                emit_json_if_requested(
+                    &serde_json::json!({ "record": rec, "snapshot": snap }),
+                    json.as_deref(),
+                )
+            }
+            MatshitaEmuAction::SerialCmd {
+                unlock_pass,
+                cmd,
+                json,
+            } => {
+                let mut emu = MatshitaOddEmulator::default();
+                if unlock_pass {
+                    let _ = emu.execute_drv_serial_command("PASS 0x4d415453 0x48495441")?;
+                }
+                let resp = emu.execute_drv_serial_command(&cmd)?;
+                println!("DRV CLI [{}]: {}", resp.status, resp.command);
+                print_lines(&resp.output_lines);
+                emit_json_if_requested(&resp, json.as_deref())
+            }
+            MatshitaEmuAction::VerifyFrm { kind, input, json } => {
+                let bytes =
+                    fs::read(&input).with_context(|| format!("Reading {}", input.display()))?;
+                let summary = verify_unlock_frm_container(&kind, &bytes)?;
+                print_lines(&format_frm_unlock_verification_lines(&summary));
+                emit_json_if_requested(&summary, json.as_deref())
+            }
+            MatshitaEmuAction::PackUnlockFrm {
+                kind,
+                payload_file,
+                out,
+                json,
+            } => {
+                let mode = parse_unlock_container_mode(&kind)?;
+                let prog_payload = match payload_file {
+                    Some(p) => fs::read(&p).with_context(|| format!("Reading {}", p.display()))?,
+                    None => vec![0xCBu8; 1024],
+                };
+                let (bytes, summary) = build_sample_unlock_frm(mode, &prog_payload)?;
+                if let Some(parent) = out.parent()
+                    && !parent.as_os_str().is_empty()
+                {
+                    fs::create_dir_all(parent)?;
+                }
+                fs::write(&out, &bytes)?;
+                println!(
+                    "Wrote unlock {} -> {}",
+                    summary.container_kind,
+                    out.display()
+                );
+                print_lines(&format_frm_unlock_verification_lines(&summary));
+                emit_json_if_requested(&summary, json.as_deref())
+            }
+        },
     }
 }

@@ -67,6 +67,24 @@ impl Mn103Vm {
         })
     }
 
+    pub(super) fn exec_bitop(&mut self, addr: u32, mask: u8, mode: u8) -> Result<(), Mn103Fault> {
+        let orig = self.read_u8(addr)?;
+        let zero = (orig & mask) == 0;
+        self.psw = if zero {
+            self.psw | PSW_Z
+        } else {
+            self.psw & !PSW_Z
+        };
+        self.psw_undef &= !PSW_Z;
+        match mode {
+            0 => self.write_u8(addr, orig | mask)?,
+            1 => self.write_u8(addr, orig & !mask)?,
+            2 => {}
+            _ => return Err(Mn103Fault::InvalidOpcode(mode)),
+        }
+        Ok(())
+    }
+
     pub(super) fn step_f0(&mut self, p: u8) -> Result<(), Mn103Fault> {
         let m = ((p >> 2) & 3) as usize;
         let n = (p & 3) as usize;
@@ -75,6 +93,10 @@ impl Mn103Vm {
             0x10..=0x1F => self.write_u32(self.a[n], self.a[m])?,
             0x40..=0x4F => self.d[m] = self.read_u8(self.a[n])? as u32,
             0x50..=0x5F => self.write_u8(self.a[n], self.d[m] as u8)?,
+            0x60..=0x6F => self.d[m] = self.read_u16(self.a[n])? as u32,
+            0x70..=0x7F => self.write_u16(self.a[n], self.d[m] as u16)?,
+            0x80..=0x8F => self.exec_bitop(self.a[n], self.d[m] as u8, 0)?,
+            0x90..=0x9F => self.exec_bitop(self.a[n], self.d[m] as u8, 1)?,
             0xF0..=0xF3 => {
                 let ret = self.pc.wrapping_add(2);
                 self.sp = self.sp.wrapping_sub(4);
@@ -296,5 +318,43 @@ impl Mn103Vm {
         }
         self.pc = self.pc.wrapping_add(6);
         Ok(())
+    }
+
+    pub(super) fn step_fa(&mut self, p: u8) -> Result<(), Mn103Fault> {
+        if !(0xF0..=0xFB).contains(&p) {
+            return Err(Mn103Fault::InvalidOpcode(p));
+        }
+        let mode = (p >> 2) & 3;
+        let n = (p & 3) as usize;
+        let d8 = self.read_u8(self.pc.wrapping_add(2))?;
+        let imm8 = self.read_u8(self.pc.wrapping_add(3))?;
+        let disp = if mode == 2 {
+            d8 as u32
+        } else {
+            (d8 as i8) as i32 as u32
+        };
+        self.exec_bitop(self.a[n].wrapping_add(disp), imm8, mode)?;
+        self.pc = self.pc.wrapping_add(4);
+        Ok(())
+    }
+
+    pub(super) fn step_fe(&mut self, p: u8) -> Result<(), Mn103Fault> {
+        match p {
+            0x00..=0x02 => {
+                let addr = self.fetch_u32(self.pc.wrapping_add(2))?;
+                let imm8 = self.read_u8(self.pc.wrapping_add(6))?;
+                self.exec_bitop(addr, imm8, p & 3)?;
+                self.pc = self.pc.wrapping_add(7);
+                Ok(())
+            }
+            0x80..=0x82 => {
+                let addr = (self.fetch_i16(self.pc.wrapping_add(2))? as u16) as u32;
+                let imm8 = self.read_u8(self.pc.wrapping_add(4))?;
+                self.exec_bitop(addr, imm8, p & 3)?;
+                self.pc = self.pc.wrapping_add(5);
+                Ok(())
+            }
+            _ => Err(Mn103Fault::InvalidOpcode(p)),
+        }
     }
 }

@@ -1,3 +1,6 @@
+> 🌐 **Idioma / Language:** [English (US)](../en-US/GDB_GHIDRA_IDA_DEBUGGING_GUIDE.md) | **Português (BR)**
+> 🧭 **Portal:** [Índice da Documentação](../INDEX.md) | [Auditoria Completa](../../AUDITORIA_COMPLETA.md) | [Auditorias](../audits/README.md) | [Pseudocódigo Ghidra](../pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) | [Logs de Debug](../debug_logs/README.md)
+
 # Guia de Depuração Interativa de Hardware: GDB, Ghidra e IDA Pro via P7501 / RSP
 
 **Documento Oficial de Engenharia Reversa e Depuração em Tempo Real**  

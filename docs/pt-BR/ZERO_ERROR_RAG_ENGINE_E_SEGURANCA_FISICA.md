@@ -1,8 +1,11 @@
+> 🌐 **Idioma / Language:** [English (US)](../en-US/ZERO_ERROR_RAG_ENGINE_AND_PHYSICAL_SAFETY.md) | **Português (BR)**
+> 🧭 **Portal:** [Índice da Documentação](../INDEX.md) | [Auditoria Completa](../../AUDITORIA_COMPLETA.md) | [Auditorias](../audits/README.md) | [Pseudocódigo Ghidra](../pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) | [Logs de Debug](../debug_logs/README.md)
+
 # Dossiê Técnico: Motor RAG Zero-Error, Defesa em 6 Camadas e Invariantes Físicos
 
 **Panadiga — Panasonic DIGA DMR-EH55 Engineering Ecosystem**  
 **Classificação:** Arquitetura de Inteligência Artificial Crítica / Engenharia Reversa e Proteção de Silício  
-**Subsistema:** `src/rag/` (Rust Core Nativo) & `tools/rag_engine/` (Laboratório Python)  
+**Subsistema:** `crates/panadiga-rag/src/` (Rust Core Nativo) & `crates/panadiga-mcp/` (Tool MCP `panadiga_rag_query`)  
 **Autor:** Equipe de Engenharia Panadiga  
 
 ---
@@ -74,7 +77,7 @@ flowchart TD
 - **Análise de Negação Robusta:** O validador distingue entre perguntas seguras (ex: *"Por que NÃO devemos usar 5V?"*) e instruções destrutivas (ex: *"Como injeto 5V?"*), evitando falsos positivos através de janelas direcionais de negação.
 
 ### Camada 2: Hybrid Retrieval (Busca Híbrida BM25 + Espaço Vetorial TF-IDF)
-- **Objetivo:** Localizar trechos técnicos pertinentes nos 15 manuais de serviço oficiais (`manuals_and_schematics/`), diagramas esquemáticos e dossiês de engenharia reversa.
+- **Objetivo:** Localizar trechos técnicos pertinentes nos **30 PDFs** oficiais em `manuals_and_schematics/` (manuais de serviço, guias de operação e datasheets de silício), diagramas esquemáticos e dossiês de engenharia reversa.
 - **Mecanismo:** Combinação linear ponderada:
   $$\text{Score}(q, d) = \alpha \cdot \text{BM25}(q, d) + (1 - \alpha) \cdot \text{CosineSimilarity}(\vec{q}, \vec{d}) + \text{EntityBoost}$$
 - **Tokenizador Técnico Especializado:** Diferente de tokenizadores comuns que fragmentam símbolos, o `technical_tokenize` preserva integralmente:
@@ -222,7 +225,7 @@ O motor RAG e todos os subsistemas da suíte estão totalmente acessíveis atrav
   3. **HddStorageView:** Parser visual do sistema de arquivos MEIHFS, LBA 0 "SH" e extrator de partições.
   4. **PicoBenchView:** Controle de hardware do RP2040, Cold Break-In e console serial.
   5. **FrmCryptoView:** Criptoanálise óptica, TOC de 48B e Codebook ECB de 64 bits.
-  6. **ManualsView:** Visualizador dos 15 manuais com o **Painel Visual do RAG Zero-Error** integrado (tempo de resposta < 1 ms, selo de segurança física e citações de página).
+  6. **ManualsView:** Visualizador dos **30 PDFs** (manuais e datasheets) + navegador interativo de `docs/`, logs e dumps com o **Painel Visual do RAG Zero-Error** integrado (tempo de resposta < 1 ms, selo de segurança física e citações de página).
   7. **HexInspectorView:** Inspetor hexadecimal de arquivos e partições.
 * **Zero Nuvem / Zero Token:** O aplicativo roda com zero chamadas externas, operando perfeitamente em bancadas sem acesso à internet.
 

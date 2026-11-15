@@ -9,11 +9,43 @@ import {
   mockNvramCleanReport,
 } from './mockData';
 
-export function handleMockCryptoCommand(cmd: string): unknown | undefined {
+export function handleMockCryptoCommand(
+  cmd: string,
+  args?: Record<string, unknown>,
+): unknown | undefined {
   switch (cmd) {
     case 'clean_nvram':
     case 'analyze_flash_dump':
       return mockNvramCleanReport;
+    case 'patch_nvram_command': {
+      const inputPath = String(args?.inputPath ?? args?.input_path ?? '').trim();
+      const outputPath = String(args?.outputPath ?? args?.output_path ?? '').trim();
+      if (!inputPath || !outputPath || inputPath === outputPath) {
+        throw new Error('Copy-on-Write obrigatório: defina um output_path diferente do input_path.');
+      }
+      const rawOffset = String(args?.nvramOffset ?? args?.nvram_offset ?? '0').trim();
+      const parsedOffset = Number.parseInt(
+        rawOffset,
+        rawOffset.toLowerCase().startsWith('0x') ? 16 : 10,
+      );
+      const patchHex = String(args?.patchHex ?? args?.patch_hex ?? '').replace(/\s+/g, '');
+      const patchBytes = Math.ceil(patchHex.length / 2);
+      if (
+        !Number.isFinite(parsedOffset) ||
+        parsedOffset < 0 ||
+        parsedOffset + patchBytes > 65536
+      ) {
+        throw new Error(
+          'E05: Escrita bloqueada além dos 64 KiB de NVRAM (região IPL Spansion 0x80000000..0x807EFFFF somente leitura).',
+        );
+      }
+      return {
+        ...mockNvramCleanReport,
+        input_file: inputPath,
+        output_file: outputPath,
+        bootloader_immutable: true,
+      };
+    }
 
     case 'analyze_frm':
       return mockCryptanalysisReport;

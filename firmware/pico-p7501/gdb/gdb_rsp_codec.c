@@ -22,6 +22,7 @@ static bool               s_gdb_active = false;
 static gdb_parser_state_t s_parser_state = GDB_STATE_IDLE;
 static char               s_rx_buffer[GDB_RSP_MAX_PACKET_LEN];
 static size_t             s_rx_len = 0U;
+static bool               s_rx_escaped = false;
 static uint8_t            s_calc_checksum = 0U;
 static uint8_t            s_received_checksum = 0U;
 static char               s_last_tx_packet[GDB_RSP_MAX_PACKET_LEN];
@@ -41,19 +42,27 @@ void gdb_rsp_test_get_last_response(char *out, size_t max_len) {
     }
 }
 
-void gdb_rsp_test_inject_packet(const char *payload) {
+void gdb_rsp_test_inject_packet_len(const uint8_t *payload, size_t len) {
     if (payload == NULL) {
         return;
     }
     gdb_rsp_process_char('$');
-    const char *p = payload;
-    while (*p != '\0') {
-        gdb_rsp_process_char(*p++);
+    uint8_t csum = 0U;
+    for (size_t i = 0U; i < len; i++) {
+        const uint8_t b = payload[i];
+        csum = (uint8_t)(csum + b);
+        gdb_rsp_process_char((char)b);
     }
     gdb_rsp_process_char('#');
-    const uint8_t csum = gdb_compute_checksum(payload);
     gdb_rsp_process_char(gdb_nibble_to_hex_char((uint8_t)(csum >> 4)));
     gdb_rsp_process_char(gdb_nibble_to_hex_char((uint8_t)(csum & 0x0FU)));
+}
+
+void gdb_rsp_test_inject_packet(const char *payload) {
+    if (payload == NULL) {
+        return;
+    }
+    gdb_rsp_test_inject_packet_len((const uint8_t *)payload, strlen(payload));
 }
 #endif
 
@@ -116,6 +125,7 @@ void gdb_rsp_init(void) {
     s_gdb_active = false;
     s_parser_state = GDB_STATE_IDLE;
     s_rx_len = 0U;
+    s_rx_escaped = false;
     s_calc_checksum = 0U;
     s_received_checksum = 0U;
     memset(s_last_tx_packet, 0, sizeof(s_last_tx_packet));
@@ -125,6 +135,10 @@ void gdb_rsp_init(void) {
 
 bool gdb_rsp_is_active(void) {
     return s_gdb_active;
+}
+
+size_t gdb_rsp_get_last_packet_len(void) {
+    return s_rx_len;
 }
 
 void gdb_rsp_set_active_flag(bool active) {
@@ -168,7 +182,7 @@ void gdb_rsp_send_packet(const char *payload) {
 }
 
 void gdb_rsp_process_char(char ch) {
-    if (ch == 0x03) {
+    if ((ch == 0x03) && !((s_parser_state == GDB_STATE_DATA) && s_rx_escaped)) {
         gdb_cpu_handle_ctrl_c();
         return;
     }
@@ -178,6 +192,7 @@ void gdb_rsp_process_char(char ch) {
             if (ch == '$') {
                 s_parser_state = GDB_STATE_DATA;
                 s_rx_len = 0U;
+                s_rx_escaped = false;
                 s_calc_checksum = 0U;
             } else if (ch == '-') {
                 if (s_last_tx_packet[0] != '\0') {
@@ -189,11 +204,12 @@ void gdb_rsp_process_char(char ch) {
             break;
 
         case GDB_STATE_DATA:
-            if (ch == '#') {
+            if ((ch == '#') && !s_rx_escaped) {
                 s_parser_state = GDB_STATE_CHKSUM_MSB;
             } else if (s_rx_len < (GDB_RSP_MAX_PACKET_LEN - 1U)) {
                 s_rx_buffer[s_rx_len++] = ch;
                 s_calc_checksum = (uint8_t)(s_calc_checksum + (uint8_t)ch);
+                s_rx_escaped = !s_rx_escaped && ((uint8_t)ch == 0x7DU);
             }
             break;
 

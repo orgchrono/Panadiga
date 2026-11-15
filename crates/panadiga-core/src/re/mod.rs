@@ -2,8 +2,10 @@
 
 pub mod bgo_unbrick;
 pub mod main_passthrough;
+pub mod matshita_emu;
 pub mod mn10300;
 pub mod mn10300_emu;
+pub mod mn10300_traps;
 pub mod nor_dumper;
 pub mod patch_spec;
 pub mod prog061_uart_monitor;
@@ -35,11 +37,11 @@ pub use mn10300::{
     decode_bcc_refs, decode_branch_call_refs, decode_call_frames, decode_regmask_names,
     decode_setlb_loops, find_callers_to, find_fc_immediate_loads, find_pointer_xrefs,
 };
-pub use mn10300_emu::{Mn103Fault, Mn103Vm};
+pub use mn10300_emu::{CfiStage, Mn103Fault, Mn103Vm};
 pub use nor_dumper::{
-    DEFAULT_NOR_STUB_LOAD_ADDR, NOR_ALLOWED_WINDOWS, NOR_MAGIC_FOOTER, NOR_MAGIC_HEADER,
-    NorDumpResult, build_nor_dumper_artifact, build_readonly_nor_dumper_stub,
-    decode_nor_dump_stream, validate_nor_dump_range,
+    DEFAULT_NOR_STUB_LOAD_ADDR, DIGADIAG_NOR_STUB_LOAD_ADDR, NOR_ALLOWED_WINDOWS, NOR_MAGIC_FOOTER,
+    NOR_MAGIC_HEADER, NorDumpResult, build_nor_dumper_artifact, build_readonly_nor_dumper_stub,
+    decode_nor_dump_stream, resolve_nor_stub_load_addr, validate_nor_dump_range,
 };
 pub use prog061_uart_monitor::{
     OFF_UART_MONITOR_SLACK, PATCH_A2CD_UART_MONITOR, PROG061_UART_MONITOR_VA,

@@ -9,38 +9,11 @@
 #include "uart/p7501_pana_rsp.h"
 #include "uart/p7501_pana_rsp_internal.h"
 #include "uart/p7501_pana_dumpnor.h"
+#include "flash/p7501_flash.h"
 #include "common/p7501_hex.h"
 
 #include <stdio.h>
 #include <string.h>
-
-static bool ascii_iprefix(const char *str, const char *prefix) {
-    if (str == NULL || prefix == NULL) {
-        return false;
-    }
-    while (*prefix != '\0') {
-        char a = *str++;
-        char b = *prefix++;
-        if (a >= 'a' && a <= 'z') a = (char)(a - ('a' - 'A'));
-        if (b >= 'a' && b <= 'z') b = (char)(b - ('a' - 'A'));
-        if (a != b) {
-            return false;
-        }
-    }
-    return true;
-}
-
-static bool is_digits_only(const char *tok) {
-    if (tok == NULL || *tok == '\0') {
-        return false;
-    }
-    for (const char *p = tok; *p != '\0'; ++p) {
-        if (*p < '0' || *p > '9') {
-            return false;
-        }
-    }
-    return true;
-}
 
 static bool parse_mem_spec(const char *spec_text, char opcode, char *out_payload, size_t cap) {
     const char *comma = strchr(spec_text, ',');
@@ -87,6 +60,9 @@ static bool assign_write_u32_payload(
     uint32_t value_le,
     p7501_pana_rsp_spec_t *out
 ) {
+    if (p7501_flash_is_protected_ipl_range(dest_addr, 4u)) {
+        return false;
+    }
     uint8_t le[4];
     p7501_rsp_encode_u32_le(value_le, le);
     if (!p7501_rsp_build_write_mem_payload(dest_addr, le, sizeof(le), out->payload, sizeof(out->payload))) {
@@ -111,6 +87,12 @@ static bool apply_panarsp_action_token(const char *tok, p7501_pana_rsp_spec_t *o
         *saw_action = true;
         return true;
     }
+    if (p7501_ascii_ieq(tok, "REGS")) {
+        out->action = PANA_RSP_ACT_REGS;
+        snprintf(out->payload, sizeof(out->payload), "g");
+        *saw_action = true;
+        return true;
+    }
     if (p7501_ascii_ieq(tok, "Z0")) {
         out->action = PANA_RSP_ACT_Z0;
         snprintf(out->payload, sizeof(out->payload), "Z0");
@@ -123,7 +105,7 @@ static bool apply_panarsp_action_token(const char *tok, p7501_pana_rsp_spec_t *o
         *saw_action = true;
         return true;
     }
-    if (ascii_iprefix(tok, "MEM:") || ascii_iprefix(tok, "XMEM:")) {
+    if (p7501_ascii_iprefix(tok, "MEM:") || p7501_ascii_iprefix(tok, "XMEM:")) {
         const bool is_x = (tok[0] == 'X' || tok[0] == 'x');
         const size_t prefix_len = is_x ? 5u : 4u;
         if (!parse_mem_spec(tok + prefix_len, is_x ? 'x' : 'm', out->payload, sizeof(out->payload))) {
@@ -139,7 +121,7 @@ static bool apply_panarsp_action_token(const char *tok, p7501_pana_rsp_spec_t *o
         *saw_action = true;
         return true;
     }
-    if (ascii_iprefix(tok, "WMEM:")) {
+    if (p7501_ascii_iprefix(tok, "WMEM:")) {
         const char *spec = tok + 5u;
         const char *comma = strchr(spec, ',');
         if (comma == NULL || comma == spec || comma[1] == '\0') {
@@ -150,6 +132,7 @@ static bool apply_panarsp_action_token(const char *tok, p7501_pana_rsp_spec_t *o
         if (!p7501_rsp_parse_hex_u32_span(spec, (size_t)(comma - spec), &addr) ||
             !p7501_decode_hex_bytes(comma + 1, out->data_bytes, sizeof(out->data_bytes), &data_len) ||
             data_len == 0u ||
+            p7501_flash_is_protected_ipl_range(addr, data_len) ||
             !p7501_rsp_build_write_mem_payload(addr, out->data_bytes, data_len, out->payload, sizeof(out->payload))) {
             return false;
         }
@@ -159,7 +142,7 @@ static bool apply_panarsp_action_token(const char *tok, p7501_pana_rsp_spec_t *o
         *saw_action = true;
         return true;
     }
-    if (ascii_iprefix(tok, "WRITE32:")) {
+    if (p7501_ascii_iprefix(tok, "WRITE32:")) {
         const char *spec = tok + 8u;
         const char *comma = strchr(spec, ',');
         if (comma == NULL || comma == spec || comma[1] == '\0') {
@@ -177,7 +160,7 @@ static bool apply_panarsp_action_token(const char *tok, p7501_pana_rsp_spec_t *o
         *saw_action = true;
         return true;
     }
-    if (ascii_iprefix(tok, "CALL:") && tok[5] != '\0') {
+    if (p7501_ascii_iprefix(tok, "CALL:") && tok[5] != '\0') {
         uint32_t target = 0u;
         if (!p7501_rsp_parse_hex_u32(tok + 5u, 10u, &target) ||
             !assign_write_u32_payload((uint32_t)P7501_AM34_SERIAL_CB_PTR_ADDR, target, out)) {
@@ -197,7 +180,7 @@ static bool apply_panarsp_action_token(const char *tok, p7501_pana_rsp_spec_t *o
         *saw_action = true;
         return true;
     }
-    if (ascii_iprefix(tok, "DUMPNOR:")) {
+    if (p7501_ascii_iprefix(tok, "DUMPNOR:")) {
         if (!p7501_dumpnor_parse_colon_spec(tok + 8u, &out->addr, &out->value_u32)) {
             return false;
         }
@@ -206,13 +189,13 @@ static bool apply_panarsp_action_token(const char *tok, p7501_pana_rsp_spec_t *o
         *saw_action = true;
         return true;
     }
-    if (ascii_iprefix(tok, "RAW:") && tok[4] != '\0') {
+    if (p7501_ascii_iprefix(tok, "RAW:") && tok[4] != '\0') {
         out->action = PANA_RSP_ACT_RAW;
         snprintf(out->payload, sizeof(out->payload), "%s", tok + 4);
         *saw_action = true;
         return true;
     }
-    if (ascii_iprefix(tok, "HEX:") && tok[4] != '\0') {
+    if (p7501_ascii_iprefix(tok, "HEX:") && tok[4] != '\0') {
         if (!p7501_decode_hex_bytes(tok + 4, out->raw_bytes, sizeof(out->raw_bytes), &out->raw_len)) {
             return false;
         }
@@ -258,7 +241,7 @@ bool p7501_panarsp_parse_args(const char *arg, p7501_pana_rsp_spec_t *out) {
                 out->value_u32 = dump_hex;
             }
             dumpnor_argc += 1u;
-        } else if (is_digits_only(tok)) {
+        } else if (p7501_ascii_is_digits(tok)) {
             out->timeout_ms = p7501_parse_uint32_clamped(tok, 4000u, 150u, 900000u);
         } else if (p7501_ascii_ieq(tok, "MAGIC")) {
             out->send_magic_prefix = true;
@@ -268,12 +251,10 @@ bool p7501_panarsp_parse_args(const char *arg, p7501_pana_rsp_spec_t *out) {
         } else if (p7501_ascii_ieq(tok, "NAK")) {
             out->send_nak_prefix = true;
             explicit_nak_only = true;
-        } else if (ascii_iprefix(tok, "WAIT:") && tok[5] != '\0') {
+        } else if (p7501_ascii_iprefix(tok, "WAIT:") && tok[5] != '\0') {
             out->wait_trigger_enabled = true;
             snprintf(out->trigger, sizeof(out->trigger), "%s", tok + 5);
-        } else if (!saw_boot && (p7501_ascii_ieq(tok, "NORMAL") || p7501_ascii_ieq(tok, "BOOT") ||
-                                 p7501_ascii_ieq(tok, "NOPULL") || p7501_ascii_ieq(tok, "PASSIVE") ||
-                                 p7501_ascii_ieq(tok, "JIG") || ascii_iprefix(tok, "JIG:"))) {
+        } else if (!saw_boot && p7501_is_boot_spec_token(tok)) {
             out->boot_action = p7501_parse_boot_spec(tok, &out->jig_hold_ms);
             saw_boot = true;
         } else if (!apply_panarsp_action_token(tok, out, &saw_action)) {

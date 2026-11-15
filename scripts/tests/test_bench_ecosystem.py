@@ -251,3 +251,42 @@ def test_readonly_nor_dumper_stub_and_stream_verification() -> None:
             validate_nor_dump_range(*bad_args)
         with pytest.raises(ValueError):
             build_readonly_nor_dumper_stub(*bad_args)
+
+
+def test_digadiag_50400000_and_guarded_rsp_writes_and_pass_unlock() -> None:
+    """Verify DIGADIAG 0x50400000 default, PASS unlock classification, and IPL-guarded $M/$X writes."""
+    from scripts.bench.nor_dumper import DIGADIAG_STUB_LOAD_ADDR, resolve_nor_stub_load_addr
+    from scripts.bench.rsp_frames import (
+        build_rsp_frame,
+        build_rsp_write_frame,
+        is_ipl_readonly_address,
+        parse_rsp_reply,
+    )
+
+    assert resolve_nor_stub_load_addr(None, wrap_digadiag=True) == DIGADIAG_STUB_LOAD_ADDR
+    assert DIGADIAG_STUB_LOAD_ADDR == 0x50400000
+    assert resolve_nor_stub_load_addr(None, wrap_digadiag=False) == 0x51800000
+
+    assert classify_drv_cli_command("WB", 0x38, pass_unlocked=False) == "WRITE_BLOCKED"
+    assert classify_drv_cli_command("WB", 0x38, pass_unlocked=True) == "UNLOCKED_WRITE"
+
+    assert is_ipl_readonly_address(0x84000000, 4)
+    assert not is_ipl_readonly_address(0x847F0000, 4)
+
+    with pytest.raises(ValueError):
+        build_rsp_frame("M51800000,4:01020304")
+    with pytest.raises(ValueError):
+        build_rsp_write_frame(0x80000000, b"\x00\x01")
+    with pytest.raises(ValueError):
+        build_rsp_write_frame(0x847EFFF8, b"\x00" * 16)
+
+    m_frame = build_rsp_write_frame(0x51800000, b"\xaa\xbb\xcc\xdd")
+    parsed_m = parse_rsp_reply(m_frame)
+    assert parsed_m is not None
+    assert parsed_m.payload == b"M51800000,4:aabbccdd"
+
+    x_frame = build_rsp_write_frame(0x847F0000, b"}#$*", use_binary_x=True)
+    parsed_x = parse_rsp_reply(x_frame)
+    assert parsed_x is not None
+    assert parsed_x.payload.startswith(b"X847f0000,4:")
+    assert b"}]" in parsed_x.payload and b"}\x03" in parsed_x.payload

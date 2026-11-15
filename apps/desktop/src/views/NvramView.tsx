@@ -3,6 +3,7 @@ import { useNvramViewModel } from '@/viewmodels/useNvramViewModel';
 import {
   NvramTopBanner,
   NvramActionsCard,
+  NvramPatchCard,
   NvramMetricsGrid,
   NvramSectorMap,
   NvramMicrosectorsTable,
@@ -28,10 +29,14 @@ export const NvramView: React.FC = () => {
     liveCapture,
     cleaning,
     cleanSuccess,
+    patching,
+    patchSuccess,
+    patchError,
     filterType,
     setFilterType,
     error,
     executeSurgicalClean,
+    executeGuardedPatch,
     captureFromLivePico,
     clearLiveCapture,
     refresh,
@@ -80,6 +85,15 @@ export const NvramView: React.FC = () => {
           void clearLiveCapture();
         }}
         onRefresh={refresh}
+      />
+
+      <NvramPatchCard
+        defaultInputPath={report?.input_file}
+        patching={patching}
+        patchSuccess={patchSuccess}
+        error={patchError}
+        lastOutputFile={report?.output_file}
+        onExecutePatch={executeGuardedPatch}
       />
 
       {/* 4 High-Contrast Telemetry Metric Cards */}

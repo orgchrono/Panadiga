@@ -10,9 +10,11 @@ pub mod bridge;
 pub mod cdc;
 pub mod diagnostics;
 pub mod flasher;
+pub mod log_decoder;
 pub mod platforms;
 
 pub use bridge::run_gdb_bridge;
 pub use diagnostics::ping_pico;
 pub use flasher::*;
+pub use log_decoder::*;
 pub use platforms::*;

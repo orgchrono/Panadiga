@@ -65,3 +65,18 @@ bool p7501_flash_is_readonly_nor_range(uint32_t flash_size_bytes,
     return ((s64 >= cached_lo) && (e64 <= cached_hi)) ||
            ((s64 >= hw_lo) && (e64 <= hw_hi));
 }
+
+bool p7501_flash_is_protected_ipl_range(uint32_t addr, size_t len) {
+    if (len == 0u) {
+        return false;
+    }
+    const uint64_t s64 = (uint64_t)addr;
+    const uint64_t e64 = s64 + (uint64_t)len - 1ULL;
+    return (s64 <= 0x807EFFFFULL && e64 >= (uint64_t)P7501_FLASH_CACHED_BASE) ||
+           (s64 <= 0x847EFFFFULL && e64 >= (uint64_t)P7501_FLASH_HW_UNCACHED_BASE);
+}
+
+bool p7501_flash_is_nvram_microsector_addr(uint32_t addr) {
+    return (addr >= 0x807F0000UL && addr <= 0x807FFFFFUL) ||
+           (addr >= 0x847F0000UL && addr <= 0x847FFFFFUL);
+}

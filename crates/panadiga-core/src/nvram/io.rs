@@ -6,7 +6,9 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, bail};
 
-use super::pure::{NvramCleanReport, clean_flash_nvram_slice};
+use super::pure::{
+    NvramCleanReport, PureNvramCleanOutput, clean_flash_nvram_slice, patch_flash_nvram_slice,
+};
 use crate::constants::*;
 
 /// Intelligently resolves an input file path across working directory and known folders,
@@ -99,6 +101,49 @@ pub fn clean_flash_nvram(
     input_path: &Path,
     output_path: Option<&Path>,
 ) -> Result<NvramCleanReport> {
+    persist_transformed_flash(
+        input_path,
+        output_path,
+        "CLEAN",
+        "PANASONIC DMR-EH55 NVRAM CLEANER & FLASH INTEGRITY ARCHITECT",
+        |flash_bytes, in_lbl, out_lbl, bak_lbl| {
+            clean_flash_nvram_slice(flash_bytes, in_lbl, out_lbl, bak_lbl)
+        },
+    )
+}
+
+/// Copy-on-write guarded write/patch of bytes strictly within writable NVRAM microsectors.
+pub fn patch_flash_nvram(
+    input_path: &Path,
+    output_path: Option<&Path>,
+    nvram_rel_offset: usize,
+    patch_bytes: &[u8],
+) -> Result<NvramCleanReport> {
+    persist_transformed_flash(
+        input_path,
+        output_path,
+        "PATCHED",
+        "PANASONIC DMR-EH55 GUARDED NVRAM PATCHER (IPL PROTECTED)",
+        |flash_bytes, in_lbl, out_lbl, bak_lbl| {
+            patch_flash_nvram_slice(
+                flash_bytes,
+                nvram_rel_offset,
+                patch_bytes,
+                in_lbl,
+                out_lbl,
+                bak_lbl,
+            )
+        },
+    )
+}
+
+fn persist_transformed_flash(
+    input_path: &Path,
+    output_path: Option<&Path>,
+    default_suffix: &str,
+    banner_title: &str,
+    transform: impl FnOnce(&[u8], &str, &str, &str) -> Result<PureNvramCleanOutput>,
+) -> Result<NvramCleanReport> {
     let resolved_input = resolve_input_path(input_path)?;
 
     let resolved_output = match output_path {
@@ -113,7 +158,7 @@ pub fn clean_flash_nvram(
                 .extension()
                 .and_then(|e| e.to_str())
                 .unwrap_or("bin");
-            parent.join(format!("{stem}_CLEAN.{ext}"))
+            parent.join(format!("{stem}_{default_suffix}.{ext}"))
         }
     };
 
@@ -136,7 +181,7 @@ pub fn clean_flash_nvram(
     let backup_nvram_path = backup_dir.join("nvram_corrupt_backup.bin");
 
     log_println!("======================================================================");
-    log_println!("   PANASONIC DMR-EH55 NVRAM CLEANER & FLASH INTEGRITY ARCHITECT      ");
+    log_println!("   {banner_title}");
     log_println!("            Spansion S29JL064H NOR Flash (8 MB / 64 Mbit)             ");
     log_println!("======================================================================");
     log_println!("  Input File   : {}", resolved_input.display());
@@ -146,7 +191,7 @@ pub fn clean_flash_nvram(
 
     let flash_bytes = read_flash_file(&resolved_input)?;
 
-    let pure_output = clean_flash_nvram_slice(
+    let pure_output = transform(
         &flash_bytes,
         &resolved_input.to_string_lossy(),
         &resolved_output.to_string_lossy(),

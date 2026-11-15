@@ -83,6 +83,26 @@ pub fn clean_nvram(
     clean_nvram_command(path, Some(out))
 }
 
+/// Guarded copy-on-write patch within the 64 KB writable NVRAM sector (`SA134..SA141`); Spansion IPL stays read-only.
+#[tauri::command]
+pub fn patch_nvram_command(
+    input_path: String,
+    output_path: Option<String>,
+    nvram_offset: u32,
+    patch_hex: String,
+) -> Result<NvramCleanReport, String> {
+    let patch_bytes = panadiga_core::re::matshita_emu::parse_hex_payload(patch_hex.trim())
+        .map_err(|e| format!("Payload hex inválido para NVRAM: {e}"))?;
+    let in_p = Path::new(input_path.trim());
+    let out_trimmed = output_path
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+    let out_p = out_trimmed.map(Path::new);
+    panadiga_core::nvram::patch_flash_nvram(in_p, out_p, nvram_offset as usize, &patch_bytes)
+        .map_err(|e| e.to_string())
+}
+
 /// Frontend `inspect_hdd` command.
 #[tauri::command]
 pub fn inspect_hdd(

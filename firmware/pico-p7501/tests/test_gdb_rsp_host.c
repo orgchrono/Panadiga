@@ -235,6 +235,27 @@ static void test_halt_and_continue_status(void) {
     printf("  [PASS] test_halt_and_continue_status (OPUS-05 verified)\n");
 }
 
+static void test_binary_x_write_and_ipl_guard(void) {
+    char resp[GDB_RSP_MAX_PACKET_LEN];
+    /* Binary write of raw `}\x00#$` into NVRAM at 0x807F0010 using GDB $X escaping */
+    static const uint8_t x_pkt[] = {
+        'X', '8', '0', '7', 'F', '0', '0', '1', '0', ',', '4', ':',
+        0x7Du, 0x5Du, 0x00u, 0x7Du, 0x03u, 0x7Du, 0x04u
+    };
+    gdb_rsp_test_inject_packet_len(x_pkt, sizeof(x_pkt));
+    gdb_rsp_test_get_last_response(resp, sizeof(resp));
+    assert(strcmp(resp, "OK") == 0);
+
+    send_cmd_and_get_response("m807F0010,4", resp, sizeof(resp));
+    assert(strcmp(resp, "7d002324") == 0);
+
+    /* $X into read-only IPL NOR must fail closed with E05 */
+    send_cmd_and_get_response("X80000000,4:ABCD", resp, sizeof(resp));
+    assert(strcmp(resp, "E05") == 0);
+
+    printf("  [PASS] test_binary_x_write_and_ipl_guard\n");
+}
+
 int main(void) {
     printf("======================================================================\n");
     printf(">> Running Panadiga P7501 C11 Host Test Suite (PICO_HOST_TEST=1)\n");
@@ -256,6 +277,9 @@ int main(void) {
     test_ipl_write_rejection_e05();
 
     reset_mock_state();
+    test_binary_x_write_and_ipl_guard();
+
+    reset_mock_state();
     test_register_access_no_ub();
 
     reset_mock_state();
@@ -266,7 +290,7 @@ int main(void) {
     }
 
     printf("======================================================================\n");
-    printf("[SUCCESS] All 7 C11 Pico Firmware Host Unit Tests Passed Cleanly!\n");
+    printf("[SUCCESS] All 8 C11 Pico Firmware Host Unit Tests Passed Cleanly!\n");
     printf("======================================================================\n");
     return 0;
 }

@@ -1,3 +1,6 @@
+> 🌐 **Idioma / Language:** [English (US)](../en-US/RP2350_AND_GDB_INTEGRATION_PLAN.md) | **Português (BR)**
+> 🧭 **Portal:** [Índice da Documentação](../INDEX.md) | [Auditoria Completa](../../AUDITORIA_COMPLETA.md) | [Auditorias](../audits/README.md) | [Pseudocódigo Ghidra](../pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) | [Logs de Debug](../debug_logs/README.md)
+
 # Planejamento de Engenharia: Suporte ao RP2350 (Pico 2) e Integração GDB / Ghidra via `P7501`
 
 **Documento de Arquitetura e Roadmap Técnico**  
@@ -69,5 +72,5 @@
 * **Objetivo:** Eliminar intermediários JTAG genéricos incompatíveis (como OpenOCD ARM) e prover uma ponte determinística de baixa latência integrada diretamente à UI Tauri e ao GDB Multiarch (`set architecture mn10300`).
 * **Estratégia:**
   * Encaminhamento bidirecional direto USB CDC / BLE NUS via `panadiga pico gdb-bridge` na porta TCP `127.0.0.1:3333`.
-  * Ring buffer introspectivo de pacotes RSP (`crates/panadiga-core/src/pico/gdb_bridge.rs`) para inspeção em tempo real na interface desktop.
+  * Ring buffer introspectivo de pacotes RSP (`apps/desktop/src-tauri/src/pico/gdb_bridge.rs`) para inspeção em tempo real na interface desktop.
   * Gerador nativo de scripts Ghidra Jython (`tools/ghidra/`) derivado da SSOT em Rust.

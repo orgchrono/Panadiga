@@ -1,8 +1,56 @@
 //! Segmented memory accessors and MOVM/CALL register frame helpers for [`Mn103Vm`].
 
-use super::{MemSegment, Mn103Fault, Mn103Vm};
+use super::{CfiStage, MemSegment, Mn103Fault, Mn103Vm};
+
+const SC0_TXB_VA: u32 = 0xD400_2008;
+const SC0_RXB_VA: u32 = 0xD400_2009;
+const SC0_STR_VA: u32 = 0xD400_200C;
+
+/// Returns `true` when `addr` lies in strictly read-only cached/uncached IPL NOR flash.
+pub fn is_ipl_readonly_va(addr: u32) -> bool {
+    (0x8000_0000..=0x807E_FFFF).contains(&addr) || (0x8400_0000..=0x847E_FFFF).contains(&addr)
+}
 
 impl Mn103Vm {
+    fn try_cfi_write(&mut self, addr: u32, raw_val: u16) -> Option<Result<(), Mn103Fault>> {
+        if !is_ipl_readonly_va(addr) {
+            return None;
+        }
+        let cmd = (raw_val & 0xFF) as u8;
+        let low = addr & 0x0FFF;
+        if cmd == 0xF0 {
+            self.cfi_stage = CfiStage::Normal;
+            return Some(Ok(()));
+        }
+        if matches!(low, 0x554 | 0x555 | 0xAAA) && cmd == 0xAA && self.cfi_stage == CfiStage::Normal
+        {
+            self.cfi_stage = CfiStage::Unlock555;
+            return Some(Ok(()));
+        }
+        if matches!(low, 0xAAA | 0xAAB | 0x554 | 0x555)
+            && cmd == 0x55
+            && self.cfi_stage == CfiStage::Unlock555
+        {
+            self.cfi_stage = CfiStage::Unlock2AA;
+            return Some(Ok(()));
+        }
+        if cmd == 0x90 && self.cfi_stage == CfiStage::Unlock2AA {
+            self.cfi_stage = CfiStage::Autoselect;
+            return Some(Ok(()));
+        }
+        Some(Err(Mn103Fault::IplWriteProtected(addr)))
+    }
+
+    fn read_cfi_autoselect_u16(&self, addr: u32) -> Option<u16> {
+        if self.cfi_stage != CfiStage::Autoselect || !is_ipl_readonly_va(addr) {
+            return None;
+        }
+        match addr & 0xFE {
+            0x00 => Some(0x0001), // Spansion/AMD manufacturer ID
+            0x02 => Some(0x227E), // S29JL064H/S29GL family device ID
+            _ => Some(0xFFFF),
+        }
+    }
     fn locate_slice(&self, addr: u32, len: usize) -> Option<(&MemSegment, usize)> {
         let addr_u64 = addr as u64;
         let end_u64 = addr_u64 + len as u64;
@@ -36,7 +84,22 @@ impl Mn103Vm {
         Err(Mn103Fault::UnmappedWrite(addr))
     }
 
-    pub fn read_u8(&self, addr: u32) -> Result<u8, Mn103Fault> {
+    pub fn read_u8(&mut self, addr: u32) -> Result<u8, Mn103Fault> {
+        if self.sc0_enabled {
+            if addr == SC0_RXB_VA {
+                return Ok(self.uart_rx.pop_front().unwrap_or(0));
+            }
+            if addr == SC0_STR_VA {
+                return Ok(if self.uart_rx.is_empty() { 0x00 } else { 0x10 });
+            }
+        }
+        if let Some(id16) = self.read_cfi_autoselect_u16(addr) {
+            return Ok(if (addr & 1) == 0 {
+                id16 as u8
+            } else {
+                (id16 >> 8) as u8
+            });
+        }
         let (seg, off) = self
             .locate_slice(addr, 1)
             .ok_or(Mn103Fault::UnmappedRead(addr))?;
@@ -46,6 +109,16 @@ impl Mn103Vm {
     pub fn read_u16(&self, addr: u32) -> Result<u16, Mn103Fault> {
         if (addr & 1) != 0 {
             return Err(Mn103Fault::AlignError(addr));
+        }
+        if self.sc0_enabled && addr == SC0_STR_VA {
+            return Ok(if self.uart_rx.is_empty() {
+                0x0000
+            } else {
+                0x0010
+            });
+        }
+        if let Some(id16) = self.read_cfi_autoselect_u16(addr) {
+            return Ok(id16);
         }
         let (seg, off) = self
             .locate_slice(addr, 2)
@@ -81,6 +154,13 @@ impl Mn103Vm {
     }
 
     pub fn write_u8(&mut self, addr: u32, val: u8) -> Result<(), Mn103Fault> {
+        if self.sc0_enabled && addr == SC0_TXB_VA {
+            self.uart_tx.push(val);
+            return Ok(());
+        }
+        if let Some(res) = self.try_cfi_write(addr, val as u16) {
+            return res;
+        }
         let (slice, off) = self.locate_slice_mut(addr, 1)?;
         slice[off] = val;
         Ok(())
@@ -90,6 +170,9 @@ impl Mn103Vm {
         if (addr & 1) != 0 {
             return Err(Mn103Fault::AlignError(addr));
         }
+        if let Some(res) = self.try_cfi_write(addr, val) {
+            return res;
+        }
         let (slice, off) = self.locate_slice_mut(addr, 2)?;
         slice[off..off + 2].copy_from_slice(&val.to_le_bytes());
         Ok(())
@@ -98,6 +181,9 @@ impl Mn103Vm {
     pub fn write_u32(&mut self, addr: u32, val: u32) -> Result<(), Mn103Fault> {
         if (addr & 3) != 0 {
             return Err(Mn103Fault::AlignError(addr));
+        }
+        if is_ipl_readonly_va(addr) || is_ipl_readonly_va(addr.wrapping_add(3)) {
+            return Err(Mn103Fault::IplWriteProtected(addr));
         }
         let (slice, off) = self.locate_slice_mut(addr, 4)?;
         slice[off..off + 4].copy_from_slice(&val.to_le_bytes());

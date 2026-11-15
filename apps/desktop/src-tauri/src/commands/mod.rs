@@ -9,6 +9,7 @@
 
 pub mod crypto_manuals;
 pub mod dto;
+pub mod engineering_docs;
 pub mod frm_pack;
 pub mod hardware;
 pub mod hardware_bridge;
@@ -20,6 +21,7 @@ pub mod workspace;
 
 pub use crypto_manuals::*;
 pub use dto::*;
+pub use engineering_docs::*;
 pub use frm_pack::*;
 pub use hardware::*;
 pub use hardware_bridge::*;

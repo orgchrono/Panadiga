@@ -2,6 +2,7 @@ import React from 'react';
 import { Loader2, RefreshCw, ShieldAlert } from 'lucide-react';
 import { useUnbrickViewModel } from '@/viewmodels/useUnbrickViewModel';
 import {
+  MatshitaEmulatorCard,
   SdKitBuilderCard,
   TbcPassthroughCard,
   UnbrickArchitectureCard,
@@ -19,6 +20,11 @@ export const UnbrickView: React.FC = () => {
     tbc,
     rspPlan,
     norStub,
+    matshitaBoot,
+    matshitaInject,
+    matshitaSerial,
+    frmVerify,
+    frmPack,
     loadWorkbench,
     buildSdKit,
     verifySdMedia,
@@ -26,6 +32,11 @@ export const UnbrickView: React.FC = () => {
     runMainPassthrough,
     generateRspPlan,
     buildNorStub,
+    runMatshitaBoot,
+    injectMatshitaWrite,
+    runMatshitaSerial,
+    verifyUnlockFrm,
+    packUnlockFrm,
   } = useUnbrickViewModel();
 
   const data = workbench.data;
@@ -109,6 +120,19 @@ export const UnbrickView: React.FC = () => {
               onBuildNorStub={buildNorStub}
             />
           </div>
+
+          <MatshitaEmulatorCard
+            bootState={matshitaBoot}
+            injectState={matshitaInject}
+            serialState={matshitaSerial}
+            frmVerifyState={frmVerify}
+            frmPackState={frmPack}
+            onRunBoot={runMatshitaBoot}
+            onInjectWrite={injectMatshitaWrite}
+            onRunSerial={runMatshitaSerial}
+            onVerifyFrm={verifyUnlockFrm}
+            onPackFrm={packUnlockFrm}
+          />
         </>
       )}
     </div>

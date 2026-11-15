@@ -1,3 +1,6 @@
+> 🌐 **Idioma / Language:** [English (US)](../en-US/PANASONIC_P7501_UART_RECONSTRUCTION.md) | **Português (BR)**
+> 🧭 **Portal:** [Índice da Documentação](../INDEX.md) | [Auditoria Completa](../../AUDITORIA_COMPLETA.md) | [Auditorias](../audits/README.md) | [Pseudocódigo Ghidra](../pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) | [Logs de Debug](../debug_logs/README.md)
+
 # Especificação Técnica: Interface `P7501` Async UART (`115200 8N1`) & Arquitetura AM34 / MN103S
 
 Documento de especificação técnica para interfaceamento físico, captura de boot, sondagem diagnóstica e suporte à arquitetura de memória do gravador **Panasonic DMR-EH55** (SoC **Matsushita `AM34` / `MN103S`** + Syscon **`IC7501`**, placa **`VEP79138`**, conector **`P7501`** `[B6B-ZR-3R4]` `"TO JIGU"`).

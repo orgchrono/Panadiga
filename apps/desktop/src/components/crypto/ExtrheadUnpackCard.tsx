@@ -23,17 +23,29 @@ export const ExtrheadUnpackCard: React.FC<ExtrheadUnpackCardProps> = ({
   const [inputPath, setInputPath] = useState('firmware_and_images/DIGADIAG.FRM');
   const [mode, setMode] = useState<'auto' | 'main' | 'drv' | 'plain'>('auto');
   const [outPath, setOutPath] = useState('');
-
-  const submitDisabled = unpackLoading || !inputPath.trim();
+  const [inputError, setInputError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const handleUnpack = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (submitDisabled) return;
-    await onUnpack({
+    if (unpackLoading) return;
+    if (!inputPath.trim()) {
+      setInputError('Informe o caminho do arquivo EXTRHEAD ou módulo para desempacotar.');
+      setSuccess(null);
+      return;
+    }
+    setInputError(null);
+    setSuccess(null);
+    const unpacked = await onUnpack({
       inputPath: inputPath.trim(),
       mode,
       outPath: outPath.trim() || undefined,
     });
+    if (unpacked) {
+      setSuccess(
+        `Tag ${unpacked.header.tag} (${unpacked.decompressed_bytes.toLocaleString()} bytes) desempacotada com sucesso.`
+      );
+    }
   };
 
   return (
@@ -49,16 +61,26 @@ export const ExtrheadUnpackCard: React.FC<ExtrheadUnpackCardProps> = ({
         <StatusBadge variant="neutral" label={mode.toUpperCase()} />
       </div>
 
-      <form onSubmit={handleUnpack} className="grid grid-cols-1 md:grid-cols-12 gap-3 text-xs items-end">
+      <form onSubmit={handleUnpack} className="grid grid-cols-1 md:grid-cols-12 gap-3 text-xs items-end" noValidate>
         <label className="md:col-span-5 space-y-1 block">
           <span className="text-slate-400 block">Arquivo EXTRHEAD / Módulo</span>
           <input
             type="text"
             value={inputPath}
-            onChange={e => setInputPath(e.target.value)}
+            aria-invalid={Boolean(inputError)}
+            aria-describedby={inputError ? 'extrhead-input-error' : undefined}
+            onChange={e => {
+              setInputPath(e.target.value);
+              if (inputError) setInputError(null);
+            }}
             placeholder="firmware_and_images/out/MAIN3060NP.bin"
             className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200"
           />
+          {inputError && (
+            <span id="extrhead-input-error" role="alert" className="text-[11px] text-rose-400 block">
+              {inputError}
+            </span>
+          )}
         </label>
 
         <label className="md:col-span-2 space-y-1 block">
@@ -91,7 +113,7 @@ export const ExtrheadUnpackCard: React.FC<ExtrheadUnpackCardProps> = ({
             type="submit"
             size="sm"
             variant="secondary"
-            disabled={submitDisabled}
+            disabled={unpackLoading}
             className="w-full gap-1.5 font-bold"
           >
             {unpackLoading && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
@@ -99,6 +121,10 @@ export const ExtrheadUnpackCard: React.FC<ExtrheadUnpackCardProps> = ({
           </Button>
         </div>
       </form>
+
+      {success && !unpackError && (
+        <p className="text-[11px] text-emerald-300 font-mono">{success}</p>
+      )}
 
       {unpackError && (
         <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-xs text-rose-300 flex items-start gap-2">

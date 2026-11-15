@@ -15,19 +15,26 @@ vi.mock('@/context/ToastContext', () => ({
   useToast: () => ({ showToast: mockShowToast }),
 }));
 
+async function renderWorkbenchWithQueue(...queued: unknown[]) {
+  const mockWorkbench = handleMockUnbrickCommand(
+    'inspect_unbrick_workbench',
+  ) as UnbrickWorkspaceReport;
+  const invokeMock = vi.mocked(ipcService.invokeCommand).mockResolvedValueOnce(mockWorkbench);
+  for (const item of queued) {
+    invokeMock.mockResolvedValueOnce(item);
+  }
+  const rendered = renderHook(() => useUnbrickViewModel());
+  await waitFor(() => expect(rendered.result.current.workbench.loading).toBe(false));
+  return rendered;
+}
+
 describe('useUnbrickViewModel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('loads unbrick workbench on mount and hydrates TBC + RSP + SD verify state', async () => {
-    const mockReport = handleMockUnbrickCommand(
-      'inspect_unbrick_workbench'
-    ) as UnbrickWorkspaceReport;
-    vi.mocked(ipcService.invokeCommand).mockResolvedValueOnce(mockReport);
-
-    const { result } = renderHook(() => useUnbrickViewModel());
-    await waitFor(() => expect(result.current.workbench.loading).toBe(false));
+    const { result } = await renderWorkbenchWithQueue();
 
     expect(ipcService.invokeCommand).toHaveBeenCalledWith('inspect_unbrick_workbench', undefined);
     expect(result.current.workbench.data?.discovered_pana_dvd).toBe(
@@ -39,19 +46,10 @@ describe('useUnbrickViewModel', () => {
   });
 
   it('builds SD recovery kit and syncs post-verification state', async () => {
-    const mockWorkbench = handleMockUnbrickCommand(
-      'inspect_unbrick_workbench'
-    ) as UnbrickWorkspaceReport;
     const mockKit = handleMockUnbrickCommand('prepare_sd_unbrick_kit_command', {
       request: { output_dir: 'sd_out', bgo_mode: 'bypass' },
     }) as SdUnbrickKitReport;
-
-    vi.mocked(ipcService.invokeCommand)
-      .mockResolvedValueOnce(mockWorkbench)
-      .mockResolvedValueOnce(mockKit);
-
-    const { result } = renderHook(() => useUnbrickViewModel());
-    await waitFor(() => expect(result.current.workbench.loading).toBe(false));
+    const { result } = await renderWorkbenchWithQueue(mockKit);
 
     await act(async () => {
       await result.current.buildSdKit({
@@ -79,5 +77,41 @@ describe('useUnbrickViewModel', () => {
 
     expect(result.current.workbench.error).toContain('SD dir missing');
     expect(mockShowToast).toHaveBeenCalledWith(expect.objectContaining({ type: 'error' }));
+  });
+
+  it('defaults DIGADIAG wrapped NOR dumper loadAddr to 0x50400000 and drives Matshita emulator', async () => {
+    const mockStub = handleMockUnbrickCommand('build_nor_dumper_stub_command', {
+      wrapAsDigadiag: true,
+    });
+    const mockBoot = handleMockUnbrickCommand('run_matshita_boot_emu', {
+      scenario: 'unlock_disc_frm',
+    });
+    const mockInject = handleMockUnbrickCommand('inject_matshita_atapi_write', {
+      targetVa: '0x51800000',
+      payloadHex: 'DEADBEEF',
+      useVendorEd: true,
+    });
+    const { result } = await renderWorkbenchWithQueue(mockStub, mockBoot, mockInject);
+
+    await act(async () => {
+      await result.current.buildNorStub({ wrapAsDigadiag: true });
+      await result.current.runMatshitaBoot('unlock_disc_frm');
+      await result.current.injectMatshitaWrite({
+        targetVa: '0x51800000',
+        payloadHex: 'DEADBEEF',
+        useVendorEd: true,
+      });
+    });
+
+    expect(ipcService.invokeCommand).toHaveBeenCalledWith(
+      'build_nor_dumper_stub_command',
+      expect.objectContaining({
+        wrapAsDigadiag: true,
+        loadAddr: '0x50400000',
+      }),
+    );
+    expect(result.current.norStub.data?.load_addr).toBe('0x50400000');
+    expect(result.current.matshitaBoot.data?.jump_target_va_hex).toBe('0x50400000');
+    expect(result.current.matshitaInject.data?.record.cdb0_or_cmd).toBe('0xED');
   });
 });

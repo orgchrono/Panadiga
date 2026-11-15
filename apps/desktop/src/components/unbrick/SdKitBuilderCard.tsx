@@ -65,7 +65,7 @@ export const SdKitBuilderCard: React.FC<SdKitBuilderCardProps> = ({
   const [unlockHddDynamic, setUnlockHddDynamic] = useState(true);
 
   const [outDirError, setOutDirError] = useState<string | null>(null);
-  const [buildSuccessMessage, setBuildSuccessMessage] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     if (discoveredPanaDvd) setPanaDvdPath(discoveredPanaDvd);
@@ -90,11 +90,11 @@ export const SdKitBuilderCard: React.FC<SdKitBuilderCardProps> = ({
       return;
     }
     setOutDirError(null);
-    setBuildSuccessMessage(null);
+    setSuccess(null);
     const built = await onBuildKit(request);
     if (built) {
       setVerifyDir(built.output_dir);
-      setBuildSuccessMessage(`${t('unbrick.sdKit.successTitle')}: ${built.digadiag_path}`);
+      setSuccess(`${t('unbrick.sdKit.successTitle')}: ${built.digadiag_path}`);
     }
   };
 
@@ -234,7 +234,7 @@ export const SdKitBuilderCard: React.FC<SdKitBuilderCardProps> = ({
           <Alert variant="success">
             <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
             <div className="space-y-1 min-w-0">
-              <AlertTitle>{buildSuccessMessage ?? t('unbrick.sdKit.successTitle')}</AlertTitle>
+              <AlertTitle>{success ?? t('unbrick.sdKit.successTitle')}</AlertTitle>
               <AlertDescription className="font-mono text-[11px] break-all">
                 DIGADIAG: {kitResult.digadiag_path} ({kitResult.bgo_mode_applied})
                 {kitResult.pana_sd_path && ` | PANA__SD: ${kitResult.pana_sd_path}`}

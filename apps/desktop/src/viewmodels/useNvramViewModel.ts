@@ -212,18 +212,25 @@ export function useNvramViewModel() {
     await loadAnalysis();
   }, [loadAnalysis]);
 
+  const [patching, setPatching] = useState(false);
+  const [patchSuccess, setPatchSuccess] = useState(false);
+  const [patchError, setPatchError] = useState<string | null>(null);
+
+  const applyFlashReport = useCallback((data: NvramCleanReport) => {
+    setReport(data);
+    const updatedSectors = buildSectorMapFromReport(data);
+    setSectorMap(updatedSectors);
+    const firstMicro = updatedSectors.find(s => s.sector_type === 'nvram_microsector');
+    if (firstMicro) setSelectedSector(firstMicro);
+  }, []);
+
   const executeSurgicalClean = useCallback(async () => {
     setCleaning(true);
     setError(null);
     try {
       const data = await invokeCommand<NvramCleanReport>('clean_nvram');
-      setReport(data);
-      const cleanedSectors = buildSectorMapFromReport(data);
-      setSectorMap(cleanedSectors);
+      applyFlashReport(data);
       setCleanSuccess(true);
-
-      const firstMicro = cleanedSectors.find(s => s.sector_type === 'nvram_microsector');
-      if (firstMicro) setSelectedSector(firstMicro);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(msg);
@@ -231,7 +238,51 @@ export function useNvramViewModel() {
     } finally {
       setCleaning(false);
     }
-  }, []);
+  }, [applyFlashReport]);
+
+  const executeGuardedPatch = useCallback(
+    async (params: {
+      inputPath: string;
+      outputPath: string;
+      nvramOffset: string;
+      patchHex: string;
+    }): Promise<NvramCleanReport | null> => {
+      const inputPath = params.inputPath.trim();
+      const outputPath = params.outputPath.trim();
+      const nvramOffset = params.nvramOffset.trim() || '0x0';
+      const patchHex = params.patchHex.trim();
+      if (!inputPath || !outputPath || !patchHex) {
+        setPatchError('Informe dump de entrada, saída Copy-on-Write e payload hexadecimal.');
+        return null;
+      }
+      if (inputPath === outputPath) {
+        setPatchError('Copy-on-Write obrigatório: o arquivo de saída não pode sobrescrever a origem.');
+        return null;
+      }
+      setPatching(true);
+      setPatchSuccess(false);
+      setPatchError(null);
+      try {
+        const data = await invokeCommand<NvramCleanReport>('patch_nvram_command', {
+          inputPath,
+          outputPath,
+          nvramOffset,
+          patchHex,
+        });
+        applyFlashReport(data);
+        setPatchSuccess(true);
+        return data;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setPatchError(msg);
+        logger.error('NvramViewModel', 'Failed guarded NVRAM CoW patch', err);
+        return null;
+      } finally {
+        setPatching(false);
+      }
+    },
+    [applyFlashReport]
+  );
 
   const filteredSectors = sectorMap.filter(s => {
     if (filterType === 'nvram') return s.sector_type === 'nvram_microsector';
@@ -252,10 +303,14 @@ export function useNvramViewModel() {
     liveCapture,
     cleaning,
     cleanSuccess,
+    patching,
+    patchSuccess,
+    patchError,
     filterType,
     setFilterType,
     error,
     executeSurgicalClean,
+    executeGuardedPatch,
     captureFromLivePico,
     clearLiveCapture: clearLiveCaptureAndReload,
     refresh: loadAnalysis,

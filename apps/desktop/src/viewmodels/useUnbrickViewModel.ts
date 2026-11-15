@@ -12,16 +12,11 @@ import type {
 import { invokeCommand } from '@/services/ipc';
 import { useToast } from '@/context/ToastContext';
 import { logger } from '@/utils/logger';
-
-interface AsyncChannelState<T> {
-  loading: boolean;
-  data: T | null;
-  error: string | null;
-}
-
-function emptyChannel<T>(initial: T | null = null): AsyncChannelState<T> {
-  return { loading: false, data: initial, error: null };
-}
+import {
+  emptyChannel,
+  useMatshitaEmuActions,
+  type AsyncChannelState,
+} from './useMatshitaEmuActions';
 
 function formatErr(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
@@ -218,7 +213,7 @@ export function useUnbrickViewModel() {
             startAddr: params.startAddr?.trim() || '0x84000000',
             totalLen: params.totalLen?.trim() || '0x800000',
             blockSize: params.blockSize ?? 4096,
-            loadAddr: params.loadAddr?.trim() || '0x51800000',
+            loadAddr: params.loadAddr?.trim() || (wrap ? '0x50400000' : '0x51800000'),
             outPath: params.outPath?.trim() || undefined,
             wrapAsDigadiag: wrap,
             wrap_as_digadiag: wrap,
@@ -229,6 +224,8 @@ export function useUnbrickViewModel() {
     [runChannel]
   );
 
+  const matshita = useMatshitaEmuActions(runChannel);
+
   return {
     workbench,
     sdKit,
@@ -237,6 +234,7 @@ export function useUnbrickViewModel() {
     tbc,
     rspPlan,
     norStub,
+    ...matshita,
     loadWorkbench,
     buildSdKit,
     verifySdMedia,

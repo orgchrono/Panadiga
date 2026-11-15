@@ -4,6 +4,7 @@ import { useManualsViewModel } from '@/viewmodels/useManualsViewModel';
 import { StatusBadge } from '@/components/StatusBadge';
 import { RagAssistantPanel } from '@/components/rag';
 import {
+  EngineeringDocsPanel,
   ManualsSearchCard,
   ManualsResultsList,
   ManualsDocCatalog,
@@ -21,6 +22,24 @@ export const ManualsView: React.FC = () => {
     selectedDoc,
     setSelectedDoc,
     loading,
+    engineeringDocs,
+    allEngineeringDocs,
+    docLocaleFilter,
+    setDocLocaleFilter,
+    docSearchQuery,
+    setDocSearchQuery,
+    selectedEngDoc,
+    engDocContent,
+    engDocLoading,
+    activeAnchor,
+    setActiveAnchor,
+    decodedLogReport,
+    canGoBackDoc,
+    canGoForwardDoc,
+    goBackDoc,
+    goForwardDoc,
+    selectEngineeringDoc,
+    navigateToReference,
     executeSearch,
     selectTerm,
   } = useManualsViewModel();
@@ -82,6 +101,27 @@ export const ManualsView: React.FC = () => {
           />
         </div>
       </div>
+
+      <EngineeringDocsPanel
+        docs={engineeringDocs}
+        allDocs={allEngineeringDocs}
+        localeFilter={docLocaleFilter}
+        onLocaleFilterChange={setDocLocaleFilter}
+        searchQuery={docSearchQuery}
+        onSearchQueryChange={setDocSearchQuery}
+        selectedDoc={selectedEngDoc}
+        content={engDocContent}
+        loading={engDocLoading}
+        activeAnchor={activeAnchor}
+        onSelectAnchor={setActiveAnchor}
+        decodedLog={decodedLogReport}
+        canGoBack={canGoBackDoc}
+        canGoForward={canGoForwardDoc}
+        onGoBack={goBackDoc}
+        onGoForward={goForwardDoc}
+        onSelectDoc={selectEngineeringDoc}
+        onNavigateReference={navigateToReference}
+      />
     </div>
   );
 };

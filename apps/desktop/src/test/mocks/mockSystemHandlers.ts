@@ -85,6 +85,60 @@ export function handleMockSystemCommand(
       };
     }
 
+    case 'list_engineering_docs':
+      return [
+        {
+          locale: 'root',
+          file_name: 'INDEX.md',
+          relative_path: 'INDEX.md',
+          title: 'Panadiga Technical Documentation Index',
+          size_bytes: 4096,
+        },
+        {
+          locale: 'pt-BR',
+          file_name: 'EMULADOR_MATSHITA_R6MV4_E_INJECAO_ATAPI.md',
+          relative_path: 'pt-BR/EMULADOR_MATSHITA_R6MV4_E_INJECAO_ATAPI.md',
+          title: 'Emulador Matshita R6-MV4 e Injeção ATAPI (0x3B / 0xED)',
+          size_bytes: 8192,
+        },
+        {
+          locale: 'en-US',
+          file_name: 'MATSHITA_R6MV4_EMULATOR_AND_ATAPI_INJECTION.md',
+          relative_path: 'en-US/MATSHITA_R6MV4_EMULATOR_AND_ATAPI_INJECTION.md',
+          title: 'Matshita R6-MV4 Emulator and ATAPI Injection (0x3B / 0xED)',
+          size_bytes: 8192,
+        },
+      ];
+
+    case 'read_engineering_doc': {
+      const rel = String(
+        (args as Record<string, unknown> | undefined)?.relativePath ??
+          (args as Record<string, unknown> | undefined)?.relative_path ??
+          '',
+      ).trim();
+      if (!rel || rel.includes('..')) {
+        throw new Error('Acesso bloqueado fora do diretório docs/.');
+      }
+      return `# ${rel}\n\n> 🌐 [🇺🇸 English](../en-US/MATSHITA_R6MV4_EMULATOR_AND_ATAPI_INJECTION.md) · [🇧🇷 Português](../pt-BR/EMULADOR_MATSHITA_R6MV4_E_INJECAO_ATAPI.md)\n\nMock engineering documentation content verified for \`${rel}\`.\n`;
+    }
+
+    case 'decode_engineering_log': {
+      return {
+        loader_version: 'Loader ver0.61 [06/03/06]',
+        boot_mode: 'cd_diag',
+        bgo_failed_code: 1,
+        startup_reason: '5',
+        sd_capacity_lba: 0x3c4000,
+        sdcd_errors: [0],
+        drive_error_codes: ['80045300'],
+        sense_packets: [],
+        vdd_volts: 3.25,
+        dump_line_count: 0,
+        panarsp_summaries: [],
+        notes: ['Mock decoded COM10 log telemetry'],
+      };
+    }
+
     default:
       return undefined;
   }

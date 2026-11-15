@@ -43,6 +43,32 @@ bool p7501_ascii_ieq(const char *a, const char *b) {
     return *a == '\0' && *b == '\0';
 }
 
+bool p7501_ascii_iprefix(const char *str, const char *prefix) {
+    if ((str == NULL) || (prefix == NULL)) {
+        return false;
+    }
+    while (*prefix != '\0') {
+        if ((*str == '\0') || (to_ascii_upper(*str) != to_ascii_upper(*prefix))) {
+            return false;
+        }
+        ++str;
+        ++prefix;
+    }
+    return true;
+}
+
+bool p7501_ascii_is_digits(const char *str) {
+    if ((str == NULL) || (*str == '\0')) {
+        return false;
+    }
+    for (const char *p = str; *p != '\0'; ++p) {
+        if ((*p < '0') || (*p > '9')) {
+            return false;
+        }
+    }
+    return true;
+}
+
 void p7501_ascii_upper_copy(char *dst, size_t dst_cap, const char *src) {
     if (dst == NULL || dst_cap == 0u) {
         return;

@@ -1,3 +1,6 @@
+> 🌐 **Idioma / Language:** [English (US)](../en-US/FORENSIC_VALIDATION_INDEPENDENT_AUDIT_AND_COMPRESSION_DOSSIER.md) | **Português (BR)**
+> 🧭 **Portal:** [Índice da Documentação](../INDEX.md) | [Auditoria Completa](../../AUDITORIA_COMPLETA.md) | [Auditorias](../audits/README.md) | [Pseudocódigo Ghidra](../pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) | [Logs de Debug](../debug_logs/README.md)
+
 # Dossiê Técnico Forense: Compatibilidade de Binários, Auditoria Independente & Arquitetura de Compactação Multiplataforma
 
 ---

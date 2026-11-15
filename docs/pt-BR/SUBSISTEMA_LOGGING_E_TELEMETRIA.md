@@ -1,3 +1,6 @@
+> 🌐 **Idioma / Language:** [English (US)](../en-US/LOGGING_AND_TELEMETRY_SUBSYSTEM.md) | **Português (BR)**
+> 🧭 **Portal:** [Índice da Documentação](../INDEX.md) | [Auditoria Completa](../../AUDITORIA_COMPLETA.md) | [Auditorias](../audits/README.md) | [Pseudocódigo Ghidra](../pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) | [Logs de Debug](../debug_logs/README.md)
+
 # Especificação do Subsistema de Logging e Telemetria Unificada — Panadiga
 
 > **Classificação:** Documento Técnico de Arquitetura de Software e Padrões de Código  
@@ -72,7 +75,7 @@ static CURRENT_LEVEL: AtomicU8 = AtomicU8::new(LogLevel::Info as u8);
 Todas as macros são exportadas na raiz do crate `panadiga` e estão disponíveis para importação direta:
 
 ```rust
-use panadiga::{log_info, log_warn, log_error, log_debug, log_println};
+use panadiga_core::{log_info, log_warn, log_error, log_debug, log_println};
 ```
 
 ### 3.1 `log_println!` / `log_raw!`
@@ -123,7 +126,7 @@ log_trace!("Pacote GDB recebido: {:?}", raw_packet_bytes);
 O subsistema permite o registro de um interceptador dinâmico de saída via `set_sink`:
 
 ```rust
-use panadiga::logger::{set_sink, reset_sink, LogLevel};
+use panadiga_core::logger::{set_sink, reset_sink, LogLevel};
 
 // Exemplo: Captura para buffer em teste unitário
 set_sink(|level: LogLevel, message: &str| {
@@ -146,14 +149,14 @@ Foram migradas **365 chamadas brutas** para o subsistema unificado:
 
 | Componente | Arquivo | Total de Chamadas |
 | :--- | :--- | :--- |
-| **Criptoanálise & CPRM** | `src/crypto.rs` | 119 chamadas |
-| **Storage Forensics & MEIHFS** | `src/hdd.rs` | 91 chamadas |
-| **CLI & Dispatcher** | `src/main.rs` | 56 chamadas |
-| **Cirurgia de NVRAM Spansion** | `src/nvram.rs` | 34 chamadas |
-| **Inspeção de Headers** | `src/headers.rs` | 19 chamadas |
-| **Pico Serial & GDB Bridge** | `src/pico.rs` | 16 chamadas |
-| **Scanner Forense de Strings** | `src/scan.rs` | 15 chamadas |
-| **Indexador de Manuais PDF** | `src/manuals.rs` | 13 chamadas |
+| **Criptoanálise & CPRM** | `src/crypto.rs` *(pré-workspace -> [`crates/panadiga-core/src/crypto/`](../../crates/panadiga-core/src/crypto/mod.rs))* | 119 chamadas |
+| **Storage Forensics & MEIHFS** | `src/hdd.rs` *(pré-workspace -> [`crates/panadiga-core/src/hdd/`](../../crates/panadiga-core/src/hdd/mod.rs))* | 91 chamadas |
+| **CLI & Dispatcher** | `src/main.rs` *(pré-workspace -> [`crates/panadiga-cli/src/main.rs`](../../crates/panadiga-cli/src/main.rs))* | 56 chamadas |
+| **Cirurgia de NVRAM Spansion** | `src/nvram.rs` *(pré-workspace -> [`crates/panadiga-core/src/nvram.rs`](../../crates/panadiga-core/src/nvram.rs))* | 34 chamadas |
+| **Inspeção de Headers** | `src/headers.rs` *(pré-workspace -> [`crates/panadiga-core/src/headers.rs`](../../crates/panadiga-core/src/headers.rs))* | 19 chamadas |
+| **Pico Serial & GDB Bridge** | `src/pico.rs` *(pré-workspace -> [`crates/panadiga-core/src/pico/`](../../crates/panadiga-core/src/pico/mod.rs))* | 16 chamadas |
+| **Scanner Forense de Strings** | `src/scan.rs` *(pré-workspace -> [`crates/panadiga-core/src/scan.rs`](../../crates/panadiga-core/src/scan.rs))* | 15 chamadas |
+| **Indexador de Manuais PDF** | `src/manuals.rs` *(pré-workspace -> `crates/panadiga-rag/src/indexer/`)* | 13 chamadas |
 | **Tauri GDB Controller** | `src/desktop/...` | 2 chamadas |
 | **Total Global** | | **365 chamadas migradas** |
 

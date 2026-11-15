@@ -5,9 +5,9 @@
 # Central de Engenharia Reversa, Firmware e Diagnóstico de Hardware — Gravadores Panasonic DIGA
 
 [![Rust](https://img.shields.io/badge/Rust-1.85%2B-orange.svg)](https://www.rust-lang.org/)
-[![SoC](<https://img.shields.io/badge/SoC-Matsushita%20UniPhier%20(AM34%2FMN103S)-blue.svg>)]()
-[![Flash](<https://img.shields.io/badge/NOR%20Flash-Spansion%20S29JL%20%2F%20Am29LV%20(2MB--16MB)-green.svg>)]()
-[![Storage](<https://img.shields.io/badge/Storage-MEIHDFS%20(IDE%2FPATA%2FSATA)-yellow.svg>)]()
+[![SoC](https://img.shields.io/badge/SoC-Matsushita%20UniPhier%20%28AM34%2FMN103S%29-blue.svg)](#1-visão-geral-e-apresentação-executiva-do-projeto)
+[![Flash](https://img.shields.io/badge/NOR%20Flash-Spansion%20S29JL%20%2F%20Am29LV%20%282MB--16MB%29-green.svg)](#6-mapa-de-memória-físico-da-arquitetura-matsushita-am34-mn103s--vep79138)
+[![Storage](https://img.shields.io/badge/Storage-MEIHDFS%20%28IDE%2FPATA%2FSATA%29-yellow.svg)](#7-síntese-das-descobertas-criptográficas-e-forenses-forensic-cryptanalysis--storage-deep-dive)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 > **Documento Mestre de Referência Técnica de Sistemas e Hardware**
@@ -32,7 +32,7 @@ Embora o foco inicial de laboratório deste projeto seja o modelo amplamente dif
 3. **Criptografia e Proteção de Propriedade Intelectual:** O contêiner de distribuição óptica (`PANA_DVD.FRM`) e as partições executáveis do HD são blindados com cifras de bloco simétricas de 64 bits em modo ECB, associadas a esquemas CPRM (*Content Protection for Recordable Media*) e DivX DRM.
 4. **A Vulnerabilidade Crítica do Erro `U99`:** A calibração de canais, estado de montagem do HDD e parâmetros do gravador são mantidos nos últimos 64 KB da Flash, emulando uma EEPROM (`EEMUL`). Desgaste de células, desligamento abrupto durante gravação ou parâmetros corrompidos provocam falha de validação na inicialização. Como consequência, o firmware Matsushita entra em pânico e trava irreversivelmente com o código **`U99`** no display VFD frontal, rejeitando comandos do controle e travando o mecanismo óptico.
 
-Este repositório consolida o **ecossistema definitivo de engenharia reversa, recuperação física e análise forense** para a linha Panasonic DIGA, disponibilizando a suíte de ferramentas de alta performance em Rust **`panadiga`**, interface de bancada desktop e mobile Android (`.apk`), firmware C11/PIO para microcontroladores **Raspberry Pi Pico (RP2040) e Pico 2 (RP2350)** com suporte a **Bluetooth Low Energy (BLE)** e USB-C OTG, 30 manuais técnicos de fábrica, esquemas elétricos e datasheets de silício, e o acervo completo de 13 grandes dossiês técnicos bilíngues de referência.
+Este repositório consolida o **ecossistema definitivo de engenharia reversa, recuperação física e análise forense** para a linha Panasonic DIGA, disponibilizando a suíte de ferramentas de alta performance em Rust **`panadiga`**, interface de bancada desktop e mobile Android (`.apk`), firmware C11/PIO para microcontroladores **Raspberry Pi Pico (RP2040) e Pico 2 (RP2350)** com suporte a **Bluetooth Low Energy (BLE)** e USB-C OTG, **30 manuais técnicos de fábrica e datasheets de silício**, **33 dossiês técnicos bilíngues sincronizados (`pt-BR` / `en-US`)**, **disassembly e pseudocódigo integral MN103S** (`docs/pseudocode/`) e **12 capturas únicas de bancada (`COM10`)** (`docs/debug_logs/`).
 
 ---
 
@@ -117,31 +117,27 @@ flowchart TD
 Panadiga/
 ├── package.json                                      <-- Ponto de Entrada Unificado (`npm start`, `npm run build:desktop`, `npm run validate`)
 ├── Cargo.toml                                        <-- Especificação Mestre do Workspace Rust (Edição 2024)
-├── tauri.conf.json                                   <-- Configuração Desktop & Mobile Tauri 2.0
-├── scripts/                                          <-- Orquestração Multiplataforma (`build.py`, `validate.py`, `panadiga_ops.py`)
-├── src/                                              <-- Motor Nativo em Rust de Alta Performance
-│   ├── main.rs                                       <-- Ponto de Entrada Unificado (CLI & GUI Tauri)
-│   ├── lib.rs                                        <-- Biblioteca Crate Exportando os Módulos Centrais
-│   ├── logger.rs                                     <-- Subsistema Unificado de Logging Estruturado
-│   ├── manuals.rs                                    <-- Indexador de Manuais & Scanner Regex Ultrarrápido
-│   ├── nvram/                                        <-- Parser Multi-Geometria de NVRAM & Emulação EEMUL
-│   ├── hdd/                                          <-- Motor de Armazenamento MEIHDFS & Tabela de Partições
-│   ├── frm/                                          <-- Motor de Criptoanálise do Contêiner PANA_DVD.FRM
-│   ├── rag/                                          <-- Motor RAG Zero-Error & 6 Camadas de Defesa
-│   └── desktop/                                      <-- Comandos Nativos Tauri 2.0 & Ponte GDB RSP
-├── apps/desktop/                                     <-- Interface Gráfica de Bancada (React 19 + Vite)
-│   ├── src/                                          <-- Componentes & ViewModels em Arquitetura MVVM Rigorosa
-│   │   ├── components/                               <-- Painéis de Interface Pura (GDB, P7501 UART, HexViewer)
-│   │   ├── services/                                 <-- Transporte Tipado Tauri IPC & Pontes Nativas
-│   │   └── viewmodels/                               <-- Máquinas de Estados Algébricas (Lógica Pure FP)
-│   ├── package.json                                  <-- Dependências Node.js & Scripts de Automação
-│   └── playwright.config.ts                          <-- Configuração de Testes de Navegador toEnd-to-End
+├── AUDITORIA_COMPLETA.md / COMPLETE_AUDIT.md         <-- Auditoria Técnica Viva na Raiz (PT-BR / EN)
+├── crates/                                           <-- Arquitetura Modular Multi-Crate em Rust
+│   ├── panadiga-core/                                <-- Núcleos: NVRAM, MEIHDFS + `hdd/capacity_patch/`, Cripto Feistel/EXTRHEAD, RE (`mn10300/`, `mn10300_traps/`, `mn10300_emu/`, `matshita_emu/`, `nor_dumper.rs`, `bgo_unbrick/`, `main_passthrough/`, `unbrick_sd_kit/`, `prog061_uart_monitor/`), Hardware SSOT
+│   ├── panadiga-cli/                                 <-- Binário `panadiga` & Workbench TUI Interativo
+│   ├── panadiga-rag/                                 <-- Motor RAG Zero-Error 6 Camadas + `HardwareSafetyValidator` + `FactCritic`
+│   └── panadiga-mcp/                                 <-- Servidor MCP JSON-RPC 2.0 `stdio` Expondo 18 Ferramentas Nativas
+├── apps/desktop/                                     <-- GUI Desktop & Android Tauri 2.0 (`panadiga-desktop` + React 19 + Vite MVVM)
+│   ├── src-tauri/                                    <-- Comandos Nativos Rust, IPC de Docs/Logs & Ponte GDB RSP
+│   ├── src/                                          <-- Componentes, ViewModels MVVM e Visualizador Interativo de Docs/Logs/Código
+│   ├── package.json                                  <-- Dependências Node.js, Vitest, uxlint & Playwright
+│   └── playwright.config.ts                          <-- Configuração de Testes End-to-End em Navegador
 ├── docs/                                             <-- Acervo Oficial de Documentação Técnica
 │   ├── INDEX.md                                      <-- Portal e Índice Gateway de Documentação
-│   ├── en-US/                                        <-- Dossiês Técnicos Canônicos em Inglês (16 Dossiês)
-│   ├── pt-BR/                                        <-- Dossiês Técnicos de Bancada em Português (16 Dossiês)
-│   └── images/                                       <-- Esquemáticos em Alta Resolução, Fotos e Pinouts
-├── manuals_and_schematics/                           <-- Acervo Técnico (30 Manuais, Esquemas & Datasheets)
+│   ├── translation_pairs.json                        <-- Mapa Canônico de 33 Pares Bilíngues (`pt-BR` <-> `en-US` + Raiz)
+│   ├── en-US/                                        <-- Dossiês Técnicos Canônicos em Inglês (33 pares)
+│   ├── pt-BR/                                        <-- Dossiês Técnicos de Bancada em Português (33 pares)
+│   ├── audits/                                       <-- Snapshots Históricos Pré-Refatoração (`2026-11-11`)
+│   ├── pseudocode/                                   <-- Pseudocódigo Integral MN103S, Auditoria `??` & Dumps Brutos (`raw/*.txt`)
+│   ├── debug_logs/                                   <-- 12 Capturas Únicas `COM10` / `P7501` & `DOSSIE_COMPLETO_...txt`
+│   └── assets/ / images/                             <-- Esquemáticos em Alta Resolução, 241 PNGs do Catálogo Visual & Pinouts
+├── manuals_and_schematics/                           <-- Acervo Técnico (30 Manuais PDF, Esquemas & Datasheets)
 │   ├── README.md                                     <-- Catálogo Mestre Indexado por Modelo e Disciplina
 │   ├── datasheets/                                   <-- Datasheets de Silício (MN103, RP2040, RP2350, Spansion)
 │   ├── dmr-eh55/                                     <-- Manuais DMR-EH55 (Serviço, Esquemas, Usuário, Firmware)
@@ -155,22 +151,29 @@ Panadiga/
 │   ├── dmr-e85h/                                     <-- Manual Pioneiro HDD/DVD 4MB Flash DMR-E85H
 │   ├── dmr-e500h/                                    <-- Manual do Gravador Massivo 400 GB DMR-E500H
 │   └── dmr-ex98v/                                    <-- Manual de Serviço DVB-T/HDMI Vol 1 DMR-EX98V
-├── tools/                                            <-- Ferramentas de Laboratório, Ghidra & Launchers Windows
+├── tools/                                            <-- Utilitários de Laboratório, Launchers Windows & Scripts Ghidra (`tools/ghidra/`)
 │   ├── Abrir_HxD.cmd                                 <-- Inicializador Rápido do Editor Hexadecimal HxD (Windows)
 │   ├── conectar_gdb_multiarch.cmd                    <-- Conexão GDB Multiarch ao Alvo MN10300 (Windows)
 │   ├── iniciar_ponte_gdb.cmd                         <-- Encaminhador TCP do Servidor GDB RSP (:3333, Windows)
 │   ├── iniciar_ghidra.cmd                            <-- Inicializador do Workspace Ghidra (Windows)
-│   └── ghidra/                                       <-- Scripts Ghidra AM34/MN103S (Gerados da SSOT em Rust)
-├── scripts/                                          <-- Orquestração Cross-Platform de Build & 9 Quality Gates
+│   └── ghidra/                                       <-- 7 Scripts Jython AM34/MN103S (Gerados da SSOT em Rust)
+├── scripts/                                          <-- Orquestração Cross-Platform de Build & 9 Quality Gates (`build.py`, `validate.py`, `bench/`, `re/`, `dev/`)
 │   ├── build.py                                      <-- Compilação Unificada Desktop, Android APK & Pico UF2
 │   └── validate.py                                   <-- Executor dos 9 Portões Obrigatórios de Qualidade
 └── firmware/
     └── pico-p7501/                                   <-- Firmware RP2040/RP2350 C11 Modular P7501 UART, Lógica PIO & `PANARSP` Autônomo
-        ├── p7501_uart.pio                            <-- Máquina de Estados PIO UART 115200 8N1 / Half-Duplex
-        ├── p7501_pico_main.c                         <-- Ponto de Entrada & Console Diagnóstico Serial (PANADIGA>)
-        ├── hal/                                      <-- Camada HAL Open-Drain, Proteção NSW5V & Temporização
-        ├── gdb/                                      <-- Codec Determinístico e Handlers GDB RSP
-        └── CMakeLists.txt                            <-- Pipeline CMake Bare-Metal Dual-Target
+        ├── cli/                                      <-- Parser de Comandos Interativo USB-CDC / BLE `PANADIGA>` & Help
+        ├── common/                                   <-- Utilitários C11 Puros de Hex & Checksum
+        ├── diag/                                     <-- `PIOLOGIC` Amostrador 4 Canais, `SDSNIFF` & `JIGSWEEP`
+        ├── flash/                                    <-- Autodetecção CFI / Espelho Spansion NOR & Guardas E05
+        ├── gdb/                                      <-- Codec & Servidor Determinístico GDB RSP
+        ├── hal/                                      <-- Open-Drain `XRESET`, `SW_UART` (GP26), `NSW5V` (GP3 Hi-Z) & HAL de LED
+        ├── protocol/                                 <-- Varredura de Perfis de Boot & Handshake de Barramento
+        ├── uart/                                     <-- Motor UART PIO1, `UARTSTREAM`, `WAITTX`, `DIAGWATCH`, `DRVPANA` & `PANARSP`
+        ├── tests/                                    <-- Suíte de Testes Unitários C11 no Host (`PICO_HOST_TEST=1`, 4 módulos)
+        ├── p7501_uart*.pio / p7501_logic_sampler.pio <-- Máquinas de Estado PIO (UART 115200 8N1 & Amostrador 2 MHz)
+        ├── p7501_pico_main.c                         <-- Ponto de Entrada & Loop Principal de Diagnóstico
+        └── CMakeLists.txt                            <-- Pipeline CMake Bare-Metal Dual-Target RP2040/RP2350
 ```
 
 ---
@@ -189,7 +192,7 @@ Panadiga/
 
 ---
 
-## 4. Guia de Uso Completo da Ferramenta Rust `panadiga` (`src/`)
+## 4. Guia de Uso Completo da Ferramenta Rust `panadiga` (`crates/`)
 
 O binário compilado `panadiga` opera tanto como servidor gráfico de bancada Desktop quanto utilitário de linha de comando de alta velocidade.
 
@@ -575,30 +578,48 @@ Todos os manuais de serviço, esquemas e datasheets estão organizados hierarqui
 
 ---
 
-## 11. Links Diretos para o Acervo de Dossiês Técnicos Especializados (`docs/`)
+## 11. Links Diretos para Auditorias, Dossiês Técnicos, Pseudocódigo e Logs (`docs/`)
 
-O acervo oficial de 16 dossiês técnicos bilíngues listados abaixo está disponível em `docs/pt-BR/` (com espelho em inglês em `docs/en-US/` e índice completo em `docs/INDEX.md`):
+O acervo oficial reúne **33 dossiês técnicos bilíngues sincronizados (`pt-BR` / `en-US`)** (indexados em [`docs/INDEX.md`](docs/INDEX.md) e [`docs/translation_pairs.json`](docs/translation_pairs.json)), auditorias vivas na raiz ([`AUDITORIA_COMPLETA.md`](AUDITORIA_COMPLETA.md) / [`COMPLETE_AUDIT.md`](COMPLETE_AUDIT.md)), snapshots históricos ([`docs/audits/`](docs/audits/README.md)), evidência integral de disassembly/pseudocódigo Ghidra ([`docs/pseudocode/`](docs/pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) & [`docs/pseudocode/raw/`](docs/pseudocode/raw/)) e 12 capturas únicas reais de bancada `COM10` ([`docs/debug_logs/`](docs/debug_logs/README.md)):
 
-* 🏛️ **[Arquitetura de Sistemas e Blueprint de Engenharia](docs/pt-BR/ARQUITETURA_E_BLUEPRINT_DE_ENGENHARIA.md)** ([English Mirror](docs/en-US/SYSTEM_ARCHITECTURE_AND_ENGINEERING_BLUEPRINT.md))*Especificação mestre do ecossistema: decomposição de monólitos, Pure FP domain, MVVM rigoroso, anel GDB e invariantes de silício.*
-* 📱 **[Arquitetura Mobile Android e Bluetooth](docs/pt-BR/ARQUITETURA_MOBILE_ANDROID_E_BLUETOOTH.md)** ([English Mirror](docs/en-US/ANDROID_APK_AND_BLUETOOTH_ARCHITECTURE.md))*Construção de APK Android (`aarch64-linux-android`), HAL nativa em Rust (BLE NUS / USB-C OTG) e isolamento da porta P7501.*
-* 🧪 **[Arquitetura de Testes e Matriz de Conformidade](docs/pt-BR/ARQUITETURA_DE_TESTES_E_CONFORMIDADE.md)** ([English Mirror](docs/en-US/TESTING_ARCHITECTURE_AND_COMPLIANCE.md))*Pirâmide de testes em 5 camadas (Pure FP, GDB RSP, MVVM ADTs, CLI SSOT, E2E), rastreabilidade e status CI/CD.*
-* ⚡ **[Blueprint do Esquema Elétrico de Bancada](docs/pt-BR/BLUEPRINT_ESQUEMA_ELETRICO_BANCADA.md)** ([English Mirror](docs/en-US/BLUEPRINT_BENCH_WIRING_AND_SCHEMATIC.md))*Chicote de conexão, pinagem do conector P7501, RP2040, disclaimer de resistores de protótipo vs produto final.*
-* 💾 **[Arquitetura de Armazenamento MEIHDFS e Partições](docs/pt-BR/ARQUITETURA_STORAGE_MEIHDFS_PARTICOES.md)** ([English Mirror](docs/en-US/STORAGE_ARCHITECTURE_MEIHDFS_PARTITIONS.md))*MEIHFS Panasonic, MBR 'SH' em LBA 0, espelho a 28 MB, journal transacional de 10 blocos e partições de firmware.*
-* 🔐 **[Dossiê de Criptografia e Contêiner PANA_DVD.FRM](docs/pt-BR/DOSSIE_CRIPTOGRAFIA_E_FIRMWARE_PANA_DVD.md)** ([English Mirror](docs/en-US/DOSSIER_CRYPTOGRAPHY_AND_FIRMWARE_PANA_DVD.md))*Contêiner óptico PANA_DVD.FRM, cifras CPRM/C2, codebook ECB de 64 bits e análise matemática de entropia.*
-* 🔬 **[Estratégia de Integração Ghidra e Servidor GDB](docs/pt-BR/ESTRATEGIA_INTEGRACAO_GHIDRA_GDB.md)** ([English Mirror](docs/en-US/GHIDRA_GDB_INTEGRATION_STRATEGY.md))*Processador Matsushita AM34/MN103S, módulo SLED Ghidra e servidor GDB Remote Serial Protocol (:3333).*
-* 🛠️ **[Guia Ilustrado de Montagem da Sonda de Bancada](docs/pt-BR/GUIA_MONTAGEM_E_FOTOS_PROBE_BANCADA.md)** ([English Mirror](docs/en-US/BENCH_PROBE_ASSEMBLY_AND_PHOTOS_GUIDE.md))*Montagem da sonda passo a passo, chicote JST ZR 1.5mm e teste mandatória de continuidade do terra (Pino 4 GND).*
-* 📋 **[Inventário Técnico e Guia de Operações](docs/pt-BR/INVENTARIO_TECNICO_E_GUIA_DE_OPERACAO.md)** ([English Mirror](docs/en-US/TECHNICAL_INVENTORY_AND_OPERATIONS_MANUAL.md))*Inventário de arquivos, hashes SHA-256 e roteiro passo a passo de desbrick do erro U99.*
-* 📊 **[Relatório de Auditoria e Modularização Final](docs/pt-BR/RELATORIO_AUDITORIA_E_MODULARIZACAO_FINAL.md)** ([English Mirror](docs/en-US/FINAL_AUDIT_AND_MODULARIZATION_REPORT.md))*Relatório de modularização, integração cross-stack (Rust/C/Python/TypeScript) e homologação dos 9 Quality Gates.*
-* 📡 **[Subsistema de Logging e Telemetria Unificada](docs/pt-BR/SUBSISTEMA_LOGGING_E_TELEMETRIA.md)** ([English Mirror](docs/en-US/LOGGING_AND_TELEMETRY_SUBSYSTEM.md))*Logging estruturado em JSON, sinks thread-safe e telemetria serial em tempo real na interface gráfica.*
-* 💡 **[Teoria e Prática: Resolução do U99 e Semicondutores](docs/pt-BR/TEORIA_E_PRATICA_UNBRICK_U99_E_CRIPTOGRAFIA_MATSUSHITA.md)** ([English Mirror](docs/en-US/THEORY_AND_PRACTICE_U99_UNBRICK_MATSUSHITA_CRYPTO.md))*Física de semicondutores da Flash NOR Spansion, motor circular EEMUL e sanitização dos 64 KB de NVRAM para 0xFF.*
+* 📋 **[Auditoria Técnica Consolidada (Raiz)](AUDITORIA_COMPLETA.md)** ([English Mirror: `COMPLETE_AUDIT.md`](COMPLETE_AUDIT.md))
+  *Estado vivo do workspace (`crates/`, `firmware/pico-p7501/`, `scripts/`), hashes SHA-256 dos UF2 recompilados, síntese da auditoria `??` no Ghidra, paridade Python → Rust e os 9 Quality Gates.*
+* 🏛️ **[Arquitetura de Sistemas e Blueprint de Engenharia](docs/pt-BR/ARQUITETURA_E_BLUEPRINT_DE_ENGENHARIA.md)** ([English Mirror](docs/en-US/SYSTEM_ARCHITECTURE_AND_ENGINEERING_BLUEPRINT.md))
+  *Especificação mestre do ecossistema: decomposição modular, Pure FP domain, MVVM rigoroso, anel GDB e invariantes de silício.*
+* 📱 **[Arquitetura Mobile Android e Bluetooth](docs/pt-BR/ARQUITETURA_MOBILE_ANDROID_E_BLUETOOTH.md)** ([English Mirror](docs/en-US/ANDROID_APK_AND_BLUETOOTH_ARCHITECTURE.md))
+  *Construção de APK Android (`aarch64-linux-android`), HAL nativa em Rust (BLE NUS / USB-C OTG) e isolamento da porta P7501.*
+* 🧪 **[Arquitetura de Testes e Matriz de Conformidade](docs/pt-BR/ARQUITETURA_DE_TESTES_E_CONFORMIDADE.md)** ([English Mirror](docs/en-US/TESTING_ARCHITECTURE_AND_COMPLIANCE.md))
+  *Pirâmide de testes em 5 camadas (Pure FP, GDB RSP, MVVM ADTs, CLI SSOT, E2E), rastreabilidade e status CI/CD.*
+* ⚡ **[Blueprint do Esquema Elétrico de Bancada](docs/pt-BR/BLUEPRINT_ESQUEMA_ELETRICO_BANCADA.md)** ([English Mirror](docs/en-US/BLUEPRINT_BENCH_WIRING_AND_SCHEMATIC.md))
+  *Chicote de conexão, pinagem do conector P7501, RP2040, disclaimer de resistores de protótipo vs produto final.*
+* 💾 **[Arquitetura de Armazenamento MEIHDFS e Partições](docs/pt-BR/ARQUITETURA_STORAGE_MEIHDFS_PARTICOES.md)** ([English Mirror](docs/en-US/STORAGE_ARCHITECTURE_MEIHDFS_PARTITIONS.md))
+  *MEIHFS Panasonic, MBR 'SH' em LBA 0, espelho a 28 MB, journal transacional de 10 blocos e partições de firmware.*
+* 🔐 **[Dossiê de Criptografia e Contêiner PANA_DVD.FRM](docs/pt-BR/DOSSIE_CRIPTOGRAFIA_E_FIRMWARE_PANA_DVD.md)** ([English Mirror](docs/en-US/DOSSIER_CRYPTOGRAPHY_AND_FIRMWARE_PANA_DVD.md))
+  *Contêiner óptico PANA_DVD.FRM, cifras CPRM/C2, codebook ECB de 64 bits e análise matemática de entropia.*
+* 🔬 **[Estratégia de Integração Ghidra e Servidor GDB](docs/pt-BR/ESTRATEGIA_INTEGRACAO_GHIDRA_GDB.md)** ([English Mirror](docs/en-US/GHIDRA_GDB_INTEGRATION_STRATEGY.md))
+  *Processador Matsushita AM34/MN103S, módulo SLED Ghidra e servidor GDB Remote Serial Protocol (:3333).*
+* 🛠️ **[Guia Ilustrado de Montagem da Sonda de Bancada](docs/pt-BR/GUIA_MONTAGEM_E_FOTOS_PROBE_BANCADA.md)** ([English Mirror](docs/en-US/BENCH_PROBE_ASSEMBLY_AND_PHOTOS_GUIDE.md))
+  *Montagem da sonda passo a passo, chicote JST ZR 1.5mm e teste mandatório de continuidade do terra (Pino 4 GND).*
+* 📋 **[Inventário Técnico e Guia de Operações](docs/pt-BR/INVENTARIO_TECNICO_E_GUIA_DE_OPERACAO.md)** ([English Mirror](docs/en-US/TECHNICAL_INVENTORY_AND_OPERATIONS_MANUAL.md))
+  *Inventário de arquivos, hashes SHA-256 e roteiro passo a passo de desbrick do erro U99.*
+* 📊 **[Relatório de Auditoria e Modularização Final](docs/pt-BR/RELATORIO_AUDITORIA_E_MODULARIZACAO_FINAL.md)** ([English Mirror](docs/en-US/FINAL_AUDIT_AND_MODULARIZATION_REPORT.md))
+  *Linha de base histórica (`2026-11-07`) de modularização, integração cross-stack (Rust/C/Python/TypeScript) e base dos 9 Quality Gates.*
+* 📡 **[Subsistema de Logging e Telemetria Unificada](docs/pt-BR/SUBSISTEMA_LOGGING_E_TELEMETRIA.md)** ([English Mirror](docs/en-US/LOGGING_AND_TELEMETRY_SUBSYSTEM.md))
+  *Logging estruturado em JSON, sinks thread-safe e telemetria serial em tempo real na interface gráfica.*
+* 💡 **[Teoria e Prática: Resolução do U99 e Semicondutores](docs/pt-BR/TEORIA_E_PRATICA_UNBRICK_U99_E_CRIPTOGRAFIA_MATSUSHITA.md)** ([English Mirror](docs/en-US/THEORY_AND_PRACTICE_U99_UNBRICK_MATSUSHITA_CRYPTO.md))
+  *Física de semicondutores da Flash NOR Spansion, motor circular EEMUL e sanitização dos 64 KB de NVRAM para 0xFF.*
 * 🛡️ **[Motor RAG Zero-Error e Segurança Física de Bancada](docs/pt-BR/ZERO_ERROR_RAG_ENGINE_E_SEGURANCA_FISICA.md)** ([English Mirror](docs/en-US/ZERO_ERROR_RAG_ENGINE_AND_PHYSICAL_SAFETY.md))
   *Sistema de defesa em 6 camadas determinísticas (QueryGuard, CRAG, GroundedSynthesis, FactCritic, InvariantShield).*
 * 🔬 **[Dossiê de Engenharia Reversa Profunda: Bootloader MN103S, Drive Óptico e Telemetria ao Vivo](docs/pt-BR/DOSSIE_ENGENHARIA_REVERSA_BOOTLOADER_E_DRIVE_MN103S.md)** ([English Mirror](docs/en-US/REVERSE_ENGINEERING_BOOTLOADER_AND_OPTICAL_DRIVE_MN103S.md))
   *Telemetria ao vivo no `DMR-EH55` (`P7501`/`CDDIAG`), disassembly MN103S de `BOOT.BIN` e `DRV_decomp.bin`, 74 opcodes ATAPI, 62 comandos CLI de fábrica e dicionário Shift-JIS completo de 431 erros (`0x83A7`).*
-* 🧩 **[Vista Explodida, Injeção via Pico e Bypass AV Passthrough](docs/pt-BR/VISTA_EXPLODIDA_ARQUITETURA_INJECAO_PICO_E_BYPASS_PASSTHROUGH.md)**
-  *Especificação `DIGADIAG.FRM` vs `PANA_DVD.FRM`, comandos autônomos Pico `PANARSP`, handshake `_dev_SERIAL` (`0x515B2E60`) e bypass AV TBC `E-E`.*
+* 🧩 **[Vista Explodida, Injeção via Pico e Bypass AV Passthrough](docs/pt-BR/VISTA_EXPLODIDA_ARQUITETURA_INJECAO_PICO_E_BYPASS_PASSTHROUGH.md)** ([English Mirror](docs/en-US/EXPLODED_VIEW_PICO_INJECTION_ARCHITECTURE_AND_BYPASS_PASSTHROUGH.md))
+  *Especificação `DIGADIAG.FRM` vs `PANA_DVD.FRM` vs `PANA__SD.FRM`, comandos autônomos Pico `PANARSP`, handshake `_dev_SERIAL` (`0x515B2E60`) e os 3 pontos de bypass AV TBC `E-E` (`0x5771ABFB`, `0x574F7B8C`, `0x574F7C5C`).*
 * 🛠️ **[`DIGADIAG.FRM` vs `PANA__SD.FRM`, Erro SD `-91006` e Viabilidade de TBC Autônomo](docs/pt-BR/DIGADIAG_PANA_SD_E_TBC_AUTONOMO.md)** ([English Mirror](docs/en-US/DIGADIAG_PANA_SD_AND_STANDALONE_TBC.md))
   *Como `/BOOT.BIN` (`SDDIAG`) vs `PROG061` consomem `.FRM`, prova do bloqueio 4-bit `ACMD6` (`-91006`), dependências da Main PCB (`IC3001`/`IC7501`/`P7402`) no Digital PCB `MN2DS0009`, e guia completo `panadiga unbrick` + `Centro Unbrick`.*
+* 💿 **[Emulador Matshita `R6-MV4` e Injeção ATAPI](docs/pt-BR/EMULADOR_MATSHITA_R6MV4_E_INJECAO_ATAPI.md)** ([English Mirror](docs/en-US/MATSHITA_R6MV4_EMULATOR_AND_ATAPI_INJECTION.md)) · 🪤 **[Armadilhas MN103S e Resolução Ghidra](docs/pt-BR/ARMADILHAS_MN103S_E_RESOLUCAO_GHIDRA.md)** ([English Mirror](docs/en-US/MN103S_SEVEN_TRAPS_AND_GHIDRA_RESOLUTION.md)) · ✍️ **[`DIGADIAG` Salto `0x50400000` e Escrita Protegida](docs/pt-BR/DIGADIAG_SALTO_50400000_E_ESCRITA_PROTEGIDA.md)** ([English Mirror](docs/en-US/DIGADIAG_JUMP_50400000_AND_GUARDED_RW.md))
+* ⚡ **[Upgrades C11 no Pico `P7501`, Causas de `??` no Ghidra e Paridade Python → Rust](docs/pt-BR/UPGRADES_PICO_C11_UNDEF_GHIDRA_E_PARIDADE_PYTHON_RUST.md)** ([English Mirror](docs/en-US/PICO_C11_UPGRADES_GHIDRA_UNDEF_AND_PYTHON_RUST_PARITY.md))
+  *`DIAGWATCH` parametrizado, `PANARSP REGS`, `DRVPANA`, UF2s recompilados (`RP2040`/`RP2350`), auditoria completa de `??` no Ghidra (`docs/pseudocode/`), logs reais (`docs/debug_logs/`), auditoria mestre (`AUDITORIA_COMPLETA.md`), histórico (`docs/audits/`) e comandos `panadiga re` / `panadiga pico decode-log`.*
+* 🗂️ **Catálogo Bilíngue Completo (`33` PT-BR + `33` EN-US + `audits/` + `pseudocode/` + `debug_logs/`):** Consulte [**`docs/INDEX.md`**](docs/INDEX.md).
 
 ---
 
@@ -614,27 +635,27 @@ O acervo oficial de 16 dossiês técnicos bilíngues listados abaixo está dispo
 
 ## 13. Qualidade Total, Pirâmide de Testes e Proteção Anti-Regressão (9 Quality Gates)
 
-O ecossistema Panadiga impõe uma rigorosa pipeline anti-regressão composta por **9 Quality Gates**:
+O ecossistema Panadiga impõe uma rigorosa pipeline anti-regressão composta por **9 Quality Gates** ([`scripts/validate.py`](scripts/validate.py)):
 
 ```text
-       Camada 5: Testes de Navegador End-to-End (Playwright Chromium 13/13)
-       Camada 4: Testes Unitários de UI Desktop (Vitest + React Testing Library 63/63)
-       Camada 3: Testes de Host C11 do Firmware Pico (Harness de Teste GCC 18/18)
-       Camada 2: Scripts Python & Verificação Pytest (Pytest 16/16, Mypy Strict)
-       Camada 1: Testes Nativos Rust Core, CLI, Desktop IPC, MCP & RAG (Cargo Test 103/103)
+       Camada 5: Testes de Navegador End-to-End (Playwright Chromium — 13 testes / 4 specs)
+       Camada 4: Testes Unitários e de Componente da UI Desktop (Vitest + React Testing Library — 72 testes / 23 arquivos)
+       Camada 3: Testes de Host C11 do Firmware Pico (Harness GCC — 24 testes / 4 módulos)
+       Camada 2: Scripts Python & Verificação Pytest (22 testes Pytest / 4 arquivos + Mypy Strict)
+       Camada 1: Testes Nativos do Workspace Rust (Cargo Test — 142 testes em core/cli/desktop/mcp/rag)
 ```
 
 ### 13.1. Os 9 Quality Gates Integrados e Ativos
 
-1. **Rust Cargo Check & Test Gate:** Formatação (`cargo fmt`), tipagem e 103 testes unitários/integração em todo o workspace.
+1. **Rust Cargo Check & Test Gate:** Formatação (`cargo fmt`), tipagem estrita e 142 testes unitários/integração em todo o workspace (`panadiga-core`, `panadiga-cli`, `panadiga-desktop`, `panadiga-mcp` e `panadiga-rag`).
 2. **TypeScript Strict Type-Check Gate:** `tsc --noEmit` valida tipagem estrita com zero escapes `any`.
-3. **Frontend Vitest Unit Suite:** 63 testes em 20 arquivos cobrindo ViewModels, parsers e transições de estado algébricas.
+3. **Frontend Vitest Unit Suite:** Cobre ViewModels, resolvedores de links/binários, componentes React e transições de estado algébricas com 72 testes em 23 arquivos em `apps/desktop/src/**/*.test.{ts,tsx}`.
 4. **Copy/Paste Detector (`jscpd`):** Limite estrito de 0.00% de duplicação de código.
-5. **UI/UX Completeness Linter (`uxlint`):** Auditoria de estados loading, empty, error e validação de formulário nas views React.
-6. **Playwright E2E Suite:** 13 testes funcionais completos em navegador Chromium headless.
+5. **UI/UX Completeness Linter (`uxlint`):** Auditoria de estados loading, empty, error, acessibilidade e validação de formulário nas views React.
+6. **Playwright E2E Suite:** 13 testes funcionais completos em 4 specs (`frm-packager`, `navigation`, `nvram`, `pico-bench`) em navegador Chromium headless.
 7. **Ghidra Script Generator Gate:** Exportação automática de mapas de memória e símbolos do SSOT em Rust.
-8. **C11 Firmware Host Test Gate:** Compilação e execução com `-Wall -Wextra -Werror` de 18 testes C11 do firmware do Pico.
-9. **Python & Pytest Gate:** Tipagem estrita (`mypy --strict`) e 16 testes automatizados em `scripts/tests/`.
+8. **C11 Firmware Host Test Gate:** Compilação e execução com `-Wall -Wextra -Werror` de 24 testes C11 do firmware do Pico em 4 módulos (`test_gdb_rsp_host.c`, `test_pana_diag_drv.c`, `test_pana_logic.c`, `test_uart_codec.c`).
+9. **Python & Pytest Gate:** Tipagem estrita (`mypy --strict`) e 22 testes automatizados em 4 arquivos sob `scripts/tests/`.
 
 ### 13.2. Execução da Validação Completa Local
 
@@ -673,7 +694,7 @@ Um servidor MCP padronizado em JSON-RPC 2.0 via `stdio` (`panadiga mcp`) expõe 
 * `panadiga_bgo_unbrick` & `panadiga_main_passthrough`: Patching pre-MAIN `PROG061` (`BGO`) e sites TBC Passthrough `E-E` (`0x5771ABFB`, `0x574F7B8C`, `0x574F7C5C`).
 * `panadiga_sd_unbrick_kit`: Diagnóstico unificado de unbrick, extração Feistel `.FRM`, geração completa de Kit SD (`DIGADIAG.FRM` + `PANA__SD.FRM`) e validação pós-gravação.
 
-### 14.3. Subsistema de Logging e Telemetria Unificada (`src/logger.rs`)
+### 14.3. Subsistema de Logging e Telemetria Unificada (`crates/panadiga-core/src/logger.rs`)
 
 Todos os componentes operam através de sinks estruturados:
 

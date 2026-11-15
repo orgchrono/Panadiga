@@ -97,15 +97,22 @@ pub(crate) fn parse_nor_dumper_params(
     load_addr: Option<&str>,
     wrap_as_digadiag: Option<bool>,
 ) -> Result<NorDumperParams, String> {
+    let wrapped = wrap_as_digadiag.unwrap_or(false);
+    let explicit_load = load_addr
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(parse_u32_radix)
+        .transpose()
+        .map_err(|e| format!("Load address inválido: {e}"))?;
+
     Ok(NorDumperParams {
         start_u32: parse_u32_radix(start_addr.unwrap_or("0x84000000"))
             .map_err(|e| format!("Endereço inicial NOR inválido: {e}"))?,
         len_u32: parse_u32_radix(total_len.unwrap_or("0x800000"))
             .map_err(|e| format!("Tamanho total inválido: {e}"))?,
         block_size: block_size.unwrap_or(4096),
-        load_u32: parse_u32_radix(load_addr.unwrap_or("0x51800000"))
-            .map_err(|e| format!("Load address inválido: {e}"))?,
-        wrapped: wrap_as_digadiag.unwrap_or(false),
+        load_u32: panadiga_core::re::resolve_nor_stub_load_addr(explicit_load, wrapped),
+        wrapped,
     })
 }
 
@@ -134,12 +141,17 @@ mod tests {
 
     #[test]
     fn nor_dumper_param_defaults_and_dir_validation() {
-        let params = parse_nor_dumper_params(None, None, None, None, Some(true)).unwrap();
-        assert_eq!(params.start_u32, 0x8400_0000);
-        assert_eq!(params.len_u32, 0x80_0000);
-        assert_eq!(params.block_size, 4096);
-        assert_eq!(params.load_u32, 0x5180_0000);
-        assert!(params.wrapped);
+        let wrapped = parse_nor_dumper_params(None, None, None, None, Some(true)).unwrap();
+        assert_eq!(wrapped.start_u32, 0x8400_0000);
+        assert_eq!(wrapped.len_u32, 0x80_0000);
+        assert_eq!(wrapped.block_size, 4096);
+        assert_eq!(wrapped.load_u32, 0x5040_0000);
+        assert!(wrapped.wrapped);
+
+        let raw = parse_nor_dumper_params(None, None, None, None, Some(false)).unwrap();
+        assert_eq!(raw.load_u32, 0x5180_0000);
+        assert!(!raw.wrapped);
+
         assert!(resolve_dir_target("   ").is_err());
     }
 }

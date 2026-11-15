@@ -1,66 +1,114 @@
-# Panadiga Documentation Gateway / Portal do Acervo Técnico de Documentação
+> 🌐 **Language / Idioma:** **Bilingual Portal (English US / Português BR)**
+> 🧭 **Root Docs:** [README (EN)](../README.md) | [README (PT-BR)](../README.pt-BR.md) | [Complete Audit (EN)](../COMPLETE_AUDIT.md) | [Auditoria Completa (PT-BR)](../AUDITORIA_COMPLETA.md) | [Agent Rules](../AGENTS.md)
 
-Welcome to the **Panadiga** technical documentation portal. The documentation is organized by language locale into dedicated directories:
+# Panadiga Technical Documentation Index / Índice da Documentação Técnica
 
-Bem-vindo ao portal mestre do acervo de documentação técnica do ecossistema **Panadiga**. O acervo está categorizado e estruturado por idioma em diretórios dedicados:
-
----
-
-## 🇺🇸 Canonical Technical English (`docs/en-US/`)
-
-High-standard engineering documentation, technical blueprints, and specifications in standard English:
-
-| Document | Technical Domain | Description |
-| :--- | :--- | :--- |
-| [**SYSTEM_ARCHITECTURE_AND_ENGINEERING_BLUEPRINT.md**](en-US/SYSTEM_ARCHITECTURE_AND_ENGINEERING_BLUEPRINT.md) | Systems Architecture | Master specification: modular decomposition, Pure FP domain, strict MVVM, GDB ring buffer, and silicon invariants. |
-| [**ANDROID_APK_AND_BLUETOOTH_ARCHITECTURE.md**](en-US/ANDROID_APK_AND_BLUETOOTH_ARCHITECTURE.md) | Mobile / Wireless | Android APK (`aarch64-linux-android`), Native Rust HAL (BLE NUS / USB-C OTG), and P7501 power rules. |
-| [**TESTING_ARCHITECTURE_AND_COMPLIANCE.md**](en-US/TESTING_ARCHITECTURE_AND_COMPLIANCE.md) | Quality & Verification | 5-layer test pyramid (Pure FP, GDB RSP, MVVM ADTs, CLI SSOT, E2E), traceability matrix, and CI/CD verification status. |
-| [**BLUEPRINT_BENCH_WIRING_AND_SCHEMATIC.md**](en-US/BLUEPRINT_BENCH_WIRING_AND_SCHEMATIC.md) | Hardware / Electronics | Wiring harness, P7501 connector pinout, RP2040 hookup, prototype vs production resistors. |
-| [**STORAGE_ARCHITECTURE_MEIHDFS_PARTITIONS.md**](en-US/STORAGE_ARCHITECTURE_MEIHDFS_PARTITIONS.md) | Storage / Forensics | Panasonic MEIHFS, LBA 0 "SH" MBR, 28 MB mirror, 8 MB journal, firmware partitions, and `src/hdd_cmd.c` dynamic LBA48 capacity unlock (`250 GB`–`2 TB+`). |
-| [**DOSSIER_CRYPTOGRAPHY_AND_FIRMWARE_PANA_DVD.md**](en-US/DOSSIER_CRYPTOGRAPHY_AND_FIRMWARE_PANA_DVD.md) | Firmware / Cryptanalysis | Optical container PANA_DVD.FRM, CPRM/C2 ciphers, 64-bit ECB codebooks, and entropy analysis. |
-| [**GHIDRA_GDB_INTEGRATION_STRATEGY.md**](en-US/GHIDRA_GDB_INTEGRATION_STRATEGY.md) | Reverse Engineering | AM34/MN103S processor architecture, Ghidra SLED module, and GDB Remote Serial Protocol (:3333). |
-| [**BENCH_PROBE_ASSEMBLY_AND_PHOTOS_GUIDE.md**](en-US/BENCH_PROBE_ASSEMBLY_AND_PHOTOS_GUIDE.md) | Laboratory / Assembly | Step-by-step soldering, JST ZR 1.5mm female socket mating, Pin 4 GND continuity verification. |
-| [**TECHNICAL_INVENTORY_AND_OPERATIONS_MANUAL.md**](en-US/TECHNICAL_INVENTORY_AND_OPERATIONS_MANUAL.md) | Operations / Inventory | File inventory, cryptographic SHA-256 manifests, and step-by-step U99 unbrick runbook. |
-| [**FINAL_AUDIT_AND_MODULARIZATION_REPORT.md**](en-US/FINAL_AUDIT_AND_MODULARIZATION_REPORT.md) | Software Architecture | Modularization audit, cross-stack integration (Rust/C/Python/TypeScript), 9 quality gates status. |
-| [**LOGGING_AND_TELEMETRY_SUBSYSTEM.md**](en-US/LOGGING_AND_TELEMETRY_SUBSYSTEM.md) | Systems / Telemetry | Structured JSON logging, thread-safe sinks, and real-time serial terminal integration. |
-| [**THEORY_AND_PRACTICE_U99_UNBRICK_MATSUSHITA_CRYPTO.md**](en-US/THEORY_AND_PRACTICE_U99_UNBRICK_MATSUSHITA_CRYPTO.md) | Silicon / Physics | Semiconductor physics of NOR Flash, EEMUL circular wear-leveling, and 64 KB NVRAM sanitization. |
-| [**ZERO_ERROR_RAG_ENGINE_AND_PHYSICAL_SAFETY.md**](en-US/ZERO_ERROR_RAG_ENGINE_AND_PHYSICAL_SAFETY.md) | AI Safety / Invariants | 6-layer defense system (QueryGuard, CRAG, GroundedSynthesis, FactCritic, InvariantShield). |
-| [**FORENSIC_VALIDATION_INDEPENDENT_AUDIT_AND_COMPRESSION_DOSSIER.md**](en-US/FORENSIC_VALIDATION_INDEPENDENT_AUDIT_AND_COMPRESSION_DOSSIER.md) | Forensics / Cryptanalysis | Mathematical proofs of binary compatibility, high-precision independent verification audit prompt, and GZIP (<100MB) storage architecture. |
-| [**DIGADIAG_PANA_SD_AND_STANDALONE_TBC.md**](en-US/DIGADIAG_PANA_SD_AND_STANDALONE_TBC.md) | Pre-MAIN Unbrick / Hardware | How `DIGADIAG.FRM` (128 KiB plaintext Stage-1 `BOOT.BIN`) vs `PANA__SD.FRM` / `PANA_DVD.FRM` work, SD `-91006` (`ACMD6` @ `0x44027F79`) proof, standalone Digital PCB (`MN2DS0009` / `P59001`) TBC feasibility vs Main PCB `P7402`, and `panadiga unbrick` + Unbrick Center guide. |
-| [**REVERSE_ENGINEERING_BOOTLOADER_AND_OPTICAL_DRIVE_MN103S.md**](en-US/REVERSE_ENGINEERING_BOOTLOADER_AND_OPTICAL_DRIVE_MN103S.md) | Silicon RE / Hardware & Firmware | Empirical live `DMR-EH55` bench telemetry (`P7501`/`CDDIAG`), `BOOT.BIN` & `R6-MV4` (`DRV_decomp.bin`) MN103S disassembly, 74 ATAPI CDB opcodes, 62 serial CLI commands, and the full 431-entry Shift-JIS factory optical error dictionary (`0x83A7`). |
+All **33** primary technical engineering dossiers in this repository maintain **1:1 bidirectional parity** between [**English (`docs/en-US/`)**](#english-documentation-docsen-us--33-dossiers) and [**Português (BR) (`docs/pt-BR/`)**](#documentação-em-português-docspt-br--33-dossiês), paired automatically with [`translation_pairs.json`](./translation_pairs.json), plus root audits, preserved `2026-11-11` audit snapshots ([`audits/`](./audits/README.md)), Ghidra C/disassembly evidence ([`pseudocode/`](./pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md)), and live `COM10` bench UART logs ([`debug_logs/`](./debug_logs/README.md)).
 
 ---
 
-## 🇧🇷 Dossiês Técnicos de Bancada em Português (`docs/pt-BR/`)
+## English Documentation (`docs/en-US/`) — 33 Dossiers
 
-Documentação exaustiva de bancada, esquemáticos e manuais de engenharia reversa em Português:
+| # | Document (`en-US`) | PT-BR Counterpart | Engineering Domain & Scope |
+| :---: | :--- | :--- | :--- |
+| 1 | [ADVERSARIAL_AUDIT_PICO_FIRMWARE_AND_PROG061_MAIN_DISASSEMBLY.md](en-US/ADVERSARIAL_AUDIT_PICO_FIRMWARE_AND_PROG061_MAIN_DISASSEMBLY.md) | [PT-BR](pt-BR/AUDITORIA_ADVERSARIAL_FIRMWARE_PICO_E_DISASSEMBLY_PROG061_MAIN.md) | Adversarial Pico C11/LED audit & live `COM10` vs `PROG061`/`MAIN` disassembly |
+| 2 | [ANDROID_APK_AND_BLUETOOTH_ARCHITECTURE.md](en-US/ANDROID_APK_AND_BLUETOOTH_ARCHITECTURE.md) | [PT-BR](pt-BR/ARQUITETURA_MOBILE_ANDROID_E_BLUETOOTH.md) | Android 12–16 APK native HAL, Bluetooth RFCOMM (`SPP`), and Tauri 2 FFI |
+| 3 | [BENCH_GUIDE_P7501_NO_DESOLDERING.md](en-US/BENCH_GUIDE_P7501_NO_DESOLDERING.md) | [PT-BR](pt-BR/GUIA_BANCADA_P7501_SEM_DESSOLDA.md) | Non-destructive `P7501` Async UART probe connection (`JST ZHR-6`) |
+| 4 | [BENCH_PROBE_ASSEMBLY_AND_PHOTOS_GUIDE.md](en-US/BENCH_PROBE_ASSEMBLY_AND_PHOTOS_GUIDE.md) | [PT-BR](pt-BR/GUIA_MONTAGEM_E_FOTOS_PROBE_BANCADA.md) | Illustrated assembly guide, BOM, JST ZR specs & multimeter checklist |
+| 5 | [BLUEPRINT_BENCH_WIRING_AND_SCHEMATIC.md](en-US/BLUEPRINT_BENCH_WIRING_AND_SCHEMATIC.md) | [PT-BR](pt-BR/BLUEPRINT_ESQUEMA_ELETRICO_BANCADA.md) | Bench electrical schematics (`P7501` UART, TSOP-48 `IC5001` & Pico) |
+| 6 | [DIGADIAG_JUMP_50400000_AND_GUARDED_RW.md](en-US/DIGADIAG_JUMP_50400000_AND_GUARDED_RW.md) | [PT-BR](pt-BR/DIGADIAG_SALTO_50400000_E_ESCRITA_PROTEGIDA.md) | `JMP 0x50400000` (`EXTRHEAD`) & two-step guarded NOR/SDRAM R/W |
+| 7 | [DIGADIAG_PANA_SD_AND_STANDALONE_TBC.md](en-US/DIGADIAG_PANA_SD_AND_STANDALONE_TBC.md) | [PT-BR](pt-BR/DIGADIAG_PANA_SD_E_TBC_AUTONOMO.md) | `DIGADIAG.FRM` vs `PANA__SD.FRM` / `PANA_DVD.FRM` & standalone TBC `E-E` |
+| 8 | [DOSSIER_CRYPTOGRAPHY_AND_FIRMWARE_PANA_DVD.md](en-US/DOSSIER_CRYPTOGRAPHY_AND_FIRMWARE_PANA_DVD.md) | [PT-BR](pt-BR/DOSSIE_CRIPTOGRAFIA_E_FIRMWARE_PANA_DVD.md) | Feistel-32/CPRM cipher, periodic TOC (`0x7108`), and ECB flash leak proofs |
+| 9 | [EH55_REVERSE_ENGINEERING_SESSION_FAITHFUL_REPORT.md](en-US/EH55_REVERSE_ENGINEERING_SESSION_FAITHFUL_REPORT.md) | [PT-BR](pt-BR/RELATORIO_SESSAO_ENGENHARIA_REVERSA_EH55_100_FIEL.md) | 100% verbatim transcript of EH55 live bench & Ghidra RE milestones |
+| 10 | [EXPLODED_VIEW_PICO_INJECTION_ARCHITECTURE_AND_BYPASS_PASSTHROUGH.md](en-US/EXPLODED_VIEW_PICO_INJECTION_ARCHITECTURE_AND_BYPASS_PASSTHROUGH.md) | [PT-BR](pt-BR/VISTA_EXPLODIDA_ARQUITETURA_INJECAO_PICO_E_BYPASS_PASSTHROUGH.md) | End-to-end Pico `PANARSP` injection, `18` MCP tools & `MAIN` TBC bypass |
+| 11 | [FINAL_AUDIT_AND_MODULARIZATION_REPORT.md](en-US/FINAL_AUDIT_AND_MODULARIZATION_REPORT.md) | [PT-BR](pt-BR/RELATORIO_AUDITORIA_E_MODULARIZACAO_FINAL.md) | Pre-refactor audit, modular decomposition & 9 Quality Gates architecture |
+| 12 | [FORENSIC_AUDIT_REPORT_CRYPTANALYSIS_AND_MEIHDFS.md](en-US/FORENSIC_AUDIT_REPORT_CRYPTANALYSIS_AND_MEIHDFS.md) | [PT-BR](pt-BR/PARECER_AUDITORIA_FORENSE_CRIPTOANALISE_E_MEIHDFS.md) | Independent cryptographic & MEIHDFS forensic opinion + bench verdict |
+| 13 | [FORENSIC_VALIDATION_INDEPENDENT_AUDIT_AND_COMPRESSION_DOSSIER.md](en-US/FORENSIC_VALIDATION_INDEPENDENT_AUDIT_AND_COMPRESSION_DOSSIER.md) | [PT-BR](pt-BR/DOSSIE_VALIDACAO_FORENSE_AUDITORIA_INDEPENDENTE_E_COMPACTACAO.md) | Binary compatibility proofs, audit framework & multi-algo compression |
+| 14 | [GDB_GHIDRA_IDA_DEBUGGING_GUIDE.md](en-US/GDB_GHIDRA_IDA_DEBUGGING_GUIDE.md) | [PT-BR](pt-BR/GUIA_DEPURACAO_GDB_GHIDRA_IDA.md) | Live GDB / Ghidra / IDA Pro hardware debugging guide via `127.0.0.1:3333` |
+| 15 | [GHIDRA_GDB_INTEGRATION_STRATEGY.md](en-US/GHIDRA_GDB_INTEGRATION_STRATEGY.md) | [PT-BR](pt-BR/ESTRATEGIA_INTEGRACAO_GHIDRA_GDB.md) | AM34 SSOT memory map, Jython scripts, GDB RSP bridge & HxD launcher |
+| 16 | [LOGGING_AND_TELEMETRY_SUBSYSTEM.md](en-US/LOGGING_AND_TELEMETRY_SUBSYSTEM.md) | [PT-BR](pt-BR/SUBSISTEMA_LOGGING_E_TELEMETRIA.md) | `panadiga_core::logger` (`LogLevel`, `set_sink`, Tauri forwarding, macros) |
+| 17 | [MATSHITA_R6MV4_EMULATOR_AND_ATAPI_INJECTION.md](en-US/MATSHITA_R6MV4_EMULATOR_AND_ATAPI_INJECTION.md) | [PT-BR](pt-BR/EMULADOR_MATSHITA_R6MV4_E_INJECAO_ATAPI.md) | `DRV12` / `R6-MV4` ATAPI `0x3B` write injection & optical unlock synthesis |
+| 18 | [MN103S_SEVEN_TRAPS_AND_GHIDRA_RESOLUTION.md](en-US/MN103S_SEVEN_TRAPS_AND_GHIDRA_RESOLUTION.md) | [PT-BR](pt-BR/ARMADILHAS_MN103S_E_RESOLUCAO_GHIDRA.md) | Catalog of the 7 MN103S decompiler traps & Rust/Jython resolution |
+| 19 | [PANASONIC_P7501_UART_RECONSTRUCTION.md](en-US/PANASONIC_P7501_UART_RECONSTRUCTION.md) | [PT-BR](pt-BR/PANASONIC_P7501_UART_RECONSTRUCTION.md) | `P7501` Async UART (`115200 8N1`) electrical signal reconstruction |
+| 20 | [PICO_C11_UPGRADES_GHIDRA_UNDEF_AND_PYTHON_RUST_PARITY.md](en-US/PICO_C11_UPGRADES_GHIDRA_UNDEF_AND_PYTHON_RUST_PARITY.md) | [PT-BR](pt-BR/UPGRADES_PICO_C11_UNDEF_GHIDRA_E_PARIDADE_PYTHON_RUST.md) | C11 firmware upgrades, Ghidra `??` root causes & Python-to-Rust parity matrix |
+| 21 | [PICO_P7501_FIRMWARE_GUIDE.md](en-US/PICO_P7501_FIRMWARE_GUIDE.md) | [PT-BR](pt-BR/FIRMWARE_PICO_P7501_GUIA.md) | Pico RP2040/RP2350 C11 firmware guide (`UARTMON`, `JIGBOOT`, `PANARSP`) |
+| 22 | [RE_REPORT_FEISTEL_TOC_EXTRHEAD_AND_UART0_GATES.md](en-US/RE_REPORT_FEISTEL_TOC_EXTRHEAD_AND_UART0_GATES.md) | [PT-BR](pt-BR/RELATORIO_RE_FEISTEL_TOC_EXTRHEAD_E_GATES_UART0.md) | Static/dynamic RE of `FUN_4400a666`, `.FRM` TOCs, `EXTRHEAD` & UART0 gates |
+| 23 | [RE_SCRIPTS_COMPENDIUM_STEPS_01_50.md](en-US/RE_SCRIPTS_COMPENDIUM_STEPS_01_50.md) | [PT-BR](pt-BR/COMPILADO_SCRIPTS_RE_STEPS_01_50.md) | Consolidated reference of Python RE & bench automation (`Steps 1–50`) |
+| 24 | [REVERSE_ENGINEERING_BOOTLOADER_AND_OPTICAL_DRIVE_MN103S.md](en-US/REVERSE_ENGINEERING_BOOTLOADER_AND_OPTICAL_DRIVE_MN103S.md) | [PT-BR](pt-BR/DOSSIE_ENGENHARIA_REVERSA_BOOTLOADER_E_DRIVE_MN103S.md) | Deep RE of `BOOT.BIN`, `DRV_decomp`, `83 A7`, 431 errors, 62 CLI & `P7501` |
+| 25 | [RP2350_AND_GDB_INTEGRATION_PLAN.md](en-US/RP2350_AND_GDB_INTEGRATION_PLAN.md) | [PT-BR](pt-BR/PLANO_INTEGRACAO_RP2350_E_GDB.md) | Dual-target RP2040 / RP2350 Pico SDK architecture & GDB RSP integration |
+| 26 | [STORAGE_ARCHITECTURE_MEIHDFS_PARTITIONS.md](en-US/STORAGE_ARCHITECTURE_MEIHDFS_PARTITIONS.md) | [PT-BR](pt-BR/ARQUITETURA_STORAGE_MEIHDFS_PARTICOES.md) | MEIHDFS HDD layout (`'SH'`), `XOR 0xFF` records, Partitions 1–3 & `IDE2SAT2` |
+| 27 | [SYSTEM_ARCHITECTURE_AND_ENGINEERING_BLUEPRINT.md](en-US/SYSTEM_ARCHITECTURE_AND_ENGINEERING_BLUEPRINT.md) | [PT-BR](pt-BR/ARQUITETURA_E_BLUEPRINT_DE_ENGENHARIA.md) | End-to-end Rust, MCP, Tauri 2 React, C11, Android & Python blueprint |
+| 28 | [TECHNICAL_INVENTORY_AND_OPERATIONS_MANUAL.md](en-US/TECHNICAL_INVENTORY_AND_OPERATIONS_MANUAL.md) | [PT-BR](pt-BR/INVENTARIO_TECNICO_E_GUIA_DE_OPERACAO.md) | Cryptographic asset SHA-256 inventory, `30` PDFs, bench ops & FMEA |
+| 29 | [TECHNICAL_REPORT_FOR_CLAUDE_OPUS_UNBRICK_DMR_EH55.md](en-US/TECHNICAL_REPORT_FOR_CLAUDE_OPUS_UNBRICK_DMR_EH55.md) | [PT-BR](pt-BR/RELATORIO_TECNICO_CLAUDE_OPUS_UNBRICK_DMR_EH55.md) | Cross-validated DMR-EH55 unbrick dossier, power/laser triage & `P7501` |
+| 30 | [TESTING_ARCHITECTURE_AND_COMPLIANCE.md](en-US/TESTING_ARCHITECTURE_AND_COMPLIANCE.md) | [PT-BR](pt-BR/ARQUITETURA_DE_TESTES_E_CONFORMIDADE.md) | 4-layer Testing Pyramid, 9 Quality Gates & physical safety compliance |
+| 31 | [THEORY_AND_PRACTICE_U99_UNBRICK_MATSUSHITA_CRYPTO.md](en-US/THEORY_AND_PRACTICE_U99_UNBRICK_MATSUSHITA_CRYPTO.md) | [PT-BR](pt-BR/TEORIA_E_PRATICA_UNBRICK_U99_E_CRIPTOGRAFIA_MATSUSHITA.md) | NOR `S29JL064H` flash physics, `EEMUL` `U99` cure, handshake & hex maps |
+| 32 | [VISUAL_CATALOG_EH55_SCHEMATICS_AND_PCB.md](en-US/VISUAL_CATALOG_EH55_SCHEMATICS_AND_PCB.md) | [PT-BR](pt-BR/CATALOGO_VISUAL_ESQUEMAS_E_PCB_EH55.md) | Visual catalog (`238` entries) of DMR-EH55 schematics, PCBs & RE renders |
+| 33 | [ZERO_ERROR_RAG_ENGINE_AND_PHYSICAL_SAFETY.md](en-US/ZERO_ERROR_RAG_ENGINE_AND_PHYSICAL_SAFETY.md) | [PT-BR](pt-BR/ZERO_ERROR_RAG_ENGINE_E_SEGURANCA_FISICA.md) | 6-layer Zero-Error RAG engine, `FactCritic` & physical voltage guardrails |
 
-| Dossiê | Domínio Técnico | Descrição |
-| :--- | :--- | :--- |
-| [**ARQUITETURA_E_BLUEPRINT_DE_ENGENHARIA.md**](pt-BR/ARQUITETURA_E_BLUEPRINT_DE_ENGENHARIA.md) | Arquitetura de Sistemas | Especificação mestre: decomposição modular, Pure FP domain, MVVM rigoroso, anel GDB e invariantes de silício. |
-| [**ARQUITETURA_MOBILE_ANDROID_E_BLUETOOTH.md**](pt-BR/ARQUITETURA_MOBILE_ANDROID_E_BLUETOOTH.md) | Mobile / Sem Fio | APK Android (`aarch64-linux-android`), HAL nativa em Rust (BLE NUS / USB-C OTG) e isolamento da porta P7501. |
-| [**ARQUITETURA_DE_TESTES_E_CONFORMIDADE.md**](pt-BR/ARQUITETURA_DE_TESTES_E_CONFORMIDADE.md) | Qualidade & Testes | Pirâmide de testes em 5 camadas (Pure FP, GDB RSP, MVVM ADTs, CLI SSOT, E2E), matriz de rastreabilidade e status CI/CD. |
-| [**BLUEPRINT_ESQUEMA_ELETRICO_BANCADA.md**](pt-BR/BLUEPRINT_ESQUEMA_ELETRICO_BANCADA.md) | Hardware / Eletrônica | Esquema de bancada, conector P7501, RP2040, disclaimer de protótipo vs produto final. |
-| [**ARQUITETURA_STORAGE_MEIHDFS_PARTICOES.md**](pt-BR/ARQUITETURA_STORAGE_MEIHDFS_PARTICOES.md) | Armazenamento / MEIHDFS | MBR 'SH' em LBA 0, espelho a 28 MB, journal transacional, partições de firmware e desbloqueio dinâmico LBA48 (`src/hdd_cmd.c`: `250 GB`–`2 TB+`). |
-| [**DOSSIE_CRIPTOGRAFIA_E_FIRMWARE_PANA_DVD.md**](pt-BR/DOSSIE_CRIPTOGRAFIA_E_FIRMWARE_PANA_DVD.md) | Firmware / Criptoanálise | Contêiner óptico PANA_DVD.FRM, cifras CPRM/C2, codebook ECB e análise de entropia. |
-| [**ESTRATEGIA_INTEGRACAO_GHIDRA_GDB.md**](pt-BR/ESTRATEGIA_INTEGRACAO_GHIDRA_GDB.md) | Engenharia Reversa | Processador Matsushita AM34/MN103S, scripts Ghidra e servidor GDB RSP (:3333). |
-| [**GUIA_MONTAGEM_E_FOTOS_PROBE_BANCADA.md**](pt-BR/GUIA_MONTAGEM_E_FOTOS_PROBE_BANCADA.md) | Bancada / Montagem | Procedimento ilustrado de montagem, chicote JST ZR 1.5mm e teste de terra (GND Pino 4). |
-| [**INVENTARIO_TECNICO_E_GUIA_DE_OPERACAO.md**](pt-BR/INVENTARIO_TECNICO_E_GUIA_DE_OPERACAO.md) | Operações / Inventário | Inventário de arquivos, hashes SHA-256 e roteiro passo a passo de desbrick do erro U99. |
-| [**RELATORIO_AUDITORIA_E_MODULARIZACAO_FINAL.md**](pt-BR/RELATORIO_AUDITORIA_E_MODULARIZACAO_FINAL.md) | Arquitetura de Software | Relatório de modularização, integração cross-stack e homologação dos 9 Quality Gates. |
-| [**SUBSISTEMA_LOGGING_E_TELEMETRIA.md**](pt-BR/SUBSISTEMA_LOGGING_E_TELEMETRIA.md) | Sistemas / Telemetria | Logging unificado, sinks thread-safe e telemetria serial em tempo real na interface gráfica. |
-| [**TEORIA_E_PRATICA_UNBRICK_U99_E_CRIPTOGRAFIA_MATSUSHITA.md**](pt-BR/TEORIA_E_PRATICA_UNBRICK_U99_E_CRIPTOGRAFIA_MATSUSHITA.md) | Física / Semicondutores | Física da Flash NOR Spansion, motor EEMUL circular e sanitização dos 64 KB de NVRAM para 0xFF. |
-| [**ZERO_ERROR_RAG_ENGINE_E_SEGURANCA_FISICA.md**](pt-BR/ZERO_ERROR_RAG_ENGINE_E_SEGURANCA_FISICA.md) | Segurança de IA / RAG | Defesa em 6 camadas determinísticas (QueryGuard, CRAG, FactCritic, InvariantShield). |
-| [**DOSSIE_VALIDACAO_FORENSE_AUDITORIA_INDEPENDENTE_E_COMPACTACAO.md**](pt-BR/DOSSIE_VALIDACAO_FORENSE_AUDITORIA_INDEPENDENTE_E_COMPACTACAO.md) | Forense / Criptoanálise | Provas matemáticas de compatibilidade de binários, prompt para auditoria técnica independente e arquitetura de compactação GZIP (<100MB). |
-| [**DOSSIE_ENGENHARIA_REVERSA_BOOTLOADER_E_DRIVE_MN103S.md**](pt-BR/DOSSIE_ENGENHARIA_REVERSA_BOOTLOADER_E_DRIVE_MN103S.md) | Engenharia Reversa / Silício & Firmware | Telemetria ao vivo do `DMR-EH55` (`P7501`/`CDDIAG`), disassembly MN103S de `BOOT.BIN` e `R6-MV4` (`DRV_decomp.bin`), 74 opcodes ATAPI CDB, 62 comandos CLI seriais e dicionário completo Shift-JIS de 431 erros ópticos de fábrica (`0x83A7`). |
-| [**PANASONIC_P7501_UART_RECONSTRUCTION.md**](pt-BR/PANASONIC_P7501_UART_RECONSTRUCTION.md) | Interface UART P7501 | Especificação técnica verificada da interface assíncrona `P7501` (`115200 8N1`), circuito `Q7510`/`Q7514` e proteção `NSW5V` (`GP3` Hi-Z). |
-| [**GUIA_BANCADA_P7501_SEM_DESSOLDA.md**](pt-BR/GUIA_BANCADA_P7501_SEM_DESSOLDA.md) | Bancada / Sem Dessolda | Guia prático de conexão na porta `P7501` (`115200 8N1` + `XRESET`/`SW_UART`) sem remoção da Flash TSOP-48 (`IC5001`). |
-| [**GUIA_DEPURACAO_GDB_GHIDRA_IDA.md**](pt-BR/GUIA_DEPURACAO_GDB_GHIDRA_IDA.md) | Depuração / GDB RSP | Roteiro de conexão da ponte GDB (:3333) ao Ghidra Debugger e IDA Pro para o alvo MN10300. |
-| [**PLANO_INTEGRACAO_RP2350_E_GDB.md**](pt-BR/PLANO_INTEGRACAO_RP2350_E_GDB.md) | Arquitetura / RP2350 | Plano de suporte dual-target RP2040/RP2350 e motor GDB Remote Serial Protocol embarcado. |
-| [**FIRMWARE_PICO_P7501_GUIA.md**](pt-BR/FIRMWARE_PICO_P7501_GUIA.md) | Firmware Pico C11 | Guia de arquitetura modular C11, motor `PIO1` (`BAUD`/`BAUDSCAN`/`HEXCAP`/`WAITTX`/`BRIDGE`/`PWRTRACE`), `LED` IRQ-safe e geração `.uf2`. |
-| [**RELATORIO_SESSAO_ENGENHARIA_REVERSA_EH55_100_FIEL.md**](pt-BR/RELATORIO_SESSAO_ENGENHARIA_REVERSA_EH55_100_FIEL.md) | Relatório Fiel RE | Cronologia 100% fiel dos testes em `COM10` (`P7501`), circuito discreto (`Q7510`/`Q7514`/`IC1506`), 10 logs ao vivo e achados `0x83A7`/`BGO`. |
-| [**COMPILADO_SCRIPTS_RE_STEPS_01_50.md**](pt-BR/COMPILADO_SCRIPTS_RE_STEPS_01_50.md) | Compilado RE Python | Índice de consulta dos scripts `step1..step50` + utilitários CAD e mapeamento para `scripts/re/` e `scripts/bench/`. |
-| [**CATALOGO_VISUAL_ESQUEMAS_E_PCB_EH55.md**](pt-BR/CATALOGO_VISUAL_ESQUEMAS_E_PCB_EH55.md) | Catálogo Visual (RAG/MCP) | Catálogo completo das 238 imagens únicas (esquemas, PCBs e crops vetoriais) indexadas em `visual_manifest.json`. |
-| [**RELATORIO_RE_FEISTEL_TOC_EXTRHEAD_E_GATES_UART0.md**](pt-BR/RELATORIO_RE_FEISTEL_TOC_EXTRHEAD_E_GATES_UART0.md) | RE Feistel / `.FRM` & Gates UART0 | Dossiê consolidado da cifra Feistel 64-bit (`FUN_4400a666`), Adler-32 amostrado (`FUN_4401e5a3`), TOC 48B/64B/`EXTRHEAD`/`DIGADIAG.FRM`, módulos Rust `panadiga-core` e gates `P01`/`SC0`/`ndb>` em `EH55_MAIN_3410PQ.bin`. |
-| [**AUDITORIA_ADVERSARIAL_FIRMWARE_PICO_E_DISASSEMBLY_PROG061_MAIN.md**](pt-BR/AUDITORIA_ADVERSARIAL_FIRMWARE_PICO_E_DISASSEMBLY_PROG061_MAIN.md) | Auditoria Firmware & RE MN103S | Decomposição SRP em C11, causa raiz e correção do LED (`MANUAL_LOCK`/`repeating_timer`), auditoria `COM10` (`HEXCAP` RAM buffer, `DCSR=0xFFFFFFFF` fail-loud, `WAITTX JIG:350`) e disassembly (`PROG061` Timer-MCU `0x5040DF40` + stub RSP `+$OK#9A` `0x574F0775` em `EH55_MAIN_3410PQ.bin`). |
-| [**VISTA_EXPLODIDA_ARQUITETURA_INJECAO_PICO_E_BYPASS_PASSTHROUGH.md**](pt-BR/VISTA_EXPLODIDA_ARQUITETURA_INJECAO_PICO_E_BYPASS_PASSTHROUGH.md) | Consolidação & Unbrick Pré-MAIN | Status 100% plaintext, consolidação Python→Rust/MCP(`16`)/RAG, vista explodida hardware/firmware, Marvell `88SA8052` vs JMicron `JM20330`, `BGO` unbrick `0x50401F3C`/`DIGADIAG.FRM`, Pico `$M/$X/$G` & `PANADMP1` 8MB Flash dump e passthrough TBC `IC3001`/`MN2DS0009`. |
-| [**DIGADIAG_PANA_SD_E_TBC_AUTONOMO.md**](pt-BR/DIGADIAG_PANA_SD_E_TBC_AUTONOMO.md) | Unbrick Pré-MAIN / Hardware | Fluxo de consumo `DIGADIAG.FRM` (128 KiB Stage-1 `BOOT.BIN`) vs `PANA__SD.FRM` / `PANA_DVD.FRM`, prova do bloqueio SD `-91006` (`ACMD6` @ `0x44027F79`), limites do Digital PCB (`MN2DS0009` / `P59001`) sem Main PCB (`P7402`), e guia completo `panadiga unbrick` + `Centro Unbrick`. |
+---
+
+## Documentação em Português (`docs/pt-BR/`) — 33 Dossiês
+
+| # | Documento (`pt-BR`) | Versão `en-US` | Área / Escopo Técnico |
+| :---: | :--- | :--- | :--- |
+| 1 | [ARMADILHAS_MN103S_E_RESOLUCAO_GHIDRA.md](pt-BR/ARMADILHAS_MN103S_E_RESOLUCAO_GHIDRA.md) | [EN-US](en-US/MN103S_SEVEN_TRAPS_AND_GHIDRA_RESOLUTION.md) | As 7 Armadilhas do decompilador MN103S/AM34 e resolução em Rust + Jython |
+| 2 | [ARQUITETURA_DE_TESTES_E_CONFORMIDADE.md](pt-BR/ARQUITETURA_DE_TESTES_E_CONFORMIDADE.md) | [EN-US](en-US/TESTING_ARCHITECTURE_AND_COMPLIANCE.md) | Pirâmide de 4 camadas, 9 Quality Gates e guardas de segurança física |
+| 3 | [ARQUITETURA_E_BLUEPRINT_DE_ENGENHARIA.md](pt-BR/ARQUITETURA_E_BLUEPRINT_DE_ENGENHARIA.md) | [EN-US](en-US/SYSTEM_ARCHITECTURE_AND_ENGINEERING_BLUEPRINT.md) | Blueprint mestre do ecossistema Rust, Tauri, Android, Pico C11 e Python |
+| 4 | [ARQUITETURA_MOBILE_ANDROID_E_BLUETOOTH.md](pt-BR/ARQUITETURA_MOBILE_ANDROID_E_BLUETOOTH.md) | [EN-US](en-US/ANDROID_APK_AND_BLUETOOTH_ARCHITECTURE.md) | APK Android 12–16, Bluetooth `SPP` sem fio e integração FFI no Tauri 2 |
+| 5 | [ARQUITETURA_STORAGE_MEIHDFS_PARTICOES.md](pt-BR/ARQUITETURA_STORAGE_MEIHDFS_PARTICOES.md) | [EN-US](en-US/STORAGE_ARCHITECTURE_MEIHDFS_PARTITIONS.md) | SSOT MEIHDFS: `'SH'`, `XOR 0xFF`, journal, partições 1–3 e ponte `IDE2SAT2` |
+| 6 | [AUDITORIA_ADVERSARIAL_FIRMWARE_PICO_E_DISASSEMBLY_PROG061_MAIN.md](pt-BR/AUDITORIA_ADVERSARIAL_FIRMWARE_PICO_E_DISASSEMBLY_PROG061_MAIN.md) | [EN-US](en-US/ADVERSARIAL_AUDIT_PICO_FIRMWARE_AND_PROG061_MAIN_DISASSEMBLY.md) | Auditoria adversarial Pico (`P7501`/LED) e disassembly `PROG061` / `MAIN` |
+| 7 | [BLUEPRINT_ESQUEMA_ELETRICO_BANCADA.md](pt-BR/BLUEPRINT_ESQUEMA_ELETRICO_BANCADA.md) | [EN-US](en-US/BLUEPRINT_BENCH_WIRING_AND_SCHEMATIC.md) | Esquemáticos elétricos de bancada (`P7501` UART, TSOP-48 `IC5001` e Pico) |
+| 8 | [CATALOGO_VISUAL_ESQUEMAS_E_PCB_EH55.md](pt-BR/CATALOGO_VISUAL_ESQUEMAS_E_PCB_EH55.md) | [EN-US](en-US/VISUAL_CATALOG_EH55_SCHEMATICS_AND_PCB.md) | Catálogo visual completo (`238` itens) de esquemas, PCBs e diagramas RE |
+| 9 | [COMPILADO_SCRIPTS_RE_STEPS_01_50.md](pt-BR/COMPILADO_SCRIPTS_RE_STEPS_01_50.md) | [EN-US](en-US/RE_SCRIPTS_COMPENDIUM_STEPS_01_50.md) | Compilado de scripts Python de RE e bancada (`Steps 1–50`) |
+| 10 | [DIGADIAG_PANA_SD_E_TBC_AUTONOMO.md](pt-BR/DIGADIAG_PANA_SD_E_TBC_AUTONOMO.md) | [EN-US](en-US/DIGADIAG_PANA_SD_AND_STANDALONE_TBC.md) | Consolidação `DIGADIAG.FRM` vs `PANA__SD.FRM` / `PANA_DVD.FRM` e TBC `E-E` |
+| 11 | [DIGADIAG_SALTO_50400000_E_ESCRITA_PROTEGIDA.md](pt-BR/DIGADIAG_SALTO_50400000_E_ESCRITA_PROTEGIDA.md) | [EN-US](en-US/DIGADIAG_JUMP_50400000_AND_GUARDED_RW.md) | Salto `0x50400000` (`EXTRHEAD`) e leitura/gravação protegida (Guarded R/W) |
+| 12 | [DOSSIE_CRIPTOGRAFIA_E_FIRMWARE_PANA_DVD.md](pt-BR/DOSSIE_CRIPTOGRAFIA_E_FIRMWARE_PANA_DVD.md) | [EN-US](en-US/DOSSIER_CRYPTOGRAPHY_AND_FIRMWARE_PANA_DVD.md) | Cifra Feistel-32/CPRM, TOC periódica (`0x7108`) e provas de vazamento ECB |
+| 13 | [DOSSIE_ENGENHARIA_REVERSA_BOOTLOADER_E_DRIVE_MN103S.md](pt-BR/DOSSIE_ENGENHARIA_REVERSA_BOOTLOADER_E_DRIVE_MN103S.md) | [EN-US](en-US/REVERSE_ENGINEERING_BOOTLOADER_AND_OPTICAL_DRIVE_MN103S.md) | RE profunda `BOOT.BIN`, `DRV_decomp`, `83 A7`, 431 erros, 62 CLI e `P7501` |
+| 14 | [DOSSIE_VALIDACAO_FORENSE_AUDITORIA_INDEPENDENTE_E_COMPACTACAO.md](pt-BR/DOSSIE_VALIDACAO_FORENSE_AUDITORIA_INDEPENDENTE_E_COMPACTACAO.md) | [EN-US](en-US/FORENSIC_VALIDATION_INDEPENDENT_AUDIT_AND_COMPRESSION_DOSSIER.md) | Compatibilidade forense de binários, auditoria independente e benchmark `.gz` |
+| 15 | [EMULADOR_MATSHITA_R6MV4_E_INJECAO_ATAPI.md](pt-BR/EMULADOR_MATSHITA_R6MV4_E_INJECAO_ATAPI.md) | [EN-US](en-US/MATSHITA_R6MV4_EMULATOR_AND_ATAPI_INJECTION.md) | Emulador `R6-MV4`, injeção ATAPI `0x3B` e geração de unlock via SD/CD |
+| 16 | [ESTRATEGIA_INTEGRACAO_GHIDRA_GDB.md](pt-BR/ESTRATEGIA_INTEGRACAO_GHIDRA_GDB.md) | [EN-US](en-US/GHIDRA_GDB_INTEGRATION_STRATEGY.md) | Mapa AM34 SSOT, scripts Ghidra, ponte GDB RSP `:3333` e lançador HxD |
+| 17 | [FIRMWARE_PICO_P7501_GUIA.md](pt-BR/FIRMWARE_PICO_P7501_GUIA.md) | [EN-US](en-US/PICO_P7501_FIRMWARE_GUIDE.md) | Guia do firmware C11 no Pico (`UARTMON`, `JIGBOOT`, `PANARSP`, `DIAGWATCH`) |
+| 18 | [GUIA_BANCADA_P7501_SEM_DESSOLDA.md](pt-BR/GUIA_BANCADA_P7501_SEM_DESSOLDA.md) | [EN-US](en-US/BENCH_GUIDE_P7501_NO_DESOLDERING.md) | Guia não-destrutivo de conexão ao `P7501` (`JST ZHR-6`) sem dessolda |
+| 19 | [GUIA_DEPURACAO_GDB_GHIDRA_IDA.md](pt-BR/GUIA_DEPURACAO_GDB_GHIDRA_IDA.md) | [EN-US](en-US/GDB_GHIDRA_IDA_DEBUGGING_GUIDE.md) | Depuração interativa ao vivo com GDB, Ghidra e IDA Pro em `127.0.0.1:3333` |
+| 20 | [GUIA_MONTAGEM_E_FOTOS_PROBE_BANCADA.md](pt-BR/GUIA_MONTAGEM_E_FOTOS_PROBE_BANCADA.md) | [EN-US](en-US/BENCH_PROBE_ASSEMBLY_AND_PHOTOS_GUIDE.md) | Roteiro ilustrado da sonda `P7501`, BOM, JST ZR e checklist no multímetro |
+| 21 | [INVENTARIO_TECNICO_E_GUIA_DE_OPERACAO.md](pt-BR/INVENTARIO_TECNICO_E_GUIA_DE_OPERACAO.md) | [EN-US](en-US/TECHNICAL_INVENTORY_AND_OPERATIONS_MANUAL.md) | Inventário criptográfico SHA-256, `30` PDFs, rotas de bancada e FMEA |
+| 22 | [PANASONIC_P7501_UART_RECONSTRUCTION.md](pt-BR/PANASONIC_P7501_UART_RECONSTRUCTION.md) | [EN-US](en-US/PANASONIC_P7501_UART_RECONSTRUCTION.md) | Especificação técnica de reconstrução elétrica `P7501` Async UART `115200` |
+| 23 | [PARECER_AUDITORIA_FORENSE_CRIPTOANALISE_E_MEIHDFS.md](pt-BR/PARECER_AUDITORIA_FORENSE_CRIPTOANALISE_E_MEIHDFS.md) | [EN-US](en-US/FORENSIC_AUDIT_REPORT_CRYPTANALYSIS_AND_MEIHDFS.md) | Parecer conclusivo de auditoria forense (`PANA_DVD.FRM`, `MEIHDFS` e bancada) |
+| 24 | [PLANO_INTEGRACAO_RP2350_E_GDB.md](pt-BR/PLANO_INTEGRACAO_RP2350_E_GDB.md) | [EN-US](en-US/RP2350_AND_GDB_INTEGRATION_PLAN.md) | Planejamento dual-target RP2040/RP2350 no Pico SDK e integração GDB |
+| 25 | [RELATORIO_AUDITORIA_E_MODULARIZACAO_FINAL.md](pt-BR/RELATORIO_AUDITORIA_E_MODULARIZACAO_FINAL.md) | [EN-US](en-US/FINAL_AUDIT_AND_MODULARIZATION_REPORT.md) | Auditoria pré-refatoração, decomposição modular e pipeline dos 9 Gates |
+| 26 | [RELATORIO_RE_FEISTEL_TOC_EXTRHEAD_E_GATES_UART0.md](pt-BR/RELATORIO_RE_FEISTEL_TOC_EXTRHEAD_E_GATES_UART0.md) | [EN-US](en-US/RE_REPORT_FEISTEL_TOC_EXTRHEAD_AND_UART0_GATES.md) | Engenharia reversa da cifra Feistel (`FUN_4400a666`), TOC, `EXTRHEAD` e UART0 |
+| 27 | [RELATORIO_SESSAO_ENGENHARIA_REVERSA_EH55_100_FIEL.md](pt-BR/RELATORIO_SESSAO_ENGENHARIA_REVERSA_EH55_100_FIEL.md) | [EN-US](en-US/EH55_REVERSE_ENGINEERING_SESSION_FAITHFUL_REPORT.md) | Registro 100% fiel da sessão de engenharia reversa ao vivo no EH55 |
+| 28 | [RELATORIO_TECNICO_CLAUDE_OPUS_UNBRICK_DMR_EH55.md](pt-BR/RELATORIO_TECNICO_CLAUDE_OPUS_UNBRICK_DMR_EH55.md) | [EN-US](en-US/TECHNICAL_REPORT_FOR_CLAUDE_OPUS_UNBRICK_DMR_EH55.md) | Dossiê técnico de validação cruzada, triagem elétrica/laser e unbrick |
+| 29 | [SUBSISTEMA_LOGGING_E_TELEMETRIA.md](pt-BR/SUBSISTEMA_LOGGING_E_TELEMETRIA.md) | [EN-US](en-US/LOGGING_AND_TELEMETRY_SUBSYSTEM.md) | Subsistema `panadiga_core::logger` (`LogLevel`, `set_sink`, Tauri e macros) |
+| 30 | [TEORIA_E_PRATICA_UNBRICK_U99_E_CRIPTOGRAFIA_MATSUSHITA.md](pt-BR/TEORIA_E_PRATICA_UNBRICK_U99_E_CRIPTOGRAFIA_MATSUSHITA.md) | [EN-US](en-US/THEORY_AND_PRACTICE_U99_UNBRICK_MATSUSHITA_CRYPTO.md) | Física NOR `S29JL064H`, cura circular `EEMUL` (`U99`), handshakes e hex maps |
+| 31 | [UPGRADES_PICO_C11_UNDEF_GHIDRA_E_PARIDADE_PYTHON_RUST.md](pt-BR/UPGRADES_PICO_C11_UNDEF_GHIDRA_E_PARIDADE_PYTHON_RUST.md) | [EN-US](en-US/PICO_C11_UPGRADES_GHIDRA_UNDEF_AND_PYTHON_RUST_PARITY.md) | Upgrades C11 no Pico, diagnóstico `??` no Ghidra e matriz de paridade Rust |
+| 32 | [VISTA_EXPLODIDA_ARQUITETURA_INJECAO_PICO_E_BYPASS_PASSTHROUGH.md](pt-BR/VISTA_EXPLODIDA_ARQUITETURA_INJECAO_PICO_E_BYPASS_PASSTHROUGH.md) | [EN-US](en-US/EXPLODED_VIEW_PICO_INJECTION_ARCHITECTURE_AND_BYPASS_PASSTHROUGH.md) | Vista explodida (`DMR-EH55`), `MCP(18)` tools, `PANARSP` e bypass AV `E-E` |
+| 33 | [ZERO_ERROR_RAG_ENGINE_E_SEGURANCA_FISICA.md](pt-BR/ZERO_ERROR_RAG_ENGINE_E_SEGURANCA_FISICA.md) | [EN-US](en-US/ZERO_ERROR_RAG_ENGINE_AND_PHYSICAL_SAFETY.md) | Motor RAG Zero-Error (6 camadas), `FactCritic` e guardrails de tensão |
+
+---
+
+## Root Audits, Ghidra Pseudocode & Live Debug Logs / Auditorias, Pseudocódigo & Logs
+
+### Root Audit Reports & Project Guides
+* [**`COMPLETE_AUDIT.md`**](../COMPLETE_AUDIT.md) — Current Consolidated Technical Audit (**English**)
+* [**`AUDITORIA_COMPLETA.md`**](../AUDITORIA_COMPLETA.md) — Auditoria Técnica Consolidada Atual (**Português BR**)
+* [**`README.md`**](../README.md) / [**`README.pt-BR.md`**](../README.pt-BR.md) — Main Workspace Architecture, Build & Quality Documentation
+* [**`AGENTS.md`**](../AGENTS.md) — Engineering Constraints, 9 Quality Gates & Agent Constitution
+
+### Preserved Historical Audits (`docs/audits/`)
+* [**`audits/README.md`**](./audits/README.md) — Bilingual Audit History Index
+* [`audits/AUDITORIA_COMPLETA_2026-11-11.md`](./audits/AUDITORIA_COMPLETA_2026-11-11.md) — Pre-refactor workspace snapshot (`2026-11-11`)
+* [`audits/AUDITORIA_FIRMWARE_PICO_E_PIPELINE_2026-11-11.md`](./audits/AUDITORIA_FIRMWARE_PICO_E_PIPELINE_2026-11-11.md) — Pico C11/UF2 & build pipeline snapshot
+* [`audits/AUDITORIA_RUNTIME_PANADIGA_2026-11-11.md`](./audits/AUDITORIA_RUNTIME_PANADIGA_2026-11-11.md) — Serial runtime, Tauri parser & electrical safety snapshot
+
+### Ghidra MN103S Pseudocode, Undefined `??` Audit & Raw Captures (`docs/pseudocode/`)
+* [**`pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md`**](./pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) — Bilingual line-indexed guide (`166` blocks/functions)
+* [**`pseudocode/EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md`**](./pseudocode/EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md) — Verbatim 13,677-line decompilation & disassembly dossier (`488,538 B`)
+* [**`pseudocode/GHIDRA_UNDEF_AUDIT_REPORT.md`**](./pseudocode/GHIDRA_UNDEF_AUDIT_REPORT.md) — Exhaustive `??` undefined-byte quantitative root-cause report
+* Raw text captures (`docs/pseudocode/raw/`): [`doc_boot_core.txt`](./pseudocode/raw/doc_boot_core.txt) · [`doc_boot_media_crypto.txt`](./pseudocode/raw/doc_boot_media_crypto.txt) · [`doc_prog061.txt`](./pseudocode/raw/doc_prog061.txt) · [`doc_main.txt`](./pseudocode/raw/doc_main.txt) · [`doc_drv_and_atapi.txt`](./pseudocode/raw/doc_drv_and_atapi.txt)
+
+### Live `COM10` Bench UART Captures & Dossier (`docs/debug_logs/`)
+* [**`debug_logs/README.md`**](./debug_logs/README.md) — Bilingual catalog of `12` unique `SHA-256`-verified captures (`panadiga pico decode-log`)
+* [`debug_logs/DOSSIE_COMPLETO_EH55_UNBRICK_E_FIRMWARE.txt`](./debug_logs/DOSSIE_COMPLETO_EH55_UNBRICK_E_FIRMWARE.txt) — Consolidated operational text dossier (`36,628 B`)
+* Unique `.log` captures (`docs/debug_logs/`):
+  [`captura_live_20261112_143843.log`](./debug_logs/captura_live_20261112_143843.log) · [`captura_live_20261112_144101.log`](./debug_logs/captura_live_20261112_144101.log) · [`captura_live_20261112_151352.log`](./debug_logs/captura_live_20261112_151352.log) · [`captura_samsung_2gb_20261115_020351.log`](./debug_logs/captura_samsung_2gb_20261115_020351.log) · [`captura_live_20261115_021346.log`](./debug_logs/captura_live_20261115_021346.log) · [`captura_flat_odd_20261115_021446.log`](./debug_logs/captura_flat_odd_20261115_021446.log) · [`captura_flat_odd_85s_20261115_021614.log`](./debug_logs/captura_flat_odd_85s_20261115_021614.log) · [`captura_sdhc32gb_cd_20261115_022258.log`](./debug_logs/captura_sdhc32gb_cd_20261115_022258.log) · [`captura_sdhc32gb_cd_75s_20261115_022548.log`](./debug_logs/captura_sdhc32gb_cd_75s_20261115_022548.log) · [`captura_retest_cabo_20261115_023052.log`](./debug_logs/captura_retest_cabo_20261115_023052.log) · [`captura_sd_retest_20261115_023237.log`](./debug_logs/captura_sd_retest_20261115_023237.log) · [`captura_sd_flat_fix_20261115_025903.log`](./debug_logs/captura_sd_flat_fix_20261115_025903.log)

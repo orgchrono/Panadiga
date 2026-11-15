@@ -1,3 +1,6 @@
+> 🌐 **Idioma / Language:** [English (US)](../en-US/DIGADIAG_PANA_SD_AND_STANDALONE_TBC.md) | **Português (BR)**
+> 🧭 **Portal:** [Índice da Documentação](../INDEX.md) | [Auditoria Completa](../../AUDITORIA_COMPLETA.md) | [Auditorias](../audits/README.md) | [Pseudocódigo Ghidra](../pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) | [Logs de Debug](../debug_logs/README.md)
+
 # Dossiê Técnico: Consolidação `DIGADIAG.FRM` vs `PANA__SD.FRM` / `PANA_DVD.FRM`, Bloqueio SD `-91006` e Viabilidade de TBC Autônomo (DMR-EH55 / MN103S)
 
 > **Escopo & Lastro Forense:** Especificação baseada em desmontagem MN103S verificada de `/BOOT.BIN` (NOR `0x44000000`), `PROG061` (`0x50400000`), `EH55_MAIN_3410PQ.bin` (`0x57000000`), `MAIN3060NP` (`0x57000000`), análise empírica de `sd_card_eh55/`, `PANA_DVD.FRM`, `hdd_partition_firmware_0x02000000.bin` e esquemas oficiais `VEP79138` (`na_p49_blk1.png`, `na_p50_blk2.png`, `vol2_p125_interconnect.png`).

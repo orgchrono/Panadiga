@@ -174,6 +174,12 @@ void gdb_cpu_dispatch_command(const char *cmd) {
             gdb_mem_handle_write_cmd(&cmd[1]);
             break;
 
+        case 'X': {
+            const size_t raw_len = gdb_rsp_get_last_packet_len();
+            gdb_mem_handle_write_bin_cmd(&cmd[1], (raw_len > 1U) ? (raw_len - 1U) : 0U);
+            break;
+        }
+
         case 'c':
             if (p7501_hw_read_dcsr() == P7501_BUS_RESP_OPEN_HIGH ||
                 !apply_optional_pc_arg(&cmd[1])) {

@@ -29,17 +29,28 @@ export const FrmTopHeader: React.FC<FrmTopHeaderProps> = ({
 }) => {
   const { t } = useTranslation();
   const [draftPath, setDraftPath] = useState(selectedPath);
+  const [pathError, setPathError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     setDraftPath(selectedPath);
+    setPathError(null);
   }, [selectedPath]);
 
   const options = Array.from(new Set([...containers, ...PRESET_CONTAINERS]));
 
   const handleLoad = (e: React.FormEvent) => {
     e.preventDefault();
-    if (draftPath.trim() && onSelectPath) {
-      onSelectPath(draftPath.trim());
+    const nextPath = draftPath.trim();
+    if (!nextPath) {
+      setPathError('Informe o caminho do contêiner .FRM para inspeção.');
+      setSuccess(null);
+      return;
+    }
+    setPathError(null);
+    if (onSelectPath) {
+      onSelectPath(nextPath);
+      setSuccess(`Contêiner selecionado: ${nextPath}`);
     }
   };
 
@@ -74,61 +85,86 @@ export const FrmTopHeader: React.FC<FrmTopHeaderProps> = ({
       {onSelectPath && (
         <form
           onSubmit={handleLoad}
-          className="flex flex-col lg:flex-row items-stretch lg:items-center gap-2 pt-3 border-t border-slate-800/80 text-xs"
+          className="space-y-2 pt-3 border-t border-slate-800/80 text-xs"
+          noValidate
         >
-          <div className="flex items-center gap-2 flex-wrap">
-            <FolderOpen className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-            <select
-              aria-label="Selecionar contêiner .FRM"
-              value={options.includes(selectedPath) ? selectedPath : ''}
-              onChange={e => {
-                if (e.target.value) {
-                  setDraftPath(e.target.value);
-                  onSelectPath(e.target.value);
-                }
-              }}
-              className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500"
-            >
-              {options.map(path => (
-                <option key={path} value={path}>
-                  {path}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <input
-            type="text"
-            value={draftPath}
-            onChange={e => setDraftPath(e.target.value)}
-            placeholder={frmFile || 'firmware_and_images/PANA_DVD.FRM'}
-            className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
-          />
-
-          <div className="flex items-center gap-2">
-            <Button
-              type="submit"
-              size="sm"
-              variant="secondary"
-              disabled={loading || !draftPath.trim()}
-              className="text-xs font-semibold gap-1.5"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-              <span>Analisar .FRM</span>
-            </Button>
-            {onRefresh && (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={loading}
-                onClick={onRefresh}
-                className="text-xs"
+          <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <FolderOpen className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+              <select
+                aria-label="Selecionar contêiner .FRM"
+                value={options.includes(selectedPath) ? selectedPath : ''}
+                onChange={e => {
+                  if (e.target.value) {
+                    setDraftPath(e.target.value);
+                    setPathError(null);
+                    onSelectPath(e.target.value);
+                    setSuccess(`Contêiner carregado: ${e.target.value}`);
+                  }
+                }}
+                className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500"
               >
-                Atualizar
+                {options.length === 0 ? (
+                  <option value="" disabled>
+                    Nenhum contêiner listado
+                  </option>
+                ) : (
+                  options.map(path => (
+                    <option key={path} value={path}>
+                      {path}
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
+
+            <input
+              type="text"
+              value={draftPath}
+              aria-invalid={Boolean(pathError)}
+              aria-describedby={pathError ? 'frm-top-path-error' : undefined}
+              onChange={e => {
+                setDraftPath(e.target.value);
+                if (pathError) setPathError(null);
+              }}
+              placeholder={frmFile || 'firmware_and_images/PANA_DVD.FRM'}
+              className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+            />
+
+            <div className="flex items-center gap-2">
+              <Button
+                type="submit"
+                size="sm"
+                variant="secondary"
+                disabled={loading}
+                className="text-xs font-semibold gap-1.5"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+                <span>Analisar .FRM</span>
               </Button>
-            )}
+              {onRefresh && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={loading}
+                  onClick={onRefresh}
+                  className="text-xs"
+                >
+                  Atualizar
+                </Button>
+              )}
+            </div>
           </div>
+
+          {pathError && (
+            <p id="frm-top-path-error" role="alert" className="text-[11px] text-rose-400">
+              {pathError}
+            </p>
+          )}
+          {success && !pathError && !loading && (
+            <p className="text-[11px] text-emerald-400">{success}</p>
+          )}
         </form>
       )}
     </div>

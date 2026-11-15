@@ -19,6 +19,7 @@ pub fn run_desktop_app() {
             analyze_flash_dump,
             analyze_live_nvram_bytes,
             clean_nvram_command,
+            patch_nvram_command,
             inspect_hdd,
             inspect_hdd_command,
             decode_meihdfs_allocations,
@@ -37,6 +38,9 @@ pub fn run_desktop_app() {
             search_manuals,
             search_manuals_command,
             list_service_manuals,
+            list_engineering_docs,
+            read_engineering_doc,
+            decode_engineering_log,
             read_hex_dump,
             get_diga_model_catalog,
             list_pico_serial_ports,
@@ -80,6 +84,11 @@ pub fn run_desktop_app() {
             prepare_sd_unbrick_kit_command,
             verify_sd_unbrick_media_command,
             build_nor_dumper_stub_command,
+            run_matshita_boot_emu,
+            inject_matshita_atapi_write,
+            run_matshita_serial_cmd,
+            verify_frm_unlock_command,
+            pack_unlock_frm_command,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

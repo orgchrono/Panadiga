@@ -1,0 +1,2954 @@
+PROGRAM: /BOOT.BIN (Part 1: Boot Flow, UART0, Timer/VFD, HDD Load, BGO/NFROM/NVRAM)
+
+=== NO_FUNC reset_or_early @ 0x44000000 ===
+
+=== NO_FUNC early_sc0_probe_1 @ 0x440007d4 ===
+
+=== NO_FUNC early_sc0_probe_2 @ 0x440011a8 ===
+
+=== NO_FUNC crt0_bss_and_data_copy @ 0x440012a0 ===
+
+=== FUNC FUN_440018bb (nfrom_recover_map) @ 0x440018bb (size=810 B, req=0x440018bb) ===
+// Callers (1): 0x4400403c
+// Referenced strings/literals:
+//   0x440333be: '[nfrom] NOR STATE : Original -> Backup\n'
+//   0x44033396: '[nfrom] NOR STATE : Backup -> Original\n'
+//   0x440333e6: '[nfrom] Map load error[%u].\n'
+//   0x44033403: '[nfrom] Map write error[%u].\n'
+//   0x44033421: '[nfrom] File map load error[%u].\n'
+//   0x44033443: '[nfrom] File map write error[%u].\n'
+//   0x44033466: '[nfrom] Status change error[%d].\n'
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+undefined4 FUN_440018bb(void)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_4;
+  if (_DAT_505163d4 == 0xffff) {
+    FUN_4400bd82(2,s__nfrom__NOR_STATE___Original__>_B_440333be);
+  }
+  else if (_DAT_505163d4 < 0x10000) {
+    if (_DAT_505163d4 != 0) goto LAB_44001bdd;
+  }
+  else {
+    if (_DAT_505163d4 != 0xffffff) goto LAB_44001bdd;
+    FUN_4400bd82(2,s__nfrom__NOR_STATE___Backup__>_Or_44033396);
+  }
+  *(undefined2 *)((int)puVar1 + -10) = 0;
+  while (*(ushort *)((int)puVar1 + -10) < 8) {
+    uVar2 = FUN_44001c49(3,*(short *)((int)puVar1 + -10) + *(short *)(puVar1 + -3),
+                         (uint)*(ushort *)((int)puVar1 + -10) * 0x200 + 0x50516dd4);
+    puVar1[-1] = uVar2;
+    if (puVar1[-1] != 0) {
+      FUN_4400bd82(1,s__nfrom__Map_load_error__u___440333e6,puVar1[-1]);
+      puVar1[-7] = 0xfffffffb;
+      goto LAB_44001bdd;
+    }
+    *(short *)((int)puVar1 + -10) = *(short *)((int)puVar1 + -10) + 1;
+  }
+  if (_DAT_505163d4 != 0) {
+    *(undefined2 *)((int)puVar1 + -10) = 0;
+    while (*(ushort *)((int)puVar1 + -10) < 8) {
+      uVar2 = FUN_44001c49(3,*(short *)((int)puVar1 + -10) + *(short *)((int)puVar1 + -0xe),
+                           &DAT_505180b8);
+      puVar1[-1] = uVar2;
+      if (puVar1[-1] != 0) {
+        FUN_4400bd82(1,s__nfrom__Map_load_error__u___440333e6,puVar1[-1]);
+        puVar1[-7] = 0xfffffffb;
+        goto LAB_44001bdd;
+      }
+      uVar2 = FUN_4402c2b7(&DAT_505180b8,(uint)*(ushort *)((int)puVar1 + -10) * 0x200 + 0x50516dd4,
+                           0x200);
+      puVar1[-2] = uVar2;
+      if (puVar1[-2] != 0) {
+        uVar2 = FUN_44001d4d(*(short *)((int)puVar1 + -10) + *(short *)((int)puVar1 + -0xe));
+        puVar1[-1] = uVar2;
+        if (puVar1[-1] != 2) {
+          FUN_4400bd82(1,s__nfrom__Map_write_error__u___44033403,puVar1[-1]);
+          puVar1[-7] = 0xfffffffe;
+          goto LAB_44001bdd;
+        }
+      }
+      *(short *)((int)puVar1 + -10) = *(short *)((int)puVar1 + -10) + 1;
+    }
+  }
+  *(undefined2 *)((int)puVar1 + -10) = 0;
+  while (*(ushort *)((int)puVar1 + -10) < 4) {
+    uVar2 = FUN_44001c49(3,*(short *)((int)puVar1 + -10) + 0x802,
+                         (uint)*(ushort *)((int)puVar1 + -10) * 0x200 + 0x505165d4);
+    puVar1[-1] = uVar2;
+    if (puVar1[-1] != 0) {
+      FUN_4400bd82(1,s__nfrom__File_map_load_error__u___44033421,puVar1[-1]);
+      puVar1[-7] = 0xfffffffb;
+      goto LAB_44001bdd;
+    }
+    *(short *)((int)puVar1 + -10) = *(short *)((int)puVar1 + -10) + 1;
+  }
+  if (_DAT_505163d4 != 0) {
+    *(undefined2 *)((int)puVar1 + -10) = 0;
+    while (*(ushort *)((int)puVar1 + -10) < 4) {
+      FUN_4402c2f7(puVar1[-6],puVar1[-5],0x100);
+      puVar1[-6] = puVar1[-6] + 0x200;
+      puVar1[-5] = puVar1[-5] + 0x200;
+      *(short *)((int)puVar1 + -10) = *(short *)((int)puVar1 + -10) + 1;
+    }
+    *(undefined2 *)((int)puVar1 + -10) = 0;
+    while (*(ushort *)((int)puVar1 + -10) < 4) {
+      uVar2 = FUN_44001d4d(*(short *)((int)puVar1 + -10) + 0x802);
+      puVar1[-1] = uVar2;
+      if (puVar1[-1] != 2) {
+        FUN_4400bd82(1,s__nfrom__File_map_write_error__u__44033443,puVar1[-1]);
+        puVar1[-7] = 0xfffffffe;
+        goto LAB_44001bdd;
+      }
+      *(short *)((int)puVar1 + -10) = *(short *)((int)puVar1 + -10) + 1;
+    }
+    uVar2 = FUN_44001be5(0);
+    puVar1[-2] = uVar2;
+    if (puVar1[-2] != 0) {
+      FUN_4400bd82(1,s__nfrom__Status_change_error__d___44033466,puVar1[-2]);
+      puVar1[-7] = 0xfffffffc;
+      goto LAB_44001bdd;
+    }
+  }
+  puVar1[-7] = 0;
+LAB_44001bdd:
+  return puVar1[-7];
+}
+
+=== FUNC FUN_44001c49 (bgo_ioctl_dispatch) @ 0x44001c49 (size=260 B, req=0x44001c49) ===
+// Callers (12): 0x440019a9, 0x44001a0b, 0x44001ad7, 0x44001d67, 0x4400292d, 0x44004011, 0x44008397, 0x440087b2, 0x44008837, 0x44008e79, 0x44008fa9, 0x44009311
+// Referenced strings/literals:
+//   0x440334af: '[nfrom] bgo_read_D(ID=0x%X) return error(%u).\n'
+//   0x440334de: '[nfrom] BGO command[%d] error.\n'
+undefined4 FUN_44001c49(undefined1 param_1,undefined2 param_2,undefined4 param_3)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_4;
+  switch(param_1) {
+  case 0:
+    uVar2 = FUN_4401e636();
+    puVar1[-1] = uVar2;
+    break;
+  case 1:
+    uVar2 = FUN_4401eb14(1,4);
+    puVar1[-1] = uVar2;
+    break;
+  case 2:
+    uVar2 = FUN_4401e68a(0);
+    puVar1[-1] = uVar2;
+    break;
+  case 3:
+    uVar2 = FUN_4401e6ef(1,param_2,1,param_3);
+    puVar1[-1] = uVar2;
+    if (puVar1[-1] == 0) {
+      puVar1[-1] = 0;
+    }
+    else {
+      FUN_4400bd82(1,s__nfrom__bgo_read_D_ID_0x_X__retu_440334af,*(undefined2 *)(puVar1 + 3),
+                   puVar1[-1]);
+      puVar1[-1] = 1;
+    }
+    break;
+  case 4:
+    uVar2 = FUN_4401e751(1,param_2,1,param_3);
+    puVar1[-1] = uVar2;
+    break;
+  default:
+    FUN_4400bd82(1,s__nfrom__BGO_command__d__error__440334de,param_1);
+    puVar1[-1] = 0xffffffff;
+    break;
+  case 6:
+    uVar2 = FUN_4401e7ea(1,param_2,1);
+    puVar1[-1] = uVar2;
+    break;
+  case 8:
+  }
+  return puVar1[-1];
+}
+
+=== FUNC FUN_44003fd0 (nfrom_power_fail_recovery) @ 0x44003fd0 (size=513 B, req=0x44003fd0) ===
+// Callers (3): 0x440083bf, 0x44008c1e, 0x44008c8e
+// Referenced strings/literals:
+//   0x440338e3: '[nfrom] Power failer recovery error[%d].\n'
+//   0x440338bd: '[nfrom] Main control data error[%u].\n'
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+undefined4 FUN_44003fd0(void)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_4;
+  FUN_4402c348(&DAT_505163d4,0xff,&DAT_00001ad8);
+  uVar2 = FUN_44001c49(3,0x801,&DAT_505163d4);
+  puVar1[-1] = uVar2;
+  if (puVar1[-1] == 0) {
+    uVar2 = FUN_440018bb();
+    puVar1[-2] = uVar2;
+    if (puVar1[-2] == 0) {
+      _DAT_50517ea8 = 0;
+      _DAT_50517eaa = 0;
+      *(undefined2 *)((int)puVar1 + -10) = 0;
+      while (*(ushort *)((int)puVar1 + -10) < 0x35) {
+        *(undefined2 *)((int)puVar1 + -0xe) = 0;
+        while (*(ushort *)((int)puVar1 + -0xe) < _DAT_505163d8) {
+          *(short *)(puVar1 + -4) = *(short *)((int)puVar1 + -0xe) * 0x10 + 0x10;
+          if (_DAT_505163da < *(ushort *)(puVar1 + -4)) {
+            *(ushort *)(puVar1 + -4) = 0x10 - (_DAT_505163da - *(short *)(puVar1 + -4));
+          }
+          else {
+            *(undefined2 *)(puVar1 + -4) = 0x10;
+          }
+          *(undefined2 *)(puVar1 + -3) = 0;
+          while (*(ushort *)(puVar1 + -3) < *(ushort *)(puVar1 + -4)) {
+            uVar2 = FUN_4402c2b7((uint)*(ushort *)((int)puVar1 + -10) * 9 + 0x50480004,
+                                 ((uint)*(ushort *)(puVar1 + -3) +
+                                 (uint)*(ushort *)((int)puVar1 + -0xe) * 0x20) * 0x10 + 0x505165d4,8
+                                );
+            puVar1[-2] = uVar2;
+            if (puVar1[-2] == 0) {
+              *(undefined2 *)((uint)*(ushort *)((int)puVar1 + -10) * 4 + 0x50517dd4) =
+                   *(undefined2 *)((int)puVar1 + -0xe);
+              *(undefined2 *)((uint)*(ushort *)((int)puVar1 + -10) * 4 + 0x50517dd6) =
+                   *(undefined2 *)(puVar1 + -3);
+              if ((_DAT_50517ea8 < *(ushort *)((int)puVar1 + -0xe)) ||
+                 ((_DAT_50517ea8 == *(ushort *)((int)puVar1 + -0xe) &&
+                  (_DAT_50517eaa <= *(ushort *)(puVar1 + -3))))) {
+                _DAT_50517ea8 = *(ushort *)((int)puVar1 + -0xe);
+                _DAT_50517eaa = *(short *)(puVar1 + -3) + 1;
+                if (0xf < _DAT_50517eaa) {
+                  _DAT_50517ea8 = _DAT_50517ea8 + 1;
+                  _DAT_50517eaa = 0;
+                }
+              }
+              break;
+            }
+            *(short *)(puVar1 + -3) = *(short *)(puVar1 + -3) + 1;
+          }
+          if (puVar1[-2] == 0) break;
+          *(short *)((int)puVar1 + -0xe) = *(short *)((int)puVar1 + -0xe) + 1;
+        }
+        *(short *)((int)puVar1 + -10) = *(short *)((int)puVar1 + -10) + 1;
+      }
+      puVar1[-5] = 0;
+    }
+    else {
+      FUN_4400bd82(1,s__nfrom__Power_failer_recovery_er_440338e3,puVar1[-2]);
+      puVar1[-5] = puVar1[-2];
+    }
+  }
+  else {
+    FUN_4400bd82(1,s__nfrom__Main_control_data_error__440338bd,puVar1[-1]);
+    puVar1[-5] = 0xfffffffb;
+  }
+  return puVar1[-5];
+}
+
+=== FUNC FUN_440046e4 (gpio_model_flag_46e4) @ 0x440046e4 (size=101 B, req=0x440046e4) ===
+// Callers (7): 0x4400327d, 0x440032e5, 0x44003328, 0x4400335e, 0x44003377, 0x4400340d, 0x4400347b
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+void FUN_440046e4(char param_1)
+
+{
+  if (_DAT_50480000 == 0x1c) {
+    nvram_read_id(0xe,0,0);
+  }
+  else if (((_DAT_50480000 & 0xff) == 1) || (_DAT_50480000 == 0x20)) {
+    if (param_1 == '\x01') {
+      nvram_read_id(0xe,0,0);
+    }
+    else {
+      nvram_read_id(0xe,0,1);
+    }
+  }
+  return;
+}
+
+=== FUNC uart0_init (uart0_init) @ 0x44004749 (size=86 B, req=0x44004749) ===
+// Callers (0): 
+char uart0_init(void)
+
+{
+  byte bVar1;
+  
+  if (DAT_50480b88 == '\0') {
+    nvram_read_id(0x17,0,0xffffffff);
+    SC0CTR = 0xc085;
+    TM2MD = 0;
+    TM2BR = 0x2b;
+    bVar1 = TM2MD;
+    TM2MD = bVar1 | 0x80;
+    DAT_50480b88 = '\x01';
+  }
+  return DAT_50480b88;
+}
+
+=== FUNC uart0_getc (uart0_getc_dead) @ 0x4400479f (size=40 B, req=0x4400479f) ===
+// Callers (2): 0x4400489a, 0x44004904
+undefined1 uart0_getc(void)
+
+{
+  undefined1 uVar1;
+  ushort uVar2;
+  
+  do {
+    uVar2 = SC0STR;
+  } while ((uVar2 >> 4 & 1) == 0);
+  uVar1 = SC0RXB;
+  return uVar1;
+}
+
+=== FUNC uart0_putc (uart0_putc_poll) @ 0x440047c7 (size=65 B, req=0x440047dc) ===
+// Callers (9): 0x4400485c, 0x44004863, 0x44004877, 0x440048c4, 0x440048cb, 0x440048d3, 0x440048ff, 0x44004910, 0x44004917
+undefined1 uart0_putc(undefined1 param_1)
+
+{
+  ushort uVar1;
+  int iStack_8;
+  
+  iStack_8 = 0x1400000;
+  while ((-1 < iStack_8 && (uVar1 = SC0STR, (uVar1 & 0xa0) != 0))) {
+    iStack_8 = iStack_8 + -1;
+  }
+  SC0TXB = param_1;
+  return param_1;
+}
+
+=== FUNC console_getline (console_getline_dead) @ 0x4400488a (size=164 B, req=0x4400488a) ===
+// Callers (0): 
+undefined4 console_getline(undefined4 param_1,undefined4 param_2)
+
+{
+  undefined4 *puVar1;
+  undefined1 extraout_D0;
+  undefined1 extraout_D0_00;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_4;
+  uart0_getc(0,param_2,0);
+  *(undefined1 *)((int)puVar1 + -1) = extraout_D0;
+  while (*(char *)((int)puVar1 + -1) != '\r') {
+    if (*(char *)((int)puVar1 + -1) == '\b') {
+      if (0 < (int)puVar1[-2]) {
+        puVar1[-2] = puVar1[-2] + -1;
+        uart0_putc(*(undefined1 *)((int)puVar1 + -1));
+        uart0_putc(0x20);
+        uart0_putc(*(undefined1 *)((int)puVar1 + -1));
+      }
+    }
+    else {
+      *(undefined1 *)(puVar1[-2] + puVar1[2]) = *(undefined1 *)((int)puVar1 + -1);
+      if ((int)puVar1[-2] < puVar1[3] + -1) {
+        puVar1[-2] = puVar1[-2] + 1;
+      }
+      uart0_putc(*(undefined1 *)((int)puVar1 + -1));
+    }
+    uart0_getc();
+    *(undefined1 *)((int)puVar1 + -1) = extraout_D0_00;
+  }
+  uart0_putc(0xd);
+  uart0_putc(10);
+  *(undefined1 *)(puVar1[-2] + puVar1[2]) = 0;
+  return 0;
+}
+
+=== FUNC boot_main (boot_main) @ 0x4400492e (size=13 B, req=0x4400492e) ===
+// Callers (0): 
+// Referenced strings/literals:
+//   0x44033ab8: '\n***** Loader ver%s [%s](%s) *****\n'
+//   0x44033adc: '0.63'
+//   0x44033ae1: '07/10/24'
+//   0x44033aea: '4MB/TOP BOOT'
+//   0x44033af7: '***** FEonly mode *****\n'
+//   0x44033ba2: '***** serial boot mode *****\n'
+//   0x44033b89: '***** normal mode *****\n'
+//   0x44033b10: '***** support card mode *****\n'
+//   0x44033b2f: 'load_address = 0x%08x , load_size = 0x%x\n\n'
+//   0x44033b5a: 'error! main soft is not loaded to 0x40000400.\n'
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+void boot_main(void)
+
+{
+  byte bVar1;
+  undefined4 *puVar2;
+  undefined1 extraout_D0;
+  undefined4 uVar3;
+  undefined4 uStack_4;
+  
+  puVar2 = &uStack_4;
+  _DAT_5056b5f8 = 0;
+  uart0_init();
+  uart0_printf(s_______Loader_ver_s___s___s_______44033ab8,&DAT_44033adc,s_07_10_24_44033ae1,
+               s_4MB_TOP_BOOT_44033aea);
+  bVar1 = P5OUT;
+  P5OUT = bVar1 | 8;
+  detect_boot_mode();
+  *(undefined1 *)((int)puVar2 + -9) = extraout_D0;
+  nvram_read_id(2,puVar2 + -7,0xffffffff);
+  nvram_read_id(0xb,puVar2 + -6,0xffffffff);
+  FUN_4402c348(&DAT_901f75e0,0xff,0x3c0);
+  if (((puVar2[-6] != 0) && (*(char *)((int)puVar2 + -9) != '\x02')) || (puVar2[-7] == 0)) {
+    sub_4400bb14(0,1);
+  }
+  if (puVar2[-7] == 0) {
+    uart0_printf(s_______FEonly_mode_______44033af7);
+    feonly_mode();
+  }
+  puVar2[-8] = (uint)*(byte *)((int)puVar2 + -9);
+  if (puVar2[-8] == 2) {
+    uart0_printf(s_______serial_boot_mode_______44033ba2);
+    fmu_sd_dispatcher(2);
+  }
+  else {
+    if ((int)puVar2[-8] < 3) {
+      if (puVar2[-8] == 1) {
+        uart0_printf(s_______normal_mode_______44033b89);
+        uVar3 = bgo_driver_init();
+        puVar2[-4] = uVar3;
+        if (puVar2[-4] != 0) {
+          boot_panic_or_halt_7812();
+          return;
+        }
+        fmu_sd_dispatcher(1);
+        return;
+      }
+    }
+    else if (puVar2[-8] == 3) {
+      uart0_printf(s_______support_card_mode_______44033b10);
+      uVar3 = bgo_driver_init();
+      puVar2[-4] = uVar3;
+      if (puVar2[-4] != 0) {
+        boot_panic_or_halt_7812();
+        return;
+      }
+      uVar3 = parse_support_card_hdr(0x40000400);
+      puVar2[-1] = uVar3;
+      uart0_printf(s_load_address___0x_08x___load_siz_44033b2f,puVar2[-2],puVar2[-1]);
+      if (puVar2[-1] == 0) {
+        uart0_printf(s_error__main_soft_is_not_loaded_t_44033b5a);
+        boot_panic_or_halt_7812();
+      }
+      FUN_4402c2f7(puVar2[-2],0x40000400,puVar2[-1]);
+      puVar2[-5] = puVar2[-2];
+      (*(code *)puVar2[-5])();
+      return;
+    }
+    boot_panic_or_halt_7812();
+  }
+  return;
+}
+
+=== FUNC feonly_mode (feonly_mode) @ 0x44004b06 (size=214 B, req=0x44004b06) ===
+// Callers (1): 0x440049eb
+// Referenced strings/literals:
+//   0x44033bc0: 'LAST_ERR_LOG load OK(0x%08X).\n'
+//   0x44033bdf: 'LAST_ERR_LOG load NG(%d).\n'
+//   0x44033bfa: 'LAST_ERR_LOG load NG.\n'
+//   0x44033c11: 'Copy to update program(size=0x%X) to 0x%08X from 0x%08X.\n'
+//   0x44033c4b: '*** jump to update program ***\n'
+/* WARNING: Control flow encountered bad instruction data */
+
+void feonly_mode(void)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_4;
+  uVar2 = bgo_driver_init();
+  puVar1[-1] = uVar2;
+  if (puVar1[-1] == 0) {
+    puVar1[-2] = 0xffffffff;
+    uVar2 = nvram_read_8634(0x504800ee,&DAT_901f75e0);
+    puVar1[-1] = uVar2;
+    if (puVar1[-1] == 0) {
+      uart0_printf(s_LAST_ERR_LOG_load_OK_0x_08X___44033bc0,&DAT_901f75e0);
+    }
+    else {
+      uart0_printf(s_LAST_ERR_LOG_load_NG__d___44033bdf,puVar1[-1]);
+    }
+  }
+  else {
+    uart0_printf(s_LAST_ERR_LOG_load_NG__44033bfa);
+  }
+  DAT_901f3bce = 0xff;
+  fe_drive_mailbox_write(puVar1[-2]);
+  uart0_printf(s_Copy_to_update_program_size_0x_X_44033c11,0x40000,&DAT_90400000,&DAT_90002000);
+  FUN_4402c2f7(&DAT_90400000,&DAT_90002000,0x40000);
+  uart0_printf(s_____jump_to_update_program_____44033c4b);
+                    /* WARNING: Bad instruction - Truncating control flow here */
+  halt_baddata();
+}
+
+=== FUNC fe_drive_mailbox_write (fe_drive_mailbox_write) @ 0x44004bde (size=300 B, req=0x44004bde) ===
+// Callers (1): 0x44004b86
+// Referenced strings/literals:
+//   0x44033c6b: 'F-CPU reset finish. 0x%X-0x%X data polling.\n'
+//   0x44033c98: 'Drive firmware update start.\n'
+//   0x44033cb6: 'I am BootLoader...\n'
+//   0x44033cfe: 'LAST_ERR_LOG save NG.\n'
+//   0x44033d15: 'LAST_ERR_LOG save OK.\n'
+//   0x44033d2c: 'LAST_ERR_LOG save NG(%d).\n'
+//   0x44033cca: 'Drive adjustment value update firmware load start.\n'
+void fe_drive_mailbox_write(void)
+
+{
+  undefined4 in_A3;
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_4;
+  uStack_4 = in_A3;
+  uart0_printf(s_F_CPU_reset_finish__0x_X_0x_X_da_44033c6b,&DAT_901f3bda,&DAT_901f3bdf,0);
+  while( true ) {
+    while( true ) {
+      while( true ) {
+        puVar1[-1] = DAT_901f3be0;
+        if (DAT_901f3bdf == -1) {
+          uart0_printf(s_Drive_firmware_update_start__44033c98);
+          return;
+        }
+        if (DAT_901f3bde != -1) break;
+        fe_drive_band_change();
+      }
+      if (DAT_901f3bdd != -1) break;
+      uart0_printf(s_I_am_BootLoader____44033cb6);
+      DAT_901f3bdd = -0x10;
+    }
+    if (DAT_901f3bdc == -1) break;
+    if (DAT_901f3bda == -1) {
+      if (puVar1[2] == 0) {
+        uart0_printf(s_LAST_ERR_LOG_save_NG__44033cfe);
+        DAT_901f3bda = -0x10;
+      }
+      else {
+        uVar2 = FUN_440090a6(0x504800ee,&DAT_901f75e0,0x3c0);
+        puVar1[-1] = uVar2;
+        if (puVar1[-1] == 0) {
+          uart0_printf(s_LAST_ERR_LOG_save_OK__44033d15);
+          DAT_901f3bda = '\0';
+        }
+        else {
+          uart0_printf(s_LAST_ERR_LOG_save_NG__d___44033d2c,puVar1[-1]);
+          DAT_901f3bda = -0x10;
+        }
+      }
+    }
+  }
+  uart0_printf(s_Drive_adjustment_value_update_fi_44033cca);
+  return;
+}
+
+=== FUNC FUN_44005086 (timer_mcu_5086) @ 0x44005086 (size=93 B, req=0x44005086) ===
+// Callers (1): 0x4400596c
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+undefined4 FUN_44005086(uint param_1,int param_2)
+
+{
+  undefined4 uStack_8;
+  
+  if (0xf < param_1) {
+    uStack_8 = 0xf;
+    param_1 = uStack_8;
+  }
+  while (param_1 != 0) {
+    param_1 = param_1 - 1;
+    *(undefined1 *)(param_1 + param_2) =
+         *(undefined1 *)(param_1 + _DAT_50480c8c * 0x10 + 0x505184bc);
+  }
+  return 0;
+}
+
+=== FUNC FUN_44005114 (timer_rx_handler_5114) @ 0x44005114 (size=492 B, req=0x44005114) ===
+// Callers (1): 0x440061e7
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+byte FUN_44005114(void)
+
+{
+  byte bVar1;
+  char cVar2;
+  undefined4 *puVar3;
+  uint uStack_c;
+  int iStack_8;
+  undefined4 uStack_4;
+  
+  puVar3 = &uStack_4;
+  uStack_c = (uint)(_DAT_50480c8c == 0);
+  for (iStack_8 = 0; iStack_8 < 0x10; iStack_8 = iStack_8 + 1) {
+    *(undefined1 *)(iStack_8 + uStack_c * 0x10 + 0x505184bc) = (&DAT_dc010020)[iStack_8];
+  }
+  _DAT_50480c8c = uStack_c;
+  bVar1 = DAT_dc010020;
+  if (((bVar1 & 0xfe) == 0x40) || (bVar1 = DAT_dc010020, (bVar1 & 0xfe) == 0x41)) {
+    cVar2 = DAT_dc010023;
+    if (((cVar2 == '\x01') || ((cVar2 = DAT_dc010023, cVar2 == -8 && (_DAT_50501518 == 0)))) ||
+       ((cVar2 = DAT_dc010023, cVar2 == -7 && (_DAT_50501518 != 0)))) {
+      FUN_44009e55();
+    }
+    if ((*(byte *)(puVar3[-3] + 3) & 0xfd) == 0x3d) {
+      FUN_44007759();
+    }
+  }
+  if (*(char *)puVar3[-3] == 'H') {
+    if (_DAT_5051b5d8 == 0) {
+      if (_DAT_5051b5d4 == 0) {
+        _DAT_5051b5d4 = 1;
+      }
+      else {
+        _DAT_5051b5d8 = 1;
+      }
+    }
+    else {
+      _DAT_5051b5d4 = 0;
+    }
+    if (_DAT_50480c9c != 0) {
+      FUN_4400561f();
+    }
+  }
+  if ((*(char *)puVar3[-3] == 'c') || (*(char *)puVar3[-3] == '\x7f')) {
+    DAT_50480cae = *(undefined1 *)puVar3[-3];
+    DAT_50480caf = *(undefined1 *)(puVar3[-3] + 1);
+    _DAT_50480c98 = 1;
+  }
+  if (*(char *)puVar3[-3] == '\v') {
+    if (*(char *)(puVar3[-3] + 1) == '\0') {
+      _DAT_5051b5c0 = 1;
+    }
+    else {
+      _DAT_5051b5c0 = 0xffffffff;
+    }
+  }
+  if (*(char *)puVar3[-3] == '\t') {
+    _DAT_5051b5dc = (uint)*(byte *)(puVar3[-3] + 1);
+  }
+  if ((_DAT_50480c90 != 0) && (*(byte *)puVar3[-3] == _DAT_504801e4)) {
+    _DAT_50480c90 = 0;
+  }
+  _DAT_5051b5e0 = 1;
+  bVar1 = DAT_dc010000;
+  DAT_dc010000 = bVar1 | 0x10;
+  bVar1 = DAT_dc010000;
+  DAT_dc010000 = bVar1 & 0xef;
+  return bVar1 & 0xef;
+}
+
+=== FUNC FUN_4400599a (vfd_msg_599a) @ 0x4400599a (size=125 B, req=0x4400599a) ===
+// Callers (2): 0x440054c2, 0x4400564a
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+int FUN_4400599a(void)
+
+{
+  undefined1 *puVar1;
+  int iVar2;
+  undefined1 auStack_1c [20];
+  int iStack_8;
+  undefined1 auStack_4 [4];
+  
+  puVar1 = auStack_4;
+  iStack_8 = 0x1400000;
+  while ((-1 < iStack_8 && (_DAT_50480c94 == 1))) {
+    iStack_8 = iStack_8 + -1;
+  }
+  FUN_4402c348(auStack_1c,0,0xf);
+  puVar1[-0x18] = 0xa3;
+  FUN_4400be54(puVar1 + -0x15,*(undefined4 *)(puVar1 + 8));
+  FUN_4400534a(puVar1 + -0x18,*(undefined4 *)(puVar1 + -8));
+  iVar2 = *(int *)(puVar1 + -8);
+  if (iVar2 == 1) {
+    iVar2 = 0;
+    _DAT_50480c94 = 0;
+  }
+  return iVar2;
+}
+
+=== FUNC FUN_44005cd0 (vfd_wait_5cd0) @ 0x44005cd0 (size=70 B, req=0x44005cd0) ===
+// Callers (3): 0x440078bc, 0x440079ef, 0x4400b3b3
+// Referenced strings/literals:
+//   0x44034058: 'Main hung-up time changed %u[s].\n'
+void FUN_44005cd0(void)
+
+{
+  undefined4 *puVar1;
+  undefined1 auStack_14 [16];
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_4;
+  FUN_4402c348(auStack_14,0,0xf);
+  *(undefined1 *)(puVar1 + -4) = 0x8a;
+  *(undefined1 *)((int)puVar1 + -0xf) = 2;
+  *(undefined1 *)((int)puVar1 + -0xd) = 0xff;
+  FUN_44005747(0xf,puVar1 + -4);
+  uart0_printf(s_Main_hung_up_time_changed__u_s___44034058,0xff);
+  return;
+}
+
+=== FUNC detect_boot_mode (detect_boot_mode) @ 0x44006454 (size=116 B, req=0x44006454) ===
+// Callers (1): 0x44004977
+// Referenced strings/literals:
+//   0x44034134: 'Chip select = 1\n'
+//   0x44034145: 'Chip select = 0\n'
+undefined4 detect_boot_mode(void)
+
+{
+  undefined4 *puVar1;
+  undefined1 auStack_8 [4];
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_4;
+  nvram_read_id(1,auStack_8,0xffffffff);
+  nvram_read_id(0xc,puVar1 + -2,0xffffffff);
+  if (puVar1[-1] == 0) {
+    uart0_printf(s_Chip_select___1_44034134);
+  }
+  else {
+    uart0_printf(s_Chip_select___0_44034145);
+  }
+  if (puVar1[-1] == 0) {
+    if (puVar1[-2] == 0) {
+      puVar1[-3] = 2;
+    }
+    else {
+      puVar1[-3] = 1;
+    }
+  }
+  else {
+    puVar1[-3] = 3;
+  }
+  return puVar1[-3];
+}
+
+=== FUNC parse_support_card_hdr (parse_support_card_hdr) @ 0x440064c8 (size=197 B, req=0x440064c8) ===
+// Callers (1): 0x44004a50
+// Referenced strings/literals:
+//   0x44034172: 'check address = 0x%X, data = 0x%X\n'
+//   0x44034156: 'first data = 0x%02X 0x%02X\n'
+undefined4 parse_support_card_hdr(byte *param_1,undefined4 *param_2)
+
+{
+  undefined1 *puVar1;
+  uint *puVar2;
+  undefined1 auStack_4 [4];
+  
+  puVar1 = auStack_4;
+  if ((*param_1 == 0xdc) && (param_1[1] == 0x44)) {
+    *param_2 = *(undefined4 *)(param_1 + 0xc);
+    puVar2 = (uint *)(param_1 + 8);
+    if ((*puVar2 < 0x50000000) || (0x57ffffff < *puVar2)) {
+      uart0_printf(s_check_address___0x_X__data___0x__44034172,puVar2,*puVar2);
+      *(undefined4 *)(puVar1 + -0x14) = 0;
+    }
+  }
+  else {
+    uart0_printf(s_first_data___0x_02X_0x_02X_44034156,(uint)*param_1,(uint)param_1[1]);
+    *(undefined4 *)(puVar1 + -0x14) = 0;
+  }
+  return *(undefined4 *)(puVar1 + -0x14);
+}
+
+=== FUNC FUN_4400658d (support_card_jump_658d) @ 0x4400658d (size=47 B, req=0x4400658d) ===
+// Callers (1): 0x4400688a
+int FUN_4400658d(int param_1)
+
+{
+  return *(int *)(param_1 + 8) + -8;
+}
+
+=== FUNC fmu_sd_dispatcher (fmu_sd_dispatcher) @ 0x440065bc (size=614 B, req=0x440065bc) ===
+// Callers (2): 0x44004ad9, 0x44004af1
+// Referenced strings/literals:
+//   0x44034195: 'Conveyer firm boot mode...\n'
+//   0x440341b1: 'Clear update data.\n'
+//   0x440341c5: 'HDD_MAX_LBA get failed[0x%X].\n'
+//   0x440341e4: 'mainsoft data is invalid, so set update flag.\n'
+void fmu_sd_dispatcher(char param_1)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_4;
+  if (param_1 == '\x02') {
+    FUN_44006cd9(0,2);
+  }
+  uVar2 = FUN_4400934f();
+  puVar1[-1] = uVar2;
+  if ((puVar1[-1] == 0) &&
+     (FUN_440093d4(0x402,1,(int)puVar1 + -0x11), *(char *)((int)puVar1 + -0x11) == 'U')) {
+    uart0_printf(s_Conveyer_firm_boot_mode____44034195);
+    FUN_44006cd9(0,2);
+  }
+  uVar2 = FUN_44007fa1();
+  puVar1[-1] = uVar2;
+  puVar1[-9] = 0;
+  while ((uint)puVar1[-9] < 0xc) {
+    if (puVar1[-9] != 0xb) {
+      uVar2 = FUN_44008075(puVar1[-9]);
+      puVar1[-2] = uVar2;
+      if (puVar1[-2] == 1) break;
+    }
+    puVar1[-9] = puVar1[-9] + 1;
+  }
+  uVar2 = FUN_44008040();
+  puVar1[-3] = uVar2;
+  if ((puVar1[-3] == 1) && (puVar1[-2] == 1)) {
+    FUN_44006cd9(0,*(undefined1 *)(puVar1 + 2));
+  }
+  if ((puVar1[-3] == 1) || (puVar1[-2] == 1)) {
+    uart0_printf(s_Clear_update_data__440341b1);
+    FUN_44007ea9();
+    FUN_44007f1c();
+  }
+  FUN_44005ed3();
+  FUN_44006216();
+  FUN_4400629a();
+  FUN_44009741(0,1);
+  uVar2 = FUN_44009ea7();
+  puVar1[-1] = uVar2;
+  if (puVar1[-1] == 0) {
+    uVar2 = FUN_440068f5(0x10000,puVar1 + -10,puVar1 + -8);
+    puVar1[-1] = uVar2;
+    if (puVar1[-1] == 1) {
+      puVar1[-4] = puVar1[-10];
+      uVar2 = FUN_44006822(puVar1[-4]);
+      puVar1[-1] = uVar2;
+      if (puVar1[-1] == 0) {
+        puVar1[-3] = 1;
+      }
+      else {
+        puVar1[-3] = 0;
+      }
+    }
+    else {
+      puVar1[-3] = 0;
+    }
+    if (puVar1[-3] != 1) {
+      if ((uint)puVar1[-7] < 0x20000) {
+        puVar1[-1] = 3;
+      }
+      else {
+        uVar2 = FUN_440068f5(puVar1[-7] + -0x20000,puVar1 + -10,puVar1 + -8);
+        puVar1[-1] = uVar2;
+        if (puVar1[-1] == 1) {
+          puVar1[-4] = puVar1[-10];
+          uVar2 = FUN_44006822(puVar1[-4]);
+          puVar1[-1] = uVar2;
+        }
+        else {
+          puVar1[-1] = 3;
+        }
+        if (puVar1[-1] == 0) {
+          FUN_44006ae4(puVar1[-7] + -0x20000,0x10000,puVar1[-8]);
+        }
+      }
+    }
+  }
+  else {
+    puVar1[-7] = 0;
+    uart0_printf(s_HDD_MAX_LBA_get_failed_0x_X___440341c5,puVar1[-1]);
+    puVar1[-1] = 3;
+  }
+  if (puVar1[-1] == 0) {
+    FUN_440062c4();
+    FUN_4400f2d5();
+    puVar1[-6] = puVar1[-4];
+    (*(code *)puVar1[-6])();
+  }
+  else {
+    uart0_printf(s_mainsoft_data_is_invalid__so_set_440341e4);
+    FUN_44007fff();
+    FUN_44008027(2);
+  }
+  FUN_44006cd9(1,*(undefined1 *)(puVar1 + 2));
+  return;
+}
+
+=== FUNC FUN_44006822 (hdd_hdr_check_6822) @ 0x44006822 (size=211 B, req=0x44006822) ===
+// Callers (2): 0x4400671c, 0x44006786
+// Referenced strings/literals:
+//   0x44034213: 'mainsoft-check: error! check address = 0x%x, out of range.\n'
+//   0x44034286: 'Main address = 0x%08X\nMainsoft version = %s\n'
+//   0x440342b3: 'mainsoft-check: error! check data invalid.\n'
+//   0x4403424f: 'mainsoft-check: error! check address = 0x%x, invalid.\n'
+undefined4 FUN_44006822(int param_1)
+
+{
+  undefined4 uVar1;
+  undefined4 *puVar2;
+  uint uVar3;
+  undefined4 uStack_4;
+  
+  puVar2 = &uStack_4;
+  uVar3 = *(uint *)(param_1 + 8);
+  if ((uVar3 < 0x50000000) || (0x57ffffff < uVar3)) {
+    uart0_printf(s_mainsoft_check__error__check_add_44034213,uVar3);
+    puVar2[-4] = 1;
+  }
+  else if ((uVar3 & 3) == 0) {
+    uVar1 = FUN_4400658d(param_1);
+    uart0_printf(s_Main_address___0x_08X_Mainsoft_v_44034286,puVar2[2],uVar1);
+    puVar2[-3] = 1;
+    puVar2[-1] = 0;
+    while ((int)puVar2[-1] < 0x20) {
+      if (*(int *)puVar2[-2] != puVar2[-3]) {
+        uart0_printf(s_mainsoft_check__error__check_dat_440342b3,*(int *)puVar2[-2],uVar1);
+        puVar2[-4] = 3;
+        goto LAB_440068ed;
+      }
+      puVar2[-2] = puVar2[-2] + 4;
+      puVar2[-3] = puVar2[-3] * 2;
+      puVar2[-1] = puVar2[-1] + 1;
+    }
+    puVar2[-4] = 0;
+  }
+  else {
+    uart0_printf(s_mainsoft_check__error__check_add_4403424f,uVar3);
+    puVar2[-4] = 2;
+  }
+LAB_440068ed:
+  return puVar2[-4];
+}
+
+=== FUNC FUN_440068f5 (hdd_load_mainsoft_68f5) @ 0x440068f5 (size=495 B, req=0x440068f5) ===
+// Callers (2): 0x44006704, 0x4400676e
+// Referenced strings/literals:
+//   0x4403430b: 'Error! Not main compress header.\n'
+//   0x4403432d: 'sector = 0x%X , address = 0x%X , size = 0x%X\n'
+//   0x440343ab: 'Mainsoft data uncompress failed.\n'
+//   0x440343cd: 'Error! Not main compress.\n'
+//   0x44034382: 'Error! Failed[0x%X] read main from HDD.\n'
+//   0x4403435b: 'Error! Read sector num[%u] over flow.\n'
+//   0x440342df: 'Error! Failed[0x%X] to read main from HDD.\n'
+undefined4 FUN_440068f5(undefined4 param_1)
+
+{
+  undefined4 *puVar1;
+  undefined4 *puVar2;
+  undefined4 uVar3;
+  int iVar4;
+  undefined4 uStack_8;
+  undefined4 uStack_4;
+  
+  puVar2 = &uStack_8;
+  uVar3 = FUN_4400a00a(0,param_1,200);
+  puVar2[-7] = uVar3;
+  if (puVar2[-7] == 0) {
+    FUN_4400a666(&DAT_90c00000,0x19000);
+    uVar3 = FUN_4400b52e(&DAT_90c00000);
+    puVar2[-1] = uVar3;
+    if (puVar2[-1] == 0) {
+      uart0_printf(s_Error__Not_main_compress_header__4403430b);
+      puVar2[-9] = 0;
+    }
+    else {
+      puVar1 = (undefined4 *)puVar2[4];
+      uVar3 = FUN_4400b61a(&DAT_90c00000);
+      *puVar1 = uVar3;
+      uVar3 = FUN_4400b5e1(&DAT_90c00000);
+      puVar2[-3] = uVar3;
+      uVar3 = FUN_4400b4ab(&DAT_90c00000,0);
+      puVar2[-5] = uVar3;
+      uVar3 = FUN_4400b5b5(&DAT_90c00000);
+      puVar2[-2] = uVar3;
+      uart0_printf(s_sector___0x_X___address___0x_X___4403432d,puVar2[3],*(undefined4 *)puVar2[4],
+                   puVar2[-5]);
+      puVar2[-6] = puVar2[-5] & 7;
+      if (puVar2[-6] != 0) {
+        puVar2[-6] = 8 - puVar2[-6];
+      }
+      puVar2[-6] = puVar2[-5] + puVar2[-6];
+      *(uint *)puVar2[5] = puVar2[-6] + 0x1ff >> 9;
+      puVar2[-8] = (puVar2[-6] + 0x1ff >> 9) - 200;
+      puVar2[-4] = puVar2[-4] + 0x19000;
+      puVar2[3] = puVar2[3] + 200;
+      if ((uint)puVar2[-8] < 0x10001) {
+        uVar3 = FUN_4400a00a(puVar2[-4],puVar2[3],puVar2[-8]);
+        puVar2[-7] = uVar3;
+        if (puVar2[-7] == 0) {
+          FUN_4400a666(puVar2[-6] + -0x6f419000,0x19000);
+          if (puVar2[-2] == 1) {
+            iVar4 = FUN_4400b6c6(&DAT_90c00000);
+            if (iVar4 == 1) {
+              puVar2[-9] = 1;
+            }
+            else {
+              uart0_printf(s_Mainsoft_data_uncompress_failed__440343ab);
+              puVar2[-9] = 0;
+            }
+          }
+          else {
+            uart0_printf(s_Error__Not_main_compress__440343cd);
+            puVar2[-9] = 0;
+          }
+        }
+        else {
+          uart0_printf(s_Error__Failed_0x_X__read_main_fr_44034382,puVar2[-7]);
+          puVar2[-9] = 0;
+        }
+      }
+      else {
+        uart0_printf(s_Error__Read_sector_num__u__over_f_4403435b,puVar2[-8]);
+        puVar2[-9] = 0;
+      }
+    }
+  }
+  else {
+    uart0_printf(s_Error__Failed_0x_X__to_read_main_440342df,puVar2[-7]);
+    puVar2[-9] = 0;
+  }
+  return puVar2[-9];
+}
+
+=== FUNC FUN_44006ae4 (hdd_inner_recovery_6ae4) @ 0x44006ae4 (size=501 B, req=0x44006ae4) ===
+// Callers (1): 0x440067b2
+// Referenced strings/literals:
+//   0x440343e8: 'HDD INNER SECTOR MAIN RECOVERY START.\n'
+//   0x4403440f: 'Error! Failed[0x%X] write to HDD.\n'
+//   0x44034432: 'Error! Failed[0x%X] read to HDD.\n'
+//   0x44034454: 'Verify error.\n'
+//   0x440342df: 'Error! Failed[0x%X] to read main from HDD.\n'
+//   0x44034463: 'Recovery history = (total:%u , ok:%u , ng:%u).\n'
+//   0x44034493: 'HDD INNER SECTOR MAIN RECOVERY SUCCESS.\n'
+//   0x440344bc: 'HDD INNER SECTOR MAIN RECOVERY FAILED.\n'
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+void FUN_44006ae4(void)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_4;
+  uart0_printf(s_HDD_INNER_SECTOR_MAIN_RECOVERY_S_440343e8);
+  uVar2 = FUN_4400a00a(0,puVar1[2],puVar1[4]);
+  puVar1[-2] = uVar2;
+  if (puVar1[-2] == 0) {
+    puVar1[-3] = 0;
+    while ((uint)puVar1[-3] < 3) {
+      uVar2 = FUN_4400a0b0(0,puVar1[3],puVar1[4]);
+      puVar1[-2] = uVar2;
+      if (puVar1[-2] != 0) {
+        uart0_printf(s_Error__Failed_0x_X__write_to_HDD_4403440f,puVar1[-2]);
+        break;
+      }
+      uVar2 = FUN_4400a00a(0x1000000,puVar1[3],puVar1[4]);
+      puVar1[-2] = uVar2;
+      if (puVar1[-2] != 0) {
+        uart0_printf(s_Error__Failed_0x_X__read_to_HDD__44034432,puVar1[-2]);
+        break;
+      }
+      uVar2 = FUN_4402c2b7(&DAT_90c00000,&DAT_91c00000,puVar1[4] << 9);
+      puVar1[-2] = uVar2;
+      if (puVar1[-2] == 0) break;
+      uart0_printf(s_Verify_error__44034454);
+      puVar1[-3] = puVar1[-3] + 1;
+    }
+  }
+  else {
+    uart0_printf(s_Error__Failed_0x_X__to_read_main_440342df,puVar1[-2]);
+  }
+  uVar2 = FUN_4400920b(0x50480016);
+  puVar1[-1] = uVar2;
+  if (puVar1[-1] == 0) {
+    if (puVar1[-3] == 0xc) {
+      uVar2 = nvram_read_8634(0x50480016,&DAT_505180ac);
+      puVar1[-1] = uVar2;
+      if (puVar1[-1] != 0) {
+        FUN_4402c348(&DAT_505180ac,0,0xc);
+      }
+    }
+    else {
+      FUN_4402c348(&DAT_505180ac,0,0xc);
+    }
+    if (puVar1[-2] == 0) {
+      _DAT_505180ac = _DAT_505180ac + 1;
+    }
+    else {
+      _DAT_505180b0 = _DAT_505180b0 + 1;
+    }
+    _DAT_505180b4 = _DAT_505180b4 + 1;
+    uart0_printf(s_Recovery_history____total__u___o_44034463,_DAT_505180b4,_DAT_505180ac,
+                 _DAT_505180b0);
+    uVar2 = FUN_440090a6(0x50480016,&DAT_505180ac,0xc);
+    puVar1[-1] = uVar2;
+    if (puVar1[-2] == 0) {
+      uart0_printf(s_HDD_INNER_SECTOR_MAIN_RECOVERY_S_44034493);
+    }
+    else {
+      uart0_printf(s_HDD_INNER_SECTOR_MAIN_RECOVERY_F_440344bc);
+    }
+  }
+  return;
+}
+
+=== FUNC FUN_44006cd9 (boot_route_cd_sd_6cd9) @ 0x44006cd9 (size=777 B, req=0x44006cd9) ===
+// Callers (4): 0x440065ec, 0x4400662d, 0x4400668b, 0x44006816
+// Referenced strings/literals:
+//   0x440344e4: '\n!!! start fmu to read & exec fvu. !!!\n'
+//   0x4403450c: '\n*** start diag ***\n'
+//   0x44034521: 'error! startup reason is invalid.\n'
+//   0x44034544: 'error! drive-firm maybe destroyed, so power off.\n'
+//   0x44034576: 'Read fvu program from Update-Disk to 0x%x.\n'
+//   0x440345a2: 'success to read fvu program from Update-Disc.\n'
+//   0x440345d1: 'fvu size over 0x%X.\n'
+//   0x440345e6: 'fvu uncompress start...\n'
+//   0x440345ff: 'fvu uncompress failed...\n'
+//   0x44034619: 'fvu is preserved with fvu.\n'
+//   0x44034635: '\n*** start fvu ***\n'
+/* WARNING: Control flow encountered bad instruction data */
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+void FUN_44006cd9(void)
+
+{
+  undefined4 *puVar1;
+  int iVar2;
+  undefined4 uVar3;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_4;
+  uart0_printf(s_____start_fmu_to_read___exec_fvu_440344e4);
+  _DAT_50503760 = 0;
+  _DAT_5050375c = 0;
+  _DAT_50501514 = 0;
+  _DAT_5048025c = 1;
+  FUN_44005ed3();
+  FUN_44006216();
+  FUN_4400629a();
+  FUN_4400531a();
+  FUN_4400b344();
+  if (puVar1[2] == 1) {
+    FUN_440054aa(300,0x50480255);
+  }
+  if (*(char *)(puVar1 + 3) == '\x02') {
+    FUN_44009741(0,0);
+  }
+  else {
+    FUN_44009741(1,0);
+  }
+  _DAT_5056b5f8 = 1;
+  if (*(char *)(puVar1 + 3) == '\x02') {
+    FUN_44007ba5();
+    nvram_read_id(0xb,puVar1 + -6,0xffffffff);
+    if (puVar1[-6] != 0) {
+      FUN_4400a4c5();
+    }
+    FUN_440062c4();
+    FUN_4400f2d5();
+    uart0_printf(s_____start_diag_____4403450c);
+  }
+  else {
+    iVar2 = FUN_44008075(0xd);
+    if (((((iVar2 != 1) && (iVar2 = FUN_44008075(0xe), iVar2 != 1)) &&
+         (iVar2 = FUN_44008075(3), iVar2 != 1)) &&
+        ((iVar2 = FUN_44008075(0x10), iVar2 != 1 && (iVar2 = FUN_44008075(0x13), iVar2 != 1)))) &&
+       ((puVar1[2] == 0 && (*(char *)((int)puVar1 + -0xf) != '\x04')))) {
+      uart0_printf(s_error__startup_reason_is_invalid_44034521);
+      FUN_44007f1c();
+      FUN_44007ea9();
+      FUN_440079a4();
+    }
+    if (((*(char *)((int)puVar1 + -0xf) != '\x04') && (puVar1[2] == 0)) &&
+       (iVar2 = FUN_44008075(0x11), iVar2 == 1)) {
+      puVar1[-3] = 1;
+    }
+    puVar1[-2] = 0;
+    uVar3 = FUN_440084d9(0x504800af);
+    puVar1[-1] = uVar3;
+    if ((puVar1[-1] == 0) && (iVar2 = uncompress(0x84050000), iVar2 == 1)) {
+      puVar1[-2] = 1;
+    }
+    if (puVar1[-2] == 0) {
+      if ((puVar1[-3] == 0) && (iVar2 = FUN_44008075(0xd), iVar2 == 1)) {
+        uart0_printf(s_error__drive_firm_maybe_destroye_44034544);
+        FUN_44007f1c();
+        FUN_44007ea9();
+        FUN_44007836(0x50480239,0x50480232);
+      }
+      uart0_printf(s_Read_fvu_program_from_Update_Dis_44034576,&DAT_90400000);
+      if (puVar1[2] == 0) {
+        FUN_440054aa(300,0x504801ec);
+      }
+      _DAT_5050375c = 0;
+      _DAT_50503760 = 0;
+      _DAT_50501514 = 0;
+      uVar3 = FUN_44006fe7(puVar1[2],puVar1[-3]);
+      puVar1[-5] = uVar3;
+      uart0_printf(s_success_to_read_fvu_program_from_440345a2);
+      if (0x20000 < (uint)puVar1[-5]) {
+        uart0_printf(s_fvu_size_over_0x_X__440345d1,0x20000);
+        FUN_44007f1c();
+        FUN_44007ea9();
+        boot_panic_or_halt_7812();
+      }
+      uart0_printf(s_fvu_uncompress_start____440345e6);
+      iVar2 = uncompress(&DAT_93fc0000);
+      if (iVar2 != 1) {
+        uart0_printf(s_fvu_uncompress_failed____440345ff);
+        FUN_44007f1c();
+        FUN_44007ea9();
+        boot_panic_or_halt_7812();
+      }
+      uart0_printf(s_fvu_is_preserved_with_fvu__44034619);
+    }
+    nvram_read_id(0xb,puVar1 + -6,0xffffffff);
+    if (puVar1[-6] != 0) {
+      FUN_4400a4c5();
+    }
+    FUN_440062c4();
+    FUN_4400f2d5();
+    uart0_printf(s_____start_fvu_____44034635);
+  }
+                    /* WARNING: Bad instruction - Truncating control flow here */
+  halt_baddata();
+}
+
+=== FUNC FUN_44006fe7 (media_update_gate_6fe7) @ 0x44006fe7 (size=1093 B, req=0x44006fe7) ===
+// Callers (1): 0x44006f11
+// Referenced strings/literals:
+//   0x44034649: 'error! cannot read DeviceInfo-file from Nand-FROM.\n'
+//   0x4403467d: 'SD card check start\n'
+//   0x44034692: '[SD] Power failer recovery mode. But, SD read failed[0x%X].\n'
+//   0x440346cf: 'SD info get failed[%d]. But, DVD-RAM/CD verup check start.\n'
+//   0x440347ab: 'MATSHITA DVD-RAM RECORDER'
+//   0x440347c5: '300h = %s\n'
+//   0x440347d0: 'treat as DVD-RAM.\n'
+//   0x440347e3: 'treat as CD-R.\n'
+//   0x44034786: 'treat as SD.\n'
+//   0x44034794: 'FAT Close failed[%d].\n'
+//   0x4403470b: 'Failed to read fvu.\n'
+//   0x44034720: '!!! Insert Update-Disc !!!\n'
+//   0x4403473c: 'Timout for waiting for insert Update-Disc.\n'
+//   0x44034768: 'closed tray.\n'
+//   0x44034776: 'startup drive.\n'
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+undefined4 FUN_44006fe7(void)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  int iVar3;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_4;
+  uVar2 = FUN_4400934f();
+  puVar1[-2] = uVar2;
+  if (puVar1[-2] != 0) {
+    uart0_printf(s_error__cannot_read_DeviceInfo_fi_44034649);
+    FUN_44007f1c();
+    FUN_44007ea9();
+    boot_panic_or_halt_7812();
+  }
+  FUN_4402c348(puVar1 + -0xc,0,8);
+  FUN_440093d4(4,8,puVar1 + -0xc);
+  FUN_440093d4(0xc,1,(int)puVar1 + -10);
+  uVar2 = FUN_44008075(0x11);
+  puVar1[-2] = uVar2;
+  if ((puVar1[-2] == 1) || (puVar1[2] == 1)) {
+    uart0_printf(s_SD_card_check_start_4403467d);
+    uVar2 = FUN_44007e48((int)puVar1 + -9,puVar1[2],puVar1[3]);
+    puVar1[-2] = uVar2;
+    if (puVar1[-2] != 0) {
+      if (puVar1[3] == 1) {
+        uart0_printf(s__SD__Power_failer_recovery_mode__44034692,puVar1[-2]);
+        FUN_440079a4();
+      }
+      else {
+        uart0_printf(s_SD_info_get_failed__d___But__DVD_440346cf,puVar1[-2]);
+      }
+    }
+  }
+  if (*(char *)((int)puVar1 + -9) == '\0') goto LAB_440070e0;
+  do {
+    if (puVar1[2] == 1) {
+      FUN_440054aa(300,0x504801ec);
+    }
+    _DAT_50501518 = 0;
+    if (*(char *)((int)puVar1 + -9) != '\x01') {
+      FUN_44010760(0,puVar1 + -10,0x1a,0);
+      *(undefined1 *)((int)puVar1 + -0xf) = 0;
+      iVar3 = FUN_4402c420(puVar1 + -10,s_MATSHITA_DVD_RAM_RECORDER_440347ab,0x19);
+      if (iVar3 == 0) {
+        uart0_printf(s_300h____s_440347c5);
+        uart0_printf(s_treat_as_DVD_RAM__440347d0);
+        uVar2 = FUN_4400742c(puVar1 + -0xc,*(undefined1 *)((int)puVar1 + -10));
+        puVar1[-0xd] = uVar2;
+        iVar3 = puVar1[-0xd];
+      }
+      else {
+        uart0_printf(s_treat_as_CD_R__440347e3);
+        uVar2 = FUN_440075aa(puVar1 + -0xc,*(undefined1 *)((int)puVar1 + -10));
+        puVar1[-0xd] = uVar2;
+        iVar3 = puVar1[-0xd];
+      }
+      if (iVar3 == 0) goto LAB_44007126;
+      goto LAB_44007424;
+    }
+    uVar2 = FUN_4400a8c7();
+    puVar1[-2] = uVar2;
+    if (puVar1[-2] == 1) {
+LAB_44007319:
+      uart0_printf(s_treat_as_SD__44034786);
+      uVar2 = FUN_44007a12(puVar1 + -0xc,*(undefined1 *)((int)puVar1 + -10));
+      puVar1[-0xd] = uVar2;
+      if (puVar1[-0xd] != 0) goto LAB_44007388;
+      uVar2 = FUN_4400c984(_DAT_50501730);
+      puVar1[-2] = uVar2;
+      if (puVar1[-2] != 0) {
+        uart0_printf(s_FAT_Close_failed__d___44034794,puVar1[-2]);
+      }
+      if (puVar1[3] == 1) {
+        uart0_printf(s__SD__Power_failer_recovery_mode__44034692,puVar1[-2]);
+        FUN_440079a4();
+LAB_44007388:
+        FUN_44008027(0x11);
+LAB_44007424:
+        return puVar1[-0xd];
+      }
+      *(undefined1 *)((int)puVar1 + -9) = 0;
+    }
+    else {
+      if (puVar1[3] == 1) {
+        uart0_printf(s__SD__Power_failer_recovery_mode__44034692,puVar1[-2]);
+        FUN_440079a4();
+        goto LAB_44007319;
+      }
+      *(undefined1 *)((int)puVar1 + -9) = 0;
+    }
+LAB_440070e0:
+    iVar3 = startup_drive(1);
+    if (iVar3 != 0) {
+      FUN_44007722();
+    }
+    _DAT_50501518 = 0;
+    FUN_44009a3e(0,0x300,1);
+    while (iVar3 = FUN_44009a3e(0,0x300,1), iVar3 != 0) {
+      _DAT_50501518 = 1;
+LAB_44007126:
+      uart0_printf(s_Failed_to_read_fvu__4403470b);
+      if (_DAT_50503760 == 1) {
+        puVar1[-1] = 1;
+      }
+      FUN_44007789(puVar1[-1]);
+      uart0_printf(s_____Insert_Update_Disc_____44034720);
+      _DAT_50501514 = 0;
+      _DAT_50501518 = 1;
+      _DAT_50503760 = 0;
+      puVar1[-0xe] = 0x3c;
+      while (puVar1[-0xe] != 0) {
+        if (puVar1[2] == 0) {
+          puVar1[-0xf] = puVar1[-0xe] & 3;
+          if (puVar1[-0xf] == 0) {
+            FUN_440054aa(6,0x504801f3);
+          }
+          else if (puVar1[-0xf] == 2) {
+            FUN_440054aa(6,0x504801fa);
+          }
+        }
+        if (_DAT_50501514 == 1) {
+          iVar3 = FUN_44009c85();
+          if (iVar3 == 0) {
+            _DAT_50501518 = 0;
+          }
+          _DAT_50501514 = 0;
+        }
+        uVar2 = FUN_44009835();
+        puVar1[-2] = uVar2;
+        if (puVar1[-2] == 0) break;
+        if (((undefined *)puVar1[-2] == &DAT_80023a00) && (_DAT_50501518 == 0)) {
+          _DAT_50501518 = 1;
+          FUN_44009bd7();
+        }
+        if (_DAT_50503760 == 1) {
+          FUN_44007f1c();
+          FUN_44007ea9();
+          FUN_440079a4();
+        }
+        delay_ms(1000);
+        puVar1[-0xe] = puVar1[-0xe] + -1;
+      }
+      if (puVar1[-0xe] == 0) {
+        uart0_printf(s_Timout_for_waiting_for_insert_Up_4403473c);
+        puVar1[-1] = 1;
+        FUN_44007f1c();
+        FUN_44007ea9();
+        FUN_440079a4();
+      }
+      _DAT_50503760 = 0;
+      _DAT_50501518 = 0;
+      _DAT_5048025c = 1;
+      uart0_printf(s_closed_tray__44034768);
+      uart0_printf(s_startup_drive__44034776);
+      iVar3 = startup_drive(0);
+      if (iVar3 != 0) {
+        FUN_44007722();
+      }
+    }
+  } while( true );
+}
+
+=== FUNC boot_panic_or_halt_7812 (boot_panic_or_halt_7812) @ 0x44007812 (size=36 B, req=0x44007812) ===
+// Callers (12): 0x44004a3c, 0x44004a86, 0x44004ace, 0x44004afa, 0x44006f52, 0x44006f91, 0x4400702b, 0x44007edc, 0x44007f10, 0x44007f51, 0x44007f87, 0x44007fd7
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+void boot_panic_or_halt_7812(void)
+
+{
+  _DAT_50480cc4 = 1;
+  FUN_44007836(0x50480240,0x50480240);
+  return;
+}
+
+=== FUNC FUN_44007836 (vfd_u99_open_tray_7836) @ 0x44007836 (size=366 B, req=0x44007836) ===
+// Callers (4): 0x44006ec7, 0x4400774f, 0x44007808, 0x4400782c
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+void FUN_44007836(void)
+
+{
+  undefined1 *puVar1;
+  undefined *puVar2;
+  undefined1 auStack_4 [4];
+  
+  puVar1 = auStack_4;
+  if (_DAT_5056b5f8 == 0) {
+    _DAT_50503760 = 0;
+    _DAT_5050375c = 0;
+    _DAT_50501514 = 0;
+    _DAT_5048025c = 1;
+    FUN_44005ed3();
+    FUN_4400531a();
+    FUN_44006216();
+    FUN_4400629a();
+    FUN_4400597e(0);
+    FUN_440056b1(0x80,0);
+    FUN_4400592c(2);
+    _DAT_5056b5f8 = 1;
+    FUN_440056b1(0x81,1);
+    FUN_44005cd0();
+    FUN_440057f3();
+    FUN_44009741(1,1);
+  }
+  _DAT_50503760 = 0;
+  _DAT_5050375c = 0;
+  _DAT_50501514 = 0;
+  if (_DAT_50480cc4 == 1) {
+    FUN_440058d0();
+    FUN_440054aa(0,*(undefined4 *)(puVar1 + 8));
+  }
+  else {
+    FUN_440054cc(*(undefined4 *)(puVar1 + 8),*(undefined4 *)(puVar1 + 0xc));
+    FUN_44005662(300);
+  }
+  FUN_44009c85();
+  startup_drive(0);
+  puVar2 = (undefined *)FUN_44009835();
+  if (puVar2 != &DAT_80023a00) {
+    _DAT_50501518 = 1;
+    FUN_44009bd7();
+  }
+  while (_DAT_50503760 == 0) {
+    delay_ms(0x32);
+  }
+  if (_DAT_50501518 == 1) {
+    FUN_44009c85();
+    startup_drive(0);
+    puVar2 = (undefined *)FUN_44009835();
+    if (puVar2 != &DAT_80023a00) {
+      _DAT_50501518 = 1;
+      FUN_44009bd7();
+    }
+  }
+  FUN_440079a4();
+  return;
+}
+
+=== FUNC FUN_440079a4 (power_off_or_halt_79a4) @ 0x440079a4 (size=110 B, req=0x440079a4) ===
+// Callers (15): 0x44006e2b, 0x440070bf, 0x4400722e, 0x4400726f, 0x4400730b, 0x4400737a, 0x4400777f, 0x4400799a, 0x44007bf3, 0x44007c42, 0x44007cc0, 0x44007d32, 0x44007db7, 0x44007e36, 0x44007e9c
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+void FUN_440079a4(void)
+
+{
+  if (_DAT_5056b5f8 == 0) {
+    FUN_44005ed3();
+    FUN_4400531a();
+    FUN_44006216();
+    FUN_4400629a();
+    FUN_4400597e(0);
+    FUN_440056b1(0x80,0);
+    FUN_440056b1(0x81,1);
+    FUN_44005cd0();
+    FUN_44009741(1,1);
+    _DAT_5056b5f8 = 1;
+  }
+  FUN_44005896();
+  do {
+                    /* WARNING: Do nothing block with infinite loop */
+  } while( true );
+}
+
+=== FUNC FUN_44007ea9 (bgo_flag_clear_7ea9) @ 0x44007ea9 (size=115 B, req=0x44007ea9) ===
+// Callers (12): 0x440066af, 0x44006e24, 0x44006eb4, 0x44006f4b, 0x44006f8a, 0x44007024, 0x44007227, 0x44007268, 0x4400773c, 0x44007778, 0x440077f5, 0x44007e95
+void FUN_44007ea9(void)
+
+{
+  undefined4 *puVar1;
+  int iVar2;
+  undefined4 uVar3;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_4;
+  iVar2 = FUN_440084d9(0x504800a6);
+  if (iVar2 == 0) {
+    uVar3 = FUN_44008b02(0x504800a6,0,0);
+    puVar1[-1] = uVar3;
+    if (puVar1[-1] != 0) {
+      boot_panic_or_halt_7812();
+    }
+  }
+  iVar2 = FUN_440084d9(0x504800af);
+  if (iVar2 == 0) {
+    uVar3 = FUN_44008b02(0x504800af,0,0);
+    puVar1[-1] = uVar3;
+    if (puVar1[-1] != 0) {
+      boot_panic_or_halt_7812();
+    }
+  }
+  return;
+}
+
+=== FUNC FUN_44007f1c (bgo_flag_clear2_7f1c) @ 0x44007f1c (size=65 B, req=0x44007f1c) ===
+// Callers (13): 0x440066b6, 0x44006e1d, 0x44006ead, 0x44006f44, 0x44006f83, 0x4400701d, 0x44007220, 0x44007261, 0x44007735, 0x44007771, 0x440077ee, 0x44007e8e, 0x44007fe7
+void FUN_44007f1c(void)
+
+{
+  undefined1 *puVar1;
+  undefined4 uVar2;
+  undefined1 auStack_4 [4];
+  
+  puVar1 = auStack_4;
+  FUN_4402c348(&DAT_50480cdc,0,0x30);
+  uVar2 = FUN_44008b02(0x5048009d,0,0);
+  *(undefined4 *)(puVar1 + -4) = uVar2;
+  if (*(int *)(puVar1 + -4) != 0) {
+    boot_panic_or_halt_7812();
+  }
+  return;
+}
+
+=== FUNC FUN_44007fa1 (bgo_status_7fa1) @ 0x44007fa1 (size=94 B, req=0x44007fa1) ===
+// Callers (1): 0x44006634
+undefined4 FUN_44007fa1(void)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_4;
+  FUN_4402c348(&DAT_50480cdc,0,0x30);
+  uVar2 = nvram_read_8634(0x5048009d,&DAT_50480cdc);
+  puVar1[-1] = uVar2;
+  if (puVar1[-1] == -1) {
+    boot_panic_or_halt_7812();
+  }
+  else if (puVar1[-1] == -2) {
+    FUN_44007f1c();
+    puVar1[-2] = 0;
+    goto LAB_44007ff7;
+  }
+  puVar1[-2] = 1;
+LAB_44007ff7:
+  return puVar1[-2];
+}
+
+=== FUNC FUN_44008075 (bgo_update_loop_8075) @ 0x44008075 (size=409 B, req=0x44008075) ===
+// Callers (9): 0x44006653, 0x44006dc3, 0x44006dd0, 0x44006ddd, 0x44006dea, 0x44006df7, 0x44006e40, 0x44006e95, 0x44007065
+undefined4 FUN_44008075(undefined4 param_1)
+
+{
+  undefined4 uStack_8;
+  
+  uStack_8 = 0;
+  switch(param_1) {
+  case 0:
+    if (DAT_50480ce4 != '\0') {
+      uStack_8 = 1;
+    }
+    break;
+  case 1:
+    if (DAT_50480ce9 != '\0') {
+      uStack_8 = 1;
+    }
+    break;
+  case 2:
+    if (DAT_50480ce5 != '\0') {
+      uStack_8 = 1;
+    }
+    break;
+  case 3:
+    if (DAT_50480ce6 != '\0') {
+      uStack_8 = 1;
+    }
+    break;
+  case 4:
+    if (DAT_50480ce8 != '\0') {
+      uStack_8 = 1;
+    }
+    break;
+  case 5:
+    if (DAT_50480ce7 != '\0') {
+      uStack_8 = 1;
+    }
+    break;
+  case 6:
+    if (DAT_50480cea != '\0') {
+      uStack_8 = 1;
+    }
+    break;
+  case 7:
+    if (DAT_50480ceb != '\0') {
+      uStack_8 = 1;
+    }
+    break;
+  case 8:
+    if (DAT_50480cec != '\0') {
+      uStack_8 = 1;
+    }
+    break;
+  case 9:
+    if (DAT_50480ced != '\0') {
+      uStack_8 = 1;
+    }
+    break;
+  case 10:
+    if (DAT_50480cf5 != '\0') {
+      uStack_8 = 1;
+    }
+    break;
+  case 0xd:
+    if (DAT_50480cef != '\0') {
+      uStack_8 = 1;
+    }
+    break;
+  case 0xe:
+    if (DAT_50480cf0 != '\0') {
+      uStack_8 = 1;
+    }
+    break;
+  case 0xf:
+    if (DAT_50480cee != '\0') {
+      uStack_8 = 1;
+    }
+    break;
+  case 0x10:
+    if (DAT_50480cf1 != '\0') {
+      uStack_8 = 1;
+    }
+    break;
+  case 0x11:
+    if (DAT_50480cf2 != '\0') {
+      uStack_8 = 1;
+    }
+    break;
+  case 0x12:
+    if (DAT_50480cf3 != '\0') {
+      uStack_8 = 1;
+    }
+    break;
+  case 0x13:
+    if (DAT_50480cf4 != '\0') {
+      uStack_8 = 1;
+    }
+  }
+  return uStack_8;
+}
+
+=== FUNC FUN_4400825c (bgo_flag_update_825c) @ 0x4400825c (size=275 B, req=0x4400825c) ===
+// Callers (1): 0x44008036
+undefined4 FUN_4400825c(undefined4 param_1,undefined1 param_2)
+
+{
+  undefined1 *puVar1;
+  undefined4 uVar2;
+  undefined1 auStack_4 [4];
+  
+  puVar1 = auStack_4;
+  switch(param_1) {
+  case 0:
+    DAT_50480ce4 = param_2;
+    break;
+  case 1:
+    DAT_50480ce9 = param_2;
+    break;
+  case 2:
+    DAT_50480ce5 = param_2;
+    break;
+  case 3:
+    DAT_50480ce6 = param_2;
+    break;
+  case 4:
+    DAT_50480ce8 = param_2;
+    break;
+  case 5:
+    DAT_50480ce7 = param_2;
+    break;
+  case 6:
+    DAT_50480cea = param_2;
+    break;
+  case 7:
+    DAT_50480ceb = param_2;
+    break;
+  case 8:
+    DAT_50480cec = param_2;
+    break;
+  case 9:
+    DAT_50480ced = param_2;
+    break;
+  case 10:
+    DAT_50480cf5 = param_2;
+    break;
+  case 0xd:
+    DAT_50480cef = param_2;
+    break;
+  case 0xe:
+    DAT_50480cf0 = param_2;
+    break;
+  case 0xf:
+    DAT_50480cee = param_2;
+    break;
+  case 0x10:
+    DAT_50480cf1 = param_2;
+    break;
+  case 0x11:
+    DAT_50480cf2 = param_2;
+    break;
+  case 0x12:
+    DAT_50480cf3 = param_2;
+    break;
+  case 0x13:
+    DAT_50480cf4 = param_2;
+  }
+  uVar2 = FUN_44007f5d();
+  *(undefined4 *)(puVar1 + -4) = uVar2;
+  return *(undefined4 *)(puVar1 + -4);
+}
+
+=== FUNC bgo_driver_init (bgo_driver_init) @ 0x4400836f (size=140 B, req=0x4400836f) ===
+// Callers (3): 0x44004a2b, 0x44004abd, 0x44004b14
+// Referenced strings/literals:
+//   0x44034bf0: 'BGO driver init failed[%u].\n'
+//   0x44034c0d: 'Control information init failed[%d].\n'
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+undefined4 bgo_driver_init(void)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_4;
+  if (_DAT_50480d0c != 1) {
+    FUN_440041dc(&DAT_50480000,&DAT_50480002);
+    uVar2 = FUN_44001c49(0,0,0);
+    puVar1[-1] = uVar2;
+    if (puVar1[-1] != 0) {
+      uart0_printf(s_BGO_driver_init_failed__u___44034bf0,puVar1[-1]);
+      puVar1[-3] = 0xffffffff;
+      goto LAB_440083f3;
+    }
+    uVar2 = FUN_44003fd0();
+    puVar1[-2] = uVar2;
+    if (puVar1[-2] != 0) {
+      uart0_printf(s_Control_information_init_failed__44034c0d,puVar1[-2]);
+      puVar1[-3] = 0xffffffff;
+      goto LAB_440083f3;
+    }
+    _DAT_50480d0c = 1;
+  }
+  puVar1[-3] = 0;
+LAB_440083f3:
+  return puVar1[-3];
+}
+
+=== FUNC nvram_read_8634 (nvram_read_8634) @ 0x44008634 (size=864 B, req=0x44008634) ===
+// Callers (4): 0x44004b36, 0x44006c05, 0x44007fc6, 0x440093aa
+// Referenced strings/literals:
+//   0x44034c63: 'Data read buffer pointer is NULL.\n'
+//   0x44034c86: 'ID invalid.\n'
+//   0x44034c93: 'ID[%d] read error[%u].\n'
+//   0x44034ccb: 'error!: uncompress() = %d\n'
+//   0x44034cab: 'Last data ID[%d] not equal %d.\n'
+//   0x44034c33: 'BGO driver no init.\n'
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+undefined4 nvram_read_8634(undefined4 param_1,int param_2)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_4;
+  if (_DAT_50480d0c == 1) {
+    if (param_2 == 0) {
+      uart0_printf(s_Data_read_buffer_pointer_is_NULL_44034c63);
+      puVar1[-9] = 0xffffffff;
+    }
+    else {
+      uVar2 = FUN_440084d9(param_1);
+      puVar1[-1] = uVar2;
+      if (puVar1[-1] == 0) {
+        uVar2 = FUN_440083fb(puVar1[2],(int)puVar1 + -6,puVar1 + -2);
+        puVar1[-1] = uVar2;
+        if (puVar1[-1] == 0) {
+          *(undefined2 *)((int)puVar1 + -10) =
+               *(undefined2 *)
+                (((uint)*(ushort *)((int)puVar1 + -6) * 0x20 + (uint)*(ushort *)(puVar1 + -2)) *
+                 0x10 + 0x505165e0);
+          puVar1[-5] = *(undefined4 *)
+                        (((uint)*(ushort *)((int)puVar1 + -6) * 0x20 +
+                         (uint)*(ushort *)(puVar1 + -2)) * 0x10 + 0x505165dc);
+          if (*(char *)(((uint)*(ushort *)((int)puVar1 + -6) * 0x20 + (uint)*(ushort *)(puVar1 + -2)
+                        ) * 0x10 + 0x505165e2) != -1) {
+            puVar1[3] = &DAT_50481514;
+          }
+          puVar1[-6] = puVar1[-5] & 0x1ff;
+          if (puVar1[-6] == 0) {
+            puVar1[-6] = 0x200;
+          }
+          *(short *)(puVar1 + -3) = (short)(puVar1[-5] + 0x1ff >> 9) + -1;
+          *(undefined2 *)((int)puVar1 + -0xe) = 0;
+          while (*(ushort *)((int)puVar1 + -0xe) < *(ushort *)(puVar1 + -3)) {
+            if (*(short *)((int)puVar1 + -10) == -1) {
+              uart0_printf(s_ID_invalid__44034c86);
+              puVar1[-9] = 0xffffffff;
+              goto LAB_4400898c;
+            }
+            uVar2 = FUN_44001c49(3,*(undefined2 *)((int)puVar1 + -10),
+                                 puVar1[3] + (uint)*(ushort *)((int)puVar1 + -0xe) * 0x200);
+            puVar1[-7] = uVar2;
+            if (puVar1[-7] != 0) {
+              uart0_printf(s_ID__d__read_error__u___44034c93,(uint)*(ushort *)((int)puVar1 + -10),
+                           puVar1[-7]);
+              puVar1[-9] = 0xffffffff;
+              goto LAB_4400898c;
+            }
+            *(short *)((int)puVar1 + -6) = (short)(*(ushort *)((int)puVar1 + -10) + 0xff >> 8);
+            *(short *)((int)puVar1 + -6) = *(short *)((int)puVar1 + -6) + -1;
+            *(ushort *)(puVar1 + -2) = *(short *)((int)puVar1 + -10) - 1U & 0xff;
+            *(undefined2 *)((int)puVar1 + -10) =
+                 *(undefined2 *)
+                  (((uint)*(ushort *)(puVar1 + -2) + (uint)*(ushort *)((int)puVar1 + -6) * 0x100) *
+                   2 + 0x50516dd4);
+            *(short *)((int)puVar1 + -0xe) = *(short *)((int)puVar1 + -0xe) + 1;
+          }
+          uVar2 = FUN_44001c49(3,*(undefined2 *)((int)puVar1 + -10),&DAT_505180b8);
+          puVar1[-7] = uVar2;
+          if (puVar1[-7] == 0) {
+            FUN_4402c2f7((uint)*(ushort *)((int)puVar1 + -0xe) * 0x200 + puVar1[3],&DAT_505180b8,
+                         puVar1[-6]);
+            *(short *)((int)puVar1 + -6) = (short)(*(ushort *)((int)puVar1 + -10) + 0xff >> 8);
+            *(short *)((int)puVar1 + -6) = *(short *)((int)puVar1 + -6) + -1;
+            *(ushort *)(puVar1 + -2) = *(short *)((int)puVar1 + -10) - 1U & 0xff;
+            *(undefined2 *)((int)puVar1 + -10) =
+                 *(undefined2 *)
+                  (((uint)*(ushort *)(puVar1 + -2) + (uint)*(ushort *)((int)puVar1 + -6) * 0x100) *
+                   2 + 0x50516dd4);
+            if (*(short *)((int)puVar1 + -10) == -0x13) {
+              uVar2 = FUN_440083fb(puVar1[2],(int)puVar1 + -6,puVar1 + -2);
+              puVar1[-1] = uVar2;
+              if (puVar1[-1] == 0) {
+                if (*(char *)(((uint)*(ushort *)((int)puVar1 + -6) * 0x20 +
+                              (uint)*(ushort *)(puVar1 + -2)) * 0x10 + 0x505165e2) != -1) {
+                  puVar1[-6] = *(undefined4 *)puVar1[3];
+                  puVar1[-5] = puVar1[-5] + -4;
+                  uVar2 = FUN_44028393(puVar1[-8],puVar1 + -6,puVar1[3] + 4,puVar1[-5] + 0x100);
+                  puVar1[-1] = uVar2;
+                  if (puVar1[-1] != 0) {
+                    uart0_printf(s_error___uncompress______d_44034ccb,puVar1[-1]);
+                    puVar1[-9] = 0xffffffff;
+                    goto LAB_4400898c;
+                  }
+                }
+                puVar1[-9] = 0;
+              }
+              else {
+                puVar1[-9] = 0xffffffff;
+              }
+            }
+            else {
+              uart0_printf(s_Last_data_ID__d__not_equal__d__44034cab,
+                           (uint)*(ushort *)((int)puVar1 + -10),0xffed);
+              puVar1[-9] = 0xffffffff;
+            }
+          }
+          else {
+            uart0_printf(s_ID__d__read_error__u___44034c93,(uint)*(ushort *)((int)puVar1 + -10),
+                         puVar1[-7]);
+            puVar1[-9] = 0xffffffff;
+          }
+        }
+        else {
+          puVar1[-9] = 0;
+        }
+      }
+      else {
+        puVar1[-9] = 0;
+      }
+    }
+  }
+  else {
+    uart0_printf(s_BGO_driver_no_init__44034c33);
+    puVar1[-9] = 0xffffffff;
+  }
+LAB_4400898c:
+  return puVar1[-9];
+}
+
+=== FUNC FUN_44008b02 (bgo_ctrl_init_8b02) @ 0x44008b02 (size=455 B, req=0x44008b02) ===
+// Callers (4): 0x44007ecb, 0x44007eff, 0x44007f40, 0x440090bd
+// Referenced strings/literals:
+//   0x44034cf5: 'Not compress data write start.\n'
+//   0x44034d15: '%s rewrite error[%d].\n'
+//   0x44034d2c: 'status recovery error[%d].\n'
+//   0x44034d48: '%s write error[%d].\n'
+//   0x44034ce6: '%s not found.\n'
+//   0x44034c33: 'BGO driver no init.\n'
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+undefined4 FUN_44008b02(undefined4 param_1)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_4;
+  if (_DAT_50480d0c == 1) {
+    uVar2 = FUN_44008a99(param_1);
+    puVar1[-2] = uVar2;
+    if (puVar1[-2] == 0) {
+      if (0x200 < (uint)puVar1[4]) {
+        uVar2 = FUN_4400ba02(0x50481518,puVar1 + -1,puVar1[3],puVar1[4]);
+        puVar1[-2] = uVar2;
+        if (puVar1[-2] == 1) {
+          puVar1[3] = &DAT_50481514;
+          *(undefined4 *)puVar1[3] = puVar1[4];
+          puVar1[4] = puVar1[-1] + 4;
+          *(undefined1 *)((int)puVar1 + -0xf) = 0;
+        }
+        else {
+          uart0_printf(s_Not_compress_data_write_start__44034cf5);
+        }
+      }
+      uVar2 = FUN_440084d9(puVar1[2]);
+      puVar1[-2] = uVar2;
+      if (puVar1[-2] == 0) {
+        uVar2 = FUN_44002f71(*(undefined2 *)((int)puVar1 + -0xe),puVar1[3],puVar1[4],
+                             *(undefined1 *)((int)puVar1 + -0xf));
+        puVar1[-2] = uVar2;
+        if (puVar1[-2] != 0) {
+          uart0_printf(s__s_rewrite_error__d___44034d15,puVar1[2],puVar1[-2]);
+          uVar2 = FUN_44003fd0();
+          puVar1[-3] = uVar2;
+          if (puVar1[-3] == 0) {
+            puVar1[-5] = 0xfffffffd;
+          }
+          else {
+            uart0_printf(s_status_recovery_error__d___44034d2c,puVar1[-3]);
+            puVar1[-5] = 0xffffffff;
+          }
+          goto LAB_44008cc1;
+        }
+      }
+      else if (puVar1[4] != 0) {
+        uVar2 = FUN_4400225d(*(undefined2 *)((int)puVar1 + -0xe),puVar1[3],puVar1[4],
+                             *(undefined1 *)((int)puVar1 + -0xf));
+        puVar1[-2] = uVar2;
+        if (puVar1[-2] != 0) {
+          uart0_printf(s__s_write_error__d___44034d48,puVar1[2],puVar1[-2]);
+          uVar2 = FUN_44003fd0();
+          puVar1[-3] = uVar2;
+          if (puVar1[-3] == 0) {
+            puVar1[-5] = 0xfffffffd;
+          }
+          else {
+            uart0_printf(s_status_recovery_error__d___44034d2c,puVar1[-3]);
+            puVar1[-5] = 0xffffffff;
+          }
+          goto LAB_44008cc1;
+        }
+      }
+      puVar1[-5] = 0;
+    }
+    else {
+      uart0_printf(s__s_not_found__44034ce6,puVar1[2]);
+      puVar1[-5] = 0xffffffff;
+    }
+  }
+  else {
+    uart0_printf(s_BGO_driver_no_init__44034c33);
+    puVar1[-5] = 0xffffffff;
+  }
+LAB_44008cc1:
+  return puVar1[-5];
+}
+
+=== FUNC FUN_44008cc9 (bgo_device_info_check_8cc9) @ 0x44008cc9 (size=989 B, req=0x44008cc9) ===
+// Callers (1): 0x44009101
+// Referenced strings/literals:
+//   0x44034d5d: 'File size different. Ctrl[0x%X] != Check[0x%X].\n'
+//   0x44034c86: 'ID invalid.\n'
+//   0x44034c93: 'ID[%d] read error[%u].\n'
+//   0x44034d8e: 'ID[%d] verify error(0x%08X-0x%08X).\n'
+//   0x44034cab: 'Last data ID[%d] not equal %d.\n'
+//   0x44034ce6: '%s not found.\n'
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+undefined4 FUN_44008cc9(undefined4 param_1)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  undefined4 uStack0000000c;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_4;
+  uVar2 = FUN_44008a99(param_1);
+  puVar1[-1] = uVar2;
+  if (puVar1[-1] == 0) {
+    *(undefined2 *)((int)puVar1 + -6) =
+         *(undefined2 *)((uint)*(ushort *)(puVar1 + -3) * 4 + 0x50517dd4);
+    *(undefined2 *)(puVar1 + -2) = *(undefined2 *)((uint)*(ushort *)(puVar1 + -3) * 4 + 0x50517dd6);
+    *(undefined2 *)((int)puVar1 + -10) =
+         *(undefined2 *)
+          (((uint)*(ushort *)((int)puVar1 + -6) * 0x20 + (uint)*(ushort *)(puVar1 + -2)) * 0x10 +
+          0x505165e0);
+    if (*(char *)(((uint)*(ushort *)((int)puVar1 + -6) * 0x20 + (uint)*(ushort *)(puVar1 + -2)) *
+                  0x10 + 0x505165e2) == -1) {
+      if (*(int *)(((uint)*(ushort *)((int)puVar1 + -6) * 0x20 + (uint)*(ushort *)(puVar1 + -2)) *
+                   0x10 + 0x505165dc) != puVar1[4]) {
+        uart0_printf(s_File_size_different__Ctrl_0x_X____44034d5d,
+                     *(undefined4 *)
+                      (((uint)*(ushort *)((int)puVar1 + -6) * 0x20 + (uint)*(ushort *)(puVar1 + -2))
+                       * 0x10 + 0x505165dc),puVar1[4]);
+        puVar1[-8] = 0xffffffff;
+        goto LAB_4400909e;
+      }
+    }
+    else {
+      puVar1[3] = &DAT_50481514;
+      puVar1[4] = *(undefined4 *)
+                   (((uint)*(ushort *)((int)puVar1 + -6) * 0x20 + (uint)*(ushort *)(puVar1 + -2)) *
+                    0x10 + 0x505165dc);
+    }
+    puVar1[-6] = puVar1[4] & 0x1ff;
+    if (puVar1[-6] == 0) {
+      puVar1[-6] = 0x200;
+    }
+    *(short *)((int)puVar1 + -0xe) = (short)(puVar1[4] + 0x1ff >> 9) + -1;
+    *(undefined2 *)(puVar1 + -4) = 0;
+    while (*(ushort *)(puVar1 + -4) < *(ushort *)((int)puVar1 + -0xe)) {
+      if (*(short *)((int)puVar1 + -10) == -1) {
+        uart0_printf(s_ID_invalid__44034c86);
+        puVar1[-8] = 0xffffffff;
+        goto LAB_4400909e;
+      }
+      uVar2 = FUN_44001c49(3,*(undefined2 *)((int)puVar1 + -10),&DAT_505180b8);
+      puVar1[-7] = uVar2;
+      if (puVar1[-7] != 0) {
+        uart0_printf(s_ID__d__read_error__u___44034c93,(uint)*(ushort *)((int)puVar1 + -10),
+                     puVar1[-7]);
+        puVar1[-8] = 0xffffffff;
+        goto LAB_4400909e;
+      }
+      uVar2 = FUN_4402c2b7((uint)*(ushort *)(puVar1 + -4) * 0x200 + puVar1[3],&DAT_505180b8,0x200);
+      puVar1[-1] = uVar2;
+      if (puVar1[-1] != 0) {
+        uart0_printf(s_ID__d__verify_error_0x_08X_0x_08_44034d8e,
+                     (uint)*(ushort *)((int)puVar1 + -10),puVar1[3],puVar1[3] + 0x1ff);
+        puVar1[-8] = 0xffffffff;
+        goto LAB_4400909e;
+      }
+      if (((*(short *)(puVar1 + -4) == 0) &&
+          (*(char *)(((uint)*(ushort *)((int)puVar1 + -6) * 0x20 + (uint)*(ushort *)(puVar1 + -2)) *
+                     0x10 + 0x505165e2) != -1)) && (_DAT_505180b8 != puVar1[-5])) {
+        uart0_printf(s_File_size_different__Ctrl_0x_X____44034d5d,_DAT_505180b8,puVar1[-5]);
+        puVar1[-8] = 0xffffffff;
+        goto LAB_4400909e;
+      }
+      *(short *)((int)puVar1 + -6) = (short)(*(ushort *)((int)puVar1 + -10) + 0xff >> 8);
+      *(short *)((int)puVar1 + -6) = *(short *)((int)puVar1 + -6) + -1;
+      *(ushort *)(puVar1 + -2) = *(short *)((int)puVar1 + -10) - 1U & 0xff;
+      *(undefined2 *)((int)puVar1 + -10) =
+           *(undefined2 *)
+            (((uint)*(ushort *)(puVar1 + -2) + (uint)*(ushort *)((int)puVar1 + -6) * 0x100) * 2 +
+            0x50516dd4);
+      *(short *)(puVar1 + -4) = *(short *)(puVar1 + -4) + 1;
+    }
+    uVar2 = FUN_44001c49(3,*(undefined2 *)((int)puVar1 + -10),&DAT_505180b8);
+    puVar1[-7] = uVar2;
+    if (puVar1[-7] == 0) {
+      uVar2 = FUN_4402c2b7((uint)*(ushort *)(puVar1 + -4) * 0x200 + puVar1[3],&DAT_505180b8,
+                           puVar1[-6]);
+      puVar1[-1] = uVar2;
+      if (puVar1[-1] == 0) {
+        *(short *)((int)puVar1 + -6) = (short)(*(ushort *)((int)puVar1 + -10) + 0xff >> 8);
+        *(short *)((int)puVar1 + -6) = *(short *)((int)puVar1 + -6) + -1;
+        *(ushort *)(puVar1 + -2) = *(short *)((int)puVar1 + -10) - 1U & 0xff;
+        *(undefined2 *)((int)puVar1 + -10) =
+             *(undefined2 *)
+              (((uint)*(ushort *)(puVar1 + -2) + (uint)*(ushort *)((int)puVar1 + -6) * 0x100) * 2 +
+              0x50516dd4);
+        if (*(short *)((int)puVar1 + -10) == -0x13) {
+          puVar1[-8] = 0;
+        }
+        else {
+          uart0_printf(s_Last_data_ID__d__not_equal__d__44034cab,
+                       (uint)*(ushort *)((int)puVar1 + -10),0xffed);
+          puVar1[-8] = 0xffffffff;
+        }
+      }
+      else {
+        uart0_printf(s_ID__d__verify_error_0x_08X_0x_08_44034d8e,
+                     (uint)*(ushort *)((int)puVar1 + -10),puVar1[3],puVar1[-6] + puVar1[3] + -1);
+        puVar1[-8] = 0xffffffff;
+      }
+    }
+    else {
+      uart0_printf(s_ID__d__read_error__u___44034c93,(uint)*(ushort *)((int)puVar1 + -10),puVar1[-7]
+                  );
+      puVar1[-8] = 0xffffffff;
+    }
+  }
+  else {
+    uart0_printf(s__s_not_found__44034ce6,puVar1[2]);
+    puVar1[-8] = 0xffffffff;
+  }
+LAB_4400909e:
+  return puVar1[-8];
+}
+
+=== FUNC FUN_440090a6 (bgo_write_part_90a6) @ 0x440090a6 (size=153 B, req=0x440090a6) ===
+// Callers (3): 0x44004cc2, 0x44006ca7, 0x44007f76
+// Referenced strings/literals:
+//   0x44034dce: '%s[0x%X] verify error[%d].\n'
+//   0x44034db3: '%s[0x%X] write error[%d].\n'
+undefined4 FUN_440090a6(undefined4 param_1,undefined4 param_2,undefined4 param_3)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_4;
+  uVar2 = FUN_44008b02(param_1,param_2,param_3);
+  puVar1[-1] = uVar2;
+  if (puVar1[-1] == 0) {
+    if (puVar1[4] != 0) {
+      uVar2 = FUN_44008cc9(puVar1[2],puVar1[3],puVar1[4]);
+      puVar1[-1] = uVar2;
+      if (puVar1[-1] != 0) {
+        uart0_printf(s__s_0x_X__verify_error__d___44034dce,puVar1[2],puVar1[4],puVar1[-1]);
+        puVar1[-2] = puVar1[-1];
+        goto LAB_44009137;
+      }
+    }
+    puVar1[-2] = 0;
+  }
+  else {
+    uart0_printf(s__s_0x_X__write_error__d___44034db3,puVar1[2],puVar1[4],puVar1[-1]);
+    puVar1[-2] = puVar1[-1];
+  }
+LAB_44009137:
+  return puVar1[-2];
+}
+
+=== FUNC FUN_4400920b (bgo_read_part_920b) @ 0x4400920b (size=324 B, req=0x4400920b) ===
+// Callers (2): 0x44006bde, 0x4400936d
+// Referenced strings/literals:
+//   0x44034e05: 'BGO read error[%u].\n'
+//   0x44034c33: 'BGO driver no init.\n'
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+undefined4 FUN_4400920b(undefined4 param_1,undefined4 *param_2)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_4;
+  *param_2 = 0;
+  if (_DAT_50480d0c == 1) {
+    uVar2 = FUN_440084d9(param_1);
+    puVar1[-1] = uVar2;
+    if (puVar1[-1] == 0) {
+      uVar2 = FUN_440083fb(puVar1[2],(int)puVar1 + -6,puVar1 + -2);
+      puVar1[-1] = uVar2;
+      if (puVar1[-1] == 0) {
+        if (*(char *)(((uint)*(ushort *)((int)puVar1 + -6) * 0x20 + (uint)*(ushort *)(puVar1 + -2))
+                      * 0x10 + 0x505165e2) == -1) {
+          *(undefined4 *)puVar1[3] =
+               *(undefined4 *)
+                (((uint)*(ushort *)((int)puVar1 + -6) * 0x20 + (uint)*(ushort *)(puVar1 + -2)) *
+                 0x10 + 0x505165dc);
+        }
+        else if (*(short *)(((uint)*(ushort *)((int)puVar1 + -6) * 0x20 +
+                            (uint)*(ushort *)(puVar1 + -2)) * 0x10 + 0x505165e0) != -1) {
+          uVar2 = FUN_44001c49(3,*(undefined2 *)
+                                  (((uint)*(ushort *)((int)puVar1 + -6) * 0x20 +
+                                   (uint)*(ushort *)(puVar1 + -2)) * 0x10 + 0x505165e0),
+                               &DAT_505180b8);
+          puVar1[-3] = uVar2;
+          if (puVar1[-3] != 0) {
+            uart0_printf(s_BGO_read_error__u___44034e05,puVar1[-3]);
+            puVar1[-4] = 0xffffffff;
+            goto LAB_44009347;
+          }
+          *(undefined4 *)puVar1[3] = _DAT_505180b8;
+        }
+        puVar1[-4] = 0;
+      }
+      else {
+        puVar1[-4] = 0;
+      }
+    }
+    else {
+      puVar1[-4] = 0;
+    }
+  }
+  else {
+    uart0_printf(s_BGO_driver_no_init__44034c33);
+    puVar1[-4] = 0xffffffff;
+  }
+LAB_44009347:
+  return puVar1[-4];
+}
+
+=== FUNC FUN_4400934f (conveyer_check_934f) @ 0x4400934f (size=133 B, req=0x4400934f) ===
+// Callers (2): 0x440065f3, 0x44006fff
+// Referenced strings/literals:
+//   0x44034e1a: 'Now DeviceInfo2 size = 0x%X.\n'
+undefined4 FUN_4400934f(void)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_4;
+  if (DAT_50480d10 == '\0') {
+    uVar2 = FUN_4400920b(0x5048001f);
+    puVar1[-1] = uVar2;
+    if ((puVar1[-1] != 0) || (0x800 < (uint)puVar1[-2])) {
+      uart0_printf(s_Now_DeviceInfo2_size___0x_X__44034e1a,puVar1[-2]);
+      puVar1[-3] = 0xffffffff;
+      goto LAB_440093cc;
+    }
+    uVar2 = nvram_read_8634(0x5048001f,0x50480d14);
+    puVar1[-1] = uVar2;
+    if (puVar1[-1] != 0) {
+      puVar1[-3] = 0xffffffff;
+      goto LAB_440093cc;
+    }
+    DAT_50480d10 = '\x01';
+  }
+  puVar1[-3] = 0;
+LAB_440093cc:
+  return puVar1[-3];
+}
+
+=== FUNC nvram_read_id (nvram_read_id) @ 0x4400f5cb (size=196 B, req=0x4400f5cb) ===
+// Callers (14): 0x440041ee, 0x440046fd, 0x4400472d, 0x4400473d, 0x44004761, 0x4400498b, 0x4400499c, 0x44006464, 0x44006475, 0x44006d8c, 0x44006fad, 0x44007c8a, 0x4400bc5a, 0x44010e2e
+// Referenced strings/literals:
+//   0x44035834: 'ðÿ\n'
+undefined4 nvram_read_id(uint param_1,uint *param_2,int param_3)
+
+{
+  ushort uVar1;
+  ushort *puVar2;
+  byte *pbVar3;
+  ushort *puVar4;
+  byte bVar5;
+  int in_R0;
+  int iVar6;
+  
+  if (0x19 < param_1) {
+    return 1;
+  }
+  if (param_1 < 0x14) {
+    iVar6 = in_R0 * 0x10;
+    if ((&DAT_440356fd)[iVar6] == 0) {
+      if (param_2 != (uint *)0x0) {
+        *(ushort *)(&PTR_P0MD_440356f0)[in_R0 * 4] =
+             *(ushort *)(&DAT_440356f4 + iVar6) & *(ushort *)(&PTR_P0MD_440356f0)[in_R0 * 4];
+        *param_2 = (uint)(((&DAT_440356fc)[iVar6] & *(&PTR_P0OUT_440356f8)[in_R0 * 4]) != 0);
+        return 0;
+      }
+      return 1;
+    }
+    if (param_3 == 0) {
+      pbVar3 = (&PTR_P0OUT_440356f8)[in_R0 * 4];
+      bVar5 = (&DAT_440356fc)[iVar6] & *pbVar3;
+    }
+    else {
+      pbVar3 = (&PTR_P0OUT_440356f8)[in_R0 * 4];
+      bVar5 = (&DAT_440356fd)[iVar6] | *pbVar3;
+    }
+    *pbVar3 = bVar5;
+    puVar4 = (ushort *)(&PTR_P0MD_440356f0)[in_R0 * 4];
+    uVar1 = *puVar4;
+    puVar2 = (ushort *)(&DAT_440356f4 + iVar6);
+  }
+  else {
+    puVar4 = (ushort *)(&PTR_P1MD_44035830)[(param_1 - 0x14) * 2];
+    uVar1 = *puVar4;
+    puVar2 = (ushort *)(&DAT_44035834 + (param_1 - 0x14) * 8);
+  }
+  *puVar4 = puVar2[1] | uVar1 & *puVar2;
+  return 0;
+}
+
+=== FUNC FUN_4401f044 (bgo_nor_part_check_1f044) @ 0x4401f044 (size=61 B, req=0x4401f044) ===
+// Callers (12): 0x4401e669, 0x4401e6ce, 0x4401e721, 0x4401e79d, 0x4401e832, 0x4401eb3a, 0x4401f790, 0x4401f8c3, 0x44021e24, 0x44022f38, 0x440232f7, 0x44023378
+undefined4 FUN_4401f044(int param_1,uint param_2)
+
+{
+  if (param_2 == 3) {
+    return *(undefined4 *)(param_1 * 0xc + 0x505743b8);
+  }
+  if (param_2 < 4) {
+    if (param_2 != 0) {
+      return *(undefined4 *)(param_1 * 0xc + 0x505743b4);
+    }
+  }
+  else if (param_2 == 4) {
+    return *(undefined4 *)(param_1 * 0xc + 0x505743bc);
+  }
+  return 4;
+}
+
+=== FUNC FUN_4401f081 (bgo_err_log_1f081) @ 0x4401f081 (size=59 B, req=0x4401f081) ===
+// Callers (35): 0x4401ef92, 0x4401f0d4, 0x4401f4d9, 0x4401f577, 0x4401f63b, 0x4401f91a, 0x4402027b, 0x44020963, 0x44020c18, 0x44020d4b, 0x44020e60, 0x44020f84, 0x4402189e, 0x440219e8, 0x44021a1e, 0x44021a87
+undefined4 FUN_4401f081(int param_1,uint param_2,undefined4 param_3)
+
+{
+  if (param_2 == 3) {
+    *(undefined4 *)(param_1 * 0xc + 0x505743b8) = param_3;
+    return param_3;
+  }
+  if (param_2 < 4) {
+    if (param_2 != 0) {
+      *(undefined4 *)(param_1 * 0xc + 0x505743b4) = param_3;
+      return param_3;
+    }
+  }
+  else {
+    if (param_2 != 4) {
+      return param_3;
+    }
+    *(undefined4 *)(param_1 * 0xc + 0x505743bc) = param_3;
+  }
+  return param_3;
+}
+
+=== FUNC FUN_4401f804 (bgo_nor_sum_1f804) @ 0x4401f804 (size=292 B, req=0x4401f804) ===
+// Callers (1): 0x4401f785
+void FUN_4401f804(undefined4 param_1)
+
+{
+  undefined2 uVar1;
+  int iVar2;
+  undefined2 *puVar3;
+  undefined2 *puVar4;
+  int iVar5;
+  int *piVar6;
+  int *piVar7;
+  int iVar8;
+  uint uVar9;
+  undefined4 uVar10;
+  undefined4 uVar11;
+  uint uVar12;
+  int *piVar13;
+  int iVar14;
+  undefined4 extraout_var;
+  undefined4 extraout_var_00;
+  undefined4 extraout_var_01;
+  undefined4 extraout_var_02;
+  int extraout_var_03;
+  int extraout_var_04;
+  int iVar15;
+  int iStack_34;
+  int local_30;
+  int local_2c;
+  undefined4 uStack_20;
+  undefined4 uStack_1c;
+  undefined4 uStack_18;
+  undefined4 uStack_14;
+  
+  uVar12 = 1;
+  piVar6 = &iStack_34;
+  iVar14 = 0x5057452a;
+  piVar7 = &DAT_44036590;
+  iVar5 = 4;
+  piVar13 = &local_30;
+  do {
+    iVar8 = FUN_4401f169(param_1,uVar12);
+    param_1 = extraout_var;
+    if (iVar8 == 0) {
+      *piVar13 = 4;
+    }
+    else {
+      iVar2 = (*piVar7 + iVar8) * 2;
+      iVar15 = extraout_var_03;
+      if (*(short *)(iVar14 + iVar2) != -1) {
+        uVar9 = FUN_4401f214(0,*(undefined2 *)(iVar14 + iVar2 + 2));
+        puVar4 = (undefined2 *)((*piVar7 + iVar8) * 2 + iVar14);
+        uVar1 = *puVar4;
+        puVar3 = (undefined2 *)((*piVar7 + (uVar9 & 0xff)) * 2 + iStack_34);
+        *puVar4 = *puVar3;
+        *puVar3 = uVar1;
+        param_1 = extraout_var_00;
+        iVar15 = extraout_var_04;
+      }
+      if (*(uint *)(iVar15 + iVar5 + -4) == (uint)((iVar8 + 1) * iVar8) >> 1) {
+        uVar11 = 2;
+      }
+      else {
+        uVar11 = 1;
+      }
+      *(undefined4 *)((int)piVar6 + iVar5) = uVar11;
+    }
+    piVar7 = piVar7 + 1;
+    iVar5 = iVar5 + 4;
+    piVar13 = piVar13 + 1;
+    uVar12 = uVar12 + 1;
+  } while (uVar12 < 5);
+  uVar12 = 2;
+  uVar11 = 0x145;
+  piVar6 = piVar6 + 2;
+  do {
+    iVar5 = FUN_4401f044(param_1,uVar12);
+    param_1 = extraout_var_01;
+    if (iVar5 == 6) {
+      uVar9 = uVar12;
+      if (uVar12 == 2) {
+        if ((local_30 == 2) && (local_2c == 2)) {
+          uVar10 = 0x708;
+          iVar5 = 2;
+        }
+        else if ((local_30 == 4) && (local_2c == 4)) {
+          uVar10 = 0x70c;
+          iVar5 = 4;
+          uVar9 = 2;
+        }
+        else {
+          iVar5 = 1;
+          uVar10 = 0x710;
+          uVar9 = 2;
+        }
+      }
+      else {
+        iVar5 = *piVar6;
+        uVar10 = 0x715;
+      }
+      FUN_4401f081(extraout_var_01,uVar9,iVar5,uVar10,uVar11);
+      param_1 = extraout_var_02;
+    }
+    piVar6 = piVar6 + 1;
+    uVar12 = uVar12 + 1;
+  } while (uVar12 < 5);
+  return;
+}
+
+=== FUNC FUN_440237ba (bgo_nor_erase_write_237ba) @ 0x440237ba (size=395 B, req=0x440237ba) ===
+// Callers (2): 0x4401ecfa, 0x44022e69
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+void FUN_440237ba(undefined4 param_1)
+
+{
+  int iVar1;
+  
+  FUN_44025b14();
+  iVar1 = FUN_440236ed(param_1);
+  if (iVar1 == 0) {
+    _DAT_50574770 = FUN_4402426b;
+    _DAT_5057476c = &LAB_44024367;
+    _DAT_50574764 = &LAB_440243dd;
+    _DAT_50574778 = &LAB_440244ba;
+    _DAT_50574760 = FUN_4402451a;
+    _DAT_5057477c = FUN_44024673;
+    _DAT_50574774 = &LAB_440247b4;
+    _DAT_50574768 = &LAB_44024970;
+    _DAT_50574780 = &LAB_440249f9;
+    _DAT_5057475c = &LAB_44024a23;
+  }
+  else if (iVar1 == 1) {
+    _DAT_50574770 = FUN_44025c40;
+    _DAT_5057476c = &LAB_44025ca4;
+    _DAT_50574764 = &LAB_44025d14;
+    _DAT_50574778 = &LAB_44025db0;
+    _DAT_50574760 = FUN_44025e03;
+    _DAT_5057477c = FUN_44025ecc;
+    _DAT_50574774 = &LAB_44025f2e;
+    _DAT_50574768 = &LAB_44026081;
+    _DAT_50574780 = &LAB_440260e3;
+    _DAT_5057475c = &LAB_4402610d;
+  }
+  else {
+    _DAT_50574770 = FUN_44024bf2;
+    _DAT_5057476c = &LAB_44024c56;
+    _DAT_50574764 = &LAB_44024cc6;
+    _DAT_50574778 = &LAB_44024d62;
+    _DAT_50574760 = FUN_44024db5;
+    _DAT_5057477c = FUN_44024e7e;
+    _DAT_50574774 = &LAB_44024ee0;
+    _DAT_50574768 = &LAB_44025033;
+    _DAT_50574780 = &LAB_44025095;
+    _DAT_5057475c = &LAB_440250bf;
+  }
+  (*_DAT_50574770)(param_1);
+  return;
+}
+
+=== FUNC FUN_440236ed (bgo_nor_cfi_cmd_236ed) @ 0x440236ed (size=205 B, req=0x440236ed) ===
+// Callers (1): 0x440237c8
+/* WARNING: Removing unreachable block (ram,0x44023774) */
+/* WARNING: Removing unreachable block (ram,0x440237a4) */
+/* WARNING: Removing unreachable block (ram,0x44023782) */
+/* WARNING: Removing unreachable block (ram,0x44023791) */
+/* WARNING: Removing unreachable block (ram,0x44023797) */
+/* WARNING: Removing unreachable block (ram,0x4402379f) */
+/* WARNING: Removing unreachable block (ram,0x44023721) */
+/* WARNING: Removing unreachable block (ram,0x44023738) */
+/* WARNING: Removing unreachable block (ram,0x44023759) */
+/* WARNING: Removing unreachable block (ram,0x4402373e) */
+/* WARNING: Removing unreachable block (ram,0x44023742) */
+/* WARNING: Removing unreachable block (ram,0x44023746) */
+/* WARNING: Removing unreachable block (ram,0x44023730) */
+/* WARNING: Removing unreachable block (ram,0x4402375d) */
+/* WARNING: Removing unreachable block (ram,0x44023748) */
+/* WARNING: Removing unreachable block (ram,0x44023736) */
+/* WARNING: Removing unreachable block (ram,0x44023762) */
+/* WARNING: Removing unreachable block (ram,0x44023768) */
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+undefined4 FUN_440236ed(void)
+
+{
+  _DAT_84200554 = 0x55;
+  _DAT_84200aaa = 0x90;
+  _DAT_84200000 = 0xf0;
+  return 2;
+}
+
+=== RAW RESET VECTORS 0x44000000..0x440000A0 ===
+  0x44000000: f0 2c fe 09 88 00 00 00 04 c8 04 ca 07 dc 05 00
+  0x44000010: 00 04 00 f2 f3 fe 01 04 10 00 c0 01 fe 01 02 10
+  0x44000020: 00 c0 80 fc df 2c 00 00 44 cc 87 00 fc df 35 00
+  0x44000030: 00 44 cc 16 01 fc df 3e 00 00 44 cc 62 01 fc df
+  0x44000040: 47 00 00 44 cc 01 0e fc dc 00 00 00 53 f2 f0 fc
+  0x44000050: df 58 00 00 44 cc 86 11 fc df 61 00 00 44 cc 95
+  0x44000060: 11 fc df 6a 00 00 44 cc 3e 12 fc df 73 00 00 44
+  0x44000070: cc a4 12 00 04 08 0c f9 68 88 f9 68 99 f9 68 aa
+  0x44000080: f9 68 bb f9 68 00 f9 68 11 f9 68 22 f9 68 33 f9
+  0x44000090: 68 44 f9 68 55 f9 68 66 f9 68 77 dc d4 14 00 00
+
+=== BOOT.BIN STRING TABLE HIGHLIGHTS 0x440332E0..0x44035680 ===
+  0x440332e3: 'ò\x93\x88\x8dÊó'
+  0x440332f0: '[nfrom] Format error[%d].\n'
+  0x4403330b: '[nfrom] File map init error[%d].\n'
+  0x4403332d: '[nfrom] Data omap init error[%d].\n'
+  0x44033350: '[nfrom] Data bmap init error[%d].\n'
+  0x44033373: '[nfrom] Main data init error[%d].\n'
+  0x44033396: '[nfrom] NOR STATE : Backup -> Original\n'
+  0x440333be: '[nfrom] NOR STATE : Original -> Backup\n'
+  0x440333e6: '[nfrom] Map load error[%u].\n'
+  0x44033403: '[nfrom] Map write error[%u].\n'
+  0x44033421: '[nfrom] File map load error[%u].\n'
+  0x44033443: '[nfrom] File map write error[%u].\n'
+  0x44033466: '[nfrom] Status change error[%d].\n'
+  0x44033488: '[nfrom] Status flag change error[%u].\n'
+  0x440334af: '[nfrom] bgo_read_D(ID=0x%X) return error(%u).\n'
+  0x440334de: '[nfrom] BGO command[%d] error.\n'
+  0x44033523: 'D[nfrom] bgo_writeD(ID=0x%X) return error(%u).\n'
+  0x44033553: '[nfrom] No free ID.\n'
+  0x44033568: '[nfrom] BGO write error[%u].\n'
+  0x44033586: '[nfrom] Free ID find error[%d].\n'
+  0x440335a7: '[nfrom] Data omap update error[%d].\n'
+  0x440335cc: '[nfrom] Ctrl info error(id=0x%X,po=0x%X).\n'
+  0x440335f7: '[nfrom] File omap update error[%u].\n'
+  0x4403361c: '[nfrom] Data bmap update error[%d].\n'
+  0x44033641: '[nfrom] File bmap update error[%u].\n'
+  0x44033666: '[nfrom] New file write start error[%d].\n'
+  0x4403368f: '[nfrom] New data write error[%u].\n'
+  0x440336b2: '[nfrom] New data write[%u].\n'
+  0x440336cf: '[nfrom] New file write end error[%d].\n'
+  0x440336f6: '[nfrom] Data read error[%u].\n'
+  0x44033714: '[nfrom] Data write error[%d].\n'
+  0x44033733: '[nfrom] Data write error[%u].\n'
+  0x44033752: '[nfrom] file_no[%d],skip(%d),non_skip(%d),erase(%d),new_write(%d).\n'
+  0x44033796: '[nfrom] File rewrite start error[%d].\n'
+  0x440337bd: '[nfrom] File erase error[%d].\n'
+  0x440337dc: '[nfrom] File rewrite error[%d].\n'
+  0x440337fd: '[nfrom] File rewrite end error[%d].\n'
+  0x44033822: '[nfrom] bgo_writeD_FF(ID=0x%X) return error(%u).\n'
+  0x44033854: '[nfrom] BGO read error[%u].\n'
+  0x44033871: '[nfrom] 0xFF data write error[%u].\n'
+  0x44033895: '[nfrom] 0xFF file write end error[%d].\n'
+  0x440338bd: '[nfrom] Main control data error[%u].\n'
+  0x440338e3: '[nfrom] Power failer recovery error[%d].\n'
+  0x4403390d: '********** Main Control Data **********\n'
+  0x44033936: 'STATUS      : 0x%X\n'
+  0x4403394a: 'CTRL ID NUM : %d\n'
+  0x4403395c: 'FILE NUM    : %d\n'
+  0x4403396e: 'DATA ID NUM : %d\n'
+  0x44033980: 'FREE ID NUM : %d\n'
+  0x44033992: 'DATA SIZE   : %d\n'
+  0x440339a4: 'MAKER ID    : 0x%04X\n'
+  0x440339ba: 'DEVICE ID   : 0x%04X\n'
+  0x440339d0: '********** Original File Map **********\n'
+  0x440339f9: 'NO , NAME     , SIZE       , START ID , COMP\n'
+  0x44033a27: '%2d , %8s , 0x%-8X , 0x%04X   , 0x%02X\n'
+  0x44033a4f: '********** BackUp File Map **********\n'
+  0x44033a76: '********** Data ID Map **********\n'
+  0x44033a99: '----- %2d data -----\n'
+  0x44033aaf: '%04X '
+  0x44033ab8: '\n***** Loader ver%s [%s](%s) *****\n'
+  0x44033adc: '0.63'
+  0x44033ae1: '07/10/24'
+  0x44033aea: '4MB/TOP BOOT'
+  0x44033af7: '***** FEonly mode *****\n'
+  0x44033b10: '***** support card mode *****\n'
+  0x44033b2f: 'load_address = 0x%08x , load_size = 0x%x\n\n'
+  0x44033b5a: 'error! main soft is not loaded to 0x40000400.\n'
+  0x44033b89: '***** normal mode *****\n'
+  0x44033ba2: '***** serial boot mode *****\n'
+  0x44033bc0: 'LAST_ERR_LOG load OK(0x%08X).\n'
+  0x44033bdf: 'LAST_ERR_LOG load NG(%d).\n'
+  0x44033bfa: 'LAST_ERR_LOG load NG.\n'
+  0x44033c11: 'Copy to update program(size=0x%X) to 0x%08X from 0x%08X.\n'
+  0x44033c4b: '*** jump to update program ***\n'
+  0x44033c6b: 'F-CPU reset finish. 0x%X-0x%X data polling.\n'
+  0x44033c98: 'Drive firmware update start.\n'
+  0x44033cb6: 'I am BootLoader...\n'
+  0x44033cca: 'Drive adjustment value update firmware load start.\n'
+  0x44033cfe: 'LAST_ERR_LOG save NG.\n'
+  0x44033d15: 'LAST_ERR_LOG save OK.\n'
+  0x44033d2c: 'LAST_ERR_LOG save NG(%d).\n'
+  0x44033d47: '***** F-CPU BAND change start *****\n'
+  0x44033d6c: 'FE DMD(tmin) changed to 0x%04X.\n'
+  0x44033d8d: 'FE DMD(tper) changed to 0x%04X.\n'
+  0x44033dae: 'FE DMD(tlim) changed to 0x%04X.\n'
+  0x44033dcf: 'FE DMD not aotenjyo.\n'
+  0x44033de5: 'FE DMD aotenjyo.\n'
+  0x44033df7: 'FE C13(tmin) changed to 0x%04X.\n'
+  0x44033e18: 'FE C13(tper) changed to 0x%04X.\n'
+  0x44033e39: 'FE C13(tlim) changed to 0x%04X.\n'
+  0x44033e5a: 'FE C13 not aotenjyo.\n'
+  0x44033e70: 'FE C13 aotenjyo.\n'
+  0x44033e82: 'FE C4A(tmin) changed to 0x%04X.\n'
+  0x44033ea3: 'FE C4A(tper) changed to 0x%04X.\n'
+  0x44033ec4: 'FE C4A(tlim) changed to 0x%04X.\n'
+  0x44033ee5: 'FE C4A not aotenjyo.\n'
+  0x44033efb: 'FE C4A aotenjyo.\n'
+  0x44033f0d: 'FE FPU(tmin) changed to 0x%04X.\n'
+  0x44033f2e: 'FE FPU(tper) changed to 0x%04X.\n'
+  0x44033f4f: 'FE FPU(tlim) changed to 0x%04X.\n'
+  0x44033f70: 'FE FPU not aotenjyo.\n'
+  0x44033f86: 'FE FPU aotenjyo.\n'
+  0x44033f98: '***** F-CPU BAND change end *****\n'
+  0x44033fbb: 'error! timeout:timer or VHS_write\n'
+  0x44033fde: 'error! timeout:timer_or VHS write\n'
+  0x44034001: 'error! timeout:timer or VHS_read\n'
+  0x44034023: 'waiting reply.( %02d/ 70 )\n'
+  0x4403403f: 'error! timeout 1min:VHS\n'
+  0x44034058: 'Main hung-up time changed %u[s].\n'
+  0x4403407a: 'Send timer-ucon judge command[%02X].\n'
+  0x440340a0: 'Timer replay %02X %02X.\n'
+  0x440340b9: 'Now model is PAL.\n'
+  0x440340cc: 'Now model is NTSC.\n'
+  0x440340e0: 'Error!! Timer replay %02X %02X.\n'
+  0x44034101: 'Now model is unknown.\n'
+  0x44034118: 'miniboot : system assert!!\n'
+  0x44034134: 'Chip select = 1\n'
+  0x44034145: 'Chip select = 0\n'
+  0x44034156: 'first data = 0x%02X 0x%02X\n'
+  0x44034172: 'check address = 0x%X, data = 0x%X\n'
+  0x44034195: 'Conveyer firm boot mode...\n'
+  0x440341b1: 'Clear update data.\n'
+  0x440341c5: 'HDD_MAX_LBA get failed[0x%X].\n'
+  0x440341e4: 'mainsoft data is invalid, so set update flag.\n'
+  0x44034213: 'mainsoft-check: error! check address = 0x%x, out of range.\n'
+  0x4403424f: 'mainsoft-check: error! check address = 0x%x, invalid.\n'
+  0x44034286: 'Main address = 0x%08X\nMainsoft version = %s\n'
+  0x440342b3: 'mainsoft-check: error! check data invalid.\n'
+  0x440342df: 'Error! Failed[0x%X] to read main from HDD.\n'
+  0x4403430b: 'Error! Not main compress header.\n'
+  0x4403432d: 'sector = 0x%X , address = 0x%X , size = 0x%X\n'
+  0x4403435b: 'Error! Read sector num[%u] over flow.\n'
+  0x44034382: 'Error! Failed[0x%X] read main from HDD.\n'
+  0x440343ab: 'Mainsoft data uncompress failed.\n'
+  0x440343cd: 'Error! Not main compress.\n'
+  0x440343e8: 'HDD INNER SECTOR MAIN RECOVERY START.\n'
+  0x4403440f: 'Error! Failed[0x%X] write to HDD.\n'
+  0x44034432: 'Error! Failed[0x%X] read to HDD.\n'
+  0x44034454: 'Verify error.\n'
+  0x44034463: 'Recovery history = (total:%u , ok:%u , ng:%u).\n'
+  0x44034493: 'HDD INNER SECTOR MAIN RECOVERY SUCCESS.\n'
+  0x440344bc: 'HDD INNER SECTOR MAIN RECOVERY FAILED.\n'
+  0x440344e4: '\n!!! start fmu to read & exec fvu. !!!\n'
+  0x4403450c: '\n*** start diag ***\n'
+  0x44034521: 'error! startup reason is invalid.\n'
+  0x44034544: 'error! drive-firm maybe destroyed, so power off.\n'
+  0x44034576: 'Read fvu program from Update-Disk to 0x%x.\n'
+  0x440345a2: 'success to read fvu program from Update-Disc.\n'
+  0x440345d1: 'fvu size over 0x%X.\n'
+  0x440345e6: 'fvu uncompress start...\n'
+  0x440345ff: 'fvu uncompress failed...\n'
+  0x44034619: 'fvu is preserved with fvu.\n'
+  0x44034635: '\n*** start fvu ***\n'
+  0x44034649: 'error! cannot read DeviceInfo-file from Nand-FROM.\n'
+  0x4403467d: 'SD card check start\n'
+  0x44034692: '[SD] Power failer recovery mode. But, SD read failed[0x%X].\n'
+  0x440346cf: 'SD info get failed[%d]. But, DVD-RAM/CD verup check start.\n'
+  0x4403470b: 'Failed to read fvu.\n'
+  0x44034720: '!!! Insert Update-Disc !!!\n'
+  0x4403473c: 'Timout for waiting for insert Update-Disc.\n'
+  0x44034768: 'closed tray.\n'
+  0x44034776: 'startup drive.\n'
+  0x44034786: 'treat as SD.\n'
+  0x44034794: 'FAT Close failed[%d].\n'
+  0x440347ab: 'MATSHITA DVD-RAM RECORDER'
+  0x440347c5: '300h = %s\n'
+  0x440347d0: 'treat as DVD-RAM.\n'
+  0x440347e3: 'treat as CD-R.\n'
+  0x440347f3: 'Searching for FVU.\n'
+  0x44034807: 'error! not found fvu program in Update-Disk.\n'
+  0x44034835: 'PROG'
+  0x4403483a: 'error! failed to read fvu program.\n'
+  0x4403485e: 'copying fvu program from RTSC-buf to SDRAM.\n'
+  0x4403488b: 'error! fvu program check-sum invalid.\n'
+  0x440348b2: 'error! failed to read fvu program. Read_VCDDATA: %8x\n'
+  0x440348e8: 'cheking for fvu program check-sum.\n'
+  0x4403490c: 'error! Failed to Startup Drive.\n'
+  0x4403492d: 'Timeout Power Off\n'
+  0x44034940: 'pushed power-button\n'
+  0x44034955: 'Firm list read failed[%d].\n'
+  0x44034971: 'Not found fvu program in SD.\n'
+  0x4403498f: 'FAT Seek(%d) failed[%d].\n'
+  0x440349a9: 'File ID[0x%X] seek to 0x%X.\n'
+  0x440349c6: 'Fvu read failed[%d].\n'
+  0x440349dc: 'File ID[0x%X] read to 0x%X(size=0x%X).\n'
+  0x44034a04: 'cheking for fvu program check-sum[0x%X].\n'
+  0x44034a2e: 'Fvu check-sum invalid.\n'
+  0x44034a46: 'SDDIAG'
+  0x44034a4d: 'SD diag load failed[%d].\n'
+  0x44034a67: 'SD init failed[%d].\n'
+  0x44034a7c: 'diag loader uncompress start...\n'
+  0x44034a9d: 'diag loader uncompress failed...\n'
+  0x44034abf: 'diag loader is preserved with diag loader.\n'
+  0x44034aeb: '*** CD diag boot mode ***\n'
+  0x44034b06: 'CDDIAG'
+  0x44034b0d: 'Drive start failed[%d].\n'
+  0x44034b26: 'DIGADIAG.FRM'
+  0x44034b33: 'DIGADIAG.FRM read failed.\n'
+  0x44034b57: 'DÃ\x80'
+  0x44034b5b: 'DØ\x80'
+  0x44034b63: 'Dí\x80'
+  0x44034b67: 'D,\x81'
+  0x44034b6b: 'DA\x81'
+  0x44034b6f: 'DV\x81'
+  0x44034b73: 'Dk\x81'
+  0x44034b77: 'D\x80\x81'
+  0x44034b83: 'D¢\x81'
+  0x44034b87: 'D³\x81'
+  0x44034b8b: 'D\x91\x81'
+  0x44034b8f: 'DÄ\x81'
+  0x44034b93: 'DÕ\x81'
+  0x44034b97: 'Dæ\x81'
+  0x44034b9b: 'D÷\x81'
+  0x44034b9f: 'D\x95\x82'
+  0x44034ba3: 'DÑ\x82'
+  0x44034ba7: 'D¡\x82'
+  0x44034bab: 'D\xad\x82'
+  0x44034baf: 'DÅ\x82'
+  0x44034bb3: 'D¹\x82'
+  0x44034bb7: 'DÝ\x82'
+  0x44034bbb: 'Dè\x82'
+  0x44034bbf: 'Dó\x82'
+  0x44034bc3: 'Dþ\x82'
+  0x44034bc7: 'D\t\x83'
+  0x44034bcb: 'D_\x83'
+  0x44034bcf: 'D_\x83'
+  0x44034bd7: 'D*\x83'
+  0x44034bdf: 'D5\x83'
+  0x44034be3: 'D@\x83'
+  0x44034be7: 'DK\x83'
+  0x44034beb: 'DV\x83'
+  0x44034bef: 'DBGO driver init failed[%u].\n'
+  0x44034c0d: 'Control information init failed[%d].\n'
+  0x44034c33: 'BGO driver no init.\n'
+  0x44034c48: 'Filename pointer is NULL.\n'
+  0x44034c63: 'Data read buffer pointer is NULL.\n'
+  0x44034c86: 'ID invalid.\n'
+  0x44034c93: 'ID[%d] read error[%u].\n'
+  0x44034cab: 'Last data ID[%d] not equal %d.\n'
+  0x44034ccb: 'error!: uncompress() = %d\n'
+  0x44034ce6: '%s not found.\n'
+  0x44034cf5: 'Not compress data write start.\n'
+  0x44034d15: '%s rewrite error[%d].\n'
+  0x44034d2c: 'status recovery error[%d].\n'
+  0x44034d48: '%s write error[%d].\n'
+  0x44034d5d: 'File size different. Ctrl[0x%X] != Check[0x%X].\n'
+  0x44034d8e: 'ID[%d] verify error(0x%08X-0x%08X).\n'
+  0x44034db3: '%s[0x%X] write error[%d].\n'
+  0x44034dce: '%s[0x%X] verify error[%d].\n'
+  0x44034dea: '%s[0x%X] erase error[%d].\n'
+  0x44034e05: 'BGO read error[%u].\n'
+  0x44034e1a: 'Now DeviceInfo2 size = 0x%X.\n'
+  0x44034e38: 'ReWrite 0x%08X-0x%08X(size=0x%X) start.\n'
+  0x44034e61: 'retry[%d]...\n'
+  0x44034e6f: 'Erase(0x%08X-0x%08X) error.\n'
+  0x44034e8c: 'Write(0x%08X-0x%08X) error from 0x%08X.\n'
+  0x44034eb7: '\nReWrite end(SKIP=%u , NOT_SKIP=%u)\n'
+  0x44034edc: '*** RTSC Initialize ***\n'
+  0x44034ef5: '*** Drive Initialize ***\n'
+  0x44034f0f: '*** HDD Initialize ***\n'
+  0x44034f2b: '(%08x)'
+  0x44034f32: '\tdrive_read: unit not ready [%x]\n'
+  0x44034f54: '\tdrive_read: retry TUR %d times\n'
+  0x44034f75: '\tdrive_read: read failed [%x]\n'
+  0x44034f94: '** command retry **\n'
+  0x44034fa9: '** open tray **\n'
+  0x44034fba: '** can not open tray **\n'
+  0x44034fd3: '** close tray **\n'
+  0x44034fe5: '** can not close tray **\n'
+  0x44034fff: '** startup drive **\n'
+  0x44035014: 'drive start error(%08x)\n'
+  0x4403502d: '** success to startup **\n'
+  0x44035047: '** no disc **\n'
+  0x44035058: '%d,'
+  0x4403505c: 'HDD MAX LBA = 0x%X.\n'
+  0x44035071: 'SD init start...\n'
+  0x44035083: 'SD = 0x%X[LBA]\n'
+  0x44035093: '... SD init end\n'
+  0x440350a4: 'Drive connect failed[0x%X].\n'
+  0x440350c1: 'Drive disconnect failed[0x%X].\n'
+  0x440350e1: 'Drive(sleep mode) change failed[0x%X].\n'
+  0x44035109: 'Media rotation stop failed[%d].\n'
+  0x4403512a: 'Drive disconnect failed[%d].\n'
+  0x44035148: '[fmu] error! list_sum is invalid.\n'
+  0x4403516b: 'DRV '
+  0x44035170: '[fmu] error! Read_VCDDATA(): %8x\n'
+  0x44035192: 'FAT Mount failed[%d].\n'
+  0x440351a9: 'FAT Mount ID = 0x%X\n'
+  0x440351be: 'PANA__SD.FRM'
+  0x440351cb: 'FAT Open(%s) failed[%d].\n'
+  0x440351e5: 'FAT Open Old File ID = 0x%X\n'
+  0x44035202: 'DIGADIAG.FRM'
+  0x4403520f: 'CD001'
+  0x44035215: 'PANA_DVD.FRM'
+  0x44035222: 'wait 1 second.\n'
+  0x44035232: '*** timer correspond initialize ***\n'
+  0x44035257: 'startup reason = [%x]\n'
+  0x4403526e: 'EXTRHEAD'
+  0x44035277: 'EXTRFOOT'
+  0x44035280: 'HEADER:%08X, DECOMP:%08X\n\n'
+  0x4403529b: 'no header!\n'
+  0x440352a7: 'no footer!\n'
+  0x440352b3: 'Destination address(=NULL) error.\n'
+  0x440352d6: 'Source address(=NULL) error.\n'
+  0x440352f4: 'Source length(=0) error.\n'
+  0x4403530e: 'Destination length(=0) error.\n'
+  0x4403532d: 'uncompress dst=%x len=%x src=%x len=%x\n'
+  0x44035355: 'error!: uncompress() = %d\n'
+  0x44035370: 'error!: destLen = 0x%x, header->original_soft_size = 0x%x\n'
+  0x440353ab: 'error!: check sum mismatch\n'
+  0x440353c7: 'error!: lzma_uncompress() = %d\n'
+  0x440353e7: 'error! unsupport argo_no = %d\n'
+  0x44035406: 'Compress data output buffer size error(0x%X).\n'
+  0x44035435: 'Compress start address error(NULL).\n'
+  0x4403545a: 'Compress data output buffer address error(NULL).\n'
+  0x4403548c: 'Compress start address align error(0x%08X).\n'
+  0x440354b9: 'Compress data output buffer address align error(0x%08X).\n'
+  0x440354f3: 'Error! compress() return %d.\n'
+  0x44035511: 'Compress OK! Result:0x%X->0x%X\n'
+  0x44035531: 'Error! Drive firmware not compress header.\n'
+  0x4403555d: 'F/E Address = 0x%X , Drive(compress) Size = 0x%X\n'
+  0x4403558f: 'Error! Drive firmware uncompress failed[0x%X].\n'
+  0x440355bf: 'Error! Drive firmware not compress.\n'
+  0x440355e4: 'F/E reset release finish ...\n'
+  0x44035602: 'Error! Fvu not compress header.\n'
+  0x44035623: 'Fvu Address = 0x%X , Size = 0x%X\n'
+  0x44035645: 'Error! Fvu uncompress failed[0x%X].\n'
+  0x4403566a: 'Error! Fvu not compress.\n'
+
+=== BOOT.BIN BGO PARTITION DEFAULT NAMES (.data copy -> 0x50480000) ===
+  0x44039820: 6c 6c 69 73 69 6f 6e 0a 00 00 00 00 00 00 00 00  |llision.........|
+  0x44039830: ff ff ff ff 69 66 6f 64 65 76 31 00 00 6d 69 6e  |....ifodev1..min|
+  0x44039840: 69 62 6f 6f 74 00 6d 61 69 6e 73 6f 66 74 00 69  |iboot.mainsoft.i|
+  0x44039850: 66 6f 64 65 76 32 00 00 6e 65 74 66 69 72 6d 00  |fodev2..netfirm.|
+  0x44039860: 00 6e 65 74 69 66 6f 31 00 00 73 79 73 66 61 63  |.netifo1..sysfac|
+  0x44039870: 74 00 00 66 73 31 2e 64 61 74 00 00 66 73 32 2e  |t..fs1.dat..fs2.|
+  0x44039880: 64 61 74 00 00 66 73 33 2e 64 61 74 00 00 66 73  |dat..fs3.dat..fs|
+  0x44039890: 34 2e 64 61 74 00 00 63 6f 6e 66 69 67 31 00 00  |4.dat..config1..|
+  0x440398a0: 72 74 73 64 31 00 00 00 00 72 74 73 64 32 00 00  |rtsd1....rtsd2..|
+  0x440398b0: 00 00 63 6f 6e 66 69 67 32 00 00 67 75 69 64 65  |..config2..guide|
+  0x440398c0: 00 00 00 00 64 65 62 75 67 00 00 00 00 75 70 64  |....debug....upd|
+  0x440398d0: 61 74 65 00 00 00 64 72 76 66 69 72 6d 00 00 66  |ate...drvfirm..f|
+  0x440398e0: 76 75 2e 65 78 65 00 00 63 69 6d 5f 64 76 64 00  |vu.exe..cim_dvd.|
+  0x440398f0: 00 63 69 6d 5f 68 64 64 00 00 73 79 73 5f 68 64  |.cim_hdd..sys_hd|
+  0x44039900: 64 00 00 6e 6d 69 63 6e 74 00 00 00 66 73 35 2e  |d..nmicnt...fs5.|
+  0x44039910: 64 61 74 00 00 66 73 36 2e 64 61 74 00 00 72 74  |dat..fs6.dat..rt|
+  0x44039920: 73 64 33 00 00 00 00 72 74 73 64 34 00 00 00 00  |sd3....rtsd4....|
+  0x44039930: 69 74 63 2e 64 61 74 00 00 65 70 67 64 61 74 61  |itc.dat..epgdata|
+  0x44039940: 00 00 65 70 67 63 6f 6e 66 00 00 66 73 5f 6d 70  |..epgconf..fs_mp|
+  0x44039950: 67 34 00 00 66 74 72 65 63 00 00 00 00 74 76 67  |g4..ftrec....tvg|
+  0x44039960: 6f 73 00 00 00 00 66 69 6f 5f 72 65 63 76 00 66  |os....fio_recv.f|
+  0x44039970: 69 6f 5f 62 75 70 00 00 66 69 6f 5f 73 70 72 30  |io_bup..fio_spr0|
+  0x44039980: 00 66 69 6f 5f 73 70 72 31 00 66 69 6f 5f 73 70  |.fio_spr1.fio_sp|
+  0x44039990: 72 32 00 66 69 6f 5f 73 70 72 33 00 66 73 37 2e  |r2.fio_spr3.fs7.|
+  0x440399a0: 64 61 74 00 00 74 76 67 6f 73 5f 63 31 00 74 76  |dat..tvgos_c1.tv|
+  0x440399b0: 67 6f 73 5f 63 32 00 72 74 73 64 35 00 00 00 00  |gos_c2.rtsd5....|
+  0x440399c0: 65 78 74 65 6e 64 00 00 00 72 74 73 64 36 00 00  |extend...rtsd6..|
+  0x440399d0: 00 00 65 70 67 64 61 74 61 31 00 65 70 67 6d 6e  |..epgdata1.epgmn|
+  0x440399e0: 67 00 00 00 68 64 63 70 73 72 6d 00 00 73 65 72  |g...hdcpsrm..ser|
+  0x440399f0: 65 69 73 69 64 00 63 67 69 64 00 00 00 00 00 72  |eisid.cgid.....r|
+  0x44039a00: 73 76 5f 6c 69 6e 6b 00 72 73 76 5f 63 6f 6d 70  |sv_link.rsv_comp|
+  0x44039a10: 00 00 00 00 ff ff 00 00 01 00 00 00 4c 44 20 46  |............LD F|
+  0x44039a20: 56 55 00 49 4e 53 45 52 54 00 20 20 44 49 53 4b  |VU.INSERT.  DISK|
+  0x44039a30: 00 4e 47 44 49 53 4b 00 4e 4f 20 46 56 55 00 44  |.NGDISK.NO FVU.D|
+  0x44039a40: 4c 20 45 52 52 00 53 55 4d 20 4e 47 00 44 52 56  |L ERR.SUM NG.DRV|
+  0x44039a50: 20 4e 47 00 53 54 46 41 49 4c 00 54 49 4d 4f 55  | NG.STFAIL.TIMOU|
+  0x44039a60: 54 00 54 52 4f 55 42 4c 00 44 52 56 20 4e 47 00  |T.TROUBL.DRV NG.|
+  0x44039a70: 55 39 39 20 20 20 00 46 4d 4c 49 53 54 00 44 4c  |U99   .FMLIST.DL|
+  0x44039a80: 20 45 52 52 00 48 44 44 45 52 52 00 01 00 00 00  | ERR.HDDERR.....|
+  0x44039a90: 00 00 00 00 01 00 00 00 02 00 00 00 03 00 00 00  |................|
+  0x44039aa0: 04 00 00 00 05 00 00 00 72 eb ca 91 30 45 68 ad  |........r...0Eh.|
+  0x44039ab0: 99 df 56 72 3a b8 10 00 02 00 00 00 04 00 00 00  |..Vr:...........|

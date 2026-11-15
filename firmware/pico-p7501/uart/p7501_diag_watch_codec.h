@@ -23,8 +23,13 @@ extern "C" {
 typedef enum p7501_diag_action {
     P7501_DIAG_ACT_AUTO = 0,
     P7501_DIAG_ACT_BYPASS,
+    P7501_DIAG_ACT_READ,
+    P7501_DIAG_ACT_WRITE,
     P7501_DIAG_ACT_FORMAT,
     P7501_DIAG_ACT_DUMP,
+    P7501_DIAG_ACT_JUMP,
+    P7501_DIAG_ACT_ERASE,
+    P7501_DIAG_ACT_QUIT,
     P7501_DIAG_ACT_NONE
 } p7501_diag_action_t;
 
@@ -45,6 +50,7 @@ typedef struct p7501_diag_watch_spec {
     uint32_t jig_hold_ms;
     p7501_diag_action_t action;
     bool release_on_ddr;
+    char tx_seq[32];
 } p7501_diag_watch_spec_t;
 
 typedef struct p7501_diag_watch_state {
@@ -55,14 +61,17 @@ typedef struct p7501_diag_watch_state {
     bool tx_dispatched;
 } p7501_diag_watch_state_t;
 
-/** Parse `DIAGWATCH [ms] [NORMAL|JIG[:ms]|NOPULL] [AUTO|BYPASS|FORMAT|DUMP|NONE] [RELEASE|HOLD]`. */
+/** Parse `DIAGWATCH [ms] [NORMAL|JIG[:ms]|NOPULL] [AUTO|BYPASS|READ[:a[,n]]|WRITE:<a,v>|FORMAT|DUMP|JUMP:<a>|ERASE:<a_nvram>|QUIT|NONE] [RELEASE|HOLD]`. */
 bool p7501_diag_watch_parse_args(const char *arg, p7501_diag_watch_spec_t *out);
 
 /** Initialize a clean rolling `DIAGWATCH` state machine. */
 void p7501_diag_watch_init(p7501_diag_watch_state_t *st);
 
-/** Return single-byte `PANAMON1` command char (`'B'`/`'F'`/`'D'`) or `'\0'` for passive mode. */
+/** Return single-byte `PANAMON1` command char (`'B'`/`'R'`/`'W'`/`'F'`/`'D'`/`'J'`/`'E'`/`'Q'`) or `'\0'`. */
 char p7501_diag_watch_action_char(p7501_diag_action_t action);
+
+/** Format full `PANAMON1` TX payload (single char or parameterized `<op><hex>\r`), returning byte length. */
+size_t p7501_diag_watch_format_tx(const p7501_diag_watch_spec_t *spec, char *out, size_t cap);
 
 /**
  * @brief Feed one RX byte into the `DIAGWATCH` event classifier.

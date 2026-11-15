@@ -25,6 +25,12 @@ char p7501_nibble_to_hex_char(uint8_t nibble);
 /** Case-insensitive equality for null-terminated ASCII strings. */
 bool p7501_ascii_ieq(const char *a, const char *b);
 
+/** Case-insensitive prefix check for null-terminated ASCII strings. */
+bool p7501_ascii_iprefix(const char *str, const char *prefix);
+
+/** Return true if `str` is non-empty and consists solely of ASCII decimal digits `'0'..'9'`. */
+bool p7501_ascii_is_digits(const char *str);
+
 /** Copy ASCII string up to `dst_cap - 1` chars converting lowercase letters to uppercase. */
 void p7501_ascii_upper_copy(char *dst, size_t dst_cap, const char *src);
 

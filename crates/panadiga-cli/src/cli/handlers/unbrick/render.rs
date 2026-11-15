@@ -1,6 +1,10 @@
 //! Pure terminal report formatting and thin JSON file emission for CLI `unbrick`.
 
 use anyhow::Result;
+use panadiga_core::re::matshita_emu::{
+    BootSequenceReport, FrmUnlockVerificationSummary, MatshitaEmulatorSnapshot,
+    WriteInjectionRecord,
+};
 use panadiga_core::re::{
     FrmModuleExtractionReport, MainPassthroughReport, MainPassthroughRspPlan, Prog061BgoInspection,
     SdMediaVerificationReport, SdUnbrickKitReport, UnbrickWorkspaceReport,
@@ -153,6 +157,61 @@ pub fn format_bgo_inspection_line(rep: &Prog061BgoInspection) -> String {
         "PROG061 BGO Inspection: mode={} ({})",
         rep.detected_mode, rep.raw_sha256
     )
+}
+
+pub fn format_matshita_boot_lines(report: &BootSequenceReport) -> Vec<String> {
+    let mut lines = vec![format!(
+        "Matshita R6-MV4 Boot [{:?}]: inquiry='{}' startup={} unlock_verified={} final={}",
+        report.scenario,
+        report.inquiry_id,
+        report.startup_succeeded,
+        report.unlock_media_verified,
+        report.final_boot_code_hex
+    )];
+    if let Some(ref va) = report.jump_target_va_hex {
+        lines.push(format!("  Boot Jump VA: {va}"));
+    }
+    for step in &report.steps {
+        lines.push(format!(
+            "  [{}/{}] {} -> CDB [{}] -> {} ({})",
+            step.step_index,
+            if step.passed { "OK" } else { "ERR" },
+            step.boot_fn_name,
+            step.cdb_hex,
+            step.sense_hex,
+            step.boot_log_line
+        ));
+    }
+    lines
+}
+
+pub fn format_matshita_injection_lines(
+    rec: &WriteInjectionRecord,
+    snap: &MatshitaEmulatorSnapshot,
+) -> Vec<String> {
+    vec![
+        format!(
+            "Matshita ATAPI Injection #{} ({} / mode={}): {} B @ 0x{:08X} -> {}",
+            rec.seq, rec.cdb0_or_cmd, rec.mode, rec.len_bytes, rec.target_va_or_lba, rec.status
+        ),
+        format!("  Note      : {}", rec.note),
+        format!("  BufferSHA : {}", snap.buffer_sha256),
+    ]
+}
+
+pub fn format_frm_unlock_verification_lines(summary: &FrmUnlockVerificationSummary) -> Vec<String> {
+    let mut lines = vec![format!(
+        "FRM Unlock Verify [{}]: {} B, entries={}, verified={}, jmp={}",
+        summary.container_kind,
+        summary.container_bytes,
+        summary.entry_count,
+        summary.verified,
+        summary.bootloader_jump_va_hex
+    )];
+    for note in &summary.notes {
+        lines.push(format!("  * {note}"));
+    }
+    lines
 }
 
 pub fn print_lines(lines: &[String]) {

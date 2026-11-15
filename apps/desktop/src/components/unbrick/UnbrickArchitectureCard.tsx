@@ -38,7 +38,7 @@ export const UnbrickArchitectureCard: React.FC<UnbrickArchitectureCardProps> = (
   );
   const [outDir, setOutDir] = useState('unbrick_extracted_frm');
   const [frmErr, setFrmErr] = useState<string | null>(null);
-  const [extractSuccessMessage, setExtractSuccessMessage] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     if (workbench?.discovered_pana_dvd) setFrmPath(workbench.discovered_pana_dvd);
@@ -51,10 +51,10 @@ export const UnbrickArchitectureCard: React.FC<UnbrickArchitectureCardProps> = (
       return;
     }
     setFrmErr(null);
-    setExtractSuccessMessage(null);
+    setSuccess(null);
     const extracted = await onExtractFrm(frmPath.trim(), outDir.trim());
     if (extracted) {
-      setExtractSuccessMessage(
+      setSuccess(
         `Extraídos ${extracted.modules.length} módulos para ${extracted.output_dir}`
       );
     }
@@ -158,10 +158,10 @@ export const UnbrickArchitectureCard: React.FC<UnbrickArchitectureCardProps> = (
 
         {frmErr && <p className="text-[11px] text-rose-400 font-mono">{frmErr}</p>}
 
-        {extractSuccessMessage && (
+        {success && (
           <Alert variant="success">
             <AlertDescription className="font-mono text-[11px]">
-              {extractSuccessMessage}
+              {success}
             </AlertDescription>
           </Alert>
         )}

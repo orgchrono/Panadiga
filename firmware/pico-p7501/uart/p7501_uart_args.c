@@ -116,6 +116,15 @@ p7501_boot_action_t p7501_parse_boot_action(const char *token) {
     return p7501_parse_boot_spec(token, NULL);
 }
 
+bool p7501_is_boot_spec_token(const char *token) {
+    if (!token || token[0] == '\0') {
+        return false;
+    }
+    return p7501_ascii_ieq(token, "NORMAL") || p7501_ascii_ieq(token, "BOOT") ||
+           p7501_ascii_ieq(token, "NOPULL") || p7501_ascii_ieq(token, "PASSIVE") ||
+           p7501_ascii_ieq(token, "JIG") || p7501_ascii_iprefix(token, "JIG:");
+}
+
 void p7501_parse_window_boot_args(
     const char *arg,
     uint32_t default_ms,

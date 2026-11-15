@@ -1,3 +1,6 @@
+> 🌐 **Idioma / Language:** [English (US)](../en-US/ANDROID_APK_AND_BLUETOOTH_ARCHITECTURE.md) | **Português (BR)**
+> 🧭 **Portal:** [Índice da Documentação](../INDEX.md) | [Auditoria Completa](../../AUDITORIA_COMPLETA.md) | [Auditorias](../audits/README.md) | [Pseudocódigo Ghidra](../pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) | [Logs de Debug](../debug_logs/README.md)
+
 # Arquitetura Mobile (Android APK) e Conectividade Sem Fio (Bluetooth Low Energy)
 ## Panadiga Workbench Mobile — Especificação Técnica da HAL Nativa em Rust
 

@@ -33,3 +33,39 @@ fn test_pure_slice_cleaning_in_memory() {
     );
     assert!(output.report.bootloader_immutable);
 }
+
+#[test]
+fn test_patch_flash_nvram_slice_cow_and_ipl_guard() {
+    let size = 8 * 1024 * 1024;
+    let mock_flash = vec![0xA5u8; size];
+    let nvram_offset = size - SPANSION_NVRAM_SIZE_BYTES;
+    let patched = patch_flash_nvram_slice(
+        &mock_flash,
+        0x100,
+        b"HITA",
+        "memory://src.bin",
+        "memory://patched.bin",
+        "memory://bak.bin",
+    )
+    .expect("Guarded NVRAM patch within top 64 KB must succeed");
+    assert_eq!(
+        &patched.cleaned_bytes[nvram_offset + 0x100..nvram_offset + 0x104],
+        b"HITA"
+    );
+    assert_eq!(
+        &patched.cleaned_bytes[..nvram_offset],
+        &mock_flash[..nvram_offset]
+    );
+    assert!(patched.report.bootloader_immutable);
+    assert!(
+        patch_flash_nvram_slice(
+            &mock_flash,
+            SPANSION_NVRAM_SIZE_BYTES - 2,
+            b"HITA",
+            "a",
+            "b",
+            "c"
+        )
+        .is_err()
+    );
+}

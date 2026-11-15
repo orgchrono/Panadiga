@@ -1,3 +1,6 @@
+> 🌐 **Language / Idioma:** **English** | [Português (BR)](../pt-BR/DIGADIAG_PANA_SD_E_TBC_AUTONOMO.md)
+> 🧭 **Portal:** [Docs Index](../INDEX.md) | [Complete Audit](../../COMPLETE_AUDIT.md) | [Audits](../audits/README.md) | [Ghidra Pseudocode](../pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) | [Debug Logs](../debug_logs/README.md)
+
 # Technical Dossier: `DIGADIAG.FRM` vs `PANA__SD.FRM` / `PANA_DVD.FRM`, SD `-91006` Gate & Standalone TBC Feasibility (DMR-EH55 / MN103S)
 
 > **Scope & Forensic Evidence Base:** Derived from verified MN103S disassembly of `/BOOT.BIN` (NOR `0x44000000`), `PROG061` (`0x50400000`), `EH55_MAIN_3410PQ.bin` (`0x57000000`), `MAIN3060NP` (`0x57000000`), container dumps in `sd_card_eh55/`, `PANA_DVD.FRM`, `hdd_partition_firmware_0x02000000.bin`, and official `VEP79138` schematics (`na_p49_blk1.png`, `na_p50_blk2.png`, `vol2_p125_interconnect.png`).

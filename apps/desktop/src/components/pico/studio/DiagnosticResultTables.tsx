@@ -1,12 +1,23 @@
 import React from 'react';
+import { EmptyState } from '@/components/ui';
 import type { PicoDiagnosticResult } from '@/models';
 
 export interface DiagnosticResultTablesProps {
   result: PicoDiagnosticResult;
 }
 
-export const DiagnosticResultTables: React.FC<DiagnosticResultTablesProps> = ({ result }) => (
-  <>
+export const DiagnosticResultTables: React.FC<DiagnosticResultTablesProps> = ({ result }) => {
+  const hasAnyTable =
+    result.pincheck_rows.length > 0 ||
+    result.transition_rows.length > 0 ||
+    result.dump_rows.length > 0;
+
+  if (!hasAnyTable) {
+    return <EmptyState compact title="Nenhuma tabela estruturada retornada para este comando." />;
+  }
+
+  return (
+    <>
     {result.pincheck_rows.length > 0 && (
       <div className="overflow-x-auto rounded-lg border border-slate-800">
         <table className="w-full text-[11px]">
@@ -81,5 +92,6 @@ export const DiagnosticResultTables: React.FC<DiagnosticResultTablesProps> = ({ 
         </table>
       </div>
     )}
-  </>
-);
+    </>
+  );
+};

@@ -1,3 +1,6 @@
+> 🌐 **Idioma / Language:** [English (US)](../en-US/TECHNICAL_INVENTORY_AND_OPERATIONS_MANUAL.md) | **Português (BR)**
+> 🧭 **Portal:** [Índice da Documentação](../INDEX.md) | [Auditoria Completa](../../AUDITORIA_COMPLETA.md) | [Auditorias](../audits/README.md) | [Pseudocódigo Ghidra](../pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) | [Logs de Debug](../debug_logs/README.md)
+
 # Inventário Técnico, Auditoria de Qualidade e Guia de Operação de Bancada
 ## Ecossistema de Engenharia Reversa e Recuperação — Panasonic DMR-EH55
 
@@ -16,7 +19,7 @@ O ecossistema de recuperação e engenharia reversa do gravador digital **Panaso
 1. **Acervo de Firmware e Imagens:** Todos os artefatos binários brutos (`panasonic DMR EH-55 Firmware hdd_100.bin`, `PANA_DVD.FRM` e `UPDATE_EH55.zip`) foram catalogados, periciados com análise de entropia e tiveram seus hashes criptográficos (SHA-256) fixados de forma imutável.
 2. **Migração para Plataforma Nativa em Rust (`panadiga` CLI & Workspace):** Antigos utilitários Python avulsos de análise (`clean_spansion_nvram.py`, `inspect_hdd_image.py`, `analyze_deep.py`, `inspect_firmware_headers.py`, `search_manuals.py`) foram integralmente substituídos pelo binário nativo Rust multiplataforma (`panadiga nvram clean`, `panadiga hdd inspect`/`extract`/`decode-descriptors`, `panadiga frm`, `panadiga headers`, `panadiga scan`, `panadiga manuals`, `panadiga rag`, `panadiga mcp`). A automação em Python ficou restrita aos orquestradores tipados (`mypy --strict`) em `scripts/build.py`, `scripts/validate.py`, `scripts/panadiga_ops.py` e suítes em `scripts/bench/` e `scripts/re/`.
 3. **Ferramentas Auxiliares:** O lançador [`tools/Abrir_HxD.cmd`](../../tools/Abrir_HxD.cmd) e os scripts `.cmd` em `tools/` foram padronizados para resolução relativa portátil no Windows, ao lado dos geradores nativos Ghidra gerados a partir da SSOT em Rust (`tools/ghidra/`).
-4. **Acervo de Manuais Técnicos:** Todos os 15 manuais em formato PDF foram catalogados e indexados pelo motor RAG nativo em Rust (`crates/panadiga-rag`), categorizados entre Manuais de Serviço Oficiais com diagramas esquemáticos completos, Manuais de Operação regionais, Guias de Atualização e Guias Rápidos.
+4. **Acervo de Manuais Técnicos:** Todos os **30 PDFs** (manuais de serviço, guias de operação e datasheets em `manuals_and_schematics/`) foram catalogados em [`manuals_and_schematics/README.md`](../../manuals_and_schematics/README.md) e indexados pelo motor RAG nativo em Rust (`crates/panadiga-rag`).
 5. **Subsistema `P7501` Async UART (`firmware/pico-p7501/`):** Verificado eletricamente contra os esquemáticos da placa `VEP79138` e medições de bancada em `COM10`. Confirmou-se que `P7501` (`B6B-ZR-3R4`, `TO JIGU`) opera em **UART Assíncrona `115200 8N1`** + controle discreto (`SW_UART`, `XRESET` Open-Drain e guarda estrita `Hi-Z Input` sem pulls no pino 5 **`NSW5V` / `GP3`**).
 
 ---
@@ -27,7 +30,7 @@ Abaixo encontra-se o inventário dos artefatos binários imutáveis, executávei
 
 | Diretório | Arquivo | Tamanho (Bytes) | Hash SHA-256 | Função Técnica / Descrição | Status QA |
 | :--- | :--- | :---: | :--- | :--- | :--- |
-| `docs/pt-BR/` | `INVENTARIO_TECNICO_E_GUIA_DE_OPERACAO.md` | Dinâmico | Homologado | Este inventário técnico, catálogo de 15 manuais, rotinas de bancada e FMEA. | Homologado |
+| `docs/pt-BR/` | `INVENTARIO_TECNICO_E_GUIA_DE_OPERACAO.md` | Dinâmico | Homologado | Este inventário técnico, catálogo de **30 PDFs** (manuais de serviço), rotinas de bancada e FMEA. | Homologado |
 | `docs/pt-BR/` | `RELATORIO_AUDITORIA_E_MODULARIZACAO_FINAL.md` | Dinâmico | Homologado | Relatório de auditoria, decomposição de módulos e 9 Quality Gates. | Homologado |
 | `docs/pt-BR/` | `ARQUITETURA_STORAGE_MEIHDFS_PARTICOES.md` | Dinâmico | Homologado | SSOT do disco: MBR `'SH'`, mirror em 28 MB, journal e os 256 registros XOR `0xFF`. | Homologado |
 | `docs/pt-BR/` | `DOSSIE_CRIPTOGRAFIA_E_FIRMWARE_PANA_DVD.md` | Dinâmico | Homologado | Dossiê forense de criptoanálise, DRM, CPRM, TOC periódica e ECB. | Homologado |
@@ -42,12 +45,12 @@ Abaixo encontra-se o inventário dos artefatos binários imutáveis, executávei
 | `firmware_and_images/` | `PANA_DVD.FRM` | 7,531,744 | `a596d52a8220a9113777c9caf271ac4d518202d0639d6118a4d0bc03b9a6367f` | Imagem binária oficial de atualização de firmware via disco óptico. | Homologado |
 | `firmware_and_images/` | `UPDATE_EH55.zip` | 7,474,766 | `07589e79722409413c5da25c700227a9a04cef39f0178ffa08df3d8d3f7debd4` | Arquivo compactado oficial Matsushita contendo `PANA_DVD.FRM`. | Homologado |
 | `firmware/pico-p7501/` | `p7501_uart.pio` | 1,861 | `2d08a2621bb116bde5b23c06ee9879deddb85229d74ce5a0ffa82bc056412528` | Máquina de estados PIO RX `115200 8N1` para `GP2` (`P7501` Pino 6 `UARTP2M_T`). | Homologado |
-| `firmware/pico-p7501/` | `p7501_pico_main.c` | 2,149 | `5c5970bfc940b3ef01e7d8f49d50ecf5b6ebcfbb0f499548569750f97f89b6fc` | Entrypoint C11 RP2040/RP2350 orquestrando HAL `P7501`, USB CDC/BLE CLI e ponte GDB RSP. | Homologado |
-| `firmware/pico-p7501/flash/` | `ram_loader_am34_target.c` | 6,715 | `b1238c0bafac7a28f16c54d41e3bd09bbf84a5141fe3f164091f43d7e3102940` | Micro-driver C nativo AM34/MN103S de posição independente para erase JEDEC na Spansion. | Homologado |
+| `firmware/pico-p7501/` | `p7501_pico_main.c` | 2,154 | `4c5335e053dd0461ad72082d4db54ed98c5ecbf0d6fd44cd7365f3f9c76fa4e6` | Entrypoint C11 RP2040/RP2350 orquestrando HAL `P7501`, USB CDC/BLE CLI e ponte GDB RSP. | Homologado |
+| `firmware/pico-p7501/flash/` | `ram_loader_am34_target.c` | 7,071 | `9013ffd3bbd12d1a4a41019a8838f65f90ebe6da3f97d4185df040582c634bf8` | Micro-driver C nativo AM34/MN103S de posição independente para erase JEDEC na Spansion. | Homologado |
 | `firmware/pico-p7501/` | `CMakeLists.txt` | Dinâmico | Homologado | Build CMake modular dual-target (`RP2040` / `RP2350` + BLE em `pico_w`/`pico2_w`). | Homologado |
-| `crates/panadiga-core/src/pico/firmware_bins/` | `panasonic_p7501_uart_unified.uf2` | 463,360 | `b22c85a58f01af48bdd3d251764e162a9402775746e662d22a072032ec451a38` | Imagem UF2 universal concatenando targets `RP2040` + `RP2350` (`panadiga pico flash`). | Homologado |
-| `crates/panadiga-core/src/pico/firmware_bins/` | `panasonic_p7501_uart_rp2040.uf2` | 236,544 | `d5d3e617ba56b4fb8caac2705da5ad756700e0f08dce21a208bec8c3b79c9d14` | Imagem UF2 dedicada ao Raspberry Pi Pico (`RP2040`). | Homologado |
-| `crates/panadiga-core/src/pico/firmware_bins/` | `panasonic_p7501_uart_rp2350.uf2` | 226,816 | `e002537499e3442c1c1af6aad12477aa27d63f738ffd6d2ea7d55a041d60824a` | Imagem UF2 dedicada ao Raspberry Pi Pico 2 (`RP2350`). | Homologado |
+| `crates/panadiga-core/src/pico/firmware_bins/` | `panasonic_p7501_uart_unified.uf2` | 646,144 | `d97dd9600766adff2f3692b5add5ec533e41f5379e67eb58296d7918f8f4334d` | Imagem UF2 universal concatenando targets `RP2040` + `RP2350` (ARM GNU Toolchain `14.2 rel1`). | Homologado |
+| `crates/panadiga-core/src/pico/firmware_bins/` | `panasonic_p7501_uart_rp2040.uf2` | 330,752 | `70d578710a79ec5ca27ee1dd1dc23893ceccd30cacfed75e6a0bf0a00c771435` | Imagem UF2 dedicada ao Raspberry Pi Pico (`RP2040`). | Homologado |
+| `crates/panadiga-core/src/pico/firmware_bins/` | `panasonic_p7501_uart_rp2350.uf2` | 315,392 | `73b0ebf7fb0eb3337578e40f0b0c9764323283e8e88c3454fcba1a1e6b27b29f` | Imagem UF2 dedicada ao Raspberry Pi Pico 2 (`RP2350`). | Homologado |
 | `tools/` | `Abrir_HxD.cmd` | 815 | `fe7d792ee29ab7380b40dd078b12540111794a1acc06438e76c4e890fbc9c4f3` | Lançador portátil do editor hexadecimal HxD 64-bit no Windows. | Homologado |
 | `tools/HxD/app/` | `HxD64.exe` | 6,917,120 | `03e101d5d65377d559680848648ffa4c111d32d128b6e89dde8b441de7b6bf8e` | Executável do HxD Hex Editor (64 bits). | Homologado |
 | `tools/HxD/app/` | `HxD32.exe` | 4,704,256 | `ae742195737cd0a7038b9e02d7163a334aeaae7ac983e387701d257dda9b950d` | Executável do HxD Hex Editor (32 bits). | Homologado |
@@ -85,7 +88,8 @@ Abaixo encontra-se o inventário dos artefatos binários imutáveis, executávei
 
 ### 3.2. Biblioteca Técnica de Manuais e Esquemas (`manuals_and_schematics/`)
 
-A biblioteca técnica reúne 15 manuais em PDF, totalizando **1.090 páginas** de esquemas elétricos, guias de alinhamento, rotinas de modo de serviço e manuais de operação. Abaixo, a correlação exata de cada arquivo com sua variante regional, código de publicação e conteúdo:
+> [!NOTE]
+> Os 15 documentos primários da família `DMR-EH55` listados abaixo com seus nomes históricos de catalogação inicial foram posteriormente padronizados semanticamente em `manuals_and_schematics/dmr-eh55/` e expandidos para **30 PDFs** cobrindo todas as famílias DIGA + datasheets de silício (`datasheets/`). Consulte o catálogo completo em [`manuals_and_schematics/README.md`](../../manuals_and_schematics/README.md).
 
 | Nome do Arquivo | Pág. | Tamanho | Modelo Aplicável | Região de Mercado | Código de Publicação / Order No. | Natureza e Conteúdo Técnico |
 | :--- | :---: | :---: | :--- | :--- | :--- | :--- |
@@ -117,7 +121,7 @@ A biblioteca técnica reúne 15 manuais em PDF, totalizando **1.090 páginas** d
 3. **`panadiga frm` / `panadiga headers` / `panadiga scan`**:
    * **Objetivo:** Auditoria criptográfica de containers `PANA_DVD.FRM` e extração de strings/cabeçalhos em imagens binárias.
 4. **`panadiga manuals` / `panadiga rag` / `panadiga mcp`**:
-   * **Objetivo:** Indexação nativa dos 15 manuais PDF e pesquisa semântica com guardrails determinísticos de segurança de hardware (`crates/panadiga-rag`, `crates/panadiga-mcp`).
+   * **Objetivo:** Indexação nativa dos **30 PDFs** (manuais de serviço, guias e datasheets) e pesquisa semântica com guardrails determinísticos de segurança de hardware (`crates/panadiga-rag`, `crates/panadiga-mcp`).
 5. **Orquestradores Python (`scripts/`):** `scripts/build.py` (Desktop, Android APK, Pico UF2), `scripts/validate.py` (9 Quality Gates), `scripts/panadiga_ops.py` e pacotes modulares de análise/bancada em `scripts/bench/` e `scripts/re/`.
 
 ---
@@ -261,7 +265,7 @@ Se o disco rígido original estiver com setores defeituosos (*bad sectors*), ru�
      > [!WARNING]
      > **Topologia real do `DMR-EH55` (`ch=1, dev=0` = Secondary `MASTER`):** Os esquemáticos (`vol2_schematics.pdf` pp. 46, 52, 113, 125–126) e o disassembly real de `eh55_frm_PROG061_BOOT.bin` (`FUN_50414908`) e `EH55_MAIN_3410PQ.bin` (`FUN_574d1de8`) comprovam `acStack_70[4] = { 2, 0, 1, 0 }`: o drive óptico (ODD) é **Primary Master (`ch=0, dev=0`)** no Front-End interno, enquanto o HDD usa um cabo FFC dedicado de 40 vias como **Secondary `MASTER` (`ch=1, dev=0`, `0x89000D00`)** — a tabela de remapeamento `DAT_505733d4 == 0` pertence apenas ao `DMR-EH58`, não ao `DMR-EH55`. Configurar como **`Slave`** coloca o disco em `acStack_70[3] == 0` (ignorado pelo firmware); deixar em **`CS` (`Cable Select`)** na `StarTech IDE2SAT2` causa seleção indeterminada / colisão `0x8000040d` / travamento `MultiWord DMA MODE2`, podendo levar ao desligamento forçado e corrupção dos setores NOR **BGO (`0x84200000..0x843FFFFF`)** (`BGO driver init failed[1].` / `U99`). Configure **sempre explicitamente como `MASTER` (`Device 0`)**.
    * Conecte o novo disco a uma estação de trabalho Linux ou Windows.
-   * **Remoção da trava de 200 GB do firmware `MAIN` (`src/hdd_cmd.c`):** Antes de gravar a imagem ou Partição 1 no disco >200 GB, desbloqueie o limite via CLI ou aba **`Desbloqueio de Capacidade (250GB / 2TB)`** do Desktop:
+   * **Remoção da trava de 200 GB do firmware `MAIN` (string de debug interna Matsushita `"src/hdd_cmd.c"`):** Antes de gravar a imagem ou Partição 1 no disco >200 GB, desbloqueie o limite via CLI ou aba **`Desbloqueio de Capacidade (250GB / 2TB)`** do Desktop:
      ```bash
      # 1. Inspecionar trava atual (0xC6 bls +12 vs 0xCA bra +12)
      panadiga hdd inspect-capacity -i firmware_and_images/extracted_partitions/hdd_partition_firmware_0x02000000.bin

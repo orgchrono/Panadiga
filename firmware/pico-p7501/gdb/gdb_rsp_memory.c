@@ -191,3 +191,46 @@ void gdb_mem_handle_write_cmd(const char *arg) {
 
     gdb_rsp_send_packet(write_ok ? "OK" : "E05");
 }
+
+void gdb_mem_handle_write_bin_cmd(const char *arg, size_t arg_len) {
+    uint32_t addr = 0U;
+    uint32_t length = 0U;
+    const char *p = gdb_parse_addr_and_len(arg, &addr, &length, ':');
+    if (p == NULL) {
+        gdb_rsp_send_packet("E03");
+        return;
+    }
+    const size_t hdr_len = (size_t)(p - arg);
+    if (hdr_len > arg_len) {
+        gdb_rsp_send_packet("E03");
+        return;
+    }
+    if (!is_valid_write_range(addr, length)) {
+        gdb_rsp_send_packet("E05");
+        return;
+    }
+
+    size_t rx_pos = hdr_len;
+    uint32_t written = 0U;
+    bool write_ok = true;
+    while ((written < length) && (rx_pos < arg_len)) {
+        uint8_t byte = (uint8_t)arg[rx_pos++];
+        if (byte == 0x7DU) {
+            if (rx_pos >= arg_len) {
+                gdb_rsp_send_packet("E04");
+                return;
+            }
+            byte = (uint8_t)((uint8_t)arg[rx_pos++] ^ 0x20U);
+        }
+        if (!memory_write_byte(addr + written, byte)) {
+            write_ok = false;
+            break;
+        }
+        written++;
+    }
+    if (written != length) {
+        gdb_rsp_send_packet("E04");
+        return;
+    }
+    gdb_rsp_send_packet(write_ok ? "OK" : "E05");
+}

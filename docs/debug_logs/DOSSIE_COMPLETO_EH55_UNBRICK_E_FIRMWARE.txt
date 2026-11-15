@@ -1,0 +1,559 @@
+================================================================================
+DOSSIE TECNICO CONSOLIDADO — PANASONIC DMR-EH55 (VEP79138 / Loader ver0.61)
+Diagnostico Forense, Mapa de Memoria MN103S, Formato [nfrom]/BGO,
+Analise de Bootloader/Drive/SD/HDD e Rotas Viaveis de Desbrick
+Data de consolidacao: 2026-11-14
+================================================================================
+
+1. RESUMO EXECUTIVO DO ESTADO ATUAL DA BANCADA
+--------------------------------------------------------------------------------
+Placa/Alvo: Panasonic DMR-EH55, Loader ao vivo: ver0.61 [06/03/06] (Chip select = 1).
+Jig conectado: Raspberry Pi Pico (COM10, 115200 8N1) em P7501 (B6B-ZR-3R4).
+
+O aparelho esta preso em loop de erro U99 por DUAS falhas independentes
+atuando simultaneamente (comprovado por disassembly MN103S + logs reais):
+
+  (A) FALHA 1 — CORRUPCAO LOGICA BGO / [nfrom] NA NOR FLASH (0x84200000..0x843fffff):
+      Em "***** normal mode *****", o bootloader executa bgo_driver_init() ANTES
+      de tentar ler o HDD (LBA 0x10000). A validacao logica (FUN_4401f804 em
+      BOOT.BIN / FUN_50423058 em PROG061) verifica se a soma dos numeros
+      logicos 1..N de cada particao (2..4) fecha com N*(N+1)/2.
+      Desligar a alimentacao durante gravacao deixa setores apagados (0xffff),
+      duplicados ou incompletos, retornando erro -> "BGO driver init failed[1].".
+      Consequencia no normal mode: boot_main desvia para boot_panic_or_halt_7812()
+      -> FUN_44007836(), que fecha bandeja / tenta drive otico, espera Timer MCU
+      (255 s) -> U99 -> trava em loop infinito (FUN_440079a4).
+      OBS IMPORTANTE: Em normal mode com BGO falhando, ele NAO carrega PANA_DVD.FRM!
+
+  (B) FALHA 2 — ENTRADAS DE RECUPERACAO BLOQUEADAS (SD -91006 + DRIVE 80040904):
+      Puxando P7501 Pino 1 (SW_UART = LOW) no reset ("***** serial boot mode *****"),
+      o Loader PULA bgo_driver_init() e tenta carregar "DIGADIAG.FRM" para
+      0x50400000 nesta ordem:
+        1) Leitor SD (FUN_4400a247 -> FUN_4402724f -> GetSD_Status -> FUN_4400a97c):
+           O cartao atual (Fujifilm 2GB MMAGF02GWECA-MB) falha no ACMD13
+           ("[SDCD]This SD Card is't memory card", erro -91006 / -90002)
+           ANTES de montar o FAT16. Nao depende do conteudo de arquivo no SD.
+        2) Fallback "CD diag boot mode" (cd_diag_boot_mode @ 0x44007c59):
+           Tenta ler "DIGADIAG.FRM" (nao "PANA_DVD.FRM") do CD. Porem o drive
+           MATSHITA R6-MV4 falha com "** can not close tray **" e
+           "[RTSD] === DRIVE ACCESS ERROR === ( 80040904 )",
+           "SENSE[70 00 04 00 00 00 00 0A 00 00 83 A7 09 04 00 00 00 00]",
+           e nao aciona o motor spindle ("spinner nao liga").
+           Testes com cabo IDE do HDD desconectado (no_ide_cable_boot.log) e
+           sem Molex do HDD (no_molex_boot.log) produziram exatamente o mesmo
+           erro 80040904 / 0x83A7, provando que o erro vem do subsistema otico.
+
+  (C) POR QUE NAO DA PARA ENVIAR FIRMWARE EM PLAIN TEXT VIA UART P7501 HOJE:
+      - O protocolo JTAG/OCD (DWire32A) retorna DCSR=0xFFFFFFFF em P7501 (inativo).
+      - A mensagem "wait 1 second." em serial boot mode corresponde a
+        wait_1_sec_timer_sync @ 0x4400b34d, que executa delay_ms(1000) simples
+        e sincroniza com o Timer MCU ("startup reason = [70]").
+      - Em todo BOOT.BIN, uart0_getc @ 0x4400479f (SC0RXB @ 0xd4002009) e
+        chamada apenas por console_getline @ 0x4400488a, que possui 0 chamadores.
+      - SC1 (0xd4002010..0xd400201c) possui 0 referencias em BOOT.BIN.
+      - Em Hardware (P7501), manter SW_UART=LOW corta Q7514 via Q7510/R7528 e
+        isola fisicamente GP4 (UARTM2P_T) ate SW_UART voltar para Hi-Z.
+      Logo, o BOOT.BIN residente NAO possui downloader serial em plain text/XMODEM.
+
+
+================================================================================
+2. MAPA DE HARDWARE E SINAIS VERIFICADOS (DMR-EH55)
+--------------------------------------------------------------------------------
+2.1 Conector P7501 ("TO WRITE JIGU", B6B-ZR-3R4, 6 pinos, passo 1.5 mm)
+    (Fonte: RELATORIO_SESSAO_ENGENHARIA_REVERSA_EH55_100_FIEL.md + Esquemas NA/EC)
+  Pino 1 : SW_UART (GP26/ADC0 Pico) -> Q7510 / QR7503 / IC7501 pino 80.
+           LOW no reset ativa serial boot (XFWE); Hi-Z habilita TX em Q7514.
+  Pino 2 : XRESET  (GP5 Pico)       -> Open-Drain exclusivo (LOW / Hi-Z).
+  Pino 3 : UARTM2P_T (GP4 TX Pico)  -> Pull-up R7570 10k para NSW5V -> Q7514.
+  Pino 4 : GND
+  Pino 5 : NSW5V   (GP3 Pico)       -> IC1506 / D7510; MANTER SEMPRE Hi-Z INPUT!
+  Pino 6 : UARTP2M_T (GP2 RX Pico)  -> TX do SoC AM34 (115200 8N1).
+
+2.2 Alimentacao e Conectores do Drive DVD-RAM (MATSHITA R6-MV4)
+    (Fonte: panasonic_dmr_eh55ec_service_manual_vol2_schematics.pdf p. 113, 126, 175)
+  - Bloco da Fonte (Vol2 p. 175):
+      X SW+12V --> [IP1501 (IC Protector)] --> [Q1509 FET (DR+12V OUT)] --> DR+12V
+      Controle do gate de Q1509: QR1501 <-- pino 42 de IC7501 (DR P ON).
+  - Interconexao Digital PCB <-> RAM Drive (Vol2 p. 113, 126; Vol1 p. 31, 34):
+      Trilhos presentes: DR12V, DR5V, X_SW12V, FM/OEIC VCC:5V, D3R3V.
+      Flats do drive:
+        FP50002 : Stepping motor / bobinas atuador
+        FP50003 : Motor Spindle (COILU, COILV, COILW, Hall HU/HV/HW)
+        FP50004 : Loading motor (LM+/LM-) + chaves mecanicas OPEN_SW / CLOSE_SW
+        45-pin  : Pickup otico / OEIC / Laser / ACT FOC & TRK
+      OBS: O HDD de 40 vias (RFKZ0366, PATA) conecta direto na RAM/Digital PCB,
+           separado dos flats do drive otico.
+
+2.3 Barramento de Memoria MN103S (BOOT.BIN 0x440000bc..0x44000146)
+  Registrador controlador de barramento externo 0xd8c00000:
+    CS0 (0xd8c00000 +0x100): 0x8000fc01 (NOR_FLASH_XIP 0x80000000..)
+    CS1 (0xd8c00010 +0x100): 0x8400fc01 (Area BGO / Flash CS1 0x84000000..0x843fffff)
+    CS2 (0xd8c00020 +0x100): 0x8c00fc01
+  SDRAM principal: 0x90000000..0x93ffffff (64 MB)
+    - Loader ao vivo descomprime F/E de 0x84080040 -> 0x90202000 (len=0x160000).
+    - Loader carrega/executa DIGADIAG.FRM (FVU) em 0x50400000 (0x40000 bytes).
+    - Buffer temporario de leitura SD/CD antes da descompressao: 0x93fc0000.
+  MMIO UART0 (BOOT.BIN):
+    SC0CTR @ 0xd4002000
+    SC0ICR @ 0xd4002004
+    SC0TXB @ 0xd4002008
+    SC0RXB @ 0xd4002009
+    SC0STR @ 0xd400200c (TX busy testado com (SC0STR & 0xa0) != 0; RX com bit 4)
+
+2.4 Manual de Servico — Digital PCB e NOR Flash
+  Nos manuais DMR-EH55EC Vol. 1 e Vol. 2, a "RAM/Digital P.C.B. Module"
+  (Ref. 55000/57000) e tratada como modulo substituivel fechado, sem esquema
+  interno do CI NOR Flash TSOP-48 na Vol. 2. Em documentacao de referencia
+  do repositorio aparece mencao a Spansion S29JL064H (8 MB) / IC5001, mas na
+  placa fisica em bancada e OBRIGATORIO ler a serigrafia real do CI TSOP-48
+  antes de configurar qualquer gravador externo.
+
+
+================================================================================
+3. ESTRUTURA DETALHADA DOS FIRMWARES & FORMATOS CRIPTOGRAFICOS
+--------------------------------------------------------------------------------
+3.1 Diferenca entre Loader analisado no Ghidra vs Loader ao vivo na placa
+  - Placa DMR-EH55 ao vivo: "Loader ver0.61 [06/03/06]", F/E em 0x84080040.
+  - /BOOT.BIN no projeto Ghidra Panadiga_MN103S: "07/10/24", "4MB/TOP BOOT",
+    F/E fallback em 0x84050000 (compartilha a mesma arquitetura BGO/[nfrom],
+    SDCD, EXTRHEAD, Feistel e MN103S).
+  - /eh55_frm_PROG061_BOOT.bin no Ghidra = "PROG061" (262.144 bytes = 0x40000),
+    identico byte-a-byte (SHA-256 c7da9121174fcf4c...) ao arquivo
+    sd_card_eh55/OPCAO_3_FORMATO_VER061_RAW/DIGADIAG.FRM extraido do PANA_DVD.FRM
+    oficial do EH55.
+  - /EH55_MAIN_3410PQ.bin: firmware principal 3410PQ carregado em 0x57000000..
+    0x57c6692b.
+
+3.2 Conteiner DIGADIAG.FRM (Formato EXTRHEADFVU — SEM ASSINATURA RSA!)
+  Analise exata de FUN_4400b6c6 e FUN_4401e5a3 (validado em sd_card_eh55\DIGADIAG.FRM):
+  Cabecalho de 0x40 (64) bytes em little-endian:
+    +0x00 (12B): "EXTRHEADFVU " (magic: "EXTRHEAD" + tag "FVU ")
+    +0x0c (u16): compress_flag (1 = comprimido, 0 = bruto)
+    +0x0e (u16): algo (0 = zlib; 2 e 3 = outros algos suportados)
+    +0x10 (u32): decomp_size   (0x00040000 para PROG061)
+    +0x14 (u32): dst_addr      (0x50400000)
+    +0x18 (u32): comp_size     (0x0001cbbe no DIGADIAG.FRM oficial)
+    +0x20 (u32): footer_offset (0x0001cbfe -> aponta para "EXTRFOOT")
+    +0x24 (u32): entry_addr    (0x50400000; salto em 0x44006dbc: JMP 0x50400000)
+    +0x28 (u32): checksum      (0x80bbbd69 no oficial; se == 0, ignora checagem)
+    +0x2c (u8) : adler_stride  (0x10 = passo 16 bytes; se == 0, ignora checagem)
+    +0x30 (16B): build_name    ("PROG061\0...")
+
+  Algoritmo do Checksum FUN_4401e5a3 (Adler-32 amostrado sobre buffer descomprimido):
+    s1 = 1
+    s2 = 0
+    para i = 0, stride, 2*stride, ... < decomp_size:
+        s1 = (s1 + data[i]) % 65521   # 0xFFF1
+        s2 = (s2 + s1) % 65521
+    checksum = (s2 << 16) | s1
+    (Verificado com exatidao em python: 0x80bbbd69 em prog061_dec.bin, stride=16.)
+
+  IMPORTANTE PARA CODIGO CUSTOMIZADO:
+    Como NAO ha RSA/ECDSA em DIGADIAG.FRM, qualquer codigo MN103S compilado para
+    0x50400000 e empacotado com EXTRHEADFVU + Adler-32 (ou ate flag=0, algo=0)
+    sera aceito e executado por Loader ver0.61 se chegar via SD ou CD!
+
+3.3 Cifra de Bloco e Particoes do HDD ("panasonic DMR EH-55 Firmware hdd_100.bin")
+  - Tamanho do recorte analisado: 104.857.600 bytes (204.800 setores LBA 512B).
+  - LBA 0 (offset 0x00000000) e espelho LBA 57344 (offset 28 MB):
+      00 00 00 00 01 00 53 48 62 8c 6e f5 1b 2c 36 66 ... ("SH", GUID 628C6EF51B2C3666).
+  - Journal transacional MEIHDFS: LBA 16384.. (offset 0x00800000 / 0x00820000).
+  - Particao 1 (offset 0x02000000, LBA 65536 = 0x10000, 6.173.264 B):
+      MAIN firmware cifrado (Feistel 64-bit ECB Panasonic, inicia 51 87 13 8d 5b 0a fb 22...).
+      Em fmu_sd_dispatcher (res27), BOOT.BIN le LBA 0x10000 e, se invalido, tenta
+      recuperar copia de backup em (HDD_MAX_LBA - 0x20000).
+  - Particao 2 (offset 0x04000000, LBA 131072 = 0x20000, 720.896 B):
+      DRV S211 cifrado (drive otico).
+  - PANA_DVD.FRM (7.531.744 B, cifrado) vs PANA__SD.FRM (plain TOC "DRV S211" / "PROG061 " / "MAIN3060NP"):
+      MAIN desempacotado = main3060np_unpacked.bin (13.427.852 B, dst 0x57000000).
+      DRV  desempacotado = drv_s211_unpacked.bin   ( 1.441.792 B, dst 0x90200000 / 0x40000000).
+
+3.4 Arquitetura BGO / [nfrom] (NOR Flash 0x84200000..0x843fffff)
+  Geometria na tabela BOOT.BIN (0x44036540..0x440365e8) e MAIN_3410PQ (0x57a51d70..0x57a51e60):
+    - Faixa fisica no espaco MN103S: 0x84200000..0x843fffff (2 MB = 32 x 0x10000 = 64 KB/setor)
+    - 3 regioes de particao: 0x84200000 (1 MB), 0x84300000 (512 KB), 0x84380000 (512 KB)
+    - Algoritmo de escrita flash em FUN_44025ecc / FUN_440041dc:
+        Autoselect CFI em 0x84380000 (0x90 / 0xAA / 0x55 / 0x90; aceita IDs 0x1c, 0x01+0x227e, 0x20).
+        Programa AMD/Spansion standard em 0x84200aaa = 0xAA, 0x84200554 = 0x55, 0x84200aaa = 0xA0.
+  Tabela completa dos 53 arquivos virtuais [nfrom] (BOOT.BIN 0x44039834..0x44039a08, stride 9B):
+    ifodev1, miniboot, mainsoft, ifodev2, netfirm, netifo1, sysfact,
+    fs1.dat, fs2.dat, fs3.dat, fs4.dat, config1, rtsd1, rtsd2, config2,
+    guide, debug, update, drvfirm, fvu.exe, cim_dvd, cim_hdd, sys_hdd,
+    nmicnt, fs5.dat, fs6.dat, rtsd3, rtsd4, itc.dat, epgdata, epgconf,
+    fs_mpg4, ftrec, tvgos, fio_recv, fio_bup, fio_spr0, fio_spr1, fio_spr2,
+    fio_spr3, fs7.dat, tvgos_c1, tvgos_c2, rtsd5, extend, rtsd6, epgdata1,
+    epgmng, hdcpsrm, sereisid, cgid, rsv_link, rsv_comp.
+  - Formatador BGO manual: FUN_4401e68a(0) (BOOT) / FUN_50421ebe(0) (PROG061),
+    via dispatcher case 2 — NUNCA e chamado automaticamente por BOOT.BIN nem por PROG061.
+  - PROG061 (eh55_frm_PROG061_BOOT.bin): em FUN_50404fa7 -> 0x5040501f chama
+    FUN_5040a294() (BGO init) e, se retornar != 0, trava em FUN_5040689d -> U99
+    ANTES de entrar no menu FVU.
+
+
+================================================================================
+4. SINTESE DA ESTRATEGIA "FIRMWARE EM PLAIN TEXT" -> REPARO REAL DA PLACA
+--------------------------------------------------------------------------------
+Voce quer passar do erro U99 e reviver a placa usando codigo legivel/reconstruido.
+Como ja conhecemos toda a estrutura binaria do loader e dos dados, podemos sim
+escrever em codigo-fonte legivel ("plain text" C/ASM/Python) um micro-firmware
+de recuperacao DIGADIAG.FRM (payload <= 4 KB em 0x50400000) com 2 funcoes:
+  1) DUMPER SOMENTE-LEITURA: ler toda a NOR Flash (0x84000000..0x843fffff e
+     0x80000000.. se mapeada) e enviar em hex pela UART0 (P7501 @ 115200 8N1)
+     ao Pico antes de apagar qualquer setor.
+  2) REPARADOR CIRURGICO BGO: identificar exatamente qual setor de 64 KB quebrou
+     o somatorio N*(N+1)/2, ou reformatar preservando sysfact/hdcpsrm/sereisid/
+     cim_hdd a partir do dump capturado via UART0.
+
+PRE-REQUISITO FISICO OBRIGATORIO (escolher 1 de 3 portas):
+Como BOOT.BIN NAO le payload da UART e DWire32A nao funciona em P7501, esse
+DIGADIAG.FRM customizado precisa ser injetado na RAM por UMA destas vias:
+
+  OPCAO 1 — DESTRAVAR O DRIVE OTICO ("spinner nao liga" / 80040904 / IP1501):
+    - Mesmo que o drive volte a girar, UM CD COM PANA_DVD.FRM NAO BASTA:
+      a) em normal mode, U99 ocorre antes de ler CD;
+      b) em serial boot mode, ele busca DIGADIAG.FRM, e o PROG061 oficial
+         tambem trava no erro BGO!
+      Entao, se conseguirmos o drive girar/ler CD-R, gravaremos nosso
+      DIGADIAG.FRM customizado num CD-R ISO-9660.
+    - Cheque fisico imediato antes de condenar o laser:
+      1) Medir tensao em DR+12V (apos Q1509 / protetor IP1501) e DR5V com a placa
+         em JIGBOOT / normal boot: sem 12V o spinner e o motor de bandeja nao giram.
+      2) Reassentar flats FP50002, FP50003 (spindle), FP50004 (loading/OPEN_SW/CLOSE_SW)
+         e o flat de 45 vias da cabeca otica, e limpar cuidadosamente a lente.
+
+  OPCAO 2 — CARTAO SDSC ANTIGO (<= 1 GB, SD 1.0/1.1):
+    - O Fujifilm 2GB atual falhou no ACMD13 (cStack_86 != 0 -> -91006).
+    - Um cartao SDSC antigo (128 MB, 256 MB, 512 MB ou 1 GB) em FAT16 entra
+      em "serial boot mode" (JIGBOOT) e executa nosso DIGADIAG.FRM direto da RAM
+      SEM precisar de drive otico nem solda!
+
+  OPCAO 3 — GRAVADOR EXTERNO TSOP-48 (rota 100% independente de SD e CD):
+    - Remover ou clipar o CI NOR Flash TSOP-48 da Digital PCB (confirmando a
+      serigrafia exata do componente na placa).
+    - Ler 2x e salvar dump bruto no PC (preserva 100% de sysfact, hdcpsrm, etc.).
+    - Corrigir no PC apenas os setores BGO invalidos em 0x84200000..0x843fffff
+      e regravar o CI.
+    - Caso o HDD tambem tenha corrompido LBA 0x10000 no desligamento em CS,
+      restaurar com seguranca a particao MAIN via PC a partir da imagem
+      panasonic DMR EH-55 Firmware hdd_100.bin (100 MB, Internet Archive,
+      contendo MAIN 3410PQ em 0x02000000) ou do modulo MAIN3060NP extraido
+      de PANA_DVD.FRM.
+
+================================================================================
+5. ARQUIVOS DE REFERENCIA NESTE WORKSPACE E EM PANADIGA
+--------------------------------------------------------------------------------
+- Dumps e logs ao vivo (scratch):
+    res22_bgo_layout.txt, res23_main_and_bgo.txt, res24_rodata_and_cal.txt,
+    res25_sd_odd_prog061.txt, res26_backdoors_and_drv.txt, res27_panic_cd.txt,
+    normal_boot_90s.log, sd_fmu_attempt1.log, no_ide_cable_boot.log, no_molex_boot.log
+- Imagens / containers validos em disk:
+    C:\Users\danie\Documents\Panadiga\firmware_and_images\PANA_DVD.FRM (7.531.744 B)
+    C:\Users\danie\Documents\Panadiga\firmware_and_images\panasonic DMR EH-55 Firmware hdd_100.bin (104.857.600 B)
+    C:\Users\danie\Documents\Panasonic Firmware HDD bin\sd_card_eh55\DIGADIAG.FRM (131.072 B, EXTRHEADFVU)
+    C:\Users\danie\Documents\Panadiga\firmware_and_images\extracted_partitions\frm_unpacked\prog061_dec.bin (262.144 B)
+- NAO usar como backup real (sao mocks sinteticos):
+    panasonic_dmr-eh55_flash_dump.bin / nvram_corrupt_backup.bin
+
+
+================================================================================
+6. PROVENIENCIA EXATA DOS 5 BINARIOS DO GHIDRA VS. DADOS DA PLACA FISICA
+================================================================================
+NOTA IMPORTANTE SOBRE ORIGEM DOS DADOS:
+- NENHUM dump de memoria NOR Flash ou de HDD neste projeto foi extraido da
+  placa fisica nem do HDD fisico do usuario.
+- O arquivo "panasonic DMR EH-55 Firmware hdd_100.bin" (104.857.600 bytes)
+  foi baixado do Internet Archive como imagem de referencia externa.
+- Da placa fisica real em bancada (DMR-EH55 / Loader ver0.61) existem
+  exclusivamente as medicoes eletricas em P7501 e as capturas UART em tempo
+  real via Raspberry Pi Pico (COM10 @ 115200 8N1).
+
+Tabela de proveniencia dos 5 programas carregados no projeto Ghidra
+(Panadiga_MN103S):
+
+  1) /BOOT.BIN
+     - Modelo/Versao : DMR-EH58 (Loader ver0.63 [07/10/24], DEV_VER 3110PC)
+     - Tamanho / Base: 262.144 bytes (0x40000) | 0x44000000..0x4403ffff
+     - SHA-256       : 7c13c72a54c77387f3f7df0ddc213e4800e20b27eecbfd225cbc05a8fc73e377
+     - Origem        : Extraido em plaintext de Panadiga/firmware_and_images/
+                       dmr-eh58/DVDRAM.7z (BOOT.BIN).
+     - Papel no RE   : Referencia completa de bootloader MN103S (843 funcoes
+                       decompiladas no Ghidra).
+
+  2) /eh55_frm_PROG061_BOOT.bin
+     - Modelo/Versao : DMR-EH55 (modulo FVU / build PROG061, geracao ver0.61)
+     - Tamanho / Base: 262.144 bytes (0x40000) | 0x50400000..0x5043ffff
+     - SHA-256       : c7da9121174fcf4c54f35f5bb1f7b23a3dc0c93ab227158ad4fdd90a1ea24a81
+     - Origem        : Modulo [1] de Panadiga/firmware_and_images/PANA_DVD.FRM
+                       (7.531.744 B, oriundo de UPDATE_EH55.zip), decifrado com
+                       a cifra Feistel de 16 rodadas da Panasonic ->
+                       extracted_partitions/frm_unpacked/prog061_dec.bin
+                       (identico byte-a-byte a sd_card_eh55/OPCAO_3_FORMATO_VER061_RAW/
+                       DIGADIAG.FRM).
+     - Papel no RE   : Codigo exato da geracao 0.61 executado em 0x50400000.
+
+  3) /EH55_DRV_S211.bin
+     - Modelo/Versao : DMR-EH55 (MATSHITA DVD-RAM R6-MV4 / LF-M821, versao S211)
+     - Tamanho / Base: 1.441.792 bytes (0x160000) | 0x40000000..0x4015ffff
+     - SHA-256       : 6f2b61ede80ea9e3e9185d3d677813593f3d361446678e437c905a0037060243
+     - Origem        : Presente tanto na Particao 2 da imagem de 100 MB do
+                       Internet Archive (hdd_partition_firmware_0x04000000.bin,
+                       720.896 B, SHA-256 487d5951d4aa7bc4...) quanto no Slot [0]
+                       de PANA_DVD.FRM -> decifrado (modo DRV) + descompactado
+                       via zlib de EXTRHEADDRV -> frm_unpacked/drv_s211_unpacked.bin.
+     - Papel no RE   : Microcodigo real do drive otico S211 do DMR-EH55.
+
+  4) /DRV_decomp.bin
+     - Modelo/Versao : DMR-EH58 (MATSHITA R6-MV4 A0, versao S415)
+     - Tamanho / Base: 1.441.792 bytes (0x160000) | 0x40000000..0x4015ffff
+     - SHA-256       : 694a4ab8aa29fcc45350dc0712047663602bdee7e4bff313b8ae62b057efd052
+     - Origem        : Descompactado via zlib de DRV.BIN (720.896 B,
+                       EXTRHEADDRV em plaintext) dentro de dmr-eh58/DVDRAM.7z.
+     - Papel no RE   : Firmware S415 completamente analisado no Ghidra (2.346
+                       funcoes), pareado 1:1 com EH55_DRV_S211.bin.
+
+  5) /EH55_MAIN_3410PQ.bin
+     - Modelo/Versao : DMR-EH55 (aplicacao principal MAIN, revisao 3410PQ)
+     - Tamanho / Base: 13.003.052 bytes (0xc6692c) | 0x57000000..0x57c6692b
+     - SHA-256       : c3275d39549b68f48db16bc5fd043c6f8a373d4ba416826de09be5c55dc991b1
+     - Origem        : Particao 1 (offset 0x02000000) de "panasonic DMR EH-55
+                       Firmware hdd_100.bin" (Internet Archive) ->
+                       hdd_partition_firmware_0x02000000.bin (6.173.264 B, SHA-256
+                       6ec63de059c00b28...) decifrado no modo MAIN (prefixo/sufixo
+                       0x19000 B) e descompactado via zlib (tag='MAIN',
+                       dst=0x57000000).
+     - Nota comparat.: A variante europeia em PANA_DVD.FRM Slot [2] e MAIN3060NP
+                       -> main3060np_unpacked.bin (13.427.852 B, SHA-256
+                       075f552ed583ba1835c0d44d1b533ff5a016b8d81d15d7166240098461ddcca7).
+
+
+================================================================================
+7. CONSOLIDACAO DO DISASSEMBLY AVANCADO (PASSES 29 A 34 — GHIDRA)
+================================================================================
+7.1 Inicializacao do F/E e Copia da EEPROM Virtual (sub_4400bb14)
+    (Fonte verificada: scratch/res30_exact_re.txt)
+  - Em BOOT.BIN, a rotina sub_4400bb14 (0x4400bb14, chamada por cd_diag_boot_mode
+    e boot inicial) executa a sequencia de carga do subsistema Front-End (drive):
+      1) Preenche 0x90202000 (0x100 bytes) com 0xFF.
+      2) Descomprime o firmware do drive (de 0x84070000 em BOOT.BIN ver0.63; na
+         placa ao vivo ver0.61 o log mostra 0x84080040 -> 0x90202000, len=0x160000).
+      3) Limpa 0x80 bytes em 0x901f3b60, consulta nvram_read_id(2, ...).
+      4) Executa FUN_4402c2f7(&DAT_90362000, 0x84120000, &DAT_00001070), copiando
+         0x1070 (4.208) bytes da Flash NOR (0x84120000) para a janela compartilhada
+         0x90362000 (equivalente a 0x40160000 no espaco de enderecamento do DRV).
+      5) Libera o reset do F/E (DAT_dc0f0080 = 0x202000; DAT_c0001008 |= 0x8000)
+         e imprime "F/E reset release finish.".
+
+7.2 Validacao da EEPROM Virtual (0x40160000) e Calibracao de Laser no Drive
+    (Fonte verificada: scratch/res33_drv_fe_calib.txt e res34_boot_drv_dsp.txt)
+  - FUN_400d6f39 @ 0x400d6f39 (chamada por FUN_40013a84 @ 0x40013aa4 em
+    DRV_decomp.bin):
+      - Testa (DAT_0000a228 & 1). Quando zero (modo EEPROM virtual em SDRAM),
+        opera sobre 0x40160000, calcula o checksum em complemento de 2 sobre
+        0x1000 bytes via FUN_400d7929(0x1000) e compara com FUN_400d7952().
+      - FUN_400d7952() indexa o checksum armazenado em 0x40161002.. pelos bits
+        de _DAT_40161000; se exaurir os 15 slots sem achar entrada valida,
+        registra _DAT_00000de8 = 0x710d e retorna 0x3c.
+      - Se o checksum divergir do calculado, verifica _DAT_40161000,
+        _DAT_4016102e e _DAT_40161030 e marca _DAT_00000de8 = 0x7104 (bit 15
+        invalido), 0x7105 (contagem de bits / bit 31 de _DAT_40161030) ou
+        0x7106 (checksum falho). Em falha, FUN_40013a84 marca DAT_0000039a = 'B'
+        e chama FUN_400c2dec(0).
+  - FUN_400d70b5, FUN_400d70cb, FUN_400d71c0 e FUN_400d71ee:
+      - Interfaces de leitura e escrita na area 0x40160000..0x4016106f (limite
+        de 0x1070 bytes no modo virtual em FUN_400d71ee; erros 0x7109 e 0x710f).
+  - FUN_4008e1ed @ 0x4008e1ed (DRV_decomp.bin):
+      - Le parametros de calibracao da EEPROM virtual via FUN_400d70c0 e
+        FUN_400d70b5 e registra os logs "ld_pow = %s %wd %d" (0x4011ccfb) e
+        "fac_ld = %s %wd %d" (0x4011cd15) ligados a emissao do laser.
+  - FUN_400db60c @ 0x400db60c (mapeada em 0x0d5378 no EH55_DRV_S211.bin):
+      - Wrapper de espera/status DSP (chama FUN_400dbebf, le Ram88000194) que
+        faz latch de erros DSP na familia 0x83xx (_DAT_00000de8 | 0x8000), origem
+        do sentido 0x83A7 reportado no erro 80040904.
+
+7.3 Fluxos FVU/Diagnostico em BOOT.BIN e Check BGO no PROG061
+    (Fonte verificada: scratch/res32_0x8412_and_sd.txt, res34, res20_prog061_exact.txt)
+  - FUN_44007a12 @ 0x44007a12 (BOOT.BIN): procura e le modulo FVU dentro de
+    PANA__SD.FRM no cartao SD (FUN_4400aa5f -> FUN_4400a733 -> FUN_4400c94d ->
+    FUN_4400c922) para 0x93fc0000 e valida checksum via FUN_4400a831.
+  - FUN_4400742c @ 0x4400742c e FUN_440075aa @ 0x440075aa (BOOT.BIN): buscam
+    o modulo FVU no disco otico de atualizacao (PANA_DVD.FRM) via RTSC/CD e
+    carregam para 0x93fc0000.
+  - FUN_4400a97c @ 0x4400a97c e cd_diag_boot_mode @ 0x44007c59: carregam
+    0x20000 bytes (131.072 B) de DIGADIAG.FRM (via SD FAT16 ou CD) para
+    0x93fc0000.
+  - PROG061 (eh55_frm_PROG061_BOOT.bin): dentro de FUN_50404fa7, a instrucao em
+    0x5040501f executa CALL 0x5040a294 (init BGO, que chama FUN_5040248e(0,0,0)
+    -> func_0x50421e6a e func_0x5040439b); se D0 != 0, 0x50405030 chama
+    FUN_5040689d antes de alcancar o menu FVU/diagnostico.
+
+================================================================================
+8. DESBLOQUEIO DINAMICO DE CAPACIDADE DE HDD (250 GB A 2 TB+) — NOTAS DE PLANTAO
+================================================================================
+8.1 Anatomia & Disassembly MN103S do Clamp de 200 GB em src/hdd_cmd.c
+  - O firmware nativo MAIN limita discos PATA/SATA via comparacao entre
+    MaxProductLBA (global RAM) e PhysicalBlocks2KB (blocos de 2 KB medidos via
+    ATA IDENTIFY DEVICE LBA48):
+      MAIN3060NP (main3060np_unpacked.bin, 13.427.852 B, SHA-256 075f552e...):
+        * Ponto de clamp : VA 0x574E499C (file offset 0x004E499C, bloco 117 B)
+        * MaxProductLBA  : VA 0x5300750C | PhysicalBlocks2KB: VA 0x530077E0
+        * Slots originais: 400GB=0x0BA43B74 | 200GB=0x05D21DBA | FB=0x05D0DDBA
+        * Strings RTSD   : 0x579F9F13 ("[RTSD] M7920(HDD 400GB) \n") / 0x579F9F2D ("...200GB")
+      EH55_MAIN_3410PQ (EH55_MAIN_3410PQ.bin, 13.003.052 B, SHA-256 c3275d39...):
+        * Ponto de clamp : VA 0x574DD1FC (file offset 0x004DD1FC, bloco 117 B)
+        * MaxProductLBA  : VA 0x5311B9AC | PhysicalBlocks2KB: VA 0x5311BC80
+        * Slots originais: 400GB=0x0BA43B74 | 200GB=0x05D21DBA | FB=0x04A6D7C8
+        * Strings RTSD   : 0x57A5E957 ("[RTSD] M7920(HDD 400GB) \n") / 0x57A5E971 ("...200GB")
+  - Disassembly byte-a-byte da janela WIN_LEN = 0x72 (114 B, bloco completo 117 B +0x00..+0x74):
+      +0x00..+0x0B: FD AA 00 8A 00 00 FB E9 00 80 C8 1D -> le DevInfo(option)+0x8A,
+                    testa bit 0x8000 (M7920 400GB); beq +29 -> +0x27 (200GB)
+      +0x0C..+0x26: carrega slot_400gb (+0x0E), grava MaxProductLBA (+0x14), loga, bra +41 -> +0x4E
+      +0x27..+0x41: carrega slot_200gb (+0x29), grava MaxProductLBA, loga, bra +14 -> +0x4E
+      +0x42..+0x4D: caminho fallback -> carrega slot_fb (+0x44), grava MaxProductLBA
+      +0x4E..+0x59: mov (MaxProductLBA), d1 ; mov (PhysicalBlocks2KB), d0
+      +0x5A       : A1       -> cmp d1, d0
+      +0x5B..+0x5C: C6 0C    -> bls +12 (-> +0x67). NO PATCH `dynamic`: 0xC6 -> 0xCA (bra +12)
+      +0x5D..+0x66: 29 FF FC 85 <phys_va> CA 0A -> add -1, d1; mov d1, (phys); bra +10 (TRAVA!)
+      +0x67..+0x6E: 28 FF FC 81 <phys_va>       -> add -1, d0; mov d0, (phys) (CAMINHO LIVRE 100%)
+      +0x6F..+0x74: FC A4 <phys_va>             -> recarrega (PhysicalBlocks2KB) em d0
+  - Patch Dinamico LBA48 (`dynamic`): altera +0x5B de 0xC6 (bls +12) para
+    0xCA (bra +12 incondicional) e eleva +0x0E/+0x29/+0x44 para 0x3FFFFFFF
+    (ou alvo explicito), fazendo o gravador aceitar 100% da capacidade fisica
+    real de discos de 250 GB, 320 GB, 500 GB, 1 TB ou 2 TB+.
+
+8.2 Tabela Nativa RTSD `Change HDD Capacity` (0x574CA054 / 0x574C267B)
+    #1 400GB = 0x0BA3FB74 (195.296.116 blks 2KB / 781.184.464 LBA 512B)
+    #2 300GB = 0x08BAEC97 (146.467.991 blks 2KB / 585.871.964 LBA 512B)
+    #3 250GB = 0x07466528 (122.053.928 blks 2KB / 488.215.712 LBA 512B)
+    #4 200GB = 0x05D1DDBA ( 97.639.866 blks 2KB / 390.559.464 LBA 512B)
+    #5 160GB = 0x04A7D7C8 ( 78.108.616 blks 2KB / 312.434.464 LBA 512B)
+    #6 137GB = 0x03FC7AC3 ( 66.878.147 blks 2KB / 267.512.588 LBA 512B)
+    #7 120GB = 0x037DD1D6 ( 58.577.366 blks 2KB / 234.309.464 LBA 512B)
+    #8 100GB = 0x02E8CEDD ( 48.811.741 blks 2KB / 195.246.964 LBA 512B)
+    #9  80GB = 0x0253CBE4 ( 39.046.116 blks 2KB / 156.184.464 LBA 512B)
+  Formula generica: blocks_2kb = floor((GB * 1_000_000_000) / 2048); sectors_512b = blocks_2kb * 4.
+
+8.3 Cadeia Criptografica, Implementacao & Checklist de Hardware (`MASTER` vs `CS` vs `Slave`)
+  - Origem dos binarios base: `panasonic DMR EH-55 Firmware hdd_100.bin` veio do
+    Internet Archive (nao do disco fisico do usuario) e tem bytes 16..512 do
+    LBA 0 zerados (`zeros_after_header_clean`), preservados pelo patcher salvo
+    em imagens procedurais `mkfs` (que sincronizam LBA 0 e LBA 57.344).
+  - Pipeline `EXTRHEAD_CONTAINER` / `FULL_HDD_IMAGE_P1`:
+      decifra Feistel 16 rodadas -> descompacta deflate -> aplica patch MN103S ->
+      recompacta deflate -> calcula Adler-32 strided step=16 (FUN_4401e5a3) ->
+      gera rodape EXTRFOOT -> re-cifra Feistel 64-bit ECB -> valida com
+      `unpack_extrhead` (`checksum_valid == true`).
+  - Core (`crates/panadiga-core/src/hdd/capacity_patch.rs`): expoe ainda
+    `default_capacity_patched_output_path` (`<stem>_PATCHED_DYNAMIC.<ext>`,
+    `<stem>_PATCHED_<GB>GB.<ext>` ou `<stem>_FACTORY_200GB.<ext>`).
+  - CLI (`panadiga-cli`):
+      * `panadiga hdd inspect-capacity [-i] <arquivo> [--json out.json]`
+      * `panadiga hdd patch-capacity -i <arquivo> [-o saida] --mode dynamic [--target-gb 250]`
+  - Desktop App (`apps/desktop`):
+      * Comandos IPC Tauri `inspect_hdd_capacity_patch` e `apply_hdd_capacity_patch`.
+      * Nova aba `Desbloqueio de Capacidade (250GB / 2TB)` (`HddCapacityPatcherCard`)
+        e seletor de capacidade no `mkfs.meihdfs` (`HddWriterCard`).
+  - Checklist Hardware PATA/SATA (`StarTech IDE2SAT2`) - AUDITORIA ADVERSARIAL:
+    * ERRO CORRIGIDO: A referencia anterior a `DAT_505733d4 == 0` / `Slave`
+      pertence apenas ao `BOOT.BIN` do `DMR-EH58` (`FUN_4400fc3f`). NO `DMR-EH55`
+      REAL (esquematicos `vol2_schematics.pdf` pp. 46, 52, 113, 125-126 +
+      disassembly de `eh55_frm_PROG061_BOOT.bin` e `EH55_MAIN_3410PQ.bin`), ODD e
+      HDD operam em CANAIS IDE SEPARADOS:
+        - `ch=0, dev=0` (Primary Master, MMIO `0x89000500`) = Drive DVD-RAM (FEP)
+        - `ch=1, dev=0` (Secondary MASTER, MMIO `0x89000D00`) = HDD em cabo
+          flat FFC dedicado de 40 vias (`Extension FFC`).
+    * Em `FUN_50414908` (`PROG061`) e `FUN_574d1de8` (`EH55_MAIN`), a tabela fixa
+      `acStack_70[4] = { 2, 0, 1, 0 }` ignora `acStack_70[3]` (Secondary Slave).
+    * Colocar jumper em `Slave` (`dev=1`) faz o `DMR-EH55` ignorar o disco;
+      colocar em `CS` (`Cable Select`, pino 28 `CSEL`) na ponte `StarTech IDE2SAT2`
+      pode gerar selecao indeterminada de `DEV`, colisao `0x8000040d` ou
+      travamento DMA (`FUN_5041f61b` / `FUN_5041f782`), levando a desligamento e
+      corrupcao BGO (`0x84200000..0x843FFFFF` -> `BGO driver init failed[1].` + `U99`).
+    * REGRA OBRIGATORIA NO `DMR-EH55`: Configure SEMPRE o jumper da ponte
+      `StarTech IDE2SAT2` / HDD explicitamente como **`MASTER` (`Device 0`)** -
+      **NUNCA `CS` e NUNCA `Slave`**.
+
+================================================================================
+9. CONSOLIDACAO RUST/MCP/RAG, HOT WRITE PICO, NOR DUMP & PASSTHROUGH TBC (14/11)
+================================================================================
+
+  - Documentacao Consolidada Master ("Vista Explodida"):
+    * Consulte `Panadiga\docs\pt-BR\VISTA_EXPLODIDA_ARQUITETURA_INJECAO_PICO_E_BYPASS_PASSTHROUGH.md`
+      para diagramas explodidos de barramentos, processos, parametros e
+      fluxo de boot completo.
+
+  - Status 100% Plaintext vs Codigo-Fonte C:
+    * Todos os 5 binarios do EH55 (`eh55_frm_PROG061_BOOT.bin`, `EH55_MAIN_3410PQ.bin`,
+      `main3060np_unpacked.bin`, `EH55_DRV_S211.bin`, alem do dump `hdd_100.bin` do
+      Internet Archive) + comparativos EH58 (`BOOT.BIN`, `DRV_decomp.bin`) estao
+      100% descriptografados e descompactados em texto claro de maquina MN103S.
+
+  - Consolidacao Python -> Rust (`panadiga-core::re`) + MCP (16 Tools) + RAG:
+    * `crates/panadiga-core/src/re/`: `mn10300.rs` (xrefs), `nor_dumper.rs`
+      (`PANADMP1..PANADONE`), `bgo_unbrick.rs` (`0x504230F0`, `0x50405097`,
+      `0x5040A2CD` -> `nfrom_format` `0x50401F3C` gerando `DIGADIAG.FRM` 131.072 B).
+    * Novas MCP tools (`crates/panadiga-mcp`, 13 -> 16): `panadiga_hdd_capacity`,
+      `panadiga_nor_dumper_stub` e `panadiga_bgo_unbrick`.
+
+  - Ponte StarTech IDE2SAT2 (`Marvell 88SA8052`) vs JMicron (`JM20330`):
+    * Apenas pontes baseadas em **Marvell 88SA8052** (`StarTech IDE2SAT2` em
+      **`MASTER`**) traduzem com seguranca `MultiWord DMA MODE2`, `ATA Streaming
+      DMA EXT`, `PUIS` (`4000 ms`) e `DAVIS_Get_DriveID` no canal `ch=1, dev=0`.
+      Adaptadores JMicron (`JM20330`) falham na negociacao MWDMA2/Streaming.
+
+  - Por Que Gravar Firmware no HDD Nao Inicia o Boot no Brick Pre-MAIN:
+    * Em `normal mode`, `FUN_440049eb` chama `bgo_driver_init()` (`FUN_4401e636` ->
+      `BGO driver init failed[1].`) e trava em `0x44004ACC` ANTES de `FUN_44009741`
+      (IDE init / leitura de HDD). Solucao sem dessolda: `JIG:2500` (`SW_UART` LOW)
+      -> `SDDIAG` (`FUN_44007ba5`, resolvendo erro 4-bit `-91006` no SD/slot P6801)
+      -> `DIGADIAG.FRM` (`auto_format` em `panadiga_bgo_unbrick`). Fallback fisico:
+      extracao/regravação TSOP-48 (`IC5001` 8 MB, `SA134..SA141` + regiao BGO).
+
+  - Hot Write I/O (`_dev_SERIAL` `0x574F0775`) & Flash Dump 8 MB (`PANADMP1`):
+    * Pre-MAIN (`BOOT.BIN` / `PROG061`) nao tem RX serial. No `MAIN`, o stub RSP
+      aceita `$M`/`$X` (RAM `0x50000000..0x57FFFFFF`, retorno `+$OK#9A`), `$x`
+      (blocos crus `0x440 B`), `$g` (`112 B` regs) e `$Z0`. Stub read-only em
+      `0x51800000` (`panadiga_nor_dumper_stub`) despeja `0x84000000..0x847FFFFF`
+      (`8.388.608 B`) em blocos de 4 KB com checksum + `PANADONE`.
+
+  - Passthrough de Sinal (TBC / Matriz AV `IC3001` `C1AB00002379` + `MN2DS0009`):
+    * Melhor rota (preserva TBC): recuperar BGO + `MAIN` (*diskless/skip ODD 0x83A7*),
+      usando entrada `AV1..AV4` -> `Y/V ADC` (pino 83) / `C-ADC` (pino 81) ->
+      `MN2DS0009` -> `ENC Y/C/G/B/R` (pinos 91-99) no `IC3001`, operando em modo
+      `E-E monitor` ou Service Mode `[1][3] RTSC Return in XP` (sem disco).
+      Rota secundaria puramente analogica (`IC3001` I2C pinos 88/89) perde TBC e
+      exige isolar/emular handshake `TBUS` do Timer MCU `IC7501` para evitar corte `U99`.
+
+--------------------------------------------------------------------------------
+SECAO 17: CONTEINERES `.FRM` (`DIGADIAG.FRM` vs `PANA_DVD.FRM` vs `PANA__SD.FRM`),
+17ª FERRAMENTA MCP (`panadiga_main_passthrough`) & PICO `PANARSP` AUTONOMO
+--------------------------------------------------------------------------------
+  - Anatomia `DIGADIAG.FRM` vs `PANA_DVD.FRM` vs `PANA__SD.FRM`:
+    * `DIGADIAG.FRM` (`SDDIAG` `FUN_44007BA5` / `CDDIAG` `FUN_4400A97C`):
+      conteiner single-module 100% plaintext `EXTRHEAD` (`0x40` B, tag `"FVU "`/`"DIAG"`,
+      `dst_addr = 0x50400000`, `adler_step = 4`) + `zlib` + `EXTRFOOT`. Em `SDDIAG`,
+      `/BOOT.BIN` le `0x20000` (`131.072` B) em `0x93FC0000`, valida Adler-32 amostrado
+      (`FUN_4401e5a3`) e descompacta para `0x50400000`.
+    * `PANA_DVD.FRM` (`FUN_4400a6d0`): cabecalho global de `16` B + TOC `"Firm list"`
+      Feistel-cifrada (`3 x 48` B = `0x90` B, S-Box `0x44035D84`, `list_sum` em `+0x2E`,
+      `fvu_checksum_u32` em `+0x24`) + 3 modulos `EXTRHEAD`: `PROG061` (`0x50400000`),
+      `DRV` (`EH55_DRV_S211.bin`, primeiros `0x400` B cifrados -> ATAPI ODD) e
+      `MAIN` (primeiros/ultimos `0x400` B cifrados -> HDD Particao 1 `LBA 65536` / `0x02000000`).
+    * `PANA__SD.FRM` (`FUN_440075aa`): TOC em plaintext com entradas de `64` B (`0x40`,
+      `list_sum_u16` em `+0x3E`, ate 128 entradas) ou `48` B (`PROG061`).
+
+  - 17ª Tool MCP (`panadiga_main_passthrough`, `crates/panadiga-core/src/re/main_passthrough.rs`):
+    * Inspeciona, aplica/reverte patches AV TBC (`E-E`) em `EH55_MAIN_3410PQ.bin`
+      (`base VA 0x57000000`, `13.003.052` B) e gera planos `_dev_SERIAL` (`rsp_plan`):
+      - `0x5771ABFB` (`+0x0071ABFB`, 6 B): `80 01 F0 FC CB CB` (`mov 1, d0; ret; nop; nop`)
+      - `0x574F7B8C` (`+0x004F7B8C`, 4 B): `CC D0 00 CB` (`jmp16 +0x00D0 -> 0x574F7C5C; nop`)
+      - `0x574F7C5C` (`+0x004F7C5C`, 7 B): `80 00 CB CB CB CB CB` (`clr d0; nop x5`)
+      - Stub `_dev_SERIAL`: handshake `0E 02 02 04` (`0x515B2E60`) + `0x15` NAK,
+        ponteiro de callback serial `0x515B2E40` e contexto de ISR `0x5316AE8C` (`+0x64`).
+
+  - Upgrade Autonomo do Firmware Pico `P7501` (`firmware/pico-p7501/uart/p7501_pana_rsp.*`):
+    * Novos subcomandos em `PANARSP`:
+      - `WMEM:<addr>,<hex>` (emite `$M<addr>,<len>:<hex>#<xx>`)
+      - `WRITE32:<addr>,<u32>` (emite `$M<addr>,4:<le_hex>#<xx>`)
+      - `PASSTHROUGH` (envia handshake + `0x15` + 3 quadros `$M` TBC `E-E` em sequencia)
+      - `CALL:<addr>` (envia handshake + `0x15` + atualiza `0x515B2E40` + envia `$g#67`)
+================================================================================

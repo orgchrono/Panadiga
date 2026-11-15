@@ -8,6 +8,7 @@ pub mod ghidra;
 pub mod hdd;
 pub mod nvram;
 pub mod pico;
+pub mod re;
 pub mod system;
 pub mod unbrick;
 
@@ -16,6 +17,7 @@ pub use ghidra::handle_ghidra;
 pub use hdd::handle_hdd;
 pub use nvram::handle_nvram;
 pub use pico::{handle_gdb_config, handle_pico};
+pub use re::handle_re;
 pub use system::{
     handle_manuals, handle_mcp, handle_memory_map, handle_rag, handle_verify_artifact,
 };
@@ -79,5 +81,6 @@ pub fn dispatch(command: Commands) -> Result<()> {
         }
         Commands::Mcp(args) => handle_mcp(args),
         Commands::Unbrick(args) => handle_unbrick(args),
+        Commands::Re(args) => handle_re(args),
     }
 }

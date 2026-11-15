@@ -8,7 +8,7 @@ use anyhow::{Result, bail};
 use byteorder::{ByteOrder, LittleEndian};
 use serde::{Deserialize, Serialize};
 
-use crate::constants::PANA_DIGADIAG_FRM_SIZE;
+use crate::constants::{PANA_DIGADIAG_DEFAULT_LOAD_ADDR, PANA_DIGADIAG_FRM_SIZE};
 use crate::crypto::build_digadiag_frm;
 use crate::nvram::calculate_hashes;
 
@@ -19,8 +19,19 @@ pub const NOR_MAGIC_FOOTER: &[u8; 8] = b"PANADONE";
 /// Strictly enforced read-only MN103S NOR flash windows (cached & uncached).
 pub const NOR_ALLOWED_WINDOWS: [(u32, u32); 2] =
     [(0x8000_0000, 0x8080_0000), (0x8400_0000, 0x8480_0000)];
-/// Safe free SDRAM load address used by `DIGADIAG.FRM` or Pico RAM injection (`$M` / `$G`).
+/// Safe free SDRAM load address used by live Pico RAM injection (`$M` / `$G`).
 pub const DEFAULT_NOR_STUB_LOAD_ADDR: u32 = 0x5180_0000;
+/// Verified `/BOOT.BIN` `DIGADIAG.FRM` default RAM entry VA (`0x50400000`).
+pub const DIGADIAG_NOR_STUB_LOAD_ADDR: u32 = PANA_DIGADIAG_DEFAULT_LOAD_ADDR;
+
+/// Selects the canonical stub load VA: `0x50400000` for wrapped `DIGADIAG.FRM` or `0x51800000` for live RAM RSP.
+pub fn resolve_nor_stub_load_addr(explicit: Option<u32>, wrap_digadiag: bool) -> u32 {
+    explicit.unwrap_or(if wrap_digadiag {
+        DIGADIAG_NOR_STUB_LOAD_ADDR
+    } else {
+        DEFAULT_NOR_STUB_LOAD_ADDR
+    })
+}
 
 const HEADER_PREFIX_LEN: usize = NOR_MAGIC_HEADER.len() + 12;
 
@@ -329,5 +340,11 @@ mod tests {
         assert_eq!(parsed.start_addr, 0x8420_0000);
         assert_eq!(parsed.data.len(), 32);
         assert_eq!(parsed.block_checksums, vec![s0, s1]);
+        assert_eq!(resolve_nor_stub_load_addr(None, true), 0x5040_0000);
+        assert_eq!(resolve_nor_stub_load_addr(None, false), 0x5180_0000);
+        assert_eq!(
+            resolve_nor_stub_load_addr(Some(0x5100_0000), true),
+            0x5100_0000
+        );
     }
 }

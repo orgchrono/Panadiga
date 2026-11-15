@@ -11,7 +11,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "lint": "tsc --noEmit",
-    "uxlint": "ux-guard scan src",
+    "uxlint": "ux-guard scan src --fail-on warn",
     "jscpd": "jscpd src --threshold 5",
     "check:ci": "run-p -l typecheck test",
     "check": "run-p -l typecheck uxlint jscpd test",

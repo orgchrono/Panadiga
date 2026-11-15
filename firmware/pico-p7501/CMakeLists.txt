@@ -63,9 +63,12 @@ add_executable(panasonic_p7501_uart
     uart/p7501_pana_dumpnor.c
     uart/p7501_pana_rsp_codec.c
     uart/p7501_pana_rsp_parse.c
+    uart/p7501_pana_rsp_report.c
     uart/p7501_pana_rsp.c
     uart/p7501_diag_watch_codec.c
     uart/p7501_diag_watch.c
+    uart/p7501_drv_pana_codec.c
+    uart/p7501_drv_pana.c
     cli/p7501_cli_help.c
     cli/p7501_cli.c
 )

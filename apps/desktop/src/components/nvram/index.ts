@@ -4,3 +4,4 @@ export * from './NvramMetricsGrid';
 export * from './NvramSectorMap';
 export * from './NvramMicrosectorsTable';
 export * from './NvramAuditDialog';
+export * from './NvramPatchCard';

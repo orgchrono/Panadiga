@@ -1,3 +1,6 @@
+> 🌐 **Idioma / Language:** [English (US)](../en-US/RE_SCRIPTS_COMPENDIUM_STEPS_01_50.md) | **Português (BR)**
+> 🧭 **Portal:** [Índice da Documentação](../INDEX.md) | [Auditoria Completa](../../AUDITORIA_COMPLETA.md) | [Auditorias](../audits/README.md) | [Pseudocódigo Ghidra](../pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) | [Logs de Debug](../debug_logs/README.md)
+
 # Compilado de Consulta — Scripts Python RE (`Steps 1–50` e Utilitários CAD/Bancada)
 
 > Referência permanente de consulta rápida consolidando todos os **119 scripts Python** gerados durante a investigação (`54` scripts `step1..step50` + `65` utilitários CAD/PDF/bancada), evitando re-executar ou recriar análises.

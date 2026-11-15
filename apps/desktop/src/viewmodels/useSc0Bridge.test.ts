@@ -46,7 +46,7 @@ describe('useSc0Bridge ViewModel', () => {
     expect(result.current.bridgeLogs.some(l => l.text.includes('BRIDGE: OK (~~~)'))).toBe(true);
   });
 
-  it('falls back to PANARSP and UARTSEND when SC0 bridge is standby', async () => {
+  it('falls back to PANARSP and DRVPANA when SC0 bridge is standby', async () => {
     const { onExec, result } = createBridgeTestHarness();
 
     await act(async () => {
@@ -54,6 +54,6 @@ describe('useSc0Bridge ViewModel', () => {
       await result.current.sendDriveCommand('DSCREG');
     });
     expect(onExec).toHaveBeenCalledWith('PANARSP', '4000 JIG:350 NAK');
-    expect(onExec).toHaveBeenCalledWith('UARTSEND', 'DSCREG');
+    expect(onExec).toHaveBeenCalledWith('DRVPANA', 'DSCREG');
   });
 });

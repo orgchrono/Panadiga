@@ -17,7 +17,7 @@
 void p7501_cmd_diag_watch(const char *arg) {
     p7501_diag_watch_spec_t spec;
     if (!p7501_diag_watch_parse_args(arg, &spec)) {
-        printf("DIAGWATCH: ERROR (Usage: DIAGWATCH [ms] [NORMAL|JIG[:ms]|NOPULL] [AUTO|BYPASS|FORMAT|DUMP|NONE] [RELEASE|HOLD])\n");
+        printf("DIAGWATCH: ERROR (Usage: DIAGWATCH [ms] [NORMAL|JIG[:ms]|NOPULL] [AUTO|BYPASS|READ[:a[,n]]|WRITE:<a,v>|FORMAT|DUMP|JUMP:<a>|ERASE:<a_nvram>|QUIT|NONE] [RELEASE|HOLD])\n");
         return;
     }
 
@@ -71,9 +71,23 @@ void p7501_cmd_diag_watch(const char *arg) {
                 printf("\n[DIAGWATCH +%" PRIu32 "ms] ALERT: BGO driver init failure detected\n", elapsed_ms);
             }
             if (tx_ch != '\0') {
-                const uint8_t tx_u8 = (uint8_t)tx_ch;
-                p7501_pio_tx_bytes(&tx_u8, 1u, false);
-                printf("\n[DIAGWATCH +%" PRIu32 "ms] PANAMON1> matched -> injected '%c'\n", elapsed_ms, tx_ch);
+                char tx_buf[36];
+                const size_t tx_len = p7501_diag_watch_format_tx(&spec, tx_buf, sizeof(tx_buf));
+                if (tx_len <= 1u) {
+                    const uint8_t tx_u8 = (uint8_t)tx_ch;
+                    p7501_pio_tx_bytes(&tx_u8, 1u, false);
+                    printf("\n[DIAGWATCH +%" PRIu32 "ms] PANAMON1> matched -> injected '%c'\n", elapsed_ms, tx_ch);
+                } else {
+                    for (size_t ti = 0u; ti < tx_len; ++ti) {
+                        const uint8_t tx_u8 = (uint8_t)tx_buf[ti];
+                        p7501_pio_tx_bytes(&tx_u8, 1u, false);
+                        sleep_us(200u);
+                    }
+                    printf("\n[DIAGWATCH +%" PRIu32 "ms] PANAMON1> matched -> injected %.*s\n",
+                           elapsed_ms,
+                           (int)(tx_len - 1u),
+                           tx_buf);
+                }
             }
         }
         if ((rx_count & 0xFFu) == 0u) {

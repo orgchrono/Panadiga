@@ -1,9 +1,11 @@
+> 🌐 **Idioma / Language:** [English (US)](../en-US/TESTING_ARCHITECTURE_AND_COMPLIANCE.md) | **Português (BR)**
+> 🧭 **Portal:** [Índice da Documentação](../INDEX.md) | [Auditoria Completa](../../AUDITORIA_COMPLETA.md) | [Auditorias](../audits/README.md) | [Pseudocódigo Ghidra](../pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) | [Logs de Debug](../debug_logs/README.md)
+
 # Arquitetura de Testes & Matriz de Conformidade do Ecossistema Panadiga
 
 ## Validação Multicamadas: FP Pure Domain, MVVM Rigoroso, GDB Introspectivo & SSOT
 
-> **Versão:** 1.0.0 | **Data de Homologação:** Novembro de 2026
-> **Status:** 100% dos Quality Gates Aprovados (41 Testes Rust, 33 Testes Vitest, 8 E2E Playwright, 27 Pytest, 7 C11 Host Tests)
+> **Versão:** 2.0.0 | **Referência Atual dos 9 Quality Gates:** `142` Testes Rust Workspace, `72` Testes Vitest (`23` arquivos), `24` Testes C11 Host em `4` módulos, `13` E2E Playwright, `22` Pytest + `35` `mypy --strict`, `0%` Clones `jscpd`, `100/100` `uxlint` (`0` issues / `204` arquivos)  
 > **Autores:** Equipe de Engenharia Reversa e Arquitetura de Sistemas Panadiga
 
 ---
@@ -17,13 +19,13 @@ A evolução arquitetural do **Panadiga** exigiu uma reestruturação profunda d
                                        ▲
                                       / \
                                      /   \
-                                    / E2E \   (8 testes Playwright Chromium + CI/CD Multiplataforma)
+                                    / E2E \   (13 testes Playwright Chromium + CI/CD Multiplataforma)
                                    /───────\
-                                  /  MVVM   \  (33 testes Vitest: State Machines, Subcomponentes, Logger)
+                                  /  MVVM   \  (Vitest UI + Docs Interativos + ViewModels + Logger)
                                  /───────────\
-                                /  GDB & HAL  \ (7 testes C11 Host + Telemetria Ring Buffer + Checksums)
+                                /  GDB & HAL  \ (24 testes C11 Host em 4 módulos + Telemetria RSP)
                                /───────────────\
-                              /  FP Pure Domain \ (41 testes Rust: fatias &[u8], Clap Matrix, SSOT Memory Map)
+                              /  FP Pure Domain \ (142 testes Rust: &[u8], RE, MCP, RAG, Tauri)
                              /───────────────────\
 ```
 
@@ -39,10 +41,10 @@ Desacoplar a lógica forense de baixo nível de operações de E/S em disco. Tod
 
 | Arquivo de Teste                      | Função / Módulo Testado              | Garantia de Conformidade                                                                                                                                                |
 | :------------------------------------ | :-------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/nvram/pure_fp_tests.rs`        | `clean_nvram_slice(&[u8])`            | Testa a sanitização cirúrgica de microsetores SA134..SA141 diretamente em memória RAM, verificando integridade do bootloader e zeramento estrito da partição U99. |
-| `src/hdd/inspect/pure_hdd_tests.rs` | `inspect_hdd_slice_pure(&[u8])`       | Valida MBR proprietário Panasonic, tabela de espelho em LBA 57344 e partições de firmware sobre buffers sem tocar o sistema de arquivos.                             |
-| `tests/entropy_math_tests.rs`       | `calculate_entropy(&[u8])`            | Verifica o cálculo de entropia de Shannon (0.0 para sequências puras, 1.0 para binários alternados, 8.0 para distribuição uniforme).                               |
-| `tests/crypto_codebook_tests.rs`     | `test_real_frm_dump_toc_and_codebook` | Testa a dissecação da TOC periódica de 48 bytes e matriz de conhecidos pares de texto-plano do container `PANA_DVD.FRM`.                                           |
+| `crates/panadiga-core/src/nvram/tests.rs` | `clean_nvram_slice(&[u8])`            | Testa a sanitização cirúrgica de microsetores SA134..SA141 diretamente em memória RAM, verificando integridade do bootloader e zeramento estrito da partição U99. |
+| `crates/panadiga-core/src/hdd/inspect/tests.rs` | `inspect_hdd_slice_pure(&[u8])`       | Valida MBR proprietário Panasonic, tabela de espelho em LBA 57344 e partições de firmware sobre buffers sem tocar o sistema de arquivos.                             |
+| `crates/panadiga-core/tests/entropy_math_tests.rs` | `calculate_entropy(&[u8])`            | Verifica o cálculo de entropia de Shannon (0.0 para sequências puras, 1.0 para binários alternados, 8.0 para distribuição uniforme).                               |
+| `crates/panadiga-core/tests/crypto_codebook_tests.rs` | `test_real_frm_dump_toc_and_codebook` | Testa a dissecação da TOC periódica de 48 bytes e matriz de conhecidos pares de texto-plano do container `PANA_DVD.FRM`.                                           |
 
 ---
 
@@ -56,10 +58,10 @@ Garantir fidelidade protocolar absoluta na ponte de depuração serial-para-TCP,
 
 | Arquivo de Teste                                     | Função / Módulo Testado              | Garantia de Conformidade                                                                                                                                                                                                             |
 | :--------------------------------------------------- | :-------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `tests/debugger_gdb_tests.rs`        | `test_gdb_rsp_checksum_calculation`   | Validação formal do cálculo de checksum de dois dígitos hexadecimais (`sum % 256`) para comandos RSP (`qSupported`, `g`, `?`, `c`, `s`, `OK`).                                                                     |
-| `src/desktop/pico/gdb_bridge.rs`                   | `test_verify_and_classify_rsp_packet` | Testa o classificador formal de pacotes RSP: validação de prefixo `$`, delimitador `#`, cálculo de checksum e extração do tipo de comando.                                                                                  |
-| `src/desktop/pico/gdb_bridge.rs`                   | `test_telemetry_ring_capacity`        | Valida o buffer circular introspectivo (`RingBuffer<GdbPacketTelemetryEvent>`): capacidade máxima fixa, rotação FIFO sem vazamentos e ordenação cronológica.                                                                 |
-| `firmware/pico-p7501/tests/test_gdb_rsp_host.c` | Host C11 Firmware (`-Werror`)         | 7 testes de integração do protocolo RSP compilados com GCC C11 executados diretamente no ambiente de build: leitura/escrita em SRAM, rejeição de escrita em flash IPL (`E05`), registradores AM34 e controle de halt/continue. |
+| `crates/panadiga-core/tests/debugger_gdb_tests.rs`   | `test_gdb_rsp_checksum_calculation`   | Validação formal do cálculo de checksum de dois dígitos hexadecimais (`sum % 256`) para comandos RSP (`qSupported`, `g`, `?`, `c`, `s`, `OK`).                                                                     |
+| `apps/desktop/src-tauri/src/pico/gdb_bridge.rs`      | `test_verify_and_classify_rsp_packet` | Testa o classificador formal de pacotes RSP: validação de prefixo `$`, delimitador `#`, cálculo de checksum e extração do tipo de comando.                                                                                  |
+| `apps/desktop/src-tauri/src/pico/gdb_bridge.rs`      | `test_telemetry_ring_capacity`        | Valida o buffer circular introspectivo (`RingBuffer<GdbPacketTelemetryEvent>`): capacidade máxima fixa, rotação FIFO sem vazamentos e ordenação cronológica.                                                                 |
+| `firmware/pico-p7501/tests/` (`4` módulos, `24` testes) | Host C11 Firmware (`-Wall -Wextra -Werror` / `/W4 /WX`) | Suíte completa de protocolo GDB RSP, codecs `DIAGWATCH`/`PANARSP`/`DRVPANA`/`SDSNIFF`/`PIOLOGIC` e guarda IPL `E05` (`test_gdb_rsp_host.c`, `test_pana_logic.c`, `test_pana_diag_drv.c`, `test_uart_codec.c`). |
 
 ---
 
@@ -86,15 +88,15 @@ Substituição definitiva de booleanos soltos por máquinas de estado fechadas (
 
 ### Objetivo Arquitetural
 
-Garantir que argumentos de linha de comando sejam fortemente validados via Clap, que handlers atuem de forma determinística e que nenhuma constante física ou caminho de arquivo seja hardcoded fora de `constants.rs`.
+Garantir que argumentos de linha de comando sejam fortemente validados via Clap, que handlers atuem de forma determinística e que nenhuma constante física ou caminho de arquivo seja hardcoded fora do SSOT (`crates/panadiga-core/src/constants/`).
 
 ### Suíte de Testes Implementada
 
 | Arquivo de Teste            | Módulo Testado                                   | Garantia de Conformidade                                                                                                                                                                                        |
 | :-------------------------- | :------------------------------------------------ | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `tests/firmware_scan_tests.rs`       | `test_cli_args_parsing_matrix`                  | Valida parsing e desserialização tipada de subcomandos isolados (`memory-map`, `gdb-config`, `pico list`, `nvram clean`, etc.), aliases (`tui`, `verify`) e rejeição de comandos desconhecidos. |
-| `tests/system_constants_tests.rs`    | `test_constants_memory_map_and_candidate_paths` | Valida as 8 regiões de memória oficiais da arquitetura AM34/UniPhier, formatação de tabela ASCII para terminal, exportação de schema JSON canônico e presença de caminhos candidatos universais.        |
-| `tests/pico_bench_tests.rs`          | `test_all_host_controller_platforms_matrix`     | Valida a matriz de identificação de hardware USB VID/PID para Raspberry Pi Pico, Pico W, Pico 2 (ARM/RISC-V) e compatíveis.                                                                                  |
+| `crates/panadiga-core/tests/firmware_scan_tests.rs` | `test_cli_args_parsing_matrix` + testes scan | Valida parsing e desserialização tipada de subcomandos isolados (`memory-map`, `gdb-config`, `pico list`, `nvram clean`, etc.), aliases (`tui`, `verify`) e rejeição de comandos desconhecidos. |
+| `crates/panadiga-core/tests/system_constants_tests.rs` | `test_constants_memory_map_and_candidate_paths` | Valida as 8 regiões de memória oficiais da arquitetura AM34/UniPhier, formatação de tabela ASCII para terminal, exportação de schema JSON canônico e presença de caminhos candidatos universais.        |
+| `crates/panadiga-core/tests/pico_bench_tests.rs` | `test_all_host_controller_platforms_matrix` | Valida a matriz de identificação de hardware USB VID/PID para Raspberry Pi Pico, Pico W, Pico 2 (ARM/RISC-V) e compatíveis.                                                                                  |
 
 ---
 
@@ -102,29 +104,23 @@ Garantir que argumentos de linha de comando sejam fortemente validados via Clap,
 
 ### Cobertura Playwright (Chromium)
 
-8 testes automatizados de ponta a ponta verificam o comportamento visual e reativo da aplicação:
+13 testes automatizados em 4 arquivos spec (`apps/desktop/e2e/`) verificam o comportamento visual e reativo da aplicação:
 
-1. `navigation.spec.ts`: Carregamento do Dashboard e métricas de sistema em tempo real.
-2. `navigation.spec.ts`: Navegação fluida e sem quebra de estado entre todos os módulos de bancada.
-3. `nvram.spec.ts`: Renderização da especificação da Spansion NOR Flash S29JL064H e card cirúrgico.
-4. `nvram.spec.ts`: Detalhamento dos 8 microsetores (SA134..SA141) e telemetria de integridade.
-5. `pico-bench.spec.ts`: Telemetria do host controller e identificação de arquitetura.
-6. `pico-bench.spec.ts`: Tabela de pinagem verificada do conector `P7501` (UART `115200 8N1` + proteção `NSW5V` Hi-Z) com alertas de aterramento.
-7. `pico-bench.spec.ts`: Alternância de modos do Cold Break-In (Modo 0, 1 e 2).
-8. `pico-bench.spec.ts`: Interatividade do console serial com eco e envio de comandos.
+1. `navigation.spec.ts`: Carregamento do Dashboard, navegação fluida entre todas as telas (`NVRAM`, `MEIHFS`, `Pico`, `Manuais`, `Docs Interativos`) e continuidade de estado.
+2. `nvram.spec.ts`: Renderização da Spansion NOR Flash `S29JL064H`, detalhamento dos 8 microsetores (`SA134..SA141`) e ações cirúrgicas.
+3. `pico-bench.spec.ts`: Telemetria do controlador, pinagem verificada do conector `P7501` (`115200 8N1` + `NSW5V` Hi-Z), modos de boot e console serial interativo.
+4. `frm-packager.spec.ts`: Inspeção criptográfica de `.FRM`, decodificação Feistel/TOC e fluxo do `Centro Unbrick`.
 
-### Matriz de Integração Contínua (GitHub Actions)
+### Matriz de Integração Contínua (GitHub Actions & `scripts/validate.py`)
 
-Todos os 8 jobs rodam sob cada push na branch `main`:
+Todos os 9 Quality Gates são executados via `python scripts/validate.py`:
 
 - **Android APK Build (Tauri 2.0 / ARM64)**: Compilação de binário Android com `cargo-ndk`.
-- **Rust Workspace (Ubuntu Linux)**: `cargo check` e suíte completa de testes.
-- **Ghidra Generator & Python Tools**: `py_compile`, `mypy --strict` e `pytest` (27 testes).
-- **Desktop UI**: `tsc --noEmit`, Vitest (33 testes), `uxlint` (100/100) e Playwright E2E.
-- **Rust Workspace (macOS latest ARM64)**: Validação em Apple Silicon.
-- **Rust Workspace (Windows latest)**: Validação em ambiente Windows nativo.
-- **Code Quality & Duplication**: `cargo fmt`, `clippy` e detector de clones `jscpd` (limite estrito 0%).
-- **Pico Firmware Dual Target**: Compilação UF2 para RP2040 e RP2350 (Cortex-M33).
+- **Rust Workspace (`5` crates)**: `cargo fmt --all -- --check`, `cargo check --workspace --all-targets` e `cargo test --workspace` (**142 testes**).
+- **Ghidra Generator & Python Tools**: `panadiga ghidra export-all`, `py_compile`, `mypy --strict scripts` (35 arquivos) e `pytest scripts/tests` (**22 testes**).
+- **Desktop UI**: `tsc --noEmit`, Vitest (**72 testes em 23 arquivos** em `apps/desktop/src/**/*.test.*`), `uxlint` (`100/100` com `--fail-on warn`, `0` issues em `204` arquivos) e Playwright E2E (**13 testes**).
+- **Code Quality & Duplication**: Detector de clones `jscpd` (**limite estrito 0% / 0 clones**).
+- **Pico Firmware Dual Target**: Suíte C11 Host (`4` módulos, **24 testes**, `-Wall -Wextra -Werror` / `/W4 /WX`) e compilação UF2 para RP2040 e RP2350.
 
 ---
 
@@ -132,10 +128,10 @@ Todos os 8 jobs rodam sob cada push na branch `main`:
 
 | Requisito Arquitetural               | Problema Mitigado                                                                  | Teste Automatizado de Proteção                                                                 |
 | :----------------------------------- | :--------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------- |
-| **FP Pure Domain**             | Regressão de decodificadores que dependiam de arquivos locais ou caminhos fixos.  | `pure_fp_tests.rs`, `pure_hdd_tests.rs`, `test_entropy_calculation`                        |
-| **MVVM Rigoroso**              | Telas travando em estado intermediário devido a flags booleanas soltas.           | `useInCircuitErase.test.ts`, `useGdbBridge.test.ts`                                          |
+| **FP Pure Domain**             | Regressão de decodificadores que dependiam de arquivos locais ou caminhos fixos.  | `nvram/tests.rs`, `hdd/inspect/tests.rs`, `test_entropy_calculation`                        |
+| **MVVM Rigoroso**              | Telas travando em estado intermediário devido a flags booleanas soltas.           | `useInCircuitErase.test.ts`, `useGdbBridge.test.ts`, `useManualsViewModel`                     |
 | **GDB Introspectivo**          | Corrupção de pacotes RSP ou estouro de buffer de telemetria em alta frequência. | `test_gdb_rsp_checksum_calculation`, `test_telemetry_ring_capacity`, `test_gdb_rsp_host.c` |
-| **SRP em Componentes**         | Regressão nos launchers rápidos ou controles do socket TCP de depuração.       | `GdbServerComponents.test.tsx`                                                                 |
-| **Zero Raw Prints / Consoles** | Poluição de stdout que quebra integrações JSON-RPC de servidores MCP.          | `logger.test.ts`, `test_logger_custom_sink`, testes unitários JSON-RPC de `src/mcp.rs`    |
+| **SRP em Componentes**         | Regressão nos launchers rápidos ou controles do socket TCP de depuração.       | `GdbServerComponents.test.tsx`, `docLinkResolver.test.ts`                                      |
+| **Zero Raw Prints / Consoles** | Poluição de stdout que quebra integrações JSON-RPC de servidores MCP.          | `logger.test.ts`, `mcp_core_tests.rs`, `mcp_re_tests.rs`                                       |
 | **SSOT de Constantes**         | Conflito de endereços de memória entre Ghidra, TUI, CLI e Desktop.               | `test_constants_memory_map_and_candidate_paths`, `test_system_constants_integrity`           |
-| **Decomposição do CLI**      | Parsing silencioso ou argumentos ignorados no novo entrypoint enxuto.              | `test_cli_args_parsing_matrix`                                                                 |
+| **Decomposição do CLI**      | Parsing silencioso ou argumentos ignorados entre subcomandos (`unbrick`, `re` etc.).| `cli_tests.rs`, `firmware_scan_tests.rs`                                                       |

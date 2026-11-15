@@ -1,3 +1,6 @@
+> 🌐 **Language / Idioma:** **English** | [Português (BR)](../pt-BR/ARQUITETURA_MOBILE_ANDROID_E_BLUETOOTH.md)
+> 🧭 **Portal:** [Docs Index](../INDEX.md) | [Complete Audit](../../COMPLETE_AUDIT.md) | [Audits](../audits/README.md) | [Ghidra Pseudocode](../pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) | [Debug Logs](../debug_logs/README.md)
+
 # Mobile Architecture (Android APK) and Wireless Connectivity (Bluetooth Low Energy)
 ## Panadiga Workbench Mobile — Native Rust Hardware Abstraction Layer Specification
 

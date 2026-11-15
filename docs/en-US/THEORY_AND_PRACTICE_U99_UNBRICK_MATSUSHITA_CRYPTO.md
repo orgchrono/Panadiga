@@ -1,4 +1,7 @@
-# REVERSE ENGINEERING TREATISE: U99 UNBRICK, CRYPTANALYSIS & MATSUSHITA HEXADECIMAL MAPPING
+> 🌐 **Language / Idioma:** **English** | [Português (BR)](../pt-BR/TEORIA_E_PRATICA_UNBRICK_U99_E_CRIPTOGRAFIA_MATSUSHITA.md)
+> 🧭 **Portal:** [Docs Index](../INDEX.md) | [Complete Audit](../../COMPLETE_AUDIT.md) | [Audits](../audits/README.md) | [Ghidra Pseudocode](../pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) | [Debug Logs](../debug_logs/README.md)
+
+# Reverse Engineering Treatise: U99 Unbrick, Cryptanalysis & Matsushita Hexadecimal Cartography
 ## Semiconductor Physics Fundamentals, EEMUL Subsystem, Cryptographic Keys & Firmware Memory Architecture
 
 **Document:** `THEORY_AND_PRACTICE_U99_UNBRICK_MATSUSHITA_CRYPTO.md`  
@@ -6,11 +9,11 @@
 
 ---
 
-## 1. Why Erase the 64 KB NVRAM (SA134..SA141) to `0xFF` Instead of "Patching the U99 Flag"?
+## 1. Why Erase the 64 KB NVRAM (`SA134..SA141`) to `0xFF` Instead of "Patching Only the U99 Flag"?
 
-A recurring reverse engineering question is: *would it not be more elegant to decompile the firmware, identify the exact byte offset of the U99 error flag in NVRAM, and zero out only that byte while preserving the rest of the original data?*
+A recurring reverse engineering question is: *would it not be more elegant and surgical to decompile the firmware, pinpoint the exact byte holding the U99 error flag in NVRAM, and zero only that flag while keeping 100% of all other original bytes untouched?*
 
-The definitive physical and software answer is **NO**. That approach is completely unfeasible due to **three fundamental barriers of semiconductor physics, transactional filesystem architecture, and factory contingency routines**:
+The definitive engineering answer is **NO**. That approach is both physically unworkable and harmful due to **three fundamental barriers rooted in semiconductor physics, transactional filesystem architecture, and factory contingency routines**:
 
 ```text
 +---------------------------------------------------------------------------------------------------+
@@ -18,45 +21,241 @@ The definitive physical and software answer is **NO**. That approach is complete
 +---------------------------------------------------------------------------------------------------+
 | Unidirectional Bit Transition (Write) :  1 ───> 0    (Hot-Carrier Electron Injection Programming) |
 | Reverse Bit Transition (FORBIDDEN)    :  0 ───> 1    (Physically IMPOSSIBLE without Sector Erase!)|
-| Matrix Cell Reset Mechanism           :  Entire 8 KB sector forced back to 0xFF via Fowler-Nordheim|
+| Matrix Cell Reset Mechanism           :  Entire 8 KB sector forced to 0xFF via JEDEC Sector Erase |
 +---------------------------------------------------------------------------------------------------+
 ```
 
-### 1.1 The Semiconductor Physics of Spansion S29JL064H NOR Flash
-* **State Transition Asymmetry:** In floating-gate Flash memory cells, transistors leave the factory in an uncharged state (logic `1`). The write operation (*Byte/Word Program*) injects electrons into the floating gate, transitioning bits from `1` to `0`.
-* **Impossibility of Isolated $0 \rightarrow 1$ Programming:** If a byte contains low bits (`0`), the on-die controller is **physically incapable** of returning individual bits to `1`.
-* **The JEDEC `Sector Erase` Command:** The only mechanism to restore bits back to `1` is purging stored electrons from floating gates across the entire sector simultaneously using a high-voltage Fowler-Nordheim tunneling pulse, resetting all 8,192 bytes of the micro-sector back to `0xFF`.
-* Consequently, modifying even a single bit from `0` to `1` in an existing recorded sector **strictly mandates erasing the entire sector**.
+### 1.1 Semiconductor Physics of Spansion `S29JL064H` NOR Flash
+* **State Transition Asymmetry:** In floating-gate Flash memory cells, transistors leave the factory in an uncharged state (logic `1`). Programming (*Byte/Word Program*) only injects electrons into the floating gate, transitioning bits strictly from `1` to `0`.
+* **Impossibility of Isolated $0 \rightarrow 1$ Writes:** If any status byte already holds cleared bits (`0`), the on-chip controller is **physically incapable** of flipping individual bits back to `1`.
+* **The JEDEC `Sector Erase` Command:** The only way to return bits to `1` is evacuating trapped electrons across all floating gates in an entire sector simultaneously via Fowler-Nordheim tunneling, resetting every byte of all 8,192 bytes in that micro-sector back to `0xFF`.
+* Consequently, toggling even one byte from `0` back to `1` inside an already-written block **mandates erasing the entire micro-sector anyway**.
 
 ---
 
-### 1.2 The U99 Error is NOT a "Static Flag" — It is a Transactional Integrity Panic Trap
-Panasonic firmware does not implement NVRAM as a static flat memory array where `offset 0x1234 = error_code`.
-The top 64 KB of the Spansion Flash (`0x807F0000` to `0x807FFFFF`, top-boot sectors `SA134` to `SA141`) hosts the **`EEMUL` (EEPROM Emulation Engine)**:
+### 1.2 Error `U99` Is NOT a "Static Flag" — It Is a Transactional Integrity Trap (*Kernel Panic Trap*)
+Matsushita firmware does **not** implement NVRAM as a flat memory struct where `offset 0x1234 = error_code`.
+The top 64 KB of Spansion Flash (`0x807F0000` through `0x807FFFFF`, Top-Boot micro-sectors `SA134` through `SA141`) hosts the **`EEMUL` (EEPROM Emulation Engine)**:
 
 ```text
                DYNAMIC CIRCULAR STRUCTURE OF THE EEMUL SUBSYSTEM (SA134..SA141)
 +-----------------------------------------------------------------------------------------+
-| Block Header    | Record 1   | Record 2   | ... | Record N (Active)  | 0xFF 0xFF (Blank)    |
-| (Seq ID + CRC)  | (Obsolete) | (Obsolete) |     | (Current Values)   | (Append Buffer)      |
+| Block Header    | Record 1   | Record 2   | ... | Record N (Active)  | 0xFF 0xFF (Blank)|
+| (Seq ID + CRC)  | (Obsolete) | (Obsolete) |     | (Current Values)   | (Append Buffer)  |
 +-----------------------------------------------------------------------------------------+
        │                                                      │
        └─── Wear-Leveling: Records advance continuously ──────┘
 ```
 
-1. **Sequential Append Logging:** To avoid exhausting the Flash endurance limit (100,000 erase cycles), Panasonic implemented a circular append log. New calibration updates and telemetry entries append to the first available `0xFF` address.
-2. **Dynamic Garbage Collection:** When an 8 KB sector runs out of virgin `0xFF` space, active parameters are compacted into the adjacent sector, and a JEDEC `Sector Erase` is triggered on the exhausted sector.
-3. **The True Genesis of Error U99:**
-   - Error `U99` is primarily triggered by **unexpected power loss** or excessive power-supply ripple on the $3.3\text{V}$ rail (caused by aging secondary electrolytic capacitors after 15+ years of continuous service).
-   - If power collapses during a JEDEC compaction cycle, the micro-sector enters a hybrid corrupted state: incomplete records, orphaned linked-list pointers, and **header checksum mismatches (CRC16/Sum32)**.
-   - Upon the next boot, the **IPL (Initial Program Loader)** parses sectors `SA134..SA141`. When integrity checks fail, the kernel refuses to energize optical laser diodes or mount IDE hard drives to prevent hardware damage.
-   - The CPU halts in a fail-safe exception trap and commands the front-panel vacuum fluorescent display (VFD) to flash the panic code: **`U99`** (*Fatal Parameter / Drive Initialization Timeout*).
+1. **Sequential Append Logging:** To avoid wearing out Flash endurance (rated at ~100,000 erase cycles), Panasonic engineered a sequential transactional journal. Each updated calibration record appends at the next virgin `0xFF` slot.
+2. **Dynamic Compaction (Garbage Collection):** Once an 8 KB micro-sector runs out of blank space, active records compact into the next micro-sector and JEDEC `Sector Erase` wipes the exhausted sector.
+3. **True Root Cause of `U99`:**
+   - Error `U99` occurs primarily due to **premature power loss** or high ripple on the $3.3\text{V}$ rail (common as secondary SMPS electrolytic capacitors gain ESR after 15+ years of service).
+   - If power collapses mid-JEDEC compaction, the micro-sector enters a split hybrid state: truncated records, dangling linked pointers, and **header checksum mismatches (CRC16/Sum32)**.
+   - At boot, the **IPL (Initial Program Loader)** scans `SA134..SA141`. Detecting checksum corruption and broken circular pointers, the kernel refuses to energize optical laser diodes or initialize IDE buses to prevent permanent hardware damage.
+   - The system locks into a fail-safe panic loop and drives the front VFD panel to display **`U99`** (*Fatal Parameter / Drive Initialization Timeout*).
+
+> [!IMPORTANT]
+> **Why Manual "Patching" Inevitably Fails:**  
+> Because `EEMUL` slides continuously via wear-leveling, no "flag" sits at a fixed byte offset. Manually reconstructing the journal would require decoding Matsushita's transaction B-tree, repairing broken pointers, and recomputing proprietary checksums across every sector — a single mismatched word causes IPL rejection and returns immediately to `U99`.
 
 ---
 
-### 1.3 Factory Cold-Boot Recalibration Routine
+### 1.3 Panasonic's Built-In Cold-Factory Recalibration Mechanism (*Cold-Factory Recalibration*)
+The definitive recovery path engineered by Matsushita's own architects relies on virgin erased Flash state:
 
-Panasonic engineers designed the factory initialization routine around unprogrammed Flash:
-1. When sectors `SA134..SA141` contain pure `0xFF`, the IPL detects clean uninitialized Flash.
-2. The bootloader writes initial factory default calibration tables, restores baseline servo parameters, and executes a clean boot into the initial setup wizard.
-3. Therefore, **sanitizing the entire 64 KB NVRAM space to `0xFF` is mathematically and physically the only 100% reliable method to clear the U99 error loop.**
+```text
+                  BOOTLOADER (IPL) INITIALIZATION FLOW
+                              [ Power-On ]
+                                   │
+                                   ▼
+                 [ Read Sectors SA134..SA141 (0x807F0000) ]
+                                   │
+                      What state are the 64 KB in?
+                     ┌─────────────┴─────────────┐
+       DATA WRITTEN WITH INVALID CHECKSUM      ALL 64 KB EQUAL 0xFF
+                     │                                   │
+                     ▼                                   ▼
+              [ PANIC TRAP: U99 ]           [ AUTO-FACTORY MODE TRIGGERED ]
+            (Freezes IDE/Laser Buses)       1. Detects virgin factory Flash
+                                            2. Recalibrates ADCs & thermal sensors
+                                            3. Sends ATA IDENTIFY DEVICE to HDD
+                                            4. Rebuilds clean calibration tables
+                                            5. Writes fresh valid EEMUL blocks
+                                                          │
+                                                          ▼
+                                                [ 100% CLEAN BOOT ]
+```
+
+* **Behavior When All 64 KB Read `0xFF`:**  
+  The IPL recognizes the factory *"Uninitialized Non-Volatile Memory"* signature.
+* It immediately runs the self-recovery sequence:
+  1. Clears residual fault counters.
+  2. Auto-calibrates internal ADC references and SoC thermal sensors.
+  3. Issues `ATA IDENTIFY DEVICE` (`0xEC`) over IDE to interrogate native drive geometry.
+  4. Synthesizes clean calibration tables and writes a fresh valid `EEMUL` structure to Flash.
+  5. Completes startup and advances into normal recorder operation.
+
+Therefore, **erasing all 64 KB of NVRAM to `0xFF` is not destructive data loss; it is the official factory trigger that makes the recorder self-heal and match its exact installed physical hardware**.
+
+---
+
+### 1.4 Why Erasing ONLY Block 3 (`SA137`, 8 KB Panic Flags) Does NOT Resolve `U99`
+
+A tempting hypothesis raised during early audits was:  
+*"If Block 3 (`SA137`, 8 KB, physical offset `0x7F6000..0x7F7FFF`) stores fatal error records and Panasonic panic flags, would running JEDEC `Sector Erase` solely on that single 8 KB micro-sector while leaving the other 7 blocks (56 KB) untouched cure `U99`?"*
+
+Technical analysis rooted in firmware internals and bench verification proves that **erasing Block 3 alone categorically fails to restore the recorder** due to three deterministic blockers:
+
+#### 1. Cross-Sector Superblock Invalidation in `SA141` (Block 7)
+Matsushita's `EEMUL` subsystem **does not treat the eight 8 KB blocks as independent partitions**. Block 7 (`SA141`, `0x807FE000..0x807FFFFF`) acts as the *Master Superblock* storing:
+* Global compaction Generation ID.
+* Active pointer table for each sector `SA134..SA140`.
+* Structural cross-checksums (`CRC16`/`Sum32`) covering every micro-sector.
+
+If you erase only Block 3 (`SA137`) to `0xFF`:
+1. `SA137`'s digest collapses to the trivial $\text{CRC16}(0\text{xFF}\dots0\text{xFF})$.
+2. At power-on, IPL self-check reads the master table in `SA141` and recomputes `SA137`'s CRC.
+3. Comparing computed CRC against the committed checksum inside `SA141` triggers **`Cross-Sector Checksum Mismatch`**.
+4. Confronted with transactional tree incoherence, the kernel halts parameter loading and immediately throws panic freeze **`U99`**.
+5. Because NOR Flash forbids $0 \rightarrow 1$ writes without sector erase, updating `SA141` requires erasing `SA141` itself — destroying pointers to the remaining sectors!
+
+#### 2. Confusing Cause with Symptom (Block 3 Is the Black Box, Not the Fault)
+Block 3 (`SA137`) acts purely as the critical event flight recorder (*Crash Dump / Panic Logger*):
+* It records the CPU snapshot at panic time: AM34 registers, IDE bus status, power sense, and fault code.
+* The underlying fault **NEVER originated inside Block 3**. It originated in **Block 0 (`SA134` — laser focus/tracking calibration)** or **Block 6 (`SA140` — active transaction descriptors)** during a brownout or sudden power cut.
+* Wiping only Block 3 erases the crash log while leaving the root corruption in `SA134` or `SA140` completely intact.
+* Within microseconds of rebooting, the IPL reloads corrupted tables from `SA134`/`SA140`, hits another bus fault, logs a **fresh crash record into Block 3**, and locks back on **`U99`**.
+
+#### 3. Atomic Boolean Check Inside `cold_factory_recovery`
+Decompression and startup logic in the IPL validates factory initialization via a strict 64 KB loop:
+
+$$\text{TriggerAutoFactory} = \bigwedge_{addr = 0x807F0000}^{0x807FFFFF} \big(\text{FlashRead8}(addr) == 0\text{xFF}\big)$$
+
+* Only if **all 65,536 bytes** equal `0xFF` does the IPL recognize virgin Flash and invoke full factory recalibration.
+* If Block 3 is `0xFF` while `SA134..SA136` and `SA138..SA141` retain bytes $\neq 0\text{xFF}$, the condition evaluates **FALSE**.
+* The IPL skips factory recovery, boots down the normal operational path, trips over the corrupt tree, and locks on `U99`.
+
+**Unequivocal Conclusion:** The only 100%-reliable recovery action is issuing JEDEC `Sector Erase` across all 8 NVRAM micro-sectors together (`SA134..SA141`, 64 KB total).
+
+---
+
+## 2. Matsushita Cryptanalysis: Where Keys Live, How Handshakes Work & Extraction Paths
+
+### 2.1 Physical Residence of the Master Key
+DMR-EH55 hardware lacks transparent external-bus decryption logic. For the AM34 CPU to fetch instructions starting at reset (`0x80000000`), external Spansion NOR Flash **must contain plaintext native MN103S machine instructions**.
+
+Master cryptographic material resides in two hardware locations:
+1. **IPL Bootloader Code (`SA0`, Spansion Flash `0x80000000`..`0x8000FFFF`):**
+   - Embedded as immediate constants and static tables directly inside unencrypted machine code on the main PCB.
+   - Any external programmer readout (XGecu T48 / SVOD 4) or uncached `0x80000000` capture contains the decryption routines and key constants.
+2. **Internal Mask ROM of Matsushita AM34 (`MN103S`) Silicon:**
+   - An on-die 16 KB Boot ROM validating primary IPL authenticity.
+
+---
+
+### 2.2 Three-Level Operational Handshake
+
+Firmware ingestion flows through three distinct verification stages:
+
+```text
++------------------------------------------------------------------------------------+
+| LEVEL 1: OPTICAL ATAPI HANDSHAKE (DVD Drive MN102 <---> Main CPU AM34)             |
+|    - User inserts CD-R. Optical DSP (MN102) reads 160-byte TOC.                    |
+|    - Validates Matsushita Magic: EF DC 1C DA 13 88 1B AB                           |
+|    - Validates Core Target ID:   74 A7 8A CD 78 9B 84 FF (AM34)                    |
+|    - Front panel VFD cycles: LOAD ──> LD FVU ──> M_FIRM ──> L1 P01                 |
++------------------------------------------------------------------------------------+
+                                         │
+                                         ▼
++------------------------------------------------------------------------------------+
+| LEVEL 2: HDD STORAGE HANDSHAKE (In-Drive Encrypted Transfer)                       |
+|    - Main CPU does NOT decrypt firmware before writing to IDE HDD.                 |
+|    - Transfers encrypted blocks DIRECTLY into reserved HDD partitions at           |
+|      LBAs 65536 (32 MB) and 131072 (64 MB).                                        |
+|    - Writes encrypted key check marker: E5 D1 F3 4A 51 8B 26 90                    |
++------------------------------------------------------------------------------------+
+                                         │
+                                         ▼
++------------------------------------------------------------------------------------+
+| LEVEL 3: OPERATIONAL BOOT HANDSHAKE (Executed on Every Power-On)                   |
+|    - IPL reads "SH" MBR at LBA 0 and 256 XOR 0xFF descriptors at LBA 24..31.       |
+|    - DMAs HDD Partition 1 into Elpida SDRAM (0x40000000).                          |
+|    - Runs 16-round Feistel decryption in RAM using ROM keys.                       |
+|    - Decompresses kernel (GZIP/LZSS) and jumps to RTOS Entry Point.                |
++------------------------------------------------------------------------------------+
+```
+
+---
+
+### 2.3 Forensic Phenomenon of the 64-Bit ECB Codebook
+
+Operating in *Electronic Codebook* (ECB) mode with no inter-block chaining (zero IV) exposes structural plaintext patterns, letting us catalog the **Panasonic Codebook**:
+
+$$\text{Plaintext } [0\text{xFF} \times 8] \xrightarrow{\text{Feistel 64-bit}} \mathbf{03\ 50\ 65\ C8\ 7B\ B8\ E0\ 90} \quad \text{(Virgin Erased Flash)}$$
+$$\text{Plaintext } [0\text{x00} \times 8] \xrightarrow{\text{Feistel 64-bit}} \mathbf{E5\ D1\ F3\ 4A\ 51\ 8B\ 26\ 90} \quad \text{(Zero Padding / BSS)}$$
+
+The simultaneous appearance of `E5D1F34A518B2690` inside optical container `PANA_DVD.FRM` and inside reserved HDD partition headers proves **both media channels share the exact same cryptographic master key**.
+
+---
+
+## 3. Complete Ecosystem Hexadecimal Cartography
+
+### 3.1 Forensic MEIHFS Hard Disk Dump (`hdd_100.bin` — 104,857,600 Bytes)
+* **SHA-256 Digest:** `9d292d5b46f190775f359e30af11d074021fb321f040bf701d0ecf0f2056db00`
+* **Audited Span:** `100.00 MB` / `204,800` 512-byte LBA sectors.
+
+```text
+  LBA Sector      Physical Offset     Active Size     Signature / Magic        Technical & Forensic Description
+─────────────   ───────────────────  ─────────────   ───────────────────────  ─────────────────────────────────────────────
+  LBA 0           0x00000000..1FF      512 bytes     0000000001005348...      Primary Panasonic MBR (ASCII "SH" tag, GUID)
+  LBA 1..23       0x00000200..2FFF      11.5 KB      Variable                 MEIHFS Partition Table & Volume Structures
+  LBA 24..31      0x00003000..3FFF     4,096 bytes   XOR 0xFF (1's Comp.)     256 Bit-Inverted Extent Descriptors
+  LBA 16640       0x00820000..95FF     1.25 MB       Transactional 0x5348     Transactional Journaling Pool (10 blocks)
+  LBA 57344       0x01C00000..1FF      512 bytes     61162c24c9240408...      MIRROR MBR (Exact 28.00 MB / 100% identical)
+  LBA 57368..75   0x01C03000..3FFF     4,096 bytes   4b604ad2a689bd39...      Identical Mirror of 256 XOR Descriptors
+  LBA 65536       0x02000000         6,173,264 B     5187138D5B0AFB22         PARTITION 1: Main AM34 Kernel (32 MB mark)
+  LBA 131072      0x04000000           720,896 B     5187138D5B0AFB22         PARTITION 2: Subsystem / Drivers (64 MB mark)
+```
+
+---
+
+### 3.2 Optical Firmware Update Container (`PANA_DVD.FRM` — 7,531,744 Bytes)
+* **Shannon Entropy:** `7.99958 bits/byte`.
+
+```text
+    Offset Range          Active Size       Signature / Target ID        Hardware Role & Payload Destination
+──────────────────────   ──────────────   ──────────────────────────   ─────────────────────────────────────────────
+  0x000000..0x00000F         16 bytes     492F0560CEDE508CE3C0...      Optical Container Global Header
+  0x000010..0x00003F         48 bytes     EFDC1CDA... 74A78ACD...      TOC Entry 0: Module 1 (Target: AM34 Core)
+  0x000040..0x00006F         48 bytes     EFDC1CDA... 3B7E7EDB...      TOC Entry 1: Module 2 (Target: MN102 DSP)
+  0x000070..0x00009F         48 bytes     EFDC1CDA... 74A78ACD...      TOC Entry 2: Module 3 (Target: AM34 OS)
+  0x0000A0..0x000AE480      713,696 B     Encrypted Payload            MODULE 1: Subsystem/OSD (Maps to HDD Partition 2)
+  0x000AEFD0..0x000B17D0     10,240 B     4D3C5DBB0C357777 (1,280x)    Inter-Module Transition Descriptors
+  0x000B1800..0x000EAC98    234,648 B     Contains 196x E5D1F34A...    MODULE 2: DVD Drive Firmware (MN102 DSP)
+  0x000EAC98..0x000F17F8     27,488 B     035065C87BB8E090 (3,436x)    Virgin Flash Padding (0xFF x 8)
+  0x000F1818..0x0072ECE0  6,542,536 B     Encrypted Payload            MODULE 3: DIGA Main Kernel (Maps to HDD Partition 1)
+```
+
+---
+
+### 3.3 Physical NOR Flash Spansion `S29JL064H` (`VEP79138` Board — 8,388,608 Bytes)
+
+```text
+     Bus Address Range           File Offset Range        Size      Attr    Architectural Role
+─────────────────────────────   ───────────────────   ───────────   ────   ────────────────────────────────────────
+  0x80000000 .. 0x8000FFFF       0x000000..0x00FFFF       64 KB      RO    Sector SA0: Native Plaintext IPL Bootloader
+  0x80010000 .. 0x807EFFFF       0x010000..0x7EFFFF    8,064 KB      RO    Sectors SA1..SA133: Base Kernel & RTOS
+  0x807F0000 .. 0x807F1FFF       0x7F0000..0x7F1FFF        8 KB      RW    Sector SA134: EEMUL Block 0 (Laser Calib.)
+  0x807F2000 .. 0x807F3FFF       0x7F2000..0x7F3FFF        8 KB      RW    Sector SA135: EEMUL Block 1 (HDD Geometry)
+  0x807F4000 .. 0x807F5FFF       0x7F4000..0x7F5FFF        8 KB      RW    Sector SA136: EEMUL Block 2 (Region/VFD)
+  0x807F6000 .. 0x807F7FFF       0x7F6000..0x7F7FFF        8 KB      RW    Sector SA137: EEMUL Block 3 (Fatal Crash Logs)
+  0x807F8000 .. 0x807F9FFF       0x7F8000..0x7F9FFF        8 KB      RW    Sector SA138: EEMUL Block 4 (Error History)
+  0x807FA000 .. 0x807FBFFF       0x7FA000..0x7FBFFF        8 KB      RW    Sector SA139: EEMUL Block 5 (Power State)
+  0x807FC000 .. 0x807FDFFF       0x7FC000..0x7FDFFF        8 KB      RW    Sector SA140: EEMUL Block 6 (NVRAM Tx)
+  0x807FE000 .. 0x807FFFFF       0x7FE000..0x7FFFFF        8 KB      RW    Sector SA141: EEMUL Block 7 (Master Checksum)
+```
+
+### 3.4 Bus Invariants Summary
+* **Immutable Factory Region (99.21875%):** `0x80000000` to `0x807EFFFF` (8,323,072 bytes) — Strictly preserved bit-identical across the entire lifetime of the unit.
+* **Targeted Sanitization Window (0.78125%):** `0x807F0000` to `0x807FFFFF` (65,536 bytes) — Erased to `0xFF` via bench JEDEC `Sector Erase` to command the AM34 CPU to execute factory recalibration and restore healthy recorder operation.

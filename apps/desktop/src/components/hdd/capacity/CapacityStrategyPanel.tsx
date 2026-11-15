@@ -2,6 +2,8 @@ import React from 'react';
 import { Cpu, HardDrive, ShieldCheck, Sparkles, Unlock } from 'lucide-react';
 import { QUICK_CAPACITIES_GB, type PatchMode } from './capacityHelpers';
 
+const QUICK_CAPACITIES: readonly number[] = QUICK_CAPACITIES_GB;
+
 export interface CapacityStrategyPanelProps {
   mode: PatchMode;
   onModeChange: (nextMode: PatchMode) => void;
@@ -113,21 +115,25 @@ export const CapacityStrategyPanel: React.FC<CapacityStrategyPanelProps> = ({
 
         {(mode === 'cap' || limitInDynamicMode) && (
           <div className="flex flex-wrap items-center gap-2">
-            {QUICK_CAPACITIES_GB.map(gb => (
-              <button
-                key={gb}
-                type="button"
-                onClick={() => onTargetGbChange(gb)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${
-                  targetGb === gb
-                    ? 'bg-cyan-500 text-slate-950 border-cyan-400'
-                    : 'bg-bench-900 text-slate-300 border-slate-800 hover:border-slate-700'
-                }`}
-              >
-                {gb >= 1000 ? `${gb / 1000} TB (${gb} GB)` : `${gb} GB`}
-                {gb === 250 ? ' ★' : ''}
-              </button>
-            ))}
+            {QUICK_CAPACITIES.length === 0 ? (
+              <span className="text-[11px] text-slate-500">Sem presets de capacidade carregados.</span>
+            ) : (
+              QUICK_CAPACITIES.map(gb => (
+                <button
+                  key={gb}
+                  type="button"
+                  onClick={() => onTargetGbChange(gb)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${
+                    targetGb === gb
+                      ? 'bg-cyan-500 text-slate-950 border-cyan-400'
+                      : 'bg-bench-900 text-slate-300 border-slate-800 hover:border-slate-700'
+                  }`}
+                >
+                  {gb >= 1000 ? `${gb / 1000} TB (${gb} GB)` : `${gb} GB`}
+                  {gb === 250 ? ' ★' : ''}
+                </button>
+              ))
+            )}
 
             <div className="flex items-center gap-1.5 ml-auto">
               <span className="text-[11px] text-slate-400">Custom (GB):</span>

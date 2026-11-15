@@ -250,6 +250,15 @@ def _add_bookmark(bm_mgr, space, addr_hex, category, comment):
     except Exception:
         pass
 
+def _is_mid_instruction_literal_hit(prog, addr_val):
+    listing = prog.getListing()
+    addr = prog.getAddressFactory().getDefaultAddressSpace().getAddress(addr_val)
+    cur = listing.getInstructionContaining(addr)
+    if cur is None:
+        return False
+    # Trap 7 false-positive LE32/LE16 hit occurs when constant matches bytes straddling opcode+imm or imm inside insn without primary alignment
+    return not cur.getAddress().equals(addr)
+
 def _collect_xref_counts(prog):
     ref_mgr = prog.getReferenceManager()
     space = prog.getAddressFactory().getDefaultAddressSpace()
@@ -260,10 +269,16 @@ def _collect_xref_counts(prog):
         if mem.getBlock(addr) is None:
             continue
         refs = []
+        mid_insn = []
         it = ref_mgr.getReferencesTo(addr)
         while it.hasNext() and len(refs) < 32:
-            refs.append("0x%08X" % (it.next().getFromAddress().getOffset() & 0xFFFFFFFF))
-        counts[name] = {{"target": "0x%08X" % addr_val, "xref_count": len(refs), "callers": refs}}
+            from_addr = it.next().getFromAddress()
+            from_u32 = from_addr.getOffset() & 0xFFFFFFFF
+            if _is_mid_instruction_literal_hit(prog, from_u32):
+                mid_insn.append("0x%08X" % from_u32)
+            else:
+                refs.append("0x%08X" % from_u32)
+        counts[name] = {{"target": "0x%08X" % addr_val, "xref_count": len(refs), "callers": refs, "mid_insn_false_hits": mid_insn}}
     return counts
 
 def _default_report_path(prog):

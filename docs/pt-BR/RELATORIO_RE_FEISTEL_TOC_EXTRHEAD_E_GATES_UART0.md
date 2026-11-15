@@ -1,3 +1,6 @@
+> 🌐 **Idioma / Language:** [English (US)](../en-US/RE_REPORT_FEISTEL_TOC_EXTRHEAD_AND_UART0_GATES.md) | **Português (BR)**
+> 🧭 **Portal:** [Índice da Documentação](../INDEX.md) | [Auditoria Completa](../../AUDITORIA_COMPLETA.md) | [Auditorias](../audits/README.md) | [Pseudocódigo Ghidra](../pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) | [Logs de Debug](../debug_logs/README.md)
+
 # Dossiê de Engenharia Reversa: Cifra Feistel (`FUN_4400a666`), Contêineres `.FRM` (`EXTRHEAD`) e Gates UART0/Debug (`DMR-EH55`)
 
 > **Escopo & Integridade:** Este documento consolida, de forma persistente no repositório, as descobertas empíricas obtidas no disassembly MN103S de `BOOT.BIN` (**Trilha A**) e `EH55_MAIN_3410PQ.bin` (**Trilha B**), bem como sua materialização modular em Rust (`panadiga-core` / `panadiga-cli`) e Python (`scripts/re/pana_frm.py`). Todos os endereços, chaves, tabelas e invariantes aqui descritos foram validados diretamente sobre `firmware_and_images/PANA_DVD.FRM` e nos testes automatizados do workspace.

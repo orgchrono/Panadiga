@@ -1,3 +1,6 @@
+> 🌐 **Idioma / Language:** [English (US)](../en-US/BLUEPRINT_BENCH_WIRING_AND_SCHEMATIC.md) | **Português (BR)**
+> 🧭 **Portal:** [Índice da Documentação](../INDEX.md) | [Auditoria Completa](../../AUDITORIA_COMPLETA.md) | [Auditorias](../audits/README.md) | [Pseudocódigo Ghidra](../pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) | [Logs de Debug](../debug_logs/README.md)
+
 # BLUEPRINT DE ENGENHARIA DE HARDWARE E CIRCUITOS DE BANCADA
 ## Interface In-Circuit `P7501` Async UART (`115200 8N1`) & Gravação Externa Spansion `S29JL064H` (TSOP-48)
 ### Gravador Digital Panasonic DMR-EH55 — Placa Principal (`PCB: VEP79138`)

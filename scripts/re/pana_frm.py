@@ -121,11 +121,11 @@ def find_extrhead_containers(buf: bytes, image_base: int = 0) -> list[ExtrheadMa
     return matches
 
 
-def classify_drv_cli_command(name: str, flags: int) -> str:
+def classify_drv_cli_command(name: str, flags: int, pass_unlocked: bool = False) -> str:
     """Classify one DRV CLI entry (`0x400DF5C0..0x400DFE94`) by safety/privilege tier."""
     norm = name.strip().upper()
     if norm in _DRV_WRITE_BLOCKED_NAMES or flags == 0x38:
-        return "WRITE_BLOCKED"
+        return "UNLOCKED_WRITE" if pass_unlocked else "WRITE_BLOCKED"
     if norm == "PASS":
         return "UNLOCK_AUTH"
     if norm in _DRV_READ_ONLY_NAMES:

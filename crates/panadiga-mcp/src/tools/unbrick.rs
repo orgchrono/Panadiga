@@ -1,14 +1,105 @@
 //! MCP handler for unified SD Unbrick Kit generation, FRM extraction, and media verification.
 
-use anyhow::Result;
+use std::{fs, path::Path};
+
+use anyhow::{Result, bail};
+use serde_json::{Value, json};
+
+use panadiga_core::crypto::parse_u32_radix;
 use panadiga_core::re::{
     MainPassthroughMode, Prog061BgoPatchMode, SdUnbrickKitRequest, extract_modules_from_frm,
-    inspect_unbrick_workspace, prepare_sd_unbrick_kit, verify_sd_unbrick_media,
+    inspect_unbrick_workspace,
+    matshita_emu::{
+        MatshitaBootScenario, MatshitaOddEmulator, build_sample_unlock_frm, parse_hex_payload,
+        parse_unlock_container_mode, verify_unlock_frm_container,
+    },
+    prepare_sd_unbrick_kit, verify_sd_unbrick_media,
 };
-use serde_json::{Value, json};
-use std::path::Path;
 
 use crate::workspace::{optional_non_empty_str, require_non_empty_str, resolve_workspace_path};
+
+fn handle_matshita_emu_action(args: &Value, workspace_root: &Path) -> Result<Value> {
+    let sub = optional_non_empty_str(args, "emu_action")
+        .unwrap_or("boot")
+        .to_ascii_lowercase();
+    match sub.as_str() {
+        "boot" => {
+            let scenario: MatshitaBootScenario = optional_non_empty_str(args, "scenario")
+                .unwrap_or("healthy_with_disc")
+                .parse()?;
+            let mut emu = MatshitaOddEmulator::new(scenario);
+            if let Some(rel) = optional_non_empty_str(args, "frm_path") {
+                let bytes = fs::read(resolve_workspace_path(workspace_root, rel))?;
+                let _ = emu.mount_unlock_frm("dvd", &bytes)?;
+            }
+            Ok(serde_json::to_value(emu.run_boot_sequence()?)?)
+        }
+        "inject_write" => {
+            let payload_hex = optional_non_empty_str(args, "payload_hex").unwrap_or("50414E41");
+            let payload = parse_hex_payload(payload_hex)?;
+            let offset = args.get("offset").and_then(|v| v.as_u64()).unwrap_or(0) as usize;
+            let mode = args.get("mode").and_then(|v| v.as_u64()).unwrap_or(2) as u8;
+            let use_vendor_ed = args
+                .get("use_vendor_ed")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            let target_va = optional_non_empty_str(args, "target_va")
+                .map(parse_u32_radix)
+                .transpose()?;
+            let mut emu = MatshitaOddEmulator::default();
+            let (rec, snap) =
+                emu.run_inject_write(target_va, offset, mode, use_vendor_ed, &payload)?;
+            Ok(json!({ "record": rec, "snapshot": snap }))
+        }
+        "serial_cmd" => {
+            let cmd = require_non_empty_str(args, "serial_cmd")?;
+            let mut emu = MatshitaOddEmulator::default();
+            if args
+                .get("unlock_pass")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false)
+            {
+                let _ = emu.execute_drv_serial_command("PASS 0x4d415453 0x48495441")?;
+            }
+            Ok(serde_json::to_value(emu.execute_drv_serial_command(cmd)?)?)
+        }
+        "verify_frm" => {
+            let kind = optional_non_empty_str(args, "container_kind").unwrap_or("digadiag");
+            let rel = require_non_empty_str(args, "frm_path")?;
+            let bytes = fs::read(resolve_workspace_path(workspace_root, rel))?;
+            Ok(serde_json::to_value(verify_unlock_frm_container(
+                kind, &bytes,
+            )?)?)
+        }
+        "pack_unlock_frm" => {
+            let kind = optional_non_empty_str(args, "container_kind").unwrap_or("sd");
+            let mode = parse_unlock_container_mode(kind)?;
+            let payload = match optional_non_empty_str(args, "payload_hex") {
+                Some(h) => parse_hex_payload(h)?,
+                None => vec![0xCBu8; 1024],
+            };
+            let (bytes, summary) = build_sample_unlock_frm(mode, &payload)?;
+            let mut saved_path: Option<String> = None;
+            if let Some(out_rel) = optional_non_empty_str(args, "output_path") {
+                let out_path = resolve_workspace_path(workspace_root, out_rel);
+                if let Some(parent) = out_path.parent()
+                    && !parent.as_os_str().is_empty()
+                {
+                    fs::create_dir_all(parent)?;
+                }
+                fs::write(&out_path, &bytes)?;
+                saved_path = Some(out_path.to_string_lossy().into_owned());
+            }
+            Ok(json!({
+                "verification": summary,
+                "output_file": saved_path,
+            }))
+        }
+        other => bail!(
+            "Unsupported matshita_emu sub-action '{other}': expected boot, inject_write, serial_cmd, verify_frm, or pack_unlock_frm"
+        ),
+    }
+}
 
 pub fn handle_sd_unbrick_kit(args: &Value, workspace_root: &Path) -> Result<Value> {
     let action = optional_non_empty_str(args, "action")
@@ -97,8 +188,9 @@ pub fn handle_sd_unbrick_kit(args: &Value, workspace_root: &Path) -> Result<Valu
             })?;
             Ok(serde_json::to_value(rep)?)
         }
+        "matshita_emu" => handle_matshita_emu_action(args, workspace_root),
         other => Ok(json!({
-            "error": format!("Unsupported panadiga_sd_unbrick_kit action '{other}': expected status, extract_frm, prepare_sd, or verify_sd")
+            "error": format!("Unsupported panadiga_sd_unbrick_kit action '{other}': expected status, extract_frm, prepare_sd, verify_sd, or matshita_emu")
         })),
     }
 }

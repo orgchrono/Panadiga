@@ -1,3 +1,6 @@
+> 🌐 **Idioma / Language:** [English (US)](../en-US/EXPLODED_VIEW_PICO_INJECTION_ARCHITECTURE_AND_BYPASS_PASSTHROUGH.md) | **Português (BR)**
+> 🧭 **Portal:** [Índice da Documentação](../INDEX.md) | [Auditoria Completa](../../AUDITORIA_COMPLETA.md) | [Auditorias](../audits/README.md) | [Pseudocódigo Ghidra](../pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) | [Logs de Debug](../debug_logs/README.md)
+
 # Vista Explodida da Arquitetura `DMR-EH55`, Consolidação Rust/MCP/RAG, Injeção via Pico & Bypass/Passthrough AV
 
 > [!IMPORTANT]
@@ -28,18 +31,19 @@ Uma pergunta recorrente em bancada é se *"o firmware já está 100% em texto cl
 
 ---
 
-## 2. Consolidação Python → Rust, MCP (`17` Tools) e RAG Zero-Error
+## 2. Consolidação Python → Rust, MCP (`18` Tools) e RAG Zero-Error
 
-As rotinas críticas de engenharia reversa e bancada que antes residiam dispersas em scripts Python foram consolidadas nativamente na crate `panadiga-core`, expostas pelo servidor MCP (`panadiga-mcp`, **`17` ferramentas**) e indexadas automaticamente pelo motor `panadiga-rag`:
+As rotinas críticas de engenharia reversa e bancada que antes residiam dispersas em scripts Python foram consolidadas nativamente na crate `panadiga-core`, expostas pelo servidor MCP (`panadiga-mcp`, **`18` ferramentas**) e indexadas automaticamente pelo motor `panadiga-rag`:
 
 | Origem Histórica (Python / Pesquisa) | Módulo Rust Consolidado (`crates/panadiga-core`) | Exposição MCP / Interface |
 | :--- | :--- | :--- |
-| `scripts/re/pana_frm.py` *(cifra/packing)* | [`src/crypto/`](../../crates/panadiga-core/src/crypto/mod.rs) (`feistel_decrypt_buffer`, `unpack_extrhead`, `build_digadiag_frm`, `pack_frm`) | `panadiga_inspect_frm` + CLI `panadiga-cli frm` |
-| `scripts/re/mn10300.py` | [`src/re/mn10300.rs`](../../crates/panadiga-core/src/re/mn10300.rs) (`decode_branch_call_refs`, `find_callers_to`, `find_fc_immediate_loads`, `find_pointer_xrefs`) | API interna Rust para análise MN103S PC-rel (`target = va + disp`) |
-| `scripts/bench/nor_dumper.py` | [`src/re/nor_dumper.rs`](../../crates/panadiga-core/src/re/nor_dumper.rs) (`build_readonly_nor_dumper_stub`, `decode_nor_dump_stream`, guarda estrita `0x80000000`/`0x84000000`) | **`panadiga_nor_dumper_stub`** (MCP Tool #15) |
-| Análise `src/hdd_cmd.c` (`MaxProductLBA`) | [`src/hdd/capacity_patch.rs`](../../crates/panadiga-core/src/hdd/capacity_patch.rs) (`inspect_main_hdd_capacity`, `patch_main_hdd_capacity`, `DynamicUnclamped`) | **`panadiga_hdd_capacity`** (MCP Tool #14) + CLI `panadiga-cli hdd-capacity` + Desktop UI |
-| Descoberta pré-MAIN BGO (`0x50401F3C` / `0x504230F0`) | [`src/re/bgo_unbrick.rs`](../../crates/panadiga-core/src/re/bgo_unbrick.rs) (`inspect_prog061_bgo_sites`, `patch_prog061_bgo_in_place`, `patch_prog061_or_build_digadiag`) | **`panadiga_bgo_unbrick`** (MCP Tool #16) — gera `DIGADIAG.FRM` (`131.072 B`) |
-| `MAIN` AV TBC (`E-E`) & `_dev_SERIAL` (`0x574F0775`) | [`src/re/main_passthrough.rs`](../../crates/panadiga-core/src/re/main_passthrough.rs) (`inspect_main_passthrough_sites`, `patch_main_passthrough_file`, `build_passthrough_rsp_plan`) | **`panadiga_main_passthrough`** (MCP Tool #17) + Pico `PANARSP PASSTHROUGH` / `CALL:` |
+| `scripts/re/pana_frm.py` *(cifra/packing)* | [`crates/panadiga-core/src/crypto/`](../../crates/panadiga-core/src/crypto/mod.rs) (`feistel_decrypt_buffer`, `unpack_extrhead`, `build_digadiag_frm`, `pack_frm`) | `panadiga_inspect_frm` + CLI `panadiga frm` |
+| `scripts/re/mn10300.py` | [`crates/panadiga-core/src/re/mn10300/`](../../crates/panadiga-core/src/re/mn10300/mod.rs) (`decode_branch_call_refs`, `find_callers_to`, `find_fc_immediate_loads`, `find_pointer_xrefs`) | API interna + CLI `panadiga re xrefs` |
+| `scripts/bench/nor_dumper.py` | [`crates/panadiga-core/src/re/nor_dumper.rs`](../../crates/panadiga-core/src/re/nor_dumper.rs) (`build_readonly_nor_dumper_stub`, `decode_nor_dump_stream`, guarda estrita `0x80000000`/`0x84000000`) | **`panadiga_nor_dumper_stub`** (MCP Tool #15) |
+| Análise histórica `hdd_cmd.c` (`MaxProductLBA`) | [`crates/panadiga-core/src/hdd/capacity_patch/`](../../crates/panadiga-core/src/hdd/capacity_patch/mod.rs) (`inspect_main_hdd_capacity`, `patch_main_hdd_capacity`, `DynamicUnclamped`) | **`panadiga_hdd_capacity`** (MCP Tool #14) + CLI `panadiga hdd inspect-capacity` + Desktop UI |
+| Descoberta pré-MAIN BGO (`0x50401F3C` / `0x504230F0`) | [`crates/panadiga-core/src/re/bgo_unbrick.rs`](../../crates/panadiga-core/src/re/bgo_unbrick.rs) (`inspect_prog061_bgo_sites`, `patch_prog061_bgo_in_place`, `patch_prog061_or_build_digadiag`) | **`panadiga_bgo_unbrick`** (MCP Tool #16) — gera `DIGADIAG.FRM` (`131.072 B`) |
+| `MAIN` AV TBC (`E-E`) & `_dev_SERIAL` (`0x574F0775`) | [`crates/panadiga-core/src/re/main_passthrough.rs`](../../crates/panadiga-core/src/re/main_passthrough.rs) (`inspect_main_passthrough_sites`, `patch_main_passthrough_file`, `build_passthrough_rsp_plan`) | **`panadiga_main_passthrough`** (MCP Tool #17) + Pico `PANARSP PASSTHROUGH` / `CALL:` |
+| Orquestração de Kit SD & Diag Unbrick | [`crates/panadiga-core/src/re/unbrick_sd_kit/`](../../crates/panadiga-core/src/re/unbrick_sd_kit/mod.rs) (`compose`, `io`, `verify`) | **`panadiga_sd_unbrick_kit`** (MCP Tool #18) + `panadiga unbrick` + `Centro Unbrick` |
 | Manuais PDF + `docs/` + C11 + Rust | [`panadiga-rag`](../../crates/panadiga-rag/src/indexer/mod.rs) (indexação hierárquica automática + `FactCritic` + `HardwareSafetyValidator`) | `panadiga_rag_query`, `panadiga_search_code`, `panadiga_search_manuals`, `panadiga://docs/...` |
 
 ---
@@ -160,7 +164,7 @@ Importante distinção arquitetural verificada:
 
 ### 6.2 Flash Dump Completo de 8 MB NOR via Pico (`PANADMP1..PANADONE`)
 
-O módulo Rust [`src/re/nor_dumper.rs`](../../crates/panadiga-core/src/re/nor_dumper.rs) (exposto via ferramenta MCP **`panadiga_nor_dumper_stub`**) gera um stub **100% read-only em código de máquina MN103S** projetado para rodar em SDRAM livre (`0x51800000`):
+O módulo Rust [`crates/panadiga-core/src/re/nor_dumper.rs`](../../crates/panadiga-core/src/re/nor_dumper.rs) (exposto via ferramenta MCP **`panadiga_nor_dumper_stub`**) gera um stub **100% read-only em código de máquina MN103S** projetado para rodar em SDRAM livre (`0x51800000`):
 * **Parâmetros padrão para dump completo da `IC5001` (`S29JL064H`):**
   * `start_addr = 0x84000000` (janela não-cacheada da Flash NOR, evitando aliasing de cache D$)
   * `total_len = 0x800000` (`8.388.608` bytes = 8 MB exatos)
@@ -188,7 +192,7 @@ Muitos entusiastas utilizam gravadores Panasonic DIGA como **Time Base Corrector
 
 ---
 
-## 8. Anatomia Comparativa dos Contêineres (`DIGADIAG.FRM` vs `PANA_DVD.FRM` vs `PANA__SD.FRM`) & Automação Autônoma via Pico (`17` Tools MCP)
+## 8. Anatomia Comparativa dos Contêineres (`DIGADIAG.FRM` vs `PANA_DVD.FRM` vs `PANA__SD.FRM`) & Automação Autônoma via Pico (`18` Tools MCP)
 
 ### 8.1 Como o Bootloader Carrega e Lê Cada Contêiner `.FRM`
 
@@ -201,7 +205,7 @@ Muitos entusiastas utilizam gravadores Panasonic DIGA como **Time Base Corrector
 
 ### 8.2 Consolidação das 4 Pontas Soltas e Upgrade Autônomo do Raspberry Pi Pico (`PANARSP`)
 
-Para eliminar a subutilização do microcontrolador **Raspberry Pi Pico (RP2040 / RP2350)** na bancada (`COM10`), o firmware C11 em `firmware/pico-p7501/` e o workspace Rust (`panadiga-core` + `panadiga-mcp`, agora com **`17` ferramentas MCP**) consolidam as soluções das 4 frentes críticas:
+Para eliminar a subutilização do microcontrolador **Raspberry Pi Pico (RP2040 / RP2350)** na bancada (`COM10`), o firmware C11 em `firmware/pico-p7501/` e o workspace Rust (`panadiga-core` + `panadiga-mcp`, agora com **`18` ferramentas MCP**) consolidam as soluções das 4 frentes críticas:
 
 1. **Destravamento Pré-MAIN (`SDDIAG -91006` / `CDDIAG 0x83A7`) & Monitor `PANAMON1`:**
    * `DIGADIAG.FRM` (`panadiga_bgo_unbrick`) cabe dentro do teto estrito de `131.072` B (`0x20000`), mantendo checksum Adler-32 strided válido em `0x50400000` nos modos `inspect`, `bypass_only` (padrão seguro), **`uart_monitor`** (menu interativo **`PANAMON1>[B/F/D/Q]`** em `0x50439494`: `B`=bypass BGO, `F`=executar `nfrom_format`, `D`=dump de 8 MB NOR em `0x84000000`, `Q`=abortar) e `auto_format` (`0x50401F3C`, bloqueado fail-closed sem `--allow-unsafe-bgo-format`).

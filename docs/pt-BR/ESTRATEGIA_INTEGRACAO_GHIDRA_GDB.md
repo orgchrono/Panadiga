@@ -1,3 +1,6 @@
+> 🌐 **Idioma / Language:** [English (US)](../en-US/GHIDRA_GDB_INTEGRATION_STRATEGY.md) | **Português (BR)**
+> 🧭 **Portal:** [Índice da Documentação](../INDEX.md) | [Auditoria Completa](../../AUDITORIA_COMPLETA.md) | [Auditorias](../audits/README.md) | [Pseudocódigo Ghidra](../pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) | [Logs de Debug](../debug_logs/README.md)
+
 # Estratégia de Integração do Ecossistema: Ghidra, GDB, OpenOCD e Panadiga
 
 Este documento formaliza a estratégia técnica e arquitetural adotada para integrar plenamente as maiores ferramentas de engenharia reversa do mundo (**Ghidra**, **GNU Debugger / gdb-multiarch**, **OpenOCD** e **IDA Pro**) com o ecossistema **Panadiga**.
@@ -23,7 +26,7 @@ flowchart TD
     subgraph CoreBridge ["Camada de Comunicação & Bridge (C & Rust)"]
         CDC["Firmware Pico CDC Serial (panasonic_p7501_uart)"]
         RSP["GDB Remote Serial Protocol (RSP) Engine"]
-        PANAPICO["Panadiga CLI / Desktop Bridge (src & apps/desktop)"]
+        PANAPICO["Panadiga CLI / Desktop Bridge (crates & apps/desktop)"]
         PICO <--> CDC
         CDC <--> RSP
         CDC <--> PANAPICO
@@ -60,9 +63,9 @@ flowchart TD
   4. O usuário pode pausar (`Ctrl+C`), inspecionar registradores (`info registers`), ler memória (`x/16wx 0x807FE000`) e executar instruções passo-a-passo (`stepi`).
 
 ### 2.2 NSA Ghidra (Descompilador & Ghidra Debugger)
-Ghidra é a ferramenta primária de descompilação de código estático e análise dinâmica. A suíte Panadiga fornece scripts dedicados em [`tools/`](../../tools/) e [`tools/ghidra/`](../../tools/ghidra/):
+Ghidra é a ferramenta primária de descompilação de código estático e análise dinâmica. A suíte Panadiga gera de forma determinística a partir do SSOT em Rust ([`crates/panadiga-core/src/ghidra/`](../../crates/panadiga-core/src/ghidra/mod.rs)) 7 scripts Jython em [`tools/ghidra/`](../../tools/ghidra/) (disparados pelos lançadores em [`tools/`](../../tools/)):
 
-1. **`ghidra_am34_memory_map.py` (Mapeador de Barramento):**
+1. **`tools/ghidra/ghidra_am34_memory_map.py` (Mapeador de Barramento):**
    - Cria no Ghidra as regiões exatas da placa mãe:
      - `INTERNAL_SRAM` (`0x00000000` - 256 KB)
      - `SRAM_LOADER` (`0x00004000` - 4 KB para injeção de payload)
@@ -70,11 +73,13 @@ Ghidra é a ferramenta primária de descompilação de código estático e anál
      - `NVRAM_EEMUL` (`0x807F0000` - 64 KB, setores SA134..SA141)
      - `ASIC_MMIO` (`0xC0000000` - UniPhier System MMIO)
      - `ATA_IDE_MMIO` (`0xD4000000` - Controladora PATA do disco MEIHDFS)
-2. **`ghidra_importar_simbolos_panadiga.py` (Anotador de Símbolos):**
+2. **`tools/ghidra/ghidra_importar_simbolos_panadiga.py` / `ghidra_import_symbols_panadiga.py` (Anotador de Símbolos):**
    - Rótulos automáticos para o vetor de reset (`0x80000000`), vetores de interrupção (NMI, Trap, DMA, IDE), sequências de desbloqueio da Flash Spansion (`0x80000AAA`, `0x80000554`) e todos os 8 micro-setores da NVRAM.
-3. **`ghidra_conectar_debugger.py` (Ghidra Debugger Bridge):**
+3. **`tools/ghidra/ghidra_conectar_debugger.py` / `ghidra_connect_debugger.py` (Ghidra Debugger Bridge):**
    - Orienta a conexão da perspectiva dinâmica do Ghidra (Window -> Debugger) via conector GDB local apontando para `127.0.0.1:3333`.
    - O código descompilado do Ghidra sincroniza com a posição física do registrador PC da CPU Panasonic DMR-EH55.
+4. **`tools/ghidra/ghidra_auto_unbrick_audit.py` & `ghidra_mn103_fix_decompilation.py` (Resolvedores Armadilhas 1–7):**
+   - Automatizam referências cruzadas de unbrick pré-MAIN/MAIN e recuperação de ilhas de código/stack-purge (`??`).
 
 ### 2.3 Ponte Nativa GDB RSP (`panadiga pico gdb-bridge`)
 * **Arquitetura Alvo:** Matsushita **`mn10300`** (`AM34 / MN103S`), evitando abstrações genéricas incompatíveis com JTAG ARM padrão.

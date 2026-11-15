@@ -234,6 +234,9 @@ export const PicoBenchView: React.FC = () => {
         onSendDriveCommand={cmd => {
           void sc0Bridge.sendDriveCommand(cmd);
         }}
+        onRunDiagnostic={(command, arg) => {
+          void executeDiagnostic(command, arg);
+        }}
       />
 
       <GdbServerCard

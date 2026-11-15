@@ -1,6 +1,11 @@
 //! Thin Tauri IPC shell for the Pre-MAIN DIGA Unbrick, SD Kit Builder, & TBC Passthrough Center.
 
 use panadiga_core::crypto::parse_u32_radix;
+use panadiga_core::re::matshita_emu::{
+    BootSequenceReport, FrmUnlockVerificationSummary, MatshitaBootScenario, MatshitaOddEmulator,
+    SerialCliResponse, build_sample_unlock_frm, parse_hex_payload, parse_unlock_container_mode,
+    verify_unlock_frm_container,
+};
 use panadiga_core::re::{
     FrmModuleExtractionReport, MainPassthroughMode, Prog061BgoPatchMode, SdMediaVerificationReport,
     SdUnbrickKitReport, UnbrickWorkspaceReport, build_nor_dumper_artifact,
@@ -177,6 +182,112 @@ pub fn build_nor_dumper_stub_command(
     ))
 }
 
+/// Runs a synthetic Matshita R6-MV4 optical drive boot sequence scenario (`healthy_with_disc`, `unlock_disc_frm`, etc.).
+#[tauri::command]
+pub fn run_matshita_boot_emu(scenario: String) -> Result<BootSequenceReport, String> {
+    let parsed: MatshitaBootScenario = scenario
+        .trim()
+        .parse()
+        .map_err(|e: anyhow::Error| format!("Cenário de boot Matshita inválido: {e}"))?;
+    let mut emu = MatshitaOddEmulator::new(parsed);
+    emu.run_boot_sequence()
+        .map_err(|e| format!("Falha ao emular sequência de boot: {e}"))
+}
+
+/// Executes an emulated Matshita ATAPI write-injection (`0x3B WRITE BUFFER` or vendor `0xED`) with IPL `E05` guard.
+#[tauri::command]
+pub fn inject_matshita_atapi_write(
+    target_va: Option<String>,
+    offset: Option<usize>,
+    mode: Option<u8>,
+    use_vendor_ed: Option<bool>,
+    payload_hex: String,
+) -> Result<Value, String> {
+    let payload = parse_hex_payload(payload_hex.trim())
+        .map_err(|e| format!("Payload hexadecimal inválido: {e}"))?;
+    let va_opt = opt_trimmed(&target_va)
+        .map(parse_u32_radix)
+        .transpose()
+        .map_err(|e| format!("Endereço VA inválido: {e}"))?;
+    let mut emu = MatshitaOddEmulator::default();
+    let (record, snapshot) = emu
+        .run_inject_write(
+            va_opt,
+            offset.unwrap_or(0),
+            mode.unwrap_or(2),
+            use_vendor_ed.unwrap_or(false),
+            &payload,
+        )
+        .map_err(|e| format!("Falha na injeção ATAPI Matshita: {e}"))?;
+    Ok(serde_json::json!({
+        "record": record,
+        "snapshot": snapshot,
+    }))
+}
+
+/// Sends a command to the emulated Matshita `DRV` serial CLI (optionally unlocking via `PASS` first).
+#[tauri::command]
+pub fn run_matshita_serial_cmd(
+    command: String,
+    unlock_pass: Option<bool>,
+) -> Result<SerialCliResponse, String> {
+    let cmd = command.trim();
+    if cmd.is_empty() {
+        return Err("Comando serial DRV não pode ser vazio.".to_string());
+    }
+    let mut emu = MatshitaOddEmulator::default();
+    if unlock_pass.unwrap_or(true) {
+        let _ = emu
+            .execute_drv_serial_command("PASS 0x4d415453 0x48495441")
+            .map_err(|e| e.to_string())?;
+    }
+    emu.execute_drv_serial_command(cmd)
+        .map_err(|e| format!("Falha no CLI serial DRV: {e}"))
+}
+
+/// Verifies an SD (`EXTRHEAD` / `PANA__SD`) or CD (`PANA_DVD.FRM` / `cd`) unlock container against EH55 bootloader rules.
+#[tauri::command]
+pub fn verify_frm_unlock_command(
+    container_kind: String,
+    frm_path: String,
+) -> Result<FrmUnlockVerificationSummary, String> {
+    let path = resolve_read_path(frm_path.trim());
+    let bytes = std::fs::read(&path)
+        .map_err(|e| format!("Falha lendo container '{}': {e}", path.display()))?;
+    verify_unlock_frm_container(container_kind.trim(), &bytes)
+        .map_err(|e| format!("Falha ao verificar container .FRM: {e}"))
+}
+
+/// Synthesizes and verifies a sample SD (`sd`/`sd48`) or CD (`cd`/`dvd`) unlock `.FRM` container (optionally saved to disk).
+#[tauri::command]
+pub fn pack_unlock_frm_command(
+    container_kind: String,
+    out_path: Option<String>,
+    payload_hex: Option<String>,
+) -> Result<Value, String> {
+    let mode = parse_unlock_container_mode(container_kind.trim())
+        .map_err(|e| format!("Modo de container unlock inválido: {e}"))?;
+    let payload = match opt_trimmed(&payload_hex) {
+        Some(h) => parse_hex_payload(h).map_err(|e| format!("Payload hex inválido: {e}"))?,
+        None => vec![0xCBu8; 1024],
+    };
+    let (bytes, verification) = build_sample_unlock_frm(mode, &payload)
+        .map_err(|e| format!("Falha ao empacotar container unlock .FRM: {e}"))?;
+    let written_path = opt_trimmed(&out_path)
+        .map(|raw| {
+            let dest = resolve_write_path(raw)?;
+            std::fs::write(&dest, &bytes)
+                .map_err(|e| format!("Falha gravando '{}': {e}", dest.display()))?;
+            Ok::<_, String>(dest.to_string_lossy().into_owned())
+        })
+        .transpose()?;
+    Ok(serde_json::json!({
+        "verification": verification,
+        "output_path": written_path,
+        "container_bytes": bytes.len(),
+    }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -199,12 +310,31 @@ mod tests {
             Some("0x84000000".to_string()),
             Some("0x10000".to_string()),
             Some(4096),
-            Some("0x51800000".to_string()),
+            None,
             None,
             Some(true),
         )
         .unwrap();
         assert_eq!(stub["output_bytes"], PANA_DIGADIAG_FRM_SIZE);
         assert_eq!(stub["wrapped_digadiag"], true);
+        assert_eq!(stub["load_addr"], "0x50400000");
+
+        let boot = run_matshita_boot_emu("unlock_disc_frm".to_string()).unwrap();
+        assert!(boot.startup_succeeded);
+        assert!(boot.unlock_media_verified);
+        assert_eq!(boot.jump_target_va_hex.as_deref(), Some("0x50400000"));
+
+        let inj = inject_matshita_atapi_write(
+            Some("0x50400000".to_string()),
+            Some(0),
+            Some(2),
+            Some(true),
+            "deadbeef".to_string(),
+        )
+        .unwrap();
+        assert_eq!(inj["record"]["len_bytes"], 4);
+
+        let ipl_err = run_matshita_serial_cmd("WW 0x84000000 0x11223344".to_string(), Some(true));
+        assert!(ipl_err.unwrap_err().contains("E05"));
     }
 }

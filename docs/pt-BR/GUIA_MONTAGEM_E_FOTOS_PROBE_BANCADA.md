@@ -1,3 +1,6 @@
+> 🌐 **Idioma / Language:** [English (US)](../en-US/BENCH_PROBE_ASSEMBLY_AND_PHOTOS_GUIDE.md) | **Português (BR)**
+> 🧭 **Portal:** [Índice da Documentação](../INDEX.md) | [Auditoria Completa](../../AUDITORIA_COMPLETA.md) | [Auditorias](../audits/README.md) | [Pseudocódigo Ghidra](../pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) | [Logs de Debug](../debug_logs/README.md)
+
 # Guia Prático Ilustrado de Montagem da Sonda `P7501` e Procedimentos de Bancada
 ## Assembly da Ferramenta de Comunicação Serial UART (`115200 8N1`) para Panasonic DMR-EH55 (Placa `VEP79138`)
 

@@ -47,47 +47,63 @@ export function usePicoTelemetryEffects({
   }, [refreshPorts, refreshModelCatalog]);
 
   useEffect(() => {
+    let active = true;
     let unlistenTelemetry: (() => void) | undefined;
     let unlistenDiag: (() => void) | undefined;
 
-    listenEvent<PicoDeviceStatus>('pico://telemetry', incoming => {
-      if (incoming && typeof incoming.vdd_volts === 'number') {
-        setDeviceStatus(prev => {
-          if (!prev?.connected && !incoming.connected) return prev;
-          const preservedVdd =
-            incoming.vdd_volts > 0
-              ? incoming.vdd_volts
-              : prev?.connected && incoming.connected && prev.vdd_volts > 0
-                ? prev.vdd_volts
-                : incoming.vdd_volts;
-          const powered = isTargetPowered(preservedVdd, PICO_MIN_VDD_THRESHOLD_VOLTS);
-          const updated: PicoDeviceStatus = {
-            ...(prev || DEFAULT_DISCONNECTED_STATUS),
-            ...incoming,
-            vdd_volts: preservedVdd,
-            target_powered: powered,
-          };
-          picoSessionStore.setStatus(updated);
-          return updated;
-        });
+    const bindTelemetryStreams = async (): Promise<void> => {
+      try {
+        const [offTel, offDiag] = await Promise.all([
+          listenEvent<PicoDeviceStatus>('pico://telemetry', incoming => {
+            if (incoming && typeof incoming.vdd_volts === 'number') {
+              setDeviceStatus(prev => {
+                if (!prev?.connected && !incoming.connected) return prev;
+                const preservedVdd =
+                  incoming.vdd_volts > 0
+                    ? incoming.vdd_volts
+                    : prev?.connected && incoming.connected && prev.vdd_volts > 0
+                      ? prev.vdd_volts
+                      : incoming.vdd_volts;
+                const powered = isTargetPowered(preservedVdd, PICO_MIN_VDD_THRESHOLD_VOLTS);
+                const updated: PicoDeviceStatus = {
+                  ...(prev || DEFAULT_DISCONNECTED_STATUS),
+                  ...incoming,
+                  vdd_volts: preservedVdd,
+                  target_powered: powered,
+                };
+                picoSessionStore.setStatus(updated);
+                return updated;
+              });
+            }
+          }),
+          listenEvent<PicoDiagnosticResult>('pico://diagnostic-result', diag => {
+            if (diag && typeof diag.vdd_volts === 'number' && diag.vdd_volts > 0) {
+              applyMeasuredVoltage(diag.vdd_volts, diag.command_id, diag.success);
+            }
+          }),
+        ]);
+        if (!active) {
+          offTel();
+          offDiag();
+        } else {
+          unlistenTelemetry = offTel;
+          unlistenDiag = offDiag;
+        }
+      } catch (err) {
+        if (active) {
+          onLog?.('error', 'PICO', `Falha ao assinar telemetria IPC: ${String(err)}`);
+        }
       }
-    }).then(fn => {
-      unlistenTelemetry = fn;
-    });
+    };
 
-    listenEvent<PicoDiagnosticResult>('pico://diagnostic-result', diag => {
-      if (diag && typeof diag.vdd_volts === 'number' && diag.vdd_volts > 0) {
-        applyMeasuredVoltage(diag.vdd_volts, diag.command_id, diag.success);
-      }
-    }).then(fn => {
-      unlistenDiag = fn;
-    });
+    void bindTelemetryStreams();
 
     return () => {
+      active = false;
       unlistenTelemetry?.();
       unlistenDiag?.();
     };
-  }, [applyMeasuredVoltage, setDeviceStatus]);
+  }, [applyMeasuredVoltage, onLog, setDeviceStatus]);
 
   useEffect(() => {
     picoSessionStore.setStatus(deviceStatus);

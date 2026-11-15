@@ -107,6 +107,8 @@ void p7501_parse_window_boot_args(
     p7501_window_boot_spec_t *out_spec
 );
 
+bool p7501_is_boot_spec_token(const char *token);
+
 bool p7501_parse_framing(const char *token, p7501_uart_framing_t *out);
 const char *p7501_framing_name(p7501_uart_framing_t framing);
 uint8_t p7501_uart_even_parity_bit(uint8_t byte);

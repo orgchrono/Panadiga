@@ -1,6 +1,9 @@
+> 🌐 **Language / Idioma:** **English** | [Português (BR)](../pt-BR/PARECER_AUDITORIA_FORENSE_CRIPTOANALISE_E_MEIHDFS.md)
+> 🧭 **Portal:** [Docs Index](../INDEX.md) | [Complete Audit](../../COMPLETE_AUDIT.md) | [Audits](../audits/README.md) | [Ghidra Pseudocode](../pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) | [Debug Logs](../debug_logs/README.md)
+
 # INDEPENDENT FORENSIC AUDIT OPINION & CRYPTANALYSIS DELIBERATION
 **Target:** Optical Ecosystem (`PANA_DVD.FRM`) and MEIHDFS Storage (`hdd_100.bin`) — Panasonic DIGA DMR-EH55  
-**Audited Single Source of Truth (SSOT):** `src/constants.rs`, `src/crypto/toc.rs`, `src/crypto/codebook.rs`, and `src/hdd/meihdfs.rs`.
+**Audited Single Source of Truth (SSOT):** [`crates/panadiga-core/src/constants.rs`](../../crates/panadiga-core/src/constants.rs), [`crates/panadiga-core/src/crypto/toc.rs`](../../crates/panadiga-core/src/crypto/toc.rs), [`crates/panadiga-core/src/crypto/codebook.rs`](../../crates/panadiga-core/src/crypto/codebook.rs), and [`crates/panadiga-core/src/hdd/meihdfs.rs`](../../crates/panadiga-core/src/hdd/meihdfs.rs).
 
 ---
 
@@ -38,3 +41,12 @@
   - Superblock MBR: `0x01C00000` (LBA 57344) $\longrightarrow$ `0x00000000` (LBA 0)
   - Descriptors Table: `0x01C03000` (LBA 57368) $\longrightarrow$ `0x00003000` (LBA 24..31)
 - Preserves 100% of recorded video titles on Partition 3 with zero data loss.
+
+---
+
+## 4. Final Bench Feasibility Verdict & "What's Next" Protocol
+
+1. **Physical Bench Connection (`P7501`):** Connect the Raspberry Pi Pico RP2040/RP2350 running the **6-Pin `P7501` Async UART (`115200 8N1`) + Boot/Reset** firmware (`PINCHECK` / `JIGBOOT` / `PANADIGA>`). Keep **`NSW5V` (`GP3`) strictly `Hi-Z`**.
+2. **`U99` NVRAM Cure & Boot Inspection:** Trigger `JIGBOOT` / `UARTMON` to capture live `Loader ver0.61` logs, run the guard-protected NOR dumper (`IC5001.bin`), and sanitize the circular 64 KB `EEMUL` NVRAM sector when `U99` is confirmed without touching the IPL.
+3. **First-Contact Key Backup:** Extract `BOOT.BIN` / `IC5001.bin` (`0x44039AA8` Feistel seed + `0x44035D84` S-Box) before modifying Partition 1 or Partition 2 firmware images.
+4. **Workspace Readiness:** All reverse-engineering, storage forensics, and unbrick generators are consolidated in `panadiga-core` (`18` MCP tools, Desktop GUI, CLI) and enforced by the 9-gate `scripts/validate.py --sequential` pipeline.

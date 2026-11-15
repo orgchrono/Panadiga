@@ -1,3 +1,6 @@
+> 🌐 **Idioma / Language:** [English (US)](../en-US/SYSTEM_ARCHITECTURE_AND_ENGINEERING_BLUEPRINT.md) | **Português (BR)**
+> 🧭 **Portal:** [Índice da Documentação](../INDEX.md) | [Auditoria Completa](../../AUDITORIA_COMPLETA.md) | [Auditorias](../audits/README.md) | [Pseudocódigo Ghidra](../pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) | [Logs de Debug](../debug_logs/README.md)
+
 # Arquitetura de Sistemas e Blueprint de Engenharia
 ## Panadiga — Especificação Mestre de Decomposição Modular, Silício e Invariantes
 
@@ -84,7 +87,7 @@ No frontend (React 18 / TypeScript), eliminou-se completamente o antipadrão de 
     | { status: 'success'; sectorsErased: number; durationMs: number }
     | { status: 'failed'; error: string; code: string };
   ```
-- **Impossibilidade de Estados Ilegais**: É matematicamente impossível a interface exibir simultaneousmente "carregando" e "sucesso", garantindo 100/100 nas auditorias de completude do `uxlint`.
+- **Impossibilidade de Estados Ilegais**: É matematicamente impossível a interface exibir simultaneamente "carregando" e "sucesso", assegurando cobertura explícita dos estados monitorados pelo `uxlint` (`ux-guard`).
 
 ### 2.3 GDB Introspectivo e Telemetria Circular Sem Perdas
 A depuração in-circuit do núcleo AM34 através do conector P7501 exige taxa de transmissão de dados contínua:

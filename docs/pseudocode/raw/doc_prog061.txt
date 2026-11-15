@@ -1,0 +1,1269 @@
+PROGRAM: /eh55_frm_PROG061_BOOT.bin (Stage 2 DIGADIAG / FVU Loader)
+
+=== FUNC FUN_50400014 (p61_startup_0014) @ 0x50400014 (size=101 B, req=0x50400014) ===
+// Callers (1): 0x50400000
+/* WARNING: This function may have set the stack pointer */
+/* WARNING: Removing unreachable block (ram,0x50400475) */
+
+void FUN_50400014(void)
+
+{
+  undefined2 uVar1;
+  short sVar2;
+  byte bVar3;
+  ushort uVar4;
+  char cVar5;
+  int iVar6;
+  code *UNRECOVERED_JUMPTABLE;
+  undefined4 *puVar7;
+  uint uVar8;
+  
+  Ramd4000008 = 0;
+  cVar5 = TM0MD;
+  if (cVar5 == '\x01') goto LAB_504000b1;
+  if (cVar5 == '\0') {
+code_r0x5040021b:
+    bVar3 = UNK_c0001004;
+    sVar2 = Ramc0000044;
+    uVar4 = Ramd4000000;
+    if (((((bVar3 & 2) != 0) || (sVar2 != 0)) || ((uVar4 & 7) != 0)) ||
+       (((iRam50400334 != 0 || (iRam50400338 != 0)) || ((iRam5040033c != 1 || (iRam50400340 != 0))))
+       )) {
+      do {
+                    /* WARNING: Do nothing block with infinite loop */
+      } while( true );
+    }
+    puVar7 = (undefined4 *)0x504f8b00;
+    do {
+      *puVar7 = 0;
+      puVar7 = puVar7 + 1;
+    } while ((int)puVar7 < 0x504f9178);
+    UNK_c0001002 = 0x22;
+    func_0x50400311();
+    uVar8 = func_0x5040031a();
+    if ((uVar8 & 0x18) != 0x18) {
+      func_0x50400328();
+      Ramd2000008 = pcRam50400010;
+      func_0x50400937();
+      goto code_r0x5040008d;
+    }
+  }
+  else {
+    iVar6 = Ramd4003000;
+    if (iVar6 != -1) {
+      Ramc0000018 = 0xaa01;
+      UNK_c0001004 = 0;
+      UNK_c0001004 = 1;
+      TM0MD = 0;
+      goto code_r0x5040021b;
+    }
+    uVar8 = 0x8800000;
+code_r0x5040008d:
+    func_0x5040099c(uVar8);
+    func_0x504002a0();
+    uVar1 = Ramc0000018;
+  }
+  func_0x50400a87();
+LAB_504000b1:
+  UNRECOVERED_JUMPTABLE = (code *)Ramd2000008;
+  if (UNRECOVERED_JUMPTABLE == (code *)0xffffffff) {
+    UNRECOVERED_JUMPTABLE = pcRam50400010;
+  }
+                    /* WARNING: Could not recover jumptable at 0x504000e7. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  (*UNRECOVERED_JUMPTABLE)(0,0);
+  return;
+}
+
+=== FUNC FUN_50400810 (p61_data_init_0810) @ 0x50400810 (size=150 B, req=0x50400810) ===
+// Callers (0): 
+// Referenced strings/literals:
+//   0x50438920: 'ÿÿÿÿifodev1'
+/* WARNING: Removing unreachable block (ram,0x50400839) */
+/* WARNING: Removing unreachable block (ram,0x5040083a) */
+/* WARNING: Removing unreachable block (ram,0x50400875) */
+/* WARNING: Removing unreachable block (ram,0x50400881) */
+/* WARNING: Removing unreachable block (ram,0x5040088d) */
+
+undefined4 FUN_50400810(void)
+
+{
+  undefined4 *puVar1;
+  undefined4 *puVar2;
+  undefined4 uVar3;
+  
+  puVar1 = (undefined4 *)0x50480b80;
+  do {
+    *puVar1 = 0;
+    puVar1 = puVar1 + 1;
+  } while ((int)puVar1 < 0x504f8ab0);
+  puVar1 = (undefined4 *)0x50438920;
+  puVar2 = (undefined4 *)0x50480000;
+  do {
+    uVar3 = *puVar1;
+    *puVar2 = uVar3;
+    puVar1 = puVar1 + 1;
+    puVar2 = puVar2 + 1;
+  } while ((int)puVar2 < 0x50480b74);
+  return uVar3;
+}
+
+=== FUNC FUN_50401f3c (p61_nfrom_format_orphan_1f3c) @ 0x50401f3c (size=483 B, req=0x50401f3c) ===
+// Callers (0): 
+// Referenced strings/literals:
+//   0x5043263b: '[nfrom] File map init error[%d].\n'
+//   0x5043265d: '[nfrom] Data omap init error[%d].\n'
+//   0x50432680: '[nfrom] Data bmap init error[%d].\n'
+//   0x504326a3: '[nfrom] Main data init error[%d].\n'
+//   0x50432620: '[nfrom] Format error[%d].\n'
+undefined4 FUN_50401f3c(void)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_4;
+  uVar2 = FUN_5040248e(2,0,0);
+  puVar1[-1] = uVar2;
+  if (puVar1[-1] == 0) {
+    func_0x5042d323(0x50496d10,0xff,0x1cc4);
+    uRam50496d14 = 0;
+    uRam50496d16 = 0;
+    uRam50496d18 = 0;
+    uRam50496d1a = 0x200;
+    uRam50496d1c = uRam50480000;
+    uRam50496d1e = uRam50480002;
+    uRam50496d10 = 0;
+    *(undefined2 *)((int)puVar1 + -6) = 0;
+    while (*(ushort *)((int)puVar1 + -6) < 3) {
+      uVar2 = func_0x5040257b(*(short *)((int)puVar1 + -6) + 0xa02,
+                              (uint)*(ushort *)((int)puVar1 + -6) * 0x200 + 0x50496f10);
+      puVar1[-1] = uVar2;
+      if (puVar1[-1] != 2) {
+        func_0x50410d86(1,0x5043263b,puVar1[-1]);
+        return 0xfffffffe;
+      }
+      *(short *)((int)puVar1 + -6) = *(short *)((int)puVar1 + -6) + 1;
+    }
+    *(undefined2 *)((int)puVar1 + -6) = 0;
+    while (*(ushort *)((int)puVar1 + -6) < 10) {
+      uVar2 = func_0x5040257b(*(short *)((int)puVar1 + -6) + 0xa07,
+                              (uint)*(ushort *)((int)puVar1 + -6) * 0x200 + 0x50497510);
+      puVar1[-1] = uVar2;
+      if (puVar1[-1] != 2) {
+        func_0x50410d86(1,0x5043265d,puVar1[-1]);
+        return 0xfffffffe;
+      }
+      *(short *)((int)puVar1 + -6) = *(short *)((int)puVar1 + -6) + 1;
+    }
+    *(undefined2 *)((int)puVar1 + -6) = 0;
+    while (*(ushort *)((int)puVar1 + -6) < 10) {
+      uVar2 = func_0x5040257b(*(short *)((int)puVar1 + -6) + 0xa11,
+                              (uint)*(ushort *)((int)puVar1 + -6) * 0x200 + 0x50497510);
+      puVar1[-1] = uVar2;
+      if (puVar1[-1] != 2) {
+        func_0x50410d86(1,0x50432680,puVar1[-1]);
+        return 0xfffffffe;
+      }
+      *(short *)((int)puVar1 + -6) = *(short *)((int)puVar1 + -6) + 1;
+    }
+    func_0x50404585(0xa01);
+    uVar2 = func_0x5040257b(0xa01,0x50496d10);
+    puVar1[-1] = uVar2;
+    if (puVar1[-1] == 2) {
+      uVar2 = 0;
+    }
+    else {
+      func_0x50404585(0xffffffff);
+      func_0x50410d86(1,0x504326a3,puVar1[-1]);
+      uVar2 = 0xfffffffe;
+    }
+  }
+  else {
+    func_0x50410d86(1,0x50432620,puVar1[-1]);
+    uVar2 = 0xffffffff;
+  }
+  return uVar2;
+}
+
+=== FUNC FUN_5040211f (p61_cmd_dispatch_211f) @ 0x5040211f (size=788 B, req=0x5040211f) ===
+// Callers (1): 0x504043eb
+// Referenced strings/literals:
+//   0x504326ee: '[nfrom] NOR STATE : Original -> Backup\n'
+//   0x50432716: '[nfrom] Map load error[%u].\n'
+//   0x50432733: '[nfrom] Map write error[%u].\n'
+//   0x50432751: '[nfrom] File map load error[%u].\n'
+//   0x50432773: '[nfrom] File map write error[%u].\n'
+//   0x50432796: '[nfrom] Status change error[%d].\n'
+//   0x504326c6: '[nfrom] NOR STATE : Backup -> Original\n'
+undefined4 FUN_5040211f(void)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  undefined4 extraout_var;
+  undefined4 extraout_var_00;
+  undefined4 extraout_var_01;
+  undefined4 uVar3;
+  undefined4 extraout_var_02;
+  undefined4 extraout_var_03;
+  undefined4 extraout_var_04;
+  undefined4 uStack_8;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_8;
+  if (uRam50496d10 == 0xffff) {
+    func_0x50410d86(2,0x504326ee);
+    uVar2 = extraout_var_00;
+    uVar3 = extraout_var_03;
+LAB_504021c4:
+    *(undefined2 *)((int)puVar1 + -10) = 0;
+    while (*(ushort *)((int)puVar1 + -10) < 10) {
+      uVar2 = FUN_5040248e(3,*(short *)(puVar1 + -3) + *(short *)((int)puVar1 + -10),
+                           (uint)*(ushort *)((int)puVar1 + -10) * 0x200 + 0x50497510,uVar2,uVar3);
+      puVar1[-1] = uVar2;
+      if (puVar1[-1] != 0) {
+        func_0x50410d86(1,0x50432716,puVar1[-1]);
+        return 0xfffffffb;
+      }
+      *(short *)((int)puVar1 + -10) = *(short *)((int)puVar1 + -10) + 1;
+      uVar2 = extraout_var_01;
+      uVar3 = extraout_var_04;
+    }
+    if (uRam50496d10 != 0) {
+      *(undefined2 *)((int)puVar1 + -10) = 0;
+      while (*(ushort *)((int)puVar1 + -10) < 10) {
+        uVar2 = FUN_5040248e(3,*(short *)((int)puVar1 + -0xe) + *(short *)((int)puVar1 + -10),
+                             0x50498bf0);
+        puVar1[-1] = uVar2;
+        if (puVar1[-1] != 0) {
+          func_0x50410d86(1,0x50432716,puVar1[-1]);
+          return 0xfffffffb;
+        }
+        uVar2 = func_0x5042d292(0x50498bf0,(uint)*(ushort *)((int)puVar1 + -10) * 0x200 + 0x50497510
+                                ,0x200);
+        puVar1[-2] = uVar2;
+        if (puVar1[-2] != 0) {
+          uVar2 = func_0x5040257b(*(short *)((int)puVar1 + -10) + *(short *)((int)puVar1 + -0xe),
+                                  (uint)*(ushort *)((int)puVar1 + -10) * 0x200 + 0x50497510);
+          puVar1[-1] = uVar2;
+          if (puVar1[-1] != 2) {
+            func_0x50410d86(1,0x50432733,puVar1[-1]);
+            return 0xfffffffe;
+          }
+        }
+        *(short *)((int)puVar1 + -10) = *(short *)((int)puVar1 + -10) + 1;
+      }
+    }
+    *(undefined2 *)((int)puVar1 + -10) = 0;
+    while (*(ushort *)((int)puVar1 + -10) < 3) {
+      uVar2 = FUN_5040248e(3,*(short *)((int)puVar1 + -10) + 0xa02,
+                           (uint)*(ushort *)((int)puVar1 + -10) * 0x200 + 0x50496f10);
+      puVar1[-1] = uVar2;
+      if (puVar1[-1] != 0) {
+        func_0x50410d86(1,0x50432751,puVar1[-1]);
+        return 0xfffffffb;
+      }
+      *(short *)((int)puVar1 + -10) = *(short *)((int)puVar1 + -10) + 1;
+    }
+    if (uRam50496d10 != 0) {
+      *(undefined2 *)((int)puVar1 + -10) = 0;
+      while (*(ushort *)((int)puVar1 + -10) < 3) {
+        func_0x5042d2d2(puVar1[-6],puVar1[-5],0x100);
+        puVar1[-6] = puVar1[-6] + 0x200;
+        puVar1[-5] = puVar1[-5] + 0x200;
+        *(short *)((int)puVar1 + -10) = *(short *)((int)puVar1 + -10) + 1;
+      }
+      *(undefined2 *)((int)puVar1 + -10) = 0;
+      while (*(ushort *)((int)puVar1 + -10) < 3) {
+        uVar2 = func_0x5040257b(*(short *)((int)puVar1 + -10) + 0xa02,
+                                (uint)*(ushort *)((int)puVar1 + -10) * 0x200 + 0x50496f10);
+        puVar1[-1] = uVar2;
+        if (puVar1[-1] != 2) {
+          func_0x50410d86(1,0x50432773,puVar1[-1]);
+          return 0xfffffffe;
+        }
+        *(short *)((int)puVar1 + -10) = *(short *)((int)puVar1 + -10) + 1;
+      }
+      uVar2 = func_0x50402435(0);
+      puVar1[-2] = uVar2;
+      if (puVar1[-2] != 0) {
+        func_0x50410d86(1,0x50432796,puVar1[-2]);
+        return 0xfffffffc;
+      }
+    }
+    uVar2 = 0;
+  }
+  else {
+    if (uRam50496d10 < 0x10000) {
+      if (uRam50496d10 == 0) {
+        uVar3 = 0;
+        uVar2 = 0;
+        goto LAB_504021c4;
+      }
+    }
+    else if (uRam50496d10 == 0xffffff) {
+      func_0x50410d86(2,0x504326c6);
+      uVar2 = extraout_var;
+      uVar3 = extraout_var_02;
+      goto LAB_504021c4;
+    }
+    uVar2 = 0xfffffffc;
+  }
+  return uVar2;
+}
+
+=== FUNC FUN_5040248e (p61_fmu_sd_diag_248e) @ 0x5040248e (size=74 B, req=0x5040248e) ===
+// Callers (12): 0x50401f48, 0x504021f0, 0x50402250, 0x5040232b, 0x50402591, 0x5040308e, 0x504043c3, 0x5040a2bc, 0x5040a671, 0x5040a6f7, 0x5040ab80, 0x5040ac52
+// Referenced strings/literals:
+//   0x504327df: '[nfrom] bgo_read_D(ID=0x%X) return error(%u).\n'
+//   0x5043280e: '[nfrom] BGO command[%d] error.\n'
+undefined4 FUN_5040248e(undefined1 param_1,undefined2 param_2,undefined4 param_3)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  undefined4 uStack_8;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_8;
+  switch(param_1) {
+  case 0:
+    uVar2 = func_0x50421e6a();
+    puVar1[-2] = uVar2;
+    break;
+  case 1:
+    uVar2 = FUN_50422359(1,4);
+    puVar1[-2] = uVar2;
+    break;
+  case 2:
+    uVar2 = FUN_50421ebe(0);
+    puVar1[-2] = uVar2;
+    break;
+  case 3:
+    uVar2 = func_0x50421f23(1,param_2,1,param_3);
+    puVar1[-2] = uVar2;
+    if (puVar1[-2] == 0) {
+      puVar1[-2] = 0;
+    }
+    else {
+      func_0x50410d86(1,0x504327df,*(undefined2 *)(puVar1 + -1),puVar1[-2]);
+      puVar1[-2] = 1;
+    }
+    break;
+  case 4:
+    uVar2 = func_0x50421f85(1,param_2,1,param_3);
+    puVar1[-2] = uVar2;
+    break;
+  default:
+    func_0x50410d86(1,0x5043280e,param_1);
+    puVar1[-2] = 0xffffffff;
+    break;
+  case 6:
+    uVar2 = FUN_5042201e(1,param_2,1);
+    puVar1[-2] = uVar2;
+  }
+  return puVar1[-2];
+}
+
+=== FUNC FUN_50404dcd (p61_print_helper_4dcd) @ 0x50404dcd (size=144 B, req=0x50404dcd) ===
+// Callers (372): 0x50405018, 0x50405053, 0x50405072, 0x504050a0, 0x504050f3, 0x504051d5, 0x50405214, 0x50405233, 0x5040529a, 0x504052b2, 0x5040546e, 0x504054b7, 0x504054de, 0x50405529, 0x5040555d, 0x50405591
+undefined4 FUN_50404dcd(undefined4 param_1)
+
+{
+  undefined4 *puVar1;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_4;
+  func_0x5042d51e(0x50480b8a,param_1,&stack0x00000008);
+  puVar1[-2] = 0;
+  while( true ) {
+    if (*(char *)(puVar1[-2] + 0x50480b8a) == '\0') break;
+    if (*(char *)(puVar1[-2] + 0x50480b8a) == '\n') {
+      func_0x50404d15(0xd);
+      func_0x50404d15(10);
+    }
+    else {
+      func_0x50404d15(*(undefined1 *)(puVar1[-2] + 0x50480b8a));
+    }
+    puVar1[-2] = puVar1[-2] + 1;
+  }
+  return 0;
+}
+
+=== FUNC FUN_50404ec0 (p61_hit_any_key_4ec0) @ 0x50404ec0 (size=148 B, req=0x50404ec0) ===
+// Callers (0): 
+undefined4 FUN_50404ec0(void)
+
+{
+  int in_A3;
+  undefined1 extraout_D0;
+  
+  do {
+    if (*(int *)(in_A3 + -8) < *(int *)(in_A3 + 0xc) + -1) {
+      *(int *)(in_A3 + -8) = *(int *)(in_A3 + -8) + 1;
+    }
+    func_0x50404d15(*(undefined1 *)(in_A3 + -1));
+    while( true ) {
+      func_0x50404ca5();
+      *(undefined1 *)(in_A3 + -1) = extraout_D0;
+      if (*(char *)(in_A3 + -1) == '\r') {
+        func_0x50404d15(0xd);
+        func_0x50404d15(10);
+        *(undefined1 *)(*(int *)(in_A3 + -8) + *(int *)(in_A3 + 8)) = 0;
+        return 0;
+      }
+      if (*(char *)(in_A3 + -1) != '\b') break;
+      if (0 < *(int *)(in_A3 + -8)) {
+        *(int *)(in_A3 + -8) = *(int *)(in_A3 + -8) + -1;
+        func_0x50404d15(*(undefined1 *)(in_A3 + -1));
+        func_0x50404d15(0x20);
+        func_0x50404d15(*(undefined1 *)(in_A3 + -1));
+      }
+    }
+    *(undefined1 *)(*(int *)(in_A3 + -8) + *(int *)(in_A3 + 8)) = *(undefined1 *)(in_A3 + -1);
+  } while( true );
+}
+
+=== FUNC FUN_50404fa7 (p61_main_menu_4fa7) @ 0x50404fa7 (size=1126 B, req=0x50404fa7) ===
+// Callers (0): 
+// Referenced strings/literals:
+//   0x50432e70: '***** Fvu ver%s [%s] *****\n'
+//   0x50432e8c: '0.61'
+//   0x50432e91: '05/11/01'
+//   0x50432e9a: '***** Factory Production Mode *****\n'
+//   0x50432ebf: '*** RTSC Initialize ***\n'
+//   0x50432ed8: 'error! cannot read DeviceInfo-file from Nand-FROM.\n'
+//   0x50432f0c: 'SD version up mode.\n'
+//   0x50432fa8: 'FINISH'
+//   0x50432f21: '*** Chip Reset ***\n'
+//   0x50432f35: 'RSTCTR(CHIPRST)->0 retry %d.\n'
+//   0x50432f53: 'RSTCTR(CHIPRST) not 0.\n'
+//   0x50432f6b: 'RSTERR'
+//   0x50432f90: 'RSTCTR(CHIPRST) not 1.\n'
+//   0x50432f72: 'RSTCTR(CHIPRST)->1 retry %d.\n'
+/* WARNING: Removing unreachable block (ram,0x50405324) */
+
+void FUN_50404fa7(void)
+
+{
+  byte bVar1;
+  ushort uVar2;
+  undefined4 *puVar3;
+  undefined4 uVar4;
+  int iVar5;
+  undefined4 uStack_4;
+  
+  puVar3 = &uStack_4;
+  uRam504f00f0 = 0;
+  iRam504f00f4 = 0;
+  uRam504f00ec = 0;
+  uRam504802d8 = 0;
+  uRam504802e0 = 1;
+  iRam504802a0 = 0;
+  func_0x50404b11();
+  func_0x5040c352();
+  func_0x5040b61b();
+  func_0x5040d516();
+  func_0x5040d587();
+  func_0x504069ca();
+  FUN_50404dcd(0x50432e70,0x50432e8c,0x50432e91);
+  uVar4 = FUN_5040a294();
+  puVar3[-1] = uVar4;
+  if (puVar3[-1] != 0) {
+    FUN_5040689d();
+  }
+  uVar4 = FUN_50409ef4();
+  puVar3[-1] = uVar4;
+  iVar5 = FUN_50409fdb(0x11);
+  if (iVar5 == 1) {
+    FUN_50404dcd(0x50432e9a);
+    func_0x5040c6d5();
+    iRam504802a0 = 1;
+  }
+  else {
+    FUN_50404dcd(0x50432ebf);
+    func_0x5040c700();
+  }
+  uRam504f00f0 = 1;
+  uVar4 = FUN_5040af11();
+  puVar3[-1] = uVar4;
+  if (puVar3[-1] != 0) {
+    FUN_50404dcd(0x50432ed8);
+    FUN_5040689d();
+  }
+  func_0x5042d323(0x50480ec8,0,9);
+  func_0x5040af8c(4,8,0x50480ec8);
+  uVar4 = FUN_50409fdb(0x10);
+  puVar3[-1] = uVar4;
+  if (puVar3[-1] == 1) {
+    iRam50480284 = 5;
+    FUN_50404dcd(0x50432f0c);
+  }
+  FUN_50405416(puVar3 + -2);
+  if ((iRam50480288 == 0) || (iRam5048028c == 0)) {
+    func_0x50409df2();
+    func_0x50409e65();
+  }
+  if (((iRam50480288 != 1) || ((iRam50480284 != 3 && (iRam5048028c == 0)))) && (iRam50480284 != 5))
+  {
+    func_0x5040cb59();
+  }
+  iRam504f00f4 = 0;
+  uRam504f00ec = 0;
+  uRam504802d8 = 0;
+  if (puVar3[-2] == 1) {
+    if (iRam504802a4 == 1) {
+      uVar2 = Ramdb000500;
+      Ramdb000500 = uVar2 & 0xff3f;
+      uVar2 = Ramdb000500;
+      Ramdb000500 = uVar2 | 0x40;
+      bVar1 = P5OUT;
+      P5OUT = bVar1 | 8;
+    }
+    func_0x5040e3d6();
+  }
+  if (iRam504802a0 != 1) {
+    do {
+      while( true ) {
+        if (iRam50480284 == 5) {
+          func_0x5040b99b(2,0x50432fa8,0x50432fa8);
+        }
+        if (iRam504f00f4 != 0) {
+          func_0x504067d5();
+          return;
+        }
+        if (iRam50480288 != 1) break;
+        if (iRam5048028c == 0) {
+          func_0x5040b99b(2,0x504801b4,0x5048025c);
+        }
+        else {
+          func_0x5040b99b(2,0x504801bb,0x5048025c);
+        }
+      }
+      puVar3[-3] = 0;
+      while ((uint)puVar3[-3] < 0xb) {
+        if (*(int *)(puVar3[-3] * 0x34 + 0x50480c9c) != 0) {
+          if ((iRam504f00f4 != 0) ||
+             (func_0x5040b99b(2,*(undefined4 *)(puVar3[-3] * 0x34 + 0x50480c98),
+                              *(undefined4 *)(puVar3[-3] * 0x34 + 0x50480c9c)), iRam504f00f4 != 0))
+          break;
+          func_0x5040b99b(2,*(undefined4 *)(puVar3[-3] * 0x34 + 0x50480c98),
+                          *(undefined4 *)(puVar3[-3] * 0x34 + 0x50480c9c));
+        }
+        puVar3[-3] = puVar3[-3] + 1;
+      }
+    } while( true );
+  }
+  FUN_50404dcd(0x50432f21);
+  puVar3[-3] = 0;
+  while ((uint)puVar3[-3] < 0x10) {
+    bVar1 = UNK_c0001004;
+    UNK_c0001004 = bVar1 & 0xfe;
+    bVar1 = UNK_c0001004;
+    if ((bVar1 & 1) == 0) break;
+    FUN_50404dcd(0x50432f35,puVar3[-3]);
+    puVar3[-3] = puVar3[-3] + 1;
+  }
+  if (0xf < (uint)puVar3[-3]) {
+    FUN_50404dcd(0x50432f53);
+    func_0x5040b7b4(300,0x50432f6b);
+    func_0x5040d59f();
+    func_0x50416765();
+    do {
+                    /* WARNING: Do nothing block with infinite loop */
+    } while( true );
+  }
+  puVar3[-3] = 0;
+  while( true ) {
+    if (0xf < (uint)puVar3[-3]) {
+      FUN_50404dcd(0x50432f90);
+      func_0x5040b7b4(300,0x50432f6b);
+      func_0x5040d59f();
+      func_0x50416765();
+      do {
+                    /* WARNING: Do nothing block with infinite loop */
+      } while( true );
+    }
+    bVar1 = UNK_c0001004;
+    UNK_c0001004 = bVar1 | 1;
+    bVar1 = UNK_c0001004;
+    if ((bVar1 & 1) != 0) break;
+    FUN_50404dcd(0x50432f72,puVar3[-3]);
+    puVar3[-3] = puVar3[-3] + 1;
+  }
+  do {
+                    /* WARNING: Do nothing block with infinite loop */
+  } while( true );
+}
+
+=== FUNC FUN_50405416 (p61_diag_loop_5416) @ 0x50405416 (size=653 B, req=0x50405416) ===
+// Callers (1): 0x504050ff
+// Referenced strings/literals:
+//   0x50432faf: 'error! Failed to read Firm-list.\n'
+//   0x50432fd1: 'do not need to update %s.\n'
+void FUN_50405416(void)
+
+{
+  undefined1 *puVar1;
+  int iVar2;
+  undefined1 auStack_4 [4];
+  
+  puVar1 = auStack_4;
+  if (((iRam50480284 == 5) || (iVar2 = FUN_50409fdb(0xc), iVar2 != 1)) || (iRam504802ac == 1)) {
+    iRam504802ac = 0;
+    func_0x504056a3();
+    if (iRam50480284 == 0) {
+      FUN_50404dcd(0x50432faf);
+      func_0x5040821d(0,0,0x504801d7,0x504801e5);
+    }
+  }
+  else {
+    iRam504802ac = 1;
+    func_0x5040ce91();
+  }
+  iVar2 = FUN_50409fdb(0);
+  if (iVar2 == 1) {
+    func_0x50406daa(0,*(undefined4 *)(puVar1 + 8),iRam504802ac);
+  }
+  else {
+    FUN_50404dcd(0x50432fd1,0x50480ca1);
+  }
+  if ((iRam504802ac == 1) && (func_0x504056a3(), iRam50480284 == 0)) {
+    FUN_50404dcd(0x50432faf);
+    func_0x5040821d(0,0,0x504801d7,0x504801e5);
+  }
+  iVar2 = FUN_50409fdb(2);
+  if (iVar2 == 1) {
+    func_0x50406daa(2,*(undefined4 *)(puVar1 + 8),iRam504802ac);
+  }
+  else {
+    FUN_50404dcd(0x50432fd1,0x50480d09);
+  }
+  iVar2 = FUN_50409fdb(5);
+  if (iVar2 == 1) {
+    func_0x50406daa(5,*(undefined4 *)(puVar1 + 8),iRam504802ac);
+  }
+  else {
+    FUN_50404dcd(0x50432fd1,0x50480da5);
+  }
+  iVar2 = FUN_50409fdb(4);
+  if (iVar2 == 1) {
+    func_0x50406daa(4,*(undefined4 *)(puVar1 + 8),iRam504802ac);
+  }
+  else {
+    FUN_50404dcd(0x50432fd1,0x50480d71);
+  }
+  iVar2 = FUN_50409fdb(7);
+  if (iVar2 == 1) {
+    func_0x50406daa(7,*(undefined4 *)(puVar1 + 8),iRam504802ac);
+  }
+  else {
+    FUN_50404dcd(0x50432fd1,0x50480e0d);
+  }
+  iVar2 = FUN_50409fdb(8);
+  if (iVar2 == 1) {
+    func_0x50406daa(8,*(undefined4 *)(puVar1 + 8),iRam504802ac);
+  }
+  else {
+    FUN_50404dcd(0x50432fd1,0x50480e41);
+  }
+  iVar2 = FUN_50409fdb(9);
+  if (iVar2 == 1) {
+    func_0x50406daa(9,*(undefined4 *)(puVar1 + 8),iRam504802ac);
+  }
+  else {
+    FUN_50404dcd(0x50432fd1,0x50480e75);
+  }
+  iVar2 = FUN_50409fdb(6);
+  if (iVar2 == 1) {
+    func_0x50406daa(6,*(undefined4 *)(puVar1 + 8),iRam504802ac);
+  }
+  else {
+    FUN_50404dcd(0x50432fd1,0x50480dd9);
+  }
+  iVar2 = FUN_50409fdb(1);
+  if (iVar2 == 1) {
+    func_0x50406daa(1,*(undefined4 *)(puVar1 + 8),iRam504802ac);
+  }
+  else {
+    FUN_50404dcd(0x50432fd1,0x50480cd5);
+  }
+  return;
+}
+
+=== FUNC FUN_5040689d (p61_halt_689d) @ 0x5040689d (size=32 B, req=0x5040689d) ===
+// Callers (7): 0x50405030, 0x504050a7, 0x50409e25, 0x50409e59, 0x50409eae, 0x50409ee1, 0x50409f3f
+void FUN_5040689d(void)
+
+{
+  func_0x504068bd(1,0x50480255,0x50480255);
+  return;
+}
+
+=== FUNC FUN_50406d30 (p61_state_init_6d30) @ 0x50406d30 (size=122 B, req=0x50406d30) ===
+// Callers (0): 
+// Referenced strings/literals:
+//   0x5043361e: 'deviceinfo'
+//   0x50433629: 'STB '
+//   0x5043362e: 'STB-data'
+void FUN_50406d30(undefined4 param_1)
+
+{
+  undefined4 *in_A2;
+  undefined4 in_D2;
+  
+  *in_A2 = in_D2;
+  uRam00005048 = (undefined1)param_1;
+  uRam50480e38 = 0x5048026a;
+  uRam50480e34 = param_1;
+  func_0x5042d47c(0x50480e41,0x5043361e);
+  func_0x5042d47c(0x50480e64,0x50433629);
+  uRam50480e68 = 0x50480278;
+  uRam50480e6c = 0x50480278;
+  func_0x5042d47c(0x50480e75,0x5043362e);
+  return;
+}
+
+=== FUNC FUN_5040a294 (p61_bgo_init_hook_a294) @ 0x5040a294 (size=130 B, req=0x5040a294) ===
+// Callers (1): 0x5040501f
+// Referenced strings/literals:
+//   0x50433eb0: 'BGO driver init failed[%u].\n'
+//   0x50433ecd: 'Control information init failed[%d].\n'
+undefined4 FUN_5040a294(void)
+
+{
+  undefined1 *puVar1;
+  undefined4 uVar2;
+  undefined1 auStack_4 [4];
+  
+  puVar1 = auStack_4;
+  if (iRam504802b0 != 1) {
+    FUN_50404592(0x50480000,0x50480002);
+    uVar2 = FUN_5040248e(0,0,0);
+    *(undefined4 *)(puVar1 + -4) = uVar2;
+    if (*(int *)(puVar1 + -4) != 0) {
+      FUN_50404dcd(0x50433eb0,*(undefined4 *)(puVar1 + -4));
+      return 0xffffffff;
+    }
+    uVar2 = func_0x5040439b();
+    *(undefined4 *)(puVar1 + -8) = uVar2;
+    if (*(int *)(puVar1 + -8) != 0) {
+      FUN_50404dcd(0x50433ecd,*(undefined4 *)(puVar1 + -8));
+      return 0xffffffff;
+    }
+    iRam504802b0 = 1;
+  }
+  return 0;
+}
+
+=== FUNC FUN_5040df40 (p61_TimerMCU_update_df40) @ 0x5040df40 (size=1058 B, req=0x5040df40) ===
+// Callers (0): 
+// Referenced strings/literals:
+//   0x504346cf: 'Send 0x84 0x00 0x00 0xFF... Drive power down.\n'
+//   0x504346fe: 'wait 3[s]...\n'
+//   0x5043470c: 'send 0x8B.\n'
+//   0x50434718: 'error! echo = 0x%x\n'
+//   0x5043472c: 'changing BaudRate from 9600 to 31250...\n'
+//   0x50434755: 'changing BaudRate from 9600 to 57600...\n'
+//   0x5043477e: 'write retry[%d].\n'
+//   0x50434790: 'erasing Timer-flash...\n'
+//   0x504347ea: 'programing Timer-flash...(size=0x%x)\n'
+//   0x50434810: 'verify checking Timer-flash...\n'
+//   0x504347a8: 'error! busy now.\n'
+//   0x504347d3: 'error! erase timeout.\n'
+//   0x504347ba: 'error! failed to erase.\n'
+//   0x50434830: 'success to update Timer.\n'
+//   0x5043484a: 'failed to update Timer.\n'
+undefined4 FUN_5040df40(int param_1)
+
+{
+  ushort uVar1;
+  byte bVar2;
+  int in_A3;
+  int iVar3;
+  undefined4 uVar4;
+  
+  if (param_1 == 1) {
+    FUN_50404dcd(0x504346cf);
+    func_0x5042d323(in_A3 + -0x1c,0);
+    *(undefined1 *)(in_A3 + -0x1c) = 0x84;
+    *(undefined1 *)(in_A3 + -0x19) = 0xff;
+    func_0x5040ba7e(0xf);
+    FUN_50404dcd(0x504346fe);
+    func_0x5040d655(3000);
+    bVar2 = P5OUT;
+    P5OUT = bVar2 & 0xf7;
+    uVar1 = Ramdb000500;
+    Ramdb000500 = uVar1 & 0xff3f;
+    uVar1 = Ramdb000500;
+    Ramdb000500 = uVar1 | 0x40;
+  }
+  func_0x5040b9d9(0x8b,0);
+  FUN_50404dcd(0x5043470c);
+  uVar1 = Ramdb000100;
+  Ramdb000100 = uVar1 & 0xfff0;
+  uVar1 = Ramdb000100;
+  Ramdb000100 = uVar1 | 10;
+  if (*(int *)(in_A3 + 0x10) == 1) {
+    func_0x5040d655(2000);
+  }
+  else {
+    func_0x5040d655(1000);
+  }
+  if (*(int *)(in_A3 + 0x10) != 1) {
+    func_0x5040bdc6(1,*(undefined4 *)(in_A3 + 0x10));
+    *(undefined4 *)(in_A3 + -4) = 0;
+    while (*(int *)(in_A3 + -4) < 0x10) {
+      uRam50481934 = 0;
+      iVar3 = func_0x5040be58(0x50481934,1);
+      if (iVar3 == 0) {
+        return 0;
+      }
+      func_0x5040d655(0x1e);
+      *(int *)(in_A3 + -4) = *(int *)(in_A3 + -4) + 1;
+    }
+    uRam50481934 = 0xb0;
+    iVar3 = func_0x5040be58(0x50481934,1);
+    if (iVar3 == 0) {
+      return 0;
+    }
+    iVar3 = func_0x5040bf33(0x50481a37,1);
+    if (iVar3 == 0) {
+      return 0;
+    }
+    if (cRam50481a37 != -0x50) {
+      FUN_50404dcd(0x50434718,cRam50481a37);
+      return 0;
+    }
+    func_0x5040d655(3000);
+  }
+  if (*(int *)(in_A3 + 0x10) == 1) {
+    FUN_50404dcd(0x5043472c);
+    func_0x5040bdc6(3,*(undefined4 *)(in_A3 + 0x10));
+  }
+  else {
+    FUN_50404dcd(0x50434755);
+  }
+  uRam50481934 = 0xb3;
+  iVar3 = func_0x5040be58(0x50481934,1);
+  if (iVar3 == 0) {
+    uVar4 = 0;
+  }
+  else {
+    iVar3 = func_0x5040bf33(0x50481a37,1);
+    if (iVar3 == 0) {
+      uVar4 = 0;
+    }
+    else if (cRam50481a37 == -0x4d) {
+      if (*(int *)(in_A3 + 0x10) != 1) {
+        func_0x5040bdc6(2,*(undefined4 *)(in_A3 + 0x10));
+      }
+      func_0x5040d655(3000);
+      *(undefined4 *)(in_A3 + -8) = 0;
+      while (*(int *)(in_A3 + -8) < 2) {
+        if (0 < *(int *)(in_A3 + -8)) {
+          FUN_50404dcd(0x5043477e,*(undefined4 *)(in_A3 + -8));
+          func_0x5040d655(1000);
+        }
+        FUN_50404dcd(0x50434790);
+        uRam50481934 = 0xa7;
+        iVar3 = func_0x5040be58(0x50481934,1);
+        if (iVar3 != 0) {
+          uRam50481934 = 0xd0;
+          iVar3 = func_0x5040be58(0x50481934,1);
+          if (iVar3 != 0) {
+            func_0x5040d655(5000);
+            if (*(int *)(in_A3 + 0x10) == 1) {
+              func_0x5040d655(35000);
+LAB_5040e2c2:
+              FUN_50404dcd(0x504347ea,*(undefined4 *)(in_A3 + 0xc));
+              iVar3 = func_0x5040e41b(*(undefined4 *)(in_A3 + 8),*(undefined4 *)(in_A3 + 0xc));
+              if (iVar3 != 0) {
+                if (*(int *)(in_A3 + 0x10) == 1) {
+                  func_0x5040d655(0xfa);
+                }
+                FUN_50404dcd(0x50434810);
+                iVar3 = func_0x5040e6dc(*(undefined4 *)(in_A3 + 8),*(undefined4 *)(in_A3 + 0xc));
+                if (iVar3 != 0) break;
+              }
+            }
+            else {
+              uRam50481934 = 0x70;
+              iVar3 = func_0x5040be58(0x50481934,1);
+              if ((iVar3 != 0) && (iVar3 = func_0x5040bf33(0x50481a37,2), iVar3 != 0)) {
+                *(char *)(in_A3 + -9) = cRam50481a37;
+                *(undefined1 *)(in_A3 + -10) = uRam50481a38;
+                if ((*(byte *)(in_A3 + -9) & 0x80) == 0) {
+                  FUN_50404dcd(0x504347a8);
+                }
+                else if ((*(byte *)(in_A3 + -9) & 0x20) == 0) {
+                  if ((*(byte *)(in_A3 + -10) & 2) == 0) goto LAB_5040e2c2;
+                  FUN_50404dcd(0x504347d3);
+                }
+                else {
+                  FUN_50404dcd(0x504347ba);
+                }
+              }
+            }
+          }
+        }
+        *(int *)(in_A3 + -8) = *(int *)(in_A3 + -8) + 1;
+      }
+      func_0x5040e364(*(undefined4 *)(in_A3 + 0x10));
+      if (*(int *)(in_A3 + -8) < 2) {
+        FUN_50404dcd(0x50434830);
+        uVar4 = 1;
+      }
+      else {
+        FUN_50404dcd(0x5043484a);
+        uVar4 = 0;
+      }
+    }
+    else {
+      FUN_50404dcd(0x50434718,cRam50481a37);
+      uVar4 = 0;
+    }
+  }
+  return uVar4;
+}
+
+=== NO_FUNC p61_FMU_list_sum_ea30 @ 0x5040ea30 ===
+
+=== FUNC FUN_50421ebe (p61_bgo_ctrl_21ebe) @ 0x50421ebe (size=101 B, req=0x50421ebe) ===
+// Callers (0): 
+undefined4 FUN_50421ebe(int param_1)
+
+{
+  undefined4 uVar1;
+  undefined4 uVar2;
+  int iVar3;
+  uint uVar4;
+  uint uVar5;
+  
+  uVar4 = 1;
+  uVar2 = 0xffffff90;
+  uVar1 = 0x14d;
+  do {
+    func_0x504228fe(uVar4,4,uVar2,uVar1);
+    uVar4 = uVar4 + 1;
+  } while (uVar4 < 5);
+  uVar4 = (uint)(param_1 != 0);
+  uVar5 = 1;
+  do {
+    func_0x504266e0(uVar5,uVar4);
+    func_0x50422a58(uVar5);
+    uVar5 = uVar5 + 1;
+  } while (uVar5 < 2);
+  uVar4 = 1;
+  do {
+    uVar5 = 2;
+    do {
+      iVar3 = func_0x50422886(uVar4,uVar5);
+      if ((iVar3 != 0) && (iVar3 != 4)) {
+        return 1;
+      }
+      uVar5 = uVar5 + 1;
+    } while (uVar5 < 5);
+    uVar4 = uVar4 + 1;
+    if (1 < uVar4) {
+      return 0;
+    }
+  } while( true );
+}
+
+=== FUNC FUN_5042201e (p61_bgo_read_2201e) @ 0x5042201e (size=165 B, req=0x5042201e) ===
+// Callers (0): 
+uint FUN_5042201e(uint param_1,uint param_2,int param_3)
+
+{
+  uint uVar1;
+  int iVar2;
+  uint uVar3;
+  undefined1 auStack_74 [116];
+  
+  if (param_1 != 1) {
+    return 0x13;
+  }
+  if (param_3 - 1U < 0x10) {
+    if (param_2 != 0) {
+      uVar3 = (param_2 + param_3) - 1;
+      uVar1 = func_0x50422a1b(1,1);
+      if (uVar3 <= uVar1) {
+        if ((param_2 & 0xf) + param_3 < 0x11) {
+          iVar2 = func_0x50422886(param_1,param_1);
+          if (iVar2 != 0) {
+            return 0x11;
+          }
+          uVar1 = func_0x50426a4a(param_1);
+          if ((uVar1 < 0x10) && (iVar2 = func_0x504268f6(auStack_74), iVar2 == 0)) {
+            uVar1 = 0;
+            iVar2 = func_0x504227e1(param_1,2);
+            if (iVar2 == 0) {
+              uVar1 = param_1;
+            }
+            iVar2 = func_0x504227e1(param_1,param_1);
+            if (iVar2 != 0) {
+              return uVar1;
+            }
+            return uVar1 | 2;
+          }
+          return 0x10;
+        }
+        goto LAB_50422060;
+      }
+    }
+    uVar1 = 0x12;
+  }
+  else {
+LAB_50422060:
+    uVar1 = 0x14;
+  }
+  return uVar1;
+}
+
+=== FUNC FUN_50422359 (p61_bgo_nor_22359) @ 0x50422359 (size=50 B, req=0x50422359) ===
+// Callers (0): 
+undefined4 FUN_50422359(int param_1,uint param_2)
+
+{
+  undefined4 uVar1;
+  
+  if (param_1 != 1) goto LAB_50422360;
+  if (param_2 == 2) {
+    uVar1 = 4;
+LAB_5042237f:
+    uVar1 = func_0x50422886(1,uVar1);
+  }
+  else {
+    if (param_2 < 3) {
+      if (param_2 == 1) {
+        uVar1 = 3;
+        goto LAB_5042237f;
+      }
+    }
+    else if (param_2 == 4) {
+      uVar1 = 1;
+      goto LAB_5042237f;
+    }
+LAB_50422360:
+    uVar1 = 4;
+  }
+  return uVar1;
+}
+
+=== FUNC FUN_50423058 (p61_bgo_sum_23058) @ 0x50423058 (size=292 B, req=0x50423058) ===
+// Callers (1): 0x50422fd9
+void FUN_50423058(undefined4 param_1)
+
+{
+  undefined2 uVar1;
+  int iVar2;
+  undefined2 *puVar3;
+  undefined2 *puVar4;
+  int iVar5;
+  int *piVar6;
+  int *piVar7;
+  int iVar8;
+  uint uVar9;
+  undefined4 uVar10;
+  undefined4 uVar11;
+  uint uVar12;
+  int *piVar13;
+  int iVar14;
+  undefined4 extraout_var;
+  undefined4 extraout_var_00;
+  undefined4 extraout_var_01;
+  undefined4 extraout_var_02;
+  int extraout_var_03;
+  int extraout_var_04;
+  int iVar15;
+  int iStack_34;
+  int iStack_30;
+  int iStack_2c;
+  undefined4 uStack_20;
+  undefined4 uStack_1c;
+  undefined4 uStack_18;
+  undefined4 uStack_14;
+  
+  uVar12 = 1;
+  piVar6 = &iStack_34;
+  iVar14 = 0x504f861a;
+  piVar7 = (int *)0x50436ea0;
+  iVar5 = 4;
+  piVar13 = &iStack_30;
+  do {
+    iVar8 = func_0x504229be(param_1,uVar12);
+    param_1 = extraout_var;
+    if (iVar8 == 0) {
+      *piVar13 = 4;
+    }
+    else {
+      iVar2 = (*piVar7 + iVar8) * 2;
+      iVar15 = extraout_var_03;
+      if (*(short *)(iVar14 + iVar2) != -1) {
+        uVar9 = func_0x50422a69(0,*(undefined2 *)(iVar14 + iVar2 + 2));
+        puVar4 = (undefined2 *)((*piVar7 + iVar8) * 2 + iVar14);
+        uVar1 = *puVar4;
+        puVar3 = (undefined2 *)((*piVar7 + (uVar9 & 0xff)) * 2 + iStack_34);
+        *puVar4 = *puVar3;
+        *puVar3 = uVar1;
+        param_1 = extraout_var_00;
+        iVar15 = extraout_var_04;
+      }
+      if (*(uint *)(iVar15 + iVar5 + -4) == (uint)((iVar8 + 1) * iVar8) >> 1) {
+        uVar11 = 2;
+      }
+      else {
+        uVar11 = 1;
+      }
+      *(undefined4 *)((int)piVar6 + iVar5) = uVar11;
+    }
+    piVar7 = piVar7 + 1;
+    iVar5 = iVar5 + 4;
+    piVar13 = piVar13 + 1;
+    uVar12 = uVar12 + 1;
+  } while (uVar12 < 5);
+  uVar12 = 2;
+  uVar11 = 0x145;
+  piVar6 = piVar6 + 2;
+  do {
+    iVar5 = func_0x50422886(param_1,uVar12);
+    param_1 = extraout_var_01;
+    if (iVar5 == 6) {
+      uVar9 = uVar12;
+      if (uVar12 == 2) {
+        if ((iStack_30 == 2) && (iStack_2c == 2)) {
+          uVar10 = 0x708;
+          iVar5 = 2;
+        }
+        else if ((iStack_30 == 4) && (iStack_2c == 4)) {
+          uVar10 = 0x70c;
+          iVar5 = 4;
+          uVar9 = 2;
+        }
+        else {
+          iVar5 = 1;
+          uVar10 = 0x710;
+          uVar9 = 2;
+        }
+      }
+      else {
+        iVar5 = *piVar6;
+        uVar10 = 0x715;
+      }
+      func_0x504228c3(extraout_var_01,uVar9,iVar5,uVar10,uVar11);
+      param_1 = extraout_var_02;
+    }
+    piVar6 = piVar6 + 1;
+    uVar12 = uVar12 + 1;
+  } while (uVar12 < 5);
+  return;
+}
+
+=== PROG061 EXACT BGO PATCH SITES DISASSEMBLY ===
+-- Site 1 (0x50423058..0x50423110, Site 0x504230F0 beq+10) --
+  0x504230d0: [f1 60               ] ADD D0,A0
+  0x504230d2: [f1 70               ] ADD A0,A0
+  0x504230d4: [fb 8a 00 18         ] MOV (0x18,SP),R0
+  0x504230d8: [f9 78 08            ] ADD R0,A0
+  0x504230db: [f0 60               ] MOVHU (A0),D0
+  0x504230dd: [f0 71               ] MOVHU D0,(A1)
+  0x504230df: [f0 74               ] MOVHU D1,(A0)
+  0x504230e1: [5c 54               ] MOV (0x54,SP),A0
+  0x504230e3: [f1 78               ] ADD A2,A0
+  0x504230e5: [88                  ] MOV D2,D0
+  0x504230e6: [40                  ] INC D0
+  0x504230e7: [f2 42               ] MUL D0,D2
+  0x504230e9: [f8 c6 01            ] LSR 0x1,D2
+  0x504230ec: [f8 00 fc            ] MOV (-0x4 ,A0),D0
+  0x504230ef: [a8                  ] CMP D2,D0
+  0x504230f0: [c8 0a               ] BEQ 0x504230fa
+  0x504230f2: [f5 9c               ] MOV R7,A0
+  0x504230f4: [f1 78               ] ADD A2,A0
+  0x504230f6: [80 01               ] MOV 0x1,D0
+  0x504230f8: [ca 08               ] BRA 0x50423100
+  0x504230fa: [f5 9c               ] MOV R7,A0
+  0x504230fc: [f1 78               ] ADD A2,A0
+  0x504230fe: [80 02               ] MOV 0x2,D0
+  0x50423100: [60                  ] MOV D0,(A0)
+  0x50423101: [53                  ] INC4 A3
+  0x50423102: [52                  ] INC4 A2
+  0x50423103: [f9 c8 44            ] INC4 R4
+  0x50423106: [4c                  ] INC D3
+  0x50423107: [af 04               ] CMP 0x4,D3
+  0x50423109: [c7 87               ] BLS 0x50423090
+  0x5042310b: [8f 02               ] MOV 0x2,D3
+  0x5042310d: [2e 45 01            ] MOV 0x145,D2
+  0x50423110: [f5 9e               ] MOV R7,A2
+  0x50423112: [22 08               ] ADD 0x8,A2
+  0x50423114: [58 50               ] MOV (0x50,SP),D0
+  0x50423116: [8d                  ] MOV D3,D1
+  0x50423117: [cd 6f f7 00 00      ] CALL 0x50422886,[],0x0
+-- Site 2 (0x50405070..0x504050C0, Site 0x50405097 beq+21) --
+  0x50405071: [84                  ] MOV D1,D0
+  0x50405072: [dd 5b fd ff ff 00 00] CALL 0x50404dcd,[],0x0
+  0x50405079: [dd 87 76 00 00 00 00] CALL 0x5040c700,[],0x0
+  0x50405080: [80 01               ] MOV 0x1,D0
+  0x50405082: [fc 81 f0 00 4f 50   ] MOV D0,(0x504f00f0)
+  0x50405088: [dd 89 5e 00 00 00 00] CALL 0x5040af11,[],0x0
+  0x5040508f: [f8 13 fc            ] MOV D0,(-0x4 ,A3)
+  0x50405092: [f8 03 fc            ] MOV (-0x4 ,A3),D0
+  0x50405095: [a0 00               ] CMP 0x0,D0
+  0x50405097: [c8 15               ] BEQ 0x504050ac
+  0x50405099: [fc cd d8 2e 43 50   ] MOV 0x50432ed8,D1
+  0x5040509f: [84                  ] MOV D1,D0
+  0x504050a0: [dd 2d fd ff ff 00 00] CALL 0x50404dcd,[],0x0
+  0x504050a7: [cd f6 17 00 00      ] CALL 0x5040689d,[],0x0
+  0x504050ac: [fc cc c8 0e 48 50   ] MOV 0x50480ec8,D0
+  0x504050b2: [85 09               ] MOV 0x9,D1
+  0x504050b4: [46 0c               ] MOV D1,(0xc,SP)
+  0x504050b6: [04                  ] CLR D1
+  0x504050b7: [dd 6c 82 02 00 00 00] CALL 0x5042d323,[],0x0
+  0x504050be: [fc cc c8 0e 48 50   ] MOV 0x50480ec8,D0
+-- Site 3 (0x5040A294..0x5040A320, Site 0x5040A2CD BGO fail hook) --
+  0x5040a294: [cf 10               ] MOVM [A3],(SP)
+  0x5040a296: [3f                  ] MOV SP,A3
+  0x5040a297: [f8 fe e8            ] ADD -0x18,SP
+  0x5040a29a: [fc a4 b0 02 48 50   ] MOV (0x504802b0),D0
+  0x5040a2a0: [a0 01               ] CMP 0x1,D0
+  0x5040a2a2: [c8 6c               ] BEQ 0x5040a30e
+  0x5040a2a4: [fc cc 00 00 48 50   ] MOV 0x50480000,D0
+  0x5040a2aa: [fc cd 02 00 48 50   ] MOV 0x50480002,D1
+  0x5040a2b0: [dd e2 a2 ff ff 00 00] CALL 0x50404592,[],0x0
+  0x5040a2b7: [00                  ] CLR D0
+  0x5040a2b8: [42 0c               ] MOV D0,(0xc,SP)
+  0x5040a2ba: [00                  ] CLR D0
+  0x5040a2bb: [04                  ] CLR D1
+  0x5040a2bc: [dd d2 81 ff ff 00 00] CALL 0x5040248e,[],0x0
+  0x5040a2c3: [f8 13 fc            ] MOV D0,(-0x4 ,A3)
+  0x5040a2c6: [f8 03 fc            ] MOV (-0x4 ,A3),D0
+  0x5040a2c9: [a0 00               ] CMP 0x0,D0
+  0x5040a2cb: [c8 16               ] BEQ 0x5040a2e1
+  0x5040a2cd: [fc cc b0 3e 43 50   ] MOV 0x50433eb0,D0
+  0x5040a2d3: [f8 07 fc            ] MOV (-0x4 ,A3),D1
+  0x5040a2d6: [dd f7 aa ff ff 00 00] CALL 0x50404dcd,[],0x0
+  0x5040a2dd: [80 ff               ] MOV 0xff,D0
+  0x5040a2df: [ca 32               ] BRA 0x5040a311
+  0x5040a2e1: [dd ba a0 ff ff 00 00] CALL 0x5040439b,[],0x0
+  0x5040a2e8: [f8 13 f8            ] MOV D0,(-0x8 ,A3)
+  0x5040a2eb: [f8 03 f8            ] MOV (-0x8 ,A3),D0
+  0x5040a2ee: [a0 00               ] CMP 0x0,D0
+  0x5040a2f0: [c8 16               ] BEQ 0x5040a306
+  0x5040a2f2: [fc cc cd 3e 43 50   ] MOV 0x50433ecd,D0
+  0x5040a2f8: [f8 07 f8            ] MOV (-0x8 ,A3),D1
+  0x5040a2fb: [dd d2 aa ff ff 00 00] CALL 0x50404dcd,[],0x0
+  0x5040a302: [80 ff               ] MOV 0xff,D0
+  0x5040a304: [ca 0d               ] BRA 0x5040a311
+  0x5040a306: [80 01               ] MOV 0x1,D0
+  0x5040a308: [fc 81 b0 02 48 50   ] MOV D0,(0x504802b0)
+  0x5040a30e: [00                  ] CLR D0
+  0x5040a30f: [ca 02               ] BRA 0x5040a311
+  0x5040a311: [f2 fc               ] MOV A3,SP
+  0x5040a313: [df 10 04            ] RET [A3],0x4
+  0x5040a316: [cf 10               ] MOVM [A3],(SP)
+  0x5040a318: [3f                  ] MOV SP,A3
+  0x5040a319: [f8 fe e8            ] ADD -0x18,SP
+  0x5040a31c: [f8 13 08            ] MOV D0,(0x8 ,A3)
+  0x5040a31f: [f8 17 0c            ] MOV D1,(0xc ,A3)

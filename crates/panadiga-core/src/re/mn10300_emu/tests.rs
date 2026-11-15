@@ -178,3 +178,50 @@ fn test_movm_f8_and_fc_subset_roundtrip() {
     assert_eq!(vm.sp, 0x5001_0100);
     assert_eq!(vm.read_u32(0x5001_0200).unwrap(), 0x1234_5678);
 }
+
+#[test]
+fn test_bitops_cfi_autoselect_and_ipl_write_protection() {
+    // Exercise 0xFE/0xFA/0xF0 BSET/BCLR/BTST, EXTHU, MOVHU, Spansion CFI autoselect, and IPL air-gap.
+    let mut vm = Mn103Vm::new();
+    #[rustfmt::skip]
+    let code = vec![
+        // TEST 1: FE 80/81/82 -> BSET/BCLR/BTST imm8, (imm16) at 0x0D78 (like S211 PASS unlock!)
+        0xFE, 0x80, 0x78, 0x0D, 0x01, // bset 0x01, (0x0d78)
+        0xFE, 0x80, 0x78, 0x0D, 0x08, // bset 0x08, (0x0d78) -> 0x09
+        0xFE, 0x81, 0x78, 0x0D, 0x01, // bclr 0x01, (0x0d78) -> 0x08
+        // TEST 2: F0 90 BCLR D0,(A0) + FA F0 BSET imm8,(d8,A1)
+        0x94, 0x00,                   // mov 0, a1 (placeholder; set below)
+        0xFC, 0xDD, 0x00, 0x10, 0x00, 0x00, // mov 0x00001000, a1
+        0xFA, 0xF1, 0x04, 0xA5,       // bset 0xa5, (4, a1) -> [0x1004] |= 0xA5
+        // TEST 3: EXTHU D0
+        0xFC, 0xCC, 0xEF, 0xBE, 0xAD, 0xDE, // mov 0xDEADBEEF, d0
+        0x1C,                               // exthu d0 -> 0x0000BEEF
+        0xCB,                               // nop (stop)
+    ];
+    let stop_pc = 0x5000_0000 + code.len() as u32 - 1;
+    vm.map_segment(0x5000_0000, code, false);
+    vm.map_segment(0x0000_0000, vec![0; 0x2000], true);
+    vm.map_segment(0x8400_0000, vec![0xEA; 0x80_0000], false);
+    vm.pc = 0x5000_0000;
+    vm.run_until(stop_pc, 32).unwrap();
+    assert_eq!(vm.read_u8(0x0D78).unwrap(), 0x08);
+    assert_eq!(vm.read_u8(0x1004).unwrap(), 0xA5);
+    assert_eq!(vm.d[0], 0x0000_BEEF);
+
+    // Verify Spansion CFI autoselect (0x84200554 / 0x84200AAA -> 0x0001 / 0x227E)
+    vm.write_u8(0x8420_0554, 0xAA).unwrap();
+    vm.write_u8(0x8420_0AAA, 0x55).unwrap();
+    vm.write_u8(0x8420_0554, 0x90).unwrap();
+    assert_eq!(vm.cfi_stage, CfiStage::Autoselect);
+    assert_eq!(vm.read_u16(0x8420_0000).unwrap(), 0x0001);
+    assert_eq!(vm.read_u16(0x8420_0002).unwrap(), 0x227E);
+    vm.write_u8(0x8420_0000, 0xF0).unwrap();
+    assert_eq!(vm.cfi_stage, CfiStage::Normal);
+    assert_eq!(vm.read_u8(0x8420_0000).unwrap(), 0xEA);
+
+    // Normal writes to IPL NOR fail closed with IplWriteProtected
+    assert!(matches!(
+        vm.write_u32(0x8400_0000, 0x1234_5678),
+        Err(Mn103Fault::IplWriteProtected(0x8400_0000))
+    ));
+}

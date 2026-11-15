@@ -1,3 +1,6 @@
+> 🌐 **Idioma / Language:** [English (US)](../en-US/TECHNICAL_REPORT_FOR_CLAUDE_OPUS_UNBRICK_DMR_EH55.md) | **Português (BR)**
+> 🧭 **Portal:** [Índice da Documentação](../INDEX.md) | [Auditoria Completa](../../AUDITORIA_COMPLETA.md) | [Auditorias](../audits/README.md) | [Pseudocódigo Ghidra](../pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) | [Logs de Debug](../debug_logs/README.md)
+
 # DOSSIÊ TÉCNICO DE ENGENHARIA REVERSA, VALIDAÇÃO CRUZADA & DESTRAVAMENTO AO VIVO
 ## Alvo: Panasonic DMR-EH55 (SoC Matsushita AM34 / Núcleo RISC MN103S)
 **Destinatário da Análise:** Claude Opus / Equipe de Engenharia Reversa Sênior  
