@@ -73,18 +73,30 @@ CRITICAL_XREF_TARGETS = (
 def detect_stage_from_metadata(image_base, prog_name, strings_found, exec_size):
     name_up = (prog_name or "").upper()
     hits = set(strings_found or ())
-    if image_base == 0x44000000 or "BOOT" in name_up or "SetBusWidth" in hits or "-91006" in hits:
-        return "BOOT.BIN"
-    if image_base == 0x50400000 or exec_size == 0x40000 or "PROG061" in name_up or "BGO driver init" in hits:
+    if image_base == 0x50400000:
         return "PROG061"
-    if exec_size == 13427852 or "3060NP" in name_up:
-        return "MAIN3060NP"
-    if image_base == 0x57000000 or exec_size == 13003052 or "3410PQ" in name_up or "MAIN" in name_up:
-        return "MAIN3410PQ"
-    if image_base == 0x90202000 or exec_size == 1441792 or "DRV" in name_up:
+    if image_base == 0x57000000:
+        return "MAIN3060NP" if (exec_size == 13427852 or "3060NP" in name_up) else "MAIN3410PQ"
+    if image_base == 0x44000000:
+        return "BOOT.BIN"
+    if image_base == 0x90202000:
         return "DRV_S211"
     if image_base in (0x80000000, 0x84000000) or exec_size == 0x800000:
         return "NOR_8MB"
+    if exec_size == 13427852 or "3060NP" in name_up:
+        return "MAIN3060NP"
+    if exec_size == 13003052 or "3410PQ" in name_up or "MAIN" in name_up or "_dev_SERIAL" in hits:
+        return "MAIN3410PQ"
+    if "PROG061" in name_up:
+        return "PROG061"
+    if exec_size == 1441792 or "DRV" in name_up:
+        return "DRV_S211"
+    if "BOOT" in name_up or "-91006" in hits:
+        return "BOOT.BIN"
+    if exec_size == 0x40000 and "BGO driver init" in hits:
+        return "PROG061"
+    if "SetBusWidth" in hits:
+        return "BOOT.BIN"
     return "UNKNOWN"
 
 def _label_pair(actual, orig, patch, orig_name, patch_name):
@@ -272,6 +284,7 @@ def run_unbrick_audit(prog=None, output_json=None):
     image_base = prog.getImageBase().getOffset() & 0xFFFFFFFF
 
     exec_size = 0
+    first_init_base = None
     string_hits = {}
     mmio_lit_hits = {}
     for blk in mem.getBlocks():
@@ -280,6 +293,8 @@ def run_unbrick_audit(prog=None, output_json=None):
         blk_size = int(blk.getSize())
         exec_size += blk_size
         blk_base = blk.getStart().getOffset() & 0xFFFFFFFF
+        if first_init_base is None:
+            first_init_base = blk_base
         raw = _read_initialized_block_u8(blk)
         for kw, addrs in scan_ascii_keywords(raw, blk_base).items():
             string_hits.setdefault(kw, []).extend(addrs)
@@ -288,7 +303,8 @@ def run_unbrick_audit(prog=None, output_json=None):
             mmio_lit_hits.setdefault(label, []).extend(addrs)
             _add_bookmark(bm_mgr, space, addrs[0], "Panadiga-MMIO", label)
 
-    stage = detect_stage_from_metadata(image_base, prog.getName(), string_hits.keys(), exec_size)
+    effective_base = image_base if image_base != 0 else (first_init_base or 0)
+    stage = detect_stage_from_metadata(effective_base, prog.getName(), string_hits.keys(), exec_size)
     prog061_status = classify_prog061_sites(
         _read_prog_bytes(prog, 0x504230F0, 2),
         _read_prog_bytes(prog, 0x50405097, 2),

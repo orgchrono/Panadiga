@@ -89,7 +89,11 @@ def test_ghidra_auto_unbrick_audit_helpers() -> None:
 
     assert audit.detect_stage_from_metadata(0x44000000, "BOOT.BIN", (), 0) == "BOOT.BIN"
     assert audit.detect_stage_from_metadata(0, "firmware", ("BGO driver init",), 262144) == "PROG061"
+    assert audit.detect_stage_from_metadata(0x50400000, "unknown.bin", (), 262144) == "PROG061"
+    assert audit.detect_stage_from_metadata(0, "eh55_frm_PROG061_BOOT.bin", ("SetBusWidth", "BGO driver init"), 262144) == "PROG061"
+    assert audit.detect_stage_from_metadata(0, "BOOT.BIN", ("SetBusWidth", "BGO driver init"), 262144) == "BOOT.BIN"
     assert audit.detect_stage_from_metadata(0x57000000, "EH55_MAIN_3410PQ", (), 13003052) == "MAIN3410PQ"
+    assert audit.detect_stage_from_metadata(0, "EH55_MAIN_3410PQ.bin", ("SetBusWidth", "BGO driver init", "_dev_SERIAL"), 13003052) == "MAIN3410PQ"
     assert audit.detect_stage_from_metadata(0, "EH55_MAIN_3060NP", (), 13427852) == "MAIN3060NP"
 
     auto_bgo = audit.classify_prog061_sites(
