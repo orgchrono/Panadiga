@@ -55,13 +55,17 @@ pub enum UnbrickActions {
         #[arg(short, long, value_name = "FILE")]
         output: Option<PathBuf>,
 
-        /// BGO patch mode: auto_format (default), bypass, uart_monitor, or factory
-        #[arg(short, long, default_value = "auto_format", value_name = "MODE")]
+        /// BGO patch mode: bypass (default, safe), uart_monitor, factory, or auto_format (blocked without override)
+        #[arg(short, long, default_value = "bypass", value_name = "MODE")]
         mode: String,
 
         /// Write raw 256 KiB PROG061 binary instead of 128 KiB plaintext DIGADIAG.FRM
         #[arg(long)]
         raw_prog061: bool,
+
+        /// Explicit unsafe override required for auto_format (D4/D5 CS1 IC5001 alias risk)
+        #[arg(long)]
+        allow_unsafe_bgo_format: bool,
 
         /// Exports structured JSON report
         #[arg(short, long, value_name = "JSON_FILE")]
@@ -117,9 +121,21 @@ pub enum UnbrickActions {
         #[arg(long, value_name = "FILE")]
         drv: Option<PathBuf>,
 
-        /// PROG061 BGO mode: auto_format (default), bypass, uart_monitor, or factory
-        #[arg(long, default_value = "auto_format", value_name = "MODE")]
+        /// PROG061 BGO mode: bypass (default, safe), uart_monitor, factory, or auto_format (blocked without override)
+        #[arg(long, default_value = "bypass", value_name = "MODE")]
         bgo_mode: String,
+
+        /// Explicit unsafe override required when --bgo-mode auto_format is passed
+        #[arg(long)]
+        allow_unsafe_bgo_format: bool,
+
+        /// Optional expected MAIN build target (e.g. 3410PQ or 3060NP); rejects mismatches unless overridden
+        #[arg(long, value_name = "BUILD")]
+        expected_main_build: Option<String>,
+
+        /// Allow MAIN build/model mismatch when composing PANA__SD.FRM
+        #[arg(long)]
+        allow_target_mismatch: bool,
 
         /// MAIN passthrough mode: av_passthrough (default) or factory_original
         #[arg(long, default_value = "av_passthrough", value_name = "MODE")]

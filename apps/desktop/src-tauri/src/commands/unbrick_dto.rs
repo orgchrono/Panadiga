@@ -17,11 +17,14 @@ pub struct SdUnbrickKitRequestDto {
     pub main_path: Option<String>,
     pub drv_path: Option<String>,
     pub bgo_mode: Option<String>,
+    pub allow_unsafe_auto_format: Option<bool>,
     pub main_passthrough_mode: Option<String>,
     pub include_pana_sd: Option<bool>,
     pub unlock_hdd_dynamic: Option<bool>,
     pub hdd_target_gb: Option<u32>,
     pub write_extracted_sources: Option<bool>,
+    pub expected_main_build: Option<String>,
+    pub allow_target_mismatch: Option<bool>,
 }
 
 pub(crate) fn opt_trimmed(raw: &Option<String>) -> Option<&str> {
@@ -51,7 +54,7 @@ pub(crate) fn to_sd_unbrick_kit_request(
     let bgo_mode: Prog061BgoPatchMode = dto
         .bgo_mode
         .as_deref()
-        .unwrap_or("auto_format")
+        .unwrap_or("bypass")
         .parse()
         .map_err(|e: anyhow::Error| e.to_string())?;
     let main_passthrough_mode: MainPassthroughMode = dto
@@ -68,11 +71,14 @@ pub(crate) fn to_sd_unbrick_kit_request(
         main_path: opt_read_path(&dto.main_path),
         drv_path: opt_read_path(&dto.drv_path),
         bgo_mode,
+        allow_unsafe_auto_format: dto.allow_unsafe_auto_format.unwrap_or(false),
         main_passthrough_mode,
         include_pana_sd: dto.include_pana_sd.unwrap_or(true),
         unlock_hdd_dynamic: dto.unlock_hdd_dynamic.unwrap_or(true),
         hdd_target_gb: dto.hdd_target_gb,
         write_extracted_sources: dto.write_extracted_sources.unwrap_or(false),
+        expected_main_build: opt_trimmed(&dto.expected_main_build).map(str::to_string),
+        allow_target_mismatch: dto.allow_target_mismatch.unwrap_or(false),
     })
 }
 

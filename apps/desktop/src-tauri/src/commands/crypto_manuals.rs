@@ -25,7 +25,7 @@ pub fn analyze_frm_command(frm_path: String) -> Result<FrmEntropyReport, String>
 /// Dumps and validates the Table of Contents (TOC) descriptors in PANA_DVD.FRM.
 #[tauri::command]
 pub fn dump_frm_toc_command(frm_path: String) -> Result<FrmTocDumpReport, String> {
-    panadiga_core::crypto::dump_toc(Path::new(&frm_path), None).map_err(|e| e.to_string())
+    panadiga_core::crypto::read_and_analyze_frm_toc(Path::new(&frm_path)).map_err(|e| e.to_string())
 }
 
 /// Computes the 64-bit ECB Known-Plaintext Attack (KPA) codebook dictionary.

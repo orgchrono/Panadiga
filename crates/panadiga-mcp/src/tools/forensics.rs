@@ -20,7 +20,8 @@ use panadiga_core::nvram::{calculate_hashes, clean_flash_nvram_slice};
 use panadiga_core::re::{
     DEFAULT_NOR_STUB_LOAD_ADDR, MainPassthroughMode, PROG061_EXPECTED_SIZE, Prog061BgoPatchMode,
     build_passthrough_rsp_plan, build_readonly_nor_dumper_stub, inspect_main_passthrough_sites,
-    inspect_prog061_bgo_sites, patch_main_passthrough_file, patch_prog061_or_build_digadiag,
+    inspect_prog061_bgo_sites, patch_main_passthrough_file,
+    patch_prog061_or_build_digadiag_with_policy,
 };
 use serde_json::{Value, json};
 use std::fs::{self, File};
@@ -311,7 +312,11 @@ pub fn handle_nor_dumper_stub(args: &Value, workspace_root: &Path) -> Result<Val
 }
 
 pub fn handle_bgo_unbrick(args: &Value, workspace_root: &Path) -> Result<Value> {
-    let mode_str = optional_non_empty_str(args, "mode").unwrap_or("auto_format");
+    let mode_str = optional_non_empty_str(args, "mode").unwrap_or("bypass");
+    let allow_unsafe_bgo_format = args
+        .get("allow_unsafe_bgo_format")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
     let wrap = args
         .get("wrap_as_digadiag")
         .and_then(|v| v.as_bool())
@@ -340,7 +345,13 @@ pub fn handle_bgo_unbrick(args: &Value, workspace_root: &Path) -> Result<Value> 
         },
         |in_path, out_path| {
             let mode: Prog061BgoPatchMode = mode_str.parse()?;
-            let report = patch_prog061_or_build_digadiag(in_path, out_path, mode, wrap)?;
+            let report = patch_prog061_or_build_digadiag_with_policy(
+                in_path,
+                out_path,
+                mode,
+                wrap,
+                allow_unsafe_bgo_format,
+            )?;
             Ok(serde_json::to_value(report)?)
         },
     )

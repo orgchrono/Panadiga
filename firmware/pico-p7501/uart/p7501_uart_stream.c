@@ -43,8 +43,12 @@ static absolute_time_t begin_pio_stream_window(
     const char *label,
     const p7501_window_boot_spec_t *spec
 ) {
-    printf("=== %s: PIO1 %" PRIu32 " 8N1 (window=%" PRIu32 " ms, hold=%" PRIu32 " ms) ===\n",
-           label, p7501_pio_get_baud(), spec->window_ms, spec->jig_hold_ms);
+    printf("=== %s: PIO1 %" PRIu32 " %s (window=%" PRIu32 " ms, hold=%" PRIu32 " ms) ===\n",
+           label,
+           p7501_pio_get_baud(),
+           p7501_framing_name(p7501_pio_get_framing()),
+           spec->window_ms,
+           spec->jig_hold_ms);
     fflush(stdout);
     p7501_led_set_auto_mode(LED_MODE_BUS_ACTIVE);
     p7501_pio_begin_rx_session_ex(spec->boot_action, spec->jig_hold_ms);

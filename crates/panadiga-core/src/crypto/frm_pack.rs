@@ -6,7 +6,7 @@
 use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
 
-use super::codec::{pad_to_block, write_padded_ascii};
+use super::codec::{pad_to_block, parse_u32_radix, write_padded_ascii};
 use super::extrhead::{ExtrheadCryptMode, pack_extrhead, parse_extrhead_header};
 use super::feistel::{feistel_decrypt_buffer, feistel_encrypt_buffer};
 use super::toc::{decrypt_and_parse_frm_toc, parse_sd_frm_toc};
@@ -296,9 +296,59 @@ pub fn verify_packed_frm_roundtrip(
     Ok(entries.into_iter().take(expected_modules).collect())
 }
 
+/// Unpacks a Feistel-encrypted `PANA_DVD.FRM` image into `FrmPackModule` descriptors preserving factory TOC fields.
+pub fn unpack_dvd_frm_to_modules(dvd_bytes: &[u8]) -> Result<Vec<FrmPackModule>> {
+    let entries = decrypt_and_parse_frm_toc(dvd_bytes);
+    if entries.is_empty()
+        || entries
+            .iter()
+            .any(|e| !e.list_sum_valid || e.module_name.trim().is_empty())
+    {
+        bail!("Input does not contain a valid Feistel 48B PANA_DVD.FRM TOC");
+    }
+
+    let mut out = Vec::with_capacity(entries.len());
+    for entry in entries {
+        let start = entry.module_offset as usize;
+        let end = start
+            .checked_add(entry.module_size as usize)
+            .context("PANA_DVD.FRM module offset overflow")?;
+        if end > dvd_bytes.len() || entry.module_size == 0 {
+            bail!(
+                "PANA_DVD.FRM module '{}' range 0x{:X}..0x{:X} exceeds container ({} B)",
+                entry.module_name,
+                start,
+                end,
+                dvd_bytes.len()
+            );
+        }
+        let mut payload = dvd_bytes[start..end].to_vec();
+        feistel_decrypt_buffer(
+            &mut payload,
+            &PANA_FEISTEL_ROUND_KEY_32B,
+            &PANA_FEISTEL_SBOX_256,
+        );
+        let ver_u32 = parse_u32_radix(&entry.version_u16_hex)?;
+        let mut module = FrmPackModule::new(entry.module_name, payload);
+        module.version_u16 = u16::try_from(ver_u32).context("TOC version_u16 out of range")?;
+        module.hardware_family = entry.hardware_family;
+        module.target_flag = entry.target_flag;
+        module.model_group = entry.model_group;
+        out.push(module);
+    }
+    Ok(out)
+}
+
+/// Converts a Feistel-encrypted `PANA_DVD.FRM` container into a factory plaintext 64B-TOC `PANA__SD.FRM`.
+pub fn convert_pana_dvd_to_factory_sd(dvd_bytes: &[u8]) -> Result<(Vec<u8>, FrmPackReport)> {
+    let modules = unpack_dvd_frm_to_modules(dvd_bytes)?;
+    pack_frm(&modules, FrmContainerMode::Sd, None)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::nvram::calculate_hashes;
 
     #[test]
     fn test_verify_packed_frm_roundtrip_for_sd_sd48_and_dvd() {
@@ -323,6 +373,35 @@ mod tests {
             let last = image.len() - 1;
             image[last] ^= 0x55;
             assert!(verify_packed_frm_roundtrip(&image, mode, 2).is_err());
+        }
+    }
+
+    #[test]
+    fn test_convert_pana_dvd_to_factory_sd_synthetic_and_workspace_roundtrip() {
+        let mut m_drv = FrmPackModule::new("DRV S211", vec![0x12u8; 64]);
+        m_drv.version_u16 = 0x975E;
+        let mut m_prog = FrmPackModule::new("PROG061 ", vec![0x34u8; 32]);
+        m_prog.version_u16 = 0x1202;
+        m_prog.target_flag = 1;
+        let mut m_main = FrmPackModule::new("MAIN3060NP", vec![0x56u8; 96]);
+        m_main.version_u16 = 0x96AA;
+        let mods = vec![m_drv, m_prog, m_main];
+
+        let (dvd_frm, _) = pack_frm(&mods, FrmContainerMode::Dvd, None).unwrap();
+        let (expected_sd, _) = pack_frm(&mods, FrmContainerMode::Sd, None).unwrap();
+        let (converted_sd, _) = convert_pana_dvd_to_factory_sd(&dvd_frm).unwrap();
+        assert_eq!(converted_sd, expected_sd);
+
+        let ws_dvd = resolve_workspace_root().join("firmware_and_images/PANA_DVD.FRM");
+        if ws_dvd.is_file() {
+            let dvd_real = std::fs::read(&ws_dvd).unwrap();
+            let (sd_real, _) = convert_pana_dvd_to_factory_sd(&dvd_real).unwrap();
+            assert_eq!(sd_real.len(), 7_533_792);
+            let (_, sha) = calculate_hashes(&sd_real);
+            assert_eq!(
+                sha,
+                "edbe9ea8ec8a4905c5c891d37484205e2897c12a50f73d272a268ebe91bb7a1a"
+            );
         }
     }
 }

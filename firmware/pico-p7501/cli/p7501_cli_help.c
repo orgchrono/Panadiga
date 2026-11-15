@@ -9,6 +9,7 @@
 
 #include "gdb/gdb_rsp.h"
 #include "p7501_types.h"
+#include "uart/p7501_uart_codec.h"
 #include "uart/p7501_uart_pio_engine.h"
 
 #include <inttypes.h>
@@ -28,8 +29,9 @@ void p7501_cli_print_banner(void) {
     printf("\n====================================================================\n");
     printf("   PANADIGA: Panasonic DMR-EH55 P7501 Async UART & Boot Bench Probe\n");
     printf("   MCU Host : %s\n", cli_mcu_name());
-    printf("   Bus      : P7501 (B6B-ZR-3R4) %" PRIu32 " 8N1 (PIO1) + SW_UART / XRESET / NSW5V(Hi-Z)\n",
-           p7501_pio_get_baud());
+    printf("   Bus      : P7501 (B6B-ZR-3R4) %" PRIu32 " %s (PIO1) + SW_UART / XRESET / NSW5V(Hi-Z)\n",
+           p7501_pio_get_baud(),
+           p7501_framing_name(p7501_pio_get_framing()));
     printf("   %s\n", gdb_rsp_get_status_info());
     printf("   Type HELP for available P7501 UART, PIO1, FMU, diag, Flash, LED & GDB commands.\n");
     printf("====================================================================\n");
@@ -50,6 +52,7 @@ void p7501_cli_print_help(void) {
     printf("  PWRTRACE [ms] [boot]                 - Boot ADC0 rail & NSW5V/RXD/TXD glitch logger\n");
     printf("  BOOTTRACE [ms] [boot]                - Correlated PIO1 UART + GP3..5 + ADC0 profiler\n");
     printf("  PIOLOGIC [ms] [boot] [khz] [CTRL]    - PIO0 4-ch (GP2..5) edge & FMU timing sampler\n");
+    printf("  SDSNIFF [ms] [boot]                  - Passive Hi-Z PIO0 SD sniffer (GP10..15, CRC16/lane)\n");
     printf("  JIGSWEEP [HOLD|DELAY|PREBOOT] [ms..] - SW_UART latch window & pre-DDR Bootrom sweep\n");
     printf("  PANARSP [ms] [boot] [WAIT:x] <act>   - MAIN _dev_SERIAL RSP (MEM/WMEM/DUMPNOR/PASSTHROUGH/CALL)\n");
     printf("  DIAGWATCH [ms] [boot] [act] [rel]    - Autonomous SC0 boot watchdog & PANAMON1 trigger\n");

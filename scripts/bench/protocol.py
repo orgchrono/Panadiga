@@ -34,6 +34,7 @@ SAFE_BENCH_COMMANDS: Final[tuple[str, ...]] = (
     "PWRTRACE",
     "BOOTTRACE",
     "PIOLOGIC",
+    "SDSNIFF",
     "JIGSWEEP",
     "DIAGWATCH",
     "PANARSP",

@@ -42,8 +42,12 @@ pub fn handle_sd_unbrick_kit(args: &Value, workspace_root: &Path) -> Result<Valu
         "prepare_sd" => {
             let out_dir = require_non_empty_str(args, "output_dir")?;
             let bgo_mode: Prog061BgoPatchMode = optional_non_empty_str(args, "bgo_mode")
-                .unwrap_or("auto_format")
+                .unwrap_or("bypass")
                 .parse()?;
+            let allow_unsafe_auto_format = args
+                .get("allow_unsafe_auto_format")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
             let passthrough_mode: MainPassthroughMode =
                 optional_non_empty_str(args, "passthrough_mode")
                     .unwrap_or("av_passthrough")
@@ -64,6 +68,12 @@ pub fn handle_sd_unbrick_kit(args: &Value, workspace_root: &Path) -> Result<Valu
                 .get("write_extracted_sources")
                 .and_then(|v| v.as_bool())
                 .unwrap_or(false);
+            let expected_main_build =
+                optional_non_empty_str(args, "expected_main_build").map(str::to_string);
+            let allow_target_mismatch = args
+                .get("allow_target_mismatch")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
 
             let rep = prepare_sd_unbrick_kit(&SdUnbrickKitRequest {
                 output_dir: resolve_workspace_path(workspace_root, out_dir),
@@ -76,11 +86,14 @@ pub fn handle_sd_unbrick_kit(args: &Value, workspace_root: &Path) -> Result<Valu
                 drv_path: optional_non_empty_str(args, "drv_path")
                     .map(|p| resolve_workspace_path(workspace_root, p)),
                 bgo_mode,
+                allow_unsafe_auto_format,
                 main_passthrough_mode: passthrough_mode,
                 include_pana_sd,
                 unlock_hdd_dynamic,
                 hdd_target_gb,
                 write_extracted_sources: save_sources,
+                expected_main_build,
+                allow_target_mismatch,
             })?;
             Ok(serde_json::to_value(rep)?)
         }

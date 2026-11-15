@@ -318,7 +318,7 @@ fn test_extrhead_pack_unpack_and_frm_packing() {
 
     let sd_path = std::env::temp_dir().join("panadiga_test_sd_toc_dump.frm");
     std::fs::write(&sd_path, &sd_frm).unwrap();
-    let sd_dump = panadiga_core::crypto::toc::dump_toc(&sd_path, None);
+    let sd_dump = dump_toc(&sd_path, None);
     let _ = std::fs::remove_file(&sd_path);
     assert_eq!(sd_dump.unwrap().file_size_bytes, sd_frm.len());
 }

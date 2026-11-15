@@ -96,7 +96,7 @@ sequenceDiagram
         Note over SD: "Atencao -91006: falha na 2a chamada GetSD_Status pos-chaveamento 4-bit (0x89001850 &= 0x7fff)"
         SD->>IPL: "Le 0x20000 (131.072 B) de DIGADIAG.FRM -> descompacta para 0x50400000"
         IPL->>SD: "JMP 0x50400000 (PROG061 Patched via panadiga_bgo_unbrick)"
-        SD->>BGO: "0x5040A2CD -> call32 0x50401F3C (nfrom_format) + bypass 0x504230F0/0x50405097"
+        SD->>BGO: "bypass padrão: 0x504230F0/0x50405097 (auto_format 0x50401F3C bloqueado sem override)"
         BGO-->>IDE: "BGO OK -> PROG061 inicializa DAVIS_Connect_IDE(1) -> FVU / Boot MAIN"
     end
 ```
@@ -126,15 +126,15 @@ A auditoria adversarial provou nos esquemáticos (`vol2_schematics.pdf` pp. 46, 
 ## 5. Por Que Gravar o Firmware no HDD Não Dá Start no Brick Pré-MAIN — e Como Resolver
 
 1. **Bloqueio Pré-IDE (`0x44004ACC`):**
-   Mesmo que o HDD SATA conectado na `StarTech IDE2SAT2` esteja perfeitamente clonado ou desbloqueado para 250 GB (`panadiga_hdd_capacity`), no brick atual a Digital PCB trava no **Bootloader NOR de 1º estágio (`0x80000000`)** antes mesmo de inicializar o controlador IDE (`FUN_44009741`):
+   Mesmo que o HDD SATA conectado na `StarTech IDE2SAT2` (`Marvell 88SA8052`) esteja perfeitamente clonado ou desbloqueado para 250 GB (`panadiga_hdd_capacity`), no brick atual a Digital PCB trava no **Bootloader NOR de 1º estágio (`0x80000000`)** antes mesmo de inicializar o controlador IDE (`FUN_44009741`):
    * `FUN_440049eb` executa `bgo_driver_init()` (`FUN_4401e636`) -> falha com **`BGO driver init failed[1].`** -> `BEQ 0x44004ACC` chama `boot_panic_or_halt_7812` -> Timer MCU `IC7501` contabiliza `Main hung-up time changed 255[s].` e derruba em **`U99`**.
 2. **Soluções Ordenadas para Sair do Brick Pré-MAIN:**
    * **Solução 1 — Sem Dessolda via `JIG:2500` → `SDDIAG` + `DIGADIAG.FRM` BGO Unbrick (`panadiga_bgo_unbrick`):**
      * No modo `JIG` (`SW_UART` mantido em LOW $\ge 2500\text{ ms}$ até passar `DDR CHECK: OK`), `FUN_44006cd9` salta a checagem de `BGO` do boot normal e executa `SDDIAG` (`FUN_44007ba5`).
-     * Use **`panadiga_bgo_unbrick`** em `eh55_frm_PROG061_BOOT.bin` (`mode = "auto_format"`, `wrap_as_digadiag = true`) para gerar um `DIGADIAG.FRM` de exatamente **`131.072` bytes (`0x20000`)**:
+     * Use **`panadiga_bgo_unbrick`** em `eh55_frm_PROG061_BOOT.bin` (**`mode = "bypass"`** padrão seguro ou `uart_monitor`, `wrap_as_digadiag = true`) para gerar um `DIGADIAG.FRM` de exatamente **`131.072` bytes (`0x20000`)**:
        * **`0x504230F0` (`0x000230F0`):** `C8 0A -> CA 0A` (bypassa checagem de soma `N(N+1)/2` em `bgo_sum_23058`).
        * **`0x50405097` (`0x00005097`):** `C8 15 -> CA 15` (bypassa falha quando `"INFO"` em `DeviceInfo` está ausente/corrompido).
-       * **`0x5040A2CD` (`0x0000A2CD`):** redireciona o ramo de falha `BGO driver init failed` diretamente para a rotina órfã de fábrica **`nfrom_format` (`0x50401F3C`, `0` chamadores estáticos)**, formatando/reconstruindo as tabelas BGO (`0x50496D10..0x50497510`) e prosseguindo para `Control information init` (`0x5040A2E1`).
+       * **`0x5040A2CD` (`0x0000A2CD`):** modo `auto_format` (`nfrom_format @ 0x50401F3C`) fica **bloqueado fail-closed** sem `--allow-unsafe-bgo-format` (atua na janela CS1 `0x84200000..0x843FFFFF` e ponteiros RAM `0x504F8464..6C` antes de `0x504802B0==1`); use **`bypass`** (padrão) ou **`uart_monitor`**.
      * **Cuidado crítico com erro `-91006` no SD Card (`Fuji 2 GB`):** `FUN_4402791a` passa na 1ª chamada `GetSD_Status` (**1-bit**), chaveia para **4-bit** (`0x89001850 &= 0x7fff`) e falha apenas na **2ª leitura `ACMD13` em 4-bit** quando há mau contato/impedância no cabo `P6802 <-> P53501`, resistores `RX6801`/`RX6802` ou resposta `SD_STATUS[2] != 0` do cartão. Exige cartão **SDSC $\le 2\text{ GB}$ em `FAT16`/`FAT12` ($\le 65.525$ clusters)** com as 4 vias `DAT0..DAT3` íntegras.
    * **Solução 2 — Bancada TSOP-48 (`IC5001` `S29JL064H`):**
      * Se nem `SDDIAG` (por `-91006` físico no slot/cartão) nem `CDDIAG` (por falha laser `0x83A7` no `DRV`) conseguirem carregar payload para SDRAM, o caminho determinístico sem risco é extrair o dump de 8 MB da `IC5001`, aplicar sanitização de NVRAM (`SA134..SA141`, `0x7F0000..0x7FFFFF`) + reconstrução da partição BGO (`0x84200000..0x843FFFFF`) em imagem limpa validada antes da regravação na TSOP-48.
@@ -183,7 +183,7 @@ Muitos entusiastas utilizam gravadores Panasonic DIGA como **Time Base Corrector
 ### Sequência Prática Recomendada na Bancada Agora
 
 1. **Não descarte o HDD + `StarTech IDE2SAT2`:** deixe o jumper da placa StarTech estritamente em **`MASTER`**. Aplique o patch de capacidade (`panadiga_hdd_capacity` modo `dynamic` ou `cap` 250 GB) quando for preparar o `MAIN` no disco.
-2. **Ataque primeiro o brick pré-MAIN (`BGO driver init failed[1].`):** gere o `DIGADIAG.FRM` (`131.072 B`) com `panadiga_bgo_unbrick` (`auto_format`) e teste via `JIG:2500` em cartão **SDSC $\le 2\text{ GB}$ FAT16** (resolvendo primeiro a causa física do `-91006` nas vias `DAT1..DAT3` do flat `P6802` / leitor SD).
+2. **Ataque primeiro o brick pré-MAIN (`BGO driver init failed[1].`):** após medição a frio das vias `DAT1..DAT3` (`P6801`/`P6802`/`VEP73136A`) e desconexão de eventual flat ODD aquecido, gere o `DIGADIAG.FRM` (`131.072 B`) com `panadiga_bgo_unbrick` (`bypass` padrão seguro ou `uart_monitor`) e teste via `JIG:2500` em cartão **SDSC $\le 2\text{ GB}$ FAT16** (usando `SDSNIFF` se `-91006` persistir).
 3. **Se `SDDIAG` não subir por barramento 4-bit físico e o ODD continuar com `0x83A7`:** faça a leitura externa TSOP-48 da **`IC5001`** (8 MB) para backup integral antes de qualquer escrita, recupere a região BGO/NVRAM e então faça o dump de validação + passthrough TBC pelo **`MN2DS0009` + `IC3001`**.
 
 ---
@@ -204,11 +204,11 @@ Muitos entusiastas utilizam gravadores Panasonic DIGA como **Time Base Corrector
 Para eliminar a subutilização do microcontrolador **Raspberry Pi Pico (RP2040 / RP2350)** na bancada (`COM10`), o firmware C11 em `firmware/pico-p7501/` e o workspace Rust (`panadiga-core` + `panadiga-mcp`, agora com **`17` ferramentas MCP**) consolidam as soluções das 4 frentes críticas:
 
 1. **Destravamento Pré-MAIN (`SDDIAG -91006` / `CDDIAG 0x83A7`) & Monitor `PANAMON1`:**
-   * `DIGADIAG.FRM` (`panadiga_bgo_unbrick`) cabe dentro do teto estrito de `131.072` B (`0x20000`), mantendo checksum Adler-32 strided válido em `0x50400000` nos modos `inspect`, `bypass_only`, `auto_format` (`0x50401F3C`) e **`uart_monitor`** (menu interativo **`PANAMON1>[B/F/D/Q]`** em `0x50439494` permitindo `B`=bypass BGO, `F`=executar `nfrom_format`, `D`=dump de 8 MB NOR em `0x84000000`, `Q`=abortar).
+   * `DIGADIAG.FRM` (`panadiga_bgo_unbrick`) cabe dentro do teto estrito de `131.072` B (`0x20000`), mantendo checksum Adler-32 strided válido em `0x50400000` nos modos `inspect`, `bypass_only` (padrão seguro), **`uart_monitor`** (menu interativo **`PANAMON1>[B/F/D/Q]`** em `0x50439494`: `B`=bypass BGO, `F`=executar `nfrom_format`, `D`=dump de 8 MB NOR em `0x84000000`, `Q`=abortar) e `auto_format` (`0x50401F3C`, bloqueado fail-closed sem `--allow-unsafe-bgo-format`).
    * Requer barramento SD de 4 linhas (`DAT0..DAT3` entre `P6801` e `P53501`) íntegro na 2ª consulta `GetSD_Status` pós-`ACMD6`; caso `SW_OPT_BOOT` (`P65` / `DR_POWER_ON`) ou o pickup óptico (`0x83A7`) impeça `CDDIAG`, `SDDIAG` via `JIG:2500` permanece a rota primária sem dessolda.
 2. **Protocolo `_dev_SERIAL` (`0x574F0775`) & Execução Autônoma no Pico (`PANARSP` + `DIAGWATCH`):**
    * O Pico agora executa nativamente sobre a PIO1 (`115200 8N1`, TX `GP4`, RX `GP2`, `SW_UART` `GP26`, `XRESET` `GP5`, `NSW5V` Hi-Z `GP3`) os comandos autônomos de **`PANARSP`** e **`DIAGWATCH`**:
-     * **Handshake 4-byte (`MAGIC`):** envia `0x0E, 0x02, 0x02, 0x04` (avançando a máquina de estados `0x515B2E60` de `0 -> 4`) seguido de `0x15` (`NAK`).
+     * **Handshake 3-byte (`MAGIC`):** envia `0x0E, 0x04, 0x02` (`DEV_SERIAL_HANDSHAKE_BYTES`, avançando a máquina de estados `0x515B2E60`: `0 -> 2 -> 4`) seguido de `0x15` (`NAK`).
      * **`PANARSP WMEM:<addr_hex>,<data_hex>` & `PANARSP WRITE32:<addr_hex>,<u32_hex>`:** constrói e transmite quadros GDB RSP `$M<addr>,<len>:<hex>#<csum>` diretamente da CLI do Pico sem exigir PC/Python externo.
      * **`PANARSP DUMPNOR [<addr_hex> [<len_hex>]]` (`DUMPNOR:<start>,<len>`):** monta autonomamente os `162` B do stub read-only `PANADMP1..PANADONE`, faz upload em `0x51800000` via `$M`, redireciona `0x515B2E40 -> 0x51800000`, dispara `$g#67` e faz stream binário pela USB CDC.
      * **`PANARSP CALL:<addr_hex>`:** executa o handshake + `0x15`, grava `<addr_hex>` (32 bits LE) no ponteiro do callback serial registrado **`0x515B2E40`** (`DEV_SERIAL_CALLBACK_VA`, alternativamente ao contexto salvo de ISR em `0x5316AE8C` + offset `0x64`) via `$M515B2E40,4:<le_hex>#<xx>`, e envia `$g#67` para acionar a rotina alvo em RAM (como `0x50401F3C` ou o dumper em `0x51800000`).

@@ -32,6 +32,7 @@
 #include "diag/p7501_diag_boottrace.h"
 #include "diag/p7501_jigsweep_codec.h"
 #include "diag/p7501_piologic_codec.h"
+#include "diag/p7501_diag_sdsniff.h"
 #include "hal/p7501_hw.h"
 #include "hal/p7501_led.h"
 #include "gdb/gdb_rsp.h"
@@ -239,6 +240,7 @@ static const p7501_cli_cmd_entry_t k_cli_commands[] = {
     { "PWRTRACE",      p7501_cmd_pwrtrace },
     { "BOOTTRACE",     p7501_cmd_boottrace },
     { "PIOLOGIC",      p7501_cmd_piologic },
+    { "SDSNIFF",       p7501_cmd_sdsniff },
     { "JIGSWEEP",      p7501_cmd_jigsweep },
     { "PANARSP",       p7501_cmd_pana_rsp },
     { "DIAGWATCH",     p7501_cmd_diag_watch },

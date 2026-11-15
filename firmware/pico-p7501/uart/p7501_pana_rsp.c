@@ -353,7 +353,7 @@ void p7501_cmd_pana_rsp(const char *arg) {
             panarsp_drain_for_ms(&s_cap, 30u, false, step_off);
         }
         if (spec.send_nak_prefix && spec.action != PANA_RSP_ACT_MAGIC) {
-            static const uint8_t k_nak = 0x15u;
+            static const uint8_t k_nak = P7501_RSP_NAK_BYTE;
             const size_t step_off = s_cap.len;
             p7501_pio_tx_bytes(&k_nak, 1u, false);
             panarsp_drain_for_ms(&s_cap, (spec.action == PANA_RSP_ACT_NAK) ? 350u : 80u, true, step_off);
@@ -366,13 +366,16 @@ void p7501_cmd_pana_rsp(const char *arg) {
                 break;
             }
             case PANA_RSP_ACT_PASSTHROUGH: {
-                static const char *const k_pass_seq[] = {
-                    "M5771ABFB,6:8001f0fccbcb",
-                    "M574F7B8C,4:ccd000cb",
-                    "M574F7C5C,7:8000cbcbcbcbcb",
-                };
-                printf("[PANARSP] Applying 3 MAIN AV TBC E-E passthrough sites via $M...\n");
-                primary_off = panarsp_tx_sequence(&s_cap, k_pass_seq, 3u, 250u);
+                static const char *const k_pass_seq[P7501_TBC_PASSTHROUGH_SEQ_LEN] =
+                    P7501_TBC_PASSTHROUGH_SEQ_INIT;
+                printf("[PANARSP] Applying %u MAIN AV TBC E-E passthrough sites via $M...\n",
+                       (unsigned)P7501_TBC_PASSTHROUGH_SEQ_LEN);
+                primary_off = panarsp_tx_sequence(
+                    &s_cap,
+                    k_pass_seq,
+                    P7501_TBC_PASSTHROUGH_SEQ_LEN,
+                    250u
+                );
                 break;
             }
             case PANA_RSP_ACT_CALL: {

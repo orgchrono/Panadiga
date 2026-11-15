@@ -225,7 +225,7 @@ fn test_cli_args_parsing_matrix() {
             "--outdir",
             "sd_out",
             "--bgo-mode",
-            "auto_format",
+            "bypass",
             "--passthrough-mode",
             "av_passthrough",
         ])

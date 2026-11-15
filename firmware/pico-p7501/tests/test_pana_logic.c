@@ -11,6 +11,7 @@
 #include "uart/p7501_diag_watch_codec.h"
 #include "flash/p7501_flash.h"
 #include "diag/p7501_piologic_codec.h"
+#include "diag/p7501_sds_codec.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -70,9 +71,10 @@ static void test_pana_rsp_frame_codec(void) {
     assert(p7501_rsp_inspect_frame(bin_frame, bin_frame_len, &info));
     assert(info.found && !info.checksum_ok);
 
-    /* Verify 4-byte UART state-machine handshake & 32-bit LE `$M` write helper. */
-    assert(k_p7501_rsp_handshake[0] == 0x0Eu && k_p7501_rsp_handshake[1] == 0x02u);
-    assert(k_p7501_rsp_handshake[2] == 0x02u && k_p7501_rsp_handshake[3] == 0x04u);
+    /* Verify 3-byte `_dev_SERIAL` UART state-machine handshake (`0E 04 02`) & 32-bit LE `$M`. */
+    assert(P7501_RSP_HANDSHAKE_LEN == 3u);
+    assert(k_p7501_rsp_handshake[0] == 0x0Eu && k_p7501_rsp_handshake[1] == 0x04u);
+    assert(k_p7501_rsp_handshake[2] == 0x02u);
 
     char wr_frame[48];
     const size_t wr_len = p7501_rsp_build_write_u32(
@@ -325,6 +327,111 @@ static void test_rsp_boot_prose_does_not_trip_nak(void) {
     assert(!info.found && info.nak_minus && !info.ack_plus);
 }
 
+static void sds_emit_cmd_frame(p7501_sds_state_t *st, bool dir_host, uint8_t idx, uint32_t arg) {
+    uint8_t raw5[5];
+    raw5[0] = (uint8_t)((dir_host ? 0x40u : 0x00u) | (idx & 0x3Fu));
+    raw5[1] = (uint8_t)(arg >> 24u);
+    raw5[2] = (uint8_t)(arg >> 16u);
+    raw5[3] = (uint8_t)(arg >> 8u);
+    raw5[4] = (uint8_t)arg;
+    const uint8_t crc7 = p7501_sds_crc7_bytes(raw5, 5u);
+    const uint8_t frame[6] = {
+        raw5[0], raw5[1], raw5[2], raw5[3], raw5[4], (uint8_t)((crc7 << 1u) | 1u)
+    };
+    p7501_sds_feed_sample(st, 0x1Fu); /* idle clock */
+    for (size_t b = 0u; b < 6u; ++b) {
+        for (int bit = 7; bit >= 0; --bit) {
+            const uint8_t cmd_b = (uint8_t)((frame[b] >> (uint8_t)bit) & 1u);
+            p7501_sds_feed_sample(st, (uint8_t)(0x1Eu | cmd_b)); /* DAT0..3 idle HIGH */
+        }
+    }
+    p7501_sds_feed_sample(st, 0x1Fu);
+}
+
+static void sds_emit_4bit_block(
+    p7501_sds_state_t *st,
+    const uint8_t *payload,
+    size_t len,
+    uint8_t corrupt_lane_mask
+) {
+    uint16_t calc_crc[4] = { 0u, 0u, 0u, 0u };
+    /* Start bit: all 4 data lanes go LOW while CMD stays HIGH (1). */
+    p7501_sds_feed_sample(st, P7501_SDS_BIT_CMD);
+
+    for (size_t i = 0u; i < len; ++i) {
+        const uint8_t nibs[2] = {
+            (uint8_t)((payload[i] >> 4u) & 0x0Fu),
+            (uint8_t)(payload[i] & 0x0Fu)
+        };
+        for (size_t k = 0u; k < 2u; ++k) {
+            for (uint8_t lane = 0u; lane < 4u; ++lane) {
+                calc_crc[lane] = p7501_sds_crc16_step(
+                    calc_crc[lane], (uint8_t)((nibs[k] >> lane) & 1u)
+                );
+            }
+            p7501_sds_feed_sample(st, (uint8_t)(P7501_SDS_BIT_CMD | (nibs[k] << 1u)));
+        }
+    }
+
+    for (int b = 15; b >= 0; --b) {
+        uint8_t nib = 0u;
+        for (uint8_t lane = 0u; lane < 4u; ++lane) {
+            uint8_t bit = (uint8_t)((calc_crc[lane] >> (uint8_t)b) & 1u);
+            if (b == 0 && ((corrupt_lane_mask >> lane) & 1u) != 0u) {
+                bit ^= 1u;
+            }
+            nib |= (uint8_t)(bit << lane);
+        }
+        p7501_sds_feed_sample(st, (uint8_t)(P7501_SDS_BIT_CMD | (nib << 1u)));
+    }
+    p7501_sds_feed_sample(st, 0x1Fu); /* end bit HIGH */
+}
+
+static void test_sds_bus_sniffer_codec(void) {
+    const uint8_t cmd0[5] = { 0x40u, 0x00u, 0x00u, 0x00u, 0x00u };
+    assert(((p7501_sds_crc7_bytes(cmd0, 5u) << 1u) | 1u) == 0x95u);
+    const uint8_t cmd8[5] = { 0x48u, 0x00u, 0x00u, 0x01u, 0xAAu };
+    assert(((p7501_sds_crc7_bytes(cmd8, 5u) << 1u) | 1u) == 0x87u);
+
+    p7501_sds_spec_t sds_arg;
+    assert(p7501_sds_parse_args("5000 NORMAL LEN:64", &sds_arg));
+    assert(sds_arg.boot.window_ms == 5000u && sds_arg.default_block_bytes == 64u);
+    assert(!p7501_sds_parse_args("4000 NORMAL LEN:128", &sds_arg));
+
+    p7501_sds_state_t st;
+    p7501_sds_init(&st, 0u);
+    sds_emit_cmd_frame(&st, true, 0u, 0u);
+    sds_emit_cmd_frame(&st, true, 55u, 0x12340000u);
+    sds_emit_cmd_frame(&st, false, 55u, 0x00000120u);
+    sds_emit_cmd_frame(&st, true, 6u, 0x00000002u); /* ACMD6 4-bit */
+    sds_emit_cmd_frame(&st, false, 6u, 0x00000920u);
+    assert(st.bus_width == 4u && st.saw_cmd55 && st.saw_acmd6_4bit && st.cmd_crc_err == 0u);
+
+    sds_emit_cmd_frame(&st, true, 55u, 0x12340000u);
+    sds_emit_cmd_frame(&st, false, 55u, 0x00000920u);
+    sds_emit_cmd_frame(&st, true, 13u, 0u); /* ACMD13 */
+    sds_emit_cmd_frame(&st, false, 13u, 0x00000920u);
+    assert(st.saw_acmd13 && st.expecting_acmd13);
+
+    uint8_t sd_status[64];
+    memset(sd_status, 0, sizeof(sd_status));
+    sd_status[0] = 0x80u; /* DAT_BUS_WIDTH = 2 (4-bit) */
+    sd_status[2] = 0x00u; /* SD_CARD_TYPE = 0x0000 (regular RW SD) */
+    sd_status[3] = 0x00u;
+    sds_emit_4bit_block(&st, sd_status, sizeof(sd_status), 0x00u);
+    assert(st.data_blocks_ok == 1u && st.data_crc_err == 0u);
+    assert(st.acmd13_captured && st.acmd13_crc_ok);
+    assert(st.acmd13_dat_bus_width == 2u && st.acmd13_sd_card_type == 0x0000u);
+
+    /* Now fault ONLY DAT2 (bit 2 -> mask 0x04) on a second ACMD13 and confirm isolated lane error. */
+    sds_emit_cmd_frame(&st, true, 55u, 0x12340000u);
+    sds_emit_cmd_frame(&st, true, 13u, 0u);
+    sds_emit_4bit_block(&st, sd_status, sizeof(sd_status), 0x04u);
+    assert(st.data_crc_err == 1u && st.last_fail_lane_mask == 0x04u);
+    assert(st.lane_crc_err[0] == 0u && st.lane_crc_err[1] == 0u);
+    assert(st.lane_crc_err[2] == 1u && st.lane_crc_err[3] == 0u);
+}
+
 int p7501_run_pana_logic_tests(void) {
     test_pana_rsp_frame_codec();
     test_rsp_boot_prose_does_not_trip_nak();
@@ -333,6 +440,7 @@ int p7501_run_pana_logic_tests(void) {
     test_flash_geometry_and_bgo();
     test_pana_dumpnor_stub_and_args();
     test_diag_watch_codec();
-    printf("[HOST-TEST] PANARSP + DUMPNOR + DIAGWATCH + FlashGeo + PIOLOGIC passed.\n");
+    test_sds_bus_sniffer_codec();
+    printf("[HOST-TEST] PANARSP + DUMPNOR + DIAGWATCH + FlashGeo + PIOLOGIC + SDSNIFF passed.\n");
     return 0;
 }

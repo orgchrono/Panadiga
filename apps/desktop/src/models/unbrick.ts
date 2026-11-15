@@ -83,11 +83,14 @@ export interface SdUnbrickKitRequestDto {
   main_path?: string;
   drv_path?: string;
   bgo_mode?: 'auto_format' | 'bypass' | 'uart_monitor' | 'factory';
+  allow_unsafe_auto_format?: boolean;
   main_passthrough_mode?: 'av_passthrough' | 'factory_original';
   include_pana_sd?: boolean;
   unlock_hdd_dynamic?: boolean;
   hdd_target_gb?: number | null;
   write_extracted_sources?: boolean;
+  expected_main_build?: string;
+  allow_target_mismatch?: boolean;
 }
 
 export interface SdUnbrickKitReport {

@@ -314,7 +314,11 @@ pub fn tool_definitions() -> Vec<Value> {
                     "mode": {
                         "type": "string",
                         "enum": ["bypass", "auto_format", "uart_monitor", "factory"],
-                        "description": "Patch strategy when action='patch' (default 'auto_format'; 'uart_monitor' embeds interactive PANAMON1 UART0 monitor @ 0x50439494)."
+                        "description": "Patch strategy when action='patch' (default 'bypass'; 'auto_format' requires allow_unsafe_bgo_format=true due to unverified nfrom_format RAM pointers; 'uart_monitor' embeds interactive PANAMON1 UART0 monitor @ 0x50439494)."
+                    },
+                    "allow_unsafe_bgo_format": {
+                        "type": "boolean",
+                        "description": "Explicitly unlock unsafe 'auto_format' mode (fail-closed false by default)."
                     },
                     "wrap_as_digadiag": {
                         "type": "boolean",
@@ -379,13 +383,25 @@ pub fn tool_definitions() -> Vec<Value> {
                     },
                     "bgo_mode": {
                         "type": "string",
-                        "enum": ["auto_format", "bypass", "uart_monitor", "factory"],
-                        "description": "PROG061 BGO patch mode for 'prepare_sd' (default 'auto_format')."
+                        "enum": ["bypass", "auto_format", "uart_monitor", "factory"],
+                        "description": "PROG061 BGO patch mode for 'prepare_sd' (default 'bypass'; 'auto_format' is blocked unless allow_unsafe_auto_format=true)."
+                    },
+                    "allow_unsafe_auto_format": {
+                        "type": "boolean",
+                        "description": "Explicitly unlock unsafe 'auto_format' mode in prepare_sd (default false)."
                     },
                     "passthrough_mode": {
                         "type": "string",
                         "enum": ["av_passthrough", "factory_original"],
-                        "description": "MAIN (3410PQ) TBC passthrough mode for 'prepare_sd' (default 'av_passthrough')."
+                        "description": "MAIN TBC passthrough mode for 'prepare_sd' (default 'av_passthrough'; guarded by build identity verification)."
+                    },
+                    "expected_main_build": {
+                        "type": "string",
+                        "description": "Optional MAIN build tag guard (e.g. '3410PQ' or '3060NP')."
+                    },
+                    "allow_target_mismatch": {
+                        "type": "boolean",
+                        "description": "Explicitly override expected_main_build check if non-matching (default false)."
                     },
                     "include_pana_sd": {
                         "type": "boolean",

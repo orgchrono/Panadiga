@@ -3,7 +3,7 @@
  * @brief Panasonic AM34 `_dev_SERIAL` RSP client/probe (`FUN_574f0590` / `FUN_574f0775`).
  *
  * Implements pure C11 8-bit RSP frame construction/verification and PIO1 UART probe
- * sequences (`0x15` NAK, `0x0E 0x02 0x02 0x04` 4-byte state handshake on `0x515B2E60`,
+ * sequences (`0x15` NAK, `0x0E 0x04 0x02` 3-byte state handshake from Rust SSOT `p7501_pana_rsp_ssot.h`,
  * `$g#67`, `$Z0#8A`, `$Z1#8B`, `$m<addr>,<len>#XX`, `$x<addr>,<len>#XX`, `$M<addr>,4:<val>#XX`).
  *
  * @standard ISO/IEC 9899:2011 (C11)
@@ -16,6 +16,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "uart/p7501_pana_rsp_ssot.h"
 #include "uart/p7501_uart_codec.h"
 
 #ifdef __cplusplus
@@ -25,12 +26,8 @@ extern "C" {
 #define P7501_RSP_MAX_FRAME    256u
 #define P7501_RSP_MAX_TRIG     P7501_WAITTX_MAX_TRIGGER
 #define P7501_RSP_MAX_RAW_TX   64u
-#define P7501_RSP_HANDSHAKE_LEN 4u
-#define P7501_AM34_ISR_CTX_PTR_ADDR   0x5316AE8CUL
-#define P7501_AM34_ISR_SAVED_PC_OFF   0x64UL
-#define P7501_AM34_SERIAL_CB_PTR_ADDR 0x515B2E40UL
 
-/** Verified 4-byte UART state-machine entry sequence (`0x515B2E60`: 0->1->2->3->4). */
+/** Verified 3-byte UART state-machine entry sequence (`0 -> 2 -> 4`, paired with `0x15` NAK). */
 extern const uint8_t k_p7501_rsp_handshake[P7501_RSP_HANDSHAKE_LEN];
 
 typedef struct p7501_rsp_frame_info {

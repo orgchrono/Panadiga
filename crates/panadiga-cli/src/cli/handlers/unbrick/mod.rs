@@ -8,7 +8,7 @@ use panadiga_core::re::{
     MainPassthroughMode, Prog061BgoPatchMode, SdUnbrickKitRequest, build_nor_dumper_artifact,
     build_passthrough_rsp_plan, extract_modules_from_frm, inspect_main_passthrough_sites,
     inspect_prog061_container_bytes, inspect_unbrick_workspace, patch_main_passthrough_file,
-    patch_prog061_or_build_digadiag, prepare_sd_unbrick_kit, verify_sd_unbrick_media,
+    patch_prog061_or_build_digadiag_with_policy, prepare_sd_unbrick_kit, verify_sd_unbrick_media,
 };
 use std::fs;
 
@@ -41,12 +41,18 @@ pub fn handle_unbrick(args: UnbrickArgs) -> Result<()> {
             output,
             mode,
             raw_prog061,
+            allow_unsafe_bgo_format,
             json,
         } => {
             let parsed_mode: Prog061BgoPatchMode = mode.parse()?;
             if let Some(out_path) = output {
-                let rep =
-                    patch_prog061_or_build_digadiag(&input, &out_path, parsed_mode, !raw_prog061)?;
+                let rep = patch_prog061_or_build_digadiag_with_policy(
+                    &input,
+                    &out_path,
+                    parsed_mode,
+                    !raw_prog061,
+                    allow_unsafe_bgo_format,
+                )?;
                 println!(
                     "Patched BGO ({}) -> {} ({} B, wrapped={})",
                     rep.mode, rep.output_path, rep.output_size, rep.digadiag_wrapped
@@ -101,6 +107,9 @@ pub fn handle_unbrick(args: UnbrickArgs) -> Result<()> {
             main,
             drv,
             bgo_mode,
+            allow_unsafe_bgo_format,
+            expected_main_build,
+            allow_target_mismatch,
             passthrough_mode,
             diag_only,
             no_hdd_dynamic,
@@ -120,6 +129,9 @@ pub fn handle_unbrick(args: UnbrickArgs) -> Result<()> {
                 unlock_hdd_dynamic: !no_hdd_dynamic && target_gb.is_none(),
                 hdd_target_gb: target_gb,
                 write_extracted_sources: save_sources,
+                allow_unsafe_auto_format: allow_unsafe_bgo_format,
+                expected_main_build,
+                allow_target_mismatch,
             })?;
             print_lines(&format_sd_kit_lines(&report));
             emit_json_if_requested(&report, json.as_deref())

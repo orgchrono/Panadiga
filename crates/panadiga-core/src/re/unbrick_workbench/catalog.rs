@@ -96,7 +96,17 @@ pub(crate) fn hardware_facts_catalog() -> Vec<UnbrickHardwareFact> {
         UnbrickHardwareFact {
             topic: "Standalone Digital PCB TBC Operation Outside Drive".to_string(),
             verdict: "ODD_HDD_REMOVABLE_MAIN_PCB_REQUIRED".to_string(),
-            evidence: "Patching MAIN passthrough sites (0x5771ABFB, 0x574F7B8C, 0x574F7C5C) lets TBC (E-E) run without ODD/HDD checks (or with CF/SSD via IDE2SAT2). However, Digital PCB P59001 still requires Main PCB P7402 (schematics na_p49_blk1, vol2_p125) for IC3001 video clamps/75-ohm drivers, IC7501 Timer MCU TBUS handshake, and 8+ power rails.".to_string(),
+            evidence: "Patching MAIN passthrough sites (0x5771ABFB, 0x574F7B8C, 0x574F7C5C — verified strictly for MAIN 3410PQ) lets TBC (E-E) run without ODD/HDD checks (or with CF/SSD via IDE2SAT2). Digital PCB P59001 still requires Main PCB P7402 (schematics na_p49_blk1, vol2_p125) for IC3001 video clamps/75-ohm drivers, IC7501 Timer MCU TBUS handshake, and 8+ power rails.".to_string(),
+        },
+        UnbrickHardwareFact {
+            topic: "CS1 0x84200000 Window & AutoFormatBgo Alias Risk (D4)".to_string(),
+            verdict: "BLOCKED_FAIL_CLOSED_IC5001_ALIAS".to_string(),
+            evidence: "Both 0x50404592 and 0x50426F78 probe CS1 0x84200000..0x843FFFFF and return Spansion S29JL064H autoselect IDs (0x0001 / 0x227E / 0x2202 / 0x220A). That window maps offsets +0x200000..+0x3FFFFF of IC5001 (8 MiB NOR) inside the read-only IPL range; nfrom_format (0x50401F3C) must stay fail-closed.".to_string(),
+        },
+        UnbrickHardwareFact {
+            topic: "Orphan nfrom_format (0x50401F3C) Indirect Callback Preconditions (D5)".to_string(),
+            verdict: "UNINITIALIZED_RAM_PTRS_0x504F8464".to_string(),
+            evidence: "Calling nfrom_format (0x50401F3C) invokes 0x5040248E(2, 0) -> 0x50421EBE, which calls indirect RAM pointers 0x504F8464/68/6C before setting CFI handlers 0x504F88DC..0x504F8900 and never writes *(u8*)0x504802B0=1; jumping there directly from 0x5040A2CD without [nfrom] Case 0 init risks wild calls.".to_string(),
         },
     ]
 }
@@ -104,8 +114,8 @@ pub(crate) fn hardware_facts_catalog() -> Vec<UnbrickHardwareFact> {
 pub(crate) fn digadiag_vs_pana_notes() -> Vec<String> {
     vec![
         "DIGADIAG.FRM -> BOOT.BIN (NOR 0x44000000) loads 128 KiB plaintext EXTRHEAD 'FVU ' to 0x50400000 and jumps directly (zero BGO/NVRAM check).".to_string(),
-        "PANA__SD.FRM -> PROG061 reads 64B plaintext TOC slots to reflash DRV/PROG/MAIN when SD Update runs.".to_string(),
-        "PANA_DVD.FRM -> Optical update container with 48B Feistel TOC + full Feistel module layer over DRV S211 / PROG061 / MAIN3060NP.".to_string(),
+        "PANA__SD.FRM -> BOOT.BIN reads 64B plaintext TOC slots (0x2000 header); 48B SD TOC (OPCAO_3, 0x1800) only matches orphan/SD-update PROG061 readers and is rejected at boot.".to_string(),
+        "PANA_DVD.FRM -> Optical update container with 48B Feistel TOC + full Feistel module layer over DRV S211 / PROG061 / MAIN3060NP (verified byte-for-byte source of factory PANA__SD.FRM).".to_string(),
     ]
 }
 
@@ -119,10 +129,10 @@ mod tests {
         assert_eq!(sanitize_module_slug("  MAIN3410PQ"), "main3410pq");
         assert_eq!(sanitize_module_slug("---"), "module");
         assert_eq!(
-            bgo_mode_label(Prog061BgoPatchMode::AutoFormatBgo),
-            "auto_format"
+            bgo_mode_label(Prog061BgoPatchMode::BypassChecksOnly),
+            "bypass"
         );
-        assert_eq!(hardware_facts_catalog().len(), 3);
+        assert_eq!(hardware_facts_catalog().len(), 5);
         assert_eq!(digadiag_vs_pana_notes().len(), 3);
     }
 }

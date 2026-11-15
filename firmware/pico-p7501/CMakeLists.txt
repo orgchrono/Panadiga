@@ -44,6 +44,8 @@ add_executable(panasonic_p7501_uart
     diag/p7501_diag_boottrace.c
     diag/p7501_piologic_codec.c
     diag/p7501_diag_piologic.c
+    diag/p7501_sds_codec.c
+    diag/p7501_diag_sdsniff.c
     diag/p7501_jigsweep_codec.c
     diag/p7501_diag_jigsweep.c
     flash/p7501_flash_cli.c
@@ -60,6 +62,7 @@ add_executable(panasonic_p7501_uart
     uart/p7501_uart_tx.c
     uart/p7501_pana_dumpnor.c
     uart/p7501_pana_rsp_codec.c
+    uart/p7501_pana_rsp_parse.c
     uart/p7501_pana_rsp.c
     uart/p7501_diag_watch_codec.c
     uart/p7501_diag_watch.c
@@ -76,6 +79,7 @@ target_include_directories(panasonic_p7501_uart PRIVATE
 pico_generate_pio_header(panasonic_p7501_uart ${CMAKE_CURRENT_LIST_DIR}/p7501_uart.pio)
 pico_generate_pio_header(panasonic_p7501_uart ${CMAKE_CURRENT_LIST_DIR}/p7501_uart_duplex.pio)
 pico_generate_pio_header(panasonic_p7501_uart ${CMAKE_CURRENT_LIST_DIR}/p7501_logic_sampler.pio)
+pico_generate_pio_header(panasonic_p7501_uart ${CMAKE_CURRENT_LIST_DIR}/p7501_sds_sampler.pio)
 
 # Link essential Pico SDK and RP2040/RP2350 hardware drivers
 target_link_libraries(panasonic_p7501_uart

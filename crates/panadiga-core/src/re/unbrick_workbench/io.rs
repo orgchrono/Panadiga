@@ -13,7 +13,7 @@ use crate::nvram::{calculate_hashes, resolve_input_path};
 use super::super::bgo_unbrick::inspect_prog061_bgo_sites;
 use super::super::main_passthrough::{
     EXPECTED_MAIN_3410PQ_SIZE, MAIN_BASE_VA, build_passthrough_rsp_plan,
-    inspect_main_passthrough_sites,
+    inspect_main_firmware_identity, inspect_main_passthrough_sites,
 };
 use super::super::unbrick_sd_kit::verify_sd_unbrick_media;
 use super::catalog::{
@@ -161,11 +161,13 @@ pub fn inspect_unbrick_workspace(workspace_override: Option<&Path>) -> UnbrickWo
         .and_then(|p| fs::read(p).ok())
         .and_then(|raw| load_main_binary_and_meta(&raw).ok())
         .map(|(bin, build, _, _)| {
-            let pass = if bin.len() == EXPECTED_MAIN_3410PQ_SIZE {
-                inspect_main_passthrough_sites(&bin).ok()
-            } else {
-                None
-            };
+            let identity = inspect_main_firmware_identity(&bin, Some(build.as_str()));
+            let pass =
+                if bin.len() == EXPECTED_MAIN_3410PQ_SIZE && identity.supports_3410pq_tbc_patch {
+                    inspect_main_passthrough_sites(&bin).ok()
+                } else {
+                    None
+                };
             let cap = inspect_main_buffer_capacity(
                 &bin,
                 MAIN_BASE_VA,

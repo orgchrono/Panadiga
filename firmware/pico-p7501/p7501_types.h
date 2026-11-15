@@ -39,6 +39,12 @@ enum p7501_gpio_pin {
     P7501_PIN_NSW5V       = 3,  /**< GP3 (P7501 Pin 5 NSW5V): Rail Sense ONLY (Keep Hi-Z Input!) */
     P7501_PIN_TXD         = 4,  /**< GP4 (P7501 Pin 3 UARTM2P_T): 115200 8N1 TX (Pico -> Target) */
     P7501_PIN_XRESET      = 5,  /**< GP5 (P7501 Pin 2 XRESET): Active-Low Reset (Open-Drain ONLY) */
+    P7501_PIN_SD_CLK      = 10, /**< GP10 (Optional SDSNIFF Hi-Z): SD_CLK rising-edge clock */
+    P7501_PIN_SD_CMD      = 11, /**< GP11 (Optional SDSNIFF Hi-Z): SD_CMD (sample bit 0) */
+    P7501_PIN_SD_DAT0     = 12, /**< GP12 (Optional SDSNIFF Hi-Z): SD_DAT0 (sample bit 1) */
+    P7501_PIN_SD_DAT1     = 13, /**< GP13 (Optional SDSNIFF Hi-Z): SD_DAT1 (sample bit 2) */
+    P7501_PIN_SD_DAT2     = 14, /**< GP14 (Optional SDSNIFF Hi-Z): SD_DAT2 (sample bit 3) */
+    P7501_PIN_SD_DAT3     = 15, /**< GP15 (Optional SDSNIFF Hi-Z): SD_DAT3 (sample bit 4) */
     P7501_PIN_SW_UART_ADC = 26, /**< GP26 (P7501 Pin 1 SW_UART / ADC0): Serial Boot Mux & VDD Sense */
 };
 typedef enum p7501_gpio_pin p7501_gpio_pin_t;

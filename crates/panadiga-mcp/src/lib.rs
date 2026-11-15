@@ -335,12 +335,26 @@ mod tests {
             ]);
         fs::write(tmp.join("prog061.bin"), &prog).unwrap();
 
-        let bgo_res = execute_tool(
+        let blocked_auto = execute_tool(
             "panadiga_bgo_unbrick",
             &json!({
                 "input_path": "prog061.bin",
                 "action": "patch",
                 "mode": "auto_format",
+                "wrap_as_digadiag": true,
+                "output_path": "DIGADIAG_BLOCKED.FRM"
+            }),
+            &tmp,
+        )
+        .unwrap_err();
+        assert!(blocked_auto.to_string().contains("AutoFormatBgo"));
+
+        let bgo_res = execute_tool(
+            "panadiga_bgo_unbrick",
+            &json!({
+                "input_path": "prog061.bin",
+                "action": "patch",
+                "mode": "bypass",
                 "wrap_as_digadiag": true,
                 "output_path": "DIGADIAG.FRM"
             }),
@@ -353,7 +367,7 @@ mod tests {
         );
         assert_eq!(
             bgo_res["inspection_after"]["detected_mode"],
-            "AUTO_FORMAT_BGO"
+            "BYPASS_CHECKS_ONLY"
         );
         assert!(tmp.join("DIGADIAG.FRM").is_file());
 
@@ -394,7 +408,7 @@ mod tests {
             &tmp,
         )
         .unwrap();
-        assert_eq!(rsp_plan["handshake_hex"], "0e020204");
+        assert_eq!(rsp_plan["handshake_hex"], "0e0402");
         assert_eq!(rsp_plan["passthrough_frames"].as_array().unwrap().len(), 3);
         assert_eq!(rsp_plan["callback_write_frame"], "$M515B2E40,4:3c1f4050#95");
 
@@ -407,7 +421,7 @@ mod tests {
         .unwrap();
         assert_eq!(
             unbrick_status["hardware_facts"].as_array().unwrap().len(),
-            3
+            5
         );
 
         let verify_res = execute_tool(
@@ -417,7 +431,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(verify_res["overall_status"], "READY_WITH_HW_WARNINGS");
-        assert_eq!(verify_res["digadiag_bgo_mode"], "AUTO_FORMAT_BGO");
+        assert_eq!(verify_res["digadiag_bgo_mode"], "BYPASS_CHECKS_ONLY");
 
         let empty_sd = tmp.join("empty_sd");
         fs::create_dir_all(&empty_sd).unwrap();

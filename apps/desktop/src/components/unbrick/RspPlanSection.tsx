@@ -37,7 +37,7 @@ export const RspPlanSection: React.FC<RspPlanSectionProps> = ({
           <Terminal className="w-3.5 h-3.5 text-purple-400" />
           <span>{t('unbrick.rsp.title')}</span>
         </span>
-        <Badge variant="outline">MAGIC {rspPlan?.handshake_hex ?? '0e020204'}</Badge>
+        <Badge variant="outline">MAGIC {rspPlan?.handshake_hex ?? '0e0402'}</Badge>
       </div>
 
       <div className="flex gap-2">

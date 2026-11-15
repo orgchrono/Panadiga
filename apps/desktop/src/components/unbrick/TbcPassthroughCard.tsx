@@ -98,7 +98,7 @@ export const TbcPassthroughCard: React.FC<TbcPassthroughCardProps> = ({
             <CardDescription className="mt-1">{t('unbrick.tbc.desc')}</CardDescription>
           </div>
           <Badge variant={resolveTbcModeBadgeVariant(tbcReport?.detected_mode)}>
-            {tbcReport?.detected_mode ?? 'MAIN 3410PQ'}
+            {tbcReport?.detected_mode ?? 'MAIN FW'}
           </Badge>
         </div>
       </CardHeader>

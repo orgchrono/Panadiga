@@ -13,7 +13,7 @@ import type {
 } from '@/models';
 
 const MOCK_RSP_PLAN: MainPassthroughRspPlan = {
-  handshake_hex: '0e020204',
+  handshake_hex: '0e0402',
   nak_byte_hex: '15',
   serial_state_base_va: '0x515B2E00',
   serial_callback_va: '0x515B2E40',
@@ -43,11 +43,11 @@ const MOCK_SD_VERIFICATION: SdMediaVerificationReport = {
   digadiag_present: true,
   digadiag_exact_size_ok: true,
   digadiag_dst_addr_hex: '0x50400000',
-  digadiag_bgo_mode: 'AUTO_FORMAT_BGO',
+  digadiag_bgo_mode: 'BYPASS_CHECKS_ONLY',
   pana_sd_present: true,
   pana_sd_toc_entries: 3,
   pana_sd_list_sums_ok: true,
-  pana_sd_prog061_mode: 'AUTO_FORMAT_BGO',
+  pana_sd_prog061_mode: 'BYPASS_CHECKS_ONLY',
   pana_sd_main_build: '3410PQ',
   pana_sd_main_passthrough_mode: 'AV_PASSTHROUGH',
   pana_sd_main_hdd_dynamic: true,
@@ -56,7 +56,7 @@ const MOCK_SD_VERIFICATION: SdMediaVerificationReport = {
       id: 'digadiag_container',
       severity: 'pass',
       title: 'DIGADIAG.FRM (Stage-1.5 MN103S SDDIAG)',
-      detail: 'size=131072 B (exact_128k=true), dst=0x50400000, adler_ok=true, bgo_mode=AUTO_FORMAT_BGO',
+      detail: 'size=131072 B (exact_128k=true), dst=0x50400000, adler_ok=true, bgo_mode=BYPASS_CHECKS_ONLY',
     },
     {
       id: 'pana_sd_container',
@@ -210,7 +210,7 @@ export function handleMockUnbrickCommand(
     case 'prepare_sd_unbrick_kit_command': {
       const req = (args?.request as Record<string, unknown>) || {};
       const outDir = (req.output_dir as string) || 'unbrick_sd_kit';
-      const bgoMode = (req.bgo_mode as string) || 'auto_format';
+      const bgoMode = (req.bgo_mode as string) || 'bypass';
       const passthroughMode = (req.main_passthrough_mode as string) || 'av_passthrough';
       const includeSd = req.include_pana_sd !== false;
       const unlockDyn = req.unlock_hdd_dynamic !== false;

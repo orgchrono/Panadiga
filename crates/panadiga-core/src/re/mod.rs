@@ -5,6 +5,7 @@ pub mod main_passthrough;
 pub mod mn10300;
 pub mod mn10300_emu;
 pub mod nor_dumper;
+pub mod patch_spec;
 pub mod prog061_uart_monitor;
 pub mod unbrick_sd_kit;
 pub mod unbrick_workbench;
@@ -13,17 +14,21 @@ pub use bgo_unbrick::{
     OFF_BGO_INIT_FAIL_HOOK, OFF_BGO_SUM_BEQ, OFF_DEVINFO_CHECK_BEQ, PROG061_BASE_VA,
     PROG061_EXPECTED_SIZE, PROG061_NFROM_FORMAT_VA, Prog061BgoInspection, Prog061BgoPatchMode,
     Prog061BgoPatchReport, Prog061BgoSiteStatus, decode_prog061_payload, inspect_prog061_bgo_sites,
-    inspect_prog061_container_bytes, patch_prog061_bgo_in_place, patch_prog061_or_build_digadiag,
+    inspect_prog061_container_bytes, patch_prog061_bgo_in_place,
+    patch_prog061_bgo_in_place_with_policy, patch_prog061_or_build_digadiag,
+    patch_prog061_or_build_digadiag_with_policy,
 };
 pub use main_passthrough::{
     DEV_SERIAL_CALLBACK_VA, DEV_SERIAL_HANDSHAKE_BYTES, DEV_SERIAL_ISR_CTX_PTR_VA,
     DEV_SERIAL_PC_OFFSET, DEV_SERIAL_STATE_BASE_VA, EXPECTED_MAIN_3410PQ_SIZE, MAIN_BASE_VA,
-    MainPassthroughMode, MainPassthroughReport, MainPassthroughRspPlan, MainPassthroughSiteReport,
-    OFF_FPC_STATUS_CTRL, OFF_ODD_INIT_STATUS, OFF_ODD_STATE_BRANCH, ORIG_FPC_STATUS_CTRL,
-    ORIG_ODD_INIT_STATUS, ORIG_ODD_STATE_BRANCH, PATCH_FPC_STATUS_CTRL, PATCH_ODD_INIT_STATUS,
-    PATCH_ODD_STATE_BRANCH, apply_main_passthrough_in_place, build_passthrough_rsp_plan,
-    format_rsp_frame, format_rsp_write_mem_frame, format_rsp_write_u32_frame,
-    inspect_main_passthrough_sites, patch_main_passthrough_file, rsp_checksum,
+    MainFirmwareIdentity, MainPassthroughMode, MainPassthroughReport, MainPassthroughRspPlan,
+    MainPassthroughSiteReport, OFF_FPC_STATUS_CTRL, OFF_ODD_INIT_STATUS, OFF_ODD_STATE_BRANCH,
+    ORIG_FPC_STATUS_CTRL, ORIG_ODD_INIT_STATUS, ORIG_ODD_STATE_BRANCH, PATCH_FPC_STATUS_CTRL,
+    PATCH_ODD_INIT_STATUS, PATCH_ODD_STATE_BRANCH, apply_main_passthrough_in_place,
+    build_passthrough_rsp_plan, format_rsp_frame, format_rsp_write_mem_frame,
+    format_rsp_write_mem_payload, format_rsp_write_u32_frame, inspect_main_firmware_identity,
+    inspect_main_passthrough_sites, passthrough_rsp_payloads, patch_main_passthrough_file,
+    rsp_checksum,
 };
 pub use mn10300::{
     CallFrameRef, HardwareLoopRef, ImmediateLoadRef, InstructionRef, condition_suffix,

@@ -1,0 +1,38 @@
+; Panasonic DMR-EH55 Passive Hi-Z SD Bus Sniffer (PIO0)
+;
+; Triggered on SD_CLK (GP10) rising edge; samples contiguous 5 SD signals:
+;   bit 0 = GP11 (SD_CMD)
+;   bit 1 = GP12 (SD_DAT0)
+;   bit 2 = GP13 (SD_DAT1)
+;   bit 3 = GP14 (SD_DAT2)
+;   bit 4 = GP15 (SD_DAT3)
+; Packed 1 sample per byte (`in pins, 5; in null, 3` with right-shift autopush 32),
+; so bits [4:0] of each pushed byte equal [DAT3, DAT2, DAT1, DAT0, CMD].
+;
+; SAFETY: NEVER call `pio_gpio_init` on GP10..GP15; keep them strictly Hi-Z inputs
+; with internal pulls disabled so the Pico never loads VJB73136 SD traces.
+
+.program p7501_sds_sampler
+
+.wrap_target
+    wait 0 gpio 10
+    wait 1 gpio 10
+    in pins, 5
+    in null, 3
+.wrap
+
+% c-sdk {
+static inline void p7501_sds_sampler_program_init(
+    PIO pio,
+    uint sm,
+    uint offset,
+    uint cmd_pin_base
+) {
+    pio_sm_config c = p7501_sds_sampler_program_get_default_config(offset);
+    sm_config_set_in_pins(&c, cmd_pin_base);
+    sm_config_set_in_shift(&c, true, true, 32);
+    sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
+    sm_config_set_clkdiv(&c, 1.0f);
+    pio_sm_init(pio, sm, offset, &c);
+}
+%}

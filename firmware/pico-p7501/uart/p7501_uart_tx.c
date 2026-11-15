@@ -176,8 +176,9 @@ void p7501_cmd_bridge(const char *arg) {
         }
     }
 
-    printf("[BRIDGE] USB CDC <-> P7501 SC0 %" PRIu32 " 8N1 active (exit: send '~~~').\n",
-           p7501_pio_get_baud());
+    printf("[BRIDGE] USB CDC <-> P7501 SC0 %" PRIu32 " %s active (exit: send '~~~').\n",
+           p7501_pio_get_baud(),
+           p7501_framing_name(p7501_pio_get_framing()));
     fflush(stdout);
 
     p7501_led_set_auto_mode(LED_MODE_GDB_RSP);

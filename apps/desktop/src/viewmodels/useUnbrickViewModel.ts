@@ -164,7 +164,7 @@ export function useUnbrickViewModel() {
       const mode = params.mode ?? 'av_passthrough';
       return runChannel(
         setTbc,
-        'TBC Passthrough MAIN 3410PQ',
+        'TBC Passthrough MAIN',
         () =>
           invokeCommand<MainPassthroughReport>('patch_main_passthrough_command', {
             action: params.action,
@@ -175,8 +175,8 @@ export function useUnbrickViewModel() {
             mode,
           }),
         params.action === 'patch'
-          ? `MAIN 3410PQ (${mode}) gravado com sucesso`
-          : 'Sites TBC inspecionados em 3410PQ'
+          ? `MAIN TBC (${mode}) gravado com sucesso`
+          : 'Sites TBC inspecionados em MAIN'
       );
     },
     [runChannel]

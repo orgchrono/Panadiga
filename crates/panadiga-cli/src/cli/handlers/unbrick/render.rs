@@ -35,7 +35,7 @@ pub fn format_unbrick_status_lines(report: &UnbrickWorkspaceReport) -> Vec<Strin
             report.discovered_prog061.as_deref().unwrap_or("not found")
         ),
         format!(
-            "MAIN 3410PQ : {}",
+            "MAIN FW     : {}",
             report
                 .discovered_main_3410pq
                 .as_deref()
@@ -170,7 +170,7 @@ mod tests {
     fn pure_cli_formatters_emit_expected_headers() {
         let plan = build_passthrough_rsp_plan(Some(0x5040_1F3C));
         let lines = format_rsp_plan_lines(&plan);
-        assert!(lines.iter().any(|l| l.contains("0e020204")));
+        assert!(lines.iter().any(|l| l.contains("0e0402")));
         assert!(lines.iter().any(|l| l.contains("RSP $M:")));
     }
 }

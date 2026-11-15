@@ -10,6 +10,7 @@ pub mod extrhead;
 pub mod feistel;
 pub mod frm_pack;
 pub mod toc;
+pub mod toc_io;
 pub mod types;
 
 pub use codebook::{correlate_hdd_partitions, print_codebook};
@@ -25,9 +26,13 @@ pub use feistel::{
 };
 pub use frm_pack::{
     FrmContainerMode, FrmPackModule, FrmPackReport, PackedFrmModuleSummary, build_digadiag_frm,
-    pack_frm, verify_packed_frm_roundtrip,
+    convert_pana_dvd_to_factory_sd, pack_frm, unpack_dvd_frm_to_modules,
+    verify_packed_frm_roundtrip,
 };
 pub use toc::{
-    analyze_toc, decrypt_and_parse_frm_toc, dump_toc, interpret_frm_target_flag, parse_sd_frm_toc,
+    TocLayout, analyze_frm_toc_report, analyze_toc, decrypt_and_parse_frm_toc,
+    format_toc_dump_lines, interpret_frm_target_flag, parse_sd_frm_toc,
+    parse_sd_frm_toc_with_layout,
 };
+pub use toc_io::{dump_toc, read_and_analyze_frm_toc};
 pub use types::*;

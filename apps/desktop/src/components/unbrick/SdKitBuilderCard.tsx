@@ -59,7 +59,7 @@ export const SdKitBuilderCard: React.FC<SdKitBuilderCardProps> = ({
     discoveredPanaDvd ?? 'firmware_and_images/PANA_DVD.FRM'
   );
   const [verifyDir, setVerifyDir] = useState(discoveredSdDir ?? 'sd_card_eh55');
-  const [bgoMode, setBgoMode] = useState<BgoMode>('auto_format');
+  const [bgoMode, setBgoMode] = useState<BgoMode>('bypass');
   const [mainMode, setMainMode] = useState<MainPassthroughMode>('av_passthrough');
   const [includePanaSd, setIncludePanaSd] = useState(true);
   const [unlockHddDynamic, setUnlockHddDynamic] = useState(true);
@@ -161,10 +161,12 @@ export const SdKitBuilderCard: React.FC<SdKitBuilderCardProps> = ({
                 value={bgoMode}
                 onChange={e => setBgoMode(e.target.value as BgoMode)}
               >
-                <option value="auto_format">auto_format (PROG061 -&gt; BGO Auto-Format U99)</option>
-                <option value="bypass">bypass (Skip U99 Boot Checks Only)</option>
+                <option value="bypass">bypass (Skip U99 Boot Checks Only — Safe Default)</option>
                 <option value="uart_monitor">uart_monitor (Hook _dev_SERIAL PANAMON1)</option>
                 <option value="factory">factory (Stock PROG061 Unmodified)</option>
+                <option value="auto_format" disabled>
+                  auto_format (BLOCKED D5: unverified nfrom_format RAM ptrs)
+                </option>
               </Select>
             </div>
 
@@ -178,7 +180,7 @@ export const SdKitBuilderCard: React.FC<SdKitBuilderCardProps> = ({
                 onChange={e => setMainMode(e.target.value as MainPassthroughMode)}
               >
                 <option value="av_passthrough">av_passthrough (TBC E-E No-ODD/No-FPC)</option>
-                <option value="factory_original">factory_original (Stock MAIN3410PQ)</option>
+                <option value="factory_original">factory_original (Stock MAIN Build)</option>
               </Select>
             </div>
           </div>

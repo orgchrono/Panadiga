@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::constants::{
     PANA_DIGADIAG_DEFAULT_LOAD_ADDR, PANA_DIGADIAG_FRM_SIZE, PANA_SD_TOC_ENTRY_SIZE,
 };
-use crate::crypto::{ExtrheadCryptMode, parse_sd_frm_toc, unpack_extrhead};
+use crate::crypto::{ExtrheadCryptMode, TocLayout, parse_sd_frm_toc_with_layout, unpack_extrhead};
 use crate::hdd::inspect_main_buffer_capacity;
 
 use super::super::bgo_unbrick::inspect_prog061_bgo_sites;
@@ -169,7 +169,7 @@ pub(crate) fn verify_pana_sd_buffer(bytes_opt: Option<&[u8]>) -> PanaSdInspectio
         };
     };
 
-    let toc = parse_sd_frm_toc(sd_bytes);
+    let (toc_layout, toc) = parse_sd_frm_toc_with_layout(sd_bytes);
     let toc_entries = toc.len();
     let list_sums_ok = !toc.is_empty()
         && toc.iter().all(|e| {
@@ -220,15 +220,33 @@ pub(crate) fn verify_pana_sd_buffer(bytes_opt: Option<&[u8]>) -> PanaSdInspectio
         }
     }
 
+    let is_64b_layout = matches!(toc_layout, Some(TocLayout::Sd64B));
+    let is_48b_obsolete = matches!(toc_layout, Some(TocLayout::Sd48B));
+    let stride = toc_layout.map_or(PANA_SD_TOC_ENTRY_SIZE, TocLayout::stride_bytes);
+    let chk_severity = if list_sums_ok && is_64b_layout {
+        "pass"
+    } else {
+        "fail"
+    };
+    let chk_title = match toc_layout {
+        Some(layout) => layout.title(),
+        None => "PANA__SD.FRM (Invalid/Corrupt SD TOC)",
+    };
+    let chk_suffix = if is_48b_obsolete {
+        ", rejected_by_boot_bin=48B_OPCAO_3_OBSOLETE"
+    } else {
+        ""
+    };
     let chk = check(
         "pana_sd_container",
-        if list_sums_ok { "pass" } else { "fail" },
-        "PANA__SD.FRM (64B Plaintext SD TOC)",
+        chk_severity,
+        chk_title,
         format!(
-            "entries={}, list_sums_ok={}, entry_stride={}B, prog061={}, main_build={}, tbc_mode={}",
+            "entries={}, list_sums_ok={}, entry_stride={}B{}, prog061={}, main_build={}, tbc_mode={}",
             toc_entries,
             list_sums_ok,
-            PANA_SD_TOC_ENTRY_SIZE,
+            stride,
+            chk_suffix,
             prog061_mode.as_deref().unwrap_or("n/a"),
             main_build.as_deref().unwrap_or("n/a"),
             main_passthrough_mode
@@ -314,5 +332,30 @@ mod tests {
         assert_eq!(rep_bad.overall_status, "INCOMPLETE_OR_INVALID");
         assert!(rep_bad.digadiag_present);
         assert!(!rep_bad.digadiag_exact_size_ok);
+    }
+
+    #[test]
+    fn obsolete_48b_sd_toc_is_marked_fail_with_48b_stride() {
+        let mut sd48 = vec![0u8; 0x1880];
+        sd48[0..8].copy_from_slice(b"DRV S211");
+        sd48[0x0C..0x10].copy_from_slice(&0x1800u32.to_le_bytes());
+        sd48[0x20..0x24].copy_from_slice(&64u32.to_le_bytes());
+        let sum: u16 = sd48[..0x2E]
+            .iter()
+            .fold(0u16, |acc, &b| acc.wrapping_add(u16::from(b)));
+        sd48[0x2E..0x30].copy_from_slice(&sum.to_le_bytes());
+
+        let rep = verify_sd_buffers("/mem/sd48", None, Some(&sd48));
+        assert!(rep.pana_sd_present);
+        assert!(rep.pana_sd_list_sums_ok);
+        assert_eq!(rep.overall_status, "INCOMPLETE_OR_INVALID");
+        let sd_chk = rep
+            .checks
+            .iter()
+            .find(|c| c.id == "pana_sd_container")
+            .unwrap();
+        assert_eq!(sd_chk.severity, "fail");
+        assert!(sd_chk.title.contains("48B Obsolete"));
+        assert!(sd_chk.detail.contains("entry_stride=48B"));
     }
 }

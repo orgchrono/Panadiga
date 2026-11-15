@@ -34,7 +34,7 @@ describe('useUnbrickViewModel', () => {
       'firmware_and_images/PANA_DVD.FRM'
     );
     expect(result.current.tbc.data?.detected_mode).toBe('FACTORY_ORIGINAL');
-    expect(result.current.rspPlan.data?.handshake_hex).toBe('0e020204');
+    expect(result.current.rspPlan.data?.handshake_hex).toBe('0e0402');
     expect(result.current.verify.data?.overall_status).toBe('READY_WITH_HW_WARNINGS');
   });
 
@@ -43,7 +43,7 @@ describe('useUnbrickViewModel', () => {
       'inspect_unbrick_workbench'
     ) as UnbrickWorkspaceReport;
     const mockKit = handleMockUnbrickCommand('prepare_sd_unbrick_kit_command', {
-      request: { output_dir: 'sd_out', bgo_mode: 'auto_format' },
+      request: { output_dir: 'sd_out', bgo_mode: 'bypass' },
     }) as SdUnbrickKitReport;
 
     vi.mocked(ipcService.invokeCommand)
@@ -56,7 +56,7 @@ describe('useUnbrickViewModel', () => {
     await act(async () => {
       await result.current.buildSdKit({
         output_dir: 'sd_out',
-        bgo_mode: 'auto_format',
+        bgo_mode: 'bypass',
         main_passthrough_mode: 'av_passthrough',
         include_pana_sd: true,
         unlock_hdd_dynamic: true,
@@ -64,7 +64,7 @@ describe('useUnbrickViewModel', () => {
     });
 
     expect(ipcService.invokeCommand).toHaveBeenCalledWith('prepare_sd_unbrick_kit_command', {
-      request: expect.objectContaining({ output_dir: 'sd_out', bgo_mode: 'auto_format' }),
+      request: expect.objectContaining({ output_dir: 'sd_out', bgo_mode: 'bypass' }),
     });
     expect(result.current.sdKit.data?.digadiag_path).toBe('sd_out/DIGADIAG.FRM');
     expect(result.current.verify.data?.sd_root_dir).toBe('sd_out');

@@ -6,7 +6,7 @@ use panadiga_core::re::{
     SdUnbrickKitReport, UnbrickWorkspaceReport, build_nor_dumper_artifact,
     build_passthrough_rsp_plan, extract_modules_from_frm, inspect_main_passthrough_sites,
     inspect_prog061_container_bytes, inspect_unbrick_workspace, patch_main_passthrough_file,
-    patch_prog061_or_build_digadiag, prepare_sd_unbrick_kit, verify_sd_unbrick_media,
+    patch_prog061_or_build_digadiag_with_policy, prepare_sd_unbrick_kit, verify_sd_unbrick_media,
 };
 use serde_json::Value;
 use std::path::PathBuf;
@@ -50,6 +50,7 @@ pub fn patch_bgo_unbrick_command(
     out_path: Option<String>,
     mode: String,
     wrap_as_digadiag: Option<bool>,
+    allow_unsafe_bgo_format: Option<bool>,
 ) -> Result<Value, String> {
     let in_file = resolve_read_path(input_path.trim());
     let parsed_mode: Prog061BgoPatchMode = mode
@@ -58,11 +59,12 @@ pub fn patch_bgo_unbrick_command(
 
     if let Some(out_raw) = opt_trimmed(&out_path) {
         let out_file = resolve_write_path(out_raw)?;
-        let report = patch_prog061_or_build_digadiag(
+        let report = patch_prog061_or_build_digadiag_with_policy(
             &in_file,
             &out_file,
             parsed_mode,
             wrap_as_digadiag.unwrap_or(true),
+            allow_unsafe_bgo_format.unwrap_or(false),
         )
         .map_err(|e| format!("Falha ao aplicar patch BGO PROG061: {e}"))?;
         serialize_value(report)
@@ -190,7 +192,7 @@ mod tests {
             Some("0x50401F3C".to_string()),
         )
         .unwrap();
-        assert_eq!(plan["handshake_hex"], "0e020204");
+        assert_eq!(plan["handshake_hex"], "0e0402");
         assert_eq!(plan["callback_write_frame"], "$M515B2E40,4:3c1f4050#95");
 
         let stub = build_nor_dumper_stub_command(

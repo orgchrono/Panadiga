@@ -33,25 +33,28 @@ fn optional_real_workspace_sd_kit_roundtrip() {
         prog061_path: None,
         main_path: Some(p1),
         drv_path: None,
-        bgo_mode: Prog061BgoPatchMode::AutoFormatBgo,
+        bgo_mode: Prog061BgoPatchMode::BypassChecksOnly,
         main_passthrough_mode: MainPassthroughMode::AvPassthrough,
         include_pana_sd: true,
         unlock_hdd_dynamic: true,
         hdd_target_gb: None,
         write_extracted_sources: false,
+        allow_unsafe_auto_format: false,
+        expected_main_build: Some("3410PQ".to_string()),
+        allow_target_mismatch: false,
     })
     .unwrap();
 
     assert!(report.verification.digadiag_exact_size_ok);
     assert_eq!(
         report.verification.digadiag_bgo_mode.as_deref(),
-        Some("AUTO_FORMAT_BGO")
+        Some("BYPASS_CHECKS_ONLY")
     );
     assert!(report.verification.pana_sd_present);
     assert!(report.verification.pana_sd_list_sums_ok);
     assert_eq!(
         report.verification.pana_sd_prog061_mode.as_deref(),
-        Some("AUTO_FORMAT_BGO")
+        Some("BYPASS_CHECKS_ONLY")
     );
     assert_eq!(
         report.verification.pana_sd_main_passthrough_mode.as_deref(),

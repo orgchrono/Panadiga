@@ -80,7 +80,7 @@ pub fn prepare_sd_unbrick_kit(req: &SdUnbrickKitRequest) -> Result<SdUnbrickKitR
     let prog_raw = fs::read(&prog_src_path)
         .with_context(|| format!("Reading PROG061 source {}", prog_src_path.display()))?;
     let (prog_patched, diag_bytes, digadiag_sha256) =
-        compose_digadiag_and_prog061(&prog_raw, req.bgo_mode)?;
+        compose_digadiag_and_prog061(&prog_raw, req.bgo_mode, req.allow_unsafe_auto_format)?;
 
     fs::create_dir_all(&req.output_dir)?;
     let digadiag_path = req.output_dir.join("DIGADIAG.FRM");
@@ -121,6 +121,8 @@ pub fn prepare_sd_unbrick_kit(req: &SdUnbrickKitRequest) -> Result<SdUnbrickKitR
             req.main_passthrough_mode,
             req.unlock_hdd_dynamic,
             req.hdd_target_gb,
+            req.expected_main_build.as_deref(),
+            req.allow_target_mismatch,
         )?;
         main_passthrough_applied = Some(composed_main.passthrough_applied);
         hdd_capacity_applied = composed_main.hdd_capacity_applied;
@@ -136,8 +138,10 @@ pub fn prepare_sd_unbrick_kit(req: &SdUnbrickKitRequest) -> Result<SdUnbrickKitR
         let (sd_bytes, sd_sha) = compose_pana_sd_container(
             drv_bytes,
             prog_patched,
+            req.bgo_mode,
             composed_main.container,
-            composed_main.slot_name,
+            &composed_main.slot_name,
+            composed_main.build_version_u16,
         )?;
         let out_sd = req.output_dir.join("PANA__SD.FRM");
         fs::write(&out_sd, &sd_bytes)?;

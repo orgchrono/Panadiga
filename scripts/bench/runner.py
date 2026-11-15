@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from scripts.bench.boot_harness import format_ab_csv, run_ab_boot_harness
 from scripts.bench.decoders import (
     parse_am34_uart_log,
     parse_busdiag_output,
@@ -100,6 +101,13 @@ def main(argv: list[str] | None = None) -> int:
 
     sub.add_parser("smoke-suite", help="Run offline end-to-end bench verification suite")
 
+    p_ab = sub.add_parser("ab-boot", help="Run alternating NORMAL vs JIG boot pairs and tally faults")
+    p_ab.add_argument("--port", default=None)
+    p_ab.add_argument("--mock", action="store_true")
+    p_ab.add_argument("--pairs", type=int, default=3)
+    p_ab.add_argument("--window-ms", type=int, default=6000)
+    p_ab.add_argument("--csv", type=Path, default=None)
+
     args = parser.parse_args(argv)
     result: dict[str, Any]
     if args.subcommand == "health":
@@ -109,6 +117,19 @@ def main(argv: list[str] | None = None) -> int:
     elif args.subcommand == "decode-log":
         text = read_captured_log(args.path)
         result = asdict(parse_am34_uart_log(text))
+    elif args.subcommand == "ab-boot":
+        summary = run_ab_boot_harness(
+            _make_transport(None if args.mock else args.port),
+            pairs=args.pairs,
+            window_ms=args.window_ms,
+        )
+        if args.csv is not None:
+            args.csv.parent.mkdir(parents=True, exist_ok=True)
+            args.csv.write_text(format_ab_csv(summary.runs), encoding="utf-8")
+        result = {
+            "runs": [asdict(r) for r in summary.runs],
+            "by_mode": {k: asdict(v) for k, v in summary.by_mode.items()},
+        }
     else:
         result = run_smoke_suite()
 

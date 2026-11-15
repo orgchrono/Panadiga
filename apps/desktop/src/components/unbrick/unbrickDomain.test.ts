@@ -12,7 +12,7 @@ describe('unbrickDomain pure transformations', () => {
     const empty = buildSdKitRequestPayload({
       outputDir: '   ',
       panaDvdPath: 'PANA_DVD.FRM',
-      bgoMode: 'auto_format',
+      bgoMode: 'bypass',
       mainMode: 'av_passthrough',
       includePanaSd: true,
       unlockHddDynamic: true,

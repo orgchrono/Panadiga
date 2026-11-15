@@ -184,7 +184,11 @@ def parse_am34_uart_log(text: str) -> UartBootReport:
     startup_reason = reason_m.group(1) if reason_m else None
 
     sdcd_errs: list[int] = []
-    for pat in (r"SD Status ERROR\s+(-?\d+)", r"SD init failed\[(-?\d+)\]"):
+    for pat in (
+        r"SD Status ERROR\s+(-?\d+)",
+        r"SD init failed\[(-?\d+)\]",
+        r"SDCD:[^:\r\n]+:[^\[\r\n]*\[(-?\d+)\]",
+    ):
         for m in re.finditer(pat, text):
             code = int(m.group(1))
             if code not in sdcd_errs:
