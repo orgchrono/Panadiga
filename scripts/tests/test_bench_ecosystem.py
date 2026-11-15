@@ -321,3 +321,32 @@ def test_parse_am34_uart_log_sd_stage_funnel_not_masked_by_bgo() -> None:
     assert "SD_HW_OK" in rep.boot_stages and "SD_DIAG_LOAD_FAIL" in rep.boot_stages
     assert "SD diag load failed[0]" in rep.diagnosis
     assert any("FUN_4400a97c" in n for n in rep.notes)
+
+    interleaved = (
+        "DDR CHECK: OK\r\n"
+        "***** Loader ver0.61 [06/03/06] *****\r\n"
+        "***** serial boot mode\r\n"
+        "[DIAGWATCH +26ms] serial boot mode -> SW_UART released Hi-Z (Q7514 TX ready)\r\n"
+        " *****\r\n"
+        "SD = 0x3BB000[LBA]\r\n"
+        "... SD init end\r\n"
+        "[DIAGWATCH +1453ms] STAGE: SD hardware 4-bit init OK (... SD init end)\r\n"
+        "\r\n"
+        "SD diag load failed\r\n"
+        "[DIAGWATCH +1504ms] ALERT: SD diag load failed[0] (FUN_4400a97c)\r\n"
+        "[0].\r\n"
+        "***** normal mode *****\r\n"
+        "BGO driver init failed\r\n"
+        "[DIAGWATCH +3599ms] ALERT: BGO driver init failure detected\r\n"
+        "[1].\r\n"
+        "** can not close tray\r\n"
+        "[DIAGWATCH +6786ms] ALERT: ODD tray close error detected\r\n"
+        " **\r\n"
+    )
+    rep_i = parse_am34_uart_log(interleaved)
+    assert rep_i.boot_mode == "normal mode"
+    assert rep_i.sd_hw_init_ok is True
+    assert rep_i.sd_diag_load_failed == 0
+    assert rep_i.bgo_failed_code == 1
+    assert rep_i.odd_tray_failed is True
+    assert "SD diag load failed[0]" in rep_i.diagnosis

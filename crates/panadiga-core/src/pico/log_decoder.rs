@@ -231,8 +231,41 @@ fn classify_boot_diagnosis(
     "No known Panasonic boot signatures observed".to_string()
 }
 
+/// Strips interleaved `[DIAGWATCH...]` probe lines and rejoins target fragments
+/// split mid-line during real-time UART streaming (e.g. `BGO driver init failed` + `[1].`).
+fn reconstruct_diagwatch_target_stream(text: &str) -> String {
+    let lines: Vec<&str> = text.lines().collect();
+    let mut out: Vec<String> = Vec::with_capacity(lines.len());
+    let mut i = 0usize;
+    while i < lines.len() {
+        let line = lines[i];
+        if line.trim_start().starts_with("[DIAGWATCH") {
+            while i + 1 < lines.len() && lines[i + 1].trim_start().starts_with("[DIAGWATCH") {
+                i += 1;
+            }
+            if let (Some(prev), Some(&nxt)) = (out.last_mut(), lines.get(i + 1))
+                && nxt
+                    .chars()
+                    .next()
+                    .is_some_and(|c| matches!(c, '[' | ' ' | '.' | ',' | '*' | ')' | ']'))
+            {
+                prev.push_str(nxt);
+                i += 2;
+                continue;
+            }
+            i += 1;
+            continue;
+        }
+        out.push(line.to_string());
+        i += 1;
+    }
+    out.join("\n")
+}
+
 /// Parses an offline AM34 / Pico capture text buffer into structured boot & diagnostic telemetry.
 pub fn parse_bench_log_text(text: &str) -> Am34BootLogReport {
+    let reconstructed = reconstruct_diagwatch_target_stream(text);
+    let target_text = reconstructed.as_str();
     let mut loader_version = None;
     let mut boot_mode = None;
     let mut saw_serial_boot = false;
@@ -256,9 +289,9 @@ pub fn parse_bench_log_text(text: &str) -> Am34BootLogReport {
     let mut sense_packets = Vec::new();
     let mut panarsp_summaries = Vec::new();
     let mut notes = Vec::new();
-    let ddr_ok = text.contains("DDR CHECK: OK");
+    let ddr_ok = target_text.contains("DDR CHECK: OK");
 
-    for line in text.lines() {
+    for line in target_text.lines() {
         let trimmed = line.trim();
         if let Some(idx) = trimmed.find("Loader ver") {
             let ver = trimmed[idx..].trim_end_matches('*').trim().to_string();
@@ -357,7 +390,7 @@ pub fn parse_bench_log_text(text: &str) -> Am34BootLogReport {
         if trimmed.contains("*** start diag ***") || trimmed.contains("diag loader is preserved") {
             diag_started = true;
         }
-        if trimmed.contains("** can not close tray **") || trimmed.contains("80045300") {
+        if trimmed.contains("** can not close tray") || trimmed.contains("80045300") {
             odd_tray_failed = true;
         }
         if trimmed.contains("PANAMON1>") {
@@ -366,7 +399,6 @@ pub fn parse_bench_log_text(text: &str) -> Am34BootLogReport {
 
         for (marker, end_delim) in [
             ("ERROR[", Some(']')),
-            ("SD diag load failed[", Some(']')),
             ("SD init failed[", Some(']')),
             ("ERROR:", None),
             ("ERROR ", None),
@@ -412,8 +444,8 @@ pub fn parse_bench_log_text(text: &str) -> Am34BootLogReport {
     let has_83a7 = sense_packets
         .iter()
         .any(|s| s.mecha_error_code.as_deref() == Some("0x83A7"))
-        || text.contains("0x83A7")
-        || text.contains("83 A7");
+        || target_text.contains("0x83A7")
+        || target_text.contains("83 A7");
 
     let mut boot_stages = Vec::new();
     if ddr_ok {
@@ -603,5 +635,38 @@ mod tests {
         let report = parse_bench_log_text(sample);
         assert_eq!(report.sdcd_errors, vec![-91006, -90002]);
         assert!(report.notes.iter().any(|n| n.contains("-91006")));
+    }
+
+    #[test]
+    fn rejoins_interleaved_diagwatch_target_lines() {
+        let sample = concat!(
+            "DDR CHECK: OK\r\n",
+            "***** Loader ver0.61 [06/03/06] *****\r\n",
+            "***** serial boot mode\r\n",
+            "[DIAGWATCH +26ms] serial boot mode -> SW_UART released Hi-Z (Q7514 TX ready)\r\n",
+            " *****\r\n",
+            "SD = 0x3BB000[LBA]\r\n",
+            "... SD init end\r\n",
+            "[DIAGWATCH +1453ms] STAGE: SD hardware 4-bit init OK (... SD init end)\r\n",
+            "\r\n",
+            "SD diag load failed\r\n",
+            "[DIAGWATCH +1504ms] ALERT: SD diag load failed[0] (FUN_4400a97c)\r\n",
+            "[0].\r\n",
+            "***** normal mode *****\r\n",
+            "BGO driver init failed\r\n",
+            "[DIAGWATCH +3599ms] ALERT: BGO driver init failure detected\r\n",
+            "[1].\r\n",
+            "** can not close tray\r\n",
+            "[DIAGWATCH +6786ms] ALERT: ODD tray close error detected\r\n",
+            " **\r\n",
+        );
+        let report = parse_bench_log_text(sample);
+        assert_eq!(report.boot_mode.as_deref(), Some("normal"));
+        assert!(report.sd_hw_init_ok);
+        assert_eq!(report.sd_diag_load_failed, Some(0));
+        assert_eq!(report.bgo_failed_code, Some(1));
+        assert!(report.odd_tray_failed);
+        assert!(report.sdcd_errors.is_empty());
+        assert!(report.diagnosis.contains("SD diag load failed[0]"));
     }
 }

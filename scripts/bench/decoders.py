@@ -235,14 +235,38 @@ def _classify_uart_boot_diagnosis(
     return "No known Panasonic boot signatures observed"
 
 
+def _reconstruct_diagwatch_target_stream(text: str) -> str:
+    """Strip interleaved `[DIAGWATCH...]` probe lines and rejoin split target fragments."""
+    lines = text.splitlines()
+    out: list[str] = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        if line.lstrip().startswith("[DIAGWATCH"):
+            while i + 1 < len(lines) and lines[i + 1].lstrip().startswith("[DIAGWATCH"):
+                i += 1
+            if out and i + 1 < len(lines):
+                nxt = lines[i + 1]
+                if nxt and nxt[0] in "[ .,*)]":
+                    out[-1] = out[-1] + nxt
+                    i += 2
+                    continue
+            i += 1
+            continue
+        out.append(line)
+        i += 1
+    return "\n".join(out)
+
+
 def parse_am34_uart_log(text: str) -> UartBootReport:
     """Decode bootloader milestones, SD errors, ATAPI errors, and Sense packets from a UART log."""
+    text = _reconstruct_diagwatch_target_stream(text)
     ddr_ok = "DDR CHECK: OK" in text
     ver_m = re.search(r"Loader\s+(ver[0-9.]+\s*\[[^\]]+\])", text)
     loader_version = ver_m.group(1) if ver_m else None
 
-    mode_m = re.search(r"\*{5}\s*(normal mode|serial boot mode|FEonly|support card)\s*\*{5}", text, re.IGNORECASE)
-    boot_mode = mode_m.group(1) if mode_m else None
+    modes = re.findall(r"\*{5}\s*(normal mode|serial boot mode|FEonly|support card)\s*\*{5}", text, re.IGNORECASE)
+    boot_mode = modes[-1] if modes else None
 
     bgo_m = re.search(r"BGO driver init failed\[(-?\d+)\]", text)
     bgo_failed = int(bgo_m.group(1)) if bgo_m else None
@@ -281,7 +305,7 @@ def parse_am34_uart_log(text: str) -> UartBootReport:
         )
     )
     diag_started = "*** start diag ***" in text or "diag loader is preserved" in text
-    odd_tray_failed = "** can not close tray **" in text or "80045300" in text
+    odd_tray_failed = "** can not close tray" in text or "80045300" in text
     panamon_active = "PANAMON1>" in text
 
     sdcd_errs: list[int] = []
