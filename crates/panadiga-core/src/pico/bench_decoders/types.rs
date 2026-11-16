@@ -16,6 +16,7 @@ pub const SAFE_BENCH_COMMANDS: &[&str] = &[
     "BUSDIAG",
     "SNIFF",
     "ISOLATE",
+    "RESET",
     "UARTMON",
     "BOOTCAP",
     "JIGBOOT",
@@ -35,6 +36,7 @@ pub const SAFE_BENCH_COMMANDS: &[&str] = &[
     "JIGSWEEP",
     "DIAGWATCH",
     "PANARSP",
+    "DRVPANA",
 ];
 
 pub(super) const FORBIDDEN_WRITE_TOKENS: [&str; 5] =

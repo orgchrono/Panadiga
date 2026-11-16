@@ -80,7 +80,9 @@ pub fn verify_unlock_frm_container(
             let mode = match layout {
                 crate::crypto::TocLayout::Sd64B => FrmContainerMode::Sd,
                 crate::crypto::TocLayout::Sd48B => FrmContainerMode::Sd48,
-                crate::crypto::TocLayout::Dvd48B => FrmContainerMode::Dvd,
+                crate::crypto::TocLayout::Dvd48B | crate::crypto::TocLayout::Dvd64B => {
+                    FrmContainerMode::Dvd
+                }
             };
             let verified_entries = verify_packed_frm_roundtrip(frm_bytes, mode, entries.len())?;
             Ok(FrmUnlockVerificationSummary {

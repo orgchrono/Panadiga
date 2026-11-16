@@ -21,7 +21,7 @@ use crate::constants::{
 };
 use crate::crypto::codec::{extract_c_ascii, write_padded_ascii, write_toc_entry_list_sum};
 use crate::crypto::{
-    DecryptedFrmTocEntry, TocLayout, decrypt_and_parse_frm_toc, feistel_decrypt_buffer,
+    DecryptedFrmTocEntry, TocLayout, decrypt_frm_toc_with_detected_key, feistel_decrypt_buffer,
     feistel_encrypt_buffer, parse_sd_frm_toc_with_layout,
 };
 use crate::nvram::calculate_hashes;
@@ -256,15 +256,15 @@ pub fn retarget_frm_toc_bytes(
     }
 
     let (sd_layout, sd_entries) = parse_sd_frm_toc_with_layout(bytes);
-    let (layout, active_indices, is_dvd) = if let Some(l) = sd_layout {
+    let (layout, active_indices, is_dvd, detected_key) = if let Some(l) = sd_layout {
         let active: Vec<usize> = sd_entries
             .iter()
             .filter(|e| e.list_sum_valid && !e.module_name.trim().is_empty() && e.module_size > 0)
             .map(|e| e.index)
             .collect();
-        (l, active, false)
+        (l, active, false, PANA_FEISTEL_ROUND_KEY_32B)
     } else {
-        let dvd_entries = decrypt_and_parse_frm_toc(bytes);
+        let (_kname, rk, dvd_l, dvd_entries) = decrypt_frm_toc_with_detected_key(bytes);
         let active: Vec<usize> = dvd_entries
             .iter()
             .filter(|e| e.list_sum_valid && !e.module_name.trim().is_empty() && e.module_size > 0)
@@ -275,7 +275,7 @@ pub fn retarget_frm_toc_bytes(
                 "Unrecognized .FRM container (neither valid plaintext SD TOC nor Feistel DVD TOC)"
             );
         }
-        (TocLayout::Dvd48B, active, true)
+        (dvd_l, active, true, rk)
     };
 
     let max_grp = if layout == TocLayout::Sd64B { 12 } else { 6 };
@@ -285,7 +285,11 @@ pub fn retarget_frm_toc_bytes(
 
     let stride = layout.stride_bytes();
     let max_slots = if is_dvd {
-        PANA_FRM_TOC_ENTRY_COUNT
+        if layout == TocLayout::Dvd64B {
+            PANA_FRM_TOC_REGION_SIZE / 64
+        } else {
+            PANA_FRM_TOC_ENTRY_COUNT
+        }
     } else {
         PANA_SD_TOC_MAX_ENTRIES
     };
@@ -304,11 +308,7 @@ pub fn retarget_frm_toc_bytes(
 
     let mut out = bytes.to_vec();
     if is_dvd {
-        feistel_decrypt_buffer(
-            &mut out[..toc_span],
-            &PANA_FEISTEL_ROUND_KEY_32B,
-            &PANA_FEISTEL_SBOX_256,
-        );
+        feistel_decrypt_buffer(&mut out[..toc_span], &detected_key, &PANA_FEISTEL_SBOX_256);
     }
 
     for &idx in &active_indices {
@@ -338,15 +338,11 @@ pub fn retarget_frm_toc_bytes(
     }
 
     if is_dvd {
-        feistel_encrypt_buffer(
-            &mut out[..toc_span],
-            &PANA_FEISTEL_ROUND_KEY_32B,
-            &PANA_FEISTEL_SBOX_256,
-        );
+        feistel_encrypt_buffer(&mut out[..toc_span], &detected_key, &PANA_FEISTEL_SBOX_256);
     }
 
     let final_entries = if is_dvd {
-        decrypt_and_parse_frm_toc(&out)
+        decrypt_frm_toc_with_detected_key(&out).3
     } else {
         parse_sd_frm_toc_with_layout(&out).1
     };
@@ -366,7 +362,7 @@ pub fn retarget_frm_toc_bytes(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::crypto::{FrmContainerMode, FrmPackModule, pack_frm};
+    use crate::crypto::{FrmContainerMode, FrmPackModule, decrypt_and_parse_frm_toc, pack_frm};
 
     #[test]
     fn region_compat_main_bypass_and_restore_work_atomically() {

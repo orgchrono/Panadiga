@@ -3,7 +3,7 @@
 use anyhow::{Result, bail};
 
 use super::super::types::{FrmModuleInfo, FrmTocDumpReport, TocEntry, TocReport};
-use super::{TocLayout, decrypt_and_parse_frm_toc, parse_sd_frm_toc_with_layout};
+use super::{TocLayout, decrypt_frm_toc_with_detected_key, parse_sd_frm_toc_with_layout};
 use crate::constants::*;
 
 /// Dissects the first 512 bytes of `PANA_DVD.FRM` to verify the 48-byte TOC entries.
@@ -140,7 +140,7 @@ pub fn analyze_frm_toc_report(raw: &[u8], source_label: &str) -> Result<FrmTocDu
     let global_header_hex = hex::encode_upper(&raw[0..PANA_FRM_GLOBAL_HEADER_SIZE]);
     let (toc_entries, invariants_ok) = build_raw_toc_entries(raw);
 
-    let decrypted_toc = decrypt_and_parse_frm_toc(raw);
+    let (_kname, _rk, dvd_layout, decrypted_toc) = decrypt_frm_toc_with_detected_key(raw);
     let use_decrypted_dvd = decrypted_toc.iter().any(|e| e.list_sum_valid);
     let (sd_layout_opt, sd_toc) = if use_decrypted_dvd {
         (None, Vec::new())
@@ -150,7 +150,7 @@ pub fn analyze_frm_toc_report(raw: &[u8], source_label: &str) -> Result<FrmTocDu
     let use_sd_toc = !use_decrypted_dvd && sd_toc.iter().any(|e| e.list_sum_valid);
 
     let toc_format = if use_decrypted_dvd {
-        TocLayout::Dvd48B.label()
+        dvd_layout.label()
     } else if use_sd_toc {
         sd_layout_opt.map_or("sd-plaintext", TocLayout::label)
     } else {
@@ -265,6 +265,9 @@ pub fn format_toc_dump_lines(report: &FrmTocDumpReport) -> Vec<String> {
         "sd-plaintext" => "TABELA PLAINTEXT SD (\"PANA__SD.FRM\" — Slots de 64B):",
         "sd-48b-plaintext-obsolete" => {
             "TABELA PLAINTEXT SD OBSOLETA (\"PANA__SD.FRM\" — Slots de 48B):"
+        }
+        "dvd-64b-feistel" => {
+            "TABELA DECIFRADA 64B (\"Firm list\" — Feistel FUN_4400a666 / S-Box 0x44035D84):"
         }
         _ => "TABELA DECIFRADA (\"Firm list\" — Feistel FUN_4400a666 / S-Box 0x44035D84):",
     };

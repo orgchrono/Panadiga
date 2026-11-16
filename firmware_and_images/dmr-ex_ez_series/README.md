@@ -1,10 +1,10 @@
-# Panasonic DMR-EX / DMR-EZ Official Firmware Matrix (17 Extracted Packages + 30 Live CDN URLs)
+# Panasonic DMR-EX / DMR-EZ Official Firmware Matrix (19 Extracted Packages + 32 Live CDN URLs)
 
-Coleção de pacotes oficiais baixados diretamente de `fdl.jpn.support.panasonic.com`, extraídos, verificados por SHA-256 e redistribuídos em `dmr-ex-ez-series-17models-official-pack.zip` na Release [`firmware-pack-v0.1.0`](https://github.com/orgchrono/Panadiga/releases/tag/firmware-pack-v0.1.0).
+Coleção de pacotes oficiais baixados diretamente de `fdl.jpn.support.panasonic.com`, extraídos, verificados por SHA-256 e redistribuídos em `dmr-ex-ez-series-17models-official-pack.zip` (`262,322,776` B, SHA-256 `7f0910e63dacbf332951330e7015b82330198733e77d3a9c1197a2b0dcd51d02`) — além do pacote de binários plaintext desempacotados `dmr-am34-unpacked-plaintext-bootloaders-and-kernels.7z` (`34,003,390` B, SHA-256 `b4b25f02e16fa425fc146d3486507385dfad03ae4b94f24237abcb8c5299d747`) — na Release [`firmware-pack-v0.1.0`](https://github.com/orgchrono/Panadiga/releases/tag/firmware-pack-v0.1.0).
 
 > **Nota:** Conforme [`.gitignore`](../../.gitignore), binários proprietários (`*.exe`, `*.FRM`, `*.bin`) não são versionados diretamente no Git e são distribuídos via asset empacotado com manifesto SHA-256.
 
-## 1. Pacotes Baixados, Extraídos e Auditados (17 Subdiretórios)
+## 1. Pacotes Baixados, Extraídos e Auditados (19 Subdiretórios)
 
 | Subdir | Instalador Oficial (`.exe`) | `.exe` Bytes | `PANA_DVD.FRM` Bytes | `PANA_DVD.FRM` SHA-256 | Fonte Oficial |
 | :--- | :--- | ---: | ---: | :--- | :--- |
@@ -12,6 +12,7 @@ Coleção de pacotes oficiais baixados diretamente de `fdl.jpn.support.panasonic
 | `ex769ef/` | `UPDATE_DMR-EX769EF_V14.exe` | `6,365,331` | `6,264,392` | `b1d55c1f15467341ce7becfbf3d32c50ef3564ad5a9f611dc0e859f68b29012f` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex769/UPDATE_DMR-EX769EF_V14.exe` |
 | `ex773ec/` | `UPDATE_DMR-EX773EC_V109.exe` | `7,126,264` | `7,018,064` | `ef8ead563883809f5d6a01aaf1fdd9de8e7a64e15f51c07abb68515a16057ff6` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex773/UPDATE_DMR-EX773EC_V109.exe` |
 | `ex773ep/` | `UPDATE_DMR-EX773EP_V109.exe` | `7,123,800` | `7,015,608` | `e602b452d2a981e2b3021b436d699c54158f475a3d5d1a5161d8aabafa1f0e42` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex773/UPDATE_DMR-EX773EP_V109.exe` |
+| `ex78en/` | `UPDATE_DMR-EX78EN_V15.exe` | `6,877,384` | `6,770,928` | `11f72af33eef53c16d2841bc4a8011fd6b2e054dabbff25a3c4936dc05b238f8` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex78/UPDATE_DMR-EX78EN_V15.exe` |
 | `ex795ep/` | `UPDATE_EX795EP_V108.exe` | `2,516,032` | `2,297,800` | `9e0c849d7253cd5163fcc86959c52d71e8ca60ed7c3322a2545899f699f1df39` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex795/UPDATE_EX795EP_V108.exe` |
 | `ex79_89_769eb/` | `Update_EX79_EX89_EX769EB_V105.exe` | `1,795,184` | `1,576,960` | `3b78fb68384fe4ffb26aaef28067cc3a336c7036696fda6b4ce09beff53acbfe` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex79/Update_EX79_EX89_EX769EB_V105.exe` |
 | `ex79ef/` | `UPDATE_DMR-EX79EF_V14.exe` | `13,806,904` | `13,700,448` | `7ca219d3a40779674a4402bcf145d51abbc71ab17a1353af1bc334cfba758ca8` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex79/UPDATE_DMR-EX79EF_V14.exe` |
@@ -21,6 +22,7 @@ Coleção de pacotes oficiais baixados diretamente de `fdl.jpn.support.panasonic
 | `ex83ep/` | `UPDATE_DMR-EX83EP_V109.exe` | `7,931,720` | `7,823,528` | `9115c7a9dd517c35376745163cbeca2d5ca73c6681683e8acff7dfee2ebbfbaf` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex83/UPDATE_DMR-EX83EP_V109.exe` |
 | `ex84ceg/` | `UPDATE_DMR-EX84CEG_V107303.exe` | `10,413,976` | `10,305,272` | `216a7b72ae117be26a07b319e231bc8e19816b3fc37bfe4551c76e2723789771` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex84/UPDATE_DMR-EX84CEG_V107303.exe` |
 | `ex86_83_773_eb/` | `Update_EX86_EX83_EX773_EX99V_EZ49VEB_V107.exe` | `1,792,600` | `1,576,960` | `8237b06fd4cce0dbedf32a9ecbf7cdcefa3ca18abff66f5ead1a2fb9b3576dac` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex86/Update_EX86_EX83_EX773_EX99V_EZ49VEB_V107.exe` |
+| `ex88en/` | `UPDATE_DMR-EX88EN_V15.exe` | `6,946,168` | `6,839,712` | `9598c3722caac7476a920cbbfa91d98d1650707120073c67b85396cf78df4eae` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex88/UPDATE_DMR-EX88EN_V15.exe` |
 | `ex89ef/` | `UPDATE_DMR-EX89EF_V14.exe` | `7,502,744` | `7,396,288` | `e7a3368cd94c16017d985901bc34b4ac7e2bad8d64594372de7bb460fe2763a3` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex89/UPDATE_DMR-EX89EF_V14.exe` |
 | `ex93ceg/` | `UPDATE_DMR-EX93CEG_V139324.exe` | `10,654,152` | `10,545,448` | `5ca06ba7a41ab9f41462b4f2b957b7d434c23cfe29a3dbc58f583392894a480e` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex93/UPDATE_DMR-EX93CEG_V139324.exe` |
 | `ez49veb/` | `UPDATE_EZ49VEB_V11.exe` | `6,150,285` | `6,049,344` | `a4c5d8b2b7fdb4e69f4081348ba73f23dc43e9f83c5068136834403e2221816c` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ez49v/UPDATE_EZ49VEB_V11.exe` |
@@ -45,6 +47,7 @@ Coleção de pacotes oficiais baixados diretamente de `fdl.jpn.support.panasonic
 | `ex773` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex773/UPDATE_DMR-EX773EC_V109.exe` |
 | `ex773` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex773/UPDATE_DMR-EX773EP_V109.exe` |
 | `ex773` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex86/Update_EX86_EX83_EX773_EX99V_EZ49VEB_V107.exe` |
+| `ex78` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex78/UPDATE_DMR-EX78EN_V15.exe` |
 | `ex79` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex79/UPDATE_DMR-EX79EF_V14.exe` |
 | `ex79` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex79/Update_EX79_EX89_EX769EB_V105.exe` |
 | `ex795` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex795/UPDATE_EX795EP_V108.exe` |
@@ -56,6 +59,7 @@ Coleção de pacotes oficiais baixados diretamente de `fdl.jpn.support.panasonic
 | `ex83` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex86/Update_EX86_EX83_EX773_EX99V_EZ49VEB_V107.exe` |
 | `ex84c` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex84/UPDATE_DMR-EX84CEG_V107303.exe` |
 | `ex86` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex86/Update_EX86_EX83_EX773_EX99V_EZ49VEB_V107.exe` |
+| `ex88` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex88/UPDATE_DMR-EX88EN_V15.exe` |
 | `ex89` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex79/Update_EX79_EX89_EX769EB_V105.exe` |
 | `ex89` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex89/UPDATE_DMR-EX89EF_V14.exe` |
 | `ex93c` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex93/UPDATE_DMR-EX93CEG_V139324.exe` |

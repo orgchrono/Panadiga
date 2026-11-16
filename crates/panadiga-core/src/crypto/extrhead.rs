@@ -196,7 +196,7 @@ pub fn unpack_extrhead(raw_container: &[u8], mode: ExtrheadCryptMode) -> Result<
     }
 
     let header = parse_extrhead_header(&hdr_blk)?;
-    if header.algo != 0 {
+    if header.algo != 0 && header.algo != 2 {
         bail!("Unsupported EXTRHEAD compression algo: {}", header.algo);
     }
 
@@ -220,11 +220,18 @@ pub fn unpack_extrhead(raw_container: &[u8], mode: ExtrheadCryptMode) -> Result<
         );
     }
 
-    let mut decoder = ZlibDecoder::new(&decrypted[0x40..payload_end]);
-    let mut decompressed = Vec::with_capacity(header.dst_len as usize);
-    decoder
-        .read_to_end(&mut decompressed)
-        .context("Decompressing EXTRHEAD zlib payload")?;
+    let decompressed = match header.algo {
+        0 => {
+            let mut decoder = ZlibDecoder::new(&decrypted[0x40..payload_end]);
+            let mut buf = Vec::with_capacity(header.dst_len as usize);
+            decoder
+                .read_to_end(&mut buf)
+                .context("Decompressing EXTRHEAD zlib payload")?;
+            buf
+        }
+        2 => decompress_pana_lzss(&decrypted[0x40..payload_end], header.dst_len as usize),
+        other => bail!("Unsupported EXTRHEAD compression algo: {other}"),
+    };
 
     let stride = header.adler_step.max(1) as usize;
     let calculated_checksum = adler32_panasonic_strided(&decompressed, stride);
@@ -239,4 +246,119 @@ pub fn unpack_extrhead(raw_container: &[u8], mode: ExtrheadCryptMode) -> Result<
         calculated_checksum,
         footer_present,
     })
+}
+
+/// Decompresses an Okumura LZSS stream used by Panasonic DIGA firmware (`algo == 2`).
+///
+/// Uses a 4096-byte sliding window, 0-initialized, with initial window position `0x0FEE`.
+/// Flag byte: bit 0 indicates literal (1) or 2-byte backreference (0).
+pub fn decompress_pana_lzss(data: &[u8], expected_size: usize) -> Vec<u8> {
+    let mut window = [0u8; 0x1000];
+    let mut dst = if expected_size > 0 {
+        Vec::with_capacity(expected_size)
+    } else {
+        Vec::new()
+    };
+    let mut src_i = 0;
+    let mut win_pos = 0x0FEE;
+    let mut flags = 0u16;
+
+    while src_i < data.len() {
+        flags >>= 1;
+        if (flags & 0x100) == 0 {
+            if src_i >= data.len() {
+                break;
+            }
+            flags = (data[src_i] as u16) | 0xFF00;
+            src_i += 1;
+        }
+
+        if (flags & 1) == 0 {
+            // 2-byte Backreference: offset (12 bits) and length (4 bits + 3)
+            if src_i + 1 >= data.len() {
+                break;
+            }
+            let b1 = data[src_i];
+            let b2 = data[src_i + 1];
+            src_i += 2;
+
+            let mut offset = (b1 as usize) | (((b2 & 0xF0) as usize) << 4);
+            let length = ((b2 & 0x0F) as usize) + 3;
+
+            for _ in 0..length {
+                let c = window[offset];
+                dst.push(c);
+                window[win_pos] = c;
+                win_pos = (win_pos + 1) & 0x0FFF;
+                offset = (offset + 1) & 0x0FFF;
+                if expected_size > 0 && dst.len() >= expected_size {
+                    return dst;
+                }
+            }
+        } else {
+            // 1-byte Literal
+            if src_i >= data.len() {
+                break;
+            }
+            let c = data[src_i];
+            src_i += 1;
+            dst.push(c);
+            window[win_pos] = c;
+            win_pos = (win_pos + 1) & 0x0FFF;
+            if expected_size > 0 && dst.len() >= expected_size {
+                return dst;
+            }
+        }
+    }
+
+    dst
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_decompress_pana_lzss_vector() {
+        // Encodes b"PANASONIC PANASONIC"
+        let compressed = [
+            0xFF, b'P', b'A', b'N', b'A', b'S', b'O', b'N', b'I', 0xFB, b'C', b' ', 0xEE, 0xF6,
+        ];
+        let decomp = decompress_pana_lzss(&compressed, 19);
+        assert_eq!(&decomp, b"PANASONIC PANASONIC");
+    }
+
+    #[test]
+    fn test_unpack_extrhead_with_lzss() {
+        let payload = b"PANASONIC PANASONIC";
+        let compressed = [
+            0xFF, b'P', b'A', b'N', b'A', b'S', b'O', b'N', b'I', 0xFB, b'C', b' ', 0xEE, 0xF6,
+        ];
+        let checksum = adler32_panasonic_strided(payload, 16);
+
+        let mut raw = Vec::new();
+        raw.extend_from_slice(b"EXTRHEAD");
+        raw.extend_from_slice(b"TEST");
+        raw.extend_from_slice(&0u16.to_le_bytes()); // flag
+        raw.extend_from_slice(&2u16.to_le_bytes()); // algo = 2 (LZSS)
+        raw.extend_from_slice(&(payload.len() as u32).to_le_bytes()); // dst_len
+        raw.extend_from_slice(&0x50400000u32.to_le_bytes()); // dst_addr
+        raw.extend_from_slice(&(compressed.len() as u32).to_le_bytes()); // src_len
+        raw.extend_from_slice(&0u32.to_le_bytes());
+        let footer_offset = 0x40 + compressed.len() as u32;
+        raw.extend_from_slice(&footer_offset.to_le_bytes());
+        raw.extend_from_slice(&0u32.to_le_bytes());
+        raw.extend_from_slice(&checksum.to_le_bytes());
+        raw.extend_from_slice(&16u32.to_le_bytes()); // adler_step
+        raw.extend_from_slice(&[0u8; 16]); // build_name
+        raw.extend_from_slice(&compressed);
+        raw.extend_from_slice(b"EXTRFOOT");
+        pad_to_block(&mut raw);
+
+        let unpacked = unpack_extrhead(&raw, ExtrheadCryptMode::Plain).unwrap();
+        assert_eq!(unpacked.header.algo, 2);
+        assert_eq!(unpacked.decompressed, payload);
+        assert!(unpacked.checksum_valid);
+        assert!(unpacked.footer_present);
+    }
 }
