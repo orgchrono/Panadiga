@@ -51,9 +51,9 @@ void p7501_cli_print_help(void) {
     printf("  HEXCAP [ms] [NORMAL|JIG[:ms]|NOPULL]     - Microsecond-delta hex+ASCII RX capture\n");
     printf("  UARTTXHEX [LOW:]<hex|BRK> [rx_ms]    - PIO1 arbitrary hex / 120ms BREAK inject\n");
     printf("  WAITTX <ms> <boot> \"<trig>\" <hex|BRK> [post] - Triggered TX inject on match\n");
-    printf("  BRIDGE [baud] [NORMAL|JIG[:ms]|NOPULL]   - Raw USB-CDC <-> SC0 passthrough (~~~ exit)\n");
+    printf("  BRIDGE [baud] [boot] [CTRL]          - Raw USB-CDC <-> SC0 passthrough + [CTRL] edges\n");
     printf("  PWRTRACE [ms] [boot]                 - Boot ADC0 rail & NSW5V/RXD/TXD glitch logger\n");
-    printf("  BOOTTRACE [ms] [boot]                - Correlated PIO1 UART + GP3..5 + ADC0 profiler\n");
+    printf("  BOOTTRACE [ms] [boot] [STICKY]       - Correlated PIO1 UART + GP3..5 + ADC0 profiler\n");
     printf("  PIOLOGIC [ms] [boot] [khz] [CTRL]    - PIO0 4-ch (GP2..5) edge & FMU timing sampler\n");
     printf("  SDSNIFF [ms] [boot]                  - Passive Hi-Z PIO0 SD sniffer (GP10..15, CRC16/lane)\n");
     printf("  JIGSWEEP [HOLD|DELAY|PREBOOT] [ms..] - SW_UART latch window & pre-DDR Bootrom sweep\n");

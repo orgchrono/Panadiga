@@ -126,9 +126,19 @@ static void test_hex_window_and_led_logic(void) {
 
     p7501_window_boot_spec_t win;
     p7501_parse_window_boot_args("8000 JIG:350", 5000u, 200u, 30000u, &win);
-    assert(win.window_ms == 8000u && win.boot_action == P7501_BOOT_ACTION_JIG && win.jig_hold_ms == 350u);
+    assert(win.window_ms == 8000u && win.boot_action == P7501_BOOT_ACTION_JIG && win.jig_hold_ms == 350u && !win.sticky_jig);
+    p7501_parse_window_boot_args("45000 JIG:3000 STICKY", 5000u, 200u, 90000u, &win);
+    assert(win.window_ms == 45000u && win.boot_action == P7501_BOOT_ACTION_JIG && win.jig_hold_ms == 3000u && win.sticky_jig);
     p7501_parse_window_boot_args("4000 NOPULL", 5000u, 200u, 30000u, &win);
-    assert(win.window_ms == 4000u && win.boot_action == P7501_BOOT_ACTION_PASSIVE && win.jig_hold_ms == 0u);
+    assert(win.window_ms == 4000u && win.boot_action == P7501_BOOT_ACTION_PASSIVE && win.jig_hold_ms == 0u && !win.sticky_jig);
+
+    p7501_bridge_spec_t bspec;
+    p7501_parse_bridge_args("115200 PASSIVE CTRL", 115200u, &bspec);
+    assert(bspec.baud == 115200u && bspec.boot_action == P7501_BOOT_ACTION_PASSIVE && bspec.log_ctrl_edges);
+    p7501_parse_bridge_args("JIG:500 CTRL", 115200u, &bspec);
+    assert(bspec.baud == 115200u && bspec.boot_action == P7501_BOOT_ACTION_JIG && bspec.jig_hold_ms == 500u && bspec.log_ctrl_edges);
+    p7501_parse_bridge_args("", 57600u, &bspec);
+    assert(bspec.baud == 57600u && bspec.boot_action == P7501_BOOT_ACTION_PASSIVE && !bspec.log_ctrl_edges);
 
     p7501_led_state_t led;
     p7501_led_state_init(&led);

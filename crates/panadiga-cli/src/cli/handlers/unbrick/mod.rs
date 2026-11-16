@@ -1,6 +1,7 @@
 //! Thin CLI dispatch shell for Pre-MAIN DIGA Unbrick, SD Kit Builder, & TBC Passthrough Workbench.
 
 mod nor_matshita;
+mod region_compat;
 pub mod render;
 
 use anyhow::{Context, Result, bail};
@@ -176,5 +177,6 @@ pub fn handle_unbrick(args: UnbrickArgs) -> Result<()> {
             nor_matshita::handle_decode_nor_dump(&input, out, json.as_deref())
         }
         UnbrickActions::MatshitaEmu { action } => nor_matshita::handle_matshita_emu(action),
+        UnbrickActions::RegionCompat { action } => region_compat::handle_region_compat(action),
     }
 }

@@ -161,3 +161,31 @@ fn decodes_live_boottrace_prefixed_normal_and_jig_capture() {
     assert!(rep.boot_stages.contains(&"SD_DIAG_LOAD_FAIL".to_string()));
     assert!(rep.diagnosis.contains("SD diag load failed[0]"));
 }
+
+#[test]
+fn decodes_multi_reset_tray_cycles_spinup_and_ctrl_edges() {
+    let sample = concat!(
+        "[10:36:48.030 + 607.361s] DDR CHECK: OK\r\n",
+        "[10:36:48.805 + 608.136s] ***** normal mode *****\r\n",
+        "[10:36:48.815 + 608.146s] BGO driver init failed[1].\r\n",
+        "[10:37:58.175 + 677.506s] ** open tray **\r\n",
+        "[10:38:18.043 + 697.374s] ** close tray **\r\n",
+        "[10:38:18.429 + 697.760s] X(80020401)59,\r\n",
+        "[CTRL +1523ms] NSW5V=1 TXD=1 XRESET=0\r\n",
+        "[10:38:30.519 + 709.850s] DDR CHECK: OK\r\n",
+        "[10:38:34.490 + 713.821s] ** can not close tray **\r\n",
+        "[10:38:34.866 + 714.197s] X(80020401)59,\r\n",
+    );
+    let rep = parse_bench_log_text(sample);
+    assert_eq!(rep.reset_cycle_count, 2);
+    assert_eq!(rep.odd_tray_open_count, 1);
+    assert_eq!(rep.odd_tray_close_count, 1);
+    assert_eq!(rep.odd_spinup_count, 2);
+    assert_eq!(
+        rep.ctrl_edge_events,
+        vec!["[CTRL +1523ms] NSW5V=1 TXD=1 XRESET=0".to_string()]
+    );
+    assert!(rep.boot_stages.contains(&"ODD_TRAY_OPEN".to_string()));
+    assert!(rep.boot_stages.contains(&"ODD_TRAY_CLOSE".to_string()));
+    assert!(rep.notes.iter().any(|n| n.contains("2 DDR reset cycle(s)")));
+}

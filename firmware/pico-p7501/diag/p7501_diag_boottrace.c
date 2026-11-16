@@ -128,8 +128,9 @@ void p7501_cmd_boottrace(const char *arg) {
         spec.jig_hold_ms = P7501_JIG_DEFAULT_HOLD_MS;
     }
 
-    printf("=== BOOTTRACE: window=%" PRIu32 "ms boot=%d hold=%" PRIu32 "ms (%s @ %" PRIu32 ") ===\n",
+    printf("=== BOOTTRACE: window=%" PRIu32 "ms boot=%d hold=%" PRIu32 "ms sticky=%s (%s @ %" PRIu32 ") ===\n",
            spec.window_ms, (int)spec.boot_action, spec.jig_hold_ms,
+           spec.sticky_jig ? "YES" : "NO",
            p7501_framing_name(p7501_pio_get_framing()), p7501_pio_get_baud());
     fflush(stdout);
 
@@ -156,7 +157,7 @@ void p7501_cmd_boottrace(const char *arg) {
         .boot_action = spec.boot_action,
         .jig_hold_ms = spec.jig_hold_ms,
         .manage_session = true,
-        .auto_release_serial_boot = true,
+        .auto_release_serial_boot = !spec.sticky_jig,
         .allow_cdc_abort = true,
         .on_rx_byte = boottrace_on_byte,
         .on_tick = boottrace_on_tick,

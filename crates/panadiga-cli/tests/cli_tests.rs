@@ -329,6 +329,19 @@ fn test_cli_args_parsing_matrix() {
             .command,
         Some(Commands::Pico(_))
     ));
+    assert!(matches!(
+        Cli::try_parse_from([
+            "panadiga",
+            "unbrick",
+            "region-compat",
+            "inspect-main",
+            "-i",
+            "MAIN.bin"
+        ])
+        .unwrap()
+        .command,
+        Some(Commands::Unbrick(_))
+    ));
 
     let cli = Cli::try_parse_from(["panadiga", "-i"]).unwrap();
     assert!(cli.interactive);

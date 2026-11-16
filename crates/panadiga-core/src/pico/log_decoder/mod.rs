@@ -12,8 +12,8 @@ use diagnosis::{
     BootDiagnosisContext, build_boot_stages, build_diagnostic_notes, classify_boot_diagnosis,
 };
 use stream::{
-    extract_bracket_value_after, parse_hex_prefixed_u32, parse_sense_line, push_unique_str,
-    reconstruct_diagwatch_target_stream,
+    extract_bracket_value_after, extract_ctrl_edge_events, parse_hex_prefixed_u32,
+    parse_sense_line, push_unique_str, reconstruct_diagwatch_target_stream,
 };
 
 pub use diagnosis::describe_boot_fat_error_code;
@@ -48,6 +48,11 @@ pub struct Am34BootLogReport {
     pub fat_mount_failed: Option<i32>,
     pub fat_open_failed: Option<(String, i32)>,
     pub odd_tray_failed: bool,
+    pub odd_tray_open_count: usize,
+    pub odd_tray_close_count: usize,
+    pub odd_spinup_count: usize,
+    pub reset_cycle_count: usize,
+    pub ctrl_edge_events: Vec<String>,
     pub boot_stages: Vec<String>,
     pub diagnosis: String,
     pub sdcd_errors: Vec<i32>,
@@ -61,6 +66,7 @@ pub struct Am34BootLogReport {
 
 /// Parses an offline AM34 / Pico capture text buffer into structured boot & diagnostic telemetry.
 pub fn parse_bench_log_text(text: &str) -> Am34BootLogReport {
+    let ctrl_edge_events = extract_ctrl_edge_events(text);
     let reconstructed = reconstruct_diagwatch_target_stream(text);
     let target_text = reconstructed.as_str();
     let mut loader_version = None;
@@ -80,6 +86,10 @@ pub fn parse_bench_log_text(text: &str) -> Am34BootLogReport {
     let mut fat_mount_failed = None;
     let mut fat_open_failed = None;
     let mut odd_tray_failed = false;
+    let mut odd_tray_open_count = 0usize;
+    let mut odd_tray_close_count = 0usize;
+    let mut odd_spinup_count = 0usize;
+    let mut reset_cycle_count = 0usize;
     let mut panamon_active = false;
     let mut sdcd_errors = Vec::new();
     let mut drive_error_codes = Vec::new();
@@ -89,6 +99,9 @@ pub fn parse_bench_log_text(text: &str) -> Am34BootLogReport {
 
     for line in target_text.lines() {
         let trimmed = line.trim();
+        if trimmed.contains("DDR CHECK: OK") {
+            reset_cycle_count += 1;
+        }
         if let Some(idx) = trimmed.find("Loader ver") {
             loader_version = Some(trimmed[idx..].trim_end_matches('*').trim().to_string());
         }
@@ -183,6 +196,13 @@ pub fn parse_bench_log_text(text: &str) -> Am34BootLogReport {
         if trimmed.contains("** can not close tray") || trimmed.contains("80045300") {
             odd_tray_failed = true;
         }
+        if trimmed.contains("** open tray **") {
+            odd_tray_open_count += 1;
+        }
+        if trimmed.contains("** close tray **") {
+            odd_tray_close_count += 1;
+        }
+        odd_spinup_count += trimmed.matches("X(80020401)").count();
         if trimmed.contains("PANAMON1>") {
             panamon_active = true;
         }
@@ -249,6 +269,10 @@ pub fn parse_bench_log_text(text: &str) -> Am34BootLogReport {
         bgo_failed_code,
         sdcd_errors: &sdcd_errors,
         odd_tray_failed,
+        odd_tray_open_count,
+        odd_tray_close_count,
+        odd_spinup_count,
+        reset_cycle_count,
         has_83a7,
         boot_mode: boot_mode.as_deref(),
         ddr_ok,
@@ -276,6 +300,11 @@ pub fn parse_bench_log_text(text: &str) -> Am34BootLogReport {
         fat_mount_failed,
         fat_open_failed,
         odd_tray_failed,
+        odd_tray_open_count,
+        odd_tray_close_count,
+        odd_spinup_count,
+        reset_cycle_count,
+        ctrl_edge_events,
         boot_stages,
         diagnosis,
         sdcd_errors,

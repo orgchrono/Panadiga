@@ -22,6 +22,15 @@ pub(crate) fn write_padded_ascii(dst: &mut [u8], text: &str, pad: u8) {
     dst[..count].copy_from_slice(&src[..count]);
 }
 
+pub(crate) fn write_toc_entry_list_sum(entry: &mut [u8]) -> u16 {
+    let sum_off = entry.len() - 2;
+    let list_sum = entry[..sum_off]
+        .iter()
+        .fold(0u16, |acc, &b| acc.wrapping_add(u16::from(b)));
+    entry[sum_off..].copy_from_slice(&list_sum.to_le_bytes());
+    list_sum
+}
+
 pub(crate) fn pad_to_block(buf: &mut Vec<u8>) {
     let rem = buf.len() % CIPHER_BLOCK_SIZE;
     if rem != 0 {

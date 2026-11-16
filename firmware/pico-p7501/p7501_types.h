@@ -121,7 +121,7 @@ typedef enum p7501_adc_channel p7501_adc_channel_t;
 /** Default / maximum capture & tracer window boundaries (ms). */
 #define P7501_CAPTURE_DEFAULT_MS     7500U
 #define P7501_CAPTURE_MAX_MS         120000U
-#define P7501_TRACE_MAX_MS           30000U
+#define P7501_TRACE_MAX_MS           90000U
 #define P7501_FMU_PROBE_WINDOW_MS    4000U
 #define P7501_FMU_BATCH_WINDOW_MS    2000U
 #define P7501_UART_PROBE_WINDOW_MS   4500U

@@ -120,6 +120,18 @@ fn strip_boottrace_prefix(line: &str) -> Option<&str> {
     Some(line)
 }
 
+/// Collects `[CTRL +...]` control-rail transition events prior to target-stream normalization.
+pub(super) fn extract_ctrl_edge_events(text: &str) -> Vec<String> {
+    text.lines()
+        .filter_map(|line| {
+            let trimmed = line.trim();
+            trimmed
+                .find("[CTRL +")
+                .map(|idx| trimmed[idx..].to_string())
+        })
+        .collect()
+}
+
 /// Strips interleaved `[DIAGWATCH...]` / `[BOOTTRACE]` wrappers and rejoins target fragments
 /// split mid-line during real-time UART streaming (e.g. `BGO driver init failed` + `[1].`).
 pub(super) fn reconstruct_diagwatch_target_stream(text: &str) -> String {

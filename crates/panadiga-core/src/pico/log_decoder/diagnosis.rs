@@ -28,6 +28,10 @@ pub(super) struct BootDiagnosisContext<'a> {
     pub(super) bgo_failed_code: Option<i32>,
     pub(super) sdcd_errors: &'a [i32],
     pub(super) odd_tray_failed: bool,
+    pub(super) odd_tray_open_count: usize,
+    pub(super) odd_tray_close_count: usize,
+    pub(super) odd_spinup_count: usize,
+    pub(super) reset_cycle_count: usize,
     pub(super) has_83a7: bool,
     pub(super) boot_mode: Option<&'a str>,
     pub(super) ddr_ok: bool,
@@ -151,6 +155,12 @@ pub(super) fn build_boot_stages(
     if ctx.odd_tray_failed {
         boot_stages.push("ODD_NO_TRAY_80045300".to_string());
     }
+    if ctx.odd_tray_open_count > 0 {
+        boot_stages.push("ODD_TRAY_OPEN".to_string());
+    }
+    if ctx.odd_tray_close_count > 0 {
+        boot_stages.push("ODD_TRAY_CLOSE".to_string());
+    }
     if ctx.has_83a7 {
         boot_stages.push("ODD_APC_80040904".to_string());
     }
@@ -197,6 +207,15 @@ pub(super) fn build_diagnostic_notes(
             "ODD tray close failure (** can not close tray ** / 80045300): check 4-pin tray motor/sensor cable."
                 .to_string(),
         );
+    }
+    if ctx.reset_cycle_count > 1 || ctx.odd_spinup_count > 0 {
+        notes.push(format!(
+            "Observed {} DDR reset cycle(s), tray open={}, tray close={}, spinup X(80020401)={} (matches ~3.14s FUN_44007836 tray check & ~1.3s Syscon FUN_440079a4 power reset).",
+            ctx.reset_cycle_count,
+            ctx.odd_tray_open_count,
+            ctx.odd_tray_close_count,
+            ctx.odd_spinup_count
+        ));
     }
     if let Some(v) = vdd_volts
         && v <= 0.10

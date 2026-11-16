@@ -125,6 +125,16 @@ bool p7501_is_boot_spec_token(const char *token) {
            p7501_ascii_ieq(token, "JIG") || p7501_ascii_iprefix(token, "JIG:");
 }
 
+static bool is_sticky_token(const char *token) {
+    return (token != NULL) &&
+           (p7501_ascii_ieq(token, "STICKY") || p7501_ascii_ieq(token, "HOLD"));
+}
+
+static bool is_ctrl_token(const char *token) {
+    return (token != NULL) &&
+           (p7501_ascii_ieq(token, "CTRL") || p7501_ascii_ieq(token, "EDGES"));
+}
+
 void p7501_parse_window_boot_args(
     const char *arg,
     uint32_t default_ms,
@@ -132,8 +142,7 @@ void p7501_parse_window_boot_args(
     uint32_t max_ms,
     p7501_window_boot_spec_t *out_spec
 ) {
-    char tok1[24] = {0};
-    char tok2[24] = {0};
+    char tok[24] = {0};
 
     if (!out_spec) {
         return;
@@ -141,12 +150,47 @@ void p7501_parse_window_boot_args(
     out_spec->window_ms = default_ms;
     out_spec->boot_action = P7501_BOOT_ACTION_NORMAL;
     out_spec->jig_hold_ms = 0u;
+    out_spec->sticky_jig = false;
 
-    const char *cur = p7501_next_token(arg, tok1, sizeof(tok1));
+    const char *cur = p7501_next_token(arg, tok, sizeof(tok));
     if (cur != NULL) {
-        out_spec->window_ms = p7501_parse_uint32_clamped(tok1, default_ms, min_ms, max_ms);
-        if (p7501_next_token(cur, tok2, sizeof(tok2)) != NULL) {
-            out_spec->boot_action = p7501_parse_boot_spec(tok2, &out_spec->jig_hold_ms);
+        out_spec->window_ms = p7501_parse_uint32_clamped(tok, default_ms, min_ms, max_ms);
+        while ((cur = p7501_next_token(cur, tok, sizeof(tok))) != NULL) {
+            if (is_sticky_token(tok)) {
+                out_spec->sticky_jig = true;
+            } else if (p7501_is_boot_spec_token(tok)) {
+                out_spec->boot_action = p7501_parse_boot_spec(tok, &out_spec->jig_hold_ms);
+            }
+        }
+    }
+}
+
+void p7501_parse_bridge_args(
+    const char *arg,
+    uint32_t default_baud,
+    p7501_bridge_spec_t *out_spec
+) {
+    char tok[24] = {0};
+
+    if (!out_spec) {
+        return;
+    }
+    out_spec->baud = default_baud;
+    out_spec->boot_action = P7501_BOOT_ACTION_PASSIVE;
+    out_spec->jig_hold_ms = 0u;
+    out_spec->log_ctrl_edges = false;
+
+    const char *cur = arg;
+    while ((cur = p7501_next_token(cur, tok, sizeof(tok))) != NULL) {
+        uint32_t parsed_u32 = 0u;
+        if (is_ctrl_token(tok)) {
+            out_spec->log_ctrl_edges = true;
+        } else if (p7501_is_boot_spec_token(tok)) {
+            out_spec->boot_action = p7501_parse_boot_spec(tok, &out_spec->jig_hold_ms);
+        } else if (p7501_parse_u32_strict(tok, &parsed_u32)) {
+            out_spec->baud = p7501_parse_uint32_clamped(
+                tok, default_baud, P7501_UART_MIN_BAUD, P7501_UART_MAX_BAUD
+            );
         }
     }
 }

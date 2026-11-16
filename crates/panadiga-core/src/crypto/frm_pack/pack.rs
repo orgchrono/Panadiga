@@ -2,7 +2,7 @@
 
 use anyhow::{Result, bail};
 
-use super::super::codec::{pad_to_block, write_padded_ascii};
+use super::super::codec::{pad_to_block, write_padded_ascii, write_toc_entry_list_sum};
 use super::super::extrhead::{ExtrheadCryptMode, pack_extrhead, parse_extrhead_header};
 use super::super::feistel::feistel_encrypt_buffer;
 use super::types::{FrmContainerMode, FrmPackModule, FrmPackReport, PackedFrmModuleSummary};
@@ -121,11 +121,7 @@ pub fn pack_frm(
             write_padded_ascii(&mut entry[0x30..0x3C], &module.model_group, 0);
         }
 
-        let sum_off = stride - 2;
-        let list_sum = entry[..sum_off]
-            .iter()
-            .fold(0u16, |acc, &b| acc.wrapping_add(u16::from(b)));
-        entry[sum_off..stride].copy_from_slice(&list_sum.to_le_bytes());
+        let list_sum = write_toc_entry_list_sum(entry);
 
         image.extend_from_slice(&mod_bytes);
         summaries.push(PackedFrmModuleSummary {

@@ -9,6 +9,7 @@ pub mod mn10300_traps;
 pub mod nor_dumper;
 pub mod patch_spec;
 pub mod prog061_uart_monitor;
+pub mod region_compat;
 pub mod unbrick_sd_kit;
 pub mod unbrick_workbench;
 
@@ -46,6 +47,13 @@ pub use nor_dumper::{
 pub use prog061_uart_monitor::{
     OFF_UART_MONITOR_SLACK, PATCH_A2CD_UART_MONITOR, PROG061_UART_MONITOR_VA,
     UART_MONITOR_MAX_SLACK_BYTES, build_prog061_uart_monitor_payload,
+};
+pub use region_compat::{
+    DevBinReport, EXPECTED_MAIN_3060NP_SIZE, FrmRetargetReport, MainRegionCompatReport,
+    OFF_FMU_DEVINFO_3060NP, OFF_FMU_DEVINFO_3410PQ, ORIG_FMU_DEVINFO_3060NP,
+    ORIG_FMU_DEVINFO_3410PQ, PATCH_FMU_DEVINFO_3060NP, PATCH_FMU_DEVINFO_3410PQ, RegionCompatMode,
+    inspect_dev_bin_bytes, inspect_main_region_compat, patch_dev_bin_bytes,
+    patch_main_region_compat_in_place, retarget_frm_toc_bytes,
 };
 pub use unbrick_sd_kit::{
     FatBpbReport, MbrPartitionRecord, RootDirFileReport, SdDiskInspectionReport,

@@ -15,6 +15,7 @@
 #include "uart/p7501_uart_codec.h"
 #include "uart/p7501_uart_pio_engine.h"
 
+#include "hardware/gpio.h"
 #include "pico/stdlib.h"
 #include "pico/time.h"
 
@@ -192,32 +193,24 @@ void p7501_cmd_waittx(const char *arg) {
 }
 
 void p7501_cmd_bridge(const char *arg) {
-    char tok1[24] = {0};
-    char tok2[24] = {0};
     const uint32_t orig_baud = p7501_pio_get_baud();
-    p7501_boot_action_t action = P7501_BOOT_ACTION_PASSIVE;
-    uint32_t jig_hold_ms = 0u;
+    p7501_bridge_spec_t spec;
+    p7501_parse_bridge_args(arg, orig_baud, &spec);
+    (void)p7501_pio_set_baud(spec.baud);
 
-    const char *cur = p7501_next_token(arg, tok1, sizeof(tok1));
-    if (cur != NULL && tok1[0] != '\0') {
-        const uint32_t req = p7501_parse_uint32_clamped(
-            tok1, orig_baud, P7501_UART_MIN_BAUD, P7501_UART_MAX_BAUD
-        );
-        (void)p7501_pio_set_baud(req);
-        if (p7501_next_token(cur, tok2, sizeof(tok2)) != NULL) {
-            action = p7501_parse_boot_spec(tok2, &jig_hold_ms);
-        }
-    }
-
-    printf("[BRIDGE] USB CDC <-> P7501 SC0 %" PRIu32 " %s active (exit: send '~~~' or unplug USB).\n",
+    printf("[BRIDGE] USB CDC <-> P7501 SC0 %" PRIu32 " %s ctrl=%s active (exit: send '~~~' or unplug USB).\n",
            p7501_pio_get_baud(),
-           p7501_framing_name(p7501_pio_get_framing()));
+           p7501_framing_name(p7501_pio_get_framing()),
+           spec.log_ctrl_edges ? "ON" : "OFF");
     fflush(stdout);
 
     p7501_wdt_set_stage(P7501_WDT_STAGE_BRIDGE);
     p7501_led_set_auto_mode(LED_MODE_GDB_RSP);
-    p7501_pio_begin_rx_session_ex(action, jig_hold_ms);
+    p7501_pio_begin_rx_session_ex(spec.boot_action, spec.jig_hold_ms);
 
+    const uint64_t t0_us = time_us_64();
+    uint8_t prev_ctrl3 = (uint8_t)((gpio_get_all() >> P7501_PIN_NSW5V) & 0x07u);
+    uint32_t ctrl_edges = 0u;
     uint32_t rx_count = 0u;
     uint32_t tx_count = 0u;
     uint32_t ferr_count = 0u;
@@ -233,6 +226,20 @@ void p7501_cmd_bridge(const char *arg) {
         (void)p7501_pio_poll_sw_uart_release();
         if (p7501_pio_poll_and_clear_framing_err()) {
             ++ferr_count;
+        }
+        if (spec.log_ctrl_edges) {
+            const uint8_t cur_ctrl3 = (uint8_t)((gpio_get_all() >> P7501_PIN_NSW5V) & 0x07u);
+            if (cur_ctrl3 != prev_ctrl3) {
+                const uint32_t rel_ms = (uint32_t)((time_us_64() - t0_us) / 1000ULL);
+                printf("\n[CTRL +%" PRIu32 "ms] NSW5V=%u TXD=%u XRESET=%u\n",
+                       rel_ms,
+                       (unsigned)(cur_ctrl3 & 1u),
+                       (unsigned)((cur_ctrl3 >> 1u) & 1u),
+                       (unsigned)((cur_ctrl3 >> 2u) & 1u));
+                fflush(stdout);
+                prev_ctrl3 = cur_ctrl3;
+                ++ctrl_edges;
+            }
         }
 
         if (!stdio_usb_connected()) {
@@ -297,6 +304,6 @@ void p7501_cmd_bridge(const char *arg) {
     p7501_pio_end_session();
     (void)p7501_pio_set_baud(orig_baud);
     p7501_led_set_auto_mode(LED_MODE_HEARTBEAT_IDLE);
-    printf("\nBRIDGE: OK (rx=%" PRIu32 " tx=%" PRIu32 " framing_err=%" PRIu32 " overflow=%s)\n",
-           rx_count, tx_count, ferr_count, ovf ? "YES" : "NO");
+    printf("\nBRIDGE: OK (rx=%" PRIu32 " tx=%" PRIu32 " ferr=%" PRIu32 " ctrl_edges=%" PRIu32 " overflow=%s)\n",
+           rx_count, tx_count, ferr_count, ctrl_edges, ovf ? "YES" : "NO");
 }

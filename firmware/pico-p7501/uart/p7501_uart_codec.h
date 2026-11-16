@@ -88,23 +88,39 @@ bool p7501_parse_waittx_args(const char *arg, p7501_waittx_spec_t *out);
 
 #include "common/p7501_hex.h"
 
-/** Parsed capture window + boot stimulation specification (`UARTSTREAM`/`HEXCAP`/`PWRTRACE`). */
+/** Parsed capture window + boot stimulation specification (`UARTSTREAM`/`HEXCAP`/`PWRTRACE`/`BOOTTRACE`). */
 typedef struct p7501_window_boot_spec {
     uint32_t window_ms;
     p7501_boot_action_t boot_action;
     uint32_t jig_hold_ms;
+    bool sticky_jig;
 } p7501_window_boot_spec_t;
+
+/** Parsed `BRIDGE [baud] [PASSIVE|NORMAL|JIG[:ms]|NOPULL] [CTRL]` specification. */
+typedef struct p7501_bridge_spec {
+    uint32_t baud;
+    p7501_boot_action_t boot_action;
+    uint32_t jig_hold_ms;
+    bool log_ctrl_edges;
+} p7501_bridge_spec_t;
 
 /** Parse boot action (`NORMAL`, `JIG`, `JIG:<hold_ms>`, `NOPULL`) with optional timed SW_UART release. */
 p7501_boot_action_t p7501_parse_boot_spec(const char *token, uint32_t *out_jig_hold_ms);
 
-/** Parse standard `<ms> [NORMAL|JIG|JIG:<ms>|NOPULL]` arguments (DRY helper across stream/diag commands). */
+/** Parse standard `<ms> [NORMAL|JIG|JIG:<ms>|NOPULL] [STICKY]` arguments (DRY helper across stream/diag commands). */
 void p7501_parse_window_boot_args(
     const char *arg,
     uint32_t default_ms,
     uint32_t min_ms,
     uint32_t max_ms,
     p7501_window_boot_spec_t *out_spec
+);
+
+/** Parse `BRIDGE` arguments supporting optional baud, boot mode, and `CTRL` edge telemetry flag. */
+void p7501_parse_bridge_args(
+    const char *arg,
+    uint32_t default_baud,
+    p7501_bridge_spec_t *out_spec
 );
 
 bool p7501_is_boot_spec_token(const char *token);
