@@ -85,6 +85,10 @@ export function useUnbrickViewModel() {
         setRspPlan(prev => ({ ...prev, data: report.rsp_plan }));
         if (report.sd_verification) {
           setVerify(prev => ({ ...prev, data: report.sd_verification }));
+          const sdStatus = report.sd_verification.overall_status;
+          if (sdStatus && sdStatus !== 'FAIL' && sdStatus !== 'INCOMPLETE_OR_INVALID') {
+            emitLocalEvent('unbrick://completed', true);
+          }
         }
       }
       return report;

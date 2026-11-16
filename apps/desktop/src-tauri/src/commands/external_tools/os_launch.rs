@@ -9,8 +9,10 @@ use std::process::{Command, Stdio};
 use crate::commands::constants::{
     DEFAULT_GDB_LISTEN_SOCKET, WIN_SCRIPT_GDB, WIN_SCRIPT_GHIDRA, WIN_SCRIPT_HXD,
 };
+#[cfg(target_os = "windows")]
+use crate::commands::error::IpcResult;
 #[cfg(not(target_os = "android"))]
-use crate::commands::error::{IpcResult, PanadigaIpcError};
+use crate::commands::error::PanadigaIpcError;
 
 #[cfg(target_os = "windows")]
 use super::ghidra_discovery::{

@@ -1,7 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useHddStorageViewModel } from '@/viewmodels/useHddStorageViewModel';
 import { useWorkbenchMode } from '@/context/WorkbenchModeContext';
 import { useToast } from '@/context/ToastContext';
+import { useManagedTimeouts } from '@/hooks/useManagedTimeouts';
+import { CLIPBOARD_FEEDBACK_MS } from '@/constants';
 import { useTranslation } from '@/i18n/useTranslation';
 import type { ViewKey } from '@/models';
 import {
@@ -51,7 +53,7 @@ export const HddStorageView: React.FC<{ onNavigate?: (view: ViewKey) => void }> 
   const [copiedSha, setCopiedSha] = useState(false);
   const [inputPath, setInputPath] = useState(imagePath || '');
   const [showPathInput, setShowPathInput] = useState(false);
-  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { scheduleTimeout, clearAllTimeouts } = useManagedTimeouts();
 
   useEffect(() => {
     if (!isAdvanced && (activeTab === 'meihdfs' || activeTab === 'journal' || activeTab === 'density')) {
@@ -59,22 +61,16 @@ export const HddStorageView: React.FC<{ onNavigate?: (view: ViewKey) => void }> 
     }
   }, [activeTab, isAdvanced, setActiveTab]);
 
-  useEffect(() => {
-    return () => {
-      if (copyTimerRef.current !== null) clearTimeout(copyTimerRef.current);
-    };
-  }, []);
-
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
+    clearAllTimeouts();
     setCopiedSha(true);
     showToast({
       type: 'info',
       title: 'SHA256SUMS copiado',
       message: 'Manifesto copiado para a área de transferência.',
     });
-    if (copyTimerRef.current !== null) clearTimeout(copyTimerRef.current);
-    copyTimerRef.current = setTimeout(() => setCopiedSha(false), 2000);
+    scheduleTimeout(() => setCopiedSha(false), CLIPBOARD_FEEDBACK_MS);
   };
 
   const handleOpenPath = () => {

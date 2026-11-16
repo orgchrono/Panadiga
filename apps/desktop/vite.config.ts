@@ -77,12 +77,55 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          if (id.includes("node_modules")) {
-            if (id.includes("lucide-react")) {
+          const norm = id.replace(/\\/g, "/");
+          if (norm.includes("/src/locales/pt-BR.json")) {
+            return "locales-pt-br";
+          }
+          if (norm.includes("/src/locales/en-US.json")) {
+            return "locales-en-us";
+          }
+          if (norm.includes("node_modules")) {
+            if (norm.includes("lucide-react")) {
               return "vendor-icons";
             }
-            if (id.includes("@tauri-apps")) {
+            if (norm.includes("@tauri-apps")) {
               return "vendor-tauri";
+            }
+            if (
+              norm.includes("framer-motion") ||
+              norm.includes("motion-dom") ||
+              norm.includes("motion-utils")
+            ) {
+              return "vendor-motion";
+            }
+            if (
+              norm.includes("@reduxjs") ||
+              norm.includes("react-redux") ||
+              norm.includes("/redux/") ||
+              norm.includes("/immer/") ||
+              norm.includes("/reselect/") ||
+              norm.includes("use-sync-external-store")
+            ) {
+              return "vendor-state";
+            }
+            if (
+              norm.includes("@radix-ui") ||
+              norm.includes("sonner") ||
+              norm.includes("class-variance-authority") ||
+              norm.includes("/clsx/") ||
+              norm.includes("tailwind-merge")
+            ) {
+              return "vendor-ui";
+            }
+            if (norm.includes("i18next") || norm.includes("react-i18next")) {
+              return "vendor-i18n";
+            }
+            if (
+              norm.includes("/react/") ||
+              norm.includes("/react-dom/") ||
+              norm.includes("/scheduler/")
+            ) {
+              return "vendor-react";
             }
           }
         },
