@@ -566,32 +566,44 @@ This structural design explains observed bench behaviors on the DMR-EH55:
 2. **Deterministic Timestamps:** Timestamps store elapsed seconds since `1980-01-01 00:00:00 UTC` (`TIME_OFFSET = 315532800`).
 3. **Forensic Masking:** Early recorders mask Inode metadata using `XOR 0xFF`, preventing standard PC file recovery utilities from identifying valid MPEG transport structures.
 
-### 4.8 Cross-Brand OEM Compatibility (Loewe, Hualu, Matsushita `SW-9585` vs. Funai/MediaTek)
+### 4.8 Cross-Brand OEM Compatibility (Shared `.FRM` Chassis vs. Incompatible Platforms)
 
-Cross-referencing service chassis and firmware header signatures clarifies which third-party brands share Matsushita DIGA internals (`MN2DS` / `MN103S` / `PANA_DVD.FRM` / `MEIHFS`) versus incompatible platforms:
+Not every DVD recorder with a European badge uses Panasonic silicon. Cross-referencing PCB series (`VEP`), SoCs (`MN2DS` / `MN103S`), partition layouts (`MEIHFS`), and encrypted headers (`PANA_DVD.FRM`) cleanly separates true OEM siblings from unrelated platforms:
 
-| Brand / Platform | Hardware / Key Evidence | `.FRM` / MEIHFS Compatibility | Archive & Verification Notes |
+| Brand / Platform | Hardware / Cipher Evidence | Practical Panadiga Compatibility | Bench Rule & Source Notes |
 | :--- | :--- | :---: | :--- |
-| **Loewe Centros `1102` / `1172` / `2102 HD` / `2172 HD` & `ViewVision DR+`** | Matsushita/Panasonic OEM chassis (`MN2DS` SoC, `VEP`-series PCBs, Panasonic update/service conventions) | **High (Genuine Architecture)** | Service manuals on Elektrotanya; ViewVision SW builds `090410L`/`070627a` referenced on `die-oberklasse.de` (no unauthenticated direct `.FRM`/`.bin` downloads located) |
-| **Hualu `BDR-9800`** | Listed in `PANA_DVD_KEY_CATALOG` with 8-byte Feistel key `0x0A1EE6C5BDC4933F` (`bfhualu.com`) | **Confirmed (`PANA_DVD` Cipher)** | Uses genuine Panasonic `.FRM` Feistel encryption |
-| **Matsushita `SW-9585` / `MN2DS0003`..`0018` & Sub-brands** | `SW-9585` IDE DVD-RAM drive and `MN2DS0003`/`0009`/`0016`/`0018` SoCs in select JVC, Pioneer, Marantz, Cambridge Audio, and Nintendo RVT-R units; Quasar / National Matsushita sub-brands | **Partial (Subsystem / Chassis)** | Individual PCB (`VEP`) and `DEV.BIN` header verification required before any cross-flashing attempt |
-| **Tevion / Medion / Funai / most Philips** | Funai/MediaTek platform (`FUNAI_UPG` in `unixtract/src/keys.ukf`) | **Incompatible** | Distinct encryption format and ISA compared to MN103S `.FRM` binaries |
+| **Loewe Centros `1102` / `1172` / `2102 HD` / `2172 HD` & `ViewVision DR+`** | Matsushita/Panasonic OEM chassis (`MN2DS` SoC, `VEP`-series PCBs, Panasonic update/service conventions) | **Same Architecture (Genuine OEM)** | Shares `MEIHFS` / `.FRM` layout tooling; verify exact `DEV.BIN` header before any cross-flashing attempt. Service manuals on Elektrotanya; ViewVision SW builds `090410L`/`070627a` referenced on `die-oberklasse.de` (no unauthenticated direct `.FRM`/`.bin` downloads located). |
+| **Hualu `BDR-9800`** | Listed in `PANA_DVD_KEY_CATALOG` with 8-byte Feistel key `0x0A1EE6C5BDC4933F` (`bfhualu.com`) | **Confirmed (Same `.FRM` Feistel Cipher)** | Compatible with Panadiga's `.FRM` decrypt/pack engine using its own 8-byte key. |
+| **Matsushita `SW-9585` / `MN2DS0003`..`0018` & Sub-brands** | `SW-9585` IDE DVD-RAM drive and `MN2DS0003`/`0009`/`0016`/`0018` SoCs in select JVC, Pioneer, Marantz, Cambridge Audio, and Nintendo RVT-R units; Quasar / National | **Partial (Subsystem / Optical Drive)** | Useful for optical drive firmware or SoC/mechanical salvage; full `.FRM` images are **not** interchangeable without PCB/model matching. |
+| **Tevion / Medion / Funai / most Philips** | Funai/MediaTek platform (`FUNAI_UPG` in `unixtract/src/keys.ukf`) | **Incompatible** | Completely different CPU ISA and firmware container format — never flash Panadiga/DIGA binaries onto these boards. |
 
-### 4.9 Kaseikyo IR Protocol Proof: `[RED]` (`0x141`) vs. `AUDIO [A]`, `IRTX` Synthesis, and `DIAGWATCH WAKE`
+### 4.9 Practical Kaseikyo IR Map: `EUR7659Y70` Remote, `AUDIO [A]` vs. `[RED]`, Android CIR, and Pico `IRTX`
 
-On North American combo remotes (`DVD/VHS POWER`, `AUDIO [A]`, `DISPLAY [B]`, `SUB MENU [S]`), **`AUDIO [A]` does NOT send `[RED]`**: North American models omit the four Teletext colour buttons and expose Guide/VCR+ softkeys `[A]` and `[B]` instead.
+#### 1. Can `EUR7659Y70` be used without `[RED]`, and does any key replace `[RED]`?
+* **YES — on the DMR-EH55 you do NOT need `[RED]` at all:** per the official **DMR-EH55 Service Manual (`DSD0603003CE`)**, **Service Mode (`SERV`)** is entered using the **front panel buttons** in Standby (**`[CH UP] + [OPEN/CLOSE] + [REC]` held for 5s**) — **not** JDM `[5]+[9]+[RED]`. Once the VFD displays `SERV`, all service codes (`00`, `01`, `02`, `31`, `41`, `42`, `65`, `80`, `81`, `91`, `98`, `99`) use **only the standard `0`..`9` numeric keys** already present on **`EUR7659Y70`**.
+* **No key on `EUR7659Y70` or North American combo remotes replaces `[RED]` (`0x141`) or `ND2` (`0x182`):** North American combo remotes (`DVD/VHS POWER`, `AUDIO [A]`, `DISPLAY [B]`, `SUB MENU [S]`) omit the four Teletext colour buttons and replace them with Guide/VCR+ softkeys `[A]` and `[B]`. Cross-verified across `Flipper-IRDB`, `pana-fw`, and the live `.irplus` capture `Panasonic_DMR_EH55_Commander.irplus` (`android-remote-panasonic`):
 
-| Remote Function / Key | Kaseikyo Code | LSB-First Wire Bytes | Flipper / `pana-fw` Notation | Role in Ecosystem |
+| Remote Key / Command | Kaseikyo Code | LSB-First Wire Bytes | Verified Source | Actual Function |
 | :--- | :---: | :--- | :--- | :--- |
-| **`AUDIO [A]`** (`Audio / Subtitles [A]`) | `0x033` | `02 20 B0 00 33 83` | Flipper `addr B0 02 20 00`, `cmd 30 03` | Audio/Subtitles & Guide/VCR+ softkey (NOT service `[RED]`) |
-| **`DISPLAY [B]`** (`Display [B]`) | `0x092` | `02 20 B0 00 92 22` | `Flipper-IRDB` E50/EX77 capture | OSD Status & softkey `[B]` |
-| **Teletext `[RED]`** (`Teletext Red [RED]`) | `0x141` | `02 20 B0 01 41 F0` | `pana-fw`: `41 B0 01 41` | Physical `[RED]` button on European/JDM remotes |
-| **`ND2` (`[5]+[9]+[RED]`)** | `0x182` | `02 20 B0 01 82 33` | `pana-fw`: `40 B0 01 82` | Direct Service Non-Disclosure mode 2 sequence on supported models |
+| **`POWER`** | `0x03D` | `02 20 B0 00 3D 8D` | `.irplus` (`0000 0070...`) | Power On / Standby toggle |
+| **`AUDIO [A]`** | `0x033` | `02 20 B0 00 33 83` | `.irplus` + `Flipper-IRDB` | Audio stream selector / softkey `[A]` (**NOT** `[RED]`) |
+| **`DISPLAY [B]`** | `0x092` | `02 20 B0 00 92 22` | `.irplus` + `Flipper-IRDB` | On-screen status / softkey `[B]` |
+| **`FUNCTIONS` / `ENTER`** | `0x057` / `0x082` | `02 20 B0 00 57 E7` / `82 32` | `.irplus` | Setup OSD & confirm (`SET 2`/`SET 3` unlock) |
+| **`1`..`9`, `0`** | `0x010`..`0x019` | `02 20 B0 00 10 A0`..`19 A9` | `.irplus` | DMR-EH55 `SERV` two-digit diagnostic entry on `EUR7659Y70` |
+| **`MEDIA SERVER`** | `0x004` | `02 20 B0 00 04 B4` | `.irplus` (`MULTI_REGION_HACK`) | Final discrete pulse after `1..0 -> AUDIO` in Region Free unlock |
+| **Teletext `[RED]`** | `0x141` | `02 20 B0 01 41 F0` | `pana-fw` (`41 B0 01 41`) | European Teletext remotes (`EUR7659Y60`) / programmable IR only |
+| **`ND2` (`[5]+[9]+[RED]`)** | `0x182` | `02 20 B0 01 82 33` | `pana-fw` (`40 B0 01 82`) | Service Non-Disclosure mode 2 sequence on supported JDM/BD units |
 
-The expanded catalog in `crates/panadiga-core/src/crypto/pana_fw_go.rs` (`PANA_KASEIKYO_SERVICE_COMMANDS`) records `"Audio / Subtitles [A]"`, `"Display [B]"`, `"Teletext Red [RED]"`, and `"Power On/Off"`. Inside the Pico C11 bench probe firmware (`firmware/pico-p7501/`), two additions automate standby wakeup and IR injection without the original JDM remote:
+#### 2. Do you need an IR transmitter wired to the Pico, or can you use a normal remote / Android phone?
 
-1. **38 kHz PWM Kaseikyo Synthesizer (`IRTX`):** `IRTX <RED|GREEN|YELLOW|BLUE|POWER|AUDIO|DISPLAY|SERV|ND2|0..9|sub:cmd> [GP6..9|16..22] [repeat]` generates hardware PWM carrier bursts strictly interlocked to spare GPIOs `GP6..9` and `GP16..22`.
-2. **Standby Wake-on-Rail Trigger (`DIAGWATCH WAKE`):** `DIAGWATCH WAKE` and `DIAGWATCH WAKE:<ms>` arm on `VDD >= P7501_VDD_WAKE_THRESHOLD_V` (`2.0f`) before starting PIO UART capture, emitting a Standby `VDD` telemetry notice whenever `rx=0`.
+| Bench Hardware Option | Needs IR LED on Pico? | Practical Capability |
+| :--- | :---: | :--- |
+| **1. Standard Physical Remote (`EUR7659Y70` / `EUR7729KG0`)** | **NO** | Runs power/navigation and **all DMR-EH55 `SERV` numeric diagnostics (`00`..`99`)** once entered via front panel buttons (`[CH UP] + [OPEN/CLOSE] + [REC]`). Does not have Teletext `[RED]` (`0x141`) or `ND2` (`0x182`). |
+| **2. Android Device with Built-in IR Blaster (`SM-T805M` + `.irplus` profiles / `android-remote-panasonic`)** | **NO** | Uses the device's built-in IR diode (`ConsumerIrManager` / `/sys/class/sec/sec_ir/ir_send` @ `37.010 kHz`). Sends any arbitrary Kaseikyo pulse without extra Pico wiring: `SET 1`/`2`/`3` (`0x00`/`0x10`/`0x20`), VCR `0x90`, automated `AUTO_RESTORE_SET2/3_TO_SET1`, Region Free (`1..0 -> AUDIO -> MEDIA SERVER`), and `[RED]`/`ND2`. |
+| **3. Pico `P7501` UART Probe (`STATUS`, `CDDIAG`, `DUMP`, `ERASE_NVRAM`, `GDB`, `DIAGWATCH WAKE`)** | **NO** | All `P7501` engineering telemetry travels over the 6-pin wire harness. `DIAGWATCH WAKE` / `DIAGWATCH WAKE:<ms>` arm on `VDD >= P7501_VDD_WAKE_THRESHOLD_V` (`2.0f`) upon Standby wakeup before PIO capture and report Standby state when `rx=0`. |
+| **4. Pico `IRTX` Synthesizer (`firmware/pico-p7501/`)** | **YES (External 940 nm IR LED)** | `IRTX <RED|GREEN|YELLOW|BLUE|POWER|AUDIO|DISPLAY|SERV|ND2|0..9|sub:cmd> [GP6..9|16..22] [repeat]` generates 38 kHz Kaseikyo carrier bursts strictly interlocked to spare GPIOs `GP6..9`/`GP16..22`. **Only needed if you do not have an IR-equipped phone/remote and want the Pico to emit optical IR**, requiring a physical 940 nm IR LED (+ resistor/driver) wired to one of those GPIO pins. |
+
+The expanded catalog in `crates/panadiga-core/src/crypto/pana_fw_go.rs` (`PANA_KASEIKYO_SERVICE_COMMANDS`) tracks `"Audio / Subtitles [A]"`, `"Display [B]"`, `"Teletext Red [RED]"`, and `"Power On/Off"` for uniform desktop and serial decoding.
 
 ### 4.10 E2E Validation via `Mn103Vm` + Simulated Spansion NOR (`panadiga re verify-patches`)
 

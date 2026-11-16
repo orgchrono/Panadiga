@@ -550,32 +550,44 @@ Essa arquitetura explica o comportamento de bancada do DMR-EH55:
 2. **Registro de Data/Hora:** Todas as gravações utilizam carimbos de data/hora em segundos transcorridos desde `01/01/1980 00:00:00 UTC` (`TIME_OFFSET = 315532800`).
 3. **Mascaramento e Criptografia Forense:** Conforme catalogado no projeto Panadiga, os metadados do Inode nos primeiros modelos utilizam operadores de inversão de bits (`XOR 0xFF`), o que impediu durante décadas que utilitários comerciais de recuperação de dados em PC reconhecessem a estrutura dos vídeos gravados.
 
-### 4.8 Compatibilidade OEM Multi-Marca (Loewe, Hualu, Matsushita `SW-9585` vs. Funai/MediaTek)
+### 4.8 Compatibilidade OEM Multi-Marca (O que Compartilha Chassi `.FRM` vs. Plataformas Incompatíveis)
 
-A investigação cruzada de chassis e assinaturas de firmware identificou exatamente quais marcas de terceiros compartilham arquitetura Matsushita DIGA (`MN2DS` / `MN103S` / `PANA_DVD.FRM` / `MEIHFS`) versus plataformas incompatíveis:
+Nem todo gravador de DVD com marca europeia ou etiqueta parecida usa eletrônica Panasonic. O cruzamento de placas (`VEP`), SoCs (`MN2DS` / `MN103S`), assinaturas de partição (`MEIHFS`) e cabeçalhos criptografados (`PANA_DVD.FRM`) separa claramente o que é compatível do que pertence a outro fabricante:
 
-| Plataforma / Marca | Evidência de Hardware / Chave | Compatibilidade `.FRM` / MEIHFS | Observações de Acervo |
+| Plataforma / Marca | Evidência de Hardware / Cifra | Compatibilidade Prática com Panadiga | Regra de Bancada e Fontes Localizadas |
 | :--- | :--- | :---: | :--- |
-| **Loewe Centros `1102` / `1172` / `2102 HD` / `2172 HD` & `ViewVision DR+`** | Chassi OEM Matsushita/Panasonic (`MN2DS` SoC, PCBs série `VEP`, convenções de atualização/serviço Panasonic) | **Alta (Arquitetura Genuína)** | Manuais de serviço no Elektrotanya; versões SW `090410L`/`070627a` referenciadas no `die-oberklasse.de` (sem binários `.FRM`/`.bin` públicos sem autenticação localizados) |
-| **Hualu `BDR-9800`** | Catálogo `PANA_DVD_KEY_CATALOG` com chave Feistel de 8 bytes `0x0A1EE6C5BDC4933F` (`bfhualu.com`) | **Confirmada (Cifra `PANA_DVD`)** | Utiliza empacotamento e cifra Feistel `.FRM` genuína Panasonic |
-| **Unidade `SW-9585` / SoCs `MN2DS0003`..`0018` & Submarcas** | Unidade IDE DVD-RAM `SW-9585` e SoCs `MN2DS0003`/`0009`/`0016`/`0018` em unidades selecionadas JVC, Pioneer, Marantz, Cambridge Audio e Nintendo RVT-R; Quasar / National como submarcas Matsushita | **Parcial (Subsistema / Chassi)** | Requer verificação individual de PCB (`VEP`) e cabeçalho `DEV.BIN` antes de qualquer gravação cruzada |
-| **Tevion / Medion / Funai / maioria Philips** | Plataforma Funai/MediaTek (`FUNAI_UPG` em `unixtract/src/keys.ukf`) | **Incompatível** | Estrutura criptográfica e conjunto de instruções distintos dos binários MN103S `.FRM` |
+| **Loewe Centros `1102` / `1172` / `2102 HD` / `2172 HD` & `ViewVision DR+`** | Projeto OEM Matsushita/Panasonic (`MN2DS` SoC, placas série `VEP`, convenções de atualização/serviço Panasonic) | **Mesma Arquitetura (OEM Genuíno)** | Compartilha ferramentas de análise (`MEIHFS` / estrutura `.FRM`); exige conferência exata do `DEV.BIN` antes de qualquer gravação cruzada. Manuais de serviço no Elektrotanya; versões SW `090410L`/`070627a` citadas no `die-oberklasse.de` (sem links públicos diretos sem autenticação para `.FRM`/`.bin`). |
+| **Hualu `BDR-9800`** | Catálogo `PANA_DVD_KEY_CATALOG` com chave Feistel de 8 bytes `0x0A1EE6C5BDC4933F` (`bfhualu.com`) | **Confirmada (Mesma Cifra Feistel `.FRM`)** | Aceita descriptografia/empacotamento `.FRM` pela mesma engine matemática usada no DMR-EH55 (com sua chave própria de 8 bytes). |
+| **Subsistema `SW-9585` / SoCs `MN2DS0003`..`0018` & Submarcas Matsushita** | Unidade IDE DVD-RAM `SW-9585` e SoCs `MN2DS0003`/`0009`/`0016`/`0018` em unidades selecionadas JVC, Pioneer, Marantz, Cambridge Audio e Nintendo RVT-R; Quasar / National | **Parcial (Peças / Driver / Subsistema)** | Útil para mapeamento de firmware de drive óptico ou reaproveitamento mecânico/SoC, **não** intercambiável diretamente por imagem `.FRM` inteira sem checar placa e modelo. |
+| **Tevion / Medion / Funai / maioria Philips** | Plataforma Funai/MediaTek (`FUNAI_UPG` em `unixtract/src/keys.ukf`) | **Incompatível** | Arquitetura de CPU, formato de pacote e cifra totalmente distintos — **nunca** tentar gravar binários Panadiga/DIGA nessas placas. |
 
-### 4.9 Prova de Protocolo Kaseikyo IR: `[RED]` (`0x141`) vs. `AUDIO [A]`, Síntese `IRTX` e `DIAGWATCH WAKE`
+### 4.9 Mapa Prático de IR Kaseikyo: Controle `EUR7659Y70`, `AUDIO [A]` vs. `[RED]`, Android CIR e `IRTX` no Pico
 
-Nos controles remotos combo norte-americanos (`DVD/VHS POWER`, `AUDIO [A]`, `DISPLAY [B]`, `SUB MENU [S]`), a tecla **`AUDIO [A]` NÃO equivale ao botão `[RED]`**: os modelos norte-americanos omitem a fileira de 4 botões coloridos de Teletexto, substituindo-os pelos atalhos Guide/VCR+ `[A]` e `[B]`.
+#### 1. Preciso do botão `[RED]` no controle `EUR7659Y70`? Existe substituto?
+* **SIM — no DMR-EH55 você PODE usar o `EUR7659Y70` sem o botão `[RED]`:** no **Panasonic DMR-EH55** (Manual de Serviço `DSD0603003CE`), a entrada no **Modo de Serviço (`SERV`)** é feita pelos **botões do painel frontal** em Standby (**`[CH UP] + [OPEN/CLOSE] + [REC]` por 5s**) — **não** pela sequência JDM `[5]+[9]+[RED]`. Depois que o visor exibe `SERV`, todos os códigos internos (`00`, `01`, `02`, `31`, `41`, `42`, `65`, `80`, `81`, `91`, `98`, `99`) usam **exclusivamente as teclas numéricas `0`..`9`**, que já existem normalmente no seu **`EUR7659Y70`**.
+* **Nenhum botão do `EUR7659Y70` ou dos controles combo norte-americanos substitui o `[RED]` (`0x141`) nem `ND2` (`0x182`):** nos controles norte-americanos (`DVD/VHS POWER`, `AUDIO [A]`, `DISPLAY [B]`, `SUB MENU [S]`), a fileira de 4 botões coloridos de Teletexto foi removida de fábrica e substituída pelos atalhos de Guide/VCR+ `[A]` e `[B]`. Decodificação cruzada (`Flipper-IRDB`, `pana-fw` e o perfil real `Panasonic_DMR_EH55_Commander.irplus` em `android-remote-panasonic`):
 
-| Função / Botão Remoto | Código Kaseikyo | Bytes Wire LSB-first | Notação Flipper / `pana-fw` | Uso no Ecossistema |
+| Botão / Comando | Kaseikyo | Bytes Wire LSB-first | Origem Verificada | Função Real |
 | :--- | :---: | :--- | :--- | :--- |
-| **`AUDIO [A]`** (`Audio / Subtitles [A]`) | `0x033` | `02 20 B0 00 33 83` | Flipper `addr B0 02 20 00`, `cmd 30 03` | Áudio/Legenda e Guide/VCR+ softkey (NÃO aciona modo serviço `[RED]`) |
-| **`DISPLAY [B]`** (`Display [B]`) | `0x092` | `02 20 B0 00 92 22` | Captura E50/EX77 `Flipper-IRDB` | Status OSD e softkey `[B]` |
-| **Teletexto `[RED]`** (`Teletext Red [RED]`) | `0x141` | `02 20 B0 01 41 F0` | `pana-fw`: `41 B0 01 41` | Botão `[RED]` físico em controles Europeus/JDM |
-| **`ND2` (`[5]+[9]+[RED]`)** | `0x182` | `02 20 B0 01 82 33` | `pana-fw`: `40 B0 01 82` | Acesso direto Service Non-Disclosure mode 2 em modelos suportados |
+| **`POWER`** | `0x03D` | `02 20 B0 00 3D 8D` | `.irplus` (`0000 0070...`) | Liga / Standby |
+| **`AUDIO [A]`** | `0x033` | `02 20 B0 00 33 83` | `.irplus` + `Flipper-IRDB` | Faixa de áudio / softkey `[A]` (**NÃO** é `[RED]`) |
+| **`DISPLAY [B]`** | `0x092` | `02 20 B0 00 92 22` | `.irplus` + `Flipper-IRDB` | Informações na tela (OSD) / softkey `[B]` |
+| **`FUNCTIONS` / `ENTER`** | `0x057` / `0x082` | `02 20 B0 00 57 E7` / `82 32` | `.irplus` | Menus OSD e confirmação (e destrave `SET 2`/`SET 3`) |
+| **`1`..`9`, `0`** | `0x010`..`0x019` | `02 20 B0 00 10 A0`..`19 A9` | `.irplus` | Dígitos do modo `SERV` (`00`..`99`) no `EUR7659Y70` |
+| **`MEDIA SERVER`** | `0x004` | `02 20 B0 00 04 B4` | `.irplus` (`MULTI_REGION_HACK`) | Pulso discreto final após `1..0 -> AUDIO` no desbloqueio Region Free |
+| **Teletexto `[RED]`** | `0x141` | `02 20 B0 01 41 F0` | `pana-fw` (`41 B0 01 41`) | Apenas controles EU/JDM (`EUR7659Y60`) ou emissor programável |
+| **`ND2` (`[5]+[9]+[RED]`)** | `0x182` | `02 20 B0 01 82 33` | `pana-fw` (`40 B0 01 82`) | Sequência Service Non-Disclosure mode 2 em modelos JDM/Blu-ray |
 
-O mapa estendido em `crates/panadiga-core/src/crypto/pana_fw_go.rs` (`PANA_KASEIKYO_SERVICE_COMMANDS`) documenta `"Audio / Subtitles [A]"`, `"Display [B]"`, `"Teletext Red [RED]"` e `"Power On/Off"`. Na bancada com Raspberry Pi Pico (`firmware/pico-p7501/`), duas extensões eliminam a necessidade do controle físico original:
+#### 2. Preciso ligar um transmissor IR no Raspberry Pi Pico ou posso usar controle normal / celular Android?
 
-1. **Sintetizador IR 38 kHz (`IRTX`):** O comando `IRTX <RED|GREEN|YELLOW|BLUE|POWER|AUDIO|DISPLAY|SERV|ND2|0..9|sub:cmd> [GP6..9|16..22] [repeat]` modula o protocolo Kaseikyo por hardware PWM, com intertravamento estrito permitindo saída apenas nos GPIOs livres `GP6..9` e `GP16..22`.
-2. **Gatilho Standby Wake-on-Rail (`DIAGWATCH WAKE`):** Os modos `DIAGWATCH WAKE` e `DIAGWATCH WAKE:<ms>` aguardam a subida do barramento (`VDD >= P7501_VDD_WAKE_THRESHOLD_V`, limiar `2.0f`) antes de iniciar a captura PIO, reportando estado de Standby por telemetria `VDD` quando `rx=0`.
+| Cenário / Ferramenta na Bancada | Precisa de LED IR no Pico? | O que você consegue fazer na prática |
+| :--- | :---: | :--- |
+| **1. Controle Físico Comum (`EUR7659Y70` / `EUR7729KG0`)** | **NÃO** | Suficiente para ligar/desligar e rodar **todos os códigos `00`..`99` do modo `SERV`** do DMR-EH55 após acionar o painel frontal (`[CH UP] + [OPEN/CLOSE] + [REC]`). Não possui `[RED]` (`0x141`) nem `ND2` (`0x182`). |
+| **2. Tablet / Celular Android com IR Blaster nativo (`SM-T805M` + perfis `.irplus` / `android-remote-panasonic`)** | **NÃO** | Usa o emissor IR infravermelho **embutido no aparelho Android** (`ConsumerIrManager` / `/sys/class/sec/sec_ir/ir_send` @ `37.010 kHz`). Envia qualquer código sem fios extras: modos `SET 1`/`2`/`3` (subdevices `0x00`/`0x10`/`0x20`), deck VCR `0x90`, macros `AUTO_RESTORE`, Region Free (`1..0 -> AUDIO -> MEDIA SERVER`) e `[RED]`/`ND2`. |
+| **3. Sonda Pico UART `P7501` (`STATUS`, `CDDIAG`, `DUMP`, `ERASE_NVRAM`, `GDB`, `DIAGWATCH WAKE`)** | **NÃO** | Toda a depuração serial/JTAG/NVRAM ocorre eletricamente pelo conector `P7501`. Os novos modos **`DIAGWATCH WAKE`** e **`DIAGWATCH WAKE:<ms>`** monitoram a subida de tensão do trilho (`VDD >= P7501_VDD_WAKE_THRESHOLD_V`, limiar `2.0f`) ao sair do Standby antes de capturar via PIO, avisando estado Standby quando `rx=0`. |
+| **4. Comando `IRTX` do Pico (`firmware/pico-p7501/`)** | **SIM (LED IR 940 nm externo)** | `IRTX <RED|GREEN|YELLOW|BLUE|POWER|AUDIO|DISPLAY|SERV|ND2|0..9|sub:cmd> [GP6..9|16..22] [repeat]` gera portadora Kaseikyo 38 kHz via hardware PWM, com trava estrita nos GPIOs livres `GP6..9`/`GP16..22`. **Só útil se você NÃO tiver celular com IR blaster e quiser que o Pico dispare luz IR** ligando um **LED IR 940 nm** (+ resistor/transistor) a um desses pinos. |
+
+O catálogo de referência em `crates/panadiga-core/src/crypto/pana_fw_go.rs` (`PANA_KASEIKYO_SERVICE_COMMANDS`) espelha `"Audio / Subtitles [A]"`, `"Display [B]"`, `"Teletext Red [RED]"` e `"Power On/Off"` para decodificação uniforme em desktop e terminal serial.
 
 ### 4.10 Validação E2E em Emulador `Mn103Vm` + Spansion NOR Simulada (`panadiga re verify-patches`)
 
