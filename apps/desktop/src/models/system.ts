@@ -21,6 +21,7 @@ export type ViewKey =
   | 'unbrick'
   | 'manuals'
   | 'hexinspector'
+  | 'ircommander'
   | 'settings';
 
 export const ExecutionStatus = {

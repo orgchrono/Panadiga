@@ -89,15 +89,19 @@ static bool is_writable_nor_window(
     uint32_t addr,
     uint32_t end_addr
 ) {
+    const bool unlocked      = (ctx != NULL) && ctx->upper_nor_unlocked;
+    const uint32_t flash_end = base + (flash_bytes - 1UL);
+    if (flash_bytes == P7501_FLASH_SIZE_8MB) {
+        return (addr >= base) && (end_addr <= flash_end) &&
+               !p7501_flash_is_write_blocked_with_policy(
+                   addr, (size_t)(end_addr - addr + 1UL), unlocked
+               );
+    }
+
     const uint32_t nvram_start = base + (flash_bytes - P7501_FLASH_NVRAM_SIZE_64KB);
-    const uint32_t ipl_end     = nvram_start - 1UL;
-    const uint32_t flash_end   = base + (flash_bytes - 1UL);
-    const bool unlocked        = (ctx != NULL) && ctx->upper_nor_unlocked;
     const uint32_t prot_end    = unlocked
         ? (base + P7501_FLASH_CRITICAL_IPL_SIZE - 1UL)
-        : ipl_end;
-
-    /* OPUS-07: Strictly reject any overlap with protected Bootloader IPL ROM (or SA0..SA3 when unlocked) */
+        : (nvram_start - 1UL);
     if ((addr <= prot_end) && (end_addr >= base)) {
         return false;
     }

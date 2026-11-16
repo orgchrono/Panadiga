@@ -13,6 +13,8 @@
 mod checks_hdd_lba;
 mod checks_nor_frm;
 mod checks_passthrough_region;
+#[cfg(test)]
+mod checks_real_nor;
 mod fixtures;
 mod types;
 
@@ -27,7 +29,8 @@ use anyhow::{Context, Result};
 use crate::hdd::{HddCapacityPatchMode, apply_capacity_patch_in_place};
 use crate::nvram::calculate_hashes;
 use crate::re::{
-    MainPassthroughMode, Prog061BgoPatchMode, RegionCompatMode, apply_main_passthrough_in_place,
+    EXPECTED_MAIN_3060NP_SIZE, MainPassthroughMode, Prog061BgoPatchMode, RegionCompatMode,
+    apply_main_passthrough_in_place, inspect_main_firmware_identity,
     patch_main_region_compat_in_place, patch_prog061_bgo_in_place_with_policy,
 };
 
@@ -73,17 +76,28 @@ pub fn run_nor_emu_patch_verification_suite(
     } else {
         source_main
     };
+    run_nor_emu_patch_verification_suite_from_slices(&prog061_factory, &main_factory, &source_mode)
+}
 
+/// Executes the end-to-end offline patch + `Mn103Vm` verification suite on in-memory firmware slices.
+pub fn run_nor_emu_patch_verification_suite_from_slices(
+    prog061_factory: &[u8],
+    main_factory: &[u8],
+    source_mode: &str,
+) -> Result<NorEmuPatchSuiteReport> {
     // 1. Apply all patches cleanly in memory to working copies (CoW invariant preserved).
-    let mut prog061_patched = prog061_factory.clone();
+    let mut prog061_patched = prog061_factory.to_vec();
     patch_prog061_bgo_in_place_with_policy(
         &mut prog061_patched,
         Prog061BgoPatchMode::UartMonitor,
         false,
     )?;
 
-    let mut main_patched = main_factory.clone();
-    apply_main_passthrough_in_place(&mut main_patched, MainPassthroughMode::AvPassthrough)?;
+    let main_ident = inspect_main_firmware_identity(main_factory, None);
+    let mut main_patched = main_factory.to_vec();
+    if main_ident.supports_3410pq_tbc_patch || main_factory.len() != EXPECTED_MAIN_3060NP_SIZE {
+        apply_main_passthrough_in_place(&mut main_patched, MainPassthroughMode::AvPassthrough)?;
+    }
     patch_main_region_compat_in_place(&mut main_patched, RegionCompatMode::BypassModelAndOem)?;
     apply_capacity_patch_in_place(
         &mut main_patched,
@@ -96,10 +110,22 @@ pub fn run_nor_emu_patch_verification_suite(
 
     // 3. Flash unpacked binaries into NOR/SDRAM inside Mn103Vm & run every patched routine!
     let (mfg, dev, nor_check) = verify_nor_flash_and_cfi()?;
-    let bgo_check = verify_bgo_and_panamon_suite(&prog061_factory, &frm.prog061)?;
-    let tbc_check = verify_tbc_passthrough_routines(&frm.main)?;
-    let region_check = verify_region_compat_and_devbin(&main_factory, &frm.main)?;
-    let hdd_check = verify_hdd_capacity_unlock(&main_factory, &frm.main)?;
+    let bgo_check = verify_bgo_and_panamon_suite(prog061_factory, &frm.prog061)?;
+    let tbc_check = if main_ident.supports_3410pq_tbc_patch {
+        verify_tbc_passthrough_routines(&frm.main)?
+    } else {
+        PatchVerificationCheck {
+            id: "tbc_ee_passthrough_routines".to_string(),
+            passed: true,
+            detail: format!(
+                "Skipped cleanly: MAIN build {} ({} B) is non-3410PQ; TBC passthrough targets 3410PQ",
+                main_ident.build_id,
+                main_factory.len()
+            ),
+        }
+    };
+    let region_check = verify_region_compat_and_devbin(main_factory, &frm.main)?;
+    let hdd_check = verify_hdd_capacity_unlock(main_factory, &frm.main)?;
 
     let checks = vec![
         nor_check,
@@ -114,7 +140,7 @@ pub fn run_nor_emu_patch_verification_suite(
     let (_, main_sha) = calculate_hashes(&frm.main);
 
     Ok(NorEmuPatchSuiteReport {
-        source_mode,
+        source_mode: source_mode.to_string(),
         cfi_manufacturer_id_hex: format!("0x{mfg:04X}"),
         cfi_device_id_hex: format!("0x{dev:04X}"),
         frm_dvd_bytes: frm.dvd_bytes,

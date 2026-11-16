@@ -46,10 +46,10 @@ static bool parse_diag_write_param(const char *spec, p7501_diag_watch_spec_t *ou
     uint32_t val = 0u;
     if (!p7501_rsp_parse_hex_u32_span(spec, (size_t)(comma - spec), &addr) ||
         !p7501_rsp_parse_hex_u32(comma + 1, 4u, &val) ||
-        (val > 0xFFu) ||
-        p7501_flash_is_protected_ipl_range(addr, 1u)) {
+        (val > 0xFFu)) {
         return false;
     }
+    out->target_addr = addr;
     const int n = snprintf(out->tx_seq, sizeof(out->tx_seq), "W%X,%02X\r", (unsigned)addr, (unsigned)val);
     return (n > 0) && ((size_t)n < sizeof(out->tx_seq));
 }
@@ -57,16 +57,13 @@ static bool parse_diag_write_param(const char *spec, p7501_diag_watch_spec_t *ou
 static bool parse_diag_single_addr_param(
     const char *spec,
     char opcode,
-    bool require_nvram,
     p7501_diag_watch_spec_t *out
 ) {
     uint32_t addr = 0u;
     if (!p7501_rsp_parse_hex_u32(spec, 10u, &addr)) {
         return false;
     }
-    if (require_nvram && !p7501_flash_is_nvram_microsector_addr(addr)) {
-        return false;
-    }
+    out->target_addr = addr;
     const int n = snprintf(out->tx_seq, sizeof(out->tx_seq), "%c%X\r", opcode, (unsigned)addr);
     return (n > 0) && ((size_t)n < sizeof(out->tx_seq));
 }
@@ -114,13 +111,13 @@ static bool parse_diag_action_token(
         return true;
     }
     if (p7501_ascii_iprefix(tok, "JUMP:") && (tok[5] != '\0')) {
-        if (!parse_diag_single_addr_param(tok + 5u, 'J', false, out)) return false;
+        if (!parse_diag_single_addr_param(tok + 5u, 'J', out)) return false;
         out->action = P7501_DIAG_ACT_JUMP;
         *saw_action = true;
         return true;
     }
     if (p7501_ascii_iprefix(tok, "ERASE:") && (tok[6] != '\0')) {
-        if (!parse_diag_single_addr_param(tok + 6u, 'E', true, out)) return false;
+        if (!parse_diag_single_addr_param(tok + 6u, 'E', out)) return false;
         out->action = P7501_DIAG_ACT_ERASE;
         *saw_action = true;
         return true;
@@ -147,9 +144,15 @@ bool p7501_diag_watch_parse_args(const char *arg, p7501_diag_watch_spec_t *out) 
     char tok[48];
     bool saw_boot = false;
     bool saw_action = false;
+    int policy_override = -1;
 
     while ((cur = p7501_next_token(cur, tok, sizeof(tok))) != NULL) {
         if (tok[0] == '\0') {
+            continue;
+        }
+        bool bad_pol = false;
+        if (p7501_flash_consume_policy_tok(tok, &policy_override, &bad_pol)) {
+            if (bad_pol) return false;
             continue;
         }
         if (p7501_ascii_is_digits(tok)) {
@@ -188,6 +191,23 @@ bool p7501_diag_watch_parse_args(const char *arg, p7501_diag_watch_spec_t *out) 
         } else {
             return false;
         }
+    }
+
+    const bool eff_unlocked = p7501_flash_effective_policy(policy_override);
+    if ((out->action == P7501_DIAG_ACT_WRITE) && (out->tx_seq[0] != '\0') &&
+        p7501_flash_is_write_blocked_with_policy(out->target_addr, 1u, eff_unlocked)) {
+        return false;
+    }
+    if ((out->action == P7501_DIAG_ACT_ERASE) && (out->tx_seq[0] != '\0') &&
+        !p7501_flash_is_erasable_nor_addr(out->target_addr, eff_unlocked)) {
+        return false;
+    }
+    out->nor_unlock = (policy_override == 1) ||
+        (eff_unlocked && (out->tx_seq[0] != '\0') &&
+         ((out->action == P7501_DIAG_ACT_WRITE) || (out->action == P7501_DIAG_ACT_ERASE)) &&
+         p7501_flash_is_protected_ipl_range(out->target_addr, 1u));
+    if (policy_override != -1) {
+        p7501_flash_set_upper_nor_unlocked(policy_override == 1);
     }
     return true;
 }

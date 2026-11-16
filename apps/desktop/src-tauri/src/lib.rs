@@ -13,19 +13,9 @@ pub fn run() {
     run_desktop_app();
 }
 
-pub fn run_desktop_app() {
-    tauri::Builder::default()
-        .manage(state::PanadigaBackendState::new())
-        .plugin(tauri_plugin_shell::init())
-        .setup(|app| {
-            let backend = app.state::<state::PanadigaBackendState>();
-            crate::commands::hardware_diag::start_port_mutation_observer(
-                app.handle().clone(),
-                backend.inner(),
-            );
-            Ok(())
-        })
-        .invoke_handler(tauri::generate_handler![
+macro_rules! build_invoke_handler {
+    ($($android_cmd:path),* $(,)?) => {
+        tauri::generate_handler![
             get_system_overview,
             clean_nvram,
             analyze_flash_dump,
@@ -103,7 +93,41 @@ pub fn run_desktop_app() {
             run_matshita_serial_cmd,
             verify_frm_unlock_command,
             pack_unlock_frm_command,
-        ])
+            $($android_cmd,)*
+        ]
+    };
+}
+
+pub fn run_desktop_app() {
+    tauri::Builder::default()
+        .manage(state::PanadigaBackendState::new())
+        .plugin(tauri_plugin_shell::init())
+        .setup(|app| {
+            let backend = app.state::<state::PanadigaBackendState>();
+            crate::commands::hardware_diag::start_port_mutation_observer(
+                app.handle().clone(),
+                backend.inner(),
+            );
+            Ok(())
+        })
+        .invoke_handler({
+            #[cfg(target_os = "android")]
+            {
+                build_invoke_handler!(
+                    ir_catalog_stats,
+                    ir_search_catalog,
+                    ir_assemble_codeset,
+                    ir_import_profile,
+                    ir_export_irplus,
+                    ir_prepare_transmission,
+                    ir_get_verified_macros,
+                )
+            }
+            #[cfg(not(target_os = "android"))]
+            {
+                build_invoke_handler!()
+            }
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

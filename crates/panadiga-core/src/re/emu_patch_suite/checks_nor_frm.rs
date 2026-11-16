@@ -152,6 +152,7 @@ pub(super) fn verify_bgo_and_panamon_suite(
 
     // Boot patched PROG061 from SDRAM (0x50400000) and exercise PANAMON1 commands over SC0 UART.
     let mut vm = new_spansion_nor_vm();
+    vm.nor_write_policy = crate::pico::rsp_codec::policy::NorWritePolicy::UpperNorAppUnlocked;
     vm.enable_sc0_uart(&[]);
     let mon_va = crate::re::PROG061_UART_MONITOR_VA;
     let mon_off = crate::re::OFF_UART_MONITOR_SLACK;
@@ -187,21 +188,29 @@ pub(super) fn verify_bgo_and_panamon_suite(
         b"R 84000000,04\r\n\
           W 847EFFFF,11\r\n\
           E 847E0000\r\n\
+          E 847F0000\r\n\
           W 847F0020,7B\r\n\
+          U CONFIRM_UPPER_NOR\r\n\
+          E 84200000\r\n\
+          W 84200020,5C\r\n\
+          U LOCK\r\n\
           E 847FE000\r\n\
           J 50001800\r\n\
           B",
     );
-    vm.run_until(call_va + 7, 250_000)?;
+    vm.run_until(call_va + 7, 500_000)?;
     let tx = vm.take_uart_tx_utf8();
     if vm.d[0] != 0
         || !tx.contains("PANAMON1>")
         || !tx.contains("A5A5A5A5")
         || tx.matches("ERR:E05_IPL_RO").count() != 2
+        || !tx.contains("OK:NOR_UNLOCK")
+        || !tx.contains("OK:NOR_LOCK")
         || !tx.contains("OK:WRITE")
         || !tx.contains("OK:ERASE")
         || !tx.contains("OK:BYPASS")
         || vm.read_u8(TEST_RAM_WORK_BASE + 0x0200)? != 0x33
+        || vm.read_u8(AM34_FLASH_UNCACHED_BASE + 0x0020_0020)? != 0x5C
         || vm.read_u8(AM34_NVRAM_UNCACHED_BASE + 0x20)? != 0x7B
         || vm.read_u8(AM34_NVRAM_UNCACHED_BASE + 0xE000)? != 0xFF
     {

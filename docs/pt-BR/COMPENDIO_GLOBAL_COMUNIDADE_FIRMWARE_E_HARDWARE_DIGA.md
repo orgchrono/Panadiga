@@ -270,7 +270,7 @@ O portal `elektroda.pl` preserva discussões e anexos técnicos relevantes da fa
 
 ---
 
-## 3. Modo de Serviço Oficial (Manual `DSD0603003CE`), Sequência JDM (`[RED]`) e Física Elétrica do Standby / `TW7501`
+## 3. Modo de Serviço Oficial (Manual `DSD0603003CE`), Sequência JDM (`[RED]`) e Física Elétrica do Standby / `TW7501` vs. `P7501`
 
 Os gravadores Panasonic DIGA incorporam rotinas de diagnóstico de fábrica documentadas oficialmente nos Manuais de Serviço (como o **`ORDER NO. DSD0603003CE`** do DMR-EH55EC/EP/EH56EG) além de atalhos IR estendidos utilizados na geração japonesa/Blu-ray.
 
@@ -287,7 +287,7 @@ Os gravadores Panasonic DIGA incorporam rotinas de diagnóstico de fábrica docu
 | Modo Especial | Display FL | Operação exata (Manual de Serviço `DSD0603003CE`, pp. 17–21) | Efeito / Uso de Bancada |
 | :--- | :---: | :--- | :--- |
 | **Service Mode (`SERV`)** | `SERV` | Com a energia **desligada (Standby)**, manter pressionadas simultaneamente **`[CH UP] + [OPEN/CLOSE] + [REC]`** no painel frontal por **5 segundos**. | Libera o menu de engenharia interno (`[0][0]`..`[9][9]`) via controle remoto. |
-| **TEST Mode (`TM AV1`)** | `TM AV1` | Com a energia **desligada (Standby)**, manter pressionadas **`[STOP] + [CH UP] + [OPEN/CLOSE]`** por **5 segundos**. | Inicializa **todos os parâmetros** da unidade principal (incluindo sintonizador/tuner). |
+| **TEST Mode (`TM AV1`)** | `TM AV1` | Com a energia **desligada (Standby)**, manter pressionadas **`[STOP] + [CH UP] + [OPEN/CLOSE]`** por **5 segundos**. | **NÃO é Service Mode**: reinicializa todos os parâmetros do aparelho (sintonizador/preferências de usuário). |
 | **Forced Disc Eject** | *(anterior)* | Com a energia **desligada**, manter **`[STOP] + [CH UP]`** por **5 segundos**. | Ejeção forçada da bandeja (inativo sob Child/Demo Lock). |
 | **Forced Power-Off** | *(P-off)* | Pressionar **`[POWER]`** no painel frontal por **mais de 10 segundos**. | Desligamento forçado da unidade principal quando travada. |
 | **First Time Setup Reset** | `HELLO` | *(Firmware Guide p. 7–8)* Com a unidade sintonizada, manter **`[CH UP] + [CH DOWN]`** por **10–15 segundos** até desligar. | Força tela de configuração inicial no próximo boot. |
@@ -295,7 +295,7 @@ Os gravadores Panasonic DIGA incorporam rotinas de diagnóstico de fábrica docu
 | **Rating Password Reset** | *(nível 8)* | Abrir bandeja e manter **`[REC] + [PLAY]`** por **5 segundos**. | Reseta senha de controle parental para Nível 8. |
 | **Progressive Init** | *(anterior)* | Ligado (E-E): **`[STOP] + [PLAY]`** por **5 segundos**. | Retorna saída de vídeo para Interlace. |
 | **Demo Lock / Unlock** | `LOCK` / `UNLOCK` | Ligado: **`[STOP] + [POWER]`** por **5 segundos**. | Bloqueia/desbloqueia ejeção da bandeja (persiste após Factory Init). |
-| **Child Lock (`X-HOLD`)** | `X-HOLD` | No controle remoto: **`[ENTER] + [RETURN]`** até exibir `[X-HOLD]`. | Bloqueia comandos frontais e remotos. |
+| **Child Lock (`X-HOLD`)** | `X-HOLD` | No controle remoto: manter **`[ENTER] + [RETURN]`** simultaneamente até exibir `[X-HOLD]`. | Bloqueia comandos frontais e remotos (não aceita 10 pulsos de `ENTER`). |
 
 ### 3.3 Tabela Completa de Comandos Remotos do Modo `SERV` (DMR-EH55 `DSD0603003CE`, pp. 21–26)
 
@@ -303,69 +303,91 @@ Uma vez exibido **`SERV`** no display fluorescente (VFD), o técnico digita os *
 
 | Código | Nome Oficial (Manual `DSD0603003CE`, pp. 21–26) | Descrição & Diagnóstico Verificado |
 | :---: | :--- | :--- |
-| **`[0][0]`** ou **`[RETURN]`** | **Release Items** | Cancela o item atual do Service Mode e retorna para `SERV`. |
+| **`[0][0]`** ou **`[RETURN]`** | **Release Items** | Cancela o item atual do Service Mode e retorna para `SERV` (não é teste do VFD; o teste de VFD é `[5][1]`). |
 | **`[0][1]`** | **Error Code Display** | Exibe o **último código de erro (`U**`/`H**`/`F**`) retido pelo Timer `IC7501`** (`F00` se vazio). |
-| **`[0][2]`** | **ROM Version Display** | Exibe em sequência (5s cada): **1. Region code** $\rightarrow$ **2. Main firm** $\rightarrow$ **3. Timer firm** $\rightarrow$ **4. Drive firm** $\rightarrow$ **5. ROM correction**. |
-| **`[1][1]` / `[1][2]`** | **White / Magenta Picture Output** | Gera padrão 100% branco ou magenta no AV Decoder (componente). |
+| **`[0][2]`** | **ROM Version Display** | Sequência (5s cada): **1. Region code** $\rightarrow$ **2. Main firm** $\rightarrow$ **3. Timer firm** $\rightarrow$ **4. Drive firm** $\rightarrow$ **5. ROM correction**. |
+| **`[1][1]` / `[1][2]`** | **White / Magenta Picture Output** | Gera padrão interno 100% branco ou magenta no AV Decoder (componente). |
 | **`[1][3]` / `[1][4]`** | **RTSC Return in XP / I-P Switch** | Codifica e decodifica AV1 em tempo real (`XP`, 48kHz) sem gravar em disco; `[1][4]` alterna Interlace/Progressive. |
 | **`[2][1]` / `[2][2]`** | **Audio Mute (`XTMUTE` / `XDMUTE`)** | Testa mute controlado pelo Timer (`T MUTE`) ou pela PCB Digital (`D MUTE`). |
 | **`[2][3]` / `[2][4]`** | **Audio Pattern Output** | Emite tons internos (`L=1kHz/-18dB`, `R=400Hz/-18dB`); `[2][4]` alterna 48kHz / 44.1kHz. |
 | **`[3][1]`** | **HDD READ inspection** | Varredura de leitura completa do HDD (**`HDD OK`** ou código de defeito; sair com `[POWER] > 10s`). |
-| **`[4][1]` / `[9][5]`** | **Laser Used Time / Delete Laser Time** | Exibe horas acumuladas de uso do laser óptico (`*****`); **`[9][5]`** zera o contador (`CLR`). |
+| **`[4][1]` / `[9][5]`** | **Laser Used Time / Delete Laser Time** | Exibe horas acumuladas de uso do laser óptico (`*****`); **`[9][5]`** zera o contador (`CLR`, destrutivo). |
 | **`[4][2]` / `[9][6]`** | **RAM Drive Last Error (`NO **`) / Delete** | Detalha número, timestamp (`DD/hh/mm`), tipo de mídia e fabricante; `[0][1]`..`[1][9]` mostra últimos 19 erros (`[9][6]` limpa). |
 | **`[4][4]`** | **Laser Power Confirmation** | Compara calibração atual do laser contra o valor de fábrica com DVD-RAM inserido (`CHK *` / `NO DISC` / `ERROR`). |
 | **`[5][1]` / `[5][4]`** | **All FL/LEDs / Front Key Inspection** | `[5][1]` acende todos segmentos do VFD/LEDs; `[5][4]` testa cada tecla do painel frontal incrementalmente. |
 | **`[6][1]` / `[6][4]`** | **Production Date / Accumulated Working Time** | `[6][1]` exibe data de fabricação (`YYMMDD`); `[6][4]` exibe tempo total ligado em segundos. |
 | **`[6][5]` / `[9][7]`** | **Display Error History (`[0][1]`..`[1][9]`) / Delete** | Lista os últimos **19 eventos de erro** com código de causa (5s): **`01`/`05`** = Digital PCB (`AV DEC / MAIN CPU`), **`02`** = RAM Drive, **`03`** = Disco, **`04`** = Digital PCB / Erro de Comunicação, **`06`** = Defeito de HDD (`[9][7]` limpa). |
 | **`[7][4]`** | **SD Card WRITE check** | Inserir cartão SD em Standby (`[CARD SD]`): testa escrita (`SD OK` / `SD NG`; **apaga imagens no cartão!**). |
-| **`[8][0]`..`[8][3]`** | **AV1/AV2/AV4 Video I/O Routing** | Comuta roteamento analógico Y/C, V e RGB para aferição de entrada/saída. |
+| **`[8][0]`..`[8][3]`** | **AV1/AV2/AV4 Video I/O Routing** | Comuta roteamento analógico Y/C, V e RGB para aferição de entrada/saída (testes de passthrough SCART nos modelos europeus, ausentes nos modelos NA). |
 | **`[8][4]` / `[8][5]`** | **`P50(H)` / `P50(L)` Timer Output Check** | Testa saída `IC7501-76` passando pelo inversor até AV1 pino 10 (`~0V` vs `~4.4V DC`). |
 | **`[9][1]`** | **Tray OPEN/CLOSE Test** | Abre/fecha a bandeja continuamente contando ciclos (liberar segurando `[POWER]` no controle `> 10s`). |
 | **`[9][8]`** | **Error Code Initialization** | Limpa o último código de erro retido pelo Timer `IC7501` $\rightarrow$ grava `F00` (`CLR`). |
-| **`[9][9]`** | **Initialize Service** | Inicializa simultaneamente **Last Drive Error**, **Error History** e **Error Codes** para padrão de fábrica (`CLR`). |
+| **`[9][9]`** | **Initialize Service (`CLR SERV`)** | Inicializa simultaneamente **Last Drive Error**, **Error History** e **Error Codes** para padrão de fábrica (`CLR`). |
 | **`[POWER]`** | **Finishing Service Mode** | Sai do modo `SERV` retornando ao modo `STOP (E-E)`. |
 
 > [!NOTE]
 > Em modelos japoneses (JDM) ou geração Blu-ray posteriores, códigos adicionais de controle remoto incluem `38 + [ENTER]` (`HDDCHK`), `03 VL`, `04 PRG`, `06 FTO` e `08 FIN`.
 
-### 3.4 Por que `[CH UP] + [OPEN/CLOSE] + [REC]` e `[STOP]` revertem `HELLO -> U99`
+### 3.4 Por que `HELLO -> PLEASE WAIT (~2s) -> U99` (`< 2s` de Standby `0:00`) não entra em `SERV` / `ND2` / `Functions`
 
-Conforme o Manual de Serviço `DSD0603003CE` (p. 18, tabela `8.1.1`) e os diagramas esquemáticos do Timer `IC7501` (`EC pp. 47, 64`), o erro **`U99` ("Hang-up")** significa literalmente: *"Displayed when communication error has occurred between Main microprocessor and Timer microprocessor."*
-1. Quando você segura `[CH UP] + [OPEN/CLOSE] + [REC]` por 5 segundos no Standby, quem lê as chaves é o **Microcontrolador Timer `IC7501`** (`KEYIN1`/`KEYIN2`/`KEYIN3`, Pinos 86–88).
-2. `IC7501` liga a placa Digital acionando `DI_P_ON[H]` (Pino 44) e envia via **`TBUS_CLK / TBUS_TXD / TBUS_RXD`** (Pinos 35–37) o pedido para o processador principal **AM34 (`MN103S`)** iniciar em modo `SERV`. O VFD mostra **`HELLO`**.
-3. Se durante a inicialização na placa Digital o AM34 falhar ao montar BGO/NVRAM corrompida ou travar antes de concluir o handshake de boot no `TBUS`, `IC7501` estoura o timeout de comunicação e exibe **`U99`** em vez de `SERV` (e desliga/reinicia se a falha persistir). Portanto, **combinações de botões não conseguem sobrescrever setores corrompidos de NVRAM na Flash NOR (`0x807F0000..0x807FFFFF`)**.
+Conforme o Manual de Serviço `DSD0603003CE` (p. 18, tabela `8.1.1`) e os esquemáticos do Timer `IC7501` ([`panasonic_dmr_eh55ec_service_manual_vol2_schematics.pdf`](../../manuals_and_schematics/dmr-eh55/service/panasonic_dmr_eh55ec_service_manual_vol2_schematics.pdf) pp. 121–122; [`panasonic_dmr_eh55ec_service_manual_vol1_diagnostics.pdf`](../../manuals_and_schematics/dmr-eh55/service/panasonic_dmr_eh55ec_service_manual_vol1_diagnostics.pdf) pp. 22–25, 67–68; [`panasonic_dmr_eh55p9_eh55pc9_service_manual_north_america.pdf`](../../manuals_and_schematics/dmr-eh55/service/panasonic_dmr_eh55p9_eh55pc9_service_manual_north_america.pdf) pp. 21–24, 62–63), o erro **`U99` ("Hang-up")** indica falha de comunicação/handshake entre o microcontrolador Timer (`IC7501`) e o SoC principal (`AM34` / `MN2DS0009`):
 
-### 3.5 Física Elétrica do Standby (`P-OFF`), `TW7501` (`SW_UART`), Sonda Pico `P7501` e Mapas de Acordamento
+1. **Diferença Crítica entre `TEST Mode` e `Service Mode (`SERV`)`:**
+   - A combinação frontal **`[STOP] + [CH UP] + [OPEN/CLOSE]`** por **5s** aciona o **`TEST Mode` (`TM AV1`)**, que reinicializa configurações do sintonizador/preferências de usuário — ela **não** entra no Service Mode.
+   - O **`SERV`** oficial exige Power OFF (Standby) + **`[CH UP] + [OPEN/CLOSE] + [REC]`** por **5s**. Tanto `SERV` quanto os menus OSD (`Functions`) e os atalhos `ND2` (`[5]+[9]+[RED]`) dependem da execução do **`MAIN` (`SYS_SERV`)** após o boot do AM34; quando `U99` bloqueia a subida do `MAIN`, nenhum desses modos consegue ser aberto pelo painel ou por IR.
+2. **Por que `HELLO -> PLEASE WAIT (~2s) -> U99` (ou `< 2s` a partir de `0:00` Standby) falha antes do `BOOT.BIN`:**
+   - Na inicialização normal da Flash NOR, o `BOOT.BIN` (`PROG061`) só altera o watchdog de hang-up do Timer MCU para **`255s`** após executar `FUN_44005cd0()` (`vfd_wait_5cd0`, log `"Main hung-up time changed 255[s]."` sobre `TBUS`).
+   - Quando o aparelho cai em **`U99` em menos de ~2s (`HELLO -> PLEASE WAIT -> U99`)**, a falha ocorre **ANTES** que `BOOT.BIN` chegue a executar `FUN_44005cd0()`. Isso aponta para três classes de defeito pré-handshake:
+     1. Falha precoce de barramento de potência ou supervisão de reset (`X_SW+3.8V`, `X_SW+5.8V`, `X_SW+12V`, `ANA+3.3V`, `X_SW+3.3V` ou queda em `PFAIL[L]` — falha que dispara proteção imediata, nunca forçar tensões acima de `3.3V` nos pinos LVTTL);
+     2. Congelamento prematuro em **`SA0..SA3`** (`0x80000000..0x8003FFFF`) ou falha na **SDRAM** (`DDR CHECK`) antes do handshake `TBUS`; ou
+     3. Falha física no próprio barramento **`TBUS`** (`TBUS_CLK`, `TBUS_TXD`, `TBUS_RXD`, `XMPREQ`, `XINTM`).
+   - Em contraste, a mensagem **`BGO driver init failed[1].`** ocorre em um estágio posterior, **depois** que o `BOOT.BIN` já inicializou a SDRAM e começou a imprimir mensagens pela saída serial do AM34 (**`UARTP2M_T`**, `P7501` Pino 6 $\rightarrow$ Pico `GP2` RX; enquanto `P7501` Pino 3 **`UARTM2P_T`** é a entrada Pico `GP4` TX $\rightarrow$ AM34 via `Q7514`).
+3. **Rota Real de Recuperação:**
+   - Combinações de botões frontais não conseguem corrigir falhas de rail, `TBUS`, SDRAM ou Flash corrompida. A rota de bancada é a **triagem passiva UART em `P7501` Pino 6 (`UARTP2M_T`)** associada à sequência **`SW_UART` (`P7501` Pino 1 / `GP26`) `LOW` + `XRESET` (`P7501` Pino 2 / `GP5`) Open-Drain** (`***** serial boot mode *****` $\rightarrow$ `DIGADIAG.FRM`) ou recuperação direta por gravador **TSOP-48** (preservando `SA0..SA3` imutáveis em leitura estrita, tratando Upper NOR / NVRAM `SA134..SA141`), mantendo **`NSW5V` (`GP3`) sempre em `Hi-Z Input` sem pulls (nunca dirigir push-pull!)** e **nunca alimentando o Pico pelo `P7501`**.
 
-A verificação cruzada dos esquemáticos oficiais (`EC pp. 47, 63, 64, 65` e `P9 pp. 55, 56, 62, 64`) com medições ao vivo em `COM10` revela exatamente como a sonda UART (`P7501`) interage com o Standby:
+### 3.5 Física Elétrica do Standby (`P-OFF`), Distinção `TW7501` vs. `P7501` Pino 1 (`SW_UART`), `IC3001` e Mapas de Acordamento
 
-1. **Por que `STATUS` / `VDD` lê `0.03V (LOW / UNPOWERED)` em Standby sem jumper?**
-   - Os reguladores da placa (`IC1502` `X SW +5.2V`, `IC1504` `JC +5V`, `IC1506` `DR +5V`, `IC1507` `ANA +3.3V`) e a alimentação da placa Digital (`D3R3V`) são **comutados** por `P_SAVE_L` / `DI_P_ON[H]` sob comando do `IC7501` (`P9 pp. 55–56, 62`).
-   - Como `NSW5V` (`P7501` Pino 5) e os pull-ups de `SW_UART` (`TW7501`, Pino 1), `UARTM2P_T` (Pino 3) e `UARTP2M_T` (Pino 6) derivam desses barramentos comutados, durante o **Standby (`P-OFF` / relógio `0:00`) todos os pinos do `P7501` caem a ~`0.00V`** (`VDD: 0.03V`, `RXD=0, NSW5V=0, TXD=0, XRESET=0`). Isso **não** significa falha no cabo Pico — significa que o bloco Digital está em Standby! Assim que o `DI_P_ON[H]` sobe (mesmo num pulso de 1–2s), `NSW5V` e `SW_UART` sobem a `~3.25V`.
-2. **A sonda ligada em `P7501` pode ligar o aparelho diretamente do Standby?**
+A verificação cruzada dos esquemáticos oficiais ([`panasonic_dmr_eh55ec_service_manual_vol2_schematics.pdf`](../../manuals_and_schematics/dmr-eh55/service/panasonic_dmr_eh55ec_service_manual_vol2_schematics.pdf) pp. 121–122, [`panasonic_dmr_eh55ec_service_manual_vol1_diagnostics.pdf`](../../manuals_and_schematics/dmr-eh55/service/panasonic_dmr_eh55ec_service_manual_vol1_diagnostics.pdf) pp. 22–25, 67–68, [`panasonic_dmr_eh55p9_eh55pc9_service_manual_north_america.pdf`](../../manuals_and_schematics/dmr-eh55/service/panasonic_dmr_eh55p9_eh55pc9_service_manual_north_america.pdf) pp. 21–24, 62–63 e [`panasonic_dmr_es10_service_manual_north_america.pdf`](../../manuals_and_schematics/dmr-es10/service/panasonic_dmr_es10_service_manual_north_america.pdf) p. 27) corrige uma confusão histórica de nomenclatura e consolida a arquitetura elétrica real:
+
+1. **Correção Crítica — `TW7501` (`VWJ0795=5`) NÃO é o Pino 1 (`SW_UART`) do `P7501`:**
+   - **`TW7501` (`VWJ0795=5`):** Situa-se no **trilho de alimentação de 5V / backup de memória** (`D7509`, `C7578`, `R7623`, supercapacitor `C7584` `0.047F` nos modelos `EC` / bateria `B7501` `CR2354` nos modelos `NA`) que alimenta o **Microprocessador Timer `IC7501`** (`C2CBJG000713` no `EC`; `MN67788RA` + `IC8001` no `NA`) e o detector de reset **`IC7502`** (`C0EBE0000504`) $\rightarrow$ `XRESET` (`IC7501` Pino 12 e `P7501` Pino 2). Curto-circuitar `TW7501` reseta o estado do Timer MCU e limpa dados voláteis de standby (assim como no `DMR-ES10` `NA p. 27`, onde `TW7501` envia `RESET (L)` para `XRESET`).
+   - **`P7501` Pino 1 (`SW_UART/IR_BUSY`):** É uma **linha separada de strap de boot serial do AM34 (`MN2DS0009`)**, ligada ao estágio `Q7510` / `QR7503` e controlada em software pelo pino **`GP26`** do Pico via comandos `JIGPIN LOW` / `JIGPIN HIZ`.
+   - **Nota sobre nomenclatura legada:** Strings antigas de firmware/UI (ex.: `"TW7501_STRAP"` no comando `JIGPIN` em `p7501_cli.c`) apelidaram historicamente o `JIGPIN` de `"TW7501"`; eletricamente, porém, `TW7501` (rail de backup/`XRESET` do Timer MCU) e `P7501` Pino 1 (`SW_UART/IR_BUSY` do AM34) são **redes distintas**.
+2. **Papel Real de `IC3001` e Ausência de EEPROM Externa no `DMR-EH55`:**
+   - **`IC3001` (`C1AB00002379`)** é o **CI matriz de comutação A/V de 100 pinos** na placa Main (controlado via barramento I²C pelo `IC7501`), **NÃO** o Microcontrolador Timer (`IC7501`).
+   - O **DMR-EH55 NÃO possui EEPROM externa** conectada ao Timer MCU: nos esquemáticos (`EC vol2 p. 122`, `EC vol1 p. 68`), o pino **`(EEPROM_W_C)` do `IC7501` está explicitamente ligado como `NC(OPEN)`**. Toda persistência não-volátil do sistema reside na Flash NOR Spansion `IC5001` (`SA134..SA141`).
+3. **Por que `STATUS` / `VDD` lê `0.03V (LOW / UNPOWERED)` em Standby sem jumper:**
+   - Os reguladores da placa (`IC1502` `X SW +5.2V`, `IC1504` `JC +5V`, `IC1506` `DR +5V`, `IC1507` `ANA +3.3V`) e a alimentação da placa Digital (`D3R3V`) são **comutados** por `P_SAVE_L` / `DI_P_ON[H]` sob comando do `IC7501` (`NA pp. 55–56, 62`).
+   - Como `NSW5V` (`P7501` Pino 5) e os pull-ups de `SW_UART/IR_BUSY` (Pino 1), `UARTM2P_T` (Pino 3) e `UARTP2M_T` (Pino 6) derivam desses barramentos comutados, durante o **Standby (`P-OFF` / relógio `0:00`) todos os pinos do `P7501` caem a ~`0.00V`** (`VDD: 0.03V`, `RXD=0, NSW5V=0, TXD=0, XRESET=0`). Assim que `DI_P_ON[H]` sobe (mesmo num pulso de 1–2s), `NSW5V` e `SW_UART` sobem a `~3.25V`.
+4. **A sonda ligada em `P7501` pode ligar o aparelho diretamente do Standby?**
    - **Não pelos 6 fios atuais do `P7501`**: o botão `[POWER]` do painel (`S7002` `KEY3_POWER`, `EC p. 65`) vai diretamente para `IC7501` Pino 88 (`KEYIN3`) e o receptor IR (`IR7501`) vai para o Pino 65 (`IR`) — nenhum desses dois sinais passa pelo conector `P7501`.
    - **Alternativas para acordar via Pico sem tocar no aparelho:**
-     * **LED IR Kaseikyo 38 kHz (não invasivo, zero solda):** adicionar um LED emissor infravermelho (+ resistor `330 Ω`) em qualquer GPIO livre do Pico apontado para `IR7501` permite enviar códigos Panasonic Kaseikyo (`Power Toggle`, dígitos `[0][1]`..`[9][9]` do `SERV`).
+     * **LED IR Kaseikyo 38 kHz (`IRTX`, não invasivo, zero solda):** um LED emissor infravermelho (+ resistor `330 Ω`) em GPIO livre seguro (`GP6..9` ou `GP16..22`) apontado para `IR7501` envia códigos Panasonic Kaseikyo (`Power Toggle`, dígitos `[0][1]`..`[9][9]` do `SERV`).
      * **Fio opcional `Open-Drain` em `S7002` (`KEYIN3`):** permite simular o clique físico do `[POWER]`.
-3. **Como a sonda Pico mapeia o Standby e substitui o jumper no `TW7501`:**
-   - **Mapeamento Contínuo de Transições (`BRIDGE 115200 PASSIVE CTRL`, `PWRTRACE`, `PIOLOGIC`):** com a sonda em modo passivo durante Standby (`0:00`), o Pico registra com carimbo de tempo em milissegundos a borda exata de subida e queda de **`NSW5V` (`GP3`), `TXD` (`GP4`) e `XRESET` (`GP5`)** + cada byte transmitido em `115200 8N1` (`DDR CHECK: OK`, `Loader ver0.61`, `HELLO`, `U99`, queda para Standby).
-   - **Emulação em Software do Jumper `TW7501` (`JIGPIN LOW` / `JIGPIN HIZ`):** o pino 1 do `P7501` (`SW_UART` / Pico `GP26`) está ligado **no mesmo nó elétrico que o ponto de teste `TW7501`** (`P9 p. 62`). O comando **`JIGPIN LOW`** no firmware C11 do Pico coloca `GP26` em `0V` (equivalente exato ao jumper físico em `TW7501`) **sem pulsar `XRESET`**, enquanto **`STATUS`** passa a discriminar `STANDBY (NSW5V=0)` de `AWAKE (NSW5V=1)` e de cabo desconectado!
+5. **Como a sonda Pico mapeia o Standby e aciona `SW_UART` por software (`JIGPIN`):**
+   - **Mapeamento Contínuo de Transições (`BRIDGE 115200 PASSIVE CTRL`, `PWRTRACE`, `BOOTTRACE`, `PIOLOGIC`):** com a sonda em modo passivo durante Standby (`0:00`), o Pico registra com carimbo de tempo a borda de subida e queda de **`NSW5V` (`GP3`, estritamente `Hi-Z Input`), `TXD` (`GP4`) e `XRESET` (`GP5`)** + cada byte transmitido em `115200 8N1` por `UARTP2M_T` (`GP2`).
+   - **Emulação em Software do Strap `SW_UART/IR_BUSY` (`JIGPIN LOW` / `JIGPIN HIZ`):** o comando **`JIGPIN LOW`** no firmware C11 coloca `GP26` (`P7501` Pino 1) em `0V` **sem pulsar `XRESET` e sem tocar o rail de backup `TW7501`**, enquanto **`STATUS`** discrimina `STANDBY (NSW5V=0)` de `AWAKE (NSW5V=1)` e cabo desconectado.
 
 ```mermaid
 flowchart TD
     subgraph P7501_PINOUT["Conector P7501 (Placa Principal VEP79138 — Barramento Comutado por DI_P_ON)"]
-        P1["Pino 1: SW_UART (= TW7501 / XFWE) -> Pico GP26 (JIGPIN LOW/HIZ)"]
-        P2["Pino 2: XRESET (Open-Drain via QR7503) -> Pico GP5"]
-        P3["Pino 3: UARTM2P_T (TX Pico -> Q7514 -> AM34) -> Pico GP4"]
+        P1["Pino 1: SW_UART/IR_BUSY (AM34 Serial Boot Strap) -> Pico GP26 (JIGPIN LOW/HIZ)"]
+        P2["Pino 2: XRESET (Open-Drain via QR7503 / IC7502) -> Pico GP5"]
+        P3["Pino 3: UARTM2P_T (TX Pico -> Q7514 -> AM34 RX) -> Pico GP4"]
         P4["Pino 4: GND (Referência 0.0 Ω ao Chassi)"]
         P5["Pino 5: NSW5V (Comutado ~5.15V upstream / ~3.29V ON; 0V em Standby) -> Pico GP3 Hi-Z"]
         P6["Pino 6: UARTP2M_T (AM34 TX 115200 8N1 -> RX Pico) -> Pico GP2"]
     end
 
+    subgraph BACKUP_RAIL["Circuito Separado: TW7501 (VWJ0795=5) — Backup 5V & Reset IC7501/IC7502"]
+        TW["TW7501 (D7509, C7578, R7623, C7584 0.047F / B7501 CR2354)"] -->|"Alimenta"| MCU["Timer MCU IC7501 (C2CBJG000713 / MN67788RA+IC8001) + IC7502"]
+        MCU -->|"Pin 12 XRESET"| P2
+    end
+
     subgraph STANDBY_STATES["Mapeamento Elétrico do P7501 (Standby vs Acordado)"]
         ST_OFF["Standby P-OFF ('0:00')\nDI_P_ON=L -> NSW5V=0, SW_UART=0.03V"] -->|"[POWER] via KEYIN3 / IR"| ST_WAKE["Wakeup Digital PCB\nNSW5V=1, XRESET=1, SW_UART~3.25V"]
-        ST_WAKE -->|"SW_UART=Hi-Z"| BOOT_NORM["Boot Flash NOR -> HELLO -> U99"]
-        ST_WAKE -->|"TW7501=GND (Jumper ou JIGPIN LOW)"| BOOT_SER["Loader: serial boot mode / [RTSD]"]
+        ST_WAKE -->|"SW_UART=Hi-Z"| BOOT_NORM["Boot Flash NOR -> HELLO -> U99 (<2s se rail/TBUS/SA0..3)"]
+        ST_WAKE -->|"SW_UART=LOW (JIGPIN LOW)"| BOOT_SER["Loader: ***** serial boot mode *****"]
     end
 ```
 

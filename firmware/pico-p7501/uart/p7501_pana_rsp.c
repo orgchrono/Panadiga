@@ -8,6 +8,7 @@
 #include "uart/p7501_pana_rsp.h"
 #include "uart/p7501_pana_rsp_report.h"
 #include "uart/p7501_pana_dumpnor.h"
+#include "uart/p7501_pana_jedec.h"
 #include "uart/p7501_uart_pio_engine.h"
 #include "common/p7501_hex.h"
 #include "hal/p7501_hw.h"
@@ -19,15 +20,6 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
-
-static uint32_t panarsp_tx_frame(const char *payload) {
-    char frame[P7501_RSP_MAX_FRAME];
-    const size_t flen = p7501_rsp_build_frame(payload, frame, sizeof(frame));
-    if (flen > 0u) {
-        p7501_pio_tx_bytes((const uint8_t *)frame, flen, false);
-    }
-    return (uint32_t)flen;
-}
 
 static size_t panarsp_tx_sequence(
     panarsp_rx_cap_t *cap,
@@ -61,75 +53,41 @@ static size_t panarsp_execute_dumpnor(
     if (stub_len == 0u) {
         return cap->len;
     }
-
-    char frame[P7501_RSP_MAX_FRAME];
     printf("[PANARSP] Uploading %uB PANADMP1 stub -> 0x%08lX (range 0x%08lX+0x%08lX)...\n",
-           (unsigned)stub_len,
-           (unsigned long)P7501_DUMPNOR_STUB_ADDR,
-           (unsigned long)spec->addr,
-           (unsigned long)spec->value_u32);
-
-    for (size_t off = 0u; off < stub_len; off += 16u) {
-        const size_t chunk = (stub_len - off > 16u) ? 16u : (stub_len - off);
-        const size_t flen = p7501_rsp_build_write_mem(
-            P7501_DUMPNOR_STUB_ADDR + (uint32_t)off, &stub[off], chunk, frame, sizeof(frame)
-        );
-        if (flen == 0u) {
-            return cap->len;
-        }
-        const size_t step_off = cap->len;
-        p7501_pio_tx_bytes((const uint8_t *)frame, flen, false);
-        panarsp_drain_for_ms(cap, 45u, true, step_off);
-    }
-
-    const size_t cb_len = p7501_rsp_build_write_u32(
-        P7501_AM34_SERIAL_CB_PTR_ADDR, P7501_DUMPNOR_STUB_ADDR, frame, sizeof(frame)
+           (unsigned)stub_len, (unsigned long)P7501_DUMPNOR_STUB_ADDR,
+           (unsigned long)spec->addr, (unsigned long)spec->value_u32);
+    return panarsp_stream_until_tokens(
+        cap, P7501_DUMPNOR_STUB_ADDR, stub, stub_len, spec->timeout_ms,
+        "PANADMP1", "PANADONE", NULL, out_hdr_seen, out_ftr_seen, NULL, out_stream_bytes
     );
-    const size_t cb_off = cap->len;
-    if (cb_len > 0u) {
-        p7501_pio_tx_bytes((const uint8_t *)frame, cb_len, false);
-        panarsp_drain_for_ms(cap, 80u, true, cb_off);
-    }
+}
 
-    const size_t stream_off = cap->len;
-    printf("[PANARSP] Triggering $g @ 0x%08lX; streaming raw PANADMP1..PANADONE:\n",
-           (unsigned long)P7501_DUMPNOR_STUB_ADDR);
-    stdio_flush();
-    (void)panarsp_tx_frame("g");
-
-    uint8_t hdr_ring[12];
-    uint8_t ftr_ring[12];
-    size_t hdr_len = 0u;
-    size_t ftr_len = 0u;
-    bool hdr_seen = false;
-    bool ftr_seen = false;
-    uint32_t streamed = 0u;
-    const uint64_t t0_us = time_us_64();
-    const uint64_t deadline = t0_us + ((uint64_t)spec->timeout_ms * 1000ULL);
-    while (!ftr_seen && p7501_wdt_loop_step(t0_us, deadline, true, NULL)) {
-        p7501_pio_poll_sw_uart_release();
-        uint8_t b = 0u;
-        while (p7501_pio_pop_rx_byte(&b)) {
-            putchar((int)b);
-            streamed += 1u;
-            if (!hdr_seen && p7501_rolling_match_push(hdr_ring, &hdr_len, sizeof(hdr_ring), b, "PANADMP1")) {
-                hdr_seen = true;
-            }
-            if (p7501_rolling_match_push(ftr_ring, &ftr_len, sizeof(ftr_ring), b, "PANADONE")) {
-                ftr_seen = true;
-                break;
-            }
-            if ((streamed & 0xFFu) == 0u) {
-                stdio_flush();
-            }
-        }
-        tight_loop_contents();
+static size_t panarsp_execute_jedec(
+    panarsp_rx_cap_t *cap,
+    const p7501_pana_rsp_spec_t *spec,
+    bool *out_ok_seen,
+    bool *out_to_seen,
+    uint32_t *out_stream_bytes
+) {
+    uint8_t stub[P7501_JEDEC_MAX_STUB_SIZE];
+    const size_t stub_len = (spec->action == PANA_RSP_ACT_JEDEC_ERASE)
+        ? p7501_jedec_build_erase_stub(spec->addr, P7501_JEDEC_STUB_ADDR, stub, sizeof(stub))
+        : p7501_jedec_build_prog_stub(
+              spec->addr, spec->data_bytes, spec->data_len, P7501_JEDEC_STUB_ADDR, stub, sizeof(stub)
+          );
+    if (stub_len == 0u) {
+        return cap->len;
     }
-    stdio_flush();
-    *out_hdr_seen = hdr_seen;
-    *out_ftr_seen = ftr_seen;
-    *out_stream_bytes = streamed;
-    return stream_off;
+    printf("[PANARSP] Uploading %uB JEDEC %s stub -> 0x%08lX (target 0x%08lX)...\n",
+           (unsigned)stub_len,
+           (spec->action == PANA_RSP_ACT_JEDEC_ERASE) ? "ERASE" : "PROG",
+           (unsigned long)P7501_JEDEC_STUB_ADDR, (unsigned long)spec->addr);
+    bool hdr_unused = false;
+    return panarsp_stream_until_tokens(
+        cap, P7501_JEDEC_STUB_ADDR, stub, stub_len, spec->timeout_ms,
+        NULL, P7501_JEDEC_OK_TOKEN, P7501_JEDEC_TO_TOKEN,
+        &hdr_unused, out_ok_seen, out_to_seen, out_stream_bytes
+    );
 }
 
 void p7501_cmd_pana_rsp(const char *arg) {
@@ -137,7 +95,12 @@ void p7501_cmd_pana_rsp(const char *arg) {
     p7501_pana_rsp_spec_t spec;
 
     if (!p7501_panarsp_parse_args(arg, &spec)) {
-        printf("PANARSP: ERROR (Usage: PANARSP [ms] [NORMAL|JIG[:ms]|NOPULL] [MAGIC] [NONAK] [WAIT:<trig>] [PROBESEQ|G|REGS|Z0|Z1|MEM:<addr>,<len>|XMEM:<addr>,<len>|WMEM:<addr>,<hex>|WRITE32:<addr>,<u32>|PASSTHROUGH|CALL:<addr>|DUMPNOR [start] [len]|NAK|RAW:<txt>|HEX:<hex>])\n");
+        printf("PANARSP: ERROR (Usage: PANARSP [ms] [NORMAL|JIG[:ms]|NOPULL] [MAGIC] [NONAK] [NORUNLOCK:CONFIRM_UPPER_NOR|NORLOCK] [WAIT:<trig>] [PROBESEQ|G|REGS|Z0|Z1|MEM:<addr>,<len>|XMEM:<addr>,<len>|WMEM:<addr>,<hex>|WRITE32:<addr>,<u32>|JEDEC_ERASE:<addr>|JEDEC_PROG:<addr>,<hex>|PASSTHROUGH|CALL:<addr>|DUMPNOR [start] [len]|NAK|RAW:<txt>|HEX:<hex>])\n");
+        return;
+    }
+    if (spec.action == PANA_RSP_ACT_NOR_POLICY) {
+        printf("PANARSP: OK (upper_nor=%s, sa0_sa3=PERMANENT_E05)\n",
+               spec.nor_unlocked_effective ? "UNLOCKED" : "LOCKED");
         return;
     }
 
@@ -195,7 +158,9 @@ void p7501_cmd_pana_rsp(const char *arg) {
                                     (spec.action == PANA_RSP_ACT_MAGIC) ||
                                     (spec.action == PANA_RSP_ACT_PASSTHROUGH) ||
                                     (spec.action == PANA_RSP_ACT_CALL) ||
-                                    (spec.action == PANA_RSP_ACT_DUMPNOR);
+                                    (spec.action == PANA_RSP_ACT_DUMPNOR) ||
+                                    (spec.action == PANA_RSP_ACT_JEDEC_ERASE) ||
+                                    (spec.action == PANA_RSP_ACT_JEDEC_PROG);
         if (need_handshake) {
             const size_t step_off = s_cap.len;
             p7501_pio_tx_bytes(k_p7501_rsp_handshake, P7501_RSP_HANDSHAKE_LEN, false);
@@ -240,6 +205,12 @@ void p7501_cmd_pana_rsp(const char *arg) {
                     &s_cap, &spec, &dump_hdr, &dump_ftr, &dump_bytes
                 );
                 break;
+            case PANA_RSP_ACT_JEDEC_ERASE:
+            case PANA_RSP_ACT_JEDEC_PROG:
+                primary_off = panarsp_execute_jedec(
+                    &s_cap, &spec, &dump_ftr, &dump_hdr, &dump_bytes
+                );
+                break;
             case PANA_RSP_ACT_G:
             case PANA_RSP_ACT_REGS:
             case PANA_RSP_ACT_Z0:
@@ -273,6 +244,15 @@ void p7501_cmd_pana_rsp(const char *arg) {
                dump_bytes,
                dump_hdr ? "YES" : "NO",
                dump_ftr ? "YES" : "NO",
+               fifo_ovf ? "YES" : "NO");
+        return;
+    }
+    if (spec.action == PANA_RSP_ACT_JEDEC_ERASE || spec.action == PANA_RSP_ACT_JEDEC_PROG) {
+        printf("\nPANARSP: %s (jedec_rx=%" PRIu32 " bytes, ok=%s, timeout=%s, fifo_ovf=%s)\n",
+               (triggered && dump_ftr) ? "OK" : "PARTIAL",
+               dump_bytes,
+               dump_ftr ? "YES" : "NO",
+               dump_hdr ? "YES" : "NO",
                fifo_ovf ? "YES" : "NO");
         return;
     }

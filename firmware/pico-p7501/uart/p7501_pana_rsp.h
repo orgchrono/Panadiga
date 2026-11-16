@@ -58,7 +58,10 @@ typedef enum p7501_pana_rsp_action {
     PANA_RSP_ACT_PASSTHROUGH,
     PANA_RSP_ACT_CALL,
     PANA_RSP_ACT_DUMPNOR,
-    PANA_RSP_ACT_REGS
+    PANA_RSP_ACT_REGS,
+    PANA_RSP_ACT_NOR_POLICY,
+    PANA_RSP_ACT_JEDEC_ERASE,
+    PANA_RSP_ACT_JEDEC_PROG
 } p7501_pana_rsp_action_t;
 
 typedef struct p7501_pana_rsp_spec {
@@ -68,6 +71,7 @@ typedef struct p7501_pana_rsp_spec {
     bool send_nak_prefix;
     bool send_magic_prefix;
     bool wait_trigger_enabled;
+    bool nor_unlocked_effective;
     char trigger[P7501_RSP_MAX_TRIG + 1u];
     p7501_pana_rsp_action_t action;
     char payload[128];

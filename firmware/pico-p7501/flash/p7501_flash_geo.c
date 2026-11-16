@@ -8,6 +8,10 @@
  */
 
 #include "flash/p7501_flash.h"
+#include "common/p7501_hex.h"
+#include <string.h>
+
+static bool s_upper_nor_unlocked = false;
 #include "flash/ram_loader_payload.h"
 
 uint32_t p7501_flash_normalize_size(uint32_t flash_size_bytes) {
@@ -100,6 +104,69 @@ bool p7501_flash_is_protected_ipl_range(uint32_t addr, size_t len) {
 
 bool p7501_flash_is_critical_boot_ipl_range(uint32_t addr, size_t len) {
     return flash_range_overlaps_window(addr, len, P7501_FLASH_CRITICAL_IPL_SIZE);
+}
+
+bool p7501_flash_is_upper_nor_unlocked(void) {
+    return s_upper_nor_unlocked;
+}
+
+void p7501_flash_set_upper_nor_unlocked(bool unlocked) {
+    s_upper_nor_unlocked = unlocked;
+}
+
+bool p7501_flash_is_write_blocked_with_policy(uint32_t addr, size_t len, bool upper_nor_unlocked) {
+    return upper_nor_unlocked
+        ? p7501_flash_is_critical_boot_ipl_range(addr, len)
+        : p7501_flash_is_protected_ipl_range(addr, len);
+}
+
+bool p7501_flash_is_write_blocked(uint32_t addr, size_t len) {
+    return p7501_flash_is_write_blocked_with_policy(addr, len, s_upper_nor_unlocked);
+}
+
+bool p7501_flash_is_erasable_nor_addr(uint32_t addr, bool upper_nor_unlocked) {
+    return p7501_flash_is_readonly_nor_range(P7501_FLASH_SIZE_8MB, addr, 1UL) &&
+           !p7501_flash_is_write_blocked_with_policy(addr, 1u, upper_nor_unlocked);
+}
+
+uint32_t p7501_flash_normalize_uncached_addr(uint32_t addr) {
+    if ((addr >= P7501_FLASH_CACHED_BASE) && (addr < (P7501_FLASH_CACHED_BASE + P7501_FLASH_SIZE_8MB))) {
+        return P7501_FLASH_HW_UNCACHED_BASE + (addr - P7501_FLASH_CACHED_BASE);
+    }
+    return addr;
+}
+
+int p7501_flash_eval_policy_token(const char *tok) {
+    if (tok == NULL) {
+        return 2;
+    }
+    if (p7501_ascii_ieq(tok, "NORLOCK")) {
+        return 0;
+    }
+    if (p7501_ascii_iprefix(tok, "NORUNLOCK")) {
+        return ((tok[9] == ':') && (strcmp(tok + 10, "CONFIRM_UPPER_NOR") == 0)) ? 1 : -1;
+    }
+    return 2;
+}
+
+bool p7501_flash_consume_policy_tok(const char *tok, int *io_override, bool *out_invalid) {
+    *out_invalid = false;
+    const int ptok = p7501_flash_eval_policy_token(tok);
+    if (ptok == -1) {
+        *out_invalid = true;
+        return true;
+    }
+    if (ptok == 0 || ptok == 1) {
+        if (io_override != NULL) *io_override = ptok;
+        return true;
+    }
+    return false;
+}
+
+bool p7501_flash_effective_policy(int policy_override) {
+    if (policy_override == 1) return true;
+    if (policy_override == 0) return false;
+    return s_upper_nor_unlocked;
 }
 
 uint32_t p7501_flash_get_sector_size_at(uint32_t flash_size_bytes, uint32_t addr) {

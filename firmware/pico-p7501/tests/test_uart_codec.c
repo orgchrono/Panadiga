@@ -10,6 +10,7 @@
 #include "diag/p7501_jigsweep_codec.h"
 #include "diag/p7501_piologic_codec.h"
 #include "uart/p7501_fmu_codec.h"
+#include "uart/p7501_uart_autobaud.h"
 #include "uart/p7501_uart_codec.h"
 #include "common/p7501_hex.h"
 #include "common/p7501_wdt_logic.h"
@@ -75,6 +76,22 @@ static void test_hex_and_baud_math(void) {
     assert(p7501_snap_standard_baud(17u, &raw_bps) == 57600u);
     assert(p7501_snap_standard_baud(32u, &raw_bps) == 31250u);
     assert(p7501_snap_standard_baud(104u, &raw_bps) == 9600u);
+
+    /* Dual-polarity glitch-immune autobaud cluster verification */
+    p7501_baud_hist_t hist;
+    p7501_baud_estimate_t est;
+    p7501_baud_hist_init(&hist);
+    p7501_baud_hist_push_pulse(&hist, 1u, false); /* 1us power-on glitch ignored */
+    p7501_baud_hist_push_pulse(&hist, 4u, false); /* isolated 230400 spike (1 hit) ignored when 115200 cluster dominates */
+    for (int i = 0; i < 6; ++i) {
+        p7501_baud_hist_push_pulse(&hist, 9u, (i % 2) == 1);
+    }
+    p7501_baud_hist_push_pulse(&hist, 17u, false); /* 2-bit run at 115200 */
+    p7501_baud_hist_finish(&hist, &est);
+    assert(hist.glitches_rejected == 1u);
+    assert(est.snapped_baud == 115200u);
+    assert(est.best_cluster_hits >= 6u);
+    assert(est.confidence_pct >= 50u);
 }
 
 static void test_trigger_and_waittx_parser(void) {

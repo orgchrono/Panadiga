@@ -50,6 +50,8 @@ enum {
     P7501_DIAG_EVT_FAT_FAIL           = (1u << 13)
 };
 
+#define P7501_DIAG_WATCH_UNLOCK_TX "U CONFIRM_UPPER_NOR\r"
+
 typedef struct p7501_diag_watch_spec {
     uint32_t timeout_ms;
     p7501_boot_action_t boot_action;
@@ -57,7 +59,9 @@ typedef struct p7501_diag_watch_spec {
     p7501_diag_action_t action;
     bool release_on_ddr;
     bool wait_for_wake;
+    bool nor_unlock;
     uint32_t wake_timeout_ms;
+    uint32_t target_addr;
     char tx_seq[32];
 } p7501_diag_watch_spec_t;
 
@@ -66,6 +70,7 @@ typedef struct p7501_diag_watch_state {
     size_t ring_len;
     uint32_t seen_events;
     bool sw_uart_released;
+    bool unlock_dispatched;
     bool tx_dispatched;
 } p7501_diag_watch_state_t;
 

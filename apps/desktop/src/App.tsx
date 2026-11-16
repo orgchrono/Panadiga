@@ -13,6 +13,7 @@ import { useAppDispatch, useAppSelector } from './store/hooks';
 import { setCurrentView, setMobileNavOpen } from './store/slices/shellSlice';
 import { useTranslation } from './i18n/useTranslation';
 import { Loader2 } from 'lucide-react';
+import { isAndroidCommanderEnabled } from './config/platform';
 
 const DashboardView = lazy(() =>
   import('./views/DashboardView').then(m => ({ default: m.DashboardView }))
@@ -41,6 +42,13 @@ const UnbrickView = lazy(() =>
 const SettingsView = lazy(() =>
   import('./views/SettingsView').then(m => ({ default: m.SettingsView }))
 );
+
+const IrCommanderView =
+  __PANADIGA_ANDROID_APK__ || !import.meta.env.PROD
+    ? lazy(() =>
+        import('./views/IrCommanderView').then(m => ({ default: m.IrCommanderView })),
+      )
+    : null;
 
 const ViewLoadingFallback: React.FC = () => {
   const { t } = useTranslation();
@@ -73,7 +81,7 @@ const AppShell: React.FC = () => {
   );
 
   const manualsCountLabel = ssot ? `${ssot.indexed_manuals_count} PDFs` : 'SSOT';
-  const viewTitles: Record<ViewKey, string> = {
+  const viewTitles: Partial<Record<ViewKey, string>> = {
     dashboard: t('shell.viewTitles.dashboard'),
     nvram: t('shell.viewTitles.nvram'),
     hdd: t('shell.viewTitles.hdd'),
@@ -83,7 +91,12 @@ const AppShell: React.FC = () => {
     hexinspector: t('shell.viewTitles.hexinspector'),
     unbrick: t('shell.viewTitles.unbrick'),
     settings: t('shell.viewTitles.settings'),
+    ...(__PANADIGA_ANDROID_APK__ || !import.meta.env.PROD
+      ? { ircommander: t('shell.viewTitles.ircommander') }
+      : {}),
   };
+
+  const activeViewTitle = viewTitles[currentView] ?? '';
 
   const sidebarProps = {
     currentView,
@@ -109,7 +122,7 @@ const AppShell: React.FC = () => {
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         <Header
           currentView={currentView}
-          currentViewTitle={viewTitles[currentView]}
+          currentViewTitle={activeViewTitle}
           onOpenMobileNav={() => handleMobileNavChange(true)}
           onOpenSettings={() => handleSelectView('settings')}
           hardwareConnected={hardwareStatus.connected}
@@ -128,7 +141,7 @@ const AppShell: React.FC = () => {
             <GuidedPipelineBar currentView={currentView} onNavigate={handleSelectView} />
           </div>
 
-          <ErrorBoundary fallbackTitle={t('shell.boundaryFailure', { title: viewTitles[currentView] })}>
+          <ErrorBoundary fallbackTitle={t('shell.boundaryFailure', { title: activeViewTitle })}>
             <Suspense fallback={<ViewLoadingFallback />}>
               <motion.div
                 key={currentView}
@@ -144,6 +157,9 @@ const AppShell: React.FC = () => {
                 {currentView === 'manuals' && <ManualsView />}
                 {currentView === 'hexinspector' && <HexInspectorView />}
                 {currentView === 'unbrick' && <UnbrickView />}
+                {IrCommanderView &&
+                  isAndroidCommanderEnabled() &&
+                  currentView === 'ircommander' && <IrCommanderView />}
                 {currentView === 'settings' && <SettingsView />}
               </motion.div>
             </Suspense>

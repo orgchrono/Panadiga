@@ -39,17 +39,39 @@ jobs:
           cache: "npm"
           cache-dependency-path: apps/desktop/package-lock.json
 
-      - name: Install UI Dependencies & Build Dist
+      - name: Install UI Dependencies & Build Desktop + Android Dists
         working-directory: apps/desktop
         run: |
           npm ci --prefer-offline
           npm run build
+          npm run build:android
+          node -e "
+            const fs = require('fs'), path = require('path');
+            const forbidden = ['ircommander', 'panasonic_ir_catalog', '__PANADIGA_IR_BRIDGE__'];
+            for (const f of fs.readdirSync('dist/assets')) {
+              const txt = fs.readFileSync(path.join('dist/assets', f), 'utf8');
+              for (const needle of forbidden) {
+                if (txt.includes(needle)) {
+                  console.error('LEAK: Desktop bundle contains Android-only token ' + needle + ' in ' + f);
+                  process.exit(1);
+                }
+              }
+            }
+          "
 
-      - name: Upload Reusable Frontend Dist Artifact
+      - name: Upload Reusable Desktop Frontend Dist Artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: panadiga-frontend-dist
           path: apps/desktop/dist/
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Upload Reusable Android Frontend Dist Artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: panadiga-frontend-android-dist
+          path: apps/desktop/dist-android/
           if-no-files-found: error
           retention-days: 1
 
@@ -329,21 +351,21 @@ jobs:
           cd apps/desktop
           npm ci --prefer-offline
 
-      - name: Restore Prebuilt Frontend Dist
+      - name: Restore Prebuilt Android Frontend Dist
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          name: panadiga-frontend-dist
-          path: apps/desktop/dist
+          name: panadiga-frontend-android-dist
+          path: apps/desktop/dist-android
 
       - name: Initialize & Build Android APK
         run: |
           export ANDROID_NDK_ROOT=$NDK_HOME
-          touch apps/desktop/dist/index.html
+          touch apps/desktop/dist-android/index.html
           cd apps/desktop
           if [ ! -d "src-tauri/gen/android" ]; then
             npx --yes @tauri-apps/cli android init --ci --skip-targets-install
           fi
-          npx --yes @tauri-apps/cli android build --apk --target aarch64 --ci
+          npx --yes @tauri-apps/cli android build --apk --target aarch64 --ci --config src-tauri/tauri.android.conf.json
 
       - name: Upload Android APK Artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

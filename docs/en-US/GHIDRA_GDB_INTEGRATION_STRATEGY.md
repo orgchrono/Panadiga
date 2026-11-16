@@ -79,8 +79,13 @@ flowchart TD
   - [`ghidra_connect_debugger.py`](../../tools/ghidra/ghidra_connect_debugger.py) & [`ghidra_conectar_debugger.py`](../../tools/ghidra/ghidra_conectar_debugger.py): Connects Ghidra's debugger client to the `127.0.0.1:3333` RSP target.
   - [`ghidra_auto_unbrick_audit.py`](../../tools/ghidra/ghidra_auto_unbrick_audit.py) & [`ghidra_mn103_fix_decompilation.py`](../../tools/ghidra/ghidra_mn103_fix_decompilation.py): Automated Trap 1–7 auditing, `??` code island recovery, and unbrick cross-referencing.
 
-### 2.3 Native Rust GDB RSP Bridge (`panadiga pico gdb-bridge`)
-* Implemented directly inside the Rust core (`panadiga-core` / CLI `panadiga pico gdb-bridge`), translating GDB packets (`$qSupported`, `$g`, `$m`, `$M`, `$X`, `$c`, `$Z0`) over USB CDC `115200 8N1` to the Pico RP2040/RP2350 bench probe (`P7501`) and into `_dev_SERIAL` (`FUN_574f0590`) when `MAIN` is active.
+### 2.3 Native Rust Asynchronous GDB RSP Bridge (`panadiga pico gdb-bridge`)
+* **Why `P7501` Requires Asynchronous Bridging:** Connector `P7501` carries asynchronous `115200 8N1` UART (`UARTP2M_T` Pin 6 / `UARTM2P_T` Pin 3) with **no synchronous DWire32A hardware clock**. When using legacy `GDB` (`--target-mode ocd`), [`p7501_bus_protocol.c`](../../firmware/pico-p7501/protocol/p7501_bus_protocol.c) returns `0xFFFFFFFF` fail-safely unless a monitor is alive in AM34 RAM/ROM.
+* **Three Selectable Bridge Target Modes (`--target-mode`):**
+  - **`panamon1`** (`panadiga pico gdb-bridge --port COM10 --target-mode panamon1`): enters Pico `BRIDGE 115200 PASSIVE` and translates Ghidra synchronous RSP requests (`$qSupported`, `$qXfer:memory-map:read`, `$g`, `$m`, IPL-guarded `$M`) into asynchronous `PANAMON1>` (`R`/`W`) UART commands (`DIGADIAG.FRM` Stage-1.5).
+  - **`panarsp`** (`--target-mode panarsp`): forwards RSP `$` packets through `BRIDGE` to `MAIN` `_dev_SERIAL` (`FUN_574f0590`) when normal firmware reaches Ready state.
+  - **`ocd`** (default legacy): connects to Pico C11 native RSP handler.
+* **Pre-Flight Guided Triage:** Run `panadiga pico bench-wizard` first when diagnosing `U99` / Standby drops; Ghidra attaches live only after `PANAMON1>` or `_dev_SERIAL` answers over `UARTP2M_T`.
 
 ### 2.4 HxD Hex Editor Portable Integration
 * Automated binary inspection via [`tools/Abrir_HxD.cmd`](../../tools/Abrir_HxD.cmd) launching [`tools/HxD/app/HxD64.exe`](../../tools/HxD/app/HxD64.exe) pre-loaded with the first available lab artifact (`panasonic_dmr-eh55_flash_dump.bin`, `panasonic_dmr_ez485v_flash_dump_4mb.bin`, `panasonic DMR EH-55 Firmware hdd_100.bin`, or `PANA_DVD.FRM`).

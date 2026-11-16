@@ -12,6 +12,8 @@ pub mod crypto;
 pub mod ghidra;
 pub mod hdd;
 pub mod headers;
+#[cfg(any(target_os = "android", test, feature = "android-ir"))]
+pub mod ir;
 pub mod manuals;
 pub mod nvram;
 pub mod pico;

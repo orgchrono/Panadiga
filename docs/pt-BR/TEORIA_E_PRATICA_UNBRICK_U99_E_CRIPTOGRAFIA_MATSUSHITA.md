@@ -253,11 +253,26 @@ A presença simultânea do bloco `E5D1F34A518B2690` tanto no arquivo de CD `PANA
 ```
 
 ### 3.4 Resumo das Invariantes de Barramento & Modelo de Proteção em Duas Camadas
-* **Região Imutável de Fábrica (99,21875%)**: `0x80000000` a `0x807EFFFF` (8.323.072 bytes) — Permanece preservada e protegida por padrão (`E05`) durante toda a operação padrão e na cura do erro `U99`.
-* **Região Alvo de Sanitização (0,78125%)**: `0x807F0000` a `0x807FFFFF` (65.536 bytes) — Ao sofrer o `Sector Erase` JEDEC de bancada para `0xFF`, comanda a CPU AM34 a executar a rotina de auto-recuperação de fábrica, restabelecendo o gravador com parâmetros operacionais perfeitos.
+* **Região Protegida por Padrão (99,21875%):** `0x80000000` a `0x807EFFFF` (8.323.072 bytes; espelho *uncached* `0x84000000..0x847EFFFF`) — Permanece preservada (`immutable` no boot `SA0..SA3` e bloqueada por padrão com `E05` em `SA4..SA133`) durante toda a operação padrão e na cura do erro `U99`.
+* **Região Alvo de Sanitização (0,78125%):** `0x807F0000` a `0x807FFFFF` (`SA134..SA141`, 8 setores de `8 KiB`, totalizando `65.536` bytes) — Ao sofrer o `Sector Erase` JEDEC de bancada para `0xFF`, comanda a CPU AM34 a executar a rotina de auto-recuperação de fábrica, restabelecendo o gravador com parâmetros operacionais perfeitos.
 
 > [!NOTE]
-> **Modelo Controlado de Escrita da NOR em Duas Camadas (`SA0..SA3` vs. `SA4..SA133`):**
-> Para conciliar a proteção absoluta da cadeia de boot com experimentação avançada fora da NVRAM, o controle de acesso sobre `0x80000000..0x807EFFFF` separa a área protegida em duas camadas distintas:
-> 1. **Camada 1 — Bootloader / IPL Crítico (`SA0..SA3`, `0x80000000..0x8003FFFF`, `256 KiB`):** **leitura estrita permanente (`RO` imutável)** no hardware `P7501` — nunca deve ser apagada ou sobrescrita, sendo toda tentativa de escrita bloqueada de forma irreversível com erro **`E05`** para preservar o Root of Trust.
-> 2. **Camada 2 — Região BGO / Aplicação Upper NOR (`SA4..SA133`, `0x80040000..0x807EFFFF`, setores de `64 KiB`):** **protegida por padrão (`E05`)** para segurança estrita durante reparo de erro `U99`, porém **desbloqueável explicitamente** via flag/comando dedicado (**`qPanadigaNorUnlock:CONFIRM_UPPER_NOR`** no protocolo de depuração ou **`--offset`** em imagem *Copy-on-Write* (`CoW`) com backup SHA-256 obrigatório) para experimentação controlada fora da NVRAM (`SA134..SA141`).
+> **Modelo Controlado de Escrita da NOR em Camadas (`SA0..SA3` vs. `SA4..SA133` vs. `SA134..SA141`):**
+> O controle unificado [`NorWritePolicy`](../../crates/panadiga-core/src/pico/rsp_codec/policy.rs) separa a Flash Spansion `S29JL064H` (`8 MiB`) em três zonas operacionais:
+> 1. **Camada 1 — Bootloader / IPL Crítico (`SA0..SA3`, `0x80000000..0x8003FFFF` / `0x84000000..0x8403FFFF`, `256 KiB`):** **leitura estrita permanente (`immutable read-only`, `never` gravável na sonda Pico)** — nunca apagar ou sobrescrever na bancada; toda tentativa via sonda `P7501` é irreversivelmente bloqueada com erro **`E05`** para preservar o Root of Trust de boot serial.
+> 2. **Camada 2 — Região BGO / Aplicação Upper NOR (`SA4..SA133`, `0x80040000..0x807EFFFF` / `0x84040000..0x847EFFFF`, setores de `64 KiB`):** **bloqueada por padrão (`NorWritePolicy::NvramOnly` → `E05`)** para segurança estrita durante reparo de erro `U99`, porém **explicitamente desbloqueável** (`NorWritePolicy::UpperNorAppUnlocked`) para pesquisa controlada fora da NVRAM após backup verificado.
+> 3. **Camada 3 — NVRAM / EEMUL (`SA134..SA141`, `0x807F0000..0x807FFFFF`, setores de `8 KiB`):** gravação autorizada por padrão para sanitização cirúrgica do erro `U99`.
+
+### 3.5 Governança de Desbloqueio Upper NOR, Stubs JEDEC (`0x51800000`) & Emulador `Mn103Vm`
+
+| Superfície | Mecanismo / Comando | Escopo & Invariante de Segurança (`E05`) |
+| :--- | :--- | :--- |
+| **GDB RSP (`gdb_rsp_codec.c` / `gdb_rsp_memory.c`)** | `$qPanadigaNorUnlock:CONFIRM_UPPER_NOR#<xx>` / `$qPanadigaNorLock#<xx>` | Alterna `NvramOnly` ↔ `UpperNorAppUnlocked`; **never** libera `SA0..SA3` (`0x80000000..0x8003FFFF`, sempre `E05`). |
+| **Monitor `PANAMON1` ([`jedec_emit.rs`](../../crates/panadiga-core/src/re/prog061_uart_monitor/jedec_emit.rs))** | `U CONFIRM_UPPER_NOR` / `U LOCK` | Protocolo serial no monitor residente AM34; o fluxo `DIAGWATCH` executa comando `'U'` em duas etapas antes de `'W'` / `'E'`. |
+| **Pico `PANARSP` & `DIAGWATCH` ([`p7501_pana_rsp_parse.c`](../../firmware/pico-p7501/uart/p7501_pana_rsp_parse.c), [`p7501_diag_watch.c`](../../firmware/pico-p7501/uart/p7501_diag_watch.c))** | `NORUNLOCK:CONFIRM_UPPER_NOR` / `NORLOCK` + `JEDEC_ERASE:<addr>` / `JEDEC_PROG:<addr>,<hex>` | Carrega o stub SRAM [`p7501_pana_jedec.c`](../../firmware/pico-p7501/uart/p7501_pana_jedec.c) em `0x51800000` (`1..=16` bytes/programação), retornando `PANAJEDEC_OK` ou timeout `PANAJEDEC_TO`. Mantém `SA0..SA3` `read-only` (`E05`). |
+| **CLI Copy-on-Write ([`panadiga nvram patch-upper-nor`](../../crates/panadiga-cli/src/cli/handlers/nvram.rs))** | `panadiga nvram patch-upper-nor` com `--backup` ([`upper_nor.rs`](../../crates/panadiga-core/src/nvram/pure/upper_nor.rs), [`io/upper_nor.rs`](../../crates/panadiga-core/src/nvram/io/upper_nor.rs)) | Gera cópia *Copy-on-Write* (`never` edita o dump original *in-place*) com backup validado por SHA-256; bloqueia `SA0..SA3` a menos que `--allow-critical-ipl` seja passado em pesquisa offline. |
+
+* **FSM Spansion JEDEC Real no Emulador `Mn103Vm` ([`spansion_nor.rs`](../../crates/panadiga-core/src/re/mn10300_emu/spansion_nor.rs)):**
+  Implementa a máquina de estados elétrica da `S29JL064H`: ciclo **Autoselect `0x90`** (retornando Manufacturer `0x0001` e Device `0x227E`), **Sector Erase de 6 ciclos (`0x80 -> 0x30`)**, **Word/Byte Program de 4 ciclos (`0xA0`, aplicando `&=` bit a bit como NOR real)** e **Reset (`0xF0`)**.
+* **Validação de Integração em Imagens Reais ([`checks_real_nor.rs`](../../crates/panadiga-core/src/re/emu_patch_suite/checks_real_nor.rs)):**
+  Verifica o ciclo completo de desbloqueio, programação e leitura JEDEC diretamente sobre os binários reais `flash.bin` (`8 MiB`), `prog061_dec.bin`, `PANA_DVD.FRM` (`3410PQ`), `main3060np` e `PANA__SD.FRM`.

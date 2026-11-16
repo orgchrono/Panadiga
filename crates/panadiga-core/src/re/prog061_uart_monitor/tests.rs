@@ -21,6 +21,9 @@ fn uart_monitor_payload_assembles_cleanly_within_slack() {
 fn panamon1_executes_guarded_rw_jump_erase_and_blocks_ipl_on_mn103_vm() {
     let payload = build_prog061_uart_monitor_payload(PROG061_UART_MONITOR_VA).unwrap();
     let mut vm = Mn103Vm::new();
+    // Authorize Upper NOR hardware writes on the VM so PANAMON1's own software U-lock
+    // (`U LOCK` -> `ERR:E05_IPL_RO` vs `U CONFIRM_UPPER_NOR` -> `OK`) and permanent SA0..SA3 lock are tested.
+    vm.nor_write_policy = crate::pico::rsp_codec::policy::NorWritePolicy::UpperNorAppUnlocked;
     vm.enable_sc0_uart(&[]);
 
     vm.map_segment(PROG061_UART_MONITOR_VA, payload, false);
@@ -40,6 +43,7 @@ fn panamon1_executes_guarded_rw_jump_erase_and_blocks_ipl_on_mn103_vm() {
     vm.map_segment(0x5000_0000, ram, true);
     vm.map_segment(0x8000_0000, vec![0xDE, 0xAD, 0xBE, 0xEF], false);
     vm.map_segment(0x8400_0000, vec![0xCA, 0xFE, 0xBA, 0xBE], false);
+    vm.map_segment(0x8420_0000, vec![0x5Au8; 0x1_0000], true);
     vm.map_segment(0x847F_0000, vec![0x5Au8; 0x1_0000], true);
     vm.sp = 0x5000_F000;
     vm.pc = call_va;
@@ -49,14 +53,26 @@ fn panamon1_executes_guarded_rw_jump_erase_and_blocks_ipl_on_mn103_vm() {
           W 80000000,AA\r\n\
           W 847EFFFF,AA\r\n\
           E 847E0000\r\n\
+          E 847F0000\r\n\
           W 847F0010,A5\r\n\
           R 847F0010,04\r\n\
+          U WRONG\r\n\
+          W 84200010,12\r\n\
+          U CONFIRM_UPPER_NOR\r\n\
+          W 84000000,AA\r\n\
+          E 84030000\r\n\
+          E 84200000\r\n\
+          W 84200010,A5\r\n\
+          W 84200011,5A\r\n\
+          U LOCK\r\n\
+          W 84200012,11\r\n\
+          W 50000200,42\r\n\
           J 50001800\r\n\
           E 847FE000\r\n\
           B",
     );
 
-    if let Err(e) = vm.run_until(call_va + 7, 250_000) {
+    if let Err(e) = vm.run_until(call_va + 7, 500_000) {
         let tx = vm.take_uart_tx_utf8();
         panic!(
             "PANAMON1 VM err={e:?} pc={:#010x} sp={:#010x} a0={:#010x} a2={:#010x} d0={:#010x} d1={:#010x} d2={:#010x} tx={tx:?}",
@@ -66,17 +82,25 @@ fn panamon1_executes_guarded_rw_jump_erase_and_blocks_ipl_on_mn103_vm() {
     assert_eq!(vm.d[0], 0);
 
     let tx = vm.take_uart_tx_utf8();
-    assert!(tx.contains("PANAMON1>[B/R/W/D/F/J/E/Q]"), "tx={tx}");
+    assert!(tx.contains("PANAMON1>[B/R/W/D/F/J/E/U/Q]"), "tx={tx}");
     assert!(tx.contains("DEADBEEF"), "expected IPL read hex: {tx}");
-    assert_eq!(tx.matches("ERR:E05_IPL_RO").count(), 3, "tx={tx}");
+    assert_eq!(tx.matches("ERR:E05_IPL_RO").count(), 7, "tx={tx}");
+    assert!(tx.contains("?\r\n"), "tx={tx}");
+    assert!(tx.contains("OK:NOR_UNLOCK"), "tx={tx}");
+    assert!(tx.contains("OK:NOR_LOCK"), "tx={tx}");
     assert!(tx.contains("OK:WRITE"), "tx={tx}");
-    assert!(tx.contains("A55A5A5A"), "tx={tx}");
+    assert!(tx.contains("A5FFFFFF"), "tx={tx}");
     assert!(tx.contains("OK:DONE"), "tx={tx}");
     assert!(tx.contains("OK:ERASE"), "tx={tx}");
     assert!(tx.contains("OK:BYPASS"), "tx={tx}");
 
     assert_eq!(vm.read_u8(0x8000_0000).unwrap(), 0xDE);
     assert_eq!(vm.read_u8(0x5000_0100).unwrap(), 0x77);
+    assert_eq!(vm.read_u8(0x5000_0200).unwrap(), 0x42);
+    assert_eq!(vm.read_u8(0x8420_0000).unwrap(), 0xFF);
+    assert_eq!(vm.read_u8(0x8420_0010).unwrap(), 0xA5);
+    assert_eq!(vm.read_u8(0x8420_0011).unwrap(), 0x5A);
+    assert_eq!(vm.read_u8(0x8420_FFFF).unwrap(), 0xFF);
     assert_eq!(vm.read_u8(0x847F_0010).unwrap(), 0xA5);
     assert_eq!(vm.read_u8(0x847F_DFFFu32).unwrap(), 0x5A);
     assert_eq!(vm.read_u8(0x847F_E000u32).unwrap(), 0xFF);

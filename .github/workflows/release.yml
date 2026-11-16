@@ -42,17 +42,26 @@ jobs:
           cache: "npm"
           cache-dependency-path: apps/desktop/package-lock.json
 
-      - name: Install Node Dependencies & Build Frontend
+      - name: Install Node Dependencies & Build Desktop + Android Frontends
         working-directory: apps/desktop
         run: |
           npm ci --prefer-offline
           npm run build
+          npm run build:android
 
-      - name: Upload Shared Frontend Dist
+      - name: Upload Shared Desktop Frontend Dist
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: release-frontend-dist
           path: apps/desktop/dist/
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Upload Shared Android Frontend Dist
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-frontend-android-dist
+          path: apps/desktop/dist-android/
           if-no-files-found: error
           retention-days: 1
 
@@ -384,11 +393,11 @@ jobs:
           cd apps/desktop
           npm ci --prefer-offline
 
-      - name: Download Shared Frontend Dist & Compiled Pico UF2s
+      - name: Download Shared Android Frontend Dist
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          name: release-frontend-dist
-          path: apps/desktop/dist
+          name: release-frontend-android-dist
+          path: apps/desktop/dist-android
 
       - name: Download Compiled Pico UF2s for Android Embedding
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
@@ -399,12 +408,12 @@ jobs:
       - name: Build Android Release APK
         run: |
           export ANDROID_NDK_ROOT=$NDK_HOME
-          touch apps/desktop/dist/index.html
+          touch apps/desktop/dist-android/index.html
           cd apps/desktop
           if [ ! -d "src-tauri/gen/android" ]; then
             npx --yes @tauri-apps/cli android init --ci --skip-targets-install
           fi
-          npx --yes @tauri-apps/cli android build --apk --target aarch64 --ci
+          npx --yes @tauri-apps/cli android build --apk --target aarch64 --ci --config src-tauri/tauri.android.conf.json
           cd ../..
           mkdir -p release-apk
           APK_PATH=$(find apps/desktop/src-tauri/gen/android -type f -name "*.apk" | head -n 1)

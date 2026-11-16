@@ -6,6 +6,7 @@
  */
 
 #include "gdb/gdb_rsp_internal.h"
+#include "flash/p7501_flash.h"
 #include "common/p7501_hex.h"
 #include <stdio.h>
 #include <string.h>
@@ -123,18 +124,21 @@ void gdb_rsp_ctx_init(gdb_rsp_ctx_t *ctx) {
     memset(ctx, 0, sizeof(*ctx));
     ctx->parser_state = GDB_STATE_IDLE;
     ctx->flash_size_bytes = 0x00800000UL;
-    ctx->upper_nor_unlocked = false;
+    if (ctx == &s_default_gdb_ctx) p7501_flash_set_upper_nor_unlocked(false);
     gdb_cpu_init_registers(&ctx->regs);
     gdb_rsp_ctx_invalidate_cache(ctx);
 }
 
 void gdb_rsp_ctx_set_upper_nor_unlocked(gdb_rsp_ctx_t *ctx, bool unlocked) {
-    if (ctx != NULL) {
-        ctx->upper_nor_unlocked = unlocked;
+    if (ctx == NULL) {
+        return;
     }
+    ctx->upper_nor_unlocked = unlocked;
+    if (ctx == &s_default_gdb_ctx) p7501_flash_set_upper_nor_unlocked(unlocked);
 }
 
 bool gdb_rsp_ctx_is_upper_nor_unlocked(const gdb_rsp_ctx_t *ctx) {
+    if (ctx == &s_default_gdb_ctx) return p7501_flash_is_upper_nor_unlocked();
     return (ctx != NULL) && ctx->upper_nor_unlocked;
 }
 

@@ -9,6 +9,7 @@ import {
   Cpu,
   HardDrive,
   Radio,
+  Smartphone,
   Lock,
   BookOpen,
   Binary,
@@ -17,6 +18,7 @@ import {
   ShieldAlert,
   Settings,
 } from 'lucide-react';
+import { isAndroidCommanderEnabled } from '@/config/platform';
 
 export type { ViewKey };
 
@@ -116,6 +118,20 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
       badge: 'UNBRICK',
       badgeVariant: 'success',
     },
+    ...(__PANADIGA_ANDROID_APK__ || !import.meta.env.PROD
+      ? isAndroidCommanderEnabled()
+        ? [
+            {
+              key: 'ircommander' as const,
+              label: t('nav.ircommander'),
+              sublabel: t('nav.ircommander.sub'),
+              icon: <Smartphone className="w-4 h-4" />,
+              badge: 'IR APK',
+              badgeVariant: 'default' as const,
+            },
+          ]
+        : []
+      : []),
     {
       key: 'settings',
       label: t('nav.settings'),

@@ -72,12 +72,16 @@ uint32_t p7501_diag_watch_feed_byte(
         st->ring[cap - 1u] = byte;
     }
 
+    bool panamon_prompt_now = false;
     uint32_t newly_hit = 0u;
     for (size_t i = 0u; i < (sizeof(k_diag_rules) / sizeof(k_diag_rules[0])); ++i) {
         const size_t nlen = k_diag_rules[i].len;
         if (st->ring_len >= nlen &&
             memcmp(&st->ring[st->ring_len - nlen], k_diag_rules[i].needle, nlen) == 0) {
             const uint32_t flag = k_diag_rules[i].flag;
+            if (flag == P7501_DIAG_EVT_PANAMON) {
+                panamon_prompt_now = true;
+            }
             if ((st->seen_events & flag) == 0u) {
                 st->seen_events |= flag;
                 newly_hit |= flag;
@@ -97,12 +101,19 @@ uint32_t p7501_diag_watch_feed_byte(
         }
     }
 
-    if ((newly_hit & P7501_DIAG_EVT_PANAMON) != 0u && !st->tx_dispatched) {
-        const char ch = p7501_diag_watch_action_char(spec->action);
-        if (ch != '\0') {
-            st->tx_dispatched = true;
+    if (panamon_prompt_now && !st->tx_dispatched) {
+        if (spec->nor_unlock && !st->unlock_dispatched) {
+            st->unlock_dispatched = true;
             if (out_tx_char != NULL) {
-                *out_tx_char = ch;
+                *out_tx_char = 'U';
+            }
+        } else {
+            const char ch = p7501_diag_watch_action_char(spec->action);
+            if (ch != '\0') {
+                st->tx_dispatched = true;
+                if (out_tx_char != NULL) {
+                    *out_tx_char = ch;
+                }
             }
         }
     }

@@ -257,11 +257,26 @@ The simultaneous appearance of `E5D1F34A518B2690` inside optical container `PANA
 ```
 
 ### 3.4 Bus Invariants Summary & Two-Layer NOR Write-Protection Model
-* **Default-Protected Factory Region (99.21875%):** `0x80000000` to `0x807EFFFF` (8,323,072 bytes) — Preserved and write-protected (`E05`) by default throughout standard operation and `U99` recovery.
-* **Targeted Sanitization Window (0.78125%):** `0x807F0000` to `0x807FFFFF` (65,536 bytes) — Erased to `0xFF` via bench JEDEC `Sector Erase` to command the AM34 CPU to execute factory recalibration and restore healthy recorder operation.
+* **Default-Protected Factory Region (99.21875%):** `0x80000000` to `0x807EFFFF` (8,323,072 bytes; uncached mirror `0x84000000..0x847EFFFF`) — Preserved (`immutable` on `SA0..SA3` and write-protected by default with `E05` across `SA4..SA133`) throughout standard operation and `U99` recovery.
+* **Targeted Sanitization Window (0.78125%):** `0x807F0000` to `0x807FFFFF` (`SA134..SA141`, eight `8 KiB` sectors totaling `65,536` bytes) — Erased to `0xFF` via bench JEDEC `Sector Erase` to command the AM34 CPU to execute factory recalibration and restore healthy recorder operation.
 
 > [!NOTE]
-> **Two-Layer Controlled Upper-NOR Model (`SA0..SA3` vs. `SA4..SA133`):**
-> To guarantee unbreakable boot-chain safety while permitting advanced off-NVRAM research, write governance over `0x80000000..0x807EFFFF` separates the region into two distinct layers:
-> 1. **Layer 1 — Critical Bootloader / IPL (`SA0..SA3`, `0x80000000..0x8003FFFF`, `256 KiB`):** **permanently read-only (`immutable RO`)** on `P7501` hardware — never erase or overwrite this range; every write/erase attempt is unconditionally blocked with error **`E05`** to preserve the Root of Trust.
-> 2. **Layer 2 — BGO / Application Upper-NOR Region (`SA4..SA133`, `0x80040000..0x807EFFFF`, `64 KiB` sectors):** **protected by default (`E05`)** for strict `U99` safety, yet **explicitly unlockable** through an opt-in command/flag (**`qPanadigaNorUnlock:CONFIRM_UPPER_NOR`** in the debug protocol or **`--offset`** on a *Copy-on-Write* (`CoW`) image with mandatory SHA-256 backup) for controlled experimentation outside NVRAM (`SA134..SA141`).
+> **Two-Layer Controlled NOR Write Model (`SA0..SA3` vs. `SA4..SA133` vs. `SA134..SA141`):**
+> Unified policy enforcement via [`NorWritePolicy`](../../crates/panadiga-core/src/pico/rsp_codec/policy.rs) partitions the `8 MiB` Spansion `S29JL064H` flash into three operational tiers:
+> 1. **Layer 1 — Critical Bootloader / IPL (`SA0..SA3`, `0x80000000..0x8003FFFF` / `0x84000000..0x8403FFFF`, `256 KiB`):** **permanently read-only (`immutable RO`, never writable on the Pico probe)** — never erase or overwrite on hardware; every probe write/erase attempt is unconditionally blocked with error **`E05`** to preserve the serial-boot Root of Trust.
+> 2. **Layer 2 — BGO / Application Upper-NOR Region (`SA4..SA133`, `0x80040000..0x807EFFFF` / `0x84040000..0x847EFFFF`, `64 KiB` sectors):** **write-protected by default (`NorWritePolicy::NvramOnly` → `E05`)** for strict `U99` safety, yet **explicitly unlockable** (`NorWritePolicy::UpperNorAppUnlocked`) for controlled off-NVRAM research after SHA-256 backup verification.
+> 3. **Layer 3 — NVRAM / EEMUL (`SA134..SA141`, `0x807F0000..0x807FFFFF`, `8 KiB` sectors):** writable by default for surgical `U99` sanitization.
+
+### 3.5 Upper-NOR Unlock Governance, JEDEC SRAM Stubs (`0x51800000`) & `Mn103Vm` Emulation
+
+| Surface | Mechanism / Command | Scope & Safety Invariant (`E05`) |
+| :--- | :--- | :--- |
+| **GDB RSP (`gdb_rsp_codec.c` / `gdb_rsp_memory.c`)** | `$qPanadigaNorUnlock:CONFIRM_UPPER_NOR#<xx>` / `$qPanadigaNorLock#<xx>` | Toggles `NvramOnly` ↔ `UpperNorAppUnlocked`; **never** unlocks `SA0..SA3` (`0x80000000..0x8003FFFF`, permanently `E05`). |
+| **`PANAMON1` Monitor ([`jedec_emit.rs`](../../crates/panadiga-core/src/re/prog061_uart_monitor/jedec_emit.rs))** | `U CONFIRM_UPPER_NOR` / `U LOCK` | Serial command inside the AM34 resident monitor; `DIAGWATCH` dispatches a two-step `'U'` handoff prior to `'W'` / `'E'`. |
+| **Pico `PANARSP` & `DIAGWATCH` ([`p7501_pana_rsp_parse.c`](../../firmware/pico-p7501/uart/p7501_pana_rsp_parse.c), [`p7501_diag_watch.c`](../../firmware/pico-p7501/uart/p7501_diag_watch.c))** | `NORUNLOCK:CONFIRM_UPPER_NOR` / `NORLOCK` + `JEDEC_ERASE:<addr>` / `JEDEC_PROG:<addr>,<hex>` | Uploads [`p7501_pana_jedec.c`](../../firmware/pico-p7501/uart/p7501_pana_jedec.c) SRAM stub at `0x51800000` (`1..=16` bytes per write), reporting `PANAJEDEC_OK` or `PANAJEDEC_TO`. `SA0..SA3` remains `immutable RO` (`E05`). |
+| **Offline Copy-on-Write CLI ([`panadiga nvram patch-upper-nor`](../../crates/panadiga-cli/src/cli/handlers/nvram.rs))** | `panadiga nvram patch-upper-nor` with `--backup` ([`upper_nor.rs`](../../crates/panadiga-core/src/nvram/pure/upper_nor.rs), [`io/upper_nor.rs`](../../crates/panadiga-core/src/nvram/io/upper_nor.rs)) | Produces a *Copy-on-Write* output image (**never** mutates source dumps in-place) alongside a SHA-256 verified backup; blocks `SA0..SA3` unless `--allow-critical-ipl` is passed for offline image research. |
+
+* **Real Spansion JEDEC FSM in `Mn103Vm` ([`spansion_nor.rs`](../../crates/panadiga-core/src/re/mn10300_emu/spansion_nor.rs)):**
+  Faithfully simulates the `S29JL064H` state machine: **Autoselect `0x90`** (`0x0001` Manufacturer / `0x227E` Device), **6-cycle Sector Erase (`0x80 -> 0x30`)**, **4-cycle Word/Byte Program (`0xA0`, bitwise `&=` NOR semantics)**, and **Reset (`0xF0`)**.
+* **Real-Binary Integration Verification ([`checks_real_nor.rs`](../../crates/panadiga-core/src/re/emu_patch_suite/checks_real_nor.rs)):**
+  Tests end-to-end Upper-NOR unlocking, JEDEC programming/erasing, and verification against real firmware artifacts: 8 MiB `flash.bin`, `prog061_dec.bin`, `PANA_DVD.FRM` (`3410PQ`), `main3060np`, and `PANA__SD.FRM`.

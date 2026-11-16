@@ -1,0 +1,186 @@
+[
+  {
+    "id": "eh55_error_history_latest",
+    "title_pt": "Último Código de Erro (0, 1)",
+    "title_en": "Latest Error Code (0, 1)",
+    "description_pt": "Exibe o código de erro U**/H**/F** mais recente retido pelo Timer MCU IC7501. Requer aparelho em Service Mode ([CH UP]+[OPEN/CLOSE]+[REC] 5s em Power OFF).",
+    "description_en": "Displays the latest U**/H**/F** error code retained by Timer MCU IC7501. Requires unit in Service Mode ([CH UP]+[OPEN/CLOSE]+[REC] 5s from Power OFF).",
+    "risk": "SAFE",
+    "verification_source": "EH55 VOL1 p.25 / NA p.25 / main3060np SERV[01]",
+    "steps": [
+      { "label": "0", "device": 176, "subdevice": 0, "obc": 25, "hold_ms": 0, "post_delay_ms": 450 },
+      { "label": "1", "device": 176, "subdevice": 0, "obc": 16, "hold_ms": 0, "post_delay_ms": 450 }
+    ]
+  },
+  {
+    "id": "eh55_rom_version_region",
+    "title_pt": "Versão ROM & Região Atual (0, 2)",
+    "title_en": "ROM Version & Region Code (0, 2)",
+    "description_pt": "Exibe no VFD durante 5 s o código de região seguido de Main, Timer, Drive e ROM Correction. Somente leitura.",
+    "description_en": "Displays Region code (5 s) followed by Main, Timer, Drive, and ROM Correction versions on VFD. Read-only.",
+    "risk": "SAFE",
+    "verification_source": "EH55 VOL1 p.25 / NA p.25 / main3060np SERV[02]",
+    "steps": [
+      { "label": "0", "device": 176, "subdevice": 0, "obc": 25, "hold_ms": 0, "post_delay_ms": 450 },
+      { "label": "2", "device": 176, "subdevice": 0, "obc": 17, "hold_ms": 0, "post_delay_ms": 450 }
+    ]
+  },
+  {
+    "id": "eh55_vfd_all_segments",
+    "title_pt": "Teste Completo VFD/FL & LEDs (5, 1)",
+    "title_en": "Turn On All VFD/FL & LEDs (5, 1)",
+    "description_pt": "Acende todos os segmentos do display fluorescente VFD e LEDs frontais para inspeção visual. (Não é [0][0], que apenas cancela item ativo).",
+    "description_en": "Illuminates every VFD segment and front panel LEDs for visual inspection. (Note: [0][0] is Release Items, not VFD test).",
+    "risk": "SAFE",
+    "verification_source": "EH55 VOL1 p.28 / NA p.27 / main3060np SERV[51]",
+    "steps": [
+      { "label": "5", "device": 176, "subdevice": 0, "obc": 20, "hold_ms": 0, "post_delay_ms": 450 },
+      { "label": "1", "device": 176, "subdevice": 0, "obc": 16, "hold_ms": 0, "post_delay_ms": 450 }
+    ]
+  },
+  {
+    "id": "eh55_av_pattern_white",
+    "title_pt": "Padrão de Vídeo Decoder — Branco (1, 1)",
+    "title_en": "AV Decoder Test Pattern — White (1, 1)",
+    "description_pt": "Gera tela branca interna pelo AV Decoder do AM34 para testar saída de vídeo composto/componente.",
+    "description_en": "Generates internal solid white raster from AM34 AV Decoder to verify video outputs.",
+    "risk": "SAFE",
+    "verification_source": "EH55 VOL1 p.26 / NA p.25",
+    "steps": [
+      { "label": "1", "device": 176, "subdevice": 0, "obc": 16, "hold_ms": 0, "post_delay_ms": 450 },
+      { "label": "1", "device": 176, "subdevice": 0, "obc": 16, "hold_ms": 0, "post_delay_ms": 450 }
+    ]
+  },
+  {
+    "id": "eh55_av_pattern_magenta",
+    "title_pt": "Padrão de Vídeo Decoder — Magenta (1, 2)",
+    "title_en": "AV Decoder Test Pattern — Magenta (1, 2)",
+    "description_pt": "Gera padrão interno Magenta pelo AV Decoder para validar croma e barramento DAC.",
+    "description_en": "Generates internal Magenta raster from AM34 AV Decoder to test chroma and video DAC stages.",
+    "risk": "SAFE",
+    "verification_source": "EH55 VOL1 p.26 / NA p.26",
+    "steps": [
+      { "label": "1", "device": 176, "subdevice": 0, "obc": 16, "hold_ms": 0, "post_delay_ms": 450 },
+      { "label": "2", "device": 176, "subdevice": 0, "obc": 17, "hold_ms": 0, "post_delay_ms": 450 }
+    ]
+  },
+  {
+    "id": "eh55_laser_hours",
+    "title_pt": "Horas de Uso do Laser ODD (4, 1)",
+    "title_en": "Optical Laser Used Hours (4, 1)",
+    "description_pt": "Consulta o contador acumulado de horas de emissão do bloco óptico DVD-RAM/RW.",
+    "description_en": "Reads cumulative laser emission hours counter on the DVD optical pickup assembly.",
+    "risk": "SAFE",
+    "verification_source": "EH55 VOL1 p.27 / NA p.26 / main3060np SERV[41]",
+    "steps": [
+      { "label": "4", "device": 176, "subdevice": 0, "obc": 19, "hold_ms": 0, "post_delay_ms": 450 },
+      { "label": "1", "device": 176, "subdevice": 0, "obc": 16, "hold_ms": 0, "post_delay_ms": 450 }
+    ]
+  },
+  {
+    "id": "eh55_ram_drive_last_error",
+    "title_pt": "Último Erro do Drive Óptico RAM (4, 2)",
+    "title_en": "RAM/ODD Drive Last Error (4, 2)",
+    "description_pt": "Consulta o último código de falha SENSE/mecânico da unidade óptica (INFO******; aceita 01..19 depois).",
+    "description_en": "Queries last mechanical/SENSE fault from optical drive (INFO******; accepts slots 01..19 afterwards).",
+    "risk": "SAFE",
+    "verification_source": "EH55 VOL1 p.28 / NA p.26-27 / main3060np SERV[42]",
+    "steps": [
+      { "label": "4", "device": 176, "subdevice": 0, "obc": 19, "hold_ms": 0, "post_delay_ms": 450 },
+      { "label": "2", "device": 176, "subdevice": 0, "obc": 17, "hold_ms": 0, "post_delay_ms": 450 }
+    ]
+  },
+  {
+    "id": "eh55_error_history_browse",
+    "title_pt": "Histórico Detalhado Slot 01 (6, 5 -> 0, 1)",
+    "title_en": "19-Slot Error History Slot 01 (6, 5 -> 0, 1)",
+    "description_pt": "Entra no histórico estendido do EH55 ([6][5]) e lê o slot [0][1]; depois disque [0][2]..[1][9] diretamente.",
+    "description_en": "Opens EH55 extended error log ([6][5]) and selects slot [0][1]; dial [0][2]..[1][9] directly afterwards.",
+    "risk": "SAFE",
+    "verification_source": "EH55 VOL1 p.29 / NA p.28",
+    "steps": [
+      { "label": "6", "device": 176, "subdevice": 0, "obc": 21, "hold_ms": 0, "post_delay_ms": 450 },
+      { "label": "5", "device": 176, "subdevice": 0, "obc": 20, "hold_ms": 0, "post_delay_ms": 700 },
+      { "label": "0", "device": 176, "subdevice": 0, "obc": 25, "hold_ms": 0, "post_delay_ms": 450 },
+      { "label": "1", "device": 176, "subdevice": 0, "obc": 16, "hold_ms": 0, "post_delay_ms": 450 }
+    ]
+  },
+  {
+    "id": "eh55_service_release",
+    "title_pt": "Cancelar Item de Serviço Ativo (0, 0)",
+    "title_en": "Release Active Service Item (0, 0)",
+    "description_pt": "Sai do sub-item em execução no Service Mode sem reiniciar o aparelho.",
+    "description_en": "Exits/releases the currently active Service Mode test item without rebooting.",
+    "risk": "SAFE",
+    "verification_source": "EH55 VOL1 p.25 / NA p.25 / main3060np SERV[00]",
+    "steps": [
+      { "label": "0", "device": 176, "subdevice": 0, "obc": 25, "hold_ms": 0, "post_delay_ms": 450 },
+      { "label": "0", "device": 176, "subdevice": 0, "obc": 25, "hold_ms": 0, "post_delay_ms": 450 }
+    ]
+  },
+  {
+    "id": "eh55_hdd_read_inspection",
+    "title_pt": "Inspeção de Leitura / Seek do HDD (3, 1)",
+    "title_en": "HDD Read Seek Inspection (3, 1)",
+    "description_pt": "Executa teste de leitura / Read Seektime do HDD (exibe HDD OK ou HDD NG). Para abortar no meio exige segurar [POWER] > 10s.",
+    "description_en": "Runs HDD read / seek-time check (displays HDD OK or HDD NG). Interrupting mid-test requires holding [POWER] > 10s.",
+    "risk": "MODERATE",
+    "verification_source": "EH55 VOL1 p.27 / NA p.26 / main3060np SERV[31]",
+    "steps": [
+      { "label": "3", "device": 176, "subdevice": 0, "obc": 18, "hold_ms": 0, "post_delay_ms": 450 },
+      { "label": "1", "device": 176, "subdevice": 0, "obc": 16, "hold_ms": 0, "post_delay_ms": 450 }
+    ]
+  },
+  {
+    "id": "eh55_tray_endurance_test",
+    "title_pt": "Loop Mecânico da Bandeja (9, 1)",
+    "title_en": "Tray OPEN/CLOSE Endurance Test (9, 1)",
+    "description_pt": "Cicla continuamente abertura/fechamento da bandeja de DVD. Para sair, segure [POWER] > 10s (não sai por STOP).",
+    "description_en": "Continuously cycles DVD tray open/close. Exit requires holding [POWER] > 10s (STOP does not exit).",
+    "risk": "MODERATE",
+    "verification_source": "EH55 VOL1 p.30 / NA p.29 / main3060np SERV[91]",
+    "steps": [
+      { "label": "9", "device": 176, "subdevice": 0, "obc": 24, "hold_ms": 0, "post_delay_ms": 450 },
+      { "label": "1", "device": 176, "subdevice": 0, "obc": 16, "hold_ms": 0, "post_delay_ms": 450 }
+    ]
+  },
+  {
+    "id": "eh55_clear_last_error_f00",
+    "title_pt": "Limpar Último Erro para F00 (9, 8)",
+    "title_en": "Clear Last Error to F00 (9, 8)",
+    "description_pt": "Sobrescreve o último código de falha retido no Timer MCU com F00 sem zerar histórico ou horas de laser.",
+    "description_en": "Clears the latest retained fault code in Timer MCU to F00 without erasing full history or laser hours.",
+    "risk": "MODERATE",
+    "verification_source": "EH55 VOL1 p.30 / NA p.29 / main3060np SERV[98]",
+    "steps": [
+      { "label": "9", "device": 176, "subdevice": 0, "obc": 24, "hold_ms": 0, "post_delay_ms": 450 },
+      { "label": "8", "device": 176, "subdevice": 0, "obc": 23, "hold_ms": 0, "post_delay_ms": 450 }
+    ]
+  },
+  {
+    "id": "eh55_clear_laser_hours",
+    "title_pt": "Zerar Contador de Horas do Laser (9, 5)",
+    "title_en": "Clear Laser Used Hours Counter (9, 5)",
+    "description_pt": "DESTRUTIVO: zera o contador de vida útil do diodo laser na unidade ótica após troca do pickup.",
+    "description_en": "DESTRUCTIVE: resets optical laser hours counter after laser pickup assembly replacement.",
+    "risk": "DESTRUCTIVE",
+    "verification_source": "EH55 VOL1 p.30 / NA p.29",
+    "steps": [
+      { "label": "9", "device": 176, "subdevice": 0, "obc": 24, "hold_ms": 0, "post_delay_ms": 450 },
+      { "label": "5", "device": 176, "subdevice": 0, "obc": 20, "hold_ms": 0, "post_delay_ms": 450 }
+    ]
+  },
+  {
+    "id": "eh55_service_initialize_clr",
+    "title_pt": "Service Initialize / CLR SERV (9, 9)",
+    "title_en": "Service Initialize / CLR SERV (9, 9)",
+    "description_pt": "DESTRUTIVO: apaga Last Drive Error, histórico de erros [01..19] e códigos F**/U** (não zera horas do laser nem apaga o HDD).",
+    "description_en": "DESTRUCTIVE: clears Last Drive Error, 19-slot error history, and error codes (does NOT reset laser hours or wipe HDD).",
+    "risk": "DESTRUCTIVE",
+    "verification_source": "EH55 VOL1 p.30 / NA p.29 / main3060np SERV[99]",
+    "steps": [
+      { "label": "9", "device": 176, "subdevice": 0, "obc": 24, "hold_ms": 0, "post_delay_ms": 450 },
+      { "label": "9", "device": 176, "subdevice": 0, "obc": 24, "hold_ms": 0, "post_delay_ms": 450 }
+    ]
+  }
+]

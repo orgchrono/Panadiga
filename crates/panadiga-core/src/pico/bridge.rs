@@ -7,6 +7,8 @@ use std::time::Duration;
 
 use anyhow::{Context, Result};
 
+use super::async_gdb_proxy::{GdbBridgeTargetMode, serve_panamon1_tcp_client};
+
 fn pump_stream<R: Read, W: Write>(
     mut reader: R,
     mut writer: W,
@@ -34,12 +36,28 @@ fn pump_stream<R: Read, W: Write>(
     flag.store(false, Ordering::Relaxed);
 }
 
-/// Runs bidirectional TCP-to-Serial GDB Remote Serial Protocol (RSP) bridge
+/// Runs bidirectional TCP-to-Serial GDB Remote Serial Protocol (RSP) bridge (`ocd` legacy mode).
 pub fn run_gdb_bridge(port_name: &str, baud_rate: u32, listen_addr: &str) -> Result<()> {
+    run_gdb_bridge_with_mode(
+        port_name,
+        baud_rate,
+        listen_addr,
+        GdbBridgeTargetMode::OcdRaw,
+    )
+}
+
+/// Runs TCP-to-Serial GDB RSP bridge selecting `ocd`, `panamon1`, or `panarsp` asynchronous UART mode.
+pub fn run_gdb_bridge_with_mode(
+    port_name: &str,
+    baud_rate: u32,
+    listen_addr: &str,
+    mode: GdbBridgeTargetMode,
+) -> Result<()> {
     log_println!("====================================================================");
     log_println!("   PANASONIC AM34 GDB RSP BRIDGE (P7501 UART 115200 8N1)");
     log_println!("   Host Architecture: Multi-Platform (RP2040 / RP2350 Dual-Core)");
     log_println!("   Serial Interface : {} @ {} baud", port_name, baud_rate);
+    log_println!("   Target Mode      : {}", mode.label());
     log_println!("   TCP GDB Listener : {}", listen_addr);
     log_println!("====================================================================");
 
@@ -47,20 +65,31 @@ pub fn run_gdb_bridge(port_name: &str, baud_rate: u32, listen_addr: &str) -> Res
         crate::pico::cdc::open_cdc(port_name, baud_rate, Duration::from_millis(100))
             .with_context(|| format!("Failed to open serial port '{}'", port_name))?;
 
-    // Request firmware switch to GDB mode
-    log_info!("[Bridge] Requesting controller firmware enter GDB RSP server mode...");
-    let _ = serial_port.write_all(b"\r\nGDB\r\n");
-    thread::sleep(Duration::from_millis(100));
+    match mode {
+        GdbBridgeTargetMode::OcdRaw => {
+            log_info!(
+                "[Bridge] Requesting Pico native GDB handler (note: P7501 lacks DWire32A clock)..."
+            );
+            let _ = serial_port.write_all(b"\r\nGDB\r\n");
+        }
+        GdbBridgeTargetMode::Panamon1 | GdbBridgeTargetMode::Panarsp => {
+            log_info!("[Bridge] Entering Pico SC0 UART passthrough (BRIDGE 115200 PASSIVE)...");
+            let _ = serial_port.write_all(b"\r\nBRIDGE 115200 PASSIVE\r\n");
+        }
+    }
+    thread::sleep(Duration::from_millis(120));
 
     let listener = TcpListener::bind(listen_addr)
         .with_context(|| format!("Failed to bind TCP listener on '{}'", listen_addr))?;
 
     log_println!(
-        "[Bridge] Listening for GDB debugger connections on {}...",
+        "[Bridge] Listening for GDB/Ghidra connections on {}...",
         listen_addr
     );
-    log_println!("[Bridge] In your debugger terminal, run:");
-    log_println!("         (gdb) target remote {}", listen_addr);
+    log_println!(
+        "[Bridge] In Ghidra/GDB console run: target remote {}",
+        listen_addr
+    );
     log_println!("--------------------------------------------------------------------");
 
     for stream_res in listener.incoming() {
@@ -72,6 +101,13 @@ pub fn run_gdb_bridge(port_name: &str, baud_rate: u32, listen_addr: &str) -> Res
                     .map(|a| a.to_string())
                     .unwrap_or_else(|_| "unknown".to_string());
                 log_info!("[Bridge] GDB client connected from: {}", peer_addr);
+
+                if mode == GdbBridgeTargetMode::Panamon1 {
+                    if let Err(err) = serve_panamon1_tcp_client(tcp_stream, &mut *serial_port) {
+                        log_warn!("[Bridge] PANAMON1 async session ended: {err}");
+                    }
+                    continue;
+                }
 
                 let running = Arc::new(AtomicBool::new(true));
 
@@ -105,5 +141,8 @@ pub fn run_gdb_bridge(port_name: &str, baud_rate: u32, listen_addr: &str) -> Res
         }
     }
 
+    if mode != GdbBridgeTargetMode::OcdRaw {
+        let _ = serial_port.write_all(b"~~~");
+    }
     Ok(())
 }

@@ -148,6 +148,29 @@ static void test_diag_watch_parameterized_tx_and_e05(void) {
     assert(!p7501_flash_is_protected_ipl_range(0x847F0000UL, 16u));
     assert(p7501_flash_is_nvram_microsector_addr(0x807FFFFFUL));
     assert(!p7501_flash_is_nvram_microsector_addr(0x847EFFFFUL));
+
+    /* DIAGWATCH 2-layer unlock/lock + two-step 'U' -> 'W'/'E' dispatch + SA0..SA3/RAM guards */
+    p7501_flash_set_upper_nor_unlocked(false);
+    assert(!p7501_diag_watch_parse_args("20000 WRITE:84200010,A5", &dw));
+    assert(!p7501_diag_watch_parse_args("20000 ERASE:84200000", &dw));
+    assert(!p7501_diag_watch_parse_args("20000 NORUNLOCK:BAD WRITE:84200010,A5", &dw));
+    assert(!p7501_diag_watch_parse_args("20000 NORUNLOCK:CONFIRM_UPPER_NOR WRITE:84000100,AA", &dw));
+    assert(!p7501_diag_watch_parse_args("20000 NORUNLOCK:CONFIRM_UPPER_NOR ERASE:84030000", &dw));
+    assert(!p7501_diag_watch_parse_args("20000 NORUNLOCK:CONFIRM_UPPER_NOR ERASE:50400000", &dw));
+
+    assert(p7501_diag_watch_parse_args("20000 JIG NORUNLOCK:CONFIRM_UPPER_NOR WRITE:84200010,A5", &dw));
+    assert(dw.nor_unlock && dw.action == P7501_DIAG_ACT_WRITE);
+    p7501_diag_watch_state_t dwst;
+    p7501_diag_watch_init(&dwst);
+    int rc = 0, tc = 0;
+    char ltx = '\0';
+    feed_str_and_count(&dwst, &dw, "PANAMON1>", &rc, &tc, &ltx);
+    assert(tc == 1 && ltx == 'U' && dwst.unlock_dispatched && !dwst.tx_dispatched);
+    feed_str_and_count(&dwst, &dw, "\r\nOK:NOR_UNLOCK\r\nPANAMON1>", &rc, &tc, &ltx);
+    assert(tc == 2 && ltx == 'W' && dwst.tx_dispatched);
+    assert(p7501_diag_watch_parse_args("20000 ERASE:80200000 NORLOCK", &dw) == false);
+    assert(p7501_diag_watch_parse_args("20000 NORLOCK WRITE:847F0010,55", &dw));
+    assert(!dw.nor_unlock && !p7501_flash_is_upper_nor_unlocked());
 }
 
 static void test_pana_rsp_regs_codec(void) {

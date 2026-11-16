@@ -24,6 +24,7 @@ BUILD_IGNORE_DIRS: Final[frozenset[str]] = frozenset(
         "__pycache__",
         "build",
         "dist",
+        "dist-android",
         "node_modules",
         "pico-build",
         "playwright-report",

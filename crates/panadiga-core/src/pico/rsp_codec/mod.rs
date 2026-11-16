@@ -6,7 +6,7 @@
 
 mod decode;
 mod encode;
-mod policy;
+pub mod policy;
 
 #[cfg(test)]
 mod tests;

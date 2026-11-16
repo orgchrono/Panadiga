@@ -54,6 +54,7 @@ add_executable(panasonic_p7501_uart
     diag/p7501_ir_kaseikyo.c
     flash/p7501_flash_cli.c
     uart/p7501_uart_bitbang.c
+    uart/p7501_uart_autobaud.c
     uart/p7501_uart_codec.c
     uart/p7501_uart_args.c
     uart/p7501_uart_capture.c
@@ -68,6 +69,7 @@ add_executable(panasonic_p7501_uart
     uart/p7501_uart_stream.c
     uart/p7501_uart_tx.c
     uart/p7501_pana_dumpnor.c
+    uart/p7501_pana_jedec.c
     uart/p7501_pana_rsp_codec.c
     uart/p7501_pana_rsp_parse.c
     uart/p7501_pana_rsp_report.c

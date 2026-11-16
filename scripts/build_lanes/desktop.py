@@ -48,22 +48,31 @@ STALE_DIST_ITEMS: Final[tuple[str, ...]] = (
 )
 
 
-def build_frontend(env: Mapping[str, str], *, use_cache: bool = True, capture_output: bool = False) -> bool:
-    """Build Desktop React/Vite bundle; returns True when satisfied from hash cache."""
-    digest, outputs = frontend_digest_and_outputs(ROOT)
-    if use_cache and is_step_fresh(ROOT, "frontend", digest, outputs):
+def build_frontend(
+    env: Mapping[str, str],
+    *,
+    use_cache: bool = True,
+    capture_output: bool = False,
+    android: bool = False,
+) -> bool:
+    """Build Desktop or Android React/Vite bundle; returns True when satisfied from hash cache."""
+    step_key = "frontend-android" if android else "frontend"
+    npm_script = "build:android" if android else "build"
+    out_label = "apps/desktop/dist-android" if android else "apps/desktop/dist"
+    digest, outputs = frontend_digest_and_outputs(ROOT, android=android)
+    if use_cache and is_step_fresh(ROOT, step_key, digest, outputs):
         if not capture_output:
-            print_status("CACHE", "Frontend Vite UI cache hit (apps/desktop/dist unchanged).", "36")
+            print_status("CACHE", f"Frontend Vite UI cache hit ({out_label} unchanged).", "36")
         return True
 
     out = run_step(
-        ["npm", "--prefix", "apps/desktop", "run", "build"],
+        ["npm", "--prefix", "apps/desktop", "run", npm_script],
         cwd=ROOT,
         env=env,
         capture_output=True,
     )
     flush_output(out)
-    record_step_cache(ROOT, "frontend", digest, outputs)
+    record_step_cache(ROOT, step_key, digest, outputs)
     return False
 
 

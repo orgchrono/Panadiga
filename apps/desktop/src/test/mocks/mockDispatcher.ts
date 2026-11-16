@@ -8,6 +8,7 @@ import { logger } from '@/utils/logger';
 import { handleMockCryptoCommand } from './mockCryptoHandlers';
 import { subscribeMockChannel } from './mockEventBus';
 import { handleMockHddCommand } from './mockHddHandlers';
+import { handleMockIrCommand } from './mockIrHandlers';
 import { handleMockPicoCommand, buildMockPicoStatus } from './mockPicoHandlers';
 import { handleMockSystemCommand } from './mockSystemHandlers';
 import { handleMockUnbrickCommand } from './mockUnbrickHandlers';
@@ -20,6 +21,7 @@ const DOMAIN_HANDLERS: MockDomainHandler[] = [
   handleMockCryptoCommand,
   handleMockPicoCommand,
   handleMockUnbrickCommand,
+  handleMockIrCommand,
 ];
 
 export async function handleMockCommand<T>(

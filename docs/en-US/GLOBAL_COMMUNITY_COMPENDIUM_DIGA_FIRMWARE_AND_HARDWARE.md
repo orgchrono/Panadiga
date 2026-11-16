@@ -270,7 +270,7 @@ The `elektroda.pl` archive preserves key practical discussions and attachments f
 
 ---
 
-## 3. Official Service Mode (`DSD0603003CE`), JDM `[RED]` Sequence, and Standby / `TW7501` Electrical Physics
+## 3. Official Service Mode (`DSD0603003CE`), JDM `[RED]` Sequence, and Standby / `TW7501` vs. `P7501` Electrical Physics
 
 Panasonic DIGA recorders embed factory diagnostic routines officially documented in Panasonic Service Manuals (notably **`ORDER NO. DSD0603003CE`** for DMR-EH55EC/EP/EH56EG) alongside extended infrared remote sequences used on Japanese domestic (JDM) and later Blu-ray models.
 
@@ -287,7 +287,7 @@ Panasonic DIGA recorders embed factory diagnostic routines officially documented
 | Mode | FL Display | Exact Key Operation (`DSD0603003CE`, pp. 17–21) | Effect / Bench Purpose |
 | :--- | :---: | :--- | :--- |
 | **Service Mode (`SERV`)** | `SERV` | While **power is off (Standby)**, press **`[CH UP] + [OPEN/CLOSE] + [REC]`** on front panel simultaneously for **5 seconds**. | Unlocks factory diagnostics (`[0][0]`..`[9][9]`) via remote control. |
-| **TEST Mode (`TM AV1`)** | `TM AV1` | While **power is off**, press **`[STOP] + [CH UP] + [OPEN/CLOSE]`** simultaneously for **5 seconds**. | Initializes **all main unit parameters** (including tuner). |
+| **TEST Mode (`TM AV1`)** | `TM AV1` | While **power is off (Standby)**, press **`[STOP] + [CH UP] + [OPEN/CLOSE]`** simultaneously for **5 seconds**. | **NOT Service Mode**: resets tuner/user preferences and initializes main unit parameters. |
 | **Forced Disc Eject** | *(prior)* | While **power is off**, press **`[STOP] + [CH UP]`** simultaneously for **5 seconds**. | Forcibly opens tray (disabled when Child/Demo Lock is ON). |
 | **Forced Power-Off** | *(P-off)* | Press front-panel **`[POWER]`** key for **over 10 seconds**. | Hard-halts a hung main microprocessor. |
 | **First Time Setup Reset** | `HELLO` | *(Firmware Guide pp. 7–8)* While tuned, hold **`[CH UP] + [CH DOWN]`** for **10–15 seconds** until power off. | Triggers First Time Setup wizard on next boot. |
@@ -295,7 +295,7 @@ Panasonic DIGA recorders embed factory diagnostic routines officially documented
 | **Rating Password Reset** | *(Level 8)* | Open tray and hold **`[REC] + [PLAY]`** simultaneously for **5 seconds**. | Resets parental rating password to Level 8. |
 | **Progressive Init** | *(prior)* | Power on (E-E): hold **`[STOP] + [PLAY]`** for **5 seconds**. | Resets video output setting back to Interlace. |
 | **Demo Lock / Unlock** | `LOCK` / `UNLOCK` | Power on: hold **`[STOP] + [POWER]`** for **5 seconds**. | Locks/unlocks tray ejection (persists across Main Unit Init). |
-| **Child Lock (`X-HOLD`)** | `X-HOLD` | Remote controller: **`[ENTER] + [RETURN]`** until `[X-HOLD]` displays. | Locks out front panel and remote inputs. |
+| **Child Lock (`X-HOLD`)** | `X-HOLD` | Remote controller: hold **`[ENTER] + [RETURN]`** simultaneously until `[X-HOLD]` displays. | Locks out front panel and remote inputs (10x `ENTER` pulses do NOT unlock it). |
 
 ### 3.3 Complete Remote Command Reference Inside `SERV` Mode (DMR-EH55 `DSD0603003CE`, pp. 21–26)
 
@@ -303,7 +303,7 @@ Once **`SERV`** is displayed on the FL panel, two-digit remote codes execute fac
 
 | Code | Official Designation (`DSD0603003CE`, pp. 21–26) | Verified Diagnostic Function |
 | :---: | :--- | :--- |
-| **`[0][0]`** or **`[RETURN]`** | **Release Items** | Cancels current active test and returns to top `SERV` prompt. |
+| **`[0][0]`** or **`[RETURN]`** | **Release Items** | Cancels current active test and returns to top `SERV` prompt (NOT a VFD test; VFD test is `[5][1]`). |
 | **`[0][1]`** | **Error Code Display** | Shows **latest error code (`U**`/`H**`/`F**`) held by Timer `IC7501`** (`F00` if none). |
 | **`[0][2]`** | **ROM Version Display** | Sequentially displays (5s each): **1. Region code** $\rightarrow$ **2. Main firm** $\rightarrow$ **3. Timer firm** $\rightarrow$ **4. Drive firm** $\rightarrow$ **5. ROM correction**. |
 | **`[1][1]` / `[1][2]`** | **White / Magenta Picture Output** | Outputs 100% white or magenta component test raster from AV Decoder. |
@@ -311,24 +311,24 @@ Once **`SERV`** is displayed on the FL panel, two-digit remote codes execute fac
 | **`[2][1]` / `[2][2]`** | **Audio Mute (`XTMUTE` / `XDMUTE`)** | Verifies audio mute assertion from Timer (`T MUTE`) or Digital PCB (`D MUTE`). |
 | **`[2][3]` / `[2][4]`** | **Audio Pattern Output** | Generates reference tones (`L=1kHz/-18dB`, `R=400Hz/-18dB`); `[2][4]` switches 48kHz / 44.1kHz. |
 | **`[3][1]`** | **HDD READ inspection** | Runs full HDD read test (**`HDD OK`** or defect code; exit via `[POWER] > 10s`). |
-| **`[4][1]` / `[9][5]`** | **Laser Used Time / Delete Laser Time** | Displays cumulative optical laser hours (`*****`); **`[9][5]`** clears counter (`CLR`). |
+| **`[4][1]` / `[9][5]`** | **Laser Used Time / Delete Laser Time** | Displays cumulative optical laser hours (`*****`); **`[9][5]`** clears counter (`CLR`, destructive). |
 | **`[4][2]` / `[9][6]`** | **RAM Drive Last Error (`NO **`) / Delete** | Reports error ID, timestamp (`DD/hh/mm`), media type & maker; `[0][1]`..`[1][9]` cycles past 19 errors (`[9][6]` clears). |
 | **`[4][4]`** | **Laser Power Confirmation** | Compares present laser power against shipping baseline with DVD-RAM inserted (`CHK *` / `NO DISC` / `ERROR`). |
 | **`[5][1]` / `[5][4]`** | **Turn on all FL/LEDs / Front Key Check** | `[5][1]` lights every FL segment/LED; `[5][4]` verifies every front key contact incrementally. |
 | **`[6][1]` / `[6][4]`** | **Production Date / Accumulated Working Time** | `[6][1]` prints manufacture date (`YYMMDD`); `[6][4]` shows total runtime in seconds. |
 | **`[6][5]` / `[9][7]`** | **Display Error History (`[0][1]`..`[1][9]`) / Delete** | Lists past **19 errors** with fault source (5s): **`01`/`05`** = Digital PCB (`AV DEC / MAIN CPU`), **`02`** = RAM Drive, **`03`** = Disc, **`04`** = Digital PCB / Communication Error, **`06`** = Defect of HDD (`[9][7]` clears). |
 | **`[7][4]`** | **SD Card WRITE Check** | Insert SD card while power off (`[CARD SD]`): verifies write (`SD OK` / `SD NG`; **erases SD images!**). |
-| **`[8][0]`..`[8][3]`** | **AV1/AV2/AV4 Video I/O Routing** | Sets analog input/output routing matrices for AV Jack testing. |
+| **`[8][0]`..`[8][3]`** | **AV1/AV2/AV4 Video I/O Routing** | Sets analog input/output routing matrices for AV Jack testing (European SCART I/O passthrough tests absent on NA models). |
 | **`[8][4]` / `[8][5]`** | **`P50(H)` / `P50(L)` Output Check** | Verifies Timer `IC7501-76` inverted output on AV1 Pin 10 (`~0V` vs `~4.4V DC`). |
 | **`[9][1]`** | **Tray OPEN/CLOSE Test** | Cycles RAM drive tray continuously counting cycles (release with remote `[POWER] > 10s`). |
 | **`[9][8]`** | **Error Code Initialization** | Clears Timer-latched error code back to `F00` (`CLR`). |
-| **`[9][9]`** | **Initialize Service** | Resets Last Drive Error, Error History, and Error Codes simultaneously to factory defaults (`CLR`). |
+| **`[9][9]`** | **Initialize Service (`CLR SERV`)** | Resets Last Drive Error, Error History, and Error Codes simultaneously to factory defaults (`CLR`). |
 | **`[POWER]`** | **Finishing Service Mode** | Exits `SERV` mode to standard `STOP (E-E)`. |
 
 > [!NOTE]
 > On Japanese (JDM) and later Blu-ray recorders, additional remote codes include `38 + [ENTER]` (`HDDCHK`), `03 VL`, `04 PRG`, `06 FTO`, and `08 FIN`.
 
-### 3.3 JDM Storage Magic `"Panasonic DIGA RTSC"` & ATA-7 AV Streaming Requirements
+#### 3.3.1 JDM Storage Magic `"Panasonic DIGA RTSC"` & ATA-7 AV Streaming Requirements
 
 Discussions across Japanese 2channel / 5ch and `ncos1` revealed why off-the-shelf computer hard drives fail to format on DIGA recorders:
 
@@ -344,44 +344,66 @@ Discussions across Japanese 2channel / 5ch and `ncos1` revealed why off-the-shel
    - If an off-the-shelf PC drive aborts these commands (operating exclusively under standard PC error-recovery profiles where the drive pauses for seconds to perform deep ECC error recovery), the recorder rejects the disk, hangs during initialization, and flags a storage error.
    - Factory drives (such as Western Digital AV-GP / DVR and Seagate DB35) shipped with custom microcode prioritizing continuous video throughput over bit-perfect data integrity.
 
-### 3.4 Why `[CH UP] + [OPEN/CLOSE] + [REC]` and `[STOP]` Revert `HELLO -> U99`
+### 3.4 Why `HELLO -> PLEASE WAIT (~2s) -> U99` (`< 2s` from `0:00` Standby) Cannot Enter `SERV` / `ND2` / `Functions`
 
-As defined in `DSD0603003CE` (p. 18, Section `8.1.1`) and Timer MCU `IC7501` schematics (`EC pp. 47, 64`), **`U99` ("Hang-up")** indicates: *"Displayed when communication error has occurred between Main microprocessor and Timer microprocessor."*
-1. Holding `[CH UP] + [OPEN/CLOSE] + [REC]` for 5 seconds from Standby is decoded by the **Timer MCU `IC7501`** (`KEYIN1`–`KEYIN3`, Pins 86–88).
-2. `IC7501` enables the Digital PCB rail (`DI_P_ON[H]`, Pin 44) and instructs the **Main AM34 SoC (`MN103S`)** over **`TBUS_CLK / TBUS_TXD / TBUS_RXD`** (Pins 35–37) to boot into `SERV` mode (`HELLO`).
-3. If the AM34 SoC halts during early BGO/NVRAM mount inside NOR Flash (`0x807F0000..0x807FFFFF`) before completing the `TBUS` handshake back to `IC7501`, the Timer MCU times out and forces **`U99`** onto the VFD instead of `SERV`. Front-panel keys cannot repair corrupted Flash NVRAM sectors.
+As defined in `DSD0603003CE` (p. 18, Section `8.1.1`) and Timer MCU `IC7501` schematics ([`panasonic_dmr_eh55ec_service_manual_vol2_schematics.pdf`](../../manuals_and_schematics/dmr-eh55/service/panasonic_dmr_eh55ec_service_manual_vol2_schematics.pdf) pp. 121–122; [`panasonic_dmr_eh55ec_service_manual_vol1_diagnostics.pdf`](../../manuals_and_schematics/dmr-eh55/service/panasonic_dmr_eh55ec_service_manual_vol1_diagnostics.pdf) pp. 22–25, 67–68; [`panasonic_dmr_eh55p9_eh55pc9_service_manual_north_america.pdf`](../../manuals_and_schematics/dmr-eh55/service/panasonic_dmr_eh55p9_eh55pc9_service_manual_north_america.pdf) pp. 21–24, 62–63), **`U99` ("Hang-up")** signals a communication/handshake failure between Timer MCU `IC7501` and the Main AM34 SoC (`MN2DS0009`):
 
-### 3.5 Electrical Physics of Standby (`P-OFF`), `TW7501` (`SW_UART`), P7501 Probe & Wakeup Mapping
+1. **Critical Distinction Between `TEST Mode` and `Service Mode (`SERV`)`:**
+   - Front-panel **`[STOP] + [CH UP] + [OPEN/CLOSE]`** for **5s** enters **`TEST Mode` (`TM AV1`)**, which resets tuner/user preferences — it is **NOT Service Mode**.
+   - Official **`SERV`** requires Power OFF (Standby) + **`[CH UP] + [OPEN/CLOSE] + [REC]`** for **5s**. Both `SERV` and `Functions` / `ND2` require `MAIN` (`SYS_SERV`) to be running; when `U99` blocks `MAIN`, none of them are reachable via front-panel keys or IR.
+2. **Why `HELLO -> PLEASE WAIT (~2s) -> U99` (and `< 2s` from `0:00` Standby) Trips Before `BOOT.BIN`:**
+   - During a normal NOR boot, `BOOT.BIN` (`PROG061`) only sets the Timer MCU hang-up timeout to **`255s`** once it executes `FUN_44005cd0()` (`vfd_wait_5cd0`, logging `"Main hung-up time changed 255[s]."` over `TBUS`).
+   - A **`U99` trip in `< 2s` (`HELLO -> PLEASE WAIT (~2s) -> U99`)** therefore triggers **BEFORE** `BOOT.BIN` reaches `FUN_44005cd0()`, indicating one of three pre-handshake faults:
+     1. Early power rail or reset failure (`X_SW+3.8V`, `X_SW+5.8V`, `X_SW+12V`, `ANA+3.3V`, `X_SW+3.3V`, or `PFAIL[L]` — fatal supply faults that must never be bypassed by applying > `3.3V` to LVTTL pins);
+     2. Early `SA0..SA3` (`0x80000000..0x8003FFFF`) Flash or SDRAM (`DDR CHECK`) freeze before the `TBUS` handshake; or
+     3. A physical `TBUS` (`TBUS_CLK`, `TBUS_TXD`, `TBUS_RXD`, `XMPREQ`, `XINTM`) fault.
+   - By contrast, `BGO driver init failed[1].` occurs **after** `BOOT.BIN` initializes SDRAM and starts printing over AM34 TX (`UARTP2M_T` on `P7501` Pin 6 $\rightarrow$ Pico `GP2` RX; whereas `P7501` Pin 3 `UARTM2P_T` is the Pico `GP4` TX $\rightarrow$ AM34 RX input via `Q7514`).
+3. **Verified Recovery Path:**
+   - Front-panel button chords cannot repair rail, `TBUS`, SDRAM, or Flash failures. The recovery path is passive `P7501` Pin 6 (`UARTP2M_T`) UART triage + `SW_UART` (`P7501` Pin 1 / `GP26`) `LOW` + `XRESET` (`P7501` Pin 2 / `GP5`) Open-Drain (`***** serial boot mode *****` $\rightarrow$ `DIGADIAG.FRM`) or external TSOP-48 recovery (preserving read-only `SA0..SA3` while recovering Upper NOR / NVRAM `SA134..SA141`), always keeping `NSW5V` (`GP3`) strictly `Hi-Z Input` (never push-pull!) and never powering the Pico from `P7501`.
 
-Cross-referencing official schematics (`EC pp. 47, 63, 64, 65` & `P9 pp. 55, 56, 62, 64`) with live `COM10` measurements explains how the Pico UART probe interacts with Standby:
+### 3.5 Electrical Physics of Standby (`P-OFF`), `TW7501` vs. `P7501` Pin 1 (`SW_UART`), `IC3001` & Wakeup Mapping
 
-1. **Why `STATUS` / `VDD` Reads `0.03V (LOW / UNPOWERED)` in Standby Without Jumper:**
-   - The power regulators (`IC1502` `X SW +5.2V`, `IC1504` `JC +5V`, `IC1506` `DR +5V`, `IC1507` `ANA +3.3V`) and Digital PCB supply (`D3R3V`) are **switched** via `P_SAVE_L` / `DI_P_ON[H]` controlled by `IC7501` (`P9 pp. 55–56, 62`).
-   - Because `NSW5V` (`P7501` Pin 5) and the pull-ups on `SW_UART` (`TW7501`, Pin 1), `UARTM2P_T` (Pin 3), and `UARTP2M_T` (Pin 6) derive from these switched rails, **every `P7501` pin drops to ~`0.00V` during Standby (`P-OFF` / `0:00`)** (`VDD: 0.03V`, `RXD=0, NSW5V=0, TXD=0, XRESET=0`). That is normal Standby behavior, not a faulty probe cable — the instant `DI_P_ON[H]` rises (even for 1–2 seconds), `NSW5V` and `SW_UART` climb to `~3.25V`.
-2. **Can the `P7501` Probe Directly Turn On the Unit From Standby?**
+Cross-referencing official schematics ([`panasonic_dmr_eh55ec_service_manual_vol2_schematics.pdf`](../../manuals_and_schematics/dmr-eh55/service/panasonic_dmr_eh55ec_service_manual_vol2_schematics.pdf) pp. 121–122, [`panasonic_dmr_eh55ec_service_manual_vol1_diagnostics.pdf`](../../manuals_and_schematics/dmr-eh55/service/panasonic_dmr_eh55ec_service_manual_vol1_diagnostics.pdf) pp. 22–25, 67–68, [`panasonic_dmr_eh55p9_eh55pc9_service_manual_north_america.pdf`](../../manuals_and_schematics/dmr-eh55/service/panasonic_dmr_eh55p9_eh55pc9_service_manual_north_america.pdf) pp. 21–24, 62–63, and [`panasonic_dmr_es10_service_manual_north_america.pdf`](../../manuals_and_schematics/dmr-es10/service/panasonic_dmr_es10_service_manual_north_america.pdf) p. 27) corrects a legacy naming conflation and establishes the verified circuit topology:
+
+1. **Critical Correction — `TW7501` (`VWJ0795=5`) Is NOT `P7501` Pin 1 (`SW_UART`):**
+   - **`TW7501` (`VWJ0795=5`):** Resides on the **5V/memory backup supply rail** (`D7509`, `C7578`, `R7623`, supercap `C7584` `0.047F` on EC; `B7501` `CR2354` battery on NA) feeding **Timer Microprocessor `IC7501`** (`C2CBJG000713` on EC; `MN67788RA` + `IC8001` on NA) and reset detector **`IC7502`** (`C0EBE0000504`) $\rightarrow$ `XRESET` (`IC7501` Pin 12 & `P7501` Pin 2). Shorting `TW7501` resets Timer MCU state and clears volatile standby data (consistent with `DMR-ES10` NA manual p. 27, where shorting `TW7501` asserts `RESET (L)` to `XRESET`).
+   - **`P7501` Pin 1 (`SW_UART/IR_BUSY`):** Is the **separate AM34 (`MN2DS0009`) serial boot strap line** wired through `Q7510`/`QR7503` and driven in software by Pico `GP26` (`JIGPIN LOW` / `JIGPIN HIZ`).
+   - **Note on legacy naming:** Legacy firmware/UI strings (such as `"TW7501_STRAP"` inside `p7501_cli.c`) historically nicknamed `JIGPIN` `"TW7501"`, even though electrically `TW7501` (`VWJ0795=5` backup/reset rail) and `P7501` Pin 1 (`SW_UART/IR_BUSY`) are distinct nets.
+2. **Role of `IC3001` and Absence of External EEPROM on DMR-EH55:**
+   - **`IC3001` (`C1AB00002379`)** is the **100-pin A/V switching matrix IC** (controlled over I²C by `IC7501`), **NOT** the Timer MCU (`IC7501`).
+   - The **DMR-EH55 has no external EEPROM**: on `EC vol2 p. 122` and `EC vol1 p. 68`, `IC7501` pin `(EEPROM_W_C)` is explicitly **`NC(OPEN)`**. Persistent recorder state lives inside Spansion NOR Flash `IC5001` (`SA134..SA141`).
+3. **Why `STATUS` / `VDD` Reads `0.03V (LOW / UNPOWERED)` in Standby Without Jumper:**
+   - The power regulators (`IC1502` `X SW +5.2V`, `IC1504` `JC +5V`, `IC1506` `DR +5V`, `IC1507` `ANA +3.3V`) and Digital PCB supply (`D3R3V`) are **switched** via `P_SAVE_L` / `DI_P_ON[H]` controlled by `IC7501` (`NA pp. 55–56, 62`).
+   - Because `NSW5V` (`P7501` Pin 5) and the pull-ups on `SW_UART/IR_BUSY` (Pin 1), `UARTM2P_T` (Pin 3), and `UARTP2M_T` (Pin 6) derive from these switched rails, **every `P7501` pin drops to ~`0.00V` during Standby (`P-OFF` / `0:00`)** (`VDD: 0.03V`, `RXD=0, NSW5V=0, TXD=0, XRESET=0`). The instant `DI_P_ON[H]` rises (even for 1–2 seconds), `NSW5V` and `SW_UART` climb to `~3.25V`.
+4. **Can the `P7501` Probe Directly Turn On the Unit From Standby?**
    - **Not over the existing 6 `P7501` wires alone**: front-panel `[POWER]` (`S7002` `KEY3_POWER`, `EC p. 65`) routes directly to `IC7501` Pin 88 (`KEYIN3`) and IR input routes from `IR7501` to Pin 65 (`IR`) — neither reaches `P7501`.
    - **Two Simple Options for Automated Wakeup:**
-     * **38 kHz Kaseikyo IR TX LED (zero modification to recorder):** an IR LED + `330 Ω` resistor driven by a spare Pico GPIO aimed at `IR7501` sends Panasonic Kaseikyo `Power Toggle` and `SERV` remote digits cleanly.
+     * **38 kHz Kaseikyo IR TX LED (`IRTX`, zero modification to recorder):** an IR LED + `330 Ω` resistor driven by a spare safe Pico GPIO (`GP6..9` / `GP16..22`) aimed at `IR7501` sends Panasonic Kaseikyo `Power Toggle` and `SERV` remote digits cleanly.
      * **Optional Open-Drain Wire on `S7002` (`KEYIN3`):** simulates pressing the physical front `[POWER]` switch.
-3. **How the Pico Maps Standby Transitions & Replaces the Physical `TW7501` Jumper:**
-   - **Continuous Standby <-> Wakeup Mapping (`BRIDGE 115200 PASSIVE CTRL`, `PWRTRACE`, `PIOLOGIC`):** left in passive mode during Standby, the Pico timestamps every rising/falling transition on **`NSW5V` (`GP3`), `TXD` (`GP4`), and `XRESET` (`GP5`)** plus every `115200 8N1` boot character (`DDR CHECK: OK`, `Loader ver0.61`, `HELLO`, `U99`, standby drop).
-   - **Software Emulation of the `TW7501` Jumper (`JIGPIN LOW` / `JIGPIN HIZ`):** `P7501` Pin 1 (`SW_UART` / Pico `GP26`) is electrically wired to **`TW7501`** (`P9 p. 62`). The C11 command **`JIGPIN LOW`** latches `GP26` to `0V` (exact software equivalent of a wire jumper on `TW7501`) **without pulsing `XRESET`**, while **`STATUS`** differentiates `STANDBY (NSW5V=0)` vs. `AWAKE (NSW5V=1)` vs. disconnected cable!
+5. **How the Pico Maps Standby Transitions & Asserts `SW_UART/IR_BUSY` (`JIGPIN`):**
+   - **Continuous Standby <-> Wakeup Mapping (`BRIDGE 115200 PASSIVE CTRL`, `PWRTRACE`, `BOOTTRACE`, `PIOLOGIC`):** left in passive mode during Standby, the Pico timestamps every rising/falling transition on **`NSW5V` (`GP3`, strictly `Hi-Z Input`), `TXD` (`GP4`), and `XRESET` (`GP5`)** plus every `115200 8N1` boot character received on `UARTP2M_T` (`GP2`).
+   - **Software Control of `SW_UART/IR_BUSY` (`JIGPIN LOW` / `JIGPIN HIZ`):** The C11 command **`JIGPIN LOW`** latches `GP26` (`P7501` Pin 1) to `0V` **without pulsing `XRESET` and without touching the separate `TW7501` backup rail**, while **`STATUS`** differentiates `STANDBY (NSW5V=0)` vs. `AWAKE (NSW5V=1)` vs. disconnected cable.
 
 ```mermaid
 flowchart TD
     subgraph P7501_PINOUT["P7501 Connector (Main PCB VEP79138 — Switched by DI_P_ON)"]
-        P1["Pin 1: SW_UART (= TW7501 / XFWE) -> Pico GP26 (JIGPIN LOW/HIZ)"]
-        P2["Pin 2: XRESET (Open-Drain via QR7503) -> Pico GP5"]
-        P3["Pin 3: UARTM2P_T (TX Pico -> Q7514 -> AM34) -> Pico GP4"]
+        P1["Pin 1: SW_UART/IR_BUSY (AM34 Serial Boot Strap) -> Pico GP26 (JIGPIN LOW/HIZ)"]
+        P2["Pin 2: XRESET (Open-Drain via QR7503 / IC7502) -> Pico GP5"]
+        P3["Pin 3: UARTM2P_T (TX Pico -> Q7514 -> AM34 RX) -> Pico GP4"]
         P4["Pin 4: GND (0.0 Ω Chassis Reference)"]
         P5["Pin 5: NSW5V (Switched ~5.15V upstream / ~3.29V ON; 0V in Standby) -> Pico GP3 Hi-Z"]
         P6["Pin 6: UARTP2M_T (AM34 TX 115200 8N1 -> RX Pico) -> Pico GP2"]
     end
 
+    subgraph BACKUP_RAIL["Separate Circuit: TW7501 (VWJ0795=5) — 5V Backup & IC7501/IC7502 Reset"]
+        TW["TW7501 (D7509, C7578, R7623, C7584 0.047F / B7501 CR2354)"] -->|"Feeds"| MCU["Timer MCU IC7501 (C2CBJG000713 / MN67788RA+IC8001) + IC7502"]
+        MCU -->|"Pin 12 XRESET"| P2
+    end
+
     subgraph STANDBY_STATES["Electrical Mapping Across Standby vs Awake"]
         ST_OFF["Standby P-OFF ('0:00')\nDI_P_ON=L -> NSW5V=0, SW_UART=0.03V"] -->|"[POWER] via KEYIN3 / IR"| ST_WAKE["Wakeup Digital PCB\nNSW5V=1, XRESET=1, SW_UART~3.25V"]
-        ST_WAKE -->|"SW_UART=Hi-Z"| BOOT_NORM["Boot NOR Flash -> HELLO -> U99"]
-        ST_WAKE -->|"TW7501=GND (Jumper or JIGPIN LOW)"| BOOT_SER["Loader: serial boot mode / [RTSD]"]
+        ST_WAKE -->|"SW_UART=Hi-Z"| BOOT_NORM["Boot NOR Flash -> HELLO -> U99 (<2s if rail/TBUS/SA0..3)"]
+        ST_WAKE -->|"SW_UART=LOW (JIGPIN LOW)"| BOOT_SER["Loader: ***** serial boot mode *****"]
     end
 ```
 

@@ -225,3 +225,65 @@ fn test_bitops_cfi_autoselect_and_ipl_write_protection() {
         Err(Mn103Fault::IplWriteProtected(0x8400_0000))
     ));
 }
+
+fn run_jedec_erase(vm: &mut Mn103Vm, base: u32, sector_addr: u32) -> Result<(), Mn103Fault> {
+    vm.write_u16(base + 0x0AAA, 0x00AA)?;
+    vm.write_u16(base + 0x0554, 0x0055)?;
+    vm.write_u16(base + 0x0AAA, 0x0080)?;
+    vm.write_u16(base + 0x0AAA, 0x00AA)?;
+    vm.write_u16(base + 0x0554, 0x0055)?;
+    vm.write_u16(sector_addr, 0x0030)
+}
+
+fn run_jedec_program_u8(vm: &mut Mn103Vm, base: u32, addr: u32, val: u8) -> Result<(), Mn103Fault> {
+    vm.write_u8(base + 0x0AAA, 0xAA)?;
+    vm.write_u8(base + 0x0554, 0x55)?;
+    vm.write_u8(base + 0x0AAA, 0xA0)?;
+    vm.write_u8(addr, val)
+}
+
+#[test]
+fn test_spansion_jedec_erase_program_and_two_layer_policy() {
+    let mut vm = Mn103Vm::new();
+    vm.map_segment(0x8400_0000, vec![0x5Au8; 0x80_0000], true);
+    assert_eq!(vm.nor_write_policy, NorWritePolicy::NvramOnly);
+    assert!(is_critical_ipl_boot_va(0x8400_0000));
+    assert!(is_critical_ipl_boot_va(0x8003_FFFF));
+    assert!(!is_critical_ipl_boot_va(0x8404_0000));
+
+    // Default NvramOnly: blocks SA4..SA133 erase/program, allows 8 KiB NVRAM SA134..SA141 + NAND-like &=
+    assert!(matches!(
+        run_jedec_erase(&mut vm, 0x8400_0000, 0x8420_0000),
+        Err(Mn103Fault::IplWriteProtected(0x8420_0000))
+    ));
+    assert!(matches!(
+        run_jedec_program_u8(&mut vm, 0x8400_0000, 0x8404_0010, 0x12),
+        Err(Mn103Fault::IplWriteProtected(0x8404_0010))
+    ));
+    run_jedec_program_u8(&mut vm, 0x8400_0000, 0x847F_0010, 0xA5).unwrap();
+    assert_eq!(vm.read_u8(0x847F_0010).unwrap(), 0x5A & 0xA5); // 1->0 physical NOR rule without erase
+    run_jedec_erase(&mut vm, 0x8400_0000, 0x847F_2000).unwrap();
+    assert_eq!(vm.read_u8(0x847F_1FFF).unwrap(), 0x5A);
+    assert_eq!(vm.read_u8(0x847F_2000).unwrap(), 0xFF);
+    run_jedec_program_u8(&mut vm, 0x8400_0000, 0x847F_2004, 0xF0).unwrap(); // 0xF0 data during ProgramPending
+    assert_eq!(vm.read_u8(0x847F_2004).unwrap(), 0xF0);
+
+    // Explicit unlock: SA4..SA133 64 KiB erase + program works; SA0..SA3 permanently E05 without mutating IPL
+    vm.nor_write_policy = NorWritePolicy::UpperNorAppUnlocked;
+    assert!(matches!(
+        run_jedec_erase(&mut vm, 0x8400_0000, 0x8403_FFFE),
+        Err(Mn103Fault::IplWriteProtected(0x8403_FFFE))
+    ));
+    assert!(matches!(
+        run_jedec_program_u8(&mut vm, 0x8400_0000, 0x8400_0100, 0x00),
+        Err(Mn103Fault::IplWriteProtected(0x8400_0100))
+    ));
+    assert_eq!(vm.read_u8(0x8400_0AAA).unwrap(), 0x5A); // unlock cycles didn't clobber SA0
+    run_jedec_erase(&mut vm, 0x8400_0000, 0x8420_1234).unwrap();
+    assert_eq!(vm.read_u8(0x841F_FFFF).unwrap(), 0x5A);
+    assert_eq!(vm.read_u8(0x8420_0000).unwrap(), 0xFF);
+    assert_eq!(vm.read_u8(0x8420_FFFF).unwrap(), 0xFF);
+    assert_eq!(vm.read_u8(0x8421_0000).unwrap(), 0x5A);
+    run_jedec_program_u8(&mut vm, 0x8400_0000, 0x8420_0020, 0x3C).unwrap();
+    assert_eq!(vm.read_u8(0x8420_0020).unwrap(), 0x3C);
+}

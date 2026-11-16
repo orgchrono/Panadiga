@@ -25,6 +25,9 @@ extern "C" {
 #define P7501_DUMPNOR_DIGADIAG_ADDR 0x50400000UL
 #define P7501_DUMPNOR_STUB_SIZE     162u
 
+/** Shared verified 24-byte MN103S SC0 PUTC(D3) leaf subroutine (matches `PUTC_D3_BYTES`). */
+extern const uint8_t k_p7501_mn103_putc_d3[24];
+
 /** Choose verified stream block size (`4096`, else `256`) or `0` if unaligned/invalid. */
 uint32_t p7501_dumpnor_block_size(uint32_t total_len);
 

@@ -2,6 +2,7 @@
 
 pub mod bgo_unbrick;
 pub mod emu_patch_suite;
+pub mod error_dict;
 pub mod main_passthrough;
 pub mod matshita_emu;
 pub mod mn10300;

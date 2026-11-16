@@ -163,13 +163,56 @@ A captura `Panasonic_DVD_TV.ir` resolve de forma definitiva uma dúvida recorren
 2. **Relação com o Controle Físico `EUR7659Y70` (DMR-EH55):**
    * O controle original `EUR7659Y70` (região América/Brasil) tampouco possui `[RED]` (`0x141`) ou `ND2` (`0x182`), compartilhando os mesmos códigos `sub = 0x00` de `Panasonic_DVD_TV.ir` para dígitos `0..9` (`0x10..0x19`), energia (`0x3D`), navegação, `FUNCTIONS` (`0x57`), `DIRECT NAVIGATOR` (`0x9B`), `AUDIO` (`0x33`) e `DISPLAY` (`0x92`). Além disso, traz teclas físicas dedicadas ausentes nesta captura combo (como `OPEN/CLOSE` = `0x01` e `DRIVE SELECT` `DVD/HDD`).
    * No **Panasonic DMR-EH55** (Manual de Serviço `DSD0603003CE`), a ausência de `[RED]` **não** impede o diagnóstico: o modo de serviço **`SERV`** é ativado diretamente no painel frontal em Standby (**`[CH UP] + [OPEN/CLOSE] + [REC]` por 5 s**), e todos os testes de serviço (`00`..`99`) utilizam apenas as teclas `0..9` (`0x10..0x19`).
-3. **Emissores Programáveis (Android CIR e Pico `IRTX`):**
-   * Quando há necessidade de emitir códigos `sub = 0x01` (`[RED]` `0x141`, `ND2` `0x182`), alternar conjuntos de endereço `SET 1/2/3` (`sub = 0x00 / 0x10 / 0x20`) ou executar macros como Region Free (`1..0 -> AUDIO -> MEDIA SERVER`), deve-se recorrer a um dispositivo **Android com IR blaster nativo** (via `ConsumerIrManager` e perfis `.irplus` como `Panasonic_DMR_EH55_Commander.irplus` em `android-remote-panasonic`) ou ao sintetizador PWM 38 kHz **`IRTX`** do firmware Pico (`firmware/pico-p7501/diag/p7501_ir_codec.c`, limitado aos GPIOs livres seguros `GP6..9` / `GP16..22`).
+3. **Emissores Programáveis (Android CIR / `IrCommanderView` & Pico `IRTX`):**
+   * Quando há necessidade de emitir códigos `sub = 0x01` (`[RED]` `0x141`, `ND2` `0x182`), alternar conjuntos de endereço `SET 1/2/3` (`sub = 0x00 / 0x10 / 0x20`) ou executar macros declarativas verificadas, deve-se recorrer ao módulo unificado **DIGA IR Commander** do APK Android ([`IrCommanderView.tsx`](../../apps/desktop/src/views/IrCommanderView.tsx) + SSOT em [`crates/panadiga-core/src/ir/`](../../crates/panadiga-core/src/ir/mod.rs), via `/sys/class/sec/sec_ir/ir_send` ou `ConsumerIrManager`) ou ao sintetizador PWM 38 kHz **`IRTX`** do firmware Pico ([`p7501_ir_codec.c`](../../firmware/pico-p7501/diag/p7501_ir_codec.c), limitado aos GPIOs livres seguros `GP6..9` / `GP16..22`).
 
 ---
 
-## 5. Documentos Relacionados
+## 5. Macros de Serviço DIGA Verificadas Declarativamente (SSOT)
+
+Todas as sequências automatizáveis de serviço do **Panasonic DMR-EH55** foram consolidadas de forma declarativa em [`ir_macros_ssot.json`](../../crates/panadiga-core/src/ir/ir_macros_ssot.json) e expostas via [`verified_service_macros()`](../../crates/panadiga-core/src/ir/macros.rs) (`panadiga-core::ir::macros`), após validação cruzada entre a captura `Panasonic_DVD_TV.ir`, os manuais de serviço **EV/EC** ([`panasonic_dmr_eh55ec_service_manual_vol1_diagnostics.pdf`](../../manuals_and_schematics/dmr-eh55/service/panasonic_dmr_eh55ec_service_manual_vol1_diagnostics.pdf) pp. 22–30), o manual **NA** ([`panasonic_dmr_eh55p9_eh55pc9_service_manual_north_america.pdf`](../../manuals_and_schematics/dmr-eh55/service/panasonic_dmr_eh55p9_eh55pc9_service_manual_north_america.pdf) pp. 21–29) e os *handlers* `SYS_SERV` desmontados de `main3060np`.
+
+> [!IMPORTANT]
+> **Pré-requisito de Entrada no Modo de Serviço (`SERV`):**
+> A execução das macros `[x][y]` abaixo exige que o gravador esteja em **Service Mode (`SERV`)**, acionado no painel frontal com o aparelho **desligado (Standby)** pressionando simultaneamente **`[CH UP] + [OPEN/CLOSE] + [REC]` por ~5 s**. Caso o aparelho trave com `U99` antes de inicializar o `MAIN` / `SYS_SERV`, a interface IR não responde ao modo `SERV` e o diagnóstico deve ocorrer via `P7501`.
+
+### 5.1 Catálogo Auditado das 14 Macros Verificadas
+
+| Nível | ID na SSOT (`ir_macros_ssot.json`) | Sequência IR | Função & Comportamento Verificado |
+| :--- | :--- | :--- | :--- |
+| **SAFE** | `eh55_service_release` | `[0][0]` | **`Release Items`** — sai do item de diagnóstico atual sem alterar NVRAM/contadores. |
+| **SAFE** | `eh55_error_history_latest` | `[0][1]` | Exibe o **código de erro mais recente** armazenado no histórico de serviço. |
+| **SAFE** | `eh55_rom_version_region` | `[0][2]` | Exibe **versão da ROM / firmware e código de região** no VFD/OSD. |
+| **SAFE** | `eh55_av_pattern_white` | `[1][1]` | Gera padrão interno de teste A/V **White** (tela branca 100%). |
+| **SAFE** | `eh55_av_pattern_magenta` | `[1][2]` | Gera padrão interno de teste A/V **Magenta**. |
+| **SAFE** | `eh55_laser_hours` | `[4][1]` | Exibe o horímetro acumulado do leitor/gravador óptico (**Laser Hours**). |
+| **SAFE** | `eh55_ram_drive_last_error` | `[4][2]` | Exibe o último erro do drive óptico (`Drive Last Error`); navegue pelos 19 slots com `[0][1]..[1][9]`. |
+| **SAFE** | `eh55_vfd_all_segments` | `[5][1]` | Acende **todos os segmentos do VFD e LEDs** frontais para inspeção visual. |
+| **SAFE** | `eh55_error_history_browse` | `[6][5]` → `[0][1]`..`[1][9]` | Entra no navegador de **19 slots de histórico de erros** (`[6][5]` abre `[0][1]`, avançando até `[1][9]`). |
+| **MODERATE** | `eh55_hdd_read_inspection` | `[3][1]` | Executa **inspeção de leitura do HDD** (*HDD READ inspection*); para abortar/sair, segure **`[POWER] > 10s`**. |
+| **MODERATE** | `eh55_tray_endurance_test` | `[9][1]` | Inicia loop contínuo de abertura/fechamento da bandeja (**Tray OPEN/CLOSE loop**); **`STOP` NÃO encerra** — saia segurando **`[POWER] > 10s`**. |
+| **MODERATE** | `eh55_clear_last_error_f00` | `[9][8]` | Executa limpeza pontual do erro **`F00`** / último código registrado (`Clear Last Error F00`). |
+| **DESTRUCTIVE** | `eh55_clear_laser_hours` | `[9][5]` | **Destrutivo:** zera o contador permanente de horas do laser (**Clear Laser Hours**). |
+| **DESTRUCTIVE** | `eh55_service_initialize_clr` | `[9][9]` | **Destrutivo (`CLR SERV`):** limpa *Last Drive Error*, histórico de 19 slots e códigos de erro; **NÃO** apaga o HDD nem zera *Laser Hours*. |
+
+### 5.2 Mitos de Comunidade Rejeitados & Correções Auditadas
+
+Os testes unitários em [`crates/panadiga-core/src/ir/tests.rs`](../../crates/panadiga-core/src/ir/tests.rs) bloqueiam explicitamente IDs legados/não verificados (`multi_region`, `child_lock`, `video_io_test_80`, `auto_restore_set2`) e corrigem confusões recorrentes da comunidade:
+
+1. **`[0][0]` vs. `[5][1]` (Teste de VFD):** `[0][0]` executa **`Release Items`** (saída de item de serviço), **NÃO** o teste do visor VFD; a sequência verificada para acender todos os segmentos VFD/LEDs é **`[5][1]`**.
+2. **`[8][0]` / `[8][1]` (SCART EU) vs. `[1][1]` / `[1][2]` (Padrões Internos):** `[8][0]` e `[8][1]` correspondem a testes de *passthrough* de E/S **SCART europeu**, ausentes em modelos norte-americanos (**NA**). Os padrões internos de vídeo disponíveis em serviço são **`[1][1]`** (*White*) e **`[1][2]`** (*Magenta*).
+3. **Desbloqueio de Child Lock:** A abertura do *Child Lock* exige segurar simultaneamente **`[ENTER] + [RETURN]`**, e **não** enviar 10 pulsos sequenciais de `ENTER`.
+4. **Macro `SET 2/3 -> SET 1` & Navegação do Menu `Setup`:** O menu `Setup` possui **7 abas** de configuração e a seleção do painel direito exige **`[RIGHT]`**; macros cegas baseadas em contagem incorreta de profundidade (`auto_restore_set2`) foram removidas da SSOT.
+5. **Macro Não Verificada `MULTI_REGION` (`OBC 0x04 = REWIND`):** A sequência divulgada online (`1..0 -> AUDIO -> MEDIA SERVER`) apoia-se em `OBC 0x04`, que na tabela real `curated_diga_eh55_eur7659` e em `Panasonic_DVD_TV.ir` mapeia para **`REWIND`** (`MediaServer = B0 00 04`, idêntico a `Rewind = B0 00 04`). Por falta de comprovação determinística em firmware, `multi_region` foi excluída da SSOT verificada.
+6. **Divergências Comprovadas em `Panasonic_DVD_TV.ir` & `curated_diga_eh55_eur7659`:**
+   * **`AUDIO [A]`** (`0x33` / `B0 00 33`) **≠ `[RED]`** (`0x141`, `sub = 0x01` / `B0 01 41`) — usar `[RED]` no lugar de `AUDIO` quebra comandos de áudio/macros.
+   * Códigos confirmados na matriz principal (`sub = 0x00`, exceto onde indicado): **`FUNCTIONS = 0x57`** (`B0 00 57`), **`STATUS = 0x5F`** (`B0 00 5F`), **`SCHEDULE = 0x7C`** (`B0 00 7C`), **`GUIDE = 0x60`** (`B0 00 60`) e **`EXIT = 0x51 (sub = 0x01)`** (`B0 01 51`).
+
+---
+
+## 6. Documentos Relacionados
 
 * [`firmware_and_images/README.md`](../../firmware_and_images/README.md) — Catálogo de artefatos binários e capturas de bancada (Seção #6).
 * [`COMPENDIO_GLOBAL_COMUNIDADE_FIRMWARE_E_HARDWARE_DIGA.md`](COMPENDIO_GLOBAL_COMUNIDADE_FIRMWARE_E_HARDWARE_DIGA.md) — Seção `4.9` (Mapa prático `EUR7659Y70`, `AUDIO [A]` vs. `[RED]`, Android CIR e `IRTX`).
+* [`ARQUITETURA_MOBILE_ANDROID_E_BLUETOOTH.md`](ARQUITETURA_MOBILE_ANDROID_E_BLUETOOTH.md) — Pipeline Android APK (`IrCommanderView`, shims Kotlin e `panadiga-core::ir::adapter`).
 * [`TEORIA_E_PRATICA_UNBRICK_U99_E_CRIPTOGRAFIA_MATSUSHITA.md`](TEORIA_E_PRATICA_UNBRICK_U99_E_CRIPTOGRAFIA_MATSUSHITA.md) — Diagnóstico `U99`, mapa Spansion NOR e rotina de recuperação.

@@ -1,7 +1,7 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": ["typescript", "unicorn", "react", "import"],
-  "ignorePatterns": ["dist/**", "src-tauri/**", "e2e/**", "node_modules/**"],
+  "ignorePatterns": ["dist/**", "dist-android/**", "src-tauri/**", "e2e/**", "node_modules/**"],
   "rules": {
     "no-unused-vars": "error",
     "no-var": "error",
@@ -47,6 +47,18 @@
               {
                 "name": "@/services/androidBridge",
                 "message": "Violação MVVM: Views e Components não podem importar @/services/androidBridge diretamente; passe props a partir do ViewModel."
+              },
+              {
+                "name": "@/services/androidIrBridge",
+                "message": "Violação MVVM: Views e Components não podem importar @/services/androidIrBridge diretamente; use o ViewModel."
+              },
+              {
+                "name": "@/services/irIpc",
+                "message": "Violação MVVM: Views e Components não podem importar @/services/irIpc diretamente; use o ViewModel."
+              },
+              {
+                "name": "@/services/irTransportService",
+                "message": "Violação MVVM: Views e Components não podem importar @/services/irTransportService diretamente; use o ViewModel."
               }
             ],
             "patterns": [

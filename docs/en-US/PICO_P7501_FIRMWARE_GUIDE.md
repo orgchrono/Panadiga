@@ -125,7 +125,7 @@ The firmware serves interactive human operators as well as Rust automation (`pan
 | **`STATUS` / `VDD`** | `STATUS` \| `VDD` | Samples `GP26 (ADC0)` on `P7501` Pin 1 (`SW_UART`) and prints `VDD: X.XXV (OK / LOW / FLOATING)`. |
 | **`BANNER`** / **`HELP`** | `BANNER` \| `HELP` \| `?` | Prints the identification banner or complete command list. |
 | **`BAUD`** | `BAUD [bps]` | Queries or configures **`PIO1` (`SM0`/`SM1`)** baud rate using FP16 fractional divisor (`300..921600 bps`). |
-| **`BAUDSCAN`** | `BAUDSCAN [ms] [NORMAL\|JIG[:ms]\|NOPULL] [APPLY]` | Measures min/max LOW pulse width on `GP2` and estimates baud rate (optional `APPLY` to `PIO1`). |
+| **`BAUDSCAN`** | `BAUDSCAN [ms] [NORMAL\|JIG[:ms]\|NOPULL] [APPLY]` | Glitch-immune dual-polarity (LOW/HIGH) bit-width cluster detector + PIO1 `IRQ 4` framing & ASCII counter on `GP2` (`APPLY` switches `PIO1`). **Note:** Changing baud in PuTTY/RealTerm only affects virtual USB CDC — `PIO1` controls physical `P7501` sampling. |
 | **`UARTSTREAM`** | `UARTSTREAM [ms] [NORMAL\|JIG[:ms]\|NOPULL]` | Live capture via `PIO1` with timed `SW_UART` release (`JIG:350`) and automatic `ADC0` restoration. |
 | **`HEXCAP`** | `HEXCAP [ms] [NORMAL\|JIG[:ms]\|NOPULL]` | RAM capture (`HEXCAP_RAM_BUF_CAP` = `2048` bytes) with `+us` deltas and hex+ASCII dump after window (zero overflow at `115200 bps`). |
 | **`UARTTXHEX`** | `UARTTXHEX [LOW:]<hex\|BRK> [rx_ms]` | Injects arbitrary hex bytes or a `120 ms` `BREAK` pulse over `PIO1 TX` (`Q7514` requires `SW_UART` released unless prefixed with `LOW:`). |
@@ -135,8 +135,12 @@ The firmware serves interactive human operators as well as Rust automation (`pan
 | **`BOOTCAP`** | `BOOTCAP [ms]` | Asserts Open-Drain `XRESET` with `SW_UART` released and captures `115200 8N1` boot UART stream (`PIO0`). |
 | **`UARTMON`** | `UARTMON [ms]` | Passively listens on `GP2` (`UARTP2M_T`) without forcing reset or `SW_UART`. |
 | **`JIGBOOT`** | `JIGBOOT [ms]` | Boots with `SW_UART = LOW` (`XFWE` / JIG mode) across `XRESET` pulse and captures `GP2` at `115200 8N1`. |
+| **`JIGPIN`** | `JIGPIN [LOW\|HIZ\|STATUS]` | Drives Open-Drain control on `P7501` Pin 1 (`SW_UART` on `GP26`, historically nicknamed `"TW7501"` in legacy CLI strings — distinct from the physical `TW7501` pad on `IC7501`'s 5V backup rail). |
 | **`UARTSEND`** | `UARTSEND [LOW:]<text>` | Transmits ASCII/bytes on `GP4` (`UARTM2P_T`) at `115200 8N1` (default `Hi-Z` enables `Q7514` conduction; `LOW:` prefix forces `SW_UART` low). |
 | **`UARTPROBE`** | `UARTPROBE [sec]` | Runs serial probing on `P7501` and restores `GP26` to `ADC0 Hi-Z` afterward. |
+| **`PANARSP`** | `PANARSP [ms] [boot] [WAIT:x] <act>` | `_dev_SERIAL` RSP bridge (`REGS`, `MEM`, `WMEM`, `DUMPNOR`, `CALL`, `NORUNLOCK:CONFIRM_UPPER_NOR`, `NORLOCK`, `JEDEC_ERASE:<addr>`, `JEDEC_PROG:<addr>,<hex>`). |
+| **`DIAGWATCH`** | `DIAGWATCH [ms] [boot] [act] [WAKE]` | Autonomous `SC0` watchdog and resident `PANAMON1>` monitor (`NORUNLOCK:CONFIRM_UPPER_NOR` / `NORLOCK` dispatching two-step `'U'` → `'W'`/`'E'`). |
+| **`IRTX`** | `IRTX <RED\|SERV\|DEVSUB:CMD...> [GPpin] [repeat]` | 38 kHz Kaseikyo PWM synthesizer ([`p7501_ir_codec.c`](../../firmware/pico-p7501/diag/p7501_ir_codec.c)) constrained to safe spare GPIOs `GP6..9` / `GP16..22` (device `>= 0x01`). |
 | **`FMUSCAN` / `FMUTEST` / `FMUBATCH`** | `FMUSCAN` \| `FMUTEST` \| `FMUBATCH` | Timing probes and byte scans against Bootrom/FMU over `P7501`. |
 | **`PINCHECK`** | `PINCHECK` | 6-pin electrical matrix check on `P7501` (`Hi-Z`, pull-down, pull-up on `GP26`, edge count on `GP2`, `XRESET` rise time, `NSW5V`/`GP3` guard). |
 | **`BUSDIAG` / `SNIFF`** | `BUSDIAG` \| `SNIFF [ms]` | Bus activity diagnostic and passive transition counting. |
@@ -219,13 +223,34 @@ ERASE_NVRAM: OK
 
 ## 8. GDB RSP Bridge Mode (Interactive Debugging with Ghidra / IDA Pro)
 
-The firmware embeds a **GNU Remote Serial Protocol (RSP)** server governed by [`gdb/gdb_rsp.h`](../../firmware/pico-p7501/gdb/gdb_rsp.h):
+The firmware embeds a **GNU Remote Serial Protocol (RSP)** server governed by [`gdb/gdb_rsp.h`](../../firmware/pico-p7501/gdb/gdb_rsp.h), [`gdb_rsp_codec.c`](../../firmware/pico-p7501/gdb/gdb_rsp_codec.c), and [`gdb_rsp_memory.c`](../../firmware/pico-p7501/gdb/gdb_rsp_memory.c):
 * Serial command: `GDB` (or autodetection of packets starting with `$`).
-* Unified TCP/Serial bridge in the Rust CLI:
+* Custom Upper-NOR governance packets in RSP:
+  * `$qPanadigaNorUnlock:CONFIRM_UPPER_NOR#<xx>` — explicitly unlocks writes on **Layer 2 (`SA4..SA133`)**.
+  * `$qPanadigaNorLock#<xx>` — restores the default `NorWritePolicy::NvramOnly` (`E05`) lock.
+* Unified TCP/Serial bridge in the Rust CLI (including async translation over `P7501` UART because no synchronous `DWire32A` clock exists):
   ```bash
-  panadiga gdb-bridge --port COM10 --listen 127.0.0.1:3333
-  # or:
-  panadiga pico gdb-bridge --port COM10 --listen 127.0.0.1:3333
+  # Live async Ghidra/GDB bridge over DIGADIAG PANAMON1> (R/W) or MAIN _dev_SERIAL:
+  panadiga pico gdb-bridge --port COM10 --target-mode panamon1 --listen 127.0.0.1:3333
+  panadiga pico gdb-bridge --port COM10 --target-mode panarsp  --listen 127.0.0.1:3333
+  # Guided interactive bench test battery (Wakeup + BAUDSCAN + 447-code Firmware Dictionary):
+  panadiga pico bench-wizard --port COM10
+  panadiga pico error-lookup 0x83A7
   ```
 * Detailed step-by-step walkthrough for Ghidra, IDA Pro, and `gdb-multiarch`:
   * 📖 **[Interactive Hardware Debugging Guide: GDB, Ghidra, and IDA Pro](GDB_GHIDRA_IDA_DEBUGGING_GUIDE.md)**
+
+---
+
+## 9. Two-Layer NOR Write Policy & Real JEDEC SRAM Stubs
+
+The flash subsystem ([`p7501_flash.c`](../../firmware/pico-p7501/flash/p7501_flash.c)) mirrors [`NorWritePolicy`](../../crates/panadiga-core/src/pico/rsp_codec/policy.rs) over the Spansion `S29JL064H` (`0x80000000..0x807FFFFF` / uncached mirror `0x84000000..0x847FFFFF`):
+
+| Layer | Sectors & Bus Window | Pico Firmware Policy | Unlock / Governance Notes |
+| :--- | :--- | :--- | :--- |
+| **Layer 1 — Critical IPL / Bootloader** | `SA0..SA3` (`0x80000000..0x8003FFFF` / `0x84000000..0x8403FFFF`, `256 KiB`) | **Permanently read-only (`immutable RO`, never writable) → `E05`** | Never unlocked on the Pico probe so `P7501` serial boot recovery remains intact. |
+| **Layer 2 — Upper NOR / BGO App** | `SA4..SA133` (`0x80040000..0x807EFFFF` / `0x84040000..0x847EFFFF`, `64 KiB` sectors) | **Write-protected by default (`NvramOnly` → `E05`, forbidden until unlocked)** | Opt-in unlock via `$qPanadigaNorUnlock:CONFIRM_UPPER_NOR#<xx>`, `PANAMON1` (`U CONFIRM_UPPER_NOR`), or `PANARSP`/`DIAGWATCH` (`NORUNLOCK:CONFIRM_UPPER_NOR`). |
+| **Layer 3 — NVRAM / EEMUL** | `SA134..SA141` (`0x807F0000..0x807FFFFF`, `8 KiB` sectors) | **Writable by default** | Target sanitization region for `U99` recovery (`ERASE_NVRAM CONFIRM`). |
+
+* **JEDEC SRAM Stubs (`0x51800000`):** `PANARSP JEDEC_ERASE:<addr>` and `PANARSP JEDEC_PROG:<addr>,<hex>` (`1..=16` bytes per call) upload the [`p7501_pana_jedec.h`](../../firmware/pico-p7501/uart/p7501_pana_jedec.h) / [`p7501_pana_jedec.c`](../../firmware/pico-p7501/uart/p7501_pana_jedec.c) stub to `0x51800000` (after policy enforcement in [`p7501_pana_rsp_parse.c`](../../firmware/pico-p7501/uart/p7501_pana_rsp_parse.c)), signaling **`PANAJEDEC_OK`** or timeout **`PANAJEDEC_TO`**. Over `PANAMON1>`, [`p7501_diag_watch.c`](../../firmware/pico-p7501/uart/p7501_diag_watch.c) dispatches `'U'` before `'W'`/`'E'`.
+* **Offline Copy-on-Write Fallback:** Image patching runs via `panadiga nvram patch-upper-nor` ([`nvram.rs`](../../crates/panadiga-cli/src/cli/handlers/nvram.rs)) with mandatory SHA-256 `--backup` (blocking `SA0..SA3` unless `--allow-critical-ipl` is specified offline).

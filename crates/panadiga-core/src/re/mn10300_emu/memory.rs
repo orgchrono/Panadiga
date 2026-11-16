@@ -1,62 +1,14 @@
 //! Segmented memory accessors and MOVM/CALL register frame helpers for [`Mn103Vm`].
 
-use super::{CfiStage, MemSegment, Mn103Fault, Mn103Vm};
-use crate::constants::{
-    AM34_FLASH_BASE, AM34_FLASH_IPL_SIZE, AM34_FLASH_UNCACHED_BASE, AM34_SC0_RXB_VA,
-    AM34_SC0_STR_VA, AM34_SC0_TXB_VA,
-};
+use super::spansion_nor::is_ipl_readonly_va;
+use super::{MemSegment, Mn103Fault, Mn103Vm};
+use crate::constants::{AM34_SC0_RXB_VA, AM34_SC0_STR_VA, AM34_SC0_TXB_VA};
 
 const SC0_TXB_VA: u32 = AM34_SC0_TXB_VA;
 const SC0_RXB_VA: u32 = AM34_SC0_RXB_VA;
 const SC0_STR_VA: u32 = AM34_SC0_STR_VA;
 
-/// Returns `true` when `addr` lies in strictly read-only cached/uncached IPL NOR flash.
-pub fn is_ipl_readonly_va(addr: u32) -> bool {
-    let ipl_last = AM34_FLASH_IPL_SIZE - 1;
-    (AM34_FLASH_BASE..=AM34_FLASH_BASE + ipl_last).contains(&addr)
-        || (AM34_FLASH_UNCACHED_BASE..=AM34_FLASH_UNCACHED_BASE + ipl_last).contains(&addr)
-}
-
 impl Mn103Vm {
-    fn try_cfi_write(&mut self, addr: u32, raw_val: u16) -> Option<Result<(), Mn103Fault>> {
-        if !is_ipl_readonly_va(addr) {
-            return None;
-        }
-        let cmd = (raw_val & 0xFF) as u8;
-        let low = addr & 0x0FFF;
-        if cmd == 0xF0 {
-            self.cfi_stage = CfiStage::Normal;
-            return Some(Ok(()));
-        }
-        if matches!(low, 0x554 | 0x555 | 0xAAA) && cmd == 0xAA && self.cfi_stage == CfiStage::Normal
-        {
-            self.cfi_stage = CfiStage::Unlock555;
-            return Some(Ok(()));
-        }
-        if matches!(low, 0xAAA | 0xAAB | 0x554 | 0x555)
-            && cmd == 0x55
-            && self.cfi_stage == CfiStage::Unlock555
-        {
-            self.cfi_stage = CfiStage::Unlock2AA;
-            return Some(Ok(()));
-        }
-        if cmd == 0x90 && self.cfi_stage == CfiStage::Unlock2AA {
-            self.cfi_stage = CfiStage::Autoselect;
-            return Some(Ok(()));
-        }
-        Some(Err(Mn103Fault::IplWriteProtected(addr)))
-    }
-
-    fn read_cfi_autoselect_u16(&self, addr: u32) -> Option<u16> {
-        if self.cfi_stage != CfiStage::Autoselect || !is_ipl_readonly_va(addr) {
-            return None;
-        }
-        match addr & 0xFE {
-            0x00 => Some(0x0001), // Spansion/AMD manufacturer ID
-            0x02 => Some(0x227E), // S29JL064H/S29GL family device ID
-            _ => Some(0xFFFF),
-        }
-    }
     fn locate_slice(&self, addr: u32, len: usize) -> Option<(&MemSegment, usize)> {
         let addr_u64 = addr as u64;
         let end_u64 = addr_u64 + len as u64;
@@ -70,7 +22,7 @@ impl Mn103Vm {
         None
     }
 
-    fn locate_slice_mut(
+    pub(super) fn locate_slice_mut(
         &mut self,
         addr: u32,
         len: usize,
@@ -164,7 +116,7 @@ impl Mn103Vm {
             self.uart_tx.push(val);
             return Ok(());
         }
-        if let Some(res) = self.try_cfi_write(addr, val as u16) {
+        if let Some(res) = self.try_cfi_write(addr, val as u16, 1) {
             return res;
         }
         let (slice, off) = self.locate_slice_mut(addr, 1)?;
@@ -176,7 +128,7 @@ impl Mn103Vm {
         if (addr & 1) != 0 {
             return Err(Mn103Fault::AlignError(addr));
         }
-        if let Some(res) = self.try_cfi_write(addr, val) {
+        if let Some(res) = self.try_cfi_write(addr, val, 2) {
             return res;
         }
         let (slice, off) = self.locate_slice_mut(addr, 2)?;

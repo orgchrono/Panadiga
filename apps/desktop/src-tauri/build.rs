@@ -9,6 +9,7 @@ fn main() {
     println!("cargo:rerun-if-changed=../src");
     println!("cargo:rerun-if-changed=../package.json");
     println!("cargo:rerun-if-changed=tauri.conf.json");
+    println!("cargo:rerun-if-changed=tauri.android.conf.json");
 
     #[cfg(windows)]
     {
@@ -25,7 +26,12 @@ fn main() {
 /// Automatically compiles the React / TypeScript frontend before packaging the native binary
 /// if `../dist` is missing or if sources in `../src` have been modified.
 fn ensure_frontend_built() {
-    let dist_index = Path::new("../dist/index.html");
+    let is_android = std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("android");
+    let dist_index = if is_android {
+        Path::new("../dist-android/index.html")
+    } else {
+        Path::new("../dist/index.html")
+    };
     let mut needs_build = !dist_index.exists();
 
     if !needs_build
@@ -37,13 +43,17 @@ fn ensure_frontend_built() {
     }
 
     if needs_build {
-        println!("cargo:warning=[PANADIGA] Building React/TypeScript frontend (apps/desktop)...");
+        let build_script = if is_android { "build:android" } else { "build" };
+        println!(
+            "cargo:warning=[PANADIGA] Building React/TypeScript frontend (apps/desktop, script={})...",
+            build_script
+        );
         let npm_cmd = if cfg!(windows) { "npm.cmd" } else { "npm" };
         let status = Command::new(npm_cmd)
             .current_dir("..")
-            .args(["run", "build"])
+            .args(["run", build_script])
             .status()
-            .expect("Failed to execute npm run build in apps/desktop");
+            .expect("Failed to execute frontend build script in apps/desktop");
 
         if !status.success() {
             panic!(

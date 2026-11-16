@@ -182,7 +182,17 @@ def build_android(
     if not skip_prep:
         prep_tasks.append(("rustup", lambda: install_android_rust_target(env)))
     if not skip_frontend:
-        prep_tasks.append(("frontend", lambda: build_frontend(env, use_cache=use_cache, capture_output=capture_output)))
+        prep_tasks.append(
+            (
+                "frontend",
+                lambda: build_frontend(
+                    env,
+                    use_cache=use_cache,
+                    capture_output=capture_output,
+                    android=True,
+                ),
+            )
+        )
     run_concurrent_tasks(prep_tasks)
 
     if not (gen_android / "app").is_dir() or not (gen_android / "tauri.settings.gradle").is_file():
@@ -196,12 +206,15 @@ def build_android(
 
     android_cmd = ["npx", "--yes", "@tauri-apps/cli", "android", "build", "--apk", "--target", "aarch64"]
     if skip_frontend:
-        skip_cfg = ROOT / "target" / ".panadiga-cache" / "tauri.skip_frontend.json"
+        skip_cfg = ROOT / "target" / ".panadiga-cache" / "tauri.android.skip_frontend.json"
         skip_cfg.parent.mkdir(parents=True, exist_ok=True)
-        desired_cfg = '{"build":{"beforeBuildCommand":""}}\n'
+        desired_cfg = '{"build":{"frontendDist":"../dist-android","beforeBuildCommand":""}}\n'
         if not skip_cfg.is_file() or skip_cfg.read_text(encoding="utf-8", errors="ignore") != desired_cfg:
             skip_cfg.write_text(desired_cfg, encoding="utf-8")
         android_cmd.extend(["--config", str(skip_cfg)])
+    else:
+        android_cfg = desktop_dir / "src-tauri" / "tauri.android.conf.json"
+        android_cmd.extend(["--config", str(android_cfg)])
 
     build_out = run_step(android_cmd, cwd=desktop_dir, env=env, capture_output=capture_output)
     flush_output(build_out)

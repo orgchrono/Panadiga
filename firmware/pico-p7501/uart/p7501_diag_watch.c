@@ -19,6 +19,7 @@
 
 #include <inttypes.h>
 #include <stdio.h>
+#include <string.h>
 
 typedef struct diagwatch_ctx {
     const p7501_diag_watch_spec_t *spec;
@@ -79,16 +80,23 @@ static void diagwatch_on_byte(void *raw_ctx, uint8_t b, uint32_t rel_us, bool *o
     record_alert_timestamp(dc, hit, ms);
 
     if (tx_ch != '\0') {
-        const size_t tx_len = p7501_diag_watch_format_tx(dc->spec, dc->injected_tx, sizeof(dc->injected_tx));
-        if (tx_len <= 1u) {
-            const uint8_t tx_u8 = (uint8_t)tx_ch;
-            p7501_pio_tx_bytes(&tx_u8, 1u, false);
-            dc->injected_tx[0] = tx_ch;
-            dc->injected_len = 1u;
-        } else {
+        size_t tx_len = 0u;
+        if (tx_ch == 'U') {
+            tx_len = sizeof(P7501_DIAG_WATCH_UNLOCK_TX) - 1u;
+            memcpy(dc->injected_tx, P7501_DIAG_WATCH_UNLOCK_TX, tx_len + 1u);
             p7501_pio_tx_bytes((const uint8_t *)dc->injected_tx, tx_len, false);
-            dc->injected_len = tx_len;
+        } else {
+            tx_len = p7501_diag_watch_format_tx(dc->spec, dc->injected_tx, sizeof(dc->injected_tx));
+            if (tx_len <= 1u) {
+                const uint8_t tx_u8 = (uint8_t)tx_ch;
+                p7501_pio_tx_bytes(&tx_u8, 1u, false);
+                dc->injected_tx[0] = tx_ch;
+                tx_len = 1u;
+            } else {
+                p7501_pio_tx_bytes((const uint8_t *)dc->injected_tx, tx_len, false);
+            }
         }
+        dc->injected_len = tx_len;
         dc->panamon_ms = ms;
         dc->tx_dispatched = true;
     }

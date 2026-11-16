@@ -92,6 +92,17 @@ pub(super) fn patch_s8_rel(
     Ok(())
 }
 
+pub(super) fn emit_uppercase_d0(buf: &mut Vec<u8>, tag: &str) -> Result<()> {
+    buf.extend_from_slice(&[0xA0, b'a']);
+    let blt_skip = emit_branch8_placeholder(buf, 0xC0);
+    buf.extend_from_slice(&[0xA0, b'z']);
+    let bgt_skip = emit_branch8_placeholder(buf, 0xC1);
+    buf.extend_from_slice(&[0x28, 0xE0]);
+    let done = buf.len();
+    patch_s8_rel(buf, blt_skip, done, tag)?;
+    patch_s8_rel(buf, bgt_skip, done, tag)
+}
+
 pub(super) fn emit_print_str(
     buf: &mut Vec<u8>,
     pt: &mut PatchTable,
@@ -282,53 +293,5 @@ pub(super) fn emit_read_hex_u32_sub(
         patch_s8_rel(buf, br, bad_ret_off, "HEX_BAD_RET")?;
     }
     buf.extend_from_slice(&[0x85, 0x00, 0xDF, 0x00, 0x04]); // mov 0, d1; ret [], 4
-    Ok(sub_off)
-}
-
-/// Emits helper verifying `A2` is writable (`0xD0 = 0`) vs Spansion IPL read-only NOR (`0xD0 = -1`).
-pub(super) fn emit_check_write_a2_sub(buf: &mut Vec<u8>) -> Result<usize> {
-    let sub_off = buf.len();
-    let _ = emit_mov_imm32(buf, 0xDA, 0x8000_0000);
-    let allow_1 = emit_branch8_placeholder(buf, 0xC4);
-    let _ = emit_mov_imm32(buf, 0xDA, 0x807F_0000);
-    let block_1 = emit_branch8_placeholder(buf, 0xC4);
-    let _ = emit_mov_imm32(buf, 0xDA, 0x8400_0000);
-    let allow_2 = emit_branch8_placeholder(buf, 0xC4);
-    let _ = emit_mov_imm32(buf, 0xDA, 0x847F_0000);
-    let block_2 = emit_branch8_placeholder(buf, 0xC4);
-
-    let allow_off = buf.len();
-    patch_s8_rel(buf, allow_1, allow_off, "WR_ALLOW1")?;
-    patch_s8_rel(buf, allow_2, allow_off, "WR_ALLOW2")?;
-    buf.extend_from_slice(&[0x00, 0xDF, 0x00, 0x04]);
-
-    let block_off = buf.len();
-    patch_s8_rel(buf, block_1, block_off, "WR_BLOCK1")?;
-    patch_s8_rel(buf, block_2, block_off, "WR_BLOCK2")?;
-    buf.extend_from_slice(&[0x80, 0xFF, 0xDF, 0x00, 0x04]);
-    Ok(sub_off)
-}
-
-/// Emits helper confining 8 KB microsector erase `A2` strictly within NVRAM `0x807F..`/`0x847F..`.
-pub(super) fn emit_check_nvram_erase_a2_sub(buf: &mut Vec<u8>) -> Result<usize> {
-    let sub_off = buf.len();
-    let _ = emit_mov_imm32(buf, 0xDA, 0x807F_0000);
-    let blk_1 = emit_branch8_placeholder(buf, 0xC4);
-    let _ = emit_mov_imm32(buf, 0xDA, 0x807F_E001);
-    let ok_1 = emit_branch8_placeholder(buf, 0xC4);
-    let _ = emit_mov_imm32(buf, 0xDA, 0x847F_0000);
-    let blk_2 = emit_branch8_placeholder(buf, 0xC4);
-    let _ = emit_mov_imm32(buf, 0xDA, 0x847F_E001);
-    let ok_2 = emit_branch8_placeholder(buf, 0xC4);
-
-    let blk_off = buf.len();
-    patch_s8_rel(buf, blk_1, blk_off, "ER_BLK1")?;
-    patch_s8_rel(buf, blk_2, blk_off, "ER_BLK2")?;
-    buf.extend_from_slice(&[0x80, 0xFF, 0xDF, 0x00, 0x04]);
-
-    let ok_off = buf.len();
-    patch_s8_rel(buf, ok_1, ok_off, "ER_OK1")?;
-    patch_s8_rel(buf, ok_2, ok_off, "ER_OK2")?;
-    buf.extend_from_slice(&[0x00, 0xDF, 0x00, 0x04]);
     Ok(sub_off)
 }

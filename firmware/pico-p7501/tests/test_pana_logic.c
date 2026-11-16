@@ -8,6 +8,7 @@
 #include "tests/test_pana_logic.h"
 #include "uart/p7501_pana_rsp.h"
 #include "uart/p7501_pana_dumpnor.h"
+#include "uart/p7501_pana_jedec.h"
 #include "flash/p7501_flash.h"
 #include "diag/p7501_piologic_codec.h"
 #include "diag/p7501_sds_codec.h"
@@ -217,6 +218,65 @@ static void test_pana_dumpnor_stub_and_args(void) {
     assert(!p7501_panarsp_parse_args("DUMPNOR 847F0000", &spec));
 }
 
+static bool buf_contains_bytes(const uint8_t *hay, size_t hlen, const void *needle, size_t nlen) {
+    if (nlen == 0u || hlen < nlen) {
+        return false;
+    }
+    for (size_t i = 0u; i <= (hlen - nlen); ++i) {
+        if (memcmp(&hay[i], needle, nlen) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static void test_pana_rsp_jedec_and_nor_policy(void) {
+    p7501_flash_set_upper_nor_unlocked(false);
+    p7501_pana_rsp_spec_t spec;
+
+    /* Locked default blocks Upper NOR SA4..SA133 in WMEM/WRITE32/JEDEC_* while permitting NVRAM */
+    assert(!p7501_panarsp_parse_args("JEDEC_ERASE:84200000", &spec));
+    assert(!p7501_panarsp_parse_args("JEDEC_PROG:84200010,A55A", &spec));
+    assert(p7501_panarsp_parse_args("JEDEC_ERASE:807FE000", &spec));
+    assert(spec.action == PANA_RSP_ACT_JEDEC_ERASE && spec.addr == 0x807FE000UL);
+    assert(p7501_panarsp_parse_args("JEDEC_PROG:847F0010,A55A", &spec));
+    assert(spec.action == PANA_RSP_ACT_JEDEC_PROG && spec.data_len == 2u);
+
+    /* Bad unlock token MUST be rejected without unlocking */
+    assert(!p7501_panarsp_parse_args("NORUNLOCK:WRONG_TOKEN JEDEC_ERASE:84200000", &spec));
+    assert(!p7501_flash_is_upper_nor_unlocked());
+
+    /* Explicit unlock enables SA4..SA133 while SA0..SA3 stays permanently blocked */
+    assert(!p7501_panarsp_parse_args("NORUNLOCK:CONFIRM_UPPER_NOR JEDEC_ERASE:84000000", &spec));
+    assert(!p7501_flash_is_upper_nor_unlocked()); /* atomic rollback on failure */
+    assert(!p7501_panarsp_parse_args("NORUNLOCK:CONFIRM_UPPER_NOR WMEM:8003FFFC,11223344", &spec));
+    assert(p7501_panarsp_parse_args("NORUNLOCK:CONFIRM_UPPER_NOR JEDEC_ERASE:80200000", &spec));
+    assert(p7501_flash_is_upper_nor_unlocked());
+    assert(p7501_panarsp_parse_args("JEDEC_PROG:84200011,5A", &spec));
+    assert(p7501_panarsp_parse_args("WMEM:84400000,11223344", &spec));
+    assert(p7501_panarsp_parse_args("WRITE32:80200000,DEADBEEF", &spec));
+    assert(p7501_panarsp_parse_args("NORLOCK", &spec));
+    assert(spec.action == PANA_RSP_ACT_NOR_POLICY && !spec.nor_unlocked_effective);
+    assert(!p7501_flash_is_upper_nor_unlocked());
+    assert(!p7501_panarsp_parse_args("JEDEC_ERASE:84200000", &spec));
+
+    /* Stub generation invariants: uncached bus literals + completion/timeout banners */
+    uint8_t stub[P7501_JEDEC_MAX_STUB_SIZE];
+    const uint8_t unlock1_le[4] = { 0xAAu, 0x0Au, 0x00u, 0x84u };
+    const size_t elen = p7501_jedec_build_erase_stub(0x80200000UL, P7501_JEDEC_STUB_ADDR, stub, sizeof(stub));
+    assert(elen > 64u && elen <= P7501_JEDEC_MAX_STUB_SIZE);
+    assert(buf_contains_bytes(stub, elen, unlock1_le, sizeof(unlock1_le)));
+    assert(buf_contains_bytes(stub, elen, P7501_JEDEC_OK_TOKEN, sizeof(P7501_JEDEC_OK_TOKEN) - 1u));
+    assert(buf_contains_bytes(stub, elen, P7501_JEDEC_TO_TOKEN, sizeof(P7501_JEDEC_TO_TOKEN) - 1u));
+
+    const uint8_t prog_data[3] = { 0xA5u, 0x5Au, 0xF0u };
+    const size_t plen = p7501_jedec_build_prog_stub(0x84200010UL, prog_data, sizeof(prog_data), P7501_JEDEC_STUB_ADDR, stub, sizeof(stub));
+    assert(plen > 80u && plen <= P7501_JEDEC_MAX_STUB_SIZE);
+    assert(buf_contains_bytes(stub, plen, unlock1_le, sizeof(unlock1_le)));
+    assert(buf_contains_bytes(stub, plen, prog_data, sizeof(prog_data)));
+    assert(buf_contains_bytes(stub, plen, P7501_JEDEC_OK_TOKEN, sizeof(P7501_JEDEC_OK_TOKEN) - 1u));
+}
+
 static void test_rsp_boot_prose_does_not_trip_nak(void) {
     const char *boot_log =
         "Main hung-up time changed 255[s].\r\n"
@@ -368,6 +428,7 @@ int p7501_run_pana_logic_tests(void) {
     test_piologic_analyzer();
     test_flash_geometry_and_bgo();
     test_pana_dumpnor_stub_and_args();
+    test_pana_rsp_jedec_and_nor_policy();
     p7501_run_pana_diag_drv_tests();
     test_sds_bus_sniffer_codec();
     printf("[HOST-TEST] PANARSP + REGS + DUMPNOR + DIAGWATCH + DRVPANA + FlashGeo + PIOLOGIC + SDSNIFF passed.\n");

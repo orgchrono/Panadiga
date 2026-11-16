@@ -38,9 +38,19 @@ const tailwindConfig = {
   plugins: [],
 };
 
+const isAndroidApk =
+  process.env.PANADIGA_TARGET === "android" ||
+  process.argv.some(
+    (arg, idx, arr) =>
+      arg === "--mode=android" || (arg === "--mode" && arr[idx + 1] === "android")
+  );
+
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  define: {
+    __PANADIGA_ANDROID_APK__: JSON.stringify(isAndroidApk),
+  },
   clearScreen: false,
   server: {
     port: 1420,
@@ -71,6 +81,8 @@ export default defineConfig({
     },
   },
   build: {
+    outDir: isAndroidApk ? "dist-android" : "dist",
+    emptyOutDir: true,
     target: "es2020",
     minify: !process.env.TAURI_DEBUG ? "esbuild" : false,
     sourcemap: !!process.env.TAURI_DEBUG,

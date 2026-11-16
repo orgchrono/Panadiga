@@ -28,5 +28,8 @@ tauri-plugin-shell = { workspace = true }
 [target.'cfg(windows)'.dependencies]
 windows-sys = { workspace = true }
 
+[dev-dependencies]
+panadiga-core = { path = "../../../crates/panadiga-core", features = ["android-ir"] }
+
 [build-dependencies]
 tauri-build = { workspace = true }

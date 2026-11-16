@@ -11,3 +11,9 @@ fn nor_emu_end_to_end_patcher_suite_passes_deterministically() {
     assert_eq!(rep.cfi_manufacturer_id_hex, "0x0001");
     assert_eq!(rep.cfi_device_id_hex, "0x227E");
 }
+
+#[test]
+fn real_binaries_and_8mb_nor_jedec_suite_passes_when_present() {
+    super::checks_real_nor::run_optional_real_binaries_integration()
+        .expect("Real 8 MiB flash.bin + PROG061 + MAIN verification suite should pass");
+}

@@ -7,7 +7,9 @@
 
 #include "uart/p7501_pana_rsp_report.h"
 #include "uart/p7501_uart_pio_engine.h"
+#include "common/p7501_hex.h"
 #include "hal/p7501_watchdog.h"
+#include "p7501_types.h"
 #include "pico/stdlib.h"
 
 #include <inttypes.h>
@@ -182,4 +184,91 @@ void panarsp_print_report(
            (unsigned)cap->len,
            has_frame ? (info.checksum_ok ? "VALID" : "BAD_CSUM") : "NO_REPLY",
            fifo_ovf ? "YES" : "NO");
+}
+
+uint32_t panarsp_tx_frame(const char *payload) {
+    char frame[P7501_RSP_MAX_FRAME];
+    const size_t flen = p7501_rsp_build_frame(payload, frame, sizeof(frame));
+    if (flen > 0u) {
+        p7501_pio_tx_bytes((const uint8_t *)frame, flen, false);
+    }
+    return (uint32_t)flen;
+}
+
+static bool panarsp_upload_stub_and_go(
+    panarsp_rx_cap_t *cap,
+    uint32_t stub_addr,
+    const uint8_t *stub,
+    size_t stub_len
+) {
+    char frame[P7501_RSP_MAX_FRAME];
+    for (size_t off = 0u; off < stub_len; off += 16u) {
+        const size_t chunk = (stub_len - off > 16u) ? 16u : (stub_len - off);
+        const size_t flen = p7501_rsp_build_write_mem(
+            stub_addr + (uint32_t)off, &stub[off], chunk, frame, sizeof(frame)
+        );
+        if (flen == 0u) {
+            return false;
+        }
+        const size_t step_off = cap->len;
+        p7501_pio_tx_bytes((const uint8_t *)frame, flen, false);
+        panarsp_drain_for_ms(cap, 45u, true, step_off);
+    }
+    const size_t cb_len = p7501_rsp_build_write_u32(
+        P7501_AM34_SERIAL_CB_PTR_ADDR, stub_addr, frame, sizeof(frame)
+    );
+    if (cb_len == 0u) {
+        return false;
+    }
+    const size_t cb_off = cap->len;
+    p7501_pio_tx_bytes((const uint8_t *)frame, cb_len, false);
+    panarsp_drain_for_ms(cap, 80u, true, cb_off);
+    stdio_flush();
+    (void)panarsp_tx_frame("g");
+    return true;
+}
+
+size_t panarsp_stream_until_tokens(
+    panarsp_rx_cap_t *cap,
+    uint32_t stub_addr,
+    const uint8_t *stub,
+    size_t stub_len,
+    uint32_t timeout_ms,
+    const char *tok_hdr,
+    const char *tok_done,
+    const char *tok_fail,
+    bool *out_hdr_seen,
+    bool *out_done_seen,
+    bool *out_fail_seen,
+    uint32_t *out_stream_bytes
+) {
+    if (!panarsp_upload_stub_and_go(cap, stub_addr, stub, stub_len)) {
+        return cap->len;
+    }
+    const size_t stream_off = cap->len;
+    uint8_t r1[16], r2[16], r3[16];
+    size_t l1 = 0u, l2 = 0u, l3 = 0u;
+    bool s1 = (tok_hdr == NULL), s2 = false, s3 = false;
+    uint32_t rx = 0u;
+    const uint64_t t0 = time_us_64();
+    const uint64_t deadline = t0 + ((uint64_t)timeout_ms * 1000ULL);
+    while (!s2 && !s3 && p7501_wdt_loop_step(t0, deadline, true, NULL)) {
+        p7501_pio_poll_sw_uart_release();
+        uint8_t b = 0u;
+        while (p7501_pio_pop_rx_byte(&b)) {
+            putchar((int)b);
+            rx += 1u;
+            if (!s1 && p7501_rolling_match_push(r1, &l1, sizeof(r1), b, tok_hdr)) s1 = true;
+            if (tok_done && p7501_rolling_match_push(r2, &l2, sizeof(r2), b, tok_done)) { s2 = true; break; }
+            if (tok_fail && p7501_rolling_match_push(r3, &l3, sizeof(r3), b, tok_fail)) { s3 = true; break; }
+            if ((rx & 0xFFu) == 0u) stdio_flush();
+        }
+        tight_loop_contents();
+    }
+    stdio_flush();
+    *out_hdr_seen = s1;
+    *out_done_seen = s2;
+    if (out_fail_seen) *out_fail_seen = s3;
+    *out_stream_bytes = rx;
+    return stream_off;
 }

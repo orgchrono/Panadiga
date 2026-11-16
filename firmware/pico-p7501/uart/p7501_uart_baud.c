@@ -11,6 +11,7 @@
 #include "hal/p7501_led.h"
 #include "hal/p7501_watchdog.h"
 #include "p7501_types.h"
+#include "uart/p7501_uart_autobaud.h"
 #include "uart/p7501_uart_codec.h"
 #include "uart/p7501_uart_pio_engine.h"
 
@@ -83,7 +84,7 @@ void p7501_cmd_baudscan(const char *arg) {
         }
     }
 
-    printf("[BAUDSCAN] Measuring GP2 (P7501 RXD) pulse widths over %" PRIu32 " ms...\n",
+    printf("[BAUDSCAN] Measuring GP2 (UARTP2M_T RXD) dual-polarity pulses & PIO1 framing over %" PRIu32 " ms...\n",
            spec.window_ms);
     fflush(stdout);
 
@@ -92,11 +93,14 @@ void p7501_cmd_baudscan(const char *arg) {
 
     const uint64_t t0_us = time_us_64();
     const uint64_t deadline_us = t0_us + ((uint64_t)spec.window_ms * 1000ULL);
-    uint32_t min_low_us = UINT32_MAX;
-    uint32_t max_low_us = 0u;
+    p7501_baud_hist_t hist;
+    p7501_baud_hist_init(&hist);
     uint32_t edges = 0u;
+    uint32_t pio_rx_bytes = 0u;
+    uint32_t pio_ascii_bytes = 0u;
+    uint32_t pio_framing_errs = 0u;
     bool prev_level = gpio_get(P7501_PIN_RXD);
-    uint32_t last_fall_us = time_us_32();
+    uint32_t last_edge_us = time_us_32();
     bool aborted = false;
 
     p7501_wdt_set_stage(P7501_WDT_STAGE_RX_WAIT);
@@ -105,21 +109,21 @@ void p7501_cmd_baudscan(const char *arg) {
         const bool cur = gpio_get(P7501_PIN_RXD);
         if (cur != prev_level) {
             const uint32_t now_us = time_us_32();
+            const uint32_t width_us = now_us - last_edge_us;
             ++edges;
-            if (!cur) {
-                last_fall_us = now_us;
-            } else {
-                const uint32_t low_us = now_us - last_fall_us;
-                if (low_us >= 2u && low_us <= 2000u) {
-                    if (low_us < min_low_us) {
-                        min_low_us = low_us;
-                    }
-                    if (low_us > max_low_us) {
-                        max_low_us = low_us;
-                    }
-                }
-            }
+            p7501_baud_hist_push_pulse(&hist, width_us, prev_level);
+            last_edge_us = now_us;
             prev_level = cur;
+        }
+        uint8_t rx_b = 0u;
+        if (p7501_pio_pop_rx_byte(&rx_b)) {
+            ++pio_rx_bytes;
+            if ((rx_b >= 0x20u && rx_b <= 0x7Eu) || rx_b == '\r' || rx_b == '\n' || rx_b == '\t') {
+                ++pio_ascii_bytes;
+            }
+        }
+        if (p7501_pio_poll_and_clear_framing_err()) {
+            ++pio_framing_errs;
         }
     }
 
@@ -127,20 +131,27 @@ void p7501_cmd_baudscan(const char *arg) {
     p7501_pio_end_session();
     p7501_led_set_auto_mode(LED_MODE_HEARTBEAT_IDLE);
 
-    if (edges == 0u || min_low_us == UINT32_MAX) {
-        printf("[BAUDSCAN] No valid UART low pulses observed on GP2 (edges=%" PRIu32 ").\n", edges);
+    if (edges == 0u || (hist.low_pulses + hist.high_pulses) == 0u) {
+        printf("[BAUDSCAN] No valid UART pulses observed on GP2 (edges=%" PRIu32 " glitches=%" PRIu32 ").\n",
+               edges, hist.glitches_rejected);
         printf("BAUDSCAN: OK (no_signal)\n");
         return;
     }
 
-    uint32_t raw_bps = 0u;
-    const uint32_t snapped = p7501_snap_standard_baud(min_low_us, &raw_bps);
-    printf("[BAUDSCAN] edges=%" PRIu32 " min_low_us=%" PRIu32 " max_low_us=%" PRIu32
-           " raw_bps=%" PRIu32 " snapped_baud=%" PRIu32 "\n",
-           edges, min_low_us, max_low_us, raw_bps, snapped);
+    p7501_baud_estimate_t est;
+    p7501_baud_hist_finish(&hist, &est);
+    printf("[BAUDSCAN] edges=%" PRIu32 " min_low_us=%" PRIu32 " min_high_us=%" PRIu32
+           " raw_bps=%" PRIu32 " snapped_baud=%" PRIu32 " cluster_hits=%" PRIu32
+           " confidence=%" PRIu32 "%% glitches=%" PRIu32
+           " rx_bytes=%" PRIu32 " ascii=%" PRIu32 " framing_errs=%" PRIu32 "\n",
+           edges,
+           (hist.min_low_us == UINT32_MAX) ? 0u : hist.min_low_us,
+           (hist.min_high_us == UINT32_MAX) ? 0u : hist.min_high_us,
+           est.raw_bps, est.snapped_baud, est.best_cluster_hits, est.confidence_pct,
+           hist.glitches_rejected, pio_rx_bytes, pio_ascii_bytes, pio_framing_errs);
 
-    if (auto_apply && snapped > 0u && p7501_pio_set_baud(snapped)) {
-        printf("[BAUDSCAN] Auto-applied PIO1 baudrate -> %" PRIu32 " bps.\n", snapped);
+    if (auto_apply && est.snapped_baud > 0u && p7501_pio_set_baud(est.snapped_baud)) {
+        printf("[BAUDSCAN] Auto-applied PIO1 baudrate -> %" PRIu32 " bps.\n", est.snapped_baud);
     }
     printf("BAUDSCAN: OK\n");
 }

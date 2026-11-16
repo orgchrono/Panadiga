@@ -81,12 +81,14 @@ Ghidra é a ferramenta primária de descompilação de código estático e anál
 4. **`tools/ghidra/ghidra_auto_unbrick_audit.py` & `ghidra_mn103_fix_decompilation.py` (Resolvedores Armadilhas 1–7):**
    - Automatizam referências cruzadas de unbrick pré-MAIN/MAIN e recuperação de ilhas de código/stack-purge (`??`).
 
-### 2.3 Ponte Nativa GDB RSP (`panadiga pico gdb-bridge`)
+### 2.3 Ponte Nativa Assíncrona GDB RSP (`panadiga pico gdb-bridge`)
 * **Arquitetura Alvo:** Matsushita **`mn10300`** (`AM34 / MN103S`), evitando abstrações genéricas incompatíveis com JTAG ARM padrão.
-* **Disparador:** Botão **"Iniciar Ponte GDB"** / **"GDB Multiarch"** no Panadiga Desktop, [`tools/iniciar_ponte_gdb.cmd`](../../tools/iniciar_ponte_gdb.cmd) ou [`tools/conectar_gdb_multiarch.cmd`](../../tools/conectar_gdb_multiarch.cmd).
-* **Recursos:**
-  - Encaminhamento direto TCP (`127.0.0.1:3333`) $\leftrightarrow$ Raspberry Pi Pico CDC (`P7501 Async UART`).
-  - Comandos nativos para perfis discretos de boot, dump de setores e inspeção/sanitização de NVRAM.
+* **Por que `P7501` exige Ponte Assíncrona:** O conector `P7501` transporta **UART assíncrona `115200 8N1`** (`UARTP2M_T` Pino 6 / `UARTM2P_T` Pino 3) sem linha síncrona `DWire32A`. No modo `ocd` legado (`GDB`), [`p7501_bus_protocol.c`](../../firmware/pico-p7501/protocol/p7501_bus_protocol.c) retorna `0xFFFFFFFF` por falta de clock síncrono.
+* **Três Modos Selecionáveis (`--target-mode`):**
+  - **`panamon1`** (`panadiga pico gdb-bridge --port COM10 --target-mode panamon1`): aciona `BRIDGE 115200 PASSIVE` no Pico e traduz pacotes RSP síncronos do Ghidra (`$qSupported`, `$qXfer:memory-map:read`, `$g`, `$m`, `$M` com guarda IPL) em comandos assíncronos `R`/`W` no monitor **`PANAMON1>`** (`DIGADIAG.FRM`).
+  - **`panarsp`** (`--target-mode panarsp`): encaminha frames RSP direto ao stub `_dev_SERIAL` quando o `MAIN` está ativo.
+  - **`ocd`** (legado): modo RSP embarcado no Pico.
+* **Disparador & Pré-diagnóstico:** [`tools/iniciar_ponte_gdb.cmd`](../../tools/iniciar_ponte_gdb.cmd), [`tools/conectar_gdb_multiarch.cmd`](../../tools/conectar_gdb_multiarch.cmd) ou `panadiga pico bench-wizard` (para verificar antes se o alvo saiu de `U99` e expôs monitor UART).
 
 ### 2.4 HxD Hex Editor Portable
 * **Executável Integrado:** [`tools/HxD/app/HxD64.exe`](../../tools/Abrir_HxD.cmd).

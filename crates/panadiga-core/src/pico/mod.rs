@@ -6,7 +6,9 @@
 //! Supports Raspberry Pi Pico/Pico W, Pico 2 (ARM & RISC-V), Arduino Nano RP2040 Connect,
 //! Seeed XIAO, Adafruit, SparkFun, and Waveshare RP2-family controllers across Windows, Linux, and macOS.
 
+pub mod async_gdb_proxy;
 pub mod bench_decoders;
+pub mod bench_wizard;
 pub mod bridge;
 pub mod cdc;
 pub mod diag_rows;
@@ -16,8 +18,10 @@ pub mod log_decoder;
 pub mod platforms;
 pub mod rsp_codec;
 
+pub use async_gdb_proxy::GdbBridgeTargetMode;
 pub use bench_decoders::*;
-pub use bridge::run_gdb_bridge;
+pub use bench_wizard::*;
+pub use bridge::{run_gdb_bridge, run_gdb_bridge_with_mode};
 pub use diagnostics::ping_pico;
 pub use flasher::*;
 pub use log_decoder::*;

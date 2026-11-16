@@ -70,6 +70,15 @@ bool p7501_flash_is_readonly_nor_range(uint32_t flash_size_bytes,
                                        uint32_t total_len);
 bool p7501_flash_is_protected_ipl_range(uint32_t addr, size_t len);
 bool p7501_flash_is_critical_boot_ipl_range(uint32_t addr, size_t len);
+bool p7501_flash_is_upper_nor_unlocked(void);
+void p7501_flash_set_upper_nor_unlocked(bool unlocked);
+bool p7501_flash_is_write_blocked_with_policy(uint32_t addr, size_t len, bool upper_nor_unlocked);
+bool p7501_flash_is_write_blocked(uint32_t addr, size_t len);
+bool p7501_flash_is_erasable_nor_addr(uint32_t addr, bool upper_nor_unlocked);
+uint32_t p7501_flash_normalize_uncached_addr(uint32_t addr);
+int p7501_flash_eval_policy_token(const char *tok);
+bool p7501_flash_consume_policy_tok(const char *tok, int *io_override, bool *out_invalid);
+bool p7501_flash_effective_policy(int policy_override);
 uint32_t p7501_flash_get_sector_size_at(uint32_t flash_size_bytes, uint32_t addr);
 bool p7501_flash_is_nvram_microsector_addr(uint32_t addr);
 uint32_t p7501_hw_autodetect_flash_size(void);

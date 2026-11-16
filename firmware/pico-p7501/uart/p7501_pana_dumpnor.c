@@ -12,6 +12,17 @@
 
 #include <string.h>
 
+const uint8_t k_p7501_mn103_putc_d3[24] = {
+    0xFCu, 0xACu, 0x0Cu, 0x20u, 0x00u, 0xD4u, /* movhu (0xD400200C), d0 */
+    0x1Cu,                                     /* exthu d0 */
+    0xF8u, 0xE0u, 0xA0u,                       /* and 0xA0, d0 */
+    0xA0u, 0x00u,                              /* cmp 0, d0 */
+    0xC9u, 0xF4u,                              /* bne -12 */
+    0x8Cu,                                     /* mov d3, d0 */
+    0xFCu, 0x82u, 0x08u, 0x20u, 0x00u, 0xD4u, /* movbu d0, (0xD4002008) */
+    0xDFu, 0x00u, 0x00u                        /* ret [], 0 */
+};
+
 typedef struct dumpnor_buf {
     uint8_t *ptr;
     size_t len;
@@ -150,17 +161,7 @@ size_t p7501_dumpnor_build_stub(
         return 0u;
     }
 
-    /* Verified MN103S subroutine: poll SC0STR(0xD400200C) & 0xA0, write D3 -> SC0TXB(0xD4002008). */
-    static const uint8_t k_putc_d3[24] = {
-        0xFCu, 0xACu, 0x0Cu, 0x20u, 0x00u, 0xD4u, /* movhu (0xD400200C), d0 */
-        0x1Cu,                                     /* exthu d0 */
-        0xF8u, 0xE0u, 0xA0u,                       /* and 0xA0, d0 */
-        0xA0u, 0x00u,                              /* cmp 0, d0 */
-        0xC9u, 0xF4u,                              /* bne -12 */
-        0x8Cu,                                     /* mov d3, d0 */
-        0xFCu, 0x82u, 0x08u, 0x20u, 0x00u, 0xD4u, /* movbu d0, (0xD4002008) */
-        0xDFu, 0x00u, 0x00u                        /* ret [], 0 */
-    };
+    /* Emit SC0 PUTC(D3) leaf subroutine + loop primitives */
     static const uint8_t k_loop_hdr[2]  = { 0x8Au, 0x00u };
     static const uint8_t k_rd_byte[4]   = { 0xF0u, 0x40u, 0x83u, 0xE2u };
     static const uint8_t k_next_byte[6] = { 0x20u, 0x01u, 0x29u, 0xFFu, 0xA5u, 0x00u };
@@ -213,7 +214,7 @@ size_t p7501_dumpnor_build_stub(
     emit_bytes(&b, k_ret0, sizeof(k_ret0));
 
     const size_t putc_off = b.len;
-    emit_bytes(&b, k_putc_d3, sizeof(k_putc_d3));
+    emit_bytes(&b, k_p7501_mn103_putc_d3, sizeof(k_p7501_mn103_putc_d3));
 
     const size_t hdr_off = b.len;
     emit_bytes(&b, (const uint8_t *)"PANADMP1", 8u);

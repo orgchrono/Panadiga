@@ -9,6 +9,7 @@
 #include "uart/p7501_pana_rsp.h"
 #include "uart/p7501_pana_rsp_internal.h"
 #include "uart/p7501_pana_dumpnor.h"
+#include "uart/p7501_pana_jedec.h"
 #include "flash/p7501_flash.h"
 #include "common/p7501_hex.h"
 #include "common/p7501_wdt_logic.h"
@@ -16,43 +17,28 @@
 #include <stdio.h>
 #include <string.h>
 
+static bool parse_addr_comma_tail(const char *spec, uint32_t *out_addr, const char **out_tail) {
+    const char *comma = strchr(spec, ',');
+    if (comma == NULL || comma == spec || comma[1] == '\0') {
+        return false;
+    }
+    if (!p7501_rsp_parse_hex_u32_span(spec, (size_t)(comma - spec), out_addr)) {
+        return false;
+    }
+    *out_tail = comma + 1;
+    return true;
+}
+
 static bool parse_mem_spec(const char *spec_text, char opcode, char *out_payload, size_t cap) {
-    const char *comma = strchr(spec_text, ',');
-    if (comma == NULL || comma == spec_text || comma[1] == '\0') {
+    uint32_t addr = 0u;
+    const char *tail = NULL;
+    uint32_t len = 0u;
+    if (!parse_addr_comma_tail(spec_text, &addr, &tail) ||
+        !p7501_rsp_parse_hex_u32(tail, 6u, &len) || len == 0u || len > 0xFFFFu) {
         return false;
     }
-    const char *addr_start = spec_text;
-    if (addr_start[0] == '0' && (addr_start[1] == 'x' || addr_start[1] == 'X')) {
-        addr_start += 2;
-    }
-    size_t addr_len = (size_t)(comma - addr_start);
-    if (addr_len == 0u || addr_len > 8u) {
-        return false;
-    }
-    for (size_t i = 0u; i < addr_len; ++i) {
-        if (p7501_hex_char_to_nibble(addr_start[i]) < 0) {
-            return false;
-        }
-    }
-
-    const char *len_start = comma + 1;
-    if (len_start[0] == '0' && (len_start[1] == 'x' || len_start[1] == 'X')) {
-        len_start += 2;
-    }
-    size_t len_chars = strlen(len_start);
-    if (len_chars == 0u || len_chars > 4u) {
-        return false;
-    }
-    for (size_t i = 0u; i < len_chars; ++i) {
-        if (p7501_hex_char_to_nibble(len_start[i]) < 0) {
-            return false;
-        }
-    }
-
-    char addr_buf[12];
-    memcpy(addr_buf, addr_start, addr_len);
-    addr_buf[addr_len] = '\0';
-    int n = snprintf(out_payload, cap, "%c%s,%s", opcode, addr_buf, len_start);
+    const char *len_start = (tail[0] == '0' && (tail[1] == 'x' || tail[1] == 'X')) ? (tail + 2) : tail;
+    int n = snprintf(out_payload, cap, "%c%X,%s", opcode, (unsigned)addr, len_start);
     return n > 0 && (size_t)n < cap;
 }
 
@@ -61,9 +47,6 @@ static bool assign_write_u32_payload(
     uint32_t value_le,
     p7501_pana_rsp_spec_t *out
 ) {
-    if (p7501_flash_is_protected_ipl_range(dest_addr, 4u)) {
-        return false;
-    }
     uint8_t le[4];
     p7501_rsp_encode_u32_le(value_le, le);
     if (!p7501_rsp_build_write_mem_payload(dest_addr, le, sizeof(le), out->payload, sizeof(out->payload))) {
@@ -76,35 +59,28 @@ static bool assign_write_u32_payload(
 }
 
 static bool apply_panarsp_action_token(const char *tok, p7501_pana_rsp_spec_t *out, bool *saw_action) {
-    if (p7501_ascii_ieq(tok, "PROBESEQ") || p7501_ascii_ieq(tok, "PROBE") ||
-        p7501_ascii_ieq(tok, "PING_STUB")) {
-        out->action = PANA_RSP_ACT_SEQ;
-        *saw_action = true;
-        return true;
-    }
-    if (p7501_ascii_ieq(tok, "G")) {
-        out->action = PANA_RSP_ACT_G;
-        snprintf(out->payload, sizeof(out->payload), "g");
-        *saw_action = true;
-        return true;
-    }
-    if (p7501_ascii_ieq(tok, "REGS")) {
-        out->action = PANA_RSP_ACT_REGS;
-        snprintf(out->payload, sizeof(out->payload), "g");
-        *saw_action = true;
-        return true;
-    }
-    if (p7501_ascii_ieq(tok, "Z0")) {
-        out->action = PANA_RSP_ACT_Z0;
-        snprintf(out->payload, sizeof(out->payload), "Z0");
-        *saw_action = true;
-        return true;
-    }
-    if (p7501_ascii_ieq(tok, "Z1")) {
-        out->action = PANA_RSP_ACT_Z1;
-        snprintf(out->payload, sizeof(out->payload), "Z1");
-        *saw_action = true;
-        return true;
+    static const struct {
+        const char *name;
+        p7501_pana_rsp_action_t act;
+        const char *payload;
+    } k_simple[] = {
+        { "PROBESEQ", PANA_RSP_ACT_SEQ, "" },
+        { "PROBE", PANA_RSP_ACT_SEQ, "" },
+        { "PING_STUB", PANA_RSP_ACT_SEQ, "" },
+        { "G", PANA_RSP_ACT_G, "g" },
+        { "REGS", PANA_RSP_ACT_REGS, "g" },
+        { "Z0", PANA_RSP_ACT_Z0, "Z0" },
+        { "Z1", PANA_RSP_ACT_Z1, "Z1" },
+    };
+    for (size_t i = 0u; i < (sizeof(k_simple) / sizeof(k_simple[0])); ++i) {
+        if (p7501_ascii_ieq(tok, k_simple[i].name)) {
+            out->action = k_simple[i].act;
+            if (k_simple[i].payload[0] != '\0') {
+                snprintf(out->payload, sizeof(out->payload), "%s", k_simple[i].payload);
+            }
+            *saw_action = true;
+            return true;
+        }
     }
     if (p7501_ascii_iprefix(tok, "MEM:") || p7501_ascii_iprefix(tok, "XMEM:")) {
         const bool is_x = (tok[0] == 'X' || tok[0] == 'x');
@@ -122,37 +98,46 @@ static bool apply_panarsp_action_token(const char *tok, p7501_pana_rsp_spec_t *o
         *saw_action = true;
         return true;
     }
-    if (p7501_ascii_iprefix(tok, "WMEM:")) {
-        const char *spec = tok + 5u;
-        const char *comma = strchr(spec, ',');
-        if (comma == NULL || comma == spec || comma[1] == '\0') {
-            return false;
-        }
+    if (p7501_ascii_iprefix(tok, "WMEM:") || p7501_ascii_iprefix(tok, "JEDEC_PROG:")) {
+        const bool is_jedec = (tok[0] == 'J' || tok[0] == 'j');
+        const char *spec = tok + (is_jedec ? 11u : 5u);
+        const char *tail = NULL;
         uint32_t addr = 0u;
         size_t data_len = 0u;
-        if (!p7501_rsp_parse_hex_u32_span(spec, (size_t)(comma - spec), &addr) ||
-            !p7501_decode_hex_bytes(comma + 1, out->data_bytes, sizeof(out->data_bytes), &data_len) ||
-            data_len == 0u ||
-            p7501_flash_is_protected_ipl_range(addr, data_len) ||
+        if (!parse_addr_comma_tail(spec, &addr, &tail) ||
+            !p7501_decode_hex_bytes(tail, out->data_bytes, sizeof(out->data_bytes), &data_len) ||
+            data_len == 0u) {
+            return false;
+        }
+        if (!is_jedec &&
             !p7501_rsp_build_write_mem_payload(addr, out->data_bytes, data_len, out->payload, sizeof(out->payload))) {
             return false;
         }
         out->addr = addr;
         out->data_len = data_len;
-        out->action = PANA_RSP_ACT_WMEM;
+        out->send_magic_prefix = is_jedec;
+        out->action = is_jedec ? PANA_RSP_ACT_JEDEC_PROG : PANA_RSP_ACT_WMEM;
+        *saw_action = true;
+        return true;
+    }
+    if (p7501_ascii_iprefix(tok, "JEDEC_ERASE:") && tok[12] != '\0') {
+        uint32_t addr = 0u;
+        if (!p7501_rsp_parse_hex_u32(tok + 12u, 10u, &addr)) {
+            return false;
+        }
+        out->addr = addr;
+        out->data_len = 1u;
+        out->send_magic_prefix = true;
+        out->action = PANA_RSP_ACT_JEDEC_ERASE;
         *saw_action = true;
         return true;
     }
     if (p7501_ascii_iprefix(tok, "WRITE32:")) {
-        const char *spec = tok + 8u;
-        const char *comma = strchr(spec, ',');
-        if (comma == NULL || comma == spec || comma[1] == '\0') {
-            return false;
-        }
+        const char *tail = NULL;
         uint32_t addr = 0u;
         uint32_t val = 0u;
-        if (!p7501_rsp_parse_hex_u32_span(spec, (size_t)(comma - spec), &addr) ||
-            !p7501_rsp_parse_hex_u32(comma + 1, 10u, &val) ||
+        if (!parse_addr_comma_tail(tok + 8u, &addr, &tail) ||
+            !p7501_rsp_parse_hex_u32(tail, 10u, &val) ||
             !assign_write_u32_payload(addr, val, out)) {
             return false;
         }
@@ -227,6 +212,7 @@ bool p7501_panarsp_parse_args(const char *arg, p7501_pana_rsp_spec_t *out) {
     bool saw_action = false;
     bool explicit_nak_only = false;
     bool explicit_magic_only = false;
+    int policy_override = -1;
     uint8_t dumpnor_argc = 0u;
 
     while ((cur = p7501_next_token(cur, tok, sizeof(tok))) != NULL) {
@@ -234,6 +220,7 @@ bool p7501_panarsp_parse_args(const char *arg, p7501_pana_rsp_spec_t *out) {
             continue;
         }
         uint32_t dump_hex = 0u;
+        bool bad_pol = false;
         if (saw_action && (out->action == PANA_RSP_ACT_DUMPNOR) && (dumpnor_argc < 2u) &&
             p7501_dumpnor_parse_hex_tok(tok, &dump_hex)) {
             if (dumpnor_argc == 0u) {
@@ -242,6 +229,8 @@ bool p7501_panarsp_parse_args(const char *arg, p7501_pana_rsp_spec_t *out) {
                 out->value_u32 = dump_hex;
             }
             dumpnor_argc += 1u;
+        } else if (p7501_flash_consume_policy_tok(tok, &policy_override, &bad_pol)) {
+            if (bad_pol) return false;
         } else if (p7501_ascii_is_digits(tok)) {
             out->timeout_ms = p7501_parse_uint32_clamped(
                 tok,
@@ -268,16 +257,37 @@ bool p7501_panarsp_parse_args(const char *arg, p7501_pana_rsp_spec_t *out) {
         }
     }
 
+    const bool eff_unlocked = p7501_flash_effective_policy(policy_override);
+    out->nor_unlocked_effective = eff_unlocked;
+
     if (!saw_action) {
-        if (explicit_nak_only) {
+        if (policy_override != -1) {
+            out->action = PANA_RSP_ACT_NOR_POLICY;
+            out->send_nak_prefix = false;
+        } else if (explicit_nak_only) {
             out->action = PANA_RSP_ACT_NAK;
         } else if (explicit_magic_only && !out->send_nak_prefix) {
             out->action = PANA_RSP_ACT_MAGIC;
         }
     }
+    if ((out->action == PANA_RSP_ACT_WMEM || out->action == PANA_RSP_ACT_WRITE32) &&
+        p7501_flash_is_write_blocked_with_policy(out->addr, out->data_len, eff_unlocked)) {
+        return false;
+    }
+    if ((out->action == PANA_RSP_ACT_JEDEC_ERASE) &&
+        !p7501_jedec_validate_erase_addr(out->addr, eff_unlocked, NULL)) {
+        return false;
+    }
+    if ((out->action == PANA_RSP_ACT_JEDEC_PROG) &&
+        !p7501_jedec_validate_prog_range(out->addr, out->data_len, eff_unlocked, NULL)) {
+        return false;
+    }
     if ((out->action == PANA_RSP_ACT_DUMPNOR) &&
         !p7501_dumpnor_validate_range(out->addr, out->value_u32)) {
         return false;
+    }
+    if (policy_override != -1) {
+        p7501_flash_set_upper_nor_unlocked(policy_override == 1);
     }
     return true;
 }

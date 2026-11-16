@@ -4,6 +4,7 @@
   "ignore": [
     "**/node_modules/**",
     "**/dist/**",
+    "**/dist-android/**",
     "**/*.json",
     "**/*.svg"
   ],

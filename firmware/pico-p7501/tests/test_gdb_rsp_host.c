@@ -366,13 +366,19 @@ static void test_upper_nor_unlock_allows_app_keeps_ipl_e05(void) {
     send_cmd_and_get_response("M80400000,4:01020304", resp, sizeof(resp));
     assert(strcmp(resp, "E05") == 0);
 
-    /* Explicit context setter/getter isolation check */
+    /* Explicit context setter/getter isolation + centralized p7501_flash_geo sync */
+    assert(!p7501_flash_is_upper_nor_unlocked());
+    assert(p7501_flash_is_write_blocked_with_policy(0x84200000UL, 4u, false));
+    assert(!p7501_flash_is_write_blocked_with_policy(0x84200000UL, 4u, true));
+    assert(p7501_flash_is_write_blocked_with_policy(0x84000000UL, 4u, true));
+
     gdb_rsp_ctx_t isolated;
     gdb_rsp_ctx_init(&isolated);
     assert(!gdb_rsp_ctx_is_upper_nor_unlocked(&isolated));
     gdb_rsp_ctx_set_upper_nor_unlocked(&isolated, true);
     assert(gdb_rsp_ctx_is_upper_nor_unlocked(&isolated));
     assert(!gdb_rsp_is_upper_nor_unlocked());
+    assert(!p7501_flash_is_upper_nor_unlocked());
 
     printf("  [PASS] test_upper_nor_unlock_allows_app_keeps_ipl_e05\n");
 }

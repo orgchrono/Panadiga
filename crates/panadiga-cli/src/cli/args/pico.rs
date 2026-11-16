@@ -102,6 +102,54 @@ pub enum PicoActions {
         /// TCP listener address and port for incoming GDB connections
         #[arg(short, long, default_value = DEFAULT_GDB_LISTEN_SOCKET)]
         listen: String,
+
+        /// Target monitor protocol behind P7501 async UART: ocd | panamon1 | panarsp
+        #[arg(long, default_value = "ocd", value_name = "MODE")]
+        target_mode: String,
+    },
+
+    /// Interactive guided live bench battery (Standby wake, BAUDSCAN, SW_UART & Error Dict correlation)
+    #[command(name = "bench-wizard", alias = "bench_wizard")]
+    BenchWizard {
+        /// Serial port identifier (auto-detects connected RP2040/RP2350 Pico when omitted)
+        #[arg(short, long, value_name = "PORT")]
+        port: Option<String>,
+
+        /// CDC baud rate (defaults to 115200)
+        #[arg(short, long, default_value_t = DEFAULT_BAUD_RATE)]
+        baud: u32,
+
+        /// Capture window in milliseconds for Standby wakeup / BOOTTRACE
+        #[arg(long, default_value_t = 12000)]
+        window_ms: u32,
+
+        /// Run without stdin prompts (uses --vfd-cue and --active-jig flags directly)
+        #[arg(long, default_value_t = false)]
+        non_interactive: bool,
+
+        /// Visual front-panel cue override for --non-interactive (1..8 or text)
+        #[arg(long, value_name = "CUE")]
+        vfd_cue: Option<String>,
+
+        /// Authorize active SW_UART LOW + XRESET probe during --non-interactive run
+        #[arg(long, default_value_t = false)]
+        active_jig: bool,
+
+        /// Destination folder for timestamped .md and .json bench reports
+        #[arg(long, value_name = "OUT_DIR")]
+        out_dir: Option<PathBuf>,
+    },
+
+    /// Queries all 447 embedded Panasonic / Matshita firmware error records (431 DRV + Boot/VFD/SENSE)
+    #[command(name = "error-lookup", alias = "error_lookup")]
+    ErrorLookup {
+        /// Error code (0x83A7, 80040904, U99, -91006, -10025) or keyword
+        #[arg(value_name = "QUERY")]
+        query: String,
+
+        /// Optional JSON output path (`-` emits stdout JSON)
+        #[arg(long, value_name = "JSON_OUT")]
+        json: Option<PathBuf>,
     },
 
     /// Automatically flashes the Panadiga P7501 Async UART firmware to a detected Raspberry Pi Pico (RP2040/RP2350)

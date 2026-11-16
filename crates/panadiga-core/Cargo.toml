@@ -10,6 +10,10 @@ description = "Core forensic, hardware SSOT, cryptography, MEIHFS storage, and P
 name = "panadiga_core"
 crate-type = ["rlib"]
 
+[features]
+default = []
+android-ir = []
+
 [dependencies]
 anyhow = { workspace = true }
 byteorder = { workspace = true }

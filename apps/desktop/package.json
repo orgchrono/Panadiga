@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:android": "vite --mode android",
     "build": "tsc && vite build",
+    "build:android": "tsc && vite build --mode android",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",

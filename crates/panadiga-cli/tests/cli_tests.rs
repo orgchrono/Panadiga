@@ -72,6 +72,43 @@ fn test_cli_args_parsing_matrix() {
     assert!(matches!(
         Cli::try_parse_from([
             "panadiga",
+            "pico",
+            "gdb-bridge",
+            "--port",
+            "COM10",
+            "--listen",
+            "127.0.0.1:3333",
+            "--target-mode",
+            "panamon1"
+        ])
+        .unwrap()
+        .command,
+        Some(Commands::Pico(_))
+    ));
+    assert!(matches!(
+        Cli::try_parse_from([
+            "panadiga",
+            "pico",
+            "bench-wizard",
+            "--port",
+            "COM10",
+            "--non-interactive",
+            "--vfd-cue",
+            "2"
+        ])
+        .unwrap()
+        .command,
+        Some(Commands::Pico(_))
+    ));
+    assert!(matches!(
+        Cli::try_parse_from(["panadiga", "pico", "error-lookup", "0x83A7"])
+            .unwrap()
+            .command,
+        Some(Commands::Pico(_))
+    ));
+    assert!(matches!(
+        Cli::try_parse_from([
+            "panadiga",
             "gdb-bridge",
             "--port",
             "COM10",

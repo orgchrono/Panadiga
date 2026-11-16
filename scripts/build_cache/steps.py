@@ -152,8 +152,8 @@ def copy_if_changed(src: Path, dst: Path) -> bool:
     return True
 
 
-def frontend_digest_and_outputs(root: Path) -> tuple[str, tuple[Path, ...]]:
-    """Compute input digest and expected artifact paths for the React/Vite desktop UI."""
+def frontend_digest_and_outputs(root: Path, *, android: bool = False) -> tuple[str, tuple[Path, ...]]:
+    """Compute input digest and expected artifact paths for the React/Vite UI bundle."""
     app_dir = root / "apps" / "desktop"
     inputs = (
         app_dir / "src",
@@ -164,8 +164,9 @@ def frontend_digest_and_outputs(root: Path) -> tuple[str, tuple[Path, ...]]:
         app_dir / "tsconfig.node.json",
         app_dir / "vite.config.ts",
     )
-    outputs = (app_dir / "dist" / "index.html",)
-    return compute_tree_digest(root, inputs), outputs
+    out_dir = "dist-android" if android else "dist"
+    outputs = (app_dir / out_dir / "index.html",)
+    return compute_tree_digest(root, inputs, extra_salt=(f"target={out_dir}",)), outputs
 
 
 def pico_digest_and_outputs(root: Path, env: Mapping[str, str]) -> tuple[str, tuple[Path, ...]]:
@@ -230,6 +231,7 @@ def inspect_cache_entries(root: Path = ROOT) -> list[CacheEntryStat]:
         ("Pico CMake Build", root / "target" / "pico-build"),
         ("Vite Cache", root / "apps" / "desktop" / "node_modules" / ".vite"),
         ("Frontend Dist", root / "apps" / "desktop" / "dist"),
+        ("Android Frontend Dist", root / "apps" / "desktop" / "dist-android"),
         ("Cargo Debug Cache", root / "target" / "debug"),
         ("Cargo Release Cache", root / "target" / "release"),
         ("Cargo Android Cache", root / "target" / "android-cargo"),
@@ -252,6 +254,7 @@ def clear_caches(root: Path = ROOT, *, include_cargo: bool = False) -> list[Path
         root / "target" / "pico-build",
         root / "apps" / "desktop" / "node_modules" / ".vite",
         root / "apps" / "desktop" / "dist",
+        root / "apps" / "desktop" / "dist-android",
     ]
     if include_cargo:
         targets.extend(

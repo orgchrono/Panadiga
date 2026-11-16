@@ -14,6 +14,7 @@ Cargo.lock.orig
 # ------------------------------------------------------------------------------
 **/node_modules/
 **/dist/
+**/dist-android/
 .vite/
 *.tsbuildinfo
 *.timestamp-*.mjs

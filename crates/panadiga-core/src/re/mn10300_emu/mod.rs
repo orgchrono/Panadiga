@@ -18,11 +18,15 @@
 mod memory;
 mod ops;
 mod ops_ext;
+mod spansion_nor;
 mod step_core;
 
 #[cfg(test)]
 mod tests;
 
+pub use spansion_nor::{is_critical_ipl_boot_va, is_ipl_readonly_va};
+
+use crate::pico::rsp_codec::policy::NorWritePolicy;
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 
@@ -40,6 +44,10 @@ pub enum CfiStage {
     Unlock555,
     Unlock2AA,
     Autoselect,
+    EraseSetup,
+    EraseUnlock555,
+    EraseUnlock2AA,
+    ProgramPending,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, thiserror::Error)]
@@ -88,6 +96,7 @@ pub struct Mn103Vm {
     pub steps: u64,
     pub sc0_enabled: bool,
     pub cfi_stage: CfiStage,
+    pub nor_write_policy: NorWritePolicy,
     pub uart_rx: VecDeque<u8>,
     pub uart_tx: Vec<u8>,
     pub(super) segments: Vec<MemSegment>,
@@ -114,6 +123,7 @@ impl Mn103Vm {
             steps: 0,
             sc0_enabled: false,
             cfi_stage: CfiStage::Normal,
+            nor_write_policy: NorWritePolicy::NvramOnly,
             uart_rx: VecDeque::new(),
             uart_tx: Vec::new(),
             segments: Vec::new(),

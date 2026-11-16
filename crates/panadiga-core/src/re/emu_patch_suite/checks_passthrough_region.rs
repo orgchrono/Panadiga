@@ -5,8 +5,9 @@ use anyhow::{Result, bail};
 use crate::constants::{PANA_DEV_BIN_MAGIC, PANA_DEV_BIN_SIG, PANA_DEV_BIN_SIZE};
 use crate::crypto::codec::write_padded_ascii;
 use crate::re::{
-    MAIN_BASE_VA, OFF_FMU_DEVINFO_3060NP, OFF_FMU_DEVINFO_3410PQ, OFF_FPC_STATUS_CTRL,
-    OFF_ODD_INIT_STATUS, OFF_ODD_STATE_BRANCH, ORIG_FMU_DEVINFO_3060NP, PATCH_FMU_DEVINFO_3060NP,
+    EXPECTED_MAIN_3060NP_SIZE, MAIN_BASE_VA, OFF_FMU_DEVINFO_3060NP, OFF_FMU_DEVINFO_3410PQ,
+    OFF_FPC_STATUS_CTRL, OFF_ODD_INIT_STATUS, OFF_ODD_STATE_BRANCH, ORIG_FMU_DEVINFO_3060NP,
+    ORIG_FMU_DEVINFO_3410PQ, PATCH_FMU_DEVINFO_3060NP, PATCH_FMU_DEVINFO_3410PQ,
     patch_dev_bin_bytes,
 };
 
@@ -54,20 +55,32 @@ pub(super) fn verify_region_compat_and_devbin(
     main_factory: &[u8],
     main_patched: &[u8],
 ) -> Result<PatchVerificationCheck> {
-    // 3410PQ uses main_factory/main_patched; also verify 3060NP `<deviceinfo>` bypass branch.
-    for (label, off, fac_pair, pat_pair) in [
+    let is_3060np = main_factory.len() == EXPECTED_MAIN_3060NP_SIZE;
+    let pair_3410 = if is_3060np {
         (
-            "3410PQ",
-            OFF_FMU_DEVINFO_3410PQ,
+            &ORIG_FMU_DEVINFO_3410PQ[..4],
+            &PATCH_FMU_DEVINFO_3410PQ[..4],
+        )
+    } else {
+        (
             &main_factory[OFF_FMU_DEVINFO_3410PQ..OFF_FMU_DEVINFO_3410PQ + 4],
             &main_patched[OFF_FMU_DEVINFO_3410PQ..OFF_FMU_DEVINFO_3410PQ + 4],
-        ),
+        )
+    };
+    let pair_3060 = if is_3060np {
         (
-            "3060NP",
-            OFF_FMU_DEVINFO_3060NP,
+            &main_factory[OFF_FMU_DEVINFO_3060NP..OFF_FMU_DEVINFO_3060NP + 4],
+            &main_patched[OFF_FMU_DEVINFO_3060NP..OFF_FMU_DEVINFO_3060NP + 4],
+        )
+    } else {
+        (
             &ORIG_FMU_DEVINFO_3060NP[..4],
             &PATCH_FMU_DEVINFO_3060NP[..4],
-        ),
+        )
+    };
+    for (label, off, fac_pair, pat_pair) in [
+        ("3410PQ", OFF_FMU_DEVINFO_3410PQ, pair_3410.0, pair_3410.1),
+        ("3060NP", OFF_FMU_DEVINFO_3060NP, pair_3060.0, pair_3060.1),
     ] {
         if fac_pair[..2] != [0xA0, 0x00] || pat_pair[..2] != [0xA0, 0x00] {
             bail!("Unexpected <deviceinfo> compare prefix for {label} @ 0x{off:06X}");
