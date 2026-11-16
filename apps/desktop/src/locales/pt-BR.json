@@ -5,7 +5,10 @@
     "liveMode": "Conexão Real",
     "loading": "Carregando subsistema de bancada...",
     "subsystemFailure": "Falha Crítica no Subsistema",
-    "reloadSubsystem": "Recarregar Subsistema"
+    "reloadSubsystem": "Recarregar Subsistema",
+    "boundaryFallbackTitle": "Falha de Renderização no Módulo",
+    "boundaryFallbackDesc": "Ocorreu uma exceção não tratada durante o processamento do componente. A integridade da memória física e do hardware da bancada permanece preservada.",
+    "retryModule": "Tentar Novamente"
   },
   "nav": {
     "dashboard": "Visão Geral",
@@ -74,7 +77,9 @@
     "metricDwire": "Interface UART P7501",
     "metricDwireSub": "RP2040/RP2350 UART Assíncrona 115200 8N1",
     "metricDwireBadge": "3.28V LVTTL OK",
-    "loading": "Carregando telemetria e integridade da bancada DMR-EH55..."
+    "loading": "Carregando telemetria e integridade da bancada DMR-EH55...",
+    "connectionErrorTitle": "Falha na Conexão com o Kernel do Sistema",
+    "connectionErrorDesc": "Não foi possível carregar o resumo da bancada do dispositivo."
   },
   "hdd": {
     "title": "Hitachi PATA 100 MB Forensic Image (MEIHDFS)",
@@ -151,6 +156,19 @@
       "inspectBtn": "Inspecionar",
       "outputLabel": "Arquivo de Saída Patcheado (Opcional — gera automático se vazio)",
       "outputPlaceholder": "Ex: extracted_partitions/hdd_partition_firmware_0x02000000_PATCHED_DYNAMIC.bin"
+    },
+    "shaCopiedToastTitle": "SHA256SUMS copiado",
+    "shaCopiedToastMsg": "Manifesto copiado para a área de transferência.",
+    "fallback": {
+      "notFoundTitle": "Imagem de Disco Padrão Não Encontrada",
+      "emptyTitle": "Nenhuma Imagem MEIHDFS Carregada",
+      "defaultError": "Informe o caminho de um dump físico (.bin, .raw, .img) ou alterne para a aba Gravação Física para gerenciar discos conectados via SATA/USB.",
+      "placeholder": "Ex: C:\\dumps\\panasonic_hdd.bin",
+      "loadingBtn": "Carregando...",
+      "analyzeBtn": "Analisar",
+      "viewDisksBtn": "Ver Discos Físicos Conectados (Win32/SATA)",
+      "openCapacityBtn": "Abrir Patcher de Capacidade",
+      "settingsBtn": "Configurações"
     }
   },
   "crypto": {
@@ -226,6 +244,11 @@
       "desc": "Os blocos de padding cifrados na Partição 1 do HD coincidem perfeitamente com o contêiner óptico.",
       "badge": "CHAVE COMPARTILHADA CONFIRMADA",
       "empty": "Nenhuma correlação cruzada encontrada"
+    },
+    "notFound": {
+      "title": "Contêiner Criptográfico {{path}} Não Encontrado",
+      "defaultError": "Não foi possível carregar ou analisar o contêiner .FRM selecionado.",
+      "reloadBtn": "Recarregar Contêiner FRM"
     }
   },
   "hex": {
@@ -237,6 +260,35 @@
     "prev": "Anterior",
     "next": "Próximo",
     "bookmarks": "Marcadores Rápidos:",
+    "inputAria": "Offset físico em hexadecimal ou número de setor LBA",
+    "metrics": {
+      "offsetTitle": "Offset Físico Atual",
+      "offsetSub": "{{bytes}} bytes a partir do início",
+      "lbaTitle": "Setor LBA ATA/IDE",
+      "lbaSub": "Unidade de 512 bytes de bloco",
+      "bookmarkTitle": "Marcador Selecionado",
+      "bookmarkFree": "LIVRE",
+      "bookmarkManual": "Endereçamento manual",
+      "windowTitle": "Janela de Exibição",
+      "windowUnit": "bytes",
+      "windowSub": "{{rows}} linhas de 16 bytes"
+    },
+    "scrubberLabel": "Scrubber LBA / Offset Físico (RangeDnD)",
+    "presets": {
+      "mbrLba0": "MBR LBA 0",
+      "journal8mb": "Journal 8MB (LBA 16384)",
+      "mirror28mb": "Espelho 28MB (LBA 57344)",
+      "part1_32mb": "Partição 1 (32MB)"
+    },
+    "splitAria": "Divisor entre marcadores e dump hexadecimal",
+    "criticalBookmarks": "Marcadores Arquiteturais Críticos",
+    "noBookmarks": "Nenhum marcador registrado",
+    "prevPageTitle": "Página Anterior (384 bytes)",
+    "nextPageTitle": "Próxima Página (384 bytes)",
+    "loadingBytes": "Carregando bytes na memória...",
+    "footerMode": "Modo Zero-Copy Mmap • Alinhamento ATA/IDE 512B",
+    "footerPrev": "Pág Anterior (-384B)",
+    "footerNext": "Próxima Pág (+384B)",
     "bookmarkItems": {
       "mbr_lba0": {
         "label": "LBA 0: MBR Primário (\"SH\")",
@@ -304,6 +356,9 @@
     "launchGhidra": "Scripts Ghidra",
     "launchHxd": "HxD Editor",
     "launchTerminal": "PowerShell",
+    "splitAria": "Divisor entre pinagem P7501 e terminal serial",
+    "terminalPlaceholder": "Digite comando CDC (STATUS, RESET, ADC, PINCHECK, DUMP, GDB)...",
+    "sendButton": "Enviar",
     "pinout": {
       "title": "Conexões Físicas (Pico → P7501)",
       "disclaimerTitle": "DISCLAIMER CRÍTICO: IDENTIFICAÇÃO DO TERRA (GND)",
@@ -441,6 +496,11 @@
   },
   "nvram": {
     "title": "Flash Spansion S29JL064H & Cirurgia NVRAM U99",
+    "syncingMap": "Sincronizando mapa Spansion NOR...",
+    "loadError": "Falha ao carregar dump de flash NOR: {{error}}",
+    "openPicoBench": "Abrir PicoBench",
+    "basicModeBanner": "Modo Básico ativo: o editor hexadecimal Copy-on-Write (offset manual) está recolhido para simplificar o reparo U99.",
+    "revealAdvancedBtn": "Revelar Ferramentas Avançadas",
     "cleanButton": "Executar Cirurgia no Dump",
     "cleaning": "Higienizando Micro-Setores...",
     "statusClean": "NVRAM HIGIENIZADA (U99 CORRIGIDO)",
@@ -559,7 +619,9 @@
     "cancel": "Cancelar",
     "ok": "OK",
     "error": "Erro",
-    "success": "Sucesso"
+    "success": "Sucesso",
+    "loading": "Carregando...",
+    "retry": "Tentar Novamente"
   },
   "ssot": {
     "protocol": {
@@ -1157,10 +1219,109 @@
       "mainPathRequired": "Informe o caminho do binário MAIN 3410PQ.",
       "mainOutRequired": "Informe o caminho de saída para gravar o MAIN patchado.",
       "extractPathsRequired": "Informe o caminho do .FRM e o diretório de destino."
+    },
+    "basicModeBanner": "Modo Básico ativo: ferramentas avançadas de Patch TBC Passthrough e Emulador Matshita ODD estão ocultas para focar no Kit SD.",
+    "revealAdvancedBtn": "Mostrar TBC & Emulador Matshita"
+  },
+  "pipeline": {
+    "sectionAria": "Pipeline Guiado de Recuperação Panadiga",
+    "title": "Pipeline Operacional",
+    "progress": "({{done}}/{{total}} etapas concluídas)",
+    "modeGroupAria": "Alternar complexidade da interface",
+    "basicBtn": "Básico (Guiado)",
+    "advancedBtn": "Avançado (Engenharia)",
+    "hudShow": "HUD Pinout",
+    "hudHide": "Ocultar HUD",
+    "emptySteps": "Nenhuma etapa de pipeline definida.",
+    "steps": {
+      "picoTitle": "1. Sonda P7501 UART",
+      "picoHint": "Conectar & VDD 3.3V",
+      "nvramTitle": "2. Cirurgia NVRAM U99",
+      "nvramHint": "Limpar SA134..SA141",
+      "hddTitle": "3. Forense & Capacidade HDD",
+      "hddHint": "MEIHDFS & LBA48",
+      "unbrickTitle": "4. Unbrick SD & FRM",
+      "unbrickHint": "DIGADIAG / TBC"
+    }
+  },
+  "hud": {
+    "ariaLabel": "HUD Flutuante Arrastável de Pinout P7501",
+    "dragTitle": "HUD P7501 (Arraste livre)",
+    "closeAria": "Fechar HUD Flutuante",
+    "linkLabel": "Link:",
+    "on": "ON",
+    "off": "OFF",
+    "vddLabel": "VDD {{volts}}V",
+    "navPico": "PicoBench",
+    "navNvram": "NVRAM U99",
+    "pins": {
+      "pin1": "ADC0 / Open-Drain LOW boot",
+      "pin2": "Estrito Open-Drain (15ms)",
+      "pin3": "AM34 TX -> Pico RX (115200)",
+      "pin4": "Referência comum obrigatória",
+      "pin5": "Hi-Z Input SEMPRE (5.15V!)",
+      "pin6": "Pico TX -> AM34 RX (3.3V)"
     }
   },
   "settings": {
     "title": "Configurações, Acessibilidade & Preferências da Bancada",
-    "subtitle": "Personalize tema visual, contraste, suporte a daltonismo, idioma, modo Básico/Avançado e recuperação de layout."
+    "subtitle": "Personalize tema visual, contraste, suporte a daltonismo, idioma, modo Básico/Avançado e recuperação de layout.",
+    "themes": {
+      "cardTitle": "Tema & Acessibilidade Visual",
+      "cardDesc": "Escolha o perfil cromático que melhor se adapta à iluminação e conforto visual do laboratório.",
+      "emptyThemes": "Nenhum tema disponível.",
+      "toastThemeTitle": "Tema Atualizado",
+      "toastScaleTitle": "Escala Tipográfica",
+      "scaleLargeEnabled": "Fonte Ampliada ativada",
+      "scaleDefaultRestored": "Fonte Padrão restaurada",
+      "darkLab": {
+        "label": "Dark Lab (Padrão)",
+        "desc": "Tema escuro de bancada com contraste balanceado para engenharia."
+      },
+      "highContrast": {
+        "label": "Alto Contraste (WCAG AAA)",
+        "desc": "Fundo preto puro, bordas nítidas e leitura máxima de texto/hex."
+      },
+      "daylightBench": {
+        "label": "Daylight Bench (Claro)",
+        "desc": "Modo claro otimizado para bancadas sob iluminação intensa."
+      },
+      "amberCrt": {
+        "label": "Amber CRT (Baixa Luz Azul)",
+        "desc": "Fósforo âmbar estilo osciloscópio para sessões prolongadas."
+      },
+      "colorblindTitle": "Modo Daltônico",
+      "colorblindDesc": "Substitui verde/vermelho por azul/laranja de alta distinção.",
+      "colorblindAria": "Ativar modo daltônico",
+      "reducedMotionTitle": "Reduzir Movimento",
+      "reducedMotionDesc": "Minimiza transições e animações do Framer Motion/CSS.",
+      "reducedMotionAria": "Ativar redução de movimento",
+      "fontScaleTitle": "Texto Ampliado",
+      "fontScaleDesc": "Escala legível para endereços hex e tabelas técnicas.",
+      "fontScaleAria": "Alternar escala tipográfica ampliada"
+    },
+    "workflow": {
+      "cardTitle": "Idioma & Fluxo de Trabalho",
+      "cardDesc": "Alterne o idioma do dicionário i18n e o nível de complexidade das ferramentas.",
+      "languageLabel": "Idioma (i18n)",
+      "complexityLabel": "Padrão de Complexidade",
+      "basicMode": "Básico (Guiado)",
+      "advancedMode": "Avançado (Engenharia)",
+      "hudLabel": "HUD Flutuante Arrastável P7501",
+      "hudAria": "Alternar HUD Flutuante P7501",
+      "recoveryTitle": "Recuperação & Limpeza de Estado",
+      "recoveryDesc": "Saída segura caso algum painel redimensionável ou estado de sessão fique desalinhado.",
+      "pipelineStatusTitle": "Status atual do Pipeline:",
+      "ok": "OK",
+      "clean": "Limpa",
+      "inspected": "Inspecionado",
+      "ready": "Pronto",
+      "pending": "Pendente",
+      "resetPipelineBtn": "Zerar Progresso do Pipeline",
+      "pipelineResetToast": "Pipeline Reiniciado",
+      "resetAllBtn": "Restaurar Layout & Padrões",
+      "resetAllToastTitle": "Layout e Preferências Restaurados",
+      "resetAllToastMsg": "Proporções de divisores, tema e modo foram redefinidos com segurança."
+    }
   }
 }

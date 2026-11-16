@@ -203,7 +203,7 @@ export const PicoBenchView: React.FC = () => {
           minLeftPercent={28}
           maxLeftPercent={62}
           storageKey="panadiga.split.picobench"
-          ariaLabel="Divisor entre pinagem P7501 e terminal serial"
+          ariaLabel={t('pico.splitAria')}
           left={
             <div className="flex flex-col space-y-4 lg:min-h-[720px]">
               <ColdBreakinSelector
@@ -227,7 +227,7 @@ export const PicoBenchView: React.FC = () => {
                 <input
                   type="text"
                   aria-label={t('pico.title')}
-                  placeholder="Digite comando CDC (STATUS, RESET, ADC, PINCHECK, DUMP, GDB)..."
+                  placeholder={t('pico.terminalPlaceholder')}
                   value={commandInput}
                   onChange={e => setCommandInput(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && sendCommand()}
@@ -237,11 +237,12 @@ export const PicoBenchView: React.FC = () => {
                   type="button"
                   variant="default"
                   size="sm"
+                  data-testid="pico-serial-send-btn"
                   onClick={sendCommand}
                   className="font-bold text-xs gap-1.5"
                 >
                   <Send className="w-3.5 h-3.5" />
-                  <span>Enviar</span>
+                  <span>{t('pico.sendButton')}</span>
                 </Button>
               </div>
             </div>

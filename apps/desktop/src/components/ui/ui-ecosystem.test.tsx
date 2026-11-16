@@ -8,6 +8,7 @@ import { emitLocalEvent } from '@/services/ipc';
 import { store } from '@/store';
 import { resetPipeline, resetWorkbenchPreferences } from '@/store/slices/workbenchSlice';
 import { clearToasts } from '@/store/slices/toastSlice';
+import { setGlobalLocale } from '@/i18n/useTranslation';
 import {
   DraggableBenchHud,
   GuidedPipelineBar,
@@ -18,6 +19,7 @@ import {
 describe('React UI Ecosystem Primitives (Resizable, RangeDnD, Pipeline, HUD, Sonner)', () => {
   beforeEach(() => {
     window.localStorage.clear();
+    setGlobalLocale('en-US');
     store.dispatch(resetWorkbenchPreferences());
     store.dispatch(resetPipeline());
     store.dispatch(clearToasts());
@@ -78,21 +80,21 @@ describe('React UI Ecosystem Primitives (Resizable, RangeDnD, Pipeline, HUD, Son
       </WorkbenchModeProvider>
     );
 
-    const basicBtn = screen.getByRole('button', { name: 'Básico (Guiado)' });
+    const basicBtn = screen.getByRole('button', { name: 'Basic (Guided)' });
     fireEvent.click(basicBtn);
     expect(basicBtn.getAttribute('aria-pressed')).toBe('true');
     expect(window.localStorage.getItem('panadiga.workbench.mode')).toBe('basic');
 
-    expect(screen.queryByText(/HUD P7501/i)).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'HUD Pinout' }));
-    expect(screen.getByText(/HUD P7501/i)).toBeTruthy();
+    expect(screen.queryByText(/P7501 HUD/i)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Pinout HUD' }));
+    expect(screen.getByText(/P7501 HUD/i)).toBeTruthy();
     expect(screen.getByText(/VDD 3\.29V/)).toBeTruthy();
 
     act(() => {
       emitLocalEvent('nvram://cleaned', true);
       emitLocalEvent('hdd://inspected', true);
     });
-    expect(screen.getByText(/\(2\/4 etapas concluídas\)/)).toBeTruthy();
+    expect(screen.getByText(/\(2\/4 steps completed\)/)).toBeTruthy();
   });
 
   it('ToastProvider exposes showToast and removeToast cleanly with sonner', () => {
@@ -138,7 +140,7 @@ describe('React UI Ecosystem Primitives (Resizable, RangeDnD, Pipeline, HUD, Son
     expect(screen.getByText('advanced:true')).toBeTruthy();
   });
 
-  it('SettingsView switches accessible themes, colorblind mode, font scale, and restores defaults', () => {
+  it('SettingsView switches accessible themes, colorblind mode, font scale, locale, and restores defaults', () => {
     window.localStorage.setItem('panadiga.split.hex', '50');
     render(
       <WorkbenchModeProvider>
@@ -148,14 +150,17 @@ describe('React UI Ecosystem Primitives (Resizable, RangeDnD, Pipeline, HUD, Son
       </WorkbenchModeProvider>
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /Alto Contraste/i }));
+    fireEvent.click(screen.getByRole('button', { name: /High Contrast/i }));
     expect(document.documentElement.getAttribute('data-theme')).toBe('high-contrast');
 
-    fireEvent.click(screen.getByRole('switch', { name: 'Ativar modo daltônico' }));
+    fireEvent.click(screen.getByRole('switch', { name: 'Enable colorblind mode' }));
     expect(document.documentElement.getAttribute('data-colorblind')).toBe('true');
 
-    fireEvent.click(screen.getByRole('switch', { name: 'Alternar escala tipográfica ampliada' }));
+    fireEvent.click(screen.getByRole('switch', { name: 'Enable enlarged typography scale' }));
     expect(document.documentElement.getAttribute('data-font-scale')).toBe('large');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Português (pt-BR)' }));
+    expect(screen.getByText('Tema & Acessibilidade Visual')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: /Restaurar Layout & Padrões/i }));
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark-lab');

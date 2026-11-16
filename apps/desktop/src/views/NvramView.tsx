@@ -56,7 +56,7 @@ export const NvramView: React.FC<NvramViewProps> = ({ onNavigate }) => {
       {loading && (
         <div className="flex items-center gap-2 text-xs text-cyan-400">
           <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-          <span>Sincronizando mapa Spansion NOR...</span>
+          <span>{t('nvram.syncingMap')}</span>
         </div>
       )}
       {/* Surgical Clean Notification */}
@@ -69,7 +69,7 @@ export const NvramView: React.FC<NvramViewProps> = ({ onNavigate }) => {
         <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/40 text-rose-300 text-xs flex items-center justify-between shadow-lg">
           <div className="flex items-center gap-2">
             <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
-            <span>Falha ao carregar dump de flash NOR: {error}</span>
+            <span>{t('nvram.loadError', { error })}</span>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {onNavigate && (
@@ -80,7 +80,7 @@ export const NvramView: React.FC<NvramViewProps> = ({ onNavigate }) => {
                 className="border-rose-500/40 text-rose-200 hover:bg-rose-900/40 gap-1.5"
               >
                 <Radio className="w-3.5 h-3.5" />
-                <span>Abrir PicoBench</span>
+                <span>{t('nvram.openPicoBench')}</span>
               </Button>
             )}
             <Button
@@ -90,7 +90,7 @@ export const NvramView: React.FC<NvramViewProps> = ({ onNavigate }) => {
               className="text-rose-300 hover:text-white hover:bg-rose-900/40 gap-1.5"
             >
               <RefreshCw className="w-3.5 h-3.5" />
-              <span>Tentar Novamente</span>
+              <span>{t('common.retry')}</span>
             </Button>
           </div>
         </div>
@@ -125,11 +125,11 @@ export const NvramView: React.FC<NvramViewProps> = ({ onNavigate }) => {
       ) : (
         <div className="rounded-xl bg-bench-900/70 border border-slate-800 px-4 py-3 flex flex-wrap items-center justify-between gap-3 text-xs">
           <span className="text-slate-400 font-sans">
-            Modo Básico ativo: o editor hexadecimal Copy-on-Write (offset manual) está recolhido para simplificar o reparo U99.
+            {t('nvram.basicModeBanner')}
           </span>
           <Button type="button" variant="outline" size="sm" onClick={() => setMode('advanced')} className="gap-1.5 text-xs">
             <Wrench className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Revelar Ferramentas Avançadas</span>
+            <span>{t('nvram.revealAdvancedBtn')}</span>
           </Button>
         </div>
       )}

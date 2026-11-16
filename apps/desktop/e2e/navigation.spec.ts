@@ -55,30 +55,32 @@ test.describe('Panadiga Desktop Navigation & Layout E2E', () => {
 
   test('operates Guided Pipeline Bar, Basic/Advanced mode toggle, Draggable HUD, and Resizable/RangeDnD in HexInspector', async ({ page }) => {
     // 1. Open Draggable HUD Pinout
-    await page.getByRole('button', { name: 'HUD Pinout' }).click();
-    await expect(page.getByText('HUD P7501 (Arraste livre)')).toBeVisible();
-    await page.getByRole('button', { name: 'Fechar HUD Flutuante' }).click();
-    await expect(page.getByText('HUD P7501 (Arraste livre)')).toHaveCount(0);
+    await page.getByRole('button', { name: /Pinout HUD|HUD Pinout/i }).click();
+    await expect(page.getByText(/P7501 HUD|HUD P7501/i)).toBeVisible();
+    await page.getByRole('button', { name: /Close Floating HUD|Fechar HUD Flutuante/i }).click();
+    await expect(page.getByText(/P7501 HUD|HUD P7501/i)).toHaveCount(0);
 
     // 2. Navigate via Pipeline Bar to Hex Inspector and verify ResizableSplitPane + RangeDnD
     await page.click('button[data-testid="nav-hexinspector"]');
     await expect(page.getByRole('separator')).toBeVisible();
-    await expect(page.getByText('Scrubber LBA / Offset Físico (RangeDnD)')).toBeVisible();
+    await expect(page.getByText(/LBA \/ Physical Offset Scrubber|Scrubber LBA \/ Offset Físico/i)).toBeVisible();
 
     // 3. Toggle Basic mode in NVRAM view and verify advanced patcher collapses cleanly
-    await page.click('button:has-text("2. Cirurgia NVRAM U99")');
+    await page.click('button:has-text("2. NVRAM U99 Surgery"), button:has-text("2. Cirurgia NVRAM U99")');
     await expect(page.getByText('Janela de Setores (RangeDnD)')).toBeVisible();
-    await page.getByRole('button', { name: 'Básico (Guiado)' }).click();
-    await expect(page.getByText(/Modo Básico ativo: o editor hexadecimal Copy-on-Write/i)).toBeVisible();
-    await page.getByRole('button', { name: 'Avançado (Engenharia)' }).click();
+    await page.getByRole('button', { name: /Basic \(Guided\)|Básico \(Guiado\)/i }).click();
+    await expect(page.getByText(/Basic Mode active: the Copy-on-Write hex editor|Modo Básico ativo: o editor hexadecimal Copy-on-Write/i)).toBeVisible();
+    await page.getByRole('button', { name: /Advanced \(Engineering\)|Avançado \(Engenharia\)/i }).click();
 
-    // 4. Open Settings & Accessibility view, toggle High Contrast & Colorblind mode, then restore defaults
+    // 4. Open Settings & Accessibility view, toggle High Contrast & Colorblind mode, switch locale, then restore defaults
     await page.click('button[data-testid="nav-settings"]');
     await expect(page.locator('[data-testid="app-header"]')).toHaveAttribute('data-view', 'settings');
-    await page.getByRole('button', { name: /Alto Contraste/i }).click();
+    await page.getByRole('button', { name: /High Contrast|Alto Contraste/i }).click();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'high-contrast');
-    await page.getByRole('switch', { name: 'Ativar modo daltônico' }).click();
+    await page.getByRole('switch', { name: /Enable colorblind mode|Ativar modo daltônico/i }).click();
     await expect(page.locator('html')).toHaveAttribute('data-colorblind', 'true');
+    await page.getByRole('button', { name: 'Português (pt-BR)' }).click();
+    await expect(page.getByText('Tema & Acessibilidade Visual')).toBeVisible();
     await page.getByRole('button', { name: /Restaurar Layout & Padrões/i }).click();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark-lab');
   });

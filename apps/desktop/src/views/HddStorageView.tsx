@@ -67,8 +67,8 @@ export const HddStorageView: React.FC<{ onNavigate?: (view: ViewKey) => void }> 
     setCopiedSha(true);
     showToast({
       type: 'info',
-      title: 'SHA256SUMS copiado',
-      message: 'Manifesto copiado para a área de transferência.',
+      title: t('hdd.shaCopiedToastTitle'),
+      message: t('hdd.shaCopiedToastMsg'),
     });
     scheduleTimeout(() => setCopiedSha(false), CLIPBOARD_FEEDBACK_MS);
   };
@@ -117,18 +117,17 @@ export const HddStorageView: React.FC<{ onNavigate?: (view: ViewKey) => void }> 
           </div>
           <div>
             <h3 className="text-sm font-bold text-slate-100">
-              {error ? 'Imagem de Disco Padrão Não Encontrada' : 'Nenhuma Imagem MEIHDFS Carregada'}
+              {error ? t('hdd.fallback.notFoundTitle') : t('hdd.fallback.emptyTitle')}
             </h3>
             <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
-              {error ||
-                'Informe o caminho de um dump físico (.bin, .raw, .img) ou alterne para a aba Gravação Física para gerenciar discos conectados via SATA/USB.'}
+              {error || t('hdd.fallback.defaultError')}
             </p>
           </div>
 
           <div className="flex items-center gap-2 max-w-md mx-auto pt-2">
             <input
               type="text"
-              placeholder="Ex: C:\dumps\panasonic_hdd.bin"
+              placeholder={t('hdd.fallback.placeholder')}
               value={inputPath}
               onChange={e => setInputPath(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleOpenPath()}
@@ -140,7 +139,7 @@ export const HddStorageView: React.FC<{ onNavigate?: (view: ViewKey) => void }> 
               disabled={loading || !inputPath.trim()}
               className="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs transition-colors disabled:opacity-50"
             >
-              {loading ? 'Carregando...' : 'Analisar'}
+              {loading ? t('hdd.fallback.loadingBtn') : t('hdd.fallback.analyzeBtn')}
             </button>
           </div>
 
@@ -151,7 +150,7 @@ export const HddStorageView: React.FC<{ onNavigate?: (view: ViewKey) => void }> 
               className="px-4 py-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 font-bold flex items-center gap-2 transition-colors"
             >
               <HardDrive className="w-4 h-4" />
-              <span>Ver Discos Físicos Conectados (Win32/SATA)</span>
+              <span>{t('hdd.fallback.viewDisksBtn')}</span>
             </button>
             <button
               type="button"
@@ -159,7 +158,7 @@ export const HddStorageView: React.FC<{ onNavigate?: (view: ViewKey) => void }> 
               className="px-4 py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold flex items-center gap-2 transition-colors"
             >
               <Unlock className="w-4 h-4" />
-              <span>Abrir Patcher de Capacidade</span>
+              <span>{t('hdd.fallback.openCapacityBtn')}</span>
             </button>
             {onNavigate && (
               <button
@@ -167,7 +166,7 @@ export const HddStorageView: React.FC<{ onNavigate?: (view: ViewKey) => void }> 
                 onClick={() => onNavigate('settings')}
                 className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-bold transition-colors"
               >
-                Configurações
+                {t('hdd.fallback.settingsBtn')}
               </button>
             )}
           </div>

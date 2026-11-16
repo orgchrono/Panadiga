@@ -38,7 +38,7 @@ test.describe('Pico Bench & P7501 UART Hardware Workbench E2E', () => {
     await expect(input).toBeVisible();
 
     await input.fill('STATUS');
-    await page.click('button:has-text("Enviar")');
+    await page.getByTestId('pico-serial-send-btn').click();
 
     // Verify TX entry appeared in log
     await expect(page.locator('div').filter({ hasText: '> STATUS' }).first()).toBeVisible();

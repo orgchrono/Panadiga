@@ -8,7 +8,7 @@ import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Swit
 export const WorkflowRecoveryCards: React.FC = () => {
   const { mode, setMode, hudOpen, setHudOpen, resetWorkbenchPreferences, resetPipeline, pipeline } =
     useWorkbenchMode();
-  const { locale, setLocale } = useTranslation();
+  const { t, locale, setLocale } = useTranslation();
   const { showToast } = useToast();
 
   const handleResetAll = () => {
@@ -16,8 +16,8 @@ export const WorkflowRecoveryCards: React.FC = () => {
     resetPipeline();
     showToast({
       type: 'success',
-      title: 'Layout e Preferências Restaurados',
-      message: 'Proporções de divisores, tema e modo foram redefinidos com segurança.',
+      title: t('settings.workflow.resetAllToastTitle'),
+      message: t('settings.workflow.resetAllToastMsg'),
     });
   };
 
@@ -27,15 +27,17 @@ export const WorkflowRecoveryCards: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Globe className="w-4 h-4 text-emerald-400" />
-            <span>Idioma & Fluxo de Trabalho</span>
+            <span>{t('settings.workflow.cardTitle')}</span>
           </CardTitle>
           <CardDescription>
-            Alterne o idioma do dicionário i18n e o nível de complexidade das ferramentas.
+            {t('settings.workflow.cardDesc')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-1.5">
-            <span className="text-[11px] text-slate-400 uppercase font-bold block">Idioma (i18n)</span>
+            <span className="text-[11px] text-slate-400 uppercase font-bold block">
+              {t('settings.workflow.languageLabel')}
+            </span>
             <div className="flex items-center gap-2">
               <Button
                 type="button"
@@ -59,7 +61,7 @@ export const WorkflowRecoveryCards: React.FC = () => {
           <div className="space-y-1.5 pt-2 border-t border-slate-800">
             <span className="text-[11px] text-slate-400 uppercase font-bold flex items-center gap-1.5">
               <Layers className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Padrão de Complexidade</span>
+              <span>{t('settings.workflow.complexityLabel')}</span>
             </span>
             <div className="flex items-center gap-2">
               <Button
@@ -68,7 +70,7 @@ export const WorkflowRecoveryCards: React.FC = () => {
                 variant={mode === 'basic' ? 'emerald' : 'outline'}
                 onClick={() => setMode('basic')}
               >
-                Básico (Guiado)
+                {t('settings.workflow.basicMode')}
               </Button>
               <Button
                 type="button"
@@ -76,7 +78,7 @@ export const WorkflowRecoveryCards: React.FC = () => {
                 variant={mode === 'advanced' ? 'default' : 'outline'}
                 onClick={() => setMode('advanced')}
               >
-                Avançado (Engenharia)
+                {t('settings.workflow.advancedMode')}
               </Button>
             </div>
           </div>
@@ -84,10 +86,10 @@ export const WorkflowRecoveryCards: React.FC = () => {
           <div className="flex items-center justify-between pt-2 border-t border-slate-800">
             <span className="text-xs text-slate-300 flex items-center gap-1.5">
               <SlidersHorizontal className="w-3.5 h-3.5 text-cyan-400" />
-              <span>HUD Flutuante Arrastável P7501</span>
+              <span>{t('settings.workflow.hudLabel')}</span>
             </span>
             <Switch
-              aria-label="Alternar HUD Flutuante P7501"
+              aria-label={t('settings.workflow.hudAria')}
               checked={hudOpen}
               onCheckedChange={setHudOpen}
             />
@@ -99,20 +101,20 @@ export const WorkflowRecoveryCards: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <RotateCcw className="w-4 h-4 text-amber-400" />
-            <span>Recuperação & Limpeza de Estado</span>
+            <span>{t('settings.workflow.recoveryTitle')}</span>
           </CardTitle>
           <CardDescription>
-            Saída segura caso algum painel redimensionável ou estado de sessão fique desalinhado.
+            {t('settings.workflow.recoveryDesc')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs space-y-1">
-            <div className="text-slate-400">Status atual do Pipeline:</div>
+            <div className="text-slate-400">{t('settings.workflow.pipelineStatusTitle')}</div>
             <div className="text-slate-200">
-              Pico: {pipeline.picoReady ? 'OK' : 'Pendente'} • NVRAM:{' '}
-              {pipeline.nvramCleaned ? 'Limpa' : 'Pendente'} • HDD:{' '}
-              {pipeline.hddInspected ? 'Inspecionado' : 'Pendente'} • Unbrick:{' '}
-              {pipeline.unbrickReady ? 'Pronto' : 'Pendente'}
+              Pico: {pipeline.picoReady ? t('settings.workflow.ok') : t('settings.workflow.pending')} • NVRAM:{' '}
+              {pipeline.nvramCleaned ? t('settings.workflow.clean') : t('settings.workflow.pending')} • HDD:{' '}
+              {pipeline.hddInspected ? t('settings.workflow.inspected') : t('settings.workflow.pending')} • Unbrick:{' '}
+              {pipeline.unbrickReady ? t('settings.workflow.ready') : t('settings.workflow.pending')}
             </div>
           </div>
 
@@ -123,12 +125,12 @@ export const WorkflowRecoveryCards: React.FC = () => {
               size="sm"
               onClick={() => {
                 resetPipeline();
-                showToast({ type: 'info', title: 'Pipeline Reiniciado' });
+                showToast({ type: 'info', title: t('settings.workflow.pipelineResetToast') });
               }}
               className="gap-1.5"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              <span>Zerar Progresso do Pipeline</span>
+              <span>{t('settings.workflow.resetPipelineBtn')}</span>
             </Button>
 
             <Button
@@ -139,7 +141,7 @@ export const WorkflowRecoveryCards: React.FC = () => {
               className="gap-1.5"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              <span>Restaurar Layout & Padrões</span>
+              <span>{t('settings.workflow.resetAllBtn')}</span>
             </Button>
           </div>
         </CardContent>

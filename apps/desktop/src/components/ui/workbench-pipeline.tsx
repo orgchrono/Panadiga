@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import type { ViewKey } from '@/models';
 import { useWorkbenchMode } from '@/context/WorkbenchModeContext';
+import { useTranslation } from '@/i18n/useTranslation';
+import type { TranslationKey } from '@/i18n/translations';
 import { cn } from '@/lib/utils';
 import { Button } from './button';
 
@@ -25,40 +27,40 @@ export interface GuidedPipelineBarProps {
 const PIPELINE_STEPS: ReadonlyArray<{
   readonly step: number;
   readonly view: ViewKey;
-  readonly title: string;
-  readonly hint: string;
+  readonly titleKey: TranslationKey;
+  readonly hintKey: TranslationKey;
   readonly Icon: React.ComponentType<{ className?: string }>;
   readonly flag: 'picoReady' | 'nvramCleaned' | 'hddInspected' | 'unbrickReady';
 }> = [
   {
     step: 1,
     view: 'picobench',
-    title: '1. Sonda P7501 UART',
-    hint: 'Conectar & VDD 3.3V',
+    titleKey: 'pipeline.steps.picoTitle',
+    hintKey: 'pipeline.steps.picoHint',
     Icon: Radio,
     flag: 'picoReady',
   },
   {
     step: 2,
     view: 'nvram',
-    title: '2. Cirurgia NVRAM U99',
-    hint: 'Limpar SA134..SA141',
+    titleKey: 'pipeline.steps.nvramTitle',
+    hintKey: 'pipeline.steps.nvramHint',
     Icon: Cpu,
     flag: 'nvramCleaned',
   },
   {
     step: 3,
     view: 'hdd',
-    title: '3. Forense & Capacidade HDD',
-    hint: 'MEIHDFS & LBA48',
+    titleKey: 'pipeline.steps.hddTitle',
+    hintKey: 'pipeline.steps.hddHint',
     Icon: HardDrive,
     flag: 'hddInspected',
   },
   {
     step: 4,
     view: 'unbrick',
-    title: '4. Unbrick SD & FRM',
-    hint: 'DIGADIAG / TBC',
+    titleKey: 'pipeline.steps.unbrickTitle',
+    hintKey: 'pipeline.steps.unbrickHint',
     Icon: Lock,
     flag: 'unbrickReady',
   },
@@ -68,27 +70,28 @@ export const GuidedPipelineBar: React.FC<GuidedPipelineBarProps> = ({
   currentView,
   onNavigate,
 }) => {
+  const { t } = useTranslation();
   const { mode, setMode, hudOpen, toggleHud, pipeline } = useWorkbenchMode();
   const completedCount = PIPELINE_STEPS.filter(item => pipeline[item.flag]).length;
 
   return (
     <section
-      aria-label="Pipeline Guiado de Recuperação Panadiga"
+      aria-label={t('pipeline.sectionAria')}
       className="mb-4 rounded-2xl border border-slate-800/90 bg-bench-900/75 px-3.5 py-2.5 shadow-lg font-mono"
     >
       <div className="flex flex-wrap items-center justify-between gap-2 pb-2 mb-2 border-b border-slate-800/80">
         <div className="flex items-center gap-2 text-[11px] text-slate-300">
           <Sparkles className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-          <span className="font-bold">Pipeline Operacional</span>
+          <span className="font-bold">{t('pipeline.title')}</span>
           <span className="text-slate-500">
-            ({completedCount}/{PIPELINE_STEPS.length} etapas concluídas)
+            {t('pipeline.progress', { done: completedCount, total: PIPELINE_STEPS.length })}
           </span>
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5">
           <div
             role="group"
-            aria-label="Alternar complexidade da interface"
+            aria-label={t('pipeline.modeGroupAria')}
             className="inline-flex rounded-lg bg-slate-950 border border-slate-800 p-0.5 text-[11px]"
           >
             <button
@@ -102,7 +105,7 @@ export const GuidedPipelineBar: React.FC<GuidedPipelineBarProps> = ({
                   : 'text-slate-400 hover:text-slate-200'
               )}
             >
-              Básico (Guiado)
+              {t('pipeline.basicBtn')}
             </button>
             <button
               type="button"
@@ -115,7 +118,7 @@ export const GuidedPipelineBar: React.FC<GuidedPipelineBarProps> = ({
                   : 'text-slate-400 hover:text-slate-200'
               )}
             >
-              Avançado (Engenharia)
+              {t('pipeline.advancedBtn')}
             </button>
           </div>
 
@@ -128,13 +131,13 @@ export const GuidedPipelineBar: React.FC<GuidedPipelineBarProps> = ({
             className="h-7 px-2.5 text-[11px] gap-1.5 border-slate-700"
           >
             <SlidersHorizontal className="w-3 h-3 text-cyan-400" />
-            <span>{hudOpen ? 'Ocultar HUD' : 'HUD Pinout'}</span>
+            <span>{hudOpen ? t('pipeline.hudHide') : t('pipeline.hudShow')}</span>
           </Button>
         </div>
       </div>
 
       {PIPELINE_STEPS.length === 0 ? (
-        <span className="text-xs text-slate-500">Nenhuma etapa de pipeline definida.</span>
+        <span className="text-xs text-slate-500">{t('pipeline.emptySteps')}</span>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2">
           {PIPELINE_STEPS.map(item => {
@@ -170,8 +173,8 @@ export const GuidedPipelineBar: React.FC<GuidedPipelineBarProps> = ({
                   {done ? <CheckCircle2 className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="text-[11px] font-bold truncate">{item.title}</div>
-                  <div className="text-[10px] text-slate-400 truncate">{item.hint}</div>
+                  <div className="text-[11px] font-bold truncate">{t(item.titleKey)}</div>
+                  <div className="text-[10px] text-slate-400 truncate">{t(item.hintKey)}</div>
                 </div>
               </motion.button>
             );
@@ -188,13 +191,17 @@ export interface DraggableBenchHudProps {
   readonly onNavigate: (view: ViewKey) => void;
 }
 
-const HUD_PINS: ReadonlyArray<{ readonly pin: string; readonly note: string; readonly warn?: boolean }> = [
-  { pin: 'Pin 1 • SW_UART (GP26)', note: 'ADC0 / Open-Drain LOW boot' },
-  { pin: 'Pin 2 • XRESET (GP5)', note: 'Estrito Open-Drain (15ms)' },
-  { pin: 'Pin 3 • UARTM2P (GP2)', note: 'AM34 TX → Pico RX (115200)' },
-  { pin: 'Pin 4 • GND', note: 'Referência comum obrigatória' },
-  { pin: 'Pin 5 • NSW5V (GP3)', note: 'Hi-Z Input SEMPRE (5.15V!)', warn: true },
-  { pin: 'Pin 6 • UARTP2M (GP4)', note: 'Pico TX → AM34 RX (3.3V)' },
+const HUD_PINS: ReadonlyArray<{
+  readonly pin: string;
+  readonly noteKey: TranslationKey;
+  readonly warn?: boolean;
+}> = [
+  { pin: 'Pin 1 • SW_UART (GP26)', noteKey: 'hud.pins.pin1' },
+  { pin: 'Pin 2 • XRESET (GP5)', noteKey: 'hud.pins.pin2' },
+  { pin: 'Pin 3 • UARTM2P (GP2)', noteKey: 'hud.pins.pin3' },
+  { pin: 'Pin 4 • GND', noteKey: 'hud.pins.pin4' },
+  { pin: 'Pin 5 • NSW5V (GP3)', noteKey: 'hud.pins.pin5', warn: true },
+  { pin: 'Pin 6 • UARTP2M (GP4)', noteKey: 'hud.pins.pin6' },
 ];
 
 export const DraggableBenchHud: React.FC<DraggableBenchHudProps> = ({
@@ -202,6 +209,7 @@ export const DraggableBenchHud: React.FC<DraggableBenchHudProps> = ({
   hardwareConnected,
   onNavigate,
 }) => {
+  const { t } = useTranslation();
   const { hudOpen, setHudOpen } = useWorkbenchMode();
   if (!hudOpen) return null;
 
@@ -211,17 +219,17 @@ export const DraggableBenchHud: React.FC<DraggableBenchHudProps> = ({
       dragMomentum={false}
       initial={{ opacity: 0, scale: 0.96, y: 12 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
-      aria-label="HUD Flutuante Arrastável de Pinout P7501"
+      aria-label={t('hud.ariaLabel')}
       className="fixed bottom-5 left-5 z-40 w-80 max-w-[calc(100vw-2.5rem)] rounded-2xl border border-cyan-500/40 bg-slate-950/95 shadow-2xl backdrop-blur-md font-mono overflow-hidden"
     >
       <div className="flex items-center justify-between px-3 py-2 bg-bench-900 border-b border-slate-800 cursor-grab active:cursor-grabbing select-none">
         <div className="flex items-center gap-2 text-[11px] font-bold text-cyan-300">
           <GripHorizontal className="w-4 h-4 text-slate-400" />
-          <span>HUD P7501 (Arraste livre)</span>
+          <span>{t('hud.dragTitle')}</span>
         </div>
         <button
           type="button"
-          aria-label="Fechar HUD Flutuante"
+          aria-label={t('hud.closeAria')}
           onClick={() => setHudOpen(false)}
           className="p-1 rounded-md text-slate-400 hover:text-slate-100 hover:bg-slate-800"
         >
@@ -232,9 +240,14 @@ export const DraggableBenchHud: React.FC<DraggableBenchHudProps> = ({
       <div className="p-3 space-y-2.5 text-[11px]">
         <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-bench-900 border border-slate-800">
           <span className="text-slate-400">
-            Link: <strong className={hardwareConnected ? 'text-emerald-400' : 'text-rose-400'}>{hardwareConnected ? 'ON' : 'OFF'}</strong>
+            {t('hud.linkLabel')}{' '}
+            <strong className={hardwareConnected ? 'text-emerald-400' : 'text-rose-400'}>
+              {hardwareConnected ? t('hud.on') : t('hud.off')}
+            </strong>
           </span>
-          <span className="text-cyan-300 font-bold">VDD {vddVolts.toFixed(2)}V</span>
+          <span className="text-cyan-300 font-bold">
+            {t('hud.vddLabel', { volts: vddVolts.toFixed(2) })}
+          </span>
         </div>
 
         <div className="space-y-1">
@@ -252,17 +265,17 @@ export const DraggableBenchHud: React.FC<DraggableBenchHudProps> = ({
                 {row.warn && <ShieldAlert className="w-3 h-3 text-rose-400 shrink-0" />}
                 {row.pin}
               </span>
-              <span className="text-slate-400 shrink-0">{row.note}</span>
+              <span className="text-slate-400 shrink-0">{t(row.noteKey)}</span>
             </div>
           ))}
         </div>
 
         <div className="flex items-center gap-1.5 pt-1">
           <Button type="button" size="sm" variant="outline" className="h-7 flex-1 text-[10px]" onClick={() => onNavigate('picobench')}>
-            PicoBench
+            {t('hud.navPico')}
           </Button>
           <Button type="button" size="sm" variant="outline" className="h-7 flex-1 text-[10px]" onClick={() => onNavigate('nvram')}>
-            NVRAM U99
+            {t('hud.navNvram')}
           </Button>
         </div>
       </div>

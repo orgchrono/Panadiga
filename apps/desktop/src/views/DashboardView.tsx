@@ -37,15 +37,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         </div>
         <div>
           <h3 className="text-sm font-bold text-slate-100">
-            Falha na Conexão com o Kernel do Sistema
+            {t('dashboard.connectionErrorTitle')}
           </h3>
           <p className="text-xs text-slate-400 mt-1">
-            {error || 'Não foi possível carregar o resumo da bancada do dispositivo.'}
+            {error || t('dashboard.connectionErrorDesc')}
           </p>
         </div>
         <Button variant="emerald" onClick={refresh} className="gap-2 mx-auto">
           <RefreshCw className="w-4 h-4" />
-          <span>Tentar Novamente</span>
+          <span>{t('common.retry')}</span>
         </Button>
       </div>
     );

@@ -61,11 +61,10 @@ export const FrmCryptoView: React.FC = () => {
           </div>
           <div>
             <h3 className="text-sm font-bold text-slate-100">
-              Contêiner Criptográfico {frmPath} Não Encontrado
+              {t('crypto.notFound.title', { path: frmPath })}
             </h3>
             <p className="text-xs text-slate-400 mt-1">
-              {error ||
-                'Não foi possível carregar ou analisar o contêiner .FRM selecionado.'}
+              {error || t('crypto.notFound.defaultError')}
             </p>
           </div>
           <div className="flex items-center justify-center gap-3 flex-wrap">
@@ -75,7 +74,7 @@ export const FrmCryptoView: React.FC = () => {
               className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs inline-flex items-center gap-2 transition-colors"
             >
               <RefreshCw className="w-4 h-4" />
-              <span>Recarregar Contêiner FRM</span>
+              <span>{t('crypto.notFound.reloadBtn')}</span>
             </button>
             <button
               type="button"

@@ -5,7 +5,10 @@
     "liveMode": "Live Hardware",
     "loading": "Loading engineering subsystem...",
     "subsystemFailure": "Critical Subsystem Failure",
-    "reloadSubsystem": "Reload Subsystem"
+    "reloadSubsystem": "Reload Subsystem",
+    "boundaryFallbackTitle": "Module Rendering Failure",
+    "boundaryFallbackDesc": "An unhandled exception occurred while rendering this component. Physical NOR Flash and bench hardware integrity remain preserved.",
+    "retryModule": "Try Again"
   },
   "nav": {
     "dashboard": "Overview",
@@ -74,7 +77,9 @@
     "metricDwire": "P7501 UART Interface",
     "metricDwireSub": "RP2040/RP2350 Async UART 115200 8N1",
     "metricDwireBadge": "3.28V LVTTL OK",
-    "loading": "Loading DMR-EH55 bench telemetry and system health..."
+    "loading": "Loading DMR-EH55 bench telemetry and system health...",
+    "connectionErrorTitle": "System Kernel Connection Failure",
+    "connectionErrorDesc": "Unable to load the device bench overview summary."
   },
   "hdd": {
     "title": "Hitachi PATA 100 MB Forensic Image (MEIHDFS)",
@@ -151,6 +156,19 @@
       "inspectBtn": "Inspect",
       "outputLabel": "Patched Output File (Optional — auto-generated if blank)",
       "outputPlaceholder": "Ex: extracted_partitions/hdd_partition_firmware_0x02000000_PATCHED_DYNAMIC.bin"
+    },
+    "shaCopiedToastTitle": "SHA256SUMS copied",
+    "shaCopiedToastMsg": "Manifest copied to clipboard.",
+    "fallback": {
+      "notFoundTitle": "Default Disk Image Not Found",
+      "emptyTitle": "No MEIHDFS Image Loaded",
+      "defaultError": "Enter a physical dump path (.bin, .raw, .img) or switch to the Physical Writer tab to manage drives connected over SATA/USB.",
+      "placeholder": "Ex: C:\\dumps\\panasonic_hdd.bin",
+      "loadingBtn": "Loading...",
+      "analyzeBtn": "Analyze",
+      "viewDisksBtn": "View Connected Physical Drives (Win32/SATA)",
+      "openCapacityBtn": "Open Capacity Patcher",
+      "settingsBtn": "Settings"
     }
   },
   "crypto": {
@@ -226,6 +244,11 @@
       "desc": "Encrypted padding blocks in HDD Partition 1 match optical container perfectly.",
       "badge": "SHARED KEY CONFIRMED",
       "empty": "No HDD correlations found"
+    },
+    "notFound": {
+      "title": "Cryptographic Container {{path}} Not Found",
+      "defaultError": "Unable to load or analyze the selected .FRM container.",
+      "reloadBtn": "Reload FRM Container"
     }
   },
   "hex": {
@@ -237,6 +260,35 @@
     "prev": "Previous",
     "next": "Next",
     "bookmarks": "Quick Bookmarks:",
+    "inputAria": "Physical offset in hexadecimal or LBA sector number",
+    "metrics": {
+      "offsetTitle": "Current Physical Offset",
+      "offsetSub": "{{bytes}} bytes from start",
+      "lbaTitle": "ATA/IDE LBA Sector",
+      "lbaSub": "512-byte logical block unit",
+      "bookmarkTitle": "Selected Bookmark",
+      "bookmarkFree": "FREE",
+      "bookmarkManual": "Manual addressing",
+      "windowTitle": "Display Window",
+      "windowUnit": "bytes",
+      "windowSub": "{{rows}} rows of 16 bytes"
+    },
+    "scrubberLabel": "LBA / Physical Offset Scrubber (RangeDnD)",
+    "presets": {
+      "mbrLba0": "MBR LBA 0",
+      "journal8mb": "Journal 8MB (LBA 16384)",
+      "mirror28mb": "Mirror 28MB (LBA 57344)",
+      "part1_32mb": "Partition 1 (32MB)"
+    },
+    "splitAria": "Splitter between architectural bookmarks and hex dump",
+    "criticalBookmarks": "Critical Architectural Bookmarks",
+    "noBookmarks": "No bookmarks registered",
+    "prevPageTitle": "Previous Page (384 bytes)",
+    "nextPageTitle": "Next Page (384 bytes)",
+    "loadingBytes": "Loading memory bytes...",
+    "footerMode": "Zero-Copy Mmap Mode • ATA/IDE 512B Alignment",
+    "footerPrev": "Prev Page (-384B)",
+    "footerNext": "Next Page (+384B)",
     "bookmarkItems": {
       "mbr_lba0": {
         "label": "LBA 0: Primary MBR (\"SH\")",
@@ -304,6 +356,9 @@
     "launchGhidra": "Ghidra Scripts",
     "launchHxd": "HxD Editor",
     "launchTerminal": "PowerShell",
+    "splitAria": "Splitter between P7501 pinout and serial terminal",
+    "terminalPlaceholder": "Enter CDC command (STATUS, RESET, ADC, PINCHECK, DUMP, GDB)...",
+    "sendButton": "Send",
     "pinout": {
       "title": "Physical Wiring (Pico → P7501)",
       "disclaimerTitle": "CRITICAL DISCLAIMER: GROUND (GND) IDENTIFICATION",
@@ -441,6 +496,11 @@
   },
   "nvram": {
     "title": "Spansion S29JL064H Flash & NVRAM U99 Surgery",
+    "syncingMap": "Synchronizing Spansion NOR memory map...",
+    "loadError": "Failed loading NOR flash dump: {{error}}",
+    "openPicoBench": "Open PicoBench",
+    "basicModeBanner": "Basic Mode active: the Copy-on-Write hex editor (manual offset) is collapsed to streamline U99 repair.",
+    "revealAdvancedBtn": "Reveal Advanced Tools",
     "cleanButton": "Perform Dump Surgery",
     "cleaning": "Sanitizing Micro-Sectors...",
     "statusClean": "NVRAM SANITIZED (U99 RESOLVED)",
@@ -559,7 +619,9 @@
     "cancel": "Cancel",
     "ok": "OK",
     "error": "Error",
-    "success": "Success"
+    "success": "Success",
+    "loading": "Loading...",
+    "retry": "Try Again"
   },
   "ssot": {
     "protocol": {
@@ -1157,10 +1219,109 @@
       "mainPathRequired": "Please enter the MAIN 3410PQ binary path.",
       "mainOutRequired": "Please enter the output path for patched MAIN.",
       "extractPathsRequired": "Please provide both source .FRM path and output directory."
+    },
+    "basicModeBanner": "Basic Mode active: advanced TBC Passthrough and Matshita ODD Emulator tools are collapsed to focus on the SD Kit.",
+    "revealAdvancedBtn": "Show TBC & Matshita Emulator"
+  },
+  "pipeline": {
+    "sectionAria": "Panadiga Guided Recovery Pipeline",
+    "title": "Operational Pipeline",
+    "progress": "({{done}}/{{total}} steps completed)",
+    "modeGroupAria": "Toggle interface complexity",
+    "basicBtn": "Basic (Guided)",
+    "advancedBtn": "Advanced (Engineering)",
+    "hudShow": "Pinout HUD",
+    "hudHide": "Hide HUD",
+    "emptySteps": "No pipeline stages defined.",
+    "steps": {
+      "picoTitle": "1. P7501 UART Probe",
+      "picoHint": "Connect & VDD 3.3V",
+      "nvramTitle": "2. NVRAM U99 Surgery",
+      "nvramHint": "Clean SA134..SA141",
+      "hddTitle": "3. HDD Forensics & Capacity",
+      "hddHint": "MEIHDFS & LBA48",
+      "unbrickTitle": "4. SD Unbrick & FRM",
+      "unbrickHint": "DIGADIAG / TBC"
+    }
+  },
+  "hud": {
+    "ariaLabel": "Draggable P7501 Floating Pinout HUD",
+    "dragTitle": "P7501 HUD (Free drag)",
+    "closeAria": "Close Floating HUD",
+    "linkLabel": "Link:",
+    "on": "ON",
+    "off": "OFF",
+    "vddLabel": "VDD {{volts}}V",
+    "navPico": "PicoBench",
+    "navNvram": "NVRAM U99",
+    "pins": {
+      "pin1": "ADC0 / Open-Drain LOW boot",
+      "pin2": "Strict Open-Drain (15ms)",
+      "pin3": "AM34 TX -> Pico RX (115200)",
+      "pin4": "Mandatory common ground",
+      "pin5": "ALWAYS Hi-Z Input (5.15V!)",
+      "pin6": "Pico TX -> AM34 RX (3.3V)"
     }
   },
   "settings": {
     "title": "Settings, Accessibility & Workbench Preferences",
-    "subtitle": "Customize visual theme, contrast, colorblind support, language, Basic/Advanced mode, and layout recovery."
+    "subtitle": "Customize visual theme, contrast, colorblind support, language, Basic/Advanced mode, and layout recovery.",
+    "themes": {
+      "cardTitle": "Theme & Visual Accessibility",
+      "cardDesc": "Choose the color profile that best suits laboratory lighting and visual comfort.",
+      "emptyThemes": "No themes available.",
+      "toastThemeTitle": "Theme Updated",
+      "toastScaleTitle": "Typography Scale",
+      "scaleLargeEnabled": "Large font scale enabled",
+      "scaleDefaultRestored": "Standard font scale restored",
+      "darkLab": {
+        "label": "Dark Lab (Default)",
+        "desc": "Balanced dark workbench theme designed for hardware engineering."
+      },
+      "highContrast": {
+        "label": "High Contrast (WCAG AAA)",
+        "desc": "Pure black background, crisp borders, and maximum text/hex legibility."
+      },
+      "daylightBench": {
+        "label": "Daylight Bench (Light)",
+        "desc": "Light mode optimized for brightly lit electronics workbenches."
+      },
+      "amberCrt": {
+        "label": "Amber CRT (Low Blue Light)",
+        "desc": "Oscilloscope-inspired amber phosphor styling for long lab sessions."
+      },
+      "colorblindTitle": "Colorblind Mode",
+      "colorblindDesc": "Replaces green/red pairs with high-distinction blue/orange.",
+      "colorblindAria": "Enable colorblind mode",
+      "reducedMotionTitle": "Reduce Motion",
+      "reducedMotionDesc": "Minimizes Framer Motion and CSS transitions.",
+      "reducedMotionAria": "Enable reduced motion",
+      "fontScaleTitle": "Enlarged Text",
+      "fontScaleDesc": "Readable typography scale for hex addresses and data tables.",
+      "fontScaleAria": "Enable enlarged typography scale"
+    },
+    "workflow": {
+      "cardTitle": "Language & Workflow Mode",
+      "cardDesc": "Switch i18n dictionary language and toolset complexity level.",
+      "languageLabel": "Language (i18n)",
+      "complexityLabel": "Complexity Profile",
+      "basicMode": "Basic (Guided)",
+      "advancedMode": "Advanced (Engineering)",
+      "hudLabel": "Draggable P7501 Floating HUD",
+      "hudAria": "Toggle Floating P7501 HUD",
+      "recoveryTitle": "Recovery & State Reset",
+      "recoveryDesc": "Safe escape hatch if any resizable pane or session state becomes misaligned.",
+      "pipelineStatusTitle": "Current Pipeline Status:",
+      "ok": "OK",
+      "clean": "Clean",
+      "inspected": "Inspected",
+      "ready": "Ready",
+      "pending": "Pending",
+      "resetPipelineBtn": "Reset Pipeline Progress",
+      "pipelineResetToast": "Pipeline Reset",
+      "resetAllBtn": "Reset Layout & Defaults",
+      "resetAllToastTitle": "Layout & Preferences Restored",
+      "resetAllToastMsg": "Splitter ratios, theme, and mode have been safely restored."
+    }
   }
 }

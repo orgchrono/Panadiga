@@ -2,6 +2,7 @@ import { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { Button } from './button';
 import { logger } from '@/utils/logger';
+import { translate } from '@/i18n/useTranslation';
 
 interface Props {
   children: ReactNode;
@@ -40,12 +41,11 @@ export class ErrorBoundary extends Component<Props, State> {
           </div>
 
           <h3 className="text-base font-bold font-mono text-slate-100 mb-1">
-            {this.props.fallbackTitle ?? 'Falha de Renderização no Módulo'}
+            {this.props.fallbackTitle ?? translate('app.boundaryFallbackTitle')}
           </h3>
 
           <p className="text-xs text-slate-400 max-w-md font-sans mb-4">
-            Ocorreu uma exceção não tratada durante o processamento do componente. A integridade da
-            memória física e do hardware da bancada permanece preservada.
+            {translate('app.boundaryFallbackDesc')}
           </p>
 
           {this.state.error && (
@@ -56,7 +56,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
           <Button variant="outline" size="sm" onClick={this.handleReset} className="gap-2">
             <RefreshCw className="w-3.5 h-3.5" />
-            <span>Tentar Novamente</span>
+            <span>{translate('app.retryModule')}</span>
           </Button>
         </div>
       );

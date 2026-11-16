@@ -41,12 +41,12 @@ export const HexInspectorView: React.FC = () => {
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-base font-bold text-slate-100">
-                Inspetor Hexadecimal de Firmware & LBA Forensics
+                {t('hex.title')}
               </h2>
-              <StatusBadge variant="info" label="16 BYTES/LINHA" />
+              <StatusBadge variant="info" label={t('hex.badge')} />
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              Endereçamento dual (Offset Físico Hexadecimal & Setor LBA de 512 Bytes) com Decodificação ASCII
+              {t('hex.subtitle')}
             </p>
           </div>
         </div>
@@ -56,11 +56,11 @@ export const HexInspectorView: React.FC = () => {
           <div className="relative">
             <input
               type="text"
-              placeholder="0x00000000..."
+              placeholder={t('hex.jumpPlaceholder')}
               value={jumpInput}
               onChange={e => setJumpInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && jumpToInputOffset()}
-              aria-label="Offset físico em hexadecimal ou número de setor LBA"
+              aria-label={t('hex.inputAria')}
               className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-cyan-400 focus:outline-none focus:border-cyan-500 w-36 font-bold focus:ring-1 focus:ring-cyan-500"
             />
           </div>
@@ -68,7 +68,7 @@ export const HexInspectorView: React.FC = () => {
             onClick={jumpToInputOffset}
             className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs font-semibold border border-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400"
           >
-            {t('hex.jumpButton', 'Ir para')}
+            {t('hex.jumpButton')}
           </button>
         </div>
       </div>
@@ -82,35 +82,35 @@ export const HexInspectorView: React.FC = () => {
       {/* Telemetry Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
-          title="Offset Físico Atual"
+          title={t('hex.metrics.offsetTitle')}
           value={`0x${currentOffset.toString(16).padStart(8, '0').toUpperCase()}`}
-          subtitle={`${currentOffset.toLocaleString()} bytes a partir do início`}
+          subtitle={t('hex.metrics.offsetSub', { bytes: currentOffset.toLocaleString() })}
           variant="cyan"
         />
         <MetricCard
-          title="Setor LBA ATA/IDE"
+          title={t('hex.metrics.lbaTitle')}
           value={`LBA ${currentLba.toLocaleString()}`}
-          subtitle="Unidade de 512 bytes de bloco"
+          subtitle={t('hex.metrics.lbaSub')}
           variant="emerald"
         />
         <MetricCard
-          title="Marcador Selecionado"
-          value={selectedBookmark ? selectedBookmark.category : 'LIVRE'}
-          subtitle={selectedBookmark ? selectedBookmark.label : 'Endereçamento manual'}
+          title={t('hex.metrics.bookmarkTitle')}
+          value={selectedBookmark ? selectedBookmark.category : t('hex.metrics.bookmarkFree')}
+          subtitle={selectedBookmark ? selectedBookmark.label : t('hex.metrics.bookmarkManual')}
           variant="amber"
         />
         <MetricCard
-          title="Janela de Exibição"
+          title={t('hex.metrics.windowTitle')}
           value={`${hexRows.length * 16}`}
-          unit="bytes"
-          subtitle={`${hexRows.length} linhas de 16 bytes`}
+          unit={t('hex.metrics.windowUnit')}
+          subtitle={t('hex.metrics.windowSub', { rows: hexRows.length })}
           variant="slate"
         />
       </div>
 
       {/* RangeDnD Scrubbing Window across 100 MB Disk / LBA Space */}
       <RangeDndScrubber
-        label="Scrubber LBA / Offset Físico (RangeDnD)"
+        label={t('hex.scrubberLabel')}
         min={0}
         max={104857600}
         step={512}
@@ -118,10 +118,10 @@ export const HexInspectorView: React.FC = () => {
         endValue={Math.min(104857600, currentOffset + hexRows.length * 16)}
         formatValue={val => `0x${val.toString(16).toUpperCase().padStart(8, '0')} (LBA ${Math.floor(val / 512)})`}
         presets={[
-          { label: 'MBR LBA 0', start: 0, end: 384 },
-          { label: 'Journal 8MB (LBA 16384)', start: 8388608, end: 8388992 },
-          { label: 'Espelho 28MB (LBA 57344)', start: 29360128, end: 29360512 },
-          { label: 'Partição 1 (32MB)', start: 33554432, end: 33554816 },
+          { label: t('hex.presets.mbrLba0'), start: 0, end: 384 },
+          { label: t('hex.presets.journal8mb'), start: 8388608, end: 8388992 },
+          { label: t('hex.presets.mirror28mb'), start: 29360128, end: 29360512 },
+          { label: t('hex.presets.part1_32mb'), start: 33554432, end: 33554816 },
         ]}
         onChangeRange={start => jumpToOffset(start)}
       />
@@ -132,19 +132,19 @@ export const HexInspectorView: React.FC = () => {
         minLeftPercent={22}
         maxLeftPercent={55}
         storageKey="panadiga.split.hex"
-        ariaLabel="Divisor entre marcadores e dump hexadecimal"
+        ariaLabel={t('hex.splitAria')}
         left={
           <div className="flex flex-col h-[520px] lg:h-[680px]">
             <div className="rounded-xl bg-bench-900 border border-slate-800 p-5 shadow-xl space-y-3 flex flex-col h-full">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-300 flex items-center gap-2 shrink-0">
                 <Compass className="w-4 h-4 text-cyan-400" />
-                <span>Marcadores Arquiteturais Críticos</span>
+                <span>{t('hex.criticalBookmarks')}</span>
               </h3>
 
               <div className="space-y-2 flex-1 min-h-0 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-800">
                 {bookmarks.length === 0 ? (
                   <div className="p-6 text-center text-xs text-slate-500 font-mono">
-                    Nenhum marcador registrado
+                    {t('hex.noBookmarks')}
                   </div>
                 ) : (
                   bookmarks.map(bm => {
@@ -197,16 +197,16 @@ export const HexInspectorView: React.FC = () => {
                 <button
                   onClick={prevPage}
                   className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400"
-                  title="Página Anterior (384 bytes)"
-                  aria-label="Página Anterior (384 bytes)"
+                  title={t('hex.prevPageTitle')}
+                  aria-label={t('hex.prevPageTitle')}
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
                 <button
                   onClick={nextPage}
                   className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400"
-                  title="Próxima Página (384 bytes)"
-                  aria-label="Próxima Página (384 bytes)"
+                  title={t('hex.nextPageTitle')}
+                  aria-label={t('hex.nextPageTitle')}
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
@@ -217,7 +217,7 @@ export const HexInspectorView: React.FC = () => {
             <div className="p-4 bg-slate-950 overflow-x-auto overflow-y-auto space-y-1 text-xs select-text flex-1 min-h-0">
               {loading ? (
                 <div className="py-12 text-center text-slate-500">
-                  Carregando bytes na memória...
+                  {t('hex.loadingBytes')}
                 </div>
               ) : (
                 hexRows.map(row => (
@@ -251,20 +251,20 @@ export const HexInspectorView: React.FC = () => {
 
             {/* Hex Footer */}
             <div className="px-4 py-2 bg-bench-950 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-500">
-              <span>Modo Zero-Copy Mmap • Alinhamento ATA/IDE 512B</span>
+              <span>{t('hex.footerMode')}</span>
               <div className="flex items-center gap-3">
                 <button
                   onClick={prevPage}
                   className="text-slate-400 hover:text-slate-200 underline"
                 >
-                  Pág Anterior (-384B)
+                  {t('hex.footerPrev')}
                 </button>
                 <span>•</span>
                 <button
                   onClick={nextPage}
                   className="text-slate-400 hover:text-slate-200 underline"
                 >
-                  Próxima Pág (+384B)
+                  {t('hex.footerNext')}
                 </button>
               </div>
             </div>

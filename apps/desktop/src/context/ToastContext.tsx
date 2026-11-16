@@ -3,7 +3,15 @@
  * @brief Redux-backed notification facade bridging Redux `toastSlice` with Sonner toasts.
  */
 
-import React, { useCallback, useEffect, type ReactNode } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  type ReactNode,
+} from 'react';
 import { Toaster, toast as sonnerToast } from 'sonner';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { dismissToast, enqueueToast } from '@/store/slices/toastSlice';
@@ -18,6 +26,11 @@ interface ToastContextType {
   removeToast: (id: string) => void;
 }
 
+interface ToastTimerRegistry {
+  schedule: (id: string, durationMs: number, onExpire: () => void) => void;
+  cancel: (id: string) => void;
+}
+
 const SONNER_DISPATCH: Record<
   ToastType,
   (title: string, opts: { id: string; description?: string; duration: number }) => string | number
@@ -28,19 +41,46 @@ const SONNER_DISPATCH: Record<
   info: (title, opts) => sonnerToast.info(title, opts),
 };
 
-const ACTIVE_TIMERS = new Map<string, ReturnType<typeof setTimeout>>();
+const ToastTimerContext = createContext<ToastTimerRegistry | null>(null);
 
 export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const activeTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
+  const cancel = useCallback((id: string) => {
+    const existing = activeTimersRef.current.get(id);
+    if (existing !== undefined) {
+      clearTimeout(existing);
+      activeTimersRef.current.delete(id);
+    }
+  }, []);
+
+  const schedule = useCallback(
+    (id: string, durationMs: number, onExpire: () => void) => {
+      cancel(id);
+      const handle = setTimeout(() => {
+        activeTimersRef.current.delete(id);
+        onExpire();
+      }, durationMs);
+      activeTimersRef.current.set(id, handle);
+    },
+    [cancel],
+  );
+
   useEffect(
     () => () => {
-      ACTIVE_TIMERS.forEach(handle => clearTimeout(handle));
-      ACTIVE_TIMERS.clear();
+      activeTimersRef.current.forEach(handle => clearTimeout(handle));
+      activeTimersRef.current.clear();
     },
     [],
   );
 
+  const registry = useMemo<ToastTimerRegistry>(
+    () => ({ schedule, cancel }),
+    [schedule, cancel],
+  );
+
   return (
-    <>
+    <ToastTimerContext.Provider value={registry}>
       {children}
       <Toaster
         theme="dark"
@@ -51,25 +91,22 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           className: 'font-mono text-xs border border-slate-800 bg-slate-950 text-slate-100 shadow-2xl',
         }}
       />
-    </>
+    </ToastTimerContext.Provider>
   );
 };
 
 export function useToast(): ToastContextType {
   const dispatch = useAppDispatch();
   const toasts = useAppSelector(state => state.toast.items);
+  const timerRegistry = useContext(ToastTimerContext);
 
   const removeToast = useCallback(
     (id: string) => {
-      const existing = ACTIVE_TIMERS.get(id);
-      if (existing !== undefined) {
-        clearTimeout(existing);
-        ACTIVE_TIMERS.delete(id);
-      }
+      timerRegistry?.cancel(id);
       sonnerToast.dismiss(id);
       dispatch(dismissToast(id));
     },
-    [dispatch],
+    [dispatch, timerRegistry],
   );
 
   const showToast = useCallback(
@@ -85,14 +122,12 @@ export function useToast(): ToastContextType {
       });
 
       if (durationMs > 0) {
-        const handle = setTimeout(() => {
-          ACTIVE_TIMERS.delete(id);
+        timerRegistry?.schedule(id, durationMs, () => {
           dispatch(dismissToast(id));
-        }, durationMs);
-        ACTIVE_TIMERS.set(id, handle);
+        });
       }
     },
-    [dispatch],
+    [dispatch, timerRegistry],
   );
 
   return { toasts, showToast, removeToast };
