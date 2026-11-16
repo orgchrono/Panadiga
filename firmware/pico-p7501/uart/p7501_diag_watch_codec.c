@@ -168,6 +168,23 @@ bool p7501_diag_watch_parse_args(const char *arg, p7501_diag_watch_spec_t *out) 
             out->release_on_ddr = true;
         } else if (p7501_ascii_ieq(tok, "HOLD")) {
             out->release_on_ddr = false;
+        } else if (p7501_ascii_ieq(tok, "WAKE")) {
+            out->wait_for_wake = true;
+            out->wake_timeout_ms = P7501_WDT_MAX_CMD_WINDOW_MS < 30000u
+                ? P7501_WDT_MAX_CMD_WINDOW_MS
+                : 30000u;
+        } else if (p7501_ascii_iprefix(tok, "WAKE:")) {
+            const char *ms_tok = tok + 5u;
+            if ((ms_tok[0] == '\0') || !p7501_ascii_is_digits(ms_tok)) {
+                return false;
+            }
+            out->wait_for_wake = true;
+            out->wake_timeout_ms = p7501_parse_uint32_clamped(
+                ms_tok,
+                30000u,
+                1000u,
+                P7501_WDT_MAX_CMD_WINDOW_MS
+            );
         } else {
             return false;
         }

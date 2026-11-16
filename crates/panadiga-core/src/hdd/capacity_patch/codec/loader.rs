@@ -73,12 +73,12 @@ fn is_full_hdd_with_p1(raw: &[u8]) -> bool {
 }
 
 fn detect_extrhead_container_len(slice: &[u8]) -> Result<usize> {
-    if slice.len() < 0x40 {
-        bail!("EXTRHEAD slice shorter than 64 bytes");
+    if slice.len() < PANA_EXTRHEAD_HEADER_SIZE {
+        bail!("EXTRHEAD slice shorter than {PANA_EXTRHEAD_HEADER_SIZE} bytes");
     }
     let is_plain = slice.starts_with(b"EXTRHEAD");
-    let mut hdr = [0u8; 0x40];
-    hdr.copy_from_slice(&slice[..0x40]);
+    let mut hdr = [0u8; PANA_EXTRHEAD_HEADER_SIZE];
+    hdr.copy_from_slice(&slice[..PANA_EXTRHEAD_HEADER_SIZE]);
     if !is_plain {
         crate::crypto::feistel_decrypt_buffer(
             &mut hdr,
@@ -87,10 +87,10 @@ fn detect_extrhead_container_len(slice: &[u8]) -> Result<usize> {
         );
     }
     let parsed = crate::crypto::parse_extrhead_header(&hdr)?;
-    let footer_span = if parsed.footer_offset >= 0x40 {
-        parsed.footer_offset as usize + 8
+    let footer_span = if parsed.footer_offset >= PANA_EXTRHEAD_HEADER_SIZE as u32 {
+        parsed.footer_offset as usize + PANA_EXTRHEAD_FOOTER_SIZE
     } else {
-        0x40 + parsed.src_len as usize + 8
+        PANA_EXTRHEAD_HEADER_SIZE + parsed.src_len as usize + PANA_EXTRHEAD_FOOTER_SIZE
     };
     let aligned = (footer_span + 7) & !7;
     if aligned > slice.len() {

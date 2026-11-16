@@ -21,21 +21,25 @@ use super::feistel::{
     feistel_decrypt_buffer, feistel_encrypt_buffer,
 };
 use crate::constants::{
-    PANA_EXTRHEAD_DEFAULT_ADLER_STEP, PANA_EXTRHEAD_DRV_CRYPT_SPAN, PANA_FEISTEL_ROUND_KEY_32B,
-    PANA_FEISTEL_SBOX_256,
+    PANA_CRAMFS_FLAG_FSID_VERSION_2, PANA_CRAMFS_MAGIC, PANA_CRAMFS_SIGNATURE,
+    PANA_DRV_HEADER_SIZE, PANA_DRV_TAIL_CLEAR_BYTES, PANA_EXTRHEAD_DEFAULT_ADLER_STEP,
+    PANA_EXTRHEAD_DRV_CRYPT_SPAN, PANA_FEISTEL_ROUND_KEY_32B, PANA_FEISTEL_SBOX_256,
+    PANA_LIBDOWNLOADLIB_CIPHER_IV, PANA_LIBDOWNLOADLIB_CIPHER_STEP, PANA_MAIN_LIST_ENTRY_SIZE,
+    PANA_MAIN_LIST_HEADER_SIZE, PANA_MAIN_LIST_LEGACY_SEG_TARGET, PANA_MAIN_LIST_MODERN_CRYPT_SPAN,
+    PANA_MAIN_LIST_MODERN_SEG_TARGET, PANA_ROMFS_MAGIC,
 };
 
-pub const MAIN_LIST_LEGACY_SEGMENT_TARGET_SIZE: u32 = 32 * 1024 * 1024;
-pub const MAIN_LIST_MODERN_SEGMENT_TARGET_SIZE: u32 = 16 * 1024 * 1024;
+pub const MAIN_LIST_LEGACY_SEGMENT_TARGET_SIZE: u32 = PANA_MAIN_LIST_LEGACY_SEG_TARGET;
+pub const MAIN_LIST_MODERN_SEGMENT_TARGET_SIZE: u32 = PANA_MAIN_LIST_MODERN_SEG_TARGET;
 pub const MAIN_LIST_LEGACY_CRYPT_SPAN: usize = PANA_EXTRHEAD_DRV_CRYPT_SPAN; // 0x2800 (10 KiB)
-pub const MAIN_LIST_MODERN_CRYPT_SPAN: usize = 0x1400; // 5 KiB
-pub const DRV_HEADER_SIZE: usize = 0x20;
-pub const DRV_TAIL_CLEAR_BYTES: usize = 48;
+pub const MAIN_LIST_MODERN_CRYPT_SPAN: usize = PANA_MAIN_LIST_MODERN_CRYPT_SPAN; // 0x1400 (5 KiB)
+pub const DRV_HEADER_SIZE: usize = PANA_DRV_HEADER_SIZE;
+pub const DRV_TAIL_CLEAR_BYTES: usize = PANA_DRV_TAIL_CLEAR_BYTES;
 
-const CRAMFS_MAGIC: u32 = 0x28CD_3D45;
-const CRAMFS_SIGNATURE: &[u8; 16] = b"Compressed ROMFS";
-const CRAMFS_FLAG_FSID_VERSION_2: u32 = 0x0000_0001;
-const ROMFS_MAGIC: &[u8; 8] = b"-rom1fs-";
+const CRAMFS_MAGIC: u32 = PANA_CRAMFS_MAGIC;
+const CRAMFS_SIGNATURE: &[u8; 16] = PANA_CRAMFS_SIGNATURE;
+const CRAMFS_FLAG_FSID_VERSION_2: u32 = PANA_CRAMFS_FLAG_FSID_VERSION_2;
+const ROMFS_MAGIC: &[u8; 8] = PANA_ROMFS_MAGIC;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct MainListHeader {
@@ -189,6 +193,42 @@ pub const PANA_KASEIKYO_SERVICE_COMMANDS: &[KaseikyoServiceCommand] = &[
         flipper_hint: "A:0x22002B1, C:0x020",
         notes: "5 + 9 + Red (70 RET -> 80 SRV)",
     },
+    KaseikyoServiceCommand {
+        name: "Audio / Subtitles [A]",
+        fpc_bytes: [0x41, 0xB0, 0x00, 0x33],
+        device: 0xB,
+        subdevice: 0x0,
+        command: 0x33,
+        flipper_hint: "A:B0 02 20 00, C:30 03 (wire 02 20 B0 00 33 83)",
+        notes: "NA Combo remote AUDIO [A] != Teletext RED (0x141)",
+    },
+    KaseikyoServiceCommand {
+        name: "Display [B]",
+        fpc_bytes: [0x41, 0xB0, 0x00, 0x92],
+        device: 0xB,
+        subdevice: 0x0,
+        command: 0x92,
+        flipper_hint: "wire 02 20 B0 00 92 22 (DMR-E50/EX77)",
+        notes: "NA Combo remote DISPLAY [B]",
+    },
+    KaseikyoServiceCommand {
+        name: "Teletext Red [RED]",
+        fpc_bytes: [0x41, 0xB0, 0x01, 0x41],
+        device: 0xB,
+        subdevice: 0x1,
+        command: 0x41,
+        flipper_hint: "wire 02 20 B0 01 41 F0 (DMR-BCT73/pana-fw)",
+        notes: "EU/JDM Teletext Red button (absent on NA remotes)",
+    },
+    KaseikyoServiceCommand {
+        name: "Power On/Off",
+        fpc_bytes: [0x41, 0xB0, 0x00, 0x3D],
+        device: 0xB,
+        subdevice: 0x0,
+        command: 0x3D,
+        flipper_hint: "wire 02 20 B0 00 3D 8D",
+        notes: "DVD/DIGA power toggle",
+    },
 ];
 
 fn main_list_crypt_span(decompressed_segment_size: u32) -> usize {
@@ -228,8 +268,11 @@ fn apply_edge_crypt_order(buf: &mut [u8], span: usize, round_key: &[u8; 32], enc
 
 /// Parses and decrypts a multi-segment `MainList` (`MAIN` module payload in modern/split `.FRM` containers).
 pub fn parse_main_list(raw: &[u8], round_key: Option<&[u8; 32]>) -> Result<UnpackedMainList> {
-    if raw.len() < 20 {
-        bail!("MainList header too short ({} bytes < 20)", raw.len());
+    if raw.len() < PANA_MAIN_LIST_HEADER_SIZE {
+        bail!(
+            "MainList header too short ({} bytes < {PANA_MAIN_LIST_HEADER_SIZE})",
+            raw.len()
+        );
     }
     let checksum = read_u32_le(raw, 0x00);
     let unknown1 = read_u32_le(raw, 0x04);
@@ -237,7 +280,10 @@ pub fn parse_main_list(raw: &[u8], round_key: Option<&[u8; 32]>) -> Result<Unpac
     let decompressed_segment_size = read_u32_le(raw, 0x0C);
     let compression_type = read_u32_le(raw, 0x10);
 
-    if list_size < 20 || !(list_size - 20).is_multiple_of(8) {
+    if (list_size as usize) < PANA_MAIN_LIST_HEADER_SIZE
+        || !(list_size as usize - PANA_MAIN_LIST_HEADER_SIZE)
+            .is_multiple_of(PANA_MAIN_LIST_ENTRY_SIZE)
+    {
         bail!("Invalid MainList list_size {list_size}");
     }
     let list_size_us = list_size as usize;
@@ -249,7 +295,7 @@ pub fn parse_main_list(raw: &[u8], round_key: Option<&[u8; 32]>) -> Result<Unpac
     }
     let header_checksum_valid = adler32_panasonic_strided(&raw[4..list_size_us], 1) == checksum;
 
-    let count = (list_size_us - 20) / 8;
+    let count = (list_size_us - PANA_MAIN_LIST_HEADER_SIZE) / PANA_MAIN_LIST_ENTRY_SIZE;
     let crypt_span = main_list_crypt_span(decompressed_segment_size);
     let mut entries = Vec::with_capacity(count);
     let mut segments = Vec::with_capacity(count);
@@ -257,7 +303,7 @@ pub fn parse_main_list(raw: &[u8], round_key: Option<&[u8; 32]>) -> Result<Unpac
     let mut cursor = list_size_us;
 
     for idx in 0..count {
-        let entry_off = 20 + idx * 8;
+        let entry_off = PANA_MAIN_LIST_HEADER_SIZE + idx * PANA_MAIN_LIST_ENTRY_SIZE;
         let seg_size = read_u32_le(raw, entry_off);
         let seg_sum = read_u32_le(raw, entry_off + 4);
         let seg_end = cursor
@@ -765,17 +811,16 @@ pub fn find_feistel_key_slow(block: &[u8]) -> Option<(&'static str, [u8; 32], us
 }
 
 fn network_stream_transform(data: &mut [u8], decrypt: bool) {
-    const IV: u32 = 904;
     let mut counter = 0u32;
     for (idx, byte) in data.iter_mut().enumerate() {
         if (idx & 0xFF) == 0 {
-            counter = IV;
+            counter = PANA_LIBDOWNLOADLIB_CIPHER_IV;
         }
         let key_byte = (counter >> 8) as u8;
         let out_byte = *byte ^ key_byte;
         let cipher_byte = if decrypt { *byte } else { out_byte };
         *byte = out_byte;
-        counter = counter.wrapping_add(u32::from(cipher_byte) + 38_400 + 163);
+        counter = counter.wrapping_add(u32::from(cipher_byte) + PANA_LIBDOWNLOADLIB_CIPHER_STEP);
     }
 }
 

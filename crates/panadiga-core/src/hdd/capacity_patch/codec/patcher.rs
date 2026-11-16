@@ -10,8 +10,9 @@ use crate::crypto::{
 
 use super::super::specs::{
     DYNAMIC_UNCLAMPED_MAX_BLOCKS_2KB, HDD_CMD_M7920_200GB_BLOCKS, HDD_CMD_M7920_400GB_BLOCKS,
-    HddCapacityPatchMode, MainCapacityInspectionReport, OFF_CLAMP_BRANCH_OP, OFF_SLOT_200GB,
-    OFF_SLOT_400GB, OFF_SLOT_FALLBACK, OPCODE_BLS, OPCODE_BRA, blocks_2kb_for_gb,
+    HDD_CMD_M7920_FALLBACK_BLOCKS, HddCapacityPatchMode, MainCapacityInspectionReport,
+    OFF_CLAMP_BRANCH_OP, OFF_SLOT_200GB, OFF_SLOT_400GB, OFF_SLOT_FALLBACK, OPCODE_BLS, OPCODE_BRA,
+    blocks_2kb_for_gb,
 };
 use super::loader::{find_hdd_cmd_clamp_site, inspect_unpacked_capacity};
 
@@ -39,15 +40,12 @@ pub fn apply_capacity_patch_in_place(
             let blocks = blocks_2kb_for_gb(gb)?;
             (OPCODE_BLS, blocks, blocks, blocks)
         }
-        HddCapacityPatchMode::Factory200Gb => {
-            let fb = 0x05D0_DDBA;
-            (
-                OPCODE_BLS,
-                HDD_CMD_M7920_400GB_BLOCKS,
-                HDD_CMD_M7920_200GB_BLOCKS,
-                fb,
-            )
-        }
+        HddCapacityPatchMode::Factory200Gb => (
+            OPCODE_BLS,
+            HDD_CMD_M7920_400GB_BLOCKS,
+            HDD_CMD_M7920_200GB_BLOCKS,
+            HDD_CMD_M7920_FALLBACK_BLOCKS,
+        ),
     };
 
     LittleEndian::write_u32(&mut main_buf[site + OFF_SLOT_400GB..], slot_400_val);

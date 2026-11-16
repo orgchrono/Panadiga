@@ -1,6 +1,7 @@
 //! Reverse Engineering, MN103S Disassembly, UART NOR Dumper & BGO Unbrick Primitives
 
 pub mod bgo_unbrick;
+pub mod emu_patch_suite;
 pub mod main_passthrough;
 pub mod matshita_emu;
 pub mod mn10300;
@@ -14,12 +15,16 @@ pub mod unbrick_sd_kit;
 pub mod unbrick_workbench;
 
 pub use bgo_unbrick::{
-    OFF_BGO_INIT_FAIL_HOOK, OFF_BGO_SUM_BEQ, OFF_DEVINFO_CHECK_BEQ, PROG061_BASE_VA,
-    PROG061_EXPECTED_SIZE, PROG061_NFROM_FORMAT_VA, Prog061BgoInspection, Prog061BgoPatchMode,
-    Prog061BgoPatchReport, Prog061BgoSiteStatus, decode_prog061_payload, inspect_prog061_bgo_sites,
+    OFF_BGO_INIT_FAIL_HOOK, OFF_BGO_SUM_BEQ, OFF_DEVINFO_CHECK_BEQ, ORIG_A2CD_HOOK,
+    ORIG_DEVINFO_BEQ, ORIG_SUM_BEQ, PROG061_BASE_VA, PROG061_EXPECTED_SIZE,
+    PROG061_NFROM_FORMAT_VA, Prog061BgoInspection, Prog061BgoPatchMode, Prog061BgoPatchReport,
+    Prog061BgoSiteStatus, decode_prog061_payload, inspect_prog061_bgo_sites,
     inspect_prog061_container_bytes, patch_prog061_bgo_in_place,
     patch_prog061_bgo_in_place_with_policy, patch_prog061_or_build_digadiag,
     patch_prog061_or_build_digadiag_with_policy,
+};
+pub use emu_patch_suite::{
+    NorEmuPatchSuiteReport, PatchVerificationCheck, run_nor_emu_patch_verification_suite,
 };
 pub use main_passthrough::{
     DEV_SERIAL_CALLBACK_VA, DEV_SERIAL_HANDSHAKE_BYTES, DEV_SERIAL_ISR_CTX_PTR_VA,

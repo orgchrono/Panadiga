@@ -18,14 +18,134 @@ concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+
 jobs:
   # ==========================================================================
-  # 1. Multi-Platform Binary Compilation & Packaging (Windows, Linux, macOS)
+  # 1. Shared Frontend Build (Built Once, Reused Across All 4 Target Platforms)
+  # ==========================================================================
+  frontend-bundle:
+    name: Build Frontend Bundle
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: "npm"
+          cache-dependency-path: apps/desktop/package-lock.json
+
+      - name: Install Node Dependencies & Build Frontend
+        working-directory: apps/desktop
+        run: |
+          npm ci --prefer-offline
+          npm run build
+
+      - name: Upload Shared Frontend Dist
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-frontend-dist
+          path: apps/desktop/dist/
+          if-no-files-found: error
+          retention-days: 1
+
+  # ==========================================================================
+  # 2. Raspberry Pi Pico Firmware Dual Target (RP2040 & RP2350)
+  # ==========================================================================
+  pico-firmware:
+    name: Pico Firmware Dual Target (RP2040 & RP2350)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install ARM Embedded Toolchain, Ninja & CCache
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y --no-install-recommends gcc-arm-none-eabi libnewlib-arm-none-eabi cmake ninja-build ccache libudev-dev pkg-config
+
+      - name: Set up stable Rust toolchain
+        uses: dtolnay/rust-toolchain@39008827e6b4319a349e9a42dfc90579dd25f1ca # stable
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+
+      - name: Cache Pico C/C++ Compilation Objects (ccache)
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-pico-release-${{ hashFiles('firmware/pico-p7501/**') }}
+          restore-keys: |
+            ccache-pico-release-
+
+      - name: Cache Raspberry Pi Pico SDK (2.1.1)
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ${{ runner.temp }}/pico-sdk
+          key: pico-sdk-2.1.1-${{ runner.os }}
+
+      - name: Clone Raspberry Pi Pico SDK
+        run: |
+          if [ ! -d "${{ runner.temp }}/pico-sdk/.git" ]; then
+            git clone --depth 1 --branch 2.1.1 https://github.com/raspberrypi/pico-sdk.git ${{ runner.temp }}/pico-sdk
+            cd ${{ runner.temp }}/pico-sdk
+            git submodule update --init --depth 1
+          fi
+
+      - name: Build Firmware in Parallel (RP2040 & RP2350) + Unified UF2 Merge
+        env:
+          PICO_SDK_PATH: ${{ runner.temp }}/pico-sdk
+          CMAKE_POLICY_VERSION_MINIMUM: "3.5"
+          CXXFLAGS: "-include cstdint"
+        run: |
+          ./build.sh --pico --strict-toolchains
+          mkdir -p target/pico-build/out
+          cp crates/panadiga-core/src/pico/firmware_bins/panasonic_p7501_uart_rp2040.uf2 target/pico-build/out/panasonic_p7501_uart_rp2040.uf2
+          cp crates/panadiga-core/src/pico/firmware_bins/panasonic_p7501_uart_rp2350.uf2 target/pico-build/out/panasonic_p7501_uart_rp2350.uf2
+          cp crates/panadiga-core/src/pico/firmware_bins/panasonic_p7501_uart_unified.uf2 target/pico-build/out/panasonic_p7501_uart_unified.uf2
+          (cd target/pico-build/out && sha256sum panasonic_p7501_uart_rp2040.uf2 > panasonic_p7501_uart_rp2040.uf2.sha256)
+          (cd target/pico-build/out && sha256sum panasonic_p7501_uart_rp2350.uf2 > panasonic_p7501_uart_rp2350.uf2.sha256)
+          (cd target/pico-build/out && sha256sum panasonic_p7501_uart_unified.uf2 > panasonic_p7501_uart_unified.uf2.sha256)
+
+      - name: Upload Firmware Artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: panasonic_p7501_uart_firmware_binaries
+          path: |
+            target/pico-build/out/*.uf2
+            target/pico-build/out/*.uf2.sha256
+          retention-days: 30
+
+      - name: Publish Firmware to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        with:
+          files: |
+            target/pico-build/out/panasonic_p7501_uart_rp2040.uf2
+            target/pico-build/out/panasonic_p7501_uart_rp2040.uf2.sha256
+            target/pico-build/out/panasonic_p7501_uart_rp2350.uf2
+            target/pico-build/out/panasonic_p7501_uart_rp2350.uf2.sha256
+            target/pico-build/out/panasonic_p7501_uart_unified.uf2
+            target/pico-build/out/panasonic_p7501_uart_unified.uf2.sha256
+          body_path: .github/RELEASE_NOTES.md
+          generate_release_notes: false
+
+  # ==========================================================================
+  # 3. Multi-Platform Binary Compilation & Packaging (Windows, Linux, macOS)
   # ==========================================================================
   build-release:
     name: Build (${{ matrix.platform.name }})
+    needs: [frontend-bundle, pico-firmware]
     runs-on: ${{ matrix.platform.os }}
-    timeout-minutes: 60
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -58,46 +178,43 @@ jobs:
         with:
           lfs: true
 
-      - name: Setup Node.js 22
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - name: Download Shared Frontend Dist & Fresh Pico UF2 Binaries
+        uses: actions/download-artifact@fa0a91b75d4f50ff3845483238924c2982a1090f # v4
         with:
-          node-version: 22
-          cache: "npm"
-          cache-dependency-path: apps/desktop/package-lock.json
+          name: release-frontend-dist
+          path: apps/desktop/dist
+
+      - name: Download Compiled Pico UF2 Firmware Images
+        uses: actions/download-artifact@fa0a91b75d4f50ff3845483238924c2982a1090f # v4
+        with:
+          name: panasonic_p7501_uart_firmware_binaries
+          path: crates/panadiga-core/src/pico/firmware_bins
+
+      - name: Ensure Fresh Frontend Timestamp for tauri-build
+        shell: bash
+        run: touch apps/desktop/dist/index.html
 
       - name: Install stable Rust toolchain
         uses: dtolnay/rust-toolchain@39008827e6b4319a349e9a42dfc90579dd25f1ca # stable
         with:
-          components: rustfmt, clippy
           targets: ${{ matrix.platform.target }}
 
       - name: Rust Cache
         uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         with:
-          key: ${{ matrix.platform.target }}
+          key: release-${{ matrix.platform.target }}
 
       - name: Install Linux GUI Dependencies
         if: runner.os == 'Linux'
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libssl-dev libayatana-appindicator3-dev librsvg2-dev libudev-dev pkg-config
+          sudo apt-get update -y
+          sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libudev-dev pkg-config
 
-      - name: Install Node Dependencies & Build Frontend
-        shell: bash
-        run: |
-          cd apps/desktop
-          npm ci
-          npm run check
-          npm run build
-
-      - name: Verify Rust Format, Clippy & Workspace Tests
-        run: |
-          cargo fmt --all -- --check
-          cargo clippy --workspace --all-targets --no-deps -- -D warnings
-          cargo test --workspace
-
-      - name: Compile Unified Panadiga Binaries
+      - name: Compile Unified Panadiga Release Binaries
         run: cargo build --release --target ${{ matrix.platform.target }} -p panadiga-cli -p panadiga-desktop
+
+      - name: Smoke Test Built Release CLI + NOR/MN103Vm Patch Suite
+        run: ./${{ matrix.platform.bin_cli }} re verify-patches
 
       - name: Package Windows Artifacts
         if: runner.os == 'Windows'
@@ -107,14 +224,11 @@ jobs:
           New-Item -ItemType Directory -Path $staging | Out-Null
           Copy-Item "${{ matrix.platform.bin_cli }}" -Destination "$staging\panadiga.exe"
           Copy-Item "${{ matrix.platform.bin_desktop }}" -Destination "$staging\panadiga-desktop.exe"
-          if (Test-Path "crates/panadiga-core/src/pico/firmware_bins/panasonic_p7501_uart_rp2040.uf2") {
-              Copy-Item "crates/panadiga-core/src/pico/firmware_bins/panasonic_p7501_uart_rp2040.uf2" -Destination "$staging\panasonic_p7501_uart_rp2040.uf2"
-          }
-          if (Test-Path "crates/panadiga-core/src/pico/firmware_bins/panasonic_p7501_uart_rp2350.uf2") {
-              Copy-Item "crates/panadiga-core/src/pico/firmware_bins/panasonic_p7501_uart_rp2350.uf2" -Destination "$staging\panasonic_p7501_uart_rp2350.uf2"
-          }
-          if (Test-Path "crates/panadiga-core/src/pico/firmware_bins/panasonic_p7501_uart_unified.uf2") {
-              Copy-Item "crates/panadiga-core/src/pico/firmware_bins/panasonic_p7501_uart_unified.uf2" -Destination "$staging\panasonic_p7501_uart_unified.uf2"
+          foreach ($uf2 in @("panasonic_p7501_uart_rp2040.uf2", "panasonic_p7501_uart_rp2350.uf2", "panasonic_p7501_uart_unified.uf2")) {
+              $src = "crates/panadiga-core/src/pico/firmware_bins/$uf2"
+              if (Test-Path $src) {
+                  Copy-Item $src -Destination "$staging\$uf2"
+              }
           }
           New-Item -ItemType Directory -Path "$staging\tools" | Out-Null
           if (Test-Path "tools\ghidra") {
@@ -125,7 +239,7 @@ jobs:
               Copy-Item "tools\README.md" -Destination "$staging\tools\README.md"
           }
           Copy-Item "LICENSE" -Destination "$staging\LICENSE"
-          
+
           if (Get-Command 7z -ErrorAction SilentlyContinue) {
               7z a -tzip -mx=5 "${{ matrix.platform.archive_name }}" ".\$staging\*"
           } else {
@@ -151,9 +265,7 @@ jobs:
           if [ "${{ runner.os }}" = "Linux" ]; then
             echo "[*] Building Debian package (.deb)..."
             deb_dir="panadiga_deb_pkg"
-            mkdir -p "$deb_dir/DEBIAN"
-            mkdir -p "$deb_dir/usr/bin"
-            mkdir -p "$deb_dir/usr/share/panadiga/tools"
+            mkdir -p "$deb_dir/DEBIAN" "$deb_dir/usr/bin" "$deb_dir/usr/share/panadiga/tools"
             cp "${{ matrix.platform.bin_cli }}" "$deb_dir/usr/bin/panadiga"
             cp "${{ matrix.platform.bin_desktop }}" "$deb_dir/usr/bin/panadiga-desktop"
             chmod 755 "$deb_dir/usr/bin/panadiga" "$deb_dir/usr/bin/panadiga-desktop"
@@ -212,102 +324,13 @@ jobs:
           prerelease: false
 
   # ==========================================================================
-  # 2. Raspberry Pi Pico Firmware Dual Target (RP2040 & RP2350)
-  # ==========================================================================
-  pico-firmware:
-    name: Pico Firmware Dual Target (RP2040 & RP2350)
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          lfs: true
-
-      - name: Install ARM Embedded Toolchain & Ninja
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi cmake ninja-build libudev-dev pkg-config
-
-      - name: Set up stable Rust toolchain
-        uses: dtolnay/rust-toolchain@39008827e6b4319a349e9a42dfc90579dd25f1ca # stable
-
-      - name: Rust Cache
-        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
-
-      - name: Cache Raspberry Pi Pico SDK (2.1.1)
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
-        with:
-          path: ${{ runner.temp }}/pico-sdk
-          key: pico-sdk-2.1.1-${{ runner.os }}
-
-      - name: Clone Raspberry Pi Pico SDK
-        run: |
-          if [ ! -d "${{ runner.temp }}/pico-sdk/.git" ]; then
-            git clone --depth 1 --branch 2.1.1 https://github.com/raspberrypi/pico-sdk.git ${{ runner.temp }}/pico-sdk
-            cd ${{ runner.temp }}/pico-sdk
-            git submodule update --init --depth 1
-          fi
-
-      - name: Build Firmware in Parallel (RP2040 & RP2350)
-        env:
-          PICO_SDK_PATH: ${{ runner.temp }}/pico-sdk
-          CMAKE_POLICY_VERSION_MINIMUM: "3.5"
-          CXXFLAGS: "-include cstdint"
-        run: |
-          mkdir -p target/pico-build/out
-          (
-            cmake -S firmware/pico-p7501 -B target/pico-build/pico -G Ninja -DCMAKE_BUILD_TYPE=Release -DPICO_BOARD=pico -DCMAKE_POLICY_VERSION_MINIMUM=3.5
-            cmake --build target/pico-build/pico --config Release --parallel
-          ) & p_rp2040=$!
-          (
-            cmake -S firmware/pico-p7501 -B target/pico-build/pico2 -G Ninja -DCMAKE_BUILD_TYPE=Release -DPICO_BOARD=pico2 -DCMAKE_POLICY_VERSION_MINIMUM=3.5
-            cmake --build target/pico-build/pico2 --config Release --parallel
-          ) & p_rp2350=$!
-          wait "$p_rp2040" && wait "$p_rp2350"
-          cp target/pico-build/pico/panasonic_p7501_uart.uf2 target/pico-build/out/panasonic_p7501_uart_rp2040.uf2
-          cp target/pico-build/pico2/panasonic_p7501_uart.uf2 target/pico-build/out/panasonic_p7501_uart_rp2350.uf2
-          sha256sum target/pico-build/out/panasonic_p7501_uart_rp2040.uf2 > target/pico-build/out/panasonic_p7501_uart_rp2040.uf2.sha256
-          sha256sum target/pico-build/out/panasonic_p7501_uart_rp2350.uf2 > target/pico-build/out/panasonic_p7501_uart_rp2350.uf2.sha256
-
-      - name: Merge Unified Multi-Family UF2 (RP2040 + RP2350) via Native Rust CLI
-        run: |
-          cargo run -p panadiga-cli -- pico merge-uf2 \
-            --rp2040 target/pico-build/out/panasonic_p7501_uart_rp2040.uf2 \
-            --rp2350 target/pico-build/out/panasonic_p7501_uart_rp2350.uf2 \
-            --out target/pico-build/out/panasonic_p7501_uart_unified.uf2
-          sha256sum target/pico-build/out/panasonic_p7501_uart_unified.uf2 > target/pico-build/out/panasonic_p7501_uart_unified.uf2.sha256
-
-      - name: Upload Firmware Artifacts
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: panasonic_p7501_uart_firmware_binaries
-          path: |
-            target/pico-build/out/*.uf2
-            target/pico-build/out/*.uf2.sha256
-          retention-days: 30
-
-      - name: Publish Firmware to GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
-        with:
-          files: |
-            target/pico-build/out/panasonic_p7501_uart_rp2040.uf2
-            target/pico-build/out/panasonic_p7501_uart_rp2040.uf2.sha256
-            target/pico-build/out/panasonic_p7501_uart_rp2350.uf2
-            target/pico-build/out/panasonic_p7501_uart_rp2350.uf2.sha256
-            target/pico-build/out/panasonic_p7501_uart_unified.uf2
-            target/pico-build/out/panasonic_p7501_uart_unified.uf2.sha256
-          body_path: .github/RELEASE_NOTES.md
-          generate_release_notes: false
-
-  # ==========================================================================
-  # 3. Android Mobile APK Build & Release (AArch64)
+  # 4. Android Mobile APK Build & Release (AArch64)
   # ==========================================================================
   release-android-apk:
     name: Build & Release Android APK (AArch64)
+    needs: [frontend-bundle, pico-firmware]
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 45
     steps:
       - name: Checkout repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -336,7 +359,7 @@ jobs:
       - name: Rust Cache
         uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         with:
-          key: aarch64-linux-android
+          key: release-aarch64-linux-android
 
       - name: Setup Gradle Cache
         uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
@@ -353,18 +376,27 @@ jobs:
           cache: "npm"
           cache-dependency-path: apps/desktop/package-lock.json
 
-      - name: Install Dependencies & Build Frontend
+      - name: Install Dependencies & Restore Prebuilt Frontend
         run: |
           cd apps/desktop
-          npm ci
-          npm run build
+          npm ci --prefer-offline
 
-      - name: Verify Android Rust Target Compilation
-        run: cargo check -p panadiga-core -p panadiga-desktop --lib --target aarch64-linux-android
+      - name: Download Shared Frontend Dist & Compiled Pico UF2s
+        uses: actions/download-artifact@fa0a91b75d4f50ff3845483238924c2982a1090f # v4
+        with:
+          name: release-frontend-dist
+          path: apps/desktop/dist
+
+      - name: Download Compiled Pico UF2s for Android Embedding
+        uses: actions/download-artifact@fa0a91b75d4f50ff3845483238924c2982a1090f # v4
+        with:
+          name: panasonic_p7501_uart_firmware_binaries
+          path: crates/panadiga-core/src/pico/firmware_bins
 
       - name: Build Android Release APK
         run: |
           export ANDROID_NDK_ROOT=$NDK_HOME
+          touch apps/desktop/dist/index.html
           cd apps/desktop
           if [ ! -d "src-tauri/gen/android" ]; then
             npx --yes @tauri-apps/cli android init --ci --skip-targets-install
@@ -389,4 +421,3 @@ jobs:
             release-apk/panadiga-android-arm64.apk.sha256
           body_path: .github/RELEASE_NOTES.md
           generate_release_notes: false
-          

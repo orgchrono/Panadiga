@@ -70,6 +70,12 @@ typedef enum p7501_adc_channel p7501_adc_channel_t;
 /** Threshold voltage below which target SW_UART sense is unpowered/disconnected. */
 #define P7501_VDD_THRESHOLD_V        2.5f
 
+/** Standby wake-edge rising threshold (V) monitored by `DIAGWATCH WAKE[:ms]`. */
+#define P7501_VDD_WAKE_THRESHOLD_V   2.0f
+
+/** Default Standby wake wait window (ms) when `WAKE` is given without explicit duration. */
+#define P7501_WAKE_DEFAULT_WAIT_MS   30000U
+
 /**
  * @brief Pull-down discrimination floor on GP26 (ADC0).
  *

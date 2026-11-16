@@ -40,15 +40,15 @@ pub fn build_digadiag_frm_with_algo(
     }
     container.resize(total_size, 0);
 
-    let hdr = parse_extrhead_header(&container[..0x40])?;
+    let hdr = parse_extrhead_header(&container[..PANA_EXTRHEAD_HEADER_SIZE])?;
     let report = FrmPackReport {
         mode: "digadiag".to_string(),
         total_bytes: container.len(),
-        toc_region_size: 0x40,
+        toc_region_size: PANA_EXTRHEAD_HEADER_SIZE,
         modules: vec![PackedFrmModuleSummary {
             index: 0,
             name: hdr.tag,
-            module_offset: 0x40,
+            module_offset: PANA_EXTRHEAD_HEADER_SIZE as u32,
             module_size: hdr.src_len,
             fvu_checksum_u32: hdr.header_checksum,
             list_sum_u16: 0,

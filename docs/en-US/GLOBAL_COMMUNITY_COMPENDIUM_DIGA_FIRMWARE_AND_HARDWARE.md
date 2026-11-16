@@ -566,6 +566,44 @@ This structural design explains observed bench behaviors on the DMR-EH55:
 2. **Deterministic Timestamps:** Timestamps store elapsed seconds since `1980-01-01 00:00:00 UTC` (`TIME_OFFSET = 315532800`).
 3. **Forensic Masking:** Early recorders mask Inode metadata using `XOR 0xFF`, preventing standard PC file recovery utilities from identifying valid MPEG transport structures.
 
+### 4.8 Cross-Brand OEM Compatibility (Loewe, Hualu, Matsushita `SW-9585` vs. Funai/MediaTek)
+
+Cross-referencing service chassis and firmware header signatures clarifies which third-party brands share Matsushita DIGA internals (`MN2DS` / `MN103S` / `PANA_DVD.FRM` / `MEIHFS`) versus incompatible platforms:
+
+| Brand / Platform | Hardware / Key Evidence | `.FRM` / MEIHFS Compatibility | Archive & Verification Notes |
+| :--- | :--- | :---: | :--- |
+| **Loewe Centros `1102` / `1172` / `2102 HD` / `2172 HD` & `ViewVision DR+`** | Matsushita/Panasonic OEM chassis (`MN2DS` SoC, `VEP`-series PCBs, Panasonic update/service conventions) | **High (Genuine Architecture)** | Service manuals on Elektrotanya; ViewVision SW builds `090410L`/`070627a` referenced on `die-oberklasse.de` (no unauthenticated direct `.FRM`/`.bin` downloads located) |
+| **Hualu `BDR-9800`** | Listed in `PANA_DVD_KEY_CATALOG` with 8-byte Feistel key `0x0A1EE6C5BDC4933F` (`bfhualu.com`) | **Confirmed (`PANA_DVD` Cipher)** | Uses genuine Panasonic `.FRM` Feistel encryption |
+| **Matsushita `SW-9585` / `MN2DS0003`..`0018` & Sub-brands** | `SW-9585` IDE DVD-RAM drive and `MN2DS0003`/`0009`/`0016`/`0018` SoCs in select JVC, Pioneer, Marantz, Cambridge Audio, and Nintendo RVT-R units; Quasar / National Matsushita sub-brands | **Partial (Subsystem / Chassis)** | Individual PCB (`VEP`) and `DEV.BIN` header verification required before any cross-flashing attempt |
+| **Tevion / Medion / Funai / most Philips** | Funai/MediaTek platform (`FUNAI_UPG` in `unixtract/src/keys.ukf`) | **Incompatible** | Distinct encryption format and ISA compared to MN103S `.FRM` binaries |
+
+### 4.9 Kaseikyo IR Protocol Proof: `[RED]` (`0x141`) vs. `AUDIO [A]`, `IRTX` Synthesis, and `DIAGWATCH WAKE`
+
+On North American combo remotes (`DVD/VHS POWER`, `AUDIO [A]`, `DISPLAY [B]`, `SUB MENU [S]`), **`AUDIO [A]` does NOT send `[RED]`**: North American models omit the four Teletext colour buttons and expose Guide/VCR+ softkeys `[A]` and `[B]` instead.
+
+| Remote Function / Key | Kaseikyo Code | LSB-First Wire Bytes | Flipper / `pana-fw` Notation | Role in Ecosystem |
+| :--- | :---: | :--- | :--- | :--- |
+| **`AUDIO [A]`** (`Audio / Subtitles [A]`) | `0x033` | `02 20 B0 00 33 83` | Flipper `addr B0 02 20 00`, `cmd 30 03` | Audio/Subtitles & Guide/VCR+ softkey (NOT service `[RED]`) |
+| **`DISPLAY [B]`** (`Display [B]`) | `0x092` | `02 20 B0 00 92 22` | `Flipper-IRDB` E50/EX77 capture | OSD Status & softkey `[B]` |
+| **Teletext `[RED]`** (`Teletext Red [RED]`) | `0x141` | `02 20 B0 01 41 F0` | `pana-fw`: `41 B0 01 41` | Physical `[RED]` button on European/JDM remotes |
+| **`ND2` (`[5]+[9]+[RED]`)** | `0x182` | `02 20 B0 01 82 33` | `pana-fw`: `40 B0 01 82` | Direct Service Non-Disclosure mode 2 sequence on supported models |
+
+The expanded catalog in `crates/panadiga-core/src/crypto/pana_fw_go.rs` (`PANA_KASEIKYO_SERVICE_COMMANDS`) records `"Audio / Subtitles [A]"`, `"Display [B]"`, `"Teletext Red [RED]"`, and `"Power On/Off"`. Inside the Pico C11 bench probe firmware (`firmware/pico-p7501/`), two additions automate standby wakeup and IR injection without the original JDM remote:
+
+1. **38 kHz PWM Kaseikyo Synthesizer (`IRTX`):** `IRTX <RED|GREEN|YELLOW|BLUE|POWER|AUDIO|DISPLAY|SERV|ND2|0..9|sub:cmd> [GP6..9|16..22] [repeat]` generates hardware PWM carrier bursts strictly interlocked to spare GPIOs `GP6..9` and `GP16..22`.
+2. **Standby Wake-on-Rail Trigger (`DIAGWATCH WAKE`):** `DIAGWATCH WAKE` and `DIAGWATCH WAKE:<ms>` arm on `VDD >= P7501_VDD_WAKE_THRESHOLD_V` (`2.0f`) before starting PIO UART capture, emitting a Standby `VDD` telemetry notice whenever `rx=0`.
+
+### 4.10 E2E Validation via `Mn103Vm` + Simulated Spansion NOR (`panadiga re verify-patches`)
+
+The validation module [`crates/panadiga-core/src/re/emu_patch_suite.rs`](../../crates/panadiga-core/src/re/emu_patch_suite.rs) and CLI command `panadiga re verify-patches` combine **`Mn103Vm`**, a simulated **8 MiB Spansion `S29JL064H` NOR Flash** enforcing the read-only IPL airgap (`0x80000000..0x807EFFFF` $\rightarrow$ `E05`), and real `.FRM` pack/retarget/unpack workflows across six end-to-end tests:
+
+1. `spansion_nor_cfi_and_ipl_airgap` — Verifies CFI identity, strict `E05` write protection over the bootloader/IPL range, and isolated NVRAM sanitization (`0x807F0000..0x807FFFFF`).
+2. `frm_pack_retarget_and_flash` — Exercises `.FRM` packing, TOC model/region retargeting (`3410PQ`/`3060NP` + `DEV.BIN`), and flashing into simulated NOR.
+3. `bgo_bypass_and_panamon1_commands` — Executes the BGO bypass and `PANAMON1>` monitor commands (`R/W/E/J/D/B`) inside `Mn103Vm`.
+4. `tbc_ee_passthrough_routines` — Executes TBC/E-E passthrough routines under VM supervision.
+5. `region_model_compat_unlock` — Validates deterministic region/model compatibility unlocking with `.FRM` re-packing.
+6. `hdd_resize_over_200gb_lba48` — Executes the real `src/hdd_cmd.c` capacity limiter (`[MaxProductLBA]` at `0x5311_B9AC`, instruction `cmp d0, d1; bls/bra +12` at `site_va + 0x4E..0x6F`): the factory `0xC6` opcode clamps a 500 GB drive (`0x0E8D4A51`) down to `0x05D21DB9` (`200 GB - 1`), whereas the patched `0xCA` opcode preserves `0x0E8D4A50` (`500 GB - 1`).
+
 ---
 
 ## 5. Synthesis & Engineering Directives for the Panadiga Ecosystem

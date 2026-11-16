@@ -59,8 +59,9 @@ void p7501_cli_print_help(void) {
     printf("  SDSNIFF [ms] [boot]                  - Passive Hi-Z PIO0 SD sniffer (GP10..15, CRC16/lane)\n");
     printf("  JIGSWEEP [HOLD|DELAY|PREBOOT] [ms..] - SW_UART latch window & pre-DDR Bootrom sweep\n");
     printf("  PANARSP [ms] [boot] [WAIT:x] <act>   - MAIN _dev_SERIAL RSP (REGS/MEM/WMEM/DUMPNOR/CALL)\n");
-    printf("  DIAGWATCH [ms] [boot] [act] [rel]    - Autonomous SC0 watchdog & PANAMON1 READ/WRITE/ERASE\n");
+    printf("  DIAGWATCH [ms] [boot] [act] [WAKE]   - Autonomous SC0 watchdog, wake-trigger & PANAMON1\n");
     printf("  DRVPANA [ms] [boot] [NOPASS] <cmd>   - Matshita R6-MV4 Drive Factory CLI (auto PASS unlock)\n");
+    printf("  IRTX <RED|SERV|ND2|POWER|...> [GPn]  - 38 kHz Kaseikyo IR service/remote synthesizer\n");
     printf("  FMUSCAN / FMUTEST / FMUBATCH         - Bootrom FMU handshake sweep & batch probes\n");
     printf("  PINCHECK / BUSDIAG / SNIFF           - 6-pin electrical matrix & NSW5V Hi-Z guard\n");
     printf("  ISOLATE / ENGAGE / RESET             - Hi-Z isolate / TX idle HIGH / XRESET pulse\n");

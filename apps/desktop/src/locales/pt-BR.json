@@ -1030,7 +1030,22 @@
           "formatBgo": "Formatar BGO (JIG:2500)",
           "dumpNor": "Dump NOR 8MB (JIG:2500)",
           "passive": "Passivo (Normal)",
-          "readNvram": "Ler NVRAM @ 847F0000"
+          "readNvram": "Ler NVRAM @ 847F0000",
+          "wakeJig": "Disparo Standby Wake + Bypass (WAKE:30000)"
+        }
+      },
+      "IRTX": {
+        "label": "Sintetizador IR Kaseikyo 38 kHz (IRTX)",
+        "description": "Transmite códigos Panasonic Kaseikyo 38 kHz (RED Teletexto ausente no controle NA, SERV, ND2 5+9+RED, POWER, AUDIO) via LED IR em GPIO seguro.",
+        "arg_label": "Código Kaseikyo / Pino",
+        "arg_placeholder": "RED GP6 2",
+        "options": {
+          "red": "RED (0x141 / Ausente no Controle NA)",
+          "power": "POWER (0x03D)",
+          "serv": "Tecla Serviço (0x0F2)",
+          "nd2": "5+9+RED Serviço ND2 (0x182)",
+          "audio": "AUDIO [A] (0x033)",
+          "display": "DISPLAY [B] (0x192)"
         }
       },
       "DRVPANA": {

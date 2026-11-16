@@ -291,7 +291,7 @@
     {
       "id": "DIAGWATCH",
       "category": "uart_fmu",
-      "syntax": "DIAGWATCH [ms] [NORMAL|JIG[:ms]|NOPULL] [AUTO|BYPASS|READ[:addr[,len]]|WRITE:<addr,val>|FORMAT|DUMP|JUMP:<addr>|ERASE:<nvram_addr>|QUIT|NONE] [RELEASE|HOLD]",
+      "syntax": "DIAGWATCH [ms] [NORMAL|JIG[:ms]|NOPULL] [AUTO|BYPASS|READ[:addr[,len]]|WRITE:<addr,val>|FORMAT|DUMP|JUMP:<addr>|ERASE:<nvram_addr>|QUIT|NONE] [RELEASE|HOLD] [WAKE[:ms]]",
       "default_arg": "25000 JIG:2500 AUTO RELEASE",
       "options": [
         ["autoBypass", "25000 JIG:2500 AUTO RELEASE"],
@@ -300,9 +300,25 @@
         ["writeMem", "25000 JIG:2500 WRITE RELEASE"],
         ["formatBgo", "35000 JIG:2500 FORMAT RELEASE"],
         ["dumpNor", "{{WDT_DUMPNOR_CAPTURE_WINDOW_MS}} JIG:2500 DUMP RELEASE"],
-        ["passive", "15000 NORMAL NONE RELEASE"]
+        ["passive", "15000 NORMAL NONE RELEASE"],
+        ["wakeJig", "25000 JIG:2500 AUTO RELEASE WAKE:30000"]
       ],
       "timeout": "wdt_ceiling"
+    },
+    {
+      "id": "IRTX",
+      "category": "uart_fmu",
+      "syntax": "IRTX <RED|GREEN|YELLOW|BLUE|POWER|AUDIO|DISPLAY|SERV|ND2|0..9|sub:cmd> [GP6..9|16..22] [repeat]",
+      "default_arg": "RED GP6 2",
+      "options": [
+        ["red", "RED GP6 2"],
+        ["power", "POWER GP6 2"],
+        ["serv", "SERV GP6 2"],
+        ["nd2", "ND2 GP6 2"],
+        ["audio", "AUDIO GP6 2"],
+        ["display", "DISPLAY GP6 2"]
+      ],
+      "timeout": "probe_fast"
     },
     {
       "id": "DRVPANA",

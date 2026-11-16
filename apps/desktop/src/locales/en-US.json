@@ -1030,7 +1030,22 @@
           "formatBgo": "Format BGO (JIG:2500)",
           "dumpNor": "Dump 8MB NOR (JIG:2500)",
           "passive": "Passive (Normal)",
-          "readNvram": "Read NVRAM @ 847F0000"
+          "readNvram": "Read NVRAM @ 847F0000",
+          "wakeJig": "Wake Trigger + Auto Bypass (WAKE:30000)"
+        }
+      },
+      "IRTX": {
+        "label": "38 kHz Kaseikyo IR Synthesizer (IRTX)",
+        "description": "Transmits Panasonic Kaseikyo 38 kHz IR frames (Teletext RED, SERV, ND2 5+9+RED, POWER, AUDIO) via an IR LED on a safe spare GPIO.",
+        "arg_label": "Kaseikyo Code / Pin",
+        "arg_placeholder": "RED GP6 2",
+        "options": {
+          "red": "RED (0x141 / Missing on NA Remotes)",
+          "power": "POWER (0x03D)",
+          "serv": "Service Key (0x0F2)",
+          "nd2": "5+9+RED Service ND2 (0x182)",
+          "audio": "AUDIO [A] (0x033)",
+          "display": "DISPLAY [B] (0x192)"
         }
       },
       "DRVPANA": {

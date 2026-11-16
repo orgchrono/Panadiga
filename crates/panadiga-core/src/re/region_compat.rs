@@ -16,6 +16,7 @@ use super::patch_spec::{
     PatchApplyAction, PatchSpec, apply_patch_specs_in_place, classify_patch_site,
 };
 use crate::constants::{
+    EXPECTED_MAIN_3060NP_SIZE_BYTES, PANA_DEV_BIN_MAGIC, PANA_DEV_BIN_SIG, PANA_DEV_BIN_SIZE,
     PANA_FEISTEL_ROUND_KEY_32B, PANA_FEISTEL_SBOX_256, PANA_FRM_TOC_ENTRY_COUNT,
     PANA_FRM_TOC_REGION_SIZE, PANA_SD_TOC_MAX_ENTRIES, PANA_SD_TOC_REGION_SIZE,
 };
@@ -27,7 +28,7 @@ use crate::crypto::{
 use crate::nvram::calculate_hashes;
 
 /// Exact unpacked byte size of `MAIN3060NP` (`PANA_DVD.FRM` slot 2 / `PANA__SD.FRM`).
-pub const EXPECTED_MAIN_3060NP_SIZE: usize = 13_427_852;
+pub const EXPECTED_MAIN_3060NP_SIZE: usize = EXPECTED_MAIN_3060NP_SIZE_BYTES;
 
 /// `3410PQ` `src/fmupre/pre_update_firm.c` model/OEM comparison pair (`VA 0x57498738`, 21 B).
 pub const OFF_FMU_DEVINFO_3410PQ: usize = 0x0049_8738;
@@ -74,9 +75,9 @@ const SPEC_DEVINFO_3060NP: PatchSpec<'static> = PatchSpec {
     input_sha256: None,
 };
 
-const DEV_BIN_SIZE: usize = 512;
-const DEV_BIN_MAGIC: [u8; 4] = [0xAA, 0x55, 0xFF, 0xFF];
-const DEV_BIN_SIG: &[u8; 12] = b"PANA_DVD_REC";
+const DEV_BIN_SIZE: usize = PANA_DEV_BIN_SIZE;
+const DEV_BIN_MAGIC: [u8; 4] = PANA_DEV_BIN_MAGIC;
+const DEV_BIN_SIG: &[u8; 12] = PANA_DEV_BIN_SIG;
 
 /// Patch mode for `MAIN` updater `<deviceinfo>` model/OEM guards.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

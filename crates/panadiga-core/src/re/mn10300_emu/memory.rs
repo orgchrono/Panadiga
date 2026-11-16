@@ -1,14 +1,20 @@
 //! Segmented memory accessors and MOVM/CALL register frame helpers for [`Mn103Vm`].
 
 use super::{CfiStage, MemSegment, Mn103Fault, Mn103Vm};
+use crate::constants::{
+    AM34_FLASH_BASE, AM34_FLASH_IPL_SIZE, AM34_FLASH_UNCACHED_BASE, AM34_SC0_RXB_VA,
+    AM34_SC0_STR_VA, AM34_SC0_TXB_VA,
+};
 
-const SC0_TXB_VA: u32 = 0xD400_2008;
-const SC0_RXB_VA: u32 = 0xD400_2009;
-const SC0_STR_VA: u32 = 0xD400_200C;
+const SC0_TXB_VA: u32 = AM34_SC0_TXB_VA;
+const SC0_RXB_VA: u32 = AM34_SC0_RXB_VA;
+const SC0_STR_VA: u32 = AM34_SC0_STR_VA;
 
 /// Returns `true` when `addr` lies in strictly read-only cached/uncached IPL NOR flash.
 pub fn is_ipl_readonly_va(addr: u32) -> bool {
-    (0x8000_0000..=0x807E_FFFF).contains(&addr) || (0x8400_0000..=0x847E_FFFF).contains(&addr)
+    let ipl_last = AM34_FLASH_IPL_SIZE - 1;
+    (AM34_FLASH_BASE..=AM34_FLASH_BASE + ipl_last).contains(&addr)
+        || (AM34_FLASH_UNCACHED_BASE..=AM34_FLASH_UNCACHED_BASE + ipl_last).contains(&addr)
 }
 
 impl Mn103Vm {

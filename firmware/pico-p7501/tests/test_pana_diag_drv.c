@@ -6,6 +6,7 @@
  */
 
 #include "tests/test_pana_logic.h"
+#include "diag/p7501_ir_codec.h"
 #include "uart/p7501_diag_watch_codec.h"
 #include "uart/p7501_drv_pana_codec.h"
 #include "uart/p7501_pana_rsp.h"
@@ -263,10 +264,47 @@ static void test_diag_watch_stage_funnel_no_bgo_masking(void) {
     assert(strstr(p7501_diag_watch_diagnosis(st.seen_events), "decompressed") != NULL);
 }
 
+static void test_diag_watch_wake_and_ir_kaseikyo(void) {
+    p7501_diag_watch_spec_t dw;
+    assert(p7501_diag_watch_parse_args("20000 JIG:2500 AUTO RELEASE WAKE:45000", &dw));
+    assert(dw.wait_for_wake && dw.wake_timeout_ms == 45000u);
+    assert(p7501_diag_watch_parse_args("15000 NOPULL NONE WAKE", &dw));
+    assert(dw.wait_for_wake && dw.wake_timeout_ms == 30000u);
+    assert(!p7501_diag_watch_parse_args("15000 WAKE:bad", &dw));
+
+    /* Verify Panasonic Kaseikyo IR frame synthesis vs Flipper-IRDB captures & pin safety. */
+    p7501_ir_spec_t ir;
+    assert(p7501_ir_parse_args("RED", &ir));
+    assert(ir.gpio == 6u && ir.repeat == 2u);
+    assert(ir.frame[0] == 0x02u && ir.frame[1] == 0x20u && ir.frame[2] == 0xB0u);
+    assert(ir.frame[3] == 0x01u && ir.frame[4] == 0x41u && ir.frame[5] == 0xF0u);
+
+    assert(p7501_ir_parse_args("AUDIO GP16 3", &ir));
+    assert(ir.gpio == 16u && ir.repeat == 3u);
+    assert(ir.frame[3] == 0x00u && ir.frame[4] == 0x33u && ir.frame[5] == 0x83u);
+
+    assert(p7501_ir_parse_args("ND2 22 1", &ir));
+    assert(ir.gpio == 22u && ir.repeat == 1u);
+    assert(ir.frame[3] == 0x01u && ir.frame[4] == 0x82u && ir.frame[5] == 0x33u);
+
+    assert(p7501_ir_parse_args("POWER", &ir));
+    assert(ir.frame[3] == 0x00u && ir.frame[4] == 0x3Du && ir.frame[5] == 0x8Du);
+
+    assert(p7501_ir_parse_args("B001:41 7", &ir));
+    assert(ir.frame[2] == 0xB0u && ir.frame[3] == 0x01u && ir.frame[4] == 0x41u && ir.frame[5] == 0xF0u);
+
+    /* P7501 GP2..5, SD GP10..15, and ADC/LED GP25..26 MUST be blocked. */
+    assert(!p7501_ir_parse_args("RED GP3", &ir));
+    assert(!p7501_ir_parse_args("RED GP5", &ir));
+    assert(!p7501_ir_parse_args("RED GP10", &ir));
+    assert(!p7501_ir_parse_args("RED GP26", &ir));
+}
+
 void p7501_run_pana_diag_drv_tests(void) {
     test_diag_watch_legacy_and_fsm();
     test_diag_watch_parameterized_tx_and_e05();
     test_diag_watch_stage_funnel_no_bgo_masking();
     test_pana_rsp_regs_codec();
     test_drv_pana_codec();
+    test_diag_watch_wake_and_ir_kaseikyo();
 }

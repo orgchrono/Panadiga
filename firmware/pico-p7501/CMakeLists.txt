@@ -50,6 +50,8 @@ add_executable(panasonic_p7501_uart
     diag/p7501_diag_sdsniff.c
     diag/p7501_jigsweep_codec.c
     diag/p7501_diag_jigsweep.c
+    diag/p7501_ir_codec.c
+    diag/p7501_ir_kaseikyo.c
     flash/p7501_flash_cli.c
     uart/p7501_uart_bitbang.c
     uart/p7501_uart_codec.c
@@ -96,6 +98,7 @@ target_link_libraries(panasonic_p7501_uart
     hardware_pio
     hardware_adc
     hardware_clocks
+    hardware_pwm
     hardware_watchdog
 )
 

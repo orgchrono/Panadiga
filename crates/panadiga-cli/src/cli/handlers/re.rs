@@ -265,5 +265,36 @@ pub fn handle_re(args: ReArgs) -> Result<()> {
             pass_unlocked,
             json,
         ),
+        ReActions::VerifyPatches {
+            prog061,
+            main,
+            json,
+        } => {
+            let report = panadiga_core::re::run_nor_emu_patch_verification_suite(
+                prog061.as_deref(),
+                main.as_deref(),
+            )?;
+            emit_json_if_requested(&report, json.as_deref())?;
+            if json.is_none() {
+                log_println!(
+                    "NOR+MN103Vm Patch Suite [{}]: CFI={}/{} DVD={}B SD={}B all_passed={}",
+                    report.source_mode,
+                    report.cfi_manufacturer_id_hex,
+                    report.cfi_device_id_hex,
+                    report.frm_dvd_bytes,
+                    report.frm_sd_bytes,
+                    report.all_passed
+                );
+                for chk in &report.checks {
+                    log_println!(
+                        "  [{}] {}: {}",
+                        if chk.passed { "PASS" } else { "FAIL" },
+                        chk.id,
+                        chk.detail
+                    );
+                }
+            }
+            Ok(())
+        }
     }
 }

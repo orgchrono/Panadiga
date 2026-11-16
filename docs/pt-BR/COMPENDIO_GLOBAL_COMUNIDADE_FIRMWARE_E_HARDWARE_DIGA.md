@@ -550,6 +550,44 @@ Essa arquitetura explica o comportamento de bancada do DMR-EH55:
 2. **Registro de Data/Hora:** Todas as gravações utilizam carimbos de data/hora em segundos transcorridos desde `01/01/1980 00:00:00 UTC` (`TIME_OFFSET = 315532800`).
 3. **Mascaramento e Criptografia Forense:** Conforme catalogado no projeto Panadiga, os metadados do Inode nos primeiros modelos utilizam operadores de inversão de bits (`XOR 0xFF`), o que impediu durante décadas que utilitários comerciais de recuperação de dados em PC reconhecessem a estrutura dos vídeos gravados.
 
+### 4.8 Compatibilidade OEM Multi-Marca (Loewe, Hualu, Matsushita `SW-9585` vs. Funai/MediaTek)
+
+A investigação cruzada de chassis e assinaturas de firmware identificou exatamente quais marcas de terceiros compartilham arquitetura Matsushita DIGA (`MN2DS` / `MN103S` / `PANA_DVD.FRM` / `MEIHFS`) versus plataformas incompatíveis:
+
+| Plataforma / Marca | Evidência de Hardware / Chave | Compatibilidade `.FRM` / MEIHFS | Observações de Acervo |
+| :--- | :--- | :---: | :--- |
+| **Loewe Centros `1102` / `1172` / `2102 HD` / `2172 HD` & `ViewVision DR+`** | Chassi OEM Matsushita/Panasonic (`MN2DS` SoC, PCBs série `VEP`, convenções de atualização/serviço Panasonic) | **Alta (Arquitetura Genuína)** | Manuais de serviço no Elektrotanya; versões SW `090410L`/`070627a` referenciadas no `die-oberklasse.de` (sem binários `.FRM`/`.bin` públicos sem autenticação localizados) |
+| **Hualu `BDR-9800`** | Catálogo `PANA_DVD_KEY_CATALOG` com chave Feistel de 8 bytes `0x0A1EE6C5BDC4933F` (`bfhualu.com`) | **Confirmada (Cifra `PANA_DVD`)** | Utiliza empacotamento e cifra Feistel `.FRM` genuína Panasonic |
+| **Unidade `SW-9585` / SoCs `MN2DS0003`..`0018` & Submarcas** | Unidade IDE DVD-RAM `SW-9585` e SoCs `MN2DS0003`/`0009`/`0016`/`0018` em unidades selecionadas JVC, Pioneer, Marantz, Cambridge Audio e Nintendo RVT-R; Quasar / National como submarcas Matsushita | **Parcial (Subsistema / Chassi)** | Requer verificação individual de PCB (`VEP`) e cabeçalho `DEV.BIN` antes de qualquer gravação cruzada |
+| **Tevion / Medion / Funai / maioria Philips** | Plataforma Funai/MediaTek (`FUNAI_UPG` em `unixtract/src/keys.ukf`) | **Incompatível** | Estrutura criptográfica e conjunto de instruções distintos dos binários MN103S `.FRM` |
+
+### 4.9 Prova de Protocolo Kaseikyo IR: `[RED]` (`0x141`) vs. `AUDIO [A]`, Síntese `IRTX` e `DIAGWATCH WAKE`
+
+Nos controles remotos combo norte-americanos (`DVD/VHS POWER`, `AUDIO [A]`, `DISPLAY [B]`, `SUB MENU [S]`), a tecla **`AUDIO [A]` NÃO equivale ao botão `[RED]`**: os modelos norte-americanos omitem a fileira de 4 botões coloridos de Teletexto, substituindo-os pelos atalhos Guide/VCR+ `[A]` e `[B]`.
+
+| Função / Botão Remoto | Código Kaseikyo | Bytes Wire LSB-first | Notação Flipper / `pana-fw` | Uso no Ecossistema |
+| :--- | :---: | :--- | :--- | :--- |
+| **`AUDIO [A]`** (`Audio / Subtitles [A]`) | `0x033` | `02 20 B0 00 33 83` | Flipper `addr B0 02 20 00`, `cmd 30 03` | Áudio/Legenda e Guide/VCR+ softkey (NÃO aciona modo serviço `[RED]`) |
+| **`DISPLAY [B]`** (`Display [B]`) | `0x092` | `02 20 B0 00 92 22` | Captura E50/EX77 `Flipper-IRDB` | Status OSD e softkey `[B]` |
+| **Teletexto `[RED]`** (`Teletext Red [RED]`) | `0x141` | `02 20 B0 01 41 F0` | `pana-fw`: `41 B0 01 41` | Botão `[RED]` físico em controles Europeus/JDM |
+| **`ND2` (`[5]+[9]+[RED]`)** | `0x182` | `02 20 B0 01 82 33` | `pana-fw`: `40 B0 01 82` | Acesso direto Service Non-Disclosure mode 2 em modelos suportados |
+
+O mapa estendido em `crates/panadiga-core/src/crypto/pana_fw_go.rs` (`PANA_KASEIKYO_SERVICE_COMMANDS`) documenta `"Audio / Subtitles [A]"`, `"Display [B]"`, `"Teletext Red [RED]"` e `"Power On/Off"`. Na bancada com Raspberry Pi Pico (`firmware/pico-p7501/`), duas extensões eliminam a necessidade do controle físico original:
+
+1. **Sintetizador IR 38 kHz (`IRTX`):** O comando `IRTX <RED|GREEN|YELLOW|BLUE|POWER|AUDIO|DISPLAY|SERV|ND2|0..9|sub:cmd> [GP6..9|16..22] [repeat]` modula o protocolo Kaseikyo por hardware PWM, com intertravamento estrito permitindo saída apenas nos GPIOs livres `GP6..9` e `GP16..22`.
+2. **Gatilho Standby Wake-on-Rail (`DIAGWATCH WAKE`):** Os modos `DIAGWATCH WAKE` e `DIAGWATCH WAKE:<ms>` aguardam a subida do barramento (`VDD >= P7501_VDD_WAKE_THRESHOLD_V`, limiar `2.0f`) antes de iniciar a captura PIO, reportando estado de Standby por telemetria `VDD` quando `rx=0`.
+
+### 4.10 Validação E2E em Emulador `Mn103Vm` + Spansion NOR Simulada (`panadiga re verify-patches`)
+
+O módulo [`crates/panadiga-core/src/re/emu_patch_suite.rs`](../../crates/panadiga-core/src/re/emu_patch_suite.rs) e o comando CLI `panadiga re verify-patches` executam uma validação integrada combinando o emulador **`Mn103Vm`**, uma imagem simulada de **Flash NOR Spansion `S29JL064H` (8 MiB)** com proteção estrita de IPL (`0x80000000..0x807EFFFF` $\rightarrow$ erro `E05`) e ciclos reais de empacotamento/retarguetamento/desempacotamento `.FRM` em seis cenários:
+
+1. `spansion_nor_cfi_and_ipl_airgap` — Validação de identificação CFI, bloqueio read-only da região bootloader/IPL e saneamento isolado da NVRAM (`0x807F0000..0x807FFFFF`).
+2. `frm_pack_retarget_and_flash` — Empacotamento, ajuste de modelo/região no TOC (`3410PQ`/`3060NP` + `DEV.BIN`) e gravação na imagem Flash simulada.
+3. `bgo_bypass_and_panamon1_commands` — Execução em `Mn103Vm` do bypass BGO e dos comandos do monitor `PANAMON1>` (`R/W/E/J/D/B`).
+4. `tbc_ee_passthrough_routines` — Verificação em máquina virtual das rotinas de passthrough TBC/E-E.
+5. `region_model_compat_unlock` — Desbloqueio determinístico de região/modelo com re-empacotamento `.FRM`.
+6. `hdd_resize_over_200gb_lba48` — Execução real da rotina de limite LBA em `src/hdd_cmd.c` (`[MaxProductLBA]` em `0x5311_B9AC`, instrução `cmp d0, d1; bls/bra +12` em `site_va + 0x4E..0x6F`): o opcode de fábrica `0xC6` trunca um disco de 500 GB (`0x0E8D4A51`) para `0x05D21DB9` (`200 GB - 1`), ao passo que o opcode patchado `0xCA` preserva integralmente `0x0E8D4A50` (`500 GB - 1`).
+
 ---
 
 ## 5. Matriz de Síntese e Diretrizes de Engenharia para o Ecossistema Panadiga

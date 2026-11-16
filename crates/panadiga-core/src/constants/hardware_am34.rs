@@ -79,6 +79,17 @@ pub const AM34_DRV_S211_BASE: u32 = 0x9020_2000;
 /// UniPhier `SC0` UART0 Peripheral Base (`0xD400_2000`: `SC0CTR/+00`, `SC0ICR/+04`, `SC0TXB/+08`, `SC0RXB/+09`, `SC0STR/+0C`).
 pub const AM34_SC0_BASE: u32 = 0xD400_2000;
 pub const AM34_SC0_SIZE: u32 = 0x0000_0020;
+pub const AM34_SC0_TXB_VA: u32 = AM34_SC0_BASE + 0x08;
+pub const AM34_SC0_RXB_VA: u32 = AM34_SC0_BASE + 0x09;
+pub const AM34_SC0_STR_VA: u32 = AM34_SC0_BASE + 0x0C;
+
+/// Standard virtual load bases for unpacked Panasonic `PROG061` and `MAIN` modules in SDRAM.
+pub const AM34_PROG061_BASE_VA: u32 = 0x5040_0000;
+pub const AM34_MAIN_BASE_VA: u32 = 0x5700_0000;
+
+/// Expected unpacked binary sizes for audited `MAIN` firmware builds (`3410PQ` & `3060NP`).
+pub const EXPECTED_MAIN_3410PQ_SIZE_BYTES: usize = 13_003_052;
+pub const EXPECTED_MAIN_3060NP_SIZE_BYTES: usize = 13_427_852;
 
 /// Strongly-typed hardware memory region descriptor for Panasonic Matsushita AM34 / MN103S.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]

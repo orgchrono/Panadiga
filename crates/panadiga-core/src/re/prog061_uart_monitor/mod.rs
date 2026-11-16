@@ -11,6 +11,8 @@ mod tests;
 use anyhow::{Result, bail};
 use byteorder::{ByteOrder, LittleEndian};
 
+use crate::constants::{AM34_FLASH_SIZE, AM34_FLASH_UNCACHED_BASE};
+
 use super::bgo_unbrick::{PROG061_BASE_VA, PROG061_NFROM_FORMAT_VA};
 use super::nor_dumper::{NOR_MAGIC_FOOTER, NOR_MAGIC_HEADER};
 use mn103_emit::{
@@ -50,8 +52,8 @@ pub fn build_prog061_uart_monitor_payload(base_va: u32) -> Result<Vec<u8>> {
     ];
     let mut nor_hdr = Vec::with_capacity(20);
     nor_hdr.extend_from_slice(NOR_MAGIC_HEADER);
-    nor_hdr.extend_from_slice(&0x8400_0000u32.to_le_bytes());
-    nor_hdr.extend_from_slice(&0x0080_0000u32.to_le_bytes());
+    nor_hdr.extend_from_slice(&AM34_FLASH_UNCACHED_BASE.to_le_bytes());
+    nor_hdr.extend_from_slice(&AM34_FLASH_SIZE.to_le_bytes());
     nor_hdr.extend_from_slice(&4096u32.to_le_bytes());
 
     let mut buf = Vec::with_capacity(1024);

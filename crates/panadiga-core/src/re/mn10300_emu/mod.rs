@@ -42,15 +42,23 @@ pub enum CfiStage {
     Autoselect,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, thiserror::Error)]
 pub enum Mn103Fault {
+    #[error("Unmapped read @ 0x{0:08X}")]
     UnmappedRead(u32),
+    #[error("Unmapped write @ 0x{0:08X}")]
     UnmappedWrite(u32),
+    #[error("Spansion IPL read-only flash write protection triggered @ 0x{0:08X} (E05)")]
     IplWriteProtected(u32),
+    #[error("Unaligned memory access @ 0x{0:08X}")]
     AlignError(u32),
+    #[error("Attempt to write reserved PSW bits 0x{0:04X}")]
     ReservedPswBits(u16),
+    #[error("Invalid/unimplemented MN103S opcode 0x{0:02X}")]
     InvalidOpcode(u8),
+    #[error("Undefined PSW flag read")]
     UndefinedFlagRead,
+    #[error("VM execution step limit reached")]
     StepLimitReached,
 }
 

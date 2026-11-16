@@ -33,7 +33,7 @@ use super::patch_spec::PatchSpec;
 use super::prog061_uart_monitor::PATCH_A2CD_UART_MONITOR;
 
 /// Virtual base address of `eh55_frm_PROG061_BOOT.bin` (`SDDIAG` loads `DIGADIAG.FRM` here).
-pub const PROG061_BASE_VA: u32 = 0x5040_0000;
+pub const PROG061_BASE_VA: u32 = crate::constants::AM34_PROG061_BASE_VA;
 /// Exact unpacked byte size of `eh55_frm_PROG061_BOOT.bin`.
 pub const PROG061_EXPECTED_SIZE: usize = 0x4_0000;
 /// Orphan factory NFROM/BGO formatter function in `PROG061` (`0` static callers).

@@ -141,6 +141,8 @@ pub const COMPLETION_MARKERS: &[&str] = &[
     "PANARSP: ERROR",
     "DRVPANA: OK",
     "DRVPANA: ERROR",
+    "IRTX: OK",
+    "IRTX: ERROR",
     "BRIDGE: OK",
     "BRIDGE: ERROR",
     "LED: OK",

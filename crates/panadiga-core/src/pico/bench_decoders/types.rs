@@ -38,6 +38,7 @@ pub const SAFE_BENCH_COMMANDS: &[&str] = &[
     "DIAGWATCH",
     "PANARSP",
     "DRVPANA",
+    "IRTX",
 ];
 
 pub(super) const FORBIDDEN_WRITE_TOKENS: [&str; 5] =

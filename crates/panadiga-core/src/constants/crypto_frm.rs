@@ -146,3 +146,45 @@ pub const PANA_FRM_MOD2_BOUNDARY: usize = 0x0F1818;
 
 /// Module 3 (Main CPU OS AM34 / DIGA OS) start offset in PANA_DVD.FRM (0x0F1818).
 pub const PANA_FRM_MOD3_START_OFFSET: usize = 0x0F1818;
+
+/// Standard `EXTRHEAD` header (`0x40` = 64 B) and `EXTRFOOT` footer (`8` B) sizes.
+pub const PANA_EXTRHEAD_HEADER_SIZE: usize = 0x40;
+pub const PANA_EXTRHEAD_FOOTER_SIZE: usize = 8;
+
+/// Panasonic Okumura LZSS (`algo == 2`) sliding dictionary & hash chain constants.
+pub const PANA_LZSS_WINDOW_SIZE: usize = 0x1000;
+pub const PANA_LZSS_WINDOW_INIT: usize = 0x0FEE;
+pub const PANA_LZSS_MAX_UNCODED: usize = 3;
+pub const PANA_LZSS_MAX_CODED: usize = PANA_LZSS_MAX_UNCODED + 16;
+pub const PANA_LZSS_HASH_BITS: usize = 13;
+pub const PANA_LZSS_HASH_SIZE: usize = 1 << PANA_LZSS_HASH_BITS;
+pub const PANA_LZSS_KNUTH_HASH_MULT: u32 = 2_654_435_761;
+
+/// `MainList` multi-segment header, entry stride, target chunk sizes, and overlap crypt spans.
+pub const PANA_MAIN_LIST_HEADER_SIZE: usize = 20;
+pub const PANA_MAIN_LIST_ENTRY_SIZE: usize = 8;
+pub const PANA_MAIN_LIST_LEGACY_SEG_TARGET: u32 = 32 * 1024 * 1024;
+pub const PANA_MAIN_LIST_MODERN_SEG_TARGET: u32 = 16 * 1024 * 1024;
+pub const PANA_MAIN_LIST_MODERN_CRYPT_SPAN: usize = 0x1400;
+
+/// Optical drive (`DRV`) `0x20`-byte header size and unencrypted 48-byte trailer length.
+pub const PANA_DRV_HEADER_SIZE: usize = 0x20;
+pub const PANA_DRV_TAIL_CLEAR_BYTES: usize = 48;
+
+/// Panasonic 512-byte `DEV.BIN` service container descriptor geometry and signatures.
+pub const PANA_DEV_BIN_SIZE: usize = 512;
+pub const PANA_DEV_BIN_MAGIC: [u8; 4] = [0xAA, 0x55, 0xFF, 0xFF];
+pub const PANA_DEV_BIN_SIG: &[u8; 12] = b"PANA_DVD_REC";
+
+/// `libdownloadlib.so` network stream decipher IV & feedback step (`pana-fw/crypto/decipher.go`).
+pub const PANA_LIBDOWNLOADLIB_CIPHER_IV: u32 = 904;
+pub const PANA_LIBDOWNLOADLIB_CIPHER_STEP: u32 = 38_400 + 163;
+
+/// Embedded filesystem container signatures extracted from demuxed `MAIN` partitions.
+pub const PANA_CRAMFS_MAGIC: u32 = 0x28CD_3D45;
+pub const PANA_CRAMFS_SIGNATURE: &[u8; 16] = b"Compressed ROMFS";
+pub const PANA_CRAMFS_FLAG_FSID_VERSION_2: u32 = 0x0000_0001;
+pub const PANA_ROMFS_MAGIC: &[u8; 8] = b"-rom1fs-";
+
+/// Default `src/hdd_cmd.c` M7920 fallback limit in 2 KB blocks (~199.91 GB).
+pub const PANA_HDD_CMD_M7920_FALLBACK_BLOCKS: u32 = 0x05D0_DDBA;

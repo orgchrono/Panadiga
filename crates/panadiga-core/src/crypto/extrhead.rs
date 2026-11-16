@@ -483,12 +483,12 @@ pub fn decompress_pana_lzss(data: &[u8], expected_size: usize) -> Vec<u8> {
 ///
 /// Mirrors `pana-fw/utils/lzss/compress.go` using 3-byte hash-chain matching and lazy match selection.
 pub fn compress_pana_lzss(data: &[u8]) -> Vec<u8> {
-    const WINDOW_SIZE: usize = 0x1000;
-    const WINDOW_INIT: usize = 0x0FEE;
-    const MAX_UNCODED: usize = 3;
-    const MAX_CODED: usize = MAX_UNCODED + 16;
-    const HASH_BITS: usize = 13;
-    const HASH_SIZE: usize = 1 << HASH_BITS;
+    const WINDOW_SIZE: usize = PANA_LZSS_WINDOW_SIZE;
+    const WINDOW_INIT: usize = PANA_LZSS_WINDOW_INIT;
+    const MAX_UNCODED: usize = PANA_LZSS_MAX_UNCODED;
+    const MAX_CODED: usize = PANA_LZSS_MAX_CODED;
+    const HASH_BITS: usize = PANA_LZSS_HASH_BITS;
+    const HASH_SIZE: usize = PANA_LZSS_HASH_SIZE;
 
     let n = data.len();
     if n == 0 {
@@ -499,7 +499,7 @@ pub fn compress_pana_lzss(data: &[u8]) -> Vec<u8> {
         let v = (u32::from(data[pos]) << 16)
             | (u32::from(data[pos + 1]) << 8)
             | u32::from(data[pos + 2]);
-        ((v.wrapping_mul(2_654_435_761)) >> (32 - HASH_BITS)) as usize
+        ((v.wrapping_mul(PANA_LZSS_KNUTH_HASH_MULT)) >> (32 - HASH_BITS)) as usize
     };
 
     let mut head = [-1i32; HASH_SIZE];

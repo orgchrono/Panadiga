@@ -32,6 +32,7 @@
 #include "diag/p7501_diag_pwrtrace.h"
 #include "diag/p7501_diag_boottrace.h"
 #include "diag/p7501_jigsweep_codec.h"
+#include "diag/p7501_ir_kaseikyo.h"
 #include "diag/p7501_piologic_codec.h"
 #include "diag/p7501_diag_sdsniff.h"
 #include "hal/p7501_hw.h"
@@ -284,6 +285,7 @@ static const p7501_cli_cmd_entry_t k_cli_commands[] = {
     { "PANARSP",       p7501_cmd_pana_rsp },
     { "DIAGWATCH",     p7501_cmd_diag_watch },
     { "DRVPANA",       p7501_cmd_drv_pana },
+    { "IRTX",          p7501_cmd_irtx },
     { "BRIDGE",        p7501_cmd_bridge },
     { "WDT",           p7501_cmd_wdt_status },
     { "BOOTSEL",       cli_cmd_bootsel },

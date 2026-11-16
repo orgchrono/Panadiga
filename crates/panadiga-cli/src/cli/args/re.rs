@@ -239,4 +239,20 @@ pub enum ReActions {
         #[arg(long, value_name = "JSON_OUT")]
         json: Option<PathBuf>,
     },
+
+    /// Execute end-to-end .FRM + Spansion NOR + MN103Vm patcher validation (BGO, TBC, region unlock, >200GB HDD, PANAMON1)
+    #[command(name = "verify-patches", alias = "verify_patches")]
+    VerifyPatches {
+        /// Optional path to real unpacked PROG061 binary (defaults to audited MN103S byte windows)
+        #[arg(long, value_name = "PROG061_BIN")]
+        prog061: Option<PathBuf>,
+
+        /// Optional path to real unpacked MAIN3410PQ binary (defaults to audited MN103S byte windows)
+        #[arg(long, value_name = "MAIN_BIN")]
+        main: Option<PathBuf>,
+
+        /// JSON output path (`-` emits compact JSON to stdout)
+        #[arg(long, value_name = "JSON_OUT")]
+        json: Option<PathBuf>,
+    },
 }

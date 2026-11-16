@@ -160,10 +160,41 @@ static void diagwatch_on_tick(void *raw_ctx, uint32_t rel_us, bool *out_stop) {
     flush_pending_alerts(dc);
 }
 
+static bool wait_for_standby_wake(uint32_t wait_ms, float *out_vdd, uint32_t *out_elapsed_ms) {
+    float v = p7501_hw_read_vdd();
+    if (v >= P7501_VDD_WAKE_THRESHOLD_V) {
+        if (out_vdd != NULL) *out_vdd = v;
+        if (out_elapsed_ms != NULL) *out_elapsed_ms = 0u;
+        return true;
+    }
+    printf("[DIAGWATCH] WAKE armed (Standby VDD=%.2fV): press POWER on unit within %" PRIu32 " ms...\n",
+           v, wait_ms);
+    fflush(stdout);
+    const uint64_t t0_us = time_us_64();
+    const uint64_t deadline_us = t0_us + ((uint64_t)wait_ms * 1000ULL);
+    while (time_us_64() < deadline_us) {
+        if (p7501_wdt_poll_abort()) {
+            if (out_vdd != NULL) *out_vdd = p7501_hw_read_vdd();
+            if (out_elapsed_ms != NULL) *out_elapsed_ms = (uint32_t)((time_us_64() - t0_us) / 1000ULL);
+            return false;
+        }
+        v = p7501_hw_read_vdd();
+        if (v >= P7501_VDD_WAKE_THRESHOLD_V) {
+            if (out_vdd != NULL) *out_vdd = v;
+            if (out_elapsed_ms != NULL) *out_elapsed_ms = (uint32_t)((time_us_64() - t0_us) / 1000ULL);
+            return true;
+        }
+        sleep_ms(1u);
+    }
+    if (out_vdd != NULL) *out_vdd = p7501_hw_read_vdd();
+    if (out_elapsed_ms != NULL) *out_elapsed_ms = wait_ms;
+    return false;
+}
+
 void p7501_cmd_diag_watch(const char *arg) {
     p7501_diag_watch_spec_t spec;
     if (!p7501_diag_watch_parse_args(arg, &spec)) {
-        printf("DIAGWATCH: ERROR (Usage: DIAGWATCH [ms] [NORMAL|JIG[:ms]|NOPULL] [AUTO|BYPASS|READ[:a[,n]]|WRITE:<a,v>|FORMAT|DUMP|JUMP:<a>|ERASE:<a_nvram>|QUIT|NONE] [RELEASE|HOLD])\n");
+        printf("DIAGWATCH: ERROR (Usage: DIAGWATCH [ms] [NORMAL|JIG[:ms]|NOPULL] [AUTO|BYPASS|READ[:a[,n]]|WRITE:<a,v>|FORMAT|DUMP|JUMP:<a>|ERASE:<a_nvram>|QUIT|NONE] [RELEASE|HOLD] [WAKE[:ms]])\n");
         return;
     }
 
@@ -173,6 +204,19 @@ void p7501_cmd_diag_watch(const char *arg) {
     }
     if (p7501_pio_get_framing() != P7501_FRAMING_8N1) {
         (void)p7501_pio_set_framing(P7501_FRAMING_8N1);
+    }
+
+    if (spec.wait_for_wake) {
+        float wake_v = 0.0f;
+        uint32_t wake_ms = 0u;
+        if (!wait_for_standby_wake(spec.wake_timeout_ms, &wake_v, &wake_ms)) {
+            printf("DIAGWATCH: OK (rx=0 bytes, ferr=0, events=0x0000, sw_rel=NO, tx=NO, ovf=NO, aborted=YES)\n");
+            printf("[DIAGWATCH] Notice: Standby wake not observed within %" PRIu32 " ms (VDD=%.2fV)\n",
+                   wake_ms, wake_v);
+            return;
+        }
+        printf("[DIAGWATCH +%" PRIu32 "ms] WAKE edge detected (VDD=%.2fV) -> starting capture\n",
+               wake_ms, wake_v);
     }
 
     size_t buf_cap = 0u;
@@ -210,6 +254,14 @@ void p7501_cmd_diag_watch(const char *arg) {
     flush_pending_rx_bytes(&dc);
     flush_pending_alerts(&dc);
     stdio_flush();
+
+    if (m.rx_bytes == 0u) {
+        const float end_v = p7501_hw_read_vdd();
+        if (end_v < P7501_VDD_THRESHOLD_V) {
+            printf("\n[DIAGWATCH] Notice: Target P7501 rails OFF / Standby (VDD=%.2fV) — wake unit or use WAKE:30000\n",
+                   end_v);
+        }
+    }
 
     printf("\nDIAGWATCH: OK (rx=%" PRIu32 " bytes, ferr=%" PRIu32 ", events=0x%04" PRIX32 ", sw_rel=%s, tx=%s, ovf=%s, aborted=%s)\n",
            m.rx_bytes,

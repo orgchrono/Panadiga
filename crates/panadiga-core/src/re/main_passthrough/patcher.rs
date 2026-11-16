@@ -12,12 +12,13 @@ use super::super::patch_spec::{
     PatchApplyAction, PatchSpec, apply_patch_specs_in_place, classify_patch_site,
 };
 use super::rsp_plan::format_rsp_write_mem_frame;
+use crate::constants::{AM34_MAIN_BASE_VA, EXPECTED_MAIN_3410PQ_SIZE_BYTES};
 use crate::nvram::resolve_input_path;
 
 /// Virtual base address where `EH55_MAIN_3410PQ.bin` executes in SDRAM.
-pub const MAIN_BASE_VA: u32 = 0x5700_0000;
+pub const MAIN_BASE_VA: u32 = AM34_MAIN_BASE_VA;
 /// Exact unpacked byte size of `EH55_MAIN_3410PQ.bin`.
-pub const EXPECTED_MAIN_3410PQ_SIZE: usize = 13_003_052;
+pub const EXPECTED_MAIN_3410PQ_SIZE: usize = EXPECTED_MAIN_3410PQ_SIZE_BYTES;
 
 /// File offset of front-panel status control site (`VA 0x5771ABFB`, 6 bytes).
 pub const OFF_FPC_STATUS_CTRL: usize = 0x0071_ABFB;
