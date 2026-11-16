@@ -9,6 +9,7 @@
 #include "uart/p7501_diag_watch_codec.h"
 #include "uart/p7501_uart_pio_engine.h"
 #include "hal/p7501_led.h"
+#include "hal/p7501_watchdog.h"
 #include "pico/stdlib.h"
 
 #include <inttypes.h>
@@ -47,8 +48,9 @@ void p7501_cmd_diag_watch(const char *arg) {
     const uint64_t deadline = t0_us + ((uint64_t)spec.timeout_ms * 1000ULL);
     uint32_t rx_count = 0u;
     uint32_t ferr_count = 0u;
+    bool aborted = false;
 
-    while (time_us_64() < deadline) {
+    while (p7501_wdt_loop_step(t0_us, deadline, true, &aborted)) {
         p7501_pio_poll_sw_uart_release();
         if (p7501_pio_poll_and_clear_framing_err()) {
             ferr_count += 1u;
@@ -126,12 +128,13 @@ void p7501_cmd_diag_watch(const char *arg) {
     p7501_pio_end_session();
     p7501_led_set_auto_mode(LED_MODE_HEARTBEAT_IDLE);
 
-    printf("\nDIAGWATCH: OK (rx=%" PRIu32 " bytes, ferr=%" PRIu32 ", events=0x%04" PRIX32 ", sw_rel=%s, tx=%s, ovf=%s)\n",
+    printf("\nDIAGWATCH: OK (rx=%" PRIu32 " bytes, ferr=%" PRIu32 ", events=0x%04" PRIX32 ", sw_rel=%s, tx=%s, ovf=%s, aborted=%s)\n",
            rx_count,
            ferr_count,
            st.seen_events,
            st.sw_uart_released ? "YES" : "NO",
            st.tx_dispatched ? "YES" : "NO",
-           fifo_ovf ? "YES" : "NO");
+           fifo_ovf ? "YES" : "NO",
+           aborted ? "YES" : "NO");
     printf("[DIAGWATCH] Diagnosis: %s\n", p7501_diag_watch_diagnosis(st.seen_events));
 }

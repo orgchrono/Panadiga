@@ -7,6 +7,10 @@ use serde::Deserialize;
 use serde_json::Value;
 use std::path::PathBuf;
 
+use super::constants::{
+    DEFAULT_BGO_PATCH_MODE, DEFAULT_MAIN_PASSTHROUGH_MODE, DEFAULT_NOR_DUMP_BLOCK_SIZE,
+    DEFAULT_NOR_DUMP_LEN_HEX, DEFAULT_NOR_DUMP_START_HEX, NOR_STUB_HEX_PREVIEW_BYTES,
+};
 use super::frm_pack::resolve_read_path;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -54,13 +58,13 @@ pub(crate) fn to_sd_unbrick_kit_request(
     let bgo_mode: Prog061BgoPatchMode = dto
         .bgo_mode
         .as_deref()
-        .unwrap_or("bypass")
+        .unwrap_or(DEFAULT_BGO_PATCH_MODE)
         .parse()
         .map_err(|e: anyhow::Error| e.to_string())?;
     let main_passthrough_mode: MainPassthroughMode = dto
         .main_passthrough_mode
         .as_deref()
-        .unwrap_or("av_passthrough")
+        .unwrap_or(DEFAULT_MAIN_PASSTHROUGH_MODE)
         .parse()
         .map_err(|e: anyhow::Error| e.to_string())?;
 
@@ -106,11 +110,11 @@ pub(crate) fn parse_nor_dumper_params(
         .map_err(|e| format!("Load address inválido: {e}"))?;
 
     Ok(NorDumperParams {
-        start_u32: parse_u32_radix(start_addr.unwrap_or("0x84000000"))
+        start_u32: parse_u32_radix(start_addr.unwrap_or(DEFAULT_NOR_DUMP_START_HEX))
             .map_err(|e| format!("Endereço inicial NOR inválido: {e}"))?,
-        len_u32: parse_u32_radix(total_len.unwrap_or("0x800000"))
+        len_u32: parse_u32_radix(total_len.unwrap_or(DEFAULT_NOR_DUMP_LEN_HEX))
             .map_err(|e| format!("Tamanho total inválido: {e}"))?,
-        block_size: block_size.unwrap_or(4096),
+        block_size: block_size.unwrap_or(DEFAULT_NOR_DUMP_BLOCK_SIZE),
         load_u32: panadiga_core::re::resolve_nor_stub_load_addr(explicit_load, wrapped),
         wrapped,
     })
@@ -131,7 +135,7 @@ pub(crate) fn format_nor_dumper_response(
         "wrapped_digadiag": params.wrapped,
         "output_bytes": payload.len(),
         "written_path": written_path,
-        "stub_hex": hex::encode(&payload[..payload.len().min(128)]),
+        "stub_hex": hex::encode(&payload[..payload.len().min(NOR_STUB_HEX_PREVIEW_BYTES)]),
     })
 }
 

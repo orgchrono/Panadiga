@@ -11,7 +11,7 @@ import subprocess
 import sys
 import threading
 from pathlib import Path
-from typing import Any, Callable, Final, Iterator, Mapping, Sequence
+from typing import BinaryIO, Final, Iterator, Mapping, Protocol, Sequence, TypedDict
 
 ROOT: Final[Path] = Path(__file__).resolve().parent.parent
 TOOLS_PYCACHE_IGNORE: Final[frozenset[str]] = frozenset(
@@ -56,14 +56,27 @@ class _TrackerLocal(threading.local):
 _TRACKER_LOCAL = _TrackerLocal()
 
 
-def _subprocess_group_kwargs() -> dict[str, Any]:
+class _SubprocessGroupKwargs(TypedDict, total=False):
+    creationflags: int
+    start_new_session: bool
+
+
+class _HashDigestLike(Protocol):
+    def hexdigest(self) -> str: ...
+
+
+class _FileDigestCallable(Protocol):
+    def __call__(self, fileobj: BinaryIO, digest: str, /) -> _HashDigestLike: ...
+
+
+def _subprocess_group_kwargs() -> _SubprocessGroupKwargs:
     if sys.platform == "win32":
         flag = int(getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0))
         return {"creationflags": flag} if flag else {}
     return {"start_new_session": True}
 
 
-def _terminate_process_tree(proc: subprocess.Popen[Any]) -> None:
+def _terminate_process_tree(proc: subprocess.Popen[str]) -> None:
     """Force-terminate a child process and its descendants without raising if already exited."""
     if proc.poll() is not None:
         return
@@ -95,14 +108,14 @@ class ProcessTracker:
     def __init__(self) -> None:
         self._lock = threading.Lock()
         self._aborted = False
-        self._procs: set[subprocess.Popen[Any]] = set()
+        self._procs: set[subprocess.Popen[str]] = set()
 
     def is_aborted(self) -> bool:
         """Return True once sibling cancellation has been triggered."""
         with self._lock:
             return self._aborted
 
-    def register(self, proc: subprocess.Popen[Any]) -> bool:
+    def register(self, proc: subprocess.Popen[str]) -> bool:
         """Track a newly spawned process; returns False and terminates if already aborted."""
         with self._lock:
             if self._aborted:
@@ -115,7 +128,7 @@ class ProcessTracker:
             return False
         return True
 
-    def unregister(self, proc: subprocess.Popen[Any]) -> None:
+    def unregister(self, proc: subprocess.Popen[str]) -> None:
         """Stop tracking a finished child process."""
         with self._lock:
             self._procs.discard(proc)
@@ -234,7 +247,7 @@ def print_status(tag: str, message: str, ansi_color: str) -> None:
 
 def sha256_file(path: Path) -> str:
     """Compute lowercase hexadecimal SHA-256 digest using zero-copy C file_digest when available."""
-    file_digest_fn: Callable[[Any, str], Any] | None = getattr(hashlib, "file_digest", None)
+    file_digest_fn: _FileDigestCallable | None = getattr(hashlib, "file_digest", None)
     with path.open("rb") as handle:
         if file_digest_fn is not None:
             return str(file_digest_fn(handle, "sha256").hexdigest())

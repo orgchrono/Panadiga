@@ -8,6 +8,7 @@
 
 pub mod bridge;
 pub mod cdc;
+pub mod diag_rows;
 pub mod diagnostics;
 pub mod flasher;
 pub mod log_decoder;

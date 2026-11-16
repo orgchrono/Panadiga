@@ -1,12 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Bug, FileCode, Binary, Terminal, type LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui';
+import { GDB_DEFAULT_TCP_PORT } from '@/constants/hardwareSpecs/physicalConstants';
 import { isAndroidNativeBridgeAvailable } from '@/services/androidBridge';
 
 export type ExternalToolName = 'gdb' | 'ghidra' | 'hxd' | 'terminal';
 
 export interface GdbExternalToolLaunchersProps {
   onLaunchTool?: (tool: ExternalToolName) => Promise<void>;
+  isAndroidHost?: boolean;
 }
 
 const TOOL_LAUNCHERS: Array<{
@@ -19,7 +21,7 @@ const TOOL_LAUNCHERS: Array<{
   {
     id: 'gdb',
     label: 'GDB Multiarch',
-    title: 'Abre terminal interativo com gdb-multiarch conectado na porta 3333',
+    title: `Abre terminal interativo com gdb-multiarch conectado na porta ${GDB_DEFAULT_TCP_PORT}`,
     className: 'bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
     Icon: Bug,
   },
@@ -48,10 +50,14 @@ const TOOL_LAUNCHERS: Array<{
 
 export const GdbExternalToolLaunchers: React.FC<GdbExternalToolLaunchersProps> = ({
   onLaunchTool,
+  isAndroidHost,
 }) => {
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const androidHost = useMemo(() => isAndroidNativeBridgeAvailable(), []);
+  const androidHost = useMemo(
+    () => (isAndroidHost !== undefined ? isAndroidHost : isAndroidNativeBridgeAvailable()),
+    [isAndroidHost]
+  );
 
   useEffect(() => {
     return () => {

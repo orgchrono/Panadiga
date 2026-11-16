@@ -6,6 +6,11 @@ use std::time::{Duration, Instant};
 
 use panadiga_core::pico::cdc::strip_leading_prompts;
 
+use crate::commands::constants::{
+    COMPLETION_MARKERS, SERIAL_CHUNK_READ_TIMEOUT_MS, SERIAL_IDLE_COMPLETE_MS,
+    SERIAL_READ_CHUNK_BYTES,
+};
+
 use super::super::bridge_session::is_sc0_bridge_active;
 use super::super::gdb_bridge::is_gdb_bridge_active;
 use super::super::types::extract_port_name;
@@ -40,73 +45,6 @@ fn serial_response_has_completed(out: &str) -> bool {
     if body.is_empty() {
         return false;
     }
-    const COMPLETION_MARKERS: &[&str] = &[
-        "PANADIGA>",
-        "P7501>",
-        "DUMP: OK",
-        "PINCHECK: OK",
-        "BUSDIAG: OK",
-        "CFI: OK",
-        "CFI: FAILED",
-        "BOOTCAP: OK",
-        "UARTMON: OK",
-        "JIGBOOT: OK",
-        "UARTSEND: OK",
-        "UARTPROBE: OK",
-        "BAUD: OK",
-        "BAUD: ERROR",
-        "FRAMING: OK",
-        "FRAMING: ERROR",
-        "BAUDSCAN: OK",
-        "BAUDSCAN: ERROR",
-        "UARTSTREAM: OK",
-        "HEXCAP: OK",
-        "UARTTXHEX: OK",
-        "UARTTXHEX: ERROR",
-        "WAITTX: OK",
-        "WAITTX: ERROR",
-        "PWRTRACE: OK",
-        "BOOTTRACE: OK",
-        "PIOLOGIC: OK",
-        "PIOLOGIC: ERROR",
-        "SDSNIFF: OK",
-        "SDSNIFF: ERROR",
-        "JIGSWEEP: OK",
-        "JIGSWEEP: ERROR",
-        "DIAGWATCH: OK",
-        "PANARSP: OK",
-        "PANARSP: ERROR",
-        "DRVPANA: OK",
-        "DRVPANA: ERROR",
-        "BRIDGE: OK",
-        "BRIDGE: ERROR",
-        "LED: OK",
-        "LED: ERROR",
-        "FMUSCAN: OK",
-        "FMUTEST: OK",
-        "FMUBATCH: OK",
-        "ERASE_NVRAM: OK",
-        "ERASE_NVRAM: ERROR",
-        "INJECT_LOADER: OK",
-        "INJECT_LOADER: ERROR",
-        "SAFETY INTERLOCK",
-        "BREAK_IN: OK",
-        "SCAN: COMPLETED",
-        "SNIFF: OK",
-        "ISOLATE: OK",
-        "ENGAGE: OK",
-        "AUTODETECT: OK",
-        "FLASH_SIZE: OK",
-        "FLASH_SIZE: ERROR",
-        "[HANDSHAKE] SUCCESS",
-        "[HANDSHAKE] FAILED",
-        "[HANDSHAKE] ABORT",
-        "[HANDSHAKE] ACTIVE",
-        "Auto-ready",
-        "PONG",
-        "VDD:",
-        "VDD=",
-    ];
     COMPLETION_MARKERS
         .iter()
         .any(|marker| body.contains(marker))
@@ -117,10 +55,10 @@ pub fn read_serial_response_complete(
     port: &mut dyn serialport::SerialPort,
     max_wait: Duration,
 ) -> Result<String, String> {
-    let _ = port.set_timeout(Duration::from_millis(180));
+    let _ = port.set_timeout(Duration::from_millis(SERIAL_CHUNK_READ_TIMEOUT_MS));
     let start = Instant::now();
     let mut out = String::new();
-    let mut chunk = [0u8; 1024];
+    let mut chunk = [0u8; SERIAL_READ_CHUNK_BYTES];
 
     while start.elapsed() < max_wait {
         match port.read(&mut chunk) {
@@ -136,7 +74,7 @@ pub fn read_serial_response_complete(
                     || e.kind() == std::io::ErrorKind::WouldBlock =>
             {
                 if !strip_leading_prompts(&out).is_empty()
-                    && start.elapsed() > Duration::from_millis(350)
+                    && start.elapsed() > Duration::from_millis(SERIAL_IDLE_COMPLETE_MS)
                 {
                     break;
                 }

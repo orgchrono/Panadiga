@@ -9,6 +9,7 @@
 #include "uart/p7501_drv_pana_codec.h"
 #include "uart/p7501_uart_pio_engine.h"
 #include "hal/p7501_led.h"
+#include "hal/p7501_watchdog.h"
 #include "pico/stdlib.h"
 
 #include <inttypes.h>
@@ -16,8 +17,9 @@
 #include <string.h>
 
 static void drvpana_drain_ms(uint32_t wait_ms, uint32_t *rx_count, uint32_t *ferr_count) {
-    const uint64_t deadline = time_us_64() + ((uint64_t)wait_ms * 1000ULL);
-    while (time_us_64() < deadline) {
+    const uint64_t t0_us = time_us_64();
+    const uint64_t deadline = t0_us + ((uint64_t)wait_ms * 1000ULL);
+    while (p7501_wdt_loop_step(t0_us, deadline, false, NULL)) {
         p7501_pio_poll_sw_uart_release();
         if (p7501_pio_poll_and_clear_framing_err()) {
             *ferr_count += 1u;

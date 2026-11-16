@@ -1,8 +1,19 @@
 //! MCP JSON schema definitions for RE, unbrick, HDD capacity, and SD kit tools.
 
+use panadiga_core::constants::{
+    AM34_FLASH_BASE, AM34_FLASH_UNCACHED_BASE, SPANSION_FLASH_SIZE_BYTES,
+};
+use panadiga_core::re::{
+    DEFAULT_NOR_STUB_LOAD_ADDR, DEV_SERIAL_CALLBACK_VA, DIGADIAG_NOR_STUB_LOAD_ADDR, MAIN_BASE_VA,
+    OFF_BGO_INIT_FAIL_HOOK, OFF_BGO_SUM_BEQ, OFF_DEVINFO_CHECK_BEQ, OFF_FPC_STATUS_CTRL,
+    OFF_ODD_INIT_STATUS, OFF_ODD_STATE_BRANCH, PROG061_BASE_VA, PROG061_NFROM_FORMAT_VA,
+    PROG061_UART_MONITOR_VA,
+};
 use serde_json::{Value, json};
 
 pub(super) fn re_tool_definitions() -> Vec<Value> {
+    let flash_mb = SPANSION_FLASH_SIZE_BYTES / (1024 * 1024);
+
     vec![
         json!({
             "name": "panadiga_hdd_capacity",
@@ -38,17 +49,17 @@ pub(super) fn re_tool_definitions() -> Vec<Value> {
         }),
         json!({
             "name": "panadiga_nor_dumper_stub",
-            "description": "Assembles a read-only MN103S UART NOR flash dumper stub (`PANADMP1..PANADONE`, guarded strictly to 0x80000000/0x84000000 windows) as a raw RSP RAM stub or 128 KiB DIGADIAG.FRM.",
+            "description": format!("Assembles a read-only MN103S UART NOR flash dumper stub (`PANADMP1..PANADONE`, guarded strictly to 0x{:08X}/0x{:08X} windows) as a raw RSP RAM stub or 128 KiB DIGADIAG.FRM.", AM34_FLASH_BASE, AM34_FLASH_UNCACHED_BASE),
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "start_addr": {
                         "type": "string",
-                        "description": "Hex or decimal NOR start VA (default '0x84000000')."
+                        "description": format!("Hex or decimal NOR start VA (default '0x{:08X}').", AM34_FLASH_UNCACHED_BASE)
                     },
                     "total_len": {
                         "type": ["string", "integer"],
-                        "description": "Total dump byte length, exact multiple of block_size (default '0x800000' = 8 MiB)."
+                        "description": format!("Total dump byte length, exact multiple of block_size (default '0x{:X}' = {} MiB).", SPANSION_FLASH_SIZE_BYTES, flash_mb)
                     },
                     "block_size": {
                         "type": "integer",
@@ -56,11 +67,11 @@ pub(super) fn re_tool_definitions() -> Vec<Value> {
                     },
                     "wrap_digadiag": {
                         "type": "boolean",
-                        "description": "Wrap stub inside a 131072-byte DIGADIAG.FRM (FVU / NOR_DMP, default load 0x50400000) instead of raw stub (default load 0x51800000)."
+                        "description": format!("Wrap stub inside a 131072-byte DIGADIAG.FRM (FVU / NOR_DMP, default load 0x{:08X}) instead of raw stub (default load 0x{:08X}).", DIGADIAG_NOR_STUB_LOAD_ADDR, DEFAULT_NOR_STUB_LOAD_ADDR)
                     },
                     "load_addr": {
                         "type": "string",
-                        "description": "MN103S SDRAM stub load address (defaults to '0x50400000' when wrap_digadiag=true, else '0x51800000')."
+                        "description": format!("MN103S SDRAM stub load address (defaults to '0x{:08X}' when wrap_digadiag=true, else '0x{:08X}').", DIGADIAG_NOR_STUB_LOAD_ADDR, DEFAULT_NOR_STUB_LOAD_ADDR)
                     },
                     "output_path": {
                         "type": "string",
@@ -71,7 +82,7 @@ pub(super) fn re_tool_definitions() -> Vec<Value> {
         }),
         json!({
             "name": "panadiga_bgo_unbrick",
-            "description": "Inspects or patches the 3 verified BGO unbrick/bypass sites (`0x504230F0`, `0x50405097`, and `0x5040A2CD` -> `nfrom_format 0x50401F3C`) in `PROG061` / `DIGADIAG.FRM` to recover `BGO driver init failed[1].` (`U99`).",
+            "description": format!("Inspects or patches the 3 verified BGO unbrick/bypass sites (`0x{:08X}`, `0x{:08X}`, and `0x{:08X}` -> `nfrom_format 0x{:08X}`) in `PROG061` / `DIGADIAG.FRM` to recover `BGO driver init failed[1].` (`U99`).", PROG061_BASE_VA + OFF_BGO_SUM_BEQ as u32, PROG061_BASE_VA + OFF_DEVINFO_CHECK_BEQ as u32, PROG061_BASE_VA + OFF_BGO_INIT_FAIL_HOOK as u32, PROG061_NFROM_FORMAT_VA),
             "inputSchema": {
                 "type": "object",
                 "required": ["input_path"],
@@ -88,7 +99,7 @@ pub(super) fn re_tool_definitions() -> Vec<Value> {
                     "mode": {
                         "type": "string",
                         "enum": ["bypass", "auto_format", "uart_monitor", "factory"],
-                        "description": "Patch strategy when action='patch' (default 'bypass'; 'auto_format' requires allow_unsafe_bgo_format=true due to unverified nfrom_format RAM pointers; 'uart_monitor' embeds interactive PANAMON1 UART0 monitor @ 0x50439494)."
+                        "description": format!("Patch strategy when action='patch' (default 'bypass'; 'auto_format' requires allow_unsafe_bgo_format=true due to unverified nfrom_format RAM pointers; 'uart_monitor' embeds interactive PANAMON1 UART0 monitor @ 0x{:08X}).", PROG061_UART_MONITOR_VA)
                     },
                     "allow_unsafe_bgo_format": {
                         "type": "boolean",
@@ -107,7 +118,7 @@ pub(super) fn re_tool_definitions() -> Vec<Value> {
         }),
         json!({
             "name": "panadiga_main_passthrough",
-            "description": "Inspects or patches the 3 verified MAIN (`EH55_MAIN_3410PQ.bin`, VA 0x57000000) AV TBC (`E-E`) passthrough sites (`0x5771ABFB`, `0x574F7B8C`, `0x574F7C5C`), or generates `_dev_SERIAL` GDB RSP `$M` frames (`rsp_plan`, no image required).",
+            "description": format!("Inspects or patches the 3 verified MAIN (`EH55_MAIN_3410PQ.bin`, VA 0x{:08X}) AV TBC (`E-E`) passthrough sites (`0x{:08X}`, `0x{:08X}`, `0x{:08X}`), or generates `_dev_SERIAL` GDB RSP `$M` frames (`rsp_plan`, no image required).", MAIN_BASE_VA, MAIN_BASE_VA + OFF_FPC_STATUS_CTRL as u32, MAIN_BASE_VA + OFF_ODD_INIT_STATUS as u32, MAIN_BASE_VA + OFF_ODD_STATE_BRANCH as u32),
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -131,7 +142,7 @@ pub(super) fn re_tool_definitions() -> Vec<Value> {
                     },
                     "callback_target_va": {
                         "type": ["string", "integer"],
-                        "description": "Optional MN103S target VA for `_dev_SERIAL` callback pointer (`0x515B2E40`) in 'rsp_plan' mode."
+                        "description": format!("Optional MN103S target VA for `_dev_SERIAL` callback pointer (`0x{:08X}`) in 'rsp_plan' mode.", DEV_SERIAL_CALLBACK_VA)
                     }
                 }
             }

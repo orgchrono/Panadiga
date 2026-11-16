@@ -8,6 +8,7 @@
 #include "uart/p7501_uart_pio_engine.h"
 
 #include "hal/p7501_hw.h"
+#include "hal/p7501_watchdog.h"
 #include "p7501_types.h"
 
 #include "hardware/adc.h"
@@ -83,7 +84,7 @@ void p7501_pio_pulse_xreset_ms(uint32_t hold_low_ms) {
     gpio_init(P7501_PIN_XRESET);
     gpio_put(P7501_PIN_XRESET, 0);
     gpio_set_dir(P7501_PIN_XRESET, GPIO_OUT);
-    sleep_ms(hold_low_ms > 0u ? hold_low_ms : 15u);
+    p7501_wdt_sleep_ms(hold_low_ms > 0u ? hold_low_ms : 15u);
     gpio_set_dir(P7501_PIN_XRESET, GPIO_IN);
     gpio_disable_pulls(P7501_PIN_XRESET);
 }
@@ -311,6 +312,7 @@ void p7501_pio_tx_bytes(const uint8_t *data, size_t len, bool force_sw_uart_low)
         );
     }
     while (!pio_sm_is_tx_fifo_empty(P7501_PIO_UART_INST, P7501_PIO_TX_SM)) {
+        p7501_wdt_kick();
         tight_loop_contents();
     }
     sleep_us(drain_us);
@@ -325,7 +327,7 @@ void p7501_pio_tx_break_ms(uint32_t break_ms, bool force_sw_uart_low) {
     gpio_set_function(P7501_PIN_TXD, GPIO_FUNC_SIO);
     gpio_put(P7501_PIN_TXD, 0);
     gpio_set_dir(P7501_PIN_TXD, GPIO_OUT);
-    sleep_ms(break_ms > 0u ? break_ms : 120u);
+    p7501_wdt_sleep_ms(break_ms > 0u ? break_ms : 120u);
     gpio_set_dir(P7501_PIN_TXD, GPIO_IN);
     gpio_pull_up(P7501_PIN_TXD);
 }

@@ -8,6 +8,7 @@
 #include "uart/p7501_uart_stream.h"
 
 #include "hal/p7501_led.h"
+#include "hal/p7501_watchdog.h"
 #include "p7501_types.h"
 #include "uart/p7501_uart_codec.h"
 #include "uart/p7501_uart_pio_engine.h"
@@ -66,6 +67,7 @@ void p7501_cmd_uart_stream(const char *arg) {
     uint8_t byte = 0u;
 
     while (!time_reached(end_t)) {
+        p7501_wdt_kick();
         if (p7501_pio_poll_sw_uart_release()) {
             printf("\n[SW_UART] Timed release -> Hi-Z ADC0 (Q7514 TX ready)\n");
             fflush(stdout);
@@ -153,6 +155,7 @@ void p7501_cmd_hexcap(const char *arg) {
     uint8_t byte = 0u;
 
     while (!time_reached(end_t)) {
+        p7501_wdt_kick();
         (void)p7501_pio_poll_sw_uart_release();
         if (p7501_pio_poll_and_clear_framing_err()) {
             ++ferr_count;

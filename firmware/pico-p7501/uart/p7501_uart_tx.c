@@ -9,6 +9,7 @@
 
 #include "common/p7501_hex.h"
 #include "hal/p7501_led.h"
+#include "hal/p7501_watchdog.h"
 #include "p7501_types.h"
 #include "uart/p7501_uart_codec.h"
 #include "uart/p7501_uart_pio_engine.h"
@@ -73,6 +74,7 @@ void p7501_cmd_uart_tx_hex(const char *arg) {
     uint32_t rx_count = 0u;
     uint8_t byte = 0u;
     while (!time_reached(end_t)) {
+        p7501_wdt_kick();
         while (p7501_pio_pop_rx_byte(&byte)) {
             ++rx_count;
             emit_printable_byte(byte);
@@ -112,6 +114,7 @@ void p7501_cmd_waittx(const char *arg) {
     const absolute_time_t wait_end = make_timeout_time_ms(spec.timeout_ms);
 
     while (!time_reached(wait_end)) {
+        p7501_wdt_kick();
         if (p7501_pio_poll_sw_uart_release()) {
             printf("\n[SW_UART] Released to Hi-Z -> Q7514 active\n");
             fflush(stdout);
@@ -147,6 +150,7 @@ void p7501_cmd_waittx(const char *arg) {
 
         const absolute_time_t post_end = make_timeout_time_ms(spec.post_rx_ms);
         while (!time_reached(post_end)) {
+            p7501_wdt_kick();
             while (p7501_pio_pop_rx_byte(&byte)) {
                 ++rx_count;
                 emit_printable_byte(byte);
@@ -193,7 +197,7 @@ void p7501_cmd_bridge(const char *arg) {
     bool exit_requested = false;
 
     while (!exit_requested) {
-        p7501_led_tick();
+        p7501_wdt_kick();
         (void)p7501_pio_poll_sw_uart_release();
         if (p7501_pio_poll_and_clear_framing_err()) {
             ++ferr_count;

@@ -23,16 +23,20 @@ fn lock_unpoisoned<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(|e| e.into_inner())
 }
 
+struct GdbBridgeMutableState {
+    port_name: String,
+    listen_addr: String,
+    last_event: String,
+    registers: Am34RegisterState,
+    telemetry_ring: VecDeque<GdbPacketTelemetryEvent>,
+}
+
 struct GdbBridgeController {
     running: Arc<AtomicBool>,
     client_connected: Arc<AtomicBool>,
     client_count: Arc<AtomicU32>,
-    port_name: Mutex<String>,
-    listen_addr: Mutex<String>,
-    last_event: Mutex<String>,
+    state: Mutex<GdbBridgeMutableState>,
     thread_handle: Mutex<Option<thread::JoinHandle<()>>>,
-    registers: Mutex<Am34RegisterState>,
-    telemetry_ring: Mutex<VecDeque<GdbPacketTelemetryEvent>>,
 }
 
 static GDB_CONTROLLER: OnceLock<GdbBridgeController> = OnceLock::new();
@@ -42,20 +46,22 @@ fn get_controller() -> &'static GdbBridgeController {
         running: Arc::new(AtomicBool::new(false)),
         client_connected: Arc::new(AtomicBool::new(false)),
         client_count: Arc::new(AtomicU32::new(0)),
-        port_name: Mutex::new(String::new()),
-        listen_addr: Mutex::new(DEFAULT_GDB_LISTEN_SOCKET.to_string()),
-        last_event: Mutex::new("Servidor GDB offline".to_string()),
-        thread_handle: Mutex::new(None),
-        registers: Mutex::new(Am34RegisterState {
-            d: [0x00000000, 0x00000000, 0x00000000, 0x00000000],
-            a: [0x00000000, 0x00000000, 0x00000000, 0x0003FFF0],
-            mdr: 0x00000000,
-            psw: 0x00000100,
-            pc: 0x80000000,
-            sp: 0x0003FFF0,
-            is_halted: true,
+        state: Mutex::new(GdbBridgeMutableState {
+            port_name: String::new(),
+            listen_addr: DEFAULT_GDB_LISTEN_SOCKET.to_string(),
+            last_event: "Servidor GDB offline".to_string(),
+            registers: Am34RegisterState {
+                d: [0x00000000, 0x00000000, 0x00000000, 0x00000000],
+                a: [0x00000000, 0x00000000, 0x00000000, 0x0003FFF0],
+                mdr: 0x00000000,
+                psw: 0x00000100,
+                pc: 0x80000000,
+                sp: 0x0003FFF0,
+                is_halted: true,
+            },
+            telemetry_ring: VecDeque::with_capacity(128),
         }),
-        telemetry_ring: Mutex::new(VecDeque::with_capacity(128)),
+        thread_handle: Mutex::new(None),
     })
 }
 
@@ -67,11 +73,9 @@ pub fn is_gdb_bridge_active() -> bool {
 /// Synchronizes the controller's AM34 shadow register file from a 96-char hex string.
 fn sync_controller_registers(hex_str: &str) {
     let ctrl = get_controller();
-    let halted = ctrl.registers.lock().map(|r| r.is_halted).unwrap_or(true);
-    if let Some(updated) = decode_am34_registers_hex(hex_str, halted)
-        && let Ok(mut regs) = ctrl.registers.lock()
-    {
-        *regs = updated;
+    let mut guard = lock_unpoisoned(&ctrl.state);
+    if let Some(updated) = decode_am34_registers_hex(hex_str, guard.registers.is_halted) {
+        guard.registers = updated;
     }
 }
 
@@ -90,17 +94,18 @@ pub fn record_telemetry(direction: &str, raw_packet: &str) {
         checksum_valid,
     };
 
-    let mut ring = lock_unpoisoned(&ctrl.telemetry_ring);
-    if ring.len() >= 128 {
-        ring.pop_front();
+    let mut guard = lock_unpoisoned(&ctrl.state);
+    if guard.telemetry_ring.len() >= 128 {
+        guard.telemetry_ring.pop_front();
     }
-    ring.push_back(event);
+    guard.telemetry_ring.push_back(event);
 }
 
 /// Retrieves all recorded GDB packet telemetry events.
 pub fn get_gdb_telemetry() -> Vec<GdbPacketTelemetryEvent> {
     let ctrl = get_controller();
-    lock_unpoisoned(&ctrl.telemetry_ring)
+    lock_unpoisoned(&ctrl.state)
+        .telemetry_ring
         .iter()
         .cloned()
         .collect()
@@ -146,9 +151,12 @@ pub fn start_gdb_bridge(port_name: String, listen_addr: String) -> Result<GdbBri
     ctrl.client_connected.store(false, Ordering::Relaxed);
     ctrl.client_count.store(0, Ordering::Relaxed);
 
-    *lock_unpoisoned(&ctrl.port_name) = clean_port.clone();
-    *lock_unpoisoned(&ctrl.listen_addr) = addr.clone();
-    *lock_unpoisoned(&ctrl.last_event) = format!("Ouvindo conexões GDB em {}", addr);
+    {
+        let mut guard = lock_unpoisoned(&ctrl.state);
+        guard.port_name = clean_port.clone();
+        guard.listen_addr = addr.clone();
+        guard.last_event = format!("Ouvindo conexões GDB em {}", addr);
+    }
 
     let running_flag = ctrl.running.clone();
     let connected_flag = ctrl.client_connected.clone();
@@ -317,7 +325,7 @@ pub fn stop_gdb_bridge() -> Result<GdbBridgeStatus, String> {
     ctrl.running.store(false, Ordering::Relaxed);
     ctrl.client_connected.store(false, Ordering::Relaxed);
 
-    let addr = lock_unpoisoned(&ctrl.listen_addr).clone();
+    let addr = lock_unpoisoned(&ctrl.state).listen_addr.clone();
     if let Ok(sock_addr) = addr
         .parse::<SocketAddr>()
         .or_else(|_| DEFAULT_GDB_LISTEN_SOCKET.parse::<SocketAddr>())
@@ -329,26 +337,27 @@ pub fn stop_gdb_bridge() -> Result<GdbBridgeStatus, String> {
         let _ = h.join();
     }
 
-    *lock_unpoisoned(&ctrl.last_event) = "Servidor GDB finalizado".to_string();
+    lock_unpoisoned(&ctrl.state).last_event = "Servidor GDB finalizado".to_string();
     get_gdb_bridge_status()
 }
 
 /// Retrieves the current status and metrics of the GDB bridge.
 pub fn get_gdb_bridge_status() -> Result<GdbBridgeStatus, String> {
     let ctrl = get_controller();
+    let guard = lock_unpoisoned(&ctrl.state);
     Ok(GdbBridgeStatus {
         running: ctrl.running.load(Ordering::Relaxed),
-        port_name: lock_unpoisoned(&ctrl.port_name).clone(),
-        listen_addr: lock_unpoisoned(&ctrl.listen_addr).clone(),
+        port_name: guard.port_name.clone(),
+        listen_addr: guard.listen_addr.clone(),
         connected_clients: ctrl.client_count.load(Ordering::Relaxed),
-        last_event: lock_unpoisoned(&ctrl.last_event).clone(),
+        last_event: guard.last_event.clone(),
     })
 }
 
 /// Retrieves the current AM34 register state.
 pub fn get_am34_registers() -> Result<Am34RegisterState, String> {
     let ctrl = get_controller();
-    Ok(lock_unpoisoned(&ctrl.registers).clone())
+    Ok(lock_unpoisoned(&ctrl.state).registers.clone())
 }
 
 #[cfg(test)]

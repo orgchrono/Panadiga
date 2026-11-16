@@ -3,7 +3,7 @@
  * @brief Reactive telemetry stream subscription, SSOT voltage alert logging, and session persistence effects.
  */
 
-import { useEffect, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
+import { useEffect, useRef, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
 import type { PicoDeviceStatus, PicoDiagnosticResult } from '@/models';
 import { PICO_MAX_VDD_CEILING_VOLTS, PICO_MIN_VDD_THRESHOLD_VOLTS } from '@/constants';
 import { isTargetPowered } from '@/utils/formatters';
@@ -23,7 +23,7 @@ interface UsePicoTelemetryEffectsParams {
   selectedModel: string;
   lastAlertRef: MutableRefObject<VoltageAlertLevel>;
   applyMeasuredVoltage: (vddVolts: number, commandId?: string, commandSuccess?: boolean) => void;
-  refreshPorts: (silent?: unknown) => Promise<void>;
+  refreshPorts: (injectedPortsOrSilent?: unknown) => Promise<void>;
   refreshModelCatalog: () => Promise<void>;
   pollDeviceStatus: () => Promise<void>;
   onLog?: UsePicoDeviceOptions['onLog'];
@@ -41,27 +41,43 @@ export function usePicoTelemetryEffects({
   pollDeviceStatus,
   onLog,
 }: UsePicoTelemetryEffectsParams) {
+  const refreshPortsRef = useRef(refreshPorts);
+
+  useEffect(() => {
+    refreshPortsRef.current = refreshPorts;
+  }, [refreshPorts]);
+
   useEffect(() => {
     refreshPorts();
     refreshModelCatalog();
   }, [refreshPorts, refreshModelCatalog]);
 
   useEffect(() => {
-    if (deviceStatus?.connected) return;
-    const timer = window.setInterval(() => {
-      void refreshPorts(true);
-    }, 4000);
-    return () => window.clearInterval(timer);
-  }, [deviceStatus?.connected, refreshPorts]);
+    const nav = navigator as Navigator & { serial?: EventTarget; usb?: EventTarget };
+    const onHardwareMutated = () => {
+      void refreshPortsRef.current(true);
+    };
+    nav.serial?.addEventListener('connect', onHardwareMutated);
+    nav.serial?.addEventListener('disconnect', onHardwareMutated);
+    nav.usb?.addEventListener('connect', onHardwareMutated);
+    nav.usb?.addEventListener('disconnect', onHardwareMutated);
+    return () => {
+      nav.serial?.removeEventListener('connect', onHardwareMutated);
+      nav.serial?.removeEventListener('disconnect', onHardwareMutated);
+      nav.usb?.removeEventListener('connect', onHardwareMutated);
+      nav.usb?.removeEventListener('disconnect', onHardwareMutated);
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
     let unlistenTelemetry: (() => void) | undefined;
     let unlistenDiag: (() => void) | undefined;
+    let unlistenPorts: (() => void) | undefined;
 
     const bindTelemetryStreams = async (): Promise<void> => {
       try {
-        const [offTel, offDiag] = await Promise.all([
+        const [offTel, offDiag, offPorts] = await Promise.all([
           listenEvent<PicoDeviceStatus>('pico://telemetry', incoming => {
             if (incoming && typeof incoming.vdd_volts === 'number') {
               setDeviceStatus(prev => {
@@ -89,13 +105,20 @@ export function usePicoTelemetryEffects({
               applyMeasuredVoltage(diag.vdd_volts, diag.command_id, diag.success);
             }
           }),
+          listenEvent<string[]>('pico://ports-changed', ports => {
+            if (Array.isArray(ports)) {
+              void refreshPortsRef.current(ports);
+            }
+          }),
         ]);
         if (!active) {
           offTel();
           offDiag();
+          offPorts();
         } else {
           unlistenTelemetry = offTel;
           unlistenDiag = offDiag;
+          unlistenPorts = offPorts;
         }
       } catch (err) {
         if (active) {
@@ -110,6 +133,7 @@ export function usePicoTelemetryEffects({
       active = false;
       unlistenTelemetry?.();
       unlistenDiag?.();
+      unlistenPorts?.();
     };
   }, [applyMeasuredVoltage, onLog, setDeviceStatus]);
 

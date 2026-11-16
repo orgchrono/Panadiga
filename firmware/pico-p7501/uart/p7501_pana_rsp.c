@@ -11,6 +11,7 @@
 #include "uart/p7501_uart_pio_engine.h"
 #include "common/p7501_hex.h"
 #include "hal/p7501_led.h"
+#include "hal/p7501_watchdog.h"
 #include "p7501_types.h"
 #include "pico/stdlib.h"
 
@@ -102,8 +103,9 @@ static size_t panarsp_execute_dumpnor(
     bool hdr_seen = false;
     bool ftr_seen = false;
     uint32_t streamed = 0u;
-    const uint64_t deadline = time_us_64() + ((uint64_t)spec->timeout_ms * 1000ULL);
-    while (!ftr_seen && time_us_64() < deadline) {
+    const uint64_t t0_us = time_us_64();
+    const uint64_t deadline = t0_us + ((uint64_t)spec->timeout_ms * 1000ULL);
+    while (!ftr_seen && p7501_wdt_loop_step(t0_us, deadline, true, NULL)) {
         p7501_pio_poll_sw_uart_release();
         uint8_t b = 0u;
         while (p7501_pio_pop_rx_byte(&b)) {
@@ -156,8 +158,9 @@ void p7501_cmd_pana_rsp(const char *arg) {
         uint8_t jig_ring[24];
         size_t ring_len = 0u;
         size_t jig_ring_len = 0u;
-        const uint64_t wait_deadline = time_us_64() + ((uint64_t)spec.timeout_ms * 1000ULL);
-        while (!triggered && time_us_64() < wait_deadline) {
+        const uint64_t wait_t0 = time_us_64();
+        const uint64_t wait_deadline = wait_t0 + ((uint64_t)spec.timeout_ms * 1000ULL);
+        while (!triggered && p7501_wdt_loop_step(wait_t0, wait_deadline, true, NULL)) {
             p7501_pio_poll_sw_uart_release();
             uint8_t b = 0u;
             while (p7501_pio_pop_rx_byte(&b)) {

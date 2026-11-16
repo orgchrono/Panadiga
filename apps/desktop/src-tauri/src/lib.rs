@@ -13,6 +13,10 @@ pub fn run() {
 pub fn run_desktop_app() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .setup(|app| {
+            crate::commands::hardware_diag::start_port_mutation_observer(app.handle().clone());
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             get_system_overview,
             clean_nvram,

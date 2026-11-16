@@ -5,6 +5,11 @@
 
 use std::path::Path;
 
+use super::constants::{
+    BYTES_PER_KIB_F64, BYTES_PER_MIB_F64, CANDIDATE_FRM_CONTAINER_PATHS,
+    DEFAULT_FRM_CONTAINER_PATH, DEFAULT_FRM_ENTROPY_TOP_N, DEFAULT_MANUAL_FALLBACK_NAME,
+    DEFAULT_MANUAL_SEARCH_TERM,
+};
 use super::dto::{
     CodebookReport, FrmEntropyReport, FrmTocDumpReport, ManualSearchResult, resolve_candidate,
 };
@@ -18,8 +23,13 @@ pub fn analyze_frm_command(frm_path: String) -> Result<FrmEntropyReport, String>
         .collect();
     let hdd_path = hdd_candidates.iter().find(|p| p.exists()).copied();
 
-    panadiga_core::crypto::analyze_frm_container(Path::new(&frm_path), hdd_path, 25, None)
-        .map_err(|e| e.to_string())
+    panadiga_core::crypto::analyze_frm_container(
+        Path::new(&frm_path),
+        hdd_path,
+        DEFAULT_FRM_ENTROPY_TOP_N,
+        None,
+    )
+    .map_err(|e| e.to_string())
 }
 
 /// Dumps and validates the Table of Contents (TOC) descriptors in PANA_DVD.FRM.
@@ -71,15 +81,15 @@ pub fn list_service_manuals() -> Result<Vec<super::dto::ServiceManualCatalogItem
     let mut items = Vec::with_capacity(pdfs.len());
     for p in pdfs {
         let size_bytes = std::fs::metadata(&p).map(|m| m.len()).unwrap_or(0);
-        let formatted_size = if size_bytes >= 1024 * 1024 {
-            format!("{:.2} MB", size_bytes as f64 / (1024.0 * 1024.0))
+        let formatted_size = if size_bytes >= BYTES_PER_MIB_F64 as u64 {
+            format!("{:.2} MB", size_bytes as f64 / BYTES_PER_MIB_F64)
         } else {
-            format!("{:.1} KB", size_bytes as f64 / 1024.0)
+            format!("{:.1} KB", size_bytes as f64 / BYTES_PER_KIB_F64)
         };
         let file_name = p
             .file_name()
             .and_then(|n| n.to_str())
-            .unwrap_or("manual.pdf")
+            .unwrap_or(DEFAULT_MANUAL_FALLBACK_NAME)
             .to_string();
         let relative_path = p
             .strip_prefix(&root)
@@ -104,13 +114,7 @@ fn resolve_frm_input_path(frm_path: Option<String>) -> String {
         let nested = format!("firmware_and_images/{}", raw);
         return resolve_candidate(&[&raw, &nested], &raw);
     }
-    resolve_candidate(
-        &[
-            panadiga_core::constants::DEFAULT_FRM_CONTAINER_PATH,
-            "../../firmware_and_images/PANA_DVD.FRM",
-        ],
-        panadiga_core::constants::DEFAULT_FRM_CONTAINER_PATH,
-    )
+    resolve_candidate(CANDIDATE_FRM_CONTAINER_PATHS, DEFAULT_FRM_CONTAINER_PATH)
 }
 
 /// Frontend `analyze_frm` command.
@@ -140,6 +144,8 @@ pub fn search_manuals(
     query: Option<String>,
     term: Option<String>,
 ) -> Result<Vec<ManualSearchResult>, String> {
-    let q = query.or(term).unwrap_or_else(|| "U99".to_string());
+    let q = query
+        .or(term)
+        .unwrap_or_else(|| DEFAULT_MANUAL_SEARCH_TERM.to_string());
     search_manuals_command(q)
 }

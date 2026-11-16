@@ -8,36 +8,21 @@ use std::path::{Component, Path, PathBuf};
 
 use panadiga_core::pico::{Am34BootLogReport, decode_captured_log_bytes, parse_bench_log_text};
 
+use super::constants::{
+    DOC_EXTENSIONS, DOC_LOCALES, DOCS_DIR_NAME, DOCS_INDEX_FILE, MAX_SRC_PREVIEW_BYTES,
+    ROOT_DOC_ALLOWLIST, SRC_EXTENSIONS, SRC_TOP_DIRS,
+};
 use super::dto::EngineeringDocEntryDto;
-
-const ROOT_DOC_ALLOWLIST: &[&str] = &[
-    "README.md",
-    "README.pt-BR.md",
-    "AUDITORIA_COMPLETA.md",
-    "COMPLETE_AUDIT.md",
-    "AGENTS.md",
-];
-
-const SRC_TOP_DIRS: &[&str] = &["crates", "firmware", "apps", "scripts", "tools"];
-
-const SRC_EXTENSIONS: &[&str] = &[
-    "rs", "c", "h", "pio", "py", "ts", "tsx", "css", "json", "toml", "yml", "yaml", "md", "txt",
-    "log", "cmd", "sh",
-];
-
-const DOC_EXTENSIONS: &[&str] = &["md", "txt", "log"];
-
-const MAX_SRC_PREVIEW_BYTES: usize = 512 * 1024;
 
 fn resolve_workspace() -> PathBuf {
     panadiga_core::constants::resolve_workspace_root()
 }
 
 fn resolve_docs_root() -> Result<PathBuf, String> {
-    if let Some(dir) = panadiga_core::constants::find_workspace_subdir("docs") {
+    if let Some(dir) = panadiga_core::constants::find_workspace_subdir(DOCS_DIR_NAME) {
         return Ok(dir);
     }
-    let fallback = resolve_workspace().join("docs");
+    let fallback = resolve_workspace().join(DOCS_DIR_NAME);
     if fallback.is_dir() {
         return Ok(fallback);
     }
@@ -130,14 +115,14 @@ pub fn list_engineering_docs() -> Result<Vec<EngineeringDocEntryDto>, String> {
     let ws_root = resolve_workspace();
     let mut entries = Vec::new();
 
-    let index_path = docs_root.join("INDEX.md");
+    let index_path = docs_root.join(DOCS_INDEX_FILE);
     if index_path.is_file() {
         let size_bytes = std::fs::metadata(&index_path).map(|m| m.len()).unwrap_or(0);
         entries.push(EngineeringDocEntryDto {
             locale: "root".to_string(),
-            file_name: "INDEX.md".to_string(),
-            relative_path: "INDEX.md".to_string(),
-            title: extract_doc_title(&index_path, "INDEX.md"),
+            file_name: DOCS_INDEX_FILE.to_string(),
+            relative_path: DOCS_INDEX_FILE.to_string(),
+            title: extract_doc_title(&index_path, DOCS_INDEX_FILE),
             size_bytes,
         });
     }
@@ -156,7 +141,7 @@ pub fn list_engineering_docs() -> Result<Vec<EngineeringDocEntryDto>, String> {
         }
     }
 
-    for locale in ["en-US", "pt-BR", "audits", "pseudocode", "debug_logs"] {
+    for locale in DOC_LOCALES {
         collect_dir_entries(&docs_root.join(locale), locale, locale, &mut entries)?;
     }
     collect_dir_entries(

@@ -5,7 +5,7 @@ import { TerminalView } from '@/components/TerminalView';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Button, ResizableSplitPane } from '@/components/ui';
 import { useWorkbenchMode } from '@/context/WorkbenchModeContext';
-import { isTargetPowered } from '@/utils/formatters';
+import { isTargetPowered, resolveEffectiveVddVolts } from '@/utils/formatters';
 import {
   PicoBenchTopBar,
   PicoBenchMetrics,
@@ -111,10 +111,10 @@ export const PicoBenchView: React.FC = () => {
     );
   }
 
-  const effectiveVddVolts =
-    deviceStatus?.vdd_volts && deviceStatus.vdd_volts > 0
-      ? deviceStatus.vdd_volts
-      : (latestDiagnostic?.vdd_volts ?? 0);
+  const effectiveVddVolts = resolveEffectiveVddVolts(
+    deviceStatus?.vdd_volts,
+    latestDiagnostic?.vdd_volts
+  );
   const effectiveDeviceStatus = deviceStatus
     ? {
         ...deviceStatus,

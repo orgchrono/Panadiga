@@ -2,6 +2,17 @@
 
 use std::process::{Command, Stdio};
 
+#[allow(unused_imports)]
+use super::constants::{
+    DEFAULT_GDB_LISTEN_SOCKET, FIRMWARE_IMAGES_DIR_NAME, WIN_SCRIPT_GDB, WIN_SCRIPT_GHIDRA,
+    WIN_SCRIPT_HXD,
+};
+#[cfg(any(
+    target_os = "macos",
+    all(not(target_os = "windows"), not(target_os = "android"))
+))]
+use panadiga_core::constants::DEFAULT_GDB_LISTEN_SOCKET;
+
 use super::hardware::run_blocking;
 
 /// Resolves the Panadiga workspace root via `panadiga-core` multiplatform discovery.
@@ -88,17 +99,17 @@ pub fn launch_external_tool_command(tool: String) -> Result<String, String> {
         let root = resolve_workspace_root();
         match tool.to_lowercase().as_str() {
             "gdb" => {
-                launch_tools_script(&root, "conectar_gdb_multiarch.cmd")
+                launch_tools_script(&root, WIN_SCRIPT_GDB)
                     .map_err(|e| format!("Falha ao iniciar GDB Multiarch: {}", e))?;
                 Ok("Sessão interativa do GDB iniciada em novo terminal.".to_string())
             }
             "ghidra_scripts" | "ghidra" => {
-                launch_tools_script(&root, "iniciar_ghidra.cmd")
+                launch_tools_script(&root, WIN_SCRIPT_GHIDRA)
                     .map_err(|e| format!("Falha ao iniciar Ghidra: {}", e))?;
                 Ok("Inicializador do Ghidra disparado.".to_string())
             }
             "hxd" => {
-                launch_tools_script(&root, "Abrir_HxD.cmd")
+                launch_tools_script(&root, WIN_SCRIPT_HXD)
                     .map_err(|e| format!("Falha ao abrir editor hexadecimal: {}", e))?;
                 Ok("Editor hexadecimal iniciado no workspace.".to_string())
             }
@@ -138,14 +149,17 @@ pub fn launch_external_tool_command(tool: String) -> Result<String, String> {
                     &[
                         "-e",
                         &format!(
-                            "tell application \"Terminal\" to do script \"cd '{}' && gdb-multiarch -ex 'target remote 127.0.0.1:3333'\"",
-                            root_str
+                            "tell application \"Terminal\" to do script \"cd '{}' && gdb-multiarch -ex 'target remote {}'\"",
+                            root_str, DEFAULT_GDB_LISTEN_SOCKET
                         ),
                     ],
                     &root,
                 )
                 .map_err(|e| format!("Falha ao iniciar Terminal com GDB: {}", e))?;
-                Ok("Terminal macOS iniciado conectando em 127.0.0.1:3333.".to_string())
+                Ok(format!(
+                    "Terminal macOS iniciado conectando em {}.",
+                    DEFAULT_GDB_LISTEN_SOCKET
+                ))
             }
             "ghidra_scripts" | "ghidra" => {
                 let ghidra_dir = root.join("tools").join("ghidra");
@@ -154,7 +168,7 @@ pub fn launch_external_tool_command(tool: String) -> Result<String, String> {
                 Ok("Diretório de scripts Ghidra aberto no Finder.".to_string())
             }
             "hxd" => {
-                let images_dir = root.join("firmware_and_images");
+                let images_dir = root.join(FIRMWARE_IMAGES_DIR_NAME);
                 spawn_detached("open", &[&images_dir.to_string_lossy()], &root)
                     .map_err(|e| format!("Falha ao abrir pasta de imagens: {}", e))?;
                 Ok("Diretório de imagens binárias aberto no Finder.".to_string())
@@ -180,11 +194,12 @@ pub fn launch_external_tool_command(tool: String) -> Result<String, String> {
         let root = resolve_workspace_root();
         match tool.to_lowercase().as_str() {
             "gdb" => {
-                spawn_first_terminal(
-                    &root,
-                    Some("gdb-multiarch -ex 'target remote 127.0.0.1:3333'; exec bash"),
-                )
-                .map_err(|e| format!("Falha ao iniciar GDB no terminal Linux: {}", e))?;
+                let cmd = format!(
+                    "gdb-multiarch -ex 'target remote {}'; exec bash",
+                    DEFAULT_GDB_LISTEN_SOCKET
+                );
+                spawn_first_terminal(&root, Some(&cmd))
+                    .map_err(|e| format!("Falha ao iniciar GDB no terminal Linux: {}", e))?;
                 Ok("Sessão GDB Multiarch iniciada no terminal.".to_string())
             }
             "ghidra_scripts" | "ghidra" => {

@@ -1,5 +1,11 @@
 //! Tauri IPC Commands for Panasonic `.FRM` Packing and `EXTRHEAD`/`EXTRFOOT` Unpacking.
 
+use super::constants::{
+    DEFAULT_DIGADIAG_BUILD, DEFAULT_DIGADIAG_DST_HEX, DEFAULT_DIGADIAG_TAG, DEFAULT_FRM_HW_FAMILY,
+    DEFAULT_FRM_MODEL_GROUP, DEFAULT_FRM_VERSION_HEX, FIRMWARE_IMAGES_DIR_NAME,
+    FRM_COLLECTION_MAX_DEPTH, FRM_FILE_EXTENSION, FRM_IGNORED_SUBDIR, FRM_UNPACK_DEFAULT_MODE,
+    FRM_WRITE_EMPTY_PATH_ERR,
+};
 use panadiga_core::constants::{
     PANA_DIGADIAG_FRM_SIZE, PANA_EXTRHEAD_DEFAULT_ADLER_STEP, find_workspace_subdir,
     resolve_workspace_root,
@@ -59,7 +65,7 @@ pub(crate) fn resolve_read_path(raw: &str) -> PathBuf {
     if ws_rel.exists() {
         return ws_rel;
     }
-    let fw_rel = ws_root.join("firmware_and_images").join(trimmed);
+    let fw_rel = ws_root.join(FIRMWARE_IMAGES_DIR_NAME).join(trimmed);
     if fw_rel.exists() {
         return fw_rel;
     }
@@ -69,7 +75,7 @@ pub(crate) fn resolve_read_path(raw: &str) -> PathBuf {
 pub(crate) fn resolve_write_path(raw: &str) -> Result<PathBuf, String> {
     let trimmed = raw.trim();
     if trimmed.is_empty() {
-        return Err("Caminho de saída obrigatório.".to_string());
+        return Err(FRM_WRITE_EMPTY_PATH_ERR.to_string());
     }
     let path = PathBuf::from(trimmed);
     let resolved = if path.is_absolute() {
@@ -87,7 +93,7 @@ pub(crate) fn resolve_write_path(raw: &str) -> Result<PathBuf, String> {
 }
 
 fn collect_frm_files(dir: &Path, root: &Path, out: &mut Vec<String>, depth: usize) {
-    if depth > 2 {
+    if depth > FRM_COLLECTION_MAX_DEPTH {
         return;
     }
     let Ok(entries) = std::fs::read_dir(dir) else {
@@ -101,7 +107,7 @@ fn collect_frm_files(dir: &Path, root: &Path, out: &mut Vec<String>, depth: usiz
                 .and_then(|n| n.to_str())
                 .unwrap_or("")
                 .to_ascii_lowercase();
-            if name != "bkp" {
+            if name != FRM_IGNORED_SUBDIR {
                 collect_frm_files(&p, root, out, depth + 1);
             }
             continue;
@@ -109,7 +115,7 @@ fn collect_frm_files(dir: &Path, root: &Path, out: &mut Vec<String>, depth: usiz
         let is_frm = p
             .extension()
             .and_then(|e| e.to_str())
-            .map(|e| e.eq_ignore_ascii_case("frm"))
+            .map(|e| e.eq_ignore_ascii_case(FRM_FILE_EXTENSION))
             .unwrap_or(false);
         if is_frm {
             let rel = p.strip_prefix(root).unwrap_or(&p);
@@ -122,7 +128,7 @@ fn collect_frm_files(dir: &Path, root: &Path, out: &mut Vec<String>, depth: usiz
 #[tauri::command]
 pub fn list_frm_containers_command() -> Result<Vec<String>, String> {
     let ws_root = resolve_workspace_root();
-    let Some(fw_dir) = find_workspace_subdir("firmware_and_images") else {
+    let Some(fw_dir) = find_workspace_subdir(FIRMWARE_IMAGES_DIR_NAME) else {
         return Ok(Vec::new());
     };
     let mut found = Vec::new();
@@ -149,10 +155,18 @@ pub fn pack_frm_command(request: PackFrmRequestDto) -> Result<FrmPackReport, Str
             let in_path = resolve_read_path(in_raw);
             let payload = std::fs::read(&in_path)
                 .map_err(|e| format!("Falha lendo '{}': {}", in_path.display(), e))?;
-            let dst_addr = parse_u32_radix(request.dst_addr.as_deref().unwrap_or("0x50400000"))
-                .map_err(|e| format!("Endereço destino inválido: {e}"))?;
-            let tag = request.tag.as_deref().unwrap_or("FVU ");
-            let build = request.build_name.as_deref().unwrap_or("DIAG01");
+            let dst_addr = parse_u32_radix(
+                request
+                    .dst_addr
+                    .as_deref()
+                    .unwrap_or(DEFAULT_DIGADIAG_DST_HEX),
+            )
+            .map_err(|e| format!("Endereço destino inválido: {e}"))?;
+            let tag = request.tag.as_deref().unwrap_or(DEFAULT_DIGADIAG_TAG);
+            let build = request
+                .build_name
+                .as_deref()
+                .unwrap_or(DEFAULT_DIGADIAG_BUILD);
             build_digadiag_frm(
                 &payload,
                 dst_addr,
@@ -169,12 +183,21 @@ pub fn pack_frm_command(request: PackFrmRequestDto) -> Result<FrmPackReport, Str
                     "Modo '{mode_norm}' exige ao menos um módulo (nome + caminho)."
                 ));
             }
-            let ver_raw = request.version_u16.as_deref().unwrap_or("0x0001");
+            let ver_raw = request
+                .version_u16
+                .as_deref()
+                .unwrap_or(DEFAULT_FRM_VERSION_HEX);
             let ver_u32 = parse_u32_radix(ver_raw).map_err(|e| e.to_string())?;
             let ver_u16 = u16::try_from(ver_u32)
                 .map_err(|_| "version_u16 deve caber em 16 bits.".to_string())?;
-            let hw = request.hw_family.as_deref().unwrap_or("M6930");
-            let model = request.model_group.as_deref().unwrap_or("NP-309");
+            let hw = request
+                .hw_family
+                .as_deref()
+                .unwrap_or(DEFAULT_FRM_HW_FAMILY);
+            let model = request
+                .model_group
+                .as_deref()
+                .unwrap_or(DEFAULT_FRM_MODEL_GROUP);
             let flag = request.target_flag.unwrap_or(0);
 
             let mut parsed_modules = Vec::with_capacity(request.modules.len());
@@ -232,7 +255,7 @@ pub fn unpack_extrhead_command(
 
     let crypt_mode: ExtrheadCryptMode = mode
         .as_deref()
-        .unwrap_or("auto")
+        .unwrap_or(FRM_UNPACK_DEFAULT_MODE)
         .parse()
         .map_err(|e: anyhow::Error| e.to_string())?;
     let unpacked = unpack_extrhead(&raw, crypt_mode)

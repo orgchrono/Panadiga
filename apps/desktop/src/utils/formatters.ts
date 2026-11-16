@@ -96,6 +96,34 @@ const defaultIdRegistry = (() => {
 })();
 
 /**
+ * Pure helper: resolves live target rail voltage from hardware status or latest diagnostic fallback.
+ */
+export const resolveEffectiveVddVolts = (
+  statusVdd?: number | null,
+  diagVdd?: number | null
+): number => {
+  if (typeof statusVdd === 'number' && statusVdd > 0) {
+    return statusVdd;
+  }
+  return typeof diagVdd === 'number' && diagVdd > 0 ? diagVdd : 0;
+};
+
+/**
+ * Pure helper: classifies Pico bench transport flags (BLE, Android USB-OTG, RP2040/RP2350 CDC).
+ */
+export const detectPicoTransportFlags = (
+  transportMode?: string | null,
+  selectedPort?: string | null
+): { isBle: boolean; isOtg: boolean; isPicoPort: boolean } => {
+  const port = selectedPort ?? '';
+  return {
+    isBle: transportMode === 'ble' || port.startsWith('BLE_'),
+    isOtg: transportMode === 'usb-otg' || port.startsWith('ANDROID-USB-OTG'),
+    isPicoPort: /VID:2E8A|RP2040|RP2350|Pico|PANADIGA|P7501/i.test(port),
+  };
+};
+
+/**
  * Deterministic prefix-scoped ID generator free of PRNG randomness and global mutable state.
  */
 export const nextUniqueId = (prefix = 'id'): string => defaultIdRegistry(prefix);

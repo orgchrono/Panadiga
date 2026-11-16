@@ -31,6 +31,7 @@ from scripts.panadiga_ops import (
 DESKTOP_DIR: Final[Path] = ROOT / "apps" / "desktop"
 C11_HOST_SOURCES: Final[tuple[str, ...]] = (
     "firmware/pico-p7501/common/p7501_hex.c",
+    "firmware/pico-p7501/common/p7501_wdt_logic.c",
     "firmware/pico-p7501/hal/p7501_led_logic.c",
     "firmware/pico-p7501/gdb/gdb_rsp_codec.c",
     "firmware/pico-p7501/gdb/gdb_rsp_memory.c",

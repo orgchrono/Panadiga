@@ -13,6 +13,7 @@
 #include "cli/p7501_cli.h"
 #include "hal/p7501_hw.h"
 #include "hal/p7501_led.h"
+#include "hal/p7501_watchdog.h"
 #include "p7501_types.h"
 #include "gdb/gdb_rsp.h"
 
@@ -56,9 +57,10 @@ int main(void) {
     stdio_init_all();
     p7501_led_init();
     (void)p7501_hw_init();
+    p7501_wdt_init();
     gdb_rsp_init();
 
-    sleep_ms(250U);
+    p7501_wdt_sleep_ms(250U);
     p7501_cli_print_banner();
     printf("PANADIGA> ");
     fflush(stdout);
@@ -68,7 +70,7 @@ int main(void) {
     bool last_was_cr = false;
 
     for (;;) {
-        p7501_led_tick();
+        p7501_wdt_kick();
 
         const int ch = getchar_timeout_us(0);
         if (ch == PICO_ERROR_TIMEOUT) {

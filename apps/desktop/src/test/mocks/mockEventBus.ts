@@ -11,7 +11,7 @@ const mockListeners: Record<string, MockEventHandler[]> = {};
 export function publishMockEvent<T>(eventName: string, payload: T): void {
   const registered = mockListeners[eventName];
   if (!registered) return;
-  for (const listener of [...registered]) {
+  for (const listener of Array.from(registered)) {
     listener(payload);
   }
 }

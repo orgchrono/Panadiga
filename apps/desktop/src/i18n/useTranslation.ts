@@ -14,7 +14,7 @@ export const getGlobalLocale = (): Locale => {
   return (i18n.language as Locale) || 'en-US';
 };
 
-export const translate = (key: TranslationKey | string, fallback?: string): string => {
+export const translate = (key: TranslationKey, fallback?: string): string => {
   const res = i18n.t(key);
   if (res === key && fallback) {
     return fallback;
@@ -34,7 +34,7 @@ export function useTranslation() {
   }, []);
 
   const t = useCallback(
-    (key: TranslationKey | string, fallbackOrOptions?: string | Record<string, unknown>): string => {
+    (key: TranslationKey, fallbackOrOptions?: string | Record<string, unknown>): string => {
       if (typeof fallbackOrOptions === 'string') {
         const res = i18nTranslate(key);
         return res === key ? fallbackOrOptions : res;

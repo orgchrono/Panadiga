@@ -1,5 +1,6 @@
 //! Workspace file path resolution helpers for desktop IPC commands.
 
+use crate::commands::constants::{FALLBACK_IC5001_FLASH_PATH, FIRMWARE_IMAGES_DIR_NAME};
 use panadiga_core::constants::{find_workspace_subdir, resolve_workspace_root};
 use panadiga_core::ssot::is_valid_nor_flash_size;
 use std::path::{Path, PathBuf};
@@ -134,21 +135,21 @@ pub fn resolve_default_flash_path(input_path: Option<String>) -> String {
     }
 
     let mut firmware_roots = vec![
-        PathBuf::from("firmware_and_images"),
+        PathBuf::from(FIRMWARE_IMAGES_DIR_NAME),
         PathBuf::from("../firmware_and_images"),
         PathBuf::from("../../firmware_and_images"),
         PathBuf::from("../../../firmware_and_images"),
     ];
-    if let Some(found_fw_dir) = find_workspace_subdir("firmware_and_images") {
+    if let Some(found_fw_dir) = find_workspace_subdir(FIRMWARE_IMAGES_DIR_NAME) {
         firmware_roots.insert(0, found_fw_dir);
     }
 
     if let Ok(exe_path) = std::env::current_exe()
         && let Some(exe_dir) = exe_path.parent()
     {
-        firmware_roots.push(exe_dir.join("firmware_and_images"));
+        firmware_roots.push(exe_dir.join(FIRMWARE_IMAGES_DIR_NAME));
         if let Some(parent) = exe_dir.parent() {
-            firmware_roots.push(parent.join("firmware_and_images"));
+            firmware_roots.push(parent.join(FIRMWARE_IMAGES_DIR_NAME));
         }
     }
 
@@ -158,7 +159,7 @@ pub fn resolve_default_flash_path(input_path: Option<String>) -> String {
         }
     }
 
-    "firmware_and_images/IC5001.bin".to_string()
+    FALLBACK_IC5001_FLASH_PATH.to_string()
 }
 
 #[cfg(test)]

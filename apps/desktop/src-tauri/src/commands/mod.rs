@@ -7,9 +7,11 @@
 //! - `workspace`: System overview (`get_system_overview`) and binary hex dump (`read_hex_dump`) commands
 //! - `hardware`: Pico USB CDC, Cold Break-In, In-Circuit Erase, GDB RSP Bridge, External Tools, and RAG commands
 
+pub mod constants;
 pub mod crypto_manuals;
 pub mod dto;
 pub mod engineering_docs;
+pub mod error;
 pub mod external_tools;
 pub mod frm_pack;
 pub mod hardware;
@@ -23,6 +25,7 @@ pub mod workspace;
 pub use crypto_manuals::*;
 pub use dto::*;
 pub use engineering_docs::*;
+pub use error::*;
 pub use external_tools::*;
 pub use frm_pack::*;
 pub use hardware::*;

@@ -6,7 +6,11 @@ import type {
   PicoTransportMode,
   PicoUf2Variant,
 } from '@/models';
-import { isTargetPowered } from '@/utils/formatters';
+import {
+  detectPicoTransportFlags,
+  isTargetPowered,
+  resolveEffectiveVddVolts,
+} from '@/utils/formatters';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Alert, AlertDescription, AlertTitle, Button } from '@/components/ui';
 import {
@@ -70,13 +74,11 @@ export const PicoBenchTopBar: React.FC<PicoBenchTopBarProps> = ({
 }) => {
   const [uf2Variant, setUf2Variant] = useState<PicoUf2Variant>('unified');
 
-  const isBle = transportMode === 'ble' || selectedPort.startsWith('BLE_');
-  const isOtg = transportMode === 'usb-otg' || selectedPort.startsWith('ANDROID-USB-OTG');
-  const isPicoPort = /VID:2E8A|RP2040|RP2350|Pico|PANADIGA|P7501/i.test(selectedPort ?? '');
-  const effectiveVddVolts =
-    deviceStatus?.vdd_volts && deviceStatus.vdd_volts > 0
-      ? deviceStatus.vdd_volts
-      : (latestDiagnostic?.vdd_volts ?? 0);
+  const { isBle, isOtg, isPicoPort } = detectPicoTransportFlags(transportMode, selectedPort);
+  const effectiveVddVolts = resolveEffectiveVddVolts(
+    deviceStatus?.vdd_volts,
+    latestDiagnostic?.vdd_volts
+  );
   const powered = isTargetPowered(effectiveVddVolts);
 
   return (

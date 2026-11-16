@@ -5,6 +5,10 @@
 
 use std::path::Path;
 
+use super::constants::{
+    AM34_NVRAM_BASE, CANDIDATE_HDD_IMAGE_PATHS, CANDIDATE_MAIN_CAPACITY_PATHS,
+    DEFAULT_HDD_EXTRACT_DIR, DEFAULT_HDD_IMAGE_PATH, DEFAULT_LIVE_NVRAM_LABEL,
+};
 use super::dto::{
     ExtractedPartitionItemDto, ExtractedPartitionReport, HddAnalysisReport,
     MeihdfsAllocationReport, NvramCleanReport, PartitionExtractionManifestDto, resolve_candidate,
@@ -48,8 +52,7 @@ pub fn extract_hdd_partitions_command(
     image_path: String,
     output_dir: Option<String>,
 ) -> Result<Vec<ExtractedPartitionReport>, String> {
-    let out_dir =
-        output_dir.unwrap_or_else(|| panadiga_core::constants::DEFAULT_HDD_EXTRACT_DIR.to_string());
+    let out_dir = output_dir.unwrap_or_else(|| DEFAULT_HDD_EXTRACT_DIR.to_string());
     panadiga_core::hdd::extract_hdd_partitions(Path::new(&image_path), Path::new(&out_dir), None)
         .map_err(|e| e.to_string())
 }
@@ -109,15 +112,8 @@ pub fn inspect_hdd(
     image_path: Option<String>,
     show_density: Option<bool>,
 ) -> Result<HddAnalysisReport, String> {
-    let path = image_path.unwrap_or_else(|| {
-        resolve_candidate(
-            &[
-                panadiga_core::constants::DEFAULT_HDD_IMAGE_PATH,
-                "../../firmware_and_images/panasonic DMR EH-55 Firmware hdd_100.bin",
-            ],
-            panadiga_core::constants::DEFAULT_HDD_IMAGE_PATH,
-        )
-    });
+    let path = image_path
+        .unwrap_or_else(|| resolve_candidate(CANDIDATE_HDD_IMAGE_PATHS, DEFAULT_HDD_IMAGE_PATH));
     inspect_hdd_command(path, show_density.unwrap_or(true))
 }
 
@@ -127,15 +123,8 @@ pub fn decode_meihdfs_allocations(
     image_path: Option<String>,
     include_journal: Option<bool>,
 ) -> Result<MeihdfsAllocationReport, String> {
-    let path = image_path.unwrap_or_else(|| {
-        resolve_candidate(
-            &[
-                panadiga_core::constants::DEFAULT_HDD_IMAGE_PATH,
-                "../../firmware_and_images/panasonic DMR EH-55 Firmware hdd_100.bin",
-            ],
-            panadiga_core::constants::DEFAULT_HDD_IMAGE_PATH,
-        )
-    });
+    let path = image_path
+        .unwrap_or_else(|| resolve_candidate(CANDIDATE_HDD_IMAGE_PATHS, DEFAULT_HDD_IMAGE_PATH));
     decode_meihdfs_command(path, include_journal.unwrap_or(true))
 }
 
@@ -145,17 +134,9 @@ pub fn extract_partitions(
     image_path: Option<String>,
     output_dir: Option<String>,
 ) -> Result<PartitionExtractionManifestDto, String> {
-    let img = image_path.unwrap_or_else(|| {
-        resolve_candidate(
-            &[
-                panadiga_core::constants::DEFAULT_HDD_IMAGE_PATH,
-                "../../firmware_and_images/panasonic DMR EH-55 Firmware hdd_100.bin",
-            ],
-            panadiga_core::constants::DEFAULT_HDD_IMAGE_PATH,
-        )
-    });
-    let out_dir =
-        output_dir.unwrap_or_else(|| panadiga_core::constants::DEFAULT_HDD_EXTRACT_DIR.to_string());
+    let img = image_path
+        .unwrap_or_else(|| resolve_candidate(CANDIDATE_HDD_IMAGE_PATHS, DEFAULT_HDD_IMAGE_PATH));
+    let out_dir = output_dir.unwrap_or_else(|| DEFAULT_HDD_EXTRACT_DIR.to_string());
     let reports = extract_hdd_partitions_command(img.clone(), Some(out_dir.clone()))?;
 
     let mut sums = String::new();
@@ -221,15 +202,8 @@ pub fn write_hdd_image(
     image_path: Option<String>,
     confirmation_token: String,
 ) -> Result<panadiga_core::hdd::DriveWriteReport, String> {
-    let img_path = image_path.unwrap_or_else(|| {
-        resolve_candidate(
-            &[
-                panadiga_core::constants::DEFAULT_HDD_IMAGE_PATH,
-                "../../firmware_and_images/panasonic DMR EH-55 Firmware hdd_100.bin",
-            ],
-            panadiga_core::constants::DEFAULT_HDD_IMAGE_PATH,
-        )
-    });
+    let img_path = image_path
+        .unwrap_or_else(|| resolve_candidate(CANDIDATE_HDD_IMAGE_PATHS, DEFAULT_HDD_IMAGE_PATH));
     let bytes = std::fs::read(&img_path)
         .map_err(|e| format!("Failed reading image file {}: {}", img_path, e))?;
     panadiga_core::hdd::write_raw_image_to_drive(&device_path, &bytes, &confirmation_token)
@@ -251,14 +225,8 @@ fn resolve_default_main_capacity_path(input_path: Option<String>) -> String {
         return p;
     }
     resolve_candidate(
-        &[
-            "firmware_and_images/extracted_partitions/hdd_partition_firmware_0x02000000.bin",
-            "extracted_partitions/hdd_partition_firmware_0x02000000.bin",
-            panadiga_core::constants::DEFAULT_HDD_IMAGE_PATH,
-            "C:/ghidra/binaries/unpacked/EH55_MAIN_3410PQ.bin",
-            "firmware_and_images/extracted_partitions/frm_unpacked/main3060np_unpacked.bin",
-        ],
-        "firmware_and_images/extracted_partitions/hdd_partition_firmware_0x02000000.bin",
+        CANDIDATE_MAIN_CAPACITY_PATHS,
+        CANDIDATE_MAIN_CAPACITY_PATHS[0],
     )
 }
 
@@ -298,8 +266,8 @@ pub fn analyze_live_nvram_bytes(
     base_bus_address: Option<u32>,
     source_label: Option<String>,
 ) -> Result<panadiga_core::nvram::NvramCleanReport, String> {
-    let base_addr = base_bus_address.unwrap_or(panadiga_core::constants::AM34_NVRAM_BASE);
-    let label = source_label.unwrap_or_else(|| "Pico Live NVRAM Capture".to_string());
+    let base_addr = base_bus_address.unwrap_or(AM34_NVRAM_BASE);
+    let label = source_label.unwrap_or_else(|| DEFAULT_LIVE_NVRAM_LABEL.to_string());
     panadiga_core::nvram::inspect_partial_nvram_capture(&bytes, base_addr, &label)
         .map_err(|e| e.to_string())
 }

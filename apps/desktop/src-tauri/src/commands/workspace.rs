@@ -7,6 +7,14 @@ use std::fs::{self, File};
 use std::io::{Read, Seek, SeekFrom};
 use std::path::Path;
 
+use super::constants::{
+    BYTES_PER_MIB_F64, CANDIDATE_FRM_CONTAINER_PATHS, CANDIDATE_HDD_IMAGE_PATHS,
+    DEFAULT_FRM_CONTAINER_PATH, DEFAULT_HDD_IMAGE_PATH, DEFAULT_HEX_DUMP_ROWS,
+    FLASH_SIZE_2MB_BYTES, FLASH_SIZE_4MB_BYTES, FLASH_SIZE_8MB_BYTES, FLASH_SIZE_16MB_BYTES,
+    HEX_DUMP_HALF_ROW_BYTES, HEX_DUMP_ROW_BYTES, MAX_HEX_DUMP_ROWS, OVERVIEW_CORE_ARCH,
+    OVERVIEW_DEBUG_PORT, OVERVIEW_ERROR_CODE, OVERVIEW_ERROR_DESC, OVERVIEW_FW_VERSION,
+    OVERVIEW_HDD_SPECS, OVERVIEW_OPTICAL_DRIVE, OVERVIEW_OS_SYSTEM,
+};
 use super::dto::{
     BinaryFileStatusDto, HexDumpRowDto, SystemOverviewDto, detect_diga_model_from_slice,
     resolve_candidate, resolve_default_flash_path,
@@ -20,7 +28,7 @@ pub fn get_system_overview() -> Result<SystemOverviewDto, String> {
         let meta = fs::metadata(p).ok();
         let exists = meta.is_some();
         let size_bytes = meta.map(|m| m.len());
-        let formatted_size = size_bytes.map(|s| format!("{:.2} MB", s as f64 / (1024.0 * 1024.0)));
+        let formatted_size = size_bytes.map(|s| format!("{:.2} MB", s as f64 / BYTES_PER_MIB_F64));
         BinaryFileStatusDto {
             id: id.to_string(),
             name: name.to_string(),
@@ -42,20 +50,20 @@ pub fn get_system_overview() -> Result<SystemOverviewDto, String> {
     let (product_model, soc_processor, flash_rom) = if let Ok(data) = fs::read(&resolved_flash) {
         let model = detect_diga_model_from_slice(&data);
         let (soc, rom) = match data.len() {
-            0x0020_0000 => (
+            FLASH_SIZE_2MB_BYTES => (
                 "Matsushita AM33 / MN103S".to_string(),
                 "2 MB NOR Flash (Top-Boot 64KB EEMUL NVRAM @ 0x801F0000)".to_string(),
             ),
-            0x0040_0000 => (
+            FLASH_SIZE_4MB_BYTES => (
                 "Matsushita AM33 / MN103S".to_string(),
                 "4 MB NOR Flash (Top-Boot 64KB EEMUL NVRAM @ 0x803F0000)".to_string(),
             ),
-            0x0080_0000 => (
+            FLASH_SIZE_8MB_BYTES => (
                 "Matsushita AM34 / MN103S (VEP79138)".to_string(),
                 "Spansion S29JL064H (8 MB NOR, Top-Boot 8x8KB SA134..SA141 @ 0x807F0000)"
                     .to_string(),
             ),
-            0x0100_0000 => (
+            FLASH_SIZE_16MB_BYTES => (
                 "Matsushita AM34 / MN103S (VEP79138)".to_string(),
                 "16 MB NOR Flash (Top-Boot 64KB EEMUL NVRAM @ 0x80FF0000)".to_string(),
             ),
@@ -83,13 +91,13 @@ pub fn get_system_overview() -> Result<SystemOverviewDto, String> {
         check_file(
             "hdd_image",
             "Panasonic DIGA HDD Raw Dump",
-            panadiga_core::constants::DEFAULT_HDD_IMAGE_PATH,
+            DEFAULT_HDD_IMAGE_PATH,
             "LBA 0 Superblock (SH) + Mirror LBA 57344 + Partitions 1 & 2",
         ),
         check_file(
             "frm_container",
             "Optical Firmware Container (PANA_DVD.FRM)",
-            panadiga_core::constants::DEFAULT_FRM_CONTAINER_PATH,
+            DEFAULT_FRM_CONTAINER_PATH,
             "64-bit ECB Encrypted AM34 OS, Servo DSP & Front Panel",
         ),
     ];
@@ -97,15 +105,15 @@ pub fn get_system_overview() -> Result<SystemOverviewDto, String> {
     Ok(SystemOverviewDto {
         product_model,
         soc_processor,
-        core_architecture: "32-bit AM34 / MN10300 RISC".to_string(),
-        os_system: "Panasonic Real-Time OS + MEIHDFS v1.0".to_string(),
+        core_architecture: OVERVIEW_CORE_ARCH.to_string(),
+        os_system: OVERVIEW_OS_SYSTEM.to_string(),
         flash_rom,
-        hdd_specs: "PATA/IDE MEIHDFS (LBA 0 Master + LBA 57344 Mirror)".to_string(),
-        optical_drive: "DVD-RAM / DVD-RW / DVD-R Multi-Drive".to_string(),
-        debug_port: "P7501 (B6B-ZR-3R4 TO JIGU) Async UART 115200 8N1 (Pin 4 = GND)".to_string(),
-        error_code: "U99".to_string(),
-        error_description: "Falha de Handshake EEMUL NVRAM / Bootloader Trap".to_string(),
-        firmware_version: "v1.18 EU / Global".to_string(),
+        hdd_specs: OVERVIEW_HDD_SPECS.to_string(),
+        optical_drive: OVERVIEW_OPTICAL_DRIVE.to_string(),
+        debug_port: OVERVIEW_DEBUG_PORT.to_string(),
+        error_code: OVERVIEW_ERROR_CODE.to_string(),
+        error_description: OVERVIEW_ERROR_DESC.to_string(),
+        firmware_version: OVERVIEW_FW_VERSION.to_string(),
         binaries,
     })
 }
@@ -120,24 +128,26 @@ pub fn read_hex_dump(
     let path = file_path.unwrap_or_else(|| {
         resolve_candidate(
             &[
-                panadiga_core::constants::DEFAULT_HDD_IMAGE_PATH,
-                panadiga_core::constants::DEFAULT_FRM_CONTAINER_PATH,
+                CANDIDATE_HDD_IMAGE_PATHS[0],
+                CANDIDATE_FRM_CONTAINER_PATHS[0],
             ],
-            panadiga_core::constants::DEFAULT_HDD_IMAGE_PATH,
+            DEFAULT_HDD_IMAGE_PATH,
         )
     });
     let base_offset = offset.unwrap_or(0);
-    let row_count = count.unwrap_or(24).min(256);
+    let row_count = count
+        .unwrap_or(DEFAULT_HEX_DUMP_ROWS)
+        .min(MAX_HEX_DUMP_ROWS);
 
     let mut file = File::open(&path)
         .map_err(|e| format!("Falha ao abrir binário '{}' para Hex Dump: {}", path, e))?;
     let file_len = file.metadata().map(|m| m.len() as usize).unwrap_or(0);
 
     let mut rows = Vec::with_capacity(row_count);
-    let mut buf = [0u8; 16];
+    let mut buf = [0u8; HEX_DUMP_ROW_BYTES];
 
     for r in 0..row_count {
-        let cur_offset = base_offset.saturating_add(r * 16);
+        let cur_offset = base_offset.saturating_add(r * HEX_DUMP_ROW_BYTES);
         if cur_offset >= file_len {
             break;
         }
@@ -148,11 +158,15 @@ pub fn read_hex_dump(
             break;
         }
         let slice = &buf[..n];
-        let hex_p1: Vec<String> = slice.iter().take(8).map(|b| format!("{:02X}", b)).collect();
+        let hex_p1: Vec<String> = slice
+            .iter()
+            .take(HEX_DUMP_HALF_ROW_BYTES)
+            .map(|b| format!("{:02X}", b))
+            .collect();
         let hex_p2: Vec<String> = slice
             .iter()
-            .skip(8)
-            .take(8)
+            .skip(HEX_DUMP_HALF_ROW_BYTES)
+            .take(HEX_DUMP_HALF_ROW_BYTES)
             .map(|b| format!("{:02X}", b))
             .collect();
         let ascii: String = slice

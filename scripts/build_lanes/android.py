@@ -6,7 +6,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Callable, Mapping
+from typing import Callable, Mapping
 
 from scripts.build_lanes.concurrency import flush_output, run_concurrent_tasks
 from scripts.build_lanes.desktop import build_frontend
@@ -178,23 +178,23 @@ def build_android(
     print_banner("BUILD ANDROID: Tauri 2 Mobile APK (AArch64)")
     env, sdk_dir, desktop_dir, gen_android = prepare_android_env(base_env)
 
-    prep_tasks: list[tuple[str, Callable[[], Any]]] = []
+    prep_tasks: list[tuple[str, Callable[[], object]]] = []
     if not skip_prep:
         prep_tasks.append(("rustup", lambda: install_android_rust_target(env)))
     if not skip_frontend:
         prep_tasks.append(("frontend", lambda: build_frontend(env, use_cache=use_cache, capture_output=capture_output)))
     run_concurrent_tasks(prep_tasks)
 
-    if not (gen_android / "app").is_dir():
+    if not (gen_android / "app").is_dir() or not (gen_android / "tauri.settings.gradle").is_file():
         init_out = run_step(
-            ["npx", "@tauri-apps/cli", "android", "init", "--ci", "--skip-targets-install"],
+            ["npx", "--yes", "@tauri-apps/cli", "android", "init", "--ci", "--skip-targets-install"],
             cwd=desktop_dir,
             env=env,
             capture_output=capture_output,
         )
         flush_output(init_out)
 
-    android_cmd = ["npx", "@tauri-apps/cli", "android", "build", "--apk", "--target", "aarch64"]
+    android_cmd = ["npx", "--yes", "@tauri-apps/cli", "android", "build", "--apk", "--target", "aarch64"]
     if skip_frontend:
         skip_cfg = ROOT / "target" / ".panadiga-cache" / "tauri.skip_frontend.json"
         skip_cfg.parent.mkdir(parents=True, exist_ok=True)

@@ -16,6 +16,10 @@ use panadiga_core::re::{
 use serde_json::Value;
 use std::path::PathBuf;
 
+use super::constants::{
+    DEFAULT_MAIN_PASSTHROUGH_MODE, DEFAULT_MATSHITA_INJECT_MODE, MATSHITA_DRV_PASS_UNLOCK_CMD,
+    SAMPLE_UNLOCK_PAYLOAD_BYTE, SAMPLE_UNLOCK_PAYLOAD_LEN,
+};
 use super::frm_pack::{resolve_read_path, resolve_write_path};
 use super::unbrick_dto::{
     SdUnbrickKitRequestDto, format_nor_dumper_response, opt_trimmed, parse_nor_dumper_params,
@@ -107,7 +111,7 @@ pub fn patch_main_passthrough_command(
             .ok_or_else(|| "Caminho de saída do MAIN patched é obrigatório.".to_string())?;
         let parsed_mode: MainPassthroughMode = mode
             .as_deref()
-            .unwrap_or("av_passthrough")
+            .unwrap_or(DEFAULT_MAIN_PASSTHROUGH_MODE)
             .parse()
             .map_err(|e: anyhow::Error| e.to_string())?;
         let report =
@@ -214,7 +218,7 @@ pub fn inject_matshita_atapi_write(
         .run_inject_write(
             va_opt,
             offset.unwrap_or(0),
-            mode.unwrap_or(2),
+            mode.unwrap_or(DEFAULT_MATSHITA_INJECT_MODE),
             use_vendor_ed.unwrap_or(false),
             &payload,
         )
@@ -238,7 +242,7 @@ pub fn run_matshita_serial_cmd(
     let mut emu = MatshitaOddEmulator::default();
     if unlock_pass.unwrap_or(true) {
         let _ = emu
-            .execute_drv_serial_command("PASS 0x4d415453 0x48495441")
+            .execute_drv_serial_command(MATSHITA_DRV_PASS_UNLOCK_CMD)
             .map_err(|e| e.to_string())?;
     }
     emu.execute_drv_serial_command(cmd)
@@ -269,7 +273,7 @@ pub fn pack_unlock_frm_command(
         .map_err(|e| format!("Modo de container unlock inválido: {e}"))?;
     let payload = match opt_trimmed(&payload_hex) {
         Some(h) => parse_hex_payload(h).map_err(|e| format!("Payload hex inválido: {e}"))?,
-        None => vec![0xCBu8; 1024],
+        None => vec![SAMPLE_UNLOCK_PAYLOAD_BYTE; SAMPLE_UNLOCK_PAYLOAD_LEN],
     };
     let (bytes, verification) = build_sample_unlock_frm(mode, &payload)
         .map_err(|e| format!("Falha ao empacotar container unlock .FRM: {e}"))?;

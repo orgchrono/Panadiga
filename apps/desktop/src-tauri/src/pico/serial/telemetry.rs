@@ -5,6 +5,14 @@ use std::time::Duration;
 
 use panadiga_core::pico::cdc::parse_vdd_reply;
 
+use crate::commands::constants::{
+    CHIP_ID_RP2040, CHIP_ID_RP2350, DEFAULT_BAUD_RATE, DEFAULT_COLD_BREAKIN_MODE,
+    DEFAULT_OCD_BUS_FREQ_HZ, DEFAULT_PICO_FW_FALLBACK, DEFAULT_PIO_UART_BAUD_115200_CMD,
+    DEFAULT_PIO_UART_FRAMING_8N1_CMD, SERIAL_AUTODETECT_TIMEOUT_MS, SERIAL_OPEN_TIMEOUT_MS,
+    SERIAL_PING_STATUS_TIMEOUT_MS, SERIAL_RETRY_BACKOFF_MS, SERIAL_UART_SYNC_TIMEOUT_MS,
+    VDD_TARGET_FLOATING_CEIL_VOLTS, VDD_TARGET_MIN_VOLTS,
+};
+
 use super::super::bridge_session::is_sc0_bridge_active;
 use super::super::gdb_bridge::is_gdb_bridge_active;
 use super::super::types::{PicoDeviceStatusDto, PicoStatusResponse};
@@ -40,15 +48,15 @@ fn ensure_default_uart_and_probe_target(
 ) -> Option<String> {
     let framing_out = panadiga_core::pico::cdc::send_and_read_until(
         port,
-        "FRAMING 8N1",
+        DEFAULT_PIO_UART_FRAMING_8N1_CMD,
         &["FRAMING: OK", "FRAMING: ERROR", "PANADIGA>"],
-        Duration::from_millis(800),
+        Duration::from_millis(SERIAL_UART_SYNC_TIMEOUT_MS),
     );
     let baud_out = panadiga_core::pico::cdc::send_and_read_until(
         port,
-        "BAUD 115200",
+        DEFAULT_PIO_UART_BAUD_115200_CMD,
         &["BAUD: OK", "BAUD: ERROR", "PANADIGA>"],
-        Duration::from_millis(800),
+        Duration::from_millis(SERIAL_UART_SYNC_TIMEOUT_MS),
     );
     let uart_synced = framing_out.contains("FRAMING: OK") && baud_out.contains("BAUD: OK");
     if !target_powered {
@@ -58,7 +66,7 @@ fn ensure_default_uart_and_probe_target(
         port,
         "AUTODETECT",
         &["[AUTODETECT]", "AUTODETECT: OK", "PANADIGA>"],
-        Duration::from_millis(1500),
+        Duration::from_millis(SERIAL_AUTODETECT_TIMEOUT_MS),
     );
     let clean_probe = autodetect_out
         .lines()
@@ -80,28 +88,28 @@ fn pico_connect_and_test_with_guard(
     probe_target_on_connect: bool,
     _guard: &MutexGuard<'_, ()>,
 ) -> Result<PicoStatusResponse, String> {
-    let (clean, mut port) = open_validated_cdc(port_name, baud_rate, 1500)?;
+    let (clean, mut port) = open_validated_cdc(port_name, baud_rate, SERIAL_OPEN_TIMEOUT_MS)?;
 
     let response_text = panadiga_core::pico::cdc::send_and_read_until(
         &mut *port,
         "PING",
         &["PONG"],
-        Duration::from_millis(1500),
+        Duration::from_millis(SERIAL_PING_STATUS_TIMEOUT_MS),
     );
     let mut vdd_text = panadiga_core::pico::cdc::send_and_read_until(
         &mut *port,
         "STATUS",
         &["VDD:"],
-        Duration::from_millis(1500),
+        Duration::from_millis(SERIAL_PING_STATUS_TIMEOUT_MS),
     );
     let mut vdd_reading = parse_vdd_reply(&vdd_text);
     if vdd_reading.is_none() {
-        std::thread::sleep(Duration::from_millis(40));
+        std::thread::sleep(Duration::from_millis(SERIAL_RETRY_BACKOFF_MS));
         vdd_text = panadiga_core::pico::cdc::send_and_read_until(
             &mut *port,
             "STATUS",
             &["VDD:"],
-            Duration::from_millis(1500),
+            Duration::from_millis(SERIAL_PING_STATUS_TIMEOUT_MS),
         );
         vdd_reading = parse_vdd_reply(&vdd_text);
     }
@@ -116,10 +124,8 @@ fn pico_connect_and_test_with_guard(
     }
 
     let vdd_volts = vdd_reading.unwrap_or(0.0f32);
-    const VDD_FLOATING_CEIL: f32 = 3.45;
-    const VDD_MIN_THRESHOLD: f32 = 2.5;
-    let probe_floating = vdd_volts >= VDD_FLOATING_CEIL;
-    let target_powered = !probe_floating && vdd_volts >= VDD_MIN_THRESHOLD;
+    let probe_floating = vdd_volts >= VDD_TARGET_FLOATING_CEIL_VOLTS;
+    let target_powered = !probe_floating && vdd_volts >= VDD_TARGET_MIN_VOLTS;
 
     let is_pico2 = response_text.contains("RP2350") || response_text.contains("Pico 2");
     let dev_label = if is_pico2 {
@@ -188,7 +194,7 @@ fn build_disconnected_status_dto() -> PicoDeviceStatusDto {
         baud_rate: 0,
         vdd_volts: 0.0,
         target_powered: false,
-        breakin_mode: 2,
+        breakin_mode: DEFAULT_COLD_BREAKIN_MODE,
         core_state: "DISCONNECTED".to_string(),
         bus_freq_hz: 0,
         firmware_version: "".to_string(),
@@ -210,7 +216,7 @@ fn pico_get_device_status_dto_with_guard(
     if port_name.trim().is_empty() {
         return Ok(build_disconnected_status_dto());
     }
-    let status = pico_connect_and_test_with_guard(&port_name, 115_200, false, guard)?;
+    let status = pico_connect_and_test_with_guard(&port_name, DEFAULT_BAUD_RATE, false, guard)?;
     let is_rp2350 = status.port_name.contains("2350") || status.firmware_banner.contains("2350");
 
     let probes = SCAN_TOTAL_PROBES.load(std::sync::atomic::Ordering::SeqCst);
@@ -218,7 +224,7 @@ fn pico_get_device_status_dto_with_guard(
     let firmware_ver = if !status.firmware_banner.is_empty() {
         status.firmware_banner.clone()
     } else {
-        "v2.0-P7501-UART".to_string()
+        DEFAULT_PICO_FW_FALLBACK.to_string()
     };
 
     Ok(PicoDeviceStatusDto {
@@ -227,7 +233,7 @@ fn pico_get_device_status_dto_with_guard(
         baud_rate: status.baud_rate,
         vdd_volts: status.vdd_voltage,
         target_powered: status.target_powered,
-        breakin_mode: mode_override.unwrap_or(2),
+        breakin_mode: mode_override.unwrap_or(DEFAULT_COLD_BREAKIN_MODE),
         core_state: if !status.connected {
             "DISCONNECTED".to_string()
         } else if !status.target_powered {
@@ -237,12 +243,12 @@ fn pico_get_device_status_dto_with_guard(
         } else {
             "RUNNING".to_string()
         },
-        bus_freq_hz: 1_000_000,
+        bus_freq_hz: DEFAULT_OCD_BUS_FREQ_HZ,
         firmware_version: firmware_ver,
         chip_id: if is_rp2350 {
-            "RP2350-A2".to_string()
+            CHIP_ID_RP2350.to_string()
         } else {
-            "RP2040-B2".to_string()
+            CHIP_ID_RP2040.to_string()
         },
         total_probes: probes,
         hits_detected: hits,

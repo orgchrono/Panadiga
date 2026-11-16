@@ -3,34 +3,16 @@
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
+use crate::commands::constants::{
+    DIAG_DURATION_SLACK_MS, DIAG_MAX_TIMEOUT_MS, DIAG_MIN_TIMEOUT_MS, VALID_BREAK_IN_MODES,
+    VALID_FLASH_SIZE_ARGS, VALID_LED_MODE_ARGS, VARIABLE_DURATION_COMMANDS,
+};
 use crate::commands::dto::build_hardware_ssot_spec;
 
-/// Single pin row parsed from `PINCHECK`.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PincheckRowDto {
-    pub pin_label: String,
-    pub hiz: String,
-    pub pull_down: String,
-    pub pull_up: String,
-    pub state: String,
-}
-
-/// Signal transition / level row parsed from `SNIFF` or `BUSDIAG`.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BusTransitionRowDto {
-    pub signal: String,
-    pub gpio: String,
-    pub final_level: Option<u8>,
-    pub transitions: u32,
-}
-
-/// Decoded 32-bit word row parsed from `DUMP`.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DumpWordRowDto {
-    pub address: String,
-    pub words: Vec<String>,
-    pub ascii: String,
-}
+pub use panadiga_core::pico::diag_rows::{
+    BusTransitionRowSpec as BusTransitionRowDto, DumpWordRowSpec as DumpWordRowDto,
+    PincheckRowSpec as PincheckRowDto,
+};
 
 /// Structured result of running any granular Pico firmware diagnostic command.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -77,13 +59,13 @@ pub fn compose_diagnostic_command(
     // Enforce bounded parameter formats for critical commands
     if normalized == "BREAK_IN" {
         if let Some(m) = clean_arg
-            && !matches!(m, "0" | "1" | "2" | "3")
+            && !VALID_BREAK_IN_MODES.contains(&m)
         {
             return Err(format!("Modo Break-In inválido '{}': use 0, 1, 2 ou 3.", m));
         }
     } else if normalized == "FLASH_SIZE" {
         if let Some(sz) = clean_arg
-            && !matches!(sz, "2" | "4" | "8" | "16")
+            && !VALID_FLASH_SIZE_ARGS.contains(&sz)
         {
             return Err(format!(
                 "Tamanho Flash inválido '{}': use 2, 4, 8 ou 16.",
@@ -94,10 +76,7 @@ pub fn compose_diagnostic_command(
         && let Some(mode) = clean_arg
     {
         let upper = mode.to_ascii_uppercase();
-        if !matches!(
-            upper.as_str(),
-            "IDLE" | "ACTIVE" | "GDB" | "FAULT" | "OFF" | "AUTO" | "STATUS"
-        ) {
+        if !VALID_LED_MODE_ARGS.contains(&upper.as_str()) {
             return Err(
                 "Modo LED inválido: use IDLE, ACTIVE, GDB, FAULT, OFF, AUTO ou STATUS.".to_string(),
             );
@@ -111,27 +90,13 @@ pub fn compose_diagnostic_command(
 
     // Scale wait window dynamically for variable-duration captures
     let mut timeout_ms = entry.timeout_ms;
-    if matches!(
-        normalized.as_str(),
-        "SNIFF"
-            | "BOOTCAP"
-            | "UARTMON"
-            | "JIGBOOT"
-            | "UARTSTREAM"
-            | "HEXCAP"
-            | "BAUDSCAN"
-            | "PWRTRACE"
-            | "BOOTTRACE"
-            | "PIOLOGIC"
-            | "SDSNIFF"
-            | "PANARSP"
-            | "DIAGWATCH"
-            | "DRVPANA"
-            | "WAITTX"
-    ) && let Some(first_tok) = clean_arg.and_then(|s| s.split_whitespace().next())
+    if VARIABLE_DURATION_COMMANDS.contains(&normalized.as_str())
+        && let Some(first_tok) = clean_arg.and_then(|s| s.split_whitespace().next())
         && let Ok(ms) = first_tok.parse::<u64>()
     {
-        timeout_ms = ms.saturating_add(2500).clamp(2000, 125_000);
+        timeout_ms = ms
+            .saturating_add(DIAG_DURATION_SLACK_MS)
+            .clamp(DIAG_MIN_TIMEOUT_MS, DIAG_MAX_TIMEOUT_MS);
     }
 
     Ok((raw_cmd, Duration::from_millis(timeout_ms)))

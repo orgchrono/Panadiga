@@ -11,6 +11,7 @@
 #include "diag/p7501_piologic_codec.h"
 #include "uart/p7501_uart_codec.h"
 #include "common/p7501_hex.h"
+#include "common/p7501_wdt_logic.h"
 #include "hal/p7501_led_logic.h"
 
 #include <assert.h>
@@ -203,6 +204,20 @@ static void test_framing_ctrl_and_jigsweep(void) {
     assert(p7501_jigsweep_classify_rx(k_ser, sizeof(k_ser) - 1u) == P7501_SWEEP_OUTCOME_SERIAL);
     assert(p7501_jigsweep_classify_rx(k_norm, sizeof(k_norm) - 1u) == P7501_SWEEP_OUTCOME_NORMAL);
     assert(p7501_jigsweep_classify_rx(k_early, sizeof(k_early)) == P7501_SWEEP_OUTCOME_EARLY_OTHER);
+
+    /* Watchdog functional core: scratch packing, window clamping, CDC Ctrl-C abort */
+    const uint32_t w0 = p7501_wdt_pack_scratch0(42u, P7501_WDT_FLAG_IN_CMD | P7501_WDT_FLAG_RECOVERED, 7u);
+    uint8_t dec_cmd = 0u;
+    uint8_t dec_flags = 0u;
+    uint16_t dec_rec = 0u;
+    assert(p7501_wdt_unpack_scratch0(w0, &dec_cmd, &dec_flags, &dec_rec));
+    assert(dec_cmd == 42u && dec_flags == (P7501_WDT_FLAG_IN_CMD | P7501_WDT_FLAG_RECOVERED) && dec_rec == 7u);
+    assert(!p7501_wdt_unpack_scratch0(w0, NULL, &dec_flags, &dec_rec));
+    assert(p7501_wdt_clamp_window_ms(900000u, 15000u, 1000u) == P7501_WDT_MAX_CMD_WINDOW_MS);
+    assert(p7501_wdt_clamp_window_ms(0u, 15000u, 1000u) == 15000u);
+    assert(p7501_wdt_clamp_window_ms(50u, 15000u, 1000u) == 1000u);
+    assert(p7501_wdt_is_abort_char(P7501_CDC_ABORT_CTRL_C));
+    assert(!p7501_wdt_is_abort_char('B'));
 }
 
 int p7501_run_uart_codec_tests(void) {

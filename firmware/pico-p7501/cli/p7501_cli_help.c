@@ -8,6 +8,7 @@
 #include "cli/p7501_cli_help.h"
 
 #include "gdb/gdb_rsp.h"
+#include "hal/p7501_watchdog.h"
 #include "p7501_types.h"
 #include "uart/p7501_uart_codec.h"
 #include "uart/p7501_uart_pio_engine.h"
@@ -33,13 +34,15 @@ void p7501_cli_print_banner(void) {
            p7501_pio_get_baud(),
            p7501_framing_name(p7501_pio_get_framing()));
     printf("   %s\n", gdb_rsp_get_status_info());
-    printf("   Type HELP for available P7501 UART, PIO1, FMU, diag, Flash, LED & GDB commands.\n");
+    printf("   ");
+    p7501_wdt_print_summary_line();
+    printf("   Type HELP for available P7501 UART, PIO1, FMU, diag, Flash, LED, WDT & GDB commands.\n");
     printf("====================================================================\n");
 }
 
 void p7501_cli_print_help(void) {
     printf("\n--- Panadiga P7501 Bench CLI Commands ---\n");
-    printf("  PING / STATUS / VDD                  - Heartbeat & GP26 ADC0 SW_UART sense\n");
+    printf("  PING / STATUS / VDD / WDT            - Heartbeat, GP26 ADC0 sense & WDT traceability\n");
     printf("  BOOTCAP / UARTMON / JIGBOOT          - PIO1 boot/passive/smart-JIG RX capture\n");
     printf("  UARTSEND / UARTPROBE                 - PIO1 P7501 TX (Q7514 Hi-Z default) & probe\n");
     printf("  BAUD [bps] / FRAMING [8N1|8E1|8O1]   - PIO1 baudrate & hardware parity framing\n");

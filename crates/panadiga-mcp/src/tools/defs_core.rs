@@ -1,8 +1,16 @@
 //! MCP JSON schema definitions for core, hardware, forensics, and RAG tools.
 
+use panadiga_core::constants::{
+    AM34_NVRAM_BASE, DEFAULT_FRM_CONTAINER_PATH, SPANSION_FLASH_SIZE_BYTES,
+    SPANSION_NVRAM_BASE_OFFSET, SPANSION_NVRAM_END_OFFSET, SPANSION_NVRAM_SIZE_BYTES,
+};
+use panadiga_rag::config::MAX_SAFE_VOLTAGE_VOLTS;
 use serde_json::{Value, json};
 
 pub(super) fn core_tool_definitions() -> Vec<Value> {
+    let nvram_kb = SPANSION_NVRAM_SIZE_BYTES / 1024;
+    let flash_mb = SPANSION_FLASH_SIZE_BYTES / (1024 * 1024);
+
     vec![
         json!({
             "name": "panadiga_memory_map",
@@ -38,29 +46,29 @@ pub(super) fn core_tool_definitions() -> Vec<Value> {
                 "properties": {
                     "voltage": {
                         "type": "number",
-                        "description": "Voltage value in Volts to test against the 3.3V LVTTL safety rail (absolute ceiling 3.35V)."
+                        "description": format!("Voltage value in Volts to test against the 3.3V LVTTL safety rail (absolute ceiling {:.2}V).", MAX_SAFE_VOLTAGE_VOLTS)
                     },
                     "address": {
                         "type": "string",
-                        "description": "Hexadecimal memory bus address (e.g. '0x807F0000') to test for write permission."
+                        "description": format!("Hexadecimal memory bus address (e.g. '0x{:08X}') to test for write permission.", AM34_NVRAM_BASE)
                     }
                 }
             }
         }),
         json!({
             "name": "panadiga_clean_nvram",
-            "description": "Analyzes, sanitizes, or performs guarded copy-on-write patches in the 64KB NVRAM sector (0x7F0000..0x800000) of a Spansion S29JL064H 8MB flash dump (IPL stays strictly read-only).",
+            "description": format!("Analyzes, sanitizes, or performs guarded copy-on-write patches in the {}KB NVRAM sector (0x{:X}..0x{:X}) of a Spansion S29JL064H {}MB flash dump (IPL stays strictly read-only).", nvram_kb, SPANSION_NVRAM_BASE_OFFSET, SPANSION_NVRAM_END_OFFSET, flash_mb),
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "action": {
                         "type": "string",
                         "enum": ["clean", "patch"],
-                        "description": "Operation: 'clean' resets 64KB NVRAM to 0xFF (default), 'patch' writes hex bytes into [nvram_offset..nvram_offset+N] copy-on-write."
+                        "description": format!("Operation: 'clean' resets {}KB NVRAM to 0xFF (default), 'patch' writes hex bytes into [nvram_offset..nvram_offset+N] copy-on-write.", nvram_kb)
                     },
                     "input_file": {
                         "type": "string",
-                        "description": "Path to original 8MB flash dump file."
+                        "description": format!("Path to original {}MB flash dump file.", flash_mb)
                     },
                     "output_file": {
                         "type": "string",
@@ -68,7 +76,7 @@ pub(super) fn core_tool_definitions() -> Vec<Value> {
                     },
                     "nvram_offset": {
                         "type": ["string", "integer"],
-                        "description": "Relative byte offset inside the 64KB NVRAM sector (0..65536) when action='patch' (default 0)."
+                        "description": format!("Relative byte offset inside the {}KB NVRAM sector (0..{}) when action='patch' (default 0).", nvram_kb, SPANSION_NVRAM_SIZE_BYTES)
                     },
                     "patch_hex": {
                         "type": "string",
@@ -122,7 +130,7 @@ pub(super) fn core_tool_definitions() -> Vec<Value> {
                 "properties": {
                     "frm_path": {
                         "type": "string",
-                        "description": "Path to PANA_DVD.FRM file (defaults to firmware_and_images/PANA_DVD.FRM)."
+                        "description": format!("Path to PANA_DVD.FRM file (defaults to {}).", DEFAULT_FRM_CONTAINER_PATH)
                     }
                 }
             }

@@ -12,6 +12,15 @@ use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tauri::Emitter;
 
+use super::constants::{
+    AM34_NVRAM_BASE, BYTES_PER_U32_WORD, DEFAULT_DUMP_DIAGNOSTIC_CMD, DEFAULT_NVRAM_CAPTURE_WORDS,
+    EVENT_PICO_DIAG_RESULT, EVENT_PICO_NVRAM_CAPTURE, EVENT_PICO_PORTS_CHANGED,
+    EVENT_PICO_SERIAL_LOG, EVENT_PICO_TELEMETRY, MAX_NVRAM_CAPTURE_WORDS, MIN_NVRAM_CAPTURE_WORDS,
+    NVRAM_DUMP_CHUNK_WORDS, PORT_OBSERVER_POLL_MS, SOURCE_PICO_DIAG_DUMP, SOURCE_PICO_LIVE_NVRAM,
+    STATUS_REFRESH_COMMANDS, TELEMETRY_WORKER_POLL_MS, TRANSPORT_PREFIX_ANDROID_OTG,
+    TRANSPORT_PREFIX_BLE, VDD_TARGET_FLOATING_CEIL_VOLTS, VDD_TARGET_MIN_VOLTS,
+    VDD_ZERO_EPSILON_VOLTS,
+};
 use super::dto::{HardwareSsotSpecDto, LiveNvramCaptureEventDto, build_hardware_ssot_spec};
 use super::hardware::pico_get_status;
 use crate::pico::diagnostics::{PicoDiagnosticResultDto, execute_diagnostic_on_port};
@@ -29,6 +38,7 @@ pub struct ReactiveSerialEventDto {
 struct TelemetryStreamState {
     active: Arc<AtomicBool>,
     worker_started: Arc<AtomicBool>,
+    port_observer_started: Arc<AtomicBool>,
     port_name: Mutex<String>,
 }
 
@@ -38,8 +48,34 @@ fn stream_state() -> &'static TelemetryStreamState {
     STREAM_STATE.get_or_init(|| TelemetryStreamState {
         active: Arc::new(AtomicBool::new(false)),
         worker_started: Arc::new(AtomicBool::new(false)),
+        port_observer_started: Arc::new(AtomicBool::new(false)),
         port_name: Mutex::new(String::new()),
     })
+}
+
+/// Starts a passive USB port-mutation observer that emits `EVENT_PICO_PORTS_CHANGED`
+/// only when the physical serial port list changes.
+pub fn start_port_mutation_observer(app: tauri::AppHandle) {
+    let state = stream_state();
+    if state
+        .port_observer_started
+        .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+        .is_err()
+    {
+        return;
+    }
+    thread::spawn(move || {
+        let mut last_ports = crate::pico::list_pico_serial_ports().unwrap_or_default();
+        loop {
+            thread::sleep(Duration::from_millis(PORT_OBSERVER_POLL_MS));
+            if let Ok(current_ports) = crate::pico::list_pico_serial_ports()
+                && current_ports != last_ports
+            {
+                last_ports = current_ports.clone();
+                let _ = app.emit(EVENT_PICO_PORTS_CHANGED, &current_ports);
+            }
+        }
+    });
 }
 
 fn current_time_hhmmss() -> String {
@@ -71,7 +107,7 @@ fn build_and_emit_live_nvram_capture(
         captured_bytes: bytes.len(),
         report,
     };
-    let _ = app.emit("pico://nvram-live-capture", &event);
+    let _ = app.emit(EVENT_PICO_NVRAM_CAPTURE, &event);
     Ok(event)
 }
 
@@ -84,19 +120,21 @@ pub async fn pico_capture_nvram_live(
     base_addr: Option<u32>,
     word_count: Option<u32>,
 ) -> Result<LiveNvramCaptureEventDto, String> {
-    let start_addr = base_addr.unwrap_or(panadiga_core::constants::AM34_NVRAM_BASE);
-    let total_words = word_count.unwrap_or(16_384).clamp(16, 32_768);
-    let chunk_words_limit: u32 = 2_048; // 8 KB (1 Spansion microsector) per USB CDC DUMP transaction
-    let mut accumulated: Vec<u8> = Vec::with_capacity((total_words as usize) * 4);
+    let start_addr = base_addr.unwrap_or(AM34_NVRAM_BASE);
+    let total_words = word_count
+        .unwrap_or(DEFAULT_NVRAM_CAPTURE_WORDS)
+        .clamp(MIN_NVRAM_CAPTURE_WORDS, MAX_NVRAM_CAPTURE_WORDS);
+    let chunk_words_limit: u32 = NVRAM_DUMP_CHUNK_WORDS;
+    let mut accumulated: Vec<u8> = Vec::with_capacity((total_words * BYTES_PER_U32_WORD) as usize);
     let mut words_read: u32 = 0;
 
     while words_read < total_words {
-        let cur_addr = start_addr.wrapping_add(words_read * 4);
+        let cur_addr = start_addr.wrapping_add(words_read * BYTES_PER_U32_WORD);
         let chunk_words = (total_words - words_read).min(chunk_words_limit);
         let arg = format!("0x{:08X} {}", cur_addr, chunk_words);
         let port_clone = port_name.clone();
         let res = tauri::async_runtime::spawn_blocking(move || {
-            execute_diagnostic_on_port(&port_clone, "DUMP", Some(&arg))
+            execute_diagnostic_on_port(&port_clone, DEFAULT_DUMP_DIAGNOSTIC_CMD, Some(&arg))
         })
         .await
         .map_err(|e| format!("Falha interna de execução assíncrona: {}", e))??;
@@ -121,7 +159,7 @@ pub async fn pico_capture_nvram_live(
 
     build_and_emit_live_nvram_capture(
         &app,
-        "pico-live-nvram-capture",
+        SOURCE_PICO_LIVE_NVRAM,
         &port_name,
         start_addr,
         &accumulated,
@@ -149,7 +187,7 @@ pub async fn pico_execute_diagnostic(
     };
 
     let _ = app.emit(
-        "pico://serial-log",
+        EVENT_PICO_SERIAL_LOG,
         ReactiveSerialEventDto {
             id: format!(
                 "tx-{}",
@@ -175,8 +213,8 @@ pub async fn pico_execute_diagnostic(
     .await
     .map_err(|e| format!("Falha interna ao aguardar diagnóstico Pico: {}", e))??;
 
-    let _ = app.emit("pico://diagnostic-result", &result);
-    if result.command_id == "DUMP" && result.success {
+    let _ = app.emit(EVENT_PICO_DIAG_RESULT, &result);
+    if result.command_id == DEFAULT_DUMP_DIAGNOSTIC_CMD && result.success {
         let bytes = panadiga_core::pico::cdc::parse_pico_dump_hex_to_bytes(&result.raw_output);
         if !bytes.is_empty() {
             let base_addr = result
@@ -191,10 +229,10 @@ pub async fn pico_execute_diagnostic(
                     )
                     .ok()
                 })
-                .unwrap_or(panadiga_core::constants::AM34_NVRAM_BASE);
+                .unwrap_or(AM34_NVRAM_BASE);
             let _ = build_and_emit_live_nvram_capture(
                 &app,
-                "pico-diagnostic-dump",
+                SOURCE_PICO_DIAG_DUMP,
                 &port_name,
                 base_addr,
                 &bytes,
@@ -202,7 +240,7 @@ pub async fn pico_execute_diagnostic(
         }
     }
     let _ = app.emit(
-        "pico://serial-log",
+        EVENT_PICO_SERIAL_LOG,
         ReactiveSerialEventDto {
             id: format!(
                 "rx-{}",
@@ -218,30 +256,21 @@ pub async fn pico_execute_diagnostic(
         },
     );
 
-    if matches!(
-        result.command_id.as_str(),
-        "STATUS"
-            | "VDD"
-            | "PINCHECK"
-            | "HANDSHAKE"
-            | "RESET"
-            | "AUTODETECT"
-            | "FLASH_SIZE"
-            | "ISOLATE"
-            | "ENGAGE"
-    ) && let Ok(mut status) = pico_get_status(Some(port_name)).await
+    if STATUS_REFRESH_COMMANDS.contains(&result.command_id.as_str())
+        && let Ok(mut status) = pico_get_status(Some(port_name)).await
     {
         if let Some(diag_vdd) = result.vdd_volts
-            && status.vdd_volts <= 0.01
-            && diag_vdd > 0.01
+            && status.vdd_volts <= VDD_ZERO_EPSILON_VOLTS
+            && diag_vdd > VDD_ZERO_EPSILON_VOLTS
         {
             status.vdd_volts = diag_vdd;
-            status.target_powered = (2.5..3.45).contains(&diag_vdd);
+            status.target_powered =
+                (VDD_TARGET_MIN_VOLTS..VDD_TARGET_FLOATING_CEIL_VOLTS).contains(&diag_vdd);
             if status.target_powered && status.core_state == "RESET" {
                 status.core_state = "RUNNING".to_string();
             }
         }
-        let _ = app.emit("pico://telemetry", &status);
+        let _ = app.emit(EVENT_PICO_TELEMETRY, &status);
     }
 
     Ok(result)
@@ -254,6 +283,7 @@ pub fn set_pico_telemetry_stream(
     active: bool,
     port_name: Option<String>,
 ) -> Result<bool, String> {
+    start_port_mutation_observer(app.clone());
     let state = stream_state();
     if let Some(port) = port_name.filter(|p| !p.trim().is_empty())
         && let Ok(mut guard) = state.port_name.lock()
@@ -272,7 +302,7 @@ pub fn set_pico_telemetry_stream(
         thread::spawn(move || {
             let st = stream_state();
             loop {
-                thread::sleep(Duration::from_millis(2000));
+                thread::sleep(Duration::from_millis(TELEMETRY_WORKER_POLL_MS));
                 if !st.active.load(Ordering::Relaxed) {
                     continue;
                 }
@@ -280,11 +310,13 @@ pub fn set_pico_telemetry_stream(
                 if port.trim().is_empty() {
                     continue;
                 }
-                if port.starts_with("BLE") || port.starts_with("ANDROID-USB-OTG") {
+                if port.starts_with(TRANSPORT_PREFIX_BLE)
+                    || port.starts_with(TRANSPORT_PREFIX_ANDROID_OTG)
+                {
                     continue;
                 }
                 if let Some(Ok(status)) = crate::pico::try_pico_get_device_status_dto(port) {
-                    let _ = app_clone.emit("pico://telemetry", &status);
+                    let _ = app_clone.emit(EVENT_PICO_TELEMETRY, &status);
                 }
             }
         });

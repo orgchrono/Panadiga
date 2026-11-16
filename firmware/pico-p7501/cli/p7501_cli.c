@@ -36,6 +36,7 @@
 #include "diag/p7501_diag_sdsniff.h"
 #include "hal/p7501_hw.h"
 #include "hal/p7501_led.h"
+#include "hal/p7501_watchdog.h"
 #include "gdb/gdb_rsp.h"
 
 #include <stdio.h>
@@ -74,6 +75,7 @@ static void cli_cmd_status(void) {
         p7501_led_set_auto_mode(next_led);
     }
     printf("VDD: %.2fV (%s)\n", (double)vdd, state);
+    p7501_wdt_print_summary_line();
 }
 
 static void cli_cmd_led(const char *arg) {
@@ -247,6 +249,7 @@ static const p7501_cli_cmd_entry_t k_cli_commands[] = {
     { "DIAGWATCH",     p7501_cmd_diag_watch },
     { "DRVPANA",       p7501_cmd_drv_pana },
     { "BRIDGE",        p7501_cmd_bridge },
+    { "WDT",           p7501_cmd_wdt_status },
     { "BOOTSEL",       cli_cmd_bootsel },
 };
 
@@ -264,7 +267,9 @@ void p7501_cli_process_command(char *line) {
 
     for (size_t i = 0u; i < (sizeof(k_cli_commands) / sizeof(k_cli_commands[0])); ++i) {
         if (strcmp(cmd, k_cli_commands[i].name) == 0) {
+            p7501_wdt_begin_cmd((uint8_t)i, k_cli_commands[i].name);
             k_cli_commands[i].handler(arg);
+            p7501_wdt_end_cmd(false);
             return;
         }
     }

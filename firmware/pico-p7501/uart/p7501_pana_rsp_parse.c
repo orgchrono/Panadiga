@@ -11,6 +11,7 @@
 #include "uart/p7501_pana_dumpnor.h"
 #include "flash/p7501_flash.h"
 #include "common/p7501_hex.h"
+#include "common/p7501_wdt_logic.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -242,7 +243,12 @@ bool p7501_panarsp_parse_args(const char *arg, p7501_pana_rsp_spec_t *out) {
             }
             dumpnor_argc += 1u;
         } else if (p7501_ascii_is_digits(tok)) {
-            out->timeout_ms = p7501_parse_uint32_clamped(tok, 4000u, 150u, 900000u);
+            out->timeout_ms = p7501_parse_uint32_clamped(
+                tok,
+                4000u,
+                150u,
+                P7501_WDT_MAX_CMD_WINDOW_MS
+            );
         } else if (p7501_ascii_ieq(tok, "MAGIC")) {
             out->send_magic_prefix = true;
             explicit_magic_only = true;

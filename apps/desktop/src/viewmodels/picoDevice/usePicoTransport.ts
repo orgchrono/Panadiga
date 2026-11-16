@@ -123,11 +123,14 @@ export function usePicoTransport({
     [modelCatalog, sendDirectRawCommand, setSelectedModel, onLog]
   );
 
-  const refreshPorts = useCallback(async (silent?: unknown) => {
-    const isSilent = silent === true;
+  const refreshPorts = useCallback(async (injectedPortsOrSilent?: unknown) => {
+    const pushedPorts = Array.isArray(injectedPortsOrSilent)
+      ? injectedPortsOrSilent.filter((p): p is string => typeof p === 'string')
+      : null;
+    const isSilent = pushedPorts !== null || injectedPortsOrSilent === true;
     if (!isSilent) setIsLoading(true);
     try {
-      const ports = await invokeCommand<string[]>('list_pico_serial_ports');
+      const ports = pushedPorts ?? (await invokeCommand<string[]>('list_pico_serial_ports'));
       const allPorts = [...(ports || [])];
 
       if (isAndroidNativeBridgeAvailable()) {

@@ -7,6 +7,7 @@
 
 #include "uart/p7501_uart_capture.h"
 #include "hal/p7501_led.h"
+#include "hal/p7501_watchdog.h"
 #include "uart/p7501_uart_bitbang.h"
 #include "uart/p7501_uart_codec.h"
 #include "uart/p7501_uart_pio_engine.h"
@@ -43,13 +44,13 @@ uint32_t p7501_uart_capture_window(uint32_t dur_us, uint32_t max_cap) {
     const absolute_time_t end_t = make_timeout_time_us(dur_us);
     uint8_t rx_byte = 0U;
     while (!time_reached(end_t)) {
+        p7501_wdt_kick();
         (void)p7501_pio_poll_and_clear_framing_err();
         while (p7501_pio_pop_rx_byte(&rx_byte)) {
             if (rx_len < max_cap) {
                 s_p7501_rx_buf[rx_len++] = rx_byte;
             }
         }
-        p7501_led_tick();
         tight_loop_contents();
     }
     return rx_len;
@@ -87,6 +88,7 @@ void p7501_cmd_boot_capture(const char *arg, bool do_reset, bool is_jig, const c
     uint8_t byte = 0U;
 
     while (!time_reached(end_t)) {
+        p7501_wdt_kick();
         if (p7501_pio_poll_sw_uart_release()) {
             sw_rel_seen = true;
         }
@@ -102,7 +104,6 @@ void p7501_cmd_boot_capture(const char *arg, bool do_reset, bool is_jig, const c
                 s_p7501_rx_buf[rx_len++] = byte;
             }
         }
-        p7501_led_tick();
     }
 
     const uint32_t perr = p7501_pio_get_and_clear_parity_errors();

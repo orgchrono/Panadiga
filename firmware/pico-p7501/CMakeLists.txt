@@ -27,9 +27,11 @@ message(STATUS "[PANADIGA] Configuring P7501 UART Probe for Board: ${PICO_BOARD}
 add_executable(panasonic_p7501_uart
     p7501_pico_main.c
     common/p7501_hex.c
+    common/p7501_wdt_logic.c
     hal/p7501_hw.c
     hal/p7501_led_logic.c
     hal/p7501_led.c
+    hal/p7501_watchdog.c
     gdb/gdb_rsp_codec.c
     gdb/gdb_rsp_memory.c
     gdb/gdb_rsp_cpu.c
@@ -90,6 +92,7 @@ target_link_libraries(panasonic_p7501_uart
     hardware_pio
     hardware_adc
     hardware_clocks
+    hardware_watchdog
 )
 
 # Optional Bluetooth Low Energy (CYW43439 / BTstack) support for Pico W and Pico 2 W
