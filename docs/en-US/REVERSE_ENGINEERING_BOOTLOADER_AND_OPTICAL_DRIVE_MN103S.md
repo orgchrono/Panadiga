@@ -5,7 +5,7 @@
 
 > **Classification:** Empirical Silicon, Firmware, and Bench Hardware Reverse Engineering  
 > **Live Bench Hardware Target:** **Panasonic DMR-EH55** DVD/HDD Recorder (Main PCB `VEP79138`, `Loader ver0.61 [06/03/06]`, Pico RP2040 interface on `COM10` / `P7501`)  
-> **Disassembled Binary Reference:** **DMR-EH58** service package extracted from `firmware_and_images/dmr-eh58/DVDRAM.7z` *(local proprietary archive excluded from Git via `.gitignore`; see [dmr-eh58 inventory](../../firmware_and_images/dmr-eh58/README.md))* (`Loader ver0.63 [07/10/24]`, Optical Drive `MATSHITA R6-MV4 A0 S415 05/14/08`) + **DMR-EH55** HDD partitions (`0x02000000` / `0x04000000`) & `PANA_DVD.FRM`  
+> **Disassembled Binary Reference:** **DMR-EH58** service package [`DVDRAM.7z`](https://github.com/orgchrono/Panadiga/releases/download/firmware-pack-v0.1.0/DVDRAM.7z) *(included in the [Panadiga Firmware Pack `firmware-pack-v0.1.0`](https://github.com/orgchrono/Panadiga/releases/tag/firmware-pack-v0.1.0); `Loader ver0.63 [07/10/24]`, Optical Drive `MATSHITA R6-MV4 A0 S415 05/14/08`)* + **DMR-EH55** HDD partitions (`0x02000000` / `0x04000000`) & [`PANA_DVD.FRM`](https://github.com/orgchrono/Panadiga/releases/download/firmware-pack-v0.1.0/dmr-eh55-PANA_DVD.FRM)  
 > **Technical Scope:** 32-bit **Matsushita AM34 / MN103S (`MN10300`)** machine code, bootloader state dispatch, `[SDCD]` / `ACMD13` root-cause trace, ATAPI CDB dispatch architecture, hidden factory UART CLI monitor, and the complete **431-entry Shift-JIS Optical Drive Internal Error Dictionary**.
 
 ---
@@ -33,7 +33,7 @@ To uphold strict scientific provenance for the reverse-engineering community, th
 | DMR-EH58 | `DRV.BIN` | `720,896` (`0x0B0000`) | `78202974d402db9802d3fab3fdb31579` | `3a9699dd576e96ac...` | Compressed F/E Drive FW (`EXTRHEADDRV`, exact match to EH55 Part 2 size) |
 | DMR-EH58 | `DRV_decomp.bin` | `1,441,792` (`0x160000`) | `56cbd63993c800e05d0f914710d3c393` | `694a4ab8aa29fcc4...` | Decompressed MN103S Drive MCU (`0x40000000`, `MATSHITAR6-MV4 A0 S415`) |
 | DMR-EH58 | `MAIN.BIN` | `6,361,216` (`0x611080`) | `4e6500cff94d923140ca52f00c38940e` | `f89af74a255f91ca...` | Main OS (`M_FIRM`, 64-bit ECB header `5187138d...`, `e5d1f34a...` @ `+0x38`) |
-| DMR-EH58 | `DVDRAM.7z` | `7,179,299` (`0x6D8C23`) | `b24750771125d45e5672a4bd66d92aa7` | `d58297d6581551a9...` | Service optical/USB update container (`EH58EE`, proprietary binary excluded via `.gitignore`; see [`dmr-eh58/README.md`](../../firmware_and_images/dmr-eh58/README.md)) |
+| DMR-EH58 | [`DVDRAM.7z`](https://github.com/orgchrono/Panadiga/releases/download/firmware-pack-v0.1.0/DVDRAM.7z) | `7,179,299` (`0x6D8C23`) | `b24750771125d45e5672a4bd66d92aa7` | `d58297d6581551a9...` | Service optical/USB update container (`EH58EE`; available in [Firmware Pack `firmware-pack-v0.1.0`](https://github.com/orgchrono/Panadiga/releases/tag/firmware-pack-v0.1.0)) |
 | DMR-EH55 | `PANA_DVD.FRM` | `7,531,744` (`0x72ECE0`) | `2b1b5754d63d131b54bd93a6fa73f39d` | `a596d52a8220a911...` | Optical update container (`492F0560...`, CPRM/C2 64-bit ECB) |
 | DMR-EH55 | `hdd_partition_firmware_0x02000000.bin` | `6,173,264` (`0x5E3250`) | `393e52d939eee76bbf06a98f2415253f` | `6ec63de059c00b28...` | HDD Part 1 (`M_FIRM`, `5187138d...` header, `e5d1f34a...` @ `+0x38`) |
 | DMR-EH55 | `hdd_partition_firmware_0x04000000.bin` | `720,896` (`0x0B0000`) | `ee465f12930bef1599bb4fc256346ef0` | `487d5951d4aa7bc4...` | HDD Part 2 (`DRV` compressed image, 64-bit ECB encrypted on disk) |

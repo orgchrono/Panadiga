@@ -2,7 +2,7 @@
 
 - **Model:** Panasonic DMR-EH50 (Gen 3 Early DIGA)
 - **SoC Architecture:** Matsushita UniPhier MN2DS0016 (AM34 RISC)
-- **Optical Container:** `PANA_DVD.FRM` (Extracted from official `UPDATE_08_07_2006_DMR_EH50.zip`, 7.22 MB)
+- **Optical Container:** [`dmr-eh50-PANA_DVD.FRM`](https://github.com/orgchrono/Panadiga/releases/download/firmware-pack-v0.1.0/dmr-eh50-PANA_DVD.FRM) (Extracted from official [`UPDATE_08_07_2006_DMR_EH50.zip`](https://github.com/orgchrono/Panadiga/releases/download/firmware-pack-v0.1.0/dmr-eh50-UPDATE_08_07_2006_DMR_EH50.zip), 7.22 MB — [Firmware Pack `firmware-pack-v0.1.0`](https://github.com/orgchrono/Panadiga/releases/tag/firmware-pack-v0.1.0))
 - **Cryptographic Characteristics:**
   - 64-bit ECB Matsushita cipher
   - Erased NOR Flash block: `79BB2C325AD4FD34` (4,107 occurrences)

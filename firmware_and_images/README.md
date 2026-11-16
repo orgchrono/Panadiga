@@ -2,9 +2,11 @@
 
 Este diretório armazena os dumps brutos de memória e imagens de armazenamento do Panasonic DMR-EH55 utilizados pelas ferramentas de análise forense e engenharia reversa do `panadiga`.
 
-> [!NOTE]
-> Por motivos de restrições de tamanho do GitHub (arquivos > 100 MB) e proteção de propriedade intelectual/direitos autorais de terceiros, os dumps brutos proprietários não são versionados diretamente no repositório Git público.
-> Ao trabalhar com o gravador, coloque seus dumps obtidos em bancada nesta pasta com os nomes descritos abaixo.
+> [!TIP]
+> **Download Direto de Todas as Imagens Verificadas (`firmware-pack-v0.1.0`):** Como os dumps brutos de 100 MiB excedem o limite por arquivo do Git (e mantêm o `git clone` leve), todos os pacotes validados (`DMR-EH55`, `DMR-EH58` `DVDRAM.7z`, `DMR-EH50`, `DMR-EX98V`, `DMR-EZ485V`, kit `SD Unbrick`, partições extraídas e imagens HDD `.bin.gz`/`.7z` + `FIRMWARE_SHA256SUMS.txt`) estão disponíveis diretamente na Release oficial:  
+> **https://github.com/orgchrono/Panadiga/releases/tag/firmware-pack-v0.1.0**
+>
+> Ao trabalhar localmente em bancada, baixe ou coloque seus dumps nesta pasta com os nomes descritos abaixo.
 
 ---
 

@@ -2,10 +2,11 @@
 
 - **Model / Region:** Panasonic DMR-EH58 (`EH58EE` — Gen 4 DIGA, Eastern Europe/Russia/CIS firmware train)
 - **SoC Architecture:** Matsushita UniPhier Gen 2 (`MN2DS0018/22` / MN103S family)
-- **Optical / Service Container:** `DVDRAM.7z` (**excluded from Git via `.gitignore` — proprietary firmware binaries are not redistributed in this MIT repository**)
-- **Usage:** Local reference firmware container used for cross-model static reverse engineering (`BOOT.BIN`, `DRV.BIN`, `MAIN.BIN`).
+- **Direct Download (`DVDRAM.7z`):** [`DVDRAM.7z` (`firmware-pack-v0.1.0`)](https://github.com/orgchrono/Panadiga/releases/download/firmware-pack-v0.1.0/DVDRAM.7z)
+- **Full Verified Firmware & Recovery Pack:** [Panadiga Firmware Pack `firmware-pack-v0.1.0`](https://github.com/orgchrono/Panadiga/releases/tag/firmware-pack-v0.1.0)
+- **Usage:** Reference firmware container (`BOOT.BIN`, `DRV.BIN`, `MAIN.BIN`) verified and validated for cross-model static reverse engineering and recovery workflows.
 
-## Verified `DVDRAM.7z` Manifest (Copyright-Excluded Local Artifact)
+## Verified `DVDRAM.7z` Manifest (`7z t` & Internal `.MD5` Verified)
 
 - **Size:** `7,179,299` bytes (`0x6D8C23`)
 - **MD5:** `b24750771125d45e5672a4bd66d92aa7`
@@ -17,6 +18,6 @@
   - `DEV_VER,3110PC`
   - `DRV_VER,@ 0F`
   - `MAIN_VER,3110PC`
-- **Archive Contents:** `BOOT.BIN`, `BOOT.MD5`, `DEV.BIN`, `DEV.MD5`, `DRV.BIN`, `DRV.MD5`, `MAIN.BIN`, `MAIN.MD5`, `VERSION.TXT`
+- **Archive Contents:** `BOOT.BIN` (`MD5: 7737e5710b351bd4b0f9b2b59c7b40f3`), `DEV.BIN` (`MD5: b0c41cdfade27202a02507f9acf969bb`), `DRV.BIN` (`MD5: 78202974d402db9802d3fab3fdb31579`), `MAIN.BIN` (`MD5: 4e6500cff94d923140ca52f00c38940e`), `VERSION.TXT` + `.MD5` files
 
-> **Region & Recovery Warning:** Do not cross-flash `EH58EE` firmware onto non-EE hardware variants (`EG`, `EB`, `EF`, `EP`, `GN`, etc.) without verifying regional PCB strapping and `DEV.BIN` model identifiers. For `U99` NVRAM corruption or optical/HDD update recovery workflows, see [Technical Inventory & Operations Manual](../../docs/en-US/TECHNICAL_INVENTORY_AND_OPERATIONS_MANUAL.md).
+> **Region & Recovery Caution:** Verify your rear model suffix (`EH58EE` vs `EG`, `EB`, `EF`, `EP`, `GN`) before applying optical/USB updates (`DEV.BIN` enforces model/region compatibility). For `U99` NVRAM corruption or HDD failures, see [Technical Inventory & Operations Manual](../../docs/en-US/TECHNICAL_INVENTORY_AND_OPERATIONS_MANUAL.md).
