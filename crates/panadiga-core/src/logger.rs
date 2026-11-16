@@ -69,13 +69,13 @@ pub fn set_sink<F>(sink: F)
 where
     F: Fn(LogLevel, &str) + Send + Sync + 'static,
 {
-    let mut guard = CUSTOM_SINK.lock().unwrap();
+    let mut guard = CUSTOM_SINK.lock().unwrap_or_else(|e| e.into_inner());
     *guard = Some(Box::new(sink));
 }
 
 /// Clears any registered custom sink, restoring standard stdout/stderr output.
 pub fn reset_sink() {
-    let mut guard = CUSTOM_SINK.lock().unwrap();
+    let mut guard = CUSTOM_SINK.lock().unwrap_or_else(|e| e.into_inner());
     *guard = None;
 }
 

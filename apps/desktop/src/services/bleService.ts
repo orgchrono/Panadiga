@@ -101,7 +101,18 @@ export function createBleUartService(): BleUartClient {
   let androidNativeConnected = false;
   let androidListenerBound = false;
 
+  const handleAndroidRxEvent = (event: Event): void => {
+    const custom = event as CustomEvent<string>;
+    if (typeof custom.detail === 'string') {
+      receiveCallbacks.forEach(cb => cb(custom.detail));
+    }
+  };
+
   const cleanup = (): void => {
+    if (androidListenerBound && typeof window !== 'undefined') {
+      window.removeEventListener('panadiga-ble-rx', handleAndroidRxEvent);
+      androidListenerBound = false;
+    }
     androidNativeConnected = false;
     server = null;
     device = null;
@@ -112,12 +123,7 @@ export function createBleUartService(): BleUartClient {
   const ensureAndroidRxListener = (): void => {
     if (androidListenerBound || typeof window === 'undefined') return;
     androidListenerBound = true;
-    window.addEventListener('panadiga-ble-rx', event => {
-      const custom = event as CustomEvent<string>;
-      if (typeof custom.detail === 'string') {
-        receiveCallbacks.forEach(cb => cb(custom.detail));
-      }
-    });
+    window.addEventListener('panadiga-ble-rx', handleAndroidRxEvent);
   };
 
   const isSupported = (): boolean => {

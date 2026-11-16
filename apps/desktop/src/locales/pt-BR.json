@@ -19,7 +19,7 @@
     "frmcrypto": "Cripto PANA_DVD",
     "frmcrypto.sub": "Dicionário ECB & Entropia",
     "manuals": "Manuais Técnicos",
-    "manuals.sub": "15 PDFs & Esquemáticos",
+    "manuals.sub": "30 PDFs & Esquemáticos",
     "hexinspector": "Inspetor Hex",
     "hexinspector.sub": "Alinhamento LBA & Offsets",
     "unbrick": "Centro Unbrick",
@@ -615,13 +615,16 @@
         }
       },
       "BAUD": {
-        "label": "Medir Baud Rate (PIO1)",
-        "description": "Mede a menor largura de pulso em GP2 via PIO1 e calcula o baud rate real da linha SC0.",
-        "arg_label": "Janela (ms)",
-        "arg_placeholder": "1500",
+        "label": "Baud Rate UART PIO1",
+        "description": "Configura ou consulta a taxa de transmissão (bps) da máquina RX/TX PIO1 na linha SC0 (padrão AM34: 115200).",
+        "arg_label": "Baudrate (bps)",
+        "arg_placeholder": "115200",
         "options": {
-          "s1_5": "1.5 s",
-          "s3_0": "3.0 s"
+          "b115200": "115200 bps (Padrão AM34)",
+          "b57600": "57600 bps",
+          "b38400": "38400 bps",
+          "b19200": "19200 bps",
+          "b9600": "9600 bps"
         }
       },
       "BAUDSCAN": {
@@ -716,6 +719,17 @@
           "jig2500ctrl": "4s JIG:2500 CTRL",
           "normal4": "4s NORMAL",
           "passive2": "2s Passivo"
+        }
+      },
+      "SDSNIFF": {
+        "label": "Sniffer SD Passivo PIO0 (GP10..15)",
+        "description": "Captura passiva em Hi-Z (GP10=CLK, GP11=CMD, GP12..15=DAT0..3), decodificando CMD55/ACMD6/ACMD13, CMD17/CMD18 LBAs e CRC16 por via.",
+        "arg_label": "Janela & Boot",
+        "arg_placeholder": "4000 NORMAL",
+        "options": {
+          "normal4": "4s NORMAL",
+          "jig4": "4s JIG:350",
+          "acmd13": "4s ACMD13 (LEN:64)"
         }
       },
       "JIGSWEEP": {
@@ -949,5 +963,9 @@
       "mainOutRequired": "Informe o caminho de saída para gravar o MAIN patchado.",
       "extractPathsRequired": "Informe o caminho do .FRM e o diretório de destino."
     }
+  },
+  "settings": {
+    "title": "Configurações, Acessibilidade & Preferências da Bancada",
+    "subtitle": "Personalize tema visual, contraste, suporte a daltonismo, idioma, modo Básico/Avançado e recuperação de layout."
   }
 }

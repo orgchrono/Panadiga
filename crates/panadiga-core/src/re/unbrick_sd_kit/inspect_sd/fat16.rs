@@ -58,7 +58,7 @@ fn trace_fat16_chain(
             complete = chain.len() >= needed;
             break;
         }
-        if next < 2 || next >= 0xFFF0 {
+        if !(2..0xFFF0).contains(&next) {
             break;
         }
         cur = next;
@@ -108,7 +108,7 @@ pub(crate) fn inspect_fat16_root_and_digadiag<R: Read + Seek>(
     let data_start_lba = root_start_lba + root_dir_sectors as u64;
 
     let mut prev_was_lfn = false;
-    for entry in root_bytes.chunks_exact(32) {
+    for entry in root_bytes.as_chunks::<32>().0 {
         if entry[0] == 0x00 {
             break;
         }

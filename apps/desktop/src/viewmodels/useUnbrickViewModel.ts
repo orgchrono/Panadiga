@@ -9,7 +9,7 @@ import type {
   SdUnbrickKitRequestDto,
   UnbrickWorkspaceReport,
 } from '@/models';
-import { invokeCommand } from '@/services/ipc';
+import { emitLocalEvent, invokeCommand } from '@/services/ipc';
 import { useToast } from '@/context/ToastContext';
 import { logger } from '@/utils/logger';
 import {
@@ -102,6 +102,7 @@ export function useUnbrickViewModel() {
       );
       if (report) {
         setVerify({ loading: false, data: report.verification, error: null });
+        emitLocalEvent('unbrick://completed', true);
       }
       return report;
     },
@@ -111,7 +112,7 @@ export function useUnbrickViewModel() {
   const verifySdMedia = useCallback(
     async (sdRootDir: string): Promise<SdMediaVerificationReport | null> => {
       const clean = sdRootDir.trim();
-      return runChannel(
+      const report = await runChannel(
         setVerify,
         'Verificar Mídia SD',
         () =>
@@ -121,6 +122,10 @@ export function useUnbrickViewModel() {
           }),
         `Mídia SD validada: ${clean}`
       );
+      if (report) {
+        emitLocalEvent('unbrick://completed', true);
+      }
+      return report;
     },
     [runChannel]
   );

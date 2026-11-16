@@ -6,30 +6,31 @@ use super::{
 };
 use anyhow::{Result, bail};
 
+pub(super) struct InjectionLogEntry<'a> {
+    pub(super) source: &'a str,
+    pub(super) cdb0_or_cmd: &'a str,
+    pub(super) mode: u8,
+    pub(super) target: u32,
+    pub(super) payload: &'a [u8],
+    pub(super) status: &'a str,
+    pub(super) note: String,
+}
+
 impl MatshitaOddEmulator {
-    pub(super) fn record_injection(
-        &mut self,
-        source: &str,
-        cdb0_or_cmd: &str,
-        mode: u8,
-        target: u32,
-        payload: &[u8],
-        status: &str,
-        note: String,
-    ) {
+    pub(super) fn record_injection(&mut self, entry: InjectionLogEntry<'_>) {
         let rec = WriteInjectionRecord {
             seq: self.injections.len() + 1,
-            source: source.to_string(),
-            cdb0_or_cmd: cdb0_or_cmd.to_string(),
-            mode,
-            target_va_or_lba: target,
-            len_bytes: payload.len(),
-            payload_sha256: sha256_hex(payload),
-            status: status.to_string(),
-            note: note.clone(),
+            source: entry.source.to_string(),
+            cdb0_or_cmd: entry.cdb0_or_cmd.to_string(),
+            mode: entry.mode,
+            target_va_or_lba: entry.target,
+            len_bytes: entry.payload.len(),
+            payload_sha256: sha256_hex(entry.payload),
+            status: entry.status.to_string(),
+            note: entry.note.clone(),
         };
         self.injections.push(rec);
-        self.log_event(note);
+        self.log_event(entry.note);
     }
 
     /// High-level helper: injects `payload` via ATAPI `0x3B` (or `0xED`) and verifies readback via `0x3C`.

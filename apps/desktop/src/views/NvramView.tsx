@@ -10,14 +10,20 @@ import {
   NvramAuditDialog,
 } from '@/components/nvram';
 import { useTranslation } from '@/i18n/useTranslation';
-import { AlertCircle, RefreshCw } from 'lucide-react';
+import { useWorkbenchMode } from '@/context/WorkbenchModeContext';
+import type { ViewKey } from '@/models';
+import { AlertCircle, Radio, RefreshCw, Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+
+interface NvramViewProps {
+  onNavigate?: (view: ViewKey) => void;
+}
 
 /**
  * Declarative MVVM View: Spansion NOR Flash S29JL064H & NVRAM U99 Sanitizer.
  * Fully decomposed following Single Responsibility, Functional Programming, and Radix UI.
  */
-export const NvramView: React.FC = () => {
+export const NvramView: React.FC<NvramViewProps> = ({ onNavigate }) => {
   const { t } = useTranslation();
   const {
     report,
@@ -43,9 +49,16 @@ export const NvramView: React.FC = () => {
   } = useNvramViewModel();
 
   const [showBackupModal, setShowBackupModal] = useState<boolean>(false);
+  const { isAdvanced, setMode } = useWorkbenchMode();
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12 font-mono">
+    <div className="space-y-6 max-w-7xl mx-auto pb-12 font-mono" aria-label={t('nvram.title')}>
+      {loading && (
+        <div className="flex items-center gap-2 text-xs text-cyan-400">
+          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+          <span>Sincronizando mapa Spansion NOR...</span>
+        </div>
+      )}
       {/* Surgical Clean Notification */}
       {cleanSuccess && (
         <NvramTopBanner onOpenAudit={() => setShowBackupModal(true)} />
@@ -58,15 +71,28 @@ export const NvramView: React.FC = () => {
             <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
             <span>Falha ao carregar dump de flash NOR: {error}</span>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={refresh}
-            className="text-rose-300 hover:text-white hover:bg-rose-900/40 gap-1.5"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            <span>Tentar Novamente</span>
-          </Button>
+          <div className="flex items-center gap-2 shrink-0">
+            {onNavigate && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onNavigate('picobench')}
+                className="border-rose-500/40 text-rose-200 hover:bg-rose-900/40 gap-1.5"
+              >
+                <Radio className="w-3.5 h-3.5" />
+                <span>Abrir PicoBench</span>
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={refresh}
+              className="text-rose-300 hover:text-white hover:bg-rose-900/40 gap-1.5"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Tentar Novamente</span>
+            </Button>
+          </div>
         </div>
       )}
 
@@ -87,14 +113,26 @@ export const NvramView: React.FC = () => {
         onRefresh={refresh}
       />
 
-      <NvramPatchCard
-        defaultInputPath={report?.input_file}
-        patching={patching}
-        patchSuccess={patchSuccess}
-        error={patchError}
-        lastOutputFile={report?.output_file}
-        onExecutePatch={executeGuardedPatch}
-      />
+      {isAdvanced ? (
+        <NvramPatchCard
+          defaultInputPath={report?.input_file}
+          patching={patching}
+          patchSuccess={patchSuccess}
+          error={patchError}
+          lastOutputFile={report?.output_file}
+          onExecutePatch={executeGuardedPatch}
+        />
+      ) : (
+        <div className="rounded-xl bg-bench-900/70 border border-slate-800 px-4 py-3 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <span className="text-slate-400 font-sans">
+            Modo Básico ativo: o editor hexadecimal Copy-on-Write (offset manual) está recolhido para simplificar o reparo U99.
+          </span>
+          <Button type="button" variant="outline" size="sm" onClick={() => setMode('advanced')} className="gap-1.5 text-xs">
+            <Wrench className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Revelar Ferramentas Avançadas</span>
+          </Button>
+        </div>
+      )}
 
       {/* 4 High-Contrast Telemetry Metric Cards */}
       <NvramMetricsGrid

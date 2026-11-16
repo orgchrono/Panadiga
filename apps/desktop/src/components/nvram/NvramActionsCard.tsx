@@ -28,8 +28,6 @@ export const NvramActionsCard: React.FC<NvramActionsCardProps> = ({
   onRefresh,
 }) => {
   const flashBytes = report?.total_flash_bytes ?? 0;
-  const flashMb = flashBytes > 0 ? (flashBytes / (1024 * 1024)).toFixed(0) : '8';
-  const flashMbit = flashBytes > 0 ? (flashBytes * 8) / (1024 * 1024) : 64;
 
   const startHex = report
     ? `0x${report.nvram_offset_start.toString(16).toUpperCase().padStart(8, '0')}`

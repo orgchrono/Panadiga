@@ -1,91 +1,32 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React from 'react';
 import { AlertTriangle, RefreshCw, Unlock } from 'lucide-react';
 import { StatusBadge } from '@/components/StatusBadge';
-import type { MainCapacityInspectionReport, MainCapacityPatchReport } from '@/models';
-import { invokeCommand } from '@/services/ipc';
-import { useToast } from '@/context/ToastContext';
-import {
-  computePreviewBlocks,
-  resolveEffectiveTargetGb,
-  type PatchMode,
-} from './capacity/capacityHelpers';
+import { useHddCapacityViewModel } from '@/viewmodels/useHddCapacityViewModel';
 import { CapacityInspectionGrid } from './capacity/CapacityInspectionGrid';
 import { CapacityStrategyPanel } from './capacity/CapacityStrategyPanel';
 import { PatchOutputBanner, RtsdPresetsTable } from './capacity/RtsdPresetsTable';
 
 export const HddCapacityPatcherCard: React.FC = () => {
-  const { showToast } = useToast();
-  const [inputPath, setInputPath] = useState<string>('');
-  const [outputPath, setOutputPath] = useState<string>('');
-  const [mode, setMode] = useState<PatchMode>('dynamic');
-  const [targetGb, setTargetGb] = useState<number>(250);
-  const [limitInDynamicMode, setLimitInDynamicMode] = useState<boolean>(false);
-  const [inspection, setInspection] = useState<MainCapacityInspectionReport | null>(null);
-  const [patchReport, setPatchReport] = useState<MainCapacityPatchReport | null>(null);
-  const [inspecting, setInspecting] = useState<boolean>(false);
-  const [patching, setPatching] = useState<boolean>(false);
-  const [inspectError, setInspectError] = useState<string | null>(null);
-
-  const runInspect = useCallback(
-    async (customInput?: string) => {
-      setInspecting(true);
-      setInspectError(null);
-      const pathVal = (customInput !== undefined ? customInput : inputPath).trim();
-      try {
-        const res = await invokeCommand<MainCapacityInspectionReport>(
-          'inspect_hdd_capacity_patch',
-          pathVal ? { inputPath: pathVal } : {}
-        );
-        setInspection(res);
-        if (!pathVal && res.input_path) {
-          setInputPath(res.input_path);
-        }
-      } catch (err) {
-        setInspectError(err instanceof Error ? err.message : String(err));
-      } finally {
-        setInspecting(false);
-      }
-    },
-    [inputPath]
-  );
-
-  useEffect(() => {
-    void runInspect('');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const previewBlocks = useMemo(
-    () => computePreviewBlocks(mode, targetGb, limitInDynamicMode),
-    [mode, targetGb, limitInDynamicMode]
-  );
-
-  const handleApplyPatch = async () => {
-    setPatching(true);
-    try {
-      const effectiveTargetGb = resolveEffectiveTargetGb(mode, targetGb, limitInDynamicMode);
-      const res = await invokeCommand<MainCapacityPatchReport>('apply_hdd_capacity_patch', {
-        inputPath: inputPath.trim() || undefined,
-        outputPath: outputPath.trim() || undefined,
-        mode,
-        targetGb: effectiveTargetGb ?? undefined,
-      });
-      setPatchReport(res);
-      setInspection(res.inspection_after);
-      showToast({
-        type: 'success',
-        title: 'Patch de Capacidade Aplicado!',
-        message: `Salvo em ${res.output_path} (${res.applied_blocks_2kb_hex})`,
-      });
-    } catch (err) {
-      showToast({
-        type: 'error',
-        title: 'Falha ao Aplicar Patch de Capacidade',
-        message: err instanceof Error ? err.message : String(err),
-      });
-    } finally {
-      setPatching(false);
-    }
-  };
+  const {
+    inputPath,
+    setInputPath,
+    outputPath,
+    setOutputPath,
+    mode,
+    setMode,
+    targetGb,
+    setTargetGb,
+    limitInDynamicMode,
+    setLimitInDynamicMode,
+    inspection,
+    patchReport,
+    inspecting,
+    patching,
+    inspectError,
+    previewBlocks,
+    runInspect,
+    handleApplyPatch,
+  } = useHddCapacityViewModel();
 
   return (
     <div className="space-y-6 font-mono">

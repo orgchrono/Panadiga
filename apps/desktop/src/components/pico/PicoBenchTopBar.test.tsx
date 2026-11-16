@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import React from 'react';
 import type { PicoDeviceStatus } from '@/models';
 import { simulateMockDiagnostic } from '@/test/mocks/mockDiagnostics';
 import { PicoBenchTopBar } from './PicoBenchTopBar';

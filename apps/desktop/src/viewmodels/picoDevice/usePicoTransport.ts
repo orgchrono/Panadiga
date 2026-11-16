@@ -3,7 +3,14 @@
  * @brief Transport hook managing USB CDC, Android USB-OTG, BLE NUS connection, port enumeration, and target profiles.
  */
 
-import { useCallback, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  type Dispatch,
+  type MutableRefObject,
+  type SetStateAction,
+} from 'react';
 import type { ColdBreakinMode, DigaModelProfile, PicoDeviceStatus } from '@/models';
 import { invokeCommand } from '@/services/ipc';
 import { bleService } from '@/services/bleService';
@@ -20,6 +27,7 @@ import {
   DEFAULT_DISCONNECTED_STATUS,
   isGdbBridgeRunning,
   parseVddFromStatusRaw,
+  PICO_PORT_PATTERN,
   pickPreferredSerialPort,
   type UsePicoDeviceOptions,
 } from './stateHelpers';
@@ -51,6 +59,14 @@ export function usePicoTransport({
   isConnectingRef,
   onLog,
 }: UsePicoTransportParams) {
+  const manualDisconnectRef = useRef<boolean>(false);
+  const isConnectedRef = useRef<boolean>(Boolean(deviceStatus?.connected));
+  const toggleConnectionRef = useRef<((overridePort?: unknown) => Promise<void>) | null>(null);
+
+  useEffect(() => {
+    isConnectedRef.current = Boolean(deviceStatus?.connected);
+  }, [deviceStatus?.connected]);
+
   const sendDirectRawCommand = useCallback(
     async (command: string): Promise<string> => {
       if (selectedPort.startsWith('ANDROID-USB-OTG')) {
@@ -63,7 +79,6 @@ export function usePicoTransport({
       }
       return await invokeCommand<string>('pico_send_serial_command', {
         portName: selectedPort,
-        port_name: selectedPort,
         command,
       });
     },
@@ -108,8 +123,9 @@ export function usePicoTransport({
     [modelCatalog, sendDirectRawCommand, setSelectedModel, onLog]
   );
 
-  const refreshPorts = useCallback(async () => {
-    setIsLoading(true);
+  const refreshPorts = useCallback(async (silent?: unknown) => {
+    const isSilent = silent === true;
+    if (!isSilent) setIsLoading(true);
     try {
       const ports = await invokeCommand<string[]>('list_pico_serial_ports');
       const allPorts = [...(ports || [])];
@@ -134,6 +150,15 @@ export function usePicoTransport({
         if (!selectedPort || !allPorts.includes(selectedPort)) {
           setSelectedPort(targetDefault);
         }
+        const canAutoConnect =
+          PICO_PORT_PATTERN.test(targetDefault) &&
+          !isConnectedRef.current &&
+          !isConnectingRef.current &&
+          !manualDisconnectRef.current;
+        if (canAutoConnect) {
+          onLog?.('info', 'HOST', `Pico detectado automaticamente em ${targetDefault}. Iniciando conexão...`);
+          void toggleConnectionRef.current?.(targetDefault);
+        }
       } else if (allPorts.length > 0 && !selectedPort) {
         setSelectedPort(allPorts[0]);
       } else if (allPorts.length === 0) {
@@ -142,9 +167,9 @@ export function usePicoTransport({
     } catch (err) {
       logger.warn('PicoDevice', 'Failed loading system serial ports', err);
     } finally {
-      setIsLoading(false);
+      if (!isSilent) setIsLoading(false);
     }
-  }, [selectedPort, setAvailablePorts, setIsLoading, setSelectedPort]);
+  }, [isConnectingRef, onLog, selectedPort, setAvailablePorts, setIsLoading, setSelectedPort]);
 
   const pollDeviceStatus = useCallback(async () => {
     if (!selectedPort || isConnectingRef.current) return;
@@ -212,6 +237,7 @@ export function usePicoTransport({
       }
 
       if (deviceStatus?.connected) {
+        manualDisconnectRef.current = true;
         try {
           await invokeCommand('set_pico_telemetry_stream', { active: false }).catch(() => {});
           if (targetPort.startsWith('ANDROID-USB-OTG')) {
@@ -253,6 +279,7 @@ export function usePicoTransport({
         return;
       }
 
+      manualDisconnectRef.current = false;
       setIsLoading(true);
       isConnectingRef.current = true;
       onLog?.('info', 'HOST', `Estabelecendo conexão física com ${targetPort} (115200 bps)...`);
@@ -318,7 +345,7 @@ export function usePicoTransport({
           onLog?.(
             'success',
             'HOST',
-            `Conexão estabelecida com sucesso em ${targetPort}! VDD: ${result.vdd_voltage.toFixed(2)}V`
+            result.message || `Conexão estabelecida com sucesso em ${targetPort}! VDD: ${result.vdd_voltage.toFixed(2)}V`
           );
 
           await invokeCommand('set_pico_telemetry_stream', {
@@ -347,6 +374,10 @@ export function usePicoTransport({
     },
     [deviceStatus, isConnectingRef, onLog, selectedPort, sendDirectRawCommand, setDeviceStatus, setIsLoading]
   );
+
+  useEffect(() => {
+    toggleConnectionRef.current = toggleConnection;
+  }, [toggleConnection]);
 
   return {
     refreshModelCatalog,

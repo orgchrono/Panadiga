@@ -264,9 +264,10 @@ mod tests {
 
         let idx = read_engineering_doc("INDEX.md".to_string()).unwrap();
         assert!(!idx.trim().is_empty());
-        let src_preview =
-            read_engineering_doc("src:crates/panadiga-core/src/pico/log_decoder.rs".to_string())
-                .unwrap();
+        let src_preview = read_engineering_doc(
+            "src:crates/panadiga-core/src/pico/log_decoder/stream.rs".to_string(),
+        )
+        .unwrap();
         assert!(src_preview.contains("decode_captured_log_bytes"));
 
         assert!(read_engineering_doc("../Cargo.toml".to_string()).is_err());

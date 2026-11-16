@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from scripts.bench.decoders import (
+    describe_boot_fat_error_code,
     parse_am34_uart_log,
     parse_busdiag_output,
     parse_panarsp_output,
@@ -350,3 +351,11 @@ def test_parse_am34_uart_log_sd_stage_funnel_not_masked_by_bgo() -> None:
     assert rep_i.bgo_failed_code == 1
     assert rep_i.odd_tray_failed is True
     assert "SD diag load failed[0]" in rep_i.diagnosis
+    assert "fat_read 0x20000 failed" in rep_i.diagnosis
+
+    assert "FAT_ERR_FILE_NOT_FOUND" in describe_boot_fat_error_code(-10010)
+    assert "FAT_ERR_INVALID_FS_OR_IO" in describe_boot_fat_error_code(-10025)
+    assert "FAT_ERR_CORRUPT_CLUSTER" in describe_boot_fat_error_code(-10028)
+    mount_rep = parse_am34_uart_log("SD = 0x3BB000[LBA]\r\n... SD init end\r\nFAT Mount failed[-10025].\r\nSD diag load failed[0].\r\n")
+    assert mount_rep.fat_mount_failed == -10025
+    assert "FAT_ERR_INVALID_FS_OR_IO" in mount_rep.diagnosis

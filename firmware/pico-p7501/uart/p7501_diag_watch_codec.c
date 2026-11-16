@@ -330,14 +330,14 @@ const char *p7501_diag_watch_diagnosis(uint32_t events) {
     }
     if ((events & P7501_DIAG_EVT_SD_DIAG_LOAD_FAIL) != 0u) {
         if ((events & P7501_DIAG_EVT_FAT_FAIL) != 0u) {
-            return "Stage-1 SD HW OK (4-bit), FAT mount/open failed before BGO reboot";
+            return "Stage-1 SD HW OK (4-bit), FAT mount/open failed (-10010=missing,-10020=8.3,-10025=BPB/FAT32) before BGO reboot";
         }
         if ((events & P7501_DIAG_EVT_SD_HW_OK) != 0u) {
             return ((events & P7501_DIAG_EVT_BGO_FAIL) != 0u)
-                ? "Stage-1 SD HW OK (4-bit), FAILED at SD diag load failed[0] (MBR/FAT16/DIGADIAG.FRM) before BGO reboot"
-                : "Stage-1 SD HW OK (4-bit), FAILED at SD diag load failed[0] (MBR/FAT16/DIGADIAG.FRM 128KiB)";
+                ? "Stage-1 SD HW OK (4-bit), FAILED at SD diag load failed[0] (Mount+Open OK, fat_read 0x20000 failed) before BGO reboot"
+                : "Stage-1 SD HW OK (4-bit), FAILED at SD diag load failed[0] (Mount+Open OK, DIGADIAG.FRM < 128KiB or cluster read fail)";
         }
-        return "Stage-1 FAILED at SD diag load failed[0] (FAT mount/open or size < 128KiB)";
+        return "Stage-1 FAILED at SD diag load failed[0] (Mount+Open OK, fat_read 0x20000 != 128KiB)";
     }
     if ((events & P7501_DIAG_EVT_BGO_FAIL) != 0u && (events & P7501_DIAG_EVT_SERIAL_BOOT) == 0u) {
         if ((events & P7501_DIAG_EVT_CD_APC_ERR) != 0u) {

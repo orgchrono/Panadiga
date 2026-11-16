@@ -14,7 +14,6 @@ import { Button } from '@/components/ui/button';
 
 interface DashboardViewProps {
   onNavigate: (view: ViewKey) => void;
-  onQuickClean?: () => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {

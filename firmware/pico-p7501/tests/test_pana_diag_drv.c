@@ -244,6 +244,7 @@ static void test_diag_watch_stage_funnel_no_bgo_masking(void) {
     const char *diag = p7501_diag_watch_diagnosis(st.seen_events);
     assert(strstr(diag, "SD diag load failed[0]") != NULL);
     assert(strstr(diag, "SD HW OK") != NULL);
+    assert(strstr(diag, "fat_read 0x20000 failed") != NULL);
 
     /* Uncompress failure stage also beats post-reset BGO. */
     p7501_diag_watch_init(&st);

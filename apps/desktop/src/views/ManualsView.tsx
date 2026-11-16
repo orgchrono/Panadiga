@@ -2,6 +2,7 @@ import React from 'react';
 import { useTranslation } from '@/i18n/useTranslation';
 import { useManualsViewModel } from '@/viewmodels/useManualsViewModel';
 import { StatusBadge } from '@/components/StatusBadge';
+import { ResizableSplitPane } from '@/components/ui';
 import { RagAssistantPanel } from '@/components/rag';
 import {
   EngineeringDocsPanel,
@@ -82,25 +83,27 @@ export const ManualsView: React.FC = () => {
         selectTerm={selectTerm}
       />
 
-      {/* Main Grid: Search Results & Document Metadata (Balanced Columns) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-        {/* Left: Search Results & Snippets */}
-        <div className="lg:col-span-8 flex flex-col">
+      {/* Main Resizable Split: Search Results & Document Metadata */}
+      <ResizableSplitPane
+        initialLeftPercent={64}
+        minLeftPercent={42}
+        maxLeftPercent={76}
+        storageKey="panadiga.split.manuals"
+        ariaLabel="Divisor entre resultados e catálogo de manuais"
+        left={
           <ManualsResultsList
             searchResults={searchResults}
             loading={loading}
           />
-        </div>
-
-        {/* Right: Document Catalog & Selected Doc Details */}
-        <div className="lg:col-span-4 flex flex-col">
+        }
+        right={
           <ManualsDocCatalog
             documents={documents}
             selectedDoc={selectedDoc}
             setSelectedDoc={setSelectedDoc}
           />
-        </div>
-      </div>
+        }
+      />
 
       <EngineeringDocsPanel
         docs={engineeringDocs}

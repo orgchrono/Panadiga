@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import React from 'react';
 import { CANONICAL_HARDWARE_SSOT_SPEC } from '@/constants';
 import { simulateMockDiagnostic } from '@/test/mocks/mockDiagnostics';
 import { PicoDiagnosticsStudio } from './PicoDiagnosticsStudio';

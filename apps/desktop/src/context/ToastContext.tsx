@@ -1,6 +1,13 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import { CheckCircle2, AlertTriangle, AlertCircle, Info, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+  ReactNode,
+} from 'react';
+import { Toaster, toast as sonnerToast } from 'sonner';
 import { nextUniqueId } from '@/utils/formatters';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
@@ -14,17 +21,42 @@ export interface ToastItem {
 }
 
 interface ToastContextType {
-  toasts: ToastItem[];
+  toasts: readonly ToastItem[];
   showToast: (toast: Omit<ToastItem, 'id'>) => void;
   removeToast: (id: string) => void;
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
+const SONNER_DISPATCH: Record<
+  ToastType,
+  (title: string, opts: { id: string; description?: string; duration: number }) => string | number
+> = {
+  success: (title, opts) => sonnerToast.success(title, opts),
+  error: (title, opts) => sonnerToast.error(title, opts),
+  warning: (title, opts) => sonnerToast.warning(title, opts),
+  info: (title, opts) => sonnerToast.info(title, opts),
+};
+
 export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const [toasts, setToasts] = useState<readonly ToastItem[]>([]);
+  const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
+  useEffect(() => {
+    const timers = timersRef.current;
+    return () => {
+      timers.forEach(handle => clearTimeout(handle));
+      timers.clear();
+    };
+  }, []);
 
   const removeToast = useCallback((id: string) => {
+    const existing = timersRef.current.get(id);
+    if (existing !== undefined) {
+      clearTimeout(existing);
+      timersRef.current.delete(id);
+    }
+    sonnerToast.dismiss(id);
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
@@ -35,27 +67,45 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
       setToasts(prev => [...prev, newToast]);
 
+      SONNER_DISPATCH[type](title, {
+        id,
+        description: message,
+        duration: durationMs > 0 ? durationMs : Infinity,
+      });
+
       if (durationMs > 0) {
-        setTimeout(() => {
-          removeToast(id);
+        const handle = setTimeout(() => {
+          timersRef.current.delete(id);
+          setToasts(prev => prev.filter(t => t.id !== id));
         }, durationMs);
+        timersRef.current.set(id, handle);
       }
     },
-    [removeToast]
+    []
   );
 
   return (
     <ToastContext.Provider value={{ toasts, showToast, removeToast }}>
       {children}
-      <ToastContainer toasts={toasts} onDismiss={removeToast} />
+      <Toaster
+        theme="dark"
+        position="bottom-right"
+        richColors
+        closeButton
+        toastOptions={{
+          className: 'font-mono text-xs border border-slate-800 bg-slate-950 text-slate-100 shadow-2xl',
+        }}
+      />
     </ToastContext.Provider>
   );
 };
 
 const noopToastAction = (): void => {};
 
+const EMPTY_TOASTS: readonly ToastItem[] = Object.freeze([]);
+
 const NOOP_TOAST_CONTEXT: ToastContextType = Object.freeze({
-  toasts: Object.freeze([]) as unknown as ToastItem[],
+  toasts: EMPTY_TOASTS,
   showToast: noopToastAction,
   removeToast: noopToastAction,
 });
@@ -64,61 +114,3 @@ export function useToast(): ToastContextType {
   const ctx = useContext(ToastContext);
   return ctx ?? NOOP_TOAST_CONTEXT;
 }
-
-interface ToastContainerProps {
-  toasts: ToastItem[];
-  onDismiss: (id: string) => void;
-}
-
-const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onDismiss }) => {
-  if (toasts.length === 0) return null;
-
-  return (
-    <div
-      aria-live="polite"
-      className="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none"
-    >
-      {toasts.map(toast => {
-        const isSuccess = toast.type === 'success';
-        const isError = toast.type === 'error';
-        const isWarning = toast.type === 'warning';
-
-        return (
-          <div
-            key={toast.id}
-            role="status"
-            className={cn(
-              'pointer-events-auto flex items-start gap-3 p-4 rounded-xl border shadow-2xl backdrop-blur-md transition-all animate-in slide-in-from-bottom-5 duration-200 font-sans',
-              isSuccess && 'bg-emerald-950/90 border-emerald-500/40 text-emerald-100',
-              isError && 'bg-rose-950/90 border-rose-500/40 text-rose-100',
-              isWarning && 'bg-amber-950/90 border-amber-500/40 text-amber-100',
-              !isSuccess && !isError && !isWarning && 'bg-slate-900/95 border-cyan-500/40 text-cyan-100'
-            )}
-          >
-            <div className="shrink-0 mt-0.5">
-              {isSuccess && <CheckCircle2 className="w-5 h-5 text-emerald-400" />}
-              {isError && <AlertCircle className="w-5 h-5 text-rose-400" />}
-              {isWarning && <AlertTriangle className="w-5 h-5 text-amber-400" />}
-              {!isSuccess && !isError && !isWarning && <Info className="w-5 h-5 text-cyan-400" />}
-            </div>
-
-            <div className="flex-1 min-w-0">
-              <h5 className="text-xs font-bold font-mono tracking-wide">{toast.title}</h5>
-              {toast.message && (
-                <p className="text-[11px] text-slate-300 mt-0.5 leading-snug">{toast.message}</p>
-              )}
-            </div>
-
-            <button
-              onClick={() => onDismiss(toast.id)}
-              className="shrink-0 p-1 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-white/10 transition-colors"
-              aria-label="Fechar notificação"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        );
-      })}
-    </div>
-  );
-};

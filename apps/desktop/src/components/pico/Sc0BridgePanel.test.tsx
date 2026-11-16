@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import React from 'react';
 import { Sc0BridgePanel, type Sc0BridgePanelProps } from './Sc0BridgePanel';
 import type { BridgeStreamLine } from '@/viewmodels/useSc0Bridge';
 

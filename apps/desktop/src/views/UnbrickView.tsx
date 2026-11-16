@@ -1,6 +1,7 @@
 import React from 'react';
-import { Loader2, RefreshCw, ShieldAlert } from 'lucide-react';
+import { Loader2, RefreshCw, ShieldAlert, Wrench } from 'lucide-react';
 import { useUnbrickViewModel } from '@/viewmodels/useUnbrickViewModel';
+import { useWorkbenchMode } from '@/context/WorkbenchModeContext';
 import {
   MatshitaEmulatorCard,
   SdKitBuilderCard,
@@ -12,6 +13,7 @@ import { useTranslation } from '@/i18n/useTranslation';
 
 export const UnbrickView: React.FC = () => {
   const { t } = useTranslation();
+  const { isAdvanced, setMode } = useWorkbenchMode();
   const {
     workbench,
     sdKit,
@@ -92,7 +94,7 @@ export const UnbrickView: React.FC = () => {
             onExtractFrm={extractFrmModules}
           />
 
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
+          <div className={isAdvanced ? 'grid grid-cols-1 xl:grid-cols-2 gap-6 items-start' : 'space-y-6'}>
             <SdKitBuilderCard
               discoveredPanaDvd={data?.discovered_pana_dvd ?? null}
               discoveredSdDir={data?.discovered_sd_dir ?? null}
@@ -106,33 +108,47 @@ export const UnbrickView: React.FC = () => {
               onVerifyMedia={verifySdMedia}
             />
 
-            <TbcPassthroughCard
-              discoveredMainPath={data?.discovered_main_3410pq ?? null}
-              tbcLoading={tbc.loading}
-              tbcReport={tbc.data}
-              tbcError={tbc.error}
-              rspLoading={rspPlan.loading}
-              rspPlan={rspPlan.data}
-              norStubLoading={norStub.loading}
-              norStubResult={norStub.data}
-              onRunTbc={runMainPassthrough}
-              onRefreshRspPlan={generateRspPlan}
-              onBuildNorStub={buildNorStub}
-            />
+            {isAdvanced && (
+              <TbcPassthroughCard
+                discoveredMainPath={data?.discovered_main_3410pq ?? null}
+                tbcLoading={tbc.loading}
+                tbcReport={tbc.data}
+                tbcError={tbc.error}
+                rspLoading={rspPlan.loading}
+                rspPlan={rspPlan.data}
+                norStubLoading={norStub.loading}
+                norStubResult={norStub.data}
+                onRunTbc={runMainPassthrough}
+                onRefreshRspPlan={generateRspPlan}
+                onBuildNorStub={buildNorStub}
+              />
+            )}
           </div>
 
-          <MatshitaEmulatorCard
-            bootState={matshitaBoot}
-            injectState={matshitaInject}
-            serialState={matshitaSerial}
-            frmVerifyState={frmVerify}
-            frmPackState={frmPack}
-            onRunBoot={runMatshitaBoot}
-            onInjectWrite={injectMatshitaWrite}
-            onRunSerial={runMatshitaSerial}
-            onVerifyFrm={verifyUnlockFrm}
-            onPackFrm={packUnlockFrm}
-          />
+          {isAdvanced ? (
+            <MatshitaEmulatorCard
+              bootState={matshitaBoot}
+              injectState={matshitaInject}
+              serialState={matshitaSerial}
+              frmVerifyState={frmVerify}
+              frmPackState={frmPack}
+              onRunBoot={runMatshitaBoot}
+              onInjectWrite={injectMatshitaWrite}
+              onRunSerial={runMatshitaSerial}
+              onVerifyFrm={verifyUnlockFrm}
+              onPackFrm={packUnlockFrm}
+            />
+          ) : (
+            <div className="rounded-xl bg-bench-900/70 border border-slate-800 px-4 py-3 flex flex-wrap items-center justify-between gap-3 text-xs">
+              <span className="text-slate-400 font-sans">
+                Modo Básico ativo: ferramentas avançadas de Patch TBC Passthrough e Emulador Matshita ODD estão ocultas para focar no Kit SD.
+              </span>
+              <Button type="button" variant="outline" size="sm" onClick={() => setMode('advanced')} className="gap-1.5 text-xs">
+                <Wrench className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Mostrar TBC & Emulador Matshita</span>
+              </Button>
+            </div>
+          )}
         </>
       )}
     </div>

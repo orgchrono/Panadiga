@@ -14,6 +14,7 @@ import {
   Activity,
   Layers,
   ShieldAlert,
+  Settings,
 } from 'lucide-react';
 
 export type { ViewKey };
@@ -110,6 +111,12 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
       icon: <ShieldAlert className="w-4 h-4" />,
       badge: 'UNBRICK',
       badgeVariant: 'success',
+    },
+    {
+      key: 'settings',
+      label: 'Configurações',
+      sublabel: 'Temas, Acessibilidade & Idioma',
+      icon: <Settings className="w-4 h-4" />,
     },
   ];
 

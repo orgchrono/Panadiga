@@ -4,7 +4,8 @@ import {
   MeihdfsAllocationReport,
   PartitionExtractionManifest,
 } from '@/models';
-import { invokeCommand } from '@/services/ipc';
+import { emitLocalEvent, invokeCommand } from '@/services/ipc';
+import { useToast } from '@/context/ToastContext';
 import { logger } from '@/utils/logger';
 
 export type HddTab =
@@ -18,6 +19,7 @@ export type HddTab =
   | 'writer';
 
 export function useHddStorageViewModel() {
+  const { showToast } = useToast();
   const [hddReport, setHddReport] = useState<HddAnalysisReport | null>(null);
   const [meihdfsReport, setMeihdfsReport] = useState<MeihdfsAllocationReport | null>(null);
   const [activeTab, setActiveTab] = useState<HddTab>('overview');
@@ -41,6 +43,7 @@ export function useHddStorageViewModel() {
       ]);
       setHddReport(hddData);
       setMeihdfsReport(meihdfsData);
+      emitLocalEvent('hdd://inspected', true);
       if (hddData?.image_path) {
         setImagePath(hddData.image_path);
       }
@@ -64,12 +67,23 @@ export function useHddStorageViewModel() {
       const res = await invokeCommand<PartitionExtractionManifest>('extract_partitions', args);
       setManifest(res);
       setActiveTab('extract');
+      emitLocalEvent('hdd://inspected', true);
+      showToast({
+        type: 'success',
+        title: 'Partições Extraídas com Manifesto SHA-256',
+        message: `${res.extractedPartitions.length} partições salvas em ${res.outputDirectory}`,
+      });
     } catch (err) {
+      showToast({
+        type: 'error',
+        title: 'Falha ao Extrair Partições',
+        message: err instanceof Error ? err.message : String(err),
+      });
       logger.error('HddStorageViewModel', 'Failed extracting partitions', err);
     } finally {
       setExtracting(false);
     }
-  }, [imagePath]);
+  }, [imagePath, showToast]);
 
   const filteredRecords = useMemo(() => {
     if (!meihdfsReport) return [];

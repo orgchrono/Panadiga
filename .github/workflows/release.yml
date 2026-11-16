@@ -25,6 +25,7 @@ jobs:
   build-release:
     name: Build (${{ matrix.platform.name }})
     runs-on: ${{ matrix.platform.os }}
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -201,6 +202,7 @@ jobs:
   pico-firmware:
     name: Pico Firmware Dual Target (RP2040 & RP2350)
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -289,6 +291,7 @@ jobs:
   release-android-apk:
     name: Build & Release Android APK (AArch64)
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

@@ -147,7 +147,9 @@ fn handle_pico_option() -> Result<()> {
                 p,
                 DEFAULT_GDB_LISTEN_SOCKET
             );
-            let _ = run_gdb_bridge(p, DEFAULT_BAUD_RATE, DEFAULT_GDB_LISTEN_SOCKET);
+            if let Err(err) = run_gdb_bridge(p, DEFAULT_BAUD_RATE, DEFAULT_GDB_LISTEN_SOCKET) {
+                log_println!("\x1b[1;31m[ERROR] GDB RSP bridge failed: {}\x1b[0m", err);
+            }
         }
     }
     Ok(())

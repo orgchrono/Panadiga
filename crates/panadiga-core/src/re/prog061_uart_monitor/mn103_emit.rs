@@ -210,14 +210,14 @@ pub(super) fn emit_read_hex_u32_sub(
     emit_call16_leaf(buf, pt, putc_off);
     buf.push(0x8C); // mov d3, d0
 
-    for ws in [b' ', b'\t'] {
+    for &ws in b" \t" {
         buf.extend_from_slice(&[0xA0, ws]);
         pt.beq8s
             .push((emit_branch8_placeholder(buf, 0xC8), rx_loop));
     }
 
     let mut to_done = Vec::with_capacity(3);
-    for delim in [b',', b'\r', b'\n'] {
+    for &delim in b",\r\n" {
         buf.extend_from_slice(&[0xA0, delim]);
         to_done.push(emit_branch8_placeholder(buf, 0xC8));
     }
@@ -267,7 +267,7 @@ pub(super) fn emit_read_hex_u32_sub(
         patch_s8_rel(buf, br, drain_off, "HEX_BAD")?;
     }
     let mut to_bad_ret = Vec::with_capacity(2);
-    for crlf in [b'\r', b'\n'] {
+    for &crlf in b"\r\n" {
         buf.extend_from_slice(&[0xA0, crlf]);
         to_bad_ret.push(emit_branch8_placeholder(buf, 0xC8));
     }

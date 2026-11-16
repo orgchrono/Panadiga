@@ -83,6 +83,7 @@ firmware_and_images/*.zip
 firmware_and_images/*.FRM
 firmware_and_images/*.frm
 firmware_and_images/extracted_partitions/
+firmware_and_images/sd_unbrick_kit/
 !firmware_and_images/**/README.md
 !firmware_and_images/*.bin.gz
 

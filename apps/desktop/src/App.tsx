@@ -1,11 +1,13 @@
 import React, { useState, Suspense, lazy } from 'react';
+import { motion, MotionConfig } from 'framer-motion';
 import { Sidebar, MobileSidebarDrawer, ViewKey } from './components/Sidebar';
 import { Header } from './components/Header';
 import { useHardwareSsot, useShellTelemetryListener } from './viewmodels/useHardwareSsot';
 import { ToastProvider } from './context/ToastContext';
+import { WorkbenchModeProvider, useWorkbenchMode } from './context/WorkbenchModeContext';
 import { ErrorBoundary } from './components/ui/error-boundary';
-import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
-import { Button } from './components/ui/button';
+import { DraggableBenchHud, GuidedPipelineBar } from './components/ui';
+import { Loader2 } from 'lucide-react';
 
 const DashboardView = lazy(() =>
   import('./views/DashboardView').then(m => ({ default: m.DashboardView }))
@@ -31,6 +33,9 @@ const HexInspectorView = lazy(() =>
 const UnbrickView = lazy(() =>
   import('./views/UnbrickView').then(m => ({ default: m.UnbrickView }))
 );
+const SettingsView = lazy(() =>
+  import('./views/SettingsView').then(m => ({ default: m.SettingsView }))
+);
 
 const ViewLoadingFallback: React.FC = () => (
   <div className="flex flex-col items-center justify-center min-h-[400px] h-full gap-3 text-slate-400">
@@ -41,13 +46,12 @@ const ViewLoadingFallback: React.FC = () => (
   </div>
 );
 
-export const App: React.FC = () => {
-  const { ssot } = useHardwareSsot();
+const AppShell: React.FC = () => {
+  const { ssot, isLoading } = useHardwareSsot();
   const hardwareStatus = useShellTelemetryListener();
+  const { pipeline, accessibility } = useWorkbenchMode();
   const [currentView, setCurrentView] = useState<ViewKey>('dashboard');
   const [mobileNavOpen, setMobileNavOpen] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
 
   const viewTitles: Record<ViewKey, string> = {
     dashboard: 'Visão Geral do Gravador & Status da Bancada',
@@ -58,88 +62,91 @@ export const App: React.FC = () => {
     manuals: `Manuais de Serviço & Diagramas Esquemáticos (${ssot ? `${ssot.indexed_manuals_count} PDFs` : 'SSOT'})`,
     hexinspector: 'Inspetor Hexadecimal & Alinhamento LBA',
     unbrick: 'Centro Unbrick Pre-MAIN, Kit SD & TBC Autônomo',
+    settings: 'Configurações, Temas, Acessibilidade & Idioma',
   };
-
-  const handleRetry = () => {
-    setError(null);
-    setIsLoading(false);
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex h-screen w-screen items-center justify-center bg-bench-950 text-slate-100">
-        <ViewLoadingFallback />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex h-screen w-screen items-center justify-center bg-bench-950 p-6">
-        <div className="flex flex-col items-center max-w-md p-8 rounded-2xl bg-slate-900 border border-rose-500/30 text-center">
-          <AlertCircle className="w-12 h-12 text-rose-400 mb-4" />
-          <h2 className="text-lg font-bold font-mono text-slate-100 mb-2">Falha Crítica no Subsistema</h2>
-          <p className="text-xs text-slate-400 font-sans mb-6">{error}</p>
-          <Button variant="default" size="sm" onClick={handleRetry} className="gap-2">
-            <RefreshCw className="w-3.5 h-3.5" />
-            <span>Recarregar Subsistema</span>
-          </Button>
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <ToastProvider>
+    <MotionConfig reducedMotion={accessibility.reducedMotion ? 'always' : 'user'}>
       <div className="flex h-screen w-screen overflow-hidden bg-bench-950 text-slate-100 font-sans">
-        <Sidebar
-          currentView={currentView}
-          onSelectView={setCurrentView}
-          vddVolts={hardwareStatus.vdd_volts}
+      <Sidebar
+        currentView={currentView}
+        onSelectView={setCurrentView}
+        vddVolts={hardwareStatus.vdd_volts}
+        hardwareConnected={hardwareStatus.connected}
+        nvramCleaned={pipeline.nvramCleaned}
+        indexedManualsCount={ssot?.indexed_manuals_count ?? null}
+      />
+
+      <MobileSidebarDrawer
+        open={mobileNavOpen}
+        onOpenChange={setMobileNavOpen}
+        currentView={currentView}
+        onSelectView={setCurrentView}
+        vddVolts={hardwareStatus.vdd_volts}
+        hardwareConnected={hardwareStatus.connected}
+        nvramCleaned={pipeline.nvramCleaned}
+        indexedManualsCount={ssot?.indexed_manuals_count ?? null}
+      />
+
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+        <Header
+          currentViewTitle={viewTitles[currentView]}
+          onOpenMobileNav={() => setMobileNavOpen(true)}
+          onOpenSettings={() => setCurrentView('settings')}
           hardwareConnected={hardwareStatus.connected}
-          nvramCleaned={false}
-          indexedManualsCount={ssot?.indexed_manuals_count ?? null}
+          vddVolts={hardwareStatus.vdd_volts}
         />
 
-        <MobileSidebarDrawer
-          open={mobileNavOpen}
-          onOpenChange={setMobileNavOpen}
-          currentView={currentView}
-          onSelectView={setCurrentView}
-          vddVolts={hardwareStatus.vdd_volts}
-          hardwareConnected={hardwareStatus.connected}
-          nvramCleaned={false}
-          indexedManualsCount={ssot?.indexed_manuals_count ?? null}
-        />
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-6 scrollbar-thin scrollbar-thumb-slate-800">
+          <div className="max-w-7xl mx-auto">
+            {isLoading && !ssot && (
+              <div className="mb-3 flex items-center gap-2 text-xs font-mono text-cyan-400">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span>Sincronizando especificação SSOT do hardware...</span>
+              </div>
+            )}
+            <GuidedPipelineBar currentView={currentView} onNavigate={setCurrentView} />
+          </div>
 
-        <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-          <Header
-            currentViewTitle={viewTitles[currentView]}
-            onOpenMobileNav={() => setMobileNavOpen(true)}
-            hardwareConnected={hardwareStatus.connected}
-            vddVolts={hardwareStatus.vdd_volts}
-          />
-
-          <main className="flex-1 overflow-y-auto p-3 sm:p-6 scrollbar-thin scrollbar-thumb-slate-800">
-            <ErrorBoundary fallbackTitle={`Falha ao carregar ${viewTitles[currentView]}`}>
-              <Suspense fallback={<ViewLoadingFallback />}>
-                {currentView === 'dashboard' && (
-                  <DashboardView onNavigate={setCurrentView} />
-                )}
-                {currentView === 'nvram' && <NvramView />}
-                {currentView === 'hdd' && <HddStorageView />}
+          <ErrorBoundary fallbackTitle={`Falha ao carregar ${viewTitles[currentView]}`}>
+            <Suspense fallback={<ViewLoadingFallback />}>
+              <motion.div
+                key={currentView}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.16 }}
+              >
+                {currentView === 'dashboard' && <DashboardView onNavigate={setCurrentView} />}
+                {currentView === 'nvram' && <NvramView onNavigate={setCurrentView} />}
+                {currentView === 'hdd' && <HddStorageView onNavigate={setCurrentView} />}
                 {currentView === 'picobench' && <PicoBenchView />}
                 {currentView === 'frmcrypto' && <FrmCryptoView />}
                 {currentView === 'manuals' && <ManualsView />}
                 {currentView === 'hexinspector' && <HexInspectorView />}
                 {currentView === 'unbrick' && <UnbrickView />}
-              </Suspense>
-            </ErrorBoundary>
-          </main>
-        </div>
+                {currentView === 'settings' && <SettingsView />}
+              </motion.div>
+            </Suspense>
+          </ErrorBoundary>
+        </main>
       </div>
-    </ToastProvider>
+
+      <DraggableBenchHud
+        vddVolts={hardwareStatus.vdd_volts}
+        hardwareConnected={hardwareStatus.connected}
+        onNavigate={setCurrentView}
+      />
+      </div>
+    </MotionConfig>
   );
 };
+
+export const App: React.FC = () => (
+  <WorkbenchModeProvider>
+    <ToastProvider>
+      <AppShell />
+    </ToastProvider>
+  </WorkbenchModeProvider>
+);
 
 export default App;

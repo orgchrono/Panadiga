@@ -23,7 +23,7 @@ interface UsePicoTelemetryEffectsParams {
   selectedModel: string;
   lastAlertRef: MutableRefObject<VoltageAlertLevel>;
   applyMeasuredVoltage: (vddVolts: number, commandId?: string, commandSuccess?: boolean) => void;
-  refreshPorts: () => Promise<void>;
+  refreshPorts: (silent?: unknown) => Promise<void>;
   refreshModelCatalog: () => Promise<void>;
   pollDeviceStatus: () => Promise<void>;
   onLog?: UsePicoDeviceOptions['onLog'];
@@ -45,6 +45,14 @@ export function usePicoTelemetryEffects({
     refreshPorts();
     refreshModelCatalog();
   }, [refreshPorts, refreshModelCatalog]);
+
+  useEffect(() => {
+    if (deviceStatus?.connected) return;
+    const timer = window.setInterval(() => {
+      void refreshPorts(true);
+    }, 4000);
+    return () => window.clearInterval(timer);
+  }, [deviceStatus?.connected, refreshPorts]);
 
   useEffect(() => {
     let active = true;

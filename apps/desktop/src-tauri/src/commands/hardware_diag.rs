@@ -229,7 +229,7 @@ pub async fn pico_execute_diagnostic(
             | "FLASH_SIZE"
             | "ISOLATE"
             | "ENGAGE"
-    ) && let Ok(mut status) = pico_get_status(Some(port_name))
+    ) && let Ok(mut status) = pico_get_status(Some(port_name)).await
     {
         if let Some(diag_vdd) = result.vdd_volts
             && status.vdd_volts <= 0.01

@@ -52,4 +52,44 @@ test.describe('Panadiga Desktop Navigation & Layout E2E', () => {
     await page.click('button[data-testid="sd-kit-submit-btn"]');
     await expect(page.getByText(/sd_card_eh55_kit\/DIGADIAG\.FRM/).first()).toBeVisible();
   });
+
+  test('operates Guided Pipeline Bar, Basic/Advanced mode toggle, Draggable HUD, and Resizable/RangeDnD in HexInspector', async ({ page }) => {
+    // 1. Open Draggable HUD Pinout
+    await page.getByRole('button', { name: 'HUD Pinout' }).click();
+    await expect(page.getByText('HUD P7501 (Arraste livre)')).toBeVisible();
+    await page.getByRole('button', { name: 'Fechar HUD Flutuante' }).click();
+    await expect(page.getByText('HUD P7501 (Arraste livre)')).toHaveCount(0);
+
+    // 2. Navigate via Pipeline Bar to Hex Inspector and verify ResizableSplitPane + RangeDnD
+    await page.click('button:has-text("Inspetor Hexadecimal")');
+    await expect(page.getByRole('separator')).toBeVisible();
+    await expect(page.getByText('Scrubber LBA / Offset Físico (RangeDnD)')).toBeVisible();
+
+    // 3. Toggle Basic mode in NVRAM view and verify advanced patcher collapses cleanly
+    await page.click('button:has-text("2. Cirurgia NVRAM U99")');
+    await expect(page.getByText('Janela de Setores (RangeDnD)')).toBeVisible();
+    await page.getByRole('button', { name: 'Básico (Guiado)' }).click();
+    await expect(page.getByText(/Modo Básico ativo: o editor hexadecimal Copy-on-Write/i)).toBeVisible();
+    await page.getByRole('button', { name: 'Avançado (Engenharia)' }).click();
+
+    // 4. Open Settings & Accessibility view, toggle High Contrast & Colorblind mode, then restore defaults
+    await page.click('button[data-testid="nav-settings"]');
+    await expect(page.locator('header')).toContainText('Configurações, Temas');
+    await page.getByRole('button', { name: /Alto Contraste/i }).click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'high-contrast');
+    await page.getByRole('switch', { name: 'Ativar modo daltônico' }).click();
+    await expect(page.locator('html')).toHaveAttribute('data-colorblind', 'true');
+    await page.getByRole('button', { name: /Restaurar Layout & Padrões/i }).click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark-lab');
+  });
+
+  test('opens MobileSidebarDrawer cleanly on narrow 390x844 mobile viewport', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    const navTrigger = page.getByRole('button', { name: 'Abrir navegação principal' });
+    await expect(navTrigger).toBeVisible();
+    await navTrigger.click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await page.locator('[role="dialog"] button[data-testid="nav-settings"]').click();
+    await expect(page.locator('header')).toContainText('Configurações, Temas');
+  });
 });

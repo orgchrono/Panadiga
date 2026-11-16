@@ -19,8 +19,15 @@ fn ssot_thresholds_match_firmware_and_platform_constants() {
     assert_eq!(spec.flash_geometries.len(), 4);
     assert!(spec.pico_commands.len() >= 35);
     assert!(spec.pico_commands.iter().any(|c| c.id == "PIOLOGIC"));
+    assert!(spec.pico_commands.iter().any(|c| c.id == "SDSNIFF"));
     assert!(spec.pico_commands.iter().any(|c| c.id == "DIAGWATCH"));
     assert!(spec.pico_commands.iter().any(|c| c.id == "DRVPANA"));
+    assert!(
+        spec.pico_commands
+            .iter()
+            .find(|c| c.id == "BAUD")
+            .is_some_and(|c| c.default_arg.as_deref() == Some("115200"))
+    );
     assert!(
         spec.pico_commands
             .iter()

@@ -25,9 +25,16 @@ void p7501_cmd_diag_watch(const char *arg) {
     p7501_diag_watch_init(&st);
 
     p7501_pio_enforce_nsw5v_hiz();
+    if (p7501_pio_get_baud() != P7501_UART_DEFAULT_BAUD) {
+        (void)p7501_pio_set_baud(P7501_UART_DEFAULT_BAUD);
+    }
+    if (p7501_pio_get_framing() != P7501_FRAMING_8N1) {
+        (void)p7501_pio_set_framing(P7501_FRAMING_8N1);
+    }
     p7501_led_set_auto_mode(LED_MODE_BUS_ACTIVE);
-    printf("=== DIAGWATCH PIO1 (baud=%" PRIu32 " ms=%" PRIu32 " boot=%d hold=%" PRIu32 " act=%d rel_ddr=%s) ===\n",
+    printf("=== DIAGWATCH PIO1 (baud=%" PRIu32 " framing=%s ms=%" PRIu32 " boot=%d hold=%" PRIu32 " act=%d rel_ddr=%s) ===\n",
            p7501_pio_get_baud(),
+           p7501_framing_name(p7501_pio_get_framing()),
            spec.timeout_ms,
            (int)spec.boot_action,
            spec.jig_hold_ms,
@@ -65,10 +72,10 @@ void p7501_cmd_diag_watch(const char *arg) {
                 printf("\n[DIAGWATCH +%" PRIu32 "ms] STAGE: SD hardware 4-bit init OK (... SD init end)\n", elapsed_ms);
             }
             if ((hit & P7501_DIAG_EVT_FAT_FAIL) != 0u) {
-                printf("\n[DIAGWATCH +%" PRIu32 "ms] ALERT: FAT16 Mount/Open error emitted by bootloader\n", elapsed_ms);
+                printf("\n[DIAGWATCH +%" PRIu32 "ms] ALERT: FAT16 Mount/Open error emitted by bootloader (-10010/-10020/-10025)\n", elapsed_ms);
             }
             if ((hit & P7501_DIAG_EVT_SD_DIAG_LOAD_FAIL) != 0u) {
-                printf("\n[DIAGWATCH +%" PRIu32 "ms] ALERT: SD diag load failed[0] (FUN_4400a97c FAT mount/open or <128KiB)\n", elapsed_ms);
+                printf("\n[DIAGWATCH +%" PRIu32 "ms] ALERT: SD diag load failed[0] (if no FAT Mount/Open error: fat_read 0x20000 failed / <128KiB)\n", elapsed_ms);
             }
             if ((hit & P7501_DIAG_EVT_SD_UNCOMPRESS_FAIL) != 0u) {
                 printf("\n[DIAGWATCH +%" PRIu32 "ms] ALERT: DIGADIAG uncompress/header error detected\n", elapsed_ms);

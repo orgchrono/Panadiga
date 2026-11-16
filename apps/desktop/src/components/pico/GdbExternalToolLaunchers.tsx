@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Bug, FileCode, Binary, Terminal, type LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { isAndroidNativeBridgeAvailable } from '@/services/androidBridge';
@@ -50,7 +50,16 @@ export const GdbExternalToolLaunchers: React.FC<GdbExternalToolLaunchersProps> =
   onLaunchTool,
 }) => {
   const [activeTool, setActiveTool] = useState<string | null>(null);
+  const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const androidHost = useMemo(() => isAndroidNativeBridgeAvailable(), []);
+
+  useEffect(() => {
+    return () => {
+      if (resetTimerRef.current !== null) {
+        clearTimeout(resetTimerRef.current);
+      }
+    };
+  }, []);
 
   if (androidHost) {
     return (
@@ -66,7 +75,10 @@ export const GdbExternalToolLaunchers: React.FC<GdbExternalToolLaunchersProps> =
     try {
       await onLaunchTool(tool);
     } finally {
-      setTimeout(() => setActiveTool(null), 1200);
+      if (resetTimerRef.current !== null) {
+        clearTimeout(resetTimerRef.current);
+      }
+      resetTimerRef.current = setTimeout(() => setActiveTool(null), 1200);
     }
   };
 

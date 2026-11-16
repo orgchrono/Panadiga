@@ -6,16 +6,22 @@
 
 use std::collections::VecDeque;
 use std::io::{Read, Write};
-use std::net::{TcpListener, TcpStream};
+use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
-use std::sync::{Arc, Mutex, OnceLock};
+use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 use std::thread;
 use std::time::Duration;
+
+use panadiga_core::constants::DEFAULT_GDB_LISTEN_SOCKET;
 
 use super::rsp_protocol::{decode_am34_registers_hex, verify_and_classify_rsp_packet};
 use super::types::{
     Am34RegisterState, GdbBridgeStatus, GdbPacketTelemetryEvent, extract_port_name,
 };
+
+fn lock_unpoisoned<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
+    mutex.lock().unwrap_or_else(|e| e.into_inner())
+}
 
 struct GdbBridgeController {
     running: Arc<AtomicBool>,
@@ -37,7 +43,7 @@ fn get_controller() -> &'static GdbBridgeController {
         client_connected: Arc::new(AtomicBool::new(false)),
         client_count: Arc::new(AtomicU32::new(0)),
         port_name: Mutex::new(String::new()),
-        listen_addr: Mutex::new("127.0.0.1:3333".to_string()),
+        listen_addr: Mutex::new(DEFAULT_GDB_LISTEN_SOCKET.to_string()),
         last_event: Mutex::new("Servidor GDB offline".to_string()),
         thread_handle: Mutex::new(None),
         registers: Mutex::new(Am34RegisterState {
@@ -84,7 +90,7 @@ pub fn record_telemetry(direction: &str, raw_packet: &str) {
         checksum_valid,
     };
 
-    let mut ring = ctrl.telemetry_ring.lock().unwrap();
+    let mut ring = lock_unpoisoned(&ctrl.telemetry_ring);
     if ring.len() >= 128 {
         ring.pop_front();
     }
@@ -94,9 +100,7 @@ pub fn record_telemetry(direction: &str, raw_packet: &str) {
 /// Retrieves all recorded GDB packet telemetry events.
 pub fn get_gdb_telemetry() -> Vec<GdbPacketTelemetryEvent> {
     let ctrl = get_controller();
-    ctrl.telemetry_ring
-        .lock()
-        .unwrap()
+    lock_unpoisoned(&ctrl.telemetry_ring)
         .iter()
         .cloned()
         .collect()
@@ -116,7 +120,7 @@ pub fn start_gdb_bridge(port_name: String, listen_addr: String) -> Result<GdbBri
     super::types::reject_mock_port(&clean_port)?;
 
     let addr = if listen_addr.trim().is_empty() {
-        "127.0.0.1:3333".to_string()
+        DEFAULT_GDB_LISTEN_SOCKET.to_string()
     } else {
         listen_addr.trim().to_string()
     };
@@ -142,9 +146,9 @@ pub fn start_gdb_bridge(port_name: String, listen_addr: String) -> Result<GdbBri
     ctrl.client_connected.store(false, Ordering::Relaxed);
     ctrl.client_count.store(0, Ordering::Relaxed);
 
-    *ctrl.port_name.lock().unwrap() = clean_port.clone();
-    *ctrl.listen_addr.lock().unwrap() = addr.clone();
-    *ctrl.last_event.lock().unwrap() = format!("Ouvindo conexões GDB em {}", addr);
+    *lock_unpoisoned(&ctrl.port_name) = clean_port.clone();
+    *lock_unpoisoned(&ctrl.listen_addr) = addr.clone();
+    *lock_unpoisoned(&ctrl.last_event) = format!("Ouvindo conexões GDB em {}", addr);
 
     let running_flag = ctrl.running.clone();
     let connected_flag = ctrl.client_connected.clone();
@@ -236,7 +240,7 @@ pub fn start_gdb_bridge(port_name: String, listen_addr: String) -> Result<GdbBri
         }
     });
 
-    *ctrl.thread_handle.lock().unwrap() = Some(handle);
+    *lock_unpoisoned(&ctrl.thread_handle) = Some(handle);
     get_gdb_bridge_status()
 }
 
@@ -313,17 +317,19 @@ pub fn stop_gdb_bridge() -> Result<GdbBridgeStatus, String> {
     ctrl.running.store(false, Ordering::Relaxed);
     ctrl.client_connected.store(false, Ordering::Relaxed);
 
-    let addr = ctrl.listen_addr.lock().unwrap().clone();
-    let _ = TcpStream::connect_timeout(
-        &addr.parse().unwrap_or("127.0.0.1:3333".parse().unwrap()),
-        Duration::from_millis(100),
-    );
+    let addr = lock_unpoisoned(&ctrl.listen_addr).clone();
+    if let Ok(sock_addr) = addr
+        .parse::<SocketAddr>()
+        .or_else(|_| DEFAULT_GDB_LISTEN_SOCKET.parse::<SocketAddr>())
+    {
+        let _ = TcpStream::connect_timeout(&sock_addr, Duration::from_millis(100));
+    }
 
-    if let Some(h) = ctrl.thread_handle.lock().unwrap().take() {
+    if let Some(h) = lock_unpoisoned(&ctrl.thread_handle).take() {
         let _ = h.join();
     }
 
-    *ctrl.last_event.lock().unwrap() = "Servidor GDB finalizado".to_string();
+    *lock_unpoisoned(&ctrl.last_event) = "Servidor GDB finalizado".to_string();
     get_gdb_bridge_status()
 }
 
@@ -332,17 +338,17 @@ pub fn get_gdb_bridge_status() -> Result<GdbBridgeStatus, String> {
     let ctrl = get_controller();
     Ok(GdbBridgeStatus {
         running: ctrl.running.load(Ordering::Relaxed),
-        port_name: ctrl.port_name.lock().unwrap().clone(),
-        listen_addr: ctrl.listen_addr.lock().unwrap().clone(),
+        port_name: lock_unpoisoned(&ctrl.port_name).clone(),
+        listen_addr: lock_unpoisoned(&ctrl.listen_addr).clone(),
         connected_clients: ctrl.client_count.load(Ordering::Relaxed),
-        last_event: ctrl.last_event.lock().unwrap().clone(),
+        last_event: lock_unpoisoned(&ctrl.last_event).clone(),
     })
 }
 
 /// Retrieves the current AM34 register state.
 pub fn get_am34_registers() -> Result<Am34RegisterState, String> {
     let ctrl = get_controller();
-    Ok(ctrl.registers.lock().unwrap().clone())
+    Ok(lock_unpoisoned(&ctrl.registers).clone())
 }
 
 #[cfg(test)]

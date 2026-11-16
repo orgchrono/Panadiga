@@ -20,7 +20,8 @@ export type ViewKey =
   | 'frmcrypto'
   | 'unbrick'
   | 'manuals'
-  | 'hexinspector';
+  | 'hexinspector'
+  | 'settings';
 
 export const ExecutionStatus = {
   IDLE: 'IDLE',

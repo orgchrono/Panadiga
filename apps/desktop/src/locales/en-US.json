@@ -19,7 +19,7 @@
     "frmcrypto": "PANA_DVD Crypto",
     "frmcrypto.sub": "ECB Codebook & Entropy",
     "manuals": "Service Manuals",
-    "manuals.sub": "15 PDFs & Schematics",
+    "manuals.sub": "30 PDFs & Schematics",
     "hexinspector": "Hex Inspector",
     "hexinspector.sub": "LBA Alignment & Offsets",
     "unbrick": "Unbrick Center",
@@ -615,13 +615,16 @@
         }
       },
       "BAUD": {
-        "label": "Measure Baud Rate (PIO1)",
-        "description": "Measures the narrowest pulse width on GP2 via PIO1 and calculates the real SC0 baud rate.",
-        "arg_label": "Window (ms)",
-        "arg_placeholder": "1500",
+        "label": "PIO1 UART Baud Rate",
+        "description": "Configures or queries PIO1 RX/TX state machine baud rate on SC0 (AM34 default: 115200 bps).",
+        "arg_label": "Baudrate (bps)",
+        "arg_placeholder": "115200",
         "options": {
-          "s1_5": "1.5 s",
-          "s3_0": "3.0 s"
+          "b115200": "115200 bps (AM34 Default)",
+          "b57600": "57600 bps",
+          "b38400": "38400 bps",
+          "b19200": "19200 bps",
+          "b9600": "9600 bps"
         }
       },
       "BAUDSCAN": {
@@ -716,6 +719,17 @@
           "jig2500ctrl": "4s JIG:2500 CTRL",
           "normal4": "4s NORMAL",
           "passive2": "2s Passive"
+        }
+      },
+      "SDSNIFF": {
+        "label": "Passive PIO0 SD Sniffer (GP10..15)",
+        "description": "Captures passive Hi-Z SD bus lines (GP10=CLK, GP11=CMD, GP12..15=DAT0..3), decoding CMD55/ACMD6/ACMD13, CMD17/CMD18 LBAs, and per-lane CRC16.",
+        "arg_label": "Window & Boot",
+        "arg_placeholder": "4000 NORMAL",
+        "options": {
+          "normal4": "4s NORMAL",
+          "jig4": "4s JIG:350",
+          "acmd13": "4s ACMD13 (LEN:64)"
         }
       },
       "JIGSWEEP": {
@@ -949,5 +963,9 @@
       "mainOutRequired": "Please enter the output path for patched MAIN.",
       "extractPathsRequired": "Please provide both source .FRM path and output directory."
     }
+  },
+  "settings": {
+    "title": "Settings, Accessibility & Workbench Preferences",
+    "subtitle": "Customize visual theme, contrast, colorblind support, language, Basic/Advanced mode, and layout recovery."
   }
 }

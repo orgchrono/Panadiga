@@ -34,9 +34,50 @@ pub(super) fn record_scan_telemetry(probes: Option<u32>, hits: Option<u32>) {
     }
 }
 
+fn ensure_default_uart_and_probe_target(
+    port: &mut dyn serialport::SerialPort,
+    target_powered: bool,
+) -> Option<String> {
+    let framing_out = panadiga_core::pico::cdc::send_and_read_until(
+        port,
+        "FRAMING 8N1",
+        &["FRAMING: OK", "FRAMING: ERROR", "PANADIGA>"],
+        Duration::from_millis(800),
+    );
+    let baud_out = panadiga_core::pico::cdc::send_and_read_until(
+        port,
+        "BAUD 115200",
+        &["BAUD: OK", "BAUD: ERROR", "PANADIGA>"],
+        Duration::from_millis(800),
+    );
+    let uart_synced = framing_out.contains("FRAMING: OK") && baud_out.contains("BAUD: OK");
+    if !target_powered {
+        return uart_synced.then(|| "PIO1 UART=115200 8N1 sincronizada".to_string());
+    }
+    let autodetect_out = panadiga_core::pico::cdc::send_and_read_until(
+        port,
+        "AUTODETECT",
+        &["[AUTODETECT]", "AUTODETECT: OK", "PANADIGA>"],
+        Duration::from_millis(1500),
+    );
+    let clean_probe = autodetect_out
+        .lines()
+        .map(str::trim)
+        .find(|line| line.contains("NOR Flash detected") || line.contains("AUTODETECT: OK"));
+    match (uart_synced, clean_probe) {
+        (true, Some(probe)) => Some(format!("PIO1 UART=115200 8N1 | {probe}")),
+        (true, None) => {
+            Some("PIO1 UART=115200 8N1 pronta (P7501 Async UART RX/TX ativo)".to_string())
+        }
+        (false, Some(probe)) => Some(probe.to_string()),
+        (false, None) => None,
+    }
+}
+
 fn pico_connect_and_test_with_guard(
     port_name: &str,
     baud_rate: u32,
+    probe_target_on_connect: bool,
     _guard: &MutexGuard<'_, ()>,
 ) -> Result<PicoStatusResponse, String> {
     let (clean, mut port) = open_validated_cdc(port_name, baud_rate, 1500)?;
@@ -93,7 +134,13 @@ fn pico_connect_and_test_with_guard(
         response_text.trim().to_string()
     };
 
-    let vdd_msg = if probe_floating {
+    let target_note = if probe_target_on_connect {
+        ensure_default_uart_and_probe_target(&mut *port, target_powered)
+    } else {
+        None
+    };
+
+    let base_msg = if probe_floating {
         format!(
             "ALERTA: VDD={:.2}V (ADC flutuante — cabo P7501 NÃO conectado ou pino SW_UART em circuito aberto em GP26).",
             vdd_volts
@@ -108,6 +155,10 @@ fn pico_connect_and_test_with_guard(
             "{} operacional na porta. VDD={:.2}V OK.",
             dev_label, vdd_volts
         )
+    };
+    let vdd_msg = match target_note {
+        Some(note) => format!("{base_msg} [{note}]"),
+        None => base_msg,
     };
 
     Ok(PicoStatusResponse {
@@ -127,7 +178,7 @@ pub fn pico_connect_and_test(
     baud_rate: u32,
 ) -> Result<PicoStatusResponse, String> {
     let guard = lock_serial_io();
-    pico_connect_and_test_with_guard(&port_name, baud_rate, &guard)
+    pico_connect_and_test_with_guard(&port_name, baud_rate, true, &guard)
 }
 
 fn build_disconnected_status_dto() -> PicoDeviceStatusDto {
@@ -159,7 +210,7 @@ fn pico_get_device_status_dto_with_guard(
     if port_name.trim().is_empty() {
         return Ok(build_disconnected_status_dto());
     }
-    let status = pico_connect_and_test_with_guard(&port_name, 115_200, guard)?;
+    let status = pico_connect_and_test_with_guard(&port_name, 115_200, false, guard)?;
     let is_rp2350 = status.port_name.contains("2350") || status.firmware_banner.contains("2350");
 
     let probes = SCAN_TOTAL_PROBES.load(std::sync::atomic::Ordering::SeqCst);

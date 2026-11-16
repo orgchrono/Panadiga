@@ -126,9 +126,9 @@ pub fn scan_code_pointer_tables(
 ) -> Vec<(u32, u32)> {
     let mut out = Vec::new();
     let mut run: Vec<(u32, u32)> = Vec::new();
-    for (idx, chunk) in data.chunks_exact(4).enumerate() {
+    for (idx, chunk) in data.as_chunks::<4>().0.iter().enumerate() {
         let off = (idx * 4) as u32;
-        let val = u32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]);
+        let val = u32::from_le_bytes(*chunk);
         if val >= code_lo && val < code_hi {
             run.push((base_va.wrapping_add(off), val));
         } else {

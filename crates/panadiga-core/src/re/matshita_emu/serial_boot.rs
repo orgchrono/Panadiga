@@ -1,5 +1,6 @@
 //! `R6-MV4` `DRV` serial console, unlock media mounting, and `/BOOT.BIN` boot sequence verification.
 
+use super::inject::InjectionLogEntry;
 use super::{
     ATAPI_BUFFER_SIZE_BYTES, ATAPI_SECTOR_SIZE_BYTES, BootSequenceReport, BootSequenceStep,
     DRV_DECOMP_MMODE_HANDLER_VA, DRV_DECOMP_PASS_HANDLER_VA, DRV_DECOMP_SLOGOFF_HANDLER_VA,
@@ -156,15 +157,15 @@ impl MatshitaOddEmulator {
                     vec![(val & 0xFF) as u8]
                 };
                 self.buffer[buf_off..buf_off + width].copy_from_slice(&written);
-                self.record_injection(
-                    "DRV_SERIAL_CLI",
-                    &cmd,
-                    width as u8,
-                    addr,
-                    &written,
-                    "UNLOCKED_WRITE",
-                    format!("{cmd} 0x{addr:08X} <- 0x{val:X}"),
-                );
+                self.record_injection(InjectionLogEntry {
+                    source: "DRV_SERIAL_CLI",
+                    cdb0_or_cmd: &cmd,
+                    mode: width as u8,
+                    target: addr,
+                    payload: &written,
+                    status: "UNLOCKED_WRITE",
+                    note: format!("{cmd} 0x{addr:08X} <- 0x{val:X}"),
+                });
                 out_lines.push(format!("{cmd} OK: 0x{addr:08X} <= 0x{val:X}"));
                 status = "WRITTEN".to_string();
             }

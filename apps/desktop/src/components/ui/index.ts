@@ -10,3 +10,6 @@ export * from './switch';
 export * from './scroll-area';
 export * from './empty-state';
 export * from './error-boundary';
+export * from './resizable-split';
+export * from './range-dnd';
+export * from './workbench-pipeline';

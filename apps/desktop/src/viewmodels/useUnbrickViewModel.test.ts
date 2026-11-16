@@ -9,6 +9,7 @@ const mockShowToast = vi.fn();
 
 vi.mock('@/services/ipc', () => ({
   invokeCommand: vi.fn(),
+  emitLocalEvent: vi.fn(),
 }));
 
 vi.mock('@/context/ToastContext', () => ({

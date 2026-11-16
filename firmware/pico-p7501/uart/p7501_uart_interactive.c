@@ -61,8 +61,20 @@ void p7501_cmd_uart_send(const char *arg) {
     printf("\nUARTSEND: OK\n");
 }
 
+static uint32_t parse_probe_mode(const char *arg) {
+    if ((arg == NULL) || (*arg == '\0')) {
+        return 5U;
+    }
+    char *endptr = NULL;
+    unsigned long val = strtoul(arg, &endptr, 10);
+    if ((endptr == arg) || (*endptr != '\0') || (val > 255UL)) {
+        return 5U;
+    }
+    return (uint32_t)val;
+}
+
 void p7501_cmd_uart_probe(const char *arg) {
-    const uint32_t pmode = (arg != NULL && *arg != '\0') ? (uint32_t)atoi(arg) : 5U;
+    const uint32_t pmode = parse_probe_mode(arg);
     const bool sw_uart_low = ((pmode == 5U) || (pmode == 6U) || (pmode == 7U));
     const bool start_sdata_low = ((pmode == 7U) || (pmode == 8U) || (pmode == 2U));
 

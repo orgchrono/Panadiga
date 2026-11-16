@@ -1,9 +1,13 @@
-import React, { useState } from 'react';
-import { useHddStorageViewModel, HddTab } from '@/viewmodels/useHddStorageViewModel';
+import React, { useEffect, useRef, useState } from 'react';
+import { useHddStorageViewModel } from '@/viewmodels/useHddStorageViewModel';
+import { useWorkbenchMode } from '@/context/WorkbenchModeContext';
+import { useToast } from '@/context/ToastContext';
 import { useTranslation } from '@/i18n/useTranslation';
+import type { ViewKey } from '@/models';
 import {
   HddTopHeader,
   HddMetricsGrid,
+  HddNavigationBar,
   HddPartitionTable,
   HddMbrComparison,
   HddMeihdfsTable,
@@ -13,22 +17,15 @@ import {
   HddWriterCard,
   HddCapacityPatcherCard,
 } from '@/components/hdd';
-import {
-  Layers,
-  FileCheck,
-  Table,
-  BookOpen,
-  BarChart3,
-  FolderArchive,
-  HardDrive,
-  Unlock,
-} from 'lucide-react';
+import { HardDrive, Unlock } from 'lucide-react';
 
 /**
  * Declarative MVVM View: Panasonic MEIHDFS Storage & HDD Forensics Workbench.
  * Decomposed into dedicated domain components under components/hdd/.
  */
-export const HddStorageView: React.FC = () => {
+export const HddStorageView: React.FC<{ onNavigate?: (view: ViewKey) => void }> = ({
+  onNavigate,
+}) => {
   const { t } = useTranslation();
   const {
     hddReport,
@@ -49,14 +46,35 @@ export const HddStorageView: React.FC = () => {
     refresh,
   } = useHddStorageViewModel();
 
+  const { showToast } = useToast();
+  const { isAdvanced, setMode } = useWorkbenchMode();
   const [copiedSha, setCopiedSha] = useState(false);
   const [inputPath, setInputPath] = useState(imagePath || '');
   const [showPathInput, setShowPathInput] = useState(false);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!isAdvanced && (activeTab === 'meihdfs' || activeTab === 'journal' || activeTab === 'density')) {
+      setActiveTab('overview');
+    }
+  }, [activeTab, isAdvanced, setActiveTab]);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current !== null) clearTimeout(copyTimerRef.current);
+    };
+  }, []);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     setCopiedSha(true);
-    setTimeout(() => setCopiedSha(false), 2000);
+    showToast({
+      type: 'info',
+      title: 'SHA256SUMS copiado',
+      message: 'Manifesto copiado para a área de transferência.',
+    });
+    if (copyTimerRef.current !== null) clearTimeout(copyTimerRef.current);
+    copyTimerRef.current = setTimeout(() => setCopiedSha(false), 2000);
   };
 
   const handleOpenPath = () => {
@@ -66,9 +84,14 @@ export const HddStorageView: React.FC = () => {
     }
   };
 
+  const handleSelectImagePath = (resolved: string) => {
+    setInputPath(resolved);
+    refresh(resolved);
+    setShowPathInput(false);
+  };
+
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12 font-mono">
-      {/* Top Header & Fast Partition Extractor */}
+    <div className="space-y-6 max-w-7xl mx-auto pb-12 font-mono" aria-label={t('hdd.title')}>
       <HddTopHeader
         report={hddReport}
         extracting={extracting}
@@ -76,156 +99,21 @@ export const HddStorageView: React.FC = () => {
         onSelectImage={() => setShowPathInput(prev => !prev)}
       />
 
-      {/* Path Input Dropdown when user clicks Abrir Imagem */}
-      {showPathInput && (
-        <div className="p-4 rounded-xl bg-slate-950 border border-cyan-500/40 shadow-xl space-y-2">
-          <label className="text-[11px] text-cyan-300 font-bold uppercase">
-            Caminho do Arquivo de Imagem (.bin / .raw / .img)
-          </label>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              placeholder="Ex: firmware_and_images/panasonic DMR EH-55 Firmware hdd_100.bin"
-              value={inputPath}
-              onChange={e => setInputPath(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleOpenPath()}
-              className="flex-1 px-3 py-2 rounded-lg bg-bench-900 border border-slate-700 text-xs text-slate-100 focus:outline-none focus:border-cyan-400"
-            />
-            <button
-              onClick={handleOpenPath}
-              className="px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs transition-colors"
-            >
-              Carregar
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Metrics Row */}
       <HddMetricsGrid report={hddReport} />
 
-      {/* Navigation Tabs */}
-      <div
-        className="flex items-center gap-2 border-b border-slate-800 pb-2 text-xs"
-        role="tablist"
-        aria-label="Navegação de Forense do Disco"
-      >
-        <button
-          onClick={() => setActiveTab('overview')}
-          role="tab"
-          aria-selected={activeTab === 'overview'}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
-            activeTab === 'overview'
-              ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Layers className="w-3.5 h-3.5" />
-          <span>{t('hdd.tabs.overview', 'Visão Geral do Disco')}</span>
-        </button>
+      <HddNavigationBar
+        showPathInput={showPathInput}
+        inputPath={inputPath}
+        onInputPathChange={setInputPath}
+        onOpenPath={handleOpenPath}
+        onSelectImagePath={handleSelectImagePath}
+        activeTab={activeTab}
+        onSelectTab={setActiveTab}
+        isAdvanced={isAdvanced}
+        onEnableAdvanced={() => setMode('advanced')}
+        hasManifest={Boolean(manifest)}
+      />
 
-        <button
-          onClick={() => setActiveTab('mbr')}
-          role="tab"
-          aria-selected={activeTab === 'mbr'}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
-            activeTab === 'mbr'
-              ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <FileCheck className="w-3.5 h-3.5" />
-          <span>{t('hdd.tabs.mbr', 'MBR vs Espelho LBA 57.344')}</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('meihdfs')}
-          role="tab"
-          aria-selected={activeTab === 'meihdfs'}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
-            activeTab === 'meihdfs'
-              ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Table className="w-3.5 h-3.5" />
-          <span>{t('hdd.tabs.meihdfs', '256 Registros MEIHDFS (XOR 0xFF)')}</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('journal')}
-          role="tab"
-          aria-selected={activeTab === 'journal'}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
-            activeTab === 'journal'
-              ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <BookOpen className="w-3.5 h-3.5" />
-          <span>{t('hdd.tabs.journal', 'Journal WAL (10 Blocos)')}</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('density')}
-          role="tab"
-          aria-selected={activeTab === 'density'}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
-            activeTab === 'density'
-              ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <BarChart3 className="w-3.5 h-3.5" />
-          <span>{t('hdd.tabs.density', 'Mapa de Densidade (100 MB)')}</span>
-        </button>
-
-        {manifest && (
-          <button
-            onClick={() => setActiveTab('extract')}
-            role="tab"
-            aria-selected={activeTab === 'extract'}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
-              activeTab === 'extract'
-                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <FolderArchive className="w-3.5 h-3.5" />
-            <span>Manifesto de Partições</span>
-          </button>
-        )}
-
-        <button
-          onClick={() => setActiveTab('capacity')}
-          role="tab"
-          aria-selected={activeTab === 'capacity'}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
-            activeTab === 'capacity'
-              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Unlock className="w-3.5 h-3.5" />
-          <span>Desbloqueio de Capacidade (250GB / 2TB)</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('writer')}
-          role="tab"
-          aria-selected={activeTab === 'writer'}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 ${
-            activeTab === 'writer'
-              ? 'bg-purple-500/10 text-purple-400 border border-purple-500/30'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <HardDrive className="w-3.5 h-3.5" />
-          <span>Gravação Física & mkfs</span>
-        </button>
-      </div>
-
-      {/* Empty State / Image Selector when no report is loaded */}
       {!hddReport && activeTab !== 'writer' && activeTab !== 'capacity' && (
         <div className="p-8 rounded-2xl bg-bench-900 border border-slate-800 text-center space-y-4 max-w-2xl mx-auto shadow-xl">
           <div className="w-12 h-12 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 flex items-center justify-center mx-auto">
@@ -236,7 +124,8 @@ export const HddStorageView: React.FC = () => {
               {error ? 'Imagem de Disco Padrão Não Encontrada' : 'Nenhuma Imagem MEIHDFS Carregada'}
             </h3>
             <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
-              {error || 'Informe o caminho de um dump físico (.bin, .raw, .img) ou alterne para a aba Gravação Física para gerenciar discos conectados via SATA/USB.'}
+              {error ||
+                'Informe o caminho de um dump físico (.bin, .raw, .img) ou alterne para a aba Gravação Física para gerenciar discos conectados via SATA/USB.'}
             </p>
           </div>
 
@@ -250,6 +139,7 @@ export const HddStorageView: React.FC = () => {
               className="flex-1 px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 font-mono"
             />
             <button
+              type="button"
               onClick={handleOpenPath}
               disabled={loading || !inputPath.trim()}
               className="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs transition-colors disabled:opacity-50"
@@ -258,29 +148,38 @@ export const HddStorageView: React.FC = () => {
             </button>
           </div>
 
-          <div className="pt-4 border-t border-slate-800 flex items-center justify-center gap-4 text-xs">
+          <div className="pt-4 border-t border-slate-800 flex flex-wrap items-center justify-center gap-3 text-xs">
             <button
+              type="button"
               onClick={() => setActiveTab('writer')}
               className="px-4 py-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 font-bold flex items-center gap-2 transition-colors"
             >
               <HardDrive className="w-4 h-4" />
               <span>Ver Discos Físicos Conectados (Win32/SATA)</span>
             </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('capacity')}
+              className="px-4 py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold flex items-center gap-2 transition-colors"
+            >
+              <Unlock className="w-4 h-4" />
+              <span>Abrir Patcher de Capacidade</span>
+            </button>
+            {onNavigate && (
+              <button
+                type="button"
+                onClick={() => onNavigate('settings')}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-bold transition-colors"
+              >
+                Configurações
+              </button>
+            )}
           </div>
         </div>
       )}
 
-      {/* Tab 1: Overview */}
-      {activeTab === 'overview' && hddReport && (
-        <HddPartitionTable hddReport={hddReport} />
-      )}
-
-      {/* Tab 2: MBR vs Mirror LBA 57344 */}
-      {activeTab === 'mbr' && hddReport && (
-        <HddMbrComparison hddReport={hddReport} />
-      )}
-
-      {/* Tab 3: MEIHDFS 256 Extent Records */}
+      {activeTab === 'overview' && hddReport && <HddPartitionTable hddReport={hddReport} />}
+      {activeTab === 'mbr' && hddReport && <HddMbrComparison hddReport={hddReport} />}
       {activeTab === 'meihdfs' && (
         <HddMeihdfsTable
           filteredRecords={filteredRecords}
@@ -290,18 +189,8 @@ export const HddStorageView: React.FC = () => {
           onTagFilterChange={setTagFilter}
         />
       )}
-
-      {/* Tab 4: Journal WAL */}
-      {activeTab === 'journal' && meihdfsReport && (
-        <HddJournalTable meihdfsReport={meihdfsReport} />
-      )}
-
-      {/* Tab 5: Chunk Density Map (100 MB) */}
-      {activeTab === 'density' && hddReport && (
-        <HddDensityMap hddReport={hddReport} />
-      )}
-
-      {/* Tab 6: Partition Extract Manifest */}
+      {activeTab === 'journal' && meihdfsReport && <HddJournalTable meihdfsReport={meihdfsReport} />}
+      {activeTab === 'density' && hddReport && <HddDensityMap hddReport={hddReport} />}
       {activeTab === 'extract' && manifest && (
         <HddExtractManifestCard
           manifest={manifest}
@@ -309,16 +198,8 @@ export const HddStorageView: React.FC = () => {
           onCopySha={copyToClipboard}
         />
       )}
-
-      {/* Tab 7: Dynamic HDD Capacity Patcher */}
-      {activeTab === 'capacity' && (
-        <HddCapacityPatcherCard />
-      )}
-
-      {/* Tab 8: Physical Drive Writer & mkfs.meihdfs */}
-      {activeTab === 'writer' && (
-        <HddWriterCard />
-      )}
+      {activeTab === 'capacity' && <HddCapacityPatcherCard />}
+      {activeTab === 'writer' && <HddWriterCard />}
     </div>
   );
 };

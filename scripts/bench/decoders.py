@@ -17,6 +17,23 @@ _SDCD_ERROR_GLOSSARY: Final[dict[int, str]] = {
     -90001: "No SD card detected by sdcd_insrmv_check",
 }
 
+_BOOT_FAT_ERROR_GLOSSARY: Final[dict[int, str]] = {
+    -10010: "FAT_ERR_FILE_NOT_FOUND (0x4400d16b: 8.3 entry missing in root dir)",
+    -10011: "FAT_ERR_NO_FREE_FD (0x4400d11e: fd table full or volume unmounted)",
+    -10020: "FAT_ERR_INVALID_ARG (0x4400cfde/0x4400c9bd: invalid 8.3 filename or seek offset)",
+    -10025: "FAT_ERR_INVALID_FS_OR_IO (0x4400cb21/0x4400c696: bad MBR/BPB, FAT32 rejected, or SD sector read error)",
+    -10028: "FAT_ERR_CORRUPT_CLUSTER (0x4400dfc8: FAT cluster entry < 2 or 0xFFF6/0xFFF7)",
+    -10030: "FAT_ERR_EOF (0x4400dfc8: read offset >= file_size)",
+}
+
+
+def describe_boot_fat_error_code(code: int) -> str:
+    """Map `/BOOT.BIN` FAT12/FAT16 negative status codes (`-10010..-10030`) to root causes."""
+    return _BOOT_FAT_ERROR_GLOSSARY.get(
+        code,
+        "FAT_ERR_UNKNOWN (/BOOT.BIN FAT16/FAT12 negative status)",
+    )
+
 
 @dataclass(frozen=True)
 class StatusReport:
@@ -207,13 +224,15 @@ def _classify_uart_boot_diagnosis(
         return f"Stage-1 DIGADIAG.FRM opened, EXTRHEAD/zlib unpack failed{suffix}"
     if sd_diag_load_failed is not None:
         if fat_mount_failed is not None:
-            return f"Stage-1 SD HW OK (4-bit), FAT Mount failed[{fat_mount_failed}] before BGO reboot"
+            desc = describe_boot_fat_error_code(fat_mount_failed)
+            return f"Stage-1 SD HW OK (4-bit), FAT Mount failed[{fat_mount_failed}] ({desc}) before BGO reboot"
         if fat_open_failed is not None:
-            return f"Stage-1 SD HW OK (4-bit), FAT Open({fat_open_failed[0]}) failed[{fat_open_failed[1]}] before BGO reboot"
+            desc = describe_boot_fat_error_code(fat_open_failed[1])
+            return f"Stage-1 SD HW OK (4-bit), FAT Open({fat_open_failed[0]}) failed[{fat_open_failed[1]}] ({desc}) before BGO reboot"
         if sd_hw_init_ok:
-            extra = " before BGO reboot" if bgo_failed is not None else " (check MBR/FAT16/DIGADIAG.FRM 128KiB)"
-            return f"Stage-1 SD HW OK (4-bit), FAILED at SD diag load failed[{sd_diag_load_failed}] (FUN_4400a97c){extra}"
-        return f"Stage-1 FAILED at SD diag load failed[{sd_diag_load_failed}] (FUN_4400a97c)"
+            extra = " before BGO reboot" if bgo_failed is not None else " (Mount+Open OK, DIGADIAG.FRM < 128KiB or cluster read fail)"
+            return f"Stage-1 SD HW OK (4-bit), FAILED at SD diag load failed[{sd_diag_load_failed}] (FUN_4400a97c: Mount+Open OK, fat_read 0x20000 failed){extra}"
+        return f"Stage-1 FAILED at SD diag load failed[{sd_diag_load_failed}] (FUN_4400a97c: Mount+Open OK, fat_read 0x20000 failed)"
     if bgo_failed is not None:
         if odd_83a7:
             return f"BGO driver init failed[{bgo_failed}] -> U99 hang (ODD 80040904 / 0x83A7 also observed)"
@@ -388,12 +407,22 @@ def parse_am34_uart_log(text: str) -> UartBootReport:
     for code in sdcd_errs:
         if code in _SDCD_ERROR_GLOSSARY:
             notes.append(f"SDCD {code}: {_SDCD_ERROR_GLOSSARY[code]}")
-    if sd_diag_load_failed is not None and sd_hw_init_ok:
-        notes.append(
-            "SD hardware 4-bit initialization SUCCEEDED; Stage-1 failed inside FUN_4400a97c "
-            "(silent FAT16 Mount FUN_4400c696 / Open DIGADIAG.FRM FUN_4400c879 / <131072 B read). "
-            "Check MBR partition table, cluster count <= 0xFFF5, and root 8.3 entry."
-        )
+    if sd_diag_load_failed is not None:
+        if fat_mount_failed is not None:
+            notes.append(f"FAT Mount failed[{fat_mount_failed}]: {describe_boot_fat_error_code(fat_mount_failed)}")
+        elif fat_open_failed is not None:
+            notes.append(
+                f"FAT Open({fat_open_failed[0]}) failed[{fat_open_failed[1]}]: "
+                f"{describe_boot_fat_error_code(fat_open_failed[1])}"
+            )
+        elif sd_hw_init_ok:
+            notes.append(
+                f"SD diag load failed[{sd_diag_load_failed}] (FUN_4400a97c) without prior FAT Mount/Open error: "
+                "FUN_4400c696 (fat_mount) and FUN_4400c879 (fat_open DIGADIAG.FRM) succeeded "
+                "(FUN_4400b3d9 prints unconditionally on mount/open error), so FUN_4400c922 fat_read(0x93fc0000, 0x20000) "
+                "returned != 0x20000 (DIGADIAG.FRM < 131072 B or SD cluster/multi-block read failure in FUN_4400dfc8 -> FUN_4400ca59). "
+                "Check MBR/FAT16 cluster count <= 0xFFF5 and root 8.3 entry."
+            )
     if sd_uncompress_failed:
         notes.append(
             "DIGADIAG.FRM was opened from SD, but EXTRHEAD/zlib decompression in FUN_44007ba5 failed."

@@ -3,7 +3,8 @@ import { usePicoBenchViewModel } from '@/viewmodels/usePicoBenchViewModel';
 import { useSc0Bridge } from '@/viewmodels/useSc0Bridge';
 import { TerminalView } from '@/components/TerminalView';
 import { StatusBadge } from '@/components/StatusBadge';
-import { Button } from '@/components/ui';
+import { Button, ResizableSplitPane } from '@/components/ui';
+import { useWorkbenchMode } from '@/context/WorkbenchModeContext';
 import { isTargetPowered } from '@/utils/formatters';
 import {
   PicoBenchTopBar,
@@ -15,7 +16,7 @@ import {
   Sc0BridgePanel,
 } from '@/components/pico';
 import { useTranslation } from '@/i18n/useTranslation';
-import { AlertCircle, CheckCircle2, RefreshCw, Send, ShieldCheck } from 'lucide-react';
+import { AlertCircle, CheckCircle2, RefreshCw, Send, ShieldCheck, Wrench } from 'lucide-react';
 
 /**
  * MVVM View: Panasonic P7501 Async UART Hardware Bench Controller.
@@ -24,6 +25,7 @@ import { AlertCircle, CheckCircle2, RefreshCw, Send, ShieldCheck } from 'lucide-
  */
 export const PicoBenchView: React.FC = () => {
   const { t } = useTranslation();
+  const { isAdvanced, setMode } = useWorkbenchMode();
   const {
     ssot,
     isSsotLoading,
@@ -202,94 +204,116 @@ export const PicoBenchView: React.FC = () => {
         onClearHistory={clearDiagnosticHistory}
       />
 
-      <Sc0BridgePanel
-        status={sc0Bridge.bridgeStatus}
-        logs={sc0Bridge.bridgeLogs}
-        baudRate={sc0Bridge.baudRate}
-        onChangeBaudRate={sc0Bridge.setBaudRate}
-        bootMode={sc0Bridge.bootMode}
-        onChangeBootMode={sc0Bridge.setBootMode}
-        inputMode={sc0Bridge.inputMode}
-        onChangeInputMode={sc0Bridge.setInputMode}
-        txInput={sc0Bridge.txInput}
-        onChangeTxInput={sc0Bridge.setTxInput}
-        isBusy={sc0Bridge.isBusy}
-        error={sc0Bridge.error}
-        onStart={() => {
-          void sc0Bridge.startBridge();
-        }}
-        onStop={() => {
-          void sc0Bridge.stopBridge();
-        }}
-        onSubmitTx={() => {
-          void sc0Bridge.submitTxInput();
-        }}
-        onClearLogs={sc0Bridge.clearBridgeLogs}
-        onTriggerWaittx={spec => {
-          void sc0Bridge.triggerInteractiveWaittx(spec);
-        }}
-        onSendRspPreset={(mode, bridgePayload, panarspArg) => {
-          void sc0Bridge.sendPanaRspPreset(mode, bridgePayload, panarspArg);
-        }}
-        onSendDriveCommand={cmd => {
-          void sc0Bridge.sendDriveCommand(cmd);
-        }}
-        onRunDiagnostic={(command, arg) => {
-          void executeDiagnostic(command, arg);
-        }}
-      />
-
-      <GdbServerCard
-        gdbStatus={gdbStatus}
-        registers={am34Registers}
-        telemetry={gdbTelemetry}
-        isStarting={isGdbStarting}
-        onStart={startGdbServer}
-        onStop={stopGdbServer}
-        onLaunchTool={launchExternalTool}
-      />
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-        <div className="lg:col-span-5 flex flex-col space-y-4 lg:min-h-[720px]">
-          <ColdBreakinSelector
-            currentMode={deviceStatus?.breakin_mode ?? 2}
-            onSelectMode={changeBreakinMode}
-            breakinModes={ssot.breakin_modes}
+      {isAdvanced ? (
+        <>
+          <Sc0BridgePanel
+            status={sc0Bridge.bridgeStatus}
+            logs={sc0Bridge.bridgeLogs}
+            baudRate={sc0Bridge.baudRate}
+            onChangeBaudRate={sc0Bridge.setBaudRate}
+            bootMode={sc0Bridge.bootMode}
+            onChangeBootMode={sc0Bridge.setBootMode}
+            inputMode={sc0Bridge.inputMode}
+            onChangeInputMode={sc0Bridge.setInputMode}
+            txInput={sc0Bridge.txInput}
+            onChangeTxInput={sc0Bridge.setTxInput}
+            isBusy={sc0Bridge.isBusy}
+            error={sc0Bridge.error}
+            onStart={() => {
+              void sc0Bridge.startBridge();
+            }}
+            onStop={() => {
+              void sc0Bridge.stopBridge();
+            }}
+            onSubmitTx={() => {
+              void sc0Bridge.submitTxInput();
+            }}
+            onClearLogs={sc0Bridge.clearBridgeLogs}
+            onTriggerWaittx={spec => {
+              void sc0Bridge.triggerInteractiveWaittx(spec);
+            }}
+            onSendRspPreset={(mode, bridgePayload, panarspArg) => {
+              void sc0Bridge.sendPanaRspPreset(mode, bridgePayload, panarspArg);
+            }}
+            onSendDriveCommand={cmd => {
+              void sc0Bridge.sendDriveCommand(cmd);
+            }}
+            onRunDiagnostic={(command, arg) => {
+              void executeDiagnostic(command, arg);
+            }}
           />
-          <div className="flex-1 min-h-0 flex flex-col">
-            <P7501PinoutCard ssot={ssot} />
-          </div>
+
+          <GdbServerCard
+            gdbStatus={gdbStatus}
+            registers={am34Registers}
+            telemetry={gdbTelemetry}
+            isStarting={isGdbStarting}
+            onStart={startGdbServer}
+            onStop={stopGdbServer}
+            onLaunchTool={launchExternalTool}
+          />
+        </>
+      ) : (
+        <div className="rounded-xl bg-bench-900/70 border border-slate-800 px-4 py-3 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <span className="text-slate-400 font-sans">
+            Modo Básico ativo: Ponte SC0 interativa e Servidor GDB RSP estão recolhidos para manter o fluxo direto.
+          </span>
+          <Button type="button" variant="outline" size="sm" onClick={() => setMode('advanced')} className="gap-1.5 text-xs">
+            <Wrench className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Mostrar SC0 Bridge & GDB</span>
+          </Button>
         </div>
+      )}
 
-        <div className="lg:col-span-7 flex flex-col space-y-3 min-h-[420px] lg:min-h-[720px]">
-          <div className="flex-1 min-h-0 flex flex-col">
-            <TerminalView logs={logs} onClear={clearLogs} containerRef={logContainerRef} />
-          </div>
-
-          <div className="flex items-center gap-2 p-2 rounded-xl bg-bench-900 border border-slate-800 shrink-0">
-            <span className="text-slate-500 text-xs font-mono pl-2">{'>'}</span>
-            <input
-              type="text"
-              aria-label={t('pico.title')}
-              placeholder="Digite comando CDC (STATUS, RESET, ADC, PINCHECK, DUMP, GDB)..."
-              value={commandInput}
-              onChange={e => setCommandInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && sendCommand()}
-              className="flex-1 bg-transparent border-none text-xs text-slate-100 placeholder-slate-500 focus:outline-none font-mono"
+      <ResizableSplitPane
+        initialLeftPercent={42}
+        minLeftPercent={28}
+        maxLeftPercent={62}
+        storageKey="panadiga.split.picobench"
+        ariaLabel="Divisor entre pinagem P7501 e terminal serial"
+        left={
+          <div className="flex flex-col space-y-4 lg:min-h-[720px]">
+            <ColdBreakinSelector
+              currentMode={deviceStatus?.breakin_mode ?? 2}
+              onSelectMode={changeBreakinMode}
+              breakinModes={ssot.breakin_modes}
             />
-            <Button
-              type="button"
-              variant="default"
-              size="sm"
-              onClick={sendCommand}
-              className="font-bold text-xs gap-1.5"
-            >
-              <Send className="w-3.5 h-3.5" />
-              <span>Enviar</span>
-            </Button>
+            <div className="flex-1 min-h-0 flex flex-col">
+              <P7501PinoutCard ssot={ssot} />
+            </div>
           </div>
-        </div>
-      </div>
+        }
+        right={
+          <div className="flex flex-col space-y-3 min-h-[420px] lg:min-h-[720px]">
+            <div className="flex-1 min-h-0 flex flex-col">
+              <TerminalView logs={logs} onClear={clearLogs} containerRef={logContainerRef} />
+            </div>
+
+            <div className="flex items-center gap-2 p-2 rounded-xl bg-bench-900 border border-slate-800 shrink-0">
+              <span className="text-slate-500 text-xs font-mono pl-2">{'>'}</span>
+              <input
+                type="text"
+                aria-label={t('pico.title')}
+                placeholder="Digite comando CDC (STATUS, RESET, ADC, PINCHECK, DUMP, GDB)..."
+                value={commandInput}
+                onChange={e => setCommandInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && sendCommand()}
+                className="flex-1 bg-transparent border-none text-xs text-slate-100 placeholder-slate-500 focus:outline-none font-mono"
+              />
+              <Button
+                type="button"
+                variant="default"
+                size="sm"
+                onClick={sendCommand}
+                className="font-bold text-xs gap-1.5"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>Enviar</span>
+              </Button>
+            </div>
+          </div>
+        }
+      />
     </div>
   );
 };

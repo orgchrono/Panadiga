@@ -1,80 +1,19 @@
 import { useState, useEffect, useCallback, useSyncExternalStore } from 'react';
 import { NvramCleanReport, FlashSectorInfo } from '@/models';
-import { invokeCommand } from '@/services/ipc';
-import { bleService } from '@/services/bleService';
-import {
-  connectAndroidUsbOtg,
-  getAndroidCapabilities,
-  isAndroidNativeBridgeAvailable,
-  listAndroidUsbOtgDevices,
-  sendAndroidUsbOtgCommand,
-} from '@/services/androidBridge';
+import { emitLocalEvent, invokeCommand } from '@/services/ipc';
+import { useToast } from '@/context/ToastContext';
 import {
   clearLiveNvramCapture,
   getLatestLiveNvramCapture,
-  ingestP7501DumpOutput,
-  recordLiveNvramCapture,
   subscribeLiveNvramCapture,
 } from '@/services/liveNvramCaptureStore';
 import { logger } from '@/utils/logger';
+import { buildSectorMapFromReport, captureLivePicoNvramDump } from './nvram/nvramHelpers';
 
-/**
- * Dynamically synthesizes the Flash Sector Map (SSOT) directly from the live
- * NvramCleanReport returned by the Rust kernel, supporting any DIGA geometry
- * (2 MB, 4 MB, 8 MB, 16 MB) without hardcoded mock arrays.
- */
-export function buildSectorMapFromReport(report: NvramCleanReport | null | undefined): FlashSectorInfo[] {
-  if (!report) return [];
-  const sectors: FlashSectorInfo[] = [];
-  const nvramStart = report.nvram_offset_start ?? 0x007F0000;
-  const standardSectorSize = 65536; // 64 KB
-
-  // Number of standard 64KB sectors before the top-boot NVRAM microsectors
-  const standardSectorCount = Math.floor(nvramStart / standardSectorSize);
-
-  for (let i = 0; i < standardSectorCount; i++) {
-    const startOffset = i * standardSectorSize;
-    const endOffset = startOffset + standardSectorSize - 1;
-    const isBootloader = i < 16;
-
-    sectors.push({
-      index: i,
-      name: `SA${i}`,
-      start_offset: startOffset,
-      end_offset: endOffset,
-      size_bytes: standardSectorSize,
-      sector_type: isBootloader ? 'bootloader' : 'os_firmware',
-      is_corrupted_area: false,
-      status: isBootloader ? 'immutable' : 'clean',
-      active_bytes: standardSectorSize,
-      notes: isBootloader
-        ? `Primary AM34 Bootloader Bank (0x${startOffset.toString(16).toUpperCase().padStart(8, '0')})`
-        : `Main OS & Codec Executable Segment (0x${startOffset.toString(16).toUpperCase().padStart(8, '0')})`,
-    });
-  }
-
-  // Parameter Microsectors from live report audit
-  (report.microsectors || []).forEach((ms, idx) => {
-    const sectorIndex = standardSectorCount + idx;
-    const isCorrupted = ms.active_bytes > 0;
-    sectors.push({
-      index: sectorIndex,
-      name: ms.sector_name,
-      start_offset: ms.offset,
-      end_offset: ms.offset + ms.total_bytes - 1,
-      size_bytes: ms.total_bytes,
-      sector_type: 'nvram_microsector',
-      is_corrupted_area: isCorrupted,
-      status: isCorrupted ? 'corrupted' : 'clean',
-      active_bytes: ms.active_bytes,
-      notes: `Top Parameter Bank: ${ms.sector_name} (EEMUL NVRAM / 0x${ms.offset.toString(16).toUpperCase()})`,
-    });
-  });
-
-  return sectors;
-}
+export { buildSectorMapFromReport };
 
 export function useNvramViewModel() {
+  const { showToast } = useToast();
   const liveCapture = useSyncExternalStore(
     subscribeLiveNvramCapture,
     getLatestLiveNvramCapture
@@ -95,7 +34,9 @@ export function useNvramViewModel() {
     setReport(nextReport);
     const dynamicSectors = buildSectorMapFromReport(nextReport);
     setSectorMap(dynamicSectors);
-    setCleanSuccess(nextReport.nvram_non_ff_bytes === 0);
+    const isCleaned = nextReport.nvram_non_ff_bytes === 0;
+    setCleanSuccess(isCleaned);
+    emitLocalEvent('nvram://cleaned', isCleaned);
 
     const firstCorrupted = dynamicSectors.find(s => s.is_corrupted_area);
     const firstMicro = dynamicSectors.find(s => s.sector_type === 'nvram_microsector');
@@ -137,74 +78,28 @@ export function useNvramViewModel() {
       setCapturingLive(true);
       setError(null);
       try {
-        const androidCaps = isAndroidNativeBridgeAvailable() ? getAndroidCapabilities() : null;
-        if (
-          androidCaps?.usbHostSupported &&
-          !explicitPort?.startsWith('COM') &&
-          !explicitPort?.startsWith('/dev/')
-        ) {
-          const dumpCmd = `DUMP 0x${baseAddr.toString(16).toUpperCase()} ${Math.min(wordCount, 2048)}`;
-          let reply = sendAndroidUsbOtgCommand(dumpCmd, 6000);
-          if (!reply.ok && listAndroidUsbOtgDevices().length > 0) {
-            const conn = connectAndroidUsbOtg();
-            if (conn.connected) {
-              reply = sendAndroidUsbOtgCommand(dumpCmd, 6000);
-            }
-          }
-          if (!reply.ok) {
-            throw new Error(reply.output || 'Falha no comando DUMP via Android USB-OTG.');
-          }
-          const captured = await ingestP7501DumpOutput(reply.output, 'ANDROID_USB_OTG', 'ANDROID-USB-OTG', baseAddr);
-          if (!captured) {
-            throw new Error('Nenhuma palavra hexadecimal capturada na resposta DUMP USB-OTG.');
-          }
-          return captured;
-        }
-
-        if (bleService.isConnected() && (!explicitPort || explicitPort.startsWith('BLE_'))) {
-          const reply = await bleService.sendAndAwaitReply(
-            `DUMP 0x${baseAddr.toString(16).toUpperCase()} ${Math.min(wordCount, 256)}`,
-            6000
-          );
-          const captured = await ingestP7501DumpOutput(reply, 'BLE_NUS', 'BLE_PICO_W', baseAddr);
-          if (!captured) {
-            throw new Error('Nenhuma palavra hexadecimal capturada na resposta DUMP BLE NUS.');
-          }
-          return captured;
-        }
-
-        let targetPort = explicitPort?.trim() || '';
-        if (!targetPort) {
-          const ports = await invokeCommand<string[]>('list_pico_serial_ports');
-          const preferred = ports.find(p => !p.includes('BOOTSEL') && !p.includes('PID:0003'));
-          targetPort = (preferred || ports[0] || '').trim();
-        }
-        if (!targetPort) {
-          throw new Error(
-            'Nenhuma sonda Pico conectada (P7501 Async UART). Conecte via USB CDC/OTG ou BLE e entre em CDDIAG.'
-          );
-        }
-
-        const evt = await invokeCommand<import('@/models').LiveNvramCaptureEvent>('pico_capture_nvram_live', {
-          portName: targetPort,
-          port_name: targetPort,
-          baseAddr,
-          base_addr: baseAddr,
-          wordCount,
-          word_count: wordCount,
+        const captured = await captureLivePicoNvramDump(explicitPort, baseAddr, wordCount);
+        showToast({
+          type: 'success',
+          title: 'Captura NVRAM ao Vivo Concluída',
+          message: `${captured.captured_bytes.toLocaleString()} bytes capturados em ${captured.base_bus_address}`,
         });
-        recordLiveNvramCapture(evt);
-        return evt;
+        return captured;
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         setError(msg);
+        showToast({
+          type: 'error',
+          title: 'Falha na Captura NVRAM via Pico',
+          message: msg,
+        });
         logger.error('NvramViewModel', 'Failed live Pico NVRAM capture', err);
         return null;
       } finally {
         setCapturingLive(false);
       }
     },
-    []
+    [showToast]
   );
 
   const clearLiveCaptureAndReload = useCallback(async () => {
@@ -231,14 +126,25 @@ export function useNvramViewModel() {
       const data = await invokeCommand<NvramCleanReport>('clean_nvram');
       applyFlashReport(data);
       setCleanSuccess(true);
+      emitLocalEvent('nvram://cleaned', true);
+      showToast({
+        type: 'success',
+        title: 'NVRAM U99 Sanitizada (0xFF)',
+        message: 'Microsetores SA134..SA141 limpos preservando IPL/Bootloader.',
+      });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(msg);
+      showToast({
+        type: 'error',
+        title: 'Erro na Limpeza Cirúrgica NVRAM',
+        message: msg,
+      });
       logger.error('NvramViewModel', 'Failed cleaning NVRAM', err);
     } finally {
       setCleaning(false);
     }
-  }, [applyFlashReport]);
+  }, [applyFlashReport, showToast]);
 
   const executeGuardedPatch = useCallback(
     async (params: {
@@ -271,17 +177,27 @@ export function useNvramViewModel() {
         });
         applyFlashReport(data);
         setPatchSuccess(true);
+        showToast({
+          type: 'success',
+          title: 'Patch Copy-on-Write Aplicado',
+          message: `Salvo em ${data.output_file || outputPath}`,
+        });
         return data;
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         setPatchError(msg);
+        showToast({
+          type: 'error',
+          title: 'Patch NVRAM Bloqueado / Falhou',
+          message: msg,
+        });
         logger.error('NvramViewModel', 'Failed guarded NVRAM CoW patch', err);
         return null;
       } finally {
         setPatching(false);
       }
     },
-    [applyFlashReport]
+    [applyFlashReport, showToast]
   );
 
   const filteredSectors = sectorMap.filter(s => {

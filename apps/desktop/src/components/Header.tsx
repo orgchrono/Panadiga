@@ -2,12 +2,14 @@ import React from 'react';
 import { StatusBadge } from './StatusBadge';
 import { Button } from '@/components/ui';
 import { isTargetPowered } from '@/utils/formatters';
-import { Cpu, Activity, RefreshCw, Menu } from 'lucide-react';
+import { useWorkbenchMode } from '@/context/WorkbenchModeContext';
+import { Cpu, Activity, RefreshCw, Menu, Layers, Settings } from 'lucide-react';
 
 interface HeaderProps {
   currentViewTitle: string;
   onRefresh?: () => void;
   onOpenMobileNav?: () => void;
+  onOpenSettings?: () => void;
   vddVolts?: number;
   hardwareConnected?: boolean;
 }
@@ -16,10 +18,12 @@ export const Header: React.FC<HeaderProps> = ({
   currentViewTitle,
   onRefresh,
   onOpenMobileNav,
+  onOpenSettings,
   vddVolts = 0.0,
   hardwareConnected = false,
 }) => {
   const powered = isTargetPowered(vddVolts);
+  const { mode, toggleMode } = useWorkbenchMode();
 
   return (
     <header className="min-h-16 px-4 sm:px-6 py-2 bg-bench-900/90 backdrop-blur border-b border-slate-800 flex items-center justify-between gap-2 select-none z-10 shrink-0">
@@ -81,6 +85,32 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="text-rose-400 font-semibold">OFFLINE</span>
           )}
         </div>
+
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={toggleMode}
+          title="Alternar entre Modo Básico (Guiado) e Avançado (Engenharia)"
+          className="hidden sm:inline-flex h-8 px-2.5 text-[11px] font-mono gap-1.5 bg-bench-950 border-slate-700"
+        >
+          <Layers className="w-3.5 h-3.5 text-cyan-400" />
+          <span>{mode === 'basic' ? 'Modo: Básico' : 'Modo: Avançado'}</span>
+        </Button>
+
+        {onOpenSettings && (
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={onOpenSettings}
+            className="h-8 w-8 bg-bench-950 border-slate-700"
+            title="Configurações, Temas e Acessibilidade"
+            aria-label="Abrir Configurações e Tema"
+          >
+            <Settings className="w-3.5 h-3.5 text-slate-300" />
+          </Button>
+        )}
 
         <StatusBadge
           variant="warning"

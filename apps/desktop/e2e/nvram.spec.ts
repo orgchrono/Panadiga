@@ -24,7 +24,7 @@ test.describe('NVRAM & Spansion S29JL064H Surgical Recovery E2E', () => {
   test('streams live Pico NVRAM capture into Sector Map and toggles back to disk dump', async ({ page }) => {
     // 1. Disconnected guard: clicking capture without active Pico reports explicit requirement (no silent mock)
     await page.getByRole('button', { name: /Capturar NVRAM via Pico/i }).click();
-    await expect(page.getByText(/Nenhuma sonda Pico conectada/i)).toBeVisible();
+    await expect(page.getByText(/Nenhuma sonda Pico conectada/i).first()).toBeVisible();
 
     // 2. Navigate to PicoBench, trigger real DUMP command, and verify reactive NVRAM Sector Map sync
     await page.click('button:has-text("Bancada PicoBench")');

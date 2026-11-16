@@ -106,6 +106,14 @@ fn compose_command_validates_modes_and_blocks_injection() {
         compose_diagnostic_command("UARTSTREAM", Some("8000 JIG:350")).unwrap();
     assert_eq!(stream_cmd, "UARTSTREAM 8000 JIG:350");
     assert_eq!(stream_dur, Duration::from_millis(10500));
+
+    let (baud_cmd, baud_dur) = compose_diagnostic_command("BAUD", Some("115200")).unwrap();
+    assert_eq!(baud_cmd, "BAUD 115200");
+    assert_eq!(baud_dur, Duration::from_millis(3000));
+
+    let (sd_cmd, sd_dur) = compose_diagnostic_command("SDSNIFF", Some("6000 JIG:350")).unwrap();
+    assert_eq!(sd_cmd, "SDSNIFF 6000 JIG:350");
+    assert_eq!(sd_dur, Duration::from_millis(8500));
 }
 
 #[test]

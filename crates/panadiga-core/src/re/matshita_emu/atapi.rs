@@ -1,5 +1,6 @@
 //! ATAPI CDB packet dispatch (`R6-MV4` `DRV`) for [`MatshitaOddEmulator`].
 
+use super::inject::InjectionLogEntry;
 use super::{
     ATAPI_SECTOR_SIZE_BYTES, AtapiCommandRecord, AtapiTransferDirection,
     DRV_ATAPI_READ_BUFFER_3C_VA, DRV_ATAPI_VENDOR_ED_VA, DRV_ATAPI_VENDOR_FD_VA,
@@ -247,15 +248,15 @@ impl MatshitaOddEmulator {
         }
         let off = lba * ATAPI_SECTOR_SIZE_BYTES;
         self.disc_image[off..off + expected].copy_from_slice(&payload[..expected]);
-        self.record_injection(
-            "ATAPI_WRITE10",
-            "0x2A",
-            0,
-            lba as u32,
-            &payload[..expected],
-            "INJECTED_TO_VIRTUAL_DISC",
-            format!("Wrote {blocks} virtual CD/DVD sectors at LBA {lba}"),
-        );
+        self.record_injection(InjectionLogEntry {
+            source: "ATAPI_WRITE10",
+            cdb0_or_cmd: "0x2A",
+            mode: 0,
+            target: lba as u32,
+            payload: &payload[..expected],
+            status: "INJECTED_TO_VIRTUAL_DISC",
+            note: format!("Wrote {blocks} virtual CD/DVD sectors at LBA {lba}"),
+        });
         Ok((
             "WRITE(10)".to_string(),
             0x4001_6200,
@@ -290,17 +291,17 @@ impl MatshitaOddEmulator {
             );
         }
         self.buffer[offset..offset + req_len].copy_from_slice(&payload[..req_len]);
-        self.record_injection(
-            "ATAPI_WRITE_BUFFER",
-            "0x3B",
+        self.record_injection(InjectionLogEntry {
+            source: "ATAPI_WRITE_BUFFER",
+            cdb0_or_cmd: "0x3B",
             mode,
-            target_va,
-            &payload[..req_len],
-            "COMMITTED_BUFFER",
-            format!(
+            target: target_va,
+            payload: &payload[..req_len],
+            status: "COMMITTED_BUFFER",
+            note: format!(
                 "0x3B WRITE BUFFER mode=0x{mode:02X} off=0x{offset:X} target=0x{target_va:08X}"
             ),
-        );
+        });
         Ok((
             "WRITE BUFFER".to_string(),
             DRV_ATAPI_WRITE_BUFFER_3B_VA,
@@ -383,22 +384,22 @@ impl MatshitaOddEmulator {
                 }
                 if copy_len > 0 {
                     self.buffer[..copy_len].copy_from_slice(&payload[..copy_len]);
-                    self.record_injection(
-                        "ATAPI_VENDOR_ED",
-                        "0xED",
-                        sub,
-                        self.staged_write_addr,
-                        &payload[..copy_len],
-                        if (self.sram_0cd8_auth & 1) != 0 {
+                    self.record_injection(InjectionLogEntry {
+                        source: "ATAPI_VENDOR_ED",
+                        cdb0_or_cmd: "0xED",
+                        mode: sub,
+                        target: self.staged_write_addr,
+                        payload: &payload[..copy_len],
+                        status: if (self.sram_0cd8_auth & 1) != 0 {
                             "COMMITTED_UNLOCKED"
                         } else {
                             "STAGED_UNAUTH_CHECKED"
                         },
-                        format!(
+                        note: format!(
                             "FUN_400209f3 sub=0x{sub:02X} staged {copy_len} B @ 0x{:08X}",
                             self.staged_write_addr
                         ),
-                    );
+                    });
                 }
                 Ok((
                     format!("MATSUSHITA VENDOR 0xED (SUB 0x{sub:02X})"),

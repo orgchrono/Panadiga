@@ -2,14 +2,12 @@ import React from 'react';
 import { useHexInspectorViewModel } from '@/viewmodels/useHexInspectorViewModel';
 import { MetricCard } from '@/components/MetricCard';
 import { StatusBadge } from '@/components/StatusBadge';
+import { RangeDndScrubber, ResizableSplitPane } from '@/components/ui';
 import { useTranslation } from '@/i18n/useTranslation';
 import {
   Binary,
-  Bookmark,
   ChevronLeft,
   ChevronRight,
-  Search,
-  ArrowRight,
   Compass,
 } from 'lucide-react';
 
@@ -26,6 +24,7 @@ export const HexInspectorView: React.FC = () => {
     loading,
     feedbackMessage,
     selectBookmark,
+    jumpToOffset,
     jumpToInputOffset,
     nextPage,
     prevPage,
@@ -109,56 +108,80 @@ export const HexInspectorView: React.FC = () => {
         />
       </div>
 
-      {/* Main Hex Workspace: Left Bookmarks / Right Hex Table (Balanced Heights) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-        {/* Left: Bookmarks List */}
-        <div className="lg:col-span-4 flex flex-col h-[680px]">
-          <div className="rounded-xl bg-bench-900 border border-slate-800 p-5 shadow-xl space-y-3 flex flex-col h-full">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-300 flex items-center gap-2 shrink-0">
-              <Compass className="w-4 h-4 text-cyan-400" />
-              <span>Marcadores Arquiteturais Críticos</span>
-            </h3>
+      {/* RangeDnD Scrubbing Window across 100 MB Disk / LBA Space */}
+      <RangeDndScrubber
+        label="Scrubber LBA / Offset Físico (RangeDnD)"
+        min={0}
+        max={104857600}
+        step={512}
+        startValue={currentOffset}
+        endValue={Math.min(104857600, currentOffset + hexRows.length * 16)}
+        formatValue={val => `0x${val.toString(16).toUpperCase().padStart(8, '0')} (LBA ${Math.floor(val / 512)})`}
+        presets={[
+          { label: 'MBR LBA 0', start: 0, end: 384 },
+          { label: 'Journal 8MB (LBA 16384)', start: 8388608, end: 8388992 },
+          { label: 'Espelho 28MB (LBA 57344)', start: 29360128, end: 29360512 },
+          { label: 'Partição 1 (32MB)', start: 33554432, end: 33554816 },
+        ]}
+        onChangeRange={start => jumpToOffset(start)}
+      />
 
-            <div className="space-y-2 flex-1 min-h-0 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-800">
-              {bookmarks.length === 0 ? (
-                <div className="p-6 text-center text-xs text-slate-500 font-mono">
-                  Nenhum marcador registrado
-                </div>
-              ) : (
-                bookmarks.map(bm => {
-                  const isSelected = selectedBookmark?.id === bm.id;
-                  return (
-                    <div
-                      key={bm.id}
-                      onClick={() => selectBookmark(bm)}
-                      className={`p-3 rounded-xl border cursor-pointer transition-all ${
-                        isSelected
-                          ? 'bg-cyan-500/10 border-cyan-500/50 shadow-md shadow-cyan-950/20'
-                          : 'bg-slate-950 border-slate-800 hover:border-slate-700'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className={`text-xs font-bold ${isSelected ? 'text-cyan-400' : 'text-slate-200'}`}>
-                          {bm.label}
-                        </span>
-                        <span className="text-[10px] text-slate-500 font-mono">
-                          {bm.offset_hex}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-slate-400 font-sans">
-                        {bm.description}
-                      </p>
-                    </div>
-                  );
-                })
-              )}
+      {/* Main Hex Workspace: Resizable Split (Bookmarks vs Hex Dump Grid) */}
+      <ResizableSplitPane
+        initialLeftPercent={34}
+        minLeftPercent={22}
+        maxLeftPercent={55}
+        storageKey="panadiga.split.hex"
+        ariaLabel="Divisor entre marcadores e dump hexadecimal"
+        left={
+          <div className="flex flex-col h-[520px] lg:h-[680px]">
+            <div className="rounded-xl bg-bench-900 border border-slate-800 p-5 shadow-xl space-y-3 flex flex-col h-full">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-300 flex items-center gap-2 shrink-0">
+                <Compass className="w-4 h-4 text-cyan-400" />
+                <span>Marcadores Arquiteturais Críticos</span>
+              </h3>
+
+              <div className="space-y-2 flex-1 min-h-0 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-800">
+                {bookmarks.length === 0 ? (
+                  <div className="p-6 text-center text-xs text-slate-500 font-mono">
+                    Nenhum marcador registrado
+                  </div>
+                ) : (
+                  bookmarks.map(bm => {
+                    const isSelected = selectedBookmark?.id === bm.id;
+                    return (
+                      <button
+                        key={bm.id}
+                        type="button"
+                        onClick={() => selectBookmark(bm)}
+                        className={`w-full text-left p-3 rounded-xl border cursor-pointer transition-all ${
+                          isSelected
+                            ? 'bg-cyan-500/10 border-cyan-500/50 shadow-md shadow-cyan-950/20'
+                            : 'bg-slate-950 border-slate-800 hover:border-slate-700'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className={`text-xs font-bold ${isSelected ? 'text-cyan-400' : 'text-slate-200'}`}>
+                            {bm.label}
+                          </span>
+                          <span className="text-[10px] text-slate-500 font-mono">
+                            {bm.offset_hex}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-400 font-sans">
+                          {bm.description}
+                        </p>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
             </div>
           </div>
-        </div>
-
-        {/* Right: The High-Precision Hex Dump Grid */}
-        <div className="lg:col-span-8 flex flex-col h-[680px]">
-          <div className="rounded-xl bg-bench-900 border border-slate-800 shadow-xl overflow-hidden flex flex-col h-full">
+        }
+        right={
+          <div className="flex flex-col h-[520px] lg:h-[680px]">
+            <div className="rounded-xl bg-bench-900 border border-slate-800 shadow-xl overflow-hidden flex flex-col h-full">
             {/* Hex Header Bar */}
             <div className="px-4 py-2.5 bg-bench-950 border-b border-slate-800 flex items-center justify-between text-xs text-slate-400 shrink-0">
               <div className="flex items-center gap-6">
@@ -247,7 +270,8 @@ export const HexInspectorView: React.FC = () => {
             </div>
           </div>
         </div>
-      </div>
+        }
+      />
     </div>
   );
 };
