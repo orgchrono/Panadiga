@@ -130,12 +130,15 @@ void p7501_diag_cmd_dump(const char *arg) {
     uint32_t count = 16U;
 
     if ((arg != NULL) && (*arg != '\0')) {
-        char *next = NULL;
-        addr = (uint32_t)strtoul(arg, &next, 16);
-        if ((next != NULL) && (*next != '\0')) {
-            char *cnt_str = p7501_cli_trim_whitespace(next);
-            if ((cnt_str != NULL) && (*cnt_str != '\0')) {
-                count = (uint32_t)strtoul(cnt_str, NULL, 0);
+        const char *rest = NULL;
+        if (!p7501_parse_hex_u32_prefix(arg, &addr, &rest)) {
+            printf("[DUMP] ERROR: Invalid hex start address '%s'.\n", arg);
+            return;
+        }
+        if ((rest != NULL) && (*rest != '\0')) {
+            if (!p7501_parse_u32_auto(rest, &count)) {
+                printf("[DUMP] ERROR: Invalid word count '%s'.\n", rest);
+                return;
             }
         }
     }

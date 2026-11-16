@@ -18,11 +18,11 @@ pub(super) fn build_and_emit_live_nvram_capture(
     port_name: &str,
     base_bus_address: u32,
     bytes: &[u8],
-) -> Result<LiveNvramCaptureEventDto, String> {
+) -> IpcResult<LiveNvramCaptureEventDto> {
     let label = format!("{} ({})", source, port_name.trim());
     let report =
         panadiga_core::nvram::inspect_partial_nvram_capture(bytes, base_bus_address, &label)
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| PanadigaIpcError::validation(e.to_string()))?;
     let event = LiveNvramCaptureEventDto {
         source: source.to_string(),
         port: port_name.trim().to_string(),
@@ -68,10 +68,13 @@ pub async fn pico_capture_nvram_live(
             )
         })
         .await
-        .map_err(|e| format!("Falha interna de execução assíncrona: {}", e))??;
+        .map_err(|e| {
+            PanadigaIpcError::internal(format!("Falha interna de execução assíncrona: {}", e))
+        })?
+        .map_err(PanadigaIpcError::serial)?;
 
         if !res.success {
-            return Err(PanadigaIpcError::classify(format!(
+            return Err(PanadigaIpcError::serial(format!(
                 "Falha ao capturar bloco NVRAM em 0x{:08X}: {}",
                 cur_addr, res.summary
             )));
@@ -79,7 +82,7 @@ pub async fn pico_capture_nvram_live(
         let mut chunk_bytes =
             panadiga_core::pico::cdc::parse_pico_dump_hex_to_bytes(&res.raw_output);
         if chunk_bytes.is_empty() {
-            return Err(PanadigaIpcError::classify(format!(
+            return Err(PanadigaIpcError::serial(format!(
                 "DUMP retornou 0 bytes legíveis em 0x{:08X} ({}).",
                 cur_addr, res.summary
             )));
@@ -95,5 +98,4 @@ pub async fn pico_capture_nvram_live(
         start_addr,
         &accumulated,
     )
-    .map_err(PanadigaIpcError::from)
 }

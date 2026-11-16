@@ -23,7 +23,7 @@ describe('PicoDiagnosticsStudio Component', () => {
     );
 
     expect(screen.getByText('Nenhum diagnóstico executado nesta sessão')).toBeDefined();
-    const runPincheck = screen.getByRole('button', { name: /Executar PINCHECK/i });
+    const runPincheck = screen.getByTestId('pico-cmd-run-PINCHECK');
     fireEvent.click(runPincheck);
     expect(onExecute).toHaveBeenCalledWith('PINCHECK', '');
   });

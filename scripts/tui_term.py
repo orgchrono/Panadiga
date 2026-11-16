@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 import sys
-from typing import Any, Callable, Mapping
+from typing import Callable, Mapping, TextIO, cast
 
 from scripts.panadiga_cache import WorkspaceInventory, clear_caches
 from scripts.tui_plan import (
@@ -35,11 +35,11 @@ def _enable_ansi_console() -> None:
         pass
 
 
-def _select_readable(fd: int, timeout_s: float) -> list[Any]:
+def _select_readable(timeout_s: float) -> list[TextIO]:
     import select
 
     readable, _, _ = select.select([sys.stdin], [], [], timeout_s)
-    return readable
+    return cast(list[TextIO], readable)
 
 
 def _read_keypress() -> str:
@@ -73,7 +73,7 @@ def _read_keypress() -> str:
         if ch == "\x03":
             raise KeyboardInterrupt
         if ch == "\x1b":
-            next_ch = sys.stdin.read(1) if sys.stdin in _select_readable(fd, 0.04) else ""
+            next_ch = sys.stdin.read(1) if sys.stdin in _select_readable(0.04) else ""
             if next_ch == "[":
                 code = sys.stdin.read(1)
                 return {"A": "UP", "B": "DOWN", "C": "RIGHT", "D": "LEFT"}.get(code, "")

@@ -6,6 +6,7 @@
  */
 
 #include "uart/p7501_uart_interactive.h"
+#include "common/p7501_hex.h"
 #include "hal/p7501_hw.h"
 #include "hal/p7501_led.h"
 #include "hal/p7501_watchdog.h"
@@ -79,15 +80,11 @@ void p7501_cmd_uart_send(const char *arg) {
 }
 
 static uint32_t parse_probe_mode(const char *arg) {
-    if ((arg == NULL) || (*arg == '\0')) {
+    uint32_t val = 5U;
+    if ((arg == NULL) || (*arg == '\0') || !p7501_parse_u32_strict(arg, &val) || (val > 255U)) {
         return 5U;
     }
-    char *endptr = NULL;
-    const unsigned long val = strtoul(arg, &endptr, 10);
-    if ((endptr == arg) || (*endptr != '\0') || (val > 255UL)) {
-        return 5U;
-    }
-    return (uint32_t)val;
+    return val;
 }
 
 static void uartprobe_on_byte(void *raw_ctx, uint8_t byte, uint32_t rel_us, bool *out_stop) {

@@ -23,7 +23,40 @@
     "hexinspector": "Inspetor Hex",
     "hexinspector.sub": "Alinhamento LBA & Offsets",
     "unbrick": "Centro Unbrick",
-    "unbrick.sub": "SD Kit, DIGADIAG & TBC"
+    "unbrick.sub": "SD Kit, DIGADIAG & TBC",
+    "settings": "Configurações",
+    "settings.sub": "Temas, Acessibilidade & Idioma",
+    "manuals.subDynamic": "{{count}} PDFs & Indexação Rápida",
+    "nvram.badgeClean": "LIMPO",
+    "menuAria": "Navegação Principal do Sistema",
+    "empty": "Nenhum módulo disponível.",
+    "drawerTitle": "Menu de Módulos Panadiga"
+  },
+  "shell": {
+    "syncingSsot": "Sincronizando especificação SSOT do hardware...",
+    "boundaryFailure": "Falha ao carregar {{title}}",
+    "openMainNav": "Abrir navegação principal",
+    "modeTooltip": "Alternar entre Modo Básico (Guiado) e Avançado (Engenharia)",
+    "modeBasic": "Modo: Básico",
+    "modeAdvanced": "Modo: Avançado",
+    "openSettings": "Abrir Configurações, Temas e Acessibilidade",
+    "refreshTelemetry": "Atualizar dados de telemetria",
+    "picoConnected": "PICO CONECTADO",
+    "targetUnpowered": "Alvo 0V - Desligado",
+    "targetRailZero": "0.00 V (Sem Alimentação)",
+    "coreHalted": "HALTED (OCD)",
+    "coreStandby": "STANDBY (0V)",
+    "viewTitles": {
+      "dashboard": "Visão Geral do Gravador & Status da Bancada",
+      "nvram": "Flash Spansion S29JL064H & Cirurgia NVRAM U99",
+      "hdd": "Armazenamento MEIHDFS & Forensic do Disco Rígido",
+      "picobench": "Bancada Raspberry Pi Pico — P7501 UART (115200 8N1)",
+      "frmcrypto": "Criptoanálise Óptica PANA_DVD.FRM & Dicionário ECB",
+      "manuals": "Manuais de Serviço & Diagramas Esquemáticos ({{count}})",
+      "hexinspector": "Inspetor Hexadecimal & Alinhamento LBA",
+      "unbrick": "Centro Unbrick Pre-MAIN, Kit SD & TBC Autônomo",
+      "settings": "Configurações, Temas, Acessibilidade & Idioma"
+    }
   },
   "dashboard": {
     "alertTitle": "DIAGNÓSTICO CRÍTICO: {{errorCode}}",
@@ -89,6 +122,22 @@
       "subtitle": "Salvas em {{dir}} • Verificação hash independente pronta.",
       "copySha": "Copiar SHA256SUMS",
       "copiedSha": "Copiado!"
+    },
+    "table": {
+      "title": "256 Registros de Alocação MEIHDFS (Decodificados com XOR 0xFF)",
+      "subtitle": "Offset Físico: 0x0000_3000 (LBA 24) • Comprimento de 32 bytes por nó de alocação",
+      "searchPlaceholder": "Filtrar por tag ou hex...",
+      "searchAria": "Filtrar registros MEIHDFS por tag ou hex",
+      "filterAria": "Filtrar por tipo de tag MEIHDFS",
+      "allTags": "Todas as Tags",
+      "tableAria": "Tabela de Alocações MEIHDFS",
+      "colIdx": "Idx",
+      "colTag": "Tag Decodificada",
+      "colHex": "Hex Bruto (0xFF Invertido)",
+      "colParams": "Parâmetros (Setores / LBA)",
+      "colDesc": "Descrição Forense",
+      "sectorsUnit": "setores",
+      "empty": "Nenhum registro MEIHDFS encontrado para os filtros selecionados"
     }
   },
   "crypto": {
@@ -301,6 +350,57 @@
       "badgeRecommended": "RECOMENDADO",
       "badgeCustom": "CUSTOM",
       "empty": "Nenhuma métrica de telemetria disponível."
+    },
+    "topHeader": {
+      "subtitle": "Interface Primária P7501 UART 115200 8N1 & Controle Discreto SW_UART / XRESET / NSW5V",
+      "refreshTooltip": "Atualizar telemetria e verificar status do dispositivo",
+      "uf2VariantAria": "Variante UF2",
+      "uf2Unified": "UF2 Unificado (RP2040+RP2350)",
+      "uf2Rp2040": "UF2 RP2040 (Pico 1)",
+      "uf2Rp2350": "UF2 RP2350 (Pico 2)",
+      "flashTooltip": "Grava o firmware P7501 Async UART (RP2040 / RP2350) no drive BOOTSEL (RPI-RP2 / RP2350)",
+      "flashingUf2": "Gravando UF2...",
+      "flashBtn": "Flash Pico (BOOTSEL)",
+      "bootselTooltip": "Reinicia o Pico em modo BOOTSEL via 1200-baud touch / comando CDC",
+      "bootselBtn": "BOOTSEL Reset",
+      "bleConnected": "BLE CONECTADO",
+      "otgConnected": "USB-OTG CONECTADO",
+      "lowVddTitle": "Sonda Pico Operacional, mas Trilho Alvo em {{voltage}}V (< 2.50V)",
+      "lowVddDesc": "Verifique se o Panasonic DMR-EH55 está energizado na bancada e se os pinos P7501 (Pino 4 GND, Pino 1 SW_UART / ADC0) estão conectados corretamente."
+    },
+    "studio": {
+      "title": "Estúdio Granular P7501 Async UART, Elétrica & Probes NOR Flash",
+      "badgeCount": "{{count}} COMANDOS FIRMWARE",
+      "subtitle": "Espelha 100% do CLI embarcado (`p7501_cli.c` — P7501 UART 115200 8N1) via USB CDC, Android OTG e BLE NUS.",
+      "clearHistory": "Limpar Histórico",
+      "noCategory": "Nenhuma categoria disponível",
+      "memoryMapTab": "Mapa Memória AM34",
+      "errorTitle": "Erro na Execução Diagnóstica",
+      "runningTitle": "Sonda Pico Executando {{id}}",
+      "runningDesc": "Aguardando janela de captura / resposta determinística no barramento...",
+      "criticalBadge": "CRÍTICO",
+      "freeArgHint": "Parâmetro livre para este comando",
+      "argAria": "{{id}} argumento",
+      "runningCmd": "Executando {{id}}...",
+      "confirmCmd": "Confirmar {{id}}?",
+      "runCmd": "Executar {{id}}",
+      "tabElectrical": "Elétrica P7501",
+      "tabOcdFlash": "OCD & NOR Flash",
+      "tabUartFmu": "UART & FMU Bootrom",
+      "tabProbe": "Controle Sonda"
+    },
+    "toolsRail": {
+      "sectionTitle": "Disparo Rápido de Ferramentas de Engenharia Reversa:",
+      "emptyTools": "Nenhuma ferramenta externa configurada.",
+      "androidDesktopOnly": "Ferramentas desktop externas (GDB CLI / Ghidra GUI) ficam disponíveis no host Desktop (Windows / Linux / macOS).",
+      "syncLabel": "Sync Jython (Headless)",
+      "mcpLabel": "Ghidra MCP :8081",
+      "gdbTitle": "Abre terminal interativo com gdb-multiarch conectado na porta {{port}}",
+      "ghidraTitle": "Sincroniza scripts Jython SSOT em ~/ghidra_scripts e abre o Ghidra GUI diretamente em Panadiga_MN103S.gpr sem janelas CMD extras",
+      "syncTitle": "Executa analyzeHeadless.bat com mapa AM34, símbolos SSOT, fix MN103S e auditoria U99 gravando panadiga_jython_sync.log",
+      "mcpTitle": "Inicia a ponte streamable-http ghidra-mcp.exe em http://127.0.0.1:8081 conectada ao Ghidra (:8080)",
+      "hxdTitle": "Abre o editor hexadecimal configurado no sistema com os binários da bancada",
+      "terminalTitle": "Abre o shell nativo do sistema operacional no diretório do projeto"
     }
   },
   "nvram": {

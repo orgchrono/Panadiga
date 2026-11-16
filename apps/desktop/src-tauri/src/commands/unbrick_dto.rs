@@ -11,6 +11,7 @@ use super::constants::{
     DEFAULT_BGO_PATCH_MODE, DEFAULT_MAIN_PASSTHROUGH_MODE, DEFAULT_NOR_DUMP_BLOCK_SIZE,
     DEFAULT_NOR_DUMP_LEN_HEX, DEFAULT_NOR_DUMP_START_HEX, NOR_STUB_HEX_PREVIEW_BYTES,
 };
+use super::error::{IpcResult, PanadigaIpcError};
 use super::frm_pack::resolve_read_path;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -39,10 +40,12 @@ pub(crate) fn opt_read_path(raw: &Option<String>) -> Option<PathBuf> {
     opt_trimmed(raw).map(resolve_read_path)
 }
 
-pub(crate) fn resolve_dir_target(raw: &str) -> Result<PathBuf, String> {
+pub(crate) fn resolve_dir_target(raw: &str) -> IpcResult<PathBuf> {
     let trimmed = raw.trim();
     if trimmed.is_empty() {
-        return Err("Caminho do diretório SD é obrigatório.".to_string());
+        return Err(PanadigaIpcError::validation(
+            "Caminho do diretório SD é obrigatório.",
+        ));
     }
     let p = PathBuf::from(trimmed);
     Ok(if p.is_absolute() {
@@ -54,19 +57,19 @@ pub(crate) fn resolve_dir_target(raw: &str) -> Result<PathBuf, String> {
 
 pub(crate) fn to_sd_unbrick_kit_request(
     dto: &SdUnbrickKitRequestDto,
-) -> Result<SdUnbrickKitRequest, String> {
+) -> IpcResult<SdUnbrickKitRequest> {
     let bgo_mode: Prog061BgoPatchMode = dto
         .bgo_mode
         .as_deref()
         .unwrap_or(DEFAULT_BGO_PATCH_MODE)
         .parse()
-        .map_err(|e: anyhow::Error| e.to_string())?;
+        .map_err(|e: anyhow::Error| PanadigaIpcError::validation(e.to_string()))?;
     let main_passthrough_mode: MainPassthroughMode = dto
         .main_passthrough_mode
         .as_deref()
         .unwrap_or(DEFAULT_MAIN_PASSTHROUGH_MODE)
         .parse()
-        .map_err(|e: anyhow::Error| e.to_string())?;
+        .map_err(|e: anyhow::Error| PanadigaIpcError::validation(e.to_string()))?;
 
     Ok(SdUnbrickKitRequest {
         output_dir: resolve_dir_target(&dto.output_dir)?,
@@ -100,20 +103,21 @@ pub(crate) fn parse_nor_dumper_params(
     block_size: Option<u32>,
     load_addr: Option<&str>,
     wrap_as_digadiag: Option<bool>,
-) -> Result<NorDumperParams, String> {
+) -> IpcResult<NorDumperParams> {
     let wrapped = wrap_as_digadiag.unwrap_or(false);
     let explicit_load = load_addr
         .map(str::trim)
         .filter(|s| !s.is_empty())
         .map(parse_u32_radix)
         .transpose()
-        .map_err(|e| format!("Load address inválido: {e}"))?;
+        .map_err(|e| PanadigaIpcError::validation(format!("Load address inválido: {e}")))?;
 
     Ok(NorDumperParams {
-        start_u32: parse_u32_radix(start_addr.unwrap_or(DEFAULT_NOR_DUMP_START_HEX))
-            .map_err(|e| format!("Endereço inicial NOR inválido: {e}"))?,
+        start_u32: parse_u32_radix(start_addr.unwrap_or(DEFAULT_NOR_DUMP_START_HEX)).map_err(
+            |e| PanadigaIpcError::validation(format!("Endereço inicial NOR inválido: {e}")),
+        )?,
         len_u32: parse_u32_radix(total_len.unwrap_or(DEFAULT_NOR_DUMP_LEN_HEX))
-            .map_err(|e| format!("Tamanho total inválido: {e}"))?,
+            .map_err(|e| PanadigaIpcError::validation(format!("Tamanho total inválido: {e}")))?,
         block_size: block_size.unwrap_or(DEFAULT_NOR_DUMP_BLOCK_SIZE),
         load_u32: panadiga_core::re::resolve_nor_stub_load_addr(explicit_load, wrapped),
         wrapped,

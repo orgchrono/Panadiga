@@ -1,12 +1,15 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { HexDumpRow, HexBookmark } from '@/models';
 import { invokeCommand } from '@/services/ipc';
 import { DIGA_HEX_BOOKMARKS } from '@/constants';
 import { useToast } from '../context/ToastContext';
+import { useManagedTimeouts } from '@/hooks/useManagedTimeouts';
 import { logger } from '@/utils/logger';
 
 export function useHexInspectorViewModel() {
   const { showToast } = useToast();
+  const { scheduleTimeout, cancelTimeout } = useManagedTimeouts();
+  const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [currentOffset, setCurrentOffset] = useState<number>(0);
   const [hexRows, setHexRows] = useState<HexDumpRow[]>([]);
   const [bookmarks] = useState<HexBookmark[]>(DIGA_HEX_BOOKMARKS);
@@ -76,9 +79,13 @@ export function useHexInspectorViewModel() {
         title: 'Navegação de Offset',
         message: msg,
       });
-      setTimeout(() => setFeedbackMessage(null), 3000);
+      cancelTimeout(feedbackTimerRef.current);
+      feedbackTimerRef.current = scheduleTimeout(() => {
+        feedbackTimerRef.current = null;
+        setFeedbackMessage(null);
+      }, 3000);
     }
-  }, [jumpInput, jumpToOffset, showToast]);
+  }, [jumpInput, jumpToOffset, showToast, cancelTimeout, scheduleTimeout]);
 
   return {
     currentOffset,

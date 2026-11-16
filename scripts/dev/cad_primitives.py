@@ -6,11 +6,28 @@ import math
 import os
 import shutil
 import time
-from typing import Any, Mapping, Sequence, cast
+from typing import Mapping, Protocol, Sequence, cast
 import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
+
+
+class _AxesDrawProtocol(Protocol):
+    def plot(self, x: object, y: object, **kwargs: object) -> object: ...
+    def text(self, x: float, y: float, s: str, **kwargs: object) -> object: ...
+    def annotate(
+        self,
+        text: str,
+        *,
+        xy: tuple[float, float],
+        xytext: tuple[float, float],
+        arrowprops: dict[str, object],
+    ) -> object: ...
+
+
+class _PyplotSaveProtocol(Protocol):
+    def savefig(self, fname: str, *, dpi: int, bbox_inches: str, facecolor: object) -> None: ...
 
 
 def plot_line(
@@ -24,8 +41,8 @@ def plot_line(
     marker: str | None = None,
     markersize: float | None = None,
 ) -> None:
-    """Strictly typed wrapper for Axes.plot keeping Pyright strict happy."""
-    kwargs: dict[str, Any] = {"color": color}
+    """Strictly typed wrapper for Axes.plot keeping Mypy/Pyright strict happy."""
+    kwargs: dict[str, object] = {"color": color}
     if linewidth is not None:
         kwargs["linewidth"] = linewidth
     if solid_capstyle is not None:
@@ -34,7 +51,7 @@ def plot_line(
         kwargs["marker"] = marker
     if markersize is not None:
         kwargs["markersize"] = markersize
-    cast(Any, ax).plot(x, y, **kwargs)
+    cast(_AxesDrawProtocol, cast(object, ax)).plot(x, y, **kwargs)
 
 
 def draw_text(
@@ -51,8 +68,8 @@ def draw_text(
     fontfamily: str = "sans-serif",
     linespacing: float | None = None,
 ) -> None:
-    """Strictly typed wrapper for Axes.text keeping Pyright strict happy."""
-    kwargs: dict[str, Any] = {
+    """Strictly typed wrapper for Axes.text keeping Mypy/Pyright strict happy."""
+    kwargs: dict[str, object] = {
         "fontsize": fontsize,
         "color": color,
         "ha": ha,
@@ -63,7 +80,7 @@ def draw_text(
         kwargs["fontweight"] = fontweight
     if linespacing is not None:
         kwargs["linespacing"] = linespacing
-    cast(Any, ax).text(x, y, s, **kwargs)
+    cast(_AxesDrawProtocol, cast(object, ax)).text(x, y, s, **kwargs)
 
 
 def draw_annotate(
@@ -72,15 +89,19 @@ def draw_annotate(
     *,
     xy: tuple[float, float],
     xytext: tuple[float, float],
-    arrowprops: Mapping[str, Any],
+    arrowprops: Mapping[str, object],
 ) -> None:
-    """Strictly typed wrapper for Axes.annotate keeping Pyright strict happy."""
-    cast(Any, ax).annotate(s, xy=xy, xytext=xytext, arrowprops=dict(arrowprops))
+    """Strictly typed wrapper for Axes.annotate keeping Mypy/Pyright strict happy."""
+    cast(_AxesDrawProtocol, cast(object, ax)).annotate(
+        s, xy=xy, xytext=xytext, arrowprops=dict(arrowprops)
+    )
 
 
-def _savefig(path: str, *, dpi: int, bbox_inches: str, facecolor: Any) -> None:
-    """Strictly typed wrapper for pyplot.savefig keeping Pyright strict happy."""
-    cast(Any, plt).savefig(path, dpi=dpi, bbox_inches=bbox_inches, facecolor=facecolor)
+def _savefig(path: str, *, dpi: int, bbox_inches: str, facecolor: object) -> None:
+    """Strictly typed wrapper for pyplot.savefig keeping Mypy/Pyright strict happy."""
+    cast(_PyplotSaveProtocol, cast(object, plt)).savefig(
+        path, dpi=dpi, bbox_inches=bbox_inches, facecolor=facecolor
+    )
 
 
 def draw_ieee_resistor(

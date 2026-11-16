@@ -21,6 +21,7 @@ import {
   Select,
 } from '@/components/ui';
 import { useTranslation } from '@/i18n/useTranslation';
+import { isMainPassthroughMode } from '@/utils/typeGuards';
 import {
   buildTbcActionParams,
   type MainPassthroughMode,
@@ -145,7 +146,11 @@ export const TbcPassthroughCard: React.FC<TbcPassthroughCardProps> = ({
               <Select
                 id="tbc-patch-mode"
                 value={mode}
-                onChange={e => setMode(e.target.value as MainPassthroughMode)}
+                onChange={e => {
+                  if (isMainPassthroughMode(e.target.value)) {
+                    setMode(e.target.value);
+                  }
+                }}
               >
                 <option value="av_passthrough">AV_PASSTHROUGH (Bypass FPC + ODD)</option>
                 <option value="factory_original">FACTORY_ORIGINAL (Restore Stock)</option>

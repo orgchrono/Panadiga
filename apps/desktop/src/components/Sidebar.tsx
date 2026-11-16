@@ -2,6 +2,7 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import { Badge, Button, Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui';
 import { isTargetPowered } from '@/utils/formatters';
+import { useTranslation } from '@/i18n/useTranslation';
 import type { ViewKey } from '@/models';
 import {
   LayoutDashboard,
@@ -23,6 +24,7 @@ interface SidebarProps {
   currentView: ViewKey;
   onSelectView: (view: ViewKey) => void;
   vddVolts?: number;
+  minVddThreshold?: number;
   hardwareConnected?: boolean;
   nvramCleaned?: boolean;
   indexedManualsCount?: number | null;
@@ -37,13 +39,15 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
   currentView,
   onSelectView,
   vddVolts = 0.0,
+  minVddThreshold,
   hardwareConnected = false,
   nvramCleaned = false,
   indexedManualsCount = null,
   flashSizeMb = 8,
   onAfterSelect,
 }) => {
-  const powered = isTargetPowered(vddVolts);
+  const { t } = useTranslation();
+  const powered = isTargetPowered(vddVolts, minVddThreshold);
   const navItems: Array<{
     key: ViewKey;
     label: string;
@@ -54,68 +58,68 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
   }> = [
     {
       key: 'dashboard',
-      label: 'Visão Geral',
-      sublabel: 'Status do Gravador & Binários',
+      label: t('nav.dashboard'),
+      sublabel: t('nav.dashboard.sub'),
       icon: <LayoutDashboard className="w-4 h-4" />,
     },
     {
       key: 'nvram',
-      label: 'Flash & NVRAM',
-      sublabel: 'Spansion SA134..SA141 U99',
+      label: t('nav.nvram'),
+      sublabel: t('nav.nvram.sub'),
       icon: <Cpu className="w-4 h-4" />,
-      badge: nvramCleaned ? 'LIMPO' : 'U99',
+      badge: nvramCleaned ? t('nav.nvram.badgeClean') : 'U99',
       badgeVariant: nvramCleaned ? 'success' : 'destructive',
     },
     {
       key: 'hdd',
-      label: 'Armazenamento HD',
-      sublabel: 'MEIHDFS 100MB & Partições',
+      label: t('nav.hdd'),
+      sublabel: t('nav.hdd.sub'),
       icon: <HardDrive className="w-4 h-4" />,
       badge: '100 MB',
       badgeVariant: 'default',
     },
     {
       key: 'picobench',
-      label: 'Bancada PicoBench',
-      sublabel: 'RP2040/RP2350 P7501 UART',
+      label: t('nav.picobench'),
+      sublabel: t('nav.picobench.sub'),
       icon: <Radio className="w-4 h-4" />,
       badge: `${vddVolts.toFixed(1)}V`,
       badgeVariant: powered ? 'success' : 'warning',
     },
     {
       key: 'frmcrypto',
-      label: 'Criptoanálise FRM',
-      sublabel: 'Dissecador PANA_DVD & ECB',
+      label: t('nav.frmcrypto'),
+      sublabel: t('nav.frmcrypto.sub'),
       icon: <Lock className="w-4 h-4" />,
       badge: '7.999b',
       badgeVariant: 'secondary',
     },
     {
       key: 'manuals',
-      label: 'Manuais & Esquemas',
-      sublabel: `${indexedManualsCount ?? '--'} PDFs & Indexação Rápida`,
+      label: t('nav.manuals'),
+      sublabel: t('nav.manuals.subDynamic', { count: String(indexedManualsCount ?? '--') }),
       icon: <BookOpen className="w-4 h-4" />,
       badge: `${indexedManualsCount ?? '--'}`,
       badgeVariant: 'secondary',
     },
     {
       key: 'hexinspector',
-      label: 'Inspetor Hexadecimal',
-      sublabel: 'Navegação LBA & Offset ASCII',
+      label: t('nav.hexinspector'),
+      sublabel: t('nav.hexinspector.sub'),
       icon: <Binary className="w-4 h-4" />,
     },
     {
       key: 'unbrick',
-      label: 'Centro Unbrick',
-      sublabel: 'SD Kit, DIGADIAG & TBC',
+      label: t('nav.unbrick'),
+      sublabel: t('nav.unbrick.sub'),
       icon: <ShieldAlert className="w-4 h-4" />,
       badge: 'UNBRICK',
       badgeVariant: 'success',
     },
     {
       key: 'settings',
-      label: 'Configurações',
-      sublabel: 'Temas, Acessibilidade & Idioma',
+      label: t('nav.settings'),
+      sublabel: t('nav.settings.sub'),
       icon: <Settings className="w-4 h-4" />,
     },
   ];
@@ -139,9 +143,9 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
           </div>
         </div>
 
-        <nav className="p-3 space-y-1" aria-label="Navegação Principal do Sistema">
+        <nav className="p-3 space-y-1" aria-label={t('nav.menuAria')}>
           {navItems.length === 0 ? (
-            <p className="text-xs text-slate-500 px-3 py-2">Nenhum módulo disponível.</p>
+            <p className="text-xs text-slate-500 px-3 py-2">{t('nav.empty')}</p>
           ) : (
             navItems.map(item => {
               const isActive = currentView === item.key;
@@ -197,7 +201,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
               <span>Target Rail</span>
             </span>
             <span className="text-slate-200 font-bold">
-              {vddVolts > 0.2 ? `${vddVolts.toFixed(2)} V` : '0.00 V (Sem Alimentação)'}
+              {vddVolts > 0.2 ? `${vddVolts.toFixed(2)} V` : t('shell.targetRailZero')}
             </span>
           </div>
 
@@ -210,7 +214,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
                   : 'text-amber-400 font-semibold'
               }
             >
-              {hardwareConnected && powered ? 'HALTED (OCD)' : 'STANDBY (0V)'}
+              {hardwareConnected && powered ? t('shell.coreHalted') : t('shell.coreStandby')}
             </span>
           </div>
 
@@ -239,15 +243,18 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
   open,
   onOpenChange,
   ...props
-}) => (
-  <Dialog open={open} onOpenChange={onOpenChange}>
-    <DialogContent className="left-0 top-0 translate-x-0 translate-y-0 h-full w-72 max-w-[85vw] p-0 bg-bench-950 border-r border-slate-800 rounded-none flex flex-col">
-      <DialogHeader className="sr-only">
-        <DialogTitle>Menu de Módulos Panadiga</DialogTitle>
-      </DialogHeader>
-      <div className="flex-1 overflow-y-auto pt-2">
-        <SidebarContent {...props} onAfterSelect={() => onOpenChange(false)} />
-      </div>
-    </DialogContent>
-  </Dialog>
-);
+}) => {
+  const { t } = useTranslation();
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="left-0 top-0 translate-x-0 translate-y-0 h-full w-72 max-w-[85vw] p-0 bg-bench-950 border-r border-slate-800 rounded-none flex flex-col">
+        <DialogHeader className="sr-only">
+          <DialogTitle>{t('nav.drawerTitle')}</DialogTitle>
+        </DialogHeader>
+        <div className="flex-1 overflow-y-auto pt-2">
+          <SidebarContent {...props} onAfterSelect={() => onOpenChange(false)} />
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};

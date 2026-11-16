@@ -19,6 +19,7 @@ import {
   Select,
 } from '@/components/ui';
 import { useTranslation } from '@/i18n/useTranslation';
+import { isBgoMode, isMainPassthroughMode } from '@/utils/typeGuards';
 import {
   type BgoMode,
   buildSdKitRequestPayload,
@@ -159,7 +160,11 @@ export const SdKitBuilderCard: React.FC<SdKitBuilderCardProps> = ({
               <Select
                 id="sd-kit-bgo-mode"
                 value={bgoMode}
-                onChange={e => setBgoMode(e.target.value as BgoMode)}
+                onChange={e => {
+                  if (isBgoMode(e.target.value)) {
+                    setBgoMode(e.target.value);
+                  }
+                }}
               >
                 <option value="bypass">bypass (Skip U99 Boot Checks Only — Safe Default)</option>
                 <option value="uart_monitor">uart_monitor (Hook _dev_SERIAL PANAMON1)</option>
@@ -177,7 +182,11 @@ export const SdKitBuilderCard: React.FC<SdKitBuilderCardProps> = ({
               <Select
                 id="sd-kit-main-mode"
                 value={mainMode}
-                onChange={e => setMainMode(e.target.value as MainPassthroughMode)}
+                onChange={e => {
+                  if (isMainPassthroughMode(e.target.value)) {
+                    setMainMode(e.target.value);
+                  }
+                }}
               >
                 <option value="av_passthrough">av_passthrough (TBC E-E No-ODD/No-FPC)</option>
                 <option value="factory_original">factory_original (Stock MAIN Build)</option>

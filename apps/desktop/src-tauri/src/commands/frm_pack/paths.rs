@@ -9,7 +9,7 @@ use crate::commands::constants::{
     FIRMWARE_IMAGES_DIR_NAME, FRM_COLLECTION_MAX_DEPTH, FRM_FILE_EXTENSION, FRM_IGNORED_SUBDIR,
     FRM_WRITE_EMPTY_PATH_ERR,
 };
-use crate::commands::error::IpcResult;
+use crate::commands::error::{IpcResult, PanadigaIpcError};
 
 /// Module input item passed from the desktop UI for `dvd` / `sd` container packing.
 #[derive(Debug, Clone, Deserialize)]
@@ -68,10 +68,10 @@ pub(crate) fn resolve_read_path(raw: &str) -> PathBuf {
     ws_rel
 }
 
-pub(crate) fn resolve_write_path(raw: &str) -> Result<PathBuf, String> {
+pub(crate) fn resolve_write_path(raw: &str) -> IpcResult<PathBuf> {
     let trimmed = raw.trim();
     if trimmed.is_empty() {
-        return Err(FRM_WRITE_EMPTY_PATH_ERR.to_string());
+        return Err(PanadigaIpcError::validation(FRM_WRITE_EMPTY_PATH_ERR));
     }
     let path = PathBuf::from(trimmed);
     let resolved = if path.is_absolute() {
@@ -82,8 +82,13 @@ pub(crate) fn resolve_write_path(raw: &str) -> Result<PathBuf, String> {
     if let Some(parent) = resolved.parent()
         && !parent.as_os_str().is_empty()
     {
-        std::fs::create_dir_all(parent)
-            .map_err(|e| format!("Falha criando diretório '{}': {}", parent.display(), e))?;
+        std::fs::create_dir_all(parent).map_err(|e| {
+            PanadigaIpcError::io(format!(
+                "Falha criando diretório '{}': {}",
+                parent.display(),
+                e
+            ))
+        })?;
     }
     Ok(resolved)
 }

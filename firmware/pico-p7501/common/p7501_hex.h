@@ -34,6 +34,12 @@ bool p7501_ascii_is_digits(const char *str);
 /** Strictly parse an unsigned base-10 integer within `[0, UINT32_MAX]` with whitespace trim only. */
 bool p7501_parse_u32_strict(const char *str, uint32_t *out_val);
 
+/** Strictly parse an unsigned 32-bit integer supporting `0x`/`0X` hex or base-10 decimal. */
+bool p7501_parse_u32_auto(const char *str, uint32_t *out_val);
+
+/** Parse leading hex token (`0x` optional, <= 32 bits) and return unconsumed tail via `out_rest`. */
+bool p7501_parse_hex_u32_prefix(const char *str, uint32_t *out_val, const char **out_rest);
+
 /** Copy ASCII string up to `dst_cap - 1` chars converting lowercase letters to uppercase. */
 void p7501_ascii_upper_copy(char *dst, size_t dst_cap, const char *src);
 

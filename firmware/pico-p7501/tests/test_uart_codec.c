@@ -273,10 +273,26 @@ static void test_wdt_stage_and_fmu_codec(void) {
     const char *hex = NULL;
     p7501_fmu_parse_test_args("13 CAFE", &fmode, &rep, &hex);
     assert(fmode == 3u && rep && strcmp(hex, "CAFE") == 0);
+    p7501_fmu_parse_test_args("BEEF", &fmode, &rep, &hex);
+    assert(fmode == 0u && !rep && strcmp(hex, "BEEF") == 0);
 
     uint32_t bs = 0u, bc = 0u, bo = 0u;
     p7501_fmu_parse_batch_args("250 32 50", &bs, &bc, &bo);
     assert(bs == 250u && bc == 6u && bo == 50u);
+
+    /* Strict numeric & hex token parsers (zero atoi/strtoul UB) */
+    uint32_t u32 = 0u;
+    const char *tail = NULL;
+    assert(p7501_parse_u32_strict(" 4294967295 ", &u32) && u32 == 0xFFFFFFFFu);
+    assert(!p7501_parse_u32_strict("4294967296", &u32));
+    assert(!p7501_parse_u32_strict("-1", &u32));
+    assert(!p7501_parse_u32_strict("12ms", &u32));
+    assert(p7501_parse_u32_auto("0x807F0000", &u32) && u32 == 0x807F0000u);
+    assert(p7501_parse_u32_auto("16", &u32) && u32 == 16u);
+    assert(!p7501_parse_u32_auto("0x100000000", &u32));
+    assert(p7501_parse_hex_u32_prefix("  deadbeef 32", &u32, &tail));
+    assert(u32 == 0xDEADBEEFu && strcmp(tail, "32") == 0);
+    assert(!p7501_parse_hex_u32_prefix("80000000z", &u32, &tail));
 }
 
 int p7501_run_uart_codec_tests(void) {

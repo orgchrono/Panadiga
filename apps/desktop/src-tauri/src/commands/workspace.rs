@@ -19,7 +19,7 @@ use super::dto::{
     BinaryFileStatusDto, HexDumpRowDto, SystemOverviewDto, detect_diga_model_from_slice,
     resolve_candidate, resolve_default_flash_path,
 };
-use super::error::IpcResult;
+use super::error::{IpcResult, PanadigaIpcError};
 
 /// Returns the complete workspace and hardware overview for `useDashboardViewModel`.
 #[tauri::command]
@@ -140,8 +140,12 @@ pub fn read_hex_dump(
         .unwrap_or(DEFAULT_HEX_DUMP_ROWS)
         .min(MAX_HEX_DUMP_ROWS);
 
-    let mut file = File::open(&path)
-        .map_err(|e| format!("Falha ao abrir binário '{}' para Hex Dump: {}", path, e))?;
+    let mut file = File::open(&path).map_err(|e| {
+        PanadigaIpcError::io(format!(
+            "Falha ao abrir binário '{}' para Hex Dump: {}",
+            path, e
+        ))
+    })?;
     let file_len = file.metadata().map(|m| m.len() as usize).unwrap_or(0);
 
     let mut rows = Vec::with_capacity(row_count);
@@ -153,8 +157,10 @@ pub fn read_hex_dump(
             break;
         }
         file.seek(SeekFrom::Start(cur_offset as u64))
-            .map_err(|e| e.to_string())?;
-        let n = file.read(&mut buf).map_err(|e| e.to_string())?;
+            .map_err(|e| PanadigaIpcError::io(e.to_string()))?;
+        let n = file
+            .read(&mut buf)
+            .map_err(|e| PanadigaIpcError::io(e.to_string()))?;
         if n == 0 {
             break;
         }

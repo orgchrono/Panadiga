@@ -38,14 +38,14 @@ describe('PicoBenchTopBar voltage fallback reconciliation', () => {
     const { rerender } = render(<PicoBenchTopBar {...baseProps} latestDiagnostic={null} />);
 
     expect(
-      screen.getByText(/Sonda Pico Operacional, mas Trilho Alvo em 0\.00V \(< 2\.50V\)/)
+      screen.getByText(/(?:Pico Probe Ready, Target Rail at|Sonda Pico Operacional, mas Trilho Alvo em) 0\.00V \(< 2\.50V\)/)
     ).toBeDefined();
 
     const pincheckResult = { ...simulateMockDiagnostic('PINCHECK'), vdd_volts: 3.24 };
     rerender(<PicoBenchTopBar {...baseProps} latestDiagnostic={pincheckResult} />);
 
     expect(
-      screen.queryByText(/Sonda Pico Operacional, mas Trilho Alvo em .* \(< 2\.50V\)/)
+      screen.queryByText(/(?:Pico Probe Ready, Target Rail at|Sonda Pico Operacional, mas Trilho Alvo em) .* \(< 2\.50V\)/)
     ).toBeNull();
   });
 });

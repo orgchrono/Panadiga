@@ -44,7 +44,7 @@ pub fn inspect_sd_disk_command(
 ) -> IpcResult<panadiga_core::re::SdDiskInspectionReport> {
     let clean = target.trim();
     if clean.is_empty() {
-        return Err(PanadigaIpcError::classify(
+        return Err(PanadigaIpcError::validation(
             "Alvo de disco/volume SD é obrigatório (ex.: E: ou sd.img).",
         ));
     }
@@ -85,14 +85,17 @@ pub fn build_nor_dumper_stub_command(
         params.load_u32,
         params.wrapped,
     )
-    .map_err(|e| format!("Parâmetros/empacotamento NOR inválidos: {e}"))?;
+    .map_err(|e| {
+        PanadigaIpcError::classify(format!("Parâmetros/empacotamento NOR inválidos: {e}"))
+    })?;
 
     let written_path = opt_trimmed(&out_path)
         .map(|out_raw| {
             let dest = resolve_write_path(out_raw)?;
-            std::fs::write(&dest, &payload)
-                .map_err(|e| format!("Falha gravando stub '{}': {e}", dest.display()))?;
-            Ok::<_, String>(dest.to_string_lossy().to_string())
+            std::fs::write(&dest, &payload).map_err(|e| {
+                PanadigaIpcError::io(format!("Falha gravando stub '{}': {e}", dest.display()))
+            })?;
+            Ok::<_, PanadigaIpcError>(dest.to_string_lossy().to_string())
         })
         .transpose()?;
 
@@ -107,10 +110,9 @@ pub fn build_nor_dumper_stub_command(
 /// Runs a synthetic Matshita R6-MV4 optical drive boot sequence scenario (`healthy_with_disc`, `unlock_disc_frm`, etc.).
 #[tauri::command]
 pub fn run_matshita_boot_emu(scenario: String) -> IpcResult<BootSequenceReport> {
-    let parsed: MatshitaBootScenario = scenario
-        .trim()
-        .parse()
-        .map_err(|e: anyhow::Error| format!("Cenário de boot Matshita inválido: {e}"))?;
+    let parsed: MatshitaBootScenario = scenario.trim().parse().map_err(|e: anyhow::Error| {
+        PanadigaIpcError::validation(format!("Cenário de boot Matshita inválido: {e}"))
+    })?;
     let mut emu = MatshitaOddEmulator::new(parsed);
     emu.run_boot_sequence()
         .map_err(|e| PanadigaIpcError::classify(format!("Falha ao emular sequência de boot: {e}")))
@@ -126,11 +128,11 @@ pub fn inject_matshita_atapi_write(
     payload_hex: String,
 ) -> IpcResult<Value> {
     let payload = parse_hex_payload(payload_hex.trim())
-        .map_err(|e| format!("Payload hexadecimal inválido: {e}"))?;
+        .map_err(|e| PanadigaIpcError::validation(format!("Payload hexadecimal inválido: {e}")))?;
     let va_opt = opt_trimmed(&target_va)
         .map(parse_u32_radix)
         .transpose()
-        .map_err(|e| format!("Endereço VA inválido: {e}"))?;
+        .map_err(|e| PanadigaIpcError::validation(format!("Endereço VA inválido: {e}")))?;
     let mut emu = MatshitaOddEmulator::default();
     let (record, snapshot) = emu
         .run_inject_write(
@@ -140,7 +142,7 @@ pub fn inject_matshita_atapi_write(
             use_vendor_ed.unwrap_or(false),
             &payload,
         )
-        .map_err(|e| format!("Falha na injeção ATAPI Matshita: {e}"))?;
+        .map_err(|e| PanadigaIpcError::classify(format!("Falha na injeção ATAPI Matshita: {e}")))?;
     Ok(serde_json::json!({
         "record": record,
         "snapshot": snapshot,
@@ -155,7 +157,7 @@ pub fn run_matshita_serial_cmd(
 ) -> IpcResult<SerialCliResponse> {
     let cmd = command.trim();
     if cmd.is_empty() {
-        return Err(PanadigaIpcError::classify(
+        return Err(PanadigaIpcError::validation(
             "Comando serial DRV não pode ser vazio.",
         ));
     }

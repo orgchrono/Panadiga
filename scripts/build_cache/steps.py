@@ -9,7 +9,7 @@ import shutil
 import subprocess
 import threading
 from pathlib import Path
-from typing import Any, Final, Mapping, Sequence
+from typing import Final, Mapping, Sequence
 
 from scripts.panadiga_ops import ROOT, sha256_file
 from scripts.build_cache.inventory import CacheEntryStat, iter_files_recursive, resolve_tool
@@ -28,18 +28,20 @@ def default_cache_dir(root: Path = ROOT) -> Path:
     return root / "target" / CACHE_DIR_NAME
 
 
-def _load_manifest_unlocked(cache_dir: Path) -> dict[str, Any]:
+def _load_manifest_unlocked(cache_dir: Path) -> dict[str, object]:
     mf = _manifest_path(cache_dir)
     if not mf.is_file():
         return {}
     try:
         loaded = json.loads(mf.read_text(encoding="utf-8"))
-        return loaded if isinstance(loaded, dict) else {}
+        if not isinstance(loaded, dict):
+            return {}
+        return {str(k): v for k, v in loaded.items()}
     except (OSError, ValueError):
         return {}
 
 
-def _write_manifest_unlocked(cache_dir: Path, data: Mapping[str, Any]) -> None:
+def _write_manifest_unlocked(cache_dir: Path, data: Mapping[str, object]) -> None:
     cache_dir.mkdir(parents=True, exist_ok=True)
     tmp = _manifest_path(cache_dir).with_suffix(".tmp")
     tmp.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")

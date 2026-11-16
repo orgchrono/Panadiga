@@ -9,7 +9,6 @@
 #include "common/p7501_hex.h"
 #include "uart/p7501_uart_codec.h"
 
-#include <stdlib.h>
 #include <string.h>
 
 void p7501_fmu_state_init(p7501_fmu_phase_state_t *st) {
@@ -107,14 +106,24 @@ void p7501_fmu_parse_test_args(
     const char *hex_ptr = "0D";
 
     if ((arg != NULL) && (*arg != '\0')) {
-        char *endp = NULL;
-        raw_mode = (uint32_t)strtoul(arg, &endp, 10);
-        if (endp != NULL) {
-            while (*endp == ' ') {
-                endp++;
-            }
-            if (*endp != '\0') {
-                hex_ptr = endp;
+        char tok[24];
+        const char *rest = p7501_next_token(arg, tok, sizeof(tok));
+        if (rest != NULL) {
+            if (p7501_parse_u32_strict(tok, &raw_mode)) {
+                while ((*rest == ' ') || (*rest == '\t')) {
+                    ++rest;
+                }
+                if (*rest != '\0') {
+                    hex_ptr = rest;
+                }
+            } else {
+                raw_mode = 0u;
+                while ((*arg == ' ') || (*arg == '\t')) {
+                    ++arg;
+                }
+                if (*arg != '\0') {
+                    hex_ptr = arg;
+                }
             }
         }
     }

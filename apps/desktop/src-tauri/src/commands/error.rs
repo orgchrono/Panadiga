@@ -51,6 +51,31 @@ impl PanadigaIpcError {
         }
     }
 
+    /// Creates a deterministic filesystem/I/O error (`[E_IO]`).
+    pub fn io(message: impl Into<String>) -> Self {
+        Self::new(PanadigaIpcErrorCode::EIo, message)
+    }
+
+    /// Creates a deterministic input/path/argument validation error (`[E_VALIDATION]`).
+    pub fn validation(message: impl Into<String>) -> Self {
+        Self::new(PanadigaIpcErrorCode::EValidation, message)
+    }
+
+    /// Creates a deterministic hardware/serial/GDB transport error (`[E_SERIAL]`).
+    pub fn serial(message: impl Into<String>) -> Self {
+        Self::new(PanadigaIpcErrorCode::ESerial, message)
+    }
+
+    /// Creates a deterministic IPL read-only protection violation (`[E05_IPL_READ_ONLY]`).
+    pub fn ipl_read_only(message: impl Into<String>) -> Self {
+        Self::new(PanadigaIpcErrorCode::E05IplReadOnly, message)
+    }
+
+    /// Creates a deterministic unexpected internal fault (`[E_INTERNAL]`).
+    pub fn internal(message: impl Into<String>) -> Self {
+        Self::new(PanadigaIpcErrorCode::EInternal, message)
+    }
+
     /// Classifies an arbitrary domain/hardware error string into a structured `PanadigaIpcError`.
     pub fn classify(raw: impl Into<String>) -> Self {
         let message = raw.into();

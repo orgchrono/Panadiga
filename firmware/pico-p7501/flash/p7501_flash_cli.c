@@ -59,7 +59,11 @@ void p7501_flash_cmd_size(const char *arg) {
         return;
     }
 
-    uint32_t req = (uint32_t)strtoul(arg, NULL, 0);
+    uint32_t req = 0U;
+    if (!p7501_parse_u32_auto(arg, &req)) {
+        printf("[FLASH_SIZE] ERROR: Invalid size '%s'. Valid values: 2, 4, 8, 16 (MB).\n", arg);
+        return;
+    }
     if (req <= 16U) {
         req *= 1024UL * 1024UL;
     }

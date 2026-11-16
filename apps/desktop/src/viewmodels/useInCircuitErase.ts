@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { InCircuitNvramEraseResult, FirstContactBackupResult } from '@/models';
 import { invokeCommand } from '@/services/ipc';
+import { useManagedTimeouts } from '@/hooks/useManagedTimeouts';
 
 export interface UseInCircuitEraseOptions {
   selectedPort?: string;
@@ -23,6 +24,7 @@ export type InCircuitEraseState =
  * and NVRAM sector erasure lifecycle.
  */
 export function useInCircuitErase({ selectedPort, onLog, onSuccess }: UseInCircuitEraseOptions = {}) {
+  const { scheduleTimeout } = useManagedTimeouts();
   const [state, setState] = useState<InCircuitEraseState>({ status: 'idle' });
   const [backupState, setBackupState] = useState<{
     isBackingUp: boolean;
@@ -38,6 +40,17 @@ export function useInCircuitErase({ selectedPort, onLog, onSuccess }: UseInCircu
   const eraseResult = state.status === 'success' ? state.result : null;
   const eraseError = state.status === 'error' ? state.error : null;
 
+  const replayPicoLogLines = useCallback(
+    (lines: readonly string[]) => {
+      lines.forEach((line, index) => {
+        scheduleTimeout(() => {
+          onLog?.('rx', 'PICO', line);
+        }, index * 80);
+      });
+    },
+    [onLog, scheduleTimeout]
+  );
+
   const executeFirstContactBackup = useCallback(async () => {
     setBackupState({ isBackingUp: true, result: null, error: null });
     onLog?.('info', 'HOST', 'Iniciando Procedimento de 1º Contato (Backup Read-Only & Verificação de Integridade)...');
@@ -47,11 +60,7 @@ export function useInCircuitErase({ selectedPort, onLog, onSuccess }: UseInCircu
         port_name: selectedPort,
       });
       setBackupState({ isBackingUp: false, result, error: null });
-      result.log_lines.forEach((line: string, index: number) => {
-        setTimeout(() => {
-          onLog?.('rx', 'PICO', line);
-        }, index * 80);
-      });
+      replayPicoLogLines(result.log_lines);
       if (result.success) {
         onLog?.('success', 'HOST', `Backup de 1º Contato concluído! Modelo: ${result.detected_model}. NVRAM: ${result.nvram_bytes}B.`);
       } else {
@@ -66,7 +75,7 @@ export function useInCircuitErase({ selectedPort, onLog, onSuccess }: UseInCircu
       setBackupState({ isBackingUp: false, result: null, error: errMsg });
       onLog?.('error', 'HOST', `Falha no backup de 1º contato: ${errMsg}`);
     }
-  }, [selectedPort, onLog]);
+  }, [selectedPort, onLog, replayPicoLogLines]);
 
   const injectRamLoaderAndErase = useCallback(async () => {
     setState({ status: 'erasing' });
@@ -77,18 +86,14 @@ export function useInCircuitErase({ selectedPort, onLog, onSuccess }: UseInCircu
         port_name: selectedPort,
       });
       setState({ status: 'success', result });
-      result.log_lines.forEach((line: string, index: number) => {
-        setTimeout(() => {
-          onLog?.('rx', 'PICO', line);
-        }, index * 80);
-      });
+      replayPicoLogLines(result.log_lines);
       onSuccess?.();
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);
       setState({ status: 'error', error: errMsg });
       onLog?.('error', 'HOST', `Falha no procedimento in-circuit: ${errMsg}`);
     }
-  }, [selectedPort, onLog, onSuccess]);
+  }, [selectedPort, onLog, onSuccess, replayPicoLogLines]);
 
   return {
     state,

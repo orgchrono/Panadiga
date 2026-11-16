@@ -11,6 +11,7 @@ import { DraggableBenchHud, GuidedPipelineBar } from './components/ui';
 import { store } from './store';
 import { useAppDispatch, useAppSelector } from './store/hooks';
 import { setCurrentView, setMobileNavOpen } from './store/slices/shellSlice';
+import { useTranslation } from './i18n/useTranslation';
 import { Loader2 } from 'lucide-react';
 
 const DashboardView = lazy(() =>
@@ -41,16 +42,20 @@ const SettingsView = lazy(() =>
   import('./views/SettingsView').then(m => ({ default: m.SettingsView }))
 );
 
-const ViewLoadingFallback: React.FC = () => (
-  <div className="flex flex-col items-center justify-center min-h-[400px] h-full gap-3 text-slate-400">
-    <Loader2 className="w-8 h-8 animate-spin text-cyan-400" />
-    <span className="text-sm font-mono tracking-wide animate-pulse">
-      Carregando subsistema de bancada...
-    </span>
-  </div>
-);
+const ViewLoadingFallback: React.FC = () => {
+  const { t } = useTranslation();
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[400px] h-full gap-3 text-slate-400">
+      <Loader2 className="w-8 h-8 animate-spin text-cyan-400" />
+      <span className="text-sm font-mono tracking-wide animate-pulse">
+        {t('app.loading')}
+      </span>
+    </div>
+  );
+};
 
 const AppShell: React.FC = () => {
+  const { t } = useTranslation();
   const dispatch = useAppDispatch();
   const { ssot, isLoading } = useHardwareSsot();
   const hardwareStatus = useShellTelemetryListener();
@@ -67,48 +72,49 @@ const AppShell: React.FC = () => {
     [dispatch],
   );
 
+  const manualsCountLabel = ssot ? `${ssot.indexed_manuals_count} PDFs` : 'SSOT';
   const viewTitles: Record<ViewKey, string> = {
-    dashboard: 'Visão Geral do Gravador & Status da Bancada',
-    nvram: 'Flash Spansion S29JL064H & Cirurgia NVRAM U99',
-    hdd: 'Armazenamento MEIHDFS & Forensic do Disco Rígido',
-    picobench: 'Bancada Raspberry Pi Pico — P7501 UART (115200 8N1)',
-    frmcrypto: 'Criptoanálise Óptica PANA_DVD.FRM & Dicionário ECB',
-    manuals: `Manuais de Serviço & Diagramas Esquemáticos (${ssot ? `${ssot.indexed_manuals_count} PDFs` : 'SSOT'})`,
-    hexinspector: 'Inspetor Hexadecimal & Alinhamento LBA',
-    unbrick: 'Centro Unbrick Pre-MAIN, Kit SD & TBC Autônomo',
-    settings: 'Configurações, Temas, Acessibilidade & Idioma',
+    dashboard: t('shell.viewTitles.dashboard'),
+    nvram: t('shell.viewTitles.nvram'),
+    hdd: t('shell.viewTitles.hdd'),
+    picobench: t('shell.viewTitles.picobench'),
+    frmcrypto: t('shell.viewTitles.frmcrypto'),
+    manuals: t('shell.viewTitles.manuals', { count: manualsCountLabel }),
+    hexinspector: t('shell.viewTitles.hexinspector'),
+    unbrick: t('shell.viewTitles.unbrick'),
+    settings: t('shell.viewTitles.settings'),
+  };
+
+  const sidebarProps = {
+    currentView,
+    onSelectView: handleSelectView,
+    vddVolts: hardwareStatus.vdd_volts,
+    minVddThreshold: ssot?.thresholds.min_vdd_threshold_volts,
+    hardwareConnected: hardwareStatus.connected,
+    nvramCleaned: pipeline.nvramCleaned,
+    indexedManualsCount: ssot?.indexed_manuals_count ?? null,
   };
 
   return (
     <MotionConfig reducedMotion={accessibility.reducedMotion ? 'always' : 'user'}>
       <div className="flex h-screen w-screen overflow-hidden bg-bench-950 text-slate-100 font-sans">
-      <Sidebar
-        currentView={currentView}
-        onSelectView={handleSelectView}
-        vddVolts={hardwareStatus.vdd_volts}
-        hardwareConnected={hardwareStatus.connected}
-        nvramCleaned={pipeline.nvramCleaned}
-        indexedManualsCount={ssot?.indexed_manuals_count ?? null}
-      />
+      <Sidebar {...sidebarProps} />
 
       <MobileSidebarDrawer
         open={mobileNavOpen}
         onOpenChange={handleMobileNavChange}
-        currentView={currentView}
-        onSelectView={handleSelectView}
-        vddVolts={hardwareStatus.vdd_volts}
-        hardwareConnected={hardwareStatus.connected}
-        nvramCleaned={pipeline.nvramCleaned}
-        indexedManualsCount={ssot?.indexed_manuals_count ?? null}
+        {...sidebarProps}
       />
 
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         <Header
+          currentView={currentView}
           currentViewTitle={viewTitles[currentView]}
           onOpenMobileNav={() => handleMobileNavChange(true)}
           onOpenSettings={() => handleSelectView('settings')}
           hardwareConnected={hardwareStatus.connected}
           vddVolts={hardwareStatus.vdd_volts}
+          minVddThreshold={ssot?.thresholds.min_vdd_threshold_volts}
         />
 
         <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-6 scrollbar-thin scrollbar-thumb-slate-800">
@@ -116,13 +122,13 @@ const AppShell: React.FC = () => {
             {isLoading && !ssot && (
               <div className="mb-3 flex items-center gap-2 text-xs font-mono text-cyan-400">
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                <span>Sincronizando especificação SSOT do hardware...</span>
+                <span>{t('shell.syncingSsot')}</span>
               </div>
             )}
             <GuidedPipelineBar currentView={currentView} onNavigate={handleSelectView} />
           </div>
 
-          <ErrorBoundary fallbackTitle={`Falha ao carregar ${viewTitles[currentView]}`}>
+          <ErrorBoundary fallbackTitle={t('shell.boundaryFailure', { title: viewTitles[currentView] })}>
             <Suspense fallback={<ViewLoadingFallback />}>
               <motion.div
                 key={currentView}

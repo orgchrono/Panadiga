@@ -69,15 +69,16 @@ bool p7501_ascii_is_digits(const char *str) {
     return true;
 }
 
-bool p7501_parse_u32_strict(const char *str, uint32_t *out_val) {
-    if ((str == NULL) || (out_val == NULL)) {
-        return false;
-    }
-    const char *p = str;
-    while ((*p == ' ') || (*p == '\t')) {
+static const char *skip_hspace(const char *p) {
+    while ((p != NULL) && ((*p == ' ') || (*p == '\t'))) {
         ++p;
     }
-    if ((*p < '0') || (*p > '9')) {
+    return p;
+}
+
+bool p7501_parse_u32_strict(const char *str, uint32_t *out_val) {
+    const char *p = skip_hspace(str);
+    if ((p == NULL) || (out_val == NULL) || (*p < '0') || (*p > '9')) {
         return false;
     }
     uint64_t acc = 0ULL;
@@ -88,14 +89,58 @@ bool p7501_parse_u32_strict(const char *str, uint32_t *out_val) {
         }
         ++p;
     }
-    while ((*p == ' ') || (*p == '\t')) {
-        ++p;
-    }
+    p = skip_hspace(p);
     if (*p != '\0') {
         return false;
     }
     *out_val = (uint32_t)acc;
     return true;
+}
+
+static bool strip_hex_prefix(const char **cursor) {
+    const char *p = *cursor;
+    if ((p != NULL) && (p[0] == '0') && ((p[1] == 'x') || (p[1] == 'X'))) {
+        *cursor = p + 2;
+        return true;
+    }
+    return false;
+}
+
+bool p7501_parse_hex_u32_prefix(const char *str, uint32_t *out_val, const char **out_rest) {
+    const char *p = skip_hspace(str);
+    if ((p == NULL) || (out_val == NULL)) {
+        return false;
+    }
+    (void)strip_hex_prefix(&p);
+    uint64_t acc = 0ULL;
+    size_t digits = 0u;
+    int nib = 0;
+    while ((nib = p7501_hex_char_to_nibble(*p)) >= 0) {
+        acc = (acc << 4u) | (uint64_t)(uint32_t)nib;
+        if (acc > 0xFFFFFFFFULL) {
+            return false;
+        }
+        ++digits;
+        ++p;
+    }
+    if ((digits == 0u) || ((*p != '\0') && (*p != ' ') && (*p != '\t'))) {
+        return false;
+    }
+    *out_val = (uint32_t)acc;
+    if (out_rest != NULL) {
+        *out_rest = skip_hspace(p);
+    }
+    return true;
+}
+
+bool p7501_parse_u32_auto(const char *str, uint32_t *out_val) {
+    const char *p = skip_hspace(str);
+    const char *after_prefix = p;
+    if (strip_hex_prefix(&after_prefix)) {
+        const char *rest = NULL;
+        return p7501_parse_hex_u32_prefix(p, out_val, &rest) && (*rest == '\0');
+    }
+    return p7501_parse_u32_strict(p, out_val);
 }
 
 void p7501_ascii_upper_copy(char *dst, size_t dst_cap, const char *src) {

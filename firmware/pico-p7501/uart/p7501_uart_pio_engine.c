@@ -21,18 +21,31 @@
 #define P7501_PIO_RX_SM 0u
 #define P7501_PIO_TX_SM 1u
 
-static uint32_t s_active_baud = P7501_UART_DEFAULT_BAUD;
-static p7501_uart_framing_t s_active_framing = P7501_FRAMING_8N1;
-static uint32_t s_parity_err_count = 0u;
-static bool s_rx_loaded = false;
-static bool s_sw_uart_timed_hold = false;
-static absolute_time_t s_sw_uart_release_deadline;
-static uint s_rx_offset = 0u;
-static bool s_tx_loaded = false;
-static uint s_tx_offset = 0u;
+typedef struct p7501_pio_engine_drv {
+    uint32_t active_baud;
+    p7501_uart_framing_t active_framing;
+    uint32_t parity_err_count;
+    bool rx_loaded;
+    bool sw_uart_timed_hold;
+    absolute_time_t sw_uart_release_deadline;
+    uint rx_offset;
+    bool tx_loaded;
+    uint tx_offset;
+} p7501_pio_engine_drv_t;
+
+static p7501_pio_engine_drv_t s_pio_drv = {
+    .active_baud = P7501_UART_DEFAULT_BAUD,
+    .active_framing = P7501_FRAMING_8N1,
+    .parity_err_count = 0u,
+    .rx_loaded = false,
+    .sw_uart_timed_hold = false,
+    .rx_offset = 0u,
+    .tx_loaded = false,
+    .tx_offset = 0u,
+};
 
 static uint framing_bit_loop_count(void) {
-    return (s_active_framing == P7501_FRAMING_8N1) ? 7u : 8u;
+    return (s_pio_drv.active_framing == P7501_FRAMING_8N1) ? 7u : 8u;
 }
 
 static float compute_pio_clkdiv(uint32_t baud) {
@@ -45,13 +58,13 @@ static float compute_pio_clkdiv(uint32_t baud) {
 }
 
 static void ensure_programs_loaded(void) {
-    if (!s_rx_loaded) {
-        s_rx_offset = pio_add_program(P7501_PIO_UART_INST, &p7501_uart_rx_fast_program);
-        s_rx_loaded = true;
+    if (!s_pio_drv.rx_loaded) {
+        s_pio_drv.rx_offset = pio_add_program(P7501_PIO_UART_INST, &p7501_uart_rx_fast_program);
+        s_pio_drv.rx_loaded = true;
     }
-    if (!s_tx_loaded) {
-        s_tx_offset = pio_add_program(P7501_PIO_UART_INST, &p7501_uart_tx_fast_program);
-        s_tx_loaded = true;
+    if (!s_pio_drv.tx_loaded) {
+        s_pio_drv.tx_offset = pio_add_program(P7501_PIO_UART_INST, &p7501_uart_tx_fast_program);
+        s_pio_drv.tx_loaded = true;
     }
 }
 
@@ -59,7 +72,7 @@ static void clear_rx_diagnostics(void) {
     pio_sm_clear_fifos(P7501_PIO_UART_INST, P7501_PIO_RX_SM);
     P7501_PIO_UART_INST->fdebug = (1u << (PIO_FDEBUG_RXSTALL_LSB + P7501_PIO_RX_SM));
     pio_interrupt_clear(P7501_PIO_UART_INST, 4u);
-    s_parity_err_count = 0u;
+    s_pio_drv.parity_err_count = 0u;
 }
 
 static void release_tx_pin_hiz(void) {
@@ -80,25 +93,25 @@ void p7501_pio_pulse_xreset_ms(uint32_t hold_low_ms) {
 }
 
 uint32_t p7501_pio_get_baud(void) {
-    return s_active_baud;
+    return s_pio_drv.active_baud;
 }
 
 bool p7501_pio_set_baud(uint32_t baud) {
     if (!p7501_baud_is_valid(baud)) {
         return false;
     }
-    s_active_baud = baud;
-    if (s_rx_loaded) {
-        pio_sm_set_clkdiv(P7501_PIO_UART_INST, P7501_PIO_RX_SM, compute_pio_clkdiv(s_active_baud));
+    s_pio_drv.active_baud = baud;
+    if (s_pio_drv.rx_loaded) {
+        pio_sm_set_clkdiv(P7501_PIO_UART_INST, P7501_PIO_RX_SM, compute_pio_clkdiv(s_pio_drv.active_baud));
     }
-    if (s_tx_loaded) {
-        pio_sm_set_clkdiv(P7501_PIO_UART_INST, P7501_PIO_TX_SM, compute_pio_clkdiv(s_active_baud));
+    if (s_pio_drv.tx_loaded) {
+        pio_sm_set_clkdiv(P7501_PIO_UART_INST, P7501_PIO_TX_SM, compute_pio_clkdiv(s_pio_drv.active_baud));
     }
     return true;
 }
 
 p7501_uart_framing_t p7501_pio_get_framing(void) {
-    return s_active_framing;
+    return s_pio_drv.active_framing;
 }
 
 bool p7501_pio_set_framing(p7501_uart_framing_t framing) {
@@ -107,10 +120,10 @@ bool p7501_pio_set_framing(p7501_uart_framing_t framing) {
         framing != P7501_FRAMING_8O1) {
         return false;
     }
-    s_active_framing = framing;
-    s_parity_err_count = 0u;
+    s_pio_drv.active_framing = framing;
+    s_pio_drv.parity_err_count = 0u;
     const uint loops = framing_bit_loop_count();
-    if (s_rx_loaded) {
+    if (s_pio_drv.rx_loaded) {
         const bool was_enabled = ((P7501_PIO_UART_INST->ctrl >> P7501_PIO_RX_SM) & 1u) != 0u;
         pio_sm_set_enabled(P7501_PIO_UART_INST, P7501_PIO_RX_SM, false);
         clear_rx_diagnostics();
@@ -120,7 +133,7 @@ bool p7501_pio_set_framing(p7501_uart_framing_t framing) {
             pio_sm_set_enabled(P7501_PIO_UART_INST, P7501_PIO_RX_SM, true);
         }
     }
-    if (s_tx_loaded) {
+    if (s_pio_drv.tx_loaded) {
         pio_sm_exec(P7501_PIO_UART_INST, P7501_PIO_TX_SM, pio_encode_set(pio_y, loops));
     }
     return true;
@@ -131,9 +144,9 @@ void p7501_pio_begin_rx_session(p7501_boot_action_t action) {
 }
 
 void p7501_pio_begin_rx_session_ex(p7501_boot_action_t action, uint32_t jig_hold_ms) {
-    const float div = compute_pio_clkdiv(s_active_baud);
+    const float div = compute_pio_clkdiv(s_pio_drv.active_baud);
 
-    s_sw_uart_timed_hold = false;
+    s_pio_drv.sw_uart_timed_hold = false;
     ensure_programs_loaded();
     p7501_hw_enforce_nsw5v_hiz();
     release_tx_pin_hiz();
@@ -149,7 +162,7 @@ void p7501_pio_begin_rx_session_ex(p7501_boot_action_t action, uint32_t jig_hold
     p7501_uart_rx_fast_init(
         P7501_PIO_UART_INST,
         P7501_PIO_RX_SM,
-        s_rx_offset,
+        s_pio_drv.rx_offset,
         P7501_PIN_RXD,
         div,
         framing_bit_loop_count()
@@ -159,19 +172,19 @@ void p7501_pio_begin_rx_session_ex(p7501_boot_action_t action, uint32_t jig_hold
     if (action != P7501_BOOT_ACTION_PASSIVE) {
         p7501_hw_reset_release();
         if (action == P7501_BOOT_ACTION_JIG && jig_hold_ms > 0u) {
-            s_sw_uart_timed_hold = true;
-            s_sw_uart_release_deadline = make_timeout_time_ms(jig_hold_ms);
+            s_pio_drv.sw_uart_timed_hold = true;
+            s_pio_drv.sw_uart_release_deadline = make_timeout_time_ms(jig_hold_ms);
         }
     }
 }
 
 void p7501_pio_release_sw_uart_now(void) {
-    s_sw_uart_timed_hold = false;
+    s_pio_drv.sw_uart_timed_hold = false;
     p7501_hw_restore_sw_uart_adc0();
 }
 
 bool p7501_pio_poll_sw_uart_release(void) {
-    if (!s_sw_uart_timed_hold || !time_reached(s_sw_uart_release_deadline)) {
+    if (!s_pio_drv.sw_uart_timed_hold || !time_reached(s_pio_drv.sw_uart_release_deadline)) {
         return false;
     }
     p7501_pio_release_sw_uart_now();
@@ -184,7 +197,7 @@ bool p7501_pio_poll_jig_serial_release(
     size_t ring_cap,
     uint8_t rx_byte
 ) {
-    if (!s_sw_uart_timed_hold || (ring == NULL) || (ring_len == NULL)) {
+    if (!s_pio_drv.sw_uart_timed_hold || (ring == NULL) || (ring_len == NULL)) {
         return false;
     }
     if (!p7501_rolling_match_push(ring, ring_len, ring_cap, rx_byte, "serial boot mode")) {
@@ -195,7 +208,7 @@ bool p7501_pio_poll_jig_serial_release(
 }
 
 void p7501_pio_end_session(void) {
-    s_sw_uart_timed_hold = false;
+    s_pio_drv.sw_uart_timed_hold = false;
     pio_sm_set_enabled(P7501_PIO_UART_INST, P7501_PIO_RX_SM, false);
     release_tx_pin_hiz();
     p7501_hw_isolate_bus_hiz();
@@ -207,9 +220,9 @@ bool p7501_pio_pop_rx_byte_ex(uint8_t *out_byte, bool *out_parity_err) {
     }
     const uint32_t raw = pio_sm_get(P7501_PIO_UART_INST, P7501_PIO_RX_SM);
     bool parity_ok = true;
-    p7501_uart_decode_rx_word(raw, s_active_framing, out_byte, &parity_ok);
+    p7501_uart_decode_rx_word(raw, s_pio_drv.active_framing, out_byte, &parity_ok);
     if (!parity_ok) {
-        ++s_parity_err_count;
+        ++s_pio_drv.parity_err_count;
     }
     if (out_parity_err != NULL) {
         *out_parity_err = !parity_ok;
@@ -222,8 +235,8 @@ bool p7501_pio_pop_rx_byte(uint8_t *out_byte) {
 }
 
 uint32_t p7501_pio_get_and_clear_parity_errors(void) {
-    const uint32_t count = s_parity_err_count;
-    s_parity_err_count = 0u;
+    const uint32_t count = s_pio_drv.parity_err_count;
+    s_pio_drv.parity_err_count = 0u;
     return count;
 }
 
@@ -248,13 +261,13 @@ bool p7501_pio_had_rx_overflow(void) {
 }
 
 static void engage_tx_pio(void) {
-    const float div = compute_pio_clkdiv(s_active_baud);
+    const float div = compute_pio_clkdiv(s_pio_drv.active_baud);
 
     ensure_programs_loaded();
     p7501_uart_tx_fast_init(
         P7501_PIO_UART_INST,
         P7501_PIO_TX_SM,
-        s_tx_offset,
+        s_pio_drv.tx_offset,
         P7501_PIN_TXD,
         div,
         framing_bit_loop_count()
@@ -290,7 +303,7 @@ static bool pio_tx_put_word_bounded(uint32_t word) {
 }
 
 void p7501_pio_tx_bytes(const uint8_t *data, size_t len, bool force_sw_uart_low) {
-    const uint32_t drain_us = ((p7501_baud_to_bit_ns(s_active_baud) * 13u) / 1000u) + 60u;
+    const uint32_t drain_us = ((p7501_baud_to_bit_ns(s_pio_drv.active_baud) * 13u) / 1000u) + 60u;
 
     if (!data || len == 0u) {
         return;
@@ -301,7 +314,7 @@ void p7501_pio_tx_bytes(const uint8_t *data, size_t len, bool force_sw_uart_low)
 
     engage_tx_pio();
     for (size_t i = 0u; i < len; ++i) {
-        if (!pio_tx_put_word_bounded(p7501_uart_encode_tx_word(data[i], s_active_framing))) {
+        if (!pio_tx_put_word_bounded(p7501_uart_encode_tx_word(data[i], s_pio_drv.active_framing))) {
             release_tx_pin_hiz();
             return;
         }

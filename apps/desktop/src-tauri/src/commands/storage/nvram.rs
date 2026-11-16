@@ -55,7 +55,9 @@ pub fn patch_nvram_command(
     patch_hex: String,
 ) -> IpcResult<NvramCleanReport> {
     let patch_bytes = panadiga_core::re::matshita_emu::parse_hex_payload(patch_hex.trim())
-        .map_err(|e| format!("Payload hex inválido para NVRAM: {e}"))?;
+        .map_err(|e| {
+            PanadigaIpcError::validation(format!("Payload hex inválido para NVRAM: {e}"))
+        })?;
     let in_p = Path::new(input_path.trim());
     let out_trimmed = output_path
         .as_deref()

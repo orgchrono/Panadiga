@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import type { PicoCommandSpec } from '@/models';
 import { Badge, Button, Input } from '@/components/ui';
+import { useManagedTimeouts } from '@/hooks/useManagedTimeouts';
+import { useTranslation } from '@/i18n/useTranslation';
 import { Loader2, Play, ShieldAlert } from 'lucide-react';
 
 export interface DiagnosticCommandCardProps {
@@ -20,14 +22,23 @@ export const DiagnosticCommandCard: React.FC<DiagnosticCommandCardProps> = ({
   isCurrent,
   onRun,
 }) => {
+  const { t } = useTranslation();
   const [confirmArmed, setConfirmArmed] = useState(false);
+  const armTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { scheduleTimeout, cancelTimeout } = useManagedTimeouts();
 
   const handleTrigger = () => {
     if (cmd.dangerous && !confirmArmed) {
       setConfirmArmed(true);
-      setTimeout(() => setConfirmArmed(false), 4000);
+      cancelTimeout(armTimerRef.current);
+      armTimerRef.current = scheduleTimeout(() => {
+        armTimerRef.current = null;
+        setConfirmArmed(false);
+      }, 4000);
       return;
     }
+    cancelTimeout(armTimerRef.current);
+    armTimerRef.current = null;
     setConfirmArmed(false);
     onRun();
   };
@@ -42,7 +53,7 @@ export const DiagnosticCommandCard: React.FC<DiagnosticCommandCardProps> = ({
           </div>
           {cmd.dangerous && (
             <Badge variant="destructive" className="shrink-0 text-[9px]">
-              CRÍTICO
+              {t('pico.studio.criticalBadge')}
             </Badge>
           )}
         </div>
@@ -53,7 +64,7 @@ export const DiagnosticCommandCard: React.FC<DiagnosticCommandCardProps> = ({
         {cmd.arg_label && (
           <div className="space-y-1.5">
             {cmd.arg_options.length === 0 ? (
-              <p className="text-[10px] text-slate-500 font-mono">Parâmetro livre para este comando</p>
+              <p className="text-[10px] text-slate-500 font-mono">{t('pico.studio.freeArgHint')}</p>
             ) : (
               <div className="flex flex-wrap gap-1">
                 {cmd.arg_options.map(opt => (
@@ -76,7 +87,7 @@ export const DiagnosticCommandCard: React.FC<DiagnosticCommandCardProps> = ({
               value={argValue}
               onChange={e => onArgChange(e.target.value)}
               placeholder={cmd.arg_placeholder ?? cmd.arg_label}
-              aria-label={`${cmd.id} argumento`}
+              aria-label={t('pico.studio.argAria', { id: cmd.id })}
               className="h-8 text-[11px]"
             />
           </div>
@@ -85,6 +96,7 @@ export const DiagnosticCommandCard: React.FC<DiagnosticCommandCardProps> = ({
         <Button
           type="button"
           size="sm"
+          data-testid={`pico-cmd-run-${cmd.id}`}
           variant={confirmArmed ? 'destructive' : cmd.dangerous ? 'outline' : 'default'}
           disabled={isBusy}
           onClick={handleTrigger}
@@ -93,17 +105,17 @@ export const DiagnosticCommandCard: React.FC<DiagnosticCommandCardProps> = ({
           {isCurrent ? (
             <>
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              <span>Executando {cmd.id}...</span>
+              <span>{t('pico.studio.runningCmd', { id: cmd.id })}</span>
             </>
           ) : confirmArmed ? (
             <>
               <ShieldAlert className="w-3.5 h-3.5" />
-              <span>Confirmar {cmd.id}?</span>
+              <span>{t('pico.studio.confirmCmd', { id: cmd.id })}</span>
             </>
           ) : (
             <>
               <Play className="w-3 h-3" />
-              <span>Executar {cmd.id}</span>
+              <span>{t('pico.studio.runCmd', { id: cmd.id })}</span>
             </>
           )}
         </Button>

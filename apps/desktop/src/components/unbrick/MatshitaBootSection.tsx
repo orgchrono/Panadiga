@@ -3,11 +3,9 @@ import { Cpu, Loader2 } from 'lucide-react';
 import type { BootSequenceReport, MatshitaBootScenario } from '@/models';
 import { Button } from '@/components/ui';
 import { useTranslation } from '@/i18n/useTranslation';
-import {
-  MATSHITA_SELECT_CLS,
-  MatshitaErrorBanner,
-  type MatshitaAsyncSlice,
-} from './matshitaTypes';
+import { isMatshitaBootScenario } from '@/utils/typeGuards';
+import { MatshitaErrorBanner } from './MatshitaErrorBanner';
+import { MATSHITA_SELECT_CLS, type MatshitaAsyncSlice } from './matshitaTypes';
 
 const BOOT_SCENARIOS: MatshitaBootScenario[] = [
   'healthy_with_disc',
@@ -42,7 +40,11 @@ export const MatshitaBootSection: React.FC<MatshitaBootSectionProps> = ({
           id="matshita-scenario"
           className={MATSHITA_SELECT_CLS}
           value={scenario}
-          onChange={e => setScenario(e.target.value as MatshitaBootScenario)}
+          onChange={e => {
+            if (isMatshitaBootScenario(e.target.value)) {
+              setScenario(e.target.value);
+            }
+          }}
         >
           {BOOT_SCENARIOS.length === 0 ? (
             <option disabled value="">

@@ -3,7 +3,8 @@ import { Loader2, ShieldAlert } from 'lucide-react';
 import type { MatshitaInjectWriteResult } from '@/models';
 import { Button, Input } from '@/components/ui';
 import { useTranslation } from '@/i18n/useTranslation';
-import { MatshitaErrorBanner, type MatshitaAsyncSlice } from './matshitaTypes';
+import { MatshitaErrorBanner } from './MatshitaErrorBanner';
+import type { MatshitaAsyncSlice } from './matshitaTypes';
 
 interface MatshitaInjectSectionProps {
   injectState: MatshitaAsyncSlice<MatshitaInjectWriteResult>;

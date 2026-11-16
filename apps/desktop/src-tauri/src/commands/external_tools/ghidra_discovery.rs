@@ -1,9 +1,7 @@
 //! Ghidra installation/project discovery and SSOT Jython script synchronization.
 
 #[cfg(not(target_os = "android"))]
-use std::path::Path;
-#[cfg(target_os = "windows")]
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[cfg(target_os = "windows")]
 pub(super) struct GhidraProjectLocation {
@@ -19,14 +17,21 @@ pub(super) struct GhidraInstallDiscovery {
     pub project: Option<GhidraProjectLocation>,
 }
 
+#[cfg(not(target_os = "android"))]
+use crate::commands::error::{IpcResult, PanadigaIpcError};
+
 /// Regenerates all Ghidra Jython scripts from Rust SSOT and mirrors them into `~/ghidra_scripts`.
 #[cfg(not(target_os = "android"))]
 pub(super) fn sync_ghidra_ssot_and_user_scripts(
     root: &Path,
-) -> Result<(usize, Option<PathBuf>), String> {
+) -> IpcResult<(usize, Option<PathBuf>)> {
     let tools_ghidra = root.join("tools").join("ghidra");
-    panadiga_core::ghidra::export_all_ghidra_scripts(&tools_ghidra)
-        .map_err(|e| format!("Falha ao exportar scripts Ghidra da SSOT Rust: {}", e))?;
+    panadiga_core::ghidra::export_all_ghidra_scripts(&tools_ghidra).map_err(|e| {
+        PanadigaIpcError::io(format!(
+            "Falha ao exportar scripts Ghidra da SSOT Rust: {}",
+            e
+        ))
+    })?;
 
     let home_dir = std::env::var_os("USERPROFILE")
         .or_else(|| std::env::var_os("HOME"))
@@ -35,8 +40,9 @@ pub(super) fn sync_ghidra_ssot_and_user_scripts(
     let mut synced = 0usize;
 
     if let Some(ref dest_dir) = user_scripts_dir {
-        std::fs::create_dir_all(dest_dir)
-            .map_err(|e| format!("Falha ao criar {}: {}", dest_dir.display(), e))?;
+        std::fs::create_dir_all(dest_dir).map_err(|e| {
+            PanadigaIpcError::io(format!("Falha ao criar {}: {}", dest_dir.display(), e))
+        })?;
         if let Ok(entries) = std::fs::read_dir(&tools_ghidra) {
             for entry in entries.flatten() {
                 let src_path = entry.path();
@@ -44,7 +50,11 @@ pub(super) fn sync_ghidra_ssot_and_user_scripts(
                     && let Some(fname) = src_path.file_name()
                 {
                     std::fs::copy(&src_path, dest_dir.join(fname)).map_err(|e| {
-                        format!("Falha ao sincronizar {}: {}", fname.to_string_lossy(), e)
+                        PanadigaIpcError::io(format!(
+                            "Falha ao sincronizar {}: {}",
+                            fname.to_string_lossy(),
+                            e
+                        ))
                     })?;
                     synced += 1;
                 }

@@ -5,8 +5,8 @@ test.describe('NVRAM & Spansion S29JL064H Surgical Recovery E2E', () => {
   test.beforeEach(async ({ page }) => {
     await installMockIpcBridge(page);
     await page.goto('/');
-    await page.click('button:has-text("Flash & NVRAM")');
-    await expect(page.locator('header')).toContainText('Flash Spansion S29JL064H');
+    await page.click('button[data-testid="nav-nvram"]');
+    await expect(page.locator('[data-testid="app-header"]')).toHaveAttribute('data-view', 'nvram');
   });
 
   test('renders Spansion NOR Flash specifications and surgical action card', async ({ page }) => {
@@ -27,12 +27,12 @@ test.describe('NVRAM & Spansion S29JL064H Surgical Recovery E2E', () => {
     await expect(page.getByText(/Nenhuma sonda Pico conectada/i).first()).toBeVisible();
 
     // 2. Navigate to PicoBench, trigger real DUMP command, and verify reactive NVRAM Sector Map sync
-    await page.click('button:has-text("Bancada PicoBench")');
-    await page.click('[role="tab"]:has-text("OCD & NOR Flash")');
-    await page.click('button:has-text("Executar DUMP")');
+    await page.click('button[data-testid="nav-picobench"]');
+    await page.click('[data-testid="pico-tab-ocd_flash"]');
+    await page.click('button[data-testid="pico-cmd-run-DUMP"]');
     await expect(page.getByRole('cell', { name: '0x807F0000' }).first()).toBeVisible();
 
-    await page.click('button:has-text("Flash & NVRAM")');
+    await page.click('button[data-testid="nav-nvram"]');
     await expect(page.getByRole('button', { name: /Voltar ao Dump em Disco/i })).toBeVisible();
     await page.getByRole('button', { name: /Voltar ao Dump em Disco/i }).click();
     await expect(page.getByRole('button', { name: /Voltar ao Dump em Disco/i })).toHaveCount(0);

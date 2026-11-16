@@ -150,20 +150,20 @@ def _compile_c11_host_test(
 
 def _gate_rust(env: Mapping[str, str], *, capture_output: bool = False) -> None:
     if not capture_output:
-        print_banner("1/9. Validating Rust Workspace (Cargo Fmt, Check & Tests)")
+        print_banner("1/9. Validating Rust Workspace (Cargo Fmt, Clippy -D warnings & Tests)")
     run_step(["cargo", "fmt", "--all", "--", "--check"], cwd=ROOT, env=env, capture_output=capture_output)
-    run_step(["cargo", "check", "--workspace", "--all-targets"], cwd=ROOT, env=env, capture_output=capture_output)
+    run_step(["cargo", "clippy", "--workspace", "--all-targets", "--no-deps", "--", "-D", "warnings"], cwd=ROOT, env=env, capture_output=capture_output)
     run_step(["cargo", "test", "--workspace"], cwd=ROOT, env=env, capture_output=capture_output)
     if not capture_output:
-        print_status("PASS", "Rust workspace formatted, compiled, and all tests passed!", "32")
+        print_status("PASS", "Rust workspace formatted, clippy-clean (-D warnings), and all tests passed!", "32")
 
 
 def _gate_typescript(env: Mapping[str, str], *, capture_output: bool = False) -> None:
     if not capture_output:
-        print_banner("2/9. Validating TypeScript Strict Types (tsc --noEmit)")
-    run_step(["npm", "run", "typecheck"], cwd=DESKTOP_DIR, env=env, capture_output=capture_output)
+        print_banner("2/9. Validating Oxlint Strict & TypeScript (oxlint --deny-warnings && tsc --noEmit)")
+    run_step(["npm", "run", "lint"], cwd=DESKTOP_DIR, env=env, capture_output=capture_output)
     if not capture_output:
-        print_status("PASS", "TypeScript strict type check succeeded with 0 errors!", "32")
+        print_status("PASS", "Oxlint (129 rules) and TypeScript strict check succeeded with 0 warnings/errors!", "32")
 
 
 def _gate_vitest(env: Mapping[str, str], *, capture_output: bool = False) -> None:
@@ -268,7 +268,7 @@ def run_parallel_lanes(env: Mapping[str, str], max_jobs: int) -> None:
     """Execute all 9 Quality Gates via thread-pool DAG with fail-fast ProcessTracker cleanup."""
     lanes: tuple[tuple[str, Callable[[Mapping[str, str]], None]], ...] = (
         ("1+7/9 Rust Workspace + Ghidra", _lane_rust_and_ghidra),
-        ("2/9 TypeScript (tsc --noEmit)", lambda e: _gate_typescript(e, capture_output=True)),
+        ("2/9 Oxlint + TypeScript", lambda e: _gate_typescript(e, capture_output=True)),
         ("3/9 Vitest Unit Suite", lambda e: _gate_vitest(e, capture_output=True)),
         ("4/9 Copy/Paste (jscpd 0%)", lambda e: _gate_jscpd(e, capture_output=True)),
         ("5/9 UI/UX State Lint", lambda e: _gate_uxlint(e, capture_output=True)),

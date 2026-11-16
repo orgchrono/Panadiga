@@ -40,7 +40,7 @@ pub fn write_hdd_image(
     let img_path = image_path
         .unwrap_or_else(|| resolve_candidate(CANDIDATE_HDD_IMAGE_PATHS, DEFAULT_HDD_IMAGE_PATH));
     let buf = panadiga_core::hdd::open_image_buffer(Path::new(&img_path))
-        .map_err(|e| format!("Failed reading image file {}: {}", img_path, e))?;
+        .map_err(|e| PanadigaIpcError::io(format!("Failed reading image file {img_path}: {e}")))?;
     panadiga_core::hdd::write_raw_image_to_drive(&device_path, &buf, &confirmation_token)
         .map_err(PanadigaIpcError::from)
 }

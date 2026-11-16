@@ -22,7 +22,7 @@ use crate::commands::frm_pack::{resolve_read_path, resolve_write_path};
 use crate::commands::unbrick_dto::{opt_trimmed, resolve_dir_target};
 
 fn serialize_value<T: serde::Serialize>(val: T) -> IpcResult<Value> {
-    serde_json::to_value(val).map_err(|e| PanadigaIpcError::classify(e.to_string()))
+    serde_json::to_value(val).map_err(|e| PanadigaIpcError::internal(e.to_string()))
 }
 
 /// Inspects workspace binaries, PROG061 BGO status, MAIN TBC passthrough, RSP plan, & hardware facts.
@@ -57,9 +57,9 @@ pub fn patch_bgo_unbrick_command(
     allow_unsafe_bgo_format: Option<bool>,
 ) -> IpcResult<Value> {
     let in_file = resolve_read_path(input_path.trim());
-    let parsed_mode: Prog061BgoPatchMode = mode
-        .parse()
-        .map_err(|e: anyhow::Error| format!("Modo BGO inválido: {e}"))?;
+    let parsed_mode: Prog061BgoPatchMode = mode.parse().map_err(|e: anyhow::Error| {
+        PanadigaIpcError::validation(format!("Modo BGO inválido: {e}"))
+    })?;
 
     if let Some(out_raw) = opt_trimmed(&out_path) {
         let out_file = resolve_write_path(out_raw)?;
@@ -70,11 +70,14 @@ pub fn patch_bgo_unbrick_command(
             wrap_as_digadiag.unwrap_or(true),
             allow_unsafe_bgo_format.unwrap_or(false),
         )
-        .map_err(|e| format!("Falha ao aplicar patch BGO PROG061: {e}"))?;
+        .map_err(|e| {
+            PanadigaIpcError::classify(format!("Falha ao aplicar patch BGO PROG061: {e}"))
+        })?;
         serialize_value(report)
     } else {
-        let raw = std::fs::read(&in_file)
-            .map_err(|e| format!("Falha lendo '{}': {e}", in_file.display()))?;
+        let raw = std::fs::read(&in_file).map_err(|e| {
+            PanadigaIpcError::io(format!("Falha lendo '{}': {e}", in_file.display()))
+        })?;
         let report = inspect_prog061_container_bytes(&raw)?;
         serialize_value(report)
     }
@@ -96,25 +99,30 @@ pub fn patch_main_passthrough_command(
         return serialize_value(build_passthrough_rsp_plan(cb));
     }
 
-    let in_raw = opt_trimmed(&input_path)
-        .ok_or_else(|| "Caminho do binário MAIN (3410PQ) é obrigatório.".to_string())?;
+    let in_raw = opt_trimmed(&input_path).ok_or_else(|| {
+        PanadigaIpcError::validation("Caminho do binário MAIN (3410PQ) é obrigatório.")
+    })?;
     let in_file = resolve_read_path(in_raw);
 
     if action.trim().eq_ignore_ascii_case("patch") {
-        let out_raw = opt_trimmed(&out_path)
-            .ok_or_else(|| "Caminho de saída do MAIN patched é obrigatório.".to_string())?;
+        let out_raw = opt_trimmed(&out_path).ok_or_else(|| {
+            PanadigaIpcError::validation("Caminho de saída do MAIN patched é obrigatório.")
+        })?;
         let parsed_mode: MainPassthroughMode = mode
             .as_deref()
             .unwrap_or(DEFAULT_MAIN_PASSTHROUGH_MODE)
             .parse()
-            .map_err(|e: anyhow::Error| e.to_string())?;
+            .map_err(|e: anyhow::Error| PanadigaIpcError::validation(e.to_string()))?;
         let report =
             patch_main_passthrough_file(&in_file, &resolve_write_path(out_raw)?, parsed_mode)
-                .map_err(|e| format!("Falha ao patchear MAIN passthrough: {e}"))?;
+                .map_err(|e| {
+                    PanadigaIpcError::classify(format!("Falha ao patchear MAIN passthrough: {e}"))
+                })?;
         return serialize_value(report);
     }
 
-    let buf = std::fs::read(&in_file).map_err(|e| format!("Falha lendo MAIN: {e}"))?;
+    let buf = std::fs::read(&in_file)
+        .map_err(|e| PanadigaIpcError::io(format!("Falha lendo MAIN: {e}")))?;
     let report = inspect_main_passthrough_sites(&buf)?;
     serialize_value(report)
 }
@@ -126,8 +134,9 @@ pub fn verify_frm_unlock_command(
     frm_path: String,
 ) -> IpcResult<FrmUnlockVerificationSummary> {
     let path = resolve_read_path(frm_path.trim());
-    let bytes = std::fs::read(&path)
-        .map_err(|e| format!("Falha lendo container '{}': {e}", path.display()))?;
+    let bytes = std::fs::read(&path).map_err(|e| {
+        PanadigaIpcError::io(format!("Falha lendo container '{}': {e}", path.display()))
+    })?;
     verify_unlock_frm_container(container_kind.trim(), &bytes)
         .map_err(|e| PanadigaIpcError::classify(format!("Falha ao verificar container .FRM: {e}")))
 }
@@ -139,20 +148,24 @@ pub fn pack_unlock_frm_command(
     out_path: Option<String>,
     payload_hex: Option<String>,
 ) -> IpcResult<Value> {
-    let mode = parse_unlock_container_mode(container_kind.trim())
-        .map_err(|e| format!("Modo de container unlock inválido: {e}"))?;
+    let mode = parse_unlock_container_mode(container_kind.trim()).map_err(|e| {
+        PanadigaIpcError::validation(format!("Modo de container unlock inválido: {e}"))
+    })?;
     let payload = match opt_trimmed(&payload_hex) {
-        Some(h) => parse_hex_payload(h).map_err(|e| format!("Payload hex inválido: {e}"))?,
+        Some(h) => parse_hex_payload(h)
+            .map_err(|e| PanadigaIpcError::validation(format!("Payload hex inválido: {e}")))?,
         None => vec![SAMPLE_UNLOCK_PAYLOAD_BYTE; SAMPLE_UNLOCK_PAYLOAD_LEN],
     };
-    let (bytes, verification) = build_sample_unlock_frm(mode, &payload)
-        .map_err(|e| format!("Falha ao empacotar container unlock .FRM: {e}"))?;
+    let (bytes, verification) = build_sample_unlock_frm(mode, &payload).map_err(|e| {
+        PanadigaIpcError::classify(format!("Falha ao empacotar container unlock .FRM: {e}"))
+    })?;
     let written_path = opt_trimmed(&out_path)
         .map(|raw| {
             let dest = resolve_write_path(raw)?;
-            std::fs::write(&dest, &bytes)
-                .map_err(|e| format!("Falha gravando '{}': {e}", dest.display()))?;
-            Ok::<_, String>(dest.to_string_lossy().into_owned())
+            std::fs::write(&dest, &bytes).map_err(|e| {
+                PanadigaIpcError::io(format!("Falha gravando '{}': {e}", dest.display()))
+            })?;
+            Ok::<_, PanadigaIpcError>(dest.to_string_lossy().into_owned())
         })
         .transpose()?;
     Ok(serde_json::json!({

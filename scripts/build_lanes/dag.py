@@ -7,7 +7,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import time
-from typing import Any, Callable, Mapping, Sequence
+from typing import Callable, Mapping, Sequence
 
 from scripts.build_cache.inventory import discover_workspace_inventory, optimize_build_env
 from scripts.build_cache.steps import (
@@ -79,7 +79,7 @@ def run_build_pipeline(
             summary.append(("Android APK", "SKIP", 0.0))
 
     # Wave 1: Parallel independent build & preparation tasks.
-    wave1_tasks: list[tuple[str, Callable[[], Any]]] = []
+    wave1_tasks: list[tuple[str, Callable[[], object]]] = []
     wave1_t0 = time.monotonic()
     if need_frontend:
         wave1_tasks.append(
@@ -99,8 +99,9 @@ def run_build_pipeline(
         if "frontend" in w1:
             fe_hit = bool(w1["frontend"])
             summary.append(("Frontend Vite UI", "CACHE HIT" if fe_hit else "BUILT", w1_dt))
-        if "pico_boards" in w1:
-            rp2040_uf2, rp2350_uf2 = w1["pico_boards"]
+        pico_res = w1.get("pico_boards")
+        if isinstance(pico_res, tuple) and len(pico_res) == 2:
+            rp2040_uf2, rp2350_uf2 = pico_res
             merge_and_sync_pico_uf2(
                 rp2040_uf2,
                 rp2350_uf2,
@@ -119,7 +120,7 @@ def run_build_pipeline(
         summary.append(("CI 9 Quality Gates", "PASS", ci_dt))
 
     # Wave 3: Compile Desktop Release (CLI+GUI unified Cargo DAG) and Android APK in parallel!
-    wave3_tasks: list[tuple[str, Callable[[], Any]]] = []
+    wave3_tasks: list[tuple[str, Callable[[], tuple[str, Path, float]]]] = []
     both_native = selection.desktop and run_android
 
     def _run_desktop_lane() -> tuple[str, Path, float]:

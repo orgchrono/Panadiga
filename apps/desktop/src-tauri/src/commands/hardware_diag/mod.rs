@@ -21,7 +21,7 @@ use crate::commands::constants::{
     VDD_TARGET_FLOATING_CEIL_VOLTS, VDD_TARGET_MIN_VOLTS, VDD_ZERO_EPSILON_VOLTS,
 };
 use crate::commands::dto::{HardwareSsotSpecDto, build_hardware_ssot_spec};
-use crate::commands::error::IpcResult;
+use crate::commands::error::{IpcResult, PanadigaIpcError};
 use crate::pico::diagnostics::{
     PicoDiagnosticResultDto, execute_diagnostic_on_port, parse_diagnostic_output,
 };
@@ -102,7 +102,9 @@ pub async fn pico_execute_diagnostic(
         execute_diagnostic_on_port(&exec_backend, &port_clone, &cmd_clone, arg_clone.as_deref())
     })
     .await
-    .map_err(|e| format!("Falha interna ao aguardar diagnóstico Pico: {}", e))??;
+    .map_err(|e| {
+        PanadigaIpcError::internal(format!("Falha interna ao aguardar diagnóstico Pico: {}", e))
+    })??;
 
     let _ = app.emit(EVENT_PICO_DIAG_RESULT, &result);
     if result.command_id == DEFAULT_DUMP_DIAGNOSTIC_CMD && result.success {

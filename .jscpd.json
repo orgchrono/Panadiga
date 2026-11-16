@@ -21,6 +21,7 @@
   ],
   "format": [
     "typescript",
+    "tsx",
     "javascript",
     "rust",
     "python",

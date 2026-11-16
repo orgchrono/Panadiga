@@ -7,6 +7,7 @@ import React, { type Dispatch, type SetStateAction } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import type { FrmPackModuleInput } from '@/models';
 import { useTranslation } from '@/i18n/useTranslation';
+import { isFrmPackMode } from '@/utils/typeGuards';
 
 export type FrmPackMode = 'sd' | 'dvd' | 'digadiag';
 
@@ -66,7 +67,11 @@ export const FrmPackFormFields: React.FC<FrmPackFormFieldsProps> = ({
           <span className="text-slate-400 block">{t('crypto.packager.packMode')}</span>
           <select
             value={mode}
-            onChange={e => onModeChange(e.target.value as FrmPackMode)}
+            onChange={e => {
+              if (isFrmPackMode(e.target.value)) {
+                onModeChange(e.target.value);
+              }
+            }}
             className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200"
           >
             <option value="sd">sd — PANA__SD.FRM (TOC SD 64B plaintext)</option>

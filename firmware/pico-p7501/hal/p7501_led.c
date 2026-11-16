@@ -23,13 +23,16 @@
 #include "pico/cyw43_arch.h"
 #endif
 
-static p7501_led_state_t s_led_state;
-static absolute_time_t s_next_poll_tick;
-
+typedef struct p7501_led_drv {
+    p7501_led_state_t state;
+    absolute_time_t next_poll_tick;
 #if !defined(PANADIGA_BLE_ENABLED) || (PANADIGA_BLE_ENABLED == 0)
-static struct repeating_timer s_led_timer;
-static bool s_timer_active = false;
+    struct repeating_timer timer;
+    bool timer_active;
 #endif
+} p7501_led_drv_t;
+
+static p7501_led_drv_t s_led_drv;
 
 static void drive_physical_led(bool on) {
 #if defined(PANADIGA_BLE_ENABLED) && (PANADIGA_BLE_ENABLED != 0)
@@ -43,7 +46,7 @@ static void drive_physical_led(bool on) {
 static bool led_timer_callback(struct repeating_timer *rt) {
     (void)rt;
     const uint32_t irq_state = save_and_disable_interrupts();
-    const bool on = p7501_led_state_step_10hz(&s_led_state);
+    const bool on = p7501_led_state_step_10hz(&s_led_drv.state);
     drive_physical_led(on);
     restore_interrupts(irq_state);
     return true;
@@ -52,68 +55,68 @@ static bool led_timer_callback(struct repeating_timer *rt) {
 
 void p7501_led_init(void) {
     const uint32_t irq_state = save_and_disable_interrupts();
-    p7501_led_state_init(&s_led_state);
+    p7501_led_state_init(&s_led_drv.state);
 #if !defined(PANADIGA_BLE_ENABLED) || (PANADIGA_BLE_ENABLED == 0)
     gpio_init(PICO_DEFAULT_LED_PIN);
     gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
 #endif
-    drive_physical_led(s_led_state.current_on);
+    drive_physical_led(s_led_drv.state.current_on);
     restore_interrupts(irq_state);
 
-    s_next_poll_tick = make_timeout_time_ms(100u);
+    s_led_drv.next_poll_tick = make_timeout_time_ms(100u);
 
 #if !defined(PANADIGA_BLE_ENABLED) || (PANADIGA_BLE_ENABLED == 0)
-    if (!s_timer_active) {
-        s_timer_active = add_repeating_timer_ms(-100, led_timer_callback, NULL, &s_led_timer);
+    if (!s_led_drv.timer_active) {
+        s_led_drv.timer_active = add_repeating_timer_ms(-100, led_timer_callback, NULL, &s_led_drv.timer);
     }
 #endif
 }
 
 void p7501_led_set_mode(pico_led_mode_t mode) {
     const uint32_t irq_state = save_and_disable_interrupts();
-    p7501_led_state_set_manual(&s_led_state, mode);
-    drive_physical_led(s_led_state.current_on);
+    p7501_led_state_set_manual(&s_led_drv.state, mode);
+    drive_physical_led(s_led_drv.state.current_on);
     restore_interrupts(irq_state);
-    s_next_poll_tick = make_timeout_time_ms(100u);
+    s_led_drv.next_poll_tick = make_timeout_time_ms(100u);
 }
 
 void p7501_led_set_auto_mode(pico_led_mode_t mode) {
     const uint32_t irq_state = save_and_disable_interrupts();
-    if (p7501_led_state_set_auto(&s_led_state, mode)) {
-        drive_physical_led(s_led_state.current_on);
-        s_next_poll_tick = make_timeout_time_ms(100u);
+    if (p7501_led_state_set_auto(&s_led_drv.state, mode)) {
+        drive_physical_led(s_led_drv.state.current_on);
+        s_led_drv.next_poll_tick = make_timeout_time_ms(100u);
     }
     restore_interrupts(irq_state);
 }
 
 void p7501_led_unlock_auto(pico_led_mode_t fallback_mode) {
     const uint32_t irq_state = save_and_disable_interrupts();
-    p7501_led_state_unlock_auto(&s_led_state, fallback_mode);
-    drive_physical_led(s_led_state.current_on);
+    p7501_led_state_unlock_auto(&s_led_drv.state, fallback_mode);
+    drive_physical_led(s_led_drv.state.current_on);
     restore_interrupts(irq_state);
-    s_next_poll_tick = make_timeout_time_ms(100u);
+    s_led_drv.next_poll_tick = make_timeout_time_ms(100u);
 }
 
 void p7501_led_notify_activity(void) {
     const uint32_t irq_state = save_and_disable_interrupts();
-    p7501_led_state_pulse_activity(&s_led_state);
-    drive_physical_led(s_led_state.current_on);
+    p7501_led_state_pulse_activity(&s_led_drv.state);
+    drive_physical_led(s_led_drv.state.current_on);
     restore_interrupts(irq_state);
 }
 
 void p7501_led_tick(void) {
 #if defined(PANADIGA_BLE_ENABLED) && (PANADIGA_BLE_ENABLED != 0)
-    if (!time_reached(s_next_poll_tick)) {
+    if (!time_reached(s_led_drv.next_poll_tick)) {
         return;
     }
-    s_next_poll_tick = make_timeout_time_ms(100u);
-    const bool on = p7501_led_state_step_10hz(&s_led_state);
+    s_led_drv.next_poll_tick = make_timeout_time_ms(100u);
+    const bool on = p7501_led_state_step_10hz(&s_led_drv.state);
     drive_physical_led(on);
 #else
-    if (!s_timer_active && time_reached(s_next_poll_tick)) {
-        s_next_poll_tick = make_timeout_time_ms(100u);
+    if (!s_led_drv.timer_active && time_reached(s_led_drv.next_poll_tick)) {
+        s_led_drv.next_poll_tick = make_timeout_time_ms(100u);
         const uint32_t irq_state = save_and_disable_interrupts();
-        const bool on = p7501_led_state_step_10hz(&s_led_state);
+        const bool on = p7501_led_state_step_10hz(&s_led_drv.state);
         drive_physical_led(on);
         restore_interrupts(irq_state);
     }
@@ -126,7 +129,7 @@ void p7501_led_sleep_ms(uint32_t delay_ms) {
 
 p7501_led_state_t p7501_led_get_state(void) {
     const uint32_t irq_state = save_and_disable_interrupts();
-    const p7501_led_state_t snap = s_led_state;
+    const p7501_led_state_t snap = s_led_drv.state;
     restore_interrupts(irq_state);
     return snap;
 }

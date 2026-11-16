@@ -141,8 +141,10 @@ jobs:
         run: |
           cd apps/desktop
           npm ci
-          npm run check:ci
+          npm run check
           npm run build
+          cd ../..
+          npx --prefix apps/desktop jscpd --config .jscpd.json
 
       - name: Run Cargo Clippy & Native Rust Workspace Tests
         run: |
@@ -305,7 +307,9 @@ jobs:
         run: |
           export ANDROID_NDK_ROOT=$NDK_HOME
           cd apps/desktop
-          npx --yes @tauri-apps/cli android init --ci --skip-targets-install || true
+          if [ ! -d "src-tauri/gen/android" ]; then
+            npx --yes @tauri-apps/cli android init --ci --skip-targets-install
+          fi
           npx --yes @tauri-apps/cli android build --apk --target aarch64 --ci
 
       - name: Upload Android APK Artifact

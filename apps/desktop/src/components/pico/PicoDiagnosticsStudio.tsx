@@ -5,6 +5,7 @@ import type {
   PicoCommandSpec,
   PicoDiagnosticResult,
 } from '@/models';
+import { isPicoCommandCategory } from '@/utils/typeGuards';
 import {
   Alert,
   AlertDescription,
@@ -30,6 +31,7 @@ import {
 import { DiagnosticCommandCard } from './studio/DiagnosticCommandCard';
 import { MemoryMapPanel } from './studio/MemoryMapPanel';
 import { DiagnosticInspector } from './studio/DiagnosticInspector';
+import { useTranslation } from '@/i18n/useTranslation';
 
 export interface PicoDiagnosticsStudioProps {
   ssot: HardwareSsotSpec;
@@ -45,13 +47,17 @@ export interface PicoDiagnosticsStudioProps {
 
 const COMMAND_TABS: Array<{
   value: PicoCommandCategory;
-  label: string;
+  labelKey:
+    | 'pico.studio.tabElectrical'
+    | 'pico.studio.tabOcdFlash'
+    | 'pico.studio.tabUartFmu'
+    | 'pico.studio.tabProbe';
   Icon: React.ComponentType<{ className?: string }>;
 }> = [
-  { value: 'electrical', label: 'Elétrica P7501', Icon: Activity },
-  { value: 'ocd_flash', label: 'OCD & NOR Flash', Icon: Cpu },
-  { value: 'uart_fmu', label: 'UART & FMU Bootrom', Icon: Radio },
-  { value: 'probe', label: 'Controle Sonda', Icon: Wrench },
+  { value: 'electrical', labelKey: 'pico.studio.tabElectrical', Icon: Activity },
+  { value: 'ocd_flash', labelKey: 'pico.studio.tabOcdFlash', Icon: Cpu },
+  { value: 'uart_fmu', labelKey: 'pico.studio.tabUartFmu', Icon: Radio },
+  { value: 'probe', labelKey: 'pico.studio.tabProbe', Icon: Wrench },
 ];
 
 export const PicoDiagnosticsStudio: React.FC<PicoDiagnosticsStudioProps> = ({
@@ -65,6 +71,7 @@ export const PicoDiagnosticsStudio: React.FC<PicoDiagnosticsStudioProps> = ({
   onExecute,
   onClearHistory,
 }) => {
+  const { t } = useTranslation();
   const [argMap, setArgMap] = useState<Record<string, string>>({});
   const [activeTab, setActiveTab] = useState<string>(selectedCategory);
   const [inspectedResult, setInspectedResult] = useState<PicoDiagnosticResult | null>(null);
@@ -80,14 +87,14 @@ export const PicoDiagnosticsStudio: React.FC<PicoDiagnosticsStudioProps> = ({
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
         <div>
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="text-sm font-bold text-slate-100">
-              Estúdio Granular P7501 Async UART, Elétrica &amp; Probes NOR Flash
+            <h3 data-testid="pico-studio-title" className="text-sm font-bold text-slate-100">
+              {t('pico.studio.title')}
             </h3>
-            <Badge variant="default">{ssot.pico_commands.length} COMANDOS FIRMWARE</Badge>
+            <Badge variant="default">
+              {t('pico.studio.badgeCount', { count: ssot.pico_commands.length })}
+            </Badge>
           </div>
-          <p className="text-xs text-slate-400 font-sans mt-0.5">
-            Espelha 100% do CLI embarcado (`p7501_cli.c` — P7501 UART 115200 8N1) via USB CDC, Android OTG e BLE NUS.
-          </p>
+          <p className="text-xs text-slate-400 font-sans mt-0.5">{t('pico.studio.subtitle')}</p>
         </div>
 
         {history.length > 0 && (
@@ -102,7 +109,7 @@ export const PicoDiagnosticsStudio: React.FC<PicoDiagnosticsStudioProps> = ({
             className="text-xs text-slate-400 hover:text-rose-400 gap-1.5"
           >
             <Trash2 className="w-3.5 h-3.5" />
-            <span>Limpar Histórico</span>
+            <span>{t('pico.studio.clearHistory')}</span>
           </Button>
         )}
       </div>
@@ -111,25 +118,30 @@ export const PicoDiagnosticsStudio: React.FC<PicoDiagnosticsStudioProps> = ({
         value={activeTab}
         onValueChange={val => {
           setActiveTab(val);
-          if (val !== 'memory') {
-            onSelectCategory(val as PicoCommandCategory);
+          if (isPicoCommandCategory(val)) {
+            onSelectCategory(val);
           }
         }}
       >
         <TabsList className="w-full h-auto flex-wrap justify-start gap-1">
           {COMMAND_TABS.length === 0 ? (
-            <span className="text-xs text-slate-500 px-2 py-1">Nenhuma categoria disponível</span>
+            <span className="text-xs text-slate-500 px-2 py-1">{t('pico.studio.noCategory')}</span>
           ) : (
-            COMMAND_TABS.map(({ value, label, Icon }) => (
-              <TabsTrigger key={value} value={value} className="gap-1.5">
+            COMMAND_TABS.map(({ value, labelKey, Icon }) => (
+              <TabsTrigger
+                key={value}
+                value={value}
+                data-testid={`pico-tab-${value}`}
+                className="gap-1.5"
+              >
                 <Icon className="w-3.5 h-3.5" />
-                <span>{label}</span>
+                <span>{t(labelKey)}</span>
               </TabsTrigger>
             ))
           )}
-          <TabsTrigger value="memory" className="gap-1.5">
+          <TabsTrigger value="memory" data-testid="pico-tab-memory" className="gap-1.5">
             <Layers className="w-3.5 h-3.5" />
-            <span>Mapa Memória AM34</span>
+            <span>{t('pico.studio.memoryMapTab')}</span>
           </TabsTrigger>
         </TabsList>
 
@@ -166,7 +178,7 @@ export const PicoDiagnosticsStudio: React.FC<PicoDiagnosticsStudioProps> = ({
         <Alert variant="destructive">
           <ShieldAlert className="w-4 h-4 text-rose-400 shrink-0" />
           <div>
-            <AlertTitle>Erro na Execução Diagnóstica</AlertTitle>
+            <AlertTitle>{t('pico.studio.errorTitle')}</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </div>
         </Alert>
@@ -176,10 +188,10 @@ export const PicoDiagnosticsStudio: React.FC<PicoDiagnosticsStudioProps> = ({
         <Alert variant="info">
           <Loader2 className="w-4 h-4 text-cyan-400 animate-spin shrink-0" />
           <div>
-            <AlertTitle>Sonda Pico Executando {runningCommandId}</AlertTitle>
-            <AlertDescription>
-              Aguardando janela de captura / resposta determinística no barramento...
-            </AlertDescription>
+            <AlertTitle>
+              {t('pico.studio.runningTitle', { id: runningCommandId ?? '' })}
+            </AlertTitle>
+            <AlertDescription>{t('pico.studio.runningDesc')}</AlertDescription>
           </div>
         </Alert>
       )}

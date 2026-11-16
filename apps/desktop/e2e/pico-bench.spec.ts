@@ -5,13 +5,13 @@ test.describe('Pico Bench & P7501 UART Hardware Workbench E2E', () => {
   test.beforeEach(async ({ page }) => {
     await installMockIpcBridge(page);
     await page.goto('/');
-    await page.click('button:has-text("Bancada PicoBench")');
-    await expect(page.locator('header')).toContainText('Bancada Raspberry Pi Pico');
+    await page.click('button[data-testid="nav-picobench"]');
+    await expect(page.locator('[data-testid="app-header"]')).toHaveAttribute('data-view', 'picobench');
     await expect(page.getByLabel('Selecionar porta serial do Pico')).toHaveValue(/.+/);
   });
 
   test('displays hardware controller telemetry and architecture badge', async ({ page }) => {
-    await expect(page.getByText('Interface Primária P7501 UART 115200 8N1')).toBeVisible();
+    await expect(page.getByTestId('pico-primary-interface-subtitle')).toContainText('115200 8N1');
     await expect(page.getByText('Conexões Físicas (Pico → P7501)')).toBeVisible();
   });
 
@@ -48,15 +48,15 @@ test.describe('Pico Bench & P7501 UART Hardware Workbench E2E', () => {
   });
 
   test('executes granular PINCHECK and switches Radix tabs in Diagnostic Studio', async ({ page }) => {
-    await expect(page.getByText(/Estúdio Granular P7501 Async UART/i)).toBeVisible();
-    await page.click('button:has-text("Executar PINCHECK")');
+    await expect(page.getByTestId('pico-studio-title')).toBeVisible();
+    await page.click('button[data-testid="pico-cmd-run-PINCHECK"]');
     await expect(page.getByRole('cell', { name: /GP2 \(Pin6 RXD\s*\)/ })).toBeVisible();
 
-    await page.click('[role="tab"]:has-text("OCD & NOR Flash")');
-    await page.click('button:has-text("Executar DUMP")');
+    await page.click('[data-testid="pico-tab-ocd_flash"]');
+    await page.click('button[data-testid="pico-cmd-run-DUMP"]');
     await expect(page.getByRole('cell', { name: '0x807F0000' }).first()).toBeVisible();
 
-    await page.click('[role="tab"]:has-text("Mapa Memória AM34")');
+    await page.click('[data-testid="pico-tab-memory"]');
     await expect(page.getByText('Top-Boot NVRAM (EEMUL / U99)')).toBeVisible();
   });
 

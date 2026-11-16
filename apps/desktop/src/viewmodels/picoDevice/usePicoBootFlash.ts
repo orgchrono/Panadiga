@@ -6,6 +6,7 @@
 import { useCallback, type Dispatch, type SetStateAction } from 'react';
 import type { FlashReport, PicoUf2Variant } from '@/models';
 import { invokeCommand } from '@/services/ipc';
+import { useManagedTimeouts } from '@/hooks/useManagedTimeouts';
 import { useToast } from '@/context/ToastContext';
 import { PICO_PORT_PATTERN, type UsePicoDeviceOptions } from './stateHelpers';
 
@@ -27,6 +28,7 @@ export function usePicoBootFlash({
   onLog,
 }: UsePicoBootFlashParams) {
   const { showToast } = useToast();
+  const { scheduleTimeout } = useManagedTimeouts();
 
   const triggerBootselReboot = useCallback(async () => {
     if (!selectedPort) {
@@ -116,7 +118,7 @@ export function usePicoBootFlash({
             title: 'Pico Detectado',
             message: `Reconectando automaticamente em ${detectedPort}...`,
           });
-          setTimeout(() => {
+          scheduleTimeout(() => {
             void toggleConnection(detectedPort);
           }, 400);
         }
@@ -130,7 +132,7 @@ export function usePicoBootFlash({
         setIsFlashing(false);
       }
     },
-    [selectedPort, setIsFlashing, setSelectedPort, refreshPorts, showToast, toggleConnection]
+    [selectedPort, setIsFlashing, setSelectedPort, refreshPorts, showToast, toggleConnection, scheduleTimeout]
   );
 
   return {

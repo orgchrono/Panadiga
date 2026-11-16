@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui';
 import { useTranslation } from '@/i18n/useTranslation';
+import { isSc0BridgeInputMode } from '@/utils/typeGuards';
 import type { BridgeStreamLine } from '@/viewmodels/useSc0Bridge';
 import type { Sc0BridgeInputMode } from '@/models';
 import { Send, Terminal, Trash2 } from 'lucide-react';
@@ -84,7 +85,11 @@ export const Sc0BridgeLogConsole: React.FC<Sc0BridgeLogConsoleProps> = ({
         <select
           aria-label={t('pico.bridge.inputModeLabel')}
           value={inputMode}
-          onChange={e => onChangeInputMode(e.target.value as Sc0BridgeInputMode)}
+          onChange={e => {
+            if (isSc0BridgeInputMode(e.target.value)) {
+              onChangeInputMode(e.target.value);
+            }
+          }}
           className="rounded-lg bg-slate-900 border border-slate-700 px-2.5 py-1.5 text-xs text-slate-100"
         >
           <option value="line">{t('pico.bridge.modeLine')}</option>

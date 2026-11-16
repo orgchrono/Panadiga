@@ -2,11 +2,8 @@ import React, { useState } from 'react';
 import { FileCheck2, Loader2, Terminal } from 'lucide-react';
 import { Button, Input } from '@/components/ui';
 import { useTranslation } from '@/i18n/useTranslation';
-import {
-  MATSHITA_SELECT_CLS,
-  MatshitaErrorBanner,
-  type MatshitaSerialFrmProps,
-} from './matshitaTypes';
+import { MatshitaErrorBanner } from './MatshitaErrorBanner';
+import { MATSHITA_SELECT_CLS, type MatshitaSerialFrmProps } from './matshitaTypes';
 
 export const MatshitaSerialFrmSection: React.FC<MatshitaSerialFrmProps> = ({
   serialState,

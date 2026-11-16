@@ -66,7 +66,9 @@ pub fn search_manuals_command(term: String) -> IpcResult<Vec<ManualSearchResult>
         .find(|p| p.is_dir())
         .map(Path::to_path_buf)
         .or(fallback_dir)
-        .ok_or_else(|| "Diretório 'manuals_and_schematics' não encontrado.".to_string())?;
+        .ok_or_else(|| {
+            PanadigaIpcError::io("Diretório 'manuals_and_schematics' não encontrado.")
+        })?;
     panadiga_core::manuals::search_manuals(&resolved_dir, Some(vec![term]), None)
         .map_err(PanadigaIpcError::from)
 }
@@ -76,7 +78,7 @@ pub fn list_service_manuals() -> IpcResult<Vec<super::dto::ServiceManualCatalogI
     let manuals_dir = panadiga_core::constants::find_workspace_subdir(
         panadiga_core::constants::DEFAULT_MANUALS_DIR,
     )
-    .ok_or_else(|| "Diretório 'manuals_and_schematics' não encontrado.".to_string())?;
+    .ok_or_else(|| PanadigaIpcError::io("Diretório 'manuals_and_schematics' não encontrado."))?;
     let root = panadiga_core::constants::resolve_workspace_root();
     let pdfs = panadiga_core::manuals::list_pdf_files(&manuals_dir, None)?;
     let mut items = Vec::with_capacity(pdfs.len());

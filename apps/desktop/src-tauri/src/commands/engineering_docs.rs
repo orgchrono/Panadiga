@@ -13,13 +13,13 @@ use super::constants::{
     ROOT_DOC_ALLOWLIST, SRC_EXTENSIONS, SRC_TOP_DIRS,
 };
 use super::dto::EngineeringDocEntryDto;
-use super::error::IpcResult;
+use super::error::{IpcResult, PanadigaIpcError};
 
 fn resolve_workspace() -> PathBuf {
     panadiga_core::constants::resolve_workspace_root()
 }
 
-fn resolve_docs_root() -> Result<PathBuf, String> {
+fn resolve_docs_root() -> IpcResult<PathBuf> {
     if let Some(dir) = panadiga_core::constants::find_workspace_subdir(DOCS_DIR_NAME) {
         return Ok(dir);
     }
@@ -27,7 +27,9 @@ fn resolve_docs_root() -> Result<PathBuf, String> {
     if fallback.is_dir() {
         return Ok(fallback);
     }
-    Err("Diretório 'docs' não encontrado no workspace.".to_string())
+    Err(PanadigaIpcError::io(
+        "Diretório 'docs' não encontrado no workspace.",
+    ))
 }
 
 fn is_normal_rel_path(rel: &str) -> bool {
@@ -42,9 +44,9 @@ fn has_allowed_extension(path: &Path, allowed: &[&str]) -> bool {
         .unwrap_or(false)
 }
 
-fn read_decoded_text(path: &Path) -> Result<String, String> {
-    let bytes =
-        std::fs::read(path).map_err(|e| format!("Falha ao ler '{}': {e}", path.display()))?;
+fn read_decoded_text(path: &Path) -> IpcResult<String> {
+    let bytes = std::fs::read(path)
+        .map_err(|e| PanadigaIpcError::io(format!("Falha ao ler '{}': {e}", path.display())))?;
     Ok(decode_captured_log_bytes(&bytes))
 }
 
@@ -75,13 +77,13 @@ fn collect_dir_entries(
     locale: &str,
     rel_prefix: &str,
     entries: &mut Vec<EngineeringDocEntryDto>,
-) -> Result<(), String> {
+) -> IpcResult<()> {
     if !base_dir.is_dir() {
         return Ok(());
     }
     let mut found = Vec::new();
     let read_dir = std::fs::read_dir(base_dir)
-        .map_err(|e| format!("Falha listando 'docs/{rel_prefix}': {e}"))?;
+        .map_err(|e| PanadigaIpcError::io(format!("Falha listando 'docs/{rel_prefix}': {e}")))?;
     for entry in read_dir.flatten() {
         let path = entry.path();
         if !path.is_file() || !has_allowed_extension(&path, DOC_EXTENSIONS) {
@@ -155,42 +157,50 @@ pub fn list_engineering_docs() -> IpcResult<Vec<EngineeringDocEntryDto>> {
     Ok(entries)
 }
 
-fn read_docs_confined_text(rel: &str, allowed_exts: &[&str]) -> Result<String, String> {
+fn read_docs_confined_text(rel: &str, allowed_exts: &[&str]) -> IpcResult<String> {
     if !is_normal_rel_path(rel) || !has_allowed_extension(Path::new(rel), allowed_exts) {
-        return Err("Caminho de documento inválido (bloqueado fora de docs/).".to_string());
+        return Err(PanadigaIpcError::validation(
+            "Caminho de documento inválido (bloqueado fora de docs/).",
+        ));
     }
     let docs_root = resolve_docs_root()?;
     let canon_docs = std::fs::canonicalize(&docs_root)
-        .map_err(|e| format!("Falha ao resolver diretório docs/: {e}"))?;
+        .map_err(|e| PanadigaIpcError::io(format!("Falha ao resolver diretório docs/: {e}")))?;
     let canon_target = std::fs::canonicalize(docs_root.join(rel))
-        .map_err(|e| format!("Documento 'docs/{rel}' não encontrado: {e}"))?;
+        .map_err(|e| PanadigaIpcError::io(format!("Documento 'docs/{rel}' não encontrado: {e}")))?;
     if !canon_target.starts_with(&canon_docs) || !canon_target.is_file() {
-        return Err("Acesso bloqueado fora do diretório docs/.".to_string());
+        return Err(PanadigaIpcError::validation(
+            "Acesso bloqueado fora do diretório docs/.",
+        ));
     }
     read_decoded_text(&canon_target)
 }
 
-fn read_workspace_src_preview(sub: &str) -> Result<String, String> {
+fn read_workspace_src_preview(sub: &str) -> IpcResult<String> {
     if !is_normal_rel_path(sub) || !has_allowed_extension(Path::new(sub), SRC_EXTENSIONS) {
-        return Err("Referência de código inválida no workspace.".to_string());
+        return Err(PanadigaIpcError::validation(
+            "Referência de código inválida no workspace.",
+        ));
     }
     let first = sub.split('/').next().unwrap_or("");
     if !SRC_TOP_DIRS.contains(&first) {
-        return Err(
-            "Referência permitida apenas em crates/, firmware/, apps/, scripts/ ou tools/."
-                .to_string(),
-        );
+        return Err(PanadigaIpcError::validation(
+            "Referência permitida apenas em crates/, firmware/, apps/, scripts/ ou tools/.",
+        ));
     }
     let ws_root = resolve_workspace();
-    let canon_ws =
-        std::fs::canonicalize(&ws_root).map_err(|e| format!("Falha ao resolver workspace: {e}"))?;
-    let canon_target = std::fs::canonicalize(ws_root.join(sub))
-        .map_err(|e| format!("Arquivo de referência '{sub}' não encontrado: {e}"))?;
+    let canon_ws = std::fs::canonicalize(&ws_root)
+        .map_err(|e| PanadigaIpcError::io(format!("Falha ao resolver workspace: {e}")))?;
+    let canon_target = std::fs::canonicalize(ws_root.join(sub)).map_err(|e| {
+        PanadigaIpcError::io(format!("Arquivo de referência '{sub}' não encontrado: {e}"))
+    })?;
     if !canon_target.starts_with(&canon_ws) || !canon_target.is_file() {
-        return Err("Acesso bloqueado fora do workspace.".to_string());
+        return Err(PanadigaIpcError::validation(
+            "Acesso bloqueado fora do workspace.",
+        ));
     }
     let bytes = std::fs::read(&canon_target)
-        .map_err(|e| format!("Falha ao ler referência '{sub}': {e}"))?;
+        .map_err(|e| PanadigaIpcError::io(format!("Falha ao ler referência '{sub}': {e}")))?;
     if bytes.len() > MAX_SRC_PREVIEW_BYTES {
         let mut s = decode_captured_log_bytes(&bytes[..MAX_SRC_PREVIEW_BYTES]);
         s.push_str("\n\n... [truncado em 512 KiB para visualização rápida]");
@@ -206,19 +216,23 @@ pub fn read_engineering_doc(relative_path: String) -> IpcResult<String> {
     let rel = relative_path.trim().replace('\\', "/");
     if let Some(root_name) = rel.strip_prefix("repo:") {
         if !ROOT_DOC_ALLOWLIST.contains(&root_name) {
-            return Err("Documento raiz não listado na allowlist.".into());
+            return Err(PanadigaIpcError::validation(
+                "Documento raiz não listado na allowlist.",
+            ));
         }
         let ws_root = resolve_workspace();
         let target = ws_root.join(root_name);
         if !target.is_file() {
-            return Err(format!("Documento raiz '{root_name}' não encontrado.").into());
+            return Err(PanadigaIpcError::io(format!(
+                "Documento raiz '{root_name}' não encontrado."
+            )));
         }
-        return Ok(read_decoded_text(&target)?);
+        return read_decoded_text(&target);
     }
     if let Some(sub) = rel.strip_prefix("src:") {
-        return Ok(read_workspace_src_preview(sub)?);
+        return read_workspace_src_preview(sub);
     }
-    Ok(read_docs_confined_text(&rel, DOC_EXTENSIONS)?)
+    read_docs_confined_text(&rel, DOC_EXTENSIONS)
 }
 
 /// Decodes a `.log` or `.txt` bench capture confined within `docs/` via `panadiga_core`.

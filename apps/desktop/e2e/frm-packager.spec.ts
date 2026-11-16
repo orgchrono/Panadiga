@@ -5,8 +5,8 @@ test.describe('PANA_DVD / PANA__SD FRM Decrypted TOC & Packager E2E', () => {
   test.beforeEach(async ({ page }) => {
     await installMockIpcBridge(page);
     await page.goto('/');
-    await page.click('button:has-text("Criptoanálise FRM")');
-    await expect(page.locator('header')).toContainText('Criptoanálise Óptica');
+    await page.click('button[data-testid="nav-frmcrypto"]');
+    await expect(page.locator('[data-testid="app-header"]')).toHaveAttribute('data-view', 'frmcrypto');
   });
 
   test('renders decrypted Firm list TOC entries and executes Pack + EXTRHEAD Unpack', async ({ page }) => {

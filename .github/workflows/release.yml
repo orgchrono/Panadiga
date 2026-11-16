@@ -171,9 +171,18 @@ jobs:
           path: |
             ${{ matrix.platform.archive_name }}
             ${{ matrix.platform.archive_name }}.sha256
-            ${{ runner.os == 'Linux' && 'panadiga-linux-amd64.deb' || '' }}
-            ${{ runner.os == 'Linux' && 'panadiga-linux-amd64.deb.sha256' || '' }}
-          if-no-files-found: ignore
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload Debian Package Artifact (Linux)
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: panadiga-linux-deb
+          path: |
+            panadiga-linux-amd64.deb
+            panadiga-linux-amd64.deb.sha256
+          if-no-files-found: error
           retention-days: 14
 
       - name: Publish to GitHub Release (Windows)
@@ -354,14 +363,19 @@ jobs:
         run: |
           export ANDROID_NDK_ROOT=$NDK_HOME
           cd apps/desktop
-          npx --yes @tauri-apps/cli android init --ci --skip-targets-install || true
-          npx --yes @tauri-apps/cli android build --apk --target aarch64 --ci || true
+          if [ ! -d "src-tauri/gen/android" ]; then
+            npx --yes @tauri-apps/cli android init --ci --skip-targets-install
+          fi
+          npx --yes @tauri-apps/cli android build --apk --target aarch64 --ci
           cd ../..
           mkdir -p release-apk
-          find apps/desktop/src-tauri/gen/android -name "*.apk" -exec cp {} release-apk/panadiga-android-arm64.apk \; || true
-          if [ -f "release-apk/panadiga-android-arm64.apk" ]; then
-            shasum -a 256 "release-apk/panadiga-android-arm64.apk" > "release-apk/panadiga-android-arm64.apk.sha256"
+          APK_PATH=$(find apps/desktop/src-tauri/gen/android -type f -name "*.apk" | head -n 1)
+          if [ -z "$APK_PATH" ]; then
+            echo "ERROR: Android release APK not found under apps/desktop/src-tauri/gen/android." >&2
+            exit 1
           fi
+          cp "$APK_PATH" release-apk/panadiga-android-arm64.apk
+          shasum -a 256 "release-apk/panadiga-android-arm64.apk" > "release-apk/panadiga-android-arm64.apk.sha256"
 
       - name: Publish Android APK to GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')

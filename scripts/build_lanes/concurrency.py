@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from concurrent.futures import FIRST_EXCEPTION, Future, ThreadPoolExecutor, wait
 import threading
-from typing import Any, Callable, Sequence
+from typing import Callable, Sequence, TypeVar
 
 from scripts.panadiga_ops import ProcessTracker, use_process_tracker
 
+_T = TypeVar("_T")
 _FLUSH_LOCK = threading.Lock()
 
 
@@ -19,8 +20,8 @@ def flush_output(text: str) -> None:
 
 
 def run_concurrent_tasks(
-    tasks: Sequence[tuple[str, Callable[[], Any]]],
-) -> dict[str, Any]:
+    tasks: Sequence[tuple[str, Callable[[], _T]]],
+) -> dict[str, _T]:
     """Run independent callables concurrently with fail-fast child cancellation."""
     if not tasks:
         return {}
@@ -30,16 +31,16 @@ def run_concurrent_tasks(
 
     tracker = ProcessTracker()
 
-    def _wrapped(fn: Callable[[], Any]) -> Any:
+    def _wrapped(fn: Callable[[], _T]) -> _T:
         with use_process_tracker(tracker):
             return fn()
 
-    results: dict[str, Any] = {}
+    results: dict[str, _T] = {}
     with ThreadPoolExecutor(max_workers=len(tasks)) as pool:
-        fmap: dict[Future[Any], str] = {
+        fmap: dict[Future[_T], str] = {
             pool.submit(_wrapped, fn): name for name, fn in tasks
         }
-        pending: set[Future[Any]] = set(fmap)
+        pending: set[Future[_T]] = set(fmap)
         try:
             while pending:
                 done, pending = wait(pending, return_when=FIRST_EXCEPTION)

@@ -23,7 +23,40 @@
     "hexinspector": "Hex Inspector",
     "hexinspector.sub": "LBA Alignment & Offsets",
     "unbrick": "Unbrick Center",
-    "unbrick.sub": "SD Kit, DIGADIAG & TBC"
+    "unbrick.sub": "SD Kit, DIGADIAG & TBC",
+    "settings": "Settings",
+    "settings.sub": "Themes, Accessibility & Language",
+    "manuals.subDynamic": "{{count}} PDFs & Schematics",
+    "nvram.badgeClean": "CLEAN",
+    "menuAria": "System Main Navigation",
+    "empty": "No module available.",
+    "drawerTitle": "Panadiga Module Menu"
+  },
+  "shell": {
+    "syncingSsot": "Synchronizing Hardware SSOT specification...",
+    "boundaryFailure": "Failed to load {{title}}",
+    "openMainNav": "Open main navigation",
+    "modeTooltip": "Switch between Basic (Guided) and Advanced (Engineering) Mode",
+    "modeBasic": "Mode: Basic",
+    "modeAdvanced": "Mode: Advanced",
+    "openSettings": "Open Settings, Themes & Accessibility",
+    "refreshTelemetry": "Refresh telemetry snapshot",
+    "picoConnected": "PICO CONNECTED",
+    "targetUnpowered": "Target 0V - Off",
+    "targetRailZero": "0.00 V (Unpowered)",
+    "coreHalted": "HALTED (OCD)",
+    "coreStandby": "STANDBY (0V)",
+    "viewTitles": {
+      "dashboard": "Recorder Overview & Bench Status",
+      "nvram": "Spansion S29JL064H Flash & NVRAM U99 Surgery",
+      "hdd": "MEIHDFS Storage & Hard Drive Forensics",
+      "picobench": "Raspberry Pi Pico Bench — P7501 UART (115200 8N1)",
+      "frmcrypto": "PANA_DVD.FRM Optical Cryptanalysis & ECB Dictionary",
+      "manuals": "Service Manuals & Schematic Diagrams ({{count}})",
+      "hexinspector": "Hex Inspector & LBA Sector Alignment",
+      "unbrick": "Pre-MAIN Unbrick Center, SD Kit & Standalone TBC",
+      "settings": "Settings, Themes, Accessibility & Language"
+    }
   },
   "dashboard": {
     "alertTitle": "CRITICAL DIAGNOSIS: {{errorCode}}",
@@ -89,6 +122,22 @@
       "subtitle": "Saved in {{dir}} • Independent hash verification ready.",
       "copySha": "Copy SHA256SUMS",
       "copiedSha": "Copied!"
+    },
+    "table": {
+      "title": "256 MEIHDFS Allocation Records (XOR 0xFF Decoded)",
+      "subtitle": "Physical Offset: 0x0000_3000 (LBA 24) • 32-byte length per allocation node",
+      "searchPlaceholder": "Filter by tag or hex...",
+      "searchAria": "Filter MEIHDFS records by tag or hex",
+      "filterAria": "Filter by MEIHDFS tag type",
+      "allTags": "All Tags",
+      "tableAria": "MEIHDFS Allocation Table",
+      "colIdx": "Idx",
+      "colTag": "Decoded Tag",
+      "colHex": "Raw Hex (0xFF Inverted)",
+      "colParams": "Parameters (Sectors / LBA)",
+      "colDesc": "Forensic Description",
+      "sectorsUnit": "sectors",
+      "empty": "No MEIHDFS records match the selected filters"
     }
   },
   "crypto": {
@@ -301,6 +350,57 @@
       "badgeRecommended": "RECOMMENDED",
       "badgeCustom": "CUSTOM",
       "empty": "No telemetry metrics available."
+    },
+    "topHeader": {
+      "subtitle": "Primary P7501 UART 115200 8N1 Interface & Discrete SW_UART / XRESET / NSW5V Control",
+      "refreshTooltip": "Refresh telemetry and check device status",
+      "uf2VariantAria": "UF2 Variant",
+      "uf2Unified": "Unified UF2 (RP2040+RP2350)",
+      "uf2Rp2040": "RP2040 UF2 (Pico 1)",
+      "uf2Rp2350": "RP2350 UF2 (Pico 2)",
+      "flashTooltip": "Flashes P7501 Async UART firmware (RP2040 / RP2350) onto BOOTSEL drive (RPI-RP2 / RP2350)",
+      "flashingUf2": "Flashing UF2...",
+      "flashBtn": "Flash Pico (BOOTSEL)",
+      "bootselTooltip": "Reboots Pico into BOOTSEL USB drive via 1200-baud touch / CDC command",
+      "bootselBtn": "BOOTSEL Reset",
+      "bleConnected": "BLE CONNECTED",
+      "otgConnected": "USB-OTG CONNECTED",
+      "lowVddTitle": "Pico Probe Ready, Target Rail at {{voltage}}V (< 2.50V)",
+      "lowVddDesc": "Verify that the Panasonic DMR-EH55 is powered on the bench and P7501 pins (Pin 4 GND, Pin 1 SW_UART / ADC0) are seated properly."
+    },
+    "studio": {
+      "title": "Granular P7501 Async UART, Electrical & NOR Flash Probes Studio",
+      "badgeCount": "{{count}} FIRMWARE COMMANDS",
+      "subtitle": "Mirrors 100% of embedded CLI (`p7501_cli.c` — P7501 UART 115200 8N1) over USB CDC, Android OTG, and BLE NUS.",
+      "clearHistory": "Clear History",
+      "noCategory": "No command category available",
+      "memoryMapTab": "AM34 Memory Map",
+      "errorTitle": "Diagnostic Execution Error",
+      "runningTitle": "Pico Probe Executing {{id}}",
+      "runningDesc": "Waiting for capture window / deterministic bus reply...",
+      "criticalBadge": "CRITICAL",
+      "freeArgHint": "Free-form parameter for this command",
+      "argAria": "{{id}} argument",
+      "runningCmd": "Running {{id}}...",
+      "confirmCmd": "Confirm {{id}}?",
+      "runCmd": "Execute {{id}}",
+      "tabElectrical": "Electrical P7501",
+      "tabOcdFlash": "OCD & NOR Flash",
+      "tabUartFmu": "UART & FMU Bootrom",
+      "tabProbe": "Probe Control"
+    },
+    "toolsRail": {
+      "sectionTitle": "Quick Reverse Engineering Tool Launchers:",
+      "emptyTools": "No external tools configured.",
+      "androidDesktopOnly": "External desktop tools (GDB CLI / Ghidra GUI) are available on Desktop hosts (Windows / Linux / macOS).",
+      "syncLabel": "Sync Jython (Headless)",
+      "mcpLabel": "Ghidra MCP :8081",
+      "gdbTitle": "Opens interactive terminal with gdb-multiarch connected to port {{port}}",
+      "ghidraTitle": "Syncs SSOT Jython scripts into ~/ghidra_scripts and opens Ghidra GUI directly on Panadiga_MN103S.gpr without extra CMD windows",
+      "syncTitle": "Runs analyzeHeadless.bat with AM34 map, SSOT symbols, MN103S fixups, and U99 audit writing panadiga_jython_sync.log",
+      "mcpTitle": "Starts streamable-http ghidra-mcp.exe bridge on http://127.0.0.1:8081 connected to Ghidra (:8080)",
+      "hxdTitle": "Opens configured hex editor for bench binary dumps",
+      "terminalTitle": "Opens OS shell in project root directory"
     }
   },
   "nvram": {

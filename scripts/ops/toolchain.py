@@ -175,7 +175,11 @@ def _discover_msvc_delta() -> dict[str, str] | None:
         if sys_key in os.environ:
             probe_env[sys_key] = os.environ[sys_key]
     sys_root = probe_env.get("SystemRoot") or r"C:\Windows"
-    probe_env["PATH"] = f"{sys_root}\\System32;{sys_root}"
+    probe_env["VSCMD_SKIP_SENDTELEMETRY"] = "1"
+    probe_env["PATH"] = (
+        f"{sys_root}\\System32;{sys_root};"
+        f"{sys_root}\\System32\\Wbem;{sys_root}\\System32\\WindowsPowerShell\\v1.0"
+    )
     cmd_line = f'cmd.exe /d /s /c "call "{vcvars}" >nul 2>&1 && set"'
     try:
         proc = subprocess.run(
@@ -184,7 +188,7 @@ def _discover_msvc_delta() -> dict[str, str] | None:
             stdin=subprocess.DEVNULL,
             capture_output=True,
             text=True,
-            timeout=20,
+            timeout=60,
             check=False,
         )
     except subprocess.TimeoutExpired:
