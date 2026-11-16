@@ -1257,10 +1257,10 @@
     "pins": {
       "pin1": "ADC0 / Open-Drain LOW boot",
       "pin2": "Strict Open-Drain (15ms)",
-      "pin3": "AM34 TX -> Pico RX (115200)",
+      "pin3": "Pico TX -> AM34 RX via Q7514",
       "pin4": "Mandatory common ground",
       "pin5": "ALWAYS Hi-Z Input (5.15V!)",
-      "pin6": "Pico TX -> AM34 RX (3.3V)"
+      "pin6": "AM34 TX -> Pico RX (115200)"
     }
   },
   "settings": {

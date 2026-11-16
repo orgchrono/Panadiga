@@ -198,10 +198,10 @@ const HUD_PINS: ReadonlyArray<{
 }> = [
   { pin: 'Pin 1 • SW_UART (GP26)', noteKey: 'hud.pins.pin1' },
   { pin: 'Pin 2 • XRESET (GP5)', noteKey: 'hud.pins.pin2' },
-  { pin: 'Pin 3 • UARTM2P (GP2)', noteKey: 'hud.pins.pin3' },
+  { pin: 'Pin 3 • UARTM2P (GP4)', noteKey: 'hud.pins.pin3' },
   { pin: 'Pin 4 • GND', noteKey: 'hud.pins.pin4' },
   { pin: 'Pin 5 • NSW5V (GP3)', noteKey: 'hud.pins.pin5', warn: true },
-  { pin: 'Pin 6 • UARTP2M (GP4)', noteKey: 'hud.pins.pin6' },
+  { pin: 'Pin 6 • UARTP2M (GP2)', noteKey: 'hud.pins.pin6' },
 ];
 
 export const DraggableBenchHud: React.FC<DraggableBenchHudProps> = ({
