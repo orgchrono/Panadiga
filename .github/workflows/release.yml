@@ -192,7 +192,8 @@ jobs:
           files: |
             ${{ matrix.platform.archive_name }}
             ${{ matrix.platform.archive_name }}.sha256
-          generate_release_notes: true
+          body_path: .github/RELEASE_NOTES.md
+          generate_release_notes: false
           draft: false
           prerelease: false
 
@@ -205,7 +206,8 @@ jobs:
             ${{ matrix.platform.archive_name }}.sha256
             ${{ runner.os == 'Linux' && 'panadiga-linux-amd64.deb' || '' }}
             ${{ runner.os == 'Linux' && 'panadiga-linux-amd64.deb.sha256' || '' }}
-          generate_release_notes: true
+          body_path: .github/RELEASE_NOTES.md
+          generate_release_notes: false
           draft: false
           prerelease: false
 
@@ -296,7 +298,8 @@ jobs:
             target/pico-build/out/panasonic_p7501_uart_rp2350.uf2.sha256
             target/pico-build/out/panasonic_p7501_uart_unified.uf2
             target/pico-build/out/panasonic_p7501_uart_unified.uf2.sha256
-          generate_release_notes: true
+          body_path: .github/RELEASE_NOTES.md
+          generate_release_notes: false
 
   # ==========================================================================
   # 3. Android Mobile APK Build & Release (AArch64)
@@ -384,5 +387,6 @@ jobs:
           files: |
             release-apk/panadiga-android-arm64.apk
             release-apk/panadiga-android-arm64.apk.sha256
-          generate_release_notes: true
+          body_path: .github/RELEASE_NOTES.md
+          generate_release_notes: false
           
