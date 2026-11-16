@@ -1,6 +1,6 @@
 /**
  * @file gdb_rsp_internal.h
- * @brief Internal shared interfaces across GDB RSP codec, memory cache, and AM34 CPU modules.
+ * @brief Internal explicit-context interfaces across GDB RSP codec, memory cache, and AM34 CPU modules.
  *
  * @standard ISO/IEC 9899:2011 (C11)
  */
@@ -31,18 +31,15 @@ const char *gdb_parse_addr_and_len(
     char end_delim
 );
 
-void gdb_rsp_set_active_flag(bool active);
-size_t gdb_rsp_get_last_packet_len(void);
+void gdb_mem_handle_read_cmd(gdb_rsp_ctx_t *ctx, const char *arg, char *resp_buf);
+void gdb_mem_handle_write_cmd(gdb_rsp_ctx_t *ctx, const char *arg);
+void gdb_mem_handle_write_bin_cmd(gdb_rsp_ctx_t *ctx, const char *arg, size_t arg_len);
+void gdb_mem_send_memory_map_xml(gdb_rsp_ctx_t *ctx, char *resp_buf, size_t resp_cap);
 
-void gdb_mem_handle_read_cmd(const char *arg, char *resp_buf);
-void gdb_mem_handle_write_cmd(const char *arg);
-void gdb_mem_handle_write_bin_cmd(const char *arg, size_t arg_len);
-void gdb_mem_send_memory_map_xml(char *resp_buf, size_t resp_cap);
-
-void gdb_cpu_init_registers(void);
-void gdb_cpu_sync_registers(void);
-void gdb_cpu_handle_ctrl_c(void);
-void gdb_cpu_dispatch_command(const char *cmd);
+void gdb_cpu_init_registers(am34_reg_file_t *regs);
+void gdb_cpu_sync_registers(am34_reg_file_t *regs);
+void gdb_cpu_handle_ctrl_c(gdb_rsp_ctx_t *ctx);
+void gdb_cpu_dispatch_command(gdb_rsp_ctx_t *ctx, const char *cmd);
 
 #ifdef __cplusplus
 }

@@ -2,8 +2,8 @@
  * @file gdb_rsp.h
  * @brief Public GDB Remote Serial Protocol (RSP) Server API for Panasonic AM34 / MN103S.
  *
- * Implements standard GDB remote protocol framing ($packet#checksum), register
- * access, memory read/write with hardware IPL air-gap, breakpoint management,
+ * Implements explicit context-state GDB remote protocol framing (`$packet#checksum`),
+ * register access, memory read/write with hardware IPL air-gap, breakpoint management,
  * and single-step control over USB CDC serial on RP2040 / RP2350.
  *
  * @standard ISO/IEC 9899:2011 (C11)
@@ -58,6 +58,14 @@ enum am34_gdb_reg {
 };
 typedef enum am34_gdb_reg am34_gdb_reg_t;
 
+/** Framing parser FSM states for GDB RSP stream decoding. */
+typedef enum gdb_parser_state {
+    GDB_STATE_IDLE = 0,
+    GDB_STATE_DATA,
+    GDB_STATE_CHKSUM_MSB,
+    GDB_STATE_CHKSUM_LSB
+} gdb_parser_state_t;
+
 /** Shadow register file maintaining current AM34 CPU state. */
 typedef struct am34_reg_file {
     uint32_t d[4];
@@ -69,14 +77,47 @@ typedef struct am34_reg_file {
     bool is_halted;
 } am34_reg_file_t;
 
-void gdb_rsp_init(void);
+/** Self-contained GDB RSP server context (zero file-scope state inside CPU/Memory submodules). */
+typedef struct gdb_rsp_ctx {
+    bool               active;
+    gdb_parser_state_t parser_state;
+    char               rx_buffer[GDB_RSP_MAX_PACKET_LEN];
+    size_t             rx_len;
+    bool               rx_escaped;
+    uint8_t            calc_checksum;
+    uint8_t            received_checksum;
+    char               last_tx_packet[GDB_RSP_MAX_PACKET_LEN];
+    am34_reg_file_t    regs;
+    uint8_t            sector_cache[GDB_SECTOR_CACHE_SIZE];
+    uint32_t           cache_base_addr;
+    bool               cache_valid;
+    uint32_t           flash_size_bytes;
+#if defined(PICO_HOST_TEST) && (PICO_HOST_TEST != 0)
+    char               test_last_resp[GDB_RSP_MAX_PACKET_LEN];
+#endif
+} gdb_rsp_ctx_t;
+
+/* Explicit-context Functional Core / State-injected API */
+void gdb_rsp_ctx_init(gdb_rsp_ctx_t *ctx);
+bool gdb_rsp_ctx_is_active(const gdb_rsp_ctx_t *ctx);
+void gdb_rsp_ctx_set_active(gdb_rsp_ctx_t *ctx, bool active);
+void gdb_rsp_ctx_process_char(gdb_rsp_ctx_t *ctx, char ch);
+void gdb_rsp_ctx_send_packet(gdb_rsp_ctx_t *ctx, const char *payload);
+void gdb_rsp_ctx_invalidate_cache(gdb_rsp_ctx_t *ctx);
+bool gdb_rsp_ctx_set_flash_size(gdb_rsp_ctx_t *ctx, uint32_t flash_size_bytes);
+uint32_t gdb_rsp_ctx_get_flash_size(const gdb_rsp_ctx_t *ctx);
 
 #if defined(PICO_HOST_TEST) && (PICO_HOST_TEST != 0)
+void gdb_rsp_ctx_test_inject_packet(gdb_rsp_ctx_t *ctx, const char *payload);
+void gdb_rsp_ctx_test_inject_packet_len(gdb_rsp_ctx_t *ctx, const uint8_t *payload, size_t len);
+void gdb_rsp_ctx_test_get_last_response(const gdb_rsp_ctx_t *ctx, char *out, size_t max_len);
 void gdb_rsp_test_inject_packet(const char *payload);
 void gdb_rsp_test_inject_packet_len(const uint8_t *payload, size_t len);
 void gdb_rsp_test_get_last_response(char *out, size_t max_len);
 #endif
 
+/* Default global-singleton compatibility wrappers for CLI/main loop */
+void gdb_rsp_init(void);
 bool gdb_rsp_is_active(void);
 void gdb_rsp_set_active(bool active);
 void gdb_rsp_process_char(char ch);

@@ -86,6 +86,12 @@ export function buildMockPicoStatus(fallbackPort = ''): typeof mockPicoDeviceSta
     vdd_volts: connected ? 3.28 : 0.0,
     target_powered: connected,
     core_state: connected ? 'HALTED' : 'DISCONNECTED',
+    wdt_active: connected,
+    wdt_timeout_ms: connected ? 4000 : undefined,
+    wdt_recoveries: connected ? 0 : undefined,
+    wdt_reboot_src: connected ? 'CLEAN' : undefined,
+    wdt_fault_stage: connected ? 'IDLE' : undefined,
+    wdt_last_cmd: connected ? 'STATUS' : undefined,
   };
 }
 

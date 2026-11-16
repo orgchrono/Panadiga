@@ -209,6 +209,25 @@ pub enum UnbrickActions {
         /// Wrap assembled stub inside plaintext 128 KiB DIGADIAG.FRM
         #[arg(long)]
         wrap_digadiag: bool,
+
+        /// Exports structured JSON stub metadata and hex payload (`-` emits stdout JSON)
+        #[arg(short, long, value_name = "JSON_FILE")]
+        json: Option<PathBuf>,
+    },
+
+    /// Decodes and checksum-verifies a `PANADMP1..PANADONE` UART NOR flash capture stream
+    DecodeNorDump {
+        /// Captured UART dump stream path (or `-` for stdin bytes)
+        #[arg(short, long, value_name = "STREAM_FILE")]
+        input: PathBuf,
+
+        /// Optional destination path to save verified raw binary image
+        #[arg(short, long, value_name = "OUT_BIN")]
+        out: Option<PathBuf>,
+
+        /// Exports structured JSON dump verification report (`-` emits stdout JSON)
+        #[arg(short, long, value_name = "JSON_FILE")]
+        json: Option<PathBuf>,
     },
 
     /// Matshita R6-MV4 optical drive emulator, boot verifier, ATAPI write injector, and SD/CD .FRM unlock tool

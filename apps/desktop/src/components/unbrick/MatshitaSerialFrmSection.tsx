@@ -1,32 +1,14 @@
 import React, { useState } from 'react';
 import { FileCheck2, Loader2, Terminal } from 'lucide-react';
-import type {
-  FrmUnlockVerificationSummary,
-  PackUnlockFrmResult,
-  SerialCliResponse,
-} from '@/models';
 import { Button, Input } from '@/components/ui';
 import { useTranslation } from '@/i18n/useTranslation';
 import {
   MATSHITA_SELECT_CLS,
   MatshitaErrorBanner,
-  type MatshitaAsyncSlice,
+  type MatshitaSerialFrmProps,
 } from './matshitaTypes';
 
-interface MatshitaSerialFrmSectionProps {
-  serialState: MatshitaAsyncSlice<SerialCliResponse>;
-  frmVerifyState: MatshitaAsyncSlice<FrmUnlockVerificationSummary>;
-  frmPackState: MatshitaAsyncSlice<PackUnlockFrmResult>;
-  onRunSerial: (command: string, unlockPass?: boolean) => Promise<SerialCliResponse | null>;
-  onVerifyFrm: (containerKind: string, frmPath: string) => Promise<FrmUnlockVerificationSummary | null>;
-  onPackFrm: (params: {
-    containerKind: string;
-    outPath?: string;
-    payloadHex?: string;
-  }) => Promise<PackUnlockFrmResult | null>;
-}
-
-export const MatshitaSerialFrmSection: React.FC<MatshitaSerialFrmSectionProps> = ({
+export const MatshitaSerialFrmSection: React.FC<MatshitaSerialFrmProps> = ({
   serialState,
   frmVerifyState,
   frmPackState,

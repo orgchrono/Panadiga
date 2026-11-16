@@ -7,6 +7,8 @@
 
 #include "diag/p7501_diag_electrical.h"
 #include "hal/p7501_hw.h"
+#include "hal/p7501_watchdog.h"
+#include "p7501_types.h"
 #include "pico/stdlib.h"
 #include "hardware/gpio.h"
 #include <stdio.h>
@@ -28,13 +30,14 @@ void p7501_diag_cmd_busdiag(void) {
     static const char *ds_names[4] = { "2mA", "4mA", "8mA", "12mA" };
 
     for (uint32_t st = 0U; st < 3U; ++st) {
+        p7501_wdt_kick();
         configure_busdiag_hiz_and_sw_uart(st != 0U);
         if (st == 2U) {
             p7501_hw_reset_assert();
         } else {
             p7501_hw_reset_release();
         }
-        sleep_ms(5U);
+        p7501_wdt_sleep_ms(P7501_RESET_POST_SETTLE_MS);
 
         printf("State %" PRIu32 " (%s):\n", st,
                (st == 0U) ? "SW_UART=HiZ, XRESET=HiZ" :
@@ -62,10 +65,8 @@ void p7501_diag_cmd_busdiag(void) {
 
     for (uint32_t mode = 0U; mode < 2U; ++mode) {
         configure_busdiag_hiz_and_sw_uart(mode != 0U);
-        sleep_ms(2U);
-        p7501_hw_reset_assert();
-        sleep_ms(15U);
-        p7501_hw_reset_release();
+        p7501_wdt_sleep_ms(2U);
+        p7501_hw_pulse_xreset_ms(P7501_RESET_DIAG_ASSERT_MS);
 
         p7501_bus_transitions_t phase_a;
         p7501_bus_transitions_t phase_b;

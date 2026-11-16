@@ -12,7 +12,8 @@ interface HddOperationDescriptor {
   readonly errorTitle: string;
   readonly buildArgs?: (
     drive: PhysicalDriveInfo,
-    customSizeGb: number | null
+    customSizeGb: number | null,
+    rawImagePath: string
   ) => Record<string, unknown>;
 }
 
@@ -36,6 +37,9 @@ const HDD_OPERATION_DESCRIPTORS: Readonly<Record<HddWriteCommand, HddOperationDe
     invalidTokenSuffix: 'para desbloquear a gravação da imagem.',
     successTitle: 'Gravação Concluída',
     errorTitle: 'Falha na Gravação da Imagem',
+    buildArgs: (_drive, _customSizeGb, rawImagePath) => ({
+      imagePath: rawImagePath.trim() || undefined,
+    }),
   },
   restore_hdd_mirrors: {
     cmd: 'restore_hdd_mirrors',
@@ -64,6 +68,7 @@ export function useHddWriterViewModel() {
   const [loadingDrives, setLoadingDrives] = useState<boolean>(false);
   const [confirmInput, setConfirmInput] = useState<string>('');
   const [customSizeGb, setCustomSizeGb] = useState<number | null>(null);
+  const [rawImagePath, setRawImagePath] = useState<string>('');
   const [executing, setExecuting] = useState<boolean>(false);
   const [writeReport, setWriteReport] = useState<DriveWriteReport | null>(null);
 
@@ -127,7 +132,9 @@ export function useHddWriterViewModel() {
         const res = await invokeCommand<DriveWriteReport>(descriptor.cmd, {
           devicePath: selectedDrive.device_path,
           confirmationToken: provided,
-          ...(descriptor.buildArgs ? descriptor.buildArgs(selectedDrive, customSizeGb) : {}),
+          ...(descriptor.buildArgs
+            ? descriptor.buildArgs(selectedDrive, customSizeGb, rawImagePath)
+            : {}),
         });
         if (!mountedRef.current) return;
         setWriteReport(res);
@@ -149,7 +156,7 @@ export function useHddWriterViewModel() {
         }
       }
     },
-    [selectedDrive, confirmInput, customSizeGb, showToast]
+    [selectedDrive, confirmInput, customSizeGb, rawImagePath, showToast]
   );
 
   const handleProceduralFormat = useCallback(
@@ -191,6 +198,8 @@ export function useHddWriterViewModel() {
     setConfirmInput,
     customSizeGb,
     setCustomSizeGb,
+    rawImagePath,
+    setRawImagePath,
     resolvedTargetSectors,
     executing,
     writeReport,

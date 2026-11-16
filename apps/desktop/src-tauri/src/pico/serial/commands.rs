@@ -3,80 +3,89 @@
 use std::io::Write;
 use std::time::Duration;
 
+use crate::state::PanadigaBackendState;
+
 use super::super::types::extract_port_name;
-use super::telemetry::{record_scan_telemetry, set_ram_loader_injected};
-use super::transport::{
-    ensure_serial_port_unlocked, lock_serial_io, open_validated_cdc, read_serial_response_complete,
-};
+use super::transport::{open_validated_cdc, read_serial_response_complete};
 
 /// Sends an arbitrary interactive command to the USB CDC serial port and returns the response.
-pub fn pico_send_raw_serial_command(port_name: String, command: String) -> Result<String, String> {
+pub fn pico_send_raw_serial_command(
+    backend: &PanadigaBackendState,
+    port_name: String,
+    command: String,
+) -> Result<String, String> {
     let clean = extract_port_name(&port_name);
     let trimmed = command.trim().to_uppercase();
-    crate::pico::types::reject_mock_port(&clean)?;
 
-    let _guard = lock_serial_io();
-    ensure_serial_port_unlocked(&clean)?;
+    backend.with_exclusive_serial(&clean, || {
+        if trimmed == "ISOLATE" || trimmed == "HIZ" {
+            backend.telemetry.set_ram_loader_injected(false);
+        }
 
-    if trimmed == "ISOLATE" || trimmed == "HIZ" {
-        set_ram_loader_injected(false);
-    }
+        let mut port =
+            panadiga_core::pico::cdc::open_cdc(&clean, 115_200, Duration::from_millis(2000))
+                .map_err(|e| format!("Falha ao abrir porta serial {}: {}", clean, e))?;
 
-    let mut port = panadiga_core::pico::cdc::open_cdc(&clean, 115_200, Duration::from_millis(2000))
-        .map_err(|e| format!("Falha ao abrir porta serial {}: {}", clean, e))?;
+        let payload = format!("{}\r\n", trimmed);
+        port.write_all(payload.as_bytes())
+            .map_err(|e| format!("Falha ao transmitir comando CDC: {}", e))?;
+        let _ = port.flush();
 
-    let payload = format!("{}\r\n", trimmed);
-    port.write_all(payload.as_bytes())
-        .map_err(|e| format!("Falha ao transmitir comando CDC: {}", e))?;
-    let _ = port.flush();
+        let response = read_serial_response_complete(&mut *port, Duration::from_millis(8000))?;
 
-    let response = read_serial_response_complete(&mut *port, Duration::from_millis(8000))?;
+        if trimmed.starts_with("SCAN") {
+            let hits = response.find("Hits: ").and_then(|pos| {
+                let after = &response[pos + 6..];
+                after
+                    .find(',')
+                    .and_then(|comma| after[..comma].trim().parse::<u32>().ok())
+            });
+            let probes = response.find("Probes: ").and_then(|pos| {
+                let after = &response[pos + 8..];
+                let end_pos = after.find(')').unwrap_or(after.len());
+                after[..end_pos].trim().parse::<u32>().ok()
+            });
+            backend.telemetry.record_scan_telemetry(probes, hits);
+        }
 
-    if trimmed.starts_with("SCAN") {
-        let hits = response.find("Hits: ").and_then(|pos| {
-            let after = &response[pos + 6..];
-            after
-                .find(',')
-                .and_then(|comma| after[..comma].trim().parse::<u32>().ok())
-        });
-        let probes = response.find("Probes: ").and_then(|pos| {
-            let after = &response[pos + 8..];
-            let end_pos = after.find(')').unwrap_or(after.len());
-            after[..end_pos].trim().parse::<u32>().ok()
-        });
-        record_scan_telemetry(probes, hits);
-    }
-
-    Ok(response)
+        Ok(response)
+    })
 }
 
 /// Executes Cold Break-In sequence on the DMR-EH55 via RP2040 PIO state machine.
-pub fn pico_execute_cold_break_in(port_name: String, mode: u8) -> Result<String, String> {
-    let _guard = lock_serial_io();
-    let (_, mut port) = open_validated_cdc(&port_name, 115200, 3000)?;
+pub fn pico_execute_cold_break_in(
+    backend: &PanadigaBackendState,
+    port_name: String,
+    mode: u8,
+) -> Result<String, String> {
+    backend.serial.with_lock(|| {
+        let (_, mut port) = open_validated_cdc(backend, &port_name, 115_200, 3000)?;
 
-    let cmd = format!("BREAK_IN {}\r\n", mode);
-    port.write_all(cmd.as_bytes())
-        .map_err(|e| format!("Falha ao enviar comando BREAK_IN: {}", e))?;
-    let _ = port.flush();
+        let cmd = format!("BREAK_IN {}\r\n", mode);
+        port.write_all(cmd.as_bytes())
+            .map_err(|e| format!("Falha ao enviar comando BREAK_IN: {}", e))?;
+        let _ = port.flush();
 
-    read_serial_response_complete(&mut *port, Duration::from_millis(3000))
+        read_serial_response_complete(&mut *port, Duration::from_millis(3000))
+    })
 }
 
 /// Switches the Pico firmware into GDB Remote Serial Protocol (RSP) bridge mode.
-pub fn pico_switch_to_gdb_mode(port_name: String) -> Result<String, String> {
+pub fn pico_switch_to_gdb_mode(
+    backend: &PanadigaBackendState,
+    port_name: String,
+) -> Result<String, String> {
     let clean = extract_port_name(&port_name);
-    crate::pico::types::reject_mock_port(&clean)?;
 
-    let _guard = lock_serial_io();
-    ensure_serial_port_unlocked(&clean)?;
+    backend.with_exclusive_serial(&clean, || {
+        let mut port =
+            panadiga_core::pico::cdc::open_cdc(&clean, 115_200, Duration::from_millis(2000))
+                .map_err(|e| format!("Falha ao conectar na porta serial {}: {}", clean, e))?;
 
-    let mut port = panadiga_core::pico::cdc::open_cdc(&clean, 115200, Duration::from_millis(2000))
-        .map_err(|e| format!("Falha ao conectar na porta serial {}: {}", clean, e))?;
+        port.write_all(b"GDB\r\n")
+            .map_err(|e| format!("Falha ao enviar comando GDB: {}", e))?;
+        let _ = port.flush();
 
-    port.write_all(b"GDB\r\n")
-        .map_err(|e| format!("Falha ao enviar comando GDB: {}", e))?;
-    let _ = port.flush();
-
-    read_serial_response_complete(&mut *port, Duration::from_millis(2000))
+        read_serial_response_complete(&mut *port, Duration::from_millis(2000))
+    })
 }

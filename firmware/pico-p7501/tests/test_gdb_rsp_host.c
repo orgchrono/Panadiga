@@ -256,6 +256,33 @@ static void test_binary_x_write_and_ipl_guard(void) {
     printf("  [PASS] test_binary_x_write_and_ipl_guard\n");
 }
 
+static void test_isolated_gdb_ctx_no_aliasing(void) {
+    gdb_rsp_ctx_t ctx_4mb;
+    gdb_rsp_ctx_t ctx_16mb;
+    char resp_a[GDB_RSP_MAX_PACKET_LEN];
+    char resp_b[GDB_RSP_MAX_PACKET_LEN];
+
+    gdb_rsp_ctx_init(&ctx_4mb);
+    gdb_rsp_ctx_init(&ctx_16mb);
+    assert(gdb_rsp_ctx_set_flash_size(&ctx_4mb, 0x00400000UL));
+    assert(gdb_rsp_ctx_set_flash_size(&ctx_16mb, 0x01000000UL));
+    gdb_rsp_ctx_set_active(&ctx_4mb, true);
+    gdb_rsp_ctx_set_active(&ctx_16mb, true);
+
+    assert(gdb_rsp_ctx_get_flash_size(&ctx_4mb) == 0x00400000UL);
+    assert(gdb_rsp_ctx_get_flash_size(&ctx_16mb) == 0x01000000UL);
+
+    gdb_rsp_ctx_test_inject_packet(&ctx_4mb, "qXfer:memory-map:read::0,400");
+    gdb_rsp_ctx_test_get_last_response(&ctx_4mb, resp_a, sizeof(resp_a));
+    gdb_rsp_ctx_test_inject_packet(&ctx_16mb, "qXfer:memory-map:read::0,400");
+    gdb_rsp_ctx_test_get_last_response(&ctx_16mb, resp_b, sizeof(resp_b));
+
+    assert(strstr(resp_a, "0x803F0000") != NULL);
+    assert(strstr(resp_b, "0x80FF0000") != NULL);
+
+    printf("  [PASS] test_isolated_gdb_ctx_no_aliasing\n");
+}
+
 int main(void) {
     printf("======================================================================\n");
     printf(">> Running Panadiga P7501 C11 Host Test Suite (PICO_HOST_TEST=1)\n");
@@ -278,6 +305,9 @@ int main(void) {
 
     reset_mock_state();
     test_binary_x_write_and_ipl_guard();
+
+    reset_mock_state();
+    test_isolated_gdb_ctx_no_aliasing();
 
     reset_mock_state();
     test_register_access_no_ub();

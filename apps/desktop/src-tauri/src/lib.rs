@@ -1,7 +1,10 @@
 //! Panasonic DMR-EH55 DIGA Engineering Suite - Cross-Platform Desktop & Android Backend Library
 
+use tauri::Manager;
+
 pub mod commands;
 pub mod pico;
+pub mod state;
 
 pub use commands::*;
 
@@ -12,9 +15,14 @@ pub fn run() {
 
 pub fn run_desktop_app() {
     tauri::Builder::default()
+        .manage(state::PanadigaBackendState::new())
         .plugin(tauri_plugin_shell::init())
         .setup(|app| {
-            crate::commands::hardware_diag::start_port_mutation_observer(app.handle().clone());
+            let backend = app.state::<state::PanadigaBackendState>();
+            crate::commands::hardware_diag::start_port_mutation_observer(
+                app.handle().clone(),
+                backend.inner(),
+            );
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -88,6 +96,7 @@ pub fn run_desktop_app() {
             patch_main_passthrough_command,
             prepare_sd_unbrick_kit_command,
             verify_sd_unbrick_media_command,
+            inspect_sd_disk_command,
             build_nor_dumper_stub_command,
             run_matshita_boot_emu,
             inject_matshita_atapi_write,

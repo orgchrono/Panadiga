@@ -1,6 +1,6 @@
 /**
  * @file p7501_uart_pio_engine.c
- * @brief Multi-baud PIO1 RX/TX engine with strict P7501 electrical safety invariants.
+ * @brief Multi-baud PIO1 RX/TX engine delegating GPIO control strictly to `p7501_hw`.
  *
  * @standard ISO/IEC 9899:2011 (C11)
  */
@@ -11,7 +11,6 @@
 #include "hal/p7501_watchdog.h"
 #include "p7501_types.h"
 
-#include "hardware/adc.h"
 #include "hardware/clocks.h"
 #include "hardware/gpio.h"
 #include "hardware/pio.h"
@@ -39,7 +38,7 @@ static uint framing_bit_loop_count(void) {
 static float compute_pio_clkdiv(uint32_t baud) {
     uint16_t div_i = 0u;
     uint8_t div_f = 0u;
-    uint32_t sys_hz = clock_get_hz(clk_sys);
+    const uint32_t sys_hz = clock_get_hz(clk_sys);
 
     p7501_calc_pio_clkdiv_fp16(sys_hz, baud, &div_i, &div_f);
     return (float)div_i + ((float)div_f / 256.0f);
@@ -56,37 +55,28 @@ static void ensure_programs_loaded(void) {
     }
 }
 
+static void clear_rx_diagnostics(void) {
+    pio_sm_clear_fifos(P7501_PIO_UART_INST, P7501_PIO_RX_SM);
+    P7501_PIO_UART_INST->fdebug = (1u << (PIO_FDEBUG_RXSTALL_LSB + P7501_PIO_RX_SM));
+    pio_interrupt_clear(P7501_PIO_UART_INST, 4u);
+    s_parity_err_count = 0u;
+}
+
 static void release_tx_pin_hiz(void) {
     pio_sm_set_enabled(P7501_PIO_UART_INST, P7501_PIO_TX_SM, false);
-    gpio_set_function(P7501_PIN_TXD, GPIO_FUNC_SIO);
-    gpio_set_dir(P7501_PIN_TXD, GPIO_IN);
-    gpio_pull_up(P7501_PIN_TXD);
+    p7501_hw_release_txd_hiz(true);
 }
 
 void p7501_pio_enforce_nsw5v_hiz(void) {
-    gpio_set_function(P7501_PIN_NSW5V, GPIO_FUNC_SIO);
-    gpio_set_dir(P7501_PIN_NSW5V, GPIO_IN);
-    gpio_disable_pulls(P7501_PIN_NSW5V);
+    p7501_hw_enforce_nsw5v_hiz();
 }
 
 void p7501_pio_set_sw_uart(bool drive_low) {
-    if (drive_low) {
-        gpio_init(P7501_PIN_SW_UART_ADC);
-        gpio_set_dir(P7501_PIN_SW_UART_ADC, GPIO_OUT);
-        gpio_put(P7501_PIN_SW_UART_ADC, 0);
-    } else {
-        p7501_hw_restore_sw_uart_adc0();
-    }
+    p7501_hw_sw_uart_set_low(drive_low);
 }
 
 void p7501_pio_pulse_xreset_ms(uint32_t hold_low_ms) {
-    p7501_pio_enforce_nsw5v_hiz();
-    gpio_init(P7501_PIN_XRESET);
-    gpio_put(P7501_PIN_XRESET, 0);
-    gpio_set_dir(P7501_PIN_XRESET, GPIO_OUT);
-    p7501_wdt_sleep_ms(hold_low_ms > 0u ? hold_low_ms : 15u);
-    gpio_set_dir(P7501_PIN_XRESET, GPIO_IN);
-    gpio_disable_pulls(P7501_PIN_XRESET);
+    p7501_hw_pulse_xreset_ms(hold_low_ms);
 }
 
 uint32_t p7501_pio_get_baud(void) {
@@ -123,7 +113,7 @@ bool p7501_pio_set_framing(p7501_uart_framing_t framing) {
     if (s_rx_loaded) {
         const bool was_enabled = ((P7501_PIO_UART_INST->ctrl >> P7501_PIO_RX_SM) & 1u) != 0u;
         pio_sm_set_enabled(P7501_PIO_UART_INST, P7501_PIO_RX_SM, false);
-        pio_sm_clear_fifos(P7501_PIO_UART_INST, P7501_PIO_RX_SM);
+        clear_rx_diagnostics();
         pio_sm_exec(P7501_PIO_UART_INST, P7501_PIO_RX_SM, pio_encode_set(pio_y, loops));
         pio_sm_restart(P7501_PIO_UART_INST, P7501_PIO_RX_SM);
         if (was_enabled) {
@@ -141,18 +131,19 @@ void p7501_pio_begin_rx_session(p7501_boot_action_t action) {
 }
 
 void p7501_pio_begin_rx_session_ex(p7501_boot_action_t action, uint32_t jig_hold_ms) {
-    float div = compute_pio_clkdiv(s_active_baud);
+    const float div = compute_pio_clkdiv(s_active_baud);
 
     s_sw_uart_timed_hold = false;
-    s_parity_err_count = 0u;
     ensure_programs_loaded();
-    p7501_pio_enforce_nsw5v_hiz();
+    p7501_hw_enforce_nsw5v_hiz();
     release_tx_pin_hiz();
 
-    if (action == P7501_BOOT_ACTION_JIG) {
-        p7501_pio_set_sw_uart(true);
-    } else {
-        p7501_pio_set_sw_uart(false);
+    /* Hold target in reset BEFORE enabling RX SM so no stale pre-reset bytes pollute FIFO. */
+    if (action != P7501_BOOT_ACTION_PASSIVE) {
+        p7501_hw_sw_uart_set_low(action == P7501_BOOT_ACTION_JIG);
+        p7501_wdt_sleep_ms(P7501_RESET_POST_SETTLE_MS);
+        p7501_hw_reset_assert();
+        p7501_wdt_sleep_ms(P7501_RESET_DIAG_ASSERT_MS);
     }
 
     p7501_uart_rx_fast_init(
@@ -163,10 +154,10 @@ void p7501_pio_begin_rx_session_ex(p7501_boot_action_t action, uint32_t jig_hold
         div,
         framing_bit_loop_count()
     );
+    clear_rx_diagnostics();
 
     if (action != P7501_BOOT_ACTION_PASSIVE) {
-        sleep_ms(5u);
-        p7501_pio_pulse_xreset_ms(15u);
+        p7501_hw_reset_release();
         if (action == P7501_BOOT_ACTION_JIG && jig_hold_ms > 0u) {
             s_sw_uart_timed_hold = true;
             s_sw_uart_release_deadline = make_timeout_time_ms(jig_hold_ms);
@@ -176,15 +167,11 @@ void p7501_pio_begin_rx_session_ex(p7501_boot_action_t action, uint32_t jig_hold
 
 void p7501_pio_release_sw_uart_now(void) {
     s_sw_uart_timed_hold = false;
-    p7501_pio_set_sw_uart(false);
     p7501_hw_restore_sw_uart_adc0();
 }
 
 bool p7501_pio_poll_sw_uart_release(void) {
-    if (!s_sw_uart_timed_hold) {
-        return false;
-    }
-    if (!time_reached(s_sw_uart_release_deadline)) {
+    if (!s_sw_uart_timed_hold || !time_reached(s_sw_uart_release_deadline)) {
         return false;
     }
     p7501_pio_release_sw_uart_now();
@@ -211,9 +198,6 @@ void p7501_pio_end_session(void) {
     s_sw_uart_timed_hold = false;
     pio_sm_set_enabled(P7501_PIO_UART_INST, P7501_PIO_RX_SM, false);
     release_tx_pin_hiz();
-    p7501_pio_set_sw_uart(false);
-    p7501_hw_restore_sw_uart_adc0();
-    p7501_pio_enforce_nsw5v_hiz();
     p7501_hw_isolate_bus_hiz();
 }
 
@@ -221,7 +205,7 @@ bool p7501_pio_pop_rx_byte_ex(uint8_t *out_byte, bool *out_parity_err) {
     if (pio_sm_is_rx_fifo_empty(P7501_PIO_UART_INST, P7501_PIO_RX_SM)) {
         return false;
     }
-    uint32_t raw = pio_sm_get(P7501_PIO_UART_INST, P7501_PIO_RX_SM);
+    const uint32_t raw = pio_sm_get(P7501_PIO_UART_INST, P7501_PIO_RX_SM);
     bool parity_ok = true;
     p7501_uart_decode_rx_word(raw, s_active_framing, out_byte, &parity_ok);
     if (!parity_ok) {
@@ -247,8 +231,7 @@ void p7501_pio_drain_rx(void) {
     uint8_t dummy = 0u;
     while (p7501_pio_pop_rx_byte(&dummy)) {
     }
-    (void)p7501_pio_poll_and_clear_framing_err();
-    (void)p7501_pio_get_and_clear_parity_errors();
+    clear_rx_diagnostics();
 }
 
 bool p7501_pio_poll_and_clear_framing_err(void) {
@@ -260,12 +243,12 @@ bool p7501_pio_poll_and_clear_framing_err(void) {
 }
 
 bool p7501_pio_had_rx_overflow(void) {
-    uint32_t mask = (1u << (PIO_FDEBUG_RXSTALL_LSB + P7501_PIO_RX_SM));
+    const uint32_t mask = (1u << (PIO_FDEBUG_RXSTALL_LSB + P7501_PIO_RX_SM));
     return (P7501_PIO_UART_INST->fdebug & mask) != 0u;
 }
 
 static void engage_tx_pio(void) {
-    float div = compute_pio_clkdiv(s_active_baud);
+    const float div = compute_pio_clkdiv(s_active_baud);
 
     ensure_programs_loaded();
     p7501_uart_tx_fast_init(
@@ -293,26 +276,43 @@ static void engage_tx_pio(void) {
     pio_sm_set_enabled(P7501_PIO_UART_INST, P7501_PIO_TX_SM, true);
 }
 
+static bool pio_tx_put_word_bounded(uint32_t word) {
+    const uint64_t wait_t0 = time_us_64();
+    while (pio_sm_is_tx_fifo_full(P7501_PIO_UART_INST, P7501_PIO_TX_SM)) {
+        p7501_wdt_kick();
+        if ((time_us_64() - wait_t0) >= P7501_TX_FIFO_TIMEOUT_US) {
+            return false;
+        }
+        tight_loop_contents();
+    }
+    pio_sm_put(P7501_PIO_UART_INST, P7501_PIO_TX_SM, word);
+    return true;
+}
+
 void p7501_pio_tx_bytes(const uint8_t *data, size_t len, bool force_sw_uart_low) {
-    uint32_t drain_us = ((p7501_baud_to_bit_ns(s_active_baud) * 13u) / 1000u) + 60u;
+    const uint32_t drain_us = ((p7501_baud_to_bit_ns(s_active_baud) * 13u) / 1000u) + 60u;
 
     if (!data || len == 0u) {
         return;
     }
-    p7501_pio_enforce_nsw5v_hiz();
-    p7501_pio_set_sw_uart(force_sw_uart_low);
+    p7501_hw_enforce_nsw5v_hiz();
+    p7501_hw_sw_uart_set_low(force_sw_uart_low);
     sleep_us(200u);
 
     engage_tx_pio();
     for (size_t i = 0u; i < len; ++i) {
-        pio_sm_put_blocking(
-            P7501_PIO_UART_INST,
-            P7501_PIO_TX_SM,
-            p7501_uart_encode_tx_word(data[i], s_active_framing)
-        );
+        if (!pio_tx_put_word_bounded(p7501_uart_encode_tx_word(data[i], s_active_framing))) {
+            release_tx_pin_hiz();
+            return;
+        }
     }
+    const uint64_t drain_t0 = time_us_64();
     while (!pio_sm_is_tx_fifo_empty(P7501_PIO_UART_INST, P7501_PIO_TX_SM)) {
         p7501_wdt_kick();
+        if ((time_us_64() - drain_t0) >= P7501_TX_FIFO_TIMEOUT_US) {
+            release_tx_pin_hiz();
+            return;
+        }
         tight_loop_contents();
     }
     sleep_us(drain_us);
@@ -320,14 +320,11 @@ void p7501_pio_tx_bytes(const uint8_t *data, size_t len, bool force_sw_uart_low)
 }
 
 void p7501_pio_tx_break_ms(uint32_t break_ms, bool force_sw_uart_low) {
-    p7501_pio_enforce_nsw5v_hiz();
-    p7501_pio_set_sw_uart(force_sw_uart_low);
+    p7501_hw_enforce_nsw5v_hiz();
+    p7501_hw_sw_uart_set_low(force_sw_uart_low);
     release_tx_pin_hiz();
 
-    gpio_set_function(P7501_PIN_TXD, GPIO_FUNC_SIO);
-    gpio_put(P7501_PIN_TXD, 0);
-    gpio_set_dir(P7501_PIN_TXD, GPIO_OUT);
+    p7501_hw_drive_txd_low();
     p7501_wdt_sleep_ms(break_ms > 0u ? break_ms : 120u);
-    gpio_set_dir(P7501_PIN_TXD, GPIO_IN);
-    gpio_pull_up(P7501_PIN_TXD);
+    p7501_hw_release_txd_hiz(true);
 }

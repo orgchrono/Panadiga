@@ -35,8 +35,7 @@ static void sdsniff_enforce_hiz_inputs(void) {
         P7501_PIN_SD_DAT2,
         P7501_PIN_SD_DAT3
     };
-    gpio_set_dir(P7501_PIN_NSW5V, GPIO_IN);
-    gpio_disable_pulls(P7501_PIN_NSW5V);
+    p7501_hw_enforce_nsw5v_hiz();
     for (size_t i = 0u; i < 6u; ++i) {
         gpio_init(k_pins[i]);
         gpio_set_dir(k_pins[i], GPIO_IN);
@@ -78,23 +77,22 @@ void p7501_cmd_sdsniff(const char *arg) {
         } else {
             p7501_hw_sw_uart_set_low(false);
         }
-        p7501_wdt_sleep_ms(5u);
-        p7501_hw_reset_assert();
-        p7501_wdt_sleep_ms(15u);
-        p7501_hw_reset_release();
+        p7501_wdt_sleep_ms(P7501_RESET_POST_SETTLE_MS);
+        p7501_hw_pulse_xreset_ms(P7501_RESET_DIAG_ASSERT_MS);
         if (hold_jig_active) {
             jig_deadline = make_timeout_time_ms(spec.boot.jig_hold_ms);
         }
     }
 
+    p7501_wdt_set_stage(P7501_WDT_STAGE_RX_WAIT);
     p7501_led_set_auto_mode(LED_MODE_BUS_ACTIVE);
     pio_sm_clear_fifos(pio0, sm);
     pio0->fdebug = (1u << (PIO_FDEBUG_RXSTALL_LSB + sm));
     pio_sm_set_enabled(pio0, sm, true);
 
-    const absolute_time_t end_t = make_timeout_time_ms(spec.boot.window_ms);
-    while (!time_reached(end_t)) {
-        p7501_wdt_kick();
+    const uint64_t t0_us = time_us_64();
+    const uint64_t deadline_us = t0_us + ((uint64_t)spec.boot.window_ms * 1000ULL);
+    while (p7501_wdt_loop_step(t0_us, deadline_us, true, NULL)) {
         if (hold_jig_active && time_reached(jig_deadline)) {
             p7501_hw_sw_uart_set_low(false);
             p7501_hw_restore_sw_uart_adc0();

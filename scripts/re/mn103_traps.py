@@ -1,20 +1,20 @@
-"""Static Matsushita MN103S / AM34 Trap 1-7 analysis and resolution helpers.
-
-Complements `scripts.re.mn10300` without duplicating decoding primitives:
-- Trap 1: Pointer table & orphan dispatch table scanning (`scan_code_pointer_tables`)
-- Trap 4: Mid-instruction branch/call overlap detection (`detect_mid_instruction_overlaps`)
-- Trap 5: Spansion CS1 CFI/JEDEC volatile probe detection (`is_cfi_command_address`)
-- Trap 6: SETLB..Lcc hardware loop & negative frame verification
-- Trap 7: DRV revision fingerprint & mid-instruction constant false-hit filtering
-"""
+"""Thin typed Python facade delegating MN103S Trap 1-7 analysis to `panadiga re traps --json`."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-import struct
+from dataclasses import asdict, dataclass
+import json
 from typing import Final, Sequence
 
-from scripts.re.mn10300 import decode_branch_call_refs, decode_setlb_loops
+from scripts.panadiga_cli_bridge import (
+    as_dict,
+    as_list,
+    opt_int,
+    req_bool,
+    req_int,
+    req_str,
+    run_panadiga_json,
+)
 
 KNOWN_CFI_LOW_OFFSETS: Final[frozenset[int]] = frozenset({0x000, 0x554, 0x555, 0xAAA, 0xAAB})
 KNOWN_DRV_STUB_VAS: Final[frozenset[int]] = frozenset({0x40014559})
@@ -53,31 +53,29 @@ class DrvRevisionFingerprint:
 
 
 def estimate_mn103_insn_len(opcode: int) -> int:
-    """Estimate conservative MN103S instruction length from leading opcode byte."""
-    b = opcode & 0xFF
-    if b == 0xFC:
-        return 6
-    if b == 0xDD:
-        return 7
-    if b in (0xDC, 0xCD):
-        return 5
-    if b in (0xF8, 0xFA, 0xFE, 0xDE, 0xDF, 0xCC):
-        return 3
-    if b in (0xC0, 0xC1, 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7, 0xC8, 0xC9, 0xCA, 0xCB, 0xCE):
-        return 2
-    return 1
+    """Estimate conservative MN103S instruction length via `panadiga re traps --kind insn-len`."""
+    res = run_panadiga_json(["re", "traps", "--kind", "insn-len", "--opcode", str(opcode & 0xFF)])
+    if isinstance(res, bool) or not isinstance(res, int):
+        raise RuntimeError(f"Unexpected insn-len reply: {res!r}")
+    return res
 
 
 def build_instruction_spans(data: bytes, base_va: int) -> tuple[InstructionSpan, ...]:
-    """Build instruction spans across decoded branch/call/SETLB opcodes."""
-    spans: dict[int, InstructionSpan] = {}
-    for br in decode_branch_call_refs(data, base_va):
-        insn_len = estimate_mn103_insn_len(br.opcode)
-        spans[br.va] = InstructionSpan(br.va, br.va + insn_len, br.mnemonic)
-    for lp in decode_setlb_loops(data, base_va):
-        spans[lp.setlb_va] = InstructionSpan(lp.setlb_va, lp.setlb_va + 1, "setlb")
-        spans[lp.lcc_va] = InstructionSpan(lp.lcc_va, lp.lcc_va + 1, lp.mnemonic)
-    return tuple(spans[k] for k in sorted(spans))
+    """Build instruction spans via `panadiga re traps --kind spans`."""
+    rows = as_list(
+        run_panadiga_json(
+            ["re", "traps", "--kind", "spans", "--input", "-", "--base", f"0x{base_va:08X}"],
+            stdin_bytes=data,
+        )
+    )
+    return tuple(
+        InstructionSpan(
+            start_va=req_int(d, "start_va"),
+            end_va=req_int(d, "end_va"),
+            mnemonic=req_str(d, "mnemonic"),
+        )
+        for d in (as_dict(item) for item in rows)
+    )
 
 
 def detect_mid_instruction_overlaps(
@@ -85,50 +83,48 @@ def detect_mid_instruction_overlaps(
     base_va: int,
     extra_spans: Sequence[InstructionSpan] = (),
 ) -> tuple[OverlapCollision, ...]:
-    """Trap 4: flag branch/call targets falling inside [start_va + 1, end_va)."""
-    merged = list(build_instruction_spans(data, base_va))
-    merged.extend(extra_spans)
-    refs = decode_branch_call_refs(data, base_va)
-    hits: list[OverlapCollision] = []
-    for ref in refs:
-        tgt = ref.target_va
-        for sp in merged:
-            if sp.start_va < tgt < sp.end_va:
-                hits.append(
-                    OverlapCollision(
-                        source_va=ref.va,
-                        target_va=tgt,
-                        containing_start_va=sp.start_va,
-                        containing_end_va=sp.end_va,
-                        mnemonic=ref.mnemonic,
-                    )
-                )
-                break
-    return tuple(hits)
+    """Trap 4: flag mid-instruction branch/call overlaps via `panadiga re traps --kind overlaps`."""
+    args = ["re", "traps", "--kind", "overlaps", "--input", "-", "--base", f"0x{base_va:08X}"]
+    if extra_spans:
+        args.extend(["--extra-spans", json.dumps([asdict(sp) for sp in extra_spans])])
+    rows = as_list(run_panadiga_json(args, stdin_bytes=data))
+    return tuple(
+        OverlapCollision(
+            source_va=req_int(d, "source_va"),
+            target_va=req_int(d, "target_va"),
+            containing_start_va=req_int(d, "containing_start_va"),
+            containing_end_va=req_int(d, "containing_end_va"),
+            mnemonic=req_str(d, "mnemonic"),
+        )
+        for d in (as_dict(item) for item in rows)
+    )
 
 
 def filter_mid_instruction_constant_hits(
     hit_vas: Sequence[int],
     insn_spans: Sequence[InstructionSpan],
 ) -> tuple[tuple[int, ...], tuple[int, ...]]:
-    """Trap 7: separate genuine pointer/constant addresses from mid-instruction false hits."""
-    genuine: list[int] = []
-    false_hits: list[int] = []
-    for va in hit_vas:
-        if any(sp.start_va < va < sp.end_va for sp in insn_spans):
-            false_hits.append(va)
-        else:
-            genuine.append(va)
-    return tuple(genuine), tuple(false_hits)
+    """Trap 7: filter mid-instruction false constant hits via `panadiga re traps --kind filter-hits`."""
+    args = [
+        "re",
+        "traps",
+        "--kind",
+        "filter-hits",
+        "--hits",
+        ",".join(f"0x{va:08X}" for va in hit_vas),
+        "--extra-spans",
+        json.dumps([asdict(sp) for sp in insn_spans]),
+    ]
+    rep = as_dict(run_panadiga_json(args))
+    genuine = tuple(int(v) for v in as_list(rep.get("genuine")) if isinstance(v, int))
+    false_hits = tuple(int(v) for v in as_list(rep.get("false_hits")) if isinstance(v, int))
+    return genuine, false_hits
 
 
 def is_cfi_command_address(va: int) -> bool:
-    """Trap 5: return True when virtual address hits Spansion CS1 CFI/JEDEC aperture."""
-    u = va & 0xFFFFFFFF
-    low = u & 0x0FFF
-    return (0x84000000 <= u < 0x847F0000 or 0x80000000 <= u < 0x807F0000) and (
-        low in KNOWN_CFI_LOW_OFFSETS
-    )
+    """Trap 5: validate Spansion CS1 CFI/JEDEC aperture via `panadiga re traps --kind cfi`."""
+    res = run_panadiga_json(["re", "traps", "--kind", "cfi", "--va", f"0x{va & 0xFFFFFFFF:08X}"])
+    return req_bool({"ok": res}, "ok")
 
 
 def scan_code_pointer_tables(
@@ -140,59 +136,37 @@ def scan_code_pointer_tables(
     min_run: int = 4,
     stub_vas: frozenset[int] = KNOWN_DRV_STUB_VAS,
 ) -> tuple[tuple[int, int], ...]:
-    """Trap 1: extract contiguous aligned LE32 code pointer runs pointing into [code_lo, code_hi)."""
-    out: list[tuple[int, int]] = []
-    run: list[tuple[int, int]] = []
-    limit = (len(data) // 4) * 4
-    for off in range(0, limit, 4):
-        (val,) = struct.unpack_from("<I", data, off)
-        if code_lo <= val < code_hi:
-            run.append((base_va + off, val))
-        else:
-            if len(run) >= min_run:
-                out.extend(pair for pair in run if pair[1] not in stub_vas)
-            run = []
-    if len(run) >= min_run:
-        out.extend(pair for pair in run if pair[1] not in stub_vas)
-    return tuple(out)
+    """Trap 1: extract aligned LE32 code pointer runs via `panadiga re traps --kind ptr-tables`."""
+    args = [
+        "re",
+        "traps",
+        "--kind",
+        "ptr-tables",
+        "--input",
+        "-",
+        "--base",
+        f"0x{base_va:08X}",
+        "--code-lo",
+        f"0x{code_lo:08X}",
+        "--code-hi",
+        f"0x{code_hi:08X}",
+        "--min-run",
+        str(min_run),
+        "--stub-vas",
+        ",".join(f"0x{s:08X}" for s in sorted(stub_vas)),
+    ]
+    rows = as_list(run_panadiga_json(args, stdin_bytes=data))
+    return tuple((req_int(d, "va"), req_int(d, "target_va")) for d in (as_dict(item) for item in rows))
 
 
 def identify_drv_revision(data: bytes) -> DrvRevisionFingerprint:
-    """Trap 7: distinguish DRV_decomp vs EH55_DRV_S211 vs BOOT/PROG061 from exact signatures."""
-    has_slogon = b"SLOGON\x00\x00" in data or b"MMODE\x00\x00\x00" in data
-    has_s211 = b"R6-MV4" in data or b"S211" in data
-    if has_slogon and len(data) < 0x180000:
-        return DrvRevisionFingerprint(
-            stage="DRV",
-            revision="DRV_decomp",
-            pass_handler_va=0x4013420A,
-            cli_table_va=0x400DF5C0,
-            atapi_write_buffer_va=0x4002168D,
-            atapi_vendor_ed_va=0x400209F3,
-        )
-    if has_s211 or len(data) == 0x200000:
-        return DrvRevisionFingerprint(
-            stage="DRV",
-            revision="EH55_DRV_S211",
-            pass_handler_va=0x40130EFA,
-            cli_table_va=None,
-            atapi_write_buffer_va=None,
-            atapi_vendor_ed_va=None,
-        )
-    if b"Loader ver0.61" in data:
-        return DrvRevisionFingerprint(
-            stage="BOOT_OR_PROG061",
-            revision="ver0.61",
-            pass_handler_va=None,
-            cli_table_va=None,
-            atapi_write_buffer_va=None,
-            atapi_vendor_ed_va=None,
-        )
+    """Trap 7: identify DRV_decomp vs EH55_DRV_S211 vs BOOT/PROG061 via `panadiga re traps --kind revision`."""
+    rep = as_dict(run_panadiga_json(["re", "traps", "--kind", "revision", "--input", "-"], stdin_bytes=data))
     return DrvRevisionFingerprint(
-        stage="UNKNOWN",
-        revision="generic",
-        pass_handler_va=None,
-        cli_table_va=None,
-        atapi_write_buffer_va=None,
-        atapi_vendor_ed_va=None,
+        stage=req_str(rep, "stage"),
+        revision=req_str(rep, "revision"),
+        pass_handler_va=opt_int(rep, "pass_handler_va"),
+        cli_table_va=opt_int(rep, "cli_table_va"),
+        atapi_write_buffer_va=opt_int(rep, "atapi_write_buffer_va"),
+        atapi_vendor_ed_va=opt_int(rep, "atapi_vendor_ed_va"),
     )

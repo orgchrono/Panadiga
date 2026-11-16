@@ -18,6 +18,8 @@ export const HddCapacityPatcherCard: React.FC = () => {
     setTargetGb,
     limitInDynamicMode,
     setLimitInDynamicMode,
+    passthroughMode,
+    setPassthroughMode,
     inspection,
     patchReport,
     inspecting,
@@ -115,6 +117,8 @@ export const HddCapacityPatcherCard: React.FC = () => {
           onTargetGbChange={setTargetGb}
           limitInDynamicMode={limitInDynamicMode}
           onLimitInDynamicChange={setLimitInDynamicMode}
+          passthroughMode={passthroughMode}
+          onPassthroughModeChange={setPassthroughMode}
           previewBlocks={previewBlocks}
           patching={patching}
           onApply={() => void handleApplyPatch()}

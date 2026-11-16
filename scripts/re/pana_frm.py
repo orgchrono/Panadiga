@@ -1,54 +1,21 @@
-"""Pure parsers for Panasonic `BOOT.BIN` and `DRV_decomp.bin` static tables.
-
-NOTE: Matsushita 64-bit Feistel cipher, `EXTRHEAD`/`EXTRFOOT` compression, and
-`PANA_DVD.FRM` / `PANA__SD.FRM` / `DIGADIAG.FRM` packing are implemented natively
-in Rust (`crates/panadiga-core/src/crypto/` and `panadiga frm pack|unpack`).
-"""
+"""Thin typed Python facade delegating `BOOT.BIN` / `DRV_decomp.bin` static tables to `panadiga re --json`."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-import struct
 from typing import Final
-import zlib
+
+from scripts.panadiga_cli_bridge import (
+    PanadigaCliError,
+    as_dict,
+    as_list,
+    req_bool,
+    req_int,
+    req_str,
+    run_panadiga_json,
+)
 
 DRV_UNLOCK_COMMAND: Final[str] = "PASS 0x4d415453 0x48495441"
-
-_DRV_WRITE_BLOCKED_NAMES: Final[frozenset[str]] = frozenset({
-    "WB",
-    "WW",
-    "WRITE",
-    "WTLONG",
-    "ERASE",
-    "FORMAT",
-})
-_DRV_READ_ONLY_NAMES: Final[frozenset[str]] = frozenset({
-    "VER",
-    "RB",
-    "RW",
-    "D",
-    "MLOG",
-    "DSCLOG",
-    "CLOG",
-    "ACSLOG",
-    "TMPLOG",
-    "LFMLOG",
-    "LINFO",
-    "RMD",
-    "RZONE",
-    "LPP",
-    "ADIP",
-    "TOC",
-    "TRACK",
-    "ZTBL",
-    "ODCSTS",
-    "SVER",
-    "RDPCA",
-    "RDLNG",
-    "TMP",
-    "DATAID",
-    "SUBQ",
-})
 
 
 @dataclass(frozen=True)
@@ -62,7 +29,7 @@ class ExtrheadMatch:
 
 @dataclass(frozen=True)
 class DrvCliEntry:
-    """One `<8sIII` entry from the `DRV_decomp.bin` factory serial CLI table."""
+    """One `<8sIII>` entry from the `DRV_decomp.bin` factory serial CLI table."""
 
     index: int
     name: str
@@ -101,36 +68,53 @@ class SenseEntry:
 
 
 def decompress_drv_payload(drv_raw: bytes, header_size: int = 0x40) -> bytes:
-    """Decompress Panasonic optical drive `DRV.BIN` skipping its 64-byte header."""
-    if len(drv_raw) <= header_size:
-        raise ValueError(f"DRV payload shorter than {header_size} bytes")
-    return zlib.decompress(drv_raw[header_size:])
+    """Decompress Panasonic `DRV.BIN` via `panadiga re pana-frm --kind decompress-drv`."""
+    try:
+        rep = as_dict(
+            run_panadiga_json(
+                ["re", "pana-frm", "--kind", "decompress-drv", "--input", "-", "--header-size", str(header_size)],
+                stdin_bytes=drv_raw,
+            )
+        )
+    except PanadigaCliError as exc:
+        raise ValueError(str(exc)) from exc
+    return bytes.fromhex(req_str(rep, "data_hex"))
 
 
 def find_extrhead_containers(buf: bytes, image_base: int = 0) -> list[ExtrheadMatch]:
-    """Locate `'EXTRHEAD'` markers inside a Panasonic firmware or bootloader image."""
-    matches: list[ExtrheadMatch] = []
-    pos = 0
-    while True:
-        idx = buf.find(b"EXTRHEAD", pos)
-        if idx == -1:
-            break
-        preview = buf[idx : min(len(buf), idx + 32)].hex()
-        matches.append(ExtrheadMatch(idx, image_base + idx, preview))
-        pos = idx + 8
-    return matches
+    """Locate `'EXTRHEAD'` markers via `panadiga re pana-frm --kind extrhead`."""
+    rows = as_list(
+        run_panadiga_json(
+            ["re", "pana-frm", "--kind", "extrhead", "--input", "-", "--base", f"0x{image_base:08X}"],
+            stdin_bytes=buf,
+        )
+    )
+    return [
+        ExtrheadMatch(
+            offset=req_int(d, "offset"),
+            va=req_int(d, "va"),
+            tail_preview_hex=req_str(d, "tail_preview_hex"),
+        )
+        for d in (as_dict(item) for item in rows)
+    ]
 
 
 def classify_drv_cli_command(name: str, flags: int, pass_unlocked: bool = False) -> str:
-    """Classify one DRV CLI entry (`0x400DF5C0..0x400DFE94`) by safety/privilege tier."""
-    norm = name.strip().upper()
-    if norm in _DRV_WRITE_BLOCKED_NAMES or flags == 0x38:
-        return "UNLOCKED_WRITE" if pass_unlocked else "WRITE_BLOCKED"
-    if norm == "PASS":
-        return "UNLOCK_AUTH"
-    if norm in _DRV_READ_ONLY_NAMES:
-        return "READ_ONLY"
-    return "DIAGNOSTIC"
+    """Classify one DRV CLI entry via `panadiga re pana-frm --kind classify-cli`."""
+    args = [
+        "re",
+        "pana-frm",
+        "--kind",
+        "classify-cli",
+        "--cmd-name",
+        name,
+        "--flags",
+        str(flags),
+    ]
+    if pass_unlocked:
+        args.append("--pass-unlocked")
+    rep = as_dict(run_panadiga_json(args))
+    return req_str(rep, "classification")
 
 
 def parse_drv_cli_table(
@@ -139,19 +123,34 @@ def parse_drv_cli_table(
     image_base: int = 0x40000000,
     count: int = 113,
 ) -> list[DrvCliEntry]:
-    """Decode the `<8sIII` factory serial monitor command table inside `DRV_decomp.bin`."""
-    entries: list[DrvCliEntry] = []
-    stride = 20
-    for idx in range(count):
-        off = table_offset + idx * stride
-        if off + stride > len(drv_buf):
-            break
-        raw_name, handler_va, arg1, flags = struct.unpack_from("<8sIII", drv_buf, off)
-        name = raw_name.split(b"\x00", 1)[0].decode("ascii", errors="replace").strip()
-        if not name and handler_va == 0:
-            continue
-        entries.append(DrvCliEntry(idx, name, int(handler_va), int(arg1), int(flags)))
-    return entries
+    """Decode `<8sIII>` factory serial monitor CLI table via `panadiga re drv-cli`."""
+    rows = as_list(
+        run_panadiga_json(
+            [
+                "re",
+                "drv-cli",
+                "--input",
+                "-",
+                "--offset",
+                f"0x{table_offset:X}",
+                "--base",
+                f"0x{image_base:08X}",
+                "--max-entries",
+                str(count),
+            ],
+            stdin_bytes=drv_buf,
+        )
+    )
+    return [
+        DrvCliEntry(
+            index=req_int(d, "index"),
+            name=req_str(d, "name"),
+            handler_va=req_int(d, "handler_va"),
+            arg1=req_int(d, "arg_mask"),
+            flags=req_int(d, "flags"),
+        )
+        for d in (as_dict(item) for item in rows)
+    ]
 
 
 def parse_atapi_cdb_dispatch(
@@ -160,15 +159,34 @@ def parse_atapi_cdb_dispatch(
     count: int = 256,
     default_handler: int = 0x40014559,
 ) -> list[AtapiDispatchEntry]:
-    """Decode the 256-entry ATAPI `CDB[0]` dispatch pointer table in `DRV_decomp.bin`."""
-    entries: list[AtapiDispatchEntry] = []
-    for opcode in range(count):
-        off = table_offset + opcode * 4
-        if off + 4 > len(drv_buf):
-            break
-        handler_va = int(struct.unpack_from("<I", drv_buf, off)[0])
-        entries.append(AtapiDispatchEntry(opcode, handler_va, handler_va != default_handler))
-    return entries
+    """Decode ATAPI CDB[0] dispatch pointer table via `panadiga re pana-frm --kind atapi-dispatch`."""
+    rows = as_list(
+        run_panadiga_json(
+            [
+                "re",
+                "pana-frm",
+                "--kind",
+                "atapi-dispatch",
+                "--input",
+                "-",
+                "--offset",
+                f"0x{table_offset:X}",
+                "--count",
+                str(count),
+                "--default-handler",
+                f"0x{default_handler:08X}",
+            ],
+            stdin_bytes=drv_buf,
+        )
+    )
+    return [
+        AtapiDispatchEntry(
+            cdb_opcode=req_int(d, "cdb0"),
+            handler_va=req_int(d, "handler_va"),
+            is_active=req_bool(d, "is_active"),
+        )
+        for d in (as_dict(item) for item in rows)
+    ]
 
 
 def parse_drv_error_table(
@@ -178,33 +196,66 @@ def parse_drv_error_table(
     stride: int = 0x34,
     image_base: int = 0x40000000,
 ) -> list[DrvMechaErrorEntry]:
-    """Decode fixed-stride `<H` + CP932 string entries from `DRV_decomp.bin`."""
-    entries: list[DrvMechaErrorEntry] = []
-    hi = min(len(drv_buf), end_offset)
-    for off in range(start_offset, hi - 2, stride):
-        if off + stride > len(drv_buf):
-            break
-        code = int(struct.unpack_from("<H", drv_buf, off)[0])
-        raw_msg = drv_buf[off + 2 : off + stride].split(b"\x00", 1)[0]
-        if code == 0 or not raw_msg:
-            continue
-        msg = raw_msg.decode("cp932", errors="replace").strip()
-        entries.append(DrvMechaErrorEntry(image_base + off, code, msg))
-    return entries
+    """Decode 52-byte (`0x34`) CP932 error dictionary slice via `panadiga re drv-errors`."""
+    del stride
+    rows = as_list(
+        run_panadiga_json(
+            [
+                "re",
+                "drv-errors",
+                "--input",
+                "-",
+                "--start",
+                f"0x{start_offset:X}",
+                "--end",
+                f"0x{end_offset:X}",
+            ],
+            stdin_bytes=drv_buf,
+        )
+    )
+    return [
+        DrvMechaErrorEntry(
+            va=image_base + req_int(d, "offset"),
+            code=req_int(d, "code"),
+            message_jp=bytes.fromhex(req_str(d, "raw_hex")).decode("cp932", errors="replace"),
+        )
+        for d in (as_dict(item) for item in rows)
+    ]
 
 
 def parse_sense_lut(
     drv_buf: bytes,
     table_offset: int,
-    count: int = 64,
     image_base: int = 0x40000000,
+    count: int = 16,
 ) -> list[SenseEntry]:
-    """Decode 3-byte `[SenseKey, ASC, ASCQ]` records from the DRV Sense LUT."""
-    entries: list[SenseEntry] = []
-    for idx in range(count):
-        off = table_offset + idx * 3
-        if off + 3 > len(drv_buf):
-            break
-        sk, asc, ascq = drv_buf[off], drv_buf[off + 1], drv_buf[off + 2]
-        entries.append(SenseEntry(idx, image_base + off, sk, asc, ascq))
-    return entries
+    """Decode 3-byte `[SenseKey, ASC, ASCQ]` records via `panadiga re pana-frm --kind sense-lut`."""
+    rows = as_list(
+        run_panadiga_json(
+            [
+                "re",
+                "pana-frm",
+                "--kind",
+                "sense-lut",
+                "--input",
+                "-",
+                "--offset",
+                f"0x{table_offset:X}",
+                "--base",
+                f"0x{image_base:08X}",
+                "--count",
+                str(count),
+            ],
+            stdin_bytes=drv_buf,
+        )
+    )
+    return [
+        SenseEntry(
+            index=req_int(d, "index"),
+            va=req_int(d, "va"),
+            sense_key=req_int(d, "sense_key"),
+            asc=req_int(d, "asc"),
+            ascq=req_int(d, "ascq"),
+        )
+        for d in (as_dict(item) for item in rows)
+    ]

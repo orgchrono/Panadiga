@@ -151,6 +151,8 @@ export function handleMockHddCommand(
         applied_sectors_512b: appliedBlocks * 4,
         mbr_superblocks_updated: false,
         repacked_container_size: 6173296,
+        passthrough_mode:
+          (args?.passthroughMode as string) || (args?.passthrough_mode as string) || null,
         original_sha256: '6ec63de059c00b287a0e8a1a4102a8007bbccf3210a552bfb45118a03b85c898',
         patched_sha256: 'a1b2c3d4e5f60718293a4b5c6d7e8f90112233445566778899aabbccddeeff00',
         inspection_before: before,

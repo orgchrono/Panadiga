@@ -137,7 +137,8 @@ UARTSTREAM: OK";
 
 #[test]
 fn parses_pincheck_dump_and_sniff_outputs_cleanly() {
-    assert!(execute_diagnostic_on_port("MOCK_RP2040", "PINCHECK", None).is_err());
+    let backend = crate::state::PanadigaBackendState::new();
+    assert!(execute_diagnostic_on_port(&backend, "MOCK_RP2040", "PINCHECK", None).is_err());
 
     let pincheck = parse_diagnostic_output(
         "PINCHECK",
@@ -179,4 +180,38 @@ GP26(Pin1 SWUART) | 3.21V|   0.00V   |  3.28V  | P7501 SW_UART / Target Sense
 PINCHECK: OK";
     let res = parse_diagnostic_output("PINCHECK", "PINCHECK", floating, 40);
     assert_eq!(res.vdd_volts, Some(0.0));
+
+    assert!(compose_diagnostic_command("WDT", None).is_ok());
+    let wdt_res = parse_diagnostic_output(
+        "WDT",
+        "WDT",
+        "[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=2 wdt_recoveries=1 reboot_src=WDT_RECOVERY fault_slot=5 fault_stage=PROBE_SWEEP last_cmd=SCAN\nWDT: OK",
+        20,
+    );
+    assert!(wdt_res.success);
+    let wdt_finding = wdt_res
+        .findings
+        .iter()
+        .find(|f| f.code == "WDT_ACTIVE")
+        .expect("WDT_ACTIVE finding missing");
+    assert!(wdt_finding.detail.contains("fault_stage=PROBE_SWEEP"));
+
+    let funnel_log =
+        "... SD init end\nSD diag load failed[0].\nBGO driver init failed[1].\nDIAGWATCH: OK";
+    let funnel_res =
+        parse_diagnostic_output("DIAGWATCH", "DIAGWATCH 6000 JIG NONE", funnel_log, 6000);
+    assert!(funnel_res.success);
+    assert!(funnel_res.findings.iter().any(|f| f.code == "SD_HW_OK"));
+    assert!(
+        funnel_res
+            .findings
+            .iter()
+            .any(|f| f.code == "SD_DIAG_LOAD_FAIL")
+    );
+    assert!(
+        funnel_res
+            .findings
+            .iter()
+            .any(|f| f.code == "BGO_INIT_HALT")
+    );
 }

@@ -134,11 +134,123 @@ pub enum PicoActions {
     /// Decodes offline COM10 / AM34 UART0 / Pico capture logs (UTF-16LE or UTF-8)
     #[command(name = "decode-log", alias = "decode_log")]
     DecodeLog {
-        /// Path to captured UART / Pico `.log` or `.txt` file
+        /// Path to captured UART / Pico `.log` or `.txt` file (`-` reads stdin bytes)
         #[arg(short, long, value_name = "LOG_FILE")]
         file: PathBuf,
 
-        /// Optional JSON output path
+        /// Optional JSON output path (`-` emits compact JSON to stdout)
+        #[arg(long, value_name = "JSON_OUT")]
+        json: Option<PathBuf>,
+    },
+
+    /// Parses structured Pico CLI telemetry replies (`status`, `pincheck`, `busdiag`, `piologic`, `panarsp`, `fat-error`)
+    #[command(name = "parse-diag", alias = "parse_diag")]
+    ParseDiag {
+        /// Kind: status|pincheck|busdiag|piologic|panarsp|fat-error
+        #[arg(long, value_name = "KIND")]
+        kind: String,
+
+        /// Captured output text file (or `-` for stdin)
+        #[arg(short, long, value_name = "TEXT_FILE")]
+        file: Option<PathBuf>,
+
+        /// Numeric negative status code for `--kind fat-error`
+        #[arg(long, allow_negative_numbers = true, value_name = "I32")]
+        code: Option<i32>,
+
+        /// JSON output path (`-` emits stdout JSON)
+        #[arg(long, value_name = "JSON_OUT")]
+        json: Option<PathBuf>,
+    },
+
+    /// Validates a P7501 bench command against Rust `SAFE_BENCH_COMMANDS` allowlist
+    #[command(name = "validate-bench-cmd", alias = "validate_bench_cmd")]
+    ValidateBenchCmd {
+        /// Raw command string to validate
+        #[arg(short, long, value_name = "CMD")]
+        cmd: String,
+
+        /// JSON output path (`-` emits stdout JSON)
+        #[arg(long, value_name = "JSON_OUT")]
+        json: Option<PathBuf>,
+    },
+
+    /// Pure GDB RSP frame codec, E05 IPL NOR write guard, reply scanner, and `$g` decoder
+    #[command(name = "rsp-codec", alias = "rsp_codec")]
+    RspCodec {
+        /// Operation kind: checksum|is-ipl-readonly|build-frame|build-write|parse-reply|decode-hex|decode-g|validate-dump
+        #[arg(long, value_name = "KIND")]
+        kind: String,
+
+        /// Input byte payload file (or `-` for stdin)
+        #[arg(short, long, value_name = "BYTES")]
+        input: Option<PathBuf>,
+
+        /// Target 32-bit address in hex (for write/guard/range ops)
+        #[arg(long, value_name = "HEX_VA")]
+        addr: Option<String>,
+
+        /// Length in bytes for read/write guard checks
+        #[arg(long, default_value_t = 1)]
+        len: usize,
+
+        /// Chunk size in bytes for `--kind validate-dump`
+        #[arg(long, default_value_t = 512)]
+        chunk_size: usize,
+
+        /// Optional max chunk override for `--kind validate-dump`
+        #[arg(long)]
+        max_chunk_size: Option<usize>,
+
+        /// Optional fixed payload length hint for binary `$x` replies
+        #[arg(long)]
+        expected_len: Option<usize>,
+
+        /// Permit mutating/execution RSP frames (`M`, `X`, `c`, `s`, `k`)
+        #[arg(long, default_value_t = false)]
+        allow_write: bool,
+
+        /// Use binary escaped `$X` encoding for `--kind build-write`
+        #[arg(long, default_value_t = false)]
+        binary_x: bool,
+
+        /// JSON output path (`-` emits stdout JSON)
+        #[arg(long, value_name = "JSON_OUT")]
+        json: Option<PathBuf>,
+    },
+
+    /// Automated A/B cold-boot statistical harness helpers (`build-cmd`, `classify`, `summarize`, `csv`)
+    #[command(name = "ab-boot", alias = "ab_boot")]
+    AbBoot {
+        /// Operation kind: build-cmd|classify|summarize|csv
+        #[arg(long, value_name = "KIND")]
+        kind: String,
+
+        /// Boot trial arm mode (`NORMAL` or `JIG`)
+        #[arg(long, default_value = "NORMAL", value_name = "MODE")]
+        mode: String,
+
+        /// Capture window milliseconds
+        #[arg(long, default_value_t = 6000)]
+        window_ms: u32,
+
+        /// Input file (raw capture log or JSON array of runs, or `-` for stdin)
+        #[arg(short, long, value_name = "INPUT")]
+        input: Option<PathBuf>,
+
+        /// Trial run index for `--kind classify`
+        #[arg(long, default_value_t = 0)]
+        run_index: usize,
+
+        /// Command string recorded for `--kind classify`
+        #[arg(long, default_value = "", value_name = "CMD")]
+        command: String,
+
+        /// Measured capture duration in ms for `--kind classify`
+        #[arg(long, default_value_t = 0.0)]
+        duration_ms: f64,
+
+        /// JSON output path (`-` emits stdout JSON)
         #[arg(long, value_name = "JSON_OUT")]
         json: Option<PathBuf>,
     },

@@ -74,6 +74,35 @@ export const DiagnosticInspector: React.FC<DiagnosticInspectorProps> = ({
 
         <DiagnosticResultTables result={activeResult} />
 
+        {activeResult.findings && activeResult.findings.length > 0 && (
+          <div className="space-y-1.5" data-testid="diagnostic-findings">
+            {activeResult.findings.map((finding, idx) => (
+              <div
+                key={`${finding.code}-${idx}`}
+                className="rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-[11px] flex flex-wrap items-start gap-2"
+              >
+                <Badge
+                  variant={
+                    finding.severity === 'error'
+                      ? 'destructive'
+                      : finding.severity === 'warning'
+                        ? 'warning'
+                        : 'secondary'
+                  }
+                >
+                  {finding.code}
+                </Badge>
+                <div className="min-w-0 flex-1 space-y-0.5">
+                  <div className="font-semibold text-slate-200">{finding.summary}</div>
+                  <div className="text-[10px] text-slate-400 font-sans break-words">
+                    {finding.detail}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         <ScrollArea className="max-h-44 rounded-lg bg-slate-900/90 border border-slate-800 p-3">
           <pre className="text-[11px] text-slate-300 whitespace-pre-wrap break-words font-mono">
             {activeResult.raw_output}

@@ -13,6 +13,7 @@
 #include "pico/stdlib.h"
 #include "hardware/pio.h"
 #include "hardware/adc.h"
+#include "hardware/watchdog.h"
 #include "p7501_uart.pio.h"
 
 static PIO  s_pio_inst    = (PIO)0;
@@ -20,7 +21,17 @@ static uint s_pio_sm      = 0U;
 static uint s_pio_offset  = 0U;
 static bool s_initialized = false;
 
-static void enforce_nsw5v_hiz_safe(void) {
+static void hw_safe_sleep_ms(uint32_t total_ms) {
+    uint32_t rem = total_ms;
+    while (rem > 0U) {
+        const uint32_t slice = (rem > 200U) ? 200U : rem;
+        sleep_ms(slice);
+        watchdog_update();
+        rem -= slice;
+    }
+}
+
+void p7501_hw_enforce_nsw5v_hiz(void) {
     /* CRITICAL SAFETY INVARIANT: Pin 5 NSW5V (GP3) must ALWAYS stay Hi-Z Input with no pulls */
     gpio_set_function(P7501_PIN_NSW5V, GPIO_FUNC_SIO);
     gpio_set_dir(P7501_PIN_NSW5V, GPIO_IN);
@@ -49,7 +60,7 @@ p7501_status_t p7501_hw_init(void) {
 
     /* Pin 5 NSW5V (GP3): Strictly Hi-Z Input */
     gpio_init(P7501_PIN_NSW5V);
-    enforce_nsw5v_hiz_safe();
+    p7501_hw_enforce_nsw5v_hiz();
 
     /* Pin 3 UARTM2P_T (GP4): Idle Hi-Z Input until UART TX requested */
     gpio_init(P7501_PIN_TXD);
@@ -92,6 +103,30 @@ void p7501_hw_reset_release(void) {
     gpio_set_function(P7501_PIN_XRESET, GPIO_FUNC_SIO);
     gpio_set_dir(P7501_PIN_XRESET, GPIO_IN);
     gpio_disable_pulls(P7501_PIN_XRESET);
+}
+
+void p7501_hw_pulse_xreset_ms(uint32_t hold_low_ms) {
+    p7501_hw_enforce_nsw5v_hiz();
+    p7501_hw_reset_assert();
+    hw_safe_sleep_ms((hold_low_ms > 0U) ? hold_low_ms : P7501_RESET_DIAG_ASSERT_MS);
+    p7501_hw_reset_release();
+}
+
+void p7501_hw_drive_txd_low(void) {
+    gpio_set_function(P7501_PIN_TXD, GPIO_FUNC_SIO);
+    gpio_disable_pulls(P7501_PIN_TXD);
+    gpio_put(P7501_PIN_TXD, false);
+    gpio_set_dir(P7501_PIN_TXD, GPIO_OUT);
+}
+
+void p7501_hw_release_txd_hiz(bool with_pull_up) {
+    gpio_set_function(P7501_PIN_TXD, GPIO_FUNC_SIO);
+    gpio_set_dir(P7501_PIN_TXD, GPIO_IN);
+    if (with_pull_up) {
+        gpio_pull_up(P7501_PIN_TXD);
+    } else {
+        gpio_disable_pulls(P7501_PIN_TXD);
+    }
 }
 
 void p7501_hw_sw_uart_set_low(bool assert_low) {
@@ -158,7 +193,7 @@ void p7501_hw_boot_sequence(p7501_boot_mode_t mode) {
     p7501_hw_sw_uart_set_low(use_serial_boot);
 
     p7501_hw_reset_assert();
-    sleep_ms(P7501_RESET_ASSERT_MS);
+    hw_safe_sleep_ms(P7501_RESET_ASSERT_MS);
     p7501_hw_reset_release();
 
     for (uint32_t wait_us = 0U; wait_us < 2000U; wait_us += 10U) {
@@ -172,7 +207,7 @@ void p7501_hw_boot_sequence(p7501_boot_mode_t mode) {
         sleep_us(P7501_RESET_SETTLE_US);
         p7501_hw_sw_uart_set_low(false);
     } else if (mode == P7501_BOOT_MODE_HIZ_EXTENDED) {
-        sleep_ms(5U);
+        hw_safe_sleep_ms(P7501_RESET_POST_SETTLE_MS);
     } else {
         sleep_us(P7501_POST_RESET_DELAY_US);
     }
@@ -180,16 +215,13 @@ void p7501_hw_boot_sequence(p7501_boot_mode_t mode) {
     if (mode != P7501_BOOT_MODE_SERIAL_LOW_HOLD) {
         p7501_hw_restore_sw_uart_adc0();
     }
-    enforce_nsw5v_hiz_safe();
+    p7501_hw_enforce_nsw5v_hiz();
 }
 
 void p7501_hw_isolate_bus_hiz(void) {
     p7501_hw_reset_release();
-    enforce_nsw5v_hiz_safe();
-
-    gpio_set_function(P7501_PIN_TXD, GPIO_FUNC_SIO);
-    gpio_set_dir(P7501_PIN_TXD, GPIO_IN);
-    gpio_disable_pulls(P7501_PIN_TXD);
+    p7501_hw_enforce_nsw5v_hiz();
+    p7501_hw_release_txd_hiz(false);
 
     gpio_set_function(P7501_PIN_RXD, GPIO_FUNC_SIO);
     gpio_set_dir(P7501_PIN_RXD, GPIO_IN);
@@ -199,7 +231,7 @@ void p7501_hw_isolate_bus_hiz(void) {
 }
 
 void p7501_hw_engage_uart_bus(void) {
-    enforce_nsw5v_hiz_safe();
+    p7501_hw_enforce_nsw5v_hiz();
 
     gpio_set_function(P7501_PIN_RXD, GPIO_FUNC_SIO);
     gpio_set_dir(P7501_PIN_RXD, GPIO_IN);

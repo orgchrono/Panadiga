@@ -57,7 +57,7 @@ static void sweep_run_hold_or_delay_trial(p7501_jigsweep_mode_t mode, uint32_t p
 
     p7501_pio_begin_rx_session_ex(start_action, (mode == P7501_JIGSWEEP_HOLD) ? param_ms : 0u);
     const uint64_t t0_us = time_us_64();
-    const absolute_time_t end_t = make_timeout_time_ms(JIGSWEEP_WINDOW_MS);
+    const uint64_t deadline_us = t0_us + ((uint64_t)JIGSWEEP_WINDOW_MS * 1000ULL);
 
     bool delay_asserted = false;
     bool delay_released = false;
@@ -67,13 +67,13 @@ static void sweep_run_hold_or_delay_trial(p7501_jigsweep_mode_t mode, uint32_t p
     uint32_t ferr = 0u;
     uint8_t byte = 0u;
 
-    while (!time_reached(end_t)) {
+    while (p7501_wdt_loop_step(t0_us, deadline_us, true, NULL)) {
         const uint32_t rel_us = (uint32_t)(time_us_64() - t0_us);
         if (mode == P7501_JIGSWEEP_HOLD) {
             (void)p7501_pio_poll_sw_uart_release();
         } else {
             if (!delay_asserted && rel_us >= (param_ms * 1000u)) {
-                p7501_pio_set_sw_uart(true);
+                p7501_hw_sw_uart_set_low(true);
                 delay_asserted = true;
             }
             if (delay_asserted && !delay_released && rel_us >= (release_ms * 1000u)) {
@@ -93,7 +93,6 @@ static void sweep_run_hold_or_delay_trial(p7501_jigsweep_mode_t mode, uint32_t p
                 rx_buf[rx_len++] = byte;
             }
         }
-        p7501_wdt_kick();
     }
 
     const bool ovf = p7501_pio_had_rx_overflow();
@@ -134,18 +133,17 @@ static void sweep_run_preboot_trial(uint32_t profile) {
 
     if (profile == 2u) {
         p7501_pio_begin_rx_session_ex(P7501_BOOT_ACTION_PASSIVE, 0u);
-        p7501_pio_set_sw_uart(false);
-        gpio_init(P7501_PIN_TXD);
-        gpio_put(P7501_PIN_TXD, false);
-        gpio_set_dir(P7501_PIN_TXD, GPIO_OUT);
-        sleep_ms(2u);
-        p7501_pio_pulse_xreset_ms(15u);
+        p7501_hw_sw_uart_set_low(false);
+        p7501_hw_drive_txd_low();
+        p7501_wdt_sleep_ms(2u);
+        p7501_hw_pulse_xreset_ms(P7501_RESET_DIAG_ASSERT_MS);
     } else {
         const p7501_boot_action_t b_act = (profile == 4u) ? P7501_BOOT_ACTION_JIG : P7501_BOOT_ACTION_NORMAL;
         p7501_pio_begin_rx_session_ex(b_act, (profile == 4u) ? 30u : 0u);
     }
 
     const uint64_t t0_us = time_us_64();
+    const uint64_t deadline_us = t0_us + ((uint64_t)JIGSWEEP_WINDOW_MS * 1000ULL);
     uint8_t pre_buf[64];
     size_t pre_len = 0u;
     static uint8_t post_buf[JIGSWEEP_TRIAL_RX_CAP];
@@ -157,8 +155,7 @@ static void sweep_run_preboot_trial(uint32_t profile) {
     bool break_released = (profile != 2u);
     uint8_t byte = 0u;
 
-    const absolute_time_t end_t = make_timeout_time_ms(JIGSWEEP_WINDOW_MS);
-    while (!time_reached(end_t)) {
+    while (p7501_wdt_loop_step(t0_us, deadline_us, true, NULL)) {
         const uint32_t rel_us = (uint32_t)(time_us_64() - t0_us);
         (void)p7501_pio_poll_sw_uart_release();
 
@@ -176,8 +173,7 @@ static void sweep_run_preboot_trial(uint32_t profile) {
         }
 
         if (!break_released && rel_us >= 9000u) {
-            gpio_set_dir(P7501_PIN_TXD, GPIO_IN);
-            gpio_pull_up(P7501_PIN_TXD);
+            p7501_hw_release_txd_hiz(true);
             break_released = true;
         }
 
@@ -200,7 +196,6 @@ static void sweep_run_preboot_trial(uint32_t profile) {
                 if (post_len < sizeof(post_buf)) post_buf[post_len++] = byte;
             }
         }
-        p7501_wdt_kick();
     }
 
     const uint32_t perr = p7501_pio_get_and_clear_parity_errors();

@@ -1,106 +1,33 @@
 /**
  * @file p7501_fmu_probe.c
- * @brief Panasonic Bootrom FMU handshake probes (`FMUSCAN`, `FMUTEST`, `FMUBATCH`).
+ * @brief Panasonic Bootrom FMU handshake probes (`FMUSCAN`, `FMUTEST`).
+ *
+ * Pure trigger detection and hit gating are delegated to `p7501_fmu_codec`.
  *
  * @standard ISO/IEC 9899:2011 (C11)
  */
 
 #include "uart/p7501_fmu_probe.h"
 #include "uart/p7501_fmu_internal.h"
-#include "uart/p7501_uart_capture.h"
 #include "uart/p7501_uart_bitbang.h"
+#include "uart/p7501_uart_capture.h"
 #include "uart/p7501_uart_pio_engine.h"
 #include "common/p7501_hex.h"
 #include "hal/p7501_hw.h"
+#include "hal/p7501_led.h"
 #include "hal/p7501_watchdog.h"
+#include "p7501_types.h"
 
 #include <inttypes.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include "pico/stdlib.h"
-#include "hardware/gpio.h"
-
-bool p7501_fmu_buf_contains_tag_at_eol(
-    const uint8_t *buf,
-    uint32_t len,
-    uint32_t start_min,
-    const char *tag,
-    size_t tag_len
-) {
-    if ((len < (start_min + (uint32_t)tag_len + 1U)) || (buf[len - 1U] != '\n')) {
-        return false;
-    }
-    for (uint32_t k = start_min; (k + (uint32_t)tag_len) <= len; k++) {
-        if (memcmp(&buf[k], tag, tag_len) == 0) {
-            return true;
-        }
-    }
-    return false;
-}
-
-static bool fmu_buf_is_ddr_ok_eol(const uint8_t *buf, uint32_t len) {
-    if ((len < 14U) || (buf[len - 1U] != '\n')) {
-        return false;
-    }
-    const uint32_t scan_start = (len >= 18U) ? (len - 18U) : 0U;
-    return p7501_fmu_buf_contains_tag_at_eol(buf, len, scan_start, "DDR CHECK", 9U);
-}
-
-static bool fmu_buf_is_wait1_eol(const uint8_t *buf, uint32_t len) {
-    if ((len < 20U) || (buf[len - 1U] != '\n')) {
-        return false;
-    }
-    if ((buf[len - 2U] != '.') && (buf[len - 3U] != '.')) {
-        return false;
-    }
-    for (uint32_t k = len - 18U; k < len; k++) {
-        if (buf[k] == '1') {
-            return true;
-        }
-    }
-    return false;
-}
-
-void p7501_fmu_handle_phase_triggers(
-    p7501_fmu_phase_state_t *st,
-    const uint8_t *rx_buf,
-    uint32_t fmode,
-    uint32_t rx_len,
-    uint32_t now_us
-) {
-    if ((!st->sw_uart_flipped) && (fmode == 2U) &&
-        p7501_fmu_buf_contains_tag_at_eol(rx_buf, rx_len, 20U, "seri", 4U)) {
-        p7501_pio_release_sw_uart_now();
-        st->sw_uart_flipped = true;
-    }
-    if ((!st->sw_uart_flipped) && (fmode == 3U) &&
-        fmu_buf_is_ddr_ok_eol(rx_buf, rx_len)) {
-        p7501_pio_release_sw_uart_now();
-        st->sw_uart_flipped = true;
-    }
-    if ((!st->wait1_seen) && fmu_buf_is_wait1_eol(rx_buf, rx_len)) {
-        st->wait1_seen = true;
-        st->wait1_us = now_us;
-    }
-}
-
-static size_t fmu_decode_or_default_cr(const char *hex_str, uint8_t *out, size_t max_len) {
-    size_t out_len = 0U;
-    if ((hex_str != NULL) && (*hex_str != '\0') &&
-        p7501_decode_hex_bytes(hex_str, out, max_len, &out_len) && (out_len > 0U)) {
-        return out_len;
-    }
-    out[0] = 0x0DU;
-    return 1U;
-}
+#include "pico/time.h"
 
 void p7501_fmu_start_phase_session(p7501_fmu_phase_state_t *out_st) {
-    p7501_pio_begin_rx_session_ex(P7501_BOOT_ACTION_JIG, 2500u);
-    out_st->sw_uart_flipped = false;
-    out_st->sent_after_serial_msg = false;
-    out_st->wait1_seen = false;
-    out_st->wait1_us = 0U;
+    p7501_fmu_state_init(out_st);
+    p7501_wdt_set_stage(P7501_WDT_STAGE_RESET_SYNC);
+    p7501_led_set_auto_mode(LED_MODE_BUS_ACTIVE);
+    p7501_pio_begin_rx_session_ex(P7501_BOOT_ACTION_JIG, P7501_JIG_DEFAULT_HOLD_MS);
 }
 
 bool p7501_fmu_pop_rx_byte(uint8_t *rx_buf, uint32_t *rx_len, uint32_t max_cap) {
@@ -115,41 +42,51 @@ bool p7501_fmu_pop_rx_byte(uint8_t *rx_buf, uint32_t *rx_len, uint32_t max_cap) 
     return true;
 }
 
-void p7501_cmd_fmu_scan(const char *arg) {
-    uint32_t fmode = 0U;
-    if ((arg != NULL) && (*arg != '\0')) {
-        fmode = (uint32_t)atoi(arg);
-    }
-
+static bool run_single_fmu_scan_mode(uint32_t fmode) {
     size_t rx_cap = 0U;
     uint8_t *rx_buf = p7501_uart_rx_buffer(&rx_cap);
     p7501_fmu_phase_state_t st;
     p7501_fmu_start_phase_session(&st);
+    p7501_wdt_set_stage(P7501_WDT_STAGE_PROBE_SWEEP);
 
     uint32_t rx_len = 0U;
-    const uint32_t t0_us = time_us_32();
+    const uint64_t t0_us = time_us_64();
+    const uint64_t deadline_us = t0_us + ((uint64_t)P7501_FMU_PROBE_WINDOW_MS * 1000ULL);
     bool sweep_done = false;
+    bool aborted = false;
     int hit_byte = -1;
     uint16_t bval = 0U;
+    uint32_t last_tx_us = 0U;
     uint32_t next_tx_us = 0U;
-    bool listening_after_tx = false;
+    bool waiting_reply = false;
 
-    while ((time_us_32() - t0_us) < 4000000UL) {
+    while (!aborted && p7501_wdt_loop_step(t0_us, deadline_us, true, &aborted)) {
         const uint32_t now_us = time_us_32();
         while (p7501_fmu_pop_rx_byte(rx_buf, &rx_len, (uint32_t)rx_cap)) {
-            if (!listening_after_tx) {
-                const bool was_wait1 = st.wait1_seen;
-                p7501_fmu_handle_phase_triggers(&st, rx_buf, fmode, rx_len, now_us);
-                if ((!was_wait1) && st.wait1_seen) {
-                    next_tx_us = now_us + 2000UL;
-                }
-            } else if ((hit_byte < 0) && (bval > 0U)) {
+            const uint8_t b = rx_buf[rx_len - 1U];
+            bool rel_sw = false;
+            bool saw_wait1 = false;
+            p7501_fmu_feed_byte(&st, fmode, b, now_us, &rel_sw, NULL, &saw_wait1);
+            if (rel_sw) {
+                p7501_pio_release_sw_uart_now();
+            }
+            if (saw_wait1) {
+                next_tx_us = now_us + 2000UL;
+            }
+            if (p7501_fmu_is_echo_hit(bval, waiting_reply, st.sd_started, now_us - last_tx_us)) {
                 hit_byte = (int)(bval - 1U);
                 sweep_done = true;
+                waiting_reply = false;
+            }
+            if (st.sd_started && bval > 0U) {
+                sweep_done = true;
+                waiting_reply = false;
             }
         }
 
-        if (st.wait1_seen && (!sweep_done) && (now_us >= next_tx_us) && ((int32_t)(now_us - st.wait1_us) < 1100000L)) {
+        if (st.wait1_seen && !sweep_done && !st.sd_started &&
+            ((int32_t)(now_us - next_tx_us) >= 0) &&
+            ((now_us - st.wait1_us) < 1100000UL)) {
             if ((bval == 0U) && (fmode == 1U) && (!st.sw_uart_flipped)) {
                 p7501_pio_release_sw_uart_now();
                 st.sw_uart_flipped = true;
@@ -157,67 +94,94 @@ void p7501_cmd_fmu_scan(const char *arg) {
             if (bval < 256U) {
                 const uint8_t tx_b = (uint8_t)bval;
                 p7501_pio_tx_bytes(&tx_b, 1u, !st.sw_uart_flipped);
+                last_tx_us = time_us_32();
                 bval++;
-                listening_after_tx = true;
-                next_tx_us = time_us_32() + 2200UL;
+                waiting_reply = true;
+                next_tx_us = last_tx_us + 2200UL;
             } else {
+                waiting_reply = false;
                 sweep_done = true;
             }
         }
-        p7501_wdt_kick();
-        tight_loop_contents();
     }
 
+    p7501_wdt_set_stage(P7501_WDT_STAGE_CLEANUP);
     p7501_pio_end_session();
+    p7501_led_set_auto_mode(LED_MODE_HEARTBEAT_IDLE);
 
-    printf("\n=== FMUSCAN MODE %" PRIu32 " RESULT (hit=0x%02X/%d, bytes=%" PRIu32 ") ===\n",
-           fmode, hit_byte >= 0 ? hit_byte : 0, hit_byte, rx_len);
+    if (hit_byte >= 0) {
+        printf("\n=== FMUSCAN MODE %" PRIu32 " RESULT (hit=0x%02X/%d, bytes=%" PRIu32 "%s) ===\n",
+               fmode, hit_byte, hit_byte, rx_len, aborted ? ", aborted=YES" : "");
+    } else {
+        printf("\n=== FMUSCAN MODE %" PRIu32 " RESULT (hit=NONE, probes=%u, bytes=%" PRIu32 "%s) ===\n",
+               fmode, (unsigned)bval, rx_len, aborted ? ", aborted=YES" : "");
+    }
     p7501_uart_print_ascii_stream(rx_buf, rx_len);
+    return !aborted;
+}
+
+void p7501_cmd_fmu_scan(const char *arg) {
+    if ((arg != NULL) && p7501_ascii_ieq(arg, "all")) {
+        for (uint32_t m = 0U; m < 4U; ++m) {
+            if (!run_single_fmu_scan_mode(m)) {
+                break;
+            }
+            p7501_wdt_sleep_ms(40u);
+        }
+        printf("\nFMUSCAN: OK\n");
+        return;
+    }
+
+    uint32_t fmode = 0U;
+    if ((arg != NULL) && (*arg != '\0')) {
+        if (!p7501_parse_u32_strict(arg, &fmode)) {
+            printf("[FMUSCAN] Invalid mode '%s'! Defaulting to mode 0.\n", arg);
+            fmode = 0U;
+        }
+    }
+    (void)run_single_fmu_scan_mode(fmode);
     printf("\nFMUSCAN: OK\n");
 }
 
 void p7501_cmd_fmu_test(const char *arg) {
-    uint32_t raw_mode = 2U;
+    uint32_t fmode = 2U;
+    bool repeat_25ms = false;
     const char *hex_str = "0D";
-    if ((arg != NULL) && (*arg != '\0')) {
-        char *endp = NULL;
-        raw_mode = (uint32_t)strtoul(arg, &endp, 10);
-        if (endp != NULL) {
-            while (*endp == ' ') {
-                endp++;
-            }
-            if (*endp != '\0') {
-                hex_str = endp;
-            }
-        }
-    }
-    const uint32_t fmode = raw_mode % 10U;
-    const bool repeat_25ms = (raw_mode >= 10U);
+    p7501_fmu_parse_test_args(arg, &fmode, &repeat_25ms, &hex_str);
 
     uint8_t tx_bytes[64];
-    const size_t tx_len = fmu_decode_or_default_cr(hex_str, tx_bytes, sizeof(tx_bytes));
+    const size_t tx_len = p7501_fmu_decode_or_default_cr(hex_str, tx_bytes, sizeof(tx_bytes));
 
     size_t rx_cap = 0U;
     uint8_t *rx_buf = p7501_uart_rx_buffer(&rx_cap);
     p7501_fmu_phase_state_t st;
     p7501_fmu_start_phase_session(&st);
+    p7501_wdt_set_stage(P7501_WDT_STAGE_TX_WAIT);
 
     uint32_t rx_len = 0U;
     uint32_t next_tx_us = 0U;
     uint32_t tx_count = 0U;
-    const uint32_t t0_us = time_us_32();
+    bool aborted = false;
+    const uint64_t t0_us = time_us_64();
+    const uint64_t deadline_us = t0_us + ((uint64_t)P7501_FMU_PROBE_WINDOW_MS * 1000ULL);
 
-    while ((time_us_32() - t0_us) < 4000000UL) {
+    while (!aborted && p7501_wdt_loop_step(t0_us, deadline_us, true, &aborted)) {
         const uint32_t now_us = time_us_32();
         while (p7501_fmu_pop_rx_byte(rx_buf, &rx_len, (uint32_t)rx_cap) && (!st.wait1_seen)) {
-            p7501_fmu_handle_phase_triggers(&st, rx_buf, fmode, rx_len, now_us);
-            if ((fmode == 4U) && (!st.sent_after_serial_msg) &&
-                p7501_fmu_buf_contains_tag_at_eol(rx_buf, rx_len, 20U, "seri", 4U)) {
+            const uint8_t b = rx_buf[rx_len - 1U];
+            bool rel_sw = false;
+            bool saw_serial = false;
+            bool saw_wait1 = false;
+            p7501_fmu_feed_byte(&st, fmode, b, now_us, &rel_sw, &saw_serial, &saw_wait1);
+            if (rel_sw) {
+                p7501_pio_release_sw_uart_now();
+            }
+            if ((fmode == 4U) && (!st.sent_after_serial_msg) && saw_serial) {
                 p7501_pio_tx_bytes(tx_bytes, tx_len, !st.sw_uart_flipped);
                 st.sent_after_serial_msg = true;
                 tx_count++;
             }
-            if (st.wait1_seen) {
+            if (saw_wait1) {
                 if ((fmode == 1U) && (!st.sw_uart_flipped)) {
                     p7501_pio_release_sw_uart_now();
                     st.sw_uart_flipped = true;
@@ -227,20 +191,20 @@ void p7501_cmd_fmu_test(const char *arg) {
         }
 
         if (st.wait1_seen && ((tx_count == 0U) || repeat_25ms) &&
-            (now_us >= next_tx_us) && ((uint32_t)(now_us - st.wait1_us) < 1050000UL)) {
+            ((int32_t)(now_us - next_tx_us) >= 0) &&
+            ((uint32_t)(now_us - st.wait1_us) < 1050000UL)) {
             p7501_pio_tx_bytes(tx_bytes, tx_len, !st.sw_uart_flipped);
             tx_count++;
             next_tx_us = time_us_32() + 25000UL;
         }
-        p7501_wdt_kick();
-        tight_loop_contents();
     }
 
+    p7501_wdt_set_stage(P7501_WDT_STAGE_CLEANUP);
     p7501_pio_end_session();
+    p7501_led_set_auto_mode(LED_MODE_HEARTBEAT_IDLE);
 
-    printf("\n=== FMUTEST MODE %" PRIu32 " (%u tx bytes x%" PRIu32 ") CAPTURE (%" PRIu32 " bytes) ===\n",
-           raw_mode, (unsigned)tx_len, tx_count, rx_len);
+    printf("\n=== FMUTEST MODE %" PRIu32 " (%u tx bytes x%" PRIu32 ") CAPTURE (%" PRIu32 " bytes%s) ===\n",
+           fmode, (unsigned)tx_len, tx_count, rx_len, aborted ? ", aborted=YES" : "");
     p7501_uart_print_ascii_stream(rx_buf, rx_len);
     printf("\nFMUTEST: OK\n");
 }
-

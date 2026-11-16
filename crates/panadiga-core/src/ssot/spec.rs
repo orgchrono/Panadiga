@@ -1,8 +1,8 @@
 //! Panasonic DMR-EH55 DIGA Suite - Hardware & Firmware Single Source of Truth (SSOT) DTO
 
+mod catalog;
 mod commands;
-mod commands_a;
-mod commands_b;
+pub mod constants;
 mod dto;
 mod hardware;
 

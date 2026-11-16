@@ -11,20 +11,35 @@
 #include "flash/ram_loader_payload.h"
 
 uint32_t p7501_flash_normalize_size(uint32_t flash_size_bytes) {
-    if ((flash_size_bytes == 0x00200000UL) ||
-        (flash_size_bytes == 0x00400000UL) ||
-        (flash_size_bytes == 0x00800000UL) ||
-        (flash_size_bytes == 0x01000000UL)) {
+    if ((flash_size_bytes == P7501_FLASH_SIZE_2MB) ||
+        (flash_size_bytes == P7501_FLASH_SIZE_4MB) ||
+        (flash_size_bytes == P7501_FLASH_SIZE_8MB) ||
+        (flash_size_bytes == P7501_FLASH_SIZE_16MB)) {
         return flash_size_bytes;
     }
-    return 0x00800000UL;
+    return P7501_FLASH_SIZE_8MB;
+}
+
+static uint32_t flash_base_microsector(uint32_t eff_size) {
+    if (eff_size == P7501_FLASH_SIZE_16MB) {
+        return 254U;
+    }
+    if (eff_size == P7501_FLASH_SIZE_4MB) {
+        return 70U;
+    }
+    if (eff_size == P7501_FLASH_SIZE_2MB) {
+        return 38U;
+    }
+    return 134U;
 }
 
 p7501_flash_geometry_t p7501_flash_get_geometry(uint32_t flash_size_bytes) {
     const uint32_t eff_size = p7501_flash_normalize_size(flash_size_bytes);
-    const uint32_t nvram_size = (eff_size == 0x01000000UL) ? 0x00020000UL : 0x00010000UL;
+    const uint32_t nvram_size = (eff_size == P7501_FLASH_SIZE_16MB)
+        ? P7501_FLASH_NVRAM_SIZE_128KB
+        : P7501_FLASH_NVRAM_SIZE_64KB;
     const uint32_t nvram_offset = eff_size - nvram_size;
-    const bool has_bgo = (eff_size >= 0x00400000UL);
+    const bool has_bgo = (eff_size >= P7501_FLASH_SIZE_4MB);
 
     p7501_flash_geometry_t geo;
     geo.bytes = eff_size;
@@ -41,15 +56,15 @@ p7501_flash_geometry_t p7501_flash_get_geometry(uint32_t flash_size_bytes) {
         : 0U;
     geo.bgo_sector_count = has_bgo ? P7501_BGO_SECTOR_COUNT : 0U;
     geo.sector_count = nvram_size / SPANSION_MICROSECTOR_SIZE_BYTES;
-    geo.base_sector = (eff_size == 0x01000000UL) ? 254U :
-                      (eff_size == 0x00400000UL) ? 70U :
-                      (eff_size == 0x00200000UL) ? 38U : 134U;
+    geo.base_sector = flash_base_microsector(eff_size);
     return geo;
 }
 
-bool p7501_flash_is_readonly_nor_range(uint32_t flash_size_bytes,
-                                       uint32_t start_addr,
-                                       uint32_t total_len) {
+bool p7501_flash_is_readonly_nor_range(
+    uint32_t flash_size_bytes,
+    uint32_t start_addr,
+    uint32_t total_len
+) {
     if (total_len == 0U) {
         return false;
     }
@@ -72,11 +87,16 @@ bool p7501_flash_is_protected_ipl_range(uint32_t addr, size_t len) {
     }
     const uint64_t s64 = (uint64_t)addr;
     const uint64_t e64 = s64 + (uint64_t)len - 1ULL;
-    return (s64 <= 0x807EFFFFULL && e64 >= (uint64_t)P7501_FLASH_CACHED_BASE) ||
-           (s64 <= 0x847EFFFFULL && e64 >= (uint64_t)P7501_FLASH_HW_UNCACHED_BASE);
+    const uint64_t cached_ipl_end = (uint64_t)P7501_FLASH_CACHED_BASE + (uint64_t)P7501_FLASH_8MB_IPL_END_OFF;
+    const uint64_t hw_ipl_end = (uint64_t)P7501_FLASH_HW_UNCACHED_BASE + (uint64_t)P7501_FLASH_8MB_IPL_END_OFF;
+    return (s64 <= cached_ipl_end && e64 >= (uint64_t)P7501_FLASH_CACHED_BASE) ||
+           (s64 <= hw_ipl_end && e64 >= (uint64_t)P7501_FLASH_HW_UNCACHED_BASE);
 }
 
 bool p7501_flash_is_nvram_microsector_addr(uint32_t addr) {
-    return (addr >= 0x807F0000UL && addr <= 0x807FFFFFUL) ||
-           (addr >= 0x847F0000UL && addr <= 0x847FFFFFUL);
+    const uint32_t cached_lo = P7501_FLASH_CACHED_BASE + P7501_FLASH_8MB_NVRAM_OFF;
+    const uint32_t cached_hi = P7501_FLASH_CACHED_BASE + P7501_FLASH_8MB_END_OFF;
+    const uint32_t hw_lo = P7501_FLASH_HW_UNCACHED_BASE + P7501_FLASH_8MB_NVRAM_OFF;
+    const uint32_t hw_hi = P7501_FLASH_HW_UNCACHED_BASE + P7501_FLASH_8MB_END_OFF;
+    return (addr >= cached_lo && addr <= cached_hi) || (addr >= hw_lo && addr <= hw_hi);
 }

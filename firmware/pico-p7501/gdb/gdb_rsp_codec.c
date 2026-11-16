@@ -1,68 +1,63 @@
 /**
  * @file gdb_rsp_codec.c
- * @brief GDB RSP packet framing state machine, hex codecs, checksums, and host test hooks.
+ * @brief Explicit-context GDB RSP packet framing state machine, pure hex/checksum codecs, and wrappers.
  *
  * @standard ISO/IEC 9899:2011 (C11)
  */
 
 #include "gdb/gdb_rsp_internal.h"
 #include "common/p7501_hex.h"
-#include "hal/p7501_hw.h"
 #include <stdio.h>
 #include <string.h>
 
-typedef enum gdb_parser_state {
-    GDB_STATE_IDLE,
-    GDB_STATE_DATA,
-    GDB_STATE_CHKSUM_MSB,
-    GDB_STATE_CHKSUM_LSB
-} gdb_parser_state_t;
-
-static bool               s_gdb_active = false;
-static gdb_parser_state_t s_parser_state = GDB_STATE_IDLE;
-static char               s_rx_buffer[GDB_RSP_MAX_PACKET_LEN];
-static size_t             s_rx_len = 0U;
-static bool               s_rx_escaped = false;
-static uint8_t            s_calc_checksum = 0U;
-static uint8_t            s_received_checksum = 0U;
-static char               s_last_tx_packet[GDB_RSP_MAX_PACKET_LEN];
+static gdb_rsp_ctx_t s_default_gdb_ctx;
 
 #if defined(PICO_HOST_TEST) && (PICO_HOST_TEST != 0)
-static char s_test_last_resp[GDB_RSP_MAX_PACKET_LEN];
-
-static void gdb_rsp_test_record_response(const char *payload) {
-    if (payload != NULL) {
-        snprintf(s_test_last_resp, sizeof(s_test_last_resp), "%s", payload);
+static void gdb_rsp_test_record_response(gdb_rsp_ctx_t *ctx, const char *payload) {
+    if ((ctx != NULL) && (payload != NULL)) {
+        snprintf(ctx->test_last_resp, sizeof(ctx->test_last_resp), "%s", payload);
     }
 }
 
-void gdb_rsp_test_get_last_response(char *out, size_t max_len) {
-    if ((out != NULL) && (max_len > 0U)) {
-        snprintf(out, max_len, "%s", s_test_last_resp);
+void gdb_rsp_ctx_test_get_last_response(const gdb_rsp_ctx_t *ctx, char *out, size_t max_len) {
+    if ((ctx != NULL) && (out != NULL) && (max_len > 0U)) {
+        snprintf(out, max_len, "%s", ctx->test_last_resp);
     }
 }
 
-void gdb_rsp_test_inject_packet_len(const uint8_t *payload, size_t len) {
-    if (payload == NULL) {
+void gdb_rsp_ctx_test_inject_packet_len(gdb_rsp_ctx_t *ctx, const uint8_t *payload, size_t len) {
+    if ((ctx == NULL) || (payload == NULL)) {
         return;
     }
-    gdb_rsp_process_char('$');
+    gdb_rsp_ctx_process_char(ctx, '$');
     uint8_t csum = 0U;
     for (size_t i = 0U; i < len; i++) {
         const uint8_t b = payload[i];
         csum = (uint8_t)(csum + b);
-        gdb_rsp_process_char((char)b);
+        gdb_rsp_ctx_process_char(ctx, (char)b);
     }
-    gdb_rsp_process_char('#');
-    gdb_rsp_process_char(gdb_nibble_to_hex_char((uint8_t)(csum >> 4)));
-    gdb_rsp_process_char(gdb_nibble_to_hex_char((uint8_t)(csum & 0x0FU)));
+    gdb_rsp_ctx_process_char(ctx, '#');
+    gdb_rsp_ctx_process_char(ctx, gdb_nibble_to_hex_char((uint8_t)(csum >> 4)));
+    gdb_rsp_ctx_process_char(ctx, gdb_nibble_to_hex_char((uint8_t)(csum & 0x0FU)));
 }
 
-void gdb_rsp_test_inject_packet(const char *payload) {
+void gdb_rsp_ctx_test_inject_packet(gdb_rsp_ctx_t *ctx, const char *payload) {
     if (payload == NULL) {
         return;
     }
-    gdb_rsp_test_inject_packet_len((const uint8_t *)payload, strlen(payload));
+    gdb_rsp_ctx_test_inject_packet_len(ctx, (const uint8_t *)payload, strlen(payload));
+}
+
+void gdb_rsp_test_get_last_response(char *out, size_t max_len) {
+    gdb_rsp_ctx_test_get_last_response(&s_default_gdb_ctx, out, max_len);
+}
+
+void gdb_rsp_test_inject_packet_len(const uint8_t *payload, size_t len) {
+    gdb_rsp_ctx_test_inject_packet_len(&s_default_gdb_ctx, payload, len);
+}
+
+void gdb_rsp_test_inject_packet(const char *payload) {
+    gdb_rsp_ctx_test_inject_packet(&s_default_gdb_ctx, payload);
 }
 #endif
 
@@ -121,55 +116,45 @@ const char *gdb_parse_addr_and_len(
     return p;
 }
 
-void gdb_rsp_init(void) {
-    s_gdb_active = false;
-    s_parser_state = GDB_STATE_IDLE;
-    s_rx_len = 0U;
-    s_rx_escaped = false;
-    s_calc_checksum = 0U;
-    s_received_checksum = 0U;
-    memset(s_last_tx_packet, 0, sizeof(s_last_tx_packet));
-    gdb_cpu_init_registers();
-    gdb_rsp_invalidate_cache();
+void gdb_rsp_ctx_init(gdb_rsp_ctx_t *ctx) {
+    if (ctx == NULL) {
+        return;
+    }
+    memset(ctx, 0, sizeof(*ctx));
+    ctx->parser_state = GDB_STATE_IDLE;
+    ctx->flash_size_bytes = 0x00800000UL;
+    gdb_cpu_init_registers(&ctx->regs);
+    gdb_rsp_ctx_invalidate_cache(ctx);
 }
 
-bool gdb_rsp_is_active(void) {
-    return s_gdb_active;
+bool gdb_rsp_ctx_is_active(const gdb_rsp_ctx_t *ctx) {
+    return (ctx != NULL) && ctx->active;
 }
 
-size_t gdb_rsp_get_last_packet_len(void) {
-    return s_rx_len;
-}
-
-void gdb_rsp_set_active_flag(bool active) {
-    s_gdb_active = active;
-}
-
-void gdb_rsp_set_active(bool active) {
-    s_gdb_active = active;
+void gdb_rsp_ctx_set_active(gdb_rsp_ctx_t *ctx, bool active) {
+    if (ctx == NULL) {
+        return;
+    }
+    ctx->active = active;
     if (active) {
-        s_parser_state = GDB_STATE_IDLE;
-        s_rx_len = 0U;
-        gdb_rsp_invalidate_cache();
-        gdb_cpu_sync_registers();
+        ctx->parser_state = GDB_STATE_IDLE;
+        ctx->rx_len = 0U;
+        gdb_rsp_ctx_invalidate_cache(ctx);
+        gdb_cpu_sync_registers(&ctx->regs);
     }
 }
 
-const char *gdb_rsp_get_status_info(void) {
-    return GDB_TARGET_CHIP_LABEL;
-}
-
-void gdb_rsp_send_packet(const char *payload) {
-    if (payload == NULL) {
+void gdb_rsp_ctx_send_packet(gdb_rsp_ctx_t *ctx, const char *payload) {
+    if ((ctx == NULL) || (payload == NULL)) {
         return;
     }
 
 #if defined(PICO_HOST_TEST) && (PICO_HOST_TEST != 0)
-    gdb_rsp_test_record_response(payload);
+    gdb_rsp_test_record_response(ctx, payload);
 #endif
 
     const uint8_t csum = gdb_compute_checksum(payload);
-    snprintf(s_last_tx_packet, sizeof(s_last_tx_packet), "%s", payload);
+    snprintf(ctx->last_tx_packet, sizeof(ctx->last_tx_packet), "%s", payload);
 
     putchar('$');
     const char *p = payload;
@@ -181,22 +166,25 @@ void gdb_rsp_send_packet(const char *payload) {
     putchar(gdb_nibble_to_hex_char((uint8_t)(csum & 0x0FU)));
 }
 
-void gdb_rsp_process_char(char ch) {
-    if ((ch == 0x03) && !((s_parser_state == GDB_STATE_DATA) && s_rx_escaped)) {
-        gdb_cpu_handle_ctrl_c();
+void gdb_rsp_ctx_process_char(gdb_rsp_ctx_t *ctx, char ch) {
+    if (ctx == NULL) {
+        return;
+    }
+    if ((ch == 0x03) && !((ctx->parser_state == GDB_STATE_DATA) && ctx->rx_escaped)) {
+        gdb_cpu_handle_ctrl_c(ctx);
         return;
     }
 
-    switch (s_parser_state) {
+    switch (ctx->parser_state) {
         case GDB_STATE_IDLE:
             if (ch == '$') {
-                s_parser_state = GDB_STATE_DATA;
-                s_rx_len = 0U;
-                s_rx_escaped = false;
-                s_calc_checksum = 0U;
+                ctx->parser_state = GDB_STATE_DATA;
+                ctx->rx_len = 0U;
+                ctx->rx_escaped = false;
+                ctx->calc_checksum = 0U;
             } else if (ch == '-') {
-                if (s_last_tx_packet[0] != '\0') {
-                    gdb_rsp_send_packet(s_last_tx_packet);
+                if (ctx->last_tx_packet[0] != '\0') {
+                    gdb_rsp_ctx_send_packet(ctx, ctx->last_tx_packet);
                 }
             } else if (ch == '+') {
                 /* ACK received */
@@ -204,23 +192,23 @@ void gdb_rsp_process_char(char ch) {
             break;
 
         case GDB_STATE_DATA:
-            if ((ch == '#') && !s_rx_escaped) {
-                s_parser_state = GDB_STATE_CHKSUM_MSB;
-            } else if (s_rx_len < (GDB_RSP_MAX_PACKET_LEN - 1U)) {
-                s_rx_buffer[s_rx_len++] = ch;
-                s_calc_checksum = (uint8_t)(s_calc_checksum + (uint8_t)ch);
-                s_rx_escaped = !s_rx_escaped && ((uint8_t)ch == 0x7DU);
+            if ((ch == '#') && !ctx->rx_escaped) {
+                ctx->parser_state = GDB_STATE_CHKSUM_MSB;
+            } else if (ctx->rx_len < (GDB_RSP_MAX_PACKET_LEN - 1U)) {
+                ctx->rx_buffer[ctx->rx_len++] = ch;
+                ctx->calc_checksum = (uint8_t)(ctx->calc_checksum + (uint8_t)ch);
+                ctx->rx_escaped = !ctx->rx_escaped && ((uint8_t)ch == 0x7DU);
             }
             break;
 
         case GDB_STATE_CHKSUM_MSB: {
             const int nibble = gdb_hex_char_to_nibble(ch);
             if (nibble >= 0) {
-                s_received_checksum = (uint8_t)(nibble << 4);
-                s_parser_state = GDB_STATE_CHKSUM_LSB;
+                ctx->received_checksum = (uint8_t)(nibble << 4);
+                ctx->parser_state = GDB_STATE_CHKSUM_LSB;
             } else {
                 putchar('-');
-                s_parser_state = GDB_STATE_IDLE;
+                ctx->parser_state = GDB_STATE_IDLE;
             }
             break;
         }
@@ -228,19 +216,31 @@ void gdb_rsp_process_char(char ch) {
         case GDB_STATE_CHKSUM_LSB: {
             const int nibble = gdb_hex_char_to_nibble(ch);
             if (nibble >= 0) {
-                s_received_checksum = (uint8_t)(s_received_checksum | (uint8_t)nibble);
-                if (s_received_checksum == s_calc_checksum) {
+                ctx->received_checksum = (uint8_t)(ctx->received_checksum | (uint8_t)nibble);
+                if (ctx->received_checksum == ctx->calc_checksum) {
                     putchar('+');
-                    s_rx_buffer[s_rx_len] = '\0';
-                    gdb_cpu_dispatch_command(s_rx_buffer);
+                    ctx->rx_buffer[ctx->rx_len] = '\0';
+                    gdb_cpu_dispatch_command(ctx, ctx->rx_buffer);
                 } else {
                     putchar('-');
                 }
             } else {
                 putchar('-');
             }
-            s_parser_state = GDB_STATE_IDLE;
+            ctx->parser_state = GDB_STATE_IDLE;
             break;
         }
     }
 }
+
+void gdb_rsp_init(void) { gdb_rsp_ctx_init(&s_default_gdb_ctx); }
+bool gdb_rsp_is_active(void) { return gdb_rsp_ctx_is_active(&s_default_gdb_ctx); }
+void gdb_rsp_set_active(bool active) { gdb_rsp_ctx_set_active(&s_default_gdb_ctx, active); }
+void gdb_rsp_process_char(char ch) { gdb_rsp_ctx_process_char(&s_default_gdb_ctx, ch); }
+void gdb_rsp_send_packet(const char *payload) { gdb_rsp_ctx_send_packet(&s_default_gdb_ctx, payload); }
+void gdb_rsp_invalidate_cache(void) { gdb_rsp_ctx_invalidate_cache(&s_default_gdb_ctx); }
+const char *gdb_rsp_get_status_info(void) { return GDB_TARGET_CHIP_LABEL; }
+bool gdb_rsp_set_flash_size(uint32_t flash_size_bytes) {
+    return gdb_rsp_ctx_set_flash_size(&s_default_gdb_ctx, flash_size_bytes);
+}
+uint32_t gdb_rsp_get_flash_size(void) { return gdb_rsp_ctx_get_flash_size(&s_default_gdb_ctx); }

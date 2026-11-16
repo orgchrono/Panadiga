@@ -6,6 +6,7 @@
 //! Supports Raspberry Pi Pico/Pico W, Pico 2 (ARM & RISC-V), Arduino Nano RP2040 Connect,
 //! Seeed XIAO, Adafruit, SparkFun, and Waveshare RP2-family controllers across Windows, Linux, and macOS.
 
+pub mod bench_decoders;
 pub mod bridge;
 pub mod cdc;
 pub mod diag_rows;
@@ -13,9 +14,12 @@ pub mod diagnostics;
 pub mod flasher;
 pub mod log_decoder;
 pub mod platforms;
+pub mod rsp_codec;
 
+pub use bench_decoders::*;
 pub use bridge::run_gdb_bridge;
 pub use diagnostics::ping_pico;
 pub use flasher::*;
 pub use log_decoder::*;
 pub use platforms::*;
+pub use rsp_codec::*;

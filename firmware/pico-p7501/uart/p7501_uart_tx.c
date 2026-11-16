@@ -11,6 +11,7 @@
 #include "hal/p7501_led.h"
 #include "hal/p7501_watchdog.h"
 #include "p7501_types.h"
+#include "uart/p7501_pio_loop.h"
 #include "uart/p7501_uart_codec.h"
 #include "uart/p7501_uart_pio_engine.h"
 
@@ -21,6 +22,13 @@
 #include <stdio.h>
 #include <string.h>
 
+typedef struct tx_stream_ctx {
+    const char *trigger;
+    uint8_t ring[P7501_WAITTX_MAX_TRIGGER + 1u];
+    size_t ring_len;
+    bool triggered;
+} tx_stream_ctx_t;
+
 static void emit_printable_byte(uint8_t b) {
     if (b == '\r') {
         return;
@@ -30,6 +38,50 @@ static void emit_printable_byte(uint8_t b) {
     } else {
         printf("[%02X]", (unsigned)b);
     }
+}
+
+static void tx_print_on_byte(void *raw_ctx, uint8_t byte, uint32_t rel_us, bool *out_stop) {
+    (void)rel_us;
+    tx_stream_ctx_t *ctx = (tx_stream_ctx_t *)raw_ctx;
+    emit_printable_byte(byte);
+    if (ctx != NULL && ctx->trigger != NULL && !ctx->triggered &&
+        p7501_rolling_match_push(ctx->ring, &ctx->ring_len, sizeof(ctx->ring), byte, ctx->trigger)) {
+        ctx->triggered = true;
+        if (out_stop != NULL) {
+            *out_stop = true;
+        }
+    }
+}
+
+static void waittx_on_sw_rel(void *raw_ctx, uint32_t rel_us, const char *reason) {
+    (void)raw_ctx;
+    (void)rel_us;
+    printf("\n[SW_UART] %s -> Hi-Z -> Q7514 active\n", reason);
+    fflush(stdout);
+}
+
+static void run_tx_print_loop(
+    uint32_t window_ms,
+    p7501_boot_action_t boot_action,
+    uint32_t jig_hold_ms,
+    bool auto_rel,
+    p7501_pio_loop_sw_rel_fn on_sw_rel,
+    tx_stream_ctx_t *ctx,
+    p7501_pio_loop_metrics_t *out_m
+) {
+    const p7501_pio_loop_cfg_t cfg = {
+        .window_ms = window_ms,
+        .boot_action = boot_action,
+        .jig_hold_ms = jig_hold_ms,
+        .manage_session = false,
+        .auto_release_serial_boot = auto_rel,
+        .allow_cdc_abort = true,
+        .on_rx_byte = tx_print_on_byte,
+        .on_tick = NULL,
+        .on_sw_rel = on_sw_rel,
+        .ctx = ctx,
+    };
+    p7501_pio_run_session(&cfg, out_m);
 }
 
 void p7501_cmd_uart_tx_hex(const char *arg) {
@@ -43,8 +95,7 @@ void p7501_cmd_uart_tx_hex(const char *arg) {
 
     bool force_low = false;
     const char *payload_tok = tok1;
-    if ((tok1[0] == 'L' || tok1[0] == 'l') && (tok1[1] == 'O' || tok1[1] == 'o') &&
-        (tok1[2] == 'W' || tok1[2] == 'w') && tok1[3] == ':') {
+    if (p7501_ascii_iprefix(tok1, "LOW:")) {
         force_low = true;
         payload_tok = tok1 + 4;
     }
@@ -62,6 +113,7 @@ void p7501_cmd_uart_tx_hex(const char *arg) {
         return;
     }
 
+    p7501_wdt_set_stage(P7501_WDT_STAGE_TX_WAIT);
     p7501_led_set_auto_mode(LED_MODE_BUS_ACTIVE);
     p7501_pio_begin_rx_session(P7501_BOOT_ACTION_PASSIVE);
     if (is_break) {
@@ -70,24 +122,20 @@ void p7501_cmd_uart_tx_hex(const char *arg) {
         p7501_pio_tx_bytes(tx_buf, tx_len, force_low);
     }
 
-    const absolute_time_t end_t = make_timeout_time_ms(wait_ms);
-    uint32_t rx_count = 0u;
-    uint8_t byte = 0u;
-    while (!time_reached(end_t)) {
-        p7501_wdt_kick();
-        while (p7501_pio_pop_rx_byte(&byte)) {
-            ++rx_count;
-            emit_printable_byte(byte);
-        }
-    }
+    tx_stream_ctx_t ctx = { .trigger = NULL, .ring_len = 0u, .triggered = false };
+    p7501_pio_loop_metrics_t m;
+    run_tx_print_loop(
+        wait_ms, P7501_BOOT_ACTION_PASSIVE, 0u, false, NULL, &ctx, &m
+    );
 
+    p7501_wdt_set_stage(P7501_WDT_STAGE_CLEANUP);
     p7501_pio_end_session();
     p7501_led_set_auto_mode(LED_MODE_HEARTBEAT_IDLE);
-    if (rx_count > 0u) {
+    if (m.rx_bytes > 0u) {
         putchar('\n');
     }
     printf("UARTTXHEX: OK (tx=%s, sw_uart=%s, rx=%" PRIu32 " bytes)\n",
-           is_break ? "BREAK_120MS" : "HEX", force_low ? "LOW" : "HIZ_Q7514_ON", rx_count);
+           is_break ? "BREAK_120MS" : "HEX", force_low ? "LOW" : "HIZ_Q7514_ON", m.rx_bytes);
 }
 
 void p7501_cmd_waittx(const char *arg) {
@@ -101,45 +149,25 @@ void p7501_cmd_waittx(const char *arg) {
            p7501_pio_get_baud(), spec.timeout_ms, spec.jig_hold_ms, spec.trigger, spec.post_rx_ms);
     fflush(stdout);
 
+    p7501_wdt_set_stage(P7501_WDT_STAGE_RESET_SYNC);
     p7501_led_set_auto_mode(LED_MODE_BUS_ACTIVE);
     p7501_pio_begin_rx_session_ex(spec.boot_action, spec.jig_hold_ms);
 
-    uint8_t ring[P7501_WAITTX_MAX_TRIGGER + 1u];
-    uint8_t jig_ring[24];
-    size_t ring_len = 0u;
-    size_t jig_ring_len = 0u;
-    bool triggered = false;
-    uint32_t rx_count = 0u;
-    uint8_t byte = 0u;
-    const absolute_time_t wait_end = make_timeout_time_ms(spec.timeout_ms);
+    tx_stream_ctx_t ctx = { .trigger = spec.trigger, .ring_len = 0u, .triggered = false };
+    p7501_pio_loop_metrics_t m1;
+    run_tx_print_loop(
+        spec.timeout_ms,
+        spec.boot_action,
+        spec.jig_hold_ms,
+        spec.boot_action == P7501_BOOT_ACTION_JIG,
+        waittx_on_sw_rel,
+        &ctx,
+        &m1
+    );
 
-    while (!time_reached(wait_end)) {
-        p7501_wdt_kick();
-        if (p7501_pio_poll_sw_uart_release()) {
-            printf("\n[SW_UART] Released to Hi-Z -> Q7514 active\n");
-            fflush(stdout);
-        }
-        while (p7501_pio_pop_rx_byte(&byte)) {
-            ++rx_count;
-            emit_printable_byte(byte);
-            if (spec.boot_action == P7501_BOOT_ACTION_JIG &&
-                p7501_pio_poll_jig_serial_release(jig_ring, &jig_ring_len, sizeof(jig_ring), byte)) {
-                printf("\n[SW_UART] serial boot mode -> Hi-Z\n");
-                fflush(stdout);
-            }
-            if (!triggered && p7501_rolling_match_push(
-                                  ring, &ring_len, sizeof(ring), byte, spec.trigger
-                              )) {
-                triggered = true;
-                break;
-            }
-        }
-        if (triggered) {
-            break;
-        }
-    }
-
-    if (triggered) {
+    uint32_t total_rx = m1.rx_bytes;
+    if (ctx.triggered && !m1.aborted) {
+        p7501_wdt_set_stage(P7501_WDT_STAGE_TX_WAIT);
         printf("\n[WAITTX] Trigger matched! Injecting payload via Q7514 (SW_UART=Hi-Z)...\n");
         fflush(stdout);
         if (spec.tx_break) {
@@ -148,20 +176,19 @@ void p7501_cmd_waittx(const char *arg) {
             p7501_pio_tx_bytes(spec.tx_bytes, spec.tx_len, false);
         }
 
-        const absolute_time_t post_end = make_timeout_time_ms(spec.post_rx_ms);
-        while (!time_reached(post_end)) {
-            p7501_wdt_kick();
-            while (p7501_pio_pop_rx_byte(&byte)) {
-                ++rx_count;
-                emit_printable_byte(byte);
-            }
-        }
+        ctx.trigger = NULL;
+        p7501_pio_loop_metrics_t m2;
+        run_tx_print_loop(
+            spec.post_rx_ms, P7501_BOOT_ACTION_PASSIVE, 0u, false, NULL, &ctx, &m2
+        );
+        total_rx += m2.rx_bytes;
     }
 
+    p7501_wdt_set_stage(P7501_WDT_STAGE_CLEANUP);
     p7501_pio_end_session();
     p7501_led_set_auto_mode(LED_MODE_HEARTBEAT_IDLE);
     printf("\nWAITTX: OK (triggered=%s, rx=%" PRIu32 " bytes)\n",
-           triggered ? "YES" : "NO", rx_count);
+           ctx.triggered ? "YES" : "NO", total_rx);
 }
 
 void p7501_cmd_bridge(const char *arg) {
@@ -173,18 +200,21 @@ void p7501_cmd_bridge(const char *arg) {
 
     const char *cur = p7501_next_token(arg, tok1, sizeof(tok1));
     if (cur != NULL && tok1[0] != '\0') {
-        const uint32_t req = p7501_parse_uint32_clamped(tok1, orig_baud, P7501_UART_MIN_BAUD, P7501_UART_MAX_BAUD);
+        const uint32_t req = p7501_parse_uint32_clamped(
+            tok1, orig_baud, P7501_UART_MIN_BAUD, P7501_UART_MAX_BAUD
+        );
         (void)p7501_pio_set_baud(req);
         if (p7501_next_token(cur, tok2, sizeof(tok2)) != NULL) {
             action = p7501_parse_boot_spec(tok2, &jig_hold_ms);
         }
     }
 
-    printf("[BRIDGE] USB CDC <-> P7501 SC0 %" PRIu32 " %s active (exit: send '~~~').\n",
+    printf("[BRIDGE] USB CDC <-> P7501 SC0 %" PRIu32 " %s active (exit: send '~~~' or unplug USB).\n",
            p7501_pio_get_baud(),
            p7501_framing_name(p7501_pio_get_framing()));
     fflush(stdout);
 
+    p7501_wdt_set_stage(P7501_WDT_STAGE_BRIDGE);
     p7501_led_set_auto_mode(LED_MODE_GDB_RSP);
     p7501_pio_begin_rx_session_ex(action, jig_hold_ms);
 
@@ -195,12 +225,25 @@ void p7501_cmd_bridge(const char *arg) {
     uint8_t rx_byte = 0u;
     uint8_t tx_batch[16];
     bool exit_requested = false;
+    absolute_time_t disconnect_deadline = at_the_end_of_time;
+    bool counting_disconnect = false;
 
     while (!exit_requested) {
         p7501_wdt_kick();
         (void)p7501_pio_poll_sw_uart_release();
         if (p7501_pio_poll_and_clear_framing_err()) {
             ++ferr_count;
+        }
+
+        if (!stdio_usb_connected()) {
+            if (!counting_disconnect) {
+                counting_disconnect = true;
+                disconnect_deadline = make_timeout_time_ms(2000u);
+            } else if (time_reached(disconnect_deadline)) {
+                break;
+            }
+        } else {
+            counting_disconnect = false;
         }
 
         bool had_rx = false;
@@ -236,11 +279,6 @@ void p7501_cmd_bridge(const char *arg) {
                 tx_batch[batch_len++] = (uint8_t)'~';
                 --tilde_run;
             }
-            if (batch_len == sizeof(tx_batch)) {
-                p7501_pio_tx_bytes(tx_batch, batch_len, false);
-                tx_count += (uint32_t)batch_len;
-                batch_len = 0u;
-            }
             tx_batch[batch_len++] = (uint8_t)ch;
         }
         if (batch_len > 0u) {
@@ -255,6 +293,7 @@ void p7501_cmd_bridge(const char *arg) {
         ++ferr_count;
     }
     const bool ovf = p7501_pio_had_rx_overflow();
+    p7501_wdt_set_stage(P7501_WDT_STAGE_CLEANUP);
     p7501_pio_end_session();
     (void)p7501_pio_set_baud(orig_baud);
     p7501_led_set_auto_mode(LED_MODE_HEARTBEAT_IDLE);

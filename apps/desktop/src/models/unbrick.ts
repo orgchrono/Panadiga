@@ -59,6 +59,61 @@ export interface SdUnbrickCheck {
   detail: string;
 }
 
+export interface MbrPartitionRecord {
+  slot: number;
+  boot_flag: number;
+  partition_type: number;
+  type_name: string;
+  lba_start: number;
+  sector_count: number;
+}
+
+export interface FatBpbReport {
+  oem_name: string;
+  bytes_per_sector: number;
+  sectors_per_cluster: number;
+  cluster_size_bytes: number;
+  reserved_sectors: number;
+  num_fats: number;
+  root_entry_count: number;
+  total_sectors: number;
+  media_descriptor: number;
+  sectors_per_fat: number;
+  hidden_sectors: number;
+  fat_type_label: string;
+  volume_label: string;
+  data_clusters: number;
+  computed_fat_kind: string;
+}
+
+export interface RootDirFileReport {
+  name_8_3: string;
+  attr: number;
+  hidden: boolean;
+  system: boolean;
+  read_only: boolean;
+  first_cluster: number;
+  file_size: number;
+  has_preceding_lfn: boolean;
+  chain_clusters: number[];
+  chain_contiguous: boolean;
+  chain_complete: boolean;
+}
+
+export interface SdDiskInspectionReport {
+  target: string;
+  partition_scheme: string;
+  mbr_partitions: MbrPartitionRecord[];
+  active_partition_lba?: number | null;
+  bpb?: FatBpbReport | null;
+  digadiag_entry?: RootDirFileReport | null;
+  pana_sd_entry?: RootDirFileReport | null;
+  root_files_sample: string[];
+  digadiag_payload_verified: boolean;
+  overall_status: string;
+  checks: SdUnbrickCheck[];
+}
+
 export interface SdMediaVerificationReport {
   sd_root_dir: string;
   overall_status: string;

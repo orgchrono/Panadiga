@@ -31,6 +31,9 @@ bool p7501_ascii_iprefix(const char *str, const char *prefix);
 /** Return true if `str` is non-empty and consists solely of ASCII decimal digits `'0'..'9'`. */
 bool p7501_ascii_is_digits(const char *str);
 
+/** Strictly parse an unsigned base-10 integer within `[0, UINT32_MAX]` with whitespace trim only. */
+bool p7501_parse_u32_strict(const char *str, uint32_t *out_val);
+
 /** Copy ASCII string up to `dst_cap - 1` chars converting lowercase letters to uppercase. */
 void p7501_ascii_upper_copy(char *dst, size_t dst_cap, const char *src);
 

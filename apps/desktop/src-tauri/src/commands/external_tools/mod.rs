@@ -1,0 +1,45 @@
+//! External Desktop Engineering Tool Launchers, Ghidra SSOT Sync & Zero-Error RAG Command
+
+mod ghidra_discovery;
+mod os_launch;
+
+use std::path::PathBuf;
+
+use crate::commands::error::IpcResult;
+use crate::commands::hardware::run_blocking;
+
+fn resolve_workspace_root() -> PathBuf {
+    panadiga_core::constants::resolve_workspace_root()
+}
+
+/// Launches external engineering tools across Windows, macOS, Linux, and returns clean guidance on Android.
+#[tauri::command]
+pub fn launch_external_tool_command(tool: String) -> IpcResult<String> {
+    let root = resolve_workspace_root();
+    os_launch::launch_for_current_os(&tool, &root)
+}
+
+/// Queries the deterministic 6-layer Zero-Error RAG Engine natively in-process.
+#[tauri::command]
+pub async fn query_rag_engine(
+    query: String,
+    _top_k: Option<usize>,
+) -> IpcResult<panadiga_rag::models::RagQueryResultDto> {
+    run_blocking(move || Ok(panadiga_rag::query(&query).to_query_result())).await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn workspace_root_contains_tools_dir() {
+        assert!(resolve_workspace_root().join("tools").is_dir());
+    }
+
+    #[test]
+    fn unknown_external_tool_is_rejected() {
+        let err = launch_external_tool_command("nope".to_string()).unwrap_err();
+        assert!(err.contains("não suportada"));
+    }
+}

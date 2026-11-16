@@ -6,9 +6,12 @@ pub mod crypto;
 pub mod frm_pack;
 pub mod ghidra;
 pub mod hdd;
+pub mod json_io;
 pub mod nvram;
 pub mod pico;
+pub mod pico_bench;
 pub mod re;
+pub mod re_extra;
 pub mod system;
 pub mod unbrick;
 

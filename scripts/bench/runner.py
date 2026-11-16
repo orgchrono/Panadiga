@@ -1,4 +1,4 @@
-"""Non-destructive CLI runner for Pico P7501 bench diagnostics and smoke tests."""
+"""Thin CLI runner delegating Pico P7501 bench diagnostics & AM34 decoding to `panadiga` CLI."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import argparse
 from dataclasses import asdict
 import json
 from pathlib import Path
-from typing import Any
+from typing import cast
 
 from scripts.bench.boot_harness import format_ab_csv, run_ab_boot_harness
 from scripts.bench.decoders import (
@@ -17,6 +17,7 @@ from scripts.bench.decoders import (
     read_captured_log,
 )
 from scripts.bench.protocol import BenchSession, MockBenchTransport, SerialTransport, TransportProtocol
+from scripts.panadiga_cli_bridge import JsonDict, JsonValue, as_dict, req_bool
 
 
 def _make_transport(port: str | None, simulate_bug: bool = False) -> TransportProtocol:
@@ -25,8 +26,8 @@ def _make_transport(port: str | None, simulate_bug: bool = False) -> TransportPr
     return MockBenchTransport(simulate_gp26_sticky_low=simulate_bug)
 
 
-def run_health(port: str | None) -> dict[str, Any]:
-    """Execute read-only electrical health verification (`PING`, `STATUS`, `PINCHECK`, `BUSDIAG`)."""
+def run_health(port: str | None) -> JsonDict:
+    """Execute read-only electrical health verification (`PING`, `STATUS`, `PINCHECK`, `BUSDIAG`, `ISOLATE`)."""
     with BenchSession(_make_transport(port)) as session:
         ping = session.send("PING", timeout_s=2.0)
         status = parse_status_output(session.send("STATUS", timeout_s=2.0))
@@ -39,23 +40,23 @@ def run_health(port: str | None) -> dict[str, Any]:
             "vdd_status": status.vdd_status,
             "gp26_sticky_low_suspected": status.gp26_sticky_low_suspected,
         },
-        "pincheck_rows": [asdict(r) for r in pins],
-        "busdiag": asdict(bus),
+        "pincheck_rows": [cast(JsonValue, asdict(r)) for r in pins],
+        "busdiag": cast(JsonValue, asdict(bus)),
     }
 
 
-def run_capture(command: str, port: str | None, out_path: Path | None) -> dict[str, Any]:
-    """Execute `BOOTCAP`, `JIGBOOT`, or `UARTMON`, decode AM34 output, and isolate bus."""
+def run_capture(command: str, port: str | None, out_path: Path | None) -> JsonDict:
+    """Execute `BOOTCAP`, `JIGBOOT`, or `UARTMON`, decode via native Rust CLI, and isolate bus."""
     with BenchSession(_make_transport(port)) as session:
         raw_log = session.send(command, timeout_s=6.0)
     if out_path is not None:
         out_path.parent.mkdir(parents=True, exist_ok=True)
         out_path.write_text(raw_log, encoding="utf-8")
     decoded = parse_am34_uart_log(raw_log)
-    return {"command": command, "bytes": len(raw_log), "decoded": asdict(decoded)}
+    return {"command": command, "bytes": len(raw_log), "decoded": cast(JsonValue, asdict(decoded))}
 
 
-def run_smoke_suite() -> dict[str, Any]:
+def run_smoke_suite() -> JsonDict:
     """Run offline self-check verifying health, sticky-LOW bug detection, and JIGBOOT decoding."""
     health_res = run_health(None)
     jig_res = run_capture("JIGBOOT", None, None)
@@ -67,22 +68,24 @@ def run_smoke_suite() -> dict[str, Any]:
         _ = session.send("UARTPROBE 8")
         fixed_status = parse_status_output(session.send("STATUS"))
 
-    assert health_res["pong"] is True
+    assert req_bool(health_res, "pong") is True
     assert bug_status.gp26_sticky_low_suspected is True
     assert fixed_status.gp26_sticky_low_suspected is False
-    assert jig_res["decoded"]["boot_mode"] == "serial boot mode"
+    decoded_dict = as_dict(jig_res.get("decoded"))
+    assert decoded_dict.get("boot_mode") == "serial boot mode"
 
+    status_dict = as_dict(health_res.get("status"))
     return {
         "smoke_ok": True,
-        "health_vdd": health_res["status"]["vdd_volts"],
+        "health_vdd": status_dict.get("vdd_volts"),
         "gp26_bug_detected": bug_status.gp26_sticky_low_suspected,
         "gp26_recovered": not fixed_status.gp26_sticky_low_suspected,
-        "jigboot_notes": jig_res["decoded"]["notes"],
+        "jigboot_notes": decoded_dict.get("notes"),
     }
 
 
 def main(argv: list[str] | None = None) -> int:
-    """CLI entrypoint for `python -m scripts.bench.runner`."""
+    """CLI entrypoint for `python -m scripts.bench.runner` (backed by native `panadiga` CLI)."""
     parser = argparse.ArgumentParser(description="Panadiga P7501 Non-Destructive Bench Runner")
     sub = parser.add_subparsers(dest="subcommand", required=True)
 
@@ -109,14 +112,14 @@ def main(argv: list[str] | None = None) -> int:
     p_ab.add_argument("--csv", type=Path, default=None)
 
     args = parser.parse_args(argv)
-    result: dict[str, Any]
+    result: JsonDict
     if args.subcommand == "health":
         result = run_health(None if args.mock else args.port)
     elif args.subcommand == "capture":
         result = run_capture(args.cmd, None if args.mock else args.port, args.out)
     elif args.subcommand == "decode-log":
         text = read_captured_log(args.path)
-        result = asdict(parse_am34_uart_log(text))
+        result = cast(JsonDict, asdict(parse_am34_uart_log(text)))
     elif args.subcommand == "ab-boot":
         summary = run_ab_boot_harness(
             _make_transport(None if args.mock else args.port),
@@ -127,8 +130,8 @@ def main(argv: list[str] | None = None) -> int:
             args.csv.parent.mkdir(parents=True, exist_ok=True)
             args.csv.write_text(format_ab_csv(summary.runs), encoding="utf-8")
         result = {
-            "runs": [asdict(r) for r in summary.runs],
-            "by_mode": {k: asdict(v) for k, v in summary.by_mode.items()},
+            "runs": [cast(JsonValue, asdict(r)) for r in summary.runs],
+            "by_mode": {k: cast(JsonValue, asdict(v)) for k, v in summary.by_mode.items()},
         }
     else:
         result = run_smoke_suite()

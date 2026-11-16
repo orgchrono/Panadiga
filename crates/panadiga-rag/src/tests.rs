@@ -2,17 +2,9 @@
 
 use super::*;
 use std::path::Path;
-use std::sync::{Mutex, OnceLock};
 
 fn shared_query(query: &str) -> RagAnswer {
-    static ENGINE: OnceLock<Mutex<ZeroErrorRagEngine>> = OnceLock::new();
-    let lock = ENGINE.get_or_init(|| {
-        let mut engine = ZeroErrorRagEngine::new();
-        engine.initialize();
-        Mutex::new(engine)
-    });
-    let engine = lock.lock().unwrap_or_else(|e| e.into_inner());
-    engine.query(query)
+    super::query(query)
 }
 
 fn verify_safety_violation(ans: &RagAnswer, pattern1: &str, pattern2: &str, err_msg: &str) {

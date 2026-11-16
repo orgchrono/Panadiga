@@ -9,6 +9,7 @@
 #include "tests/test_pana_logic.h"
 #include "diag/p7501_jigsweep_codec.h"
 #include "diag/p7501_piologic_codec.h"
+#include "uart/p7501_fmu_codec.h"
 #include "uart/p7501_uart_codec.h"
 #include "common/p7501_hex.h"
 #include "common/p7501_wdt_logic.h"
@@ -26,6 +27,13 @@ static void test_timeout_and_tokens(void) {
     assert(p7501_parse_uint32_clamped("50", 5000u, 100u, 30000u) == 100u);
     assert(p7501_parse_uint32_clamped("999999", 5000u, 100u, 30000u) == 30000u);
     assert(p7501_parse_uint32_clamped("  7500 ", 5000u, 100u, 30000u) == 7500u);
+
+    uint32_t strict_val = 99u;
+    assert(p7501_parse_u32_strict(" 42 ", &strict_val) && strict_val == 42u);
+    assert(!p7501_parse_u32_strict(NULL, &strict_val));
+    assert(!p7501_parse_u32_strict("", &strict_val));
+    assert(!p7501_parse_u32_strict("12abc", &strict_val));
+    assert(!p7501_parse_u32_strict("4294967296", &strict_val));
 
     cur = p7501_next_token(cur, tok, sizeof(tok));
     assert(cur != NULL);
@@ -218,6 +226,57 @@ static void test_framing_ctrl_and_jigsweep(void) {
     assert(p7501_wdt_clamp_window_ms(50u, 15000u, 1000u) == 1000u);
     assert(p7501_wdt_is_abort_char(P7501_CDC_ABORT_CTRL_C));
     assert(!p7501_wdt_is_abort_char('B'));
+
+    /* Distinguish UF2/BOOTSEL reboots from genuine enabled watchdog timeouts */
+    assert(!p7501_wdt_is_genuine_timeout_recovery(true, false, false));
+    assert(!p7501_wdt_is_genuine_timeout_recovery(true, false, true));
+    assert(!p7501_wdt_is_genuine_timeout_recovery(true, true, false));
+    assert(!p7501_wdt_is_genuine_timeout_recovery(false, true, true));
+    assert(p7501_wdt_is_genuine_timeout_recovery(true, true, true));
+}
+
+static void test_wdt_stage_and_fmu_codec(void) {
+    /* WDT stage traceability packing in scratch[3] */
+    const uint32_t w3 = p7501_wdt_pack_scratch3(P7501_WDT_STAGE_PROBE_SWEEP, 0x00123456u);
+    uint8_t stage = 0u;
+    uint32_t up_ms = 0u;
+    assert(p7501_wdt_unpack_scratch3(w3, &stage, &up_ms));
+    assert(stage == P7501_WDT_STAGE_PROBE_SWEEP && up_ms == 0x00123456u);
+    assert(!p7501_wdt_unpack_scratch3(w3, NULL, &up_ms));
+    assert(strcmp(p7501_wdt_stage_name(P7501_WDT_STAGE_PROBE_SWEEP), "PROBE_SWEEP") == 0);
+    assert(strcmp(p7501_wdt_stage_name(99u), "UNKNOWN") == 0);
+
+    /* FMU rolling trigger matcher + echo false-positive guard */
+    p7501_fmu_phase_state_t st;
+    p7501_fmu_state_init(&st);
+    const char *msg = "DDR CHECK: OK\r\nserial boot mode\r\nwait 1 second.\r\nSD init start";
+    bool any_rel = false, any_ser = false, any_w1 = false;
+    for (size_t i = 0u; msg[i] != '\0'; ++i) {
+        bool rel = false, ser = false, w1 = false;
+        p7501_fmu_feed_byte(&st, 2u, (uint8_t)msg[i], (uint32_t)(i * 100u), &rel, &ser, &w1);
+        any_rel = any_rel || rel;
+        any_ser = any_ser || ser;
+        any_w1  = any_w1 || w1;
+    }
+    assert(any_rel && any_ser && any_w1 && st.sw_uart_flipped && st.wait1_seen && st.sd_started);
+    assert(!p7501_fmu_is_echo_hit(256u, true, true, 100u));
+    assert(!p7501_fmu_is_echo_hit(256u, true, false, P7501_FMU_ECHO_WINDOW_US + 1u));
+    assert(!p7501_fmu_is_echo_hit(0u, true, false, 100u));
+    assert(p7501_fmu_is_echo_hit(1u, true, false, P7501_FMU_ECHO_WINDOW_US));
+
+    uint8_t tx_buf[8];
+    assert(p7501_fmu_decode_or_default_cr("", tx_buf, sizeof(tx_buf)) == 1u && tx_buf[0] == 0x0Du);
+    assert(p7501_fmu_decode_or_default_cr("A55A", tx_buf, sizeof(tx_buf)) == 2u && tx_buf[0] == 0xA5u);
+
+    uint32_t fmode = 0u;
+    bool rep = false;
+    const char *hex = NULL;
+    p7501_fmu_parse_test_args("13 CAFE", &fmode, &rep, &hex);
+    assert(fmode == 3u && rep && strcmp(hex, "CAFE") == 0);
+
+    uint32_t bs = 0u, bc = 0u, bo = 0u;
+    p7501_fmu_parse_batch_args("250 32 50", &bs, &bc, &bo);
+    assert(bs == 250u && bc == 6u && bo == 50u);
 }
 
 int p7501_run_uart_codec_tests(void) {
@@ -226,6 +285,7 @@ int p7501_run_uart_codec_tests(void) {
     test_trigger_and_waittx_parser();
     test_hex_window_and_led_logic();
     test_framing_ctrl_and_jigsweep();
-    printf("[HOST-TEST] test_uart_codec + LED logic + hex + framing + jigsweep passed.\n");
+    test_wdt_stage_and_fmu_codec();
+    printf("[HOST-TEST] test_uart_codec + LED + hex + framing + jigsweep + wdt + fmu passed.\n");
     return p7501_run_pana_logic_tests();
 }

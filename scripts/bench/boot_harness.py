@@ -1,17 +1,26 @@
-"""Automated A/B cold-boot statistical harness (`NORMAL` vs `JIG`) over Pico P7501."""
+"""Thin typed Python facade delegating A/B cold-boot harness classification & CSV to `panadiga pico ab-boot`."""
 
 from __future__ import annotations
 
-import csv
 from dataclasses import asdict, dataclass
-import io
+import json
 import time
 from typing import Sequence
 
-from scripts.bench.decoders import parse_am34_uart_log
 from scripts.bench.protocol import BenchSession, TransportProtocol
-
-_ALLOWED_AB_MODES = ("NORMAL", "JIG")
+from scripts.panadiga_cli_bridge import (
+    JsonDict,
+    PanadigaCliError,
+    as_dict,
+    as_list,
+    opt_float,
+    opt_int,
+    opt_str,
+    req_bool,
+    req_int,
+    req_str,
+    run_panadiga_json,
+)
 
 
 @dataclass(frozen=True)
@@ -61,12 +70,35 @@ class AbHarnessSummary:
 
 
 def build_ab_boot_command(mode: str, window_ms: int = 6000) -> str:
-    """Build the safe read-only Pico command for one A/B trial arm."""
-    norm = mode.strip().upper()
-    if norm not in _ALLOWED_AB_MODES:
-        raise ValueError(f"Unsupported A/B boot mode '{mode}'; expected NORMAL or JIG")
-    clamped_ms = max(500, min(60000, int(window_ms)))
-    return f"BOOTCAP {clamped_ms}" if norm == "NORMAL" else f"JIGBOOT {clamped_ms}"
+    """Build the safe read-only Pico command via `panadiga pico ab-boot --kind build-cmd`."""
+    try:
+        rep = as_dict(
+            run_panadiga_json(["pico", "ab-boot", "--kind", "build-cmd", "--mode", mode, "--window-ms", str(window_ms)])
+        )
+    except PanadigaCliError as exc:
+        raise ValueError(str(exc)) from exc
+    return req_str(rep, "text")
+
+
+def _parse_ab_boot_run(jd: JsonDict) -> AbBootRun:
+    return AbBootRun(
+        run_index=req_int(jd, "run_index"),
+        mode=req_str(jd, "mode"),
+        command=req_str(jd, "command"),
+        ddr_check_ok=req_bool(jd, "ddr_check_ok"),
+        boot_mode=opt_str(jd, "boot_mode"),
+        bgo_failed_code=opt_int(jd, "bgo_failed_code"),
+        sd_91006=req_bool(jd, "sd_91006"),
+        sd_90002=req_bool(jd, "sd_90002"),
+        sd_90001=req_bool(jd, "sd_90001"),
+        odd_83a7=req_bool(jd, "odd_83a7"),
+        duration_ms=opt_float(jd, "duration_ms") or 0.0,
+        sd_hw_ok=req_bool(jd, "sd_hw_ok"),
+        sd_diag_load_fail=req_bool(jd, "sd_diag_load_fail"),
+        sd_uncompress_fail=req_bool(jd, "sd_uncompress_fail"),
+        odd_tray_fail=req_bool(jd, "odd_tray_fail"),
+        diagnosis=req_str(jd, "diagnosis"),
+    )
 
 
 def classify_ab_boot_log(
@@ -76,80 +108,65 @@ def classify_ab_boot_log(
     raw_log: str,
     duration_ms: float = 0.0,
 ) -> AbBootRun:
-    """Parse one raw Pico boot capture log deterministically into structured counts."""
-    report = parse_am34_uart_log(raw_log)
-    upper = raw_log.upper()
-    odd_83a7 = (
-        any(pkt.vendor_mecha_code == 0x83A7 for pkt in report.sense_packets)
-        or "83 A7" in upper
-        or "83A7" in upper
+    """Parse one raw Pico boot capture log via `panadiga pico ab-boot --kind classify`."""
+    rep = as_dict(
+        run_panadiga_json(
+            [
+                "pico",
+                "ab-boot",
+                "--kind",
+                "classify",
+                "--run-index",
+                str(run_index),
+                "--mode",
+                mode,
+                "--command",
+                command,
+                "--duration-ms",
+                f"{duration_ms:.4f}",
+                "--input",
+                "-",
+            ],
+            stdin_bytes=raw_log.encode("utf-8"),
+        )
     )
-    return AbBootRun(
-        run_index=run_index,
-        mode=mode,
-        command=command,
-        ddr_check_ok=report.ddr_check_ok,
-        boot_mode=report.boot_mode,
-        bgo_failed_code=report.bgo_failed_code,
-        sd_91006=(-91006 in report.sdcd_errors),
-        sd_90002=(-90002 in report.sdcd_errors),
-        sd_90001=(-90001 in report.sdcd_errors),
-        odd_83a7=odd_83a7,
-        duration_ms=round(duration_ms, 2),
-        sd_hw_ok=report.sd_hw_init_ok,
-        sd_diag_load_fail=(report.sd_diag_load_failed is not None),
-        sd_uncompress_fail=report.sd_uncompress_failed,
-        odd_tray_fail=report.odd_tray_failed,
-        diagnosis=report.diagnosis,
-    )
+    return _parse_ab_boot_run(rep)
 
 
 def summarize_ab_runs(runs: Sequence[AbBootRun]) -> AbHarnessSummary:
-    """Aggregate per-mode counters across all recorded A/B trials."""
+    """Aggregate per-mode counters via `panadiga pico ab-boot --kind summarize`."""
+    payload = json.dumps([asdict(r) for r in runs]).encode("utf-8")
+    rep = as_dict(
+        run_panadiga_json(["pico", "ab-boot", "--kind", "summarize", "--input", "-"], stdin_bytes=payload)
+    )
+    raw_runs = as_list(rep.get("runs"))
+    parsed_runs = tuple(_parse_ab_boot_run(as_dict(item)) for item in raw_runs)
+    raw_by_mode = as_dict(rep.get("by_mode"))
     by_mode: dict[str, AbModeStats] = {}
-    for mode in _ALLOWED_AB_MODES:
-        group = [r for r in runs if r.mode == mode]
-        by_mode[mode] = AbModeStats(
-            mode=mode,
-            runs=len(group),
-            ddr_ok_count=sum(1 for r in group if r.ddr_check_ok),
-            sd_91006_count=sum(1 for r in group if r.sd_91006),
-            sd_90002_count=sum(1 for r in group if r.sd_90002),
-            sd_90001_count=sum(1 for r in group if r.sd_90001),
-            odd_83a7_count=sum(1 for r in group if r.odd_83a7),
-            bgo_fail_count=sum(1 for r in group if r.bgo_failed_code is not None),
-            sd_hw_ok_count=sum(1 for r in group if r.sd_hw_ok),
-            sd_diag_load_fail_count=sum(1 for r in group if r.sd_diag_load_fail),
+    for k, v in raw_by_mode.items():
+        mv = as_dict(v)
+        by_mode[k] = AbModeStats(
+            mode=req_str(mv, "mode"),
+            runs=req_int(mv, "runs"),
+            ddr_ok_count=req_int(mv, "ddr_ok_count"),
+            sd_91006_count=req_int(mv, "sd_91006_count"),
+            sd_90002_count=req_int(mv, "sd_90002_count"),
+            sd_90001_count=req_int(mv, "sd_90001_count"),
+            odd_83a7_count=req_int(mv, "odd_83a7_count"),
+            bgo_fail_count=req_int(mv, "bgo_fail_count"),
+            sd_hw_ok_count=req_int(mv, "sd_hw_ok_count"),
+            sd_diag_load_fail_count=req_int(mv, "sd_diag_load_fail_count"),
         )
-    return AbHarnessSummary(runs=tuple(runs), by_mode=by_mode)
+    return AbHarnessSummary(runs=parsed_runs, by_mode=by_mode)
 
 
 def format_ab_csv(runs: Sequence[AbBootRun]) -> str:
-    """Render structured CSV table for spreadsheet/statistical offline inspection."""
-    fieldnames = (
-        "run_index",
-        "mode",
-        "command",
-        "ddr_check_ok",
-        "boot_mode",
-        "bgo_failed_code",
-        "sd_91006",
-        "sd_90002",
-        "sd_90001",
-        "odd_83a7",
-        "duration_ms",
-        "sd_hw_ok",
-        "sd_diag_load_fail",
-        "sd_uncompress_fail",
-        "odd_tray_fail",
-        "diagnosis",
+    """Render structured CSV table via `panadiga pico ab-boot --kind csv`."""
+    payload = json.dumps([asdict(r) for r in runs]).encode("utf-8")
+    rep = as_dict(
+        run_panadiga_json(["pico", "ab-boot", "--kind", "csv", "--input", "-"], stdin_bytes=payload)
     )
-    buf = io.StringIO()
-    writer = csv.DictWriter(buf, fieldnames=fieldnames, lineterminator="\n")
-    writer.writeheader()
-    for r in runs:
-        writer.writerow(asdict(r))
-    return buf.getvalue()
+    return req_str(rep, "text")
 
 
 def run_ab_boot_harness(
@@ -166,7 +183,7 @@ def run_ab_boot_harness(
     with BenchSession(transport) as session:
         run_idx = 0
         for _ in range(pairs):
-            for mode in _ALLOWED_AB_MODES:
+            for mode in ("NORMAL", "JIG"):
                 cmd = build_ab_boot_command(mode, window_ms=window_ms)
                 t0 = time.monotonic()
                 raw_log = session.send(cmd, timeout_s=timeout_s)

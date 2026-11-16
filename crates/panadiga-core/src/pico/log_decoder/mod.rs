@@ -195,6 +195,7 @@ pub fn parse_bench_log_text(text: &str) -> Am34BootLogReport {
         for (marker, end_delim) in [
             ("ERROR[", Some(']')),
             ("SD init failed[", Some(']')),
+            ("No Card[", Some(']')),
             ("ERROR:", None),
             ("ERROR ", None),
         ] {

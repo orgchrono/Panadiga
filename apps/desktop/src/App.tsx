@@ -1,4 +1,5 @@
-import React, { useState, Suspense, lazy } from 'react';
+import React, { useCallback, Suspense, lazy } from 'react';
+import { Provider } from 'react-redux';
 import { motion, MotionConfig } from 'framer-motion';
 import { Sidebar, MobileSidebarDrawer, ViewKey } from './components/Sidebar';
 import { Header } from './components/Header';
@@ -7,6 +8,9 @@ import { ToastProvider } from './context/ToastContext';
 import { WorkbenchModeProvider, useWorkbenchMode } from './context/WorkbenchModeContext';
 import { ErrorBoundary } from './components/ui/error-boundary';
 import { DraggableBenchHud, GuidedPipelineBar } from './components/ui';
+import { store } from './store';
+import { useAppDispatch, useAppSelector } from './store/hooks';
+import { setCurrentView, setMobileNavOpen } from './store/slices/shellSlice';
 import { Loader2 } from 'lucide-react';
 
 const DashboardView = lazy(() =>
@@ -47,11 +51,21 @@ const ViewLoadingFallback: React.FC = () => (
 );
 
 const AppShell: React.FC = () => {
+  const dispatch = useAppDispatch();
   const { ssot, isLoading } = useHardwareSsot();
   const hardwareStatus = useShellTelemetryListener();
   const { pipeline, accessibility } = useWorkbenchMode();
-  const [currentView, setCurrentView] = useState<ViewKey>('dashboard');
-  const [mobileNavOpen, setMobileNavOpen] = useState<boolean>(false);
+  const currentView = useAppSelector(state => state.shell.currentView);
+  const mobileNavOpen = useAppSelector(state => state.shell.mobileNavOpen);
+
+  const handleSelectView = useCallback(
+    (view: ViewKey) => dispatch(setCurrentView(view)),
+    [dispatch],
+  );
+  const handleMobileNavChange = useCallback(
+    (open: boolean) => dispatch(setMobileNavOpen(open)),
+    [dispatch],
+  );
 
   const viewTitles: Record<ViewKey, string> = {
     dashboard: 'Visão Geral do Gravador & Status da Bancada',
@@ -70,7 +84,7 @@ const AppShell: React.FC = () => {
       <div className="flex h-screen w-screen overflow-hidden bg-bench-950 text-slate-100 font-sans">
       <Sidebar
         currentView={currentView}
-        onSelectView={setCurrentView}
+        onSelectView={handleSelectView}
         vddVolts={hardwareStatus.vdd_volts}
         hardwareConnected={hardwareStatus.connected}
         nvramCleaned={pipeline.nvramCleaned}
@@ -79,9 +93,9 @@ const AppShell: React.FC = () => {
 
       <MobileSidebarDrawer
         open={mobileNavOpen}
-        onOpenChange={setMobileNavOpen}
+        onOpenChange={handleMobileNavChange}
         currentView={currentView}
-        onSelectView={setCurrentView}
+        onSelectView={handleSelectView}
         vddVolts={hardwareStatus.vdd_volts}
         hardwareConnected={hardwareStatus.connected}
         nvramCleaned={pipeline.nvramCleaned}
@@ -91,8 +105,8 @@ const AppShell: React.FC = () => {
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         <Header
           currentViewTitle={viewTitles[currentView]}
-          onOpenMobileNav={() => setMobileNavOpen(true)}
-          onOpenSettings={() => setCurrentView('settings')}
+          onOpenMobileNav={() => handleMobileNavChange(true)}
+          onOpenSettings={() => handleSelectView('settings')}
           hardwareConnected={hardwareStatus.connected}
           vddVolts={hardwareStatus.vdd_volts}
         />
@@ -105,7 +119,7 @@ const AppShell: React.FC = () => {
                 <span>Sincronizando especificação SSOT do hardware...</span>
               </div>
             )}
-            <GuidedPipelineBar currentView={currentView} onNavigate={setCurrentView} />
+            <GuidedPipelineBar currentView={currentView} onNavigate={handleSelectView} />
           </div>
 
           <ErrorBoundary fallbackTitle={`Falha ao carregar ${viewTitles[currentView]}`}>
@@ -116,9 +130,9 @@ const AppShell: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.16 }}
               >
-                {currentView === 'dashboard' && <DashboardView onNavigate={setCurrentView} />}
-                {currentView === 'nvram' && <NvramView onNavigate={setCurrentView} />}
-                {currentView === 'hdd' && <HddStorageView onNavigate={setCurrentView} />}
+                {currentView === 'dashboard' && <DashboardView onNavigate={handleSelectView} />}
+                {currentView === 'nvram' && <NvramView onNavigate={handleSelectView} />}
+                {currentView === 'hdd' && <HddStorageView onNavigate={handleSelectView} />}
                 {currentView === 'picobench' && <PicoBenchView />}
                 {currentView === 'frmcrypto' && <FrmCryptoView />}
                 {currentView === 'manuals' && <ManualsView />}
@@ -134,7 +148,7 @@ const AppShell: React.FC = () => {
       <DraggableBenchHud
         vddVolts={hardwareStatus.vdd_volts}
         hardwareConnected={hardwareStatus.connected}
-        onNavigate={setCurrentView}
+        onNavigate={handleSelectView}
       />
       </div>
     </MotionConfig>
@@ -142,11 +156,13 @@ const AppShell: React.FC = () => {
 };
 
 export const App: React.FC = () => (
-  <WorkbenchModeProvider>
-    <ToastProvider>
-      <AppShell />
-    </ToastProvider>
-  </WorkbenchModeProvider>
+  <Provider store={store}>
+    <WorkbenchModeProvider>
+      <ToastProvider>
+        <AppShell />
+      </ToastProvider>
+    </WorkbenchModeProvider>
+  </Provider>
 );
 
 export default App;

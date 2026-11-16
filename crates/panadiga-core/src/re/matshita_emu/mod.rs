@@ -12,6 +12,7 @@ mod atapi;
 mod frm_unlock;
 mod inject;
 mod serial_boot;
+mod serial_cli;
 pub mod types;
 
 #[cfg(test)]

@@ -6,6 +6,7 @@ pub mod markdown;
 pub mod pdf;
 pub mod tokenizer;
 pub mod vector;
+mod visual;
 
 pub use bm25::BM25Index;
 pub use tokenizer::{STOPWORDS, technical_tokenize};
@@ -19,11 +20,14 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use super::guardrails::QueryGuard;
-use super::models::{Chunk, ChunkMetadata, SubsystemType};
+use super::models::{Chunk, SubsystemType};
 
 enum IndexedBucket {
     Markdown(Vec<Chunk>),
-    Pdf(Vec<Chunk>),
+    Pdf {
+        chunks: Vec<Chunk>,
+        cache_update: Option<(String, u64, u64)>,
+    },
     Code(Vec<Chunk>),
     Ghidra(Vec<Chunk>),
     Skipped,
@@ -74,46 +78,7 @@ impl HierarchicalIndexer {
     }
 
     pub fn determine_subsystem(&self, file_path: &Path, content: &str) -> SubsystemType {
-        let path_lower = file_path.to_string_lossy().to_lowercase();
-        let filename_lower = file_path
-            .file_name()
-            .and_then(|f| f.to_str())
-            .unwrap_or("")
-            .to_lowercase();
-        let content_lower = content.to_lowercase();
-
-        if filename_lower.contains("p7501")
-            || filename_lower.contains("hardware")
-            || filename_lower.contains("esquema")
-            || filename_lower.contains("schematic")
-            || path_lower.contains("pico-p7501")
-        {
-            SubsystemType::Hardware
-        } else if filename_lower.contains("meihdfs")
-            || filename_lower.contains("hdd")
-            || filename_lower.contains("alocacao")
-        {
-            SubsystemType::Storage
-        } else if filename_lower.contains("frm")
-            || filename_lower.contains("crypto")
-            || filename_lower.contains("aes")
-        {
-            SubsystemType::Crypto
-        } else if filename_lower.contains("ghidra")
-            || filename_lower.contains("gdb")
-            || filename_lower.contains("reverse")
-            || path_lower.contains("ghidra")
-        {
-            SubsystemType::ReverseEngineering
-        } else if content_lower.contains("boot")
-            || content_lower.contains("ipl")
-            || content_lower.contains("flash")
-            || filename_lower.contains("nvram")
-        {
-            SubsystemType::Firmware
-        } else {
-            SubsystemType::General
-        }
+        visual::classify_subsystem(file_path, content)
     }
 
     pub fn chunk_markdown_file(&self, file_path: &Path) -> Vec<Chunk> {
@@ -158,9 +123,10 @@ impl HierarchicalIndexer {
             }
         }
 
+        let mut pdf_cache = pdf::PdfDiskCache::load();
         let per_file: Vec<IndexedBucket> = candidate_files
             .par_iter()
-            .map(|path| self.index_single_file(path))
+            .map(|path| self.index_single_file(path, &pdf_cache))
             .collect();
 
         let mut all_chunks = Vec::new();
@@ -170,7 +136,13 @@ impl HierarchicalIndexer {
                     self.stats.markdown_chunks += added.len();
                     all_chunks.extend(added);
                 }
-                IndexedBucket::Pdf(added) => {
+                IndexedBucket::Pdf {
+                    chunks: added,
+                    cache_update,
+                } => {
+                    if let Some((key, len, mtime)) = cache_update {
+                        pdf_cache.insert(key, len, mtime, added.clone());
+                    }
                     if !added.is_empty() {
                         self.stats.pdf_files_indexed += 1;
                         self.stats.pdf_chunks += added.len();
@@ -189,7 +161,7 @@ impl HierarchicalIndexer {
             }
         }
 
-        pdf::flush_disk_cache();
+        pdf_cache.flush_if_dirty();
         self.chunks = all_chunks;
         self.reindex_models();
         self.chunks.len()
@@ -215,7 +187,7 @@ impl HierarchicalIndexer {
         }
     }
 
-    fn index_single_file(&self, path: &Path) -> IndexedBucket {
+    fn index_single_file(&self, path: &Path, pdf_cache: &pdf::PdfDiskCache) -> IndexedBucket {
         let fname = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
         let path_lower = path.to_string_lossy().to_lowercase();
 
@@ -229,7 +201,11 @@ impl HierarchicalIndexer {
             IndexedBucket::Markdown(self.chunk_visual_manifest(path))
         } else if fname.to_lowercase().ends_with(".pdf") {
             let subsystem = self.determine_subsystem(path, "");
-            IndexedBucket::Pdf(pdf::chunk_pdf_file(&self.guard, subsystem, path))
+            let parsed = pdf::chunk_pdf_file(&self.guard, subsystem, path, pdf_cache);
+            IndexedBucket::Pdf {
+                chunks: parsed.chunks,
+                cache_update: parsed.cache_update,
+            }
         } else if code::is_supported_source_file(path)
             && !path_lower.contains("\\tests\\")
             && !path_lower.contains("/tests/")
@@ -289,83 +265,7 @@ impl HierarchicalIndexer {
 
     /// Indexes curated DMR-EH55 schematic & PCB PNG metadata from `docs/assets/visual_manifest.json`.
     fn chunk_visual_manifest(&self, path: &Path) -> Vec<Chunk> {
-        #[derive(Deserialize)]
-        struct VisualEntry {
-            id: String,
-            filename: String,
-            repo_path: String,
-            #[serde(default)]
-            aliases: Vec<String>,
-            #[serde(default)]
-            manual_edition: String,
-            page_number: Option<u32>,
-            #[serde(default)]
-            category: String,
-            #[serde(default)]
-            tags: Vec<String>,
-            #[serde(default)]
-            caption: String,
-        }
-        #[derive(Deserialize)]
-        struct VisualManifest {
-            #[serde(default)]
-            images: Vec<VisualEntry>,
-        }
-
-        let Ok(raw) = fs::read_to_string(path) else {
-            return Vec::new();
-        };
-        let Ok(manifest) = serde_json::from_str::<VisualManifest>(&raw) else {
-            return Vec::new();
-        };
-        let path_str = path.to_string_lossy().to_string();
-        let mut chunks = Vec::with_capacity(manifest.images.len());
-        for (idx, item) in manifest.images.into_iter().enumerate() {
-            let page_str = item
-                .page_number
-                .map(|p| p.to_string())
-                .unwrap_or_else(|| "N/A".to_string());
-            let aliases = if item.aliases.is_empty() {
-                String::new()
-            } else {
-                format!(" Aliases: {}.", item.aliases.join(", "))
-            };
-            let tags = if item.tags.is_empty() {
-                String::new()
-            } else {
-                format!(" Tags: {}.", item.tags.join(", "))
-            };
-            let text = format!(
-                "[Visual Asset Catalog] {} ({}) — {} p.{}, Categoria: {}.{} {} {} Path: {}",
-                item.filename,
-                item.id,
-                item.manual_edition,
-                page_str,
-                item.category,
-                aliases,
-                tags,
-                item.caption,
-                item.repo_path
-            );
-            let tokens = technical_tokenize(&text, true);
-            let extracted_entities = self.guard.process(&text).extracted_entities;
-            chunks.push(Chunk {
-                id: format!("visual_manifest::{}", item.id),
-                text,
-                tokens,
-                metadata: ChunkMetadata {
-                    doc_title: "Visual Asset Catalog (DMR-EH55 Service Manuals)".to_string(),
-                    file_path: path_str.clone(),
-                    section_title: format!("{} (p.{})", item.filename, page_str),
-                    hierarchy: vec!["Visual Catalog".to_string(), item.category, item.filename],
-                    line_start: idx + 1,
-                    line_end: idx + 1,
-                    subsystem: SubsystemType::Hardware,
-                    extracted_entities,
-                },
-            });
-        }
-        chunks
+        visual::chunk_visual_manifest(&self.guard, path)
     }
 
     pub fn add_custom_chunks(&mut self, chunks: Vec<Chunk>) {

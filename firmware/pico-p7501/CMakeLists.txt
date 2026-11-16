@@ -55,10 +55,12 @@ add_executable(panasonic_p7501_uart
     uart/p7501_uart_codec.c
     uart/p7501_uart_args.c
     uart/p7501_uart_capture.c
+    uart/p7501_fmu_codec.c
     uart/p7501_fmu_probe.c
     uart/p7501_fmu_batch.c
     uart/p7501_uart_interactive.c
     uart/p7501_uart_pio_engine.c
+    uart/p7501_pio_loop.c
     uart/p7501_uart_baud.c
     uart/p7501_uart_stream.c
     uart/p7501_uart_tx.c
@@ -68,6 +70,7 @@ add_executable(panasonic_p7501_uart
     uart/p7501_pana_rsp_report.c
     uart/p7501_pana_rsp.c
     uart/p7501_diag_watch_codec.c
+    uart/p7501_diag_watch_events.c
     uart/p7501_diag_watch.c
     uart/p7501_drv_pana_codec.c
     uart/p7501_drv_pana.c

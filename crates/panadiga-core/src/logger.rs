@@ -8,8 +8,8 @@
 
 use std::fmt;
 use std::io::{self, Write};
-use std::sync::Mutex;
 use std::sync::atomic::{AtomicU8, Ordering};
+use std::sync::{Arc, Mutex};
 
 /// Log severity levels ordered by verbosity.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -38,8 +38,13 @@ impl LogLevel {
 
 static CURRENT_LEVEL: AtomicU8 = AtomicU8::new(LogLevel::Info as u8);
 
-type LogSink = Box<dyn Fn(LogLevel, &str) + Send + Sync + 'static>;
+type LogSink = Arc<dyn Fn(LogLevel, &str) + Send + Sync + 'static>;
 static CUSTOM_SINK: Mutex<Option<LogSink>> = Mutex::new(None);
+
+fn with_custom_sink<R>(f: impl FnOnce(&mut Option<LogSink>) -> R) -> R {
+    let mut guard = CUSTOM_SINK.lock().unwrap_or_else(|e| e.into_inner());
+    f(&mut guard)
+}
 
 /// Sets the maximum active log level globally.
 pub fn set_level(level: LogLevel) {
@@ -69,14 +74,17 @@ pub fn set_sink<F>(sink: F)
 where
     F: Fn(LogLevel, &str) + Send + Sync + 'static,
 {
-    let mut guard = CUSTOM_SINK.lock().unwrap_or_else(|e| e.into_inner());
-    *guard = Some(Box::new(sink));
+    let wrapped: LogSink = Arc::new(sink);
+    with_custom_sink(|slot| {
+        *slot = Some(wrapped);
+    });
 }
 
 /// Clears any registered custom sink, restoring standard stdout/stderr output.
 pub fn reset_sink() {
-    let mut guard = CUSTOM_SINK.lock().unwrap_or_else(|e| e.into_inner());
-    *guard = None;
+    with_custom_sink(|slot| {
+        *slot = None;
+    });
 }
 
 /// Emits a formatted log message if the given level is enabled.
@@ -86,8 +94,7 @@ pub fn log(level: LogLevel, args: fmt::Arguments) {
     }
 
     let formatted = format!("{}", args);
-    let guard = CUSTOM_SINK.lock().unwrap();
-    if let Some(ref sink) = *guard {
+    if let Some(sink) = with_custom_sink(|slot| slot.clone()) {
         sink(level, &formatted);
         return;
     }
@@ -118,8 +125,7 @@ pub fn raw(args: fmt::Arguments) {
     }
 
     let text = format!("{}", args);
-    let guard = CUSTOM_SINK.lock().unwrap();
-    if let Some(ref sink) = *guard {
+    if let Some(sink) = with_custom_sink(|slot| slot.clone()) {
         sink(LogLevel::Info, &text);
         return;
     }

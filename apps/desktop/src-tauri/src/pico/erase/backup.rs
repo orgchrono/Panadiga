@@ -10,39 +10,38 @@ use std::time::Duration;
 
 use super::parser::{parse_autodetected_nvram_base, parse_pico_dump_hex_to_bytes};
 use crate::commands::dto::detect_diga_model_from_slice;
-use crate::pico::serial::{ensure_serial_port_unlocked, read_serial_response_complete};
+use crate::pico::serial::read_serial_response_complete;
 use crate::pico::types::{FirstContactBackupResult, extract_port_name};
+use crate::state::PanadigaBackendState;
 
 pub(crate) fn sha256_hex(data: &[u8]) -> String {
     calculate_hashes(data).1
 }
 
-pub(crate) type P7501Session = (
-    std::sync::MutexGuard<'static, ()>,
-    Box<dyn serialport::SerialPort>,
-    String,
-);
-
-pub(crate) fn open_and_handshake_p7501(port_name: &str) -> Result<P7501Session, String> {
+/// Executes `f` under the exclusive serial lock after opening CDC and verifying P7501 HANDSHAKE.
+pub(crate) fn with_p7501_handshake<R>(
+    backend: &PanadigaBackendState,
+    port_name: &str,
+    f: impl FnOnce(&mut dyn serialport::SerialPort, String) -> Result<R, String>,
+) -> Result<R, String> {
     let clean_port = extract_port_name(port_name);
-    crate::pico::types::reject_mock_port(&clean_port)?;
-    let io_guard = crate::pico::serial::lock_serial_io();
-    ensure_serial_port_unlocked(&clean_port)?;
-    let mut port =
-        panadiga_core::pico::cdc::open_cdc(&clean_port, 115200, Duration::from_millis(10000))
-            .map_err(|e| format!("Falha ao conectar na porta serial {}: {}", clean_port, e))?;
+    backend.with_exclusive_serial(&clean_port, || {
+        let mut port =
+            panadiga_core::pico::cdc::open_cdc(&clean_port, 115200, Duration::from_millis(10000))
+                .map_err(|e| format!("Falha ao conectar na porta serial {}: {}", clean_port, e))?;
 
-    port.write_all(b"HANDSHAKE\r\n")
-        .map_err(|e| format!("Falha ao enviar HANDSHAKE: {}", e))?;
-    let _ = port.flush();
-    let hs_out = read_serial_response_complete(&mut *port, Duration::from_millis(3000))?;
-    if !hs_out.contains("[HANDSHAKE] SUCCESS") {
-        return Err(format!(
-            "Cold Break-In falhou ao capturar o chip Matsushita AM34 (gravador desligado da tomada VDD=0V ou fiação solta). Resposta: {}",
-            hs_out.trim()
-        ));
-    }
-    Ok((io_guard, port, hs_out))
+        port.write_all(b"HANDSHAKE\r\n")
+            .map_err(|e| format!("Falha ao enviar HANDSHAKE: {}", e))?;
+        let _ = port.flush();
+        let hs_out = read_serial_response_complete(&mut *port, Duration::from_millis(3000))?;
+        if !hs_out.contains("[HANDSHAKE] SUCCESS") {
+            return Err(format!(
+                "Cold Break-In falhou ao capturar o chip Matsushita AM34 (gravador desligado da tomada VDD=0V ou fiação solta). Resposta: {}",
+                hs_out.trim()
+            ));
+        }
+        f(&mut *port, hs_out)
+    })
 }
 
 pub(crate) fn dump_p7501_region_bytes(
@@ -95,67 +94,67 @@ pub(crate) fn is_uniform_bus_pattern(data: &[u8]) -> bool {
 /// 3. Read of 16KB SRAM (`0x00000000`) & 4KB Bootloader IPL Header (`0x80000000`)
 /// 4. Auto-Detection of Panasonic DIGA Model (`DMR-EH55`, `DMR-ES15`, `DMR-EX75`, `DMR-EZ27`, etc.)
 pub fn pico_execute_first_contact_backup(
+    backend: &PanadigaBackendState,
     port_name: String,
 ) -> Result<FirstContactBackupResult, String> {
-    let (_io_guard, mut port, hs_out) = open_and_handshake_p7501(&port_name)?;
-    let nvram_base_hex = parse_autodetected_nvram_base(&hs_out);
-    let mut log_lines = vec![hs_out];
+    with_p7501_handshake(backend, &port_name, |port, hs_out| {
+        let nvram_base_hex = parse_autodetected_nvram_base(&hs_out);
+        let mut log_lines = vec![hs_out];
 
-    let is_16mb = nvram_base_hex == "0x80FE0000";
-    let nvram_words = if is_16mb { 32768 } else { 16384 };
-    let nvram_timeout = if is_16mb { 30000 } else { 15000 };
+        let is_16mb = nvram_base_hex == "0x80FE0000";
+        let nvram_words = if is_16mb { 32768 } else { 16384 };
+        let nvram_timeout = if is_16mb { 30000 } else { 15000 };
 
-    // Double-Read NVRAM at auto-detected EEMUL base to confirm zero bit-error on P7501 debug link
-    let nv_bytes_1 =
-        dump_p7501_region_bytes(&mut *port, nvram_base_hex, nvram_words, nvram_timeout);
-    let nv_bytes_2 =
-        dump_p7501_region_bytes(&mut *port, nvram_base_hex, nvram_words, nvram_timeout);
-    let sha_1 = sha256_hex(&nv_bytes_1);
-    let sha_2 = sha256_hex(&nv_bytes_2);
+        // Double-Read NVRAM at auto-detected EEMUL base to confirm zero bit-error on P7501 debug link
+        let nv_bytes_1 = dump_p7501_region_bytes(port, nvram_base_hex, nvram_words, nvram_timeout);
+        let nv_bytes_2 = dump_p7501_region_bytes(port, nvram_base_hex, nvram_words, nvram_timeout);
+        let sha_1 = sha256_hex(&nv_bytes_1);
+        let sha_2 = sha256_hex(&nv_bytes_2);
 
-    let sr_bytes = dump_p7501_region_bytes(&mut *port, "0x00000000", 4096, 6000);
-    let ipl_bytes = dump_p7501_region_bytes(&mut *port, "0x80000000", 1024, 4000);
+        let sr_bytes = dump_p7501_region_bytes(port, "0x00000000", 4096, 6000);
+        let ipl_bytes = dump_p7501_region_bytes(port, "0x80000000", 1024, 4000);
 
-    // A floating (0xFF..) or shorted (0x00..) bus yields identical reads; that is NOT a valid capture.
-    // Require explicit HALT confirmation and a non-uniform bootloader header.
-    let bus_alive =
-        log_lines[0].contains("[HANDSHAKE] SUCCESS") && !is_uniform_bus_pattern(&ipl_bytes);
-    let double_read_verified = bus_alive && !nv_bytes_1.is_empty() && sha_1 == sha_2;
+        // A floating (0xFF..) or shorted (0x00..) bus yields identical reads; that is NOT a valid capture.
+        // Require explicit HALT confirmation and a non-uniform bootloader header.
+        let bus_alive =
+            log_lines[0].contains("[HANDSHAKE] SUCCESS") && !is_uniform_bus_pattern(&ipl_bytes);
+        let double_read_verified = bus_alive && !nv_bytes_1.is_empty() && sha_1 == sha_2;
 
-    // Auto-detect DIGA model from IPL Header or NVRAM strings
-    let mut combined_probe = ipl_bytes.clone();
-    combined_probe.extend_from_slice(&nv_bytes_1);
-    let detected_model = detect_diga_model_from_slice(&combined_probe);
+        // Auto-detect DIGA model from IPL Header or NVRAM strings
+        let mut combined_probe = ipl_bytes.clone();
+        combined_probe.extend_from_slice(&nv_bytes_1);
+        let detected_model = detect_diga_model_from_slice(&combined_probe);
 
-    if double_read_verified {
-        let dir = save_live_backup_files(&nv_bytes_1, &sr_bytes, &ipl_bytes);
-        log_lines.push(format!(
-            "[DOUBLE-READ VERIFIED] SHA-256 idêntico nas 2 leituras ({} @ {}). Modelo detectado: {}. Salvo em {}/",
-            &sha_1[..16],
-            nvram_base_hex,
+        if double_read_verified {
+            let dir = save_live_backup_files(&nv_bytes_1, &sr_bytes, &ipl_bytes);
+            log_lines.push(format!(
+                "[DOUBLE-READ VERIFIED] SHA-256 idêntico nas 2 leituras ({} @ {}). Modelo detectado: {}. Salvo em {}/",
+                &sha_1[..16],
+                nvram_base_hex,
+                detected_model,
+                dir
+            ));
+        } else if !bus_alive {
+            log_lines.push(
+                "[ABORTADO] CPU não confirmada em HALT ou barramento flutuante/em curto (IPL uniforme). Nada foi salvo. Verifique a pinagem e o GND.".to_string(),
+            );
+        } else {
+            log_lines.push(format!(
+                "[ALERTA DE INTEGRIDADE] Leituras divergentes no barramento (Read1={} vs Read2={}). Verifique o cabo de 6 pinos!",
+                &sha_1[..12],
+                &sha_2[..12]
+            ));
+        }
+
+        Ok(FirstContactBackupResult {
+            success: double_read_verified,
             detected_model,
-            dir
-        ));
-    } else if !bus_alive {
-        log_lines.push(
-            "[ABORTADO] CPU não confirmada em HALT ou barramento flutuante/em curto (IPL uniforme). Nada foi salvo. Verifique a pinagem e o GND.".to_string(),
-        );
-    } else {
-        log_lines.push(format!(
-            "[ALERTA DE INTEGRIDADE] Leituras divergentes no barramento (Read1={} vs Read2={}). Verifique o cabo de 6 pinos!",
-            &sha_1[..12],
-            &sha_2[..12]
-        ));
-    }
-
-    Ok(FirstContactBackupResult {
-        success: double_read_verified,
-        detected_model,
-        nvram_bytes: nv_bytes_1.len(),
-        nvram_sha256: sha_1,
-        double_read_verified,
-        sram_bytes: sr_bytes.len(),
-        ipl_bytes: ipl_bytes.len(),
-        log_lines,
+            nvram_bytes: nv_bytes_1.len(),
+            nvram_sha256: sha_1,
+            double_read_verified,
+            sram_bytes: sr_bytes.len(),
+            ipl_bytes: ipl_bytes.len(),
+            log_lines,
+        })
     })
 }

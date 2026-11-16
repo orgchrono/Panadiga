@@ -27,6 +27,7 @@ export const PatchOutputBanner: React.FC<PatchOutputBannerProps> = ({ patchRepor
       <div>
         Contêiner EXTRHEAD: {patchReport.repacked_container_size?.toLocaleString() ?? 'RAW MAIN'} bytes • MBR
         Sync: {patchReport.mbr_superblocks_updated ? 'Atualizado (LBA 0 + 57344)' : 'N/A'}
+        {patchReport.passthrough_mode && ` • TBC: ${patchReport.passthrough_mode}`}
       </div>
     </div>
   </div>

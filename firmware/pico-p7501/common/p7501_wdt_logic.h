@@ -41,8 +41,29 @@ enum {
     P7501_WDT_FLAG_RECOVERED = (1u << 2),
 };
 
+/** Execution phase markers stored in watchdog scratch[3] for post-recovery forensics. */
+enum p7501_wdt_stage {
+    P7501_WDT_STAGE_IDLE        = 0u,
+    P7501_WDT_STAGE_INIT        = 1u,
+    P7501_WDT_STAGE_RESET_SYNC  = 2u,
+    P7501_WDT_STAGE_RX_WAIT     = 3u,
+    P7501_WDT_STAGE_TX_WAIT     = 4u,
+    P7501_WDT_STAGE_PROBE_SWEEP = 5u,
+    P7501_WDT_STAGE_BRIDGE      = 6u,
+    P7501_WDT_STAGE_CLEANUP     = 7u,
+};
+
 /** Pack `[cmd_id:8 | flags:8 | recoveries:16]` deterministically into a 32-bit scratch word. */
 uint32_t p7501_wdt_pack_scratch0(uint8_t cmd_id, uint8_t flags, uint16_t recoveries);
+
+/** Pack `[stage:8 | uptime_ms_24:24]` deterministically into scratch[3]. */
+uint32_t p7501_wdt_pack_scratch3(uint8_t stage, uint32_t uptime_ms);
+
+/** Unpack `[stage:8 | uptime_ms_24:24]` from scratch[3] (NULL-safe). */
+bool p7501_wdt_unpack_scratch3(uint32_t word, uint8_t *out_stage, uint32_t *out_uptime_ms);
+
+/** Return canonical human-readable stage token for a `p7501_wdt_stage` value. */
+const char *p7501_wdt_stage_name(uint8_t stage);
 
 /** Unpack `[cmd_id:8 | flags:8 | recoveries:16]` from a scratch[0] word (NULL-safe). */
 bool p7501_wdt_unpack_scratch0(
@@ -57,6 +78,18 @@ uint32_t p7501_wdt_clamp_window_ms(uint32_t requested_ms, uint32_t default_ms, u
 
 /** Pure predicate identifying USB CDC emergency abort character (`0x03` / Ctrl-C). */
 bool p7501_wdt_is_abort_char(int ch);
+
+/**
+ * @brief Distinguish genuine hardware watchdog timeout from UF2/BOOTSEL or software reboots.
+ *
+ * `watchdog_caused_reboot()` is also true after ROM UF2 flashes and `reset_usb_boot()`, whereas
+ * `watchdog_enable_caused_reboot()` is true only when an armed watchdog timer actually expired.
+ */
+bool p7501_wdt_is_genuine_timeout_recovery(
+    bool wdt_caused_reboot,
+    bool wdt_enable_caused_reboot,
+    bool valid_magic
+);
 
 #ifdef __cplusplus
 }

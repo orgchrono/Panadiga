@@ -12,6 +12,14 @@ use panadiga_cli::tui::run_interactive_pipeline;
 fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().collect();
 
+    if args
+        .windows(2)
+        .any(|w| w == ["--json", "-"] || w == ["-j", "-"])
+        || args.iter().any(|a| a == "--json=-")
+    {
+        panadiga_core::logger::set_level(panadiga_core::logger::LogLevel::Off);
+    }
+
     if args.len() < 2 || args[1] == "desktop" || args[1] == "gui" {
         if launch_desktop_executable().is_ok() {
             return Ok(());

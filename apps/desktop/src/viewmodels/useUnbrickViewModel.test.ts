@@ -115,4 +115,19 @@ describe('useUnbrickViewModel', () => {
     expect(result.current.matshitaBoot.data?.jump_target_va_hex).toBe('0x50400000');
     expect(result.current.matshitaInject.data?.record.cdb0_or_cmd).toBe('0xED');
   });
+
+  it('audits raw SD disk MBR/BPB FAT16 via inspect_sd_disk_command', async () => {
+    const mockDisk = handleMockUnbrickCommand('inspect_sd_disk_command', { target: 'E:' });
+    const { result } = await renderWorkbenchWithQueue(mockDisk);
+
+    await act(async () => {
+      await result.current.inspectSdDisk('E:');
+    });
+
+    expect(ipcService.invokeCommand).toHaveBeenCalledWith('inspect_sd_disk_command', {
+      target: 'E:',
+    });
+    expect(result.current.sdDisk.data?.bpb?.computed_fat_kind).toBe('FAT16');
+    expect(result.current.sdDisk.data?.digadiag_entry?.file_size).toBe(131_072);
+  });
 });

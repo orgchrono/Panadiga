@@ -22,12 +22,14 @@ describe('HddCapacityPatcherCard Component', () => {
     expect(screen.getAllByText('0x07466528').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('0x3FFFFFFF')).toBeTruthy();
 
-    // Default mode is 'dynamic' -> apply dynamic LBA48 patch
+    // Default mode is 'dynamic' -> select AV TBC passthrough co-application
+    fireEvent.click(screen.getByRole('button', { name: /AV TBC Passthrough \(av_passthrough\)/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Aplicar Patch Dinâmico de Capacidade' }));
 
     expect(
       await screen.findByText('Firmware Patcheado & Verificado (Adler-32 / EXTRFOOT OK)!')
     ).toBeTruthy();
+    expect(screen.getByText(/TBC: av_passthrough/)).toBeTruthy();
     expect(screen.getByText('DINÂMICO / UNCLAMPED (0xCA)')).toBeTruthy();
     expect(screen.getByText('Opcode 0xCA (bra +12 Livre)')).toBeTruthy();
 

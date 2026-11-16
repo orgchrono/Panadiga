@@ -1,6 +1,10 @@
 import React from 'react';
 import { Cpu, HardDrive, ShieldCheck, Sparkles, Unlock } from 'lucide-react';
-import { QUICK_CAPACITIES_GB, type PatchMode } from './capacityHelpers';
+import {
+  QUICK_CAPACITIES_GB,
+  type CapacityPassthroughMode,
+  type PatchMode,
+} from './capacityHelpers';
 
 const QUICK_CAPACITIES: readonly number[] = QUICK_CAPACITIES_GB;
 
@@ -11,6 +15,8 @@ export interface CapacityStrategyPanelProps {
   onTargetGbChange: (gb: number) => void;
   limitInDynamicMode: boolean;
   onLimitInDynamicChange: (checked: boolean) => void;
+  passthroughMode?: CapacityPassthroughMode;
+  onPassthroughModeChange?: (mode: CapacityPassthroughMode) => void;
   previewBlocks: number;
   patching: boolean;
   onApply: () => void;
@@ -23,6 +29,8 @@ export const CapacityStrategyPanel: React.FC<CapacityStrategyPanelProps> = ({
   onTargetGbChange,
   limitInDynamicMode,
   onLimitInDynamicChange,
+  passthroughMode = 'unchanged',
+  onPassthroughModeChange,
   previewBlocks,
   patching,
   onApply,
@@ -148,6 +156,36 @@ export const CapacityStrategyPanel: React.FC<CapacityStrategyPanelProps> = ({
             </div>
           </div>
         )}
+      </div>
+    )}
+
+    {onPassthroughModeChange && (
+      <div className="space-y-2 pt-2 border-t border-slate-800/80 text-xs">
+        <span className="text-[11px] text-slate-400 font-semibold uppercase block">
+          Co-aplicar Patch AV TBC E-E Passthrough em `MAIN` (Operação sem Drive Óptico):
+        </span>
+        <div className="flex flex-wrap gap-2">
+          {(
+            [
+              { id: 'unchanged', label: 'Manter TBC Original' },
+              { id: 'av_passthrough', label: 'AV TBC Passthrough (av_passthrough)' },
+              { id: 'factory_original', label: 'Restaurar ODD Stock (factory_original)' },
+            ] as const
+          ).map(opt => (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => onPassthroughModeChange(opt.id)}
+              className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-colors ${
+                passthroughMode === opt.id
+                  ? 'bg-emerald-500/20 text-emerald-200 border-emerald-500/60'
+                  : 'bg-bench-900 text-slate-400 border-slate-800 hover:border-slate-700'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
       </div>
     )}
 

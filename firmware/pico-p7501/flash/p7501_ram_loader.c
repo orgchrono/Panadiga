@@ -127,7 +127,7 @@ p7501_status_t ram_loader_inject_for_flash_size(
 }
 
 p7501_status_t ram_loader_inject(uint32_t target_sram_addr, bool verify) {
-    return ram_loader_inject_for_flash_size(target_sram_addr, verify, 0x00800000UL);
+    return ram_loader_inject_for_flash_size(target_sram_addr, verify, P7501_FLASH_SIZE_8MB);
 }
 
 p7501_status_t ram_loader_execute_erase_for_flash_size(uint32_t flash_size_bytes) {
@@ -168,7 +168,7 @@ p7501_status_t ram_loader_execute_erase_for_flash_size(uint32_t flash_size_bytes
         p7501_led_sleep_ms(100u);
     }
 
-    p7501_hw_write_mem32(geo.nvram_base, 0x00F000F0UL);
+    p7501_hw_write_mem32(geo.nvram_base, P7501_FLASH_JEDEC_RESET_CMD);
     if (!breakpoint_hit) {
         printf("[ERASE_NVRAM] ERROR: Target AM34 breakpoint 'pi' timed out; NVRAM erase unverified.\n");
         return P7501_ERR_TIMEOUT;
@@ -179,5 +179,5 @@ p7501_status_t ram_loader_execute_erase_for_flash_size(uint32_t flash_size_bytes
 }
 
 p7501_status_t ram_loader_execute_erase(void) {
-    return ram_loader_execute_erase_for_flash_size(0x00800000UL);
+    return ram_loader_execute_erase_for_flash_size(P7501_FLASH_SIZE_8MB);
 }

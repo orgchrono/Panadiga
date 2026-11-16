@@ -1,21 +1,16 @@
 import React from 'react';
 import { Button } from '@/components/ui';
 import { useTranslation } from '@/i18n/useTranslation';
-import type { Sc0BridgeInputMode } from '@/models';
 import { Activity, Disc, ShieldCheck, Zap } from 'lucide-react';
-import { DRIVE_QUICK_COMMANDS, RSP_QUICK_PROBES } from './sc0BridgeTypes';
+import {
+  DRIVE_QUICK_COMMANDS,
+  RSP_QUICK_PROBES,
+  type Sc0BridgeProbeHandlers,
+} from './sc0BridgeTypes';
 
-export interface Sc0BridgeQuickProbesProps {
+export interface Sc0BridgeQuickProbesProps extends Sc0BridgeProbeHandlers {
   readonly bridgeRunning: boolean;
   readonly isBusy: boolean;
-  readonly onTriggerWaittx: (spec: string) => void;
-  readonly onSendRspPreset: (
-    mode: Sc0BridgeInputMode,
-    bridgePayload: string,
-    panarspArg: string
-  ) => void;
-  readonly onSendDriveCommand: (cmd: string) => void;
-  readonly onRunDiagnostic?: (command: string, arg: string) => void;
 }
 
 export const Sc0BridgeQuickProbes: React.FC<Sc0BridgeQuickProbesProps> = ({

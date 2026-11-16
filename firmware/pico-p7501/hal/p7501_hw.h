@@ -24,11 +24,23 @@ extern "C" {
 /** Initialize ADC0, safe Hi-Z P7501 GPIOs, and passive PIO UART RX state machine. */
 p7501_status_t p7501_hw_init(void);
 
+/** Enforce strict electrical Hi-Z invariant on Pin 5 NSW5V (GP3) with pulls disabled. */
+void p7501_hw_enforce_nsw5v_hiz(void);
+
 /** Assert XRESET (GP5) active LOW via Open-Drain emulation (0V output). */
 void p7501_hw_reset_assert(void);
 
 /** Release XRESET (GP5) back to High-Z Input with internal pulls disabled. */
 void p7501_hw_reset_release(void);
+
+/** Execute open-drain XRESET pulse of `hold_low_ms` (`P7501_RESET_DIAG_ASSERT_MS` if 0) safely. */
+void p7501_hw_pulse_xreset_ms(uint32_t hold_low_ms);
+
+/** Drive TXD (GP4) LOW for UART Break / pre-boot strap pulses (releasing pulls). */
+void p7501_hw_drive_txd_low(void);
+
+/** Release TXD (GP4) back to idle input with optional weak pull-up. */
+void p7501_hw_release_txd_hiz(bool with_pull_up);
 
 /** Safely control GP26 (Pin 1 SW_UART): LOW outputs 0V to enter XFWE serial boot; false restores Hi-Z ADC0. */
 void p7501_hw_sw_uart_set_low(bool assert_low);

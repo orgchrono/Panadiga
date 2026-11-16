@@ -1,66 +1,36 @@
+/**
+ * @file services/liveNvramCaptureStore.ts
+ * @brief Redux-backed live in-circuit NVRAM capture dispatcher and IPC dump ingestion helper.
+ */
+
 import { AM34_NVRAM_BASE_ADDR } from '@/constants';
-import { LiveNvramCaptureEvent, NvramCleanReport } from '@/models';
+import type { LiveNvramCaptureEvent, NvramCleanReport } from '@/models';
+import { store } from '@/store';
+import { clearLiveCapture, recordLiveCapture } from '@/store/slices/nvramCaptureSlice';
 import { parseP7501DumpBytes } from './diagnosticParser';
 import { invokeCommand } from './ipc';
 
-type CaptureListener = () => void;
-
-function createLiveNvramCaptureStore() {
-  let latestCapture: LiveNvramCaptureEvent | null = null;
-  const listeners = new Set<CaptureListener>();
-
-  const subscribe = (listener: CaptureListener): (() => void) => {
-    listeners.add(listener);
-    return () => {
-      listeners.delete(listener);
-    };
-  };
-
-  const getLatest = (): LiveNvramCaptureEvent | null => latestCapture;
-
-  const record = (event: LiveNvramCaptureEvent): void => {
-    if (latestCapture === event) {
-      return;
-    }
-    latestCapture = event;
-    listeners.forEach(listener => listener());
-  };
-
-  const clear = (): void => {
-    latestCapture = null;
-    listeners.forEach(listener => listener());
-  };
-
-  return Object.freeze({ subscribe, getLatest, record, clear });
-}
-
-const liveNvramCaptureStore = createLiveNvramCaptureStore();
-
-export function subscribeLiveNvramCapture(listener: CaptureListener): () => void {
-  return liveNvramCaptureStore.subscribe(listener);
-}
-
 export function getLatestLiveNvramCapture(): LiveNvramCaptureEvent | null {
-  return liveNvramCaptureStore.getLatest();
+  return store.getState().nvramCapture.latestCapture;
 }
 
 export function recordLiveNvramCapture(event: LiveNvramCaptureEvent): void {
-  liveNvramCaptureStore.record(event);
+  store.dispatch(recordLiveCapture(event));
 }
 
 export function clearLiveNvramCapture(): void {
-  liveNvramCaptureStore.clear();
+  store.dispatch(clearLiveCapture());
 }
 
 /**
  * Decodes real `DUMP` hex words streamed from Desktop CDC, Android USB-OTG, or BLE NUS
- * and runs Rust core NVRAM/microsector structural analysis into the reactive UI SSOT.
+ * and runs Rust core NVRAM/microsector structural analysis into the Redux store.
  */
 export async function ingestP7501DumpOutput(
   rawOutput: string,
   source: string,
   port: string,
-  baseAddressOverride?: number
+  baseAddressOverride?: number,
 ): Promise<LiveNvramCaptureEvent | null> {
   const { baseAddress, bytes } = parseP7501DumpBytes(rawOutput);
   if (bytes.length === 0) {

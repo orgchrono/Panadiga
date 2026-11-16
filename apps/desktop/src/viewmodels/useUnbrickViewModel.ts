@@ -4,6 +4,7 @@ import type {
   MainPassthroughReport,
   MainPassthroughRspPlan,
   NorDumperStubResult,
+  SdDiskInspectionReport,
   SdMediaVerificationReport,
   SdUnbrickKitReport,
   SdUnbrickKitRequestDto,
@@ -30,6 +31,9 @@ export function useUnbrickViewModel() {
   );
   const [sdKit, setSdKit] = useState<AsyncChannelState<SdUnbrickKitReport>>(() => emptyChannel());
   const [verify, setVerify] = useState<AsyncChannelState<SdMediaVerificationReport>>(() =>
+    emptyChannel()
+  );
+  const [sdDisk, setSdDisk] = useState<AsyncChannelState<SdDiskInspectionReport>>(() =>
     emptyChannel()
   );
   const [extract, setExtract] = useState<AsyncChannelState<FrmModuleExtractionReport>>(() =>
@@ -125,6 +129,23 @@ export function useUnbrickViewModel() {
       if (report) {
         emitLocalEvent('unbrick://completed', true);
       }
+      return report;
+    },
+    [runChannel]
+  );
+
+  const inspectSdDisk = useCallback(
+    async (target: string): Promise<SdDiskInspectionReport | null> => {
+      const clean = target.trim();
+      const report = await runChannel(
+        setSdDisk,
+        'Auditoria FAT16 / BPB SD',
+        () =>
+          invokeCommand<SdDiskInspectionReport>('inspect_sd_disk_command', {
+            target: clean,
+          }),
+        `Disco/imagem SD auditado: ${clean}`
+      );
       return report;
     },
     [runChannel]
@@ -235,6 +256,7 @@ export function useUnbrickViewModel() {
     workbench,
     sdKit,
     verify,
+    sdDisk,
     extract,
     tbc,
     rspPlan,
@@ -243,6 +265,7 @@ export function useUnbrickViewModel() {
     loadWorkbench,
     buildSdKit,
     verifySdMedia,
+    inspectSdDisk,
     extractFrmModules,
     runMainPassthrough,
     generateRspPlan,

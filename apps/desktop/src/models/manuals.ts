@@ -86,4 +86,6 @@ export interface Am34BootLogReport {
   dump_line_count: number;
   panarsp_summaries: string[];
   notes: string[];
+  diagnosis?: string;
+  boot_stages?: string[];
 }

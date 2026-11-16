@@ -61,9 +61,7 @@ void p7501_uart_restore_default_state(void) {
 }
 
 void p7501_uart_pulse_reset_and_settle(void) {
-    p7501_hw_reset_assert();
-    sleep_ms(15);
-    p7501_hw_reset_release();
+    p7501_hw_pulse_xreset_ms(P7501_RESET_DIAG_ASSERT_MS);
 
     const uint32_t settle_t = time_us_32();
     while (!gpio_get(P7501_PIN_RXD) && (time_us_32() - settle_t) < 5000UL) {}

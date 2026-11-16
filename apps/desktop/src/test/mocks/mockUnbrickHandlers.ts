@@ -7,6 +7,7 @@ import type {
   MainPassthroughReport,
   MainPassthroughRspPlan,
   NorDumperStubResult,
+  SdDiskInspectionReport,
   SdMediaVerificationReport,
   SdUnbrickKitReport,
   UnbrickWorkspaceReport,
@@ -235,6 +236,80 @@ export function handleMockUnbrickCommand(
     case 'verify_sd_unbrick_media_command': {
       const sdDir = (args?.sdRootDir as string) || (args?.sd_root_dir as string) || 'sd_card_eh55';
       return { ...MOCK_SD_VERIFICATION, sd_root_dir: sdDir };
+    }
+
+    case 'inspect_sd_disk_command': {
+      const target = String(args?.target ?? 'E:');
+      const rep: SdDiskInspectionReport = {
+        target,
+        partition_scheme: 'MBR',
+        mbr_partitions: [
+          {
+            slot: 0,
+            boot_flag: 0x00,
+            partition_type: 0x06,
+            type_name: 'FAT16 (>=32MB)',
+            lba_start: 2048,
+            sector_count: 3_909_632,
+          },
+        ],
+        active_partition_lba: 2048,
+        bpb: {
+          oem_name: 'MSWIN4.1',
+          bytes_per_sector: 512,
+          sectors_per_cluster: 64,
+          cluster_size_bytes: 32_768,
+          reserved_sectors: 1,
+          num_fats: 2,
+          root_entry_count: 512,
+          total_sectors: 3_909_632,
+          media_descriptor: 0xf8,
+          sectors_per_fat: 240,
+          hidden_sectors: 2048,
+          fat_type_label: 'FAT16',
+          volume_label: 'NO NAME',
+          data_clusters: 61_080,
+          computed_fat_kind: 'FAT16',
+        },
+        digadiag_entry: {
+          name_8_3: 'DIGADIAG.FRM',
+          attr: 0x20,
+          hidden: false,
+          system: false,
+          read_only: false,
+          first_cluster: 2,
+          file_size: 131_072,
+          has_preceding_lfn: false,
+          chain_clusters: [2, 3, 4, 5],
+          chain_contiguous: true,
+          chain_complete: true,
+        },
+        pana_sd_entry: {
+          name_8_3: 'PANA__SD.FRM',
+          attr: 0x20,
+          hidden: false,
+          system: false,
+          read_only: false,
+          first_cluster: 6,
+          file_size: 7_183_272,
+          has_preceding_lfn: false,
+          chain_clusters: [6, 7],
+          chain_contiguous: true,
+          chain_complete: true,
+        },
+        root_files_sample: ['DIGADIAG.FRM', 'PANA__SD.FRM'],
+        digadiag_payload_verified: true,
+        overall_status: 'PASS',
+        checks: [
+          {
+            id: 'fat16_layout',
+            severity: 'pass',
+            title: 'MBR / BPB FAT16 SDSC OK',
+            detail: 'FAT16 (cluster 32 KiB), DIGADIAG.FRM 131072 B contíguo e completo.',
+          },
+        ],
+      };
+      return rep;
     }
 
     case 'patch_main_passthrough_command': {

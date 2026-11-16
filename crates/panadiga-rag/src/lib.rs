@@ -26,24 +26,27 @@ pub use pipeline::*;
 pub use retriever::*;
 pub use safety::*;
 
-use std::sync::{LazyLock, Mutex};
+use std::sync::LazyLock;
 
-static GLOBAL_ENGINE: LazyLock<Mutex<ZeroErrorRagEngine>> = LazyLock::new(|| {
+static GLOBAL_ENGINE: LazyLock<ZeroErrorRagEngine> = LazyLock::new(|| {
     let mut engine = ZeroErrorRagEngine::new();
     engine.initialize();
-    Mutex::new(engine)
+    engine
 });
 
-/// Convenience helper querying the global thread-safe Zero-Error RAG Engine.
+/// Scoped immutable access helper over the shared lock-free Zero-Error RAG Engine.
+pub fn with_global_engine<R>(f: impl FnOnce(&ZeroErrorRagEngine) -> R) -> R {
+    f(&GLOBAL_ENGINE)
+}
+
+/// Convenience helper querying the lock-free shared Zero-Error RAG Engine.
 pub fn query(text: &str) -> RagAnswer {
-    let engine = GLOBAL_ENGINE.lock().unwrap_or_else(|e| e.into_inner());
-    engine.query(text)
+    with_global_engine(|engine| engine.query(text))
 }
 
 /// Returns corpus index statistics across Markdown docs, PDF manuals, source code, and Ghidra scripts.
 pub fn corpus_stats() -> CorpusIndexStats {
-    let engine = GLOBAL_ENGINE.lock().unwrap_or_else(|e| e.into_inner());
-    engine.corpus_stats()
+    with_global_engine(ZeroErrorRagEngine::corpus_stats)
 }
 
 /// Performs filtered hybrid retrieval across specific source classes (PDF manuals, source code, Ghidra, docs).
@@ -52,6 +55,5 @@ pub fn retrieve_filtered(
     filter: ChunkSourceFilter,
     top_k: usize,
 ) -> Vec<RetrievalResult> {
-    let engine = GLOBAL_ENGINE.lock().unwrap_or_else(|e| e.into_inner());
-    engine.retrieve_filtered(text, filter, top_k)
+    with_global_engine(|engine| engine.retrieve_filtered(text, filter, top_k))
 }

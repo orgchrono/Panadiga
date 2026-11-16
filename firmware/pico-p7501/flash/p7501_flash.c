@@ -34,34 +34,34 @@ uint32_t p7501_hw_autodetect_flash_size(void) {
 
     if (((w0 == P7501_BUS_RESP_OPEN_HIGH) && (w1 == P7501_BUS_RESP_OPEN_HIGH)) ||
         ((w0 == P7501_BUS_RESP_OPEN_LOW)  && (w1 == P7501_BUS_RESP_OPEN_LOW))) {
-        return 0x00800000UL;
+        return P7501_FLASH_SIZE_8MB;
     }
 
-    if (p7501_fingerprint_matches(SPANSION_FLASH_UNCACHED_BASE, 0x80200000UL)) {
-        return 0x00200000UL;
+    if (p7501_fingerprint_matches(SPANSION_FLASH_UNCACHED_BASE, P7501_FLASH_MIRROR_2MB_VA)) {
+        return P7501_FLASH_SIZE_2MB;
     }
 
-    if (p7501_fingerprint_matches(SPANSION_FLASH_UNCACHED_BASE, 0x80400000UL)) {
-        return 0x00400000UL;
+    if (p7501_fingerprint_matches(SPANSION_FLASH_UNCACHED_BASE, P7501_FLASH_MIRROR_4MB_VA)) {
+        return P7501_FLASH_SIZE_4MB;
     }
 
-    const uint32_t u0 = p7501_hw_read_mem32(0x80800000UL);
-    const uint32_t u1 = p7501_hw_read_mem32(0x80800004UL);
-    if (p7501_fingerprint_matches(SPANSION_FLASH_UNCACHED_BASE, 0x80800000UL) ||
+    const uint32_t u0 = p7501_hw_read_mem32(P7501_FLASH_MIRROR_8MB_VA);
+    const uint32_t u1 = p7501_hw_read_mem32(P7501_FLASH_MIRROR_8MB_VA + 4UL);
+    if (p7501_fingerprint_matches(SPANSION_FLASH_UNCACHED_BASE, P7501_FLASH_MIRROR_8MB_VA) ||
         ((u0 == P7501_BUS_RESP_OPEN_HIGH) && (u1 == P7501_BUS_RESP_OPEN_HIGH)) ||
         ((u0 == P7501_BUS_RESP_OPEN_LOW)  && (u1 == P7501_BUS_RESP_OPEN_LOW))) {
-        return 0x00800000UL;
+        return P7501_FLASH_SIZE_8MB;
     }
 
-    return 0x01000000UL;
+    return P7501_FLASH_SIZE_16MB;
 }
 
 bool p7501_hw_query_cfi(uint32_t *out_size_bytes) {
-    p7501_hw_write_mem32(0x800000AAUL, 0x00980098UL);
+    p7501_hw_write_mem32(P7501_FLASH_JEDEC_CFI_ADDR, P7501_FLASH_JEDEC_CFI_CMD);
     sleep_us(10);
 
-    const uint32_t qry0 = p7501_hw_read_mem32(0x80000020UL);
-    const uint32_t qry1 = p7501_hw_read_mem32(0x80000024UL);
+    const uint32_t qry0 = p7501_hw_read_mem32(P7501_FLASH_JEDEC_QRY0_ADDR);
+    const uint32_t qry1 = p7501_hw_read_mem32(P7501_FLASH_JEDEC_QRY1_ADDR);
 
     const uint8_t q = (uint8_t)(qry0 & 0xFFU);
     const uint8_t r = (uint8_t)((qry0 >> 16) & 0xFFU);
@@ -71,14 +71,14 @@ bool p7501_hw_query_cfi(uint32_t *out_size_bytes) {
     uint32_t size = 0U;
 
     if (valid) {
-        const uint32_t sz_word = p7501_hw_read_mem32(0x8000004CUL);
+        const uint32_t sz_word = p7501_hw_read_mem32(P7501_FLASH_JEDEC_SIZE_ADDR);
         const uint8_t exponent = (uint8_t)((sz_word >> 16) & 0xFFU);
         if ((exponent >= 20U) && (exponent <= 26U)) {
             size = 1UL << exponent;
         }
     }
 
-    p7501_hw_write_mem32(SPANSION_FLASH_UNCACHED_BASE, 0x00F000F0UL);
+    p7501_hw_write_mem32(SPANSION_FLASH_UNCACHED_BASE, P7501_FLASH_JEDEC_RESET_CMD);
     sleep_us(10);
 
     if (out_size_bytes != NULL) {

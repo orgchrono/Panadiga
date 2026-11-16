@@ -153,7 +153,7 @@ pub fn parse_flash_mb(raw_output: &str) -> Option<u32> {
     None
 }
 
-fn parse_voltage_cell(cell: &str) -> Option<f32> {
+pub(crate) fn parse_voltage_cell(cell: &str) -> Option<f32> {
     cell.trim()
         .trim_end_matches(['V', 'v'])
         .trim()
@@ -185,9 +185,79 @@ pub fn extract_diagnostic_vdd(raw_output: &str, pincheck_rows: &[PincheckRowSpec
     parse_vdd_reply(raw_output).or_else(|| extract_pincheck_vdd(pincheck_rows))
 }
 
+/// Hardware watchdog traceability telemetry parsed from Pico `STATUS` or `WDT` output.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct WdtStatusSpec {
+    pub active: bool,
+    pub timeout_ms: u32,
+    pub recoveries: u16,
+    pub reboot_src: String,
+    pub fault_stage: String,
+    pub last_cmd: String,
+}
+
+fn find_kv_token<'a>(line: &'a str, key_eq: &str) -> Option<&'a str> {
+    line.split_whitespace()
+        .find_map(|tok| tok.strip_prefix(key_eq))
+}
+
+/// Parses `[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=... wdt_recoveries=... reboot_src=... [fault_stage=...] last_cmd=...`.
+pub fn parse_wdt_status(raw_output: &str) -> Option<WdtStatusSpec> {
+    let line = raw_output
+        .lines()
+        .map(str::trim)
+        .find(|l| l.starts_with("[WDT]") && l.contains("wdt="))?;
+
+    let wdt_tok = find_kv_token(line, "wdt=")?;
+    let active = wdt_tok.starts_with("ACTIVE");
+    let timeout_ms = wdt_tok
+        .split('(')
+        .nth(1)
+        .and_then(|s| s.split("ms").next())
+        .and_then(|s| s.parse::<u32>().ok())
+        .unwrap_or(4000);
+    let recoveries = find_kv_token(line, "wdt_recoveries=")
+        .and_then(|v| v.parse::<u16>().ok())
+        .unwrap_or(0);
+    let reboot_src = find_kv_token(line, "reboot_src=")
+        .unwrap_or("CLEAN")
+        .to_string();
+    let fault_stage = find_kv_token(line, "fault_stage=")
+        .unwrap_or("IDLE")
+        .to_string();
+    let last_cmd = find_kv_token(line, "last_cmd=")
+        .unwrap_or("NONE")
+        .to_string();
+
+    Some(WdtStatusSpec {
+        active,
+        timeout_ms,
+        recoveries,
+        reboot_src,
+        fault_stage,
+        last_cmd,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn parses_wdt_status_line_cleanly() {
+        let raw = "VDD: 3.24V (OK)\n[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=3 wdt_recoveries=2 reboot_src=WDT_RECOVERY fault_slot=255 fault_stage=PROBE_SWEEP last_cmd=PING last_us=195\nWDT: OK";
+        let wdt = parse_wdt_status(raw).expect("WDT status should parse");
+        assert!(wdt.active);
+        assert_eq!(wdt.timeout_ms, 4000);
+        assert_eq!(wdt.recoveries, 2);
+        assert_eq!(wdt.reboot_src, "WDT_RECOVERY");
+        assert_eq!(wdt.fault_stage, "PROBE_SWEEP");
+        assert_eq!(wdt.last_cmd, "PING");
+
+        let legacy = "[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=1 wdt_recoveries=0 reboot_src=CLEAN fault_slot=255 last_cmd=STATUS";
+        assert_eq!(parse_wdt_status(legacy).unwrap().fault_stage, "IDLE");
+        assert!(parse_wdt_status("VDD: 3.24V (OK)").is_none());
+    }
 
     #[test]
     fn parses_pincheck_rows_and_floating_vdd_safely() {

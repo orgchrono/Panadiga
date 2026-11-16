@@ -1,4 +1,19 @@
-import type { SdUnbrickKitRequestDto } from '@/models';
+import type {
+  SdDiskInspectionReport,
+  SdMediaVerificationReport,
+  SdUnbrickKitRequestDto,
+} from '@/models';
+
+export interface SdDiskVerificationProps {
+  verifyLoading: boolean;
+  verifyResult: SdMediaVerificationReport | null;
+  verifyError: string | null;
+  onVerifyMedia: (sdRootDir: string) => Promise<SdMediaVerificationReport | null>;
+  diskLoading?: boolean;
+  diskResult?: SdDiskInspectionReport | null;
+  diskError?: string | null;
+  onInspectSdDisk?: (target: string) => Promise<SdDiskInspectionReport | null>;
+}
 
 export type BgoMode = 'auto_format' | 'bypass' | 'uart_monitor' | 'factory';
 export type MainPassthroughMode = 'av_passthrough' | 'factory_original';

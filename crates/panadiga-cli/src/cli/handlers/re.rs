@@ -1,6 +1,6 @@
 //! Thin CLI handlers for Matsushita MN103S / AM34 static reverse-engineering audits.
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use panadiga_core::crypto::parse_u32_radix;
 use panadiga_core::log_println;
 use panadiga_core::re::mn10300::{find_callers_to, find_fc_immediate_loads, find_pointer_xrefs};
@@ -9,8 +9,9 @@ use panadiga_core::re::mn10300_traps::{
     parse_drv_mecha_error_table,
 };
 use serde::Serialize;
-use std::fs;
 
+use super::json_io::read_cli_input_bytes;
+use super::re_extra::{handle_mn103_inspect, handle_pana_frm_inspect, handle_traps_inspect};
 use super::unbrick::render::emit_json_if_requested;
 use crate::cli::args::re::{ReActions, ReArgs};
 
@@ -49,8 +50,7 @@ fn infer_base_va(data: &[u8]) -> u32 {
 }
 
 fn load_binary_and_base(input: &std::path::Path, base: Option<&str>) -> Result<(Vec<u8>, u32)> {
-    let data = fs::read(input)
-        .with_context(|| format!("Failed reading MN103S binary '{}'", input.display()))?;
+    let data = read_cli_input_bytes(input)?;
     let base_va = match base {
         Some(raw) => parse_u32_radix(raw)?,
         None => infer_base_va(&data),
@@ -147,8 +147,7 @@ pub fn handle_re(args: ReArgs) -> Result<()> {
             pass_unlocked,
             json,
         } => {
-            let data = fs::read(&input)
-                .with_context(|| format!("Failed reading DRV binary '{}'", input.display()))?;
+            let data = read_cli_input_bytes(&input)?;
             let off = parse_u32_radix(&offset)? as usize;
             let base_va = parse_u32_radix(&base)?;
             let entries = parse_drv_cli_table(&data, off, base_va, max_entries, pass_unlocked);
@@ -175,8 +174,7 @@ pub fn handle_re(args: ReArgs) -> Result<()> {
             end,
             json,
         } => {
-            let data = fs::read(&input)
-                .with_context(|| format!("Failed reading DRV binary '{}'", input.display()))?;
+            let data = read_cli_input_bytes(&input)?;
             let s = parse_u32_radix(&start)? as usize;
             let e = parse_u32_radix(&end)? as usize;
             let records = parse_drv_mecha_error_table(&data, s, e);
@@ -196,5 +194,76 @@ pub fn handle_re(args: ReArgs) -> Result<()> {
             }
             emit_json_if_requested(&records, json.as_deref())
         }
+        ReActions::Mn103 {
+            common,
+            va_start,
+            va_end,
+            target,
+            targets,
+            max_abs_disp,
+            max_body_bytes,
+            regmask,
+        } => handle_mn103_inspect(
+            &common.kind,
+            common.input,
+            &common.base,
+            va_start,
+            va_end,
+            target,
+            targets,
+            &max_abs_disp,
+            max_body_bytes,
+            regmask,
+            common.json,
+        ),
+        ReActions::Traps {
+            common,
+            code_lo,
+            code_hi,
+            min_run,
+            stub_vas,
+            va,
+            extra_spans,
+            hits,
+            opcode,
+        } => handle_traps_inspect(
+            &common.kind,
+            common.input,
+            &common.base,
+            code_lo,
+            code_hi,
+            min_run,
+            stub_vas,
+            va,
+            extra_spans,
+            hits,
+            opcode,
+            common.json,
+        ),
+        ReActions::PanaFrm {
+            kind,
+            input,
+            base,
+            offset,
+            count,
+            header_size,
+            default_handler,
+            cmd_name,
+            flags,
+            pass_unlocked,
+            json,
+        } => handle_pana_frm_inspect(
+            &kind,
+            input,
+            &base,
+            &offset,
+            count,
+            header_size,
+            &default_handler,
+            cmd_name,
+            flags,
+            pass_unlocked,
+            json,
+        ),
     }
 }

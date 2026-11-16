@@ -1,12 +1,9 @@
-import { useState, useEffect, useCallback, useSyncExternalStore } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { NvramCleanReport, FlashSectorInfo } from '@/models';
 import { emitLocalEvent, invokeCommand } from '@/services/ipc';
 import { useToast } from '@/context/ToastContext';
-import {
-  clearLiveNvramCapture,
-  getLatestLiveNvramCapture,
-  subscribeLiveNvramCapture,
-} from '@/services/liveNvramCaptureStore';
+import { clearLiveNvramCapture, getLatestLiveNvramCapture } from '@/services/liveNvramCaptureStore';
+import { useAppSelector } from '@/store/hooks';
 import { logger } from '@/utils/logger';
 import { buildSectorMapFromReport, captureLivePicoNvramDump } from './nvram/nvramHelpers';
 
@@ -14,10 +11,7 @@ export { buildSectorMapFromReport };
 
 export function useNvramViewModel() {
   const { showToast } = useToast();
-  const liveCapture = useSyncExternalStore(
-    subscribeLiveNvramCapture,
-    getLatestLiveNvramCapture
-  );
+  const liveCapture = useAppSelector(state => state.nvramCapture.latestCapture);
   const [report, setReport] = useState<NvramCleanReport | null>(() => liveCapture?.report ?? null);
   const [sectorMap, setSectorMap] = useState<FlashSectorInfo[]>(() =>
     liveCapture?.report ? buildSectorMapFromReport(liveCapture.report) : []

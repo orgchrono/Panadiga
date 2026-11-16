@@ -11,20 +11,10 @@ use panadiga_core::re::{
     UnbrickWorkspaceReport,
 };
 use serde::Serialize;
-use std::fs;
 use std::path::Path;
 
 pub fn emit_json_if_requested<T: Serialize>(val: &T, json_path: Option<&Path>) -> Result<()> {
-    if let Some(p) = json_path {
-        if let Some(parent) = p.parent()
-            && !parent.as_os_str().is_empty()
-        {
-            fs::create_dir_all(parent)?;
-        }
-        fs::write(p, serde_json::to_string_pretty(val)?)?;
-        println!("JSON report written to {}", p.display());
-    }
-    Ok(())
+    crate::cli::handlers::json_io::emit_json_output(val, json_path)
 }
 
 pub fn format_unbrick_status_lines(report: &UnbrickWorkspaceReport) -> Vec<String> {

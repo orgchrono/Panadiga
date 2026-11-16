@@ -2,11 +2,8 @@ import React from 'react';
 import { Disc3 } from 'lucide-react';
 import type {
   BootSequenceReport,
-  FrmUnlockVerificationSummary,
   MatshitaBootScenario,
   MatshitaInjectWriteResult,
-  PackUnlockFrmResult,
-  SerialCliResponse,
 } from '@/models';
 import {
   Badge,
@@ -20,14 +17,11 @@ import { useTranslation } from '@/i18n/useTranslation';
 import { MatshitaBootSection } from './MatshitaBootSection';
 import { MatshitaInjectSection } from './MatshitaInjectSection';
 import { MatshitaSerialFrmSection } from './MatshitaSerialFrmSection';
-import type { MatshitaAsyncSlice } from './matshitaTypes';
+import type { MatshitaAsyncSlice, MatshitaSerialFrmProps } from './matshitaTypes';
 
-interface MatshitaEmulatorCardProps {
+interface MatshitaEmulatorCardProps extends MatshitaSerialFrmProps {
   bootState: MatshitaAsyncSlice<BootSequenceReport>;
   injectState: MatshitaAsyncSlice<MatshitaInjectWriteResult>;
-  serialState: MatshitaAsyncSlice<SerialCliResponse>;
-  frmVerifyState: MatshitaAsyncSlice<FrmUnlockVerificationSummary>;
-  frmPackState: MatshitaAsyncSlice<PackUnlockFrmResult>;
   onRunBoot: (scenario: MatshitaBootScenario) => Promise<BootSequenceReport | null>;
   onInjectWrite: (params: {
     targetVa?: string;
@@ -36,13 +30,6 @@ interface MatshitaEmulatorCardProps {
     useVendorEd?: boolean;
     payloadHex: string;
   }) => Promise<MatshitaInjectWriteResult | null>;
-  onRunSerial: (command: string, unlockPass?: boolean) => Promise<SerialCliResponse | null>;
-  onVerifyFrm: (containerKind: string, frmPath: string) => Promise<FrmUnlockVerificationSummary | null>;
-  onPackFrm: (params: {
-    containerKind: string;
-    outPath?: string;
-    payloadHex?: string;
-  }) => Promise<PackUnlockFrmResult | null>;
 }
 
 export const MatshitaEmulatorCard: React.FC<MatshitaEmulatorCardProps> = ({

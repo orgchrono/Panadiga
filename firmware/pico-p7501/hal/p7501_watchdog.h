@@ -27,6 +27,7 @@ typedef struct p7501_wdt_telemetry {
     bool caused_reboot;
     uint16_t recoveries;
     uint8_t last_fault_cmd_id;
+    uint8_t last_fault_stage;
     uint8_t last_flags;
     uint32_t cmd_seq;
     const char *last_cmd_name;
@@ -36,6 +37,9 @@ typedef struct p7501_wdt_telemetry {
 /** Initialize hardware watchdog (`4000 ms`, non-overridable) and recover persistent scratch telemetry. */
 void p7501_wdt_init(void);
 
+/** Clear scratch magic/slot before intentional USB BOOTSEL reboot so next boot reports CLEAN. */
+void p7501_wdt_prepare_bootsel_reset(void);
+
 /** Kick the hardware watchdog, enforce GP3 NSW5V Hi-Z safety, and advance LED heartbeat. */
 void p7501_wdt_kick(void);
 
@@ -44,6 +48,12 @@ void p7501_wdt_sleep_ms(uint32_t total_ms);
 
 /** Record active command entry in watchdog scratch registers for post-crash traceability. */
 void p7501_wdt_begin_cmd(uint8_t cmd_id, const char *cmd_name);
+
+/** Update execution phase marker in scratch[3] and kick WDT for pinpoint crash diagnosis. */
+void p7501_wdt_set_stage(uint8_t stage);
+
+/** Kick WDT and return true if user/host sent USB CDC Ctrl-C emergency abort (`0x03`). */
+bool p7501_wdt_poll_abort(void);
 
 /** Record clean command completion and compute command execution duration in microseconds. */
 void p7501_wdt_end_cmd(bool aborted);

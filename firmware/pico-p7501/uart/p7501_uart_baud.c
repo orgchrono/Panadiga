@@ -71,7 +71,7 @@ void p7501_cmd_baudscan(const char *arg) {
     char tok3[24] = {0};
     bool auto_apply = false;
 
-    p7501_parse_window_boot_args(arg, 4000u, 200u, 30000u, &spec);
+    p7501_parse_window_boot_args(arg, 4000u, 200u, P7501_TRACE_MAX_MS, &spec);
     {
         char t1[24], t2[24];
         const char *cur = p7501_next_token(arg, t1, sizeof(t1));
@@ -90,18 +90,17 @@ void p7501_cmd_baudscan(const char *arg) {
     p7501_led_set_auto_mode(LED_MODE_BUS_ACTIVE);
     p7501_pio_begin_rx_session_ex(spec.boot_action, spec.jig_hold_ms);
 
-    const absolute_time_t end_t = make_timeout_time_ms(spec.window_ms);
+    const uint64_t t0_us = time_us_64();
+    const uint64_t deadline_us = t0_us + ((uint64_t)spec.window_ms * 1000ULL);
     uint32_t min_low_us = UINT32_MAX;
     uint32_t max_low_us = 0u;
     uint32_t edges = 0u;
     bool prev_level = gpio_get(P7501_PIN_RXD);
     uint32_t last_fall_us = time_us_32();
-    uint32_t wdt_iter = 0u;
+    bool aborted = false;
 
-    while (!time_reached(end_t)) {
-        if ((++wdt_iter & 0x0FFFu) == 0u) {
-            p7501_wdt_kick();
-        }
+    p7501_wdt_set_stage(P7501_WDT_STAGE_RX_WAIT);
+    while (!aborted && p7501_wdt_loop_step(t0_us, deadline_us, true, &aborted)) {
         (void)p7501_pio_poll_sw_uart_release();
         const bool cur = gpio_get(P7501_PIN_RXD);
         if (cur != prev_level) {
@@ -124,6 +123,7 @@ void p7501_cmd_baudscan(const char *arg) {
         }
     }
 
+    p7501_wdt_set_stage(P7501_WDT_STAGE_CLEANUP);
     p7501_pio_end_session();
     p7501_led_set_auto_mode(LED_MODE_HEARTBEAT_IDLE);
 

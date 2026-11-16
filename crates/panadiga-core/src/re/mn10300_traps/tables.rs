@@ -1,6 +1,13 @@
 //! Trap 1 & Trap 7 pointer/CLI/ATAPI/CP932 dispatch table parsers.
 
-use super::{AtapiCdbDispatchSlot, DrvCliEntry, DrvMechaErrorRecord};
+use std::io::Read;
+
+use anyhow::{Result, bail};
+use flate2::read::ZlibDecoder;
+
+use super::{
+    AtapiCdbDispatchSlot, DrvCliEntry, DrvMechaErrorRecord, ExtrheadContainerMatch, SenseLutEntry,
+};
 use crate::crypto::codec::{extract_c_ascii, read_u16_le, read_u32_le};
 
 /// Trap 1 + Guarded Write helper: classifies a DRV CLI command according to `PASS` auth state.
@@ -186,9 +193,65 @@ pub fn parse_drv_mecha_error_table(
             code,
             code_hex: format!("0x{code:04X}"),
             raw_len: nul,
+            raw_hex: hex::encode(raw_slice),
             ascii_preview,
         });
         off += STRIDE;
     }
     records
+}
+
+/// Decompresses Panasonic `DRV.BIN` payload skipping its leading 64-byte header.
+pub fn decompress_drv_payload(drv_raw: &[u8], header_size: usize) -> Result<Vec<u8>> {
+    if drv_raw.len() <= header_size {
+        bail!("DRV payload shorter than {header_size} bytes");
+    }
+    let mut decoder = ZlibDecoder::new(&drv_raw[header_size..]);
+    let mut out = Vec::new();
+    decoder.read_to_end(&mut out)?;
+    Ok(out)
+}
+
+/// Scans a firmware binary for `'EXTRHEAD'` compressed container markers.
+pub fn find_extrhead_containers(buf: &[u8], image_base: u32) -> Vec<ExtrheadContainerMatch> {
+    let mut out = Vec::new();
+    let mut pos = 0usize;
+    while pos + 8 <= buf.len() {
+        let Some(rel) = buf[pos..].windows(8).position(|w| w == b"EXTRHEAD") else {
+            break;
+        };
+        let idx = pos + rel;
+        let end = buf.len().min(idx + 32);
+        out.push(ExtrheadContainerMatch {
+            offset: idx,
+            va: image_base.wrapping_add(idx as u32),
+            tail_preview_hex: hex::encode(&buf[idx..end]),
+        });
+        pos = idx + 8;
+    }
+    out
+}
+
+/// Decodes 3-byte `[SenseKey, ASC, ASCQ]` records from a DRV SCSI Sense LUT slice.
+pub fn parse_sense_lut(
+    drv_buf: &[u8],
+    table_offset: usize,
+    image_base: u32,
+    count: usize,
+) -> Vec<SenseLutEntry> {
+    let mut out = Vec::new();
+    for idx in 0..count {
+        let off = table_offset.saturating_add(idx * 3);
+        if off + 3 > drv_buf.len() {
+            break;
+        }
+        out.push(SenseLutEntry {
+            index: idx,
+            va: image_base.wrapping_add(off as u32),
+            sense_key: drv_buf[off],
+            asc: drv_buf[off + 1],
+            ascq: drv_buf[off + 2],
+        });
+    }
+    out
 }

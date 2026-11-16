@@ -69,6 +69,35 @@ bool p7501_ascii_is_digits(const char *str) {
     return true;
 }
 
+bool p7501_parse_u32_strict(const char *str, uint32_t *out_val) {
+    if ((str == NULL) || (out_val == NULL)) {
+        return false;
+    }
+    const char *p = str;
+    while ((*p == ' ') || (*p == '\t')) {
+        ++p;
+    }
+    if ((*p < '0') || (*p > '9')) {
+        return false;
+    }
+    uint64_t acc = 0ULL;
+    while ((*p >= '0') && (*p <= '9')) {
+        acc = (acc * 10ULL) + (uint64_t)(*p - '0');
+        if (acc > 0xFFFFFFFFULL) {
+            return false;
+        }
+        ++p;
+    }
+    while ((*p == ' ') || (*p == '\t')) {
+        ++p;
+    }
+    if (*p != '\0') {
+        return false;
+    }
+    *out_val = (uint32_t)acc;
+    return true;
+}
+
 void p7501_ascii_upper_copy(char *dst, size_t dst_cap, const char *src) {
     if (dst == NULL || dst_cap == 0u) {
         return;

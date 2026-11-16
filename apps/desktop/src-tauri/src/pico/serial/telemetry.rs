@@ -1,9 +1,9 @@
 //! Telemetry status querying, VDD/ADC validation, and session state flags.
 
-use std::sync::MutexGuard;
 use std::time::Duration;
 
 use panadiga_core::pico::cdc::parse_vdd_reply;
+use panadiga_core::pico::diag_rows::parse_wdt_status;
 
 use crate::commands::constants::{
     CHIP_ID_RP2040, CHIP_ID_RP2350, DEFAULT_BAUD_RATE, DEFAULT_COLD_BREAKIN_MODE,
@@ -12,35 +12,10 @@ use crate::commands::constants::{
     SERIAL_PING_STATUS_TIMEOUT_MS, SERIAL_RETRY_BACKOFF_MS, SERIAL_UART_SYNC_TIMEOUT_MS,
     VDD_TARGET_FLOATING_CEIL_VOLTS, VDD_TARGET_MIN_VOLTS,
 };
+use crate::state::PanadigaBackendState;
 
-use super::super::bridge_session::is_sc0_bridge_active;
-use super::super::gdb_bridge::is_gdb_bridge_active;
-use super::super::types::{PicoDeviceStatusDto, PicoStatusResponse};
-use super::transport::{lock_serial_io, open_validated_cdc, try_lock_serial_io};
-
-static RAM_LOADER_INJECTED: std::sync::atomic::AtomicBool =
-    std::sync::atomic::AtomicBool::new(false);
-static SCAN_TOTAL_PROBES: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
-static SCAN_HITS_DETECTED: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
-
-/// Manages state tracking for RAM loader injection in the current process.
-pub fn set_ram_loader_injected(injected: bool) {
-    RAM_LOADER_INJECTED.store(injected, std::sync::atomic::Ordering::SeqCst);
-}
-
-/// Checks whether the in-circuit RAM loader has been injected during this session.
-pub fn is_ram_loader_injected() -> bool {
-    RAM_LOADER_INJECTED.load(std::sync::atomic::Ordering::SeqCst)
-}
-
-pub(super) fn record_scan_telemetry(probes: Option<u32>, hits: Option<u32>) {
-    if let Some(h) = hits {
-        SCAN_HITS_DETECTED.store(h, std::sync::atomic::Ordering::SeqCst);
-    }
-    if let Some(p) = probes {
-        SCAN_TOTAL_PROBES.store(p, std::sync::atomic::Ordering::SeqCst);
-    }
-}
+use super::super::types::{PicoDeviceStatusDto, PicoStatusResponse, PicoWdtFields};
+use super::transport::open_validated_cdc;
 
 fn ensure_default_uart_and_probe_target(
     port: &mut dyn serialport::SerialPort,
@@ -82,13 +57,14 @@ fn ensure_default_uart_and_probe_target(
     }
 }
 
-fn pico_connect_and_test_with_guard(
+fn pico_connect_and_test_unlocked(
+    backend: &PanadigaBackendState,
     port_name: &str,
     baud_rate: u32,
     probe_target_on_connect: bool,
-    _guard: &MutexGuard<'_, ()>,
 ) -> Result<PicoStatusResponse, String> {
-    let (clean, mut port) = open_validated_cdc(port_name, baud_rate, SERIAL_OPEN_TIMEOUT_MS)?;
+    let (clean, mut port) =
+        open_validated_cdc(backend, port_name, baud_rate, SERIAL_OPEN_TIMEOUT_MS)?;
 
     let response_text = panadiga_core::pico::cdc::send_and_read_until(
         &mut *port,
@@ -99,7 +75,7 @@ fn pico_connect_and_test_with_guard(
     let mut vdd_text = panadiga_core::pico::cdc::send_and_read_until(
         &mut *port,
         "STATUS",
-        &["VDD:"],
+        &["PANADIGA>", "P7501>"],
         Duration::from_millis(SERIAL_PING_STATUS_TIMEOUT_MS),
     );
     let mut vdd_reading = parse_vdd_reply(&vdd_text);
@@ -108,11 +84,12 @@ fn pico_connect_and_test_with_guard(
         vdd_text = panadiga_core::pico::cdc::send_and_read_until(
             &mut *port,
             "STATUS",
-            &["VDD:"],
+            &["PANADIGA>", "P7501>"],
             Duration::from_millis(SERIAL_PING_STATUS_TIMEOUT_MS),
         );
         vdd_reading = parse_vdd_reply(&vdd_text);
     }
+    let wdt = parse_wdt_status(&vdd_text);
 
     let has_pong = response_text.contains("PONG") || response_text.contains("PANADIGA");
     if (!has_pong && vdd_reading.is_none()) || (response_text.is_empty() && vdd_reading.is_none()) {
@@ -175,16 +152,28 @@ fn pico_connect_and_test_with_guard(
         target_powered,
         firmware_banner: banner,
         message: vdd_msg,
+        wdt: wdt
+            .map(|w| PicoWdtFields {
+                wdt_active: Some(w.active),
+                wdt_timeout_ms: Some(w.timeout_ms),
+                wdt_recoveries: Some(w.recoveries),
+                wdt_reboot_src: Some(w.reboot_src),
+                wdt_fault_stage: Some(w.fault_stage),
+                wdt_last_cmd: Some(w.last_cmd),
+            })
+            .unwrap_or_default(),
     })
 }
 
 /// Connects to a hardware Pico CDC port and retrieves device telemetry.
 pub fn pico_connect_and_test(
+    backend: &PanadigaBackendState,
     port_name: String,
     baud_rate: u32,
 ) -> Result<PicoStatusResponse, String> {
-    let guard = lock_serial_io();
-    pico_connect_and_test_with_guard(&port_name, baud_rate, true, &guard)
+    backend
+        .serial
+        .with_lock(|| pico_connect_and_test_unlocked(backend, &port_name, baud_rate, true))
 }
 
 fn build_disconnected_status_dto() -> PicoDeviceStatusDto {
@@ -205,22 +194,23 @@ fn build_disconnected_status_dto() -> PicoDeviceStatusDto {
         open_bus_low: 0,
         ram_loader_injected: false,
         last_keepalive: "".to_string(),
+        wdt: PicoWdtFields::default(),
     }
 }
 
-fn pico_get_device_status_dto_with_guard(
+fn pico_get_device_status_dto_unlocked(
+    backend: &PanadigaBackendState,
     port_name: String,
     mode_override: Option<u8>,
-    guard: &MutexGuard<'_, ()>,
 ) -> Result<PicoDeviceStatusDto, String> {
     if port_name.trim().is_empty() {
         return Ok(build_disconnected_status_dto());
     }
-    let status = pico_connect_and_test_with_guard(&port_name, DEFAULT_BAUD_RATE, false, guard)?;
+    let status = pico_connect_and_test_unlocked(backend, &port_name, DEFAULT_BAUD_RATE, false)?;
     let is_rp2350 = status.port_name.contains("2350") || status.firmware_banner.contains("2350");
 
-    let probes = SCAN_TOTAL_PROBES.load(std::sync::atomic::Ordering::SeqCst);
-    let hits = SCAN_HITS_DETECTED.load(std::sync::atomic::Ordering::SeqCst);
+    let (probes, hits) = backend.telemetry.scan_counts();
+    let ram_loaded = backend.telemetry.is_ram_loader_injected();
     let firmware_ver = if !status.firmware_banner.is_empty() {
         status.firmware_banner.clone()
     } else {
@@ -238,7 +228,7 @@ fn pico_get_device_status_dto_with_guard(
             "DISCONNECTED".to_string()
         } else if !status.target_powered {
             "RESET".to_string()
-        } else if is_ram_loader_injected() {
+        } else if ram_loaded {
             "HALTED".to_string()
         } else {
             "RUNNING".to_string()
@@ -254,32 +244,35 @@ fn pico_get_device_status_dto_with_guard(
         hits_detected: hits,
         open_bus_high: 0,
         open_bus_low: 0,
-        ram_loader_injected: is_ram_loader_injected(),
+        ram_loader_injected: ram_loaded,
         last_keepalive: "OK".to_string(),
+        wdt: status.wdt,
     })
 }
 
 /// Retrieves full `PicoDeviceStatusDto` matching the React Frontend `PicoDeviceStatus` interface.
 pub fn pico_get_device_status_dto(
+    backend: &PanadigaBackendState,
     port_name: String,
     mode_override: Option<u8>,
 ) -> Result<PicoDeviceStatusDto, String> {
     if port_name.trim().is_empty() {
         return Ok(build_disconnected_status_dto());
     }
-    let guard = lock_serial_io();
-    pico_get_device_status_dto_with_guard(port_name, mode_override, &guard)
+    backend
+        .serial
+        .with_lock(|| pico_get_device_status_dto_unlocked(backend, port_name, mode_override))
 }
 
 /// Non-blocking status poll for the background telemetry worker.
 pub fn try_pico_get_device_status_dto(
+    backend: &PanadigaBackendState,
     port_name: String,
 ) -> Option<Result<PicoDeviceStatusDto, String>> {
-    if port_name.trim().is_empty() || is_gdb_bridge_active() || is_sc0_bridge_active() {
+    if port_name.trim().is_empty() || backend.is_any_bridge_active() {
         return None;
     }
-    let guard = try_lock_serial_io()?;
-    Some(pico_get_device_status_dto_with_guard(
-        port_name, None, &guard,
-    ))
+    backend
+        .serial
+        .try_with_lock(|| pico_get_device_status_dto_unlocked(backend, port_name, None))
 }

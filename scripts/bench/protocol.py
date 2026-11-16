@@ -7,6 +7,7 @@ import importlib
 import time
 from typing import Final, Protocol, cast
 
+from scripts.panadiga_cli_bridge import PanadigaCliError, run_panadiga_json
 
 SAFE_BENCH_COMMANDS: Final[tuple[str, ...]] = (
     "PING",
@@ -38,14 +39,6 @@ SAFE_BENCH_COMMANDS: Final[tuple[str, ...]] = (
     "JIGSWEEP",
     "DIAGWATCH",
     "PANARSP",
-)
-
-_FORBIDDEN_WRITE_TOKENS: Final[tuple[str, ...]] = (
-    "ERASE",
-    "WRITE",
-    "FLASH",
-    "PROGRAM",
-    "WRITEMEM",
 )
 
 _PROMPT_MARKERS: Final[tuple[str, ...]] = ("P7501>", "PANADIGA>")
@@ -83,22 +76,17 @@ class TransportProtocol(Protocol):
 
 
 def validate_safe_bench_command(command: str) -> str:
-    """Validate that `command` belongs to the read-only/diagnostic bench allowlist."""
-    normalized = command.strip()
-    if not normalized:
-        raise BenchSafetyError("Empty bench command is not permitted")
-    if "\n" in normalized or "\r" in normalized:
-        raise BenchSafetyError("Multiline commands are rejected to prevent command injection")
-
-    head = normalized.split()[0].upper()
-    if head not in SAFE_BENCH_COMMANDS:
-        raise BenchSafetyError(f"Command '{head}' is outside SAFE_BENCH_COMMANDS")
-
-    upper_full = normalized.upper()
-    for token in _FORBIDDEN_WRITE_TOKENS:
-        if token in upper_full:
-            raise BenchSafetyError(f"Forbidden mutating token '{token}' in bench command")
-    return normalized
+    """Validate `command` against Rust `SAFE_BENCH_COMMANDS` via `panadiga pico validate-bench-cmd`."""
+    try:
+        res = run_panadiga_json(["pico", "validate-bench-cmd", "--cmd", command])
+    except PanadigaCliError as exc:
+        raise BenchSafetyError(str(exc)) from exc
+    if not isinstance(res, dict):
+        raise BenchSafetyError("Unexpected validation reply")
+    norm = res.get("normalized")
+    if not isinstance(norm, str):
+        raise BenchSafetyError("Missing normalized command string")
+    return norm
 
 
 class SerialTransport:

@@ -164,8 +164,14 @@ pub(super) fn build_diagnostic_notes(
     let mut notes = Vec::new();
     if let Some(code) = ctx.bgo_failed_code {
         notes.push(format!(
-            "BGO driver init failed[{code}] detected (CS1 NOR BGO corruption -> U99 loop unless bypassed via JIGBOOT/DIGADIAG.FRM)."
+            "BGO driver init failed[{code}] detected (CS1 NOR BGO corruption in FUN_4400836f routing NORMAL boot into boot_panic_or_halt_7812 -> U99 loop unless bypassed via JIGBOOT/DIGADIAG.FRM)."
         ));
+    }
+    if ctx.has_83a7 {
+        notes.push(
+            "ODD 0x83A7 fault detected (FUN_400db60c reads Ram88000194 laser APC < 0.5mW prior to spindle actuation)."
+                .to_string(),
+        );
     }
     if ctx.sdcd_errors.contains(&-91006) {
         notes.push(

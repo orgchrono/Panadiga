@@ -13,6 +13,8 @@ export const HddWriterCard: React.FC = () => {
     setConfirmInput,
     customSizeGb,
     setCustomSizeGb,
+    rawImagePath,
+    setRawImagePath,
     resolvedTargetSectors,
     executing,
     writeReport,
@@ -162,6 +164,50 @@ export const HddWriterCard: React.FC = () => {
                 className="w-24 px-2 py-1 rounded-lg bg-slate-950 border border-slate-700 text-[11px] text-cyan-300 focus:outline-none focus:border-cyan-400 ml-auto"
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <label className="text-[11px] text-slate-400">
+                Imagem Raw / Patcheada (.img, .bin, .bin.gz) para gravação física:
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  {
+                    label: '250GB + TBC (.img)',
+                    path: 'firmware_and_images/panasonic_dmr_eh55_hdd_250gb_patched.img',
+                  },
+                  {
+                    label: '250GB ODD Stock (.img)',
+                    path: 'firmware_and_images/panasonic_dmr_eh55_hdd_250gb_odd_stock.img',
+                  },
+                  {
+                    label: 'Original hdd_100.bin',
+                    path: 'firmware_and_images/panasonic DMR EH-55 Firmware hdd_100.bin',
+                  },
+                ].map(preset => (
+                  <button
+                    key={preset.path}
+                    type="button"
+                    onClick={() => setRawImagePath(preset.path)}
+                    className={`px-2 py-0.5 rounded text-[10px] border transition-colors ${
+                      rawImagePath === preset.path
+                        ? 'bg-cyan-500/20 text-cyan-200 border-cyan-500/50 font-bold'
+                        : 'bg-bench-900 text-slate-400 border-slate-800 hover:border-slate-700'
+                    }`}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <input
+              type="text"
+              value={rawImagePath}
+              onChange={e => setRawImagePath(e.target.value)}
+              placeholder="firmware_and_images/panasonic_dmr_eh55_hdd_250gb_patched.img (vazio = padrão)"
+              className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-cyan-300 focus:outline-none focus:border-cyan-500 font-mono"
+            />
           </div>
 
           <div className="space-y-1.5">

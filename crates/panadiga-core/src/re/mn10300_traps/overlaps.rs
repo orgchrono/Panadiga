@@ -8,12 +8,15 @@ const AM33_REG_NAMES: [&str; 16] = [
     "R0", "R1", "R2", "R3", "R4", "R5", "R6", "R7", "A0", "A1", "A2", "A3", "D0", "D1", "D2", "D3",
 ];
 
-fn branch_insn_len(opcode: u8) -> u32 {
+/// Estimates conservative MN103S instruction byte length from leading opcode byte.
+pub fn estimate_mn103_insn_len(opcode: u8) -> usize {
     match opcode {
+        0xFC => 6,
         0xDD => 7,
-        0xCD | 0xDC => 5,
-        0xCC => 3,
-        _ => 2,
+        0xDC | 0xCD => 5,
+        0xF8 | 0xFA | 0xFE | 0xDE | 0xDF | 0xCC => 3,
+        0xC0..=0xCB | 0xCE => 2,
+        _ => 1,
     }
 }
 
@@ -24,7 +27,7 @@ pub fn build_instruction_spans(data: &[u8], base_va: u32) -> Vec<InstructionSpan
             .into_iter()
             .map(|r| InstructionSpan {
                 start_va: r.va,
-                end_va: r.va.wrapping_add(branch_insn_len(r.opcode)),
+                end_va: r.va.wrapping_add(estimate_mn103_insn_len(r.opcode) as u32),
                 mnemonic: r.mnemonic,
             })
             .collect();

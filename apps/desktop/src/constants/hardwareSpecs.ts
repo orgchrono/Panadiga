@@ -3,6 +3,7 @@
  * @brief Immutable Physical Hardware Specifications & Functional SSOT Builder barrel.
  */
 
+export * from './hardwareSpecs/catalogTokens';
 export * from './hardwareSpecs/physicalConstants';
 export {
   buildCanonicalHardwareSsotSpec,

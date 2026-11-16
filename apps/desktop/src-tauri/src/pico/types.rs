@@ -13,6 +13,23 @@ pub const PICO_RP2350_CDC_PID: u16 = 0x000F;
 /// Raspberry Pi BOOTSEL Mode Product ID
 pub const PICO_BOOTSEL_PID: u16 = 0x0003;
 
+/// Flatten-ready hardware watchdog traceability fields embedded in Pico status DTOs.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct PicoWdtFields {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub wdt_active: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub wdt_timeout_ms: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub wdt_recoveries: Option<u16>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub wdt_reboot_src: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub wdt_fault_stage: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub wdt_last_cmd: Option<String>,
+}
+
 /// Diagnostic connection and telemetry response from the Pico controller.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PicoStatusResponse {
@@ -23,6 +40,8 @@ pub struct PicoStatusResponse {
     pub target_powered: bool,
     pub firmware_banner: String,
     pub message: String,
+    #[serde(flatten)]
+    pub wdt: PicoWdtFields,
 }
 
 /// Current status of the GDB TCP-to-Serial bridge server.
@@ -77,6 +96,8 @@ pub struct PicoDeviceStatusDto {
     pub open_bus_low: u32,
     pub ram_loader_injected: bool,
     pub last_keepalive: String,
+    #[serde(flatten)]
+    pub wdt: PicoWdtFields,
 }
 
 /// Result of in-circuit RAM loader injection and NVRAM sector erasure matching Frontend `InCircuitNvramEraseResult`.

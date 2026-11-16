@@ -3,12 +3,12 @@ import { Card, CardContent } from '@/components/ui';
 import { useTranslation } from '@/i18n/useTranslation';
 import type { BridgeStreamLine } from '@/viewmodels/useSc0Bridge';
 import type { Sc0BridgeInputMode, Sc0BridgeStatus } from '@/models';
-import { BridgeNoticeBanner } from './sc0BridgeTypes';
+import { BridgeNoticeBanner, type Sc0BridgeProbeHandlers } from './sc0BridgeTypes';
 import { Sc0BridgeHeader } from './Sc0BridgeHeader';
 import { Sc0BridgeQuickProbes } from './Sc0BridgeQuickProbes';
 import { Sc0BridgeLogConsole } from './Sc0BridgeLogConsole';
 
-export interface Sc0BridgePanelProps {
+export interface Sc0BridgePanelProps extends Sc0BridgeProbeHandlers {
   readonly status: Sc0BridgeStatus;
   readonly logs: readonly BridgeStreamLine[];
   readonly baudRate: string;
@@ -25,14 +25,6 @@ export interface Sc0BridgePanelProps {
   readonly onStop: () => void;
   readonly onSubmitTx: () => void;
   readonly onClearLogs: () => void;
-  readonly onTriggerWaittx: (spec: string) => void;
-  readonly onSendRspPreset: (
-    mode: Sc0BridgeInputMode,
-    bridgePayload: string,
-    panarspArg: string
-  ) => void;
-  readonly onSendDriveCommand: (cmd: string) => void;
-  readonly onRunDiagnostic?: (command: string, arg: string) => void;
 }
 
 export const Sc0BridgePanel: React.FC<Sc0BridgePanelProps> = ({

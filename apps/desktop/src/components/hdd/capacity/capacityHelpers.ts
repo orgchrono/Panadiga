@@ -4,6 +4,7 @@
  */
 
 export type PatchMode = 'dynamic' | 'cap' | 'factory_200gb';
+export type CapacityPassthroughMode = 'unchanged' | 'av_passthrough' | 'factory_original';
 
 export const QUICK_CAPACITIES_GB = [250, 300, 320, 400, 500, 1000, 2000] as const;
 

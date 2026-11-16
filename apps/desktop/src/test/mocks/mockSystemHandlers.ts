@@ -136,6 +136,8 @@ export function handleMockSystemCommand(
         dump_line_count: 0,
         panarsp_summaries: [],
         notes: ['Mock decoded COM10 log telemetry'],
+        diagnosis: 'BGO driver init failed[1] -> U99 hang (ODD tray 80045300 also observed)',
+        boot_stages: ['SD_HW_OK', 'BGO_FAIL', 'ODD_NO_TRAY_80045300'],
       };
     }
 

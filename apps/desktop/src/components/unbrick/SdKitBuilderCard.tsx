@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { CheckCircle2, Disc3, HardDriveDownload, Loader2 } from 'lucide-react';
 import type {
-  SdMediaVerificationReport,
   SdUnbrickKitReport,
   SdUnbrickKitRequestDto,
 } from '@/models';
@@ -25,20 +24,17 @@ import {
   buildSdKitRequestPayload,
   type MainPassthroughMode,
   resolveSdOverallBadgeVariant,
+  type SdDiskVerificationProps,
 } from './unbrickDomain';
 import { SdVerificationPanel } from './SdVerificationPanel';
 
-interface SdKitBuilderCardProps {
+interface SdKitBuilderCardProps extends SdDiskVerificationProps {
   discoveredPanaDvd: string | null;
   discoveredSdDir: string | null;
   kitLoading: boolean;
   kitResult: SdUnbrickKitReport | null;
   kitError: string | null;
-  verifyLoading: boolean;
-  verifyResult: SdMediaVerificationReport | null;
-  verifyError: string | null;
   onBuildKit: (request: SdUnbrickKitRequestDto) => Promise<SdUnbrickKitReport | null>;
-  onVerifyMedia: (sdRootDir: string) => Promise<SdMediaVerificationReport | null>;
 }
 
 export const SdKitBuilderCard: React.FC<SdKitBuilderCardProps> = ({
@@ -52,6 +48,10 @@ export const SdKitBuilderCard: React.FC<SdKitBuilderCardProps> = ({
   verifyError,
   onBuildKit,
   onVerifyMedia,
+  diskLoading = false,
+  diskResult = null,
+  diskError = null,
+  onInspectSdDisk,
 }) => {
   const { t } = useTranslation();
   const [outputDir, setOutputDir] = useState('sd_card_eh55_kit');
@@ -250,6 +250,10 @@ export const SdKitBuilderCard: React.FC<SdKitBuilderCardProps> = ({
           verifyResult={verifyResult}
           verifyError={verifyError}
           onVerifyMedia={onVerifyMedia}
+          diskLoading={diskLoading}
+          diskResult={diskResult}
+          diskError={diskError}
+          onInspectSdDisk={onInspectSdDisk}
         />
       </CardContent>
     </Card>

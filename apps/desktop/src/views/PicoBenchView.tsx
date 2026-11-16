@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { usePicoBenchViewModel } from '@/viewmodels/usePicoBenchViewModel';
 import { useSc0Bridge } from '@/viewmodels/useSc0Bridge';
 import { TerminalView } from '@/components/TerminalView';
-import { StatusBadge } from '@/components/StatusBadge';
 import { Button, ResizableSplitPane } from '@/components/ui';
-import { isTargetPowered, resolveEffectiveVddVolts } from '@/utils/formatters';
 import {
   PicoBenchTopBar,
   PicoBenchMetrics,
+  PicoBenchSsotLoading,
+  PicoBenchSsotError,
+  PicoBenchActionBanners,
+  PicoBenchSectionToolbar,
   GdbServerCard,
   ColdBreakinSelector,
   P7501PinoutCard,
@@ -15,17 +17,7 @@ import {
   Sc0BridgePanel,
 } from '@/components/pico';
 import { useTranslation } from '@/i18n/useTranslation';
-import { AlertCircle, CheckCircle2, RefreshCw, Send, ShieldCheck } from 'lucide-react';
-
-type PicoBenchSectionFilter = 'all' | 'diag' | 'bridge' | 'gdb' | 'terminal';
-
-const SECTION_FILTERS: ReadonlyArray<{ id: PicoBenchSectionFilter; label: string }> = [
-  { id: 'all', label: 'Visão Completa' },
-  { id: 'diag', label: 'Diagnósticos P7501' },
-  { id: 'bridge', label: 'SC0 Bridge' },
-  { id: 'gdb', label: 'GDB & Ghidra' },
-  { id: 'terminal', label: 'Pinagem & Terminal' },
-];
+import { Send } from 'lucide-react';
 
 /**
  * MVVM View: Panasonic P7501 Async UART Hardware Bench Controller.
@@ -34,14 +26,14 @@ const SECTION_FILTERS: ReadonlyArray<{ id: PicoBenchSectionFilter; label: string
  */
 export const PicoBenchView: React.FC = () => {
   const { t } = useTranslation();
-  const [sectionFilter, setSectionFilter] = useState<PicoBenchSectionFilter>('all');
-  const showsSection = (section: Exclude<PicoBenchSectionFilter, 'all'>): boolean =>
-    sectionFilter === 'all' || sectionFilter === section;
   const {
     ssot,
     isSsotLoading,
     ssotError,
     reloadSsot,
+    sectionFilter,
+    setSectionFilter,
+    showsSection,
     deviceStatus,
     isFlashing,
     availablePorts,
@@ -94,88 +86,19 @@ export const PicoBenchView: React.FC = () => {
   });
 
   if (isSsotLoading && !ssot) {
-    return (
-      <div className="flex flex-col items-center justify-center h-96 gap-3 text-slate-400 font-mono text-xs">
-        <RefreshCw className="w-6 h-6 animate-spin text-cyan-400" />
-        <span>Carregando especificação SSOT de hardware do backend...</span>
-      </div>
-    );
+    return <PicoBenchSsotLoading />;
   }
 
   if (!ssot) {
-    return (
-      <div className="max-w-2xl mx-auto my-16 p-6 rounded-2xl bg-bench-900 border border-rose-500/30 text-center space-y-4 font-mono">
-        <div className="w-12 h-12 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/30 flex items-center justify-center mx-auto">
-          <AlertCircle className="w-6 h-6" />
-        </div>
-        <div>
-          <h3 className="text-sm font-bold text-slate-100">
-            Falha ao Carregar Especificação Hardware SSOT
-          </h3>
-          <p className="text-xs text-slate-400 mt-1">
-            {ssotError || 'Não foi possível obter a tabela de pinagem P7501 e comandos PICO via IPC nativo.'}
-          </p>
-        </div>
-        <Button type="button" onClick={reloadSsot} className="gap-2 mx-auto font-bold text-xs">
-          <RefreshCw className="w-4 h-4" />
-          <span>Recarregar SSOT</span>
-        </Button>
-      </div>
-    );
+    return <PicoBenchSsotError ssotError={ssotError} onReload={reloadSsot} />;
   }
-
-  const effectiveVddVolts = resolveEffectiveVddVolts(
-    deviceStatus?.vdd_volts,
-    latestDiagnostic?.vdd_volts
-  );
-  const effectiveDeviceStatus = deviceStatus
-    ? {
-        ...deviceStatus,
-        vdd_volts: effectiveVddVolts,
-        target_powered:
-          isTargetPowered(effectiveVddVolts, ssot.thresholds.min_vdd_threshold_volts) ||
-          deviceStatus.target_powered,
-      }
-    : null;
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12 font-mono">
-      {backupResult?.success && (
-        <div className="rounded-xl bg-cyan-500/10 border border-cyan-500/40 p-4 flex items-center justify-between shadow-xl gap-3">
-          <div className="flex items-center gap-3">
-            <ShieldCheck className="w-5 h-5 text-cyan-400 shrink-0" />
-            <div>
-              <h4 className="text-xs font-bold text-cyan-300">
-                BACKUP DE 1º CONTATO & DOUBLE-READ CONCLUÍDOS COM SUCESSO!
-              </h4>
-              <p className="text-[11px] text-slate-300 mt-0.5 font-sans">
-                Modelo: {backupResult.detected_model} | NVRAM: {backupResult.nvram_bytes.toLocaleString()} bytes | SRAM: {backupResult.sram_bytes.toLocaleString()} bytes. Integridade verificada via SHA-256.
-              </p>
-            </div>
-          </div>
-          <StatusBadge variant="info" label="BACKUP SEGURO" />
-        </div>
-      )}
-
-      {eraseResult?.success && (
-        <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/40 p-4 flex items-center justify-between shadow-xl gap-3">
-          <div className="flex items-center gap-3">
-            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-            <div>
-              <h4 className="text-xs font-bold text-emerald-300">
-                INJEÇÃO DE RAM LOADER & APAGAMENTO IN-CIRCUIT CONCLUÍDOS!
-              </h4>
-              <p className="text-[11px] text-slate-300 mt-0.5 font-sans">
-                Executado em {eraseResult.elapsed_ms}ms via P7501 UART (SW_UART / XRESET). NVRAM limpa para 0xFF (65.536 bytes). Alvo pronto para boot.
-              </p>
-            </div>
-          </div>
-          <StatusBadge variant="success" label="HARDWARE RESTAURADO" />
-        </div>
-      )}
+      <PicoBenchActionBanners backupResult={backupResult} eraseResult={eraseResult} />
 
       <PicoBenchTopBar
-        deviceStatus={effectiveDeviceStatus}
+        deviceStatus={deviceStatus}
         latestDiagnostic={latestDiagnostic}
         availablePorts={availablePorts}
         selectedPort={selectedPort}
@@ -200,35 +123,12 @@ export const PicoBenchView: React.FC = () => {
       />
 
       <PicoBenchMetrics
-        deviceStatus={effectiveDeviceStatus}
+        deviceStatus={deviceStatus}
         ssot={ssot}
         detectedFlashMb={latestDiagnostic?.detected_flash_mb}
       />
 
-      <div
-        role="toolbar"
-        aria-label="Filtro rápido de painéis da bancada Pico"
-        className="flex items-center gap-2 flex-wrap rounded-xl bg-bench-900/70 border border-slate-800 px-3 py-2"
-      >
-        <span className="text-[11px] uppercase tracking-wider text-slate-400 mr-1">Seções:</span>
-        {SECTION_FILTERS.length === 0 ? (
-          <span className="text-xs text-slate-500">Nenhuma seção disponível.</span>
-        ) : (
-          SECTION_FILTERS.map(({ id, label }) => (
-            <Button
-              key={id}
-              type="button"
-              size="sm"
-              variant={sectionFilter === id ? 'default' : 'outline'}
-              aria-pressed={sectionFilter === id}
-              onClick={() => setSectionFilter(id)}
-              className="h-7 px-2.5 text-xs font-mono"
-            >
-              {label}
-            </Button>
-          ))
-        )}
-      </div>
+      <PicoBenchSectionToolbar sectionFilter={sectionFilter} onSelectFilter={setSectionFilter} />
 
       {showsSection('diag') && (
         <PicoDiagnosticsStudio
@@ -299,54 +199,54 @@ export const PicoBenchView: React.FC = () => {
 
       {showsSection('terminal') && (
         <ResizableSplitPane
-        initialLeftPercent={42}
-        minLeftPercent={28}
-        maxLeftPercent={62}
-        storageKey="panadiga.split.picobench"
-        ariaLabel="Divisor entre pinagem P7501 e terminal serial"
-        left={
-          <div className="flex flex-col space-y-4 lg:min-h-[720px]">
-            <ColdBreakinSelector
-              currentMode={deviceStatus?.breakin_mode ?? 2}
-              onSelectMode={changeBreakinMode}
-              breakinModes={ssot.breakin_modes}
-            />
-            <div className="flex-1 min-h-0 flex flex-col">
-              <P7501PinoutCard ssot={ssot} />
-            </div>
-          </div>
-        }
-        right={
-          <div className="flex flex-col space-y-3 min-h-[420px] lg:min-h-[720px]">
-            <div className="flex-1 min-h-0 flex flex-col">
-              <TerminalView logs={logs} onClear={clearLogs} containerRef={logContainerRef} />
-            </div>
-
-            <div className="flex items-center gap-2 p-2 rounded-xl bg-bench-900 border border-slate-800 shrink-0">
-              <span className="text-slate-500 text-xs font-mono pl-2">{'>'}</span>
-              <input
-                type="text"
-                aria-label={t('pico.title')}
-                placeholder="Digite comando CDC (STATUS, RESET, ADC, PINCHECK, DUMP, GDB)..."
-                value={commandInput}
-                onChange={e => setCommandInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && sendCommand()}
-                className="flex-1 bg-transparent border-none text-xs text-slate-100 placeholder-slate-500 focus:outline-none font-mono"
+          initialLeftPercent={42}
+          minLeftPercent={28}
+          maxLeftPercent={62}
+          storageKey="panadiga.split.picobench"
+          ariaLabel="Divisor entre pinagem P7501 e terminal serial"
+          left={
+            <div className="flex flex-col space-y-4 lg:min-h-[720px]">
+              <ColdBreakinSelector
+                currentMode={deviceStatus?.breakin_mode ?? 2}
+                onSelectMode={changeBreakinMode}
+                breakinModes={ssot.breakin_modes}
               />
-              <Button
-                type="button"
-                variant="default"
-                size="sm"
-                onClick={sendCommand}
-                className="font-bold text-xs gap-1.5"
-              >
-                <Send className="w-3.5 h-3.5" />
-                <span>Enviar</span>
-              </Button>
+              <div className="flex-1 min-h-0 flex flex-col">
+                <P7501PinoutCard ssot={ssot} />
+              </div>
             </div>
-          </div>
-        }
-      />
+          }
+          right={
+            <div className="flex flex-col space-y-3 min-h-[420px] lg:min-h-[720px]">
+              <div className="flex-1 min-h-0 flex flex-col">
+                <TerminalView logs={logs} onClear={clearLogs} containerRef={logContainerRef} />
+              </div>
+
+              <div className="flex items-center gap-2 p-2 rounded-xl bg-bench-900 border border-slate-800 shrink-0">
+                <span className="text-slate-500 text-xs font-mono pl-2">{'>'}</span>
+                <input
+                  type="text"
+                  aria-label={t('pico.title')}
+                  placeholder="Digite comando CDC (STATUS, RESET, ADC, PINCHECK, DUMP, GDB)..."
+                  value={commandInput}
+                  onChange={e => setCommandInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && sendCommand()}
+                  className="flex-1 bg-transparent border-none text-xs text-slate-100 placeholder-slate-500 focus:outline-none font-mono"
+                />
+                <Button
+                  type="button"
+                  variant="default"
+                  size="sm"
+                  onClick={sendCommand}
+                  className="font-bold text-xs gap-1.5"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Enviar</span>
+                </Button>
+              </div>
+            </div>
+          }
+        />
       )}
     </div>
   );

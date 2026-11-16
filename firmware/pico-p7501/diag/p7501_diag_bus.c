@@ -7,9 +7,11 @@
 
 #include "diag/p7501_diag_bus.h"
 #include "cli/p7501_cli.h"
+#include "common/p7501_hex.h"
 #include "flash/p7501_flash.h"
 #include "flash/ram_loader_payload.h"
 #include "hal/p7501_hw.h"
+#include "hal/p7501_watchdog.h"
 #include "protocol/p7501_bus_protocol.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -38,12 +40,18 @@ void p7501_diag_run_monitor_sweep(p7501_scan_stats_t *stats) {
     printf("[Scanner] Probe range: 0x%02X to 0x%02X (%u probes per profile)\n",
            P7501_PROBE_MIN, P7501_PROBE_MAX, (P7501_PROBE_MAX - P7501_PROBE_MIN + 1U));
 
-    for (uint32_t mode = 0U; mode < (uint32_t)P7501_BOOT_MODE_COUNT; ++mode) {
+    p7501_wdt_set_stage(P7501_WDT_STAGE_PROBE_SWEEP);
+    bool aborted = false;
+    for (uint32_t mode = 0U; !aborted && (mode < (uint32_t)P7501_BOOT_MODE_COUNT); ++mode) {
         const p7501_boot_mode_t boot_mode = (p7501_boot_mode_t)mode;
         printf("\n[Scanner] ---> Testing Boot Profile Mode %" PRIu32 " (%s)...\n",
                mode, boot_mode_label(mode));
 
         for (uint32_t cmd = P7501_PROBE_MIN; cmd <= P7501_PROBE_MAX; ++cmd) {
+            if (p7501_wdt_poll_abort()) {
+                aborted = true;
+                break;
+            }
             p7501_hw_boot_sequence(boot_mode);
             const uint32_t resp = p7501_proto_probe_opcode((uint8_t)cmd);
             stats->total_probes++;
@@ -60,8 +68,9 @@ void p7501_diag_run_monitor_sweep(p7501_scan_stats_t *stats) {
         }
     }
 
+    p7501_wdt_set_stage(P7501_WDT_STAGE_CLEANUP);
     p7501_hw_isolate_bus_hiz();
-    printf("\n[Scanner] Monitor sweep finished.\n");
+    printf("\n[Scanner] Monitor sweep finished%s.\n", aborted ? " (ABORTED)" : "");
 }
 
 static void print_scan_summary(const p7501_scan_stats_t *stats, float vdd_volts) {
@@ -142,7 +151,11 @@ void p7501_diag_cmd_dump(const char *arg) {
     printf("[DUMP] Reading %" PRIu32 " words (%" PRIu32 " bytes) from 0x%08" PRIX32 "...\n",
            count, count * 4U, addr);
 
+    p7501_wdt_set_stage(P7501_WDT_STAGE_RX_WAIT);
     for (uint32_t i = 0U; i < count; ++i) {
+        if ((i & 0x1Fu) == 0U && p7501_wdt_poll_abort()) {
+            break;
+        }
         const uint32_t curr_addr = addr + (i * 4U);
         const uint32_t val = p7501_hw_read_mem32(curr_addr);
         if ((i % 4U) == 0U) {
@@ -156,9 +169,8 @@ void p7501_diag_cmd_dump(const char *arg) {
 void p7501_diag_cmd_boot_profile(const char *arg) {
     uint32_t mode = 0U;
     if ((arg != NULL) && (*arg != '\0')) {
-        mode = (uint32_t)atoi(arg);
-        if (mode >= (uint32_t)P7501_BOOT_MODE_COUNT) {
-            printf("[BREAK_IN] Invalid profile %" PRIu32 "! Defaulting to mode 0.\n", mode);
+        if (!p7501_parse_u32_strict(arg, &mode) || (mode >= (uint32_t)P7501_BOOT_MODE_COUNT)) {
+            printf("[BREAK_IN] Invalid profile '%s'! Defaulting to mode 0.\n", arg);
             mode = 0U;
         }
     }

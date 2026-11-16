@@ -1,6 +1,6 @@
 /**
  * @file p7501_fmu_internal.h
- * @brief Internal shared phase state and trigger helpers for FMU boot probes.
+ * @brief Internal shared phase helpers for FMU hardware probes (`FMUSCAN`, `FMUTEST`, `FMUBATCH`).
  *
  * @standard ISO/IEC 9899:2011 (C11)
  */
@@ -8,36 +8,9 @@
 #ifndef P7501_FMU_INTERNAL_H
 #define P7501_FMU_INTERNAL_H
 
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-
-typedef struct p7501_fmu_phase_state {
-    bool sw_uart_flipped;
-    bool sent_after_serial_msg;
-    bool wait1_seen;
-    uint32_t wait1_us;
-} p7501_fmu_phase_state_t;
-
-bool p7501_fmu_buf_contains_tag_at_eol(
-    const uint8_t *buf,
-    uint32_t len,
-    uint32_t start_min,
-    const char *tag,
-    size_t tag_len
-);
-
-void p7501_fmu_handle_phase_triggers(
-    p7501_fmu_phase_state_t *st,
-    const uint8_t *rx_buf,
-    uint32_t fmode,
-    uint32_t rx_len,
-    uint32_t now_us
-);
+#include "uart/p7501_fmu_codec.h"
 
 void p7501_fmu_start_phase_session(p7501_fmu_phase_state_t *out_st);
-
-/** Pop one byte from PIO1 RX FIFO into `rx_buf[*rx_len]` when room remains. */
 bool p7501_fmu_pop_rx_byte(uint8_t *rx_buf, uint32_t *rx_len, uint32_t max_cap);
 
 #endif /* P7501_FMU_INTERNAL_H */

@@ -28,7 +28,7 @@ pub fn verify_and_classify_rsp_packet(packet: &str) -> (String, bool) {
     let expected_csum_str = parts[1];
     let expected_csum = u8::from_str_radix(expected_csum_str, 16).unwrap_or(0);
 
-    let actual_csum: u8 = payload.bytes().fold(0u8, |acc, b| acc.wrapping_add(b));
+    let actual_csum = panadiga_core::pico::rsp_codec::rsp_checksum(payload.as_bytes());
     let checksum_valid = actual_csum == expected_csum;
 
     let cmd_type = if payload.starts_with("qSupported") {
@@ -60,7 +60,7 @@ pub fn verify_and_classify_rsp_packet(packet: &str) -> (String, bool) {
 
 /// Pure helper to frame a GDB RSP payload with `+$<payload>#<checksum>`.
 pub fn build_rsp_packet(payload: &str) -> Vec<u8> {
-    let csum: u8 = payload.bytes().fold(0u8, |acc, b| acc.wrapping_add(b));
+    let csum = panadiga_core::pico::rsp_codec::rsp_checksum(payload.as_bytes());
     format!("+${}#{:02x}", payload, csum).into_bytes()
 }
 
@@ -169,9 +169,7 @@ pub fn compute_mock_rsp_response_pure(cmd: &str, current_regs: &Am34RegisterStat
         let addr_str = rest.split(',').next().unwrap_or("0");
         let addr = u32::from_str_radix(addr_str, 16).unwrap_or(0);
         // Hardware safety invariant: IPL/OS Flash regions (0x80000000..0x807EFFFF and mirror 0x84000000..0x847EFFFF) are strictly Read-Only
-        if (0x8000_0000..=0x807E_FFFF).contains(&addr)
-            || (0x8400_0000..=0x847E_FFFF).contains(&addr)
-        {
+        if panadiga_core::pico::rsp_codec::is_ipl_readonly_address(addr, 1) {
             build_rsp_packet("E05")
         } else {
             build_rsp_packet("OK")

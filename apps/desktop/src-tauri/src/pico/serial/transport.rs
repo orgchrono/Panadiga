@@ -1,7 +1,6 @@
-//! Low-level USB CDC transport, mutex synchronization, port discovery, and multi-chunk reader.
+//! Low-level USB CDC transport, port discovery, and multi-chunk reader.
 
 use serialport::SerialPortType;
-use std::sync::{Mutex, MutexGuard};
 use std::time::{Duration, Instant};
 
 use panadiga_core::pico::cdc::strip_leading_prompts;
@@ -10,34 +9,16 @@ use crate::commands::constants::{
     COMPLETION_MARKERS, SERIAL_CHUNK_READ_TIMEOUT_MS, SERIAL_IDLE_COMPLETE_MS,
     SERIAL_READ_CHUNK_BYTES,
 };
+use crate::state::PanadigaBackendState;
 
-use super::super::bridge_session::is_sc0_bridge_active;
-use super::super::gdb_bridge::is_gdb_bridge_active;
 use super::super::types::extract_port_name;
 
-static SERIAL_IO_MUTEX: Mutex<()> = Mutex::new(());
-
-/// Acquires the foreground serial I/O mutex cleanly (recovering from any poisoned lock).
-pub fn lock_serial_io() -> MutexGuard<'static, ()> {
-    SERIAL_IO_MUTEX
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner())
-}
-
-pub(super) fn try_lock_serial_io() -> Option<MutexGuard<'static, ()>> {
-    SERIAL_IO_MUTEX.try_lock().ok()
-}
-
 /// Verifies that the serial port is not currently owned by an active GDB RSP or SC0 bridge thread.
-pub fn ensure_serial_port_unlocked(clean_port: &str) -> Result<(), String> {
-    crate::pico::types::reject_mock_port(clean_port)?;
-    if is_gdb_bridge_active() || is_sc0_bridge_active() {
-        return Err(format!(
-            "Porta serial {} ocupada pela Ponte GDB/SC0 ativa. Encerre a sessão antes de enviar comandos CDC.",
-            clean_port
-        ));
-    }
-    Ok(())
+pub fn ensure_serial_port_unlocked(
+    backend: &PanadigaBackendState,
+    clean_port: &str,
+) -> Result<(), String> {
+    backend.ensure_serial_port_unlocked(clean_port)
 }
 
 fn serial_response_has_completed(out: &str) -> bool {
@@ -118,13 +99,13 @@ pub fn list_pico_serial_ports() -> Result<Vec<String>, String> {
 }
 
 pub(super) fn open_validated_cdc(
+    backend: &PanadigaBackendState,
     port_name: &str,
     baud_rate: u32,
     timeout_ms: u64,
 ) -> Result<(String, Box<dyn serialport::SerialPort>), String> {
     let clean = extract_port_name(port_name);
-    crate::pico::types::reject_mock_port(&clean)?;
-    ensure_serial_port_unlocked(&clean)?;
+    backend.ensure_serial_port_unlocked(&clean)?;
     let port =
         panadiga_core::pico::cdc::open_cdc(&clean, baud_rate, Duration::from_millis(timeout_ms))
             .map_err(|e| format!("Falha ao abrir porta serial {}: {}", clean, e))?;

@@ -3,6 +3,8 @@ export * from './GdbServerCard';
 export * from './GdbServerControls';
 export * from './GdbExternalToolLaunchers';
 export * from './GdbTelemetryInspector';
+export * from './PicoBenchBanners';
+export * from './PicoBenchTopBarHeader';
 export * from './PicoBenchTopBar';
 export * from './PicoBenchMetrics';
 export * from './ColdBreakinSelector';

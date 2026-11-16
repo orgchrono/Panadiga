@@ -124,6 +124,11 @@ export function simulateMockDiagnostic(commandId: string, arg?: string): PicoDia
   } else if (norm === 'LED') {
     const req = (cleanArg || 'STATUS').toUpperCase();
     rawOutput = `LED: OK (${req}, ${req === 'AUTO' ? 'AUTO' : 'MANUAL_LOCK'})`;
+  } else if (norm === 'WDT') {
+    rawOutput = [
+      '[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=2 wdt_recoveries=0 reboot_src=CLEAN fault_slot=255 fault_stage=IDLE last_cmd=STATUS last_us=1420',
+      'WDT: OK (Hardware auto-recovery active @ 4000ms; override disabled)',
+    ].join('\n');
   } else if (norm.startsWith('FMU') || norm.startsWith('UART')) {
     rawOutput = `UART/FMU Probe Capture (18 bytes): SERI_READY OK\n${norm}: OK`;
   } else if (norm === 'SCAN') {

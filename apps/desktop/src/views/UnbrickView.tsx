@@ -18,6 +18,7 @@ export const UnbrickView: React.FC = () => {
     workbench,
     sdKit,
     verify,
+    sdDisk,
     extract,
     tbc,
     rspPlan,
@@ -30,6 +31,7 @@ export const UnbrickView: React.FC = () => {
     loadWorkbench,
     buildSdKit,
     verifySdMedia,
+    inspectSdDisk,
     extractFrmModules,
     runMainPassthrough,
     generateRspPlan,
@@ -106,6 +108,10 @@ export const UnbrickView: React.FC = () => {
               verifyError={verify.error}
               onBuildKit={buildSdKit}
               onVerifyMedia={verifySdMedia}
+              diskLoading={sdDisk.loading}
+              diskResult={sdDisk.data}
+              diskError={sdDisk.error}
+              onInspectSdDisk={inspectSdDisk}
             />
 
             {isAdvanced && (

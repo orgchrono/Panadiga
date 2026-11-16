@@ -1,14 +1,12 @@
 /**
  * @file constants/hardwareSpecs/ssotBlueprints.ts
- * @brief Frozen physical pinout, break-in, flash geometry, and memory region blueprints.
+ * @brief Data-driven physical pinout, break-in, flash geometry, and memory region blueprints.
  */
 
-import type ptBRJson from '@/locales/pt-BR.json';
+import ptBRJson from '@/locales/pt-BR.json';
 import type { ColdBreakinMode } from '@/models';
-import {
-  SPANSION_FLASH_SIZE_BYTES,
-  SPANSION_NVRAM_SIZE_BYTES,
-} from './physicalConstants';
+import hardwareCatalog from '../../../../../crates/panadiga-core/src/ssot/hardware_catalog.json';
+import { computeFlashGeometryAddresses } from './catalogTokens';
 
 export type SsotLocaleDict = typeof ptBRJson.ssot;
 export type PinLocaleKey = keyof SsotLocaleDict['pins'];
@@ -23,27 +21,11 @@ export interface PinBlueprint {
   readonly pico_gpio: string;
 }
 
-export const PINOUT_BLUEPRINTS: readonly PinBlueprint[] = Object.freeze([
-  Object.freeze({ key: 'pin1', manual_pin: 1, physical_pin: 1, pico_gpio: 'GP26 (ADC0 / Pin 31)' }),
-  Object.freeze({ key: 'pin2', manual_pin: 2, physical_pin: 2, pico_gpio: 'GP5 (Pin 7)' }),
-  Object.freeze({ key: 'pin3', manual_pin: 3, physical_pin: 3, pico_gpio: 'GP4 (Pin 6)' }),
-  Object.freeze({ key: 'pin4', manual_pin: 4, physical_pin: 4, pico_gpio: 'GND (Pin 38)' }),
-  Object.freeze({ key: 'pin5', manual_pin: 5, physical_pin: 5, pico_gpio: 'GP3 (Pin 5)' }),
-  Object.freeze({ key: 'pin6', manual_pin: 6, physical_pin: 6, pico_gpio: 'GP2 (Pin 4)' }),
-]);
-
 export interface BreakInBlueprint {
   readonly key: ModeLocaleKey;
   readonly mode: ColdBreakinMode;
   readonly badge_variant: string;
 }
-
-export const BREAKIN_BLUEPRINTS: readonly BreakInBlueprint[] = Object.freeze([
-  Object.freeze({ key: 'mode0', mode: 0, badge_variant: 'secondary' }),
-  Object.freeze({ key: 'mode1', mode: 1, badge_variant: 'secondary' }),
-  Object.freeze({ key: 'mode2', mode: 2, badge_variant: 'success' }),
-  Object.freeze({ key: 'mode3', mode: 3, badge_variant: 'warning' }),
-]);
 
 export interface FlashGeometryBlueprint {
   readonly key: FlashLocaleKey;
@@ -54,47 +36,69 @@ export interface FlashGeometryBlueprint {
   readonly microsector_range: string;
 }
 
-export const FLASH_GEOMETRY_BLUEPRINTS: readonly FlashGeometryBlueprint[] = Object.freeze([
-  Object.freeze({
-    key: 'mb2',
-    size_mb: 2,
-    size_bytes: 0x0020_0000,
-    nvram_base_hex: '0x801F0000',
-    nvram_size_bytes: SPANSION_NVRAM_SIZE_BYTES,
-    microsector_range: 'SA38..SA45',
-  }),
-  Object.freeze({
-    key: 'mb4',
-    size_mb: 4,
-    size_bytes: 0x0040_0000,
-    nvram_base_hex: '0x803F0000',
-    nvram_size_bytes: SPANSION_NVRAM_SIZE_BYTES,
-    microsector_range: 'SA70..SA77',
-  }),
-  Object.freeze({
-    key: 'mb8',
-    size_mb: 8,
-    size_bytes: SPANSION_FLASH_SIZE_BYTES,
-    nvram_base_hex: '0x807F0000',
-    nvram_size_bytes: SPANSION_NVRAM_SIZE_BYTES,
-    microsector_range: 'SA134..SA141',
-  }),
-  Object.freeze({
-    key: 'mb16',
-    size_mb: 16,
-    size_bytes: 0x0100_0000,
-    nvram_base_hex: '0x80FE0000',
-    nvram_size_bytes: 0x0002_0000,
-    microsector_range: 'SA254..SA269',
-  }),
-]);
-
 export interface MemoryRegionBlueprint {
   readonly key: RegionLocaleKey;
   readonly start: string;
   readonly end: string;
   readonly size_kb: number;
 }
+
+function assertLocaleKey<K extends string>(
+  table: Readonly<Record<string, unknown>>,
+  raw: string,
+  section: string,
+): K {
+  if (!Object.prototype.hasOwnProperty.call(table, raw)) {
+    throw new Error(`Missing locale entry ssot.${section}.${raw}`);
+  }
+  return raw as K;
+}
+
+function parseColdBreakinMode(raw: number): ColdBreakinMode {
+  if (raw === 0 || raw === 1 || raw === 2 || raw === 3) {
+    return raw;
+  }
+  throw new Error(`Invalid ColdBreakinMode ${raw} in hardware_catalog.json`);
+}
+
+export const PINOUT_BLUEPRINTS: readonly PinBlueprint[] = Object.freeze(
+  hardwareCatalog.pinout.map(entry =>
+    Object.freeze({
+      key: assertLocaleKey<PinLocaleKey>(ptBRJson.ssot.pins, entry.key, 'pins'),
+      manual_pin: entry.manual_pin,
+      physical_pin: entry.physical_pin,
+      pico_gpio: entry.pico_gpio,
+    }),
+  ),
+);
+
+export const BREAKIN_BLUEPRINTS: readonly BreakInBlueprint[] = Object.freeze(
+  hardwareCatalog.breakin_modes.map(entry =>
+    Object.freeze({
+      key: assertLocaleKey<ModeLocaleKey>(ptBRJson.ssot.breakinModes, entry.key, 'breakinModes'),
+      mode: parseColdBreakinMode(entry.mode),
+      badge_variant: entry.badge_variant,
+    }),
+  ),
+);
+
+export const FLASH_GEOMETRY_BLUEPRINTS: readonly FlashGeometryBlueprint[] = Object.freeze(
+  hardwareCatalog.flash_geometries.map(entry => {
+    const geom = computeFlashGeometryAddresses(entry.size_mb);
+    return Object.freeze({
+      key: assertLocaleKey<FlashLocaleKey>(
+        ptBRJson.ssot.flashGeometries,
+        entry.key,
+        'flashGeometries',
+      ),
+      size_mb: entry.size_mb,
+      size_bytes: geom.sizeBytes,
+      nvram_base_hex: geom.nvramBaseHex,
+      nvram_size_bytes: geom.nvramSizeBytes,
+      microsector_range: entry.microsector_range,
+    });
+  }),
+);
 
 export const MEMORY_REGION_BLUEPRINTS: readonly MemoryRegionBlueprint[] = Object.freeze([
   Object.freeze({ key: 'sram', start: '0x00000000', end: '0x0000FFFF', size_kb: 64 }),

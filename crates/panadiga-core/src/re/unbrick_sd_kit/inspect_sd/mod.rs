@@ -3,6 +3,7 @@
 //! Decomposed cleanly into domain types (`types`), pure MBR/VBR/BPB parser (`mbr_bpb`),
 //! FAT16 root & cluster-chain inspector (`fat16`), and sector-aligned I/O (`io`).
 
+pub mod bpb;
 pub mod fat16;
 pub mod io;
 pub mod mbr_bpb;

@@ -31,6 +31,17 @@ export const DRIVE_QUICK_COMMANDS: ReadonlyArray<{
   { label: 'STOP', cmd: 'STOP' },
 ];
 
+export interface Sc0BridgeProbeHandlers {
+  readonly onTriggerWaittx: (spec: string) => void;
+  readonly onSendRspPreset: (
+    mode: Sc0BridgeInputMode,
+    bridgePayload: string,
+    panarspArg: string
+  ) => void;
+  readonly onSendDriveCommand: (cmd: string) => void;
+  readonly onRunDiagnostic?: (command: string, arg: string) => void;
+}
+
 export interface BridgeNoticeBannerProps {
   readonly role: 'note' | 'alert';
   readonly toneClass: string;

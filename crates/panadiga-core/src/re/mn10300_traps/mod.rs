@@ -19,14 +19,15 @@ pub mod tables;
 mod tests;
 
 pub use overlaps::{
-    build_instruction_spans, detect_mid_instruction_overlaps, filter_mid_instruction_constant_hits,
-    is_flash_cfi_command_va, scan_am33_f9_ea_postinc_loads, scan_am33_ff_pre_rets_sites,
-    scan_cfi_flash_constant_hits,
+    build_instruction_spans, detect_mid_instruction_overlaps, estimate_mn103_insn_len,
+    filter_mid_instruction_constant_hits, is_flash_cfi_command_va, scan_am33_f9_ea_postinc_loads,
+    scan_am33_ff_pre_rets_sites, scan_cfi_flash_constant_hits,
 };
 pub use revisions::identify_firmware_revision;
 pub use tables::{
-    classify_drv_cli_command, parse_atapi_cdb_dispatch, parse_drv_cli_table,
-    parse_drv_mecha_error_table, scan_code_pointer_tables,
+    classify_drv_cli_command, decompress_drv_payload, find_extrhead_containers,
+    parse_atapi_cdb_dispatch, parse_drv_cli_table, parse_drv_mecha_error_table, parse_sense_lut,
+    scan_code_pointer_tables,
 };
 
 use super::mn10300::decode_setlb_loops;
@@ -87,7 +88,24 @@ pub struct DrvMechaErrorRecord {
     pub code: u16,
     pub code_hex: String,
     pub raw_len: usize,
+    pub raw_hex: String,
     pub ascii_preview: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ExtrheadContainerMatch {
+    pub offset: usize,
+    pub va: u32,
+    pub tail_preview_hex: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SenseLutEntry {
+    pub index: usize,
+    pub va: u32,
+    pub sense_key: u8,
+    pub asc: u8,
+    pub ascq: u8,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

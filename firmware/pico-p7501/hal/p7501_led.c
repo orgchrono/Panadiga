@@ -12,6 +12,7 @@
  */
 
 #include "hal/p7501_led.h"
+#include "hal/p7501_watchdog.h"
 
 #include "hardware/gpio.h"
 #include "hardware/sync.h"
@@ -120,13 +121,7 @@ void p7501_led_tick(void) {
 }
 
 void p7501_led_sleep_ms(uint32_t delay_ms) {
-    uint32_t remaining = delay_ms;
-    while (remaining > 0u) {
-        const uint32_t slice = (remaining > 50u) ? 50u : remaining;
-        sleep_ms(slice);
-        p7501_led_tick();
-        remaining -= slice;
-    }
+    p7501_wdt_sleep_ms(delay_ms);
 }
 
 p7501_led_state_t p7501_led_get_state(void) {

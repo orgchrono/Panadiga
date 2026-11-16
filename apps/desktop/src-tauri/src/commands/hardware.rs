@@ -3,6 +3,8 @@
 //! Single Responsibility: Tauri IPC command dispatchers for RP2040/RP2350 USB CDC
 //! communication, Cold Break-In sequencing, In-Circuit NVRAM erasure, and GDB RSP bridge lifecycle.
 
+use crate::state::PanadigaBackendState;
+
 use super::dto::{
     Am34RegisterState, DigaModelProfileDto, FirstContactBackupResult, GdbBridgeStatus,
     GdbPacketTelemetryEvent, InCircuitNvramEraseResult, PicoDeviceStatusDto, PicoStatusResponse,
@@ -38,47 +40,71 @@ pub async fn list_pico_serial_ports() -> IpcResult<Vec<String>> {
 /// Connects to a Pico serial COM port and reads device telemetry and VDD voltage.
 #[tauri::command]
 pub async fn pico_connect_and_test(
+    state: tauri::State<'_, PanadigaBackendState>,
     port_name: String,
     baud_rate: u32,
 ) -> IpcResult<PicoStatusResponse> {
-    run_blocking(move || super::super::pico::pico_connect_and_test(port_name, baud_rate)).await
+    let backend = state.inner().clone();
+    run_blocking(move || super::super::pico::pico_connect_and_test(&backend, port_name, baud_rate))
+        .await
 }
 
 /// Triggers P7501 discrete boot/reset sequence on the RP2040/RP2350 hardware probe.
 #[tauri::command]
-pub async fn pico_execute_cold_break_in(port_name: String, mode: u8) -> IpcResult<String> {
-    run_blocking(move || super::super::pico::pico_execute_cold_break_in(port_name, mode)).await
+pub async fn pico_execute_cold_break_in(
+    state: tauri::State<'_, PanadigaBackendState>,
+    port_name: String,
+    mode: u8,
+) -> IpcResult<String> {
+    let backend = state.inner().clone();
+    run_blocking(move || super::super::pico::pico_execute_cold_break_in(&backend, port_name, mode))
+        .await
 }
 
 /// Executes in-circuit surgical sector erase of NVRAM micro-sectors on Spansion S29JL064H.
 #[tauri::command]
-pub async fn pico_execute_in_circuit_erase(port_name: String) -> IpcResult<String> {
-    run_blocking(move || super::super::pico::pico_execute_in_circuit_erase(port_name)).await
+pub async fn pico_execute_in_circuit_erase(
+    state: tauri::State<'_, PanadigaBackendState>,
+    port_name: String,
+) -> IpcResult<String> {
+    let backend = state.inner().clone();
+    run_blocking(move || super::super::pico::pico_execute_in_circuit_erase(&backend, port_name))
+        .await
 }
 
 /// Switches the Pico firmware into GDB Remote Serial Protocol bridge mode.
 #[tauri::command]
-pub async fn pico_switch_to_gdb_mode(port_name: String) -> IpcResult<String> {
-    run_blocking(move || super::super::pico::pico_switch_to_gdb_mode(port_name)).await
+pub async fn pico_switch_to_gdb_mode(
+    state: tauri::State<'_, PanadigaBackendState>,
+    port_name: String,
+) -> IpcResult<String> {
+    let backend = state.inner().clone();
+    run_blocking(move || super::super::pico::pico_switch_to_gdb_mode(&backend, port_name)).await
 }
 
 /// Frontend `pico_get_status` command.
 #[tauri::command]
-pub async fn pico_get_status(port_name: Option<String>) -> IpcResult<PicoDeviceStatusDto> {
+pub async fn pico_get_status(
+    state: tauri::State<'_, PanadigaBackendState>,
+    port_name: Option<String>,
+) -> IpcResult<PicoDeviceStatusDto> {
+    let backend = state.inner().clone();
     let port = port_name.unwrap_or_default();
-    run_blocking(move || super::super::pico::pico_get_device_status_dto(port, None)).await
+    run_blocking(move || super::super::pico::pico_get_device_status_dto(&backend, port, None)).await
 }
 
 /// Frontend `pico_set_breakin_mode` command.
 #[tauri::command]
 pub async fn pico_set_breakin_mode(
+    state: tauri::State<'_, PanadigaBackendState>,
     port_name: Option<String>,
     mode: u8,
 ) -> IpcResult<PicoDeviceStatusDto> {
+    let backend = state.inner().clone();
     let port = port_name.unwrap_or_default();
     run_blocking(move || {
-        super::super::pico::pico_execute_cold_break_in(port.clone(), mode)?;
-        super::super::pico::pico_get_device_status_dto(port, Some(mode))
+        super::super::pico::pico_execute_cold_break_in(&backend, port.clone(), mode)?;
+        super::super::pico::pico_get_device_status_dto(&backend, port, Some(mode))
     })
     .await
 }
@@ -86,29 +112,38 @@ pub async fn pico_set_breakin_mode(
 /// Frontend `pico_inject_ram_loader` command (Handshake + Backup + INJECT_LOADER CONFIRM + ERASE_NVRAM CONFIRM).
 #[tauri::command]
 pub async fn pico_inject_ram_loader(
+    state: tauri::State<'_, PanadigaBackendState>,
     port_name: Option<String>,
 ) -> IpcResult<InCircuitNvramEraseResult> {
+    let backend = state.inner().clone();
     let port = port_name.unwrap_or_default();
-    run_blocking(move || super::super::pico::pico_execute_in_circuit_erase_full(port)).await
+    run_blocking(move || super::super::pico::pico_execute_in_circuit_erase_full(&backend, port))
+        .await
 }
 
 /// Non-destructive 1st-Contact Read-Only Backup & Auto-Model Probe ("What's Next" protocol).
 #[tauri::command]
 pub async fn pico_first_contact_backup(
+    state: tauri::State<'_, PanadigaBackendState>,
     port_name: Option<String>,
 ) -> IpcResult<FirstContactBackupResult> {
+    let backend = state.inner().clone();
     let port = port_name.unwrap_or_default();
-    run_blocking(move || super::super::pico::pico_execute_first_contact_backup(port)).await
+    run_blocking(move || super::super::pico::pico_execute_first_contact_backup(&backend, port))
+        .await
 }
 
 /// Frontend `pico_send_serial_command` command for interactive USB CDC terminal.
 #[tauri::command]
 pub async fn pico_send_serial_command(
+    state: tauri::State<'_, PanadigaBackendState>,
     port_name: Option<String>,
     command: String,
 ) -> IpcResult<String> {
+    let backend = state.inner().clone();
     let port = port_name.unwrap_or_default();
-    run_blocking(move || super::super::pico::pico_send_raw_serial_command(port, command)).await
+    run_blocking(move || super::super::pico::pico_send_raw_serial_command(&backend, port, command))
+        .await
 }
 
 /// Discovers any currently mounted Raspberry Pi BOOTSEL drives (RPI-RP2 / RP2350).
@@ -153,32 +188,42 @@ pub async fn pico_flash_firmware(
 /// Starts the GDB TCP-to-Serial bridge server.
 #[tauri::command]
 pub fn start_gdb_bridge_command(
+    state: tauri::State<'_, PanadigaBackendState>,
     port_name: String,
     listen_addr: String,
 ) -> IpcResult<GdbBridgeStatus> {
-    super::super::pico::start_gdb_bridge(port_name, listen_addr).map_err(PanadigaIpcError::from)
+    super::super::pico::start_gdb_bridge(state.inner(), port_name, listen_addr)
+        .map_err(PanadigaIpcError::from)
 }
 
 /// Stops the GDB TCP-to-Serial bridge server.
 #[tauri::command]
-pub fn stop_gdb_bridge_command() -> IpcResult<GdbBridgeStatus> {
-    super::super::pico::stop_gdb_bridge().map_err(PanadigaIpcError::from)
+pub fn stop_gdb_bridge_command(
+    state: tauri::State<'_, PanadigaBackendState>,
+) -> IpcResult<GdbBridgeStatus> {
+    super::super::pico::stop_gdb_bridge(state.inner()).map_err(PanadigaIpcError::from)
 }
 
 /// Retrieves the current status of the GDB bridge server.
 #[tauri::command]
-pub fn get_gdb_bridge_status_command() -> IpcResult<GdbBridgeStatus> {
-    super::super::pico::get_gdb_bridge_status().map_err(PanadigaIpcError::from)
+pub fn get_gdb_bridge_status_command(
+    state: tauri::State<'_, PanadigaBackendState>,
+) -> IpcResult<GdbBridgeStatus> {
+    super::super::pico::get_gdb_bridge_status(state.inner()).map_err(PanadigaIpcError::from)
 }
 
 /// Retrieves the current AM34 CPU register file state.
 #[tauri::command]
-pub fn get_am34_registers_command() -> IpcResult<Am34RegisterState> {
-    super::super::pico::get_am34_registers().map_err(PanadigaIpcError::from)
+pub fn get_am34_registers_command(
+    state: tauri::State<'_, PanadigaBackendState>,
+) -> IpcResult<Am34RegisterState> {
+    super::super::pico::get_am34_registers(state.inner()).map_err(PanadigaIpcError::from)
 }
 
 /// Retrieves recorded GDB RSP packet telemetry events from the introspective ring buffer.
 #[tauri::command]
-pub fn get_gdb_telemetry_command() -> IpcResult<Vec<GdbPacketTelemetryEvent>> {
-    Ok(super::super::pico::get_gdb_telemetry())
+pub fn get_gdb_telemetry_command(
+    state: tauri::State<'_, PanadigaBackendState>,
+) -> IpcResult<Vec<GdbPacketTelemetryEvent>> {
+    Ok(super::super::pico::get_gdb_telemetry(state.inner()))
 }

@@ -263,6 +263,44 @@
       "bgoHaltWarningTitle": "BOOT.BIN interrompido por BGO driver init failed (boot_panic_or_halt_7812)",
       "bgoHaltWarningBody": "FUN_4400836f (bgo_driver_init) falhou no modo NORMAL antes de fmu_sd_dispatcher(1); portanto MAIN e _dev_SERIAL (PANARSP) não estão ativos nesta sessão.",
       "diagwatchReadNvram": "DIAGWATCH Ler NVRAM"
+    },
+    "sections": {
+      "toolbarAria": "Filtro rápido de painéis da bancada Pico",
+      "label": "Seções:",
+      "empty": "Nenhuma seção disponível.",
+      "all": "Visão Completa",
+      "diag": "Diagnósticos P7501",
+      "bridge": "SC0 Bridge",
+      "gdb": "GDB & Ghidra",
+      "terminal": "Pinagem & Terminal"
+    },
+    "metrics": {
+      "vddTitle": "Tensão VDD (ADC0 / GP26)",
+      "vddUnit": "Volts",
+      "railNominal": "Trilho de 3.3V Estabilizado (Nominal)",
+      "railActive": "Alvo Ativo ({{voltage}}V >= {{threshold}}V)",
+      "railLow": "VDD < {{threshold}}V (Desligado / Cabo Solto)",
+      "badgePowered": "POWERED",
+      "badgeLowRail": "LOW RAIL",
+      "badgeUnpowered": "UNPOWERED",
+      "coreTitle": "Estado do Núcleo AM34",
+      "flashDetected": "Flash NOR Detectada: {{mb}} MB",
+      "uartChannel": "Canal P7501 Async UART (115200 8N1)",
+      "badgeOcdActive": "OCD ACTIVE",
+      "badgeReady": "PRONTO (3.3V)",
+      "badgeStandby": "STANDBY",
+      "busFreqTitle": "Frequência do Barramento",
+      "busFreqUnit": "MHz",
+      "wdtStatus": "WDT {{timeout}}ms · {{src}} ({{rec}} rec)",
+      "wdtStatusWithStage": "WDT {{timeout}}ms · {{src}} [{{stage}}] ({{rec}} rec)",
+      "legacyChannel": "P7501 UART 115200 / PIO Legado",
+      "wdtBadge": "WDT {{timeout}}ms",
+      "breakinTitle": "Modo Cold Break-In",
+      "breakinValue": "Modo {{mode}}",
+      "breakinSubtitle": "Captura síncrona na subida de reset",
+      "badgeRecommended": "RECOMENDADO",
+      "badgeCustom": "CUSTOM",
+      "empty": "Nenhuma métrica de telemetria disponível."
     }
   },
   "nvram": {
@@ -755,7 +793,7 @@
           "mem515": "Mem @ 515B2E38",
           "xmem840": "XMem Bin @ 84000000",
           "dumpnor": "Dump NOR 8MB (PANADMP1)",
-          "regsDecode": "REGS (Decodificar  12x u32)"
+          "regsDecode": "REGS (Decodificar 12x u32)"
         }
       },
       "DIAGWATCH": {
@@ -861,6 +899,10 @@
         "label": "Versão & Banner Firmware",
         "description": "Exibe identificação completa da compilação RP2040/RP2350 em execução na sonda."
       },
+      "WDT": {
+        "label": "Watchdog Hardware (WDT)",
+        "description": "Audita o watchdog de hardware não-desativável (4000ms), contador de recuperações, origem do boot e último comando."
+      },
       "LED": {
         "label": "Modo LED Onboard GP25",
         "description": "Alterna o padrão visual do LED onboard (com lock manual contra polling) ou restaura AUTO.",
@@ -912,7 +954,11 @@
       "successTitle": "Kit SD Unbrick gravado e verificado",
       "verifyInputLabel": "Diretório SD para Verificar",
       "verifyBtn": "Verificar Mídia SD",
-      "checksEmpty": "Nenhuma checagem executada ainda. Clique em Verificar Mídia SD."
+      "checksEmpty": "Nenhuma checagem executada ainda. Clique em Verificar Mídia SD.",
+      "inspectDiskLabel": "Alvo Físico / Volume FAT16 / .img (ex: E: ou sd.img)",
+      "inspectDiskBtn": "Auditar Disco/BPB FAT16",
+      "inspectDiskError": "Falha ao inspecionar MBR/BPB/FAT16 do cartão SD",
+      "inspectDiskRequired": "Informe a unidade (ex: E:) ou caminho da imagem SD."
     },
     "tbc": {
       "title": "MAIN 3410PQ TBC Passthrough (E-E) & RSP _dev_SERIAL",

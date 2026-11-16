@@ -1,10 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import {
+  buildCanonicalHardwareSsotSpec,
   CANONICAL_HARDWARE_SSOT_SPEC,
   PICO_MAX_VDD_CEILING_VOLTS,
   PICO_MIN_VDD_THRESHOLD_VOLTS,
   PICO_RP2350_CDC_PID,
 } from '@/constants';
+import hardwareCatalog from '../../../../crates/panadiga-core/src/ssot/hardware_catalog.json';
 import { parseDiagnosticOutput, parseP7501DumpBytes } from './diagnosticParser';
 import { simulateMockDiagnostic } from '@/test/mocks/mockDiagnostics';
 
@@ -116,5 +118,55 @@ describe('diagnosticParser & Hardware SSOT Consistency', () => {
     expect(details).toContain('FUN_400db60c');
     expect(details).toContain('Ram88000194');
     expect(details).toContain('-0x1637e');
+  });
+
+  it('extracts WDT active status and Stage-1 SD funnel findings (SD_HW_OK, SD_DIAG_LOAD_FAIL, ODD_NO_TRAY_80045300)', () => {
+    const wdt = simulateMockDiagnostic('WDT');
+    expect(wdt.success).toBe(true);
+    expect((wdt.findings ?? []).map((f) => f.code)).toContain('WDT_ACTIVE');
+
+    const funnel = parseDiagnosticOutput(
+      'DIAGWATCH',
+      'DIAGWATCH 6000 JIG NONE',
+      '... SD init end\nSD diag load failed[0].\n** can not close tray **\nDIAGWATCH: OK',
+      6000,
+    );
+    expect(funnel.success).toBe(true);
+    expect((funnel.findings ?? []).map((f) => f.code)).toEqual([
+      'SD_HW_OK',
+      'SD_DIAG_LOAD_FAIL',
+      'ODD_NO_TRAY_80045300',
+    ]);
+  });
+
+  it('derives both pt-BR and en-US SSOT specs cleanly from shared hardware_catalog.json', () => {
+    const ptSpec = CANONICAL_HARDWARE_SSOT_SPEC;
+    const enSpec = buildCanonicalHardwareSsotSpec('en-US');
+    const catalogIds = hardwareCatalog.commands.map((c) => c.id);
+
+    expect(ptSpec.pico_commands.map((c) => c.id)).toEqual(catalogIds);
+    expect(enSpec.pico_commands.map((c) => c.id)).toEqual(catalogIds);
+    expect(ptSpec.flash_geometries.map((g) => g.nvram_base_hex)).toEqual([
+      '0x801F0000',
+      '0x803F0000',
+      '0x807F0000',
+      '0x80FE0000',
+    ]);
+
+    for (const cmd of [...ptSpec.pico_commands, ...enSpec.pico_commands]) {
+      expect(cmd.syntax).not.toContain('{{');
+      if (cmd.default_arg !== null && cmd.default_arg !== undefined) {
+        expect(cmd.default_arg).not.toContain('{{');
+      }
+      for (const opt of cmd.arg_options) {
+        expect(opt.value).not.toContain('{{');
+      }
+    }
+
+    const dump = ptSpec.pico_commands.find((c) => c.id === 'DUMP');
+    const drv = ptSpec.pico_commands.find((c) => c.id === 'DRVPANA');
+    expect(dump?.default_arg).toBe('0x807F0000 16');
+    expect(dump?.arg_placeholder).toBe('0x807F0000 16');
+    expect(drv?.arg_options[1]?.value).toBe('PASS 0x4d415453 0x48495441');
   });
 });

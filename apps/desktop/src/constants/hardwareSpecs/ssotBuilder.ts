@@ -105,11 +105,11 @@ export function buildCanonicalHardwareSsotSpec(locale: SupportedLocale = 'pt-BR'
       description: text.description,
       syntax: bp.syntax,
       arg_label: text.arg_label ?? null,
-      arg_placeholder: text.arg_placeholder ?? null,
+      arg_placeholder: bp.default_arg ?? text.arg_placeholder ?? null,
       default_arg: bp.default_arg,
       arg_options: options,
       dangerous: Boolean(bp.dangerous),
-      timeout_ms: bp.timeout_ms ?? 3000,
+      timeout_ms: bp.timeout_ms,
     };
   });
 

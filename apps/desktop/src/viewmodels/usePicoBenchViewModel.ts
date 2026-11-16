@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef } from 'react';
-import type { PicoDiagnosticResult } from '@/models';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { PicoBenchSectionFilter, PicoDiagnosticResult } from '@/models';
 import { isAndroidNativeBridgeAvailable } from '@/services/androidBridge';
+import { isTargetPowered, resolveEffectiveVddVolts } from '@/utils/formatters';
 import { useHardwareSsot } from './useHardwareSsot';
 import { usePicoDevice } from './usePicoDevice';
 import { usePicoDiagnostics } from './usePicoDiagnostics';
@@ -64,6 +65,30 @@ export function usePicoBenchViewModel() {
     }, [setDeviceStatus]),
   });
 
+  const [sectionFilter, setSectionFilter] = useState<PicoBenchSectionFilter>('all');
+  const showsSection = useCallback(
+    (section: Exclude<PicoBenchSectionFilter, 'all'>): boolean =>
+      sectionFilter === 'all' || sectionFilter === section,
+    [sectionFilter]
+  );
+
+  const effectiveDeviceStatus = useMemo(() => {
+    if (!device.deviceStatus || !ssot) {
+      return device.deviceStatus;
+    }
+    const effectiveVddVolts = resolveEffectiveVddVolts(
+      device.deviceStatus.vdd_volts,
+      diagnostics.latestResult?.vdd_volts
+    );
+    return {
+      ...device.deviceStatus,
+      vdd_volts: effectiveVddVolts,
+      target_powered:
+        isTargetPowered(effectiveVddVolts, ssot.thresholds.min_vdd_threshold_volts) ||
+        device.deviceStatus.target_powered,
+    };
+  }, [device.deviceStatus, diagnostics.latestResult?.vdd_volts, ssot]);
+
   const handleSendCommand = useCallback(() => {
     return console.sendCommand(device.selectedPort);
   }, [console, device.selectedPort]);
@@ -76,8 +101,13 @@ export function usePicoBenchViewModel() {
     ssotError,
     reloadSsot,
 
+    // Section Filter & Derived Effective Rail Telemetry (MVVM Strict)
+    sectionFilter,
+    setSectionFilter,
+    showsSection,
+
     // Device & Connection Subsystem
-    deviceStatus: device.deviceStatus,
+    deviceStatus: effectiveDeviceStatus,
     isFlashing: device.isFlashing,
     availablePorts: device.availablePorts,
     selectedPort: device.selectedPort,

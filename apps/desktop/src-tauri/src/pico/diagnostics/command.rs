@@ -14,6 +14,15 @@ pub use panadiga_core::pico::diag_rows::{
     PincheckRowSpec as PincheckRowDto,
 };
 
+/// Semantic boot stage or watchdog finding extracted from diagnostic output.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiagnosticFindingDto {
+    pub code: String,
+    pub severity: String,
+    pub summary: String,
+    pub detail: String,
+}
+
 /// Structured result of running any granular Pico firmware diagnostic command.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PicoDiagnosticResultDto {
@@ -30,6 +39,7 @@ pub struct PicoDiagnosticResultDto {
     pub transition_rows: Vec<BusTransitionRowDto>,
     pub dump_rows: Vec<DumpWordRowDto>,
     pub captured_bytes: Option<u32>,
+    pub findings: Vec<DiagnosticFindingDto>,
 }
 
 /// Validates command ID & optional argument against SSOT catalog and prevents CDC injection.

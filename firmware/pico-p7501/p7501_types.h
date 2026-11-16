@@ -103,11 +103,31 @@ typedef enum p7501_adc_channel p7501_adc_channel_t;
 /** Target open-drain XRESET hold time (ms) for clean cold reboot. */
 #define P7501_RESET_ASSERT_MS        10U
 
+/** Extended diagnostic open-drain XRESET hold time (ms) for PIO/UART sync captures. */
+#define P7501_RESET_DIAG_ASSERT_MS   15U
+
+/** Pre-reset SW_UART settle window (ms) before asserting XRESET. */
+#define P7501_RESET_POST_SETTLE_MS   5U
+
 /** Settle window (us) between SW_UART setup and XRESET release. */
 #define P7501_RESET_SETTLE_US        10U
 
 /** Post-reset settle window (us). */
 #define P7501_POST_RESET_DELAY_US    200U
+
+/** Default JIG SW_UART LOW hold window (ms) matching Loader serial-boot strap latency. */
+#define P7501_JIG_DEFAULT_HOLD_MS    2500U
+
+/** Default / maximum capture & tracer window boundaries (ms). */
+#define P7501_CAPTURE_DEFAULT_MS     7500U
+#define P7501_CAPTURE_MAX_MS         120000U
+#define P7501_TRACE_MAX_MS           30000U
+#define P7501_FMU_PROBE_WINDOW_MS    4000U
+#define P7501_FMU_BATCH_WINDOW_MS    2000U
+#define P7501_UART_PROBE_WINDOW_MS   4500U
+
+/** Fail-closed PIO TX FIFO wait ceiling (us) preventing infinite TX blocking. */
+#define P7501_TX_FIFO_TIMEOUT_US     500000UL
 
 /* =========================================================================
  * Discrete P7501 Boot & Reset Sequence Profiles (SW_UART + XRESET)

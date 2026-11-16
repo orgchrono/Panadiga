@@ -4,8 +4,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{LazyLock, Mutex};
 use std::time::UNIX_EPOCH;
 
 use super::super::guardrails::QueryGuard;
@@ -19,15 +17,50 @@ struct CachedPdfEntry {
     chunks: Vec<Chunk>,
 }
 
-static PDF_MEMORY_CACHE: LazyLock<Mutex<HashMap<String, CachedPdfEntry>>> =
-    LazyLock::new(|| Mutex::new(load_disk_cache()));
+/// Scoped disk-backed PDF parse cache (read-only across Rayon threads, mutated on collector thread).
+#[derive(Debug, Default)]
+pub struct PdfDiskCache {
+    entries: HashMap<String, CachedPdfEntry>,
+    dirty: bool,
+}
 
-static PDF_CACHE_DIRTY: AtomicBool = AtomicBool::new(false);
+pub struct ParsedPdfResult {
+    pub chunks: Vec<Chunk>,
+    pub cache_update: Option<(String, u64, u64)>,
+}
 
-pub fn flush_disk_cache() {
-    if PDF_CACHE_DIRTY.swap(false, Ordering::SeqCst) {
-        let cache = PDF_MEMORY_CACHE.lock().unwrap_or_else(|e| e.into_inner());
-        persist_disk_cache(&cache);
+impl PdfDiskCache {
+    pub fn load() -> Self {
+        Self {
+            entries: load_disk_cache(),
+            dirty: false,
+        }
+    }
+
+    pub fn lookup(&self, key: &str, len: u64, mtime: u64) -> Option<Vec<Chunk>> {
+        self.entries
+            .get(key)
+            .filter(|entry| entry.file_len == len && entry.modified_secs == mtime)
+            .map(|entry| entry.chunks.clone())
+    }
+
+    pub fn insert(&mut self, key: String, file_len: u64, modified_secs: u64, chunks: Vec<Chunk>) {
+        self.entries.insert(
+            key,
+            CachedPdfEntry {
+                file_len,
+                modified_secs,
+                chunks,
+            },
+        );
+        self.dirty = true;
+    }
+
+    pub fn flush_if_dirty(&mut self) {
+        if self.dirty {
+            persist_disk_cache(&self.entries);
+            self.dirty = false;
+        }
     }
 }
 
@@ -82,27 +115,26 @@ fn is_readable_technical_text(text: &str) -> bool {
     alnum >= 40 && total > 0 && (printable * 100 / total) >= 80
 }
 
-fn lookup_cached_chunks(key: &str, len: u64, mtime: u64) -> Option<Vec<Chunk>> {
-    let cache = PDF_MEMORY_CACHE.lock().unwrap_or_else(|e| e.into_inner());
-    cache
-        .get(key)
-        .filter(|entry| entry.file_len == len && entry.modified_secs == mtime)
-        .map(|entry| entry.chunks.clone())
-}
-
 pub fn chunk_pdf_file(
     guard: &QueryGuard,
     subsystem: SubsystemType,
     file_path: &Path,
-) -> Vec<Chunk> {
+    cache: &PdfDiskCache,
+) -> ParsedPdfResult {
     let (key, len, mtime) = file_signature(file_path);
 
-    if let Some(chunks) = lookup_cached_chunks(&key, len, mtime) {
-        return chunks;
+    if let Some(chunks) = cache.lookup(&key, len, mtime) {
+        return ParsedPdfResult {
+            chunks,
+            cache_update: None,
+        };
     }
 
     let Ok(doc) = lopdf::Document::load(file_path) else {
-        return Vec::new();
+        return ParsedPdfResult {
+            chunks: Vec::new(),
+            cache_update: None,
+        };
     };
 
     let doc_title = file_path
@@ -165,15 +197,8 @@ pub fn chunk_pdf_file(
         }
     }
 
-    let mut cache = PDF_MEMORY_CACHE.lock().unwrap_or_else(|e| e.into_inner());
-    cache.insert(
-        key,
-        CachedPdfEntry {
-            file_len: len,
-            modified_secs: mtime,
-            chunks: chunks.clone(),
-        },
-    );
-    PDF_CACHE_DIRTY.store(true, Ordering::SeqCst);
-    chunks
+    ParsedPdfResult {
+        chunks,
+        cache_update: Some((key, len, mtime)),
+    }
 }

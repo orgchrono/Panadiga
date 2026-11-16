@@ -10,7 +10,7 @@ pub fn identify_firmware_revision(data: &[u8]) -> FirmwareRevisionProfile {
     let has_slogon = data
         .windows(8)
         .any(|w| w == b"SLOGON\0\0" || w == b"MMODE\0\0\0");
-    let has_s211 = data.windows(6).any(|w| w == b"R6-MV4");
+    let has_s211 = data.windows(6).any(|w| w == b"R6-MV4") || data.windows(4).any(|w| w == b"S211");
     if has_slogon && data.len() < 0x18_0000 {
         return FirmwareRevisionProfile {
             stage: "DRV".to_string(),

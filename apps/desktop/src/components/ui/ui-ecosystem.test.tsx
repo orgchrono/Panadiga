@@ -5,6 +5,9 @@ import { ToastProvider, useToast } from '@/context/ToastContext';
 import { WorkbenchModeProvider, useWorkbenchMode } from '@/context/WorkbenchModeContext';
 import { SettingsView } from '@/views/SettingsView';
 import { emitLocalEvent } from '@/services/ipc';
+import { store } from '@/store';
+import { resetPipeline, resetWorkbenchPreferences } from '@/store/slices/workbenchSlice';
+import { clearToasts } from '@/store/slices/toastSlice';
 import {
   DraggableBenchHud,
   GuidedPipelineBar,
@@ -15,6 +18,9 @@ import {
 describe('React UI Ecosystem Primitives (Resizable, RangeDnD, Pipeline, HUD, Sonner)', () => {
   beforeEach(() => {
     window.localStorage.clear();
+    store.dispatch(resetWorkbenchPreferences());
+    store.dispatch(resetPipeline());
+    store.dispatch(clearToasts());
   });
 
   it('ResizableSplitPane adjusts ratio via keyboard and resets on double-click', () => {

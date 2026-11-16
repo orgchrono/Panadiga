@@ -5,6 +5,7 @@ import { useToast } from '@/context/ToastContext';
 import {
   computePreviewBlocks,
   resolveEffectiveTargetGb,
+  type CapacityPassthroughMode,
   type PatchMode,
 } from '@/components/hdd/capacity/capacityHelpers';
 
@@ -16,6 +17,7 @@ export function useHddCapacityViewModel() {
   const [mode, setMode] = useState<PatchMode>('dynamic');
   const [targetGb, setTargetGb] = useState<number>(250);
   const [limitInDynamicMode, setLimitInDynamicMode] = useState<boolean>(false);
+  const [passthroughMode, setPassthroughMode] = useState<CapacityPassthroughMode>('unchanged');
   const [inspection, setInspection] = useState<MainCapacityInspectionReport | null>(null);
   const [patchReport, setPatchReport] = useState<MainCapacityPatchReport | null>(null);
   const [inspecting, setInspecting] = useState<boolean>(false);
@@ -71,11 +73,13 @@ export function useHddCapacityViewModel() {
     setPatching(true);
     try {
       const effectiveTargetGb = resolveEffectiveTargetGb(mode, targetGb, limitInDynamicMode);
+      const effectivePt = passthroughMode === 'unchanged' ? undefined : passthroughMode;
       const res = await invokeCommand<MainCapacityPatchReport>('apply_hdd_capacity_patch', {
         inputPath: inputPath.trim() || undefined,
         outputPath: outputPath.trim() || undefined,
         mode,
         targetGb: effectiveTargetGb ?? undefined,
+        passthroughMode: effectivePt,
       });
       if (!mountedRef.current) return;
       setPatchReport(res);
@@ -98,7 +102,7 @@ export function useHddCapacityViewModel() {
         setPatching(false);
       }
     }
-  }, [inputPath, limitInDynamicMode, mode, outputPath, showToast, targetGb]);
+  }, [inputPath, limitInDynamicMode, mode, outputPath, passthroughMode, showToast, targetGb]);
 
   return {
     inputPath,
@@ -111,6 +115,8 @@ export function useHddCapacityViewModel() {
     setTargetGb,
     limitInDynamicMode,
     setLimitInDynamicMode,
+    passthroughMode,
+    setPassthroughMode,
     inspection,
     patchReport,
     inspecting,

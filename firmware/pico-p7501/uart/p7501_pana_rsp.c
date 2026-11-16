@@ -10,6 +10,7 @@
 #include "uart/p7501_pana_dumpnor.h"
 #include "uart/p7501_uart_pio_engine.h"
 #include "common/p7501_hex.h"
+#include "hal/p7501_hw.h"
 #include "hal/p7501_led.h"
 #include "hal/p7501_watchdog.h"
 #include "p7501_types.h"
@@ -141,7 +142,8 @@ void p7501_cmd_pana_rsp(const char *arg) {
     }
 
     memset(&s_cap, 0, sizeof(s_cap));
-    p7501_pio_enforce_nsw5v_hiz();
+    p7501_wdt_set_stage(P7501_WDT_STAGE_RESET_SYNC);
+    p7501_hw_enforce_nsw5v_hiz();
     p7501_led_set_auto_mode(LED_MODE_BUS_ACTIVE);
     printf("=== PANARSP PIO1 (baud=%" PRIu32 " ms=%" PRIu32 " boot=%d hold=%" PRIu32 " action=%d) ===\n",
            p7501_pio_get_baud(),
@@ -188,6 +190,7 @@ void p7501_cmd_pana_rsp(const char *arg) {
     bool dump_ftr = false;
     uint32_t dump_bytes = 0u;
     if (triggered) {
+        p7501_wdt_set_stage(P7501_WDT_STAGE_TX_WAIT);
         const bool need_handshake = spec.send_magic_prefix ||
                                     (spec.action == PANA_RSP_ACT_MAGIC) ||
                                     (spec.action == PANA_RSP_ACT_PASSTHROUGH) ||

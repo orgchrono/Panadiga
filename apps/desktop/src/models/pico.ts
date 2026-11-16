@@ -32,7 +32,15 @@ export interface PicoDeviceStatus {
   open_bus_low: number;
   ram_loader_injected: boolean;
   last_keepalive: string;
+  wdt_active?: boolean;
+  wdt_timeout_ms?: number;
+  wdt_recoveries?: number;
+  wdt_reboot_src?: string;
+  wdt_fault_stage?: string;
+  wdt_last_cmd?: string;
 }
+
+export type PicoBenchSectionFilter = 'all' | 'diag' | 'bridge' | 'gdb' | 'terminal';
 
 export type LogLevel = 'info' | 'warn' | 'error' | 'success' | 'tx' | 'rx';
 

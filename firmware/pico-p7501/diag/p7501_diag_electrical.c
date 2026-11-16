@@ -6,12 +6,12 @@
  */
 
 #include "diag/p7501_diag_electrical.h"
+#include "common/p7501_hex.h"
 #include "hal/p7501_hw.h"
 #include "hal/p7501_watchdog.h"
 #include "pico/stdlib.h"
 #include "hardware/gpio.h"
 #include <stdio.h>
-#include <stdlib.h>
 #include <inttypes.h>
 
 void p7501_diag_sample_transitions(
@@ -26,11 +26,14 @@ void p7501_diag_sample_transitions(
     bool last_txd    = ((all & (1UL << P7501_PIN_TXD)) != 0U);
     bool last_xreset = ((all & (1UL << P7501_PIN_XRESET)) != 0U);
 
-    const absolute_time_t end_time = make_timeout_time_ms(duration_ms);
+    const uint64_t t0_us = time_us_64();
+    const uint64_t deadline_us = t0_us + ((uint64_t)duration_ms * 1000ULL);
     uint32_t wdt_iter = 0U;
-    while (get_absolute_time() < end_time) {
+    while (time_us_64() < deadline_us) {
         if ((++wdt_iter & 0x0FFFu) == 0U) {
-            p7501_wdt_kick();
+            if (!p7501_wdt_loop_step(t0_us, deadline_us, true, NULL)) {
+                break;
+            }
         }
         all = gpio_get_all();
         const bool cur_rxd    = ((all & (1UL << P7501_PIN_RXD)) != 0U);
@@ -58,9 +61,11 @@ void p7501_diag_sample_transitions(
 void p7501_diag_cmd_sniff(const char *arg) {
     uint32_t duration_ms = 250U;
     if ((arg != NULL) && (*arg != '\0')) {
-        duration_ms = (uint32_t)atoi(arg);
-        if (duration_ms == 0U) { duration_ms = 250U; }
-        if (duration_ms > 10000U) { duration_ms = 10000U; }
+        if (!p7501_parse_u32_strict(arg, &duration_ms) || (duration_ms == 0U)) {
+            duration_ms = 250U;
+        } else if (duration_ms > 10000U) {
+            duration_ms = 10000U;
+        }
     }
 
     printf("[SNIFF] Passively monitoring P7501 GP2/RXD, GP3/NSW5V, GP4/TXD, GP5/XRESET for %" PRIu32 " ms...\n",
@@ -156,7 +161,7 @@ void p7501_diag_cmd_pincheck(void) {
            vdd_hiz, vdd_pd, vdd_pu);
 
     p7501_hw_reset_assert();
-    sleep_ms(15);
+    p7501_wdt_sleep_ms(P7501_RESET_DIAG_ASSERT_MS);
     const int rst_low_gp2 = gpio_get(P7501_PIN_RXD) ? 1 : 0;
     const int rst_low_gp3 = gpio_get(P7501_PIN_NSW5V) ? 1 : 0;
     const int rst_low_gp4 = gpio_get(P7501_PIN_TXD) ? 1 : 0;

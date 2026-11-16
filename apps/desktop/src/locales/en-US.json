@@ -263,6 +263,44 @@
       "bgoHaltWarningTitle": "BOOT.BIN halted on BGO driver init failed (boot_panic_or_halt_7812)",
       "bgoHaltWarningBody": "FUN_4400836f (bgo_driver_init) failed in NORMAL mode before fmu_sd_dispatcher(1), so MAIN and _dev_SERIAL (PANARSP) are not running in this session.",
       "diagwatchReadNvram": "DIAGWATCH Read NVRAM"
+    },
+    "sections": {
+      "toolbarAria": "Pico workbench quick section filter",
+      "label": "Sections:",
+      "empty": "No sections available.",
+      "all": "Overview",
+      "diag": "P7501 Diagnostics",
+      "bridge": "SC0 Bridge",
+      "gdb": "GDB & Ghidra",
+      "terminal": "Pinout & Console"
+    },
+    "metrics": {
+      "vddTitle": "Target VDD Rail (ADC0 / GP26)",
+      "vddUnit": "Volts",
+      "railNominal": "3.3V Rail Stabilized (Nominal)",
+      "railActive": "Target Active ({{voltage}}V >= {{threshold}}V)",
+      "railLow": "VDD < {{threshold}}V (Off / Unplugged)",
+      "badgePowered": "POWERED",
+      "badgeLowRail": "LOW RAIL",
+      "badgeUnpowered": "UNPOWERED",
+      "coreTitle": "AM34 Core State",
+      "flashDetected": "NOR Flash Detected: {{mb}} MB",
+      "uartChannel": "P7501 Async UART Channel (115200 8N1)",
+      "badgeOcdActive": "OCD ACTIVE",
+      "badgeReady": "READY (3.3V)",
+      "badgeStandby": "STANDBY",
+      "busFreqTitle": "Bus Clock Frequency",
+      "busFreqUnit": "MHz",
+      "wdtStatus": "WDT {{timeout}}ms · {{src}} ({{rec}} rec)",
+      "wdtStatusWithStage": "WDT {{timeout}}ms · {{src}} [{{stage}}] ({{rec}} rec)",
+      "legacyChannel": "P7501 UART 115200 / Legacy PIO",
+      "wdtBadge": "WDT {{timeout}}ms",
+      "breakinTitle": "Cold Break-In Mode",
+      "breakinValue": "Mode {{mode}}",
+      "breakinSubtitle": "Reset-edge synchronous capture",
+      "badgeRecommended": "RECOMMENDED",
+      "badgeCustom": "CUSTOM",
+      "empty": "No telemetry metrics available."
     }
   },
   "nvram": {
@@ -861,6 +899,10 @@
         "label": "Firmware Version & Banner",
         "description": "Displays full RP2040/RP2350 firmware build banner running on the probe."
       },
+      "WDT": {
+        "label": "Hardware Watchdog (WDT)",
+        "description": "Audits the non-overridable 4000ms hardware watchdog, recovery counter, boot source, and last command latency."
+      },
       "LED": {
         "label": "Onboard LED GP25 Mode",
         "description": "Switches visual blink pattern on the Pico onboard LED (with manual polling lock) or restores AUTO.",
@@ -912,7 +954,11 @@
       "successTitle": "SD Unbrick Kit Written & Verified",
       "verifyInputLabel": "SD Directory to Verify",
       "verifyBtn": "Verify SD Media",
-      "checksEmpty": "No SD verification checks run yet."
+      "checksEmpty": "No SD verification checks run yet.",
+      "inspectDiskLabel": "Raw SD Target / FAT16 Volume / .img (e.g. E: or sd.img)",
+      "inspectDiskBtn": "Audit Disk/BPB FAT16",
+      "inspectDiskError": "Failed inspecting raw SD MBR/BPB/FAT16",
+      "inspectDiskRequired": "Please enter a drive letter (e.g. E:) or SD image path."
     },
     "tbc": {
       "title": "MAIN 3410PQ TBC Passthrough (E-E) & _dev_SERIAL RSP",

@@ -215,6 +215,7 @@ export interface MainCapacityPatchReport {
   applied_sectors_512b: number;
   mbr_superblocks_updated: boolean;
   repacked_container_size?: number | null;
+  passthrough_mode?: string | null;
   original_sha256: string;
   patched_sha256: string;
   inspection_before: MainCapacityInspectionReport;

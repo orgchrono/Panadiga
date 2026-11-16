@@ -189,7 +189,7 @@ static void cli_cmd_bootsel(const char *arg) {
     fflush(stdout);
     p7501_wdt_kick();
     p7501_wdt_sleep_ms(50U);
-    p7501_wdt_kick();
+    p7501_wdt_prepare_bootsel_reset();
     reset_usb_boot(0U, 0U);
 }
 

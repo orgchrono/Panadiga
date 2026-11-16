@@ -3,14 +3,16 @@
 use std::io::Write;
 use std::time::{Duration, Instant};
 
-use crate::pico::serial::{ensure_serial_port_unlocked, read_serial_response_complete};
+use crate::pico::serial::read_serial_response_complete;
 use crate::pico::types::extract_port_name;
+use crate::state::PanadigaBackendState;
 
 use super::command::{PicoDiagnosticResultDto, compose_diagnostic_command};
 use super::parser::parse_diagnostic_output;
 
 /// Executes a granular diagnostic command against the connected USB CDC Pico.
 pub fn execute_diagnostic_on_port(
+    backend: &PanadigaBackendState,
     port_name: &str,
     command_id: &str,
     arg: Option<&str>,
@@ -28,19 +30,20 @@ pub fn execute_diagnostic_on_port(
         );
     }
 
-    let _io_guard = crate::pico::serial::lock_serial_io();
-    ensure_serial_port_unlocked(&clean)?;
-    let mut port = panadiga_core::pico::cdc::open_cdc(&clean, 115200, Duration::from_millis(4000))
-        .map_err(|e| format!("Falha ao abrir porta '{}': {}", clean, e))?;
+    backend.with_exclusive_serial(&clean, || {
+        let mut port =
+            panadiga_core::pico::cdc::open_cdc(&clean, 115_200, Duration::from_millis(4000))
+                .map_err(|e| format!("Falha ao abrir porta '{}': {}", clean, e))?;
 
-    let wire = format!("{}\r\n", raw_cmd);
-    port.write_all(wire.as_bytes())
-        .map_err(|e| format!("Falha ao enviar '{}' para Pico: {}", raw_cmd, e))?;
-    let _ = port.flush();
+        let wire = format!("{}\r\n", raw_cmd);
+        port.write_all(wire.as_bytes())
+            .map_err(|e| format!("Falha ao enviar '{}' para Pico: {}", raw_cmd, e))?;
+        let _ = port.flush();
 
-    let raw_out = read_serial_response_complete(&mut *port, timeout)?;
-    let elapsed_ms = started.elapsed().as_millis() as u64;
-    Ok(parse_diagnostic_output(
-        command_id, &raw_cmd, &raw_out, elapsed_ms,
-    ))
+        let raw_out = read_serial_response_complete(&mut *port, timeout)?;
+        let elapsed_ms = started.elapsed().as_millis() as u64;
+        Ok(parse_diagnostic_output(
+            command_id, &raw_cmd, &raw_out, elapsed_ms,
+        ))
+    })
 }

@@ -40,9 +40,7 @@ void p7501_cmd_piologic(const char *arg) {
 
     p7501_logic_parse_args_ex(arg, &boot, &sample_khz, &ctrl_only);
 
-    /* Hardware safety invariant: GP3 (NSW5V) MUST stay Hi-Z Input without pulls. */
-    gpio_set_dir(P7501_PIN_NSW5V, GPIO_IN);
-    gpio_disable_pulls(P7501_PIN_NSW5V);
+    p7501_hw_enforce_nsw5v_hiz();
 
     if (!pio_can_add_program(pio0, &p7501_logic_sampler_program)) {
         printf("PIOLOGIC: ERROR (No PIO0 instruction slots left)\n");
@@ -91,6 +89,7 @@ void p7501_cmd_piologic(const char *arg) {
     pio0->fdebug = (1u << (PIO_FDEBUG_RXSTALL_LSB + sm));
     pio_sm_set_enabled(pio0, sm, true);
 
+    p7501_wdt_set_stage(P7501_WDT_STAGE_RX_WAIT);
     while (sample_idx < total_samples && time_us_64() < hard_deadline_us) {
         if (release_xreset_pending && sample_idx >= reset_release_sample) {
             p7501_hw_reset_release();
@@ -101,13 +100,15 @@ void p7501_cmd_piologic(const char *arg) {
             hold_jig_active = false;
         }
         if (pio_sm_is_rx_fifo_empty(pio0, sm)) {
-            p7501_wdt_kick();
+            if (p7501_wdt_poll_abort()) {
+                break;
+            }
             tight_loop_contents();
             continue;
         }
         const uint32_t w = pio_sm_get(pio0, sm);
-        if ((sample_idx & 0x0FFFu) == 0u) {
-            p7501_wdt_kick();
+        if ((sample_idx & 0x0FFFu) == 0u && p7501_wdt_poll_abort()) {
+            break;
         }
         if (w != rep_word) {
             for (uint32_t nib = 0u; nib < 8u; ++nib) {

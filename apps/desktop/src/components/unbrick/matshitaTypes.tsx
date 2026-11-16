@@ -1,10 +1,28 @@
 import { ShieldAlert } from 'lucide-react';
+import type {
+  FrmUnlockVerificationSummary,
+  PackUnlockFrmResult,
+  SerialCliResponse,
+} from '@/models';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui';
 
 export interface MatshitaAsyncSlice<T> {
   loading: boolean;
   data: T | null;
   error: string | null;
+}
+
+export interface MatshitaSerialFrmProps {
+  serialState: MatshitaAsyncSlice<SerialCliResponse>;
+  frmVerifyState: MatshitaAsyncSlice<FrmUnlockVerificationSummary>;
+  frmPackState: MatshitaAsyncSlice<PackUnlockFrmResult>;
+  onRunSerial: (command: string, unlockPass?: boolean) => Promise<SerialCliResponse | null>;
+  onVerifyFrm: (containerKind: string, frmPath: string) => Promise<FrmUnlockVerificationSummary | null>;
+  onPackFrm: (params: {
+    containerKind: string;
+    outPath?: string;
+    payloadHex?: string;
+  }) => Promise<PackUnlockFrmResult | null>;
 }
 
 export const MATSHITA_SELECT_CLS =
