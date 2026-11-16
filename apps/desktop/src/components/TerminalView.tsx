@@ -24,7 +24,7 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
     if (autoScroll && scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [logs, autoScroll]);
+  }, [logs, autoScroll, scrollRef]);
 
   const levelColor = (level: SerialLogEntry['level']) => {
     switch (level) {

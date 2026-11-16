@@ -1,5 +1,6 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import type { PicoDiagnosticResult } from '@/models';
+import { isAndroidNativeBridgeAvailable } from '@/services/androidBridge';
 import { useHardwareSsot } from './useHardwareSsot';
 import { usePicoDevice } from './usePicoDevice';
 import { usePicoDiagnostics } from './usePicoDiagnostics';
@@ -39,7 +40,9 @@ export function usePicoBenchViewModel() {
     },
     [applyMeasuredVoltage]
   );
-  telemetryRef.current = handleDiagnosticTelemetry;
+  useEffect(() => {
+    telemetryRef.current = handleDiagnosticTelemetry;
+  }, [handleDiagnosticTelemetry]);
 
   const diagnostics = usePicoDiagnostics({
     selectedPort: device.selectedPort,
@@ -108,6 +111,8 @@ export function usePicoBenchViewModel() {
     am34Registers: gdb.am34Registers,
     gdbTelemetry: gdb.telemetry,
     isGdbStarting: gdb.isGdbStarting,
+    gdbError: gdb.gdbError,
+    isAndroidHost: isAndroidNativeBridgeAvailable(),
     startGdbServer: gdb.startGdbServer,
     stopGdbServer: gdb.stopGdbServer,
     launchExternalTool: gdb.launchTool,

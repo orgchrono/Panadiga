@@ -11,6 +11,7 @@
 
 #include "hal/p7501_hw.h"
 #include "hal/p7501_led.h"
+#include "hal/p7501_watchdog.h"
 #include "p7501_types.h"
 #include "uart/p7501_uart_codec.h"
 #include "uart/p7501_uart_pio_engine.h"
@@ -123,6 +124,7 @@ void p7501_cmd_pwrtrace(const char *arg) {
     absolute_time_t next_adc_t = make_timeout_time_ms(10u);
 
     while (!time_reached(end_t)) {
+        p7501_wdt_kick();
         if (p7501_pio_poll_sw_uart_release()) {
             sw_rel_seen = true;
             sw_rel_ms = (uint32_t)((time_us_64() - t0_us) / 1000ULL);

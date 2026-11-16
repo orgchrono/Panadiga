@@ -222,12 +222,18 @@ fn run_bridge_worker(
                     break;
                 }
             }
-            Err(ref e) if e.kind() == std::io::ErrorKind::TimedOut => {
+            Ok(_) => {
+                if stop_requested {
+                    break;
+                }
+                thread::sleep(Duration::from_millis(5));
+            }
+            Err(ref e) if crate::pico::is_transient_io_error(e) => {
                 if stop_requested {
                     break;
                 }
             }
-            _ => break,
+            Err(_) => break,
         }
     }
 
@@ -251,7 +257,15 @@ pub fn start_sc0_bridge_session(
     baud_rate: Option<u32>,
     boot_mode: Option<String>,
 ) -> Result<Sc0BridgeStatusDto, String> {
-    let clean_port = extract_port_name(&port_name);
+    let mut clean_port = extract_port_name(&port_name);
+    if clean_port.is_empty() || clean_port.eq_ignore_ascii_case("AUTO") {
+        let detected = super::serial::list_pico_serial_ports()?;
+        let first = detected.first().ok_or_else(|| {
+            "Nenhuma porta serial Pico detectada. Conecte o Raspberry Pi Pico via USB e clique em Atualizar Portas."
+                .to_string()
+        })?;
+        clean_port = extract_port_name(first);
+    }
     reject_mock_port(&clean_port)?;
     if is_gdb_bridge_active() {
         return Err("Porta ocupada pela Ponte GDB RSP ativa.".to_string());

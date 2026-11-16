@@ -306,7 +306,7 @@ jobs:
           export ANDROID_NDK_ROOT=$NDK_HOME
           cd apps/desktop
           npx --yes @tauri-apps/cli android init --ci --skip-targets-install || true
-          npx --yes @tauri-apps/cli android build --apk --target aarch64 --ci || true
+          npx --yes @tauri-apps/cli android build --apk --target aarch64 --ci
 
       - name: Upload Android APK Artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -314,6 +314,6 @@ jobs:
           name: panadiga-android-apk
           path: |
             apps/desktop/src-tauri/gen/android/app/build/outputs/apk/**/*.apk
-          if-no-files-found: ignore
+          if-no-files-found: error
           retention-days: 30
           

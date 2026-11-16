@@ -14,6 +14,7 @@
 #include "diag/p7501_sds_codec.h"
 #include "hal/p7501_hw.h"
 #include "hal/p7501_led.h"
+#include "hal/p7501_watchdog.h"
 #include "p7501_sds_sampler.pio.h"
 #include "p7501_types.h"
 
@@ -77,9 +78,9 @@ void p7501_cmd_sdsniff(const char *arg) {
         } else {
             p7501_hw_sw_uart_set_low(false);
         }
-        sleep_ms(5u);
+        p7501_wdt_sleep_ms(5u);
         p7501_hw_reset_assert();
-        sleep_ms(15u);
+        p7501_wdt_sleep_ms(15u);
         p7501_hw_reset_release();
         if (hold_jig_active) {
             jig_deadline = make_timeout_time_ms(spec.boot.jig_hold_ms);
@@ -93,7 +94,7 @@ void p7501_cmd_sdsniff(const char *arg) {
 
     const absolute_time_t end_t = make_timeout_time_ms(spec.boot.window_ms);
     while (!time_reached(end_t)) {
-        p7501_led_tick();
+        p7501_wdt_kick();
         if (hold_jig_active && time_reached(jig_deadline)) {
             p7501_hw_sw_uart_set_low(false);
             p7501_hw_restore_sw_uart_adc0();

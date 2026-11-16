@@ -106,21 +106,18 @@ export function useSc0Bridge({
   }, []);
 
   const startBridge = useCallback(async (): Promise<void> => {
-    if (!selectedPort) {
-      setError('Selecione uma porta serial COM antes de iniciar a SC0 Bridge.');
-      return;
-    }
+    const targetPort = selectedPort || 'AUTO';
     setIsBusy(true);
     setError(null);
     try {
       const parsedBaud = Number.parseInt(baudRate, 10) || 115200;
       const status = await invokeCommand<Sc0BridgeStatus>('pico_start_sc0_bridge', {
-        portName: selectedPort,
+        portName: targetPort,
         baudRate: parsedBaud,
         bootMode,
       });
       setBridgeStatus(status);
-      onLog?.('info', 'HOST', `SC0 BRIDGE ${parsedBaud} 8N1 iniciada (${bootMode})`);
+      onLog?.('info', 'HOST', `SC0 BRIDGE ${parsedBaud} 8N1 iniciada em ${status.port_name || targetPort} (${bootMode})`);
     } catch (err) {
       const msg = String(err);
       setError(msg);

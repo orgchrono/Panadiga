@@ -12,6 +12,7 @@
 
 #include "hal/p7501_hw.h"
 #include "hal/p7501_led.h"
+#include "hal/p7501_watchdog.h"
 #include "p7501_types.h"
 #include "uart/p7501_uart_codec.h"
 #include "uart/p7501_uart_pio_engine.h"
@@ -92,7 +93,7 @@ static void sweep_run_hold_or_delay_trial(p7501_jigsweep_mode_t mode, uint32_t p
                 rx_buf[rx_len++] = byte;
             }
         }
-        p7501_led_tick();
+        p7501_wdt_kick();
     }
 
     const bool ovf = p7501_pio_had_rx_overflow();
@@ -199,7 +200,7 @@ static void sweep_run_preboot_trial(uint32_t profile) {
                 if (post_len < sizeof(post_buf)) post_buf[post_len++] = byte;
             }
         }
-        p7501_led_tick();
+        p7501_wdt_kick();
     }
 
     const uint32_t perr = p7501_pio_get_and_clear_parity_errors();
@@ -250,7 +251,7 @@ void p7501_cmd_jigsweep(const char *arg) {
         } else {
             sweep_run_hold_or_delay_trial(spec.mode, spec.points_ms[i]);
         }
-        sleep_ms(40u);
+        p7501_wdt_sleep_ms(40u);
     }
 
     (void)p7501_pio_set_baud(saved_baud);

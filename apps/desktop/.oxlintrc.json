@@ -1,9 +1,69 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["typescript", "unicorn"],
+  "plugins": ["typescript", "unicorn", "react", "import"],
   "ignorePatterns": ["dist/**", "src-tauri/**", "e2e/**", "node_modules/**"],
   "rules": {
     "no-unused-vars": "error",
-    "unicorn/no-useless-spread": "error"
-  }
+    "no-var": "error",
+    "prefer-const": "error",
+    "no-param-reassign": "error",
+    "eqeqeq": "error",
+    "no-eval": "error",
+    "no-implied-eval": "error",
+    "no-debugger": "error",
+    "no-self-compare": "error",
+    "no-template-curly-in-string": "error",
+    "typescript/no-explicit-any": "error",
+    "typescript/no-non-null-assertion": "error",
+    "unicorn/no-useless-spread": "error",
+    "unicorn/no-array-reverse": "error",
+    "unicorn/prefer-array-flat-map": "error",
+    "import/no-self-import": "error",
+    "import/no-cycle": "error",
+    "import/no-mutable-exports": "error",
+    "react/rules-of-hooks": "error",
+    "react/exhaustive-deps": "error",
+    "react/jsx-key": "error",
+    "react/jsx-no-duplicate-props": "error",
+    "react/set-state-in-effect": "off",
+    "react/preserve-manual-memoization": "off"
+  },
+  "overrides": [
+    {
+      "files": ["src/views/**/*.tsx", "src/components/**/*.tsx"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "@/services/ipc",
+                "message": "Violação MVVM: Views e Components não podem importar @/services/ipc diretamente; use um ViewModel em src/viewmodels/."
+              },
+              {
+                "name": "@/services/bleService",
+                "message": "Violação MVVM: Views e Components não podem importar @/services/bleService diretamente; use um ViewModel."
+              },
+              {
+                "name": "@/services/androidBridge",
+                "message": "Violação MVVM: Views e Components não podem importar @/services/androidBridge diretamente; passe props a partir do ViewModel."
+              }
+            ],
+            "patterns": [
+              {
+                "group": ["@tauri-apps/api/*", "@tauri-apps/plugin-*"],
+                "message": "Violação MVVM: Views e Components não podem acessar APIs Tauri diretamente; encapsule no ViewModel/Service."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/test/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    }
+  ]
 }

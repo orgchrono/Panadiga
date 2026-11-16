@@ -7,6 +7,7 @@
 
 #include "diag/p7501_diag_electrical.h"
 #include "hal/p7501_hw.h"
+#include "hal/p7501_watchdog.h"
 #include "pico/stdlib.h"
 #include "hardware/gpio.h"
 #include <stdio.h>
@@ -26,7 +27,11 @@ void p7501_diag_sample_transitions(
     bool last_xreset = ((all & (1UL << P7501_PIN_XRESET)) != 0U);
 
     const absolute_time_t end_time = make_timeout_time_ms(duration_ms);
+    uint32_t wdt_iter = 0U;
     while (get_absolute_time() < end_time) {
+        if ((++wdt_iter & 0x0FFFu) == 0U) {
+            p7501_wdt_kick();
+        }
         all = gpio_get_all();
         const bool cur_rxd    = ((all & (1UL << P7501_PIN_RXD)) != 0U);
         const bool cur_nsw5v  = ((all & (1UL << P7501_PIN_NSW5V)) != 0U);

@@ -107,3 +107,6 @@ scratch_*.log
 *.sublime-workspace
 *.swp
 *~
+
+# Generated Win32DiskImager raw disk images
+firmware_and_images/*.img

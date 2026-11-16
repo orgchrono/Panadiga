@@ -9,9 +9,9 @@ use crate::constants::{LBA_PARTITION_1_OFFSET, LBA_PARTITION_2_OFFSET};
 use crate::nvram::{calculate_hashes, resolve_input_path};
 
 use super::codec::{
-    LoadedMainSource, apply_capacity_patch_in_place, inspect_main_buffer_capacity,
-    inspect_unpacked_capacity, load_main_source, maybe_update_procedural_mbr_capacity,
-    patch_and_repack_extrhead, verify_and_inspect_repacked,
+    LoadedMainSource, apply_capacity_patch_in_place, apply_optional_passthrough,
+    inspect_main_buffer_capacity, inspect_unpacked_capacity, load_main_source,
+    maybe_update_procedural_mbr_capacity, patch_and_repack_extrhead, verify_and_inspect_repacked,
 };
 use super::specs::{HddCapacityPatchMode, MainCapacityInspectionReport, MainCapacityPatchReport};
 
@@ -61,6 +61,142 @@ pub fn default_capacity_patched_output_path(
     parent.join(format!("{stem}_{suffix}.{ext}"))
 }
 
+type LoadedPatchResult = (
+    String,
+    MainCapacityInspectionReport,
+    MainCapacityInspectionReport,
+    u32,
+    Option<String>,
+    bool,
+    Option<usize>,
+    Vec<u8>,
+);
+
+fn apply_patch_to_loaded_source(
+    loaded: LoadedMainSource,
+    in_label: &str,
+    out_label: &str,
+    mode: HddCapacityPatchMode,
+    target_gb: Option<u32>,
+    passthrough_mode: Option<&str>,
+) -> Result<LoadedPatchResult> {
+    match loaded {
+        LoadedMainSource::RawMain {
+            mut main_bytes,
+            base_va,
+        } => {
+            let before = inspect_main_buffer_capacity(
+                &main_bytes,
+                base_va,
+                "RAW_MAIN_BINARY",
+                None,
+                in_label,
+            )?;
+            let applied = apply_capacity_patch_in_place(&mut main_bytes, mode, target_gb)?;
+            let applied_pt = apply_optional_passthrough(&mut main_bytes, passthrough_mode)?;
+            let after = inspect_main_buffer_capacity(
+                &main_bytes,
+                base_va,
+                "RAW_MAIN_BINARY",
+                None,
+                out_label,
+            )?;
+            Ok((
+                "RAW_MAIN_BINARY".to_string(),
+                before,
+                after,
+                applied,
+                applied_pt,
+                false,
+                None,
+                main_bytes,
+            ))
+        }
+        LoadedMainSource::Extrhead {
+            mut unpacked,
+            is_plain,
+        } => {
+            let (before, applied, applied_pt, repacked) = patch_and_repack_extrhead(
+                &mut unpacked,
+                is_plain,
+                "EXTRHEAD_CONTAINER",
+                in_label,
+                mode,
+                target_gb,
+                passthrough_mode,
+            )?;
+            let repacked_sz = repacked.len();
+            let after = verify_and_inspect_repacked(&repacked, "EXTRHEAD_CONTAINER", out_label)?;
+            Ok((
+                "EXTRHEAD_CONTAINER".to_string(),
+                before,
+                after,
+                applied,
+                applied_pt,
+                false,
+                Some(repacked_sz),
+                repacked,
+            ))
+        }
+        LoadedMainSource::FullHddP1 {
+            mut image_bytes,
+            p1_container_len,
+            mut unpacked,
+            is_plain,
+        } => {
+            let (before, applied, applied_pt, repacked) = patch_and_repack_extrhead(
+                &mut unpacked,
+                is_plain,
+                "FULL_HDD_IMAGE_P1",
+                in_label,
+                mode,
+                target_gb,
+                passthrough_mode,
+            )?;
+            let repacked_sz = repacked.len();
+
+            let p1_off = LBA_PARTITION_1_OFFSET as usize;
+            let p2_off = LBA_PARTITION_2_OFFSET as usize;
+            if p1_off + repacked_sz > p2_off {
+                bail!(
+                    "Repacked Partition 1 ({} bytes) exceeds 32 MB gap before Partition 2 ({} bytes)",
+                    repacked_sz,
+                    p2_off - p1_off
+                );
+            }
+            if repacked_sz < p1_container_len {
+                image_bytes[p1_off..p1_off + p1_container_len].fill(0);
+            }
+            image_bytes[p1_off..p1_off + repacked_sz].copy_from_slice(&repacked);
+
+            let mbr_updated = if let Some(gb) = target_gb {
+                maybe_update_procedural_mbr_capacity(
+                    &mut image_bytes,
+                    (gb as u64 * 1_000_000_000) / 512,
+                )
+            } else {
+                maybe_update_procedural_mbr_capacity(&mut image_bytes, (applied as u64) * 4)
+            };
+
+            let after = verify_and_inspect_repacked(
+                &image_bytes[p1_off..p1_off + repacked_sz],
+                "FULL_HDD_IMAGE_P1",
+                out_label,
+            )?;
+            Ok((
+                "FULL_HDD_IMAGE_P1".to_string(),
+                before,
+                after,
+                applied,
+                applied_pt,
+                mbr_updated,
+                Some(repacked_sz),
+                image_bytes,
+            ))
+        }
+    }
+}
+
 /// Applies a dynamic or preset HDD capacity patch and writes the output artifact (`RAW`, `EXTRHEAD`, or full HDD image).
 pub fn patch_main_hdd_capacity(
     input_path: &Path,
@@ -68,131 +204,44 @@ pub fn patch_main_hdd_capacity(
     mode_str: &str,
     target_gb: Option<u32>,
 ) -> Result<MainCapacityPatchReport> {
+    patch_main_hdd_capacity_with_passthrough(input_path, output_path, mode_str, target_gb, None)
+}
+
+/// Applies a dynamic or preset HDD capacity patch plus an optional `MAIN` AV TBC passthrough patch.
+pub fn patch_main_hdd_capacity_with_passthrough(
+    input_path: &Path,
+    output_path: &Path,
+    mode_str: &str,
+    target_gb: Option<u32>,
+    passthrough_mode: Option<&str>,
+) -> Result<MainCapacityPatchReport> {
     let mode: HddCapacityPatchMode = mode_str.parse()?;
     let resolved_in = resolve_input_path(input_path)?;
     let raw = fs::read(&resolved_in)
         .with_context(|| format!("Failed reading firmware input: {}", resolved_in.display()))?;
     let (_, original_sha256) = calculate_hashes(&raw);
     let in_label = resolved_in.to_string_lossy().into_owned();
+    let out_label = output_path.to_string_lossy().into_owned();
 
     crate::re::bgo_unbrick::ensure_parent_dir(output_path)?;
 
-    let (container_format, before, after, applied_blocks, mbr_updated, repacked_len, out_bytes) =
-        match load_main_source(raw)? {
-            LoadedMainSource::RawMain {
-                mut main_bytes,
-                base_va,
-            } => {
-                let before = inspect_main_buffer_capacity(
-                    &main_bytes,
-                    base_va,
-                    "RAW_MAIN_BINARY",
-                    None,
-                    &in_label,
-                )?;
-                let applied = apply_capacity_patch_in_place(&mut main_bytes, mode, target_gb)?;
-                let after = inspect_main_buffer_capacity(
-                    &main_bytes,
-                    base_va,
-                    "RAW_MAIN_BINARY",
-                    None,
-                    &output_path.to_string_lossy(),
-                )?;
-                (
-                    "RAW_MAIN_BINARY".to_string(),
-                    before,
-                    after,
-                    applied,
-                    false,
-                    None,
-                    main_bytes,
-                )
-            }
-            LoadedMainSource::Extrhead {
-                mut unpacked,
-                is_plain,
-                padded_len,
-            } => {
-                let (before, applied, repacked) = patch_and_repack_extrhead(
-                    &mut unpacked,
-                    is_plain,
-                    "EXTRHEAD_CONTAINER",
-                    &in_label,
-                    mode,
-                    target_gb,
-                )?;
-                let repacked_sz = repacked.len();
-                let after = verify_and_inspect_repacked(
-                    &repacked,
-                    "EXTRHEAD_CONTAINER",
-                    &output_path.to_string_lossy(),
-                )?;
-                let _ = padded_len;
-                (
-                    "EXTRHEAD_CONTAINER".to_string(),
-                    before,
-                    after,
-                    applied,
-                    false,
-                    Some(repacked_sz),
-                    repacked,
-                )
-            }
-            LoadedMainSource::FullHddP1 {
-                mut image_bytes,
-                p1_container_len,
-                mut unpacked,
-                is_plain,
-            } => {
-                let (before, applied, repacked) = patch_and_repack_extrhead(
-                    &mut unpacked,
-                    is_plain,
-                    "FULL_HDD_IMAGE_P1",
-                    &in_label,
-                    mode,
-                    target_gb,
-                )?;
-                let repacked_sz = repacked.len();
-
-                let p1_off = LBA_PARTITION_1_OFFSET as usize;
-                let p2_off = LBA_PARTITION_2_OFFSET as usize;
-                if p1_off + repacked_sz > p2_off {
-                    bail!(
-                        "Repacked Partition 1 ({} bytes) exceeds 32 MB gap before Partition 2 ({} bytes)",
-                        repacked_sz,
-                        p2_off - p1_off
-                    );
-                }
-                if repacked_sz < p1_container_len {
-                    image_bytes[p1_off..p1_off + p1_container_len].fill(0);
-                }
-                image_bytes[p1_off..p1_off + repacked_sz].copy_from_slice(&repacked);
-
-                let mbr_updated = if let Some(gb) = target_gb {
-                    maybe_update_procedural_mbr_capacity(
-                        &mut image_bytes,
-                        (gb as u64 * 1_000_000_000) / 512,
-                    )
-                } else {
-                    maybe_update_procedural_mbr_capacity(&mut image_bytes, (applied as u64) * 4)
-                };
-
-                let after = verify_and_inspect_repacked(
-                    &image_bytes[p1_off..p1_off + repacked_sz],
-                    "FULL_HDD_IMAGE_P1",
-                    &output_path.to_string_lossy(),
-                )?;
-                (
-                    "FULL_HDD_IMAGE_P1".to_string(),
-                    before,
-                    after,
-                    applied,
-                    mbr_updated,
-                    Some(repacked_sz),
-                    image_bytes,
-                )
-            }
-        };
+    let (
+        container_format,
+        before,
+        after,
+        applied_blocks,
+        applied_passthrough,
+        mbr_updated,
+        repacked_len,
+        out_bytes,
+    ) = apply_patch_to_loaded_source(
+        load_main_source(raw)?,
+        &in_label,
+        &out_label,
+        mode,
+        target_gb,
+        passthrough_mode,
+    )?;
 
     let (_, patched_sha256) = calculate_hashes(&out_bytes);
     fs::write(output_path, &out_bytes).with_context(|| {
@@ -204,7 +253,7 @@ pub fn patch_main_hdd_capacity(
 
     Ok(MainCapacityPatchReport {
         input_path: in_label,
-        output_path: output_path.to_string_lossy().into_owned(),
+        output_path: out_label,
         container_format,
         mode: mode_str.to_string(),
         target_gb,
@@ -213,6 +262,7 @@ pub fn patch_main_hdd_capacity(
         applied_sectors_512b: (applied_blocks as u64) * 4,
         mbr_superblocks_updated: mbr_updated,
         repacked_container_size: repacked_len,
+        passthrough_mode: applied_passthrough,
         original_sha256,
         patched_sha256,
         inspection_before: before,

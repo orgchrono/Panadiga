@@ -7,6 +7,7 @@
 
 #include "uart/p7501_pana_rsp_report.h"
 #include "uart/p7501_uart_pio_engine.h"
+#include "hal/p7501_watchdog.h"
 #include "pico/stdlib.h"
 
 #include <inttypes.h>
@@ -61,6 +62,7 @@ bool panarsp_drain_for_ms(
         if (frame_grace_us != 0ULL && time_us_64() >= frame_grace_us) {
             return true;
         }
+        p7501_wdt_kick();
         tight_loop_contents();
     }
     return false;

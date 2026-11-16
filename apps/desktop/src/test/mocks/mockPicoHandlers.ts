@@ -10,6 +10,7 @@ import {
   Sc0BridgeStatus,
 } from '@/models';
 import { emitLocalEvent } from '@/services/ipc';
+import { parseDiagnosticOutput } from '@/services/diagnosticParser';
 import { publishMockEvent } from './mockEventBus';
 import { simulateMockDiagnostic } from './mockDiagnostics';
 import { mockNvramCleanReport, mockPicoDeviceStatus } from './mockData';
@@ -387,6 +388,14 @@ export function handleMockPicoCommand(
 
     case 'pico_get_bridge_status':
       return mockPicoState.getBridgeStatus();
+
+    case 'pico_parse_diagnostic_output': {
+      const commandId = (args?.commandId as string) || (args?.command_id as string) || 'STATUS';
+      const rawCommand = (args?.rawCommand as string) || (args?.raw_command as string) || commandId;
+      const rawOutput = (args?.rawOutput as string) || (args?.raw_output as string) || '';
+      const elapsedMs = Number(args?.elapsedMs ?? args?.elapsed_ms ?? 0);
+      return parseDiagnosticOutput(commandId, rawCommand, rawOutput, elapsedMs);
+    }
 
     default:
       return undefined;

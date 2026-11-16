@@ -65,6 +65,7 @@ pub fn run_desktop_app() {
             launch_external_tool_command,
             query_rag_engine,
             get_hardware_ssot_spec,
+            pico_parse_diagnostic_output,
             pico_execute_diagnostic,
             pico_start_sc0_bridge,
             pico_send_bridge_input,

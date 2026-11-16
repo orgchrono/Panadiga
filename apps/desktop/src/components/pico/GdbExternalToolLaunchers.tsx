@@ -1,10 +1,9 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Bug, FileCode, Binary, Terminal, type LucideIcon } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Bug, FileCode, Binary, Terminal, RefreshCw, Cpu, type LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { GDB_DEFAULT_TCP_PORT } from '@/constants/hardwareSpecs/physicalConstants';
-import { isAndroidNativeBridgeAvailable } from '@/services/androidBridge';
 
-export type ExternalToolName = 'gdb' | 'ghidra' | 'hxd' | 'terminal';
+export type ExternalToolName = 'gdb' | 'ghidra' | 'ghidra_sync' | 'ghidra_mcp' | 'hxd' | 'terminal';
 
 export interface GdbExternalToolLaunchersProps {
   onLaunchTool?: (tool: ExternalToolName) => Promise<void>;
@@ -28,9 +27,25 @@ const TOOL_LAUNCHERS: Array<{
   {
     id: 'ghidra',
     label: 'Scripts Ghidra',
-    title: 'Inicia o Ghidra / exportação de mapa de memória e símbolos AM34',
+    title:
+      'Sincroniza scripts Jython SSOT em ~/ghidra_scripts e abre o Ghidra GUI diretamente em Panadiga_MN103S.gpr sem janelas CMD extras',
     className: 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
     Icon: FileCode,
+  },
+  {
+    id: 'ghidra_sync',
+    label: 'Sync Jython (Headless)',
+    title:
+      'Executa analyzeHeadless.bat com mapa AM34, símbolos SSOT, fix MN103S e auditoria U99 gravando panadiga_jython_sync.log',
+    className: 'bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border-teal-500/30',
+    Icon: RefreshCw,
+  },
+  {
+    id: 'ghidra_mcp',
+    label: 'Ghidra MCP :8081',
+    title: 'Inicia a ponte streamable-http ghidra-mcp.exe em http://127.0.0.1:8081 conectada ao Ghidra (:8080)',
+    className: 'bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
+    Icon: Cpu,
   },
   {
     id: 'hxd',
@@ -50,14 +65,11 @@ const TOOL_LAUNCHERS: Array<{
 
 export const GdbExternalToolLaunchers: React.FC<GdbExternalToolLaunchersProps> = ({
   onLaunchTool,
-  isAndroidHost,
+  isAndroidHost = false,
 }) => {
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const androidHost = useMemo(
-    () => (isAndroidHost !== undefined ? isAndroidHost : isAndroidNativeBridgeAvailable()),
-    [isAndroidHost]
-  );
+  const androidHost = Boolean(isAndroidHost);
 
   useEffect(() => {
     return () => {

@@ -15,7 +15,6 @@
 #include "pico/stdlib.h"
 #include "pico/time.h"
 
-#include <inttypes.h>
 #include <stdio.h>
 
 static p7501_wdt_telemetry_t s_wdt_state = {
@@ -141,15 +140,15 @@ p7501_wdt_telemetry_t p7501_wdt_snapshot(void) {
 }
 
 void p7501_wdt_print_summary_line(void) {
-    printf("[WDT] wdt=ACTIVE(%ums,NON_OVERRIDABLE) seq=%" PRIu32
-           " wdt_recoveries=%u reboot_src=%s fault_slot=%u last_cmd=%s last_us=%" PRIu64 "\n",
+    printf("[WDT] wdt=ACTIVE(%ums,NON_OVERRIDABLE) seq=%lu"
+           " wdt_recoveries=%u reboot_src=%s fault_slot=%u last_cmd=%s last_us=%llu\n",
            (unsigned)P7501_WDT_TIMEOUT_MS,
-           s_wdt_state.cmd_seq,
+           (unsigned long)s_wdt_state.cmd_seq,
            (unsigned)s_wdt_state.recoveries,
            s_wdt_state.caused_reboot ? "WDT_RECOVERY" : "CLEAN",
            (unsigned)s_wdt_state.last_fault_cmd_id,
            (s_wdt_state.last_cmd_name != NULL) ? s_wdt_state.last_cmd_name : "NONE",
-           s_wdt_state.last_cmd_elapsed_us);
+           (unsigned long long)s_wdt_state.last_cmd_elapsed_us);
 }
 
 void p7501_cmd_wdt_status(const char *arg) {

@@ -178,7 +178,7 @@ static void cli_cmd_engage(const char *arg) {
 static void cli_cmd_reset_pulse(const char *arg) {
     (void)arg;
     p7501_hw_reset_assert();
-    sleep_ms(P7501_RESET_ASSERT_MS);
+    p7501_wdt_sleep_ms(P7501_RESET_ASSERT_MS);
     p7501_hw_reset_release();
     printf("[RESET] Open-drain XRESET pulse complete.\n");
 }
@@ -187,7 +187,9 @@ static void cli_cmd_bootsel(const char *arg) {
     (void)arg;
     printf("[BOOTSEL] Rebooting into USB UF2 Mass-Storage Bootloader...\n");
     fflush(stdout);
-    sleep_ms(50U);
+    p7501_wdt_kick();
+    p7501_wdt_sleep_ms(50U);
+    p7501_wdt_kick();
     reset_usb_boot(0U, 0U);
 }
 

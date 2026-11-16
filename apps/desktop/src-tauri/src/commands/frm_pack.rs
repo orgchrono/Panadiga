@@ -6,6 +6,7 @@ use super::constants::{
     FRM_COLLECTION_MAX_DEPTH, FRM_FILE_EXTENSION, FRM_IGNORED_SUBDIR, FRM_UNPACK_DEFAULT_MODE,
     FRM_WRITE_EMPTY_PATH_ERR,
 };
+use super::error::{IpcResult, PanadigaIpcError};
 use panadiga_core::constants::{
     PANA_DIGADIAG_FRM_SIZE, PANA_EXTRHEAD_DEFAULT_ADLER_STEP, find_workspace_subdir,
     resolve_workspace_root,
@@ -126,7 +127,7 @@ fn collect_frm_files(dir: &Path, root: &Path, out: &mut Vec<String>, depth: usiz
 
 /// Lists `.FRM` containers available under workspace `firmware_and_images`.
 #[tauri::command]
-pub fn list_frm_containers_command() -> Result<Vec<String>, String> {
+pub fn list_frm_containers_command() -> IpcResult<Vec<String>> {
     let ws_root = resolve_workspace_root();
     let Some(fw_dir) = find_workspace_subdir(FIRMWARE_IMAGES_DIR_NAME) else {
         return Ok(Vec::new());
@@ -140,7 +141,7 @@ pub fn list_frm_containers_command() -> Result<Vec<String>, String> {
 
 /// Packs modules or raw diagnostic binaries into `PANA_DVD.FRM`, `PANA__SD.FRM`, or `DIGADIAG.FRM`.
 #[tauri::command]
-pub fn pack_frm_command(request: PackFrmRequestDto) -> Result<FrmPackReport, String> {
+pub fn pack_frm_command(request: PackFrmRequestDto) -> IpcResult<FrmPackReport> {
     let mode_norm = request.mode.trim().to_ascii_lowercase();
     let out_path = resolve_write_path(&request.out_path)?;
 
@@ -179,15 +180,15 @@ pub fn pack_frm_command(request: PackFrmRequestDto) -> Result<FrmPackReport, Str
         }
         "sd" | "dvd" => {
             if request.modules.is_empty() {
-                return Err(format!(
+                return Err(PanadigaIpcError::classify(format!(
                     "Modo '{mode_norm}' exige ao menos um módulo (nome + caminho)."
-                ));
+                )));
             }
             let ver_raw = request
                 .version_u16
                 .as_deref()
                 .unwrap_or(DEFAULT_FRM_VERSION_HEX);
-            let ver_u32 = parse_u32_radix(ver_raw).map_err(|e| e.to_string())?;
+            let ver_u32 = parse_u32_radix(ver_raw)?;
             let ver_u16 = u16::try_from(ver_u32)
                 .map_err(|_| "version_u16 deve caber em 16 bits.".to_string())?;
             let hw = request
@@ -205,7 +206,9 @@ pub fn pack_frm_command(request: PackFrmRequestDto) -> Result<FrmPackReport, Str
                 let name = item.name.trim();
                 let path_str = item.path.trim();
                 if name.is_empty() || path_str.is_empty() {
-                    return Err("Cada módulo requer nome e caminho não vazios.".to_string());
+                    return Err(PanadigaIpcError::classify(
+                        "Cada módulo requer nome e caminho não vazios.",
+                    ));
                 }
                 let mod_path = resolve_read_path(path_str);
                 let payload = std::fs::read(&mod_path)
@@ -227,9 +230,9 @@ pub fn pack_frm_command(request: PackFrmRequestDto) -> Result<FrmPackReport, Str
                 .map_err(|e| format!("Falha empacotando .{}: {e}", mode_norm.to_uppercase()))?
         }
         other => {
-            return Err(format!(
+            return Err(PanadigaIpcError::classify(format!(
                 "Modo inválido '{other}': esperado 'sd', 'dvd' ou 'digadiag'."
-            ));
+            )));
         }
     };
 
@@ -244,10 +247,12 @@ pub fn unpack_extrhead_command(
     input_path: String,
     mode: Option<String>,
     out_path: Option<String>,
-) -> Result<ExtrheadUnpackReportDto, String> {
+) -> IpcResult<ExtrheadUnpackReportDto> {
     let trimmed = input_path.trim();
     if trimmed.is_empty() {
-        return Err("Caminho do contêiner EXTRHEAD é obrigatório.".to_string());
+        return Err(PanadigaIpcError::classify(
+            "Caminho do contêiner EXTRHEAD é obrigatório.",
+        ));
     }
     let resolved_in = resolve_read_path(trimmed);
     let raw = std::fs::read(&resolved_in)

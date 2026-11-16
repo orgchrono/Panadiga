@@ -9,6 +9,7 @@
 
 #include "common/p7501_hex.h"
 #include "hal/p7501_led.h"
+#include "hal/p7501_watchdog.h"
 #include "p7501_types.h"
 #include "uart/p7501_uart_codec.h"
 #include "uart/p7501_uart_pio_engine.h"
@@ -95,8 +96,12 @@ void p7501_cmd_baudscan(const char *arg) {
     uint32_t edges = 0u;
     bool prev_level = gpio_get(P7501_PIN_RXD);
     uint32_t last_fall_us = time_us_32();
+    uint32_t wdt_iter = 0u;
 
     while (!time_reached(end_t)) {
+        if ((++wdt_iter & 0x0FFFu) == 0u) {
+            p7501_wdt_kick();
+        }
         (void)p7501_pio_poll_sw_uart_release();
         const bool cur = gpio_get(P7501_PIN_RXD);
         if (cur != prev_level) {

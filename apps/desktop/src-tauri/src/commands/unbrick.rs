@@ -20,21 +20,22 @@ use super::constants::{
     DEFAULT_MAIN_PASSTHROUGH_MODE, DEFAULT_MATSHITA_INJECT_MODE, MATSHITA_DRV_PASS_UNLOCK_CMD,
     SAMPLE_UNLOCK_PAYLOAD_BYTE, SAMPLE_UNLOCK_PAYLOAD_LEN,
 };
+use super::error::{IpcResult, PanadigaIpcError};
 use super::frm_pack::{resolve_read_path, resolve_write_path};
 use super::unbrick_dto::{
     SdUnbrickKitRequestDto, format_nor_dumper_response, opt_trimmed, parse_nor_dumper_params,
     resolve_dir_target, to_sd_unbrick_kit_request,
 };
 
-fn serialize_value<T: serde::Serialize>(val: T) -> Result<Value, String> {
-    serde_json::to_value(val).map_err(|e| e.to_string())
+fn serialize_value<T: serde::Serialize>(val: T) -> IpcResult<Value> {
+    serde_json::to_value(val).map_err(|e| PanadigaIpcError::classify(e.to_string()))
 }
 
 /// Inspects workspace binaries, PROG061 BGO status, MAIN TBC passthrough, RSP plan, & hardware facts.
 #[tauri::command]
 pub fn inspect_unbrick_workbench(
     workspace_path: Option<String>,
-) -> Result<UnbrickWorkspaceReport, String> {
+) -> IpcResult<UnbrickWorkspaceReport> {
     let override_path = opt_trimmed(&workspace_path).map(PathBuf::from);
     Ok(inspect_unbrick_workspace(override_path.as_deref()))
 }
@@ -45,11 +46,11 @@ pub fn extract_frm_modules_command(
     frm_path: String,
     out_dir: String,
     unpack_payloads: Option<bool>,
-) -> Result<FrmModuleExtractionReport, String> {
+) -> IpcResult<FrmModuleExtractionReport> {
     let in_file = resolve_read_path(frm_path.trim());
     let dest = resolve_dir_target(&out_dir)?;
     extract_modules_from_frm(&in_file, &dest, unpack_payloads.unwrap_or(true))
-        .map_err(|e| format!("Falha ao extrair módulos do .FRM: {e}"))
+        .map_err(|e| PanadigaIpcError::classify(format!("Falha ao extrair módulos do .FRM: {e}")))
 }
 
 /// Inspects or patches `PROG061` BGO (`U99`) sites and optionally wraps as 128 KiB `DIGADIAG.FRM`.
@@ -60,7 +61,7 @@ pub fn patch_bgo_unbrick_command(
     mode: String,
     wrap_as_digadiag: Option<bool>,
     allow_unsafe_bgo_format: Option<bool>,
-) -> Result<Value, String> {
+) -> IpcResult<Value> {
     let in_file = resolve_read_path(input_path.trim());
     let parsed_mode: Prog061BgoPatchMode = mode
         .parse()
@@ -80,7 +81,7 @@ pub fn patch_bgo_unbrick_command(
     } else {
         let raw = std::fs::read(&in_file)
             .map_err(|e| format!("Falha lendo '{}': {e}", in_file.display()))?;
-        let report = inspect_prog061_container_bytes(&raw).map_err(|e| e.to_string())?;
+        let report = inspect_prog061_container_bytes(&raw)?;
         serialize_value(report)
     }
 }
@@ -93,12 +94,11 @@ pub fn patch_main_passthrough_command(
     out_path: Option<String>,
     mode: Option<String>,
     callback_target_va: Option<String>,
-) -> Result<Value, String> {
+) -> IpcResult<Value> {
     if action.trim().eq_ignore_ascii_case("rsp_plan") {
         let cb = opt_trimmed(&callback_target_va)
             .map(parse_u32_radix)
-            .transpose()
-            .map_err(|e| e.to_string())?;
+            .transpose()?;
         return serialize_value(build_passthrough_rsp_plan(cb));
     }
 
@@ -121,7 +121,7 @@ pub fn patch_main_passthrough_command(
     }
 
     let buf = std::fs::read(&in_file).map_err(|e| format!("Falha lendo MAIN: {e}"))?;
-    let report = inspect_main_passthrough_sites(&buf).map_err(|e| e.to_string())?;
+    let report = inspect_main_passthrough_sites(&buf)?;
     serialize_value(report)
 }
 
@@ -129,16 +129,17 @@ pub fn patch_main_passthrough_command(
 #[tauri::command]
 pub fn prepare_sd_unbrick_kit_command(
     request: SdUnbrickKitRequestDto,
-) -> Result<SdUnbrickKitReport, String> {
+) -> IpcResult<SdUnbrickKitReport> {
     let core_req = to_sd_unbrick_kit_request(&request)?;
-    prepare_sd_unbrick_kit(&core_req).map_err(|e| format!("Falha ao gerar Kit Unbrick SD: {e}"))
+    prepare_sd_unbrick_kit(&core_req)
+        .map_err(|e| PanadigaIpcError::classify(format!("Falha ao gerar Kit Unbrick SD: {e}")))
 }
 
 /// Validates an SD card root directory (`DIGADIAG.FRM`, `PANA__SD.FRM`, & -91006 hardware warnings).
 #[tauri::command]
 pub fn verify_sd_unbrick_media_command(
     sd_root_dir: String,
-) -> Result<SdMediaVerificationReport, String> {
+) -> IpcResult<SdMediaVerificationReport> {
     Ok(verify_sd_unbrick_media(&resolve_dir_target(&sd_root_dir)?))
 }
 
@@ -151,7 +152,7 @@ pub fn build_nor_dumper_stub_command(
     load_addr: Option<String>,
     out_path: Option<String>,
     wrap_as_digadiag: Option<bool>,
-) -> Result<Value, String> {
+) -> IpcResult<Value> {
     let params = parse_nor_dumper_params(
         start_addr.as_deref(),
         total_len.as_deref(),
@@ -188,14 +189,14 @@ pub fn build_nor_dumper_stub_command(
 
 /// Runs a synthetic Matshita R6-MV4 optical drive boot sequence scenario (`healthy_with_disc`, `unlock_disc_frm`, etc.).
 #[tauri::command]
-pub fn run_matshita_boot_emu(scenario: String) -> Result<BootSequenceReport, String> {
+pub fn run_matshita_boot_emu(scenario: String) -> IpcResult<BootSequenceReport> {
     let parsed: MatshitaBootScenario = scenario
         .trim()
         .parse()
         .map_err(|e: anyhow::Error| format!("Cenário de boot Matshita inválido: {e}"))?;
     let mut emu = MatshitaOddEmulator::new(parsed);
     emu.run_boot_sequence()
-        .map_err(|e| format!("Falha ao emular sequência de boot: {e}"))
+        .map_err(|e| PanadigaIpcError::classify(format!("Falha ao emular sequência de boot: {e}")))
 }
 
 /// Executes an emulated Matshita ATAPI write-injection (`0x3B WRITE BUFFER` or vendor `0xED`) with IPL `E05` guard.
@@ -206,7 +207,7 @@ pub fn inject_matshita_atapi_write(
     mode: Option<u8>,
     use_vendor_ed: Option<bool>,
     payload_hex: String,
-) -> Result<Value, String> {
+) -> IpcResult<Value> {
     let payload = parse_hex_payload(payload_hex.trim())
         .map_err(|e| format!("Payload hexadecimal inválido: {e}"))?;
     let va_opt = opt_trimmed(&target_va)
@@ -234,19 +235,19 @@ pub fn inject_matshita_atapi_write(
 pub fn run_matshita_serial_cmd(
     command: String,
     unlock_pass: Option<bool>,
-) -> Result<SerialCliResponse, String> {
+) -> IpcResult<SerialCliResponse> {
     let cmd = command.trim();
     if cmd.is_empty() {
-        return Err("Comando serial DRV não pode ser vazio.".to_string());
+        return Err(PanadigaIpcError::classify(
+            "Comando serial DRV não pode ser vazio.",
+        ));
     }
     let mut emu = MatshitaOddEmulator::default();
     if unlock_pass.unwrap_or(true) {
-        let _ = emu
-            .execute_drv_serial_command(MATSHITA_DRV_PASS_UNLOCK_CMD)
-            .map_err(|e| e.to_string())?;
+        let _ = emu.execute_drv_serial_command(MATSHITA_DRV_PASS_UNLOCK_CMD)?;
     }
     emu.execute_drv_serial_command(cmd)
-        .map_err(|e| format!("Falha no CLI serial DRV: {e}"))
+        .map_err(|e| PanadigaIpcError::classify(format!("Falha no CLI serial DRV: {e}")))
 }
 
 /// Verifies an SD (`EXTRHEAD` / `PANA__SD`) or CD (`PANA_DVD.FRM` / `cd`) unlock container against EH55 bootloader rules.
@@ -254,12 +255,12 @@ pub fn run_matshita_serial_cmd(
 pub fn verify_frm_unlock_command(
     container_kind: String,
     frm_path: String,
-) -> Result<FrmUnlockVerificationSummary, String> {
+) -> IpcResult<FrmUnlockVerificationSummary> {
     let path = resolve_read_path(frm_path.trim());
     let bytes = std::fs::read(&path)
         .map_err(|e| format!("Falha lendo container '{}': {e}", path.display()))?;
     verify_unlock_frm_container(container_kind.trim(), &bytes)
-        .map_err(|e| format!("Falha ao verificar container .FRM: {e}"))
+        .map_err(|e| PanadigaIpcError::classify(format!("Falha ao verificar container .FRM: {e}")))
 }
 
 /// Synthesizes and verifies a sample SD (`sd`/`sd48`) or CD (`cd`/`dvd`) unlock `.FRM` container (optionally saved to disk).
@@ -268,7 +269,7 @@ pub fn pack_unlock_frm_command(
     container_kind: String,
     out_path: Option<String>,
     payload_hex: Option<String>,
-) -> Result<Value, String> {
+) -> IpcResult<Value> {
     let mode = parse_unlock_container_mode(container_kind.trim())
         .map_err(|e| format!("Modo de container unlock inválido: {e}"))?;
     let payload = match opt_trimmed(&payload_hex) {

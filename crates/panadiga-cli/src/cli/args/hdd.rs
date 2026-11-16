@@ -146,5 +146,9 @@ pub enum HddActions {
         /// Target capacity in GB (e.g. 250, 300, 320, 400, 500, 1000, 2000)
         #[arg(short = 'g', long, visible_alias = "gb", value_name = "GB")]
         target_gb: Option<u32>,
+
+        /// Optional MAIN AV TBC passthrough mode to co-apply (av_passthrough or factory_original)
+        #[arg(long = "passthrough-mode", value_name = "PASSTHROUGH_MODE")]
+        passthrough_mode: Option<String>,
     },
 }

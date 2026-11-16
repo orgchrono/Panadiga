@@ -59,7 +59,6 @@ pub(crate) enum LoadedMainSource {
     Extrhead {
         unpacked: UnpackedExtrhead,
         is_plain: bool,
-        padded_len: usize,
     },
     FullHddP1 {
         image_bytes: Vec<u8>,
@@ -123,12 +122,7 @@ pub(crate) fn load_main_source(raw: Vec<u8>) -> Result<LoadedMainSource> {
     if raw.starts_with(b"EXTRHEAD") || raw.starts_with(&PANASONIC_HDD_PARTITION_MAGIC) {
         let is_plain = raw.starts_with(b"EXTRHEAD");
         let unpacked = unpack_extrhead(&raw, ExtrheadCryptMode::Auto)?;
-        let padded_len = raw.len();
-        return Ok(LoadedMainSource::Extrhead {
-            unpacked,
-            is_plain,
-            padded_len,
-        });
+        return Ok(LoadedMainSource::Extrhead { unpacked, is_plain });
     }
 
     Ok(LoadedMainSource::RawMain {
@@ -250,6 +244,18 @@ pub(crate) fn inspect_unpacked_capacity(
     )
 }
 
+pub(crate) fn apply_optional_passthrough(
+    main_buf: &mut [u8],
+    passthrough_mode: Option<&str>,
+) -> Result<Option<String>> {
+    let Some(raw_mode) = passthrough_mode else {
+        return Ok(None);
+    };
+    let mode: crate::re::MainPassthroughMode = raw_mode.parse()?;
+    crate::re::apply_main_passthrough_in_place(main_buf, mode)?;
+    Ok(Some(mode.as_str().to_string()))
+}
+
 pub(crate) fn patch_and_repack_extrhead(
     unpacked: &mut UnpackedExtrhead,
     is_plain: bool,
@@ -257,11 +263,13 @@ pub(crate) fn patch_and_repack_extrhead(
     in_label: &str,
     mode: HddCapacityPatchMode,
     target_gb: Option<u32>,
-) -> Result<(MainCapacityInspectionReport, u32, Vec<u8>)> {
+    passthrough_mode: Option<&str>,
+) -> Result<(MainCapacityInspectionReport, u32, Option<String>, Vec<u8>)> {
     let before = inspect_unpacked_capacity(unpacked, container_format, in_label)?;
     let applied = apply_capacity_patch_in_place(&mut unpacked.decompressed, mode, target_gb)?;
+    let applied_pt = apply_optional_passthrough(&mut unpacked.decompressed, passthrough_mode)?;
     let repacked = repack_from_header(&unpacked.decompressed, &unpacked.header, is_plain)?;
-    Ok((before, applied, repacked))
+    Ok((before, applied, applied_pt, repacked))
 }
 
 pub(crate) fn verify_and_inspect_repacked(

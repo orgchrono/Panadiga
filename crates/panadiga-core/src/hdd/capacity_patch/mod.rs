@@ -12,6 +12,7 @@ pub use codec::{
 };
 pub use io::{
     default_capacity_patched_output_path, inspect_main_hdd_capacity, patch_main_hdd_capacity,
+    patch_main_hdd_capacity_with_passthrough,
 };
 pub use specs::{
     DYNAMIC_UNCLAMPED_MAX_BLOCKS_2KB, HDD_CMD_M7920_200GB_BLOCKS, HDD_CMD_M7920_400GB_BLOCKS,

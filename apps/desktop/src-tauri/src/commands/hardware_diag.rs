@@ -22,8 +22,11 @@ use super::constants::{
     VDD_ZERO_EPSILON_VOLTS,
 };
 use super::dto::{HardwareSsotSpecDto, LiveNvramCaptureEventDto, build_hardware_ssot_spec};
+use super::error::{IpcResult, PanadigaIpcError};
 use super::hardware::pico_get_status;
-use crate::pico::diagnostics::{PicoDiagnosticResultDto, execute_diagnostic_on_port};
+use crate::pico::diagnostics::{
+    PicoDiagnosticResultDto, execute_diagnostic_on_port, parse_diagnostic_output,
+};
 
 /// Real-time serial log entry pushed over Tauri event `"pico://serial-log"`.
 #[derive(Debug, Clone, Serialize)]
@@ -119,7 +122,7 @@ pub async fn pico_capture_nvram_live(
     port_name: String,
     base_addr: Option<u32>,
     word_count: Option<u32>,
-) -> Result<LiveNvramCaptureEventDto, String> {
+) -> IpcResult<LiveNvramCaptureEventDto> {
     let start_addr = base_addr.unwrap_or(AM34_NVRAM_BASE);
     let total_words = word_count
         .unwrap_or(DEFAULT_NVRAM_CAPTURE_WORDS)
@@ -140,18 +143,18 @@ pub async fn pico_capture_nvram_live(
         .map_err(|e| format!("Falha interna de execução assíncrona: {}", e))??;
 
         if !res.success {
-            return Err(format!(
+            return Err(PanadigaIpcError::classify(format!(
                 "Falha ao capturar bloco NVRAM em 0x{:08X}: {}",
                 cur_addr, res.summary
-            ));
+            )));
         }
         let mut chunk_bytes =
             panadiga_core::pico::cdc::parse_pico_dump_hex_to_bytes(&res.raw_output);
         if chunk_bytes.is_empty() {
-            return Err(format!(
+            return Err(PanadigaIpcError::classify(format!(
                 "DUMP retornou 0 bytes legíveis em 0x{:08X} ({}).",
                 cur_addr, res.summary
-            ));
+            )));
         }
         accumulated.append(&mut chunk_bytes);
         words_read += chunk_words;
@@ -164,12 +167,29 @@ pub async fn pico_capture_nvram_live(
         start_addr,
         &accumulated,
     )
+    .map_err(PanadigaIpcError::from)
 }
 
 /// Returns the complete Hardware & Firmware Single Source of Truth (SSOT) specification.
 #[tauri::command]
-pub fn get_hardware_ssot_spec() -> Result<HardwareSsotSpecDto, String> {
+pub fn get_hardware_ssot_spec() -> IpcResult<HardwareSsotSpecDto> {
     Ok(build_hardware_ssot_spec())
+}
+
+/// Canonical diagnostic reply parser exposed over IPC so Android BLE / USB-OTG and Desktop CDC share `panadiga-core`.
+#[tauri::command]
+pub fn pico_parse_diagnostic_output(
+    command_id: String,
+    raw_command: String,
+    raw_output: String,
+    elapsed_ms: u64,
+) -> IpcResult<PicoDiagnosticResultDto> {
+    Ok(parse_diagnostic_output(
+        &command_id,
+        &raw_command,
+        &raw_output,
+        elapsed_ms,
+    ))
 }
 
 /// Executes any granular Pico firmware command asynchronously without stalling the WebView UI,
@@ -180,7 +200,7 @@ pub async fn pico_execute_diagnostic(
     port_name: String,
     command_id: String,
     arg: Option<String>,
-) -> Result<PicoDiagnosticResultDto, String> {
+) -> IpcResult<PicoDiagnosticResultDto> {
     let cmd_preview = match arg.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
         Some(a) => format!("{} {}", command_id.trim().to_ascii_uppercase(), a),
         None => command_id.trim().to_ascii_uppercase(),
@@ -282,7 +302,7 @@ pub fn set_pico_telemetry_stream(
     app: tauri::AppHandle,
     active: bool,
     port_name: Option<String>,
-) -> Result<bool, String> {
+) -> IpcResult<bool> {
     start_port_mutation_observer(app.clone());
     let state = stream_state();
     if let Some(port) = port_name.filter(|p| !p.trim().is_empty())

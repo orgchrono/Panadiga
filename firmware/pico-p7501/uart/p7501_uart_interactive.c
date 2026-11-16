@@ -8,6 +8,7 @@
 #include "uart/p7501_uart_interactive.h"
 #include "hal/p7501_hw.h"
 #include "hal/p7501_led.h"
+#include "hal/p7501_watchdog.h"
 #include "uart/p7501_uart_bitbang.h"
 #include "uart/p7501_uart_capture.h"
 #include "uart/p7501_uart_codec.h"
@@ -139,7 +140,7 @@ void p7501_cmd_uart_probe(const char *arg) {
                 rx_buf[rx_len++] = byte;
             }
         }
-        p7501_led_tick();
+        p7501_wdt_kick();
     }
 
     const uint32_t perr = p7501_pio_get_and_clear_parity_errors();

@@ -14,26 +14,24 @@ use super::dto::{
     MeihdfsAllocationReport, NvramCleanReport, PartitionExtractionManifestDto, resolve_candidate,
     resolve_default_flash_path,
 };
+use super::error::{IpcResult, PanadigaIpcError};
 
 /// Surgically cleans and audits the Spansion S29JL064H flash dump NVRAM emulation partitions.
 #[tauri::command]
 pub fn clean_nvram_command(
     input_path: String,
     output_path: Option<String>,
-) -> Result<NvramCleanReport, String> {
+) -> IpcResult<NvramCleanReport> {
     let in_p = Path::new(&input_path);
     let out_p = output_path.as_deref().map(Path::new);
-    panadiga_core::nvram::clean_flash_nvram(in_p, out_p).map_err(|e| e.to_string())
+    panadiga_core::nvram::clean_flash_nvram(in_p, out_p).map_err(PanadigaIpcError::from)
 }
 
 /// Inspects HDD image layout, MBR tables, partition metadata, and allocation density.
 #[tauri::command]
-pub fn inspect_hdd_command(
-    image_path: String,
-    show_density: bool,
-) -> Result<HddAnalysisReport, String> {
+pub fn inspect_hdd_command(image_path: String, show_density: bool) -> IpcResult<HddAnalysisReport> {
     panadiga_core::hdd::inspect_hdd_image(Path::new(&image_path), show_density, None)
-        .map_err(|e| e.to_string())
+        .map_err(PanadigaIpcError::from)
 }
 
 /// Decodes bit-inverted MEIHDFS filesystem allocation descriptors and journal blocks.
@@ -41,9 +39,9 @@ pub fn inspect_hdd_command(
 pub fn decode_meihdfs_command(
     image_path: String,
     include_journal: bool,
-) -> Result<MeihdfsAllocationReport, String> {
+) -> IpcResult<MeihdfsAllocationReport> {
     panadiga_core::hdd::decode_meihdfs_descriptors(Path::new(&image_path), include_journal, None)
-        .map_err(|e| e.to_string())
+        .map_err(PanadigaIpcError::from)
 }
 
 /// Surgically extracts firmware partitions, MBR structures, and cryptographic manifest.
@@ -51,17 +49,17 @@ pub fn decode_meihdfs_command(
 pub fn extract_hdd_partitions_command(
     image_path: String,
     output_dir: Option<String>,
-) -> Result<Vec<ExtractedPartitionReport>, String> {
+) -> IpcResult<Vec<ExtractedPartitionReport>> {
     let out_dir = output_dir.unwrap_or_else(|| DEFAULT_HDD_EXTRACT_DIR.to_string());
     panadiga_core::hdd::extract_hdd_partitions(Path::new(&image_path), Path::new(&out_dir), None)
-        .map_err(|e| e.to_string())
+        .map_err(PanadigaIpcError::from)
 }
 
 /// Frontend `analyze_flash_dump` command (non-destructive inspection).
 #[tauri::command]
-pub fn analyze_flash_dump(input_path: Option<String>) -> Result<NvramCleanReport, String> {
+pub fn analyze_flash_dump(input_path: Option<String>) -> IpcResult<NvramCleanReport> {
     let path = resolve_default_flash_path(input_path);
-    panadiga_core::nvram::inspect_flash_nvram(Path::new(&path)).map_err(|e| e.to_string())
+    panadiga_core::nvram::inspect_flash_nvram(Path::new(&path)).map_err(PanadigaIpcError::from)
 }
 
 /// Frontend `clean_nvram` command (surgical 64 KB NVRAM reset to 0xFF).
@@ -69,7 +67,7 @@ pub fn analyze_flash_dump(input_path: Option<String>) -> Result<NvramCleanReport
 pub fn clean_nvram(
     input_path: Option<String>,
     output_path: Option<String>,
-) -> Result<NvramCleanReport, String> {
+) -> IpcResult<NvramCleanReport> {
     let path = resolve_default_flash_path(input_path);
     let in_p = Path::new(&path);
     let out = output_path.unwrap_or_else(|| {
@@ -93,7 +91,7 @@ pub fn patch_nvram_command(
     output_path: Option<String>,
     nvram_offset: u32,
     patch_hex: String,
-) -> Result<NvramCleanReport, String> {
+) -> IpcResult<NvramCleanReport> {
     let patch_bytes = panadiga_core::re::matshita_emu::parse_hex_payload(patch_hex.trim())
         .map_err(|e| format!("Payload hex inválido para NVRAM: {e}"))?;
     let in_p = Path::new(input_path.trim());
@@ -103,7 +101,7 @@ pub fn patch_nvram_command(
         .filter(|s| !s.is_empty());
     let out_p = out_trimmed.map(Path::new);
     panadiga_core::nvram::patch_flash_nvram(in_p, out_p, nvram_offset as usize, &patch_bytes)
-        .map_err(|e| e.to_string())
+        .map_err(PanadigaIpcError::from)
 }
 
 /// Frontend `inspect_hdd` command.
@@ -111,7 +109,7 @@ pub fn patch_nvram_command(
 pub fn inspect_hdd(
     image_path: Option<String>,
     show_density: Option<bool>,
-) -> Result<HddAnalysisReport, String> {
+) -> IpcResult<HddAnalysisReport> {
     let path = image_path
         .unwrap_or_else(|| resolve_candidate(CANDIDATE_HDD_IMAGE_PATHS, DEFAULT_HDD_IMAGE_PATH));
     inspect_hdd_command(path, show_density.unwrap_or(true))
@@ -122,7 +120,7 @@ pub fn inspect_hdd(
 pub fn decode_meihdfs_allocations(
     image_path: Option<String>,
     include_journal: Option<bool>,
-) -> Result<MeihdfsAllocationReport, String> {
+) -> IpcResult<MeihdfsAllocationReport> {
     let path = image_path
         .unwrap_or_else(|| resolve_candidate(CANDIDATE_HDD_IMAGE_PATHS, DEFAULT_HDD_IMAGE_PATH));
     decode_meihdfs_command(path, include_journal.unwrap_or(true))
@@ -133,7 +131,7 @@ pub fn decode_meihdfs_allocations(
 pub fn extract_partitions(
     image_path: Option<String>,
     output_dir: Option<String>,
-) -> Result<PartitionExtractionManifestDto, String> {
+) -> IpcResult<PartitionExtractionManifestDto> {
     let img = image_path
         .unwrap_or_else(|| resolve_candidate(CANDIDATE_HDD_IMAGE_PATHS, DEFAULT_HDD_IMAGE_PATH));
     let out_dir = output_dir.unwrap_or_else(|| DEFAULT_HDD_EXTRACT_DIR.to_string());
@@ -174,8 +172,8 @@ pub fn extract_partitions(
 
 /// Discovers connected physical storage drives and evaluates system safety locks.
 #[tauri::command]
-pub fn list_physical_drives() -> Result<Vec<panadiga_core::hdd::PhysicalDriveInfo>, String> {
-    panadiga_core::hdd::list_physical_drives().map_err(|e| e.to_string())
+pub fn list_physical_drives() -> IpcResult<Vec<panadiga_core::hdd::PhysicalDriveInfo>> {
+    panadiga_core::hdd::list_physical_drives().map_err(PanadigaIpcError::from)
 }
 
 /// Formats a physical disk with procedural MEIHDFS filesystem structures (mkfs.meihdfs).
@@ -184,15 +182,14 @@ pub fn format_hdd_meihdfs(
     device_path: String,
     total_sectors: u64,
     confirmation_token: String,
-) -> Result<panadiga_core::hdd::DriveWriteReport, String> {
-    let layout = panadiga_core::hdd::mkfs::generate_meihdfs_layout(total_sectors, None)
-        .map_err(|e| e.to_string())?;
+) -> IpcResult<panadiga_core::hdd::DriveWriteReport> {
+    let layout = panadiga_core::hdd::mkfs::generate_meihdfs_layout(total_sectors, None)?;
     panadiga_core::hdd::write_meihdfs_procedural_to_drive(
         &device_path,
         &layout,
         &confirmation_token,
     )
-    .map_err(|e| e.to_string())
+    .map_err(PanadigaIpcError::from)
 }
 
 /// Safely writes an existing raw image file to a verified physical drive.
@@ -201,13 +198,13 @@ pub fn write_hdd_image(
     device_path: String,
     image_path: Option<String>,
     confirmation_token: String,
-) -> Result<panadiga_core::hdd::DriveWriteReport, String> {
+) -> IpcResult<panadiga_core::hdd::DriveWriteReport> {
     let img_path = image_path
         .unwrap_or_else(|| resolve_candidate(CANDIDATE_HDD_IMAGE_PATHS, DEFAULT_HDD_IMAGE_PATH));
     let bytes = std::fs::read(&img_path)
         .map_err(|e| format!("Failed reading image file {}: {}", img_path, e))?;
     panadiga_core::hdd::write_raw_image_to_drive(&device_path, &bytes, &confirmation_token)
-        .map_err(|e| e.to_string())
+        .map_err(PanadigaIpcError::from)
 }
 
 /// Atomically restores primary MEIHDFS structures from dual redundancy mirrors.
@@ -215,9 +212,9 @@ pub fn write_hdd_image(
 pub fn restore_hdd_mirrors(
     device_path: String,
     confirmation_token: String,
-) -> Result<panadiga_core::hdd::DriveWriteReport, String> {
+) -> IpcResult<panadiga_core::hdd::DriveWriteReport> {
     panadiga_core::hdd::restore_meihdfs_from_mirrors(&device_path, &confirmation_token)
-        .map_err(|e| e.to_string())
+        .map_err(PanadigaIpcError::from)
 }
 
 fn resolve_default_main_capacity_path(input_path: Option<String>) -> String {
@@ -234,9 +231,10 @@ fn resolve_default_main_capacity_path(input_path: Option<String>) -> String {
 #[tauri::command]
 pub fn inspect_hdd_capacity_patch(
     input_path: Option<String>,
-) -> Result<panadiga_core::hdd::MainCapacityInspectionReport, String> {
+) -> IpcResult<panadiga_core::hdd::MainCapacityInspectionReport> {
     let resolved = resolve_default_main_capacity_path(input_path);
-    panadiga_core::hdd::inspect_main_hdd_capacity(Path::new(&resolved)).map_err(|e| e.to_string())
+    panadiga_core::hdd::inspect_main_hdd_capacity(Path::new(&resolved))
+        .map_err(PanadigaIpcError::from)
 }
 
 /// Applies a dynamic or fixed GB HDD capacity patch (`src/hdd_cmd.c` + EXTRHEAD repack + optional MEIHDFS MBR sync).
@@ -246,7 +244,7 @@ pub fn apply_hdd_capacity_patch(
     output_path: Option<String>,
     mode: String,
     target_gb: Option<u32>,
-) -> Result<panadiga_core::hdd::MainCapacityPatchReport, String> {
+) -> IpcResult<panadiga_core::hdd::MainCapacityPatchReport> {
     let in_str = resolve_default_main_capacity_path(input_path);
     let in_p = Path::new(&in_str);
     let out_p = output_path
@@ -256,7 +254,7 @@ pub fn apply_hdd_capacity_patch(
             panadiga_core::hdd::default_capacity_patched_output_path(in_p, &mode, target_gb)
         });
     panadiga_core::hdd::patch_main_hdd_capacity(in_p, &out_p, &mode, target_gb)
-        .map_err(|e| e.to_string())
+        .map_err(PanadigaIpcError::from)
 }
 
 /// Audits a live NVRAM byte slice captured in-circuit via Pico (P7501 UART) / Android USB-OTG / BLE NUS.
@@ -265,11 +263,11 @@ pub fn analyze_live_nvram_bytes(
     bytes: Vec<u8>,
     base_bus_address: Option<u32>,
     source_label: Option<String>,
-) -> Result<panadiga_core::nvram::NvramCleanReport, String> {
+) -> IpcResult<panadiga_core::nvram::NvramCleanReport> {
     let base_addr = base_bus_address.unwrap_or(AM34_NVRAM_BASE);
     let label = source_label.unwrap_or_else(|| DEFAULT_LIVE_NVRAM_LABEL.to_string());
     panadiga_core::nvram::inspect_partial_nvram_capture(&bytes, base_addr, &label)
-        .map_err(|e| e.to_string())
+        .map_err(PanadigaIpcError::from)
 }
 
 fn format_utc_iso8601_now() -> String {

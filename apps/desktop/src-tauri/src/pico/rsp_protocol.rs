@@ -122,8 +122,7 @@ pub fn decode_am34_registers_hex(hex_str: &str, is_halted: bool) -> Option<Am34R
     })
 }
 
-/// Pure responder for simulated GDB RSP packets used exclusively in unit tests.
-#[cfg(test)]
+/// Pure responder for GDB RSP packets (used in Local AM34 Stub mode and unit tests).
 pub fn compute_mock_rsp_response_pure(cmd: &str, current_regs: &Am34RegisterState) -> Vec<u8> {
     if cmd.starts_with("qSupported") {
         build_rsp_packet("PacketSize=800;qXfer:memory-map:read+")

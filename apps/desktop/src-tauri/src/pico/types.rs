@@ -125,3 +125,13 @@ pub fn reject_mock_port(clean_port: &str) -> Result<(), String> {
     }
     Ok(())
 }
+
+/// Returns true for non-fatal transient read errors (`TimedOut`, `WouldBlock`, `Interrupted`).
+pub fn is_transient_io_error(err: &std::io::Error) -> bool {
+    matches!(
+        err.kind(),
+        std::io::ErrorKind::TimedOut
+            | std::io::ErrorKind::WouldBlock
+            | std::io::ErrorKind::Interrupted
+    )
+}

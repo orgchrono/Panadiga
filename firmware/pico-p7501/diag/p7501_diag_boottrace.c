@@ -13,6 +13,7 @@
 
 #include "hal/p7501_hw.h"
 #include "hal/p7501_led.h"
+#include "hal/p7501_watchdog.h"
 #include "p7501_types.h"
 #include "uart/p7501_uart_codec.h"
 #include "uart/p7501_uart_pio_engine.h"
@@ -91,6 +92,7 @@ void p7501_cmd_boottrace(const char *arg) {
     uint8_t byte = 0u;
 
     while (!time_reached(end_t)) {
+        p7501_wdt_kick();
         const uint64_t now_us = time_us_64();
         const uint32_t rel_us = (uint32_t)(now_us - t0_us);
 

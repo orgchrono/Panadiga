@@ -10,6 +10,7 @@
 
 #include "diag/p7501_piologic_codec.h"
 #include "hal/p7501_hw.h"
+#include "hal/p7501_watchdog.h"
 #include "p7501_logic_sampler.pio.h"
 
 #include "hardware/gpio.h"
@@ -68,7 +69,7 @@ void p7501_cmd_piologic(const char *arg) {
             p7501_hw_sw_uart_set_low(false);
         }
         p7501_hw_reset_assert();
-        sleep_ms(30);
+        p7501_wdt_sleep_ms(30u);
         release_xreset_pending = true;
     }
 
@@ -100,10 +101,14 @@ void p7501_cmd_piologic(const char *arg) {
             hold_jig_active = false;
         }
         if (pio_sm_is_rx_fifo_empty(pio0, sm)) {
+            p7501_wdt_kick();
             tight_loop_contents();
             continue;
         }
         const uint32_t w = pio_sm_get(pio0, sm);
+        if ((sample_idx & 0x0FFFu) == 0u) {
+            p7501_wdt_kick();
+        }
         if (w != rep_word) {
             for (uint32_t nib = 0u; nib < 8u; ++nib) {
                 const uint8_t cur = (uint8_t)((w >> (nib * 4u)) & 0x0Fu);

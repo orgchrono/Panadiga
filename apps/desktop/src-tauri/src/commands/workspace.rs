@@ -19,10 +19,11 @@ use super::dto::{
     BinaryFileStatusDto, HexDumpRowDto, SystemOverviewDto, detect_diga_model_from_slice,
     resolve_candidate, resolve_default_flash_path,
 };
+use super::error::IpcResult;
 
 /// Returns the complete workspace and hardware overview for `useDashboardViewModel`.
 #[tauri::command]
-pub fn get_system_overview() -> Result<SystemOverviewDto, String> {
+pub fn get_system_overview() -> IpcResult<SystemOverviewDto> {
     let check_file = |id: &str, name: &str, path: &str, role: &str| -> BinaryFileStatusDto {
         let p = Path::new(path);
         let meta = fs::metadata(p).ok();
@@ -124,7 +125,7 @@ pub fn read_hex_dump(
     file_path: Option<String>,
     offset: Option<usize>,
     count: Option<usize>,
-) -> Result<Vec<HexDumpRowDto>, String> {
+) -> IpcResult<Vec<HexDumpRowDto>> {
     let path = file_path.unwrap_or_else(|| {
         resolve_candidate(
             &[

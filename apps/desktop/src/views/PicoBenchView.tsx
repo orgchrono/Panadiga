@@ -1,10 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { usePicoBenchViewModel } from '@/viewmodels/usePicoBenchViewModel';
 import { useSc0Bridge } from '@/viewmodels/useSc0Bridge';
 import { TerminalView } from '@/components/TerminalView';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Button, ResizableSplitPane } from '@/components/ui';
-import { useWorkbenchMode } from '@/context/WorkbenchModeContext';
 import { isTargetPowered, resolveEffectiveVddVolts } from '@/utils/formatters';
 import {
   PicoBenchTopBar,
@@ -16,16 +15,28 @@ import {
   Sc0BridgePanel,
 } from '@/components/pico';
 import { useTranslation } from '@/i18n/useTranslation';
-import { AlertCircle, CheckCircle2, RefreshCw, Send, ShieldCheck, Wrench } from 'lucide-react';
+import { AlertCircle, CheckCircle2, RefreshCw, Send, ShieldCheck } from 'lucide-react';
+
+type PicoBenchSectionFilter = 'all' | 'diag' | 'bridge' | 'gdb' | 'terminal';
+
+const SECTION_FILTERS: ReadonlyArray<{ id: PicoBenchSectionFilter; label: string }> = [
+  { id: 'all', label: 'Visão Completa' },
+  { id: 'diag', label: 'Diagnósticos P7501' },
+  { id: 'bridge', label: 'SC0 Bridge' },
+  { id: 'gdb', label: 'GDB & Ghidra' },
+  { id: 'terminal', label: 'Pinagem & Terminal' },
+];
 
 /**
  * MVVM View: Panasonic P7501 Async UART Hardware Bench Controller.
  * Composes TopBar, Telemetry Metrics, Granular Diagnostics Studio (Radix Tabs),
- * GDB Server Card, Break-In Modes / Pinout, and Live Serial Console.
+ * SC0 Bridge, GDB Server Card, Break-In Modes / Pinout, and Live Serial Console.
  */
 export const PicoBenchView: React.FC = () => {
   const { t } = useTranslation();
-  const { isAdvanced, setMode } = useWorkbenchMode();
+  const [sectionFilter, setSectionFilter] = useState<PicoBenchSectionFilter>('all');
+  const showsSection = (section: Exclude<PicoBenchSectionFilter, 'all'>): boolean =>
+    sectionFilter === 'all' || sectionFilter === section;
   const {
     ssot,
     isSsotLoading,
@@ -62,6 +73,8 @@ export const PicoBenchView: React.FC = () => {
     am34Registers,
     gdbTelemetry,
     isGdbStarting,
+    gdbError,
+    isAndroidHost,
     startGdbServer,
     stopGdbServer,
     launchExternalTool,
@@ -192,80 +205,100 @@ export const PicoBenchView: React.FC = () => {
         detectedFlashMb={latestDiagnostic?.detected_flash_mb}
       />
 
-      <PicoDiagnosticsStudio
-        ssot={ssot}
-        latestResult={latestDiagnostic}
-        history={diagnosticHistory}
-        runningCommandId={runningCommandId}
-        error={diagnosticError}
-        selectedCategory={diagnosticCategory}
-        onSelectCategory={setDiagnosticCategory}
-        onExecute={executeDiagnostic}
-        onClearHistory={clearDiagnosticHistory}
-      />
+      <div
+        role="toolbar"
+        aria-label="Filtro rápido de painéis da bancada Pico"
+        className="flex items-center gap-2 flex-wrap rounded-xl bg-bench-900/70 border border-slate-800 px-3 py-2"
+      >
+        <span className="text-[11px] uppercase tracking-wider text-slate-400 mr-1">Seções:</span>
+        {SECTION_FILTERS.length === 0 ? (
+          <span className="text-xs text-slate-500">Nenhuma seção disponível.</span>
+        ) : (
+          SECTION_FILTERS.map(({ id, label }) => (
+            <Button
+              key={id}
+              type="button"
+              size="sm"
+              variant={sectionFilter === id ? 'default' : 'outline'}
+              aria-pressed={sectionFilter === id}
+              onClick={() => setSectionFilter(id)}
+              className="h-7 px-2.5 text-xs font-mono"
+            >
+              {label}
+            </Button>
+          ))
+        )}
+      </div>
 
-      {isAdvanced ? (
-        <>
-          <Sc0BridgePanel
-            status={sc0Bridge.bridgeStatus}
-            logs={sc0Bridge.bridgeLogs}
-            baudRate={sc0Bridge.baudRate}
-            onChangeBaudRate={sc0Bridge.setBaudRate}
-            bootMode={sc0Bridge.bootMode}
-            onChangeBootMode={sc0Bridge.setBootMode}
-            inputMode={sc0Bridge.inputMode}
-            onChangeInputMode={sc0Bridge.setInputMode}
-            txInput={sc0Bridge.txInput}
-            onChangeTxInput={sc0Bridge.setTxInput}
-            isBusy={sc0Bridge.isBusy}
-            error={sc0Bridge.error}
-            onStart={() => {
-              void sc0Bridge.startBridge();
-            }}
-            onStop={() => {
-              void sc0Bridge.stopBridge();
-            }}
-            onSubmitTx={() => {
-              void sc0Bridge.submitTxInput();
-            }}
-            onClearLogs={sc0Bridge.clearBridgeLogs}
-            onTriggerWaittx={spec => {
-              void sc0Bridge.triggerInteractiveWaittx(spec);
-            }}
-            onSendRspPreset={(mode, bridgePayload, panarspArg) => {
-              void sc0Bridge.sendPanaRspPreset(mode, bridgePayload, panarspArg);
-            }}
-            onSendDriveCommand={cmd => {
-              void sc0Bridge.sendDriveCommand(cmd);
-            }}
-            onRunDiagnostic={(command, arg) => {
-              void executeDiagnostic(command, arg);
-            }}
-          />
-
-          <GdbServerCard
-            gdbStatus={gdbStatus}
-            registers={am34Registers}
-            telemetry={gdbTelemetry}
-            isStarting={isGdbStarting}
-            onStart={startGdbServer}
-            onStop={stopGdbServer}
-            onLaunchTool={launchExternalTool}
-          />
-        </>
-      ) : (
-        <div className="rounded-xl bg-bench-900/70 border border-slate-800 px-4 py-3 flex flex-wrap items-center justify-between gap-3 text-xs">
-          <span className="text-slate-400 font-sans">
-            Modo Básico ativo: Ponte SC0 interativa e Servidor GDB RSP estão recolhidos para manter o fluxo direto.
-          </span>
-          <Button type="button" variant="outline" size="sm" onClick={() => setMode('advanced')} className="gap-1.5 text-xs">
-            <Wrench className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Mostrar SC0 Bridge & GDB</span>
-          </Button>
-        </div>
+      {showsSection('diag') && (
+        <PicoDiagnosticsStudio
+          ssot={ssot}
+          latestResult={latestDiagnostic}
+          history={diagnosticHistory}
+          runningCommandId={runningCommandId}
+          error={diagnosticError}
+          selectedCategory={diagnosticCategory}
+          onSelectCategory={setDiagnosticCategory}
+          onExecute={executeDiagnostic}
+          onClearHistory={clearDiagnosticHistory}
+        />
       )}
 
-      <ResizableSplitPane
+      {showsSection('bridge') && (
+        <Sc0BridgePanel
+          status={sc0Bridge.bridgeStatus}
+          logs={sc0Bridge.bridgeLogs}
+          baudRate={sc0Bridge.baudRate}
+          onChangeBaudRate={sc0Bridge.setBaudRate}
+          bootMode={sc0Bridge.bootMode}
+          onChangeBootMode={sc0Bridge.setBootMode}
+          inputMode={sc0Bridge.inputMode}
+          onChangeInputMode={sc0Bridge.setInputMode}
+          txInput={sc0Bridge.txInput}
+          onChangeTxInput={sc0Bridge.setTxInput}
+          isBusy={sc0Bridge.isBusy}
+          error={sc0Bridge.error}
+          onStart={() => {
+            void sc0Bridge.startBridge();
+          }}
+          onStop={() => {
+            void sc0Bridge.stopBridge();
+          }}
+          onSubmitTx={() => {
+            void sc0Bridge.submitTxInput();
+          }}
+          onClearLogs={sc0Bridge.clearBridgeLogs}
+          onTriggerWaittx={spec => {
+            void sc0Bridge.triggerInteractiveWaittx(spec);
+          }}
+          onSendRspPreset={(mode, bridgePayload, panarspArg) => {
+            void sc0Bridge.sendPanaRspPreset(mode, bridgePayload, panarspArg);
+          }}
+          onSendDriveCommand={cmd => {
+            void sc0Bridge.sendDriveCommand(cmd);
+          }}
+          onRunDiagnostic={(command, arg) => {
+            void executeDiagnostic(command, arg);
+          }}
+        />
+      )}
+
+      {showsSection('gdb') && (
+        <GdbServerCard
+          gdbStatus={gdbStatus}
+          registers={am34Registers}
+          telemetry={gdbTelemetry}
+          isStarting={isGdbStarting}
+          error={gdbError}
+          isAndroidHost={isAndroidHost}
+          onStart={startGdbServer}
+          onStop={stopGdbServer}
+          onLaunchTool={launchExternalTool}
+        />
+      )}
+
+      {showsSection('terminal') && (
+        <ResizableSplitPane
         initialLeftPercent={42}
         minLeftPercent={28}
         maxLeftPercent={62}
@@ -314,6 +347,7 @@ export const PicoBenchView: React.FC = () => {
           </div>
         }
       />
+      )}
     </div>
   );
 };

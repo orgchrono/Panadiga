@@ -67,11 +67,15 @@ describe('GdbExternalToolLaunchers Component (SRP Decomposition)', () => {
 
     const gdbButton = screen.getByRole('button', { name: /GDB Multiarch/i });
     const ghidraButton = screen.getByRole('button', { name: /Scripts Ghidra/i });
+    const ghidraSyncButton = screen.getByRole('button', { name: /Sync Jython \(Headless\)/i });
+    const ghidraMcpButton = screen.getByRole('button', { name: /Ghidra MCP :8081/i });
     const hxdButton = screen.getByRole('button', { name: /Editor Hexadecimal/i });
     const terminalButton = screen.getByRole('button', { name: /Terminal Host/i });
 
     expect(gdbButton).toBeDefined();
     expect(ghidraButton).toBeDefined();
+    expect(ghidraSyncButton).toBeDefined();
+    expect(ghidraMcpButton).toBeDefined();
     expect(hxdButton).toBeDefined();
     expect(terminalButton).toBeDefined();
 
@@ -80,6 +84,12 @@ describe('GdbExternalToolLaunchers Component (SRP Decomposition)', () => {
 
     fireEvent.click(ghidraButton);
     expect(onLaunchTool).toHaveBeenCalledWith('ghidra');
+
+    fireEvent.click(ghidraSyncButton);
+    expect(onLaunchTool).toHaveBeenCalledWith('ghidra_sync');
+
+    fireEvent.click(ghidraMcpButton);
+    expect(onLaunchTool).toHaveBeenCalledWith('ghidra_mcp');
 
     fireEvent.click(hxdButton);
     expect(onLaunchTool).toHaveBeenCalledWith('hxd');

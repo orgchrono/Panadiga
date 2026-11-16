@@ -6,8 +6,8 @@ use panadiga_core::constants::{DEFAULT_HDD_IMAGE_PATH, PANA_FRM_MOD3_START_OFFSE
 use panadiga_core::hdd::{
     decode_meihdfs_descriptors, default_capacity_patched_output_path, export_report_to_json,
     extract_hdd_partitions, generate_meihdfs_layout, inspect_hdd_image, inspect_main_hdd_capacity,
-    list_physical_drives, open_image_buffer, patch_main_hdd_capacity, restore_meihdfs_from_mirrors,
-    write_meihdfs_procedural_to_drive, write_raw_image_to_drive,
+    list_physical_drives, open_image_buffer, patch_main_hdd_capacity_with_passthrough,
+    restore_meihdfs_from_mirrors, write_meihdfs_procedural_to_drive, write_raw_image_to_drive,
 };
 use panadiga_core::log_println;
 use std::path::PathBuf;
@@ -201,22 +201,30 @@ pub fn handle_hdd(args: HddArgs) -> Result<()> {
             output,
             mode,
             target_gb,
+            passthrough_mode,
         } => {
             let in_path = resolve_main_capacity_input(input);
             let out_path = output.unwrap_or_else(|| {
                 default_capacity_patched_output_path(&in_path, &mode, target_gb)
             });
-            let rep = patch_main_hdd_capacity(&in_path, &out_path, &mode, target_gb)?;
+            let rep = patch_main_hdd_capacity_with_passthrough(
+                &in_path,
+                &out_path,
+                &mode,
+                target_gb,
+                passthrough_mode.as_deref(),
+            )?;
             log_println!("====================================================================");
             log_println!("   PANASONIC DIGA DYNAMIC HDD CAPACITY PATCHER");
             log_println!("====================================================================");
             log_println!("Input:            {}", rep.input_path);
             log_println!("Output:           {}", rep.output_path);
             log_println!(
-                "Format / Mode:    {} | mode={} | target_gb={:?}",
+                "Format / Mode:    {} | mode={} | target_gb={:?} | passthrough={}",
                 rep.container_format,
                 rep.mode,
-                rep.target_gb
+                rep.target_gb,
+                rep.passthrough_mode.as_deref().unwrap_or("unchanged")
             );
             log_println!(
                 "Applied Ceiling:  {} ({} blocks of 2KB = {} 512B sectors)",

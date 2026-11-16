@@ -13,6 +13,7 @@ use super::constants::{
     ROOT_DOC_ALLOWLIST, SRC_EXTENSIONS, SRC_TOP_DIRS,
 };
 use super::dto::EngineeringDocEntryDto;
+use super::error::IpcResult;
 
 fn resolve_workspace() -> PathBuf {
     panadiga_core::constants::resolve_workspace_root()
@@ -110,7 +111,7 @@ fn collect_dir_entries(
 /// Lists bilingual markdown docs (`INDEX.md`, root docs, `en-US`, `pt-BR`, `audits`),
 /// Ghidra pseudocode/raw `.txt` dumps, and deduplicated `COM10` `.log` captures.
 #[tauri::command]
-pub fn list_engineering_docs() -> Result<Vec<EngineeringDocEntryDto>, String> {
+pub fn list_engineering_docs() -> IpcResult<Vec<EngineeringDocEntryDto>> {
     let docs_root = resolve_docs_root()?;
     let ws_root = resolve_workspace();
     let mut entries = Vec::new();
@@ -201,28 +202,28 @@ fn read_workspace_src_preview(sub: &str) -> Result<String, String> {
 /// Reads an engineering doc (`.md`/`.txt`/`.log` in `docs/`), allowlisted root doc (`repo:<name>`),
 /// or workspace source reference (`src:<rel_path>`) with strict path-traversal confinement.
 #[tauri::command]
-pub fn read_engineering_doc(relative_path: String) -> Result<String, String> {
+pub fn read_engineering_doc(relative_path: String) -> IpcResult<String> {
     let rel = relative_path.trim().replace('\\', "/");
     if let Some(root_name) = rel.strip_prefix("repo:") {
         if !ROOT_DOC_ALLOWLIST.contains(&root_name) {
-            return Err("Documento raiz não listado na allowlist.".to_string());
+            return Err("Documento raiz não listado na allowlist.".into());
         }
         let ws_root = resolve_workspace();
         let target = ws_root.join(root_name);
         if !target.is_file() {
-            return Err(format!("Documento raiz '{root_name}' não encontrado."));
+            return Err(format!("Documento raiz '{root_name}' não encontrado.").into());
         }
-        return read_decoded_text(&target);
+        return Ok(read_decoded_text(&target)?);
     }
     if let Some(sub) = rel.strip_prefix("src:") {
-        return read_workspace_src_preview(sub);
+        return Ok(read_workspace_src_preview(sub)?);
     }
-    read_docs_confined_text(&rel, DOC_EXTENSIONS)
+    Ok(read_docs_confined_text(&rel, DOC_EXTENSIONS)?)
 }
 
 /// Decodes a `.log` or `.txt` bench capture confined within `docs/` via `panadiga_core`.
 #[tauri::command]
-pub fn decode_engineering_log(relative_path: String) -> Result<Am34BootLogReport, String> {
+pub fn decode_engineering_log(relative_path: String) -> IpcResult<Am34BootLogReport> {
     let rel = relative_path.trim().replace('\\', "/");
     let decoded = read_docs_confined_text(&rel, &["log", "txt"])?;
     Ok(parse_bench_log_text(&decoded))

@@ -10,6 +10,8 @@ export interface GdbServerCardProps {
   registers: Am34RegisterState | null;
   telemetry?: GdbPacketTelemetryEvent[];
   isStarting: boolean;
+  error?: string | null;
+  isAndroidHost?: boolean;
   onStart: (listenAddr?: string) => Promise<void>;
   onStop: () => Promise<void>;
   onLaunchTool?: (tool: ExternalToolName) => Promise<void>;
@@ -24,6 +26,8 @@ export const GdbServerCard: React.FC<GdbServerCardProps> = ({
   registers,
   telemetry = [],
   isStarting,
+  error,
+  isAndroidHost = false,
   onStart,
   onStop,
   onLaunchTool,
@@ -34,12 +38,13 @@ export const GdbServerCard: React.FC<GdbServerCardProps> = ({
       <GdbServerControls
         gdbStatus={gdbStatus}
         isStarting={isStarting}
+        error={error}
         onStart={onStart}
         onStop={onStop}
       />
 
       {/* 2. Rapid Engineering Tool Launchers */}
-      <GdbExternalToolLaunchers onLaunchTool={onLaunchTool} />
+      <GdbExternalToolLaunchers onLaunchTool={onLaunchTool} isAndroidHost={isAndroidHost} />
 
       {/* 3. AM34 Register Live Grid */}
       <Am34RegisterGrid registers={registers} />

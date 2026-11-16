@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 //! Centralized constants for Tauri IPC commands, hardware diagnostics, and desktop paths.
 //!
 //! Eliminates inline magic literals across `commands/` and `pico/` by re-exporting
@@ -38,7 +40,6 @@ pub const PORT_OBSERVER_POLL_MS: u64 = 1_000;
 pub const VDD_ZERO_EPSILON_VOLTS: f32 = 0.01;
 pub const VDD_TARGET_MIN_VOLTS: f32 = 2.50;
 pub const VDD_TARGET_FLOATING_CEIL_VOLTS: f32 = 3.45;
-pub const NVRAM_DEFAULT_WORD_BASE_FALLBACK_HEX: &str = "0x807F0000";
 
 pub const SERIAL_OPEN_TIMEOUT_MS: u64 = 1_500;
 pub const SERIAL_PING_STATUS_TIMEOUT_MS: u64 = 1_500;
@@ -64,10 +65,10 @@ pub const SOURCE_PICO_LIVE_NVRAM: &str = "pico-live-nvram-capture";
 pub const SOURCE_PICO_DIAG_DUMP: &str = "pico-diagnostic-dump";
 pub const DEFAULT_LIVE_NVRAM_LABEL: &str = "Pico Live NVRAM Capture";
 pub const DEFAULT_DUMP_DIAGNOSTIC_CMD: &str = "DUMP";
-pub const DEFAULT_ISOLATE_CMD: &str = "ISOLATE";
 
 pub const STATUS_REFRESH_COMMANDS: &[&str] = &[
     "STATUS",
+    "WDT",
     "VDD",
     "PINCHECK",
     "HANDSHAKE",
@@ -142,6 +143,7 @@ pub const COMPLETION_MARKERS: &[&str] = &[
     "BRIDGE: ERROR",
     "LED: OK",
     "LED: ERROR",
+    "WDT: OK",
     "WDT:",
     "FMUSCAN: OK",
     "FMUTEST: OK",

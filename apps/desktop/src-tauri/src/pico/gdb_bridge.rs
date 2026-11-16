@@ -14,7 +14,9 @@ use std::time::Duration;
 
 use panadiga_core::constants::DEFAULT_GDB_LISTEN_SOCKET;
 
-use super::rsp_protocol::{decode_am34_registers_hex, verify_and_classify_rsp_packet};
+use super::rsp_protocol::{
+    compute_mock_rsp_response_pure, decode_am34_registers_hex, verify_and_classify_rsp_packet,
+};
 use super::types::{
     Am34RegisterState, GdbBridgeStatus, GdbPacketTelemetryEvent, extract_port_name,
 };
@@ -112,17 +114,27 @@ pub fn get_gdb_telemetry() -> Vec<GdbPacketTelemetryEvent> {
 }
 
 /// Starts the GDB TCP-to-Serial bridge server in a background thread.
+///
+/// Binds `listen_addr` (default `127.0.0.1:3333`) ONCE before spawning the accept loop to
+/// eliminate TCP `TIME_WAIT` race conditions, and falls back to an offline Local AM34 RSP
+/// Stub when no physical Pico serial port is attached so `gdb-multiarch` / Ghidra can always connect.
 pub fn start_gdb_bridge(port_name: String, listen_addr: String) -> Result<GdbBridgeStatus, String> {
     let ctrl = get_controller();
     if ctrl.running.load(Ordering::Relaxed) {
         return get_gdb_bridge_status();
     }
 
-    let clean_port = extract_port_name(&port_name);
-    if clean_port.is_empty() {
-        return Err("Nenhuma porta serial selecionada para a Ponte GDB RSP. Conecte o Pico ou selecione uma porta COM primeiro.".to_string());
+    let mut clean_port = extract_port_name(&port_name);
+    if clean_port.is_empty() || clean_port.eq_ignore_ascii_case("AUTO") {
+        clean_port = super::serial::list_pico_serial_ports()
+            .ok()
+            .and_then(|ports| ports.into_iter().next())
+            .map(|p| extract_port_name(&p))
+            .unwrap_or_else(|| "LOCAL_STUB".to_string());
     }
-    super::types::reject_mock_port(&clean_port)?;
+    if !clean_port.eq_ignore_ascii_case("LOCAL_STUB") {
+        super::types::reject_mock_port(&clean_port)?;
+    }
 
     let addr = if listen_addr.trim().is_empty() {
         DEFAULT_GDB_LISTEN_SOCKET.to_string()
@@ -130,22 +142,51 @@ pub fn start_gdb_bridge(port_name: String, listen_addr: String) -> Result<GdbBri
         listen_addr.trim().to_string()
     };
 
-    // Pre-validate that TCP port can be bound
-    let pre_test_listener = TcpListener::bind(&addr).map_err(|e| {
-        format!("Falha ao vincular porta TCP {}: {}. Verifique se outra instância do GDB ou processo não está utilizando a porta.", addr, e)
+    // Bind TCP socket once directly and hand the live TcpListener to the worker thread.
+    let listener = TcpListener::bind(&addr).map_err(|e| {
+        format!("Falha ao abrir porta TCP GDB {}: {}. Verifique se outra instância do GDB/Ghidra não está utilizando esta porta.", addr, e)
     })?;
-    drop(pre_test_listener);
+    let _ = listener.set_nonblocking(true);
 
-    // Pre-validate serial accessibility
-    match panadiga_core::pico::cdc::open_cdc(&clean_port, 115200, Duration::from_millis(150)) {
-        Ok(_) => {}
-        Err(e) => {
-            return Err(format!(
-                "Falha ao abrir porta serial {} para a Ponte GDB RSP: {}. Verifique se o Pico está conectado e não ocupado por outro terminal.",
-                clean_port, e
-            ));
+    // Try opening physical Pico CDC (holding serial mutex); fall back cleanly to Local AM34 RSP Stub if absent/busy.
+    let mut maybe_serial: Option<Box<dyn serialport::SerialPort>> = None;
+    let active_mode_label = if !clean_port.eq_ignore_ascii_case("LOCAL_STUB")
+        && !clean_port.eq_ignore_ascii_case("LOCAL")
+    {
+        let _io_guard = super::serial::lock_serial_io();
+        match panadiga_core::pico::cdc::open_cdc(&clean_port, 115200, Duration::from_millis(120)) {
+            Ok(mut p) => {
+                let _ = p.write_all(b"\r\nGDB\r\n");
+                let _ = p.flush();
+                let mut drain_buf = [0u8; 512];
+                let mut accumulated = String::new();
+                for _ in 0..8 {
+                    match p.read(&mut drain_buf) {
+                        Ok(n) if n > 0 => {
+                            accumulated.push_str(&String::from_utf8_lossy(&drain_buf[..n]));
+                            if accumulated.contains("Auto-ready") {
+                                break;
+                            }
+                        }
+                        _ => break,
+                    }
+                }
+                let _ = p.set_timeout(Duration::from_millis(50));
+                maybe_serial = Some(p);
+                clean_port.clone()
+            }
+            Err(e) => {
+                panadiga_core::log_warn!(
+                    "[GDB Bridge] Porta serial {} indisponível ({}); iniciando servidor em modo Local AM34 Stub.",
+                    clean_port,
+                    e
+                );
+                format!("LOCAL_STUB (fallback de {})", clean_port)
+            }
         }
-    }
+    } else {
+        "LOCAL_STUB (AM34)".to_string()
+    };
 
     ctrl.running.store(true, Ordering::Relaxed);
     ctrl.client_connected.store(false, Ordering::Relaxed);
@@ -153,70 +194,16 @@ pub fn start_gdb_bridge(port_name: String, listen_addr: String) -> Result<GdbBri
 
     {
         let mut guard = lock_unpoisoned(&ctrl.state);
-        guard.port_name = clean_port.clone();
+        guard.port_name = active_mode_label.clone();
         guard.listen_addr = addr.clone();
-        guard.last_event = format!("Ouvindo conexões GDB em {}", addr);
+        guard.last_event = format!("Ouvindo conexões GDB em {} [{}]", addr, active_mode_label);
     }
 
     let running_flag = ctrl.running.clone();
     let connected_flag = ctrl.client_connected.clone();
     let count_flag = ctrl.client_count.clone();
-    let thread_port = clean_port.clone();
-    let thread_addr = addr.clone();
 
     let handle = thread::spawn(move || {
-        let listener = match TcpListener::bind(&thread_addr) {
-            Ok(l) => {
-                let _ = l.set_nonblocking(true);
-                l
-            }
-            Err(e) => {
-                panadiga_core::log_warn!(
-                    "[GDB Bridge] Falha ao vincular porta TCP {}: {}",
-                    thread_addr,
-                    e
-                );
-                running_flag.store(false, Ordering::Relaxed);
-                return;
-            }
-        };
-
-        let mut maybe_serial: Option<Box<dyn serialport::SerialPort>> =
-            match panadiga_core::pico::cdc::open_cdc(
-                &thread_port,
-                115200,
-                Duration::from_millis(120),
-            ) {
-                Ok(mut p) => {
-                    let _ = p.write_all(b"\r\nGDB\r\n");
-                    let _ = p.flush();
-                    let mut drain_buf = [0u8; 512];
-                    let mut accumulated = String::new();
-                    for _ in 0..8 {
-                        match p.read(&mut drain_buf) {
-                            Ok(n) if n > 0 => {
-                                accumulated.push_str(&String::from_utf8_lossy(&drain_buf[..n]));
-                                if accumulated.contains("Auto-ready") {
-                                    break;
-                                }
-                            }
-                            _ => break,
-                        }
-                    }
-                    let _ = p.set_timeout(Duration::from_millis(50));
-                    Some(p)
-                }
-                Err(e) => {
-                    panadiga_core::log_warn!(
-                        "[GDB Bridge] Falha ao abrir porta serial {}: {}",
-                        thread_port,
-                        e
-                    );
-                    running_flag.store(false, Ordering::Relaxed);
-                    return;
-                }
-            };
-
         while running_flag.load(Ordering::Relaxed) {
             match listener.accept() {
                 Ok((tcp_stream, _peer)) => {
@@ -229,6 +216,8 @@ pub fn start_gdb_bridge(port_name: String, listen_addr: String) -> Result<GdbBri
                             &running_flag,
                             &connected_flag,
                         );
+                    } else {
+                        handle_local_stub_session(tcp_stream, &running_flag, &connected_flag);
                     }
                     connected_flag.store(false, Ordering::Relaxed);
                 }
@@ -252,14 +241,59 @@ pub fn start_gdb_bridge(port_name: String, listen_addr: String) -> Result<GdbBri
     get_gdb_bridge_status()
 }
 
+fn prepare_gdb_tcp_stream(tcp_stream: &mut TcpStream) {
+    let _ = tcp_stream.set_nonblocking(false);
+    let _ = tcp_stream.set_read_timeout(Some(Duration::from_millis(50)));
+}
+
+fn handle_local_stub_session(
+    mut tcp_stream: TcpStream,
+    running_flag: &Arc<AtomicBool>,
+    connected_flag: &Arc<AtomicBool>,
+) {
+    prepare_gdb_tcp_stream(&mut tcp_stream);
+    let mut t_buf = [0u8; 1024];
+
+    while running_flag.load(Ordering::Relaxed) && connected_flag.load(Ordering::Relaxed) {
+        match tcp_stream.read(&mut t_buf) {
+            Ok(0) => break,
+            Ok(n) => {
+                let raw = String::from_utf8_lossy(&t_buf[..n]);
+                record_telemetry("INBOUND", &raw);
+                for segment in raw.split('$').skip(1) {
+                    let cmd = segment.split('#').next().unwrap_or("");
+                    if cmd.is_empty() {
+                        continue;
+                    }
+                    if cmd.starts_with('G') {
+                        sync_controller_registers(cmd);
+                    }
+                    let regs_snapshot = {
+                        let ctrl = get_controller();
+                        lock_unpoisoned(&ctrl.state).registers.clone()
+                    };
+                    let reply_bytes = compute_mock_rsp_response_pure(cmd, &regs_snapshot);
+                    let reply_str = String::from_utf8_lossy(&reply_bytes).into_owned();
+                    record_telemetry("OUTBOUND", &reply_str);
+                    if tcp_stream.write_all(&reply_bytes).is_err() {
+                        return;
+                    }
+                }
+                let _ = tcp_stream.flush();
+            }
+            Err(ref e) if crate::pico::is_transient_io_error(e) => {}
+            Err(_) => break,
+        }
+    }
+}
+
 fn handle_serial_session(
     mut tcp_stream: TcpStream,
     serial_port: &mut Box<dyn serialport::SerialPort>,
     running_flag: &Arc<AtomicBool>,
     connected_flag: &Arc<AtomicBool>,
 ) {
-    let _ = tcp_stream.set_nonblocking(false);
-    let _ = tcp_stream.set_read_timeout(Some(Duration::from_millis(50)));
+    prepare_gdb_tcp_stream(&mut tcp_stream);
 
     let mut s_buf = [0u8; 1024];
     let mut t_buf = [0u8; 1024];
@@ -286,9 +320,7 @@ fn handle_serial_session(
                 }
                 let _ = serial_port.write_all(&t_buf[..n]);
             }
-            Err(ref e)
-                if e.kind() == std::io::ErrorKind::WouldBlock
-                    || e.kind() == std::io::ErrorKind::TimedOut => {}
+            Err(ref e) if crate::pico::is_transient_io_error(e) => {}
             Err(_) => break,
         }
 
@@ -309,7 +341,7 @@ fn handle_serial_session(
                     break;
                 }
             }
-            Err(ref e) if e.kind() == std::io::ErrorKind::TimedOut => {}
+            Err(ref e) if crate::pico::is_transient_io_error(e) => {}
             Err(_) => break,
         }
     }

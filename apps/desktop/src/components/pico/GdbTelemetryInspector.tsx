@@ -32,7 +32,7 @@ export const GdbTelemetryInspector: React.FC<GdbTelemetryInspectorProps> = ({
           ) : (
             telemetry
               .slice(-12)
-              .reverse()
+              .map((_, idx, list) => list[list.length - 1 - idx])
               .map((pkt, idx) => (
                 <div
                   key={`${pkt.timestamp_ms}-${idx}`}

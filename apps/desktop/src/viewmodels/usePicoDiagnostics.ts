@@ -92,7 +92,16 @@ export function usePicoDiagnostics({
           const started = performance.now();
           const reply = await runTransport();
           const elapsed = Math.round(performance.now() - started);
-          const parsed = parseDiagnosticOutput(norm, rawCommand, reply.output, elapsed);
+          const parsed = await invokeCommand<PicoDiagnosticResult>('pico_parse_diagnostic_output', {
+            commandId: norm,
+            command_id: norm,
+            rawCommand,
+            raw_command: rawCommand,
+            rawOutput: reply.output,
+            raw_output: reply.output,
+            elapsedMs: elapsed,
+            elapsed_ms: elapsed,
+          }).catch(() => parseDiagnosticOutput(norm, rawCommand, reply.output, elapsed));
           if (!reply.ok) parsed.success = false;
           if (parsed.success && norm === 'DUMP') {
             void ingestP7501DumpOutput(reply.output, transportTag, selectedPort).catch(() => {});
@@ -140,7 +149,7 @@ export function usePicoDiagnostics({
         setRunningCommandId(null);
       }
     },
-    [selectedPort, ssot?.pico_commands, onLog, commitDiagnosticResult]
+    [selectedPort, ssot, onLog, commitDiagnosticResult]
   );
 
   const clearHistory = useCallback(() => {

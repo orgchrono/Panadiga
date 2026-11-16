@@ -76,6 +76,8 @@ pub struct MainCapacityPatchReport {
     pub applied_sectors_512b: u64,
     pub mbr_superblocks_updated: bool,
     pub repacked_container_size: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub passthrough_mode: Option<String>,
     pub original_sha256: String,
     pub patched_sha256: String,
     pub inspection_before: MainCapacityInspectionReport,

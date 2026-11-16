@@ -63,12 +63,17 @@ export function useGdbBridge({ selectedPort, onLog }: UseGdbBridgeOptions) {
   }, []);
 
   const startGdbServer = useCallback(async (listenAddr = GDB_DEFAULT_LISTEN_ADDR) => {
+    const targetPort = selectedPort || 'AUTO';
     setState({ status: 'starting', listenAddr });
-    onLog?.('info', 'HOST', `Iniciando Servidor Ponte GDB RSP em ${listenAddr} (Porta: ${selectedPort})...`);
+    onLog?.(
+      'info',
+      'HOST',
+      `Iniciando Servidor Ponte GDB RSP em ${listenAddr} (Porta: ${selectedPort ? selectedPort : 'AUTO / Stub AM34'})...`
+    );
     try {
       const status = await invokeCommand<GdbBridgeStatus>('start_gdb_bridge_command', {
-        portName: selectedPort,
-        port_name: selectedPort,
+        portName: targetPort,
+        port_name: targetPort,
         listenAddr,
         listen_addr: listenAddr,
       });
@@ -78,7 +83,11 @@ export function useGdbBridge({ selectedPort, onLog }: UseGdbBridgeOptions) {
         listenAddr: status.listen_addr,
         clientCount: status.connected_clients,
       });
-      onLog?.('success', 'HOST', `Ponte GDB RSP ativa! Conecte seu depurador com: (gdb) target remote ${listenAddr}`);
+      onLog?.(
+        'success',
+        'HOST',
+        `Ponte GDB RSP ativa (${status.port_name})! Conecte seu depurador com: (gdb) target remote ${status.listen_addr || listenAddr}`
+      );
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);
       setState({ status: 'error', message: errMsg });
@@ -101,7 +110,7 @@ export function useGdbBridge({ selectedPort, onLog }: UseGdbBridgeOptions) {
   }, [onLog]);
 
   const launchTool = useCallback(
-    async (tool: 'gdb' | 'ghidra' | 'hxd' | 'terminal') => {
+    async (tool: 'gdb' | 'ghidra' | 'ghidra_sync' | 'ghidra_mcp' | 'hxd' | 'terminal') => {
       onLog?.('info', 'HOST', `Disparando ferramenta externa: ${tool.toUpperCase()}...`);
       try {
         const msg = await invokeCommand<string>('launch_external_tool_command', { tool });
@@ -125,6 +134,7 @@ export function useGdbBridge({ selectedPort, onLog }: UseGdbBridgeOptions) {
     am34Registers,
     telemetry,
     isGdbStarting,
+    gdbError: state.status === 'error' ? state.message : null,
     startGdbServer,
     stopGdbServer,
     pollGdbState,

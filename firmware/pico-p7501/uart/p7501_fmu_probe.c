@@ -12,6 +12,7 @@
 #include "uart/p7501_uart_pio_engine.h"
 #include "common/p7501_hex.h"
 #include "hal/p7501_hw.h"
+#include "hal/p7501_watchdog.h"
 
 #include <inttypes.h>
 #include <stdio.h>
@@ -163,6 +164,7 @@ void p7501_cmd_fmu_scan(const char *arg) {
                 sweep_done = true;
             }
         }
+        p7501_wdt_kick();
         tight_loop_contents();
     }
 
@@ -230,6 +232,7 @@ void p7501_cmd_fmu_test(const char *arg) {
             tx_count++;
             next_tx_us = time_us_32() + 25000UL;
         }
+        p7501_wdt_kick();
         tight_loop_contents();
     }
 

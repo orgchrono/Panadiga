@@ -13,10 +13,11 @@ use super::constants::{
 use super::dto::{
     CodebookReport, FrmEntropyReport, FrmTocDumpReport, ManualSearchResult, resolve_candidate,
 };
+use super::error::{IpcResult, PanadigaIpcError};
 
 /// Performs Shannon entropy calculation, cipher frequency analysis, and ECB leak detection.
 #[tauri::command]
-pub fn analyze_frm_command(frm_path: String) -> Result<FrmEntropyReport, String> {
+pub fn analyze_frm_command(frm_path: String) -> IpcResult<FrmEntropyReport> {
     let hdd_candidates: Vec<&Path> = panadiga_core::constants::CANDIDATE_HDD_RAW_BACKUP_PATHS
         .iter()
         .map(Path::new)
@@ -29,13 +30,14 @@ pub fn analyze_frm_command(frm_path: String) -> Result<FrmEntropyReport, String>
         DEFAULT_FRM_ENTROPY_TOP_N,
         None,
     )
-    .map_err(|e| e.to_string())
+    .map_err(PanadigaIpcError::from)
 }
 
 /// Dumps and validates the Table of Contents (TOC) descriptors in PANA_DVD.FRM.
 #[tauri::command]
-pub fn dump_frm_toc_command(frm_path: String) -> Result<FrmTocDumpReport, String> {
-    panadiga_core::crypto::read_and_analyze_frm_toc(Path::new(&frm_path)).map_err(|e| e.to_string())
+pub fn dump_frm_toc_command(frm_path: String) -> IpcResult<FrmTocDumpReport> {
+    panadiga_core::crypto::read_and_analyze_frm_toc(Path::new(&frm_path))
+        .map_err(PanadigaIpcError::from)
 }
 
 /// Computes the 64-bit ECB Known-Plaintext Attack (KPA) codebook dictionary.
@@ -43,15 +45,15 @@ pub fn dump_frm_toc_command(frm_path: String) -> Result<FrmTocDumpReport, String
 pub fn get_frm_codebook_command(
     frm_path: String,
     hdd_path: Option<String>,
-) -> Result<CodebookReport, String> {
+) -> IpcResult<CodebookReport> {
     let hdd_p = hdd_path.as_deref().map(Path::new);
     panadiga_core::crypto::print_codebook(Path::new(&frm_path), hdd_p, None)
-        .map_err(|e| e.to_string())
+        .map_err(PanadigaIpcError::from)
 }
 
 /// Searches official Panasonic DMR-EH55 service manuals and schematics for technical terms.
 #[tauri::command]
-pub fn search_manuals_command(term: String) -> Result<Vec<ManualSearchResult>, String> {
+pub fn search_manuals_command(term: String) -> IpcResult<Vec<ManualSearchResult>> {
     let fallback_dir = panadiga_core::constants::find_workspace_subdir(
         panadiga_core::constants::DEFAULT_MANUALS_DIR,
     );
@@ -66,18 +68,17 @@ pub fn search_manuals_command(term: String) -> Result<Vec<ManualSearchResult>, S
         .or(fallback_dir)
         .ok_or_else(|| "Diretório 'manuals_and_schematics' não encontrado.".to_string())?;
     panadiga_core::manuals::search_manuals(&resolved_dir, Some(vec![term]), None)
-        .map_err(|e| e.to_string())
+        .map_err(PanadigaIpcError::from)
 }
 
 #[tauri::command]
-pub fn list_service_manuals() -> Result<Vec<super::dto::ServiceManualCatalogItemDto>, String> {
+pub fn list_service_manuals() -> IpcResult<Vec<super::dto::ServiceManualCatalogItemDto>> {
     let manuals_dir = panadiga_core::constants::find_workspace_subdir(
         panadiga_core::constants::DEFAULT_MANUALS_DIR,
     )
     .ok_or_else(|| "Diretório 'manuals_and_schematics' não encontrado.".to_string())?;
     let root = panadiga_core::constants::resolve_workspace_root();
-    let pdfs =
-        panadiga_core::manuals::list_pdf_files(&manuals_dir, None).map_err(|e| e.to_string())?;
+    let pdfs = panadiga_core::manuals::list_pdf_files(&manuals_dir, None)?;
     let mut items = Vec::with_capacity(pdfs.len());
     for p in pdfs {
         let size_bytes = std::fs::metadata(&p).map(|m| m.len()).unwrap_or(0);
@@ -119,13 +120,13 @@ fn resolve_frm_input_path(frm_path: Option<String>) -> String {
 
 /// Frontend `analyze_frm` command.
 #[tauri::command]
-pub fn analyze_frm(frm_path: Option<String>) -> Result<FrmEntropyReport, String> {
+pub fn analyze_frm(frm_path: Option<String>) -> IpcResult<FrmEntropyReport> {
     analyze_frm_command(resolve_frm_input_path(frm_path))
 }
 
 /// Frontend `dump_frm_toc` command.
 #[tauri::command]
-pub fn dump_frm_toc(frm_path: Option<String>) -> Result<FrmTocDumpReport, String> {
+pub fn dump_frm_toc(frm_path: Option<String>) -> IpcResult<FrmTocDumpReport> {
     dump_frm_toc_command(resolve_frm_input_path(frm_path))
 }
 
@@ -134,7 +135,7 @@ pub fn dump_frm_toc(frm_path: Option<String>) -> Result<FrmTocDumpReport, String
 pub fn get_codebook(
     frm_path: Option<String>,
     hdd_path: Option<String>,
-) -> Result<CodebookReport, String> {
+) -> IpcResult<CodebookReport> {
     get_frm_codebook_command(resolve_frm_input_path(frm_path), hdd_path)
 }
 
@@ -143,7 +144,7 @@ pub fn get_codebook(
 pub fn search_manuals(
     query: Option<String>,
     term: Option<String>,
-) -> Result<Vec<ManualSearchResult>, String> {
+) -> IpcResult<Vec<ManualSearchResult>> {
     let q = query
         .or(term)
         .unwrap_or_else(|| DEFAULT_MANUAL_SEARCH_TERM.to_string());
