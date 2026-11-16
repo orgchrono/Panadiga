@@ -1,0 +1,101 @@
+{
+  "nav": {
+    "ircommander": "DIGA Commander IR",
+    "ircommander.sub": "Kaseikyo Blasting & Keymaps (APK)"
+  },
+  "shell": {
+    "viewTitles": {
+      "ircommander": "Panasonic DIGA Commander — Offline IR & Keymaps"
+    }
+  },
+  "irCommander": {
+    "title": "DIGA Commander — Unified Kaseikyo IR Hub",
+    "subtitle": "Android ConsumerIR / Exynos sec_ir + Pico 38 kHz IRTX (APK Exclusive).",
+    "tabs": {
+      "remote": "DIGA Remote",
+      "catalog": "1,763-Model Catalog",
+      "service": "Service & Unbrick",
+      "diagnostics": "IR HAL & Pico"
+    },
+    "vfd": {
+      "header": "FL DISPLAY / IR TELEMETRY",
+      "txActive": "TX ACTIVE",
+      "txFailed": "IR transmission failed"
+    },
+    "macro": {
+      "runningProgress": "Running macro step {{step}} of {{total}}...",
+      "abortBtn": "ABORT MACRO",
+      "abortedToast": "Macro aborted safely.",
+      "completedToast": "Macro sequence completed."
+    },
+    "remote": {
+      "deckTitle": "Hardware Deck & Unit Code",
+      "teletextNoteTitle": "Teletext [RED] (0x141) vs Remote AUDIO [A] / DISPLAY [B]",
+      "teletextNoteBody": "US combo remotes (EUR7659Y70) print 'AUDIO [A]' (OBC 0x33) and 'DISPLAY [B]' (OBC 0x92), which are NOT Teletext Color [RED]/[GREEN]/[YELLOW]/[BLUE] (0x141..0x144) or Setup/Service keys.",
+      "emptyTitle": "No deck profile loaded",
+      "emptyDesc": "Select a deck mode above or browse all 1,763 Panasonic codesets.",
+      "confirmKeyDesc": "This button triggers a protected operation (Erase/Format/Power). Confirm IR emission?",
+      "confirmKeyBtn": "Transmit Key"
+    },
+    "keymap": {
+      "editMode": "Edit Runtime Keys"
+    },
+    "sections": {
+      "POWER_INPUT": "Power & Inputs",
+      "NAVIGATION": "Navigation & Menus",
+      "TRANSPORT": "Playback & Transport",
+      "RECORDING_EDIT": "Recording & Chapter Edit",
+      "TUNING_AUDIO": "Tuning, Audio & Colors",
+      "NUMERIC": "Numeric Keypad",
+      "CUSTOM": "Custom / Imported Keys"
+    },
+    "catalog": {
+      "title": "All-Panasonic Offline IR Database",
+      "searchPlaceholder": "Search DMR-EH55, ES35V, Viera, SA-HT, N2QAYB...",
+      "importBtn": "Import .ir/.irplus",
+      "savedLabel": "Saved Profiles",
+      "emptySearch": "No Panasonic codesets matched this filter.",
+      "addKeyBtn": "Add Key",
+      "saveProfileBtn": "Save Profile",
+      "importDialogTitle": "Import External IR Keymap",
+      "importDialogDesc": "Paste a Flipper Zero (.ir) or irplus (.irplus XML) definition.",
+      "importConfirmBtn": "Parse & Load Profile",
+      "savedToast": "Saved to Android persistent preferences.",
+      "importedToast": "Loaded {{count}} keys from imported file."
+    },
+    "editor": {
+      "title": "Edit Remote Button",
+      "subtitle": "Customize label, Kaseikyo D/S/F or Pronto RAW payload in runtime.",
+      "label": "Button Label",
+      "section": "Layout Section",
+      "protocol": "IR Protocol",
+      "tone": "Button Accent",
+      "confirmGuard": "Require confirmation modal",
+      "deleteBtn": "Delete Key",
+      "saveBtn": "Apply Changes"
+    },
+    "service": {
+      "guardTitle": "Verified Hardware Sequences Only",
+      "guardBody": "Every sequence here is loaded from the audited Panadiga SSOT JSON after hardware/manual verification, enforcing anti-brick holds and delays with instant abort.",
+      "emptyTitle": "No verified service macros loaded",
+      "emptyDesc": "Waiting for verified macro definitions from Panadiga Core SSOT.",
+      "runBtn": "Execute Sequence",
+      "confirmTitle": "Confirm Service Sequence",
+      "confirmRunBtn": "Confirm & Transmit"
+    },
+    "diag": {
+      "halTitle": "Android CIR HAL, Exynos sec_ir & Pico Dual-Transport",
+      "refreshBtn": "Probe IR Hardware",
+      "transportLabel": "Active IR Output Transport",
+      "picoGpioLabel": "Pico PWM IR Output Pin",
+      "timingUnitLabel": "Exynos / HAL Timing Encoding",
+      "repeatLabel": "Burst Repeat Count",
+      "beaconTitle": "Phone Camera IR Emitter Verification",
+      "beaconStartBtn": "Start 30x Camera IR Beacon",
+      "beaconStopBtn": "Stop IR Beacon",
+      "beaconDone": "Camera IR test beacon sequence complete.",
+      "safetyTitle": "Physical P7501 & Exynos Root Guard",
+      "safetyBody": "Pico PWM IRTX only uses spare 3.3V GPIOs (GP6..9, GP16..22), never touching P7501/NSW5V. Android Exynos Tablet S (SM-T805M) auto-selects PERIOD_SCALED + Magisk su sysfs cascade."
+    }
+  }
+}

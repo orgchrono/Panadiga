@@ -1,0 +1,101 @@
+{
+  "nav": {
+    "ircommander": "DIGA Commander IR",
+    "ircommander.sub": "Emissor Kaseikyo & Mapas (APK)"
+  },
+  "shell": {
+    "viewTitles": {
+      "ircommander": "Panasonic DIGA Commander — IR Offline & Mapas"
+    }
+  },
+  "irCommander": {
+    "title": "DIGA Commander — Central IR Kaseikyo Unificada",
+    "subtitle": "Android ConsumerIR / Exynos sec_ir + Pico 38 kHz IRTX (Exclusivo APK).",
+    "tabs": {
+      "remote": "Controle DIGA",
+      "catalog": "Catálogo 1.763 Modelos",
+      "service": "Serviço & Unbrick",
+      "diagnostics": "IR HAL & Pico"
+    },
+    "vfd": {
+      "header": "DISPLAY VFD / TELEMETRIA IR",
+      "txActive": "TX ATIVO",
+      "txFailed": "Falha ao transmitir sinal IR"
+    },
+    "macro": {
+      "runningProgress": "Executando passo {{step}} de {{total}} da macro...",
+      "abortBtn": "ABORTAR MACRO",
+      "abortedToast": "Macro abortada com segurança.",
+      "completedToast": "Sequência de macro concluída."
+    },
+    "remote": {
+      "deckTitle": "Deck de Hardware & Código de Unidade",
+      "teletextNoteTitle": "Teletext [RED] (0x141) vs Botões AUDIO [A] / DISPLAY [B]",
+      "teletextNoteBody": "Controles combo EUA (EUR7659Y70) trazem 'AUDIO [A]' (OBC 0x33) e 'DISPLAY [B]' (OBC 0x92), que NÃO substituem os botões Teletext Color [RED]/[GREEN]/[YELLOW]/[BLUE] (0x141..0x144) nem Setup/Serviço.",
+      "emptyTitle": "Nenhum perfil de deck carregado",
+      "emptyDesc": "Selecione um modo acima ou pesquise entre todos os 1.763 códigos Panasonic.",
+      "confirmKeyDesc": "Esta tecla aciona operação protegida (Delete/Format/Power). Confirmar disparo IR?",
+      "confirmKeyBtn": "Transmitir Tecla"
+    },
+    "keymap": {
+      "editMode": "Editar Teclas ao Vivo"
+    },
+    "sections": {
+      "POWER_INPUT": "Energia & Entradas",
+      "NAVIGATION": "Navegação & Menus",
+      "TRANSPORT": "Reprodução & Transporte",
+      "RECORDING_EDIT": "Gravação & Edição",
+      "TUNING_AUDIO": "Sintonização, Áudio & Cores",
+      "NUMERIC": "Teclado Numérico",
+      "CUSTOM": "Teclas Customizadas / Importadas"
+    },
+    "catalog": {
+      "title": "Base Offline Completa Panasonic IR",
+      "searchPlaceholder": "Buscar DMR-EH55, ES35V, Viera, SA-HT, N2QAYB...",
+      "importBtn": "Importar .ir/.irplus",
+      "savedLabel": "Perfis Salvos",
+      "emptySearch": "Nenhum modelo Panasonic corresponde ao filtro atual.",
+      "addKeyBtn": "Nova Tecla",
+      "saveProfileBtn": "Salvar Perfil",
+      "importDialogTitle": "Importar Mapa de Controle Externo",
+      "importDialogDesc": "Cole o conteúdo de um arquivo Flipper Zero (.ir) ou irplus (.irplus XML).",
+      "importConfirmBtn": "Converter & Carregar",
+      "savedToast": "Salvo nas preferências persistentes do Android.",
+      "importedToast": "Carregadas {{count}} teclas do arquivo importado."
+    },
+    "editor": {
+      "title": "Editar Botão do Controle",
+      "subtitle": "Altere nome, protocolo Kaseikyo D/S/F ou Pronto RAW em tempo de execução.",
+      "label": "Rótulo do Botão",
+      "section": "Seção de Layout",
+      "protocol": "Protocolo IR",
+      "tone": "Cor Semântica",
+      "confirmGuard": "Exigir confirmação antes de enviar",
+      "deleteBtn": "Remover Tecla",
+      "saveBtn": "Aplicar Alterações"
+    },
+    "service": {
+      "guardTitle": "Somente Sequências Verificadas em Hardware",
+      "guardBody": "Todas as sequências vêm da SSOT declarativa em JSON auditado contra manuais de serviço/ROMs, respeitando tempos de retenção e abortamento instantâneo.",
+      "emptyTitle": "Nenhuma macro verificada carregada",
+      "emptyDesc": "Aguardando catálogo declarativo de macros da SSOT em Rust.",
+      "runBtn": "Executar Sequência",
+      "confirmTitle": "Confirmar Sequência de Serviço",
+      "confirmRunBtn": "Confirmar & Transmitir"
+    },
+    "diag": {
+      "halTitle": "Android CIR HAL, Exynos sec_ir & Dual-Transport Pico",
+      "refreshBtn": "Sondar Hardware IR",
+      "transportLabel": "Transporte de Saída IR",
+      "picoGpioLabel": "Pino PWM IR no Pico",
+      "timingUnitLabel": "Codificação de Tempo Exynos / HAL",
+      "repeatLabel": "Repetições do Disparo",
+      "beaconTitle": "Verificação com Câmera do Celular",
+      "beaconStartBtn": "Iniciar Beacon IR 30x",
+      "beaconStopBtn": "Parar Beacon IR",
+      "beaconDone": "Sequência de teste com câmera concluída.",
+      "safetyTitle": "Proteção Física P7501 & Exynos Root",
+      "safetyBody": "O Pico PWM IRTX usa apenas GPIOs livres de 3.3V (GP6..9, GP16..22), sem tocar P7501/NSW5V. No Galaxy Tab S (SM-T805M), a HAL seleciona PERIOD_SCALED + cascata Magisk su."
+    }
+  }
+}

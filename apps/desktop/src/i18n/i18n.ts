@@ -1,12 +1,11 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import enUS from '../locales/en-US.json';
-import ptBR from '../locales/pt-BR.json';
+import { mergedLocales } from './translations';
 
 export const defaultNS = 'translation';
 export const resources = {
-  'en-US': { translation: enUS },
-  'pt-BR': { translation: ptBR },
+  'en-US': { translation: mergedLocales['en-US'] },
+  'pt-BR': { translation: mergedLocales['pt-BR'] },
 } as const;
 
 i18n

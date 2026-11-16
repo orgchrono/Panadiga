@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import { resolve } from "path";
 import tailwindcss from "tailwindcss";
@@ -45,9 +45,25 @@ const isAndroidApk =
       arg === "--mode=android" || (arg === "--mode" && arr[idx + 1] === "android")
   );
 
+function stripDesktopIrLocalesPlugin(strip: boolean): Plugin {
+  return {
+    name: "panadiga-strip-desktop-ir-locales",
+    load(id: string) {
+      if (!strip) {
+        return null;
+      }
+      const norm = id.replace(/\\/g, "/");
+      if (/\/src\/locales\/ir\.(en-US|pt-BR)\.json$/.test(norm)) {
+        return "{}";
+      }
+      return null;
+    },
+  };
+}
+
 // https://vitejs.dev/config/
-export default defineConfig({
-  plugins: [react()],
+export default defineConfig(({ command }) => ({
+  plugins: [react(), stripDesktopIrLocalesPlugin(command === "build" && !isAndroidApk)],
   define: {
     __PANADIGA_ANDROID_APK__: JSON.stringify(isAndroidApk),
   },
@@ -90,10 +106,16 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           const norm = id.replace(/\\/g, "/");
-          if (norm.includes("/src/locales/pt-BR.json")) {
+          if (
+            norm.includes("/src/locales/pt-BR.json") ||
+            norm.includes("/src/locales/ir.pt-BR.json")
+          ) {
             return "locales-pt-br";
           }
-          if (norm.includes("/src/locales/en-US.json")) {
+          if (
+            norm.includes("/src/locales/en-US.json") ||
+            norm.includes("/src/locales/ir.en-US.json")
+          ) {
             return "locales-en-us";
           }
           if (norm.includes("node_modules")) {
@@ -144,4 +166,4 @@ export default defineConfig({
       },
     },
   },
-});
+}));
