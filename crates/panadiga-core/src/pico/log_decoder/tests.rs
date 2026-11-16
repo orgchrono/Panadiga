@@ -116,3 +116,48 @@ fn describes_boot_fat_error_codes_and_silent_fat_read() {
     assert_eq!(rep_m.fat_mount_failed, Some(-10025));
     assert!(rep_m.diagnosis.contains("FAT_ERR_INVALID_FS_OR_IO"));
 }
+
+#[test]
+fn decodes_live_boottrace_prefixed_normal_and_jig_capture() {
+    let sample = concat!(
+        "=== BOOTTRACE: window=1800ms boot=1 hold=0ms (8N1 @ 115200) ===\r\n",
+        "[BOOTTRACE +  10ms] DDR CHECK: OK\r\n",
+        "[BOOTTRACE + 780ms] ***** Loader ver0.61 [06/03/06] *****\r\n",
+        "[BOOTTRACE + 783ms] ***** normal mode *****\r\n",
+        "[BOOTTRACE + 793ms] BGO driver init failed[1].\r\n",
+        "BOOTTRACE: OK\r\n",
+        "=== BOOTTRACE: window=1800ms boot=2 hold=300ms (8N1 @ 115200) ===\r\n",
+        "[BOOTTRACE +  20ms] ***** Loader ver0.61 [06/03/06] *****\r\n",
+        "[BOOTTRACE +  24ms] ***** serial boot mode *****\r\n",
+        "[BOOTTRACE +1039ms] startup reason = [70]\r\n",
+        "[BOOTTRACE +1429ms] .Card type:2(condition:3) wp:0\r\n",
+        "[BOOTTRACE +1431ms] .capacity:3bb000[LBA](2002780160Byte) . transfer speed:25000[Kbps]\r\n",
+        "[BOOTTRACE +1437ms] .RCA:2 . Bus Width:4(current) 4(support)\r\n",
+        "[BOOTTRACE +1446ms] SD = 0x3BB000[LBA]\r\n",
+        "[BOOTTRACE +1447ms] ... SD init end\r\n",
+        "[BOOTTRACE +1498ms] SD diag load failed[0].\r\n",
+        "[BOOTTRACE] UART: bytes=608 first_byte=10224us ferr=1 perr=0 ovf=NO | SW_rel=YES@26262us(SERIAL_BOOT)\r\n",
+        "  [CTRL +1525405us] NSW5V=1 TXD=1 XRESET=0\r\n",
+        "BOOTTRACE: OK\r\n",
+    );
+    let rep = parse_bench_log_text(sample);
+    assert_eq!(
+        rep.loader_version.as_deref(),
+        Some("Loader ver0.61 [06/03/06]")
+    );
+    assert_eq!(rep.boot_mode.as_deref(), Some("serial_boot"));
+    assert_eq!(rep.bgo_failed_code, Some(1));
+    assert_eq!(rep.startup_reason.as_deref(), Some("70"));
+    assert_eq!(rep.sd_capacity_lba, Some(0x003B_B000));
+    assert_eq!(rep.sd_capacity_bytes, Some(2_002_780_160));
+    assert_eq!(rep.sd_bus_width, Some(4));
+    assert_eq!(rep.sd_transfer_kbps, Some(25_000));
+    assert!(rep.sd_hw_init_ok);
+    assert_eq!(rep.sd_diag_load_failed, Some(0));
+    assert!(rep.boot_stages.contains(&"NORMAL_MODE".to_string()));
+    assert!(rep.boot_stages.contains(&"BGO_FAIL".to_string()));
+    assert!(rep.boot_stages.contains(&"SERIAL_BOOT".to_string()));
+    assert!(rep.boot_stages.contains(&"SD_HW_OK".to_string()));
+    assert!(rep.boot_stages.contains(&"SD_DIAG_LOAD_FAIL".to_string()));
+    assert!(rep.diagnosis.contains("SD diag load failed[0]"));
+}

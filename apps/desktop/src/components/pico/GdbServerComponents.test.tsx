@@ -24,7 +24,7 @@ describe('GdbServerControls Component (SRP Decomposition)', () => {
     );
 
     expect(screen.getByText('OFFLINE')).toBeDefined();
-    const startButton = screen.getByRole('button', { name: /INICIAR SERVIDOR GDB/i });
+    const startButton = screen.getByRole('button', { name: /START GDB SERVER|INICIAR SERVIDOR GDB/i });
     expect(startButton).toBeDefined();
 
     fireEvent.click(startButton);
@@ -50,8 +50,8 @@ describe('GdbServerControls Component (SRP Decomposition)', () => {
       />
     );
 
-    expect(screen.getByText(/CLIENTE ATIVO/i)).toBeDefined();
-    const stopButton = screen.getByRole('button', { name: /Parar GDB/i });
+    expect(screen.getByText(/CLIENT ACTIVE|CLIENTE ATIVO/i)).toBeDefined();
+    const stopButton = screen.getByRole('button', { name: /Stop GDB Server|Parar GDB/i });
     expect(stopButton).toBeDefined();
 
     fireEvent.click(stopButton);

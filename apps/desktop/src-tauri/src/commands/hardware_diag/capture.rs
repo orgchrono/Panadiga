@@ -70,8 +70,7 @@ pub async fn pico_capture_nvram_live(
         .await
         .map_err(|e| {
             PanadigaIpcError::internal(format!("Falha interna de execução assíncrona: {}", e))
-        })?
-        .map_err(PanadigaIpcError::serial)?;
+        })??;
 
         if !res.success {
             return Err(PanadigaIpcError::serial(format!(

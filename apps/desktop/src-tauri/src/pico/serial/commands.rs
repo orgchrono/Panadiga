@@ -3,6 +3,7 @@
 use std::io::Write;
 use std::time::Duration;
 
+use crate::commands::error::{IpcResult, PanadigaIpcError};
 use crate::state::PanadigaBackendState;
 
 use super::super::types::extract_port_name;
@@ -13,7 +14,7 @@ pub fn pico_send_raw_serial_command(
     backend: &PanadigaBackendState,
     port_name: String,
     command: String,
-) -> Result<String, String> {
+) -> IpcResult<String> {
     let clean = extract_port_name(&port_name);
     let trimmed = command.trim().to_uppercase();
 
@@ -24,11 +25,17 @@ pub fn pico_send_raw_serial_command(
 
         let mut port =
             panadiga_core::pico::cdc::open_cdc(&clean, 115_200, Duration::from_millis(2000))
-                .map_err(|e| format!("Falha ao abrir porta serial {}: {}", clean, e))?;
+                .map_err(|e| {
+                    PanadigaIpcError::serial(format!(
+                        "Falha ao abrir porta serial {}: {}",
+                        clean, e
+                    ))
+                })?;
 
         let payload = format!("{}\r\n", trimmed);
-        port.write_all(payload.as_bytes())
-            .map_err(|e| format!("Falha ao transmitir comando CDC: {}", e))?;
+        port.write_all(payload.as_bytes()).map_err(|e| {
+            PanadigaIpcError::serial(format!("Falha ao transmitir comando CDC: {}", e))
+        })?;
         let _ = port.flush();
 
         let response = read_serial_response_complete(&mut *port, Duration::from_millis(8000))?;
@@ -57,13 +64,14 @@ pub fn pico_execute_cold_break_in(
     backend: &PanadigaBackendState,
     port_name: String,
     mode: u8,
-) -> Result<String, String> {
+) -> IpcResult<String> {
     backend.serial.with_lock(|| {
         let (_, mut port) = open_validated_cdc(backend, &port_name, 115_200, 3000)?;
 
         let cmd = format!("BREAK_IN {}\r\n", mode);
-        port.write_all(cmd.as_bytes())
-            .map_err(|e| format!("Falha ao enviar comando BREAK_IN: {}", e))?;
+        port.write_all(cmd.as_bytes()).map_err(|e| {
+            PanadigaIpcError::serial(format!("Falha ao enviar comando BREAK_IN: {}", e))
+        })?;
         let _ = port.flush();
 
         read_serial_response_complete(&mut *port, Duration::from_millis(3000))
@@ -74,16 +82,21 @@ pub fn pico_execute_cold_break_in(
 pub fn pico_switch_to_gdb_mode(
     backend: &PanadigaBackendState,
     port_name: String,
-) -> Result<String, String> {
+) -> IpcResult<String> {
     let clean = extract_port_name(&port_name);
 
     backend.with_exclusive_serial(&clean, || {
         let mut port =
             panadiga_core::pico::cdc::open_cdc(&clean, 115_200, Duration::from_millis(2000))
-                .map_err(|e| format!("Falha ao conectar na porta serial {}: {}", clean, e))?;
+                .map_err(|e| {
+                    PanadigaIpcError::serial(format!(
+                        "Falha ao conectar na porta serial {}: {}",
+                        clean, e
+                    ))
+                })?;
 
         port.write_all(b"GDB\r\n")
-            .map_err(|e| format!("Falha ao enviar comando GDB: {}", e))?;
+            .map_err(|e| PanadigaIpcError::serial(format!("Falha ao enviar comando GDB: {}", e)))?;
         let _ = port.flush();
 
         read_serial_response_complete(&mut *port, Duration::from_millis(2000))

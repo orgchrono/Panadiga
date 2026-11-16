@@ -2,6 +2,7 @@ import React from 'react';
 import { Cpu, ShieldCheck, RefreshCw, FileCode, Radio } from 'lucide-react';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Button } from '@/components/ui/button';
+import { useTranslation } from '@/i18n/useTranslation';
 import { LiveNvramCaptureEvent, NvramCleanReport } from '@/models';
 
 interface NvramActionsCardProps {
@@ -27,6 +28,7 @@ export const NvramActionsCard: React.FC<NvramActionsCardProps> = ({
   onClearLiveCapture,
   onRefresh,
 }) => {
+  const { t } = useTranslation();
   const flashBytes = report?.total_flash_bytes ?? 0;
 
   const startHex = report
@@ -59,16 +61,24 @@ export const NvramActionsCard: React.FC<NvramActionsCardProps> = ({
             {liveCapture && (
               <StatusBadge
                 variant="success"
-                label={`LIVE PICO: ${liveCapture.port} (${liveCapture.base_bus_address})`}
+                label={t('nvram.actions.livePicoBadge', {
+                  port: liveCapture.port,
+                  addr: liveCapture.base_bus_address,
+                })}
               />
             )}
           </div>
           <p className="text-xs text-slate-400 mt-1">
-            Offset EEMUL NVRAM: <code className="text-cyan-400">{startHex}..{endHex}</code> (64 KB).{' '}
-            {report?.microsectors.length ?? 8} microsetores de 8 KB com checksum e cabeçalhos emulados.
+            {t('nvram.actions.descPrefix')}{' '}
+            <code className="text-cyan-400">{startHex}..{endHex}</code>{' '}
+            {t('nvram.actions.descMiddle', { count: report?.microsectors.length ?? 8 })}
             {liveCapture && (
               <span className="text-emerald-400 ml-2">
-                Captura in-circuit ({liveCapture.source}, {liveCapture.captured_bytes}B às {liveCapture.captured_at}).
+                {t('nvram.actions.liveCaptureInfo', {
+                  source: liveCapture.source,
+                  bytes: liveCapture.captured_bytes,
+                  time: liveCapture.captured_at,
+                })}
               </span>
             )}
           </p>
@@ -81,10 +91,11 @@ export const NvramActionsCard: React.FC<NvramActionsCardProps> = ({
             type="button"
             variant="ghost"
             size="sm"
+            data-testid="nvram-back-to-disk-btn"
             onClick={onClearLiveCapture}
             className="text-xs text-slate-400 hover:text-slate-200"
           >
-            Voltar ao Dump em Disco
+            {t('nvram.actions.backToDisk')}
           </Button>
         )}
 
@@ -92,12 +103,15 @@ export const NvramActionsCard: React.FC<NvramActionsCardProps> = ({
           <Button
             type="button"
             variant="outline"
+            data-testid="nvram-capture-live-btn"
             onClick={onCaptureLive}
             disabled={capturingLive || cleaning}
             className="gap-2 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border-cyan-500/40"
           >
             <Radio className={`w-4 h-4 ${capturingLive ? 'animate-pulse' : ''}`} />
-            <span>{capturingLive ? 'Capturando Pico...' : 'Capturar NVRAM via Pico'}</span>
+            <span>
+              {capturingLive ? t('nvram.actions.capturingPico') : t('nvram.actions.captureLiveBtn')}
+            </span>
           </Button>
         )}
 
@@ -105,14 +119,15 @@ export const NvramActionsCard: React.FC<NvramActionsCardProps> = ({
           variant="ghost"
           size="icon"
           onClick={onRefresh}
-          title="Recarregar análise da flash"
-          aria-label="Recarregar análise da flash"
+          title={t('nvram.actions.reloadTooltip')}
+          aria-label={t('nvram.actions.reloadTooltip')}
         >
           <RefreshCw className="w-4 h-4 text-slate-400" />
         </Button>
 
         <Button
           variant="emerald"
+          data-testid="nvram-clean-btn"
           onClick={onExecuteClean}
           disabled={cleaning || cleanSuccess || !report || Boolean(liveCapture)}
           className="gap-2"
@@ -120,17 +135,17 @@ export const NvramActionsCard: React.FC<NvramActionsCardProps> = ({
           {cleaning ? (
             <>
               <RefreshCw className="w-4 h-4 animate-spin" />
-              <span>Higienizando Microsetores...</span>
+              <span>{t('nvram.actions.cleaningBtn')}</span>
             </>
           ) : cleanSuccess ? (
             <>
               <ShieldCheck className="w-4 h-4" />
-              <span>Flash Higienizada (0xFF)</span>
+              <span>{t('nvram.actions.cleanedBadge')}</span>
             </>
           ) : (
             <>
               <FileCode className="w-4 h-4" />
-              <span>Limpeza Cirúrgica (U99 Reset)</span>
+              <span>{t('nvram.actions.surgicalCleanBtn')}</span>
             </>
           )}
         </Button>

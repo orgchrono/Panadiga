@@ -138,6 +138,19 @@
       "colDesc": "Forensic Description",
       "sectorsUnit": "sectors",
       "empty": "No MEIHDFS records match the selected filters"
+    },
+    "capacity": {
+      "title": "Dynamic HDD Capacity Unlocker (src/hdd_cmd.c + MEIHDFS1.0)",
+      "subtitlePrefix": "Removes the artificial 200 GB clamp (",
+      "subtitleMiddle": " in ",
+      "subtitleSuffix": ") and unlocks automatic LBA48 detection for 250 GB, 320 GB, 500 GB, 1 TB or 2 TB+ drives directly in MAIN (raw, EXTRHEAD or HDD image).",
+      "badgeUnclamped": "DYNAMIC / UNCLAMPED (0xCA)",
+      "badgeClamped": "CAP ACTIVE: {{gb}} GB (0xC6)",
+      "badgeWaiting": "AWAITING BINARY",
+      "inputLabel": "Source File (Partition 1 0x02000000, MAIN raw or hdd_100.bin)",
+      "inspectBtn": "Inspect",
+      "outputLabel": "Patched Output File (Optional — auto-generated if blank)",
+      "outputPlaceholder": "Ex: extracted_partitions/hdd_partition_firmware_0x02000000_PATCHED_DYNAMIC.bin"
     }
   },
   "crypto": {
@@ -276,12 +289,35 @@
     "gdbStop": "Stop GDB Server",
     "gdbListening": "LISTENING (3333)",
     "gdbOffline": "OFFLINE",
-    "gdbClientActive": "CLIENT ACTIVE",
+    "gdbClientActive": "CLIENT ACTIVE ({{count}})",
+    "gdbListeningPort": "LISTENING ({{port}})",
+    "gdbPortTitle": "GDB Remote RSP Server (TCP Port {{port}})",
+    "gdbSocketHelp": "Binary GDB RSP TCP socket (do not open as an HTTP URL in browser). Connect gdb-multiarch or Ghidra Debugger at",
+    "gdbTargetPrefix": " (Target: {{port}}).",
+    "gdbLocalStubHint": " (Physical Pico or Local AM34 Stub).",
+    "gdbBindLabel": "Bind:",
+    "gdbBindAria": "GDB server TCP bind address",
+    "gdbCopyTitle": "Copy GDB command",
+    "gdbStarting": "Starting...",
     "extTools": "Ecosystem & External Tools:",
     "launchGdb": "GDB Multiarch",
     "launchGhidra": "Ghidra Scripts",
     "launchHxd": "HxD Editor",
     "launchTerminal": "PowerShell",
+    "pinout": {
+      "title": "Physical Wiring (Pico → P7501)",
+      "disclaimerTitle": "CRITICAL DISCLAIMER: GROUND (GND) IDENTIFICATION",
+      "line1": "• P7501 Connector (UART 115200 8N1): Official GND is PIN 4; keep GP3 / NSW5V (Pin 5) strictly as Hi-Z input (~3.29V idle; IC1506 rail ~5.15V — NEVER drive push-pull).",
+      "line2": "• XRESET (Pin 2 / GP5): Drive strictly in Open-Drain.",
+      "line3": "Always verify 0.0Ω continuity beep with a multimeter before powering on!",
+      "empty": "No P7501 pins mapped in SSOT."
+    },
+    "breakin": {
+      "title": "P7501 Boot/Reset Profile Selector",
+      "subtitle": "Controls SW_UART (GP26) and Open-Drain XRESET (GP5) pulse for UART capture / JIGBOOT.",
+      "groupAria": "P7501 Boot and Reset Profile",
+      "empty": "No profile modes configured"
+    },
     "bridge": {
       "title": "Interactive SC0 Bridge, WAITTX & Optical Drive Console",
       "subtitle": "Live bidirectional USB-CDC <-> SC0 passthrough (exit with '~~~'), PANA_RSP probe (0x15/$g/$Z0), and drive serial CLI",
@@ -418,7 +454,20 @@
     "patchOffsetLabel": "NVRAM Offset (hex/dec)",
     "patchHexLabel": "Hex Payload Bytes",
     "patchBtn": "Apply Guarded CoW Patch",
-    "patchSuccess": "Guarded CoW NVRAM patch written cleanly (IPL preserved)."
+    "patchSuccess": "Guarded CoW NVRAM patch written cleanly (IPL preserved).",
+    "actions": {
+      "livePicoBadge": "LIVE PICO: {{port}} ({{addr}})",
+      "descPrefix": "EEMUL NVRAM Offset:",
+      "descMiddle": "(64 KB). {{count}} microsectors of 8 KB with checksum and emulated headers.",
+      "liveCaptureInfo": "In-circuit capture ({{source}}, {{bytes}}B at {{time}}).",
+      "backToDisk": "Back to Disk Dump",
+      "capturingPico": "Capturing Pico...",
+      "captureLiveBtn": "Capture NVRAM via Pico",
+      "reloadTooltip": "Reload flash analysis",
+      "cleaningBtn": "Sanitizing Microsectors...",
+      "cleanedBadge": "Flash Sanitized (0xFF)",
+      "surgicalCleanBtn": "Surgical Clean (U99 Reset)"
+    }
   },
   "manuals": {
     "header": {

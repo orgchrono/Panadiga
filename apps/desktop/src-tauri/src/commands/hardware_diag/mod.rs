@@ -146,11 +146,10 @@ pub async fn pico_execute_diagnostic(
     if STATUS_REFRESH_COMMANDS.contains(&result.command_id.as_str()) {
         let status_backend = backend.clone();
         let status_port = port_name.clone();
-        if let Ok(mut status) = tauri::async_runtime::spawn_blocking(move || {
+        if let Ok(Ok(mut status)) = tauri::async_runtime::spawn_blocking(move || {
             crate::pico::pico_get_device_status_dto(&status_backend, status_port, None)
         })
         .await
-        .unwrap_or_else(|_| Err(String::new()))
         {
             if let Some(diag_vdd) = result.vdd_volts
                 && status.vdd_volts <= VDD_ZERO_EPSILON_VOLTS

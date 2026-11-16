@@ -16,50 +16,106 @@ fn verify_sd_media_flags_missing_root() {
     let _ = fs::remove_dir_all(&tmp);
 }
 
-#[test]
-fn optional_real_workspace_sd_kit_roundtrip() {
+fn build_workspace_sd_kit_with_mode(
+    tag: &str,
+    bgo_mode: Prog061BgoPatchMode,
+    allow_unsafe_auto_format: bool,
+) -> Option<panadiga_core::re::SdUnbrickKitReport> {
     let ws = resolve_workspace_root();
     let dvd = ws.join("firmware_and_images/PANA_DVD.FRM");
     let p1 =
         ws.join("firmware_and_images/extracted_partitions/hdd_partition_firmware_0x02000000.bin");
     if !dvd.is_file() || !p1.is_file() {
-        return;
+        return None;
     }
-    let tmp = std::env::temp_dir().join(format!("panadiga_unbrick_kit_{}", std::process::id()));
+    let tmp =
+        std::env::temp_dir().join(format!("panadiga_unbrick_kit_{tag}_{}", std::process::id()));
     let _ = fs::remove_dir_all(&tmp);
-    let report = prepare_sd_unbrick_kit(&SdUnbrickKitRequest {
+    let result = prepare_sd_unbrick_kit(&SdUnbrickKitRequest {
         output_dir: tmp.clone(),
         pana_dvd_path: Some(dvd),
         prog061_path: None,
         main_path: Some(p1),
         drv_path: None,
-        bgo_mode: Prog061BgoPatchMode::BypassChecksOnly,
+        bgo_mode,
         main_passthrough_mode: MainPassthroughMode::AvPassthrough,
         include_pana_sd: true,
         unlock_hdd_dynamic: true,
         hdd_target_gb: None,
         write_extracted_sources: false,
-        allow_unsafe_auto_format: false,
+        allow_unsafe_auto_format,
         expected_main_build: Some("3410PQ".to_string()),
         allow_target_mismatch: false,
-    })
-    .unwrap();
-
-    assert!(report.verification.digadiag_exact_size_ok);
-    assert_eq!(
-        report.verification.digadiag_bgo_mode.as_deref(),
-        Some("BYPASS_CHECKS_ONLY")
-    );
-    assert!(report.verification.pana_sd_present);
-    assert!(report.verification.pana_sd_list_sums_ok);
-    assert_eq!(
-        report.verification.pana_sd_prog061_mode.as_deref(),
-        Some("BYPASS_CHECKS_ONLY")
-    );
-    assert_eq!(
-        report.verification.pana_sd_main_passthrough_mode.as_deref(),
-        Some("AV_PASSTHROUGH")
-    );
-    assert_eq!(report.verification.pana_sd_main_hdd_dynamic, Some(true));
+    });
     let _ = fs::remove_dir_all(&tmp);
+    Some(result.expect("workspace SD recovery kit roundtrip should succeed"))
+}
+
+#[test]
+fn optional_real_workspace_sd_kit_roundtrip() {
+    for (tag, mode, expected_label) in [
+        (
+            "bypass",
+            Prog061BgoPatchMode::BypassChecksOnly,
+            "BYPASS_CHECKS_ONLY",
+        ),
+        (
+            "panamon1",
+            Prog061BgoPatchMode::UartMonitor,
+            "UART_MONITOR_PANAMON1",
+        ),
+    ] {
+        let Some(report) = build_workspace_sd_kit_with_mode(tag, mode, false) else {
+            return;
+        };
+        assert!(report.verification.digadiag_exact_size_ok);
+        assert_eq!(
+            report.verification.digadiag_bgo_mode.as_deref(),
+            Some(expected_label)
+        );
+        assert!(report.verification.pana_sd_present);
+        assert!(report.verification.pana_sd_list_sums_ok);
+        assert_eq!(
+            report.verification.pana_sd_prog061_mode.as_deref(),
+            Some(expected_label)
+        );
+        assert_eq!(
+            report.verification.pana_sd_main_passthrough_mode.as_deref(),
+            Some("AV_PASSTHROUGH")
+        );
+        assert_eq!(report.verification.pana_sd_main_hdd_dynamic, Some(true));
+    }
+}
+
+#[test]
+fn auto_format_bgo_policy_fails_closed_without_explicit_override() {
+    let ws = resolve_workspace_root();
+    let dvd = ws.join("firmware_and_images/PANA_DVD.FRM");
+    if !dvd.is_file() {
+        return;
+    }
+    let tmp = std::env::temp_dir().join(format!("panadiga_unbrick_af_{}", std::process::id()));
+    let _ = fs::remove_dir_all(&tmp);
+    let err = prepare_sd_unbrick_kit(&SdUnbrickKitRequest {
+        output_dir: tmp.clone(),
+        pana_dvd_path: Some(dvd),
+        prog061_path: None,
+        main_path: None,
+        drv_path: None,
+        bgo_mode: Prog061BgoPatchMode::AutoFormatBgo,
+        main_passthrough_mode: MainPassthroughMode::FactoryOriginal,
+        include_pana_sd: false,
+        unlock_hdd_dynamic: false,
+        hdd_target_gb: None,
+        write_extracted_sources: false,
+        allow_unsafe_auto_format: false,
+        expected_main_build: None,
+        allow_target_mismatch: false,
+    })
+    .unwrap_err();
+    let _ = fs::remove_dir_all(&tmp);
+    assert!(
+        err.to_string().contains("nfrom_format") || err.to_string().contains("AutoFormatBgo"),
+        "unexpected error: {err}"
+    );
 }

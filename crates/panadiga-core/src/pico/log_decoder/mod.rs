@@ -12,7 +12,7 @@ use diagnosis::{
     BootDiagnosisContext, build_boot_stages, build_diagnostic_notes, classify_boot_diagnosis,
 };
 use stream::{
-    extract_bracket_value, parse_hex_prefixed_u32, parse_sense_line, push_unique_str,
+    extract_bracket_value_after, parse_hex_prefixed_u32, parse_sense_line, push_unique_str,
     reconstruct_diagwatch_target_stream,
 };
 
@@ -104,16 +104,13 @@ pub fn parse_bench_log_text(text: &str) -> Am34BootLogReport {
             boot_mode = Some("emergency".to_string());
         }
 
-        if trimmed.contains("BGO driver init failed")
-            && let Some(val) = extract_bracket_value(trimmed)
+        if let Some(val) = extract_bracket_value_after(trimmed, "BGO driver init failed")
             && let Ok(code) = val.parse::<i32>()
         {
             bgo_failed_code = Some(code);
         }
 
-        if trimmed.contains("startup reason =")
-            && let Some(val) = extract_bracket_value(trimmed)
-        {
+        if let Some(val) = extract_bracket_value_after(trimmed, "startup reason =") {
             startup_reason = Some(val.to_string());
         }
 
@@ -154,14 +151,12 @@ pub fn parse_bench_log_text(text: &str) -> Am34BootLogReport {
         if trimmed.contains("... SD init end") {
             sd_hw_init_ok = true;
         }
-        if trimmed.contains("SD diag load failed[")
-            && let Some(val) = extract_bracket_value(trimmed)
+        if let Some(val) = extract_bracket_value_after(trimmed, "SD diag load failed")
             && let Ok(code) = val.parse::<i32>()
         {
             sd_diag_load_failed = Some(code);
         }
-        if trimmed.contains("FAT Mount failed[")
-            && let Some(val) = extract_bracket_value(trimmed)
+        if let Some(val) = extract_bracket_value_after(trimmed, "FAT Mount failed")
             && let Ok(code) = val.parse::<i32>()
         {
             fat_mount_failed = Some(code);

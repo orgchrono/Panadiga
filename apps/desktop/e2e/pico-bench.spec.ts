@@ -12,11 +12,11 @@ test.describe('Pico Bench & P7501 UART Hardware Workbench E2E', () => {
 
   test('displays hardware controller telemetry and architecture badge', async ({ page }) => {
     await expect(page.getByTestId('pico-primary-interface-subtitle')).toContainText('115200 8N1');
-    await expect(page.getByText('Conexões Físicas (Pico → P7501)')).toBeVisible();
+    await expect(page.getByTestId('pico-pinout-title')).toBeVisible();
   });
 
   test('renders pins in the P7501 Pinout table with GND disclaimer', async ({ page }) => {
-    await expect(page.getByText('DISCLAIMER CRÍTICO: IDENTIFICAÇÃO DO TERRA (GND)')).toBeVisible();
+    await expect(page.getByTestId('pico-gnd-disclaimer')).toBeVisible();
     await expect(page.getByText('Pino 1 [P7501 SW_UART / XFWE]')).toBeVisible();
     await expect(page.getByText('Pino 3 [P7501 UARTM2P_T / Q7514]')).toBeVisible();
     await expect(page.getByText('Pino 4 [P7501 GND]')).toBeVisible();
@@ -25,7 +25,7 @@ test.describe('Pico Bench & P7501 UART Hardware Workbench E2E', () => {
   });
 
   test('switches P7501 Boot/Reset profile modes dynamically', async ({ page }) => {
-    await expect(page.getByText('Seletor de Perfil Boot/Reset P7501')).toBeVisible();
+    await expect(page.getByTestId('pico-breakin-title')).toBeVisible();
     await expect(page.getByText('Modo 2: JIG Hold LOW (SW_UART Retido)')).toBeVisible();
 
     // Click Mode 1

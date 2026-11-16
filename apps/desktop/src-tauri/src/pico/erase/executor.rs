@@ -9,6 +9,7 @@ use super::backup::{
     dump_p7501_region_bytes, save_live_backup_files, sha256_hex, with_p7501_handshake,
 };
 use super::parser::parse_autodetected_nvram_base;
+use crate::commands::error::{IpcResult, PanadigaIpcError};
 use crate::pico::serial::read_serial_response_complete;
 use crate::pico::types::InCircuitNvramEraseResult;
 use crate::state::PanadigaBackendState;
@@ -32,7 +33,7 @@ pub(crate) fn query_port_vdd(port: &mut dyn serialport::SerialPort) -> f32 {
 pub fn pico_execute_in_circuit_erase_full(
     backend: &PanadigaBackendState,
     port_name: String,
-) -> Result<InCircuitNvramEraseResult, String> {
+) -> IpcResult<InCircuitNvramEraseResult> {
     let start_ts = Instant::now();
     with_p7501_handshake(backend, &port_name, |port, hs_out| {
         let voltage_before = query_port_vdd(port);
@@ -66,18 +67,23 @@ pub fn pico_execute_in_circuit_erase_full(
         ));
 
         // Step 3: INJECT_LOADER CONFIRM (into 0x00004000)
-        port.write_all(b"INJECT_LOADER CONFIRM\r\n")
-            .map_err(|e| format!("Falha ao enviar INJECT_LOADER CONFIRM: {}", e))?;
+        port.write_all(b"INJECT_LOADER CONFIRM\r\n").map_err(|e| {
+            PanadigaIpcError::serial(format!("Falha ao enviar INJECT_LOADER CONFIRM: {}", e))
+        })?;
         let _ = port.flush();
         let inj_out = read_serial_response_complete(port, Duration::from_millis(5000))?;
         log_lines.push(inj_out.clone());
         if inj_out.contains("ERROR") || inj_out.contains("SAFETY INTERLOCK") {
-            return Err(format!("Falha na injeção do RAM Loader: {}", inj_out));
+            return Err(PanadigaIpcError::serial(format!(
+                "Falha na injeção do RAM Loader: {}",
+                inj_out
+            )));
         }
 
         // Step 4: ERASE_NVRAM CONFIRM (~5.2s across 8 micro-sectors)
-        port.write_all(b"ERASE_NVRAM CONFIRM\r\n")
-            .map_err(|e| format!("Falha ao enviar ERASE_NVRAM CONFIRM: {}", e))?;
+        port.write_all(b"ERASE_NVRAM CONFIRM\r\n").map_err(|e| {
+            PanadigaIpcError::serial(format!("Falha ao enviar ERASE_NVRAM CONFIRM: {}", e))
+        })?;
         let _ = port.flush();
         let erase_out = read_serial_response_complete(port, Duration::from_millis(erase_timeout))?;
         for line in erase_out.lines() {
@@ -106,7 +112,7 @@ pub fn pico_execute_in_circuit_erase_full(
 pub fn pico_execute_in_circuit_erase(
     backend: &PanadigaBackendState,
     port_name: String,
-) -> Result<String, String> {
+) -> IpcResult<String> {
     let res = pico_execute_in_circuit_erase_full(backend, port_name)?;
     Ok(res.log_lines.join("\n"))
 }

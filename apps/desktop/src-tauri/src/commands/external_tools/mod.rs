@@ -2,6 +2,8 @@
 
 mod ghidra_discovery;
 mod os_launch;
+#[cfg(not(target_os = "windows"))]
+mod os_launch_unix;
 
 use std::path::PathBuf;
 

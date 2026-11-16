@@ -60,6 +60,7 @@ add_executable(panasonic_p7501_uart
     uart/p7501_fmu_batch.c
     uart/p7501_uart_interactive.c
     uart/p7501_uart_pio_engine.c
+    uart/p7501_uart_pio_tx.c
     uart/p7501_pio_loop.c
     uart/p7501_uart_baud.c
     uart/p7501_uart_stream.c

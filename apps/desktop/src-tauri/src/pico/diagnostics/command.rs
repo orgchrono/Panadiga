@@ -8,6 +8,7 @@ use crate::commands::constants::{
     VALID_FLASH_SIZE_ARGS, VALID_LED_MODE_ARGS, VARIABLE_DURATION_COMMANDS,
 };
 use crate::commands::dto::build_hardware_ssot_spec;
+use crate::commands::error::{IpcResult, PanadigaIpcError};
 
 pub use panadiga_core::pico::diag_rows::{
     BusTransitionRowSpec as BusTransitionRowDto, DumpWordRowSpec as DumpWordRowDto,
@@ -46,21 +47,28 @@ pub struct PicoDiagnosticResultDto {
 pub fn compose_diagnostic_command(
     command_id: &str,
     arg: Option<&str>,
-) -> Result<(String, Duration), String> {
+) -> IpcResult<(String, Duration)> {
     let normalized = command_id.trim().to_ascii_uppercase();
     let spec = build_hardware_ssot_spec();
     let entry = spec
         .pico_commands
         .iter()
         .find(|c| c.id == normalized)
-        .ok_or_else(|| format!("Comando diagnóstico desconhecido: '{}'", command_id))?;
+        .ok_or_else(|| {
+            PanadigaIpcError::validation(format!(
+                "Comando diagnóstico desconhecido: '{}'",
+                command_id
+            ))
+        })?;
 
     let clean_arg = arg
         .map(str::trim)
         .filter(|s| !s.is_empty())
         .map(|s| {
             if s.chars().any(|c| c == '\r' || c == '\n' || c.is_control()) {
-                return Err("Argumento contém caracteres de controle inválidos.".to_string());
+                return Err(PanadigaIpcError::validation(
+                    "Argumento contém caracteres de controle inválidos.",
+                ));
             }
             Ok(s)
         })
@@ -71,25 +79,28 @@ pub fn compose_diagnostic_command(
         if let Some(m) = clean_arg
             && !VALID_BREAK_IN_MODES.contains(&m)
         {
-            return Err(format!("Modo Break-In inválido '{}': use 0, 1, 2 ou 3.", m));
+            return Err(PanadigaIpcError::validation(format!(
+                "Modo Break-In inválido '{}': use 0, 1, 2 ou 3.",
+                m
+            )));
         }
     } else if normalized == "FLASH_SIZE" {
         if let Some(sz) = clean_arg
             && !VALID_FLASH_SIZE_ARGS.contains(&sz)
         {
-            return Err(format!(
+            return Err(PanadigaIpcError::validation(format!(
                 "Tamanho Flash inválido '{}': use 2, 4, 8 ou 16.",
                 sz
-            ));
+            )));
         }
     } else if normalized == "LED"
         && let Some(mode) = clean_arg
     {
         let upper = mode.to_ascii_uppercase();
         if !VALID_LED_MODE_ARGS.contains(&upper.as_str()) {
-            return Err(
-                "Modo LED inválido: use IDLE, ACTIVE, GDB, FAULT, OFF, AUTO ou STATUS.".to_string(),
-            );
+            return Err(PanadigaIpcError::validation(
+                "Modo LED inválido: use IDLE, ACTIVE, GDB, FAULT, OFF, AUTO ou STATUS.",
+            ));
         }
     }
 

@@ -1,5 +1,7 @@
 //! Pure wire codecs and formatting helpers for interactive SC0 Bridge sessions.
 
+use crate::commands::error::{IpcResult, PanadigaIpcError};
+
 /// Formats arbitrary bytes as uppercase space-separated hex octets.
 pub(super) fn bytes_to_hex_spaced(bytes: &[u8]) -> String {
     bytes
@@ -10,7 +12,7 @@ pub(super) fn bytes_to_hex_spaced(bytes: &[u8]) -> String {
 }
 
 /// Pure encoder converting UI Bridge inputs (`text`, `line`, `hex`, `rsp`) into raw wire bytes.
-pub fn encode_bridge_input(input_mode: &str, payload: &str) -> Result<Vec<u8>, String> {
+pub fn encode_bridge_input(input_mode: &str, payload: &str) -> IpcResult<Vec<u8>> {
     let mode = input_mode.trim().to_ascii_lowercase();
     match mode.as_str() {
         "text" | "raw" => Ok(payload.as_bytes().to_vec()),
@@ -24,19 +26,19 @@ pub fn encode_bridge_input(input_mode: &str, payload: &str) -> Result<Vec<u8>, S
         "rsp" => {
             let trimmed = payload.trim();
             if trimmed.is_empty() {
-                return Err("Payload RSP vazio.".to_string());
+                return Err(PanadigaIpcError::validation("Payload RSP vazio."));
             }
             let csum: u8 = panadiga_core::pico::rsp_checksum(trimmed.as_bytes());
             Ok(format!("${}#{:02x}", trimmed, csum).into_bytes())
         }
-        other => Err(format!(
+        other => Err(PanadigaIpcError::validation(format!(
             "Modo de entrada SC0 Bridge desconhecido: '{}'",
             other
-        )),
+        ))),
     }
 }
 
-fn decode_hex_payload(raw_hex: &str) -> Result<Vec<u8>, String> {
+fn decode_hex_payload(raw_hex: &str) -> IpcResult<Vec<u8>> {
     let cleaned: String = raw_hex
         .split_whitespace()
         .map(|tok| tok.trim_start_matches("0x").trim_start_matches("0X"))
@@ -47,15 +49,16 @@ fn decode_hex_payload(raw_hex: &str) -> Result<Vec<u8>, String> {
         .collect();
 
     if cleaned.is_empty() || !cleaned.len().is_multiple_of(2) {
-        return Err(format!(
+        return Err(PanadigaIpcError::validation(format!(
             "Hexadecimal inválido (comprimento ímpar ou vazio): '{}'",
             raw_hex
-        ));
+        )));
     }
     let mut bytes = Vec::with_capacity(cleaned.len() / 2);
     for idx in (0..cleaned.len()).step_by(2) {
-        let byte = u8::from_str_radix(&cleaned[idx..idx + 2], 16)
-            .map_err(|_| format!("Dígito hexadecimal inválido em '{}'", raw_hex))?;
+        let byte = u8::from_str_radix(&cleaned[idx..idx + 2], 16).map_err(|_| {
+            PanadigaIpcError::validation(format!("Dígito hexadecimal inválido em '{}'", raw_hex))
+        })?;
         bytes.push(byte);
     }
     Ok(bytes)

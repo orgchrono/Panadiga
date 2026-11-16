@@ -17,6 +17,7 @@ use std::thread;
 use std::time::Duration;
 use tauri::AppHandle;
 
+use crate::commands::error::{IpcResult, PanadigaIpcError};
 use crate::state::PanadigaBackendState;
 
 use super::types::{extract_port_name, reject_mock_port};
@@ -35,19 +36,22 @@ pub fn start_sc0_bridge_session(
     port_name: String,
     baud_rate: Option<u32>,
     boot_mode: Option<String>,
-) -> Result<Sc0BridgeStatusDto, String> {
+) -> IpcResult<Sc0BridgeStatusDto> {
     let mut clean_port = extract_port_name(&port_name);
     if clean_port.is_empty() || clean_port.eq_ignore_ascii_case("AUTO") {
         let detected = super::serial::list_pico_serial_ports()?;
         let first = detected.first().ok_or_else(|| {
-            "Nenhuma porta serial Pico detectada. Conecte o Raspberry Pi Pico via USB e clique em Atualizar Portas."
-                .to_string()
+            PanadigaIpcError::serial(
+                "Nenhuma porta serial Pico detectada. Conecte o Raspberry Pi Pico via USB e clique em Atualizar Portas.",
+            )
         })?;
         clean_port = extract_port_name(first);
     }
     reject_mock_port(&clean_port)?;
     if backend.gdb_bridge.is_active() {
-        return Err("Porta ocupada pela Ponte GDB RSP ativa.".to_string());
+        return Err(PanadigaIpcError::serial(
+            "Porta ocupada pela Ponte GDB RSP ativa.",
+        ));
     }
     if backend.sc0_bridge.is_active() {
         let _ = stop_sc0_bridge_session(backend);
@@ -65,12 +69,19 @@ pub fn start_sc0_bridge_session(
         let mut p =
             panadiga_core::pico::cdc::open_cdc(&clean_port, 115_200, Duration::from_millis(25))
                 .map_err(|e| {
-                    format!("Falha ao abrir porta {} para SC0 Bridge: {}", clean_port, e)
+                    PanadigaIpcError::serial(format!(
+                        "Falha ao abrir porta {} para SC0 Bridge: {}",
+                        clean_port, e
+                    ))
                 })?;
-        p.write_all(cmd.as_bytes())
-            .map_err(|e| format!("Falha ao iniciar BRIDGE na porta {}: {}", clean_port, e))?;
+        p.write_all(cmd.as_bytes()).map_err(|e| {
+            PanadigaIpcError::serial(format!(
+                "Falha ao iniciar BRIDGE na porta {}: {}",
+                clean_port, e
+            ))
+        })?;
         let _ = p.flush();
-        Ok::<_, String>(p)
+        Ok::<_, PanadigaIpcError>(p)
     })?;
 
     let (tx, rx) = mpsc::channel();
@@ -110,27 +121,25 @@ pub fn send_sc0_bridge_input(
     backend: &PanadigaBackendState,
     input_mode: String,
     payload: String,
-) -> Result<usize, String> {
+) -> IpcResult<usize> {
     if !backend.sc0_bridge.is_active() {
-        return Err(
-            "Nenhuma sessão SC0 Bridge ativa. Inicie a ponte antes de transmitir.".to_string(),
-        );
+        return Err(PanadigaIpcError::serial(
+            "Nenhuma sessão SC0 Bridge ativa. Inicie a ponte antes de transmitir.",
+        ));
     }
     let bytes = encode_bridge_input(&input_mode, &payload)?;
     let byte_len = bytes.len();
     let tx = backend
         .sc0_bridge
         .sender()
-        .ok_or_else(|| "Canal da sessão SC0 Bridge indisponível.".to_string())?;
+        .ok_or_else(|| PanadigaIpcError::serial("Canal da sessão SC0 Bridge indisponível."))?;
     tx.send(BridgeWorkerMsg::Data(bytes))
-        .map_err(|_| "Worker SC0 Bridge já encerrado.".to_string())?;
+        .map_err(|_| PanadigaIpcError::serial("Worker SC0 Bridge já encerrado."))?;
     Ok(byte_len)
 }
 
 /// Sends `~~~` exit sequence, joins the SC0 worker thread, and releases serial ownership.
-pub fn stop_sc0_bridge_session(
-    backend: &PanadigaBackendState,
-) -> Result<Sc0BridgeStatusDto, String> {
+pub fn stop_sc0_bridge_session(backend: &PanadigaBackendState) -> IpcResult<Sc0BridgeStatusDto> {
     if let Some(mut session) = backend.sc0_bridge.take_session() {
         let _ = session.tx.send(BridgeWorkerMsg::StopAndExit);
         if let Some(handle) = session.join.take() {

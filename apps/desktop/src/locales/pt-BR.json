@@ -138,6 +138,19 @@
       "colDesc": "Descrição Forense",
       "sectorsUnit": "setores",
       "empty": "Nenhum registro MEIHDFS encontrado para os filtros selecionados"
+    },
+    "capacity": {
+      "title": "Desbloqueio Dinâmico de Capacidade de HDD (src/hdd_cmd.c + MEIHDFS1.0)",
+      "subtitlePrefix": "Remove o clamp artificial de 200 GB (",
+      "subtitleMiddle": " em ",
+      "subtitleSuffix": ") e libera detecção automática LBA48 para discos de 250 GB, 320 GB, 500 GB, 1 TB ou 2 TB+ direto no módulo MAIN (raw, EXTRHEAD ou imagem HDD).",
+      "badgeUnclamped": "DINÂMICO / UNCLAMPED (0xCA)",
+      "badgeClamped": "TRAVA ATIVA: {{gb}} GB (0xC6)",
+      "badgeWaiting": "AGUARDANDO BINÁRIO",
+      "inputLabel": "Arquivo de Origem (Partição 1 0x02000000, MAIN raw ou hdd_100.bin)",
+      "inspectBtn": "Inspecionar",
+      "outputLabel": "Arquivo de Saída Patcheado (Opcional — gera automático se vazio)",
+      "outputPlaceholder": "Ex: extracted_partitions/hdd_partition_firmware_0x02000000_PATCHED_DYNAMIC.bin"
     }
   },
   "crypto": {
@@ -276,12 +289,35 @@
     "gdbStop": "Parar Servidor GDB",
     "gdbListening": "OUVINDO (3333)",
     "gdbOffline": "OFFLINE",
-    "gdbClientActive": "CLIENTE ATIVO",
+    "gdbClientActive": "CLIENTE ATIVO ({{count}})",
+    "gdbListeningPort": "OUVINDO ({{port}})",
+    "gdbPortTitle": "Servidor GDB Remote RSP (Porta TCP {{port}})",
+    "gdbSocketHelp": "Socket TCP binário GDB RSP (não abre como link HTTP no navegador). Conecte gdb-multiarch ou Ghidra Debugger em",
+    "gdbTargetPrefix": " (Alvo: {{port}}).",
+    "gdbLocalStubHint": " (Pico físico ou Stub AM34 Local).",
+    "gdbBindLabel": "Bind:",
+    "gdbBindAria": "Endereço TCP do servidor GDB",
+    "gdbCopyTitle": "Copiar comando GDB",
+    "gdbStarting": "Iniciando...",
     "extTools": "Ecossistema & Ferramentas Externas:",
     "launchGdb": "GDB Multiarch",
     "launchGhidra": "Scripts Ghidra",
     "launchHxd": "HxD Editor",
     "launchTerminal": "PowerShell",
+    "pinout": {
+      "title": "Conexões Físicas (Pico → P7501)",
+      "disclaimerTitle": "DISCLAIMER CRÍTICO: IDENTIFICAÇÃO DO TERRA (GND)",
+      "line1": "• Conector P7501 (UART 115200 8N1): O GND oficial é o PINO 4; mantenha GP3 / NSW5V (Pino 5) apenas como entrada Hi-Z (~3.29V em repouso; rail IC1506 ~5.15V — NUNCA dirigir push-pull).",
+      "line2": "• XRESET (Pino 2 / GP5): Operar estritamente em Open-Drain.",
+      "line3": "Valide sempre o bipe de 0.0Ω no multímetro antes de energizar!",
+      "empty": "Nenhum pino P7501 mapeado no SSOT."
+    },
+    "breakin": {
+      "title": "Seletor de Perfil Boot/Reset P7501",
+      "subtitle": "Controla SW_UART (GP26) e pulso Open-Drain XRESET (GP5) para captura UART / JIGBOOT.",
+      "groupAria": "Perfil de Boot e Reset P7501",
+      "empty": "Nenhum modo configurado"
+    },
     "bridge": {
       "title": "Ponte Interativa SC0 (BRIDGE), WAITTX & Drive Óptico",
       "subtitle": "Passthrough USB-CDC ↔ SC0 em tempo real (encerre com '~~~'), sonda PANA_RSP (0x15/$g/$Z0) e CLI serial do drive",
@@ -418,7 +454,20 @@
     "patchOffsetLabel": "Offset NVRAM (hex/dec)",
     "patchHexLabel": "Bytes em Hex",
     "patchBtn": "Aplicar Patch CoW Protegido",
-    "patchSuccess": "Patch CoW aplicado com segurança na NVRAM (IPL preservado)."
+    "patchSuccess": "Patch CoW aplicado com segurança na NVRAM (IPL preservado).",
+    "actions": {
+      "livePicoBadge": "LIVE PICO: {{port}} ({{addr}})",
+      "descPrefix": "Offset EEMUL NVRAM:",
+      "descMiddle": "(64 KB). {{count}} microsetores de 8 KB com checksum e cabeçalhos emulados.",
+      "liveCaptureInfo": "Captura in-circuit ({{source}}, {{bytes}}B às {{time}}).",
+      "backToDisk": "Voltar ao Dump em Disco",
+      "capturingPico": "Capturando Pico...",
+      "captureLiveBtn": "Capturar NVRAM via Pico",
+      "reloadTooltip": "Recarregar análise da flash",
+      "cleaningBtn": "Higienizando Microsetores...",
+      "cleanedBadge": "Flash Higienizada (0xFF)",
+      "surgicalCleanBtn": "Limpeza Cirúrgica (U99 Reset)"
+    }
   },
   "manuals": {
     "header": {

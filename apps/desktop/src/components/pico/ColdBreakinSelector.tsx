@@ -1,6 +1,7 @@
 import React from 'react';
 import type { BreakInModeSpec, ColdBreakinMode } from '@/models';
 import { Badge, Card } from '@/components/ui';
+import { useTranslation } from '@/i18n/useTranslation';
 import { Sliders } from 'lucide-react';
 
 export interface ColdBreakinSelectorProps {
@@ -18,25 +19,29 @@ export const ColdBreakinSelector: React.FC<ColdBreakinSelectorProps> = ({
   onSelectMode,
   breakinModes,
 }) => {
+  const { t } = useTranslation();
   return (
     <Card className="p-5 shadow-xl space-y-4">
       <div>
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+        <h3
+          data-testid="pico-breakin-title"
+          className="text-xs font-semibold uppercase tracking-wider text-slate-300 flex items-center gap-2"
+        >
           <Sliders className="w-4 h-4 text-cyan-400" />
-          <span>Seletor de Perfil Boot/Reset P7501</span>
+          <span>{t('pico.breakin.title')}</span>
         </h3>
         <p className="text-[11px] text-slate-500 font-sans mt-0.5">
-          Controla SW_UART (GP26) e pulso Open-Drain XRESET (GP5) para captura UART / JIGBOOT.
+          {t('pico.breakin.subtitle')}
         </p>
       </div>
 
       <div
         className="space-y-2.5"
         role="radiogroup"
-        aria-label="Perfil de Boot e Reset P7501"
+        aria-label={t('pico.breakin.groupAria')}
       >
         {breakinModes.length === 0 ? (
-          <div className="text-slate-500 text-xs p-3 font-mono">Nenhum modo configurado</div>
+          <div className="text-slate-500 text-xs p-3 font-mono">{t('pico.breakin.empty')}</div>
         ) : (
           breakinModes.map(m => {
             const isSelected = currentMode === m.mode;

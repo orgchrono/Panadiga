@@ -17,6 +17,7 @@ use std::time::Duration;
 
 use panadiga_core::constants::DEFAULT_GDB_LISTEN_SOCKET;
 
+use crate::commands::error::{IpcResult, PanadigaIpcError};
 use crate::state::PanadigaBackendState;
 
 use super::types::{
@@ -32,7 +33,7 @@ pub fn get_gdb_telemetry(backend: &PanadigaBackendState) -> Vec<GdbPacketTelemet
 fn open_serial_gdb_target(
     backend: &PanadigaBackendState,
     clean_port: &str,
-) -> Result<(Option<Box<dyn serialport::SerialPort>>, String), String> {
+) -> IpcResult<(Option<Box<dyn serialport::SerialPort>>, String)> {
     if clean_port.eq_ignore_ascii_case("LOCAL_STUB") || clean_port.eq_ignore_ascii_case("LOCAL") {
         return Ok((None, "LOCAL_STUB (AM34)".to_string()));
     }
@@ -83,7 +84,7 @@ pub fn start_gdb_bridge(
     backend: &PanadigaBackendState,
     port_name: String,
     listen_addr: String,
-) -> Result<GdbBridgeStatus, String> {
+) -> IpcResult<GdbBridgeStatus> {
     let ctrl = &backend.gdb_bridge;
     if ctrl.is_active() {
         return get_gdb_bridge_status(backend);
@@ -105,7 +106,10 @@ pub fn start_gdb_bridge(
     };
 
     let listener = TcpListener::bind(&addr).map_err(|e| {
-        format!("Falha ao abrir porta TCP GDB {}: {}. Verifique se outra instância do GDB/Ghidra não está utilizando esta porta.", addr, e)
+        PanadigaIpcError::serial(format!(
+            "Falha ao abrir porta TCP GDB {}: {}. Verifique se outra instância do GDB/Ghidra não está utilizando esta porta.",
+            addr, e
+        ))
     })?;
     let _ = listener.set_nonblocking(true);
 
@@ -157,7 +161,7 @@ pub fn start_gdb_bridge(
 }
 
 /// Stops the GDB TCP-to-Serial bridge server cleanly via wakeup TCP dial and thread join.
-pub fn stop_gdb_bridge(backend: &PanadigaBackendState) -> Result<GdbBridgeStatus, String> {
+pub fn stop_gdb_bridge(backend: &PanadigaBackendState) -> IpcResult<GdbBridgeStatus> {
     let ctrl = &backend.gdb_bridge;
     if !ctrl.is_active() {
         return get_gdb_bridge_status(backend);
@@ -185,11 +189,11 @@ pub fn stop_gdb_bridge(backend: &PanadigaBackendState) -> Result<GdbBridgeStatus
 }
 
 /// Retrieves the current status and metrics of the GDB bridge.
-pub fn get_gdb_bridge_status(backend: &PanadigaBackendState) -> Result<GdbBridgeStatus, String> {
+pub fn get_gdb_bridge_status(backend: &PanadigaBackendState) -> IpcResult<GdbBridgeStatus> {
     Ok(backend.gdb_bridge.status_snapshot())
 }
 
 /// Retrieves the current AM34 register state.
-pub fn get_am34_registers(backend: &PanadigaBackendState) -> Result<Am34RegisterState, String> {
+pub fn get_am34_registers(backend: &PanadigaBackendState) -> IpcResult<Am34RegisterState> {
     Ok(backend.gdb_bridge.registers_snapshot())
 }

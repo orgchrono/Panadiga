@@ -3,6 +3,7 @@
 use std::io::Write;
 use std::time::{Duration, Instant};
 
+use crate::commands::error::{IpcResult, PanadigaIpcError};
 use crate::pico::serial::read_serial_response_complete;
 use crate::pico::types::extract_port_name;
 use crate::state::PanadigaBackendState;
@@ -16,7 +17,7 @@ pub fn execute_diagnostic_on_port(
     port_name: &str,
     command_id: &str,
     arg: Option<&str>,
-) -> Result<PicoDiagnosticResultDto, String> {
+) -> IpcResult<PicoDiagnosticResultDto> {
     let (raw_cmd, timeout) = compose_diagnostic_command(command_id, arg)?;
     let clean = extract_port_name(port_name);
     let started = Instant::now();
@@ -24,20 +25,22 @@ pub fn execute_diagnostic_on_port(
     crate::pico::types::reject_mock_port(&clean)?;
 
     if clean.starts_with("BLE") || clean.starts_with("ANDROID-USB-OTG") {
-        return Err(
-            "Comandos em modo BLE NUS / USB-OTG Android devem ser despachados diretamente pela camada móvel."
-                .to_string(),
-        );
+        return Err(PanadigaIpcError::validation(
+            "Comandos em modo BLE NUS / USB-OTG Android devem ser despachados diretamente pela camada móvel.",
+        ));
     }
 
     backend.with_exclusive_serial(&clean, || {
         let mut port =
             panadiga_core::pico::cdc::open_cdc(&clean, 115_200, Duration::from_millis(4000))
-                .map_err(|e| format!("Falha ao abrir porta '{}': {}", clean, e))?;
+                .map_err(|e| {
+                    PanadigaIpcError::serial(format!("Falha ao abrir porta '{}': {}", clean, e))
+                })?;
 
         let wire = format!("{}\r\n", raw_cmd);
-        port.write_all(wire.as_bytes())
-            .map_err(|e| format!("Falha ao enviar '{}' para Pico: {}", raw_cmd, e))?;
+        port.write_all(wire.as_bytes()).map_err(|e| {
+            PanadigaIpcError::serial(format!("Falha ao enviar '{}' para Pico: {}", raw_cmd, e))
+        })?;
         let _ = port.flush();
 
         let raw_out = read_serial_response_complete(&mut *port, timeout)?;

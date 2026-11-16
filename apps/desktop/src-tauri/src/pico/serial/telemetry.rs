@@ -12,6 +12,7 @@ use crate::commands::constants::{
     SERIAL_PING_STATUS_TIMEOUT_MS, SERIAL_RETRY_BACKOFF_MS, SERIAL_UART_SYNC_TIMEOUT_MS,
     VDD_TARGET_FLOATING_CEIL_VOLTS, VDD_TARGET_MIN_VOLTS,
 };
+use crate::commands::error::{IpcResult, PanadigaIpcError};
 use crate::state::PanadigaBackendState;
 
 use super::super::types::{PicoDeviceStatusDto, PicoStatusResponse, PicoWdtFields};
@@ -62,7 +63,7 @@ fn pico_connect_and_test_unlocked(
     port_name: &str,
     baud_rate: u32,
     probe_target_on_connect: bool,
-) -> Result<PicoStatusResponse, String> {
+) -> IpcResult<PicoStatusResponse> {
     let (clean, mut port) =
         open_validated_cdc(backend, port_name, baud_rate, SERIAL_OPEN_TIMEOUT_MS)?;
 
@@ -93,11 +94,11 @@ fn pico_connect_and_test_unlocked(
 
     let has_pong = response_text.contains("PONG") || response_text.contains("PANADIGA");
     if (!has_pong && vdd_reading.is_none()) || (response_text.is_empty() && vdd_reading.is_none()) {
-        return Err(format!(
+        return Err(PanadigaIpcError::serial(format!(
             "O Pico em {} abriu a porta mas não respondeu a PING/STATUS (firmware Panadiga ausente ou DTR não aceito). \
              Grave o firmware pelo botão \"Flash Pico (BOOTSEL)\" ou reconecte o cabo USB.",
             clean
-        ));
+        )));
     }
 
     let vdd_volts = vdd_reading.unwrap_or(0.0f32);
@@ -170,7 +171,7 @@ pub fn pico_connect_and_test(
     backend: &PanadigaBackendState,
     port_name: String,
     baud_rate: u32,
-) -> Result<PicoStatusResponse, String> {
+) -> IpcResult<PicoStatusResponse> {
     backend
         .serial
         .with_lock(|| pico_connect_and_test_unlocked(backend, &port_name, baud_rate, true))
@@ -202,7 +203,7 @@ fn pico_get_device_status_dto_unlocked(
     backend: &PanadigaBackendState,
     port_name: String,
     mode_override: Option<u8>,
-) -> Result<PicoDeviceStatusDto, String> {
+) -> IpcResult<PicoDeviceStatusDto> {
     if port_name.trim().is_empty() {
         return Ok(build_disconnected_status_dto());
     }
@@ -255,7 +256,7 @@ pub fn pico_get_device_status_dto(
     backend: &PanadigaBackendState,
     port_name: String,
     mode_override: Option<u8>,
-) -> Result<PicoDeviceStatusDto, String> {
+) -> IpcResult<PicoDeviceStatusDto> {
     if port_name.trim().is_empty() {
         return Ok(build_disconnected_status_dto());
     }
@@ -268,7 +269,7 @@ pub fn pico_get_device_status_dto(
 pub fn try_pico_get_device_status_dto(
     backend: &PanadigaBackendState,
     port_name: String,
-) -> Option<Result<PicoDeviceStatusDto, String>> {
+) -> Option<IpcResult<PicoDeviceStatusDto>> {
     if port_name.trim().is_empty() || backend.is_any_bridge_active() {
         return None;
     }

@@ -1,12 +1,14 @@
 import React from 'react';
 import { AlertTriangle, RefreshCw, Unlock } from 'lucide-react';
 import { StatusBadge } from '@/components/StatusBadge';
+import { useTranslation } from '@/i18n/useTranslation';
 import { useHddCapacityViewModel } from '@/viewmodels/useHddCapacityViewModel';
 import { CapacityInspectionGrid } from './capacity/CapacityInspectionGrid';
 import { CapacityStrategyPanel } from './capacity/CapacityStrategyPanel';
 import { PatchOutputBanner, RtsdPresetsTable } from './capacity/RtsdPresetsTable';
 
 export const HddCapacityPatcherCard: React.FC = () => {
+  const { t } = useTranslation();
   const {
     inputPath,
     setInputPath,
@@ -37,27 +39,30 @@ export const HddCapacityPatcherCard: React.FC = () => {
           <div>
             <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
               <Unlock className="w-5 h-5 text-emerald-400" />
-              <span>Desbloqueio Dinâmico de Capacidade de HDD (src/hdd_cmd.c + MEIHDFS1.0)</span>
+              <span>{t('hdd.capacity.title')}</span>
             </h3>
             <p className="text-xs text-slate-400 mt-1">
-              Remove o clamp artificial de 200 GB (<code>bls +12</code> em{' '}
-              <code className="text-cyan-300">MaxProductLBA</code>) e libera detecção automática LBA48 para discos de
-              250 GB, 320 GB, 500 GB, 1 TB ou 2 TB+ direto no módulo <code>MAIN</code> (raw, <code>EXTRHEAD</code> ou
-              imagem HDD).
+              {t('hdd.capacity.subtitlePrefix')}
+              <code>bls +12</code>
+              {t('hdd.capacity.subtitleMiddle')}
+              <code className="text-cyan-300">MaxProductLBA</code>
+              {t('hdd.capacity.subtitleSuffix')}
             </p>
           </div>
           <div className="flex items-center gap-2">
             {inspection ? (
               inspection.is_dynamic_unclamped ? (
-                <StatusBadge variant="success" label="DINÂMICO / UNCLAMPED (0xCA)" />
+                <StatusBadge variant="success" label={t('hdd.capacity.badgeUnclamped')} />
               ) : (
                 <StatusBadge
                   variant="warning"
-                  label={`TRAVA ATIVA: ${inspection.effective_default_limit_gb.toFixed(0)} GB (0xC6)`}
+                  label={t('hdd.capacity.badgeClamped', {
+                    gb: inspection.effective_default_limit_gb.toFixed(0),
+                  })}
                 />
               )
             ) : (
-              <StatusBadge variant="neutral" label="AGUARDANDO BINÁRIO" />
+              <StatusBadge variant="neutral" label={t('hdd.capacity.badgeWaiting')} />
             )}
           </div>
         </div>
@@ -65,7 +70,7 @@ export const HddCapacityPatcherCard: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 text-xs">
           <div className="space-y-1.5">
             <label className="text-[11px] text-slate-400 font-semibold uppercase block">
-              Arquivo de Origem (Partição 1 0x02000000, MAIN raw ou hdd_100.bin)
+              {t('hdd.capacity.inputLabel')}
             </label>
             <div className="flex gap-2">
               <input
@@ -82,20 +87,20 @@ export const HddCapacityPatcherCard: React.FC = () => {
                 className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 font-bold text-xs flex items-center gap-1.5 transition-colors disabled:opacity-50"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${inspecting ? 'animate-spin' : ''}`} />
-                <span>Inspecionar</span>
+                <span>{t('hdd.capacity.inspectBtn')}</span>
               </button>
             </div>
           </div>
 
           <div className="space-y-1.5">
             <label className="text-[11px] text-slate-400 font-semibold uppercase block">
-              Arquivo de Saída Patcheado (Opcional — gera automático se vazio)
+              {t('hdd.capacity.outputLabel')}
             </label>
             <input
               type="text"
               value={outputPath}
               onChange={e => setOutputPath(e.target.value)}
-              placeholder="Ex: extracted_partitions/hdd_partition_firmware_0x02000000_PATCHED_DYNAMIC.bin"
+              placeholder={t('hdd.capacity.outputPlaceholder')}
               className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
             />
           </div>

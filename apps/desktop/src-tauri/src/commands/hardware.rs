@@ -15,14 +15,13 @@ use super::error::{IpcResult, PanadigaIpcError};
 pub(super) async fn run_blocking<T, F>(work: F) -> IpcResult<T>
 where
     T: Send + 'static,
-    F: FnOnce() -> Result<T, String> + Send + 'static,
+    F: FnOnce() -> IpcResult<T> + Send + 'static,
 {
     tauri::async_runtime::spawn_blocking(work)
         .await
         .map_err(|e| {
-            PanadigaIpcError::classify(format!("Falha interna de execução assíncrona: {}", e))
+            PanadigaIpcError::internal(format!("Falha interna de execução assíncrona: {}", e))
         })?
-        .map_err(PanadigaIpcError::from)
 }
 
 /// Returns the internal Panasonic DIGA Model Database (2MB/4MB/8MB/16MB NOR Flash profiles).
@@ -164,7 +163,7 @@ pub async fn pico_detect_bootsel_drives() -> IpcResult<Vec<String>> {
 pub async fn pico_trigger_bootsel_reboot(port_name: String) -> IpcResult<String> {
     run_blocking(move || {
         panadiga_core::pico::flasher::trigger_1200_baud_bootsel(&port_name)
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| PanadigaIpcError::serial(e.to_string()))?;
         Ok(format!(
             "Port {} triggered 1200-baud reset into BOOTSEL mode",
             port_name
@@ -180,7 +179,7 @@ pub async fn pico_flash_firmware(
 ) -> IpcResult<panadiga_core::pico::flasher::PicoFlashReport> {
     run_blocking(move || {
         panadiga_core::pico::flasher::flash_embedded_firmware(target_family.as_deref())
-            .map_err(|e| e.to_string())
+            .map_err(PanadigaIpcError::from)
     })
     .await
 }
@@ -193,7 +192,6 @@ pub fn start_gdb_bridge_command(
     listen_addr: String,
 ) -> IpcResult<GdbBridgeStatus> {
     super::super::pico::start_gdb_bridge(state.inner(), port_name, listen_addr)
-        .map_err(PanadigaIpcError::from)
 }
 
 /// Stops the GDB TCP-to-Serial bridge server.
@@ -201,7 +199,7 @@ pub fn start_gdb_bridge_command(
 pub fn stop_gdb_bridge_command(
     state: tauri::State<'_, PanadigaBackendState>,
 ) -> IpcResult<GdbBridgeStatus> {
-    super::super::pico::stop_gdb_bridge(state.inner()).map_err(PanadigaIpcError::from)
+    super::super::pico::stop_gdb_bridge(state.inner())
 }
 
 /// Retrieves the current status of the GDB bridge server.
@@ -209,7 +207,7 @@ pub fn stop_gdb_bridge_command(
 pub fn get_gdb_bridge_status_command(
     state: tauri::State<'_, PanadigaBackendState>,
 ) -> IpcResult<GdbBridgeStatus> {
-    super::super::pico::get_gdb_bridge_status(state.inner()).map_err(PanadigaIpcError::from)
+    super::super::pico::get_gdb_bridge_status(state.inner())
 }
 
 /// Retrieves the current AM34 CPU register file state.
@@ -217,7 +215,7 @@ pub fn get_gdb_bridge_status_command(
 pub fn get_am34_registers_command(
     state: tauri::State<'_, PanadigaBackendState>,
 ) -> IpcResult<Am34RegisterState> {
-    super::super::pico::get_am34_registers(state.inner()).map_err(PanadigaIpcError::from)
+    super::super::pico::get_am34_registers(state.inner())
 }
 
 /// Retrieves recorded GDB RSP packet telemetry events from the introspective ring buffer.

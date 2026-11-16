@@ -9,6 +9,7 @@ use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use crate::commands::error::{IpcResult, PanadigaIpcError};
 use crate::pico::bridge_session::Sc0BridgeController;
 use crate::pico::gdb_bridge::GdbBridgeController;
 
@@ -184,13 +185,13 @@ impl PanadigaBackendState {
     }
 
     /// Verifies that `clean_port` is non-mock and not owned by an active bridge session.
-    pub fn ensure_serial_port_unlocked(&self, clean_port: &str) -> Result<(), String> {
+    pub fn ensure_serial_port_unlocked(&self, clean_port: &str) -> IpcResult<()> {
         crate::pico::types::reject_mock_port(clean_port)?;
         if self.is_any_bridge_active() {
-            return Err(format!(
+            return Err(PanadigaIpcError::serial(format!(
                 "Porta serial {} ocupada pela Ponte GDB/SC0 ativa. Encerre a sessão antes de enviar comandos CDC.",
                 clean_port
-            ));
+            )));
         }
         Ok(())
     }
@@ -199,8 +200,8 @@ impl PanadigaBackendState {
     pub fn with_exclusive_serial<R>(
         &self,
         clean_port: &str,
-        f: impl FnOnce() -> Result<R, String>,
-    ) -> Result<R, String> {
+        f: impl FnOnce() -> IpcResult<R>,
+    ) -> IpcResult<R> {
         crate::pico::types::reject_mock_port(clean_port)?;
         self.serial.with_lock(|| {
             self.ensure_serial_port_unlocked(clean_port)?;

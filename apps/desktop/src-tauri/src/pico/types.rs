@@ -137,12 +137,11 @@ pub fn extract_port_name(input: &str) -> String {
 }
 
 /// Enforces production hardware-only policy by rejecting legacy `MOCK*` identifiers.
-pub fn reject_mock_port(clean_port: &str) -> Result<(), String> {
+pub fn reject_mock_port(clean_port: &str) -> crate::commands::error::IpcResult<()> {
     if clean_port.trim().to_ascii_uppercase().starts_with("MOCK") {
-        return Err(
-            "Simulador MOCK desativado em produção: conecte o Raspberry Pi Pico real via USB CDC / BLE NUS."
-                .to_string(),
-        );
+        return Err(crate::commands::error::PanadigaIpcError::validation(
+            "Simulador MOCK desativado em produção: conecte o Raspberry Pi Pico real via USB CDC / BLE NUS.",
+        ));
     }
     Ok(())
 }

@@ -9,6 +9,7 @@ use crate::commands::constants::{
     COMPLETION_MARKERS, SERIAL_CHUNK_READ_TIMEOUT_MS, SERIAL_IDLE_COMPLETE_MS,
     SERIAL_READ_CHUNK_BYTES,
 };
+use crate::commands::error::{IpcResult, PanadigaIpcError};
 use crate::state::PanadigaBackendState;
 
 use super::super::types::extract_port_name;
@@ -17,7 +18,7 @@ use super::super::types::extract_port_name;
 pub fn ensure_serial_port_unlocked(
     backend: &PanadigaBackendState,
     clean_port: &str,
-) -> Result<(), String> {
+) -> IpcResult<()> {
     backend.ensure_serial_port_unlocked(clean_port)
 }
 
@@ -35,7 +36,7 @@ fn serial_response_has_completed(out: &str) -> bool {
 pub fn read_serial_response_complete(
     port: &mut dyn serialport::SerialPort,
     max_wait: Duration,
-) -> Result<String, String> {
+) -> IpcResult<String> {
     let _ = port.set_timeout(Duration::from_millis(SERIAL_CHUNK_READ_TIMEOUT_MS));
     let start = Instant::now();
     let mut out = String::new();
@@ -60,7 +61,12 @@ pub fn read_serial_response_complete(
                     break;
                 }
             }
-            Err(e) => return Err(format!("Erro de leitura USB CDC: {}", e)),
+            Err(e) => {
+                return Err(PanadigaIpcError::serial(format!(
+                    "Erro de leitura USB CDC: {}",
+                    e
+                )));
+            }
         }
     }
     let clean = strip_leading_prompts(&out).trim();
@@ -73,7 +79,7 @@ pub fn read_serial_response_complete(
 
 /// Lists all available USB CDC serial COM ports, tagging recognized RP2040 and RP2350 hardware
 /// while skipping BOOTSEL mass-storage entries.
-pub fn list_pico_serial_ports() -> Result<Vec<String>, String> {
+pub fn list_pico_serial_ports() -> IpcResult<Vec<String>> {
     let mut ports = Vec::new();
     if let Ok(available) = serialport::available_ports() {
         for p in available {
@@ -103,11 +109,13 @@ pub(super) fn open_validated_cdc(
     port_name: &str,
     baud_rate: u32,
     timeout_ms: u64,
-) -> Result<(String, Box<dyn serialport::SerialPort>), String> {
+) -> IpcResult<(String, Box<dyn serialport::SerialPort>)> {
     let clean = extract_port_name(port_name);
     backend.ensure_serial_port_unlocked(&clean)?;
     let port =
         panadiga_core::pico::cdc::open_cdc(&clean, baud_rate, Duration::from_millis(timeout_ms))
-            .map_err(|e| format!("Falha ao abrir porta serial {}: {}", clean, e))?;
+            .map_err(|e| {
+                PanadigaIpcError::serial(format!("Falha ao abrir porta serial {}: {}", clean, e))
+            })?;
     Ok((clean, port))
 }

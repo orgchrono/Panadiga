@@ -1,8 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import type { GdbBridgeStatus } from '@/models';
 import { CLIPBOARD_FEEDBACK_MS, GDB_DEFAULT_LISTEN_ADDR } from '@/constants';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Button } from '@/components/ui';
+import { useManagedTimeouts } from '@/hooks/useManagedTimeouts';
+import { useTranslation } from '@/i18n/useTranslation';
 import { Server, Play, RefreshCw, Copy, Check, AlertCircle } from 'lucide-react';
 
 export interface GdbServerControlsProps {
@@ -20,8 +22,9 @@ export const GdbServerControls: React.FC<GdbServerControlsProps> = ({
   onStart,
   onStop,
 }) => {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState<boolean>(false);
-  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { scheduleTimeout, clearAllTimeouts } = useManagedTimeouts();
   const [listenAddrInput, setListenAddrInput] = useState<string>(
     gdbStatus?.listen_addr || GDB_DEFAULT_LISTEN_ADDR
   );
@@ -31,21 +34,11 @@ export const GdbServerControls: React.FC<GdbServerControlsProps> = ({
   const activePortLabel = listenAddr.split(':').pop() || '3333';
   const connectionCommand = `target remote ${listenAddr}`;
 
-  useEffect(() => {
-    return () => {
-      if (copyTimerRef.current !== null) {
-        clearTimeout(copyTimerRef.current);
-      }
-    };
-  }, []);
-
   const handleCopy = () => {
     navigator.clipboard?.writeText(connectionCommand);
+    clearAllTimeouts();
     setCopied(true);
-    if (copyTimerRef.current !== null) {
-      clearTimeout(copyTimerRef.current);
-    }
-    copyTimerRef.current = setTimeout(() => setCopied(false), CLIPBOARD_FEEDBACK_MS);
+    scheduleTimeout(() => setCopied(false), CLIPBOARD_FEEDBACK_MS);
   };
 
   return (
@@ -58,35 +51,40 @@ export const GdbServerControls: React.FC<GdbServerControlsProps> = ({
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="text-sm font-bold text-slate-100">
-                Servidor GDB Remote RSP (Porta TCP {activePortLabel})
+                {t('pico.gdbPortTitle', { port: activePortLabel })}
               </h3>
               {gdbStatus?.running ? (
                 (gdbStatus.connected_clients ?? 0) > 0 ? (
                   <StatusBadge
                     variant="success"
-                    label={`CLIENTE ATIVO (${gdbStatus.connected_clients})`}
+                    label={t('pico.gdbClientActive', { count: gdbStatus.connected_clients })}
                   />
                 ) : (
-                  <StatusBadge variant="warning" label={`OUVINDO (${activePortLabel})`} />
+                  <StatusBadge
+                    variant="warning"
+                    label={t('pico.gdbListeningPort', { port: activePortLabel })}
+                  />
                 )
               ) : (
-                <StatusBadge variant="neutral" label="OFFLINE" />
+                <StatusBadge variant="neutral" label={t('pico.gdbOffline')} />
               )}
             </div>
             <p className="text-xs text-slate-400 mt-0.5 font-sans">
-              Socket TCP binário GDB RSP (não abre como link HTTP no navegador). Conecte gdb-multiarch ou Ghidra Debugger em{' '}
+              {t('pico.gdbSocketHelp')}{' '}
               <code className="text-purple-300 font-mono">{listenAddr}</code>
-              {gdbStatus?.port_name ? ` (Alvo: ${gdbStatus.port_name})` : ' (Pico físico ou Stub AM34 Local)'}.
+              {gdbStatus?.port_name
+                ? t('pico.gdbTargetPrefix', { port: gdbStatus.port_name })
+                : t('pico.gdbLocalStubHint')}
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
           <label className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-[11px] text-slate-300">
-            <span className="text-slate-500">Bind:</span>
+            <span className="text-slate-500">{t('pico.gdbBindLabel')}</span>
             <input
               type="text"
-              aria-label="Endereço TCP do servidor GDB"
+              aria-label={t('pico.gdbBindAria')}
               value={listenAddr}
               onChange={e => setListenAddrInput(e.target.value)}
               disabled={Boolean(gdbStatus?.running)}
@@ -100,7 +98,7 @@ export const GdbServerControls: React.FC<GdbServerControlsProps> = ({
               type="button"
               onClick={handleCopy}
               className="text-slate-400 hover:text-cyan-400 p-1 transition-colors"
-              title="Copiar comando GDB"
+              title={t('pico.gdbCopyTitle')}
             >
               {copied ? (
                 <Check className="w-3.5 h-3.5 text-emerald-400" />
@@ -118,7 +116,7 @@ export const GdbServerControls: React.FC<GdbServerControlsProps> = ({
               onClick={() => onStop()}
               className="font-bold text-xs"
             >
-              Parar GDB
+              {t('pico.gdbStop')}
             </Button>
           ) : (
             <Button
@@ -132,12 +130,12 @@ export const GdbServerControls: React.FC<GdbServerControlsProps> = ({
               {isStarting ? (
                 <>
                   <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  <span>Iniciando...</span>
+                  <span>{t('pico.gdbStarting')}</span>
                 </>
               ) : (
                 <>
                   <Play className="w-3.5 h-3.5 fill-current" />
-                  <span>Iniciar Servidor GDB</span>
+                  <span>{t('pico.gdbStart')}</span>
                 </>
               )}
             </Button>

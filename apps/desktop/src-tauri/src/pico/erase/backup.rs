@@ -10,6 +10,7 @@ use std::time::Duration;
 
 use super::parser::{parse_autodetected_nvram_base, parse_pico_dump_hex_to_bytes};
 use crate::commands::dto::detect_diga_model_from_slice;
+use crate::commands::error::{IpcResult, PanadigaIpcError};
 use crate::pico::serial::read_serial_response_complete;
 use crate::pico::types::{FirstContactBackupResult, extract_port_name};
 use crate::state::PanadigaBackendState;
@@ -22,23 +23,28 @@ pub(crate) fn sha256_hex(data: &[u8]) -> String {
 pub(crate) fn with_p7501_handshake<R>(
     backend: &PanadigaBackendState,
     port_name: &str,
-    f: impl FnOnce(&mut dyn serialport::SerialPort, String) -> Result<R, String>,
-) -> Result<R, String> {
+    f: impl FnOnce(&mut dyn serialport::SerialPort, String) -> IpcResult<R>,
+) -> IpcResult<R> {
     let clean_port = extract_port_name(port_name);
     backend.with_exclusive_serial(&clean_port, || {
         let mut port =
             panadiga_core::pico::cdc::open_cdc(&clean_port, 115200, Duration::from_millis(10000))
-                .map_err(|e| format!("Falha ao conectar na porta serial {}: {}", clean_port, e))?;
+                .map_err(|e| {
+                    PanadigaIpcError::serial(format!(
+                        "Falha ao conectar na porta serial {}: {}",
+                        clean_port, e
+                    ))
+                })?;
 
         port.write_all(b"HANDSHAKE\r\n")
-            .map_err(|e| format!("Falha ao enviar HANDSHAKE: {}", e))?;
+            .map_err(|e| PanadigaIpcError::serial(format!("Falha ao enviar HANDSHAKE: {}", e)))?;
         let _ = port.flush();
         let hs_out = read_serial_response_complete(&mut *port, Duration::from_millis(3000))?;
         if !hs_out.contains("[HANDSHAKE] SUCCESS") {
-            return Err(format!(
+            return Err(PanadigaIpcError::serial(format!(
                 "Cold Break-In falhou ao capturar o chip Matsushita AM34 (gravador desligado da tomada VDD=0V ou fiação solta). Resposta: {}",
                 hs_out.trim()
-            ));
+            )));
         }
         f(&mut *port, hs_out)
     })
@@ -96,7 +102,7 @@ pub(crate) fn is_uniform_bus_pattern(data: &[u8]) -> bool {
 pub fn pico_execute_first_contact_backup(
     backend: &PanadigaBackendState,
     port_name: String,
-) -> Result<FirstContactBackupResult, String> {
+) -> IpcResult<FirstContactBackupResult> {
     with_p7501_handshake(backend, &port_name, |port, hs_out| {
         let nvram_base_hex = parse_autodetected_nvram_base(&hs_out);
         let mut log_lines = vec![hs_out];

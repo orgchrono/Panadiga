@@ -29,8 +29,9 @@ fn decode_utf16_slice(bytes: &[u8], big_endian: bool) -> String {
         .collect()
 }
 
-pub(super) fn extract_bracket_value(line: &str) -> Option<&str> {
-    let (_, after) = line.split_once('[')?;
+pub(super) fn extract_bracket_value_after<'a>(line: &'a str, marker: &str) -> Option<&'a str> {
+    let (_, rest) = line.split_once(marker)?;
+    let (_, after) = rest.split_once('[')?;
     let (inner, _) = after.split_once(']')?;
     Some(inner.trim())
 }
@@ -103,10 +104,26 @@ pub(super) fn push_unique_str(vec: &mut Vec<String>, val: String) {
     }
 }
 
-/// Strips interleaved `[DIAGWATCH...]` probe lines and rejoins target fragments
+fn strip_boottrace_prefix(line: &str) -> Option<&str> {
+    let ts = line.trim_start();
+    if let Some(after) = ts.strip_prefix("[BOOTTRACE +") {
+        let (_, rest) = after.split_once(']')?;
+        return Some(rest.strip_prefix(' ').unwrap_or(rest));
+    }
+    if ts.starts_with("[BOOTTRACE]")
+        || ts.starts_with("=== BOOTTRACE:")
+        || ts.starts_with("BOOTTRACE:")
+        || ts.starts_with("[CTRL +")
+    {
+        return None;
+    }
+    Some(line)
+}
+
+/// Strips interleaved `[DIAGWATCH...]` / `[BOOTTRACE]` wrappers and rejoins target fragments
 /// split mid-line during real-time UART streaming (e.g. `BGO driver init failed` + `[1].`).
 pub(super) fn reconstruct_diagwatch_target_stream(text: &str) -> String {
-    let lines: Vec<&str> = text.lines().collect();
+    let lines: Vec<&str> = text.lines().filter_map(strip_boottrace_prefix).collect();
     let mut out: Vec<String> = Vec::with_capacity(lines.len());
     let mut i = 0usize;
     while i < lines.len() {
