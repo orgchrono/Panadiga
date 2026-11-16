@@ -1,21 +1,12 @@
-//! Pure functional GDB Remote Serial Protocol (RSP) frame codec and AM34 read-only safety guards.
-//!
-//! Shared SSOT across CLI, Tauri bridge, and Python bench tooling for `$<payload>#<xx>` framing,
-//! binary `$x` escaping, E05 IPL NOR write protection (`0x80000000..0x807EFFFF` / `0x84..`),
-//! `$m`/`$g` response validation, and 28-word (`0x70`-byte) MN103S register decoding.
+//! GDB RSP reply parsing, `E0x` error detection, `$m` hex decoding, and MN103S `$g` register extraction.
 
 use std::collections::BTreeMap;
 
 use anyhow::{Result, bail};
 use serde::{Deserialize, Serialize};
 
-/// Strictly read-only IPL NOR windows (`0x80000000..0x807EFFFF` cached & `0x84000000..0x847EFFFF` uncached).
-pub const IPL_READONLY_RANGES: [(u64, u64); 2] =
-    [(0x8000_0000, 0x807F_0000), (0x8400_0000, 0x847F_0000)];
-/// Safe maximum `$m` ASCII hex chunk payload size.
-pub const MAX_M_CHUNK: usize = 512;
-/// Safe maximum `$x` binary chunk payload size.
-pub const MAX_X_CHUNK: usize = 0x440;
+use super::encode::rsp_checksum;
+
 /// Canonical MN103S `_dev_SERIAL` `$g` register frame size in bytes (28 x 32-bit LE words).
 pub const G_REGISTER_BYTES: usize = 0x70;
 const G_REGISTER_WORDS: usize = 28;
@@ -38,72 +29,6 @@ pub struct ParsedRspFrame {
     pub ack_plus: bool,
     pub nak_minus: bool,
     pub raw_nak_0x15: bool,
-}
-
-/// Computes standard 8-bit modulo-256 GDB RSP checksum.
-pub fn rsp_checksum(payload: &[u8]) -> u8 {
-    payload.iter().fold(0u8, |acc, &b| acc.wrapping_add(b))
-}
-
-/// Returns `true` when `[addr, addr + length)` touches read-only Spansion IPL NOR flash.
-pub fn is_ipl_readonly_address(addr: u32, length: usize) -> bool {
-    let start = addr as u64;
-    let span = length.max(1) as u64;
-    let raw_end = (start + span) & 0xFFFF_FFFF;
-    let end = if raw_end < start {
-        0x1_0000_0000
-    } else {
-        raw_end
-    };
-    IPL_READONLY_RANGES
-        .iter()
-        .any(|&(lo, hi)| start < hi && end > lo)
-}
-
-/// Encodes `$<payload>#<xx>`, rejecting mutating or execution opcodes unless `allow_write` is true.
-pub fn build_rsp_frame(payload: &[u8], allow_write: bool) -> Result<Vec<u8>> {
-    if !allow_write
-        && matches!(
-            payload.first().copied(),
-            Some(b'M' | b'X' | b'c' | b's' | b'k')
-        )
-    {
-        let op = payload[0] as char;
-        bail!("Mutating or execution RSP command '{op}' requires allow_write=true");
-    }
-    let csum = rsp_checksum(payload);
-    let mut out = Vec::with_capacity(payload.len() + 4);
-    out.push(b'$');
-    out.extend_from_slice(payload);
-    out.extend_from_slice(format!("#{csum:02x}").as_bytes());
-    Ok(out)
-}
-
-/// Builds a hardware-guarded `$M` (ASCII hex) or `$X` (escaped binary) write frame, blocking IPL NOR (`E05`).
-pub fn build_rsp_write_frame(addr: u32, data: &[u8], use_binary_x: bool) -> Result<Vec<u8>> {
-    if data.is_empty() {
-        bail!("Write payload cannot be empty");
-    }
-    if is_ipl_readonly_address(addr, data.len()) {
-        bail!(
-            "Hardware Safety Lockout (E05): refusing RSP write to read-only IPL NOR 0x{addr:08X}"
-        );
-    }
-    if use_binary_x {
-        let mut raw = format!("X{addr:x},{:x}:", data.len()).into_bytes();
-        for &b in data {
-            if matches!(b, 0x23 | 0x24 | 0x2A | 0x7D) {
-                raw.push(0x7D);
-                raw.push(b ^ 0x20);
-            } else {
-                raw.push(b);
-            }
-        }
-        return build_rsp_frame(&raw, true);
-    }
-    let hex_body = hex::encode(data);
-    let raw = format!("M{addr:x},{:x}:{hex_body}", data.len());
-    build_rsp_frame(raw.as_bytes(), true)
 }
 
 /// Returns an error if the RSP reply payload matches `E00`..`E04`.
@@ -262,39 +187,4 @@ pub fn validate_dump_range(
         bail!("chunk_size must be in 1..{max_chunk_size} for reliable UART RSP framing");
     }
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn rsp_guard_binary_x_and_register_decoding_work() {
-        assert!(is_ipl_readonly_address(0x8400_0000, 4));
-        assert!(!is_ipl_readonly_address(0x847F_0000, 4));
-        assert!(build_rsp_frame(b"M51800000,4:01020304", false).is_err());
-        assert!(build_rsp_write_frame(0x8000_0000, &[0, 1], false).is_err());
-        assert!(build_rsp_write_frame(0x847E_FFF8, &[0; 16], false).is_err());
-
-        let x_frame = build_rsp_write_frame(0x847F_0000, b"}#$*", true).unwrap();
-        let parsed = parse_rsp_reply(&x_frame, None).unwrap();
-        assert!(parsed.checksum_ok);
-        let decoded = hex::decode(&parsed.payload_hex).unwrap();
-        assert!(decoded.starts_with(b"X847f0000,4:"));
-
-        let mut raw_g = Vec::with_capacity(G_REGISTER_BYTES);
-        for i in 0..28u32 {
-            let v = match i {
-                25 => 0xAA00_0064,
-                26 => 0xBB00_0068,
-                27 => 0xCC00_006C,
-                _ => 0x1000 + i,
-            };
-            raw_g.extend_from_slice(&v.to_le_bytes());
-        }
-        let regs = decode_mn103s_g_registers(hex::encode(raw_g).as_bytes()).unwrap();
-        assert_eq!(regs.get("w25"), Some(&0xAA00_0064));
-        assert_eq!(regs.get("w27"), Some(&0xCC00_006C));
-        assert!(decode_mn103s_g_registers(b"0000").is_err());
-    }
 }

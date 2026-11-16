@@ -1,0 +1,103 @@
+//! Auto-detect profile and 8 MB Top-Boot (2006+, UniPhier AM34) DIGA model specs.
+
+use super::types::{ModelSpecRow, model_spec};
+
+pub(super) const SPECS: &[ModelSpecRow] = &[
+    model_spec(
+        "AUTO",
+        "Auto-Detect (Passive Address Aliasing / Binary Signature)",
+        8,
+        "AUTO (0x801F0000 / 0x803F0000 / 0x807F0000 / 0x80FE0000)",
+        "Auto-Detected Top-Boot / Uniform",
+        "UniPhier AM34 / MN103S Auto",
+    ),
+    // 8 MB Top-Boot (2006+)
+    model_spec(
+        "DMR-EH55",
+        "Série EH (HDD+DVD)",
+        8,
+        "0x807F0000",
+        "Top-Boot 8x8KB (SA134..SA141)",
+        "Matsushita AM34 / MN103S (VEP79138)",
+    ),
+    model_spec(
+        "DMR-EH56",
+        "Série EH (HDD+DVD)",
+        8,
+        "0x807F0000",
+        "Top-Boot 8x8KB (SA134..SA141)",
+        "Matsushita AM34 / MN103S (VEP79138)",
+    ),
+    model_spec(
+        "DMR-EH65",
+        "Série EH (HDD+DVD)",
+        8,
+        "0x807F0000",
+        "Top-Boot 8x8KB (SA134..SA141)",
+        "Matsushita AM34 / MN103S (VEP79138)",
+    ),
+    model_spec(
+        "DMR-EH57",
+        "Série EH (HDD+DVD)",
+        8,
+        "0x807F0000",
+        "Top-Boot 8x8KB (SA134..SA141)",
+        "Matsushita AM34 / MN103S (VEP79138)",
+    ),
+    model_spec(
+        "DMR-EH58",
+        "Série EH (HDD+DVD)",
+        8,
+        "0x807F0000",
+        "Top-Boot 8x8KB (SA134..SA141)",
+        "Matsushita AM34 / MN103S (VEP79138)",
+    ),
+    model_spec(
+        "DMR-EH67",
+        "Série EH (HDD+DVD)",
+        8,
+        "0x807F0000",
+        "Top-Boot 8x8KB (SA134..SA141)",
+        "Matsushita AM34 / MN103S (VEP79138)",
+    ),
+    model_spec(
+        "DMR-EH68",
+        "Série EH (HDD+DVD)",
+        8,
+        "0x807F0000",
+        "Top-Boot 8x8KB (SA134..SA141)",
+        "Matsushita AM34 / MN103S (VEP79138)",
+    ),
+    model_spec(
+        "DMR-ES15",
+        "Série ES (DVD/Combo)",
+        8,
+        "0x807F0000",
+        "Top-Boot 8x8KB (SA134..SA141)",
+        "Matsushita AM34 / MN103S (VEP79138)",
+    ),
+    model_spec(
+        "DMR-ES25",
+        "Série ES (DVD/Combo)",
+        8,
+        "0x807F0000",
+        "Top-Boot 8x8KB (SA134..SA141)",
+        "Matsushita AM34 / MN103S (VEP79138)",
+    ),
+    model_spec(
+        "DMR-ES35V",
+        "Série ES (DVD+VHS)",
+        8,
+        "0x807F0000",
+        "Top-Boot 8x8KB (SA134..SA141)",
+        "Matsushita AM34 / MN103S (VEP79138)",
+    ),
+    model_spec(
+        "DMR-EZ25",
+        "Série EZ (DVB-T DVD)",
+        8,
+        "0x807F0000",
+        "Top-Boot 8x8KB (SA134..SA141)",
+        "Matsushita AM34 / MN103S (VEP79138)",
+    ),
+];

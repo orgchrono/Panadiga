@@ -9,6 +9,7 @@
  */
 
 #include "gdb/gdb_rsp_internal.h"
+#include "flash/p7501_flash.h"
 #include "hal/p7501_hw.h"
 #include <stdio.h>
 #include <string.h>
@@ -81,6 +82,31 @@ static uint8_t memory_read_byte(gdb_rsp_ctx_t *ctx, uint32_t addr) {
     return (uint8_t)((word >> (byte_idx * 8U)) & 0xFFU);
 }
 
+static bool is_writable_nor_window(
+    const gdb_rsp_ctx_t *ctx,
+    uint32_t base,
+    uint32_t flash_bytes,
+    uint32_t addr,
+    uint32_t end_addr
+) {
+    const uint32_t nvram_start = base + (flash_bytes - P7501_FLASH_NVRAM_SIZE_64KB);
+    const uint32_t ipl_end     = nvram_start - 1UL;
+    const uint32_t flash_end   = base + (flash_bytes - 1UL);
+    const bool unlocked        = (ctx != NULL) && ctx->upper_nor_unlocked;
+    const uint32_t prot_end    = unlocked
+        ? (base + P7501_FLASH_CRITICAL_IPL_SIZE - 1UL)
+        : ipl_end;
+
+    /* OPUS-07: Strictly reject any overlap with protected Bootloader IPL ROM (or SA0..SA3 when unlocked) */
+    if ((addr <= prot_end) && (end_addr >= base)) {
+        return false;
+    }
+    const uint32_t writable_start = unlocked
+        ? (base + P7501_FLASH_CRITICAL_IPL_SIZE)
+        : nvram_start;
+    return (addr >= writable_start) && (end_addr <= flash_end);
+}
+
 static bool is_valid_write_range(const gdb_rsp_ctx_t *ctx, uint32_t addr, uint32_t length) {
     if (length == 0U) {
         return false;
@@ -91,19 +117,14 @@ static bool is_valid_write_range(const gdb_rsp_ctx_t *ctx, uint32_t addr, uint32
     }
 
     const uint32_t flash_bytes = normalized_flash_size(ctx);
-    const uint32_t nvram_start = 0x80000000UL + (flash_bytes - 0x00010000UL);
-    const uint32_t ipl_end     = nvram_start - 1UL;
-    const uint32_t flash_end   = 0x80000000UL + (flash_bytes - 1UL);
-
-    /* OPUS-07: Strictly reject any overlap with protected Bootloader IPL ROM */
-    if ((addr <= ipl_end) && (end_addr >= 0x80000000UL)) {
-        return false;
+    if (is_writable_nor_window(ctx, P7501_FLASH_CACHED_BASE, flash_bytes, addr, end_addr) ||
+        is_writable_nor_window(ctx, P7501_FLASH_HW_UNCACHED_BASE, flash_bytes, addr, end_addr)) {
+        return true;
     }
 
     if (end_addr <= 0x0003FFFFUL) { return true; }                             /* Internal SRAM */
     if ((addr >= 0x10000000UL) && (end_addr <= 0x1000FFFFUL)) { return true; } /* Core MMIO */
     if ((addr >= 0x40000000UL) && (end_addr <= 0x43FFFFFFUL)) { return true; } /* System SDRAM */
-    if ((addr >= nvram_start)  && (end_addr <= flash_end))    { return true; } /* Top 64KB NVRAM */
     if ((addr >= 0xC0000000UL) && (end_addr <= 0xC000FFFFUL)) { return true; } /* OCD MMIO */
     if ((addr >= 0xD4000000UL) && (end_addr <= 0xD4000FFFUL)) { return true; } /* PATA / IDE MMIO */
 

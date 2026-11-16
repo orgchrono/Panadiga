@@ -256,6 +256,12 @@ The simultaneous appearance of `E5D1F34A518B2690` inside optical container `PANA
   0x807FE000 .. 0x807FFFFF       0x7FE000..0x7FFFFF        8 KB      RW    Sector SA141: EEMUL Block 7 (Master Checksum)
 ```
 
-### 3.4 Bus Invariants Summary
-* **Immutable Factory Region (99.21875%):** `0x80000000` to `0x807EFFFF` (8,323,072 bytes) — Strictly preserved bit-identical across the entire lifetime of the unit.
+### 3.4 Bus Invariants Summary & Two-Layer NOR Write-Protection Model
+* **Default-Protected Factory Region (99.21875%):** `0x80000000` to `0x807EFFFF` (8,323,072 bytes) — Preserved and write-protected (`E05`) by default throughout standard operation and `U99` recovery.
 * **Targeted Sanitization Window (0.78125%):** `0x807F0000` to `0x807FFFFF` (65,536 bytes) — Erased to `0xFF` via bench JEDEC `Sector Erase` to command the AM34 CPU to execute factory recalibration and restore healthy recorder operation.
+
+> [!NOTE]
+> **Two-Layer Controlled Upper-NOR Model (`SA0..SA3` vs. `SA4..SA133`):**
+> To guarantee unbreakable boot-chain safety while permitting advanced off-NVRAM research, write governance over `0x80000000..0x807EFFFF` separates the region into two distinct layers:
+> 1. **Layer 1 — Critical Bootloader / IPL (`SA0..SA3`, `0x80000000..0x8003FFFF`, `256 KiB`):** **permanently read-only (`immutable RO`)** on `P7501` hardware — never erase or overwrite this range; every write/erase attempt is unconditionally blocked with error **`E05`** to preserve the Root of Trust.
+> 2. **Layer 2 — BGO / Application Upper-NOR Region (`SA4..SA133`, `0x80040000..0x807EFFFF`, `64 KiB` sectors):** **protected by default (`E05`)** for strict `U99` safety, yet **explicitly unlockable** through an opt-in command/flag (**`qPanadigaNorUnlock:CONFIRM_UPPER_NOR`** in the debug protocol or **`--offset`** on a *Copy-on-Write* (`CoW`) image with mandatory SHA-256 backup) for controlled experimentation outside NVRAM (`SA134..SA141`).

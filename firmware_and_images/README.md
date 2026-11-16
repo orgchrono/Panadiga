@@ -39,3 +39,10 @@ Este diretório armazena os dumps brutos de memória e imagens de armazenamento 
 
 ### 5. Dump Físico `DMR-ES35V` (`dmr-es35v/` — 8 MiB Plaintext NOR + 8 KiB EEPROM)
 * **Descrição:** Dump chip-off real (Triton v5.7) publicado na Release `firmware-pack-v0.1.0` como **`dmr-es35v-8mb-nor-flash-and-eeprom-triton-dump.zip`** (`13.599.723 bytes`, SHA-256 `800f3874d4a3ed2bacf90780a7f6f666cb9f8b5a3b2e6bf9dfd9529f2b50cb32`), com `flash.bin` (`8.388.608 bytes`, bootloader XIP `0.18 [06/03/13]`, `EXTRHEAD DRV/MAIN`, FS BGO `0x700000..0x7EFFFF` e EEMUL NVRAM `0x7F0000..0x7FFFFF`) e `eeprom.bin` (`8.192 bytes`, 24C64). Veja [`dmr-es35v/README.md`](dmr-es35v/README.md).
+
+### 6. Captura IR Flipper Zero — Controle Combo Panasonic DVD/TV (`Panasonic_DVD_TV.ir`)
+* **Descrição:** Arquivo de captura infravermelho **Kaseikyo** (`Filetype: IR signals file`, `Version: 1`, `305` linhas, **`50` sinais parseados**: `6` comandos TV `0x80` + `44` comandos DVD/HDD `0xB0`) de controle combo DVD/TV norte-americano (com botões `AUDIO [A]`, `DISPLAY [B]`, `SUB MENU [S]`, `F REC`, `CM SKIP`, `TIME SLIP` e `DIRECT NAVIGATOR`, sem fileira de 4 botões de Teletexto).
+* **Origem / Crédito:** `Flipper-IRDB` (`DVD_Players/Panasonic/Panasonic_DVD_TV.ir`, crédito `emptythevoid` — `https://github.com/emptythevoid`).
+* **Tamanho exato:** `4.943 bytes`.
+* **Hash SHA-256:** `82acb0a7611c89ea56799094bf3c71b9e366f38c0301b457cf5c8266279a9b99`.
+* **Referência Técnica Bilíngue:** [`docs/pt-BR/REFERENCIA_CAPTURA_IR_PANASONIC_DVD_TV.md`](../docs/pt-BR/REFERENCIA_CAPTURA_IR_PANASONIC_DVD_TV.md) · [`docs/en-US/PANASONIC_DVD_TV_IR_CAPTURE_REFERENCE.md`](../docs/en-US/PANASONIC_DVD_TV_IR_CAPTURE_REFERENCE.md)

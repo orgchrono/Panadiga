@@ -40,4 +40,32 @@ pub enum NvramActions {
         #[arg(long, value_name = "HEX")]
         hex: String,
     },
+
+    /// Copy-on-write patch in Upper NOR App / BGO (0x040000..nvram_start-1); blocks SA0..SA3 unless --allow-critical-ipl
+    #[command(name = "patch-upper-nor")]
+    PatchUpperNor {
+        /// Path to raw Spansion NOR flash dump (2/4/8/16 MiB)
+        #[arg(short, long, value_name = "INPUT_DUMP")]
+        input: PathBuf,
+
+        /// Destination copy-on-write output path (cannot overwrite input)
+        #[arg(short, long, value_name = "OUTPUT_FILE")]
+        output: PathBuf,
+
+        /// Flash-relative byte offset (hex/dec inside 0x040000..nvram_start-1)
+        #[arg(long, value_name = "OFFSET")]
+        offset: String,
+
+        /// Hex bytes to write (e.g. "DEADBEEF" or "A5 FF")
+        #[arg(long, value_name = "HEX")]
+        hex: String,
+
+        /// Optional explicit binary backup path for affected 64 KiB sector(s)
+        #[arg(long, value_name = "BACKUP_FILE")]
+        backup: Option<PathBuf>,
+
+        /// Explicit offline CoW override permitting writes inside Critical Boot IPL (SA0..SA3)
+        #[arg(long)]
+        allow_critical_ipl: bool,
+    },
 }

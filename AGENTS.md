@@ -43,8 +43,9 @@ Ao propor scripts, comandos de bancada ou modificações de firmware:
    - **NUNCA ALIMENTE A SONDA PICO PELO CONECTOR P7501**. O pino 1 (`SW_UART` / Sense no P7501) destina-se apenas ao controle de boot/detecção ($< 10\text{ mA}$). O Pico deve receber alimentação externa via USB ou `VSYS`.
 3. **Invariante de Escrita em Memória Flash**:
    - A memória Flash Spansion `S29JL064H70TFI00` (8 MB) possui mapeamento de barramento físico de `0x80000000` a `0x807FFFFF`.
-   - Região do Bootloader/IPL (`0x80000000` a `0x807EFFFF`): **LEITURA ESTRITA**. Qualquer tentativa de escrita deve ser terminantemente rejeitada com erro `E05`.
-   - Única região autorizada para escrita de sanitização de erro `U99`: Os últimos 64 KB de NVRAM/EEMUL (`0x807F0000` a `0x807FFFFF`, offset físico `0x7F0000` a `0x7FFFFF`).
+   - **IPL Crítico de Boot (`SA0..SA3`, `0x80000000` a `0x8003FFFF` / `0x84000000` a `0x8403FFFF`)**: **LEITURA ESTRITA PERMANENTE** na sonda Pico (`E05`), preservando o boot `P7501` e evitando brick irreversível sem gravador TSOP-48.
+   - **Região Upper NOR App / BGO (`SA4..SA133`, `0x80040000` a `0x807EFFFF`)**: protegida por padrão com `E05` para operações de rotina `U99`, mas desbloqueável explicitamente via `qPanadigaNorUnlock:CONFIRM_UPPER_NOR` / `NorWritePolicy::UpperNorAppUnlocked` ou CoW `panadiga nvram patch-upper-nor` (com backup prévio verificado por SHA-256).
+   - **NVRAM/EEMUL (`SA134..SA141`, últimos 64 KB)**: `0x807F0000` a `0x807FFFFF` (offset físico `0x7F0000` a `0x7FFFFF`) — escrita autorizada por padrão para sanitização cirúrgica do erro `U99`.
 4. **Invariante Forense de Storage (MEIHFS)**:
    - Dumps brutos de disco rígido (como `panasonic DMR EH-55 Firmware hdd_100.bin`) são evidências forenses imutáveis.
    - NUNCA editar ou sobrescrever dumps originais no local (*in-place*). Qualquer extração ou reconstrução deve gerar cópias de trabalho e validar somas de verificação SHA-256 contra os manifestos auditados.

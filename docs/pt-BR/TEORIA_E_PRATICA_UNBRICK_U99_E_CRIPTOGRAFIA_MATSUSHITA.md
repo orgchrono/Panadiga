@@ -252,6 +252,12 @@ A presença simultânea do bloco `E5D1F34A518B2690` tanto no arquivo de CD `PANA
   0x807FE000 .. 0x807FFFFF       0x7FE000..0x7FFFFF       8 KB        RW       Setor SA141: EEMUL Bloco 7 (NVRAM Checksum)
 ```
 
-### 3.4 Resumo das Invariantes de Barramento
-* **Região Imutável de Fábrica (99,21875%)**: `0x80000000` a `0x807EFFFF` (8.323.072 bytes) — Permanece 100% preservada e intacta durante toda a vida útil do aparelho.
+### 3.4 Resumo das Invariantes de Barramento & Modelo de Proteção em Duas Camadas
+* **Região Imutável de Fábrica (99,21875%)**: `0x80000000` a `0x807EFFFF` (8.323.072 bytes) — Permanece preservada e protegida por padrão (`E05`) durante toda a operação padrão e na cura do erro `U99`.
 * **Região Alvo de Sanitização (0,78125%)**: `0x807F0000` a `0x807FFFFF` (65.536 bytes) — Ao sofrer o `Sector Erase` JEDEC de bancada para `0xFF`, comanda a CPU AM34 a executar a rotina de auto-recuperação de fábrica, restabelecendo o gravador com parâmetros operacionais perfeitos.
+
+> [!NOTE]
+> **Modelo Controlado de Escrita da NOR em Duas Camadas (`SA0..SA3` vs. `SA4..SA133`):**
+> Para conciliar a proteção absoluta da cadeia de boot com experimentação avançada fora da NVRAM, o controle de acesso sobre `0x80000000..0x807EFFFF` separa a área protegida em duas camadas distintas:
+> 1. **Camada 1 — Bootloader / IPL Crítico (`SA0..SA3`, `0x80000000..0x8003FFFF`, `256 KiB`):** **leitura estrita permanente (`RO` imutável)** no hardware `P7501` — nunca deve ser apagada ou sobrescrita, sendo toda tentativa de escrita bloqueada de forma irreversível com erro **`E05`** para preservar o Root of Trust.
+> 2. **Camada 2 — Região BGO / Aplicação Upper NOR (`SA4..SA133`, `0x80040000..0x807EFFFF`, setores de `64 KiB`):** **protegida por padrão (`E05`)** para segurança estrita durante reparo de erro `U99`, porém **desbloqueável explicitamente** via flag/comando dedicado (**`qPanadigaNorUnlock:CONFIRM_UPPER_NOR`** no protocolo de depuração ou **`--offset`** em imagem *Copy-on-Write* (`CoW`) com backup SHA-256 obrigatório) para experimentação controlada fora da NVRAM (`SA134..SA141`).

@@ -17,6 +17,7 @@
 #include <assert.h>
 
 #include "../gdb/gdb_rsp.h"
+#include "../flash/p7501_flash.h"
 #include "../hal/p7501_hw.h"
 #include "test_uart_codec.h"
 
@@ -36,6 +37,19 @@ static bool s_mock_halted = true;
 static uint32_t s_mock_dcsr = 0x00000001UL; /* Halted flag set */
 static uint32_t s_mock_pc = 0x80000000UL;
 
+static bool resolve_mock_flash_offset(uint32_t addr, uint32_t *out_offset) {
+    if ((addr >= P7501_FLASH_CACHED_BASE) && (addr < (P7501_FLASH_CACHED_BASE + MOCK_FLASH_SIZE))) {
+        *out_offset = addr - P7501_FLASH_CACHED_BASE;
+        return true;
+    }
+    if ((addr >= P7501_FLASH_HW_UNCACHED_BASE) &&
+        (addr < (P7501_FLASH_HW_UNCACHED_BASE + MOCK_FLASH_SIZE))) {
+        *out_offset = addr - P7501_FLASH_HW_UNCACHED_BASE;
+        return true;
+    }
+    return false;
+}
+
 /* Mock HAL implementation */
 uint32_t p7501_hw_read_mem32(uint32_t addr) {
     if (addr < MOCK_SRAM_SIZE) {
@@ -43,16 +57,14 @@ uint32_t p7501_hw_read_mem32(uint32_t addr) {
         memcpy(&val, &s_mock_sram[addr], 4);
         return val;
     }
-    if (addr >= 0x807F0000UL && addr < (0x807F0000UL + MOCK_NVRAM_SIZE)) {
-        uint32_t offset = addr - 0x807F0000UL;
+    uint32_t offset = 0UL;
+    if (resolve_mock_flash_offset(addr, &offset)) {
         uint32_t val;
-        memcpy(&val, &s_mock_nvram[offset], 4);
-        return val;
-    }
-    if (addr >= 0x80000000UL && addr < (0x80000000UL + MOCK_FLASH_SIZE)) {
-        uint32_t offset = addr - 0x80000000UL;
-        uint32_t val;
-        memcpy(&val, &s_mock_flash[offset], 4);
+        if (offset >= P7501_FLASH_8MB_NVRAM_OFF) {
+            memcpy(&val, &s_mock_nvram[offset - P7501_FLASH_8MB_NVRAM_OFF], 4);
+        } else {
+            memcpy(&val, &s_mock_flash[offset], 4);
+        }
         return val;
     }
     return 0xFFFFFFFFUL;
@@ -63,12 +75,15 @@ void p7501_hw_write_mem32(uint32_t addr, uint32_t data) {
         memcpy(&s_mock_sram[addr], &data, 4);
         return;
     }
-    if (addr >= 0x807F0000UL && addr < (0x807F0000UL + MOCK_NVRAM_SIZE)) {
-        uint32_t offset = addr - 0x807F0000UL;
-        memcpy(&s_mock_nvram[offset], &data, 4);
-        return;
+    uint32_t offset = 0UL;
+    if (resolve_mock_flash_offset(addr, &offset)) {
+        if (offset >= P7501_FLASH_8MB_NVRAM_OFF) {
+            memcpy(&s_mock_nvram[offset - P7501_FLASH_8MB_NVRAM_OFF], &data, 4);
+        } else if (offset >= P7501_FLASH_CRITICAL_IPL_SIZE) {
+            memcpy(&s_mock_flash[offset], &data, 4);
+        }
+        /* Critical Boot IPL (0x000000..0x03FFFF) is physically ignored in Flash */
     }
-    /* Any write to 0x80000000..0x807EFFFF is physically ignored in Flash */
 }
 
 bool p7501_hw_is_cpu_halted(void) {
@@ -283,6 +298,120 @@ static void test_isolated_gdb_ctx_no_aliasing(void) {
     printf("  [PASS] test_isolated_gdb_ctx_no_aliasing\n");
 }
 
+static void test_upper_nor_unlock_allows_app_keeps_ipl_e05(void) {
+    char resp[GDB_RSP_MAX_PACKET_LEN];
+
+    /* Locked by default: Upper NOR App/BGO writes fail closed with E05 */
+    assert(!gdb_rsp_is_upper_nor_unlocked());
+    send_cmd_and_get_response("M80040000,4:11223344", resp, sizeof(resp));
+    assert(strcmp(resp, "E05") == 0);
+    send_cmd_and_get_response("M84200000,4:aabbccdd", resp, sizeof(resp));
+    assert(strcmp(resp, "E05") == 0);
+
+    /* Wrong or empty unlock token returns E01 and keeps lock engaged */
+    send_cmd_and_get_response("qPanadigaNorUnlock:WRONG", resp, sizeof(resp));
+    assert(strcmp(resp, "E01") == 0);
+    assert(!gdb_rsp_is_upper_nor_unlocked());
+    send_cmd_and_get_response("qPanadigaNorUnlock", resp, sizeof(resp));
+    assert(strcmp(resp, "E01") == 0);
+    assert(!gdb_rsp_is_upper_nor_unlocked());
+    send_cmd_and_get_response("M80400000,4:deadbeef", resp, sizeof(resp));
+    assert(strcmp(resp, "E05") == 0);
+
+    /* Explicit unlock token unlocks SA4..SA133 while SA0..SA3 remains E05 */
+    send_cmd_and_get_response("qPanadigaNorUnlock:CONFIRM_UPPER_NOR", resp, sizeof(resp));
+    assert(strcmp(resp, "OK") == 0);
+    assert(gdb_rsp_is_upper_nor_unlocked());
+
+    /* Critical Boot IPL (SA0..SA3: 0x80000000..0x8003FFFF / 0x84000000..0x8403FFFF) permanently E05 */
+    static const char *k_ipl_cmds[] = {
+        "M80000000,4:00000000",
+        "M8003FFFC,4:00000000",
+        "M8003FFFE,4:11223344",
+        "X80000000,4:ABCD",
+        "M84000000,4:00000000",
+        "M8403FFFE,4:11223344",
+    };
+    for (size_t i = 0u; i < (sizeof(k_ipl_cmds) / sizeof(k_ipl_cmds[0])); ++i) {
+        send_cmd_and_get_response(k_ipl_cmds[i], resp, sizeof(resp));
+        assert(strcmp(resp, "E05") == 0);
+    }
+
+    /* Upper NOR App & BGO writes succeed and read back cleanly */
+    send_cmd_and_get_response("M80040000,4:11223344", resp, sizeof(resp));
+    assert(strcmp(resp, "OK") == 0);
+    send_cmd_and_get_response("m80040000,4", resp, sizeof(resp));
+    assert(strcmp(resp, "11223344") == 0);
+
+    send_cmd_and_get_response("M84200000,4:cafebabe", resp, sizeof(resp));
+    assert(strcmp(resp, "OK") == 0);
+    send_cmd_and_get_response("m84200000,4", resp, sizeof(resp));
+    assert(strcmp(resp, "cafebabe") == 0);
+
+    send_cmd_and_get_response("M80400000,4:deadbeef", resp, sizeof(resp));
+    assert(strcmp(resp, "OK") == 0);
+    send_cmd_and_get_response("m80400000,4", resp, sizeof(resp));
+    assert(strcmp(resp, "deadbeef") == 0);
+
+    /* NVRAM stays writable and out-of-bounds remains E05 */
+    send_cmd_and_get_response("M807F0000,4:55667788", resp, sizeof(resp));
+    assert(strcmp(resp, "OK") == 0);
+    send_cmd_and_get_response("M80800000,4:00000000", resp, sizeof(resp));
+    assert(strcmp(resp, "E05") == 0);
+
+    /* Re-locking restores full NvramOnly E05 protection over Upper NOR */
+    send_cmd_and_get_response("qPanadigaNorLock", resp, sizeof(resp));
+    assert(strcmp(resp, "OK") == 0);
+    assert(!gdb_rsp_is_upper_nor_unlocked());
+    send_cmd_and_get_response("M80400000,4:01020304", resp, sizeof(resp));
+    assert(strcmp(resp, "E05") == 0);
+
+    /* Explicit context setter/getter isolation check */
+    gdb_rsp_ctx_t isolated;
+    gdb_rsp_ctx_init(&isolated);
+    assert(!gdb_rsp_ctx_is_upper_nor_unlocked(&isolated));
+    gdb_rsp_ctx_set_upper_nor_unlocked(&isolated, true);
+    assert(gdb_rsp_ctx_is_upper_nor_unlocked(&isolated));
+    assert(!gdb_rsp_is_upper_nor_unlocked());
+
+    printf("  [PASS] test_upper_nor_unlock_allows_app_keeps_ipl_e05\n");
+}
+
+static void test_flash_sector_geo_64k_vs_8k(void) {
+    assert(P7501_FLASH_CRITICAL_IPL_SIZE == 0x00040000UL);
+    assert(SPANSION_MAIN_SECTOR_SIZE_BYTES == 65536UL);
+
+    assert(p7501_flash_is_critical_boot_ipl_range(0x80000000UL, 4u));
+    assert(p7501_flash_is_critical_boot_ipl_range(0x8003FFFEUL, 4u));
+    assert(p7501_flash_is_critical_boot_ipl_range(0x84000000UL, 4u));
+    assert(p7501_flash_is_critical_boot_ipl_range(0x8403FFFFUL, 1u));
+    assert(!p7501_flash_is_critical_boot_ipl_range(0x80040000UL, 4u));
+    assert(!p7501_flash_is_critical_boot_ipl_range(0x84040000UL, 4u));
+    assert(!p7501_flash_is_critical_boot_ipl_range(0x807F0000UL, 4u));
+    assert(!p7501_flash_is_critical_boot_ipl_range(0x80000000UL, 0u));
+
+    /* 8 MiB S29JL064H: 64 KiB below 0x7F0000, 8 KiB in NVRAM micro-sectors */
+    assert(p7501_flash_get_sector_size_at(P7501_FLASH_SIZE_8MB, 0x80000000UL) == 65536UL);
+    assert(p7501_flash_get_sector_size_at(P7501_FLASH_SIZE_8MB, 0x80040000UL) == 65536UL);
+    assert(p7501_flash_get_sector_size_at(P7501_FLASH_SIZE_8MB, 0x84200000UL) == 65536UL);
+    assert(p7501_flash_get_sector_size_at(P7501_FLASH_SIZE_8MB, 0x807EFFFFUL) == 65536UL);
+    assert(p7501_flash_get_sector_size_at(P7501_FLASH_SIZE_8MB, 0x807F0000UL) == 8192UL);
+    assert(p7501_flash_get_sector_size_at(P7501_FLASH_SIZE_8MB, 0x847F2000UL) == 8192UL);
+    assert(p7501_flash_get_sector_size_at(P7501_FLASH_SIZE_8MB, 0x807FFFFFUL) == 8192UL);
+    assert(p7501_flash_get_sector_size_at(P7501_FLASH_SIZE_8MB, 0x80800000UL) == 0UL);
+    assert(p7501_flash_get_sector_size_at(P7501_FLASH_SIZE_8MB, 0x40000000UL) == 0UL);
+
+    /* 2 MiB / 4 MiB / 16 MiB boundaries */
+    assert(p7501_flash_get_sector_size_at(P7501_FLASH_SIZE_2MB, 0x801EFFFFUL) == 65536UL);
+    assert(p7501_flash_get_sector_size_at(P7501_FLASH_SIZE_2MB, 0x801F0000UL) == 8192UL);
+    assert(p7501_flash_get_sector_size_at(P7501_FLASH_SIZE_4MB, 0x803EFFFFUL) == 65536UL);
+    assert(p7501_flash_get_sector_size_at(P7501_FLASH_SIZE_4MB, 0x803F0000UL) == 8192UL);
+    assert(p7501_flash_get_sector_size_at(P7501_FLASH_SIZE_16MB, 0x80FDFFFFUL) == 65536UL);
+    assert(p7501_flash_get_sector_size_at(P7501_FLASH_SIZE_16MB, 0x80FE0000UL) == 8192UL);
+
+    printf("  [PASS] test_flash_sector_geo_64k_vs_8k\n");
+}
+
 int main(void) {
     printf("======================================================================\n");
     printf(">> Running Panadiga P7501 C11 Host Test Suite (PICO_HOST_TEST=1)\n");
@@ -308,6 +437,12 @@ int main(void) {
 
     reset_mock_state();
     test_isolated_gdb_ctx_no_aliasing();
+
+    reset_mock_state();
+    test_upper_nor_unlock_allows_app_keeps_ipl_e05();
+
+    reset_mock_state();
+    test_flash_sector_geo_64k_vs_8k();
 
     reset_mock_state();
     test_register_access_no_ub();

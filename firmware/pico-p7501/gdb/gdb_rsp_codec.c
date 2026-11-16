@@ -123,8 +123,46 @@ void gdb_rsp_ctx_init(gdb_rsp_ctx_t *ctx) {
     memset(ctx, 0, sizeof(*ctx));
     ctx->parser_state = GDB_STATE_IDLE;
     ctx->flash_size_bytes = 0x00800000UL;
+    ctx->upper_nor_unlocked = false;
     gdb_cpu_init_registers(&ctx->regs);
     gdb_rsp_ctx_invalidate_cache(ctx);
+}
+
+void gdb_rsp_ctx_set_upper_nor_unlocked(gdb_rsp_ctx_t *ctx, bool unlocked) {
+    if (ctx != NULL) {
+        ctx->upper_nor_unlocked = unlocked;
+    }
+}
+
+bool gdb_rsp_ctx_is_upper_nor_unlocked(const gdb_rsp_ctx_t *ctx) {
+    return (ctx != NULL) && ctx->upper_nor_unlocked;
+}
+
+bool gdb_rsp_handle_nor_policy_cmd(gdb_rsp_ctx_t *ctx, const char *cmd) {
+    static const char k_unlock_prefix[] = "qPanadigaNorUnlock";
+    static const char k_unlock_valid[] = "qPanadigaNorUnlock:CONFIRM_UPPER_NOR";
+    static const char k_lock_cmd[] = "qPanadigaNorLock";
+    const size_t unlock_len = sizeof(k_unlock_prefix) - 1U;
+
+    if ((ctx == NULL) || (cmd == NULL)) {
+        return false;
+    }
+    if (strcmp(cmd, k_unlock_valid) == 0) {
+        gdb_rsp_ctx_set_upper_nor_unlocked(ctx, true);
+        gdb_rsp_ctx_send_packet(ctx, "OK");
+        return true;
+    }
+    if ((strncmp(cmd, k_unlock_prefix, unlock_len) == 0) &&
+        ((cmd[unlock_len] == '\0') || (cmd[unlock_len] == ':'))) {
+        gdb_rsp_ctx_send_packet(ctx, "E01");
+        return true;
+    }
+    if (strcmp(cmd, k_lock_cmd) == 0) {
+        gdb_rsp_ctx_set_upper_nor_unlocked(ctx, false);
+        gdb_rsp_ctx_send_packet(ctx, "OK");
+        return true;
+    }
+    return false;
 }
 
 bool gdb_rsp_ctx_is_active(const gdb_rsp_ctx_t *ctx) {
@@ -220,7 +258,9 @@ void gdb_rsp_ctx_process_char(gdb_rsp_ctx_t *ctx, char ch) {
                 if (ctx->received_checksum == ctx->calc_checksum) {
                     putchar('+');
                     ctx->rx_buffer[ctx->rx_len] = '\0';
-                    gdb_cpu_dispatch_command(ctx, ctx->rx_buffer);
+                    if (!gdb_rsp_handle_nor_policy_cmd(ctx, ctx->rx_buffer)) {
+                        gdb_cpu_dispatch_command(ctx, ctx->rx_buffer);
+                    }
                 } else {
                     putchar('-');
                 }
@@ -244,3 +284,9 @@ bool gdb_rsp_set_flash_size(uint32_t flash_size_bytes) {
     return gdb_rsp_ctx_set_flash_size(&s_default_gdb_ctx, flash_size_bytes);
 }
 uint32_t gdb_rsp_get_flash_size(void) { return gdb_rsp_ctx_get_flash_size(&s_default_gdb_ctx); }
+void gdb_rsp_set_upper_nor_unlocked(bool unlocked) {
+    gdb_rsp_ctx_set_upper_nor_unlocked(&s_default_gdb_ctx, unlocked);
+}
+bool gdb_rsp_is_upper_nor_unlocked(void) {
+    return gdb_rsp_ctx_is_upper_nor_unlocked(&s_default_gdb_ctx);
+}

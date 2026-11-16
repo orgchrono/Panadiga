@@ -135,6 +135,12 @@ typedef enum p7501_adc_channel p7501_adc_channel_t;
 /** Fail-closed PIO TX FIFO wait ceiling (us) preventing infinite TX blocking. */
 #define P7501_TX_FIFO_TIMEOUT_US     500000UL
 
+/** Critical Boot IPL window (`SA0..SA3` = first 256 KiB: `0x80000000..0x8003FFFF`). */
+#define P7501_FLASH_CRITICAL_IPL_SIZE    0x00040000UL
+
+/** Standard Spansion main uniform sector size (64 KiB = 65536 bytes). */
+#define SPANSION_MAIN_SECTOR_SIZE_BYTES  65536UL
+
 /* =========================================================================
  * Discrete P7501 Boot & Reset Sequence Profiles (SW_UART + XRESET)
  * ========================================================================= */

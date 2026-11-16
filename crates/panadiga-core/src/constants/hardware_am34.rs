@@ -29,6 +29,12 @@ pub const AM34_FLASH_BUS_BASE: u32 = AM34_FLASH_BASE;
 pub const AM34_FLASH_SIZE: u32 = 0x0080_0000;
 /// Spansion NOR Flash Protected IPL / Kernel Size (SA0..SA133 = 8,128 Kilobytes).
 pub const AM34_FLASH_IPL_SIZE: u32 = 0x007F_0000;
+/// Spansion NOR Flash Critical Boot IPL Size (SA0..SA3 = first 256 KiB: 0x8000_0000..0x8003_FFFF).
+pub const AM34_FLASH_CRITICAL_IPL_SIZE: u32 = 0x0004_0000;
+/// Physical offset where Upper NOR App / BGO sectors begin (SA4..SA133 = 0x0004_0000..nvram_start - 1).
+pub const AM34_FLASH_UPPER_APP_START_OFFSET: u32 = 0x0004_0000;
+/// Main uniform sector size of Spansion S29JL064H NOR Flash (64 KiB = 65,536 bytes).
+pub const SPANSION_MAIN_SECTOR_SIZE_BYTES: usize = 65_536;
 
 /// NVRAM Top-Boot Partition Base Physical Address (0x807F_0000).
 pub const AM34_NVRAM_BASE: u32 = 0x807F_0000;

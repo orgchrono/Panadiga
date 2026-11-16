@@ -92,6 +92,7 @@ typedef struct gdb_rsp_ctx {
     uint32_t           cache_base_addr;
     bool               cache_valid;
     uint32_t           flash_size_bytes;
+    bool               upper_nor_unlocked;
 #if defined(PICO_HOST_TEST) && (PICO_HOST_TEST != 0)
     char               test_last_resp[GDB_RSP_MAX_PACKET_LEN];
 #endif
@@ -106,6 +107,8 @@ void gdb_rsp_ctx_send_packet(gdb_rsp_ctx_t *ctx, const char *payload);
 void gdb_rsp_ctx_invalidate_cache(gdb_rsp_ctx_t *ctx);
 bool gdb_rsp_ctx_set_flash_size(gdb_rsp_ctx_t *ctx, uint32_t flash_size_bytes);
 uint32_t gdb_rsp_ctx_get_flash_size(const gdb_rsp_ctx_t *ctx);
+void gdb_rsp_ctx_set_upper_nor_unlocked(gdb_rsp_ctx_t *ctx, bool unlocked);
+bool gdb_rsp_ctx_is_upper_nor_unlocked(const gdb_rsp_ctx_t *ctx);
 
 #if defined(PICO_HOST_TEST) && (PICO_HOST_TEST != 0)
 void gdb_rsp_ctx_test_inject_packet(gdb_rsp_ctx_t *ctx, const char *payload);
@@ -126,6 +129,8 @@ void gdb_rsp_invalidate_cache(void);
 const char *gdb_rsp_get_status_info(void);
 bool gdb_rsp_set_flash_size(uint32_t flash_size_bytes);
 uint32_t gdb_rsp_get_flash_size(void);
+void gdb_rsp_set_upper_nor_unlocked(bool unlocked);
+bool gdb_rsp_is_upper_nor_unlocked(void);
 
 #ifdef __cplusplus
 }

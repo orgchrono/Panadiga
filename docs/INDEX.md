@@ -3,11 +3,11 @@
 
 # Panadiga Technical Documentation Index / Índice da Documentação Técnica
 
-All **34** primary technical engineering dossiers in this repository maintain **1:1 bidirectional parity** between [**English (`docs/en-US/`)**](#english-documentation-docsen-us--34-dossiers) and [**Português (BR) (`docs/pt-BR/`)**](#documentação-em-português-docspt-br--34-dossiês), paired automatically with [`translation_pairs.json`](./translation_pairs.json), plus root audits, preserved `2026-11-11` audit snapshots ([`audits/`](./audits/README.md)), Ghidra C/disassembly evidence ([`pseudocode/`](./pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md)), and live `COM10` bench UART logs ([`debug_logs/`](./debug_logs/README.md)).
+All **35** primary technical engineering dossiers in this repository maintain **1:1 bidirectional parity** between [**English (`docs/en-US/`)**](#english-documentation-docsen-us--35-dossiers) and [**Português (BR) (`docs/pt-BR/`)**](#documentação-em-português-docspt-br--35-dossiês), paired automatically with [`translation_pairs.json`](./translation_pairs.json), plus root audits, preserved `2026-11-11` audit snapshots ([`audits/`](./audits/README.md)), Ghidra C/disassembly evidence ([`pseudocode/`](./pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md)), and live `COM10` bench UART logs ([`debug_logs/`](./debug_logs/README.md)).
 
 ---
 
-## English Documentation (`docs/en-US/`) — 34 Dossiers
+## English Documentation (`docs/en-US/`) — 35 Dossiers
 
 | # | Document (`en-US`) | PT-BR Counterpart | Engineering Domain & Scope |
 | :---: | :--- | :--- | :--- |
@@ -30,25 +30,26 @@ All **34** primary technical engineering dossiers in this repository maintain **
 | 17 | [LOGGING_AND_TELEMETRY_SUBSYSTEM.md](en-US/LOGGING_AND_TELEMETRY_SUBSYSTEM.md) | [PT-BR](pt-BR/SUBSISTEMA_LOGGING_E_TELEMETRIA.md) | `panadiga_core::logger` (`LogLevel`, `set_sink`, Tauri forwarding, macros) |
 | 18 | [MATSHITA_R6MV4_EMULATOR_AND_ATAPI_INJECTION.md](en-US/MATSHITA_R6MV4_EMULATOR_AND_ATAPI_INJECTION.md) | [PT-BR](pt-BR/EMULADOR_MATSHITA_R6MV4_E_INJECAO_ATAPI.md) | `DRV12` / `R6-MV4` ATAPI `0x3B` write injection & optical unlock synthesis |
 | 19 | [MN103S_SEVEN_TRAPS_AND_GHIDRA_RESOLUTION.md](en-US/MN103S_SEVEN_TRAPS_AND_GHIDRA_RESOLUTION.md) | [PT-BR](pt-BR/ARMADILHAS_MN103S_E_RESOLUCAO_GHIDRA.md) | Catalog of the 7 MN103S decompiler traps & Rust/Jython resolution |
-| 20 | [PANASONIC_P7501_UART_RECONSTRUCTION.md](en-US/PANASONIC_P7501_UART_RECONSTRUCTION.md) | [PT-BR](pt-BR/PANASONIC_P7501_UART_RECONSTRUCTION.md) | `P7501` Async UART (`115200 8N1`) electrical signal reconstruction |
-| 21 | [PICO_C11_UPGRADES_GHIDRA_UNDEF_AND_PYTHON_RUST_PARITY.md](en-US/PICO_C11_UPGRADES_GHIDRA_UNDEF_AND_PYTHON_RUST_PARITY.md) | [PT-BR](pt-BR/UPGRADES_PICO_C11_UNDEF_GHIDRA_E_PARIDADE_PYTHON_RUST.md) | C11 firmware upgrades, Ghidra `??` root causes & Python-to-Rust parity matrix |
-| 22 | [PICO_P7501_FIRMWARE_GUIDE.md](en-US/PICO_P7501_FIRMWARE_GUIDE.md) | [PT-BR](pt-BR/FIRMWARE_PICO_P7501_GUIA.md) | Pico RP2040/RP2350 C11 firmware guide (`UARTMON`, `JIGBOOT`, `PANARSP`) |
-| 23 | [RE_REPORT_FEISTEL_TOC_EXTRHEAD_AND_UART0_GATES.md](en-US/RE_REPORT_FEISTEL_TOC_EXTRHEAD_AND_UART0_GATES.md) | [PT-BR](pt-BR/RELATORIO_RE_FEISTEL_TOC_EXTRHEAD_E_GATES_UART0.md) | Static/dynamic RE of `FUN_4400a666`, `.FRM` TOCs, `EXTRHEAD` & UART0 gates |
-| 24 | [RE_SCRIPTS_COMPENDIUM_STEPS_01_50.md](en-US/RE_SCRIPTS_COMPENDIUM_STEPS_01_50.md) | [PT-BR](pt-BR/COMPILADO_SCRIPTS_RE_STEPS_01_50.md) | Consolidated reference of Python RE & bench automation (`Steps 1–50`) |
-| 25 | [REVERSE_ENGINEERING_BOOTLOADER_AND_OPTICAL_DRIVE_MN103S.md](en-US/REVERSE_ENGINEERING_BOOTLOADER_AND_OPTICAL_DRIVE_MN103S.md) | [PT-BR](pt-BR/DOSSIE_ENGENHARIA_REVERSA_BOOTLOADER_E_DRIVE_MN103S.md) | Deep RE of `BOOT.BIN`, `DRV_decomp`, `83 A7`, 431 errors, 62 CLI & `P7501` |
-| 26 | [RP2350_AND_GDB_INTEGRATION_PLAN.md](en-US/RP2350_AND_GDB_INTEGRATION_PLAN.md) | [PT-BR](pt-BR/PLANO_INTEGRACAO_RP2350_E_GDB.md) | Dual-target RP2040 / RP2350 Pico SDK architecture & GDB RSP integration |
-| 27 | [STORAGE_ARCHITECTURE_MEIHDFS_PARTITIONS.md](en-US/STORAGE_ARCHITECTURE_MEIHDFS_PARTITIONS.md) | [PT-BR](pt-BR/ARQUITETURA_STORAGE_MEIHDFS_PARTICOES.md) | MEIHDFS HDD layout (`'SH'`), `XOR 0xFF` records, Partitions 1–3 & `IDE2SAT2` |
-| 28 | [SYSTEM_ARCHITECTURE_AND_ENGINEERING_BLUEPRINT.md](en-US/SYSTEM_ARCHITECTURE_AND_ENGINEERING_BLUEPRINT.md) | [PT-BR](pt-BR/ARQUITETURA_E_BLUEPRINT_DE_ENGENHARIA.md) | End-to-end Rust, MCP, Tauri 2 React, C11, Android & Python blueprint |
-| 29 | [TECHNICAL_INVENTORY_AND_OPERATIONS_MANUAL.md](en-US/TECHNICAL_INVENTORY_AND_OPERATIONS_MANUAL.md) | [PT-BR](pt-BR/INVENTARIO_TECNICO_E_GUIA_DE_OPERACAO.md) | Cryptographic asset SHA-256 inventory, `30` PDFs, bench ops & FMEA |
-| 30 | [TECHNICAL_REPORT_FOR_CLAUDE_OPUS_UNBRICK_DMR_EH55.md](en-US/TECHNICAL_REPORT_FOR_CLAUDE_OPUS_UNBRICK_DMR_EH55.md) | [PT-BR](pt-BR/RELATORIO_TECNICO_CLAUDE_OPUS_UNBRICK_DMR_EH55.md) | Cross-validated DMR-EH55 unbrick dossier, power/laser triage & `P7501` |
-| 31 | [TESTING_ARCHITECTURE_AND_COMPLIANCE.md](en-US/TESTING_ARCHITECTURE_AND_COMPLIANCE.md) | [PT-BR](pt-BR/ARQUITETURA_DE_TESTES_E_CONFORMIDADE.md) | 4-layer Testing Pyramid, 9 Quality Gates & physical safety compliance |
-| 32 | [THEORY_AND_PRACTICE_U99_UNBRICK_MATSUSHITA_CRYPTO.md](en-US/THEORY_AND_PRACTICE_U99_UNBRICK_MATSUSHITA_CRYPTO.md) | [PT-BR](pt-BR/TEORIA_E_PRATICA_UNBRICK_U99_E_CRIPTOGRAFIA_MATSUSHITA.md) | NOR `S29JL064H` flash physics, `EEMUL` `U99` cure, handshake & hex maps |
-| 33 | [VISUAL_CATALOG_EH55_SCHEMATICS_AND_PCB.md](en-US/VISUAL_CATALOG_EH55_SCHEMATICS_AND_PCB.md) | [PT-BR](pt-BR/CATALOGO_VISUAL_ESQUEMAS_E_PCB_EH55.md) | Visual catalog (`238` entries) of DMR-EH55 schematics, PCBs & RE renders |
-| 34 | [ZERO_ERROR_RAG_ENGINE_AND_PHYSICAL_SAFETY.md](en-US/ZERO_ERROR_RAG_ENGINE_AND_PHYSICAL_SAFETY.md) | [PT-BR](pt-BR/ZERO_ERROR_RAG_ENGINE_E_SEGURANCA_FISICA.md) | 6-layer Zero-Error RAG engine, `FactCritic` & physical voltage guardrails |
+| 20 | [PANASONIC_DVD_TV_IR_CAPTURE_REFERENCE.md](en-US/PANASONIC_DVD_TV_IR_CAPTURE_REFERENCE.md) | [PT-BR](pt-BR/REFERENCIA_CAPTURA_IR_PANASONIC_DVD_TV.md) | Flipper-IRDB `Panasonic_DVD_TV.ir` Kaseikyo decoding (`50` signals: TV `0x80` + DVD/HDD `0xB0`) |
+| 21 | [PANASONIC_P7501_UART_RECONSTRUCTION.md](en-US/PANASONIC_P7501_UART_RECONSTRUCTION.md) | [PT-BR](pt-BR/PANASONIC_P7501_UART_RECONSTRUCTION.md) | `P7501` Async UART (`115200 8N1`) electrical signal reconstruction |
+| 22 | [PICO_C11_UPGRADES_GHIDRA_UNDEF_AND_PYTHON_RUST_PARITY.md](en-US/PICO_C11_UPGRADES_GHIDRA_UNDEF_AND_PYTHON_RUST_PARITY.md) | [PT-BR](pt-BR/UPGRADES_PICO_C11_UNDEF_GHIDRA_E_PARIDADE_PYTHON_RUST.md) | C11 firmware upgrades, Ghidra `??` root causes & Python-to-Rust parity matrix |
+| 23 | [PICO_P7501_FIRMWARE_GUIDE.md](en-US/PICO_P7501_FIRMWARE_GUIDE.md) | [PT-BR](pt-BR/FIRMWARE_PICO_P7501_GUIA.md) | Pico RP2040/RP2350 C11 firmware guide (`UARTMON`, `JIGBOOT`, `PANARSP`) |
+| 24 | [RE_REPORT_FEISTEL_TOC_EXTRHEAD_AND_UART0_GATES.md](en-US/RE_REPORT_FEISTEL_TOC_EXTRHEAD_AND_UART0_GATES.md) | [PT-BR](pt-BR/RELATORIO_RE_FEISTEL_TOC_EXTRHEAD_E_GATES_UART0.md) | Static/dynamic RE of `FUN_4400a666`, `.FRM` TOCs, `EXTRHEAD` & UART0 gates |
+| 25 | [RE_SCRIPTS_COMPENDIUM_STEPS_01_50.md](en-US/RE_SCRIPTS_COMPENDIUM_STEPS_01_50.md) | [PT-BR](pt-BR/COMPILADO_SCRIPTS_RE_STEPS_01_50.md) | Consolidated reference of Python RE & bench automation (`Steps 1–50`) |
+| 26 | [REVERSE_ENGINEERING_BOOTLOADER_AND_OPTICAL_DRIVE_MN103S.md](en-US/REVERSE_ENGINEERING_BOOTLOADER_AND_OPTICAL_DRIVE_MN103S.md) | [PT-BR](pt-BR/DOSSIE_ENGENHARIA_REVERSA_BOOTLOADER_E_DRIVE_MN103S.md) | Deep RE of `BOOT.BIN`, `DRV_decomp`, `83 A7`, 431 errors, 62 CLI & `P7501` |
+| 27 | [RP2350_AND_GDB_INTEGRATION_PLAN.md](en-US/RP2350_AND_GDB_INTEGRATION_PLAN.md) | [PT-BR](pt-BR/PLANO_INTEGRACAO_RP2350_E_GDB.md) | Dual-target RP2040 / RP2350 Pico SDK architecture & GDB RSP integration |
+| 28 | [STORAGE_ARCHITECTURE_MEIHDFS_PARTITIONS.md](en-US/STORAGE_ARCHITECTURE_MEIHDFS_PARTITIONS.md) | [PT-BR](pt-BR/ARQUITETURA_STORAGE_MEIHDFS_PARTICOES.md) | MEIHDFS HDD layout (`'SH'`), `XOR 0xFF` records, Partitions 1–3 & `IDE2SAT2` |
+| 29 | [SYSTEM_ARCHITECTURE_AND_ENGINEERING_BLUEPRINT.md](en-US/SYSTEM_ARCHITECTURE_AND_ENGINEERING_BLUEPRINT.md) | [PT-BR](pt-BR/ARQUITETURA_E_BLUEPRINT_DE_ENGENHARIA.md) | End-to-end Rust, MCP, Tauri 2 React, C11, Android & Python blueprint |
+| 30 | [TECHNICAL_INVENTORY_AND_OPERATIONS_MANUAL.md](en-US/TECHNICAL_INVENTORY_AND_OPERATIONS_MANUAL.md) | [PT-BR](pt-BR/INVENTARIO_TECNICO_E_GUIA_DE_OPERACAO.md) | Cryptographic asset SHA-256 inventory, `30` PDFs, bench ops & FMEA |
+| 31 | [TECHNICAL_REPORT_FOR_CLAUDE_OPUS_UNBRICK_DMR_EH55.md](en-US/TECHNICAL_REPORT_FOR_CLAUDE_OPUS_UNBRICK_DMR_EH55.md) | [PT-BR](pt-BR/RELATORIO_TECNICO_CLAUDE_OPUS_UNBRICK_DMR_EH55.md) | Cross-validated DMR-EH55 unbrick dossier, power/laser triage & `P7501` |
+| 32 | [TESTING_ARCHITECTURE_AND_COMPLIANCE.md](en-US/TESTING_ARCHITECTURE_AND_COMPLIANCE.md) | [PT-BR](pt-BR/ARQUITETURA_DE_TESTES_E_CONFORMIDADE.md) | 4-layer Testing Pyramid, 9 Quality Gates & physical safety compliance |
+| 33 | [THEORY_AND_PRACTICE_U99_UNBRICK_MATSUSHITA_CRYPTO.md](en-US/THEORY_AND_PRACTICE_U99_UNBRICK_MATSUSHITA_CRYPTO.md) | [PT-BR](pt-BR/TEORIA_E_PRATICA_UNBRICK_U99_E_CRIPTOGRAFIA_MATSUSHITA.md) | NOR `S29JL064H` flash physics, `EEMUL` `U99` cure, handshake & hex maps |
+| 34 | [VISUAL_CATALOG_EH55_SCHEMATICS_AND_PCB.md](en-US/VISUAL_CATALOG_EH55_SCHEMATICS_AND_PCB.md) | [PT-BR](pt-BR/CATALOGO_VISUAL_ESQUEMAS_E_PCB_EH55.md) | Visual catalog (`238` entries) of DMR-EH55 schematics, PCBs & RE renders |
+| 35 | [ZERO_ERROR_RAG_ENGINE_AND_PHYSICAL_SAFETY.md](en-US/ZERO_ERROR_RAG_ENGINE_AND_PHYSICAL_SAFETY.md) | [PT-BR](pt-BR/ZERO_ERROR_RAG_ENGINE_E_SEGURANCA_FISICA.md) | 6-layer Zero-Error RAG engine, `FactCritic` & physical voltage guardrails |
 
 ---
 
-## Documentação em Português (`docs/pt-BR/`) — 34 Dossiês
+## Documentação em Português (`docs/pt-BR/`) — 35 Dossiês
 
 | # | Documento (`pt-BR`) | Versão `en-US` | Área / Escopo Técnico |
 | :---: | :--- | :--- | :--- |
@@ -77,15 +78,16 @@ All **34** primary technical engineering dossiers in this repository maintain **
 | 23 | [PANASONIC_P7501_UART_RECONSTRUCTION.md](pt-BR/PANASONIC_P7501_UART_RECONSTRUCTION.md) | [EN-US](en-US/PANASONIC_P7501_UART_RECONSTRUCTION.md) | Especificação técnica de reconstrução elétrica `P7501` Async UART `115200` |
 | 24 | [PARECER_AUDITORIA_FORENSE_CRIPTOANALISE_E_MEIHDFS.md](pt-BR/PARECER_AUDITORIA_FORENSE_CRIPTOANALISE_E_MEIHDFS.md) | [EN-US](en-US/FORENSIC_AUDIT_REPORT_CRYPTANALYSIS_AND_MEIHDFS.md) | Parecer conclusivo de auditoria forense (`PANA_DVD.FRM`, `MEIHDFS` e bancada) |
 | 25 | [PLANO_INTEGRACAO_RP2350_E_GDB.md](pt-BR/PLANO_INTEGRACAO_RP2350_E_GDB.md) | [EN-US](en-US/RP2350_AND_GDB_INTEGRATION_PLAN.md) | Planejamento dual-target RP2040/RP2350 no Pico SDK e integração GDB |
-| 26 | [RELATORIO_AUDITORIA_E_MODULARIZACAO_FINAL.md](pt-BR/RELATORIO_AUDITORIA_E_MODULARIZACAO_FINAL.md) | [EN-US](en-US/FINAL_AUDIT_AND_MODULARIZATION_REPORT.md) | Auditoria pré-refatoração, decomposição modular e pipeline dos 9 Gates |
-| 27 | [RELATORIO_RE_FEISTEL_TOC_EXTRHEAD_E_GATES_UART0.md](pt-BR/RELATORIO_RE_FEISTEL_TOC_EXTRHEAD_E_GATES_UART0.md) | [EN-US](en-US/RE_REPORT_FEISTEL_TOC_EXTRHEAD_AND_UART0_GATES.md) | Engenharia reversa da cifra Feistel (`FUN_4400a666`), TOC, `EXTRHEAD` e UART0 |
-| 28 | [RELATORIO_SESSAO_ENGENHARIA_REVERSA_EH55_100_FIEL.md](pt-BR/RELATORIO_SESSAO_ENGENHARIA_REVERSA_EH55_100_FIEL.md) | [EN-US](en-US/EH55_REVERSE_ENGINEERING_SESSION_FAITHFUL_REPORT.md) | Registro 100% fiel da sessão de engenharia reversa ao vivo no EH55 |
-| 29 | [RELATORIO_TECNICO_CLAUDE_OPUS_UNBRICK_DMR_EH55.md](pt-BR/RELATORIO_TECNICO_CLAUDE_OPUS_UNBRICK_DMR_EH55.md) | [EN-US](en-US/TECHNICAL_REPORT_FOR_CLAUDE_OPUS_UNBRICK_DMR_EH55.md) | Dossiê técnico de validação cruzada, triagem elétrica/laser e unbrick |
-| 30 | [SUBSISTEMA_LOGGING_E_TELEMETRIA.md](pt-BR/SUBSISTEMA_LOGGING_E_TELEMETRIA.md) | [EN-US](en-US/LOGGING_AND_TELEMETRY_SUBSYSTEM.md) | Subsistema `panadiga_core::logger` (`LogLevel`, `set_sink`, Tauri e macros) |
-| 31 | [TEORIA_E_PRATICA_UNBRICK_U99_E_CRIPTOGRAFIA_MATSUSHITA.md](pt-BR/TEORIA_E_PRATICA_UNBRICK_U99_E_CRIPTOGRAFIA_MATSUSHITA.md) | [EN-US](en-US/THEORY_AND_PRACTICE_U99_UNBRICK_MATSUSHITA_CRYPTO.md) | Física NOR `S29JL064H`, cura circular `EEMUL` (`U99`), handshakes e hex maps |
-| 32 | [UPGRADES_PICO_C11_UNDEF_GHIDRA_E_PARIDADE_PYTHON_RUST.md](pt-BR/UPGRADES_PICO_C11_UNDEF_GHIDRA_E_PARIDADE_PYTHON_RUST.md) | [EN-US](en-US/PICO_C11_UPGRADES_GHIDRA_UNDEF_AND_PYTHON_RUST_PARITY.md) | Upgrades C11 no Pico, diagnóstico `??` no Ghidra e matriz de paridade Rust |
-| 33 | [VISTA_EXPLODIDA_ARQUITETURA_INJECAO_PICO_E_BYPASS_PASSTHROUGH.md](pt-BR/VISTA_EXPLODIDA_ARQUITETURA_INJECAO_PICO_E_BYPASS_PASSTHROUGH.md) | [EN-US](en-US/EXPLODED_VIEW_PICO_INJECTION_ARCHITECTURE_AND_BYPASS_PASSTHROUGH.md) | Vista explodida (`DMR-EH55`), `MCP(18)` tools, `PANARSP` e bypass AV `E-E` |
-| 34 | [ZERO_ERROR_RAG_ENGINE_E_SEGURANCA_FISICA.md](pt-BR/ZERO_ERROR_RAG_ENGINE_E_SEGURANCA_FISICA.md) | [EN-US](en-US/ZERO_ERROR_RAG_ENGINE_AND_PHYSICAL_SAFETY.md) | Motor RAG Zero-Error (6 camadas), `FactCritic` e guardrails de tensão |
+| 26 | [REFERENCIA_CAPTURA_IR_PANASONIC_DVD_TV.md](pt-BR/REFERENCIA_CAPTURA_IR_PANASONIC_DVD_TV.md) | [EN-US](en-US/PANASONIC_DVD_TV_IR_CAPTURE_REFERENCE.md) | Decodificação Kaseikyo `Panasonic_DVD_TV.ir` (`50` sinais: TV `0x80` + DVD/HDD `0xB0`) |
+| 27 | [RELATORIO_AUDITORIA_E_MODULARIZACAO_FINAL.md](pt-BR/RELATORIO_AUDITORIA_E_MODULARIZACAO_FINAL.md) | [EN-US](en-US/FINAL_AUDIT_AND_MODULARIZATION_REPORT.md) | Auditoria pré-refatoração, decomposição modular e pipeline dos 9 Gates |
+| 28 | [RELATORIO_RE_FEISTEL_TOC_EXTRHEAD_E_GATES_UART0.md](pt-BR/RELATORIO_RE_FEISTEL_TOC_EXTRHEAD_E_GATES_UART0.md) | [EN-US](en-US/RE_REPORT_FEISTEL_TOC_EXTRHEAD_AND_UART0_GATES.md) | Engenharia reversa da cifra Feistel (`FUN_4400a666`), TOC, `EXTRHEAD` e UART0 |
+| 29 | [RELATORIO_SESSAO_ENGENHARIA_REVERSA_EH55_100_FIEL.md](pt-BR/RELATORIO_SESSAO_ENGENHARIA_REVERSA_EH55_100_FIEL.md) | [EN-US](en-US/EH55_REVERSE_ENGINEERING_SESSION_FAITHFUL_REPORT.md) | Registro 100% fiel da sessão de engenharia reversa ao vivo no EH55 |
+| 30 | [RELATORIO_TECNICO_CLAUDE_OPUS_UNBRICK_DMR_EH55.md](pt-BR/RELATORIO_TECNICO_CLAUDE_OPUS_UNBRICK_DMR_EH55.md) | [EN-US](en-US/TECHNICAL_REPORT_FOR_CLAUDE_OPUS_UNBRICK_DMR_EH55.md) | Dossiê técnico de validação cruzada, triagem elétrica/laser e unbrick |
+| 31 | [SUBSISTEMA_LOGGING_E_TELEMETRIA.md](pt-BR/SUBSISTEMA_LOGGING_E_TELEMETRIA.md) | [EN-US](en-US/LOGGING_AND_TELEMETRY_SUBSYSTEM.md) | Subsistema `panadiga_core::logger` (`LogLevel`, `set_sink`, Tauri e macros) |
+| 32 | [TEORIA_E_PRATICA_UNBRICK_U99_E_CRIPTOGRAFIA_MATSUSHITA.md](pt-BR/TEORIA_E_PRATICA_UNBRICK_U99_E_CRIPTOGRAFIA_MATSUSHITA.md) | [EN-US](en-US/THEORY_AND_PRACTICE_U99_UNBRICK_MATSUSHITA_CRYPTO.md) | Física NOR `S29JL064H`, cura circular `EEMUL` (`U99`), handshakes e hex maps |
+| 33 | [UPGRADES_PICO_C11_UNDEF_GHIDRA_E_PARIDADE_PYTHON_RUST.md](pt-BR/UPGRADES_PICO_C11_UNDEF_GHIDRA_E_PARIDADE_PYTHON_RUST.md) | [EN-US](en-US/PICO_C11_UPGRADES_GHIDRA_UNDEF_AND_PYTHON_RUST_PARITY.md) | Upgrades C11 no Pico, diagnóstico `??` no Ghidra e matriz de paridade Rust |
+| 34 | [VISTA_EXPLODIDA_ARQUITETURA_INJECAO_PICO_E_BYPASS_PASSTHROUGH.md](pt-BR/VISTA_EXPLODIDA_ARQUITETURA_INJECAO_PICO_E_BYPASS_PASSTHROUGH.md) | [EN-US](en-US/EXPLODED_VIEW_PICO_INJECTION_ARCHITECTURE_AND_BYPASS_PASSTHROUGH.md) | Vista explodida (`DMR-EH55`), `MCP(18)` tools, `PANARSP` e bypass AV `E-E` |
+| 35 | [ZERO_ERROR_RAG_ENGINE_E_SEGURANCA_FISICA.md](pt-BR/ZERO_ERROR_RAG_ENGINE_E_SEGURANCA_FISICA.md) | [EN-US](en-US/ZERO_ERROR_RAG_ENGINE_AND_PHYSICAL_SAFETY.md) | Motor RAG Zero-Error (6 camadas), `FactCritic` e guardrails de tensão |
 
 ---
 

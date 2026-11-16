@@ -81,16 +81,43 @@ bool p7501_flash_is_readonly_nor_range(
            ((s64 >= hw_lo) && (e64 <= hw_hi));
 }
 
-bool p7501_flash_is_protected_ipl_range(uint32_t addr, size_t len) {
-    if (len == 0u) {
+static bool flash_range_overlaps_window(uint32_t addr, size_t len, uint32_t window_size) {
+    if ((len == 0u) || (window_size == 0UL)) {
         return false;
     }
     const uint64_t s64 = (uint64_t)addr;
     const uint64_t e64 = s64 + (uint64_t)len - 1ULL;
-    const uint64_t cached_ipl_end = (uint64_t)P7501_FLASH_CACHED_BASE + (uint64_t)P7501_FLASH_8MB_IPL_END_OFF;
-    const uint64_t hw_ipl_end = (uint64_t)P7501_FLASH_HW_UNCACHED_BASE + (uint64_t)P7501_FLASH_8MB_IPL_END_OFF;
-    return (s64 <= cached_ipl_end && e64 >= (uint64_t)P7501_FLASH_CACHED_BASE) ||
-           (s64 <= hw_ipl_end && e64 >= (uint64_t)P7501_FLASH_HW_UNCACHED_BASE);
+    const uint64_t span_last = (uint64_t)window_size - 1ULL;
+    const uint64_t cached_end = (uint64_t)P7501_FLASH_CACHED_BASE + span_last;
+    const uint64_t hw_end = (uint64_t)P7501_FLASH_HW_UNCACHED_BASE + span_last;
+    return ((s64 <= cached_end) && (e64 >= (uint64_t)P7501_FLASH_CACHED_BASE)) ||
+           ((s64 <= hw_end) && (e64 >= (uint64_t)P7501_FLASH_HW_UNCACHED_BASE));
+}
+
+bool p7501_flash_is_protected_ipl_range(uint32_t addr, size_t len) {
+    return flash_range_overlaps_window(addr, len, P7501_FLASH_8MB_NVRAM_OFF);
+}
+
+bool p7501_flash_is_critical_boot_ipl_range(uint32_t addr, size_t len) {
+    return flash_range_overlaps_window(addr, len, P7501_FLASH_CRITICAL_IPL_SIZE);
+}
+
+uint32_t p7501_flash_get_sector_size_at(uint32_t flash_size_bytes, uint32_t addr) {
+    const p7501_flash_geometry_t geo = p7501_flash_get_geometry(flash_size_bytes);
+    uint32_t offset = 0UL;
+    if ((addr >= P7501_FLASH_CACHED_BASE) && (addr < (P7501_FLASH_CACHED_BASE + geo.bytes))) {
+        offset = addr - P7501_FLASH_CACHED_BASE;
+    } else if ((addr >= geo.hw_uncached_base) && (addr < (geo.hw_uncached_base + geo.bytes))) {
+        offset = addr - geo.hw_uncached_base;
+    } else if (addr < geo.bytes) {
+        offset = addr;
+    } else {
+        return 0UL;
+    }
+    const uint32_t nvram_offset = geo.bytes - geo.nvram_size;
+    return (offset >= nvram_offset)
+        ? (uint32_t)SPANSION_MICROSECTOR_SIZE_BYTES
+        : SPANSION_MAIN_SECTOR_SIZE_BYTES;
 }
 
 bool p7501_flash_is_nvram_microsector_addr(uint32_t addr) {
