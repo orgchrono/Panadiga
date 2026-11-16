@@ -4,7 +4,7 @@ use anyhow::{Context, Result, bail};
 
 use super::super::codec::parse_u32_radix;
 use super::super::feistel::feistel_decrypt_buffer;
-use super::super::toc::{decrypt_and_parse_frm_toc, parse_sd_frm_toc};
+use super::super::toc::{decrypt_frm_toc_with_detected_key, parse_sd_frm_toc};
 use super::super::types::DecryptedFrmTocEntry;
 use super::pack::pack_frm;
 use super::types::{FrmContainerMode, FrmPackModule, FrmPackReport};
@@ -16,9 +16,12 @@ pub fn verify_packed_frm_roundtrip(
     mode: FrmContainerMode,
     expected_modules: usize,
 ) -> Result<Vec<DecryptedFrmTocEntry>> {
-    let entries = match mode {
-        FrmContainerMode::Dvd => decrypt_and_parse_frm_toc(bytes),
-        FrmContainerMode::Sd | FrmContainerMode::Sd48 => parse_sd_frm_toc(bytes),
+    let (detected_key, entries) = match mode {
+        FrmContainerMode::Dvd => {
+            let (_, rk, _, parsed) = decrypt_frm_toc_with_detected_key(bytes);
+            (Some(rk), parsed)
+        }
+        FrmContainerMode::Sd | FrmContainerMode::Sd48 => (None, parse_sd_frm_toc(bytes)),
     };
     if entries.len() < expected_modules {
         bail!(
@@ -29,6 +32,7 @@ pub fn verify_packed_frm_roundtrip(
     }
 
     let is_dvd = mode == FrmContainerMode::Dvd;
+    let dvd_key = detected_key.unwrap_or(PANA_FEISTEL_ROUND_KEY_32B);
     for entry in &entries[..expected_modules] {
         if !entry.list_sum_valid {
             bail!(
@@ -59,11 +63,7 @@ pub fn verify_packed_frm_roundtrip(
         let mut payload_buf;
         let payload_slice: &[u8] = if is_dvd {
             payload_buf = bytes[start..end].to_vec();
-            feistel_decrypt_buffer(
-                &mut payload_buf,
-                &PANA_FEISTEL_ROUND_KEY_32B,
-                &PANA_FEISTEL_SBOX_256,
-            );
+            feistel_decrypt_buffer(&mut payload_buf, &dvd_key, &PANA_FEISTEL_SBOX_256);
             &payload_buf
         } else {
             &bytes[start..end]
@@ -86,13 +86,13 @@ pub fn verify_packed_frm_roundtrip(
 
 /// Unpacks a Feistel-encrypted `PANA_DVD.FRM` image into `FrmPackModule` descriptors preserving factory TOC fields.
 pub fn unpack_dvd_frm_to_modules(dvd_bytes: &[u8]) -> Result<Vec<FrmPackModule>> {
-    let entries = decrypt_and_parse_frm_toc(dvd_bytes);
+    let (_key_name, round_key, _layout, entries) = decrypt_frm_toc_with_detected_key(dvd_bytes);
     if entries.is_empty()
         || entries
             .iter()
             .any(|e| !e.list_sum_valid || e.module_name.trim().is_empty())
     {
-        bail!("Input does not contain a valid Feistel 48B PANA_DVD.FRM TOC");
+        bail!("Input does not contain a valid Feistel PANA_DVD.FRM TOC");
     }
 
     let mut out = Vec::with_capacity(entries.len());
@@ -111,11 +111,7 @@ pub fn unpack_dvd_frm_to_modules(dvd_bytes: &[u8]) -> Result<Vec<FrmPackModule>>
             );
         }
         let mut payload = dvd_bytes[start..end].to_vec();
-        feistel_decrypt_buffer(
-            &mut payload,
-            &PANA_FEISTEL_ROUND_KEY_32B,
-            &PANA_FEISTEL_SBOX_256,
-        );
+        feistel_decrypt_buffer(&mut payload, &round_key, &PANA_FEISTEL_SBOX_256);
         let ver_u32 = parse_u32_radix(&entry.version_u16_hex)?;
         let mut module = FrmPackModule::new(entry.module_name, payload);
         module.version_u16 = u16::try_from(ver_u32).context("TOC version_u16 out of range")?;

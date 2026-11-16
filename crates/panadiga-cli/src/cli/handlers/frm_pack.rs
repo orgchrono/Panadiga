@@ -4,9 +4,9 @@ use super::super::args::crypto::{FrmPackArgs, FrmUnpackArgs};
 use anyhow::{Context, Result, bail};
 use panadiga_core::constants::{PANA_DIGADIAG_FRM_SIZE, PANA_EXTRHEAD_DEFAULT_ADLER_STEP};
 use panadiga_core::crypto::{
-    ExtrheadCryptMode, FrmContainerMode, FrmPackModule, FrmPackReport, build_digadiag_frm,
-    interpret_frm_target_flag, pack_frm, parse_u32_radix, unpack_extrhead,
-    verify_packed_frm_roundtrip,
+    ExtrheadCompressionAlgo, ExtrheadCryptMode, FrmContainerMode, FrmPackModule, FrmPackReport,
+    build_digadiag_frm_with_algo, interpret_frm_target_flag, pack_frm, parse_u32_radix,
+    unpack_extrhead, verify_packed_frm_roundtrip,
 };
 use serde::Serialize;
 use std::path::Path;
@@ -109,11 +109,13 @@ pub fn handle_frm_pack(args: &FrmPackArgs) -> Result<()> {
             let payload = std::fs::read(bin_path)
                 .with_context(|| format!("Reading {}", bin_path.display()))?;
             let dst_addr = parse_u32_radix(&args.dst_addr)?;
-            build_digadiag_frm(
+            let algo: ExtrheadCompressionAlgo = args.algo.parse()?;
+            build_digadiag_frm_with_algo(
                 &payload,
                 dst_addr,
                 &args.tag,
                 &args.build,
+                algo,
                 PANA_EXTRHEAD_DEFAULT_ADLER_STEP as u32,
                 PANA_DIGADIAG_FRM_SIZE,
             )?
@@ -234,6 +236,7 @@ mod tests {
             model: "NP-309".to_string(),
             version_u16: "0x0001".to_string(),
             target_flag: 0,
+            algo: "zlib".to_string(),
             patch_force: true,
             patch_format_hdd: true,
             verify: true,

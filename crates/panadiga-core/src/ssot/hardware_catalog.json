@@ -151,6 +151,14 @@
       "timeout": "capture_long"
     },
     {
+      "id": "JIGPIN",
+      "category": "uart_fmu",
+      "syntax": "JIGPIN [LOW|HIZ|STATUS]",
+      "default_arg": "STATUS",
+      "options": [["status", "STATUS"], ["low", "LOW"], ["hiz", "HIZ"]],
+      "timeout": "probe_fast"
+    },
+    {
       "id": "BAUD",
       "category": "uart_fmu",
       "syntax": "BAUD [{{DEFAULT_BAUD_RATE}}|57600|38400|19200|9600]",

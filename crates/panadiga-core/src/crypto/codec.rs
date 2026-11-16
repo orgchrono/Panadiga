@@ -10,6 +10,10 @@ pub(crate) fn read_u32_le(slice: &[u8], off: usize) -> u32 {
     u32::from_le_bytes([slice[off], slice[off + 1], slice[off + 2], slice[off + 3]])
 }
 
+pub(crate) fn read_u32_be(slice: &[u8], off: usize) -> u32 {
+    u32::from_be_bytes([slice[off], slice[off + 1], slice[off + 2], slice[off + 3]])
+}
+
 pub(crate) fn extract_c_ascii(bytes: &[u8]) -> String {
     let end = bytes.iter().position(|&b| b == 0).unwrap_or(bytes.len());
     String::from_utf8_lossy(&bytes[..end]).into_owned()

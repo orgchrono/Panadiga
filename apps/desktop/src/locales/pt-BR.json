@@ -863,6 +863,17 @@
           "s7_5": "7.5 s"
         }
       },
+      "JIGPIN": {
+        "label": "Jumper Software TW7501 (JIGPIN)",
+        "description": "Trava SW_UART (GP26 / TW7501) em LOW ou libera para Hi-Z ADC0 sem pulsar XRESET.",
+        "arg_label": "Modo do Pino",
+        "arg_placeholder": "STATUS",
+        "options": {
+          "status": "Status",
+          "low": "LOW (Jumper TW7501)",
+          "hiz": "Hi-Z (Soltar)"
+        }
+      },
       "BAUD": {
         "label": "Baud Rate UART PIO1",
         "description": "Configura ou consulta a taxa de transmissão (bps) da máquina RX/TX PIO1 na linha SC0 (padrão AM34: 115200).",

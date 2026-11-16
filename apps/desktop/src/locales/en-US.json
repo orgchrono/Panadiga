@@ -863,6 +863,17 @@
           "s7_5": "7.5 s"
         }
       },
+      "JIGPIN": {
+        "label": "Software TW7501 Strap (JIGPIN)",
+        "description": "Latches SW_UART (GP26 / TW7501) LOW or releases to Hi-Z ADC0 without pulsing XRESET.",
+        "arg_label": "Pin Mode",
+        "arg_placeholder": "STATUS",
+        "options": {
+          "status": "Status",
+          "low": "LOW (TW7501 Strap)",
+          "hiz": "Hi-Z (Release)"
+        }
+      },
       "BAUD": {
         "label": "PIO1 UART Baud Rate",
         "description": "Configures or queries PIO1 RX/TX state machine baud rate on SC0 (AM34 default: 115200 bps).",

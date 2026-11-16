@@ -3,26 +3,31 @@
 use anyhow::{Result, bail};
 
 use super::super::codec::{pad_to_block, write_padded_ascii, write_toc_entry_list_sum};
-use super::super::extrhead::{ExtrheadCryptMode, pack_extrhead, parse_extrhead_header};
+use super::super::extrhead::{
+    ExtrheadCompressionAlgo, ExtrheadCryptMode, pack_extrhead_with_options, parse_extrhead_header,
+};
 use super::super::feistel::feistel_encrypt_buffer;
 use super::types::{FrmContainerMode, FrmPackModule, FrmPackReport, PackedFrmModuleSummary};
 use crate::constants::*;
 
-/// Wraps an executable/diagnostic image into a plaintext `DIGADIAG.FRM` container padded to 128 KiB.
-pub fn build_digadiag_frm(
+/// Wraps an executable/diagnostic image into a plaintext `DIGADIAG.FRM` with configurable compression algo.
+pub fn build_digadiag_frm_with_algo(
     payload: &[u8],
     dst_addr: u32,
     tag: &str,
     build_name: &str,
+    algo: ExtrheadCompressionAlgo,
     adler_step: u32,
     total_size: usize,
 ) -> Result<(Vec<u8>, FrmPackReport)> {
-    let mut container = pack_extrhead(
+    let mut container = pack_extrhead_with_options(
         payload,
         tag,
         dst_addr,
         build_name,
         ExtrheadCryptMode::Plain,
+        algo,
+        &PANA_FEISTEL_ROUND_KEY_32B,
         adler_step,
         1,
     )?;
@@ -52,11 +57,32 @@ pub fn build_digadiag_frm(
     Ok((container, report))
 }
 
-/// Packs modules into a `PANA_DVD.FRM` (Feistel + 48B TOC) or `PANA__SD.FRM` (plaintext + 64B/48B TOC) image.
-pub fn pack_frm(
+/// Wraps an executable/diagnostic image into a plaintext `DIGADIAG.FRM` container padded to 128 KiB.
+pub fn build_digadiag_frm(
+    payload: &[u8],
+    dst_addr: u32,
+    tag: &str,
+    build_name: &str,
+    adler_step: u32,
+    total_size: usize,
+) -> Result<(Vec<u8>, FrmPackReport)> {
+    build_digadiag_frm_with_algo(
+        payload,
+        dst_addr,
+        tag,
+        build_name,
+        ExtrheadCompressionAlgo::Zlib,
+        adler_step,
+        total_size,
+    )
+}
+
+/// Packs modules into a `PANA_DVD.FRM` or `PANA__SD.FRM` image using an explicit Feistel round key.
+pub fn pack_frm_with_key(
     modules: &[FrmPackModule],
     mode: FrmContainerMode,
     toc_region_size: Option<usize>,
+    round_key: &[u8; 32],
 ) -> Result<(Vec<u8>, FrmPackReport)> {
     if modules.is_empty() {
         bail!("At least one module is required to pack an .FRM container");
@@ -135,11 +161,7 @@ pub fn pack_frm(
     }
 
     if is_dvd {
-        feistel_encrypt_buffer(
-            &mut image,
-            &PANA_FEISTEL_ROUND_KEY_32B,
-            &PANA_FEISTEL_SBOX_256,
-        );
+        feistel_encrypt_buffer(&mut image, round_key, &PANA_FEISTEL_SBOX_256);
     }
 
     let mode_label = match mode {
@@ -154,4 +176,13 @@ pub fn pack_frm(
         modules: summaries,
     };
     Ok((image, report))
+}
+
+/// Packs modules into a `PANA_DVD.FRM` (Feistel + 48B TOC) or `PANA__SD.FRM` (plaintext + 64B/48B TOC) image.
+pub fn pack_frm(
+    modules: &[FrmPackModule],
+    mode: FrmContainerMode,
+    toc_region_size: Option<usize>,
+) -> Result<(Vec<u8>, FrmPackReport)> {
+    pack_frm_with_key(modules, mode, toc_region_size, &PANA_FEISTEL_ROUND_KEY_32B)
 }

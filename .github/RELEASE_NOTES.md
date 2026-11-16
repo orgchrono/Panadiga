@@ -36,7 +36,7 @@ The platform operates across both stages of the hybrid DIGA architecture:
 | **macOS (Apple Silicon ARM64)** | `panadiga-macos-aarch64.tar.gz` (+ `.sha256`) | `panadiga`, `panadiga-desktop`, `tools/ghidra/` |
 | **Android (ARM64 APK)** | `panadiga-android-arm64.apk` (+ `.sha256`) | Native Tauri 2 mobile APK with USB-C OTG CDC-ACM & BLE Nordic UART Service (NUS) bridges |
 | **Raspberry Pi Pico Probe** | `panasonic_p7501_uart_rp2040.uf2`, `panasonic_p7501_uart_rp2350.uf2`, `panasonic_p7501_uart_unified.uf2` (+ `.sha256`) | Dual-target C11 + PIO firmware (`RP2040`, `RP2350`, and RP2350-E10 compliant unified UF2) |
-| **Verified Firmware & Recovery Pack** | [Release `firmware-pack-v0.1.0`](https://github.com/orgchrono/Panadiga/releases/tag/firmware-pack-v0.1.0) | `12` verified assets: `DMR-EH55`, `DMR-EH58` (`DVDRAM.7z`), `DMR-EH50`, `DMR-EH49/59/69`, `DMR-EX/EZ` (`19` models incl. `EX78EN`/`EX88EN`), `dmr-am34-unpacked-plaintext-bootloaders-and-kernels.7z` (`47` plaintext binaries), `DMR-EZ485V` 4MB LSI NOR, HDD `.bin.gz`, extracted partitions, `FIRMWARE_SHA256SUMS.txt` |
+| **Verified Firmware & Recovery Pack** | [Release `firmware-pack-v0.1.0`](https://github.com/orgchrono/Panadiga/releases/tag/firmware-pack-v0.1.0) | `13` verified assets: `DMR-EH55`, `DMR-EH58` (`DVDRAM.7z`), `DMR-EH50`, `DMR-EH49/59/69`, `DMR-EX/EZ` (`19` models incl. `EX78EN`/`EX88EN`), `DMR-ES35V` 8 MB NOR + 8 KB EEPROM (`flash.bin`/`eeprom.bin`), `dmr-am34-unpacked-plaintext-bootloaders-and-kernels.7z` (`47` plaintext binaries), `DMR-EZ485V` 4 MB LSI NOR, HDD `.bin.gz`, extracted partitions, `FIRMWARE_SHA256SUMS.txt` |
 
 ### 2.1 Embedded RP2040 / RP2350 P7501 UART Probe Firmware
 

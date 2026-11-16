@@ -4,7 +4,7 @@ mod pack;
 mod types;
 mod verify;
 
-pub use pack::{build_digadiag_frm, pack_frm};
+pub use pack::{build_digadiag_frm, build_digadiag_frm_with_algo, pack_frm, pack_frm_with_key};
 pub use types::{FrmContainerMode, FrmPackModule, FrmPackReport, PackedFrmModuleSummary};
 pub use verify::{
     convert_pana_dvd_to_factory_sd, unpack_dvd_frm_to_modules, verify_packed_frm_roundtrip,
@@ -39,6 +39,30 @@ mod tests {
             image[last] ^= 0x55;
             assert!(verify_packed_frm_roundtrip(&image, mode, 2).is_err());
         }
+    }
+
+    #[test]
+    fn test_pack_and_unpack_dvd_with_non_default_catalog_key() {
+        use super::super::feistel::{PANA_DVD_KEY_CATALOG, derive_round_key_from_custom_key_8b};
+
+        let mut m_prog = FrmPackModule::new("PROG071 ", vec![0x33u8; 64]);
+        m_prog.version_u16 = 0x0701;
+        m_prog.target_flag = 1;
+        let mut m_main = FrmPackModule::new("MAIN3360NA", vec![0x77u8; 128]);
+        m_main.version_u16 = 0x3360;
+
+        let alt_key = derive_round_key_from_custom_key_8b(&PANA_DVD_KEY_CATALOG[1].1);
+        let (dvd_bytes, _) =
+            pack_frm_with_key(&[m_prog, m_main], FrmContainerMode::Dvd, None, &alt_key).unwrap();
+
+        let verified = verify_packed_frm_roundtrip(&dvd_bytes, FrmContainerMode::Dvd, 2).unwrap();
+        assert_eq!(verified[0].module_name, "PROG071 ");
+        assert_eq!(verified[1].module_name, "MAIN3360NA");
+
+        let unpacked = unpack_dvd_frm_to_modules(&dvd_bytes).unwrap();
+        assert_eq!(unpacked.len(), 2);
+        assert_eq!(unpacked[0].payload, vec![0x33u8; 64]);
+        assert_eq!(unpacked[1].payload, vec![0x77u8; 128]);
     }
 
     #[test]

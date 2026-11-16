@@ -214,10 +214,19 @@ flowchart LR
   - URL: `https://remont-aud.net/dump/dvd/panasonic/dmr_eh57_67/205-1-0-5696`
   - Contém o dump de imagem de disco rígido bruto capturado via utilitário DMDE (*DM Disk Editor*).
   - Confirma que o setor LBA 0 inicia com a assinatura de partição proprietária `"SH"`, seguido pelo setor espelho e pela estrutura de journal idêntica à do DMR-EH55 nos primeiros 10 MB.
-* **DMR-ES35V (Combo DVD/VHS, Dump #21200):**
-  - URL: `https://remont-aud.net/dump/dvd/panasonic/dmr_es35v/205-1-0-21200`
-  - Mecânica óptica: `RFKNES35VEE`.
-  - Tópico analisa o ciclo de autoteste entre o mecanismo VHS e o gravador de DVD. Se o encoder óptico da mecânica falhar, o sistema exibe `U61` (erro de rotação/posicionamento) e, em seguida, transiciona irreversivelmente para `U99`.
+* **DMR-ES35V (Combo DVD/VHS, Dump #21200 — Baixado e Auditado em `firmware-pack-v0.1.0`):**
+  - URL original: `https://remont-aud.net/dump/dvd/panasonic/dmr_es35v/205-1-0-21200` (leitura física Triton v5.7 — pacote **`dmr-es35v-8mb-nor-flash-and-eeprom-triton-dump.zip`**, SHA-256 `800f3874d4a3ed2bacf90780a7f6f666cb9f8b5a3b2e6bf9dfd9529f2b50cb32`, incluído na Release oficial!).
+  - **Conteúdo Extraído e Descompactado:**
+    - `flash.bin` (`8.388.608 B`, CRC32 `B246C174`, SHA-256 `0969f2580ad30b98027271a8e3947f5a6ae1c02dec06462b87ce1057a7a1bcf9`): dump físico integral de 8 MiB da Flash NOR em plaintext.
+    - `eeprom.bin` (`8.192 B`, CRC32 `66A845DB`, SHA-256 `17bb5383c287dc90a493aa5c67f729dbb54b587224b267940e1e7133aa2ce32c`): EEPROM I²C 24C64 com tabelas de calibração/estratégia de mídia (`GS176031`, `@RITEK`, `@MBIPG101R05`).
+    - **Mapa Físico Verificado da NOR de 8 MiB (`flash.bin`):**
+      * `0x000000..0x03FFFF` (`256 KB`): Bootloader XIP em plaintext **`Loader ver0.18 [06/03/13]`** (apenas 7 dias posterior ao `Loader ver0.61 [06/03/06]` do DMR-EH55, com as mesmas strings `MATSHITA DVD-RAM RECORDER`, `serial boot mode`, `Read fvu program from Nor-FROM`, `RV NG U99`).
+      * `0x080000..0x12C0C0`: contêiner `EXTRHEAD` `"DRV "` (Zlib `algo=0`) $\rightarrow$ descomprime para **`DRV_0x080000.bin`** (`1.441.792 B`, `dst=0x90202000`, SHA-256 `f6655390b3769bf278571c561b976e59489a2b075eab218d3b2095ef8f9800c7`), contendo referências diretas a **`DMR-EH55`**, `DMR-EH55S159`, `DMR-E500F`.
+      * `0x130000..0x40FFFF`: código e dados `MAIN` executados in-place (XIP) na NOR (`_dev_SERIAL`, `src/fmupre/pre_update_firm.c`, `[fmu] <deviceinfo> model = %s, oem = %c`).
+      * `0x430000..0x6D42F0`: contêiner `EXTRHEAD` `"MAIN"` (LZMA `algo=3`, build **`3080GR`**) $\rightarrow$ descomprime para **`MAIN_3080GR_0x430000.bin`** (`6.739.752 B`, `dst=0x52DF6000`, SHA-256 `841a5419506e995a31d0a3ef6583051a4f46500a5dda834c70edabbfd07732c1`).
+      * `0x700000..0x7EFFFF` (`15 × 64 KB`): sistema de arquivos Flash **BGO** com marcadores `FF FF FF FF <id> F2 FF FF` (`01f2`..`0df2`).
+      * `0x7F0000..0x7FFFFF` (últimos `64 KB`): setores **EEMUL / NVRAM** com cabeçalhos `FF FF FF FF <id> F1 FF FF` em `0x7F2000` (`02f1`), `0x7F4000` (`01f1`) e `0x7F8000` (`03f1`) — prova física direta da região sanitizada para cura do `U99`.
+  - Veja o catálogo detalhado em [`firmware_and_images/dmr-es35v/README.md`](../../firmware_and_images/dmr-es35v/README.md).
 * **DMR-ES15 (`MN2DS00151DB`, Fórum #103187):**
   - URL: `https://remont-aud.net/forum/52-103187-1`
   - Placa `A-3 863ZES MP-1`, CPU `MN2DS00151DB`.
@@ -261,110 +270,104 @@ O portal `elektroda.pl` preserva discussões e anexos técnicos relevantes da fa
 
 ---
 
-## 3. Modo de Serviço de Fábrica Japonês (`SERV`), Teclas Frontais e Física Elétrica do `TW7501` (`SW_UART`)
+## 3. Modo de Serviço Oficial (Manual `DSD0603003CE`), Sequência JDM (`[RED]`) e Física Elétrica do Standby / `TW7501`
 
-Os gravadores Panasonic DIGA incorporam rotinas de diagnóstico de fábrica mantidas em sigilo pela engenharia da Matsushita Electric Industrial Co., Ltd. Essas rotinas operam em dois níveis: comandos de controle remoto proprietários para entrada no modo de serviço e circuitos de chaveamento de hardware na placa principal.
+Os gravadores Panasonic DIGA incorporam rotinas de diagnóstico de fábrica documentadas oficialmente nos Manuais de Serviço (como o **`ORDER NO. DSD0603003CE`** do DMR-EH55EC/EP/EH56EG) além de atalhos IR estendidos utilizados na geração japonesa/Blu-ray.
 
-### 3.1 Sequência Secreta de Entrada no Modo de Serviço Japonês (`SERV`)
+### 3.1 O que é o botão `[RED]` (`[VERMELHO]`) e diferença entre DMR-EH55 e Linha JDM/BD
 
-Técnicos de centros autorizados no Japão utilizam uma combinação precisa no controle remoto original para desbloquear o menu de diagnóstico interno no mostrador VFD da unidade:
+1. **Identificação física do `[RED]` no Controle Remoto (Manual do Usuário `RQT8415`, p. 12 item `#10`):**
+   - No controle remoto original da família DIGA (`EUR7659Y60` / `EUR7659YC0`), logo **abaixo** do anel direcional (`ENTER` / `FUNCTIONS` / `DIRECT NAVIGATOR` / `RETURN` / `SUB MENU`), existe uma fileira com **4 botões coloridos de Teletexto/Funções (`Colour buttons`)**: **Vermelho (`[RED]`)**, **Verde (`[GREEN]`)**, **Amarelo (`[YELLOW]`)** e **Azul (`[BLUE]`)**.
+2. **Importante — JDM/BD vs. DMR-EH55 Global:**
+   - A combinação **`[5] + [9] + [RED]`** por 5 segundos (exibindo **`70 RET`** $\rightarrow$ seta direita **`80 SRV`** $\rightarrow$ `[ENTER]`) pertence aos modelos domésticos japoneses (JDM) e gravadores DIGA/Blu-ray posteriores.
+   - No **Panasonic DMR-EH55 (Europa/Global — Manual de Serviço Oficial `ORDER NO. DSD0603003CE`, Seções `8.1.2` e `8.1.3`, páginas 18–26)**, **NÃO se usa `[5]+[9]+[RED]`**: tanto o **Modo de Serviço (`SERV`)** quanto o **TEST Mode (`TM AV1`)** são acionados pelas **teclas do painel frontal com o aparelho em Standby (Power-Off)**, e os subcomandos internos são digitados em 2 dígitos numéricos (`[0][0]`..`[9][9]`) no controle remoto!
 
-```text
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│               SEQUÊNCIA DE ENTRADA NO MODO DE SERVIÇO DE FÁBRICA (SERV)                │
-├────────────────────────────────────────────────────────────────────────────────────────┤
-│ 1. Coloque o gravador em modo STANDBY (mostrador exibindo relógio, ex: "0:00" ou apagado).│
-│ 2. No controle remoto original, pressione e MANTENHA PRESSIONADAS simultaneamente:    │
-│    [TECLA 5] + [TECLA 9] + [BOTÃO VERMELHO DE TELETEXTO/COR] por aprox. 5 segundos.    │
-│ 3. O mostrador fluorescente (VFD) exibirá o código: "70 RET".                          │
-│ 4. Pressione a tecla [SETA PARA A DIREITA] (ou [POWER] dependendo do modelo do controle)│
-│    O mostrador alternará para: "80 SRV".                                               │
-│ 5. Pressione a tecla [ENTER] (ou [OPEN/CLOSE] no painel frontal do gravador).          │
-│ 6. A unidade iniciará uma rotina interna de handshake exibindo "HELLO" (~30 segundos).  │
-│ 7. O mostrador confirmará o modo de bancada exibindo o texto permanente: "SERV".       │
-└────────────────────────────────────────────────────────────────────────────────────────┘
-```
+### 3.2 Modos Especiais Oficiais no Painel Frontal (DMR-EH55 `DSD0603003CE`, pp. 17–21)
 
-### 3.2 Tabela de Comandos de Diagnóstico do Modo `SERV`
+| Modo Especial | Display FL | Operação exata (Manual de Serviço `DSD0603003CE`, pp. 17–21) | Efeito / Uso de Bancada |
+| :--- | :---: | :--- | :--- |
+| **Service Mode (`SERV`)** | `SERV` | Com a energia **desligada (Standby)**, manter pressionadas simultaneamente **`[CH UP] + [OPEN/CLOSE] + [REC]`** no painel frontal por **5 segundos**. | Libera o menu de engenharia interno (`[0][0]`..`[9][9]`) via controle remoto. |
+| **TEST Mode (`TM AV1`)** | `TM AV1` | Com a energia **desligada (Standby)**, manter pressionadas **`[STOP] + [CH UP] + [OPEN/CLOSE]`** por **5 segundos**. | Inicializa **todos os parâmetros** da unidade principal (incluindo sintonizador/tuner). |
+| **Forced Disc Eject** | *(anterior)* | Com a energia **desligada**, manter **`[STOP] + [CH UP]`** por **5 segundos**. | Ejeção forçada da bandeja (inativo sob Child/Demo Lock). |
+| **Forced Power-Off** | *(P-off)* | Pressionar **`[POWER]`** no painel frontal por **mais de 10 segundos**. | Desligamento forçado da unidade principal quando travada. |
+| **First Time Setup Reset** | `HELLO` | *(Firmware Guide p. 7–8)* Com a unidade sintonizada, manter **`[CH UP] + [CH DOWN]`** por **10–15 segundos** até desligar. | Força tela de configuração inicial no próximo boot. |
+| **NTSC / PAL Switch** | *(anterior)* | Com o aparelho **ligado (E-E mode)**, manter **`[STOP] + [OPEN/CLOSE]`** por **5 segundos**. | Alterna saída entre sistema PAL e NTSC. |
+| **Rating Password Reset** | *(nível 8)* | Abrir bandeja e manter **`[REC] + [PLAY]`** por **5 segundos**. | Reseta senha de controle parental para Nível 8. |
+| **Progressive Init** | *(anterior)* | Ligado (E-E): **`[STOP] + [PLAY]`** por **5 segundos**. | Retorna saída de vídeo para Interlace. |
+| **Demo Lock / Unlock** | `LOCK` / `UNLOCK` | Ligado: **`[STOP] + [POWER]`** por **5 segundos**. | Bloqueia/desbloqueia ejeção da bandeja (persiste após Factory Init). |
+| **Child Lock (`X-HOLD`)** | `X-HOLD` | No controle remoto: **`[ENTER] + [RETURN]`** até exibir `[X-HOLD]`. | Bloqueia comandos frontais e remotos. |
 
-Uma vez com a palavra **`SERV`** no display VFD, o técnico digita comandos numéricos de dois dígitos no teclado do controle remoto seguidos de `[ENTER]`:
+### 3.3 Tabela Completa de Comandos Remotos do Modo `SERV` (DMR-EH55 `DSD0603003CE`, pp. 21–26)
 
-| Comando | Nome do Teste | Descrição da Operação de Bancada |
+Uma vez exibido **`SERV`** no display fluorescente (VFD), o técnico digita os **dois dígitos no controle remoto**:
+
+| Código | Nome Oficial (Manual `DSD0603003CE`, pp. 21–26) | Descrição & Diagnóstico Verificado |
 | :---: | :--- | :--- |
-| **`38 + [ENTER]`** | **`HDDCHK`** | **Verificação Forense do HDD:** executa o teste de superfície dos pratos magnéticos, testa leitura/escrita no cluster de journal e verifica integridade dos dados SMART. |
-| **`00 + [ENTER]`** | **`00 RET`** | **Retorno / Saída:** encerra o modo de serviço e reinicia o gravador em modo de operação normal de usuário. |
-| **`03 VL`** | **Reset de Limite de Visualização:** comando de controle de acesso / nível de visualização (`VL` — *Viewing Limit*). |
-| **`04 PRG`** | **Saída Progressiva 480i (`PRG`):** força resolução de saída de vídeo para `480i`. |
-| **`06 FTO`** | **Abertura Forçada de Bandeja (`Forced Tray Open`):** destrava e ejeta mecanicamente a gaveta do drive óptico. |
-| **`08 + [ENTER]`** | **`08 FIN`** | **Inicialização de Fábrica (*Factory Init*):** limpa todos os canais sintonizados, restaura valores padrão e sanitiza parâmetros temporários de NVRAM. |
-| **`Teclas de Status`** | **`LASER ****`** | **Leitura de Potência do Laser:** exibe em valor hexadecimal a corrente consumida pelos diodos laser vermelho e infravermelho para aferição de desgaste da lente. |
+| **`[0][0]`** ou **`[RETURN]`** | **Release Items** | Cancela o item atual do Service Mode e retorna para `SERV`. |
+| **`[0][1]`** | **Error Code Display** | Exibe o **último código de erro (`U**`/`H**`/`F**`) retido pelo Timer `IC7501`** (`F00` se vazio). |
+| **`[0][2]`** | **ROM Version Display** | Exibe em sequência (5s cada): **1. Region code** $\rightarrow$ **2. Main firm** $\rightarrow$ **3. Timer firm** $\rightarrow$ **4. Drive firm** $\rightarrow$ **5. ROM correction**. |
+| **`[1][1]` / `[1][2]`** | **White / Magenta Picture Output** | Gera padrão 100% branco ou magenta no AV Decoder (componente). |
+| **`[1][3]` / `[1][4]`** | **RTSC Return in XP / I-P Switch** | Codifica e decodifica AV1 em tempo real (`XP`, 48kHz) sem gravar em disco; `[1][4]` alterna Interlace/Progressive. |
+| **`[2][1]` / `[2][2]`** | **Audio Mute (`XTMUTE` / `XDMUTE`)** | Testa mute controlado pelo Timer (`T MUTE`) ou pela PCB Digital (`D MUTE`). |
+| **`[2][3]` / `[2][4]`** | **Audio Pattern Output** | Emite tons internos (`L=1kHz/-18dB`, `R=400Hz/-18dB`); `[2][4]` alterna 48kHz / 44.1kHz. |
+| **`[3][1]`** | **HDD READ inspection** | Varredura de leitura completa do HDD (**`HDD OK`** ou código de defeito; sair com `[POWER] > 10s`). |
+| **`[4][1]` / `[9][5]`** | **Laser Used Time / Delete Laser Time** | Exibe horas acumuladas de uso do laser óptico (`*****`); **`[9][5]`** zera o contador (`CLR`). |
+| **`[4][2]` / `[9][6]`** | **RAM Drive Last Error (`NO **`) / Delete** | Detalha número, timestamp (`DD/hh/mm`), tipo de mídia e fabricante; `[0][1]`..`[1][9]` mostra últimos 19 erros (`[9][6]` limpa). |
+| **`[4][4]`** | **Laser Power Confirmation** | Compara calibração atual do laser contra o valor de fábrica com DVD-RAM inserido (`CHK *` / `NO DISC` / `ERROR`). |
+| **`[5][1]` / `[5][4]`** | **All FL/LEDs / Front Key Inspection** | `[5][1]` acende todos segmentos do VFD/LEDs; `[5][4]` testa cada tecla do painel frontal incrementalmente. |
+| **`[6][1]` / `[6][4]`** | **Production Date / Accumulated Working Time** | `[6][1]` exibe data de fabricação (`YYMMDD`); `[6][4]` exibe tempo total ligado em segundos. |
+| **`[6][5]` / `[9][7]`** | **Display Error History (`[0][1]`..`[1][9]`) / Delete** | Lista os últimos **19 eventos de erro** com código de causa (5s): **`01`/`05`** = Digital PCB (`AV DEC / MAIN CPU`), **`02`** = RAM Drive, **`03`** = Disco, **`04`** = Digital PCB / Erro de Comunicação, **`06`** = Defeito de HDD (`[9][7]` limpa). |
+| **`[7][4]`** | **SD Card WRITE check** | Inserir cartão SD em Standby (`[CARD SD]`): testa escrita (`SD OK` / `SD NG`; **apaga imagens no cartão!**). |
+| **`[8][0]`..`[8][3]`** | **AV1/AV2/AV4 Video I/O Routing** | Comuta roteamento analógico Y/C, V e RGB para aferição de entrada/saída. |
+| **`[8][4]` / `[8][5]`** | **`P50(H)` / `P50(L)` Timer Output Check** | Testa saída `IC7501-76` passando pelo inversor até AV1 pino 10 (`~0V` vs `~4.4V DC`). |
+| **`[9][1]`** | **Tray OPEN/CLOSE Test** | Abre/fecha a bandeja continuamente contando ciclos (liberar segurando `[POWER]` no controle `> 10s`). |
+| **`[9][8]`** | **Error Code Initialization** | Limpa o último código de erro retido pelo Timer `IC7501` $\rightarrow$ grava `F00` (`CLR`). |
+| **`[9][9]`** | **Initialize Service** | Inicializa simultaneamente **Last Drive Error**, **Error History** e **Error Codes** para padrão de fábrica (`CLR`). |
+| **`[POWER]`** | **Finishing Service Mode** | Sai do modo `SERV` retornando ao modo `STOP (E-E)`. |
 
-### 3.3 A Assinatura de Disco JDM `"Panasonic DIGA RTSC"` e os Comandos ATA-7 AV
+> [!NOTE]
+> Em modelos japoneses (JDM) ou geração Blu-ray posteriores, códigos adicionais de controle remoto incluem `38 + [ENTER]` (`HDDCHK`), `03 VL`, `04 PRG`, `06 FTO` e `08 FIN`.
 
-Investigações conduzidas por entusiastas japoneses nas redes 2channel / 5ch e no site `ncos1` revelaram o motivo pelo qual discos rígidos convencionais de computador (Western Digital, Seagate) comprados no mercado varejista não funcionam nos gravadores DIGA quando formatados pelo menu do usuário:
+### 3.4 Por que `[CH UP] + [OPEN/CLOSE] + [REC]` e `[STOP]` revertem `HELLO -> U99`
 
-1. **Assinatura Mágica do Setor 128 / 512 (`Panasonic DIGA RTSC`):**
-   - Os gravadores japoneses gravam nos setores LBA 128 e LBA 512 do disco rígido a cadeia de caracteres ASCII:
-     ```text
-     "Panasonic DIGA RTSC"
-     ```
-   - O acrônimo **RTSC** refere-se a *Real-Time Stream Control*. Esse setor contém os parâmetros de alocação de zonas térmicas do disco, limite máximo de retentativas de erro antes de descartar frames de vídeo e tabelas de conversão de setores de reserva para gravação contínua.
-2. **Requisito Obrigatório do Conjunto de Comandos ATA-7 AV Streaming:**
-   - O firmware do gravador emite comandos ATA-7 específicos de streaming de áudio/vídeo:
-     - `0x88` (`READ STREAM EXT`) e `0x89` (`WRITE STREAM EXT`).
-   - Se o disco rígido responder com comando abortado (*Command Aborted*), indicando que opera apenas no perfil convencional de dados de PC (onde o drive bloqueia a gravação por tempo indeterminado para remapear setores defeituosos com ECC extensivo), o gravador rejeita a unidade, congela o processo de formatação e gera código de falha de storage.
-   - Os discos homologados de fábrica (como a linha Western Digital AV-GP / DVR e Seagate DB35) vinham com microcódigo customizado de fábrica com cache de escrita configurado para priorizar fluidez de vídeo contínuo em vez de integridade de dados bancários.
+Conforme o Manual de Serviço `DSD0603003CE` (p. 18, tabela `8.1.1`) e os diagramas esquemáticos do Timer `IC7501` (`EC pp. 47, 64`), o erro **`U99` ("Hang-up")** significa literalmente: *"Displayed when communication error has occurred between Main microprocessor and Timer microprocessor."*
+1. Quando você segura `[CH UP] + [OPEN/CLOSE] + [REC]` por 5 segundos no Standby, quem lê as chaves é o **Microcontrolador Timer `IC7501`** (`KEYIN1`/`KEYIN2`/`KEYIN3`, Pinos 86–88).
+2. `IC7501` liga a placa Digital acionando `DI_P_ON[H]` (Pino 44) e envia via **`TBUS_CLK / TBUS_TXD / TBUS_RXD`** (Pinos 35–37) o pedido para o processador principal **AM34 (`MN103S`)** iniciar em modo `SERV`. O VFD mostra **`HELLO`**.
+3. Se durante a inicialização na placa Digital o AM34 falhar ao montar BGO/NVRAM corrompida ou travar antes de concluir o handshake de boot no `TBUS`, `IC7501` estoura o timeout de comunicação e exibe **`U99`** em vez de `SERV` (e desliga/reinicia se a falha persistir). Portanto, **combinações de botões não conseguem sobrescrever setores corrompidos de NVRAM na Flash NOR (`0x807F0000..0x807FFFFF`)**.
 
-### 3.4 Comportamento de Bancada das Teclas Frontais: Por que `CH UP + STOP + OPEN` Reverte `HELLO -> U99`
+### 3.5 Física Elétrica do Standby (`P-OFF`), `TW7501` (`SW_UART`), Sonda Pico `P7501` e Mapas de Acordamento
 
-Durante a operação de bancada no DMR-EH55, técnicos frequentemente utilizam as combinações de teclas do painel frontal documentadas nos manuais de serviço:
-* `[CH UP] + [STOP] + [OPEN/CLOSE]`: Reset forçado de microprocessador e limpeza de flags de operação.
-* `[CH UP] + [OPEN/CLOSE] + [REC]`: Modo de recuperação emergencial de firmware óptico.
+A verificação cruzada dos esquemáticos oficiais (`EC pp. 47, 63, 64, 65` e `P9 pp. 55, 56, 62, 64`) com medições ao vivo em `COM10` revela exatamente como a sonda UART (`P7501`) interage com o Standby:
 
-**A Física da Reversão `HELLO -> U99`:**
-Quando essas teclas são pressionadas, a sub-CPU do painel frontal (`IC7001`) envia um sinal de interrupção para o SoC principal AM34, forçando a reexecução do bootloader frio. O display exibe **`HELLO`**.
-Durante esse período de aproximadamente 30 segundos, o processador central executa:
-1. Verificação do barramento SPI/I²C com o chip de segurança CPRM.
-2. Interrogação ATAPI do microcontrolador MN102 do drive óptico.
-3. Leitura e cálculo de paridade dos últimos 64 KB de NVRAM (`0x807F0000..0x807FFFFF`).
-
-Se a EEPROM/NVRAM estiver corrompida (como ocorre no erro `U99`) ou se a placa do drive óptico não responder com o handshake de firmware correto, a rotina de autoteste do bootloader falha. O firmware AM34 conclui que o ambiente de execução viola a integridade física de DRM/segurança, aborta a carga do `MAIN.bin` e força imediatamente a exibição do erro **`U99`**, travando a máquina. Portanto, comandos de teclas frontais não têm o poder de reparar uma NVRAM fisicamente corrompida na Flash.
-
-### 3.5 Física Elétrica do Ponto de Teste `TW7501` (`SW_UART` / Pino 1 do `P7501`)
-
-O conector **`P7501`** (conector JST ZHR-6 de 6 pinos na placa `VEP79138`) possui no seu pino 1 o sinal de controle crítico denominado nos esquemáticos como **`SW_UART`** (ligado diretamente ao ponto de teste de bancada **`TW7501`**).
+1. **Por que `STATUS` / `VDD` lê `0.03V (LOW / UNPOWERED)` em Standby sem jumper?**
+   - Os reguladores da placa (`IC1502` `X SW +5.2V`, `IC1504` `JC +5V`, `IC1506` `DR +5V`, `IC1507` `ANA +3.3V`) e a alimentação da placa Digital (`D3R3V`) são **comutados** por `P_SAVE_L` / `DI_P_ON[H]` sob comando do `IC7501` (`P9 pp. 55–56, 62`).
+   - Como `NSW5V` (`P7501` Pino 5) e os pull-ups de `SW_UART` (`TW7501`, Pino 1), `UARTM2P_T` (Pino 3) e `UARTP2M_T` (Pino 6) derivam desses barramentos comutados, durante o **Standby (`P-OFF` / relógio `0:00`) todos os pinos do `P7501` caem a ~`0.00V`** (`VDD: 0.03V`, `RXD=0, NSW5V=0, TXD=0, XRESET=0`). Isso **não** significa falha no cabo Pico — significa que o bloco Digital está em Standby! Assim que o `DI_P_ON[H]` sobe (mesmo num pulso de 1–2s), `NSW5V` e `SW_UART` sobem a `~3.25V`.
+2. **A sonda ligada em `P7501` pode ligar o aparelho diretamente do Standby?**
+   - **Não pelos 6 fios atuais do `P7501`**: o botão `[POWER]` do painel (`S7002` `KEY3_POWER`, `EC p. 65`) vai diretamente para `IC7501` Pino 88 (`KEYIN3`) e o receptor IR (`IR7501`) vai para o Pino 65 (`IR`) — nenhum desses dois sinais passa pelo conector `P7501`.
+   - **Alternativas para acordar via Pico sem tocar no aparelho:**
+     * **LED IR Kaseikyo 38 kHz (não invasivo, zero solda):** adicionar um LED emissor infravermelho (+ resistor `330 Ω`) em qualquer GPIO livre do Pico apontado para `IR7501` permite enviar códigos Panasonic Kaseikyo (`Power Toggle`, dígitos `[0][1]`..`[9][9]` do `SERV`).
+     * **Fio opcional `Open-Drain` em `S7002` (`KEYIN3`):** permite simular o clique físico do `[POWER]`.
+3. **Como a sonda Pico mapeia o Standby e substitui o jumper no `TW7501`:**
+   - **Mapeamento Contínuo de Transições (`BRIDGE 115200 PASSIVE CTRL`, `PWRTRACE`, `PIOLOGIC`):** com a sonda em modo passivo durante Standby (`0:00`), o Pico registra com carimbo de tempo em milissegundos a borda exata de subida e queda de **`NSW5V` (`GP3`), `TXD` (`GP4`) e `XRESET` (`GP5`)** + cada byte transmitido em `115200 8N1` (`DDR CHECK: OK`, `Loader ver0.61`, `HELLO`, `U99`, queda para Standby).
+   - **Emulação em Software do Jumper `TW7501` (`JIGPIN LOW` / `JIGPIN HIZ`):** o pino 1 do `P7501` (`SW_UART` / Pico `GP26`) está ligado **no mesmo nó elétrico que o ponto de teste `TW7501`** (`P9 p. 62`). O comando **`JIGPIN LOW`** no firmware C11 do Pico coloca `GP26` em `0V` (equivalente exato ao jumper físico em `TW7501`) **sem pulsar `XRESET`**, enquanto **`STATUS`** passa a discriminar `STANDBY (NSW5V=0)` de `AWAKE (NSW5V=1)` e de cabo desconectado!
 
 ```mermaid
 flowchart TD
-    subgraph P7501_PINOUT["Conector P7501 (Placa Principal VEP79138)"]
-        P1["Pino 1: SW_UART (TW7501 / XFWE / TBUS)"]
-        P2["Pino 2: XRESET (Open-Drain, GP5 Pico)"]
-        P3["Pino 3: UARTM2P_T (TX AM34 -> RX Pico GP1, 3.3V LVTTL)"]
-        P4["Pino 4: GND (Referência de Terra Elétrico)"]
-        P5["Pino 5: NSW5V (Amostra ~5.15V upstream / ~3.29V repouso, GP3 Hi-Z SEM PULLS)"]
-        P6["Pino 6: UARTP2M_T (RX AM34 <- TX Pico GP0, 3.3V LVTTL)"]
+    subgraph P7501_PINOUT["Conector P7501 (Placa Principal VEP79138 — Barramento Comutado por DI_P_ON)"]
+        P1["Pino 1: SW_UART (= TW7501 / XFWE) -> Pico GP26 (JIGPIN LOW/HIZ)"]
+        P2["Pino 2: XRESET (Open-Drain via QR7503) -> Pico GP5"]
+        P3["Pino 3: UARTM2P_T (TX Pico -> Q7514 -> AM34) -> Pico GP4"]
+        P4["Pino 4: GND (Referência 0.0 Ω ao Chassi)"]
+        P5["Pino 5: NSW5V (Comutado ~5.15V upstream / ~3.29V ON; 0V em Standby) -> Pico GP3 Hi-Z"]
+        P6["Pino 6: UARTP2M_T (AM34 TX 115200 8N1 -> RX Pico) -> Pico GP2"]
     end
 
-    subgraph CIRCUIT_BEHAVIOR["Comportamento Elétrico do Pino 1 (SW_UART / TW7501)"]
-        STATE_A["A. TW7501 em Nível Baixo (GND) no Standby"] --> RES_A["IC7001 Estabiliza Standby em '0:00'\nMux TBUS Isola Barramento Serial"]
-        STATE_B["B. TW7501 Mantido em GND Após Acordar (Wakeup)"] --> RES_B["AM34 Desvia do Boot Normal\nTrava em: '[RTSD] Flash Memory Updater ->Serial'"]
-        STATE_C["C. TW7501 Flutuante / Hi-Z com Pull-up Interno"] --> RES_C["Boot Normal da Flash NOR\nExecuta Bootloader e Entra em MAIN"]
+    subgraph STANDBY_STATES["Mapeamento Elétrico do P7501 (Standby vs Acordado)"]
+        ST_OFF["Standby P-OFF ('0:00')\nDI_P_ON=L -> NSW5V=0, SW_UART=0.03V"] -->|"[POWER] via KEYIN3 / IR"| ST_WAKE["Wakeup Digital PCB\nNSW5V=1, XRESET=1, SW_UART~3.25V"]
+        ST_WAKE -->|"SW_UART=Hi-Z"| BOOT_NORM["Boot Flash NOR -> HELLO -> U99"]
+        ST_WAKE -->|"TW7501=GND (Jumper ou JIGPIN LOW)"| BOOT_SER["Loader: serial boot mode / [RTSD]"]
     end
 ```
-
-**Análise do Circuito Elétrico:**
-1. **Multiplexação do Barramento `TBUS` e Controle `XFWE`:**
-   - O pino `SW_UART` está conectado à linha `XFWE` (*Flash Write Enable*) e ao multiplexador digital do barramento de teste `TBUS` que interliga a sub-CPU do painel frontal `IC7001` ao SoC `AM34`.
-2. **Por que o aterramento do `TW7501` estabiliza o relógio em `0:00`:**
-   - Quando o `TW7501` é aterrado durante o estado de desligado/standby, ele força a sub-CPU `IC7001` a suprimir as tentativas imediatas de inicialização de alta corrente do drive de disco e do motor de rotação. Como o circuito de potência não sofre a sobrecarga da inicialização do spindle, a linha de alimentação de 3.3V estabiliza-se e o display VFD consegue apresentar o relógio padrão em `0:00`.
-3. **Por que manter o pino aterrado trava a CPU em `Flash Memory Updater ->Serial`:**
-   - Se o técnico mantiver o `TW7501` aterrado no instante em que o gravador é ligado (ou quando o pino `XRESET` do Pico é liberado em nível alto), os pinos de configuração de boot (*boot strapping*) do SoC AM34 detectam o nível lógico `0` na linha `SW_UART`.
-   - Essa condição desvia o registrador de instrução do vetor de reset tradicional (`0x80000000`) para a ROM de máscara de inicialização embutida no silício da Matsushita.
-   - A CPU entra no modo de recuperação emergencial de fábrica via linha serial serial assíncrona, enviando pela UART (`115200 8N1` no pino 3) o banner de texto de baixo nível:
-     ```text
-     [RTSD] Flash Memory Updater ->Serial
-     ```
-   - Nesse estado, a CPU fica em loop infinito aguardando comandos do protocolo de transmissão serial de fábrica para reprogramação dos blocos da Flash, sem nunca carregar o firmware normal da unidade. Para que o DMR-EH55 execute o boot comum da Flash, o pino `SW_UART` / `TW7501` deve ser liberado (retornando a nível alto via resistor de pull-up) logo após a inicialização.
 
 ---
 

@@ -243,6 +243,21 @@ static void test_framing_ctrl_and_jigsweep(void) {
     assert(!p7501_wdt_is_genuine_timeout_recovery(true, true, false));
     assert(!p7501_wdt_is_genuine_timeout_recovery(false, true, true));
     assert(p7501_wdt_is_genuine_timeout_recovery(true, true, true));
+
+    /* JIGPIN argument parser & Standby / Wakeup classifier */
+    p7501_jigpin_mode_t jmode = P7501_JIGPIN_STATUS;
+    assert(p7501_parse_jigpin_arg("", &jmode) && jmode == P7501_JIGPIN_STATUS);
+    assert(p7501_parse_jigpin_arg("low", &jmode) && jmode == P7501_JIGPIN_LOW);
+    assert(p7501_parse_jigpin_arg("GND", &jmode) && jmode == P7501_JIGPIN_LOW);
+    assert(p7501_parse_jigpin_arg("HiZ", &jmode) && jmode == P7501_JIGPIN_HIZ);
+    assert(p7501_parse_jigpin_arg("release", &jmode) && jmode == P7501_JIGPIN_HIZ);
+    assert(!p7501_parse_jigpin_arg("pushpull_5v", &jmode));
+
+    assert(strstr(p7501_classify_standby_state(3.25f, 3.26f, true, true, false), "POWERED / AWAKE") != NULL);
+    assert(strstr(p7501_classify_standby_state(0.03f, 0.03f, true, true, false), "NSW5V HIGH") != NULL);
+    assert(strstr(p7501_classify_standby_state(0.03f, 0.40f, false, false, false), "CLAMPED LOW") != NULL);
+    assert(strstr(p7501_classify_standby_state(0.03f, 3.25f, false, false, false), "CABLE UNPLUGGED") != NULL);
+    assert(strstr(p7501_classify_standby_state(0.00f, 0.00f, false, false, true), "JIGPIN_LOW LATCHED") != NULL);
 }
 
 static void test_wdt_stage_and_fmu_codec(void) {

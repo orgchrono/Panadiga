@@ -41,6 +41,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include "hardware/gpio.h"
 #include "pico/stdlib.h"
 #include "pico/bootrom.h"
 
@@ -60,7 +61,13 @@ static const char *cli_extract_arg(const char *trimmed_line) {
 }
 
 static void cli_cmd_status(void) {
-    const float vdd = p7501_hw_read_vdd();
+    const bool jig_latched = gpio_is_dir_out(P7501_PIN_SW_UART_ADC);
+    const float vdd = jig_latched ? 0.00f : p7501_hw_read_vdd();
+    const float sw_pu = jig_latched ? 0.00f : p7501_hw_sample_sw_uart_volts(false, true);
+    const bool rxd_h = gpio_get(P7501_PIN_RXD);
+    const bool nsw_h = gpio_get(P7501_PIN_NSW5V);
+    const bool txd_h = gpio_get(P7501_PIN_TXD);
+    const bool xrst_h = gpio_get(P7501_PIN_XRESET);
     const char *state = "LOW / UNPOWERED";
     pico_led_mode_t next_led = LED_MODE_BUS_FAULT;
 
@@ -75,7 +82,33 @@ static void cli_cmd_status(void) {
         p7501_led_set_auto_mode(next_led);
     }
     printf("VDD: %.2fV (%s)\n", (double)vdd, state);
+    printf("[STANDBY] RXD=%d NSW5V=%d TXD=%d XRESET=%d SW_PU=%.2fV | State=%s\n",
+           rxd_h ? 1 : 0, nsw_h ? 1 : 0, txd_h ? 1 : 0, xrst_h ? 1 : 0,
+           (double)sw_pu,
+           p7501_classify_standby_state(vdd, sw_pu, nsw_h, txd_h, jig_latched));
     p7501_wdt_print_summary_line();
+}
+
+static void cli_cmd_jigpin(const char *arg) {
+    p7501_jigpin_mode_t mode = P7501_JIGPIN_STATUS;
+    if (!p7501_parse_jigpin_arg(arg, &mode)) {
+        printf("[JIGPIN] ERROR: Use JIGPIN LOW, JIGPIN HIZ, or JIGPIN STATUS.\n");
+        return;
+    }
+    if (mode == P7501_JIGPIN_LOW) {
+        p7501_hw_sw_uart_set_low(true);
+        printf("JIGPIN: SW_UART(GP26)=LOW (TW7501_STRAP; XRESET untouched)\n");
+        return;
+    }
+    if (mode == P7501_JIGPIN_HIZ) {
+        p7501_hw_sw_uart_set_low(false);
+    }
+    const bool latched = gpio_is_dir_out(P7501_PIN_SW_UART_ADC);
+    const float v_hiz = latched ? 0.00f : p7501_hw_sample_sw_uart_volts(false, false);
+    printf("JIGPIN: SW_UART(GP26)=%s (%.2fV, NSW5V=%d)\n",
+           latched ? "LOW (TW7501_STRAP)" : "Hi-Z ADC0",
+           (double)v_hiz,
+           gpio_get(P7501_PIN_NSW5V) ? 1 : 0);
 }
 
 static void cli_cmd_led(const char *arg) {
@@ -218,6 +251,7 @@ static const p7501_cli_cmd_entry_t k_cli_commands[] = {
     { "BOOTCAP",       cli_cmd_bootcap_wrap },
     { "UARTMON",       cli_cmd_uartmon_wrap },
     { "JIGBOOT",       cli_cmd_jigboot_wrap },
+    { "JIGPIN",        cli_cmd_jigpin },
     { "FMUSCAN",       p7501_cmd_fmu_scan },
     { "FMUTEST",       p7501_cmd_fmu_test },
     { "FMUBATCH",      p7501_cmd_fmu_batch },

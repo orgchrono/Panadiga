@@ -20,6 +20,7 @@ pub const SAFE_BENCH_COMMANDS: &[&str] = &[
     "UARTMON",
     "BOOTCAP",
     "JIGBOOT",
+    "JIGPIN",
     "UARTPROBE",
     "UARTSEND",
     "BAUD",

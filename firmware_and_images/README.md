@@ -3,7 +3,7 @@
 Este diretório armazena os dumps brutos de memória e imagens de armazenamento do Panasonic DMR-EH55 utilizados pelas ferramentas de análise forense e engenharia reversa do `panadiga`.
 
 > [!TIP]
-> **Download Direto de Todas as Imagens Verificadas (`firmware-pack-v0.1.0`):** Como os dumps brutos de 100 MiB excedem o limite por arquivo do Git (e mantêm o `git clone` leve), todos os pacotes validados (`DMR-EH55`, `DMR-EH58` `DVDRAM.7z`, `DMR-EH50`, `DMR-EX98V`, `DMR-EZ485V`, kit `SD Unbrick`, partições extraídas e imagens HDD `.bin.gz`/`.7z` + `FIRMWARE_SHA256SUMS.txt`) estão disponíveis diretamente na Release oficial:  
+> **Download Direto de Todas as Imagens Verificadas (`firmware-pack-v0.1.0`):** Como os dumps brutos de 100 MiB excedem o limite por arquivo do Git (e mantêm o `git clone` leve), todos os pacotes validados (`DMR-EH55`, `DMR-EH58` `DVDRAM.7z`, `DMR-EH50`, `DMR-EX98V`, `DMR-EZ485V` 4MB NOR, **`DMR-ES35V` 8MB NOR + EEPROM Triton dump**, `dmr-am34-unpacked-plaintext-bootloaders-and-kernels.7z`, partições extraídas e imagens HDD `.bin.gz`/`.7z` + `FIRMWARE_SHA256SUMS.txt`) estão disponíveis diretamente na Release oficial:  
 > **https://github.com/orgchrono/Panadiga/releases/tag/firmware-pack-v0.1.0**
 >
 > Ao trabalhar localmente em bancada, baixe ou coloque seus dumps nesta pasta com os nomes descritos abaixo.
@@ -36,3 +36,6 @@ Este diretório armazena os dumps brutos de memória e imagens de armazenamento 
 * **Descrição:** Arquivo de serviço comparativo da mesma família MN103S DIGA (`BOOT_VER,0.63`, `DEV_VER,3110PC`):
   * `BOOT.BIN` → **`BOOT.BIN`** (`262.144 bytes`, SHA-256 `7c13c72a54c77387f3f7df0ddc213e4800e20b27eecbfd225cbc05a8fc73e377`, base VA `0x44000000`, `Loader ver0.63 [07/10/24]` em plaintext).
   * `DRV.BIN` (`720.896 bytes`, SHA-256 `3a9699dd576e96ac89d163094786f2c292bb68826bac344837ec3c9f9a0eccbf`) → descompactado (`--mode plain`) para **`DRV_decomp.bin`** (`1.441.792 bytes`, SHA-256 `694a4ab8aa29fcc45350dc0712047663602bdee7e4bff313b8ae62b057efd052`, base VA `0x40000000`, `MATSHITA R6-MV4 A0 S415`).
+
+### 5. Dump Físico `DMR-ES35V` (`dmr-es35v/` — 8 MiB Plaintext NOR + 8 KiB EEPROM)
+* **Descrição:** Dump chip-off real (Triton v5.7) publicado na Release `firmware-pack-v0.1.0` como **`dmr-es35v-8mb-nor-flash-and-eeprom-triton-dump.zip`** (`13.599.723 bytes`, SHA-256 `800f3874d4a3ed2bacf90780a7f6f666cb9f8b5a3b2e6bf9dfd9529f2b50cb32`), com `flash.bin` (`8.388.608 bytes`, bootloader XIP `0.18 [06/03/13]`, `EXTRHEAD DRV/MAIN`, FS BGO `0x700000..0x7EFFFF` e EEMUL NVRAM `0x7F0000..0x7FFFFF`) e `eeprom.bin` (`8.192 bytes`, 24C64). Veja [`dmr-es35v/README.md`](dmr-es35v/README.md).

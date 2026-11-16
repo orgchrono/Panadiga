@@ -232,3 +232,26 @@ bool p7501_parse_waittx_args(const char *arg, p7501_waittx_spec_t *out) {
     }
     return true;
 }
+
+bool p7501_parse_jigpin_arg(const char *arg, p7501_jigpin_mode_t *out_mode) {
+    char tok[24] = {0};
+
+    if (out_mode == NULL) {
+        return false;
+    }
+    if (p7501_next_token(arg, tok, sizeof(tok)) == NULL || p7501_ascii_ieq(tok, "STATUS")) {
+        *out_mode = P7501_JIGPIN_STATUS;
+        return true;
+    }
+    if (p7501_ascii_ieq(tok, "LOW") || p7501_ascii_ieq(tok, "ON") ||
+        p7501_ascii_ieq(tok, "GND") || p7501_ascii_ieq(tok, "1")) {
+        *out_mode = P7501_JIGPIN_LOW;
+        return true;
+    }
+    if (p7501_ascii_ieq(tok, "HIZ") || p7501_ascii_ieq(tok, "OFF") ||
+        p7501_ascii_ieq(tok, "RELEASE") || p7501_ascii_ieq(tok, "0")) {
+        *out_mode = P7501_JIGPIN_HIZ;
+        return true;
+    }
+    return false;
+}

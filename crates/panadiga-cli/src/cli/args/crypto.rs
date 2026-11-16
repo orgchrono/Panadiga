@@ -109,6 +109,10 @@ pub struct FrmPackArgs {
     #[arg(long, default_value_t = 0)]
     pub target_flag: u8,
 
+    /// Compression algorithm for digadiag EXTRHEAD container: zlib, gzip, or lzss
+    #[arg(long, default_value = "zlib", value_name = "ALGO")]
+    pub algo: String,
+
     /// Set FormatFlag = 1 on MAIN* modules to force firmware update regardless of version
     #[arg(long, default_value_t = false)]
     pub patch_force: bool,

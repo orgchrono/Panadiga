@@ -44,6 +44,7 @@ void p7501_cli_print_help(void) {
     printf("\n--- Panadiga P7501 Bench CLI Commands ---\n");
     printf("  PING / STATUS / VDD / WDT            - Heartbeat, GP26 ADC0 sense & WDT traceability\n");
     printf("  BOOTCAP / UARTMON / JIGBOOT          - PIO1 boot/passive/smart-JIG RX capture\n");
+    printf("  JIGPIN [LOW|HIZ|STATUS]              - Software TW7501 (SW_UART GP26) open-drain strap\n");
     printf("  UARTSEND / UARTPROBE                 - PIO1 P7501 TX (Q7514 Hi-Z default) & probe\n");
     printf("  BAUD [bps] / FRAMING [8N1|8E1|8O1]   - PIO1 baudrate & hardware parity framing\n");
     printf("  BAUDSCAN [ms] [boot] [APPLY]         - GP2 pulse-width autobaud detector\n");
