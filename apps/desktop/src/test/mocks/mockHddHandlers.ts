@@ -54,7 +54,9 @@ export function handleMockHddCommand(
     }
 
     case 'list_physical_drives':
-      return [
+    case 'list_hdd_drives':
+    case 'list_sd_card_drives': {
+      const mockAll = [
         {
           device_path: '\\\\.\\PhysicalDrive0',
           display_name: 'Physical Drive 0 (Host Windows NVMe, 512.0 GB)',
@@ -63,6 +65,20 @@ export function handleMockHddCommand(
           is_system_drive: true,
           safe_to_write: false,
           lockout_reason: 'LOCKED: Windows Host Operating System Boot Drive (PhysicalDrive0)',
+          drive_role: 'system_os',
+          bus_type: 'NVMe',
+          removable: false,
+          is_mounted: true,
+          mount_points: ['C:\\'],
+          partitions: [
+            {
+              device_path: '\\\\.\\C:',
+              label: 'OS',
+              fs_type: 'NTFS',
+              mount_point: 'C:\\',
+              size_bytes: 512110190592,
+            },
+          ],
         },
         {
           device_path: '\\\\.\\PhysicalDrive1',
@@ -72,8 +88,48 @@ export function handleMockHddCommand(
           is_system_drive: false,
           safe_to_write: true,
           lockout_reason: null,
+          drive_role: 'hard_disk',
+          bus_type: 'USB',
+          removable: false,
+          is_mounted: false,
+          mount_points: [],
+          partitions: [],
+        },
+        {
+          device_path: '\\\\.\\PhysicalDrive2',
+          display_name: 'Generic SD/MMC Card Reader (USB, 2.0 GB)',
+          size_bytes: 2002780160,
+          size_gb: 2.0,
+          is_system_drive: false,
+          safe_to_write: true,
+          lockout_reason: null,
+          drive_role: 'sd_card',
+          bus_type: 'MMC/SD',
+          removable: true,
+          is_mounted: true,
+          mount_points: ['E:\\'],
+          partitions: [
+            {
+              device_path: '\\\\.\\E:',
+              label: 'DIGA_SD',
+              fs_type: 'FAT',
+              mount_point: 'E:\\',
+              size_bytes: 2002780160,
+            },
+          ],
         },
       ];
+      if (cmd === 'list_hdd_drives' || args?.role === 'hdd') {
+        return mockAll.filter((d) => d.drive_role === 'hard_disk');
+      }
+      if (cmd === 'list_sd_card_drives' || args?.role === 'sd') {
+        return mockAll.filter((d) => d.drive_role === 'sd_card');
+      }
+      return mockAll;
+    }
+
+    case 'unmount_physical_drive':
+      return [`${String(args?.devicePath ?? '\\\\.\\PhysicalDrive2')} (unmounted)`];
 
     case 'format_hdd_meihdfs':
     case 'write_hdd_image':

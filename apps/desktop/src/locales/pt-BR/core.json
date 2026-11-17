@@ -264,7 +264,13 @@
       "pipelineResetToast": "Pipeline Reiniciado",
       "resetAllBtn": "Restaurar Layout & Padrões",
       "resetAllToastTitle": "Layout e Preferências Restaurados",
-      "resetAllToastMsg": "Proporções de divisores, tema e modo foram redefinidos com segurança."
+      "resetAllToastMsg": "Proporções de divisores, tema e modo foram redefinidos com segurança.",
+      "launcherTitle": "Integração com SO, Launcher & Atalhos",
+      "launcherDesc": "Cria entrada no menu de aplicativos, ícone Hicolor (Linux XDG) e atalho na Área de Trabalho (Linux `.desktop` / Windows `.lnk`).",
+      "installShortcutBtn": "Criar Launcher & Atalho no Desktop",
+      "installingShortcut": "Criando Atalho...",
+      "shortcutCreatedTitle": "Launcher e atalho criados!",
+      "shortcutErrorTitle": "Falha ao criar launcher/atalho"
     },
     "runtime": {
       "cardTitle": "Padrões Operacionais em Runtime (Persistência Rust)",

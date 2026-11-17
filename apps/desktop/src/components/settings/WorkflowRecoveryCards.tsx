@@ -1,5 +1,5 @@
 import React from 'react';
-import { Globe, Layers, RotateCcw, SlidersHorizontal } from 'lucide-react';
+import { AppWindow, Globe, Layers, Loader2, RotateCcw, SlidersHorizontal } from 'lucide-react';
 import {
   Button,
   Card,
@@ -25,6 +25,8 @@ export interface WorkflowRecoveryCardsProps {
   readonly onResetPipeline: () => void;
   readonly onResetWorkbenchPreferences: () => void;
   readonly onNotify: (toast: Omit<ToastMessage, 'id'>) => void;
+  readonly installingShortcut?: boolean;
+  readonly onInstallShortcut?: () => void;
 }
 
 export const WorkflowRecoveryCards: React.FC<WorkflowRecoveryCardsProps> = ({
@@ -36,6 +38,8 @@ export const WorkflowRecoveryCards: React.FC<WorkflowRecoveryCardsProps> = ({
   onResetPipeline,
   onResetWorkbenchPreferences,
   onNotify,
+  installingShortcut = false,
+  onInstallShortcut,
 }) => {
   const { t, locale, setLocale } = useTranslation();
 
@@ -119,6 +123,37 @@ export const WorkflowRecoveryCards: React.FC<WorkflowRecoveryCardsProps> = ({
               checked={hudOpen}
               onCheckedChange={onSetHudOpen}
             />
+          </div>
+
+          <div className="pt-2 border-t border-slate-800 space-y-2">
+            <div className="space-y-0.5">
+              <span className="text-xs text-slate-200 font-semibold flex items-center gap-1.5">
+                <AppWindow className="w-3.5 h-3.5 text-emerald-400" />
+                <span>{t('settings.workflow.launcherTitle')}</span>
+              </span>
+              <p className="text-[11px] text-slate-400 font-sans">
+                {t('settings.workflow.launcherDesc')}
+              </p>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={installingShortcut || !onInstallShortcut}
+              onClick={() => onInstallShortcut?.()}
+              className="gap-1.5"
+            >
+              {installingShortcut ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <AppWindow className="w-3.5 h-3.5 text-cyan-400" />
+              )}
+              <span>
+                {installingShortcut
+                  ? t('settings.workflow.installingShortcut')
+                  : t('settings.workflow.installShortcutBtn')}
+              </span>
+            </Button>
           </div>
         </CardContent>
       </Card>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   DECIMAL_GB_BYTES,
   HDD_DEFAULT_250GB_SECTORS,
@@ -8,7 +8,8 @@ import {
 import { useToast } from '@/context/ToastContext';
 import { translate } from '@/i18n/useTranslation';
 import type { DriveWriteReport, PhysicalDriveInfo } from '@/models';
-import { executeDiskWriteCommand, listPhysicalDrives } from '@/services/storageCryptoService';
+import { executeDiskWriteCommand } from '@/services/storageCryptoService';
+import { useStorageDrives } from './useStorageDrives';
 
 type HddWriteCommand = 'format_hdd_meihdfs' | 'write_hdd_image' | 'restore_hdd_mirrors';
 
@@ -89,53 +90,43 @@ export function getExpectedDriveConfirmToken(devicePath: string): string {
  */
 export function useHddWriterViewModel() {
   const { showToast } = useToast();
-  const [drives, setDrives] = useState<PhysicalDriveInfo[]>([]);
-  const [selectedDrive, setSelectedDrive] = useState<PhysicalDriveInfo | null>(null);
-  const [loadingDrives, setLoadingDrives] = useState<boolean>(false);
+  const {
+    drives,
+    filteredDrives,
+    roleFilter,
+    setRoleFilter,
+    loading: loadingDrives,
+    unmountingPath,
+    refresh: refreshDrives,
+    unmountDrive,
+  } = useStorageDrives('all', true);
+  const [manualSelectedPath, setManualSelectedPath] = useState<string | null>(null);
   const [confirmInput, setConfirmInput] = useState<string>('');
   const [customSizeGb, setCustomSizeGb] = useState<number | null>(null);
   const [rawImagePath, setRawImagePath] = useState<string>('');
   const [executing, setExecuting] = useState<boolean>(false);
   const [writeReport, setWriteReport] = useState<DriveWriteReport | null>(null);
 
-  const performFetchDrives = useCallback(
-    async (signal?: AbortSignal) => {
-      setLoadingDrives(true);
-      try {
-        const list = await listPhysicalDrives();
-        if (signal?.aborted) return;
-        setDrives(list);
-        const safe = list.find((drive) => drive.safe_to_write);
-        if (safe) {
-          setSelectedDrive(safe);
-        }
-      } catch (err) {
-        if (signal?.aborted) return;
-        showToast({
-          type: 'error',
-          title: translate('errors.hdd.listDisksError'),
-          message: err instanceof Error ? err.message : String(err),
-        });
-      } finally {
-        if (!signal?.aborted) {
-          setLoadingDrives(false);
-        }
-      }
-    },
-    [showToast],
-  );
+  const selectedDrive = useMemo<PhysicalDriveInfo | null>(() => {
+    if (drives.length === 0) return null;
+    if (manualSelectedPath) {
+      const explicit = drives.find((d) => d.device_path === manualSelectedPath);
+      if (explicit) return explicit;
+    }
+    return (
+      drives.find((d) => d.safe_to_write && d.drive_role !== 'sd_card') ??
+      drives.find((d) => d.safe_to_write) ??
+      null
+    );
+  }, [drives, manualSelectedPath]);
 
-  const fetchDrives = useCallback(() => performFetchDrives(), [performFetchDrives]);
+  const setSelectedDrive = useCallback((drive: PhysicalDriveInfo | null) => {
+    setManualSelectedPath(drive?.device_path ?? null);
+  }, []);
 
-  useEffect(() => {
-    const controller = new AbortController();
-    void Promise.resolve().then(() => {
-      if (!controller.signal.aborted) {
-        void performFetchDrives(controller.signal);
-      }
-    });
-    return () => controller.abort();
-  }, [performFetchDrives]);
+  const fetchDrives = useCallback(async () => {
+    await refreshDrives();
+  }, [refreshDrives]);
 
   const runConfirmedOperation = useCallback(
     async (command: HddWriteCommand) => {
@@ -207,6 +198,11 @@ export function useHddWriterViewModel() {
 
   return {
     drives,
+    filteredDrives,
+    roleFilter,
+    setRoleFilter,
+    unmountingPath,
+    unmountDrive,
     selectedDrive,
     setSelectedDrive,
     isLoading: loadingDrives || executing,

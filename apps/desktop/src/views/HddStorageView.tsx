@@ -12,6 +12,7 @@ import {
   HddPartitionTable,
   HddTopHeader,
   HddWriterCard,
+  StorageDeviceSelector,
 } from '@/components/hdd';
 import { useWorkbenchMode } from '@/context/WorkbenchModeContext';
 import { useTranslation } from '@/i18n/useTranslation';
@@ -26,6 +27,7 @@ import type {
 import { useHddCapacityViewModel } from '@/viewmodels/useHddCapacityViewModel';
 import { useHddStorageViewModel } from '@/viewmodels/useHddStorageViewModel';
 import { useHddWriterViewModel } from '@/viewmodels/useHddWriterViewModel';
+import { useStorageDrives } from '@/viewmodels/useStorageDrives';
 
 interface HddActiveTabContentProps {
   readonly activeTab: HddTab;
@@ -125,6 +127,7 @@ export const HddStorageView: React.FC<{ onNavigate?: (view: ViewKey) => void }> 
 
   const capacityVm = useHddCapacityViewModel();
   const writerVm = useHddWriterViewModel();
+  const hddInspectorDrives = useStorageDrives('hard_disk', true);
   const { isAdvanced, setMode } = useWorkbenchMode();
   const [inputPath, setInputPath] = useState(imagePath || '');
   const [showPathInput, setShowPathInput] = useState(false);
@@ -165,6 +168,11 @@ export const HddStorageView: React.FC<{ onNavigate?: (view: ViewKey) => void }> 
         onInputPathChange={setInputPath}
         onOpenPath={handleOpenPath}
         onSelectImagePath={handleSelectImagePath}
+        drives={hddInspectorDrives.filteredDrives}
+        roleFilter={hddInspectorDrives.roleFilter}
+        onChangeRoleFilter={hddInspectorDrives.setRoleFilter}
+        loadingDrives={hddInspectorDrives.loading}
+        onRefreshDrives={() => void hddInspectorDrives.refresh()}
         activeTab={activeTab}
         onSelectTab={setActiveTab}
         isAdvanced={isAdvanced}
@@ -203,6 +211,22 @@ export const HddStorageView: React.FC<{ onNavigate?: (view: ViewKey) => void }> 
             >
               {loading ? t('hdd.fallback.loadingBtn') : t('hdd.fallback.analyzeBtn')}
             </button>
+          </div>
+
+          <div className="pt-3 border-t border-slate-800 text-left space-y-2">
+            <span className="text-[11px] text-slate-400 block">
+              {t('hdd.devices.inspectDeviceLabel')}
+            </span>
+            <StorageDeviceSelector
+              compact
+              drives={hddInspectorDrives.filteredDrives}
+              selectedDevicePath={inputPath}
+              roleFilter={hddInspectorDrives.roleFilter}
+              onChangeRoleFilter={hddInspectorDrives.setRoleFilter}
+              loading={hddInspectorDrives.loading}
+              onRefresh={() => void hddInspectorDrives.refresh()}
+              onSelectDrive={(drive) => handleSelectImagePath(drive.device_path)}
+            />
           </div>
 
           <div className="pt-4 border-t border-slate-800 flex flex-wrap items-center justify-center gap-3 text-xs">

@@ -41,6 +41,13 @@ export const UnbrickView: React.FC = () => {
     runMatshitaSerial,
     verifyUnlockFrm,
     packUnlockFrm,
+    sdDrives,
+    sdDriveFilter,
+    setSdDriveFilter,
+    sdDrivesLoading,
+    refreshSdDrives,
+    autoSdDiskTarget,
+    autoSdMountDir,
   } = useUnbrickViewModel();
 
   const data = workbench.data;
@@ -112,6 +119,13 @@ export const UnbrickView: React.FC = () => {
               diskResult={sdDisk.data}
               diskError={sdDisk.error}
               onInspectSdDisk={inspectSdDisk}
+              sdDrives={sdDrives}
+              sdDriveFilter={sdDriveFilter}
+              onChangeSdDriveFilter={setSdDriveFilter}
+              sdDrivesLoading={sdDrivesLoading}
+              onRefreshSdDrives={() => void refreshSdDrives()}
+              autoSdDiskTarget={autoSdDiskTarget}
+              autoSdMountDir={autoSdMountDir}
             />
 
             {isAdvanced && (

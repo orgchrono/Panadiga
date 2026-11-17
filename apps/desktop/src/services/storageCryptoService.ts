@@ -97,8 +97,20 @@ export const inspectHddCapacity = (inputPath?: string): Promise<MainCapacityInsp
 export const patchHddCapacity = (params: Record<string, unknown>): Promise<MainCapacityPatchReport> =>
   invokeCommand<MainCapacityPatchReport>('apply_hdd_capacity_patch', params);
 
-export const listPhysicalDrives = (): Promise<PhysicalDriveInfo[]> =>
-  invokeCommand<PhysicalDriveInfo[]>('list_physical_drives');
+export const listPhysicalDrives = (role?: string): Promise<PhysicalDriveInfo[]> =>
+  invokeCommand<PhysicalDriveInfo[]>(
+    'list_physical_drives',
+    role ? { role } : undefined,
+  );
+
+export const listHddDrives = (): Promise<PhysicalDriveInfo[]> =>
+  invokeCommand<PhysicalDriveInfo[]>('list_hdd_drives');
+
+export const listSdCardDrives = (): Promise<PhysicalDriveInfo[]> =>
+  invokeCommand<PhysicalDriveInfo[]>('list_sd_card_drives');
+
+export const unmountPhysicalDrive = (devicePath: string): Promise<string[]> =>
+  invokeCommand<string[]>('unmount_physical_drive', { devicePath });
 
 export const executeDiskWriteCommand = (
   cmd: 'format_hdd_meihdfs' | 'write_hdd_image' | 'restore_hdd_mirrors',

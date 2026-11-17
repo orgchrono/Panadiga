@@ -98,24 +98,31 @@ fn normalize_sd_target(target: &str) -> (String, bool) {
     (trimmed.to_string(), false)
 }
 
-/// Open an SD raw `.img` file, logical drive (`E:` / `\\.\E:`), or `\\.\PhysicalDriveN` read-only and audit MBR/BPB/FAT16/8.3.
+/// Open an SD raw `.img` file, logical drive (`E:` / `\\.\E:`), mount point (`/media/...`), or raw block device read-only.
 pub fn inspect_sd_target(target: &str) -> Result<SdDiskInspectionReport> {
-    let (open_path, is_logical) = normalize_sd_target(target);
-    let path = Path::new(&open_path);
-    let mut file = File::open(path).with_context(|| {
-        format!(
-            "Failed to open SD target '{}' read-only (on Windows, \\\\.\\PhysicalDriveN may require Administrator privileges)",
-            path.display()
-        )
-    })?;
-    if !is_logical
-        && !open_path.starts_with(r"\\.\")
-        && file.metadata().map(|m| m.is_dir()).unwrap_or(false)
-    {
-        bail!(
-            "'{}' is a directory; use `unbrick verify-sd` for folders or pass a drive letter (`E:`), `\\\\.\\PhysicalDriveN`, or raw `.img` file.",
-            target
-        );
+    let (mut open_path, is_logical) = normalize_sd_target(target);
+    let mut path = Path::new(&open_path);
+    if !is_logical && !open_path.starts_with(r"\\.\") && path.is_dir() {
+        if let Some(resolved_dev) = crate::hdd::resolve_mount_point_to_block_device(&open_path) {
+            open_path = resolved_dev;
+            path = Path::new(&open_path);
+        } else {
+            bail!(
+                "'{}' is a directory (not a mounted block device in /proc/mounts); use `unbrick verify-sd` for folders or select a mounted drive (`E:`, `/dev/sdX1`, or `.img`).",
+                target
+            );
+        }
     }
+    let mut file = File::open(path).map_err(|e| {
+        if e.kind() == std::io::ErrorKind::PermissionDenied {
+            anyhow::anyhow!(
+                "Permission denied opening SD target '{}' read-only ({}). Linux: add user to 'disk' group (`sudo usermod -aG disk $USER`) or run via pkexec/sudo; Windows: run as Administrator.",
+                path.display(),
+                e
+            )
+        } else {
+            anyhow::Error::new(e).context(format!("Failed to open SD target '{}'", path.display()))
+        }
+    })?;
     inspect_sd_reader(target, &mut file, is_logical)
 }

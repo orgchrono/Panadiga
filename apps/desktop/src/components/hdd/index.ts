@@ -10,3 +10,4 @@ export * from './HddExtractManifestCard';
 export * from './HddWriterCard';
 export * from './HddCapacityPatcherCard';
 export * from './HddNavigationBar';
+export * from './StorageDeviceSelector';

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AM34_FLASH_SIZE_HEX,
   AM34_FLASH_UNCACHED_ADDR_HEX,
@@ -31,11 +31,13 @@ import {
   verifySdUnbrickMedia,
 } from '@/services/unbrickService';
 import { logger } from '@/utils/logger';
+import { resolvePrimaryDriveTarget } from '@/utils/storageDrives';
 import {
   emptyChannel,
   useMatshitaEmuActions,
   type AsyncChannelState,
 } from './useMatshitaEmuActions';
+import { useStorageDrives } from './useStorageDrives';
 
 function formatErr(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
@@ -263,6 +265,14 @@ export function useUnbrickViewModel() {
   );
 
   const matshita = useMatshitaEmuActions(runChannel);
+  const sdDrivesVm = useStorageDrives('sd_card', true);
+
+  const autoSdResolved = useMemo(() => {
+    const candidate =
+      sdDrivesVm.filteredDrives.find((d) => d.safe_to_write) ??
+      sdDrivesVm.drives.find((d) => d.drive_role === 'sd_card' && d.safe_to_write);
+    return candidate ? resolvePrimaryDriveTarget(candidate, true) : null;
+  }, [sdDrivesVm.drives, sdDrivesVm.filteredDrives]);
 
   return {
     workbench,
@@ -274,6 +284,13 @@ export function useUnbrickViewModel() {
     rspPlan,
     norStub,
     ...matshita,
+    sdDrives: sdDrivesVm.filteredDrives,
+    sdDriveFilter: sdDrivesVm.roleFilter,
+    setSdDriveFilter: sdDrivesVm.setRoleFilter,
+    sdDrivesLoading: sdDrivesVm.loading,
+    refreshSdDrives: sdDrivesVm.refresh,
+    autoSdDiskTarget: autoSdResolved?.diskTarget ?? null,
+    autoSdMountDir: autoSdResolved?.mountPoint ?? null,
     loadWorkbench,
     buildSdKit,
     verifySdMedia,

@@ -8,10 +8,42 @@ use crate::commands::constants::{
 use crate::commands::dto::resolve_candidate;
 use crate::commands::error::{IpcResult, PanadigaIpcError};
 
-/// Discovers connected physical storage drives and evaluates system safety locks.
+/// Discovers connected physical storage drives & mounted volumes (optionally filtered by role).
 #[tauri::command]
-pub fn list_physical_drives() -> IpcResult<Vec<panadiga_core::hdd::PhysicalDriveInfo>> {
-    panadiga_core::hdd::list_physical_drives().map_err(PanadigaIpcError::from)
+pub fn list_physical_drives(
+    role: Option<String>,
+) -> IpcResult<Vec<panadiga_core::hdd::PhysicalDriveInfo>> {
+    let parsed_role = role
+        .as_deref()
+        .and_then(|r| match r.trim().to_ascii_lowercase().as_str() {
+            "hdd" | "hard_disk" | "harddisk" => {
+                Some(panadiga_core::hdd::StorageMediaRole::HardDisk)
+            }
+            "sd" | "sd_card" | "sdcard" | "mmc" => {
+                Some(panadiga_core::hdd::StorageMediaRole::SdCard)
+            }
+            "system" | "os" => Some(panadiga_core::hdd::StorageMediaRole::SystemOs),
+            _ => None,
+        });
+    panadiga_core::hdd::list_drives_by_role(parsed_role).map_err(PanadigaIpcError::from)
+}
+
+/// Dedicated enumerator discovering Hard Disk Drives (SATA/PATA/NVMe/USB enclosures).
+#[tauri::command]
+pub fn list_hdd_drives() -> IpcResult<Vec<panadiga_core::hdd::PhysicalDriveInfo>> {
+    panadiga_core::hdd::list_hard_disk_drives().map_err(PanadigaIpcError::from)
+}
+
+/// Dedicated enumerator discovering SD Cards and removable flash media.
+#[tauri::command]
+pub fn list_sd_card_drives() -> IpcResult<Vec<panadiga_core::hdd::PhysicalDriveInfo>> {
+    panadiga_core::hdd::list_sd_card_drives().map_err(PanadigaIpcError::from)
+}
+
+/// Unmounts non-OS partitions of `device_path` (e.g. via `udisksctl` / `umount` on Linux).
+#[tauri::command]
+pub fn unmount_physical_drive(device_path: String) -> IpcResult<Vec<String>> {
+    panadiga_core::hdd::unmount_drive_partitions(&device_path).map_err(PanadigaIpcError::from)
 }
 
 /// Formats a physical disk with procedural MEIHDFS filesystem structures (mkfs.meihdfs).

@@ -61,8 +61,15 @@ pub enum HddActions {
         journal: bool,
     },
 
-    /// Lists connected physical drives and identifies system OS drive lockouts
-    ListDrives,
+    /// Lists connected physical drives & mounted partitions with optional media role filter (`all`, `hdd`, `sd`)
+    ListDrives {
+        /// Role filter: all, hdd, sd, or system
+        #[arg(short, long, default_value = "all", value_name = "ROLE")]
+        role: String,
+    },
+
+    /// Dedicated command listing detected SD Cards, MMC/SD readers, and removable flash media
+    ListSdCards,
 
     /// Procedurally formats a non-system physical drive or disk image with MEIHDFS structures (mkfs.meihdfs)
     FormatMeihdfs {

@@ -247,10 +247,25 @@
       "tabCapacity": "Desbloqueio de Capacidade (250GB / 2TB)",
       "tabWriter": "Gravação Física & mkfs"
     },
+    "devices": {
+      "filterAria": "Filtrar dispositivos de armazenamento por função",
+      "filterHdd": "HDD / USB",
+      "filterSd": "Cartão SD / MMC",
+      "filterMounted": "Montados",
+      "filterAll": "Todos",
+      "emptyForFilter": "Nenhum disco ou mídia montada corresponde ao filtro selecionado.",
+      "badgeSd": "SD / REMOVÍVEL",
+      "inspectDeviceLabel": "Ou selecione um Disco / Volume Montado detectado (Windows & Linux):"
+    },
     "writer": {
       "title": "Gravador Físico de Disco & MEIHDFS Formatter (mkfs.meihdfs)",
       "subtitle": "Gravação física direta em unidades PATA/IDE com trava de segurança de SO host e token anti-acidente.",
       "refreshBtn": "Atualizar Discos",
+      "unmountBtn": "Desmontar Partições",
+      "unmountingBtn": "Desmontando...",
+      "unmountSuccessTitle": "Partições desmontadas com segurança",
+      "unmountEmptyMsg": "Nenhuma partição montada em {{device}}.",
+      "unmountErrorTitle": "Falha ao desmontar partições",
       "safetyTitle": "INVARIANTE DE SEGURANÇA: BLOQUEIO INCONDICIONAL DO DISCO DE BOOT",
       "safetyBodyWindowsPrefix": "O disco do sistema operacional host (ex:",
       "safetyBodyMiddle": "no Windows ou",

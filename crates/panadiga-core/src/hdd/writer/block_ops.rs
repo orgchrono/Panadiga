@@ -19,10 +19,22 @@ pub struct DriveWriteReport {
     pub message: String,
 }
 
-/// Verifies that a target drive is safe for writing and validates the confirmation token.
-pub fn verify_safety_lockout(device_path: &str, confirmation_token: &str) -> Result<()> {
-    let normalized = device_path.to_lowercase();
-    if normalized.contains("physicaldrive0") || normalized == "/dev/sda" {
+/// Pure safety lockout validator checking host OS boot drives & exact confirmation token.
+pub fn verify_safety_lockout_with_os_disks(
+    device_path: &str,
+    confirmation_token: &str,
+    detected_os_disks: Option<&[&str]>,
+) -> Result<()> {
+    let normalized = device_path.trim().to_ascii_lowercase();
+    let is_default_win_boot = normalized.contains("physicaldrive0");
+    let is_detected_os_disk = match detected_os_disks {
+        Some(os_disks) => os_disks.iter().any(|os_dev| {
+            let clean_os = os_dev.trim().to_ascii_lowercase();
+            !clean_os.is_empty() && (normalized == clean_os || normalized.starts_with(&clean_os))
+        }),
+        None => normalized == "/dev/sda",
+    };
+    if is_default_win_boot || is_detected_os_disk {
         bail!(
             "FATAL SAFETY INVARIANT VIOLATION: Access to {} is unconditionally locked! \
             The primary operating system drive can never be overwritten by Panadiga.",
@@ -42,15 +54,42 @@ pub fn verify_safety_lockout(device_path: &str, confirmation_token: &str) -> Res
     Ok(())
 }
 
-/// Helper to verify safety lockout and open a physical block device in read/write mode.
+/// Verifies that a target drive is safe for writing and validates the confirmation token.
+pub fn verify_safety_lockout(device_path: &str, confirmation_token: &str) -> Result<()> {
+    let os_disks_owned = super::discovery::detect_linux_host_os_disks();
+    let os_refs: Option<Vec<&str>> = os_disks_owned
+        .as_ref()
+        .map(|list| list.iter().map(String::as_str).collect());
+    verify_safety_lockout_with_os_disks(device_path, confirmation_token, os_refs.as_deref())
+}
+
+/// Helper to verify safety lockout, safely unmount non-OS partitions on Unix, and open raw handle.
 pub fn open_verified_block_device(device_path: &str, confirmation_token: &str) -> Result<File> {
     verify_safety_lockout(device_path, confirmation_token)?;
+
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    {
+        super::discovery::unmount_drive_partitions(device_path)?;
+    }
 
     OpenOptions::new()
         .read(true)
         .write(true)
         .open(device_path)
-        .with_context(|| format!("Failed to open physical block device at {}", device_path))
+        .map_err(|e| {
+            if e.kind() == std::io::ErrorKind::PermissionDenied {
+                anyhow::anyhow!(
+                    "Permission denied opening '{}' ({}). Linux: add user to 'disk' group (`sudo usermod -aG disk $USER`) or run `pkexec panadiga ...`. Windows: run Panadiga as Administrator.",
+                    device_path,
+                    e
+                )
+            } else {
+                anyhow::Error::new(e).context(format!(
+                    "Failed to open physical block device at {}",
+                    device_path
+                ))
+            }
+        })
 }
 
 /// Writes procedurally synthesized MEIHDFS structures directly to a physical drive.

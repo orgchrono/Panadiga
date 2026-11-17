@@ -53,6 +53,13 @@ export const SdKitBuilderCard: React.FC<SdKitBuilderCardProps> = ({
   diskResult = null,
   diskError = null,
   onInspectSdDisk,
+  sdDrives,
+  sdDriveFilter,
+  onChangeSdDriveFilter,
+  sdDrivesLoading,
+  onRefreshSdDrives,
+  autoSdDiskTarget,
+  autoSdMountDir,
 }) => {
   const { t } = useTranslation();
   const [outputDir, setOutputDir] = useState('sd_card_eh55_kit');
@@ -255,6 +262,13 @@ export const SdKitBuilderCard: React.FC<SdKitBuilderCardProps> = ({
           diskResult={diskResult}
           diskError={diskError}
           onInspectSdDisk={onInspectSdDisk}
+          sdDrives={sdDrives}
+          sdDriveFilter={sdDriveFilter}
+          onChangeSdDriveFilter={onChangeSdDriveFilter}
+          sdDrivesLoading={sdDrivesLoading}
+          onRefreshSdDrives={onRefreshSdDrives}
+          autoSdDiskTarget={autoSdDiskTarget}
+          autoSdMountDir={autoSdMountDir}
         />
       </CardContent>
     </Card>

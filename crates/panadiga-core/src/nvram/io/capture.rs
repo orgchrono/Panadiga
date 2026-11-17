@@ -12,6 +12,11 @@ use crate::constants::SPANSION_FLASH_SIZE_BYTES;
 /// Intelligently resolves an input file path across working directory and known folders,
 /// transparently handling both uncompressed (.bin) and compressed (.bin.gz) files.
 pub fn resolve_input_path(input: &Path) -> Result<PathBuf> {
+    let raw = input.to_string_lossy();
+    let trimmed = raw.trim();
+    if trimmed.starts_with(r"\\.\") || trimmed.starts_with("/dev/") {
+        return Ok(PathBuf::from(trimmed));
+    }
     if input.exists() {
         return Ok(input.to_path_buf());
     }

@@ -1,6 +1,8 @@
 //! Path resolution, DTO schemas, and workspace discovery for `.FRM` containers.
 
-use panadiga_core::constants::{find_workspace_subdir, resolve_workspace_root};
+use panadiga_core::constants::{
+    find_workspace_subdir, resolve_workspace_root, resolve_writable_data_root,
+};
 use panadiga_core::crypto::ExtrheadHeader;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -77,7 +79,7 @@ pub(crate) fn resolve_write_path(raw: &str) -> IpcResult<PathBuf> {
     let resolved = if path.is_absolute() {
         path
     } else {
-        resolve_workspace_root().join(path)
+        resolve_writable_data_root().join(path)
     };
     if let Some(parent) = resolved.parent()
         && !parent.as_os_str().is_empty()

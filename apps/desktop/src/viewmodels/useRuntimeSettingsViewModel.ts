@@ -23,6 +23,7 @@ import {
   persistRuntimeSettings,
   resetRuntimeSettingsOnBackend,
 } from '@/services/settingsService';
+import { installDesktopShortcut } from '@/services/systemService';
 import { runtimeSettingsSchema } from '@/utils/runtimeSettingsSchema';
 
 function splitKeywords(rawText: string): readonly string[] {
@@ -39,6 +40,7 @@ export function useRuntimeSettingsViewModel() {
   const [keywordsOverride, setKeywordsOverride] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [saving, setSaving] = useState<boolean>(false);
+  const [installingShortcut, setInstallingShortcut] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const { acquire: acquireReload, release: releaseReload } = useAbortSlot();
@@ -212,6 +214,26 @@ export function useRuntimeSettingsViewModel() {
     }
   }, [acquirePersist, applyPersistedRuntimeSettings, releasePersist]);
 
+  const installSystemLauncher = useCallback(async () => {
+    setInstallingShortcut(true);
+    try {
+      const report = await installDesktopShortcut(true);
+      showToast({
+        type: 'success',
+        title: translate('settings.workflow.shortcutCreatedTitle'),
+        message: report.message,
+      });
+    } catch (err) {
+      showToast({
+        type: 'error',
+        title: translate('settings.workflow.shortcutErrorTitle'),
+        message: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setInstallingShortcut(false);
+    }
+  }, [showToast]);
+
   const currentCandidate: RuntimeSettings = {
     ...draft,
     storage: { ...draft.storage, forensic_keywords: splitKeywords(keywordsText) },
@@ -224,6 +246,7 @@ export function useRuntimeSettingsViewModel() {
     setKeywordsText: updateKeywordsText,
     isLoading,
     saving,
+    installingShortcut,
     error,
     successMessage,
     isDirty: JSON.stringify(currentCandidate) !== JSON.stringify(runtimeSettings),
@@ -233,5 +256,6 @@ export function useRuntimeSettingsViewModel() {
     updateWorkbenchField,
     saveRuntimeConfig,
     resetRuntimeDefaults,
+    installSystemLauncher,
   };
 }

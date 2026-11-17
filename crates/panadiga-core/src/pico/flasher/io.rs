@@ -31,31 +31,49 @@ pub fn detect_bootsel_drives() -> Vec<PathBuf> {
 
     #[cfg(unix)]
     {
-        let candidate_roots = [
-            "/media",
-            "/run/media",
-            "/Volumes", // macOS
+        let mut candidate_roots: Vec<PathBuf> = vec![
+            PathBuf::from("/media"),
+            PathBuf::from("/run/media"),
+            PathBuf::from("/mnt"),
+            PathBuf::from("/Volumes"),
         ];
+        if let Ok(xdg_runtime) = std::env::var("XDG_RUNTIME_DIR")
+            && !xdg_runtime.trim().is_empty()
+        {
+            candidate_roots.push(PathBuf::from(xdg_runtime).join("media"));
+        }
 
-        for root in candidate_roots {
-            let root_path = Path::new(root);
-            if let Ok(entries) = fs::read_dir(root_path) {
+        let push_if_bootsel = |dir: &Path, list: &mut Vec<PathBuf>| {
+            if dir.is_dir()
+                && (dir.join("INFO_UF2.TXT").exists() || dir.join("INDEX.HTM").exists())
+                && !list.iter().any(|existing| existing == dir)
+            {
+                list.push(dir.to_path_buf());
+            }
+        };
+
+        for root_path in candidate_roots {
+            push_if_bootsel(&root_path, &mut bootsel_drives);
+            if let Ok(entries) = fs::read_dir(&root_path) {
                 for entry in entries.flatten() {
                     let p = entry.path();
                     if p.is_dir() {
-                        // Check inside user subfolders (e.g. /media/user/RPI-RP2)
+                        push_if_bootsel(&p, &mut bootsel_drives);
                         if let Ok(sub_entries) = fs::read_dir(&p) {
                             for sub in sub_entries.flatten() {
-                                let sp = sub.path();
-                                if sp.join("INFO_UF2.TXT").exists() {
-                                    bootsel_drives.push(sp);
-                                }
+                                push_if_bootsel(&sub.path(), &mut bootsel_drives);
                             }
                         }
-                        if p.join("INFO_UF2.TXT").exists() {
-                            bootsel_drives.push(p);
-                        }
                     }
+                }
+            }
+        }
+
+        if let Ok(mounts_txt) = fs::read_to_string("/proc/mounts") {
+            for line in mounts_txt.lines() {
+                if let Some(mp) = line.split_whitespace().nth(1) {
+                    let clean_mp = mp.replace(r"\040", " ");
+                    push_if_bootsel(Path::new(&clean_mp), &mut bootsel_drives);
                 }
             }
         }

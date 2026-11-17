@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
-import { HardDrive, Loader2, ShieldCheck } from 'lucide-react';
-import { KIB_BYTES, SD_DISK_CHECKS_PREVIEW } from '@/constants';
+import { Loader2, ShieldCheck } from 'lucide-react';
 import { Alert, AlertDescription, Badge, Button, EmptyState, Input } from '@/components/ui';
 import { useTranslation } from '@/i18n/useTranslation';
-import type { SdDiskInspectionReport } from '@/models';
+import { SdDiskInspectSection } from './SdDiskInspectSection';
 import {
-  resolveSdOverallBadgeVariant,
   resolveSeverityBadgeVariant,
   validateRequiredText,
   type SdDiskVerificationProps,
@@ -16,60 +14,6 @@ interface SdVerificationPanelProps extends SdDiskVerificationProps {
   onChangeVerifyDir: (val: string) => void;
 }
 
-const SdDiskReportCard: React.FC<{ readonly diskResult: SdDiskInspectionReport }> = ({
-  diskResult,
-}) => {
-  const { t } = useTranslation();
-  return (
-    <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3 space-y-2 text-[11px] font-mono">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="font-semibold text-cyan-300">{diskResult.target}</span>
-        <div className="flex flex-wrap gap-1.5">
-          <Badge variant="outline">{diskResult.partition_scheme}</Badge>
-          {diskResult.bpb && (
-            <Badge variant="secondary">
-              {t('unbrick.sdKit.kibPerCluster', {
-                kind: diskResult.bpb.computed_fat_kind,
-                kib: Math.round(diskResult.bpb.cluster_size_bytes / KIB_BYTES),
-              })}
-            </Badge>
-          )}
-          <Badge variant={resolveSdOverallBadgeVariant(diskResult.overall_status)}>
-            {diskResult.overall_status}
-          </Badge>
-        </div>
-      </div>
-      {diskResult.digadiag_entry && (
-        <div className="text-slate-300">
-          {diskResult.digadiag_entry.name_8_3}: {diskResult.digadiag_entry.file_size.toLocaleString()} B
-          {' • '}
-          {diskResult.digadiag_entry.chain_contiguous
-            ? t('unbrick.sdKit.contiguous')
-            : t('unbrick.sdKit.fragmented')}
-          {' • '}
-          {diskResult.digadiag_entry.chain_complete
-            ? t('unbrick.sdKit.chainOk')
-            : t('unbrick.sdKit.chainIncomplete')}
-        </div>
-      )}
-      {diskResult.pana_sd_entry && (
-        <div className="text-slate-300">
-          {diskResult.pana_sd_entry.name_8_3}: {diskResult.pana_sd_entry.file_size.toLocaleString()} B
-          {' • '}
-          {diskResult.pana_sd_entry.chain_contiguous
-            ? t('unbrick.sdKit.contiguous')
-            : t('unbrick.sdKit.fragmented')}
-        </div>
-      )}
-      {diskResult.checks.slice(0, SD_DISK_CHECKS_PREVIEW).map((chk) => (
-        <div key={chk.id} className="text-slate-400">
-          [{chk.severity.toUpperCase()}] {chk.title}: {chk.detail}
-        </div>
-      ))}
-    </div>
-  );
-};
-
 export const SdVerificationPanel: React.FC<SdVerificationPanelProps> = ({
   verifyDir,
   onChangeVerifyDir,
@@ -77,19 +21,17 @@ export const SdVerificationPanel: React.FC<SdVerificationPanelProps> = ({
   verifyResult,
   verifyError,
   onVerifyMedia,
-  diskLoading = false,
-  diskResult = null,
-  diskError = null,
-  onInspectSdDisk,
+  autoSdMountDir = null,
+  ...diskProps
 }) => {
   const { t } = useTranslation();
   const [verifyDirError, setVerifyDirError] = useState<string | null>(null);
-  const [diskTarget, setDiskTarget] = useState('E:');
-  const [diskTargetError, setDiskTargetError] = useState<string | null>(null);
+  const effectiveVerifyDir =
+    verifyDir === 'sd_card_eh55' && autoSdMountDir ? autoSdMountDir : verifyDir;
   const checks = verifyResult?.checks ?? [];
 
   const handleVerifyClick = async () => {
-    const res = validateRequiredText(verifyDir, 'unbrick.errors.verifyDirRequired');
+    const res = validateRequiredText(effectiveVerifyDir, 'unbrick.errors.verifyDirRequired');
     if (res.errorKey) {
       setVerifyDirError(t(res.errorKey));
       return;
@@ -98,27 +40,16 @@ export const SdVerificationPanel: React.FC<SdVerificationPanelProps> = ({
     await onVerifyMedia(res.trimmed);
   };
 
-  const handleInspectDiskClick = async () => {
-    if (!onInspectSdDisk) return;
-    const res = validateRequiredText(diskTarget, 'unbrick.sdKit.inspectDiskRequired');
-    if (res.errorKey) {
-      setDiskTargetError(t(res.errorKey));
-      return;
-    }
-    setDiskTargetError(null);
-    await onInspectSdDisk(res.trimmed);
-  };
-
   return (
     <div className="border-t border-slate-800/80 pt-3 space-y-2.5">
       <div className="flex flex-col sm:flex-row gap-2">
         <div className="flex-1 space-y-1">
           <Input
-            value={verifyDir}
+            value={effectiveVerifyDir}
             aria-label={t('unbrick.sdKit.verifyInputLabel')}
             aria-invalid={Boolean(verifyDirError)}
             aria-describedby={verifyDirError ? 'sd-verify-dir-err' : undefined}
-            onChange={e => {
+            onChange={(e) => {
               onChangeVerifyDir(e.target.value);
               if (verifyDirError) setVerifyDirError(null);
             }}
@@ -156,7 +87,7 @@ export const SdVerificationPanel: React.FC<SdVerificationPanelProps> = ({
         <EmptyState compact title={t('unbrick.sdKit.checksEmpty')} />
       ) : (
         <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1">
-          {checks.map(item => (
+          {checks.map((item) => (
             <div
               key={item.id}
               className="rounded-xl border border-slate-800 bg-slate-950/70 p-2.5 text-xs space-y-1"
@@ -173,52 +104,7 @@ export const SdVerificationPanel: React.FC<SdVerificationPanelProps> = ({
         </div>
       )}
 
-      {onInspectSdDisk && (
-        <div className="border-t border-slate-800/80 pt-3 space-y-2.5">
-          <div className="flex flex-col sm:flex-row gap-2">
-            <div className="flex-1 space-y-1">
-              <Input
-                value={diskTarget}
-                aria-label={t('unbrick.sdKit.inspectDiskLabel')}
-                aria-invalid={Boolean(diskTargetError)}
-                aria-describedby={diskTargetError ? 'sd-disk-target-err' : undefined}
-                onChange={e => {
-                  setDiskTarget(e.target.value);
-                  if (diskTargetError) setDiskTargetError(null);
-                }}
-                placeholder={t('unbrick.sdKit.diskTargetPlaceholder')}
-              />
-              {diskTargetError && (
-                <p id="sd-disk-target-err" className="text-[11px] text-rose-400 font-mono">
-                  {diskTargetError}
-                </p>
-              )}
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={diskLoading}
-              onClick={() => void handleInspectDiskClick()}
-            >
-              {diskLoading ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
-              ) : (
-                <HardDrive className="w-3.5 h-3.5 mr-1.5 text-emerald-400" />
-              )}
-              <span>{t('unbrick.sdKit.inspectDiskBtn')}</span>
-            </Button>
-          </div>
-
-          {diskError && (
-            <Alert variant="destructive">
-              <AlertDescription>{diskError}</AlertDescription>
-            </Alert>
-          )}
-
-          {diskResult && <SdDiskReportCard diskResult={diskResult} />}
-        </div>
-      )}
+      <SdDiskInspectSection {...diskProps} onChangeVerifyDir={onChangeVerifyDir} />
     </div>
   );
 };

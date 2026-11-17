@@ -151,6 +151,17 @@ export interface PartitionExtractionManifest {
 }
 
 
+export type StorageMediaRole = 'system_os' | 'hard_disk' | 'sd_card' | 'other';
+export type DriveRoleFilter = 'all' | 'hard_disk' | 'sd_card' | 'mounted';
+
+export interface MountedPartitionInfo {
+  device_path: string;
+  label: string;
+  fs_type: string;
+  mount_point: string;
+  size_bytes: number;
+}
+
 export interface PhysicalDriveInfo {
   device_path: string;
   display_name: string;
@@ -159,6 +170,12 @@ export interface PhysicalDriveInfo {
   is_system_drive: boolean;
   safe_to_write: boolean;
   lockout_reason?: string | null;
+  drive_role?: StorageMediaRole;
+  bus_type?: string;
+  removable?: boolean;
+  is_mounted?: boolean;
+  mount_points?: string[];
+  partitions?: MountedPartitionInfo[];
 }
 
 export interface DriveWriteReport {

@@ -4,9 +4,10 @@ use super::super::args::{HddActions, HddArgs};
 use anyhow::Result;
 use panadiga_core::constants::{DEFAULT_HDD_IMAGE_PATH, PANA_FRM_MOD3_START_OFFSET};
 use panadiga_core::hdd::{
-    decode_meihdfs_descriptors, default_capacity_patched_output_path, export_report_to_json,
-    extract_hdd_partitions, generate_meihdfs_layout, inspect_hdd_image, inspect_main_hdd_capacity,
-    list_physical_drives, open_image_buffer, patch_main_hdd_capacity_with_passthrough,
+    PhysicalDriveInfo, StorageMediaRole, decode_meihdfs_descriptors,
+    default_capacity_patched_output_path, export_report_to_json, extract_hdd_partitions,
+    generate_meihdfs_layout, inspect_hdd_image, inspect_main_hdd_capacity, list_drives_by_role,
+    list_sd_card_drives, open_image_buffer, patch_main_hdd_capacity_with_passthrough,
     restore_meihdfs_from_mirrors, write_meihdfs_procedural_to_drive, write_raw_image_to_drive,
 };
 use panadiga_core::log_println;
@@ -27,6 +28,46 @@ fn resolve_main_capacity_input(input: Option<PathBuf>) -> PathBuf {
             PathBuf::from(DEFAULT_HDD_IMAGE_PATH)
         }
     })
+}
+
+fn print_drive_inventory(title: &str, drives: &[PhysicalDriveInfo]) {
+    log_println!("====================================================================");
+    log_println!("   {title}");
+    log_println!("====================================================================");
+    if drives.is_empty() {
+        log_println!("No matching physical block storage drives or mounted media detected.");
+    } else {
+        for d in drives {
+            let status = if d.safe_to_write {
+                "[SAFE TO WRITE]"
+            } else {
+                "[LOCKED - SYSTEM DRIVE]"
+            };
+            let role_tag = match d.drive_role {
+                StorageMediaRole::HardDisk => "HDD",
+                StorageMediaRole::SdCard => "SD",
+                StorageMediaRole::SystemOs => "OS",
+                StorageMediaRole::Other => "OTHER",
+            };
+            let mounts = if d.mount_points.is_empty() {
+                "UNMOUNTED".to_string()
+            } else {
+                d.mount_points.join(", ")
+            };
+            log_println!(
+                "Target: {:<18} | {:<4} | {:<23} | {} | Mounts: {}",
+                d.device_path,
+                role_tag,
+                status,
+                d.display_name,
+                mounts
+            );
+            if let Some(ref reason) = d.lockout_reason {
+                log_println!("        -> {}", reason);
+            }
+        }
+    }
+    log_println!("--------------------------------------------------------------------");
 }
 
 pub fn handle_hdd(args: HddArgs) -> Result<()> {
@@ -55,32 +96,22 @@ pub fn handle_hdd(args: HddArgs) -> Result<()> {
             let img_path = resolve_hdd_path(image);
             decode_meihdfs_descriptors(&img_path, journal, json.as_deref())?;
         }
-        HddActions::ListDrives => {
-            let drives = list_physical_drives()?;
-            log_println!("====================================================================");
-            log_println!("   PANADIGA STORAGE DISCOVERY & SYSTEM DRIVE LOCKOUT AUDIT");
-            log_println!("====================================================================");
-            if drives.is_empty() {
-                log_println!("No physical block storage drives detected.");
-            } else {
-                for d in &drives {
-                    let status = if d.safe_to_write {
-                        "[SAFE TO WRITE]"
-                    } else {
-                        "[LOCKED - SYSTEM DRIVE]"
-                    };
-                    log_println!(
-                        "Target: {:<20} | {:<23} | {}",
-                        d.device_path,
-                        status,
-                        d.display_name
-                    );
-                    if let Some(ref reason) = d.lockout_reason {
-                        log_println!("        -> {}", reason);
-                    }
-                }
-            }
-            log_println!("--------------------------------------------------------------------");
+        HddActions::ListDrives { role } => {
+            let parsed = match role.trim().to_ascii_lowercase().as_str() {
+                "hdd" | "hard_disk" | "harddisk" => Some(StorageMediaRole::HardDisk),
+                "sd" | "sd_card" | "sdcard" | "mmc" => Some(StorageMediaRole::SdCard),
+                "system" | "os" => Some(StorageMediaRole::SystemOs),
+                _ => None,
+            };
+            let drives = list_drives_by_role(parsed)?;
+            print_drive_inventory(
+                "PANADIGA STORAGE DISCOVERY & SYSTEM DRIVE LOCKOUT AUDIT",
+                &drives,
+            );
+        }
+        HddActions::ListSdCards => {
+            let drives = list_sd_card_drives()?;
+            print_drive_inventory("PANADIGA SD CARD / REMOVABLE MEDIA DISCOVERY", &drives);
         }
         HddActions::FormatMeihdfs {
             target,

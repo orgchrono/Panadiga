@@ -264,7 +264,13 @@
       "pipelineResetToast": "Pipeline Reset",
       "resetAllBtn": "Reset Layout & Defaults",
       "resetAllToastTitle": "Layout & Preferences Restored",
-      "resetAllToastMsg": "Splitter ratios, theme, and mode have been safely restored."
+      "resetAllToastMsg": "Splitter ratios, theme, and mode have been safely restored.",
+      "launcherTitle": "OS Launcher, Icon & Desktop Shortcut",
+      "launcherDesc": "Installs system menu launcher, Hicolor icon (Linux XDG), and Desktop shortcut (Linux `.desktop` / Windows `.lnk`).",
+      "installShortcutBtn": "Create Launcher & Desktop Shortcut",
+      "installingShortcut": "Creating Shortcut...",
+      "shortcutCreatedTitle": "Launcher and shortcut created!",
+      "shortcutErrorTitle": "Failed creating launcher/shortcut"
     },
     "runtime": {
       "cardTitle": "Runtime Operational Defaults (Rust Persisted)",

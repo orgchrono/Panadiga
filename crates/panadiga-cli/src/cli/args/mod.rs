@@ -117,4 +117,12 @@ pub enum Commands {
 
     /// Static Matsushita MN103S / AM34 reverse-engineering traps, xrefs, & DRV CLI auditors
     Re(ReArgs),
+
+    /// Installs OS application launcher menu entry, icon, and optional Desktop shortcut (Linux XDG / Windows .lnk)
+    #[command(name = "install-shortcut", alias = "install_shortcut")]
+    InstallShortcut {
+        /// Skip creating an icon on ~/Desktop (menu launcher only)
+        #[arg(long)]
+        no_desktop: bool,
+    },
 }

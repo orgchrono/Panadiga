@@ -73,10 +73,83 @@ pub fn calculate_entropy(data: &[u8]) -> f64 {
     entropy
 }
 
-/// Opens a disk image buffer, transparently supporting raw images via zero-copy mmap
-/// or compressed images (.gz or magic 0x1F 0x8B) via streaming in-memory GZIP decompression.
+/// Maximum byte prefix read when inspecting a live raw block device (covers MBR, WAL, Mirrors, Part 1 & 2).
+const MAX_BLOCK_DEVICE_INSPECT_BYTES: usize = 128 * 1024 * 1024;
+const BLOCK_READ_CHUNK_BYTES: usize = 64 * 1024;
+
+/// Returns `true` when `path` addresses a raw OS block device, disk handle, or logical volume.
+pub fn is_raw_block_device_path(path: &Path) -> bool {
+    let raw = path.to_string_lossy();
+    let trimmed = raw.trim();
+    if trimmed.starts_with(r"\\.\") || trimmed.starts_with("/dev/") {
+        return true;
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::FileTypeExt;
+        if let Ok(meta) = fs::metadata(path)
+            && meta.file_type().is_block_device()
+        {
+            return true;
+        }
+    }
+    false
+}
+
+fn read_block_device_prefix(path: &Path) -> Result<Vec<u8>> {
+    let mut file = File::open(path).map_err(|e| {
+        if e.kind() == std::io::ErrorKind::PermissionDenied {
+            anyhow::anyhow!(
+                "Permission denied opening block device '{}' read-only ({}). Linux: add user to 'disk' group (`sudo usermod -aG disk $USER`) or run `pkexec panadiga ...`. Windows: run as Administrator.",
+                path.display(),
+                e
+            )
+        } else {
+            anyhow::Error::new(e).context(format!("Failed opening block device: {}", path.display()))
+        }
+    })?;
+
+    let mut buffer = Vec::with_capacity(64 * 1024);
+    let mut chunk = vec![0u8; BLOCK_READ_CHUNK_BYTES];
+    while buffer.len() < MAX_BLOCK_DEVICE_INSPECT_BYTES {
+        let remaining = MAX_BLOCK_DEVICE_INSPECT_BYTES - buffer.len();
+        let to_read = remaining.min(chunk.len());
+        match file.read(&mut chunk[..to_read]) {
+            Ok(0) => break,
+            Ok(n) => buffer.extend_from_slice(&chunk[..n]),
+            Err(e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
+            Err(_) if !buffer.is_empty() => break,
+            Err(e) => {
+                return Err(e).with_context(|| {
+                    format!(
+                        "Failed reading sectors from block device: {}",
+                        path.display()
+                    )
+                });
+            }
+        }
+    }
+    if buffer.is_empty() {
+        anyhow::bail!("Block device returned 0 readable bytes: {}", path.display());
+    }
+    Ok(buffer)
+}
+
+/// Opens a disk image or live block device, supporting mmap for files, streaming GZIP,
+/// and sector-aligned prefix reads for raw OS disks (`/dev/sdX`, `\\.\PhysicalDriveN`).
 pub fn open_image_buffer(path: &Path) -> Result<ImageBuffer> {
-    let resolved = resolve_input_path(path)?;
+    let mut resolved = resolve_input_path(path)?;
+    if resolved.is_dir()
+        && let Some(blk) =
+            super::writer::resolve_mount_point_to_block_device(&resolved.to_string_lossy())
+    {
+        resolved = std::path::PathBuf::from(blk);
+    }
+
+    if is_raw_block_device_path(&resolved) {
+        return read_block_device_prefix(&resolved).map(ImageBuffer::Ram);
+    }
+
     let mut file = File::open(&resolved)
         .with_context(|| format!("Failed opening image file: {}", resolved.display()))?;
     let file_len = file.metadata()?.len();

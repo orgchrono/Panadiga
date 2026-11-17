@@ -154,6 +154,16 @@ export function handleMockSystemCommand(
     case 'log_frontend_event':
       return null;
 
+    case 'install_desktop_shortcut':
+      return {
+        platform: 'linux',
+        desktop_entry_path: '~/.local/share/applications/panadiga.desktop',
+        icon_path: '~/.local/share/icons/hicolor/128x128/apps/panadiga.png',
+        shortcut_path: '~/Desktop/Panadiga.desktop',
+        created: true,
+        message: 'Launcher XDG e atalho registrados em modo de demonstração.',
+      };
+
     default:
       return undefined;
   }

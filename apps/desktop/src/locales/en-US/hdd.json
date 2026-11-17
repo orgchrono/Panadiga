@@ -247,10 +247,25 @@
       "tabCapacity": "Capacity Unlocker (250GB / 2TB)",
       "tabWriter": "Physical Writer & mkfs"
     },
+    "devices": {
+      "filterAria": "Filter storage devices by functional role",
+      "filterHdd": "HDD / USB",
+      "filterSd": "SD Card / MMC",
+      "filterMounted": "Mounted",
+      "filterAll": "All",
+      "emptyForFilter": "No physical drives or mounted media match the selected filter.",
+      "badgeSd": "SD / REMOVABLE",
+      "inspectDeviceLabel": "Or pick a detected Physical Drive / Mounted Volume (Windows & Linux):"
+    },
     "writer": {
       "title": "Physical Disk Writer & MEIHDFS Formatter (mkfs.meihdfs)",
       "subtitle": "Direct physical writing to PATA/IDE drives with OS host safety lock and confirmation guard.",
       "refreshBtn": "Refresh Drives",
+      "unmountBtn": "Unmount Partitions",
+      "unmountingBtn": "Unmounting...",
+      "unmountSuccessTitle": "Partitions unmounted cleanly",
+      "unmountEmptyMsg": "No active mounts found on {{device}}.",
+      "unmountErrorTitle": "Failed unmounting partitions",
       "safetyTitle": "SAFETY INVARIANT: UNCONDITIONAL BOOT DISK LOCKOUT",
       "safetyBodyWindowsPrefix": "The host OS disk (e.g.",
       "safetyBodyMiddle": "on Windows or",

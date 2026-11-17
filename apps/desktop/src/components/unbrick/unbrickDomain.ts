@@ -1,7 +1,9 @@
 import type { TranslationKey } from '@/i18n/translations';
 import type {
   BgoMode,
+  DriveRoleFilter,
   MainPassthroughMode,
+  PhysicalDriveInfo,
   SdDiskInspectionReport,
   SdMediaVerificationReport,
   SdUnbrickKitRequestDto,
@@ -18,6 +20,13 @@ export interface SdDiskVerificationProps {
   diskResult?: SdDiskInspectionReport | null;
   diskError?: string | null;
   onInspectSdDisk?: (target: string) => Promise<SdDiskInspectionReport | null>;
+  sdDrives?: readonly PhysicalDriveInfo[];
+  sdDriveFilter?: DriveRoleFilter;
+  onChangeSdDriveFilter?: (filter: DriveRoleFilter) => void;
+  sdDrivesLoading?: boolean;
+  onRefreshSdDrives?: () => void;
+  autoSdDiskTarget?: string | null;
+  autoSdMountDir?: string | null;
 }
 
 export type BadgeVariant = 'success' | 'warning' | 'destructive' | 'secondary';

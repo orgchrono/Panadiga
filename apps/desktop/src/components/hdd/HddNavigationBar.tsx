@@ -11,8 +11,9 @@ import {
 } from 'lucide-react';
 import type { TranslationKey } from '@/i18n/translations';
 import { useTranslation } from '@/i18n/useTranslation';
-import type { HddTab } from '@/models';
+import type { DriveRoleFilter, HddTab, PhysicalDriveInfo } from '@/models';
 import { isRecord, readStringProp } from '@/utils/typeGuards';
+import { StorageDeviceSelector } from './StorageDeviceSelector';
 
 interface HddNavigationBarProps {
   readonly showPathInput: boolean;
@@ -20,6 +21,11 @@ interface HddNavigationBarProps {
   readonly onInputPathChange: (val: string) => void;
   readonly onOpenPath: () => void;
   readonly onSelectImagePath: (path: string) => void;
+  readonly drives: readonly PhysicalDriveInfo[];
+  readonly roleFilter: DriveRoleFilter;
+  readonly onChangeRoleFilter: (filter: DriveRoleFilter) => void;
+  readonly loadingDrives: boolean;
+  readonly onRefreshDrives: () => void;
   readonly activeTab: HddTab;
   readonly onSelectTab: (tab: HddTab) => void;
   readonly isAdvanced: boolean;
@@ -52,6 +58,11 @@ export const HddNavigationBar: React.FC<HddNavigationBarProps> = ({
   onInputPathChange,
   onOpenPath,
   onSelectImagePath,
+  drives,
+  roleFilter,
+  onChangeRoleFilter,
+  loadingDrives,
+  onRefreshDrives,
   activeTab,
   onSelectTab,
   isAdvanced,
@@ -136,6 +147,22 @@ export const HddNavigationBar: React.FC<HddNavigationBarProps> = ({
             >
               {t('hdd.navBar.loadBtn')}
             </button>
+          </div>
+          <div className="pt-2 border-t border-slate-800 space-y-2">
+            <span className="text-[11px] text-slate-400 block">
+              {t('hdd.devices.inspectDeviceLabel')}
+            </span>
+            <StorageDeviceSelector
+              compact
+              allowSelectSystemDrive={false}
+              drives={drives}
+              selectedDevicePath={inputPath}
+              roleFilter={roleFilter}
+              onChangeRoleFilter={onChangeRoleFilter}
+              loading={loadingDrives}
+              onRefresh={onRefreshDrives}
+              onSelectDrive={(drive) => onSelectImagePath(drive.device_path)}
+            />
           </div>
         </div>
       )}

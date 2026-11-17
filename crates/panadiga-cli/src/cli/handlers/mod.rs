@@ -85,5 +85,13 @@ pub fn dispatch(command: Commands) -> Result<()> {
         Commands::Mcp(args) => handle_mcp(args),
         Commands::Unbrick(args) => handle_unbrick(args),
         Commands::Re(args) => handle_re(args),
+        Commands::InstallShortcut { no_desktop } => {
+            let report = panadiga_core::launcher::install_desktop_launcher(!no_desktop)?;
+            panadiga_core::log_println!("[OK] {}", report.message);
+            if let Some(shortcut) = report.shortcut_path {
+                panadiga_core::log_println!("     Atalho Desktop: {}", shortcut);
+            }
+            Ok(())
+        }
     }
 }

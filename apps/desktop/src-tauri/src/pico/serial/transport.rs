@@ -115,7 +115,15 @@ pub(super) fn open_validated_cdc(
     let port =
         panadiga_core::pico::cdc::open_cdc(&clean, baud_rate, Duration::from_millis(timeout_ms))
             .map_err(|e| {
-                PanadigaIpcError::serial(format!("Falha ao abrir porta serial {}: {}", clean, e))
+                let msg = e.to_string();
+                let hint = if cfg!(target_os = "linux")
+                    && msg.to_ascii_lowercase().contains("permission")
+                {
+                    " (Linux: adicione seu usuário ao grupo 'dialout'/'uucp' via `sudo usermod -aG dialout,uucp $USER`)"
+                } else {
+                    ""
+                };
+                PanadigaIpcError::serial(format!("Falha ao abrir porta serial {clean}: {msg}{hint}"))
             })?;
     Ok((clean, port))
 }

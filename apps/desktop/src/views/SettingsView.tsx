@@ -75,6 +75,8 @@ export const SettingsView: React.FC = () => {
         onResetPipeline={resetPipeline}
         onResetWorkbenchPreferences={resetWorkbenchPreferences}
         onNotify={toast}
+        installingShortcut={runtimeVm.installingShortcut}
+        onInstallShortcut={() => void runtimeVm.installSystemLauncher()}
       />
     </div>
   );

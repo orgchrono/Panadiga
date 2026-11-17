@@ -37,3 +37,12 @@ pub fn log_frontend_event(
     emit_frontend_telemetry(&severity, &subsystem, &message, details.as_deref());
     Ok(())
 }
+
+/// Registers OS application menu launcher, icon, and optional Desktop shortcut (Linux XDG / Windows `.lnk`).
+#[tauri::command]
+pub fn install_desktop_shortcut(
+    create_desktop_shortcut: Option<bool>,
+) -> IpcResult<panadiga_core::launcher::LauncherInstallReport> {
+    panadiga_core::launcher::install_desktop_launcher(create_desktop_shortcut.unwrap_or(true))
+        .map_err(|err| PanadigaIpcError::io(err.to_string()))
+}

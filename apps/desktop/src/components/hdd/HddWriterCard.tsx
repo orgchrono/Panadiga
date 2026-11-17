@@ -7,7 +7,6 @@ import {
   RefreshCw,
   ShieldCheck,
 } from 'lucide-react';
-import { StatusBadge } from '@/components/StatusBadge';
 import {
   DECIMAL_GB_BYTES,
   HDD_DEFAULT_CAPACITY_GB,
@@ -18,7 +17,9 @@ import {
   ONE_TERABYTE_GB,
 } from '@/constants';
 import { useTranslation } from '@/i18n/useTranslation';
-import type { DriveWriteReport, PhysicalDriveInfo } from '@/models';
+import { EmptyState } from '@/components/ui';
+import type { DriveRoleFilter, DriveWriteReport, PhysicalDriveInfo } from '@/models';
+import { StorageDeviceSelector } from './StorageDeviceSelector';
 
 const RAW_IMAGE_PRESETS: ReadonlyArray<{ readonly label: string; readonly path: string }> = [
   {
@@ -37,6 +38,11 @@ const RAW_IMAGE_PRESETS: ReadonlyArray<{ readonly label: string; readonly path: 
 
 export interface HddWriterCardProps {
   readonly drives: readonly PhysicalDriveInfo[];
+  readonly filteredDrives: readonly PhysicalDriveInfo[];
+  readonly roleFilter: DriveRoleFilter;
+  readonly setRoleFilter: (filter: DriveRoleFilter) => void;
+  readonly unmountingPath: string | null;
+  readonly unmountDrive: (devicePath: string) => Promise<boolean>;
   readonly selectedDrive: PhysicalDriveInfo | null;
   readonly setSelectedDrive: (drive: PhysicalDriveInfo | null) => void;
   readonly loadingDrives: boolean;
@@ -58,7 +64,11 @@ export interface HddWriterCardProps {
 }
 
 export const HddWriterCard: React.FC<HddWriterCardProps> = ({
-  drives,
+  filteredDrives,
+  roleFilter,
+  setRoleFilter,
+  unmountingPath,
+  unmountDrive,
   selectedDrive,
   setSelectedDrive,
   loadingDrives,
@@ -117,50 +127,17 @@ export const HddWriterCard: React.FC<HddWriterCardProps> = ({
         <span className="text-xs text-slate-400 font-semibold uppercase block">
           {t('hdd.writer.selectTargetLabel')}
         </span>
-        {drives.length === 0 ? (
-          <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-500 text-center">
-            {t('hdd.writer.emptyDrives')}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {drives.map((drive) => {
-              const isSelected = selectedDrive?.device_path === drive.device_path;
-              return (
-                <button
-                  key={drive.device_path}
-                  type="button"
-                  disabled={!drive.safe_to_write}
-                  aria-pressed={isSelected}
-                  onClick={() => drive.safe_to_write && setSelectedDrive(drive)}
-                  className={`p-4 rounded-xl border text-left transition-all ${
-                    drive.is_system_drive
-                      ? 'bg-rose-950/20 border-rose-900/60 opacity-60 cursor-not-allowed'
-                      : isSelected
-                        ? 'bg-cyan-500/10 border-cyan-500/50 shadow-lg cursor-pointer'
-                        : 'bg-slate-950 border-slate-800 hover:border-slate-700 cursor-pointer'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-bold text-xs text-slate-200">{drive.display_name}</span>
-                    {drive.is_system_drive ? (
-                      <StatusBadge variant="error" label={t('hdd.writer.badgeLocked')} />
-                    ) : (
-                      <StatusBadge variant="success" label={t('hdd.writer.badgeSafe')} />
-                    )}
-                  </div>
-                  <span className="text-[11px] font-mono text-cyan-400 block">
-                    {drive.device_path}
-                  </span>
-                  {drive.lockout_reason && (
-                    <span className="text-[10px] text-rose-400 block mt-1">
-                      {drive.lockout_reason}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        )}
+        <StorageDeviceSelector
+          drives={filteredDrives}
+          selectedDevicePath={selectedDrive?.device_path}
+          roleFilter={roleFilter}
+          onChangeRoleFilter={setRoleFilter}
+          loading={loadingDrives}
+          unmountingPath={unmountingPath}
+          onRefresh={() => void fetchDrives()}
+          onSelectDrive={(drive) => setSelectedDrive(drive)}
+          onUnmountDrive={(path) => void unmountDrive(path)}
+        />
       </div>
 
       {selectedDrive && selectedDrive.safe_to_write && (
@@ -198,26 +175,33 @@ export const HddWriterCard: React.FC<HddWriterCardProps> = ({
               >
                 {t('hdd.writer.autoPhysicalPreset')}
               </button>
-              {HDD_WRITER_QUICK_GBS.map((gb) => {
-                const label =
-                  gb >= ONE_TERABYTE_GB
-                    ? `${gb / ONE_TERABYTE_GB} ${t('hdd.writer.tbUnit')}`
-                    : `${gb} GB`;
-                return (
-                  <button
-                    key={gb}
-                    type="button"
-                    onClick={() => setCustomSizeGb(gb)}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-colors ${
-                      customSizeGb === gb
-                        ? 'bg-emerald-500 text-slate-950 border-emerald-400'
-                        : 'bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-700'
-                    }`}
-                  >
-                    {label}
-                  </button>
+              {(() => {
+                const quickGbs: readonly number[] = HDD_WRITER_QUICK_GBS;
+                return quickGbs.length === 0 ? (
+                  <EmptyState compact title={t('hdd.writer.autoPhysicalPreset')} />
+                ) : (
+                  quickGbs.map((gb) => {
+                    const label =
+                      gb >= ONE_TERABYTE_GB
+                        ? `${gb / ONE_TERABYTE_GB} ${t('hdd.writer.tbUnit')}`
+                        : `${gb} GB`;
+                    return (
+                      <button
+                        key={gb}
+                        type="button"
+                        onClick={() => setCustomSizeGb(gb)}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-colors ${
+                          customSizeGb === gb
+                            ? 'bg-emerald-500 text-slate-950 border-emerald-400'
+                            : 'bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-700'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })
                 );
-              })}
+              })()}
               <input
                 type="number"
                 aria-label={t('hdd.writer.gbCustomPlaceholder')}

@@ -8,6 +8,7 @@ import type {
   EngineeringDocEntry,
   HardwareSsotSpec,
   HexDumpRow,
+  LauncherInstallReport,
   LiveNvramCaptureEvent,
   ManualSearchResult,
   PicoDeviceStatus,
@@ -43,6 +44,13 @@ export const decodeEngineeringLog = (relativePath: string): Promise<Am34BootLogR
 
 export const readHexDump = (offset: number, count: number): Promise<HexDumpRow[]> =>
   invokeCommand<HexDumpRow[]>('read_hex_dump', { offset, count });
+
+export const installDesktopShortcut = (
+  createDesktopShortcut = true,
+): Promise<LauncherInstallReport> =>
+  invokeCommand<LauncherInstallReport>('install_desktop_shortcut', {
+    createDesktopShortcut,
+  });
 
 export interface WorkbenchPipelineListeners {
   readonly onTelemetry: (status: PicoDeviceStatus) => void;

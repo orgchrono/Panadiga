@@ -1,6 +1,6 @@
 //! Pure DTO validation, request/parameter mapping, and JSON response formatting for Unbrick IPC.
 
-use panadiga_core::constants::resolve_workspace_root;
+use panadiga_core::constants::{resolve_workspace_root, resolve_writable_data_root};
 use panadiga_core::crypto::parse_u32_radix;
 use panadiga_core::re::{MainPassthroughMode, Prog061BgoPatchMode, SdUnbrickKitRequest};
 use serde::Deserialize;
@@ -71,8 +71,21 @@ pub(crate) fn to_sd_unbrick_kit_request(
         .parse()
         .map_err(|e: anyhow::Error| PanadigaIpcError::validation(e.to_string()))?;
 
+    let out_trimmed = dto.output_dir.trim();
+    if out_trimmed.is_empty() {
+        return Err(PanadigaIpcError::validation(
+            "Diretório de saída do Kit SD é obrigatório.",
+        ));
+    }
+    let out_p = PathBuf::from(out_trimmed);
+    let resolved_out = if out_p.is_absolute() {
+        out_p
+    } else {
+        resolve_writable_data_root().join(out_p)
+    };
+
     Ok(SdUnbrickKitRequest {
-        output_dir: resolve_dir_target(&dto.output_dir)?,
+        output_dir: resolved_out,
         pana_dvd_path: opt_read_path(&dto.pana_dvd_path),
         prog061_path: opt_read_path(&dto.prog061_path),
         main_path: opt_read_path(&dto.main_path),

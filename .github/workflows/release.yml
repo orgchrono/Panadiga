@@ -261,27 +261,79 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           staging="staging_release"
-          mkdir -p "$staging/tools"
+          mkdir -p "$staging/tools" "$staging/icons"
           cp "${{ matrix.platform.bin_cli }}" "$staging/panadiga"
           cp "${{ matrix.platform.bin_desktop }}" "$staging/panadiga-desktop"
           if [ -d "tools/ghidra" ]; then cp -r tools/ghidra "$staging/tools/ghidra"; fi
           if [ -f "tools/README.md" ]; then cp tools/README.md "$staging/tools/README.md"; fi
+          if [ -f "apps/desktop/src-tauri/icons/128x128.png" ]; then cp apps/desktop/src-tauri/icons/128x128.png "$staging/icons/panadiga.png"; fi
           cp LICENSE "$staging/LICENSE"
           chmod +x "$staging/panadiga" "$staging/panadiga-desktop"
+
+          if [ "${{ runner.os }}" = "Linux" ]; then
+            cat <<'EOF' > "$staging/install-launcher.sh"
+#!/usr/bin/env bash
+set -euo pipefail
+SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
+"$SELF_DIR/panadiga" install-shortcut "$@"
+EOF
+            chmod +x "$staging/install-launcher.sh"
+          fi
 
           tar -czvf "${{ matrix.platform.archive_name }}" -C "$staging" .
           shasum -a 256 "${{ matrix.platform.archive_name }}" > "${{ matrix.platform.archive_name }}.sha256"
 
           if [ "${{ runner.os }}" = "Linux" ]; then
-            echo "[*] Building Debian package (.deb)..."
+            echo "[*] Building Debian package (.deb) with Freedesktop launcher & Hicolor icons..."
             deb_dir="panadiga_deb_pkg"
-            mkdir -p "$deb_dir/DEBIAN" "$deb_dir/usr/bin" "$deb_dir/usr/share/panadiga/tools"
+            mkdir -p \
+              "$deb_dir/DEBIAN" \
+              "$deb_dir/usr/bin" \
+              "$deb_dir/usr/share/panadiga/tools" \
+              "$deb_dir/usr/share/applications" \
+              "$deb_dir/usr/share/pixmaps" \
+              "$deb_dir/usr/share/icons/hicolor/32x32/apps" \
+              "$deb_dir/usr/share/icons/hicolor/128x128/apps" \
+              "$deb_dir/usr/share/icons/hicolor/256x256/apps"
             cp "${{ matrix.platform.bin_cli }}" "$deb_dir/usr/bin/panadiga"
             cp "${{ matrix.platform.bin_desktop }}" "$deb_dir/usr/bin/panadiga-desktop"
             chmod 755 "$deb_dir/usr/bin/panadiga" "$deb_dir/usr/bin/panadiga-desktop"
+            cp apps/desktop/src-tauri/icons/32x32.png "$deb_dir/usr/share/icons/hicolor/32x32/apps/panadiga.png"
+            cp apps/desktop/src-tauri/icons/128x128.png "$deb_dir/usr/share/icons/hicolor/128x128/apps/panadiga.png"
+            cp apps/desktop/src-tauri/icons/128x128@2x.png "$deb_dir/usr/share/icons/hicolor/256x256/apps/panadiga.png"
+            cp apps/desktop/src-tauri/icons/128x128.png "$deb_dir/usr/share/pixmaps/panadiga.png"
+            cat <<'EOF' > "$deb_dir/usr/share/applications/panadiga.desktop"
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Panadiga
+GenericName=Panasonic DIGA Engineering Suite
+Comment=Panasonic DMR-EH55 Forensic, NVRAM, HDD & P7501 UART Suite
+Exec=/usr/bin/panadiga-desktop %U
+Icon=panadiga
+Terminal=false
+Categories=Development;Utility;Electronics;
+Keywords=Panasonic;DIGA;DMR-EH55;MEIHDFS;Pico;MN103S;U99;
+StartupNotify=true
+StartupWMClass=panadiga-desktop
+EOF
+            chmod 644 "$deb_dir/usr/share/applications/panadiga.desktop"
             if [ -d "tools/ghidra" ]; then cp -r tools/ghidra "$deb_dir/usr/share/panadiga/tools/ghidra"; fi
             if [ -f "tools/README.md" ]; then cp tools/README.md "$deb_dir/usr/share/panadiga/tools/README.md"; fi
-            printf "Package: panadiga\nVersion: 0.1.0\nSection: utils\nPriority: optional\nArchitecture: amd64\nMaintainer: OrgChrono Engineering <support@orgchrono.com>\nDepends: libc6, libwebkit2gtk-4.1-0, libayatana-appindicator3-1\nDescription: Panasonic DIGA DMR-EH55 Forensic, NVRAM and Reverse Engineering Suite\n" > "$deb_dir/DEBIAN/control"
+            cat <<'EOF' > "$deb_dir/DEBIAN/postinst"
+#!/bin/sh
+set -e
+if command -v update-desktop-database >/dev/null 2>&1; then update-desktop-database -q /usr/share/applications || true; fi
+if command -v gtk-update-icon-cache >/dev/null 2>&1; then gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor || true; fi
+EOF
+            cat <<'EOF' > "$deb_dir/DEBIAN/postrm"
+#!/bin/sh
+set -e
+if command -v update-desktop-database >/dev/null 2>&1; then update-desktop-database -q /usr/share/applications || true; fi
+if command -v gtk-update-icon-cache >/dev/null 2>&1; then gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor || true; fi
+EOF
+            chmod 755 "$deb_dir/DEBIAN/postinst" "$deb_dir/DEBIAN/postrm"
+            printf "Package: panadiga\nVersion: 0.1.0\nSection: utils\nPriority: optional\nArchitecture: amd64\nMaintainer: OrgChrono Engineering <support@orgchrono.com>\nDepends: libc6, libwebkit2gtk-4.1-0, libayatana-appindicator3-1 | libappindicator3-1\nDescription: Panasonic DIGA DMR-EH55 Forensic, NVRAM and Reverse Engineering Suite\n" > "$deb_dir/DEBIAN/control"
             dpkg-deb --build "$deb_dir" "panadiga-linux-amd64.deb"
             shasum -a 256 "panadiga-linux-amd64.deb" > "panadiga-linux-amd64.deb.sha256"
           fi

@@ -51,6 +51,30 @@ pub fn resolve_workspace_root() -> std::path::PathBuf {
     cwd
 }
 
+/// Resolves a writable base directory for relative outputs across repo builds and installed packages.
+/// Inside a dev repo it uses `resolve_workspace_root()`; when launched from `/usr/bin`, `/`, or
+/// read-only `Program Files`, it falls back to user-writable OS application storage.
+pub fn resolve_writable_data_root() -> std::path::PathBuf {
+    let ws = resolve_workspace_root();
+    if ws.join("Cargo.toml").is_file() && ws.join("crates").is_dir() {
+        return ws;
+    }
+    #[cfg(target_os = "windows")]
+    if let Some(local) = std::env::var_os("LOCALAPPDATA").filter(|s| !s.is_empty()) {
+        return std::path::PathBuf::from(local).join("Panadiga");
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        if let Some(xdg) = std::env::var_os("XDG_DATA_HOME").filter(|s| !s.is_empty()) {
+            return std::path::PathBuf::from(xdg).join("panadiga");
+        }
+        if let Some(home) = std::env::var_os("HOME").filter(|s| !s.is_empty()) {
+            return std::path::PathBuf::from(home).join("Panadiga");
+        }
+    }
+    ws
+}
+
 /// Resolves a workspace-relative subdirectory (e.g. `"docs"` or `"manuals_and_schematics"`).
 pub fn find_workspace_subdir(rel: &str) -> Option<std::path::PathBuf> {
     let root = resolve_workspace_root().join(rel);

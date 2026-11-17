@@ -77,6 +77,9 @@ macro_rules! build_invoke_handler {
             pico_trigger_bootsel_reboot,
             pico_flash_firmware,
             list_physical_drives,
+            list_hdd_drives,
+            list_sd_card_drives,
+            unmount_physical_drive,
             format_hdd_meihdfs,
             write_hdd_image,
             restore_hdd_mirrors,
@@ -99,6 +102,7 @@ macro_rules! build_invoke_handler {
             save_runtime_settings,
             reset_runtime_settings,
             log_frontend_event,
+            install_desktop_shortcut,
             $($android_cmd,)*
         ]
     };
@@ -113,6 +117,8 @@ pub fn run_desktop_app() {
         .manage(state::PanadigaBackendState::new())
         .plugin(tauri_plugin_shell::init())
         .setup(|app| {
+            #[cfg(not(target_os = "android"))]
+            panadiga_core::launcher::ensure_linux_desktop_launcher_if_missing();
             let backend = app.state::<state::PanadigaBackendState>();
             crate::commands::hardware_diag::start_port_mutation_observer(
                 app.handle().clone(),

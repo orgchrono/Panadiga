@@ -105,3 +105,12 @@ export interface RuntimeSettings {
   readonly ir: IrRuntimeSettings;
   readonly workbench: WorkbenchRuntimeSettings;
 }
+
+export interface LauncherInstallReport {
+  readonly platform: string;
+  readonly desktop_entry_path: string;
+  readonly icon_path?: string | null;
+  readonly shortcut_path?: string | null;
+  readonly created: boolean;
+  readonly message: string;
+}

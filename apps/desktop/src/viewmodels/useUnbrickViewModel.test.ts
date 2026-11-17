@@ -16,14 +16,17 @@ vi.mock('@/context/ToastContext', () => ({
   useToast: () => ({ showToast: mockShowToast }),
 }));
 
-async function renderWorkbenchWithQueue(...queued: unknown[]) {
+async function renderWorkbenchWithMap(commandResponses: Readonly<Record<string, unknown>> = {}) {
   const mockWorkbench = handleMockUnbrickCommand(
     'inspect_unbrick_workbench',
   ) as UnbrickWorkspaceReport;
-  const invokeMock = vi.mocked(ipcService.invokeCommand).mockResolvedValueOnce(mockWorkbench);
-  for (const item of queued) {
-    invokeMock.mockResolvedValueOnce(item);
-  }
+  vi.mocked(ipcService.invokeCommand).mockImplementation(async (cmd) => {
+    if (cmd === 'inspect_unbrick_workbench') return mockWorkbench;
+    if (cmd === 'list_sd_card_drives' || cmd === 'list_physical_drives' || cmd === 'list_hdd_drives') {
+      return [];
+    }
+    return commandResponses[cmd];
+  });
   const rendered = renderHook(() => useUnbrickViewModel());
   await waitFor(() => expect(rendered.result.current.workbench.loading).toBe(false));
   return rendered;
@@ -35,7 +38,7 @@ describe('useUnbrickViewModel', () => {
   });
 
   it('loads unbrick workbench on mount and hydrates TBC + RSP + SD verify state', async () => {
-    const { result } = await renderWorkbenchWithQueue();
+    const { result } = await renderWorkbenchWithMap();
 
     expect(ipcService.invokeCommand).toHaveBeenCalledWith('inspect_unbrick_workbench', undefined);
     expect(result.current.workbench.data?.discovered_pana_dvd).toBe(
@@ -50,7 +53,9 @@ describe('useUnbrickViewModel', () => {
     const mockKit = handleMockUnbrickCommand('prepare_sd_unbrick_kit_command', {
       request: { output_dir: 'sd_out', bgo_mode: 'bypass' },
     }) as SdUnbrickKitReport;
-    const { result } = await renderWorkbenchWithQueue(mockKit);
+    const { result } = await renderWorkbenchWithMap({
+      prepare_sd_unbrick_kit_command: mockKit,
+    });
 
     await act(async () => {
       await result.current.buildSdKit({
@@ -71,7 +76,12 @@ describe('useUnbrickViewModel', () => {
   });
 
   it('captures error state on IPC rejection without throwing', async () => {
-    vi.mocked(ipcService.invokeCommand).mockRejectedValueOnce(new Error('SD dir missing'));
+    vi.mocked(ipcService.invokeCommand).mockImplementation(async (cmd) => {
+      if (cmd === 'inspect_unbrick_workbench') {
+        throw new Error('SD dir missing');
+      }
+      return [];
+    });
 
     const { result } = renderHook(() => useUnbrickViewModel());
     await waitFor(() => expect(result.current.workbench.loading).toBe(false));
@@ -92,7 +102,11 @@ describe('useUnbrickViewModel', () => {
       payloadHex: 'DEADBEEF',
       useVendorEd: true,
     });
-    const { result } = await renderWorkbenchWithQueue(mockStub, mockBoot, mockInject);
+    const { result } = await renderWorkbenchWithMap({
+      build_nor_dumper_stub_command: mockStub,
+      run_matshita_boot_emu: mockBoot,
+      inject_matshita_atapi_write: mockInject,
+    });
 
     await act(async () => {
       await result.current.buildNorStub({ wrapAsDigadiag: true });
@@ -118,7 +132,9 @@ describe('useUnbrickViewModel', () => {
 
   it('audits raw SD disk MBR/BPB FAT16 via inspect_sd_disk_command', async () => {
     const mockDisk = handleMockUnbrickCommand('inspect_sd_disk_command', { target: 'E:' });
-    const { result } = await renderWorkbenchWithQueue(mockDisk);
+    const { result } = await renderWorkbenchWithMap({
+      inspect_sd_disk_command: mockDisk,
+    });
 
     await act(async () => {
       await result.current.inspectSdDisk('E:');

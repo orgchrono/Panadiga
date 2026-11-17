@@ -16,6 +16,7 @@ pub mod hdd;
 pub mod headers;
 #[cfg(any(target_os = "android", test, feature = "android-ir"))]
 pub mod ir;
+pub mod launcher;
 pub mod manuals;
 pub mod nvram;
 pub mod pico;
