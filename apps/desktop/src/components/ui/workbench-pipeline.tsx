@@ -34,7 +34,7 @@ export interface GuidedPipelineBarProps {
   readonly runningCommandId?: string | null;
 }
 
-const VIEW_GUIDANCE_HINT_MAP: Readonly<Record<ViewKey, TranslationKey>> = {
+const VIEW_GUIDANCE_HINT_MAP: Partial<Record<ViewKey, TranslationKey>> = {
   dashboard: 'pipeline.guidance.hintDashboard',
   picobench: 'pipeline.guidance.hintPico',
   nvram: 'pipeline.guidance.hintNvram',
@@ -44,7 +44,9 @@ const VIEW_GUIDANCE_HINT_MAP: Readonly<Record<ViewKey, TranslationKey>> = {
   hexinspector: 'pipeline.guidance.hintHex',
   manuals: 'pipeline.guidance.hintManuals',
   settings: 'pipeline.guidance.hintSettings',
-  ircommander: 'pipeline.guidance.hintIr',
+  ...(import.meta.env.MODE === 'android' || !import.meta.env.PROD
+    ? { ircommander: 'pipeline.guidance.hintIr' as const }
+    : {}),
 };
 
 const PIPELINE_STEPS: ReadonlyArray<{
@@ -138,7 +140,7 @@ export const GuidedPipelineBar: React.FC<GuidedPipelineBarProps> = ({
           <span>{t('pipeline.guidance.title')}:</span>
         </span>
         <Badge variant={statusBadge.variant} className="text-[10px] px-2 py-0">{statusBadge.label}</Badge>
-        <span className="text-slate-300 font-sans truncate">{t(VIEW_GUIDANCE_HINT_MAP[currentView])}</span>
+        <span className="text-slate-300 font-sans truncate">{t(VIEW_GUIDANCE_HINT_MAP[currentView] ?? 'pipeline.guidance.hintDashboard')}</span>
       </div>
     </section>
   );

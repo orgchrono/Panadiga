@@ -80,10 +80,17 @@ describe('useRuntimeSettingsViewModel & SettingsView', () => {
 
     const saveBtn = screen.getByTestId('runtime-settings-save-btn');
     expect(saveBtn).toHaveProperty('disabled', false);
-    fireEvent.click(saveBtn);
+    await act(async () => {
+      fireEvent.click(saveBtn);
+    });
 
     await waitFor(() => {
       expect(screen.getByTestId('runtime-settings-save-btn')).toHaveProperty('disabled', true);
+      expect(screen.getByTestId('runtime-settings-reset-btn')).toHaveProperty('disabled', false);
+      expect(screen.getByLabelText(/Baud Rate/i)).toHaveProperty('value', '57600');
+      expect(screen.getByRole('status').textContent).toMatch(
+        /validated and saved atomically|validados e gravados atomicamente/i,
+      );
     });
   });
 });

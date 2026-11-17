@@ -7,6 +7,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { DEFAULT_RUNTIME_SETTINGS } from '@/constants';
 import { useToast } from '@/context/ToastContext';
 import { useWorkbenchMode } from '@/context/WorkbenchModeContext';
+import { useAbortSlot } from '@/hooks/useAbortSlot';
+import type { TranslationKey } from '@/i18n/translations';
 import { translate } from '@/i18n/useTranslation';
 import type {
   IrRuntimeSettings,
@@ -39,25 +41,31 @@ export function useRuntimeSettingsViewModel() {
   const [saving, setSaving] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const { acquire: acquireReload, release: releaseReload } = useAbortSlot();
+  const { acquire: acquirePersist, release: releasePersist } = useAbortSlot();
 
   const draft = draftOverrides ?? runtimeSettings;
   const keywordsText = keywordsOverride ?? draft.storage.forensic_keywords.join(', ');
 
   const reloadFromBackend = useCallback(async () => {
     if (!isRustSettingsBacked()) return;
+    const ctrl = acquireReload();
     setIsLoading(true);
     setError(null);
     try {
       const loaded = await fetchRuntimeSettings();
+      if (ctrl.signal.aborted) return;
       setRuntimeSettings(loaded);
       setDraftOverrides(null);
       setKeywordsOverride(null);
     } catch (err) {
+      if (ctrl.signal.aborted) return;
       setError(err instanceof Error ? err.message : String(err));
     } finally {
-      setIsLoading(false);
+      releaseReload(ctrl);
+      if (!ctrl.signal.aborted) setIsLoading(false);
     }
-  }, [setRuntimeSettings]);
+  }, [acquireReload, releaseReload, setRuntimeSettings]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -118,6 +126,22 @@ export function useRuntimeSettingsViewModel() {
     setKeywordsOverride(nextText);
   }, []);
 
+  const applyPersistedRuntimeSettings = useCallback(
+    (nextSettings: RuntimeSettings, titleKey: TranslationKey, msgKey: TranslationKey) => {
+      setRuntimeSettings(nextSettings);
+      setDraftOverrides(null);
+      setKeywordsOverride(null);
+      const okMsg = translate(msgKey);
+      setSuccessMessage(okMsg);
+      showToast({
+        type: 'success',
+        title: translate(titleKey),
+        message: okMsg,
+      });
+    },
+    [setRuntimeSettings, showToast],
+  );
+
   const saveRuntimeConfig = useCallback(async () => {
     const candidate: RuntimeSettings = {
       ...draft,
@@ -137,21 +161,19 @@ export function useRuntimeSettingsViewModel() {
       return;
     }
 
+    const ctrl = acquirePersist();
     setSaving(true);
     setError(null);
     try {
       const saved = await persistRuntimeSettings(parsed.data);
-      setRuntimeSettings(saved);
-      setDraftOverrides(null);
-      setKeywordsOverride(null);
-      const okMsg = translate('settings.runtime.savedToastMsg');
-      setSuccessMessage(okMsg);
-      showToast({
-        type: 'success',
-        title: translate('settings.runtime.savedToastTitle'),
-        message: okMsg,
-      });
+      if (ctrl.signal.aborted) return;
+      applyPersistedRuntimeSettings(
+        saved,
+        'settings.runtime.savedToastTitle',
+        'settings.runtime.savedToastMsg',
+      );
     } catch (err) {
+      if (ctrl.signal.aborted) return;
       const msg = err instanceof Error ? err.message : String(err);
       setError(msg);
       setSuccessMessage(null);
@@ -161,34 +183,34 @@ export function useRuntimeSettingsViewModel() {
         message: msg,
       });
     } finally {
-      setSaving(false);
+      releasePersist(ctrl);
+      if (!ctrl.signal.aborted) setSaving(false);
     }
-  }, [draft, keywordsText, setRuntimeSettings, showToast]);
+  }, [acquirePersist, applyPersistedRuntimeSettings, draft, keywordsText, releasePersist, showToast]);
 
   const resetRuntimeDefaults = useCallback(async () => {
+    const ctrl = acquirePersist();
     setSaving(true);
     setError(null);
     try {
       const restored = isRustSettingsBacked()
         ? await resetRuntimeSettingsOnBackend()
         : DEFAULT_RUNTIME_SETTINGS;
-      setRuntimeSettings(restored);
-      setDraftOverrides(null);
-      setKeywordsOverride(null);
-      const resetMsg = translate('settings.runtime.resetToastMsg');
-      setSuccessMessage(resetMsg);
-      showToast({
-        type: 'success',
-        title: translate('settings.runtime.resetToastTitle'),
-        message: resetMsg,
-      });
+      if (ctrl.signal.aborted) return;
+      applyPersistedRuntimeSettings(
+        restored,
+        'settings.runtime.resetToastTitle',
+        'settings.runtime.resetToastMsg',
+      );
     } catch (err) {
+      if (ctrl.signal.aborted) return;
       const msg = err instanceof Error ? err.message : String(err);
       setError(msg);
     } finally {
-      setSaving(false);
+      releasePersist(ctrl);
+      if (!ctrl.signal.aborted) setSaving(false);
     }
-  }, [setRuntimeSettings, showToast]);
+  }, [acquirePersist, applyPersistedRuntimeSettings, releasePersist]);
 
   const currentCandidate: RuntimeSettings = {
     ...draft,

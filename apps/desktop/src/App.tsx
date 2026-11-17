@@ -55,6 +55,9 @@ interface ActiveViewSwitchProps {
 }
 
 const ActiveViewSwitch: React.FC<ActiveViewSwitchProps> = ({ currentView, onNavigate }) => {
+  if (IrCommanderView && isAndroidCommanderEnabled() && currentView === 'ircommander') {
+    return <IrCommanderView />;
+  }
   switch (currentView) {
     case 'dashboard': return <DashboardView onNavigate={onNavigate} />;
     case 'nvram': return <NvramView onNavigate={onNavigate} />;
@@ -64,7 +67,6 @@ const ActiveViewSwitch: React.FC<ActiveViewSwitchProps> = ({ currentView, onNavi
     case 'manuals': return <ManualsView />;
     case 'hexinspector': return <HexInspectorView />;
     case 'unbrick': return <UnbrickView />;
-    case 'ircommander': return IrCommanderView && isAndroidCommanderEnabled() ? <IrCommanderView /> : null;
     case 'settings': return <SettingsView />;
     default: return null;
   }

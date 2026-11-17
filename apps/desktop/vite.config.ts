@@ -45,6 +45,12 @@ const isAndroidApk =
       arg === "--mode=android" || (arg === "--mode" && arr[idx + 1] === "android")
   );
 
+const FORBIDDEN_DESKTOP_TOKENS = [
+  "ircommander",
+  "panasonic_ir_catalog",
+  "__PANADIGA_IR_BRIDGE__",
+] as const;
+
 function stripDesktopIrLocalesPlugin(strip: boolean): Plugin {
   return {
     name: "panadiga-strip-desktop-ir-locales",
@@ -57,6 +63,26 @@ function stripDesktopIrLocalesPlugin(strip: boolean): Plugin {
         return "{}";
       }
       return null;
+    },
+    generateBundle(_options, bundle) {
+      if (!strip) {
+        return;
+      }
+      for (const [fileName, output] of Object.entries(bundle)) {
+        const content =
+          output.type === "chunk"
+            ? output.code
+            : typeof output.source === "string"
+              ? output.source
+              : "";
+        for (const token of FORBIDDEN_DESKTOP_TOKENS) {
+          if (content.includes(token)) {
+            this.error(
+              `LEAK: Desktop bundle contains Android-only token ${token} in ${fileName}`
+            );
+          }
+        }
+      }
     },
   };
 }
