@@ -3,6 +3,8 @@
 //! Modularized into protocol transport, resources, prompts, hardware tools,
 //! forensic tools, and knowledge/RAG search tools over JSON-RPC 2.0 stdio.
 
+#![cfg_attr(not(test), deny(clippy::print_stdout, clippy::print_stderr))]
+
 pub mod prompts;
 pub mod protocol;
 pub mod resources;
@@ -38,12 +40,11 @@ pub fn run_stdio_with_io<R: BufRead, W: Write>(
     Ok(())
 }
 
-/// Starts the native Rust MCP CLI/stdio server while isolating logger output to stderr.
+/// Starts the native Rust MCP CLI/stdio server while isolating tracing telemetry to stderr.
 pub fn run_mcp_server(show_tools: bool, ping_only: bool) -> Result<()> {
     // CRITICAL: Keep stdout strictly clean for JSON-RPC 2.0 protocol framing.
-    panadiga_core::logger::set_sink(|level, msg| {
-        eprintln!("[{}] {}", level.as_str(), msg);
-    });
+    panadiga_core::logger::init_telemetry(panadiga_core::LogLevel::Info);
+    panadiga_core::logger::set_raw_output_enabled(false);
 
     let mut stdout = io::stdout().lock();
     if show_tools {

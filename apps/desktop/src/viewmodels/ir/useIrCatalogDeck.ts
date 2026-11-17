@@ -1,13 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch } from 'react';
-import { irCommanderActions } from '@/store/slices/irCommanderSlice';
-import {
-  irAssembleCodeset,
-  irCatalogStats,
-  irExportIrplus,
-  irGetVerifiedMacros,
-  irImportProfile,
-  irSearchCatalog,
-} from '@/services/irIpc';
+import { useCallback, useEffect, useMemo, useState, type Dispatch } from 'react';
+import { IR_CATALOG_DEFAULT_SEARCH_LIMIT } from '@/constants';
+import type { TranslationKey } from '@/i18n/useTranslation';
 import type {
   DynamicKeymapProfile,
   DynamicRemoteKey,
@@ -16,6 +9,15 @@ import type {
   RemoteMode,
   VerifiedIrMacro,
 } from '@/models/ir';
+import {
+  irAssembleCodeset,
+  irCatalogStats,
+  irExportIrplus,
+  irGetVerifiedMacros,
+  irImportProfile,
+  irSearchCatalog,
+} from '@/services/irIpc';
+import { irCommanderActions } from '@/store/slices/irCommanderSlice';
 import {
   COMBO_DECK_CODESET_ID,
   DECK_CODESET_MAP,
@@ -29,7 +31,7 @@ type IrCommanderAction = ReturnType<
 
 interface UseIrCatalogDeckParams {
   dispatch: Dispatch<IrCommanderAction>;
-  t: (key: string, opts?: Record<string, unknown>) => string;
+  t: (key: TranslationKey, opts?: Record<string, unknown>) => string;
   showToast: (toast: {
     type: 'info' | 'success' | 'warning' | 'error';
     title: string;
@@ -48,18 +50,12 @@ export function useIrCatalogDeck({ dispatch, t, showToast }: UseIrCatalogDeckPar
   const [verifiedMacros, setVerifiedMacros] = useState<VerifiedIrMacro[]>([]);
   const [exportedXml, setExportedXml] = useState<string | null>(null);
 
-  const deckCacheRef = useRef<Record<string, DynamicKeymapProfile>>({});
-  const activeDeckCodesetRef = useRef<string>(DECK_CODESET_MAP.DVD);
-
-  const loadCodesetIntoCache = useCallback(
+  const fetchCodeset = useCallback(
     async (codesetId: string): Promise<DynamicKeymapProfile | null> => {
-      const existing = deckCacheRef.current[codesetId];
-      if (existing) return existing;
       setIsLoadingDeck(true);
       try {
         const res = await irAssembleCodeset(codesetId);
-        deckCacheRef.current = { ...deckCacheRef.current, [codesetId]: res.profile };
-        setDeckProfiles(deckCacheRef.current);
+        setDeckProfiles((prev) => ({ ...prev, [codesetId]: res.profile }));
         return res.profile;
       } catch (err) {
         dispatch(irCommanderActions.setError(getErrorMessage(err)));
@@ -71,37 +67,46 @@ export function useIrCatalogDeck({ dispatch, t, showToast }: UseIrCatalogDeckPar
     [dispatch],
   );
 
+  const loadCodesetIntoCache = useCallback(
+    async (codesetId: string): Promise<DynamicKeymapProfile | null> => {
+      const existing = deckProfiles[codesetId];
+      if (existing) return existing;
+      return fetchCodeset(codesetId);
+    },
+    [deckProfiles, fetchCodeset],
+  );
+
   useEffect(() => {
-    let active = true;
+    const controller = new AbortController();
     void (async () => {
       try {
         const [stats, initialSearch, macros] = await Promise.all([
           irCatalogStats(),
-          irSearchCatalog('', 'ALL', 60),
+          irSearchCatalog('', 'ALL', IR_CATALOG_DEFAULT_SEARCH_LIMIT),
           irGetVerifiedMacros(),
         ]);
-        if (!active) return;
+        if (controller.signal.aborted) return;
         setTotalCodesets(stats.codeset_count);
         setTotalAliases(stats.command_count);
         setSearchResults(initialSearch);
         setVerifiedMacros(macros);
-        await loadCodesetIntoCache(DECK_CODESET_MAP.DVD);
+        await fetchCodeset(DECK_CODESET_MAP.DVD);
       } catch (err) {
-        if (!active) return;
+        if (controller.signal.aborted) return;
         dispatch(irCommanderActions.setError(getErrorMessage(err)));
       }
     })();
 
     return () => {
-      active = false;
+      controller.abort();
     };
-  }, [dispatch, loadCodesetIntoCache]);
+  }, [dispatch, fetchCodeset]);
 
   const refreshSearch = useCallback(
     async (query: string, category: PanasonicCategory) => {
       setIsSearching(true);
       try {
-        const hits = await irSearchCatalog(query, category, 60);
+        const hits = await irSearchCatalog(query, category, IR_CATALOG_DEFAULT_SEARCH_LIMIT);
         setSearchResults(hits);
       } catch (err) {
         dispatch(irCommanderActions.setError(getErrorMessage(err)));
@@ -114,7 +119,6 @@ export function useIrCatalogDeck({ dispatch, t, showToast }: UseIrCatalogDeckPar
 
   const activateDeckCodeset = useCallback(
     async (codesetId: string) => {
-      activeDeckCodesetRef.current = codesetId;
       setActiveDeckCodesetId(codesetId);
       await loadCodesetIntoCache(codesetId);
     },
@@ -151,14 +155,16 @@ export function useIrCatalogDeck({ dispatch, t, showToast }: UseIrCatalogDeckPar
     [dispatch, loadCodesetIntoCache],
   );
 
-  const updateActiveDeckKey = useCallback((updated: DynamicRemoteKey) => {
-    const deckId = activeDeckCodesetRef.current;
-    const deck = deckCacheRef.current[deckId];
-    if (!deck) return;
-    const nextDeck = replaceProfileKey(deck, updated);
-    deckCacheRef.current = { ...deckCacheRef.current, [deckId]: nextDeck };
-    setDeckProfiles(deckCacheRef.current);
-  }, []);
+  const updateActiveDeckKey = useCallback(
+    (updated: DynamicRemoteKey) => {
+      setDeckProfiles((prev) => {
+        const deck = prev[activeDeckCodesetId];
+        if (!deck) return prev;
+        return { ...prev, [activeDeckCodesetId]: replaceProfileKey(deck, updated) };
+      });
+    },
+    [activeDeckCodesetId],
+  );
 
   const importProfileText = useCallback(
     async (format: 'irplus' | 'flipper', content: string, name: string) => {
@@ -183,6 +189,8 @@ export function useIrCatalogDeck({ dispatch, t, showToast }: UseIrCatalogDeckPar
     setExportedXml(xml);
   }, []);
 
+  const clearExportedXml = useCallback(() => setExportedXml(null), []);
+
   return {
     totalCodesets,
     totalAliases,
@@ -192,7 +200,7 @@ export function useIrCatalogDeck({ dispatch, t, showToast }: UseIrCatalogDeckPar
     activeDeckProfile,
     verifiedMacros,
     exportedXml,
-    clearExportedXml: useCallback(() => setExportedXml(null), []),
+    clearExportedXml,
     refreshSearch,
     selectMode,
     selectComboDeck,

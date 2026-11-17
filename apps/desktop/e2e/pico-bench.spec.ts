@@ -7,7 +7,7 @@ test.describe('Pico Bench & P7501 UART Hardware Workbench E2E', () => {
     await page.goto('/');
     await page.click('button[data-testid="nav-picobench"]');
     await expect(page.locator('[data-testid="app-header"]')).toHaveAttribute('data-view', 'picobench');
-    await expect(page.getByLabel('Selecionar porta serial do Pico')).toHaveValue(/.+/);
+    await expect(page.getByLabel(/Select Pico serial port|Selecionar porta serial do Pico/i)).toHaveValue(/.+/);
   });
 
   test('displays hardware controller telemetry and architecture badge', async ({ page }) => {

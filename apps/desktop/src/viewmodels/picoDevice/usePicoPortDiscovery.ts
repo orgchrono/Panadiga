@@ -1,28 +1,20 @@
 /**
  * @file viewmodels/picoDevice/usePicoPortDiscovery.ts
- * @brief Hook handling serial/OTG/BLE enumeration, DIGA model profile selection, and raw command dispatch.
+ * @brief Hook handling serial/OTG/BLE enumeration and DIGA model profile selection.
  */
 
-import {
-  useCallback,
-  type Dispatch,
-  type MutableRefObject,
-  type SetStateAction,
-} from 'react';
+import { useCallback, type Dispatch, type SetStateAction } from 'react';
+import { translate } from '@/i18n/useTranslation';
 import type { DigaModelProfile } from '@/models';
-import { invokeCommand } from '@/services/ipc';
-import { bleService } from '@/services/bleService';
 import {
   isAndroidNativeBridgeAvailable,
   listAndroidUsbOtgDevices,
-  sendAndroidUsbOtgCommand,
 } from '@/services/androidBridge';
+import { bleService } from '@/services/bleService';
+import { getDigaModelCatalog, listPicoSerialPorts } from '@/services/picoService';
 import { logger } from '@/utils/logger';
-import {
-  PICO_PORT_PATTERN,
-  pickPreferredSerialPort,
-  type UsePicoDeviceOptions,
-} from './stateHelpers';
+import { sendDirectRawCommandForPort } from './picoConnectionActions';
+import { pickPreferredSerialPort, type UsePicoDeviceOptions } from './stateHelpers';
 
 export interface UsePicoPortDiscoveryParams {
   selectedPort: string;
@@ -32,10 +24,6 @@ export interface UsePicoPortDiscoveryParams {
   setModelCatalog: Dispatch<SetStateAction<DigaModelProfile[]>>;
   setSelectedModel: Dispatch<SetStateAction<string>>;
   setIsLoading: Dispatch<SetStateAction<boolean>>;
-  isConnectedRef: MutableRefObject<boolean>;
-  isConnectingRef: MutableRefObject<boolean>;
-  manualDisconnectRef: MutableRefObject<boolean>;
-  toggleConnectionRef: MutableRefObject<((overridePort?: unknown) => Promise<void>) | null>;
   onLog?: UsePicoDeviceOptions['onLog'];
 }
 
@@ -47,33 +35,11 @@ export function usePicoPortDiscovery({
   setModelCatalog,
   setSelectedModel,
   setIsLoading,
-  isConnectedRef,
-  isConnectingRef,
-  manualDisconnectRef,
-  toggleConnectionRef,
   onLog,
 }: UsePicoPortDiscoveryParams) {
-  const sendDirectRawCommand = useCallback(
-    async (command: string): Promise<string> => {
-      if (selectedPort.startsWith('ANDROID-USB-OTG')) {
-        const res = sendAndroidUsbOtgCommand(command, 3000);
-        if (!res.ok) throw new Error(res.output);
-        return res.output;
-      }
-      if (selectedPort.startsWith('BLE_') && bleService.isConnected()) {
-        return await bleService.sendAndAwaitReply(command, 3500);
-      }
-      return await invokeCommand<string>('pico_send_serial_command', {
-        portName: selectedPort,
-        command,
-      });
-    },
-    [selectedPort]
-  );
-
   const refreshModelCatalog = useCallback(async () => {
     try {
-      const catalog = await invokeCommand<DigaModelProfile[]>('get_diga_model_catalog');
+      const catalog = await getDigaModelCatalog();
       if (catalog && catalog.length > 0) {
         setModelCatalog(catalog);
       }
@@ -85,28 +51,36 @@ export function usePicoPortDiscovery({
   const selectTargetModel = useCallback(
     async (modelId: string) => {
       setSelectedModel(modelId);
-      const profile = modelCatalog.find(m => m.model_id === modelId);
+      const profile = modelCatalog.find((m) => m.model_id === modelId);
       if (modelId === 'AUTO') {
         try {
-          const resp = await sendDirectRawCommand('AUTODETECT');
-          onLog?.('info', 'PICO', `Modo AUTO ativado (Address Aliasing Probe): ${resp}`);
+          const resp = await sendDirectRawCommandForPort(selectedPort, 'AUTODETECT');
+          onLog?.('info', 'PICO', translate('errors.pico.autoModeActivated', { resp }));
         } catch (err) {
           logger.warn('PicoDevice', 'AUTODETECT command failed', err);
         }
       } else if (profile) {
         try {
-          const resp = await sendDirectRawCommand(`FLASH_SIZE ${profile.flash_size_mb}`);
+          const resp = await sendDirectRawCommandForPort(
+            selectedPort,
+            `FLASH_SIZE ${profile.flash_size_mb}`,
+          );
           onLog?.(
             'info',
             'HOST',
-            `Perfil ${profile.model_id} selecionado (${profile.flash_size_mb}MB | EEMUL ${profile.nvram_base_hex}): ${resp}`
+            translate('errors.pico.profileSelected', {
+              model: profile.model_id,
+              flashMb: profile.flash_size_mb,
+              nvramHex: profile.nvram_base_hex,
+              resp,
+            }),
           );
         } catch (err) {
           logger.warn('PicoDevice', 'FLASH_SIZE command failed', err);
         }
       }
     },
-    [modelCatalog, sendDirectRawCommand, setSelectedModel, onLog]
+    [modelCatalog, selectedPort, setSelectedModel, onLog],
   );
 
   const refreshPorts = useCallback(
@@ -117,63 +91,41 @@ export function usePicoPortDiscovery({
       const isSilent = pushedPorts !== null || injectedPortsOrSilent === true;
       if (!isSilent) setIsLoading(true);
       try {
-        const ports = pushedPorts ?? (await invokeCommand<string[]>('list_pico_serial_ports'));
-        const allPorts = [...(ports || [])];
+        const ports = pushedPorts ?? (await listPicoSerialPorts());
+        const otgLabels = isAndroidNativeBridgeAvailable()
+          ? listAndroidUsbOtgDevices()
+              .map(
+                (dev) =>
+                  `ANDROID-USB-OTG [${dev.deviceName} - ${dev.productName}${dev.isBootsel ? ' BOOTSEL' : ''}]`,
+              )
+              .filter((label) => !(ports ?? []).includes(label))
+          : [];
+        const bleEntries =
+          bleService.isSupported() && !(ports ?? []).some((p) => p.includes('BLE_PICO_W'))
+            ? ['BLE_PICO_W [Bluetooth LE - Nordic UART Service (NUS)]']
+            : [];
+        const allPorts = [...otgLabels, ...(ports ?? []), ...bleEntries];
 
-        if (isAndroidNativeBridgeAvailable()) {
-          listAndroidUsbOtgDevices().forEach(dev => {
-            const label = `ANDROID-USB-OTG [${dev.deviceName} - ${dev.productName}${dev.isBootsel ? ' BOOTSEL' : ''}]`;
-            if (!allPorts.includes(label)) {
-              allPorts.unshift(label);
-            }
-          });
-        }
-
-        if (bleService.isSupported() && !allPorts.some(p => p.includes('BLE_PICO_W'))) {
-          allPorts.push('BLE_PICO_W [Bluetooth LE - Nordic UART Service (NUS)]');
-        }
         setAvailablePorts(allPorts);
-
         const targetDefault = pickPreferredSerialPort(allPorts);
-        if (targetDefault) {
-          if (!selectedPort || !allPorts.includes(selectedPort)) {
-            setSelectedPort(targetDefault);
+        setSelectedPort((prev) => {
+          if (targetDefault) {
+            return !prev || !allPorts.includes(prev) ? targetDefault : prev;
           }
-          const canAutoConnect =
-            PICO_PORT_PATTERN.test(targetDefault) &&
-            !isConnectedRef.current &&
-            !isConnectingRef.current &&
-            !manualDisconnectRef.current;
-          if (canAutoConnect) {
-            onLog?.('info', 'HOST', `Pico detectado automaticamente em ${targetDefault}. Iniciando conexão...`);
-            void toggleConnectionRef.current?.(targetDefault);
-          }
-        } else if (allPorts.length > 0 && !selectedPort) {
-          setSelectedPort(allPorts[0]);
-        } else if (allPorts.length === 0) {
-          setSelectedPort('');
-        }
+          if (allPorts.length > 0 && !prev) return allPorts[0];
+          if (allPorts.length === 0) return '';
+          return prev;
+        });
       } catch (err) {
         logger.warn('PicoDevice', 'Failed loading system serial ports', err);
       } finally {
         if (!isSilent) setIsLoading(false);
       }
     },
-    [
-      isConnectedRef,
-      isConnectingRef,
-      manualDisconnectRef,
-      onLog,
-      selectedPort,
-      setAvailablePorts,
-      setIsLoading,
-      setSelectedPort,
-      toggleConnectionRef,
-    ]
+    [setAvailablePorts, setIsLoading, setSelectedPort],
   );
 
   return {
-    sendDirectRawCommand,
     refreshModelCatalog,
     selectTargetModel,
     refreshPorts,

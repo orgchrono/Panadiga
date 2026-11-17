@@ -1,8 +1,13 @@
+import type { TranslationKey } from '@/i18n/translations';
 import type {
+  BgoMode,
+  MainPassthroughMode,
   SdDiskInspectionReport,
   SdMediaVerificationReport,
   SdUnbrickKitRequestDto,
 } from '@/models';
+
+export type { BgoMode, MainPassthroughMode };
 
 export interface SdDiskVerificationProps {
   verifyLoading: boolean;
@@ -15,8 +20,6 @@ export interface SdDiskVerificationProps {
   onInspectSdDisk?: (target: string) => Promise<SdDiskInspectionReport | null>;
 }
 
-export type BgoMode = 'auto_format' | 'bypass' | 'uart_monitor' | 'factory';
-export type MainPassthroughMode = 'av_passthrough' | 'factory_original';
 export type BadgeVariant = 'success' | 'warning' | 'destructive' | 'secondary';
 
 const SEVERITY_BADGE: Record<string, BadgeVariant> = {
@@ -42,8 +45,8 @@ export function resolveTbcModeBadgeVariant(mode?: string | null): BadgeVariant {
 
 export function validateRequiredText(
   value: string,
-  errorKey: string
-): { trimmed: string; errorKey: string | null } {
+  errorKey: TranslationKey,
+): { trimmed: string; errorKey: TranslationKey | null } {
   const trimmed = value.trim();
   return trimmed ? { trimmed, errorKey: null } : { trimmed: '', errorKey };
 }
@@ -58,7 +61,7 @@ export interface SdKitFormInputs {
 }
 
 export function buildSdKitRequestPayload(inputs: SdKitFormInputs): {
-  errorKey: string | null;
+  errorKey: TranslationKey | null;
   request: SdUnbrickKitRequestDto | null;
 } {
   const outCheck = validateRequiredText(inputs.outputDir, 'unbrick.errors.outputDirRequired');
@@ -93,8 +96,8 @@ export interface TbcActionPayload {
 }
 
 export function buildTbcActionParams(inputs: TbcActionInputs): {
-  inErrorKey: string | null;
-  outErrorKey: string | null;
+  inErrorKey: TranslationKey | null;
+  outErrorKey: TranslationKey | null;
   params: TbcActionPayload | null;
 } {
   const inCheck = validateRequiredText(inputs.mainInput, 'unbrick.errors.mainPathRequired');

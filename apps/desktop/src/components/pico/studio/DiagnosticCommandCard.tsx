@@ -1,7 +1,8 @@
-import React, { useRef, useState } from 'react';
+import React from 'react';
 import type { PicoCommandSpec } from '@/models';
 import { Badge, Button, Input } from '@/components/ui';
-import { useManagedTimeouts } from '@/hooks/useManagedTimeouts';
+import { PICO_DIAGNOSTIC_DEFAULT_TIMEOUT_MS } from '@/constants';
+import { useTransientFlag } from '@/hooks/useManagedTimeouts';
 import { useTranslation } from '@/i18n/useTranslation';
 import { Loader2, Play, ShieldAlert } from 'lucide-react';
 
@@ -23,23 +24,18 @@ export const DiagnosticCommandCard: React.FC<DiagnosticCommandCardProps> = ({
   onRun,
 }) => {
   const { t } = useTranslation();
-  const [confirmArmed, setConfirmArmed] = useState(false);
-  const armTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { scheduleTimeout, cancelTimeout } = useManagedTimeouts();
+  const {
+    active: confirmArmed,
+    trigger: armConfirm,
+    reset: disarmConfirm,
+  } = useTransientFlag(PICO_DIAGNOSTIC_DEFAULT_TIMEOUT_MS);
 
   const handleTrigger = () => {
     if (cmd.dangerous && !confirmArmed) {
-      setConfirmArmed(true);
-      cancelTimeout(armTimerRef.current);
-      armTimerRef.current = scheduleTimeout(() => {
-        armTimerRef.current = null;
-        setConfirmArmed(false);
-      }, 4000);
+      armConfirm();
       return;
     }
-    cancelTimeout(armTimerRef.current);
-    armTimerRef.current = null;
-    setConfirmArmed(false);
+    disarmConfirm();
     onRun();
   };
 

@@ -1,82 +1,89 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import {
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { CLIPBOARD_FEEDBACK_MS } from '@/constants';
+import { useToast } from '@/context/ToastContext';
+import { useManagedTimeouts } from '@/hooks/useManagedTimeouts';
+import { translate } from '@/i18n/useTranslation';
+import type {
   HddAnalysisReport,
+  HddTab,
   MeihdfsAllocationReport,
   PartitionExtractionManifest,
 } from '@/models';
-import { emitLocalEvent, invokeCommand } from '@/services/ipc';
-import { useToast } from '@/context/ToastContext';
+import { copyToClipboard } from '@/services/browserActions';
+import { extractHddPartitions, inspectHddImage } from '@/services/storageCryptoService';
+import { emitHddInspectedEvent } from '@/services/systemService';
 import { logger } from '@/utils/logger';
 
-export type HddTab =
-  | 'overview'
-  | 'mbr'
-  | 'meihdfs'
-  | 'journal'
-  | 'density'
-  | 'extract'
-  | 'capacity'
-  | 'writer';
+export type { HddTab };
 
 export function useHddStorageViewModel() {
   const { showToast } = useToast();
+  const { scheduleTimeout, clearAllTimeouts } = useManagedTimeouts();
   const [hddReport, setHddReport] = useState<HddAnalysisReport | null>(null);
   const [meihdfsReport, setMeihdfsReport] = useState<MeihdfsAllocationReport | null>(null);
   const [activeTab, setActiveTab] = useState<HddTab>('overview');
   const [loading, setLoading] = useState<boolean>(false);
   const [extracting, setExtracting] = useState<boolean>(false);
+  const [copiedSha, setCopiedSha] = useState<boolean>(false);
   const [manifest, setManifest] = useState<PartitionExtractionManifest | null>(null);
   const [tagFilter, setTagFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [imagePath, setImagePath] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
 
-  const loadData = useCallback(async (customPath?: string) => {
-    setLoading(true);
-    setError(null);
-    const targetPath = customPath !== undefined ? customPath : imagePath;
-    const args = targetPath.trim() ? { image_path: targetPath.trim() } : {};
-    try {
-      const [hddData, meihdfsData] = await Promise.all([
-        invokeCommand<HddAnalysisReport>('inspect_hdd', args),
-        invokeCommand<MeihdfsAllocationReport>('decode_meihdfs_allocations', args),
-      ]);
-      setHddReport(hddData);
-      setMeihdfsReport(meihdfsData);
-      emitLocalEvent('hdd://inspected', true);
-      if (hddData?.image_path) {
-        setImagePath(hddData.image_path);
+  const loadData = useCallback(
+    async (customPath?: string) => {
+      setLoading(true);
+      setError(null);
+      const targetPath = customPath !== undefined ? customPath : imagePath;
+      try {
+        const { report, allocReport } = await inspectHddImage(targetPath);
+        setHddReport(report);
+        setMeihdfsReport(allocReport);
+        emitHddInspectedEvent(true);
+        if (report?.image_path) {
+          setImagePath(report.image_path);
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setError(msg);
+        logger.warn('HddStorageViewModel', 'Failed loading HDD forensics', err);
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setError(msg);
-      logger.warn('HddStorageViewModel', 'Failed loading HDD forensics', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [imagePath]);
+    },
+    [imagePath],
+  );
 
   useEffect(() => {
-    loadData();
+    const controller = new AbortController();
+    void Promise.resolve().then(() => {
+      if (!controller.signal.aborted) {
+        void loadData();
+      }
+    });
+    return () => controller.abort();
   }, [loadData]);
 
   const extractPartitions = useCallback(async () => {
     setExtracting(true);
     try {
-      const args = imagePath.trim() ? { image_path: imagePath.trim() } : {};
-      const res = await invokeCommand<PartitionExtractionManifest>('extract_partitions', args);
+      const res = await extractHddPartitions(imagePath);
       setManifest(res);
       setActiveTab('extract');
-      emitLocalEvent('hdd://inspected', true);
+      emitHddInspectedEvent(true);
       showToast({
         type: 'success',
-        title: 'Partições Extraídas com Manifesto SHA-256',
-        message: `${res.extractedPartitions.length} partições salvas em ${res.outputDirectory}`,
+        title: translate('errors.hdd.extractSuccess'),
+        message: translate('errors.hdd.extractSavedMsg', {
+          count: res.extractedPartitions.length,
+          dir: res.outputDirectory,
+        }),
       });
     } catch (err) {
       showToast({
         type: 'error',
-        title: 'Falha ao Extrair Partições',
+        title: translate('errors.hdd.extractError'),
         message: err instanceof Error ? err.message : String(err),
       });
       logger.error('HddStorageViewModel', 'Failed extracting partitions', err);
@@ -87,17 +94,34 @@ export function useHddStorageViewModel() {
 
   const filteredRecords = useMemo(() => {
     if (!meihdfsReport) return [];
-    return meihdfsReport.records.filter(rec => {
+    const upperQuery = searchQuery.toUpperCase();
+    const lowerQuery = searchQuery.toLowerCase();
+    return meihdfsReport.records.filter((rec) => {
       const matchesTag = tagFilter === 'all' || rec.tag_name.includes(tagFilter);
       const matchesSearch =
         searchQuery === '' ||
-        rec.raw_hex.includes(searchQuery.toUpperCase()) ||
-        rec.inverted_hex.includes(searchQuery.toUpperCase()) ||
-        rec.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        rec.raw_hex.includes(upperQuery) ||
+        rec.inverted_hex.includes(upperQuery) ||
+        rec.description.toLowerCase().includes(lowerQuery) ||
         rec.index.toString() === searchQuery;
       return matchesTag && matchesSearch;
     });
   }, [meihdfsReport, tagFilter, searchQuery]);
+
+  const copyManifestSha = useCallback(
+    (text: string) => {
+      void copyToClipboard(text);
+      clearAllTimeouts();
+      setCopiedSha(true);
+      showToast({
+        type: 'info',
+        title: translate('hdd.shaCopiedToastTitle'),
+        message: translate('hdd.shaCopiedToastMsg'),
+      });
+      scheduleTimeout(() => setCopiedSha(false), CLIPBOARD_FEEDBACK_MS);
+    },
+    [clearAllTimeouts, scheduleTimeout, showToast],
+  );
 
   return {
     hddReport,
@@ -107,6 +131,8 @@ export function useHddStorageViewModel() {
     setActiveTab,
     loading,
     extracting,
+    copiedSha,
+    copyManifestSha,
     manifest,
     tagFilter,
     setTagFilter,

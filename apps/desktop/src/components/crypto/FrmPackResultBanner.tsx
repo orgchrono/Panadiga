@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
+import { HEX16_PAD_WIDTH } from '@/constants';
 import type { FrmPackReport } from '@/models';
 import { useTranslation } from '@/i18n/useTranslation';
 
@@ -48,12 +49,15 @@ export const FrmPackResultBanner: React.FC<FrmPackResultBannerProps> = ({
               <span>{t('crypto.packager.packSuccess')}</span>
             </span>
             <span className="text-slate-300">
-              {packResult.total_bytes.toLocaleString()} bytes • TOC {packResult.toc_region_size} B
+              {t('crypto.packager.totalSummary', {
+                bytes: packResult.total_bytes.toLocaleString(),
+                tocSize: packResult.toc_region_size,
+              })}
             </span>
           </div>
           <div className="space-y-1 text-[11px] text-slate-300">
             {packResult.modules.length === 0 ? (
-              <p className="text-slate-500">Nenhum módulo reportado no contêiner.</p>
+              <p className="text-slate-500">{t('crypto.packager.noModules')}</p>
             ) : (
               packResult.modules.map(m => (
                 <div key={m.index} className="flex justify-between bg-slate-950/70 px-2.5 py-1 rounded">
@@ -62,7 +66,7 @@ export const FrmPackResultBanner: React.FC<FrmPackResultBannerProps> = ({
                   </span>
                   <span className="text-cyan-300">
                     {m.module_size.toLocaleString()} B • FVU 0x{m.fvu_checksum_u32.toString(16).toUpperCase()} • sum 0x
-                    {m.list_sum_u16.toString(16).toUpperCase().padStart(4, '0')}
+                    {m.list_sum_u16.toString(16).toUpperCase().padStart(HEX16_PAD_WIDTH, '0')}
                   </span>
                 </div>
               ))

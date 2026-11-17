@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { resetHardwareSsotCacheForTests, useHardwareSsot } from './useHardwareSsot';
+import { getInstalledTestIpcBridge, installTestIpcBridge } from '@/test/mocks/testHostBridges';
 
 async function renderSettledSsotHook() {
   const rendered = renderHook(() => useHardwareSsot());
@@ -25,13 +26,13 @@ describe('useHardwareSsot ViewModel Test', () => {
   });
 
   it('surfaces explicit error and keeps ssot null without silent fallback when IPC fails', async () => {
-    const previousBridge = window.__PANADIGA_TEST_IPC__;
-    window.__PANADIGA_TEST_IPC__ = {
+    const previousBridge = getInstalledTestIpcBridge();
+    installTestIpcBridge({
       invoke: async () => {
         throw new Error('SSOT IPC unreachable');
       },
       listen: () => () => {},
-    };
+    });
 
     try {
       const result = await renderSettledSsotHook();
@@ -40,7 +41,7 @@ describe('useHardwareSsot ViewModel Test', () => {
       expect(result.current.ssot).toBeNull();
       expect(result.current.error).toContain('SSOT IPC unreachable');
     } finally {
-      window.__PANADIGA_TEST_IPC__ = previousBridge;
+      installTestIpcBridge(previousBridge);
     }
   });
 });

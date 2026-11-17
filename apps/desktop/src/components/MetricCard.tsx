@@ -1,6 +1,8 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 
+export type MetricVariant = 'emerald' | 'amber' | 'cyan' | 'rose' | 'slate';
+
 interface MetricCardProps {
   title: string;
   value: string | number;
@@ -8,7 +10,7 @@ interface MetricCardProps {
   subtitle?: string;
   icon?: React.ReactNode;
   badge?: React.ReactNode;
-  variant?: 'emerald' | 'amber' | 'cyan' | 'rose' | 'slate';
+  variant?: MetricVariant;
   className?: string;
 }
 

@@ -7,8 +7,11 @@ import { createAppStore } from '@/store';
 import {
   IS_ANDROID_APK_BUILD,
   isAndroidCommanderEnabled,
-  setAndroidRuntimeTestOverride,
 } from '@/config/platform';
+import {
+  installAndroidIrTestBridge,
+  setAndroidRuntimeTestOverride,
+} from '@/test/mocks/testHostBridges';
 import { IrCommanderView } from '@/views/IrCommanderView';
 
 function renderCommander() {
@@ -27,7 +30,7 @@ function renderCommander() {
 describe('IrCommanderView & Platform Gating', () => {
   afterEach(() => {
     setAndroidRuntimeTestOverride(false);
-    delete window.__PANADIGA_IR_BRIDGE__;
+    installAndroidIrTestBridge(undefined);
   });
 
   it('keeps DIGA Commander disabled on non-Android desktop builds by default', () => {
@@ -39,7 +42,7 @@ describe('IrCommanderView & Platform Gating', () => {
 
   it('renders React/Radix DIGA Commander tabs, transmits keys, and guards editing', async () => {
     const txSpy = vi.fn(() => JSON.stringify({ ok: true, backendUsed: 'Android CIR' }));
-    window.__PANADIGA_IR_BRIDGE__ = {
+    installAndroidIrTestBridge({
       isAvailable: () => true,
       getCapabilitiesJson: () =>
         JSON.stringify({
@@ -65,7 +68,7 @@ describe('IrCommanderView & Platform Gating', () => {
       saveSettings: () => JSON.stringify({ ok: true }),
       saveCustomProfilesJson: () => true,
       transmitPreparedJson: txSpy,
-    };
+    });
 
     renderCommander();
 

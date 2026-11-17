@@ -1,80 +1,137 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["typescript", "unicorn", "react", "import"],
-  "ignorePatterns": ["dist/**", "dist-android/**", "src-tauri/**", "e2e/**", "node_modules/**"],
+  "plugins": [
+    "eslint",
+    "typescript",
+    "unicorn",
+    "react",
+    "react-perf",
+    "import",
+    "oxc",
+    "promise",
+    "jsx-a11y",
+    "vitest"
+  ],
+  "jsPlugins": ["@orgchrono/oxlint-plugin"],
+  "options": {
+    "denyWarnings": true,
+    "reportUnusedDisableDirectives": "error"
+  },
+  "ignorePatterns": [
+    "dist/**",
+    "dist-android/**",
+    "src-tauri/**",
+    "e2e/**",
+    "node_modules/**"
+  ],
   "rules": {
-    "no-unused-vars": "error",
+    "panadiga/no-unsafe-type-cast": "error",
+    "panadiga/no-let-or-mutation": "error",
+    "panadiga/no-global-state-or-side-effects": "error",
+    "panadiga/mvvm-strict-boundaries": "error",
+    "panadiga/zero-hardcode": "error",
+    "panadiga/no-lint-suppression": "error",
+    "panadiga/ux-workbench-integrity": "error",
+
     "no-var": "error",
     "prefer-const": "error",
-    "no-param-reassign": "error",
-    "eqeqeq": "error",
+    "no-param-reassign": ["error", { "props": true }],
+    "no-console": "error",
     "no-eval": "error",
     "no-implied-eval": "error",
+    "no-new-func": "error",
+    "no-alert": "error",
     "no-debugger": "error",
-    "no-self-compare": "error",
-    "no-template-curly-in-string": "error",
+    "no-duplicate-imports": "error",
+    "eqeqeq": ["error", "always"],
+    "no-nested-ternary": "off",
+    "no-magic-numbers": [
+      "error",
+      {
+        "ignore": [-1, 0, 1, 2, 10, 16, 100],
+        "ignoreArrayIndexes": true,
+        "ignoreDefaultValues": true,
+        "ignoreNumericLiteralTypes": true,
+        "ignoreEnums": true,
+        "ignoreReadonlyClassProperties": true,
+        "detectObjects": false
+      }
+    ],
+    "max-depth": ["error", 4],
+    "complexity": ["error", 22],
+
     "typescript/no-explicit-any": "error",
     "typescript/no-non-null-assertion": "error",
-    "unicorn/no-useless-spread": "error",
-    "unicorn/no-array-reverse": "error",
-    "unicorn/prefer-array-flat-map": "error",
-    "import/no-self-import": "error",
+    "typescript/ban-ts-comment": "error",
+    "typescript/consistent-type-definitions": ["error", "interface"],
+    "typescript/no-namespace": "error",
+    "typescript/no-empty-interface": "error",
+    "typescript/prefer-as-const": "error",
+
     "import/no-cycle": "error",
-    "import/no-mutable-exports": "error",
+    "import/no-self-import": "error",
+    "import/no-duplicates": "error",
+
+    "promise/no-nesting": "error",
+    "promise/prefer-await-to-then": "off",
+
     "react/rules-of-hooks": "error",
     "react/exhaustive-deps": "error",
     "react/jsx-key": "error",
-    "react/jsx-no-duplicate-props": "error",
-    "react/set-state-in-effect": "off",
-    "react/preserve-manual-memoization": "off"
+    "react/no-array-index-key": "error",
+    "react/no-danger": "error",
+    "react/self-closing-comp": "error",
+    "react/jsx-no-useless-fragment": "error",
+
+    "react-perf/jsx-no-new-object-as-prop": "off",
+    "react-perf/jsx-no-new-function-as-prop": "off",
+
+    "unicorn/prefer-array-find": "error",
+    "unicorn/prefer-array-some": "error",
+    "unicorn/prefer-includes": "error",
+    "unicorn/prefer-modern-math-apis": "error",
+    "unicorn/prefer-string-starts-ends-with": "error",
+    "unicorn/throw-new-error": "error",
+
+    "vitest/no-focused-tests": "error",
+    "vitest/no-disabled-tests": "error",
+    "vitest/no-identical-title": "error"
   },
   "overrides": [
     {
-      "files": ["src/views/**/*.tsx", "src/components/**/*.tsx"],
+      "files": ["src/components/ui/error-boundary.tsx"],
       "rules": {
-        "no-restricted-imports": [
-          "error",
-          {
-            "paths": [
-              {
-                "name": "@/services/ipc",
-                "message": "Violação MVVM: Views e Components não podem importar @/services/ipc diretamente; use um ViewModel em src/viewmodels/."
-              },
-              {
-                "name": "@/services/bleService",
-                "message": "Violação MVVM: Views e Components não podem importar @/services/bleService diretamente; use um ViewModel."
-              },
-              {
-                "name": "@/services/androidBridge",
-                "message": "Violação MVVM: Views e Components não podem importar @/services/androidBridge diretamente; passe props a partir do ViewModel."
-              },
-              {
-                "name": "@/services/androidIrBridge",
-                "message": "Violação MVVM: Views e Components não podem importar @/services/androidIrBridge diretamente; use o ViewModel."
-              },
-              {
-                "name": "@/services/irIpc",
-                "message": "Violação MVVM: Views e Components não podem importar @/services/irIpc diretamente; use o ViewModel."
-              },
-              {
-                "name": "@/services/irTransportService",
-                "message": "Violação MVVM: Views e Components não podem importar @/services/irTransportService diretamente; use o ViewModel."
-              }
-            ],
-            "patterns": [
-              {
-                "group": ["@tauri-apps/api/*", "@tauri-apps/plugin-*"],
-                "message": "Violação MVVM: Views e Components não podem acessar APIs Tauri diretamente; encapsule no ViewModel/Service."
-              }
-            ]
-          }
-        ]
+        "panadiga/no-let-or-mutation": "off"
       }
     },
     {
-      "files": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/test/**/*.ts"],
+      "files": ["src/components/ui/resizable-split.tsx"],
       "rules": {
-        "no-restricted-imports": "off"
+        "jsx-a11y/prefer-tag-over-role": "off"
+      }
+    },
+    {
+      "files": ["src/constants/**", "src/models/**", "src/i18n/**"],
+      "rules": {
+        "no-magic-numbers": "off"
+      }
+    },
+    {
+      "files": ["src/vite-env.d.ts"],
+      "rules": {
+        "no-unused-vars": "off"
+      }
+    },
+    {
+      "files": ["**/*.test.ts", "**/*.test.tsx", "src/test/**"],
+      "rules": {
+        "no-magic-numbers": "off",
+        "no-console": "off",
+        "complexity": "off",
+        "max-depth": "off",
+        "panadiga/mvvm-strict-boundaries": "off",
+        "panadiga/zero-hardcode": "off",
+        "vitest/require-mock-type-parameters": "off"
       }
     }
   ]

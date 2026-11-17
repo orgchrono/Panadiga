@@ -43,15 +43,17 @@ export const FrmCorrelationTab: React.FC<FrmCorrelationTabProps> = ({ correlatio
               </div>
               <div className="space-y-1 text-slate-400">
                 <div className="flex justify-between">
-                  <span>Bloco Cifrado Identificado:</span>
+                  <span>{t('crypto.correlationSection.identifiedBlock')}</span>
                   <span className="text-purple-300 font-bold">{corr.block_hex}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Frequência no PANA_DVD.FRM:</span>
-                  <span className="text-emerald-400 font-bold">{corr.frm_occurrences} repetições</span>
+                  <span>{t('crypto.correlationSection.frmFrequency')}</span>
+                  <span className="text-emerald-400 font-bold">
+                    {t('crypto.correlationSection.repetitions', { count: corr.frm_occurrences })}
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Interpretação:</span>
+                  <span>{t('crypto.correlationSection.interpretation')}</span>
                   <span className="text-slate-300">{corr.interpretation}</span>
                 </div>
               </div>

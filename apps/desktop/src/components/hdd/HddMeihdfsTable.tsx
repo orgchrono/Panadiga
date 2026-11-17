@@ -51,10 +51,10 @@ export const HddMeihdfsTable: React.FC<HddMeihdfsTableProps> = ({
             className="px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-300 focus:outline-none focus:border-cyan-500"
           >
             <option value="all">{t('hdd.table.allTags')}</option>
-            <option value="Extent">Extent Record (0x20)</option>
-            <option value="Directory">Directory Descriptor (0x30)</option>
-            <option value="Root">Root Volume Anchor (0x01)</option>
-            <option value="Journal">WAL Journal Pointer (0x10)</option>
+            <option value="Extent">{t('hdd.table.tagExtent')}</option>
+            <option value="Directory">{t('hdd.table.tagDirectory')}</option>
+            <option value="Root">{t('hdd.table.tagRoot')}</option>
+            <option value="Journal">{t('hdd.table.tagJournal')}</option>
           </select>
         </div>
       </div>

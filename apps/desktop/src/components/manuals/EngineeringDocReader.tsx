@@ -12,10 +12,12 @@ import {
   Loader2,
   Terminal,
 } from 'lucide-react';
+import { MAX_DOC_DECODE_NOTES_PREVIEW } from '@/constants';
 import type { Am34BootLogReport, EngineeringDocEntry } from '@/models';
 import { Badge, Button, ScrollArea } from '@/components/ui';
 import { useTranslation } from '@/i18n/useTranslation';
 import type { DocHeading } from '@/utils/docLinkResolver';
+import { withUniqueKeys } from '@/utils/formatters';
 import { MarkdownDocRenderer } from './MarkdownDocRenderer';
 
 export interface EngineeringDocNavigationProps {
@@ -108,11 +110,13 @@ export const EngineeringDocReader: React.FC<EngineeringDocReaderProps> = ({
                     -
                   </option>
                 ) : (
-                  headings.map((h, idx) => (
-                    <option key={`${h.slug}-${idx}`} value={h.slug}>
-                      {'  '.repeat(Math.max(0, h.level - 1))}{h.text}
-                    </option>
-                  ))
+                  withUniqueKeys(headings, (h) => `${h.slug}-${h.level}-${h.text}`).map(
+                    ({ item: h, key }) => (
+                      <option key={key} value={h.slug}>
+                        {'  '.repeat(Math.max(0, h.level - 1))}{h.text}
+                      </option>
+                    ),
+                  )
                 )}
               </select>
             )}
@@ -174,8 +178,11 @@ export const EngineeringDocReader: React.FC<EngineeringDocReaderProps> = ({
           )}
           {decodedLog.notes.length > 0 && (
             <div className="text-[10px] text-slate-300 space-y-0.5">
-              {decodedLog.notes.slice(0, 3).map((note, ni) => (
-                <div key={ni}>• {note}</div>
+              {withUniqueKeys(
+                decodedLog.notes.slice(0, MAX_DOC_DECODE_NOTES_PREVIEW),
+                (note) => note,
+              ).map(({ item: note, key }) => (
+                <div key={key}>• {note}</div>
               ))}
             </div>
           )}

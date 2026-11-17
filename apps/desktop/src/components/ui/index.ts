@@ -13,3 +13,8 @@ export * from './error-boundary';
 export * from './resizable-split';
 export * from './range-dnd';
 export * from './workbench-pipeline';
+export * from './workbench-left-dock';
+export * from './workbench-right-dock';
+export * from './workbench-bottom-console';
+export * from './workbench-status-bar';
+export * from './compliance-dialog';

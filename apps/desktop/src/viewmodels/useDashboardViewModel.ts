@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { SystemOverview } from '@/models';
-import { invokeCommand } from '@/services/ipc';
+import type { SystemOverview } from '@/models';
+import { fetchSystemOverview } from '@/services/systemService';
 import { logger } from '@/utils/logger';
 
 export function useDashboardViewModel() {
@@ -12,7 +12,7 @@ export function useDashboardViewModel() {
     setLoading(true);
     setError(null);
     try {
-      const data = await invokeCommand<SystemOverview>('get_system_overview');
+      const data = await fetchSystemOverview();
       setOverview(data);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -24,7 +24,7 @@ export function useDashboardViewModel() {
   }, []);
 
   useEffect(() => {
-    fetchOverview();
+    void Promise.resolve().then(() => fetchOverview());
   }, [fetchOverview]);
 
   return {

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
-import { clearLiveNvramCapture, ingestP7501DumpOutput } from '@/services/liveNvramCaptureStore';
+import { clearLiveNvramCapture, ingestP7501DumpOutput } from '@/store/nvramCaptureBridge';
 import { useNvramViewModel } from './useNvramViewModel';
 
 async function renderReadyNvramHook() {

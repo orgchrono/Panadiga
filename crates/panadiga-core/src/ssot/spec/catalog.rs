@@ -1,5 +1,5 @@
 //! Data-driven loader for the shared SSOT hardware catalog (`hardware_catalog.json`)
-//! and localized text tables (`apps/desktop/src/locales/pt-BR.json`).
+//! and localized text tables (`apps/desktop/src/locales/pt-BR/ssot.json`).
 
 use std::collections::BTreeMap;
 use std::sync::OnceLock;
@@ -9,7 +9,7 @@ use serde::Deserialize;
 const RAW_HARDWARE_CATALOG_JSON: &str = include_str!("../hardware_catalog.json");
 const RAW_PT_BR_LOCALE_JSON: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../../apps/desktop/src/locales/pt-BR.json"
+    "/../../apps/desktop/src/locales/pt-BR/ssot.json"
 ));
 
 #[derive(Debug, Clone, Deserialize)]

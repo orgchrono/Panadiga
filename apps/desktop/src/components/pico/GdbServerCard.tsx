@@ -15,6 +15,7 @@ export interface GdbServerCardProps {
   onStart: (listenAddr?: string) => Promise<void>;
   onStop: () => Promise<void>;
   onLaunchTool?: (tool: ExternalToolName) => Promise<void>;
+  onCopyCommand?: (cmd: string) => void;
 }
 
 /**
@@ -31,6 +32,7 @@ export const GdbServerCard: React.FC<GdbServerCardProps> = ({
   onStart,
   onStop,
   onLaunchTool,
+  onCopyCommand,
 }) => {
   return (
     <div className="rounded-2xl bg-bench-900 border border-slate-800 p-5 shadow-xl space-y-4">
@@ -41,6 +43,7 @@ export const GdbServerCard: React.FC<GdbServerCardProps> = ({
         error={error}
         onStart={onStart}
         onStop={onStop}
+        onCopyCommand={onCopyCommand}
       />
 
       {/* 2. Rapid Engineering Tool Launchers */}

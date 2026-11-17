@@ -52,13 +52,14 @@ export const ManualsSearchCard: React.FC<ManualsSearchCardProps> = ({
           <Sparkles className="w-3 h-3 text-amber-400" /> {t('manuals.terms.label')}
         </span>
         {activeTerms.length === 0 ? (
-          <span className="text-xs text-slate-600">Nenhum termo ativo</span>
+          <span className="text-xs text-slate-600">{t('manuals.search.noActiveTerms')}</span>
         ) : (
           activeTerms.map(term => (
             <button
               key={term}
+              type="button"
               onClick={() => selectTerm(term)}
-              aria-label={`Buscar termo ${term}`}
+              aria-label={t('manuals.search.searchTermAria', { term })}
               className={`px-2.5 py-1 rounded-lg text-xs transition-colors border focus:outline-none focus:ring-1 focus:ring-cyan-500/50 ${
                 searchQuery.toUpperCase() === term.toUpperCase()
                   ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40 font-bold'

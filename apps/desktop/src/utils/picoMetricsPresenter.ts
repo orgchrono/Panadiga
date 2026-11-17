@@ -1,22 +1,51 @@
 /**
- * @file viewmodels/picoDevice/metricsPresenter.ts
+ * @file utils/picoMetricsPresenter.ts
  * @brief Pure functional presenter deriving telemetry MetricCard view specs for PicoBenchMetrics.
  */
 
-import type { HardwareSsotSpec, PicoDeviceStatus } from '@/models';
-import type { StatusVariant } from '@/components/StatusBadge';
-import type { TranslationKey } from '@/i18n/useTranslation';
+import type { HardwareSsotSpec, PicoDeviceStatus, StatusVariant } from '@/models';
 import {
   formatVoltage,
   isTargetPowered,
   isTargetVoltageNominal,
 } from '@/utils/formatters';
 
+const HZ_PER_MHZ = 1_000_000;
+const WDT_DEFAULT_TIMEOUT_MS = 4000;
+const RECOMMENDED_BREAKIN_MODE = 2;
+
 export type MetricCardVariant = 'emerald' | 'amber' | 'cyan' | 'rose' | 'slate';
 
+export type PicoMetricsTranslationKey =
+  | 'pico.metrics.vddTitle'
+  | 'pico.metrics.vddUnit'
+  | 'pico.metrics.railNominal'
+  | 'pico.metrics.badgePowered'
+  | 'pico.metrics.railActive'
+  | 'pico.metrics.badgeLowRail'
+  | 'pico.metrics.railLow'
+  | 'pico.metrics.badgeUnpowered'
+  | 'pico.metrics.badgeOcdActive'
+  | 'pico.metrics.badgeReady'
+  | 'pico.metrics.badgeStandby'
+  | 'pico.metrics.coreTitle'
+  | 'pico.metrics.flashDetected'
+  | 'pico.metrics.uartChannel'
+  | 'pico.metrics.busFreqTitle'
+  | 'pico.metrics.busFreqUnit'
+  | 'pico.metrics.legacyChannel'
+  | 'pico.metrics.wdtStatusWithStage'
+  | 'pico.metrics.wdtStatus'
+  | 'pico.metrics.wdtBadge'
+  | 'pico.metrics.breakinTitle'
+  | 'pico.metrics.breakinValue'
+  | 'pico.metrics.breakinSubtitle'
+  | 'pico.metrics.badgeRecommended'
+  | 'pico.metrics.badgeCustom';
+
 export type TranslateFn = (
-  key: TranslationKey,
-  fallbackOrOptions?: string | Record<string, unknown>
+  key: PicoMetricsTranslationKey,
+  options?: Record<string, unknown>,
 ) => string;
 
 export interface PicoBenchMetricCardSpec {
@@ -50,7 +79,7 @@ function buildRailMetricCard({
   const isNominal = isTargetVoltageNominal(
     vdd,
     thresholds.safe_operating_min_volts,
-    thresholds.max_vdd_ceiling_volts
+    thresholds.max_vdd_ceiling_volts,
   );
   const voltageStr = formatVoltage(vdd);
   const thresholdStr = thresholds.min_vdd_threshold_volts.toFixed(1);
@@ -118,7 +147,7 @@ function buildBusWdtMetricCard({
   ssot,
   t,
 }: PicoBenchMetricsInput): PicoBenchMetricCardSpec {
-  const mhzStr = (ssot.thresholds.bus_freq_hz / 1_000_000).toFixed(2);
+  const mhzStr = (ssot.thresholds.bus_freq_hz / HZ_PER_MHZ).toFixed(2);
   if (!deviceStatus?.wdt_active) {
     return {
       key: 'bus_wdt',
@@ -130,7 +159,7 @@ function buildBusWdtMetricCard({
     };
   }
 
-  const timeout = deviceStatus.wdt_timeout_ms ?? 4000;
+  const timeout = deviceStatus.wdt_timeout_ms ?? WDT_DEFAULT_TIMEOUT_MS;
   const recoveries = deviceStatus.wdt_recoveries ?? 0;
   const src = deviceStatus.wdt_reboot_src ?? 'CLEAN';
   const faultStage = deviceStatus.wdt_fault_stage;
@@ -168,8 +197,8 @@ function buildBreakinMetricCard({
   deviceStatus,
   t,
 }: PicoBenchMetricsInput): PicoBenchMetricCardSpec {
-  const mode = deviceStatus?.breakin_mode ?? 2;
-  const isRecommended = mode === 2;
+  const mode = deviceStatus?.breakin_mode ?? RECOMMENDED_BREAKIN_MODE;
+  const isRecommended = mode === RECOMMENDED_BREAKIN_MODE;
   return {
     key: 'breakin',
     title: t('pico.metrics.breakinTitle'),
@@ -186,7 +215,7 @@ function buildBreakinMetricCard({
 }
 
 export function derivePicoBenchMetricsPresentation(
-  input: PicoBenchMetricsInput
+  input: PicoBenchMetricsInput,
 ): readonly PicoBenchMetricCardSpec[] {
   return [
     buildRailMetricCard(input),

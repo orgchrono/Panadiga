@@ -2,7 +2,8 @@
  * Mock IPC handlers for system overview, manuals lookup, hex viewer, external tools, and RAG queries.
  */
 
-import { CANONICAL_HARDWARE_SSOT_SPEC } from '@/constants';
+import { CANONICAL_HARDWARE_SSOT_SPEC, DEFAULT_RUNTIME_SETTINGS } from '@/constants';
+import { parseRuntimeSettings } from '@/utils/runtimeSettingsSchema';
 import {
   generateMockHexDump,
   mockManualDocuments,
@@ -140,6 +141,18 @@ export function handleMockSystemCommand(
         boot_stages: ['SD_HW_OK', 'BGO_FAIL', 'ODD_NO_TRAY_80045300'],
       };
     }
+
+    case 'get_runtime_settings':
+      return DEFAULT_RUNTIME_SETTINGS;
+
+    case 'save_runtime_settings':
+      return parseRuntimeSettings(args?.settings);
+
+    case 'reset_runtime_settings':
+      return DEFAULT_RUNTIME_SETTINGS;
+
+    case 'log_frontend_event':
+      return null;
 
     default:
       return undefined;

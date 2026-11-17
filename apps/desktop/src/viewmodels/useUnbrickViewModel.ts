@@ -1,4 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
+import {
+  AM34_FLASH_SIZE_HEX,
+  AM34_FLASH_UNCACHED_ADDR_HEX,
+  AM34_SDRAM_STUB_RAW_ADDR,
+  AM34_SDRAM_STUB_WRAP_ADDR,
+  NOR_DUMPER_DEFAULT_BLOCK_SIZE,
+} from '@/constants';
+import { useToast } from '@/context/ToastContext';
+import { translate } from '@/i18n/useTranslation';
 import type {
   FrmModuleExtractionReport,
   MainPassthroughReport,
@@ -10,8 +19,17 @@ import type {
   SdUnbrickKitRequestDto,
   UnbrickWorkspaceReport,
 } from '@/models';
-import { emitLocalEvent, invokeCommand } from '@/services/ipc';
-import { useToast } from '@/context/ToastContext';
+import { emitUnbrickCompletedEvent } from '@/services/systemService';
+import {
+  buildNorDumperStub,
+  extractFrmModules as extractFrmModulesRpc,
+  generateMainRspPlan,
+  inspectSdDisk as inspectSdDiskRpc,
+  inspectUnbrickWorkbench,
+  patchMainPassthrough,
+  prepareSdUnbrickKit,
+  verifySdUnbrickMedia,
+} from '@/services/unbrickService';
 import { logger } from '@/utils/logger';
 import {
   emptyChannel,
@@ -26,35 +44,37 @@ function formatErr(err: unknown): string {
 export function useUnbrickViewModel() {
   const { showToast } = useToast();
 
-  const [workbench, setWorkbench] = useState<AsyncChannelState<UnbrickWorkspaceReport>>(() =>
-    emptyChannel()
-  );
+  const [workbench, setWorkbench] = useState<AsyncChannelState<UnbrickWorkspaceReport>>(() => ({
+    loading: true,
+    data: null,
+    error: null,
+  }));
   const [sdKit, setSdKit] = useState<AsyncChannelState<SdUnbrickKitReport>>(() => emptyChannel());
   const [verify, setVerify] = useState<AsyncChannelState<SdMediaVerificationReport>>(() =>
-    emptyChannel()
+    emptyChannel(),
   );
   const [sdDisk, setSdDisk] = useState<AsyncChannelState<SdDiskInspectionReport>>(() =>
-    emptyChannel()
+    emptyChannel(),
   );
   const [extract, setExtract] = useState<AsyncChannelState<FrmModuleExtractionReport>>(() =>
-    emptyChannel()
+    emptyChannel(),
   );
   const [tbc, setTbc] = useState<AsyncChannelState<MainPassthroughReport>>(() => emptyChannel());
   const [rspPlan, setRspPlan] = useState<AsyncChannelState<MainPassthroughRspPlan>>(() =>
-    emptyChannel()
+    emptyChannel(),
   );
   const [norStub, setNorStub] = useState<AsyncChannelState<NorDumperStubResult>>(() =>
-    emptyChannel()
+    emptyChannel(),
   );
 
   const runChannel = useCallback(
-    async <T,>(
+    async <T>(
       setter: React.Dispatch<React.SetStateAction<AsyncChannelState<T>>>,
       tag: string,
       fn: () => Promise<T>,
-      toastTitle?: string
+      toastTitle?: string,
     ): Promise<T | null> => {
-      setter(prev => ({ ...prev, loading: true, error: null }));
+      setter((prev) => ({ ...prev, loading: true, error: null }));
       try {
         const result = await fn();
         setter({ loading: false, data: result, error: null });
@@ -65,56 +85,62 @@ export function useUnbrickViewModel() {
       } catch (err) {
         const msg = formatErr(err);
         logger.error('UnbrickViewModel', `${tag} failed`, err);
-        setter(prev => ({ ...prev, loading: false, error: msg }));
+        setter((prev) => ({ ...prev, loading: false, error: msg }));
         showToast({ type: 'error', title: tag, message: msg });
         return null;
       }
     },
-    [showToast]
+    [showToast],
   );
 
   const loadWorkbench = useCallback(
     async (workspacePath?: string): Promise<UnbrickWorkspaceReport | null> => {
       const trimmed = workspacePath?.trim();
       const args = trimmed ? { workspacePath: trimmed, workspace_path: trimmed } : undefined;
-      const report = await runChannel(setWorkbench, 'Unbrick Workbench', () =>
-        invokeCommand<UnbrickWorkspaceReport>('inspect_unbrick_workbench', args)
+      const report = await runChannel(setWorkbench, translate('errors.unbrick.workbenchTag'), () =>
+        inspectUnbrickWorkbench(args),
       );
       if (report) {
-        setTbc(prev => ({ ...prev, data: report.main_passthrough }));
-        setRspPlan(prev => ({ ...prev, data: report.rsp_plan }));
+        setTbc((prev) => ({ ...prev, data: report.main_passthrough }));
+        setRspPlan((prev) => ({ ...prev, data: report.rsp_plan }));
         if (report.sd_verification) {
-          setVerify(prev => ({ ...prev, data: report.sd_verification }));
+          setVerify((prev) => ({ ...prev, data: report.sd_verification }));
           const sdStatus = report.sd_verification.overall_status;
           if (sdStatus && sdStatus !== 'FAIL' && sdStatus !== 'INCOMPLETE_OR_INVALID') {
-            emitLocalEvent('unbrick://completed', true);
+            emitUnbrickCompletedEvent(true);
           }
         }
       }
       return report;
     },
-    [runChannel]
+    [runChannel],
   );
 
   useEffect(() => {
-    void loadWorkbench();
+    const controller = new AbortController();
+    void Promise.resolve().then(() => {
+      if (!controller.signal.aborted) {
+        void loadWorkbench();
+      }
+    });
+    return () => controller.abort();
   }, [loadWorkbench]);
 
   const buildSdKit = useCallback(
     async (request: SdUnbrickKitRequestDto): Promise<SdUnbrickKitReport | null> => {
       const report = await runChannel(
         setSdKit,
-        'SD Recovery Kit',
-        () => invokeCommand<SdUnbrickKitReport>('prepare_sd_unbrick_kit_command', { request }),
-        `Kit SD gravado em ${request.output_dir}`
+        translate('errors.unbrick.sdKitTag'),
+        () => prepareSdUnbrickKit(request),
+        translate('errors.unbrick.sdKitSaved', { dir: request.output_dir }),
       );
       if (report) {
         setVerify({ loading: false, data: report.verification, error: null });
-        emitLocalEvent('unbrick://completed', true);
+        emitUnbrickCompletedEvent(true);
       }
       return report;
     },
-    [runChannel]
+    [runChannel],
   );
 
   const verifySdMedia = useCallback(
@@ -122,61 +148,49 @@ export function useUnbrickViewModel() {
       const clean = sdRootDir.trim();
       const report = await runChannel(
         setVerify,
-        'Verificar Mídia SD',
-        () =>
-          invokeCommand<SdMediaVerificationReport>('verify_sd_unbrick_media_command', {
-            sdRootDir: clean,
-            sd_root_dir: clean,
-          }),
-        `Mídia SD validada: ${clean}`
+        translate('errors.unbrick.verifySdTag'),
+        () => verifySdUnbrickMedia(clean),
+        translate('errors.unbrick.verifySdDone', { dir: clean }),
       );
       if (report) {
-        emitLocalEvent('unbrick://completed', true);
+        emitUnbrickCompletedEvent(true);
       }
       return report;
     },
-    [runChannel]
+    [runChannel],
   );
 
   const inspectSdDisk = useCallback(
     async (target: string): Promise<SdDiskInspectionReport | null> => {
       const clean = target.trim();
-      const report = await runChannel(
+      return runChannel(
         setSdDisk,
-        'Auditoria FAT16 / BPB SD',
-        () =>
-          invokeCommand<SdDiskInspectionReport>('inspect_sd_disk_command', {
-            target: clean,
-          }),
-        `Disco/imagem SD auditado: ${clean}`
+        translate('errors.unbrick.inspectDiskTag'),
+        () => inspectSdDiskRpc(clean),
+        translate('errors.unbrick.inspectDiskDone', { target: clean }),
       );
-      return report;
     },
-    [runChannel]
+    [runChannel],
   );
 
   const extractFrmModules = useCallback(
     async (
       frmPath: string,
       outDir: string,
-      unpackPayloads = true
-    ): Promise<FrmModuleExtractionReport | null> => {
-      return runChannel(
+      unpackPayloads = true,
+    ): Promise<FrmModuleExtractionReport | null> =>
+      runChannel(
         setExtract,
-        'Extração de Módulos .FRM',
+        translate('errors.unbrick.extractFrmTag'),
         () =>
-          invokeCommand<FrmModuleExtractionReport>('extract_frm_modules_command', {
+          extractFrmModulesRpc({
             frmPath: frmPath.trim(),
-            frm_path: frmPath.trim(),
             outDir: outDir.trim(),
-            out_dir: outDir.trim(),
             unpackPayloads,
-            unpack_payloads: unpackPayloads,
           }),
-        `Módulos extraídos para ${outDir.trim()}`
-      );
-    },
-    [runChannel]
+        translate('errors.unbrick.extractFrmDone', { dir: outDir.trim() }),
+      ),
+    [runChannel],
   );
 
   const runMainPassthrough = useCallback(
@@ -189,22 +203,20 @@ export function useUnbrickViewModel() {
       const mode = params.mode ?? 'av_passthrough';
       return runChannel(
         setTbc,
-        'TBC Passthrough MAIN',
+        translate('errors.unbrick.tbcTag'),
         () =>
-          invokeCommand<MainPassthroughReport>('patch_main_passthrough_command', {
+          patchMainPassthrough({
             action: params.action,
             inputPath: params.inputPath.trim(),
-            input_path: params.inputPath.trim(),
             outPath: params.outPath?.trim() || undefined,
-            out_path: params.outPath?.trim() || undefined,
             mode,
           }),
         params.action === 'patch'
-          ? `MAIN TBC (${mode}) gravado com sucesso`
-          : 'Sites TBC inspecionados em MAIN'
+          ? translate('errors.unbrick.tbcPatched', { mode })
+          : translate('errors.unbrick.tbcInspected'),
       );
     },
-    [runChannel]
+    [runChannel],
   );
 
   const generateRspPlan = useCallback(
@@ -212,17 +224,12 @@ export function useUnbrickViewModel() {
       const cb = callbackTargetVa?.trim() || undefined;
       return runChannel(
         setRspPlan,
-        'Plano RSP _dev_SERIAL',
-        () =>
-          invokeCommand<MainPassthroughRspPlan>('patch_main_passthrough_command', {
-            action: 'rsp_plan',
-            callbackTargetVa: cb,
-            callback_target_va: cb,
-          }),
-        'Frames RSP _dev_SERIAL atualizados'
+        translate('errors.unbrick.rspPlanTag'),
+        () => generateMainRspPlan(cb),
+        translate('errors.unbrick.rspPlanUpdated'),
       );
     },
-    [runChannel]
+    [runChannel],
   );
 
   const buildNorStub = useCallback(
@@ -237,21 +244,22 @@ export function useUnbrickViewModel() {
       const wrap = Boolean(params.wrapAsDigadiag);
       return runChannel(
         setNorStub,
-        'NOR Dumper Stub MN103S',
+        translate('errors.unbrick.norStubTag'),
         () =>
-          invokeCommand<NorDumperStubResult>('build_nor_dumper_stub_command', {
-            startAddr: params.startAddr?.trim() || '0x84000000',
-            totalLen: params.totalLen?.trim() || '0x800000',
-            blockSize: params.blockSize ?? 4096,
-            loadAddr: params.loadAddr?.trim() || (wrap ? '0x50400000' : '0x51800000'),
+          buildNorDumperStub({
+            startAddr: params.startAddr?.trim() || AM34_FLASH_UNCACHED_ADDR_HEX,
+            totalLen: params.totalLen?.trim() || AM34_FLASH_SIZE_HEX,
+            blockSize: params.blockSize ?? NOR_DUMPER_DEFAULT_BLOCK_SIZE,
+            loadAddr:
+              params.loadAddr?.trim() ||
+              (wrap ? AM34_SDRAM_STUB_WRAP_ADDR : AM34_SDRAM_STUB_RAW_ADDR),
             outPath: params.outPath?.trim() || undefined,
             wrapAsDigadiag: wrap,
-            wrap_as_digadiag: wrap,
           }),
-        'Stub MN103S NOR Dumper gerado'
+        translate('errors.unbrick.norStubBuilt'),
       );
     },
-    [runChannel]
+    [runChannel],
   );
 
   const matshita = useMatshitaEmuActions(runChannel);

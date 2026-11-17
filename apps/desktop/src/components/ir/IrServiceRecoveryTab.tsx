@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Play, ShieldAlert, Wrench } from 'lucide-react';
 import { useTranslation } from '@/i18n/useTranslation';
+import { withUniqueKeys } from '@/utils/formatters';
 import {
   Alert,
   AlertDescription,
@@ -95,8 +96,11 @@ export const IrServiceRecoveryTab: React.FC<IrServiceRecoveryTabProps> = ({
                   <p className="text-xs text-slate-300">{desc}</p>
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex flex-wrap gap-1 font-mono text-[10px] text-slate-400">
-                      {macro.steps.map((s, idx) => (
-                        <Badge key={`${macro.id}-${idx}`} variant="outline" className="text-[10px]">
+                      {withUniqueKeys(
+                        macro.steps,
+                        (s) => `${macro.id}-${s.device}-${s.subdevice}-${s.obc}-${s.post_delay_ms}-${s.label}`,
+                      ).map(({ item: s, key }, idx) => (
+                        <Badge key={key} variant="outline" className="text-[10px]">
                           {idx + 1}. {s.label} ({s.device.toString(16).toUpperCase()}:
                           {s.subdevice.toString(16).toUpperCase()}:
                           {s.obc.toString(16).toUpperCase()} · +{s.post_delay_ms}ms)

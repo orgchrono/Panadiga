@@ -67,7 +67,7 @@ test.describe('Panadiga Desktop Navigation & Layout E2E', () => {
 
     // 3. Toggle Basic mode in NVRAM view and verify advanced patcher collapses cleanly
     await page.click('button:has-text("2. NVRAM U99 Surgery"), button:has-text("2. Cirurgia NVRAM U99")');
-    await expect(page.getByText('Janela de Setores (RangeDnD)')).toBeVisible();
+    await expect(page.getByText(/Sector Window \(RangeDnD\)|Janela de Setores \(RangeDnD\)/i)).toBeVisible();
     await page.getByRole('button', { name: /Basic \(Guided\)|Básico \(Guiado\)/i }).click();
     await expect(page.getByText(/Basic Mode active: the Copy-on-Write hex editor|Modo Básico ativo: o editor hexadecimal Copy-on-Write/i)).toBeVisible();
     await page.getByRole('button', { name: /Advanced \(Engineering\)|Avançado \(Engenharia\)/i }).click();
@@ -81,6 +81,13 @@ test.describe('Panadiga Desktop Navigation & Layout E2E', () => {
     await expect(page.locator('html')).toHaveAttribute('data-colorblind', 'true');
     await page.getByRole('button', { name: 'Português (pt-BR)' }).click();
     await expect(page.getByText('Tema & Acessibilidade Visual')).toBeVisible();
+    await page.locator('#rt-baud').selectOption('57600');
+    await page.getByTestId('runtime-settings-save-btn').click();
+    await expect(
+      page.getByText(/Padrões operacionais validados e gravados atomicamente/i).first(),
+    ).toBeVisible();
+    await page.getByTestId('runtime-settings-reset-btn').click();
+    await expect(page.locator('#rt-baud')).toHaveValue('115200');
     await page.getByRole('button', { name: /Restaurar Layout & Padrões/i }).click();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark-lab');
   });

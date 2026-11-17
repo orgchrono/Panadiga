@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="README.md">English</a> | <strong>Português (Brasil)</strong>
+  <a href="README.md">English</a> | <strong>Português (Brasil)</strong> | <a href="CONTRIBUTING.md">Regras de Arquitetura e Contribuição</a>
 </p>
 
 # Central de Engenharia Reversa, Firmware e Diagnóstico de Hardware — Gravadores Panasonic DIGA

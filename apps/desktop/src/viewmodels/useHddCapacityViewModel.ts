@@ -1,21 +1,25 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { MainCapacityInspectionReport, MainCapacityPatchReport } from '@/models';
-import { emitLocalEvent, invokeCommand } from '@/services/ipc';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useToast } from '@/context/ToastContext';
+import { translate } from '@/i18n/useTranslation';
+import type { MainCapacityInspectionReport, MainCapacityPatchReport } from '@/models';
+import { inspectHddCapacity, patchHddCapacity } from '@/services/storageCryptoService';
+import { emitHddInspectedEvent } from '@/services/systemService';
+import { getRuntimeSettingsSnapshot } from '@/store/runtimeSettingsBridge';
 import {
   computePreviewBlocks,
   resolveEffectiveTargetGb,
   type CapacityPassthroughMode,
   type PatchMode,
-} from '@/components/hdd/capacity/capacityHelpers';
+} from '@/utils/hddCapacity';
 
 export function useHddCapacityViewModel() {
   const { showToast } = useToast();
-  const mountedRef = useRef(true);
   const [inputPath, setInputPath] = useState<string>('');
   const [outputPath, setOutputPath] = useState<string>('');
   const [mode, setMode] = useState<PatchMode>('dynamic');
-  const [targetGb, setTargetGb] = useState<number>(250);
+  const [targetGb, setTargetGb] = useState<number>(
+    () => getRuntimeSettingsSnapshot().storage.hdd_default_capacity_gb,
+  );
   const [limitInDynamicMode, setLimitInDynamicMode] = useState<boolean>(false);
   const [passthroughMode, setPassthroughMode] = useState<CapacityPassthroughMode>('unchanged');
   const [inspection, setInspection] = useState<MainCapacityInspectionReport | null>(null);
@@ -24,49 +28,48 @@ export function useHddCapacityViewModel() {
   const [patching, setPatching] = useState<boolean>(false);
   const [inspectError, setInspectError] = useState<string | null>(null);
 
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
+  const performInspect = useCallback(async (pathVal: string, signal?: AbortSignal) => {
+    setInspecting(true);
+    setInspectError(null);
+    try {
+      const res = await inspectHddCapacity(pathVal);
+      if (signal?.aborted) return;
+      setInspection(res);
+      emitHddInspectedEvent(true);
+      if (!pathVal && res.input_path) {
+        setInputPath(res.input_path);
+      }
+    } catch (err) {
+      if (signal?.aborted) return;
+      setInspectError(err instanceof Error ? err.message : String(err));
+    } finally {
+      if (!signal?.aborted) {
+        setInspecting(false);
+      }
+    }
   }, []);
 
   const runInspect = useCallback(
     async (customInput?: string) => {
-      setInspecting(true);
-      setInspectError(null);
       const pathVal = (customInput !== undefined ? customInput : inputPath).trim();
-      try {
-        const res = await invokeCommand<MainCapacityInspectionReport>(
-          'inspect_hdd_capacity_patch',
-          pathVal ? { inputPath: pathVal } : {}
-        );
-        if (!mountedRef.current) return;
-        setInspection(res);
-        emitLocalEvent('hdd://inspected', true);
-        if (!pathVal && res.input_path) {
-          setInputPath(res.input_path);
-        }
-      } catch (err) {
-        if (!mountedRef.current) return;
-        setInspectError(err instanceof Error ? err.message : String(err));
-      } finally {
-        if (mountedRef.current) {
-          setInspecting(false);
-        }
-      }
+      await performInspect(pathVal);
     },
-    [inputPath]
+    [inputPath, performInspect],
   );
 
   useEffect(() => {
-    void runInspect('');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    const controller = new AbortController();
+    void Promise.resolve().then(() => {
+      if (!controller.signal.aborted) {
+        void performInspect('', controller.signal);
+      }
+    });
+    return () => controller.abort();
+  }, [performInspect]);
 
   const previewBlocks = useMemo(
     () => computePreviewBlocks(mode, targetGb, limitInDynamicMode),
-    [mode, targetGb, limitInDynamicMode]
+    [mode, targetGb, limitInDynamicMode],
   );
 
   const handleApplyPatch = useCallback(async () => {
@@ -74,33 +77,32 @@ export function useHddCapacityViewModel() {
     try {
       const effectiveTargetGb = resolveEffectiveTargetGb(mode, targetGb, limitInDynamicMode);
       const effectivePt = passthroughMode === 'unchanged' ? undefined : passthroughMode;
-      const res = await invokeCommand<MainCapacityPatchReport>('apply_hdd_capacity_patch', {
+      const res = await patchHddCapacity({
         inputPath: inputPath.trim() || undefined,
         outputPath: outputPath.trim() || undefined,
         mode,
         targetGb: effectiveTargetGb ?? undefined,
         passthroughMode: effectivePt,
       });
-      if (!mountedRef.current) return;
       setPatchReport(res);
       setInspection(res.inspection_after);
-      emitLocalEvent('hdd://inspected', true);
+      emitHddInspectedEvent(true);
       showToast({
         type: 'success',
-        title: 'Patch de Capacidade Aplicado!',
-        message: `Salvo em ${res.output_path} (${res.applied_blocks_2kb_hex})`,
+        title: translate('errors.hdd.capacitySuccess'),
+        message: translate('errors.hdd.capacitySavedMsg', {
+          path: res.output_path,
+          hex: res.applied_blocks_2kb_hex,
+        }),
       });
     } catch (err) {
-      if (!mountedRef.current) return;
       showToast({
         type: 'error',
-        title: 'Falha ao Aplicar Patch de Capacidade',
+        title: translate('errors.hdd.capacityError'),
         message: err instanceof Error ? err.message : String(err),
       });
     } finally {
-      if (mountedRef.current) {
-        setPatching(false);
-      }
+      setPatching(false);
     }
   }, [inputPath, limitInDynamicMode, mode, outputPath, passthroughMode, showToast, targetGb]);
 
@@ -119,6 +121,7 @@ export function useHddCapacityViewModel() {
     setPassthroughMode,
     inspection,
     patchReport,
+    isLoading: inspecting || patching,
     inspecting,
     patching,
     inspectError,

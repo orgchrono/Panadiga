@@ -4,11 +4,38 @@
  */
 
 import { useCallback, type Dispatch, type SetStateAction } from 'react';
-import type { FlashReport, PicoUf2Variant } from '@/models';
-import { invokeCommand } from '@/services/ipc';
-import { useManagedTimeouts } from '@/hooks/useManagedTimeouts';
+import {
+  PICO_BOOTSEL_AUTOCONNECT_DELAY_MS,
+  PICO_BOOTSEL_REBOOT_WAIT_MS,
+  PICO_BOOTSEL_RECONNECT_MAX_ATTEMPTS,
+  PICO_BOOTSEL_RECONNECT_POLL_MS,
+} from '@/constants';
 import { useToast } from '@/context/ToastContext';
+import { useManagedTimeouts } from '@/hooks/useManagedTimeouts';
+import { translate } from '@/i18n/useTranslation';
+import type { PicoUf2Variant } from '@/models';
+import {
+  detectPicoBootselDrives,
+  flashPicoFirmwareUf2,
+  listPicoSerialPorts,
+  triggerPicoBootselReboot,
+} from '@/services/picoService';
 import { PICO_PORT_PATTERN, type UsePicoDeviceOptions } from './stateHelpers';
+
+function waitMs(delayMs: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, delayMs);
+  });
+}
+
+async function pollForDetectedPicoPort(attemptsLeft: number): Promise<string> {
+  if (attemptsLeft <= 0) return '';
+  await waitMs(PICO_BOOTSEL_RECONNECT_POLL_MS);
+  const ports = await listPicoSerialPorts().catch(() => []);
+  const found = ports.find((port) => PICO_PORT_PATTERN.test(port));
+  if (found) return found;
+  return pollForDetectedPicoPort(attemptsLeft - 1);
+}
 
 interface UsePicoBootFlashParams {
   selectedPort: string;
@@ -34,26 +61,27 @@ export function usePicoBootFlash({
     if (!selectedPort) {
       showToast({
         type: 'warning',
-        title: 'Porta Não Selecionada',
-        message: 'Selecione a porta serial do Pico antes de solicitar o reset para BOOTSEL.',
+        title: translate('errors.pico.bootselSelectPortTitle'),
+        message: translate('errors.pico.bootselSelectPort'),
       });
       return;
     }
     try {
-      const msg = await invokeCommand<string>('pico_trigger_bootsel_reboot', {
-        portName: selectedPort,
-        port_name: selectedPort,
-      });
+      const msg = await triggerPicoBootselReboot(selectedPort);
       showToast({
         type: 'success',
-        title: 'BOOTSEL Reset Iniciado',
-        message: `${msg}. Aguarde 2 segundos para o drive RPI-RP2 / RP2350 montar e clique em "Flash Pico (BOOTSEL)".`,
+        title: translate('errors.pico.bootselResetTitle'),
+        message: translate('errors.pico.bootselResetMsg', { msg }),
       });
-      onLog?.('info', 'HOST', `BOOTSEL reset iniciado em ${selectedPort}: ${msg}`);
+      onLog?.(
+        'info',
+        'HOST',
+        translate('errors.pico.bootselResetLog', { port: selectedPort, msg }),
+      );
     } catch (err) {
       showToast({
         type: 'error',
-        title: 'Falha no Reset BOOTSEL',
+        title: translate('errors.pico.bootselResetFailedTitle'),
         message: err instanceof Error ? err.message : String(err),
       });
     }
@@ -63,76 +91,75 @@ export function usePicoBootFlash({
     async (uf2Variant: PicoUf2Variant) => {
       setIsFlashing(true);
       try {
-        let drives = await invokeCommand<string[]>('pico_detect_bootsel_drives').catch(() => []);
-        if ((!drives || drives.length === 0) && selectedPort && PICO_PORT_PATTERN.test(selectedPort)) {
-          showToast({
-            type: 'info',
-            title: 'Reiniciando Pico em BOOTSEL',
-            message: 'Enviando pulso 1200-baud para reiniciar a placa em modo de gravação...',
-          });
-          await invokeCommand('pico_trigger_bootsel_reboot', {
-            portName: selectedPort,
-            port_name: selectedPort,
-          }).catch(() => {});
-          await new Promise(resolve => setTimeout(resolve, 1600));
-          drives = await invokeCommand<string[]>('pico_detect_bootsel_drives').catch(() => []);
-        }
+        const initialDrives = await detectPicoBootselDrives().catch(() => []);
+        const needsReboot =
+          initialDrives.length === 0 && Boolean(selectedPort) && PICO_PORT_PATTERN.test(selectedPort);
+        const drives = needsReboot
+          ? await (async () => {
+              showToast({
+                type: 'info',
+                title: translate('errors.pico.bootselRebootingTitle'),
+                message: translate('errors.pico.bootselRebootingMsg'),
+              });
+              await triggerPicoBootselReboot(selectedPort).catch(() => {});
+              await waitMs(PICO_BOOTSEL_REBOOT_WAIT_MS);
+              return detectPicoBootselDrives().catch(() => []);
+            })()
+          : initialDrives;
 
-        if (!drives || drives.length === 0) {
+        if (drives.length === 0) {
           showToast({
             type: 'warning',
-            title: 'Nenhum Drive BOOTSEL Detectado',
-            message:
-              'Nenhum drive RPI-RP2 / RP2350 encontrado. Clique em "BOOTSEL Reset" ou segure BOOTSEL ao conectar.',
+            title: translate('errors.pico.bootselNoDriveTitle'),
+            message: translate('errors.pico.bootselNoDriveMsg'),
           });
           return;
         }
 
-        const report = await invokeCommand<FlashReport>('pico_flash_firmware', {
-          targetFamily: uf2Variant,
-          target_family: uf2Variant,
-        });
+        const report = await flashPicoFirmwareUf2(uf2Variant);
         const sizeStr = report.uf2_size_bytes ? report.uf2_size_bytes.toLocaleString() : 'UF2';
         showToast({
           type: 'success',
-          title: 'Firmware Pico Gravado',
-          message: `${report.message} (${report.board_family || uf2Variant}, ${sizeStr} bytes). Reconectando USB...`,
+          title: translate('errors.pico.flashSuccessTitle'),
+          message: translate('errors.pico.flashSuccessMsg', {
+            msg: report.message,
+            family: report.board_family || uf2Variant,
+            size: sizeStr,
+          }),
         });
 
-        let detectedPort = '';
-        for (let i = 0; i < 12; i++) {
-          await new Promise(resolve => setTimeout(resolve, 500));
-          const ports = await invokeCommand<string[]>('list_pico_serial_ports').catch(() => []);
-          const found = ports?.find(p => PICO_PORT_PATTERN.test(p));
-          if (found) {
-            detectedPort = found;
-            break;
-          }
-        }
-
+        const detectedPort = await pollForDetectedPicoPort(PICO_BOOTSEL_RECONNECT_MAX_ATTEMPTS);
         await refreshPorts();
         if (detectedPort) {
           setSelectedPort(detectedPort);
           showToast({
             type: 'success',
-            title: 'Pico Detectado',
-            message: `Reconectando automaticamente em ${detectedPort}...`,
+            title: translate('errors.pico.probeDetectedTitle'),
+            message: translate('errors.pico.probeDetectedMsg', { port: detectedPort }),
           });
           scheduleTimeout(() => {
             void toggleConnection(detectedPort);
-          }, 400);
+          }, PICO_BOOTSEL_AUTOCONNECT_DELAY_MS);
         }
       } catch (err) {
         showToast({
           type: 'error',
-          title: 'Falha ao Gravar Firmware',
+          title: translate('errors.pico.flashFailedTitle'),
           message: err instanceof Error ? err.message : String(err),
         });
       } finally {
         setIsFlashing(false);
       }
     },
-    [selectedPort, setIsFlashing, setSelectedPort, refreshPorts, showToast, toggleConnection, scheduleTimeout]
+    [
+      selectedPort,
+      setIsFlashing,
+      setSelectedPort,
+      refreshPorts,
+      showToast,
+      toggleConnection,
+      scheduleTimeout,
+    ],
   );
 
   return {

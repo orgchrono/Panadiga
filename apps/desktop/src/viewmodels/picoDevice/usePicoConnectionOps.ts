@@ -3,19 +3,15 @@
  * @brief Hook managing Pico device connection toggling, telemetry polling, and cold break-in mode switching.
  */
 
-import {
-  useCallback,
-  useEffect,
-  type Dispatch,
-  type MutableRefObject,
-  type SetStateAction,
-} from 'react';
+import { useCallback, type Dispatch, type SetStateAction } from 'react';
+import { translate } from '@/i18n/useTranslation';
 import type { ColdBreakinMode, PicoDeviceStatus } from '@/models';
-import { invokeCommand } from '@/services/ipc';
+import { getPicoStatus, setPicoBreakinMode } from '@/services/picoService';
 import { logger } from '@/utils/logger';
 import {
   disconnectTransportPort,
   establishTransportConnection,
+  sendDirectRawCommandForPort,
 } from './picoConnectionActions';
 import {
   buildMobileDeviceStatus,
@@ -30,10 +26,9 @@ export interface UsePicoConnectionOpsParams {
   setDeviceStatus: Dispatch<SetStateAction<PicoDeviceStatus | null>>;
   setIsLoading: Dispatch<SetStateAction<boolean>>;
   selectedPort: string;
-  isConnectingRef: MutableRefObject<boolean>;
-  manualDisconnectRef: MutableRefObject<boolean>;
-  toggleConnectionRef: MutableRefObject<((overridePort?: unknown) => Promise<void>) | null>;
-  sendDirectRawCommand: (command: string) => Promise<string>;
+  isConnecting: boolean;
+  setIsConnecting: Dispatch<SetStateAction<boolean>>;
+  setManualDisconnect: Dispatch<SetStateAction<boolean>>;
   onLog?: UsePicoDeviceOptions['onLog'];
 }
 
@@ -42,20 +37,19 @@ export function usePicoConnectionOps({
   setDeviceStatus,
   setIsLoading,
   selectedPort,
-  isConnectingRef,
-  manualDisconnectRef,
-  toggleConnectionRef,
-  sendDirectRawCommand,
+  isConnecting,
+  setIsConnecting,
+  setManualDisconnect,
   onLog,
 }: UsePicoConnectionOpsParams) {
   const pollDeviceStatus = useCallback(async () => {
-    if (!selectedPort || isConnectingRef.current) return;
+    if (!selectedPort || isConnecting) return;
     if (await isGdbBridgeRunning()) return;
     if (selectedPort.startsWith('ANDROID-USB-OTG') || selectedPort.startsWith('BLE_')) {
       try {
-        const raw = await sendDirectRawCommand('STATUS');
+        const raw = await sendDirectRawCommandForPort(selectedPort, 'STATUS');
         const vdd = parseVddFromStatusRaw(raw);
-        setDeviceStatus(prev => buildMobileDeviceStatus(prev, selectedPort, vdd));
+        setDeviceStatus((prev) => buildMobileDeviceStatus(prev, selectedPort, vdd));
       } catch (err) {
         logger.warn('PicoDevice', 'Failed mobile STATUS telemetry poll', err);
       }
@@ -64,39 +58,36 @@ export function usePicoConnectionOps({
 
     setIsLoading(true);
     try {
-      const status = await invokeCommand<PicoDeviceStatus>('pico_get_status', {
-        portName: selectedPort,
-        port_name: selectedPort,
-      });
+      const status = await getPicoStatus(selectedPort);
       setDeviceStatus(status);
     } catch (err) {
       logger.warn('PicoDevice', 'Failed querying Pico device telemetry', err);
     } finally {
       setIsLoading(false);
     }
-  }, [isConnectingRef, selectedPort, sendDirectRawCommand, setDeviceStatus, setIsLoading]);
+  }, [isConnecting, selectedPort, setDeviceStatus, setIsLoading]);
 
   const changeBreakinMode = useCallback(
     async (mode: ColdBreakinMode) => {
       try {
         if (selectedPort.startsWith('ANDROID-USB-OTG') || selectedPort.startsWith('BLE_')) {
-          await sendDirectRawCommand(`BREAK_IN ${mode}`);
-          setDeviceStatus(prev => (prev ? { ...prev, breakin_mode: mode } : prev));
-          onLog?.('info', 'HOST', `Modo de Cold Break-In alterado para: Modo ${mode}`);
+          await sendDirectRawCommandForPort(selectedPort, `BREAK_IN ${mode}`);
+          setDeviceStatus((prev) => (prev ? { ...prev, breakin_mode: mode } : prev));
+          onLog?.('info', 'HOST', translate('errors.pico.modeChanged', { mode }));
           return;
         }
-        const updated = await invokeCommand<PicoDeviceStatus>('pico_set_breakin_mode', {
-          portName: selectedPort,
-          port_name: selectedPort,
-          mode,
-        });
+        const updated = await setPicoBreakinMode(selectedPort, mode);
         setDeviceStatus(updated);
-        onLog?.('info', 'HOST', `Modo de Cold Break-In alterado para: Modo ${mode}`);
+        onLog?.('info', 'HOST', translate('errors.pico.modeChanged', { mode }));
       } catch (err) {
-        onLog?.('error', 'HOST', `Erro ao alterar modo: ${err}`);
+        onLog?.(
+          'error',
+          'HOST',
+          translate('errors.pico.modeChangeFailed', { reason: String(err) }),
+        );
       }
     },
-    [selectedPort, sendDirectRawCommand, setDeviceStatus, onLog]
+    [selectedPort, setDeviceStatus, onLog],
   );
 
   const toggleConnection = useCallback(
@@ -104,46 +95,45 @@ export function usePicoConnectionOps({
       const targetPort =
         typeof overridePort === 'string' && overridePort.trim() ? overridePort : selectedPort;
       if (!targetPort) {
-        onLog?.('warn', 'HOST', 'Nenhuma porta selecionada para conexão.');
+        onLog?.('warn', 'HOST', translate('errors.pico.noPortSelected'));
         return;
       }
 
-      if (isConnectingRef.current) {
-        onLog?.('warn', 'HOST', 'Conexão já em andamento — aguarde antes de tentar novamente.');
+      if (isConnecting) {
+        onLog?.('warn', 'HOST', translate('errors.pico.connectionInProgress'));
         return;
       }
 
       if (deviceStatus?.connected) {
-        manualDisconnectRef.current = true;
+        setManualDisconnect(true);
         await disconnectTransportPort({
           targetPort,
           setDeviceStatus,
-          sendDirectRawCommand,
           onLog,
         });
         return;
       }
 
       if (await isGdbBridgeRunning()) {
-        onLog?.(
-          'warn',
-          'HOST',
-          `${targetPort} está em uso pela Ponte GDB RSP (a sessão de depuração já usa o Pico). Pare a ponte para enviar comandos CDC diretos.`
-        );
+        onLog?.('warn', 'HOST', translate('errors.pico.portBusyGdb', { port: targetPort }));
         return;
       }
 
-      manualDisconnectRef.current = false;
+      setManualDisconnect(false);
       setIsLoading(true);
-      isConnectingRef.current = true;
-      onLog?.('info', 'HOST', `Estabelecendo conexão física com ${targetPort} (115200 bps)...`);
+      setIsConnecting(true);
+      onLog?.('info', 'HOST', translate('errors.pico.connectingPort', { port: targetPort }));
 
       try {
         await establishTransportConnection({ targetPort, setDeviceStatus, onLog });
       } catch (err) {
         const errMsg = err instanceof Error ? err.message : String(err);
-        onLog?.('error', 'HOST', `Falha ao conectar em ${targetPort}: ${errMsg}`);
-        setDeviceStatus(prev => ({
+        onLog?.(
+          'error',
+          'HOST',
+          translate('errors.pico.connectFailed', { port: targetPort, reason: errMsg }),
+        );
+        setDeviceStatus((prev) => ({
           ...(prev || DEFAULT_DISCONNECTED_STATUS),
           connected: false,
           port: targetPort,
@@ -153,24 +143,20 @@ export function usePicoConnectionOps({
         }));
       } finally {
         setIsLoading(false);
-        isConnectingRef.current = false;
+        setIsConnecting(false);
       }
     },
     [
       deviceStatus,
-      isConnectingRef,
-      manualDisconnectRef,
+      isConnecting,
       onLog,
       selectedPort,
-      sendDirectRawCommand,
       setDeviceStatus,
+      setIsConnecting,
       setIsLoading,
-    ]
+      setManualDisconnect,
+    ],
   );
-
-  useEffect(() => {
-    toggleConnectionRef.current = toggleConnection;
-  }, [toggleConnection, toggleConnectionRef]);
 
   return {
     pollDeviceStatus,

@@ -1,11 +1,17 @@
-import { useState, useCallback } from 'react';
-import { InCircuitNvramEraseResult, FirstContactBackupResult } from '@/models';
-import { invokeCommand } from '@/services/ipc';
+import { useCallback, useState } from 'react';
+import { IN_CIRCUIT_LOG_REPLAY_STEP_MS } from '@/constants';
 import { useManagedTimeouts } from '@/hooks/useManagedTimeouts';
+import { translate } from '@/i18n/useTranslation';
+import type { FirstContactBackupResult, InCircuitNvramEraseResult } from '@/models';
+import { runPicoFirstContactBackup, runPicoInCircuitErase } from '@/services/picoService';
 
 export interface UseInCircuitEraseOptions {
   selectedPort?: string;
-  onLog?: (level: 'info' | 'warn' | 'error' | 'success' | 'rx', source: 'HOST' | 'PICO', message: string) => void;
+  onLog?: (
+    level: 'info' | 'warn' | 'error' | 'success' | 'rx',
+    source: 'HOST' | 'PICO',
+    message: string,
+  ) => void;
   onSuccess?: () => void;
 }
 
@@ -45,53 +51,50 @@ export function useInCircuitErase({ selectedPort, onLog, onSuccess }: UseInCircu
       lines.forEach((line, index) => {
         scheduleTimeout(() => {
           onLog?.('rx', 'PICO', line);
-        }, index * 80);
+        }, index * IN_CIRCUIT_LOG_REPLAY_STEP_MS);
       });
     },
-    [onLog, scheduleTimeout]
+    [onLog, scheduleTimeout],
   );
 
   const executeFirstContactBackup = useCallback(async () => {
     setBackupState({ isBackingUp: true, result: null, error: null });
-    onLog?.('info', 'HOST', 'Iniciando Procedimento de 1º Contato (Backup Read-Only & Verificação de Integridade)...');
+    onLog?.('info', 'HOST', translate('errors.erase.firstContactStart'));
     try {
-      const result = await invokeCommand<FirstContactBackupResult>('pico_first_contact_backup', {
-        portName: selectedPort,
-        port_name: selectedPort,
-      });
+      const result = await runPicoFirstContactBackup(selectedPort ?? '');
       setBackupState({ isBackingUp: false, result, error: null });
       replayPicoLogLines(result.log_lines);
       if (result.success) {
-        onLog?.('success', 'HOST', `Backup de 1º Contato concluído! Modelo: ${result.detected_model}. NVRAM: ${result.nvram_bytes}B.`);
-      } else {
         onLog?.(
-          'error',
+          'success',
           'HOST',
-          'Backup de 1º Contato abortado: o barramento Matsushita AM34 não respondeu (alvo desligado VDD=0V ou fiação solta).'
+          translate('errors.erase.firstContactComplete', {
+            model: result.detected_model,
+            bytes: result.nvram_bytes,
+          }),
         );
+      } else {
+        onLog?.('error', 'HOST', translate('errors.erase.firstContactNoResponse'));
       }
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);
       setBackupState({ isBackingUp: false, result: null, error: errMsg });
-      onLog?.('error', 'HOST', `Falha no backup de 1º contato: ${errMsg}`);
+      onLog?.('error', 'HOST', translate('errors.erase.firstContactFailed', { reason: errMsg }));
     }
   }, [selectedPort, onLog, replayPicoLogLines]);
 
   const injectRamLoaderAndErase = useCallback(async () => {
     setState({ status: 'erasing' });
-    onLog?.('info', 'HOST', 'Disparando sequência cirúrgica: Injeção de RAM Loader + Apagamento de NVRAM In-Circuit...');
+    onLog?.('info', 'HOST', translate('errors.erase.surgicalStart'));
     try {
-      const result = await invokeCommand<InCircuitNvramEraseResult>('pico_inject_ram_loader', {
-        portName: selectedPort,
-        port_name: selectedPort,
-      });
+      const result = await runPicoInCircuitErase(selectedPort ?? '');
       setState({ status: 'success', result });
       replayPicoLogLines(result.log_lines);
       onSuccess?.();
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);
       setState({ status: 'error', error: errMsg });
-      onLog?.('error', 'HOST', `Falha no procedimento in-circuit: ${errMsg}`);
+      onLog?.('error', 'HOST', translate('errors.erase.surgicalFailed', { reason: errMsg }));
     }
   }, [selectedPort, onLog, onSuccess, replayPicoLogLines]);
 

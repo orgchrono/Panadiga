@@ -1,53 +1,80 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type { DriveWriteReport, PhysicalDriveInfo } from '@/models';
-import { invokeCommand } from '@/services/ipc';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  DECIMAL_GB_BYTES,
+  HDD_DEFAULT_250GB_SECTORS,
+  HDD_MIN_CAPACITY_GB,
+  LBA_SECTOR_SIZE_BYTES,
+} from '@/constants';
 import { useToast } from '@/context/ToastContext';
+import { translate } from '@/i18n/useTranslation';
+import type { DriveWriteReport, PhysicalDriveInfo } from '@/models';
+import { executeDiskWriteCommand, listPhysicalDrives } from '@/services/storageCryptoService';
 
 type HddWriteCommand = 'format_hdd_meihdfs' | 'write_hdd_image' | 'restore_hdd_mirrors';
 
+type HddErrorKey =
+  | 'errors.hdd.formatTokenSuffix'
+  | 'errors.hdd.formatSuccess'
+  | 'errors.hdd.formatError'
+  | 'errors.hdd.writeTokenSuffix'
+  | 'errors.hdd.writeSuccess'
+  | 'errors.hdd.writeError'
+  | 'errors.hdd.mirrorTokenSuffix'
+  | 'errors.hdd.mirrorSuccess'
+  | 'errors.hdd.mirrorError';
+
 interface HddOperationDescriptor {
   readonly cmd: HddWriteCommand;
-  readonly invalidTokenSuffix: string;
-  readonly successTitle: string;
-  readonly errorTitle: string;
+  readonly invalidTokenSuffixKey: HddErrorKey;
+  readonly successTitleKey: HddErrorKey;
+  readonly errorTitleKey: HddErrorKey;
   readonly buildArgs?: (
     drive: PhysicalDriveInfo,
     customSizeGb: number | null,
-    rawImagePath: string
+    rawImagePath: string,
   ) => Record<string, unknown>;
 }
 
-const HDD_OPERATION_DESCRIPTORS: Readonly<Record<HddWriteCommand, HddOperationDescriptor>> = Object.freeze({
-  format_hdd_meihdfs: {
-    cmd: 'format_hdd_meihdfs',
-    invalidTokenSuffix: 'para desbloquear a gravação física.',
-    successTitle: 'Formatação Concluída',
-    errorTitle: 'Falha na Formatação MEIHDFS',
-    buildArgs: (drive, customSizeGb) => ({
-      totalSectors:
-        customSizeGb !== null && customSizeGb >= 20
-          ? Math.floor((customSizeGb * 1_000_000_000) / 512)
-          : drive.size_bytes > 0
-            ? Math.floor(drive.size_bytes / 512)
-            : 488_281_250,
-    }),
-  },
-  write_hdd_image: {
-    cmd: 'write_hdd_image',
-    invalidTokenSuffix: 'para desbloquear a gravação da imagem.',
-    successTitle: 'Gravação Concluída',
-    errorTitle: 'Falha na Gravação da Imagem',
-    buildArgs: (_drive, _customSizeGb, rawImagePath) => ({
-      imagePath: rawImagePath.trim() || undefined,
-    }),
-  },
-  restore_hdd_mirrors: {
-    cmd: 'restore_hdd_mirrors',
-    invalidTokenSuffix: 'para restaurar via espelho LBA 57.344.',
-    successTitle: 'Restauração Concluída',
-    errorTitle: 'Falha na Restauração dos Espelhos',
-  },
-});
+function resolveTargetSectors(
+  selectedDrive: PhysicalDriveInfo | null,
+  customSizeGb: number | null,
+): number {
+  if (customSizeGb !== null && customSizeGb >= HDD_MIN_CAPACITY_GB) {
+    return Math.floor((customSizeGb * DECIMAL_GB_BYTES) / LBA_SECTOR_SIZE_BYTES);
+  }
+  if (selectedDrive && selectedDrive.size_bytes > 0) {
+    return Math.floor(selectedDrive.size_bytes / LBA_SECTOR_SIZE_BYTES);
+  }
+  return HDD_DEFAULT_250GB_SECTORS;
+}
+
+const HDD_OPERATION_DESCRIPTORS: Readonly<Record<HddWriteCommand, HddOperationDescriptor>> =
+  Object.freeze({
+    format_hdd_meihdfs: {
+      cmd: 'format_hdd_meihdfs',
+      invalidTokenSuffixKey: 'errors.hdd.formatTokenSuffix',
+      successTitleKey: 'errors.hdd.formatSuccess',
+      errorTitleKey: 'errors.hdd.formatError',
+      buildArgs: (drive, customSizeGb) => ({
+        totalSectors: resolveTargetSectors(drive, customSizeGb),
+      }),
+    },
+    write_hdd_image: {
+      cmd: 'write_hdd_image',
+      invalidTokenSuffixKey: 'errors.hdd.writeTokenSuffix',
+      successTitleKey: 'errors.hdd.writeSuccess',
+      errorTitleKey: 'errors.hdd.writeError',
+      buildArgs: (_drive, _customSizeGb, rawImagePath) => ({
+        imagePath: rawImagePath.trim() || undefined,
+      }),
+    },
+    restore_hdd_mirrors: {
+      cmd: 'restore_hdd_mirrors',
+      invalidTokenSuffixKey: 'errors.hdd.mirrorTokenSuffix',
+      successTitleKey: 'errors.hdd.mirrorSuccess',
+      errorTitleKey: 'errors.hdd.mirrorError',
+    },
+  });
 
 /**
  * Pure helper computing the required confirmation token for a physical disk target.
@@ -58,11 +85,10 @@ export function getExpectedDriveConfirmToken(devicePath: string): string {
 
 /**
  * Single Responsibility ViewModel: manages physical ATA/IDE disk enumeration and guarded
- * MEIHDFS write operations (format, raw image write, mirror recovery) via Tauri IPC.
+ * MEIHDFS write operations (format, raw image write, mirror recovery) via domain services.
  */
 export function useHddWriterViewModel() {
   const { showToast } = useToast();
-  const mountedRef = useRef(true);
   const [drives, setDrives] = useState<PhysicalDriveInfo[]>([]);
   const [selectedDrive, setSelectedDrive] = useState<PhysicalDriveInfo | null>(null);
   const [loadingDrives, setLoadingDrives] = useState<boolean>(false);
@@ -72,42 +98,44 @@ export function useHddWriterViewModel() {
   const [executing, setExecuting] = useState<boolean>(false);
   const [writeReport, setWriteReport] = useState<DriveWriteReport | null>(null);
 
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
-
-  const fetchDrives = useCallback(async () => {
-    if (mountedRef.current) {
+  const performFetchDrives = useCallback(
+    async (signal?: AbortSignal) => {
       setLoadingDrives(true);
-    }
-    try {
-      const list = await invokeCommand<PhysicalDriveInfo[]>('list_physical_drives');
-      if (!mountedRef.current) return;
-      setDrives(list);
-      const safe = list.find(d => d.safe_to_write);
-      if (safe) {
-        setSelectedDrive(safe);
+      try {
+        const list = await listPhysicalDrives();
+        if (signal?.aborted) return;
+        setDrives(list);
+        const safe = list.find((drive) => drive.safe_to_write);
+        if (safe) {
+          setSelectedDrive(safe);
+        }
+      } catch (err) {
+        if (signal?.aborted) return;
+        showToast({
+          type: 'error',
+          title: translate('errors.hdd.listDisksError'),
+          message: err instanceof Error ? err.message : String(err),
+        });
+      } finally {
+        if (!signal?.aborted) {
+          setLoadingDrives(false);
+        }
       }
-    } catch (err) {
-      if (!mountedRef.current) return;
-      showToast({
-        type: 'error',
-        title: 'Erro ao Listar Discos Físicos',
-        message: err instanceof Error ? err.message : String(err),
-      });
-    } finally {
-      if (mountedRef.current) {
-        setLoadingDrives(false);
-      }
-    }
-  }, [showToast]);
+    },
+    [showToast],
+  );
+
+  const fetchDrives = useCallback(() => performFetchDrives(), [performFetchDrives]);
 
   useEffect(() => {
-    void fetchDrives();
-  }, [fetchDrives]);
+    const controller = new AbortController();
+    void Promise.resolve().then(() => {
+      if (!controller.signal.aborted) {
+        void performFetchDrives(controller.signal);
+      }
+    });
+    return () => controller.abort();
+  }, [performFetchDrives]);
 
   const runConfirmedOperation = useCallback(
     async (command: HddWriteCommand) => {
@@ -119,80 +147,69 @@ export function useHddWriterViewModel() {
       if (provided !== expected) {
         showToast({
           type: 'error',
-          title: 'Token de Confirmação Inválido',
-          message: `Digite exatamente "${expected}" ${descriptor.invalidTokenSuffix}`,
+          title: translate('errors.hdd.invalidConfirmToken'),
+          message: translate('errors.hdd.tokenPromptMsg', {
+            token: expected,
+            suffix: translate(descriptor.invalidTokenSuffixKey),
+          }),
         });
         return;
       }
 
-      if (mountedRef.current) {
-        setExecuting(true);
-      }
+      setExecuting(true);
       try {
-        const res = await invokeCommand<DriveWriteReport>(descriptor.cmd, {
+        const res = await executeDiskWriteCommand(descriptor.cmd, {
           devicePath: selectedDrive.device_path,
           confirmationToken: provided,
           ...(descriptor.buildArgs
             ? descriptor.buildArgs(selectedDrive, customSizeGb, rawImagePath)
             : {}),
         });
-        if (!mountedRef.current) return;
         setWriteReport(res);
         showToast({
           type: 'success',
-          title: descriptor.successTitle,
+          title: translate(descriptor.successTitleKey),
           message: res.message,
         });
       } catch (err) {
-        if (!mountedRef.current) return;
         showToast({
           type: 'error',
-          title: descriptor.errorTitle,
+          title: translate(descriptor.errorTitleKey),
           message: err instanceof Error ? err.message : String(err),
         });
       } finally {
-        if (mountedRef.current) {
-          setExecuting(false);
-        }
+        setExecuting(false);
       }
     },
-    [selectedDrive, confirmInput, customSizeGb, rawImagePath, showToast]
+    [selectedDrive, confirmInput, customSizeGb, rawImagePath, showToast],
   );
 
   const handleProceduralFormat = useCallback(
     () => runConfirmedOperation('format_hdd_meihdfs'),
-    [runConfirmedOperation]
+    [runConfirmedOperation],
   );
 
   const handleWriteRawImage = useCallback(
     () => runConfirmedOperation('write_hdd_image'),
-    [runConfirmedOperation]
+    [runConfirmedOperation],
   );
 
   const handleRestoreMirrors = useCallback(
     () => runConfirmedOperation('restore_hdd_mirrors'),
-    [runConfirmedOperation]
+    [runConfirmedOperation],
   );
 
   const expectedToken = selectedDrive ? getExpectedDriveConfirmToken(selectedDrive.device_path) : '';
   const isTokenValid = Boolean(
-    selectedDrive && selectedDrive.safe_to_write && confirmInput.trim() === expectedToken
+    selectedDrive && selectedDrive.safe_to_write && confirmInput.trim() === expectedToken,
   );
-
-  const resolvedTargetSectors = selectedDrive
-    ? customSizeGb !== null && customSizeGb >= 20
-      ? Math.floor((customSizeGb * 1_000_000_000) / 512)
-      : selectedDrive.size_bytes > 0
-        ? Math.floor(selectedDrive.size_bytes / 512)
-        : 488_281_250
-    : customSizeGb !== null && customSizeGb >= 20
-      ? Math.floor((customSizeGb * 1_000_000_000) / 512)
-      : 488_281_250;
+  const resolvedTargetSectors = resolveTargetSectors(selectedDrive, customSizeGb);
 
   return {
     drives,
     selectedDrive,
     setSelectedDrive,
+    isLoading: loadingDrives || executing,
     loadingDrives,
     confirmInput,
     setConfirmInput,

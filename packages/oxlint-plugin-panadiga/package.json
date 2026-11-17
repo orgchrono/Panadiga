@@ -1,0 +1,26 @@
+{
+  "name": "@orgchrono/oxlint-plugin",
+  "version": "0.1.0",
+  "description": "Strict FP, MVVM, zero-hardcode, and hardware safety Oxlint plugin for Panadiga",
+  "type": "module",
+  "main": "./src/index.mjs",
+  "exports": {
+    ".": "./src/index.mjs"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/orgchrono/Panadiga.git",
+    "directory": "packages/oxlint-plugin-panadiga"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -29,6 +29,11 @@ export const DRV_PASS_HEX_TOKEN_1 = 0x48495441; // "HITA"
 
 export const P7501_WDT_MAX_CMD_WINDOW_MS = 185000;
 export const WDT_DUMPNOR_CAPTURE_WINDOW_MS = 180000;
+export const NOR_DUMPER_DEFAULT_BLOCK_SIZE = 4096;
+export const AM34_FLASH_UNCACHED_ADDR_HEX = '0x84000000';
+export const AM34_FLASH_SIZE_HEX = '0x800000';
+export const AM34_SDRAM_STUB_WRAP_ADDR = '0x50400000';
+export const AM34_SDRAM_STUB_RAW_ADDR = '0x51800000';
 
 export function formatHexU32(value: number, upperCase = true): string {
   const padded = (value >>> 0).toString(16).padStart(8, '0');
@@ -59,13 +64,11 @@ export function resolveCatalogTemplate(raw: string): string {
   if (!raw.includes('{{')) {
     return raw;
   }
-  let resolved = raw;
-  for (const [needle, replacement] of CATALOG_TEMPLATE_TOKENS) {
-    if (resolved.includes(needle)) {
-      resolved = resolved.split(needle).join(replacement);
-    }
-  }
-  return resolved;
+  return CATALOG_TEMPLATE_TOKENS.reduce(
+    (resolved, [needle, replacement]) =>
+      resolved.includes(needle) ? resolved.split(needle).join(replacement) : resolved,
+    raw,
+  );
 }
 
 /** Derives byte size, top-boot NVRAM base address, and NVRAM sector size from MB aperture. */

@@ -17,7 +17,13 @@ fn main() -> Result<()> {
         .any(|w| w == ["--json", "-"] || w == ["-j", "-"])
         || args.iter().any(|a| a == "--json=-")
     {
-        panadiga_core::logger::set_level(panadiga_core::logger::LogLevel::Off);
+        panadiga_core::logger::init_telemetry(panadiga_core::LogLevel::Off);
+        panadiga_core::logger::set_raw_output_enabled(false);
+    } else {
+        let settings = panadiga_core::settings::load_runtime_settings();
+        let initial_level =
+            panadiga_core::logger::LogLevel::parse_lossy(&settings.workbench.log_level);
+        panadiga_core::logger::init_telemetry(initial_level);
     }
 
     if args.len() < 2 || args[1] == "desktop" || args[1] == "gui" {

@@ -61,7 +61,14 @@
       "importDialogDesc": "Cole o conteúdo de um arquivo Flipper Zero (.ir) ou irplus (.irplus XML).",
       "importConfirmBtn": "Converter & Carregar",
       "savedToast": "Salvo nas preferências persistentes do Android.",
-      "importedToast": "Carregadas {{count}} teclas do arquivo importado."
+      "importedToast": "Carregadas {{count}} teclas do arquivo importado.",
+      "flipperFormatBtn": "Flipper (.ir)",
+      "irplusFormatBtn": "irplus (.irplus XML)",
+      "profileNamePlaceholder": "Nome do Perfil",
+      "importBodyPlaceholder": "Cole o conteúdo de Filetype: IR signals ou XML <irplus> aqui...",
+      "exportXmlTitle": "XML .irplus Exportado",
+      "defaultProfileDesc": "Perfil IR Panadiga",
+      "exportIrplusBtn": ".irplus XML"
     },
     "editor": {
       "title": "Editar Botão do Controle",
@@ -95,7 +102,35 @@
       "beaconStopBtn": "Parar Beacon IR",
       "beaconDone": "Sequência de teste com câmera concluída.",
       "safetyTitle": "Proteção Física P7501 & Exynos Root",
-      "safetyBody": "O Pico PWM IRTX usa apenas GPIOs livres de 3.3V (GP6..9, GP16..22), sem tocar P7501/NSW5V. No Galaxy Tab S (SM-T805M), a HAL seleciona PERIOD_SCALED + cascata Magisk su."
+      "safetyBody": "O Pico PWM IRTX usa apenas GPIOs livres de 3.3V (GP6..9, GP16..22), sem tocar P7501/NSW5V. No Galaxy Tab S (SM-T805M), a HAL seleciona PERIOD_SCALED + cascata Magisk su.",
+      "defaultCarrierSpans": "Exynos Padrão / 37010 Hz",
+      "gpioDefault": "Padrão",
+      "gpioSpareSafe": "Spare Seguro",
+      "repeat1x": "1x (Rajada Única)",
+      "repeat2x": "2x (Dupla Repetição)",
+      "repeat3x": "3x (Sensor Fraco / Ambiente Claro)",
+      "prontoHexHeader": "PRONTO HEX (último TX):",
+      "cirStatus": "CIR: {{status}}",
+      "secIrStatus": "sec_ir: {{status}}",
+      "fpgaStatus": "fpga: {{status}}",
+      "magiskSuStatus": "Magisk su: {{status}}",
+      "statusReady": "READY",
+      "statusNone": "NONE",
+      "statusPresent": "PRESENT",
+      "statusAbsent": "ABSENT",
+      "statusAvailable": "AVAILABLE",
+      "statusUnavailable": "UNAVAILABLE",
+      "deviceModelLine": "Modelo: {{manufacturer}} {{model}} (SDK {{sdk}} / Android {{release}})",
+      "socBoardLine": "SoC/Placa: hw={{hardware}} · board={{board}} · product={{product}} · dev={{device}}",
+      "carrierSpansLine": "Faixas Carrier: {{spans}}"
+    },
+    "editorExtra": {
+      "kaseikyoOption": "KASEIKYO (Panasonic 48-bit)",
+      "prontoOption": "PRONTO_RAW (0000 ...)",
+      "devLabel": "Device (hex)",
+      "subLabel": "Subdevice (hex)",
+      "obcLabel": "OBC (hex)",
+      "prontoLabel": "Pronto Hex"
     }
   }
 }

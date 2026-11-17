@@ -73,10 +73,33 @@ describe('React UI Ecosystem Primitives (Resizable, RangeDnD, Pipeline, HUD, Son
 
   it('WorkbenchModeProvider toggles Basic/Advanced, HUD, and tracks reactive pipeline events', () => {
     const onNavigate = vi.fn();
+    const WorkbenchHarness: React.FC = () => {
+      const { mode, setMode, hudOpen, toggleHud, setHudOpen, pipeline } = useWorkbenchMode();
+      return (
+        <>
+          <GuidedPipelineBar
+            currentView="dashboard"
+            onNavigate={onNavigate}
+            mode={mode}
+            onModeChange={setMode}
+            hudOpen={hudOpen}
+            onToggleHud={toggleHud}
+            pipeline={pipeline}
+          />
+          <DraggableBenchHud
+            vddVolts={3.29}
+            hardwareConnected={true}
+            hudOpen={hudOpen}
+            onCloseHud={() => setHudOpen(false)}
+            onNavigate={onNavigate}
+          />
+        </>
+      );
+    };
+
     render(
       <WorkbenchModeProvider>
-        <GuidedPipelineBar currentView="dashboard" onNavigate={onNavigate} />
-        <DraggableBenchHud vddVolts={3.29} hardwareConnected={true} onNavigate={onNavigate} />
+        <WorkbenchHarness />
       </WorkbenchModeProvider>
     );
 

@@ -1,8 +1,8 @@
 import { useState, useCallback } from 'react';
-import { invokeCommand } from '@/services/ipc';
-import { ExecutionStatus, RagQueryResult } from '@/models';
+import { ExecutionStatus, type RagQueryResult } from '@/models';
+import { queryRagEngine } from '@/services/systemService';
 
-export function useRagViewModel(initialQuery: string = 'How to recover error U99 on Spansion Flash?') {
+export function useRagViewModel(initialQuery = 'How to recover error U99 on Spansion Flash?') {
   const [ragQuery, setRagQuery] = useState<string>(initialQuery);
   const [ragStatus, setRagStatus] = useState<ExecutionStatus>(ExecutionStatus.IDLE);
   const [ragResult, setRagResult] = useState<RagQueryResult | null>(null);
@@ -14,7 +14,7 @@ export function useRagViewModel(initialQuery: string = 'How to recover error U99
     setRagError(null);
 
     try {
-      const res = await invokeCommand<RagQueryResult>('query_rag_engine', { query: ragQuery });
+      const res = await queryRagEngine(ragQuery);
       setRagResult(res);
       setRagStatus(ExecutionStatus.SUCCESS);
     } catch (err) {

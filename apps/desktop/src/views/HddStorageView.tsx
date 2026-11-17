@@ -1,25 +1,98 @@
 import React, { useEffect, useState } from 'react';
-import { useHddStorageViewModel } from '@/viewmodels/useHddStorageViewModel';
-import { useWorkbenchMode } from '@/context/WorkbenchModeContext';
-import { useToast } from '@/context/ToastContext';
-import { useManagedTimeouts } from '@/hooks/useManagedTimeouts';
-import { CLIPBOARD_FEEDBACK_MS } from '@/constants';
-import { useTranslation } from '@/i18n/useTranslation';
-import type { ViewKey } from '@/models';
+import { HardDrive, Unlock } from 'lucide-react';
 import {
-  HddTopHeader,
+  HddCapacityPatcherCard,
+  HddDensityMap,
+  HddExtractManifestCard,
+  HddJournalTable,
+  HddMbrComparison,
+  HddMeihdfsTable,
   HddMetricsGrid,
   HddNavigationBar,
   HddPartitionTable,
-  HddMbrComparison,
-  HddMeihdfsTable,
-  HddJournalTable,
-  HddDensityMap,
-  HddExtractManifestCard,
+  HddTopHeader,
   HddWriterCard,
-  HddCapacityPatcherCard,
 } from '@/components/hdd';
-import { HardDrive, Unlock } from 'lucide-react';
+import { useWorkbenchMode } from '@/context/WorkbenchModeContext';
+import { useTranslation } from '@/i18n/useTranslation';
+import type {
+  HddAnalysisReport,
+  HddTab,
+  MeihdfsAllocationRecord,
+  MeihdfsAllocationReport,
+  PartitionExtractionManifest,
+  ViewKey,
+} from '@/models';
+import { useHddCapacityViewModel } from '@/viewmodels/useHddCapacityViewModel';
+import { useHddStorageViewModel } from '@/viewmodels/useHddStorageViewModel';
+import { useHddWriterViewModel } from '@/viewmodels/useHddWriterViewModel';
+
+interface HddActiveTabContentProps {
+  readonly activeTab: HddTab;
+  readonly hddReport: HddAnalysisReport | null;
+  readonly meihdfsReport: MeihdfsAllocationReport | null;
+  readonly filteredRecords: MeihdfsAllocationRecord[];
+  readonly searchQuery: string;
+  readonly setSearchQuery: (q: string) => void;
+  readonly tagFilter: string;
+  readonly setTagFilter: (tag: string) => void;
+  readonly manifest: PartitionExtractionManifest | null;
+  readonly copiedSha: boolean;
+  readonly onCopySha: (text: string) => void;
+  readonly capacityVm: ReturnType<typeof useHddCapacityViewModel>;
+  readonly writerVm: ReturnType<typeof useHddWriterViewModel>;
+}
+
+const HddActiveTabContent: React.FC<HddActiveTabContentProps> = ({
+  activeTab,
+  hddReport,
+  meihdfsReport,
+  filteredRecords,
+  searchQuery,
+  setSearchQuery,
+  tagFilter,
+  setTagFilter,
+  manifest,
+  copiedSha,
+  onCopySha,
+  capacityVm,
+  writerVm,
+}) => {
+  switch (activeTab) {
+    case 'overview':
+      return hddReport ? <HddPartitionTable hddReport={hddReport} /> : null;
+    case 'mbr':
+      return hddReport ? <HddMbrComparison hddReport={hddReport} /> : null;
+    case 'meihdfs':
+      return (
+        <HddMeihdfsTable
+          filteredRecords={filteredRecords}
+          searchQuery={searchQuery}
+          tagFilter={tagFilter}
+          onSearchChange={setSearchQuery}
+          onTagFilterChange={setTagFilter}
+        />
+      );
+    case 'journal':
+      return meihdfsReport ? <HddJournalTable meihdfsReport={meihdfsReport} /> : null;
+    case 'density':
+      return hddReport ? <HddDensityMap hddReport={hddReport} /> : null;
+    case 'extract':
+      return manifest ? (
+        <HddExtractManifestCard
+          manifest={manifest}
+          copiedSha={copiedSha}
+          onCopySha={onCopySha}
+        />
+      ) : null;
+    case 'capacity':
+      return <HddCapacityPatcherCard {...capacityVm} />;
+    case 'writer':
+      return <HddWriterCard {...writerVm} />;
+    default:
+      return null;
+  }
+};
 
 /**
  * Declarative MVVM View: Panasonic MEIHDFS Storage & HDD Forensics Workbench.
@@ -37,6 +110,8 @@ export const HddStorageView: React.FC<{ onNavigate?: (view: ViewKey) => void }> 
     setActiveTab,
     loading,
     extracting,
+    copiedSha,
+    copyManifestSha,
     manifest,
     tagFilter,
     setTagFilter,
@@ -48,30 +123,17 @@ export const HddStorageView: React.FC<{ onNavigate?: (view: ViewKey) => void }> 
     refresh,
   } = useHddStorageViewModel();
 
-  const { showToast } = useToast();
+  const capacityVm = useHddCapacityViewModel();
+  const writerVm = useHddWriterViewModel();
   const { isAdvanced, setMode } = useWorkbenchMode();
-  const [copiedSha, setCopiedSha] = useState(false);
   const [inputPath, setInputPath] = useState(imagePath || '');
   const [showPathInput, setShowPathInput] = useState(false);
-  const { scheduleTimeout, clearAllTimeouts } = useManagedTimeouts();
 
   useEffect(() => {
     if (!isAdvanced && (activeTab === 'meihdfs' || activeTab === 'journal' || activeTab === 'density')) {
       setActiveTab('overview');
     }
   }, [activeTab, isAdvanced, setActiveTab]);
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    clearAllTimeouts();
-    setCopiedSha(true);
-    showToast({
-      type: 'info',
-      title: t('hdd.shaCopiedToastTitle'),
-      message: t('hdd.shaCopiedToastMsg'),
-    });
-    scheduleTimeout(() => setCopiedSha(false), CLIPBOARD_FEEDBACK_MS);
-  };
 
   const handleOpenPath = () => {
     if (inputPath.trim()) {
@@ -92,7 +154,7 @@ export const HddStorageView: React.FC<{ onNavigate?: (view: ViewKey) => void }> 
         report={hddReport}
         extracting={extracting}
         onExtractPartitions={extractPartitions}
-        onSelectImage={() => setShowPathInput(prev => !prev)}
+        onSelectImage={() => setShowPathInput((prev) => !prev)}
       />
 
       <HddMetricsGrid report={hddReport} />
@@ -129,8 +191,8 @@ export const HddStorageView: React.FC<{ onNavigate?: (view: ViewKey) => void }> 
               type="text"
               placeholder={t('hdd.fallback.placeholder')}
               value={inputPath}
-              onChange={e => setInputPath(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleOpenPath()}
+              onChange={(e) => setInputPath(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleOpenPath()}
               className="flex-1 px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 font-mono"
             />
             <button
@@ -173,28 +235,21 @@ export const HddStorageView: React.FC<{ onNavigate?: (view: ViewKey) => void }> 
         </div>
       )}
 
-      {activeTab === 'overview' && hddReport && <HddPartitionTable hddReport={hddReport} />}
-      {activeTab === 'mbr' && hddReport && <HddMbrComparison hddReport={hddReport} />}
-      {activeTab === 'meihdfs' && (
-        <HddMeihdfsTable
-          filteredRecords={filteredRecords}
-          searchQuery={searchQuery}
-          tagFilter={tagFilter}
-          onSearchChange={setSearchQuery}
-          onTagFilterChange={setTagFilter}
-        />
-      )}
-      {activeTab === 'journal' && meihdfsReport && <HddJournalTable meihdfsReport={meihdfsReport} />}
-      {activeTab === 'density' && hddReport && <HddDensityMap hddReport={hddReport} />}
-      {activeTab === 'extract' && manifest && (
-        <HddExtractManifestCard
-          manifest={manifest}
-          copiedSha={copiedSha}
-          onCopySha={copyToClipboard}
-        />
-      )}
-      {activeTab === 'capacity' && <HddCapacityPatcherCard />}
-      {activeTab === 'writer' && <HddWriterCard />}
+      <HddActiveTabContent
+        activeTab={activeTab}
+        hddReport={hddReport}
+        meihdfsReport={meihdfsReport}
+        filteredRecords={filteredRecords}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        tagFilter={tagFilter}
+        setTagFilter={setTagFilter}
+        manifest={manifest}
+        copiedSha={copiedSha}
+        onCopySha={copyManifestSha}
+        capacityVm={capacityVm}
+        writerVm={writerVm}
+      />
     </div>
   );
 };

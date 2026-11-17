@@ -1,17 +1,18 @@
 import { useCallback, useEffect, useState } from 'react';
-import {
+import type {
   ExtrheadUnpackReport,
   FrmPackReport,
   PackFrmRequest,
+  UnpackExtrheadParams,
 } from '@/models';
-import { invokeCommand } from '@/services/ipc';
+import {
+  listFrmContainers,
+  packFrmContainer,
+  unpackExtrheadPayload,
+} from '@/services/storageCryptoService';
 import { logger } from '@/utils/logger';
 
-export interface UnpackExtrheadParams {
-  inputPath: string;
-  mode: 'auto' | 'main' | 'drv' | 'plain';
-  outPath?: string;
-}
+export type { UnpackExtrheadParams };
 
 /**
  * ViewModel for listing .FRM containers, packing PANA__SD.FRM / PANA_DVD.FRM / DIGADIAG.FRM,
@@ -19,7 +20,7 @@ export interface UnpackExtrheadParams {
  */
 export function useFrmPackager() {
   const [containers, setContainers] = useState<string[]>([]);
-  const [loadingContainers, setLoadingContainers] = useState<boolean>(false);
+  const [loadingContainers, setLoadingContainers] = useState<boolean>(true);
 
   const [packLoading, setPackLoading] = useState<boolean>(false);
   const [packError, setPackError] = useState<string | null>(null);
@@ -32,7 +33,7 @@ export function useFrmPackager() {
   const refreshContainers = useCallback(async () => {
     setLoadingContainers(true);
     try {
-      const list = await invokeCommand<string[]>('list_frm_containers_command');
+      const list = await listFrmContainers();
       setContainers(Array.isArray(list) ? list : []);
     } catch (err) {
       logger.warn('FrmPackager', 'Failed listing .FRM containers', err);
@@ -42,7 +43,7 @@ export function useFrmPackager() {
   }, []);
 
   useEffect(() => {
-    void refreshContainers();
+    void Promise.resolve().then(() => refreshContainers());
   }, [refreshContainers]);
 
   const packFrm = useCallback(
@@ -50,7 +51,7 @@ export function useFrmPackager() {
       setPackLoading(true);
       setPackError(null);
       try {
-        const report = await invokeCommand<FrmPackReport>('pack_frm_command', { request });
+        const report = await packFrmContainer(request);
         setPackResult(report);
         await refreshContainers();
         return report;
@@ -62,7 +63,7 @@ export function useFrmPackager() {
         setPackLoading(false);
       }
     },
-    [refreshContainers]
+    [refreshContainers],
   );
 
   const unpackExtrhead = useCallback(
@@ -71,12 +72,10 @@ export function useFrmPackager() {
       setUnpackError(null);
       try {
         const trimmedOut = outPath?.trim();
-        const report = await invokeCommand<ExtrheadUnpackReport>('unpack_extrhead_command', {
-          input_path: inputPath.trim(),
+        const report = await unpackExtrheadPayload({
           inputPath: inputPath.trim(),
           mode,
-          out_path: trimmedOut ? trimmedOut : null,
-          outPath: trimmedOut ? trimmedOut : null,
+          outPath: trimmedOut || undefined,
         });
         setUnpackResult(report);
         return report;
@@ -88,11 +87,14 @@ export function useFrmPackager() {
         setUnpackLoading(false);
       }
     },
-    []
+    [],
   );
+
+  const isLoading = loadingContainers || packLoading || unpackLoading;
 
   return {
     containers,
+    isLoading,
     loadingContainers,
     refreshContainers,
     packLoading,

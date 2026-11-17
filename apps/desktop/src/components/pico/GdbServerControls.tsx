@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
 import type { GdbBridgeStatus } from '@/models';
-import { CLIPBOARD_FEEDBACK_MS, GDB_DEFAULT_LISTEN_ADDR } from '@/constants';
+import {
+  CLIPBOARD_FEEDBACK_MS,
+  GDB_DEFAULT_LISTEN_ADDR,
+  GDB_DEFAULT_TCP_PORT,
+} from '@/constants';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Button } from '@/components/ui';
-import { useManagedTimeouts } from '@/hooks/useManagedTimeouts';
+import { useTransientFlag } from '@/hooks/useManagedTimeouts';
 import { useTranslation } from '@/i18n/useTranslation';
 import { Server, Play, RefreshCw, Copy, Check, AlertCircle } from 'lucide-react';
 
@@ -13,6 +17,7 @@ export interface GdbServerControlsProps {
   error?: string | null;
   onStart: (listenAddr?: string) => Promise<void>;
   onStop: () => Promise<void>;
+  onCopyCommand?: (command: string) => void;
 }
 
 export const GdbServerControls: React.FC<GdbServerControlsProps> = ({
@@ -21,24 +26,22 @@ export const GdbServerControls: React.FC<GdbServerControlsProps> = ({
   error,
   onStart,
   onStop,
+  onCopyCommand,
 }) => {
   const { t } = useTranslation();
-  const [copied, setCopied] = useState<boolean>(false);
-  const { scheduleTimeout, clearAllTimeouts } = useManagedTimeouts();
+  const { active: copied, trigger: triggerCopied } = useTransientFlag(CLIPBOARD_FEEDBACK_MS);
   const [listenAddrInput, setListenAddrInput] = useState<string>(
-    gdbStatus?.listen_addr || GDB_DEFAULT_LISTEN_ADDR
+    gdbStatus?.listen_addr || GDB_DEFAULT_LISTEN_ADDR,
   );
   const listenAddr = gdbStatus?.running
     ? gdbStatus.listen_addr || listenAddrInput
     : listenAddrInput;
-  const activePortLabel = listenAddr.split(':').pop() || '3333';
+  const activePortLabel = listenAddr.split(':').at(-1) || String(GDB_DEFAULT_TCP_PORT);
   const connectionCommand = `target remote ${listenAddr}`;
 
   const handleCopy = () => {
-    navigator.clipboard?.writeText(connectionCommand);
-    clearAllTimeouts();
-    setCopied(true);
-    scheduleTimeout(() => setCopied(false), CLIPBOARD_FEEDBACK_MS);
+    onCopyCommand?.(connectionCommand);
+    triggerCopied();
   };
 
   return (

@@ -9,8 +9,10 @@ import {
   Table,
   Unlock,
 } from 'lucide-react';
-import type { HddTab } from '@/viewmodels/useHddStorageViewModel';
+import type { TranslationKey } from '@/i18n/translations';
 import { useTranslation } from '@/i18n/useTranslation';
+import type { HddTab } from '@/models';
+import { isRecord, readStringProp } from '@/utils/typeGuards';
 
 interface HddNavigationBarProps {
   readonly showPathInput: boolean;
@@ -24,6 +26,25 @@ interface HddNavigationBarProps {
   readonly onEnableAdvanced: () => void;
   readonly hasManifest: boolean;
 }
+
+const CORE_HDD_TABS: ReadonlyArray<{
+  readonly id: HddTab;
+  readonly labelKey: TranslationKey;
+  readonly Icon: React.ComponentType<{ className?: string }>;
+}> = [
+  { id: 'overview', labelKey: 'hdd.tabs.overview', Icon: Layers },
+  { id: 'mbr', labelKey: 'hdd.tabs.mbr', Icon: FileCheck },
+];
+
+const ADVANCED_HDD_TABS: ReadonlyArray<{
+  readonly id: HddTab;
+  readonly labelKey: TranslationKey;
+  readonly Icon: React.ComponentType<{ className?: string }>;
+}> = [
+  { id: 'meihdfs', labelKey: 'hdd.tabs.meihdfs', Icon: Table },
+  { id: 'journal', labelKey: 'hdd.tabs.journal', Icon: BookOpen },
+  { id: 'density', labelKey: 'hdd.tabs.density', Icon: BarChart3 },
+];
 
 export const HddNavigationBar: React.FC<HddNavigationBarProps> = ({
   showPathInput,
@@ -43,19 +64,46 @@ export const HddNavigationBar: React.FC<HddNavigationBarProps> = ({
   const handleDropImagePath = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     setDragOverPath(false);
-    const droppedFile = event.dataTransfer.files?.[0] as (File & { path?: string }) | undefined;
+    const droppedFile: unknown = event.dataTransfer.files?.[0];
+    const droppedPath = isRecord(droppedFile)
+      ? readStringProp(droppedFile, 'path') ?? readStringProp(droppedFile, 'name')
+      : undefined;
     const textPath = event.dataTransfer.getData('text/plain')?.trim();
-    const resolved = droppedFile?.path || droppedFile?.name || textPath;
+    const resolved = droppedPath || textPath;
     if (resolved) {
       onSelectImagePath(resolved);
     }
+  };
+
+  const renderTabButton = (
+    tab: HddTab,
+    label: string,
+    Icon: React.ComponentType<{ className?: string }>,
+    activeClass = 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30',
+  ) => {
+    const active = activeTab === tab;
+    return (
+      <button
+        key={tab}
+        type="button"
+        onClick={() => onSelectTab(tab)}
+        role="tab"
+        aria-selected={active}
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
+          active ? activeClass : 'text-slate-400 hover:text-slate-200'
+        }`}
+      >
+        <Icon className="w-3.5 h-3.5" />
+        <span>{label}</span>
+      </button>
+    );
   };
 
   return (
     <>
       {showPathInput && (
         <div
-          onDragOver={e => {
+          onDragOver={(e) => {
             e.preventDefault();
             setDragOverPath(true);
           }}
@@ -65,16 +113,20 @@ export const HddNavigationBar: React.FC<HddNavigationBarProps> = ({
             dragOverPath ? 'border-emerald-400 bg-emerald-950/20' : 'border-cyan-500/40'
           }`}
         >
-          <label className="text-[11px] text-cyan-300 font-bold uppercase block">
-            Caminho do Arquivo de Imagem (.bin / .raw / .img) — Arraste o arquivo ou digite
+          <label
+            htmlFor="hdd-image-path-input"
+            className="text-[11px] text-cyan-300 font-bold uppercase block"
+          >
+            {t('hdd.navBar.pathLabel')}
           </label>
           <div className="flex gap-2">
             <input
+              id="hdd-image-path-input"
               type="text"
-              placeholder="Ex: firmware_and_images/panasonic DMR EH-55 Firmware hdd_100.bin"
+              placeholder={t('hdd.navBar.pathPlaceholder')}
               value={inputPath}
-              onChange={e => onInputPathChange(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && onOpenPath()}
+              onChange={(e) => onInputPathChange(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && onOpenPath()}
               className="flex-1 px-3 py-2 rounded-lg bg-bench-900 border border-slate-700 text-xs text-slate-100 focus:outline-none focus:border-cyan-400"
             />
             <button
@@ -82,7 +134,7 @@ export const HddNavigationBar: React.FC<HddNavigationBarProps> = ({
               onClick={onOpenPath}
               className="px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs transition-colors"
             >
-              Carregar
+              {t('hdd.navBar.loadBtn')}
             </button>
           </div>
         </div>
@@ -91,143 +143,45 @@ export const HddNavigationBar: React.FC<HddNavigationBarProps> = ({
       <div
         className="flex flex-wrap items-center gap-2 border-b border-slate-800 pb-2 text-xs"
         role="tablist"
-        aria-label="Navegação de Forense do Disco"
+        aria-label={t('hdd.navBar.tablistAria')}
       >
-        <button
-          type="button"
-          onClick={() => onSelectTab('overview')}
-          role="tab"
-          aria-selected={activeTab === 'overview'}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
-            activeTab === 'overview'
-              ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Layers className="w-3.5 h-3.5" />
-          <span>{t('hdd.tabs.overview', 'Visão Geral do Disco')}</span>
-        </button>
+        {CORE_HDD_TABS.length === 0
+          ? null
+          : CORE_HDD_TABS.map(({ id, labelKey, Icon }) => renderTabButton(id, t(labelKey), Icon))}
 
-        <button
-          type="button"
-          onClick={() => onSelectTab('mbr')}
-          role="tab"
-          aria-selected={activeTab === 'mbr'}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
-            activeTab === 'mbr'
-              ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <FileCheck className="w-3.5 h-3.5" />
-          <span>{t('hdd.tabs.mbr', 'MBR vs Espelho LBA 57.344')}</span>
-        </button>
-
-        {isAdvanced && (
-          <>
-            <button
-              type="button"
-              onClick={() => onSelectTab('meihdfs')}
-              role="tab"
-              aria-selected={activeTab === 'meihdfs'}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
-                activeTab === 'meihdfs'
-                  ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <Table className="w-3.5 h-3.5" />
-              <span>{t('hdd.tabs.meihdfs', '256 Registros MEIHDFS (XOR 0xFF)')}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => onSelectTab('journal')}
-              role="tab"
-              aria-selected={activeTab === 'journal'}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
-                activeTab === 'journal'
-                  ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <BookOpen className="w-3.5 h-3.5" />
-              <span>{t('hdd.tabs.journal', 'Journal WAL (10 Blocos)')}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => onSelectTab('density')}
-              role="tab"
-              aria-selected={activeTab === 'density'}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
-                activeTab === 'density'
-                  ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <BarChart3 className="w-3.5 h-3.5" />
-              <span>{t('hdd.tabs.density', 'Mapa de Densidade (100 MB)')}</span>
-            </button>
-          </>
-        )}
-
-        {!isAdvanced && (
+        {isAdvanced ? (
+          ADVANCED_HDD_TABS.map(({ id, labelKey, Icon }) => renderTabButton(id, t(labelKey), Icon))
+        ) : (
           <button
             type="button"
             onClick={onEnableAdvanced}
             className="ml-auto px-2.5 py-1 rounded-lg border border-slate-800 text-[11px] text-cyan-300 hover:bg-slate-800 transition-colors"
           >
-            + Abas Forenses (MEIHDFS / WAL / Densidade)
+            {t('hdd.navBar.enableAdvancedBtn')}
           </button>
         )}
 
-        {hasManifest && (
-          <button
-            type="button"
-            onClick={() => onSelectTab('extract')}
-            role="tab"
-            aria-selected={activeTab === 'extract'}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
-              activeTab === 'extract'
-                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <FolderArchive className="w-3.5 h-3.5" />
-            <span>Manifesto de Partições</span>
-          </button>
+        {hasManifest &&
+          renderTabButton(
+            'extract',
+            t('hdd.navBar.tabExtract'),
+            FolderArchive,
+            'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30',
+          )}
+
+        {renderTabButton(
+          'capacity',
+          t('hdd.navBar.tabCapacity'),
+          Unlock,
+          'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30',
         )}
 
-        <button
-          type="button"
-          onClick={() => onSelectTab('capacity')}
-          role="tab"
-          aria-selected={activeTab === 'capacity'}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
-            activeTab === 'capacity'
-              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Unlock className="w-3.5 h-3.5" />
-          <span>Desbloqueio de Capacidade (250GB / 2TB)</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onSelectTab('writer')}
-          role="tab"
-          aria-selected={activeTab === 'writer'}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 ${
-            activeTab === 'writer'
-              ? 'bg-purple-500/10 text-purple-400 border border-purple-500/30'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <HardDrive className="w-3.5 h-3.5" />
-          <span>Gravação Física & mkfs</span>
-        </button>
+        {renderTabButton(
+          'writer',
+          t('hdd.navBar.tabWriter'),
+          HardDrive,
+          'bg-purple-500/10 text-purple-400 border border-purple-500/30',
+        )}
       </div>
     </>
   );

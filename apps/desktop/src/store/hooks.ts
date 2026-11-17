@@ -5,16 +5,35 @@
 
 import { useContext, useSyncExternalStore } from 'react';
 import { ReactReduxContext } from 'react-redux';
-import type { Store } from '@reduxjs/toolkit';
-import { store as defaultAppStore, type AppDispatch, type RootState } from './index';
+import { isRecord } from '@/utils/typeGuards';
+import { store as defaultAppStore, type AppDispatch, type AppStore, type RootState } from './index';
 
-export function useActiveAppStore(): Store<RootState> {
+function isAppStore(candidate: unknown): candidate is AppStore {
+  if (!isRecord(candidate)) return false;
+  if (
+    typeof candidate.getState !== 'function' ||
+    typeof candidate.dispatch !== 'function' ||
+    typeof candidate.subscribe !== 'function'
+  ) {
+    return false;
+  }
+  const state: unknown = candidate.getState();
+  return (
+    isRecord(state) &&
+    'shell' in state &&
+    'workbench' in state &&
+    'toast' in state &&
+    'nvramCapture' in state
+  );
+}
+
+export function useActiveAppStore(): AppStore {
   const ctx = useContext(ReactReduxContext);
-  return (ctx?.store as Store<RootState> | undefined) ?? defaultAppStore;
+  return isAppStore(ctx?.store) ? ctx.store : defaultAppStore;
 }
 
 export function useAppDispatch(): AppDispatch {
-  return useActiveAppStore().dispatch as AppDispatch;
+  return useActiveAppStore().dispatch;
 }
 
 export function useAppSelector<T>(selector: (state: RootState) => T): T {

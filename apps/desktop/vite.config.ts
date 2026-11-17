@@ -53,7 +53,7 @@ function stripDesktopIrLocalesPlugin(strip: boolean): Plugin {
         return null;
       }
       const norm = id.replace(/\\/g, "/");
-      if (/\/src\/locales\/ir\.(en-US|pt-BR)\.json$/.test(norm)) {
+      if (/\/src\/locales\/ir\/(en-US|pt-BR)\.json$/.test(norm)) {
         return "{}";
       }
       return null;
@@ -62,11 +62,12 @@ function stripDesktopIrLocalesPlugin(strip: boolean): Plugin {
 }
 
 // https://vitejs.dev/config/
-export default defineConfig(({ command }) => ({
+export default defineConfig(({ command, mode }) => ({
   plugins: [react(), stripDesktopIrLocalesPlugin(command === "build" && !isAndroidApk)],
-  define: {
-    __PANADIGA_ANDROID_APK__: JSON.stringify(isAndroidApk),
-  },
+  define:
+    isAndroidApk && mode !== "android"
+      ? { "import.meta.env.MODE": JSON.stringify("android") }
+      : undefined,
   clearScreen: false,
   server: {
     port: 1420,
@@ -107,14 +108,14 @@ export default defineConfig(({ command }) => ({
         manualChunks(id) {
           const norm = id.replace(/\\/g, "/");
           if (
-            norm.includes("/src/locales/pt-BR.json") ||
-            norm.includes("/src/locales/ir.pt-BR.json")
+            norm.includes("/src/locales/pt-BR/") ||
+            norm.includes("/src/locales/ir/pt-BR.json")
           ) {
             return "locales-pt-br";
           }
           if (
-            norm.includes("/src/locales/en-US.json") ||
-            norm.includes("/src/locales/ir.en-US.json")
+            norm.includes("/src/locales/en-US/") ||
+            norm.includes("/src/locales/ir/en-US.json")
           ) {
             return "locales-en-us";
           }
@@ -153,6 +154,17 @@ export default defineConfig(({ command }) => ({
             }
             if (norm.includes("i18next") || norm.includes("react-i18next")) {
               return "vendor-i18n";
+            }
+            if (norm.includes("/zod/")) {
+              return "vendor-validation";
+            }
+            if (
+              norm.includes("/pino/") ||
+              norm.includes("@pinojs/") ||
+              norm.includes("quick-format") ||
+              norm.includes("@opentelemetry/")
+            ) {
+              return "vendor-telemetry";
             }
             if (
               norm.includes("/react/") ||

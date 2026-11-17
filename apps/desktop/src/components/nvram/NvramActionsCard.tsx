@@ -2,6 +2,14 @@ import React from 'react';
 import { Cpu, ShieldCheck, RefreshCw, FileCode, Radio } from 'lucide-react';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Button } from '@/components/ui/button';
+import {
+  FLASH_16MB_BYTES,
+  FLASH_2MB_BYTES,
+  FLASH_4MB_BYTES,
+  HEX32_PAD_WIDTH,
+  SPANSION_MICROSECTOR_COUNT,
+} from '@/constants';
+import type { TranslationKey } from '@/i18n/translations';
 import { useTranslation } from '@/i18n/useTranslation';
 import { LiveNvramCaptureEvent, NvramCleanReport } from '@/models';
 
@@ -15,6 +23,49 @@ interface NvramActionsCardProps {
   onCaptureLive?: () => void;
   onClearLiveCapture?: () => void;
   onRefresh: () => void;
+}
+
+const CHIP_LABEL_BY_BYTES: ReadonlyArray<readonly [number, TranslationKey]> = [
+  [FLASH_2MB_BYTES, 'nvram.actions.chip2mb'],
+  [FLASH_4MB_BYTES, 'nvram.actions.chip4mb'],
+  [FLASH_16MB_BYTES, 'nvram.actions.chip16mb'],
+];
+
+function resolveFlashChipKey(flashBytes: number): TranslationKey {
+  return CHIP_LABEL_BY_BYTES.find(([bytes]) => bytes === flashBytes)?.[1] ?? 'nvram.actions.chip8mb';
+}
+
+function formatAddressHex(offset: number): string {
+  return `0x${offset.toString(16).toUpperCase().padStart(HEX32_PAD_WIDTH, '0')}`;
+}
+
+function getCleanButtonBody(
+  cleaning: boolean,
+  cleanSuccess: boolean,
+  t: ReturnType<typeof useTranslation>['t'],
+): React.ReactNode {
+  if (cleaning) {
+    return (
+      <>
+        <RefreshCw className="w-4 h-4 animate-spin" />
+        <span>{t('nvram.actions.cleaningBtn')}</span>
+      </>
+    );
+  }
+  if (cleanSuccess) {
+    return (
+      <>
+        <ShieldCheck className="w-4 h-4" />
+        <span>{t('nvram.actions.cleanedBadge')}</span>
+      </>
+    );
+  }
+  return (
+    <>
+      <FileCode className="w-4 h-4" />
+      <span>{t('nvram.actions.surgicalCleanBtn')}</span>
+    </>
+  );
 }
 
 export const NvramActionsCard: React.FC<NvramActionsCardProps> = ({
@@ -31,21 +82,9 @@ export const NvramActionsCard: React.FC<NvramActionsCardProps> = ({
   const { t } = useTranslation();
   const flashBytes = report?.total_flash_bytes ?? 0;
 
-  const startHex = report
-    ? `0x${report.nvram_offset_start.toString(16).toUpperCase().padStart(8, '0')}`
-    : '0x007F0000';
-  const endHex = report
-    ? `0x${(report.nvram_offset_end - 1).toString(16).toUpperCase().padStart(8, '0')}`
-    : '0x007FFFFF';
-
-  const flashName =
-    flashBytes === 0x0020_0000
-      ? 'Spansion S29AL016J NOR Flash (2 MB / 16 Mbit)'
-      : flashBytes === 0x0040_0000
-        ? 'Spansion S29JL032H NOR Flash (4 MB / 32 Mbit)'
-        : flashBytes === 0x0100_0000
-          ? 'Spansion S29GL128P NOR Flash (16 MB / 128 Mbit)'
-          : 'Spansion S29JL064H NOR Flash (8 MB / 64 Mbit)';
+  const startHex = report ? formatAddressHex(report.nvram_offset_start) : '0x007F0000';
+  const endHex = report ? formatAddressHex(report.nvram_offset_end - 1) : '0x007FFFFF';
+  const flashName = t(resolveFlashChipKey(flashBytes));
 
   return (
     <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-5 rounded-2xl bg-bench-900 border border-slate-800 shadow-xl">
@@ -56,8 +95,8 @@ export const NvramActionsCard: React.FC<NvramActionsCardProps> = ({
         <div>
           <div className="flex items-center gap-2 flex-wrap">
             <h2 className="text-base font-bold text-slate-100">{flashName}</h2>
-            <StatusBadge variant="info" label="TOP-BOOT" />
-            <StatusBadge variant="neutral" label="TSOP-48 / BGA" />
+            <StatusBadge variant="info" label={t('nvram.actions.topBootBadge')} />
+            <StatusBadge variant="neutral" label={t('nvram.actions.packageBadge')} />
             {liveCapture && (
               <StatusBadge
                 variant="success"
@@ -71,7 +110,9 @@ export const NvramActionsCard: React.FC<NvramActionsCardProps> = ({
           <p className="text-xs text-slate-400 mt-1">
             {t('nvram.actions.descPrefix')}{' '}
             <code className="text-cyan-400">{startHex}..{endHex}</code>{' '}
-            {t('nvram.actions.descMiddle', { count: report?.microsectors.length ?? 8 })}
+            {t('nvram.actions.descMiddle', {
+              count: report?.microsectors.length ?? SPANSION_MICROSECTOR_COUNT,
+            })}
             {liveCapture && (
               <span className="text-emerald-400 ml-2">
                 {t('nvram.actions.liveCaptureInfo', {
@@ -132,22 +173,7 @@ export const NvramActionsCard: React.FC<NvramActionsCardProps> = ({
           disabled={cleaning || cleanSuccess || !report || Boolean(liveCapture)}
           className="gap-2"
         >
-          {cleaning ? (
-            <>
-              <RefreshCw className="w-4 h-4 animate-spin" />
-              <span>{t('nvram.actions.cleaningBtn')}</span>
-            </>
-          ) : cleanSuccess ? (
-            <>
-              <ShieldCheck className="w-4 h-4" />
-              <span>{t('nvram.actions.cleanedBadge')}</span>
-            </>
-          ) : (
-            <>
-              <FileCode className="w-4 h-4" />
-              <span>{t('nvram.actions.surgicalCleanBtn')}</span>
-            </>
-          )}
+          {getCleanButtonBody(cleaning, cleanSuccess, t)}
         </Button>
       </div>
     </div>

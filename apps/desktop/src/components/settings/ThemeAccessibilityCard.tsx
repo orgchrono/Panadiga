@@ -1,11 +1,15 @@
 import React from 'react';
 import { Contrast, Eye, Moon, Sparkles, Sun, Tv, Type } from 'lucide-react';
-import { useWorkbenchMode, type FontScaleMode, type WorkbenchTheme } from '@/context/WorkbenchModeContext';
-import { useToast } from '@/context/ToastContext';
-import { useTranslation } from '@/i18n/useTranslation';
-import type { TranslationKey } from '@/i18n/translations';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Switch } from '@/components/ui';
+import type { TranslationKey } from '@/i18n/translations';
+import { useTranslation } from '@/i18n/useTranslation';
 import { cn } from '@/lib/utils';
+import type {
+  AccessibilitySettings,
+  FontScaleMode,
+  ToastMessage,
+  WorkbenchTheme,
+} from '@/models';
 
 const THEME_OPTIONS: ReadonlyArray<{
   readonly id: WorkbenchTheme;
@@ -44,16 +48,29 @@ const THEME_OPTIONS: ReadonlyArray<{
   },
 ];
 
-export const ThemeAccessibilityCard: React.FC = () => {
+export interface ThemeAccessibilityCardProps {
+  readonly accessibility: AccessibilitySettings;
+  readonly onSetTheme: (theme: WorkbenchTheme) => void;
+  readonly onSetColorblindSafe: (enabled: boolean) => void;
+  readonly onSetReducedMotion: (enabled: boolean) => void;
+  readonly onSetFontScale: (scale: FontScaleMode) => void;
+  readonly onNotify: (toast: Omit<ToastMessage, 'id'>) => void;
+}
+
+export const ThemeAccessibilityCard: React.FC<ThemeAccessibilityCardProps> = ({
+  accessibility,
+  onSetTheme,
+  onSetColorblindSafe,
+  onSetReducedMotion,
+  onSetFontScale,
+  onNotify,
+}) => {
   const { t } = useTranslation();
-  const { accessibility, setTheme, setColorblindSafe, setReducedMotion, setFontScale } =
-    useWorkbenchMode();
-  const { showToast } = useToast();
 
   const handleThemeSelect = (nextTheme: WorkbenchTheme) => {
-    setTheme(nextTheme);
-    const opt = THEME_OPTIONS.find(item => item.id === nextTheme);
-    showToast({
+    onSetTheme(nextTheme);
+    const opt = THEME_OPTIONS.find((item) => item.id === nextTheme);
+    onNotify({
       type: 'info',
       title: t('settings.themes.toastThemeTitle'),
       message: opt ? t(opt.labelKey) : nextTheme,
@@ -61,8 +78,8 @@ export const ThemeAccessibilityCard: React.FC = () => {
   };
 
   const handleFontScale = (scale: FontScaleMode) => {
-    setFontScale(scale);
-    showToast({
+    onSetFontScale(scale);
+    onNotify({
       type: 'info',
       title: t('settings.themes.toastScaleTitle'),
       message:
@@ -79,16 +96,14 @@ export const ThemeAccessibilityCard: React.FC = () => {
           <Contrast className="w-4 h-4 text-cyan-400" />
           <span>{t('settings.themes.cardTitle')}</span>
         </CardTitle>
-        <CardDescription>
-          {t('settings.themes.cardDesc')}
-        </CardDescription>
+        <CardDescription>{t('settings.themes.cardDesc')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
         {THEME_OPTIONS.length === 0 ? (
           <span className="text-xs text-slate-500">{t('settings.themes.emptyThemes')}</span>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {THEME_OPTIONS.map(opt => {
+            {THEME_OPTIONS.map((opt) => {
               const Icon = opt.Icon;
               const active = accessibility.theme === opt.id;
               return (
@@ -101,13 +116,13 @@ export const ThemeAccessibilityCard: React.FC = () => {
                     'flex items-start gap-3 p-3.5 rounded-xl border text-left transition-colors',
                     active
                       ? 'bg-cyan-500/10 border-cyan-500/60 text-slate-100'
-                      : 'bg-slate-950/80 border-slate-800 text-slate-300 hover:border-slate-700'
+                      : 'bg-slate-950/80 border-slate-800 text-slate-300 hover:border-slate-700',
                   )}
                 >
                   <div
                     className={cn(
                       'w-9 h-9 rounded-lg border-2 flex items-center justify-center shrink-0',
-                      opt.swatch
+                      opt.swatch,
                     )}
                   >
                     <Icon className="w-4 h-4 text-cyan-400" />
@@ -138,7 +153,7 @@ export const ThemeAccessibilityCard: React.FC = () => {
             <Switch
               aria-label={t('settings.themes.colorblindAria')}
               checked={accessibility.colorblindSafe}
-              onCheckedChange={checked => setColorblindSafe(checked)}
+              onCheckedChange={onSetColorblindSafe}
             />
           </div>
 
@@ -155,7 +170,7 @@ export const ThemeAccessibilityCard: React.FC = () => {
             <Switch
               aria-label={t('settings.themes.reducedMotionAria')}
               checked={accessibility.reducedMotion}
-              onCheckedChange={checked => setReducedMotion(checked)}
+              onCheckedChange={onSetReducedMotion}
             />
           </div>
 
@@ -172,7 +187,7 @@ export const ThemeAccessibilityCard: React.FC = () => {
             <Switch
               aria-label={t('settings.themes.fontScaleAria')}
               checked={accessibility.fontScale === 'large'}
-              onCheckedChange={checked => handleFontScale(checked ? 'large' : 'normal')}
+              onCheckedChange={(checked) => handleFontScale(checked ? 'large' : 'normal')}
             />
           </div>
         </div>

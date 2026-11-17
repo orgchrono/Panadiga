@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { ArchiveRestore, Cpu, Layers, Loader2 } from 'lucide-react';
 import type {
   FrmModuleExtractionReport,
@@ -26,6 +26,16 @@ interface UnbrickArchitectureCardProps {
   onExtractFrm: (frmPath: string, outDir: string) => Promise<FrmModuleExtractionReport | null>;
 }
 
+function formatHddLimitLabel(
+  workbench: UnbrickWorkspaceReport | null,
+  t: ReturnType<typeof useTranslation>['t'],
+): string {
+  const cap = workbench?.main_capacity;
+  if (!cap) return t('unbrick.arch.na');
+  if (cap.is_dynamic_unclamped) return t('unbrick.arch.hddDynamicBadge');
+  return t('unbrick.arch.hddLimitGb', { gb: cap.effective_default_limit_gb });
+}
+
 export const UnbrickArchitectureCard: React.FC<UnbrickArchitectureCardProps> = ({
   workbench,
   extractLoading,
@@ -33,16 +43,12 @@ export const UnbrickArchitectureCard: React.FC<UnbrickArchitectureCardProps> = (
   onExtractFrm,
 }) => {
   const { t } = useTranslation();
-  const [frmPath, setFrmPath] = useState(
-    workbench?.discovered_pana_dvd ?? 'firmware_and_images/PANA_DVD.FRM'
-  );
+  const [editedFrmPath, setEditedFrmPath] = useState<string | null>(null);
+  const frmPath =
+    editedFrmPath ?? workbench?.discovered_pana_dvd ?? 'firmware_and_images/PANA_DVD.FRM';
   const [outDir, setOutDir] = useState('unbrick_extracted_frm');
   const [frmErr, setFrmErr] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (workbench?.discovered_pana_dvd) setFrmPath(workbench.discovered_pana_dvd);
-  }, [workbench?.discovered_pana_dvd]);
 
   const handleExtractSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,7 +61,10 @@ export const UnbrickArchitectureCard: React.FC<UnbrickArchitectureCardProps> = (
     const extracted = await onExtractFrm(frmPath.trim(), outDir.trim());
     if (extracted) {
       setSuccess(
-        `Extraídos ${extracted.modules.length} módulos para ${extracted.output_dir}`
+        t('unbrick.arch.extractedSummary', {
+          count: extracted.modules.length,
+          dir: extracted.output_dir,
+        }),
       );
     }
   };
@@ -76,15 +85,12 @@ export const UnbrickArchitectureCard: React.FC<UnbrickArchitectureCardProps> = (
           </div>
           <div className="flex flex-wrap gap-1.5">
             <Badge variant={workbench?.prog061_bgo ? 'default' : 'outline'}>
-              PROG061: {workbench?.prog061_bgo?.detected_mode ?? 'NONE'}
+              {t('unbrick.arch.progPrefix', {
+                mode: workbench?.prog061_bgo?.detected_mode ?? t('unbrick.arch.na'),
+              })}
             </Badge>
             <Badge variant={workbench?.main_capacity?.is_dynamic_unclamped ? 'success' : 'warning'}>
-              HDD Limit:{' '}
-              {workbench?.main_capacity
-                ? workbench.main_capacity.is_dynamic_unclamped
-                  ? 'DYNAMIC'
-                  : `${workbench.main_capacity.effective_default_limit_gb} GB`
-                : 'N/A'}
+              {t('unbrick.arch.hddLimitLabel')} {formatHddLimitLabel(workbench, t)}
             </Badge>
           </div>
         </div>
@@ -127,7 +133,7 @@ export const UnbrickArchitectureCard: React.FC<UnbrickArchitectureCardProps> = (
               value={frmPath}
               aria-invalid={Boolean(frmErr)}
               onChange={e => {
-                setFrmPath(e.target.value);
+                setEditedFrmPath(e.target.value);
                 if (frmErr) setFrmErr(null);
               }}
             />

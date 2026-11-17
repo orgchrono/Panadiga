@@ -1,5 +1,7 @@
 //! Panasonic DMR-EH55 DIGA Engineering Suite - Cross-Platform Desktop & Android Backend Library
 
+#![cfg_attr(not(test), deny(clippy::print_stdout, clippy::print_stderr))]
+
 use tauri::Manager;
 
 pub mod commands;
@@ -93,12 +95,20 @@ macro_rules! build_invoke_handler {
             run_matshita_serial_cmd,
             verify_frm_unlock_command,
             pack_unlock_frm_command,
+            get_runtime_settings,
+            save_runtime_settings,
+            reset_runtime_settings,
+            log_frontend_event,
             $($android_cmd,)*
         ]
     };
 }
 
+/// Initializes native desktop runtime plugins, event listeners, and hardware-safe defaults.
 pub fn run_desktop_app() {
+    let settings = panadiga_core::settings::load_runtime_settings();
+    let initial_level = panadiga_core::logger::LogLevel::parse_lossy(&settings.workbench.log_level);
+    panadiga_core::logger::init_telemetry(initial_level);
     tauri::Builder::default()
         .manage(state::PanadigaBackendState::new())
         .plugin(tauri_plugin_shell::init())

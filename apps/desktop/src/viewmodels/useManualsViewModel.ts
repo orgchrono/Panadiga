@@ -1,33 +1,50 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import {
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import type {
   ManualSearchResult,
   ManualDocumentMetadata,
   ServiceManualCatalogItem,
 } from '@/models';
-import { invokeCommand } from '@/services/ipc';
-import { useTranslation, TranslationKey } from '@/i18n/useTranslation';
+import { listServiceManuals, searchServiceManuals } from '@/services/systemService';
+import { useTranslation, type TranslationKey } from '@/i18n/useTranslation';
 import { useEngineeringDocsNav } from './useEngineeringDocsNav';
+
+const DEFAULT_MANUAL_TERMS: readonly string[] = Object.freeze([
+  'U99',
+  'S29JL064',
+  'MN103S',
+  'P7501',
+  'IC5001',
+  'NSW5V',
+  'HDD FORMAT',
+  'SELF-CHECK',
+  'RAM DISK',
+  'VEP79138',
+]);
+
+function inferManualCategory(lower: string): ManualDocumentMetadata['category'] {
+  if (lower.includes('schematic')) return 'schematic';
+  if (lower.includes('operating') || lower.includes('user')) return 'operating_instructions';
+  if (lower.includes('quick') || lower.includes('guide') || lower.includes('bulletin')) {
+    return 'bulletin';
+  }
+  return 'service_manual';
+}
+
+function inferManualKeyIcs(lower: string): string[] {
+  const ics = [
+    ...(lower.includes('eh55') ? ['AM34', 'S29JL064H', 'P7501'] : []),
+    ...(lower.includes('mn103') || lower.includes('am3') ? ['MN103S', 'AM34'] : []),
+    ...(lower.includes('schematic') ? ['VEP79138', 'IC5001', 'Q7514'] : []),
+  ];
+  return ics.length > 0 ? ics : ['PDF'];
+}
 
 function inferManualMetadata(item: ServiceManualCatalogItem, index: number): ManualDocumentMetadata {
   const lower = item.file_name.toLowerCase();
-  const category: ManualDocumentMetadata['category'] = lower.includes('schematic')
-    ? 'schematic'
-    : lower.includes('operating') || lower.includes('user')
-    ? 'operating_instructions'
-    : lower.includes('quick') || lower.includes('guide') || lower.includes('bulletin')
-    ? 'bulletin'
-    : 'service_manual';
-
   const cleanTitle = item.file_name
     .replace(/\.pdf$/i, '')
     .replace(/_/g, ' ')
     .replace(/\b\w/g, c => c.toUpperCase());
-
-  const keyIcs: string[] = [];
-  if (lower.includes('eh55')) keyIcs.push('AM34', 'S29JL064H', 'P7501');
-  if (lower.includes('mn103') || lower.includes('am3')) keyIcs.push('MN103S', 'AM34');
-  if (lower.includes('schematic')) keyIcs.push('VEP79138', 'IC5001', 'Q7514');
-  if (keyIcs.length === 0) keyIcs.push('PDF');
 
   return {
     id: String(index + 1),
@@ -35,10 +52,10 @@ function inferManualMetadata(item: ServiceManualCatalogItem, index: number): Man
     file_path: item.relative_path,
     title: cleanTitle,
     description: `${item.relative_path} (${item.formatted_size})`,
-    category,
+    category: inferManualCategory(lower),
     size_bytes: item.size_bytes,
     page_count: 0,
-    key_ics: keyIcs,
+    key_ics: inferManualKeyIcs(lower),
   };
 }
 
@@ -49,86 +66,68 @@ export function useManualsViewModel() {
   const [searchQuery, setSearchQuery] = useState<string>('U99');
   const [errorKey, setErrorKey] = useState<TranslationKey | null>(null);
   const [rawError, setRawError] = useState<string | null>(null);
-  const [activeTerms] = useState<string[]>([
-    'U99',
-    'S29JL064',
-    'MN103S',
-    'P7501',
-    'IC5001',
-    'NSW5V',
-    'HDD FORMAT',
-    'SELF-CHECK',
-    'RAM DISK',
-    'VEP79138',
-  ]);
+  const [activeTerms] = useState<string[]>([...DEFAULT_MANUAL_TERMS]);
   const [selectedDoc, setSelectedDoc] = useState<ManualDocumentMetadata | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
 
-  const isMountedRef = useRef(true);
   useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    let mounted = true;
-    invokeCommand<ServiceManualCatalogItem[]>('list_service_manuals')
+    const controller = new AbortController();
+    void Promise.resolve()
+      .then(() => listServiceManuals())
       .then(items => {
-        if (!mounted) return;
+        if (controller.signal.aborted) return;
         const mapped = items.map(inferManualMetadata);
         setDocuments(mapped);
         setSelectedDoc(prev => prev ?? mapped[0] ?? null);
       })
       .catch(err => {
-        if (!mounted) return;
-        setRawError(err instanceof Error ? err.message : String(err));
+        if (!controller.signal.aborted) {
+          setRawError(err instanceof Error ? err.message : String(err));
+        }
       });
-    return () => {
-      mounted = false;
-    };
+    return () => controller.abort();
+  }, []);
+
+  const performSearch = useCallback(async (q: string) => {
+    setLoading(true);
+    try {
+      const results = await searchServiceManuals(q);
+      setSearchResults(results);
+    } catch (err) {
+      setRawError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   const executeSearch = useCallback(
     async (queryParam?: string) => {
       const q = (queryParam !== undefined ? queryParam : searchQuery).trim();
       if (!q) {
-        if (!isMountedRef.current) return;
         setErrorKey('manuals.search.emptyQuery');
         setRawError(null);
         setSearchResults([]);
         return;
       }
-
-      if (!isMountedRef.current) return;
       setErrorKey(null);
       setRawError(null);
-      setLoading(true);
-      try {
-        const results = await invokeCommand<ManualSearchResult[]>('search_manuals', { query: q });
-        if (isMountedRef.current) {
-          setSearchResults(results);
-        }
-      } catch (err) {
-        if (isMountedRef.current) {
-          setRawError(err instanceof Error ? err.message : String(err));
-        }
-      } finally {
-        if (isMountedRef.current) {
-          setLoading(false);
-        }
-      }
+      await performSearch(q);
     },
-    [searchQuery],
+    [performSearch, searchQuery],
   );
 
   useEffect(() => {
-    executeSearch('U99');
-  }, [executeSearch]);
+    const controller = new AbortController();
+    void Promise.resolve().then(() => {
+      if (!controller.signal.aborted) {
+        void performSearch('U99');
+      }
+    });
+    return () => controller.abort();
+  }, [performSearch]);
 
-  const docsNav = useEngineeringDocsNav(isMountedRef, setRawError);
+  const docsNav = useEngineeringDocsNav(setRawError);
 
   const filteredDocs = useMemo(() => {
     if (categoryFilter === 'all') return documents;
@@ -138,7 +137,7 @@ export function useManualsViewModel() {
   const selectTerm = useCallback(
     (term: string) => {
       setSearchQuery(term);
-      executeSearch(term);
+      void executeSearch(term);
     },
     [executeSearch],
   );

@@ -3,6 +3,7 @@
  * @brief Shared structured diagnostic parser used across USB CDC, Android USB-OTG, and BLE transports.
  */
 
+import { PICO_FLOATING_PIN_VOLTS_THRESHOLD } from '@/constants';
 import type { PicoDiagnosticResult } from '@/models/pico';
 import { extractTelemetryFindings } from './findingsRules';
 import {
@@ -23,7 +24,7 @@ function resolvePincheckVdd(rows: ReturnType<typeof parsePincheckRows>['rows']):
   );
   const pinPdParsed = vddRow ? Number.parseFloat(vddRow.pull_down) : NaN;
   const pinHizParsed = vddRow ? Number.parseFloat(vddRow.hiz) : NaN;
-  if (Number.isFinite(pinPdParsed) && pinPdParsed < 1.5) return pinPdParsed;
+  if (Number.isFinite(pinPdParsed) && pinPdParsed < PICO_FLOATING_PIN_VOLTS_THRESHOLD) return pinPdParsed;
   if (Number.isFinite(pinHizParsed)) return pinHizParsed;
   if (Number.isFinite(pinPdParsed)) return pinPdParsed;
   return null;

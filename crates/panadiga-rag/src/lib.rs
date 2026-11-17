@@ -3,6 +3,8 @@
 //! Replaces legacy Python RAG with a deterministic, memory-safe, zero-copy,
 //! 6-layer defense engine executing in sub-milliseconds without external runtime dependencies.
 
+#![cfg_attr(not(test), deny(clippy::print_stdout, clippy::print_stderr))]
+
 pub mod config;
 pub mod critic;
 pub mod generator;

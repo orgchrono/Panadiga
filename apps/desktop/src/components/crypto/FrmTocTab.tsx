@@ -1,5 +1,6 @@
 import React from 'react';
 import { Layers, Cpu, KeyRound } from 'lucide-react';
+import { HEX16_PAD_WIDTH, HEX32_PAD_WIDTH } from '@/constants';
 import { FrmTocDumpReport } from '@/models';
 import { StatusBadge } from '@/components/StatusBadge';
 import { useTranslation } from '@/i18n/useTranslation';
@@ -26,7 +27,9 @@ export const FrmTocTab: React.FC<FrmTocTabProps> = ({ tocReport }) => {
           </div>
           <StatusBadge
             variant={tocReport.toc_invariants_valid ? 'success' : 'warning'}
-            label={`Formato: ${tocReport.toc_format || 'unknown'}`}
+            label={t('crypto.tocSection.formatBadge', {
+              format: tocReport.toc_format || t('crypto.tocSection.formatUnknown'),
+            })}
           />
         </div>
 
@@ -39,14 +42,14 @@ export const FrmTocTab: React.FC<FrmTocTabProps> = ({ tocReport }) => {
             <table className="w-full text-left text-xs">
               <thead className="bg-bench-950 text-[11px] uppercase text-slate-400 border-b border-slate-800">
                 <tr>
-                  <th className="py-2.5 px-3">#</th>
-                  <th className="py-2.5 px-3">Slot</th>
-                  <th className="py-2.5 px-3">Módulo</th>
-                  <th className="py-2.5 px-3">HW / Modelo</th>
-                  <th className="py-2.5 px-3">Offset</th>
-                  <th className="py-2.5 px-3">Tamanho</th>
-                  <th className="py-2.5 px-3">FVU CRC32</th>
-                  <th className="py-2.5 px-3">list_sum</th>
+                  <th className="py-2.5 px-3">{t('crypto.tocSection.colIndex')}</th>
+                  <th className="py-2.5 px-3">{t('crypto.tocSection.colSlot')}</th>
+                  <th className="py-2.5 px-3">{t('crypto.tocSection.colModule')}</th>
+                  <th className="py-2.5 px-3">{t('crypto.tocSection.colHwModel')}</th>
+                  <th className="py-2.5 px-3">{t('crypto.tocSection.colOffset')}</th>
+                  <th className="py-2.5 px-3">{t('crypto.tocSection.colSize')}</th>
+                  <th className="py-2.5 px-3">{t('crypto.tocSection.colCrc32')}</th>
+                  <th className="py-2.5 px-3">{t('crypto.tocSection.colListSum')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/70">
@@ -57,25 +60,28 @@ export const FrmTocTab: React.FC<FrmTocTabProps> = ({ tocReport }) => {
                     <td className="py-2 px-3">
                       <span className="font-bold text-cyan-300">{row.module_name}</span>
                       <span className="block text-[10px] text-slate-500">
-                        ver {row.version_u16_hex} • flag 0x{row.target_flag.toString(16).padStart(2, '0')}
+                        {t('crypto.tocSection.metaVerFlag', {
+                          ver: row.version_u16_hex,
+                          flag: row.target_flag.toString(16).padStart(2, '0'),
+                        })}
                       </span>
                     </td>
                     <td className="py-2 px-3 text-slate-300">
                       {row.hardware_family} / {row.model_group}
                     </td>
                     <td className="py-2 px-3 text-purple-300">
-                      0x{row.module_offset.toString(16).toUpperCase().padStart(8, '0')}
+                      0x{row.module_offset.toString(16).toUpperCase().padStart(HEX32_PAD_WIDTH, '0')}
                     </td>
                     <td className="py-2 px-3 text-slate-200">
                       {row.module_size.toLocaleString()} B
                     </td>
                     <td className="py-2 px-3 text-slate-400">
-                      0x{row.fvu_checksum_u32.toString(16).toUpperCase().padStart(8, '0')}
+                      0x{row.fvu_checksum_u32.toString(16).toUpperCase().padStart(HEX32_PAD_WIDTH, '0')}
                     </td>
                     <td className="py-2 px-3">
                       <StatusBadge
                         variant={row.list_sum_valid ? 'success' : 'error'}
-                        label={`0x${row.list_sum_u16.toString(16).toUpperCase().padStart(4, '0')} ${row.list_sum_valid ? 'OK' : 'ERR'}`}
+                        label={`0x${row.list_sum_u16.toString(16).toUpperCase().padStart(HEX16_PAD_WIDTH, '0')} ${row.list_sum_valid ? t('crypto.tocSection.ok') : t('crypto.tocSection.err')}`}
                       />
                     </td>
                   </tr>
@@ -165,7 +171,11 @@ export const FrmTocTab: React.FC<FrmTocTabProps> = ({ tocReport }) => {
 
                 <div className="flex items-center gap-4 text-xs font-mono text-slate-400 shrink-0">
                   <span>{mod.start_offset_hex} .. {mod.end_offset_hex}</span>
-                  <span className="text-cyan-400 font-bold">{mod.payload_size_bytes.toLocaleString()} bytes</span>
+                  <span className="text-cyan-400 font-bold">
+                    {t('crypto.tocSection.bytesSuffix', {
+                      bytes: mod.payload_size_bytes.toLocaleString(),
+                    })}
+                  </span>
                 </div>
               </div>
             ))

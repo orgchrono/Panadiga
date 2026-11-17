@@ -51,12 +51,12 @@ export const FrmCodebookTab: React.FC<FrmCodebookTabProps> = ({
           <table className="w-full text-left text-xs font-mono">
             <thead>
               <tr className="border-b border-slate-800 text-slate-500 uppercase text-[10px]">
-                <th className="py-2.5 px-3">Rank</th>
-                <th className="py-2.5 px-3">Bloco Cifrado C_i (64b)</th>
-                <th className="py-2.5 px-3">Texto Claro P_i (KPA)</th>
-                <th className="py-2.5 px-3">Ocorrências (.FRM)</th>
-                <th className="py-2.5 px-3">Ocorrências (HD)</th>
-                <th className="py-2.5 px-3">Interpretação Semântica</th>
+                <th className="py-2.5 px-3">{t('crypto.codebookSection.colRank')}</th>
+                <th className="py-2.5 px-3">{t('crypto.codebookSection.colCiphertext')}</th>
+                <th className="py-2.5 px-3">{t('crypto.codebookSection.colPlaintext')}</th>
+                <th className="py-2.5 px-3">{t('crypto.codebookSection.colFrmOcc')}</th>
+                <th className="py-2.5 px-3">{t('crypto.codebookSection.colHddOcc')}</th>
+                <th className="py-2.5 px-3">{t('crypto.codebookSection.colInterpretation')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">

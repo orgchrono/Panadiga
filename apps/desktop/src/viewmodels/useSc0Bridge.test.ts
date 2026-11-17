@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useSc0Bridge } from './useSc0Bridge';
 import { handleMockCommand, subscribeMockEventStream } from '@/test/mocks/mockDispatcher';
-import type { PanadigaTestIpcBridge } from '@/services/ipc';
+import { installTestIpcBridge } from '@/test/mocks/testHostBridges';
 
 function createBridgeTestHarness() {
   const onExec = vi.fn().mockResolvedValue(null);
@@ -14,13 +14,12 @@ function createBridgeTestHarness() {
 
 describe('useSc0Bridge ViewModel', () => {
   beforeEach(() => {
-    const win = window as Window & { __PANADIGA_TEST_IPC__?: PanadigaTestIpcBridge };
-    win.__PANADIGA_TEST_IPC__ = {
+    installTestIpcBridge({
       invoke: <T,>(cmd: string, args?: Record<string, unknown>) =>
         handleMockCommand<T>(cmd, args),
       listen: <T,>(eventName: string, handler: (payload: T) => void) =>
         subscribeMockEventStream<T>(eventName, handler),
-    };
+    });
   });
 
   it('starts live SC0 bridge, sends RSP/drive payloads, and exits cleanly with ~~~', async () => {

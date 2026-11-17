@@ -1,6 +1,7 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { Bug, FileCode, Binary, Terminal, RefreshCw, Cpu, type LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui';
+import { TOOL_LAUNCH_FEEDBACK_MS } from '@/constants';
 import { GDB_DEFAULT_TCP_PORT } from '@/constants/hardwareSpecs/physicalConstants';
 import { useManagedTimeouts } from '@/hooks/useManagedTimeouts';
 import { useTranslation } from '@/i18n/useTranslation';
@@ -70,8 +71,7 @@ export const GdbExternalToolLaunchers: React.FC<GdbExternalToolLaunchersProps> =
 }) => {
   const { t } = useTranslation();
   const [activeTool, setActiveTool] = useState<string | null>(null);
-  const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { scheduleTimeout, cancelTimeout } = useManagedTimeouts();
+  const { scheduleTimeout, clearAllTimeouts } = useManagedTimeouts();
   const androidHost = Boolean(isAndroidHost);
 
   if (androidHost) {
@@ -84,15 +84,14 @@ export const GdbExternalToolLaunchers: React.FC<GdbExternalToolLaunchersProps> =
 
   const handleLaunch = async (tool: ExternalToolName) => {
     if (!onLaunchTool) return;
+    clearAllTimeouts();
     setActiveTool(tool);
     try {
       await onLaunchTool(tool);
     } finally {
-      cancelTimeout(resetTimerRef.current);
-      resetTimerRef.current = scheduleTimeout(() => {
-        resetTimerRef.current = null;
+      scheduleTimeout(() => {
         setActiveTool(null);
-      }, 1200);
+      }, TOOL_LAUNCH_FEEDBACK_MS);
     }
   };
 

@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { HardDrive, Loader2, ShieldCheck } from 'lucide-react';
+import { KIB_BYTES, SD_DISK_CHECKS_PREVIEW } from '@/constants';
 import { Alert, AlertDescription, Badge, Button, EmptyState, Input } from '@/components/ui';
 import { useTranslation } from '@/i18n/useTranslation';
+import type { SdDiskInspectionReport } from '@/models';
 import {
   resolveSdOverallBadgeVariant,
   resolveSeverityBadgeVariant,
@@ -13,6 +15,60 @@ interface SdVerificationPanelProps extends SdDiskVerificationProps {
   verifyDir: string;
   onChangeVerifyDir: (val: string) => void;
 }
+
+const SdDiskReportCard: React.FC<{ readonly diskResult: SdDiskInspectionReport }> = ({
+  diskResult,
+}) => {
+  const { t } = useTranslation();
+  return (
+    <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3 space-y-2 text-[11px] font-mono">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="font-semibold text-cyan-300">{diskResult.target}</span>
+        <div className="flex flex-wrap gap-1.5">
+          <Badge variant="outline">{diskResult.partition_scheme}</Badge>
+          {diskResult.bpb && (
+            <Badge variant="secondary">
+              {t('unbrick.sdKit.kibPerCluster', {
+                kind: diskResult.bpb.computed_fat_kind,
+                kib: Math.round(diskResult.bpb.cluster_size_bytes / KIB_BYTES),
+              })}
+            </Badge>
+          )}
+          <Badge variant={resolveSdOverallBadgeVariant(diskResult.overall_status)}>
+            {diskResult.overall_status}
+          </Badge>
+        </div>
+      </div>
+      {diskResult.digadiag_entry && (
+        <div className="text-slate-300">
+          {diskResult.digadiag_entry.name_8_3}: {diskResult.digadiag_entry.file_size.toLocaleString()} B
+          {' • '}
+          {diskResult.digadiag_entry.chain_contiguous
+            ? t('unbrick.sdKit.contiguous')
+            : t('unbrick.sdKit.fragmented')}
+          {' • '}
+          {diskResult.digadiag_entry.chain_complete
+            ? t('unbrick.sdKit.chainOk')
+            : t('unbrick.sdKit.chainIncomplete')}
+        </div>
+      )}
+      {diskResult.pana_sd_entry && (
+        <div className="text-slate-300">
+          {diskResult.pana_sd_entry.name_8_3}: {diskResult.pana_sd_entry.file_size.toLocaleString()} B
+          {' • '}
+          {diskResult.pana_sd_entry.chain_contiguous
+            ? t('unbrick.sdKit.contiguous')
+            : t('unbrick.sdKit.fragmented')}
+        </div>
+      )}
+      {diskResult.checks.slice(0, SD_DISK_CHECKS_PREVIEW).map((chk) => (
+        <div key={chk.id} className="text-slate-400">
+          [{chk.severity.toUpperCase()}] {chk.title}: {chk.detail}
+        </div>
+      ))}
+    </div>
+  );
+};
 
 export const SdVerificationPanel: React.FC<SdVerificationPanelProps> = ({
   verifyDir,
@@ -130,7 +186,7 @@ export const SdVerificationPanel: React.FC<SdVerificationPanelProps> = ({
                   setDiskTarget(e.target.value);
                   if (diskTargetError) setDiskTargetError(null);
                 }}
-                placeholder="E: ou firmware_and_images/sd.img"
+                placeholder={t('unbrick.sdKit.diskTargetPlaceholder')}
               />
               {diskTargetError && (
                 <p id="sd-disk-target-err" className="text-[11px] text-rose-400 font-mono">
@@ -160,45 +216,7 @@ export const SdVerificationPanel: React.FC<SdVerificationPanelProps> = ({
             </Alert>
           )}
 
-          {diskResult && (
-            <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3 space-y-2 text-[11px] font-mono">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="font-semibold text-cyan-300">{diskResult.target}</span>
-                <div className="flex flex-wrap gap-1.5">
-                  <Badge variant="outline">{diskResult.partition_scheme}</Badge>
-                  {diskResult.bpb && (
-                    <Badge variant="secondary">
-                      {diskResult.bpb.computed_fat_kind} · {Math.round(diskResult.bpb.cluster_size_bytes / 1024)} KiB/cluster
-                    </Badge>
-                  )}
-                  <Badge variant={resolveSdOverallBadgeVariant(diskResult.overall_status)}>
-                    {diskResult.overall_status}
-                  </Badge>
-                </div>
-              </div>
-              {diskResult.digadiag_entry && (
-                <div className="text-slate-300">
-                  {diskResult.digadiag_entry.name_8_3}: {diskResult.digadiag_entry.file_size.toLocaleString()} B
-                  {' • '}
-                  {diskResult.digadiag_entry.chain_contiguous ? 'contíguo' : 'fragmentado'}
-                  {' • '}
-                  {diskResult.digadiag_entry.chain_complete ? 'cadeia OK' : 'cadeia incompleta'}
-                </div>
-              )}
-              {diskResult.pana_sd_entry && (
-                <div className="text-slate-300">
-                  {diskResult.pana_sd_entry.name_8_3}: {diskResult.pana_sd_entry.file_size.toLocaleString()} B
-                  {' • '}
-                  {diskResult.pana_sd_entry.chain_contiguous ? 'contíguo' : 'fragmentado'}
-                </div>
-              )}
-              {diskResult.checks.slice(0, 4).map(chk => (
-                <div key={chk.id} className="text-slate-400">
-                  [{chk.severity.toUpperCase()}] {chk.title}: {chk.detail}
-                </div>
-              ))}
-            </div>
-          )}
+          {diskResult && <SdDiskReportCard diskResult={diskResult} />}
         </div>
       )}
     </div>

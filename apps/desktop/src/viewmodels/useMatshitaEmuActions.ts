@@ -1,5 +1,5 @@
-import { useCallback, useState } from 'react';
-import type { Dispatch, SetStateAction } from 'react';
+import { useCallback, useState, type Dispatch, type SetStateAction } from 'react';
+import { translate } from '@/i18n/useTranslation';
 import type {
   BootSequenceReport,
   FrmUnlockVerificationSummary,
@@ -8,7 +8,15 @@ import type {
   PackUnlockFrmResult,
   SerialCliResponse,
 } from '@/models';
-import { invokeCommand } from '@/services/ipc';
+import {
+  injectMatshitaAtapiWrite,
+  packFrmUnlockContainer,
+  runMatshitaBootEmu,
+  runMatshitaSerialCmd,
+  verifyFrmUnlockContainer,
+} from '@/services/unbrickService';
+
+const DEFAULT_ATAPI_WRITE_MODE = 2;
 
 export interface AsyncChannelState<T> {
   loading: boolean;
@@ -24,7 +32,7 @@ export type RunChannelFn = <T>(
   setter: Dispatch<SetStateAction<AsyncChannelState<T>>>,
   tag: string,
   fn: () => Promise<T>,
-  toastTitle?: string
+  toastTitle?: string,
 ) => Promise<T | null>;
 
 /**
@@ -33,30 +41,30 @@ export type RunChannelFn = <T>(
  */
 export function useMatshitaEmuActions(runChannel: RunChannelFn) {
   const [matshitaBoot, setMatshitaBoot] = useState<AsyncChannelState<BootSequenceReport>>(() =>
-    emptyChannel()
+    emptyChannel(),
   );
   const [matshitaInject, setMatshitaInject] = useState<
     AsyncChannelState<MatshitaInjectWriteResult>
   >(() => emptyChannel());
   const [matshitaSerial, setMatshitaSerial] = useState<AsyncChannelState<SerialCliResponse>>(() =>
-    emptyChannel()
+    emptyChannel(),
   );
   const [frmVerify, setFrmVerify] = useState<AsyncChannelState<FrmUnlockVerificationSummary>>(() =>
-    emptyChannel()
+    emptyChannel(),
   );
   const [frmPack, setFrmPack] = useState<AsyncChannelState<PackUnlockFrmResult>>(() =>
-    emptyChannel()
+    emptyChannel(),
   );
 
   const runMatshitaBoot = useCallback(
     async (scenario: MatshitaBootScenario): Promise<BootSequenceReport | null> =>
       runChannel(
         setMatshitaBoot,
-        'Matshita R6-MV4 Boot',
-        () => invokeCommand<BootSequenceReport>('run_matshita_boot_emu', { scenario }),
-        `Sequência de boot (${scenario}) emulada`
+        translate('errors.unbrick.matshitaBootTag'),
+        () => runMatshitaBootEmu(scenario),
+        translate('errors.unbrick.matshitaBootDone', { scenario }),
       ),
-    [runChannel]
+    [runChannel],
   );
 
   const injectMatshitaWrite = useCallback(
@@ -69,51 +77,43 @@ export function useMatshitaEmuActions(runChannel: RunChannelFn) {
     }): Promise<MatshitaInjectWriteResult | null> =>
       runChannel(
         setMatshitaInject,
-        'ATAPI Write Injection',
+        translate('errors.unbrick.matshitaInjectTag'),
         () =>
-          invokeCommand<MatshitaInjectWriteResult>('inject_matshita_atapi_write', {
+          injectMatshitaAtapiWrite({
             targetVa: params.targetVa?.trim() || undefined,
             offset: params.offset ?? 0,
-            mode: params.mode ?? 2,
+            mode: params.mode ?? DEFAULT_ATAPI_WRITE_MODE,
             useVendorEd: Boolean(params.useVendorEd),
             payloadHex: params.payloadHex.trim(),
           }),
-        'Injeção ATAPI concluída'
+        translate('errors.unbrick.matshitaInjectDone'),
       ),
-    [runChannel]
+    [runChannel],
   );
 
   const runMatshitaSerial = useCallback(
     async (command: string, unlockPass = true): Promise<SerialCliResponse | null> =>
       runChannel(
         setMatshitaSerial,
-        'Matshita DRV CLI',
-        () =>
-          invokeCommand<SerialCliResponse>('run_matshita_serial_cmd', {
-            command: command.trim(),
-            unlockPass,
-          }),
-        'Comando DRV executado'
+        translate('errors.unbrick.matshitaSerialTag'),
+        () => runMatshitaSerialCmd(command.trim(), unlockPass),
+        translate('errors.unbrick.matshitaSerialDone'),
       ),
-    [runChannel]
+    [runChannel],
   );
 
   const verifyUnlockFrm = useCallback(
     async (
       containerKind: string,
-      frmPath: string
+      frmPath: string,
     ): Promise<FrmUnlockVerificationSummary | null> =>
       runChannel(
         setFrmVerify,
-        'FRM Unlock Verifier',
-        () =>
-          invokeCommand<FrmUnlockVerificationSummary>('verify_frm_unlock_command', {
-            containerKind: containerKind.trim(),
-            frmPath: frmPath.trim(),
-          }),
-        'Container .FRM verificado'
+        translate('errors.unbrick.frmVerifyTag'),
+        () => verifyFrmUnlockContainer(containerKind.trim(), frmPath.trim()),
+        translate('errors.unbrick.frmVerifyDone'),
       ),
-    [runChannel]
+    [runChannel],
   );
 
   const packUnlockFrm = useCallback(
@@ -124,16 +124,16 @@ export function useMatshitaEmuActions(runChannel: RunChannelFn) {
     }): Promise<PackUnlockFrmResult | null> =>
       runChannel(
         setFrmPack,
-        'FRM Unlock Builder',
+        translate('errors.unbrick.frmPackTag'),
         () =>
-          invokeCommand<PackUnlockFrmResult>('pack_unlock_frm_command', {
+          packFrmUnlockContainer({
             containerKind: params.containerKind.trim(),
             outPath: params.outPath?.trim() || undefined,
             payloadHex: params.payloadHex?.trim() || undefined,
           }),
-        'Container unlock .FRM gerado'
+        translate('errors.unbrick.frmPackDone'),
       ),
-    [runChannel]
+    [runChannel],
   );
 
   return {

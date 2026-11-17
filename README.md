@@ -1,5 +1,5 @@
 <p align="center">
-  <strong>English</strong> | <a href="README.pt-BR.md">Português (Brasil)</a>
+  <strong>English</strong> | <a href="README.pt-BR.md">Português (Brasil)</a> | <a href="CONTRIBUTING.md">Contributing & Architecture Rules</a>
 </p>
 
 # Panadiga — Hardware Diagnostic, Firmware & Reverse Engineering Suite for Panasonic DIGA Recorders

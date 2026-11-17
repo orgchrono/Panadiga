@@ -7,6 +7,7 @@ import {
   mockCryptanalysisReport,
   mockFrmTocDumpReport,
 } from '@/test/mocks/mockCrypto';
+import { getInstalledTestIpcBridge, installTestIpcBridge } from '@/test/mocks/testHostBridges';
 
 describe('useFrmCryptoViewModel & useFrmPackager Test', () => {
   beforeEach(() => {
@@ -14,18 +15,22 @@ describe('useFrmCryptoViewModel & useFrmPackager Test', () => {
   });
 
   it('passes selected frm_path across analyze_frm, dump_frm_toc, and get_codebook', async () => {
-    const previousBridge = window.__PANADIGA_TEST_IPC__;
+    const previousBridge = getInstalledTestIpcBridge();
     const calls: Array<{ cmd: string; args?: Record<string, unknown> }> = [];
-    window.__PANADIGA_TEST_IPC__ = {
-      invoke: async <T>(cmd: string, args?: Record<string, unknown>): Promise<T> => {
+    const mockBridge: {
+      invoke: (cmd: string, args?: Record<string, unknown>) => Promise<unknown>;
+      listen: () => () => void;
+    } = {
+      invoke: async (cmd, args) => {
         calls.push({ cmd, args });
-        if (cmd === 'analyze_frm') return mockCryptanalysisReport as unknown as T;
-        if (cmd === 'dump_frm_toc') return mockFrmTocDumpReport as unknown as T;
-        if (cmd === 'get_codebook') return mockCodebookReport as unknown as T;
-        return [] as unknown as T;
+        if (cmd === 'analyze_frm') return mockCryptanalysisReport;
+        if (cmd === 'dump_frm_toc') return mockFrmTocDumpReport;
+        if (cmd === 'get_codebook') return mockCodebookReport;
+        return [];
       },
       listen: () => () => {},
     };
+    installTestIpcBridge(mockBridge);
 
     try {
       const { result } = renderHook(() => useFrmCryptoViewModel());
@@ -44,7 +49,7 @@ describe('useFrmCryptoViewModel & useFrmPackager Test', () => {
         ).toBe(true)
       );
     } finally {
-      window.__PANADIGA_TEST_IPC__ = previousBridge;
+      installTestIpcBridge(previousBridge);
     }
   });
 

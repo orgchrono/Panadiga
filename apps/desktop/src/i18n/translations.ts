@@ -1,70 +1,104 @@
 /**
  * @file translations.ts
- * @brief Internationalization resources loaded directly from canonical JSON tables.
- *
- * Backed by locales/en-US.json and locales/pt-BR.json.
+ * @brief Internationalization resources composed from modular domain JSON tables under src/locales/<lang>/<domain>.json.
  */
 
-import enUSJson from '../locales/en-US.json';
-import ptBRJson from '../locales/pt-BR.json';
-import irEnUSJson from '../locales/ir.en-US.json';
-import irPtBRJson from '../locales/ir.pt-BR.json';
+import { isRecord } from '@/utils/typeGuards';
+import enCore from '../locales/en-US/core.json';
+import enWorkspace from '../locales/en-US/workspace.json';
+import enHdd from '../locales/en-US/hdd.json';
+import enCrypto from '../locales/en-US/crypto.json';
+import enPico from '../locales/en-US/pico.json';
+import enSsot from '../locales/en-US/ssot.json';
+import enErrors from '../locales/en-US/errors.json';
+import ptCore from '../locales/pt-BR/core.json';
+import ptWorkspace from '../locales/pt-BR/workspace.json';
+import ptHdd from '../locales/pt-BR/hdd.json';
+import ptCrypto from '../locales/pt-BR/crypto.json';
+import ptPico from '../locales/pt-BR/pico.json';
+import ptSsot from '../locales/pt-BR/ssot.json';
+import ptErrors from '../locales/pt-BR/errors.json';
+import irEnUSJson from '../locales/ir/en-US.json';
+import irPtBRJson from '../locales/ir/pt-BR.json';
+
+const enUSJson = {
+  ...enCore,
+  ...enWorkspace,
+  ...enHdd,
+  ...enCrypto,
+  ...enPico,
+  ...enSsot,
+  ...enErrors,
+} as const;
+
+const ptBRJson = {
+  ...ptCore,
+  ...ptWorkspace,
+  ...ptHdd,
+  ...ptCrypto,
+  ...ptPico,
+  ...ptSsot,
+  ...ptErrors,
+} as const;
 
 export type Locale = 'en-US' | 'pt-BR';
 
+type JoinKey<K, P> = K extends string ? (P extends string ? `${K}.${P}` : never) : never;
+
+type NestedKeyOf<T> = {
+  [K in keyof T & string]: T[K] extends readonly unknown[]
+    ? K
+    : T[K] extends Record<string, unknown>
+      ? JoinKey<K, NestedKeyOf<T[K]>>
+      : K;
+}[keyof T & string];
+
+export type TranslationKey = NestedKeyOf<typeof enUSJson> | NestedKeyOf<typeof irEnUSJson>;
+
 function mergeSection(base: unknown, extra: unknown): Record<string, unknown> {
-  const a = base && typeof base === 'object' ? (base as Record<string, unknown>) : {};
-  const b = extra && typeof extra === 'object' ? (extra as Record<string, unknown>) : {};
+  const a = isRecord(base) ? base : {};
+  const b = isRecord(extra) ? extra : {};
   return { ...a, ...b };
 }
 
-function mergeLocaleResources(
-  core: Record<string, unknown>,
-  ir: Record<string, unknown>,
-): Record<string, unknown> {
-  if (Object.keys(ir).length === 0) {
-    return core;
+function mergeLocaleResources(core: unknown, ir: unknown): Record<string, unknown> {
+  const coreRecord = isRecord(core) ? core : {};
+  const irRecord = isRecord(ir) ? ir : {};
+  if (Object.keys(irRecord).length === 0) {
+    return coreRecord;
   }
-  const mergedShell = mergeSection(core.shell, ir.shell);
-  mergedShell.viewTitles = mergeSection(
-    (core.shell as Record<string, unknown> | undefined)?.viewTitles,
-    (ir.shell as Record<string, unknown> | undefined)?.viewTitles,
-  );
+  const coreShell = isRecord(coreRecord.shell) ? coreRecord.shell : {};
+  const irShell = isRecord(irRecord.shell) ? irRecord.shell : {};
+  const mergedShell: Record<string, unknown> = {
+    ...coreShell,
+    ...irShell,
+    viewTitles: mergeSection(coreShell.viewTitles, irShell.viewTitles),
+  };
   return {
-    ...core,
-    ...ir,
-    nav: mergeSection(core.nav, ir.nav),
+    ...coreRecord,
+    ...irRecord,
+    nav: mergeSection(coreRecord.nav, irRecord.nav),
     shell: mergedShell,
   };
 }
 
 export const mergedLocales = {
-  'en-US': mergeLocaleResources(
-    enUSJson as Record<string, unknown>,
-    irEnUSJson as Record<string, unknown>,
-  ),
-  'pt-BR': mergeLocaleResources(
-    ptBRJson as Record<string, unknown>,
-    irPtBRJson as Record<string, unknown>,
-  ),
+  'en-US': mergeLocaleResources(enUSJson, irEnUSJson),
+  'pt-BR': mergeLocaleResources(ptBRJson, irPtBRJson),
 } as const;
 
 function flattenObject(obj: Record<string, unknown>, prefix = ''): Record<string, string> {
-  const result: Record<string, string> = {};
-  for (const [key, value] of Object.entries(obj)) {
+  const entries = Object.entries(obj).flatMap<readonly [string, string]>(([key, value]) => {
     const fullKey = prefix ? `${prefix}.${key}` : key;
-    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-      Object.assign(result, flattenObject(value as Record<string, unknown>, fullKey));
-    } else {
-      result[fullKey] = String(value);
+    if (isRecord(value)) {
+      return Object.entries(flattenObject(value, fullKey));
     }
-  }
-  return result;
+    return [[fullKey, String(value)]];
+  });
+  return Object.fromEntries(entries);
 }
 
 export const translations = {
   'en-US': flattenObject(mergedLocales['en-US']),
   'pt-BR': flattenObject(mergedLocales['pt-BR']),
 } as const;
-
-export type TranslationKey = keyof typeof translations['en-US'];

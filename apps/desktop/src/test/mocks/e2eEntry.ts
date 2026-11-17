@@ -1,5 +1,6 @@
 import type { PanadigaTestIpcBridge } from '@/services/ipc';
 import { handleMockCommand, subscribeMockEventStream } from './mockDispatcher';
+import { installTestIpcBridge } from './testHostBridges';
 
 const bridge: PanadigaTestIpcBridge = {
   invoke: <T>(cmd: string, args?: Record<string, unknown>) => handleMockCommand<T>(cmd, args),
@@ -7,4 +8,4 @@ const bridge: PanadigaTestIpcBridge = {
     subscribeMockEventStream<T>(eventName, handler),
 };
 
-(window as Window & { __PANADIGA_TEST_IPC__?: PanadigaTestIpcBridge }).__PANADIGA_TEST_IPC__ = bridge;
+installTestIpcBridge(bridge);

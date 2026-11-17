@@ -32,37 +32,43 @@ const SECTION_FILTER_IDS: ReadonlyArray<{
   { id: 'terminal', labelKey: 'pico.sections.terminal' },
 ];
 
-export const PicoBenchSsotLoading: React.FC = () => (
-  <div className="flex flex-col items-center justify-center h-96 gap-3 text-slate-400 font-mono text-xs">
-    <RefreshCw className="w-6 h-6 animate-spin text-cyan-400" />
-    <span>Carregando especificação SSOT de hardware do backend...</span>
-  </div>
-);
+export const PicoBenchSsotLoading: React.FC = () => {
+  const { t } = useTranslation();
+  return (
+    <div className="flex flex-col items-center justify-center h-96 gap-3 text-slate-400 font-mono text-xs">
+      <RefreshCw className="w-6 h-6 animate-spin text-cyan-400" />
+      <span>{t('pico.banners.ssotLoading')}</span>
+    </div>
+  );
+};
 
 interface PicoBenchSsotErrorProps {
   ssotError: string | null;
   onReload: () => void;
 }
 
-export const PicoBenchSsotError: React.FC<PicoBenchSsotErrorProps> = ({ ssotError, onReload }) => (
-  <div className="max-w-2xl mx-auto my-16 p-6 rounded-2xl bg-bench-900 border border-rose-500/30 text-center space-y-4 font-mono">
-    <div className="w-12 h-12 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/30 flex items-center justify-center mx-auto">
-      <AlertCircle className="w-6 h-6" />
+export const PicoBenchSsotError: React.FC<PicoBenchSsotErrorProps> = ({ ssotError, onReload }) => {
+  const { t } = useTranslation();
+  return (
+    <div className="max-w-2xl mx-auto my-16 p-6 rounded-2xl bg-bench-900 border border-rose-500/30 text-center space-y-4 font-mono">
+      <div className="w-12 h-12 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/30 flex items-center justify-center mx-auto">
+        <AlertCircle className="w-6 h-6" />
+      </div>
+      <div>
+        <h3 className="text-sm font-bold text-slate-100">
+          {t('pico.banners.ssotErrorTitle')}
+        </h3>
+        <p className="text-xs text-slate-400 mt-1">
+          {ssotError || t('pico.banners.ssotErrorFallback')}
+        </p>
+      </div>
+      <Button type="button" onClick={onReload} className="gap-2 mx-auto font-bold text-xs">
+        <RefreshCw className="w-4 h-4" />
+        <span>{t('pico.banners.ssotReloadBtn')}</span>
+      </Button>
     </div>
-    <div>
-      <h3 className="text-sm font-bold text-slate-100">
-        Falha ao Carregar Especificação Hardware SSOT
-      </h3>
-      <p className="text-xs text-slate-400 mt-1">
-        {ssotError || 'Não foi possível obter a tabela de pinagem P7501 e comandos PICO via IPC nativo.'}
-      </p>
-    </div>
-    <Button type="button" onClick={onReload} className="gap-2 mx-auto font-bold text-xs">
-      <RefreshCw className="w-4 h-4" />
-      <span>Recarregar SSOT</span>
-    </Button>
-  </div>
-);
+  );
+};
 
 interface PicoBenchActionBannersProps {
   backupResult: FirstContactBackupResult | null;
@@ -72,44 +78,50 @@ interface PicoBenchActionBannersProps {
 export const PicoBenchActionBanners: React.FC<PicoBenchActionBannersProps> = ({
   backupResult,
   eraseResult,
-}) => (
-  <>
-    {backupResult?.success && (
-      <div className="rounded-xl bg-cyan-500/10 border border-cyan-500/40 p-4 flex items-center justify-between shadow-xl gap-3">
-        <div className="flex items-center gap-3">
-          <ShieldCheck className="w-5 h-5 text-cyan-400 shrink-0" />
-          <div>
-            <h4 className="text-xs font-bold text-cyan-300">
-              BACKUP DE 1º CONTATO &amp; DOUBLE-READ CONCLUÍDOS COM SUCESSO!
-            </h4>
-            <p className="text-[11px] text-slate-300 mt-0.5 font-sans">
-              Modelo: {backupResult.detected_model} | NVRAM: {backupResult.nvram_bytes.toLocaleString()} bytes | SRAM:{' '}
-              {backupResult.sram_bytes.toLocaleString()} bytes. Integridade verificada via SHA-256.
-            </p>
+}) => {
+  const { t } = useTranslation();
+  return (
+    <>
+      {backupResult?.success && (
+        <div className="rounded-xl bg-cyan-500/10 border border-cyan-500/40 p-4 flex items-center justify-between shadow-xl gap-3">
+          <div className="flex items-center gap-3">
+            <ShieldCheck className="w-5 h-5 text-cyan-400 shrink-0" />
+            <div>
+              <h4 className="text-xs font-bold text-cyan-300">
+                {t('pico.banners.backupTitle')}
+              </h4>
+              <p className="text-[11px] text-slate-300 mt-0.5 font-sans">
+                {t('pico.banners.backupMeta', {
+                  model: backupResult.detected_model,
+                  nvram: backupResult.nvram_bytes.toLocaleString(),
+                  sram: backupResult.sram_bytes.toLocaleString(),
+                })}
+              </p>
+            </div>
           </div>
+          <StatusBadge variant="info" label={t('pico.banners.backupBadge')} />
         </div>
-        <StatusBadge variant="info" label="BACKUP SEGURO" />
-      </div>
-    )}
+      )}
 
-    {eraseResult?.success && (
-      <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/40 p-4 flex items-center justify-between shadow-xl gap-3">
-        <div className="flex items-center gap-3">
-          <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-          <div>
-            <h4 className="text-xs font-bold text-emerald-300">
-              INJEÇÃO DE RAM LOADER &amp; APAGAMENTO IN-CIRCUIT CONCLUÍDOS!
-            </h4>
-            <p className="text-[11px] text-slate-300 mt-0.5 font-sans">
-              Executado em {eraseResult.elapsed_ms}ms via P7501 UART (SW_UART / XRESET). NVRAM limpa para 0xFF (65.536 bytes). Alvo pronto para boot.
-            </p>
+      {eraseResult?.success && (
+        <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/40 p-4 flex items-center justify-between shadow-xl gap-3">
+          <div className="flex items-center gap-3">
+            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+            <div>
+              <h4 className="text-xs font-bold text-emerald-300">
+                {t('pico.banners.eraseTitle')}
+              </h4>
+              <p className="text-[11px] text-slate-300 mt-0.5 font-sans">
+                {t('pico.banners.eraseMeta', { ms: eraseResult.elapsed_ms })}
+              </p>
+            </div>
           </div>
+          <StatusBadge variant="success" label={t('pico.banners.eraseBadge')} />
         </div>
-        <StatusBadge variant="success" label="HARDWARE RESTAURADO" />
-      </div>
-    )}
-  </>
-);
+      )}
+    </>
+  );
+};
 
 interface PicoBenchSectionToolbarProps {
   sectionFilter: PicoBenchSectionFilter;

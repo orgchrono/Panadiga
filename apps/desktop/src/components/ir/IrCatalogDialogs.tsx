@@ -49,7 +49,7 @@ export const IrImportProfileDialog: React.FC<IrImportProfileDialogProps> = ({
               variant={importFormat === 'flipper' ? 'default' : 'outline'}
               onClick={() => setImportFormat('flipper')}
             >
-              Flipper (.ir)
+              {t('irCommander.catalog.flipperFormatBtn')}
             </Button>
             <Button
               type="button"
@@ -57,20 +57,20 @@ export const IrImportProfileDialog: React.FC<IrImportProfileDialogProps> = ({
               variant={importFormat === 'irplus' ? 'default' : 'outline'}
               onClick={() => setImportFormat('irplus')}
             >
-              irplus (.irplus XML)
+              {t('irCommander.catalog.irplusFormatBtn')}
             </Button>
           </div>
           <Input
             value={importName}
             onChange={e => setImportName(e.target.value)}
-            placeholder="Profile Name"
+            placeholder={t('irCommander.catalog.profileNamePlaceholder')}
           />
           <textarea
             rows={8}
             value={importBody}
             onChange={e => setImportBody(e.target.value)}
             data-testid="ir-import-textarea"
-            placeholder="Paste Filetype: IR signals file or <irplus> XML here..."
+            placeholder={t('irCommander.catalog.importBodyPlaceholder')}
             className="w-full rounded-lg bg-bench-950 border border-slate-700 p-2.5 text-xs text-slate-100 font-mono"
           />
         </div>
@@ -110,8 +110,10 @@ export const IrExportXmlDialog: React.FC<IrExportXmlDialogProps> = ({
     <Dialog open={exportedIrplusXml !== null} onOpenChange={open => !open && onClose()}>
       <DialogContent className="max-w-lg font-mono">
         <DialogHeader>
-          <DialogTitle>Exported .irplus XML</DialogTitle>
-          <DialogDescription>{profileName ?? 'Panadiga IR Profile'}</DialogDescription>
+          <DialogTitle>{t('irCommander.catalog.exportXmlTitle')}</DialogTitle>
+          <DialogDescription>
+            {profileName ?? t('irCommander.catalog.defaultProfileDesc')}
+          </DialogDescription>
         </DialogHeader>
         <textarea
           readOnly

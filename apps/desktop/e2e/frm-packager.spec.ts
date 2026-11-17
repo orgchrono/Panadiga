@@ -16,7 +16,10 @@ test.describe('PANA_DVD / PANA__SD FRM Decrypted TOC & Packager E2E', () => {
     await expect(page.getByText(/0x0AE1 OK/i)).toBeVisible();
 
     await page.getByRole('button', { name: /(Packager|Empacotador).*EXTRHEAD/i }).click();
-    await page.locator('input[placeholder*="Caminho payload"]').first().fill('firmware_and_images/out/drv_s211.bin');
+    await page
+      .locator('input[placeholder*="Caminho payload"], input[placeholder*="Payload path"]')
+      .first()
+      .fill('firmware_and_images/out/drv_s211.bin');
     await page.locator('button[type="submit"]:has-text("Empacotar"), button[type="submit"]:has-text("Pack .FRM Container")').first().click();
     await expect(page.getByText(/DIAG01/i).first()).toBeVisible();
 

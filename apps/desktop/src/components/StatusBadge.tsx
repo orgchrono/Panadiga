@@ -1,7 +1,8 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
+import type { StatusVariant } from '@/models';
 
-export type StatusVariant = 'success' | 'warning' | 'error' | 'info' | 'neutral';
+export type { StatusVariant };
 
 interface StatusBadgeProps {
   variant: StatusVariant;

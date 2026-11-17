@@ -33,6 +33,7 @@
   "path": [
     "apps/desktop/src",
     "apps/desktop/src-tauri/src",
+    "packages/oxlint-plugin-panadiga/src",
     "crates",
     "firmware/pico-p7501",
     "tools",

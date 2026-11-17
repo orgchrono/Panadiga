@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Cpu, Loader2, Radio, Wrench } from 'lucide-react';
 import type {
   MainPassthroughReport,
@@ -62,18 +62,16 @@ export const TbcPassthroughCard: React.FC<TbcPassthroughCardProps> = ({
   onBuildNorStub,
 }) => {
   const { t } = useTranslation();
-  const [mainInput, setMainInput] = useState(
-    discoveredMainPath ?? 'firmware_and_images/extracted_partitions/hdd_partition_firmware_0x02000000.bin'
-  );
+  const [editedMainInput, setEditedMainInput] = useState<string | null>(null);
+  const mainInput =
+    editedMainInput ??
+    discoveredMainPath ??
+    'firmware_and_images/extracted_partitions/hdd_partition_firmware_0x02000000.bin';
   const [mainOutput, setMainOutput] = useState('unbrick_out/MAIN3410PQ_TBC_PASSTHROUGH.bin');
   const [mode, setMode] = useState<MainPassthroughMode>('av_passthrough');
 
   const [inErr, setInErr] = useState<string | null>(null);
   const [outErr, setOutErr] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (discoveredMainPath) setMainInput(discoveredMainPath);
-  }, [discoveredMainPath]);
 
   const handleInspectOrPatch = async (action: 'inspect' | 'patch') => {
     const res = buildTbcActionParams({ action, mainInput, mainOutput, mode });
@@ -115,7 +113,7 @@ export const TbcPassthroughCard: React.FC<TbcPassthroughCardProps> = ({
               value={mainInput}
               aria-invalid={Boolean(inErr)}
               onChange={e => {
-                setMainInput(e.target.value);
+                setEditedMainInput(e.target.value);
                 if (inErr) setInErr(null);
               }}
             />
@@ -152,8 +150,8 @@ export const TbcPassthroughCard: React.FC<TbcPassthroughCardProps> = ({
                   }
                 }}
               >
-                <option value="av_passthrough">AV_PASSTHROUGH (Bypass FPC + ODD)</option>
-                <option value="factory_original">FACTORY_ORIGINAL (Restore Stock)</option>
+                <option value="av_passthrough">{t('unbrick.tbc.modeAvOption')}</option>
+                <option value="factory_original">{t('unbrick.tbc.modeFactoryOption')}</option>
               </Select>
             </div>
           </div>

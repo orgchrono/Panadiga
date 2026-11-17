@@ -4,16 +4,22 @@
  */
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import type { RuntimeSettings } from '@/models';
 import type {
   AccessibilitySettings,
   FontScaleMode,
   PipelineProgressState,
+  WorkbenchDocksState,
   WorkbenchExperienceMode,
   WorkbenchTheme,
 } from '@/types/workbench';
 import {
   DEFAULT_ACCESSIBILITY,
+  DEFAULT_DOCKS_STATE,
+  readFallbackRuntimeSettings,
   readInitialAccessibility,
+  readInitialComplianceAccepted,
+  readInitialDocksState,
   readInitialWorkbenchMode,
 } from '../storage';
 
@@ -29,14 +35,25 @@ export interface WorkbenchSliceState {
   readonly hudOpen: boolean;
   readonly accessibility: AccessibilitySettings;
   readonly pipeline: PipelineProgressState;
+  readonly runtimeSettings: RuntimeSettings;
+  readonly isLoading: boolean;
+  readonly complianceAccepted: boolean;
+  readonly complianceModalOpen: boolean;
+  readonly docks: WorkbenchDocksState;
 }
 
 export function createInitialWorkbenchState(): WorkbenchSliceState {
+  const complianceAccepted = readInitialComplianceAccepted();
   return {
     mode: readInitialWorkbenchMode(),
     hudOpen: false,
     accessibility: readInitialAccessibility(),
     pipeline: DEFAULT_PIPELINE,
+    runtimeSettings: readFallbackRuntimeSettings(),
+    isLoading: false,
+    complianceAccepted,
+    complianceModalOpen: !complianceAccepted,
+    docks: readInitialDocksState(),
   };
 }
 
@@ -99,12 +116,47 @@ const workbenchSlice = createSlice({
     resetPipeline(state) {
       return { ...state, pipeline: DEFAULT_PIPELINE };
     },
+    setRuntimeSettings(state, action: PayloadAction<RuntimeSettings>) {
+      return { ...state, runtimeSettings: action.payload };
+    },
+    setRuntimeSettingsLoading(state, action: PayloadAction<boolean>) {
+      return { ...state, isLoading: action.payload };
+    },
+    acceptCompliance(state) {
+      return { ...state, complianceAccepted: true, complianceModalOpen: false };
+    },
+    setComplianceModalOpen(state, action: PayloadAction<boolean>) {
+      return { ...state, complianceModalOpen: action.payload };
+    },
+    toggleLeftDock(state) {
+      return { ...state, docks: { ...state.docks, leftOpen: !state.docks.leftOpen } };
+    },
+    toggleRightDock(state) {
+      return { ...state, docks: { ...state.docks, rightOpen: !state.docks.rightOpen } };
+    },
+    toggleBottomDock(state) {
+      return { ...state, docks: { ...state.docks, bottomOpen: !state.docks.bottomOpen } };
+    },
+    toggleBottomExpanded(state) {
+      return {
+        ...state,
+        docks: {
+          ...state.docks,
+          bottomOpen: true,
+          bottomExpanded: !state.docks.bottomExpanded,
+        },
+      };
+    },
+    setDocksState(state, action: PayloadAction<Partial<WorkbenchDocksState>>) {
+      return { ...state, docks: { ...state.docks, ...action.payload } };
+    },
     resetWorkbenchPreferences(state) {
       return {
         ...state,
         mode: 'advanced',
         hudOpen: false,
         accessibility: DEFAULT_ACCESSIBILITY,
+        docks: DEFAULT_DOCKS_STATE,
       };
     },
   },
@@ -121,6 +173,15 @@ export const {
   setFontScale,
   markPipelineFlag,
   resetPipeline,
+  setRuntimeSettings,
+  setRuntimeSettingsLoading,
+  acceptCompliance,
+  setComplianceModalOpen,
+  toggleLeftDock,
+  toggleRightDock,
+  toggleBottomDock,
+  toggleBottomExpanded,
+  setDocksState,
   resetWorkbenchPreferences,
 } = workbenchSlice.actions;
 

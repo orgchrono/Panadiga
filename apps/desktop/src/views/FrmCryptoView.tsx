@@ -1,17 +1,110 @@
 import React from 'react';
-import { useFrmCryptoViewModel } from '@/viewmodels/useFrmCryptoViewModel';
-import { useFrmPackager } from '@/viewmodels/useFrmPackager';
-import { useTranslation } from '@/i18n/useTranslation';
 import {
-  FrmTopHeader,
-  FrmMetricsGrid,
-  FrmEntropyTab,
-  FrmTocTab,
+  AlertCircle,
+  BarChart2,
+  FileCheck2,
+  KeyRound,
+  Layers,
+  PackagePlus,
+  RefreshCw,
+} from 'lucide-react';
+import {
   FrmCodebookTab,
   FrmCorrelationTab,
+  FrmEntropyTab,
+  FrmMetricsGrid,
   FrmPackagerTab,
+  FrmTocTab,
+  FrmTopHeader,
 } from '@/components/crypto';
-import { BarChart2, Layers, KeyRound, FileCheck2, RefreshCw, AlertCircle, PackagePlus } from 'lucide-react';
+import type { TranslationKey } from '@/i18n/translations';
+import { useTranslation } from '@/i18n/useTranslation';
+import type {
+  CodebookEntry,
+  CryptanalysisReport,
+  FrmTocDumpReport,
+} from '@/models';
+import { useFrmCryptoViewModel } from '@/viewmodels/useFrmCryptoViewModel';
+import { useFrmPackager } from '@/viewmodels/useFrmPackager';
+
+type FrmTabId = 'entropy' | 'toc' | 'packager' | 'codebook' | 'correlation';
+
+const FRM_TABS: ReadonlyArray<{
+  readonly id: FrmTabId;
+  readonly labelKey: TranslationKey;
+  readonly Icon: React.ComponentType<{ className?: string }>;
+}> = [
+  { id: 'entropy', labelKey: 'crypto.tabs.entropy', Icon: BarChart2 },
+  { id: 'toc', labelKey: 'crypto.tabs.toc', Icon: Layers },
+  { id: 'packager', labelKey: 'crypto.tabs.packager', Icon: PackagePlus },
+  { id: 'codebook', labelKey: 'crypto.tabs.codebook', Icon: KeyRound },
+  { id: 'correlation', labelKey: 'crypto.tabs.correlation', Icon: FileCheck2 },
+];
+
+interface FrmTabBodyProps {
+  readonly activeTab: FrmTabId;
+  readonly cryptReport: CryptanalysisReport | null;
+  readonly tocReport: FrmTocDumpReport | null;
+  readonly filteredCodebook: CodebookEntry[];
+  readonly codebookFilter: string;
+  readonly setCodebookFilter: (val: string) => void;
+  readonly packager: ReturnType<typeof useFrmPackager>;
+  readonly onInspectPacked: (outPath: string) => void;
+}
+
+const FrmTabBody: React.FC<FrmTabBodyProps> = ({
+  activeTab,
+  cryptReport,
+  tocReport,
+  filteredCodebook,
+  codebookFilter,
+  setCodebookFilter,
+  packager,
+  onInspectPacked,
+}) => {
+  const { t } = useTranslation();
+
+  switch (activeTab) {
+    case 'entropy':
+      return cryptReport ? <FrmEntropyTab topBlocks={cryptReport.top_blocks} /> : null;
+    case 'toc':
+      return tocReport ? (
+        <FrmTocTab tocReport={tocReport} />
+      ) : (
+        <div className="p-8 text-center text-slate-500 font-mono text-xs rounded-xl bg-bench-900 border border-slate-800">
+          {t('crypto.tabs.toc')} - {t('shell.ui.loadingToc')}
+        </div>
+      );
+    case 'packager':
+      return (
+        <FrmPackagerTab
+          packLoading={packager.packLoading}
+          packError={packager.packError}
+          packResult={packager.packResult}
+          onPack={packager.packFrm}
+          onInspectOutput={onInspectPacked}
+          unpackLoading={packager.unpackLoading}
+          unpackError={packager.unpackError}
+          unpackResult={packager.unpackResult}
+          onUnpack={packager.unpackExtrhead}
+        />
+      );
+    case 'codebook':
+      return (
+        <FrmCodebookTab
+          filteredCodebook={filteredCodebook}
+          codebookFilter={codebookFilter}
+          setCodebookFilter={setCodebookFilter}
+        />
+      );
+    case 'correlation':
+      return cryptReport ? (
+        <FrmCorrelationTab correlations={cryptReport.hdd_correlations || []} />
+      ) : null;
+    default:
+      return null;
+  }
+};
 
 export const FrmCryptoView: React.FC = () => {
   const { t } = useTranslation();
@@ -103,113 +196,40 @@ export const FrmCryptoView: React.FC = () => {
 
       {cryptReport && <FrmMetricsGrid cryptReport={cryptReport} tocReport={tocReport} />}
 
-      {/* Navigation Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-800 pb-2 text-xs overflow-x-auto">
-        <button
-          onClick={() => setActiveTab('entropy')}
-          aria-current={activeTab === 'entropy' ? 'page' : undefined}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500/50 ${
-            activeTab === 'entropy'
-              ? 'bg-purple-500/10 text-purple-300 border border-purple-500/30'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <BarChart2 className="w-3.5 h-3.5" />
-          <span>{t('crypto.tabs.entropy')}</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('toc')}
-          aria-current={activeTab === 'toc' ? 'page' : undefined}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500/50 ${
-            activeTab === 'toc'
-              ? 'bg-purple-500/10 text-purple-300 border border-purple-500/30'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Layers className="w-3.5 h-3.5" />
-          <span>{t('crypto.tabs.toc')}</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('packager')}
-          aria-current={activeTab === 'packager' ? 'page' : undefined}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500/50 ${
-            activeTab === 'packager'
-              ? 'bg-purple-500/10 text-purple-300 border border-purple-500/30'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <PackagePlus className="w-3.5 h-3.5" />
-          <span>{t('crypto.tabs.packager')}</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('codebook')}
-          aria-current={activeTab === 'codebook' ? 'page' : undefined}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500/50 ${
-            activeTab === 'codebook'
-              ? 'bg-purple-500/10 text-purple-300 border border-purple-500/30'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <KeyRound className="w-3.5 h-3.5" />
-          <span>{t('crypto.tabs.codebook')}</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('correlation')}
-          aria-current={activeTab === 'correlation' ? 'page' : undefined}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500/50 ${
-            activeTab === 'correlation'
-              ? 'bg-purple-500/10 text-purple-300 border border-purple-500/30'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <FileCheck2 className="w-3.5 h-3.5" />
-          <span>{t('crypto.tabs.correlation')}</span>
-        </button>
+        {FRM_TABS.length === 0
+          ? null
+          : FRM_TABS.map(({ id, labelKey, Icon }) => {
+              const active = activeTab === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setActiveTab(id)}
+                  aria-current={active ? 'page' : undefined}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500/50 ${
+                    active
+                      ? 'bg-purple-500/10 text-purple-300 border border-purple-500/30'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  <span>{t(labelKey)}</span>
+                </button>
+              );
+            })}
       </div>
 
-      {activeTab === 'entropy' && cryptReport && (
-        <FrmEntropyTab topBlocks={cryptReport.top_blocks} />
-      )}
-
-      {activeTab === 'toc' && (
-        tocReport ? (
-          <FrmTocTab tocReport={tocReport} />
-        ) : (
-          <div className="p-8 text-center text-slate-500 font-mono text-xs rounded-xl bg-bench-900 border border-slate-800">
-            {t('crypto.tabs.toc')} - {t('common.loading', 'Carregando TOC...')}
-          </div>
-        )
-      )}
-
-      {activeTab === 'packager' && (
-        <FrmPackagerTab
-          packLoading={packager.packLoading}
-          packError={packager.packError}
-          packResult={packager.packResult}
-          onPack={packager.packFrm}
-          onInspectOutput={handleInspectPacked}
-          unpackLoading={packager.unpackLoading}
-          unpackError={packager.unpackError}
-          unpackResult={packager.unpackResult}
-          onUnpack={packager.unpackExtrhead}
-        />
-      )}
-
-      {activeTab === 'codebook' && (
-        <FrmCodebookTab
-          filteredCodebook={filteredCodebook}
-          codebookFilter={codebookFilter}
-          setCodebookFilter={setCodebookFilter}
-        />
-      )}
-
-      {activeTab === 'correlation' && cryptReport && (
-        <FrmCorrelationTab correlations={cryptReport.hdd_correlations || []} />
-      )}
+      <FrmTabBody
+        activeTab={activeTab}
+        cryptReport={cryptReport}
+        tocReport={tocReport}
+        filteredCodebook={filteredCodebook}
+        codebookFilter={codebookFilter}
+        setCodebookFilter={setCodebookFilter}
+        packager={packager}
+        onInspectPacked={handleInspectPacked}
+      />
     </div>
   );
 };

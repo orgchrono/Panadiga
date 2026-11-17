@@ -3,13 +3,17 @@
  * @brief Mode selector, output path, DIGADIAG options, and module table inputs for FrmPackCard.
  */
 
-import React, { type Dispatch, type SetStateAction } from 'react';
+import React from 'react';
 import { Plus, Trash2 } from 'lucide-react';
-import type { FrmPackModuleInput } from '@/models';
+import type { FrmPackMode, FrmPackModuleInput } from '@/models';
 import { useTranslation } from '@/i18n/useTranslation';
 import { isFrmPackMode } from '@/utils/typeGuards';
 
-export type FrmPackMode = 'sd' | 'dvd' | 'digadiag';
+export type { FrmPackMode };
+
+export interface FrmPackModuleRow extends FrmPackModuleInput {
+  readonly rowId: string;
+}
 
 interface FrmPackFormFieldsProps {
   mode: FrmPackMode;
@@ -31,8 +35,10 @@ interface FrmPackFormFieldsProps {
   onModelGroupChange: (value: string) => void;
   versionU16: string;
   onVersionU16Change: (value: string) => void;
-  modules: FrmPackModuleInput[];
-  setModules: Dispatch<SetStateAction<FrmPackModuleInput[]>>;
+  modules: readonly FrmPackModuleRow[];
+  onAddModule: () => void;
+  onUpdateModule: (rowId: string, patch: Partial<FrmPackModuleInput>) => void;
+  onRemoveModule: (rowId: string) => void;
 }
 
 export const FrmPackFormFields: React.FC<FrmPackFormFieldsProps> = ({
@@ -56,7 +62,9 @@ export const FrmPackFormFields: React.FC<FrmPackFormFieldsProps> = ({
   versionU16,
   onVersionU16Change,
   modules,
-  setModules,
+  onAddModule,
+  onUpdateModule,
+  onRemoveModule,
 }) => {
   const { t } = useTranslation();
 
@@ -74,9 +82,9 @@ export const FrmPackFormFields: React.FC<FrmPackFormFieldsProps> = ({
             }}
             className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200"
           >
-            <option value="sd">sd — PANA__SD.FRM (TOC SD 64B plaintext)</option>
-            <option value="dvd">dvd — PANA_DVD.FRM (TOC Feistel 48B)</option>
-            <option value="digadiag">digadiag — DIGADIAG.FRM (128 KiB FVU)</option>
+            <option value="sd">{t('crypto.packager.modeSdLabel')}</option>
+            <option value="dvd">{t('crypto.packager.modeDvdLabel')}</option>
+            <option value="digadiag">{t('crypto.packager.modeDiagLabel')}</option>
           </select>
         </label>
 
@@ -97,14 +105,14 @@ export const FrmPackFormFields: React.FC<FrmPackFormFieldsProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3 pt-1">
           <input
             type="text"
-            placeholder="Binário entrada (ex: diag.bin)"
+            placeholder={t('crypto.packager.diagInputPlaceholder')}
             value={diagInputPath}
             onChange={e => onDiagInputPathChange(e.target.value)}
             className="md:col-span-2 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200"
           />
           <input
             type="text"
-            placeholder="dst_addr (0x50400000)"
+            placeholder={t('crypto.packager.dstAddrPlaceholder')}
             value={dstAddr}
             onChange={e => onDstAddrChange(e.target.value)}
             className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200"
@@ -112,14 +120,14 @@ export const FrmPackFormFields: React.FC<FrmPackFormFieldsProps> = ({
           <div className="flex gap-2">
             <input
               type="text"
-              placeholder="Tag"
+              placeholder={t('crypto.packager.tagPlaceholder')}
               value={tag}
               onChange={e => onTagChange(e.target.value)}
               className="w-20 bg-slate-950 border border-slate-800 rounded-lg px-2 py-2 text-slate-200"
             />
             <input
               type="text"
-              placeholder="Build"
+              placeholder={t('crypto.packager.buildPlaceholder')}
               value={buildName}
               onChange={e => onBuildNameChange(e.target.value)}
               className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-2 py-2 text-slate-200"
@@ -131,21 +139,21 @@ export const FrmPackFormFields: React.FC<FrmPackFormFieldsProps> = ({
           <div className="grid grid-cols-3 gap-2">
             <input
               type="text"
-              placeholder="HW (M6930)"
+              placeholder={t('crypto.packager.hwPlaceholder')}
               value={hwFamily}
               onChange={e => onHwFamilyChange(e.target.value)}
               className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-slate-200"
             />
             <input
               type="text"
-              placeholder="Modelo (NP-309)"
+              placeholder={t('crypto.packager.modelPlaceholder')}
               value={modelGroup}
               onChange={e => onModelGroupChange(e.target.value)}
               className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-slate-200"
             />
             <input
               type="text"
-              placeholder="Versão (0x0001)"
+              placeholder={t('crypto.packager.versionPlaceholder')}
               value={versionU16}
               onChange={e => onVersionU16Change(e.target.value)}
               className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-slate-200"
@@ -154,38 +162,30 @@ export const FrmPackFormFields: React.FC<FrmPackFormFieldsProps> = ({
 
           {modules.length === 0 ? (
             <p className="text-[11px] text-slate-500 font-mono py-1">
-              Nenhum módulo adicionado.
+              {t('crypto.packager.emptyModules')}
             </p>
           ) : (
-            modules.map((mod, idx) => (
-              <div key={idx} className="flex items-center gap-2">
+            modules.map((mod) => (
+              <div key={mod.rowId} className="flex items-center gap-2">
                 <input
                   type="text"
-                  placeholder="Nome slot (ex: PROG061 )"
+                  placeholder={t('crypto.packager.slotNamePlaceholder')}
                   value={mod.name}
-                  onChange={e =>
-                    setModules(prev =>
-                      prev.map((m, i) => (i === idx ? { ...m, name: e.target.value } : m))
-                    )
-                  }
+                  onChange={e => onUpdateModule(mod.rowId, { name: e.target.value })}
                   className="w-40 bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-slate-200"
                 />
                 <input
                   type="text"
-                  placeholder="Caminho payload (ex: firmware_and_images/out/prog061.bin)"
+                  placeholder={t('crypto.packager.slotPathPlaceholder')}
                   value={mod.path}
-                  onChange={e =>
-                    setModules(prev =>
-                      prev.map((m, i) => (i === idx ? { ...m, path: e.target.value } : m))
-                    )
-                  }
+                  onChange={e => onUpdateModule(mod.rowId, { path: e.target.value })}
                   className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-slate-200"
                 />
                 <button
                   type="button"
-                  onClick={() => setModules(prev => prev.filter((_, i) => i !== idx))}
+                  onClick={() => onRemoveModule(mod.rowId)}
                   className="p-1.5 text-slate-500 hover:text-rose-400"
-                  aria-label="Remover módulo"
+                  aria-label={t('crypto.packager.removeModuleAria')}
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -195,7 +195,7 @@ export const FrmPackFormFields: React.FC<FrmPackFormFieldsProps> = ({
 
           <button
             type="button"
-            onClick={() => setModules(prev => [...prev, { name: '', path: '' }])}
+            onClick={onAddModule}
             className="inline-flex items-center gap-1 text-[11px] text-cyan-400 hover:text-cyan-300"
           >
             <Plus className="w-3 h-3" />

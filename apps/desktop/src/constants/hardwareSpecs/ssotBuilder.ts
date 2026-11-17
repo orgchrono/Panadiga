@@ -3,8 +3,8 @@
  * @brief Functional SSOT Spec Builder composing frozen hardware blueprints with i18next localization tables.
  */
 
-import enUSJson from '@/locales/en-US.json';
-import ptBRJson from '@/locales/pt-BR.json';
+import enUSJson from '@/locales/en-US/ssot.json';
+import ptBRJson from '@/locales/pt-BR/ssot.json';
 import type {
   BreakInModeSpec,
   FlashGeometrySpec,
@@ -19,11 +19,7 @@ import {
   INDEXED_SERVICE_MANUALS_COUNT,
   PICO_USB_IDENTITY_SPEC,
 } from './physicalConstants';
-import {
-  PICO_COMMAND_BLUEPRINTS,
-  type CommandLocaleKey,
-  type PicoCommandLocaleEntry,
-} from './picoCommandBlueprints';
+import { PICO_COMMAND_BLUEPRINTS, type PicoCommandLocaleEntry } from './picoCommandBlueprints';
 import {
   BREAKIN_BLUEPRINTS,
   FLASH_GEOMETRY_BLUEPRINTS,
@@ -38,15 +34,30 @@ const SSOT_LOCALE_TABLES = Object.freeze({
 
 export type SupportedLocale = keyof typeof SSOT_LOCALE_TABLES;
 
+function lookupSectionEntry<T>(
+  section: Readonly<Record<string, T>>,
+  key: string,
+  sectionName: string,
+): T {
+  const matched = Object.entries(section).find(([entryKey]) => entryKey === key);
+  if (!matched) {
+    throw new Error(`Missing locale entry ssot.${sectionName}.${key}`);
+  }
+  return matched[1];
+}
+
 /**
  * Pure builder composing frozen physical hardware constants with i18next localization tables.
  */
 export function buildCanonicalHardwareSsotSpec(locale: SupportedLocale = 'pt-BR'): HardwareSsotSpec {
   const dict = SSOT_LOCALE_TABLES[locale] ?? SSOT_LOCALE_TABLES['pt-BR'];
-  const commandDict: Readonly<Record<CommandLocaleKey, PicoCommandLocaleEntry>> = dict.commands;
+  const commandDict: Readonly<Record<string, PicoCommandLocaleEntry>> = dict.commands;
 
   const pinout: P7501PinMapping[] = PINOUT_BLUEPRINTS.map(bp => {
-    const text = dict.pins[bp.key];
+    const text = lookupSectionEntry(dict.pins, bp.key, 'pins');
+    const criticalNote = 'critical_note' in text && typeof text.critical_note === 'string'
+      ? text.critical_note
+      : '';
     return {
       manual_pin: bp.manual_pin,
       physical_pin: bp.physical_pin,
@@ -56,12 +67,12 @@ export function buildCanonicalHardwareSsotSpec(locale: SupportedLocale = 'pt-BR'
       signal_name: text.signal_name,
       direction: text.direction,
       voltage: text.voltage,
-      critical_note: text.critical_note || null,
+      critical_note: criticalNote || null,
     };
   });
 
   const breakin_modes: BreakInModeSpec[] = BREAKIN_BLUEPRINTS.map(bp => {
-    const text = dict.breakinModes[bp.key];
+    const text = lookupSectionEntry(dict.breakinModes, bp.key, 'breakinModes');
     return {
       mode: bp.mode,
       label: text.label,
@@ -72,17 +83,20 @@ export function buildCanonicalHardwareSsotSpec(locale: SupportedLocale = 'pt-BR'
     };
   });
 
-  const flash_geometries: FlashGeometrySpec[] = FLASH_GEOMETRY_BLUEPRINTS.map(bp => ({
-    size_mb: bp.size_mb,
-    size_bytes: bp.size_bytes,
-    chip_name: dict.flashGeometries[bp.key].chip_name,
-    nvram_base_hex: bp.nvram_base_hex,
-    nvram_size_bytes: bp.nvram_size_bytes,
-    microsector_range: bp.microsector_range,
-  }));
+  const flash_geometries: FlashGeometrySpec[] = FLASH_GEOMETRY_BLUEPRINTS.map(bp => {
+    const text = lookupSectionEntry(dict.flashGeometries, bp.key, 'flashGeometries');
+    return {
+      size_mb: bp.size_mb,
+      size_bytes: bp.size_bytes,
+      chip_name: text.chip_name,
+      nvram_base_hex: bp.nvram_base_hex,
+      nvram_size_bytes: bp.nvram_size_bytes,
+      microsector_range: bp.microsector_range,
+    };
+  });
 
   const memory_regions: MemoryRegionSpec[] = MEMORY_REGION_BLUEPRINTS.map(bp => {
-    const text = dict.memoryRegions[bp.key];
+    const text = lookupSectionEntry(dict.memoryRegions, bp.key, 'memoryRegions');
     return {
       name: text.name,
       start: bp.start,
@@ -93,7 +107,7 @@ export function buildCanonicalHardwareSsotSpec(locale: SupportedLocale = 'pt-BR'
   });
 
   const pico_commands: PicoCommandSpec[] = PICO_COMMAND_BLUEPRINTS.map(bp => {
-    const text = commandDict[bp.id];
+    const text = lookupSectionEntry(commandDict, bp.id, 'commands');
     const options: PicoCommandArgOption[] = (bp.optionPairs ?? []).map(([optKey, value]) => ({
       label: text.options?.[optKey] ?? value,
       value,

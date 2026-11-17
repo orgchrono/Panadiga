@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { AlertCircle, CheckCircle2, FileArchive, RefreshCw } from 'lucide-react';
-import { ExtrheadUnpackReport } from '@/models';
-import { UnpackExtrheadParams } from '@/viewmodels/useFrmPackager';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Button } from '@/components/ui';
 import { useTranslation } from '@/i18n/useTranslation';
+import type { ExtrheadUnpackReport, UnpackExtrheadParams } from '@/models';
+import { oneOfGuard } from '@/utils/typeGuards';
+
+const isUnpackProfile = oneOfGuard(['auto', 'main', 'drv', 'plain'] as const);
 
 interface ExtrheadUnpackCardProps {
   unpackLoading: boolean;
@@ -30,7 +32,7 @@ export const ExtrheadUnpackCard: React.FC<ExtrheadUnpackCardProps> = ({
     e.preventDefault();
     if (unpackLoading) return;
     if (!inputPath.trim()) {
-      setInputError('Informe o caminho do arquivo EXTRHEAD ou módulo para desempacotar.');
+      setInputError(t('crypto.packager.unpackPathRequired'));
       setSuccess(null);
       return;
     }
@@ -43,7 +45,10 @@ export const ExtrheadUnpackCard: React.FC<ExtrheadUnpackCardProps> = ({
     });
     if (unpacked) {
       setSuccess(
-        `Tag ${unpacked.header.tag} (${unpacked.decompressed_bytes.toLocaleString()} bytes) desempacotada com sucesso.`
+        t('crypto.packager.unpackSuccessMsg', {
+          tag: unpacked.header.tag,
+          bytes: unpacked.decompressed_bytes.toLocaleString(),
+        }),
       );
     }
   };
@@ -61,15 +66,19 @@ export const ExtrheadUnpackCard: React.FC<ExtrheadUnpackCardProps> = ({
         <StatusBadge variant="neutral" label={mode.toUpperCase()} />
       </div>
 
-      <form onSubmit={handleUnpack} className="grid grid-cols-1 md:grid-cols-12 gap-3 text-xs items-end" noValidate>
+      <form
+        onSubmit={handleUnpack}
+        className="grid grid-cols-1 md:grid-cols-12 gap-3 text-xs items-end"
+        noValidate
+      >
         <label className="md:col-span-5 space-y-1 block">
-          <span className="text-slate-400 block">Arquivo EXTRHEAD / Módulo</span>
+          <span className="text-slate-400 block">{t('crypto.packager.unpackPathLabel')}</span>
           <input
             type="text"
             value={inputPath}
             aria-invalid={Boolean(inputError)}
             aria-describedby={inputError ? 'extrhead-input-error' : undefined}
-            onChange={e => {
+            onChange={(e) => {
               setInputPath(e.target.value);
               if (inputError) setInputError(null);
             }}
@@ -84,10 +93,14 @@ export const ExtrheadUnpackCard: React.FC<ExtrheadUnpackCardProps> = ({
         </label>
 
         <label className="md:col-span-2 space-y-1 block">
-          <span className="text-slate-400 block">Perfil Feistel</span>
+          <span className="text-slate-400 block">{t('crypto.packager.unpackProfileLabel')}</span>
           <select
             value={mode}
-            onChange={e => setMode(e.target.value as 'auto' | 'main' | 'drv' | 'plain')}
+            onChange={(e) => {
+              if (isUnpackProfile(e.target.value)) {
+                setMode(e.target.value);
+              }
+            }}
             className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-2 text-slate-200"
           >
             <option value="auto">auto</option>
@@ -98,11 +111,11 @@ export const ExtrheadUnpackCard: React.FC<ExtrheadUnpackCardProps> = ({
         </label>
 
         <label className="md:col-span-3 space-y-1 block">
-          <span className="text-slate-400 block">Saída descomprimida (opcional)</span>
+          <span className="text-slate-400 block">{t('crypto.packager.unpackOutLabel')}</span>
           <input
             type="text"
             value={outPath}
-            onChange={e => setOutPath(e.target.value)}
+            onChange={(e) => setOutPath(e.target.value)}
             placeholder="firmware_and_images/out/unpacked.bin"
             className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200"
           />
@@ -122,9 +135,7 @@ export const ExtrheadUnpackCard: React.FC<ExtrheadUnpackCardProps> = ({
         </div>
       </form>
 
-      {success && !unpackError && (
-        <p className="text-[11px] text-emerald-300 font-mono">{success}</p>
-      )}
+      {success && !unpackError && <p className="text-[11px] text-emerald-300 font-mono">{success}</p>}
 
       {unpackError && (
         <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-xs text-rose-300 flex items-start gap-2">
@@ -174,7 +185,7 @@ export const ExtrheadUnpackCard: React.FC<ExtrheadUnpackCardProps> = ({
 
           {unpackResult.written_output_path && (
             <p className="text-[11px] text-cyan-300">
-              Gravado em: {unpackResult.written_output_path}
+              {t('crypto.packager.unpackSavedAt', { path: unpackResult.written_output_path })}
             </p>
           )}
         </div>

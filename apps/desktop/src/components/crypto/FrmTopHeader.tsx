@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { FolderOpen, Lock, RefreshCw } from 'lucide-react';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Button } from '@/components/ui';
@@ -28,14 +28,13 @@ export const FrmTopHeader: React.FC<FrmTopHeaderProps> = ({
   loading = false,
 }) => {
   const { t } = useTranslation();
-  const [draftPath, setDraftPath] = useState(selectedPath);
+  const [editedPath, setEditedPath] = useState<{ readonly base: string; readonly value: string } | null>(
+    null,
+  );
   const [pathError, setPathError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  useEffect(() => {
-    setDraftPath(selectedPath);
-    setPathError(null);
-  }, [selectedPath]);
+  const draftPath = editedPath?.base === selectedPath ? editedPath.value : selectedPath;
 
   const options = Array.from(new Set([...containers, ...PRESET_CONTAINERS]));
 
@@ -43,14 +42,14 @@ export const FrmTopHeader: React.FC<FrmTopHeaderProps> = ({
     e.preventDefault();
     const nextPath = draftPath.trim();
     if (!nextPath) {
-      setPathError('Informe o caminho do contêiner .FRM para inspeção.');
+      setPathError(t('crypto.header.pathRequired'));
       setSuccess(null);
       return;
     }
     setPathError(null);
     if (onSelectPath) {
       onSelectPath(nextPath);
-      setSuccess(`Contêiner selecionado: ${nextPath}`);
+      setSuccess(t('crypto.header.containerSelected', { path: nextPath }));
     }
   };
 
@@ -92,21 +91,21 @@ export const FrmTopHeader: React.FC<FrmTopHeaderProps> = ({
             <div className="flex items-center gap-2 flex-wrap">
               <FolderOpen className="w-3.5 h-3.5 text-purple-400 shrink-0" />
               <select
-                aria-label="Selecionar contêiner .FRM"
+                aria-label={t('crypto.header.selectAria')}
                 value={options.includes(selectedPath) ? selectedPath : ''}
                 onChange={e => {
                   if (e.target.value) {
-                    setDraftPath(e.target.value);
+                    setEditedPath({ base: selectedPath, value: e.target.value });
                     setPathError(null);
                     onSelectPath(e.target.value);
-                    setSuccess(`Contêiner carregado: ${e.target.value}`);
+                    setSuccess(t('crypto.header.containerLoaded', { path: e.target.value }));
                   }
                 }}
                 className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500"
               >
                 {options.length === 0 ? (
                   <option value="" disabled>
-                    Nenhum contêiner listado
+                    {t('crypto.header.emptyList')}
                   </option>
                 ) : (
                   options.map(path => (
@@ -124,7 +123,7 @@ export const FrmTopHeader: React.FC<FrmTopHeaderProps> = ({
               aria-invalid={Boolean(pathError)}
               aria-describedby={pathError ? 'frm-top-path-error' : undefined}
               onChange={e => {
-                setDraftPath(e.target.value);
+                setEditedPath({ base: selectedPath, value: e.target.value });
                 if (pathError) setPathError(null);
               }}
               placeholder={frmFile || 'firmware_and_images/PANA_DVD.FRM'}
@@ -140,7 +139,7 @@ export const FrmTopHeader: React.FC<FrmTopHeaderProps> = ({
                 className="text-xs font-semibold gap-1.5"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-                <span>Analisar .FRM</span>
+                <span>{t('crypto.header.analyzeBtn')}</span>
               </Button>
               {onRefresh && (
                 <Button
@@ -151,7 +150,7 @@ export const FrmTopHeader: React.FC<FrmTopHeaderProps> = ({
                   onClick={onRefresh}
                   className="text-xs"
                 >
-                  Atualizar
+                  {t('crypto.header.refreshBtn')}
                 </Button>
               )}
             </div>

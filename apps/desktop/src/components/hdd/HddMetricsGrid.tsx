@@ -1,6 +1,12 @@
 import React from 'react';
 import { MetricCard } from '@/components/MetricCard';
 import { StatusBadge } from '@/components/StatusBadge';
+import {
+  HDD_METRIC_ENTROPY_PRECISION,
+  KIB_BYTES,
+  LBA_SECTOR_SIZE_BYTES,
+  MIB_BYTES,
+} from '@/constants';
 import { useTranslation } from '@/i18n/useTranslation';
 import { HddAnalysisReport } from '@/models';
 
@@ -15,42 +21,42 @@ export const HddMetricsGrid: React.FC<HddMetricsGridProps> = ({ report }) => {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
-          title={t('hdd.metrics.imageSize', 'Tamanho da Imagem')}
+          title={t('hdd.metrics.imageSize')}
           value="--"
-          unit="MB"
-          subtitle="Nenhum arquivo carregado"
+          unit={t('hdd.metrics.mbUnit')}
+          subtitle={t('hdd.metrics.noFileSub')}
           variant="slate"
         />
         <MetricCard
-          title={t('hdd.metrics.mirrorMbr', 'Validação MBR / Espelho')}
+          title={t('hdd.metrics.mirrorMbr')}
           value="--"
           unit=""
-          subtitle="Aguardando inspeção forense"
+          subtitle={t('hdd.metrics.awaitingSub')}
           variant="slate"
-          badge={<StatusBadge variant="neutral" label="OFFLINE" />}
+          badge={<StatusBadge variant="neutral" label={t('hdd.offlineBadge')} />}
         />
         <MetricCard
-          title="Partição 1"
+          title={t('hdd.metrics.part1Default')}
           value="--"
           unit=""
-          subtitle="Estrutura MEIHDFS não analisada"
+          subtitle={t('hdd.metrics.meihdfsUnanalyzedSub')}
           variant="slate"
         />
         <MetricCard
-          title="Partição 2"
+          title={t('hdd.metrics.part2Default')}
           value="--"
           unit=""
-          subtitle="Estrutura MEIHDFS não analisada"
+          subtitle={t('hdd.metrics.meihdfsUnanalyzedSub')}
           variant="slate"
         />
       </div>
     );
   }
 
-  const isGb = report.file_size_mb >= 1024;
-  const sizeVal = isGb ? (report.file_size_mb / 1024).toFixed(2) : report.file_size_mb.toFixed(2);
-  const sizeUnit = isGb ? 'GB' : 'MB';
-  const mirrorLbaMb = Math.round((report.mbr_tables.mirror_lba * 512) / (1024 * 1024));
+  const isGb = report.file_size_mb >= KIB_BYTES;
+  const sizeVal = isGb ? (report.file_size_mb / KIB_BYTES).toFixed(2) : report.file_size_mb.toFixed(2);
+  const sizeUnit = isGb ? t('hdd.metrics.gbUnit') : t('hdd.metrics.mbUnit');
+  const mirrorLbaMb = Math.round((report.mbr_tables.mirror_lba * LBA_SECTOR_SIZE_BYTES) / MIB_BYTES);
   const isMirrorOk = report.mbr_tables.mirror_is_bit_identical;
 
   const part1 = report.partitions[0];
@@ -59,45 +65,56 @@ export const HddMetricsGrid: React.FC<HddMetricsGridProps> = ({ report }) => {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       <MetricCard
-        title={t('hdd.metrics.imageSize', 'Tamanho da Imagem')}
+        title={t('hdd.metrics.imageSize')}
         value={sizeVal}
         unit={sizeUnit}
-        subtitle={`${report.file_size_bytes.toLocaleString()} bytes (${report.total_sectors.toLocaleString()} setores)`}
+        subtitle={t('hdd.metrics.sizeMetaSub', {
+          bytes: report.file_size_bytes.toLocaleString(),
+          sectors: report.total_sectors.toLocaleString(),
+        })}
         variant="cyan"
       />
       <MetricCard
-        title={t('hdd.metrics.mirrorMbr', 'Validação MBR / Espelho')}
-        value={`LBA ${report.mbr_tables.mirror_lba.toLocaleString()}`}
-        unit={`(${mirrorLbaMb} MB)`}
-        subtitle={`GUID: ${report.mbr_tables.disk_volume_guid || 'N/A'}`}
+        title={t('hdd.metrics.mirrorMbr')}
+        value={t('hdd.metrics.lbaPrefix', { lba: report.mbr_tables.mirror_lba.toLocaleString() })}
+        unit={t('hdd.metrics.mbUnitBracket', { mb: mirrorLbaMb })}
+        subtitle={t('hdd.metrics.guidSub', {
+          guid: report.mbr_tables.disk_volume_guid || t('hdd.metrics.guidNa'),
+        })}
         variant={isMirrorOk ? 'emerald' : 'rose'}
         badge={
           isMirrorOk ? (
-            <StatusBadge variant="success" label="MATCH 100%" />
+            <StatusBadge variant="success" label={t('hdd.metrics.matchBadge')} />
           ) : (
-            <StatusBadge variant="error" label="DIVERGENTE" />
+            <StatusBadge variant="error" label={t('hdd.metrics.mismatchBadge')} />
           )
         }
       />
       <MetricCard
-        title={part1 ? part1.name : 'Partição 1'}
+        title={part1 ? part1.name : t('hdd.metrics.part1Default')}
         value={part1 ? part1.exact_payload_size.toLocaleString() : '--'}
-        unit={part1 ? 'bytes' : ''}
+        unit={part1 ? t('hdd.metrics.bytesUnit') : ''}
         subtitle={
           part1
-            ? `LBA ${part1.lba_start.toLocaleString()} • Entropia ${part1.entropy.toFixed(3)}b`
-            : 'Não identificada'
+            ? t('hdd.metrics.entropySub', {
+                lba: part1.lba_start.toLocaleString(),
+                entropy: part1.entropy.toFixed(HDD_METRIC_ENTROPY_PRECISION),
+              })
+            : t('hdd.metrics.notIdentified')
         }
         variant="slate"
       />
       <MetricCard
-        title={part2 ? part2.name : 'Partição 2'}
+        title={part2 ? part2.name : t('hdd.metrics.part2Default')}
         value={part2 ? part2.exact_payload_size.toLocaleString() : '--'}
-        unit={part2 ? 'bytes' : ''}
+        unit={part2 ? t('hdd.metrics.bytesUnit') : ''}
         subtitle={
           part2
-            ? `LBA ${part2.lba_start.toLocaleString()} • ${part2.sectors_count.toLocaleString()} setores`
-            : 'Não identificada'
+            ? t('hdd.metrics.sectorsSub', {
+                lba: part2.lba_start.toLocaleString(),
+                sectors: part2.sectors_count.toLocaleString(),
+              })
+            : t('hdd.metrics.notIdentified')
         }
         variant="slate"
       />

@@ -1,6 +1,7 @@
 import React from 'react';
 import { BarChart2 } from 'lucide-react';
 import { StatusBadge } from '@/components/StatusBadge';
+import { FRM_HIGH_REP_THRESHOLD } from '@/constants';
 import { BlockFrequency } from '@/models';
 import { useTranslation } from '@/i18n/useTranslation';
 
@@ -49,14 +50,22 @@ export const FrmEntropyTab: React.FC<FrmEntropyTabProps> = ({ topBlocks }) => {
 
                 <div className="flex items-center gap-4 text-xs font-mono shrink-0">
                   <div className="text-right">
-                    <span className="text-slate-200 font-bold">{blk.count.toLocaleString()} ocorrências</span>
+                    <span className="text-slate-200 font-bold">
+                      {t('crypto.entropySection.occurrences', { count: blk.count.toLocaleString() })}
+                    </span>
                     <span className="text-slate-500 block text-[10px]">
-                      ({blk.total_bytes.toLocaleString()} bytes totais)
+                      {t('crypto.entropySection.totalBytes', {
+                        bytes: blk.total_bytes.toLocaleString(),
+                      })}
                     </span>
                   </div>
                   <StatusBadge
-                    variant={blk.count > 1000 ? 'warning' : 'neutral'}
-                    label={blk.count > 1000 ? t('crypto.entropySection.highRep') : t('crypto.entropySection.frequent')}
+                    variant={blk.count > FRM_HIGH_REP_THRESHOLD ? 'warning' : 'neutral'}
+                    label={
+                      blk.count > FRM_HIGH_REP_THRESHOLD
+                        ? t('crypto.entropySection.highRep')
+                        : t('crypto.entropySection.frequent')
+                    }
                   />
                 </div>
               </div>

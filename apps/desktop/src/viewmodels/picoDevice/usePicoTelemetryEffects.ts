@@ -1,17 +1,30 @@
 /**
  * @file viewmodels/picoDevice/usePicoTelemetryEffects.ts
- * @brief Reactive telemetry stream subscription, SSOT voltage alert logging, and session persistence effects.
+ * @brief Reactive telemetry stream subscription, SSOT voltage alert logging, and Redux session sync effects.
  */
 
-import { useEffect, useRef, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
-import type { PicoDeviceStatus, PicoDiagnosticResult } from '@/models';
+import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
 import { PICO_MAX_VDD_CEILING_VOLTS, PICO_MIN_VDD_THRESHOLD_VOLTS } from '@/constants';
+import { translate } from '@/i18n/useTranslation';
+import type { PicoDeviceStatus } from '@/models';
+import { subscribeBrowserUsbHotplug } from '@/services/browserActions';
+import {
+  emitPicoTelemetry,
+  subscribePicoDiagnosticResult,
+  subscribePicoPortsChanged,
+  subscribePicoTelemetry,
+} from '@/services/picoService';
+import {
+  getPicoSessionSnapshot,
+  updatePicoSessionModel,
+  updatePicoSessionPort,
+  updatePicoSessionStatus,
+} from '@/store/picoSessionBridge';
 import { isTargetPowered } from '@/utils/formatters';
-import { emitLocalEvent, listenEvent } from '@/services/ipc';
+import { registerAsyncSubscriptions } from '@/utils/subscription';
 import {
   classifyVoltageAlert,
   DEFAULT_DISCONNECTED_STATUS,
-  picoSessionStore,
   type UsePicoDeviceOptions,
   type VoltageAlertLevel,
 } from './stateHelpers';
@@ -19,9 +32,9 @@ import {
 interface UsePicoTelemetryEffectsParams {
   deviceStatus: PicoDeviceStatus | null;
   setDeviceStatus: Dispatch<SetStateAction<PicoDeviceStatus | null>>;
+  isLoading: boolean;
   selectedPort: string;
   selectedModel: string;
-  lastAlertRef: MutableRefObject<VoltageAlertLevel>;
   applyMeasuredVoltage: (vddVolts: number, commandId?: string, commandSuccess?: boolean) => void;
   refreshPorts: (injectedPortsOrSilent?: unknown) => Promise<void>;
   refreshModelCatalog: () => Promise<void>;
@@ -32,55 +45,42 @@ interface UsePicoTelemetryEffectsParams {
 export function usePicoTelemetryEffects({
   deviceStatus,
   setDeviceStatus,
+  isLoading,
   selectedPort,
   selectedModel,
-  lastAlertRef,
   applyMeasuredVoltage,
   refreshPorts,
   refreshModelCatalog,
   pollDeviceStatus,
   onLog,
 }: UsePicoTelemetryEffectsParams) {
-  const refreshPortsRef = useRef(refreshPorts);
+  const [lastAlertLevel, setLastAlertLevel] = useState<VoltageAlertLevel>('ok');
+  const [didInitialPoll, setDidInitialPoll] = useState<boolean>(false);
 
   useEffect(() => {
-    refreshPortsRef.current = refreshPorts;
-  }, [refreshPorts]);
-
-  useEffect(() => {
-    refreshPorts();
-    refreshModelCatalog();
+    const controller = new AbortController();
+    void Promise.resolve().then(() => {
+      if (controller.signal.aborted) return;
+      void refreshPorts();
+      void refreshModelCatalog();
+    });
+    return () => controller.abort();
   }, [refreshPorts, refreshModelCatalog]);
 
   useEffect(() => {
-    const nav = navigator as Navigator & { serial?: EventTarget; usb?: EventTarget };
     const onHardwareMutated = () => {
-      void refreshPortsRef.current(true);
+      void refreshPorts(true);
     };
-    nav.serial?.addEventListener('connect', onHardwareMutated);
-    nav.serial?.addEventListener('disconnect', onHardwareMutated);
-    nav.usb?.addEventListener('connect', onHardwareMutated);
-    nav.usb?.addEventListener('disconnect', onHardwareMutated);
-    return () => {
-      nav.serial?.removeEventListener('connect', onHardwareMutated);
-      nav.serial?.removeEventListener('disconnect', onHardwareMutated);
-      nav.usb?.removeEventListener('connect', onHardwareMutated);
-      nav.usb?.removeEventListener('disconnect', onHardwareMutated);
-    };
-  }, []);
+    return subscribeBrowserUsbHotplug(onHardwareMutated, onHardwareMutated);
+  }, [refreshPorts]);
 
-  useEffect(() => {
-    let active = true;
-    let unlistenTelemetry: (() => void) | undefined;
-    let unlistenDiag: (() => void) | undefined;
-    let unlistenPorts: (() => void) | undefined;
-
-    const bindTelemetryStreams = async (): Promise<void> => {
-      try {
-        const [offTel, offDiag, offPorts] = await Promise.all([
-          listenEvent<PicoDeviceStatus>('pico://telemetry', incoming => {
+  useEffect(
+    () =>
+      registerAsyncSubscriptions([
+        () =>
+          subscribePicoTelemetry((incoming) => {
             if (incoming && typeof incoming.vdd_volts === 'number') {
-              setDeviceStatus(prev => {
+              setDeviceStatus((prev) => {
                 if (!prev?.connected && !incoming.connected) return prev;
                 const preservedVdd =
                   incoming.vdd_volts > 0
@@ -95,86 +95,88 @@ export function usePicoTelemetryEffects({
                   vdd_volts: preservedVdd,
                   target_powered: powered,
                 };
-                picoSessionStore.setStatus(updated);
+                updatePicoSessionStatus(updated);
                 return updated;
               });
             }
+          }).catch((err) => {
+            onLog?.(
+              'error',
+              'PICO',
+              translate('errors.pico.telemetrySubscribeFailed', { reason: String(err) }),
+            );
+            return () => {};
           }),
-          listenEvent<PicoDiagnosticResult>('pico://diagnostic-result', diag => {
+        () =>
+          subscribePicoDiagnosticResult((diag) => {
             if (diag && typeof diag.vdd_volts === 'number' && diag.vdd_volts > 0) {
               applyMeasuredVoltage(diag.vdd_volts, diag.command_id, diag.success);
             }
           }),
-          listenEvent<string[]>('pico://ports-changed', ports => {
+        () =>
+          subscribePicoPortsChanged((ports) => {
             if (Array.isArray(ports)) {
-              void refreshPortsRef.current(ports);
+              void refreshPorts(ports);
             }
           }),
-        ]);
-        if (!active) {
-          offTel();
-          offDiag();
-          offPorts();
-        } else {
-          unlistenTelemetry = offTel;
-          unlistenDiag = offDiag;
-          unlistenPorts = offPorts;
-        }
-      } catch (err) {
-        if (active) {
-          onLog?.('error', 'PICO', `Falha ao assinar telemetria IPC: ${String(err)}`);
-        }
-      }
-    };
-
-    void bindTelemetryStreams();
-
-    return () => {
-      active = false;
-      unlistenTelemetry?.();
-      unlistenDiag?.();
-      unlistenPorts?.();
-    };
-  }, [applyMeasuredVoltage, onLog, setDeviceStatus]);
+      ]),
+    [applyMeasuredVoltage, onLog, refreshPorts, setDeviceStatus],
+  );
 
   useEffect(() => {
-    picoSessionStore.setStatus(deviceStatus);
-    if (deviceStatus) {
-      const alertLevel = classifyVoltageAlert(deviceStatus.vdd_volts);
-      if (alertLevel === 'over' && lastAlertRef.current !== 'over') {
-        lastAlertRef.current = 'over';
+    updatePicoSessionStatus(deviceStatus);
+    if (!deviceStatus) return undefined;
+    emitPicoTelemetry(deviceStatus);
+    const alertLevel = classifyVoltageAlert(deviceStatus.vdd_volts);
+    if (alertLevel === lastAlertLevel) return undefined;
+
+    const controller = new AbortController();
+    void Promise.resolve().then(() => {
+      if (controller.signal.aborted) return;
+      setLastAlertLevel(alertLevel);
+      if (alertLevel === 'over') {
         onLog?.(
           'error',
           'PICO',
-          `PERIGO CRÍTICO: Sobretensão detectada em VDD (${deviceStatus.vdd_volts.toFixed(2)}V > ${PICO_MAX_VDD_CEILING_VOLTS.toFixed(2)}V)! Desconecte imediatamente!`
+          translate('errors.pico.vddOvervoltage', {
+            vdd: deviceStatus.vdd_volts.toFixed(2),
+            limit: PICO_MAX_VDD_CEILING_VOLTS.toFixed(2),
+          }),
         );
-      } else if (alertLevel === 'low' && lastAlertRef.current !== 'low') {
-        lastAlertRef.current = 'low';
+      } else if (alertLevel === 'low') {
         onLog?.(
           'warn',
           'PICO',
-          `ALERTA REATIVO: Subtensão em VDD (${deviceStatus.vdd_volts.toFixed(2)}V < ${PICO_MIN_VDD_THRESHOLD_VOLTS.toFixed(2)}V). Alvo desligado ou pino VDD desconectado.`
+          translate('errors.pico.vddUndervoltage', {
+            vdd: deviceStatus.vdd_volts.toFixed(2),
+            limit: PICO_MIN_VDD_THRESHOLD_VOLTS.toFixed(2),
+          }),
         );
-      } else if (alertLevel === 'ok') {
-        lastAlertRef.current = 'ok';
       }
-      emitLocalEvent('pico_telemetry', deviceStatus);
-    }
-  }, [deviceStatus, lastAlertRef, onLog]);
+    });
+    return () => controller.abort();
+  }, [deviceStatus, lastAlertLevel, onLog]);
 
   useEffect(() => {
-    picoSessionStore.setPort(selectedPort);
+    updatePicoSessionPort(selectedPort);
   }, [selectedPort]);
 
   useEffect(() => {
-    picoSessionStore.setModel(selectedModel);
+    updatePicoSessionModel(selectedModel);
   }, [selectedModel]);
 
   useEffect(() => {
-    const snap = picoSessionStore.getSnapshot();
-    if (snap.status?.connected && snap.port) {
+    if (didInitialPoll) return undefined;
+    const snap = getPicoSessionSnapshot();
+    if (!snap.status?.connected || !snap.port) return undefined;
+    const controller = new AbortController();
+    void Promise.resolve().then(() => {
+      if (controller.signal.aborted) return;
+      setDidInitialPoll(true);
       void pollDeviceStatus();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    });
+    return () => controller.abort();
+  }, [didInitialPoll, pollDeviceStatus]);
+
+  return { isLoading };
 }

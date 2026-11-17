@@ -1,0 +1,180 @@
+{
+  "dashboard": {
+    "alertTitle": "CRITICAL DIAGNOSIS: {{errorCode}}",
+    "alertBadge": "AUTO-CHECK TIMEOUT",
+    "cleanButton": "Perform Surgical Clean",
+    "metricSpansion": "Spansion NOR Flash",
+    "metricSpansionSub": "Top-Boot (SA134..SA141 EEMUL)",
+    "metricSpansionBadge": "SA134 CORRUPTED",
+    "metricHdd": "HDD Head Dump",
+    "metricHddSub": "MEIHDFS 204,800 LBA sectors",
+    "metricHddBadge": "MBR SH VERIFIED",
+    "metricFrm": "PANA_DVD.FRM Entropy",
+    "metricFrmSub": "ECB Feistel 64-bit KPA Cipher",
+    "metricFrmBadge": "3 CPUs TOC",
+    "metricDwire": "P7501 UART Interface",
+    "metricDwireSub": "RP2040/RP2350 Async UART 115200 8N1",
+    "metricDwireBadge": "3.28V LVTTL OK",
+    "loading": "Loading DMR-EH55 bench telemetry and system health...",
+    "connectionErrorTitle": "System Kernel Connection Failure",
+    "connectionErrorDesc": "Unable to load the device bench overview summary.",
+    "telemetry": {
+      "unitMb": "MB",
+      "unitKbps": "kbps",
+      "flashFallbackSub": "NOR Flash Dump",
+      "flashPresentBadge": "MICROSECTORS",
+      "missingBadge": "MISSING",
+      "hddFallbackSub": "No physical image",
+      "hddPresentBadge": "MEIHDFS OK",
+      "offlineBadge": "OFFLINE",
+      "frmFallbackSub": "Official update container",
+      "frmPresentBadge": "ENCRYPTED",
+      "uartFallbackTitle": "P7501 UART 115200 8N1",
+      "uartBaudValue": "115.2",
+      "uartSub": "P7501 Async UART (Legacy PIO 1 MHz)",
+      "standbyBadge": "STANDBY"
+    },
+    "instruments": {
+      "heading": "Bench & Recovery Instruments",
+      "dragHint": "Drag cards to reorder priority",
+      "empty": "No instruments configured.",
+      "nvram": {
+        "aria": "Open U99 NVRAM Surgery",
+        "title": "NVRAM Surgery (U99)",
+        "desc": "SA0..SA141 microsector audit, surgical cleanup of 64KB emulated EEPROM (0xFF) keeping the bootloader immutable.",
+        "footerLeft": "8x 8KB Microsectors",
+        "footerRight": "1-Click Fix"
+      },
+      "hdd": {
+        "aria": "Open Hard Drive Forensics",
+        "title": "Hard Drive Forensics (100MB)",
+        "desc": "MBR \"SH\" vs Mirror LBA 57,344 validation, MEIHDFS decoding (XOR 0xFF), WAL Journal history (10 blocks) & manifest extraction.",
+        "footerLeft": "256 MEIHDFS Records",
+        "footerRight": "SHA256SUMS"
+      },
+      "picobench": {
+        "aria": "Open PicoBench P7501 UART Workbench",
+        "title": "PicoBench Workbench (P7501 UART / OCD)",
+        "desc": "P7501 UART capture (115200 8N1), 6-pin electrical matrix, ADC0 SW_UART monitoring & Cold Break-In / RAM Loader.",
+        "footerLeft": "P7501 Async UART",
+        "footerRight": "Boot & Recovery"
+      }
+    },
+    "arch": {
+      "title": "Architecture of {{model}}",
+      "defaultModel": "Panasonic DIGA",
+      "soc": "Digital SoC",
+      "core": "Main Core",
+      "flashRom": "Flash ROM",
+      "hdd": "Hard Drive",
+      "optical": "Optical Drive",
+      "ocdPort": "OCD Port",
+      "firmware": "Firmware"
+    },
+    "binaries": {
+      "title": "Firmware & Bench File Status",
+      "activeSummary": "{{active}} of {{total}} active",
+      "colBinary": "Binary / Image",
+      "colSize": "Size",
+      "colRole": "System Role",
+      "colIntegrity": "Integrity",
+      "empty": "No binaries indexed in firmware repository",
+      "statusReady": "READY",
+      "statusWarning": "U99 DUMP",
+      "statusMissing": "MISSING"
+    }
+  },
+  "manuals": {
+    "header": {
+      "title": "Technical Library & Circuit Schematics (30 Service Manuals)",
+      "badge": "LOCAL RAPID INDEXING",
+      "subtitle": "Instant lookup for ICs, test pins, self-check routines, and bench error codes",
+      "size": "62.1 MB of Indexed Technical Documentation"
+    },
+    "search": {
+      "placeholder": "Search by part/error code (U99, S29JL064, P7501, IC5001)...",
+      "emptyQuery": "Please enter a search keyword or part code.",
+      "button": "Search Manuals",
+      "noActiveTerms": "No active terms",
+      "searchTermAria": "Search term {{term}}"
+    },
+    "terms": {
+      "label": "Critical Diagnostic Terms:"
+    },
+    "results": {
+      "title": "Matches Found for Search Query",
+      "subtitle": "Technical Manual Forensic Search",
+      "loading": "Indexing PDF document text streams...",
+      "empty": "No matching references found. Try another diagnostic code from the quick pills above.",
+      "noTerms": "No associated terms",
+      "noSnippets": "No text snippet available",
+      "pages": "pages",
+      "occurrences": "OCCURRENCES"
+    },
+    "meta": {
+      "title": "Document Metadata & Diagnostics",
+      "catalogTag": "DIGA Catalog",
+      "emptyCatalog": "No manuals indexed",
+      "selectPrompt": "Select a service manual from the results on the left to inspect schematic metadata.",
+      "openExternal": "Open in External Viewer",
+      "totalDocs": "Indexed Documents",
+      "totalPages": "Total Pages",
+      "fileSize": "Corpus Size",
+      "chipsTitle": "Critical Silicon & Connectors in Manual:",
+      "splitAria": "Divider between search results and manual catalog"
+    },
+    "engDocs": {
+      "title": "Interactive Engineering Docs, Audits, Pseudocode & Logs",
+      "subtitle": "Cross-linked Markdown, Ghidra raw dumps (.txt), COM10 captures (.log), direct EN/PT-BR translation switcher, and live code references.",
+      "filterAll": "All",
+      "selectPrompt": "Select a document, raw dump, or capture log to inspect.",
+      "empty": "No documentation or reference files matched the filter.",
+      "loading": "Loading technical reference...",
+      "searchPlaceholder": "Filter docs, raw .txt, or .log...",
+      "back": "Back",
+      "forward": "Forward",
+      "switchLang": "Switch Language",
+      "tocPlaceholder": "Jump to section...",
+      "decodeSummaryTitle": "Decoded COM10 / AM34 Capture Telemetry",
+      "sourcePreviewBadge": "Workspace Source Reference",
+      "loader": "Loader",
+      "bootMode": "Boot Mode",
+      "sdLba": "SD LBA",
+      "errors": "Errors",
+      "vdd": "VDD",
+      "emptyContent": "Document has no content"
+    }
+  },
+  "rag": {
+    "title": "Zero-Error AI Engineering Assistant",
+    "badge": "GROUNDED CRAG & SELF-RAG",
+    "subtitle": "Epistemic grounding, citation verification, and hardware safety invariant enforcement",
+    "inputPlaceholder": "Ask a technical question (e.g. How to recover error U99 safely?)...",
+    "askButton": "Verify with RAG",
+    "asking": "Auditing across 6 defense layers...",
+    "groundedBadge": "100% GROUNDED IN CORPUS",
+    "hallucinationWarning": "HALLUCINATION DETECTED BY CRITIC",
+    "safetyPassed": "HARDWARE INVARIANTS VERIFIED (<= 3.3V, IPL PROTECTED)",
+    "safetyBlocked": "BLOCKED BY HARDWARE SAFETY SHIELD",
+    "confidence": "Confidence Score:",
+    "latency": "Latency:",
+    "chunksCount": "Chunks Cited:",
+    "citationsTitle": "Verified Documentary Citations & Line Numbers",
+    "line": "Lines",
+    "criticReportTitle": "FactCritic (Self-RAG) Verification Report",
+    "verifiedEntities": "Verified Entities in Context:",
+    "ungroundedEntities": "Unverified Fabrications:",
+    "abstentionTitle": "Formal Epistemic Abstention",
+    "emptyPrompt": "Ask any low-level hardware, firmware, or storage question. The RAG engine enforces zero extrapolation.",
+    "inputAria": "Technical question for AI assistant",
+    "noUngrounded": "No ungrounded entities detected",
+    "noCitations": "No documented citations returned"
+  },
+  "terminal": {
+    "title": "P7501 Async UART Monitor / CDC Console",
+    "events": "{{count}} events",
+    "clear": "Clear",
+    "empty": "No events registered on the serial channel. Awaiting bus activity...",
+    "autoScroll": "Auto-Scroll Active"
+  }
+}

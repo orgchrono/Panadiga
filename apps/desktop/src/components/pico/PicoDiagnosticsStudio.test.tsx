@@ -22,7 +22,9 @@ describe('PicoDiagnosticsStudio Component', () => {
       />
     );
 
-    expect(screen.getByText('Nenhum diagnóstico executado nesta sessão')).toBeDefined();
+    expect(
+      screen.getByText(/No diagnostic executed in this session|Nenhum diagnóstico executado nesta sessão/i),
+    ).toBeDefined();
     const runPincheck = screen.getByTestId('pico-cmd-run-PINCHECK');
     fireEvent.click(runPincheck);
     expect(onExecute).toHaveBeenCalledWith('PINCHECK', '');

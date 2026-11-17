@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { CheckCircle2, Disc3, HardDriveDownload, Loader2 } from 'lucide-react';
 import type {
   SdUnbrickKitReport,
@@ -56,10 +56,10 @@ export const SdKitBuilderCard: React.FC<SdKitBuilderCardProps> = ({
 }) => {
   const { t } = useTranslation();
   const [outputDir, setOutputDir] = useState('sd_card_eh55_kit');
-  const [panaDvdPath, setPanaDvdPath] = useState(
-    discoveredPanaDvd ?? 'firmware_and_images/PANA_DVD.FRM'
-  );
-  const [verifyDir, setVerifyDir] = useState(discoveredSdDir ?? 'sd_card_eh55');
+  const [editedPanaDvd, setEditedPanaDvd] = useState<string | null>(null);
+  const [editedVerifyDir, setEditedVerifyDir] = useState<string | null>(null);
+  const panaDvdPath = editedPanaDvd ?? discoveredPanaDvd ?? 'firmware_and_images/PANA_DVD.FRM';
+  const verifyDir = editedVerifyDir ?? discoveredSdDir ?? 'sd_card_eh55';
   const [bgoMode, setBgoMode] = useState<BgoMode>('bypass');
   const [mainMode, setMainMode] = useState<MainPassthroughMode>('av_passthrough');
   const [includePanaSd, setIncludePanaSd] = useState(true);
@@ -67,14 +67,6 @@ export const SdKitBuilderCard: React.FC<SdKitBuilderCardProps> = ({
 
   const [outDirError, setOutDirError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (discoveredPanaDvd) setPanaDvdPath(discoveredPanaDvd);
-  }, [discoveredPanaDvd]);
-
-  useEffect(() => {
-    if (discoveredSdDir) setVerifyDir(discoveredSdDir);
-  }, [discoveredSdDir]);
 
   const handleBuildSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,7 +86,7 @@ export const SdKitBuilderCard: React.FC<SdKitBuilderCardProps> = ({
     setSuccess(null);
     const built = await onBuildKit(request);
     if (built) {
-      setVerifyDir(built.output_dir);
+      setEditedVerifyDir(built.output_dir);
       setSuccess(`${t('unbrick.sdKit.successTitle')}: ${built.digadiag_path}`);
     }
   };
@@ -148,7 +140,7 @@ export const SdKitBuilderCard: React.FC<SdKitBuilderCardProps> = ({
               <Input
                 id="sd-kit-pana-dvd"
                 value={panaDvdPath}
-                onChange={e => setPanaDvdPath(e.target.value)}
+                onChange={e => setEditedPanaDvd(e.target.value)}
                 placeholder="firmware_and_images/PANA_DVD.FRM"
               />
             </div>
@@ -166,11 +158,11 @@ export const SdKitBuilderCard: React.FC<SdKitBuilderCardProps> = ({
                   }
                 }}
               >
-                <option value="bypass">bypass (Skip U99 Boot Checks Only — Safe Default)</option>
-                <option value="uart_monitor">uart_monitor (Hook _dev_SERIAL PANAMON1)</option>
-                <option value="factory">factory (Stock PROG061 Unmodified)</option>
+                <option value="bypass">{t('unbrick.sdKit.bgoBypass')}</option>
+                <option value="uart_monitor">{t('unbrick.sdKit.bgoUart')}</option>
+                <option value="factory">{t('unbrick.sdKit.bgoFactory')}</option>
                 <option value="auto_format" disabled>
-                  auto_format (BLOCKED D5: unverified nfrom_format RAM ptrs)
+                  {t('unbrick.sdKit.bgoAutoFormat')}
                 </option>
               </Select>
             </div>
@@ -188,8 +180,8 @@ export const SdKitBuilderCard: React.FC<SdKitBuilderCardProps> = ({
                   }
                 }}
               >
-                <option value="av_passthrough">av_passthrough (TBC E-E No-ODD/No-FPC)</option>
-                <option value="factory_original">factory_original (Stock MAIN Build)</option>
+                <option value="av_passthrough">{t('unbrick.sdKit.mainAv')}</option>
+                <option value="factory_original">{t('unbrick.sdKit.mainFactory')}</option>
               </Select>
             </div>
           </div>
@@ -254,7 +246,7 @@ export const SdKitBuilderCard: React.FC<SdKitBuilderCardProps> = ({
 
         <SdVerificationPanel
           verifyDir={verifyDir}
-          onChangeVerifyDir={setVerifyDir}
+          onChangeVerifyDir={setEditedVerifyDir}
           verifyLoading={verifyLoading}
           verifyResult={verifyResult}
           verifyError={verifyError}

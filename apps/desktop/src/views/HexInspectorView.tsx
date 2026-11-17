@@ -1,4 +1,16 @@
 import React from 'react';
+import {
+  HEX32_PAD_WIDTH,
+  HEX_INSPECTOR_MAX_IMAGE_BYTES,
+  HEX_PAGE_BYTES,
+  HEX_SPLIT_INITIAL_PCT,
+  HEX_SPLIT_MAX_PCT,
+  HEX_SPLIT_MIN_PCT,
+  LBA_SECTOR_SIZE_BYTES,
+  MEIHDFS_BACKUP_MBR_LBA,
+  MEIHDFS_JOURNAL_OFFSET_BYTES,
+  MEIHDFS_PART1_OFFSET_BYTES,
+} from '@/constants';
 import { useHexInspectorViewModel } from '@/viewmodels/useHexInspectorViewModel';
 import { MetricCard } from '@/components/MetricCard';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -65,6 +77,7 @@ export const HexInspectorView: React.FC = () => {
             />
           </div>
           <button
+            type="button"
             onClick={jumpToInputOffset}
             className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs font-semibold border border-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400"
           >
@@ -83,7 +96,7 @@ export const HexInspectorView: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
           title={t('hex.metrics.offsetTitle')}
-          value={`0x${currentOffset.toString(16).padStart(8, '0').toUpperCase()}`}
+          value={`0x${currentOffset.toString(16).padStart(HEX32_PAD_WIDTH, '0').toUpperCase()}`}
           subtitle={t('hex.metrics.offsetSub', { bytes: currentOffset.toLocaleString() })}
           variant="cyan"
         />
@@ -112,25 +125,39 @@ export const HexInspectorView: React.FC = () => {
       <RangeDndScrubber
         label={t('hex.scrubberLabel')}
         min={0}
-        max={104857600}
-        step={512}
+        max={HEX_INSPECTOR_MAX_IMAGE_BYTES}
+        step={LBA_SECTOR_SIZE_BYTES}
         startValue={currentOffset}
-        endValue={Math.min(104857600, currentOffset + hexRows.length * 16)}
-        formatValue={val => `0x${val.toString(16).toUpperCase().padStart(8, '0')} (LBA ${Math.floor(val / 512)})`}
+        endValue={Math.min(HEX_INSPECTOR_MAX_IMAGE_BYTES, currentOffset + hexRows.length * 16)}
+        formatValue={(val) =>
+          `0x${val.toString(16).toUpperCase().padStart(HEX32_PAD_WIDTH, '0')} (LBA ${Math.floor(val / LBA_SECTOR_SIZE_BYTES)})`
+        }
         presets={[
-          { label: t('hex.presets.mbrLba0'), start: 0, end: 384 },
-          { label: t('hex.presets.journal8mb'), start: 8388608, end: 8388992 },
-          { label: t('hex.presets.mirror28mb'), start: 29360128, end: 29360512 },
-          { label: t('hex.presets.part1_32mb'), start: 33554432, end: 33554816 },
+          { label: t('hex.presets.mbrLba0'), start: 0, end: HEX_PAGE_BYTES },
+          {
+            label: t('hex.presets.journal8mb'),
+            start: MEIHDFS_JOURNAL_OFFSET_BYTES,
+            end: MEIHDFS_JOURNAL_OFFSET_BYTES + HEX_PAGE_BYTES,
+          },
+          {
+            label: t('hex.presets.mirror28mb'),
+            start: MEIHDFS_BACKUP_MBR_LBA * LBA_SECTOR_SIZE_BYTES,
+            end: MEIHDFS_BACKUP_MBR_LBA * LBA_SECTOR_SIZE_BYTES + HEX_PAGE_BYTES,
+          },
+          {
+            label: t('hex.presets.part1_32mb'),
+            start: MEIHDFS_PART1_OFFSET_BYTES,
+            end: MEIHDFS_PART1_OFFSET_BYTES + HEX_PAGE_BYTES,
+          },
         ]}
         onChangeRange={start => jumpToOffset(start)}
       />
 
       {/* Main Hex Workspace: Resizable Split (Bookmarks vs Hex Dump Grid) */}
       <ResizableSplitPane
-        initialLeftPercent={34}
-        minLeftPercent={22}
-        maxLeftPercent={55}
+        initialLeftPercent={HEX_SPLIT_INITIAL_PCT}
+        minLeftPercent={HEX_SPLIT_MIN_PCT}
+        maxLeftPercent={HEX_SPLIT_MAX_PCT}
         storageKey="panadiga.split.hex"
         ariaLabel={t('hex.splitAria')}
         left={
@@ -185,16 +212,17 @@ export const HexInspectorView: React.FC = () => {
             {/* Hex Header Bar */}
             <div className="px-4 py-2.5 bg-bench-950 border-b border-slate-800 flex items-center justify-between text-xs text-slate-400 shrink-0">
               <div className="flex items-center gap-6">
-                <span className="w-24 font-bold text-slate-500">OFFSET</span>
+                <span className="w-24 font-bold text-slate-500">{t('hex.headerOffset')}</span>
                 <span className="w-52 font-bold tracking-wider text-slate-400">
                   00 01 02 03 04 05 06 07  08 09 0A 0B 0C 0D 0E 0F
                 </span>
-                <span className="font-bold text-slate-500">ASCII DUMP</span>
+                <span className="font-bold text-slate-500">{t('hex.headerAsciiDump')}</span>
               </div>
 
               {/* Pagination controls */}
               <div className="flex items-center gap-1">
                 <button
+                  type="button"
                   onClick={prevPage}
                   className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400"
                   title={t('hex.prevPageTitle')}
@@ -203,6 +231,7 @@ export const HexInspectorView: React.FC = () => {
                   <ChevronLeft className="w-4 h-4" />
                 </button>
                 <button
+                  type="button"
                   onClick={nextPage}
                   className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400"
                   title={t('hex.nextPageTitle')}
@@ -254,6 +283,7 @@ export const HexInspectorView: React.FC = () => {
               <span>{t('hex.footerMode')}</span>
               <div className="flex items-center gap-3">
                 <button
+                  type="button"
                   onClick={prevPage}
                   className="text-slate-400 hover:text-slate-200 underline"
                 >
@@ -261,6 +291,7 @@ export const HexInspectorView: React.FC = () => {
                 </button>
                 <span>•</span>
                 <button
+                  type="button"
                   onClick={nextPage}
                   className="text-slate-400 hover:text-slate-200 underline"
                 >

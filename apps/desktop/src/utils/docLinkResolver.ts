@@ -24,6 +24,18 @@ const SRC_PREFIXES = ['crates/', 'firmware/', 'apps/', 'scripts/', 'tools/'];
 
 const SRC_EXT_RE = /\.(rs|c|h|pio|py|ts|tsx|css|json|toml|yml|yaml|md|txt|log|cmd|sh)$/i;
 
+const HEADER_PREVIEW_LINES = 12;
+const REPO_PREFIX_LEN = 'repo:'.length;
+const SRC_PREFIX_LEN = 'src:'.length;
+const DOCS_PREFIX_LEN = 'docs/'.length;
+
+const ROOT_TRANSLATION_PAIRS: Readonly<Record<string, string>> = Object.freeze({
+  'repo:AUDITORIA_COMPLETA.md': 'repo:COMPLETE_AUDIT.md',
+  'repo:COMPLETE_AUDIT.md': 'repo:AUDITORIA_COMPLETA.md',
+  'repo:README.md': 'repo:README.pt-BR.md',
+  'repo:README.pt-BR.md': 'repo:README.md',
+});
+
 export function slugifyHeading(text: string): string {
   return text
     .toLowerCase()
@@ -34,22 +46,31 @@ export function slugifyHeading(text: string): string {
 }
 
 export function extractHeadings(markdown: string): DocHeading[] {
-  const headings: DocHeading[] = [];
-  let inFence = false;
-  for (const line of markdown.split(/\r?\n/)) {
+  const initialState: { readonly inFence: boolean; readonly headings: readonly DocHeading[] } = {
+    inFence: false,
+    headings: [],
+  };
+
+  const finalState = markdown.split(/\r?\n/).reduce((acc, line) => {
     const trimmed = line.trim();
     if (trimmed.startsWith('```')) {
-      inFence = !inFence;
-      continue;
+      return { ...acc, inFence: !acc.inFence };
     }
-    if (inFence) continue;
-    const m = /^(#{1,4})\s+(.+)$/.exec(trimmed);
-    if (m) {
-      const text = m[2].replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').trim();
-      headings.push({ level: m[1].length, text, slug: slugifyHeading(text) });
+    if (acc.inFence) {
+      return acc;
     }
-  }
-  return headings;
+    const match = /^(#{1,4})\s+(.+)$/.exec(trimmed);
+    if (!match) {
+      return acc;
+    }
+    const text = match[2].replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').trim();
+    return {
+      ...acc,
+      headings: [...acc.headings, { level: match[1].length, text, slug: slugifyHeading(text) }],
+    };
+  }, initialState);
+
+  return [...finalState.headings];
 }
 
 export function parseLineRangeAnchor(anchor?: string): { start: number; end: number } | null {
@@ -62,23 +83,22 @@ export function parseLineRangeAnchor(anchor?: string): { start: number; end: num
   return { start, end: Math.max(start, end) };
 }
 
-function normalizePosixSegments(baseDirSegments: string[], rel: string): string {
-  const stack = [...baseDirSegments];
-  for (const part of rel.replace(/\\/g, '/').split('/')) {
-    if (!part || part === '.') continue;
-    if (part === '..') {
-      if (stack.length > 0) stack.pop();
-    } else {
-      stack.push(part);
-    }
-  }
-  return stack.join('/');
+function normalizePosixSegments(baseDirSegments: readonly string[], rel: string): string {
+  return rel
+    .replace(/\\/g, '/')
+    .split('/')
+    .reduce<readonly string[]>((stack, part) => {
+      if (!part || part === '.') return stack;
+      if (part === '..') return stack.length > 0 ? stack.slice(0, -1) : stack;
+      return [...stack, part];
+    }, baseDirSegments)
+    .join('/');
 }
 
-function toRepoVirtualPath(currentRelPath: string | null): string[] {
+function toRepoVirtualPath(currentRelPath: string | null): readonly string[] {
   if (!currentRelPath) return ['docs', 'INDEX.md'];
-  if (currentRelPath.startsWith('repo:')) return [currentRelPath.slice(5)];
-  if (currentRelPath.startsWith('src:')) return currentRelPath.slice(4).split('/');
+  if (currentRelPath.startsWith('repo:')) return [currentRelPath.slice(REPO_PREFIX_LEN)];
+  if (currentRelPath.startsWith('src:')) return currentRelPath.slice(SRC_PREFIX_LEN).split('/');
   return ['docs', ...currentRelPath.split('/')];
 }
 
@@ -106,20 +126,16 @@ export function resolveDocReference(rawHref: string, currentRelPath: string | nu
     return { targetPath: pathPart, anchor, isExternal: false };
   }
 
-  let repoRel: string;
-  if (SRC_PREFIXES.some(p => pathPart.startsWith(p)) || pathPart.startsWith('docs/')) {
-    repoRel = pathPart.replace(/^\.\//, '');
-  } else {
-    const baseSegments = toRepoVirtualPath(currentRelPath);
-    baseSegments.pop();
-    repoRel = normalizePosixSegments(baseSegments, pathPart);
-  }
+  const repoRel =
+    SRC_PREFIXES.some(p => pathPart.startsWith(p)) || pathPart.startsWith('docs/')
+      ? pathPart.replace(/^\.\//, '')
+      : normalizePosixSegments(toRepoVirtualPath(currentRelPath).slice(0, -1), pathPart);
 
   if (ROOT_DOC_NAMES.has(repoRel)) {
     return { targetPath: `repo:${repoRel}`, anchor, isExternal: false };
   }
   if (repoRel.startsWith('docs/')) {
-    const insideDocs = repoRel.slice(5);
+    const insideDocs = repoRel.slice(DOCS_PREFIX_LEN);
     return {
       targetPath: insideDocs.endsWith('/') ? `${insideDocs}README.md` : insideDocs,
       anchor,
@@ -134,32 +150,31 @@ export function resolveDocReference(rawHref: string, currentRelPath: string | nu
 
 export function findTranslationCounterpart(
   content: string,
-  docs: EngineeringDocEntry[],
+  docs: readonly EngineeringDocEntry[],
   current: EngineeringDocEntry | null,
 ): EngineeringDocEntry | null {
   if (!current) return null;
-  const headerLines = content.split(/\r?\n/).slice(0, 12).join('\n');
+  const headerLines = content.split(/\r?\n/).slice(0, HEADER_PREVIEW_LINES).join('\n');
   const linkRe = /\[[^\]]*\]\(([^)#\s]+(?:#[^)\s]*)?)\)/g;
-  const targetLocale = current.locale === 'pt-BR' ? 'en-US' : current.locale === 'en-US' ? 'pt-BR' : null;
+  const targetLocale =
+    current.locale === 'pt-BR' ? 'en-US' : current.locale === 'en-US' ? 'pt-BR' : null;
 
-  let match: RegExpExecArray | null;
-  while ((match = linkRe.exec(headerLines)) !== null) {
-    const resolved = resolveDocReference(match[1], current.relative_path);
-    if (resolved.isExternal) continue;
-    const hit = docs.find(d => d.relative_path === resolved.targetPath);
-    if (hit && hit.relative_path !== current.relative_path) {
-      if (!targetLocale || hit.locale === targetLocale || current.locale === 'root') {
-        return hit;
-      }
-    }
+  const bannerHit = Array.from(headerLines.matchAll(linkRe), match =>
+    resolveDocReference(match[1], current.relative_path),
+  )
+    .filter(resolved => !resolved.isExternal)
+    .map(resolved => docs.find(d => d.relative_path === resolved.targetPath))
+    .find(
+      hit =>
+        Boolean(hit) &&
+        hit?.relative_path !== current.relative_path &&
+        (!targetLocale || hit?.locale === targetLocale || current.locale === 'root'),
+    );
+
+  if (bannerHit) {
+    return bannerHit;
   }
 
-  const rootPairs: Record<string, string> = {
-    'repo:AUDITORIA_COMPLETA.md': 'repo:COMPLETE_AUDIT.md',
-    'repo:COMPLETE_AUDIT.md': 'repo:AUDITORIA_COMPLETA.md',
-    'repo:README.md': 'repo:README.pt-BR.md',
-    'repo:README.pt-BR.md': 'repo:README.md',
-  };
-  const paired = rootPairs[current.relative_path];
+  const paired = ROOT_TRANSLATION_PAIRS[current.relative_path];
   return paired ? docs.find(d => d.relative_path === paired) ?? null : null;
 }

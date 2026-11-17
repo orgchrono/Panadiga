@@ -1,44 +1,102 @@
 import React from 'react';
-import { StatusBadge } from './StatusBadge';
+import {
+  Activity,
+  Cpu,
+  Layers,
+  Menu,
+  PanelBottom,
+  PanelLeft,
+  PanelRight,
+  RefreshCw,
+  Settings,
+  ShieldCheck,
+} from 'lucide-react';
 import { Button } from '@/components/ui';
-import { isTargetPowered } from '@/utils/formatters';
-import { useWorkbenchMode } from '@/context/WorkbenchModeContext';
+import { PICO_BROWNOUT_FLOOR_VOLTS } from '@/constants';
 import { useTranslation } from '@/i18n/useTranslation';
-import type { ViewKey } from '@/models';
-import { Cpu, Activity, RefreshCw, Menu, Layers, Settings } from 'lucide-react';
+import type { ViewKey, WorkbenchExperienceMode } from '@/models';
+import type { WorkbenchDocksState } from '@/types/workbench';
+import { isTargetPowered } from '@/utils/formatters';
+import { StatusBadge } from './StatusBadge';
 
-interface HeaderProps {
+export interface HeaderProps {
   currentView?: ViewKey;
   currentViewTitle: string;
+  mode?: WorkbenchExperienceMode;
+  onToggleMode?: () => void;
   onRefresh?: () => void;
   onOpenMobileNav?: () => void;
   onOpenSettings?: () => void;
   vddVolts?: number;
   minVddThreshold?: number;
   hardwareConnected?: boolean;
+  docks?: WorkbenchDocksState;
+  onToggleLeftDock?: () => void;
+  onToggleBottomDock?: () => void;
+  onToggleRightDock?: () => void;
+  onOpenCompliance?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   currentView,
   currentViewTitle,
+  mode = 'advanced',
+  onToggleMode,
   onRefresh,
   onOpenMobileNav,
   onOpenSettings,
   vddVolts = 0.0,
   minVddThreshold,
   hardwareConnected = false,
+  docks,
+  onToggleLeftDock,
+  onToggleBottomDock,
+  onToggleRightDock,
+  onOpenCompliance,
 }) => {
   const { t } = useTranslation();
   const powered = isTargetPowered(vddVolts, minVddThreshold);
-  const { mode, toggleMode } = useWorkbenchMode();
+
+  const dockToggles: ReadonlyArray<{
+    readonly key: string;
+    readonly testId: string;
+    readonly handler: (() => void) | undefined;
+    readonly active: boolean;
+    readonly label: string;
+    readonly Icon: typeof PanelLeft;
+  }> = [
+    {
+      key: 'left',
+      testId: 'header-left-dock-btn',
+      handler: onToggleLeftDock,
+      active: Boolean(docks?.leftOpen),
+      label: t('shell.statusBar.leftDockBtn'),
+      Icon: PanelLeft,
+    },
+    {
+      key: 'bottom',
+      testId: 'header-bottom-dock-btn',
+      handler: onToggleBottomDock,
+      active: Boolean(docks?.bottomOpen),
+      label: t('shell.statusBar.bottomDockBtn'),
+      Icon: PanelBottom,
+    },
+    {
+      key: 'right',
+      testId: 'header-right-dock-btn',
+      handler: onToggleRightDock,
+      active: Boolean(docks?.rightOpen),
+      label: t('shell.statusBar.rightDockBtn'),
+      Icon: PanelRight,
+    },
+  ];
 
   return (
     <header
       data-testid="app-header"
       data-view={currentView}
-      className="min-h-16 px-4 sm:px-6 py-2 bg-bench-900/90 backdrop-blur border-b border-slate-800 flex items-center justify-between gap-2 select-none z-10 shrink-0"
+      className="min-h-14 px-4 sm:px-6 py-2 bg-bench-900/90 backdrop-blur border-b border-slate-800 flex items-center justify-between gap-2 select-none z-10 shrink-0"
     >
-      {/* Left: Mobile Drawer Trigger + View breadcrumbs */}
       <div className="flex items-center gap-2.5 min-w-0">
         {onOpenMobileNav && (
           <Button
@@ -72,14 +130,13 @@ export const Header: React.FC<HeaderProps> = ({
               </span>
             </div>
             <p className="hidden md:block text-[11px] text-slate-500 font-mono truncate">
-              Matsushita UniPhier AM34 • Spansion S29JL064H • MEIHDFS 100MB
+              {t('shell.hardwareSubtitle')}
             </p>
           </div>
         </div>
       </div>
 
-      {/* Right: Hardware Telemetry pill */}
-      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
         <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-bench-950 border border-slate-800 font-mono text-xs">
           <Activity className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
           <span className="text-slate-400">P7501 UART:</span>
@@ -92,7 +149,11 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="text-amber-400 font-semibold flex items-center gap-1">
                 {t('shell.picoConnected')}{' '}
                 <span className="text-[10px] text-slate-500">
-                  ({vddVolts > 0.2 ? `${vddVolts.toFixed(2)}V` : t('shell.targetUnpowered')})
+                  (
+                  {vddVolts > PICO_BROWNOUT_FLOOR_VOLTS
+                    ? `${vddVolts.toFixed(2)}V`
+                    : t('shell.targetUnpowered')}
+                  )
                 </span>
               </span>
             )
@@ -101,18 +162,56 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </div>
 
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          data-testid="header-mode-toggle"
-          onClick={toggleMode}
-          title={t('shell.modeTooltip')}
-          className="hidden sm:inline-flex h-8 px-2.5 text-[11px] font-mono gap-1.5 bg-bench-950 border-slate-700"
-        >
-          <Layers className="w-3.5 h-3.5 text-cyan-400" />
-          <span>{mode === 'basic' ? t('shell.modeBasic') : t('shell.modeAdvanced')}</span>
-        </Button>
+        <div className="hidden md:flex items-center gap-1">
+          {dockToggles.length === 0 ? null : dockToggles.map(({ key, testId, handler, active, label, Icon }) =>
+            handler ? (
+              <Button
+                key={key}
+                type="button"
+                variant={active ? 'secondary' : 'outline'}
+                size="icon"
+                data-testid={testId}
+                onClick={handler}
+                aria-pressed={active}
+                title={label}
+                aria-label={label}
+                className="h-8 w-8 bg-bench-950 border-slate-700"
+              >
+                <Icon className={active ? 'w-3.5 h-3.5 text-cyan-400' : 'w-3.5 h-3.5 text-slate-400'} />
+              </Button>
+            ) : null,
+          )}
+        </div>
+
+        {onOpenCompliance && (
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            data-testid="header-compliance-btn"
+            onClick={onOpenCompliance}
+            title={t('shell.statusBar.complianceBtn')}
+            aria-label={t('shell.statusBar.complianceBtn')}
+            className="hidden sm:inline-flex h-8 w-8 bg-bench-950 border-slate-700"
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+          </Button>
+        )}
+
+        {onToggleMode && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            data-testid="header-mode-toggle"
+            onClick={onToggleMode}
+            title={t('shell.modeTooltip')}
+            className="hidden sm:inline-flex h-8 px-2.5 text-[11px] font-mono gap-1.5 bg-bench-950 border-slate-700"
+          >
+            <Layers className="w-3.5 h-3.5 text-cyan-400" />
+            <span>{mode === 'basic' ? t('shell.modeBasic') : t('shell.modeAdvanced')}</span>
+          </Button>
+        )}
 
         {onOpenSettings && (
           <Button
@@ -131,7 +230,7 @@ export const Header: React.FC<HeaderProps> = ({
 
         <StatusBadge
           variant="warning"
-          label="U99 RECOVERY SUITE"
+          label={t('shell.suiteBadge')}
           className="hidden xl:inline-flex"
         />
 

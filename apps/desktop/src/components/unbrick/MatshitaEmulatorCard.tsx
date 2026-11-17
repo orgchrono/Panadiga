@@ -55,7 +55,7 @@ export const MatshitaEmulatorCard: React.FC<MatshitaEmulatorCardProps> = ({
             <CardTitle>{t('unbrick.matshita.title')}</CardTitle>
           </div>
           <Badge variant="outline" className="font-mono text-[10px] border-cyan-500/40 text-cyan-300">
-            R6-MV4 + E05 IPL RO
+            {t('unbrick.matshita.hwBadge')}
           </Badge>
         </div>
         <CardDescription>{t('unbrick.matshita.desc')}</CardDescription>

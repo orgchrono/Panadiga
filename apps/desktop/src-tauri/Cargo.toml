@@ -24,6 +24,7 @@ serde_json = { workspace = true }
 serialport = { workspace = true }
 tauri = { workspace = true }
 tauri-plugin-shell = { workspace = true }
+tracing = { workspace = true }
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { workspace = true }

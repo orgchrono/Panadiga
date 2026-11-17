@@ -86,7 +86,8 @@ export const EngineeringDocsPanel: React.FC<EngineeringDocsPanelProps> = ({
             <CardDescription>{t('manuals.engDocs.subtitle')}</CardDescription>
           </div>
 
-          <div className="flex flex-wrap gap-1.5" role="group" aria-label={t('manuals.engDocs.title')}>
+          <fieldset className="flex flex-wrap gap-1.5 border-0 p-0 m-0">
+            <legend className="sr-only">{t('manuals.engDocs.title')}</legend>
             {LOCALE_FILTERS.length === 0 ? (
               <span className="text-xs font-mono text-slate-500">-</span>
             ) : (
@@ -103,7 +104,7 @@ export const EngineeringDocsPanel: React.FC<EngineeringDocsPanelProps> = ({
                 </Button>
               ))
             )}
-          </div>
+          </fieldset>
         </div>
       </CardHeader>
 

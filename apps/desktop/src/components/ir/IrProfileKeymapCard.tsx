@@ -57,7 +57,7 @@ export const IrProfileKeymapCard: React.FC<IrProfileKeymapCardProps> = ({
             className="gap-1"
           >
             <Download className="w-3.5 h-3.5" />
-            .irplus XML
+            {t('irCommander.catalog.exportIrplusBtn')}
           </Button>
         </div>
       </CardHeader>

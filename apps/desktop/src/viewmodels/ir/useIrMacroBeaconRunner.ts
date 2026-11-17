@@ -1,12 +1,23 @@
-import { useCallback, useEffect, useRef, type Dispatch } from 'react';
-import { irCommanderActions } from '@/store/slices/irCommanderSlice';
-import { dispatchIrSignal } from '@/services/irTransportService';
+import { useCallback, type Dispatch } from 'react';
+import {
+  IR_CAMERA_BEACON_INTERVAL_MS,
+  IR_CAMERA_BEACON_PULSE_COUNT,
+  IR_LONG_HOLD_THRESHOLD_MS,
+  PANASONIC_BEACON_OBC,
+  PANASONIC_DEFAULT_SUBDEVICE,
+  PANASONIC_DVD_DEVICE_CODE,
+} from '@/constants';
+import { useAbortSlot } from '@/hooks/useAbortSlot';
+import type { TranslationKey } from '@/i18n/useTranslation';
 import type {
+  IrMacroStep,
   IrTimingOverride,
   IrTransportKind,
   RemoteUnitSet,
   VerifiedIrMacro,
 } from '@/models/ir';
+import { dispatchIrSignal } from '@/services/irTransportService';
+import { irCommanderActions } from '@/store/slices/irCommanderSlice';
 import { buildMacroStepTelemetryPayload, getErrorMessage } from './irStorage';
 
 type IrCommanderAction = ReturnType<
@@ -28,27 +39,108 @@ export interface UseIrMacroBeaconRunnerParams {
   repeatCount: number;
   isBeaconRunning: boolean;
   locale: string;
-  t: (key: string) => string;
+  t: (key: TranslationKey, opts?: Record<string, unknown>) => string;
   showToast: (toast: ToastParams) => void;
 }
 
 function sleepAbortable(ms: number, signal: AbortSignal): Promise<boolean> {
   if (ms <= 0) return Promise.resolve(!signal.aborted);
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     if (signal.aborted) {
       resolve(false);
       return;
     }
-    const timer = setTimeout(() => {
-      signal.removeEventListener('abort', onAbort);
-      resolve(true);
-    }, ms);
     const onAbort = () => {
       clearTimeout(timer);
       resolve(false);
     };
+    const timer = setTimeout(() => {
+      signal.removeEventListener('abort', onAbort);
+      resolve(true);
+    }, ms);
     signal.addEventListener('abort', onAbort, { once: true });
   });
+}
+
+interface MacroStepContext {
+  readonly steps: readonly IrMacroStep[];
+  readonly title: string;
+  readonly signal: AbortSignal;
+  readonly dispatch: Dispatch<IrCommanderAction>;
+  readonly remoteUnit: RemoteUnitSet;
+  readonly transport: IrTransportKind;
+  readonly picoGpioPin: number;
+  readonly timingUnitOverride: IrTimingOverride;
+  readonly repeatCount: number;
+  readonly t: (key: TranslationKey, opts?: Record<string, unknown>) => string;
+}
+
+async function runMacroStepsSequentially(
+  index: number,
+  ctx: MacroStepContext,
+): Promise<void> {
+  if (index >= ctx.steps.length || ctx.signal.aborted) return;
+  const step = ctx.steps[index];
+  ctx.dispatch(
+    irCommanderActions.setMacroProgress({
+      id: ctx.title,
+      step: index + 1,
+      total: ctx.steps.length,
+    }),
+  );
+  const outcome = await dispatchIrSignal({
+    protocol: 'KASEIKYO',
+    device: step.device,
+    subdevice: step.subdevice,
+    obc: step.obc,
+    respectRemoteMode: step.device === PANASONIC_DVD_DEVICE_CODE,
+    remoteUnit: ctx.remoteUnit,
+    transport: ctx.transport,
+    picoGpioPin: ctx.picoGpioPin,
+    unitOverride: ctx.timingUnitOverride,
+    repeatCount: Math.max(ctx.repeatCount, step.hold_ms > IR_LONG_HOLD_THRESHOLD_MS ? 2 : 1),
+  });
+  ctx.dispatch(
+    irCommanderActions.setTransmissionTelemetry(
+      buildMacroStepTelemetryPayload(ctx.title, index, ctx.steps.length, step, outcome),
+    ),
+  );
+  if (!outcome.ok) {
+    throw new Error(
+      outcome.error ??
+        ctx.t('errors.ir.macroStepFailed', { step: index + 1, label: step.label }),
+    );
+  }
+  const continued = await sleepAbortable(step.hold_ms + step.post_delay_ms, ctx.signal);
+  if (!continued) return;
+  await runMacroStepsSequentially(index + 1, ctx);
+}
+
+interface BeaconPulseContext {
+  readonly signal: AbortSignal;
+  readonly remoteUnit: RemoteUnitSet;
+  readonly transport: IrTransportKind;
+  readonly picoGpioPin: number;
+  readonly timingUnitOverride: IrTimingOverride;
+}
+
+async function runBeaconPulses(pulse: number, ctx: BeaconPulseContext): Promise<void> {
+  if (pulse > IR_CAMERA_BEACON_PULSE_COUNT || ctx.signal.aborted) return;
+  await dispatchIrSignal({
+    protocol: 'KASEIKYO',
+    device: PANASONIC_DVD_DEVICE_CODE,
+    subdevice: PANASONIC_DEFAULT_SUBDEVICE,
+    obc: PANASONIC_BEACON_OBC,
+    respectRemoteMode: true,
+    remoteUnit: ctx.remoteUnit,
+    transport: ctx.transport,
+    picoGpioPin: ctx.picoGpioPin,
+    unitOverride: ctx.timingUnitOverride,
+    repeatCount: 1,
+  });
+  const ok = await sleepAbortable(IR_CAMERA_BEACON_INTERVAL_MS, ctx.signal);
+  if (!ok) return;
+  await runBeaconPulses(pulse + 1, ctx);
 }
 
 export function useIrMacroBeaconRunner({
@@ -63,53 +155,28 @@ export function useIrMacroBeaconRunner({
   t,
   showToast,
 }: UseIrMacroBeaconRunnerParams) {
-  const macroAbortRef = useRef<AbortController | null>(null);
-  const beaconAbortRef = useRef<AbortController | null>(null);
-
-  useEffect(() => {
-    return () => {
-      macroAbortRef.current?.abort();
-      beaconAbortRef.current?.abort();
-    };
-  }, []);
+  const macroSlot = useAbortSlot();
+  const beaconSlot = useAbortSlot();
 
   const executeMacro = useCallback(
     async (macro: VerifiedIrMacro) => {
-      macroAbortRef.current?.abort();
-      const ctrl = new AbortController();
-      macroAbortRef.current = ctrl;
-      const total = macro.steps.length;
+      const ctrl = macroSlot.acquire();
       const title = locale === 'pt-BR' ? macro.title_pt : macro.title_en;
 
       dispatch(irCommanderActions.setTransmitting(true));
       try {
-        for (let i = 0; i < total; i += 1) {
-          if (ctrl.signal.aborted) break;
-          const step = macro.steps[i];
-          dispatch(irCommanderActions.setMacroProgress({ id: macro.id, step: i + 1, total }));
-          const outcome = await dispatchIrSignal({
-            protocol: 'KASEIKYO',
-            device: step.device,
-            subdevice: step.subdevice,
-            obc: step.obc,
-            respectRemoteMode: step.device === 0xb0,
-            remoteUnit,
-            transport,
-            picoGpioPin,
-            unitOverride: timingUnitOverride,
-            repeatCount: Math.max(repeatCount, step.hold_ms > 1000 ? 2 : 1),
-          });
-          dispatch(
-            irCommanderActions.setTransmissionTelemetry(
-              buildMacroStepTelemetryPayload(title, i, total, step, outcome),
-            ),
-          );
-          if (!outcome.ok) {
-            throw new Error(outcome.error ?? `Macro step ${i + 1} (${step.label}) failed`);
-          }
-          const continued = await sleepAbortable(step.hold_ms + step.post_delay_ms, ctrl.signal);
-          if (!continued) break;
-        }
+        await runMacroStepsSequentially(0, {
+          steps: macro.steps,
+          title,
+          signal: ctrl.signal,
+          dispatch,
+          remoteUnit,
+          transport,
+          picoGpioPin,
+          timingUnitOverride,
+          repeatCount,
+          t,
+        });
         if (ctrl.signal.aborted) {
           showToast({ type: 'warning', title, message: t('irCommander.macro.abortedToast') });
         } else {
@@ -127,6 +194,7 @@ export function useIrMacroBeaconRunner({
     [
       dispatch,
       locale,
+      macroSlot,
       picoGpioPin,
       remoteUnit,
       repeatCount,
@@ -138,35 +206,24 @@ export function useIrMacroBeaconRunner({
   );
 
   const abortMacro = useCallback(() => {
-    macroAbortRef.current?.abort();
-  }, []);
+    macroSlot.abortAll();
+  }, [macroSlot]);
 
   const toggleCameraBeacon = useCallback(async () => {
     if (isBeaconRunning) {
-      beaconAbortRef.current?.abort();
+      beaconSlot.abortAll();
       return;
     }
-    const ctrl = new AbortController();
-    beaconAbortRef.current = ctrl;
+    const ctrl = beaconSlot.acquire();
     dispatch(irCommanderActions.setBeaconRunning(true));
     try {
-      for (let pulse = 1; pulse <= 30; pulse += 1) {
-        if (ctrl.signal.aborted) break;
-        await dispatchIrSignal({
-          protocol: 'KASEIKYO',
-          device: 0xb0,
-          subdevice: 0x00,
-          obc: 0xfe,
-          respectRemoteMode: true,
-          remoteUnit,
-          transport,
-          picoGpioPin,
-          unitOverride: timingUnitOverride,
-          repeatCount: 1,
-        });
-        const ok = await sleepAbortable(250, ctrl.signal);
-        if (!ok) break;
-      }
+      await runBeaconPulses(1, {
+        signal: ctrl.signal,
+        remoteUnit,
+        transport,
+        picoGpioPin,
+        timingUnitOverride,
+      });
       showToast({
         type: 'info',
         title: t('irCommander.diag.beaconTitle'),
@@ -176,6 +233,7 @@ export function useIrMacroBeaconRunner({
       dispatch(irCommanderActions.setBeaconRunning(false));
     }
   }, [
+    beaconSlot,
     dispatch,
     isBeaconRunning,
     picoGpioPin,

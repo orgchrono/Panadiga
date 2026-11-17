@@ -1,6 +1,7 @@
 import React from 'react';
 import { Zap, AlertTriangle } from 'lucide-react';
 import { Badge, Card } from '@/components/ui';
+import { P7501_GND_PIN_NUMBER } from '@/constants';
 import { useTranslation } from '@/i18n/useTranslation';
 import type { HardwareSsotSpec } from '@/models';
 
@@ -11,7 +12,7 @@ export interface P7501PinoutCardProps {
 const PIN_COLOR_MAP: Record<number, string> = {
   1: 'text-rose-400',
   2: 'text-purple-400',
-  4: 'text-emerald-400 font-bold',
+  [P7501_GND_PIN_NUMBER]: 'text-emerald-400 font-bold',
 };
 
 /**
@@ -59,7 +60,7 @@ export const P7501PinoutCard: React.FC<P7501PinoutCardProps> = ({ ssot }) => {
           <p className="text-slate-500 py-2">{t('pico.pinout.empty')}</p>
         ) : (
           ssot.pinout.map(pin => {
-            const isGnd = pin.manual_pin === 4;
+            const isGnd = pin.manual_pin === P7501_GND_PIN_NUMBER;
             const labelClass = PIN_COLOR_MAP[pin.manual_pin] || 'text-sky-400';
             return (
               <div

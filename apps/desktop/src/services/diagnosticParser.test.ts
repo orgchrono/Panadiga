@@ -153,15 +153,14 @@ describe('diagnosticParser & Hardware SSOT Consistency', () => {
       '0x80FE0000',
     ]);
 
-    for (const cmd of [...ptSpec.pico_commands, ...enSpec.pico_commands]) {
+    const allCmds = [...ptSpec.pico_commands, ...enSpec.pico_commands];
+    allCmds.forEach(cmd => {
       expect(cmd.syntax).not.toContain('{{');
-      if (cmd.default_arg !== null && cmd.default_arg !== undefined) {
-        expect(cmd.default_arg).not.toContain('{{');
-      }
-      for (const opt of cmd.arg_options) {
-        expect(opt.value).not.toContain('{{');
-      }
-    }
+      cmd.arg_options.forEach(opt => expect(opt.value).not.toContain('{{'));
+    });
+    allCmds
+      .filter(cmd => cmd.default_arg !== null && cmd.default_arg !== undefined)
+      .forEach(cmd => expect(cmd.default_arg).not.toContain('{{'));
 
     const dump = ptSpec.pico_commands.find((c) => c.id === 'DUMP');
     const drv = ptSpec.pico_commands.find((c) => c.id === 'DRVPANA');

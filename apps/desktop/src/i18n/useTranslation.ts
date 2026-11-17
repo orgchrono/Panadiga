@@ -1,25 +1,30 @@
 import { useCallback } from 'react';
 import { useTranslation as useI18nextTranslation } from 'react-i18next';
 import i18n from './i18n';
-import { Locale, TranslationKey, translations } from './translations';
+import { translations, type Locale, type TranslationKey } from './translations';
 
 export type { Locale, TranslationKey };
 export { translations };
 
+function isLocale(value: string): value is Locale {
+  return value === 'en-US' || value === 'pt-BR';
+}
+
 export const setGlobalLocale = (newLocale: Locale): void => {
-  i18n.changeLanguage(newLocale);
+  void i18n.changeLanguage(newLocale);
 };
 
-export const getGlobalLocale = (): Locale => {
-  return (i18n.language as Locale) || 'en-US';
-};
+export const getGlobalLocale = (): Locale =>
+  isLocale(i18n.language) ? i18n.language : 'en-US';
 
-export const translate = (key: TranslationKey, fallback?: string): string => {
-  const res = i18n.t(key);
-  if (res === key && fallback) {
-    return fallback;
+export const translate = (
+  key: TranslationKey,
+  options?: Record<string, unknown>,
+): string => {
+  if (options) {
+    return i18n.t(key, options);
   }
-  return res;
+  return i18n.t(key);
 };
 
 /**
@@ -34,22 +39,18 @@ export function useTranslation() {
   }, []);
 
   const t = useCallback(
-    (key: TranslationKey, fallbackOrOptions?: string | Record<string, unknown>): string => {
-      if (typeof fallbackOrOptions === 'string') {
-        const res = i18nTranslate(key);
-        return res === key ? fallbackOrOptions : res;
-      }
-      if (fallbackOrOptions) {
-        return i18nTranslate(key, fallbackOrOptions);
+    (key: TranslationKey, options?: Record<string, unknown>): string => {
+      if (options) {
+        return i18nTranslate(key, options);
       }
       return i18nTranslate(key);
     },
-    [i18nTranslate]
+    [i18nTranslate],
   );
 
   return {
     t,
-    locale: (instance.language as Locale) || 'en-US',
+    locale: isLocale(instance.language) ? instance.language : 'en-US',
     setLocale,
     i18n: instance,
   };

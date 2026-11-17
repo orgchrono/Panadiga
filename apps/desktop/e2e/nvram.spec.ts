@@ -11,20 +11,24 @@ test.describe('NVRAM & Spansion S29JL064H Surgical Recovery E2E', () => {
 
   test('renders Spansion NOR Flash specifications and surgical action card', async ({ page }) => {
     await expect(page.getByText('Spansion S29JL064H NOR Flash')).toBeVisible();
-    await expect(page.getByText('Status da NVRAM')).toBeVisible();
-    await expect(page.getByText('Tamanho da Flash NOR')).toBeVisible();
+    await expect(page.getByText(/NVRAM Status|Status da NVRAM/i)).toBeVisible();
+    await expect(page.getByText(/NOR Flash Size|Tamanho da Flash NOR/i)).toBeVisible();
     await expect(page.getByTestId('nvram-capture-live-btn')).toBeVisible();
   });
 
   test('displays microsector breakdown and telemetry metrics', async ({ page }) => {
-    await expect(page.getByText('Topologia Física dos 71 Setores')).toBeVisible();
-    await expect(page.getByText('Setores Corrompidos')).toBeVisible();
+    await expect(
+      page.getByText(/Physical Topology of 71 Sectors|Topologia Física dos 71 Setores/i),
+    ).toBeVisible();
+    await expect(page.getByText(/Corrupted Sectors|Setores Corrompidos/i)).toBeVisible();
   });
 
   test('streams live Pico NVRAM capture into Sector Map and toggles back to disk dump', async ({ page }) => {
     // 1. Disconnected guard: clicking capture without active Pico reports explicit requirement (no silent mock)
     await page.getByTestId('nvram-capture-live-btn').click();
-    await expect(page.getByText(/Nenhuma sonda Pico conectada/i).first()).toBeVisible();
+    await expect(
+      page.getByText(/No Pico probe connected|Nenhuma sonda Pico conectada/i).first(),
+    ).toBeVisible();
 
     // 2. Navigate to PicoBench, trigger real DUMP command, and verify reactive NVRAM Sector Map sync
     await page.click('button[data-testid="nav-picobench"]');

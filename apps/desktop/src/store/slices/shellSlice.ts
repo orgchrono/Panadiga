@@ -4,8 +4,9 @@
  */
 
 import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import { translate } from '@/i18n/useTranslation';
 import type { HardwareSsotSpec, PicoDeviceStatus, ViewKey } from '@/models';
-import { invokeCommand } from '@/services/ipc';
+import { fetchHardwareSsotSpec } from '@/services/systemService';
 import type { ShellTelemetryStatus } from '@/types/workbench';
 
 export interface ShellSliceState {
@@ -53,9 +54,9 @@ export const fetchHardwareSsot = createAsyncThunk<
   'shell/fetchHardwareSsot',
   async (_forceReload, { rejectWithValue }) => {
     try {
-      const spec = await invokeCommand<HardwareSsotSpec>('get_hardware_ssot_spec');
+      const spec = await fetchHardwareSsotSpec();
       if (!spec || !Array.isArray(spec.pico_commands) || spec.pico_commands.length === 0) {
-        return rejectWithValue('Especificação SSOT de hardware vazia ou inválida recebida do backend.');
+        return rejectWithValue(translate('errors.ssot.emptyOrInvalid'));
       }
       return spec;
     } catch (err) {
@@ -119,7 +120,7 @@ const shellSlice = createSlice({
         ssotError:
           typeof action.payload === 'string'
             ? action.payload
-            : action.error.message ?? 'Falha ao carregar especificação SSOT.',
+            : action.error.message ?? translate('errors.ssot.loadFailed'),
       }));
   },
 });

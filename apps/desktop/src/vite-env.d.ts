@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 
-declare module '*.css' {
-    const content: { [className: string]: string };
-    export default content;
+// Seal ImportMetaEnv against fallback `[key: string]: any` indexing (`vite/types/importMeta.d.ts`).
+interface ViteTypeOptions {
+  strictImportMetaEnv: unknown;
 }

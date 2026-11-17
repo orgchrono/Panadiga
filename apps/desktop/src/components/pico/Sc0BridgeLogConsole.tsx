@@ -2,8 +2,7 @@ import React from 'react';
 import { Button } from '@/components/ui';
 import { useTranslation } from '@/i18n/useTranslation';
 import { isSc0BridgeInputMode } from '@/utils/typeGuards';
-import type { BridgeStreamLine } from '@/viewmodels/useSc0Bridge';
-import type { Sc0BridgeInputMode } from '@/models';
+import type { BridgeStreamLine, Sc0BridgeInputMode } from '@/models';
 import { Send, Terminal, Trash2 } from 'lucide-react';
 
 export interface Sc0BridgeLogConsoleProps {

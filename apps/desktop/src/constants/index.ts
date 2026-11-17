@@ -1,25 +1,23 @@
 /**
- * @file constants/index.ts
- * @brief Single Source of Truth (SSOT) barrel for all hardware physical parameters,
- *        canonical SSOT builders, forensic hex bookmarks, and UI interaction timing constants.
+ * Panadiga Unified Frontend Engineering Constants (SSOT)
+ *
+ * Modular hardware geometry, physical memory addresses, USB identity specs, and i18next-backed
+ * SSOT specifications live in `./hardwareSpecs/` and `./hddCapacity.ts`.
  */
 
-export * from './hardwareSpecs';
-export {
-  DIGA_HEX_BOOKMARKS,
-  HEX_FORENSIC_BOOKMARKS,
-  getHexForensicBookmarks,
-} from './hexBookmarks';
+export * from './hexBookmarks';
+export * from './hddCapacity';
+export * from './runtimeDefaults';
+export * from './uiLayout';
+export * from './hardwareSpecs/catalogTokens';
+export * from './hardwareSpecs/physicalConstants';
+export * from './hardwareSpecs/ssotBuilder';
 
-/* =========================================================================
- * UI Interaction & Polling Timing Constants
- * ========================================================================= */
-
-/** Periodic telemetry polling interval in milliseconds */
+/** Live polling fallback interval in ms when reactive event streaming is unavailable */
 export const TELEMETRY_POLL_INTERVAL_MS = 2000;
 
-/** Toast notification visible duration in milliseconds */
+/** Default Toast feedback timeout in ms */
 export const TOAST_DURATION_MS = 3000;
 
-/** Clipboard copy feedback state duration in milliseconds */
+/** Duration in ms to show copy-to-clipboard confirmation state */
 export const CLIPBOARD_FEEDBACK_MS = 2000;

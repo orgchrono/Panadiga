@@ -4,7 +4,7 @@ import type { FrmPackModuleInput, FrmPackReport, PackFrmRequest } from '@/models
 import { StatusBadge } from '@/components/StatusBadge';
 import { Button } from '@/components/ui';
 import { useTranslation } from '@/i18n/useTranslation';
-import { FrmPackFormFields, type FrmPackMode } from './FrmPackFormFields';
+import { FrmPackFormFields, type FrmPackMode, type FrmPackModuleRow } from './FrmPackFormFields';
 import { FrmPackResultBanner } from './FrmPackResultBanner';
 
 interface FrmPackCardProps {
@@ -21,6 +21,12 @@ const DEFAULT_OUT_BY_MODE: Record<FrmPackMode, string> = {
   digadiag: 'firmware_and_images/out/DIGADIAG.FRM',
 };
 
+const INITIAL_MODULES: readonly FrmPackModuleRow[] = [
+  { rowId: 'mod-drv-s211', name: 'DRV S211', path: '' },
+  { rowId: 'mod-prog061', name: 'PROG061 ', path: '' },
+  { rowId: 'mod-main3060np', name: 'MAIN3060NP', path: '' },
+];
+
 export const FrmPackCard: React.FC<FrmPackCardProps> = ({
   packLoading,
   packError,
@@ -31,11 +37,8 @@ export const FrmPackCard: React.FC<FrmPackCardProps> = ({
   const { t } = useTranslation();
   const [mode, setMode] = useState<FrmPackMode>('sd');
   const [outPath, setOutPath] = useState(DEFAULT_OUT_BY_MODE.sd);
-  const [modules, setModules] = useState<FrmPackModuleInput[]>([
-    { name: 'DRV S211', path: '' },
-    { name: 'PROG061 ', path: '' },
-    { name: 'MAIN3060NP', path: '' },
-  ]);
+  const [modules, setModules] = useState<readonly FrmPackModuleRow[]>(() => [...INITIAL_MODULES]);
+  const [nextModuleSeq, setNextModuleSeq] = useState(INITIAL_MODULES.length);
   const [hwFamily, setHwFamily] = useState('M6930');
   const [modelGroup, setModelGroup] = useState('NP-309');
   const [versionU16, setVersionU16] = useState('0x0001');
@@ -55,23 +58,41 @@ export const FrmPackCard: React.FC<FrmPackCardProps> = ({
     }
   };
 
-  const validModules = modules.filter(m => m.name.trim() && m.path.trim());
+  const handleAddModule = () => {
+    const rowId = `mod-${nextModuleSeq}`;
+    setNextModuleSeq((prev) => prev + 1);
+    setModules((prev) => [...prev, { rowId, name: '', path: '' }]);
+  };
+
+  const handleUpdateModule = (rowId: string, patch: Partial<FrmPackModuleInput>) => {
+    setModules((prev) =>
+      prev.map((row) => (row.rowId === rowId ? { ...row, ...patch } : row)),
+    );
+  };
+
+  const handleRemoveModule = (rowId: string) => {
+    setModules((prev) => prev.filter((row) => row.rowId !== rowId));
+  };
+
+  const validModules: FrmPackModuleInput[] = modules
+    .filter((m) => m.name.trim() && m.path.trim())
+    .map(({ name, path }) => ({ name, path }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (packLoading) return;
     if (!outPath.trim()) {
-      setFormError('Informe o caminho de saída para gravar o contêiner .FRM.');
+      setFormError(t('crypto.packager.outPathRequired'));
       setSuccess(null);
       return;
     }
     if (mode === 'digadiag' && !diagInputPath.trim()) {
-      setFormError('Informe o binário de entrada para encapsular no DIGADIAG.FRM.');
+      setFormError(t('crypto.packager.diagInputRequired'));
       setSuccess(null);
       return;
     }
     if (mode !== 'digadiag' && validModules.length === 0) {
-      setFormError('Preencha nome e caminho de ao menos um módulo de firmware.');
+      setFormError(t('crypto.packager.moduleRequired'));
       setSuccess(null);
       return;
     }
@@ -95,11 +116,15 @@ export const FrmPackCard: React.FC<FrmPackCardProps> = ({
             hw_family: hwFamily.trim() || 'M6930',
             model_group: modelGroup.trim() || 'NP-309',
             version_u16: versionU16.trim() || '0x0001',
-          }
+          },
     );
     if (report) {
       setSuccess(
-        `Contêiner ${mode.toUpperCase()} gerado (${report.total_bytes.toLocaleString()} bytes) em ${outPath.trim()}.`
+        t('crypto.packager.packedSummary', {
+          mode: mode.toUpperCase(),
+          bytes: report.total_bytes.toLocaleString(),
+          path: outPath.trim(),
+        }),
       );
     }
   };
@@ -142,7 +167,9 @@ export const FrmPackCard: React.FC<FrmPackCardProps> = ({
           versionU16={versionU16}
           onVersionU16Change={setVersionU16}
           modules={modules}
-          setModules={setModules}
+          onAddModule={handleAddModule}
+          onUpdateModule={handleUpdateModule}
+          onRemoveModule={handleRemoveModule}
         />
 
         <div className="flex items-center gap-3 pt-1">

@@ -309,3 +309,6 @@ export interface PackUnlockFrmResult {
   output_path: string | null;
   container_bytes: number;
 }
+
+export type BgoMode = 'auto_format' | 'bypass' | 'uart_monitor' | 'factory';
+export type MainPassthroughMode = 'av_passthrough' | 'factory_original';

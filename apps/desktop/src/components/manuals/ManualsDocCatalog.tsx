@@ -24,7 +24,7 @@ export const ManualsDocCatalog: React.FC<ManualsDocCatalogProps> = ({
           <span>{t('manuals.meta.title')} ({documents.length})</span>
         </h3>
         <span className="text-[10px] text-slate-500 font-mono">
-          Catálogo DIGA
+          {t('manuals.meta.catalogTag')}
         </span>
       </div>
 
@@ -32,25 +32,19 @@ export const ManualsDocCatalog: React.FC<ManualsDocCatalogProps> = ({
       <div className="flex-1 overflow-y-auto pt-3 space-y-2 pr-1 scrollbar-thin scrollbar-thumb-slate-800">
         {documents.length === 0 ? (
           <div className="py-20 text-center text-xs text-slate-500">
-            Nenhum manual indexado
+            {t('manuals.meta.emptyCatalog')}
           </div>
         ) : (
           documents.map(doc => {
             const isSelected = selectedDoc?.id === doc.id;
             return (
-              <div
+              <button
                 key={doc.id}
-                role="button"
-                tabIndex={0}
+                type="button"
+                aria-label={doc.title}
                 aria-pressed={isSelected}
                 onClick={() => setSelectedDoc(doc)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    setSelectedDoc(doc);
-                  }
-                }}
-                className={`p-3 rounded-xl border cursor-pointer transition-all focus:outline-none focus:ring-1 focus:ring-blue-500/50 ${
+                className={`w-full text-left block p-3 rounded-xl border cursor-pointer transition-all focus:outline-none focus:ring-1 focus:ring-blue-500/50 ${
                   isSelected
                     ? 'bg-blue-500/10 border-blue-500/40 text-blue-200'
                     : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200'
@@ -69,7 +63,7 @@ export const ManualsDocCatalog: React.FC<ManualsDocCatalogProps> = ({
                   <span className="font-mono">{doc.file_name}</span>
                   <span className="capitalize">{doc.category}</span>
                 </div>
-              </div>
+              </button>
             );
           })
         )}

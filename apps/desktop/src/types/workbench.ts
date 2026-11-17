@@ -35,3 +35,10 @@ export interface ShellTelemetryStatus {
   readonly connected: boolean;
   readonly vdd_volts: number;
 }
+
+export interface WorkbenchDocksState {
+  readonly leftOpen: boolean;
+  readonly rightOpen: boolean;
+  readonly bottomOpen: boolean;
+  readonly bottomExpanded: boolean;
+}

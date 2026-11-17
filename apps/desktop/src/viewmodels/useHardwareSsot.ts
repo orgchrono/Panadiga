@@ -4,62 +4,57 @@
  */
 
 import { useCallback, useEffect } from 'react';
-import type { LiveNvramCaptureEvent, PicoDeviceStatus } from '@/models';
-import { listenEvent } from '@/services/ipc';
-import { recordLiveNvramCapture } from '@/services/liveNvramCaptureStore';
-import { store } from '@/store';
+import type { PicoDeviceStatus } from '@/models';
+import {
+  subscribeLegacyPicoTelemetry,
+  subscribePicoNvramLiveCapture,
+  subscribePicoTelemetry,
+} from '@/services/picoService';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { recordLiveNvramCapture } from '@/store/nvramCaptureBridge';
 import {
   applyTelemetryStatus,
   fetchHardwareSsot,
   resetSsotState,
 } from '@/store/slices/shellSlice';
 import type { ShellTelemetryStatus } from '@/types/workbench';
+import { registerAsyncSubscriptions } from '@/utils/subscription';
 
 export type { ShellTelemetryStatus };
 
 export function resetHardwareSsotCacheForTests(): void {
+  storeReset();
+}
+
+import { store } from '@/store';
+function storeReset(): void {
   store.dispatch(resetSsotState());
 }
 
 /**
- * Top-level App shell ViewModel: listens for reactive Pico telemetry and live NVRAM capture events
- * and pushes updates into Redux so shell views stay decoupled from IPC internals.
+ * React hook subscribing global shell status bar to P7501 hardware telemetry & NVRAM captures.
  */
 export function useShellTelemetryListener(): ShellTelemetryStatus {
   const dispatch = useAppDispatch();
   const hardwareStatus = useAppSelector(state => state.shell.hardwareStatus);
 
   useEffect(() => {
-    let unlistenLegacy: (() => void) | undefined;
-    let unlistenStream: (() => void) | undefined;
-    let unlistenLiveNvram: (() => void) | undefined;
-
     const onTelemetry = (incoming: PicoDeviceStatus) => {
       if (incoming) {
         dispatch(applyTelemetryStatus(incoming));
       }
     };
 
-    listenEvent<PicoDeviceStatus>('pico_telemetry', onTelemetry).then(fn => {
-      unlistenLegacy = fn;
-    });
-    listenEvent<PicoDeviceStatus>('pico://telemetry', onTelemetry).then(fn => {
-      unlistenStream = fn;
-    });
-    listenEvent<LiveNvramCaptureEvent>('pico://nvram-live-capture', evt => {
-      if (evt?.report) {
-        recordLiveNvramCapture(evt);
-      }
-    }).then(fn => {
-      unlistenLiveNvram = fn;
-    });
-
-    return () => {
-      unlistenLegacy?.();
-      unlistenStream?.();
-      unlistenLiveNvram?.();
-    };
+    return registerAsyncSubscriptions([
+      () => subscribeLegacyPicoTelemetry(onTelemetry),
+      () => subscribePicoTelemetry(onTelemetry),
+      () =>
+        subscribePicoNvramLiveCapture(evt => {
+          if (evt?.report) {
+            recordLiveNvramCapture(evt);
+          }
+        }),
+    ]);
   }, [dispatch]);
 
   return hardwareStatus;

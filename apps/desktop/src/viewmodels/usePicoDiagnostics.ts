@@ -1,15 +1,29 @@
 import { useCallback, useEffect, useState } from 'react';
+import {
+  PICO_DIAGNOSTIC_DEFAULT_TIMEOUT_MS,
+  PICO_DIAGNOSTIC_HISTORY_CAP,
+} from '@/constants';
+import { translate } from '@/i18n/useTranslation';
 import type {
   HardwareSsotSpec,
   PicoCommandCategory,
   PicoDiagnosticResult,
   SerialLogEntry,
 } from '@/models';
-import { invokeCommand, listenEvent } from '@/services/ipc';
-import { bleService } from '@/services/bleService';
 import { sendAndroidUsbOtgCommand } from '@/services/androidBridge';
+import { bleService } from '@/services/bleService';
 import { parseDiagnosticOutput } from '@/services/diagnosticParser';
-import { ingestP7501DumpOutput } from '@/services/liveNvramCaptureStore';
+import {
+  executePicoDiagnostic,
+  parsePicoDiagnosticOutput,
+  subscribePicoDiagnosticResult,
+} from '@/services/picoService';
+import { ingestP7501DumpOutput } from '@/store/nvramCaptureBridge';
+import {
+  updatePicoSessionDiagnostic,
+  updatePicoSessionRunningCommand,
+} from '@/store/picoSessionBridge';
+import { registerAsyncSubscriptions } from '@/utils/subscription';
 
 export interface UsePicoDiagnosticsOptions {
   selectedPort: string;
@@ -17,7 +31,7 @@ export interface UsePicoDiagnosticsOptions {
   onLog?: (
     level: SerialLogEntry['level'],
     source: SerialLogEntry['source'],
-    message: string
+    message: string,
   ) => void;
   onTelemetryUpdate?: (result: PicoDiagnosticResult) => void;
 }
@@ -39,29 +53,30 @@ export function usePicoDiagnostics({
   const [error, setError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<PicoCommandCategory>('electrical');
 
-  useEffect(() => {
-    let unlisten: (() => void) | undefined;
-    listenEvent<PicoDiagnosticResult>('pico://diagnostic-result', payload => {
-      if (!payload || !payload.command_id) return;
-      setLatestResult(payload);
-      setHistory(prev => [payload, ...prev].slice(0, 30));
-      onTelemetryUpdate?.(payload);
-    }).then(fn => {
-      unlisten = fn;
-    });
-    return () => {
-      unlisten?.();
-    };
-  }, [onTelemetryUpdate]);
+  useEffect(
+    () =>
+      registerAsyncSubscriptions([
+        () =>
+          subscribePicoDiagnosticResult((payload) => {
+            if (!payload || !payload.command_id) return;
+            setLatestResult(payload);
+            updatePicoSessionDiagnostic(payload);
+            setHistory((prev) => [payload, ...prev].slice(0, PICO_DIAGNOSTIC_HISTORY_CAP));
+            onTelemetryUpdate?.(payload);
+          }),
+      ]),
+    [onTelemetryUpdate],
+  );
 
   const commitDiagnosticResult = useCallback(
     (result: PicoDiagnosticResult, logReply = false): PicoDiagnosticResult => {
       setLatestResult(result);
-      setHistory(prev => {
+      updatePicoSessionDiagnostic(result);
+      setHistory((prev) => {
         if (prev[0]?.raw_command === result.raw_command && prev[0]?.elapsed_ms === result.elapsed_ms) {
           return prev;
         }
-        return [result, ...prev].slice(0, 30);
+        return [result, ...prev].slice(0, PICO_DIAGNOSTIC_HISTORY_CAP);
       });
       if (logReply) {
         onLog?.(result.success ? 'rx' : 'error', 'PICO', result.summary);
@@ -69,40 +84,39 @@ export function usePicoDiagnostics({
       onTelemetryUpdate?.(result);
       return result;
     },
-    [onLog, onTelemetryUpdate]
+    [onLog, onTelemetryUpdate],
   );
 
   const executeCommand = useCallback(
     async (commandId: string, arg?: string): Promise<PicoDiagnosticResult | null> => {
       const norm = commandId.trim().toUpperCase();
-      const spec = ssot?.pico_commands.find(c => c.id === norm);
+      const spec = ssot?.pico_commands.find((c) => c.id === norm);
       const cleanArg = arg?.trim() ? arg.trim() : undefined;
       const rawCommand = cleanArg ? `${norm} ${cleanArg}` : norm;
-      const timeoutMs = spec?.timeout_ms ?? 4000;
+      const timeoutMs = spec?.timeout_ms ?? PICO_DIAGNOSTIC_DEFAULT_TIMEOUT_MS;
 
       setRunningCommandId(norm);
+      updatePicoSessionRunningCommand(norm);
       setError(null);
 
       try {
         const executeDirect = async (
           transportTag: string,
-          runTransport: () => Promise<{ ok: boolean; output: string }>
+          runTransport: () => Promise<{ ok: boolean; output: string }>,
         ): Promise<PicoDiagnosticResult> => {
           onLog?.('tx', 'HOST', `> [${transportTag}] ${rawCommand}`);
           const started = performance.now();
           const reply = await runTransport();
           const elapsed = Math.round(performance.now() - started);
-          const parsed = await invokeCommand<PicoDiagnosticResult>('pico_parse_diagnostic_output', {
-            commandId: norm,
-            command_id: norm,
+          const rawParsed = await parsePicoDiagnosticOutput(
+            norm,
             rawCommand,
-            raw_command: rawCommand,
-            rawOutput: reply.output,
-            raw_output: reply.output,
-            elapsedMs: elapsed,
-            elapsed_ms: elapsed,
-          }).catch(() => parseDiagnosticOutput(norm, rawCommand, reply.output, elapsed));
-          if (!reply.ok) parsed.success = false;
+            reply.output,
+            elapsed,
+          ).catch(() => parseDiagnosticOutput(norm, rawCommand, reply.output, elapsed));
+          const parsed: PicoDiagnosticResult = reply.ok
+            ? rawParsed
+            : { ...rawParsed, success: false };
           if (parsed.success && norm === 'DUMP') {
             void ingestP7501DumpOutput(reply.output, transportTag, selectedPort).catch(() => {});
           }
@@ -111,7 +125,7 @@ export function usePicoDiagnostics({
 
         if (selectedPort.startsWith('ANDROID-USB-OTG')) {
           return await executeDirect('USB-OTG', async () =>
-            sendAndroidUsbOtgCommand(rawCommand, timeoutMs)
+            sendAndroidUsbOtgCommand(rawCommand, timeoutMs),
           );
         }
 
@@ -123,33 +137,31 @@ export function usePicoDiagnostics({
         }
 
         if (!selectedPort) {
-          const msg =
-            'Selecione ou conecte uma sonda Pico real antes de executar diagnósticos P7501 UART / OCD.';
+          const msg = translate('errors.pico.noDiagnosticProbe');
           setError(msg);
           throw new Error(msg);
         }
-        const portToUse = selectedPort;
-        const result = await invokeCommand<PicoDiagnosticResult>('pico_execute_diagnostic', {
-          portName: portToUse,
-          port_name: portToUse,
-          commandId: norm,
-          command_id: norm,
-          arg: cleanArg ?? null,
-        });
+
+        const result = await executePicoDiagnostic(selectedPort, norm, cleanArg ?? null);
         if (norm === 'DUMP' && result.success && result.raw_output) {
-          await ingestP7501DumpOutput(result.raw_output, 'DESKTOP_CDC', portToUse);
+          await ingestP7501DumpOutput(result.raw_output, 'DESKTOP_CDC', selectedPort);
         }
         return commitDiagnosticResult(result);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         setError(msg);
-        onLog?.('error', 'HOST', `Falha em ${rawCommand}: ${msg}`);
+        onLog?.(
+          'error',
+          'HOST',
+          translate('errors.pico.diagnosticFailed', { cmd: rawCommand, reason: msg }),
+        );
         return null;
       } finally {
         setRunningCommandId(null);
+        updatePicoSessionRunningCommand(null);
       }
     },
-    [selectedPort, ssot, onLog, commitDiagnosticResult]
+    [selectedPort, ssot, onLog, commitDiagnosticResult],
   );
 
   const clearHistory = useCallback(() => {

@@ -1,3 +1,5 @@
+import { SAFE_PICO_IR_GPIOS } from '@/constants';
+import { translate } from '@/i18n/useTranslation';
 import { invokeCommand } from './ipc';
 import {
   connectAndroidBleNus,
@@ -22,7 +24,22 @@ import type {
   RemoteUnitSet,
 } from '@/models/ir';
 
-export const SAFE_PICO_IR_GPIOS: readonly number[] = [6, 7, 8, 9, 16, 17, 18, 19, 20, 21, 22];
+export { SAFE_PICO_IR_GPIOS };
+
+const DEFAULT_GPIO_PIN = 6;
+const MIN_IR_REPEAT = 1;
+const MAX_IR_REPEAT = 8;
+const BYTE_MASK = 0xff;
+const NIBBLE_MASK = 0x0f;
+const BYTE_SHIFT_BITS = 8;
+const HEX_RADIX = 16;
+const DEV_SUB_HEX_WIDTH = 4;
+const CMD_HEX_WIDTH = 2;
+const DIGA_KASEIKYO_DEVICE_ID = 0xb0;
+const ANDROID_FALLBACK_SDK_INT = 34;
+const USB_IRTX_TIMEOUT_MS = 2500;
+const BLE_IRTX_CONNECT_TIMEOUT_MS = 6000;
+const BLE_IRTX_CMD_TIMEOUT_MS = 3000;
 
 const DEFAULT_FALLBACK_DEVICE: IrDeviceInfo = {
   manufacturer: 'Generic',
@@ -32,7 +49,7 @@ const DEFAULT_FALLBACK_DEVICE: IrDeviceInfo = {
   product: 'generic',
   device: 'generic',
   android_release: '14',
-  sdk_int: 34,
+  sdk_int: ANDROID_FALLBACK_SDK_INT,
 };
 
 export interface IrDispatchOutcome {
@@ -49,11 +66,11 @@ export function formatPicoIrtxCommand(
   gpioPin: number,
   repeatCount: number,
 ): string {
-  const safeGpio = SAFE_PICO_IR_GPIOS.includes(gpioPin) ? gpioPin : 6;
-  const clampedRepeat = Math.min(8, Math.max(1, Math.round(repeatCount)));
-  const devSub = ((device & 0xff) << 8) | (subdevice & 0x0f);
-  const lhsHex = devSub.toString(16).toUpperCase().padStart(4, '0');
-  const cmdHex = (obc & 0xff).toString(16).toUpperCase().padStart(2, '0');
+  const safeGpio = SAFE_PICO_IR_GPIOS.includes(gpioPin) ? gpioPin : DEFAULT_GPIO_PIN;
+  const clampedRepeat = Math.min(MAX_IR_REPEAT, Math.max(MIN_IR_REPEAT, Math.round(repeatCount)));
+  const devSub = ((device & BYTE_MASK) << BYTE_SHIFT_BITS) | (subdevice & NIBBLE_MASK);
+  const lhsHex = devSub.toString(HEX_RADIX).toUpperCase().padStart(DEV_SUB_HEX_WIDTH, '0');
+  const cmdHex = (obc & BYTE_MASK).toString(HEX_RADIX).toUpperCase().padStart(CMD_HEX_WIDTH, '0');
   return `IRTX ${lhsHex}:${cmdHex} GP${safeGpio} ${clampedRepeat}`;
 }
 
@@ -150,17 +167,16 @@ async function dispatchViaPicoTransport(params: {
   prepared: IrPreparedSignal;
 }): Promise<IrDispatchOutcome> {
   const effectiveSub =
-    params.respectRemoteMode && params.device === 0xb0 && params.remoteUnit > 1
-      ? ((params.remoteUnit - 1) & 0x0f) | (params.subdevice & 0x0f)
+    params.respectRemoteMode && params.device === DIGA_KASEIKYO_DEVICE_ID && params.remoteUnit > 1
+      ? ((params.remoteUnit - 1) & NIBBLE_MASK) | (params.subdevice & NIBBLE_MASK)
       : params.subdevice;
 
-  if ((params.device & 0xff) === 0) {
+  if ((params.device & BYTE_MASK) === 0) {
     return {
       ok: false,
       backendUsed: `Pico IRTX (${params.transport})`,
       prepared: params.prepared,
-      error:
-        'Pico IRTX hardware parser supports Panasonic device >= 0x01 (e.g. DIGA 0xB0 / VCR 0x90 / TV 0x80). Use Android CIR HAL for device 0x00 codes.',
+      error: translate('errors.androidIr.deviceIdZeroUnsupported'),
     };
   }
 
@@ -174,7 +190,7 @@ async function dispatchViaPicoTransport(params: {
 
   if (params.transport === 'PICO_USB_OTG') {
     connectAndroidUsbOtg('');
-    const res = sendAndroidUsbOtgCommand(cmd, 2500);
+    const res = sendAndroidUsbOtgCommand(cmd, USB_IRTX_TIMEOUT_MS);
     return {
       ok: res.ok && !res.output.includes('IRTX: ERROR'),
       backendUsed: `Pico USB-OTG (GP${params.gpioPin})`,
@@ -184,8 +200,8 @@ async function dispatchViaPicoTransport(params: {
   }
 
   if (params.transport === 'PICO_BLE') {
-    connectAndroidBleNus(6000);
-    const res = sendAndroidBleCommand(cmd, 3000);
+    connectAndroidBleNus(BLE_IRTX_CONNECT_TIMEOUT_MS);
+    const res = sendAndroidBleCommand(cmd, BLE_IRTX_CMD_TIMEOUT_MS);
     return {
       ok: res.ok && !res.output.includes('IRTX: ERROR'),
       backendUsed: `Pico BLE NUS (GP${params.gpioPin})`,

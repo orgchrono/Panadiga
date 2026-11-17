@@ -310,5 +310,14 @@ export interface Sc0BridgeDataEvent {
   timestamp: string;
 }
 
+export interface BridgeStreamLine extends Sc0BridgeDataEvent {
+  id: string;
+}
+
+export type SerialConsoleState =
+  | { status: 'idle' }
+  | { status: 'sending'; command: string }
+  | { status: 'error'; message: string };
+
 
 

@@ -1,18 +1,25 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
-import type { PicoDiagnosticResult, ReactiveSerialEvent, SerialLogEntry } from '@/models';
-import { nextUniqueId } from '@/utils/formatters';
-import { invokeCommand, isTauriEnvironment, listenEvent } from '@/services/ipc';
-import { bleService } from '@/services/bleService';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  PICO_BLE_DUMP_REPLY_TIMEOUT_MS,
+  PICO_OTG_COMMAND_TIMEOUT_MS,
+  SERIAL_CONSOLE_LOG_CAP,
+  SERIAL_LOG_TIMESTAMP_END,
+  SERIAL_LOG_TIMESTAMP_START,
+} from '@/constants';
+import { translate } from '@/i18n/useTranslation';
+import type { PicoDiagnosticResult, SerialConsoleState, SerialLogEntry } from '@/models';
 import { sendAndroidUsbOtgCommand } from '@/services/androidBridge';
+import { bleService } from '@/services/bleService';
 import { parseDiagnosticOutput } from '@/services/diagnosticParser';
-import { ingestP7501DumpOutput } from '@/services/liveNvramCaptureStore';
+import { isPicoIpcAvailable, sendPicoSerialCommand, subscribePicoSerialLog } from '@/services/picoService';
+import { ingestP7501DumpOutput } from '@/store/nvramCaptureBridge';
+import { updatePicoSessionSerialLogs } from '@/store/picoSessionBridge';
+import { createIdGenerator } from '@/utils/formatters';
+import { registerAsyncSubscriptions } from '@/utils/subscription';
 
-/**
- * Closed algebraic state machine for Serial Console transmission lifecycle.
- */
-export type SerialConsoleState =
-  | { status: 'idle' }
-  | { status: 'sending'; command: string };
+const nextSerialLogId = createIdGenerator('serial');
+
+export type { SerialConsoleState };
 
 export interface UseSerialConsoleOptions {
   selectedPort?: string;
@@ -29,6 +36,10 @@ const TELEMETRY_RELEVANT_VERBS = new Set([
   'HIZ',
 ]);
 
+function currentLogTimestamp(): string {
+  return new Date().toISOString().slice(SERIAL_LOG_TIMESTAMP_START, SERIAL_LOG_TIMESTAMP_END);
+}
+
 /**
  * Single Responsibility: Manages interactive serial CDC / BLE / USB-OTG console logs
  * and reactive `pico://serial-log` streaming events.
@@ -41,6 +52,8 @@ export function useSerialConsole({
   const [logs, setLogs] = useState<SerialLogEntry[]>(initialLogs);
   const [commandInput, setCommandInput] = useState<string>('');
   const [consoleState, setConsoleState] = useState<SerialConsoleState>({ status: 'idle' });
+  const [latestCommandTelemetry, setLatestCommandTelemetry] =
+    useState<PicoDiagnosticResult | null>(null);
   const logContainerRef = useRef<HTMLDivElement>(null);
 
   const addLog = useCallback(
@@ -48,24 +61,23 @@ export function useSerialConsole({
       level: SerialLogEntry['level'],
       source: SerialLogEntry['source'],
       message: string,
-      hexData?: string
+      hexData?: string,
     ) => {
       const newEntry: SerialLogEntry = {
-        id: nextUniqueId('serial'),
-        timestamp: new Date().toISOString().slice(11, 23),
+        id: nextSerialLogId(),
+        timestamp: currentLogTimestamp(),
         level,
         source,
         message,
         hexData,
       };
-      setLogs(prev => [...prev.slice(-240), newEntry]);
+      setLogs((prev) => [...prev.slice(-SERIAL_CONSOLE_LOG_CAP), newEntry]);
     },
-    []
+    [],
   );
 
-  // Subscribe to incoming BLE notifications when active
   useEffect(() => {
-    const unsubscribe = bleService.onReceive(data => {
+    const unsubscribe = bleService.onReceive((data) => {
       const clean = data.trim();
       if (clean) {
         addLog('rx', 'PICO', `[BLE] ${clean}`);
@@ -74,31 +86,29 @@ export function useSerialConsole({
     return unsubscribe;
   }, [addLog]);
 
-  // Subscribe to reactive backend diagnostic log pushes
-  useEffect(() => {
-    let unlisten: (() => void) | undefined;
-    listenEvent<ReactiveSerialEvent>('pico://serial-log', evt => {
-      if (!evt?.message) return;
-      setLogs(prev => {
-        if (prev.some(item => item.id === evt.id)) return prev;
-        return [
-          ...prev.slice(-240),
-          {
-            id: evt.id || nextUniqueId('serial'),
-            timestamp: evt.timestamp || new Date().toISOString().slice(11, 23),
-            level: evt.level || 'info',
-            source: evt.source || 'PICO',
-            message: evt.message,
-          },
-        ];
-      });
-    }).then(fn => {
-      unlisten = fn;
-    });
-    return () => {
-      unlisten?.();
-    };
-  }, []);
+  useEffect(
+    () =>
+      registerAsyncSubscriptions([
+        () =>
+          subscribePicoSerialLog((evt) => {
+            if (!evt?.message) return;
+            setLogs((prev) => {
+              if (prev.some((item) => item.id === evt.id)) return prev;
+              return [
+                ...prev.slice(-SERIAL_CONSOLE_LOG_CAP),
+                {
+                  id: evt.id || nextSerialLogId(),
+                  timestamp: evt.timestamp || currentLogTimestamp(),
+                  level: evt.level || 'info',
+                  source: evt.source || 'PICO',
+                  message: evt.message,
+                },
+              ];
+            });
+          }),
+      ]),
+    [],
+  );
 
   const emitConsoleEffects = useCallback(
     (cmd: string, reply: string, transportTag: string, targetPort: string) => {
@@ -106,34 +116,44 @@ export function useSerialConsole({
         void ingestP7501DumpOutput(reply, transportTag, targetPort).catch(() => {});
       }
       const verb = cmd.split(/\s+/)[0] || cmd;
-      if (onCommandTelemetry && TELEMETRY_RELEVANT_VERBS.has(verb)) {
+      if (TELEMETRY_RELEVANT_VERBS.has(verb)) {
         const parsed = parseDiagnosticOutput(verb, cmd, reply, 0);
         if (parsed.vdd_volts !== null && parsed.vdd_volts !== undefined) {
-          onCommandTelemetry(parsed);
+          setLatestCommandTelemetry(parsed);
+          onCommandTelemetry?.(parsed);
         }
       }
     },
-    [onCommandTelemetry]
+    [onCommandTelemetry],
   );
 
-  const sendCommand = useCallback(
-    async (overridePort?: string) => {
-      if (!commandInput.trim()) return;
-      const cmd = commandInput.trim().toUpperCase();
+  useEffect(() => {
+    updatePicoSessionSerialLogs(logs);
+  }, [logs]);
+
+  const sendCommandLine = useCallback(
+    async (commandLine: string, overridePort?: string): Promise<void> => {
+      if (!commandLine.trim()) return;
+      const cmd = commandLine.trim().toUpperCase();
       const targetPort = overridePort || selectedPort || '';
       setConsoleState({ status: 'sending', command: cmd });
       addLog('tx', 'HOST', `> ${cmd}`);
-      setCommandInput('');
 
       if (targetPort.startsWith('ANDROID-USB-OTG')) {
         try {
-          const res = sendAndroidUsbOtgCommand(cmd, 4000);
+          const res = sendAndroidUsbOtgCommand(cmd, PICO_OTG_COMMAND_TIMEOUT_MS);
           addLog(res.ok ? 'rx' : 'error', 'PICO', res.output);
           if (res.ok) {
             emitConsoleEffects(cmd, res.output, 'ANDROID_USB_OTG', targetPort);
           }
         } catch (err) {
-          addLog('error', 'HOST', `Erro USB-OTG: ${err instanceof Error ? err.message : String(err)}`);
+          addLog(
+            'error',
+            'HOST',
+            translate('errors.serial.usbOtgError', {
+              reason: err instanceof Error ? err.message : String(err),
+            }),
+          );
         } finally {
           setConsoleState({ status: 'idle' });
         }
@@ -143,14 +163,14 @@ export function useSerialConsole({
       if (bleService.isConnected()) {
         try {
           if (cmd.startsWith('DUMP')) {
-            const reply = await bleService.sendAndAwaitReply(cmd, 5000);
+            const reply = await bleService.sendAndAwaitReply(cmd, PICO_BLE_DUMP_REPLY_TIMEOUT_MS);
             addLog('rx', 'PICO', reply);
             emitConsoleEffects(cmd, reply, 'BLE_NUS', targetPort || 'BLE_PICO_W');
           } else {
             await bleService.send(cmd);
           }
         } catch (err) {
-          addLog('error', 'HOST', `Falha ao transmitir via BLE: ${err}`);
+          addLog('error', 'HOST', translate('errors.serial.bleTxError', { reason: String(err) }));
         } finally {
           setConsoleState({ status: 'idle' });
         }
@@ -158,27 +178,19 @@ export function useSerialConsole({
       }
 
       if (!targetPort) {
-        addLog('error', 'HOST', 'Nenhuma porta Pico USB CDC / OTG / BLE selecionada para transmissão.');
+        addLog('error', 'HOST', translate('errors.serial.noPortSelected'));
         setConsoleState({ status: 'idle' });
         return;
       }
 
-      const hasTestBridge =
-        (import.meta.env.DEV || import.meta.env.MODE === 'test') &&
-        typeof window !== 'undefined' &&
-        Boolean(window.__PANADIGA_TEST_IPC__);
-      if (!isTauriEnvironment() && !hasTestBridge) {
-        addLog('error', 'HOST', 'Runtime nativo Tauri indisponível para acesso serial ao Pico.');
+      if (!isPicoIpcAvailable()) {
+        addLog('error', 'HOST', translate('errors.serial.tauriUnavailable'));
         setConsoleState({ status: 'idle' });
         return;
       }
 
       try {
-        const response = await invokeCommand<string>('pico_send_serial_command', {
-          portName: targetPort,
-          port_name: targetPort,
-          command: cmd,
-        });
+        const response = await sendPicoSerialCommand(targetPort, cmd);
         const source = cmd === 'RESET' ? 'TARGET' : 'PICO';
         addLog('rx', source, response);
         emitConsoleEffects(cmd, response, 'USB_CDC', targetPort);
@@ -186,13 +198,25 @@ export function useSerialConsole({
         addLog(
           'error',
           'HOST',
-          `Erro CDC: ${err instanceof Error ? err.message : String(err)}`
+          translate('errors.serial.cdcError', {
+            reason: err instanceof Error ? err.message : String(err),
+          }),
         );
       } finally {
         setConsoleState({ status: 'idle' });
       }
     },
-    [commandInput, selectedPort, addLog, emitConsoleEffects]
+    [selectedPort, addLog, emitConsoleEffects],
+  );
+
+  const sendCommand = useCallback(
+    async (overridePort?: string) => {
+      const nextLine = commandInput;
+      if (!nextLine.trim()) return;
+      setCommandInput('');
+      await sendCommandLine(nextLine, overridePort);
+    },
+    [commandInput, sendCommandLine],
   );
 
   const clearLogs = useCallback(() => {
@@ -202,12 +226,14 @@ export function useSerialConsole({
   return {
     logs,
     consoleState,
+    latestCommandTelemetry,
     isLoading: consoleState.status === 'sending',
     addLog,
     clearLogs,
     commandInput,
     setCommandInput,
     sendCommand,
+    sendCommandLine,
     logContainerRef,
   };
 }

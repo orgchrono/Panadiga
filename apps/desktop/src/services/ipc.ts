@@ -5,23 +5,35 @@
  */
 
 import { isTauri } from '@tauri-apps/api/core';
+import type {
+  LiveNvramCaptureEvent,
+  PicoDeviceStatus,
+  PicoDiagnosticResult,
+  ReactiveSerialEvent,
+  Sc0BridgeDataEvent,
+} from '@/models';
+import { translate } from '@/i18n/useTranslation';
 import { logger } from '@/utils/logger';
-export interface PanadigaTestIpcBridge {
-  invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T>;
-  listen<T>(eventName: string, handler: (payload: T) => void): (() => void) | Promise<() => void>;
+import { resolveTestIpcBridge, type PanadigaTestIpcBridge } from './hostBridge';
+
+export type { PanadigaTestIpcBridge };
+
+export interface PanadigaEventMap {
+  readonly 'unbrick://completed': boolean;
+  readonly 'nvram://cleaned': boolean;
+  readonly 'hdd://inspected': boolean;
+  readonly pico_telemetry: PicoDeviceStatus;
+  readonly 'pico://telemetry': PicoDeviceStatus;
+  readonly 'pico://nvram-live-capture': LiveNvramCaptureEvent;
+  readonly 'pico://diagnostic-result': PicoDiagnosticResult;
+  readonly 'pico://bridge-data': Sc0BridgeDataEvent;
+  readonly 'pico://serial-log': ReactiveSerialEvent;
+  readonly 'pico://ports-changed': string[];
 }
 
-declare global {
-  interface Window {
-    __PANADIGA_TEST_IPC__?: PanadigaTestIpcBridge;
-  }
-}
+export const isTauriEnvironment = (): boolean => isTauri();
 
-export const isTauriEnvironment = (): boolean => {
-  return isTauri();
-};
-
-// Native Tauri IPC runtime check
+export const hasTestIpcBridge = (): boolean => resolveTestIpcBridge() !== null;
 
 function toCamelCaseKey(key: string): string {
   return key.replace(/_([a-z0-9])/g, (_, char: string) => char.toUpperCase());
@@ -29,19 +41,20 @@ function toCamelCaseKey(key: string): string {
 
 /**
  * Normalizes argument dictionaries so that both camelCase (required by Tauri v2 IPC commands)
- * and snake_case (legacy/internal) keys are populated transparently.
+ * and snake_case (legacy/internal) keys are populated without mutating input objects.
  */
-export function normalizeArgsForTauri(args?: Record<string, unknown>): Record<string, unknown> | undefined {
+export function normalizeArgsForTauri(
+  args?: Record<string, unknown>,
+): Record<string, unknown> | undefined {
   if (!args) return undefined;
-  const normalized: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(args)) {
-    const camel = toCamelCaseKey(key);
-    normalized[camel] = value;
-    if (camel !== key) {
-      normalized[key] = value;
-    }
-  }
-  return normalized;
+  return Object.fromEntries(
+    Object.entries(args).flatMap(([key, value]) => {
+      const camel = toCamelCaseKey(key);
+      const originalPair: readonly [string, unknown] = [key, value];
+      const camelPair: readonly [string, unknown] = [camel, value];
+      return camel !== key ? [camelPair, originalPair] : [originalPair];
+    }),
+  );
 }
 
 /**
@@ -50,7 +63,7 @@ export function normalizeArgsForTauri(args?: Record<string, unknown>): Record<st
  */
 export async function invokeCommand<T>(
   cmd: string,
-  args?: Record<string, unknown>
+  args?: Record<string, unknown>,
 ): Promise<T> {
   const normalizedArgs = normalizeArgsForTauri(args);
 
@@ -59,40 +72,53 @@ export async function invokeCommand<T>(
     return await invoke<T>(cmd, normalizedArgs);
   }
 
-  const isTestOrDevHarness = import.meta.env.DEV || import.meta.env.MODE === 'test';
-  const testBridge =
-    isTestOrDevHarness && typeof window !== 'undefined' ? window.__PANADIGA_TEST_IPC__ : undefined;
-  if (testBridge?.invoke) {
+  const testBridge = resolveTestIpcBridge();
+  if (testBridge) {
     return await testBridge.invoke<T>(cmd, normalizedArgs);
   }
 
-  throw new Error(`Comando IPC '${cmd}' requer execução nativa no runtime Tauri.`);
+  throw new Error(translate('errors.ipc.requiresTauri', { cmd }));
 }
 
-function createLocalEventBus() {
-  const bus = new Map<string, Set<(payload: never) => void>>();
+type EventListenerRegistry = {
+  readonly [K in keyof PanadigaEventMap]: Set<(payload: PanadigaEventMap[K]) => void>;
+};
 
-  const emit = <T>(eventName: string, payload: T): void => {
-    const handlers = bus.get(eventName);
-    if (!handlers) return;
-    handlers.forEach(fn => {
+function createLocalEventBus() {
+  const registry: EventListenerRegistry = {
+    'unbrick://completed': new Set(),
+    'nvram://cleaned': new Set(),
+    'hdd://inspected': new Set(),
+    pico_telemetry: new Set(),
+    'pico://telemetry': new Set(),
+    'pico://nvram-live-capture': new Set(),
+    'pico://diagnostic-result': new Set(),
+    'pico://bridge-data': new Set(),
+    'pico://serial-log': new Set(),
+    'pico://ports-changed': new Set(),
+  };
+
+  const emit = <K extends keyof PanadigaEventMap>(
+    eventName: K,
+    payload: PanadigaEventMap[K],
+  ): void => {
+    registry[eventName].forEach(fn => {
       try {
-        (fn as (data: T) => void)(payload);
+        fn(payload);
       } catch (e) {
         logger.warn('IPC', `Error in local event handler for ${eventName}`, e);
       }
     });
   };
 
-  const subscribe = <T>(eventName: string, handler: (payload: T) => void): (() => void) => {
-    const handlers = bus.get(eventName) ?? new Set<(payload: never) => void>();
-    if (!bus.has(eventName)) {
-      bus.set(eventName, handlers);
-    }
-    const stored: (payload: never) => void = handler;
-    handlers.add(stored);
+  const subscribe = <K extends keyof PanadigaEventMap>(
+    eventName: K,
+    handler: (payload: PanadigaEventMap[K]) => void,
+  ): (() => void) => {
+    const channel = registry[eventName];
+    channel.add(handler);
     return () => {
-      handlers.delete(stored);
+      channel.delete(handler);
     };
   };
 
@@ -103,47 +129,48 @@ const localEventBus = createLocalEventBus();
 
 /**
  * Dispatches an event across the frontend subscriber network.
- * Allows ViewModels (like usePicoDevice) to broadcast telemetry to top-level App shell.
  */
-export function emitLocalEvent<T>(eventName: string, payload: T): void {
+export function emitLocalEvent<K extends keyof PanadigaEventMap>(
+  eventName: K,
+  payload: PanadigaEventMap[K],
+): void {
   localEventBus.emit(eventName, payload);
+}
+
+async function subscribeExternalEvent<K extends keyof PanadigaEventMap>(
+  eventName: K,
+  handler: (payload: PanadigaEventMap[K]) => void,
+): Promise<() => void> {
+  if (!isTauri()) {
+    const testBridge = resolveTestIpcBridge();
+    if (testBridge) {
+      return await testBridge.listen<PanadigaEventMap[K]>(eventName, handler);
+    }
+    return () => {};
+  }
+
+  try {
+    const { listen } = await import('@tauri-apps/api/event');
+    return await listen<PanadigaEventMap[K]>(eventName, event => {
+      handler(event.payload);
+    });
+  } catch (err) {
+    logger.warn('IPC', `Failed registering Tauri event listener for ${eventName}`, err);
+    return () => {};
+  }
 }
 
 /**
  * Reactive Event Stream Listener for Tauri & Web Environments.
- * Replaces imperative periodic polling with push-based asynchronous streams.
  */
-export async function listenEvent<T>(
-  eventName: string,
-  handler: (payload: T) => void
+export async function listenEvent<K extends keyof PanadigaEventMap>(
+  eventName: K,
+  handler: (payload: PanadigaEventMap[K]) => void,
 ): Promise<() => void> {
   const unlistenLocal = localEventBus.subscribe(eventName, handler);
-
-  let unlistenTauri: (() => void) | undefined;
-  if (isTauri()) {
-    try {
-      const { listen } = await import('@tauri-apps/api/event');
-      unlistenTauri = await listen<T>(eventName, event => {
-        handler(event.payload);
-      });
-    } catch (err) {
-      logger.warn('IPC', `Failed registering Tauri event listener for ${eventName}`, err);
-    }
-  } else {
-    const isTestOrDevHarness = import.meta.env.DEV || import.meta.env.MODE === 'test';
-    const testBridge =
-      isTestOrDevHarness && typeof window !== 'undefined' ? window.__PANADIGA_TEST_IPC__ : undefined;
-    if (testBridge?.listen) {
-      const unlistenTest = await testBridge.listen<T>(eventName, handler);
-      return () => {
-        unlistenLocal();
-        unlistenTest();
-      };
-    }
-  }
-
+  const unlistenExternal = await subscribeExternalEvent(eventName, handler);
   return () => {
     unlistenLocal();
-    unlistenTauri?.();
+    unlistenExternal();
   };
 }

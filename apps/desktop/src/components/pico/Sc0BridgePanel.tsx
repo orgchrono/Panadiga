@@ -1,8 +1,7 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui';
 import { useTranslation } from '@/i18n/useTranslation';
-import type { BridgeStreamLine } from '@/viewmodels/useSc0Bridge';
-import type { Sc0BridgeInputMode, Sc0BridgeStatus } from '@/models';
+import type { BridgeStreamLine, Sc0BridgeInputMode, Sc0BridgeStatus } from '@/models';
 import { BridgeNoticeBanner } from './BridgeNoticeBanner';
 import type { Sc0BridgeProbeHandlers } from './sc0BridgeTypes';
 import { Sc0BridgeHeader } from './Sc0BridgeHeader';

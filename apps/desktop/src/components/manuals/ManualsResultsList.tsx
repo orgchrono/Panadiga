@@ -1,8 +1,10 @@
 import React from 'react';
 import { FileText } from 'lucide-react';
 import { StatusBadge } from '@/components/StatusBadge';
-import { ManualSearchResult } from '@/models';
+import { MAX_MANUAL_PAGE_PREVIEW } from '@/constants';
 import { useTranslation } from '@/i18n/useTranslation';
+import { ManualSearchResult } from '@/models';
+import { withUniqueKeys } from '@/utils/formatters';
 
 interface ManualsResultsListProps {
   searchResults: ManualSearchResult[];
@@ -23,7 +25,7 @@ export const ManualsResultsList: React.FC<ManualsResultsListProps> = ({
           <span>{t('manuals.results.title')} ({searchResults.length})</span>
         </h3>
         <span className="text-[10px] text-slate-500 font-mono">
-          Pesquisa Forense em Manuais Técnicos
+          {t('manuals.results.subtitle')}
         </span>
       </div>
 
@@ -61,15 +63,15 @@ export const ManualsResultsList: React.FC<ManualsResultsListProps> = ({
               {/* Match badges */}
               <div className="flex flex-wrap gap-1.5">
                 {Object.keys(result.matches).length === 0 ? (
-                  <span className="text-[11px] text-slate-600">Sem termos associados</span>
+                  <span className="text-[11px] text-slate-600">{t('manuals.results.noTerms')}</span>
                 ) : (
                   Object.entries(result.matches).map(([term, pages]) => (
                     <span
                       key={term}
                       className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-[11px] text-slate-300 font-mono"
                     >
-                      <span className="text-amber-400 font-bold">{term}</span>: {t('manuals.results.pages')} {pages.slice(0, 5).join(', ')}
-                      {pages.length > 5 ? '...' : ''}
+                      <span className="text-amber-400 font-bold">{term}</span>: {t('manuals.results.pages')} {pages.slice(0, MAX_MANUAL_PAGE_PREVIEW).join(', ')}
+                      {pages.length > MAX_MANUAL_PAGE_PREVIEW ? '...' : ''}
                     </span>
                   ))
                 )}
@@ -78,11 +80,14 @@ export const ManualsResultsList: React.FC<ManualsResultsListProps> = ({
               {/* Snippets */}
               <div className="space-y-2 pt-1">
                 {result.snippets.length === 0 ? (
-                  <div className="text-[11px] text-slate-600 italic">Nenhum trecho de texto disponível</div>
+                  <div className="text-[11px] text-slate-600 italic">{t('manuals.results.noSnippets')}</div>
                 ) : (
-                  result.snippets.map((snip, idx) => (
+                  withUniqueKeys(
+                    result.snippets,
+                    (snip) => `${snip.page}-${snip.term}-${snip.context.slice(0, MAX_MANUAL_PAGE_PREVIEW)}`,
+                  ).map(({ item: snip, key }) => (
                     <div
-                      key={idx}
+                      key={key}
                       className="p-3 rounded-lg bg-slate-900/60 border border-slate-800/80 text-xs text-slate-300 space-y-1"
                     >
                       <div className="flex items-center justify-between text-[10px] text-slate-500">

@@ -1,6 +1,5 @@
 import React from 'react';
-import { ExtrheadUnpackReport, FrmPackReport, PackFrmRequest } from '@/models';
-import { UnpackExtrheadParams } from '@/viewmodels/useFrmPackager';
+import type { ExtrheadUnpackReport, FrmPackReport, PackFrmRequest, UnpackExtrheadParams } from '@/models';
 import { FrmPackCard } from './FrmPackCard';
 import { ExtrheadUnpackCard } from './ExtrheadUnpackCard';
 

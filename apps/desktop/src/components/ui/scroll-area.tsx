@@ -5,21 +5,19 @@ export interface ScrollAreaProps extends React.HTMLAttributes<HTMLDivElement> {
   maxHeightClassName?: string;
 }
 
-const ScrollArea = React.forwardRef<HTMLDivElement, ScrollAreaProps>(
-  ({ className, maxHeightClassName = 'max-h-96', children, ...props }, ref) => (
+const ScrollArea = React.forwardRef<HTMLDivElement, ScrollAreaProps>(function ScrollArea(
+  { className, maxHeightClassName = 'max-h-96', children, ...props },
+  ref,
+) {
+  return (
     <div
       ref={ref}
-      className={cn(
-        'overflow-auto pr-1 scrollbar-thin scrollbar-thumb-slate-800',
-        maxHeightClassName,
-        className
-      )}
+      className={cn('overflow-auto pr-1 scrollbar-thin scrollbar-thumb-slate-800', maxHeightClassName, className)}
       {...props}
     >
       {children}
     </div>
-  )
-);
-ScrollArea.displayName = 'ScrollArea';
+  );
+});
 
 export { ScrollArea };

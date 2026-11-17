@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 /**
  * Manages scheduled `setTimeout` handles within a component or ViewModel and cancels
@@ -21,7 +21,7 @@ export function useManagedTimeouts() {
       handlesRef.current.add(handle);
       return handle;
     },
-    []
+    [],
   );
 
   const cancelTimeout = useCallback((handle: ReturnType<typeof setTimeout> | null) => {
@@ -33,4 +33,26 @@ export function useManagedTimeouts() {
   useEffect(() => clearAllTimeouts, [clearAllTimeouts]);
 
   return { scheduleTimeout, cancelTimeout, clearAllTimeouts };
+}
+
+/**
+ * Declarative boolean flag that automatically resets to `false` after `durationMs`
+ * without requiring manual `useRef` handle mutations in consumer components.
+ */
+export function useTransientFlag(durationMs: number) {
+  const [active, setActive] = useState(false);
+  const { scheduleTimeout, clearAllTimeouts } = useManagedTimeouts();
+
+  const trigger = useCallback(() => {
+    clearAllTimeouts();
+    setActive(true);
+    scheduleTimeout(() => setActive(false), durationMs);
+  }, [clearAllTimeouts, durationMs, scheduleTimeout]);
+
+  const reset = useCallback(() => {
+    clearAllTimeouts();
+    setActive(false);
+  }, [clearAllTimeouts]);
+
+  return { active, trigger, reset };
 }

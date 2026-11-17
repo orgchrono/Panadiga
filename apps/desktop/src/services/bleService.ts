@@ -1,11 +1,9 @@
 /**
- *  * @file bleService.ts
+ * @file bleService.ts
  * @brief Bluetooth Low Energy (BLE) Nordic UART Service (NUS) Client.
- *
- * Enables wireless communication between Android Native Bridge / Web Bluetooth clients
- * and Raspberry Pi Pico W / Pico 2 W running the P7501 Async UART BLE bridge firmware.
  */
 
+import { translate } from '@/i18n/useTranslation';
 import {
   connectAndroidBleNus,
   disconnectAndroidBleNus,
@@ -13,49 +11,21 @@ import {
   isAndroidNativeBridgeAvailable,
   sendAndroidBleCommand,
 } from './androidBridge';
+import {
+  resolveBluetoothNavigator,
+  subscribeWindowEvent,
+  type BluetoothDevice,
+  type BluetoothRemoteGATTCharacteristic,
+  type BluetoothRemoteGATTServer,
+} from './hostBridge';
 
 export const NUS_SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
 export const NUS_RX_CHARACTERISTIC_UUID = '6e400002-b5a3-f393-e0a9-e50e24dcca9e';
 export const NUS_TX_CHARACTERISTIC_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';
 
-interface BluetoothRemoteGATTCharacteristic extends EventTarget {
-  startNotifications(): Promise<BluetoothRemoteGATTCharacteristic>;
-  writeValue(value: BufferSource): Promise<void>;
-  addEventListener(type: string, listener: (event: Event) => void): void;
-}
-
-interface BluetoothRemoteGATTService {
-  getCharacteristic(characteristic: string): Promise<BluetoothRemoteGATTCharacteristic>;
-}
-
-interface BluetoothRemoteGATTServer {
-  connected: boolean;
-  connect(): Promise<BluetoothRemoteGATTServer>;
-  disconnect(): void;
-  getPrimaryService(service: string): Promise<BluetoothRemoteGATTService>;
-}
-
-interface BluetoothDevice extends EventTarget {
-  id: string;
-  name?: string;
-  gatt?: BluetoothRemoteGATTServer;
-  addEventListener(type: string, listener: () => void): void;
-}
-
-interface BluetoothRequestOptions {
-  filters?: Array<{ namePrefix?: string; services?: string[] }>;
-  optionalServices?: string[];
-}
-
-interface BluetoothNavigator {
-  requestDevice(options: BluetoothRequestOptions): Promise<BluetoothDevice>;
-}
-
-declare global {
-  interface Navigator {
-    bluetooth?: BluetoothNavigator;
-  }
-}
+const BLE_ANDROID_CONNECT_TIMEOUT_MS = 10000;
+const BLE_CMD_TIMEOUT_MS = 4000;
+const BLE_REPLY_WAIT_CAP_MS = 1500;
 
 export interface BleDeviceInfo {
   id: string;
@@ -75,66 +45,72 @@ export interface BleUartClient {
   readonly disconnect: () => void;
 }
 
-interface CharacteristicValueEventTarget extends EventTarget {
-  value?: DataView;
+interface BleActiveSession {
+  readonly device: BluetoothDevice | null;
+  readonly server: BluetoothRemoteGATTServer | null;
+  readonly rxCharacteristic: BluetoothRemoteGATTCharacteristic | null;
+  readonly txCharacteristic: BluetoothRemoteGATTCharacteristic | null;
+  readonly androidNativeConnected: boolean;
+  readonly unsubAndroidRx: (() => void) | null;
 }
 
 function extractCharacteristicDataView(event: Event): DataView | null {
   const target: EventTarget | null = event.target;
-  if (!target || !('value' in target)) {
+  if (!target) {
     return null;
   }
-  const value = (target as CharacteristicValueEventTarget).value;
+  const value: unknown = Reflect.get(target, 'value');
   return value instanceof DataView ? value : null;
+}
+
+function isReplyComplete(buffer: string): boolean {
+  return (
+    buffer.includes('PANADIGA>') ||
+    buffer.includes('P7501>') ||
+    buffer.includes(': OK') ||
+    buffer.includes('FAILED')
+  );
 }
 
 /**
  * Pure closure factory encapsulating Web Bluetooth & Android BLE NUS transport state
- * without OOP classes or shared module globals.
+ * without OOP classes, `let` bindings, or shared module globals.
  */
 export function createBleUartService(): BleUartClient {
-  let device: BluetoothDevice | null = null;
-  let server: BluetoothRemoteGATTServer | null = null;
-  let rxCharacteristic: BluetoothRemoteGATTCharacteristic | null = null;
-  let txCharacteristic: BluetoothRemoteGATTCharacteristic | null = null;
   const receiveCallbacks = new Set<BleDataCallback>();
-  let androidNativeConnected = false;
-  let androidListenerBound = false;
+  const sessions = new Map<'active', BleActiveSession>();
+
+  const emitChunk = (chunk: string): void => {
+    receiveCallbacks.forEach(cb => cb(chunk));
+  };
 
   const handleAndroidRxEvent = (event: Event): void => {
-    const custom = event as CustomEvent<string>;
-    if (typeof custom.detail === 'string') {
-      receiveCallbacks.forEach(cb => cb(custom.detail));
+    if (!(event instanceof CustomEvent)) {
+      return;
+    }
+    const detail: unknown = event.detail;
+    if (typeof detail === 'string') {
+      emitChunk(detail);
     }
   };
 
   const cleanup = (): void => {
-    if (androidListenerBound && typeof window !== 'undefined') {
-      window.removeEventListener('panadiga-ble-rx', handleAndroidRxEvent);
-      androidListenerBound = false;
-    }
-    androidNativeConnected = false;
-    server = null;
-    device = null;
-    rxCharacteristic = null;
-    txCharacteristic = null;
-  };
-
-  const ensureAndroidRxListener = (): void => {
-    if (androidListenerBound || typeof window === 'undefined') return;
-    androidListenerBound = true;
-    window.addEventListener('panadiga-ble-rx', handleAndroidRxEvent);
+    const current = sessions.get('active');
+    current?.unsubAndroidRx?.();
+    sessions.delete('active');
   };
 
   const isSupported = (): boolean => {
     if (isAndroidNativeBridgeAvailable()) {
       return Boolean(getAndroidCapabilities()?.bleSupported);
     }
-    return typeof navigator !== 'undefined' && 'bluetooth' in navigator;
+    return resolveBluetoothNavigator() !== null;
   };
 
-  const isConnected = (): boolean =>
-    androidNativeConnected || Boolean(server?.connected);
+  const isConnected = (): boolean => {
+    const current = sessions.get('active');
+    return Boolean(current?.androidNativeConnected || current?.server?.connected);
+  };
 
   const onReceive = (callback: BleDataCallback): (() => void) => {
     receiveCallbacks.add(callback);
@@ -145,12 +121,21 @@ export function createBleUartService(): BleUartClient {
 
   const connect = async (): Promise<BleDeviceInfo> => {
     if (isAndroidNativeBridgeAvailable()) {
-      ensureAndroidRxListener();
-      const res = connectAndroidBleNus(10000);
+      cleanup();
+      const unsubAndroidRx = subscribeWindowEvent('panadiga-ble-rx', handleAndroidRxEvent);
+      const res = connectAndroidBleNus(BLE_ANDROID_CONNECT_TIMEOUT_MS);
       if (!res.connected) {
-        throw new Error(res.message || 'Falha ao conectar via BLE NUS no Android.');
+        unsubAndroidRx();
+        throw new Error(res.message || translate('errors.ble.androidConnectFailed'));
       }
-      androidNativeConnected = true;
+      sessions.set('active', {
+        device: null,
+        server: null,
+        rxCharacteristic: null,
+        txCharacteristic: null,
+        androidNativeConnected: true,
+        unsubAndroidRx,
+      });
       return {
         id: res.deviceName || 'ANDROID-BLE-PICO-W',
         name: res.deviceName || 'Pico W BLE (Android GATT)',
@@ -158,12 +143,14 @@ export function createBleUartService(): BleUartClient {
       };
     }
 
-    if (typeof navigator === 'undefined' || !navigator.bluetooth) {
-      throw new Error('Web Bluetooth API indisponível neste navegador ou ambiente Desktop.');
+    const bluetooth = resolveBluetoothNavigator();
+    if (!bluetooth) {
+      throw new Error(translate('errors.ble.webBluetoothUnavailable'));
     }
 
     try {
-      device = await navigator.bluetooth.requestDevice({
+      cleanup();
+      const device = await bluetooth.requestDevice({
         filters: [
           { namePrefix: 'Pico' },
           { namePrefix: 'Panadiga' },
@@ -173,23 +160,30 @@ export function createBleUartService(): BleUartClient {
       });
 
       device.addEventListener('gattserverdisconnected', cleanup);
-
       if (!device.gatt) {
-        throw new Error('GATT Server não disponível no dispositivo BLE.');
+        throw new Error(translate('errors.ble.gattUnavailable'));
       }
 
-      server = await device.gatt.connect();
+      const server = await device.gatt.connect();
       const service = await server.getPrimaryService(NUS_SERVICE_UUID);
-      rxCharacteristic = await service.getCharacteristic(NUS_RX_CHARACTERISTIC_UUID);
-      txCharacteristic = await service.getCharacteristic(NUS_TX_CHARACTERISTIC_UUID);
+      const rxCharacteristic = await service.getCharacteristic(NUS_RX_CHARACTERISTIC_UUID);
+      const txCharacteristic = await service.getCharacteristic(NUS_TX_CHARACTERISTIC_UUID);
 
       await txCharacteristic.startNotifications();
       txCharacteristic.addEventListener('characteristicvaluechanged', (event: Event) => {
         const value = extractCharacteristicDataView(event);
         if (value) {
-          const text = new TextDecoder('utf-8').decode(value);
-          receiveCallbacks.forEach(cb => cb(text));
+          emitChunk(new TextDecoder('utf-8').decode(value));
         }
+      });
+
+      sessions.set('active', {
+        device,
+        server,
+        rxCharacteristic,
+        txCharacteristic,
+        androidNativeConnected: false,
+        unsubAndroidRx: null,
       });
 
       return {
@@ -199,77 +193,86 @@ export function createBleUartService(): BleUartClient {
       };
     } catch (err: unknown) {
       cleanup();
-      throw new Error(`Falha na conexão BLE: ${err instanceof Error ? err.message : String(err)}`);
+      const reason = err instanceof Error ? err.message : String(err);
+      throw new Error(translate('errors.ble.connectFailed', { reason }));
     }
   };
 
   const send = async (message: string): Promise<void> => {
-    if (androidNativeConnected && isAndroidNativeBridgeAvailable()) {
-      const res = sendAndroidBleCommand(message.trim(), 4000);
+    const active = sessions.get('active');
+    if (active?.androidNativeConnected && isAndroidNativeBridgeAvailable()) {
+      const res = sendAndroidBleCommand(message.trim(), BLE_CMD_TIMEOUT_MS);
       if (!res.ok) {
-        throw new Error(res.output || 'Falha no envio GATT NUS.');
+        throw new Error(res.output || translate('errors.ble.gattSendFailed'));
       }
       if (res.output) {
-        receiveCallbacks.forEach(cb => cb(res.output));
+        emitChunk(res.output);
       }
       return;
     }
 
-    if (typeof navigator === 'undefined' || !navigator.bluetooth) {
-      throw new Error('Canal BLE não conectado. Use Android BLE nativo ou Web Bluetooth compatível.');
+    if (!resolveBluetoothNavigator()) {
+      throw new Error(translate('errors.ble.channelNotConnected'));
     }
 
-    if (!rxCharacteristic) {
-      throw new Error('Canal BLE não conectado. Impossível enviar dados.');
+    if (!active?.rxCharacteristic) {
+      throw new Error(translate('errors.ble.channelUnavailableSend'));
     }
 
     const data = new TextEncoder().encode(message.endsWith('\n') ? message : `${message}\n`);
-    await rxCharacteristic.writeValue(data);
+    await active.rxCharacteristic.writeValue(data);
   };
 
-  const sendAndAwaitReply = async (command: string, timeoutMs = 4000): Promise<string> => {
-    if (androidNativeConnected && isAndroidNativeBridgeAvailable()) {
+  const sendAndAwaitReply = async (
+    command: string,
+    timeoutMs = BLE_CMD_TIMEOUT_MS,
+  ): Promise<string> => {
+    const active = sessions.get('active');
+    if (active?.androidNativeConnected && isAndroidNativeBridgeAvailable()) {
       const res = sendAndroidBleCommand(command.trim(), timeoutMs);
       if (!res.ok) {
-        throw new Error(res.output || 'Falha na resposta BLE NUS.');
+        throw new Error(res.output || translate('errors.ble.gattReplyFailed'));
       }
       return res.output;
     }
 
-    let buffer = '';
-    let cleanupRx: () => void = () => {};
-    try {
-      await new Promise<void>((resolve, reject) => {
-        const timer = setTimeout(() => resolve(), Math.min(timeoutMs, 1500));
-        cleanupRx = onReceive(chunk => {
-          buffer += chunk;
-          if (
-            buffer.includes('PANADIGA>') ||
-            buffer.includes('P7501>') ||
-            buffer.includes(': OK') ||
-            buffer.includes('FAILED')
-          ) {
-            clearTimeout(timer);
-            resolve();
-          }
-        });
-        send(command).catch(err => {
+    const chunks = new Map<'buf', string>();
+    const cleanupRef = new Map<'off', () => void>();
+
+    return new Promise<string>((resolve, reject) => {
+      const settle = (result: string) => {
+        cleanupRef.get('off')?.();
+        resolve(result);
+      };
+      const timer = setTimeout(() => {
+        settle((chunks.get('buf') ?? '').trim() || `${command}: OK`);
+      }, Math.min(timeoutMs, BLE_REPLY_WAIT_CAP_MS));
+
+      const off = onReceive(chunk => {
+        const next = `${chunks.get('buf') ?? ''}${chunk}`;
+        chunks.set('buf', next);
+        if (isReplyComplete(next)) {
           clearTimeout(timer);
-          reject(err);
-        });
+          settle(next.trim());
+        }
       });
-      return buffer.trim() || `${command}: OK`;
-    } finally {
-      cleanupRx();
-    }
+      cleanupRef.set('off', off);
+
+      send(command).catch((err: unknown) => {
+        clearTimeout(timer);
+        off();
+        reject(err instanceof Error ? err : new Error(String(err)));
+      });
+    });
   };
 
   const disconnect = (): void => {
-    if (androidNativeConnected) {
+    const current = sessions.get('active');
+    if (current?.androidNativeConnected) {
       disconnectAndroidBleNus();
     }
-    if (server?.connected) {
-      server.disconnect();
+    if (current?.server?.connected) {
+      current.server.disconnect();
     }
     cleanup();
   };

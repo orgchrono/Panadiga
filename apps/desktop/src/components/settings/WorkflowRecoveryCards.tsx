@@ -1,20 +1,48 @@
 import React from 'react';
 import { Globe, Layers, RotateCcw, SlidersHorizontal } from 'lucide-react';
-import { useWorkbenchMode } from '@/context/WorkbenchModeContext';
-import { useToast } from '@/context/ToastContext';
+import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Switch,
+} from '@/components/ui';
 import { useTranslation } from '@/i18n/useTranslation';
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Switch } from '@/components/ui';
+import type {
+  ToastMessage,
+  WorkbenchExperienceMode,
+  WorkbenchPipelineState,
+} from '@/models';
 
-export const WorkflowRecoveryCards: React.FC = () => {
-  const { mode, setMode, hudOpen, setHudOpen, resetWorkbenchPreferences, resetPipeline, pipeline } =
-    useWorkbenchMode();
+export interface WorkflowRecoveryCardsProps {
+  readonly mode: WorkbenchExperienceMode;
+  readonly onSetMode: (mode: WorkbenchExperienceMode) => void;
+  readonly hudOpen: boolean;
+  readonly onSetHudOpen: (open: boolean) => void;
+  readonly pipeline: WorkbenchPipelineState;
+  readonly onResetPipeline: () => void;
+  readonly onResetWorkbenchPreferences: () => void;
+  readonly onNotify: (toast: Omit<ToastMessage, 'id'>) => void;
+}
+
+export const WorkflowRecoveryCards: React.FC<WorkflowRecoveryCardsProps> = ({
+  mode,
+  onSetMode,
+  hudOpen,
+  onSetHudOpen,
+  pipeline,
+  onResetPipeline,
+  onResetWorkbenchPreferences,
+  onNotify,
+}) => {
   const { t, locale, setLocale } = useTranslation();
-  const { showToast } = useToast();
 
   const handleResetAll = () => {
-    resetWorkbenchPreferences();
-    resetPipeline();
-    showToast({
+    onResetWorkbenchPreferences();
+    onResetPipeline();
+    onNotify({
       type: 'success',
       title: t('settings.workflow.resetAllToastTitle'),
       message: t('settings.workflow.resetAllToastMsg'),
@@ -29,9 +57,7 @@ export const WorkflowRecoveryCards: React.FC = () => {
             <Globe className="w-4 h-4 text-emerald-400" />
             <span>{t('settings.workflow.cardTitle')}</span>
           </CardTitle>
-          <CardDescription>
-            {t('settings.workflow.cardDesc')}
-          </CardDescription>
+          <CardDescription>{t('settings.workflow.cardDesc')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-1.5">
@@ -68,7 +94,7 @@ export const WorkflowRecoveryCards: React.FC = () => {
                 type="button"
                 size="sm"
                 variant={mode === 'basic' ? 'emerald' : 'outline'}
-                onClick={() => setMode('basic')}
+                onClick={() => onSetMode('basic')}
               >
                 {t('settings.workflow.basicMode')}
               </Button>
@@ -76,7 +102,7 @@ export const WorkflowRecoveryCards: React.FC = () => {
                 type="button"
                 size="sm"
                 variant={mode === 'advanced' ? 'default' : 'outline'}
-                onClick={() => setMode('advanced')}
+                onClick={() => onSetMode('advanced')}
               >
                 {t('settings.workflow.advancedMode')}
               </Button>
@@ -91,7 +117,7 @@ export const WorkflowRecoveryCards: React.FC = () => {
             <Switch
               aria-label={t('settings.workflow.hudAria')}
               checked={hudOpen}
-              onCheckedChange={setHudOpen}
+              onCheckedChange={onSetHudOpen}
             />
           </div>
         </CardContent>
@@ -103,17 +129,20 @@ export const WorkflowRecoveryCards: React.FC = () => {
             <RotateCcw className="w-4 h-4 text-amber-400" />
             <span>{t('settings.workflow.recoveryTitle')}</span>
           </CardTitle>
-          <CardDescription>
-            {t('settings.workflow.recoveryDesc')}
-          </CardDescription>
+          <CardDescription>{t('settings.workflow.recoveryDesc')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs space-y-1">
             <div className="text-slate-400">{t('settings.workflow.pipelineStatusTitle')}</div>
             <div className="text-slate-200">
-              Pico: {pipeline.picoReady ? t('settings.workflow.ok') : t('settings.workflow.pending')} • NVRAM:{' '}
-              {pipeline.nvramCleaned ? t('settings.workflow.clean') : t('settings.workflow.pending')} • HDD:{' '}
-              {pipeline.hddInspected ? t('settings.workflow.inspected') : t('settings.workflow.pending')} • Unbrick:{' '}
+              Pico: {pipeline.picoReady ? t('settings.workflow.ok') : t('settings.workflow.pending')}{' '}
+              • NVRAM:{' '}
+              {pipeline.nvramCleaned ? t('settings.workflow.clean') : t('settings.workflow.pending')}{' '}
+              • HDD:{' '}
+              {pipeline.hddInspected
+                ? t('settings.workflow.inspected')
+                : t('settings.workflow.pending')}{' '}
+              • Unbrick:{' '}
               {pipeline.unbrickReady ? t('settings.workflow.ready') : t('settings.workflow.pending')}
             </div>
           </div>
@@ -124,8 +153,8 @@ export const WorkflowRecoveryCards: React.FC = () => {
               variant="outline"
               size="sm"
               onClick={() => {
-                resetPipeline();
-                showToast({ type: 'info', title: t('settings.workflow.pipelineResetToast') });
+                onResetPipeline();
+                onNotify({ type: 'info', title: t('settings.workflow.pipelineResetToast') });
               }}
               className="gap-1.5"
             >

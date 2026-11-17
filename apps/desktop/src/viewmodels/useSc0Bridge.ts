@@ -1,16 +1,25 @@
 import { useCallback, useEffect, useState } from 'react';
+import { PICO_DEFAULT_BAUD_RATE, SC0_BRIDGE_MAX_LINES } from '@/constants';
+import { translate } from '@/i18n/useTranslation';
 import type {
+  BridgeStreamLine,
   PicoDiagnosticResult,
-  Sc0BridgeDataEvent,
   Sc0BridgeInputMode,
   Sc0BridgeStatus,
   SerialLogEntry,
 } from '@/models';
-import { invokeCommand, listenEvent } from '@/services/ipc';
+import {
+  getSc0BridgeStatus,
+  sendSc0BridgeInput,
+  startSc0Bridge,
+  stopSc0Bridge,
+  subscribePicoBridgeData,
+} from '@/services/picoService';
+import { updatePicoSessionSc0Status } from '@/store/picoSessionBridge';
+import { createIdGenerator } from '@/utils/formatters';
+import { registerAsyncSubscriptions } from '@/utils/subscription';
 
-export interface BridgeStreamLine extends Sc0BridgeDataEvent {
-  readonly id: string;
-}
+export type { BridgeStreamLine };
 
 export interface UseSc0BridgeOptions {
   selectedPort: string;
@@ -18,25 +27,21 @@ export interface UseSc0BridgeOptions {
   onLog?: (
     level: SerialLogEntry['level'],
     source: SerialLogEntry['source'],
-    message: string
+    message: string,
   ) => void;
 }
 
-const DEFAULT_BRIDGE_STATUS: Sc0BridgeStatus = {
+const DEFAULT_BRIDGE_STATUS: Sc0BridgeStatus = Object.freeze({
   running: false,
   port_name: '',
-  baud_rate: 115200,
+  baud_rate: PICO_DEFAULT_BAUD_RATE,
   boot_mode: 'JIG:350',
   bytes_rx: 0,
   bytes_tx: 0,
   last_event: 'Standby',
-};
+});
 
-const MAX_BRIDGE_LINES = 150;
-
-function formatLogId(prefix: string): string {
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-}
+const nextBridgeLineId = createIdGenerator('bridge');
 
 /**
  * MVVM ViewModel for Interactive SC0 Bridge (`BRIDGE`, exit `'~~~'`),
@@ -50,53 +55,49 @@ export function useSc0Bridge({
 }: UseSc0BridgeOptions) {
   const [bridgeStatus, setBridgeStatus] = useState<Sc0BridgeStatus>(DEFAULT_BRIDGE_STATUS);
   const [bridgeLogs, setBridgeLogs] = useState<BridgeStreamLine[]>([]);
-  const [baudRate, setBaudRate] = useState<string>('115200');
+  const [baudRate, setBaudRate] = useState<string>(String(PICO_DEFAULT_BAUD_RATE));
   const [bootMode, setBootMode] = useState<string>('JIG:350');
   const [inputMode, setInputMode] = useState<Sc0BridgeInputMode>('line');
   const [txInput, setTxInput] = useState<string>('');
   const [isBusy, setIsBusy] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(
+    () =>
+      registerAsyncSubscriptions([
+        () =>
+          subscribePicoBridgeData((chunk) => {
+            if (!chunk) return;
+            const line: BridgeStreamLine = { ...chunk, id: nextBridgeLineId() };
+            setBridgeLogs((prev) => [...prev, line].slice(-SC0_BRIDGE_MAX_LINES));
+            if (chunk.stream === 'rx') {
+              setBridgeStatus((prev) => ({
+                ...prev,
+                bytes_rx: prev.bytes_rx + chunk.bytes.length,
+              }));
+            } else if (chunk.stream === 'tx') {
+              setBridgeStatus((prev) => ({
+                ...prev,
+                bytes_tx: prev.bytes_tx + chunk.bytes.length,
+              }));
+            } else if (chunk.text.includes('finalizada') || chunk.text.includes('BRIDGE: OK')) {
+              setBridgeStatus((prev) => ({ ...prev, running: false, last_event: chunk.text }));
+            }
+          }).catch((err) => {
+            setError(translate('errors.pico.sc0SubscribeFailed', { reason: String(err) }));
+            return () => {};
+          }),
+      ]),
+    [],
+  );
+
   useEffect(() => {
-    let active = true;
-    let unlisten: (() => void) | undefined;
-
-    const subscribe = async (): Promise<void> => {
-      try {
-        const off = await listenEvent<Sc0BridgeDataEvent>('pico://bridge-data', chunk => {
-          if (!chunk) return;
-          const line: BridgeStreamLine = { ...chunk, id: formatLogId(chunk.stream) };
-          setBridgeLogs(prev => [...prev, line].slice(-MAX_BRIDGE_LINES));
-          if (chunk.stream === 'rx') {
-            setBridgeStatus(prev => ({ ...prev, bytes_rx: prev.bytes_rx + chunk.bytes.length }));
-          } else if (chunk.stream === 'tx') {
-            setBridgeStatus(prev => ({ ...prev, bytes_tx: prev.bytes_tx + chunk.bytes.length }));
-          } else if (chunk.text.includes('finalizada') || chunk.text.includes('BRIDGE: OK')) {
-            setBridgeStatus(prev => ({ ...prev, running: false, last_event: chunk.text }));
-          }
-        });
-        if (!active) {
-          off();
-        } else {
-          unlisten = off;
-        }
-      } catch (err) {
-        if (active) {
-          setError(`Falha ao escutar stream SC0: ${String(err)}`);
-        }
-      }
-    };
-
-    void subscribe();
-    return () => {
-      active = false;
-      unlisten?.();
-    };
-  }, []);
+    updatePicoSessionSc0Status(bridgeStatus.running);
+  }, [bridgeStatus.running]);
 
   const refreshBridgeStatus = useCallback(async (): Promise<void> => {
     try {
-      const status = await invokeCommand<Sc0BridgeStatus>('pico_get_bridge_status');
+      const status = await getSc0BridgeStatus();
       if (status && typeof status.running === 'boolean') {
         setBridgeStatus(status);
       }
@@ -110,18 +111,22 @@ export function useSc0Bridge({
     setIsBusy(true);
     setError(null);
     try {
-      const parsedBaud = Number.parseInt(baudRate, 10) || 115200;
-      const status = await invokeCommand<Sc0BridgeStatus>('pico_start_sc0_bridge', {
-        portName: targetPort,
-        baudRate: parsedBaud,
-        bootMode,
-      });
+      const parsedBaud = Number.parseInt(baudRate, 10) || PICO_DEFAULT_BAUD_RATE;
+      const status = await startSc0Bridge(targetPort, parsedBaud, bootMode);
       setBridgeStatus(status);
-      onLog?.('info', 'HOST', `SC0 BRIDGE ${parsedBaud} 8N1 iniciada em ${status.port_name || targetPort} (${bootMode})`);
+      onLog?.(
+        'info',
+        'HOST',
+        translate('errors.pico.sc0Started', {
+          baud: parsedBaud,
+          port: status.port_name || targetPort,
+          mode: bootMode,
+        }),
+      );
     } catch (err) {
       const msg = String(err);
       setError(msg);
-      onLog?.('error', 'HOST', `Falha SC0 BRIDGE: ${msg}`);
+      onLog?.('error', 'HOST', translate('errors.pico.sc0StartFailed', { reason: msg }));
     } finally {
       setIsBusy(false);
     }
@@ -131,13 +136,13 @@ export function useSc0Bridge({
     setIsBusy(true);
     setError(null);
     try {
-      const status = await invokeCommand<Sc0BridgeStatus>('pico_stop_sc0_bridge');
+      const status = await stopSc0Bridge();
       setBridgeStatus(status);
-      onLog?.('info', 'HOST', "SC0 BRIDGE encerrada enviando '~~~'");
+      onLog?.('info', 'HOST', translate('errors.pico.sc0Stopped'));
     } catch (err) {
       const msg = String(err);
       setError(msg);
-      onLog?.('error', 'HOST', `Erro ao encerrar SC0 BRIDGE: ${msg}`);
+      onLog?.('error', 'HOST', translate('errors.pico.sc0StopFailed', { reason: msg }));
     } finally {
       setIsBusy(false);
     }
@@ -148,16 +153,13 @@ export function useSc0Bridge({
       if (!payload.trim()) return;
       setError(null);
       try {
-        await invokeCommand<number>('pico_send_bridge_input', {
-          inputMode: mode,
-          payload,
-        });
+        await sendSc0BridgeInput(mode, payload);
         await refreshBridgeStatus();
       } catch (err) {
         setError(String(err));
       }
     },
-    [refreshBridgeStatus]
+    [refreshBridgeStatus],
   );
 
   const submitTxInput = useCallback(async (): Promise<void> => {
@@ -177,14 +179,14 @@ export function useSc0Bridge({
       setError(null);
       await onExecuteDiagnostic('WAITTX', spec);
     },
-    [onExecuteDiagnostic]
+    [onExecuteDiagnostic],
   );
 
   const sendPanaRspPreset = useCallback(
     async (
       mode: Sc0BridgeInputMode,
       bridgePayload: string,
-      standalonePanarspArg: string
+      standalonePanarspArg: string,
     ): Promise<void> => {
       if (bridgeStatus.running) {
         await sendBridgePayload(mode, bridgePayload);
@@ -192,7 +194,7 @@ export function useSc0Bridge({
         await onExecuteDiagnostic('PANARSP', standalonePanarspArg);
       }
     },
-    [bridgeStatus.running, sendBridgePayload, onExecuteDiagnostic]
+    [bridgeStatus.running, sendBridgePayload, onExecuteDiagnostic],
   );
 
   const sendDriveCommand = useCallback(
@@ -203,7 +205,7 @@ export function useSc0Bridge({
         await onExecuteDiagnostic('DRVPANA', driveCmd);
       }
     },
-    [bridgeStatus.running, sendBridgePayload, onExecuteDiagnostic]
+    [bridgeStatus.running, sendBridgePayload, onExecuteDiagnostic],
   );
 
   return {

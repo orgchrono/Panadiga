@@ -4,6 +4,8 @@
 //! Spansion NOR Flash / NVRAM surgery, MEIHFS HDD forensics, PANA_DVD.FRM cryptanalysis,
 //! PDF manuals indexing, Ghidra Jython code generation, and Panadiga P7501 Async UART Pico host protocol.
 
+#![cfg_attr(not(test), deny(clippy::print_stdout, clippy::print_stderr))]
+
 #[macro_use]
 pub mod logger;
 
@@ -19,6 +21,7 @@ pub mod nvram;
 pub mod pico;
 pub mod re;
 pub mod scan;
+pub mod settings;
 pub mod ssot;
 
 pub use logger::LogLevel;

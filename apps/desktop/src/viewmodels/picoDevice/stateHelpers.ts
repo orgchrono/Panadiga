@@ -1,53 +1,40 @@
 /**
  * @file viewmodels/picoDevice/stateHelpers.ts
- * @brief Pure state transitions, transport resolution, session store, and voltage safety helpers for Pico hardware link.
+ * @brief Pure state transitions, transport resolution, and voltage safety helpers for Pico hardware link.
  */
 
+import {
+  P7501_BOOTSEL_PID_MARKER,
+  P7501_BOOTSEL_USB_TOKEN,
+  PICO_BROWNOUT_FLOOR_VOLTS,
+  PICO_MAX_VDD_CEILING_VOLTS,
+  PICO_MIN_VDD_THRESHOLD_VOLTS,
+} from '@/constants';
 import type {
   OcdCoreState,
   PicoDeviceStatus,
   PicoTransportMode,
   SerialLogEntry,
 } from '@/models';
-import {
-  PICO_MAX_VDD_CEILING_VOLTS,
-  PICO_MIN_VDD_THRESHOLD_VOLTS,
-} from '@/constants';
-import { isTargetPowered } from '@/utils/formatters';
-import { invokeCommand } from '@/services/ipc';
 import { parseDiagnosticOutput } from '@/services/diagnosticParser';
+import { getGdbBridgeRunningStatus } from '@/services/picoService';
+import { DEFAULT_DISCONNECTED_SESSION_STATUS } from '@/store/picoSessionBridge';
+import { isTargetPowered } from '@/utils/formatters';
 
 export interface UsePicoDeviceOptions {
   onLog?: (
     level: SerialLogEntry['level'],
     source: SerialLogEntry['source'],
-    message: string
+    message: string,
   ) => void;
 }
 
-export const DEFAULT_DISCONNECTED_STATUS: PicoDeviceStatus = {
-  connected: false,
-  port: '',
-  baudRate: 115200,
-  vdd_volts: 0.0,
-  target_powered: false,
-  breakin_mode: 2,
-  core_state: 'DISCONNECTED',
-  bus_freq_hz: 0,
-  firmware_version: 'P7501 UART / Panadiga Master',
-  chip_id: '',
-  total_probes: 0,
-  hits_detected: 0,
-  open_bus_high: 0,
-  open_bus_low: 0,
-  ram_loader_injected: false,
-  last_keepalive: '',
-};
+export const DEFAULT_DISCONNECTED_STATUS = DEFAULT_DISCONNECTED_SESSION_STATUS;
 
 export const PICO_PORT_PATTERN = /VID:2E8A|RP2040|RP2350|Pico|PANADIGA|P7501/i;
 
 export function parseVddFromStatusRaw(rawStatus: string, fallback = 0): number {
-  const parsed = parseDiagnosticOutput('STATUS', 'STATUS', rawStatus, 25);
+  const parsed = parseDiagnosticOutput('STATUS', 'STATUS', rawStatus, 0);
   return parsed.vdd_volts ?? fallback;
 }
 
@@ -55,7 +42,7 @@ export function deriveCoreStateFromVoltage(
   prevState: OcdCoreState,
   vddVolts: number,
   commandId?: string,
-  commandSuccess?: boolean
+  commandSuccess?: boolean,
 ): OcdCoreState {
   if (commandId === 'HANDSHAKE' && commandSuccess) {
     return 'HALTED';
@@ -70,7 +57,7 @@ export function buildMobileDeviceStatus(
   prev: PicoDeviceStatus | null,
   portName: string,
   vdd: number,
-  chipId?: string
+  chipId?: string,
 ): PicoDeviceStatus {
   const powered = isTargetPowered(vdd, PICO_MIN_VDD_THRESHOLD_VOLTS);
   return {
@@ -85,14 +72,7 @@ export function buildMobileDeviceStatus(
   };
 }
 
-export async function isGdbBridgeRunning(): Promise<boolean> {
-  try {
-    const status = await invokeCommand<{ running?: boolean }>('get_gdb_bridge_status_command');
-    return Boolean(status?.running);
-  } catch {
-    return false;
-  }
-}
+export const isGdbBridgeRunning = getGdbBridgeRunningStatus;
 
 export function resolveTransportMode(portName: string): PicoTransportMode {
   if (portName.startsWith('ANDROID-USB-OTG')) return 'usb-otg';
@@ -100,47 +80,17 @@ export function resolveTransportMode(portName: string): PicoTransportMode {
   return 'usb';
 }
 
-function createPicoSessionStore() {
-  let status: PicoDeviceStatus | null = DEFAULT_DISCONNECTED_STATUS;
-  let port = '';
-  let model = 'AUTO';
-
-  return Object.freeze({
-    getSnapshot: () => ({ status, port, model }),
-    setStatus: (nextStatus: PicoDeviceStatus | null) => {
-      status = nextStatus;
-    },
-    setPort: (nextPort: string) => {
-      port = nextPort;
-    },
-    setModel: (nextModel: string) => {
-      model = nextModel;
-    },
-  });
-}
-
-export const picoSessionStore = createPicoSessionStore();
-
 export function pickPreferredSerialPort(allPorts: string[]): string | undefined {
   const realPorts = allPorts.filter(
-    p =>
+    (p) =>
       !p.startsWith('BLE') &&
-      !p.includes('BOOTSEL Mode') &&
-      !p.includes('BOOTSEL') &&
-      !p.includes('PID:0003')
+      !p.includes(P7501_BOOTSEL_USB_TOKEN) &&
+      !p.includes(P7501_BOOTSEL_PID_MARKER),
   );
 
   return (
-    realPorts.find(
-      p =>
-        p.includes('VID:2E8A') ||
-        p.startsWith('ANDROID-USB-OTG') ||
-        p.includes('RP2040') ||
-        p.includes('RP2350') ||
-        p.includes('Pico') ||
-        p.includes('PANADIGA') ||
-        p.includes('P7501')
-    ) || realPorts[0]
+    realPorts.find((p) => PICO_PORT_PATTERN.test(p) || p.startsWith('ANDROID-USB-OTG')) ||
+    realPorts[0]
   );
 }
 
@@ -150,7 +100,7 @@ export function classifyVoltageAlert(vddVolts: number): VoltageAlertLevel {
   if (vddVolts > PICO_MAX_VDD_CEILING_VOLTS) {
     return 'over';
   }
-  if (vddVolts > 0.2 && vddVolts < PICO_MIN_VDD_THRESHOLD_VOLTS) {
+  if (vddVolts > PICO_BROWNOUT_FLOOR_VOLTS && vddVolts < PICO_MIN_VDD_THRESHOLD_VOLTS) {
     return 'low';
   }
   return 'ok';

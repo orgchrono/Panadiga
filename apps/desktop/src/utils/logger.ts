@@ -1,26 +1,31 @@
 /**
  * @file logger.ts
- * @brief Dedicated Structured Logging Subsystem for Panadiga Frontend.
+ * @brief Structured Frontend Telemetry & Logging Facade powered by Pino + OpenTelemetry API.
  *
- * Eliminates raw console.log, console.warn, and console.error calls,
- * providing structured severity levels, timestamps, subsystem tagging,
- * and extensible sinks for test and production diagnostics.
+ * Replaces ad-hoc console.* calls and custom severity tables with industry-standard
+ * Pino level filtering, OpenTelemetry tracer spans/events, and pluggable IPC/test sinks.
  */
 
+import { SpanStatusCode, trace } from '@opentelemetry/api';
+import pino, { type DestinationStream, type Logger as PinoLogger } from 'pino';
+import type { RuntimeLogLevel } from '@/models';
+import { isRecord } from './typeGuards';
+
 export type LogSeverity = 'debug' | 'info' | 'warn' | 'error';
+export type PinoFilterLevel = LogSeverity | 'silent' | 'trace';
 
 export interface LogMessage {
-  timestamp: string;
-  severity: LogSeverity;
-  subsystem: string;
-  message: string;
-  details?: unknown;
+  readonly timestamp: string;
+  readonly severity: LogSeverity;
+  readonly subsystem: string;
+  readonly message: string;
+  readonly details?: unknown;
 }
 
 export type LogSink = (entry: LogMessage) => void;
 
 export interface StructuredLogger {
-  readonly setMinLevel: (level: LogSeverity) => void;
+  readonly setMinLevel: (level: PinoFilterLevel) => void;
   readonly addSink: (sink: LogSink) => () => void;
   readonly debug: (subsystem: string, message: string, details?: unknown) => void;
   readonly info: (subsystem: string, message: string, details?: unknown) => void;
@@ -28,74 +33,128 @@ export interface StructuredLogger {
   readonly error: (subsystem: string, message: string, details?: unknown) => void;
 }
 
-const SEVERITY_WEIGHT: Readonly<Record<LogSeverity, number>> = Object.freeze({
-  debug: 0,
-  info: 1,
-  warn: 2,
-  error: 3,
+const VALID_SEVERITIES: Readonly<Record<string, LogSeverity>> = Object.freeze({
+  debug: 'debug',
+  trace: 'debug',
+  info: 'info',
+  warn: 'warn',
+  error: 'error',
 });
 
-/**
- * Pure closure factory creating an isolated structured logger without classes or shared globals.
- */
-export function createLogger(initialLevel: LogSeverity = 'info'): StructuredLogger {
-  const sinks = new Set<LogSink>();
-  let minLevel: LogSeverity = initialLevel;
+/** Maps Rust `RuntimeLogLevel` (`off`..`trace`) cleanly to Pino filter levels. */
+export function mapRuntimeLogLevelToPino(level: RuntimeLogLevel): PinoFilterLevel {
+  return level === 'off' ? 'silent' : level;
+}
 
-  if (typeof window !== 'undefined') {
-    sinks.add(entry => {
-      const prefix = `[${entry.timestamp}] [${entry.severity.toUpperCase()}] [${entry.subsystem}]`;
-      if (entry.severity === 'error') {
-        // eslint-disable-next-line no-console
-        console.error(prefix, entry.message, entry.details ?? '');
-      } else if (entry.severity === 'warn') {
-        // eslint-disable-next-line no-console
-        console.warn(prefix, entry.message, entry.details ?? '');
-      } else if (entry.severity === 'debug') {
-        // eslint-disable-next-line no-console
-        console.debug(prefix, entry.message, entry.details ?? '');
-      } else {
-        // eslint-disable-next-line no-console
-        console.info(prefix, entry.message, entry.details ?? '');
+function toSeverity(raw: unknown): LogSeverity {
+  if (typeof raw === 'string' && raw in VALID_SEVERITIES) {
+    return VALID_SEVERITIES[raw];
+  }
+  return 'info';
+}
+
+function readRecordField(obj: object, key: string): unknown {
+  return Object.entries(obj).find(([k]) => k === key)?.[1];
+}
+
+function recordOtelEvent(entry: LogMessage): void {
+  const tracer = trace.getTracer('panadiga-desktop');
+  const span = tracer.startSpan(`ui.log.${entry.subsystem.toLowerCase()}`, {
+    attributes: {
+      'log.severity': entry.severity,
+      'panadiga.subsystem': entry.subsystem,
+      'log.message': entry.message,
+    },
+  });
+  if (entry.severity === 'error') {
+    span.setStatus({ code: SpanStatusCode.ERROR, message: entry.message });
+    if (entry.details instanceof Error) {
+      span.recordException(entry.details);
+    }
+  }
+  span.end();
+}
+
+/**
+ * Closed factory closure binding Pino + OpenTelemetry API behind the immutable StructuredLogger interface.
+ */
+export function createLogger(initialLevel: PinoFilterLevel = 'info'): StructuredLogger {
+  let sinks: readonly LogSink[] = [];
+
+  const emitToSinks = (rawPayload: object): void => {
+    const rawTime = readRecordField(rawPayload, 'time');
+    const eventDate = typeof rawTime === 'number' ? new Date(rawTime) : new Date();
+    const timestamp = eventDate.toTimeString().split(' ')[0];
+
+    const entry: LogMessage = Object.freeze({
+      timestamp,
+      severity: toSeverity(readRecordField(rawPayload, 'severity')),
+      subsystem: String(readRecordField(rawPayload, 'subsystem') ?? 'APP'),
+      message: String(readRecordField(rawPayload, 'msg') ?? ''),
+      details: readRecordField(rawPayload, 'details'),
+    });
+
+    recordOtelEvent(entry);
+
+    sinks.forEach((sink) => {
+      try {
+        sink(entry);
+      } catch {
+        // Telemetry sinks must never disrupt hardware or UI workflows
       }
     });
-  }
+  };
+
+  const nodeDestination: DestinationStream = {
+    write: (rawLine: string) => {
+      try {
+        const parsed: unknown = JSON.parse(rawLine);
+        if (isRecord(parsed)) {
+          emitToSinks(parsed);
+        }
+      } catch {
+        // Ignore non-JSON trailing fragments cleanly
+      }
+    },
+  };
+
+  const levelFormatter = (label: string): { readonly severity: string } => ({ severity: label });
+
+  const buildPino = (level: PinoFilterLevel): PinoLogger =>
+    pino(
+      {
+        level,
+        formatters: { level: levelFormatter },
+        browser: {
+          asObject: true,
+          serialize: true,
+          formatters: { level: levelFormatter },
+          write: emitToSinks,
+        },
+      },
+      nodeDestination,
+    );
+
+  let pinoInstance: PinoLogger = buildPino(initialLevel);
 
   const dispatch = (
     severity: LogSeverity,
     subsystem: string,
     message: string,
-    details?: unknown
+    details?: unknown,
   ): void => {
-    if (SEVERITY_WEIGHT[severity] < SEVERITY_WEIGHT[minLevel]) {
-      return;
-    }
-
-    const entry: LogMessage = {
-      timestamp: new Date().toTimeString().split(' ')[0],
-      severity,
-      subsystem,
-      message,
-      details,
-    };
-
-    sinks.forEach(sink => {
-      try {
-        sink(entry);
-      } catch {
-        // Logging failures must never interrupt application execution
-      }
-    });
+    const payload = details === undefined ? { subsystem } : { subsystem, details };
+    pinoInstance[severity](payload, message);
   };
 
   return Object.freeze({
-    setMinLevel: (level: LogSeverity) => {
-      minLevel = level;
+    setMinLevel: (level: PinoFilterLevel) => {
+      pinoInstance = buildPino(level);
     },
     addSink: (sink: LogSink) => {
-      sinks.add(sink);
+      sinks = [...sinks, sink];
       return () => {
-        sinks.delete(sink);
+        sinks = sinks.filter((candidate) => candidate !== sink);
       };
     },
     debug: (subsystem: string, message: string, details?: unknown) =>

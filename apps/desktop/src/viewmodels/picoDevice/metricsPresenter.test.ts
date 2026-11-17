@@ -3,7 +3,7 @@ import { renderHook } from '@testing-library/react';
 import { setGlobalLocale, useTranslation } from '@/i18n/useTranslation';
 import { buildMockPicoStatus } from '@/test/mocks/mockPicoHandlers';
 import { buildCanonicalHardwareSsotSpec } from '@/constants/hardwareSpecs';
-import { derivePicoBenchMetricsPresentation } from './metricsPresenter';
+import { derivePicoBenchMetricsPresentation } from '@/utils/picoMetricsPresenter';
 
 describe('derivePicoBenchMetricsPresentation (MVVM strict presenter)', () => {
   beforeEach(() => {

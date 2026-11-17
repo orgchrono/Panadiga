@@ -1,5 +1,6 @@
 import React from 'react';
 import { Loader2, Search, Upload } from 'lucide-react';
+import { MAX_IR_MODEL_PREVIEW } from '@/constants';
 import { useTranslation } from '@/i18n/useTranslation';
 import {
   Badge,
@@ -148,6 +149,7 @@ export const IrCatalogSearchCard: React.FC<IrCatalogSearchCardProps> = ({
               <button
                 key={hit.id}
                 type="button"
+                aria-label={hit.primary_name}
                 onClick={() => onSelectCodeset(hit.id)}
                 data-testid={`ir-codeset-hit-${hit.id}`}
                 className="w-full text-left rounded-lg border border-slate-800 bg-bench-950/70 hover:border-cyan-500/50 px-3 py-2 flex items-center justify-between gap-2 transition-colors"
@@ -157,7 +159,7 @@ export const IrCatalogSearchCard: React.FC<IrCatalogSearchCardProps> = ({
                     {hit.primary_name}
                   </div>
                   <div className="text-[11px] text-slate-400 font-mono truncate">
-                    {hit.models.slice(0, 6).join(' · ')}
+                    {hit.models.slice(0, MAX_IR_MODEL_PREVIEW).join(' · ')}
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">

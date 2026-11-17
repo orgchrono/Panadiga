@@ -1,5 +1,6 @@
 import React from 'react';
 import { Layers, Loader2, Pencil } from 'lucide-react';
+import { IR_UNIT_SET_NUMBERS } from '@/constants';
 import { useTranslation } from '@/i18n/useTranslation';
 import {
   Alert,
@@ -39,7 +40,7 @@ interface IrRemoteTabProps {
 }
 
 const DECK_MODES: ReadonlyArray<Exclude<RemoteMode, 'CATALOG'>> = ['DVD', 'VCR', 'TV'];
-const UNIT_SETS: readonly RemoteUnitSet[] = [1, 2, 3];
+const UNIT_SETS: readonly RemoteUnitSet[] = IR_UNIT_SET_NUMBERS;
 
 export const IrRemoteTab: React.FC<IrRemoteTabProps> = ({
   mode,

@@ -25,6 +25,9 @@ import { IrServiceRecoveryTab } from '@/components/ir/IrServiceRecoveryTab';
 import { IrDiagnosticsTab } from '@/components/ir/IrDiagnosticsTab';
 import { IrKeyEditorDialog } from '@/components/ir/IrKeyEditorDialog';
 import type { DynamicRemoteKey } from '@/models/ir';
+import { oneOfGuard } from '@/utils/typeGuards';
+
+const isIrTab = oneOfGuard(['remote', 'catalog', 'service', 'diagnostics'] as const);
 
 export const IrCommanderView: React.FC = () => {
   const { t } = useTranslation();
@@ -82,7 +85,12 @@ export const IrCommanderView: React.FC = () => {
         onAbortMacro={vm.abortMacro}
       />
 
-      <Tabs value={activeTab} onValueChange={v => setActiveTab(v as typeof activeTab)}>
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => {
+          if (isIrTab(v)) setActiveTab(v);
+        }}
+      >
         <TabsList className="w-full h-auto flex-wrap justify-start gap-1">
           <TabsTrigger value="remote" data-testid="ir-tab-remote">
             {t('irCommander.tabs.remote')}
@@ -173,17 +181,24 @@ export const IrCommanderView: React.FC = () => {
       <IrKeyEditorDialog
         keyItem={vm.editingKey}
         onClose={() => vm.setEditingKey(null)}
-        onSave={updated => {
+        onSave={(updated) => {
           vm.saveEditedKey(updated);
           setSuccessFeedback(updated.label);
+          toast({
+            type: 'success',
+            title: updated.label,
+            message: t('irCommander.editor.title'),
+          });
         }}
         onDelete={vm.deleteEditedKey}
       />
 
       {successFeedback && (
-        <Alert variant="success" role="status">
-          <AlertDescription>{successFeedback}</AlertDescription>
-        </Alert>
+        <output className="block">
+          <Alert variant="success">
+            <AlertDescription>{successFeedback}</AlertDescription>
+          </Alert>
+        </output>
       )}
 
       <Dialog

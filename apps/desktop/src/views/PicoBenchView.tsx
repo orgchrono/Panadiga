@@ -1,4 +1,5 @@
 import React from 'react';
+import { useWorkbenchMode } from '@/context/WorkbenchModeContext';
 import { usePicoBenchViewModel } from '@/viewmodels/usePicoBenchViewModel';
 import { useSc0Bridge } from '@/viewmodels/useSc0Bridge';
 import { TerminalView } from '@/components/TerminalView';
@@ -26,6 +27,7 @@ import { Send } from 'lucide-react';
  */
 export const PicoBenchView: React.FC = () => {
   const { t } = useTranslation();
+  const { isAdvanced } = useWorkbenchMode();
   const {
     ssot,
     isSsotLoading,
@@ -70,6 +72,7 @@ export const PicoBenchView: React.FC = () => {
     startGdbServer,
     stopGdbServer,
     launchExternalTool,
+    copyGdbCommand,
     changeBreakinMode,
     toggleConnection,
     triggerBootselReboot,
@@ -144,7 +147,7 @@ export const PicoBenchView: React.FC = () => {
         />
       )}
 
-      {showsSection('bridge') && (
+      {showsSection('bridge') && (isAdvanced || sectionFilter === 'bridge') && (
         <Sc0BridgePanel
           status={sc0Bridge.bridgeStatus}
           logs={sc0Bridge.bridgeLogs}
@@ -183,7 +186,7 @@ export const PicoBenchView: React.FC = () => {
         />
       )}
 
-      {showsSection('gdb') && (
+      {showsSection('gdb') && (isAdvanced || sectionFilter === 'gdb') && (
         <GdbServerCard
           gdbStatus={gdbStatus}
           registers={am34Registers}
@@ -194,6 +197,7 @@ export const PicoBenchView: React.FC = () => {
           onStart={startGdbServer}
           onStop={stopGdbServer}
           onLaunchTool={launchExternalTool}
+          onCopyCommand={copyGdbCommand}
         />
       )}
 

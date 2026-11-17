@@ -1,9 +1,7 @@
 import {
-  getAndroidIrSettings,
-  saveAndroidCustomProfilesJson,
-  saveAndroidIrSettings,
-} from '@/services/androidIrBridge';
-import type { IrDispatchOutcome } from '@/services/irTransportService';
+  PANASONIC_DEFAULT_SUBDEVICE,
+  PANASONIC_DVD_DEVICE_CODE,
+} from '@/constants';
 import type {
   DynamicKeymapProfile,
   DynamicRemoteKey,
@@ -11,6 +9,13 @@ import type {
   IrTimingOverride,
   RemoteMode,
 } from '@/models/ir';
+import {
+  getAndroidIrSettings,
+  saveAndroidCustomProfilesJson,
+  saveAndroidIrSettings,
+} from '@/services/androidIrBridge';
+import type { IrDispatchOutcome } from '@/services/irTransportService';
+import { isDynamicKeymapProfileArray, safeParseJson } from '@/utils/typeGuards';
 
 export const DECK_CODESET_MAP: Record<Exclude<RemoteMode, 'CATALOG'>, string> = {
   DVD: 'curated_diga_eh55_eur7659',
@@ -34,15 +39,11 @@ export function loadStoredIrSettings(): StoredIrSettingsSnapshot | null {
   const settings = getAndroidIrSettings();
   if (!settings) return null;
 
-  let savedProfiles: DynamicKeymapProfile[] = [];
-  try {
-    const parsed = JSON.parse(settings.customProfilesJson) as DynamicKeymapProfile[];
-    if (Array.isArray(parsed)) {
-      savedProfiles = parsed;
-    }
-  } catch {
-    // Ignore empty or corrupt stored custom profiles
-  }
+  const savedProfiles = safeParseJson(
+    settings.customProfilesJson,
+    isDynamicKeymapProfileArray,
+    [],
+  );
 
   return {
     timingUnitOverride: settings.timingUnitOverride,
@@ -59,11 +60,13 @@ export function upsertSavedProfiles(
   activeProfile: DynamicKeymapProfile,
   savedProfiles: readonly DynamicKeymapProfile[],
 ): DynamicKeymapProfile[] {
-  const others = savedProfiles.filter(p => p.id !== activeProfile.id);
+  const others = savedProfiles.filter((p) => p.id !== activeProfile.id);
   const updated = [activeProfile, ...others];
   saveAndroidCustomProfilesJson(JSON.stringify(updated));
   return updated;
 }
+
+const DEFAULT_CUSTOM_OBC_CODE = 0x92;
 
 export function createBlankCustomKey(): DynamicRemoteKey {
   return {
@@ -71,9 +74,9 @@ export function createBlankCustomKey(): DynamicRemoteKey {
     label: 'Custom Key',
     section: 'CUSTOM',
     protocol: 'KASEIKYO',
-    device: 0xb0,
-    subdevice: 0x00,
-    obc: 0x92,
+    device: PANASONIC_DVD_DEVICE_CODE,
+    subdevice: PANASONIC_DEFAULT_SUBDEVICE,
+    obc: DEFAULT_CUSTOM_OBC_CODE,
     respect_remote_mode: true,
     pronto_hex: null,
     tone: 'NEUTRAL',
@@ -89,7 +92,7 @@ export function replaceProfileKey(
   return {
     ...profile,
     is_user_modified: true,
-    keys: profile.keys.map(k => (k.id === updated.id ? updated : k)),
+    keys: profile.keys.map((k) => (k.id === updated.id ? updated : k)),
   };
 }
 
@@ -100,7 +103,7 @@ export function removeProfileKey(
   return {
     ...profile,
     is_user_modified: true,
-    keys: profile.keys.filter(k => k.id !== keyId),
+    keys: profile.keys.filter((k) => k.id !== keyId),
   };
 }
 

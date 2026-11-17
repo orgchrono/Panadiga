@@ -9,8 +9,19 @@ import type { HardwareThresholds, PicoUsbIdentity } from '@/models';
  * 1. Spansion S29JL064H NOR Flash & NVRAM Physical Constants
  * ========================================================================= */
 
+/** Standard binary unit multiplier (IEC KiB; MiB lives in catalogTokens) */
+export const KIB_BYTES = 1024;
+export const BITS_PER_BYTE = 8;
+export const HEX32_PAD_WIDTH = 8;
+export const P7501_GND_PIN_NUMBER = 4;
+
+/** Candidate Spansion NOR Flash sizes in bytes (2MB, 4MB, 8MB, 16MB) */
+export const FLASH_2MB_BYTES = 0x0020_0000;
+export const FLASH_4MB_BYTES = 0x0040_0000;
+export const FLASH_16MB_BYTES = 0x0100_0000;
+
 /** Total physical capacity of Spansion S29JL064H NOR Flash (8 MB / 64 Mbit) */
-export const SPANSION_FLASH_SIZE_BYTES = 8 * 1024 * 1024; // 8,388,608 bytes
+export const SPANSION_FLASH_SIZE_BYTES = 8 * KIB_BYTES * KIB_BYTES; // 8,388,608 bytes
 
 /** Base memory offset of the top NVRAM emulation sector in 8MB dump (0x007F_0000) */
 export const SPANSION_NVRAM_BASE_OFFSET = 0x007f0000;
@@ -68,8 +79,12 @@ export const LBA_SECTOR_SIZE_BYTES = 512;
 /** Panasonic MEIHDFS Storage Header magic string in ASCII */
 export const MEIHDFS_MBR_SIGNATURE_ASCII = 'SH';
 
-/** Backup MBR mirror fixed sector offset (LBA 57,344) */
+/** MEIHDFS backup MBR mirror fixed sector offset (LBA 57,344) */
 export const MEIHDFS_BACKUP_MBR_LBA = 57344;
+
+/** MEIHDFS WAL journal ring byte offset (8 MB) and Firmware Partition 1 offset (32 MB) */
+export const MEIHDFS_JOURNAL_OFFSET_BYTES = 8 * KIB_BYTES * KIB_BYTES;
+export const MEIHDFS_PART1_OFFSET_BYTES = 32 * KIB_BYTES * KIB_BYTES;
 
 /** MEIHDFS partition block unit size in bytes */
 export const MEIHDFS_BLOCK_SIZE_BYTES = 2048;
@@ -162,3 +177,84 @@ export const PICO_USB_IDENTITY_SPEC: PicoUsbIdentity = Object.freeze({
 });
 
 export const INDEXED_SERVICE_MANUALS_COUNT = 30;
+
+/** Uniform Spansion S29JL064H main array sector size in bytes (64 KiB) */
+export const SPANSION_STANDARD_SECTOR_SIZE_BYTES = 64 * 1024;
+
+/** Fixed primary bootloader bank sector count (SA0..SA15) */
+export const SPANSION_BOOTLOADER_SECTOR_COUNT = 16;
+
+/** Total unified Flash sector geometry count (SA0..SA70 across uniform + top parameter banks) */
+export const SPANSION_UNIFIED_TOTAL_SECTORS = 71;
+
+/** Standard 16-bit word count spanning the 64 KiB EEMUL NVRAM aperture */
+export const AM34_NVRAM_WORD_COUNT_16BIT = 16384;
+
+/** Maximum 16-bit words per Android USB-OTG DUMP packet */
+export const P7501_USB_OTG_DUMP_MAX_WORDS = 2048;
+
+/** Maximum 16-bit words per BLE NUS DUMP packet */
+export const P7501_BLE_DUMP_MAX_WORDS = 256;
+
+/** Default P7501 live DUMP reply window in ms */
+export const P7501_LIVE_DUMP_TIMEOUT_MS = 6000;
+
+/** Wire protocol command prefix for memory word dumps */
+export const P7501_DUMP_COMMAND_PREFIX = 'DUMP 0x';
+
+/** USB device markers identifying RP2040/RP2350 BOOTSEL volumes */
+export const P7501_BOOTSEL_USB_TOKEN = 'BOOTSEL';
+export const P7501_BOOTSEL_PID_MARKER = 'PID:0003';
+
+/** Hex Inspector default aperture constants */
+export const HEX_INSPECTOR_MAX_IMAGE_BYTES = 100 * 1024 * 1024;
+export const HEX_INSPECTOR_BYTES_PER_ROW = 16;
+export const HEX_INSPECTOR_WINDOW_BYTES = LBA_SECTOR_SIZE_BYTES;
+
+/** Terminal & SC0 Bridge rolling line retention caps */
+export const SC0_BRIDGE_LOG_CAP = 200;
+export const SERIAL_CONSOLE_LOG_CAP = 240;
+
+/** Maximum IR repeat count supported by Panasonic HAL presets */
+export const IR_MAX_REPEAT_COUNT = 3;
+
+/** Safe RP2040 / RP2350 GPIO pins available for IRTX modulated output */
+export const SAFE_PICO_IR_GPIOS: readonly number[] = Object.freeze([
+  6, 7, 8, 9, 16, 17, 18, 19, 20, 21, 22,
+]);
+
+/** Candidate Spansion/NOR flash aperture sizes (MiB) scanned during address aliasing */
+export const FLASH_CANDIDATE_SIZES_MB: readonly number[] = Object.freeze([16, 8, 4, 2]);
+
+/** Pull-down threshold distinguishing floating vs driven 3.3V LVTTL logic pin */
+export const PICO_FLOATING_PIN_VOLTS_THRESHOLD = 1.5;
+
+/** Brownout alert floor distinguishing 0V idle/unplugged vs undervoltage fault */
+export const PICO_BROWNOUT_FLOOR_VOLTS = 0.2;
+
+/** Diagnostic Studio & serial/SC0 rolling capacities and timeouts */
+export const PICO_DIAGNOSTIC_HISTORY_CAP = 30;
+export const PICO_DIAGNOSTIC_DEFAULT_TIMEOUT_MS = 4000;
+export const PICO_OTG_COMMAND_TIMEOUT_MS = 4000;
+export const PICO_OTG_SHORT_TIMEOUT_MS = 3000;
+export const PICO_STATUS_POLL_TIMEOUT_MS = 2000;
+export const PICO_BLE_COMMAND_TIMEOUT_MS = 3500;
+export const PICO_BLE_STATUS_TIMEOUT_MS = 2500;
+export const PICO_BLE_DUMP_REPLY_TIMEOUT_MS = 5000;
+export const PICO_BOOTSEL_REBOOT_WAIT_MS = 1600;
+export const PICO_BOOTSEL_RECONNECT_POLL_MS = 500;
+export const PICO_BOOTSEL_RECONNECT_MAX_ATTEMPTS = 12;
+export const PICO_BOOTSEL_AUTOCONNECT_DELAY_MS = 400;
+export const IN_CIRCUIT_LOG_REPLAY_STEP_MS = 80;
+export const SC0_BRIDGE_MAX_LINES = 150;
+export const SERIAL_LOG_TIMESTAMP_START = 11;
+export const SERIAL_LOG_TIMESTAMP_END = 23;
+
+/** Panasonic Kaseikyo / DIGA IR Runner SSOT constants */
+export const PANASONIC_DVD_DEVICE_CODE = 0xb0;
+export const PANASONIC_DEFAULT_SUBDEVICE = 0x00;
+export const PANASONIC_BEACON_OBC = 0xfe;
+export const IR_CAMERA_BEACON_PULSE_COUNT = 30;
+export const IR_CAMERA_BEACON_INTERVAL_MS = 250;
+export const IR_LONG_HOLD_THRESHOLD_MS = 1000;
+export const IR_CATALOG_DEFAULT_SEARCH_LIMIT = 60;

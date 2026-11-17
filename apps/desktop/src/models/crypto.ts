@@ -176,3 +176,11 @@ export interface ExtrheadUnpackReport {
   footer_present: boolean;
   written_output_path?: string | null;
 }
+
+export type FrmPackMode = 'sd' | 'dvd' | 'digadiag';
+
+export interface UnpackExtrheadParams {
+  inputPath: string;
+  mode: 'auto' | 'main' | 'drv' | 'plain';
+  outPath?: string;
+}

@@ -3,32 +3,28 @@
  * @brief Data-driven physical pinout, break-in, flash geometry, and memory region blueprints.
  */
 
-import ptBRJson from '@/locales/pt-BR.json';
+import ptBRJson from '@/locales/pt-BR/ssot.json';
 import type { ColdBreakinMode } from '@/models';
 import hardwareCatalog from '../../../../../crates/panadiga-core/src/ssot/hardware_catalog.json';
 import { computeFlashGeometryAddresses } from './catalogTokens';
 
 export type SsotLocaleDict = typeof ptBRJson.ssot;
-export type PinLocaleKey = keyof SsotLocaleDict['pins'];
-export type ModeLocaleKey = keyof SsotLocaleDict['breakinModes'];
-export type FlashLocaleKey = keyof SsotLocaleDict['flashGeometries'];
-export type RegionLocaleKey = keyof SsotLocaleDict['memoryRegions'];
 
 export interface PinBlueprint {
-  readonly key: PinLocaleKey;
+  readonly key: string;
   readonly manual_pin: number;
   readonly physical_pin: number;
   readonly pico_gpio: string;
 }
 
 export interface BreakInBlueprint {
-  readonly key: ModeLocaleKey;
+  readonly key: string;
   readonly mode: ColdBreakinMode;
   readonly badge_variant: string;
 }
 
 export interface FlashGeometryBlueprint {
-  readonly key: FlashLocaleKey;
+  readonly key: string;
   readonly size_mb: number;
   readonly size_bytes: number;
   readonly nvram_base_hex: string;
@@ -37,21 +33,21 @@ export interface FlashGeometryBlueprint {
 }
 
 export interface MemoryRegionBlueprint {
-  readonly key: RegionLocaleKey;
+  readonly key: string;
   readonly start: string;
   readonly end: string;
   readonly size_kb: number;
 }
 
-function assertLocaleKey<K extends string>(
+function assertCatalogKeyExists(
   table: Readonly<Record<string, unknown>>,
   raw: string,
   section: string,
-): K {
+): string {
   if (!Object.prototype.hasOwnProperty.call(table, raw)) {
     throw new Error(`Missing locale entry ssot.${section}.${raw}`);
   }
-  return raw as K;
+  return raw;
 }
 
 function parseColdBreakinMode(raw: number): ColdBreakinMode {
@@ -64,7 +60,7 @@ function parseColdBreakinMode(raw: number): ColdBreakinMode {
 export const PINOUT_BLUEPRINTS: readonly PinBlueprint[] = Object.freeze(
   hardwareCatalog.pinout.map(entry =>
     Object.freeze({
-      key: assertLocaleKey<PinLocaleKey>(ptBRJson.ssot.pins, entry.key, 'pins'),
+      key: assertCatalogKeyExists(ptBRJson.ssot.pins, entry.key, 'pins'),
       manual_pin: entry.manual_pin,
       physical_pin: entry.physical_pin,
       pico_gpio: entry.pico_gpio,
@@ -75,7 +71,7 @@ export const PINOUT_BLUEPRINTS: readonly PinBlueprint[] = Object.freeze(
 export const BREAKIN_BLUEPRINTS: readonly BreakInBlueprint[] = Object.freeze(
   hardwareCatalog.breakin_modes.map(entry =>
     Object.freeze({
-      key: assertLocaleKey<ModeLocaleKey>(ptBRJson.ssot.breakinModes, entry.key, 'breakinModes'),
+      key: assertCatalogKeyExists(ptBRJson.ssot.breakinModes, entry.key, 'breakinModes'),
       mode: parseColdBreakinMode(entry.mode),
       badge_variant: entry.badge_variant,
     }),
@@ -86,11 +82,7 @@ export const FLASH_GEOMETRY_BLUEPRINTS: readonly FlashGeometryBlueprint[] = Obje
   hardwareCatalog.flash_geometries.map(entry => {
     const geom = computeFlashGeometryAddresses(entry.size_mb);
     return Object.freeze({
-      key: assertLocaleKey<FlashLocaleKey>(
-        ptBRJson.ssot.flashGeometries,
-        entry.key,
-        'flashGeometries',
-      ),
+      key: assertCatalogKeyExists(ptBRJson.ssot.flashGeometries, entry.key, 'flashGeometries'),
       size_mb: entry.size_mb,
       size_bytes: geom.sizeBytes,
       nvram_base_hex: geom.nvramBaseHex,

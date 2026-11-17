@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from '@/i18n/useTranslation';
 import type {
   DigaModelProfile,
   PicoDeviceStatus,
@@ -41,6 +42,18 @@ export interface PicoBenchTopBarProps {
 const SELECT_CLASS =
   'w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 font-mono truncate';
 
+function resolveConnectLabel(
+  connected: boolean,
+  isBle: boolean,
+  isOtg: boolean,
+  t: ReturnType<typeof useTranslation>['t'],
+): string {
+  if (connected) return t('pico.topBar.disconnectBtn');
+  if (isBle) return t('pico.topBar.connectBleBtn');
+  if (isOtg) return t('pico.topBar.connectOtgBtn');
+  return t('pico.topBar.connectSerialBtn');
+}
+
 export const PicoBenchTopBar: React.FC<PicoBenchTopBarProps> = ({
   deviceStatus,
   latestDiagnostic,
@@ -63,14 +76,17 @@ export const PicoBenchTopBar: React.FC<PicoBenchTopBarProps> = ({
   onBootselReboot,
   onFlashFirmware,
 }) => {
+  const { t } = useTranslation();
   const [uf2Variant, setUf2Variant] = useState<PicoUf2Variant>('unified');
 
   const { isBle, isOtg, isPicoPort } = detectPicoTransportFlags(transportMode, selectedPort);
   const effectiveVddVolts = resolveEffectiveVddVolts(
     deviceStatus?.vdd_volts,
-    latestDiagnostic?.vdd_volts
+    latestDiagnostic?.vdd_volts,
   );
   const powered = isTargetPowered(effectiveVddVolts);
+  const isConnected = Boolean(deviceStatus?.connected);
+  const connectLabel = resolveConnectLabel(isConnected, isBle, isOtg, t);
 
   return (
     <div className="p-4 sm:p-5 rounded-2xl bg-bench-900 border border-slate-800 shadow-xl space-y-4 font-mono">
@@ -87,26 +103,27 @@ export const PicoBenchTopBar: React.FC<PicoBenchTopBarProps> = ({
         onBootselReboot={onBootselReboot}
       />
 
-      {deviceStatus?.connected && !powered && (
+      {isConnected && !powered && (
         <PicoLowVddAlert effectiveVddVolts={effectiveVddVolts} onQuickPincheck={onQuickPincheck} />
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
         <div className="flex flex-col gap-1">
-          <label className="text-[10px] text-slate-500 uppercase font-semibold">
-            Modelo Panasonic DIGA
+          <label htmlFor="pico-model-select" className="text-[10px] text-slate-500 uppercase font-semibold">
+            {t('pico.topBar.modelLabel')}
           </label>
           <select
-            aria-label="Selecionar modelo Panasonic DIGA"
+            id="pico-model-select"
+            aria-label={t('pico.topBar.modelAria')}
             value={selectedModel}
-            onChange={e => onSelectModel?.(e.target.value)}
+            onChange={(e) => onSelectModel?.(e.target.value)}
             className={`${SELECT_CLASS} text-cyan-300`}
           >
-            {modelCatalog.map(m => (
+            {modelCatalog.map((m) => (
               <option key={m.model_id} value={m.model_id}>
                 {m.model_id === 'AUTO'
-                  ? 'AUTO (Detectar)'
-                  : `${m.model_id} (${m.flash_size_mb}MB)`}
+                  ? t('pico.topBar.modelAuto')
+                  : t('pico.topBar.modelOption', { id: m.model_id, flashMb: m.flash_size_mb })}
               </option>
             ))}
           </select>
@@ -114,31 +131,32 @@ export const PicoBenchTopBar: React.FC<PicoBenchTopBarProps> = ({
 
         <div className="flex flex-col gap-1">
           <div className="flex items-center justify-between">
-            <label className="text-[10px] text-slate-500 uppercase font-semibold">
-              Porta Serial / Interface
+            <label htmlFor="pico-port-select" className="text-[10px] text-slate-500 uppercase font-semibold">
+              {t('pico.topBar.portLabel')}
             </label>
             {onRefreshPorts && (
               <button
                 type="button"
                 onClick={onRefreshPorts}
-                title="Escanear portas COM USB / OTG"
+                title={t('pico.topBar.refreshPortsTitle')}
                 className="text-[10px] text-cyan-400 hover:text-cyan-300 flex items-center gap-1 transition-colors focus:outline-none"
               >
                 <RefreshCw className="w-2.5 h-2.5" />
-                <span>Atualizar</span>
+                <span>{t('pico.topBar.refreshPortsBtn')}</span>
               </button>
             )}
           </div>
           <select
-            aria-label="Selecionar porta serial do Pico"
+            id="pico-port-select"
+            aria-label={t('pico.topBar.selectPortAria')}
             value={selectedPort}
-            onChange={e => onSelectPort(e.target.value)}
+            onChange={(e) => onSelectPort(e.target.value)}
             className={SELECT_CLASS}
           >
             {availablePorts.length === 0 ? (
-              <option value="">Nenhuma porta serial detectada</option>
+              <option value="">{t('pico.topBar.noPorts')}</option>
             ) : (
-              availablePorts.map(p => (
+              availablePorts.map((p) => (
                 <option key={p} value={p}>
                   {p}
                 </option>
@@ -148,70 +166,66 @@ export const PicoBenchTopBar: React.FC<PicoBenchTopBarProps> = ({
         </div>
 
         <div className="flex flex-col gap-1 justify-end">
-          <span className="text-[10px] text-transparent select-none">Conexão</span>
+          <span className="text-[10px] text-transparent select-none">{t('pico.topBar.connectionSpacer')}</span>
           <Button
             type="button"
-            variant={deviceStatus?.connected ? 'secondary' : 'default'}
+            variant={isConnected ? 'secondary' : 'default'}
             onClick={onToggleConnection}
             className={`w-full font-bold text-xs gap-1.5 ${
-              !deviceStatus?.connected && isBle ? 'bg-blue-600 hover:bg-blue-500 text-white' : ''
+              !isConnected && isBle ? 'bg-blue-600 hover:bg-blue-500 text-white' : ''
             }`}
           >
             <Radio className="w-3.5 h-3.5" />
-            <span>
-              {deviceStatus?.connected
-                ? 'Desconectar'
-                : isBle
-                  ? 'Conectar BLE'
-                  : isOtg
-                    ? 'Conectar USB-OTG'
-                    : 'Conectar Serial'}
-            </span>
+            <span>{connectLabel}</span>
           </Button>
         </div>
 
         <div className="flex flex-col gap-1 justify-end">
-          <span className="text-[10px] text-cyan-400 font-semibold uppercase">1º Contato</span>
+          <span className="text-[10px] text-cyan-400 font-semibold uppercase">
+            {t('pico.topBar.firstContactLabel')}
+          </span>
           <Button
             type="button"
             variant="outline"
             onClick={onFirstContactBackup}
-            disabled={isBackingUp || !deviceStatus?.connected}
-            title="Backup não-destrutivo de NVRAM, SRAM e IPL com verificação de integridade"
+            disabled={isBackingUp || !isConnected}
+            title={t('pico.topBar.firstContactTooltip')}
             className="w-full bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border-cyan-500/30 font-bold text-xs gap-1.5"
           >
             {isBackingUp ? (
               <>
                 <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                <span>Lendo NVRAM...</span>
+                <span>{t('pico.topBar.readingNvram')}</span>
               </>
             ) : (
               <>
                 <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Backup 1º Contato</span>
+                <span>{t('pico.topBar.firstContactBtn')}</span>
               </>
             )}
           </Button>
         </div>
 
         <div className="flex flex-col gap-1 justify-end">
-          <span className="text-[10px] text-emerald-400 font-semibold uppercase">Higienização</span>
+          <span className="text-[10px] text-emerald-400 font-semibold uppercase">
+            {t('pico.topBar.sanitizeLabel')}
+          </span>
           <Button
             type="button"
             variant="emerald"
             onClick={onInjectAndErase}
-            disabled={isErasing || !deviceStatus?.connected}
+            disabled={isErasing || !isConnected}
             className="w-full font-bold text-xs gap-1.5"
           >
             {isErasing ? (
               <>
                 <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                <span>Injetando...</span>
+                <span>{t('pico.topBar.injectingBtn')}</span>
               </>
             ) : (
               <>
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Injetar &amp; Limpar</span>
+                <span>{t('pico.topBar.injectCleanBtn')}</span>
               </>
             )}
           </Button>

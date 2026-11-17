@@ -9,6 +9,7 @@ import type {
   PanasonicCatalogCodeset,
   PanasonicCatalogSummary,
   PanasonicCategory,
+  RemoteUnitSet,
   VerifiedIrMacro,
 } from '@/models/ir';
 import { invokeCommand } from './ipc';
@@ -60,7 +61,7 @@ export async function irPrepareTransmission(params: {
   subdevice: number;
   obc: number;
   respectRemoteMode: boolean;
-  remoteUnit: 1 | 2 | 3;
+  remoteUnit: RemoteUnitSet;
   prontoHex?: string | null;
   ranges: IrFrequencyRange[];
   deviceInfo: IrDeviceInfo;

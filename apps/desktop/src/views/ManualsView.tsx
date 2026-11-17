@@ -1,6 +1,12 @@
 import React from 'react';
 import { useTranslation } from '@/i18n/useTranslation';
+import {
+  MANUALS_SPLIT_INITIAL_PCT,
+  MANUALS_SPLIT_MAX_PCT,
+  MANUALS_SPLIT_MIN_PCT,
+} from '@/constants';
 import { useManualsViewModel } from '@/viewmodels/useManualsViewModel';
+import { useRagViewModel } from '@/viewmodels/useRagViewModel';
 import { StatusBadge } from '@/components/StatusBadge';
 import { ResizableSplitPane } from '@/components/ui';
 import { RagAssistantPanel } from '@/components/rag';
@@ -45,6 +51,8 @@ export const ManualsView: React.FC = () => {
     selectTerm,
   } = useManualsViewModel();
 
+  const ragVm = useRagViewModel();
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12 font-mono">
       {/* Top Header */}
@@ -71,10 +79,8 @@ export const ManualsView: React.FC = () => {
         </div>
       </div>
 
-      {/* ZERO-ERROR RAG AI ASSISTANT PANEL */}
-      <RagAssistantPanel />
+      <RagAssistantPanel viewModel={ragVm} />
 
-      {/* Quick Keyword Pills & Search Input Bar */}
       <ManualsSearchCard
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
@@ -83,13 +89,12 @@ export const ManualsView: React.FC = () => {
         selectTerm={selectTerm}
       />
 
-      {/* Main Resizable Split: Search Results & Document Metadata */}
       <ResizableSplitPane
-        initialLeftPercent={64}
-        minLeftPercent={42}
-        maxLeftPercent={76}
+        initialLeftPercent={MANUALS_SPLIT_INITIAL_PCT}
+        minLeftPercent={MANUALS_SPLIT_MIN_PCT}
+        maxLeftPercent={MANUALS_SPLIT_MAX_PCT}
         storageKey="panadiga.split.manuals"
-        ariaLabel="Divisor entre resultados e catálogo de manuais"
+        ariaLabel={t('manuals.meta.splitAria')}
         left={
           <ManualsResultsList
             searchResults={searchResults}

@@ -4,7 +4,7 @@ import { MetricCard } from '@/components/MetricCard';
 import { StatusBadge } from '@/components/StatusBadge';
 import { EmptyState } from '@/components/ui';
 import { useTranslation } from '@/i18n/useTranslation';
-import { derivePicoBenchMetricsPresentation } from '@/viewmodels/picoDevice/metricsPresenter';
+import { derivePicoBenchMetricsPresentation } from '@/utils/picoMetricsPresenter';
 
 export interface PicoBenchMetricsProps {
   deviceStatus: PicoDeviceStatus | null;

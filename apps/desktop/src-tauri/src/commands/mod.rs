@@ -19,6 +19,7 @@ pub mod hardware_bridge;
 pub mod hardware_diag;
 #[cfg(any(target_os = "android", test))]
 pub mod ir;
+pub mod settings;
 pub mod storage;
 pub mod unbrick;
 pub mod unbrick_dto;
@@ -35,6 +36,7 @@ pub use hardware_bridge::*;
 pub use hardware_diag::*;
 #[cfg(any(target_os = "android", test))]
 pub use ir::*;
+pub use settings::*;
 pub use storage::*;
 pub use unbrick::*;
 pub use unbrick_dto::*;

@@ -1,5 +1,5 @@
-import enUSJson from '@/locales/en-US.json';
-import ptBRJson from '@/locales/pt-BR.json';
+import enUSJson from '@/locales/en-US/hdd.json';
+import ptBRJson from '@/locales/pt-BR/hdd.json';
 import type { HexBookmark } from '@/models';
 import { SPANSION_NVRAM_BASE_OFFSET, type SupportedLocale } from './hardwareSpecs';
 

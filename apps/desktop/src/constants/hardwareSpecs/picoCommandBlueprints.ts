@@ -3,13 +3,10 @@
  * @brief Data-driven CLI command blueprint loader over shared Rust/TS `hardware_catalog.json`.
  */
 
-import ptBRJson from '@/locales/pt-BR.json';
+import ptBRJson from '@/locales/pt-BR/ssot.json';
 import type { PicoCommandCategory, PicoCommandSpec } from '@/models';
 import hardwareCatalog from '../../../../../crates/panadiga-core/src/ssot/hardware_catalog.json';
 import { resolveCatalogTemplate } from './catalogTokens';
-import type { SsotLocaleDict } from './ssotBlueprints';
-
-export type CommandLocaleKey = keyof SsotLocaleDict['commands'];
 
 export interface PicoCommandLocaleEntry {
   readonly label: string;
@@ -20,7 +17,7 @@ export interface PicoCommandLocaleEntry {
 }
 
 export interface CommandBlueprint {
-  readonly id: CommandLocaleKey;
+  readonly id: string;
   readonly category: PicoCommandSpec['category'];
   readonly syntax: string;
   readonly default_arg: string | null;
@@ -44,11 +41,11 @@ function parseCommandCategory(raw: string, id: string): PicoCommandCategory {
   return category;
 }
 
-function assertCommandLocaleKey(raw: string): CommandLocaleKey {
+function assertCommandLocaleKey(raw: string): string {
   if (!Object.prototype.hasOwnProperty.call(ptBRJson.ssot.commands, raw)) {
     throw new Error(`Missing locale entry ssot.commands.${raw}`);
   }
-  return raw as CommandLocaleKey;
+  return raw;
 }
 
 function resolveCatalogTimeoutMs(key: string, id: string): number {
@@ -60,32 +57,41 @@ function resolveCatalogTimeoutMs(key: string, id: string): number {
   return value;
 }
 
-interface RawCatalogCommandEntry {
-  readonly id: string;
-  readonly category: string;
-  readonly syntax: string;
-  readonly default_arg?: string;
-  readonly options?: ReadonlyArray<ReadonlyArray<string>>;
-  readonly dangerous?: boolean;
-  readonly timeout: string;
+function extractOptionPairs(entry: object): ReadonlyArray<readonly [string, string]> | undefined {
+  if (!('options' in entry) || !Array.isArray(entry.options)) {
+    return undefined;
+  }
+  return Object.freeze(
+    entry.options.flatMap(pair => {
+      if (
+        Array.isArray(pair) &&
+        pair.length >= 2 &&
+        typeof pair[0] === 'string' &&
+        typeof pair[1] === 'string'
+      ) {
+        return [Object.freeze([pair[0], resolveCatalogTemplate(pair[1])] as const)];
+      }
+      return [];
+    }),
+  );
 }
 
 export const PICO_COMMAND_BLUEPRINTS: readonly CommandBlueprint[] = Object.freeze(
-  (hardwareCatalog.commands as readonly RawCatalogCommandEntry[]).map(entry => {
+  hardwareCatalog.commands.map(entry => {
     const id = assertCommandLocaleKey(entry.id);
     const defaultArg =
-      typeof entry.default_arg === 'string' ? resolveCatalogTemplate(entry.default_arg) : null;
-    const optionPairs = entry.options?.map(
-      ([optKey, rawVal]) => Object.freeze([optKey, resolveCatalogTemplate(rawVal)] as const),
-    );
+      'default_arg' in entry && typeof entry.default_arg === 'string'
+        ? resolveCatalogTemplate(entry.default_arg)
+        : null;
+    const dangerous = 'dangerous' in entry && entry.dangerous === true;
 
     return Object.freeze({
       id,
       category: parseCommandCategory(entry.category, entry.id),
       syntax: resolveCatalogTemplate(entry.syntax),
       default_arg: defaultArg,
-      optionPairs: optionPairs ? Object.freeze(optionPairs) : undefined,
-      dangerous: Boolean(entry.dangerous),
+      optionPairs: extractOptionPairs(entry),
+      dangerous,
       timeout_ms: resolveCatalogTimeoutMs(entry.timeout, entry.id),
     });
   }),

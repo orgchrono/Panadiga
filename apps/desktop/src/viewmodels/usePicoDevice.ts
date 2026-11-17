@@ -3,25 +3,24 @@
  * @brief ViewModel facade composing Pico USB/OTG/BLE transport, BOOTSEL flashing, and SSOT safety telemetry.
  */
 
-import { useState, useCallback, useRef } from 'react';
-import type { DigaModelProfile, PicoDeviceStatus } from '@/models';
+import { useCallback, useState } from 'react';
 import {
   PICO_MAX_VDD_CEILING_VOLTS,
   PICO_MIN_VDD_THRESHOLD_VOLTS,
   PICO_SAFE_OPERATING_MIN_VOLTS,
 } from '@/constants';
+import type { DigaModelProfile, PicoDeviceStatus } from '@/models';
+import { getPicoSessionSnapshot, updatePicoSessionStatus } from '@/store/picoSessionBridge';
 import { isTargetPowered, isTargetVoltageNominal } from '@/utils/formatters';
 import {
   DEFAULT_DISCONNECTED_STATUS,
   deriveCoreStateFromVoltage,
-  picoSessionStore,
   resolveTransportMode,
   type UsePicoDeviceOptions,
-  type VoltageAlertLevel,
 } from './picoDevice/stateHelpers';
-import { usePicoTransport } from './picoDevice/usePicoTransport';
 import { usePicoBootFlash } from './picoDevice/usePicoBootFlash';
 import { usePicoTelemetryEffects } from './picoDevice/usePicoTelemetryEffects';
+import { usePicoTransport } from './picoDevice/usePicoTransport';
 
 export { DEFAULT_DISCONNECTED_STATUS, resolveTransportMode, type UsePicoDeviceOptions };
 
@@ -30,7 +29,7 @@ export { DEFAULT_DISCONNECTED_STATUS, resolveTransportMode, type UsePicoDeviceOp
  * Bluetooth LE NUS), BOOTSEL flashing, SSOT voltage safety checks, and reactive telemetry streams.
  */
 export function usePicoDevice({ onLog }: UsePicoDeviceOptions = {}) {
-  const initialSession = picoSessionStore.getSnapshot();
+  const [initialSession] = useState(() => getPicoSessionSnapshot());
   const [deviceStatus, setDeviceStatus] = useState<PicoDeviceStatus | null>(initialSession.status);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isFlashing, setIsFlashing] = useState<boolean>(false);
@@ -39,14 +38,11 @@ export function usePicoDevice({ onLog }: UsePicoDeviceOptions = {}) {
   const [modelCatalog, setModelCatalog] = useState<DigaModelProfile[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>(initialSession.model);
 
-  const isConnectingRef = useRef<boolean>(false);
-  const lastAlertRef = useRef<VoltageAlertLevel>('ok');
-
   const applyMeasuredVoltage = useCallback(
     (vddVolts: number, commandId?: string, commandSuccess?: boolean) => {
       if (typeof vddVolts !== 'number' || isNaN(vddVolts)) return;
       const powered = isTargetPowered(vddVolts, PICO_MIN_VDD_THRESHOLD_VOLTS);
-      setDeviceStatus(prev => {
+      setDeviceStatus((prev) => {
         if (!prev) return prev;
         const nextVdd =
           vddVolts > 0
@@ -63,18 +59,18 @@ export function usePicoDevice({ onLog }: UsePicoDeviceOptions = {}) {
             prev.core_state,
             nextVdd,
             commandId,
-            commandSuccess
+            commandSuccess,
           ),
         };
-        if (nextPowered || !prev.connected) {
-          picoSessionStore.setStatus(updated);
-        } else {
-          picoSessionStore.setStatus({ ...updated, vdd_volts: vddVolts, target_powered: powered });
-        }
+        updatePicoSessionStatus(
+          nextPowered || !prev.connected
+            ? updated
+            : { ...updated, vdd_volts: vddVolts, target_powered: powered },
+        );
         return updated;
       });
     },
-    []
+    [],
   );
 
   const {
@@ -87,14 +83,15 @@ export function usePicoDevice({ onLog }: UsePicoDeviceOptions = {}) {
   } = usePicoTransport({
     deviceStatus,
     setDeviceStatus,
+    isLoading,
     setIsLoading,
+    availablePorts,
     setAvailablePorts,
     selectedPort,
     setSelectedPort,
     modelCatalog,
     setModelCatalog,
     setSelectedModel,
-    isConnectingRef,
     onLog,
   });
 
@@ -110,9 +107,9 @@ export function usePicoDevice({ onLog }: UsePicoDeviceOptions = {}) {
   usePicoTelemetryEffects({
     deviceStatus,
     setDeviceStatus,
+    isLoading,
     selectedPort,
     selectedModel,
-    lastAlertRef,
     applyMeasuredVoltage,
     refreshPorts,
     refreshModelCatalog,
@@ -124,13 +121,13 @@ export function usePicoDevice({ onLog }: UsePicoDeviceOptions = {}) {
     ? isTargetVoltageNominal(
         deviceStatus.vdd_volts,
         PICO_SAFE_OPERATING_MIN_VOLTS,
-        PICO_MAX_VDD_CEILING_VOLTS
+        PICO_MAX_VDD_CEILING_VOLTS,
       )
     : false;
   const isHardwareReady = Boolean(
     deviceStatus?.connected &&
       isTargetPowered(deviceStatus.vdd_volts, PICO_MIN_VDD_THRESHOLD_VOLTS) &&
-      deviceStatus.vdd_volts <= PICO_MAX_VDD_CEILING_VOLTS
+      deviceStatus.vdd_volts <= PICO_MAX_VDD_CEILING_VOLTS,
   );
 
   return {

@@ -34,7 +34,7 @@ describe('useGdbBridge ViewModel', () => {
     expect(onLog).toHaveBeenCalledWith(
       'info',
       'HOST',
-      expect.stringContaining('Iniciando Servidor Ponte GDB RSP')
+      expect.stringMatching(/Starting GDB RSP Bridge|Iniciando Servidor Ponte GDB RSP/),
     );
 
     await act(async () => {
@@ -44,7 +44,7 @@ describe('useGdbBridge ViewModel', () => {
     expect(onLog).toHaveBeenCalledWith(
       'warn',
       'HOST',
-      expect.stringContaining('Finalizando Servidor Ponte GDB RSP')
+      expect.stringMatching(/Stopping GDB RSP Bridge|Finalizando Servidor Ponte GDB RSP/),
     );
   });
 });

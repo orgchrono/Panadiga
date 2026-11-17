@@ -1,6 +1,5 @@
 import React from 'react';
 import { Activity, Camera, Cpu, ShieldCheck } from 'lucide-react';
-import { useTranslation } from '@/i18n/useTranslation';
 import {
   Alert,
   AlertDescription,
@@ -13,11 +12,14 @@ import {
   CardTitle,
   Select,
 } from '@/components/ui';
+import { DEFAULT_IR_PICO_GPIO } from '@/constants';
+import { useTranslation } from '@/i18n/useTranslation';
 import type {
   AndroidIrCapabilities,
   IrTimingOverride,
   IrTransportKind,
 } from '@/models/ir';
+import { oneOfGuard } from '@/utils/typeGuards';
 
 interface IrDiagnosticsTabProps {
   capabilities: AndroidIrCapabilities | null;
@@ -51,10 +53,8 @@ const TRANSPORT_OPTIONS: readonly IrTransportKind[] = [
   'PICO_TAURI',
 ];
 
-function formatCarrierSpans(ranges: readonly { min_hz: number; max_hz: number }[]): string {
-  if (ranges.length === 0) return 'Default Exynos / 37010 Hz';
-  return ranges.map(r => `${r.min_hz}-${r.max_hz}Hz`).join(', ');
-}
+const isIrTransport = oneOfGuard(TRANSPORT_OPTIONS);
+const isIrTimingOverride = oneOfGuard(TIMING_OPTIONS);
 
 export const IrDiagnosticsTab: React.FC<IrDiagnosticsTabProps> = ({
   capabilities,
@@ -74,6 +74,11 @@ export const IrDiagnosticsTab: React.FC<IrDiagnosticsTabProps> = ({
 }) => {
   const { t } = useTranslation();
 
+  const carrierSpansLabel =
+    !capabilities || capabilities.ranges.length === 0
+      ? t('irCommander.diag.defaultCarrierSpans')
+      : capabilities.ranges.map((r) => `${r.min_hz}-${r.max_hz}Hz`).join(', ');
+
   return (
     <div className="space-y-4">
       <Card>
@@ -91,31 +96,55 @@ export const IrDiagnosticsTab: React.FC<IrDiagnosticsTabProps> = ({
         <CardContent className="space-y-3 text-xs font-mono">
           <div className="flex flex-wrap gap-1.5">
             <Badge variant="outline">
-              CIR: {capabilities?.hasEmitter ? 'READY' : 'NONE'}
+              {t('irCommander.diag.cirStatus', {
+                status: capabilities?.hasEmitter
+                  ? t('irCommander.diag.statusReady')
+                  : t('irCommander.diag.statusNone'),
+              })}
             </Badge>
             <Badge variant="outline">
-              sec_ir: {capabilities?.hasSecIrNode ? 'PRESENT' : 'ABSENT'}
+              {t('irCommander.diag.secIrStatus', {
+                status: capabilities?.hasSecIrNode
+                  ? t('irCommander.diag.statusPresent')
+                  : t('irCommander.diag.statusAbsent'),
+              })}
             </Badge>
             <Badge variant="outline">
-              fpga: {capabilities?.hasFpgaNode ? 'PRESENT' : 'ABSENT'}
+              {t('irCommander.diag.fpgaStatus', {
+                status: capabilities?.hasFpgaNode
+                  ? t('irCommander.diag.statusPresent')
+                  : t('irCommander.diag.statusAbsent'),
+              })}
             </Badge>
             <Badge variant="outline">
-              Magisk su: {capabilities?.suAvailable ? 'AVAILABLE' : 'UNAVAILABLE'}
+              {t('irCommander.diag.magiskSuStatus', {
+                status: capabilities?.suAvailable
+                  ? t('irCommander.diag.statusAvailable')
+                  : t('irCommander.diag.statusUnavailable'),
+              })}
             </Badge>
           </div>
 
           {capabilities && (
             <div className="rounded-lg bg-bench-950 border border-slate-800 p-3 text-[11px] text-slate-300 space-y-1">
               <div>
-                Model: {capabilities.device.manufacturer} {capabilities.device.model} (SDK{' '}
-                {capabilities.device.sdk_int} / Android {capabilities.device.android_release})
+                {t('irCommander.diag.deviceModelLine', {
+                  manufacturer: capabilities.device.manufacturer,
+                  model: capabilities.device.model,
+                  sdk: capabilities.device.sdk_int,
+                  release: capabilities.device.android_release,
+                })}
               </div>
               <div>
-                SoC/Board: hw={capabilities.device.hardware} · board={capabilities.device.board} ·
-                product={capabilities.device.product} · dev={capabilities.device.device}
+                {t('irCommander.diag.socBoardLine', {
+                  hardware: capabilities.device.hardware,
+                  board: capabilities.device.board,
+                  product: capabilities.device.product,
+                  device: capabilities.device.device,
+                })}
               </div>
               <div>
-                Carrier Spans: {formatCarrierSpans(capabilities.ranges)}
+                {t('irCommander.diag.carrierSpansLine', { spans: carrierSpansLabel })}
               </div>
             </div>
           )}
@@ -128,10 +157,12 @@ export const IrDiagnosticsTab: React.FC<IrDiagnosticsTabProps> = ({
               <Select
                 id="ir-transport-select"
                 value={transport}
-                onChange={e => onChangeTransport(e.target.value as IrTransportKind)}
+                onChange={(e) => {
+                  if (isIrTransport(e.target.value)) onChangeTransport(e.target.value);
+                }}
                 data-testid="ir-transport-select"
               >
-                {TRANSPORT_OPTIONS.map(opt => (
+                {TRANSPORT_OPTIONS.map((opt) => (
                   <option key={opt} value={opt}>
                     {opt}
                   </option>
@@ -146,12 +177,12 @@ export const IrDiagnosticsTab: React.FC<IrDiagnosticsTabProps> = ({
               <Select
                 id="ir-gpio-select"
                 value={String(picoGpioPin)}
-                onChange={e => onChangePicoGpio(Number.parseInt(e.target.value, 10))}
+                onChange={(e) => onChangePicoGpio(Number.parseInt(e.target.value, 10))}
                 data-testid="ir-gpio-select"
               >
-                {safePicoGpios.map(pin => (
+                {safePicoGpios.map((pin) => (
                   <option key={pin} value={String(pin)}>
-                    GP{pin} (PWM 38 kHz — {pin === 6 ? 'Default' : 'Spare Safe'})
+                    {`GP${pin} (PWM 38 kHz — ${pin === DEFAULT_IR_PICO_GPIO ? t('irCommander.diag.gpioDefault') : t('irCommander.diag.gpioSpareSafe')})`}
                   </option>
                 ))}
               </Select>
@@ -164,10 +195,12 @@ export const IrDiagnosticsTab: React.FC<IrDiagnosticsTabProps> = ({
               <Select
                 id="ir-timing-unit-select"
                 value={timingUnitOverride}
-                onChange={e => onChangeTimingUnit(e.target.value as IrTimingOverride)}
+                onChange={(e) => {
+                  if (isIrTimingOverride(e.target.value)) onChangeTimingUnit(e.target.value);
+                }}
                 data-testid="ir-timing-unit-select"
               >
-                {TIMING_OPTIONS.map(u => (
+                {TIMING_OPTIONS.map((u) => (
                   <option key={u} value={u}>
                     {u}
                   </option>
@@ -182,12 +215,12 @@ export const IrDiagnosticsTab: React.FC<IrDiagnosticsTabProps> = ({
               <Select
                 id="ir-repeat-select"
                 value={String(repeatCount)}
-                onChange={e => onChangeRepeatCount(Number.parseInt(e.target.value, 10))}
+                onChange={(e) => onChangeRepeatCount(Number.parseInt(e.target.value, 10))}
                 data-testid="ir-repeat-select"
               >
-                <option value="1">1x (Single Burst)</option>
-                <option value="2">2x (Dual Repeat)</option>
-                <option value="3">3x (Weak Sensor / Bright Room)</option>
+                <option value="1">{t('irCommander.diag.repeat1x')}</option>
+                <option value="2">{t('irCommander.diag.repeat2x')}</option>
+                <option value="3">{t('irCommander.diag.repeat3x')}</option>
               </Select>
             </div>
           </div>
@@ -217,7 +250,7 @@ export const IrDiagnosticsTab: React.FC<IrDiagnosticsTabProps> = ({
 
           {lastProntoHex && (
             <div className="rounded-lg bg-bench-950 border border-slate-800 p-2.5 text-[10px] text-slate-300 break-all">
-              <div className="text-slate-400 mb-1">PRONTO HEX (last TX):</div>
+              <div className="text-slate-400 mb-1">{t('irCommander.diag.prontoHexHeader')}</div>
               {lastProntoHex}
             </div>
           )}

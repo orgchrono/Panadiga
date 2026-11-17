@@ -221,3 +221,16 @@ export interface MainCapacityPatchReport {
   inspection_before: MainCapacityInspectionReport;
   inspection_after: MainCapacityInspectionReport;
 }
+
+export type HddTab =
+  | 'overview'
+  | 'mbr'
+  | 'meihdfs'
+  | 'journal'
+  | 'density'
+  | 'extract'
+  | 'allocator'
+  | 'writer'
+  | 'capacity';
+export type PatchMode = 'dynamic' | 'cap' | 'factory_200gb';
+export type CapacityPassthroughMode = 'unchanged' | 'av_passthrough' | 'factory_original';

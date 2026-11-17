@@ -35,35 +35,30 @@ export const ColdBreakinSelector: React.FC<ColdBreakinSelectorProps> = ({
         </p>
       </div>
 
-      <div
-        className="space-y-2.5"
-        role="radiogroup"
-        aria-label={t('pico.breakin.groupAria')}
-      >
+      <fieldset className="space-y-2.5 border-0 p-0 m-0">
+        <legend className="sr-only">{t('pico.breakin.groupAria')}</legend>
         {breakinModes.length === 0 ? (
           <div className="text-slate-500 text-xs p-3 font-mono">{t('pico.breakin.empty')}</div>
         ) : (
-          breakinModes.map(m => {
+          breakinModes.map((m) => {
             const isSelected = currentMode === m.mode;
             return (
-              <div
+              <label
                 key={m.mode}
-                role="radio"
-                aria-checked={isSelected}
-                tabIndex={0}
-                onClick={() => onSelectMode(m.mode)}
-                onKeyDown={e => {
-                  if (e.key === ' ' || e.key === 'Enter') {
-                    e.preventDefault();
-                    onSelectMode(m.mode);
-                  }
-                }}
-                className={`p-3.5 rounded-xl border cursor-pointer transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-bench-900 ${
+                className={`block p-3.5 rounded-xl border cursor-pointer transition-all focus-within:ring-2 focus-within:ring-cyan-400 focus-within:ring-offset-2 focus-within:ring-offset-bench-900 ${
                   isSelected
                     ? 'bg-cyan-500/10 border-cyan-500/50 shadow-md shadow-cyan-950/20'
                     : 'bg-slate-950 border-slate-800 hover:border-slate-700'
                 }`}
               >
+                <input
+                  type="radio"
+                  name="cold-breakin-mode"
+                  value={m.mode}
+                  checked={isSelected}
+                  onChange={() => onSelectMode(m.mode)}
+                  className="sr-only"
+                />
                 <div className="flex items-center justify-between mb-1 gap-2">
                   <span className={`text-xs font-bold ${isSelected ? 'text-cyan-400' : 'text-slate-200'}`}>
                     {m.label}
@@ -76,11 +71,11 @@ export const ColdBreakinSelector: React.FC<ColdBreakinSelectorProps> = ({
                 <span className="text-[10px] text-slate-500 block mt-2 font-mono">
                   {m.signal_diagram}
                 </span>
-              </div>
+              </label>
             );
           })
         )}
-      </div>
+      </fieldset>
     </Card>
   );
 };

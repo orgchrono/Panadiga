@@ -2,35 +2,62 @@ import React from 'react';
 import { AlertTriangle, RefreshCw, Unlock } from 'lucide-react';
 import { StatusBadge } from '@/components/StatusBadge';
 import { useTranslation } from '@/i18n/useTranslation';
-import { useHddCapacityViewModel } from '@/viewmodels/useHddCapacityViewModel';
+import type {
+  CapacityPassthroughMode,
+  MainCapacityInspectionReport,
+  MainCapacityPatchReport,
+  PatchMode,
+} from '@/models';
 import { CapacityInspectionGrid } from './capacity/CapacityInspectionGrid';
 import { CapacityStrategyPanel } from './capacity/CapacityStrategyPanel';
 import { PatchOutputBanner, RtsdPresetsTable } from './capacity/RtsdPresetsTable';
 
-export const HddCapacityPatcherCard: React.FC = () => {
+export interface HddCapacityPatcherCardProps {
+  readonly inputPath: string;
+  readonly setInputPath: (value: string) => void;
+  readonly outputPath: string;
+  readonly setOutputPath: (value: string) => void;
+  readonly mode: PatchMode;
+  readonly setMode: (mode: PatchMode) => void;
+  readonly targetGb: number;
+  readonly setTargetGb: (gb: number) => void;
+  readonly limitInDynamicMode: boolean;
+  readonly setLimitInDynamicMode: (limit: boolean) => void;
+  readonly passthroughMode: CapacityPassthroughMode;
+  readonly setPassthroughMode: (mode: CapacityPassthroughMode) => void;
+  readonly inspection: MainCapacityInspectionReport | null;
+  readonly patchReport: MainCapacityPatchReport | null;
+  readonly inspecting: boolean;
+  readonly patching: boolean;
+  readonly inspectError: string | null;
+  readonly previewBlocks: number;
+  readonly runInspect: (customInput?: string) => Promise<void>;
+  readonly handleApplyPatch: () => Promise<void>;
+}
+
+export const HddCapacityPatcherCard: React.FC<HddCapacityPatcherCardProps> = ({
+  inputPath,
+  setInputPath,
+  outputPath,
+  setOutputPath,
+  mode,
+  setMode,
+  targetGb,
+  setTargetGb,
+  limitInDynamicMode,
+  setLimitInDynamicMode,
+  passthroughMode,
+  setPassthroughMode,
+  inspection,
+  patchReport,
+  inspecting,
+  patching,
+  inspectError,
+  previewBlocks,
+  runInspect,
+  handleApplyPatch,
+}) => {
   const { t } = useTranslation();
-  const {
-    inputPath,
-    setInputPath,
-    outputPath,
-    setOutputPath,
-    mode,
-    setMode,
-    targetGb,
-    setTargetGb,
-    limitInDynamicMode,
-    setLimitInDynamicMode,
-    passthroughMode,
-    setPassthroughMode,
-    inspection,
-    patchReport,
-    inspecting,
-    patching,
-    inspectError,
-    previewBlocks,
-    runInspect,
-    handleApplyPatch,
-  } = useHddCapacityViewModel();
 
   return (
     <div className="space-y-6 font-mono">
@@ -69,14 +96,18 @@ export const HddCapacityPatcherCard: React.FC = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 text-xs">
           <div className="space-y-1.5">
-            <label className="text-[11px] text-slate-400 font-semibold uppercase block">
+            <label
+              htmlFor="hdd-capacity-input-path"
+              className="text-[11px] text-slate-400 font-semibold uppercase block"
+            >
               {t('hdd.capacity.inputLabel')}
             </label>
             <div className="flex gap-2">
               <input
+                id="hdd-capacity-input-path"
                 type="text"
                 value={inputPath}
-                onChange={e => setInputPath(e.target.value)}
+                onChange={(e) => setInputPath(e.target.value)}
                 placeholder="firmware_and_images/extracted_partitions/hdd_partition_firmware_0x02000000.bin"
                 className="flex-1 px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
               />
@@ -93,13 +124,17 @@ export const HddCapacityPatcherCard: React.FC = () => {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-[11px] text-slate-400 font-semibold uppercase block">
+            <label
+              htmlFor="hdd-capacity-output-path"
+              className="text-[11px] text-slate-400 font-semibold uppercase block"
+            >
               {t('hdd.capacity.outputLabel')}
             </label>
             <input
+              id="hdd-capacity-output-path"
               type="text"
               value={outputPath}
-              onChange={e => setOutputPath(e.target.value)}
+              onChange={(e) => setOutputPath(e.target.value)}
               placeholder={t('hdd.capacity.outputPlaceholder')}
               className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
             />

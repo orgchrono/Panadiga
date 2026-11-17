@@ -1,7 +1,15 @@
 /**
  * Android Native Hardware Bridge Client (USB-C OTG CDC-ACM + Bluetooth LE NUS)
- * Wraps `window.__PANADIGA_ANDROID_BRIDGE__` injected by MainActivity.kt on Tauri Android APKs.
+ * Wraps `window.__PANADIGA_ANDROID_BRIDGE__` via `resolveAndroidNativeBridge()` + strict guards.
  */
+
+import { translate } from '@/i18n/useTranslation';
+import { isRecord, safeParseJson } from '@/utils/typeGuards';
+import { resolveAndroidNativeBridge } from './hostBridge';
+
+const DEFAULT_USB_TIMEOUT_MS = 3000;
+const DEFAULT_BLE_CONNECT_TIMEOUT_MS = 10000;
+const DEFAULT_BLE_CMD_TIMEOUT_MS = 4000;
 
 export interface AndroidBridgeCapabilities {
   platform: 'android';
@@ -30,109 +38,121 @@ export interface AndroidBridgeCommandResult {
   output: string;
 }
 
-interface RawAndroidBridge {
-  isAvailable(): boolean;
-  getCapabilitiesJson(): string;
-  requestPermissions(): boolean;
-  listUsbOtgDevicesJson(): string;
-  connectUsbOtg(targetDeviceName: string): string;
-  disconnectUsbOtg(): void;
-  sendUsbOtgCommand(command: string, timeoutMs: number): string;
-  connectBleNus(timeoutMs: number): string;
-  sendBleCommand(command: string, timeoutMs: number): string;
-  disconnectBleNus(): void;
+function isAndroidBridgeCapabilities(value: unknown): value is AndroidBridgeCapabilities {
+  return (
+    isRecord(value) &&
+    value.platform === 'android' &&
+    typeof value.usbHostSupported === 'boolean' &&
+    typeof value.bleSupported === 'boolean' &&
+    typeof value.bluetoothEnabled === 'boolean'
+  );
 }
 
-declare global {
-  interface Window {
-    __PANADIGA_ANDROID_BRIDGE__?: RawAndroidBridge;
-  }
+function isAndroidUsbDeviceInfo(value: unknown): value is AndroidUsbDeviceInfo {
+  return (
+    isRecord(value) &&
+    typeof value.deviceName === 'string' &&
+    typeof value.vendorId === 'number' &&
+    typeof value.productId === 'number' &&
+    typeof value.productName === 'string' &&
+    typeof value.isRaspberryPi === 'boolean' &&
+    typeof value.isBootsel === 'boolean'
+  );
 }
 
-function getRawBridge(): RawAndroidBridge | null {
-  if (typeof window === 'undefined') return null;
-  const candidate = window.__PANADIGA_ANDROID_BRIDGE__;
-  return candidate && typeof candidate.isAvailable === 'function' ? candidate : null;
+function isAndroidUsbDeviceList(value: unknown): value is AndroidUsbDeviceInfo[] {
+  return Array.isArray(value) && value.every(isAndroidUsbDeviceInfo);
+}
+
+function isAndroidBridgeConnectResult(value: unknown): value is AndroidBridgeConnectResult {
+  return (
+    isRecord(value) &&
+    typeof value.connected === 'boolean' &&
+    typeof value.message === 'string' &&
+    (value.deviceName === undefined || typeof value.deviceName === 'string')
+  );
+}
+
+function isAndroidBridgeCommandResult(value: unknown): value is AndroidBridgeCommandResult {
+  return isRecord(value) && typeof value.ok === 'boolean' && typeof value.output === 'string';
 }
 
 export function isAndroidNativeBridgeAvailable(): boolean {
-  return getRawBridge()?.isAvailable() ?? false;
-}
-
-function safeParseBridgeJson<T>(raw: string, fallback: T): T {
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    return fallback;
-  }
+  return resolveAndroidNativeBridge()?.isAvailable() ?? false;
 }
 
 export function getAndroidCapabilities(): AndroidBridgeCapabilities | null {
-  const bridge = getRawBridge();
+  const bridge = resolveAndroidNativeBridge();
   if (!bridge) return null;
-  return safeParseBridgeJson<AndroidBridgeCapabilities | null>(bridge.getCapabilitiesJson(), null);
+  return safeParseJson<AndroidBridgeCapabilities | null>(
+    bridge.getCapabilitiesJson(),
+    (value): value is AndroidBridgeCapabilities | null => isAndroidBridgeCapabilities(value),
+    null,
+  );
 }
 
 export function listAndroidUsbOtgDevices(): AndroidUsbDeviceInfo[] {
-  const bridge = getRawBridge();
+  const bridge = resolveAndroidNativeBridge();
   if (!bridge) return [];
-  return safeParseBridgeJson<AndroidUsbDeviceInfo[]>(bridge.listUsbOtgDevicesJson(), []);
+  return safeParseJson(bridge.listUsbOtgDevicesJson(), isAndroidUsbDeviceList, []);
 }
 
 export function connectAndroidUsbOtg(deviceName = ''): AndroidBridgeConnectResult {
-  const bridge = getRawBridge();
+  const bridge = resolveAndroidNativeBridge();
   if (!bridge) {
-    return { connected: false, message: 'Bridge USB OTG disponível apenas no APK Android.' };
+    return { connected: false, message: translate('errors.androidBridge.usbOtgDesktopOnly') };
   }
-  return safeParseBridgeJson<AndroidBridgeConnectResult>(bridge.connectUsbOtg(deviceName), {
+  return safeParseJson(bridge.connectUsbOtg(deviceName), isAndroidBridgeConnectResult, {
     connected: false,
-    message: 'Resposta JSON inválida da bridge USB OTG Android.',
+    message: translate('errors.androidBridge.usbOtgInvalidConnectJson'),
   });
 }
 
 export function sendAndroidUsbOtgCommand(
   command: string,
-  timeoutMs = 3000
+  timeoutMs = DEFAULT_USB_TIMEOUT_MS,
 ): AndroidBridgeCommandResult {
-  const bridge = getRawBridge();
+  const bridge = resolveAndroidNativeBridge();
   if (!bridge) {
-    return { ok: false, output: 'Bridge USB OTG indisponível.' };
+    return { ok: false, output: translate('errors.androidBridge.usbOtgUnavailable') };
   }
-  return safeParseBridgeJson<AndroidBridgeCommandResult>(
-    bridge.sendUsbOtgCommand(command, timeoutMs),
-    { ok: false, output: 'Resposta JSON inválida do comando USB OTG.' }
-  );
+  return safeParseJson(bridge.sendUsbOtgCommand(command, timeoutMs), isAndroidBridgeCommandResult, {
+    ok: false,
+    output: translate('errors.androidBridge.usbOtgInvalidCmdJson'),
+  });
 }
 
 export function disconnectAndroidUsbOtg(): void {
-  getRawBridge()?.disconnectUsbOtg();
+  resolveAndroidNativeBridge()?.disconnectUsbOtg();
 }
 
-export function connectAndroidBleNus(timeoutMs = 10000): AndroidBridgeConnectResult {
-  const bridge = getRawBridge();
+export function connectAndroidBleNus(
+  timeoutMs = DEFAULT_BLE_CONNECT_TIMEOUT_MS,
+): AndroidBridgeConnectResult {
+  const bridge = resolveAndroidNativeBridge();
   if (!bridge) {
-    return { connected: false, message: 'Bridge BLE nativo disponível apenas no APK Android.' };
+    return { connected: false, message: translate('errors.androidBridge.bleDesktopOnly') };
   }
-  return safeParseBridgeJson<AndroidBridgeConnectResult>(bridge.connectBleNus(timeoutMs), {
+  return safeParseJson(bridge.connectBleNus(timeoutMs), isAndroidBridgeConnectResult, {
     connected: false,
-    message: 'Resposta JSON inválida da bridge BLE Android.',
+    message: translate('errors.androidBridge.bleInvalidConnectJson'),
   });
 }
 
 export function sendAndroidBleCommand(
   command: string,
-  timeoutMs = 4000
+  timeoutMs = DEFAULT_BLE_CMD_TIMEOUT_MS,
 ): AndroidBridgeCommandResult {
-  const bridge = getRawBridge();
+  const bridge = resolveAndroidNativeBridge();
   if (!bridge) {
-    return { ok: false, output: 'Bridge BLE nativo indisponível.' };
+    return { ok: false, output: translate('errors.androidBridge.bleUnavailable') };
   }
-  return safeParseBridgeJson<AndroidBridgeCommandResult>(
-    bridge.sendBleCommand(command, timeoutMs),
-    { ok: false, output: 'Resposta JSON inválida do comando BLE Android.' }
-  );
+  return safeParseJson(bridge.sendBleCommand(command, timeoutMs), isAndroidBridgeCommandResult, {
+    ok: false,
+    output: translate('errors.androidBridge.bleInvalidCmdJson'),
+  });
 }
 
 export function disconnectAndroidBleNus(): void {
-  getRawBridge()?.disconnectBleNus();
+  resolveAndroidNativeBridge()?.disconnectBleNus();
 }

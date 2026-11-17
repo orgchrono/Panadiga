@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Reorder } from 'framer-motion';
 import { ViewKey } from '@/components/Sidebar';
+import type { TranslationKey } from '@/i18n/translations';
+import { useTranslation } from '@/i18n/useTranslation';
 import { HardDrive, Cpu, Radio, ArrowRight, GripHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -8,13 +10,13 @@ interface DashboardInstrumentsProps {
   onNavigate: (view: ViewKey) => void;
 }
 
-interface InstrumentCardDef {
+interface InstrumentStyleDef {
   readonly view: ViewKey;
-  readonly ariaLabel: string;
-  readonly title: string;
-  readonly description: string;
-  readonly footerLeft: string;
-  readonly footerRight: string;
+  readonly ariaKey: TranslationKey;
+  readonly titleKey: TranslationKey;
+  readonly descKey: TranslationKey;
+  readonly footerLeftKey: TranslationKey;
+  readonly footerRightKey: TranslationKey;
   readonly borderHover: string;
   readonly iconTone: string;
   readonly titleHover: string;
@@ -22,15 +24,14 @@ interface InstrumentCardDef {
   readonly Icon: React.ComponentType<{ className?: string }>;
 }
 
-const DEFAULT_INSTRUMENTS: readonly InstrumentCardDef[] = [
+const DEFAULT_INSTRUMENTS: readonly InstrumentStyleDef[] = [
   {
     view: 'nvram',
-    ariaLabel: 'Abrir Cirurgia de NVRAM U99',
-    title: 'Cirurgia de NVRAM (U99)',
-    description:
-      'Auditoria de microsetores SA0..SA141, limpeza cirúrgica dos 64KB de EEPROM emulada (0xFF) mantendo o bootloader imutável.',
-    footerLeft: '8 Microsetores de 8KB',
-    footerRight: '1-Clique Fix',
+    ariaKey: 'dashboard.instruments.nvram.aria',
+    titleKey: 'dashboard.instruments.nvram.title',
+    descKey: 'dashboard.instruments.nvram.desc',
+    footerLeftKey: 'dashboard.instruments.nvram.footerLeft',
+    footerRightKey: 'dashboard.instruments.nvram.footerRight',
     borderHover: 'hover:border-amber-500/50 focus:ring-amber-500/50',
     iconTone: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
     titleHover: 'group-hover:text-amber-300',
@@ -39,12 +40,11 @@ const DEFAULT_INSTRUMENTS: readonly InstrumentCardDef[] = [
   },
   {
     view: 'hdd',
-    ariaLabel: 'Abrir Forensics do Disco Rígido',
-    title: 'Forensics do Disco Rígido (100MB)',
-    description:
-      'Validação MBR "SH" vs Espelho LBA 57.344, decodificação MEIHDFS (XOR 0xFF), histórico do Journal WAL (10 blocos) e extração com manifesto.',
-    footerLeft: '256 Registros MEIHDFS',
-    footerRight: 'SHA256SUMS',
+    ariaKey: 'dashboard.instruments.hdd.aria',
+    titleKey: 'dashboard.instruments.hdd.title',
+    descKey: 'dashboard.instruments.hdd.desc',
+    footerLeftKey: 'dashboard.instruments.hdd.footerLeft',
+    footerRightKey: 'dashboard.instruments.hdd.footerRight',
     borderHover: 'hover:border-cyan-500/50 focus:ring-cyan-500/50',
     iconTone: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
     titleHover: 'group-hover:text-cyan-300',
@@ -53,12 +53,11 @@ const DEFAULT_INSTRUMENTS: readonly InstrumentCardDef[] = [
   },
   {
     view: 'picobench',
-    ariaLabel: 'Abrir Bancada PicoBench P7501 UART',
-    title: 'Bancada PicoBench (P7501 UART / OCD)',
-    description:
-      'Captura UART P7501 (115200 8N1), matriz elétrica de 6 pinos, monitoramento ADC0 SW_UART e modo legado Cold Break-In / RAM Loader.',
-    footerLeft: 'P7501 Async UART',
-    footerRight: 'Boot & Recovery',
+    ariaKey: 'dashboard.instruments.picobench.aria',
+    titleKey: 'dashboard.instruments.picobench.title',
+    descKey: 'dashboard.instruments.picobench.desc',
+    footerLeftKey: 'dashboard.instruments.picobench.footerLeft',
+    footerRightKey: 'dashboard.instruments.picobench.footerRight',
     borderHover: 'hover:border-emerald-500/50 focus:ring-emerald-500/50',
     iconTone: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
     titleHover: 'group-hover:text-emerald-300',
@@ -68,48 +67,55 @@ const DEFAULT_INSTRUMENTS: readonly InstrumentCardDef[] = [
 ];
 
 export const DashboardInstruments: React.FC<DashboardInstrumentsProps> = ({ onNavigate }) => {
-  const [cards, setCards] = useState<InstrumentCardDef[]>(() => [...DEFAULT_INSTRUMENTS]);
+  const { t } = useTranslation();
+  const [order, setOrder] = useState<ViewKey[]>(() => DEFAULT_INSTRUMENTS.map((d) => d.view));
+
+  const orderedCards = useMemo(
+    () =>
+      order
+        .map((view) => DEFAULT_INSTRUMENTS.find((item) => item.view === view))
+        .filter((item): item is InstrumentStyleDef => item !== undefined),
+    [order],
+  );
 
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <h3 className="text-xs font-mono font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-          <span>Instrumentos de Bancada & Recuperação</span>
+          <span>{t('dashboard.instruments.heading')}</span>
         </h3>
         <span className="text-[10px] font-mono text-slate-500">
-          Arraste os cartões para reorganizar a prioridade
+          {t('dashboard.instruments.dragHint')}
         </span>
       </div>
 
-      {cards.length === 0 ? (
+      {orderedCards.length === 0 ? (
         <div className="p-4 rounded-xl border border-slate-800 bg-bench-900 text-xs text-slate-500 font-mono">
-          Nenhum instrumento configurado.
+          {t('dashboard.instruments.empty')}
         </div>
       ) : (
         <Reorder.Group
           axis="x"
-          values={cards}
-          onReorder={setCards}
+          values={order}
+          onReorder={setOrder}
           className="grid grid-cols-1 md:grid-cols-3 gap-4 list-none p-0 m-0"
         >
-          {cards.map(card => {
+          {orderedCards.map((card) => {
             const Icon = card.Icon;
             return (
               <Reorder.Item
                 key={card.view}
-                value={card}
+                value={card.view}
                 whileDrag={{ scale: 1.02 }}
                 className="list-none"
               >
-                <div
-                  role="button"
-                  tabIndex={0}
-                  aria-label={card.ariaLabel}
+                <button
+                  type="button"
+                  aria-label={t(card.ariaKey)}
                   onClick={() => onNavigate(card.view)}
-                  onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && onNavigate(card.view)}
                   className={cn(
-                    'group cursor-pointer h-full p-4 rounded-xl bg-bench-900 border border-slate-800 hover:bg-bench-850 transition-all duration-150 shadow-lg flex flex-col justify-between focus:outline-none focus:ring-1',
-                    card.borderHover
+                    'w-full text-left group cursor-pointer h-full p-4 rounded-xl bg-bench-900 border border-slate-800 hover:bg-bench-850 transition-all duration-150 shadow-lg flex flex-col justify-between focus:outline-none focus:ring-1',
+                    card.borderHover,
                   )}
                 >
                   <div>
@@ -117,7 +123,7 @@ export const DashboardInstruments: React.FC<DashboardInstrumentsProps> = ({ onNa
                       <div
                         className={cn(
                           'p-2 rounded-lg border group-hover:scale-110 transition-transform',
-                          card.iconTone
+                          card.iconTone,
                         )}
                       >
                         <Icon className="w-5 h-5" />
@@ -128,22 +134,22 @@ export const DashboardInstruments: React.FC<DashboardInstrumentsProps> = ({ onNa
                       </div>
                     </div>
                     <h4 className={cn('text-xs font-bold font-mono text-slate-200', card.titleHover)}>
-                      {card.title}
+                      {t(card.titleKey)}
                     </h4>
                     <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
-                      {card.description}
+                      {t(card.descKey)}
                     </p>
                   </div>
                   <div
                     className={cn(
                       'mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-[11px] font-mono',
-                      card.footerTone
+                      card.footerTone,
                     )}
                   >
-                    <span>{card.footerLeft}</span>
-                    <span className="text-slate-500">{card.footerRight}</span>
+                    <span>{t(card.footerLeftKey)}</span>
+                    <span className="text-slate-500">{t(card.footerRightKey)}</span>
                   </div>
-                </div>
+                </button>
               </Reorder.Item>
             );
           })}

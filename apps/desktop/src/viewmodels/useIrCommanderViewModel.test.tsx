@@ -4,6 +4,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '@/context/ToastContext';
 import { Provider } from 'react-redux';
 import { createAppStore } from '@/store';
+import {
+  installAndroidIrTestBridge,
+  installAndroidNativeTestBridge,
+} from '@/test/mocks/testHostBridges';
 import { useIrCommanderViewModel } from './useIrCommanderViewModel';
 
 const Wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -29,7 +33,7 @@ describe('useIrCommanderViewModel', () => {
     usbCmdSpy.mockClear();
     connectUsbSpy.mockClear();
 
-    window.__PANADIGA_IR_BRIDGE__ = {
+    installAndroidIrTestBridge({
       isAvailable: () => true,
       getCapabilitiesJson: () =>
         JSON.stringify({
@@ -59,9 +63,9 @@ describe('useIrCommanderViewModel', () => {
       saveSettings: () => JSON.stringify({ ok: true }),
       saveCustomProfilesJson: () => true,
       transmitPreparedJson: transmitSpy,
-    };
+    });
 
-    window.__PANADIGA_ANDROID_BRIDGE__ = {
+    installAndroidNativeTestBridge({
       isAvailable: () => true,
       getCapabilitiesJson: () =>
         JSON.stringify({
@@ -78,12 +82,12 @@ describe('useIrCommanderViewModel', () => {
       connectBleNus: () => JSON.stringify({ connected: false, message: 'No BLE' }),
       sendBleCommand: () => JSON.stringify({ ok: false, output: '' }),
       disconnectBleNus: () => undefined,
-    };
+    });
   });
 
   afterEach(() => {
-    delete window.__PANADIGA_IR_BRIDGE__;
-    delete window.__PANADIGA_ANDROID_BRIDGE__;
+    installAndroidIrTestBridge(undefined);
+    installAndroidNativeTestBridge(undefined);
   });
 
   it('loads offline catalog stats, deck profile, verified macros and transmits via Android HAL', async () => {

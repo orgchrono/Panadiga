@@ -1,4 +1,5 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import { IR_MAX_REPEAT_COUNT } from '@/constants';
 import type {
   DynamicKeymapProfile,
   IrTimingOverride,
@@ -7,6 +8,8 @@ import type {
   RemoteMode,
   RemoteUnitSet,
 } from '@/models/ir';
+
+const DEFAULT_IR_GPIO_PIN = 6;
 
 export interface IrCommanderState {
   mode: RemoteMode;
@@ -37,7 +40,7 @@ export const initialIrCommanderState: IrCommanderState = {
   mode: 'DVD',
   remoteUnit: 1,
   transport: 'AUTO',
-  picoGpioPin: 6,
+  picoGpioPin: DEFAULT_IR_GPIO_PIN,
   timingUnitOverride: 'AUTO',
   repeatCount: 1,
   editMode: false,
@@ -63,51 +66,57 @@ const irCommanderSlice = createSlice({
   initialState: initialIrCommanderState,
   reducers: {
     setMode(state, action: PayloadAction<RemoteMode>) {
-      state.mode = action.payload;
+      return { ...state, mode: action.payload };
     },
     setRemoteUnit(state, action: PayloadAction<RemoteUnitSet>) {
-      state.remoteUnit = action.payload;
+      return { ...state, remoteUnit: action.payload };
     },
     setTransport(state, action: PayloadAction<IrTransportKind>) {
-      state.transport = action.payload;
+      return { ...state, transport: action.payload };
     },
     setPicoGpioPin(state, action: PayloadAction<number>) {
-      state.picoGpioPin = action.payload;
+      return { ...state, picoGpioPin: action.payload };
     },
     setTimingUnitOverride(state, action: PayloadAction<IrTimingOverride>) {
-      state.timingUnitOverride = action.payload;
+      return { ...state, timingUnitOverride: action.payload };
     },
     setRepeatCount(state, action: PayloadAction<number>) {
-      state.repeatCount = Math.min(3, Math.max(1, action.payload));
+      return {
+        ...state,
+        repeatCount: Math.min(IR_MAX_REPEAT_COUNT, Math.max(1, action.payload)),
+      };
     },
     setEditMode(state, action: PayloadAction<boolean>) {
-      state.editMode = action.payload;
+      return { ...state, editMode: action.payload };
     },
     setSearchQuery(state, action: PayloadAction<string>) {
-      state.searchQuery = action.payload;
+      return { ...state, searchQuery: action.payload };
     },
     setSelectedCategory(state, action: PayloadAction<PanasonicCategory>) {
-      state.selectedCategory = action.payload;
+      return { ...state, selectedCategory: action.payload };
     },
     setActiveProfile(state, action: PayloadAction<DynamicKeymapProfile | null>) {
-      state.activeProfile = action.payload;
+      return { ...state, activeProfile: action.payload };
     },
     setSavedProfiles(state, action: PayloadAction<DynamicKeymapProfile[]>) {
-      state.savedProfiles = action.payload;
+      return { ...state, savedProfiles: action.payload };
     },
     setMacroProgress(
       state,
       action: PayloadAction<{ id: string | null; step: number; total: number }>,
     ) {
-      state.activeMacroId = action.payload.id;
-      state.macroStepIndex = action.payload.step;
-      state.macroTotalSteps = action.payload.total;
+      return {
+        ...state,
+        activeMacroId: action.payload.id,
+        macroStepIndex: action.payload.step,
+        macroTotalSteps: action.payload.total,
+      };
     },
     setTransmitting(state, action: PayloadAction<boolean>) {
-      state.isTransmitting = action.payload;
+      return { ...state, isTransmitting: action.payload };
     },
     setBeaconRunning(state, action: PayloadAction<boolean>) {
-      state.isBeaconRunning = action.payload;
+      return { ...state, isBeaconRunning: action.payload };
     },
     setTransmissionTelemetry(
       state,
@@ -119,15 +128,18 @@ const irCommanderSlice = createSlice({
         backendUsed: string;
       }>,
     ) {
-      state.vfdPrimary = action.payload.primary;
-      state.vfdSecondary = action.payload.secondary;
-      state.lastWireHex = action.payload.wireHex;
-      state.lastProntoHex = action.payload.prontoHex;
-      state.lastBackendUsed = action.payload.backendUsed;
-      state.error = null;
+      return {
+        ...state,
+        vfdPrimary: action.payload.primary,
+        vfdSecondary: action.payload.secondary,
+        lastWireHex: action.payload.wireHex,
+        lastProntoHex: action.payload.prontoHex,
+        lastBackendUsed: action.payload.backendUsed,
+        error: null,
+      };
     },
     setError(state, action: PayloadAction<string | null>) {
-      state.error = action.payload;
+      return { ...state, error: action.payload };
     },
   },
 });

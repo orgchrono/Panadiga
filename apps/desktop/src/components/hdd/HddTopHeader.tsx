@@ -2,6 +2,7 @@ import React from 'react';
 import { HardDrive, Download, FolderOpen } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { StatusBadge } from '@/components/StatusBadge';
+import { KIB_BYTES } from '@/constants';
 import { useTranslation } from '@/i18n/useTranslation';
 import { HddAnalysisReport } from '@/models';
 
@@ -20,10 +21,10 @@ export const HddTopHeader: React.FC<HddTopHeaderProps> = ({
 }) => {
   const { t } = useTranslation();
 
-  const fileName = report ? report.image_path.split(/[/\\]/).pop() || report.image_path : null;
-  const isGb = (report?.file_size_mb ?? 0) >= 1024;
+  const fileName = report ? report.image_path.split(/[/\\]/).at(-1) || report.image_path : null;
+  const isGb = (report?.file_size_mb ?? 0) >= KIB_BYTES;
   const sizeFormatted = isGb
-    ? `${((report?.file_size_mb ?? 0) / 1024).toFixed(2)} GB`
+    ? `${((report?.file_size_mb ?? 0) / KIB_BYTES).toFixed(2)} GB`
     : `${report?.file_size_mb.toFixed(2)} MB`;
 
   return (
@@ -35,22 +36,26 @@ export const HddTopHeader: React.FC<HddTopHeaderProps> = ({
         <div>
           <div className="flex items-center gap-2 flex-wrap">
             <h2 className="text-base font-bold text-slate-100">
-              {fileName ? fileName : t('hdd.noImageTitle', 'Nenhuma Imagem de Disco Carregada')}
+              {fileName || t('hdd.noImageTitle')}
             </h2>
             {report ? (
               report.mbr_tables.mirror_is_bit_identical ? (
-                <StatusBadge variant="success" label={t('hdd.badgeOk', 'MBR & ESPELHO 100% OK')} />
+                <StatusBadge variant="success" label={t('hdd.badgeOk')} />
               ) : (
-                <StatusBadge variant="error" label="ESPELHO COM DIVERGÊNCIA" />
+                <StatusBadge variant="error" label={t('hdd.badgeMismatch')} />
               )
             ) : (
-              <StatusBadge variant="neutral" label="OFFLINE" />
+              <StatusBadge variant="neutral" label={t('hdd.offlineBadge')} />
             )}
           </div>
           <p className="text-xs text-slate-400 mt-0.5">
             {report
-              ? `${sizeFormatted} • ${report.total_sectors.toLocaleString()} setores LBA • Magic: ${report.mbr_tables.magic_ascii || 'PAD_HDD'}`
-              : t('hdd.noImageSub', 'Selecione um arquivo de imagem .bin / .raw ou acerte um disco físico na aba Gravação Direta')}
+              ? t('hdd.headerMeta', {
+                  size: sizeFormatted,
+                  sectors: report.total_sectors.toLocaleString(),
+                  magic: report.mbr_tables.magic_ascii || 'PAD_HDD',
+                })
+              : t('hdd.noImageSub')}
           </p>
         </div>
       </div>
@@ -64,7 +69,7 @@ export const HddTopHeader: React.FC<HddTopHeaderProps> = ({
             className="font-bold text-xs gap-2"
           >
             <FolderOpen className="w-4 h-4 text-cyan-400" />
-            <span>{t('hdd.openImage', 'Abrir Imagem')}</span>
+            <span>{t('hdd.openImage')}</span>
           </Button>
         )}
 
@@ -74,11 +79,11 @@ export const HddTopHeader: React.FC<HddTopHeaderProps> = ({
           className="px-5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs gap-2 shadow-xl shadow-cyan-950/50"
         >
           {extracting ? (
-            <span>{t('hdd.extracting', 'Extraindo Partições...')}</span>
+            <span>{t('hdd.extracting')}</span>
           ) : (
             <>
               <Download className="w-4 h-4" />
-              <span>{t('hdd.extractButton', 'Extrair Partições (SHA256SUMS)')}</span>
+              <span>{t('hdd.extractButton')}</span>
             </>
           )}
         </Button>

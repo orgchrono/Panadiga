@@ -29,7 +29,7 @@ describe('useInCircuitErase ViewModel', () => {
     expect(onLog).toHaveBeenCalledWith(
       'info',
       'HOST',
-      expect.stringContaining('Disparando sequência cirúrgica')
+      expect.stringMatching(/Triggering surgical sequence|Disparando sequência cirúrgica/),
     );
     expect(result.current.isErasing).toBe(false);
   });
