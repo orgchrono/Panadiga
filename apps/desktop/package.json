@@ -66,7 +66,7 @@
   },
   "overrides": {
     "minimatch": "^11.0.1",
-    "zod": "^4.6.6",
+    "zod": "$zod",
     "typescript": "$typescript",
     "vite": "$vite"
   },
