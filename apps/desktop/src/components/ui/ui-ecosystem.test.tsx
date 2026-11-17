@@ -10,11 +10,17 @@ import { resetPipeline, resetWorkbenchPreferences } from '@/store/slices/workben
 import { clearToasts } from '@/store/slices/toastSlice';
 import { setGlobalLocale } from '@/i18n/useTranslation';
 import {
+  BottomConsoleDrawer,
+  ComplianceDialog,
   DraggableBenchHud,
   GuidedPipelineBar,
+  LeftCommandDock,
   RangeDndScrubber,
   ResizableSplitPane,
+  RightTelemetryDock,
+  WorkbenchStatusBar,
 } from './index';
+import type { PicoDiagnosticResult, SerialLogEntry } from '@/models';
 
 describe('React UI Ecosystem Primitives (Resizable, RangeDnD, Pipeline, HUD, Sonner)', () => {
   beforeEach(() => {
@@ -189,5 +195,188 @@ describe('React UI Ecosystem Primitives (Resizable, RangeDnD, Pipeline, HUD, Son
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark-lab');
     expect(document.documentElement.getAttribute('data-colorblind')).toBe('false');
     expect(window.localStorage.getItem('panadiga.split.hex')).toBeNull();
+  });
+
+  it('ComplianceDialog renders checklist & invariants and enforces checkbox before accept', () => {
+    const onOpenChange = vi.fn();
+    const onAccept = vi.fn();
+    render(<ComplianceDialog open={true} onOpenChange={onOpenChange} onAccept={onAccept} />);
+
+    expect(screen.getByTestId('compliance-dialog')).toBeTruthy();
+    expect(screen.getByText('4-Stage Recovery Workflow')).toBeTruthy();
+    expect(screen.getByText(/3\.3V LVTTL Only & NSW5V Hi-Z \(GP3\)/)).toBeTruthy();
+    expect(screen.getByText(/Open-Drain XRESET \(Pin 2 \/ GP5\)/)).toBeTruthy();
+
+    const acceptBtn = screen.getByTestId('compliance-accept-btn');
+    expect(acceptBtn).toHaveProperty('disabled', true);
+    fireEvent.click(acceptBtn);
+    expect(onAccept).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByTestId('compliance-ack-checkbox'));
+    expect(acceptBtn).toHaveProperty('disabled', false);
+    fireEvent.click(acceptBtn);
+    expect(onAccept).toHaveBeenCalledTimes(1);
+  });
+
+  it('LeftCommandDock, RightTelemetryDock, BottomConsoleDrawer, and WorkbenchStatusBar operate together with form validation', () => {
+    const onRunCommand = vi.fn();
+    const onOpenPicoBench = vi.fn();
+    const onClearLogs = vi.fn();
+    const onSendCommand = vi.fn();
+    const onToggleLeftDock = vi.fn();
+    const onToggleBottomDock = vi.fn();
+    const onToggleRightDock = vi.fn();
+    const onToggleExpand = vi.fn();
+    const onOpenCompliance = vi.fn();
+
+    const sampleLogs: SerialLogEntry[] = [
+      { id: 'l1', timestamp: '12:00:01', source: 'HOST', level: 'tx', message: 'PINCHECK' },
+      { id: 'l2', timestamp: '12:00:02', source: 'PICO', level: 'rx', message: 'OK P7501' },
+      { id: 'l3', timestamp: '12:00:03', source: 'TARGET', level: 'error', message: 'ERR U99' },
+    ];
+    const latestDiagnostic: PicoDiagnosticResult = {
+      command_id: 'PINCHECK',
+      raw_command: 'PINCHECK',
+      success: true,
+      elapsed_ms: 18,
+      summary: 'P7501 lines verified',
+      raw_output: 'OK',
+      vdd_volts: 3.29,
+      pincheck_rows: [],
+      transition_rows: [],
+      dump_rows: [],
+    };
+
+    const DockHarness: React.FC = () => {
+      const [commandInput, setCommandInput] = React.useState('');
+      return (
+        <>
+          <LeftCommandDock
+            open={true}
+            onClose={onToggleLeftDock}
+            onRunCommand={onRunCommand}
+            onOpenPicoBench={onOpenPicoBench}
+            hardwareConnected={true}
+            breakinMode={2}
+          />
+          <RightTelemetryDock
+            open={true}
+            onClose={onToggleRightDock}
+            hardwareConnected={true}
+            vddVolts={3.29}
+            portName="COM10"
+            modelId="RP2040"
+            gdbRunning={true}
+            gdbListenAddr="127.0.0.1:3333"
+            sc0Running={true}
+            latestDiagnostic={latestDiagnostic}
+          />
+          <BottomConsoleDrawer
+            open={true}
+            expanded={false}
+            onToggleExpand={onToggleExpand}
+            onClose={onToggleBottomDock}
+            logs={sampleLogs}
+            onClearLogs={onClearLogs}
+            commandInput={commandInput}
+            onCommandInputChange={setCommandInput}
+            onSendCommand={onSendCommand}
+            hardwareConnected={true}
+          />
+          <WorkbenchStatusBar
+            currentStageLabel="Pico Bench"
+            hardwareConnected={true}
+            vddVolts={3.29}
+            portName="COM10"
+            logCount={sampleLogs.length}
+            docks={{ leftOpen: true, rightOpen: true, bottomOpen: true, bottomExpanded: false }}
+            onToggleLeftDock={onToggleLeftDock}
+            onToggleBottomDock={onToggleBottomDock}
+            onToggleRightDock={onToggleRightDock}
+            onOpenCompliance={onOpenCompliance}
+          />
+        </>
+      );
+    };
+
+    render(<DockHarness />);
+
+    expect(screen.getByTestId('left-command-dock')).toBeTruthy();
+    expect(screen.getByTestId('right-telemetry-dock')).toBeTruthy();
+    expect(screen.getByTestId('right-dock-latest-diagnostic')).toBeTruthy();
+    expect(screen.getByTestId('bottom-console-drawer')).toBeTruthy();
+    expect(screen.getByTestId('workbench-status-bar')).toBeTruthy();
+
+    fireEvent.click(screen.getByTestId('left-dock-cmd-PINCHECK'));
+    expect(onRunCommand).toHaveBeenCalledWith('PINCHECK', undefined);
+
+    fireEvent.click(screen.getByTestId('status-toggle-left-dock'));
+    fireEvent.click(screen.getByTestId('status-toggle-bottom-dock'));
+    fireEvent.click(screen.getByTestId('status-toggle-right-dock'));
+    fireEvent.click(screen.getByTestId('status-open-compliance-btn'));
+    fireEvent.click(screen.getByTestId('bottom-console-expand-btn'));
+    expect(onToggleLeftDock).toHaveBeenCalledTimes(1);
+    expect(onToggleBottomDock).toHaveBeenCalledTimes(1);
+    expect(onToggleRightDock).toHaveBeenCalledTimes(1);
+    expect(onOpenCompliance).toHaveBeenCalledTimes(1);
+    expect(onToggleExpand).toHaveBeenCalledTimes(1);
+
+    expect(screen.getByText('3 events')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'RX / TX' }));
+    expect(screen.getByText('2 events')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Errors' }));
+    expect(screen.getByText('1 events')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'All' }));
+    expect(screen.getByText('3 events')).toBeTruthy();
+
+    const input = screen.getByTestId('bottom-console-input');
+    const form = input.closest('form');
+    expect(form).not.toBeNull();
+    if (form) {
+      fireEvent.submit(form);
+    }
+    expect(screen.getByRole('alert')).toBeTruthy();
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    expect(onSendCommand).not.toHaveBeenCalled();
+
+    fireEvent.change(input, { target: { value: 'STATUS' } });
+    expect(input.getAttribute('aria-invalid')).toBe('false');
+    expect(screen.queryByRole('alert')).toBeNull();
+    if (form) {
+      fireEvent.submit(form);
+    }
+    expect(onSendCommand).toHaveBeenCalledTimes(1);
+  });
+
+  it('GuidedPipelineBar updates contextual guidance across Probe Offline, Standby, Active, and Executing states', () => {
+    const baseProps = {
+      currentView: 'picobench' as const,
+      onNavigate: vi.fn(),
+      mode: 'advanced' as const,
+      onModeChange: vi.fn(),
+      hudOpen: false,
+      onToggleHud: vi.fn(),
+      pipeline: { picoReady: false, nvramCleaned: false, hddInspected: false, unbrickReady: false },
+    };
+
+    const { rerender } = render(
+      <GuidedPipelineBar {...baseProps} hardwareConnected={false} vddVolts={0} runningCommandId={null} />,
+    );
+    expect(screen.getByTestId('pipeline-step-guide').textContent).toContain('Probe Offline');
+
+    rerender(
+      <GuidedPipelineBar {...baseProps} hardwareConnected={true} vddVolts={0} runningCommandId={null} />,
+    );
+    expect(screen.getByTestId('pipeline-step-guide').textContent).toContain('Target Standby');
+
+    rerender(
+      <GuidedPipelineBar {...baseProps} hardwareConnected={true} vddVolts={3.29} runningCommandId={null} />,
+    );
+    expect(screen.getByTestId('pipeline-step-guide').textContent).toContain('Bench Active');
+
+    rerender(
+      <GuidedPipelineBar {...baseProps} hardwareConnected={true} vddVolts={3.29} runningCommandId="PINCHECK" />,
+    );
+    expect(screen.getByTestId('pipeline-step-guide').textContent).toContain('Executing PINCHECK');
   });
 });

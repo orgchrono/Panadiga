@@ -96,9 +96,69 @@ test.describe('Panadiga Desktop Navigation & Layout E2E', () => {
     await page.setViewportSize({ width: 390, height: 844 });
     const navTrigger = page.getByTestId('header-mobile-nav-btn');
     await expect(navTrigger).toBeVisible();
+    await expect(page.getByTestId('workbench-status-bar')).toBeVisible();
+    await expect(page.getByTestId('status-toggle-left-dock')).toBeVisible();
     await navTrigger.click();
     await expect(page.getByRole('dialog')).toBeVisible();
     await page.locator('[role="dialog"] button[data-testid="nav-settings"]').click();
     await expect(page.locator('[data-testid="app-header"]')).toHaveAttribute('data-view', 'settings');
+  });
+
+  test('opens all 3 retractable docks simultaneously via WorkbenchStatusBar while main remains interactive', async ({ page }) => {
+    await page.getByTestId('status-toggle-left-dock').click();
+    await page.getByTestId('status-toggle-bottom-dock').click();
+    await page.getByTestId('status-toggle-right-dock').click();
+
+    const leftDock = page.getByTestId('left-command-dock');
+    const bottomConsole = page.getByTestId('bottom-console-drawer');
+    const rightDock = page.getByTestId('right-telemetry-dock');
+    const mainArea = page.locator('main');
+
+    await expect(leftDock).toBeVisible();
+    await expect(bottomConsole).toBeVisible();
+    await expect(rightDock).toBeVisible();
+    await expect(mainArea).toBeVisible();
+    await expect(rightDock.getByText('P7501 VDD')).toBeVisible();
+    await expect(rightDock.getByText('GDB RSP')).toBeVisible();
+
+    await page.click('button[data-testid="nav-picobench"]');
+    await expect(page.getByLabel(/Select Pico serial port|Selecionar porta serial do Pico/i)).toHaveValue(/.+/);
+    await page.getByTestId('left-dock-cmd-PINCHECK').click();
+    await expect(page.getByTestId('right-dock-latest-diagnostic')).toBeVisible();
+
+    await page.click('button[data-testid="nav-nvram"]');
+    await expect(page.locator('[data-testid="app-header"]')).toHaveAttribute('data-view', 'nvram');
+    await expect(leftDock).toBeVisible();
+    await expect(bottomConsole).toBeVisible();
+    await expect(rightDock).toBeVisible();
+    await expect(page.getByTestId('right-dock-latest-diagnostic')).toBeVisible();
+    await expect(mainArea).toBeVisible();
+  });
+
+  test('operates ComplianceDialog acknowledgment gate and persists acceptance across reload', async ({ page }) => {
+    await page.getByTestId('status-open-compliance-btn').click();
+    const dialog = page.getByTestId('compliance-dialog');
+    await expect(dialog).toBeVisible();
+
+    const acceptBtn = page.getByTestId('compliance-accept-btn');
+    await expect(acceptBtn).toBeDisabled();
+
+    await page.getByTestId('compliance-ack-checkbox').click();
+    await expect(acceptBtn).toBeEnabled();
+    await acceptBtn.click();
+
+    await expect(dialog).toHaveCount(0);
+    const ackAfterAccept = await page.evaluate(() =>
+      window.localStorage.getItem('panadiga.workbench.compliance_ack_v1'),
+    );
+    expect(ackAfterAccept).toBe('accepted');
+
+    await page.reload();
+    await expect(page.locator('h1')).toContainText('DIGA SUITE');
+    await expect(page.getByTestId('compliance-dialog')).toHaveCount(0);
+    const ackAfterReload = await page.evaluate(() =>
+      window.localStorage.getItem('panadiga.workbench.compliance_ack_v1'),
+    );
+    expect(ackAfterReload).toBe('accepted');
   });
 });

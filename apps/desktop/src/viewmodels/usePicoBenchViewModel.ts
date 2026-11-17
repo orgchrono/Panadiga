@@ -63,16 +63,16 @@ export function usePicoBenchViewModel() {
   const selectedPort = device.selectedPort;
 
   useEffect(() => {
-    if (!queuedCommandRequest) return;
+    if (!queuedCommandRequest || !selectedPort) return;
     clearPicoCommandRequest();
     void executeDiagnosticCommand(queuedCommandRequest.commandId, queuedCommandRequest.arg);
-  }, [queuedCommandRequest, executeDiagnosticCommand]);
+  }, [queuedCommandRequest, selectedPort, executeDiagnosticCommand]);
 
   useEffect(() => {
-    if (!queuedSerialLine) return;
+    if (!queuedSerialLine || !selectedPort) return;
     clearPicoSerialLine();
     void sendSerialLine(queuedSerialLine.line, selectedPort);
-  }, [queuedSerialLine, sendSerialLine, selectedPort]);
+  }, [queuedSerialLine, selectedPort, sendSerialLine]);
 
   const gdb = useGdbBridge({
     selectedPort: device.selectedPort,

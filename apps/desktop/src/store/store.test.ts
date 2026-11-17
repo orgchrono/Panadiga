@@ -7,12 +7,32 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { createAppStore } from './index';
 import { applyTelemetryStatus, fetchHardwareSsot, setCurrentView, setMobileNavOpen } from './slices/shellSlice';
 import {
+  acceptCompliance,
   markPipelineFlag,
   resetWorkbenchPreferences,
   setTheme,
+  toggleBottomDock,
+  toggleBottomExpanded,
   toggleHud,
+  toggleLeftDock,
   toggleMode,
+  toggleRightDock,
 } from './slices/workbenchSlice';
+import {
+  setPicoSessionDiagnostic,
+  setPicoSessionGdbStatus,
+  setPicoSessionRunningCommand,
+  setPicoSessionSc0Status,
+} from './slices/picoSessionSlice';
+import {
+  clearPicoCommandRequest,
+  clearPicoSerialLine,
+  enqueuePicoCommandRequest,
+  enqueuePicoSerialLine,
+  getPicoSessionSnapshot,
+} from './picoSessionBridge';
+import { STORAGE_COMPLIANCE_KEY, STORAGE_DOCKS_KEY } from './storage';
+import type { PicoDiagnosticResult } from '@/models';
 import { clearToasts, dismissToast, enqueueToast } from './slices/toastSlice';
 import { clearLiveCapture, recordLiveCapture } from './slices/nvramCaptureSlice';
 import { mockNvramCleanReport } from '@/test/mocks/mockNvram';
@@ -110,5 +130,104 @@ describe('Panadiga Redux Store Architecture', () => {
 
     testStore.dispatch(clearLiveCapture());
     expect(testStore.getState().nvramCapture.latestCapture).toBeNull();
+  });
+
+  it('requires initial compliance acknowledgment and persists acceptance across fresh stores', () => {
+    const initialStore = createAppStore();
+    expect(initialStore.getState().workbench.complianceAccepted).toBe(false);
+    expect(initialStore.getState().workbench.complianceModalOpen).toBe(true);
+    expect(window.localStorage.getItem(STORAGE_COMPLIANCE_KEY)).toBeNull();
+
+    initialStore.dispatch(acceptCompliance());
+    expect(initialStore.getState().workbench.complianceAccepted).toBe(true);
+    expect(initialStore.getState().workbench.complianceModalOpen).toBe(false);
+    expect(window.localStorage.getItem(STORAGE_COMPLIANCE_KEY)).toBe('accepted');
+
+    const reloadedStore = createAppStore();
+    expect(reloadedStore.getState().workbench.complianceAccepted).toBe(true);
+    expect(reloadedStore.getState().workbench.complianceModalOpen).toBe(false);
+  });
+
+  it('persists dock toggles and resets docks without clearing compliance acknowledgment', () => {
+    const testStore = createAppStore();
+    testStore.dispatch(acceptCompliance());
+
+    testStore.dispatch(toggleLeftDock());
+    testStore.dispatch(toggleRightDock());
+    testStore.dispatch(toggleBottomDock());
+    testStore.dispatch(toggleBottomExpanded());
+
+    expect(testStore.getState().workbench.docks).toEqual({
+      leftOpen: true,
+      rightOpen: true,
+      bottomOpen: true,
+      bottomExpanded: true,
+    });
+    expect(window.localStorage.getItem(STORAGE_DOCKS_KEY)).toBe(
+      JSON.stringify({
+        leftOpen: true,
+        rightOpen: true,
+        bottomOpen: true,
+        bottomExpanded: true,
+      }),
+    );
+
+    const persistedStore = createAppStore();
+    expect(persistedStore.getState().workbench.docks).toEqual({
+      leftOpen: true,
+      rightOpen: true,
+      bottomOpen: true,
+      bottomExpanded: true,
+    });
+
+    persistedStore.dispatch(resetWorkbenchPreferences());
+    expect(persistedStore.getState().workbench.docks).toEqual({
+      leftOpen: false,
+      rightOpen: false,
+      bottomOpen: false,
+      bottomExpanded: false,
+    });
+    expect(window.localStorage.getItem(STORAGE_DOCKS_KEY)).toBeNull();
+    expect(window.localStorage.getItem(STORAGE_COMPLIANCE_KEY)).toBe('accepted');
+  });
+
+  it('updates picoSessionSlice diagnostics, GDB/SC0 status, and queued dock commands', () => {
+    const testStore = createAppStore();
+    const sampleDiagnostic: PicoDiagnosticResult = {
+      command_id: 'PINCHECK',
+      raw_command: 'PINCHECK',
+      success: true,
+      elapsed_ms: 42,
+      summary: 'P7501 LVTTL nominal; GP3 Hi-Z confirmed.',
+      raw_output: 'OK PINCHECK',
+      vdd_volts: 3.29,
+      pincheck_rows: [],
+      transition_rows: [],
+      dump_rows: [],
+    };
+
+    testStore.dispatch(setPicoSessionDiagnostic(sampleDiagnostic));
+    testStore.dispatch(setPicoSessionRunningCommand('PINCHECK'));
+    testStore.dispatch(setPicoSessionGdbStatus({ running: true, listenAddr: '127.0.0.1:3333' }));
+    testStore.dispatch(setPicoSessionSc0Status(true));
+
+    const session = testStore.getState().picoSession;
+    expect(session.latestDiagnostic?.command_id).toBe('PINCHECK');
+    expect(session.runningCommandId).toBe('PINCHECK');
+    expect(session.gdbRunning).toBe(true);
+    expect(session.gdbListenAddr).toBe('127.0.0.1:3333');
+    expect(session.sc0Active).toBe(true);
+
+    enqueuePicoCommandRequest('DUMP', '0x807F0000');
+    enqueuePicoSerialLine('STATUS');
+    const snapshot = getPicoSessionSnapshot();
+    expect(snapshot.queuedCommandRequest?.commandId).toBe('DUMP');
+    expect(snapshot.queuedCommandRequest?.arg).toBe('0x807F0000');
+    expect(snapshot.queuedSerialLine?.line).toBe('STATUS');
+
+    clearPicoCommandRequest();
+    clearPicoSerialLine();
+    expect(getPicoSessionSnapshot().queuedCommandRequest).toBeNull();
+    expect(getPicoSessionSnapshot().queuedSerialLine).toBeNull();
   });
 });

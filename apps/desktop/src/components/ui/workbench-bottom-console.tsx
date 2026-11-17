@@ -148,7 +148,13 @@ export const BottomConsoleDrawer: React.FC<BottomConsoleDrawerProps> = ({
             aria-describedby={inputError ? consoleErrorId : undefined}
             className="h-8 flex-1 text-xs"
           />
-          <Button type="submit" size="sm" data-testid="bottom-console-send-btn" className="h-8 px-3 gap-1.5 text-xs shrink-0">
+          <Button
+            type="submit"
+            size="sm"
+            data-testid="bottom-console-send-btn"
+            disabled={Boolean(inputError)}
+            className="h-8 px-3 gap-1.5 text-xs shrink-0"
+          >
             <Send className="w-3 h-3" />
             <span>{t('pico.sendButton')}</span>
           </Button>
