@@ -92,6 +92,10 @@ fn test_cli_args_parsing_matrix() {
             "bench-wizard",
             "--port",
             "COM10",
+            "--profile",
+            "prejig",
+            "--wake-timeout-ms",
+            "45000",
             "--non-interactive",
             "--vfd-cue",
             "2"

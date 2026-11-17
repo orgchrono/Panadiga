@@ -15,7 +15,7 @@ pub use types::{
 const FIRMWARE_ERROR_DICT_JSON: &str = include_str!("firmware_error_dict.json");
 static PARSED_DICT: OnceLock<Vec<FirmwareErrorEntry>> = OnceLock::new();
 
-/// Returns all `447` embedded Panasonic / Matshita firmware error dictionary records.
+/// Returns all embedded Panasonic / Matshita firmware error dictionary records (`431` DRV + Core).
 #[must_use]
 pub fn all_firmware_errors() -> &'static [FirmwareErrorEntry] {
     PARSED_DICT

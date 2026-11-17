@@ -143,11 +143,15 @@ static void test_hex_window_and_led_logic(void) {
 
     p7501_window_boot_spec_t win;
     p7501_parse_window_boot_args("8000 JIG:350", 5000u, 200u, 30000u, &win);
-    assert(win.window_ms == 8000u && win.boot_action == P7501_BOOT_ACTION_JIG && win.jig_hold_ms == 350u && !win.sticky_jig);
+    assert(win.window_ms == 8000u && win.boot_action == P7501_BOOT_ACTION_JIG && win.jig_hold_ms == 350u && !win.sticky_jig && !win.no_xreset && !win.wait_for_wake);
     p7501_parse_window_boot_args("45000 JIG:3000 STICKY", 5000u, 200u, 90000u, &win);
     assert(win.window_ms == 45000u && win.boot_action == P7501_BOOT_ACTION_JIG && win.jig_hold_ms == 3000u && win.sticky_jig);
     p7501_parse_window_boot_args("4000 NOPULL", 5000u, 200u, 30000u, &win);
     assert(win.window_ms == 4000u && win.boot_action == P7501_BOOT_ACTION_PASSIVE && win.jig_hold_ms == 0u && !win.sticky_jig);
+    p7501_parse_window_boot_args("12000 PREJIG:2800 WAKE:45000", 5000u, 200u, 90000u, &win);
+    assert(win.window_ms == 12000u && win.boot_action == P7501_BOOT_ACTION_JIG && win.jig_hold_ms == 2800u && win.no_xreset && win.wait_for_wake && win.wake_timeout_ms == 45000u);
+    p7501_parse_window_boot_args("6000 PASSIVE WAKE", 5000u, 200u, 90000u, &win);
+    assert(win.window_ms == 6000u && win.boot_action == P7501_BOOT_ACTION_PASSIVE && !win.no_xreset && win.wait_for_wake && win.wake_timeout_ms == 30000u);
 
     p7501_bridge_spec_t bspec;
     p7501_parse_bridge_args("115200 PASSIVE CTRL", 115200u, &bspec);

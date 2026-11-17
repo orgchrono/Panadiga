@@ -28,6 +28,11 @@ void p7501_pio_pulse_xreset_ms(uint32_t hold_low_ms);
 
 void p7501_pio_begin_rx_session(p7501_boot_action_t action);
 void p7501_pio_begin_rx_session_ex(p7501_boot_action_t action, uint32_t jig_hold_ms);
+void p7501_pio_begin_rx_session_cfg(
+    p7501_boot_action_t action,
+    uint32_t jig_hold_ms,
+    bool no_xreset
+);
 void p7501_pio_release_sw_uart_now(void);
 bool p7501_pio_poll_sw_uart_release(void);
 bool p7501_pio_poll_jig_serial_release(

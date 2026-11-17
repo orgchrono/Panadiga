@@ -125,12 +125,28 @@ void p7501_cmd_boottrace(const char *arg) {
     p7501_window_boot_spec_t spec;
     p7501_parse_window_boot_args(arg, 4500u, 100u, P7501_TRACE_MAX_MS, &spec);
     if (spec.boot_action == P7501_BOOT_ACTION_JIG && spec.jig_hold_ms == 0u) {
-        spec.jig_hold_ms = P7501_JIG_DEFAULT_HOLD_MS;
+        spec.jig_hold_ms = spec.no_xreset ? 3000u : P7501_JIG_DEFAULT_HOLD_MS;
     }
 
-    printf("=== BOOTTRACE: window=%" PRIu32 "ms boot=%d hold=%" PRIu32 "ms sticky=%s (%s @ %" PRIu32 ") ===\n",
+    if (spec.wait_for_wake) {
+        float wake_v = 0.0f;
+        uint32_t wake_ms = 0u;
+        const bool prestrap = spec.no_xreset && (spec.boot_action == P7501_BOOT_ACTION_JIG);
+        if (!p7501_pio_wait_standby_wake("BOOTTRACE", spec.wake_timeout_ms, prestrap, &wake_v, &wake_ms)) {
+            printf("[BOOTTRACE] Notice: Standby wake not observed within %" PRIu32 " ms (VDD=%.2fV)\n",
+                   wake_ms, (double)wake_v);
+            printf("[BOOTTRACE] UART: bytes=0 first_byte=0us ferr=0 perr=0 ovf=NO | SW_rel=NO\n");
+            printf("[BOOTTRACE] CtrlEdges: nsw5v_edges=0 rxd_edges=0 txd_edges=0 wake_timeout=YES\n");
+            printf("BOOTTRACE: OK\n");
+            return;
+        }
+        printf("[BOOTTRACE +%" PRIu32 "ms] WAKE edge detected (NSW5V=%u, VDD=%.2fV) -> starting capture\n",
+               wake_ms, gpio_get(P7501_PIN_NSW5V) ? 1u : 0u, (double)wake_v);
+    }
+
+    printf("=== BOOTTRACE: window=%" PRIu32 "ms boot=%d hold=%" PRIu32 "ms sticky=%s no_xrst=%s (%s @ %" PRIu32 ") ===\n",
            spec.window_ms, (int)spec.boot_action, spec.jig_hold_ms,
-           spec.sticky_jig ? "YES" : "NO",
+           spec.sticky_jig ? "YES" : "NO", spec.no_xreset ? "YES" : "NO",
            p7501_framing_name(p7501_pio_get_framing()), p7501_pio_get_baud());
     fflush(stdout);
 
@@ -157,6 +173,7 @@ void p7501_cmd_boottrace(const char *arg) {
         .boot_action = spec.boot_action,
         .jig_hold_ms = spec.jig_hold_ms,
         .manage_session = true,
+        .no_xreset = spec.no_xreset,
         .auto_release_serial_boot = !spec.sticky_jig,
         .allow_cdc_abort = true,
         .on_rx_byte = boottrace_on_byte,

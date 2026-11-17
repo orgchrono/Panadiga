@@ -29,9 +29,9 @@ Specific MN103S / AM33 Sleigh behaviors verified verbatim in the disassembly gap
 ## 2. Pico `P7501` C11 Firmware Upgrades & Rebuilt UF2 Artifacts
 
 Modular C11 modules under [`firmware/pico-p7501/`](../../firmware/pico-p7501/) (strict `-Wall -Wextra -Werror`, all production `.c/.h` files <= `339` lines) were compiled for RP2040 + RP2350 via `python scripts/build.py --pico --no-cache` and embedded in `crates/panadiga-core/src/pico/firmware_bins/`:
-- **Unified UF2 (`panasonic_p7501_uart_unified.uf2`):** `646,144 B` (`SHA-256: d97dd9600766adff2f3692b5add5ec533e41f5379e67eb58296d7918f8f4334d`)
-- **RP2040 UF2 (`panasonic_p7501_uart_rp2040.uf2`):** `330,752 B` (`SHA-256: 70d578710a79ec5ca27ee1dd1dc23893ceccd30cacfed75e6a0bf0a00c771435`)
-- **RP2350 UF2 (`panasonic_p7501_uart_rp2350.uf2`):** `315,392 B` (`SHA-256: 73b0ebf7fb0eb3337578e40f0b0c9764323283e8e88c3454fcba1a1e6b27b29f`)
+- **Unified UF2 (`panasonic_p7501_uart_unified.uf2`):** `522,752 B` (`SHA-256: 2d568f7f4c1d3b12c83721eef4a5666a59666ead5fe8ee7359915e45962aa405`)
+- **RP2040 UF2 (`panasonic_p7501_uart_rp2040.uf2`):** `268,288 B` (`SHA-256: 0f216f39a5eb863eee4a93b7a957bea872f467cc0c050c7d897a33a73d50e0d2`)
+- **RP2350 UF2 (`panasonic_p7501_uart_rp2350.uf2`):** `254,464 B` (`SHA-256: c0cd3f9bd90401ea2699cfeeb2e8c067608c0db489ec4d724cf550ac74dab99d`)
 
 Key bench command enhancements verified by host tests (`firmware/pico-p7501/tests/test_pana_diag_drv.c`):
 1. **`DIAGWATCH [ms] [NORMAL|JIG[:ms]|NOPULL] <action> [RELEASE|HOLD]`:** supports parameterized `PANAMON1>` TX payloads `READ[:a[,n]]`, `WRITE:<a,v>`, `JUMP:<a>`, and `ERASE:<a_nvram>` alongside `AUTO`/`BYPASS`/`FORMAT`/`DUMP`/`QUIT`/`NONE`. Shared flash boundary helpers enforce IPL Read-Only protection (`0x80000000..=0x807EFFFF`, `0x84000000..=0x847EFFFF`) and restrict `ERASE` strictly to `64 KB` NVRAM (`0x807F0000..=0x807FFFFF`, `0x847F0000..=0x847FFFFF`).
@@ -47,7 +47,7 @@ Key bench command enhancements verified by host tests (`firmware/pico-p7501/test
 | :--- | :--- | :--- | :--- |
 | `scripts/re/mn10300.py`, `scripts/re/mn103_traps.py` | **Rust Parity Added** | `crates/panadiga-core/src/re/{mn10300,mn10300_traps}` + `panadiga re {audit, xrefs, drv-cli, drv-errors}` | Native zero-overhead CLI/core parity completed; Python retained temporarily for `scripts/tests/test_re_tools.py` parity verification. |
 | `scripts/re/pana_frm.py` | **Mostly Superseded** | `crates/panadiga-core/src/crypto/` (`panadiga frm`) + `panadiga re drv-cli` | Feistel/`EXTRHEAD`/`.FRM` and `DRV` table parsing live in Rust; `DRV_UNLOCK_COMMAND` & read/write classifications share parity. |
-| `scripts/bench/decoders.py` | **Rust Parity Added** | `crates/panadiga-core/src/pico/log_decoder.rs` (`panadiga pico decode-log`) + `apps/desktop/src-tauri/src/pico/diagnostics/parser.rs` | Offline UTF-16LE/UTF-8 boot log + SCSI SENSE decoding now native in Rust CLI; `decoders.py` stays only for `test_bench_ecosystem.py`. |
+| `scripts/bench/decoders.py` | **Rust Parity Added** | `crates/panadiga-core/src/pico/log_decoder/` (`panadiga pico decode-log`) + `apps/desktop/src-tauri/src/pico/diagnostics/parser.rs` | Offline UTF-16LE/UTF-8 boot log + SCSI SENSE decoding now native in Rust CLI; `decoders.py` stays only for `test_bench_ecosystem.py`. |
 | `scripts/bench/{nor_dumper,rsp_frames,rsp_dump}.py` | **Core Superseded in Rust** | `panadiga-core/src/re/nor_dumper.rs`, `src-tauri/src/pico/rsp_protocol.rs`, `panadiga mcp` (`panadiga_nor_dumper_stub`) | Production RSP/dumper stubs run in Rust & Tauri; Python copies serve standalone pyserial bench scripts & pytest mocks. |
 | `scripts/bench/{protocol,boot_harness,runner}.py` | **Optional Keep (Lab CLI)** | `apps/desktop/src-tauri/src/pico/serial/` & `panadiga pico` | Kept for quick zero-compile pyserial lab automation (`COM10`) with fault-simulation mock harness (`test_boot_harness.py`). |
 | `tools/ghidra/*.py` (6 scripts) | **MUST STAY PYTHON** | Generated from Rust SSOT via `panadiga ghidra export-all` | Runs inside Ghidra JVM (`Jython 2.7`) calling `currentProgram` / `FlatProgramAPI` / `DecompInterface`. Rust generates these scripts rather than replacing Jython. |

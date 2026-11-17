@@ -47,6 +47,26 @@ fn parses_upgraded_baudscan_and_wake_trace_telemetry() {
     assert_eq!(w.nsw5v_edges, 2);
     assert_eq!(w.rxd_edges, 0);
     assert!(w.vdd_max_volts.unwrap() > 3.2);
+
+    let real_boottrace = "[BOOTTRACE +1820ms] WAKE edge detected (NSW5V=1, VDD=3.25V) -> starting capture\n\
+        [BOOTTRACE] UART: bytes=348 first_byte=18400us ferr=0 perr=0 ovf=NO | SW_rel=YES@2500000us(TIMER)\n\
+        [BOOTTRACE] ADC0_SWUART: min=0.00V max=3.26V (low=180 hiz=3.25..3.26V n=22) | CtrlEdges: NSW5V=1 TXD=1 XRESET=0 (logged=2)\n\
+        BOOTTRACE: OK\n";
+    let w_real = parse_wake_trace_output(real_boottrace);
+    assert_eq!(w_real.nsw5v_edges, 1);
+    assert_eq!(w_real.rxd_edges, 348);
+    assert_eq!(w_real.txd_edges, 1);
+    assert!(w_real.sw_uart_released);
+    assert!(w_real.vdd_max_volts.unwrap() > 3.2);
+
+    assert_eq!(
+        BootWakeProfile::PreJigWake.build_pico_command(12000, 3000, 45000),
+        "BOOTTRACE 12000 PREJIG:3000 WAKE:45000"
+    );
+    assert_eq!(
+        BootWakeProfile::DiagWatchPreJigWake.build_pico_command(15000, 3000, 45000),
+        "DIAGWATCH 15000 PREJIG:3000 NONE RELEASE WAKE:45000"
+    );
 }
 
 #[test]
@@ -68,9 +88,9 @@ fn evaluates_u99_2s_standby_drop_and_panamon1_ghidra_readiness() {
     let rep = evaluate_guided_bench(
         "COM10",
         Some(0.05),
-        Some(wake),
-        Some(baud),
-        VfdObservation::HelloPleaseWaitU99Under2s,
+        Some(wake.clone()),
+        Some(baud.clone()),
+        VfdObservation::HelloThenU99Under2s,
         vec![],
     );
     assert!(!rep.can_attach_ghidra_now);
@@ -80,7 +100,23 @@ fn evaluates_u99_2s_standby_drop_and_panamon1_ghidra_readiness() {
         rep.firmware_correlation
             .matches
             .iter()
-            .any(|m| m.code == "HELLO_PLEASE_WAIT_U99_2S")
+            .any(|m| m.code == "HELLO_U99_STANDBY_WAKE")
+    );
+
+    let rep_pw = evaluate_guided_bench(
+        "COM10",
+        Some(0.05),
+        Some(wake),
+        Some(baud),
+        VfdObservation::PleaseWaitThenU99Under2s,
+        vec![],
+    );
+    assert!(
+        rep_pw
+            .firmware_correlation
+            .matches
+            .iter()
+            .any(|m| m.code == "PLEASE_WAIT_U99_2S")
     );
 
     let panamon_step = GuidedStepEvidence {

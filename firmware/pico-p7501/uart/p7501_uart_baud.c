@@ -11,6 +11,7 @@
 #include "hal/p7501_led.h"
 #include "hal/p7501_watchdog.h"
 #include "p7501_types.h"
+#include "uart/p7501_pio_loop.h"
 #include "uart/p7501_uart_autobaud.h"
 #include "uart/p7501_uart_codec.h"
 #include "uart/p7501_uart_pio_engine.h"
@@ -69,18 +70,28 @@ void p7501_cmd_framing(const char *arg) {
 
 void p7501_cmd_baudscan(const char *arg) {
     p7501_window_boot_spec_t spec;
-    char tok3[24] = {0};
     bool auto_apply = false;
 
     p7501_parse_window_boot_args(arg, 4000u, 200u, P7501_TRACE_MAX_MS, &spec);
     {
-        char t1[24], t2[24];
-        const char *cur = p7501_next_token(arg, t1, sizeof(t1));
-        if (cur != NULL) {
-            cur = p7501_next_token(cur, t2, sizeof(t2));
-            if (cur != NULL && p7501_next_token(cur, tok3, sizeof(tok3)) != NULL) {
-                auto_apply = p7501_ascii_ieq(tok3, "APPLY");
+        char tok[24];
+        const char *cur = arg;
+        while ((cur = p7501_next_token(cur, tok, sizeof(tok))) != NULL) {
+            if (p7501_ascii_ieq(tok, "APPLY")) {
+                auto_apply = true;
             }
+        }
+    }
+
+    if (spec.wait_for_wake) {
+        float wake_v = 0.0f;
+        uint32_t wake_ms = 0u;
+        const bool prestrap = spec.no_xreset && (spec.boot_action == P7501_BOOT_ACTION_JIG);
+        if (!p7501_pio_wait_standby_wake("BAUDSCAN", spec.wake_timeout_ms, prestrap, &wake_v, &wake_ms)) {
+            printf("[BAUDSCAN] Notice: Standby wake not observed within %" PRIu32 " ms (VDD=%.2fV).\n",
+                   wake_ms, (double)wake_v);
+            printf("BAUDSCAN: OK (no_signal)\n");
+            return;
         }
     }
 
@@ -89,7 +100,7 @@ void p7501_cmd_baudscan(const char *arg) {
     fflush(stdout);
 
     p7501_led_set_auto_mode(LED_MODE_BUS_ACTIVE);
-    p7501_pio_begin_rx_session_ex(spec.boot_action, spec.jig_hold_ms);
+    p7501_pio_begin_rx_session_cfg(spec.boot_action, spec.jig_hold_ms, spec.no_xreset);
 
     const uint64_t t0_us = time_us_64();
     const uint64_t deadline_us = t0_us + ((uint64_t)spec.window_ms * 1000ULL);

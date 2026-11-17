@@ -58,6 +58,7 @@ typedef struct p7501_diag_watch_spec {
     uint32_t jig_hold_ms;
     p7501_diag_action_t action;
     bool release_on_ddr;
+    bool no_xreset;
     bool wait_for_wake;
     bool nor_unlock;
     uint32_t wake_timeout_ms;

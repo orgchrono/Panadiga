@@ -233,8 +233,9 @@ O firmware embarca um servidor **GNU Remote Serial Protocol (RSP)** controlado p
   # Ponte assíncrona Ghidra/GDB sobre DIGADIAG PANAMON1> (R/W) ou MAIN _dev_SERIAL:
   panadiga pico gdb-bridge --port COM10 --target-mode panamon1 --listen 127.0.0.1:3333
   panadiga pico gdb-bridge --port COM10 --target-mode panarsp  --listen 127.0.0.1:3333
-  # Bateria guiada de testes em bancada (Standby Wake + BAUDSCAN + Dicionário de 447 erros):
+  # Bateria guiada multi-boot em bancada (Standby WAKE, PREJIG sem XRESET, BAUDSCAN, Dicionário de Erros):
   panadiga pico bench-wizard --port COM10
+  panadiga pico bench-wizard --port COM10 --profile prejig --wake-timeout-ms 45000
   panadiga pico error-lookup 0x83A7
   ```
 * Guia detalhado passo a passo para Ghidra, IDA Pro e `gdb-multiarch`:
@@ -254,3 +255,4 @@ O subsistema Flash ([`p7501_flash.c`](../../firmware/pico-p7501/flash/p7501_flas
 
 * **Stubs JEDEC em SRAM (`0x51800000`):** Os comandos `PANARSP JEDEC_ERASE:<addr>` e `PANARSP JEDEC_PROG:<addr>,<hex>` (`1..=16` bytes por chamada) carregam o stub [`p7501_pana_jedec.h`](../../firmware/pico-p7501/uart/p7501_pana_jedec.h) / [`p7501_pana_jedec.c`](../../firmware/pico-p7501/uart/p7501_pana_jedec.c) em `0x51800000` (após checagem de política em [`p7501_pana_rsp_parse.c`](../../firmware/pico-p7501/uart/p7501_pana_rsp_parse.c)), concluindo com **`PANAJEDEC_OK`** ou **`PANAJEDEC_TO`** em caso de timeout. No monitor `PANAMON1>`, o [`p7501_diag_watch.c`](../../firmware/pico-p7501/uart/p7501_diag_watch.c) dispara o handoff `'U'` antes de `'W'`/`'E'`.
 * **Fallback Offline Copy-on-Write:** Patches em arquivo usam `panadiga nvram patch-upper-nor` ([`nvram.rs`](../../crates/panadiga-cli/src/cli/handlers/nvram.rs)) com `--backup` SHA-256 obrigatório (mantendo `SA0..SA3` bloqueada salvo `--allow-critical-ipl` offline).
+* **Arquitetura Completa de Standby `IC7501`, `TW7501`, `TBUS` & Estados VFD Reais:** Consulte o dossiê dedicado [`ARQUITETURA_STANDBY_IC7501_TBUS_TW7501_E_MODOS_BOOT.md`](./ARQUITETURA_STANDBY_IC7501_TBUS_TW7501_E_MODOS_BOOT.md) (`PLEASE WAIT -> U99` vs `HELLO -> U99`, física de estabilização `TW7501` + `[POWER]`, handshake `FUN_44005cd0` `255s` e captura `PREJIG WAKE`).

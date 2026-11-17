@@ -44,21 +44,37 @@ pub fn parse_baudscan_output(raw: &str) -> BaudScanSummary {
     }
 }
 
-/// Parses edge counts (`nsw5v_edges`, `rxd_edges`, `txd_edges`) and `VDD` min/max from `PWRTRACE`/`BOOTTRACE`.
+/// Parses edge counts (`nsw5v_edges`, `rxd_edges`, `txd_edges`) and `VDD` min/max from `PWRTRACE`, `BOOTTRACE`, or `DIAGWATCH`.
 #[must_use]
 pub fn parse_wake_trace_output(raw: &str) -> WakeTraceSummary {
-    let nsw5v_edges = extract_u32_kv(raw, "nsw5v_edges=").unwrap_or(0);
-    let rxd_edges = extract_u32_kv(raw, "rxd_edges=").unwrap_or(0);
-    let txd_edges = extract_u32_kv(raw, "txd_edges=").unwrap_or(0);
-    let vdd_min_volts = extract_f32_kv(raw, "adc0_min=");
-    let vdd_max_volts = extract_f32_kv(raw, "adc0_max=").or_else(|| extract_f32_kv(raw, "VDD:"));
+    let nsw5v_edges = extract_u32_kv(raw, "nsw5v_edges=")
+        .or_else(|| extract_u32_kv(raw, "CtrlEdges: NSW5V="))
+        .unwrap_or_else(|| u32::from(raw.contains("WAKE edge detected")));
+    let rxd_edges = extract_u32_kv(raw, "rxd_edges=")
+        .or_else(|| extract_u32_kv(raw, "UART: bytes="))
+        .or_else(|| extract_u32_kv(raw, "rx="))
+        .unwrap_or(0);
+    let txd_edges = extract_u32_kv(raw, "txd_edges=")
+        .or_else(|| extract_u32_kv(raw, "TXD="))
+        .unwrap_or(0);
+    let vdd_min_volts = extract_f32_kv(raw, "adc0_min=")
+        .or_else(|| extract_f32_kv(raw, "ADC0_SWUART: min="))
+        .or_else(|| extract_f32_kv(raw, "Standby VDD="));
+    let vdd_max_volts = extract_f32_kv(raw, "adc0_max=")
+        .or_else(|| extract_f32_kv(raw, "max="))
+        .or_else(|| extract_f32_kv(raw, "WAKE edge detected (VDD="))
+        .or_else(|| extract_f32_kv(raw, "VDD="))
+        .or_else(|| extract_f32_kv(raw, "VDD:"));
     WakeTraceSummary {
         nsw5v_edges,
         rxd_edges,
         txd_edges,
         vdd_min_volts,
         vdd_max_volts,
-        sw_uart_released: raw.contains("sw_rel=1") || raw.contains("RELEASED"),
+        sw_uart_released: raw.contains("sw_rel=1")
+            || raw.contains("sw_rel=YES")
+            || raw.contains("SW_rel=YES")
+            || raw.contains("RELEASED"),
         raw_output: raw.trim().to_string(),
     }
 }

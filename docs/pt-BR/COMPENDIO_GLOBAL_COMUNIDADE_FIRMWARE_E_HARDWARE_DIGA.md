@@ -328,16 +328,17 @@ Uma vez exibido **`SERV`** no display fluorescente (VFD), o técnico digita os *
 > [!NOTE]
 > Em modelos japoneses (JDM) ou geração Blu-ray posteriores, códigos adicionais de controle remoto incluem `38 + [ENTER]` (`HDDCHK`), `03 VL`, `04 PRG`, `06 FTO` e `08 FIN`.
 
-### 3.4 Por que `HELLO -> PLEASE WAIT (~2s) -> U99` (`< 2s` de Standby `0:00`) não entra em `SERV` / `ND2` / `Functions`
+### 3.4 Por que `PLEASE WAIT (~2s) -> U99`, `U99` direto ou `HELLO (~2s) -> U99` não entram em `SERV` / `ND2` / `Functions`
 
-Conforme o Manual de Serviço `DSD0603003CE` (p. 18, tabela `8.1.1`) e os esquemáticos do Timer `IC7501` ([`panasonic_dmr_eh55ec_service_manual_vol2_schematics.pdf`](../../manuals_and_schematics/dmr-eh55/service/panasonic_dmr_eh55ec_service_manual_vol2_schematics.pdf) pp. 121–122; [`panasonic_dmr_eh55ec_service_manual_vol1_diagnostics.pdf`](../../manuals_and_schematics/dmr-eh55/service/panasonic_dmr_eh55ec_service_manual_vol1_diagnostics.pdf) pp. 22–25, 67–68; [`panasonic_dmr_eh55p9_eh55pc9_service_manual_north_america.pdf`](../../manuals_and_schematics/dmr-eh55/service/panasonic_dmr_eh55p9_eh55pc9_service_manual_north_america.pdf) pp. 21–24, 62–63), o erro **`U99` ("Hang-up")** indica falha de comunicação/handshake entre o microcontrolador Timer (`IC7501`) e o SoC principal (`AM34` / `MN2DS0009`):
+Conforme o Manual de Serviço `DSD0603003CE` (p. 18 tabela `8.1.1` e p. 40 *Display Flow*), os esquemáticos do Timer `IC7501` ([`panasonic_dmr_eh55ec_service_manual_vol2_schematics.pdf`](../../manuals_and_schematics/dmr-eh55/service/panasonic_dmr_eh55ec_service_manual_vol2_schematics.pdf) pp. 121–122; [`panasonic_dmr_eh55ec_service_manual_vol1_diagnostics.pdf`](../../manuals_and_schematics/dmr-eh55/service/panasonic_dmr_eh55ec_service_manual_vol1_diagnostics.pdf) pp. 22–25, 40, 63–68; [`panasonic_dmr_eh55p9_eh55pc9_service_manual_north_america.pdf`](../../manuals_and_schematics/dmr-eh55/service/panasonic_dmr_eh55p9_eh55pc9_service_manual_north_america.pdf) pp. 21–24, 62–64) e a arquitetura científica detalhada em [`ARQUITETURA_STANDBY_IC7501_TBUS_TW7501_E_MODOS_BOOT.md`](./ARQUITETURA_STANDBY_IC7501_TBUS_TW7501_E_MODOS_BOOT.md), o erro **`U99` ("Hang-up")** sinaliza falha de comunicação/handshake `TBUS` entre o microcontrolador Timer (`IC7501`) e o SoC principal (`AM34` / `MN2DS0009`):
 
-1. **Diferença Crítica entre `TEST Mode` e `Service Mode (`SERV`)`:**
-   - A combinação frontal **`[STOP] + [CH UP] + [OPEN/CLOSE]`** por **5s** aciona o **`TEST Mode` (`TM AV1`)**, que reinicializa configurações do sintonizador/preferências de usuário — ela **não** entra no Service Mode.
-   - O **`SERV`** oficial exige Power OFF (Standby) + **`[CH UP] + [OPEN/CLOSE] + [REC]`** por **5s**. Tanto `SERV` quanto os menus OSD (`Functions`) e os atalhos `ND2` (`[5]+[9]+[RED]`) dependem da execução do **`MAIN` (`SYS_SERV`)** após o boot do AM34; quando `U99` bloqueia a subida do `MAIN`, nenhum desses modos consegue ser aberto pelo painel ou por IR.
-2. **Por que `HELLO -> PLEASE WAIT (~2s) -> U99` (ou `< 2s` a partir de `0:00` Standby) falha antes do `BOOT.BIN`:**
-   - Na inicialização normal da Flash NOR, o `BOOT.BIN` (`PROG061`) só altera o watchdog de hang-up do Timer MCU para **`255s`** após executar `FUN_44005cd0()` (`vfd_wait_5cd0`, log `"Main hung-up time changed 255[s]."` sobre `TBUS`).
-   - Quando o aparelho cai em **`U99` em menos de ~2s (`HELLO -> PLEASE WAIT -> U99`)**, a falha ocorre **ANTES** que `BOOT.BIN` chegue a executar `FUN_44005cd0()`. Isso aponta para três classes de defeito pré-handshake:
+1. **Diferença Crítica entre `TEST Mode`, `Service Mode (`SERV`)` e os Dois Perfis Empíricos no VFD (`PLEASE WAIT` vs `HELLO`):**
+   - Na inicialização normal na tomada ou em loop pós-glitch (`IC7501` saindo de recuperação AC / `TW7501`), o VFD **NÃO** mostra `HELLO -> PLEASE WAIT`: ele exibe **`PLEASE WAIT` (~2s) -> `U99`**, ou vai **diretamente para `U99`** sem exibir `PLEASE WAIT`.
+   - Somente após estabilizar o aparelho em **Standby real (`0:00` / `P-OFF`)** via `[POWER]` off $\rightarrow$ salto rápido em `TW7501` energizado $\rightarrow$ segurar `[POWER]` (`KEY3_POWER`), quando o aparelho é **acordado do Standby** (pelo botão `[POWER]` ou pelas combinações frontais `[CH UP] + [OPEN/CLOSE] + [REC]`/`[STOP]`), o VFD exibe **`HELLO`** (passo 11 da p. 40 do manual `EC`: banner de acordamento normal) e então, **~2s depois**, cai em **`U99`** antes de concluir o startup!
+   - A combinação **`[STOP] + [CH UP] + [OPEN/CLOSE]`** por **5s** aciona o **`TEST Mode` (`TM AV1`)**, que reinicializa preferências de sintonizador/usuário — ela **não** entra no Service Mode. Já o **`SERV`** oficial (`[CH UP] + [OPEN/CLOSE] + [REC]`), `Functions` e os atalhos `ND2` (`[5]+[9]+[RED]`) dependem todos da subida completa do **`MAIN` (`SYS_SERV`)**; quando `U99` aborta o boot em ~2s, nenhum desses menus chega a existir em memória.
+2. **Por que tanto `PLEASE WAIT (~2s) -> U99` (Tomada/Retry) quanto `HELLO (~2s) -> U99` (Acordar de Standby) falham antes do `BOOT.BIN`:**
+   - Na inicialização normal da Flash NOR, o `BOOT.BIN` (`PROG061`) executa `wait_1_sec_timer_sync` (`0x4400b34d`: `delay_ms(1000)` $\rightarrow$ lê `startup reason` via `FUN_4400592c(2, ...)` $\rightarrow$ envia `FUN_440056b1(0x81, 1)` $\rightarrow$ `FUN_44005cd0()` `[0x8A, 0x02, ..., 0xFF]`), estendendo o watchdog de hang-up do Timer `IC7501` para **`255s`** (`"Main hung-up time changed 255[s]."` sobre `TBUS`).
+   - Quando o aparelho cai em **`U99` em ~2s** (seja via **`PLEASE WAIT -> U99`**, **`U99` direto**, ou **`HELLO -> U99`** ao acordar de Standby estável), a falha ocorre **ANTES** que o AM34 complete `FUN_44005cd0()`. Isso aponta para três classes de defeito pré-handshake:
      1. Falha precoce de barramento de potência ou supervisão de reset (`X_SW+3.8V`, `X_SW+5.8V`, `X_SW+12V`, `ANA+3.3V`, `X_SW+3.3V` ou queda em `PFAIL[L]` — falha que dispara proteção imediata, nunca forçar tensões acima de `3.3V` nos pinos LVTTL);
      2. Congelamento prematuro em **`SA0..SA3`** (`0x80000000..0x8003FFFF`) ou falha na **SDRAM** (`DDR CHECK`) antes do handshake `TBUS`; ou
      3. Falha física no próprio barramento **`TBUS`** (`TBUS_CLK`, `TBUS_TXD`, `TBUS_RXD`, `XMPREQ`, `XINTM`).
@@ -364,9 +365,12 @@ A verificação cruzada dos esquemáticos oficiais ([`panasonic_dmr_eh55ec_servi
    - **Alternativas para acordar via Pico sem tocar no aparelho:**
      * **LED IR Kaseikyo 38 kHz (`IRTX`, não invasivo, zero solda):** um LED emissor infravermelho (+ resistor `330 Ω`) em GPIO livre seguro (`GP6..9` ou `GP16..22`) apontado para `IR7501` envia códigos Panasonic Kaseikyo (`Power Toggle`, dígitos `[0][1]`..`[9][9]` do `SERV`).
      * **Fio opcional `Open-Drain` em `S7002` (`KEYIN3`):** permite simular o clique físico do `[POWER]`.
-5. **Como a sonda Pico mapeia o Standby e aciona `SW_UART` por software (`JIGPIN`):**
-   - **Mapeamento Contínuo de Transições (`BRIDGE 115200 PASSIVE CTRL`, `PWRTRACE`, `BOOTTRACE`, `PIOLOGIC`):** com a sonda em modo passivo durante Standby (`0:00`), o Pico registra com carimbo de tempo a borda de subida e queda de **`NSW5V` (`GP3`, estritamente `Hi-Z Input`), `TXD` (`GP4`) e `XRESET` (`GP5`)** + cada byte transmitido em `115200 8N1` por `UARTP2M_T` (`GP2`).
-   - **Emulação em Software do Strap `SW_UART/IR_BUSY` (`JIGPIN LOW` / `JIGPIN HIZ`):** o comando **`JIGPIN LOW`** no firmware C11 coloca `GP26` (`P7501` Pino 1) em `0V` **sem pulsar `XRESET` e sem tocar o rail de backup `TW7501`**, enquanto **`STATUS`** discrimina `STANDBY (NSW5V=0)` de `AWAKE (NSW5V=1)` e cabo desconectado.
+5. **Como a sonda Pico mapeia o Standby e aciona `PREJIG` + `WAKE` sem pulsar `XRESET`:**
+   - **Mapeamento Contínuo de Transições (`BRIDGE 115200 PASSIVE CTRL`, `PWRTRACE`, `BOOTTRACE ... WAKE`, `BAUDSCAN ... WAKE`):** em modo passivo durante Standby, o Pico aguarda `NSW5V (GP3) == 1 || VDD >= 2.0V` e registra com carimbo de tempo a borda de subida/queda de **`NSW5V` (`GP3`, estritamente `Hi-Z Input`), `TXD` (`GP4`) e `XRESET` (`GP5`)** + cada byte em `115200 8N1` por `UARTP2M_T` (`GP2`).
+   - **Strap em Standby (`JIGPIN LOW` / `PREJIG WAKE` sem `XRESET`):** Nos esquemáticos `EC` (`europe.pdf` pp. 47, 50, 54, 63–65), o conector `P59001` leva `XFWE` (`Pino 32` $\rightarrow$ `Q7401`/`QR7403`/`QR7404`) e `P_OFF_L` (`Pino 30`), porém **não** propaga `XRESET` (ficando `IC7502` $\rightarrow$ `IC7501 Pino 12` na Main e `P7501 Pino 2` local na Digital `VEP79138`). O modo **`PREJIG WAKE`** mantém `SW_UART = LOW` ainda em Standby **sem pulsar `XRESET`**, disparando na borda exata de subida de `NSW5V (GP3)` para capturar `***** serial boot mode *****` desde `t = 0 ms` ao acordar via `[POWER]`, IR ou combos `SERV`/`TEST`.
+6. **Física da Sequência `TW7501` + Segurar `[POWER]` Que Encerra o Loop de Auto-Religamento de 2s (`C7584` + `R7623` + `KEYIN3`):**
+   - **Por que descarregar `TW7501` inicia loop de religamento:** Em `EC p. 63`, `TW7501` (`VWJ0795=5`) fica em paralelo com o supercapacitor `C7584` (`0.047F`), `C7578` (`47uF`), `R7621` (`100K`) e o Pino 1 de `D7509` (alimentado por `X_SW_5R2V` via `R7623 180Ω`). Zerar `TW7501` fora da tomada apaga a RAM de backup do `IC7501` (armando `SELF CHECK`); ao ligar na tomada, `IC7501` sobe `DI_P_ON[H]` sozinho e, se travar antes do foco do leitor ODD, 1 toque em `[POWER]` derruba `NSW5V` temporariamente mas a flag volátil de retentativa religa ~2s depois.
+   - **Por que `1x [POWER]` $\rightarrow$ pulso curto em `TW7501` energizado $\rightarrow$ segurar `[POWER]` estabiliza o Standby (`VDD=0.03V`):** O curto momentâneo em `TW7501` com a placa energizada (limitado a `~29 mA` por `R7623 180Ω` em `X_SW_5R2V`) reinicia/zera a flag volátil de 2s via `IC7502`/`IC7505` enquanto `S7002` (`KEY3_POWER` $\rightarrow$ `IC7501 Pino 88 KEYIN3`; `EC p. 20` *Forced power-off* `>10s`) trava `IC7501` diretamente em **`P-OFF` Standby estável**, permitindo armar `panadiga pico bench-wizard --port COM10` sem pressa antes de qualquer tipo de boot.
 
 ```mermaid
 flowchart TD
@@ -384,10 +388,11 @@ flowchart TD
         MCU -->|"Pin 12 XRESET"| P2
     end
 
-    subgraph STANDBY_STATES["Mapeamento Elétrico do P7501 (Standby vs Acordado)"]
-        ST_OFF["Standby P-OFF ('0:00')\nDI_P_ON=L -> NSW5V=0, SW_UART=0.03V"] -->|"[POWER] via KEYIN3 / IR"| ST_WAKE["Wakeup Digital PCB\nNSW5V=1, XRESET=1, SW_UART~3.25V"]
-        ST_WAKE -->|"SW_UART=Hi-Z"| BOOT_NORM["Boot Flash NOR -> HELLO -> U99 (<2s se rail/TBUS/SA0..3)"]
-        ST_WAKE -->|"SW_UART=LOW (JIGPIN LOW)"| BOOT_SER["Loader: ***** serial boot mode *****"]
+    subgraph STANDBY_STATES["Mapeamento Elétrico do P7501 (Standby vs Acordado vs Auto-Retry AC)"]
+        ST_AC["Tomada AC / Auto-Retry\nVFD: PLEASE WAIT (~2s) -> U99\n(ou U99 direto)"] -->|"1x [POWER] + TW7501 energizado + segurar [POWER]"| ST_OFF["Standby Estável P-OFF ('0:00')\nDI_P_ON=L -> NSW5V=0, VDD=0.03V"]
+        ST_OFF -->|"[POWER] ou Combo via KEYIN3 / IR"| ST_WAKE["Wakeup Digital PCB (VFD: HELLO)\nNSW5V=1, XRESET=1, SW_UART~3.25V"]
+        ST_WAKE -->|"SW_UART=Hi-Z"| BOOT_NORM["Boot NOR Flash: HELLO (~2s) -> U99\n(antes de FUN_44005cd0)"]
+        ST_WAKE -->|"SW_UART=LOW (PREJIG WAKE)"| BOOT_SER["Loader: ***** serial boot mode *****"]
     end
 ```
 

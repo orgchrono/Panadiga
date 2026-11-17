@@ -28,6 +28,7 @@ typedef struct p7501_pio_loop_cfg {
     p7501_boot_action_t boot_action;
     uint32_t jig_hold_ms;
     bool manage_session;
+    bool no_xreset;
     bool auto_release_serial_boot;
     bool allow_cdc_abort;
     p7501_pio_loop_byte_fn on_rx_byte;
@@ -45,6 +46,18 @@ typedef struct p7501_pio_loop_metrics {
     bool aborted;
     bool sw_uart_released;
 } p7501_pio_loop_metrics_t;
+
+/**
+ * @brief Wait up to `wait_ms` for Standby -> Awake edge (`NSW5V` high or `SW_UART` VDD >= threshold),
+ *        optionally holding `SW_UART` LOW in advance (`PREJIG`) without pulsing `XRESET`.
+ */
+bool p7501_pio_wait_standby_wake(
+    const char *tag,
+    uint32_t wait_ms,
+    bool prestrap_sw_uart_low,
+    float *out_vdd,
+    uint32_t *out_elapsed_ms
+);
 
 /**
  * @brief Execute a bounded PIO1 RX session loop with automatic WDT kicks, Ctrl-C abort,

@@ -18,21 +18,60 @@
     ]
   },
   {
-    "code": "HELLO_PLEASE_WAIT_U99_2S",
+    "code": "PLEASE_WAIT_U99_2S",
     "aliases": [
-      "HELLO",
-      "PLEASE WAIT",
-      "PLEASEWAIT"
+      "PLEASE WAIT (~2S) -> U99",
+      "PLEASE WAIT -> U99 (~2S)",
+      "PLEASEWAIT -> U99",
+      "DIRECT U99",
+      "U99 IMMEDIATE",
+      "PRE-WATCHDOG U99"
+    ],
+    "domain": "front_panel",
+    "address": "IC7501/BOOT.BIN:0x4400b34d",
+    "severity": "critical",
+    "title": "PLEASE WAIT (~2s) -> U99 or Direct U99 Pre-Watchdog Recovery Drop",
+    "native_text": "AC-on / auto-restart loop (PLEASE WAIT -> U99 in <= 2s, or direct U99 without PLEASE WAIT)",
+    "translation": "After AC power or volatile retry flag set, IC7501 energized DI_P_ON[H] in recovery state (PLEASE WAIT or direct U99) and dropped to U99 before AM34 BOOT.BIN completed FUN_44005cd0() 255s TBUS watchdog setup.",
+    "actions": [
+      "Capture UARTP2M_T (Pin 6 -> Pico GP2) with `BOOTTRACE WAKE` or `PWRTRACE` while NSW5V rises to check if AM34 emits any bytes during those <=2s.",
+      "To park in stabilized Standby (`0:00`) without the 2s auto-restart loop, press [POWER] off -> briefly short TW7501 while powered -> keep holding [POWER] (`KEY3_POWER`)."
+    ]
+  },
+  {
+    "code": "HELLO_U99_STANDBY_WAKE",
+    "aliases": [
+      "HELLO (~2S) -> U99",
+      "HELLO -> U99",
+      "HELLO U99",
+      "HELLO -> (~2S) -> U99"
     ],
     "domain": "front_panel",
     "address": "MAIN:0x0586b69/IC7501",
     "severity": "critical",
-    "title": "HELLO -> PLEASE WAIT (~2s) -> U99 Pre-Watchdog Boot Drop",
-    "native_text": "Timer MCU cold boot (HELLO -> PLEASE WAIT -> U99 in <= 2s)",
-    "translation": "IC7501 initialized volatile state (AC/TW7501 reset), energized DI_P_ON[H], and dropped to U99 before receiving AM34 TBUS 255s watchdog extension.",
+    "title": "HELLO (~2s) -> U99 Wakeup Abort from Stabilized Standby",
+    "native_text": "Clean Standby wake transition (HELLO -> U99 in <= 2s, without PLEASE WAIT)",
+    "translation": "When woken from stabilized Standby (`0:00`, via [POWER] or [CH UP]+[OPEN/CLOSE]+[REC]/[STOP] chord), IC7501 displayed its clean wakeup banner `HELLO` (`EC p.40` Step 11) and raised `DI_P_ON[H]`, then dropped to `U99` before AM34 completed startup / `MAIN` / `FUN_44005cd0()`.",
     "actions": [
-      "Check whether UARTP2M_T (Pin 6) outputs Loader ver0.61/DDR CHECK during those 2s via Pico BOOTTRACE.",
-      "If silent (rxd_edges == 0 while NSW5V rises), inspect Digital PCB switched voltage rails, PFAIL[L], IC5001 SA0..SA3, and TBUS continuity."
+      "Arm `BOOTTRACE 12000 WAKE` or `PREJIG WAKE` while parked in stabilized Standby (`VDD ~0.03V`), then wake with `[POWER]` or front-panel chord to capture `UARTP2M_T` from t=0ms.",
+      "If `rxd_edges == 0` while `NSW5V` toggles, inspect Digital PCB switched rails (`X_SW+3.8/+5.8/+12`, `D3R3V`), `PFAIL[L]`, `IC5001 SA0..SA3` IPL, SDRAM (`DDR CHECK`), and `TBUS` continuity."
+    ]
+  },
+  {
+    "code": "PLEASE_WAIT_U99_LONG",
+    "aliases": [
+      "PLEASE WAIT (>10S) -> U99",
+      "LONG WAIT (>10S) -> U99",
+      "TIMEOUT U99 (>10S)"
+    ],
+    "domain": "front_panel",
+    "address": "BOOT.BIN:0x44005cd0",
+    "severity": "critical",
+    "title": "PLEASE WAIT (>10s) -> U99 Post-Handshake AM34 Timeout",
+    "native_text": "Extended initialization hang after TBUS 255s watchdog setup (PLEASE WAIT >10s -> U99)",
+    "translation": "AM34 passed early `SA0..SA3` IPL and extended the IC7501 watchdog via `FUN_44005cd0()`, then stalled later in BGO/CS1 NOR, HDD `MEIHDFS` init, or optical drive `DRV` startup before `MAIN` ready.",
+    "actions": [
+      "Decode captured `UARTP2M_T` serial text around `BGO driver init failed[1].`, `-91006`, or `DRV` timeout; retry with `JIGPIN LOW` (`PREJIG WAKE`) + `<=2GB` FAT16 SDSC holding `DIGADIAG.FRM`."
     ]
   },
   {
@@ -265,6 +304,139 @@
     "translation": "BOOT.BIN sampled P7501 Pin 1 LOW at reset and bypassed BGO/normal lock path.",
     "actions": [
       "Keep SD card inserted (`DIGADIAG.FRM`) to enter PANAMON1> and run unbrick/NOR dumps."
+    ]
+  },
+  {
+    "code": "F58",
+    "aliases": [
+      "F58"
+    ],
+    "domain": "front_panel",
+    "address": "SERVICE_MANUAL_EC:p18/IC7501",
+    "severity": "critical",
+    "title": "F58 — DVD-RAM Optical Drive Hardware Error",
+    "native_text": "Drive hardware error (F58 stored in IC7501 timer memory)",
+    "translation": "Optical drive unit hardware error logged by Timer MCU IC7501.",
+    "actions": [
+      "Run Service Mode [4][2] (RAM Drive Last Error) / [9][6] or inspect ATAPI FFC and ODD laser/tray sensors.",
+      "Capture P7501 UART via PREJIG / JIG serial boot mode to isolate ODD errors from NOR/MAIN failure."
+    ]
+  },
+  {
+    "code": "F34",
+    "aliases": [
+      "F34"
+    ],
+    "domain": "front_panel",
+    "address": "SERVICE_MANUAL_EC:p18/IC7501",
+    "severity": "critical",
+    "title": "F34 — Main Microprocessor Initialization Failure at Timer Start",
+    "native_text": "Initialization error when main microprocessor is started up for program recording (F34)",
+    "translation": "Main CPU AM34 failed initialization after IC7501 triggered recording/timer wakeup.",
+    "actions": [
+      "Capture BOOTTRACE PASSIVE WAKE across power-on and check DDR/Flash BGO initialization logs."
+    ]
+  },
+  {
+    "code": "H19",
+    "aliases": [
+      "H19",
+      "FANLOCK"
+    ],
+    "domain": "front_panel",
+    "address": "SERVICE_MANUAL_EC:p18/IC7501:p39",
+    "severity": "critical",
+    "title": "H19 — Inoperative Cooling Fan Motor (FANLOCK Fault)",
+    "native_text": "Inoperative fan motor detected (IC7501 Pin 39 FANLOCK -> auto power off)",
+    "translation": "Timer MCU IC7501 detected missing fan rotation pulse (`FANLOCK`) after power-on and forced shutdown.",
+    "actions": [
+      "Verify rear cooling fan rotation, P1103 connector (FANOUT/FAN_GND/FANLOCK), and Q7511 / IC7507 driver."
+    ]
+  },
+  {
+    "code": "HDD_ERR",
+    "aliases": [
+      "HDD ERR",
+      "HDD ERROR",
+      "HDDERR"
+    ],
+    "domain": "front_panel",
+    "address": "SERVICE_MANUAL_EC:p19/MAIN",
+    "severity": "critical",
+    "title": "HDD ERR — Hard Disk Drive Startup / MEIHFS Failure",
+    "native_text": "HDD ERR (startup failed in Normal / HDD Boot / P-OFF / HDD SLEEP)",
+    "translation": "AM34 failed Secondary Master IDE HDD detection/spin-up (`DAVIS_Connect_IDE(1)` / MEIHFS).",
+    "actions": [
+      "Ensure HDD or SATA bridge (`StarTech IDE2SAT2`) is explicitly jumpered to MASTER (never Slave or Cable Select on DMR-EH55).",
+      "Inspect 40-pin HDD FFC, DR5V/DR12V rails (`IC1506`/`Q1509`), and run `panadiga hdd inspect` on dump."
+    ]
+  },
+  {
+    "code": "HDD_NG",
+    "aliases": [
+      "HDD NG",
+      "HDDNG"
+    ],
+    "domain": "front_panel",
+    "address": "SERVICE_MANUAL_EC:p19/MAIN",
+    "severity": "critical",
+    "title": "HDD NG — Power-On in Standby / Non-Genuine HDD Error",
+    "native_text": "HDD NG (Power on Stand-by setting error or non-genuine HDD)",
+    "translation": "HDD rejected due to missing Panasonic Power-On-in-Standby / vendor handshake.",
+    "actions": [
+      "Verify HDD IDENTIFY parameters and `MASTER` strap on Secondary IDE channel (`ch=1, dev=0`)."
+    ]
+  },
+  {
+    "code": "HARD_ERR",
+    "aliases": [
+      "HARD ERR",
+      "DVD DRIVE ERROR"
+    ],
+    "domain": "front_panel",
+    "address": "SERVICE_MANUAL_EC:p19",
+    "severity": "critical",
+    "title": "HARD ERR — Optical Drive Detected Hard Error",
+    "native_text": "HARD ERR (DVD drive error.)",
+    "translation": "ATAPI DVD-RAM drive reported an unrecoverable hardware error (`0x8004xxxx`).",
+    "actions": [
+      "Inspect exact `8004xxxx` / `0x83A7` sense log over P7501 UART and verify ODD ribbon + laser unit."
+    ]
+  },
+  {
+    "code": "SELF_CHECK",
+    "aliases": [
+      "SELF CHECK",
+      "SELFCHECK"
+    ],
+    "domain": "front_panel",
+    "address": "SERVICE_MANUAL_EC:p19",
+    "severity": "warn",
+    "title": "SELF CHECK — Post-AC Loss / Initialization Restoration",
+    "native_text": "SELF CHECK (restoration operation after AC off / TW7501 discharge)",
+    "translation": "IC7501 and Main SoC executing post-AC-loss self-check restoration; persistent hang indicates Digital PCB or Drive fault.",
+    "actions": [
+      "Wait up to 60s before cutting AC; capture BOOTTRACE PASSIVE WAKE to see where restoration stalls."
+    ]
+  },
+  {
+    "code": "TW7501_STANDBY_RESET",
+    "aliases": [
+      "TW7501_STANDBY_RESET",
+      "TW7501+POWER",
+      "2S RESTART",
+      "C7584",
+      "KEY3_POWER"
+    ],
+    "domain": "front_panel",
+    "address": "MAIN_PCB:TW7501/C7584/IC7501",
+    "severity": "ok",
+    "title": "TW7501 (C7584) + [POWER] Hold — Standby Recovery & Auto-Restart Suppression",
+    "native_text": "Short TW7501 (C7584 0.047F supercap / R7623 180R) + Hold KEY3_POWER (IC7501 Pin 88)",
+    "translation": "Draining TW7501 wipes IC7501 volatile backup RAM (clearing the 2s SELF CHECK retry loop), and holding [POWER] across reset forces P-OFF Standby (`DI_P_ON[H]=0`) cleanly.",
+    "actions": [
+      "While parked in True Standby (`VDD ~0.03V`), arm `BOOTTRACE PASSIVE WAKE` or `PREJIG WAKE` BEFORE pressing [POWER] or Service/Test chord.",
+      "Do NOT apply external voltage to TW7501 or X_SW_5R2V; only P7501 Pin 1 (`SW_UART` GP26) is driven LOW on the 6-pin probe."
     ]
   },
   {

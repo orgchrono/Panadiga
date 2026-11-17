@@ -20,7 +20,8 @@ pub use correlate::{
     parse_wake_trace_output,
 };
 pub use types::{
-    BaudScanSummary, GuidedBenchReport, GuidedStepEvidence, VfdObservation, WakeTraceSummary,
+    BaudScanSummary, BootWakeProfile, GuidedBenchReport, GuidedStepEvidence, VfdObservation,
+    WakeTraceSummary,
 };
 
 /// Executes read-only Step 1 (`PING`, `STATUS`, `PINCHECK`) to validate standby rail & Hi-Z safety.
@@ -80,6 +81,56 @@ pub fn execute_baseline_safety_step(
     )
 }
 
+/// Arms the Pico for a specific boot wakeup profile (`PassiveWake`, `PreJigWake`, `DiagWatchPreJigWake`, `ActiveJigXreset`).
+pub fn execute_wake_trace_step_profile(
+    port: &mut dyn SerialPort,
+    profile: BootWakeProfile,
+    window_ms: u32,
+    jig_hold_ms: u32,
+    wake_timeout_ms: u32,
+    note: &str,
+) -> (WakeTraceSummary, GuidedStepEvidence) {
+    let cmd = profile.build_pico_command(window_ms, jig_hold_ms, wake_timeout_ms);
+    let terminators: &[&str] = if matches!(profile, BootWakeProfile::DiagWatchPreJigWake) {
+        &["DIAGWATCH: OK", "DIAGWATCH: ERROR", "PANADIGA>", "P7501>"]
+    } else {
+        &["BOOTTRACE: OK", "BOOTTRACE: ERR", "PANADIGA>", "P7501>"]
+    };
+    let total_wait_ms = u64::from(window_ms) + u64::from(wake_timeout_ms) + 2500;
+    let raw = send_and_read_until(
+        port,
+        &cmd,
+        terminators,
+        Duration::from_millis(total_wait_ms),
+    );
+    let parsed = parse_wake_trace_output(&raw);
+    let timed_out = raw.contains("wake_timeout=YES") || raw.contains("Standby wake not observed");
+    let status = if timed_out {
+        "TIMEOUT"
+    } else if parsed.rxd_edges > 0 || parsed.nsw5v_edges > 0 {
+        "PASS"
+    } else {
+        "WARN"
+    };
+    let ev = GuidedStepEvidence {
+        step_id: profile.step_id().to_string(),
+        title: profile.title().to_string(),
+        command_executed: cmd,
+        operator_note: note.to_string(),
+        status: status.to_string(),
+        summary: format!(
+            "nsw5v_edges={}, rx/uart={}, txd_edges={}, sw_rel={}, timeout={}",
+            parsed.nsw5v_edges,
+            parsed.rxd_edges,
+            parsed.txd_edges,
+            parsed.sw_uart_released,
+            timed_out
+        ),
+        raw_output: raw,
+    };
+    (parsed, ev)
+}
+
 /// Arms `BOOTTRACE` (passive or active `JIG`) for `window_ms` while operator wakes DVD from Standby.
 pub fn execute_wake_trace_step(
     port: &mut dyn SerialPort,
@@ -87,55 +138,35 @@ pub fn execute_wake_trace_step(
     active_jig: bool,
     note: &str,
 ) -> (WakeTraceSummary, GuidedStepEvidence) {
-    let mode_tok = if active_jig { "JIG" } else { "PASSIVE" };
-    let cmd = format!("BOOTTRACE {window_ms} {mode_tok}");
-    let raw = send_and_read_until(
-        port,
-        &cmd,
-        &["BOOTTRACE: OK", "BOOTTRACE: ERR", "PANADIGA>", "P7501>"],
-        Duration::from_millis(u64::from(window_ms) + 2500),
-    );
-    let parsed = parse_wake_trace_output(&raw);
-    let ev = GuidedStepEvidence {
-        step_id: if active_jig {
-            "STEP_4_JIG_BOOT".to_string()
-        } else {
-            "STEP_2_WAKE_CAPTURE".to_string()
-        },
-        title: if active_jig {
-            "Active SW_UART Serial Boot Probe (BOOTTRACE JIG)".to_string()
-        } else {
-            "Passive Wakeup Capture from Standby (BOOTTRACE PASSIVE)".to_string()
-        },
-        command_executed: cmd,
-        operator_note: note.to_string(),
-        status: if parsed.rxd_edges > 0 { "PASS" } else { "WARN" }.to_string(),
-        summary: format!(
-            "nsw5v_edges={}, rxd_edges={}, txd_edges={}",
-            parsed.nsw5v_edges, parsed.rxd_edges, parsed.txd_edges
-        ),
-        raw_output: raw,
+    let profile = if active_jig {
+        BootWakeProfile::ActiveJigXreset
+    } else {
+        BootWakeProfile::PassiveWake
     };
-    (parsed, ev)
+    execute_wake_trace_step_profile(port, profile, window_ms, 2500, 0, note)
 }
 
-/// Runs `BAUDSCAN` over `window_ms` (optionally triggering `NORMAL` boot) to classify baud & framing.
-pub fn execute_baudscan_step(
+/// Runs `BAUDSCAN` over `window_ms` (optionally waiting for Standby `WAKE`) to classify baud & framing.
+pub fn execute_baudscan_step_with_wake(
     port: &mut dyn SerialPort,
     window_ms: u32,
     apply_snapped: bool,
+    wake_timeout_ms: u32,
     note: &str,
 ) -> (BaudScanSummary, GuidedStepEvidence) {
-    let cmd = if apply_snapped {
-        format!("BAUDSCAN {window_ms} PASSIVE APPLY")
+    let apply_tok = if apply_snapped { " APPLY" } else { "" };
+    let wake_tok = if wake_timeout_ms > 0 {
+        format!(" WAKE:{wake_timeout_ms}")
     } else {
-        format!("BAUDSCAN {window_ms} PASSIVE")
+        String::new()
     };
+    let cmd = format!("BAUDSCAN {window_ms} PASSIVE{apply_tok}{wake_tok}");
+    let total_wait_ms = u64::from(window_ms) + u64::from(wake_timeout_ms) + 2000;
     let raw = send_and_read_until(
         port,
         &cmd,
         &["BAUDSCAN: OK", "PANADIGA>", "P7501>"],
-        Duration::from_millis(u64::from(window_ms) + 2000),
+        Duration::from_millis(total_wait_ms),
     );
     let parsed = parse_baudscan_output(&raw);
     let ev = GuidedStepEvidence {
@@ -161,6 +192,16 @@ pub fn execute_baudscan_step(
         raw_output: raw,
     };
     (parsed, ev)
+}
+
+/// Runs immediate `BAUDSCAN` over `window_ms` (optionally applying snapped baudrate) to classify baud & framing.
+pub fn execute_baudscan_step(
+    port: &mut dyn SerialPort,
+    window_ms: u32,
+    apply_snapped: bool,
+    note: &str,
+) -> (BaudScanSummary, GuidedStepEvidence) {
+    execute_baudscan_step_with_wake(port, window_ms, apply_snapped, 0, note)
 }
 
 /// Saves Markdown and JSON reports using a non-destructive Copy-on-Write timestamped filename.

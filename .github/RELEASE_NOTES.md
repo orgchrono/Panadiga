@@ -16,13 +16,13 @@ This release unifies **three convergent engineering layers** validated directly 
 
 | Layer | Methodology | Verified Artifacts |
 | :--- | :--- | :--- |
-| **Documentary** | `30` official Panasonic service manuals, schematics, and IC datasheets cross-referenced against PCB `VEP79138` | Canonical `P7501` (`B6B-ZR-3R4`) pinout, AM34 memory map, `MEIHDFS` geometry, `33` bilingual dossiers |
+| **Documentary** | `30` official Panasonic service manuals, schematics, and IC datasheets cross-referenced against PCB `VEP79138` | Canonical `P7501` (`B6B-ZR-3R4`) pinout, AM34 memory map, `MEIHDFS` geometry, `36` bilingual dossiers |
 | **Mathematical** | Shannon entropy analysis (`H = 7.99958 bits/byte`), 64-bit ECB KPA codebook, `.FRM` TOC parsing, `XOR 0xFF` extent decoding | `PANA_DVD.FRM` (`48B` Feistel) & `PANA__SD.FRM` (`64B` plaintext) slots, `EEMUL` NVRAM sector cure |
-| **Physical** | Reconstructed **P7501 Asynchronous UART (`115200 8N1`)**, discrete `SW_UART` / `XRESET` / `NSW5V` control, glitch-immune `BAUDSCAN` & PIO timing samplers | Modular C11 + PIO probe firmware (`RP2040` / `RP2350` / `Unified`), `SC0` Live Bridge, `DIAGWATCH`, `PANARSP`, `DRVPANA`, `JEDEC` 2-layer Spansion stub, async GDB RSP server |
+| **Physical** | Reconstructed **P7501 Asynchronous UART (`115200 8N1`)**, discrete `SW_UART` / `XRESET` / `NSW5V` control, glitch-immune `BAUDSCAN` & PIO timing samplers | Modular C11 + PIO probe firmware (`RP2040` / `RP2350` / `Unified`), `SC0` Live Bridge, `DIAGWATCH`, `PANARSP`, `DRVPANA`, `JEDEC` 2-layer Spansion stub, `PREJIG WAKE` Standby capture, async GDB RSP server |
 
 The platform operates across all stages of the hybrid DIGA engineering workflow:
 
-1. **Two-Stage Hybrid Boot Recovery & Live Bench Wizard:** Handles both onboard Spansion NOR Flash (**IPL + Upper NOR + EEMUL NVRAM**) and internal HDD / SD / CD update stages (`BOOT.BIN`, `PROG061`, `MAIN3410PQ`, `DRV S211`, `DIGADIAG.FRM`, `PANA__SD.FRM`), backed by a **447-entry firmware error dictionary** (`panadiga pico error-lookup`) and interactive hardware diagnostics (`panadiga pico bench-wizard`).
+1. **Two-Stage Hybrid Boot Recovery & Live Bench Wizard:** Handles both onboard Spansion NOR Flash (**IPL + Upper NOR + EEMUL NVRAM**) and internal HDD / SD / CD update stages (`BOOT.BIN`, `PROG061`, `MAIN3410PQ`, `DRV S211`, `DIGADIAG.FRM`, `PANA__SD.FRM`), backed by a **457-entry firmware error dictionary** (`panadiga pico error-lookup`) and multi-boot interactive diagnostics (`panadiga pico bench-wizard` supporting passive Standby wakeup, `PREJIG` without `XRESET`, and active `SW_UART`+`XRESET`).
 2. **Multi-Language Engineering Stack & Android-Exclusive IR Commander:** Native Rust workspace (5 crates), modular C11 + PIO probe firmware, Tauri 2.0 + React 18 TypeScript desktop workbench + dedicated Android APK featuring a React/Radix **DIGA IR Commander** (compile-time isolated out of Desktop `.exe`/Linux/macOS binaries), headless/MCP Ghidra Jython automation, and Python CI/build validation (`mypy --strict`).
 
 ---
@@ -43,8 +43,8 @@ The platform operates across all stages of the hybrid DIGA engineering workflow:
 The compiled P7501 Async UART firmware is embedded directly in `panadiga` / `panadiga-desktop` and distributed standalone for drag-and-drop BOOTSEL flashing (`RPI-RP2` / `RP2350`):
 
 - **Interfaces:** USB CDC (`115200`), PIO1 hardware UART samplers/TX (`p7501_uart.pio`, `p7501_uart_duplex.pio`, `p7501_logic_sampler.pio`, `p7501_sds_sampler.pio`), Android USB-C OTG, and optional **Bluetooth LE NUS** (`PANADIGA_BLE_ENABLED=1` for `pico_w` / `pico2_w`).
-- **Diagnostics & Live Control:** `PING`, `STATUS`, `BANNER`, `WDT`, `LED`, `PINCHECK`, `BUSDIAG`, `PWRTRACE`, `BOOTTRACE`, `PIOLOGIC`, `SDSNIFF`, `JIGSWEEP`, `DUMP`, `BAUDSCAN` (dual-polarity anti-glitch detector + `PIO1 IRQ 4` framing telemetry), `BRIDGE` (`SC0` passthrough), `WAITTX`, `DIAGWATCH`, `PANARSP`, `DRVPANA`, `JEDEC` (2-layer Spansion FSM/stub), and async GDB RSP bridge (`panadiga pico bridge --target-mode ocd|panamon1|panarsp` on `127.0.0.1:3333`).
-- **Error Dictionary & Guided Bench Wizard:** `panadiga pico error-lookup` (447-entry core + `DRV_decomp` `0x0000..0x83FF` dictionary) and interactive `panadiga pico bench-wizard`.
+- **Diagnostics & Live Control:** `PING`, `STATUS`, `BANNER`, `WDT`, `LED`, `PINCHECK`, `BUSDIAG`, `PWRTRACE`, `BOOTTRACE` (`PREJIG`/`WAKE`), `PIOLOGIC`, `SDSNIFF`, `JIGSWEEP`, `DUMP`, `BAUDSCAN` (dual-polarity anti-glitch detector + `PIO1 IRQ 4` framing telemetry + `WAKE`), `BRIDGE` (`SC0` passthrough), `WAITTX`, `DIAGWATCH` (`PREJIG`/`WAKE`), `PANARSP`, `DRVPANA`, `JEDEC` (2-layer Spansion FSM/stub), and async GDB RSP bridge (`panadiga pico bridge --target-mode ocd|panamon1|panarsp` on `127.0.0.1:3333`).
+- **Error Dictionary & Guided Bench Wizard:** `panadiga pico error-lookup` (457-entry core + `DRV_decomp` `0x0000..0x83FF` + `IC7501` Standby/VFD dictionary) and multi-boot interactive `panadiga pico bench-wizard`.
 
 ```bash
 # List connected Pico serial probes or flash embedded UF2 automatically
@@ -163,7 +163,7 @@ panadiga unbrick prepare-sd --outdir ./sd_card_eh55_kit
 
 ## 6. Documentation & Legal
 
-- **Master Bilingual Portal (33 EN/PT-BR Dossier Pairs):** [`docs/INDEX.md`](docs/INDEX.md)
+- **Master Bilingual Portal (36 EN/PT-BR Dossier Pairs):** [`docs/INDEX.md`](docs/INDEX.md)
 - **Root Engineering Audits:** [`COMPLETE_AUDIT.md`](COMPLETE_AUDIT.md) · [`AUDITORIA_COMPLETA.md`](AUDITORIA_COMPLETA.md)
 - **Service Manuals & Datasheets (`30` PDFs):** [`manuals_and_schematics/README.md`](manuals_and_schematics/README.md)
 - **Ghidra Pseudocode & Live `COM10` Logs:** [`docs/pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md`](docs/pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) · [`docs/debug_logs/README.md`](docs/debug_logs/README.md)

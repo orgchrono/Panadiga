@@ -29,9 +29,9 @@ Evidências exatas do módulo Sleigh MN103S / AM33 capturadas nos gaps:
 ## 2. Upgrades C11 no Firmware Pico `P7501` e UF2s Recompilados
 
 Os módulos em [`firmware/pico-p7501/`](../../firmware/pico-p7501/) (ISO C11 estrito com `-Wall -Wextra -Werror`, todos os arquivos de produção <= `339` linhas) foram recompilados para hardware real (`RP2040` e `RP2350`) via `python scripts/build.py --pico --no-cache` e incorporados em `crates/panadiga-core/src/pico/firmware_bins/`:
-- **UF2 Unificado (`panasonic_p7501_uart_unified.uf2`):** `646.144 B` (`SHA-256: d97dd9600766adff2f3692b5add5ec533e41f5379e67eb58296d7918f8f4334d`)
-- **UF2 RP2040 (`panasonic_p7501_uart_rp2040.uf2`):** `330.752 B` (`SHA-256: 70d578710a79ec5ca27ee1dd1dc23893ceccd30cacfed75e6a0bf0a00c771435`)
-- **UF2 RP2350 (`panasonic_p7501_uart_rp2350.uf2`):** `315.392 B` (`SHA-256: 73b0ebf7fb0eb3337578e40f0b0c9764323283e8e88c3454fcba1a1e6b27b29f`)
+- **UF2 Unificado (`panasonic_p7501_uart_unified.uf2`):** `522.752 B` (`SHA-256: 2d568f7f4c1d3b12c83721eef4a5666a59666ead5fe8ee7359915e45962aa405`)
+- **UF2 RP2040 (`panasonic_p7501_uart_rp2040.uf2`):** `268.288 B` (`SHA-256: 0f216f39a5eb863eee4a93b7a957bea872f467cc0c050c7d897a33a73d50e0d2`)
+- **UF2 RP2350 (`panasonic_p7501_uart_rp2350.uf2`):** `254.464 B` (`SHA-256: c0cd3f9bd90401ea2699cfeeb2e8c067608c0db489ec4d724cf550ac74dab99d`)
 
 Principais evoluções validadas nos testes de host (`firmware/pico-p7501/tests/test_pana_diag_drv.c`):
 1. **`DIAGWATCH [ms] [NORMAL|JIG[:ms]|NOPULL] <ação> [RELEASE|HOLD]`:** suporta payloads parametrizados no prompt `PANAMON1>`: `READ[:a[,n]]`, `WRITE:<a,v>`, `JUMP:<a>` e `ERASE:<a_nvram>`, além de `AUTO`/`BYPASS`/`FORMAT`/`DUMP`/`QUIT`/`NONE`. Travas compartilhadas impedem gravação na Flash IPL Spansion (`0x80000000..=0x807EFFFF`, `0x84000000..=0x847EFFFF` → `E05`) e restringem `ERASE` estritamente aos `64 KB` de NVRAM (`0x807F0000..=0x807FFFFF`, `0x847F0000..=0x847FFFFF`).
@@ -47,7 +47,7 @@ Principais evoluções validadas nos testes de host (`firmware/pico-p7501/tests/
 | :--- | :--- | :--- | :--- |
 | `scripts/re/mn10300.py`, `scripts/re/mn103_traps.py` | **Paridade Rust Entregue** | `crates/panadiga-core/src/re/{mn10300,mn10300_traps}` + `panadiga re {audit, xrefs, drv-cli, drv-errors}` | Análise estática das 7 Armadilhas, opcodes `AM33`, xrefs e tabelas `DRV` já roda nativamente em Rust; Python mantido só para paridade em `scripts/tests/test_re_tools.py`. |
 | `scripts/re/pana_frm.py` | **Substituído no Core** | `crates/panadiga-core/src/crypto/` (`panadiga frm`) + `panadiga re drv-cli` | Cifra Feistel/`EXTRHEAD`/`.FRM` e tabela `<8sIII>` do drive já possuem implementação completa em Rust. |
-| `scripts/bench/decoders.py` | **Paridade Rust Entregue** | `crates/panadiga-core/src/pico/log_decoder.rs` (`panadiga pico decode-log`) + `apps/desktop/src-tauri/src/pico/diagnostics/parser.rs` | Decodificação offline de logs UTF-16LE/UTF-8 (`COM10`), erros `SDCD` e pacotes SCSI `SENSE` migrada para a CLI Rust (`panadiga pico decode-log`). |
+| `scripts/bench/decoders.py` | **Paridade Rust Entregue** | `crates/panadiga-core/src/pico/log_decoder/` (`panadiga pico decode-log`) + `apps/desktop/src-tauri/src/pico/diagnostics/parser.rs` | Decodificação offline de logs UTF-16LE/UTF-8 (`COM10`), erros `SDCD` e pacotes SCSI `SENSE` migrada para a CLI Rust (`panadiga pico decode-log`). |
 | `scripts/bench/{nor_dumper,rsp_frames,rsp_dump}.py` | **Substituído no Core/Desktop** | `panadiga-core/src/re/nor_dumper.rs`, `src-tauri/src/pico/rsp_protocol.rs`, ferramenta MCP `panadiga_nor_dumper_stub` | Lógica de stubs NOR e pacotes GDB RSP já opera em Rust no backend Tauri e na CLI/MCP; cópias Python apoiam mocks de `pytest`. |
 | `scripts/bench/{protocol,boot_harness,runner}.py` | **Manter Opcional (Bancada)** | `apps/desktop/src-tauri/src/pico/serial/` & `panadiga pico` | Útil para testes rápidos isolados via `pyserial` na `COM10` sem recompilar binários Rust (`test_boot_harness.py`). |
 | `tools/ghidra/*.py` (6 scripts) | **DEVE MANTER PYTHON (Jython)** | Gerados a partir do SSOT Rust via `panadiga ghidra export-all` | Executam dentro da JVM do Ghidra (`Jython 2.7`) chamando `currentProgram`, `FlatProgramAPI` e `DecompInterface`. O Rust é a fonte única de verdade que os gera. |

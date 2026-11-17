@@ -69,6 +69,10 @@ static void test_diag_watch_legacy_and_fsm(void) {
     assert(p7501_diag_watch_parse_args("20000 JIG:2500 ERASE RELEASE", &dw) && dw.action == P7501_DIAG_ACT_ERASE);
     assert(p7501_diag_watch_parse_args("20000 JIG:2500 QUIT RELEASE", &dw) && dw.action == P7501_DIAG_ACT_QUIT);
 
+    assert(p7501_diag_watch_parse_args("20000 PREJIG:3200 AUTO RELEASE WAKE:45000", &dw));
+    assert(dw.boot_action == P7501_BOOT_ACTION_JIG && dw.jig_hold_ms == 3200u && dw.no_xreset);
+    assert(dw.wait_for_wake && dw.wake_timeout_ms == 45000u);
+
     assert(p7501_diag_watch_parse_args("25000 JIG:2500 AUTO RELEASE", &dw));
     p7501_diag_watch_state_t st;
     p7501_diag_watch_init(&st);

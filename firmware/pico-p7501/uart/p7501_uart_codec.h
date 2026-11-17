@@ -88,12 +88,15 @@ bool p7501_parse_waittx_args(const char *arg, p7501_waittx_spec_t *out);
 
 #include "common/p7501_hex.h"
 
-/** Parsed capture window + boot stimulation specification (`UARTSTREAM`/`HEXCAP`/`PWRTRACE`/`BOOTTRACE`). */
+/** Parsed capture window + boot stimulation specification (`UARTSTREAM`/`HEXCAP`/`PWRTRACE`/`BOOTTRACE`/`BAUDSCAN`). */
 typedef struct p7501_window_boot_spec {
     uint32_t window_ms;
     p7501_boot_action_t boot_action;
     uint32_t jig_hold_ms;
     bool sticky_jig;
+    bool no_xreset;
+    bool wait_for_wake;
+    uint32_t wake_timeout_ms;
 } p7501_window_boot_spec_t;
 
 /** Parsed `BRIDGE [baud] [PASSIVE|NORMAL|JIG[:ms]|NOPULL] [CTRL]` specification. */
@@ -104,10 +107,20 @@ typedef struct p7501_bridge_spec {
     bool log_ctrl_edges;
 } p7501_bridge_spec_t;
 
+/** Parse boot action (`NORMAL`, `JIG[:ms]`, `PREJIG[:ms]`, `NOPULL`) with XRESET-skip support. */
+p7501_boot_action_t p7501_parse_boot_spec_ex(
+    const char *token,
+    uint32_t *out_jig_hold_ms,
+    bool *out_no_xreset
+);
+
 /** Parse boot action (`NORMAL`, `JIG`, `JIG:<hold_ms>`, `NOPULL`) with optional timed SW_UART release. */
 p7501_boot_action_t p7501_parse_boot_spec(const char *token, uint32_t *out_jig_hold_ms);
 
-/** Parse standard `<ms> [NORMAL|JIG|JIG:<ms>|NOPULL] [STICKY]` arguments (DRY helper across stream/diag commands). */
+/** Parse optional `WAKE` or `WAKE:<ms>` standby trigger token cleanly (`[1000..WDT_MAX]` ms). */
+bool p7501_parse_wake_arg_token(const char *token, bool *out_wait, uint32_t *out_timeout_ms);
+
+/** Parse standard `<ms> [NORMAL|JIG[:ms]|PREJIG[:ms]|NOPULL] [STICKY] [WAKE[:ms]]` arguments. */
 void p7501_parse_window_boot_args(
     const char *arg,
     uint32_t default_ms,

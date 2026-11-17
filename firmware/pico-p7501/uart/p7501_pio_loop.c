@@ -7,14 +7,70 @@
 
 #include "uart/p7501_pio_loop.h"
 
+#include "hal/p7501_hw.h"
 #include "hal/p7501_led.h"
 #include "hal/p7501_watchdog.h"
+#include "p7501_types.h"
 #include "uart/p7501_uart_pio_engine.h"
 
+#include "hardware/gpio.h"
 #include "pico/stdlib.h"
 #include "pico/time.h"
 
+#include <inttypes.h>
+#include <stdio.h>
 #include <string.h>
+
+bool p7501_pio_wait_standby_wake(
+    const char *tag,
+    uint32_t wait_ms,
+    bool prestrap_sw_uart_low,
+    float *out_vdd,
+    uint32_t *out_elapsed_ms
+) {
+    const char *label = (tag != NULL && tag[0] != '\0') ? tag : "WAKE";
+    p7501_hw_enforce_nsw5v_hiz();
+    if (prestrap_sw_uart_low) {
+        p7501_hw_sw_uart_set_low(true);
+    }
+
+    float v = p7501_hw_read_vdd();
+    if (gpio_get(P7501_PIN_NSW5V) || (!prestrap_sw_uart_low && (v >= P7501_VDD_WAKE_THRESHOLD_V))) {
+        if (out_vdd != NULL) *out_vdd = v;
+        if (out_elapsed_ms != NULL) *out_elapsed_ms = 0u;
+        return true;
+    }
+
+    printf("[%s] WAKE armed (Standby VDD=%.2fV, prestrap=%s): press [POWER]/IR/chord within %" PRIu32 " ms...\n",
+           label, (double)v, prestrap_sw_uart_low ? "SW_UART_LOW" : "HI-Z", wait_ms);
+    fflush(stdout);
+
+    const uint64_t t0_us = time_us_64();
+    const uint64_t deadline_us = t0_us + ((uint64_t)wait_ms * 1000ULL);
+    while (time_us_64() < deadline_us) {
+        if (p7501_wdt_poll_abort()) {
+            if (out_vdd != NULL) *out_vdd = p7501_hw_read_vdd();
+            if (out_elapsed_ms != NULL) *out_elapsed_ms = (uint32_t)((time_us_64() - t0_us) / 1000ULL);
+            if (prestrap_sw_uart_low) {
+                p7501_hw_isolate_bus_hiz();
+            }
+            return false;
+        }
+        v = p7501_hw_read_vdd();
+        if (gpio_get(P7501_PIN_NSW5V) || (!prestrap_sw_uart_low && (v >= P7501_VDD_WAKE_THRESHOLD_V))) {
+            if (out_vdd != NULL) *out_vdd = v;
+            if (out_elapsed_ms != NULL) *out_elapsed_ms = (uint32_t)((time_us_64() - t0_us) / 1000ULL);
+            return true;
+        }
+        sleep_ms(1u);
+    }
+    if (out_vdd != NULL) *out_vdd = p7501_hw_read_vdd();
+    if (out_elapsed_ms != NULL) *out_elapsed_ms = wait_ms;
+    if (prestrap_sw_uart_low) {
+        p7501_hw_isolate_bus_hiz();
+    }
+    return false;
+}
 
 void p7501_pio_run_session(
     const p7501_pio_loop_cfg_t *cfg,
@@ -32,7 +88,7 @@ void p7501_pio_run_session(
     if (cfg->manage_session) {
         p7501_wdt_set_stage(P7501_WDT_STAGE_RESET_SYNC);
         p7501_led_set_auto_mode(LED_MODE_BUS_ACTIVE);
-        p7501_pio_begin_rx_session_ex(cfg->boot_action, cfg->jig_hold_ms);
+        p7501_pio_begin_rx_session_cfg(cfg->boot_action, cfg->jig_hold_ms, cfg->no_xreset);
     }
 
     p7501_wdt_set_stage(P7501_WDT_STAGE_RX_WAIT);

@@ -233,8 +233,9 @@ The firmware embeds a **GNU Remote Serial Protocol (RSP)** server governed by [`
   # Live async Ghidra/GDB bridge over DIGADIAG PANAMON1> (R/W) or MAIN _dev_SERIAL:
   panadiga pico gdb-bridge --port COM10 --target-mode panamon1 --listen 127.0.0.1:3333
   panadiga pico gdb-bridge --port COM10 --target-mode panarsp  --listen 127.0.0.1:3333
-  # Guided interactive bench test battery (Wakeup + BAUDSCAN + 447-code Firmware Dictionary):
+  # Guided interactive multi-boot bench battery (Standby WAKE, PREJIG no-XRESET, BAUDSCAN, Firmware Error Dictionary):
   panadiga pico bench-wizard --port COM10
+  panadiga pico bench-wizard --port COM10 --profile prejig --wake-timeout-ms 45000
   panadiga pico error-lookup 0x83A7
   ```
 * Detailed step-by-step walkthrough for Ghidra, IDA Pro, and `gdb-multiarch`:
@@ -254,3 +255,4 @@ The flash subsystem ([`p7501_flash.c`](../../firmware/pico-p7501/flash/p7501_fla
 
 * **JEDEC SRAM Stubs (`0x51800000`):** `PANARSP JEDEC_ERASE:<addr>` and `PANARSP JEDEC_PROG:<addr>,<hex>` (`1..=16` bytes per call) upload the [`p7501_pana_jedec.h`](../../firmware/pico-p7501/uart/p7501_pana_jedec.h) / [`p7501_pana_jedec.c`](../../firmware/pico-p7501/uart/p7501_pana_jedec.c) stub to `0x51800000` (after policy enforcement in [`p7501_pana_rsp_parse.c`](../../firmware/pico-p7501/uart/p7501_pana_rsp_parse.c)), signaling **`PANAJEDEC_OK`** or timeout **`PANAJEDEC_TO`**. Over `PANAMON1>`, [`p7501_diag_watch.c`](../../firmware/pico-p7501/uart/p7501_diag_watch.c) dispatches `'U'` before `'W'`/`'E'`.
 * **Offline Copy-on-Write Fallback:** Image patching runs via `panadiga nvram patch-upper-nor` ([`nvram.rs`](../../crates/panadiga-cli/src/cli/handlers/nvram.rs)) with mandatory SHA-256 `--backup` (blocking `SA0..SA3` unless `--allow-critical-ipl` is specified offline).
+* **Deep-Dive on `IC7501` Standby, `TW7501`, `TBUS` & Real VFD States:** See the dedicated architecture dossier [`STANDBY_IC7501_TBUS_TW7501_AND_BOOT_STATES_ARCHITECTURE.md`](./STANDBY_IC7501_TBUS_TW7501_AND_BOOT_STATES_ARCHITECTURE.md) (`PLEASE WAIT -> U99` vs `HELLO -> U99`, `TW7501` + `[POWER]` standby stabilization physics, `FUN_44005cd0` `255s` handshake, and `PREJIG WAKE`).

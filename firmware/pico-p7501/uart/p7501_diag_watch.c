@@ -168,41 +168,10 @@ static void diagwatch_on_tick(void *raw_ctx, uint32_t rel_us, bool *out_stop) {
     flush_pending_alerts(dc);
 }
 
-static bool wait_for_standby_wake(uint32_t wait_ms, float *out_vdd, uint32_t *out_elapsed_ms) {
-    float v = p7501_hw_read_vdd();
-    if (v >= P7501_VDD_WAKE_THRESHOLD_V) {
-        if (out_vdd != NULL) *out_vdd = v;
-        if (out_elapsed_ms != NULL) *out_elapsed_ms = 0u;
-        return true;
-    }
-    printf("[DIAGWATCH] WAKE armed (Standby VDD=%.2fV): press POWER on unit within %" PRIu32 " ms...\n",
-           v, wait_ms);
-    fflush(stdout);
-    const uint64_t t0_us = time_us_64();
-    const uint64_t deadline_us = t0_us + ((uint64_t)wait_ms * 1000ULL);
-    while (time_us_64() < deadline_us) {
-        if (p7501_wdt_poll_abort()) {
-            if (out_vdd != NULL) *out_vdd = p7501_hw_read_vdd();
-            if (out_elapsed_ms != NULL) *out_elapsed_ms = (uint32_t)((time_us_64() - t0_us) / 1000ULL);
-            return false;
-        }
-        v = p7501_hw_read_vdd();
-        if (v >= P7501_VDD_WAKE_THRESHOLD_V) {
-            if (out_vdd != NULL) *out_vdd = v;
-            if (out_elapsed_ms != NULL) *out_elapsed_ms = (uint32_t)((time_us_64() - t0_us) / 1000ULL);
-            return true;
-        }
-        sleep_ms(1u);
-    }
-    if (out_vdd != NULL) *out_vdd = p7501_hw_read_vdd();
-    if (out_elapsed_ms != NULL) *out_elapsed_ms = wait_ms;
-    return false;
-}
-
 void p7501_cmd_diag_watch(const char *arg) {
     p7501_diag_watch_spec_t spec;
     if (!p7501_diag_watch_parse_args(arg, &spec)) {
-        printf("DIAGWATCH: ERROR (Usage: DIAGWATCH [ms] [NORMAL|JIG[:ms]|NOPULL] [AUTO|BYPASS|READ[:a[,n]]|WRITE:<a,v>|FORMAT|DUMP|JUMP:<a>|ERASE:<a_nvram>|QUIT|NONE] [RELEASE|HOLD] [WAKE[:ms]])\n");
+        printf("DIAGWATCH: ERROR (Usage: DIAGWATCH [ms] [NORMAL|JIG[:ms]|PREJIG[:ms]|NOPULL] [AUTO|BYPASS|READ[:a[,n]]|WRITE:<a,v>|FORMAT|DUMP|JUMP:<a>|ERASE:<a_nvram>|QUIT|NONE] [RELEASE|HOLD] [WAKE[:ms]])\n");
         return;
     }
 
@@ -217,14 +186,15 @@ void p7501_cmd_diag_watch(const char *arg) {
     if (spec.wait_for_wake) {
         float wake_v = 0.0f;
         uint32_t wake_ms = 0u;
-        if (!wait_for_standby_wake(spec.wake_timeout_ms, &wake_v, &wake_ms)) {
+        const bool prestrap = spec.no_xreset && (spec.boot_action == P7501_BOOT_ACTION_JIG);
+        if (!p7501_pio_wait_standby_wake("DIAGWATCH", spec.wake_timeout_ms, prestrap, &wake_v, &wake_ms)) {
             printf("DIAGWATCH: OK (rx=0 bytes, ferr=0, events=0x0000, sw_rel=NO, tx=NO, ovf=NO, aborted=YES)\n");
             printf("[DIAGWATCH] Notice: Standby wake not observed within %" PRIu32 " ms (VDD=%.2fV)\n",
-                   wake_ms, wake_v);
+                   wake_ms, (double)wake_v);
             return;
         }
         printf("[DIAGWATCH +%" PRIu32 "ms] WAKE edge detected (VDD=%.2fV) -> starting capture\n",
-               wake_ms, wake_v);
+               wake_ms, (double)wake_v);
     }
 
     size_t buf_cap = 0u;
@@ -235,14 +205,15 @@ void p7501_cmd_diag_watch(const char *arg) {
     };
     p7501_diag_watch_init(&dc.fsm);
 
-    printf("=== DIAGWATCH PIO1 (baud=%" PRIu32 " framing=%s ms=%" PRIu32 " boot=%d hold=%" PRIu32 " act=%d rel_ddr=%s) ===\n",
+    printf("=== DIAGWATCH PIO1 (baud=%" PRIu32 " framing=%s ms=%" PRIu32 " boot=%d hold=%" PRIu32 " act=%d rel_ddr=%s no_xrst=%s) ===\n",
            p7501_pio_get_baud(),
            p7501_framing_name(p7501_pio_get_framing()),
            spec.timeout_ms,
            (int)spec.boot_action,
            spec.jig_hold_ms,
            (int)spec.action,
-           spec.release_on_ddr ? "YES" : "NO");
+           spec.release_on_ddr ? "YES" : "NO",
+           spec.no_xreset ? "YES" : "NO");
     fflush(stdout);
 
     const p7501_pio_loop_cfg_t cfg = {
@@ -250,6 +221,7 @@ void p7501_cmd_diag_watch(const char *arg) {
         .boot_action = spec.boot_action,
         .jig_hold_ms = spec.jig_hold_ms,
         .manage_session = true,
+        .no_xreset = spec.no_xreset,
         .auto_release_serial_boot = false,
         .allow_cdc_abort = true,
         .on_rx_byte = diagwatch_on_byte,

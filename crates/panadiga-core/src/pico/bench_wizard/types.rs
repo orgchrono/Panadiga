@@ -34,12 +34,74 @@ pub struct WakeTraceSummary {
     pub raw_output: String,
 }
 
-/// Operator visual cue on the DMR-EH55 front-panel VFD display.
+/// Selectable P7501 hardware boot trigger profile executed from Standby or live target.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BootWakeProfile {
+    /// Hi-Z `SW_UART` & `XRESET`, waiting cleanly for Standby wake (`NSW5V=1` or `VDD>=2.0V`).
+    PassiveWake,
+    /// Pre-straps `SW_UART = LOW` in Standby WITHOUT pulsing `XRESET`, releasing after `serial boot mode`.
+    PreJigWake,
+    /// Autonomous `DIAGWATCH` + `PREJIG` wake intercept for `SDDIAG` / `BGO` / `PANAMON1>` telemetry.
+    DiagWatchPreJigWake,
+    /// Active `SW_UART = LOW` + Open-Drain `XRESET` pulse (`JIG` forced serial boot).
+    ActiveJigXreset,
+}
+
+impl BootWakeProfile {
+    /// Builds the exact Pico CDC command (`BOOTTRACE` or `DIAGWATCH`) for this profile.
+    #[must_use]
+    pub fn build_pico_command(
+        self,
+        window_ms: u32,
+        jig_hold_ms: u32,
+        wake_timeout_ms: u32,
+    ) -> String {
+        let wake_suffix = if wake_timeout_ms > 0 {
+            format!(" WAKE:{wake_timeout_ms}")
+        } else {
+            String::new()
+        };
+        match self {
+            Self::PassiveWake => format!("BOOTTRACE {window_ms} PASSIVE{wake_suffix}"),
+            Self::PreJigWake => format!("BOOTTRACE {window_ms} PREJIG:{jig_hold_ms}{wake_suffix}"),
+            Self::DiagWatchPreJigWake => {
+                format!("DIAGWATCH {window_ms} PREJIG:{jig_hold_ms} NONE RELEASE{wake_suffix}")
+            }
+            Self::ActiveJigXreset => format!("BOOTTRACE {window_ms} JIG:{jig_hold_ms}"),
+        }
+    }
+
+    /// Stable identifier token for report sections.
+    #[must_use]
+    pub fn step_id(self) -> &'static str {
+        match self {
+            Self::PassiveWake => "STEP_WAKE_PASSIVE",
+            Self::PreJigWake => "STEP_WAKE_PREJIG",
+            Self::DiagWatchPreJigWake => "STEP_WAKE_DIAGWATCH",
+            Self::ActiveJigXreset => "STEP_BOOT_ACTIVE_JIG",
+        }
+    }
+
+    /// Human-readable title describing the electrical trigger used.
+    #[must_use]
+    pub fn title(self) -> &'static str {
+        match self {
+            Self::PassiveWake => "Passive Standby Wakeup Capture (Hi-Z SW_UART / XRESET)",
+            Self::PreJigWake => "Standby PREJIG Serial Boot (SW_UART LOW, No XRESET Pulse)",
+            Self::DiagWatchPreJigWake => "Autonomous DIAGWATCH PREJIG Wake Interceptor",
+            Self::ActiveJigXreset => "Active SW_UART LOW + Open-Drain XRESET Probe",
+        }
+    }
+}
+
+/// Visual cue observed by the operator on the DMR-EH55 front-panel VFD display.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum VfdObservation {
     StaysStandbyClock,
-    HelloPleaseWaitU99Under2s,
+    PleaseWaitThenU99Under2s,
+    HelloThenU99Under2s,
     ImmediateU99,
     U99AfterLongWait,
     ReadyNormal,
@@ -54,9 +116,10 @@ impl VfdObservation {
     pub fn as_cue_text(&self) -> &str {
         match self {
             Self::StaysStandbyClock => "0:00 STANDBY",
-            Self::HelloPleaseWaitU99Under2s => "HELLO PLEASE WAIT (<=2s) U99",
-            Self::ImmediateU99 => "U99 IMMEDIATE",
-            Self::U99AfterLongWait => "PLEASE WAIT -> U99 (>10s)",
+            Self::PleaseWaitThenU99Under2s => "PLEASE WAIT (~2s) -> U99",
+            Self::HelloThenU99Under2s => "HELLO (~2s) -> U99",
+            Self::ImmediateU99 => "DIRECT U99",
+            Self::U99AfterLongWait => "PLEASE WAIT (>10s) -> U99",
             Self::ReadyNormal => "NORMAL READY",
             Self::PowerOffBye => "BYE STANDBY",
             Self::BlankDead => "VFD BLANK",

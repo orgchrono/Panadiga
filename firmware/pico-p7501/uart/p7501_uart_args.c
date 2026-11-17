@@ -7,6 +7,7 @@
 
 #include "uart/p7501_uart_codec.h"
 #include "common/p7501_hex.h"
+#include "common/p7501_wdt_logic.h"
 
 #include <stddef.h>
 #include <string.h>
@@ -80,9 +81,16 @@ const char *p7501_next_token(const char *cursor, char *out, size_t out_cap) {
     return cursor;
 }
 
-p7501_boot_action_t p7501_parse_boot_spec(const char *token, uint32_t *out_jig_hold_ms) {
-    if (out_jig_hold_ms) {
+p7501_boot_action_t p7501_parse_boot_spec_ex(
+    const char *token,
+    uint32_t *out_jig_hold_ms,
+    bool *out_no_xreset
+) {
+    if (out_jig_hold_ms != NULL) {
         *out_jig_hold_ms = 0u;
+    }
+    if (out_no_xreset != NULL) {
+        *out_no_xreset = false;
     }
     if (!token || token[0] == '\0') {
         return P7501_BOOT_ACTION_PASSIVE;
@@ -93,7 +101,16 @@ p7501_boot_action_t p7501_parse_boot_spec(const char *token, uint32_t *out_jig_h
     if (p7501_ascii_ieq(token, "JIG") || p7501_ascii_ieq(token, "SERIAL")) {
         return P7501_BOOT_ACTION_JIG;
     }
-    /* Support `JIG:<hold_ms>` to hold SW_UART LOW across reset then release for Q7514 TX. */
+    if (p7501_ascii_ieq(token, "PREJIG")) {
+        if (out_jig_hold_ms != NULL) {
+            *out_jig_hold_ms = 3000u;
+        }
+        if (out_no_xreset != NULL) {
+            *out_no_xreset = true;
+        }
+        return P7501_BOOT_ACTION_JIG;
+    }
+    /* Support `JIG:<hold_ms>` and `PREJIG:<hold_ms>` (no XRESET pulse on Standby wake). */
     const char *colon = strchr(token, ':');
     if (colon != NULL) {
         char prefix[12];
@@ -101,15 +118,25 @@ p7501_boot_action_t p7501_parse_boot_spec(const char *token, uint32_t *out_jig_h
         if (plen > 0u && plen < sizeof(prefix)) {
             memcpy(prefix, token, plen);
             prefix[plen] = '\0';
-            if (p7501_ascii_ieq(prefix, "JIG") || p7501_ascii_ieq(prefix, "SERIAL")) {
-                if (out_jig_hold_ms) {
-                    *out_jig_hold_ms = p7501_parse_uint32_clamped(colon + 1, 350u, 50u, 30000u);
+            const bool is_prejig = p7501_ascii_ieq(prefix, "PREJIG");
+            if (is_prejig || p7501_ascii_ieq(prefix, "JIG") || p7501_ascii_ieq(prefix, "SERIAL")) {
+                if (out_jig_hold_ms != NULL) {
+                    *out_jig_hold_ms = p7501_parse_uint32_clamped(
+                        colon + 1, is_prejig ? 3000u : 350u, 50u, 30000u
+                    );
+                }
+                if (out_no_xreset != NULL) {
+                    *out_no_xreset = is_prejig;
                 }
                 return P7501_BOOT_ACTION_JIG;
             }
         }
     }
     return P7501_BOOT_ACTION_PASSIVE;
+}
+
+p7501_boot_action_t p7501_parse_boot_spec(const char *token, uint32_t *out_jig_hold_ms) {
+    return p7501_parse_boot_spec_ex(token, out_jig_hold_ms, NULL);
 }
 
 p7501_boot_action_t p7501_parse_boot_action(const char *token) {
@@ -122,7 +149,33 @@ bool p7501_is_boot_spec_token(const char *token) {
     }
     return p7501_ascii_ieq(token, "NORMAL") || p7501_ascii_ieq(token, "BOOT") ||
            p7501_ascii_ieq(token, "NOPULL") || p7501_ascii_ieq(token, "PASSIVE") ||
-           p7501_ascii_ieq(token, "JIG") || p7501_ascii_iprefix(token, "JIG:");
+           p7501_ascii_ieq(token, "JIG") || p7501_ascii_iprefix(token, "JIG:") ||
+           p7501_ascii_ieq(token, "PREJIG") || p7501_ascii_iprefix(token, "PREJIG:");
+}
+
+bool p7501_parse_wake_arg_token(const char *token, bool *out_wait, uint32_t *out_timeout_ms) {
+    if ((token == NULL) || (out_wait == NULL) || (out_timeout_ms == NULL)) {
+        return false;
+    }
+    if (p7501_ascii_ieq(token, "WAKE")) {
+        *out_wait = true;
+        *out_timeout_ms = (P7501_WDT_MAX_CMD_WINDOW_MS < 30000u)
+            ? P7501_WDT_MAX_CMD_WINDOW_MS
+            : 30000u;
+        return true;
+    }
+    if (p7501_ascii_iprefix(token, "WAKE:")) {
+        const char *ms_tok = token + 5u;
+        if ((ms_tok[0] == '\0') || !p7501_ascii_is_digits(ms_tok)) {
+            return false;
+        }
+        *out_wait = true;
+        *out_timeout_ms = p7501_parse_uint32_clamped(
+            ms_tok, 30000u, 1000u, P7501_WDT_MAX_CMD_WINDOW_MS
+        );
+        return true;
+    }
+    return false;
 }
 
 static bool is_sticky_token(const char *token) {
@@ -151,6 +204,9 @@ void p7501_parse_window_boot_args(
     out_spec->boot_action = P7501_BOOT_ACTION_NORMAL;
     out_spec->jig_hold_ms = 0u;
     out_spec->sticky_jig = false;
+    out_spec->no_xreset = false;
+    out_spec->wait_for_wake = false;
+    out_spec->wake_timeout_ms = 0u;
 
     const char *cur = p7501_next_token(arg, tok, sizeof(tok));
     if (cur != NULL) {
@@ -159,7 +215,13 @@ void p7501_parse_window_boot_args(
             if (is_sticky_token(tok)) {
                 out_spec->sticky_jig = true;
             } else if (p7501_is_boot_spec_token(tok)) {
-                out_spec->boot_action = p7501_parse_boot_spec(tok, &out_spec->jig_hold_ms);
+                out_spec->boot_action = p7501_parse_boot_spec_ex(
+                    tok, &out_spec->jig_hold_ms, &out_spec->no_xreset
+                );
+            } else {
+                (void)p7501_parse_wake_arg_token(
+                    tok, &out_spec->wait_for_wake, &out_spec->wake_timeout_ms
+                );
             }
         }
     }

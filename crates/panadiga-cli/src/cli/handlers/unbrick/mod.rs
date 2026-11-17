@@ -28,115 +28,82 @@ pub fn handle_unbrick(args: UnbrickArgs) -> Result<()> {
             print_lines(&format_unbrick_status_lines(&report));
             emit_json_if_requested(&report, json.as_deref())
         }
-        UnbrickActions::ExtractFrm {
-            frm,
-            outdir,
-            unpack,
-            json,
-        } => {
-            let report = extract_modules_from_frm(&frm, &outdir, unpack)?;
+        UnbrickActions::ExtractFrm(frm_args) => {
+            let report =
+                extract_modules_from_frm(&frm_args.frm, &frm_args.outdir, frm_args.unpack)?;
             print_lines(&format_frm_extraction_lines(&report));
-            emit_json_if_requested(&report, json.as_deref())
+            emit_json_if_requested(&report, frm_args.json.as_deref())
         }
-        UnbrickActions::Bgo {
-            input,
-            output,
-            mode,
-            raw_prog061,
-            allow_unsafe_bgo_format,
-            json,
-        } => {
-            let parsed_mode: Prog061BgoPatchMode = mode.parse()?;
-            if let Some(out_path) = output {
+        UnbrickActions::Bgo(bgo) => {
+            let parsed_mode: Prog061BgoPatchMode = bgo.mode.parse()?;
+            if let Some(out_path) = bgo.output {
                 let rep = patch_prog061_or_build_digadiag_with_policy(
-                    &input,
+                    &bgo.input,
                     &out_path,
                     parsed_mode,
-                    !raw_prog061,
-                    allow_unsafe_bgo_format,
+                    !bgo.raw_prog061,
+                    bgo.allow_unsafe_bgo_format,
                 )?;
                 println!(
                     "Patched BGO ({}) -> {} ({} B, wrapped={})",
                     rep.mode, rep.output_path, rep.output_size, rep.digadiag_wrapped
                 );
-                emit_json_if_requested(&rep, json.as_deref())
+                emit_json_if_requested(&rep, bgo.json.as_deref())
             } else {
-                let raw =
-                    fs::read(&input).with_context(|| format!("Reading {}", input.display()))?;
+                let raw = fs::read(&bgo.input)
+                    .with_context(|| format!("Reading {}", bgo.input.display()))?;
                 let rep = inspect_prog061_container_bytes(&raw)?;
                 println!("{}", format_bgo_inspection_line(&rep));
-                emit_json_if_requested(&rep, json.as_deref())
+                emit_json_if_requested(&rep, bgo.json.as_deref())
             }
         }
-        UnbrickActions::Passthrough {
-            input,
-            output,
-            mode,
-            rsp_plan,
-            callback_va,
-            json,
-        } => {
-            if rsp_plan {
-                let cb = callback_va.as_deref().map(parse_u32_radix).transpose()?;
+        UnbrickActions::Passthrough(pt) => {
+            if pt.rsp_plan {
+                let cb = pt.callback_va.as_deref().map(parse_u32_radix).transpose()?;
                 let plan = build_passthrough_rsp_plan(cb);
                 print_lines(&format_rsp_plan_lines(&plan));
-                return emit_json_if_requested(&plan, json.as_deref());
+                return emit_json_if_requested(&plan, pt.json.as_deref());
             }
 
-            let in_path =
-                input.context("--input <MAIN_3410PQ> is required unless --rsp-plan is set")?;
-            let parsed_mode: MainPassthroughMode = mode.parse()?;
-            if let Some(out_path) = output {
+            let in_path = pt
+                .input
+                .context("--input <MAIN_3410PQ> is required unless --rsp-plan is set")?;
+            let parsed_mode: MainPassthroughMode = pt.mode.parse()?;
+            if let Some(out_path) = pt.output {
                 let rep = patch_main_passthrough_file(&in_path, &out_path, parsed_mode)?;
                 println!(
                     "Patched MAIN TBC ({}) -> {}",
                     rep.detected_mode,
                     rep.output_path.as_deref().unwrap_or("")
                 );
-                emit_json_if_requested(&rep, json.as_deref())
+                emit_json_if_requested(&rep, pt.json.as_deref())
             } else {
                 let buf =
                     fs::read(&in_path).with_context(|| format!("Reading {}", in_path.display()))?;
                 let rep = inspect_main_passthrough_sites(&buf)?;
                 print_lines(&format_passthrough_inspection_lines(&rep));
-                emit_json_if_requested(&rep, json.as_deref())
+                emit_json_if_requested(&rep, pt.json.as_deref())
             }
         }
-        UnbrickActions::PrepareSd {
-            outdir,
-            frm,
-            prog061,
-            main,
-            drv,
-            bgo_mode,
-            allow_unsafe_bgo_format,
-            expected_main_build,
-            allow_target_mismatch,
-            passthrough_mode,
-            diag_only,
-            no_hdd_dynamic,
-            target_gb,
-            save_sources,
-            json,
-        } => {
+        UnbrickActions::PrepareSd(sd) => {
             let report = prepare_sd_unbrick_kit(&SdUnbrickKitRequest {
-                output_dir: outdir,
-                pana_dvd_path: frm,
-                prog061_path: prog061,
-                main_path: main,
-                drv_path: drv,
-                bgo_mode: bgo_mode.parse()?,
-                main_passthrough_mode: passthrough_mode.parse()?,
-                include_pana_sd: !diag_only,
-                unlock_hdd_dynamic: !no_hdd_dynamic && target_gb.is_none(),
-                hdd_target_gb: target_gb,
-                write_extracted_sources: save_sources,
-                allow_unsafe_auto_format: allow_unsafe_bgo_format,
-                expected_main_build,
-                allow_target_mismatch,
+                output_dir: sd.outdir,
+                pana_dvd_path: sd.frm,
+                prog061_path: sd.prog061,
+                main_path: sd.main,
+                drv_path: sd.drv,
+                bgo_mode: sd.bgo_mode.parse()?,
+                main_passthrough_mode: sd.passthrough_mode.parse()?,
+                include_pana_sd: !sd.diag_only,
+                unlock_hdd_dynamic: !sd.no_hdd_dynamic && sd.target_gb.is_none(),
+                hdd_target_gb: sd.target_gb,
+                write_extracted_sources: sd.save_sources,
+                allow_unsafe_auto_format: sd.allow_unsafe_bgo_format,
+                expected_main_build: sd.expected_main_build,
+                allow_target_mismatch: sd.allow_target_mismatch,
             })?;
             print_lines(&format_sd_kit_lines(&report));
-            emit_json_if_requested(&report, json.as_deref())
+            emit_json_if_requested(&report, sd.json.as_deref())
         }
         UnbrickActions::VerifySd { dir, json } => {
             let report = verify_sd_unbrick_media(&dir);
@@ -156,25 +123,17 @@ pub fn handle_unbrick(args: UnbrickArgs) -> Result<()> {
             }
             Ok(())
         }
-        UnbrickActions::NorStub {
-            start,
-            len,
-            block_size,
-            load_addr,
-            out,
-            wrap_digadiag,
-            json,
-        } => nor_matshita::handle_nor_stub(
-            &start,
-            &len,
-            block_size,
-            load_addr.as_deref(),
-            out,
-            wrap_digadiag,
-            json.as_deref(),
+        UnbrickActions::NorStub(stub) => nor_matshita::handle_nor_stub(
+            &stub.start,
+            &stub.len,
+            stub.block_size,
+            stub.load_addr.as_deref(),
+            stub.out,
+            stub.wrap_digadiag,
+            stub.json.as_deref(),
         ),
-        UnbrickActions::DecodeNorDump { input, out, json } => {
-            nor_matshita::handle_decode_nor_dump(&input, out, json.as_deref())
+        UnbrickActions::DecodeNorDump(dec) => {
+            nor_matshita::handle_decode_nor_dump(&dec.input, dec.out, dec.json.as_deref())
         }
         UnbrickActions::MatshitaEmu { action } => nor_matshita::handle_matshita_emu(action),
         UnbrickActions::RegionCompat { action } => region_compat::handle_region_compat(action),

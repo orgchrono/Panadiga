@@ -163,7 +163,9 @@ bool p7501_diag_watch_parse_args(const char *arg, p7501_diag_watch_spec_t *out) 
                 P7501_WDT_MAX_CMD_WINDOW_MS
             );
         } else if (!saw_boot && p7501_is_boot_spec_token(tok)) {
-            out->boot_action = p7501_parse_boot_spec(tok, &out->jig_hold_ms);
+            out->boot_action = p7501_parse_boot_spec_ex(
+                tok, &out->jig_hold_ms, &out->no_xreset
+            );
             saw_boot = true;
         } else if (parse_diag_action_token(tok, out, &saw_action)) {
             continue;
@@ -171,23 +173,10 @@ bool p7501_diag_watch_parse_args(const char *arg, p7501_diag_watch_spec_t *out) 
             out->release_on_ddr = true;
         } else if (p7501_ascii_ieq(tok, "HOLD")) {
             out->release_on_ddr = false;
-        } else if (p7501_ascii_ieq(tok, "WAKE")) {
-            out->wait_for_wake = true;
-            out->wake_timeout_ms = P7501_WDT_MAX_CMD_WINDOW_MS < 30000u
-                ? P7501_WDT_MAX_CMD_WINDOW_MS
-                : 30000u;
-        } else if (p7501_ascii_iprefix(tok, "WAKE:")) {
-            const char *ms_tok = tok + 5u;
-            if ((ms_tok[0] == '\0') || !p7501_ascii_is_digits(ms_tok)) {
+        } else if (p7501_ascii_ieq(tok, "WAKE") || p7501_ascii_iprefix(tok, "WAKE:")) {
+            if (!p7501_parse_wake_arg_token(tok, &out->wait_for_wake, &out->wake_timeout_ms)) {
                 return false;
             }
-            out->wait_for_wake = true;
-            out->wake_timeout_ms = p7501_parse_uint32_clamped(
-                ms_tok,
-                30000u,
-                1000u,
-                P7501_WDT_MAX_CMD_WINDOW_MS
-            );
         } else {
             return false;
         }

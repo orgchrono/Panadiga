@@ -8,7 +8,7 @@ fn embedded_firmware_error_dictionary_contains_all_431_drv_plus_core_records() {
         .filter(|e| e.domain == FirmwareErrorDomain::DrvMecha)
         .count();
     assert_eq!(drv_count, 431, "Must embed all 431 DRV_decomp records");
-    assert!(all.len() >= 447);
+    assert!(all.len() >= 457);
 
     let laser = lookup_firmware_errors("0x83A7");
     assert!(!laser.is_empty());
@@ -22,6 +22,27 @@ fn embedded_firmware_error_dictionary_contains_all_431_drv_plus_core_records() {
 
     let fat = lookup_firmware_errors("-10025");
     assert_eq!(fat[0].code, "FAT_10025");
+
+    let fan = lookup_firmware_errors("H19");
+    assert_eq!(fan[0].code, "H19");
+
+    let tw = lookup_firmware_errors("TW7501");
+    assert!(tw.iter().any(|e| e.code == "TW7501_STANDBY_RESET"));
+
+    let status_banner = correlate_firmware_occurrences(
+        "[STANDBY] RXD=0 NSW5V=0 TXD=0 XRESET=0 SW_PU=0.39V | State=STANDBY (P-OFF) OR TW7501 CLAMPED LOW (NSW5V=0)",
+        Some("0:00 STANDBY"),
+        Some(0.04),
+        Some(0),
+        Some(0),
+    );
+    assert!(
+        !status_banner
+            .matches
+            .iter()
+            .any(|m| m.code == "TW7501_STANDBY_RESET"),
+        "STATUS banner mentioning TW7501 must not trigger false-positive error match"
+    );
 }
 
 #[test]
@@ -36,7 +57,7 @@ fn correlates_boot_logs_and_standby_drop_with_electrical_cues() {
 
     let silent_drop = correlate_firmware_occurrences(
         "",
-        Some("HELLO -> PLEASE WAIT (2s) -> U99"),
+        Some("PLEASE WAIT (~2s) -> U99"),
         Some(0.05),
         Some(2),
         Some(0),
@@ -45,12 +66,32 @@ fn correlates_boot_logs_and_standby_drop_with_electrical_cues() {
         silent_drop
             .matches
             .iter()
-            .any(|m| m.code == "HELLO_PLEASE_WAIT_U99_2S")
+            .any(|m| m.code == "PLEASE_WAIT_U99_2S")
     );
     assert!(
         silent_drop
             .prioritized_actions
             .iter()
             .any(|a| a.contains("0 edges"))
+    );
+
+    let standby_hello_drop = correlate_firmware_occurrences(
+        "",
+        Some("HELLO (~2s) -> U99"),
+        Some(0.05),
+        Some(1),
+        Some(0),
+    );
+    assert!(
+        standby_hello_drop
+            .matches
+            .iter()
+            .any(|m| m.code == "HELLO_U99_STANDBY_WAKE")
+    );
+    assert!(
+        !standby_hello_drop
+            .matches
+            .iter()
+            .any(|m| m.code == "PLEASE_WAIT_U99_2S")
     );
 }

@@ -141,10 +141,18 @@ bool p7501_pio_set_framing(p7501_uart_framing_t framing) {
 }
 
 void p7501_pio_begin_rx_session(p7501_boot_action_t action) {
-    p7501_pio_begin_rx_session_ex(action, 0u);
+    p7501_pio_begin_rx_session_cfg(action, 0u, false);
 }
 
 void p7501_pio_begin_rx_session_ex(p7501_boot_action_t action, uint32_t jig_hold_ms) {
+    p7501_pio_begin_rx_session_cfg(action, jig_hold_ms, false);
+}
+
+void p7501_pio_begin_rx_session_cfg(
+    p7501_boot_action_t action,
+    uint32_t jig_hold_ms,
+    bool no_xreset
+) {
     const float div = compute_pio_clkdiv(s_pio_drv.active_baud);
 
     s_pio_drv.sw_uart_timed_hold = false;
@@ -152,12 +160,14 @@ void p7501_pio_begin_rx_session_ex(p7501_boot_action_t action, uint32_t jig_hold
     p7501_hw_enforce_nsw5v_hiz();
     p7501_pio_internal_release_tx_hiz();
 
-    /* Hold target in reset BEFORE enabling RX SM so no stale pre-reset bytes pollute FIFO. */
+    /* Hold target in reset BEFORE enabling RX SM unless `no_xreset` (PREJIG standby strap). */
     if (action != P7501_BOOT_ACTION_PASSIVE) {
         p7501_hw_sw_uart_set_low(action == P7501_BOOT_ACTION_JIG);
-        p7501_wdt_sleep_ms(P7501_RESET_POST_SETTLE_MS);
-        p7501_hw_reset_assert();
-        p7501_wdt_sleep_ms(P7501_RESET_DIAG_ASSERT_MS);
+        if (!no_xreset) {
+            p7501_wdt_sleep_ms(P7501_RESET_POST_SETTLE_MS);
+            p7501_hw_reset_assert();
+            p7501_wdt_sleep_ms(P7501_RESET_DIAG_ASSERT_MS);
+        }
     }
 
     p7501_uart_rx_fast_init(
@@ -171,7 +181,9 @@ void p7501_pio_begin_rx_session_ex(p7501_boot_action_t action, uint32_t jig_hold
     clear_rx_diagnostics();
 
     if (action != P7501_BOOT_ACTION_PASSIVE) {
-        p7501_hw_reset_release();
+        if (!no_xreset) {
+            p7501_hw_reset_release();
+        }
         if (action == P7501_BOOT_ACTION_JIG && jig_hold_ms > 0u) {
             s_pio_drv.sw_uart_timed_hold = true;
             s_pio_drv.sw_uart_release_deadline = make_timeout_time_ms(jig_hold_ms);
