@@ -122,7 +122,7 @@ flowchart TD
     end
 
     subgraph TOC_SD["3. TOC Plaintext SD Card (PANA__SD.FRM)"]
-        E1_SD["Entrada 0 em 0x0000 (64 Bytes em plaintext)"] --> P3["Tabela até 0x2000"]
+        E1_SD["Entrada 0 em 0x0000 (48 B sd48 EH55 ver0.61 | 64 B sd64 ver0.63)"] --> P3["Tabela 0x1800 (sd48) / 0x2000 (sd64)"]
         P3 --> PAY3["Payload Modular Direto em Plaintext"]
     end
 ```
@@ -132,8 +132,8 @@ flowchart TD
    - Na arquitetura AM34 do `DMR-EH55`, cada entrada de 48 bytes contém: Nome (`0x00..0x0A`), Versão (`0x0A..0x0C` uint16 LE), Offset (`0x0C..0x10` uint32 LE), Família HW (`0x10..0x18`), OEM (`0x18`, `'M'`), Flag (`0x19`), Grupo Modelo (`0x1A..0x20`), Tamanho (`0x20..0x24`), Soma FVU (`0x24..0x28`), Metadados (`0x28..0x2E`) e Checksum aditivo `list_sum` de 16 bits (`0x2E..0x30`); em gerações Blu-ray mais recentes documentadas no `pana-fw`, o somatório final evolui para Adler-32 de 32 bits.
 2. **TOC Feistel de 64 Bytes (`Stride = 0x40`, Payload a partir de `0x2000` / 8.192 B):**
    - Utilizada na série `EH49/59/69`, `EX81S/71SEG` e maioria dos modelos `EX72..EX93` (por exemplo, entrada 0 em `0x0000` com `PROG071`, entrada 1 em `0x0040` com `MAIN3100`), deslocando o início dos módulos para `0x2000`.
-3. **TOC Plaintext de 64 Bytes (`PANA__SD.FRM`):**
-   - Utilizada nos gravadores com leitor SD (`DMR-EH55`) para recuperação direta sem depender da mecânica óptica ATAPI, mantendo os descritores em plaintext (sem Feistel).
+3. **TOC Plaintext de Cartão SD (`PANA__SD.FRM` — `48 Bytes sd48` vs `64 Bytes sd64`):**
+   - Utilizada nos gravadores com leitor SD para recuperação direta sem depender da mecânica óptica ATAPI, mantendo os descritores em plaintext (sem Feistel). No hardware **`DMR-EH55` (`Loader ver0.61 [06/03/06]` + `PROG061`)**, o formato nativo é **`48 Bytes` (`sd48`, TOC `0x1800 B` = `6.144 B`, `list_sum` em `+0x2E`)**, pareado com `DIGADIAG.FRM` bruto de `262.144 B`; já no **`Loader ver0.63 [07/10/24]`** (`/BOOT.BIN` EZ485V/EH58), o formato é **`64 Bytes` (`sd64`, TOC `0x2000 B` = `8.192 B`, `list_sum` em `+0x3E`)**, pareado com `DIGADIAG.FRM` `EXTRHEAD` de `131.072 B`.
 
 ### 1.4 Endereços Base do `MAIN.bin`: `0x57000000` vs `0x50622000`
 
@@ -622,7 +622,7 @@ O módulo [`crates/panadiga-core/src/re/emu_patch_suite.rs`](../../crates/panadi
 
 1. `spansion_nor_cfi_and_ipl_airgap` — Validação de identificação CFI, bloqueio read-only da região bootloader/IPL e saneamento isolado da NVRAM (`0x807F0000..0x807FFFFF`).
 2. `frm_pack_retarget_and_flash` — Empacotamento, ajuste de modelo/região no TOC (`3410PQ`/`3060NP` + `DEV.BIN`) e gravação na imagem Flash simulada.
-3. `bgo_bypass_and_panamon1_commands` — Execução em `Mn103Vm` do bypass BGO e dos comandos do monitor `PANAMON1>` (`R/W/E/J/D/B`).
+3. `bgo_bypass_and_panamon1_commands` — Execução em `Mn103Vm` do bypass BGO e dos comandos do monitor `PANAMON1>` (`B/R/W/D/F/J/E/U/Q`).
 4. `tbc_ee_passthrough_routines` — Verificação em máquina virtual das rotinas de passthrough TBC/E-E.
 5. `region_model_compat_unlock` — Desbloqueio determinístico de região/modelo com re-empacotamento `.FRM`.
 6. `hdd_resize_over_200gb_lba48` — Execução real da rotina de limite LBA em `src/hdd_cmd.c` (`[MaxProductLBA]` em `0x5311_B9AC`, instrução `cmp d0, d1; bls/bra +12` em `site_va + 0x4E..0x6F`): o opcode de fábrica `0xC6` trunca um disco de 500 GB (`0x0E8D4A51`) para `0x05D21DB9` (`200 GB - 1`), ao passo que o opcode patchado `0xCA` preserva integralmente `0x0E8D4A50` (`500 GB - 1`).

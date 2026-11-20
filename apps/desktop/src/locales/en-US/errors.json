@@ -170,6 +170,28 @@
     "hex": {
       "offsetNavTitle": "Offset Navigation",
       "jumpedToOffset": "Jumped to offset 0x{{hex}}"
+    },
+    "pipelines": {
+      "calibrationInspectFailed": "Region/TV bundle inspection failed",
+      "calibrationApplyFailed": "CoW region calibration failed",
+      "calibrationApplied": "Region/TV CoW calibration written & verified",
+      "tbcPlanFailed": "MAIN TBC bypass execution failed",
+      "tbcApplied": "Standalone TBC plan & CoW bypasses applied",
+      "sdHardenFailed": "Hardened ver0.61 SD kit failed",
+      "sdHardened": "Hardened ver0.61 + sd48 SD kit verified",
+      "hddScanFailed": "Failed scanning safe target disks",
+      "hddFlashFailed": "Safe EH55 HDD flash failed",
+      "hddFlashed": "EH55 HDD flashed & SHA-256 read-back verified",
+      "norDumpFailed": "Live NOR dump failed",
+      "norDumped": "CoW NOR dump captured & hashed",
+      "bgoAuditFailed": "BGO FTL audit failed",
+      "bgoRepairFailed": "BGO FTL repair failed",
+      "bgoDryRunReady": "Dry-run BGO 1->0 repair plan computed",
+      "bgoLiveApplied": "Live BGO repair applied & U LOCK restored",
+      "davisProbeFailed": "DAVIS IDE hardware probe failed",
+      "davisProbeComplete": "DAVIS IDE probe completed",
+      "copiedSha": "SHA-256 digest copied to clipboard",
+      "validationBlocked": "Pipeline preflight or form validation failed"
     }
   }
 }

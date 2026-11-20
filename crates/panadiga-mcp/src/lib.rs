@@ -1,3 +1,4 @@
+#![deny(unsafe_code)]
 //! Native Rust Model Context Protocol (MCP) Server for Panadiga.
 //!
 //! Modularized into protocol transport, resources, prompts, hardware tools,

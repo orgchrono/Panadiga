@@ -1,100 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { HardDrive, Unlock } from 'lucide-react';
 import {
-  HddCapacityPatcherCard,
-  HddDensityMap,
-  HddExtractManifestCard,
-  HddJournalTable,
-  HddMbrComparison,
-  HddMeihdfsTable,
+  HddActiveTabContent,
   HddMetricsGrid,
   HddNavigationBar,
-  HddPartitionTable,
   HddTopHeader,
-  HddWriterCard,
   StorageDeviceSelector,
 } from '@/components/hdd';
 import { useWorkbenchMode } from '@/context/WorkbenchModeContext';
 import { useTranslation } from '@/i18n/useTranslation';
-import type {
-  HddAnalysisReport,
-  HddTab,
-  MeihdfsAllocationRecord,
-  MeihdfsAllocationReport,
-  PartitionExtractionManifest,
-  ViewKey,
-} from '@/models';
+import type { ViewKey } from '@/models';
+import { useHddSafeFlashViewModel } from '@/viewmodels/pipelines';
 import { useHddCapacityViewModel } from '@/viewmodels/useHddCapacityViewModel';
 import { useHddStorageViewModel } from '@/viewmodels/useHddStorageViewModel';
 import { useHddWriterViewModel } from '@/viewmodels/useHddWriterViewModel';
 import { useStorageDrives } from '@/viewmodels/useStorageDrives';
-
-interface HddActiveTabContentProps {
-  readonly activeTab: HddTab;
-  readonly hddReport: HddAnalysisReport | null;
-  readonly meihdfsReport: MeihdfsAllocationReport | null;
-  readonly filteredRecords: MeihdfsAllocationRecord[];
-  readonly searchQuery: string;
-  readonly setSearchQuery: (q: string) => void;
-  readonly tagFilter: string;
-  readonly setTagFilter: (tag: string) => void;
-  readonly manifest: PartitionExtractionManifest | null;
-  readonly copiedSha: boolean;
-  readonly onCopySha: (text: string) => void;
-  readonly capacityVm: ReturnType<typeof useHddCapacityViewModel>;
-  readonly writerVm: ReturnType<typeof useHddWriterViewModel>;
-}
-
-const HddActiveTabContent: React.FC<HddActiveTabContentProps> = ({
-  activeTab,
-  hddReport,
-  meihdfsReport,
-  filteredRecords,
-  searchQuery,
-  setSearchQuery,
-  tagFilter,
-  setTagFilter,
-  manifest,
-  copiedSha,
-  onCopySha,
-  capacityVm,
-  writerVm,
-}) => {
-  switch (activeTab) {
-    case 'overview':
-      return hddReport ? <HddPartitionTable hddReport={hddReport} /> : null;
-    case 'mbr':
-      return hddReport ? <HddMbrComparison hddReport={hddReport} /> : null;
-    case 'meihdfs':
-      return (
-        <HddMeihdfsTable
-          filteredRecords={filteredRecords}
-          searchQuery={searchQuery}
-          tagFilter={tagFilter}
-          onSearchChange={setSearchQuery}
-          onTagFilterChange={setTagFilter}
-        />
-      );
-    case 'journal':
-      return meihdfsReport ? <HddJournalTable meihdfsReport={meihdfsReport} /> : null;
-    case 'density':
-      return hddReport ? <HddDensityMap hddReport={hddReport} /> : null;
-    case 'extract':
-      return manifest ? (
-        <HddExtractManifestCard
-          manifest={manifest}
-          copiedSha={copiedSha}
-          onCopySha={onCopySha}
-        />
-      ) : null;
-    case 'capacity':
-      return <HddCapacityPatcherCard {...capacityVm} />;
-    case 'writer':
-      return <HddWriterCard {...writerVm} />;
-    default:
-      return null;
-  }
-};
 
 /**
  * Declarative MVVM View: Panasonic MEIHDFS Storage & HDD Forensics Workbench.
@@ -127,6 +47,7 @@ export const HddStorageView: React.FC<{ onNavigate?: (view: ViewKey) => void }> 
 
   const capacityVm = useHddCapacityViewModel();
   const writerVm = useHddWriterViewModel();
+  const safeFlashVm = useHddSafeFlashViewModel();
   const hddInspectorDrives = useStorageDrives('hard_disk', true);
   const { isAdvanced, setMode } = useWorkbenchMode();
   const [inputPath, setInputPath] = useState(imagePath || '');
@@ -180,7 +101,10 @@ export const HddStorageView: React.FC<{ onNavigate?: (view: ViewKey) => void }> 
         hasManifest={Boolean(manifest)}
       />
 
-      {!hddReport && activeTab !== 'writer' && activeTab !== 'capacity' && (
+      {!hddReport &&
+        activeTab !== 'writer' &&
+        activeTab !== 'capacity' &&
+        activeTab !== 'safe-flash' && (
         <div className="p-8 rounded-2xl bg-bench-900 border border-slate-800 text-center space-y-4 max-w-2xl mx-auto shadow-xl">
           <div className="w-12 h-12 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 flex items-center justify-center mx-auto">
             <HardDrive className="w-6 h-6" />
@@ -271,8 +195,9 @@ export const HddStorageView: React.FC<{ onNavigate?: (view: ViewKey) => void }> 
         manifest={manifest}
         copiedSha={copiedSha}
         onCopySha={copyManifestSha}
-        capacityVm={capacityVm}
-        writerVm={writerVm}
+        capacityProps={capacityVm}
+        writerProps={writerVm}
+        safeFlashVm={safeFlashVm}
       />
     </div>
   );

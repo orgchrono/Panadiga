@@ -112,8 +112,8 @@ pub fn format_passthrough_inspection_lines(rep: &MainPassthroughReport) -> Vec<S
 pub fn format_sd_kit_lines(report: &SdUnbrickKitReport) -> Vec<String> {
     let mut lines = vec![
         format!(
-            "SD Unbrick Kit Ready ({}) in {}",
-            report.verification.overall_status, report.output_dir
+            "SD Unbrick Kit Ready ({}, profile={}) in {}",
+            report.verification.overall_status, report.loader_profile_applied, report.output_dir
         ),
         format!(
             "  DIGADIAG.FRM : {} [{}]",

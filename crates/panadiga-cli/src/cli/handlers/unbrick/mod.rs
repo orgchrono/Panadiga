@@ -1,5 +1,8 @@
+#![deny(unsafe_code)]
+
 //! Thin CLI dispatch shell for Pre-MAIN DIGA Unbrick, SD Kit Builder, & TBC Passthrough Workbench.
 
+pub mod bgo_tbc;
 mod nor_matshita;
 mod region_compat;
 pub mod render;
@@ -7,10 +10,10 @@ pub mod render;
 use anyhow::{Context, Result, bail};
 use panadiga_core::crypto::parse_u32_radix;
 use panadiga_core::re::{
-    MainPassthroughMode, Prog061BgoPatchMode, SdUnbrickKitRequest, build_passthrough_rsp_plan,
-    extract_modules_from_frm, inspect_main_passthrough_sites, inspect_prog061_container_bytes,
-    inspect_sd_target, inspect_unbrick_workspace, patch_main_passthrough_file,
-    patch_prog061_or_build_digadiag_with_policy, prepare_sd_unbrick_kit, verify_sd_unbrick_media,
+    MainPassthroughMode, Prog061BgoPatchMode, build_passthrough_rsp_plan, extract_modules_from_frm,
+    inspect_main_passthrough_sites, inspect_prog061_container_bytes, inspect_sd_target,
+    inspect_unbrick_workspace, patch_main_passthrough_file,
+    patch_prog061_or_build_digadiag_with_policy,
 };
 use std::fs;
 
@@ -18,7 +21,7 @@ use crate::cli::args::unbrick::{UnbrickActions, UnbrickArgs};
 use render::{
     emit_json_if_requested, format_bgo_inspection_line, format_frm_extraction_lines,
     format_passthrough_inspection_lines, format_rsp_plan_lines, format_sd_disk_inspection_lines,
-    format_sd_kit_lines, format_sd_verification_lines, format_unbrick_status_lines, print_lines,
+    format_unbrick_status_lines, print_lines,
 };
 
 pub fn handle_unbrick(args: UnbrickArgs) -> Result<()> {
@@ -85,35 +88,12 @@ pub fn handle_unbrick(args: UnbrickArgs) -> Result<()> {
                 emit_json_if_requested(&rep, pt.json.as_deref())
             }
         }
-        UnbrickActions::PrepareSd(sd) => {
-            let report = prepare_sd_unbrick_kit(&SdUnbrickKitRequest {
-                output_dir: sd.outdir,
-                pana_dvd_path: sd.frm,
-                prog061_path: sd.prog061,
-                main_path: sd.main,
-                drv_path: sd.drv,
-                bgo_mode: sd.bgo_mode.parse()?,
-                main_passthrough_mode: sd.passthrough_mode.parse()?,
-                include_pana_sd: !sd.diag_only,
-                unlock_hdd_dynamic: !sd.no_hdd_dynamic && sd.target_gb.is_none(),
-                hdd_target_gb: sd.target_gb,
-                write_extracted_sources: sd.save_sources,
-                allow_unsafe_auto_format: sd.allow_unsafe_bgo_format,
-                expected_main_build: sd.expected_main_build,
-                allow_target_mismatch: sd.allow_target_mismatch,
-            })?;
-            print_lines(&format_sd_kit_lines(&report));
-            emit_json_if_requested(&report, sd.json.as_deref())
-        }
-        UnbrickActions::VerifySd { dir, json } => {
-            let report = verify_sd_unbrick_media(&dir);
-            print_lines(&format_sd_verification_lines(&report));
-            emit_json_if_requested(&report, json.as_deref())?;
-            if report.overall_status == "INCOMPLETE_OR_INVALID" {
-                bail!("SD media validation failed; inspect missing or corrupt artifacts above");
-            }
-            Ok(())
-        }
+        UnbrickActions::PrepareSd(sd) => bgo_tbc::handle_prepare_sd(sd),
+        UnbrickActions::VerifySd(args) => bgo_tbc::handle_verify_sd(args),
+        UnbrickActions::TbcPlan(args) => bgo_tbc::handle_tbc_plan(args),
+        UnbrickActions::BgoAudit(args) => bgo_tbc::handle_bgo_audit(args),
+        UnbrickActions::BgoRepairPlan(args) => bgo_tbc::handle_bgo_repair_plan(args),
+        UnbrickActions::BgoLiveApply(args) => bgo_tbc::handle_bgo_live_apply(args),
         UnbrickActions::InspectSd { target, json } => {
             let report = inspect_sd_target(&target)?;
             print_lines(&format_sd_disk_inspection_lines(&report));

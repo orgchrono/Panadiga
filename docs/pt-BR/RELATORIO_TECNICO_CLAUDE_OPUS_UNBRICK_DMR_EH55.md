@@ -244,11 +244,11 @@ X(80020401)59,X(80020401)58,X(80020401)57,X(80020401)56,X(80020401)55,X(80020401
 * **Resposta Request Sense:** `70 00 04 00 00 00 00 0A 00 00 83 A7 09 04 00 00 00 00`
   * **Sense Key `04`:** *Hardware Error*.
   * **ASC `09` / ASCQ `04`:** Falha de servo/mecanismo (`0x80040904` = `-2147219196`), subcódigo específico Matsushita `83 A7`.
-* **Causa Física:** No layout da placa ([page_113.png](../assets/images/re_dmr_eh55/page_113.png)), o conector `P7501` onde o cabo do Pico foi inserido fica espremido entre os flats **`FP50004` (8 vias: Loading Motor + chaves `OPEN_SW` pino 6 e `CLOSE SW` pino 8)** e **`FP50003` (10/11 vias: Spindle Motor)**. Nos primeiros 7 segundos (ticks `59` a `53`), o drive reporta `80020401` (*Becoming Ready*) enquanto tenta fechar a gaveta; no tick `52`, sem confirmação da chave `CLOSE SW`, emite `** can not close tray **` e trava em `80040904`.
+* **Diagnóstico & Isolamento Físico (Atualizado após Análise `DRV_decomp.bin`):** Em `0x400e8c1e` do `DRV_decomp.bin`, o subcódigo `83 A7` decodifica literalmente como `0.5mW発光ができない(HFｵﾝ密調整)` (*falha de emissão laser `0,5 mW`*). Testes posteriores com tampa parafusada confirmaram que o bloqueio em `80040904` decorre da falha de emissão do pickup óptico, consolidando `SDDIAG` via `DIGADIAG.FRM` e `PANARSP PASSTHROUGH` como rotas independentes do ODD.
 
 ---
 
-## 5. CRIPTANÁLISE DO CONTÊINER `PANA_DVD.FRM` & PARTIÇÕES DO HDD
+## 5. CRIPTANÁLISE PRELIMINAR DO CONTÊINER `PANA_DVD.FRM` & PARTIÇÕES DO HDD (HISTÓRICO)
 
 ### 5.1 Estrutura do Contêiner `PANA_DVD.FRM` (7.531.744 bytes)
 * **Cabeçalho Global (`0x000000..0x000010`, 16 bytes):**
@@ -257,10 +257,10 @@ X(80020401)59,X(80020401)58,X(80020401)57,X(80020401)56,X(80020401)55,X(80020401
   * **Entry 0 (`0x0010`):** `EFDC1CDA13881BAB` | `74A78ACD789B84FF` | `2A95C0DDCD1C5FF1` | `696A334256D61E54` | `212C29514C08699AC00EBF203F432332`
   * **Entry 1 (`0x0040`):** `EFDC1CDA13881BAB` | `3B7E7EDBB6C57A53` | `23CB732B8CDAA69D` | `A126CE849FEF6DB3` | `20861ED612D3E904ADB8D5CA7B848D76`
   * **Entry 2 (`0x0070`):** `EFDC1CDA13881BAB` | `74A78ACD789B84FF` | `40DEDBF6662D4CB1` | `1AE6ADB49339BA00` | `83849E9CEC5502D951D74238823D31BB`
-* **Correlação entre Módulos do `.FRM` e Partições do HDD (`panasonic DMR EH-55 Firmware hdd_100.bin`):**
-  * **Módulo 1 (`0x0000A0..0x0B1800`, 726.880 bytes):** Sub-sistema / OSD $\leftrightarrow$ **Partição 2 do HDD** (`0x04000000`, 720.896 bytes).
-  * **Módulo 2 (`0x0B1800..0x0F1818`, 262.168 bytes):** Firmware do Drive Óptico (`MN102`).
-  * **Módulo 3 (`0x0F1818..0x72EC00`, 6.542.536 bytes):** Main Firmware (`M_FIRM` / AM34 DIGA OS) $\leftrightarrow$ **Partição 1 do HDD** (`0x02000000`, 6.173.264 bytes).
+* **Correlação entre Módulos (Nota Histórica — Posteriormente Decifrada 100% em `DRV S211`, `PROG061`, `MAIN3060NP`):**
+  * **Slot 0 (TOC `0x000010` / payload `0x001800..0x0B1800`):** Inicialmente hipotetizado como OSD; depois comprovado idêntico byte a byte a `EH55_DRV_S211.bin` (`DRV S211`, `720.896 B`) $\leftrightarrow$ **Partição 2 do HDD** (`0x04000000`).
+  * **Slot 1 (`0x0B1800..0x0F1800`, `262.144 B`):** Bootloader atualizador FVU `PROG061`.
+  * **Slot 2 (`0x0F1800..0x72EC00`, `6.542.560 B`):** Main Firmware (`MAIN3060NP`) $\leftrightarrow$ **Partição 1 do HDD** (`0x02000000`, `6.173.264 B`).
 
 ### 5.2 Pares Plaintext–Ciphertext Confirmados (64-bit ECB KPA)
 | Bloco Cifrado (8 Bytes) | Texto Claro (Plaintext) | Ocorrências no `.FRM` | Ocorrências no HDD | Significado |
@@ -271,24 +271,18 @@ X(80020401)59,X(80020401)58,X(80020401)57,X(80020401)56,X(80020401)55,X(80020401
 
 ---
 
-## 6. PLANO DE AÇÃO ESTRATÉGICO PARA O CLAUDE OPUS (ORDEM DE PRIORIDADE)
+## 6. PLANO DE AÇÃO ESTRATÉGICO PROPOSTO EM 12 DE NOVEMBRO DE 2026 (HISTÓRICO)
 
 ### Prioridade 1: Explorar o Modo `SDDIAG` com Cartão SDSC ($\le 2\text{ GB}$, FAT12/FAT16) ou Emulador SD via Pico
-Como já confirmamos que a placa entra em **`SDDIAG`** (`startup reason = [5]`) e executa `[SDCD] sdcd_insrmv_check:SD Card inserted` *antes* de acionar o drive óptico:
-1. **Com Cartão SDSC Real ($\le 2\text{ GB}$):** Formatar um cartão SD clássico (até 2 GB, padrão SD 1.x, FAT16) e colocar na raiz o `PANA_DVD.FRM` (e cópias com nomes canônicos Matsushita: `FVU.BIN`, `M_FIRM.FRM`, `DIAG.FRM`), monitorando no `COM10` via `JIGBOOT` qual nome de arquivo ou setor o `[SDCD]` abre após passar do `SetBusWidth`!
-2. **Ideia Avançada para o Opus (Sniffer / Emulador SD no Pico):** Se não houver um cartão SDSC $\le 2\text{ GB}$ disponível, os pinos `CLK`, `CMD`, `DAT0..DAT3` do slot SD (`P6801`) são facilmente acessíveis; um analisador/emulador PIO no RP2040 conectado à linha `CMD` pode responder ao `ACMD41` sem `CMD8` e registrar exatamente quais setores LBA do cartão SD o `Loader ver0.61` lê no modo `SDDIAG`!
+Como o aparelho já confirmava entrar em **`SDDIAG`** (`startup reason = [5]`) e executava `[SDCD] sdcd_insrmv_check:SD Card inserted` *antes* de acionar o drive óptico:
+1. **Cartão SDSC Real ($\le 2\text{ GB}$):** Formatar em `FAT16` e posicionar `DIGADIAG.FRM` na raiz sob captura `COM10` via `JIGBOOT`. *(Desfecho posterior comprovado em bancada: após reparo do flat de `-91006`, o cartão `2 GB` Fujifilm iniciou em 4-bit a `25000 Kbps`; `Loader ver0.61` rejeitou `131.072 B` `EXTRHEAD` com `SD diag load failed[0].` e executou **`262.144 B` brutos** até `***** Fvu ver0.61 [05/11/01] *****`, gerando o kit canônico `ver061` + `sd48` em `firmware_and_images/sd_unbrick_kit/` com ABI `CALL ..., [], 0` corrigida para `PANAMON1`.)*
+2. **Ideia Avançada de Sniffer (`SDSNIFF`):** Monitorar `CLK`, `CMD`, `DAT0..DAT3` em `P6801`/`P6802` para depurar leituras LBA no `SDDIAG`.
 
-### Prioridade 2: Destravar o `*** CD diag boot mode ***` Corrigindo o Erro `80040904` (Chave `CLOSE SW` / Flat `FP50004`)
-1. Verificar o encaixe do cabo flat de 8 vias **`FP50004`** (imediatamente à direita do `P7501`) e se a bandeja do drive de DVD está fechada até o fim de curso mecânico (`CLOSE SW`, pino 8 de `FP50004` aterrado ao fechar).
-2. Com o CD contendo `PANA_DVD.FRM` inserido e a chave `CLOSE SW` fechada, o `*** CD diag boot mode ***` (acionado por `JIGBOOT`) passará do tick `52`, lerá o `FVU` do CD (`[LOAD] -> [LD FVU] -> [M_FIRM]`) e usará a rotina nativa de descriptografia da própria ROM para restaurar a Flash e o HDD!
+### Prioridade 2: Contornar ou Inspecionar `*** CD diag boot mode ***`
+Investigar `FP50004` / `CLOSE SW` vs erro de pickup óptico `0x83A7` (`ATAPI` / `DRV`). *(Resolvido posteriormente como falha real de emissão laser `< 0,5 mW` `0x83A7`, consolidando `SDDIAG` via `DIGADIAG.FRM` e `PANARSP PASSTHROUGH` como rotas sem drive óptico.)*
 
-### Prioridade 3: Handshake `fmu` no `wait 1 second.` Liberando `GP26` (`SW_UART = Hi-Z`) para Ativar `Q7514`
-1. No comando `FMUSCAN` do [`p7501_pico_main.c`](../../firmware/pico-p7501/p7501_pico_main.c), manter **`GP3` (`NSW5V`) SEMPRE como `Hi-Z Input` sem pulls (NUNCA dirigir push-pull!)** e liberar **`GP26` para `Hi-Z`** logo após o boot entrar em `***** serial boot mode *****` (permitindo que `R7559` eleve `XFWE` e habilite `Q7514` para que `GP4 / MAX RXD` alcance o RX do AM34 durante o `wait 1 second.`).
-2. Testar sequências de comandos do utilitário de fábrica Matsushita `fmu` (Flash Memory Updater) a `115200 8N1` (e variantes com paridade `8E1`/`8O1`).
+### Prioridade 3: Handshake `fmu` no `wait 1 second.` via `Hi-Z` em `GP26` / `Q7514`
+No [`p7501_pico_main.c`](../../firmware/pico-p7501/p7501_pico_main.c), manter **`GP3` (`NSW5V`) SEMPRE como `Hi-Z Input` sem pulls** e liberar `GP26` (`SW_UART`) para `Hi-Z` após entrar em `serial boot mode`. *(Desmontagem subsequente provou `0` chamadores em `uart_gets` do bootloader no `wait 1 second.`, ao passo que `_dev_SERIAL` pós-`MAIN` expõe protocolo RSP completo.)*
 
-### Prioridade 4: Extração Direta da NOR Flash `S29JL064H` (`IC5001`) para Obter o `Loader ver0.61` Descriptografado
-1. Caso se deseje quebrar criptograficamente o `PANA_DVD.FRM` offline para gerar imagens pré-descriptografadas do HDD, o caminho determinístico é extrair os primeiros `512 KB` a `1 MB` da NOR Flash Spansion `S29JL064H` (`0x80000000..0x80100000`), onde residem em texto claro (código nativo `MN103S`):
-   - A função `uncompress` (que valida `HEADER:5627DD54, DECOMP:5627DD54`),
-   - O parser `[SDCD]` do modo `SDDIAG`,
-   - O protocolo serial `fmu`, e
-   - A cifra de bloco de 64 bits ECB e sua chave mestra!
+### Prioridade 4: Extração Direta da NOR Flash `S29JL064H` (`IC5001`) para Obter `Loader ver0.61` — **CONCLUÍDA EM BANCADA**
+Extrair `IC5001` (`0x80000000..0x80800000`, ou via stub `PANADMP1` em `0x84000000` não-cacheado) para inspecionar o `Loader ver0.61` nativo, `[nfrom]`/`BGO` e os setores NVRAM `EEMUL`. *(Registro de conclusão em bancada: captura fatiada somente-leitura via `PANAMON1>` + `PANADMP1` em SDRAM *uncached* `0x9043950E` $\rightarrow$ `J 904394FA` gerou [`eh55_nor_8mb_ic5001_dump.bin`](../../firmware_and_images/README.md) [`8.388.608 B`, `SHA-256: c1faee798f60545853eefdba0d15f23678b471466dc2bc84f522bc972f15a02d`], `eh55_loader_ver061_256k.bin` [`262.144 B`, `9f5c448d...`] e `eh55_nvram_64k_raw.bin` [`65.536 B`, `803d1465...`]. A tabela `0x440337A4` provou que o BGO real do `ver0.61` ocupa `45×64 KiB` em `0x84130000..0x843FFFFF` [`SA26..SA70` vs `ver0.63`/`PROG061` `0x84200000..0x843FFFFF`], separado da área Upper EEMUL `"1284"` [`SA71..SA141`, `0x84400000..0x847FFFFF`]. A formatação de `SA70` + `1.629` escritas `1->0` em 13 spares [`SA42..SA66`] + `6` bytes em `SA41+0x14` eliminou `BGO driver init failed[1].` (`U99`) e restabeleceu o boot normal `***** normal mode *****` $\rightarrow$ `*** RTSC Initialize ***`.)*

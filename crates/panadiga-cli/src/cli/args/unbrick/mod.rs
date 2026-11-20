@@ -1,10 +1,15 @@
 //! CLI argument definitions for the Pre-MAIN DIGA Unbrick, SD Kit Builder, & TBC Passthrough Workbench.
 
+pub mod ext;
 pub mod payloads;
 pub mod recovery;
 
+pub use ext::{
+    BgoAuditArgs, BgoLiveApplyArgs, BgoRepairPlanArgs, RegionCompatAction, TbcPlanArgs,
+    VerifySdArgs,
+};
 pub use payloads::{DecodeNorDumpArgs, ExtractFrmArgs, MatshitaEmuAction, NorStubArgs};
-pub use recovery::{BgoArgs, PassthroughArgs, PrepareSdArgs, RegionCompatAction};
+pub use recovery::{BgoArgs, PassthroughArgs, PrepareSdArgs};
 
 use clap::{Args, Subcommand};
 use std::path::PathBuf;
@@ -41,15 +46,19 @@ pub enum UnbrickActions {
     PrepareSd(PrepareSdArgs),
 
     /// Verifies an SD card root directory (DIGADIAG.FRM, PANA__SD.FRM, and -91006 hardware checklist)
-    VerifySd {
-        /// SD card root or staging directory to verify
-        #[arg(value_name = "SD_DIR")]
-        dir: PathBuf,
+    VerifySd(VerifySdArgs),
 
-        /// Exports structured JSON verification report
-        #[arg(short, long, value_name = "JSON_FILE")]
-        json: Option<PathBuf>,
-    },
+    /// Plans a clean-room Diskless / Standalone TBC execution sequence (Stage 1.5 DIGADIAG or gated RAM chainload)
+    TbcPlan(TbcPlanArgs),
+
+    /// Audits the 45-sector DMR-EH55 BGO FTL (SA26..=SA70) inside an 8 MiB IC5001 NOR dump
+    BgoAudit(BgoAuditArgs),
+
+    /// Builds and CoW-simulates a deterministic BGO FTL repair plan (SA26..=SA70 only, E05-guarded)
+    BgoRepairPlan(BgoRepairPlanArgs),
+
+    /// Applies a verified BgoRepairPlan live via Pico PANAMON1> (requires --confirm-upper-nor)
+    BgoLiveApply(BgoLiveApplyArgs),
 
     /// Audits raw SD card MBR/GPT/Superfloppy, FAT16 BPB, 8.3 root entries, and cluster chain
     InspectSd {

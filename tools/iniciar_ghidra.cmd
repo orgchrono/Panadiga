@@ -11,7 +11,14 @@ echo.
 
 if not exist "%USERPROFILE%\ghidra_scripts" mkdir "%USERPROFILE%\ghidra_scripts" >nul 2>&1
 copy /Y "%~dp0ghidra\*.py" "%USERPROFILE%\ghidra_scripts\" >nul 2>&1
-echo [OK] Scripts Jython SSOT espelhados em %USERPROFILE%\ghidra_scripts
+if exist "%~dp0ghidra\java\*.java" (
+    copy /Y "%~dp0ghidra\java\*.java" "%USERPROFILE%\ghidra_scripts\" >nul 2>&1
+)
+if exist "%~dp0ghidra\java\panadiga\*.java" (
+    if not exist "%USERPROFILE%\ghidra_scripts\panadiga" mkdir "%USERPROFILE%\ghidra_scripts\panadiga" >nul 2>&1
+    copy /Y "%~dp0ghidra\java\panadiga\*.java" "%USERPROFILE%\ghidra_scripts\panadiga\" >nul 2>&1
+)
+echo [OK] Scripts Jython SSOT e Analistas Java espelhados em %USERPROFILE%\ghidra_scripts
 
 set "GHIDRA_GPR="
 if exist "C:\ghidra\projects\Panadiga_MN103S.gpr" set "GHIDRA_GPR=C:\ghidra\projects\Panadiga_MN103S.gpr"

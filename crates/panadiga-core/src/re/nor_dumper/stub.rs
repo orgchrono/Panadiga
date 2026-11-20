@@ -7,16 +7,26 @@ use super::{HEADER_PREFIX_LEN, NOR_MAGIC_FOOTER, NOR_MAGIC_HEADER, validate_nor_
 use crate::constants::PANA_DIGADIAG_FRM_SIZE;
 use crate::crypto::build_digadiag_frm;
 
-/// Verified MN103S Sleigh subroutine: polls `SC0STR` (`0xD400200C`) bit mask `0xA0`,
-/// then writes `D3` to `SC0TXB` (`0xD4002008`).
-pub(crate) const PUTC_D3_BYTES: [u8; 24] = [
-    0xFC, 0xAC, 0x0C, 0x20, 0x00, 0xD4, // MOV (0xD400200C), D0
-    0x1C, // MOV D0, D1? / shift setup
-    0xF8, 0xE0, 0xA0, // AND 0xA0, D0
+/// Verified MN103S Sleigh subroutine: polls `SC0STR` (`0xD400200C`) bits `0xA0` (`TXBUSY|TXBF`,
+/// matching `PROG061` `FUN_50404d15` @ `0x50404D37` & `BOOT.BIN` `uart0_putc` @ `0x440047DD`)
+/// with a bounded `0x00040000`-poll timeout (preserving caller `D1` on stack), then writes `D3`
+/// to `SC0TXB` (`0xD4002008`).
+pub(crate) const PUTC_D3_BYTES: [u8; 46] = [
+    0xF8, 0xFE, 0xFC, // ADD -4, SP (preserve return PC at (4, SP))
+    0x46, 0x00, // MOV D1, (0, SP)
+    0xFC, 0xCD, 0x00, 0x00, 0x04, 0x00, // MOV 0x00040000, D1 (bounded timeout)
+    0xFC, 0xAC, 0x0C, 0x20, 0x00, 0xD4, // MOVHU (0xD400200C), D0
+    0x1C, // EXTHU D0
+    0xF8, 0xE0, 0xA0, // AND 0xA0, D0 (TXBUSY | TXBF)
     0xA0, 0x00, // CMP 0, D0
-    0xC9, 0xF4, // BNE -12
+    0xC8, 0x08, // BEQ +8 -> ready
+    0x29, 0xFF, // ADD -1, D1
+    0xA5, 0x00, // CMP 0, D1
+    0xC9, 0xEE, // BNE -18 -> poll loop
     0x8C, // MOV D3, D0
-    0xFC, 0x82, 0x08, 0x20, 0x00, 0xD4, // MOVB D0, (0xD4002008)
+    0xFC, 0x82, 0x08, 0x20, 0x00, 0xD4, // MOVBU D0, (0xD4002008)
+    0x59, 0x00, // MOV (0, SP), D1
+    0xF8, 0xFE, 0x04, // ADD +4, SP
     0xDF, 0x00, 0x00, // RET [], 0
 ];
 
@@ -106,11 +116,13 @@ pub fn build_readonly_nor_dumper_stub(
     buf.extend_from_slice(&[0xCA, 0x00]); // BRA .
 
     let emit_span_off = buf.len();
+    buf.extend_from_slice(&[0xF8, 0xFE, 0xFC]); // ADD -4, SP (preserve return PC at (4, SP))
+    let emit_span_loop = buf.len();
     buf.extend_from_slice(&[0xF0, 0x40, 0x83]); // MOVBU (A0), D0; MOV D0, D3
     let call_putc_span = emit_call_rel16(&mut buf);
     buf.extend_from_slice(&[0x20, 0x01, 0xB4]); // ADD 1, A0; CMP A1, A0
-    emit_bne_back(&mut buf, emit_span_off)?;
-    buf.extend_from_slice(&[0xDF, 0x00, 0x00]); // RET [], 0
+    emit_bne_back(&mut buf, emit_span_loop)?;
+    buf.extend_from_slice(&[0xF8, 0xFE, 0x04, 0xDF, 0x00, 0x00]); // ADD +4, SP; RET [], 0
 
     let putc_off = buf.len();
     buf.extend_from_slice(&PUTC_D3_BYTES);

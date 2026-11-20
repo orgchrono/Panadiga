@@ -1,13 +1,19 @@
 //! Pure immutable inspection & algebraic validation of SD unbrick media (`DIGADIAG.FRM` + `PANA__SD.FRM`).
 
-mod media;
+pub mod media;
 
 #[cfg(test)]
 mod tests;
 
 use serde::{Deserialize, Serialize};
 
-pub(crate) use self::media::{verify_digadiag_buffer, verify_pana_sd_buffer};
+use super::compose::SdLoaderProfile;
+
+pub(crate) use self::media::{DigadiagInspection, verify_digadiag_buffer, verify_pana_sd_buffer};
+pub use self::media::{
+    DualFamilyParityReport, DualFamilySlotResolution, SdKitAuditProfile,
+    simulate_sd_find_firm_entry_dual,
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SdUnbrickCheck {
@@ -32,6 +38,10 @@ pub struct SdMediaVerificationReport {
     pub pana_sd_main_build: Option<String>,
     pub pana_sd_main_passthrough_mode: Option<String>,
     pub pana_sd_main_hdd_dynamic: Option<bool>,
+    #[serde(default)]
+    pub factory_unpatched_prog061_detected: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dual_family_parity: Option<DualFamilyParityReport>,
     pub checks: Vec<SdUnbrickCheck>,
 }
 
@@ -49,28 +59,114 @@ pub(crate) fn check(
     }
 }
 
-/// Pure function verifying in-memory `DIGADIAG.FRM` and optional `PANA__SD.FRM` buffers.
+/// Pure function verifying in-memory `DIGADIAG.FRM` and optional `PANA__SD.FRM` buffers
+/// under [`SdKitAuditProfile::Standard`].
 pub fn verify_sd_buffers(
     sd_root_label: &str,
     digadiag_opt: Option<Result<&[u8], &str>>,
     pana_sd_opt: Option<&[u8]>,
 ) -> SdMediaVerificationReport {
-    let (
-        digadiag_present,
-        digadiag_exact_size_ok,
-        digadiag_dst_addr_hex,
-        digadiag_bgo_mode,
-        diag_chk,
-    ) = verify_digadiag_buffer(digadiag_opt);
+    verify_sd_buffers_with_profile(
+        sd_root_label,
+        digadiag_opt,
+        pana_sd_opt,
+        SdKitAuditProfile::Standard,
+    )
+}
 
+/// Pure function verifying in-memory `DIGADIAG.FRM` and optional `PANA__SD.FRM` buffers
+/// under the selected [`SdKitAuditProfile`].
+pub fn verify_sd_buffers_with_profile(
+    sd_root_label: &str,
+    digadiag_opt: Option<Result<&[u8], &str>>,
+    pana_sd_opt: Option<&[u8]>,
+    audit_profile: SdKitAuditProfile,
+) -> SdMediaVerificationReport {
+    let diag: DigadiagInspection = verify_digadiag_buffer(digadiag_opt);
     let sd = verify_pana_sd_buffer(pana_sd_opt);
-    let hw_warn = check(
-        "sd_hw_91006",
-        "warn",
-        "BOOT.BIN SD-91006 Hardware Gate (1-bit -> 4-bit ACMD6)",
-        "Requires legacy SDSC card (<= 2 GiB, FAT16/FAT12) AND intact SD DAT1..DAT3 traces (P6801/P6802 <-> P53501). BOOT.BIN has no UART RX console so Pico cannot force 1-bit mode over P7501.",
-    );
-    let checks = vec![diag_chk, sd.check, hw_warn];
+    let factory_unpatched_prog061_detected =
+        diag.factory_unpatched_prog061 || sd.factory_unpatched_prog061;
+    let mut checks = vec![diag.check, sd.check];
+
+    if let (Some(diag_prof), Some(sd_prof)) = (diag.detected_profile, sd.detected_profile)
+        && diag_prof != sd_prof
+    {
+        checks.push(check(
+            "loader_profile_mismatch",
+            "fail",
+            "Incompatible Loader Profiles (DIGADIAG.FRM vs PANA__SD.FRM)",
+            format!(
+                "DIGADIAG.FRM uses {} while PANA__SD.FRM uses {}; both must match Loader ver0.61 (256 KiB raw + sd48) or ver0.63 (128 KiB EXTRHEAD + sd64).",
+                diag_prof.describe(),
+                sd_prof.describe(),
+            ),
+        ));
+    }
+
+    if factory_unpatched_prog061_detected {
+        let sev = match audit_profile {
+            SdKitAuditProfile::HardenedRecovery => "fail",
+            SdKitAuditProfile::Standard => "warn",
+        };
+        checks.push(check(
+            "factory_unpatched_prog061",
+            sev,
+            "FactoryUnpatchedProg061Detected ([05/11/01] without BGO bypass / PANAMON1)",
+            "Unpatched stock PROG061 [05/11/01] stalls in 'BGO driver init failed[1].' on corrupt NOR; harden with Prog061BgoPatchMode::UartMonitor (PANAMON1).",
+        ));
+    }
+
+    let dual_family_parity = if audit_profile == SdKitAuditProfile::HardenedRecovery {
+        if diag.present && diag.detected_profile != Some(SdLoaderProfile::Ver061RawSd48) {
+            checks.push(check(
+                "hardened_ver061_required",
+                "fail",
+                "Hardened recovery requires Loader ver0.61 256 KiB raw DIGADIAG.FRM",
+                "Expected 262,144 B raw DIGADIAG.FRM for DMR-EH55 Loader ver0.61.",
+            ));
+        }
+        pana_sd_opt.map(|sd_bytes| {
+            let parity = simulate_sd_find_firm_entry_dual(sd_bytes);
+            let parity_chk = if parity.dual_parity_ok {
+                check(
+                    "sd48_dual_family_parity",
+                    "pass",
+                    "sd_find_firm_entry Dual-Family Parity (M6930LB + M6930)",
+                    "Both M6930LB and M6930 resolve PROG061 and MAIN in sd48 TOC with [0x18]==0x4D and valid FVU sums.",
+                )
+            } else {
+                check(
+                    "sd48_dual_family_parity",
+                    "fail",
+                    "sd_find_firm_entry Dual-Family Parity Failed",
+                    parity.issues.join("; "),
+                )
+            };
+            checks.push(parity_chk);
+            parity
+        })
+    } else {
+        None
+    };
+
+    let is_ver063_detected = diag.detected_profile == Some(SdLoaderProfile::Ver063ExtrheadSd64)
+        || sd.detected_profile == Some(SdLoaderProfile::Ver063ExtrheadSd64);
+    let hw_warn = if is_ver063_detected {
+        check(
+            "sd_hw_91006",
+            "warn",
+            "DMR-EH55 Loader ver0.61 Compatibility & SD-91006 Hardware Gate",
+            "Kit uses Loader ver0.63 (128 KiB EXTRHEAD / sd64). Real DMR-EH55 Loader ver0.61 [06/03/06] rejects 128 KiB EXTRHEAD with 'SD diag load failed[0].' and requires ver061 (262,144 B raw + sd48) on <=2 GiB FAT16 SDSC with intact DAT1..DAT3.",
+        )
+    } else {
+        check(
+            "sd_hw_91006",
+            "warn",
+            "Loader ver0.61 & SD-91006 Hardware Gate (1-bit -> 4-bit ACMD6)",
+            "Requires legacy SDSC card (<= 2 GiB, FAT16/FAT12) AND intact SD DAT1..DAT3 traces (P6801/P6802 <-> P53501). Bootloader has no UART RX console so Pico cannot force 1-bit mode over P7501.",
+        )
+    };
+    checks.push(hw_warn);
 
     let overall_status = if checks.iter().any(|c| c.severity == "fail") {
         "INCOMPLETE_OR_INVALID"
@@ -84,10 +180,10 @@ pub fn verify_sd_buffers(
     SdMediaVerificationReport {
         sd_root_dir: sd_root_label.to_string(),
         overall_status,
-        digadiag_present,
-        digadiag_exact_size_ok,
-        digadiag_dst_addr_hex,
-        digadiag_bgo_mode,
+        digadiag_present: diag.present,
+        digadiag_exact_size_ok: diag.exact_size_ok,
+        digadiag_dst_addr_hex: diag.dst_addr_hex,
+        digadiag_bgo_mode: diag.bgo_mode,
         pana_sd_present: sd.present,
         pana_sd_toc_entries: sd.toc_entries,
         pana_sd_list_sums_ok: sd.list_sums_ok,
@@ -95,6 +191,8 @@ pub fn verify_sd_buffers(
         pana_sd_main_build: sd.main_build,
         pana_sd_main_passthrough_mode: sd.main_passthrough_mode,
         pana_sd_main_hdd_dynamic: sd.main_hdd_dynamic,
+        factory_unpatched_prog061_detected,
+        dual_family_parity,
         checks,
     }
 }

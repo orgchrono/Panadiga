@@ -1,3 +1,5 @@
+#![deny(unsafe_code)]
+
 //! CLI handler for Spansion NOR Flash NVRAM sanitization and guarded copy-on-write patching.
 
 use super::super::args::{NvramActions, NvramArgs};
@@ -41,6 +43,19 @@ pub fn handle_nvram(args: NvramArgs) -> Result<()> {
                 &bytes,
                 allow_critical_ipl,
             )?;
+        }
+        NvramActions::AuditNorSectors { image, json } => {
+            let raw = std::fs::read(&image)?;
+            let rep = panadiga_core::re::nor_dumper::analyze_spansion_nor_sectors(&raw)?;
+            println!(
+                "Spansion NOR Audit: total={} sectors populated={} blank={} sha256={} sigs={:?}",
+                rep.total_sectors,
+                rep.populated_sectors,
+                rep.blank_sectors,
+                rep.sha256,
+                rep.loader_signatures
+            );
+            super::json_io::emit_json_output(&rep, json.as_deref())?;
         }
     }
     Ok(())

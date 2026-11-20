@@ -9,7 +9,7 @@ This engineering dossier documents the **Matshita `R6-MV4` Optical Disc Drive (O
 
 ## 1. Architecture & Hardware Basis
 
-During `DMR-EH55` initialization (`Loader ver0.61` in `BOOT.BIN`), the host MN103S/AM34 controller interrogates the IDE/ATAPI optical drive (`MATSHITA R6-MV4          `, revision `S211` / `1.00`). Hardware bench captures on `COM10` proved two critical failure modes simulated deterministically in [`crates/panadiga-core/src/re/matshita_emu/mod.rs`](../../crates/panadiga-core/src/re/matshita_emu/mod.rs):
+During `DMR-EH55` initialization (**`Loader ver0.61 [06/03/06]`** on real hardware; cross-referenced with `/BOOT.BIN` `ver0.63`), the host MN103S/AM34 controller interrogates the IDE/ATAPI optical drive (`MATSHITA R6-MV4          `, revision `S211` / `1.00`). Hardware bench captures on `COM10` proved the failure modes simulated deterministically in [`crates/panadiga-core/src/re/matshita_emu/mod.rs`](../../crates/panadiga-core/src/re/matshita_emu/mod.rs):
 
 | Scenario Identifier | Physical / Optical Condition | Observed Log & Sense Code | Emulator Outcome |
 | :--- | :--- | :--- | :--- |
@@ -52,8 +52,8 @@ The emulated `DRV` monitor models the 20-byte `<8sIII>` dispatch table (`0x400DF
 
 ## 4. SD & CD Unlock `.FRM` Containers
 
-- **SD Card Stage-1 (`DIGADIAG.FRM`)**: Must reside at root of a **FAT16** card (`> 0xFFF5` clusters rejected by `FUN_4400c696`), exact `131,072`-byte (`0x20000`) `EXTRHEAD` container jumped to `0x50400000`.
-- **SD Signed (`PANA__SD.FRM`)** and **CD/DVD Optical (`PANA_DVD.FRM`)**: `MATSHITA` optical container (`262,144` B sample profile) verified via `verify_unlock_frm_container` and synthesized via `build_sample_unlock_frm`.
+- **SD Card Stage-1 (`DIGADIAG.FRM`)**: Must reside at root of a **FAT16** card (`> 0xFFF5` clusters rejected by `FUN_4400c696`), formatted as **`262,144`-byte (`0x40000`) raw uncompressed** (`0x90400000 -> JMP 0x50400000`) for real DMR-EH55 **`Loader ver0.61`**, or **`131,072`-byte (`0x20000`) `EXTRHEAD`** for **`Loader ver0.63`** (`/BOOT.BIN`).
+- **SD (`PANA__SD.FRM`)** and **CD/DVD Optical (`PANA_DVD.FRM`)**: `sd48` (`ver0.61`) / `sd64` (`ver0.63`) / `MATSHITA` optical containers verified via `verify_unlock_frm_container` and synthesized via `build_sample_unlock_frm`.
 
 ---
 

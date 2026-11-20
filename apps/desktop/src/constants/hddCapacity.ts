@@ -3,8 +3,8 @@
  * @brief Canonical RTSD preset block tables & LBA48 capacity bounds for Panasonic DIGA HDDs.
  */
 
-export const QUICK_CAPACITIES_GB = [250, 300, 320, 400, 500, 1000, 2000] as const;
-export const HDD_WRITER_QUICK_GBS = [250, 300, 400, 500, 1000, 2000] as const;
+export const QUICK_CAPACITIES_GB = [5, 20, 80, 160, 250, 300, 320, 400, 500, 1000, 2000] as const;
+export const HDD_WRITER_QUICK_GBS = [5, 20, 80, 160, 250, 300, 400, 500, 1000, 2000] as const;
 export const ONE_TERABYTE_GB = 1000;
 
 export const OFFICIAL_RTSD_BLOCKS_BY_GB: Readonly<Record<number, number>> = Object.freeze({
@@ -17,14 +17,25 @@ export const OFFICIAL_RTSD_BLOCKS_BY_GB: Readonly<Record<number, number>> = Obje
   120: 0x037dd1d6,
   100: 0x02e8cedd,
   80: 0x0253cbe4,
+  5: 0x0024c388,
 });
 
-export const HDD_MIN_CAPACITY_GB = 20;
+export const HDD_MIN_CAPACITY_GB = 5;
+export const HDD_MIN_REGULAR_MEIHDFS_GB = 20;
 export const HDD_MAX_CAPACITY_GB = 2200;
+export const HDD_MAX_EXTENDED_4TB_GB = 4400;
 export const HDD_DEFAULT_CAPACITY_GB = 250;
+export const HDD_BENCH_5GB_CAPACITY = 5;
+export const HDD_BENCH_5GB_BLOCKS = 0x0024c388;
+export const HDD_BENCH_5GB_MODEL = 'SAMSUNG SV0511D';
 export const HDD_FACTORY_200GB_GB = 200;
 export const DECIMAL_GB_BYTES = 1_000_000_000;
 export const HDD_FACTORY_200GB_BLOCKS = 0x05d21dba;
 export const HDD_UNCLAMPED_LBA48_BLOCKS = 0x3fffffff;
+export const HDD_EXTENDED_4TB_BLOCKS = 0x7fffffff;
 export const HDD_MAX_2KB_BLOCKS_CAP = 0x7fffffff;
 export const HDD_DEFAULT_250GB_SECTORS = 488_281_250;
+export const HDD_MIRROR_BACKSTEP_LBAS = 0x20000;
+export const HDD_BACKUP_64K_BYTES = 65_536;
+export const HDD_PRIMARY_100M_BYTES = 104_857_600;
+export const BUS_TYPE_NVME_ID = 17;

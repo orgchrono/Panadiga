@@ -197,7 +197,8 @@
         "lba48SectorsLabel": "LBA48 Sectors (512 B):",
         "lba48SummarySuffix": "• Regenerates zlib + strided Adler-32 (step=16) + 16-round Feistel automatically",
         "patchingBtn": "Repacking...",
-        "applyBtn": "Apply Dynamic Capacity Patch"
+        "applyBtn": "Apply Dynamic Capacity Patch",
+        "badge5gb": "5 GB Bench Preset: SAMSUNG SV0511D (0x0024C388)"
       },
       "patchBanner": {
         "title": "Firmware Patched & Verified (Adler-32 / EXTRFOOT OK)!",
@@ -244,7 +245,8 @@
       "tablistAria": "Disk Forensics Navigation",
       "enableAdvancedBtn": "+ Forensic Tabs (MEIHDFS / WAL / Density)",
       "tabExtract": "Partition Manifest",
-      "tabCapacity": "Capacity Unlocker (250GB / 2TB)",
+      "tabCapacity": "Capacity Unlocker (5GB–2TB)",
+      "tabSafeFlash": "Safe Flash Pipeline (5GB–2TB)",
       "tabWriter": "Physical Writer & mkfs"
     },
     "devices": {

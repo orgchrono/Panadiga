@@ -1,10 +1,18 @@
 //! Thin Tauri IPC shell for the Pre-MAIN DIGA Unbrick, SD Kit Builder, & TBC Passthrough Center.
 
+#![deny(unsafe_code)]
+
 mod frm_patch;
 mod media_emu;
+mod region_calibration;
+mod sd_harden;
+mod tbc_lab;
 
 pub use frm_patch::*;
 pub use media_emu::*;
+pub use region_calibration::*;
+pub use sd_harden::*;
+pub use tbc_lab::*;
 
 #[cfg(test)]
 mod tests {

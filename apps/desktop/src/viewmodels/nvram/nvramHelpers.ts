@@ -8,7 +8,9 @@ import {
   P7501_LIVE_DUMP_TIMEOUT_MS,
   P7501_USB_OTG_DUMP_MAX_WORDS,
   SPANSION_BOOTLOADER_SECTOR_COUNT,
+  SPANSION_FLASH_SIZE_BYTES,
   SPANSION_NVRAM_BASE_OFFSET,
+  SPANSION_NVRAM_FIRST_SA,
   SPANSION_STANDARD_SECTOR_SIZE_BYTES,
 } from '@/constants';
 import { translate } from '@/i18n/useTranslation';
@@ -24,6 +26,7 @@ import { bleService } from '@/services/bleService';
 import { capturePicoNvramLive, listPicoSerialPorts } from '@/services/picoService';
 import { ingestP7501DumpOutput, recordLiveNvramCapture } from '@/store/nvramCaptureBridge';
 import { formatHex32 } from '@/utils/formatters';
+import { mapSpansion142Sectors } from '@/utils/spansionTopology';
 
 const HEX_RADIX = 16;
 const ANDROID_USB_OTG_SOURCE = 'ANDROID_USB_OTG';
@@ -109,6 +112,41 @@ export function buildSectorMapFromReport(
   report: NvramCleanReport | null | undefined,
 ): FlashSectorInfo[] {
   if (!report) return [];
+  if (report.total_flash_bytes === SPANSION_FLASH_SIZE_BYTES) {
+    const micros = report.microsectors ?? [];
+    return mapSpansion142Sectors((desc, sectorType) => {
+      const address = formatHex32(desc.startOffset);
+      if (sectorType === 'nvram_microsector') {
+        const ms = micros[desc.sa - SPANSION_NVRAM_FIRST_SA];
+        const activeBytes = ms?.active_bytes ?? 0;
+        const isCorrupted = activeBytes > 0;
+        return {
+          sectorType,
+          isCorrupted,
+          activeBytes,
+          status: isCorrupted ? 'corrupted' : 'clean',
+          note: translate('nvram.sectors.microsectorNote', {
+            sector: ms?.sector_name ?? desc.name,
+            address,
+          }),
+        };
+      }
+      const noteKey =
+        sectorType === 'bootloader'
+          ? 'nvram.sectors.bootloaderNote'
+          : sectorType === 'bgo_region'
+            ? 'nvram.sectors.bgoNote'
+            : 'nvram.sectors.osNote';
+      return {
+        sectorType,
+        isCorrupted: false,
+        activeBytes: desc.sizeBytes,
+        status: sectorType === 'bootloader' ? 'immutable' : 'clean',
+        note: translate(noteKey, { address }),
+      };
+    });
+  }
+
   const nvramStart = report.nvram_offset_start ?? SPANSION_NVRAM_BASE_OFFSET;
   const standardSectorCount = Math.floor(nvramStart / SPANSION_STANDARD_SECTOR_SIZE_BYTES);
 

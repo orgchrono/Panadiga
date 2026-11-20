@@ -1,15 +1,27 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { Layers } from 'lucide-react';
-import { StatusBadge } from '@/components/StatusBadge';
 import { RangeDndScrubber } from '@/components/ui';
-import { HEX32_PAD_WIDTH, KIB_BYTES } from '@/constants';
+import { KIB_BYTES } from '@/constants';
 import { useWindowPointerUp } from '@/hooks/usePointerDrag';
+import type { TranslationKey } from '@/i18n/translations';
 import { useTranslation } from '@/i18n/useTranslation';
 import { FlashSectorInfo } from '@/models';
 import { cn } from '@/lib/utils';
+import { NvramSectorInspectorCard } from './NvramSectorInspectorCard';
+
+const SECTOR_FILTERS: ReadonlyArray<{
+  readonly id: string;
+  readonly labelKey: TranslationKey;
+  readonly activeClass: string;
+}> = [
+  { id: 'all', labelKey: 'nvram.sectorMap.filterAllCount', activeClass: 'bg-cyan-500/20 text-cyan-300 font-bold' },
+  { id: 'nvram', labelKey: 'nvram.sectorMap.filterNvram', activeClass: 'bg-amber-500/20 text-amber-300 font-bold' },
+  { id: 'bgo', labelKey: 'nvram.sectorMap.filterBgo', activeClass: 'bg-indigo-500/20 text-indigo-300 font-bold' },
+  { id: 'bootloader', labelKey: 'nvram.sectorMap.filterBootloader', activeClass: 'bg-cyan-500/20 text-cyan-300 font-bold' },
+];
 
 interface NvramSectorMapProps {
-  sectorMap: FlashSectorInfo[];
+  sectorMap: readonly FlashSectorInfo[];
   selectedSector: FlashSectorInfo | null;
   filterType: string;
   cleanSuccess: boolean;
@@ -23,19 +35,9 @@ function getSectorTileClass(sector: FlashSectorInfo, cleanSuccess: boolean): str
       ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold'
       : 'bg-rose-500 hover:bg-rose-400 text-slate-950 font-bold animate-pulse';
   }
-  if (sector.sector_type === 'bootloader') {
-    return 'bg-cyan-900/60 hover:bg-cyan-800/80 text-cyan-200';
-  }
+  if (sector.sector_type === 'bootloader') return 'bg-cyan-900/60 hover:bg-cyan-800/80 text-cyan-200';
+  if (sector.sector_type === 'bgo_region') return 'bg-indigo-900/70 hover:bg-indigo-800/80 text-indigo-200 border border-indigo-700/40';
   return 'bg-slate-800 hover:bg-slate-700 text-slate-300';
-}
-
-function getSectorInspectorBadgeLabel(
-  sector: FlashSectorInfo,
-  cleanSuccess: boolean,
-  t: ReturnType<typeof useTranslation>['t'],
-): string {
-  if (!sector.is_corrupted_area) return t('nvram.sectorMap.badgeIntact');
-  return cleanSuccess ? t('nvram.sectorMap.badgeCleanFf') : t('nvram.sectorMap.badgeU99');
 }
 
 export const NvramSectorMap: React.FC<NvramSectorMapProps> = ({
@@ -83,10 +85,18 @@ export const NvramSectorMap: React.FC<NvramSectorMapProps> = ({
       (last, s, idx) => (s.sector_type === 'bootloader' ? idx : last),
       -1,
     );
+    const bgoStart = sectorMap.findIndex((s) => s.sector_type === 'bgo_region');
+    const bgoEnd = sectorMap.reduce(
+      (last, s, idx) => (s.sector_type === 'bgo_region' ? idx : last),
+      -1,
+    );
     const nvramStart = sectorMap.findIndex((s) => s.sector_type === 'nvram_microsector');
     return [
       { label: t('nvram.sectorMap.presetAll', { count: sectorMap.length }), start: 0, end: maxIdx },
       ...(bootEnd >= 0 ? [{ label: t('nvram.sectorMap.presetBoot'), start: 0, end: bootEnd }] : []),
+      ...(bgoStart >= 0 && bgoEnd >= bgoStart
+        ? [{ label: t('nvram.sectorMap.presetBgo'), start: bgoStart, end: bgoEnd }]
+        : []),
       ...(nvramStart >= 0
         ? [{ label: t('nvram.sectorMap.presetNvram'), start: nvramStart, end: maxIdx }]
         : []),
@@ -107,36 +117,19 @@ export const NvramSectorMap: React.FC<NvramSectorMapProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-xl bg-slate-950 border border-slate-800 text-xs">
-          <button
-            type="button"
-            onClick={() => onSelectFilter('all')}
-            className={cn(
-              'px-2.5 py-1 rounded-lg transition-colors',
-              filterType === 'all' ? 'bg-cyan-500/20 text-cyan-300 font-bold' : 'text-slate-400 hover:text-slate-200',
-            )}
-          >
-            {t('nvram.sectorMap.filterAllCount')}
-          </button>
-          <button
-            type="button"
-            onClick={() => onSelectFilter('nvram')}
-            className={cn(
-              'px-2.5 py-1 rounded-lg transition-colors',
-              filterType === 'nvram' ? 'bg-amber-500/20 text-amber-300 font-bold' : 'text-slate-400 hover:text-slate-200',
-            )}
-          >
-            {t('nvram.sectorMap.filterNvram')}
-          </button>
-          <button
-            type="button"
-            onClick={() => onSelectFilter('bootloader')}
-            className={cn(
-              'px-2.5 py-1 rounded-lg transition-colors',
-              filterType === 'bootloader' ? 'bg-cyan-500/20 text-cyan-300 font-bold' : 'text-slate-400 hover:text-slate-200',
-            )}
-          >
-            {t('nvram.sectorMap.filterBootloader')}
-          </button>
+          {SECTOR_FILTERS.length === 0 ? null : SECTOR_FILTERS.map((f) => (
+            <button
+              key={f.id}
+              type="button"
+              onClick={() => onSelectFilter(f.id)}
+              className={cn(
+                'px-2.5 py-1 rounded-lg transition-colors',
+                filterType === f.id ? f.activeClass : 'text-slate-400 hover:text-slate-200',
+              )}
+            >
+              {t(f.labelKey)}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -220,66 +213,28 @@ export const NvramSectorMap: React.FC<NvramSectorMapProps> = ({
               <span>{t('nvram.sectorMap.legendBoot')}</span>
             </div>
             <div className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded bg-indigo-900/70 border border-indigo-700/40" />
+              <span>{t('nvram.sectorMap.legendBgo')}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
               <span className="w-3 h-3 rounded bg-slate-800" />
               <span>{t('nvram.sectorMap.legendOs')}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <span className={cn('w-3 h-3 rounded', cleanSuccess ? 'bg-emerald-500' : 'bg-rose-500 animate-pulse')} />
-              <span>
-                {cleanSuccess
-                  ? t('nvram.sectorMap.legendClean')
-                  : t('nvram.sectorMap.legendCorrupted')}
-              </span>
+              <span>{cleanSuccess ? t('nvram.sectorMap.legendClean') : t('nvram.sectorMap.legendCorrupted')}</span>
             </div>
           </div>
-
           {rangeMetrics.first && rangeMetrics.last && (
             <span className="text-cyan-300 font-semibold">
-              {t('nvram.sectorMap.rangeSummary', {
-                first: rangeMetrics.first.name,
-                last: rangeMetrics.last.name,
-                count: rangeMetrics.count,
-                kb: rangeMetrics.totalKb,
-              })}
+              {t('nvram.sectorMap.rangeSummary', { first: rangeMetrics.first.name, last: rangeMetrics.last.name, count: rangeMetrics.count, kb: rangeMetrics.totalKb })}
             </span>
           )}
         </div>
       </div>
 
       {selectedSector && (
-        <div className="p-4 rounded-xl bg-bench-950 border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-slate-100">
-                {t('nvram.sectorMap.selectedPrefix', { name: selectedSector.name })}
-              </span>
-              <StatusBadge
-                variant={selectedSector.is_corrupted_area ? (cleanSuccess ? 'success' : 'error') : 'info'}
-                label={getSectorInspectorBadgeLabel(selectedSector, cleanSuccess, t)}
-              />
-            </div>
-            <p className="text-xs text-slate-400 font-sans">{selectedSector.notes}</p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-4 text-xs font-mono">
-            <div className="text-slate-400">
-              <span className="text-slate-500 block text-[10px]">{t('nvram.sectorMap.fieldOffset')}</span>
-              <span>
-                0x{selectedSector.start_offset.toString(16).padStart(HEX32_PAD_WIDTH, '0').toUpperCase()}
-              </span>
-            </div>
-            <div className="text-slate-400">
-              <span className="text-slate-500 block text-[10px]">{t('nvram.sectorMap.fieldSize')}</span>
-              <span>{t('nvram.sectorMap.sizeKb', { kb: selectedSector.size_bytes / KIB_BYTES })}</span>
-            </div>
-            <div className="text-slate-400">
-              <span className="text-slate-500 block text-[10px]">{t('nvram.sectorMap.fieldActive')}</span>
-              <span className={selectedSector.is_corrupted_area && !cleanSuccess ? 'text-rose-400 font-bold' : 'text-slate-200'}>
-                {t('nvram.sectorMap.bytesUnit', { bytes: selectedSector.active_bytes ?? 0 })}
-              </span>
-            </div>
-          </div>
-        </div>
+        <NvramSectorInspectorCard sector={selectedSector} cleanSuccess={cleanSuccess} />
       )}
     </div>
   );

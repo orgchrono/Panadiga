@@ -122,7 +122,7 @@ flowchart TD
     end
 
     subgraph TOC_SD["3. Plaintext SD Card TOC (PANA__SD.FRM)"]
-        E1_SD["Entry 0 at 0x0000 (64 Plaintext Bytes)"] --> P3["Table up to 0x2000"]
+        E1_SD["Entry 0 at 0x0000 (48 B sd48 EH55 ver0.61 | 64 B sd64 ver0.63)"] --> P3["Table 0x1800 (sd48) / 0x2000 (sd64)"]
         P3 --> PAY3["Direct Plaintext Modular Payload"]
     end
 ```
@@ -132,8 +132,8 @@ flowchart TD
    - In the `DMR-EH55` AM34 layout, each 48-byte slot holds Name (`0x00..0x0A`), Version u16 LE (`0x0A..0x0C`), Offset (`0x0C..0x10`), HW family (`0x10..0x18`), OEM (`0x18`, `'M'`), Flag (`0x19`), Model Group (`0x1A..0x20`), Size (`0x20..0x24`), FVU sum (`0x24..0x28`), trailing metadata (`0x28..0x2E`), and 16-bit LE additive `list_sum` (`0x2E..0x30`); newer Blu-ray generations documented in `pana-fw` advance to 32-bit Adler-32 entry sums.
 2. **64-Byte Feistel TOC (`Stride = 0x40`, Payload Starting at `0x2000` / 8,192 B):**
    - Utilized across `EH49/59/69`, `EX81S/71SEG`, and most `EX72..EX93` units (e.g., entry 0 at `0x0000` `PROG071`, entry 1 at `0x0040` `MAIN3100`), shifting module payloads to `0x2000`.
-3. **64-Byte Plaintext TOC (`PANA__SD.FRM`):**
-   - Utilized on SD recovery updates (`DMR-EH55`), keeping table descriptors plaintext (bypassing Feistel decryption).
+3. **Plaintext SD TOC (`PANA__SD.FRM` — `48-Byte sd48` vs `64-Byte sd64`):**
+   - Utilized on SD recovery updates, keeping table descriptors plaintext (bypassing Feistel decryption). On real **`DMR-EH55` hardware (`Loader ver0.61 [06/03/06]` + `PROG061`)**, the native layout is **`48 Bytes` (`sd48`, `0x1800`-byte TOC = `6,144 B`, `list_sum` at `+0x2E`)** paired with raw `262,144 B` `DIGADIAG.FRM`; whereas on **`Loader ver0.63 [07/10/24]`** (`/BOOT.BIN` EZ485V/EH58), it uses **`64 Bytes` (`sd64`, `0x2000`-byte TOC = `8,192 B`, `list_sum` at `+0x3E`)** paired with `131,072 B` `EXTRHEAD` `DIGADIAG.FRM`.
 
 ### 1.4 `MAIN.bin` Architecture & Logical Base Addresses: `0x57000000` vs `0x50622000`
 
@@ -638,7 +638,7 @@ The validation module [`crates/panadiga-core/src/re/emu_patch_suite.rs`](../../c
 
 1. `spansion_nor_cfi_and_ipl_airgap` — Verifies CFI identity, strict `E05` write protection over the bootloader/IPL range, and isolated NVRAM sanitization (`0x807F0000..0x807FFFFF`).
 2. `frm_pack_retarget_and_flash` — Exercises `.FRM` packing, TOC model/region retargeting (`3410PQ`/`3060NP` + `DEV.BIN`), and flashing into simulated NOR.
-3. `bgo_bypass_and_panamon1_commands` — Executes the BGO bypass and `PANAMON1>` monitor commands (`R/W/E/J/D/B`) inside `Mn103Vm`.
+3. `bgo_bypass_and_panamon1_commands` — Executes the BGO bypass and `PANAMON1>` monitor commands (`B/R/W/D/F/J/E/U/Q`) inside `Mn103Vm`.
 4. `tbc_ee_passthrough_routines` — Executes TBC/E-E passthrough routines under VM supervision.
 5. `region_model_compat_unlock` — Validates deterministic region/model compatibility unlocking with `.FRM` re-packing.
 6. `hdd_resize_over_200gb_lba48` — Executes the real `src/hdd_cmd.c` capacity limiter (`[MaxProductLBA]` at `0x5311_B9AC`, instruction `cmp d0, d1; bls/bra +12` at `site_va + 0x4E..0x6F`): the factory `0xC6` opcode clamps a 500 GB drive (`0x0E8D4A51`) down to `0x05D21DB9` (`200 GB - 1`), whereas the patched `0xCA` opcode preserves `0x0E8D4A50` (`500 GB - 1`).

@@ -11,6 +11,8 @@ pub const HDD_CMD_M7920_400GB_BLOCKS: u32 = 0x0BA4_3B74; // 195,312,500 * 2KB = 
 pub const HDD_CMD_M7920_200GB_BLOCKS: u32 = 0x05D2_1DBA; //  97,656,250 * 2KB = 200.00 GB
 pub const HDD_CMD_M7920_FALLBACK_BLOCKS: u32 = crate::constants::PANA_HDD_CMD_M7920_FALLBACK_BLOCKS;
 pub const DYNAMIC_UNCLAMPED_MAX_BLOCKS_2KB: u32 = 0x3FFF_FFFF; // ~2.199 TB (2KB blocks)
+/// Extended 4 TiB ceiling (`0x7FFF_FFFF` 2KB blocks) requiring explicit opt-in via `allow_extended_4tb`.
+pub const EXTENDED_4TB_MAX_BLOCKS_2KB: u32 = 0x7FFF_FFFF;
 
 /// Fixed byte offsets inside the 114-byte (`0x72`) `src/hdd_cmd.c` clamp window.
 pub(crate) const WIN_LEN: usize = 0x72;
@@ -151,9 +153,11 @@ pub fn official_rtsd_presets() -> Vec<RtsdCapacityPreset> {
 }
 
 /// Maps a nominal GB size to exact 2 KB blocks (`MaxProductLBA`), matching Panasonic's RTSD table
-/// for factory presets (`80..400 GB`) and computing SI decimal blocks `(gb * 1e9) / 2048` otherwise.
-pub fn blocks_2kb_for_gb(target_gb: u32) -> Result<u32> {
-    if target_gb < 20 {
+/// for factory presets (`80..400 GB`), the verified `SAMSUNG SV0511D` 5.1 GB IDE bench drive (`5 GB` -> `0x0024C388`),
+/// and computing SI decimal blocks `(gb * 1e9) / 2048` up to `DYNAMIC_UNCLAMPED_MAX_BLOCKS_2KB` (`0x3FFF_FFFF`, ~2.199 TB)
+/// unless `allow_extended_4tb` explicitly authorizes up to `0x7FFF_FFFF`.
+pub fn blocks_2kb_for_gb_bounded(target_gb: u32, allow_extended_4tb: bool) -> Result<u32> {
+    if target_gb != 5 && target_gb < 20 {
         bail!("Target capacity {target_gb} GB is too small (minimum 20 GB required for MEIHDFS)");
     }
     let blocks = match target_gb {
@@ -166,16 +170,28 @@ pub fn blocks_2kb_for_gb(target_gb: u32) -> Result<u32> {
         120 => 0x037D_D1D6,
         100 => 0x02E8_CEDD,
         80 => 0x0253_CBE4,
+        // SAMSUNG SV0511D (9,965,088 LBAs): ((9,965,088 & !3) - 0x50000) >> 2 = 2,409,352 (2 KB blocks)
+        5 => 0x0024_C388,
         other => {
             let computed = ((other as u64) * 1_000_000_000) / 2048;
-            if computed > 0x7FFF_FFFF {
-                0x7FFF_FFFF
+            if !allow_extended_4tb && computed > u64::from(DYNAMIC_UNCLAMPED_MAX_BLOCKS_2KB) {
+                bail!(
+                    "Target capacity {other} GB ({computed} 2KB blocks) exceeds 2 TiB limit 0x{DYNAMIC_UNCLAMPED_MAX_BLOCKS_2KB:08X}; pass allow_extended_4tb=true to unlock up to 0x{EXTENDED_4TB_MAX_BLOCKS_2KB:08X}"
+                );
+            }
+            if computed > u64::from(EXTENDED_4TB_MAX_BLOCKS_2KB) {
+                EXTENDED_4TB_MAX_BLOCKS_2KB
             } else {
                 computed as u32
             }
         }
     };
     Ok(blocks)
+}
+
+/// Maps a nominal GB size to exact 2 KB blocks (`MaxProductLBA`) bounded at `0x3FFF_FFFF` (~2.199 TB).
+pub fn blocks_2kb_for_gb(target_gb: u32) -> Result<u32> {
+    blocks_2kb_for_gb_bounded(target_gb, false)
 }
 
 #[inline]
@@ -193,7 +209,18 @@ mod tests {
         let presets = official_rtsd_presets();
         assert_eq!(presets.len(), 9);
         assert_eq!(blocks_2kb_for_gb(250).unwrap(), 0x0746_6528);
+        assert_eq!(blocks_2kb_for_gb(5).unwrap(), 0x0024_C388);
         assert!(blocks_2kb_for_gb(10).is_err());
         assert!(blocks_2kb_for_gb(500).unwrap() > blocks_2kb_for_gb(400).unwrap());
+
+        let two_tb = blocks_2kb_for_gb(2000).unwrap();
+        assert!(two_tb <= DYNAMIC_UNCLAMPED_MAX_BLOCKS_2KB);
+        assert_eq!(two_tb, 0x3A35_2944);
+        assert!(blocks_2kb_for_gb(2500).is_err());
+        assert!(blocks_2kb_for_gb_bounded(2500, true).unwrap() > DYNAMIC_UNCLAMPED_MAX_BLOCKS_2KB);
+        assert_eq!(
+            blocks_2kb_for_gb_bounded(5000, true).unwrap(),
+            EXTENDED_4TB_MAX_BLOCKS_2KB
+        );
     }
 }

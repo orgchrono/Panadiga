@@ -4,9 +4,11 @@ use super::super::SymbolSpec;
 use super::sym;
 use crate::constants::{
     AM34_ASIC_MMIO_BASE, AM34_DAVIS_PRI_MMIO_BASE, AM34_DAVIS_SEC_MMIO_BASE, AM34_DRV_S211_BASE,
-    AM34_FLASH_BASE, AM34_FLASH_BGO_BASE, AM34_FLASH_UNCACHED_BASE, AM34_NVRAM_BASE,
-    AM34_NVRAM_UNCACHED_BASE, AM34_PATA_MMIO_BASE, AM34_SC0_BASE, AM34_SDCD_BUS_CFG_VA,
-    AM34_SDCD_MMIO_BASE, AM34_SRAM_LOADER_BASE,
+    AM34_EH55_BGO_TABLE_VA, AM34_EH55_DRV_EXTRHEAD_BASE, AM34_EH55_FLASH_BGO_BASE,
+    AM34_EH55_UPPER_EEMUL_BASE, AM34_FLASH_BASE, AM34_FLASH_BGO_BASE, AM34_FLASH_UNCACHED_BASE,
+    AM34_NVRAM_BASE, AM34_NVRAM_UNCACHED_BASE, AM34_PATA_MMIO_BASE,
+    AM34_PROG061_SDRAM_UNCACHED_BASE, AM34_SC0_BASE, AM34_SDCD_BUS_CFG_VA, AM34_SDCD_MMIO_BASE,
+    AM34_SRAM_LOADER_BASE,
 };
 
 pub(super) const SPECS: &[SymbolSpec] = &[
@@ -75,17 +77,42 @@ pub(super) const SPECS: &[SymbolSpec] = &[
     sym(
         AM34_FLASH_UNCACHED_BASE,
         "FLASH_NOR_UNCACHED_BASE",
-        "Spansion S29GL064 CS1 Uncached Base (DUMPNOR 0x84000000)",
+        "Spansion S29JL064H CS1 Uncached Base (DUMPNOR 0x84000000)",
+    ),
+    sym(
+        AM34_EH55_DRV_EXTRHEAD_BASE,
+        "EH55_DRV_EXTRHEAD_BASE",
+        "Real DMR-EH55 IC5001 EXTRHEAD DRV Container (SA15..SA25, 0x84080040 -> 0x90202000)",
+    ),
+    sym(
+        AM34_EH55_FLASH_BGO_BASE,
+        "FLASH_NOR_CS1_EH55_BGO",
+        "Real DMR-EH55 Loader ver0.61 BGO/[nfrom] Start (0x84130000..0x843FFFFF, 45 x 64 KiB SA26..SA70)",
     ),
     sym(
         AM34_FLASH_BGO_BASE,
         "FLASH_NOR_BGO_START",
-        "BGO Flash Partition Start (32 x 64 KiB, NFROM)",
+        "PROG061 / Loader ver0.63 BGO Flash Partition Start (0x84200000..0x843FFFFF, 32 x 64 KiB, NFROM)",
+    ),
+    sym(
+        AM34_EH55_UPPER_EEMUL_BASE,
+        "UPPER_EEMUL_BASE",
+        "Real DMR-EH55 Upper EEMUL NOR Flash FS Start (SA71..SA141, 0x84400000..0x847FFFFF, 1284 headers)",
     ),
     sym(
         AM34_NVRAM_UNCACHED_BASE,
         "NVRAM_UNCACHED_BASE",
         "NVRAM Uncached CS1 Mirror (0x847F0000..0x84800000)",
+    ),
+    sym(
+        AM34_EH55_BGO_TABLE_VA,
+        "EH55_BGO_GEOMETRY_TABLE",
+        "Real DMR-EH55 Loader ver0.61 BGO Geometry Table (45 x 64 KiB, 1 P1 + 40 P2 + 4 spares, max PID 0x0F24)",
+    ),
+    sym(
+        AM34_PROG061_SDRAM_UNCACHED_BASE,
+        "PROG061_SDRAM_UNCACHED",
+        "Uncached SDRAM Alias of 0x50400000 PROG061 (used by PANADMP1 0x9043950E & RAM stubs 0x90439B40)",
     ),
     // UniPhier SC0 UART0 (Real P7501 Diagnostic Serial Controller at 0xD4002000)
     sym(

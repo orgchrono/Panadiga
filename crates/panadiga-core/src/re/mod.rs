@@ -1,28 +1,38 @@
 //! Reverse Engineering, MN103S Disassembly, UART NOR Dumper & BGO Unbrick Primitives
 
 pub mod bgo_unbrick;
+pub mod davis_probe;
+pub mod eh55_bgo;
 pub mod emu_patch_suite;
 pub mod error_dict;
 pub mod main_passthrough;
 pub mod matshita_emu;
 pub mod mn10300;
+pub mod mn10300_emit;
 pub mod mn10300_emu;
 pub mod mn10300_traps;
 pub mod nor_dumper;
 pub mod patch_spec;
 pub mod prog061_uart_monitor;
 pub mod region_compat;
+pub mod tbc_appliance;
 pub mod unbrick_sd_kit;
 pub mod unbrick_workbench;
 
 pub use bgo_unbrick::{
-    OFF_BGO_INIT_FAIL_HOOK, OFF_BGO_SUM_BEQ, OFF_DEVINFO_CHECK_BEQ, ORIG_A2CD_HOOK,
-    ORIG_DEVINFO_BEQ, ORIG_SUM_BEQ, PROG061_BASE_VA, PROG061_EXPECTED_SIZE,
-    PROG061_NFROM_FORMAT_VA, Prog061BgoInspection, Prog061BgoPatchMode, Prog061BgoPatchReport,
-    Prog061BgoSiteStatus, decode_prog061_payload, inspect_prog061_bgo_sites,
-    inspect_prog061_container_bytes, patch_prog061_bgo_in_place,
+    OFF_BGO_INIT_CALL, OFF_BGO_INIT_FAIL_HOOK, OFF_BGO_SUM_BEQ, OFF_DEVINFO_CHECK_BEQ,
+    ORIG_A2BC_BGO_CALL, ORIG_A2CD_HOOK, ORIG_DEVINFO_BEQ, ORIG_SUM_BEQ, PATCH_A2BC_BRA_MONITOR,
+    PROG061_BASE_VA, PROG061_EXPECTED_SIZE, PROG061_NFROM_FORMAT_VA, Prog061BgoInspection,
+    Prog061BgoPatchMode, Prog061BgoPatchReport, Prog061BgoSiteStatus, decode_prog061_payload,
+    inspect_prog061_bgo_sites, inspect_prog061_container_bytes, patch_prog061_bgo_in_place,
     patch_prog061_bgo_in_place_with_policy, patch_prog061_or_build_digadiag,
     patch_prog061_or_build_digadiag_with_policy,
+};
+pub use eh55_bgo::{
+    EH55_BGO_EXPECTED_P2_COUNT, EH55_BGO_FIRST_SA, EH55_BGO_LAST_SA, EH55_BGO_MAX_PID,
+    EH55_BGO_SECTOR_COUNT, Eh55BgoAuditReport, Eh55BgoSectorKind, Eh55BgoSectorReport,
+    audit_eh55_bgo_nor_8mb, eh55_bgo_sector_offset, eval_bgo_migration_index,
+    eval_bgo_migration_target, parse_eh55_bgo_l2p, verify_nor_one_to_zero_compatible,
 };
 pub use emu_patch_suite::{
     NorEmuPatchSuiteReport, PatchVerificationCheck, run_nor_emu_patch_verification_suite,
@@ -62,7 +72,7 @@ pub use region_compat::{
     patch_main_region_compat_in_place, retarget_frm_toc_bytes,
 };
 pub use unbrick_sd_kit::{
-    FatBpbReport, MbrPartitionRecord, RootDirFileReport, SdDiskInspectionReport,
+    FatBpbReport, MbrPartitionRecord, RootDirFileReport, SdDiskInspectionReport, SdLoaderProfile,
     SdMediaVerificationReport, SdUnbrickCheck, SdUnbrickKitReport, SdUnbrickKitRequest,
     inspect_sd_disk_bytes, inspect_sd_reader, inspect_sd_target, prepare_sd_unbrick_kit,
     verify_sd_buffers, verify_sd_unbrick_media,

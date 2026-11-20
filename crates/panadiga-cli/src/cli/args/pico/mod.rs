@@ -1,11 +1,13 @@
 //! CLI argument definitions for RP2040/RP2350 Pico hardware control and GDB RSP bridge.
 
 pub mod flash_cmds;
+pub mod live_cmds;
 pub mod trace_cmds;
 
 pub use flash_cmds::{
     BreakInArgs, GdbBridgeArgs, GdbConfigArgs, MergeUf2Args, PicoDumpArgs, PicoFlashArgs,
 };
+pub use live_cmds::{CaptureNorArgs, DavisProbeArgs};
 pub use trace_cmds::{
     AbBootArgs, BenchWizardArgs, DecodeLogArgs, ParseDiagArgs, RspCodecArgs, ValidateBenchCmdArgs,
 };
@@ -110,4 +112,10 @@ pub enum PicoActions {
     /// Automated A/B cold-boot statistical harness helpers (`build-cmd`, `classify`, `summarize`, `csv`)
     #[command(name = "ab-boot", alias = "ab_boot")]
     AbBoot(AbBootArgs),
+
+    /// Captures live Spansion IC5001 NOR slices (`full|bgo|nvram|loader|custom`) via Pico PANAMON1>
+    CaptureNor(CaptureNorArgs),
+
+    /// Probes AM34 DAVIS CH0/CH1 taskfiles and 0xEC IDENTIFY via Pico PANAMON1> (guards 0xC000_100C)
+    DavisProbe(DavisProbeArgs),
 }

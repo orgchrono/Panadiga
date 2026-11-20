@@ -36,6 +36,30 @@ pub struct UnbrickHardwareFact {
     pub evidence: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct WorkbenchRegionSummary {
+    pub dev_bin_path: Option<String>,
+    pub dev_bin_model: Option<String>,
+    pub dev_bin_oem: Option<String>,
+    pub main_build_profile: Option<String>,
+    pub main_devinfo_state: Option<String>,
+    pub recommended_tv_standard: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct WorkbenchBgoSummary {
+    pub nor_dump_path: String,
+    pub healthy: bool,
+    pub total_sectors: usize,
+    pub p1_active_count: usize,
+    pub p2_present_count: usize,
+    pub p2_missing_count: usize,
+    pub spare_count: usize,
+    pub corrupt_count: usize,
+    pub nfrom_file_count: usize,
+    pub ifodev2_model: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UnbrickWorkspaceReport {
     pub workspace_root: String,
@@ -49,6 +73,12 @@ pub struct UnbrickWorkspaceReport {
     pub main_capacity: Option<MainCapacityInspectionReport>,
     pub rsp_plan: MainPassthroughRspPlan,
     pub sd_verification: Option<SdMediaVerificationReport>,
+    #[serde(default)]
+    pub recommended_recovery_profile: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub region_compat_summary: Option<WorkbenchRegionSummary>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bgo_audit_summary: Option<WorkbenchBgoSummary>,
     pub hardware_facts: Vec<UnbrickHardwareFact>,
     pub digadiag_vs_pana_notes: Vec<String>,
 }
@@ -86,7 +116,7 @@ pub(crate) fn hardware_facts_catalog() -> Vec<UnbrickHardwareFact> {
         UnbrickHardwareFact {
             topic: "DIGADIAG.FRM vs PANA__SD.FRM / PANA_DVD.FRM".to_string(),
             verdict: "DISTINCT_STAGE15_VS_STAGE2_CONTAINERS".to_string(),
-            evidence: "DIGADIAG.FRM is a fixed 128 KiB (0x20000) single-payload plaintext EXTRHEAD ('FVU ', VA 0x50400000, adler_step=4) consumed by BOOT.BIN SDDIAG. PANA_DVD.FRM uses 48B Feistel TOC + full Feistel payload (optical disc). PANA__SD.FRM uses plaintext 64B TOC entries pointing to PROG/DRV/MAIN containers for SD Update.".to_string(),
+            evidence: "DMR-EH55 Loader ver0.61 [06/03/06] loads 256 KiB (0x40000) raw DIGADIAG.FRM directly to 0x90400000 (JMP 0x50400000) and expects 48B TOC (0x1800) PANA__SD.FRM (sd48). Later Loader ver0.63 (EZ485V BOOT.BIN) reads 128 KiB (0x20000) plaintext EXTRHEAD DIGADIAG.FRM and 64B TOC PANA__SD.FRM. PANA_DVD.FRM uses 48B Feistel TOC + full Feistel payload.".to_string(),
         },
         UnbrickHardwareFact {
             topic: "Forcing SD 1-bit Mode via Pico P7501 (-91006 Bypass)".to_string(),
@@ -113,9 +143,9 @@ pub(crate) fn hardware_facts_catalog() -> Vec<UnbrickHardwareFact> {
 
 pub(crate) fn digadiag_vs_pana_notes() -> Vec<String> {
     vec![
-        "DIGADIAG.FRM -> BOOT.BIN (NOR 0x44000000) loads 128 KiB plaintext EXTRHEAD 'FVU ' to 0x50400000 and jumps directly (zero BGO/NVRAM check).".to_string(),
-        "PANA__SD.FRM -> BOOT.BIN reads 64B plaintext TOC slots (0x2000 header); 48B SD TOC (OPCAO_3, 0x1800) only matches orphan/SD-update PROG061 readers and is rejected at boot.".to_string(),
-        "PANA_DVD.FRM -> Optical update container with 48B Feistel TOC + full Feistel module layer over DRV S211 / PROG061 / MAIN3060NP (verified byte-for-byte source of factory PANA__SD.FRM).".to_string(),
+        "DIGADIAG.FRM -> DMR-EH55 Loader ver0.61 reads 256 KiB (0x40000) raw uncompressed payload to 0x90400000 and executes JMP 0x50400000; Loader ver0.63 reads 128 KiB plaintext EXTRHEAD 'FVU ' to 0x93FC0000 and uncompresses to 0x50400000.".to_string(),
+        "PANA__SD.FRM -> Loader ver0.61 / PROG061 reads 48B plaintext TOC slots (sd48, 0x1800 header); Loader ver0.63 BOOT.BIN reads 64B plaintext TOC slots (sd64, 0x2000 header).".to_string(),
+        "PANA_DVD.FRM -> Optical update container with 48B Feistel TOC + full Feistel module layer over DRV S211 / PROG061 / MAIN3060NP (verified byte-for-byte source of factory sd48 PANA__SD.FRM).".to_string(),
     ]
 }
 

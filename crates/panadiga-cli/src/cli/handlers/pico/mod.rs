@@ -1,7 +1,10 @@
+#![deny(unsafe_code)]
+
 //! CLI handlers for RP2040/RP2350 Pico hardware probing, CDDIAG DCSR check, memory DUMP, flashing, and GDB RSP bridge.
 
 mod bench_wizard;
 mod error_lookup;
+pub mod live_ops;
 mod ops;
 
 pub use bench_wizard::{BenchWizardConfig, handle_bench_wizard};
@@ -123,6 +126,8 @@ pub fn handle_pico(args: PicoArgs) -> Result<()> {
                 json: a.json,
             })?;
         }
+        PicoActions::CaptureNor(c) => live_ops::handle_capture_nor(c)?,
+        PicoActions::DavisProbe(d) => live_ops::handle_davis_probe(d)?,
     }
     Ok(())
 }

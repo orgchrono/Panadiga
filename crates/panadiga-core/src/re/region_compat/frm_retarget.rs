@@ -93,22 +93,34 @@ pub fn retarget_frm_toc_bytes(
         if let Some(hw) = hw_family {
             write_padded_ascii(&mut entry[0x10..0x18], hw.trim(), 0);
         }
-        if layout == TocLayout::Sd64B {
-            if let Some(flag) = target_flag {
-                entry[0x18] = flag;
+        match layout {
+            TocLayout::Sd64B => {
+                if let Some(flag) = target_flag {
+                    entry[0x18] = flag;
+                }
+                if let Some(grp) = model_group {
+                    write_padded_ascii(&mut entry[0x30..0x3C], grp.trim(), 0);
+                }
             }
-            if let Some(grp) = model_group {
-                write_padded_ascii(&mut entry[0x30..0x3C], grp.trim(), 0);
+            TocLayout::Sd48B => {
+                // `Loader ver0.61` `sd_find_firm_entry` checks `entry[0x18] == model_prefix` (e.g. `'M'`) and leaves `[0x19] == 0`.
+                if let Some(prefix) = oem_char.map(|c| c as u8).or(target_flag) {
+                    entry[0x18] = prefix;
+                }
+                if let Some(grp) = model_group {
+                    write_padded_ascii(&mut entry[0x1A..0x20], grp.trim(), 0);
+                }
             }
-        } else {
-            if let Some(oem) = oem_char {
-                entry[0x18] = oem as u8;
-            }
-            if let Some(flag) = target_flag {
-                entry[0x19] = flag;
-            }
-            if let Some(grp) = model_group {
-                write_padded_ascii(&mut entry[0x1A..0x20], grp.trim(), 0);
+            TocLayout::Dvd48B | TocLayout::Dvd64B => {
+                if let Some(oem) = oem_char {
+                    entry[0x18] = oem as u8;
+                }
+                if let Some(flag) = target_flag {
+                    entry[0x19] = flag;
+                }
+                if let Some(grp) = model_group {
+                    write_padded_ascii(&mut entry[0x1A..0x20], grp.trim(), 0);
+                }
             }
         }
         write_toc_entry_list_sum(entry);

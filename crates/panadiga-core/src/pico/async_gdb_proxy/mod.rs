@@ -1,3 +1,5 @@
+#![deny(unsafe_code)]
+
 //! Asynchronous UART <-> GDB Remote Serial Protocol (RSP) translator for P7501.
 //!
 //! Because connector `P7501` on Panasonic DMR-EH55 carries asynchronous `115200 8N1` UART
@@ -7,11 +9,17 @@
 
 use std::io::{Read, Write};
 use std::net::TcpStream;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use serialport::SerialPort;
 
+use super::panamon1::{
+    PANAMON1_FULL_PROMPT, PANAMON1_READ_CHUNK_BYTES, parse_panamon1_read_bytes, query_panamon1_uart,
+};
 use super::rsp_codec::{NorWritePolicy, build_rsp_frame, is_nor_write_blocked_with_policy};
+
+#[cfg(test)]
+mod tests;
 
 /// Target monitor mode used behind TCP `127.0.0.1:3333` GDB RSP bridge.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -68,44 +76,10 @@ fn parse_two_hex_args(arg: &str) -> Option<(u32, usize)> {
     Some((addr, len))
 }
 
-fn parse_panamon1_read_words(reply: &str) -> Vec<u8> {
-    let mut out = Vec::new();
-    for line in reply.lines() {
-        let Some((_, hex_part)) = line.split_once(':') else {
-            continue;
-        };
-        for tok in hex_part.split_whitespace() {
-            if tok.len() == 8
-                && tok.chars().all(|c| c.is_ascii_hexdigit())
-                && let Ok(word) = u32::from_str_radix(tok, 16)
-            {
-                out.extend_from_slice(&word.to_le_bytes());
-            }
-        }
-    }
-    out
-}
-
-fn query_panamon1_uart(serial: &mut dyn SerialPort, cmd: &str, max_wait: Duration) -> String {
-    let _ = serial.write_all(format!("{cmd}\r\n").as_bytes());
-    let _ = serial.flush();
-    let deadline = Instant::now() + max_wait;
-    let mut out = String::new();
-    let mut buf = [0u8; 512];
-    while Instant::now() < deadline {
-        if let Ok(n) = serial.read(&mut buf)
-            && n > 0
-        {
-            out.push_str(&String::from_utf8_lossy(&buf[..n]));
-            if out.contains("PANAMON1>") {
-                break;
-            }
-        }
-    }
-    out
-}
-
-fn handle_panamon1_rsp_packet(cmd: &str, serial: Option<&mut dyn SerialPort>) -> Vec<u8> {
+pub(super) fn handle_panamon1_rsp_packet_io<T: Read + Write + ?Sized>(
+    cmd: &str,
+    serial: Option<&mut T>,
+) -> Vec<u8> {
     let payload: String = if cmd.starts_with("qSupported") {
         "PacketSize=400;qXfer:memory-map:read+;qAttached+".to_string()
     } else if cmd == "qAttached" {
@@ -125,25 +99,29 @@ fn handle_panamon1_rsp_packet(cmd: &str, serial: Option<&mut dyn SerialPort>) ->
         let Some((addr, len)) = parse_two_hex_args(rest) else {
             return build_rsp_frame(b"E01", false).unwrap_or_default();
         };
+        if len == 0 {
+            return build_rsp_frame(b"", false).unwrap_or_default();
+        }
         let Some(port) = serial else {
             return build_rsp_frame(b"E0A", false).unwrap_or_default();
         };
-        let aligned = addr & !0x3;
-        let offset = (addr - aligned) as usize;
-        let words = (offset + len).div_ceil(4).clamp(1, 32);
-        let mut raw_bytes = Vec::with_capacity(words * 4);
-        for w in 0..words {
-            let va = aligned.wrapping_add((w * 4) as u32);
-            let reply =
-                query_panamon1_uart(port, &format!("R {va:08X}"), Duration::from_millis(350));
-            let parsed = parse_panamon1_read_words(&reply);
-            if parsed.is_empty() {
+        let mut raw_bytes = Vec::with_capacity(len);
+        let mut offset = 0usize;
+        while offset < len {
+            let chunk = (len - offset).min(PANAMON1_READ_CHUNK_BYTES);
+            let va = addr.wrapping_add(offset as u32);
+            let reply = query_panamon1_uart(
+                port,
+                &format!("R {va:08X},{chunk:X}"),
+                Duration::from_millis(500),
+            );
+            let Some(parsed) = parse_panamon1_read_bytes(&reply, chunk) else {
                 return build_rsp_frame(b"E0A", false).unwrap_or_default();
-            }
+            };
             raw_bytes.extend_from_slice(&parsed);
+            offset += chunk;
         }
-        let slice = &raw_bytes[offset.min(raw_bytes.len())..(offset + len).min(raw_bytes.len())];
-        slice.iter().map(|b| format!("{b:02x}")).collect()
+        raw_bytes.iter().map(|b| format!("{b:02x}")).collect()
     } else if let Some(rest) = cmd.strip_prefix('M') {
         let Some((hdr, hex_data)) = rest.split_once(':') else {
             return build_rsp_frame(b"E01", false).unwrap_or_default();
@@ -157,17 +135,29 @@ fn handle_panamon1_rsp_packet(cmd: &str, serial: Option<&mut dyn SerialPort>) ->
         let Some(port) = serial else {
             return build_rsp_frame(b"E0A", false).unwrap_or_default();
         };
-        let bytes = hex::decode(hex_data.trim()).unwrap_or_default();
-        if bytes.len() < 2 {
+        let Ok(bytes) = hex::decode(hex_data.trim()) else {
+            return build_rsp_frame(b"E01", false).unwrap_or_default();
+        };
+        if len == 0 || bytes.len() != len {
             return build_rsp_frame(b"E01", false).unwrap_or_default();
         }
-        let val16 = u16::from_le_bytes([bytes[0], bytes[1]]);
-        let reply = query_panamon1_uart(
-            port,
-            &format!("W {addr:08X},{val16:04X}"),
-            Duration::from_millis(400),
-        );
-        if reply.contains("PANAMON1>") && !reply.contains("ERR:") {
+        let mut all_ok = true;
+        for (idx, &byte) in bytes.iter().enumerate() {
+            let va = addr.wrapping_add(idx as u32);
+            let reply = query_panamon1_uart(
+                port,
+                &format!("W {va:08X},{byte:02X}"),
+                Duration::from_millis(400),
+            );
+            if !reply.contains("OK:WRITE")
+                || !reply.contains(PANAMON1_FULL_PROMPT)
+                || reply.contains("ERR:")
+            {
+                all_ok = false;
+                break;
+            }
+        }
+        if all_ok {
             "OK".to_string()
         } else {
             "E05".to_string()
@@ -177,6 +167,13 @@ fn handle_panamon1_rsp_packet(cmd: &str, serial: Option<&mut dyn SerialPort>) ->
     };
 
     build_rsp_frame(payload.as_bytes(), false).unwrap_or_default()
+}
+
+pub(super) fn handle_panamon1_rsp_packet(
+    cmd: &str,
+    serial: Option<&mut dyn SerialPort>,
+) -> Vec<u8> {
+    handle_panamon1_rsp_packet_io(cmd, serial)
 }
 
 /// Serves one synchronous TCP GDB/Ghidra client by translating RSP packets asynchronously
@@ -225,36 +222,4 @@ pub fn serve_panamon1_tcp_client(
         }
     }
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn parses_target_modes_and_translates_panamon1_rsp_safely() {
-        assert_eq!(
-            GdbBridgeTargetMode::parse_mode("panamon1").unwrap(),
-            GdbBridgeTargetMode::Panamon1
-        );
-        assert_eq!(
-            GdbBridgeTargetMode::parse_mode("panarsp").unwrap(),
-            GdbBridgeTargetMode::Panarsp
-        );
-        let sup = String::from_utf8(handle_panamon1_rsp_packet("qSupported", None)).unwrap();
-        assert!(sup.contains("qXfer:memory-map:read+"));
-
-        let g = String::from_utf8(handle_panamon1_rsp_packet("g", None)).unwrap();
-        assert!(g.starts_with('$') && g.len() > 220);
-
-        // Critical IPL NOR write must be blocked with E05 even through async Ghidra proxy
-        let e05 = String::from_utf8(handle_panamon1_rsp_packet("M80000000,2:1234", None)).unwrap();
-        assert!(e05.starts_with("$E05#"));
-    }
-
-    #[test]
-    fn parses_panamon1_word_dump_lines_cleanly() {
-        let parsed = parse_panamon1_read_words("80000000: AABBCCDD 11223344\r\nPANAMON1>");
-        assert_eq!(parsed, vec![0xDD, 0xCC, 0xBB, 0xAA, 0x44, 0x33, 0x22, 0x11]);
-    }
 }

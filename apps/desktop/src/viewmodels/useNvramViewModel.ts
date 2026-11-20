@@ -19,6 +19,7 @@ export { buildSectorMapFromReport };
 const SECTOR_FILTER_PREDICATES: Readonly<Record<string, (s: FlashSectorInfo) => boolean>> =
   Object.freeze({
     nvram: (sector) => sector.sector_type === 'nvram_microsector',
+    bgo: (sector) => sector.sector_type === 'bgo_region',
     corrupted: (sector) => sector.is_corrupted_area,
     bootloader: (sector) => sector.sector_type === 'bootloader',
     os: (sector) => sector.sector_type === 'os_firmware',

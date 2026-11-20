@@ -6,9 +6,13 @@
 
 import { isTauri } from '@tauri-apps/api/core';
 import type {
+  BgoRepairProgressEvent,
+  HddFlashProgressEvent,
   LiveNvramCaptureEvent,
+  NorDumpProgressEvent,
   PicoDeviceStatus,
   PicoDiagnosticResult,
+  PicoProbeDavisIdeResponse,
   ReactiveSerialEvent,
   Sc0BridgeDataEvent,
 } from '@/models';
@@ -22,6 +26,10 @@ export interface PanadigaEventMap {
   readonly 'unbrick://completed': boolean;
   readonly 'nvram://cleaned': boolean;
   readonly 'hdd://inspected': boolean;
+  readonly 'hdd://flash-progress': HddFlashProgressEvent;
+  readonly 'nor://dump-progress': NorDumpProgressEvent;
+  readonly 'bgo://repair-progress': BgoRepairProgressEvent;
+  readonly 'davis://probe-result': PicoProbeDavisIdeResponse;
   readonly pico_telemetry: PicoDeviceStatus;
   readonly 'pico://telemetry': PicoDeviceStatus;
   readonly 'pico://nvram-live-capture': LiveNvramCaptureEvent;
@@ -89,6 +97,10 @@ function createLocalEventBus() {
     'unbrick://completed': new Set(),
     'nvram://cleaned': new Set(),
     'hdd://inspected': new Set(),
+    'hdd://flash-progress': new Set(),
+    'nor://dump-progress': new Set(),
+    'bgo://repair-progress': new Set(),
+    'davis://probe-result': new Set(),
     pico_telemetry: new Set(),
     'pico://telemetry': new Set(),
     'pico://nvram-live-capture': new Set(),

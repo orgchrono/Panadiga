@@ -1,12 +1,15 @@
 //! Unlock `.FRM` / `DIGADIAG.FRM` packaging and verification helpers for SD and CD/DVD recovery.
 
 use super::{FrmUnlockVerificationSummary, sha256_hex};
-use crate::constants::{PANA_DIGADIAG_DEFAULT_LOAD_ADDR, PANA_DIGADIAG_FRM_SIZE};
+use crate::constants::{
+    PANA_DIGADIAG_DEFAULT_LOAD_ADDR, PANA_DIGADIAG_FRM_SIZE, PANA_DIGADIAG_RAW_VER061_SIZE,
+};
 use crate::crypto::{
     ExtrheadCryptMode, FrmContainerMode, FrmPackModule, pack_extrhead, pack_frm,
     parse_sd_frm_toc_with_layout, unpack_dvd_frm_to_modules, unpack_extrhead,
     verify_packed_frm_roundtrip,
 };
+use crate::re::bgo_unbrick::inspect_prog061_bgo_sites;
 use anyhow::{Result, bail};
 
 /// Decodes whitespace/0x-separated hexadecimal bytes into a raw payload buffer.
@@ -100,10 +103,32 @@ pub fn verify_unlock_frm_container(
             })
         }
         "digadiag" => {
+            if !frm_bytes.starts_with(b"EXTRHEAD")
+                && frm_bytes.len() == PANA_DIGADIAG_RAW_VER061_SIZE
+            {
+                let bgo = inspect_prog061_bgo_sites(frm_bytes).ok();
+                let valid_raw = bgo.is_some()
+                    || matches!(frm_bytes.first().copied(), Some(0xDC | 0xCC | 0xCA | 0xCF));
+                let mode_note = bgo
+                    .as_ref()
+                    .map(|r| r.detected_mode.as_str())
+                    .unwrap_or("CUSTOM_RAW_256K");
+                return Ok(FrmUnlockVerificationSummary {
+                    container_kind: "DIGADIAG.FRM (raw ver0.61 256 KiB)".to_string(),
+                    container_bytes: frm_bytes.len(),
+                    sha256: sha,
+                    entry_count: 1,
+                    bootloader_jump_va_hex: jump_hex,
+                    extrhead_valid: None,
+                    verified: valid_raw,
+                    notes: vec![format!(
+                        "Loader ver0.61 raw 256 KiB binary -> 0x{PANA_DIGADIAG_DEFAULT_LOAD_ADDR:08X} (mode={mode_note})"
+                    )],
+                });
+            }
             if frm_bytes.len() < PANA_DIGADIAG_FRM_SIZE {
                 bail!(
-                    "DIGADIAG.FRM must be >= {} bytes ({} B found; BOOT.BIN reads 0x20000 B)",
-                    PANA_DIGADIAG_FRM_SIZE,
+                    "DIGADIAG.FRM must be 262,144 B raw (ver0.61) or >= {PANA_DIGADIAG_FRM_SIZE} B EXTRHEAD ({} B found)",
                     frm_bytes.len()
                 );
             }

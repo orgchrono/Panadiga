@@ -1,4 +1,4 @@
-//! `DEV.BIN` (`512`-byte `AA 55 FF FF` / `PANA_DVD_REC`) descriptor parser and patcher.
+//! `DEV.BIN` (`512`-byte) and NFROM `ifodev2` (`2048`-byte) `AA 55 FF FF` / `PANA_DVD_REC` descriptor parser and patcher.
 
 use anyhow::{Result, bail};
 
@@ -9,14 +9,16 @@ use crate::nvram::calculate_hashes;
 use super::types::{DevBinReport, validate_ascii_field};
 
 const DEV_BIN_SIZE: usize = PANA_DEV_BIN_SIZE;
+/// Size of real Panasonic DMR-EH55 NFROM `ifodev2` file (4 × 512-byte BGO FTL blocks).
+pub const PANA_IFODEV2_SIZE: usize = 2048;
 const DEV_BIN_MAGIC: [u8; 4] = PANA_DEV_BIN_MAGIC;
 const DEV_BIN_SIG: &[u8; 12] = PANA_DEV_BIN_SIG;
 
-/// Parses and validates a 512-byte Panasonic `DEV.BIN` service container descriptor.
+/// Parses and validates a 512-byte `DEV.BIN` or 2048-byte NFROM `ifodev2` Panasonic service descriptor.
 pub fn inspect_dev_bin_bytes(bytes: &[u8]) -> Result<DevBinReport> {
-    if bytes.len() != DEV_BIN_SIZE {
+    if bytes.len() != DEV_BIN_SIZE && bytes.len() != PANA_IFODEV2_SIZE {
         bail!(
-            "DEV.BIN must be exactly {DEV_BIN_SIZE} bytes, got {}",
+            "DEV.BIN / ifodev2 must be {DEV_BIN_SIZE} or {PANA_IFODEV2_SIZE} bytes, got {}",
             bytes.len()
         );
     }

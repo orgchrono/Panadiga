@@ -61,10 +61,10 @@ The `"Firm list"` header region spans the initial `0x1800` bytes (6,144 B) encry
 
 Each entry also stores `fvu_checksum_u32` (byte sum of the module at `+0x24`), `version_u16`, `target_flag`, and `model_group`.
 
-### 2.2 `PANA__SD.FRM` (Plaintext TOC in 64-Byte Slots) and `DIGADIAG.FRM`
+### 2.2 `PANA__SD.FRM` (`sd48` vs `sd64` Plaintext) and `DIGADIAG.FRM` (`RAW_VER061` vs `EXTRHEAD`)
 
-- **`PANA__SD.FRM` (`FUN_4400a733` / `FUN_4400a6d0`):** uses up to `128` **plaintext** slots of `0x40` (64 B) bytes each (`PANA_SD_TOC_REGION_SIZE = 0x2000` / 8,192 B). Routine `FUN_4400a6d0` verifies `list_sum` at `+0x3E` as the `u16` sum of the first `0x3E` (62) bytes (`"_fmu_error: list sum is invalid"` on mismatch).
-- **`DIGADIAG.FRM` (`build_digadiag_frm`):** fixed-size `0x20000`-byte (`PANA_DIGADIAG_FRM_SIZE = 131,072 B`) diagnostic container in plaintext mode, encapsulating a binary payload via `EXTRHEAD`/`EXTRFOOT` (`algo = 0`, zlib, default destination address `0x50400000`, zero-padded to 128 KiB).
+- **`PANA__SD.FRM` (`sd48` EH55 vs `sd64` `/BOOT.BIN`):** Real **DMR-EH55 hardware (`Loader ver0.61` + `PROG061` `FUN_5040ebfe`/`FUN_5040ed7c`)** uses up to `128` plaintext slots of **`0x30` (`48` B)** (`PANA_SD48_TOC_REGION_SIZE = 0x1800` / `6,144` B, `list_sum` u16 at `+0x2E`). By contrast, **`/BOOT.BIN` `ver0.63`** (`FUN_4400a733` / `FUN_4400a6d0`, EZ485V/EH58) uses `128` plaintext slots of **`0x40` (`64` B)** (`PANA_SD_TOC_REGION_SIZE = 0x2000` / `8,192` B, `list_sum` u16 at `+0x3E`; `"_fmu_error: list sum is invalid"` on mismatch).
+- **`DIGADIAG.FRM` (`RAW_VER061` vs `build_digadiag_frm` `EXTRHEAD`):** On real **DMR-EH55 hardware (`Loader ver0.61 [06/03/06]`)**, `SDDIAG` reads **exact `0x40000` (`262,144`) raw uncompressed bytes** directly to **`0x90400000`** (`JMP 0x50400000`). On **`Loader ver0.63 [07/10/24]` (`/BOOT.BIN`)**, it expects a fixed **`0x20000`-byte (`131,072 B`)** plaintext `EXTRHEAD`/`EXTRFOOT` container (`algo = 0`, zlib, destination `0x50400000`, staged at `0x93FC0000`).
 
 ### 2.3 `EXTRHEAD`/`EXTRFOOT` Encapsulation with Partial Encryption (`extrhead.rs`)
 

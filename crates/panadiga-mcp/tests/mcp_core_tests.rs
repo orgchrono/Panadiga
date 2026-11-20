@@ -10,7 +10,7 @@ use std::path::Path;
 #[test]
 fn test_tool_definitions_and_memory_map() {
     let defs = tool_definitions();
-    assert_eq!(defs.len(), 18);
+    assert_eq!(defs.len(), 24);
 
     let all = execute_tool("panadiga_memory_map", &json!({}), Path::new(".")).unwrap();
     assert_eq!(all["total"], AM34_SYSTEM_MEMORY_REGIONS.len());
@@ -208,7 +208,7 @@ fn test_jsonrpc_stdio_protocol_and_capabilities() {
     assert!(r1["result"]["capabilities"]["prompts"].is_object());
 
     let r2: Value = serde_json::from_str(lines[1]).unwrap();
-    assert_eq!(r2["result"]["tools"].as_array().unwrap().len(), 18);
+    assert_eq!(r2["result"]["tools"].as_array().unwrap().len(), 24);
 
     let r3: Value = serde_json::from_str(lines[2]).unwrap();
     let body = r3["result"]["content"][0]["text"].as_str().unwrap();

@@ -57,24 +57,13 @@ pub fn generate_meihdfs_layout(
     let p3_sectors = total_sectors.saturating_sub(p3_start);
 
     // 1. Generate LBA 0 (Master MBR Superblock)
+    // Real Panasonic DIGA drives keep LBA 0[16..512] zeroed (`zeros_after_header_clean == true`);
+    // partition extents reside in the Allocation Descriptors (LBA 24..31 / LBA 57368).
     let mut mbr = [0u8; LBA_SECTOR_SIZE_BYTES];
     // Signature prefix: 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x53 ('S'), 0x48 ('H')
     mbr[0..8].copy_from_slice(&PANASONIC_HDD_MBR_SIGNATURE);
-    // Volume GUID
-    mbr[8..24].copy_from_slice(&volume_guid);
-    // Geometry & Layout Pointers
-    LittleEndian::write_u64(&mut mbr[24..32], total_sectors);
-    LittleEndian::write_u64(&mut mbr[32..40], LBA_MIRROR_MBR_SECTOR);
-    LittleEndian::write_u64(&mut mbr[40..48], LBA_JOURNAL_CATALOG_OFFSET / 512);
-    LittleEndian::write_u64(&mut mbr[48..56], ALLOCATION_DESCRIPTORS_OFFSET / 512);
-
-    // Partitions table
-    LittleEndian::write_u64(&mut mbr[56..64], p1_start);
-    LittleEndian::write_u64(&mut mbr[64..72], p1_sectors);
-    LittleEndian::write_u64(&mut mbr[72..80], p2_start);
-    LittleEndian::write_u64(&mut mbr[80..88], p2_sectors);
-    LittleEndian::write_u64(&mut mbr[88..96], p3_start);
-    LittleEndian::write_u64(&mut mbr[96..104], p3_sectors);
+    // 8-byte Volume GUID prefix (LBA 0[8..16]); bytes 16..512 stay 0x00 per `hdd/inspect/probe.rs`.
+    mbr[8..16].copy_from_slice(&volume_guid[..8]);
 
     // 2. Generate Allocation Descriptors (256 records of 16 bytes, bitwise inverted ^ 0xFF)
     let mut descriptors = [0u8; ALLOCATION_DESCRIPTORS_SIZE];
@@ -177,8 +166,9 @@ mod tests {
         let sectors = 312_581_808u64; // ~160 GB drive
         let img = generate_meihdfs_layout(sectors, None).expect("Should generate layout");
 
-        // Verify MBR Signature
+        // Verify MBR Signature and strict trailing zero cleanliness (matching real Panasonic drives)
         assert_eq!(&img.mbr_lba0[0..8], &PANASONIC_HDD_MBR_SIGNATURE);
+        assert!(img.mbr_lba0[16..512].iter().all(|&b| b == 0));
         // Verify Mirror MBR is 100% bit-identical
         assert_eq!(&img.mbr_lba0[..], &img.mirror_mbr_lba57344[..]);
         // Verify Mirror Descriptors are 100% bit-identical

@@ -64,3 +64,37 @@ fn dev_bin_and_frm_toc_retarget_roundtrip_preserve_checksums() {
         frm_rep.entries.len()
     );
 }
+
+#[test]
+fn ifodev2_2048b_and_sd48_retarget_preserve_tail_blocks_and_prefix_semantics() {
+    let ifodev2 = make_synthetic_ifodev2("M6930LB", b'M', &[0x01, 0x01]);
+
+    let initial = inspect_dev_bin_bytes(&ifodev2).unwrap();
+    assert_eq!(initial.size_bytes, PANA_IFODEV2_SIZE);
+    assert_eq!(initial.model, "M6930LB");
+    assert_eq!(initial.oem, "M");
+
+    let (patched, rep) = patch_dev_bin_bytes(&ifodev2, "M6930", Some('E')).unwrap();
+    assert_eq!(patched.len(), PANA_IFODEV2_SIZE);
+    assert_eq!(rep.model, "M6930");
+    assert_eq!(rep.oem, "E");
+    assert_eq!(&patched[0x400..0x402], &[0x01, 0x01]);
+
+    let mut sd_mod = FrmPackModule::new("MAIN3410PQ", vec![0xAAu8; 64]);
+    sd_mod.model_prefix = b'E';
+    sd_mod.target_flag = 0;
+    let (sd48_bytes, _) = pack_frm(&[sd_mod], FrmContainerMode::Sd48, None).unwrap();
+    let (retargeted, frm_rep) = retarget_frm_toc_bytes(
+        &sd48_bytes,
+        Some("M6930LB"),
+        Some("NP-309"),
+        None,
+        Some(b'M'),
+    )
+    .unwrap();
+    assert_eq!(frm_rep.layout, "sd-48b-plaintext");
+    assert!(frm_rep.entries[0].list_sum_valid);
+    assert_eq!(frm_rep.entries[0].hardware_family, "M6930LB");
+    assert_eq!(retargeted[0x18], b'M');
+    assert_eq!(retargeted[0x19], 0x00);
+}

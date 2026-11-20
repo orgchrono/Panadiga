@@ -248,6 +248,7 @@ export type HddTab =
   | 'extract'
   | 'allocator'
   | 'writer'
-  | 'capacity';
+  | 'capacity'
+  | 'safe-flash';
 export type PatchMode = 'dynamic' | 'cap' | 'factory_200gb';
 export type CapacityPassthroughMode = 'unchanged' | 'av_passthrough' | 'factory_original';

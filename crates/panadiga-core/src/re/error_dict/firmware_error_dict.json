@@ -86,7 +86,7 @@
     "severity": "critical",
     "title": "BGO Driver Init Failed [1] (CS1 NOR BGO Partition Corrupted)",
     "native_text": "BGO driver init failed[1].",
-    "translation": "bgo_driver_init() failed reading NOR CS1 [nfrom]/BGO partition (0x84200000..0x843FFFFF) and halted in boot_panic_or_halt_7812 -> U99.",
+    "translation": "bgo_driver_init() failed reading NOR CS1 [nfrom]/BGO partition (0x84130000..0x843FFFFF, 45x64 KiB SA26..SA70 on real DMR-EH55 Loader ver0.61; 0x84200000..0x843FFFFF on Loader ver0.63/PROG061) and halted in boot_panic_or_halt_7812 -> U99.",
     "actions": [
       "Use JIGPIN LOW (`SW_UART` Pin 1 LOW) + Open-Drain XRESET with a <=2GB FAT16 SDSC card holding patched DIGADIAG.FRM (`PROG061_PATCHED`) + PANA__SD.FRM.",
       "Serial boot mode (`***** serial boot mode *****`) skips bgo_driver_init() and reaches PANAMON1>."

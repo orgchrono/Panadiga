@@ -7,10 +7,12 @@
 
 export * from './hexBookmarks';
 export * from './hddCapacity';
+export * from './regionPresets';
 export * from './runtimeDefaults';
 export * from './uiLayout';
 export * from './hardwareSpecs/catalogTokens';
 export * from './hardwareSpecs/physicalConstants';
+export * from './hardwareSpecs/spansionS29jl064hTopology';
 export * from './hardwareSpecs/ssotBuilder';
 
 /** Live polling fallback interval in ms when reactive event streaming is unavailable */

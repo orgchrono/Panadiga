@@ -1,0 +1,378 @@
+{
+  "pipelines": {
+    "primitives": {
+      "stepRunner": {
+        "resetBtn": "Reset Pipeline",
+        "emptySteps": "No pipeline steps configured.",
+        "running": "RUNNING",
+        "completed": "VERIFIED",
+        "failed": "FAILED",
+        "blocked": "BLOCKED",
+        "pending": "PENDING",
+        "verified": "VERIFIED",
+        "logsLabel": "Execution Trace",
+        "emptyLogs": "No execution trace recorded yet.",
+        "progressAria": "Pipeline completion progress"
+      },
+      "preflight": {
+        "title": "Mandatory Hardware & Forensic Preflight",
+        "counter": "{{checked}}/{{total}} verified",
+        "empty": "No preflight invariants configured.",
+        "severityCritical": "CRITICAL",
+        "severityWarning": "WARNING",
+        "severityInfo": "INFO",
+        "lockedPrefix": "Blocked:"
+      },
+      "confirmGate": {
+        "title": "Physical Execution Safety Gate",
+        "expectedLabel": "Type exact token:",
+        "inputLabel": "Confirmation Token",
+        "inputPlaceholder": "Type {{token}}",
+        "mismatchError": "Token must match '{{token}}' exactly.",
+        "requiredError": "Confirmation token is required.",
+        "confirmBtn": "Authorize & Execute",
+        "busyBtn": "Executing..."
+      },
+      "sha256Card": {
+        "title": "Copy-on-Write SHA-256 Artifact Verification",
+        "verifiedBadge": "SHA-256 VERIFIED",
+        "mismatchBadge": "HASH MISMATCH",
+        "sourceLabel": "Source Path",
+        "outputLabel": "Output Path",
+        "inputHashLabel": "Input SHA-256",
+        "outputHashLabel": "Output SHA-256",
+        "bytesLabel": "Bytes Processed",
+        "copyBtn": "Copy Hash",
+        "copiedBtn": "Copied",
+        "copyAria": "Copy SHA-256 digest"
+      },
+      "registerGrid": {
+        "empty": "No MMIO register snapshots captured yet.",
+        "inspectBtn": "Inspect",
+        "colRegister": "Register",
+        "colAddress": "MMIO Address",
+        "colValue": "Value",
+        "colStatus": "State",
+        "colNotes": "Hardware Note"
+      }
+    },
+    "calibration": {
+      "title": "DVD Region & Analog TV Signal Calibration",
+      "subtitle": "Inspects DEV.BIN/ifodev2 (2048 B), MAIN <deviceinfo>, and .FRM TOC across BR EH55LB-S PAL-M, US NTSC, and EU PAL profiles.",
+      "metadataOnlyBadge": "METADATA & DEV/OEM ONLY",
+      "metadataOnlyAlert": "Unverified ifodev2 trailing payload (0x400..0x7FF) is read-only (metadata_and_dev_oem_only=true). Only verified DEV.BIN model/OEM, MAIN <deviceinfo>, and .FRM TOC fields are mutated CoW.",
+      "timerMcuNote": "Loader ver0.61 Timer-MCU (0x440340b9..4101) supports NTSC/PAL hardware toggling via [STOP]+[OPEN/CLOSE] held for 5s.",
+      "presetLabel": "Regional & Model Profile",
+      "tvStandardLabel": "Analog TV Signal / Color System",
+      "vmodeselPreviewTitle": "Clean-Room AIOF / AVDD MMIO Calibration Plan",
+      "vmodeselEmpty": "Run bundle inspection to populate clean-room AIOF/AVDD MMIO operations.",
+      "presets": {
+        "brPalM": {
+          "label": "Brazil PAL-M (Region 4 • EH55LB-S / M6930LB)",
+          "desc": "Brazil 525/60 PAL-M (AIOF_VMODESEL=0x8021), EH55LB-S chassis, OEM 'M', Region 4."
+        },
+        "usNtsc": {
+          "label": "US/CA NTSC (Region 1 • M6930)",
+          "desc": "North America 525/60 NTSC-M (AIOF_VMODESEL=0x8020), OEM 'P', Region 1."
+        },
+        "euPal": {
+          "label": "EU/UK PAL (Region 2 • M6930)",
+          "desc": "Europe 625/50 PAL B/G/I (AIOF_VMODESEL=0x8027), OEM 'E', Region 2."
+        },
+        "custom": {
+          "label": "Custom Inspected Profile",
+          "desc": "Manual model ASCII (max 8 chars), OEM char, and .FRM target flags."
+        }
+      },
+      "standards": {
+        "ntsc": "NTSC (525/60 • 0x8020)",
+        "pal_m": "PAL-M Brazil (525/60 • 0x8021)",
+        "pal": "PAL B/G/I (625/50 • 0x8027)",
+        "secam": "SECAM (625/50 • Audit Only)"
+      },
+      "inputs": {
+        "devBinPath": "DEV.BIN / ifodev2 Path (512 or 2048 B)",
+        "mainPath": "Unpacked MAIN Firmware Path",
+        "frmPath": "Container .FRM Path (optional)",
+        "nvramPath": "NVRAM / 8MB NOR Dump (optional)",
+        "outputDir": "Copy-on-Write Output Directory",
+        "modelCode": "DEV.BIN Model (1..8 ASCII)",
+        "oemChar": "DEV.BIN OEM Marker (1 ASCII char)",
+        "mainCompatMode": "MAIN <deviceinfo> Mode",
+        "modeBypass": "bypass (Unlock Model/OEM Guard)",
+        "modeFactory": "factory_strict (Restore Stock)",
+        "outputDirRequired": "Output directory is required for Copy-on-Write calibration.",
+        "modelRequired": "Model string must be 1..8 printable ASCII characters.",
+        "oemInvalid": "OEM marker must be a single printable ASCII character."
+      },
+      "actions": {
+        "inspectBtn": "Inspect Calibration Bundle",
+        "applyBtn": "Apply CoW Calibration & Re-Verify",
+        "gateTitle": "Copy-on-Write Calibration Gate",
+        "gateDesc": "Authorize CoW export of calibrated DEV.BIN / MAIN / .FRM into output directory (source files remain untouched)."
+      },
+      "steps": {
+        "selectPreset": "1. Select Region & Analog TV",
+        "inspectArtifacts": "2. Inspect Bundle & ifodev2",
+        "cowBuild": "3. Apply CoW Calibration",
+        "postVerify": "4. Post-Build Audit"
+      },
+      "preflight": {
+        "distinctCow": "Copy-on-Write directory is isolated from original source dumps",
+        "distinctCowDetail": "Rust backend enforces canonical path separation so original binaries are never overwritten.",
+        "backupReady": "ifodev2 0x400..0x7FF read-only invariant acknowledged",
+        "backupReadyDetail": "Trailing payload blocks remain immutable (metadata_and_dev_oem_only=true).",
+        "timerMcuAck": "Loader ver0.61 Timer-MCU [STOP]+[OPEN/CLOSE] 5s behavior understood",
+        "timerMcuAckDetail": "Physical NTSC/PAL output toggle also depends on Loader ver0.61 0x440340b9..4101."
+      },
+      "results": {
+        "devBinTitle": "DEV.BIN / ifodev2 Header",
+        "ifodev2TailTitle": "ifodev2 0x400..0x7FF Read-Only Tail",
+        "mainRegionTitle": "MAIN <deviceinfo> Guard",
+        "frmTocTitle": ".FRM TOC Integrity",
+        "warningsTitle": "Calibration Audit Warnings",
+        "emptyWarnings": "No calibration warnings reported.",
+        "nonFfBytes": "{{count}} non-0xFF bytes",
+        "slotsCount": "{{count}} TOC slots",
+        "listSumsOk": "list_sum OK",
+        "listSumsFail": "list_sum FAIL"
+      }
+    },
+    "tbcSd": {
+      "title": "Standalone TBC Lab, MAIN 3410PQ Bypasses & Hardened SD Kit",
+      "subtitle": "Combines 5 MAIN 3410PQ hardware bypasses, volatile SDRAM TBC planning, and hardened ver0.61 (262,144 B + sd48) SD kit generation.",
+      "standalonePresetBtn": "Apply Standalone TBC Preset (No-ODD / No-HDD)",
+      "applianceModeLabel": "TBC Execution Architecture",
+      "modeStage15": "Stage-1.5 DIGADIAG.FRM TBC (Volatile SDRAM • Safe)",
+      "modeRamChainload": "Experimental SD RAM Chainload (0x57000000)",
+      "ramChainloadAck": "Acknowledge IC3001 + IC7501 TBUS WDT keepalive prerequisites for experimental RAM chainload",
+      "tvStandardLabel": "TBC Color Standard",
+      "passthroughModeLabel": "MAIN Passthrough Mode",
+      "modeAv": "av_passthrough (Bypass FPC + ODD)",
+      "modeFactory": "factory_original (Restore Stock)",
+      "bypassSectionTitle": "MAIN 3410PQ Bypass Matrix (5 Verified Sites)",
+      "bypassEmpty": "No MAIN bypass descriptors available.",
+      "toggleBypassAria": "Toggle bypass {{id}}",
+      "vaOffsetBytes": "VA {{va}} • Offset {{offset}} ({{orig}} -> {{patched}})",
+      "applyTbcBtn": "Apply CoW TBC Bypasses",
+      "rspPlanBtn": "Generate Volatile RAM RSP Plan",
+      "inputMainLabel": "Source MAIN 3410PQ Binary (optional for plan-only)",
+      "outputMainLabel": "Copy-on-Write Output MAIN Path",
+      "cowOutRequired": "Provide a Copy-on-Write output path when patching an input MAIN binary.",
+      "bypasses": {
+        "fpcStatus": {
+          "label": "fpc_status_ctrl (Front Panel Bypass)",
+          "desc": "Returns ready (D0=1) from front-panel status polling when standalone."
+        },
+        "oddBranch": {
+          "label": "odd_state_branch (Skip ODD State Check)",
+          "desc": "Branches past ATAPI ODD presence check inside MAIN 3410PQ."
+        },
+        "oddInit": {
+          "label": "odd_init_status (Force ODD Init OK)",
+          "desc": "Clears D0=0 on optical drive initialization return path."
+        },
+        "hddCmd": {
+          "label": "hdd_cmd (Dynamic / Alternate HDD Mode)",
+          "desc": "Applies dynamic unclamped capacity opcode 0xCA (bra +12) for 5GB..2TB."
+        },
+        "fmuDevinfo": {
+          "label": "fmu_devinfo (<deviceinfo> Region Bypass)",
+          "desc": "Bypasses strict chassis/OEM XML check during updater execution."
+        }
+      },
+      "sdHardenTitle": "Hardened SD Recovery Kit (Loader ver0.61 + sd48 Dual-Family)",
+      "sdHardenDesc": "Generates 262,144 B raw DIGADIAG.FRM + PANA__SD.FRM with M6930LB/M6930 [0x18]==0x4D parity and blocks unpatched prog061 [05/11/01].",
+      "sdOutputDir": "Hardened SD Output Directory",
+      "panaDvdPath": "Source PANA_DVD.FRM (optional)",
+      "prog061Path": "Source PROG061 Binary (optional)",
+      "allowFactoryProg061": "Override factory prog061 [05/11/01] lockout (NOT recommended)",
+      "factoryBlockedBadge": "FACTORY PROG061 [05/11/01] BLOCKED",
+      "factoryWarning": "Unpatched factory prog061 [05/11/01] triggers BGO init stalls; keep override disabled.",
+      "hardenBtn": "Build Hardened ver0.61 SD Kit",
+      "sdDiskTarget": "SD Card Drive / Image for SD-91006 Gate",
+      "auditSdBtn": "Check FAT16 <= 2 GiB",
+      "sdSizeBlocked": "BLOCKED SD-91006: Media exceeds 2 GiB SDSC limit ({{mb}} MiB).",
+      "sdFsBlocked": "BLOCKED SD-91006: Filesystem is {{fs}} (Loader ver0.61 requires FAT16/FAT12).",
+      "sdGateReady": "SD-91006 Gate OK: {{fs}} • {{mb}} MiB (<= 2 GiB SDSC).",
+      "preflight": {
+        "autoFormatD4D5": "AutoFormatBgo (D4/D5) Erase Risk Acknowledged",
+        "autoFormatD4D5Detail": "AutoFormatBgo wipes/reformats BGO D4/D5 flash sectors; ensure an 8 MiB CoW NOR dump exists first.",
+        "sd91006Fat16": "SD-91006 Physical Gate: SDSC <= 2 GiB FAT16 + Intact DAT1..DAT3",
+        "sd91006Fat16Detail": "SDHC/SDXC (>2 GiB) or FAT32 cards fail ACMD6 4-bit initialization with SD-91006.",
+        "p59001P7402": "P59001 + P7402 Interconnect Verified (Main PCB IC3001 / IC7501)",
+        "p59001P7402Detail": "Bench SD and TBC operation requires P59001 <-> P7402 harness for IC3001 analog clamps and IC7501 TBUS WDT."
+      },
+      "parityTitle": "sd48 Dual-Family Parity (M6930LB + M6930 • [0x18]==0x4D)",
+      "parityOk": "DUAL PARITY OK",
+      "parityFail": "PARITY FAILED",
+      "fvuChecksum": "FVU CRC32: 0x{{hex}}",
+      "steps": {
+        "planTbc": "1. Configure Standalone TBC",
+        "patchMain": "2. CoW Patch / RSP Plan",
+        "sdGate": "3. Preflight & SD-91006 Gate",
+        "hardenKit": "4. Hardened ver0.61 Build"
+      }
+    },
+    "hddFlash": {
+      "title": "EH55 Safe HDD Capacity (5 GB–2 TB) & Verified Target Flasher",
+      "subtitle": "Enforces PhysicalDrive0, OS Boot, and BusTypeNvme (17) hard lockouts, automatic 64 KiB pre-flash backup, layout wipe, and SHA-256 read-back.",
+      "capacityLabel": "Target Capacity (5 GB or 20..2200 GB)",
+      "customGbLabel": "Target GB",
+      "allowExtended4tb": "Allow Extended 4 TiB Ceiling (0x7FFFFFFF)",
+      "invalidCapacity": "Capacity must be 5 GB (SV0511D bench) or 20..{{max}} GB.",
+      "badge5gbBench": "5 GB Bench Preset: SAMSUNG SV0511D (0x0024C388)",
+      "refreshDisksBtn": "Scan Safe Target Disks",
+      "emptyDisks": "No physical target disks discovered. Click Scan Safe Target Disks.",
+      "lockouts": {
+        "disk0": "PERMANENT LOCKOUT (DISK 0)",
+        "nvme": "PERMANENT LOCKOUT (NVMe)",
+        "osBoot": "PERMANENT LOCKOUT (OS BOOT)",
+        "eligible": "ELIGIBLE TARGET",
+        "mirrorLba": "mirror_main_lba: {{lba}}",
+        "busPrefix": "Bus: {{bus}} (#{{id}})"
+      },
+      "inputs": {
+        "imagePath": "MEIHFS HDD Image Path (blank = default 100 MiB)",
+        "backupDir": "Mandatory 64 KiB Pre-Flash Backup Directory",
+        "backupDirRequired": "Backup directory is required before flashing any physical disk.",
+        "selectTargetPrompt": "Select an eligible non-NVMe, non-OS target disk above.",
+        "gateDesc": "Type the exact confirmation token {{token}} for {{path}} to wipe partition layout and flash MEIHFS."
+      },
+      "preflight": {
+        "backup64k": "64 KiB Pre-Flash Backup Confirmed (LBA 0..63 + 57344..57407)",
+        "backup64kDetail": "Rust writer snapshots original MBR and 28 MiB mirror with SHA-256 manifest before erasing.",
+        "wipeLayout": "Authorize IOCTL_DISK_DELETE_DRIVE_LAYOUT & Volume Dismount",
+        "wipeLayoutDetail": "Clears Windows MBR/GPT partition layout on the selected target disk prior to raw MEIHFS write.",
+        "capacityRange": "Target Geometry & mirror_main_lba Verified (5 GB–2 TB)",
+        "capacityRangeDetail": "Target disk size and 28 MiB / tail MAIN mirror offset match selected EH55 capacity."
+      },
+      "steps": {
+        "capacityPlan": "1. Capacity Strategy (5 GB–2 TB)",
+        "targetLockout": "2. Safe Target Discovery",
+        "preflightBackup": "3. 64 KiB Backup & Gate",
+        "flashStream": "4. Flash & SHA-256 Read-Back"
+      },
+      "report": {
+        "title": "Physical MEIHFS Flash & Read-Back Report",
+        "backupShaLabel": "64 KiB Backup SHA-256",
+        "primaryShaLabel": "100 MiB Primary SHA-256",
+        "mirrorShaLabel": "Tail MAIN Mirror SHA-256",
+        "mirrorLbaLabel": "Mirror LBA: {{lba}}",
+        "readbackOk": "READ-BACK SHA-256 VERIFIED",
+        "readbackFail": "READ-BACK UNVERIFIED"
+      }
+    },
+    "bgoBench": {
+      "title": "Live Spansion 142-Sector NOR Dump, BGO FTL Audit (SA26..SA70) & 1->0 Repair",
+      "subtitle": "1-click CoW NOR capture via 0x9043_950E + PANADMP1, L2P SA29/SA41 + F2 (1..40 sum=820) + FAT 0x0F01..0x0F24 audit, and guarded repair.",
+      "portLabel": "Pico Serial Port",
+      "sliceLabel": "NOR Capture Slice",
+      "sliceFull": "Full 8 MiB (SA0..SA141)",
+      "sliceBgo": "BGO FTL Window (SA26..SA70 • 2.81 MiB)",
+      "sliceNvram": "NVRAM EEMUL (SA134..SA141 • 64 KiB)",
+      "sliceLoader": "Boot IPL (SA0..SA10 • 256 KiB RO)",
+      "dumpOutPath": "CoW Dump Output File Path",
+      "dumpBtn": "1-Click CoW NOR Backup",
+      "dumpOutRequired": "Provide a CoW output file path for the NOR capture.",
+      "portRequired": "Select or enter an active Pico COM port for live operations.",
+      "auditTitle": "BGO FTL Structural Audit (SA26..SA70)",
+      "auditSourceLabel": "Audit Source",
+      "modeDump": "Local 8 MiB NOR Dump File",
+      "modeLive": "Live Pico PANAMON1 (SA26..SA70)",
+      "norPathLabel": "8 MiB NOR Dump Path",
+      "norPathRequired": "Provide an 8 MiB NOR dump file path for offline audit.",
+      "auditBtn": "Run BGO FTL Audit",
+      "metrics": {
+        "statusHealthy": "BGO FTL HEALTHY",
+        "statusCorrupt": "BGO FTL CORRUPTED",
+        "f2CountLabel": "F2 Partitions (1..40): {{count}}/40 (Sum {{sum}}/820)",
+        "f2SumOk": "SUM=820 OK",
+        "f2SumMismatch": "F2 INCOMPLETE",
+        "l2pPagesLabel": "Active L2P Pages (SA29/SA41): {{pages}}",
+        "l2pMismatchLabel": "L2P Tag Mismatches: {{count}}",
+        "fatMirrorLabel": "FAT 0x0F01..0x0F24 Mismatches: {{count}}",
+        "nfromLabel": "NFROM Files: {{count}}",
+        "ifodev2ModelLabel": "ifodev2 Model: {{model}}"
+      },
+      "sectorTableTitle": "SA26..SA70 Sector & L2P Descriptor Breakdown",
+      "sectorTableEmpty": "Run BGO FTL audit to inspect all 45 BGO sectors (SA26..SA70).",
+      "l2pNote": "L2P descriptor tuples (w0..w2/vb3) resolve active pages when st=8 (st=15 free, st=0 invalid).",
+      "repairTitle": "Dry-Run 1->0 Planner & Live Upper NOR Repair",
+      "dryRunBtn": "Build Dry-Run 1->0 Plan",
+      "liveRepairBtn": "Execute Live BGO Repair",
+      "bootTraceToggle": "Run BOOTTRACE 15000 NOJIG after U LOCK",
+      "backupDirLabel": "Live Pre-Write Backup Directory",
+      "backupDirRequired": "Provide a backup directory before live Upper NOR repair.",
+      "sa0Sa3LockedBadge": "SA0..SA3 LOCKED (E05)",
+      "oneToZeroOk": "PURE 1->0 TRANSITION VERIFIED (0 SECTORS ERASED)",
+      "eraseRequiredWarning": "BLOCKED FOR PURE 1->0: {{count}} sector(s) require 0->1 Sector Erase ({{sas}}).",
+      "opsEmpty": "No BGO repair operations planned yet. Run Dry-Run first.",
+      "preflight": {
+        "cowBackupSession": "Verified CoW NOR Backup Recorded in Current Session",
+        "cowBackupLockedReason": "Run 1-Click CoW NOR Backup first to record a verified SHA-256 dump.",
+        "upperNorUnlock": "RAII Upper NOR Unlock (U CONFIRM_UPPER_NOR -> Auto U LOCK)",
+        "upperNorUnlockDetail": "SA0..SA3 remain permanently read-only (E05); U LOCK is sent automatically on Drop.",
+        "noBootInterrupt": "Target P7501 3.3V Power Stable & No Cable Disconnect",
+        "noBootInterruptDetail": "Keep USB and P7501 ground steady while programming SA26..SA70 and running BOOTTRACE."
+      },
+      "steps": {
+        "cowDump": "1. CoW NOR Dump (PANADMP1)",
+        "bgoAudit": "2. BGO FTL Audit (SA26..SA70)",
+        "dryRunPlan": "3. Dry-Run 1->0 Plan",
+        "liveRepair": "4. Live Repair & BOOTTRACE"
+      },
+      "bootTraceTitle": "Post-Repair BOOTTRACE 15000 Output"
+    },
+    "davisProbe": {
+      "title": "DAVIS CH0/CH1 Hardware IDE Probe & 256-Word IDENTIFY DEVICE",
+      "subtitle": "Non-destructive MMIO taskfile probe for CH0 ODD (0x89000500) and CH1 HDD IDE2SAT2 (0x89000D00) with 0xC000100C lockout.",
+      "portLabel": "Pico Serial Port",
+      "channelLabel": "DAVIS Channel",
+      "ch0Label": "CH0 — ODD ATAPI (0x89000500)",
+      "ch1Label": "CH1 — HDD / StarTech IDE2SAT2 (0x89000D00)",
+      "driveLabel": "DEV Bit 4 Selector",
+      "masterOpt": "Master (0xA0 • DEV=0)",
+      "slaveOpt": "Slave (0xB0 • DEV=1)",
+      "bootModeLabel": "Boot Profile",
+      "bootNormal": "NORMAL (Release F/E)",
+      "bootPassive": "PASSIVE (Keep Halted)",
+      "probeBtn": "Probe DAVIS Channel & IDENTIFY",
+      "portRequired": "Select or enter an active Pico COM port before probing DAVIS MMIO.",
+      "lethalGuardBadge": "0xC000100C GUARDED",
+      "feReleasedOk": "F/E RELEASED (0xC0001008={{after}})",
+      "feReleasedPending": "F/E NOT RELEASED ({{after}})",
+      "registersTitle": "DAVIS Taskfile & System MMIO Snapshot",
+      "registersEmpty": "Run DAVIS hardware probe to capture STATUS, ALTSTATUS, DRIVE_HEAD, and LBA signatures.",
+      "classifications": {
+        "floating_bus": "FLOATING_BUS (0xFF): Open bus / disconnected ribbon or unpowered StarTech IDE2SAT2.",
+        "reset_stuck_or_unclocked": "RESET_STUCK_OR_UNCLOCKED (0x00): RESET- held low or DAVIS bus unclocked.",
+        "bsy_iordy_hang": "BSY_IORDY_HANG (BSY=0x80): Device stalled on BSY=1 or holding IORDY low.",
+        "cs_jumper_or_slave_contention": "CS_JUMPER_OR_SLAVE_CONTENTION (0x8000040D / 32s 0x8000040F): Cable Select vs Master jumper or DEV bit-4 conflict.",
+        "atapi_signature_detected": "ATAPI_SIGNATURE_DETECTED (0x14/0xEB): Optical ATAPI drive detected; ready for 0xA1.",
+        "ata_ready": "ATA_READY (DRDY=1, BSY=0): Healthy ATA HDD ready for 0xEC IDENTIFY DEVICE.",
+        "unknown": "UNKNOWN STATE: Inspect raw taskfile registers and step logs below."
+      },
+      "identify": {
+        "title": "Decoded 256-Word IDENTIFY DEVICE (0xEC / 0xA1)",
+        "empty": "No IDENTIFY DEVICE payload captured yet. Run probe on an active ATA/ATAPI channel.",
+        "model": "Model (Words 27..46)",
+        "serial": "Serial (Words 10..19)",
+        "firmware": "Firmware (Words 23..26)",
+        "lba28": "LBA28 Sectors (W60..61)",
+        "lba48": "LBA48 Sectors (W100..103)",
+        "capacity": "Effective Capacity",
+        "mwdma2": "MWDMA2 (Word 63)",
+        "mwdma2Ok": "MWDMA2 SUPPORTED (16.7 MB/s)",
+        "mwdma2Missing": "MWDMA2 NOT SUPPORTED",
+        "udma": "UDMA (Word 88)",
+        "mirrorMainLba": "Computed mirror_main_lba",
+        "verdictCompatible": "EH55 DAVIS COMPATIBLE",
+        "verdictIncompatible": "EH55 INCOMPATIBLE / CHECK DMA",
+        "openHddPipelineBtn": "Open in HDD 5GB–2TB Pipeline"
+      },
+      "logsTitle": "DAVIS Probe Step Log",
+      "logsEmpty": "No probe step logs recorded yet."
+    }
+  }
+}

@@ -8,8 +8,10 @@ mod crypto_frm;
 mod flash_hdd;
 mod hardware_am34;
 mod paths_runtime;
+mod tbc_mmio;
 
 pub use crypto_frm::*;
 pub use flash_hdd::*;
 pub use hardware_am34::*;
 pub use paths_runtime::*;
+pub use tbc_mmio::*;

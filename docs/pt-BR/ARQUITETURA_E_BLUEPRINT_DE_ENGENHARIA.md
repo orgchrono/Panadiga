@@ -112,8 +112,8 @@ A depuração in-circuit do núcleo AM34 através do conector P7501 exige taxa d
 | :--- | :---: | :--- | :--- |
 | `0x00000000` – `0x03FFFFFF` | 64 MB | SDRAM Principal (32-bit @ 162 MHz) | Código executável do sistema operacional, buffers de vídeo OSD e heaps. |
 | `0x04000000` – `0x07FFFFFF` | 64 MB | SDRAM de Vídeo / Áudio (MPEG-2) | Buffers circulares de compressão/descompressão de stream de transporte. |
-| `0x80000000` – `0x807EFFFF` | 8.128 KB | NOR Flash Spansion (IPL / Bootloader) | **Área de Leitura Estrita.** Contém o Root-of-Trust e o Initial Program Loader. |
-| `0x807F0000` – `0x807FFFFF` | 64 KB | NOR Flash Spansion (NVRAM EEMUL) | **Área de Escrita Cirúrgica.** Setores SA134..SA141. Sanitização para erro U99. |
+| `0x80000000` – `0x807EFFFF` | 8.128 KB | NOR Flash Spansion (`IC5001` / CS0; *uncached* CS1 `0x84000000`) | **IPL Protegido (`256 KiB` `SA0..SA10` [política `SA0..SA3`] RO estrito)** + `DRV` (`0x84080000`) + BGO real EH55 `ver0.61` (`SA26..SA70` `0x84130000..0x843FFFFF` vs `ver0.63` `0x84200000..0x843FFFFF`) + Upper EEMUL (`SA71..SA133` `0x84400000..0x847EFFFF`). |
+| `0x807F0000` – `0x807FFFFF` | 64 KB | NOR Flash Spansion (NVRAM / EEMUL Topo) | **Área de Escrita Cirúrgica.** Setores `SA134..SA141` (`0x847F0000..0x847FFFFF`; no dump real EH55, `SA134` tem `6 B` `"1284"` e `SA135..SA141` estão `0xFF`). |
 | `0xD0000000` – `0xD0003FFF` | 16 KB | SRAM Interna do SoC (Uncached) | Hospeda o `ram_loader` injetado pelo Pico durante o Cold Break-In. |
 | `0xD4000000` – `0xD4000FFF` | 4 KB | Registradores MMIO do Controlador PATA | Comandos ATA/ATAPI, canais DMA e transferência de blocos do HDD interno. |
 | `0xD8000000` – `0xD80001FF` | 512 B | Registradores do Servo Óptico DVD | Controle de foco, tracking, velocidade do spindle e laser de gravação. |

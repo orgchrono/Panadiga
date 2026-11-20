@@ -5,6 +5,8 @@
  */
 
 import { logger } from '@/utils/logger';
+import { handleMockBenchExtensionsCommand } from './mockBenchExtensionsHandlers';
+import { handleMockCalibrationCommand } from './mockCalibrationHandlers';
 import { handleMockCryptoCommand } from './mockCryptoHandlers';
 import { subscribeMockChannel } from './mockEventBus';
 import { handleMockHddCommand } from './mockHddHandlers';
@@ -20,7 +22,9 @@ const DOMAIN_HANDLERS: MockDomainHandler[] = [
   handleMockHddCommand,
   handleMockCryptoCommand,
   handleMockPicoCommand,
+  handleMockBenchExtensionsCommand,
   handleMockUnbrickCommand,
+  handleMockCalibrationCommand,
   handleMockIrCommand,
 ];
 

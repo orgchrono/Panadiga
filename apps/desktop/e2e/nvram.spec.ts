@@ -18,7 +18,7 @@ test.describe('NVRAM & Spansion S29JL064H Surgical Recovery E2E', () => {
 
   test('displays microsector breakdown and telemetry metrics', async ({ page }) => {
     await expect(
-      page.getByText(/Physical Topology of 71 Sectors|Topologia Física dos 71 Setores/i),
+      page.getByText(/Physical Topology of 142 Sectors|Topologia Física dos 142 Setores/i),
     ).toBeVisible();
     await expect(page.getByText(/Corrupted Sectors|Setores Corrompidos/i)).toBeVisible();
   });

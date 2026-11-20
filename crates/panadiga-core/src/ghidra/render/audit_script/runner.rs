@@ -1,15 +1,12 @@
 //! Main Python `run_unbrick_audit` entrypoint and JSON report serialization block.
 
-use crate::re::bgo_unbrick::{
-    OFF_BGO_INIT_FAIL_HOOK, OFF_BGO_SUM_BEQ, OFF_DEVINFO_CHECK_BEQ, ORIG_A2CD_HOOK,
-    ORIG_DEVINFO_BEQ, ORIG_SUM_BEQ, PROG061_BASE_VA,
-};
+use super::AuditSiteVas;
+use crate::re::bgo_unbrick::{ORIG_A2BC_BGO_CALL, ORIG_A2CD_HOOK, ORIG_DEVINFO_BEQ, ORIG_SUM_BEQ};
 use crate::re::main_passthrough::{
-    MAIN_BASE_VA, OFF_FPC_STATUS_CTRL, OFF_ODD_INIT_STATUS, OFF_ODD_STATE_BRANCH,
     ORIG_FPC_STATUS_CTRL, ORIG_ODD_INIT_STATUS, ORIG_ODD_STATE_BRANCH,
 };
 
-pub(super) fn render_audit_runner() -> String {
+pub(super) fn render_audit_runner(vas: &AuditSiteVas) -> String {
     format!(
         r#"def run_unbrick_audit(prog=None, output_json=None):
     if prog is None:
@@ -48,6 +45,7 @@ pub(super) fn render_audit_runner() -> String {
         _read_prog_bytes(prog, 0x{prog_sum:08X}, {orig_sum_len}),
         _read_prog_bytes(prog, 0x{prog_devinfo:08X}, {orig_devinfo_len}),
         _read_prog_bytes(prog, 0x{prog_a2cd:08X}, {orig_a2cd_len}),
+        _read_prog_bytes(prog, 0x{prog_a2bc:08X}, {orig_a2bc_len}),
     )
     main3410_status = classify_main3410_sites(
         _read_prog_bytes(prog, 0x{main_fpc_ctrl:08X}, {orig_fpc_len}),
@@ -55,7 +53,7 @@ pub(super) fn render_audit_runner() -> String {
         _read_prog_bytes(prog, 0x{main_odd_status:08X}, {orig_odd_st_len}),
     )
 
-    for site_addr in ("0x{prog_sum:08X}", "0x{prog_devinfo:08X}", "0x{prog_a2cd:08X}", "0x{main_fpc_ctrl:08X}", "0x{main_odd_branch:08X}", "0x{main_odd_status:08X}"):
+    for site_addr in ("0x{prog_sum:08X}", "0x{prog_devinfo:08X}", "0x{prog_a2bc:08X}", "0x{prog_a2cd:08X}", "0x{main_fpc_ctrl:08X}", "0x{main_odd_branch:08X}", "0x{main_odd_status:08X}"):
         _add_bookmark(bm_mgr, space, site_addr, "Panadiga-Unbrick", "Verified Panadiga patch/audit site")
 
     report = {{
@@ -88,14 +86,16 @@ pub(super) fn render_audit_runner() -> String {
 if __name__ == "__main__":
     run_unbrick_audit()
 "#,
-        prog_sum = PROG061_BASE_VA + OFF_BGO_SUM_BEQ as u32,
-        prog_devinfo = PROG061_BASE_VA + OFF_DEVINFO_CHECK_BEQ as u32,
-        prog_a2cd = PROG061_BASE_VA + OFF_BGO_INIT_FAIL_HOOK as u32,
-        main_fpc_ctrl = MAIN_BASE_VA + OFF_FPC_STATUS_CTRL as u32,
-        main_odd_branch = MAIN_BASE_VA + OFF_ODD_STATE_BRANCH as u32,
-        main_odd_status = MAIN_BASE_VA + OFF_ODD_INIT_STATUS as u32,
+        prog_sum = vas.prog_sum,
+        prog_devinfo = vas.prog_devinfo,
+        prog_a2bc = vas.prog_a2bc,
+        prog_a2cd = vas.prog_a2cd,
+        main_fpc_ctrl = vas.main_fpc_ctrl,
+        main_odd_branch = vas.main_odd_branch,
+        main_odd_status = vas.main_odd_status,
         orig_sum_len = ORIG_SUM_BEQ.len(),
         orig_devinfo_len = ORIG_DEVINFO_BEQ.len(),
+        orig_a2bc_len = ORIG_A2BC_BGO_CALL.len(),
         orig_a2cd_len = ORIG_A2CD_HOOK.len(),
         orig_fpc_len = ORIG_FPC_STATUS_CTRL.len(),
         orig_odd_br_len = ORIG_ODD_STATE_BRANCH.len(),

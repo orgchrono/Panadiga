@@ -259,12 +259,26 @@ fn test_cli_args_parsing_matrix() {
         Some(Commands::Unbrick(_))
     ));
     assert!(matches!(
+        Cli::try_parse_from(["panadiga", "unbrick", "prepare-sd"])
+            .unwrap()
+            .command,
+        Some(Commands::Unbrick(_))
+    ));
+    assert!(matches!(
+        Cli::try_parse_from(["panadiga", "unbrick", "verify-sd"])
+            .unwrap()
+            .command,
+        Some(Commands::Unbrick(_))
+    ));
+    assert!(matches!(
         Cli::try_parse_from([
             "panadiga",
             "unbrick",
             "prepare-sd",
             "--outdir",
             "sd_out",
+            "--loader-profile",
+            "ver061",
             "--bgo-mode",
             "bypass",
             "--passthrough-mode",

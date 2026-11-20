@@ -4,9 +4,17 @@
  * so events emitted inside the Playwright init-script IIFE reach the Vite React module graph.
  */
 
+import { isRecord } from '@/utils/typeGuards';
+
 type MockEventHandler = (payload: unknown) => void;
 
 const mockListeners: Record<string, MockEventHandler[]> = {};
+
+export function readMockRequest(args?: Record<string, unknown>): Record<string, unknown> {
+  if (!args) return {};
+  const nested = args.request;
+  return isRecord(nested) ? nested : args;
+}
 
 export function publishMockEvent<T>(eventName: string, payload: T): void {
   const registered = mockListeners[eventName];

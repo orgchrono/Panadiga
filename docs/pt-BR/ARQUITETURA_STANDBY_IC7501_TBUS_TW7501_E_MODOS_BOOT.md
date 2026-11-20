@@ -88,7 +88,7 @@ flowchart TB
 | **76** | `P50(H)/(L)` | Inversor $\rightarrow$ `AV1` pino 10 | Sinal de comutação externa AV/SCART (`[8][4]`/`[8][5]` em modo `SERV`). |
 | **88** | `KEYIN3` | `JW7501 Pino 1 (KEY3_POWER)` $\leftarrow$ **`S7002 [POWER]`** | Entrada dedicada do botão `[POWER]` frontal (**não passa pelo `P7501`**); pressão contínua força desligamento (`EC p. 20`, Forced Power-Off). |
 | **89** | `VDD2 (5V)` | Barramento auxiliar 5V do Timer | Alimentação dos port drivers 5V de `IC7501`. |
-| `EEPROM_W_C` | **`NC (OPEN)`** | Não conectado | Confirma esquematicamente (`EC vol1 p. 68`, `vol2 p. 122`) que o **DMR-EH55 NÃO possui EEPROM serial externa no Timer MCU**: toda NVRAM/EEMUL persistente fica em **`SA134..SA141`** na `IC5001`. |
+| `EEPROM_W_C` | **`NC (OPEN)`** | Não conectado | Confirma esquematicamente (`EC vol1 p. 68`, `vol2 p. 122`) que o **DMR-EH55 NÃO possui EEPROM serial externa no Timer MCU**: toda persistência NOR reside na `IC5001` (`SA26..SA70` BGO `[nfrom]` @ `0x84130000..0x843FFFFF` + `SA71..SA141` Upper EEMUL `"1284"` @ `0x84400000..0x847FFFFF`). |
 
 > [!NOTE]
 > **`IC3001` (`C1AB00002379`):** É o circuito integrado matriz de comutação de Áudio/Vídeo de **100 pinos** (controlado via I²C por `IC7501`), **não** o microcontrolador Timer nem memória EEPROM.
@@ -137,7 +137,7 @@ Por que descarregar **`TW7501`** na tomada gera o loop de religamento de 2s (`PL
 
 Por que tanto **`PLEASE WAIT (~2s) -> U99`** (tomada/auto-retry), quanto **`U99` direto**, quanto **`HELLO (~2s) -> U99`** (acordando de Standby estabilizado) convergem para o **mesmo limite temporal de ~2 segundos** e impedem `SERV`?
 
-A resposta está literalmente no disassembly verificado de `BOOT.BIN` em [`EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md`](../pseudocode/EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md) (linhas 2144–2320):
+A resposta está literalmente no disassembly verificado de `BOOT.BIN` em [`EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md`](../pseudocode/EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md) (linhas 2279–2491):
 
 ```c
 // wait_1_sec_timer_sync @ 0x4400b34d (140 B)
@@ -234,4 +234,4 @@ Como em `Standby P-OFF` `NSW5V = 0V` (`VDD = 0.03V`), armar o monitor **após** 
    - `PREJIG` mantém `SW_UART` (`GP26`) em `LOW` silenciosamente enquanto `NSW5V == 0` e **só inicia o temporizador quando `NSW5V` (`GP3`) sobe** ao acordar (`p7501_pio_wait_standby_wake`).
    - **`rxd_edges == 0` e `nsw5v_edges > 0`**: Confirma 100% que a energia digital subiu (`HELLO` ligado, `NSW5V` comutou), porém o `AM34` **nem chegou ao transmissor UART0** antes de ~2s (inspecionar `D3R3V`, `X_SW+3.8/+5.8`, `IC5001 SA0..SA3` ou fiação Pin 6 vs Pin 3).
    - **`rxd_edges > 0` com `PANAMON1>` ou `_dev_SERIAL`**: Permite conexão imediata do proxy assíncrono Ghidra GDB RSP (`panadiga pico bridge --port COM10 --target-mode panamon1`).
-   - **Se `PANAMON1>` ainda não aparecer via `P7501` em modo `PREJIG`:** O congelamento ocorre antes mesmo de `BOOT.BIN` ler `SW_UART` (ou na própria NOR **`SA0..SA3` / `BGO` / SDRAM**), indicando extração/inspeção direta da Flash Spansion `IC5001` em gravador **`TSOP-48`** (mantendo `SA0..SA3` em leitura estrita de referência e tratando cirurgicamente `SA4..SA133` / NVRAM `SA134..SA141`).
+   - **Se `PANAMON1>` ainda não aparecer via `P7501` em modo `PREJIG`:** O congelamento ocorre antes mesmo de `BOOT.BIN` ler `SW_UART` (ou na própria NOR **`SA0..SA10` [`256 KiB` IPL] / `BGO` / SDRAM**), indicando extração/inspeção direta da Flash Spansion `IC5001` em gravador **`TSOP-48`** (mantendo os `256 KiB` iniciais `SA0..SA3` da política em leitura estrita e tratando cirurgicamente BGO `SA26..SA70` / Upper EEMUL `SA71..SA141`).

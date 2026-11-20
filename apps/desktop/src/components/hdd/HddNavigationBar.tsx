@@ -6,6 +6,7 @@ import {
   FolderArchive,
   HardDrive,
   Layers,
+  ShieldCheck,
   Table,
   Unlock,
 } from 'lucide-react';
@@ -97,6 +98,7 @@ export const HddNavigationBar: React.FC<HddNavigationBarProps> = ({
       <button
         key={tab}
         type="button"
+        data-testid={`hdd-tab-${tab}`}
         onClick={() => onSelectTab(tab)}
         role="tab"
         aria-selected={active}
@@ -201,6 +203,13 @@ export const HddNavigationBar: React.FC<HddNavigationBarProps> = ({
           t('hdd.navBar.tabCapacity'),
           Unlock,
           'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30',
+        )}
+
+        {renderTabButton(
+          'safe-flash',
+          t('hdd.navBar.tabSafeFlash'),
+          ShieldCheck,
+          'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30',
         )}
 
         {renderTabButton(

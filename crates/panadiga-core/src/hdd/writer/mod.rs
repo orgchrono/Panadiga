@@ -4,7 +4,9 @@ mod block_ops;
 mod discovery;
 mod discovery_unix;
 mod discovery_win;
+pub mod eh55_flash;
 mod types;
+pub mod win_ioctl;
 
 pub use block_ops::{
     DriveWriteReport, open_verified_block_device, restore_meihdfs_from_mirrors,
@@ -14,6 +16,13 @@ pub use block_ops::{
 pub use discovery::{
     list_drives_by_role, list_hard_disk_drives, list_physical_drives, list_sd_card_drives,
     resolve_mount_point_to_block_device, unmount_drive_partitions,
+};
+pub use eh55_flash::{
+    BUS_TYPE_NVME, BlockFlashDevice, EH55_BACKUP_SECTOR_COUNT, EH55_FLASH_CHUNK_BYTES,
+    EH55_MIRROR_MAIN_BACKSTEP_LBAS, Eh55FlashProgress, Eh55FlashStage, Eh55HddFlashReport,
+    Eh55HddFlashRequest, FileBackedMockFlashDevice, SafeTargetDiskInfo, WindowsPhysicalFlashDevice,
+    compute_eh55_mirror_main_lba, enrich_safe_target_disks, execute_eh55_hdd_flash,
+    inspect_safe_target_disks,
 };
 pub use types::{
     MountedPartitionInfo, PhysicalDriveInfo, StorageMediaRole, classify_drive_role,

@@ -7,3 +7,4 @@ export * from './hex';
 export * from './system';
 export * from './rag';
 export * from './unbrick';
+export * from './pipelines';

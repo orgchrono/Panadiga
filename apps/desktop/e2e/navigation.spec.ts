@@ -50,7 +50,7 @@ test.describe('Panadiga Desktop Navigation & Layout E2E', () => {
   test('builds SD recovery kit from Centro Unbrick', async ({ page }) => {
     await page.click('button[data-testid="nav-unbrick"]');
     await page.click('button[data-testid="sd-kit-submit-btn"]');
-    await expect(page.getByText(/sd_card_eh55_kit\/DIGADIAG\.FRM/).first()).toBeVisible();
+    await expect(page.getByText(/firmware_and_images\/sd_unbrick_kit\/DIGADIAG\.FRM/).first()).toBeVisible();
   });
 
   test('operates Guided Pipeline Bar, Basic/Advanced mode toggle, Draggable HUD, and Resizable/RangeDnD in HexInspector', async ({ page }) => {

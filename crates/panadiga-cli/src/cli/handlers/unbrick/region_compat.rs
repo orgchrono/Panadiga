@@ -1,13 +1,18 @@
+#![deny(unsafe_code)]
+
 //! CLI handler for deterministic Region & Model Compatibility patching (`region-compat`).
 
 use std::fs;
 use std::path::Path;
 
 use anyhow::{Context, Result};
+use panadiga_core::re::region_compat::{TvStandardKind, inspect_tv_calibration_bundle};
 use panadiga_core::re::{
     RegionCompatMode, inspect_dev_bin_bytes, inspect_main_region_compat, patch_dev_bin_bytes,
     patch_main_region_compat_in_place, retarget_frm_toc_bytes,
 };
+
+use super::bgo_tbc::parse_lbs_preset;
 
 use super::super::json_io::write_cli_output_bytes;
 use super::render::{emit_json_if_requested, print_lines};
@@ -121,6 +126,46 @@ pub fn handle_region_compat(action: RegionCompatAction) -> Result<()> {
                 }
             }
             write_and_report(&output, &out, &rep, &lines, json.as_deref())
+        }
+        RegionCompatAction::InspectTvBundle {
+            preset,
+            tv_standard,
+            dev_bin,
+            main,
+            frm,
+            nvram,
+            json,
+        } => {
+            let preset_id = parse_lbs_preset(&preset)?;
+            let std_override = tv_standard
+                .as_deref()
+                .map(str::parse::<TvStandardKind>)
+                .transpose()?;
+            let dev_bytes = dev_bin.as_deref().map(fs::read).transpose()?;
+            let main_bytes = main.as_deref().map(fs::read).transpose()?;
+            let frm_bytes = frm.as_deref().map(fs::read).transpose()?;
+            let nvram_bytes = nvram.as_deref().map(fs::read).transpose()?;
+            let rep = inspect_tv_calibration_bundle(
+                preset_id,
+                std_override,
+                dev_bytes.as_deref(),
+                main_bytes.as_deref(),
+                frm_bytes.as_deref(),
+                nvram_bytes.as_deref(),
+            )?;
+            println!(
+                "TV/LBS Bundle: preset={} std={} chassis={} mmio_ops={} ifodev2_readonly={} warnings={}",
+                rep.profile.preset.as_str(),
+                rep.profile.tv_standard.as_str(),
+                rep.profile.chassis_family,
+                rep.profile.mmio_plan.len(),
+                rep.metadata_and_dev_oem_only,
+                rep.warnings.len()
+            );
+            for w in &rep.warnings {
+                println!("  [WARN] {w}");
+            }
+            emit_json_if_requested(&rep, json.as_deref())
         }
     }
 }

@@ -35,6 +35,14 @@ pub(crate) fn write_toc_entry_list_sum(entry: &mut [u8]) -> u16 {
     list_sum
 }
 
+/// Computes the 32-bit unsigned byte-sum checksum (`fvu_checksum_u32`) of a firmware module payload.
+#[must_use]
+pub fn compute_fvu_byte_sum(bytes: &[u8]) -> u32 {
+    bytes
+        .iter()
+        .fold(0u32, |acc, &b| acc.wrapping_add(u32::from(b)))
+}
+
 pub(crate) fn pad_to_block(buf: &mut Vec<u8>) {
     let rem = buf.len() % CIPHER_BLOCK_SIZE;
     if rem != 0 {

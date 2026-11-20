@@ -170,6 +170,28 @@
     "hex": {
       "offsetNavTitle": "Navegação de Offset",
       "jumpedToOffset": "Saltado com sucesso para o offset 0x{{hex}}"
+    },
+    "pipelines": {
+      "calibrationInspectFailed": "Falha na inspeção de calibração Região/TV",
+      "calibrationApplyFailed": "Falha na calibração CoW de região",
+      "calibrationApplied": "Calibração CoW Região/TV gravada e verificada",
+      "tbcPlanFailed": "Falha ao executar bypasses TBC MAIN",
+      "tbcApplied": "Plano Standalone TBC & bypasses CoW aplicados",
+      "sdHardenFailed": "Falha ao gerar Kit SD ver0.61 endurecido",
+      "sdHardened": "Kit SD ver0.61 + sd48 endurecido e verificado",
+      "hddScanFailed": "Falha ao escanear discos alvo seguros",
+      "hddFlashFailed": "Falha na gravação segura do HDD EH55",
+      "hddFlashed": "HDD EH55 gravado & read-back SHA-256 verificado",
+      "norDumpFailed": "Falha na captura ao vivo da Flash NOR",
+      "norDumped": "Dump NOR CoW capturado e verificado",
+      "bgoAuditFailed": "Falha na auditoria BGO FTL",
+      "bgoRepairFailed": "Falha no reparo BGO FTL",
+      "bgoDryRunReady": "Plano dry-run 1->0 BGO calculado",
+      "bgoLiveApplied": "Reparo BGO ao vivo aplicado & U LOCK restaurado",
+      "davisProbeFailed": "Falha na sonda hardware DAVIS IDE",
+      "davisProbeComplete": "Sonda DAVIS IDE concluída",
+      "copiedSha": "Digest SHA-256 copiado para a área de transferência",
+      "validationBlocked": "Pré-voo ou validação de formulário pendente"
     }
   }
 }

@@ -32,6 +32,15 @@ Os mapeamentos de memória e símbolos são gerados diretamente pela **Single So
 * 🔗 **[`ghidra/ghidra_connect_debugger.py`](ghidra/ghidra_connect_debugger.py):**  
   Exibe instruções interativas para acoplar a perspectiva *Ghidra Debugger* à ponte GDB RSP (`127.0.0.1:3333`) com `set architecture mn10300`.
 
+### 2.1 Analistas Consolidados em Java ([`tools/ghidra/java/`](ghidra/java/))
+
+Os 11 analistas avulsos em Java originalmente na raiz `C:\ghidra\*.java` foram conferidos, corrigidos e consolidados em [`tools/ghidra/java/`](ghidra/java/) (também espelhados em `%USERPROFILE%\ghidra_scripts\` pelo [`iniciar_ghidra.cmd`](iniciar_ghidra.cmd)):
+
+* **`panadiga/Mn103sAuditSupport.java`**: Biblioteca compartilhada (`DecompInterface` com `dispose()`, resolução read-only `getFunctionContaining` + `getInstructionContaining`, catálogos verificados de `BOOT.BIN` e `PROG061`, e detector da Armadilha #8 SLEIGH em `am33.sinc`).
+* **`PanadigaBootFatSdDecompiler.java`**: Decompilador unificado de FAT12/16/32, driver SD (`CMD17`/`CMD18`/OCR/RCA) e `sd_load.o` (`--stage`, `--group`, `--addr`, alerta `fb 9c` inline).
+* **`PanadigaMn103sDisasmDump.java`**: Dumper MN103S por faixa (`START..END` / presets), com recuperação de alinhamento mid-instruction e bytes brutos.
+* **`PanadigaMn103sTrapAudit.java`**: Auditor read-only de `am33.sinc` Trap #8 (`fb 9c` e `fb/fd/fe 98`) em catálogo ou memória executável (`--scope=exec`).
+
 ---
 
 ## 3. Utilitários Hexadecimais & Análise Binária (Windows)

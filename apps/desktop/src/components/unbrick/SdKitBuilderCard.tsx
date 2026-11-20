@@ -16,17 +16,17 @@ import {
   CardHeader,
   CardTitle,
   Input,
-  Select,
 } from '@/components/ui';
 import { useTranslation } from '@/i18n/useTranslation';
-import { isBgoMode, isMainPassthroughMode } from '@/utils/typeGuards';
 import {
   type BgoMode,
   buildSdKitRequestPayload,
   type MainPassthroughMode,
   resolveSdOverallBadgeVariant,
   type SdDiskVerificationProps,
+  type SdLoaderProfile,
 } from './unbrickDomain';
+import { SdKitProfileControls } from './SdKitProfileControls';
 import { SdVerificationPanel } from './SdVerificationPanel';
 
 interface SdKitBuilderCardProps extends SdDiskVerificationProps {
@@ -62,11 +62,13 @@ export const SdKitBuilderCard: React.FC<SdKitBuilderCardProps> = ({
   autoSdMountDir,
 }) => {
   const { t } = useTranslation();
-  const [outputDir, setOutputDir] = useState('sd_card_eh55_kit');
+  const [outputDir, setOutputDir] = useState('firmware_and_images/sd_unbrick_kit');
   const [editedPanaDvd, setEditedPanaDvd] = useState<string | null>(null);
   const [editedVerifyDir, setEditedVerifyDir] = useState<string | null>(null);
   const panaDvdPath = editedPanaDvd ?? discoveredPanaDvd ?? 'firmware_and_images/PANA_DVD.FRM';
-  const verifyDir = editedVerifyDir ?? discoveredSdDir ?? 'sd_card_eh55';
+  const verifyDir =
+    editedVerifyDir ?? discoveredSdDir ?? 'firmware_and_images/sd_unbrick_kit';
+  const [loaderProfile, setLoaderProfile] = useState<SdLoaderProfile>('ver061');
   const [bgoMode, setBgoMode] = useState<BgoMode>('bypass');
   const [mainMode, setMainMode] = useState<MainPassthroughMode>('av_passthrough');
   const [includePanaSd, setIncludePanaSd] = useState(true);
@@ -82,6 +84,7 @@ export const SdKitBuilderCard: React.FC<SdKitBuilderCardProps> = ({
       panaDvdPath,
       bgoMode,
       mainMode,
+      loaderProfile,
       includePanaSd,
       unlockHddDynamic,
     });
@@ -131,7 +134,7 @@ export const SdKitBuilderCard: React.FC<SdKitBuilderCardProps> = ({
                   setOutputDir(e.target.value);
                   if (outDirError) setOutDirError(null);
                 }}
-                placeholder="sd_card_eh55_kit"
+                placeholder="firmware_and_images/sd_unbrick_kit"
               />
               {outDirError && (
                 <p id="sd-kit-outdir-err" className="text-[11px] text-rose-400 font-mono">
@@ -151,68 +154,20 @@ export const SdKitBuilderCard: React.FC<SdKitBuilderCardProps> = ({
                 placeholder="firmware_and_images/PANA_DVD.FRM"
               />
             </div>
-
-            <div className="space-y-1">
-              <label htmlFor="sd-kit-bgo-mode" className="text-slate-400 block font-mono">
-                {t('unbrick.sdKit.bgoMode')}
-              </label>
-              <Select
-                id="sd-kit-bgo-mode"
-                value={bgoMode}
-                onChange={e => {
-                  if (isBgoMode(e.target.value)) {
-                    setBgoMode(e.target.value);
-                  }
-                }}
-              >
-                <option value="bypass">{t('unbrick.sdKit.bgoBypass')}</option>
-                <option value="uart_monitor">{t('unbrick.sdKit.bgoUart')}</option>
-                <option value="factory">{t('unbrick.sdKit.bgoFactory')}</option>
-                <option value="auto_format" disabled>
-                  {t('unbrick.sdKit.bgoAutoFormat')}
-                </option>
-              </Select>
-            </div>
-
-            <div className="space-y-1">
-              <label htmlFor="sd-kit-main-mode" className="text-slate-400 block font-mono">
-                {t('unbrick.sdKit.mainMode')}
-              </label>
-              <Select
-                id="sd-kit-main-mode"
-                value={mainMode}
-                onChange={e => {
-                  if (isMainPassthroughMode(e.target.value)) {
-                    setMainMode(e.target.value);
-                  }
-                }}
-              >
-                <option value="av_passthrough">{t('unbrick.sdKit.mainAv')}</option>
-                <option value="factory_original">{t('unbrick.sdKit.mainFactory')}</option>
-              </Select>
-            </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-4 pt-1 text-[11px] text-slate-300">
-            <label className="inline-flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={includePanaSd}
-                onChange={e => setIncludePanaSd(e.target.checked)}
-                className="rounded border-slate-700 bg-slate-950 text-emerald-500 focus:ring-emerald-500"
-              />
-              <span>{t('unbrick.sdKit.includePanaSd')}</span>
-            </label>
-            <label className="inline-flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={unlockHddDynamic}
-                onChange={e => setUnlockHddDynamic(e.target.checked)}
-                className="rounded border-slate-700 bg-slate-950 text-cyan-500 focus:ring-cyan-500"
-              />
-              <span>{t('unbrick.sdKit.unlockHddDynamic')}</span>
-            </label>
-          </div>
+          <SdKitProfileControls
+            bgoMode={bgoMode}
+            onChangeBgoMode={setBgoMode}
+            mainMode={mainMode}
+            onChangeMainMode={setMainMode}
+            loaderProfile={loaderProfile}
+            onChangeLoaderProfile={setLoaderProfile}
+            includePanaSd={includePanaSd}
+            onChangeIncludePanaSd={setIncludePanaSd}
+            unlockHddDynamic={unlockHddDynamic}
+            onChangeUnlockHddDynamic={setUnlockHddDynamic}
+          />
 
           <Button
             type="submit"

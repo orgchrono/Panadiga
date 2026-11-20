@@ -14,7 +14,7 @@ O repositório está estruturado em subsistemas integrados e desacoplados:
 1. **Rust Core Workspace & CLI (`crates/`, `Cargo.toml`)**:
    - **`panadiga-core`** (`crates/panadiga-core`): Núcleo de alta performance para parsing forense de storage (`hdd`), criptoanálise (`crypto`), reparo cirúrgico de NVRAM (`nvram`), ponte serial/CDC RP2040/RP2350 (`pico`), servidor GDB RSP introspectivo (`debugger`), gerador de scripts Ghidra (`ghidra`), catálogo visual e SSOT de hardware (`ssot`).
    - **`panadiga-rag`** (`crates/panadiga-rag`): Motor RAG Zero-Error nativo em Rust com 6 camadas de defesa, guardrails determinísticos de segurança física (`safety.rs`) e indexação híbrida (Markdown docs, 30 manuais PDF via `lopdf`, fontes Rust/C11/PIO/TS/Python e scripts Ghidra).
-   - **`panadiga-mcp`** (`crates/panadiga-mcp`): Servidor MCP nativo em Rust (`panadiga mcp` via JSON-RPC 2.0 `stdio`) com **18 tools**, **resources** (`panadiga://invariants`, `panadiga://memory-map`, pinouts, catálogo visual e docs/) e **prompts** guiados.
+   - **`panadiga-mcp`** (`crates/panadiga-mcp`): Servidor MCP nativo em Rust (`panadiga mcp` via JSON-RPC 2.0 `stdio`) com **24 tools** (expansão dos 18 módulos base + 6 rotas de diagnóstico/BGO/`DAVIS`/`PAL-M`/TBC/flash), **resources** (`panadiga://invariants`, `panadiga://memory-map`, pinouts, catálogo visual e docs/) e **prompts** guiados.
    - **`panadiga-cli`** (`crates/panadiga-cli`): Binário unificado multiplataforma (`panadiga` / `panadiga.exe`) com CLI Clap, modo TUI interativo e lançador do workbench.
 2. **Desktop & Mobile Workbench (`apps/desktop/`, `apps/desktop/src-tauri/` / `panadiga-desktop`)**:
    - Interface gráfica **100% livre de mocks em produção** construída com **Tauri 2**, **React 19**, **TypeScript**, **Tailwind CSS**, **Vitest** e **Playwright** (mocks isolados estritamente em `apps/desktop/src/test/mocks/` para suítes de teste).
@@ -29,7 +29,7 @@ O repositório está estruturado em subsistemas integrados e desacoplados:
    - Scripts Ghidra Jython (`tools/ghidra/`) gerados a partir da SSOT Rust e lançadores em `tools/`.
 5. **Acervo de Engenharia & Manuais (`manuals_and_schematics/`, `docs/`)**:
    - **30 manuais de serviço e datasheets oficiais** em PDF catalogados em [`manuals_and_schematics/README.md`](manuals_and_schematics/README.md) e indexados para busca automatizada.
-   - **33 dossiês técnicos bilíngues canônicos** em `docs/pt-BR/` e `docs/en-US/` (mapa em [`docs/translation_pairs.json`](docs/translation_pairs.json)), auditorias na raiz ([`AUDITORIA_COMPLETA.md`](AUDITORIA_COMPLETA.md) / [`COMPLETE_AUDIT.md`](COMPLETE_AUDIT.md)) + históricas ([`docs/audits/`](docs/audits/README.md)), evidência integral de disassembly/pseudocódigo Ghidra ([`docs/pseudocode/`](docs/pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md)) e capturas reais de bancada ([`docs/debug_logs/`](docs/debug_logs/README.md)).
+   - **38 dossiês técnicos bilíngues canônicos** em `docs/pt-BR/` e `docs/en-US/` (mapa em [`docs/translation_pairs.json`](docs/translation_pairs.json) e [`docs/INDEX.md`](docs/INDEX.md)), kit canônico [`firmware_and_images/sd_unbrick_kit/`](firmware_and_images/sd_unbrick_kit/SHA256SUMS.txt) (`--loader-profile ver061`: `262,144 B` raw + `sd48`), auditorias na raiz ([`AUDITORIA_COMPLETA.md`](AUDITORIA_COMPLETA.md) / [`COMPLETE_AUDIT.md`](COMPLETE_AUDIT.md)) + históricas ([`docs/audits/`](docs/audits/README.md)), evidência integral de disassembly/pseudocódigo Ghidra ([`docs/pseudocode/`](docs/pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md)) e **19 capturas/logs reais de bancada** ([`docs/debug_logs/`](docs/debug_logs/README.md)).
 
 ---
 
@@ -77,19 +77,19 @@ python scripts/validate.py
 ```
 
 O portão valida de forma automatizada:
-1. **Rust Workspace (5 crates)**: `cargo fmt --all -- --check`, `cargo check --workspace --all-targets` & `cargo test --workspace --verbose` (**142 testes**).
-2. **TypeScript Strict**: `npm run typecheck` em `apps/desktop` com zero erros.
-3. **Vitest Frontend**: `npm test` em `apps/desktop` (**72 testes em 23 arquivos** em `apps/desktop/src/**/*.test.*`).
+1. **Rust Workspace (5 crates)**: `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets --no-deps -- -D warnings` & `cargo test --workspace` (**254 testes**).
+2. **TypeScript Strict + Oxlint**: `oxlint --deny-warnings && tsc --noEmit` (`npm run lint`) em `apps/desktop` com zero erros.
+3. **Vitest Frontend**: `npm test` em `apps/desktop` (**116 testes em 36 arquivos** em `apps/desktop/src/**/*.test.*`).
 4. **Detector de Duplicação (jscpd)**: `.jscpd.json` com limiar estrito de **0% de duplicação** (0 clones permitidos entre `apps/desktop/src`, `apps/desktop/src-tauri/src`, `crates`, `firmware/pico-p7501`, `tools`, `scripts`).
-5. **Linter de UX (uxlint)**: Auditoria completa de estados de interface.
-6. **Playwright E2E**: Testes ponta a ponta com Chromium headless (**13 testes** em `apps/desktop/e2e/`).
+5. **Linter de UX (uxlint)**: Auditoria completa de estados de interface (`100/100`, `0` issues em **354 arquivos**).
+6. **Playwright E2E**: Testes ponta a ponta com Chromium headless (**23 testes em 8 specs** em `apps/desktop/e2e/`).
 7. **Ghidra Native Generator**: Exportação idempotente de scripts a partir da SSOT em Rust (`cargo run -p panadiga-cli -- ghidra export-all`).
-8. **Pico C11 Host Test**: Compilação e execução de **24 testes em 4 módulos C11** (`test_gdb_rsp_host`, `test_pana_logic`, `test_pana_diag_drv`, `test_uart_codec`) com `-Wall -Wextra -Werror` / `/W4 /WX`.
-9. **Python Typer/CLI & Pytest**: Verificação `py_compile`, `mypy --strict scripts` e `pytest scripts/tests` (**22 testes** em `4` arquivos).
+8. **Pico C11 Host Test**: Compilação e execução de **31 testes em 4 módulos C11** (`test_gdb_rsp_host`, `test_pana_logic`, `test_pana_diag_drv`, `test_uart_codec`) com `-Wall -Wextra -Werror` / `/W4 /WX`.
+9. **Python Typer/CLI & Pytest**: Verificação `py_compile`, `mypy --strict scripts` (**43 arquivos**) e `pytest scripts/tests` (**28 testes** em `5` arquivos).
 
 ---
 
-## 5. Acervo de Documentação Técnica (Raiz + 33 Pares Bilíngues)
+## 5. Acervo de Documentação Técnica (Raiz + 38 Pares Bilíngues)
 
 * **Portal Mestre & Mapa Bilíngue:** [`docs/INDEX.md`](docs/INDEX.md) · [`docs/translation_pairs.json`](docs/translation_pairs.json)
 * **Auditorias na Raiz & Snapshots:** [`AUDITORIA_COMPLETA.md`](AUDITORIA_COMPLETA.md) ([English: `COMPLETE_AUDIT.md`](COMPLETE_AUDIT.md)) · [`docs/audits/README.md`](docs/audits/README.md)
@@ -104,6 +104,7 @@ O portão valida de forma automatizada:
 | **Bancada & Esquemático** | [`docs/pt-BR/BLUEPRINT_ESQUEMA_ELETRICO_BANCADA.md`](docs/pt-BR/BLUEPRINT_ESQUEMA_ELETRICO_BANCADA.md) | [`docs/en-US/BLUEPRINT_BENCH_WIRING_AND_SCHEMATIC.md`](docs/en-US/BLUEPRINT_BENCH_WIRING_AND_SCHEMATIC.md) |
 | **MEIHDFS & Storage** | [`docs/pt-BR/ARQUITETURA_STORAGE_MEIHDFS_PARTICOES.md`](docs/pt-BR/ARQUITETURA_STORAGE_MEIHDFS_PARTICOES.md) | [`docs/en-US/STORAGE_ARCHITECTURE_MEIHDFS_PARTITIONS.md`](docs/en-US/STORAGE_ARCHITECTURE_MEIHDFS_PARTITIONS.md) |
 | **Criptografia PANA_DVD** | [`docs/pt-BR/DOSSIE_CRIPTOGRAFIA_E_FIRMWARE_PANA_DVD.md`](docs/pt-BR/DOSSIE_CRIPTOGRAFIA_E_FIRMWARE_PANA_DVD.md) | [`docs/en-US/DOSSIER_CRYPTOGRAPHY_AND_FIRMWARE_PANA_DVD.md`](docs/en-US/DOSSIER_CRYPTOGRAPHY_AND_FIRMWARE_PANA_DVD.md) |
+| **Bootloader SDDIAG (`ver0.61`)**| [`docs/pt-BR/DOSSIE_FORENSE_BOOTLOADER_SDDIAG_EH55.md`](docs/pt-BR/DOSSIE_FORENSE_BOOTLOADER_SDDIAG_EH55.md) | [`docs/en-US/FORENSIC_DOSSIER_BOOTLOADER_SDDIAG_EH55.md`](docs/en-US/FORENSIC_DOSSIER_BOOTLOADER_SDDIAG_EH55.md) |
 | **Ghidra & Servidor GDB** | [`docs/pt-BR/ESTRATEGIA_INTEGRACAO_GHIDRA_GDB.md`](docs/pt-BR/ESTRATEGIA_INTEGRACAO_GHIDRA_GDB.md) | [`docs/en-US/GHIDRA_GDB_INTEGRATION_STRATEGY.md`](docs/en-US/GHIDRA_GDB_INTEGRATION_STRATEGY.md) |
 | **Montagem & Sonda JST** | [`docs/pt-BR/GUIA_MONTAGEM_E_FOTOS_PROBE_BANCADA.md`](docs/pt-BR/GUIA_MONTAGEM_E_FOTOS_PROBE_BANCADA.md) | [`docs/en-US/BENCH_PROBE_ASSEMBLY_AND_PHOTOS_GUIDE.md`](docs/en-US/BENCH_PROBE_ASSEMBLY_AND_PHOTOS_GUIDE.md) |
 | **Inventário & Hashes** | [`docs/pt-BR/INVENTARIO_TECNICO_E_GUIA_DE_OPERACAO.md`](docs/pt-BR/INVENTARIO_TECNICO_E_GUIA_DE_OPERACAO.md) | [`docs/en-US/TECHNICAL_INVENTORY_AND_OPERATIONS_MANUAL.md`](docs/en-US/TECHNICAL_INVENTORY_AND_OPERATIONS_MANUAL.md) |
@@ -111,3 +112,4 @@ O portão valida de forma automatizada:
 | **Logging & Telemetria** | [`docs/pt-BR/SUBSISTEMA_LOGGING_E_TELEMETRIA.md`](docs/pt-BR/SUBSISTEMA_LOGGING_E_TELEMETRIA.md) | [`docs/en-US/LOGGING_AND_TELEMETRY_SUBSYSTEM.md`](docs/en-US/LOGGING_AND_TELEMETRY_SUBSYSTEM.md) |
 | **Teoria U99 & Semicondutores**| [`docs/pt-BR/TEORIA_E_PRATICA_UNBRICK_U99_E_CRIPTOGRAFIA_MATSUSHITA.md`](docs/pt-BR/TEORIA_E_PRATICA_UNBRICK_U99_E_CRIPTOGRAFIA_MATSUSHITA.md) | [`docs/en-US/THEORY_AND_PRACTICE_U99_UNBRICK_MATSUSHITA_CRYPTO.md`](docs/en-US/THEORY_AND_PRACTICE_U99_UNBRICK_MATSUSHITA_CRYPTO.md) |
 | **RAG Engine & Defesa** | [`docs/pt-BR/ZERO_ERROR_RAG_ENGINE_E_SEGURANCA_FISICA.md`](docs/pt-BR/ZERO_ERROR_RAG_ENGINE_E_SEGURANCA_FISICA.md) | [`docs/en-US/ZERO_ERROR_RAG_ENGINE_AND_PHYSICAL_SAFETY.md`](docs/en-US/ZERO_ERROR_RAG_ENGINE_AND_PHYSICAL_SAFETY.md) |
+| **Histórico EH55 (BGO/CH1/PAL-M)** | [`docs/pt-BR/HISTORICO_UNBRICK_EH55_BGO_CH1_DAVIS_E_REGIAO.md`](docs/pt-BR/HISTORICO_UNBRICK_EH55_BGO_CH1_DAVIS_E_REGIAO.md) | [`docs/en-US/EH55_UNBRICK_BREAKTHROUGH_BGO_CH1_DAVIS_AND_REGION.md`](docs/en-US/EH55_UNBRICK_BREAKTHROUGH_BGO_CH1_DAVIS_AND_REGION.md) |

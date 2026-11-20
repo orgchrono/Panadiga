@@ -15,6 +15,7 @@ pub mod diag_rows;
 pub mod diagnostics;
 pub mod flasher;
 pub mod log_decoder;
+pub mod panamon1;
 pub mod platforms;
 pub mod rsp_codec;
 

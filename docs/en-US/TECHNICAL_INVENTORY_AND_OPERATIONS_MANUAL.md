@@ -42,6 +42,9 @@ Below is the verified inventory of immutable binary artifacts, support tools, an
 | `docs/en-US/` | `GHIDRA_GDB_INTEGRATION_STRATEGY.md` | Dynamic | Approved | AM34 memory map, SSOT Ghidra scripts, and GDB RSP bridge (`:3333`). | Approved |
 | `docs/en-US/` | `LOGGING_AND_TELEMETRY_SUBSYSTEM.md` | Dynamic | Approved | Structured telemetry, semantic log levels, and Rust Core sink pipeline. | Approved |
 | `firmware_and_images/` | `panasonic DMR EH-55 Firmware hdd_100.bin` | 104,857,600 | `9d292d5b46f190775f359e30af11d074021fb321f040bf701d0ecf0f2056db00` | Raw forensic dump of first 100 MB of OEM HDD (MEIHFS, LBA 0, and firmware partitions). | Approved |
+| `firmware_and_images/` | `eh55_nor_8mb_ic5001_dump.bin` | 8,388,608 | `c1faee798f60545853eefdba0d15f23678b471466dc2bc84f522bc972f15a02d` | Gold-standard 8 MiB read-only capture of live DMR-EH55 `IC5001` (`S29JL064H`) via `PANADMP1` (`0x84000000..0x847FFFFF`). | Approved |
+| `firmware_and_images/` | `eh55_loader_ver061_256k.bin` | 262,144 | `9f5c448d8879106be5ca3da6d6ac649026d50fbc191251ae0f4a003efca63800` | Stage-1 `Loader ver0.61 [06/03/06]` slice (`0x84000000..0x8403FFFF`, `SA0..SA10`) with BGO table at `0x440337A4`. | Approved |
+| `firmware_and_images/` | `eh55_nvram_64k_raw.bin` | 65,536 | `803d1465f48fb32e17d3e478e02b2a9a7e707bbb675bb424b02c5c1df92f3643` | Trailing 64 KiB `IC5001` slice (`0x847F0000..0x847FFFFF`, `SA134..SA141`: `"1284"` header + virgin `0xFF`). | Approved |
 | `firmware_and_images/` | `PANA_DVD.FRM` | 7,531,744 | `a596d52a8220a9113777c9caf271ac4d518202d0639d6118a4d0bc03b9a6367f` | Official Matsushita optical disc firmware update container. | Approved |
 | `firmware_and_images/` | `UPDATE_EH55.zip` | 7,474,766 | `07589e79722409413c5da25c700227a9a04cef39f0178ffa08df3d8d3f7debd4` | Official Matsushita ZIP archive containing `PANA_DVD.FRM`. | Approved |
 | `firmware/pico-p7501/` | `p7501_uart.pio` | 1,861 | `2d08a2621bb116bde5b23c06ee9879deddb85229d74ce5a0ffa82bc056412528` | PIO RX `115200 8N1` state machine for RP2040/RP2350 on `GP2` (`P7501` Pin 6 `UARTP2M_T`). | Approved |
@@ -260,7 +263,7 @@ When replacing a failing factory HDD or upgrading to an IDE/SATA SSD via a compa
 > **Mandatory Hardware Rule (`DMR-EH55` HDD Jumper = `MASTER`, NEVER `CS` and NEVER `Slave`):**
 > `DMR-EH55` schematics (`vol2_schematics.pdf` pp. 46, 52, 113, 125–126) and firmware disassembly (`eh55_frm_PROG061_BOOT.bin` `FUN_50414908`, `EH55_MAIN_3410PQ.bin` `FUN_574d1de8`) hardcode `acStack_70[4] = { 2, 0, 1, 0 }`: the DVD-RAM ODD sits on **Primary `ch=0, dev=0`** (`0x89000500`) via internal Front-End (`FEP`), while the HDD connects over a dedicated 40-pin `Extension FFC` as **Secondary `MASTER` (`ch=1, dev=0`, `0x89000D00`)** — `DAT_505733d4` single-cable Slave remapping exists only in `DMR-EH58`, not `DMR-EH55`.
 
-1. **Always Jumper `StarTech IDE2SAT2` / HDD explicitly as `MASTER` (`Device 0` on Secondary IDE `ch = 1`):** Setting **`Slave`** maps to ignored slot `acStack_70[3] == 0`. Leaving **`CS` (`Cable Select`)** risks indeterminate `DEV` selection, `0x8000040d` collisions, or `MultiWord DMA MODE2` hangs (`FUN_5041f61b` / `FUN_5041f782`), whose power-cycling can corrupt NOR **BGO sectors `0x84200000..0x843FFFFF`** (`BGO driver init failed[1].` / `U99`).
+1. **Always Jumper `StarTech IDE2SAT2` / HDD explicitly as `MASTER` (`Device 0` on Secondary IDE `ch = 1`):** Setting **`Slave`** maps to ignored slot `acStack_70[3] == 0`. Leaving **`CS` (`Cable Select`)** risks indeterminate `DEV` selection, `0x8000040d` collisions, or `MultiWord DMA MODE2` hangs (`FUN_5041f61b` / `FUN_5041f782`), whose power-cycling can corrupt NOR **BGO sectors (`0x84130000..0x843FFFFF` on real EH55 `Loader ver0.61`; `0x84200000..0x843FFFFF` on `ver0.63` / `PROG061`)** (`BGO driver init failed[1].` / `U99`).
 2. **Unlock Matsushita Internal `"src/hdd_cmd.c"` (`200 GB` Clamp -> Dynamic LBA48) Before Writing:**
    ```bash
    # 1. Inspect clamp opcode (0xC6 bls +12 vs 0xCA bra +12)
@@ -324,6 +327,23 @@ If the unit boots normally but needs DVD-R/+R/RAM media tables or codec updates:
 | **RSK-06** | Accidental corruption of bootloader/kernel area (`0x000000..0x7EFFFF`) | Permanent unit bricking due to lost AM34 IPL/OS | **5 (Critical)** | 1 (Minimal) | `panadiga nvram clean` enforces mandatory SHA-256 verification ensuring first 8,323,072 bytes stay untouched |
 | **RSK-07** | Reverse chip orientation (*Pin 1 backwards*) during Flash reflow | Dead short on $V_{\text{CC}}$ / $V_{\text{SS}}$, destroying Flash and regulators | **5 (Critical)** | 2 (Low) | Double-check Pin 1 chamfer/dot against PCB silkscreen before reflowing |
 | **RSK-08** | Incompatible IDE-SATA bridge chipset during SSD/HDD upgrade | System stalls on `HDD CHECK` or ATA/ATAPI timeouts | **3 (Medium)** | 3 (Medium) | Use verified bridges (e.g., Marvell `88SA8052`), avoiding legacy-DMA-broken adapters |
+
+---
+
+### 6.4 Centralized Rust Modules, `PANAMON1>` / `300 µs` Protocol & Promoted Logs (`19` Captures)
+
+Validated bench procedures have been centralized under `crates/panadiga-core/src/`:
+- **`pico::panamon1` (`Panamon1Client`, `Panamon1NorUnlockGuard`):** `?\r` handshake, `300 µs` retry cadence, `U CONFIRM_UPPER_NOR`/`U LOCK` guards, and direct `PANAMON1>` automation.
+- **`re::nor_dumper::{orchestrator, spansion_audit}` & `re::eh55_bgo::{audit, repair_plan, live_apply}`:** `142`-sector Spansion auditing, `SA54`/`SA41`/`SA29`/`SA39` corruption detection, and Cycle 2 BGO repair planning/live application.
+- **`re::davis_probe` (`DavisProbeEngine`), `re::region_compat::tv_standard`, `re::tbc_appliance` & `hdd::writer::eh55_flash`:** `DAVIS` diagnostics (`CH0 0x504F81D0=2` vs `CH1 0x504F81D4=1`), `PAL-M`/`AIOF`/`AVDD` matrix, `tbc_appliance` stages, and `PhysicalDrive1` CoW flashing.
+- **7 newly promoted audited logs in [`docs/debug_logs/`](../debug_logs/README.md) (`12 -> 19`):**
+  - `verify_bgo_restored_boot_20261119.log`: `B102000ED7E38CE5DA9BA3954ED316E540413FFF3B1CF8BC204588BCE7EBCDFC`
+  - `sddiag_ver061_live_20261119.log`: `6C5EC83CC18ABFF4233F50DC1B1586AA049C0F60C39AB81F424E9F0CCBC63B25`
+  - `diagnose_please_wait_90s_20261119.log`: `2880A883B7233C9C234DDEE450B665E1FA8ACE32C802BA44BD9E23F4FCC64DE6`
+  - `repair_bgo_sa39_sa54_com10_20261119.log`: `E17D9AC36CF31CEAA876673931052C8393CA817AE838DF3D9D1FDCBFF4B3206E`
+  - `probe_ch1_full_diag_20261119.log`: `A6E71B147C17BAAE6F5F139C3F6D8F604E9C1461B7F22E557A00DBEA8FC0646C`
+  - `probe_ch1_live_v2_0deg_20261119.log`: `F6225540D20818667FF7C81BF48FC45D202D115BCDC71A3F5ECC656C7E935705`
+  - `hdd_unbrick_flash_250gb_20261119.log`: `021806054BAE733CB6E2514E604877EB75AB7B6C9E55C1E193339DD30F03B67C`
 
 ---
 

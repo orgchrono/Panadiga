@@ -50,6 +50,7 @@ fn panamon1_executes_guarded_rw_jump_erase_and_blocks_ipl_on_mn103_vm() {
 
     vm.queue_uart_rx(
         b"R 80000000,04\r\n\
+          F\r\n\
           W 80000000,AA\r\n\
           W 847EFFFF,AA\r\n\
           E 847E0000\r\n\
@@ -59,6 +60,7 @@ fn panamon1_executes_guarded_rw_jump_erase_and_blocks_ipl_on_mn103_vm() {
           U WRONG\r\n\
           W 84200010,12\r\n\
           U CONFIRM_UPPER_NOR\r\n\
+          F\r\n\
           W 84000000,AA\r\n\
           E 84030000\r\n\
           E 84200000\r\n\
@@ -84,7 +86,11 @@ fn panamon1_executes_guarded_rw_jump_erase_and_blocks_ipl_on_mn103_vm() {
     let tx = vm.take_uart_tx_utf8();
     assert!(tx.contains("PANAMON1>[B/R/W/D/F/J/E/U/Q]"), "tx={tx}");
     assert!(tx.contains("DEADBEEF"), "expected IPL read hex: {tx}");
-    assert_eq!(tx.matches("ERR:E05_IPL_RO").count(), 7, "tx={tx}");
+    assert_eq!(tx.matches("ERR:E05_IPL_RO").count(), 9, "tx={tx}");
+    assert!(
+        !tx.contains("OK:FORMAT"),
+        "F command must be disabled fail-closed: {tx}"
+    );
     assert!(tx.contains("?\r\n"), "tx={tx}");
     assert!(tx.contains("OK:NOR_UNLOCK"), "tx={tx}");
     assert!(tx.contains("OK:NOR_LOCK"), "tx={tx}");
@@ -105,4 +111,87 @@ fn panamon1_executes_guarded_rw_jump_erase_and_blocks_ipl_on_mn103_vm() {
     assert_eq!(vm.read_u8(0x847F_DFFFu32).unwrap(), 0x5A);
     assert_eq!(vm.read_u8(0x847F_E000u32).unwrap(), 0xFF);
     assert_eq!(vm.read_u8(0x847F_FFFFu32).unwrap(), 0xFF);
+}
+
+#[test]
+fn panamon1_matches_compiler_call_zero_imm_and_preserves_callee_regs_and_sp() {
+    let payload = build_prog061_uart_monitor_payload(PROG061_UART_MONITOR_VA).unwrap();
+    // Prologue/epilogue match real PROG061 `0x50415CAD` (`MOVM [D2..A3]; ADD -16,SP ... RET [D2..A3],32`).
+    assert_eq!(
+        &payload[..8],
+        &[0xCF, 0xF0, 0xF8, 0xFE, 0xF0, 0x00, 0x42, 0x0C]
+    );
+    // Every `PUTC_D3_BYTES` copy must be embedded with bounded timeout + `SC0STR & 0xA0`.
+    assert!(
+        payload
+            .windows(crate::re::nor_dumper::PUTC_D3_BYTES.len())
+            .any(|w| w == crate::re::nor_dumper::PUTC_D3_BYTES)
+    );
+    // Must never emit legacy non-compiler `CALL16 ..., [], 0x04` or `RET [], 0x04` patterns in code region.
+    let code_end = payload
+        .windows(16)
+        .position(|w| w == b"PANAMON1>[B/R/W/")
+        .expect("prompt string present");
+    assert!(
+        !payload[..code_end]
+            .windows(3)
+            .any(|w| w == [0xDF, 0x00, 0x04]),
+        "legacy `RET [], 4` must not appear in PANAMON1 code"
+    );
+
+    // Execute starting at `0x5040A2BC` (`PATCH_A2BC_BRA_MONITOR`) with `D0 == 0` (simulating bypassed BGO)
+    // and verify unconditional `bra +17` skips `BEQ 0x5040A2E1`, runs `PATCH_A2CD_UART_MONITOR`, and preserves regs/SP.
+    let mut vm = Mn103Vm::new();
+    vm.enable_sc0_uart(b"Q");
+    vm.map_segment(PROG061_UART_MONITOR_VA, payload, false);
+    let mut hook_page = vec![0xCB; 0x100];
+    hook_page[0xBC..0xC3].copy_from_slice(&crate::re::PATCH_A2BC_BRA_MONITOR);
+    // Real `0x5040A2C3..0x5040A2CC` conditional bypass guard: if 0xA2BC fell through with D0=0, BEQ would skip 0xA2CD!
+    hook_page[0xC3..0xCD]
+        .copy_from_slice(&[0xF8, 0x13, 0xFC, 0xF8, 0x03, 0xFC, 0xA0, 0x00, 0xC8, 0x16]);
+    hook_page[0xCD..0xE1].copy_from_slice(&PATCH_A2CD_UART_MONITOR);
+    vm.map_segment(0x5040_A200, hook_page, false);
+    vm.map_segment(0x50FF_0000, vec![0u8; 0x1_0000], true);
+    vm.sp = 0x50FF_F800;
+    vm.a[3] = 0x50FF_F900;
+    vm.d[0] = 0;
+    vm.d[2] = 0x1122_3344;
+    vm.d[3] = 0x5566_7788;
+    vm.a[2] = 0x99AA_BBCC;
+    vm.pc = 0x5040_A2BC;
+
+    // `Q` returns -1, which PATCH_A2CD_UART_MONITOR dispatches via `MOV -1, D0; BRA 0x5040A311`
+    // (stop at 0x5040A2DE before the branch leaves hook_page).
+    vm.run_until(0x5040_A2DE, 50_000).unwrap();
+    assert_eq!(vm.d[0], 0xFFFF_FFFF);
+    assert_eq!(vm.sp, 0x50FF_F800);
+    assert_eq!(vm.d[2], 0x1122_3344);
+    assert_eq!(vm.d[3], 0x5566_7788);
+    assert_eq!(vm.a[2], 0x99AA_BBCC);
+    assert_eq!(vm.a[3], 0x50FF_F900);
+    let tx = vm.take_uart_tx_utf8();
+    assert!(
+        tx.starts_with("PANAMON1>[B/R/W/D/F/J/E/U/Q]\r\n"),
+        "tx={tx:?}"
+    );
+    assert!(tx.contains("OK:ABORT\r\n"), "tx={tx:?}");
+}
+
+#[test]
+fn computes_exact_uncached_sdram_nor_dumper_patch_offsets() {
+    let (payload, offsets) =
+        build_prog061_uart_monitor_with_offsets(PROG061_UART_MONITOR_VA).unwrap();
+    let (entry_u, start_u, end_u) = offsets.uncached_patch_vas(PROG061_UART_MONITOR_VA);
+    assert_eq!(entry_u, 0x9043_94FA);
+    assert_eq!(start_u, 0x9043_9510);
+    assert_eq!(end_u, 0x9043_9516);
+    assert_eq!(offsets.block_size, 4096);
+    assert_eq!(
+        &payload[offsets.start_imm_off - 2..offsets.start_imm_off],
+        &[0xFC, 0xDC]
+    );
+    assert_eq!(
+        &payload[offsets.end_imm_off - 2..offsets.end_imm_off],
+        &[0xFC, 0xDD]
+    );
 }

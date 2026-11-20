@@ -26,7 +26,7 @@ pub(super) fn emit_check_nor_access_a2_sub(buf: &mut Vec<u8>) -> Result<usize> {
     let _ = emit_mov_imm32(buf, 0xC5, 0x0400_0000); // sub 0x04000000, d1
     let _ = emit_mov_imm32(buf, 0xC9, 0x0080_0000); // cmp 0x00800000, d1
     let is_nor_2 = emit_branch8_placeholder(buf, 0xC4); // bcs is_nor
-    buf.extend_from_slice(&[0x00, 0xDF, 0x00, 0x04]); // clr d0; ret [], 4
+    buf.extend_from_slice(&[0x00, 0xDF, 0x00, 0x00]); // clr d0; ret [], 0
 
     let is_nor = buf.len();
     patch_s8_rel(buf, is_nor_1, is_nor, "NOR_CHK1")?;
@@ -40,12 +40,12 @@ pub(super) fn emit_check_nor_access_a2_sub(buf: &mut Vec<u8>) -> Result<usize> {
 
     let allow_off = buf.len();
     patch_s8_rel(buf, allow_nvram, allow_off, "NOR_NVRAM_OK")?;
-    buf.extend_from_slice(&[0x80, 0x01, 0xDF, 0x00, 0x04]);
+    buf.extend_from_slice(&[0x80, 0x01, 0xDF, 0x00, 0x00]);
 
     let blk_off = buf.len();
     patch_s8_rel(buf, blk_crit, blk_off, "NOR_BLK_CRIT")?;
     patch_s8_rel(buf, blk_upper, blk_off, "NOR_BLK_UPP")?;
-    buf.extend_from_slice(&[0x80, 0xFF, 0xDF, 0x00, 0x04]);
+    buf.extend_from_slice(&[0x80, 0xFF, 0xDF, 0x00, 0x00]);
     Ok(sub_off)
 }
 
@@ -62,10 +62,10 @@ fn emit_jedec_unlock_a0_a3(buf: &mut Vec<u8>) {
     buf.extend_from_slice(&[0x80, 0x55, 0xF0, 0x73]); // 0x0055 -> (0x84000554)
 }
 
-/// Polls `(a1)` DQ7 (`bit 7`) until `(val & 0x80) == d3` or bounded timeout, then resets array `0xF0`.
+/// Polls `(a1)` DQ7 (`bit 7`) until `(val & 0x80) == d3` or bounded timeout (~2.5-3.0s @ 100 MHz), then resets array `0xF0`.
 pub(super) fn emit_jedec_poll_dq7_reset_sub(buf: &mut Vec<u8>) -> Result<usize> {
     let sub_off = buf.len();
-    let _ = emit_mov_imm32(buf, 0xCD, 0x0010_0000);
+    let _ = emit_mov_imm32(buf, 0xCD, 0x0400_0000);
     let poll_loop = buf.len();
     buf.extend_from_slice(&[0xF0, 0x61, 0xF8, 0xE0, 0x80, 0xAC]); // movhu (a1),d0; and 80,d0; cmp d3,d0
     let br_done = emit_branch8_placeholder(buf, 0xC8);
@@ -75,7 +75,7 @@ pub(super) fn emit_jedec_poll_dq7_reset_sub(buf: &mut Vec<u8>) -> Result<usize> 
     let done_off = buf.len();
     patch_s8_rel(buf, br_done, done_off, "JEDEC_DONE")?;
     let _ = emit_mov_imm32(buf, 0xDC, AM34_FLASH_UNCACHED_BASE);
-    buf.extend_from_slice(&[0x80, 0xF0, 0x14, 0xF0, 0x70, 0xDF, 0x00, 0x04]); // 0x00F0 -> 0x84000000; ret
+    buf.extend_from_slice(&[0x80, 0xF0, 0x14, 0xF0, 0x70, 0xDF, 0x00, 0x00]); // 0x00F0 -> 0x84000000; ret [], 0
     Ok(sub_off)
 }
 
@@ -124,7 +124,7 @@ pub(super) fn emit_jedec_prog_a2_d2_sub(
     Ok(sub_off)
 }
 
-/// Emits `U <CONFIRM_UPPER_NOR|LOCK>` runtime handler mutating `(4, sp)` unlock state.
+/// Emits `U <CONFIRM_UPPER_NOR|LOCK>` runtime handler mutating `(12, sp)` unlock state.
 pub(super) fn emit_nor_unlock_handler(
     buf: &mut Vec<u8>,
     pt: &mut PatchTable,
@@ -218,7 +218,7 @@ pub(super) fn emit_nor_unlock_handler(
     for br in to_success {
         patch_s8_rel(buf, br, success_off, "U_SUCCESS")?;
     }
-    buf.extend_from_slice(&[0x4A, 0x04]); // mov d2, (4, sp)
+    buf.extend_from_slice(&[0x4A, 0x0C]); // mov d2, (12, sp)
     emit_print_str(buf, pt, strs.2, print_span_off);
     buf.extend_from_slice(&[0xAA, 0x00]); // cmp 0, d2
     let is_lock = emit_branch8_placeholder(buf, 0xC8);
@@ -249,7 +249,7 @@ pub(super) fn emit_write_or_erase_handler(
     } else {
         buf.extend_from_slice(&[0xF1, 0xEA]);
     }
-    buf.extend_from_slice(&[0x58, 0x04]); // mov (4, sp), d0
+    buf.extend_from_slice(&[0x58, 0x0C]); // mov (12, sp), d0
     emit_call16(buf, pt, subs.1);
     if is_erase {
         buf.extend_from_slice(&[0xA0, 0x01]);

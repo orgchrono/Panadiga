@@ -111,3 +111,11 @@ scratch_*.log
 
 # Generated Win32DiskImager raw disk images
 firmware_and_images/*.img
+
+# ------------------------------------------------------------------------------
+# 10. Ghidra Java Analyzers (ignore compiled bytecode, keep .java sources tracked)
+# ------------------------------------------------------------------------------
+*.class
+!tools/ghidra/java/
+!tools/ghidra/java/**/*.java
+!tools/ghidra/java/README.md

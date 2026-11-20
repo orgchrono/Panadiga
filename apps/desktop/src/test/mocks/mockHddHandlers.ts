@@ -7,6 +7,7 @@ import {
   mockHddAnalysisReport,
   mockMeihdfsAllocationReport,
 } from './mockData';
+import { handleMockSafeFlashCommand } from './mockSafeFlashHandlers';
 
 export function handleMockHddCommand(
   cmd: string,
@@ -225,6 +226,6 @@ export function handleMockHddCommand(
     }
 
     default:
-      return undefined;
+      return handleMockSafeFlashCommand(cmd, args);
   }
 }

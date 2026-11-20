@@ -16,6 +16,9 @@ pub const DEFAULT_TOOLS_DIR: &str = "tools";
 /// Default directory for partition extraction.
 pub const DEFAULT_HDD_EXTRACT_DIR: &str = "hdd_extracted";
 
+/// Canonical in-repo directory for generated SD recovery & unbrick patch kits.
+pub const DEFAULT_SD_UNBRICK_KIT_DIR: &str = "firmware_and_images/sd_unbrick_kit";
+
 /// Default serial port for host communication with the Pico controller.
 #[cfg(target_os = "windows")]
 pub const DEFAULT_SERIAL_PORT: &str = "COM5";

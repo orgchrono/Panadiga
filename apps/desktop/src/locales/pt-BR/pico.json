@@ -86,6 +86,8 @@
       "all": "Visão Completa",
       "diag": "Diagnósticos P7501",
       "bridge": "SC0 Bridge",
+      "bgo": "BGO FTL & Dump NOR",
+      "davis": "Sonda DAVIS CH0/CH1",
       "gdb": "GDB & Ghidra",
       "terminal": "Pinagem & Terminal"
     },
@@ -296,6 +298,9 @@
       "title": "Construtor & Verificador de Kit SD Unbrick",
       "desc": "Extrai PROG061, MAIN3410PQ e DRV S211, aplica BGO + TBC Passthrough + HDD dinâmico e grava DIGADIAG.FRM + PANA__SD.FRM + SHA256SUMS.",
       "outputDir": "Diretório de Saída do Cartão SD",
+      "loaderProfile": "Perfil de Bootloader / Formato SD",
+      "loaderVer061": "Loader ver0.61 (DMR-EH55 — DIGADIAG 262 KB Puro + TOC 48B)",
+      "loaderVer063": "Loader ver0.63 (DMR-EZ485V — EXTRHEAD 128 KB + TOC 64B)",
       "sourceFrm": "Fonte PANA_DVD.FRM (opcional se autodescoberto)",
       "bgoMode": "Modo BGO PROG061 (NVRAM U99)",
       "bgoBypass": "bypass (Skip U99 Boot Checks Only — Safe Default)",
@@ -365,6 +370,11 @@
       "sendSerialBtn": "Executar CLI Serial",
       "frmTitle": "Empacotador & Verificador Unlock .FRM (SD / CD)",
       "containerKindLabel": "Tipo de Contêiner",
+      "kindSd48": "sd48 (PANA__SD ver0.61 — TOC 48B)",
+      "kindSd64": "sd (EXTRHEAD 128K — ver0.63)",
+      "kindDigadiag": "digadiag (DIGADIAG.FRM)",
+      "kindCd": "cd (PANA_DVD.FRM)",
+      "kindDvd": "dvd (MATSHITA)",
       "frmPathLabel": "Caminho do .FRM para Verificar",
       "outPathLabel": "Caminho de Saída para Empacotar (opcional)",
       "verifyFrmBtn": "Verificar Unlock .FRM",
@@ -378,6 +388,12 @@
       "extractPathsRequired": "Informe o caminho do .FRM e o diretório de destino."
     },
     "basicModeBanner": "Modo Básico ativo: ferramentas avançadas de Patch TBC Passthrough e Emulador Matshita ODD estão ocultas para focar no Kit SD.",
-    "revealAdvancedBtn": "Mostrar TBC & Emulador Matshita"
+    "revealAdvancedBtn": "Mostrar TBC & Emulador Matshita",
+    "tabs": {
+      "tablistAria": "Pipelines de Unbrick & Calibração",
+      "tbcSdHarden": "Kit SD, Lab TBC & Bypasses",
+      "calibrationRegion": "Região DVD & Sinal Analógico (TV)",
+      "matshitaEmu": "Matshita R6-MV4 & Unlock .FRM"
+    }
   }
 }

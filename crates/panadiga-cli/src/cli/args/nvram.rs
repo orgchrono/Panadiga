@@ -68,4 +68,15 @@ pub enum NvramActions {
         #[arg(long)]
         allow_critical_ipl: bool,
     },
+
+    /// Audits all 142 sectors (SA0..SA141) of an 8 MiB Spansion S29JL064H (IC5001) NOR binary dump
+    AuditNorSectors {
+        /// Path to 8 MiB Spansion S29JL064H NOR binary dump
+        #[arg(long, value_name = "BIN")]
+        image: PathBuf,
+
+        /// Exports structured JSON sector audit report (`-` emits stdout JSON)
+        #[arg(short, long, value_name = "JSON_FILE")]
+        json: Option<PathBuf>,
+    },
 }

@@ -5,11 +5,12 @@ import type {
   MainPassthroughMode,
   PhysicalDriveInfo,
   SdDiskInspectionReport,
+  SdLoaderProfile,
   SdMediaVerificationReport,
   SdUnbrickKitRequestDto,
 } from '@/models';
 
-export type { BgoMode, MainPassthroughMode };
+export type { BgoMode, MainPassthroughMode, SdLoaderProfile };
 
 export interface SdDiskVerificationProps {
   verifyLoading: boolean;
@@ -65,6 +66,7 @@ export interface SdKitFormInputs {
   panaDvdPath: string;
   bgoMode: BgoMode;
   mainMode: MainPassthroughMode;
+  loaderProfile?: SdLoaderProfile;
   includePanaSd: boolean;
   unlockHddDynamic: boolean;
 }
@@ -84,6 +86,7 @@ export function buildSdKitRequestPayload(inputs: SdKitFormInputs): {
       pana_dvd_path: inputs.panaDvdPath.trim() || undefined,
       bgo_mode: inputs.bgoMode,
       main_passthrough_mode: inputs.mainMode,
+      ...(inputs.loaderProfile ? { loader_profile: inputs.loaderProfile } : {}),
       include_pana_sd: inputs.includePanaSd,
       unlock_hdd_dynamic: inputs.unlockHddDynamic,
     },

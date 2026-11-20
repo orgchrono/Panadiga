@@ -32,7 +32,7 @@ Embora o foco inicial de laboratório deste projeto seja o modelo amplamente dif
 3. **Criptografia e Proteção de Propriedade Intelectual:** O contêiner de distribuição óptica (`PANA_DVD.FRM`) e as partições executáveis do HD são blindados com cifras de bloco simétricas de 64 bits em modo ECB, associadas a esquemas CPRM (*Content Protection for Recordable Media*) e DivX DRM.
 4. **A Vulnerabilidade Crítica do Erro `U99`:** A calibração de canais, estado de montagem do HDD e parâmetros do gravador são mantidos nos últimos 64 KB da Flash, emulando uma EEPROM (`EEMUL`). Desgaste de células, desligamento abrupto durante gravação ou parâmetros corrompidos provocam falha de validação na inicialização. Como consequência, o firmware Matsushita entra em pânico e trava irreversivelmente com o código **`U99`** no display VFD frontal, rejeitando comandos do controle e travando o mecanismo óptico.
 
-Este repositório consolida o **ecossistema definitivo de engenharia reversa, recuperação física e análise forense** para a linha Panasonic DIGA, disponibilizando a suíte de ferramentas de alta performance em Rust **`panadiga`**, interface de bancada desktop e mobile Android (`.apk`), firmware C11/PIO para microcontroladores **Raspberry Pi Pico (RP2040) e Pico 2 (RP2350)** com suporte a **Bluetooth Low Energy (BLE)** e USB-C OTG, **30 manuais técnicos de fábrica e datasheets de silício**, **36 dossiês técnicos bilíngues sincronizados (`pt-BR` / `en-US`)**, **disassembly e pseudocódigo integral MN103S** (`docs/pseudocode/`) e **12 capturas únicas de bancada (`COM10`)** (`docs/debug_logs/`).
+Este repositório consolida o **ecossistema definitivo de engenharia reversa, recuperação física e análise forense** para a linha Panasonic DIGA, disponibilizando a suíte de ferramentas de alta performance em Rust **`panadiga`**, interface de bancada desktop e mobile Android (`.apk`), firmware C11/PIO para microcontroladores **Raspberry Pi Pico (RP2040) e Pico 2 (RP2350)** com suporte a **Bluetooth Low Energy (BLE)** e USB-C OTG, **30 manuais técnicos de fábrica e datasheets de silício**, **38 dossiês técnicos bilíngues sincronizados (`pt-BR` / `en-US`)**, **disassembly e pseudocódigo integral MN103S** (`docs/pseudocode/`) e **19 capturas e logs únicos de bancada (`COM10` / `PhysicalDrive1`)** (`docs/debug_logs/`).
 
 ---
 
@@ -119,10 +119,10 @@ Panadiga/
 ├── Cargo.toml                                        <-- Especificação Mestre do Workspace Rust (Edição 2024)
 ├── AUDITORIA_COMPLETA.md / COMPLETE_AUDIT.md         <-- Auditoria Técnica Viva na Raiz (PT-BR / EN)
 ├── crates/                                           <-- Arquitetura Modular Multi-Crate em Rust
-│   ├── panadiga-core/                                <-- Núcleos: NVRAM, MEIHDFS + `hdd/capacity_patch/`, Cripto Feistel/EXTRHEAD, RE (`mn10300/`, `mn10300_traps/`, `mn10300_emu/`, `matshita_emu/`, `nor_dumper.rs`, `bgo_unbrick/`, `main_passthrough/`, `unbrick_sd_kit/`, `prog061_uart_monitor/`), Hardware SSOT
+│   ├── panadiga-core/                                <-- Núcleos: NVRAM, MEIHDFS + `hdd/capacity_patch/` (`5 GB..2 TB`) + `hdd/writer/eh55_flash/`, Cripto Feistel/EXTRHEAD, RE (`mn10300/`, `mn10300_traps/`, `mn10300_emu/`, `matshita_emu/`, `nor_dumper/`, `eh55_bgo/`, `davis_probe/`, `region_compat/tv_standard/`, `tbc_appliance/`, `bgo_unbrick/`, `main_passthrough/`, `unbrick_sd_kit/`, `prog061_uart_monitor/`), `pico/panamon1/`, Hardware SSOT
 │   ├── panadiga-cli/                                 <-- Binário `panadiga` & Workbench TUI Interativo
 │   ├── panadiga-rag/                                 <-- Motor RAG Zero-Error 6 Camadas + `HardwareSafetyValidator` + `FactCritic`
-│   └── panadiga-mcp/                                 <-- Servidor MCP JSON-RPC 2.0 `stdio` Expondo 18 Ferramentas Nativas
+│   └── panadiga-mcp/                                 <-- Servidor MCP JSON-RPC 2.0 `stdio` Expondo 24 Ferramentas Nativas (18 Core + 6 Módulos Wave 3)
 ├── apps/desktop/                                     <-- GUI Desktop & Android Tauri 2.0 (`panadiga-desktop` + React 19 + Vite MVVM)
 │   ├── src-tauri/                                    <-- Comandos Nativos Rust, IPC de Docs/Logs & Ponte GDB RSP
 │   ├── src/                                          <-- Componentes, ViewModels MVVM e Visualizador Interativo de Docs/Logs/Código
@@ -130,12 +130,12 @@ Panadiga/
 │   └── playwright.config.ts                          <-- Configuração de Testes End-to-End em Navegador
 ├── docs/                                             <-- Acervo Oficial de Documentação Técnica
 │   ├── INDEX.md                                      <-- Portal e Índice Gateway de Documentação
-│   ├── translation_pairs.json                        <-- Mapa Canônico de 36 Pares Bilíngues (`pt-BR` <-> `en-US` + Raiz)
-│   ├── en-US/                                        <-- Dossiês Técnicos Canônicos em Inglês (36 pares)
-│   ├── pt-BR/                                        <-- Dossiês Técnicos de Bancada em Português (36 pares)
+│   ├── translation_pairs.json                        <-- Mapa Canônico de 38 Pares Bilíngues (`pt-BR` <-> `en-US` + Raiz)
+│   ├── en-US/                                        <-- Dossiês Técnicos Canônicos em Inglês (38 pares)
+│   ├── pt-BR/                                        <-- Dossiês Técnicos de Bancada em Português (38 pares)
 │   ├── audits/                                       <-- Snapshots Históricos Pré-Refatoração (`2026-11-11`)
 │   ├── pseudocode/                                   <-- Pseudocódigo Integral MN103S, Auditoria `??` & Dumps Brutos (`raw/*.txt`)
-│   ├── debug_logs/                                   <-- 12 Capturas Únicas `COM10` / `P7501` & `DOSSIE_COMPLETO_...txt`
+│   ├── debug_logs/                                   <-- 19 Capturas Únicas `COM10` / `P7501` / `PhysicalDrive1` & `DOSSIE_COMPLETO_...txt`
 │   └── assets/ / images/                             <-- Esquemáticos em Alta Resolução, 241 PNGs do Catálogo Visual & Pinouts
 ├── manuals_and_schematics/                           <-- Acervo Técnico (30 Manuais PDF, Esquemas & Datasheets)
 │   ├── README.md                                     <-- Catálogo Mestre Indexado por Modelo e Disciplina
@@ -262,7 +262,7 @@ panadiga hdd decode-descriptors --input hdd_100.bin
 
 ### 4.7 Comando 6: Dump e Desconstrução da TOC e Módulos do `.FRM` (`frm dump-toc`)
 
-Desconstrói `PANA_DVD.FRM` (TOC `"Firm list"` cifrada de 48B) ou `PANA__SD.FRM` (TOC plaintext de 64B) nos seus três slots reais de firmware: `[0] DRV S211`, `[1] PROG061 ` e `[2] MAIN3060NP`.
+Desconstrói `PANA_DVD.FRM` (TOC `"Firm list"` cifrada de 48B) ou `PANA__SD.FRM` (TOC plaintext de `48B` `sd48` ou `64B` `sd64`) nos seus slots reais de firmware: `[0] DRV S211`, `[1] PROG061 ` e `[2] MAIN3060NP` (`3410PQ`).
 
 ```bash
 panadiga frm dump-toc --input firmware_and_images/PANA_DVD.FRM
@@ -309,12 +309,12 @@ panadiga rag query --question "What is the canonical ground pin of P7501?" --jso
 
 ### 4.13 Comando 12: Central Unbrick Pre-MAIN, Kit SD & TBC Autônomo (`unbrick`)
 
-Orquestra todo o ciclo de recuperação sem dessolda: diagnóstico unificado do workspace, extração de módulos Feistel (`PANA_DVD.FRM`), geração e validação de Kit SD (`DIGADIAG.FRM` 128 KiB + `PANA__SD.FRM`), patch TBC Passthrough `E-E` em `MAIN3410PQ`, frames GDB RSP (`_dev_SERIAL`) e compilação de stub `NOR_DMP`.
+Orquestra todo o ciclo de recuperação sem dessolda: diagnóstico unificado do workspace, extração de módulos Feistel (`PANA_DVD.FRM`), geração e validação de Kit SD sob **`--loader-profile ver061`** (padrão no DMR-EH55 real: `256 KiB` bruto `DIGADIAG.FRM` + `48B` `sd48` `PANA__SD.FRM` em `firmware_and_images/sd_unbrick_kit/`) ou `ver063` (`128 KiB` `EXTRHEAD` + `sd64`), patch TBC Passthrough `E-E` em `MAIN3410PQ`, frames GDB RSP (`_dev_SERIAL`) e compilação de stub `NOR_DMP`.
 
 ```bash
 panadiga unbrick status
-panadiga unbrick prepare-sd --outdir sd_card_eh55_kit --bgo-mode auto_format --passthrough-mode av_passthrough
-panadiga unbrick verify-sd sd_card_eh55_kit
+panadiga unbrick prepare-sd --loader-profile ver061 --bgo-mode uart_monitor --passthrough-mode av_passthrough
+panadiga unbrick verify-sd firmware_and_images/sd_unbrick_kit
 panadiga unbrick passthrough --rsp-plan --callback-va 0x50401F3C
 ```
 
@@ -408,28 +408,25 @@ Sequência Validada na Bancada DMR-EH55 (Captura CDDIAG via P7501):
 
 ## 6. Mapa de Memória Físico da Arquitetura Matsushita AM34 (`MN103S` / `VEP79138`)
 
-```text
-+-------------------+-------------------+--------------------+---------------------------------------------+
-| Faixa Física      | Faixa Espelhada   | Tipo de Barramento | Descrição Funcional                         |
-+-------------------+-------------------+--------------------+---------------------------------------------+
-| 0x00000000..0FFF  | 0x40000000..0FFF  | I-RAM/SRAM Interna | 4 KB Scratchpad e Vetores de Exceção        |
-| 0x00400000..07FF  | 0x40400000..07FF  | D-RAM Interna      | 64 KB Memória Rápida de Dados do Sistema    |
-| 0x04000000..07FF  | 0x44000000..07FF  | Controlador DDR    | 64 MB Memória Principal do Sistema (DDR)    |
-| 0x08000000..0FFF  | 0x48000000..0FFF  | Framebuffer MPEG   | 32 MB Memória de Vídeo Dedicada / OSD       |
-| 0x10000000..10FF  | 0x50000000..10FF  | Mestre IDE / PATA  | Registradores ATA/ATAPI-5 (HDD e Drive DVD) |
-| 0x18000000..187F  | 0x58000000..187F  | CS0 Externo (NOR)  | Flash Spansion S29JL064H (8 MB - IPL)       |
-| 0x187F0000..187F  | 0x587F0000..187F  | CS0 Externo (NV)   | 64 KB Setor de NVRAM/EEMUL (Alvo do U99)    |
-| 0x1F000000..1FFF  | 0x5F000000..1FFF  | MMIO Interno SoC   | Registradores de Periféricos, Timers e OCD  |
-+-------------------+-------------------+--------------------+---------------------------------------------+
-```
+| Faixa Física | Região / Dispositivo (`AM34`) | Descrição Funcional |
+| :--- | :--- | :--- |
+| `0x00000000..0x0003FFFF` | SRAM Interna On-Chip (`256 KB`) | Vetores de exceção e abertura para RAM Loader (`0x00004000`, `4 KB`) |
+| `0x10000000..0x1000FFFF` | Barramento MMIO Core (`64 KB`) | Timers internos e controladores de interrupção |
+| `0x40000000..0x43FFFFFF` | SDRAM Principal (`64 MB`) | SDRAM cacheada / `DRV_S211` `0x40000000` / `BOOT.BIN` em `0x44000000` |
+| `0x50400000..0x5043FFFF` | Updater FVU `PROG061` (`262.144 B`) | Carregador Estágio 2 (`eh55_frm_PROG061_BOOT.bin`) e alvo de salto `DIGADIAG.FRM` |
+| `0x57000000..0x57C664EB` | SO `MAIN` (`EH55_MAIN_3410PQ.bin`) | Kernel principal AM34 (`13.003.052 B`), codecs AV, `"src/hdd_cmd.c"` e `_dev_SERIAL` (`0x574F0775`) |
+| `0x80000000..0x807FFFFF` | NOR Spansion `S29JL064H` (`8 MB`, CS0) | Janela cacheada (`142` setores `SA0..SA141`): IPL `ver0.61` (`SA0..SA10`), `DRV` (`0x80080000`), BGO (`0x80130000..0x803FFFFF` no EH55 `ver0.61`), Upper EEMUL (`SA71..SA141`, `0x80400000..0x807FFFFF`) |
+| `0x84000000..0x847FFFFF` | Janela NOR *Uncached* & BGO (`CS1`) | Base de dump somente-leitura (`PANADMP1` -> `0x84000000`), BGO EH55 `ver0.61` (`0x84130000..0x843FFFFF`, `45×64 KB` em `0x440337A4` vs `ver0.63`/`PROG061` `0x84200000..0x843FFFFF`) e Upper EEMUL (`0x84400000..0x847FFFFF`) |
+| `0x90400000..0x9043FFFF` | Espelho SDRAM *Uncached* (`PROG061`) | Alias não-cacheado de `0x50400000`, usado para coerência D-cache/I-cache em `PANADMP1` (`0x9043950E` -> `J 904394FA`) e stubs (`0x90439B40`) |
+| `0x89000500` / `0x89000D00` | Controladores IDE `DAVIS` (`ch=0`/`ch=1`) | Primary Master (`ch=0, dev=0`) = ODD ATAPI (`DRV S211`); Secondary **MASTER** (`ch=1, dev=0`) = HDD (`StarTech IDE2SAT2` em **MASTER**) |
+| `0xD4002008..0xD400200C` | UART0 `P7501` (`115200 8N1`) | `SC0TXB = 0xD4002008`, `SC0RXB = 0xD4002009`, `SC0STR = 0xD400200C` (`TXBUSY|TXBF` `0xA0`, RX `0x10`) |
 
-### 6.1 Regra de Ouro JEDEC para o RAM Loader Injetado
+### 6.1 Regra de Ouro JEDEC & Coerência de Cache *Uncached* (`0x84000000` / `0x90400000`)
 
-Ao carregar payloads executáveis na memória DDR-SDRAM ou consultar registradores-alvo pela ponte P7501/GDB:
+Ao ler ou gravar memória pelo conector `P7501` / `PANAMON1>`:
 
-* **Endereço de Carga do Payload:** `0x04010000` (offset seguro de buffer DDR, evitando a página zero).
-* **Ponteiro de Pilha Inicial:** `SP = 0x0040FFF0` (dentro da SRAM de alta velocidade interna do chip).
-* **Desativação do Watchdog:** Escrever `0x00000000` no registrador MMIO `0x1F000104` em menos de $100\text{ ms}$ após o boot.
+* **Acesso Físico à Flash Spansion (`CS1`):** Toda sequência JEDEC ou leitura direta na Flash deve usar o barramento *uncached* (`0x80000000..0x807FFFFF` ou `0x84000000..0x847FFFFF`), e nunca o espelho cacheado, evitando absorção em D-cache. Como o apagamento real de setor de `64 KiB` na `S29JL064H` dura ~`700 ms`, o polling de readback (`0xFF`) garante término após saídas antecipadas de laços DQ7 limitados.
+* **Patches Executáveis em SDRAM:** Patches de código em execução (como os limites `MOV` em `0x9043950E` para `PANADMP1` e o stub `0x90439B40`) escrevem no espelho **SDRAM não-cacheado `0x90400000`** (`0x50400000 + 0x40000000`), mantendo coerência imediata de instruções para saltos `J 904394FA`.
 
 ---
 
@@ -472,6 +469,19 @@ O superbloco no LBA 0 armazena a geometria com inversão bit a bit (`XOR 0xFF`):
 * O identificador ASCII `"SH"` aparece em hexadecimal como `0xAE 0xB7` (`~0x51 0x48`).
 * Contadores de LBA e clusters são igualmente invertidos, impedindo que utilitários de partição convencionais de PC identifiquem ou corrompam o disco.
 
+### 7.6 Perfis `Loader ver0.61` vs `/BOOT.BIN` `ver0.63`, `PANAMON1` e `PANARSP` (`P7501`)
+
+* **Dois Perfis de Bootloader (`SDDIAG` / `PANA__SD.FRM`):** O hardware real DMR-EH55 (**`Loader ver0.61 [06/03/06]`**) carrega `DIGADIAG.FRM` como **binário bruto descomprimido de exatos `262.144` bytes (`0x40000`)** direto em `0x90400000` (`JMP 0x50400000`, padrão `--loader-profile ver061`) e usa TOC `48 B` (`sd48`, `0x1800` B) em `PANA__SD.FRM`; já o `/BOOT.BIN` (`ver0.63`) utiliza `EXTRHEAD` de `131.072` B (`0x93FC0000`) + `sd64` (`0x2000` B). O monitor **`PANAMON1>[B/R/W/D/F/J/E/U/Q]`** (`0x50439494`) usa ABI `CALL ..., [], 0` + `PUTC_D3_BYTES` `46 B` (`SC0STR & 0xA0`, timeout `0x00040000`), e `PANARSP` usa handshake `0E 04 02` (`DEV_SERIAL_HANDSHAKE_BYTES`) + `0x15`.
+
+### 7.7 Dumps Ouro da `IC5001` (8 MiB) & Cura Cirúrgica do `U99` no FTL BGO
+
+* **Artefatos Ouro Capturados (`firmware_and_images/`, captura somente-leitura `PANADMP1` na `COM10` via `0x9043950E` -> `J 904394FA`):**
+  * `eh55_nor_8mb_ic5001_dump.bin`: `8.388.608 B` (`SHA-256: c1faee798f60545853eefdba0d15f23678b471466dc2bc84f522bc972f15a02d`)
+  * `eh55_loader_ver061_256k.bin`: `262.144 B` (`0x84000000..0x8403FFFF`, `SHA-256: 9f5c448d8879106be5ca3da6d6ac649026d50fbc191251ae0f4a003efca63800`)
+  * `eh55_nvram_64k_raw.bin`: `65.536 B` (`0x847F0000..0x847FFFFF`, `SHA-256: 803d1465f48fb32e17d3e478e02b2a9a7e707bbb675bb424b02c5c1df92f3643`)
+* **Geometria BGO Real (`0x440337A4`) & Erase `S29JL064H` (~700 ms):** No `Loader ver0.61` do DMR-EH55, o BGO ocupa `45` setores de `64 KiB` em `0x84130000..0x843FFFFF` (`SA26..SA70`: `1` P1 `0xF101`, `40` P2 `0xF201..0xF228`, `4` spares `0xFFFF`, `max_pid=0x0F24`, controle `0x0F01`, dir `0x0F02..0x0F04`, FAT `0x0F07..0x0F15` + backup `0x0F16..0x0F24` — em contraste com `ver0.63`/`PROG061` em `0x84200000..0x843FFFFF`), separado da região Upper EEMUL `"1284"` (`SA71..SA141`, `0x84400000..0x847FFFFF`, com `SA134` em `0x847F0000` contendo `0ff00000002c` e `SA135..SA141` `0xFF`). O apagamento real de `64 KiB` leva ~`700 ms`, exigindo polling `0xFF` após retorno antecipado do laço `0x00100000` DQ7.
+* **Reparo Cirúrgico do `U99` & Prova `BOOTTRACE 15000 NOJIG`:** A formatação de `SA70` (`0x843F0000`) + `1.629` escritas puras `1->0` em 13 spares (`SA42..SA66`, restaurando 13 setores `0xF2xx`, bloco 2 de `ifodev2` `0x0055` @ `0x84250800` e páginas FAT `0x0F0A`/`0x0F19` @ `0x8427A200`/`0x8427AE00`) + `6` escritas puras `1->0` em `SA41+0x14` (`0x84220014..0x84220023` -> `SA29`) eliminou `BGO driver init failed[1].` e restabeleceu ao vivo na `COM10` o boot `***** normal mode *****` -> `*** RTSC Initialize ***`.
+
 ---
 
 ## 8. Guia Prático de Resolução do Erro U99 em 3 Rotas de Engenharia
@@ -500,7 +510,7 @@ O superbloco no LBA 0 armazena a geometria com inversão bit a bit (`XOR 0xFF`):
 
 ### Rota B: In-Circuit via UART Assíncrona `P7501`, Ponte GDB (`PANARSP`) & Kit SD (`DIGADIAG.FRM` / `PANA__SD.FRM`)
 
-* **Via Cartão SD (SDSC `<= 2 GiB` FAT16):** Gere `DIGADIAG.FRM` (128 KiB Stage-1 `BOOT.BIN`) e `PANA__SD.FRM` com **`panadiga unbrick prepare-sd`** (ou na aba **`Centro Unbrick`** da GUI) para executar `AUTO_FORMAT_BGO` em `U99` e gravar `MAIN3410PQ` com TBC Passthrough + HDD dinâmico.
+* **Via Cartão SD (SDSC `<= 2 GiB` FAT16):** Gere o kit **`--loader-profile ver061`** em `firmware_and_images/sd_unbrick_kit/` (`256 KiB` bruto `DIGADIAG.FRM` para `Loader ver0.61` do DMR-EH55 + `48B` `sd48` `PANA__SD.FRM`; use `ver063` apenas para `128 KiB EXTRHEAD`) com **`panadiga unbrick prepare-sd --loader-profile ver061 --bgo-mode uart_monitor`** (ou **`Centro Unbrick`**) para executar `PANAMON1>[B/R/W/D/F/J/E/U/Q]` e gravar `MAIN3410PQ` com TBC Passthrough + HDD dinâmico.
 * **Via UART/GDB `P7501`:** Conecte a sonda JST ZR de 6 vias do Pico ao conector `P7501` (confirmando pino 4 `GND` = $0.0\,\Omega$ e mantendo `GP3` / `NSW5V` estritamente `Hi-Z`), e execute `panadiga pico uart-probe` / `panadiga gdb-bridge` para telemetria `115200 8N1` e comandos `PANARSP`.
 
 ### Rota C: Substituição do HD por SSD Preservando os 100 MB do MEIHDFS
@@ -580,7 +590,7 @@ Todos os manuais de serviço, esquemas e datasheets estão organizados hierarqui
 
 ## 11. Links Diretos para Auditorias, Dossiês Técnicos, Pseudocódigo e Logs (`docs/`)
 
-O acervo oficial reúne **36 dossiês técnicos bilíngues sincronizados (`pt-BR` / `en-US`)** (indexados em [`docs/INDEX.md`](docs/INDEX.md) e [`docs/translation_pairs.json`](docs/translation_pairs.json)), auditorias vivas na raiz ([`AUDITORIA_COMPLETA.md`](AUDITORIA_COMPLETA.md) / [`COMPLETE_AUDIT.md`](COMPLETE_AUDIT.md)), snapshots históricos ([`docs/audits/`](docs/audits/README.md)), evidência integral de disassembly/pseudocódigo Ghidra ([`docs/pseudocode/`](docs/pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) & [`docs/pseudocode/raw/`](docs/pseudocode/raw/)) e 12 capturas únicas reais de bancada `COM10` ([`docs/debug_logs/`](docs/debug_logs/README.md)):
+O acervo oficial reúne **38 dossiês técnicos bilíngues sincronizados (`pt-BR` / `en-US`)** (indexados em [`docs/INDEX.md`](docs/INDEX.md) e [`docs/translation_pairs.json`](docs/translation_pairs.json)), auditorias vivas na raiz ([`AUDITORIA_COMPLETA.md`](AUDITORIA_COMPLETA.md) / [`COMPLETE_AUDIT.md`](COMPLETE_AUDIT.md)), snapshots históricos ([`docs/audits/`](docs/audits/README.md)), evidência integral de disassembly/pseudocódigo Ghidra ([`docs/pseudocode/`](docs/pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) & [`docs/pseudocode/raw/`](docs/pseudocode/raw/)) e 19 capturas e logs únicos de bancada `COM10` / `PhysicalDrive1` ([`docs/debug_logs/`](docs/debug_logs/README.md)):
 
 * 📋 **[Auditoria Técnica Consolidada (Raiz)](AUDITORIA_COMPLETA.md)** ([English Mirror: `COMPLETE_AUDIT.md`](COMPLETE_AUDIT.md))
   *Estado vivo do workspace (`crates/`, `firmware/pico-p7501/`, `scripts/`), hashes SHA-256 dos UF2 recompilados, síntese da auditoria `??` no Ghidra, paridade Python → Rust e os 9 Quality Gates.*
@@ -617,11 +627,14 @@ O acervo oficial reúne **36 dossiês técnicos bilíngues sincronizados (`pt-BR
 * 🛠️ **[`DIGADIAG.FRM` vs `PANA__SD.FRM`, Erro SD `-91006` e Viabilidade de TBC Autônomo](docs/pt-BR/DIGADIAG_PANA_SD_E_TBC_AUTONOMO.md)** ([English Mirror](docs/en-US/DIGADIAG_PANA_SD_AND_STANDALONE_TBC.md))
   *Como `/BOOT.BIN` (`SDDIAG`) vs `PROG061` consomem `.FRM`, prova do bloqueio 4-bit `ACMD6` (`-91006`), dependências da Main PCB (`IC3001`/`IC7501`/`P7402`) no Digital PCB `MN2DS0009`, e guia completo `panadiga unbrick` + `Centro Unbrick`.*
 * 💿 **[Emulador Matshita `R6-MV4` e Injeção ATAPI](docs/pt-BR/EMULADOR_MATSHITA_R6MV4_E_INJECAO_ATAPI.md)** ([English Mirror](docs/en-US/MATSHITA_R6MV4_EMULATOR_AND_ATAPI_INJECTION.md)) · 🪤 **[Armadilhas MN103S e Resolução Ghidra](docs/pt-BR/ARMADILHAS_MN103S_E_RESOLUCAO_GHIDRA.md)** ([English Mirror](docs/en-US/MN103S_SEVEN_TRAPS_AND_GHIDRA_RESOLUTION.md)) · ✍️ **[`DIGADIAG` Salto `0x50400000` e Escrita Protegida](docs/pt-BR/DIGADIAG_SALTO_50400000_E_ESCRITA_PROTEGIDA.md)** ([English Mirror](docs/en-US/DIGADIAG_JUMP_50400000_AND_GUARDED_RW.md))
+* 🔬 **[Dossiê Forense do Bootloader: `SDDIAG`, `Loader ver0.61` (`COM10`) & ABI MN103S](docs/pt-BR/DOSSIE_FORENSE_BOOTLOADER_SDDIAG_EH55.md)** ([English Mirror](docs/en-US/FORENSIC_DOSSIER_BOOTLOADER_SDDIAG_EH55.md))
+  *Hardware real `Loader ver0.61` (`262.144 B` brutos `DIGADIAG.FRM` + `sd48` `PANA__SD.FRM`) vs `/BOOT.BIN` `ver0.63`, capturas `COM10` `669 B`/`641 B`, 11 scripts Java FAT/SD no Ghidra, Armadilha #8 SLEIGH (`fb 9c`) e correções `CALL ..., [], 0` + `PUTC_D3_BYTES` do `PANAMON1`.*
 * ⚡ **[Upgrades C11 no Pico `P7501`, Causas de `??` no Ghidra e Paridade Python → Rust](docs/pt-BR/UPGRADES_PICO_C11_UNDEF_GHIDRA_E_PARIDADE_PYTHON_RUST.md)** ([English Mirror](docs/en-US/PICO_C11_UPGRADES_GHIDRA_UNDEF_AND_PYTHON_RUST_PARITY.md))
   *`DIAGWATCH` parametrizado, `PANARSP REGS`, `DRVPANA`, UF2s recompilados (`RP2040`/`RP2350`), auditoria completa de `??` no Ghidra (`docs/pseudocode/`), logs reais (`docs/debug_logs/`), auditoria mestre (`AUDITORIA_COMPLETA.md`), histórico (`docs/audits/`) e comandos `panadiga re` / `panadiga pico decode-log`.*
 * ⚡ **[Arquitetura de Standby (`IC7501`), `TBUS`, `TW7501` e Estados de Boot](docs/pt-BR/ARQUITETURA_STANDBY_IC7501_TBUS_TW7501_E_MODOS_BOOT.md)** ([English Mirror](docs/en-US/STANDBY_IC7501_TBUS_TW7501_AND_BOOT_STATES_ARCHITECTURE.md))
   *Domínios elétricos (`C7584`, `R7623`, `IC7502`, `IC7505`, `P59001`), handshake `FUN_44005cd0` (`255s`), fluxos reais VFD (`PLEASE WAIT -> U99` vs `HELLO -> U99`), captura `PREJIG WAKE` na sonda Pico e dicionário de 457 entradas (`error-lookup` / `bench-wizard`).*
-* 🗂️ **Catálogo Bilíngue Completo (`36` PT-BR + `36` EN-US + `audits/` + `pseudocode/` + `debug_logs/`):** Consulte [**`docs/INDEX.md`**](docs/INDEX.md).
+* 🗂️ **Catálogo Bilíngue Completo (`38` PT-BR + `38` EN-US + `audits/` + `pseudocode/` + `debug_logs/`):** Consulte [**`docs/INDEX.md`**](docs/INDEX.md).
+* 🔬 **Histórico do Unbrick EH55 (BGO Ciclo 2, `PANAMON1>` Direto, `DAVIS`/`CH1` e Região `PAL-M`):** [**`HISTORICO_UNBRICK_EH55_BGO_CH1_DAVIS_E_REGIAO.md`**](docs/pt-BR/HISTORICO_UNBRICK_EH55_BGO_CH1_DAVIS_E_REGIAO.md) ([EN-US](docs/en-US/EH55_UNBRICK_BREAKTHROUGH_BGO_CH1_DAVIS_AND_REGION.md))
 
 ---
 
@@ -640,24 +653,24 @@ O acervo oficial reúne **36 dossiês técnicos bilíngues sincronizados (`pt-BR
 O ecossistema Panadiga impõe uma rigorosa pipeline anti-regressão composta por **9 Quality Gates** ([`scripts/validate.py`](scripts/validate.py)):
 
 ```text
-       Camada 5: Testes de Navegador End-to-End (Playwright Chromium — 13 testes / 4 specs)
-       Camada 4: Testes Unitários e de Componente da UI Desktop (Vitest + React Testing Library — 72 testes / 23 arquivos)
-       Camada 3: Testes de Host C11 do Firmware Pico (Harness GCC — 24 testes / 4 módulos)
-       Camada 2: Scripts Python & Verificação Pytest (22 testes Pytest / 4 arquivos + Mypy Strict)
-       Camada 1: Testes Nativos do Workspace Rust (Cargo Test — 142 testes em core/cli/desktop/mcp/rag)
+       Camada 5: Testes de Navegador End-to-End (Playwright Chromium — 23 testes / 8 specs)
+       Camada 4: Testes Unitários e de Componente da UI Desktop (Vitest + React Testing Library — 116 testes / 36 arquivos)
+       Camada 3: Testes de Host C11 do Firmware Pico (Harness GCC/MSVC — 31 testes / 4 módulos)
+       Camada 2: Scripts Python & Verificação Pytest (28 testes Pytest / 5 arquivos + Mypy Strict em 43 fontes)
+       Camada 1: Testes Nativos do Workspace Rust (Cargo Test — 254 testes em core/cli/desktop/mcp/rag)
 ```
 
 ### 13.1. Os 9 Quality Gates Integrados e Ativos
 
-1. **Rust Cargo Check & Test Gate:** Formatação (`cargo fmt`), tipagem estrita e 142 testes unitários/integração em todo o workspace (`panadiga-core`, `panadiga-cli`, `panadiga-desktop`, `panadiga-mcp` e `panadiga-rag`).
-2. **TypeScript Strict Type-Check Gate:** `tsc --noEmit` valida tipagem estrita com zero escapes `any`.
-3. **Frontend Vitest Unit Suite:** Cobre ViewModels, resolvedores de links/binários, componentes React e transições de estado algébricas com 72 testes em 23 arquivos em `apps/desktop/src/**/*.test.{ts,tsx}`.
+1. **Rust Cargo Check & Test Gate:** Formatação (`cargo fmt`), clippy estrito (`-D warnings`) e 254 testes unitários/integração em todo o workspace (`panadiga-core`, `panadiga-cli`, `panadiga-desktop`, `panadiga-mcp` e `panadiga-rag`).
+2. **TypeScript Strict Type-Check Gate:** `oxlint --deny-warnings` + `tsc --noEmit` valida tipagem estrita com zero escapes `any`.
+3. **Frontend Vitest Unit Suite:** Cobre ViewModels, resolvedores de links/binários, componentes React e transições de estado algébricas com 116 testes em 36 arquivos em `apps/desktop/src/**/*.test.{ts,tsx}`.
 4. **Copy/Paste Detector (`jscpd`):** Limite estrito de 0.00% de duplicação de código.
-5. **UI/UX Completeness Linter (`uxlint`):** Auditoria de estados loading, empty, error, acessibilidade e validação de formulário nas views React.
-6. **Playwright E2E Suite:** 13 testes funcionais completos em 4 specs (`frm-packager`, `navigation`, `nvram`, `pico-bench`) em navegador Chromium headless.
-7. **Ghidra Script Generator Gate:** Exportação automática de mapas de memória e símbolos do SSOT em Rust.
-8. **C11 Firmware Host Test Gate:** Compilação e execução com `-Wall -Wextra -Werror` de 24 testes C11 do firmware do Pico em 4 módulos (`test_gdb_rsp_host.c`, `test_pana_diag_drv.c`, `test_pana_logic.c`, `test_uart_codec.c`).
-9. **Python & Pytest Gate:** Tipagem estrita (`mypy --strict`) e 22 testes automatizados em 4 arquivos sob `scripts/tests/`.
+5. **UI/UX Completeness Linter (`uxlint`):** Auditoria de 354 arquivos React com nota `100/100` (`0` issues) em estados loading, empty, error, acessibilidade e validação de formulário.
+6. **Playwright E2E Suite:** 23 testes funcionais completos em 8 specs (`calibration-and-tbc`, `frm-packager`, `hdd-safe-flash`, `ir-commander`, `navigation`, `nvram`, `pico-bench`, `pico-bgo-davis`) em navegador Chromium headless.
+7. **Ghidra Script Generator Gate:** Exportação automática de mapas de memória e símbolos do SSOT em Rust (`tools/ghidra/*.py`, acompanhada de `tools/ghidra/java/`).
+8. **C11 Firmware Host Test Gate:** Compilação e execução com `-Wall -Wextra -Werror` / `/W4 /WX` de 31 testes C11 do firmware do Pico em 4 módulos (`test_gdb_rsp_host.c`, `test_pana_diag_drv.c`, `test_pana_logic.c`, `test_uart_codec.c`).
+9. **Python & Pytest Gate:** Tipagem estrita (`mypy --strict` em 43 fontes Python) e 28 testes automatizados em 5 arquivos sob `scripts/tests/`.
 
 ### 13.2. Execução da Validação Completa Local
 
@@ -685,7 +698,7 @@ O repositório define 6 subagentes de engenharia especializados para suporte aut
 
 ### 14.2. Servidor Nativo Model Context Protocol (`panadiga mcp`)
 
-Um servidor MCP padronizado em JSON-RPC 2.0 via `stdio` (`panadiga mcp`) expõe **18 ferramentas nativas** em Rust para agentes de IA:
+Um servidor MCP padronizado em JSON-RPC 2.0 via `stdio` (`panadiga mcp`) expõe **24 ferramentas nativas** em Rust para agentes de IA (18 ferramentas core + 6 módulos Wave 3 de `panamon1`/`eh55_bgo`/`davis_probe`/`tv_standard`/`tbc_appliance`/`eh55_flash`):
 
 * `panadiga_memory_map`: Retorna o mapa de memória físico oficial da arquitetura Matsushita AM34 / MN103S (`VEP79138`).
 * `panadiga_safety_check`: Valida tensões de bancada (`<= 3.3V` LVTTL / teto `3.35V`) e fronteiras de gravação em Flash.
@@ -693,7 +706,7 @@ Um servidor MCP padronizado em JSON-RPC 2.0 via `stdio` (`panadiga mcp`) expõe 
 * `panadiga_clean_nvram`: Analisa ou sanitiza a região NVRAM/EEMUL de 64 KB (`0x807F0000..0x807FFFFF`) em dumps de Flash de 8 MB.
 * `panadiga_search_manuals`: Busca no catálogo oficial de manuais técnicos e esquemas em `manuals_and_schematics/`.
 * `panadiga_rag_query`: Consulta a base local do motor RAG Zero-Error de 6 camadas em Rust com fundamentação factual estrita.
-* `panadiga_bgo_unbrick` & `panadiga_main_passthrough`: Patching pre-MAIN `PROG061` (`BGO`) e sites TBC Passthrough `E-E` (`0x5771ABFB`, `0x574F7B8C`, `0x574F7C5C`).
+* `panadiga_bgo_unbrick` & `panadiga_main_passthrough`: Patching pre-MAIN `PROG061` (`BGO`: janela `0x84200000..0x843FFFFF` no `PROG061`/`ver0.63` e `0x84130000..0x843FFFFF` no `Loader ver0.61` real do EH55) e sites TBC Passthrough `E-E` (`0x5771ABFB`, `0x574F7B8C`, `0x574F7C5C`).
 * `panadiga_sd_unbrick_kit`: Diagnóstico unificado de unbrick, extração Feistel `.FRM`, geração completa de Kit SD (`DIGADIAG.FRM` + `PANA__SD.FRM`) e validação pós-gravação.
 
 ### 14.3. Subsistema de Logging e Telemetria Unificada (`crates/panadiga-core/src/logger.rs`)

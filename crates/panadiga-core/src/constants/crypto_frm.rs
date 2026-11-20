@@ -118,8 +118,11 @@ pub const PANA_SD_TOC_MAX_ENTRIES: usize = 128;
 /// Total size of the plaintext `PANA__SD.FRM` TOC table in bytes (`0x2000` / 8,192 B).
 pub const PANA_SD_TOC_REGION_SIZE: usize = PANA_SD_TOC_ENTRY_SIZE * PANA_SD_TOC_MAX_ENTRIES;
 
-/// Fixed total size of a padded `DIGADIAG.FRM` diagnostic container (`0x20000` / 131,072 B).
+/// Fixed total size of a padded `DIGADIAG.FRM` diagnostic container (`0x20000` / 131,072 B, `Loader ver0.63`).
 pub const PANA_DIGADIAG_FRM_SIZE: usize = 0x0002_0000;
+
+/// Exact raw uncompressed byte size of `DIGADIAG.FRM` read by DMR-EH55 `Loader ver0.61` (`0x40000` / 256 KiB).
+pub const PANA_DIGADIAG_RAW_VER061_SIZE: usize = 0x0004_0000;
 
 /// Default MN103S RAM jump target executed by `BOOT.BIN` `FUN_44006cd9` after unpacking `DIGADIAG.FRM`.
 pub const PANA_DIGADIAG_DEFAULT_LOAD_ADDR: u32 = 0x5040_0000;

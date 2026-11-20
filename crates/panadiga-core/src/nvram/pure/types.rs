@@ -5,7 +5,7 @@ use anyhow::{Result, bail};
 use crate::constants::{FLASH_16MB_NVRAM_SIZE_BYTES, SPANSION_NVRAM_SIZE_BYTES};
 
 /// Audit metrics for an individual 8 KB micro-sector.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct MicroSectorAudit {
     pub sector_name: String,
     pub offset: usize,
@@ -15,7 +15,7 @@ pub struct MicroSectorAudit {
 }
 
 /// Comprehensive audit summary of the flash cleaning operation.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct NvramCleanReport {
     pub input_file: String,
     pub output_file: String,

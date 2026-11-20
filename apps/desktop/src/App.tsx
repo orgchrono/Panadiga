@@ -62,7 +62,7 @@ const ActiveViewSwitch: React.FC<ActiveViewSwitchProps> = ({ currentView, onNavi
     case 'dashboard': return <DashboardView onNavigate={onNavigate} />;
     case 'nvram': return <NvramView onNavigate={onNavigate} />;
     case 'hdd': return <HddStorageView onNavigate={onNavigate} />;
-    case 'picobench': return <PicoBenchView />;
+    case 'picobench': return <PicoBenchView onNavigate={onNavigate} />;
     case 'frmcrypto': return <FrmCryptoView />;
     case 'manuals': return <ManualsView />;
     case 'hexinspector': return <HexInspectorView />;

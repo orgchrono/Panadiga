@@ -61,10 +61,10 @@ A região de cabeçalho `"Firm list"` ocupa `0x1800` bytes (6.144 B) iniciais ci
 
 Cada entrada inclui ainda `fvu_checksum_u32` (soma de bytes do módulo em `+0x24`), `version_u16`, `target_flag` e `model_group`.
 
-### 2.2 `PANA__SD.FRM` (TOC Plaintext em Slots de 64 Bytes) e `DIGADIAG.FRM`
+### 2.2 `PANA__SD.FRM` (`sd48` vs `sd64` Plaintext) e `DIGADIAG.FRM` (`RAW_VER061` vs `EXTRHEAD`)
 
-- **`PANA__SD.FRM` (`FUN_4400a733` / `FUN_4400a6d0`):** utiliza até `128` slots em **plaintext** de `0x40` (64 B) bytes cada (`PANA_SD_TOC_REGION_SIZE = 0x2000` / 8.192 B). A rotina `FUN_4400a6d0` verifica `list_sum` em `+0x3E` como a soma `u16` dos primeiros `0x3E` (62) bytes (`"_fmu_error: list sum is invalid"` em caso de divergência).
-- **`DIGADIAG.FRM` (`build_digadiag_frm`):** contêiner diagnóstico de tamanho fixo `0x20000` bytes (`PANA_DIGADIAG_FRM_SIZE = 131.072 B`) em modo plaintext, encapsulando um payload binário via `EXTRHEAD`/`EXTRFOOT` (`algo = 0`, zlib, endereço destino padrão `0x50400000`, preenchido com zeros até 128 KiB).
+- **`PANA__SD.FRM` (`sd48` EH55 vs `sd64` `/BOOT.BIN`):** Em hardware real **DMR-EH55 (`Loader ver0.61` + `PROG061` `FUN_5040ebfe`/`FUN_5040ed7c`)**, o formato nativo usa até `128` slots plaintext de **`0x30` (`48` B)** (`PANA_SD48_TOC_REGION_SIZE = 0x1800` / `6.144` B, `list_sum` u16 em `+0x2E`). Já em **`/BOOT.BIN` `ver0.63`** (`FUN_4400a733` / `FUN_4400a6d0`, EZ485V/EH58), utiliza `128` slots plaintext de **`0x40` (`64` B)** (`PANA_SD_TOC_REGION_SIZE = 0x2000` / `8.192` B, `list_sum` u16 em `+0x3E`; `"_fmu_error: list sum is invalid"` em divergência).
+- **`DIGADIAG.FRM` (`RAW_VER061` vs `build_digadiag_frm` `EXTRHEAD`):** No hardware real **DMR-EH55 (`Loader ver0.61 [06/03/06]`)**, `SDDIAG` carrega **exatos `0x40000` (`262.144`) bytes brutos descomprimidos** direto em **`0x90400000`** (`JMP 0x50400000`). Já no **`Loader ver0.63 [07/10/24]` (`/BOOT.BIN`)**, espera contêiner plaintext `EXTRHEAD`/`EXTRFOOT` de **`0x20000` (`131.072`) bytes** (`algo = 0`, zlib, endereço destino `0x50400000`, carregado em `0x93FC0000`).
 
 ### 2.3 Encapsulamento `EXTRHEAD`/`EXTRFOOT` com Cifragem Parcial (`extrhead.rs`)
 

@@ -11,9 +11,9 @@ pub enum TocLayout {
     Dvd48B,
     /// Optical update `PANA_DVD.FRM`: Feistel-encrypted 64-byte (`0x40`) TOC (`EH49`, `EH59`, `EH69`).
     Dvd64B,
-    /// Obsolete early/custom 48-byte (`0x30`) plaintext SD TOC (`OPCAO_3`, rejected by `BOOT.BIN`).
+    /// DMR-EH55 `Loader ver0.61` (`PROG061`): plaintext 48-byte (`0x30`) SD TOC (`0x1800` header).
     Sd48B,
-    /// Verified factory `PANA__SD.FRM`: plaintext 64-byte (`0x40`) TOC (`0x2000` header).
+    /// Later `Loader ver0.63` (`BOOT.BIN`): plaintext 64-byte (`0x40`) SD TOC (`0x2000` header).
     Sd64B,
 }
 
@@ -29,7 +29,7 @@ impl TocLayout {
         match self {
             Self::Dvd48B => "dvd-feistel",
             Self::Dvd64B => "dvd-64b-feistel",
-            Self::Sd48B => "sd-48b-plaintext-obsolete",
+            Self::Sd48B => "sd-48b-plaintext",
             Self::Sd64B => "sd-plaintext",
         }
     }
@@ -38,8 +38,8 @@ impl TocLayout {
         match self {
             Self::Dvd48B => "PANA_DVD.FRM (48B Feistel TOC)",
             Self::Dvd64B => "PANA_DVD.FRM (64B Feistel TOC)",
-            Self::Sd48B => "PANA__SD.FRM (48B Obsolete SD TOC — rejected by BOOT.BIN)",
-            Self::Sd64B => "PANA__SD.FRM (64B Plaintext SD TOC)",
+            Self::Sd48B => "PANA__SD.FRM (48B Plaintext SD TOC — Loader ver0.61)",
+            Self::Sd64B => "PANA__SD.FRM (64B Plaintext SD TOC — Loader ver0.63)",
         }
     }
 }

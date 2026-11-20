@@ -12,22 +12,21 @@ pub use panadiga_core::constants::{
     PANA_EXTRHEAD_DEFAULT_ADLER_STEP, SPANSION_FLASH_SIZE_BYTES,
 };
 
-// ============================================================================
 // 1. Tauri IPC Reactive Event Channels & Transport Prefixes
-// ============================================================================
-
 pub const EVENT_PICO_SERIAL_LOG: &str = "pico://serial-log";
 pub const EVENT_PICO_DIAG_RESULT: &str = "pico://diagnostic-result";
 pub const EVENT_PICO_TELEMETRY: &str = "pico://telemetry";
 pub const EVENT_PICO_NVRAM_CAPTURE: &str = "pico://nvram-live-capture";
 pub const EVENT_PICO_PORTS_CHANGED: &str = "pico://ports-changed";
+pub const EVENT_HDD_FLASH_PROGRESS: &str = "hdd://flash-progress";
+pub const EVENT_NOR_DUMP_PROGRESS: &str = "nor://dump-progress";
+pub const EVENT_BGO_REPAIR_PROGRESS: &str = "bgo://repair-progress";
+pub const EVENT_DAVIS_PROBE_RESULT: &str = "davis://probe-result";
 
 pub const TRANSPORT_PREFIX_BLE: &str = "BLE";
 pub const TRANSPORT_PREFIX_ANDROID_OTG: &str = "ANDROID-USB-OTG";
 
-// ============================================================================
 // 2. Live NVRAM Capture, Telemetry Stream & Serial Port Timeouts
-// ============================================================================
 
 pub const DEFAULT_NVRAM_CAPTURE_WORDS: u32 = 16_384;
 pub const MIN_NVRAM_CAPTURE_WORDS: u32 = 16;
@@ -254,10 +253,7 @@ pub const CANDIDATE_FRM_CONTAINER_PATHS: &[&str] = &[
     "../../firmware_and_images/PANA_DVD.FRM",
 ];
 
-// ============================================================================
 // 5. External Workbench Tool Launchers & Engineering Docs Policy
-// ============================================================================
-
 pub const WIN_SCRIPT_GDB: &str = "conectar_gdb_multiarch.cmd";
 pub const WIN_SCRIPT_GHIDRA: &str = "iniciar_ghidra.cmd";
 pub const WIN_SCRIPT_HXD: &str = "Abrir_HxD.cmd";

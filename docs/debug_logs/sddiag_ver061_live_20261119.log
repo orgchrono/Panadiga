@@ -1,0 +1,33 @@
+VDD: 3.25V (OK)
+[STANDBY] RXD=1 NSW5V=1 TXD=1 XRESET=1 SW_PU=3.26V | State=POWERED / AWAKE (SW_UART ~3.3V)
+[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=119 wdt_recoveries=0 reboot_src=CLEAN fault_slot=255 fault_stage=IDLE last_cmd=ISOLATE last_us=164
+PANADIGA> 
+=== UARTSTREAM: PIO1 115200 8N1 (window=30000 ms, hold=2500 ms) ===
+DDR CHECK: OK
+
+Chip select = 1
+
+***** Loader ver0.61 [06/03/06] *****
+***** serial boot mode *****
+
+!!! start fmu to read & exec fvu. !!!
+wait 1 second.
+*** timer correspond initialize ***
+startup reason = [70]
+Main hung-up time changed 255[s].
+SD init start...
+[SDCD] sdcd_insrmv_check:SD Card inserted 
+[SDCD] === This Card Spec ==== 
+[09]Card type:2(condition:3) wp:0
+[09]capacity:3c4000[LBA](2021654528Byte) [09] transfer speed:25000[Kbps]
+[09]RCA:2 [09] Bus Width:4(current) 4(support)
+[09]Multi Max Block Len Read:2[SECT] / Write:2[SECT]
+SD = 0x3C4000[LBA]
+... SD init end
+
+*** start diag ***
+***** Fvu ver0.61 [05/11/01] *****
+
+[SW_UART] Timed release -> Hi-Z ADC0 (Q7514 TX ready)
+UARTSTREAM: OK (641 bytes, framing_err=0, overflow=NO)
+PANADIGA> 

@@ -25,6 +25,8 @@ ORIG_SUM_BEQ = (0xC8, 0x0A)
 PATCH_SUM_BRA = (0xCA, 0x0A)
 ORIG_DEVINFO_BEQ = (0xC8, 0x15)
 PATCH_DEVINFO_BRA = (0xCA, 0x15)
+ORIG_A2BC_BGO_CALL = (0xDD, 0xD2, 0x81, 0xFF, 0xFF, 0x00, 0x00)
+PATCH_A2BC_BRA_MONITOR = (0xCA, 0x11, 0xCB, 0xCB, 0xCB, 0xCB, 0xCB)
 ORIG_A2CD_HOOK = (0xFC, 0xCC, 0xB0, 0x3E, 0x43, 0x50, 0xF8, 0x07, 0xFC, 0xDD, 0xF7, 0xAA, 0xFF, 0xFF, 0x00, 0x00, 0x80, 0xFF, 0xCA, 0x32)
 PATCH_A2CD_AUTOFORMAT = (0xDD, 0x6F, 0x7C, 0xFF, 0xFF, 0x00, 0x00, 0xA0, 0x00, 0xC8, 0x0B, 0x80, 0xFF, 0xCA, 0x37, 0xCB, 0xCB, 0xCB, 0xCB, 0xCB)
 PATCH_A2CD_UART_MONITOR = (0xDD, 0xC7, 0xF1, 0x02, 0x00, 0x00, 0x00, 0xA0, 0x00, 0xC8, 0x30, 0xA0, 0x01, 0xC8, 0x07, 0x80, 0xFF, 0xCA, 0x33, 0xCB)
@@ -109,27 +111,38 @@ def _label_pair(actual, orig, patch, orig_name, patch_name):
         return patch_name
     return "CUSTOM(" + " ".join(["%02X" % b for b in t[:8]]) + ")"
 
-def classify_prog061_sites(sum_bytes, devinfo_bytes, a2cd_bytes):
+def classify_prog061_sites(sum_bytes, devinfo_bytes, a2cd_bytes, a2bc_bytes=None):
     sum_state = _label_pair(sum_bytes, ORIG_SUM_BEQ, PATCH_SUM_BRA, "FACTORY", "BYPASSED")
     dev_state = _label_pair(devinfo_bytes, ORIG_DEVINFO_BEQ, PATCH_DEVINFO_BRA, "FACTORY", "BYPASSED")
+    a2bc_t = tuple(b & 0xFF for b in a2bc_bytes) if a2bc_bytes is not None else None
+    a2bc_state = (
+        "NOT_CHECKED"
+        if a2bc_bytes is None
+        else _label_pair(a2bc_bytes, ORIG_A2BC_BGO_CALL, PATCH_A2BC_BRA_MONITOR, "FACTORY", "BRA_TO_MONITOR")
+    )
     a2cd_t = tuple(b & 0xFF for b in a2cd_bytes) if a2cd_bytes is not None else None
     if a2cd_t == ORIG_A2CD_HOOK:
         a2cd_state = "FACTORY"
     elif a2cd_t == PATCH_A2CD_AUTOFORMAT:
         a2cd_state = "AUTO_FORMAT_BGO"
     elif a2cd_t == PATCH_A2CD_UART_MONITOR:
-        a2cd_state = "UART_MONITOR_PANAMON1"
+        if a2bc_t is not None and a2bc_t != PATCH_A2BC_BRA_MONITOR:
+            a2cd_state = "UART_MONITOR_HOOK_CONDITIONAL_STALE"
+        else:
+            a2cd_state = "UART_MONITOR_PANAMON1"
     elif a2cd_t is None:
         a2cd_state = "UNMAPPED"
     else:
         a2cd_state = "CUSTOM"
 
-    if sum_state == "FACTORY" and dev_state == "FACTORY" and a2cd_state == "FACTORY":
+    if sum_state == "FACTORY" and dev_state == "FACTORY" and a2cd_state == "FACTORY" and a2bc_state in ("FACTORY", "NOT_CHECKED"):
         mode = "FACTORY_ORIGINAL"
-    elif sum_state == "BYPASSED" and dev_state == "BYPASSED" and a2cd_state == "FACTORY":
+    elif sum_state == "BYPASSED" and dev_state == "BYPASSED" and a2cd_state == "FACTORY" and a2bc_state in ("FACTORY", "NOT_CHECKED"):
         mode = "BYPASS_CHECKS_ONLY"
-    elif sum_state == "BYPASSED" and dev_state == "BYPASSED" and a2cd_state in ("AUTO_FORMAT_BGO", "UART_MONITOR_PANAMON1"):
-        mode = a2cd_state
+    elif sum_state == "BYPASSED" and dev_state == "BYPASSED" and a2cd_state == "AUTO_FORMAT_BGO" and a2bc_state in ("FACTORY", "NOT_CHECKED"):
+        mode = "AUTO_FORMAT_BGO"
+    elif sum_state == "BYPASSED" and dev_state == "BYPASSED" and a2cd_state == "UART_MONITOR_PANAMON1" and a2bc_state in ("BRA_TO_MONITOR", "NOT_CHECKED"):
+        mode = "UART_MONITOR_PANAMON1"
     else:
         mode = "CUSTOM_OR_PARTIAL"
 
@@ -138,6 +151,7 @@ def classify_prog061_sites(sum_bytes, devinfo_bytes, a2cd_bytes):
         "sites": {
             "0x504230F0_bgo_sum_beq": sum_state,
             "0x50405097_devinfo_check_beq": dev_state,
+            "0x5040A2BC_bgo_init_call": a2bc_state,
             "0x5040A2CD_bgo_init_fail_hook": a2cd_state,
         },
     }
@@ -324,6 +338,7 @@ def run_unbrick_audit(prog=None, output_json=None):
         _read_prog_bytes(prog, 0x504230F0, 2),
         _read_prog_bytes(prog, 0x50405097, 2),
         _read_prog_bytes(prog, 0x5040A2CD, 20),
+        _read_prog_bytes(prog, 0x5040A2BC, 7),
     )
     main3410_status = classify_main3410_sites(
         _read_prog_bytes(prog, 0x5771ABFB, 6),
@@ -331,7 +346,7 @@ def run_unbrick_audit(prog=None, output_json=None):
         _read_prog_bytes(prog, 0x574F7C5C, 7),
     )
 
-    for site_addr in ("0x504230F0", "0x50405097", "0x5040A2CD", "0x5771ABFB", "0x574F7B8C", "0x574F7C5C"):
+    for site_addr in ("0x504230F0", "0x50405097", "0x5040A2BC", "0x5040A2CD", "0x5771ABFB", "0x574F7B8C", "0x574F7C5C"):
         _add_bookmark(bm_mgr, space, site_addr, "Panadiga-Unbrick", "Verified Panadiga patch/audit site")
 
     report = {

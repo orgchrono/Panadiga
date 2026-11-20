@@ -1,5 +1,6 @@
 //! Panasonic DMR-EH55 DIGA Engineering Suite - Cross-Platform Desktop & Android Backend Library
 
+#![deny(unsafe_code)]
 #![cfg_attr(not(test), deny(clippy::print_stdout, clippy::print_stderr))]
 
 use tauri::Manager;
@@ -98,6 +99,16 @@ macro_rules! build_invoke_handler {
             run_matshita_serial_cmd,
             verify_frm_unlock_command,
             pack_unlock_frm_command,
+            inspect_region_calibration_command,
+            apply_region_calibration_command,
+            harden_sd_unbrick_kit_command,
+            apply_main_tbc_bypasses_command,
+            inspect_safe_target_disks_command,
+            flash_eh55_hdd_safe_command,
+            pico_eh55_nor_dump_command,
+            pico_eh55_bgo_audit_command,
+            pico_eh55_bgo_repair_command,
+            pico_probe_davis_ide_command,
             get_runtime_settings,
             save_runtime_settings,
             reset_runtime_settings,

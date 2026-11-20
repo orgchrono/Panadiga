@@ -4,6 +4,8 @@
 //! MN103S machine code strictly guarded to read-only cached (`0x80000000..0x80800000`) and
 //! uncached (`0x84000000..0x84800000`) NOR windows, and verifies `PANADMP1..PANADONE` dumps.
 
+pub mod orchestrator;
+pub mod spansion_audit;
 mod stream;
 mod stub;
 
@@ -12,7 +14,15 @@ use serde::{Deserialize, Serialize};
 
 use crate::constants::PANA_DIGADIAG_DEFAULT_LOAD_ADDR;
 
-pub use stream::decode_nor_dump_stream;
+pub use orchestrator::{
+    DEFAULT_NOR_CAPTURE_CHUNK_BYTES, NorCaptureConfig, NorCaptureOrchestrator, NorCaptureResult,
+    NorSliceCaptureReport, NorSlicePreset,
+};
+pub use spansion_audit::{
+    SpansionNorAuditReport, SpansionNvramHealth, SpansionRegionKind, SpansionSectorSummary,
+    analyze_spansion_nor_sectors, spansion_s29jl064h_sector_table,
+};
+pub use stream::{decode_nor_dump_stream, decode_nor_dump_stream_slice};
 pub(crate) use stub::PUTC_D3_BYTES;
 pub use stub::{build_nor_dumper_artifact, build_readonly_nor_dumper_stub};
 

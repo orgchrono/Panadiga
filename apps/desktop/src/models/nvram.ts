@@ -28,7 +28,18 @@ export interface NvramCleanReport {
   bootloader_immutable: boolean;
 }
 
-export type SectorType = 'bootloader' | 'os_firmware' | 'normal_sector' | 'nvram_microsector';
+export type SectorType =
+  | 'bootloader'
+  | 'os_firmware'
+  | 'bgo_region'
+  | 'normal_sector'
+  | 'nvram_microsector';
+
+export type FlashSectorWritePolicy =
+  | 'E05_READ_ONLY'
+  | 'UPPER_NOR_GUARDED'
+  | 'BGO_UNLOCK_GUARDED'
+  | 'NVRAM_AUTHORIZED';
 
 export interface FlashSectorInfo {
   index: number;
@@ -37,6 +48,7 @@ export interface FlashSectorInfo {
   end_offset: number;
   size_bytes: number;
   sector_type: SectorType;
+  write_policy?: FlashSectorWritePolicy;
   is_corrupted_area: boolean;
   status: 'clean' | 'corrupted' | 'factory' | 'immutable';
   active_bytes?: number;

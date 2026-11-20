@@ -5,10 +5,11 @@ use std::{fs, path::Path};
 use anyhow::{Result, bail};
 use serde_json::{Value, json};
 
+use panadiga_core::constants::DEFAULT_SD_UNBRICK_KIT_DIR;
 use panadiga_core::crypto::parse_u32_radix;
 use panadiga_core::re::{
-    MainPassthroughMode, Prog061BgoPatchMode, SdUnbrickKitRequest, extract_modules_from_frm,
-    inspect_unbrick_workspace,
+    MainPassthroughMode, Prog061BgoPatchMode, SdLoaderProfile, SdUnbrickKitRequest,
+    extract_modules_from_frm, inspect_unbrick_workspace,
     matshita_emu::{
         MatshitaBootScenario, MatshitaOddEmulator, build_sample_unlock_frm, parse_hex_payload,
         parse_unlock_container_mode, verify_unlock_frm_container,
@@ -126,12 +127,17 @@ pub fn handle_sd_unbrick_kit(args: &Value, workspace_root: &Path) -> Result<Valu
             Ok(serde_json::to_value(rep)?)
         }
         "verify_sd" => {
-            let dir = require_non_empty_str(args, "sd_root_dir")?;
+            let dir =
+                optional_non_empty_str(args, "sd_root_dir").unwrap_or(DEFAULT_SD_UNBRICK_KIT_DIR);
             let rep = verify_sd_unbrick_media(&resolve_workspace_path(workspace_root, dir));
             Ok(serde_json::to_value(rep)?)
         }
         "prepare_sd" => {
-            let out_dir = require_non_empty_str(args, "output_dir")?;
+            let out_dir =
+                optional_non_empty_str(args, "output_dir").unwrap_or(DEFAULT_SD_UNBRICK_KIT_DIR);
+            let loader_profile: SdLoaderProfile = optional_non_empty_str(args, "loader_profile")
+                .unwrap_or("ver061")
+                .parse()?;
             let bgo_mode: Prog061BgoPatchMode = optional_non_empty_str(args, "bgo_mode")
                 .unwrap_or("bypass")
                 .parse()?;
@@ -179,6 +185,7 @@ pub fn handle_sd_unbrick_kit(args: &Value, workspace_root: &Path) -> Result<Valu
                 bgo_mode,
                 allow_unsafe_auto_format,
                 main_passthrough_mode: passthrough_mode,
+                loader_profile,
                 include_pana_sd,
                 unlock_hdd_dynamic,
                 hdd_target_gb,

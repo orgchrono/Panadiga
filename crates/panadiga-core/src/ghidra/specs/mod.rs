@@ -178,6 +178,27 @@ mod tests {
                 .any(|r| r.name == "SDCD_HOST_MMIO" && r.start == 0x8900_1800)
         );
         assert!(
+            regions
+                .iter()
+                .any(|r| r.name == "FLASH_NOR_CS1_BGO" && r.start == 0x8420_0000)
+        );
+        assert!(regions.iter().any(|r| {
+            r.name == "FLASH_NOR_CS1_EH55_BGO" && r.start == 0x8413_0000 && r.size == 0x002D_0000
+        }));
+        assert!(regions.iter().any(|r| {
+            r.name == "PROG061_SDRAM_UNCACHED" && r.start == 0x9040_0000 && r.size == 0x0004_0000
+        }));
+        assert!(
+            symbols
+                .iter()
+                .any(|s| s.name == "EH55_BGO_GEOMETRY_TABLE" && s.address == 0x4403_37A4)
+        );
+        assert!(
+            symbols
+                .iter()
+                .any(|s| s.name == "UPPER_EEMUL_BASE" && s.address == 0x8440_0000)
+        );
+        assert!(
             symbols
                 .iter()
                 .any(|s| s.name == "SC0TXB_UART0_TX_BYTE" && s.address == 0xD400_2008)

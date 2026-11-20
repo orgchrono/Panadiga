@@ -2,7 +2,9 @@
 
 use panadiga_core::constants::{resolve_workspace_root, resolve_writable_data_root};
 use panadiga_core::crypto::parse_u32_radix;
-use panadiga_core::re::{MainPassthroughMode, Prog061BgoPatchMode, SdUnbrickKitRequest};
+use panadiga_core::re::{
+    MainPassthroughMode, Prog061BgoPatchMode, SdLoaderProfile, SdUnbrickKitRequest,
+};
 use serde::Deserialize;
 use serde_json::Value;
 use std::path::PathBuf;
@@ -24,6 +26,7 @@ pub struct SdUnbrickKitRequestDto {
     pub bgo_mode: Option<String>,
     pub allow_unsafe_auto_format: Option<bool>,
     pub main_passthrough_mode: Option<String>,
+    pub loader_profile: Option<String>,
     pub include_pana_sd: Option<bool>,
     pub unlock_hdd_dynamic: Option<bool>,
     pub hdd_target_gb: Option<u32>,
@@ -70,6 +73,12 @@ pub(crate) fn to_sd_unbrick_kit_request(
         .unwrap_or(DEFAULT_MAIN_PASSTHROUGH_MODE)
         .parse()
         .map_err(|e: anyhow::Error| PanadigaIpcError::validation(e.to_string()))?;
+    let loader_profile: SdLoaderProfile = dto
+        .loader_profile
+        .as_deref()
+        .unwrap_or("ver061")
+        .parse()
+        .map_err(|e: anyhow::Error| PanadigaIpcError::validation(e.to_string()))?;
 
     let out_trimmed = dto.output_dir.trim();
     if out_trimmed.is_empty() {
@@ -93,6 +102,7 @@ pub(crate) fn to_sd_unbrick_kit_request(
         bgo_mode,
         allow_unsafe_auto_format: dto.allow_unsafe_auto_format.unwrap_or(false),
         main_passthrough_mode,
+        loader_profile,
         include_pana_sd: dto.include_pana_sd.unwrap_or(true),
         unlock_hdd_dynamic: dto.unlock_hdd_dynamic.unwrap_or(true),
         hdd_target_gb: dto.hdd_target_gb,

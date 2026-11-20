@@ -3,17 +3,31 @@ import { Loader2, RefreshCw, ShieldAlert, Wrench } from 'lucide-react';
 import { useUnbrickViewModel } from '@/viewmodels/useUnbrickViewModel';
 import { useWorkbenchMode } from '@/context/WorkbenchModeContext';
 import {
+  CalibrationRegionPipeline,
   MatshitaEmulatorCard,
   SdKitBuilderCard,
+  TbcLabAndSdHardenPipeline,
   TbcPassthroughCard,
   UnbrickArchitectureCard,
 } from '@/components/unbrick';
-import { Alert, AlertDescription, AlertTitle, Badge, Button } from '@/components/ui';
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+  Badge,
+  Button,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui';
+import { useCalibrationTbcViewModel } from '@/viewmodels/pipelines';
 import { useTranslation } from '@/i18n/useTranslation';
 
 export const UnbrickView: React.FC = () => {
   const { t } = useTranslation();
   const { isAdvanced, setMode } = useWorkbenchMode();
+  const { calibration, tbcSd } = useCalibrationTbcViewModel();
   const {
     workbench,
     sdKit,
@@ -103,72 +117,93 @@ export const UnbrickView: React.FC = () => {
             onExtractFrm={extractFrmModules}
           />
 
-          <div className={isAdvanced ? 'grid grid-cols-1 xl:grid-cols-2 gap-6 items-start' : 'space-y-6'}>
-            <SdKitBuilderCard
-              discoveredPanaDvd={data?.discovered_pana_dvd ?? null}
-              discoveredSdDir={data?.discovered_sd_dir ?? null}
-              kitLoading={sdKit.loading}
-              kitResult={sdKit.data}
-              kitError={sdKit.error}
-              verifyLoading={verify.loading}
-              verifyResult={verify.data}
-              verifyError={verify.error}
-              onBuildKit={buildSdKit}
-              onVerifyMedia={verifySdMedia}
-              diskLoading={sdDisk.loading}
-              diskResult={sdDisk.data}
-              diskError={sdDisk.error}
-              onInspectSdDisk={inspectSdDisk}
-              sdDrives={sdDrives}
-              sdDriveFilter={sdDriveFilter}
-              onChangeSdDriveFilter={setSdDriveFilter}
-              sdDrivesLoading={sdDrivesLoading}
-              onRefreshSdDrives={() => void refreshSdDrives()}
-              autoSdDiskTarget={autoSdDiskTarget}
-              autoSdMountDir={autoSdMountDir}
-            />
+          <Tabs defaultValue="tbc-sd-harden" className="space-y-4">
+            <TabsList aria-label={t('unbrick.tabs.tablistAria')} className="flex flex-wrap h-auto gap-1">
+              <TabsTrigger value="tbc-sd-harden" data-testid="unbrick-tab-tbc-sd">
+                {t('unbrick.tabs.tbcSdHarden')}
+              </TabsTrigger>
+              <TabsTrigger value="calibration-region" data-testid="unbrick-tab-calibration">
+                {t('unbrick.tabs.calibrationRegion')}
+              </TabsTrigger>
+              <TabsTrigger value="matshita-emu" data-testid="unbrick-tab-matshita">
+                {t('unbrick.tabs.matshitaEmu')}
+              </TabsTrigger>
+            </TabsList>
 
-            {isAdvanced && (
-              <TbcPassthroughCard
-                discoveredMainPath={data?.discovered_main_3410pq ?? null}
-                tbcLoading={tbc.loading}
-                tbcReport={tbc.data}
-                tbcError={tbc.error}
-                rspLoading={rspPlan.loading}
-                rspPlan={rspPlan.data}
-                norStubLoading={norStub.loading}
-                norStubResult={norStub.data}
-                onRunTbc={runMainPassthrough}
-                onRefreshRspPlan={generateRspPlan}
-                onBuildNorStub={buildNorStub}
-              />
-            )}
-          </div>
+            <TabsContent value="tbc-sd-harden" className="space-y-6">
+              <div className={isAdvanced ? 'grid grid-cols-1 xl:grid-cols-2 gap-6 items-start' : 'space-y-6'}>
+                <SdKitBuilderCard
+                  discoveredPanaDvd={data?.discovered_pana_dvd ?? null}
+                  discoveredSdDir={data?.discovered_sd_dir ?? null}
+                  kitLoading={sdKit.loading}
+                  kitResult={sdKit.data}
+                  kitError={sdKit.error}
+                  verifyLoading={verify.loading}
+                  verifyResult={verify.data}
+                  verifyError={verify.error}
+                  onBuildKit={buildSdKit}
+                  onVerifyMedia={verifySdMedia}
+                  diskLoading={sdDisk.loading}
+                  diskResult={sdDisk.data}
+                  diskError={sdDisk.error}
+                  onInspectSdDisk={inspectSdDisk}
+                  sdDrives={sdDrives}
+                  sdDriveFilter={sdDriveFilter}
+                  onChangeSdDriveFilter={setSdDriveFilter}
+                  sdDrivesLoading={sdDrivesLoading}
+                  onRefreshSdDrives={() => void refreshSdDrives()}
+                  autoSdDiskTarget={autoSdDiskTarget}
+                  autoSdMountDir={autoSdMountDir}
+                />
 
-          {isAdvanced ? (
-            <MatshitaEmulatorCard
-              bootState={matshitaBoot}
-              injectState={matshitaInject}
-              serialState={matshitaSerial}
-              frmVerifyState={frmVerify}
-              frmPackState={frmPack}
-              onRunBoot={runMatshitaBoot}
-              onInjectWrite={injectMatshitaWrite}
-              onRunSerial={runMatshitaSerial}
-              onVerifyFrm={verifyUnlockFrm}
-              onPackFrm={packUnlockFrm}
-            />
-          ) : (
-            <div className="rounded-xl bg-bench-900/70 border border-slate-800 px-4 py-3 flex flex-wrap items-center justify-between gap-3 text-xs">
-              <span className="text-slate-400 font-sans">
-                {t('unbrick.basicModeBanner')}
-              </span>
-              <Button type="button" variant="outline" size="sm" onClick={() => setMode('advanced')} className="gap-1.5 text-xs">
-                <Wrench className="w-3.5 h-3.5 text-cyan-400" />
-                <span>{t('unbrick.revealAdvancedBtn')}</span>
-              </Button>
-            </div>
-          )}
+                {isAdvanced && (
+                  <TbcPassthroughCard
+                    discoveredMainPath={data?.discovered_main_3410pq ?? null}
+                    tbcLoading={tbc.loading}
+                    tbcReport={tbc.data}
+                    tbcError={tbc.error}
+                    rspLoading={rspPlan.loading}
+                    rspPlan={rspPlan.data}
+                    norStubLoading={norStub.loading}
+                    norStubResult={norStub.data}
+                    onRunTbc={runMainPassthrough}
+                    onRefreshRspPlan={generateRspPlan}
+                    onBuildNorStub={buildNorStub}
+                  />
+                )}
+              </div>
+              <TbcLabAndSdHardenPipeline vm={tbcSd} />
+            </TabsContent>
+
+            <TabsContent value="calibration-region">
+              <CalibrationRegionPipeline vm={calibration} />
+            </TabsContent>
+
+            <TabsContent value="matshita-emu">
+              {isAdvanced ? (
+                <MatshitaEmulatorCard
+                  bootState={matshitaBoot}
+                  injectState={matshitaInject}
+                  serialState={matshitaSerial}
+                  frmVerifyState={frmVerify}
+                  frmPackState={frmPack}
+                  onRunBoot={runMatshitaBoot}
+                  onInjectWrite={injectMatshitaWrite}
+                  onRunSerial={runMatshitaSerial}
+                  onVerifyFrm={verifyUnlockFrm}
+                  onPackFrm={packUnlockFrm}
+                />
+              ) : (
+                <div className="rounded-xl bg-bench-900/70 border border-slate-800 px-4 py-3 flex flex-wrap items-center justify-between gap-3 text-xs">
+                  <span className="text-slate-400 font-sans">{t('unbrick.basicModeBanner')}</span>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setMode('advanced')} className="gap-1.5 text-xs">
+                    <Wrench className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>{t('unbrick.revealAdvancedBtn')}</span>
+                  </Button>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </>
       )}
     </div>

@@ -4,7 +4,7 @@
 # Auditoria Exaustiva de `??` (`Undefined`) no Disassembly MN103S / AM34 (Ghidra) / Exhaustive `??` Undefined-Byte Disassembly Audit
 
 > **Projeto Analisado (somente leitura) / Inspected Project (strictly read-only):** `C:\ghidra\projects\Panadiga_MN103S` (`mn10300:LE:32:default`)  
-> **Artefatos complementares / Companion Artifacts:** [Índice de Pseudocódigo](./INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) · [Evidência Integral (13.677 linhas)](./EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md) · [Raw Captures](./raw/doc_boot_core.txt)
+> **Artefatos complementares / Companion Artifacts:** [Índice de Pseudocódigo](./INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) · [Evidência Integral (26.555 linhas)](./EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md) · [Raw Captures](./raw/doc_boot_core.txt)
 
 ---
 
@@ -54,7 +54,7 @@
 ## 3. Como o Ecossistema Panadiga Trata Isso Sem Mutar o Banco `.gpr` / Read-Only Ecosystem Resolution
 
 1. **CLI Nativa Rust / Native Rust CLI (`panadiga re`):**
-   - `panadiga re audit --input <BIN>` automatically detects all **7 Traps** (`orphan_code_pointers`, `cfi_constant_sites`, `mid_instruction_overlaps`, `setlb_loop_count`, `am33_f9_ea_sites`, `am33_ff_pre_rets_sites`) directly in Rust ([`crates/panadiga-core/src/re/mn10300_traps/`](../../crates/panadiga-core/src/re/mn10300_traps/mod.rs)).
+   - `panadiga re audit --input <BIN>` automatically detects all **7 static MN10300 trap families** (`orphan_code_pointers`, `cfi_constant_sites`, `mid_instruction_overlaps`, `setlb_loop_count`, `am33_f9_ea_sites`, `am33_ff_pre_rets_sites`) directly in Rust ([`crates/panadiga-core/src/re/mn10300_traps/`](../../crates/panadiga-core/src/re/mn10300_traps/mod.rs)); see also [Part V of `EVIDENCIA`](./EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md#L26534) for all **10** Ghidra/SLEIGH decompiler trap classes (including `#8 SUB fb 9c`, `#9 NOT Dm1,Dn0 -> XOR`, and `#10 BTST SIMM,Rn0 -> mn_todo()`).
    - `panadiga re xrefs`, `panadiga re drv-cli`, and `panadiga re drv-errors` extract cross-references, `<8sIII>` dispatch tables, and the `0x34`-byte Shift-JIS error dictionary.
 2. **Gerador Jython / Jython Generator (`panadiga ghidra export-all`):**
    - Exports [`tools/ghidra/ghidra_mn103_fix_decompilation.py`](../../tools/ghidra/ghidra_mn103_fix_decompilation.py) and [`tools/ghidra/ghidra_auto_unbrick_audit.py`](../../tools/ghidra/ghidra_auto_unbrick_audit.py) so operators can recover orphan prologues, fix stack-purge, and resolve cross-references safely inside Ghidra.

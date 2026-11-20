@@ -2,7 +2,7 @@
 
 use anyhow::{Context, Result, bail};
 
-use super::super::codec::parse_u32_radix;
+use super::super::codec::{compute_fvu_byte_sum, parse_u32_radix};
 use super::super::feistel::feistel_decrypt_buffer;
 use super::super::toc::{decrypt_frm_toc_with_detected_key, parse_sd_frm_toc};
 use super::super::types::DecryptedFrmTocEntry;
@@ -68,9 +68,7 @@ pub fn verify_packed_frm_roundtrip(
         } else {
             &bytes[start..end]
         };
-        let actual_sum = payload_slice
-            .iter()
-            .fold(0u32, |acc, &b| acc.wrapping_add(u32::from(b)));
+        let actual_sum = compute_fvu_byte_sum(payload_slice);
         if actual_sum != entry.fvu_checksum_u32 {
             bail!(
                 "FVU byte-sum mismatch for '{}': TOC 0x{:08X} vs computed 0x{:08X}",

@@ -88,7 +88,7 @@ flowchart TD
 * **Pre-Flight Guided Triage:** Run `panadiga pico bench-wizard` first when diagnosing `U99` / Standby drops; Ghidra attaches live only after `PANAMON1>` or `_dev_SERIAL` answers over `UARTP2M_T`.
 
 ### 2.4 HxD Hex Editor Portable Integration
-* Automated binary inspection via [`tools/Abrir_HxD.cmd`](../../tools/Abrir_HxD.cmd) launching [`tools/HxD/app/HxD64.exe`](../../tools/HxD/app/HxD64.exe) pre-loaded with the first available lab artifact (`panasonic_dmr-eh55_flash_dump.bin`, `panasonic_dmr_ez485v_flash_dump_4mb.bin`, `panasonic DMR EH-55 Firmware hdd_100.bin`, or `PANA_DVD.FRM`).
+* Automated binary inspection via [`tools/Abrir_HxD.cmd`](../../tools/Abrir_HxD.cmd) launching [`tools/HxD/app/HxD64.exe`](../../tools/HxD/app/HxD64.exe) pre-loaded with the first available lab artifact (`eh55_nor_8mb_ic5001_dump.bin`, `panasonic_dmr-eh55_flash_dump.bin`, `panasonic_dmr_ez485v_flash_dump_4mb.bin`, `panasonic DMR EH-55 Firmware hdd_100.bin`, or `PANA_DVD.FRM`).
 
 ---
 
@@ -98,9 +98,9 @@ flowchart TD
 | :--- | :---: | :---: | :---: | :---: | :--- |
 | **`INTERNAL_SRAM`** | `0x00000000` | `0x0003FFFF` | `256` | `rwx` | On-chip fast work SRAM (`AM34_SRAM_LOADER_BASE` @ `0x00004000`, `4 KiB`) |
 | **`CORE_MMIO`** | `0x10000000` | `0x1000FFFF` | `64` | `rw-` | Core AM34 / UniPhier peripheral bus MMIO |
-| **`MAIN_SDRAM`** | `0x40000000` | `0x43FFFFFF` | `65536` | `rwx` | External system SDRAM (stage windows: `0x44000000` BOOT, `0x50400000` PROG061, `0x57000000` MAIN, uncached `0x90000000`) |
-| **`FLASH_NOR_IPL`** | `0x80000000` | `0x807EFFFF` | `8128` | `r-x` | Protected Spansion `S29JL064H` IPL & compressed modules (uncached CS1 @ `0x84000000`, BGO @ `0x84200000`) |
-| **`NVRAM_U99`** | `0x807F0000` | `0x807FFFFF` | `64` | `rw-` | `EEMUL` top-boot circular NVRAM sector (Target of `U99` unbrick; uncached @ `0x847F0000`) |
+| **`MAIN_SDRAM`** | `0x40000000` | `0x43FFFFFF` | `65536` | `rwx` | External system SDRAM (stage windows: `0x44000000` BOOT, `0x50400000` PROG061, `0x57000000` MAIN; uncached `0x90000000` / `0x90400000` mirror for `PANADMP1` `0x9043950E` & RAM stubs `0x90439B40`) |
+| **`FLASH_NOR_IPL`** | `0x80000000` | `0x807EFFFF` | `8128` | `r-x` | Spansion `S29JL064H` (`IC5001`, CS0 / uncached CS1 @ `0x84000000`): IPL `Loader ver0.61` (`0x84000000..0x8403FFFF`, `SA0..SA10`), `DRV` (`0x84080000`), real EH55 `ver0.61` BGO (`0x84130000..0x843FFFFF`, `SA26..SA70` vs `ver0.63`/`PROG061` `0x84200000..0x843FFFFF`), Upper EEMUL (`SA71..SA133`, `0x84400000..0x847EFFFF`) |
+| **`NVRAM_U99`** | `0x807F0000` | `0x807FFFFF` | `64` | `rw-` | `SA134..SA141` (`8×8 KiB` uncached @ `0x847F0000`; live `IC5001` dump holds `6 B` `"1284"` header in `SA134` + `0xFF` in `SA135..SA141`) |
 | **`SYSTEM_MMIO`** | `0xC0000000` | `0xC0003FFF` | `16` | `rw-` | UniPhier ASIC system registers |
 | **`AM34_OCD_MMIO`** | `0xC0004000` | `0xC00040FF` | `1` | `rw-` | On-Chip Debug / hardware trace registers |
 | **`ATA_IDE_MMIO`** | `0xD4000000` | `0xD4000FFF` | `4` | `rw-` | ATA/IDE host controller MMIO (`DAVIS` IDE @ `0x89000500`/`0x89000D00`, `SDCD` @ `0x89001800`, `SC0` UART0 @ `0xD4002000`) |

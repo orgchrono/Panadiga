@@ -112,8 +112,8 @@ In-circuit debugging over the P7501 header requires resilient telemetry handling
 | :--- | :---: | :--- | :--- |
 | `0x00000000` – `0x03FFFFFF` | 64 MB | Main SDRAM (32-bit @ 162 MHz) | Operating system kernel code, OSD framebuffers, dynamic heap. |
 | `0x04000000` – `0x07FFFFFF` | 64 MB | Video / Audio SDRAM (MPEG-2) | Hardware MPEG codec transport stream circular buffers. |
-| `0x80000000` – `0x807EFFFF` | 8,128 KB | Spansion NOR Flash (IPL / Bootloader) | **Strict Read-Only.** Root-of-Trust and initial program loader. |
-| `0x807F0000` – `0x807FFFFF` | 64 KB | Spansion NOR Flash (EEMUL NVRAM) | **Surgical Write Area.** Sectors SA134..SA141. U99 recovery target. |
+| `0x80000000` – `0x807EFFFF` | 8,128 KB | Spansion NOR Flash (`IC5001` / CS0; uncached CS1 `0x84000000`) | **IPL Protected (`256 KiB` `SA0..SA10` [`SA0..SA3` policy] immutable RO)** + `DRV` (`0x84080000`) + real EH55 `ver0.61` BGO (`SA26..SA70` `0x84130000..0x843FFFFF` vs `ver0.63` `0x84200000..0x843FFFFF`) + Upper EEMUL (`SA71..SA133` `0x84400000..0x847EFFFF`). |
+| `0x807F0000` – `0x807FFFFF` | 64 KB | Spansion NOR Flash (Top NVRAM / EEMUL) | **Surgical Write Area.** `SA134..SA141` (`0x847F0000..0x847FFFFF`; live EH55 dump holds `6 B` `"1284"` header in `SA134` + `0xFF` in `SA135..SA141`). |
 | `0xD0000000` – `0xD0003FFF` | 16 KB | Internal SoC SRAM (Uncached) | Hosts the injected `ram_loader` during Cold Break-In. |
 | `0xD4000000` – `0xD4000FFF` | 4 KB | PATA Controller MMIO Registers | ATA/ATAPI commands, DMA channels, and IDE drive transfers. |
 | `0xD8000000` – `0xD80001FF` | 512 B | DVD Optical Servo Registers | Focus, tracking, spindle speed control, and laser calibration. |

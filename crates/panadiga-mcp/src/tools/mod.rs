@@ -1,11 +1,16 @@
+#![deny(unsafe_code)]
+
 //! Tool registry and execution dispatcher for the Panadiga MCP Server.
 
 mod defs_core;
 mod defs_re;
+mod defs_re_ext;
 pub mod forensics;
 pub mod forensics_re;
 pub mod hardware;
 pub mod knowledge;
+pub mod re_ext;
+pub mod re_ext_bench;
 pub mod unbrick;
 pub mod visuals;
 
@@ -16,6 +21,7 @@ use std::path::Path;
 pub fn tool_definitions() -> Vec<Value> {
     let mut defs = defs_core::core_tool_definitions();
     defs.extend(defs_re::re_tool_definitions());
+    defs.extend(defs_re_ext::re_ext_tool_definitions());
     defs
 }
 
@@ -39,6 +45,12 @@ pub fn execute_tool(name: &str, args: &Value, workspace_root: &Path) -> Result<V
         "panadiga_search_code" => knowledge::handle_search_code(args),
         "panadiga_ghidra_symbols" => Ok(knowledge::handle_ghidra_symbols(args)),
         "panadiga_search_visuals" => Ok(visuals::handle_search_visuals(args, workspace_root)),
+        "panadiga_region_compat" => re_ext::handle_region_compat(args, workspace_root),
+        "panadiga_hdd_flash_inspect" => re_ext::handle_hdd_flash_inspect(args),
+        "panadiga_tbc_appliance_plan" => re_ext::handle_tbc_appliance_plan(args),
+        "panadiga_nor_sector_audit" => re_ext::handle_nor_sector_audit(args, workspace_root),
+        "panadiga_eh55_bgo" => re_ext_bench::handle_eh55_bgo(args, workspace_root),
+        "panadiga_davis_probe" => re_ext_bench::handle_davis_probe(args, workspace_root),
         _ => anyhow::bail!("Unknown tool: {}", name),
     }
 }

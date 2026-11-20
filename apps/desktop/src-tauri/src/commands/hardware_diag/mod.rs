@@ -1,14 +1,19 @@
 //! Panasonic DMR-EH55 DIGA Suite - SSOT, Granular Diagnostics & Reactive Streaming Commands
-//!
-//! Modularized by SRP:
-//! - `capture`: Live in-circuit NVRAM sector chunking & inspection
-//! - `telemetry`: Managed background port observer and live telemetry streaming
-//! - Root module: Hardware SSOT DTO, canonical reply parser, and `pico_execute_diagnostic`
+
+#![deny(unsafe_code)]
 
 mod capture;
+mod davis_ide;
+mod eh55_bgo;
+mod eh55_bgo_dto;
+mod eh55_bgo_repair;
 mod telemetry;
 
 pub use capture::pico_capture_nvram_live;
+pub use davis_ide::*;
+pub use eh55_bgo::*;
+pub use eh55_bgo_dto::*;
+pub use eh55_bgo_repair::*;
 pub use telemetry::{set_pico_telemetry_stream, start_port_mutation_observer};
 
 use serde::Serialize;

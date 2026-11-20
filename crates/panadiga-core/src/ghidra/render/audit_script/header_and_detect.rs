@@ -1,6 +1,7 @@
 //! Python preamble, SSOT byte/MMIO/XREF constants, stage detection, and patch-site classifiers.
 
 use super::super::{format_py_byte_tuple, render_keywords, render_labeled_tuples};
+use super::AuditSiteVas;
 use crate::constants::{
     AM34_BOOT_BIN_BASE, AM34_DRV_S211_BASE, AM34_FLASH_BASE, AM34_FLASH_SIZE,
     AM34_FLASH_UNCACHED_BASE,
@@ -10,18 +11,17 @@ use crate::ghidra::specs::{
     critical_xref_targets,
 };
 use crate::re::bgo_unbrick::{
-    OFF_BGO_INIT_FAIL_HOOK, OFF_BGO_SUM_BEQ, OFF_DEVINFO_CHECK_BEQ, ORIG_A2CD_HOOK,
-    ORIG_DEVINFO_BEQ, ORIG_SUM_BEQ, PATCH_A2CD_AUTOFORMAT, PATCH_DEVINFO_BRA, PATCH_SUM_BRA,
-    PROG061_BASE_VA, PROG061_EXPECTED_SIZE,
+    ORIG_A2BC_BGO_CALL, ORIG_A2CD_HOOK, ORIG_DEVINFO_BEQ, ORIG_SUM_BEQ, PATCH_A2BC_BRA_MONITOR,
+    PATCH_A2CD_AUTOFORMAT, PATCH_DEVINFO_BRA, PATCH_SUM_BRA, PROG061_BASE_VA,
+    PROG061_EXPECTED_SIZE,
 };
 use crate::re::main_passthrough::{
-    MAIN_BASE_VA, OFF_FPC_STATUS_CTRL, OFF_ODD_INIT_STATUS, OFF_ODD_STATE_BRANCH,
-    ORIG_FPC_STATUS_CTRL, ORIG_ODD_INIT_STATUS, ORIG_ODD_STATE_BRANCH, PATCH_FPC_STATUS_CTRL,
-    PATCH_ODD_INIT_STATUS, PATCH_ODD_STATE_BRANCH,
+    MAIN_BASE_VA, ORIG_FPC_STATUS_CTRL, ORIG_ODD_INIT_STATUS, ORIG_ODD_STATE_BRANCH,
+    PATCH_FPC_STATUS_CTRL, PATCH_ODD_INIT_STATUS, PATCH_ODD_STATE_BRANCH,
 };
 use crate::re::prog061_uart_monitor::PATCH_A2CD_UART_MONITOR;
 
-pub(super) fn render_header_and_classifiers() -> String {
+pub(super) fn render_header_and_classifiers(vas: &AuditSiteVas) -> String {
     let kw_block = render_keywords();
     let mmio_block = render_labeled_tuples(&audit_mmio_constants());
     let xref_block = render_labeled_tuples(&critical_xref_targets());
@@ -54,6 +54,8 @@ ORIG_SUM_BEQ = {orig_sum_beq}
 PATCH_SUM_BRA = {patch_sum_bra}
 ORIG_DEVINFO_BEQ = {orig_devinfo_beq}
 PATCH_DEVINFO_BRA = {patch_devinfo_bra}
+ORIG_A2BC_BGO_CALL = {orig_a2bc}
+PATCH_A2BC_BRA_MONITOR = {patch_a2bc}
 ORIG_A2CD_HOOK = {orig_a2cd}
 PATCH_A2CD_AUTOFORMAT = {patch_a2cd_auto}
 PATCH_A2CD_UART_MONITOR = {patch_a2cd_mon}
@@ -113,27 +115,38 @@ def _label_pair(actual, orig, patch, orig_name, patch_name):
         return patch_name
     return "CUSTOM(" + " ".join(["%02X" % b for b in t[:8]]) + ")"
 
-def classify_prog061_sites(sum_bytes, devinfo_bytes, a2cd_bytes):
+def classify_prog061_sites(sum_bytes, devinfo_bytes, a2cd_bytes, a2bc_bytes=None):
     sum_state = _label_pair(sum_bytes, ORIG_SUM_BEQ, PATCH_SUM_BRA, "FACTORY", "BYPASSED")
     dev_state = _label_pair(devinfo_bytes, ORIG_DEVINFO_BEQ, PATCH_DEVINFO_BRA, "FACTORY", "BYPASSED")
+    a2bc_t = tuple(b & 0xFF for b in a2bc_bytes) if a2bc_bytes is not None else None
+    a2bc_state = (
+        "NOT_CHECKED"
+        if a2bc_bytes is None
+        else _label_pair(a2bc_bytes, ORIG_A2BC_BGO_CALL, PATCH_A2BC_BRA_MONITOR, "FACTORY", "BRA_TO_MONITOR")
+    )
     a2cd_t = tuple(b & 0xFF for b in a2cd_bytes) if a2cd_bytes is not None else None
     if a2cd_t == ORIG_A2CD_HOOK:
         a2cd_state = "FACTORY"
     elif a2cd_t == PATCH_A2CD_AUTOFORMAT:
         a2cd_state = "AUTO_FORMAT_BGO"
     elif a2cd_t == PATCH_A2CD_UART_MONITOR:
-        a2cd_state = "UART_MONITOR_PANAMON1"
+        if a2bc_t is not None and a2bc_t != PATCH_A2BC_BRA_MONITOR:
+            a2cd_state = "UART_MONITOR_HOOK_CONDITIONAL_STALE"
+        else:
+            a2cd_state = "UART_MONITOR_PANAMON1"
     elif a2cd_t is None:
         a2cd_state = "UNMAPPED"
     else:
         a2cd_state = "CUSTOM"
 
-    if sum_state == "FACTORY" and dev_state == "FACTORY" and a2cd_state == "FACTORY":
+    if sum_state == "FACTORY" and dev_state == "FACTORY" and a2cd_state == "FACTORY" and a2bc_state in ("FACTORY", "NOT_CHECKED"):
         mode = "FACTORY_ORIGINAL"
-    elif sum_state == "BYPASSED" and dev_state == "BYPASSED" and a2cd_state == "FACTORY":
+    elif sum_state == "BYPASSED" and dev_state == "BYPASSED" and a2cd_state == "FACTORY" and a2bc_state in ("FACTORY", "NOT_CHECKED"):
         mode = "BYPASS_CHECKS_ONLY"
-    elif sum_state == "BYPASSED" and dev_state == "BYPASSED" and a2cd_state in ("AUTO_FORMAT_BGO", "UART_MONITOR_PANAMON1"):
-        mode = a2cd_state
+    elif sum_state == "BYPASSED" and dev_state == "BYPASSED" and a2cd_state == "AUTO_FORMAT_BGO" and a2bc_state in ("FACTORY", "NOT_CHECKED"):
+        mode = "AUTO_FORMAT_BGO"
+    elif sum_state == "BYPASSED" and dev_state == "BYPASSED" and a2cd_state == "UART_MONITOR_PANAMON1" and a2bc_state in ("BRA_TO_MONITOR", "NOT_CHECKED"):
+        mode = "UART_MONITOR_PANAMON1"
     else:
         mode = "CUSTOM_OR_PARTIAL"
 
@@ -142,6 +155,7 @@ def classify_prog061_sites(sum_bytes, devinfo_bytes, a2cd_bytes):
         "sites": {{
             "0x{prog_sum:08X}_bgo_sum_beq": sum_state,
             "0x{prog_devinfo:08X}_devinfo_check_beq": dev_state,
+            "0x{prog_a2bc:08X}_bgo_init_call": a2bc_state,
             "0x{prog_a2cd:08X}_bgo_init_fail_hook": a2cd_state,
         }},
     }}
@@ -172,6 +186,8 @@ def classify_main3410_sites(fpc_bytes, branch_bytes, status_bytes):
         patch_sum_bra = format_py_byte_tuple(&PATCH_SUM_BRA),
         orig_devinfo_beq = format_py_byte_tuple(&ORIG_DEVINFO_BEQ),
         patch_devinfo_bra = format_py_byte_tuple(&PATCH_DEVINFO_BRA),
+        orig_a2bc = format_py_byte_tuple(&ORIG_A2BC_BGO_CALL),
+        patch_a2bc = format_py_byte_tuple(&PATCH_A2BC_BRA_MONITOR),
         orig_a2cd = format_py_byte_tuple(&ORIG_A2CD_HOOK),
         patch_a2cd_auto = format_py_byte_tuple(&PATCH_A2CD_AUTOFORMAT),
         patch_a2cd_mon = format_py_byte_tuple(&PATCH_A2CD_UART_MONITOR),
@@ -192,11 +208,12 @@ def classify_main3410_sites(fpc_bytes, branch_bytes, status_bytes):
         flash_base = AM34_FLASH_BASE,
         nor_uncached = AM34_FLASH_UNCACHED_BASE,
         flash_size = AM34_FLASH_SIZE,
-        prog_sum = PROG061_BASE_VA + OFF_BGO_SUM_BEQ as u32,
-        prog_devinfo = PROG061_BASE_VA + OFF_DEVINFO_CHECK_BEQ as u32,
-        prog_a2cd = PROG061_BASE_VA + OFF_BGO_INIT_FAIL_HOOK as u32,
-        main_fpc_ctrl = MAIN_BASE_VA + OFF_FPC_STATUS_CTRL as u32,
-        main_odd_branch = MAIN_BASE_VA + OFF_ODD_STATE_BRANCH as u32,
-        main_odd_status = MAIN_BASE_VA + OFF_ODD_INIT_STATUS as u32,
+        prog_sum = vas.prog_sum,
+        prog_devinfo = vas.prog_devinfo,
+        prog_a2bc = vas.prog_a2bc,
+        prog_a2cd = vas.prog_a2cd,
+        main_fpc_ctrl = vas.main_fpc_ctrl,
+        main_odd_branch = vas.main_odd_branch,
+        main_odd_status = vas.main_odd_status,
     )
 }

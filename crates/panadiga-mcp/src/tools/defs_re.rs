@@ -107,7 +107,7 @@ pub(super) fn re_tool_definitions() -> Vec<Value> {
                     },
                     "wrap_as_digadiag": {
                         "type": "boolean",
-                        "description": "Wrap patched PROG061 in a bootable `DIGADIAG.FRM` (default true)."
+                        "description": "Wrap patched PROG061 in 128 KiB EXTRHEAD DIGADIAG.FRM for Loader ver0.63 (default true). Pass false for raw 256 KiB DIGADIAG.FRM used by DMR-EH55 Loader ver0.61."
                     },
                     "output_path": {
                         "type": "string",
@@ -210,11 +210,16 @@ pub(super) fn re_tool_definitions() -> Vec<Value> {
                     },
                     "output_dir": {
                         "type": "string",
-                        "description": "Destination directory for 'prepare_sd' or 'extract_frm'."
+                        "description": "Destination directory for 'prepare_sd' or 'extract_frm' (defaults to 'firmware_and_images/sd_unbrick_kit' for prepare_sd)."
                     },
                     "sd_root_dir": {
                         "type": "string",
-                        "description": "SD root directory for 'verify_sd'."
+                        "description": "SD root directory for 'verify_sd' (defaults to 'firmware_and_images/sd_unbrick_kit')."
+                    },
+                    "loader_profile": {
+                        "type": "string",
+                        "enum": ["ver061", "ver063"],
+                        "description": "Target bootloader media format for 'prepare_sd': 'ver061' (default, DMR-EH55 256 KiB raw DIGADIAG.FRM + 48B sd48 PANA__SD.FRM) or 'ver063' (128 KiB EXTRHEAD + 64B sd64)."
                     },
                     "bgo_mode": {
                         "type": "string",

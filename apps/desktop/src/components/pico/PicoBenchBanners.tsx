@@ -23,12 +23,16 @@ const SECTION_FILTER_IDS: ReadonlyArray<{
     | 'pico.sections.diag'
     | 'pico.sections.bridge'
     | 'pico.sections.gdb'
+    | 'pico.sections.bgo'
+    | 'pico.sections.davis'
     | 'pico.sections.terminal';
 }> = [
   { id: 'all', labelKey: 'pico.sections.all' },
   { id: 'diag', labelKey: 'pico.sections.diag' },
   { id: 'bridge', labelKey: 'pico.sections.bridge' },
   { id: 'gdb', labelKey: 'pico.sections.gdb' },
+  { id: 'bgo', labelKey: 'pico.sections.bgo' },
+  { id: 'davis', labelKey: 'pico.sections.davis' },
   { id: 'terminal', labelKey: 'pico.sections.terminal' },
 ];
 
@@ -150,6 +154,7 @@ export const PicoBenchSectionToolbar: React.FC<PicoBenchSectionToolbarProps> = (
             key={id}
             type="button"
             size="sm"
+            data-testid={`pico-section-${id}`}
             variant={sectionFilter === id ? 'default' : 'outline'}
             aria-pressed={sectionFilter === id}
             onClick={() => onSelectFilter(id)}

@@ -117,8 +117,9 @@ Per the **Matsushita AM33v2 / AM34** architecture specification (and Linux `arch
 | Address Range (Hex) | AM34 Architectural Region | Mapped Device on Board `VEP79138` |
 | :--- | :--- | :--- |
 | `0x00000000` – `0x007FFFFF` | Cached Boot Space | Mirror of Spansion `S29JL064H` NOR Flash (`IC5001`, 8 MB) |
-| **`0x80000000` – `0x807FFFFF`** | **Direct Physical Space (Uncached)** | **Direct Physical Access to Spansion `IC5001` (`CS0` / `SB0`)** |
-| `0x8C000000` / `0x90000000` | Uncached SDRAM Space | Main SDRAM chips (system & runtime buffers) |
+| **`0x80000000` – `0x807FFFFF`** | **Direct Physical Space (`CS0`, Uncached)** | **Direct Physical Access to Spansion `IC5001` (`CS0` / `SB0`)** |
+| **`0x84000000` – `0x847FFFFF`** | **Uncached `CS1` NOR Flash Window** | **Live `PANADMP1` / `PANAMON1>` window**: IPL (`0x84000000..0x8403FFFF`), real EH55 `ver0.61` BGO (`0x84130000..0x843FFFFF`, `SA26..SA70` vs `ver0.63` `0x84200000..0x843FFFFF`), Upper EEMUL (`SA71..SA141`, `0x84400000..0x847FFFFF`) |
+| `0x8C000000` / `0x90000000` | Uncached SDRAM Space | Main SDRAM chips (`0x90400000` uncached alias of `0x50400000` used by `PANAMON1>` at `0x9043950E` $\rightarrow$ `J 904394FA` and `0x90439B40` for I-cache/D-cache coherence) |
 | `0xC0000000` – `0xDFFFFFFF` | SoC Internal Peripherals | Serial Controllers (`SC0`–`SC2` at `0xD4002000`), Timers, GPIO, ATA/IDE |
 | `0xFF000000` – `0xFFFFFFFF` | Core Control Registers | CPU core configuration & interrupt controllers |
 
@@ -272,9 +273,9 @@ mn10300-elf-objdump -D -b binary -m am33-2 --adjust-vma=0x80000000 DMR_EH55_ORIG
 
 | Criterion | Method 1: External Programmer (SVOD 4 / XGecu T48 on `IC5001`) | Method 2: `P7501` Async UART Probe (RP2040 / RP2350) |
 | :--- | :--- | :--- |
-| **Technical Maturity** | **100% proven, immediate, deterministic `U99` unbrick** | **Validated live on bench (`COM10`, `115200 8N1`) for telemetry/diagnostics** |
-| **Physical Work** | Hot-air removal of `IC5001` (TSOP-48) | Non-destructive plug-in of 6-pin **`P7501`** (`B6B-ZR-3R4`) |
-| **Operational Scope** | Full 8 MB raw dump and clean `EEMUL` write-back | Live boot capture (`<00>DDR CHECK: OK`, `CD diag`), FMU/Sense diagnostics, GDB RSP bridge |
+| **Technical Maturity** | **100% proven for external TSOP-48 backup/recovery** | **Proven live on `COM10` for 8 MiB dump (`PANADMP1`) & surgical BGO `U99` repair (`PANAMON1>`) without desoldering** |
+| **Physical Work** | Hot-air removal of `IC5001` (TSOP-48) | Non-destructive plug-in of 6-pin **`P7501`** (`B6B-ZR-3R4`) + SD `DIGADIAG.FRM` |
+| **Operational Scope** | Full 8 MB raw dump and clean `EEMUL` / BGO write-back | Full 8 MiB capture (`eh55_nor_8mb_ic5001_dump.bin`), normal boot (`*** RTSC Initialize ***`), `FMU`/Sense diagnostics, `U99` repair |
 | **Hardware Risk** | Minimal with experienced SMD rework | Minimal when keeping **`NSW5V` (`GP3`) `Hi-Z Input`** and `XRESET` (`GP5`) Open-Drain |
 | **Software Tooling** | Native CLI `panadiga nvram clean` wipes `0x7F0000`–`0x7FFFFF` | Firmware `panasonic_p7501_uart` + `panadiga` CLI / Tauri UI |
 

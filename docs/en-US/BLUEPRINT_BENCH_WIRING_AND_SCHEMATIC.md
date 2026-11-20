@@ -182,9 +182,10 @@ The main boot and system Flash IC is **`IC5001`**, part number **Spansion `S29JL
 * **Access Time ($t_{AA}$):** $70\text{ ns}$.
 * **Supply Range ($V_{CC}$):** $2.7\text{ V}$ to $3.6\text{ V}$ (Nominal: $3.3\text{ V}$).
 * **Package:** **TSOP-48 Type I** ($12\text{ mm} \times 20\text{ mm}$, $0.5\text{ mm}$ lead pitch).
-* **Sector Architecture (Model 00 - Top Boot):**
-  * 126 homogeneous main sectors of $64\text{ KBytes}$.
-  * 8 top boot micro-sectors of $8\text{ KBytes}$ at the top of memory (`SA134` through `SA141`, physical range `0x7F0000` to `0x7FFFFF`), housing dynamic calibration partition `EEMUL`.
+* **Sector Architecture (Spansion `S29JL064H70TFI00`, 142 sectors = `8,388,608` bytes):**
+  * 8 bottom boot micro-sectors of $8\text{ KBytes}$ (`SA0` through `SA7`, `0x000000..0x00FFFF` = $64\text{ KiB}$, base of `Loader ver0.61`).
+  * 126 homogeneous main sectors of $64\text{ KBytes}$ (`SA8` through `SA133`, `0x010000..0x7EFFFF` = $8,064\text{ KiB}$): houses upper `Loader ver0.61` (`SA8..SA10` + BGO table at `0x440337A4`), `EXTRHEAD "DRV "` (`SA15..SA25`), real EH55 **BGO `[nfrom]`** (`SA26..SA70`, `0x130000..0x3FFFFF` vs `ver0.63`/`PROG061` `0x200000..0x3FFFFF`), and **Upper EEMUL `"1284"`** (`SA71..SA133`, `0x400000..0x7EFFFF`). Real 64 KiB sector erase takes ~`700 ms` (exceeding bounded `0x00100000` DQ7 poll loops, requiring `0xFF` readback polling).
+  * 8 top boot micro-sectors of $8\text{ KBytes}$ (`SA134` through `SA141`, physical range `0x7F0000` to `0x7FFFFF` = $64\text{ KiB}$; in live `eh55_nor_8mb_ic5001_dump.bin`, `SA134` at `0x7F0000` holds `6` active bytes `0ff00000002c` while `SA135..SA141` are `0xFF`).
 
 ### 4.2 TSOP-48 Package Pinout Diagram (Top View)
 
@@ -535,7 +536,15 @@ Because the DMR-EH55 `EEMUL` partition extends through `0x7FFFFF` (`SA134..SA141
 
 ---
 
-## 13. Official Technical References & Engineering Standards
+## 13. Reversed `P58001` IDE Pinout (`41 - k`), `N5EZZ0000003` Harness & `CH1` Electrical Isolation
+
+- **Schematic-Verified Reversed Pinout (`[PROVEN ON REAL HARDWARE]`):** On the DMR-EH55 main PCB connector `P58001` (`VEK0K00`, `vol2_schematics.pdf` p. 113), every physical pin follows **`Pin k = ATA (41 - k)`**: `1=GND`, `2=NC`, `3=CS1-`, `4=CS0-`, `5=DA2`, `6=DA0`, `8=DA1`, `10=INTRQ`, `11=GND`, `12=DMACK-`, `13=CSEL`, `14=IORDY`, `15=GND`, `16=DIOR-`, `17=GND`, `18=DIOW-`, `19=GND`, `20=DMARQ`, `21=NC`, `22=GND`, `23=DD15`, `24=DD0`, `25=DD14`, `26=DD1`, `27=DD13`, `28=DD2`, `29=DD12`, `30=DD3`, `31=DD11`, `32=DD4`, `33=DD10`, `34=DD5`, `35=DD9`, `36=DD6`, `37=DD8`, `38=DD7`, `39=GND`, `40=RESET-`.
+- **`N5EZZ0000003` Cable & `StarTech IDE2SAT2` Orientation (`[PROVEN ON REAL HARDWARE]`):** Continuity testing confirmed 40 continuous pins in the `N5EZZ0000003` ribbon (only the male `IDE2SAT2` pin 20 is keyed). At `0°`, `IDE2SAT2` reads `0x00000000` (non-hanging); at `180°` (Type B equivalent), `DAVIS` sees `0x00002004` (`DD13|DD2`).
+- **Active `CH1` Isolation (`[UNDER INVESTIGATION / CH1 PHYSICAL BLOCK]`):** DC readings showed `IORDY`/`DIOR-`/`DIOW- = 0 V` cabled vs. `3.29 V` open, and `DAVIS` `CH1` (`0x504F81D4 = 1` active-HIGH via `J 504156AD`) still reads `0x00000000` (`is_ata=0`) on the bench `EH55` ([`probe_ch1_full_diag_20261119.log`](../debug_logs/probe_ch1_full_diag_20261119.log) · [`probe_ch1_live_v2_0deg_20261119.log`](../debug_logs/probe_ch1_live_v2_0deg_20261119.log) · [`EH55_UNBRICK_BREAKTHROUGH_BGO_CH1_DAVIS_AND_REGION.md`](./EH55_UNBRICK_BREAKTHROUGH_BGO_CH1_DAVIS_AND_REGION.md)).
+
+---
+
+## 14. Official Technical References & Engineering Standards
 
 1. **Matsushita Electric Industrial Co., Ltd. / Panasonic:**
    * *Panasonic DMR-EH55 Service Manual (North America - NTSC)* — Order No. **`CHM0605028CE`**, May 2006 (Main/Digital PCB `VEP79138` schematics, regulator `IC1506` p. 55, discrete circuit `P7501` / `D7510` / `Q7510` / `Q7514` / `QR7503` / `IC7501` pp. 62–64, interconnect `P59001` p. 97).

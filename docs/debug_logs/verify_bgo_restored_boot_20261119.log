@@ -1,0 +1,96 @@
+=== BOOTTRACE: window=15000ms boot=1 hold=0ms sticky=NO no_xrst=NO (8N1 @ 115200) ===
+[BOOTTRACE +  10ms] DDR CHECK: OK
+[BOOTTRACE +  19ms] Chip select = 1
+[BOOTTRACE +  20ms] F/E Address = 0x90202000 , Drive(compress) Size = 0xACC50
+[BOOTTRACE +  26ms] uncompress dst=90202000 len=160000 src=84080040 len=acc01
+[BOOTTRACE + 775ms] HEADER:5627DD54, DECOMP:5627DD54
+[BOOTTRACE + 778ms] F/E reset release finish ...
+[BOOTTRACE + 781ms] ***** Loader ver0.61 [06/03/06] *****
+[BOOTTRACE + 785ms] ***** normal mode *****
+[BOOTTRACE + 802ms] !!! start fmu to read & exec fvu. !!!
+[BOOTTRACE + 805ms] wait 1 second.
+[BOOTTRACE +1807ms] *** timer correspond initialize ***
+[BOOTTRACE +1812ms] startup reason = [70]
+[BOOTTRACE +1817ms] Main hung-up time changed 255[s].
+[BOOTTRACE +1829ms] *** RTSC Initialize ***
+[BOOTTRACE +5021ms] [RTSD] ATAPI Software Reset 
+[BOOTTRACE +5024ms] error! startup reason is invalid.
+[BOOTTRACE +6345ms] DDR CHECK: OK
+[BOOTTRACE +6354ms] Chip select = 1
+[BOOTTRACE +6356ms] F/E Address = 0x90202000 , Drive(compress) Size = 0xACC50
+[BOOTTRACE +6361ms] uncompress dst=90202000 len=160000 src=84080040 len=acc01
+[BOOTTRACE +7109ms] HEADER:5627DD54, DECOMP:5627DD54
+[BOOTTRACE +7113ms] F/E reset release finish ...
+[BOOTTRACE +7115ms] ***** Loader ver0.61 [06/03/06] *****
+[BOOTTRACE +7119ms] ***** normal mode *****
+[BOOTTRACE +7136ms] *** RTSC Initialize ***
+[BOOTTRACE +10281ms] [RTSD] ATAPI Software Reset 
+[BOOTTRACE +10294ms] [RTSD] HDD spin-up error (80000404)
+[BOOTTRACE +10297ms] miniboot : system assert!!
+[BOOTTRACE +10300ms] [RTSD] === IDE HOST ERROR === ( E8000000 )
+[BOOTTRACE +10303ms] *** ATAPI DEVICE ERROR
+[BOOTTRACE +10306ms] CDB  [FF EC 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +10310ms] Reg[00 00 00 00 00 00 00 : Err SecC SecN CylL CylH D/H Status] 
+[BOOTTRACE +10315ms] H_STAT [E8] T_STAT [0]
+[BOOTTRACE +10318ms] [RTSD] SRST Command Set
+[BOOTTRACE +10320ms] [RTSD] Reset Failed !! (80000407)
+[BOOTTRACE +10333ms] [RTSD] HDD spin-up error (80000404)
+[BOOTTRACE +10336ms] miniboot : system assert!!
+[BOOTTRACE +10339ms] [RTSD] === IDE HOST ERROR === ( E8000000 )
+[BOOTTRACE +10343ms] *** ATAPI DEVICE ERROR
+[BOOTTRACE +10345ms] CDB  [FF EC 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +10349ms] Reg[00 00 00 00 00 00 00 : Err SecC SecN CylL CylH D/H Status] 
+[BOOTTRACE +10355ms] H_STAT [E8] T_STAT [0]
+[BOOTTRACE +10357ms] [RTSD] SRST Command Set
+[BOOTTRACE +10359ms] [RTSD] Reset Failed !! (80000407)
+[BOOTTRACE +10372ms] [RTSD] HDD spin-up error (80000404)
+[BOOTTRACE +10375ms] miniboot : system assert!!
+[BOOTTRACE +10378ms] [RTSD] === IDE HOST ERROR === ( E8000000 )
+[BOOTTRACE +10382ms] *** ATAPI DEVICE ERROR
+[BOOTTRACE +10384ms] CDB  [FF EC 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +10388ms] Reg[00 00 00 00 00 00 00 : Err SecC SecN CylL CylH D/H Status] 
+[BOOTTRACE +10394ms] H_STAT [E8] T_STAT [0]
+[BOOTTRACE +10396ms] [RTSD] SRST Command Set
+[BOOTTRACE +10398ms] [RTSD] Reset Failed !! (80000407)
+[BOOTTRACE +10401ms] HDD_MAX_LBA get failed[0xE8000000].
+[BOOTTRACE +10404ms] mainsoft data is invalid, so set update flag.
+[BOOTTRACE +10425ms] [nfrom] file_no[17],skip(0),non_skip(1),erase(0),new_write(0).
+[BOOTTRACE +10440ms] !!! start fmu to read & exec fvu. !!!
+[BOOTTRACE +10444ms] wait 1 second.
+[BOOTTRACE +11446ms] *** timer correspond initialize ***
+[BOOTTRACE +11451ms] startup reason = [70]
+[BOOTTRACE +11455ms] Main hung-up time changed 255[s].
+[BOOTTRACE +11471ms] Read fvu program from Update-Disk to 0x90400000.
+[BOOTTRACE +11475ms] SD card check start
+[BOOTTRACE +11477ms] SD init start...
+[BOOTTRACE +11569ms] [SDCD] sdcd_insrmv_check:SD Card inserted 
+[BOOTTRACE +11825ms] [SDCD] === This Card Spec ==== 
+[BOOTTRACE +11828ms] .Card type:2(condition:3) wp:0
+[BOOTTRACE +11831ms] .capacity:3c4000[LBA](2021654528Byte) . transfer speed:25000[Kbps]
+[BOOTTRACE +11837ms] .RCA:2 . Bus Width:4(current) 4(support)
+[BOOTTRACE +11840ms] .Multi Max Block Len Read:2[SECT] / Write:2[SECT]
+[BOOTTRACE +11845ms] SD = 0x3C4000[LBA]
+[BOOTTRACE +11847ms] ... SD init end
+[BOOTTRACE +11854ms] FAT Mount ID = 0x1
+[BOOTTRACE +11858ms] FAT Open Old File ID = 0xC8
+[BOOTTRACE +11860ms] treat as SD.
+[BOOTTRACE +11877ms] File ID[0xC8] seek to 0xB1800.
+[BOOTTRACE +11945ms] File ID[0xC8] read to 0x90400000(size=0x40000).
+[BOOTTRACE +11949ms] cheking for fvu program check-sum[0x2182DC9].
+[BOOTTRACE +12035ms] [nfrom] file_no[17],skip(0),non_skip(1),erase(0),new_write(0).
+[BOOTTRACE +12050ms] success to read fvu program from Update-Disc.
+[BOOTTRACE +12085ms] [RTSD] Device Reset Occurred(0x62900) 
+[BOOTTRACE +12088ms] X(80062900)X(80023a00)X(80023a00)X(80023a00)
+[BOOTTRACE +12096ms] *** start fvu ***
+[BOOTTRACE +12104ms] ***** Fvu ver0.61 [05/11/01] *****
+[BOOTTRACE +12112ms] BGO driver init failed[1].
+[BOOTTRACE] UART: bytes=3015 first_byte=10235us ferr=1 perr=0 ovf=NO | SW_rel=NO
+[BOOTTRACE] ADC0_SWUART: min=0.09V max=3.30V (low=0 hiz=0.09..3.30V n=1501) | CtrlEdges: NSW5V=2 TXD=2 XRESET=2 (logged=6)
+  [CTRL +5047312us] NSW5V=1 TXD=1 XRESET=0
+  [CTRL +5074914us] NSW5V=0 TXD=1 XRESET=0
+  [CTRL +5093323us] NSW5V=0 TXD=0 XRESET=0
+  [CTRL +6157411us] NSW5V=0 TXD=1 XRESET=0
+  [CTRL +6158948us] NSW5V=1 TXD=1 XRESET=0
+  [CTRL +6335394us] NSW5V=1 TXD=1 XRESET=1
+BOOTTRACE: OK
+PANADIGA> 

@@ -9,5 +9,7 @@ export * from './HddDensityMap';
 export * from './HddExtractManifestCard';
 export * from './HddWriterCard';
 export * from './HddCapacityPatcherCard';
+export * from './HddCapacityAndFlashPipeline';
+export * from './HddActiveTabContent';
 export * from './HddNavigationBar';
 export * from './StorageDeviceSelector';

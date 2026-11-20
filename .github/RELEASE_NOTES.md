@@ -16,7 +16,7 @@ This release unifies **three convergent engineering layers** validated directly 
 
 | Layer | Methodology | Verified Artifacts |
 | :--- | :--- | :--- |
-| **Documentary** | `30` official Panasonic service manuals, schematics, and IC datasheets cross-referenced against PCB `VEP79138` | Canonical `P7501` (`B6B-ZR-3R4`) pinout, AM34 memory map, `MEIHDFS` geometry, `36` bilingual dossiers |
+| **Documentary** | `30` official Panasonic service manuals, schematics, and IC datasheets cross-referenced against PCB `VEP79138` | Canonical `P7501` (`B6B-ZR-3R4`) pinout, AM34 memory map, `MEIHDFS` geometry, `38` bilingual dossiers & `19` curated `COM10` bench logs |
 | **Mathematical** | Shannon entropy analysis (`H = 7.99958 bits/byte`), 64-bit ECB KPA codebook, `.FRM` TOC parsing, `XOR 0xFF` extent decoding | `PANA_DVD.FRM` (`48B` Feistel) & `PANA__SD.FRM` (`64B` plaintext) slots, `EEMUL` NVRAM sector cure |
 | **Physical** | Reconstructed **P7501 Asynchronous UART (`115200 8N1`)**, discrete `SW_UART` / `XRESET` / `NSW5V` control, glitch-immune `BAUDSCAN` & PIO timing samplers | Modular C11 + PIO probe firmware (`RP2040` / `RP2350` / `Unified`), `SC0` Live Bridge, `DIAGWATCH`, `PANARSP`, `DRVPANA`, `JEDEC` 2-layer Spansion stub, `PREJIG WAKE` Standby capture, async GDB RSP server |
 
@@ -65,7 +65,7 @@ Derived directly from the Spansion Top-Boot flash sector invariant (`NVRAM_offse
 | :---: | :---: | :--- | :--- |
 | 2 MB | 64 KB | Spansion `S29AL016J` / `Am29LV160` | `0x001F0000` |
 | 4 MB | 64 KB | Spansion `S29JL032H` / `Am29LV320` | `0x003F0000` |
-| 8 MB | 64 KB | Spansion `S29JL064H` | `0x007F0000` (`SA134..SA141`, 8 × 8 KB) |
+| 8 MB | 64 KB | Spansion `S29JL064H` (`142`-sector asymmetric topology: `SA0..SA3` IPL, BGO `SA26..SA70`, Upper EEMUL `SA71..SA141`) | `0x007F0000` (`SA134..SA141`, 8 × 8 KB) |
 | 16 MB | 128 KB | Spansion `S29GL128P` / `S29GL128N` | `0x00FF0000` |
 
 - **Sanitization:** Restores the writable EEPROM-emulated (`EEMUL`) window to virgin `0xFF`, backed up with MD5/SHA-256 verification.
@@ -85,7 +85,8 @@ panadiga nvram patch --input flash_dump_8mb.bin --output flash_patched.bin --off
 ### 2.3 MEIHDFS Storage Forensics, LBA48 Unlocker, Pre-MAIN Unbrick Kit & MN103Vm Verifier
 
 - **MEIHDFS Zero-Copy Forensics:** Validates `"SH"` magic superblock at LBA 0, bit-identical mirror at LBA 57,344 (28 MB), 10-block WAL journal (8 MB / LBA 16,384), `XOR 0xFF` inverted allocation descriptors (LBA 24..31), and firmware partitions at 32 MB (`LBA 65,536`) & 64 MB (`LBA 131,072`).
-- **Dynamic Capacity Unlocker (`>200 GB` LBA48):** Removes the artificial 200 GB clamp in `MAIN` (`src/hdd_cmd.c`) on raw `MAIN`, `EXTRHEAD`, or Partition-1 HDD images.
+- **Dynamic Capacity Unlocker (`5 GB` `SV0511D` through `2 TB` LBA48) & `eh55_flash` CoW Writer:** Scales HDD capacity clamping in `MAIN` (`hdd/capacity_patch`, from `5 GB` `0x0024C388` up to `2 TB`) alongside CoW-backed `PhysicalDrive1` flashing (`hdd/writer/eh55_flash`, verified on a 250 GB disk `4fde753c...` + high-LBA P1 mirror `488266096` `d932692c...`; `[UNDER INVESTIGATION / CH1 PHYSICAL BLOCK]` on live `EH55` bench hardware).
+- **Centralized `panamon1`, `eh55_bgo`, `davis_probe`, `tv_standard` & `tbc_appliance` Engines:** Unifies live `PANAMON1>` automation (`?\r` + `300 µs` retry, `U CONFIRM_UPPER_NOR` / `U LOCK`), Cycle 1/Cycle 2 BGO `U99` repair (`nor_dumper::{orchestrator, spansion_audit}`, `eh55_bgo::{audit, repair_plan, live_apply}`), `DAVIS` `CH0`/`CH1` probing (`0x504F81D0=2` vs `0x504F81D4=1` via `J 504156AD`), `PAL-M`/`LBS` (`ifodev2`, `AIOF 0x8800_0000`, `AVDD 0x8980_0000`), and diskless TBC orchestration (`Stage15DigadiagTbc`, `ES10/ES15/ES35V` incompatibility shields).
 - **Pre-MAIN SD Recovery Kit & End-to-End Patch Suite:** Builds/verifies `DIGADIAG.FRM` (128 KiB), `PANA__SD.FRM` (`PROG061` BGO recovery + `MAIN3410PQ` TBC Passthrough), `_dev_SERIAL` GDB RSP injection plans, Matshita `R6-MV4` ATAPI `0x3B` / `0xED` emulation, and automated MN103Vm + Spansion NOR CFI suite (`panadiga re verify-patches`).
 
 ```bash
@@ -131,7 +132,7 @@ panadiga unbrick prepare-sd --outdir ./sd_card_eh55_kit
 | Layer | Implementation | Key Safeguards & Patterns |
 | :--- | :--- | :--- |
 | **Presentation (Desktop & Mobile)** | Tauri `2.0` · React `18.3.1` · TypeScript · Redux Toolkit · Radix UI | Strict MVVM enforced by `oxlint`, immutable Redux slices + `createListenerMiddleware`, separate `dist/` (Desktop) & `dist-android/` (Android APK) bundles (`vite.config.ts` excludes DIGA IR Commander from PC builds), `GuidedPipelineBar`, `DraggableBenchHud`, EN/PT-BR i18n, WCAG high-contrast/colorblind themes |
-| **Core Engine, MCP & RAG** | Rust Workspace (5 crates) | `panadiga-core` (`ir` module compiled strictly on Android/tests), `panadiga-rag` (6-layer Zero-Error RAG + physical shields), `panadiga-mcp` (**18** JSON-RPC 2.0 stdio tools), `panadiga-cli`, `panadiga-desktop` |
+| **Core Engine, MCP & RAG** | Rust Workspace (5 crates) | `panadiga-core` (`ir`, `pico::panamon1`, `re::nor_dumper`, `re::eh55_bgo`, `re::davis_probe`, `re::region_compat::tv_standard`, `re::tbc_appliance`, `hdd::writer::eh55_flash`), `panadiga-rag` (6-layer Zero-Error RAG + physical shields), `panadiga-mcp` (**24** JSON-RPC 2.0 stdio tools: 18 core + 6 Wave-3 modules), `panadiga-cli`, `panadiga-desktop` |
 | **Mobile Hardware Bridge & IR** | Android APK (`aarch64-linux-android`) | Minimal Kotlin I/O shims (`AndroidIrExecutor.kt`, USB-C OTG CDC-ACM, BLE NUS) + Rust SSOT (`#[cfg(target_os = "android")]`) |
 | **Probe Firmware** | Modular C11 + PIO (`RP2040` / `RP2350`) | Non-overridable hardware `WDT`, isolated GDB RSP + `JEDEC` context, glitch-immune `BAUDSCAN`, `NSW5V` Hi-Z invariant, Open-Drain `XRESET` |
 | **RE & Automation** | Ghidra Jython + Python (`mypy --strict`) | AM34 SSOT memory map export, `MN103Vm` + Spansion NOR verifier (`verify-patches`), 9-gate automated validation |
@@ -147,15 +148,15 @@ panadiga unbrick prepare-sd --outdir ./sd_card_eh55_kit
 ## 5. Quality Gates — Automated Enforcement (`scripts/validate.py`)
 
 ```text
-✅ Gate 1   — Rust Workspace (`cargo fmt`, `cargo check`, `cargo test --workspace`)
-✅ Gate 2   — Oxlint + TypeScript Strict Check (`apps/desktop`)
-✅ Gate 3   — Vitest Frontend MVVM / Redux / Hooks / IR Commander Suite
-✅ Gate 4   — jscpd Clone Detector (Threshold 0% — zero structural clones)
-✅ Gate 5   — ux-guard UI/UX Completeness & State Integrity Audit
-✅ Gate 6   — Playwright E2E Chromium Headless Suite (incl. IR Commander flows)
+✅ Gate 1   — Rust Workspace (`cargo fmt`, `cargo clippy -D warnings`, 254 workspace tests + Android target check)
+✅ Gate 2   — Oxlint + TypeScript Strict Check (`apps/desktop`, 354 files)
+✅ Gate 3   — Vitest Frontend MVVM / Redux / Hooks / Pipelines / IR Commander Suite (116 tests across 36 files)
+✅ Gate 4   — jscpd Clone Detector (Threshold 0% — zero structural clones across 895 files)
+✅ Gate 5   — ux-guard UI/UX Completeness & State Integrity Audit (100/100 across 354 files)
+✅ Gate 6   — Playwright E2E Chromium Headless Suite (23 tests across 8 specs, incl. Region/TBC/HDD 5GB–2TB/BGO/DAVIS & IR Commander flows)
 ✅ Gate 7   — Ghidra Native SSOT Jython Exporter (Idempotent export check)
-✅ Gate 8   — C11 Pico Firmware Host Tests (`PICO_HOST_TEST=1`, -Wall -Wextra -Werror / /W4 /WX)
-✅ Gate 9   — Python (`py_compile`, `mypy --strict`, `pytest scripts/tests`)
+✅ Gate 8   — C11 Pico Firmware Host Tests (`PICO_HOST_TEST=1`, -Wall -Wextra -Werror / /W4 /WX, 4 modules)
+✅ Gate 9   — Python (`py_compile`, `mypy --strict` 43 files, `pytest scripts/tests` 28 tests across 5 files)
 ✅ Multi-CI — Windows x86_64 · Ubuntu x86_64 · macOS ARM64 · Android APK · Pico RP2040/RP2350 Dual UF2
 ```
 
@@ -163,7 +164,8 @@ panadiga unbrick prepare-sd --outdir ./sd_card_eh55_kit
 
 ## 6. Documentation & Legal
 
-- **Master Bilingual Portal (36 EN/PT-BR Dossier Pairs):** [`docs/INDEX.md`](docs/INDEX.md)
+- **Master Bilingual Portal (38 EN/PT-BR Dossier Pairs):** [`docs/INDEX.md`](docs/INDEX.md)
+- **EH55 Historical Breakthrough (BGO Cycle 2, Direct `PANAMON1>`, `DAVIS`/`CH1` & `PAL-M` Region):** [`docs/en-US/EH55_UNBRICK_BREAKTHROUGH_BGO_CH1_DAVIS_AND_REGION.md`](docs/en-US/EH55_UNBRICK_BREAKTHROUGH_BGO_CH1_DAVIS_AND_REGION.md) ([PT-BR](docs/pt-BR/HISTORICO_UNBRICK_EH55_BGO_CH1_DAVIS_E_REGIAO.md)) · [`19` Curated Bench Logs](docs/debug_logs/README.md)
 - **Root Engineering Audits:** [`COMPLETE_AUDIT.md`](COMPLETE_AUDIT.md) · [`AUDITORIA_COMPLETA.md`](AUDITORIA_COMPLETA.md)
 - **Service Manuals & Datasheets (`30` PDFs):** [`manuals_and_schematics/README.md`](manuals_and_schematics/README.md)
 - **Ghidra Pseudocode & Live `COM10` Logs:** [`docs/pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md`](docs/pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) · [`docs/debug_logs/README.md`](docs/debug_logs/README.md)

@@ -7,10 +7,10 @@
 //!    `bra +10` (`0xCA 0x0A`), bypassing broken `N(N+1)/2` BGO sector sum checks.
 //! 2. `0x50405097` (file offset `0x00005097`, `DeviceInfo` read guard): `beq +21` (`0xC8 0x15`) ->
 //!    `bra +21` (`0xCA 0x15`), bypassing missing `"INFO"` failure on erased/corrupted NOR.
-//! 3. `0x5040A2CD..0x5040A2E0` (file offset `0x0000A2CD`, 20-byte failure branch in
-//!    `bgo_init_A294`): optionally replaced in `AutoFormatBgo` mode with a direct `call32` to
-//!    the orphan factory formatter `nfrom_format` (`0x50401F3C`, 0 static callers), continuing to
-//!    `Control information init` (`0x5040A2E1`) on `d0 == 0` or returning `-1` cleanly otherwise.
+//! 3. `0x5040A2BC..0x5040A2E0`: in `AutoFormatBgo` mode, `0x5040A2CD` is replaced with a `call32` to
+//!    the orphan factory formatter `nfrom_format` (`0x50401F3C`, 0 static callers). In `UartMonitor`
+//!    mode, `0x5040A2BC` (`call32 FUN_5040248e`) is also bypassed via `bra +17 -> 0x5040A2CD` so
+//!    `PANAMON1` enters unconditionally right after `FUN_50404592` bus/CFI setup.
 
 mod io;
 mod patcher;
@@ -43,6 +43,8 @@ pub const PROG061_NFROM_FORMAT_VA: u32 = 0x5040_1F3C;
 pub const OFF_BGO_SUM_BEQ: usize = 0x0002_30F0;
 /// `0x50405097`: `beq +21` (`C8 15`) -> `bra +21` (`CA 15`) after `DeviceInfo` read.
 pub const OFF_DEVINFO_CHECK_BEQ: usize = 0x0000_5097;
+/// `0x5040A2BC`: 7-byte `call32 FUN_5040248e` bypassed unconditionally in `UartMonitor` mode.
+pub const OFF_BGO_INIT_CALL: usize = 0x0000_A2BC;
 /// `0x5040A2CD`: 20-byte `BGO driver init failed[%u]` failure branch inside `bgo_init_A294`.
 pub const OFF_BGO_INIT_FAIL_HOOK: usize = 0x0000_A2CD;
 
@@ -51,6 +53,10 @@ pub const PATCH_SUM_BRA: [u8; 2] = [0xCA, 0x0A];
 
 pub const ORIG_DEVINFO_BEQ: [u8; 2] = [0xC8, 0x15];
 pub const PATCH_DEVINFO_BRA: [u8; 2] = [0xCA, 0x15];
+
+pub const ORIG_A2BC_BGO_CALL: [u8; 7] = [0xDD, 0xD2, 0x81, 0xFF, 0xFF, 0x00, 0x00];
+/// `bra +17 -> 0x5040A2CD` (`ca 11`); `nop` x5 (`cb * 5`).
+pub const PATCH_A2BC_BRA_MONITOR: [u8; 7] = [0xCA, 0x11, 0xCB, 0xCB, 0xCB, 0xCB, 0xCB];
 
 pub const ORIG_A2CD_HOOK: [u8; 20] = [
     0xFC, 0xCC, 0xB0, 0x3E, 0x43, 0x50, 0xF8, 0x07, 0xFC, 0xDD, 0xF7, 0xAA, 0xFF, 0xFF, 0x00, 0x00,
@@ -83,6 +89,17 @@ pub(super) const SPEC_DEVINFO_CHECK: PatchSpec<'static> = PatchSpec {
     base_va: PROG061_BASE_VA,
     expect: &ORIG_DEVINFO_BEQ,
     replace: &PATCH_DEVINFO_BRA,
+    required_len: Some(PROG061_EXPECTED_SIZE),
+    input_sha256: None,
+};
+
+pub(super) const SPEC_A2BC_BRA_MONITOR: PatchSpec<'static> = PatchSpec {
+    name: "OFF_BGO_INIT_CALL",
+    description: "bgo_init_A294 call FUN_5040248e(0,0,0) -> bra +17 (0x5040A2CD)",
+    va: PROG061_BASE_VA + OFF_BGO_INIT_CALL as u32,
+    base_va: PROG061_BASE_VA,
+    expect: &ORIG_A2BC_BGO_CALL,
+    replace: &PATCH_A2BC_BRA_MONITOR,
     required_len: Some(PROG061_EXPECTED_SIZE),
     input_sha256: None,
 };

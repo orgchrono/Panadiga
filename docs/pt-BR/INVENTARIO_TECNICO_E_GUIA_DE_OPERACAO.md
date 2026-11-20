@@ -42,6 +42,9 @@ Abaixo encontra-se o inventário dos artefatos binários imutáveis, executávei
 | `docs/pt-BR/` | `ESTRATEGIA_INTEGRACAO_GHIDRA_GDB.md` | Dinâmico | Homologado | Mapeamento de memória AM34, scripts Ghidra SSOT e ponte GDB RSP (`:3333`). | Homologado |
 | `docs/pt-BR/` | `SUBSISTEMA_LOGGING_E_TELEMETRIA.md` | Dinâmico | Homologado | Telemetria padronizada, níveis semânticos e sinks de logging do Rust Core. | Homologado |
 | `firmware_and_images/` | `panasonic DMR EH-55 Firmware hdd_100.bin` | 104,857,600 | `9d292d5b46f190775f359e30af11d074021fb321f040bf701d0ecf0f2056db00` | Dump bruto dos primeiros 100 MB do HDD original (MEIHFS, LBA 0 e partições de firmware). | Homologado |
+| `firmware_and_images/` | `eh55_nor_8mb_ic5001_dump.bin` | 8,388,608 | `c1faee798f60545853eefdba0d15f23678b471466dc2bc84f522bc972f15a02d` | Dump ouro 8 MiB somente-leitura da `IC5001` (`S29JL064H`) real do DMR-EH55 via `PANADMP1` (`0x84000000..0x847FFFFF`). | Homologado |
+| `firmware_and_images/` | `eh55_loader_ver061_256k.bin` | 262,144 | `9f5c448d8879106be5ca3da6d6ac649026d50fbc191251ae0f4a003efca63800` | Recorte `Loader ver0.61 [06/03/06]` (`0x84000000..0x8403FFFF`, `SA0..SA10`) contendo tabela BGO em `0x440337A4`. | Homologado |
+| `firmware_and_images/` | `eh55_nvram_64k_raw.bin` | 65,536 | `803d1465f48fb32e17d3e478e02b2a9a7e707bbb675bb424b02c5c1df92f3643` | Recorte dos 64 KiB finais da `IC5001` (`0x847F0000..0x847FFFFF`, `SA134..SA141`: cabeçalho `"1284"` + `0xFF`). | Homologado |
 | `firmware_and_images/` | `PANA_DVD.FRM` | 7,531,744 | `a596d52a8220a9113777c9caf271ac4d518202d0639d6118a4d0bc03b9a6367f` | Imagem binária oficial de atualização de firmware via disco óptico. | Homologado |
 | `firmware_and_images/` | `UPDATE_EH55.zip` | 7,474,766 | `07589e79722409413c5da25c700227a9a04cef39f0178ffa08df3d8d3f7debd4` | Arquivo compactado oficial Matsushita contendo `PANA_DVD.FRM`. | Homologado |
 | `firmware/pico-p7501/` | `p7501_uart.pio` | 1,861 | `2d08a2621bb116bde5b23c06ee9879deddb85229d74ce5a0ffa82bc056412528` | Máquina de estados PIO RX `115200 8N1` para `GP2` (`P7501` Pino 6 `UARTP2M_T`). | Homologado |
@@ -263,7 +266,7 @@ Se o disco rígido original estiver com setores defeituosos (*bad sectors*), ru�
    * Utilize um disco rígido PATA/IDE ou HDD/SSD SATA de 2.5"/3.5" (inclusive `250 GB`, `320 GB`, `500 GB`, `1 TB` ou `2 TB`) acoplado a uma ponte PATA-to-SATA com chipset Marvell `88SA8052` (ex.: `StarTech IDE2SAT2`) ou Sunplus; adaptadores JM20330 costumam falhar no DMA legado Matsushita.
    * **Regra Crítica de Jumper (`MASTER` Obrigatório — NUNCA `CS` e NUNCA `Slave`):**
      > [!WARNING]
-     > **Topologia real do `DMR-EH55` (`ch=1, dev=0` = Secondary `MASTER`):** Os esquemáticos (`vol2_schematics.pdf` pp. 46, 52, 113, 125–126) e o disassembly real de `eh55_frm_PROG061_BOOT.bin` (`FUN_50414908`) e `EH55_MAIN_3410PQ.bin` (`FUN_574d1de8`) comprovam `acStack_70[4] = { 2, 0, 1, 0 }`: o drive óptico (ODD) é **Primary Master (`ch=0, dev=0`)** no Front-End interno, enquanto o HDD usa um cabo FFC dedicado de 40 vias como **Secondary `MASTER` (`ch=1, dev=0`, `0x89000D00`)** — a tabela de remapeamento `DAT_505733d4 == 0` pertence apenas ao `DMR-EH58`, não ao `DMR-EH55`. Configurar como **`Slave`** coloca o disco em `acStack_70[3] == 0` (ignorado pelo firmware); deixar em **`CS` (`Cable Select`)** na `StarTech IDE2SAT2` causa seleção indeterminada / colisão `0x8000040d` / travamento `MultiWord DMA MODE2`, podendo levar ao desligamento forçado e corrupção dos setores NOR **BGO (`0x84200000..0x843FFFFF`)** (`BGO driver init failed[1].` / `U99`). Configure **sempre explicitamente como `MASTER` (`Device 0`)**.
+     > **Topologia real do `DMR-EH55` (`ch=1, dev=0` = Secondary `MASTER`):** Os esquemáticos (`vol2_schematics.pdf` pp. 46, 52, 113, 125–126) e o disassembly real de `eh55_frm_PROG061_BOOT.bin` (`FUN_50414908`) e `EH55_MAIN_3410PQ.bin` (`FUN_574d1de8`) comprovam `acStack_70[4] = { 2, 0, 1, 0 }`: o drive óptico (ODD) é **Primary Master (`ch=0, dev=0`)** no Front-End interno, enquanto o HDD usa um cabo FFC dedicado de 40 vias como **Secondary `MASTER` (`ch=1, dev=0`, `0x89000D00`)** — a tabela de remapeamento `DAT_505733d4 == 0` pertence apenas ao `DMR-EH58`, não ao `DMR-EH55`. Configurar como **`Slave`** coloca o disco em `acStack_70[3] == 0` (ignorado pelo firmware); deixar em **`CS` (`Cable Select`)** na `StarTech IDE2SAT2` causa seleção indeterminada / colisão `0x8000040d` / travamento `MultiWord DMA MODE2`, podendo levar ao desligamento forçado e corrupção dos setores NOR **BGO (`0x84130000..0x843FFFFF` no `Loader ver0.61` real do EH55; `0x84200000..0x843FFFFF` no `ver0.63`/`PROG061`)** (`BGO driver init failed[1].` / `U99`). Configure **sempre explicitamente como `MASTER` (`Device 0`)**.
    * Conecte o novo disco a uma estação de trabalho Linux ou Windows.
    * **Remoção da trava de 200 GB do firmware `MAIN` (string de debug interna Matsushita `"src/hdd_cmd.c"`):** Antes de gravar a imagem ou Partição 1 no disco >200 GB, desbloqueie o limite via CLI ou aba **`Desbloqueio de Capacidade (250GB / 2TB)`** do Desktop:
      ```bash
@@ -344,6 +347,23 @@ A matriz FMEA (*Failure Mode and Effects Analysis*) mapeia os pontos críticos d
 | **RSK-06** | Corrupção acidental da área de bootloader ou kernel do firmware (`0x000000..0x7EFFFF`). | *Bricking* irreversível do gravador por perda do código operacional do AM34. | **5 (Crítica)** | 1 (Mínima) | O comando `panadiga nvram clean` possui trava criptográfica mandatória: calcula SHA-256 e garante imutabilidade integral dos primeiros 8.323.072 bytes fora de `0x7F0000..0x7FFFFF`. |
 | **RSK-07** | Inversão de orientação (*pinout backwards*) do chip Spansion (`IC5001`) na ressoldagem. | Curto-circuito direto nas linhas $V_{\text{CC}}$ e $V_{\text{SS}}$, destruindo Flash e reguladores da placa. | **5 (Crítica)** | 2 (Baixa) | Verificação rigorosa do ponto/chanfro do Pino 1 em relação à serigrafia da placa antes de iniciar a soldagem. |
 | **RSK-08** | Incompatibilidade de chipset no adaptador IDE-SATA ao trocar o HDD mecânico por SSD. | O processador trava em `HDD CHECK` ou emite erro de timeout ATA/ATAPI. | **3 (Média)** | 3 (Média) | Utilizar adaptadores com chipset comprovadamente compatível (ex.: Marvell `88SA8052`), evitando pontes genéricas incompatíveis com DMA legado. |
+
+---
+
+### 6.4 Módulos Rust Centralizados, Protocolo `PANAMON1>` / `300 µs` e Logs Promovidos (`19` Capturas)
+
+As rotinas validadas em bancada foram consolidadas em `crates/panadiga-core/src/`:
+- **`pico::panamon1` (`Panamon1Client`, `Panamon1NorUnlockGuard`):** handshake `?\r`, retentativa `300 µs`, guardas `U CONFIRM_UPPER_NOR`/`U LOCK` e sessões autônomas no monitor `PANAMON1>`.
+- **`re::nor_dumper::{orchestrator, spansion_audit}` & `re::eh55_bgo::{audit, repair_plan, live_apply}`:** auditoria Spansion `142` setores, detecção de corrupções em `SA54`/`SA41`/`SA29`/`SA39` e plano/aplicação ao vivo de reparo BGO Ciclo 2.
+- **`re::davis_probe` (`DavisProbeEngine`), `re::region_compat::tv_standard`, `re::tbc_appliance` e `hdd::writer::eh55_flash`:** diagnóstico `DAVIS` (`CH0 0x504F81D0=2` vs `CH1 0x504F81D4=1`), matriz `PAL-M`/`AIOF`/`AVDD`, estágios `tbc_appliance` e escrita física CoW para `PhysicalDrive1`.
+- **7 novos logs auditados em [`docs/debug_logs/`](../debug_logs/README.md) (`12 -> 19`):**
+  - `verify_bgo_restored_boot_20261119.log`: `B102000ED7E38CE5DA9BA3954ED316E540413FFF3B1CF8BC204588BCE7EBCDFC`
+  - `sddiag_ver061_live_20261119.log`: `6C5EC83CC18ABFF4233F50DC1B1586AA049C0F60C39AB81F424E9F0CCBC63B25`
+  - `diagnose_please_wait_90s_20261119.log`: `2880A883B7233C9C234DDEE450B665E1FA8ACE32C802BA44BD9E23F4FCC64DE6`
+  - `repair_bgo_sa39_sa54_com10_20261119.log`: `E17D9AC36CF31CEAA876673931052C8393CA817AE838DF3D9D1FDCBFF4B3206E`
+  - `probe_ch1_full_diag_20261119.log`: `A6E71B147C17BAAE6F5F139C3F6D8F604E9C1461B7F22E557A00DBEA8FC0646C`
+  - `probe_ch1_live_v2_0deg_20261119.log`: `F6225540D20818667FF7C81BF48FC45D202D115BCDC71A3F5ECC656C7E935705`
+  - `hdd_unbrick_flash_250gb_20261119.log`: `021806054BAE733CB6E2514E604877EB75AB7B6C9E55C1E193339DD30F03B67C`
 
 ---
 

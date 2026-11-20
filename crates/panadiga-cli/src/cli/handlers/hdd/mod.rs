@@ -1,14 +1,18 @@
-//! CLI handlers for HDD MEIHDFS inspection, extraction, and physical drive operations.
+#![deny(unsafe_code)]
+
+//! Handlers for MEIHDFS HDD image inspection, partition extraction, capacity clamping, and flashing.
+
+pub mod flash;
 
 use super::super::args::{HddActions, HddArgs};
 use anyhow::Result;
-use panadiga_core::constants::{DEFAULT_HDD_IMAGE_PATH, PANA_FRM_MOD3_START_OFFSET};
+use panadiga_core::constants::DEFAULT_HDD_IMAGE_PATH;
 use panadiga_core::hdd::{
     PhysicalDriveInfo, StorageMediaRole, decode_meihdfs_descriptors,
     default_capacity_patched_output_path, export_report_to_json, extract_hdd_partitions,
-    generate_meihdfs_layout, inspect_hdd_image, inspect_main_hdd_capacity, list_drives_by_role,
-    list_sd_card_drives, open_image_buffer, patch_main_hdd_capacity_with_passthrough,
-    restore_meihdfs_from_mirrors, write_meihdfs_procedural_to_drive, write_raw_image_to_drive,
+    inspect_hdd_image, inspect_main_hdd_capacity, list_drives_by_role, list_sd_card_drives,
+    open_image_buffer, patch_main_hdd_capacity_with_passthrough, restore_meihdfs_from_mirrors,
+    write_raw_image_to_drive,
 };
 use panadiga_core::log_println;
 use std::path::PathBuf;
@@ -77,24 +81,21 @@ pub fn handle_hdd(args: HddArgs) -> Result<()> {
             density,
             json,
         } => {
-            let img_path = resolve_hdd_path(image);
-            inspect_hdd_image(&img_path, density, json.as_deref())?;
+            inspect_hdd_image(&resolve_hdd_path(image), density, json.as_deref())?;
         }
         HddActions::Extract {
             image,
             outdir,
             json,
         } => {
-            let img_path = resolve_hdd_path(image);
-            extract_hdd_partitions(&img_path, &outdir, json.as_deref())?;
+            extract_hdd_partitions(&resolve_hdd_path(image), &outdir, json.as_deref())?;
         }
         HddActions::DecodeDescriptors {
             image,
             json,
             journal,
         } => {
-            let img_path = resolve_hdd_path(image);
-            decode_meihdfs_descriptors(&img_path, journal, json.as_deref())?;
+            decode_meihdfs_descriptors(&resolve_hdd_path(image), journal, json.as_deref())?;
         }
         HddActions::ListDrives { role } => {
             let parsed = match role.trim().to_ascii_lowercase().as_str() {
@@ -118,30 +119,26 @@ pub fn handle_hdd(args: HddArgs) -> Result<()> {
             size_gb,
             inject_frm,
             confirm,
+            dry_run,
+            json,
         } => {
-            let total_sectors = size_gb * 1_000_000_000 / 512;
-            log_println!(
-                "Formatting target {} with procedural MEIHDFS ({} GB / {} sectors)...",
-                target,
+            let summary = flash::run_format_meihdfs(
+                &target,
                 size_gb,
-                total_sectors
-            );
-            let layout = generate_meihdfs_layout(total_sectors, None)?;
-            let report = write_meihdfs_procedural_to_drive(&target, &layout, &confirm)?;
-            log_println!("[OK] {}", report.message);
-
-            if let Some(ref frm_file) = inject_frm {
+                inject_frm.as_deref(),
+                &confirm,
+                dry_run,
+                json.as_deref(),
+            )?;
+            if summary.p1_bytes_written > 0 {
                 log_println!(
-                    "Injecting Stage-2 Firmware partitions from optical container {}...",
-                    frm_file.display()
+                    "  [+] Stage-2 Injected: P1={} ({} B, sha256={}), P2={:?} ({} B)",
+                    summary.p1_module.as_deref().unwrap_or("MAIN"),
+                    summary.p1_bytes_written,
+                    summary.p1_sha256.as_deref().unwrap_or(""),
+                    summary.p2_module,
+                    summary.p2_bytes_written
                 );
-                let frm_buf = open_image_buffer(frm_file)?;
-                // Module 3 begins at offset 0x000F1818 in PANA_DVD.FRM
-                if frm_buf.len() > PANA_FRM_MOD3_START_OFFSET {
-                    log_println!(
-                        "  [+] Stage-2 Payload detected. Injected into Partition 1 (LBA 65536 / 0x02000000)."
-                    );
-                }
             } else {
                 log_println!(
                     "  [!] [AVISO MANDATORIO DE ESTAGIO 2]: Particoes 1 e 2 inicializadas vazias.\n\
@@ -271,6 +268,7 @@ pub fn handle_hdd(args: HddArgs) -> Result<()> {
             log_println!("MBR Mirror Sync:  {}", rep.mbr_superblocks_updated);
             log_println!("Output SHA-256:   {}", rep.patched_sha256);
         }
+        HddActions::FlashEh55(flash_args) => flash::handle_flash_eh55(flash_args)?,
     }
     Ok(())
 }

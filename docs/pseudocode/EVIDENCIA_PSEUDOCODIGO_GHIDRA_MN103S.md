@@ -3,14 +3,16 @@
 
 # Evidência Forense Completa de Pseudocódigo C e Disassembly — Ghidra MN103S (Panasonic DMR-EH55)
 
-> **Escopo e Integridade:** Este dossiê consolida **100% do pseudocódigo C decompilado, listagens de disassembly MN103S (`mn10300:LE:32:default`), constantes, strings e divergências de revisão** extraídos em modo estritamente **read-only** (`endTransaction(tx, False)`) do projeto Ghidra `C:\ghidra\projects\Panadiga_MN103S`. Nenhum código C ou mnemônico aqui reproduzido foi resumido, editado ou sintetizado: todos os blocos reproduzem literalmente a saída verificada do Ghidra 12.0.3 / PyGhidra.
+> **Escopo e Integridade:** Este dossiê consolida **100% do pseudocódigo C decompilado, listagens de disassembly MN103S (`mn10300:LE:32:default`), constantes, strings e divergências de revisão** extraídos em modo estritamente **read-only** (`endTransaction(tx, False)`) do projeto Ghidra `C:\ghidra\projects\Panadiga_MN103S` e, adicionalmente, da análise **somente leitura** em projeto temporário isolado do `Loader ver0.61 [06/03/06]` real do DMR-EH55 (`firmware_and_images/eh55_loader_ver061_256k.bin`, base `0x44000000..0x4403ffff`). Nenhum código C ou mnemônico aqui reproduzido foi resumido, editado ou sintetizado: os blocos originais das Partes I–IV reproduzem literalmente a saída verificada do **Ghidra 12.0.3 / PyGhidra**; os acréscimos FAT12/FAT16/FAT32 & SD da Seção 1.4 reproduzem os scripts `C:\ghidra\*.java` no **Ghidra 12.1.4 PUBLIC Headless** (com notas `[SLEIGH Trap #8]` nos operandos `SUB` invertidos); os acréscimos de correspondência 3-vias (`Loader ver0.61` × `PROG061` × `/BOOT.BIN ver0.63`), todo o subsistema `[nfrom]` / FTL BGO (`FUN_50401f3c..FUN_50428725`, tabela `0x440337A4` e estrutura `SA41 + 0x14`) e todo o subsistema **RTSC / DAVIS IDE / carga de `mainsoft`** (`FUN_5040c700..FUN_50431303` e contrapartes `ver0.61`) reproduzem literalmente as decompilações e listagens MN103S do **Ghidra 12.1.4 PUBLIC**, acompanhadas de tradução técnica em Português claro, mapeamento semântico de variáveis genéricas (`puVar`/`DAT_*`) e documentação de duas novas anomalias SLEIGH (`Trap #9: NOT Dm1, Dn0 -> XOR` e `Trap #10: BTST SIMM, Rn0 -> mn_todo()`).
 
 ---
 
 ## Sumário
 
-- [Inventário Verificado, Memória e SHA-256 dos 5 Binários](#inventário-verificado-memória-e-sha-256-dos-5-binários)
+- [Inventário Verificado, Memória e SHA-256 dos 5 Binários (+ Ref. Loader ver0.61)](#inventário-verificado-memória-e-sha-256-dos-5-binários)
 - [Cadeia Arquitetural End-to-End (BOOT -> PROG061 -> MAIN <-> DRV)](#cadeia-arquitetural-end-to-end-boot---prog061---main---drv)
+- [Mapa de Correspondência Exata entre Revisões (Loader ver0.61 × PROG061 × Loader ver0.63)](#mapa-de-correspondência-exata-entre-revisões-loader-ver061--prog061--loader-ver063)
+- [Guia de Leitura MN103S: Convenção de Chamada (ABI), Frame `A3` e Tradução Semântica](#guia-de-leitura-mn103s-convenção-de-chamada-abi-frame-a3-e-tradução-semântica)
 - [Índice Geral de Funções Decompiladas e Blocos Verificados](#índice-geral-de-funções-decompiladas-e-blocos-verificados)
 - [Parte I — `/BOOT.BIN` (Estágio 1 / NOR Flash XIP)](#parte-i--bootbin-estágio-1--nor-flash-xip)
   - [1.1 Vetores de Reset, CRT0 (`.bss` + `.data` -> `0x50480000`), Nomes BGO & Strings](#11-vetores-de-reset-crt0-bss--data---0x50480000-nomes-bgo--strings)
@@ -21,7 +23,8 @@
   - [1.6 Criptografia Feistel (`0x44039aa8` + S-Box `0x44035d84`), `ExtrHead`/`ExtrFoot` & LZ (`uncompress`)](#16-criptografia-feistel-0x44039aa8--s-box-0x44035d84-extrheadextrfoot--lz-uncompress)
 - [Parte II — `/eh55_frm_PROG061_BOOT.bin` (Estágio 2 / DIGADIAG & FVU Loader)](#parte-ii--eh55_frm_prog061_bootbin-estágio-2--digadiag--fvu-loader)
   - [2.1 Inicialização, Menu DIGADIAG, `FMU_list_sum` (`0x5040ea30`) & `TimerMCU_update`](#21-inicialização-menu-digadiag-fmu_list_sum-0x5040ea30--timermcu_update)
-  - [2.2 Drivers BGO, Controles NOR & Os 3 Patch Sites Exatos do PROG061](#22-drivers-bgo-controles-nor--os-3-patch-sites-exatos-do-prog061)
+  - [2.2 Drivers BGO, FTL `[nfrom]` (`SA41 + 0x14`), Geometria `0x50436E30`/`0x440337A4` & Os 3 Patch Sites do PROG061](#22-drivers-bgo-controles-nor--os-3-patch-sites-exatos-do-prog061)
+  - [2.3 Subsistema RTSC, Controladora DAVIS IDE & Carga de `mainsoft` (`PROG061` × `Loader ver0.61`)](#23-subsistema-rtsc-controladora-davis-ide--carga-de-mainsoft-prog061--loader-ver061)
 - [Parte III — `/EH55_MAIN_3410PQ.bin` (Estágio 3 / Main OS)](#parte-iii--eh55_main_3410pqbin-estágio-3--main-os)
   - [3.1 Console `_dev_SERIAL` / GDB RSP, Gates de UART0 & Loop de Menu `ENC`](#31-console-_dev_serial--gdb-rsp-gates-de-uart0--loop-de-menu-enc)
   - [3.2 Front Panel Test Mode (`FPC_TestModeControl`), `TEST+00` & ODD / `ATIH` / `NFROM BGO FAIL`](#32-front-panel-test-mode-fpc_testmodecontrol-test00--odd--atih--nfrom-bgo-fail)
@@ -38,11 +41,14 @@
 
 | Programa no Projeto Ghidra | Papel no DMR-EH55 | Faixa Inicializada (`ram`) | Tamanho Inicializado | `funcs` | `defined_strings` | SHA-256 do Bloco Inicializado |
 |---|---|---|---:|---:|---:|---|
-| `/BOOT.BIN` | Estágio 1: IPL / Bootloader NOR XIP | `0x44000000..0x4403ffff` | `0x40000` (262.144 B) | 843 | 512 | `7c13c72a54c77387f3f7df0ddc213e4800e20b27eecbfd225cbc05a8fc73e377` |
-| `/eh55_frm_PROG061_BOOT.bin` | Estágio 2: DIGADIAG / FVU Loader (`PROG061`) | `0x50400000..0x5043ffff` | `0x40000` (262.144 B) | 5 | 0 | `c7da9121174fcf4c54f35f5bb1f7b23a3dc0c93ab227158ad4fdd90a1ea24a81` |
+| `/BOOT.BIN` | Estágio 1: IPL / Bootloader NOR XIP — **`Loader ver0.63 [07/10/24] (4MB/TOP BOOT)`** (DMR-EZ485V; distinto do `ver0.61 [06/03/06]` do DMR-EH55) | `0x44000000..0x4403ffff` | `0x40000` (262.144 B) | 843 | 512 | `7c13c72a54c77387f3f7df0ddc213e4800e20b27eecbfd225cbc05a8fc73e377` |
+| `/eh55_frm_PROG061_BOOT.bin` | Estágio 2: DIGADIAG / FVU Loader (`PROG061` do DMR-EH55; inclui `sd_load.o` @ `0x5040e9b0..0x5040edde`) | `0x50400000..0x5043ffff` | `0x40000` (262.144 B) | 5 | 0 | `c7da9121174fcf4c54f35f5bb1f7b23a3dc0c93ab227158ad4fdd90a1ea24a81` |
 | `/EH55_MAIN_3410PQ.bin` | Estágio 3: Main OS / `_dev_SERIAL` / LBA48 | `0x57000000..0x57c6692b` | `0xc6692c` (13.003.052 B) | 33 | 0 | `c3275d39549b68f48db16bc5fd043c6f8a373d4ba416826de09be5c55dc991b1` |
 | `/DRV_decomp.bin` | FE S211 Drive Firmware (imagem principal analisada) | `0x40000000..0x4015ffff` | `0x160000` (1.441.792 B) | 2.346 | 1.913 | `694a4ab8aa29fcc45350dc0712047663602bdee7e4bff313b8ae62b057efd052` |
 | `/EH55_DRV_S211.bin` | FE S211 Drive Firmware (revisão alterna comparada) | `0x40000000..0x4015ffff` | `0x160000` (1.441.792 B) | 15 | 0 | `6f2b61ede80ea9e3e9185d3d677813593f3d361446678e437c905a0037060243` |
+| `eh55_loader_ver061_256k.bin` *(NOR real EH55, proj. read-only auxiliar)* | Estágio 1 Real: IPL / NOR Flash XIP — **`Loader ver0.61 [06/03/06]`** do DMR-EH55 (`IC5001` `SA0..SA10`), com tabela BGO em **`0x440337A4`** (`45` setores `0x84130000..0x843FFFFF` / `SA26..SA70`) | `0x44000000..0x4403ffff` | `0x40000` (262.144 B) | *(análise sob demanda)* | *(strings `0x4402f746..0x440339xx`)* | `9f5c448d8879106be5ca3da6d6ac649026d50fbc191251ae0f4a003efca63800` |
+
+> **Nota Crítica de Proveniência (`/BOOT.BIN` `ver0.63` vs NOR DMR-EH55 `ver0.61`):** O binário `/BOOT.BIN` carregado em `Panadiga_MN103S` (SHA-256 `7c13c72a...`) é o **`Loader ver0.63 [07/10/24] (4MB/TOP BOOT)`** (DMR-EZ485V, strings em `0x44033abf..0x44033afe`): em carga de diagnóstico SD, ele lê `DIGADIAG.FRM` comprimido (`0x20000` = 131.072 B `EXTRHEAD`) para `0x93fc0000` (`uncompress`) e lê `PANA__SD.FRM` com tabela de `0x2000` B (entradas de 64 B, modo `sd64`). Já o hardware **DMR-EH55** executa na NOR o **`Loader ver0.61 [06/03/06]`**, cujo módulo `sd_load.o` corresponde ao presente em `/eh55_frm_PROG061_BOOT.bin` (`0x5040e9ae..0x5040edd2` / `0x5040e9b0..0x5040edde`) e no dump NOR de março de 2006 `dmr-es35v/flash.bin` (`Loader ver0.18 [06/03/13]`, base `0x44000000`, `0x440085d9` / `0x440095ab` / `0x4400bc70`, SHA-256 `0969f258...`): nesses bootloaders de 2006, `DIGADIAG.FRM` (`0x40000` = 262.144 B crus) é carregado diretamente em **`0x90400000`** (alias não-cacheado de `0x50400000`) com salto direto **`JMP 0x50400000`** (sem `EXTRHEAD`/`uncompress`), e `PANA__SD.FRM` usa TOC de **`0x1800` B** (entradas de 48 B em modo `sd48`).
 
 Saída literal da inspeção PyGhidra (`verified_extra_facts.txt` — Seção 1):
 
@@ -78,13 +84,118 @@ Saída literal da inspeção PyGhidra (`verified_extra_facts.txt` — Seção 1)
 1. **Reset e Estágio 1 (`/BOOT.BIN` @ `0x44000000`)**:
    - O vetor de reset em `0x44000000` salta (`JMP 0x440000a0`) para o código de inicialização de barramento/SDRAM (`0x440000a0..`), executa `crt0` (`0x4400133e`, limpando `.bss` de `0x50480b80` até `0x505044d0` e copiando `0x0b80` bytes de `.data` de `0x44039830` para `0x50480000`) e entra em `boot_main` (`0x4400492e`).
    - **Chave Feistel derivada em memória**: o ponteiro `0x50480278` passado para `FUN_4400a666` / `FUN_44011d42` corresponde a `0x44039830 + 0x278 = 0x44039aa8` na ROM (`72 eb ca 91 30 45 68` como os 7 bytes de `param_1`, e `0x44039aaf` = `0x5048027f` começando em `ad 99 df 56 72 3a b8 10` como os 8 bytes de `param_2`).
-   - `boot_main` inicializa BGO (`bgo_driver_init`), lê flags em NVRAM/EEPROM, consulta `FUN_440046e4` (GPIOs/switches), dispara recuperação de mapa NFROM se necessário (`FUN_440041dc` -> `FUN_44003fd0` -> `FUN_440018bb`) e chama `FUN_44006cd9` / `FUN_44006fe7` para rotear o boot normal (`MAINSOFT` no HDD via `FUN_440068f5` + `ExtrHead`/`uncompress` em RAM -> salto) ou modo de diagnóstico/atualização via **CD/DVD-RAM** (`cd_diag_boot_mode`) ou **Cartão SD** (`fmu_sd_dispatcher` / `sd_fvu_load_7a12` -> `PROG061` em `0x50400000` -> salto em `0x50400014`).
+   - `boot_main` inicializa BGO (`bgo_driver_init`), lê flags em NVRAM/EEPROM, consulta `FUN_440046e4` (GPIOs/switches), dispara recuperação de mapa NFROM se necessário (`FUN_440041dc` -> `FUN_44003fd0` -> `FUN_440018bb`) e chama `FUN_44006cd9` / `FUN_44006fe7` para rotear o boot normal (`MAINSOFT` no HDD via `FUN_440068f5` + `ExtrHead`/`uncompress` em RAM -> salto) ou modo de diagnóstico/atualização via **CD/DVD-RAM** (`cd_diag_boot_mode`) ou **Cartão SD** (`fmu_sd_dispatcher` / `sd_fvu_load_7a12`). Em `/BOOT.BIN` (`ver0.63` DMR-EZ485V), `sd_diag_load_a97c` lê `0x20000` B (`EXTRHEAD`) para `0x93fc0000` (`uncompress`) e `0x2000` B `sd64`; no **DMR-EH55 real (`Loader ver0.61 [06/03/06]` na NOR)** — comprovado pelo `sd_load.o` de `PROG061` e por `dmr-es35v/flash.bin` (`0x440085d9`/`0x440095ab`/`0x4400bc70`) — o IPL lê `DIGADIAG.FRM` cru de `0x40000` B (262.144 B) diretamente em `0x90400000` (alias não-cacheado de `0x50400000`) e salta com `JMP 0x50400000` (com TOC `PANA__SD.FRM` de `0x1800` B em `sd48`).
 2. **Estágio 2 (`/eh55_frm_PROG061_BOOT.bin` @ `0x50400000`)**:
    - Executável carregado em RAM (`PROG061`) que apresenta o menu interativo serial DIGADIAG/FVU (`FUN_50404fa7`, `FUN_50405416`), soma listas `.FMU` (`FUN_5040ea30` com loop overlapping em `0x5040ea2f`), controla VFD/Timer MCU (`FUN_5040df40`), opera gravação BGO NOR (`FUN_50421ebe`, `FUN_5042201e`, `FUN_50422359`, `FUN_50423058`) e exibe **3 sítios de patch exatos** que explicam bloqueios/assinaturas na atualização de partições.
 3. **Estágio 3 (`/EH55_MAIN_3410PQ.bin` @ `0x57000000`)**:
    - Sistema operacional principal descompactado. Mantém console `_dev_SERIAL` com suporte a protocolo GDB Remote Serial (`+$`, `-$`, `#cs`, checksum mod 256 em `FUN_574f0590`), gate `SC0` em `FUN_57000e1c`, loop de diagnóstico de encoder (`FUN_574f8354`/`FUN_574f862b`), controle de painel frontal em Test Mode (`FUN_5771abfb` / `FUN_5749efd3` / `FPC_TestModeControl`), interface ATAPI/ODD (`FUN_574f77b0`..`FUN_574f7b6a`, `FUN_5749859a` `'ATIH'`) e comandos LBA48 para HDD (`FUN_574dd010`..`FUN_574dd273`, revelando inclusive a seleção de geometria `200GB` vs `400GB` em `0x574dd208`).
 4. **Front-End do Drive (`/DRV_decomp.bin` & `/EH55_DRV_S211.bin` @ `0x40000000`)**:
    - Firmware do controlador de drive óptico (MN103S próprio). Gerencia despachante ATAPI (`FUN_400209f3` incluindo opcode `0x3c` Write Buffer, `FUN_40021476`, `FUN_4002168d`), tabela de sense codes (`0x400089dc`), parser serial CLI (`0x400DF55C..0x400DF940`), comando de desbloqueio `PASS` com assinaturas `0x4D415453` (`"MATS"`) e `0x48495441` (`"HITA"`) e comandos `MMODE`/`SMODE`/`RB`/`WB`/`EEP`.
+
+---
+
+## Mapa de Correspondência Exata entre Revisões (Loader ver0.61 × PROG061 × Loader ver0.63)
+
+Parte do material histórico do projeto se baseou no **`/BOOT.BIN` (`Loader ver0.63 [07/10/24] (4MB/TOP BOOT)`, DMR-EZ485V)** carregado no banco principal Ghidra. Como o hardware físico **DMR-EH55** executa **`Loader ver0.61 [06/03/06]`** na NOR Spansion 8 MiB (`eh55_loader_ver061_256k.bin`, SHA-256 `9f5c448d...`) e carrega o executável de serviço **`PROG061`** (`eh55_frm_PROG061_BOOT.bin`) em `0x50400000`, as quatro tabelas abaixo estabelecem a correspondência exata **endereço a endereço** entre as três imagens e documentam dois desalinhamentos/erratas críticos corrigidos nesta auditoria.
+
+> [!IMPORTANT]
+> **Erratas de Endereçamento e Símbolos Corrigidos Nesta Auditoria:**
+> 1. **`0x44008020` em `Loader ver0.61`:** `0x44008020` **não** é entrada de função; é o deslocamento **`+0x112`** dentro de **`FUN_44007f0e`** (`911 B`, o verdadeiro `fmu_sd_dispatcher` do EH55 `ver0.61`) e recai **`+5 bytes` dentro da instrução de 6 bytes** `0x4400801b: [fc 82 c4 92 49 50] MOVBU D0,(0x504992c4)`.
+> 2. **`0x504238a5` em `PROG061`:** `0x504238a5` **não** é entrada de função; recai **`+5 bytes` dentro da instrução de 7 bytes** `0x504238a0: [fe 08 00 c4 84 4f 50] MOV 0x504f84c4,R0` dentro de **`FUN_5042383c`** (`875 B`, reconciliação do journal da Partição 2 BGO).
+> 3. **`FUN_5040211f` e `FUN_5040248e` em `PROG061`:** Nos comentários iniciais de triagem (`./raw/doc_prog061.txt`), receberam os aliases provisórios errôneos `p61_cmd_dispatch_211f` e `p61_fmu_sd_diag_248e`. A verificação estrutural prova que são respectivamente **`p61_nfrom_recover_map_211f`** (`[nfrom] NOR STATE` / recuperação OMAP+BMAP+DIR) e **`p61_bgo_ioctl_dispatch_248e`** (`[nfrom] bgo_read_D` / despachante `ioctl` `0..6` do driver BGO).
+
+### Tabela A — Boot Principal, `fmu_sd_dispatcher`, Carga `mainsoft` HDD & Flags `update`
+
+| Papel Arquitetural | `Loader ver0.61 [06/03/06]` (`eh55_loader_ver061_256k.bin`, NOR EH55) | `PROG061` (`eh55_frm_PROG061_BOOT.bin` @ `0x50400000`) | `/BOOT.BIN` `ver0.63 [07/10/24]` (EZ485V ref.) | Observações Técnicas & Evidências |
+|---|---|---|---|---|
+| **Orquestrador de Boot (`boot_main`)** | `FUN_44005fb3` (`0x44005fb3`, `1076 B`) | `FUN_50404fa7` (menu DIGADIAG) | `boot_main` (`0x4400492e`, `13 B` + corpo) | Em `ver0.61`, `FUN_44005fb3` carrega FE de `0x84080000` -> `0x90202000`, imprime `"Loader ver0.61 [06/03/06]"` e despacha `serial boot` (`2`), `normal` (`1`) ou `support card` (`3`). |
+| **Despachante FMU / HDD `mainsoft`** | **`FUN_44007f0e`** (`0x44007f0e`, `911 B`; `0x44008020` = `+0x112` / mid-insn) | *(fluxo interativo via menu `FUN_50404fa7`)* | `fmu_sd_dispatcher` (`0x440065bc`, `614 B`) | Lê NVRAM `"MATS"`/`"HITA"` (`FUN_44009cef..9dd6`), imprime `"*** RTSC Initialize ***"`, consulta `HDD MAX LBA`, carrega LBA `0x10000` ou espelho `max_lba - 0x20000`; se falhar, imprime `"mainsoft data is invalid, so set update flag."` |
+| **Validação de Cabeçalho HDD (`ExtrHead`)** | `FUN_4400829d` (`0x4400829d`, `208 B`) | — | `FUN_44006822` (`0x44006822`, `211 B`) | Confere cabeçalho/assinatura da imagem `mainsoft` carregada em RAM. |
+| **Leitura de `mainsoft` do HDD** | `FUN_4400836d` (`0x4400836d`, `534 B`) | — | `FUN_440068f5` (`0x440068f5`, `495 B`) | Lê blocos do HDD via RTSC/DAVIS e descompacta para execução na SDRAM. |
+| **Recuperação Interna de `mainsoft`** | `FUN_44008585` (`0x44008585`, `506 B`) | — | `FUN_44006ae4` (`0x44006ae4`, `501 B`) | Copia partição de backup (`max_lba - 0x20000`) de volta para LBA `0x10000`, faz read-verify até 3× (`0x90c00000` vs `0x91c00000`) e registra histórico na NVRAM `0x50480016`. |
+| **Leitura/Escrita de Flags `update` NVRAM** | `FUN_44009cef` (`108 B`), `FUN_44009d5b` (`40 B` -> `"MATS"`/`"HITA"`), `FUN_44009d83` (`27 B`), `FUN_44009d9e` (`56 B`), `FUN_44009dd6` (`54 B`), `FUN_44009bed` (`115 B`), `FUN_44009c60` (`85 B`) | — | `FUN_44007ea9`, `FUN_44007f1c`, `FUN_44007fa1`, `FUN_44008040`, `FUN_44008075`, `FUN_4400825c` | Controlam o bloco `0x50480c74..0x50480ca3` (`0x5048009d` no `ver0.61`) e assinaturas `0x4d415453` (`"MATS"`) / `0x48495441` (`"HITA"`). |
+
+### Tabela B — Subsistema `[nfrom]` & Motor FTL BGO (`SA41 + 0x14`)
+
+| Função Lógica | `Loader ver0.61 [06/03/06]` | `PROG061` (`0x50400000`) | `/BOOT.BIN` `ver0.63 [07/10/24]` | Divergências & Notas |
+|---|---|---|---|---|
+| **`nfrom_format` (órfã)** | *(ausente / removida do IPL)* | `FUN_50401f3c` (`0x50401f3c`, `483 B`) | *(ausente)* | Em `PROG061`, formata mapeamento OMAP/BMAP (`10` págs `0xa07..`, `10` págs `0xa11..`, `3` págs `0xa02..`, ctrl `0xa01`). Bloqueada fail-closed em patchers. |
+| **`nfrom_recover_map`** | `FUN_44003150` (`0x44003150`, `788 B`, **`15`** págs FAT) | **`FUN_5040211f`** (`0x5040211f`, `788 B`, **`10`** págs FAT) *(corrigido de `p61_cmd_dispatch_211f`)* | `FUN_440018bb` (`0x440018bb`, `810 B`, **`8`** págs FAT) | Sincroniza estado `0xFFFF` (`Original -> Backup`) ou `0xFFFFFF` (`Backup -> Original`); loop de páginas OMAP/BMAP reflete o tamanho BGO de cada revisão (`15`, `10`, `8`). |
+| **`bgo_ctrl_save` (`0xf01`/`0xa01`/`0x801`)** | `FUN_44003466` (`0x44003466`, `89 B`) | `FUN_50402435` (`0x50402435`, `89 B`) | `FUN_44001be5` (`0x44001be5`) | Grava descritor principal (`0x50496560` / `0x50496d10` / `0x505163d4`) e zera estado `NFROM_NOR_STATE = 0`. |
+| **`bgo_ioctl_dispatch`** | `FUN_440034bf` (`0x440034bf`, `241 B`) | **`FUN_5040248e`** (`0x5040248e`, header `74 B` + jump table `0x50432830`) *(corrigido de `p61_fmu_sd_diag_248e`)* | `FUN_44001c49` (`0x44001c49`, `260 B`) | Switch `cmd = 0,1,2,3,4,6,8` -> `ioctl(3)` lê página BGO (`[nfrom] bgo_read_D`), `ioctl(4)` grava página, `ioctl(6)` checa setor limpo. |
+| **`nfrom_write_page_wrap`** | `FUN_440035b3` (`0x440035b3`, `96 B`) | `FUN_5040257b` (`0x5040257b`, `96 B`) | `FUN_44001d4d` (`0x44001d4d`) | Invoca `bgo_ioctl_dispatch(4, page_id, buf)` e exige retorno `0..3` (converte para status interno `2` ok / `3` erro). |
+| **`nfrom_power_fail_recovery`** | `FUN_440053d3` (`0x440053d3`, `490 B`) | `FUN_5040439b` (`0x5040439b`, `490 B`) | `FUN_44003fd0` (`0x44003fd0`, `513 B`) | Lê control block (`0xf01`/`0xa01`/`0x801`), roda `nfrom_recover_map`, indexa até `0x30`/`0x35` entradas diretas (`9 B` @ `0x50480004`) para `0x50498b60`/`0x50498910`/`0x50517dd4`. |
+| **`bgo_nor_autoselect_probe`** | `FUN_440055bd` (`13 B` stub) / `+0x55ca` (`281 B`) | `FUN_50404585` (`13 B`), `FUN_50404592` (`0x50404592`, `281 B`) | *(integrado / stub no driver)* | Lê `Manufacturer ID` / `Device ID` em `0x84380000` (`0x1c` vs `0x01` + `0x227e` Spansion `S29JL064H` -> lê `0x8438001c`) após configurar `Ramdb000500` & `P5OUT &= 0xfb`. |
+| **`bgo_driver_init`** | *(chamado de `0x440063e7`)* | `FUN_5040a294` (`0x5040a294`, `130 B`) | `bgo_driver_init` (`0x4400836f`, `140 B`) | Cache `iRam504802b0 == 1` (`_DAT_50480d0c == 1`); em falha imprime `"BGO driver init failed[%u].\n"`. |
+| **FTL `ioctl(0)` (`init_part_check`)** | `FUN_4401ef82` (`0x4401ef82`, `84 B`) | `FUN_50421e6a` (`0x50421e6a`, `84 B`) | `FUN_4401e636` (`0x4401e636`, `84 B`) | Sonda Flash (`FUN_50426f78`), zera estado dos slots e inicia reconciliação/journal caso montável. |
+| **FTL `ioctl(2)` (`mount_ctrl`)** | `FUN_4401efd6` (`0x4401efd6`, `101 B`) | `FUN_50421ebe` (`0x50421ebe`, `101 B`) | `FUN_4401e68a` (`0x4401e68a`, `101 B`) | Varre tabela Flash física, monta Partição 1 (`FUN_50422ebf`) e Partição 2 (`FUN_5042383c`). |
+| **FTL `ioctl(3)` (`bgo_read_D`)** | `FUN_4401f03b` (`0x4401f03b`, `98 B`) | `FUN_50421f23` (`0x50421f23`, `98 B`) | `FUN_4401e6ef` (`0x4401e6ef`, `98 B`) | Valida `page_id` contra `FUN_50422a1b(1,1)` (`0x0f24`/`0x0a1a`/`0x0816`) e lê até `0x10` páginas/chamada. |
+| **FTL `ioctl(4)` (`bgo_write_D`)** | `FUN_4401f09d` (`0x4401f09d`, `153 B`) | `FUN_50421f85` (`0x50421f85`, `153 B`) | `FUN_4401e751` (`0x4401e751`, `153 B`) | Escreve até `0x10` páginas de `0x200` B alinhadas em bloco de 16 páginas (`(page & 0xf) + count <= 16`). |
+| **FTL `ioctl(6)` (`check_clean`)** | `FUN_4401f136` (`0x4401f136`, `165 B`) | `FUN_5042201e` (`0x5042201e`, `165 B`) | `FUN_4401e7ea` (`0x4401e7ea`, `165 B`) | Checa consistência e estado limpo do range `param_2..param_2+param_3-1`. |
+| **FTL `ioctl(1)` (`get_status_wrap`)** | `FUN_4401f460` (`0x4401f460`, `50 B`) | `FUN_50422359` (`0x50422359`, `50 B`) | `FUN_4401eb14` (`0x4401eb14`, `50 B`) | Mapeia `param_2 = 1/2/4` -> áreas `3/4/1` em `FUN_50422886`. |
+| **Varredura de Setores & P1 (`mount_scan`)** | *(corresp. em `0x4401f633..`)* | `FUN_50422ebf` (`0x50422ebf`, `409 B`) | `FUN_4401f66a` (`0x4401f66a`, `410 B`) | Percorre setores `1..max_sec` (`0x27`/`0x1f`), reconstrói OMAP/BMAP e chama `FUN_50423058` / `FUN_4402014f`! |
+| **Checksum/Swap P1 (`SA41 + 0x14`)** | `FUN_4402014f` (`0x4402014f`, `292 B`) | `FUN_50423058` (`0x50423058`, `292 B`) | `FUN_4401f804` (`0x4401f804`, `292 B`) | Contém **Patch Site 1** (`0x504230f0`: compara soma `(n*(n+1))/2` com cabeçalho em RAM `0x504f861a`). |
+| **Reconciliação P2 (`journal`)** | *(corresp. em `0x440208e7`)* | `FUN_5042383c` (`0x5042383c`, `875 B`; `0x504238a5` = `+5 B` mid-insn) | `FUN_4401ffa5` (`0x4401ffa5`, `875 B`) | Varre blocos P2, mede páginas usadas (`0..0xfc`), valida blocos órfãos/substituição e reconcilia duas páginas candidatas. |
+| **Limpeza/Reset de Estado FTL** | `FUN_44021bd9` (`0x44021bd9`, `171 B`) | `FUN_50424b2e` (`0x50424b2e`, `171 B`) | `FUN_44021297` (`0x44021297`, `171 B`) | Zera descritores de cache (`0x504f84a4..cc` / `0x504f4900..28`) e preenche OMAP RAM (`0x504f8670` / `0x504f4b80`) com `0xffffffff`. |
+| **Consulta de Base/Contagem BGO** | `FUN_44025328` (`0x44025328`, `31 B`) | *(geometria `0x50436ee4`)* | *(geometria `0x440365f4`)* | Retorna `DAT_44033858` (`1`) e `&DAT_4403385c[slot]` (`0x84130000`). |
+
+### Tabela C — Tabelas de Geometria NOR (`0x440337A4` × `0x50436E30` × `0x44036524`)
+
+Cada firmware armazena um descritor de **geometria BGO em Flash NOR** no `.rodata` (indexado com stride `chip * 0x6c`, onde a aplicação consulta o chip lógico **`1`**). A comparação word-a-word explica por que ferramentas feitas sobre `ver0.63`/`PROG061` (`0x84200000..0x843FFFFF`) divergem do **DMR-EH55 real (`Loader ver0.61` `0x440337A4`, `45` setores em `0x84130000..0x843FFFFF`, `SA26..SA70`)**:
+
+| Offset no Bloco Chip 1 | Semântica Arquitetural | `Loader ver0.61` (`0x44033738 + 0x6c = 0x440337A4`) | `PROG061` (`0x50436DC4 + 0x6c = 0x50436E30`) | `/BOOT.BIN ver0.63` (`0x440364B4 + 0x6c = 0x44036520`) |
+|---|---|---|---|---|
+| `+0x04` | Flag / contagem de partições BGO (`param_2=1` / `&DAT_440364b8`) | `0x440337a8: 0x00000001` (`1`) | `0x50436e34: 0x00000003` (`3`) | `0x44036524: 0x00000001` (`1`) |
+| `+0x08` | Blocos de Dados Partition 2 (`param_2=2`) | `0x440337ac: 0x00000028` (**`40` setores**) | `0x50436e38: 0x0000001c` (**`28` setores**) | `0x44036528: 0x00000018` (**`24` setores**) |
+| `+0x0c / +0x10` | Áreas 3 / 4 (`param_2=3 / 4`) | `0x00000000 / 0x00000000` | `0x00000000 / 0x00000000` | `0x00000000 / 0x00000000` |
+| `+0x18` | `max_page_id` lógico (`FUN_50422a1b` / `FUN_4401fb12`) | `0x440337bc: 0x00000f24` (**PIDs `0x0F01..0x0F24`**) | `0x50436e48: 0x00000a1a` (**PIDs `0x0A01..0x0A1A`**) | `0x44036538: 0x00000816` (**PIDs `0x0801..0x0816`**) |
+| `+0x20..+0x30` | **Banco Flash 1:** `erase_sz`, `idx_ini`, `idx_fim`, `start_va`, `end_va` | `0x10000` (64K), `1..0x2e` (**`45` setores**), **`0x84130000..0x84400000`** (`SA26..SA70`) | `0x10000` (64K), `1..0x20` (`31` setores), **`0x84200000..0x843f0000`** | `0x10000` (64K), `1..0x20` (`31` págs), **`0x84200000..0x843f0000`** |
+| `+0x34..+0x44` | **Banco Flash 2** (Top-Boot `8 KiB` se presente) | `0xffffffff` *(desabilitado — `S29JL064H` continua `64 KiB` até `0x3FFFFF`!)* | `0x2000` (8K), `0x20..0x28` (`8×8K`), **`0x843f0000..0x84400000`** | `0xffffffff` *(desabilitado)* |
+| `+0x74..+0x7c` | Contagens agregadas de setores BGO | `3` / **`0x2d` (`45` setores)** | `5` / `0x23` (`35` slots log.) | `3` / `0x1d` (`29` setores) |
+| `+0xb4..+0xc0` | Ponteiros base de boot/espelho (`FUN_44025328`) | `1` entrada: **`0x84130000`** | `3` entradas: `0x84200000, 0x84300000, 0x84380000` | `1` entrada (`0x84200000`) + lista `0x440365dc` (`3`) |
+
+> **Leitura Forense da `0x440337A4` (`Loader ver0.61`):** Os `45` (`0x2D`) setores de `64 KiB` (`0x84130000..0x843FFFFF` = `SA26..SA70`, `2.880 KiB`) dividem-se em **`1` bloco Partição 1 (`0xF101`) + `40` (`0x28`) blocos Partição 2 (`0xF201..0xF228`) + `4` setores spare (`0xFFFF`)**, mantendo a NVRAM `EEMUL` completamente separada nos setores `SA71..SA141` (`0x84400000..0x847FFFFF`). O cálculo de `max_page_id` confere exatamente: controle `0x0F01`, diretório `0x0F02..0x0F04` (`3` págs), FAT primária `0x0F07..0x0F15` (`15` págs = `0x0F`), FAT de backup `0x0F16..0x0F24` (`15` págs), encerrando em **`0x0F24`**.
+
+### Tabela D — Subsistema RTSC, Controladora DAVIS IDE & Delays (`Loader ver0.61` × `PROG061` × `ver0.63`)
+
+| Função Lógica | `Loader ver0.61 [06/03/06]` | `PROG061` (`0x50400000`) | `/BOOT.BIN ver0.63 [07/10/24]` | Comportamento & Constantes Verificadas |
+|---|---|---|---|---|
+| **`rtsc_init`** | `FUN_4400b1d5` (`0x4400b1d5`, `121 B`) | `FUN_5040c700` (`0x5040c700`, `121 B`) | `FUN_44009741` (chamado em `fmu_sd_dispatcher`) | Inicializa driver baixo nível (`FUN_504156ad`/`FUN_44012b61`), canal IDE 0 & 1 (`FUN_504141df`), e dispara `startup_drive(0, 1, 0)`. |
+| **`hdd_max_lba`** | `FUN_4400b980` (`0x4400b980`, `328 B`) | `FUN_5040ceab` (`0x5040ceab`, `328 B`) | `FUN_44009ea7` (`0x44009ea7`, `355 B`) | Envia comando ATA `0xEC` (`IDENTIFY DEVICE`), lê `0x200` B em `0x90c00000`, testa bit `0x400` LBA48 em word `[49/83]` (offset `-0x1a` <- `-0x176`) e escolhe LBA28 (`-0x1a4`) vs LBA48 (`-0x154`). |
+| **`rtsc_channel_lock` / `unlock`** | `FUN_4400b94c` / `FUN_4400b966` | `FUN_5040ce77` (`26 B`) / `FUN_5040ce91` (`26 B`) | — | Wrappers semafóricos do barramento RTSC em torno de comandos ATA. |
+| **`rtsc_channel_reset_probe`** | `FUN_44011651` (`0x44011651`, `137 B`) | `FUN_504141df` (`0x504141df`, `137 B`) | — | Zera descritores `0x504f7e50/54/5c = 0xff`, chama `davis_channel_init(ch)`, marca bits `0xc0` em `0x504f7e34+ch`. |
+| **`startup_drive`** | `FUN_440116da` (`0x440116da`, `308 B`) | `FUN_50414268` (`0x50414268`, `308 B`) | `startup_drive` (`0x44009cea`, `295 B`) | Executa `mode 0/2` (`Reset`/`SoftReset` -> `FUN_5041ceaa`) ou `mode 1` (Identify/Start -> `FUN_5041cf21` com timeout `0x5dc = 1500` ms/ticks). |
+| **`davis_channel_init`** | *(visto em `0x44011651`)* | `FUN_5041cd4d` (`0x5041cd4d`, `113 B`) | *(ver `0x4401a5cd`)* | Valida `canal < 2`, chama `davis_reg_reset(ch)`, `davis_devctl_write(0, ch, 0)`, `davis_hard_or_soft_reset(ch, 1)` e `davis_probe_devices(ch)`. |
+| **`davis_reg_reset`** (`+0x00/+0x20`) | `FUN_4401851f` (`0x4401851f`, `88 B`) | `FUN_5041b444` (`0x5041b444`, `88 B`) | `FUN_44016669` (`0x44016669`, `88 B`) | Zera bits `[1:0]` e depois seta `[1:0]` em `0x89000400 + ch*0x800`; limpa bit `[0]` em `0x89000420 + ch*0x800`. |
+| **`davis_tf_read`** (`0x89000520+reg`) | `FUN_44018577` (`0x44018577`, `43 B`) | `FUN_5041b49c` (`0x5041b49c`, `43 B`) | `FUN_440166c1` (`0x440166c1`, `42 B`) | Lê registrador task-file `0x89000520 + reg_off + ch*0x800`; aplica `& 0xff` se `reg_off != 0`. |
+| **`davis_drive_select_rmw`** (`0x89000538`) | `FUN_440185bc` (`0x440185bc`, `122 B`) | `FUN_5041b4e1` (`0x5041b4e1`, `122 B`) | `FUN_44016703` (`0x44016703`, `117 B`) | Read-Modify-Write em **`0x89000538`** (`Drive/Head`, `-0x76fffac8`): máscara `0xff10` seleciona Master (`DEV=0`) vs Slave (`DEV=0x10`). Contém `NOT` (`f2 3x` -> Trap #9). |
+| **`davis_devctl_write`** (`0x89000558`) | `FUN_44018636` (`0x44018636`, `89 B`) | `FUN_5041b55b` (`0x5041b55b`, `89 B`) | `FUN_44016778` (`0x44016778`, `78 B`) | Escreve **`0x89000558`** (`AltStatus/DevCtl`, `-0x76fffaa8`): bit 1 `nIEN` (`cmd=1`), bit 2 `SRST` (`cmd=2`), bit 7 (`cmd=3`). |
+| **`davis_reset_wait_bsy`** (`0xc80` = 32s) | `FUN_4401a9fc` (`0x4401a9fc`, `229 B`) | `FUN_5041d8e4` (`0x5041d8e4`, `229 B`) | `FUN_4401a5cd` / `0x4401aa1f` | Aciona reset e, para `dev = 0, 1`, seleciona `0xff10` e chama `davis_poll_altstatus(0xc80, ch, 0x80, 0)` esperando `BSY (0x80) == 0`. |
+| **`davis_poll_altstatus`** (`0x9487` + `10ms`) | `FUN_4401b03f` (`0x4401b03f`, `298 B`) | `FUN_5041df27` (`0x5041df27`, `298 B`) | `FUN_440188fc` (`0x440188fc`, `275 B`, `Trap #8A @ 0x44018963`) | Faz busy-spin em **`0x89000558`** (`reg 0x38`) durante `0x9487` ticks (`~10 ms`) e depois até `param_1 - 1` ticks de **`10 ms`** (`FUN_50431303(1)`). Timeout para `0xc80`: **`32.00 s`/dev**. |
+| **`davis_probe_devices`** (`ATAPI`/`ATA`) | `FUN_4401c733` (`0x4401c733`, `359 B`) | `FUN_5041f61b` (`0x5041f61b`, `359 B`) | `FUN_4401aa1f` (`0x4401aa1f`, `1214 B`) | Testa `0x38` (`0xFF` floating bus, `ERR 0x01`), lê `0x10`/`0x14` (`0x14/0xeb` = `ATAPI`; `0x00/0x00` + `DRDY 0x40` = `ATA`). Contém **`BCLR 0xff`** (Trap #2). |
+| **`sleep_10ms_ticks`** (`10 ms/tick`) | `FUN_4402e37b` | `FUN_50431303` (`0x50431303`, `27 B`) | `FUN_4403169a` (`0x4403169a`) | Loop de `param_1` iterações invocando `func(10)` (`10 ms` do RTOS), fundamentando `0xc80 * 10 ms = 32.000 ms`. |
+
+---
+
+## Guia de Leitura MN103S: Convenção de Chamada (ABI), Frame `A3` e Tradução Semântica
+
+Ao ler o pseudocódigo C bruto preservado nas Partes I–IV, o decompilador Ghidra exibe nomes genéricos (`puVar1`, `in_A3`, `DAT_*`, `uRam*`). Utilize este dicionário determinístico ao interpretar qualquer listagem deste documento:
+
+1. **Convenção de Chamada (ABI Matsushita AM34 / MN103S):**
+   - **Argumentos de entrada:** Argumento 1 em **`D0`**, Argumento 2 em **`D1`**, Argumentos 3, 4, ... gravados pelo chamador na pilha de saída em **`(0xc, SP)`**, **`(0x10, SP)`**, ... (porque `CALL` empilha endereço de retorno e slots reservados `[0x0..0x8]`, vistos no chamado após prólogo como `(caller_frame + 0xc)`).
+   - **Retorno:** **`D0`** (32 bits inteiro/ponteiro ou 8/16 bits estendidos via `EXTBU`/`EXTHU`); funções sem frame restauram via **`RETS`**; funções com prólogo `MOVM [D2,D3,A2,A3,EX1],(SP)` encerram com **`RET [EX1,A3,A2,D3,D2], frame_bytes`**.
+   - **Registradores preservados (*callee-saved*) e ponteiro de frame:** `D2`, `D3`, `A2`, `A3` e bloco estendido `EX1` (`R4..R7` no AM33/AM34). Quando `A3` recebe `MOV SP, A3`, o decompilador frequentemente representa variáveis locais como **`puVar1[-N]`** (onde `puVar1 = &uStack_4`) ou **`*(in_A3 + -k)`** (Armadilha #6).
+2. **Mapeamento Semântico de Variáveis Genéricas (`puVar` / `iVar` / Globais):**
+
+| Padrão no Pseudocódigo Bruto Ghidra | Significado Real no Firmware | Exemplo Concreto |
+|---|---|---|
+| `puVar1[-k]` (com `puVar1 = &uStack_4`) | Variável local de 32 bits no slot `-4*k` do frame `A3` (`(-k*4, A3)`) | `puVar1[-1]` em `FUN_5040211f` = `status_ret`; `puVar1[-2]` em `FUN_44007f0e` = `rc` / `hdd_status`. |
+| `uRam50496d10` / `_DAT_50496560` / `_DAT_505163d4` | Campo `+0x00` (`NFROM_NOR_STATE`) da struct global `nfrom_ctrl_ctx` carregada da página de controle (`0xa01`/`0xf01`/`0x801`) | `0xFFFF` (`Original -> Backup`), `0xFFFFFF` (`Backup -> Original`), `0x0000` (sincronizado). |
+| `uRam50496d14` / `_DAT_505163d8` | `num_omap_pages` (contagem de páginas OMAP válidas no descritor NFROM, offset `+0x04`) | Limita loop `while (omap_idx < num_omap_pages)` em `nfrom_power_fail_recovery`. |
+| `uRam50496d16` / `_DAT_505163da` | `total_dir_entries` (offset `+0x06`, blocos de 16 entradas/página) | Calcula `entries_in_page = min(16, total_dir_entries - page*16)`. |
+| `0x50480004 + idx * 9` | Tabela estática de **nomes de partição `[nfrom]`** (`stride = 9 B`, ASCII de até 8 chars + NUL) | Comparada via `memcmp`/`FUN_5042d292(..., 8)` contra entradas do diretório `0xa02..0xa04` / `0xf02..0xf04`. |
+| `(u32*)(0x504f8464 + chip*0xc)` / `+8` / `+c` | Status por área lógica BGO (`area 1/2 -> +0x64`, `area 3 -> +0x68`, `area 4 -> +0x6c`) | `0` = limpa/pronta, `2` = montada com sucesso, `4` = inválida/não inicializada, `6` = requer migração. |
+| `(i8*)(0x504f81d8 + ch*0x5c)` | Contexto de canal DAVIS (`+0x00` `busy_cnt`, `+0x02` `is_init`, `+0x04..05` `is_atapi[2]`, `+0x06..07` `is_ata[2]`) | Atualizado por `FUN_5041f61b` (`BCLR 0xff` zerando `+0x04/+0x06` quando `0x38 == 0xff`). |
 
 ---
 
@@ -138,13 +249,13 @@ Saída literal da inspeção PyGhidra (`verified_extra_facts.txt` — Seção 1)
 | `/BOOT.BIN` | 0x440236ed | `FUN_440236ed` | `bgo_nor_cfi_cmd_236ed` | 205 B | Sequência CFI `0xAA`/`0x55` para NOR Flash — exemplo clássico de pruning MMIO pelo decompilador (`bgo_nor_cfi_cmd_236ed`). |
 | `/BOOT.BIN` | 0x440065bc | `fmu_sd_dispatcher` | `fmu_sd_dispatcher` | 614 B | Despachante principal de carga `.FMU`/`.FVU` via SD (`fmu_sd_dispatcher`). |
 | `/BOOT.BIN` | 0x44007a12 | `FUN_44007a12` | `sd_fvu_load_7a12` | 403 B | Carregamento de arquivo `.FVU` / `PROG061` via SD (`sd_fvu_load_7a12`). |
-| `/BOOT.BIN` | 0x44007ba5 | `FUN_44007ba5` | `sd_diag_boot_7ba5` | 180 B | Boot de diagnóstico via SD (`sd_diag_boot_7ba5`). |
+| `/BOOT.BIN` | 0x44007ba5 | `FUN_44007ba5` | `sd_diag_boot_7ba5` | 180 B | Boot de diagnóstico via SD em `/BOOT.BIN` (`ver0.63` EZ485V: `uncompress(0x93fc0000)`; no EH55 `ver0.61` é substituído por carga crua em `0x90400000` e `JMP 0x50400000`). |
 | `/BOOT.BIN` | 0x44007e48 | `FUN_44007e48` | `sd_card_read_test_7e48` | 97 B | Teste de leitura do cartão SD (`sd_card_read_test_7e48`). |
 | `/BOOT.BIN` | 0x4400a247 | `FUN_4400a247` | `sd_mount_and_read_a247` | 163 B | Monta o cartão SD e abre fluxo de leitura (`sd_mount_and_read_a247`). |
 | `/BOOT.BIN` | 0x4400a32d | `FUN_4400a32d` | `sd_read_file_stream_a32d` | 216 B | Leitura em stream de arquivo SD (`sd_read_file_stream_a32d`). |
 | `/BOOT.BIN` | 0x4400a8c7 | `FUN_4400a8c7` | `sd_load_file_a8c7` | 181 B | Carregamento de arquivo nomeado do SD para buffer/RAM (`sd_load_file_a8c7`). |
-| `/BOOT.BIN` | 0x4400a97c | `FUN_4400a97c` | `sd_diag_load_a97c` | 227 B | Carga de binário de diagnóstico a partir do SD (`sd_diag_load_a97c`). |
-| `/BOOT.BIN` | 0x4400aa5f | `FUN_4400aa5f` | `sd_read_firm_list_aa5f` | 99 B | Leitura de arquivo lista `.FMU` / firmware list no SD (`sd_read_firm_list_aa5f`). |
+| `/BOOT.BIN` | 0x4400a97c | `FUN_4400a97c` | `sd_diag_load_a97c` | 227 B | Carga de `DIGADIAG.FRM` via SD em `/BOOT.BIN` (`ver0.63` EZ485V: `0x20000` B -> `0x93fc0000`; no EH55 `ver0.61`/`PROG061`/`flash.bin`: `0x40000` B -> `0x90400000`). |
+| `/BOOT.BIN` | 0x4400aa5f | `FUN_4400aa5f` | `sd_read_firm_list_aa5f` | 99 B | Leitura de `PANA__SD.FRM` via SD em `/BOOT.BIN` (`ver0.63` EZ485V: `0x2000` B `sd64`; no EH55 `ver0.61`/`PROG061`/`flash.bin`: `0x1800` B `sd48`). |
 | `/BOOT.BIN` | 0x4402618b | `FUN_4402618b` | `sd_get_info_2618b` | 88 B | Consulta informações e estado atual do controlador SD (`sd_get_info_2618b`). |
 | `/BOOT.BIN` | 0x44026278 | `FUN_44026278` | `sd_slot_init_26278` | 83 B | Inicialização básica de slot SD (`sd_slot_init_26278`). |
 | `/BOOT.BIN` | 0x440264a6 | `FUN_440264a6` | `sd_set_state_264a6` | 163 B | Configuração de máquina de estados SD (`sd_set_state_264a6`). |
@@ -155,6 +266,32 @@ Saída literal da inspeção PyGhidra (`verified_extra_facts.txt` — Seção 1)
 | `/BOOT.BIN` | 0x44028008 | `FUN_44028008` | `sd_init_entry_28008` | 492 B | Ponto de entrada da inicialização do controlador SD (`sd_init_entry_28008`). |
 | `/BOOT.BIN` | 0x440281f4 | `FUN_440281f4` | `sd_card_mount_281f4` | 99 B | Montagem de volume/sistema de arquivos no SD (`sd_card_mount_281f4`). |
 | `/BOOT.BIN` | 0x44028348 | `FUN_44028348` | `sd_card_check_28348` | 75 B | Verificação de presença/prontidão do cartão SD (`sd_card_check_28348`). |
+| `/BOOT.BIN` | 0x440098fc | `FUN_440098fc` | `fat_dev_read_sectors_98fc` | 132 B | Despachante de leitura de setores por dispositivo (`dev 0` vs `dev 3` SD via `FUN_440262cb`). |
+| `/BOOT.BIN` | 0x4400b3d9 | `FUN_4400b3d9` | `fat_sd_dbg_printf_b3d9` | 210 B | Wrapper condicional de log/erro do subsistema FAT/SD para `uart0_printf`. |
+| `/BOOT.BIN` | 0x4400c0a8 | `FUN_4400c0a8` | `fat_parse_vbr_bpb_c0a8` | 690 B | Parser de Boot Sector (VBR/BPB FAT12/FAT16/FAT32: OEM, `BytesPerSec`, `SecPerClus`, `RsvdSecCnt`, `NumFATs`, `RootEntCnt`, `FATSz`, `TotSec`). |
+| `/BOOT.BIN` | 0x4400c510 | `FUN_4400c510` | `fat_unpack_dirent_c510` | 390 B | Desempacotamento de entrada de diretório FAT 8.3 (nome, extensão, atributos, cluster e tamanho de 32 bits). |
+| `/BOOT.BIN` | 0x4400c696 | `FUN_4400c696` | `fat_mount_c696` | 483 B | Montagem pública do volume FAT no cartão SD: classifica FAT12 (`< 0xff6`), FAT16 (`<= 0xfff5`) ou FAT32 (`0x20`, retornando `0xffffd8d7` neste estágio), calcula `TotalClusters` e inicializa janela de cache via `FUN_4400ced2`. |
+| `/BOOT.BIN` | 0x4400c879 | `FUN_4400c879` | `fat_open_c879` | 169 B | Abertura de arquivo por caminho 8.3 no volume montado (`FUN_4400cfde`, `FUN_4400d11e`, `FUN_4400d16b`); retorna handle (`200` + slot, `0` -> `200`) ou código negativo. |
+| `/BOOT.BIN` | 0x4400c922 | `FUN_4400c922` | `fat_read_c922` | 43 B | Wrapper público de leitura de arquivo FAT (`handle - 200` -> `FUN_4400d32f`). |
+| `/BOOT.BIN` | 0x4400c94d | `FUN_4400c94d` | `fat_seek_c94d` | 55 B | Wrapper público de seek de arquivo FAT (`handle - 200` -> chamada direta em `0x4400c9bd`, prólogo real de `FUN_4400c9c0`). |
+| `/BOOT.BIN` | 0x4400c9c0 | `FUN_4400c9c0` | `fat_seek_internal_c9c0` | 153 B | Seek interno em handle FAT (`whence` `1` = início/`SEEK_SET`, `2` = posição atual/`SEEK_CUR`, `3` = fim/`SEEK_END`); o prólogo real inicia 3 bytes antes em `0x4400c9bd` (`cf 10 3f`: `MOVM [A3],(SP); MOV SP,A3`, tamanho real total 156 B). |
+| `/BOOT.BIN` | 0x4400ca59 | `FUN_4400ca59` | `fat_sd_read_chunked_ca59` | 200 B | Leitor de blocos SD em fatias de até `0x1fc` setores via buffer staging `0x91c00000`, invocando `FUN_440098fc(3, ...)`. |
+| `/BOOT.BIN` | 0x4400cb21 | `FUN_4400cb21` | `fat_mount_internal_cb21` | 945 B | Leitura de LBA 0 via `FUN_4400ca59`, detecção opcional de MBR (`FUN_4400bfb0`) e salto para LBA de partição antes de validar VBR via `FUN_4400c0a8`. |
+| `/BOOT.BIN` | 0x4400ced2 | `FUN_4400ced2` | `fat_cache_init_ced2` | 268 B | Inicializa janela de cache da tabela FAT (3 setores) em estrutura por slot. |
+| `/BOOT.BIN` | 0x4400cfde | `FUN_4400cfde` | `fat_parse_83_name_cfde` | 320 B | Normalização/uppercase de nome e extensão 8.3 preenchidos com espaços (`0x20`). |
+| `/BOOT.BIN` | 0x4400d11e | `FUN_4400d11e` | `fat_alloc_handle_d11e` | 77 B | Alocação do slot de arquivo FAT em `_DAT_5056b6c8` via contador `DAT_5056b6d0` (retorna slot `0`, mapeado para handle `200` por `FUN_4400d16b`, ou `0xffffd8e5` = `-10011`). |
+| `/BOOT.BIN` | 0x4400d16b | `FUN_4400d16b` | `fat_open_internal_d16b` | 452 B | Lookup interno de entrada no diretório raiz (`FUN_4400dce2`), desempacotamento (`FUN_4400c510`) e preenchimento do descritor de arquivo aberto em `0x5056b680`. |
+| `/BOOT.BIN` | 0x4400d32f | `FUN_4400d32f` | `fat_read_internal_d32f` | 2357 B | Motor principal de leitura FAT12/FAT16/FAT32 por corridas contíguas de clusters (despacha extensão `'ASF'` em `0x440356e9` para `FUN_4400dfc8`). |
+| `/BOOT.BIN` | 0x4400dc64 | `FUN_4400dc64` | `fat_read_sectors_wrapper_dc64` | 126 B | Wrapper de leitura de setores que soma `PartitionLBA` (`0x5056b608 + slot*0x40`) ao LBA relativo antes de chamar `FUN_4400ca59`. |
+| `/BOOT.BIN` | 0x4400dce2 | `FUN_4400dce2` | `fat_root_dir_lookup_dce2` | 700 B | Varredura de diretório raiz FAT12/16 (via `FUN_4400e592`) e FAT32 (cadeia de clusters a partir de `RootClus` via `FUN_4400e51f`/`FUN_4400e737`). |
+| `/BOOT.BIN` | 0x4400dfc8 | `FUN_4400dfc8` | `fat_read_asf_or_direct_dfc8` | 1367 B | Leitor FAT especializado (caminho `'ASF'` acionado por `FUN_4400d32f`, usando `FUN_4400ef58` para contar clusters contíguos). |
+| `/BOOT.BIN` | 0x4400e51f | `FUN_4400e51f` | `fat_cluster_to_lba_e51f` | 115 B | Conversão de número de cluster FAT em LBA relativo à partição (`DataStart + (cluster - 2) * SecPerClus`). |
+| `/BOOT.BIN` | 0x4400e592 | `FUN_4400e592` | `fat12_16_root_lookup_e592` | 421 B | Varredura de entradas no diretório raiz fixo FAT12/FAT16 (lote de setores a partir de `RootDirStart`). |
+| `/BOOT.BIN` | 0x4400e737 | `FUN_4400e737` | `fat_next_cluster_e737` | 1672 B | Leitura da entrada seguinte na tabela FAT12 (12 bits), FAT16 (16 bits) ou FAT32 (28 bits) com janela em cache de 3 setores. |
+| `/BOOT.BIN` | 0x4400edbf | `FUN_4400edbf` | `fat_count_contiguous_clusters_edbf` | 409 B | Contador de clusters contíguos a partir de um cluster inicial para otimização de leitura sequencial em `FUN_4400d32f`. |
+| `/BOOT.BIN` | 0x440262cb | `FUN_440262cb` | `sd_ctrl_read_blocks_262cb` | 284 B | Leitura em baixo nível no controlador SD: alterna `CMD17` (`FUN_440282d6`) vs `CMD18` (`FUN_44028257`) e trata endereçamento por bloco em SDHC (`_DAT_505748f8 == 2`). |
+| `/BOOT.BIN` | 0x4400c984 | `FUN_4400c984` | `fat_close_c984` | 57 B | Fecha handle FAT aberto e libera slot via `FUN_4400df9e` (disassembly direto em `BOOT.BIN`). |
+| `/BOOT.BIN` | 0x4400ef58 | `FUN_4400ef58` | `fat_count_contiguous_clusters_ef58` | 389 B | Conta corrida de clusters contíguos na FAT para `FUN_4400dfc8` (disassembly direto em `BOOT.BIN`). |
 | `/BOOT.BIN` | 0x44004b06 | `feonly_mode` | `feonly_mode` | 214 B | Modo Front-End Only de depuração/gravação direta com o drive. |
 | `/BOOT.BIN` | 0x44004bde | `fe_drive_mailbox_write` | `fe_drive_mailbox_write` | 300 B | Escrita via mailbox/registradores de comunicação com o drive FE. |
 | `/BOOT.BIN` | 0x4400742c | `FUN_4400742c` | `dvdram_diag_boot_742c` | 382 B | Fluxo de boot de diagnóstico via DVD-RAM (`dvdram_diag_boot_742c`). |
@@ -201,8 +338,8 @@ Saída literal da inspeção PyGhidra (`verified_extra_facts.txt` — Seção 1)
 | `/eh55_frm_PROG061_BOOT.bin` | 0x50400014 | `FUN_50400014` | `p61_startup_0014` | 101 B | Ponto de entrada pós-carga de `PROG061` em `0x50400014` (`p61_startup_0014`). |
 | `/eh55_frm_PROG061_BOOT.bin` | 0x50400810 | `FUN_50400810` | `p61_data_init_0810` | 150 B | Inicialização de dados e variáveis globais de `PROG061` (`p61_data_init_0810`). |
 | `/eh55_frm_PROG061_BOOT.bin` | 0x50401f3c | `FUN_50401f3c` | `p61_nfrom_format_orphan_1f3c` | 483 B | Rotina órfã/especial de formatação NFROM (`p61_nfrom_format_orphan_1f3c`). |
-| `/eh55_frm_PROG061_BOOT.bin` | 0x5040211f | `FUN_5040211f` | `p61_cmd_dispatch_211f` | 788 B | Despachante de comandos DIGADIAG/serviço (`p61_cmd_dispatch_211f`). |
-| `/eh55_frm_PROG061_BOOT.bin` | 0x5040248e | `FUN_5040248e` | `p61_fmu_sd_diag_248e` | 74 B | Diagnóstico de cartão SD / FMU em `PROG061` (`p61_fmu_sd_diag_248e`). |
+| `/eh55_frm_PROG061_BOOT.bin` | 0x5040211f | `FUN_5040211f` | `p61_nfrom_recover_map_211f` | 788 B | Recuperação e sincronização `[nfrom] NOR STATE` (`Original <-> Backup`, 10 págs `0xa07`/`0xa11`, 3 págs dir `0xa02..0xa04`); contraparte exata de `ver0.61` `FUN_44003150` e `ver0.63` `FUN_440018bb`. *(Alias corrigido de `p61_cmd_dispatch_211f`.)* |
+| `/eh55_frm_PROG061_BOOT.bin` | 0x5040248e | `FUN_5040248e` | `p61_bgo_ioctl_dispatch_248e` | 74 B *(header; switch @ `0x50432830` ~237 B)* | Despachante `ioctl` `[nfrom]`/`BGO` (`cmd 0..6,8`, `bgo_read_D`/`write_D`); contraparte exata de `ver0.61` `FUN_440034bf` e `ver0.63` `FUN_44001c49`. *(Alias corrigido de `p61_fmu_sd_diag_248e`.)* |
 | `/eh55_frm_PROG061_BOOT.bin` | 0x50404dcd | `FUN_50404dcd` | `p61_print_helper_4dcd` | 144 B | Helper de impressão formatada no console `PROG061` (`p61_print_helper_4dcd`). |
 | `/eh55_frm_PROG061_BOOT.bin` | 0x50404ec0 | `FUN_50404ec0` | `p61_hit_any_key_4ec0` | 148 B | Leitura de linha / espera de tecla (`Hit any key`, `p61_hit_any_key_4ec0`). |
 | `/eh55_frm_PROG061_BOOT.bin` | `0x50404f12` | `FUN_50404f12` | `HitAnyKey_xref` | 32 B | Exemplo de `in_LAR` / loop de hardware MN103S. |
@@ -212,6 +349,8 @@ Saída literal da inspeção PyGhidra (`verified_extra_facts.txt` — Seção 1)
 | `/eh55_frm_PROG061_BOOT.bin` | 0x50406d30 | `FUN_50406d30` | `p61_state_init_6d30` | 122 B | Inicialização de estados internos em `PROG061` (`p61_state_init_6d30`). |
 | `/eh55_frm_PROG061_BOOT.bin` | 0x5040df40 | `FUN_5040df40` | `p61_TimerMCU_update_df40` | 1058 B | Atualização de firmware do Timer MCU via `PROG061` (`p61_TimerMCU_update_df40`). |
 | `/eh55_frm_PROG061_BOOT.bin` | `0x5040ea30` | `FUN_5040ea30` | `FMU_list_sum` | 75 B | Decompilação + disasm de instrução sobreposta `0x5040ea2f`/`0x5040ea30`. |
+| `/eh55_frm_PROG061_BOOT.bin` | `0x5040e9ae`..`0x5040edd2` | `sd_load.o` (disasm) | `p61_sd_load_e9ae_edd2` | ~1060 B | Módulo `sd_load.o` verificado em `PROG061`: `sd_decrypt_toc_48b` (`0x5040e9ae`), `sd_list_sum_48b` (`0x5040ea1c`), `sd_find_firm_entry` (`0x5040ea7d`), `bytes_sum32` (`0x5040eb35`), `sd_open_pana_sd_frm` (`0x5040ebfe`), `sd_diag_load` (`0x5040eca9`, `0x40000` -> `0x90400000`), `sd_read_firm_list` (`0x5040ed7c`, `0x1800` `sd48` @ `0x50481b5c`). |
+| `dmr-es35v/flash.bin` | `0x440085d9`..`0x4400bd99` | NOR 2006 (disasm) | `es35v_nor_060313_sd_diag` | ~760 B | Paralelo NOR `Loader ver0.18 [06/03/13]` (`0x440085d9` -> `JMP 0x50400000`, `0x440095ab` `sd_diag_boot`, `0x44009840..0x440098b5` CD `0x40000` -> `0x90400000`, `0x4400bc70..0x4400bd98` `sd_diag_load` & `sd_read_firm_list` `0x1800` `sd48`). |
 | `/eh55_frm_PROG061_BOOT.bin` | 0x5040a294 | `FUN_5040a294` | `p61_bgo_init_hook_a294` | 130 B | Hook de inicialização BGO em `PROG061` (`p61_bgo_init_hook_a294`). |
 | `/eh55_frm_PROG061_BOOT.bin` | 0x50421ebe | `FUN_50421ebe` | `p61_bgo_ctrl_21ebe` | 101 B | Controle BGO equivalente em `PROG061` (`p61_bgo_ctrl_21ebe`). |
 | `/eh55_frm_PROG061_BOOT.bin` | 0x5042201e | `FUN_5042201e` | `p61_bgo_read_2201e` | 165 B | Leitura BGO em `PROG061` (`p61_bgo_read_2201e`). |
@@ -258,10 +397,37 @@ Saída literal da inspeção PyGhidra (`verified_extra_facts.txt` — Seção 1)
 | `/DRV_decomp.bin` | 0x40021476 | `FUN_40021476` | `drv_atapi_pkt_21476` | 535 B | Recepção/preparo de pacote CDB ATAPI (`drv_atapi_pkt_21476`). |
 | `/DRV_decomp.bin` | 0x4002168d | `FUN_4002168d` | `drv_atapi_irq_2168d` | 646 B | Rotina de interrupção/conclusão ATAPI (`drv_atapi_irq_2168d`). |
 | `/DRV_decomp.bin` | 0x400d92b2 | `FUN_400d92b2` | `drv_ref_0x400d92b2` | 82 B | Referência cruzada ao subsistema Sense / erro em `0x400d92b2` (`drv_ref_0x400d92b2`). |
+| `eh55_loader_ver061_256k.bin` | 0x44005fb3 | `FUN_44005fb3` | `v61_boot_main_5fb3` | 1076 B | **`Loader ver0.61 [06/03/06]`:** ponto central de boot EH55; carga F/E `0x84080000 -> 0x90202000` e roteamento `serial`/`normal`/`support`. |
+| `eh55_loader_ver061_256k.bin` | 0x44007f0e | `FUN_44007f0e` | `v61_fmu_sd_dispatcher_7f0e` | 911 B | **`Loader ver0.61`:** verdadeiro `fmu_sd_dispatcher` do EH55 (`0x44008020` = `+0x112` interno / `+5 B` em `MOVBU`); coordena RTSC/HDD `mainsoft` e fallback flag `update`. |
+| `eh55_loader_ver061_256k.bin` | 0x4400829d | `FUN_4400829d` | `v61_hdd_hdr_check_829d` | 208 B | Validação de assinatura/cabeçalho `mainsoft` lido do HDD (`Loader ver0.61`). |
+| `eh55_loader_ver061_256k.bin` | 0x4400836d | `FUN_4400836d` | `v61_hdd_load_mainsoft_836d` | 534 B | Carga e descompressão de `mainsoft` a partir de LBA `0x10000` / `max_lba - 0x20000` (`Loader ver0.61`). |
+| `eh55_loader_ver061_256k.bin` | 0x44008585 | `FUN_44008585` | `v61_hdd_inner_recovery_8585` | 506 B | Recuperação `HDD INNER SECTOR MAIN RECOVERY` (cópia backup -> primária + 3 tentativas read-verify + NVRAM `0x50480016`). |
+| `eh55_loader_ver061_256k.bin` | 0x44009cef..0x44009dd6 | `FUN_44009cef` / `9d5b` / `9d83` / `9d9e` / `9dd6` | `v61_nvram_update_flags` | ~285 B | Leitura, verificação e gravação da flag `update` NVRAM (`"MATS"`/`"HITA"` @ `0x50480c74`) quando `mainsoft` falha. |
+| `eh55_loader_ver061_256k.bin` | 0x44003150 | `FUN_44003150` | `v61_nfrom_recover_map_3150` | 788 B | Recuperação `[nfrom] NOR STATE` com `15` páginas FAT (`0xf07..`/`0xf16..`) e `3` páginas dir (`0xf02..0xf04`) no EH55 real. |
+| `eh55_loader_ver061_256k.bin` | 0x440034bf | `FUN_440034bf` | `v61_bgo_ioctl_dispatch_34bf` | 241 B | Despachante `ioctl` BGO do `Loader ver0.61` (cmd `0..6,8`). |
+| `eh55_loader_ver061_256k.bin` | 0x440053d3 | `FUN_440053d3` | `v61_nfrom_power_fail_recovery_53d3` | 490 B | Inicialização `control info` NFROM (`0xf01`, tabela `9 B` @ `0x50480004`, cache `0x50498b60`) no `Loader ver0.61`. |
+| `eh55_loader_ver061_256k.bin` | 0x4401ef82..0x44025328 | `FUN_4401ef82`..`FUN_44025328` | `v61_bgo_ftl_engine` | ~1.5 KB | Núcleo FTL BGO do `Loader ver0.61` (`ioctl` `0..6`, `FUN_4402014f`, `FUN_44021bd9`, `FUN_44025328` + tabela **`0x440337A4`** `45×64 KiB` `SA26..SA70`). |
+| `eh55_loader_ver061_256k.bin` | 0x4400b1d5 | `FUN_4400b1d5` | `v61_rtsc_init_b1d5` | 121 B | Inicialização do subsistema RTSC no `Loader ver0.61` (equiv. `FUN_5040c700`). |
+| `eh55_loader_ver061_256k.bin` | 0x4400b980 | `FUN_4400b980` | `v61_hdd_max_lba_b980` | 328 B | `IDENTIFY DEVICE` (`0xEC`) / obtenção de `HDD MAX LBA` (LBA28 vs LBA48 bit `0x400`, equiv. `FUN_5040ceab`). |
+| `eh55_loader_ver061_256k.bin` | 0x44012d77 / 0x44013007 | `FUN_44012d77` / `FUN_44013007` | `v61_ata_cmd_exec_12d77` | 249 / 80 B | Montagem do bloco de comando ATA/ATAPI e executor (`0x44012e69` possui **Trap #8A** `fb 9c cd c0`). |
+| `eh55_loader_ver061_256k.bin` | 0x4401851f..0x4401c733 | `FUN_4401851f..c733` | `v61_davis_ide_driver` | ~1.2 KB | Primitivas DAVIS do `Loader ver0.61` (`0x89000538`/`0x89000558`, `0xc80 * 10ms = 32s` via `FUN_4402e37b`, `BCLR 0xff` em `FUN_4401c733`). |
+| `/BOOT.BIN` | 0x4401f66a | `FUN_4401f66a` | `v63_bgo_mount_scan_1f66a` | 410 B | Varredura de setores BGO e chamada ao verificador P1 em `ver0.63` (equiv. `PROG061 FUN_50422ebf`). |
+| `/BOOT.BIN` | 0x4401ffa5 | `FUN_4401ffa5` | `v63_bgo_p2_reconcile_1ffa5` | 875 B | Reconciliação de blocos/journal P2 em `ver0.63` (equiv. `PROG061 FUN_5042383c`). |
+| `/eh55_frm_PROG061_BOOT.bin` | 0x50402435 | `FUN_50402435` | `p61_bgo_ctrl_save_2435` | 89 B | Grava página de controle `0xa01` após migração `[nfrom]`. |
+| `/eh55_frm_PROG061_BOOT.bin` | 0x5040257b | `FUN_5040257b` | `p61_nfrom_write_page_wrap_257b` | 96 B | Wrapper de escrita `ioctl(4)` com validação de códigos `0..3`. |
+| `/eh55_frm_PROG061_BOOT.bin` | 0x5040439b | `FUN_5040439b` | `p61_nfrom_power_fail_recovery_439b` | 490 B | Inicialização/recuperação pós-queda de energia NFROM em `PROG061` (equiv. `ver0.61 FUN_440053d3` / `ver0.63 FUN_44003fd0`). |
+| `/eh55_frm_PROG061_BOOT.bin` | 0x50404585 / 0x50404592 | `FUN_50404585` / `FUN_50404592` | `p61_bgo_nor_autoselect_4592` | 13 / 281 B | Stub + sonda JEDEC Autoselect (`0x84380000`, `0x1c` vs `0x01`/`0x227e` Spansion `S29JL064H` -> `0x8438001c`). |
+| `/eh55_frm_PROG061_BOOT.bin` | 0x50421e6a..0x50422a9f | `FUN_50421e6a`..`FUN_50422a9f` | `p61_bgo_ftl_core` | ~1.2 KB | Primitivas FTL (`ioctl 0/3/4`, tabela `0x50436E30`, `FUN_5042283d` slot migrado, `FUN_5042285f` swap bit, `FUN_50422a9f` maioria de bits `0`). |
+| `/eh55_frm_PROG061_BOOT.bin` | 0x50422ebf..0x50425812 | `FUN_50422ebf`..`FUN_50425812` | `p61_bgo_ftl_sa41_engine` | ~2.7 KB | Máquina de estados **`SA41 + 0x14`**, scan `FUN_50423540`/`358b` (`Trap #8A + #9 + #10`), P2 `FUN_5042383c` (`0x504238a5` mid-insn), `FUN_50423dc3` OMAP lookup, `4b2e`, `5812`. |
+| `/eh55_frm_PROG061_BOOT.bin` | 0x504266e0..0x50428725 | `FUN_504266e0`..`FUN_50428725` | `p61_bgo_ftl_nor_hal` | ~1.5 KB | Camada NOR CFI/JEDEC (`FUN_50426f78`, despacho de tabela de chip `FUN_50427040` -> `0x504f88dc`, `FUN_5042854d` loop de formatação). |
+| `/eh55_frm_PROG061_BOOT.bin` | 0x5040c700..0x504156ad | `FUN_5040c700`..`FUN_504156ad` | `p61_rtsc_hdd_init` | ~1.0 KB | Inicialização RTSC (`FUN_5040c700`), `HDD MAX LBA` (`FUN_5040ceab`), `startup_drive` (`FUN_504141df`/`4268`/`56ad`). |
+| `/eh55_frm_PROG061_BOOT.bin` | 0x5041b233..0x50431303 | `FUN_5041b233`..`FUN_50431303` | `p61_davis_ide_controller` | ~3.4 KB | Driver DAVIS IDE completo (`FUN_5041cd4d`/`ceaa`/`cf21`/`d8e4`/`df27`/`e5c1`/`f61b` + MMIO `0x89000538`/`0x89000558`, `0xc80 * 10ms = 32s`, `FUN_50431303`). |
 
 ---
 
 ## Parte I — `/BOOT.BIN` (Estágio 1 / NOR Flash XIP)
+
+> **Identificação real deste binário:** `/BOOT.BIN` em `Panadiga_MN103S` (SHA-256 `7c13c72a...`) é o **`Loader ver0.63 [07/10/24] (4MB/TOP BOOT)`** (DMR-EZ485V), distinto do **`Loader ver0.61 [06/03/06]`** gravado na NOR do DMR-EH55 (`sd_load.o` equivalente em `PROG061` e em `dmr-es35v/flash.bin` `ver0.18 [06/03/13]`, Seção 2.1).
 
 ### 1.1 Vetores de Reset, CRT0 (`.bss` + `.data` -> `0x50480000`), Nomes BGO & Strings
 
@@ -1119,7 +1285,12 @@ Marcador `NO_FUNC` presente no início de `doc_boot_core.txt` (sem corpo na expo
 
 ### 1.2 Fluxo Principal de Boot, GPIOs, UART0 e Handshake Timer MCU / VFD
 
-Funções centrais de controle do fluxo de inicialização em `/BOOT.BIN`, leitura de chaves de hardware/modelo, depuração serial UART0 (em grande parte código morto no fluxo padrão), comunicação com o Timer MCU / display VFD e rotinas de parada (`U99`, abertura de bandeja, espera de 1 segundo).
+Funções centrais de controle do fluxo de inicialização em `/BOOT.BIN` (`ver0.63`), leitura de chaves de hardware/modelo, depuração serial UART0 (em grande parte código morto no fluxo padrão), comunicação com o Timer MCU / display VFD (`TBUS` via `IC7501`) e rotinas de parada (`U99`, abertura de bandeja, espera de 1 segundo).
+
+> **Síntese Técnica (Fluxo de Inicialização & Causa do Erro `U99` antes do `SERV`):**
+> 1. Em `boot_main` (`0x4400492e`, contraparte de `FUN_44005fb3` no `Loader ver0.61`), `P5OUT |= 8` libera sinalização do painel frontal e `detect_boot_mode()` (`0x44006454`) amostra `SW_UART` / GPIOs do conector `P7501` (`2 = serial boot`, `1 = normal`, `3 = support card`).
+> 2. Em modo `normal` (`detect_boot_mode() == 1`), `boot_main` **exige** `bgo_driver_init() == 0` antes de acionar `fmu_sd_dispatcher(1)` e antes de inicializar o subsistema **RTSC / DAVIS IDE**. Caso `[nfrom]`/`BGO` retorne falha (`!= 0`), o bootloader altera o watchdog (`"Main hung-up time changed 255[s]"`) e cai no loop infinito após exibir **`U99`** (`FUN_44007836` + `boot_panic_or_halt_7812`).
+> 3. Em `wait_1_sec_timer_sync` (`0x4400b34d`), o delay de `1000 ms` antes da sessão `TBUS` (`FUN_440056b1(0x80, 0)`) somado ao handshake do Timer MCU produz a janela determinística de **`~2 segundos`** (`PLEASE WAIT -> U99` / `HELLO -> U99`).
 
 #### `boot_main` (`boot_main`) — `0x4400492e` (13 B)
 
@@ -2322,7 +2493,12 @@ void wait_1_sec_timer_sync(void)
 
 ### 1.3 Subsistema BGO / NFROM / NOR Flash & NVRAM
 
-Conjunto de funções que administram as partições BGO em memória NOR Flash (`Original` vs `Backup`), flags de estado NFROM, recuperação pós-queda de energia (`[nfrom] NOR STATE`), leitura de NVRAM/EEPROM (`nvram_read_8634`, `nvram_read_id`) e comandos CFI de apagamento/gravação NOR (`FUN_440236ed` / `FUN_440237ba`). Inclui também `FUN_440041dc` verificado em `verify_ghidra_doc_facts_out.txt`.
+Conjunto de funções que administram as partições BGO em memória NOR Flash (`Original` vs `Backup`), flags de estado NFROM, recuperação pós-queda de energia (`[nfrom] NOR STATE`), leitura de NVRAM/EEPROM (`nvram_read_8634`, `nvram_read_id`) e comandos CFI de apagamento/gravação NOR (`FUN_440236ed` / `FUN_440237ba`). Inclui também `FUN_440041dc` verificado em `verify_ghidra_doc_facts_out.txt` e os blocos completos equivalentes do **`Loader ver0.61 [06/03/06]` real** (`eh55_loader_ver061_256k.bin`, tabela de geometria em `0x440337A4` cobrindo `45` setores `0x84130000..0x843FFFFF` = `SA26..SA70`).
+
+> **Guia de Tradução — Máquina de Estados `[nfrom]` (`FUN_44003fd0` / `FUN_440018bb` / `FUN_44001c49`):**
+> - **`NFROM_CTRL_CTX` (`0x505163d4` no `ver0.63`, `0x50496560` no `ver0.61`, `0x50496d10` no `PROG061`):** Buffer `0x1AD8`–`0x26C4` B lido da página lógica de controle (`0x801` / `0xF01` / `0xA01`). A palavra `+0x00` guarda o marcador atômico `NOR_STATE`: `0x0000FFFF` significa escrita interrompida na área **Original** (`[nfrom] NOR STATE : Original -> Backup`); `0x00FFFFFF` significa falha ao sincronizar **Backup** (`Backup -> Original`); `0x00000000` indica estado coerente.
+> - **Mapeamento de Nomes (`0x50480004`):** Tabela estática de `0x30`–`0x35` descritores com passo de `9 bytes` (8 chars ASCII + NUL). `nfrom_power_fail_recovery` procura cada nome nas páginas de diretório (`0x802..` / `0xf02..` / `0xa02..`), gravando o par `(dir_page, entry_idx)` em `0x50517dd4` (`ver0.63`), `0x50498b60` (`ver0.61`) ou `0x50498910` (`PROG061`).
+> - **Despachante `bgo_ioctl_dispatch` (`FUN_44001c49` / `FUN_440034bf` / `FUN_5040248e`):** `cmd=0` valida partições e sonda Flash; `cmd=1` consulta status (`FUN_4401eb14`); `cmd=2` monta FTL; `cmd=3` chama `bgo_read_D(1, page_id, 1, dst)`; `cmd=4` chama `bgo_write_D(1, page_id, 1, src)`; `cmd=6` verifica limpeza (`check_clean`).
 
 #### `FUN_440041dc` (`verify_ghidra_doc_facts_out.txt` — Recuperação NFROM / Chamadora de `FUN_44003fd0`)
 
@@ -3916,9 +4092,1038 @@ undefined4 FUN_440236ed(void)
 }
 ```
 
+### 1.3-B Contrapartes Verificadas do `Loader ver0.61 [06/03/06]` Real (`eh55_loader_ver061_256k.bin` — `[nfrom]` & BGO `0x440337A4`)
+
+Extração direta via Ghidra read-only (`Ver061_Scratch`) do bootloader físico da NOR Spansion 8 MiB do DMR-EH55 (`SHA-256: 9f5c448d8879106be5ca3da6d6ac649026d50fbc191251ae0f4a003efca63800`), comprovando a tabela real de `45` setores em **`0x440337A4`** (`0x84130000..0x843FFFFF` / `SA26..SA70`) e o loop de **`15` (`0xf`)** páginas FAT (`0xf07..0xf15` e `0xf16..0xf24`).
+
+#### `FUN_44003150` (`v61_nfrom_recover_map_3150`) — `0x44003150` (788 B)
+
+Versão `Loader ver0.61` de `nfrom_recover_map`: opera sobre o descritor em `0x50496560` (`uRam50496560` = `NOR_STATE`), varrendo **15 (`0xf`) páginas** de OMAP/BMAP (`0xf07+i` e `0xf16+i`) e **3 páginas** de diretório (`0xf02..0xf04` em `0x50496760`). Equivalente direto de `PROG061 FUN_5040211f` (10 págs) e `ver0.63 FUN_440018bb` (8 págs).
+
+<!-- source: ver061_initial_decomp.txt | FUNC FUN_44003150 @ 0x44003150 (offset +0x60 inside FUN_44003150 (entry 0x44003150) -->
+```c
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+undefined4 FUN_44003150(void)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  undefined4 extraout_var;
+  undefined4 extraout_var_00;
+  undefined4 extraout_var_01;
+  undefined4 uVar3;
+  undefined4 extraout_var_02;
+  undefined4 extraout_var_03;
+  undefined4 extraout_var_04;
+  undefined4 uStack_8;
+  undefined4 uStack_4;
+
+  puVar1 = &uStack_8;
+  if (_DAT_50496560 == 0xffff) {
+    FUN_4400d30e(2,s__nfrom__NOR_STATE___Original__>_B_4402f76e);
+    uVar2 = extraout_var_00;
+    uVar3 = extraout_var_03;
+LAB_440031f5:
+    *(undefined2 *)((int)puVar1 + -10) = 0;
+    while (*(ushort *)((int)puVar1 + -10) < 0xf) {
+      uVar2 = FUN_440034bf(3,*(short *)(puVar1 + -3) + *(short *)((int)puVar1 + -10),
+                           (uint)*(ushort *)((int)puVar1 + -10) * 0x200 + 0x50496d60,uVar2,uVar3);
+      puVar1[-1] = uVar2;
+      if (puVar1[-1] != 0) {
+        FUN_4400d30e(1,s__nfrom__Map_load_error__u___4402f796,puVar1[-1]);
+        return 0xfffffffb;
+      }
+      *(short *)((int)puVar1 + -10) = *(short *)((int)puVar1 + -10) + 1;
+      uVar2 = extraout_var_01;
+      uVar3 = extraout_var_04;
+    }
+    if (_DAT_50496560 != 0) {
+      *(undefined2 *)((int)puVar1 + -10) = 0;
+      while (*(ushort *)((int)puVar1 + -10) < 0xf) {
+        uVar2 = FUN_440034bf(3,*(short *)((int)puVar1 + -0xe) + *(short *)((int)puVar1 + -10),
+                             0x50498e40);
+        puVar1[-1] = uVar2;
+        if (puVar1[-1] != 0) {
+          FUN_4400d30e(1,s__nfrom__Map_load_error__u___4402f796,puVar1[-1]);
+          return 0xfffffffb;
+        }
+        uVar2 = FUN_4402a30a(0x50498e40,(uint)*(ushort *)((int)puVar1 + -10) * 0x200 + 0x50496d60,
+                             0x200);
+        puVar1[-2] = uVar2;
+        if (puVar1[-2] != 0) {
+          uVar2 = FUN_440035b3(*(short *)((int)puVar1 + -10) + *(short *)((int)puVar1 + -0xe),
+                               (uint)*(ushort *)((int)puVar1 + -10) * 0x200 + 0x50496d60);
+          puVar1[-1] = uVar2;
+          if (puVar1[-1] != 2) {
+            FUN_4400d30e(1,s__nfrom__Map_write_error__u___4402f7b3,puVar1[-1]);
+            return 0xfffffffe;
+          }
+        }
+        *(short *)((int)puVar1 + -10) = *(short *)((int)puVar1 + -10) + 1;
+      }
+    }
+    *(undefined2 *)((int)puVar1 + -10) = 0;
+    while (*(ushort *)((int)puVar1 + -10) < 3) {
+      uVar2 = FUN_440034bf(3,*(short *)((int)puVar1 + -10) + 0xf02,
+                           (uint)*(ushort *)((int)puVar1 + -10) * 0x200 + 0x50496760);
+      puVar1[-1] = uVar2;
+      if (puVar1[-1] != 0) {
+        FUN_4400d30e(1,s__nfrom__File_map_load_error__u___4402f7d1,puVar1[-1]);
+        return 0xfffffffb;
+      }
+      *(short *)((int)puVar1 + -10) = *(short *)((int)puVar1 + -10) + 1;
+    }
+    if (_DAT_50496560 != 0) {
+      *(undefined2 *)((int)puVar1 + -10) = 0;
+      while (*(ushort *)((int)puVar1 + -10) < 3) {
+        FUN_4402a34a(puVar1[-6],puVar1[-5],0x100);
+        puVar1[-6] = puVar1[-6] + 0x200;
+        puVar1[-5] = puVar1[-5] + 0x200;
+        *(short *)((int)puVar1 + -10) = *(short *)((int)puVar1 + -10) + 1;
+      }
+      *(undefined2 *)((int)puVar1 + -10) = 0;
+      while (*(ushort *)((int)puVar1 + -10) < 3) {
+        uVar2 = FUN_440035b3(*(short *)((int)puVar1 + -10) + 0xf02,
+                             (uint)*(ushort *)((int)puVar1 + -10) * 0x200 + 0x50496760);
+        puVar1[-1] = uVar2;
+        if (puVar1[-1] != 2) {
+          FUN_4400d30e(1,s__nfrom__File_map_write_error__u__4402f7f3,puVar1[-1]);
+          return 0xfffffffe;
+        }
+        *(short *)((int)puVar1 + -10) = *(short *)((int)puVar1 + -10) + 1;
+      }
+      uVar2 = FUN_44003466(0);
+      puVar1[-2] = uVar2;
+      if (puVar1[-2] != 0) {
+        FUN_4400d30e(1,s__nfrom__Status_change_error__d___4402f816,puVar1[-2]);
+        return 0xfffffffc;
+      }
+    }
+    uVar2 = 0;
+  }
+  else {
+    if (_DAT_50496560 < 0x10000) {
+      if (_DAT_50496560 == 0) {
+        uVar3 = 0;
+        uVar2 = 0;
+        goto LAB_440031f5;
+      }
+    }
+    else if (_DAT_50496560 == 0xffffff) {
+      FUN_4400d30e(2,s__nfrom__NOR_STATE___Backup__>_Or_4402f746);
+      uVar2 = extraout_var;
+      uVar3 = extraout_var_02;
+      goto LAB_440031f5;
+    }
+    uVar2 = 0xfffffffc;
+  }
+  return uVar2;
+}
+
+ (GhidraScript)
+```
+
+#### `FUN_440034bf` (`v61_bgo_ioctl_dispatch_34bf`) — `0x440034bf` (241 B)
+
+Despachante `ioctl` BGO no `Loader ver0.61`: roteia `cmd 0..6,8` para os drivers físicos em `0x4401ef82..0x4401f460` (`[nfrom] bgo_read_D(ID=0x%X) return error(%u).`). Contraparte exata de `PROG061 FUN_5040248e` e `ver0.63 FUN_44001c49`.
+
+<!-- source: ver061_initial_decomp.txt | FUNC FUN_440034bf @ 0x440034bf (offset +0x7a inside FUN_440034bf (entry 0x440034bf) -->
+```c
+undefined4 FUN_440034bf(undefined1 param_1,undefined2 param_2,undefined4 param_3)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  undefined4 uStack_8;
+  undefined4 uStack_4;
+
+  puVar1 = &uStack_8;
+  switch(param_1) {
+  case 0:
+    uVar2 = FUN_4401ef82();
+    puVar1[-2] = uVar2;
+    break;
+  case 1:
+    uVar2 = FUN_4401f460(1,4);
+    puVar1[-2] = uVar2;
+    break;
+  case 2:
+    uVar2 = FUN_4401efd6(0);
+    puVar1[-2] = uVar2;
+    break;
+  case 3:
+    uVar2 = FUN_4401f03b(1,param_2,1,param_3);
+    puVar1[-2] = uVar2;
+    if (puVar1[-2] == 0) {
+      puVar1[-2] = 0;
+    }
+    else {
+      FUN_4400d30e(1,s__nfrom__bgo_read_D_ID_0x_X__retu_4402f85f,*(undefined2 *)(puVar1 + -1),
+                   puVar1[-2]);
+      puVar1[-2] = 1;
+    }
+    break;
+  case 4:
+    uVar2 = FUN_4401f09d(1,param_2,1,param_3);
+    puVar1[-2] = uVar2;
+    break;
+  default:
+    FUN_4400d30e(1,s__nfrom__BGO_command__d__error__4402f88e,param_1);
+    puVar1[-2] = 0xffffffff;
+    break;
+  case 6:
+    uVar2 = FUN_4401f136(1,param_2,1);
+    puVar1[-2] = uVar2;
+    break;
+  case 8:
+  }
+  return puVar1[-2];
+}
+
+ (GhidraScript)
+```
+
+#### `FUN_440053d3` (`v61_nfrom_power_fail_recovery_53d3`) — `0x440053d3` (490 B)
+
+Inicialização pós-queda de energia NFROM no `Loader ver0.61`: limpa `0x50496560` (`0x26c4` B), lê bloco de controle `0xf01`, executa `FUN_44003150()` e indexa `0x30` partições (`stride 9 B` @ `0x50480004`) para a tabela em RAM `0x50498b60`.
+
+<!-- source: ver061_initial_decomp.txt | FUNC FUN_440053d3 @ 0x440053d3 (offset +0x61 inside FUN_440053d3 (entry 0x440053d3) -->
+```c
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+undefined4 FUN_440053d3(void)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  undefined4 uStack_8;
+  undefined4 uStack_4;
+
+  puVar1 = &uStack_8;
+  FUN_4402a39b(&DAT_50496560,0xff,0x26c4);
+  uVar2 = FUN_440034bf(3,0xf01,&DAT_50496560);
+  puVar1[-1] = uVar2;
+  if (puVar1[-1] == 0) {
+    uVar2 = FUN_44003150();
+    puVar1[-2] = uVar2;
+    if (puVar1[-2] == 0) {
+      _DAT_50498c20 = 0;
+      _DAT_50498c22 = 0;
+      *(undefined2 *)((int)puVar1 + -10) = 0;
+      while (*(ushort *)((int)puVar1 + -10) < 0x30) {
+        *(undefined2 *)((int)puVar1 + -0xe) = 0;
+        while (*(ushort *)((int)puVar1 + -0xe) < _DAT_50496564) {
+          *(short *)(puVar1 + -4) = (*(short *)((int)puVar1 + -0xe) + 1) * 0x10;
+          if (_DAT_50496566 < *(ushort *)(puVar1 + -4)) {
+            *(ushort *)(puVar1 + -4) = 0x10 - (*(short *)(puVar1 + -4) - _DAT_50496566);
+          }
+          else {
+            *(undefined2 *)(puVar1 + -4) = 0x10;
+          }
+          *(undefined2 *)(puVar1 + -3) = 0;
+          while (*(ushort *)(puVar1 + -3) < *(ushort *)(puVar1 + -4)) {
+            uVar2 = FUN_4402a30a((uint)*(ushort *)((int)puVar1 + -10) * 9 + 0x50480004,
+                                 (uint)*(ushort *)((int)puVar1 + -0xe) * 0x200 +
+                                 (uint)*(ushort *)(puVar1 + -3) * 0x10 + 0x50496760,8);
+            puVar1[-2] = uVar2;
+            if (puVar1[-2] == 0) {
+              *(undefined2 *)((uint)*(ushort *)((int)puVar1 + -10) * 4 + 0x50498b60) =
+                   *(undefined2 *)((int)puVar1 + -0xe);
+              *(undefined2 *)((uint)*(ushort *)((int)puVar1 + -10) * 4 + 0x50498b62) =
+                   *(undefined2 *)(puVar1 + -3);
+              if ((_DAT_50498c20 < *(ushort *)((int)puVar1 + -0xe)) ||
+                 ((*(ushort *)((int)puVar1 + -0xe) == _DAT_50498c20 &&
+                  (_DAT_50498c22 <= *(ushort *)(puVar1 + -3))))) {
+                _DAT_50498c20 = *(ushort *)((int)puVar1 + -0xe);
+                _DAT_50498c22 = *(short *)(puVar1 + -3) + 1;
+                if (0xf < _DAT_50498c22) {
+                  _DAT_50498c20 = _DAT_50498c20 + 1;
+                  _DAT_50498c22 = 0;
+                }
+              }
+              break;
+            }
+            *(short *)(puVar1 + -3) = *(short *)(puVar1 + -3) + 1;
+          }
+          if (puVar1[-2] == 0) break;
+          *(short *)((int)puVar1 + -0xe) = *(short *)((int)puVar1 + -0xe) + 1;
+        }
+        *(short *)((int)puVar1 + -10) = *(short *)((int)puVar1 + -10) + 1;
+      }
+      uVar2 = 0;
+    }
+    else {
+      FUN_4400d30e(1,s__nfrom__Power_failer_recovery_er_4402fc93,puVar1[-2]);
+      uVar2 = puVar1[-2];
+    }
+  }
+  else {
+    FUN_4400d30e(1,s__nfrom__Main_control_data_error__4402fc6d,puVar1[-1]);
+    uVar2 = 0xfffffffb;
+  }
+  return uVar2;
+}
+
+ (GhidraScript)
+```
+
+#### `FUN_4401ef82` (`v61_bgo_init_part_check_1ef82`) — `0x4401ef82` (84 B)
+
+Equivalente em `ver0.61` de `PROG061 FUN_50421e6a` e `ver0.63 FUN_4401e636` (`ioctl(0)`).
+
+<!-- source: ver061_full_decomp.txt | FUNC FUN_4401ef82 @ 0x4401ef82 (exact entry, bodySize=84 B) -->
+```c
+undefined4 FUN_4401ef82(void)
+
+{
+  undefined4 uVar1;
+  int iVar2;
+  undefined4 uVar3;
+  uint uVar4;
+  uint uVar5;
+
+  uVar5 = 1;
+  uVar1 = 0x52;
+  uVar3 = 0x14d;
+  do {
+    FUN_4401fa08(uVar5,4,uVar1,uVar3);
+    uVar5 = uVar5 + 1;
+  } while (uVar5 < 5);
+  FUN_4401f633();
+  FUN_44023854();
+  uVar5 = 1;
+  do {
+    uVar4 = 2;
+    do {
+      iVar2 = FUN_4401f990(uVar5,uVar4);
+      if ((iVar2 != 0) && (iVar2 != 4)) {
+        return 1;
+      }
+      uVar4 = uVar4 + 1;
+    } while (uVar4 < 5);
+    uVar5 = uVar5 + 1;
+    if (1 < uVar5) {
+      return 0;
+    }
+  } while( true );
+}
+
+ (GhidraScript)
+```
+
+#### `FUN_4401efd6` (`v61_bgo_mount_ctrl_1efd6`) — `0x4401efd6` (101 B)
+
+Equivalente em `ver0.61` de `PROG061 FUN_50421ebe` e `ver0.63 FUN_4401e68a` (`ioctl(2)`).
+
+<!-- source: ver061_full_decomp.txt | FUNC FUN_4401efd6 @ 0x4401efd6 (exact entry, bodySize=101 B) -->
+```c
+undefined4 FUN_4401efd6(int param_1)
+
+{
+  undefined4 uVar1;
+  undefined4 uVar2;
+  int iVar3;
+  uint uVar4;
+  uint uVar5;
+
+  uVar4 = 1;
+  uVar2 = 0xffffff90;
+  uVar1 = 0x14d;
+  do {
+    FUN_4401fa08(uVar4,4,uVar2,uVar1);
+    uVar4 = uVar4 + 1;
+  } while (uVar4 < 5);
+  uVar4 = (uint)(param_1 != 0);
+  uVar5 = 1;
+  do {
+    FUN_44023797(uVar5,uVar4);
+    FUN_4401fb4f(uVar5);
+    uVar5 = uVar5 + 1;
+  } while (uVar5 < 2);
+  uVar4 = 1;
+  do {
+    uVar5 = 2;
+    do {
+      iVar3 = FUN_4401f990(uVar4,uVar5);
+      if ((iVar3 != 0) && (iVar3 != 4)) {
+        return 1;
+      }
+      uVar5 = uVar5 + 1;
+    } while (uVar5 < 5);
+    uVar4 = uVar4 + 1;
+    if (1 < uVar4) {
+      return 0;
+    }
+  } while( true );
+}
+
+ (GhidraScript)
+```
+
+#### `FUN_4401f03b` (`v61_bgo_read_D_1f03b`) — `0x4401f03b` (98 B)
+
+Equivalente em `ver0.61` de `PROG061 FUN_50421f23` e `ver0.63 FUN_4401e6ef` (`ioctl(3)`).
+
+<!-- source: ver061_full_decomp.txt | FUNC FUN_4401f03b @ 0x4401f03b (exact entry, bodySize=98 B) -->
+```c
+uint FUN_4401f03b(int param_1,int param_2,int param_3)
+
+{
+  uint uVar1;
+  int iVar2;
+  uint uVar3;
+  undefined4 uStack00000010;
+
+  if (((param_1 == 1) && (param_3 - 1U < 0x10)) && (param_2 != 0)) {
+    uVar3 = (param_3 + param_2) - 1;
+    uVar1 = FUN_4401fb12(1,1);
+    if (uVar3 <= uVar1) {
+      iVar2 = FUN_4401f990(param_1,param_1);
+      if (iVar2 - 1U < 0x2f) {
+        return 3;
+      }
+      uVar1 = FUN_440238b9(param_1,param_2,param_3,uStack00000010);
+      return (int)(uVar1 | -uVar1) >> 0x1f & 2;
+    }
+  }
+  return 4;
+}
+
+ (GhidraScript)
+```
+
+#### `FUN_4401f09d` (`v61_bgo_write_D_1f09d`) — `0x4401f09d` (153 B)
+
+Equivalente em `ver0.61` de `PROG061 FUN_50421f85` e `ver0.63 FUN_4401e751` (`ioctl(4)`).
+
+<!-- source: ver061_full_decomp.txt | FUNC FUN_4401f09d @ 0x4401f09d (exact entry, bodySize=153 B) -->
+```c
+undefined4 FUN_4401f09d(int param_1,uint param_2,uint param_3,int param_4)
+
+{
+  uint uVar1;
+  undefined4 uVar2;
+  int iVar3;
+  uint uVar4;
+  undefined1 auStack_78 [20];
+  int aiStack_64 [25];
+
+  if (param_1 != 1) {
+    return 0x13;
+  }
+  if (param_3 - 1 < 0x10) {
+    if (param_2 != 0) {
+      uVar4 = (param_2 + param_3) - 1;
+      uVar1 = FUN_4401fb12(1,1);
+      if (uVar4 <= uVar1) {
+        if ((param_2 & 0xf) + param_3 < 0x11) {
+          iVar3 = FUN_4401f990(param_1,param_1);
+          if (iVar3 == 0) {
+            uVar1 = 0;
+            if (param_3 != 0) {
+              do {
+                aiStack_64[uVar1 & 0xff] = (uVar1 & 0xff) * 0x200 + param_4;
+                uVar1 = uVar1 + 1;
+              } while ((uVar1 & 0xff) < param_3);
+            }
+            uVar2 = FUN_44023958(auStack_78,param_3);
+            return uVar2;
+          }
+          return 0x11;
+        }
+        goto LAB_4401f0e1;
+      }
+    }
+    uVar2 = 0x12;
+  }
+  else {
+LAB_4401f0e1:
+    uVar2 = 0x14;
+  }
+  return uVar2;
+}
+
+ (GhidraScript)
+```
+
+#### `FUN_4401f136` (`v61_bgo_check_clean_1f136`) — `0x4401f136` (165 B)
+
+Equivalente em `ver0.61` de `PROG061 FUN_5042201e` e `ver0.63 FUN_4401e7ea` (`ioctl(6)`).
+
+<!-- source: ver061_full_decomp.txt | FUNC FUN_4401f136 @ 0x4401f136 (exact entry, bodySize=165 B) -->
+```c
+uint FUN_4401f136(uint param_1,uint param_2,int param_3)
+
+{
+  uint uVar1;
+  int iVar2;
+  uint uVar3;
+  undefined1 auStack_74 [116];
+
+  if (param_1 != 1) {
+    return 0x13;
+  }
+  if (param_3 - 1U < 0x10) {
+    if (param_2 != 0) {
+      uVar3 = (param_2 + param_3) - 1;
+      uVar1 = FUN_4401fb12(1,1);
+      if (uVar3 <= uVar1) {
+        if ((param_2 & 0xf) + param_3 < 0x11) {
+          iVar2 = FUN_4401f990(param_1,param_1);
+          if (iVar2 != 0) {
+            return 0x11;
+          }
+          uVar1 = FUN_44023b01(param_1);
+          if ((uVar1 < 0x10) && (iVar2 = FUN_440239ad(auStack_74), iVar2 == 0)) {
+            uVar1 = 0;
+            iVar2 = FUN_4401f8eb(param_1,2);
+            if (iVar2 == 0) {
+              uVar1 = param_1;
+            }
+            iVar2 = FUN_4401f8eb(param_1,param_1);
+            if (iVar2 != 0) {
+              return uVar1;
+            }
+            return uVar1 | 2;
+          }
+          return 0x10;
+        }
+        goto LAB_4401f178;
+      }
+    }
+    uVar1 = 0x12;
+  }
+  else {
+LAB_4401f178:
+    uVar1 = 0x14;
+  }
+  return uVar1;
+}
+
+ (GhidraScript)
+```
+
+#### `FUN_4401f460` (`v61_bgo_status_wrap_1f460`) — `0x4401f460` (50 B)
+
+Equivalente em `ver0.61` de `PROG061 FUN_50422359` e `ver0.63 FUN_4401eb14` (`ioctl(1)`).
+
+<!-- source: ver061_full_decomp.txt | FUNC FUN_4401f460 @ 0x4401f460 (exact entry, bodySize=50 B) -->
+```c
+undefined4 FUN_4401f460(int param_1,uint param_2)
+
+{
+  undefined4 uVar1;
+
+  if (param_1 != 1) goto LAB_4401f467;
+  if (param_2 == 2) {
+    uVar1 = 4;
+LAB_4401f486:
+    uVar1 = FUN_4401f990(1,uVar1);
+  }
+  else {
+    if (param_2 < 3) {
+      if (param_2 == 1) {
+        uVar1 = 3;
+        goto LAB_4401f486;
+      }
+    }
+    else if (param_2 == 4) {
+      uVar1 = 1;
+      goto LAB_4401f486;
+    }
+LAB_4401f467:
+    uVar1 = 4;
+  }
+  return uVar1;
+}
+
+ (GhidraScript)
+```
+
+#### `FUN_4401fb12`, `FUN_4401f990`, `FUN_4401f9cd`, `FUN_4401fab5`, `FUN_4401fb60` (`v61_bgo_geom_accessors`)
+
+Acessores de geometria e estado em RAM (`0x504f48c4` status, `0x440337a4+` = `0x44033738 + 0x6c`) do `Loader ver0.61`: `FUN_4401fb12` consulta `&DAT_440337bc` (`max_pid = 0x0f24`).
+
+<!-- source: ver061_full_decomp.txt | FUNC FUN_4401fb12 @ 0x4401fb12 (offset +0x12 inside FUN_4401fb12 (entry 0x4401fb12) -->
+```c
+undefined4 FUN_4401fb12(int param_1,uint param_2)
+
+{
+  if ((param_2 < 3) && (param_2 != 0)) {
+    return *(undefined4 *)(&DAT_440337bc + (param_1 + -1) * 0x6c);
+  }
+  return 0;
+}
+
+ (GhidraScript)
+
+undefined4 FUN_4401f990(int param_1,uint param_2)
+
+{
+  if (param_2 == 3) {
+    return *(undefined4 *)(param_1 * 0xc + 0x504f48c4);
+  }
+  if (param_2 < 4) {
+    if (param_2 != 0) {
+      return *(undefined4 *)(param_1 * 0xc + 0x504f48c0);
+    }
+  }
+  else if (param_2 == 4) {
+    return *(undefined4 *)(param_1 * 0xc + 0x504f48c8);
+  }
+  return 4;
+}
+
+ (GhidraScript)
+
+undefined4 FUN_4401f9cd(int param_1,uint param_2,undefined4 param_3)
+
+{
+  if (param_2 == 3) {
+    *(undefined4 *)(param_1 * 0xc + 0x504f48c4) = param_3;
+    return param_3;
+  }
+  if (param_2 < 4) {
+    if (param_2 != 0) {
+      *(undefined4 *)(param_1 * 0xc + 0x504f48c0) = param_3;
+      return param_3;
+    }
+  }
+  else {
+    if (param_2 != 4) {
+      return param_3;
+    }
+    *(undefined4 *)(param_1 * 0xc + 0x504f48c8) = param_3;
+  }
+  return param_3;
+}
+
+ (GhidraScript)
+
+undefined4 FUN_4401fab5(int param_1,uint param_2)
+
+{
+  if (param_2 == 3) {
+    return *(undefined4 *)(s_DAVIS_>>_DAVIS_Set_BDSeedData_44033735 + param_1 * 0x6c + 0xf);
+  }
+  if (param_2 < 4) {
+    if (param_2 == 1) {
+      return *(undefined4 *)(s_DAVIS_>>_DAVIS_Set_BDSeedData_44033735 + param_1 * 0x6c + 7);
+    }
+    if (param_2 == 2) {
+      return *(undefined4 *)(s_DAVIS_>>_DAVIS_Set_BDSeedData_44033735 + param_1 * 0x6c + 0xb);
+    }
+  }
+  else {
+    if (param_2 == 4) {
+      return *(undefined4 *)(s_DAVIS_>>_DAVIS_Set_BDSeedData_44033735 + param_1 * 0x6c + 0x13);
+    }
+    if (param_2 == 5) {
+      return 4;
+    }
+  }
+  return 0;
+}
+
+ (GhidraScript)
+
+uint FUN_4401fb60(int param_1,uint param_2)
+
+{
+  if (param_1 != 1) {
+    return param_2 & 0xff;
+  }
+  return param_2 >> 8 & 0xff;
+}
+
+ (GhidraScript)
+```
+
+#### `FUN_4402014f` (`v61_bgo_p1_sum_2014f`) — `0x4402014f` (292 B)
+
+Verificador e reparador de soma/ordem da Partição 1 no `Loader ver0.61` (usa ponteiro `0x44033814` da tabela `0x440337A4` e buffer `0x504f4a2a`; equivalente direto ao Patch Site 1 `FUN_50423058` em `PROG061`).
+
+<!-- source: ver061_initial_decomp.txt | FUNC FUN_4402014f @ 0x4402014f (offset +0x2b inside FUN_4402014f (entry 0x4402014f) -->
+```c
+void FUN_4402014f(undefined4 param_1)
+
+{
+  undefined2 uVar1;
+  int iVar2;
+  undefined2 *puVar3;
+  undefined2 *puVar4;
+  int iVar5;
+  int *piVar6;
+  int *piVar7;
+  int iVar8;
+  uint uVar9;
+  undefined4 uVar10;
+  undefined4 uVar11;
+  uint uVar12;
+  int *piVar13;
+  int iVar14;
+  undefined4 extraout_var;
+  undefined4 extraout_var_00;
+  undefined4 extraout_var_01;
+  undefined4 extraout_var_02;
+  int extraout_var_03;
+  int extraout_var_04;
+  int iVar15;
+  int iStack_34;
+  int local_30;
+  int local_2c;
+  undefined4 uStack_20;
+  undefined4 uStack_1c;
+  undefined4 uStack_18;
+  undefined4 uStack_14;
+
+  uVar12 = 1;
+  piVar6 = &iStack_34;
+  iVar14 = 0x504f4b1c;
+  piVar7 = &DAT_44033814;
+  iVar5 = 4;
+  piVar13 = &local_30;
+  do {
+    iVar8 = FUN_4401fab5(param_1,uVar12);
+    param_1 = extraout_var;
+    if (iVar8 == 0) {
+      *piVar13 = 4;
+    }
+    else {
+      iVar2 = (*piVar7 + iVar8) * 2;
+      iVar15 = extraout_var_03;
+      if (*(short *)(iVar14 + iVar2) != -1) {
+        uVar9 = FUN_4401fb60(0,*(undefined2 *)(iVar14 + iVar2 + 2));
+        puVar4 = (undefined2 *)((*piVar7 + iVar8) * 2 + iVar14);
+        uVar1 = *puVar4;
+        puVar3 = (undefined2 *)((*piVar7 + (uVar9 & 0xff)) * 2 + iStack_34);
+        *puVar4 = *puVar3;
+        *puVar3 = uVar1;
+        param_1 = extraout_var_00;
+        iVar15 = extraout_var_04;
+      }
+      if (*(uint *)(iVar15 + iVar5 + -4) == (uint)((iVar8 + 1) * iVar8) >> 1) {
+        uVar11 = 2;
+      }
+      else {
+        uVar11 = 1;
+      }
+      *(undefined4 *)((int)piVar6 + iVar5) = uVar11;
+    }
+    piVar7 = piVar7 + 1;
+    iVar5 = iVar5 + 4;
+    piVar13 = piVar13 + 1;
+    uVar12 = uVar12 + 1;
+  } while (uVar12 < 5);
+  uVar12 = 2;
+  uVar11 = 0x145;
+  piVar6 = piVar6 + 2;
+  do {
+    iVar5 = FUN_4401f990(param_1,uVar12);
+    param_1 = extraout_var_01;
+    if (iVar5 == 6) {
+      uVar9 = uVar12;
+      if (uVar12 == 2) {
+        if ((local_30 == 2) && (local_2c == 2)) {
+          uVar10 = 0x708;
+          iVar5 = 2;
+        }
+        else if ((local_30 == 4) && (local_2c == 4)) {
+          uVar10 = 0x70c;
+          iVar5 = 4;
+          uVar9 = 2;
+        }
+        else {
+          iVar5 = 1;
+          uVar10 = 0x710;
+          uVar9 = 2;
+        }
+      }
+      else {
+        iVar5 = *piVar6;
+        uVar10 = 0x715;
+      }
+      FUN_4401f9cd(extraout_var_01,uVar9,iVar5,uVar10,uVar11);
+      param_1 = extraout_var_02;
+    }
+    piVar6 = piVar6 + 1;
+    uVar12 = uVar12 + 1;
+  } while (uVar12 < 5);
+  return;
+}
+
+ (GhidraScript)
+```
+
+#### `FUN_44021bd9` (`v61_bgo_reset_cache_21bd9`) — `0x44021bd9` (171 B)
+
+Limpa cache OMAP BGO (`0x504f4900..28`) e zera slots `0x504f4b80` usando faixa de setores **`0x44033844..0x44033848`** (`0..0x28` = 40 blocos P2) em `0x440337A4`. Contraparte exata de `PROG061 FUN_50424b2e`.
+
+<!-- source: ver061_initial_decomp.txt | FUNC FUN_44021bd9 @ 0x44021bd9 (offset +0x7c inside FUN_44021bd9 (entry 0x44021bd9) -->
+```c
+int FUN_44021bd9(int param_1)
+
+{
+  undefined4 *puVar1;
+  uint uVar2;
+  int iVar3;
+  uint uVar4;
+
+  iVar3 = (param_1 + -1) * 4;
+  *(undefined4 *)(iVar3 + 0x504f4908) = 1;
+  *(undefined4 *)(iVar3 + 0x504f4924) = 0xfc;
+  *(undefined4 *)(iVar3 + 0x504f4928) = 0xffffffff;
+  *(undefined4 *)(iVar3 + 0x504f4900) = 0xffffffff;
+  *(undefined4 *)(iVar3 + 0x504f490c) = 0xffffffff;
+  *(undefined4 *)(iVar3 + 0x504f491c) = 0xffffffff;
+  *(undefined4 *)(iVar3 + 0x504f4910) = 0;
+  *(undefined4 *)(iVar3 + 0x504f4914) = 0;
+  *(undefined4 *)(iVar3 + 0x504f4918) = 0xffffffff;
+  *(undefined4 *)(iVar3 + 0x504f4920) = 0;
+  *(undefined4 *)(iVar3 + 0x504f4904) = 0;
+  uVar2 = *(uint *)(&DAT_44033844 + iVar3);
+  uVar4 = *(uint *)(&DAT_44033848 + iVar3);
+  puVar1 = (undefined4 *)(uVar2 * 0xc + 0x504f4b80);
+  for (; uVar2 < uVar4; uVar2 = uVar2 + 1) {
+    *puVar1 = 0xffffffff;
+    puVar1[1] = 0xffffffff;
+    puVar1[2] = 0xffffffff;
+    puVar1 = puVar1 + 3;
+    iVar3 = -1;
+  }
+  return iVar3;
+}
+
+ (GhidraScript)
+```
+
+#### `FUN_44025328` (`v61_bgo_mirror_base_25328`) — `0x44025328` (31 B)
+
+Lê endereço físico inicial da partição BGO na tabela `0x440337A4` (`DAT_44033858 = 1`, `DAT_4403385c = 0x84130000`, início real de `SA26`).
+
+<!-- source: ver061_initial_decomp.txt | FUNC FUN_44025328 @ 0x44025328 (offset +0xa inside FUN_44025328 (entry 0x44025328) -->
+```c
+void FUN_44025328(undefined4 param_1,int param_2,undefined4 *param_3,undefined4 *param_4)
+
+{
+  *param_3 = DAT_44033858;
+  *param_4 = *(undefined4 *)(&DAT_4403385c + param_2 * 4);
+  return;
+}
+
+ (GhidraScript)
+```
+
+**Disassembly MN103S verificado de `FUN_4402014f` (`0x4402014f`) & `FUN_44021bd9` (`0x44021bd9`) no `Loader ver0.61`:**
+
+<!-- source: ver061_inspect.clean.txt | === DISASM FUN_4402014f @ 0x4402014f (size=292 B) === -->
+```asm
+-- === DISASM FUN_4402014f @ 0x4402014f (size=292 B) === --
+  0x4402014f: [cf f2                ] MOVM [D2,D3,A2,A3,EX1],(SP)
+  0x44020151: [f8 fe d4             ] ADD -0x2c,SP
+  0x44020154: [42 50                ] MOV D0,(0x50,SP)
+  0x44020156: [46 54                ] MOV D1,(0x54,SP)
+  0x44020158: [8f 01                ] MOV 0x1,D3
+  0x4402015a: [f9 e8 07             ] MOV SP,R7
+  0x4402015d: [fb 78 77 18          ] ADD 0x18,R7
+  0x44020161: [fe 08 55 1c 4b 4f 50 ] MOV 0x504f4b1c,R5
+  0x44020168: [fb 9a 50 18          ] MOV R5,(0x18,SP)
+  0x4402016c: [fb 8a 00 18          ] MOV (0x18,SP),R0
+  0x44020170: [fb 78 00 fe          ] ADD -0x2,R0
+  0x44020174: [fb 9a 00 18          ] MOV R0,(0x18,SP)
+  0x44020178: [fc df 14 38 03 44    ] MOV 0x44033814,A3
+  0x4402017e: [9a 04                ] MOV 0x4,A2
+  0x44020180: [f9 e8 04             ] MOV SP,R4
+  0x44020183: [fb 78 44 1c          ] ADD 0x1c,R4
+  0x44020187: [58 50                ] MOV (0x50,SP),D0
+  0x44020189: [8d                   ] MOV D3,D1
+  0x4402018a: [cd 2b f9 00 00       ] CALL 0x4401fab5,[],0x0
+  0x4402018f: [82                   ] MOV D0,D2
+  0x44020190: [aa 00                ] CMP 0x0,D2
+  0x44020192: [c9 09                ] BNE 0x4402019b
+  0x44020194: [80 04                ] MOV 0x4,D0
+  0x44020196: [f9 1a c4             ] MOV D0,(R4)
+  0x44020199: [ca 5f                ] BRA 0x440201f8
+  0x4402019b: [73                   ] MOV (A3),D0
+  0x4402019c: [81                   ] MOV D0,D1
+  0x4402019d: [e9                   ] ADD D2,D1
+  0x4402019e: [e5                   ] ADD D1,D1
+  0x4402019f: [f5 94                ] MOV R5,A0
+  0x440201a1: [f1 64                ] ADD D1,A0
+  0x440201a3: [f0 60                ] MOVHU (A0),D0
+  0x440201a5: [fc c8 ff ff 00 00    ] CMP 0xffff,D0
+  0x440201ab: [c8 2d                ] BEQ 0x440201d8
+  0x440201ad: [f5 94                ] MOV R5,A0
+  0x440201af: [f1 64                ] ADD D1,A0
+  0x440201b1: [f8 64 02             ] MOVHU (0x2 ,A0),D1
+  0x440201b4: [00                   ] CLR D0
+  0x440201b5: [cd ab f9 00 00       ] CALL 0x4401fb60,[],0x0
+  0x440201ba: [f0 03                ] MOV (A3),A0
+  0x440201bc: [91                   ] MOV A0,A1
+  0x440201bd: [f1 69                ] ADD D2,A1
+  0x440201bf: [f1 75                ] ADD A1,A1
+  0x440201c1: [f9 78 59             ] ADD R5,A1
+  0x440201c4: [f0 65                ] MOVHU (A1),D1
+  0x440201c6: [14                   ] EXTBU D0
+  0x440201c7: [f1 60                ] ADD D0,A0
+  0x440201c9: [f1 70                ] ADD A0,A0
+  0x440201cb: [fb 8a 00 18          ] MOV (0x18,SP),R0
+  0x440201cf: [f9 78 08             ] ADD R0,A0
+  0x440201d2: [f0 60                ] MOVHU (A0),D0
+  0x440201d4: [f0 71                ] MOVHU D0,(A1)
+  0x440201d6: [f0 74                ] MOVHU D1,(A0)
+  0x440201d8: [5c 54                ] MOV (0x54,SP),A0
+  0x440201da: [f1 78                ] ADD A2,A0
+  0x440201dc: [88                   ] MOV D2,D0
+  0x440201dd: [40                   ] INC D0
+  0x440201de: [f2 42                ] MUL D0,D2
+  0x440201e0: [f8 c6 01             ] LSR 0x1,D2
+  0x440201e3: [f8 00 fc             ] MOV (-0x4 ,A0),D0
+  0x440201e6: [a8                   ] CMP D2,D0
+  0x440201e7: [c8 0a                ] BEQ 0x440201f1
+  0x440201e9: [f5 9c                ] MOV R7,A0
+  0x440201eb: [f1 78                ] ADD A2,A0
+  0x440201ed: [80 01                ] MOV 0x1,D0
+  0x440201ef: [ca 08                ] BRA 0x440201f7
+  0x440201f1: [f5 9c                ] MOV R7,A0
+  0x440201f3: [f1 78                ] ADD A2,A0
+  0x440201f5: [80 02                ] MOV 0x2,D0
+  0x440201f7: [60                   ] MOV D0,(A0)
+  0x440201f8: [53                   ] INC4 A3
+  0x440201f9: [52                   ] INC4 A2
+  0x440201fa: [f9 c8 44             ] INC4 R4
+  0x440201fd: [4c                   ] INC D3
+  0x440201fe: [af 04                ] CMP 0x4,D3
+  0x44020200: [c7 87                ] BLS 0x44020187
+  0x44020202: [8f 02                ] MOV 0x2,D3
+  0x44020204: [2e 45 01             ] MOV 0x145,D2
+  0x44020207: [f5 9e                ] MOV R7,A2
+  0x44020209: [22 08                ] ADD 0x8,A2
+  0x4402020b: [58 50                ] MOV (0x50,SP),D0
+  0x4402020d: [8d                   ] MOV D3,D1
+  0x4402020e: [cd 82 f7 00 00       ] CALL 0x4401f990,[],0x0
+  0x44020213: [a0 06                ] CMP 0x6,D0
+  0x44020215: [c9 55                ] BNE 0x4402026a
+  0x44020217: [af 02                ] CMP 0x2,D3
+  0x44020219: [c9 3f                ] BNE 0x44020258
+  0x4402021b: [59 1c                ] MOV (0x1c,SP),D1
+  0x4402021d: [a5 02                ] CMP 0x2,D1
+  0x4402021f: [c9 0f                ] BNE 0x4402022e
+  0x44020221: [58 20                ] MOV (0x20,SP),D0
+  0x44020223: [a0 02                ] CMP 0x2,D0
+  0x44020225: [c9 09                ] BNE 0x4402022e
+  0x44020227: [4e 0c                ] MOV D3,(0xc,SP)
+  0x44020229: [2c 08 07             ] MOV 0x708,D0
+  0x4402022c: [ca 32                ] BRA 0x4402025e
+  0x4402022e: [a5 04                ] CMP 0x4,D1
+  0x44020230: [c9 17                ] BNE 0x44020247
+  0x44020232: [58 20                ] MOV (0x20,SP),D0
+  0x44020234: [a0 04                ] CMP 0x4,D0
+  0x44020236: [c9 11                ] BNE 0x44020247
+  0x44020238: [42 0c                ] MOV D0,(0xc,SP)
+  0x4402023a: [2c 0c 07             ] MOV 0x70c,D0
+  0x4402023d: [42 10                ] MOV D0,(0x10,SP)
+  0x4402023f: [4a 14                ] MOV D2,(0x14,SP)
+  0x44020241: [58 50                ] MOV (0x50,SP),D0
+  0x44020243: [85 02                ] MOV 0x2,D1
+  0x44020245: [ca 20                ] BRA 0x44020265
+  0x44020247: [80 01                ] MOV 0x1,D0
+  0x44020249: [42 0c                ] MOV D0,(0xc,SP)
+  0x4402024b: [2c 10 07             ] MOV 0x710,D0
+  0x4402024e: [42 10                ] MOV D0,(0x10,SP)
+  0x44020250: [4a 14                ] MOV D2,(0x14,SP)
+  0x44020252: [58 50                ] MOV (0x50,SP),D0
+  0x44020254: [85 02                ] MOV 0x2,D1
+  0x44020256: [ca 0f                ] BRA 0x44020265
+  0x44020258: [72                   ] MOV (A2),D0
+  0x44020259: [42 0c                ] MOV D0,(0xc,SP)
+  0x4402025b: [2c 15 07             ] MOV 0x715,D0
+  0x4402025e: [42 10                ] MOV D0,(0x10,SP)
+  0x44020260: [4a 14                ] MOV D2,(0x14,SP)
+  0x44020262: [58 50                ] MOV (0x50,SP),D0
+  0x44020264: [8d                   ] MOV D3,D1
+  0x44020265: [cd 68 f7 00 00       ] CALL 0x4401f9cd,[],0x0
+  0x4402026a: [52                   ] INC4 A2
+  0x4402026b: [4c                   ] INC D3
+  0x4402026c: [af 04                ] CMP 0x4,D3
+  0x4402026e: [c7 9d                ] BLS 0x4402020b
+  0x44020270: [df f2 4c             ] RET [EX1,A3,A2,D3,D2],0x4c
+```
+
+<!-- source: ver061_inspect.clean.txt | === DISASM FUN_44021bd9 @ 0x44021bd9 (size=171 B) === -->
+```asm
+-- === DISASM FUN_44021bd9 @ 0x44021bd9 (size=171 B) === --
+  0x44021bd9: [28 ff                ] ADD -0x1,D0
+  0x44021bdb: [54                   ] ASL2 D0
+  0x44021bdc: [f1 e0                ] MOV D0,A0
+  0x44021bde: [fc d0 08 49 4f 50    ] ADD 0x504f4908,A0
+  0x44021be4: [85 01                ] MOV 0x1,D1
+  0x44021be6: [64                   ] MOV D1,(A0)
+  0x44021be7: [f1 e0                ] MOV D0,A0
+  0x44021be9: [fc d0 24 49 4f 50    ] ADD 0x504f4924,A0
+  0x44021bef: [2d fc 00             ] MOV 0xfc,D1
+  0x44021bf2: [64                   ] MOV D1,(A0)
+  0x44021bf3: [f1 e0                ] MOV D0,A0
+  0x44021bf5: [fc d0 28 49 4f 50    ] ADD 0x504f4928,A0
+  0x44021bfb: [fb 08 00 ff          ] MOV -0x1,R0
+  0x44021bff: [f9 1a 08             ] MOV R0,(A0)
+  0x44021c02: [f1 e0                ] MOV D0,A0
+  0x44021c04: [fc d0 00 49 4f 50    ] ADD 0x504f4900,A0
+  0x44021c0a: [f9 1a 08             ] MOV R0,(A0)
+  0x44021c0d: [f1 e0                ] MOV D0,A0
+  0x44021c0f: [fc d0 0c 49 4f 50    ] ADD 0x504f490c,A0
+  0x44021c15: [f9 1a 08             ] MOV R0,(A0)
+  0x44021c18: [f1 e0                ] MOV D0,A0
+  0x44021c1a: [fc d0 1c 49 4f 50    ] ADD 0x504f491c,A0
+  0x44021c20: [f9 1a 08             ] MOV R0,(A0)
+  0x44021c23: [f1 e0                ] MOV D0,A0
+  0x44021c25: [fc d0 10 49 4f 50    ] ADD 0x504f4910,A0
+  0x44021c2b: [04                   ] CLR D1
+  0x44021c2c: [64                   ] MOV D1,(A0)
+  0x44021c2d: [f1 e0                ] MOV D0,A0
+  0x44021c2f: [fc d0 14 49 4f 50    ] ADD 0x504f4914,A0
+  0x44021c35: [64                   ] MOV D1,(A0)
+  0x44021c36: [f1 e0                ] MOV D0,A0
+  0x44021c38: [fc d0 18 49 4f 50    ] ADD 0x504f4918,A0
+  0x44021c3e: [f9 1a 08             ] MOV R0,(A0)
+  0x44021c41: [f1 e0                ] MOV D0,A0
+  0x44021c43: [fc d0 20 49 4f 50    ] ADD 0x504f4920,A0
+  0x44021c49: [64                   ] MOV D1,(A0)
+  0x44021c4a: [f1 e0                ] MOV D0,A0
+  0x44021c4c: [fc d0 04 49 4f 50    ] ADD 0x504f4904,A0
+  0x44021c52: [64                   ] MOV D1,(A0)
+  0x44021c53: [fc dc 44 38 03 44    ] MOV 0x44033844,A0
+  0x44021c59: [91                   ] MOV A0,A1
+  0x44021c5a: [f1 61                ] ADD D0,A1
+  0x44021c5c: [f0 05                ] MOV (A1),A1
+  0x44021c5e: [f1 60                ] ADD D0,A0
+  0x44021c60: [f8 04 04             ] MOV (0x4 ,A0),D1
+  0x44021c63: [94                   ] MOV A1,A0
+  0x44021c64: [fb a9 88 0c          ] MUL 0xc,A0
+  0x44021c68: [fc d0 80 4b 4f 50    ] ADD 0x504f4b80,A0
+  0x44021c6e: [f1 a5                ] CMP D1,A1
+  0x44021c70: [c6 12                ] BCC 0x44021c82
+  0x44021c72: [f5 c0                ] MOV R0,D0
+  0x44021c74: [60                   ] MOV D0,(A0)
+  0x44021c75: [f8 10 04             ] MOV D0,(0x4 ,A0)
+  0x44021c78: [f8 10 08             ] MOV D0,(0x8 ,A0)
+  0x44021c7b: [45                   ] INC A1
+  0x44021c7c: [20 0c                ] ADD 0xc,A0
+  0x44021c7e: [f1 a5                ] CMP D1,A1
+  0x44021c80: [c4 f4                ] BCS 0x44021c74
+  0x44021c82: [f0 fc                ] RETS
+```
+
+---
+
 ### 1.4 Subsistema SD/MMC (`FMU`, `SetBusWidth`, erro `-91006`)
 
-Funções responsáveis pela montagem de cartão SD/MMC, inicialização de clock/estado do controlador SD, OCR/RCA (`CMD8`/`ACMD41`/`CMD2`/`CMD3`), `SetBusWidth` (onde ocorre a falha `-91006` em hardware/barramento SD defeituoso), leitura de `.FVU`/`.FMU` e teste de leitura SD em `BOOT.BIN`.
+Funções do `/BOOT.BIN` (`Loader ver0.63 [07/10/24] (4MB/TOP BOOT)` do DMR-EZ485V, SHA-256 `7c13c72a...`) responsáveis pela montagem de cartão SD/MMC, controlador SD (`CMD8`/`ACMD41`/`CMD2`/`CMD3`/`CMD17`/`CMD18`), `SetBusWidth` (falha `-91006`), leitura FAT12/FAT16/FAT32 e carga de `.FVU`/`DIGADIAG.FRM`/`PANA__SD.FRM`. Onde `ver0.63` lê `DIGADIAG.FRM` comprimido (`0x20000` B `EXTRHEAD` em `0x93fc0000`) e `PANA__SD.FRM` de `0x2000` B (`sd64`), o bootloader real do DMR-EH55 (`ver0.61 [06/03/06]`, cf. Seção 2.1) lê `0x40000` B crus em `0x90400000` (`JMP 0x50400000`) e `0x1800` B (`sd48`).
+
+> **Correspondência & Fallback de `update` (`fmu_sd_dispatcher` `0x440065bc` × `ver0.61 FUN_44007f0e`):**
+> - Se apenas um dos flags (`puVar1[-3]` validade `mainsoft` vs `puVar1[-2]` flag `update` NVRAM) estiver ativo, o bootloader imprime `"Clear update data.\n"` e limpa a pendência de atualização; se `mainsoft` não puder ser carregado nem de LBA `0x10000` nem do espelho `max_lba - 0x20000`, ele imprime **`"mainsoft data is invalid, so set update flag.\n"`**, grava as assinaturas **`"MATS"`/`"HITA"`** em `0x50480c74` e aciona o modo de recuperação/atualização (`FUN_44009d5b` + `FUN_44009d83(2)` no `ver0.61`).
+> - No **DMR-EH55 real (`Loader ver0.61`)**, o endereço **`0x44008020`** citado em anotações antigas é **`+0x112` dentro de `FUN_44007f0e`** (recaindo +5 B dentro de `0x4400801b MOVBU D0,(0x504992c4)`); as rotinas completas do `Loader ver0.61` encontram-se logo abaixo na Seção 1.4-B.
 
 #### `fmu_sd_dispatcher` (`fmu_sd_dispatcher`) — `0x440065bc` (614 B)
 
@@ -4119,7 +5324,7 @@ undefined4 FUN_44007a12(void)
 
 #### `FUN_44007ba5` (`sd_diag_boot_7ba5`) — `0x44007ba5` (180 B)
 
-Boot de diagnóstico via SD (`sd_diag_boot_7ba5`).
+Boot de diagnóstico via SD em `/BOOT.BIN` (`Loader ver0.63` DMR-EZ485V: chama `FUN_4400a97c` para `0x20000` B e `uncompress(0x93fc0000)`; distinto do EH55 `ver0.61` que lê `0x40000` B crus em `0x90400000` e executa `JMP 0x50400000`).
 
 <!-- source: doc_boot_media_crypto.txt | FUNC FUN_44007ba5 (sd_diag_boot_7ba5) @ 0x44007ba5 (size=180 B, req=0x44007ba5) -->
 ```c
@@ -4345,7 +5550,7 @@ undefined4 FUN_4400a8c7(void)
 
 #### `FUN_4400a97c` (`sd_diag_load_a97c`) — `0x4400a97c` (227 B)
 
-Carga de binário de diagnóstico a partir do SD (`sd_diag_load_a97c`).
+Carga de `DIGADIAG.FRM` a partir do SD em `/BOOT.BIN` (`Loader ver0.63` DMR-EZ485V: `0x20000` B -> `0x93fc0000`; reconfirmada idêntica sob **Ghidra 12.1.4 Headless** em `DecompileFat.java` / `task-36919.log`). No EH55 `ver0.61` (`PROG061` `0x5040eca9` e `flash.bin` `0x4400bc70`), lê `0x40000` B para `0x90400000`.
 
 <!-- source: doc_boot_media_crypto.txt | FUNC FUN_4400a97c (sd_diag_load_a97c) @ 0x4400a97c (size=227 B, req=0x4400a97c) -->
 ```c
@@ -4399,7 +5604,7 @@ undefined4 FUN_4400a97c(void)
 
 #### `FUN_4400aa5f` (`sd_read_firm_list_aa5f`) — `0x4400aa5f` (99 B)
 
-Leitura de arquivo lista `.FMU` / firmware list no SD (`sd_read_firm_list_aa5f`).
+Leitura de `PANA__SD.FRM` no SD em `/BOOT.BIN` (`Loader ver0.63` DMR-EZ485V: `0x2000` B -> `0x5050175c`, modo `sd64`; no EH55 `ver0.61`/`PROG061`/`flash.bin`: `0x1800` B `sd48`).
 
 <!-- source: doc_boot_media_crypto.txt | FUNC FUN_4400aa5f (sd_read_firm_list_aa5f) @ 0x4400aa5f (size=99 B, req=0x4400aa5f) -->
 ```c
@@ -4573,7 +5778,7 @@ void FUN_44026549(uint param_1)
 
 #### `FUN_4402724f` (`sd_send_ocr_rca_2724f`) — `0x4402724f` (776 B)
 
-Negociação de OCR e obtenção de RCA do cartão SD (`sd_send_ocr_rca_2724f`).
+Negociação de OCR e obtenção de RCA do cartão SD (`sd_send_ocr_rca_2724f`; reconfirmada idêntica sob **Ghidra 12.1.4 Headless** em `DecompileCardType.java` / `task-37066.log`).
 
 <!-- source: doc_boot_media_crypto.txt | FUNC FUN_4402724f (sd_send_ocr_rca_2724f) @ 0x4402724f (size=776 B, req=0x4402724f) -->
 ```c
@@ -5309,6 +6514,3199 @@ Strings de diagnóstico do driver SD em `/BOOT.BIN` associadas à falha em barra
   0x440394bf: '[SDCD] === This Card removed ==== \n\n'
   0x440394e4: "[SDCD] === This Card can't be controled ==== \n\n"
 ```
+
+#### Subsistema FAT12 / FAT16 / FAT32 & Bloco SD (`/BOOT.BIN` — Ghidra 12.1.4 PUBLIC Headless)
+
+> **Origem e Integridade (`C:\ghidra\*.java` -> `./raw/doc_boot_fat_sd_java.txt`):** Todos os blocos C abaixo reproduzem **literalmente** a saída do decompilador **Ghidra 12.1.4 PUBLIC Headless** sobre `/BOOT.BIN` (`Loader ver0.63 [07/10/24] 4MB/TOP BOOT`, DMR-EZ485V, projeto read-only `Panadiga_MN103S`). Nenhuma expressão C original do Ghidra foi alterada; apenas foram adicionados comentários cirúrgicos `// [SLEIGH Trap #8 ...]` nas 19 linhas onde instruções `SUB Rm, Rn, Rd` (`fb 9c`) sofreram inversão de operandos no SLEIGH (`am33.sinc:184`). As sondas nulas esperadas (`DecompileFat.java` em `0x4400d335` = byte `+3` dentro de `0x4400d332 [fa fe 7c ff] ADD -0x84,SP` de `FUN_4400d32f`; `DecompileFat3.java` em `0x4400c436` = byte `+1` dentro de `0x4400c435 [f8 03 0c] MOV (0xc,A3),D0` do helper `0x4400c35a..0x4400c50f`; e `DumpAsm.java` em `0x4400c760` = byte `+1` dentro de `0x4400c75f [f8 11 18] MOV D0,(0x18,A1)`) e as duas rotinas fora do conjunto dos 11 scripts Java (`FUN_4400c984` e `FUN_4400ef58`) são documentadas abaixo com disassembly MN103S verificado diretamente em `BOOT.BIN`. Além destas, `FUN_4400a97c` (listada acima em [FUN_4400a97c](#fun_4400a97c-sd_diag_load_a97c--0x4400a97c-227-b)) e `FUN_4402724f` (listada acima em [FUN_4402724f](#fun_4402724f-sd_send_ocr_rca_2724f--0x4402724f-776-b)) foram reconfirmadas bit-a-bit idênticas por `DecompileFat.java` (`task-36919.log`) e `DecompileCardType.java` (`task-37066.log`) no Ghidra 12.1.4 Headless.
+
+#### `FUN_440098fc` (`fat_dev_read_sectors_98fc`) — `0x440098fc` (132 B)
+
+Despachante de leitura de setores por dispositivo (`dev 0` vs `dev 3` SD via `FUN_440262cb`).
+
+<!-- source: doc_boot_fat_sd_java.txt (DecompileFat7.java / task-36974.log) | FUNC FUN_440098fc (fat_dev_read_sectors_98fc) @ 0x440098fc (size=132 B, Ghidra 12.1.4 Headless) -->
+```c
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+undefined4 FUN_440098fc(int param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_4;
+  if (param_1 == 0) {
+    uVar2 = FUN_44009980(param_2,param_3,param_4);
+    puVar1[-1] = uVar2;
+  }
+  else {
+    if (param_1 != 3) goto LAB_44009978;
+    FUN_44009e77();
+    puVar1[-7] = _DAT_50573464;
+    puVar1[-6] = puVar1[3];
+    *(undefined1 *)(puVar1 + -3) = 1;
+    uVar2 = FUN_440262cb(puVar1 + -7,puVar1[4],puVar1[5]);
+    puVar1[-1] = uVar2;
+    FUN_44009e8f();
+  }
+  puVar1[-8] = puVar1[-1];
+LAB_44009978:
+  return puVar1[-8];
+}
+```
+
+#### `FUN_4400b3d9` (`fat_sd_dbg_printf_b3d9`) — `0x4400b3d9` (210 B)
+
+Wrapper condicional de log/erro do subsistema FAT/SD para `uart0_printf`.
+
+<!-- source: doc_boot_fat_sd_java.txt (DecompileFat8.java / task-36981.log) | FUNC FUN_4400b3d9 (fat_sd_dbg_printf_b3d9) @ 0x4400b3d9 (size=210 B, Ghidra 12.1.4 Headless) -->
+```c
+void FUN_4400b3d9(undefined4 param_1,char *param_2,undefined4 param_3,undefined4 param_4,
+                 undefined4 param_5,undefined4 param_6,undefined4 param_7,undefined4 param_8,
+                 undefined4 param_9,undefined4 param_10,undefined4 param_11,undefined4 param_12)
+
+{
+  uart0_printf(param_2,param_3,param_4,param_5,param_6,param_7,param_8,param_9,param_10,param_11,
+               param_12,&stack0x00000034);
+  return;
+}
+```
+
+#### `FUN_4400c0a8` (`fat_parse_vbr_bpb_c0a8`) — `0x4400c0a8` (690 B)
+
+Parser de Boot Sector (VBR/BPB FAT12/FAT16/FAT32: OEM, `BytesPerSec`, `SecPerClus`, `RsvdSecCnt`, `NumFATs`, `RootEntCnt`, `FATSz`, `TotSec`).
+
+<!-- source: doc_boot_fat_sd_java.txt (DecompileFat3.java / task-36939.log) | FUNC FUN_4400c0a8 (fat_parse_vbr_bpb_c0a8) @ 0x4400c0a8 (size=690 B, Ghidra 12.1.4 Headless) -->
+```c
+undefined4 FUN_4400c0a8(undefined1 *param_1,undefined1 *param_2)
+
+{
+  undefined1 *puVar1;
+  undefined1 auStack_8 [8];
+  
+  puVar1 = auStack_8;
+  *param_2 = *param_1;
+  param_2[1] = param_1[1];
+  param_2[2] = param_1[2];
+  FUN_4402c2f7(param_2 + 3,param_1 + 3,8);
+  *(ushort *)(*(int *)(puVar1 + 0x10) + 0xc) =
+       CONCAT11(*(undefined1 *)(*(int *)(puVar1 + 0xc) + 0xc),
+                *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0xb));
+  *(undefined1 *)(*(int *)(puVar1 + 0x10) + 0xe) = *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0xd);
+  *(ushort *)(*(int *)(puVar1 + 0x10) + 0x10) =
+       CONCAT11(*(undefined1 *)(*(int *)(puVar1 + 0xc) + 0xf),
+                *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0xe));
+  *(undefined1 *)(*(int *)(puVar1 + 0x10) + 0x12) = *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x10);
+  *(ushort *)(*(int *)(puVar1 + 0x10) + 0x14) =
+       CONCAT11(*(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x12),
+                *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x11));
+  *(ushort *)(*(int *)(puVar1 + 0x10) + 0x16) =
+       CONCAT11(*(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x14),
+                *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x13));
+  *(undefined1 *)(*(int *)(puVar1 + 0x10) + 0x18) = *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x15);
+  *(ushort *)(*(int *)(puVar1 + 0x10) + 0x1a) =
+       CONCAT11(*(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x17),
+                *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x16));
+  *(ushort *)(*(int *)(puVar1 + 0x10) + 0x1c) =
+       CONCAT11(*(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x19),
+                *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x18));
+  *(ushort *)(*(int *)(puVar1 + 0x10) + 0x1e) =
+       CONCAT11(*(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x1b),
+                *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x1a));
+  *(uint *)(*(int *)(puVar1 + 0x10) + 0x20) =
+       (uint)*(byte *)(*(int *)(puVar1 + 0xc) + 0x1d) << 8 |
+       (uint)*(byte *)(*(int *)(puVar1 + 0xc) + 0x1e) << 0x10 |
+       (uint)*(byte *)(*(int *)(puVar1 + 0xc) + 0x1f) << 0x18 |
+       (uint)*(byte *)(*(int *)(puVar1 + 0xc) + 0x1c);
+  *(uint *)(*(int *)(puVar1 + 0x10) + 0x24) =
+       (uint)*(byte *)(*(int *)(puVar1 + 0xc) + 0x21) << 8 |
+       (uint)*(byte *)(*(int *)(puVar1 + 0xc) + 0x22) << 0x10 |
+       (uint)*(byte *)(*(int *)(puVar1 + 0xc) + 0x23) << 0x18 |
+       (uint)*(byte *)(*(int *)(puVar1 + 0xc) + 0x20);
+  *(undefined1 *)(*(int *)(puVar1 + 0x10) + 0x28) = *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x24);
+  *(undefined1 *)(*(int *)(puVar1 + 0x10) + 0x29) = *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x25);
+  *(undefined1 *)(*(int *)(puVar1 + 0x10) + 0x2a) = *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x26);
+  *(uint *)(*(int *)(puVar1 + 0x10) + 0x2c) =
+       (uint)*(byte *)(*(int *)(puVar1 + 0xc) + 0x28) << 8 |
+       (uint)*(byte *)(*(int *)(puVar1 + 0xc) + 0x29) << 0x10 |
+       (uint)*(byte *)(*(int *)(puVar1 + 0xc) + 0x2a) << 0x18 |
+       (uint)*(byte *)(*(int *)(puVar1 + 0xc) + 0x27);
+  FUN_4402c2f7(*(int *)(puVar1 + 0x10) + 0x30,*(int *)(puVar1 + 0xc) + 0x2b,0xb);
+  FUN_4402c2f7(*(int *)(puVar1 + 0x10) + 0x3b,*(int *)(puVar1 + 0xc) + 0x36,8);
+  FUN_4402c2f7(*(int *)(puVar1 + 0x10) + 0x43,*(int *)(puVar1 + 0xc) + 0x3e,0x1c0);
+  *(undefined1 *)(*(int *)(puVar1 + 0x10) + 0x203) = *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x1fe)
+  ;
+  *(undefined1 *)(*(int *)(puVar1 + 0x10) + 0x204) = *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x1ff)
+  ;
+  return 0;
+}
+```
+
+#### `FUN_4400c510` (`fat_unpack_dirent_c510`) — `0x4400c510` (390 B)
+
+Desempacotamento de entrada de diretório FAT 8.3 (nome, extensão, atributos, cluster e tamanho de 32 bits).
+
+<!-- source: doc_boot_fat_sd_java.txt (DecompileFat3.java / task-36939.log) | FUNC FUN_4400c510 (fat_unpack_dirent_c510) @ 0x4400c510 (size=390 B, Ghidra 12.1.4 Headless) -->
+```c
+undefined4 FUN_4400c510(undefined4 param_1,undefined4 param_2)
+
+{
+  undefined1 *puVar1;
+  undefined1 auStack_8 [8];
+  
+  puVar1 = auStack_8;
+  FUN_4402c2f7(param_2,param_1,8);
+  FUN_4402c2f7(*(int *)(puVar1 + 0x10) + 8,*(int *)(puVar1 + 0xc) + 8,3);
+  *(undefined1 *)(*(int *)(puVar1 + 0x10) + 0xb) = *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0xb);
+  *(undefined1 *)(*(int *)(puVar1 + 0x10) + 0xc) = *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0xc);
+  *(undefined1 *)(*(int *)(puVar1 + 0x10) + 0xd) = *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0xd);
+  *(ushort *)(*(int *)(puVar1 + 0x10) + 0xe) =
+       CONCAT11(*(undefined1 *)(*(int *)(puVar1 + 0xc) + 0xf),
+                *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0xe));
+  *(ushort *)(*(int *)(puVar1 + 0x10) + 0x10) =
+       CONCAT11(*(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x11),
+                *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x10));
+  *(ushort *)(*(int *)(puVar1 + 0x10) + 0x12) =
+       CONCAT11(*(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x13),
+                *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x12));
+  *(ushort *)(*(int *)(puVar1 + 0x10) + 0x14) =
+       CONCAT11(*(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x15),
+                *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x14));
+  *(ushort *)(*(int *)(puVar1 + 0x10) + 0x16) =
+       CONCAT11(*(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x17),
+                *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x16));
+  *(ushort *)(*(int *)(puVar1 + 0x10) + 0x18) =
+       CONCAT11(*(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x19),
+                *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x18));
+  *(ushort *)(*(int *)(puVar1 + 0x10) + 0x1a) =
+       CONCAT11(*(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x1b),
+                *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x1a));
+  *(uint *)(*(int *)(puVar1 + 0x10) + 0x1c) =
+       (uint)*(byte *)(*(int *)(puVar1 + 0xc) + 0x1d) << 8 |
+       (uint)*(byte *)(*(int *)(puVar1 + 0xc) + 0x1e) << 0x10 |
+       (uint)*(byte *)(*(int *)(puVar1 + 0xc) + 0x1f) << 0x18 |
+       (uint)*(byte *)(*(int *)(puVar1 + 0xc) + 0x1c);
+  return 0;
+}
+```
+
+#### `FUN_4400c696` (`fat_mount_c696`) — `0x4400c696` (483 B)
+
+Montagem pública do volume FAT no cartão SD: classifica FAT12 (`< 0xff6`), FAT16 (`<= 0xfff5`) ou FAT32 (`0x20`, retornando `0xffffd8d7` neste estágio), calcula `TotalClusters` e inicializa janela de cache via `FUN_4400ced2`.
+
+<!-- source: doc_boot_fat_sd_java.txt (DecompileFat.java / task-36919.log) | FUNC FUN_4400c696 (fat_mount_c696) @ 0x4400c696 (size=483 B, Ghidra 12.1.4 Headless) -->
+```c
+undefined4 FUN_4400c696(void)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  undefined4 uStack_10;
+  undefined4 uStack_c;
+  undefined4 uStack_8;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_10;
+  uVar2 = FUN_4400f0dd();
+  puVar1[-2] = uVar2;
+  if (puVar1[-2] == 0) {
+    puVar1[-1] = 1;
+    puVar1[-5] = puVar1[-1] * 0x40 + 0x5056b600;
+    puVar1[-6] = 0x5056b6d4;
+    *(undefined4 *)puVar1[-5] = puVar1[-1];
+    uVar2 = FUN_4400cb21(puVar1[-1]);
+    puVar1[-2] = uVar2;
+    if ((int)puVar1[-2] < 0) {
+      puVar1[-7] = puVar1[-2];
+    }
+    else {
+      puVar1[-3] = (uint)*(byte *)(puVar1[-5] + 0x26) * *(int *)(puVar1[-5] + 0x2c);
+      puVar1[-4] = (int)(((ulonglong)*(ushort *)(puVar1[-5] + 0x28) << 5) /
+                        (ulonglong)*(ushort *)(puVar1[-1] * 0x40 + 0x5056b620));
+      *(undefined4 *)(puVar1[-5] + 0xc) = 0;
+      *(uint *)(puVar1[-5] + 0x10) = (uint)*(ushort *)(puVar1[-5] + 0x24);
+      *(int *)(puVar1[-5] + 0x14) = puVar1[-3] + *(int *)(puVar1[-5] + 0x10);
+      *(int *)(puVar1[-5] + 0x18) = puVar1[-4] + *(int *)(puVar1[-5] + 0x14);
+      if (*(short *)(puVar1[-5] + 0x2a) == 0) {
+        *(uint *)(puVar1[-5] + 0x3c) =
+             ((((uint)*(ushort *)(puVar1[-5] + 0x24) - *(int *)(puVar1[-5] + 0x34)) - puVar1[-3]) - // [SLEIGH Trap #8 @ 0x4400c77b (fb 9c dc d0): real = TotSec32(*(uint *)(+0x34)) - ReservedSectors(*(ushort *)(+0x24)); subtracoes seguintes (- puVar1[-3] - puVar1[-4]) em 0x4400c782/c787 usam f1 01 e nao sao invertidas]
+             puVar1[-4]) / (uint)*(byte *)(puVar1[-5] + 0x22);
+      }
+      else {
+        *(uint *)(puVar1[-5] + 0x3c) =
+             ((((uint)*(ushort *)(puVar1[-5] + 0x2a) - (uint)*(ushort *)(puVar1[-5] + 0x24)) -
+              puVar1[-3]) - puVar1[-4]) / (uint)*(byte *)(puVar1[-5] + 0x22);
+      }
+      *(uint *)(puVar1[-5] + 0x1c) =
+           (uint)*(byte *)(puVar1[-5] + 0x22) * *(int *)(puVar1[-5] + 0x3c) +
+           puVar1[-3] + puVar1[-4] + (uint)*(ushort *)(puVar1[-5] + 0x24);
+      *(int *)(puVar1[-5] + 0x3c) = *(int *)(puVar1[-5] + 0x3c) + 1;
+      if (*(uint *)(puVar1[-5] + 0x3c) < 0xff6) {
+        *(undefined4 *)(puVar1[-5] + 4) = 0xc;
+      }
+      else {
+        if (0xfff5 < *(uint *)(puVar1[-5] + 0x3c)) {
+          if (*(uint *)(puVar1[-5] + 0x3c) < 0xffffff6) {
+            *(undefined4 *)(puVar1[-5] + 4) = 0x20;
+            puVar1[-7] = 0xffffd8d7;
+          }
+          else {
+            puVar1[-7] = 0xffffd8d7;
+          }
+          goto LAB_4400c871;
+        }
+        *(undefined4 *)(puVar1[-5] + 4) = 0x10;
+      }
+      uVar2 = FUN_4400ced2(puVar1[-1]);
+      puVar1[-2] = uVar2;
+      if ((int)puVar1[-2] < 0) {
+        puVar1[-7] = puVar1[-2];
+      }
+      else {
+        puVar1[-7] = puVar1[-1];
+      }
+    }
+  }
+  else {
+    puVar1[-7] = puVar1[-2];
+  }
+LAB_4400c871:
+  return puVar1[-7];
+}
+```
+
+##### `DumpAsm.java` (`task-36994.log`) & Disassembly MN103S verificado de `0x4400c755..0x4400c7c7` em `FUN_4400c696`
+
+O script `DumpAsm.java` consultou `getInstructionAt(toAddr(0x4400c760))` em loop `[0x4400c760..0x4400c7b0]` e imprimiu **0 instruções** porque `0x4400c760` cai 1 byte dentro de `0x4400c75f: [f8 11 18] MOV D0,(0x18,A1)` (mesmo fenômeno observado nos outros endereços desalinhados `0x4400d335` e `0x4400c436`). O disassembly real alinhado em `BOOT.BIN` confirma `0x4400c77b: [fb 9c dc d0] SUB D1,D0,D1` (`0x4400c77c` = byte `+1` `0x9c`), seguido por `0x4400c782` e `0x4400c787` (`[f1 01] SUB D0,D1`) e pelo cálculo FAT16 em `0x4400c7ad` (`[f1 01] SUB D0,D1`):
+
+<!-- source: doc_boot_fat_sd_java.txt (DumpAsm.java / task-36994.log + BOOT.BIN raw verify) | DISASM 0x4400c755..0x4400c7c7 -->
+```asm
+  0x4400c755: [f8 23 ec            ] MOV (-0x14,A3),A0
+  0x4400c758: [f8 04 14            ] MOV (0x14,A0),D1
+  0x4400c75b: [f8 03 f0            ] MOV (-0x10,A3),D0
+  0x4400c75e: [e4                  ] ADD D1,D0
+  0x4400c75f: [f8 11 18            ] MOV D0,(0x18,A1)
+  0x4400c762: [f8 23 ec            ] MOV (-0x14,A3),A0
+  0x4400c765: [f8 60 2a            ] MOVHU (0x2a,A0),D0
+  0x4400c768: [a0 00               ] CMP 0x0,D0
+  0x4400c76a: [c9 34               ] BNE 0x4400c79e
+  0x4400c76c: [f8 2b ec            ] MOV (-0x14,A3),A2
+  0x4400c76f: [f8 27 ec            ] MOV (-0x14,A3),A1
+  0x4400c772: [f8 23 ec            ] MOV (-0x14,A3),A0
+  0x4400c775: [f8 64 24            ] MOVHU (0x24,A0),D1
+  0x4400c778: [f8 01 34            ] MOV (0x34,A1),D0
+  0x4400c77b: [fb 9c dc d0         ] SUB D1,D0,D1
+  0x4400c77f: [f8 03 f4            ] MOV (-0xc,A3),D0
+  0x4400c782: [f1 01               ] SUB D0,D1
+  0x4400c784: [f8 03 f0            ] MOV (-0x10,A3),D0
+  0x4400c787: [f1 01               ] SUB D0,D1
+  0x4400c789: [f8 23 ec            ] MOV (-0x14,A3),A0
+  0x4400c78c: [f8 40 22            ] MOVBU (0x22,A0),D0
+  0x4400c78f: [87                  ] MOV D1,D3
+  0x4400c790: [f1 0a               ] SUB D2,D2
+  0x4400c792: [f2 fa               ] MOV D2,MDR
+  0x4400c794: [f2 73               ] DIVU D0,D3
+  0x4400c796: [f2 e2               ] MOV MDR,D2
+  0x4400c798: [8c                  ] MOV D3,D0
+  0x4400c799: [f8 12 3c            ] MOV D0,(0x3c,A2)
+  0x4400c79c: [ca 30               ] BRA 0x4400c7cc
+  0x4400c79e: [f8 27 ec            ] MOV (-0x14,A3),A1
+  0x4400c7a1: [f8 23 ec            ] MOV (-0x14,A3),A0
+  0x4400c7a4: [f8 64 2a            ] MOVHU (0x2a,A0),D1
+  0x4400c7a7: [f8 23 ec            ] MOV (-0x14,A3),A0
+  0x4400c7aa: [f8 60 24            ] MOVHU (0x24,A0),D0
+  0x4400c7ad: [f1 01               ] SUB D0,D1
+  0x4400c7af: [f8 03 f4            ] MOV (-0xc,A3),D0
+  0x4400c7b2: [f1 01               ] SUB D0,D1
+  0x4400c7b4: [f8 03 f0            ] MOV (-0x10,A3),D0
+  0x4400c7b7: [f1 01               ] SUB D0,D1
+  0x4400c7b9: [f8 23 ec            ] MOV (-0x14,A3),A0
+  0x4400c7bc: [f8 40 22            ] MOVBU (0x22,A0),D0
+  0x4400c7bf: [87                  ] MOV D1,D3
+  0x4400c7c0: [f1 0a               ] SUB D2,D2
+  0x4400c7c2: [f2 fa               ] MOV D2,MDR
+  0x4400c7c4: [f2 73               ] DIVU D0,D3
+  0x4400c7c6: [f2 e2               ] MOV MDR,D2
+```
+
+#### `FUN_4400c879` (`fat_open_c879`) — `0x4400c879` (169 B)
+
+Abertura de arquivo por caminho 8.3 no volume montado (`FUN_4400cfde`, `FUN_4400d11e`, `FUN_4400d16b`); retorna handle (`200` + slot, `0` -> `200`) ou código negativo.
+
+<!-- source: doc_boot_fat_sd_java.txt (DecompileFat.java / task-36919.log) | FUNC FUN_4400c879 (fat_open_c879) @ 0x4400c879 (size=169 B, Ghidra 12.1.4 Headless) -->
+```c
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+undefined4 FUN_4400c879(void)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  undefined1 auStack_18 [20];
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_4;
+  FUN_4402c348(auStack_18,0,9);
+  FUN_4402c348(puVar1 + -6,0,4);
+  if (*(char *)puVar1[3] == -0x1b) {
+    *(undefined1 *)puVar1[3] = 5;
+  }
+  uVar2 = FUN_4400cfde(puVar1[3],puVar1 + -5,puVar1 + -6);
+  puVar1[-2] = uVar2;
+  if ((int)puVar1[-2] < 0) {
+    puVar1[-7] = puVar1[-2];
+  }
+  else {
+    uVar2 = FUN_4400d11e();
+    puVar1[-1] = uVar2;
+    if ((int)puVar1[-1] < 0) {
+      puVar1[-7] = puVar1[-1];
+    }
+    else {
+      _DAT_5056b680 = puVar1[2];
+      uVar2 = FUN_4400d16b(puVar1[-1],puVar1 + -5,puVar1 + -6,2);
+      puVar1[-7] = uVar2;
+    }
+  }
+  return puVar1[-7];
+}
+```
+
+#### `FUN_4400c922` (`fat_read_c922`) — `0x4400c922` (43 B)
+
+Wrapper público de leitura de arquivo FAT (`handle - 200` -> `FUN_4400d32f`).
+
+<!-- source: doc_boot_fat_sd_java.txt (DecompileFat.java / task-36919.log) | FUNC FUN_4400c922 (fat_read_c922) @ 0x4400c922 (size=43 B, Ghidra 12.1.4 Headless) -->
+```c
+void FUN_4400c922(int param_1,undefined4 param_2,undefined4 param_3)
+
+{
+  FUN_4400d32f(param_1 + -200,param_2,param_3);
+  return;
+}
+```
+
+#### `FUN_4400c94d` (`fat_seek_c94d`) — `0x4400c94d` (55 B)
+
+Wrapper público de seek de arquivo FAT (`handle - 200` -> chamada direta em `0x4400c9bd`, prólogo real de `FUN_4400c9c0`).
+
+<!-- source: doc_boot_fat_sd_java.txt (DecompileFat.java / task-36919.log) | FUNC FUN_4400c94d (fat_seek_c94d) @ 0x4400c94d (size=55 B, Ghidra 12.1.4 Headless) -->
+```c
+void FUN_4400c94d(undefined4 param_1,undefined4 param_2,undefined4 param_3)
+
+{
+  FUN_4400c9bd(&DAT_5056b680,param_2,param_3);
+  return;
+}
+```
+
+##### Disassembly MN103S verificado de `FUN_4400c94d` (`0x4400c94d..0x4400c983`)
+
+Confirma a chamada direta `CALL 0x4400c9bd` (prólogo real de `FUN_4400c9c0`) e o bloco contíguo até `0x4400c984`:
+
+<!-- source: BOOT.BIN (raw MN103S verify) | DISASM FUN_4400c94d 0x4400c94d..0x4400c983 -->
+```asm
+  0x4400c94d: [cf 10               ] MOVM [A3],(SP)
+  0x4400c94f: [3f                  ] MOV SP,A3
+  0x4400c950: [f8 fe ec            ] ADD -0x14,SP
+  0x4400c953: [f8 13 08            ] MOV D0,(0x8,A3)
+  0x4400c956: [f8 17 0c            ] MOV D1,(0xc,A3)
+  0x4400c959: [f8 03 08            ] MOV (0x8,A3),D0
+  0x4400c95c: [fa c0 38 ff         ] ADD -0xc8,D0
+  0x4400c960: [f8 13 08            ] MOV D0,(0x8,A3)
+  0x4400c963: [fc cc 80 b6 56 50   ] MOV 0x5056b680,D0
+  0x4400c969: [f8 13 fc            ] MOV D0,(-0x4,A3)
+  0x4400c96c: [f8 07 fc            ] MOV (-0x4,A3),D1
+  0x4400c96f: [f8 23 0c            ] MOV (0xc,A3),A0
+  0x4400c972: [f8 03 10            ] MOV (0x10,A3),D0
+  0x4400c975: [42 0c               ] MOV D0,(0xc,SP)
+  0x4400c977: [84                  ] MOV D1,D0
+  0x4400c978: [f1 d1               ] MOV A0,D1
+  0x4400c97a: [cd 43 00 00 00      ] CALL 0x4400c9bd,[],0x0
+  0x4400c97f: [f2 fc               ] MOV A3,SP
+  0x4400c981: [df 10 04            ] RET [A3],0x4
+```
+
+#### `FUN_4400c984` (`fat_close_c984`) — `0x4400c984` (57 B, disassembly direto em `BOOT.BIN`)
+
+Função `fat_close` não incluída nos 11 scripts Java headlessly invocados; extraída por disassembly MN103S verificado diretamente em `BOOT.BIN` (`0x4400c984..0x4400c9bc`). Ajusta `handle -= 200`, indexa o descritor em `0x5056b600 + slot * 0x40` a partir do ponteiro em `0x5056b680` e chama `FUN_4400df9e` para liberar o slot (`0x4400c9b3`).
+
+<!-- source: BOOT.BIN (raw MN103S verify; not in C:\ghidra\*.java) | DISASM FUN_4400c984 @ 0x4400c984 (size=57 B) -->
+```asm
+  0x4400c984: [cf 10               ] MOVM [A3],(SP)
+  0x4400c986: [3f                  ] MOV SP,A3
+  0x4400c987: [f8 fe ec            ] ADD -0x14,SP
+  0x4400c98a: [f8 13 08            ] MOV D0,(0x8,A3)
+  0x4400c98d: [f8 03 08            ] MOV (0x8,A3),D0
+  0x4400c990: [fa c0 38 ff         ] ADD -0xc8,D0
+  0x4400c994: [f8 13 08            ] MOV D0,(0x8,A3)
+  0x4400c997: [fc cc 80 b6 56 50   ] MOV 0x5056b680,D0
+  0x4400c99d: [f8 13 fc            ] MOV D0,(-0x4,A3)
+  0x4400c9a0: [f8 23 fc            ] MOV (-0x4,A3),A0
+  0x4400c9a3: [70                  ] MOV (A0),D0
+  0x4400c9a4: [f8 c0 06            ] ASL 0x6,D0
+  0x4400c9a7: [fc c0 00 b6 56 50   ] ADD 0x5056b600,D0
+  0x4400c9ad: [f8 13 f8            ] MOV D0,(-0x8,A3)
+  0x4400c9b0: [f8 03 08            ] MOV (0x8,A3),D0
+  0x4400c9b3: [cd eb 15 00 00      ] CALL 0x4400df9e,[],0x0
+  0x4400c9b8: [f2 fc               ] MOV A3,SP
+  0x4400c9ba: [df 10 04            ] RET [A3],0x4
+```
+
+#### `FUN_4400c9c0` (`fat_seek_internal_c9c0`) — `0x4400c9c0` (153 B)
+
+Seek interno em handle FAT (`whence` `1` = início/`SEEK_SET`, `2` = posição atual/`SEEK_CUR`, `3` = fim/`SEEK_END`); o prólogo real inicia 3 bytes antes em `0x4400c9bd` (`cf 10 3f`: `MOVM [A3],(SP); MOV SP,A3`, tamanho real total 156 B).
+
+<!-- source: doc_boot_fat_sd_java.txt (DecompileFat.java / task-36919.log) | FUNC FUN_4400c9c0 (fat_seek_internal_c9c0) @ 0x4400c9c0 (size=153 B, Ghidra 12.1.4 Headless) -->
+```c
+undefined4 FUN_4400c9c0(undefined4 param_1,undefined4 param_2)
+
+{
+  int in_A3;
+  
+  *(undefined4 *)(in_A3 + 8) = param_1;
+  *(undefined4 *)(in_A3 + 0xc) = param_2;
+  *(undefined4 *)(in_A3 + -0xc) = *(undefined4 *)(in_A3 + 0x10);
+  if (*(int *)(in_A3 + -0xc) == 2) {
+    *(int *)(in_A3 + -4) = *(int *)(in_A3 + 0xc) + *(int *)(*(int *)(in_A3 + 8) + 0x44);
+LAB_4400ca1d:
+    *(undefined4 *)(*(int *)(in_A3 + 8) + 0x3c) = 0xffffffff;
+    if ((*(int *)(in_A3 + -4) < 0) ||
+       (*(uint *)(*(int *)(in_A3 + 8) + 0x40) < *(uint *)(in_A3 + -4))) {
+      *(undefined4 *)(in_A3 + -8) = 0xffffd8dc;
+    }
+    else {
+      *(undefined4 *)(*(int *)(in_A3 + 8) + 0x44) = *(undefined4 *)(in_A3 + -4);
+      *(undefined4 *)(in_A3 + -8) = *(undefined4 *)(in_A3 + -4);
+    }
+  }
+  else {
+    if (*(int *)(in_A3 + -0xc) < 3) {
+      if (*(int *)(in_A3 + -0xc) == 1) {
+        *(undefined4 *)(in_A3 + -4) = *(undefined4 *)(in_A3 + 0xc);
+        goto LAB_4400ca1d;
+      }
+    }
+    else if (*(int *)(in_A3 + -0xc) == 3) {
+      *(int *)(in_A3 + -4) = *(int *)(in_A3 + 0xc) + *(int *)(*(int *)(in_A3 + 8) + 0x40);
+      goto LAB_4400ca1d;
+    }
+    *(undefined4 *)(in_A3 + -8) = 0xffffd8dc;
+  }
+  return *(undefined4 *)(in_A3 + -8);
+}
+```
+
+##### Prólogo real de `FUN_4400c9c0` (`0x4400c9bd..0x4400c9c7`)
+
+Explica os acessos `*(in_A3 + 8..0x10)` e confirma o destino de `CALL 0x4400c9bd` visto em `FUN_4400c94d`:
+
+<!-- source: BOOT.BIN (raw MN103S verify) | DISASM PROLOGUE 0x4400c9bd..0x4400c9c7 -->
+```asm
+  0x4400c9bd: [cf 10               ] MOVM [A3],(SP)
+  0x4400c9bf: [3f                  ] MOV SP,A3
+  0x4400c9c0: [f8 fe f4            ] ADD -0xc,SP
+  0x4400c9c3: [f8 13 08            ] MOV D0,(0x8,A3)
+  0x4400c9c6: [f8 17 0c            ] MOV D1,(0xc,A3)
+```
+
+#### `FUN_4400ca59` (`fat_sd_read_chunked_ca59`) — `0x4400ca59` (200 B)
+
+Leitor de blocos SD em fatias de até `0x1fc` setores via buffer staging `0x91c00000`, invocando `FUN_440098fc(3, ...)`.
+
+<!-- source: doc_boot_fat_sd_java.txt (DecompileFat6.java / task-36967.log) | FUNC FUN_4400ca59 (fat_sd_read_chunked_ca59) @ 0x4400ca59 (size=200 B, Ghidra 12.1.4 Headless) -->
+```c
+undefined4 FUN_4400ca59(void)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_4;
+  do {
+    if (puVar1[3] == 0) {
+      puVar1[-6] = puVar1[3];
+LAB_4400cb19:
+      return puVar1[-6];
+    }
+    if ((uint)puVar1[3] < 0x1fd) {
+      puVar1[-2] = puVar1[3];
+    }
+    else {
+      puVar1[-2] = 0x1fc;
+    }
+    puVar1[-3] = puVar1[-2] << 9;
+    uVar2 = FUN_440098fc(3,puVar1[-4],puVar1[4],puVar1[-2]);
+    puVar1[-1] = uVar2;
+    if ((int)puVar1[-1] < 0) {
+      puVar1[-6] = puVar1[-1];
+      goto LAB_4400cb19;
+    }
+    FUN_4402c2f7(puVar1[2],puVar1[-5],puVar1[-3]);
+    puVar1[4] = puVar1[-2] + puVar1[4];
+    puVar1[3] = puVar1[-2] - puVar1[3]; // [SLEIGH Trap #8 @ 0x4400caeb (fb 9c cd c0): real = puVar1[3] - puVar1[-2] (puVar1[3] -= setores lidos)]
+    puVar1[2] = puVar1[-3] + puVar1[2];
+    puVar1[-4] = puVar1[-3] + puVar1[-4];
+    puVar1[-5] = puVar1[-3] + puVar1[-5];
+  } while( true );
+}
+```
+
+##### Disassembly MN103S verificado de `FUN_4400ca59` (`0x4400ca59..0x4400cb20`)
+
+Verifica `0x4400caeb: [fb 9c cd c0] SUB D0,D1,D0` (`D0 = D1 - D0 = puVar1[3] - puVar1[-2]`) imediatamente após `0x4400cae8: [f8 03 f8] MOV (-0x8,A3),D0`:
+
+<!-- source: BOOT.BIN (raw MN103S verify) | DISASM FUN_4400ca59 0x4400ca59..0x4400cb20 -->
+```asm
+  0x4400ca59: [cf 10               ] MOVM [A3],(SP)
+  0x4400ca5b: [3f                  ] MOV SP,A3
+  0x4400ca5c: [f8 fe d4            ] ADD -0x2c,SP
+  0x4400ca5f: [f8 13 08            ] MOV D0,(0x8,A3)
+  0x4400ca62: [f8 17 0c            ] MOV D1,(0xc,A3)
+  0x4400ca65: [fc cc 00 00 00 01   ] MOV 0x1000000,D0
+  0x4400ca6b: [f8 13 f0            ] MOV D0,(-0x10,A3)
+  0x4400ca6e: [fc cc 00 00 c0 91   ] MOV 0x91c00000,D0
+  0x4400ca74: [f8 13 ec            ] MOV D0,(-0x14,A3)
+  0x4400ca77: [f8 03 0c            ] MOV (0xc,A3),D0
+  0x4400ca7a: [a0 00               ] CMP 0x0,D0
+  0x4400ca7c: [c9 05               ] BNE 0x4400ca81
+  0x4400ca7e: [cc 95 00            ] JMP 0x4400cb13
+  0x4400ca81: [f8 03 0c            ] MOV (0xc,A3),D0
+  0x4400ca84: [fa c8 fc 01         ] CMP 0x1fc,D0
+  0x4400ca88: [c7 0a               ] BLS 0x4400ca92
+  0x4400ca8a: [2c fc 01            ] MOV 0x1fc,D0
+  0x4400ca8d: [f8 13 f8            ] MOV D0,(-0x8,A3)
+  0x4400ca90: [ca 08               ] BRA 0x4400ca98
+  0x4400ca92: [f8 03 0c            ] MOV (0xc,A3),D0
+  0x4400ca95: [f8 13 f8            ] MOV D0,(-0x8,A3)
+  0x4400ca98: [f8 03 f8            ] MOV (-0x8,A3),D0
+  0x4400ca9b: [f8 c0 09            ] ASL 0x9,D0
+  0x4400ca9e: [f8 13 f4            ] MOV D0,(-0xc,A3)
+  0x4400caa1: [f8 07 f0            ] MOV (-0x10,A3),D1
+  0x4400caa4: [f8 03 10            ] MOV (0x10,A3),D0
+  0x4400caa7: [42 0c               ] MOV D0,(0xc,SP)
+  0x4400caa9: [f8 03 f8            ] MOV (-0x8,A3),D0
+  0x4400caac: [42 10               ] MOV D0,(0x10,SP)
+  0x4400caae: [80 03               ] MOV 0x3,D0
+  0x4400cab0: [dd 4c ce ff ff 00 00] CALL 0x440098fc,[],0x0
+  0x4400cab7: [f8 13 fc            ] MOV D0,(-0x4,A3)
+  0x4400caba: [f8 03 fc            ] MOV (-0x4,A3),D0
+  0x4400cabd: [a0 00               ] CMP 0x0,D0
+  0x4400cabf: [c2 0a               ] BGE 0x4400cac9
+  0x4400cac1: [f8 03 fc            ] MOV (-0x4,A3),D0
+  0x4400cac4: [f8 13 e8            ] MOV D0,(-0x18,A3)
+  0x4400cac7: [ca 52               ] BRA 0x4400cb19
+  0x4400cac9: [f8 07 ec            ] MOV (-0x14,A3),D1
+  0x4400cacc: [f8 03 f4            ] MOV (-0xc,A3),D0
+  0x4400cacf: [42 0c               ] MOV D0,(0xc,SP)
+  0x4400cad1: [f8 03 08            ] MOV (0x8,A3),D0
+  0x4400cad4: [dd 23 f8 01 00 00 00] CALL 0x4402c2f7,[],0x0
+  0x4400cadb: [f8 07 10            ] MOV (0x10,A3),D1
+  0x4400cade: [f8 03 f8            ] MOV (-0x8,A3),D0
+  0x4400cae1: [e4                  ] ADD D1,D0
+  0x4400cae2: [f8 13 10            ] MOV D0,(0x10,A3)
+  0x4400cae5: [f8 07 0c            ] MOV (0xc,A3),D1
+  0x4400cae8: [f8 03 f8            ] MOV (-0x8,A3),D0
+  0x4400caeb: [fb 9c cd c0         ] SUB D0,D1,D0
+  0x4400caef: [f8 13 0c            ] MOV D0,(0xc,A3)
+  0x4400caf2: [f8 07 08            ] MOV (0x8,A3),D1
+  0x4400caf5: [f8 03 f4            ] MOV (-0xc,A3),D0
+  0x4400caf8: [e4                  ] ADD D1,D0
+  0x4400caf9: [f8 13 08            ] MOV D0,(0x8,A3)
+  0x4400cafc: [f8 07 f0            ] MOV (-0x10,A3),D1
+  0x4400caff: [f8 03 f4            ] MOV (-0xc,A3),D0
+  0x4400cb02: [e4                  ] ADD D1,D0
+  0x4400cb03: [f8 13 f0            ] MOV D0,(-0x10,A3)
+  0x4400cb06: [f8 07 ec            ] MOV (-0x14,A3),D1
+  0x4400cb09: [f8 03 f4            ] MOV (-0xc,A3),D0
+  0x4400cb0c: [e4                  ] ADD D1,D0
+  0x4400cb0d: [f8 13 ec            ] MOV D0,(-0x14,A3)
+  0x4400cb10: [cc 67 ff            ] JMP 0x4400ca77
+  0x4400cb13: [f8 03 0c            ] MOV (0xc,A3),D0
+  0x4400cb16: [f8 13 e8            ] MOV D0,(-0x18,A3)
+  0x4400cb19: [f8 03 e8            ] MOV (-0x18,A3),D0
+  0x4400cb1c: [f2 fc               ] MOV A3,SP
+  0x4400cb1e: [df 10 04            ] RET [A3],0x4
+```
+
+#### `FUN_4400cb21` (`fat_mount_internal_cb21`) — `0x4400cb21` (945 B)
+
+Leitura de LBA 0 via `FUN_4400ca59`, detecção opcional de MBR (`FUN_4400bfb0`) e salto para LBA de partição antes de validar VBR via `FUN_4400c0a8`.
+
+<!-- source: doc_boot_fat_sd_java.txt (DecompileFat4.java / task-36949.log) | FUNC FUN_4400cb21 (fat_mount_internal_cb21) @ 0x4400cb21 (size=945 B, Ghidra 12.1.4 Headless) -->
+```c
+undefined4 FUN_4400cb21(void)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  int iVar3;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_4;
+  uVar2 = FUN_4400ca59(0x5056b6d4,1,0);
+  puVar1[-2] = uVar2;
+  if ((int)puVar1[-2] < 0) {
+    uVar2 = FUN_4400ca59(puVar1[-8],1,0);
+    puVar1[-2] = uVar2;
+    if ((int)puVar1[-2] < 0) {
+      puVar1[-10] = puVar1[-2];
+      goto LAB_4400ceca;
+    }
+  }
+  puVar1[-4] = puVar1[-8] + 0x200;
+  puVar1[-1] = 0;
+  while ((int)puVar1[-1] < 4) {
+    uVar2 = FUN_4400bfb0(puVar1[-1] + puVar1[-8] + 0x1be,puVar1[-4]);
+    puVar1[-2] = uVar2;
+    if ((int)puVar1[-2] < 0) {
+      puVar1[-10] = puVar1[-2];
+      goto LAB_4400ceca;
+    }
+    if ((((*(char *)(puVar1[-8] + 0x1fe) == 'U') && (*(char *)(puVar1[-8] + 0x1ff) == -0x56)) &&
+        ((*(char *)puVar1[-4] == -0x80 || (*(char *)puVar1[-4] == '\0')))) &&
+       (*(char *)(puVar1[-4] + 4) != '\0')) {
+      puVar1[-3] = *(undefined4 *)(puVar1[-4] + 8);
+      *(undefined4 *)(puVar1[-7] + 8) = *(undefined4 *)(puVar1[-4] + 8);
+      goto LAB_4400cc2c;
+    }
+    puVar1[-1] = puVar1[-1] + 0x10;
+  }
+  puVar1[-3] = 0;
+  *(undefined4 *)(puVar1[-7] + 8) = 0;
+LAB_4400cc2c:
+  do {
+    if (puVar1[-3] == 0) break;
+    uVar2 = FUN_4400ca59(puVar1[-8],1,puVar1[-3]);
+    puVar1[-2] = uVar2;
+    if (-1 < (int)puVar1[-2]) break;
+    if (*(char *)((int)puVar1 + -0x21) != '\0') {
+      puVar1[-10] = puVar1[-2];
+      goto LAB_4400ceca;
+    }
+    puVar1[-3] = *(int *)(puVar1[-7] + 8) + 6;
+    *(undefined1 *)((int)puVar1 + -0x21) = 1;
+  } while( true );
+  puVar1[-5] = puVar1[-8] + 0x200;
+  uVar2 = FUN_4400c0a8(puVar1[-8],puVar1[-5]);
+  puVar1[-2] = uVar2;
+  if ((int)puVar1[-2] < 0) {
+    puVar1[-10] = puVar1[-2];
+  }
+  else if ((*(char *)(puVar1[-5] + 0x203) == 'U') && (*(char *)(puVar1[-5] + 0x204) == -0x56)) {
+    if (*(short *)(puVar1[-5] + 0xc) == 0x200) {
+      *(undefined2 *)(puVar1[-7] + 0x20) = *(undefined2 *)(puVar1[-5] + 0xc);
+      *(undefined1 *)(puVar1[-7] + 0x22) = *(undefined1 *)(puVar1[-5] + 0xe);
+      if (*(char *)(puVar1[-7] + 0x22) == '\0') {
+        puVar1[-10] = 0xffffd8d7;
+      }
+      else {
+        *(undefined2 *)(puVar1[-7] + 0x24) = *(undefined2 *)(puVar1[-5] + 0x10);
+        *(undefined1 *)(puVar1[-7] + 0x26) = *(undefined1 *)(puVar1[-5] + 0x12);
+        if (*(char *)(puVar1[-7] + 0x26) == '\0') {
+          puVar1[-10] = 0xffffd8d7;
+        }
+        else if (*(byte *)(puVar1[-7] + 0x26) < 3) {
+          *(undefined2 *)(puVar1[-7] + 0x28) = *(undefined2 *)(puVar1[-5] + 0x14);
+          *(undefined2 *)(puVar1[-7] + 0x2a) = *(undefined2 *)(puVar1[-5] + 0x16);
+          *(uint *)(puVar1[-7] + 0x2c) = (uint)*(ushort *)(puVar1[-5] + 0x1a);
+          *(undefined4 *)(puVar1[-7] + 0x30) = *(undefined4 *)(puVar1[-5] + 0x20);
+          *(undefined4 *)(puVar1[-7] + 0x34) = *(undefined4 *)(puVar1[-5] + 0x24);
+          iVar3 = FUN_4402c420(puVar1[-5] + 0x3b,s_FAT12_440356ce,5);
+          if (iVar3 == 0) {
+            *(undefined4 *)(puVar1[-7] + 4) = 0xc;
+            if (*(char *)((int)puVar1 + -0x21) == '\x01') {
+              puVar1[-10] = 0xffffd8d7;
+              goto LAB_4400ceca;
+            }
+          }
+          else {
+            iVar3 = FUN_4402c420(puVar1[-5] + 0x3b,s_FAT16_440356d7,5);
+            if (iVar3 == 0) {
+              *(undefined4 *)(puVar1[-7] + 4) = 0x10;
+              if (*(char *)((int)puVar1 + -0x21) == '\x01') {
+                puVar1[-10] = 0xffffd8d7;
+                goto LAB_4400ceca;
+              }
+            }
+            else {
+              iVar3 = FUN_4402c420(puVar1[-5] + 0x3b,s_FAT32_440356e0,5);
+              if (iVar3 == 0) {
+                *(undefined4 *)(puVar1[-7] + 4) = 0x20;
+              }
+              else {
+                *(undefined4 *)(puVar1[-7] + 4) = 0;
+              }
+            }
+          }
+          if ((*(int *)(puVar1[-7] + 0x2c) == 0) &&
+             ((*(int *)(puVar1[-7] + 4) == 0xc || (*(int *)(puVar1[-7] + 4) == 0x10)))) {
+            puVar1[-10] = 0xffffd8d7;
+          }
+          else {
+            if ((*(short *)(puVar1[-7] + 0x28) == 0) && (*(int *)(puVar1[-7] + 0x2c) == 0)) {
+              puVar1[-6] = puVar1[-8] + 0x224;
+              uVar2 = FUN_4400c35a(puVar1[-8] + 0x24,puVar1[-6]);
+              puVar1[-2] = uVar2;
+              if ((int)puVar1[-2] < 0) {
+                puVar1[-10] = puVar1[-2];
+                goto LAB_4400ceca;
+              }
+              *(undefined4 *)(puVar1[-7] + 0x2c) = *(undefined4 *)puVar1[-6];
+              if (*(int *)(puVar1[-7] + 0x2c) == 0) {
+                puVar1[-10] = 0xffffd8d7;
+                goto LAB_4400ceca;
+              }
+              iVar3 = FUN_4402c420(puVar1[-6] + 0x2f,s_FAT32_440356e0,5);
+              if (iVar3 != 0) {
+                puVar1[-10] = 0xffffd8d7;
+                goto LAB_4400ceca;
+              }
+              *(undefined4 *)(puVar1[-7] + 4) = 0x20;
+            }
+            puVar1[-10] = puVar1[-2];
+          }
+        }
+        else {
+          puVar1[-10] = 0xffffd8d7;
+        }
+      }
+    }
+    else {
+      puVar1[-10] = 0xffffd8d7;
+    }
+  }
+  else {
+    puVar1[-10] = 0xffffd8d7;
+  }
+LAB_4400ceca:
+  return puVar1[-10];
+}
+```
+
+#### `FUN_4400ced2` (`fat_cache_init_ced2`) — `0x4400ced2` (268 B)
+
+Inicializa janela de cache da tabela FAT (3 setores) em estrutura por slot.
+
+<!-- source: doc_boot_fat_sd_java.txt (DecompileFat2.java / task-36929.log) | FUNC FUN_4400ced2 (fat_cache_init_ced2) @ 0x4400ced2 (size=268 B, Ghidra 12.1.4 Headless) -->
+```c
+undefined4 FUN_4400ced2(int param_1)
+
+{
+  int iVar1;
+  undefined4 *puVar2;
+  int iVar3;
+  undefined4 uVar4;
+  undefined4 uStack_4;
+  
+  puVar2 = &uStack_4;
+  iVar3 = param_1 * 0x40;
+  iVar1 = *(int *)(iVar3 + 0x5056b600) * 0xdec;
+  *(int *)(iVar1 + 0x505716d4) = param_1;
+  *(undefined4 *)(iVar1 + 0x505716dc) = *(undefined4 *)(iVar3 + 0x5056b610);
+  *(undefined4 *)(iVar1 + 0x505716e0) = *(undefined4 *)(iVar3 + 0x5056b62c);
+  *(undefined4 *)(iVar1 + 0x505716e4) = 0;
+  *(undefined4 *)(iVar1 + 0x505716d8) = 0;
+  if (*(uint *)(iVar1 + 0x505716e0) < 3) {
+    *(undefined4 *)(iVar1 + 0x505716e8) = *(undefined4 *)(iVar1 + 0x505716e0);
+  }
+  else {
+    *(undefined4 *)(iVar1 + 0x505716e8) = 3;
+  }
+  uVar4 = FUN_4400dc64(param_1,*(undefined4 *)(iVar1 + 0x505716dc),
+                       *(undefined4 *)(iVar1 + 0x505716e8),iVar1 + 0x505716ec);
+  puVar2[-3] = uVar4;
+  if (((int)puVar2[-3] < 0) && (1 < *(byte *)(puVar2[-5] + 0x26))) {
+    uVar4 = FUN_4400dc64(puVar2[2],*(int *)(puVar2[-4] + 8) + *(int *)(puVar2[-4] + 0xc),
+                         *(undefined4 *)(puVar2[-4] + 0x14),puVar2[-4] + 0x18);
+    puVar2[-3] = uVar4;
+  }
+  puVar2[-1] = 0;
+  while ((int)puVar2[-1] < 500) {
+    *(undefined4 *)(puVar2[-1] * 4 + puVar2[-4] + 0x61c) = 0xffffffff;
+    puVar2[-1] = puVar2[-1] + 1;
+  }
+  *(undefined4 *)(puVar2[-4] + 0x618) = 0;
+  return puVar2[-3];
+}
+```
+
+#### `FUN_4400cfde` (`fat_parse_83_name_cfde`) — `0x4400cfde` (320 B)
+
+Normalização/uppercase de nome e extensão 8.3 preenchidos com espaços (`0x20`).
+
+<!-- source: doc_boot_fat_sd_java.txt (DecompileFat2.java / task-36929.log) | FUNC FUN_4400cfde (fat_parse_83_name_cfde) @ 0x4400cfde (size=320 B, Ghidra 12.1.4 Headless) -->
+```c
+undefined4 FUN_4400cfde(void)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  undefined1 auStack_1c [16];
+  undefined4 uStack_c;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_4;
+  FUN_4402c348(auStack_1c,0x20,8);
+  FUN_4402c348(puVar1 + -7,0x20,3);
+  uVar2 = FUN_4402c3dd(puVar1[2]);
+  puVar1[-3] = uVar2;
+  if ((int)puVar1[-3] < 0xd) {
+    puVar1[-1] = 0;
+    while ((int)puVar1[-1] < (int)puVar1[-3]) {
+      while (*(char *)(puVar1[-1] + puVar1[2]) != '.') {
+        if (*(char *)(puVar1[-1] + puVar1[2]) == '\0') goto LAB_4400d0ea;
+        if (7 < (int)puVar1[-1]) {
+          puVar1[-8] = 0xffffd8dc;
+          goto LAB_4400d116;
+        }
+        *(undefined1 *)((int)puVar1 + puVar1[-1] + -0x18) = *(undefined1 *)(puVar1[-1] + puVar1[2]);
+        puVar1[-1] = puVar1[-1] + 1;
+      }
+      puVar1[-1] = puVar1[-1] + 1;
+      while ((int)puVar1[-2] < 3) {
+        if (*(char *)(puVar1[-1] + puVar1[2]) == '\0') goto LAB_4400d0ea;
+        *(undefined1 *)((int)puVar1 + puVar1[-2] + -0x1c) = *(undefined1 *)(puVar1[-1] + puVar1[2]);
+        puVar1[-1] = puVar1[-1] + 1;
+        puVar1[-2] = puVar1[-2] + 1;
+      }
+      puVar1[-1] = puVar1[-1] + 1;
+    }
+LAB_4400d0ea:
+    FUN_4402c2f7(puVar1[3],puVar1 + -6,8);
+    FUN_4402c2f7(puVar1[4],puVar1 + -7,3);
+    puVar1[-8] = 0;
+  }
+  else {
+    puVar1[-8] = 0xffffd8dc;
+  }
+LAB_4400d116:
+  return puVar1[-8];
+}
+```
+
+#### `FUN_4400d11e` (`fat_alloc_handle_d11e`) — `0x4400d11e` (77 B)
+
+Alocação do slot de arquivo FAT em `_DAT_5056b6c8` via contador `DAT_5056b6d0` (retorna slot `0`, mapeado para handle `200` por `FUN_4400d16b`, ou `0xffffd8e5` = `-10011`).
+
+<!-- source: doc_boot_fat_sd_java.txt (DecompileFat2.java / task-36929.log) | FUNC FUN_4400d11e (fat_alloc_handle_d11e) @ 0x4400d11e (size=77 B, Ghidra 12.1.4 Headless) -->
+```c
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+undefined4 FUN_4400d11e(void)
+
+{
+  undefined4 uStack_8;
+  
+  if (DAT_5056b6d0 == '\0') {
+    uStack_8 = 0xffffd8e5;
+  }
+  else if (_DAT_5056b6c8 == 0) {
+    DAT_5056b6d0 = DAT_5056b6d0 + -1;
+    _DAT_5056b6c8 = 1;
+    uStack_8 = 0;
+  }
+  else {
+    uStack_8 = 0xffffd8e5;
+  }
+  return uStack_8;
+}
+```
+
+#### `FUN_4400d16b` (`fat_open_internal_d16b`) — `0x4400d16b` (452 B)
+
+Lookup interno de entrada no diretório raiz (`FUN_4400dce2`), desempacotamento (`FUN_4400c510`) e preenchimento do descritor de arquivo aberto em `0x5056b680`.
+
+<!-- source: doc_boot_fat_sd_java.txt (DecompileFat2.java / task-36929.log) | FUNC FUN_4400d16b (fat_open_internal_d16b) @ 0x4400d16b (size=452 B, Ghidra 12.1.4 Headless) -->
+```c
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+undefined4 FUN_4400d16b(undefined4 param_1,undefined4 param_2,undefined4 param_3)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  undefined1 auStack_14 [4];
+  undefined1 auStack_10 [8];
+  int iStack_8;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_4;
+  iStack_8 = _DAT_5056b680;
+  if (((*(int *)(_DAT_5056b680 * 0x40 + 0x5056b604) == 0xc) ||
+      (*(int *)(_DAT_5056b680 * 0x40 + 0x5056b604) == 0x10)) ||
+     (*(int *)(_DAT_5056b680 * 0x40 + 0x5056b604) == 0x20)) {
+    uVar2 = FUN_4400dce2(_DAT_5056b680,param_2,param_3,auStack_10,auStack_14);
+    puVar1[-2] = uVar2;
+    if ((int)puVar1[-2] < 0) {
+      FUN_4400df9e(puVar1[2]);
+      puVar1[-10] = puVar1[-2];
+    }
+    else {
+      puVar1[-8] = puVar1[-9] + 0x200;
+      uVar2 = FUN_4400c510(puVar1[-4] + puVar1[-9],puVar1[-8]);
+      puVar1[-2] = uVar2;
+      if ((int)puVar1[-2] < 0) {
+        FUN_4400df9e(puVar1[2]);
+        puVar1[-10] = puVar1[-2];
+      }
+      else {
+        *(undefined4 *)(puVar1[-6] + 0x2c) = puVar1[-3];
+        *(undefined4 *)(puVar1[-6] + 0x30) = puVar1[-4];
+        FUN_4402c4d6(puVar1[-6] + 8,puVar1[-8],8);
+        FUN_4402c4d6(puVar1[-6] + 0x11,puVar1[-8] + 8,3);
+        *(undefined1 *)(puVar1[-6] + 0x15) = *(undefined1 *)(puVar1[-8] + 0xb);
+        *(uint *)(puVar1[-6] + 0x34) =
+             CONCAT22(*(undefined2 *)(puVar1[-8] + 0x14),*(undefined2 *)(puVar1[-8] + 0x1a));
+        *(uint *)(puVar1[-6] + 0x34) = *(uint *)(puVar1[-6] + 0x34) & puVar1[-5];
+        *(undefined4 *)(puVar1[-6] + 0x3c) = 0xffffffff;
+        *(undefined4 *)(puVar1[-6] + 0x40) = *(undefined4 *)(puVar1[-8] + 0x1c);
+        *(undefined4 *)(puVar1[-6] + 0x44) = 0;
+        *(undefined4 *)(puVar1[-6] + 4) = puVar1[5];
+        *(undefined2 *)(puVar1[-6] + 0x48) = 1;
+        puVar1[-10] = puVar1[2] + 200;
+      }
+    }
+  }
+  return puVar1[-10];
+}
+```
+
+#### `FUN_4400d32f` (`fat_read_internal_d32f`) — `0x4400d32f` (2357 B)
+
+Motor principal de leitura FAT12/FAT16/FAT32 por corridas contíguas de clusters (despacha extensão `'ASF'` em `0x440356e9` para `FUN_4400dfc8`).
+
+<!-- source: doc_boot_fat_sd_java.txt (DecompileFat2.java / task-36929.log) | FUNC FUN_4400d32f (fat_read_internal_d32f) @ 0x4400d32f (size=2357 B, Ghidra 12.1.4 Headless) -->
+```c
+undefined4 FUN_4400d32f(void)
+
+{
+  undefined4 *puVar1;
+  int iVar2;
+  undefined4 uVar3;
+  undefined4 uStack0000000c;
+  undefined4 uStack_10;
+  undefined4 uStack_c;
+  undefined4 uStack_8;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_10;
+  iVar2 = FUN_4402c398(0x5056b691,&DAT_440356e9);
+  if (iVar2 == 0) {
+    if (*(int *)(puVar1[-5] + 0x40) == 0) {
+      puVar1[-0x1b] = 0;
+    }
+    else {
+      if (*(int *)(puVar1[-1] * 0x40 + 0x5056b604) == 0xc) {
+        puVar1[-10] = 0xfff;
+      }
+      else if (*(int *)(puVar1[-1] * 0x40 + 0x5056b604) == 0x10) {
+        puVar1[-10] = 0xffff;
+      }
+      else {
+        if (*(int *)(puVar1[-1] * 0x40 + 0x5056b604) != 0x20) {
+          puVar1[-0x1b] = 0xffffd8d7;
+          goto LAB_4400dc5c;
+        }
+        puVar1[-10] = 0xfffffff;
+      }
+      if (*(uint *)(puVar1[-5] + 0x40) < *(uint *)(puVar1[-5] + 0x44)) {
+        puVar1[-0x1b] = 0xffffd8d2;
+      }
+      else {
+        if (*(uint *)(puVar1[-5] + 0x40) < (uint)(*(int *)(puVar1[-5] + 0x44) + puVar1[7])) {
+          puVar1[7] = *(int *)(puVar1[-5] + 0x44) - *(int *)(puVar1[-5] + 0x40); // [SLEIGH Trap #8 @ 0x4400d525 (fb 9c cd c0): real = FileSize(*(int *)(+0x40)) - FileOffset(*(int *)(+0x44))]
+        }
+        if (puVar1[7] == 0) {
+          puVar1[-0x1b] = 0xffffd8dc;
+        }
+        else {
+          puVar1[-0xf] = (((uint)*(ushort *)(puVar1[-6] + 0x20) +
+                          *(uint *)(puVar1[-5] + 0x44) % (uint)*(ushort *)(puVar1[-6] + 0x20) +
+                          puVar1[7]) - 1) / (uint)*(ushort *)(puVar1[-6] + 0x20);
+          puVar1[-9] = (int)(((ulonglong)*(uint *)(puVar1[-5] + 0x44) /
+                             (ulonglong)*(ushort *)(puVar1[-1] * 0x40 + 0x5056b620)) /
+                            (ulonglong)*(byte *)(puVar1[-1] * 0x40 + 0x5056b622));
+          if (*(int *)(puVar1[-5] + 0x3c) == -1) {
+            puVar1[-8] = 0;
+            while ((uint)puVar1[-8] < (uint)puVar1[-9]) {
+              uVar3 = FUN_4400e737(*(undefined4 *)puVar1[-6],puVar1[-0x10],puVar1 + -0x16);
+              puVar1[-2] = uVar3;
+              if ((int)puVar1[-2] < 0) {
+                puVar1[-0x1b] = puVar1[-2];
+                goto LAB_4400dc5c;
+              }
+              puVar1[-0x10] = puVar1[-0x16];
+              if (((((uint)puVar1[-0x10] < (puVar1[-10] & 2)) || (puVar1[-0x10] == puVar1[-10])) ||
+                  ((puVar1[-10] & 0xfffffff6) == puVar1[-0x10])) ||
+                 (((puVar1[-10] & 0xfffffff7) == puVar1[-0x10] ||
+                  ((puVar1[-10] & 0xfffffff8) == puVar1[-0x10])))) {
+                puVar1[-0x1b] = 0xffffd8d4;
+                goto LAB_4400dc5c;
+              }
+              puVar1[-8] = puVar1[-8] + 1;
+            }
+          }
+          else {
+            puVar1[-0x10] = *(undefined4 *)(puVar1[-5] + 0x3c);
+          }
+          uVar3 = FUN_4400e51f(puVar1[-1],puVar1[-0x10]);
+          puVar1[-0xb] = uVar3;
+          puVar1[-0xe] = *(uint *)(puVar1[-5] + 0x44) %
+                         (uint)*(ushort *)(puVar1[-1] * 0x40 + 0x5056b620);
+          uVar3 = FUN_4400edbf(*(undefined4 *)puVar1[-6],puVar1[-0x10],puVar1 + -0x14,puVar1 + -0x15
+                               ,puVar1[-0x17]);
+          puVar1[-2] = uVar3;
+          if ((int)puVar1[-2] < 0) {
+            puVar1[-0x1b] = puVar1[-2];
+          }
+          else {
+            puVar1[-0x1a] =
+                 ((((puVar1[7] + (uint)*(ushort *)(puVar1[-6] + 0x20)) - 1) /
+                  (uint)*(ushort *)(puVar1[-6] + 0x20)) * (uint)*(ushort *)(puVar1[-6] + 0x20)) /
+                 (uint)*(ushort *)(puVar1[-1] * 0x40 + 0x5056b620);
+            puVar1[-0x19] =
+                 ((((puVar1[-0x1a] + (uint)*(byte *)(puVar1[-6] + 0x22)) - 1) /
+                  (uint)*(byte *)(puVar1[-6] + 0x22)) * (uint)*(byte *)(puVar1[-6] + 0x22)) /
+                 (uint)*(byte *)(puVar1[-1] * 0x40 + 0x5056b622);
+            if (puVar1[-0x19] == puVar1[-0x17]) {
+              if (*(uint *)(puVar1[-5] + 0x44) %
+                  ((uint)*(ushort *)(puVar1[-1] * 0x40 + 0x5056b620) *
+                  (uint)*(byte *)(puVar1[-6] + 0x22)) + puVar1[7] <
+                  (uint)*(ushort *)(puVar1[-1] * 0x40 + 0x5056b620) *
+                  (uint)*(byte *)(puVar1[-6] + 0x22)) {
+                puVar1[-0x15] = puVar1[-0x10];
+              }
+            }
+            else {
+              puVar1[-0x18] = 1;
+              if ((puVar1[-0x14] != 1) && (puVar1[-0x17] == puVar1[-0x14])) {
+                puVar1[-0x15] = puVar1[-0x14] + puVar1[-0x10] + -1;
+              }
+            }
+            puVar1[-0x17] = puVar1[-0x14] - puVar1[-0x17]; // [SLEIGH Trap #8 @ 0x4400d7ef (fb 9c cd c0): real = puVar1[-0x17] - puVar1[-0x14] (clusters restantes antes do loop)]
+            if (puVar1[-0x17] == 0) {
+              puVar1[-3] = 1;
+              puVar1[-4] = 1;
+            }
+            if ((puVar1[-0x15] == puVar1[-10]) || ((puVar1[-10] & 0xfffffff8) == puVar1[-0x15])) {
+              puVar1[-0x10] = puVar1[-0x15];
+              puVar1[-3] = 1;
+            }
+            else {
+              if ((((puVar1[-10] & 0xfffffff7) == puVar1[-0x15]) ||
+                  ((puVar1[-10] & 0xfffffff6) == puVar1[-0x15])) ||
+                 ((uint)puVar1[-0x15] < (puVar1[-10] & 2))) {
+                puVar1[-0x1b] = 0xffffd8d4;
+                goto LAB_4400dc5c;
+              }
+              puVar1[-0x10] = puVar1[-0x15];
+            }
+            puVar1[-0xd] = (int)(((ulonglong)*(uint *)(puVar1[-5] + 0x44) /
+                                 (ulonglong)*(ushort *)(puVar1[-1] * 0x40 + 0x5056b620)) %
+                                (ulonglong)*(byte *)(puVar1[-6] + 0x22));
+            puVar1[-0x11] = puVar1[-0xd];
+            puVar1[-0x12] = puVar1[-0xd] - puVar1[-0x14] * (uint)*(byte *)(puVar1[-6] + 0x22); // [SLEIGH Trap #8 @ 0x4400d8b4 (fb 9c cd c0): real = puVar1[-0x14]*SecPerClus - puVar1[-0xd]]
+            while (puVar1[-0xf] != 0) {
+              while (puVar1[-0x12] != 0) {
+                if ((uint)puVar1[-0x12] < (uint)puVar1[-0xc]) {
+                  puVar1[-0xc] = puVar1[-0x12];
+                }
+                if ((uint)puVar1[-0xf] < (uint)puVar1[-0xc]) {
+                  puVar1[-0xc] = puVar1[-0xf];
+                }
+                uVar3 = FUN_4400dc64(puVar1[-1],puVar1[-0xb] + puVar1[-0x11],puVar1[-0xc],puVar1[-7]
+                                    );
+                puVar1[-2] = uVar3;
+                if ((int)puVar1[-2] < 0) {
+                  puVar1[-0x1b] = puVar1[-2];
+                  goto LAB_4400dc5c;
+                }
+                puVar1[-0x12] = puVar1[-0xc] - puVar1[-0x12]; // [SLEIGH Trap #8 @ 0x4400d921 (fb 9c cd c0): real = puVar1[-0x12] - puVar1[-0xc]]
+                puVar1[-0xf] = puVar1[-0xc] - puVar1[-0xf]; // [SLEIGH Trap #8 @ 0x4400d92e (fb 9c cd c0): real = puVar1[-0xf] - puVar1[-0xc]]
+                if ((uint)(puVar1[7] - puVar1[-0x13]) <
+                    (uint)*(ushort *)(puVar1[-6] + 0x20) * puVar1[-0xc]) {
+                  uStack0000000c =
+                       FUN_4402c2f7(puVar1[6],puVar1[-0xe] + puVar1[-7],puVar1[-0x13] - puVar1[7]); // [SLEIGH Trap #8 @ 0x4400d961 (fb 9c cd c0): real = puVar1[7] - puVar1[-0x13] (como no if da linha acima @ 0x4400d93d [f1 21])]
+                }
+                else {
+                  uStack0000000c =
+                       FUN_4402c2f7(puVar1[6],puVar1[-0xe] + puVar1[-7],
+                                    puVar1[-0xe] - // [SLEIGH Trap #8 @ 0x4400d98f (fb 9c cd c0): real = puVar1[-0xc]*BytesPerSec - puVar1[-0xe] (como nas linhas abaixo @ 0x4400d9ad/d9d1 [f1 01])]
+                                    puVar1[-0xc] * (uint)*(ushort *)(puVar1[-6] + 0x20));
+                }
+                puVar1[-0x13] =
+                     puVar1[-0x13] +
+                     (puVar1[-0xc] * (uint)*(ushort *)(puVar1[-6] + 0x20) - puVar1[-0xe]);
+                if (puVar1[-0xf] == 0) {
+                  puVar1[-0x11] = 0;
+                  goto LAB_4400d9fa;
+                }
+                puVar1[6] = puVar1[6] +
+                            (puVar1[-0xc] * (uint)*(ushort *)(puVar1[-6] + 0x20) - puVar1[-0xe]);
+                puVar1[-0xe] = 0;
+                puVar1[-0x11] = puVar1[-0xc] + puVar1[-0x11];
+              }
+              puVar1[-4] = 1;
+              if (puVar1[-3] == 1) {
+LAB_4400d9fa:
+                if ((puVar1[-0x10] == puVar1[-10]) || ((puVar1[-10] & 0xfffffff8) == puVar1[-0x10]))
+                {
+                  *(undefined4 *)(puVar1[-5] + 0x3c) = 0xffffffff;
+                }
+                else if (puVar1[-4] == 1) {
+                  if ((puVar1[-0x15] != puVar1[-10]) &&
+                     ((puVar1[-10] & 0xfffffff8) != puVar1[-0x15])) {
+                    *(undefined4 *)(puVar1[-5] + 0x3c) = puVar1[-0x15];
+                  }
+                }
+                else if ((uint)(*(int *)(puVar1[-5] + 0x44) + puVar1[7]) %
+                         ((uint)*(ushort *)(puVar1[-1] * 0x40 + 0x5056b620) *
+                         (uint)*(byte *)(puVar1[-6] + 0x22)) == 0) {
+                  uVar3 = FUN_4400e737(*(undefined4 *)puVar1[-6],
+                                       (uint)puVar1[-0x11] /
+                                       (uint)*(byte *)(puVar1[-1] * 0x40 + 0x5056b622) +
+                                       puVar1[-0x10],puVar1 + -0x16);
+                  puVar1[-2] = uVar3;
+                  if ((int)puVar1[-2] < 0) {
+                    *(undefined4 *)(puVar1[-5] + 0x3c) = 0xffffffff;
+                    puVar1[-0x1b] = puVar1[-2];
+                    goto LAB_4400dc5c;
+                  }
+                  if ((puVar1[-0x16] != puVar1[-10]) &&
+                     ((puVar1[-10] & 0xfffffff8) != puVar1[-0x16])) {
+                    *(undefined4 *)(puVar1[-5] + 0x3c) = puVar1[-0x16];
+                  }
+                }
+                else {
+                  *(uint *)(puVar1[-5] + 0x3c) =
+                       puVar1[-0x10] +
+                       (uint)puVar1[-0x11] / (uint)*(byte *)(puVar1[-1] * 0x40 + 0x5056b622);
+                }
+                break;
+              }
+              puVar1[-0x11] = 0;
+              uVar3 = FUN_4400edbf(*(undefined4 *)puVar1[-6],puVar1[-0x10],puVar1 + -0x14,
+                                   puVar1 + -0x15,puVar1[-0x17]);
+              puVar1[-2] = uVar3;
+              puVar1[-0x17] = puVar1[-0x14] - puVar1[-0x17]; // [SLEIGH Trap #8 @ 0x4400db58 (fb 9c cd c0): real = puVar1[-0x17] - puVar1[-0x14] (clusters restantes no loop)]
+              if ((int)puVar1[-2] < 0) {
+                puVar1[-0x1b] = puVar1[-2];
+                goto LAB_4400dc5c;
+              }
+              if (puVar1[-0x17] == 0) {
+                puVar1[-3] = 1;
+                puVar1[-4] = 1;
+                if (puVar1[-0x18] == 1) {
+                  puVar1[-0x15] = puVar1[-0x14] + puVar1[-0x10] + -1;
+                }
+              }
+              if (puVar1[-0x14] + puVar1[-0x10] + -1 == puVar1[-0x15]) {
+                puVar1[-4] = 0;
+              }
+              if ((puVar1[-0x15] == puVar1[-10]) || ((puVar1[-10] & 0xfffffff8) == puVar1[-0x15])) {
+                puVar1[-0xc] = 0x20;
+                puVar1[-3] = 1;
+                uVar3 = FUN_4400e51f(puVar1[-1],puVar1[-0x10]);
+                puVar1[-0xb] = uVar3;
+                puVar1[-0x10] = puVar1[-0x15];
+              }
+              else {
+                if ((((puVar1[-10] & 0xfffffff7) == puVar1[-0x15]) ||
+                    ((puVar1[-10] & 0xfffffff6) == puVar1[-0x15])) ||
+                   ((uint)puVar1[-0x15] < (puVar1[-10] & 2))) {
+                  puVar1[-0x1b] = 0xffffd8d4;
+                  goto LAB_4400dc5c;
+                }
+                puVar1[-0xc] = 0x20;
+                uVar3 = FUN_4400e51f(puVar1[-1],puVar1[-0x10]);
+                puVar1[-0xb] = uVar3;
+                puVar1[-0x10] = puVar1[-0x15];
+              }
+              puVar1[-0x12] = (uint)*(byte *)(puVar1[-6] + 0x22) * puVar1[-0x14];
+            }
+            *(int *)(puVar1[-5] + 0x44) = puVar1[7] + *(int *)(puVar1[-5] + 0x44);
+            puVar1[-0x1b] = puVar1[7];
+          }
+        }
+      }
+    }
+  }
+  else {
+    *(undefined4 *)(puVar1[-5] + 0x3c) = 0xffffffff;
+    uVar3 = FUN_4400dfc8(puVar1[5],puVar1[6],puVar1[7]);
+    puVar1[-2] = uVar3;
+    puVar1[-0x1b] = puVar1[-2];
+  }
+LAB_4400dc5c:
+  return puVar1[-0x1b];
+}
+```
+
+##### Janela MN103S verificada em `FUN_4400d32f` (`0x4400d480..0x4400d550` — `0x4400d4b0` vs `0x4400d525`)
+
+Prova em código de máquina que **`0x4400d4b0` não é `SUB`**, mas sim os bytes `+1..+2` (`f1 60`) de `0x4400d4af: ADD D1,D0` + `0x4400d4b0: [f1 60] ADD D0,A0` na seleção do tipo FAT16 (`0x10`), enquanto a subtração invertida de `FileSize - FileOffset` ocorre em **`0x4400d525: [fb 9c cd c0] SUB D0,D1,D0`** (além de `0x4400d7ef`, `0x4400d8b4`, `0x4400d921`, `0x4400d92e`, `0x4400d961`, `0x4400d98f` e `0x4400db58`).
+
+<!-- source: BOOT.BIN (raw MN103S verify) | DISASM FUN_4400d32f 0x4400d480..0x4400d550 -->
+```asm
+  0x4400d480: [dd 07 f8 03 fc 81 f8] CALL 0x4004cc87,[D2,EX2],0xf8
+  0x4400d487: [c1 06               ] BGT 0x4400d48d
+  0x4400d489: [fc dc 00 b6 56 50   ] MOV 0x5056b600,A0
+  0x4400d48f: [80 04               ] MOV 0x4,D0
+  0x4400d491: [e4                  ] ADD D1,D0
+  0x4400d492: [f1 60               ] ADD D0,A0
+  0x4400d494: [70                  ] MOV (A0),D0
+  0x4400d495: [a0 0c               ] CMP 0xc,D0
+  0x4400d497: [c9 0a               ] BNE 0x4400d4a1
+  0x4400d499: [2c ff 0f            ] MOV 0xfff,D0
+  0x4400d49c: [f8 13 d8            ] MOV D0,(-0x28,A3)
+  0x4400d49f: [ca 4f               ] BRA 0x4400d4ee
+  0x4400d4a1: [f8 03 fc            ] MOV (-0x4,A3),D0
+  0x4400d4a4: [81                  ] MOV D0,D1
+  0x4400d4a5: [f8 c1 06            ] ASL 0x6,D1
+  0x4400d4a8: [fc dc 00 b6 56 50   ] MOV 0x5056b600,A0
+  0x4400d4ae: [80 04               ] MOV 0x4,D0
+  0x4400d4b0: [e4                  ] ADD D1,D0
+  0x4400d4b1: [f1 60               ] ADD D0,A0
+  0x4400d4b3: [70                  ] MOV (A0),D0
+  0x4400d4b4: [a0 10               ] CMP 0x10,D0
+  0x4400d4b6: [c9 0d               ] BNE 0x4400d4c3
+  0x4400d4b8: [fc cc ff ff 00 00   ] MOV 0xffff,D0
+  0x4400d4be: [f8 13 d8            ] MOV D0,(-0x28,A3)
+  0x4400d4c1: [ca 2d               ] BRA 0x4400d4ee
+  0x4400d4c3: [f8 03 fc            ] MOV (-0x4,A3),D0
+  0x4400d4c6: [81                  ] MOV D0,D1
+  0x4400d4c7: [f8 c1 06            ] ASL 0x6,D1
+  0x4400d4ca: [fc dc 00 b6 56 50   ] MOV 0x5056b600,A0
+  0x4400d4d0: [80 04               ] MOV 0x4,D0
+  0x4400d4d2: [e4                  ] ADD D1,D0
+  0x4400d4d3: [f1 60               ] ADD D0,A0
+  0x4400d4d5: [70                  ] MOV (A0),D0
+  0x4400d4d6: [a0 20               ] CMP 0x20,D0
+  0x4400d4d8: [c9 0d               ] BNE 0x4400d4e5
+  0x4400d4da: [fc cc ff ff ff 0f   ] MOV 0xfffffff,D0
+  0x4400d4e0: [f8 13 d8            ] MOV D0,(-0x28,A3)
+  0x4400d4e3: [ca 0b               ] BRA 0x4400d4ee
+  0x4400d4e5: [2c d7 d8            ] MOV 0xd8d7,D0
+  0x4400d4e8: [f8 13 94            ] MOV D0,(-0x6c,A3)
+  0x4400d4eb: [cc 71 07            ] JMP 0x4400dc5c
+  0x4400d4ee: [f8 23 ec            ] MOV (-0x14,A3),A0
+  0x4400d4f1: [f8 27 ec            ] MOV (-0x14,A3),A1
+  0x4400d4f4: [f8 04 44            ] MOV (0x44,A0),D1
+  0x4400d4f7: [f8 01 40            ] MOV (0x40,A1),D0
+  0x4400d4fa: [a1                  ] CMP D0,D1
+  0x4400d4fb: [c7 0b               ] BLS 0x4400d506
+  0x4400d4fd: [2d d2 d8            ] MOV 0xd8d2,D1
+  0x4400d500: [f8 17 94            ] MOV D1,(-0x6c,A3)
+  0x4400d503: [cc 59 07            ] JMP 0x4400dc5c
+  0x4400d506: [f8 27 ec            ] MOV (-0x14,A3),A1
+  0x4400d509: [f8 23 ec            ] MOV (-0x14,A3),A0
+  0x4400d50c: [f8 04 44            ] MOV (0x44,A0),D1
+  0x4400d50f: [f8 03 1c            ] MOV (0x1c,A3),D0
+  0x4400d512: [e1                  ] ADD D0,D1
+  0x4400d513: [f8 01 40            ] MOV (0x40,A1),D0
+  0x4400d516: [a4                  ] CMP D1,D0
+  0x4400d517: [c6 15               ] BCC 0x4400d52c
+  0x4400d519: [f8 23 ec            ] MOV (-0x14,A3),A0
+  0x4400d51c: [f8 27 ec            ] MOV (-0x14,A3),A1
+  0x4400d51f: [f8 04 40            ] MOV (0x40,A0),D1
+  0x4400d522: [f8 01 44            ] MOV (0x44,A1),D0
+  0x4400d525: [fb 9c cd c0         ] SUB D0,D1,D0
+  0x4400d529: [f8 13 1c            ] MOV D0,(0x1c,A3)
+  0x4400d52c: [f8 03 1c            ] MOV (0x1c,A3),D0
+  0x4400d52f: [a0 00               ] CMP 0x0,D0
+  0x4400d531: [c9 0b               ] BNE 0x4400d53c
+  0x4400d533: [2e dc d8            ] MOV 0xd8dc,D2
+  0x4400d536: [f8 1b 94            ] MOV D2,(-0x6c,A3)
+  0x4400d539: [cc 23 07            ] JMP 0x4400dc5c
+  0x4400d53c: [f8 27 ec            ] MOV (-0x14,A3),A1
+  0x4400d53f: [f8 23 e8            ] MOV (-0x18,A3),A0
+  0x4400d542: [f8 64 20            ] MOVHU (0x20,A0),D1
+  0x4400d545: [f8 01 44            ] MOV (0x44,A1),D0
+  0x4400d548: [f1 0f               ] SUB D3,D3
+  0x4400d54a: [f2 fe               ] MOV D3,MDR
+  0x4400d54c: [f2 74               ] DIVU D1,D0
+  0x4400d54e: [f2 e3               ] MOV MDR,D3
+```
+
+#### `FUN_4400dc64` (`fat_read_sectors_wrapper_dc64`) — `0x4400dc64` (126 B)
+
+Wrapper de leitura de setores que soma `PartitionLBA` (`0x5056b608 + slot*0x40`) ao LBA relativo antes de chamar `FUN_4400ca59`.
+
+<!-- source: doc_boot_fat_sd_java.txt (DecompileFat5.java / task-36960.log, DecompileFat6.java / task-36967.log) | FUNC FUN_4400dc64 (fat_read_sectors_wrapper_dc64) @ 0x4400dc64 (size=126 B, Ghidra 12.1.4 Headless) -->
+```c
+undefined4 FUN_4400dc64(int param_1,int param_2,undefined4 param_3,undefined4 param_4)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  undefined4 uStack_8;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_8;
+  uVar2 = FUN_4400ca59(param_4,param_3,param_2 + *(int *)(param_1 * 0x40 + 0x5056b608),
+                       param_1 * 0x40 + 0x5056b600);
+  puVar1[-1] = uVar2;
+  if ((int)puVar1[-1] < 0) {
+    uVar2 = FUN_4400ca59(puVar1[6],puVar1[5],puVar1[4] + *(int *)(puVar1[3] * 0x40 + 0x5056b608));
+    puVar1[-1] = uVar2;
+  }
+  return puVar1[-1];
+}
+```
+
+#### `FUN_4400dce2` (`fat_root_dir_lookup_dce2`) — `0x4400dce2` (700 B)
+
+Varredura de diretório raiz FAT12/16 (via `FUN_4400e592`) e FAT32 (cadeia de clusters a partir de `RootClus` via `FUN_4400e51f`/`FUN_4400e737`).
+
+<!-- source: doc_boot_fat_sd_java.txt (DecompileFat3.java / task-36939.log) | FUNC FUN_4400dce2 (fat_root_dir_lookup_dce2) @ 0x4400dce2 (size=700 B, Ghidra 12.1.4 Headless) -->
+```c
+undefined4 FUN_4400dce2(int param_1)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  int iVar3;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_4;
+  uVar2 = FUN_4400e51f(param_1,*(undefined4 *)(param_1 * 0x40 + 0x5056b638));
+  puVar1[-4] = uVar2;
+  puVar1[-5] = (uint)*(byte *)(puVar1[-10] + 0x22);
+  puVar1[-0xb] = 0x5056b6d4;
+  if (*(int *)(puVar1[2] * 0x40 + 0x5056b604) == 0xc) {
+    puVar1[-2] = 0xfff;
+  }
+  else if (*(int *)(puVar1[2] * 0x40 + 0x5056b604) == 0x10) {
+    puVar1[-2] = 0xffff;
+  }
+  else {
+    if (*(int *)(puVar1[2] * 0x40 + 0x5056b604) != 0x20) {
+      puVar1[-0xc] = 0xffffd8d7;
+      goto LAB_4400df96;
+    }
+    puVar1[-2] = 0xfffffff;
+  }
+  if ((*(int *)(puVar1[-10] + 0x14) == puVar1[-4]) &&
+     ((*(int *)(puVar1[-10] + 4) == 0xc || (*(int *)(puVar1[-10] + 4) == 0x10)))) {
+    uVar2 = FUN_4400e592(puVar1[2],puVar1[3],puVar1[4],puVar1[5],puVar1[6]);
+    puVar1[-1] = uVar2;
+    puVar1[-0xc] = puVar1[-1];
+  }
+  else {
+    while( true ) {
+      puVar1[-6] = 0;
+      while (puVar1[-5] != 0) {
+        uVar2 = FUN_4400dc64(puVar1[2],puVar1[-4] + puVar1[-6],1,puVar1[-0xb]);
+        puVar1[-1] = uVar2;
+        if ((int)puVar1[-1] < 0) {
+          puVar1[-0xc] = puVar1[-1];
+          goto LAB_4400df96;
+        }
+        puVar1[-3] = 0;
+        while ((uint)puVar1[-3] < (uint)*(ushort *)(puVar1[-10] + 0x20)) {
+          puVar1[-9] = puVar1[-0xb] + 0x200;
+          uVar2 = FUN_4400c510(puVar1[-3] + puVar1[-0xb],puVar1[-9]);
+          puVar1[-1] = uVar2;
+          if ((int)puVar1[-1] < 0) {
+            puVar1[-0xc] = puVar1[-1];
+            goto LAB_4400df96;
+          }
+          if (*(char *)puVar1[-9] == '\0') {
+            puVar1[-0xc] = 0xffffd8e6;
+            goto LAB_4400df96;
+          }
+          if (((((*(byte *)(puVar1[-9] + 0xb) & 0xf) != 0xf) &&
+               (((*(byte *)(puVar1[-9] + 0xb) >> 3 ^ 1) & 1) != 0)) &&
+              (iVar3 = FUN_4402c420(puVar1[-9],puVar1[3],8), iVar3 == 0)) &&
+             ((iVar3 = FUN_4402c420(puVar1[-9] + 8,puVar1[4],3), iVar3 == 0 &&
+              (*(char *)puVar1[-9] != -0x1b)))) {
+            *(undefined4 *)puVar1[5] = puVar1[-6] + puVar1[-4];
+            *(undefined4 *)puVar1[6] = puVar1[-3];
+            puVar1[-0xc] = 0;
+            goto LAB_4400df96;
+          }
+          puVar1[-3] = puVar1[-3] + 0x20;
+        }
+        puVar1[-5] = puVar1[-5] + -1;
+        puVar1[-6] = puVar1[-6] + 1;
+      }
+      uVar2 = FUN_4400e737(*(undefined4 *)puVar1[-10],puVar1[-7],puVar1 + -8);
+      puVar1[-1] = uVar2;
+      if ((int)puVar1[-1] < 0) {
+        puVar1[-0xc] = puVar1[-1];
+        goto LAB_4400df96;
+      }
+      puVar1[-7] = puVar1[-8];
+      if ((puVar1[-7] == puVar1[-2]) || ((puVar1[-2] & 0xfffffff8) == puVar1[-7])) {
+        puVar1[-0xc] = 0xffffd8e6;
+        goto LAB_4400df96;
+      }
+      if ((((puVar1[-2] & 0xfffffff7) == puVar1[-7]) || ((puVar1[-2] & 0xfffffff6) == puVar1[-7]))
+         || ((uint)puVar1[-7] < (puVar1[-2] & 2))) break;
+      uVar2 = FUN_4400e51f(puVar1[2],puVar1[-7]);
+      puVar1[-4] = uVar2;
+      puVar1[-5] = (uint)*(byte *)(puVar1[-10] + 0x22);
+    }
+    puVar1[-0xc] = 0xffffd8d4;
+  }
+LAB_4400df96:
+  return puVar1[-0xc];
+}
+```
+
+#### `FUN_4400dfc8` (`fat_read_asf_or_direct_dfc8`) — `0x4400dfc8` (1367 B)
+
+Leitor FAT especializado (caminho `'ASF'` acionado por `FUN_4400d32f`, usando `FUN_4400ef58` para contar clusters contíguos).
+
+<!-- source: doc_boot_fat_sd_java.txt (DecompileFat5.java / task-36960.log) | FUNC FUN_4400dfc8 (fat_read_asf_or_direct_dfc8) @ 0x4400dfc8 (size=1367 B, Ghidra 12.1.4 Headless) -->
+```c
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+undefined4 FUN_4400dfc8(undefined4 param_1,undefined4 param_2,int param_3)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  undefined4 uStack_c;
+  undefined4 uStack_8;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_c;
+  if ((_DAT_5056b6c0 != 0) &&
+     ((((*(int *)(_DAT_5056b680 * 0x40 + 0x5056b604) == 0xc ||
+        (*(int *)(_DAT_5056b680 * 0x40 + 0x5056b604) == 0x10)) ||
+       (*(int *)(_DAT_5056b680 * 0x40 + 0x5056b604) == 0x20)) && (_DAT_5056b6c4 <= _DAT_5056b6c0))))
+  {
+    if (_DAT_5056b6c0 < _DAT_5056b6c4 + param_3) {
+      param_3 = _DAT_5056b6c4 - _DAT_5056b6c0; // [SLEIGH Trap #8 @ 0x4400e0c6 (fb 9c cd c0): real = _DAT_5056b6c0 (FileSize) - _DAT_5056b6c4 (FileOffset)]
+    }
+    if (param_3 != 0) {
+      while ((uint)puVar1[-7] < (uint)puVar1[-8]) {
+        uVar2 = FUN_4400e737(*(undefined4 *)puVar1[-5],puVar1[-0xf],puVar1 + -0x15);
+        puVar1[-2] = uVar2;
+        if ((int)puVar1[-2] < 0) {
+          puVar1[-0x16] = puVar1[-2];
+          goto LAB_4400e517;
+        }
+        puVar1[-0xf] = puVar1[-0x15];
+        if ((((uint)puVar1[-0xf] < (puVar1[-9] & 2)) || (puVar1[-0xf] == puVar1[-9])) ||
+           (((puVar1[-9] & 0xfffffff6) == puVar1[-0xf] ||
+            (((puVar1[-9] & 0xfffffff7) == puVar1[-0xf] ||
+             ((puVar1[-9] & 0xfffffff8) == puVar1[-0xf])))))) {
+          puVar1[-0x16] = 0xffffd8d4;
+          goto LAB_4400e517;
+        }
+        puVar1[-7] = puVar1[-7] + 1;
+      }
+      uVar2 = FUN_4400e51f(puVar1[-1],puVar1[-0xf]);
+      puVar1[-10] = uVar2;
+      puVar1[-0xd] = *(uint *)(puVar1[-4] + 0x44) %
+                     (uint)*(ushort *)(puVar1[-1] * 0x40 + 0x5056b620);
+      uVar2 = FUN_4400ef58(*(undefined4 *)puVar1[-5],puVar1[-0xf],puVar1 + -0x13,puVar1 + -0x14);
+      puVar1[-2] = uVar2;
+      if ((int)puVar1[-2] < 0) {
+        puVar1[-0x16] = puVar1[-2];
+      }
+      else {
+        if ((puVar1[-0x14] == puVar1[-9]) || ((puVar1[-9] & 0xfffffff8) == puVar1[-0x14])) {
+          puVar1[-0xf] = puVar1[-0x14];
+          puVar1[-3] = 1;
+        }
+        else {
+          if ((((puVar1[-9] & 0xfffffff7) == puVar1[-0x14]) ||
+              ((puVar1[-9] & 0xfffffff6) == puVar1[-0x14])) ||
+             ((uint)puVar1[-0x14] < (puVar1[-9] & 2))) {
+            puVar1[-0x16] = 0xffffd8d4;
+            goto LAB_4400e517;
+          }
+          puVar1[-0xf] = puVar1[-0x14];
+        }
+        puVar1[-0xc] = (int)(((ulonglong)*(uint *)(puVar1[-4] + 0x44) /
+                             (ulonglong)*(ushort *)(puVar1[-1] * 0x40 + 0x5056b620)) %
+                            (ulonglong)*(byte *)(puVar1[-5] + 0x22));
+        puVar1[-0x10] = puVar1[-0xc];
+        puVar1[-0x11] = puVar1[-0xc] - puVar1[-0x13] * (uint)*(byte *)(puVar1[-5] + 0x22); // [SLEIGH Trap #8 @ 0x4400e2f9 (fb 9c cd c0): real = puVar1[-0x13]*SecPerClus - puVar1[-0xc]]
+        while (puVar1[-0xe] != 0) {
+          while (puVar1[-0x11] != 0) {
+            if ((uint)puVar1[-0x11] < (uint)puVar1[-0xb]) {
+              puVar1[-0xb] = puVar1[-0x11];
+            }
+            if ((uint)puVar1[-0xe] < (uint)puVar1[-0xb]) {
+              puVar1[-0xb] = puVar1[-0xe];
+            }
+            uVar2 = FUN_4400dc64(puVar1[-1],puVar1[-10] + puVar1[-0x10],puVar1[-0xb],puVar1[-6]);
+            puVar1[-2] = uVar2;
+            if ((int)puVar1[-2] < 0) {
+              puVar1[-0x16] = puVar1[-2];
+              goto LAB_4400e517;
+            }
+            puVar1[-0x11] = puVar1[-0xb] - puVar1[-0x11]; // [SLEIGH Trap #8 @ 0x4400e366 (fb 9c cd c0): real = puVar1[-0x11] - puVar1[-0xb]]
+            puVar1[-0xe] = puVar1[-0xb] - puVar1[-0xe]; // [SLEIGH Trap #8 @ 0x4400e373 (fb 9c cd c0): real = puVar1[-0xe] - puVar1[-0xb]]
+            if ((uint)(puVar1[6] - puVar1[-0x12]) <
+                (uint)*(ushort *)(puVar1[-5] + 0x20) * puVar1[-0xb]) {
+              FUN_4402c2f7(puVar1[5],puVar1[-0xd] + puVar1[-6],puVar1[-0x12] - puVar1[6]); // [SLEIGH Trap #8 @ 0x4400e3a6 (fb 9c cd c0): real = puVar1[6] - puVar1[-0x12] (como no if acima @ 0x4400e382 [f1 21])]
+            }
+            else {
+              FUN_4402c2f7(puVar1[5],puVar1[-0xd] + puVar1[-6],
+                           puVar1[-0xd] - puVar1[-0xb] * (uint)*(ushort *)(puVar1[-5] + 0x20)); // [SLEIGH Trap #8 @ 0x4400e3d4 (fb 9c cd c0): real = puVar1[-0xb]*BytesPerSec - puVar1[-0xd]]
+            }
+            puVar1[-0x12] =
+                 puVar1[-0x12] +
+                 (puVar1[-0xb] * (uint)*(ushort *)(puVar1[-5] + 0x20) - puVar1[-0xd]);
+            if (puVar1[-0xe] == 0) goto LAB_4400e501;
+            puVar1[5] = puVar1[5] +
+                        (puVar1[-0xb] * (uint)*(ushort *)(puVar1[-5] + 0x20) - puVar1[-0xd]);
+            puVar1[-0xd] = 0;
+            puVar1[-0x10] = puVar1[-0xb] + puVar1[-0x10];
+          }
+          if (puVar1[-3] == 1) break;
+          puVar1[-0x10] = 0;
+          uVar2 = FUN_4400ef58(*(undefined4 *)puVar1[-5],puVar1[-0xf],puVar1 + -0x13,puVar1 + -0x14)
+          ;
+          puVar1[-2] = uVar2;
+          if ((int)puVar1[-2] < 0) {
+            puVar1[-0x16] = puVar1[-2];
+            goto LAB_4400e517;
+          }
+          if ((puVar1[-0x14] == puVar1[-9]) || ((puVar1[-9] & 0xfffffff8) == puVar1[-0x14])) {
+            puVar1[-0xb] = 0x20;
+            puVar1[-3] = 1;
+            uVar2 = FUN_4400e51f(puVar1[-1],puVar1[-0xf]);
+            puVar1[-10] = uVar2;
+            puVar1[-0xf] = puVar1[-0x14];
+          }
+          else {
+            if ((((puVar1[-9] & 0xfffffff7) == puVar1[-0x14]) ||
+                ((puVar1[-9] & 0xfffffff6) == puVar1[-0x14])) ||
+               ((uint)puVar1[-0x14] < (puVar1[-9] & 2))) {
+              puVar1[-0x16] = 0xffffd8d4;
+              goto LAB_4400e517;
+            }
+            puVar1[-0xb] = 0x20;
+            uVar2 = FUN_4400e51f(puVar1[-1],puVar1[-0xf]);
+            puVar1[-10] = uVar2;
+            puVar1[-0xf] = puVar1[-0x14];
+          }
+          puVar1[-0x11] = (uint)*(byte *)(puVar1[-5] + 0x22) * puVar1[-0x13];
+        }
+LAB_4400e501:
+        *(int *)(puVar1[-4] + 0x44) = puVar1[6] + *(int *)(puVar1[-4] + 0x44);
+        puVar1[-0x16] = puVar1[6];
+      }
+    }
+  }
+LAB_4400e517:
+  return puVar1[-0x16];
+}
+```
+
+##### Janela MN103S verificada em `FUN_4400dfc8` (`0x4400e088..0x4400e0f5` — `0x4400e0c6`)
+
+Confirma `0x4400e0c6: [fb 9c cd c0] SUB D0,D1,D0` (`0x4400e0c7` = byte `+1` `0x9c`), onde hardware executa `_DAT_5056b6c0 - _DAT_5056b6c4`:
+
+<!-- source: BOOT.BIN (raw MN103S verify) | DISASM FUN_4400dfc8 0x4400e088..0x4400e0f5 -->
+```asm
+  0x4400e088: [d8                  ] LEQ
+  0x4400e089: [f8 17 a8            ] MOV D1,(-0x58,A3)
+  0x4400e08c: [cc 8b 04            ] JMP 0x4400e517
+  0x4400e08f: [f8 23 f0            ] MOV (-0x10,A3),A0
+  0x4400e092: [f8 27 f0            ] MOV (-0x10,A3),A1
+  0x4400e095: [f8 04 44            ] MOV (0x44,A0),D1
+  0x4400e098: [f8 01 40            ] MOV (0x40,A1),D0
+  0x4400e09b: [a1                  ] CMP D0,D1
+  0x4400e09c: [c7 0b               ] BLS 0x4400e0a7
+  0x4400e09e: [2e d2 d8            ] MOV 0xd8d2,D2
+  0x4400e0a1: [f8 1b a8            ] MOV D2,(-0x58,A3)
+  0x4400e0a4: [cc 73 04            ] JMP 0x4400e517
+  0x4400e0a7: [f8 27 f0            ] MOV (-0x10,A3),A1
+  0x4400e0aa: [f8 23 f0            ] MOV (-0x10,A3),A0
+  0x4400e0ad: [f8 04 44            ] MOV (0x44,A0),D1
+  0x4400e0b0: [f8 03 18            ] MOV (0x18,A3),D0
+  0x4400e0b3: [e1                  ] ADD D0,D1
+  0x4400e0b4: [f8 01 40            ] MOV (0x40,A1),D0
+  0x4400e0b7: [a4                  ] CMP D1,D0
+  0x4400e0b8: [c6 15               ] BCC 0x4400e0cd
+  0x4400e0ba: [f8 23 f0            ] MOV (-0x10,A3),A0
+  0x4400e0bd: [f8 27 f0            ] MOV (-0x10,A3),A1
+  0x4400e0c0: [f8 04 40            ] MOV (0x40,A0),D1
+  0x4400e0c3: [f8 01 44            ] MOV (0x44,A1),D0
+  0x4400e0c6: [fb 9c cd c0         ] SUB D0,D1,D0
+  0x4400e0ca: [f8 13 18            ] MOV D0,(0x18,A3)
+  0x4400e0cd: [f8 03 18            ] MOV (0x18,A3),D0
+  0x4400e0d0: [a0 00               ] CMP 0x0,D0
+  0x4400e0d2: [c9 0b               ] BNE 0x4400e0dd
+  0x4400e0d4: [2f dc d8            ] MOV 0xd8dc,D3
+  0x4400e0d7: [f8 1f a8            ] MOV D3,(-0x58,A3)
+  0x4400e0da: [cc 3d 04            ] JMP 0x4400e517
+  0x4400e0dd: [f8 27 f0            ] MOV (-0x10,A3),A1
+  0x4400e0e0: [f8 23 ec            ] MOV (-0x14,A3),A0
+  0x4400e0e3: [f8 64 20            ] MOVHU (0x20,A0),D1
+  0x4400e0e6: [f8 01 44            ] MOV (0x44,A1),D0
+  0x4400e0e9: [f1 0a               ] SUB D2,D2
+  0x4400e0eb: [f2 fa               ] MOV D2,MDR
+  0x4400e0ed: [f2 74               ] DIVU D1,D0
+  0x4400e0ef: [f2 e2               ] MOV MDR,D2
+  0x4400e0f1: [89                  ] MOV D2,D1
+  0x4400e0f2: [f8 03 18            ] MOV (0x18,A3),D0
+```
+
+#### `FUN_4400e51f` (`fat_cluster_to_lba_e51f`) — `0x4400e51f` (115 B)
+
+Conversão de número de cluster FAT em LBA relativo à partição (`DataStart + (cluster - 2) * SecPerClus`).
+
+<!-- source: doc_boot_fat_sd_java.txt (DecompileFat4.java / task-36949.log) | FUNC FUN_4400e51f (fat_cluster_to_lba_e51f) @ 0x4400e51f (size=115 B, Ghidra 12.1.4 Headless) -->
+```c
+int FUN_4400e51f(int param_1,int param_2)
+
+{
+  undefined4 uStack_c;
+  
+  uStack_c = 0;
+  param_1 = param_1 * 0x40;
+  if ((param_2 == 0) || (param_2 == 1)) {
+    if (param_2 == 0) {
+      uStack_c = *(int *)(param_1 + 0x5056b614);
+    }
+    else if (param_2 == 1) {
+      uStack_c = *(int *)(param_1 + 0x5056b610);
+    }
+  }
+  else {
+    uStack_c = *(int *)(param_1 + 0x5056b618) +
+               (uint)*(byte *)(param_1 + 0x5056b622) * (param_2 + -2);
+  }
+  return uStack_c;
+}
+```
+
+#### `FUN_4400e592` (`fat12_16_root_lookup_e592`) — `0x4400e592` (421 B)
+
+Varredura de entradas no diretório raiz fixo FAT12/FAT16 (lote de setores a partir de `RootDirStart`).
+
+<!-- source: doc_boot_fat_sd_java.txt (DecompileFat4.java / task-36949.log) | FUNC FUN_4400e592 (fat12_16_root_lookup_e592) @ 0x4400e592 (size=421 B, Ghidra 12.1.4 Headless) -->
+```c
+undefined4 FUN_4400e592(int param_1)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  int iVar3;
+  undefined4 uStack_c;
+  undefined4 uStack_8;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_c;
+  uVar2 = FUN_4400e51f(param_1,*(undefined4 *)(param_1 * 0x40 + 0x5056b638));
+  puVar1[-3] = uVar2;
+  puVar1[-4] = (int)(((ulonglong)*(ushort *)(puVar1[-8] + 0x28) << 5) /
+                    (ulonglong)*(ushort *)(puVar1[4] * 0x40 + 0x5056b620));
+  puVar1[-9] = 0x5056b6d4;
+  if (*(int *)(puVar1[-8] + 4) == 0x20) {
+    puVar1[-10] = 0xffffd8d2;
+  }
+  else {
+    puVar1[-5] = 0;
+    while (puVar1[-4] != 0) {
+      uVar2 = FUN_4400dc64(puVar1[4],puVar1[-3] + puVar1[-5],1,puVar1[-9]);
+      puVar1[-1] = uVar2;
+      if ((int)puVar1[-1] < 0) {
+        puVar1[-10] = puVar1[-1];
+        goto LAB_4400e72f;
+      }
+      puVar1[-2] = 0;
+      while ((uint)puVar1[-2] < (uint)*(ushort *)(puVar1[-8] + 0x20)) {
+        puVar1[-7] = puVar1[-9] + 0x200;
+        uVar2 = FUN_4400c510(puVar1[-2] + puVar1[-9],puVar1[-7]);
+        puVar1[-1] = uVar2;
+        if ((int)puVar1[-1] < 0) {
+          puVar1[-10] = puVar1[-1];
+          goto LAB_4400e72f;
+        }
+        if (*(char *)puVar1[-7] == '\0') {
+          puVar1[-10] = 0xffffd8e6;
+          goto LAB_4400e72f;
+        }
+        if (((*(byte *)(puVar1[-7] + 0xb) & 0xf) != 0xf) &&
+           (((*(byte *)(puVar1[-7] + 0xb) >> 3 ^ 1) & 1) != 0)) {
+          iVar3 = FUN_4402c420(puVar1[-7],puVar1[5],8);
+          if (iVar3 == 0) {
+            iVar3 = FUN_4402c420(puVar1[-7] + 8,puVar1[6],3);
+            if ((iVar3 == 0) && (*(char *)puVar1[-7] != -0x1b)) {
+              *(undefined4 *)puVar1[7] = puVar1[-5] + puVar1[-3];
+              *(undefined4 *)puVar1[8] = puVar1[-2];
+              puVar1[-10] = 0;
+              goto LAB_4400e72f;
+            }
+          }
+        }
+        puVar1[-2] = puVar1[-2] + 0x20;
+      }
+      puVar1[-4] = puVar1[-4] + -1;
+      puVar1[-5] = puVar1[-5] + 1;
+    }
+    puVar1[-10] = 0xffffd8e6;
+  }
+LAB_4400e72f:
+  return puVar1[-10];
+}
+```
+
+#### `FUN_4400e737` (`fat_next_cluster_e737`) — `0x4400e737` (1672 B)
+
+Leitura da entrada seguinte na tabela FAT12 (12 bits), FAT16 (16 bits) ou FAT32 (28 bits) com janela em cache de 3 setores.
+
+<!-- source: doc_boot_fat_sd_java.txt (DecompileFat5.java / task-36960.log) | FUNC FUN_4400e737 (fat_next_cluster_e737) @ 0x4400e737 (size=1672 B, Ghidra 12.1.4 Headless) -->
+```c
+undefined4 FUN_4400e737(int param_1,uint param_2)
+
+{
+  undefined4 *puVar1;
+  int iVar2;
+  int iVar3;
+  undefined4 uVar4;
+  undefined4 uStack_10;
+  undefined4 uStack_c;
+  undefined4 uStack_8;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_10;
+  iVar2 = *(int *)(param_1 * 0xdec + 0x505716d4);
+  iVar3 = iVar2 * 0x40;
+  if ((1 < param_2) || (*(int *)(iVar2 * 0x40 + 0x5056b604) == 0x20)) {
+    if (*(int *)(iVar3 + 0x5056b604) == 0xc) {
+LAB_4400e7e0:
+      if ((*(uint *)(puVar1[-6] + 0x10) <= (uint)puVar1[-9]) &&
+         ((uint)puVar1[-9] < (uint)(*(int *)(puVar1[-6] + 0x10) + *(int *)(puVar1[-6] + 0x14)))) {
+        *(undefined1 *)((int)puVar1 + -2) =
+             *(undefined1 *)
+              (puVar1[-8] +
+               puVar1[-6] +
+               (uint)*(ushort *)(puVar1[-2] * 0x40 + 0x5056b620) *
+               (puVar1[-9] - *(int *)(puVar1[-6] + 0x10)) + 0x18);
+        *(undefined1 *)((int)puVar1 + -1) =
+             *(undefined1 *)
+              (puVar1[-8] +
+               puVar1[-6] +
+               (uint)*(ushort *)(puVar1[-2] * 0x40 + 0x5056b620) *
+               (puVar1[-9] - *(int *)(puVar1[-6] + 0x10)) + 0x19);
+        puVar1[-4] = (uint)*(ushort *)((int)puVar1 + -2);
+        if ((puVar1[6] & 1) == 0) {
+          puVar1[-4] = puVar1[-4] & 0xfff;
+        }
+        else {
+          puVar1[-4] = (uint)puVar1[-4] >> 4;
+        }
+        goto LAB_4400edac;
+      }
+      uVar4 = FUN_4400dc64(puVar1[-2],
+                           ((uint)(puVar1[-9] * -0x55555555) >> 1) * 3 + *(int *)(puVar1[-7] + 0x10)
+                           ,3,puVar1[-6] + 0x18);
+      puVar1[-3] = uVar4;
+      if ((int)puVar1[-3] < 0) {
+        if (1 < *(byte *)(puVar1[-7] + 0x26)) {
+          uVar4 = FUN_4400dc64(puVar1[-2],
+                               ((uint)(puVar1[-9] * -0x55555555) >> 1) * 3 +
+                               *(int *)(puVar1[-7] + 0x10) + *(int *)(puVar1[-6] + 0xc),3,
+                               puVar1[-6] + 0x18);
+          puVar1[-3] = uVar4;
+        }
+        if ((int)puVar1[-3] < 0) goto code_r0x4400e8f6;
+      }
+      *(uint *)(puVar1[-6] + 0x10) = ((uint)(puVar1[-9] * -0x55555555) >> 1) * 3;
+      if (*(uint *)(puVar1[-7] + 0x2c) < ((uint)(puVar1[-9] * -0x55555555) >> 1) * 3 + 3) {
+        *(int *)(puVar1[-6] + 0x14) = *(int *)(puVar1[-6] + 0x10) - *(int *)(puVar1[-7] + 0x2c); // [SLEIGH Trap #8 @ 0x4400e948 [FAT12] (fb 9c cd c0): real = *(int *)(puVar1[-7] + 0x2c) - *(int *)(puVar1[-6] + 0x10) (FATSectors - CacheStartSector)]
+      }
+      else {
+        *(undefined4 *)(puVar1[-6] + 0x14) = 3;
+      }
+      goto LAB_4400e7e0;
+    }
+    if (*(int *)(iVar3 + 0x5056b604) == 0x10) {
+LAB_4400e9cf:
+      if ((*(uint *)(puVar1[-6] + 0x10) <= (uint)puVar1[-9]) &&
+         ((uint)puVar1[-9] < (uint)(*(int *)(puVar1[-6] + 0x10) + *(int *)(puVar1[-6] + 0x14)))) {
+        *(undefined1 *)((int)puVar1 + -2) =
+             *(undefined1 *)
+              (puVar1[-8] +
+               puVar1[-6] +
+               (uint)*(ushort *)(puVar1[-2] * 0x40 + 0x5056b620) *
+               (puVar1[-9] - *(int *)(puVar1[-6] + 0x10)) + 0x18);
+        *(undefined1 *)((int)puVar1 + -1) =
+             *(undefined1 *)
+              (puVar1[-8] +
+               puVar1[-6] +
+               (uint)*(ushort *)(puVar1[-2] * 0x40 + 0x5056b620) *
+               (puVar1[-9] - *(int *)(puVar1[-6] + 0x10)) + 0x19);
+        puVar1[-4] = (uint)*(ushort *)((int)puVar1 + -2);
+        puVar1[-4] = puVar1[-4] & 0xffff;
+        goto LAB_4400edac;
+      }
+      uVar4 = FUN_4400dc64(puVar1[-2],
+                           ((uint)(puVar1[-9] * -0x55555555) >> 1) * 3 + *(int *)(puVar1[-7] + 0x10)
+                           ,3,puVar1[-6] + 0x18);
+      puVar1[-3] = uVar4;
+      if ((int)puVar1[-3] < 0) {
+        if (1 < *(byte *)(puVar1[-7] + 0x26)) {
+          uVar4 = FUN_4400dc64(puVar1[-2],
+                               ((uint)(puVar1[-9] * -0x55555555) >> 1) * 3 +
+                               *(int *)(puVar1[-7] + 0x10) + *(int *)(puVar1[-6] + 0xc),3,
+                               puVar1[-6] + 0x18);
+          puVar1[-3] = uVar4;
+        }
+        if ((int)puVar1[-3] < 0) goto code_r0x4400eae5;
+      }
+      *(uint *)(puVar1[-6] + 0x10) = ((uint)(puVar1[-9] * -0x55555555) >> 1) * 3;
+      if (*(uint *)(puVar1[-7] + 0x2c) < *(int *)(puVar1[-6] + 0x10) + 3U) {
+        *(int *)(puVar1[-6] + 0x14) = *(int *)(puVar1[-6] + 0x10) - *(int *)(puVar1[-7] + 0x2c); // [SLEIGH Trap #8 @ 0x4400eb29 [FAT16] (fb 9c cd c0): real = *(int *)(puVar1[-7] + 0x2c) - *(int *)(puVar1[-6] + 0x10) (FATSectors - CacheStartSector)]
+      }
+      else {
+        *(undefined4 *)(puVar1[-6] + 0x14) = 3;
+      }
+      goto LAB_4400e9cf;
+    }
+    if (*(int *)(iVar3 + 0x5056b604) == 0x20) {
+LAB_4400eb9a:
+      if ((*(uint *)(puVar1[-6] + 0x10) <= (uint)puVar1[-9]) &&
+         ((uint)puVar1[-9] < (uint)(*(int *)(puVar1[-6] + 0x10) + *(int *)(puVar1[-6] + 0x14)))) {
+        *(undefined1 *)((int)puVar1 + -2) =
+             *(undefined1 *)
+              (puVar1[-8] +
+               puVar1[-6] +
+               (uint)*(ushort *)(puVar1[-2] * 0x40 + 0x5056b620) *
+               (puVar1[-9] - *(int *)(puVar1[-6] + 0x10)) + 0x18);
+        *(undefined1 *)((int)puVar1 + -1) =
+             *(undefined1 *)
+              (puVar1[-8] +
+               puVar1[-6] +
+               (uint)*(ushort *)(puVar1[-2] * 0x40 + 0x5056b620) *
+               (puVar1[-9] - *(int *)(puVar1[-6] + 0x10)) + 0x19);
+        *(undefined1 *)(puVar1 + -1) =
+             *(undefined1 *)
+              (puVar1[-8] +
+               puVar1[-6] +
+               (uint)*(ushort *)(puVar1[-2] * 0x40 + 0x5056b620) *
+               (puVar1[-9] - *(int *)(puVar1[-6] + 0x10)) + 0x1a);
+        *(undefined1 *)((int)puVar1 + -3) =
+             *(undefined1 *)
+              (puVar1[-8] +
+               puVar1[-6] +
+               (uint)*(ushort *)(puVar1[-2] * 0x40 + 0x5056b620) *
+               (puVar1[-9] - *(int *)(puVar1[-6] + 0x10)) + 0x1b);
+        puVar1[-4] = (uint)*(byte *)((int)puVar1 + -1) << 8 |
+                     (uint)*(byte *)(puVar1 + -1) << 0x10 |
+                     (uint)*(byte *)((int)puVar1 + -3) << 0x18 | (uint)*(byte *)((int)puVar1 + -2);
+        puVar1[-4] = puVar1[-4] & 0xfffffff;
+LAB_4400edac:
+        *(undefined4 *)puVar1[7] = puVar1[-4];
+        puVar1[-10] = 0;
+        goto LAB_4400edb7;
+      }
+      uVar4 = FUN_4400dc64(puVar1[-2],
+                           ((uint)(puVar1[-9] * -0x55555555) >> 1) * 3 + *(int *)(puVar1[-7] + 0x10)
+                           ,3,puVar1[-6] + 0x18);
+      puVar1[-3] = uVar4;
+      if ((int)puVar1[-3] < 0) {
+        if (1 < *(byte *)(puVar1[-7] + 0x26)) {
+          uVar4 = FUN_4400dc64(puVar1[-2],
+                               ((uint)(puVar1[-9] * -0x55555555) >> 1) * 3 +
+                               *(int *)(puVar1[-7] + 0x10) + *(int *)(puVar1[-6] + 0xc),3,
+                               puVar1[-6] + 0x18);
+          puVar1[-3] = uVar4;
+        }
+        if ((int)puVar1[-3] < 0) goto code_r0x4400ed1f;
+      }
+      *(uint *)(puVar1[-6] + 0x10) = ((uint)(puVar1[-9] * -0x55555555) >> 1) * 3;
+      if (*(uint *)(puVar1[-7] + 0x2c) < *(int *)(puVar1[-6] + 0x10) + 3U) {
+        *(int *)(puVar1[-6] + 0x14) = *(int *)(puVar1[-6] + 0x10) - *(int *)(puVar1[-7] + 0x2c); // [SLEIGH Trap #8 @ 0x4400ed63 [FAT32] (fb 9c cd c0): real = *(int *)(puVar1[-7] + 0x2c) - *(int *)(puVar1[-6] + 0x10) (FATSectors - CacheStartSector)]
+      }
+      else {
+        *(undefined4 *)(puVar1[-6] + 0x14) = 3;
+      }
+      goto LAB_4400eb9a;
+    }
+  }
+LAB_4400edb7:
+  return puVar1[-10];
+code_r0x4400e8f6:
+  puVar1[-10] = puVar1[-3];
+  goto LAB_4400edb7;
+code_r0x4400eae5:
+  puVar1[-10] = puVar1[-3];
+  goto LAB_4400edb7;
+code_r0x4400ed1f:
+  puVar1[-10] = puVar1[-3];
+  goto LAB_4400edb7;
+}
+```
+
+##### Janela MN103S verificada em `FUN_4400e737` (`0x4400e910..0x4400e980` — `0x4400e948`)
+
+Confirma `0x4400e948: [fb 9c cd c0] SUB D0,D1,D0` no ramo FAT12 (e equivalentes em `0x4400eb29` FAT16 e `0x4400ed63` FAT32), onde hardware calcula `*(int *)(puVar1[-7] + 0x2c) - *(int *)(puVar1[-6] + 0x10)`:
+
+<!-- source: BOOT.BIN (raw MN103S verify) | DISASM FUN_4400e737 0x4400e910..0x4400e980 -->
+```asm
+  0x4400e910: [c5 01               ] BHI 0x4400e911
+  0x4400e912: [80 03               ] MOV 0x3,D0
+  0x4400e914: [f2 44               ] MUL D1,D0
+  0x4400e916: [f8 10 10            ] MOV D0,(0x10,A0)
+  0x4400e919: [f8 23 e4            ] MOV (-0x1c,A3),A0
+  0x4400e91c: [f8 07 dc            ] MOV (-0x24,A3),D1
+  0x4400e91f: [fc cc ab aa aa aa   ] MOV 0xaaaaaaab,D0
+  0x4400e925: [fb bd dc dc         ] MULU D1,D0,D1,D0
+  0x4400e929: [f8 c5 01            ] LSR 0x1,D1
+  0x4400e92c: [80 03               ] MOV 0x3,D0
+  0x4400e92e: [f2 44               ] MUL D1,D0
+  0x4400e930: [81                  ] MOV D0,D1
+  0x4400e931: [29 03               ] ADD 0x3,D1
+  0x4400e933: [f8 00 2c            ] MOV (0x2c,A0),D0
+  0x4400e936: [a4                  ] CMP D1,D0
+  0x4400e937: [c6 1b               ] BCC 0x4400e952
+  0x4400e939: [f8 2b e8            ] MOV (-0x18,A3),A2
+  0x4400e93c: [f8 23 e4            ] MOV (-0x1c,A3),A0
+  0x4400e93f: [f8 27 e8            ] MOV (-0x18,A3),A1
+  0x4400e942: [f8 04 2c            ] MOV (0x2c,A0),D1
+  0x4400e945: [f8 01 10            ] MOV (0x10,A1),D0
+  0x4400e948: [fb 9c cd c0         ] SUB D0,D1,D0
+  0x4400e94c: [f8 12 14            ] MOV D0,(0x14,A2)
+  0x4400e94f: [cc 91 fe            ] JMP 0x4400e7e0
+  0x4400e952: [f8 23 e8            ] MOV (-0x18,A3),A0
+  0x4400e955: [80 03               ] MOV 0x3,D0
+  0x4400e957: [f8 10 14            ] MOV D0,(0x14,A0)
+  0x4400e95a: [cc 86 fe            ] JMP 0x4400e7e0
+  0x4400e95d: [f8 43 ff            ] MOVBU (-0x1,A3),D0
+  0x4400e960: [81                  ] MOV D0,D1
+  0x4400e961: [f8 c1 08            ] ASL 0x8,D1
+  0x4400e964: [f8 43 fe            ] MOVBU (-0x2,A3),D0
+  0x4400e967: [f2 14               ] OR D1,D0
+  0x4400e969: [f8 13 f0            ] MOV D0,(-0x10,A3)
+  0x4400e96c: [f8 03 18            ] MOV (0x18,A3),D0
+  0x4400e96f: [f8 e0 01            ] AND 0x1,D0
+  0x4400e972: [a0 00               ] CMP 0x0,D0
+  0x4400e974: [c8 0e               ] BEQ 0x4400e982
+  0x4400e976: [f8 03 f0            ] MOV (-0x10,A3),D0
+  0x4400e979: [f8 c4 04            ] LSR 0x4,D0
+  0x4400e97c: [f8 13 f0            ] MOV D0,(-0x10,A3)
+  0x4400e97f: [cc 2d 04            ] JMP 0x4400edac
+```
+
+#### `FUN_4400edbf` (`fat_count_contiguous_clusters_edbf`) — `0x4400edbf` (409 B)
+
+Contador de clusters contíguos a partir de um cluster inicial para otimização de leitura sequencial em `FUN_4400d32f`.
+
+<!-- source: doc_boot_fat_sd_java.txt (DecompileFat5.java / task-36960.log) | FUNC FUN_4400edbf (fat_count_contiguous_clusters_edbf) @ 0x4400edbf (size=409 B, Ghidra 12.1.4 Headless) -->
+```c
+undefined4 FUN_4400edbf(int param_1,uint param_2)
+
+{
+  undefined4 *puVar1;
+  int *piVar2;
+  undefined4 uVar3;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_4;
+  piVar2 = (int *)(param_1 * 0xdec + 0x505716d4);
+  if ((((*(int *)(*piVar2 * 0x40 + 0x5056b604) == 0xc) ||
+       (*(int *)(*piVar2 * 0x40 + 0x5056b604) == 0x10)) ||
+      (*(int *)(*piVar2 * 0x40 + 0x5056b604) == 0x20)) &&
+     ((1 < param_2 || (*(int *)(*piVar2 * 0x40 + 0x5056b604) == 0x20)))) {
+    while( true ) {
+      uVar3 = FUN_4400e737(puVar1[2],puVar1[-5],puVar1 + -7);
+      puVar1[-1] = uVar3;
+      if ((int)puVar1[-1] < 0) break;
+      puVar1[-5] = puVar1[-7];
+      if ((puVar1[-5] == puVar1[-2]) || ((puVar1[-2] & 0xfffffff8) == puVar1[-5])) {
+        *(undefined4 *)puVar1[5] = puVar1[-5];
+        *(undefined4 *)puVar1[4] = puVar1[-4];
+        puVar1[-8] = 0;
+        goto LAB_4400ef50;
+      }
+      if ((((puVar1[-2] & 0xfffffff7) == puVar1[-5]) || ((puVar1[-2] & 0xfffffff6) == puVar1[-5]))
+         || ((uint)puVar1[-5] < (puVar1[-2] & 2))) {
+        puVar1[-8] = 0xffffd8d4;
+        goto LAB_4400ef50;
+      }
+      if (((puVar1[-3] + puVar1[-4] != puVar1[-5]) || (puVar1[6] == 1)) ||
+         ((uint)puVar1[6] <= (uint)puVar1[-4])) {
+        *(undefined4 *)puVar1[5] = puVar1[-5];
+        *(undefined4 *)puVar1[4] = puVar1[-4];
+        puVar1[-8] = 0;
+        goto LAB_4400ef50;
+      }
+      puVar1[-4] = puVar1[-4] + 1;
+    }
+    puVar1[-8] = puVar1[-1];
+  }
+LAB_4400ef50:
+  return puVar1[-8];
+}
+```
+
+#### `FUN_4400ef58` (`fat_count_contiguous_clusters_ef58`) — `0x4400ef58` (389 B, disassembly direto em `BOOT.BIN`)
+
+Função auxiliar chamada por `FUN_4400dfc8` (cujo endereço não constou na lista dos 11 scripts `C:\ghidra\*.java`); extraída integralmente por disassembly MN103S verificado em `BOOT.BIN` (`0x4400ef58..0x4400f0dc`). Caminha entradas consecutivas da tabela FAT via `FUN_4400e737` e retorna em `*param_3` o número de clusters contíguos e em `*param_4` o próximo cluster após a corrida.
+
+<!-- source: BOOT.BIN (raw MN103S verify; not in C:\ghidra\*.java) | DISASM FUN_4400ef58 @ 0x4400ef58 (size=389 B) -->
+```asm
+  0x4400ef58: [cf 10               ] MOVM [A3],(SP)
+  0x4400ef5a: [3f                  ] MOV SP,A3
+  0x4400ef5b: [f8 fe d0            ] ADD -0x30,SP
+  0x4400ef5e: [f8 13 08            ] MOV D0,(0x8,A3)
+  0x4400ef61: [f8 17 0c            ] MOV D1,(0xc,A3)
+  0x4400ef64: [80 01               ] MOV 0x1,D0
+  0x4400ef66: [f8 13 f0            ] MOV D0,(-0x10,A3)
+  0x4400ef69: [f8 03 0c            ] MOV (0xc,A3),D0
+  0x4400ef6c: [f8 13 ec            ] MOV D0,(-0x14,A3)
+  0x4400ef6f: [f8 03 0c            ] MOV (0xc,A3),D0
+  0x4400ef72: [f8 13 f4            ] MOV D0,(-0xc,A3)
+  0x4400ef75: [f8 07 08            ] MOV (0x8,A3),D1
+  0x4400ef78: [2c ec 0d            ] MOV 0xdec,D0
+  0x4400ef7b: [f2 44               ] MUL D1,D0
+  0x4400ef7d: [fc c0 d4 16 57 50   ] ADD 0x505716d4,D0
+  0x4400ef83: [f8 13 e8            ] MOV D0,(-0x18,A3)
+  0x4400ef86: [f8 23 e8            ] MOV (-0x18,A3),A0
+  0x4400ef89: [70                  ] MOV (A0),D0
+  0x4400ef8a: [81                  ] MOV D0,D1
+  0x4400ef8b: [f8 c1 06            ] ASL 0x6,D1
+  0x4400ef8e: [fc dc 00 b6 56 50   ] MOV 0x5056b600,A0
+  0x4400ef94: [80 04               ] MOV 0x4,D0
+  0x4400ef96: [e4                  ] ADD D1,D0
+  0x4400ef97: [f1 60               ] ADD D0,A0
+  0x4400ef99: [70                  ] MOV (A0),D0
+  0x4400ef9a: [a0 0c               ] CMP 0xc,D0
+  0x4400ef9c: [c9 0a               ] BNE 0x4400efa6
+  0x4400ef9e: [2c ff 0f            ] MOV 0xfff,D0
+  0x4400efa1: [f8 13 f8            ] MOV D0,(-0x8,A3)
+  0x4400efa4: [ca 51               ] BRA 0x4400eff5
+  0x4400efa6: [f8 23 e8            ] MOV (-0x18,A3),A0
+  0x4400efa9: [70                  ] MOV (A0),D0
+  0x4400efaa: [81                  ] MOV D0,D1
+  0x4400efab: [f8 c1 06            ] ASL 0x6,D1
+  0x4400efae: [fc dc 00 b6 56 50   ] MOV 0x5056b600,A0
+  0x4400efb4: [80 04               ] MOV 0x4,D0
+  0x4400efb6: [e4                  ] ADD D1,D0
+  0x4400efb7: [f1 60               ] ADD D0,A0
+  0x4400efb9: [70                  ] MOV (A0),D0
+  0x4400efba: [a0 10               ] CMP 0x10,D0
+  0x4400efbc: [c9 0d               ] BNE 0x4400efc9
+  0x4400efbe: [fc cc ff ff 00 00   ] MOV 0xffff,D0
+  0x4400efc4: [f8 13 f8            ] MOV D0,(-0x8,A3)
+  0x4400efc7: [ca 2e               ] BRA 0x4400eff5
+  0x4400efc9: [f8 23 e8            ] MOV (-0x18,A3),A0
+  0x4400efcc: [70                  ] MOV (A0),D0
+  0x4400efcd: [81                  ] MOV D0,D1
+  0x4400efce: [f8 c1 06            ] ASL 0x6,D1
+  0x4400efd1: [fc dc 00 b6 56 50   ] MOV 0x5056b600,A0
+  0x4400efd7: [80 04               ] MOV 0x4,D0
+  0x4400efd9: [e4                  ] ADD D1,D0
+  0x4400efda: [f1 60               ] ADD D0,A0
+  0x4400efdc: [70                  ] MOV (A0),D0
+  0x4400efdd: [a0 20               ] CMP 0x20,D0
+  0x4400efdf: [c9 0d               ] BNE 0x4400efec
+  0x4400efe1: [fc cc ff ff ff 0f   ] MOV 0xfffffff,D0
+  0x4400efe7: [f8 13 f8            ] MOV D0,(-0x8,A3)
+  0x4400efea: [ca 0b               ] BRA 0x4400eff5
+  0x4400efec: [2c d7 d8            ] MOV 0xd8d7,D0
+  0x4400efef: [f8 13 e0            ] MOV D0,(-0x20,A3)
+  0x4400eff2: [cc e3 00            ] JMP 0x4400f0d5
+  0x4400eff5: [f8 03 0c            ] MOV (0xc,A3),D0
+  0x4400eff8: [a0 01               ] CMP 0x1,D0
+  0x4400effa: [c5 23               ] BHI 0x4400f01d
+  0x4400effc: [f8 23 e8            ] MOV (-0x18,A3),A0
+  0x4400efff: [70                  ] MOV (A0),D0
+  0x4400f000: [81                  ] MOV D0,D1
+  0x4400f001: [f8 c1 06            ] ASL 0x6,D1
+  0x4400f004: [fc dc 00 b6 56 50   ] MOV 0x5056b600,A0
+  0x4400f00a: [80 04               ] MOV 0x4,D0
+  0x4400f00c: [e4                  ] ADD D1,D0
+  0x4400f00d: [f1 60               ] ADD D0,A0
+  0x4400f00f: [70                  ] MOV (A0),D0
+  0x4400f010: [a0 20               ] CMP 0x20,D0
+  0x4400f012: [c8 0b               ] BEQ 0x4400f01d
+  0x4400f014: [2c d2 d8            ] MOV 0xd8d2,D0
+  0x4400f017: [f8 13 e0            ] MOV D0,(-0x20,A3)
+  0x4400f01a: [cc bb 00            ] JMP 0x4400f0d5
+  0x4400f01d: [f8 07 ec            ] MOV (-0x14,A3),D1
+  0x4400f020: [f1 dc               ] MOV A3,D0
+  0x4400f022: [28 e4               ] ADD -0x1c,D0
+  0x4400f024: [42 0c               ] MOV D0,(0xc,SP)
+  0x4400f026: [f8 03 08            ] MOV (0x8,A3),D0
+  0x4400f029: [cd 0e f7 00 00      ] CALL 0x4400e737,[],0x0
+  0x4400f02e: [f8 13 fc            ] MOV D0,(-0x4,A3)
+  0x4400f031: [f8 03 fc            ] MOV (-0x4,A3),D0
+  0x4400f034: [a0 00               ] CMP 0x0,D0
+  0x4400f036: [c2 0b               ] BGE 0x4400f041
+  0x4400f038: [f8 03 fc            ] MOV (-0x4,A3),D0
+  0x4400f03b: [f8 13 e0            ] MOV D0,(-0x20,A3)
+  0x4400f03e: [cc 97 00            ] JMP 0x4400f0d5
+  0x4400f041: [f8 03 e4            ] MOV (-0x1c,A3),D0
+  0x4400f044: [f8 13 ec            ] MOV D0,(-0x14,A3)
+  0x4400f047: [f8 07 ec            ] MOV (-0x14,A3),D1
+  0x4400f04a: [f8 03 f8            ] MOV (-0x8,A3),D0
+  0x4400f04d: [a1                  ] CMP D0,D1
+  0x4400f04e: [c8 13               ] BEQ 0x4400f061
+  0x4400f050: [f8 03 f8            ] MOV (-0x8,A3),D0
+  0x4400f053: [81                  ] MOV D0,D1
+  0x4400f054: [f8 c5 03            ] LSR 0x3,D1
+  0x4400f057: [e5                  ] ADD D1,D1
+  0x4400f058: [55                  ] ASL2 D1
+  0x4400f059: [f8 03 ec            ] MOV (-0x14,A3),D0
+  0x4400f05c: [a1                  ] CMP D0,D1
+  0x4400f05d: [c8 04               ] BEQ 0x4400f061
+  0x4400f05f: [ca 16               ] BRA 0x4400f075
+  0x4400f061: [f8 23 14            ] MOV (0x14,A3),A0
+  0x4400f064: [f8 03 ec            ] MOV (-0x14,A3),D0
+  0x4400f067: [60                  ] MOV D0,(A0)
+  0x4400f068: [f8 23 10            ] MOV (0x10,A3),A0
+  0x4400f06b: [f8 03 f0            ] MOV (-0x10,A3),D0
+  0x4400f06e: [60                  ] MOV D0,(A0)
+  0x4400f06f: [00                  ] CLR D0
+  0x4400f070: [f8 13 e0            ] MOV D0,(-0x20,A3)
+  0x4400f073: [ca 62               ] BRA 0x4400f0d5
+  0x4400f075: [f8 03 f8            ] MOV (-0x8,A3),D0
+  0x4400f078: [81                  ] MOV D0,D1
+  0x4400f079: [fc e1 f7 ff ff ff   ] AND 0xfffffff7,D1
+  0x4400f07f: [f8 03 ec            ] MOV (-0x14,A3),D0
+  0x4400f082: [a1                  ] CMP D0,D1
+  0x4400f083: [c8 21               ] BEQ 0x4400f0a4
+  0x4400f085: [f8 03 f8            ] MOV (-0x8,A3),D0
+  0x4400f088: [81                  ] MOV D0,D1
+  0x4400f089: [fc e1 f6 ff ff ff   ] AND 0xfffffff6,D1
+  0x4400f08f: [f8 03 ec            ] MOV (-0x14,A3),D0
+  0x4400f092: [a1                  ] CMP D0,D1
+  0x4400f093: [c8 11               ] BEQ 0x4400f0a4
+  0x4400f095: [f8 03 f8            ] MOV (-0x8,A3),D0
+  0x4400f098: [81                  ] MOV D0,D1
+  0x4400f099: [f8 e1 02            ] AND 0x2,D1
+  0x4400f09c: [f8 03 ec            ] MOV (-0x14,A3),D0
+  0x4400f09f: [a1                  ] CMP D0,D1
+  0x4400f0a0: [c5 04               ] BHI 0x4400f0a4
+  0x4400f0a2: [ca 0a               ] BRA 0x4400f0ac
+  0x4400f0a4: [2c d4 d8            ] MOV 0xd8d4,D0
+  0x4400f0a7: [f8 13 e0            ] MOV D0,(-0x20,A3)
+  0x4400f0aa: [ca 2b               ] BRA 0x4400f0d5
+  0x4400f0ac: [f8 07 f4            ] MOV (-0xc,A3),D1
+  0x4400f0af: [f8 03 f0            ] MOV (-0x10,A3),D0
+  0x4400f0b2: [e1                  ] ADD D0,D1
+  0x4400f0b3: [f8 03 ec            ] MOV (-0x14,A3),D0
+  0x4400f0b6: [a1                  ] CMP D0,D1
+  0x4400f0b7: [c9 0c               ] BNE 0x4400f0c3
+  0x4400f0b9: [f8 03 f0            ] MOV (-0x10,A3),D0
+  0x4400f0bc: [40                  ] INC D0
+  0x4400f0bd: [f8 13 f0            ] MOV D0,(-0x10,A3)
+  0x4400f0c0: [cc 5d ff            ] JMP 0x4400f01d
+  0x4400f0c3: [f8 23 14            ] MOV (0x14,A3),A0
+  0x4400f0c6: [f8 03 ec            ] MOV (-0x14,A3),D0
+  0x4400f0c9: [60                  ] MOV D0,(A0)
+  0x4400f0ca: [f8 23 10            ] MOV (0x10,A3),A0
+  0x4400f0cd: [f8 03 f0            ] MOV (-0x10,A3),D0
+  0x4400f0d0: [60                  ] MOV D0,(A0)
+  0x4400f0d1: [00                  ] CLR D0
+  0x4400f0d2: [f8 13 e0            ] MOV D0,(-0x20,A3)
+  0x4400f0d5: [f8 03 e0            ] MOV (-0x20,A3),D0
+  0x4400f0d8: [f2 fc               ] MOV A3,SP
+  0x4400f0da: [df 10 04            ] RET [A3],0x4
+```
+
+#### `FUN_440262cb` (`sd_ctrl_read_blocks_262cb`) — `0x440262cb` (284 B)
+
+Leitura em baixo nível no controlador SD: alterna `CMD17` (`FUN_440282d6`) vs `CMD18` (`FUN_44028257`) e trata endereçamento por bloco em SDHC (`_DAT_505748f8 == 2`).
+
+<!-- source: doc_boot_fat_sd_java.txt (DecompileSdRead.java / task-37053.log) | FUNC FUN_440262cb (sd_ctrl_read_blocks_262cb) @ 0x440262cb (size=284 B, Ghidra 12.1.4 Headless) -->
+```c
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+int FUN_440262cb(int param_1,int param_2,uint param_3)
+
+{
+  uint uVar1;
+  int iVar2;
+  int iVar3;
+  uint uVar4;
+  undefined1 auStack_40 [8];
+  int iStack_38;
+  
+  iVar2 = FUN_44026626();
+  iVar3 = iVar2;
+  if ((iVar2 == 0) && (iVar3 = -0x15f97, param_3 != 0)) {
+    FUN_440276a1(1);
+    if (_DAT_505748f8 != 2) {
+      param_2 = param_2 << 9;
+    }
+    *(undefined4 *)(param_1 + 8) = 0;
+    *(undefined4 *)(param_1 + 0xc) = 0x200;
+    while (param_3 != 0) {
+      if (param_3 < 0x10001) {
+        uVar1 = 0;
+        uVar4 = param_3;
+      }
+      else {
+        uVar1 = param_3 - 0x10000;
+        uVar4 = 0x10000;
+      }
+      param_3 = uVar1;
+      iVar3 = FUN_44027600(0x32);
+      if (iVar3 == 0) {
+        if (uVar4 == 1) {
+          iVar3 = FUN_440282d6(param_2,param_1);
+        }
+        else {
+          *(uint *)(param_1 + 0xc) = uVar4 * *(int *)(param_1 + 0xc);
+          iVar3 = FUN_44028257(param_2,param_1,uVar4);
+          if (*(char *)(param_1 + 0x10) == '\x01') {
+            FUN_44013cb1(param_1,auStack_40,0x20);
+            iStack_38 = iStack_38 << 9;
+          }
+          else {
+            iStack_38 = *(int *)(param_1 + 4) + uVar4 * 0x200;
+          }
+          *(int *)(param_1 + 4) = iStack_38;
+          if (_DAT_505748f8 != 2) {
+            uVar4 = uVar4 << 9;
+          }
+          param_2 = param_2 + uVar4;
+        }
+      }
+      if (iVar3 != 0) {
+        iVar2 = -90000;
+        if (iVar3 == -0x1637c) {
+          iVar2 = -0x15f95;
+        }
+        break;
+      }
+      FUN_44026496();
+      iVar2 = 0;
+    }
+    FUN_440276a1(0);
+    iVar3 = iVar2;
+  }
+  return iVar3;
+}
+```
+### 1.4-B Rotinas Verificadas do `Loader ver0.61 [06/03/06]` (`FUN_44005fb3`, `FUN_44007f0e` [erratum `0x44008020`], `mainsoft` HDD & Flags `update`)
+
+C completo e disassembly MN103S do despachante real de boot do DMR-EH55 (`eh55_loader_ver061_256k.bin`), provando exatamente onde recai o endereço `0x44008020`, como RTSC (`FUN_4400b1d5`) + `HDD MAX LBA` (`FUN_4400b980`) são invocados e como ocorre o fallback para a flag `update` (`"MATS"`/`"HITA"`).
+
+#### `FUN_44005fb3` (`v61_boot_main_5fb3`) — `0x44005fb3` (1076 B)
+
+Orquestrador central do `Loader ver0.61`: descomprime firmware FE `0x84080000 -> 0x90202000`, imprime banner `'***** Loader ver%s [%s] *****'` (`0.61` / `06/03/06`) e chama **`FUN_44007f0e(2)`** (`serial boot`) ou **`FUN_44007f0e(1)`** (`normal mode`).
+
+<!-- source: ver061_full_decomp.txt | FUNC FUN_44005fb3 @ 0x44005fb3 (disassembled + created function, bodySize=1076 B) -->
+```c
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+void FUN_44005fb3(void)
+
+{
+  byte bVar1;
+  ushort uVar2;
+  undefined4 *puVar3;
+  undefined1 extraout_D0;
+  undefined4 uVar4;
+  undefined4 uStack_8;
+  undefined4 uStack_4;
+
+  puVar3 = &uStack_8;
+  _DAT_504ec5b8 = 0;
+  func_0x44005b49();
+  bVar1 = P5OUT;
+  P5OUT = bVar1 | 8;
+  func_0x44007d69();
+  *(undefined1 *)((int)puVar3 + -9) = extraout_D0;
+  uVar2 = Ramdb000100;
+  Ramdb000100 = uVar2 & 0xfffc;
+  uVar2 = Ramdb000400;
+  Ramdb000400 = uVar2 & 0xfff3;
+  bVar1 = P1IN;
+  if (((bVar1 & 1) == 0) || (bVar1 = P4IN, (bVar1 & 2) == 0)) {
+    FUN_44005dee(s_______FEonly_mode_______4402fef6);
+  }
+  if (((*(char *)((int)puVar3 + -9) != '\x02') || (bVar1 = P1IN, (bVar1 & 1) == 0)) ||
+     (bVar1 = P4IN, (bVar1 & 2) == 0)) {
+    FUN_4402a39b(0x90202000,0xff,0x100);
+    uVar4 = func_0x4400cea3(0x84080000);
+    puVar3[-6] = uVar4;
+    if (puVar3[-6] == 0) {
+      FUN_44005dee(s_Error__Drive_firmware_not_compre_4402ff0f);
+    }
+    else {
+      uVar4 = func_0x4400cf6f(0x84080000);
+      puVar3[-2] = uVar4;
+      uVar4 = func_0x4400ce2e(0x84080000,0xff);
+      puVar3[-1] = uVar4;
+      uVar4 = func_0x4400cf16(0x84080000);
+      puVar3[-7] = uVar4;
+      FUN_44005dee(s_F_E_Address___0x_X___Drive_compr_4402ff3b,puVar3[-2],puVar3[-1]);
+      if (puVar3[-7] == 1) {
+        uVar4 = func_0x4400d016(0x84080000);
+        puVar3[-7] = uVar4;
+        if (puVar3[-7] != 1) {
+          FUN_44005dee(s_Error__Drive_firmware_uncompress_4402ff6d,puVar3[-7]);
+        }
+      }
+      else {
+        FUN_44005dee(s_Error__Drive_firmware_not_compre_4402ff9d);
+      }
+    }
+    FUN_4402a39b(0x901f3b60,0,0x80);
+    Ramdc0f0080 = 0x202000;
+    uVar2 = Ramc0001008;
+    Ramc0001008 = uVar2 | 0x8002;
+    FUN_44005dee(s_F_E_reset_release_finish_____4402ffc2);
+  }
+  bVar1 = P1IN;
+  if (((bVar1 & 1) == 0) || (bVar1 = P4IN, (bVar1 & 2) == 0)) {
+    func_0x4400640a();
+  }
+  bVar1 = *(byte *)((int)puVar3 + -9);
+  if (bVar1 == 2) {
+    FUN_44005dee(s_______Loader_ver_s___s________4402ffe0,0x44030000,0x44030005);
+    FUN_44005dee(s_______serial_boot_mode_______44030142);
+    func_0x44007f0e(2);
+  }
+  else {
+    if (bVar1 < 3) {
+      if (bVar1 == 1) {
+        FUN_44005dee(s_______Loader_ver_s___s________4402ffe0,0x44030000,0x44030005);
+        FUN_44005dee(s_______normal_mode_______44030129);
+        uVar4 = func_0x440063e7();
+        puVar3[-4] = uVar4;
+        if (puVar3[-4] != 0) {
+          func_0x44007f0e(1);
+          return;
+        }
+        FUN_44009500();
+        return;
+      }
+    }
+    else if (bVar1 == 3) {
+      FUN_44005dee(s_______Loader_ver_s___s________4402ffe0,0x44030000,0x44030005);
+      FUN_44005dee(s_______support_card_mode_______4403000e);
+      uVar4 = func_0x440063e7();
+      puVar3[-4] = uVar4;
+      if (puVar3[-4] != 0) {
+        if ((uRam8980007c & 0x3f) == 0x32) {
+          FUN_44007813();
+          FUN_44007ba6();
+          FUN_44007c17();
+          uVar4 = func_0x4400ad0c();
+          puVar3[-4] = uVar4;
+          if (puVar3[-4] == 0) {
+            *(undefined1 *)(puVar3 + -0xb) = 0;
+            func_0x4400ad87(0x40,1,puVar3 + -0xb);
+            FUN_44005dee(s_VHS_TIME_OUT_F60__delay_flag___0_4403002d,*(undefined1 *)(puVar3 + -0xb))
+            ;
+            if (*(char *)(puVar3 + -0xb) == 'U') {
+              FUN_4402a39b(puVar3 + -0xb,0,0x10);
+              *(undefined1 *)(puVar3 + -0xb) = 0xe7;
+              *(undefined1 *)((int)puVar3 + -0x2b) = 0xf0;
+              *(undefined1 *)((int)puVar3 + -0x2a) = 10;
+              *(undefined1 *)((int)puVar3 + -0x29) = 1;
+              *(undefined1 *)(puVar3 + -10) = 7;
+              *(undefined1 *)((int)puVar3 + -0x27) = 0x14;
+              *(undefined1 *)((int)puVar3 + -0x26) = 0x14;
+              *(undefined1 *)((int)puVar3 + -0x25) = 0x14;
+              FUN_44006f3a(0xf);
+              FUN_44005dee(s_VHS_TIME_OUT_F60__delay_command_s_44030054);
+            }
+          }
+          else {
+            FUN_44005dee(s_DeviceInfo_init_failed____44030084);
+          }
+          FUN_44005dee(s____DV1394_Check_Start____4403009f);
+          uVar4 = func_0x44010fda();
+          FUN_44005dee(s_PLL_RESET_COUNT____u_440300b9,uVar4);
+          func_0x44007c3f();
+          FUN_44011340();
+        }
+        uVar4 = func_0x44007e24(0x40000400);
+        puVar3[-1] = uVar4;
+        FUN_44005dee(s_load_address___0x_08x___load_siz_440300cf,puVar3[-2],puVar3[-1]);
+        if (puVar3[-1] == 0) {
+          FUN_44005dee(s_error__main_soft_is_not_loaded_t_440300fa);
+          FUN_44009500();
+        }
+        func_0x44002eca(0x40000400,puVar3[-2],puVar3[-1]);
+        func_0x44002ec0();
+        puVar3[-5] = puVar3[-2];
+        (*(code *)puVar3[-5])();
+        return;
+      }
+      FUN_44009500();
+      return;
+    }
+    FUN_44009500();
+  }
+  return;
+}
+
+ (GhidraScript)
+```
+
+#### `FUN_44007f0e` (`v61_fmu_sd_dispatcher_7f0e`) — `0x44007f0e` (911 B) *[Contém `0x44008020` = `+0x112`]*
+
+Verdadeira entrada de função correspondente ao `fmu_sd_dispatcher` (`0x440065bc`) no `Loader ver0.61`. Verifica `Conveyer firm boot mode`, trata flags NVRAM (`FUN_44009cef`/`9dd6`/`9d9e`), chama **`FUN_4400b1d5()`** (`*** RTSC Initialize ***`) + **`FUN_4400b980()`** (`HDD MAX LBA`), tenta carga de `mainsoft` em LBA `0x10000` e espelho `max_lba - 0x20000` (`FUN_4400836d` / `829d` / `8585`), ou seta `"MATS"`/`"HITA"` em fallback (`FUN_44009d5b` + `FUN_44009d83(2)`).
+
+<!-- source: ver061_full_decomp.txt | FUNC FUN_44007f0e @ 0x44007f0e (disassembled + created function, bodySize=911 B) -->
+```c
+void FUN_44007f0e(char param_1)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  undefined4 uStack_8;
+  undefined4 uStack_4;
+
+  puVar1 = &uStack_8;
+  if (param_1 == '\x02') {
+    func_0x4400877f(0,2);
+  }
+  uVar2 = func_0x4400ad0c();
+  puVar1[-2] = uVar2;
+  if ((puVar1[-2] == 0) &&
+     (func_0x4400ad87(0x402,1,(int)puVar1 + -0x25), *(char *)((int)puVar1 + -0x25) == 'U')) {
+    FUN_44005dee(s_Conveyer_firm_boot_mode____4403066d);
+    func_0x4400877f(puVar1[-9],2);
+  }
+  if ((uRam8980007c & 0x3f) == 0x32) {
+    FUN_44007813();
+    FUN_44007ba6();
+    FUN_44007c17();
+    *(undefined1 *)((int)puVar1 + -0x25) = 0;
+    func_0x4400ad87(0x40,1,(int)puVar1 + -0x25);
+    FUN_44005dee(s_VHS_TIME_OUT_F60__delay_flag___0_44030689,*(undefined1 *)((int)puVar1 + -0x25));
+    if (*(char *)((int)puVar1 + -0x25) == 'U') {
+      FUN_4402a39b(0x504992c0,0,0x200);
+      uRam504992c0 = 0xe7;
+      uRam504992c1 = 0xf0;
+      uRam504992c2 = 10;
+      uRam504992c3 = 1;
+      uRam504992c4 = 7;
+      uRam504992c5 = 0x14;
+      uRam504992c6 = 0x14;
+      uRam504992c7 = 0x14;
+      FUN_44006f3a(0xf,0x504992c0);
+      FUN_44005dee(s_VHS_TIME_OUT_F60__delay_command_s_440306b0);
+    }
+    FUN_44005dee(s____DV1394_Check_Start____440306e0);
+    uVar2 = func_0x44010fda();
+    FUN_44005dee(s_PLL_RESET_COUNT____u_440306fa,uVar2);
+    func_0x44007c3f();
+    FUN_44011340();
+  }
+  uVar2 = func_0x44009cef();
+  puVar1[-2] = uVar2;
+  puVar1[-5] = 0;
+  while ((uint)puVar1[-5] < 0xb) {
+    if (puVar1[-5] != 10) {
+      uVar2 = func_0x44009dd6(puVar1[-5]);
+      puVar1[-7] = uVar2;
+      if (puVar1[-7] == 1) break;
+    }
+    puVar1[-5] = puVar1[-5] + 1;
+  }
+  uVar2 = func_0x44009d9e();
+  puVar1[-8] = uVar2;
+  if ((puVar1[-8] != 1) || (puVar1[-7] != 1)) {
+    if ((puVar1[-8] == 1) || (puVar1[-7] == 1)) {
+      FUN_44005dee(s_Clear_update_data__44030710);
+      FUN_44009bed();
+      FUN_44009c60();
+    }
+    FUN_44007813();
+    FUN_44007ba6();
+    FUN_44007c17();
+    FUN_44005dee(s_____RTSC_Initialize_____44030724);
+    FUN_4400b1d5();
+    uVar2 = func_0x4400b980(puVar1 + -0xb);
+    puVar1[-2] = uVar2;
+    if (puVar1[-2] == 0) {
+      puVar1[-0xb] = puVar1[-0xb] & 0xfffffffc;
+      FUN_44005dee(s_HDD_MAX_LBA___0x_X__4403073d,puVar1[-0xb]);
+      uVar2 = func_0x4400836d(0x10000,puVar1 + -6,puVar1 + -0xc);
+      puVar1[-2] = uVar2;
+      if (puVar1[-2] == 1) {
+        puVar1[-3] = puVar1[-6];
+        uVar2 = func_0x4400829d(puVar1[-3]);
+        puVar1[-2] = uVar2;
+        if (puVar1[-2] == 0) {
+          puVar1[-8] = 1;
+        }
+        else {
+          puVar1[-8] = 0;
+        }
+      }
+      else {
+        puVar1[-8] = 0;
+      }
+      if (puVar1[-8] != 1) {
+        if ((uint)puVar1[-0xb] < 0x20000) {
+          puVar1[-2] = 3;
+        }
+        else {
+          uVar2 = func_0x4400836d(puVar1[-0xb] + -0x20000,puVar1 + -6,puVar1 + -0xc);
+          puVar1[-2] = uVar2;
+          if (puVar1[-2] == 1) {
+            puVar1[-3] = puVar1[-6];
+            uVar2 = func_0x4400829d(puVar1[-3]);
+            puVar1[-2] = uVar2;
+          }
+          else {
+            puVar1[-2] = 3;
+          }
+          if (puVar1[-2] == 0) {
+            func_0x44008585(puVar1[-0xb] + -0x20000,0x10000,puVar1[-0xc]);
+          }
+        }
+      }
+    }
+    else {
+      puVar1[-0xb] = 0;
+      FUN_44005dee(s_HDD_MAX_LBA_get_failed_0x_X___44030752,puVar1[-2]);
+      puVar1[-2] = 3;
+    }
+    if (puVar1[-2] == 0) {
+      func_0x44007c3f();
+      FUN_44011340();
+      puVar1[-4] = puVar1[-3];
+      (*(code *)puVar1[-4])();
+    }
+    else {
+      FUN_44005dee(s_mainsoft_data_is_invalid__so_set_44030771);
+      func_0x44009d5b();
+      func_0x44009d83(2);
+      puVar1[-9] = 1;
+    }
+  }
+  func_0x4400877f(puVar1[-9],*(undefined1 *)((int)puVar1 + -1));
+  return;
+}
+
+ (GhidraScript)
+```
+
+**Prova em Disassembly MN103S (`FUN_44007f0e` — notar `0x4400801b: [fc 82 c4 92 49 50] MOVBU D0,(0x504992c4)`, provando que `0x44008020` é `+5 B` dentro dessa instrução, e chamadas em `0x44008132..0x4400828b`):**
+
+<!-- source: ver061_inspect.clean.txt | === DISASM FUN_44007f0e @ 0x44007f0e (size=911 B) === -->
+```asm
+-- === DISASM FUN_44007f0e @ 0x44007f0e (size=911 B) === --
+  0x44007f0e: [cf 30                ] MOVM [A2,A3],(SP)
+  0x44007f10: [3f                   ] MOV SP,A3
+  0x44007f11: [f8 fe c0             ] ADD -0x40,SP
+  0x44007f14: [f8 53 ff             ] MOVBU D0,(-0x1 ,A3)
+  0x44007f17: [00                   ] CLR D0
+  0x44007f18: [f8 13 ec             ] MOV D0,(-0x14 ,A3)
+  0x44007f1b: [00                   ] CLR D0
+  0x44007f1c: [f8 13 e8             ] MOV D0,(-0x18 ,A3)
+  0x44007f1f: [00                   ] CLR D0
+  0x44007f20: [f8 13 e4             ] MOV D0,(-0x1c ,A3)
+  0x44007f23: [00                   ] CLR D0
+  0x44007f24: [f8 13 e0             ] MOV D0,(-0x20 ,A3)
+  0x44007f27: [00                   ] CLR D0
+  0x44007f28: [f8 13 dc             ] MOV D0,(-0x24 ,A3)
+  0x44007f2b: [00                   ] CLR D0
+  0x44007f2c: [f8 53 db             ] MOVBU D0,(-0x25 ,A3)
+  0x44007f2f: [00                   ] CLR D0
+  0x44007f30: [f8 13 d4             ] MOV D0,(-0x2c ,A3)
+  0x44007f33: [00                   ] CLR D0
+  0x44007f34: [f8 13 d0             ] MOV D0,(-0x30 ,A3)
+  0x44007f37: [f8 43 ff             ] MOVBU (-0x1 ,A3),D0
+  0x44007f3a: [a0 02                ] CMP 0x2,D0
+  0x44007f3c: [c9 0f                ] BNE 0x44007f4b
+  0x44007f3e: [f8 03 dc             ] MOV (-0x24 ,A3),D0
+  0x44007f41: [f8 47 ff             ] MOVBU (-0x1 ,A3),D1
+  0x44007f44: [dd 3b 08 00 00 00 00 ] CALL 0x4400877f,[],0x0
+  0x44007f4b: [dd c1 2d 00 00 00 00 ] CALL 0x4400ad0c,[],0x0
+  0x44007f52: [f8 13 f8             ] MOV D0,(-0x8 ,A3)
+  0x44007f55: [f8 03 f8             ] MOV (-0x8 ,A3),D0
+  0x44007f58: [a0 00                ] CMP 0x0,D0
+  0x44007f5a: [c9 36                ] BNE 0x44007f90
+  0x44007f5c: [f1 dc                ] MOV A3,D0
+  0x44007f5e: [28 db                ] ADD -0x25,D0
+  0x44007f60: [42 0c                ] MOV D0,(0xc,SP)
+  0x44007f62: [2c 02 04             ] MOV 0x402,D0
+  0x44007f65: [85 01                ] MOV 0x1,D1
+  0x44007f67: [dd 20 2e 00 00 00 00 ] CALL 0x4400ad87,[],0x0
+  0x44007f6e: [f8 43 db             ] MOVBU (-0x25 ,A3),D0
+  0x44007f71: [a0 55                ] CMP 0x55,D0
+  0x44007f73: [c9 1d                ] BNE 0x44007f90
+  0x44007f75: [fc cd 6d 06 03 44    ] MOV 0x4403066d,D1
+  0x44007f7b: [84                   ] MOV D1,D0
+  0x44007f7c: [dd 72 de ff ff 00 00 ] CALL 0x44005dee,[],0x0
+  0x44007f83: [f8 07 dc             ] MOV (-0x24 ,A3),D1
+  0x44007f86: [84                   ] MOV D1,D0
+  0x44007f87: [85 02                ] MOV 0x2,D1
+  0x44007f89: [dd f6 07 00 00 00 00 ] CALL 0x4400877f,[],0x0
+  0x44007f90: [fc ac 7c 00 80 89    ] MOVHU (0x8980007c),D0
+  0x44007f96: [81                   ] MOV D0,D1
+  0x44007f97: [f8 e1 3f             ] AND 0x3f,D1
+  0x44007f9a: [84                   ] MOV D1,D0
+  0x44007f9b: [1c                   ] EXTHU D0
+  0x44007f9c: [a0 32                ] CMP 0x32,D0
+  0x44007f9e: [c8 05                ] BEQ 0x44007fa3
+  0x44007fa0: [cc e9 00             ] JMP 0x44008089
+  0x44007fa3: [dd 70 f8 ff ff 00 00 ] CALL 0x44007813,[],0x0
+  0x44007faa: [dd fc fb ff ff 00 00 ] CALL 0x44007ba6,[],0x0
+  0x44007fb1: [dd 66 fc ff ff 00 00 ] CALL 0x44007c17,[],0x0
+  0x44007fb8: [00                   ] CLR D0
+  0x44007fb9: [f8 53 db             ] MOVBU D0,(-0x25 ,A3)
+  0x44007fbc: [f1 dc                ] MOV A3,D0
+  0x44007fbe: [28 db                ] ADD -0x25,D0
+  0x44007fc0: [42 0c                ] MOV D0,(0xc,SP)
+  0x44007fc2: [80 40                ] MOV 0x40,D0
+  0x44007fc4: [85 01                ] MOV 0x1,D1
+  0x44007fc6: [dd c1 2d 00 00 00 00 ] CALL 0x4400ad87,[],0x0
+  0x44007fcd: [fc cc 89 06 03 44    ] MOV 0x44030689,D0
+  0x44007fd3: [f8 47 db             ] MOVBU (-0x25 ,A3),D1
+  0x44007fd6: [dd 18 de ff ff 00 00 ] CALL 0x44005dee,[],0x0
+  0x44007fdd: [f8 43 db             ] MOVBU (-0x25 ,A3),D0
+  0x44007fe0: [a0 55                ] CMP 0x55,D0
+  0x44007fe2: [c9 74                ] BNE 0x44008056
+  0x44007fe4: [fc cc c0 92 49 50    ] MOV 0x504992c0,D0
+  0x44007fea: [2d 00 02             ] MOV 0x200,D1
+  0x44007fed: [46 0c                ] MOV D1,(0xc,SP)
+  0x44007fef: [04                   ] CLR D1
+  0x44007ff0: [dd ab 23 02 00 00 00 ] CALL 0x4402a39b,[],0x0
+  0x44007ff7: [2c e7 00             ] MOV 0xe7,D0
+  0x44007ffa: [fc 82 c0 92 49 50    ] MOVBU D0,(0x504992c0)
+  0x44008000: [2c f0 00             ] MOV 0xf0,D0
+  0x44008003: [fc 82 c1 92 49 50    ] MOVBU D0,(0x504992c1)
+  0x44008009: [80 0a                ] MOV 0xa,D0
+  0x4400800b: [fc 82 c2 92 49 50    ] MOVBU D0,(0x504992c2)
+  0x44008011: [80 01                ] MOV 0x1,D0
+  0x44008013: [fc 82 c3 92 49 50    ] MOVBU D0,(0x504992c3)
+  0x44008019: [80 07                ] MOV 0x7,D0
+  0x4400801b: [fc 82 c4 92 49 50    ] MOVBU D0,(0x504992c4)
+  0x44008021: [80 14                ] MOV 0x14,D0
+  0x44008023: [fc 82 c5 92 49 50    ] MOVBU D0,(0x504992c5)
+  0x44008029: [80 14                ] MOV 0x14,D0
+  0x4400802b: [fc 82 c6 92 49 50    ] MOVBU D0,(0x504992c6)
+  0x44008031: [80 14                ] MOV 0x14,D0
+  0x44008033: [fc 82 c7 92 49 50    ] MOVBU D0,(0x504992c7)
+  0x44008039: [fc cd c0 92 49 50    ] MOV 0x504992c0,D1
+  0x4400803f: [80 0f                ] MOV 0xf,D0
+  0x44008041: [dd f9 ee ff ff 00 00 ] CALL 0x44006f3a,[],0x0
+  0x44008048: [fc cd b0 06 03 44    ] MOV 0x440306b0,D1
+  0x4400804e: [84                   ] MOV D1,D0
+  0x4400804f: [dd 9f dd ff ff 00 00 ] CALL 0x44005dee,[],0x0
+  0x44008056: [fc cd e0 06 03 44    ] MOV 0x440306e0,D1
+  0x4400805c: [84                   ] MOV D1,D0
+  0x4400805d: [dd 91 dd ff ff 00 00 ] CALL 0x44005dee,[],0x0
+  0x44008064: [dd 76 8f 00 00 00 00 ] CALL 0x44010fda,[],0x0
+  0x4400806b: [81                   ] MOV D0,D1
+  0x4400806c: [fc dc fa 06 03 44    ] MOV 0x440306fa,A0
+  0x44008072: [f1 d0                ] MOV A0,D0
+  0x44008074: [dd 7a dd ff ff 00 00 ] CALL 0x44005dee,[],0x0
+  0x4400807b: [dd c4 fb ff ff 00 00 ] CALL 0x44007c3f,[],0x0
+  0x44008082: [dd be 92 00 00 00 00 ] CALL 0x44011340,[],0x0
+  0x44008089: [dd 66 1c 00 00 00 00 ] CALL 0x44009cef,[],0x0
+  0x44008090: [f8 13 f8             ] MOV D0,(-0x8 ,A3)
+  0x44008093: [00                   ] CLR D0
+  0x44008094: [f8 13 ec             ] MOV D0,(-0x14 ,A3)
+  0x44008097: [f8 03 ec             ] MOV (-0x14 ,A3),D0
+  0x4400809a: [a0 0a                ] CMP 0xa,D0
+  0x4400809c: [c7 04                ] BLS 0x440080a0
+  0x4400809e: [ca 2a                ] BRA 0x440080c8
+  0x440080a0: [f8 03 ec             ] MOV (-0x14 ,A3),D0
+  0x440080a3: [a0 0a                ] CMP 0xa,D0
+  0x440080a5: [c8 19                ] BEQ 0x440080be
+  0x440080a7: [f8 07 ec             ] MOV (-0x14 ,A3),D1
+  0x440080aa: [84                   ] MOV D1,D0
+  0x440080ab: [dd 2b 1d 00 00 00 00 ] CALL 0x44009dd6,[],0x0
+  0x440080b2: [f8 13 e4             ] MOV D0,(-0x1c ,A3)
+  0x440080b5: [f8 03 e4             ] MOV (-0x1c ,A3),D0
+  0x440080b8: [a0 01                ] CMP 0x1,D0
+  0x440080ba: [c9 04                ] BNE 0x440080be
+  0x440080bc: [ca 0c                ] BRA 0x440080c8
+  0x440080be: [f8 03 ec             ] MOV (-0x14 ,A3),D0
+  0x440080c1: [81                   ] MOV D0,D1
+  0x440080c2: [44                   ] INC D1
+  0x440080c3: [f8 17 ec             ] MOV D1,(-0x14 ,A3)
+  0x440080c6: [ca d1                ] BRA 0x44008097
+  0x440080c8: [dd d6 1c 00 00 00 00 ] CALL 0x44009d9e,[],0x0
+  0x440080cf: [f8 13 e0             ] MOV D0,(-0x20 ,A3)
+  0x440080d2: [f8 03 e0             ] MOV (-0x20 ,A3),D0
+  0x440080d5: [a0 01                ] CMP 0x1,D0
+  0x440080d7: [c9 0c                ] BNE 0x440080e3
+  0x440080d9: [f8 03 e4             ] MOV (-0x1c ,A3),D0
+  0x440080dc: [a0 01                ] CMP 0x1,D0
+  0x440080de: [c9 05                ] BNE 0x440080e3
+  0x440080e0: [cc ab 01             ] JMP 0x4400828b
+  0x440080e3: [f8 03 e0             ] MOV (-0x20 ,A3),D0
+  0x440080e6: [a0 01                ] CMP 0x1,D0
+  0x440080e8: [c8 0b                ] BEQ 0x440080f3
+  0x440080ea: [f8 03 e4             ] MOV (-0x1c ,A3),D0
+  0x440080ed: [a0 01                ] CMP 0x1,D0
+  0x440080ef: [c8 04                ] BEQ 0x440080f3
+  0x440080f1: [ca 1e                ] BRA 0x4400810f
+  0x440080f3: [fc cd 10 07 03 44    ] MOV 0x44030710,D1
+  0x440080f9: [84                   ] MOV D1,D0
+  0x440080fa: [dd f4 dc ff ff 00 00 ] CALL 0x44005dee,[],0x0
+  0x44008101: [dd ec 1a 00 00 00 00 ] CALL 0x44009bed,[],0x0
+  0x44008108: [dd 58 1b 00 00 00 00 ] CALL 0x44009c60,[],0x0
+  0x4400810f: [dd 04 f7 ff ff 00 00 ] CALL 0x44007813,[],0x0
+  0x44008116: [dd 90 fa ff ff 00 00 ] CALL 0x44007ba6,[],0x0
+  0x4400811d: [dd fa fa ff ff 00 00 ] CALL 0x44007c17,[],0x0
+  0x44008124: [fc cd 24 07 03 44    ] MOV 0x44030724,D1
+  0x4400812a: [84                   ] MOV D1,D0
+  0x4400812b: [dd c3 dc ff ff 00 00 ] CALL 0x44005dee,[],0x0
+  0x44008132: [dd a3 30 00 00 00 00 ] CALL 0x4400b1d5,[],0x0
+  0x44008139: [f1 dd                ] MOV A3,D1
+  0x4400813b: [29 d4                ] ADD -0x2c,D1
+  0x4400813d: [84                   ] MOV D1,D0
+  0x4400813e: [dd 42 38 00 00 00 00 ] CALL 0x4400b980,[],0x0
+  0x44008145: [f8 13 f8             ] MOV D0,(-0x8 ,A3)
+  0x44008148: [f8 03 f8             ] MOV (-0x8 ,A3),D0
+  0x4400814b: [a0 00                ] CMP 0x0,D0
+  0x4400814d: [c8 05                ] BEQ 0x44008152
+  0x4400814f: [cc de 00             ] JMP 0x4400822d
+  0x44008152: [f8 03 d4             ] MOV (-0x2c ,A3),D0
+  0x44008155: [81                   ] MOV D0,D1
+  0x44008156: [f8 c5 02             ] LSR 0x2,D1
+  0x44008159: [55                   ] ASL2 D1
+  0x4400815a: [f8 17 d4             ] MOV D1,(-0x2c ,A3)
+  0x4400815d: [fc cc 3d 07 03 44    ] MOV 0x4403073d,D0
+  0x44008163: [f8 07 d4             ] MOV (-0x2c ,A3),D1
+  0x44008166: [dd 88 dc ff ff 00 00 ] CALL 0x44005dee,[],0x0
+  0x4400816d: [f1 dd                ] MOV A3,D1
+  0x4400816f: [29 e8                ] ADD -0x18,D1
+  0x44008171: [f1 dc                ] MOV A3,D0
+  0x44008173: [28 d0                ] ADD -0x30,D0
+  0x44008175: [42 0c                ] MOV D0,(0xc,SP)
+  0x44008177: [fc cc 00 00 01 00    ] MOV 0x10000,D0
+  0x4400817d: [cd f0 01 00 00       ] CALL 0x4400836d,[],0x0
+  0x44008182: [f8 13 f8             ] MOV D0,(-0x8 ,A3)
+  0x44008185: [f8 03 f8             ] MOV (-0x8 ,A3),D0
+  0x44008188: [a0 01                ] CMP 0x1,D0
+  0x4400818a: [c9 28                ] BNE 0x440081b2
+  0x4400818c: [f8 03 e8             ] MOV (-0x18 ,A3),D0
+  0x4400818f: [f8 13 f4             ] MOV D0,(-0xc ,A3)
+  0x44008192: [f8 07 f4             ] MOV (-0xc ,A3),D1
+  0x44008195: [84                   ] MOV D1,D0
+  0x44008196: [cd 07 01 00 00       ] CALL 0x4400829d,[],0x0
+  0x4400819b: [f8 13 f8             ] MOV D0,(-0x8 ,A3)
+  0x4400819e: [f8 03 f8             ] MOV (-0x8 ,A3),D0
+  0x440081a1: [a0 00                ] CMP 0x0,D0
+  0x440081a3: [c9 09                ] BNE 0x440081ac
+  0x440081a5: [80 01                ] MOV 0x1,D0
+  0x440081a7: [f8 13 e0             ] MOV D0,(-0x20 ,A3)
+  0x440081aa: [ca 06                ] BRA 0x440081b0
+  0x440081ac: [00                   ] CLR D0
+  0x440081ad: [f8 13 e0             ] MOV D0,(-0x20 ,A3)
+  0x440081b0: [ca 06                ] BRA 0x440081b6
+  0x440081b2: [00                   ] CLR D0
+  0x440081b3: [f8 13 e0             ] MOV D0,(-0x20 ,A3)
+  0x440081b6: [f8 03 e0             ] MOV (-0x20 ,A3),D0
+  0x440081b9: [a0 01                ] CMP 0x1,D0
+  0x440081bb: [c8 70                ] BEQ 0x4400822b
+  0x440081bd: [f8 03 d4             ] MOV (-0x2c ,A3),D0
+  0x440081c0: [fc c8 ff ff 01 00    ] CMP 0x1ffff,D0
+  0x440081c6: [c5 09                ] BHI 0x440081cf
+  0x440081c8: [80 03                ] MOV 0x3,D0
+  0x440081ca: [f8 13 f8             ] MOV D0,(-0x8 ,A3)
+  0x440081cd: [ca 5e                ] BRA 0x4400822b
+  0x440081cf: [f8 07 d4             ] MOV (-0x2c ,A3),D1
+  0x440081d2: [84                   ] MOV D1,D0
+  0x440081d3: [fc c0 00 00 fe ff    ] ADD -0x20000,D0
+  0x440081d9: [f1 dd                ] MOV A3,D1
+  0x440081db: [29 e8                ] ADD -0x18,D1
+  0x440081dd: [9c                   ] MOV A3,A0
+  0x440081de: [20 d0                ] ADD -0x30,A0
+  0x440081e0: [43 0c                ] MOV A0,(0xc,SP)
+  0x440081e2: [cd 8b 01 00 00       ] CALL 0x4400836d,[],0x0
+  0x440081e7: [f8 13 f8             ] MOV D0,(-0x8 ,A3)
+  0x440081ea: [f8 03 f8             ] MOV (-0x8 ,A3),D0
+  0x440081ed: [a0 01                ] CMP 0x1,D0
+  0x440081ef: [c9 16                ] BNE 0x44008205
+  0x440081f1: [f8 03 e8             ] MOV (-0x18 ,A3),D0
+  0x440081f4: [f8 13 f4             ] MOV D0,(-0xc ,A3)
+  0x440081f7: [f8 07 f4             ] MOV (-0xc ,A3),D1
+  0x440081fa: [84                   ] MOV D1,D0
+  0x440081fb: [cd a2 00 00 00       ] CALL 0x4400829d,[],0x0
+  0x44008200: [f8 13 f8             ] MOV D0,(-0x8 ,A3)
+  0x44008203: [ca 07                ] BRA 0x4400820a
+  0x44008205: [80 03                ] MOV 0x3,D0
+  0x44008207: [f8 13 f8             ] MOV D0,(-0x8 ,A3)
+  0x4400820a: [f8 03 f8             ] MOV (-0x8 ,A3),D0
+  0x4400820d: [a0 00                ] CMP 0x0,D0
+  0x4400820f: [c9 1c                ] BNE 0x4400822b
+  0x44008211: [f8 07 d4             ] MOV (-0x2c ,A3),D1
+  0x44008214: [84                   ] MOV D1,D0
+  0x44008215: [fc c0 00 00 fe ff    ] ADD -0x20000,D0
+  0x4400821b: [f8 07 d0             ] MOV (-0x30 ,A3),D1
+  0x4400821e: [46 0c                ] MOV D1,(0xc,SP)
+  0x44008220: [fc cd 00 00 01 00    ] MOV 0x10000,D1
+  0x44008226: [cd 5f 03 00 00       ] CALL 0x44008585,[],0x0
+  0x4400822b: [ca 1b                ] BRA 0x44008246
+  0x4400822d: [00                   ] CLR D0
+  0x4400822e: [f8 13 d4             ] MOV D0,(-0x2c ,A3)
+  0x44008231: [fc cc 52 07 03 44    ] MOV 0x44030752,D0
+  0x44008237: [f8 07 f8             ] MOV (-0x8 ,A3),D1
+  0x4400823a: [dd b4 db ff ff 00 00 ] CALL 0x44005dee,[],0x0
+  0x44008241: [80 03                ] MOV 0x3,D0
+  0x44008243: [f8 13 f8             ] MOV D0,(-0x8 ,A3)
+  0x44008246: [f8 03 f8             ] MOV (-0x8 ,A3),D0
+  0x44008249: [a0 00                ] CMP 0x0,D0
+  0x4400824b: [c9 1d                ] BNE 0x44008268
+  0x4400824d: [dd f2 f9 ff ff 00 00 ] CALL 0x44007c3f,[],0x0
+  0x44008254: [dd ec 90 00 00 00 00 ] CALL 0x44011340,[],0x0
+  0x4400825b: [f8 03 f4             ] MOV (-0xc ,A3),D0
+  0x4400825e: [f8 13 f0             ] MOV D0,(-0x10 ,A3)
+  0x44008261: [f8 2b f0             ] MOV (-0x10,A3),A2
+  0x44008264: [f0 f2                ] CALLS (A2)
+  0x44008266: [ca 25                ] BRA 0x4400828b
+  0x44008268: [fc cd 71 07 03 44    ] MOV 0x44030771,D1
+  0x4400826e: [84                   ] MOV D1,D0
+  0x4400826f: [dd 7f db ff ff 00 00 ] CALL 0x44005dee,[],0x0
+  0x44008276: [dd e5 1a 00 00 00 00 ] CALL 0x44009d5b,[],0x0
+  0x4400827d: [80 02                ] MOV 0x2,D0
+  0x4400827f: [dd 04 1b 00 00 00 00 ] CALL 0x44009d83,[],0x0
+  0x44008286: [80 01                ] MOV 0x1,D0
+  0x44008288: [f8 13 dc             ] MOV D0,(-0x24 ,A3)
+  0x4400828b: [f8 03 dc             ] MOV (-0x24 ,A3),D0
+  0x4400828e: [f8 47 ff             ] MOVBU (-0x1 ,A3),D1
+  0x44008291: [dd ee 04 00 00 00 00 ] CALL 0x4400877f,[],0x0
+  0x44008298: [f2 fc                ] MOV A3,SP
+  0x4400829a: [df 30 08             ] RET [A3,A2],0x8
+```
+
+#### `FUN_4400829d`, `FUN_4400836d` & `FUN_44008585` (`v61_hdd_mainsoft_recovery`)
+
+Trio de validação, carga e recuperação `HDD_INNER_SECTOR_MAIN_RECOVERY` no `Loader ver0.61` (equivalentes exatos de `FUN_44006822`, `FUN_440068f5` e `FUN_44006ae4` do `ver0.63`).
+
+<!-- source: ver061_full_decomp.txt | FUNC FUN_4400829d @ 0x4400829d (disassembled + created function, bodySize=208 B) -->
+```c
+undefined4 FUN_4400829d(int param_1)
+
+{
+  undefined1 *puVar1;
+  uint uVar2;
+  undefined4 uVar3;
+  undefined1 auStack_4 [4];
+
+  puVar1 = auStack_4;
+  uVar2 = *(uint *)(param_1 + 8);
+  if ((uVar2 < 0x50000000) || (0x57ffffff < uVar2)) {
+    FUN_44005dee(s_mainsoft_check__error__check_add_440307a0,uVar2);
+    uVar3 = 1;
+  }
+  else if ((uVar2 & 3) == 0) {
+    uVar3 = func_0x44007edb(param_1);
+    FUN_44005dee(s_Main_address___0x_08X_Mainsoft_v_44030813,*(undefined4 *)(puVar1 + 8),uVar3);
+    *(undefined4 *)(puVar1 + -0xc) = 1;
+    *(undefined4 *)(puVar1 + -4) = 0;
+    while (*(int *)(puVar1 + -4) < 0x20) {
+      if (**(int **)(puVar1 + -8) != *(int *)(puVar1 + -0xc)) {
+        FUN_44005dee(s_mainsoft_check__error__check_dat_44030840);
+        return 3;
+      }
+      *(int *)(puVar1 + -8) = *(int *)(puVar1 + -8) + 4;
+      *(int *)(puVar1 + -0xc) = *(int *)(puVar1 + -0xc) * 2;
+      *(int *)(puVar1 + -4) = *(int *)(puVar1 + -4) + 1;
+    }
+    uVar3 = 0;
+  }
+  else {
+    FUN_44005dee(s_mainsoft_check__error__check_add_440307dc,uVar2);
+    uVar3 = 2;
+  }
+  return uVar3;
+}
+
+ (GhidraScript)
+
+undefined4 FUN_4400836d(undefined4 param_1)
+
+{
+  undefined1 *puVar1;
+  undefined4 uVar2;
+  int iVar3;
+  undefined1 auStack_4 [4];
+
+  puVar1 = auStack_4;
+  uVar2 = func_0x4400baca(0,param_1,200);
+  *(undefined4 *)(puVar1 + -0x1c) = uVar2;
+  if (*(int *)(puVar1 + -0x1c) == 0) {
+    func_0x4400bfeb(0x90c00000,0x19000);
+    uVar2 = func_0x4400cea3(0x90c00000);
+    *(undefined4 *)(puVar1 + -4) = uVar2;
+    if (*(int *)(puVar1 + -4) == 0) {
+      FUN_44005dee(s_Error__Not_main_compress_header__44030898);
+      uVar2 = 0;
+    }
+    else {
+      uVar2 = func_0x4400cf6f(0x90c00000);
+      **(undefined4 **)(puVar1 + 0xc) = uVar2;
+      uVar2 = func_0x4400cf3b(0x90c00000);
+      *(undefined4 *)(puVar1 + -0xc) = uVar2;
+      uVar2 = func_0x4400ce2e(0x90c00000,0);
+      *(undefined4 *)(puVar1 + -0x14) = uVar2;
+      uVar2 = func_0x4400cf16(0x90c00000);
+      *(undefined4 *)(puVar1 + -8) = uVar2;
+      FUN_44005dee(s_sector___0x_X___address___0x_X___440308ba,*(undefined4 *)(puVar1 + 8),
+                   **(undefined4 **)(puVar1 + 0xc),*(undefined4 *)(puVar1 + -0x14));
+      *(uint *)(puVar1 + -0x18) = *(uint *)(puVar1 + -0x14) & 7;
+      if (*(int *)(puVar1 + -0x18) != 0) {
+        *(int *)(puVar1 + -0x18) = 8 - *(int *)(puVar1 + -0x18);
+      }
+      *(int *)(puVar1 + -0x18) = *(int *)(puVar1 + -0x18) + *(int *)(puVar1 + -0x14);
+      **(uint **)(puVar1 + 0x10) = *(int *)(puVar1 + -0x18) + 0x1ffU >> 9;
+      *(uint *)(puVar1 + -0x20) = (*(int *)(puVar1 + -0x18) + 0x1ffU >> 9) - 200;
+      *(int *)(puVar1 + -0x10) = *(int *)(puVar1 + -0x10) + 0x19000;
+      *(int *)(puVar1 + 8) = *(int *)(puVar1 + 8) + 200;
+      if (*(uint *)(puVar1 + -0x20) < 0x10001) {
+        uVar2 = func_0x4400baca(*(undefined4 *)(puVar1 + -0x10),*(undefined4 *)(puVar1 + 8),
+                                *(undefined4 *)(puVar1 + -0x20));
+        *(undefined4 *)(puVar1 + -0x1c) = uVar2;
+        if (*(int *)(puVar1 + -0x1c) == 0) {
+          func_0x4400bfeb(*(int *)(puVar1 + -0x18) + -0x6f419000,0x19000);
+          if (*(int *)(puVar1 + -8) == 1) {
+            FUN_44005dee(s_Main_soft_copy_to_0x_X_from_0x_X_44030938,*(undefined4 *)(puVar1 + -0xc),
+                         0x90c00000);
+            FUN_4402a34a(*(undefined4 *)(puVar1 + -0xc),0x90c00000,*(undefined4 *)(puVar1 + -0x14));
+            iVar3 = func_0x4400d016(0x90c00000);
+            if (iVar3 == 1) {
+              uVar2 = 1;
+            }
+            else {
+              FUN_44005dee(s_Mainsoft_data_uncompress_failed__4403095b);
+              uVar2 = 0;
+            }
+          }
+          else {
+            FUN_44005dee(s_Error__Not_main_compress__4403097d);
+            uVar2 = 0;
+          }
+        }
+        else {
+          FUN_44005dee(s_Error__Failed_0x_X__read_main_fr_4403090f,*(undefined4 *)(puVar1 + -0x1c));
+          uVar2 = 0;
+        }
+      }
+      else {
+        FUN_44005dee(s_Error__Read_sector_num__u__over_f_440308e8,*(undefined4 *)(puVar1 + -0x20));
+        uVar2 = 0;
+      }
+    }
+  }
+  else {
+    FUN_44005dee(s_Error__Failed_0x_X__to_read_main_4403086c,*(undefined4 *)(puVar1 + -0x1c));
+    uVar2 = 0;
+  }
+  return uVar2;
+}
+
+ (GhidraScript)
+
+void FUN_44008585(void)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  undefined4 uStack_4;
+
+  puVar1 = &uStack_4;
+  FUN_44005dee(s_HDD_INNER_SECTOR_MAIN_RECOVERY_S_44030998);
+  uVar2 = func_0x4400baca(0,puVar1[2],puVar1[4]);
+  puVar1[-2] = uVar2;
+  if (puVar1[-2] == 0) {
+    puVar1[-3] = 0;
+    while ((uint)puVar1[-3] < 3) {
+      uVar2 = func_0x4400bb72(0,puVar1[3],puVar1[4]);
+      puVar1[-2] = uVar2;
+      if (puVar1[-2] != 0) {
+        FUN_44005dee(s_Error__Failed_0x_X__write_to_HDD_440309bf,puVar1[-2]);
+        break;
+      }
+      uVar2 = func_0x4400baca(0x1000000,puVar1[3],puVar1[4]);
+      puVar1[-2] = uVar2;
+      if (puVar1[-2] != 0) {
+        FUN_44005dee(s_Error__Failed_0x_X__read_to_HDD__440309e2,puVar1[-2]);
+        break;
+      }
+      uVar2 = FUN_4402a30a(0x90c00000,0x91c00000,puVar1[4] << 9);
+      puVar1[-2] = uVar2;
+      if (puVar1[-2] == 0) break;
+      FUN_44005dee(s_Verify_error__44030a04);
+      puVar1[-3] = puVar1[-3] + 1;
+    }
+  }
+  else {
+    FUN_44005dee(s_Error__Failed_0x_X__to_read_main_4403086c,puVar1[-2]);
+  }
+  uVar2 = func_0x4400ac82(0x50480016);
+  puVar1[-1] = uVar2;
+  if (puVar1[-1] == 0) {
+    if (puVar1[-3] == 0xc) {
+      uVar2 = func_0x4400a343(0x50480016,0x50498e30);
+      puVar1[-1] = uVar2;
+      if (puVar1[-1] != 0) {
+        FUN_4402a39b(0x50498e30,0,0xc);
+      }
+    }
+    else {
+      FUN_4402a39b(0x50498e30,0,0xc);
+    }
+    if (puVar1[-2] == 0) {
+      iRam50498e30 = iRam50498e30 + 1;
+    }
+    else {
+      iRam50498e34 = iRam50498e34 + 1;
+    }
+    iRam50498e38 = iRam50498e38 + 1;
+    FUN_44005dee(s_Recovery_history____total__u___o_44030a13,iRam50498e38,iRam50498e30,iRam50498e34)
+    ;
+    uVar2 = FUN_4400ab35(0x50480016,0x50498e30,0xc);
+    puVar1[-1] = uVar2;
+    if (puVar1[-2] == 0) {
+      FUN_44005dee(s_HDD_INNER_SECTOR_MAIN_RECOVERY_S_44030a43);
+    }
+    else {
+      FUN_44005dee(s_HDD_INNER_SECTOR_MAIN_RECOVERY_F_44030a6c);
+    }
+  }
+  return;
+}
+
+ (GhidraScript)
+```
+
+#### `FUN_44009cef`, `FUN_44009d5b`, `FUN_44009d83`, `FUN_44009d9e` & `FUN_44009dd6` (`v61_nvram_update_flags`)
+
+Gestão do registro de flags `update` na NVRAM (`ID 0x5048009d` -> buffer RAM `0x50480c74`): `FUN_44009d5b` escreve `'MATS'` (`0x4d415453`) e `'HITA'` (`0x48495441`) quando `mainsoft` está corrompido.
+
+<!-- source: ver061_full_decomp.txt | FUNC FUN_44009cef @ 0x44009cef (disassembled + created function, bodySize=108 B) -->
+```c
+undefined4 FUN_44009cef(void)
+
+{
+  undefined1 *puVar1;
+  undefined4 uVar2;
+  int iStack_8;
+  undefined1 auStack_4 [4];
+
+  puVar1 = auStack_4;
+  for (iStack_8 = 0; iStack_8 < 0x30; iStack_8 = iStack_8 + 1) {
+    *(undefined1 *)(iStack_8 + 0x50480c74) = 0;
+  }
+  uVar2 = func_0x4400a343(0x5048009d,0x50480c74);
+  *(undefined4 *)(puVar1 + -8) = uVar2;
+  if (*(int *)(puVar1 + -8) == -1) {
+    FUN_44009500();
+  }
+  else if (*(int *)(puVar1 + -8) == -2) {
+    FUN_44009c60();
+    return 0;
+  }
+  return 1;
+}
+
+ (GhidraScript)
+
+void FUN_44009d5b(void)
+
+{
+  uRam50480c78 = 0x4d415453;
+  uRam50480c74 = 0x48495441;
+  FUN_44009cb5();
+  return;
+}
+
+ (GhidraScript)
+
+void FUN_44009d83(undefined4 param_1)
+
+{
+  func_0x44009f8e(param_1,0xff);
+  return;
+}
+
+ (GhidraScript)
+
+undefined4 FUN_44009d9e(void)
+
+{
+  undefined4 uStack_8;
+
+  if ((iRam50480c78 == 0x4d415453) && (iRam50480c74 == 0x48495441)) {
+    uStack_8 = 1;
+  }
+  else {
+    uStack_8 = 0;
+  }
+  return uStack_8;
+}
+
+ (GhidraScript)
+
+bool FUN_44009dd6(undefined4 param_1)
+
+{
+  bool bVar1;
+
+  bVar1 = false;
+  switch(param_1) {
+  case 0:
+    bVar1 = DAT_50480c7c != '\0';
+    break;
+  case 1:
+    bVar1 = DAT_50480c81 != '\0';
+    break;
+  case 2:
+    bVar1 = DAT_50480c7d != '\0';
+    break;
+  case 3:
+    bVar1 = DAT_50480c7e != '\0';
+    break;
+  case 4:
+    bVar1 = DAT_50480c80 != '\0';
+    break;
+  case 5:
+    bVar1 = DAT_50480c7f != '\0';
+    break;
+  case 6:
+    bVar1 = DAT_50480c82 != '\0';
+    break;
+  case 7:
+    bVar1 = DAT_50480c83 != '\0';
+    break;
+  case 8:
+    bVar1 = DAT_50480c84 != '\0';
+    break;
+  case 9:
+    bVar1 = DAT_50480c85 != '\0';
+    break;
+  default:
+    break;
+  case 0xc:
+    bVar1 = DAT_50480c87 != '\0';
+    break;
+  case 0xd:
+    bVar1 = DAT_50480c88 != '\0';
+    break;
+  case 0xe:
+    bVar1 = DAT_50480c86 != '\0';
+    break;
+  case 0xf:
+    bVar1 = DAT_50480c89 != '\0';
+    break;
+  case 0x10:
+    bVar1 = DAT_50480c8a != '\0';
+    break;
+  case 0x11:
+    bVar1 = DAT_50480c8b != '\0';
+    break;
+  case 0x12:
+    bVar1 = DAT_50480c8c != '\0';
+  }
+  return bVar1;
+}
+
+ (GhidraScript)
+```
+
+---
 
 ### 1.5 Optical Drive (`CD`/`DVD-RAM`), Joliet, `feonly_mode` & HDD RTSD/DAVIS IDE
 
@@ -7219,6 +11617,540 @@ LAB_4401ad5e:
 }
 ```
 
+> **Mapeamento Técnico do Controlador IDE DAVIS no `/BOOT.BIN` (`ver0.63`) × `PROG061` × `ver0.61`:**
+> - `FUN_4401a5cd` (`davis_probe_master_slave`) e `FUN_4401aa1f` (`davis_bus_init`) mantêm tabela de estado por canal (`stride 0xb4`, `0x50574070` = flag presença/modo `Master` vs `+0x02`/`0x50574072` `Slave`, `+0x2e` = flag `PIO`/`MDMA2` em `0x5057409e`, `+0x58` em `0x505740c8` = suporte `Release Int`).
+> - Falhas retornam código HRESULT `0x8000040d` (`&UNK_8000040d`) ou `0x8000040f` (timeout) após sondagem via `FUN_440188fc` (polling de **`0x89000558`**, máscara `0x80 BSY`/`0x40 DRDY`, com **[Trap #8A `0x44018963`: `SUB R6,R4,D0`]** invertendo a diferença do timer `iVar3 - iVar4` no código C).
+> - A arquitetura completa do driver DAVIS MMIO (`0x89000400`/`0x890004C0`/`0x89000538`/`0x89000558`) com disassembly integral está na [Seção 2.3](#23-subsistema-rtsc-controladora-davis-ide--carga-de-mainsoft-prog061--loader-ver061).
+
+#### Disassembly Verificado DAVIS (`FUN_440188fc`, `FUN_440166c1`, `FUN_44016703`) & BGO FTL (`FUN_4401f66a`, `FUN_4401ffa5`) em `/BOOT.BIN` (`ver0.63`)
+
+**`FUN_440188fc` (`0x440188fc`, poll AltStatus — contraparte `ver0.63` de `FUN_5041df27`/`FUN_4401b03f`; notar Trap #8A em `0x44018963: [fb 9c 64 c0] SUB R6,R4,D0`):**
+
+<!-- source: boot_ver063_inspect.clean.txt | === DISASM FUN_440188fc @ 0x440188fc (size=275 B) === -->
+```asm
+-- === DISASM FUN_440188fc @ 0x440188fc (size=275 B) === --
+  0x440188fc: [cf f2                ] MOVM [D2,D3,A2,A3,EX1],(SP)
+  0x440188fe: [f8 fe ec             ] ADD -0x14,SP
+  0x44018901: [f1 e2                ] MOV D0,A2
+  0x44018903: [f8 97 12             ] MOVHU D1,(0x12 ,SP)
+  0x44018906: [fb aa 50 40          ] MOVBU (0x40,SP),R5
+  0x4401890a: [f8 b8 44             ] MOVBU (0x44 ,SP),D0
+  0x4401890d: [f8 92 11             ] MOVBU D0,(0x11 ,SP)
+  0x44018910: [f9 68 77             ] CLR R7
+  0x44018913: [f8 bf 12             ] MOVHU (0x12 ,SP),D3
+  0x44018916: [8c                   ] MOV D3,D0
+  0x44018917: [dd 5b dc ff ff 00 00 ] CALL 0x44016572,[],0x0
+  0x4401891e: [a0 01                ] CMP 0x1,D0
+  0x44018920: [c9 17                ] BNE 0x44018937
+  0x44018922: [f5 47                ] MOV D0,R7
+  0x44018924: [42 0c                ] MOV D0,(0xc,SP)
+  0x44018926: [f1 d8                ] MOV A2,D0
+  0x44018928: [8d                   ] MOV D3,D1
+  0x44018929: [cd 62 ff 00 00       ] CALL 0x4401888b,[],0x0
+  0x4401892e: [f1 e0                ] MOV D0,A0
+  0x44018930: [a0 00                ] CMP 0x0,D0
+  0x44018932: [c8 05                ] BEQ 0x44018937
+  0x44018934: [cc d6 00             ] JMP 0x44018a0a
+  0x44018937: [8c                   ] MOV D3,D0
+  0x44018938: [dd 8d dc ff ff 00 00 ] CALL 0x440165c5,[],0x0
+  0x4401893f: [f5 46                ] MOV D0,R6
+  0x44018941: [8c                   ] MOV D3,D0
+  0x44018942: [dd 83 dc ff ff 00 00 ] CALL 0x440165c5,[],0x0
+  0x44018949: [f5 44                ] MOV D0,R4
+  0x4401894b: [80 38                ] MOV 0x38,D0
+  0x4401894d: [8d                   ] MOV D3,D1
+  0x4401894e: [dd 73 dd ff ff 00 00 ] CALL 0x440166c1,[],0x0
+  0x44018955: [fb 0d 5c e0          ] AND R5,D0,D2
+  0x44018959: [88                   ] MOV D2,D0
+  0x4401895a: [14                   ] EXTBU D0
+  0x4401895b: [fb aa b0 11          ] MOVBU (0x11,SP),A3
+  0x4401895f: [f1 9c                ] CMP A3,D0
+  0x44018961: [c8 4e                ] BEQ 0x440189af
+  0x44018963: [fb 9c 64 c0          ] SUB R6,R4,D0  <-- [TRAP8A_SUB_3OP_SWAP] real: D0 = R4 - R6
+  0x44018967: [54                   ] ASL2 D0
+  0x44018968: [54                   ] ASL2 D0
+  0x44018969: [f8 c4 04             ] LSR 0x4,D0
+  0x4401896c: [fc c8 86 94 00 00    ] CMP 0x9486,D0
+  0x44018972: [c7 cf                ] BLS 0x44018941
+  0x44018974: [22 ff                ] ADD -0x1,A2
+  0x44018976: [c9 18                ] BNE 0x4401898e
+  0x44018978: [80 38                ] MOV 0x38,D0
+  0x4401897a: [8d                   ] MOV D3,D1
+  0x4401897b: [dd 46 dd ff ff 00 00 ] CALL 0x440166c1,[],0x0
+  0x44018982: [fb 0d 5c e0          ] AND R5,D0,D2
+  0x44018986: [88                   ] MOV D2,D0
+  0x44018987: [14                   ] EXTBU D0
+  0x44018988: [f1 9c                ] CMP A3,D0
+  0x4401898a: [c9 44                ] BNE 0x440189ce
+  0x4401898c: [ca 23                ] BRA 0x440189af
+  0x4401898e: [80 01                ] MOV 0x1,D0
+  0x44018990: [dd 0a 8d 01 00 00 00 ] CALL 0x4403169a,[],0x0
+  0x44018997: [a0 00                ] CMP 0x0,D0
+  0x44018999: [c9 67                ] BNE 0x44018a00
+  0x4401899b: [80 38                ] MOV 0x38,D0
+  0x4401899d: [8d                   ] MOV D3,D1
+  0x4401899e: [dd 23 dd ff ff 00 00 ] CALL 0x440166c1,[],0x0
+  0x440189a5: [fb 0d 5c e0          ] AND R5,D0,D2
+  0x440189a9: [88                   ] MOV D2,D0
+  0x440189aa: [14                   ] EXTBU D0
+  0x440189ab: [f1 9c                ] CMP A3,D0
+  0x440189ad: [c9 1b                ] BNE 0x440189c8
+  0x440189af: [f5 dc                ] MOV R7,D0
+  0x440189b1: [14                   ] EXTBU D0
+  0x440189b2: [a0 00                ] CMP 0x0,D0
+  0x440189b4: [c8 10                ] BEQ 0x440189c4
+  0x440189b6: [8c                   ] MOV D3,D0
+  0x440189b7: [85 01                ] MOV 0x1,D1
+  0x440189b9: [cd 8f fe 00 00       ] CALL 0x44018848,[],0x0
+  0x440189be: [f1 e0                ] MOV D0,A0
+  0x440189c0: [a0 00                ] CMP 0x0,D0
+  0x440189c2: [c9 48                ] BNE 0x44018a0a
+  0x440189c4: [90 00                ] MOV 0x0,A0
+  0x440189c6: [ca 44                ] BRA 0x44018a0a
+  0x440189c8: [22 ff                ] ADD -0x1,A2
+  0x440189ca: [ba 01                ] CMP 0x1,A2
+  0x440189cc: [c5 c2                ] BHI 0x4401898e
+  0x440189ce: [f8 bf 12             ] MOVHU (0x12 ,SP),D3
+  0x440189d1: [80 38                ] MOV 0x38,D0
+  0x440189d3: [8d                   ] MOV D3,D1
+  0x440189d4: [dd ed dc ff ff 00 00 ] CALL 0x440166c1,[],0x0
+  0x440189db: [fb 0d 5c e0          ] AND R5,D0,D2
+  0x440189df: [f5 dc                ] MOV R7,D0
+  0x440189e1: [14                   ] EXTBU D0
+  0x440189e2: [a0 00                ] CMP 0x0,D0
+  0x440189e4: [c8 10                ] BEQ 0x440189f4
+  0x440189e6: [8c                   ] MOV D3,D0
+  0x440189e7: [85 01                ] MOV 0x1,D1
+  0x440189e9: [cd 5f fe 00 00       ] CALL 0x44018848,[],0x0
+  0x440189ee: [f1 e0                ] MOV D0,A0
+  0x440189f0: [a0 00                ] CMP 0x0,D0
+  0x440189f2: [c9 18                ] BNE 0x44018a0a
+  0x440189f4: [89                   ] MOV D2,D1
+  0x440189f5: [15                   ] EXTBU D1
+  0x440189f6: [f8 b8 11             ] MOVBU (0x11 ,SP),D0
+  0x440189f9: [90 00                ] MOV 0x0,A0
+  0x440189fb: [a1                   ] CMP D0,D1
+  0x440189fc: [c8 0e                ] BEQ 0x44018a0a
+  0x440189fe: [ca 06                ] BRA 0x44018a04
+  0x44018a00: [f1 e0                ] MOV D0,A0
+  0x44018a02: [ca 08                ] BRA 0x44018a0a
+  0x44018a04: [fc dc 0f 04 00 80    ] MOV 0x8000040f,A0
+  0x44018a0a: [f1 d0                ] MOV A0,D0
+  0x44018a0c: [df f2 34             ] RET [EX1,A3,A2,D3,D2],0x34
+```
+
+**`FUN_440166c1` (`0x440166c1`, leitura `0x89000520 + reg_off`) & `FUN_44016703` (`0x44016703`, RMW `0x89000538` Drive/Head com `0x44016761 [f2 33] NOT D0,D3`):**
+
+<!-- source: boot_ver063_inspect.clean.txt | === DISASM FUN_440166c1 @ 0x440166c1 (size=42 B) === -->
+```asm
+-- === DISASM FUN_440166c1 @ 0x440166c1 (size=42 B) === --
+  0x440166c1: [cf 80                ] MOVM [D2],(SP)
+  0x440166c3: [f8 fe f4             ] ADD -0xc,SP
+  0x440166c6: [f1 e0                ] MOV D0,A0
+  0x440166c8: [84                   ] MOV D1,D0
+  0x440166c9: [1c                   ] EXTHU D0
+  0x440166ca: [f8 c0 0b             ] ASL 0xb,D0
+  0x440166cd: [f1 d2                ] MOV A0,D2
+  0x440166cf: [1e                   ] EXTHU D2
+  0x440166d0: [e8                   ] ADD D2,D0
+  0x440166d1: [fc c0 20 05 00 89    ] ADD -0x76fffae0,D0
+  0x440166d7: [dd 56 5a 00 00 00 00 ] CALL 0x4401c12d,[],0x0
+  0x440166de: [81                   ] MOV D0,D1
+  0x440166df: [1d                   ] EXTHU D1
+  0x440166e0: [84                   ] MOV D1,D0
+  0x440166e1: [aa 00                ] CMP 0x0,D2
+  0x440166e3: [c8 05                ] BEQ 0x440166e8
+  0x440166e5: [f8 e0 ff             ] AND 0xff,D0
+  0x440166e8: [df 80 10             ] RET [D2],0x10
+```
+
+<!-- source: boot_ver063_inspect.clean.txt | === DISASM FUN_44016703 @ 0x44016703 (size=117 B) === -->
+```asm
+-- === DISASM FUN_44016703 @ 0x44016703 (size=117 B) === --
+  0x44016703: [cf c0                ] MOVM [D2,D3],(SP)
+  0x44016705: [f8 fe f0             ] ADD -0x10,SP
+  0x44016708: [5a 24                ] MOV (0x24,SP),D2
+  0x4401670a: [f1 e4                ] MOV D1,A0
+  0x4401670c: [04                   ] CLR D1
+  0x4401670d: [83                   ] MOV D0,D3
+  0x4401670e: [1f                   ] EXTHU D3
+  0x4401670f: [fc cb 10 ff 00 00    ] CMP 0xff10,D3
+  0x44016715: [c8 21                ] BEQ 0x44016736
+  0x44016717: [c1 0c                ] BGT 0x44016723
+  0x44016719: [fc cb 0f ff 00 00    ] CMP 0xff0f,D3
+  0x4401671f: [c8 28                ] BEQ 0x44016747
+  0x44016721: [ca 2a                ] BRA 0x4401674b
+  0x44016723: [fc cb 40 ff 00 00    ] CMP 0xff40,D3
+  0x44016729: [c8 15                ] BEQ 0x4401673e
+  0x4401672b: [fc cb ff ff 00 00    ] CMP 0xffff,D3
+  0x44016731: [c9 1a                ] BNE 0x4401674b
+  0x44016733: [89                   ] MOV D2,D1
+  0x44016734: [ca 17                ] BRA 0x4401674b
+  0x44016736: [f8 e2 01             ] AND 0x1,D2
+  0x44016739: [89                   ] MOV D2,D1
+  0x4401673a: [55                   ] ASL2 D1
+  0x4401673b: [55                   ] ASL2 D1
+  0x4401673c: [ca 0f                ] BRA 0x4401674b
+  0x4401673e: [f8 e2 01             ] AND 0x1,D2
+  0x44016741: [89                   ] MOV D2,D1
+  0x44016742: [f8 c1 06             ] ASL 0x6,D1
+  0x44016745: [ca 06                ] BRA 0x4401674b
+  0x44016747: [89                   ] MOV D2,D1
+  0x44016748: [f8 e1 0f             ] AND 0xf,D1
+  0x4401674b: [f1 d2                ] MOV A0,D2
+  0x4401674d: [1e                   ] EXTHU D2
+  0x4401674e: [f8 c2 0b             ] ASL 0xb,D2
+  0x44016751: [fc c2 38 05 00 89    ] ADD -0x76fffac8,D2
+  0x44016757: [88                   ] MOV D2,D0
+  0x44016758: [46 0c                ] MOV D1,(0xc,SP)
+  0x4401675a: [dd d3 59 00 00 00 00 ] CALL 0x4401c12d,[],0x0
+  0x44016761: [f2 33                ] NOT D0,D3
+  0x44016763: [fb 0d cf 80          ] AND D0,D3,A0
+  0x44016767: [59 0c                ] MOV (0xc,SP),D1
+  0x44016769: [1d                   ] EXTHU D1
+  0x4401676a: [88                   ] MOV D2,D0
+  0x4401676b: [f9 19 8d             ] OR A0,D1
+  0x4401676e: [dd ba 59 00 00 00 00 ] CALL 0x4401c128,[],0x0
+  0x44016775: [df c0 18             ] RET [D3,D2],0x18
+```
+
+#### `FUN_4401f66a` (`v63_bgo_mount_scan_1f66a`) — `0x4401f66a` (410 B) [`ver0.63`]
+
+Contraparte exata no `/BOOT.BIN ver0.63` de `FUN_50422ebf` (`PROG061`): varre setores BGO, popula tabela P1/P2 usando `&DAT_4403658c` (`ver0.63`) e dispara `FUN_4401f804` (`0x4401f804`, equivalente ao Patch Site 1).
+
+<!-- source: boot_ver063_bgo_davis_decomp.txt | FUNC FUN_4401f66a @ 0x4401f66a (offset +0x11b inside FUN_4401f66a (entry 0x4401f66a) -->
+```c
+undefined4 FUN_4401f66a(void)
+
+{
+  int iVar1;
+  undefined4 uVar2;
+  undefined2 *puVar3;
+  uint uVar4;
+  int *piVar5;
+  uint uVar6;
+  ushort uVar7;
+  short sVar8;
+  uint uVar9;
+  uint uVar10;
+  uint uVar11;
+  short *psVar12;
+  undefined4 extraout_var;
+  undefined4 extraout_var_00;
+  undefined4 extraout_var_01;
+  undefined4 extraout_var_02;
+  undefined4 extraout_var_03;
+  undefined4 extraout_var_04;
+  undefined4 extraout_var_05;
+  undefined4 extraout_var_06;
+  undefined4 extraout_var_07;
+  undefined4 extraout_var_08;
+  undefined4 extraout_var_09;
+  undefined4 uStack_3c;
+  int iStack_38;
+  undefined4 uStack_34;
+  undefined4 local_30;
+  undefined4 local_2c;
+  undefined4 local_28;
+  undefined4 local_24;
+  undefined4 uStack_20;
+  undefined4 uStack_1c;
+  undefined4 uStack_18;
+  undefined4 uStack_14;
+
+  uVar6 = 0;
+  puVar3 = (undefined2 *)&DAT_505742c0;
+  FUN_4402c348(&DAT_505742c0,0,0x100);
+  uVar11 = 1;
+  uVar2 = extraout_var;
+  do {
+    iVar1 = FUN_4401fd83(uVar2,uVar11);
+    uVar7 = FUN_4401fe1d(iVar1,extraout_var_00);
+    uVar4 = (uint)uVar7;
+    uVar9 = FUN_4401f214(0,uVar4);
+    uVar10 = FUN_4401f214(1,uVar4);
+    if (uVar4 == 0xffffffff) {
+      FUN_4401f928(extraout_var_01,uVar11);
+      uVar2 = extraout_var_02;
+    }
+    else if (uVar4 == 0) {
+      uVar2 = extraout_var_01;
+      if (uVar6 < 6) {
+        *puVar3 = (short)uVar11;
+        puVar3 = puVar3 + 1;
+        uVar6 = uVar6 + 1;
+      }
+    }
+    else {
+      sVar8 = FUN_4401effb(iVar1 + 0x14);
+      if (sVar8 == -1) {
+        *(short *)((*(int *)(&DAT_4403658c + (uVar10 & 0xff) * 4) + (uVar9 & 0xff)) * 2 + 0x50574528
+                  ) = (short)uVar11;
+        (&uStack_34)[uVar10 & 0xff] = (&uStack_34)[uVar10 & 0xff] + (uVar9 & 0xff);
+        uVar2 = extraout_var_03;
+      }
+      else {
+        uVar10 = uVar10 & 0xff;
+        iVar1 = FUN_4401f169(extraout_var_03,uVar10);
+        piVar5 = (int *)(&DAT_4403658c + uVar10 * 4);
+        *(short *)((*piVar5 + iVar1) * 2 + 0x5057452a) = (short)uVar11;
+        iVar1 = FUN_4401f169(extraout_var_04,uVar10);
+        *(undefined2 *)((*piVar5 + iVar1) * 2 + iStack_38) = uStack_34._2_2_;
+        uVar2 = extraout_var_05;
+      }
+    }
+    uVar11 = uVar11 + 1;
+  } while (uVar11 < 0x20);
+  FUN_4401f804(uVar2,uStack_3c);
+  uVar6 = 2;
+  uVar2 = extraout_var_06;
+  while ((iVar1 = FUN_4401f044(uVar2,uVar6), iVar1 == 4 || (iVar1 == 2))) {
+    uVar6 = uVar6 + 1;
+    uVar2 = extraout_var_07;
+    if (4 < uVar6) {
+      psVar12 = (short *)&DAT_505742c0;
+      uVar6 = 0;
+      do {
+        if (*psVar12 == 0) {
+          return 0;
+        }
+        uVar2 = FUN_4401fd83(uVar2,*psVar12);
+        iVar1 = FUN_4401fdef(uVar2);
+        if (iVar1 == 0) {
+          FUN_4401f928(extraout_var_08,*psVar12);
+          uVar2 = extraout_var_09;
+        }
+        else {
+          uVar2 = extraout_var_08;
+          if (iVar1 != 1) {
+            FUN_4401f0bc(extraout_var_08,0x20,0x6c0,0x145);
+            return 1;
+          }
+        }
+        psVar12 = psVar12 + 1;
+        uVar6 = uVar6 + 1;
+      } while (uVar6 < 6);
+      return 0;
+    }
+  }
+  return 1;
+}
+
+ (GhidraScript)
+```
+
+#### `FUN_4401ffa5` (`v63_bgo_p2_reconcile_1ffa5`) — `0x4401ffa5` (875 B) [`ver0.63`]
+
+Contraparte exata no `/BOOT.BIN ver0.63` de `FUN_5042383c` (`PROG061`): reconcilia blocos da Partição 2 BGO usando descritores `0x505743f8..0x50574414`.
+
+<!-- source: boot_ver063_bgo_davis_decomp.txt | FUNC FUN_4401ffa5 @ 0x4401ffa5 (offset +0x14a inside FUN_4401ffa5 (entry 0x4401ffa5) -->
+```c
+undefined4 FUN_4401ffa5(undefined4 param_1)
+
+{
+  short sVar1;
+  uint uVar2;
+  undefined1 uVar3;
+  char cVar4;
+  undefined2 uVar5;
+  ushort uVar6;
+  int iVar7;
+  uint uVar8;
+  int iVar9;
+  uint uVar10;
+  int iVar11;
+  undefined4 uVar12;
+  char *pcVar13;
+  uint uVar14;
+  undefined4 extraout_var;
+  undefined4 extraout_var_00;
+  undefined4 extraout_var_01;
+  int extraout_var_02;
+  undefined4 extraout_var_03;
+  int extraout_var_04;
+  int extraout_var_05;
+  undefined4 extraout_var_06;
+  int extraout_var_07;
+  int extraout_var_08;
+  undefined4 extraout_var_09;
+  int extraout_var_10;
+  int extraout_var_11;
+  int extraout_var_12;
+  int extraout_var_13;
+  int extraout_var_14;
+  int extraout_var_15;
+  int extraout_var_16;
+  undefined4 uVar15;
+  undefined4 extraout_var_17;
+  undefined4 extraout_var_18;
+  undefined4 extraout_var_19;
+  undefined4 extraout_var_20;
+  undefined4 extraout_var_21;
+  undefined4 extraout_var_22;
+  undefined4 extraout_var_23;
+  undefined4 extraout_var_24;
+  undefined4 extraout_var_25;
+  undefined4 extraout_var_26;
+  undefined4 extraout_var_27;
+  int extraout_var_28;
+  int extraout_var_29;
+  int extraout_var_30;
+  int iStack_54;
+  int iStack_50;
+  uint uStack_4c;
+  ushort *puStack_48;
+  int *piStack_44;
+  uint *puStack_40;
+  uint *puStack_3c;
+  int iStack_38;
+  short sStack_32;
+  int iStack_30;
+  int iStack_2c;
+  int iStack_28;
+  ushort auStack_22 [17];
+
+  iVar7 = FUN_4401f169(param_1,2);
+  uVar14 = iVar7 + 1;
+  FUN_44021297(extraout_var);
+  puStack_48 = auStack_22;
+  uVar12 = 2;
+  FUN_4401f223(1,puStack_48,2);
+  uVar5 = FUN_4401efd3(extraout_var_00,uVar12);
+  FUN_4401f11d(&iStack_28,extraout_var_01,uVar5);
+  iStack_54 = 0x50574414;
+  uVar2 = 1;
+  iVar7 = extraout_var_02;
+  uVar12 = extraout_var_17;
+  if (uVar14 != 0) {
+    do {
+      FUN_4401f223(0,puStack_48,uVar2 & 0xffff);
+      iVar11 = FUN_4401f11d(piStack_44,extraout_var_03,auStack_22[0]);
+      uStack_4c = uVar2 + 1;
+      iVar7 = extraout_var_04;
+      uVar12 = extraout_var_18;
+      if (iVar11 == 0) {
+        if (*(short *)(iStack_2c + 0x200) == -1) {
+          if (uVar2 == uVar14) {
+            *(uint *)(iStack_38 + 0x505743f8) = uVar2;
+            *puStack_3c = 0;
+          }
+          else {
+            FUN_440213d3(extraout_var_04,uVar2);
+            iVar7 = extraout_var_11;
+            uVar12 = extraout_var_22;
+          }
+        }
+        else {
+          uVar8 = 0;
+          iVar11 = 0;
+          uVar10 = 0;
+          do {
+            sVar1 = *(short *)(iStack_2c + uVar10 * 2 + 0x200);
+            if (sVar1 != -1) {
+              if (sVar1 != 0) {
+                FUN_4401f214(0,auStack_22[0]);
+                iVar11 = iVar11 + 1;
+                iVar7 = extraout_var_05;
+              }
+              uVar8 = uVar8 + 2;
+            }
+            uVar10 = uVar10 + 2;
+          } while (uVar10 < 0xfc);
+          if (uVar2 == uVar14) {
+            *(uint *)(iStack_38 + 0x505743f8) = uVar2;
+            *puStack_3c = uVar8;
+            uVar5 = FUN_4401efd3(iVar7,2);
+            uVar3 = FUN_4401f214(0,uVar5);
+            FUN_44021485(extraout_var_06,uVar3,extraout_var_26);
+            iVar7 = extraout_var_07;
+            uVar12 = extraout_var_19;
+          }
+          else {
+            uVar6 = FUN_4401efd3(iVar7,2);
+            if (auStack_22[0] == uVar6) {
+              *(int *)(iStack_50 + 0x50574404) = iVar11;
+              iVar7 = extraout_var_08;
+              uVar12 = extraout_var_20;
+            }
+            else {
+              iVar7 = FUN_440215d1(iStack_2c);
+              if ((iVar7 == 2) && (uVar8 < *puStack_40)) {
+                *(uint *)(iStack_50 + 0x505743f8) = uVar2;
+                *puStack_40 = uVar8;
+              }
+              FUN_44021485(extraout_var_09,uVar2,extraout_var_27);
+              iVar7 = extraout_var_10;
+              uVar12 = extraout_var_21;
+            }
+          }
+        }
+      }
+      uVar2 = uStack_4c;
+    } while (uStack_4c <= uVar14);
+  }
+  iVar11 = *(int *)(iStack_54 + iVar7 * 4);
+  if (iVar11 != 0) {
+    uVar2 = iVar11 - 2;
+    uVar14 = 0;
+    piStack_44 = &iStack_2c;
+    uVar15 = 2;
+    pcVar13 = (char *)(iVar7 * 4 + 0x505743f8);
+    iVar11 = uVar2 * 2;
+    do {
+      FUN_4401f0e1(piStack_44,iVar7,uVar15,*(undefined4 *)pcVar13,uVar12,iVar11);
+      sVar1 = *(short *)(iStack_2c + extraout_var_28 + 0x200);
+      iVar7 = extraout_var_12;
+      uVar12 = extraout_var_23;
+      iVar11 = extraout_var_28;
+      if ((sVar1 != -1) && (sVar1 != 0)) {
+        uVar8 = FUN_4402052c(extraout_var_12,sVar1,uVar15);
+        uVar8 = uVar8 & 0xffff;
+        iVar7 = extraout_var_13;
+        if ((uVar8 == 0) ||
+           ((uVar10 = FUN_4401f214(0,uVar8), iVar7 = extraout_var_15,
+            (uVar10 & 0xff) != (uVar2 & 0xff) ||
+            (cVar4 = FUN_4401f214(1,uVar8), iVar7 = extraout_var_16, uVar12 = extraout_var_25,
+            iVar11 = extraout_var_30, cVar4 != *pcVar13)))) {
+          FUN_4402157e(iVar7,*(undefined4 *)pcVar13,1);
+          iVar9 = FUN_4401f24a();
+          iVar7 = extraout_var_14;
+          uVar12 = extraout_var_24;
+          iVar11 = extraout_var_29;
+          if (iVar9 != 0) {
+            uVar15 = 0xb0;
+            uVar12 = 0x13b;
+            goto LAB_44020270;
+          }
+        }
+      }
+      if (uVar2 == 0) break;
+      iVar11 = iVar11 + -4;
+      uVar2 = uVar2 - 2;
+      uVar14 = uVar14 + 1;
+    } while (uVar14 < 0x10);
+  }
+  if (((sStack_32 == -1) || (iStack_30 == -1)) ||
+     (*(short *)(iStack_2c + iStack_30 * 2 + 0x200) != *(short *)(iStack_30 * 2 + iStack_28 + 0x200)
+     )) {
+    iVar7 = FUN_440206ef(iVar7);
+    if (iVar7 == 0) {
+      return 0;
+    }
+  }
+  else {
+    uVar15 = 0xb1;
+    uVar12 = 0x159;
+LAB_44020270:
+    FUN_4401f081(iVar7,2,uVar15,uVar12,0x148);
+  }
+  return 1;
+}
+
+ (GhidraScript)
+```
+
+---
+
 ### 1.6 Criptografia Feistel (`0x44039aa8` + S-Box `0x44035d84`), `ExtrHead`/`ExtrFoot` & LZ (`uncompress`)
 
 Pipeline completo de decifração e descompressão de contêineres `.FRM` / partições `ExtrHead`...`ExtrFoot`: chave de 15 bytes em `0x50480278` (ROM `0x44039aa8`), S-Box de 256 bytes em `0x44035d84`, Adler-32 com passo variável (`strided_adler32_1e5a3`) e motor LZ (`sub_4400bb14` + `uncompress`).
@@ -7936,7 +12868,7 @@ Tabela de substituição de 256 bytes em `/BOOT.BIN` utilizada por `FUN_44012191
 
 ## Parte II — `/eh55_frm_PROG061_BOOT.bin` (Estágio 2 / DIGADIAG & FVU Loader)
 
-Binário de Estágio 2 carregado em RAM (`0x50400000..0x5043ffff`). Fornece console interativo de serviço (`DIGADIAG`), rotina de atualização `FVU` via cartão SD/`FMU` e drivers BGO/NOR específicos do carregador.
+Binário de Estágio 2 do DMR-EH55 carregado em RAM (`0x50400000..0x5043ffff`, SHA-256 `c7da9121...`). No hardware DMR-EH55 real (`Loader ver0.61 [06/03/06]` na NOR, alinhado ao NOR `ver0.18 [06/03/13]` de março de 2006), `DIGADIAG.FRM` (`0x40000` B crus) é carregado para o alias não-cacheado `0x90400000` e executado diretamente por `JMP 0x50400000`. Fornece console interativo (`DIGADIAG`), `sd_load.o` (`0x1800` B `sd48`), atualização `FVU` via cartão SD/`FMU`/`Update-Disc` e drivers BGO/NOR.
 
 ### 2.1 Inicialização, Menu DIGADIAG, `FMU_list_sum` (`0x5040ea30`) & `TimerMCU_update`
 
@@ -8145,11 +13077,14 @@ undefined4 FUN_50401f3c(void)
 }
 ```
 
-#### `FUN_5040211f` (`p61_cmd_dispatch_211f`) — `0x5040211f` (788 B)
+#### `FUN_5040211f` (`p61_nfrom_recover_map_211f`) — `0x5040211f` (788 B)
 
-Despachante de comandos DIGADIAG/serviço (`p61_cmd_dispatch_211f`).
+Recuperação e sincronização do mapa NFROM (`[nfrom] NOR STATE`: `Original -> Backup` vs `Backup -> Original`) em `PROG061` (`p61_nfrom_recover_map_211f`). Contraparte exata de `Loader ver0.61 FUN_44003150` (15 págs FAT) e `ver0.63 FUN_440018bb` (8 págs FAT).
 
-<!-- source: doc_prog061.txt | FUNC FUN_5040211f (p61_cmd_dispatch_211f) @ 0x5040211f (size=788 B, req=0x5040211f) -->
+> **Nota de Correção (Alias Histórico):** Na captura bruta [`./raw/doc_prog061.txt`](./raw/doc_prog061.txt#L190), esta rotina fora rotulada provisoriamente como `p61_cmd_dispatch_211f`. As strings `[nfrom] NOR STATE : Original -> Backup`, `[nfrom] Map load/write error`, loops `0xa07`/`0xa11` (`10` páginas OMAP/BMAP) e `0xa02..0xa04` (`3` páginas de diretório), mais o salvamento de `0xa01` via `FUN_50402435(0)`, confirmam tratar-se de `nfrom_recover_map`.
+> - **Variáveis traduzidas:** `uRam50496d10` = `nfrom_nor_state` (`0xFFFF` = Original->Backup, `0xFFFFFF` = Backup->Original, `0x0000` = íntegro); `puVar1[-3]` / `puVar1[-0xe]` = página inicial da OMAP primária (`0xa07`) vs backup (`0xa11`); `0x50496f10` = buffer `dir_pages[3]`; `0x50497510` = buffer `omap_pages[10]`; `0x50498bf0` = scratch de comparação de backup (`memcmp 0x200 B`).
+
+<!-- source: doc_prog061.txt | FUNC FUN_5040211f (p61_nfrom_recover_map_211f; raw tag: p61_cmd_dispatch_211f) @ 0x5040211f (size=788 B, req=0x5040211f) -->
 ```c
 // Callers (1): 0x504043eb
 // Referenced strings/literals:
@@ -8278,11 +13213,13 @@ LAB_504021c4:
 }
 ```
 
-#### `FUN_5040248e` (`p61_fmu_sd_diag_248e`) — `0x5040248e` (74 B)
+#### `FUN_5040248e` (`p61_bgo_ioctl_dispatch_248e`) — `0x5040248e` (header 74 B; switch @ `0x50432830` total ~237 B)
 
-Diagnóstico de cartão SD / FMU em `PROG061` (`p61_fmu_sd_diag_248e`).
+Despachante central `ioctl` do subsistema BGO / NFROM em `PROG061` (`p61_bgo_ioctl_dispatch_248e`). Contraparte exata de `Loader ver0.61 FUN_440034bf` (241 B) e `ver0.63 FUN_44001c49` (260 B).
 
-<!-- source: doc_prog061.txt | FUNC FUN_5040248e (p61_fmu_sd_diag_248e) @ 0x5040248e (size=74 B, req=0x5040248e) -->
+> **Nota de Correção (Alias Histórico) & Mapa de Casos:** Em [`./raw/doc_prog061.txt`](./raw/doc_prog061.txt#L317), fora rotulada como `p61_fmu_sd_diag_248e`. Trata-se do despachante `BGO` via salto indireto `JMP (A1)` na tabela `0x50432830` (`case 0..6`): `0` = `FUN_50421e6a` (`init_part_check`), `1` = `FUN_50422359(1,4)` (`get_status`), `2` = `FUN_50421ebe(0)` (`mount_ctrl`), `3` = `FUN_50421f23` (`bgo_read_D`), `4` = `FUN_50421f85` (`bgo_write_D`), `6` = `FUN_5042201e` (`check_clean`).
+
+<!-- source: doc_prog061.txt | FUNC FUN_5040248e (p61_bgo_ioctl_dispatch_248e; raw tag: p61_fmu_sd_diag_248e) @ 0x5040248e (size=74 B, req=0x5040248e) -->
 ```c
 // Callers (12): 0x50401f48, 0x504021f0, 0x50402250, 0x5040232b, 0x50402591, 0x5040308e, 0x504043c3, 0x5040a2bc, 0x5040a671, 0x5040a6f7, 0x5040ab80, 0x5040ac52
 // Referenced strings/literals:
@@ -8335,6 +13272,698 @@ undefined4 FUN_5040248e(undefined1 param_1,undefined2 param_2,undefined4 param_3
   }
   return puVar1[-2];
 }
+```
+
+**Disassembly MN103S de `FUN_5040248e` (`0x5040248e`) evidenciando o despacho por jump table (`0x50432830`) cujos blocos-alvo aparecem como `<undef db>` em `0x504024b2..0x50402555` antes de criação de casos:**
+
+<!-- source: prog061_disasm_all.clean.txt | === DISASM FUN_5040248e @ 0x5040248e (size=74 B) === -->
+```asm
+-- === DISASM FUN_5040248e @ 0x5040248e (size=74 B) === --
+  0x5040248e: [cf 90                ] MOVM [D2,A3],(SP)
+  0x50402490: [3f                   ] MOV SP,A3
+  0x50402491: [f8 fe e4             ] ADD -0x1c,SP
+  0x50402494: [f8 53 ff             ] MOVBU D0,(-0x1 ,A3)
+  0x50402497: [f8 77 fc             ] MOVHU D1,(-0x4 ,A3)
+  0x5040249a: [f8 43 ff             ] MOVBU (-0x1 ,A3),D0
+  0x5040249d: [a0 06                ] CMP 0x6,D0
+  0x5040249f: [c7 05                ] BLS 0x504024a4
+  0x504024a1: [cc b4 00             ] JMP 0x50402555
+  0x504024a4: [81                   ] MOV D0,D1
+  0x504024a5: [55                   ] ASL2 D1
+  0x504024a6: [f1 e4                ] MOV D1,A0
+  0x504024a8: [fc d0 30 28 43 50    ] ADD 0x50432830,A0
+  0x504024ae: [f0 04                ] MOV (A0),A1
+  0x504024b0: [f0 f5                ] JMP (A1)
+  0x504024b2: [cc                   ] <undef db 0xcc>
+  0x504024b3: [a3                   ] <undef db 0xa3>
+  0x504024b4: [00                   ] <undef db 0x00>
+  0x504024b5: [dd                   ] <undef db 0xdd>
+  0x504024b6: [b5                   ] <undef db 0xb5>
+  0x504024b7: [f9                   ] <undef db 0xf9>
+  0x504024b8: [01                   ] <undef db 0x01>
+  0x504024b9: [00                   ] <undef db 0x00>
+  0x504024ba: [00                   ] <undef db 0x00>
+  0x504024bb: [00                   ] <undef db 0x00>
+  0x504024bc: [f8                   ] <undef db 0xf8>
+  0x504024bd: [13                   ] <undef db 0x13>
+  0x504024be: [f8                   ] <undef db 0xf8>
+  0x504024bf: [cc                   ] <undef db 0xcc>
+  0x504024c0: [b1                   ] <undef db 0xb1>
+  0x504024c1: [00                   ] <undef db 0x00>
+  0x504024c2: [80                   ] <undef db 0x80>
+  0x504024c3: [01                   ] <undef db 0x01>
+  0x504024c4: [85                   ] <undef db 0x85>
+  0x504024c5: [04                   ] <undef db 0x04>
+  0x504024c6: [dd                   ] <undef db 0xdd>
+  0x504024c7: [93                   ] <undef db 0x93>
+  0x504024c8: [fe                   ] <undef db 0xfe>
+  0x504024c9: [01                   ] <undef db 0x01>
+  0x504024ca: [00                   ] <undef db 0x00>
+  0x504024cb: [00                   ] <undef db 0x00>
+  0x504024cc: [00                   ] <undef db 0x00>
+  0x504024cd: [f8                   ] <undef db 0xf8>
+  0x504024ce: [13                   ] <undef db 0x13>
+  0x504024cf: [f8                   ] <undef db 0xf8>
+  0x504024d0: [cc                   ] <undef db 0xcc>
+  0x504024d1: [a0                   ] <undef db 0xa0>
+  0x504024d2: [00                   ] <undef db 0x00>
+  0x504024d3: [00                   ] <undef db 0x00>
+  0x504024d4: [dd                   ] <undef db 0xdd>
+  0x504024d5: [ea                   ] <undef db 0xea>
+  0x504024d6: [f9                   ] <undef db 0xf9>
+  0x504024d7: [01                   ] <undef db 0x01>
+  0x504024d8: [00                   ] <undef db 0x00>
+  0x504024d9: [00                   ] <undef db 0x00>
+  0x504024da: [00                   ] <undef db 0x00>
+  0x504024db: [f8                   ] <undef db 0xf8>
+  0x504024dc: [13                   ] <undef db 0x13>
+  0x504024dd: [f8                   ] <undef db 0xf8>
+  0x504024de: [cc                   ] <undef db 0xcc>
+  0x504024df: [92                   ] <undef db 0x92>
+  0x504024e0: [00                   ] <undef db 0x00>
+  0x504024e1: [f8                   ] <undef db 0xf8>
+  0x504024e2: [67                   ] <undef db 0x67>
+  0x504024e3: [fc                   ] <undef db 0xfc>
+  0x504024e4: [80                   ] <undef db 0x80>
+  0x504024e5: [01                   ] <undef db 0x01>
+  0x504024e6: [42                   ] <undef db 0x42>
+  0x504024e7: [0c                   ] <undef db 0x0c>
+  0x504024e8: [f8                   ] <undef db 0xf8>
+  0x504024e9: [03                   ] <undef db 0x03>
+  0x504024ea: [14                   ] <undef db 0x14>
+  0x504024eb: [42                   ] <undef db 0x42>
+  0x504024ec: [10                   ] <undef db 0x10>
+  0x504024ed: [80                   ] <undef db 0x80>
+  0x504024ee: [01                   ] <undef db 0x01>
+  0x504024ef: [dd                   ] <undef db 0xdd>
+  0x504024f0: [34                   ] <undef db 0x34>
+  0x504024f1: [fa                   ] <undef db 0xfa>
+  0x504024f2: [01                   ] <undef db 0x01>
+  0x504024f3: [00                   ] <undef db 0x00>
+  0x504024f4: [00                   ] <undef db 0x00>
+  0x504024f5: [00                   ] <undef db 0x00>
+  0x504024f6: [f8                   ] <undef db 0xf8>
+  0x504024f7: [13                   ] <undef db 0x13>
+  0x504024f8: [f8                   ] <undef db 0xf8>
+  0x504024f9: [f8                   ] <undef db 0xf8>
+  0x504024fa: [03                   ] <undef db 0x03>
+  0x504024fb: [f8                   ] <undef db 0xf8>
+  0x504024fc: [a0                   ] <undef db 0xa0>
+  0x504024fd: [00                   ] <undef db 0x00>
+  0x504024fe: [c9                   ] <undef db 0xc9>
+  0x504024ff: [08                   ] <undef db 0x08>
+  0x50402500: [00                   ] <undef db 0x00>
+  0x50402501: [f8                   ] <undef db 0xf8>
+  0x50402502: [13                   ] <undef db 0x13>
+  0x50402503: [f8                   ] <undef db 0xf8>
+  0x50402504: [ca                   ] <undef db 0xca>
+  0x50402505: [20                   ] <undef db 0x20>
+  0x50402506: [fc                   ] <undef db 0xfc>
+  0x50402507: [cd                   ] <undef db 0xcd>
+  0x50402508: [df                   ] <undef db 0xdf>
+  0x50402509: [27                   ] <undef db 0x27>
+  0x5040250a: [43                   ] <undef db 0x43>
+  0x5040250b: [50                   ] <undef db 0x50>
+  0x5040250c: [f8                   ] <undef db 0xf8>
+  0x5040250d: [6b                   ] <undef db 0x6b>
+  0x5040250e: [fc                   ] <undef db 0xfc>
+  0x5040250f: [4a                   ] <undef db 0x4a>
+  0x50402510: [0c                   ] <undef db 0x0c>
+  0x50402511: [f8                   ] <undef db 0xf8>
+  0x50402512: [03                   ] <undef db 0x03>
+  0x50402513: [f8                   ] <undef db 0xf8>
+  0x50402514: [42                   ] <undef db 0x42>
+  0x50402515: [10                   ] <undef db 0x10>
+  0x50402516: [80                   ] <undef db 0x80>
+  0x50402517: [01                   ] <undef db 0x01>
+  0x50402518: [dd                   ] <undef db 0xdd>
+  0x50402519: [6e                   ] <undef db 0x6e>
+  0x5040251a: [e8                   ] <undef db 0xe8>
+  0x5040251b: [00                   ] <undef db 0x00>
+  0x5040251c: [00                   ] <undef db 0x00>
+  0x5040251d: [00                   ] <undef db 0x00>
+  0x5040251e: [00                   ] <undef db 0x00>
+  0x5040251f: [80                   ] <undef db 0x80>
+  0x50402520: [01                   ] <undef db 0x01>
+  0x50402521: [f8                   ] <undef db 0xf8>
+  0x50402522: [13                   ] <undef db 0x13>
+  0x50402523: [f8                   ] <undef db 0xf8>
+  0x50402524: [ca                   ] <undef db 0xca>
+  0x50402525: [4c                   ] <undef db 0x4c>
+  0x50402526: [f8                   ] <undef db 0xf8>
+  0x50402527: [67                   ] <undef db 0x67>
+  0x50402528: [fc                   ] <undef db 0xfc>
+  0x50402529: [80                   ] <undef db 0x80>
+  0x5040252a: [01                   ] <undef db 0x01>
+  0x5040252b: [42                   ] <undef db 0x42>
+  0x5040252c: [0c                   ] <undef db 0x0c>
+  0x5040252d: [f8                   ] <undef db 0xf8>
+  0x5040252e: [03                   ] <undef db 0x03>
+  0x5040252f: [14                   ] <undef db 0x14>
+  0x50402530: [42                   ] <undef db 0x42>
+  0x50402531: [10                   ] <undef db 0x10>
+  0x50402532: [80                   ] <undef db 0x80>
+  0x50402533: [01                   ] <undef db 0x01>
+  0x50402534: [dd                   ] <undef db 0xdd>
+  0x50402535: [51                   ] <undef db 0x51>
+  0x50402536: [fa                   ] <undef db 0xfa>
+  0x50402537: [01                   ] <undef db 0x01>
+  0x50402538: [00                   ] <undef db 0x00>
+  0x50402539: [00                   ] <undef db 0x00>
+  0x5040253a: [00                   ] <undef db 0x00>
+  0x5040253b: [f8                   ] <undef db 0xf8>
+  0x5040253c: [13                   ] <undef db 0x13>
+  0x5040253d: [f8                   ] <undef db 0xf8>
+  0x5040253e: [ca                   ] <undef db 0xca>
+  0x5040253f: [32                   ] <undef db 0x32>
+  0x50402540: [f8                   ] <undef db 0xf8>
+  0x50402541: [67                   ] <undef db 0x67>
+  0x50402542: [fc                   ] <undef db 0xfc>
+  0x50402543: [80                   ] <undef db 0x80>
+  0x50402544: [01                   ] <undef db 0x01>
+  0x50402545: [42                   ] <undef db 0x42>
+  0x50402546: [0c                   ] <undef db 0x0c>
+  0x50402547: [80                   ] <undef db 0x80>
+  0x50402548: [01                   ] <undef db 0x01>
+  0x50402549: [dd                   ] <undef db 0xdd>
+  0x5040254a: [d5                   ] <undef db 0xd5>
+  0x5040254b: [fa                   ] <undef db 0xfa>
+  0x5040254c: [01                   ] <undef db 0x01>
+  0x5040254d: [00                   ] <undef db 0x00>
+  0x5040254e: [00                   ] <undef db 0x00>
+  0x5040254f: [00                   ] <undef db 0x00>
+  0x50402550: [f8                   ] <undef db 0xf8>
+  0x50402551: [13                   ] <undef db 0x13>
+  0x50402552: [f8                   ] <undef db 0xf8>
+  0x50402553: [ca                   ] <undef db 0xca>
+  0x50402554: [1d                   ] <undef db 0x1d>
+  0x50402555: [fc cd 0e 28 43 50    ] MOV 0x5043280e,D1
+  0x5040255b: [f8 4b ff             ] MOVBU (-0x1 ,A3),D2
+  0x5040255e: [4a 0c                ] MOV D2,(0xc,SP)
+  0x50402560: [80 01                ] MOV 0x1,D0
+  0x50402562: [dd 24 e8 00 00 00 00 ] CALL 0x50410d86,[],0x0
+  0x50402569: [80 ff                ] MOV 0xff,D0
+  0x5040256b: [f8 13 f8             ] MOV D0,(-0x8 ,A3)
+  0x5040256e: [ca 02                ] BRA 0x50402570
+  0x50402570: [f8 07 f8             ] MOV (-0x8 ,A3),D1
+  0x50402573: [84                   ] MOV D1,D0
+  0x50402574: [ca 02                ] BRA 0x50402576
+  0x50402576: [f2 fc                ] MOV A3,SP
+  0x50402578: [df 90 08             ] RET [A3,D2],0x8
+```
+
+#### `FUN_50402435` (`p61_bgo_ctrl_save_2435`) — `0x50402435` (89 B)
+
+Atualiza `uRam50496d10` (`NFROM_NOR_STATE`, passando `0` ao término da migração) e grava a página de controle `0xa01` via `FUN_5040257b`. Contraparte de `ver0.61 FUN_44003466` e `ver0.63 FUN_44001be5`.
+
+<!-- source: prog061_bgo_decomp.txt | FUNC FUN_50402435 @ 0x50402435 (disassembled + created function, bodySize=89 B) -->
+```c
+undefined4 FUN_50402435(undefined4 param_1)
+
+{
+  undefined1 *puVar1;
+  undefined4 uVar2;
+  undefined1 auStack_4 [4];
+
+  puVar1 = auStack_4;
+  uRam50496d10 = param_1;
+  func_0x50404585(0xa01);
+  uVar2 = func_0x5040257b(0xa01,0x50496d10);
+  *(undefined4 *)(puVar1 + -4) = uVar2;
+  if (*(int *)(puVar1 + -4) == 2) {
+    uVar2 = 0;
+  }
+  else {
+    func_0x50404585(0xffffffff);
+    func_0x50410d86(1,0x504327b8,*(undefined4 *)(puVar1 + -4));
+    uVar2 = 0xfffffffe;
+  }
+  return uVar2;
+}
+
+ (GhidraScript)
+```
+
+#### `FUN_5040257b` (`p61_nfrom_write_page_wrap_257b`) — `0x5040257b` (96 B)
+
+Wrapper de gravação NFROM que invoca `FUN_5040248e(4, page_id, buf)`, aceita códigos BGO `0..3` retornando `2` (sucesso) ou loga erro retornando `3`. Contraparte de `ver0.61 FUN_440035b3`.
+
+<!-- source: prog061_bgo_decomp.txt | FUNC FUN_5040257b @ 0x5040257b (disassembled + created function, bodySize=96 B) -->
+```c
+undefined4 FUN_5040257b(undefined2 param_1,undefined4 param_2)
+
+{
+  undefined1 *puVar1;
+  undefined4 uVar2;
+  undefined1 auStack_8 [8];
+
+  puVar1 = auStack_8;
+  uVar2 = FUN_5040248e(4,param_1,param_2);
+  *(undefined4 *)(puVar1 + -8) = uVar2;
+  if ((((*(int *)(puVar1 + -8) == 0) || (*(int *)(puVar1 + -8) == 1)) ||
+      (*(int *)(puVar1 + -8) == 2)) || (*(int *)(puVar1 + -8) == 3)) {
+    uVar2 = 2;
+  }
+  else {
+    func_0x50410d86(1,0x5043284c,*(undefined2 *)(puVar1 + -2),*(undefined4 *)(puVar1 + -8));
+    uVar2 = 3;
+  }
+  return uVar2;
+}
+
+ (GhidraScript)
+```
+
+#### `FUN_5040439b` (`p61_nfrom_power_fail_recovery_439b`) — `0x5040439b` (490 B)
+
+Motor completo de inicialização e recuperação de diretório `[nfrom]` em `PROG061` (contraparte de `ver0.61 FUN_440053d3` e `ver0.63 FUN_44003fd0`): lê página `0xa01`, chama `FUN_5040211f()`, varre até `0x30` partições na tabela `0x50480004` (`9 B/entrada`) contra `dir_pages[3]` em `0x50496f10` e preenche o cache `(page, slot)` em `0x50498910`, além de atualizar ponteiro livre `(uRam504989d0, uRam504989d2)`.
+
+<!-- source: prog061_bgo_decomp.txt | FUNC FUN_5040439b @ 0x5040439b (disassembled + created function, bodySize=490 B) -->
+```c
+undefined4 FUN_5040439b(void)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  undefined4 uStack_8;
+  undefined4 uStack_4;
+
+  puVar1 = &uStack_8;
+  func_0x5042d323(0x50496d10,0xff,0x1cc4);
+  uVar2 = FUN_5040248e(3,0xa01,0x50496d10);
+  puVar1[-1] = uVar2;
+  if (puVar1[-1] == 0) {
+    uVar2 = FUN_5040211f();
+    puVar1[-2] = uVar2;
+    if (puVar1[-2] == 0) {
+      uRam504989d0 = 0;
+      uRam504989d2 = 0;
+      *(undefined2 *)((int)puVar1 + -10) = 0;
+      while (*(ushort *)((int)puVar1 + -10) < 0x30) {
+        *(undefined2 *)((int)puVar1 + -0xe) = 0;
+        while (*(ushort *)((int)puVar1 + -0xe) < uRam50496d14) {
+          *(short *)(puVar1 + -4) = (*(short *)((int)puVar1 + -0xe) + 1) * 0x10;
+          if (uRam50496d16 < *(ushort *)(puVar1 + -4)) {
+            *(ushort *)(puVar1 + -4) = 0x10 - (*(short *)(puVar1 + -4) - uRam50496d16);
+          }
+          else {
+            *(undefined2 *)(puVar1 + -4) = 0x10;
+          }
+          *(undefined2 *)(puVar1 + -3) = 0;
+          while (*(ushort *)(puVar1 + -3) < *(ushort *)(puVar1 + -4)) {
+            uVar2 = func_0x5042d292((uint)*(ushort *)((int)puVar1 + -10) * 9 + 0x50480004,
+                                    (uint)*(ushort *)((int)puVar1 + -0xe) * 0x200 +
+                                    (uint)*(ushort *)(puVar1 + -3) * 0x10 + 0x50496f10,8);
+            puVar1[-2] = uVar2;
+            if (puVar1[-2] == 0) {
+              *(undefined2 *)((uint)*(ushort *)((int)puVar1 + -10) * 4 + 0x50498910) =
+                   *(undefined2 *)((int)puVar1 + -0xe);
+              *(undefined2 *)((uint)*(ushort *)((int)puVar1 + -10) * 4 + 0x50498912) =
+                   *(undefined2 *)(puVar1 + -3);
+              if ((uRam504989d0 < *(ushort *)((int)puVar1 + -0xe)) ||
+                 ((*(ushort *)((int)puVar1 + -0xe) == uRam504989d0 &&
+                  (uRam504989d2 <= *(ushort *)(puVar1 + -3))))) {
+                uRam504989d0 = *(ushort *)((int)puVar1 + -0xe);
+                uRam504989d2 = *(short *)(puVar1 + -3) + 1;
+                if (0xf < uRam504989d2) {
+                  uRam504989d0 = uRam504989d0 + 1;
+                  uRam504989d2 = 0;
+                }
+              }
+              break;
+            }
+            *(short *)(puVar1 + -3) = *(short *)(puVar1 + -3) + 1;
+          }
+          if (puVar1[-2] == 0) break;
+          *(short *)((int)puVar1 + -0xe) = *(short *)((int)puVar1 + -0xe) + 1;
+        }
+        *(short *)((int)puVar1 + -10) = *(short *)((int)puVar1 + -10) + 1;
+      }
+      uVar2 = 0;
+    }
+    else {
+      func_0x50410d86(1,0x50432c0b,puVar1[-2]);
+      uVar2 = puVar1[-2];
+    }
+  }
+  else {
+    func_0x50410d86(1,0x50432be5,puVar1[-1]);
+    uVar2 = 0xfffffffb;
+  }
+  return uVar2;
+}
+
+ (GhidraScript)
+```
+
+<!-- source: prog061_disasm_all.clean.txt | === DISASM FUN_5040439b @ 0x5040439b (size=490 B) === -->
+```asm
+-- === DISASM FUN_5040439b @ 0x5040439b (size=490 B) === --
+  0x5040439b: [cf 90                ] MOVM [D2,A3],(SP)
+  0x5040439d: [3f                   ] MOV SP,A3
+  0x5040439e: [f8 fe e0             ] ADD -0x20,SP
+  0x504043a1: [fc cc 10 6d 49 50    ] MOV 0x50496d10,D0
+  0x504043a7: [2d c4 1c             ] MOV 0x1cc4,D1
+  0x504043aa: [46 0c                ] MOV D1,(0xc,SP)
+  0x504043ac: [2d ff 00             ] MOV 0xff,D1
+  0x504043af: [dd 74 8f 02 00 00 00 ] CALL 0x5042d323,[],0x0
+  0x504043b6: [fc cc 10 6d 49 50    ] MOV 0x50496d10,D0
+  0x504043bc: [42 0c                ] MOV D0,(0xc,SP)
+  0x504043be: [80 03                ] MOV 0x3,D0
+  0x504043c0: [2d 01 0a             ] MOV 0xa01,D1
+  0x504043c3: [cd cb e0 00 00       ] CALL 0x5040248e,[],0x0
+  0x504043c8: [f8 13 fc             ] MOV D0,(-0x4 ,A3)
+  0x504043cb: [f8 03 fc             ] MOV (-0x4 ,A3),D0
+  0x504043ce: [a0 00                ] CMP 0x0,D0
+  0x504043d0: [c8 1b                ] BEQ 0x504043eb
+  0x504043d2: [fc cd e5 2b 43 50    ] MOV 0x50432be5,D1
+  0x504043d8: [f8 03 fc             ] MOV (-0x4 ,A3),D0
+  0x504043db: [42 0c                ] MOV D0,(0xc,SP)
+  0x504043dd: [80 01                ] MOV 0x1,D0
+  0x504043df: [dd a7 c9 00 00 00 00 ] CALL 0x50410d86,[],0x0
+  0x504043e6: [80 fb                ] MOV 0xfb,D0
+  0x504043e8: [cc 98 01             ] JMP 0x50404580
+  0x504043eb: [cd 34 dd 00 00       ] CALL 0x5040211f,[],0x0
+  0x504043f0: [f8 13 f8             ] MOV D0,(-0x8 ,A3)
+  0x504043f3: [f8 03 f8             ] MOV (-0x8 ,A3),D0
+  0x504043f6: [a0 00                ] CMP 0x0,D0
+  0x504043f8: [c8 1d                ] BEQ 0x50404415
+  0x504043fa: [fc cd 0b 2c 43 50    ] MOV 0x50432c0b,D1
+  0x50404400: [f8 03 f8             ] MOV (-0x8 ,A3),D0
+  0x50404403: [42 0c                ] MOV D0,(0xc,SP)
+  0x50404405: [80 01                ] MOV 0x1,D0
+  0x50404407: [dd 7f c9 00 00 00 00 ] CALL 0x50410d86,[],0x0
+  0x5040440e: [f8 07 f8             ] MOV (-0x8 ,A3),D1
+  0x50404411: [84                   ] MOV D1,D0
+  0x50404412: [cc 6e 01             ] JMP 0x50404580
+  0x50404415: [00                   ] CLR D0
+  0x50404416: [fc 83 d0 89 49 50    ] MOVHU D0,(0x504989d0)
+  0x5040441c: [00                   ] CLR D0
+  0x5040441d: [fc 83 d2 89 49 50    ] MOVHU D0,(0x504989d2)
+  0x50404423: [00                   ] CLR D0
+  0x50404424: [f8 73 f6             ] MOVHU D0,(-0xa ,A3)
+  0x50404427: [f8 63 f6             ] MOVHU (-0xa ,A3),D0
+  0x5040442a: [a0 2f                ] CMP 0x2f,D0
+  0x5040442c: [c7 05                ] BLS 0x50404431
+  0x5040442e: [cc 4f 01             ] JMP 0x5040457d
+  0x50404431: [00                   ] CLR D0
+  0x50404432: [f8 73 f2             ] MOVHU D0,(-0xe ,A3)
+  0x50404435: [f8 63 f2             ] MOVHU (-0xe ,A3),D0
+  0x50404438: [fc ad 14 6d 49 50    ] MOVHU (0x50496d14),D1
+  0x5040443e: [a4                   ] CMP D1,D0
+  0x5040443f: [c4 05                ] BCS 0x50404444
+  0x50404441: [cc 31 01             ] JMP 0x50404572
+  0x50404444: [f8 63 f2             ] MOVHU (-0xe ,A3),D0
+  0x50404447: [81                   ] MOV D0,D1
+  0x50404448: [44                   ] INC D1
+  0x50404449: [84                   ] MOV D1,D0
+  0x5040444a: [81                   ] MOV D0,D1
+  0x5040444b: [55                   ] ASL2 D1
+  0x5040444c: [55                   ] ASL2 D1
+  0x5040444d: [f8 77 f0             ] MOVHU D1,(-0x10 ,A3)
+  0x50404450: [f8 63 f0             ] MOVHU (-0x10 ,A3),D0
+  0x50404453: [fc ad 16 6d 49 50    ] MOVHU (0x50496d16),D1
+  0x50404459: [a4                   ] CMP D1,D0
+  0x5040445a: [c5 09                ] BHI 0x50404463
+  0x5040445c: [80 10                ] MOV 0x10,D0
+  0x5040445e: [f8 73 f0             ] MOVHU D0,(-0x10 ,A3)
+  0x50404461: [ca 17                ] BRA 0x50404478
+  0x50404463: [f8 63 f0             ] MOVHU (-0x10 ,A3),D0
+  0x50404466: [fc ad 16 6d 49 50    ] MOVHU (0x50496d16),D1
+  0x5040446c: [f1 04                ] SUB D1,D0
+  0x5040446e: [81                   ] MOV D0,D1
+  0x5040446f: [90 10                ] MOV 0x10,A0
+  0x50404471: [f1 d0                ] MOV A0,D0
+  0x50404473: [f1 04                ] SUB D1,D0
+  0x50404475: [f8 73 f0             ] MOVHU D0,(-0x10 ,A3)
+  0x50404478: [00                   ] CLR D0
+  0x50404479: [f8 73 f4             ] MOVHU D0,(-0xc ,A3)
+  0x5040447c: [f8 63 f4             ] MOVHU (-0xc ,A3),D0
+  0x5040447f: [f8 67 f0             ] MOVHU (-0x10 ,A3),D1
+  0x50404482: [a4                   ] CMP D1,D0
+  0x50404483: [c4 05                ] BCS 0x50404488
+  0x50404485: [cc d9 00             ] JMP 0x5040455e
+  0x50404488: [f8 63 f6             ] MOVHU (-0xa ,A3),D0
+  0x5040448b: [90 09                ] MOV 0x9,A0
+  0x5040448d: [f1 d1                ] MOV A0,D1
+  0x5040448f: [f2 41                ] MUL D0,D1
+  0x50404491: [84                   ] MOV D1,D0
+  0x50404492: [fc c0 04 00 48 50    ] ADD 0x50480004,D0
+  0x50404498: [f8 67 f2             ] MOVHU (-0xe ,A3),D1
+  0x5040449b: [f1 e4                ] MOV D1,A0
+  0x5040449d: [f1 d1                ] MOV A0,D1
+  0x5040449f: [f8 c1 09             ] ASL 0x9,D1
+  0x504044a2: [fb 4a 8b f4          ] MOVHU (-0xc,A3),A0
+  0x504044a6: [91                   ] MOV A0,A1
+  0x504044a7: [f1 d6                ] MOV A1,D2
+  0x504044a9: [56                   ] ASL2 D2
+  0x504044aa: [56                   ] ASL2 D2
+  0x504044ab: [f1 e8                ] MOV D2,A0
+  0x504044ad: [91                   ] MOV A0,A1
+  0x504044ae: [fc d1 10 6f 49 50    ] ADD 0x50496f10,A1
+  0x504044b4: [f1 55                ] ADD A1,D1
+  0x504044b6: [90 08                ] MOV 0x8,A0
+  0x504044b8: [43 0c                ] MOV A0,(0xc,SP)
+  0x504044ba: [dd d8 8d 02 00 00 00 ] CALL 0x5042d292,[],0x0
+  0x504044c1: [f8 13 f8             ] MOV D0,(-0x8 ,A3)
+  0x504044c4: [f8 03 f8             ] MOV (-0x8 ,A3),D0
+  0x504044c7: [a0 00                ] CMP 0x0,D0
+  0x504044c9: [c8 05                ] BEQ 0x504044ce
+  0x504044cb: [cc 88 00             ] JMP 0x50404553
+  0x504044ce: [f8 63 f6             ] MOVHU (-0xa ,A3),D0
+  0x504044d1: [81                   ] MOV D0,D1
+  0x504044d2: [84                   ] MOV D1,D0
+  0x504044d3: [54                   ] ASL2 D0
+  0x504044d4: [fc cd 10 89 49 50    ] MOV 0x50498910,D1
+  0x504044da: [f1 e0                ] MOV D0,A0
+  0x504044dc: [f1 64                ] ADD D1,A0
+  0x504044de: [f8 63 f2             ] MOVHU (-0xe ,A3),D0
+  0x504044e1: [f0 70                ] MOVHU D0,(A0)
+  0x504044e3: [f8 63 f6             ] MOVHU (-0xa ,A3),D0
+  0x504044e6: [81                   ] MOV D0,D1
+  0x504044e7: [84                   ] MOV D1,D0
+  0x504044e8: [54                   ] ASL2 D0
+  0x504044e9: [fc cd 12 89 49 50    ] MOV 0x50498912,D1
+  0x504044ef: [f1 e0                ] MOV D0,A0
+  0x504044f1: [f1 64                ] ADD D1,A0
+  0x504044f3: [f8 63 f4             ] MOVHU (-0xc ,A3),D0
+  0x504044f6: [f0 70                ] MOVHU D0,(A0)
+  0x504044f8: [f8 63 f2             ] MOVHU (-0xe ,A3),D0
+  0x504044fb: [fc ad d0 89 49 50    ] MOVHU (0x504989d0),D1
+  0x50404501: [a4                   ] CMP D1,D0
+  0x50404502: [c5 1c                ] BHI 0x5040451e
+  0x50404504: [f8 63 f2             ] MOVHU (-0xe ,A3),D0
+  0x50404507: [fc ad d0 89 49 50    ] MOVHU (0x504989d0),D1
+  0x5040450d: [a4                   ] CMP D1,D0
+  0x5040450e: [c9 43                ] BNE 0x50404551
+  0x50404510: [f8 63 f4             ] MOVHU (-0xc ,A3),D0
+  0x50404513: [fc ad d2 89 49 50    ] MOVHU (0x504989d2),D1
+  0x50404519: [a4                   ] CMP D1,D0
+  0x5040451a: [c6 04                ] BCC 0x5040451e
+  0x5040451c: [ca 35                ] BRA 0x50404551
+  0x5040451e: [f8 63 f2             ] MOVHU (-0xe ,A3),D0
+  0x50404521: [fc 83 d0 89 49 50    ] MOVHU D0,(0x504989d0)
+  0x50404527: [f8 63 f4             ] MOVHU (-0xc ,A3),D0
+  0x5040452a: [81                   ] MOV D0,D1
+  0x5040452b: [44                   ] INC D1
+  0x5040452c: [fc 87 d2 89 49 50    ] MOVHU D1,(0x504989d2)
+  0x50404532: [fc ac d2 89 49 50    ] MOVHU (0x504989d2),D0
+  0x50404538: [a0 0f                ] CMP 0xf,D0
+  0x5040453a: [c7 17                ] BLS 0x50404551
+  0x5040453c: [fc ac d0 89 49 50    ] MOVHU (0x504989d0),D0
+  0x50404542: [81                   ] MOV D0,D1
+  0x50404543: [44                   ] INC D1
+  0x50404544: [fc 87 d0 89 49 50    ] MOVHU D1,(0x504989d0)
+  0x5040454a: [00                   ] CLR D0
+  0x5040454b: [fc 83 d2 89 49 50    ] MOVHU D0,(0x504989d2)
+  0x50404551: [ca 0d                ] BRA 0x5040455e
+  0x50404553: [f8 63 f4             ] MOVHU (-0xc ,A3),D0
+  0x50404556: [81                   ] MOV D0,D1
+  0x50404557: [44                   ] INC D1
+  0x50404558: [f8 77 f4             ] MOVHU D1,(-0xc ,A3)
+  0x5040455b: [cc 21 ff             ] JMP 0x5040447c
+  0x5040455e: [f8 03 f8             ] MOV (-0x8 ,A3),D0
+  0x50404561: [a0 00                ] CMP 0x0,D0
+  0x50404563: [c9 04                ] BNE 0x50404567
+  0x50404565: [ca 0d                ] BRA 0x50404572
+  0x50404567: [f8 63 f2             ] MOVHU (-0xe ,A3),D0
+  0x5040456a: [81                   ] MOV D0,D1
+  0x5040456b: [44                   ] INC D1
+  0x5040456c: [f8 77 f2             ] MOVHU D1,(-0xe ,A3)
+  0x5040456f: [cc c6 fe             ] JMP 0x50404435
+  0x50404572: [f8 63 f6             ] MOVHU (-0xa ,A3),D0
+  0x50404575: [81                   ] MOV D0,D1
+  0x50404576: [44                   ] INC D1
+  0x50404577: [f8 77 f6             ] MOVHU D1,(-0xa ,A3)
+  0x5040457a: [cc ad fe             ] JMP 0x50404427
+  0x5040457d: [00                   ] CLR D0
+  0x5040457e: [ca 02                ] BRA 0x50404580
+  0x50404580: [f2 fc                ] MOV A3,SP
+  0x50404582: [df 90 08             ] RET [A3,D2],0x8
+```
+
+#### `FUN_50404585` (`p61_bgo_nor_marker_stub_4585`) & `FUN_50404592` (`p61_bgo_nor_autoselect_4592`) — `0x50404585` (13 B) / `0x50404592` (281 B)
+
+Sonda física de identificação JEDEC/Autoselect da Flash NOR em `0x84380000` chamada no início de `FUN_5040a294` (`bgo_driver_init`): configura bits de controle em `Ramdb000500` (`&= 0xffcf`, `|= 0x10`) e `P5OUT` (`&= 0xfb`), escreve sequência `0x90 / 0x55 / 0x90`, diferencia fabricante `0x1c` vs **`0x01` (Spansion/AMD)** e, quando `Device ID == 0x227e`, lê identificação estendida em **`0x8438001c`** antes de emitir Reset `0xf0`. *(Notar efeitos da Armadilha #5 no C sobre leituras/escritas voláteis em `0x84380000` — integralmente visíveis no disassembly abaixo.)*
+
+<!-- source: prog061_bgo_decomp.txt | FUNC FUN_50404592 @ 0x50404592 (disassembled + created function, bodySize=281 B) -->
+```c
+void FUN_50404585(void)
+
+{
+  return;
+}
+
+ (GhidraScript)
+
+undefined4 FUN_50404592(short *param_1,short *param_2)
+
+{
+  ushort uVar1;
+  byte bVar2;
+  undefined4 uVar3;
+  undefined4 uStack_8;
+
+  uVar1 = Ramdb000500;
+  Ramdb000500 = uVar1 & 0xffcf;
+  uVar1 = Ramdb000500;
+  Ramdb000500 = uVar1 | 0x10;
+  bVar2 = P5OUT;
+  P5OUT = bVar2 & 0xfb;
+  uRam84380000 = 0x90;
+  uRam84380554 = 0x55;
+  uRam84380aaa = 0x90;
+  *param_1 = 0x90;
+  if (*param_1 == 0x1c) {
+    *param_2 = sRam84380002;
+    uVar3 = 0xffff;
+    sRam84380002 = -1;
+  }
+  else if ((char)*param_1 == '\x01') {
+    uStack_8 = (undefined2 *)0x84380002;
+    *param_2 = sRam84380002;
+    if (*param_2 == 0x227e) {
+      uStack_8 = (undefined2 *)0x8438001c;
+      *param_2 = sRam8438001c;
+    }
+    else {
+      *param_2 = 0;
+    }
+    uVar3 = 0xf0;
+    *uStack_8 = 0xf0;
+  }
+  else {
+    uVar3 = 0;
+    *param_2 = 0;
+  }
+  return uVar3;
+}
+
+ (GhidraScript)
+```
+
+<!-- source: prog061_disasm_all.clean.txt | === DISASM FUN_50404592 @ 0x50404592 (size=281 B) === -->
+```asm
+-- === DISASM FUN_50404592 @ 0x50404592 (size=281 B) === --
+  0x50404592: [cf 10                ] MOVM [A3],(SP)
+  0x50404594: [3f                   ] MOV SP,A3
+  0x50404595: [f8 fe fc             ] ADD -0x4,SP
+  0x50404598: [f8 13 08             ] MOV D0,(0x8 ,A3)
+  0x5040459b: [f8 17 0c             ] MOV D1,(0xc ,A3)
+  0x5040459e: [fc ac 00 05 00 db    ] MOVHU (0xdb000500),D0
+  0x504045a4: [81                   ] MOV D0,D1
+  0x504045a5: [fa e1 cf ff          ] AND 0xffcf,D1
+  0x504045a9: [fc 87 00 05 00 db    ] MOVHU D1,(0xdb000500)
+  0x504045af: [fc ac 00 05 00 db    ] MOVHU (0xdb000500),D0
+  0x504045b5: [81                   ] MOV D0,D1
+  0x504045b6: [f8 e5 10             ] OR 0x10,D1
+  0x504045b9: [fc 87 00 05 00 db    ] MOVHU D1,(0xdb000500)
+  0x504045bf: [fc a8 08 05 00 db    ] MOVBU (0xdb000508),D0
+  0x504045c5: [81                   ] MOV D0,D1
+  0x504045c6: [f8 e1 fb             ] AND 0xfb,D1
+  0x504045c9: [fc 86 08 05 00 db    ] MOVBU D1,(0xdb000508)
+  0x504045cf: [fc cc 00 00 38 84    ] MOV 0x84380000,D0
+  0x504045d5: [f8 13 fc             ] MOV D0,(-0x4 ,A3)
+  0x504045d8: [f8 23 fc             ] MOV (-0x4,A3),A0
+  0x504045db: [2c 90 00             ] MOV 0x90,D0
+  0x504045de: [f0 70                ] MOVHU D0,(A0)
+  0x504045e0: [fc cc aa 0a 38 84    ] MOV 0x84380aaa,D0
+  0x504045e6: [f8 13 fc             ] MOV D0,(-0x4 ,A3)
+  0x504045e9: [f8 23 fc             ] MOV (-0x4,A3),A0
+  0x504045ec: [2c aa 00             ] MOV 0xaa,D0
+  0x504045ef: [f0 70                ] MOVHU D0,(A0)
+  0x504045f1: [fc cc 54 05 38 84    ] MOV 0x84380554,D0
+  0x504045f7: [f8 13 fc             ] MOV D0,(-0x4 ,A3)
+  0x504045fa: [f8 23 fc             ] MOV (-0x4,A3),A0
+  0x504045fd: [80 55                ] MOV 0x55,D0
+  0x504045ff: [f0 70                ] MOVHU D0,(A0)
+  0x50404601: [fc cc aa 0a 38 84    ] MOV 0x84380aaa,D0
+  0x50404607: [f8 13 fc             ] MOV D0,(-0x4 ,A3)
+  0x5040460a: [f8 23 fc             ] MOV (-0x4,A3),A0
+  0x5040460d: [2c 90 00             ] MOV 0x90,D0
+  0x50404610: [f0 70                ] MOVHU D0,(A0)
+  0x50404612: [fc cc 00 00 38 84    ] MOV 0x84380000,D0
+  0x50404618: [f8 13 fc             ] MOV D0,(-0x4 ,A3)
+  0x5040461b: [f8 23 08             ] MOV (0x8,A3),A0
+  0x5040461e: [f8 27 fc             ] MOV (-0x4,A3),A1
+  0x50404621: [f0 61                ] MOVHU (A1),D0
+  0x50404623: [f0 70                ] MOVHU D0,(A0)
+  0x50404625: [f8 23 08             ] MOV (0x8,A3),A0
+  0x50404628: [f0 60                ] MOVHU (A0),D0
+  0x5040462a: [a0 1c                ] CMP 0x1c,D0
+  0x5040462c: [c9 22                ] BNE 0x5040464e
+  0x5040462e: [f8 03 fc             ] MOV (-0x4 ,A3),D0
+  0x50404631: [81                   ] MOV D0,D1
+  0x50404632: [29 02                ] ADD 0x2,D1
+  0x50404634: [f8 17 fc             ] MOV D1,(-0x4 ,A3)
+  0x50404637: [f8 23 0c             ] MOV (0xc,A3),A0
+  0x5040463a: [f8 27 fc             ] MOV (-0x4,A3),A1
+  0x5040463d: [f0 61                ] MOVHU (A1),D0
+  0x5040463f: [f0 70                ] MOVHU D0,(A0)
+  0x50404641: [f8 23 fc             ] MOV (-0x4,A3),A0
+  0x50404644: [fc cc ff ff 00 00    ] MOV 0xffff,D0
+  0x5040464a: [f0 70                ] MOVHU D0,(A0)
+  0x5040464c: [ca 58                ] BRA 0x504046a4
+  0x5040464e: [f8 23 08             ] MOV (0x8,A3),A0
+  0x50404651: [f0 60                ] MOVHU (A0),D0
+  0x50404653: [81                   ] MOV D0,D1
+  0x50404654: [15                   ] EXTBU D1
+  0x50404655: [84                   ] MOV D1,D0
+  0x50404656: [1c                   ] EXTHU D0
+  0x50404657: [a0 01                ] CMP 0x1,D0
+  0x50404659: [c9 45                ] BNE 0x5040469e
+  0x5040465b: [f8 03 fc             ] MOV (-0x4 ,A3),D0
+  0x5040465e: [81                   ] MOV D0,D1
+  0x5040465f: [29 02                ] ADD 0x2,D1
+  0x50404661: [f8 17 fc             ] MOV D1,(-0x4 ,A3)
+  0x50404664: [f8 23 0c             ] MOV (0xc,A3),A0
+  0x50404667: [f8 27 fc             ] MOV (-0x4,A3),A1
+  0x5040466a: [f0 61                ] MOVHU (A1),D0
+  0x5040466c: [f0 70                ] MOVHU D0,(A0)
+  0x5040466e: [f8 23 0c             ] MOV (0xc,A3),A0
+  0x50404671: [f0 60                ] MOVHU (A0),D0
+  0x50404673: [fa c8 7e 22          ] CMP 0x227e,D0
+  0x50404677: [c9 17                ] BNE 0x5040468e
+  0x50404679: [fc cc 1c 00 38 84    ] MOV 0x8438001c,D0
+  0x5040467f: [f8 13 fc             ] MOV D0,(-0x4 ,A3)
+  0x50404682: [f8 23 0c             ] MOV (0xc,A3),A0
+  0x50404685: [f8 27 fc             ] MOV (-0x4,A3),A1
+  0x50404688: [f0 61                ] MOVHU (A1),D0
+  0x5040468a: [f0 70                ] MOVHU D0,(A0)
+  0x5040468c: [ca 08                ] BRA 0x50404694
+  0x5040468e: [f8 23 0c             ] MOV (0xc,A3),A0
+  0x50404691: [00                   ] CLR D0
+  0x50404692: [f0 70                ] MOVHU D0,(A0)
+  0x50404694: [f8 23 fc             ] MOV (-0x4,A3),A0
+  0x50404697: [2c f0 00             ] MOV 0xf0,D0
+  0x5040469a: [f0 70                ] MOVHU D0,(A0)
+  0x5040469c: [ca 08                ] BRA 0x504046a4
+  0x5040469e: [f8 23 0c             ] MOV (0xc,A3),A0
+  0x504046a1: [00                   ] CLR D0
+  0x504046a2: [f0 70                ] MOVHU D0,(A0)
+  0x504046a4: [ca 02                ] BRA 0x504046a6
+  0x504046a6: [f2 fc                ] MOV A3,SP
+  0x504046a8: [df 10 04             ] RET [A3],0x4
 ```
 
 #### `FUN_50404dcd` (`p61_print_helper_4dcd`) — `0x50404dcd` (144 B)
@@ -9056,7 +14685,1435 @@ bool FUN_5040ea30(int param_1,int param_2)
   0x5040ea80: [f8                   ] ?? F8h
 ```
 
+#### Módulo `sd_load.o` e Chamadores em `/eh55_frm_PROG061_BOOT.bin` (Disassembly MN103S Verificado no Binário)
+
+> **Equivalência com a NOR do DMR-EH55 (`Loader ver0.61 [06/03/06]`):** Os binários brutos de `/eh55_frm_PROG061_BOOT.bin` (`0x50400000`, SHA-256 `c7da9121...`) possuem apenas 5 funções criadas no projeto `Panadiga_MN103S`. O disassembly MN103S completo abaixo — verificado diretamente contra `prog061_dec.bin` — comprova o módulo `sd_load.o` compilado no Estágio 2 do DMR-EH55 e seu alinhamento semântico exato com o bootloader NOR de março de 2006 (`dmr-es35v/flash.bin`, `Loader ver0.18 [06/03/13]`), diferindo do `/BOOT.BIN` (`ver0.63` EZ485V) ao ler `DIGADIAG.FRM` cru de `0x40000` B diretamente para `0x90400000` e tabela `PANA__SD.FRM` de `0x1800` B (`sd48`, registros de `0x30` = 48 B) em RAM (`0x50481b5c` em `PROG061`; `0x504814ac` em `dmr-es35v/flash.bin`).
+
+##### `sd_decrypt_toc_48b` (`0x5040e9ae` / `+4` em `0x5040e9b2` .. `0x5040ea1b`)
+
+Descriptografa buffer do TOC de `PANA__SD.FRM` em blocos de 8 bytes usando `0x50416a76` (chave Feistel em `0x50480344`/`0x5048034b`) + `0x50416d5d`. Nota: `0x5040e9b2` cai dentro de `0x5040e9b1: ADD -0x10,SP`; o prólogo real é `0x5040e9ae`.
+
+<!-- source: prog061_dec.bin (base 0x50400000, SHA-256 c7da9121...) | DISASM 0x5040e9ae..0x5040ea1b -->
+```asm
+  0x5040e9ae: [cf 10               ] MOVM [A3],(SP)
+  0x5040e9b0: [3f                  ] MOV SP,A3
+  0x5040e9b1: [f8 fe f0            ] ADD -0x10,SP
+  0x5040e9b4: [f8 13 08            ] MOV D0,(0x8,A3)
+  0x5040e9b7: [f8 17 0c            ] MOV D1,(0xc,A3)
+  0x5040e9ba: [fc a4 f8 02 48 50   ] MOV (0x504802f8),D0
+  0x5040e9c0: [a0 00               ] CMP 0x0,D0
+  0x5040e9c2: [c9 25               ] BNE 0x5040e9e7
+  0x5040e9c4: [fc cc 44 03 48 50   ] MOV 0x50480344,D0
+  0x5040e9ca: [fc cd 4b 03 48 50   ] MOV 0x5048034b,D1
+  0x5040e9d0: [fc dc 3c 1b 48 50   ] MOV 0x50481b3c,A0
+  0x5040e9d6: [43 0c               ] MOV A0,(0xc,SP)
+  0x5040e9d8: [dd 9e 80 00 00 00 00] CALL 0x50416a76,[],0x0
+  0x5040e9df: [80 01               ] MOV 0x1,D0
+  0x5040e9e1: [fc 81 f8 02 48 50   ] MOV D0,(0x504802f8)
+  0x5040e9e7: [f8 03 0c            ] MOV (0xc,A3),D0
+  0x5040e9ea: [a0 00               ] CMP 0x0,D0
+  0x5040e9ec: [c1 04               ] BGT 0x5040e9f0
+  0x5040e9ee: [ca 27               ] BRA 0x5040ea15
+  0x5040e9f0: [fc cd 3c 1b 48 50   ] MOV 0x50481b3c,D1
+  0x5040e9f6: [84                  ] MOV D1,D0
+  0x5040e9f7: [f8 07 08            ] MOV (0x8,A3),D1
+  0x5040e9fa: [dd 63 83 00 00 00 00] CALL 0x50416d5d,[],0x0
+  0x5040ea01: [f8 03 0c            ] MOV (0xc,A3),D0
+  0x5040ea04: [81                  ] MOV D0,D1
+  0x5040ea05: [29 f8               ] ADD -0x8,D1
+  0x5040ea07: [f8 17 0c            ] MOV D1,(0xc,A3)
+  0x5040ea0a: [f8 03 08            ] MOV (0x8,A3),D0
+  0x5040ea0d: [81                  ] MOV D0,D1
+  0x5040ea0e: [29 08               ] ADD 0x8,D1
+  0x5040ea10: [f8 17 08            ] MOV D1,(0x8,A3)
+  0x5040ea13: [ca d4               ] BRA 0x5040e9e7
+  0x5040ea15: [ca 02               ] BRA 0x5040ea17
+  0x5040ea17: [f2 fc               ] MOV A3,SP
+  0x5040ea19: [df 10 04            ] RET [A3],0x4
+```
+
+##### `sd_list_sum_48b` (`0x5040ea1c` / `+1` em `0x5040ea1d`, prólogo completo do bloco `FUN_5040ea30`)
+
+Prólogo completo em `0x5040ea1c` (onde `0x5040ea1d` é byte `+1` de `cf 10 MOVM`) que inicializa o acumulador antes do loop sobreposto `0x5040ea2f..0x5040ea7c` já exibido acima em [`FUN_5040ea30`](#fun_5040ea30-fmu_list_sum--decompilação-verificada--disassembly-de-sobreposição-0x5040ea2c0x5040ea80).
+
+<!-- source: prog061_dec.bin (base 0x50400000, SHA-256 c7da9121...) | DISASM 0x5040ea1c..0x5040ea7c -->
+```asm
+  0x5040ea1c: [cf 10               ] MOVM [A3],(SP)
+  0x5040ea1e: [3f                  ] MOV SP,A3
+  0x5040ea1f: [f8 fe ec            ] ADD -0x14,SP
+  0x5040ea22: [f8 13 08            ] MOV D0,(0x8,A3)
+  0x5040ea25: [f8 03 08            ] MOV (0x8,A3),D0
+  0x5040ea28: [f8 13 fc            ] MOV D0,(-0x4,A3)
+  0x5040ea2b: [00                  ] CLR D0
+  0x5040ea2c: [f8 73 fa            ] MOVHU D0,(-0x6,A3)
+  0x5040ea2f: [f8 07 08            ] MOV (0x8,A3),D1
+  0x5040ea32: [84                  ] MOV D1,D0
+  0x5040ea33: [28 2e               ] ADD 0x2e,D0
+  0x5040ea35: [f8 07 fc            ] MOV (-0x4,A3),D1
+  0x5040ea38: [a1                  ] CMP D0,D1
+  0x5040ea39: [c4 04               ] BCS 0x5040ea3d
+  0x5040ea3b: [ca 19               ] BRA 0x5040ea54
+  0x5040ea3d: [f8 23 fc            ] MOV (-0x4,A3),A0
+  0x5040ea40: [f0 44               ] MOVBU (A0),D1
+  0x5040ea42: [84                  ] MOV D1,D0
+  0x5040ea43: [f8 67 fa            ] MOVHU (-0x6,A3),D1
+  0x5040ea46: [e4                  ] ADD D1,D0
+  0x5040ea47: [f8 73 fa            ] MOVHU D0,(-0x6,A3)
+  0x5040ea4a: [f8 03 fc            ] MOV (-0x4,A3),D0
+  0x5040ea4d: [81                  ] MOV D0,D1
+  0x5040ea4e: [44                  ] INC D1
+  0x5040ea4f: [f8 17 fc            ] MOV D1,(-0x4,A3)
+  0x5040ea52: [ca dd               ] BRA 0x5040ea2f
+  0x5040ea54: [f8 23 08            ] MOV (0x8,A3),A0
+  0x5040ea57: [f8 60 2e            ] MOVHU (0x2e,A0),D0
+  0x5040ea5a: [f8 67 fa            ] MOVHU (-0x6,A3),D1
+  0x5040ea5d: [a4                  ] CMP D1,D0
+  0x5040ea5e: [c9 08               ] BNE 0x5040ea66
+  0x5040ea60: [80 01               ] MOV 0x1,D0
+  0x5040ea62: [ca 16               ] BRA 0x5040ea78
+  0x5040ea64: [ca 14               ] BRA 0x5040ea78
+  0x5040ea66: [fc cd f6 49 43 50   ] MOV 0x504349f6,D1  ; '[fmu] error! list_sum is invalid.\n'
+  0x5040ea6c: [80 01               ] MOV 0x1,D0
+  0x5040ea6e: [dd f2 13 00 00 00 00] CALL 0x5040fe60,[],0x0
+  0x5040ea75: [00                  ] CLR D0
+  0x5040ea76: [ca 02               ] BRA 0x5040ea78
+  0x5040ea78: [f2 fc               ] MOV A3,SP
+  0x5040ea7a: [df 10 04            ] RET [A3],0x4
+```
+
+##### `sd_find_firm_entry` (`0x5040ea7d..0x5040eb34`, 184 B)
+
+Varre até 128 entradas (`0..0x7f`) com passo `0x30` (48 B) em `0x50481b5c`, valida checksum de 46 bytes via `0x5040ea1c` contra o campo `+0x2e` e grava ponteiro da entrada compatível.
+
+<!-- source: prog061_dec.bin (base 0x50400000, SHA-256 c7da9121...) | DISASM 0x5040ea7d..0x5040eb34 -->
+```asm
+  0x5040ea7d: [cf 10               ] MOVM [A3],(SP)
+  0x5040ea7f: [3f                  ] MOV SP,A3
+  0x5040ea80: [f8 fe e8            ] ADD -0x18,SP
+  0x5040ea83: [f8 13 08            ] MOV D0,(0x8,A3)
+  0x5040ea86: [84                  ] MOV D1,D0
+  0x5040ea87: [f8 53 ff            ] MOVBU D0,(-0x1,A3)
+  0x5040ea8a: [00                  ] CLR D0
+  0x5040ea8b: [f8 13 f8            ] MOV D0,(-0x8,A3)
+  0x5040ea8e: [f8 03 f8            ] MOV (-0x8,A3),D0
+  0x5040ea91: [a0 7f               ] CMP 0x7f,D0
+  0x5040ea93: [c3 05               ] BLE 0x5040ea98
+  0x5040ea95: [cc 98 00            ] JMP 0x5040eb2d
+  0x5040ea98: [f8 03 f8            ] MOV (-0x8,A3),D0
+  0x5040ea9b: [90 30               ] MOV 0x30,A0
+  0x5040ea9d: [f1 d1               ] MOV A0,D1
+  0x5040ea9f: [f2 41               ] MUL D0,D1
+  0x5040eaa1: [84                  ] MOV D1,D0
+  0x5040eaa2: [fc c0 6c 1b 48 50   ] ADD 0x50481b6c,D0
+  0x5040eaa8: [85 08               ] MOV 0x8,D1
+  0x5040eaaa: [46 0c               ] MOV D1,(0xc,SP)
+  0x5040eaac: [f8 07 08            ] MOV (0x8,A3),D1
+  0x5040eaaf: [dd 4c e9 01 00 00 00] CALL 0x5042d3fb,[],0x0
+  0x5040eab6: [a0 00               ] CMP 0x0,D0
+  0x5040eab8: [c9 6a               ] BNE 0x5040eb22
+  0x5040eaba: [f8 03 f8            ] MOV (-0x8,A3),D0
+  0x5040eabd: [90 30               ] MOV 0x30,A0
+  0x5040eabf: [f1 d1               ] MOV A0,D1
+  0x5040eac1: [f2 41               ] MUL D0,D1
+  0x5040eac3: [84                  ] MOV D1,D0
+  0x5040eac4: [fc c0 5c 1b 48 50   ] ADD 0x50481b5c,D0
+  0x5040eaca: [f8 07 10            ] MOV (0x10,A3),D1
+  0x5040eacd: [90 04               ] MOV 0x4,A0
+  0x5040eacf: [43 0c               ] MOV A0,(0xc,SP)
+  0x5040ead1: [dd 2a e9 01 00 00 00] CALL 0x5042d3fb,[],0x0
+  0x5040ead8: [a0 00               ] CMP 0x0,D0
+  0x5040eada: [c9 48               ] BNE 0x5040eb22
+  0x5040eadc: [f8 03 f8            ] MOV (-0x8,A3),D0
+  0x5040eadf: [85 30               ] MOV 0x30,D1
+  0x5040eae1: [f2 44               ] MUL D1,D0
+  0x5040eae3: [f1 e0               ] MOV D0,A0
+  0x5040eae5: [fc d0 5c 1b 48 50   ] ADD 0x50481b5c,A0
+  0x5040eaeb: [f8 40 18            ] MOVBU (0x18,A0),D0
+  0x5040eaee: [f8 47 ff            ] MOVBU (-0x1,A3),D1
+  0x5040eaf1: [a4                  ] CMP D1,D0
+  0x5040eaf2: [c9 30               ] BNE 0x5040eb22
+  0x5040eaf4: [f8 03 f8            ] MOV (-0x8,A3),D0
+  0x5040eaf7: [85 30               ] MOV 0x30,D1
+  0x5040eaf9: [f2 44               ] MUL D1,D0
+  0x5040eafb: [81                  ] MOV D0,D1
+  0x5040eafc: [fc c1 5c 1b 48 50   ] ADD 0x50481b5c,D1
+  0x5040eb02: [84                  ] MOV D1,D0
+  0x5040eb03: [cd 19 ff 00 00      ] CALL 0x5040ea1c,[],0x0
+  0x5040eb08: [a0 01               ] CMP 0x1,D0
+  0x5040eb0a: [c9 18               ] BNE 0x5040eb22
+  0x5040eb0c: [f8 23 14            ] MOV (0x14,A3),A0
+  0x5040eb0f: [f8 03 f8            ] MOV (-0x8,A3),D0
+  0x5040eb12: [85 30               ] MOV 0x30,D1
+  0x5040eb14: [f2 44               ] MUL D1,D0
+  0x5040eb16: [fc cd 5c 1b 48 50   ] MOV 0x50481b5c,D1
+  0x5040eb1c: [e4                  ] ADD D1,D0
+  0x5040eb1d: [60                  ] MOV D0,(A0)
+  0x5040eb1e: [80 01               ] MOV 0x1,D0
+  0x5040eb20: [ca 10               ] BRA 0x5040eb30
+  0x5040eb22: [f8 03 f8            ] MOV (-0x8,A3),D0
+  0x5040eb25: [81                  ] MOV D0,D1
+  0x5040eb26: [44                  ] INC D1
+  0x5040eb27: [f8 17 f8            ] MOV D1,(-0x8,A3)
+  0x5040eb2a: [cc 64 ff            ] JMP 0x5040ea8e
+  0x5040eb2d: [00                  ] CLR D0
+  0x5040eb2e: [ca 02               ] BRA 0x5040eb30
+  0x5040eb30: [f2 fc               ] MOV A3,SP
+  0x5040eb32: [df 10 04            ] RET [A3],0x4
+```
+
+##### `bytes_sum32` (`0x5040eb35..0x5040eb77`, 67 B) & leitor DVD-RAM `0x5040eb78..0x5040ebfd` (134 B)
+
+Rotina `bytes_sum32` (`0x5040eb35` até `RET` em `0x5040eb75..0x5040eb77`) seguida pelo leitor de TOC de `Update-Disc`/DVD-RAM (`0x5040eb78`, chamando `0x5040edd3` com tamanho `0x1800` em `0x50481b5c` e descriptografando cada entrada de 48 B via `0x5040e9ae`).
+
+<!-- source: prog061_dec.bin (base 0x50400000, SHA-256 c7da9121...) | DISASM 0x5040eb35..0x5040ebfd -->
+```asm
+  0x5040eb35: [cf 10               ] MOVM [A3],(SP)
+  0x5040eb37: [3f                  ] MOV SP,A3
+  0x5040eb38: [f8 fe fc            ] ADD -0x4,SP
+  0x5040eb3b: [f8 13 08            ] MOV D0,(0x8,A3)
+  0x5040eb3e: [f8 17 0c            ] MOV D1,(0xc,A3)
+  0x5040eb41: [00                  ] CLR D0
+  0x5040eb42: [f8 13 fc            ] MOV D0,(-0x4,A3)
+  0x5040eb45: [f8 03 0c            ] MOV (0xc,A3),D0
+  0x5040eb48: [a0 00               ] CMP 0x0,D0
+  0x5040eb4a: [c9 04               ] BNE 0x5040eb4e
+  0x5040eb4c: [ca 21               ] BRA 0x5040eb6d
+  0x5040eb4e: [f8 23 08            ] MOV (0x8,A3),A0
+  0x5040eb51: [f0 40               ] MOVBU (A0),D0
+  0x5040eb53: [f8 07 fc            ] MOV (-0x4,A3),D1
+  0x5040eb56: [e4                  ] ADD D1,D0
+  0x5040eb57: [f8 13 fc            ] MOV D0,(-0x4,A3)
+  0x5040eb5a: [f8 03 08            ] MOV (0x8,A3),D0
+  0x5040eb5d: [81                  ] MOV D0,D1
+  0x5040eb5e: [44                  ] INC D1
+  0x5040eb5f: [f8 17 08            ] MOV D1,(0x8,A3)
+  0x5040eb62: [f8 03 0c            ] MOV (0xc,A3),D0
+  0x5040eb65: [81                  ] MOV D0,D1
+  0x5040eb66: [29 ff               ] ADD -0x1,D1
+  0x5040eb68: [f8 17 0c            ] MOV D1,(0xc,A3)
+  0x5040eb6b: [ca da               ] BRA 0x5040eb45
+  0x5040eb6d: [f8 07 fc            ] MOV (-0x4,A3),D1
+  0x5040eb70: [84                  ] MOV D1,D0
+  0x5040eb71: [ca 02               ] BRA 0x5040eb73
+  0x5040eb73: [f2 fc               ] MOV A3,SP
+  0x5040eb75: [df 10 04            ] RET [A3],0x4
+  0x5040eb78: [cf 10               ] MOVM [A3],(SP)
+  0x5040eb7a: [3f                  ] MOV SP,A3
+  0x5040eb7b: [f8 fe e4            ] ADD -0x1c,SP
+  0x5040eb7e: [00                  ] CLR D0
+  0x5040eb7f: [f8 13 f8            ] MOV D0,(-0x8,A3)
+  0x5040eb82: [00                  ] CLR D0
+  0x5040eb83: [f8 13 f4            ] MOV D0,(-0xc,A3)
+  0x5040eb86: [f8 03 f8            ] MOV (-0x8,A3),D0
+  0x5040eb89: [90 30               ] MOV 0x30,A0
+  0x5040eb8b: [f1 d1               ] MOV A0,D1
+  0x5040eb8d: [f2 41               ] MUL D0,D1
+  0x5040eb8f: [84                  ] MOV D1,D0
+  0x5040eb90: [fc c0 5c 1b 48 50   ] ADD 0x50481b5c,D0
+  0x5040eb96: [f8 07 f4            ] MOV (-0xc,A3),D1
+  0x5040eb99: [24 00 18            ] MOV 0x1800,A0
+  0x5040eb9c: [43 0c               ] MOV A0,(0xc,SP)
+  0x5040eb9e: [dd 35 02 00 00 00 00] CALL 0x5040edd3,[],0x0
+  0x5040eba5: [f8 13 fc            ] MOV D0,(-0x4,A3)
+  0x5040eba8: [f8 03 fc            ] MOV (-0x4,A3),D0
+  0x5040ebab: [fa c8 00 18         ] CMP 0x1800,D0
+  0x5040ebaf: [c8 19               ] BEQ 0x5040ebc8
+  0x5040ebb1: [fc cd 19 4a 43 50   ] MOV 0x50434a19,D1  ; '[fmu] error! Read_VCDDATA(): %8x\n'
+  0x5040ebb7: [f8 03 fc            ] MOV (-0x4,A3),D0
+  0x5040ebba: [42 0c               ] MOV D0,(0xc,SP)
+  0x5040ebbc: [80 01               ] MOV 0x1,D0
+  0x5040ebbe: [dd a2 12 00 00 00 00] CALL 0x5040fe60,[],0x0
+  0x5040ebc5: [00                  ] CLR D0
+  0x5040ebc6: [ca 33               ] BRA 0x5040ebf9
+  0x5040ebc8: [00                  ] CLR D0
+  0x5040ebc9: [f8 13 f8            ] MOV D0,(-0x8,A3)
+  0x5040ebcc: [f8 03 f8            ] MOV (-0x8,A3),D0
+  0x5040ebcf: [a0 7f               ] CMP 0x7f,D0
+  0x5040ebd1: [c3 04               ] BLE 0x5040ebd5
+  0x5040ebd3: [ca 22               ] BRA 0x5040ebf5
+  0x5040ebd5: [f8 03 f8            ] MOV (-0x8,A3),D0
+  0x5040ebd8: [85 30               ] MOV 0x30,D1
+  0x5040ebda: [f2 44               ] MUL D1,D0
+  0x5040ebdc: [81                  ] MOV D0,D1
+  0x5040ebdd: [fc c1 5c 1b 48 50   ] ADD 0x50481b5c,D1
+  0x5040ebe3: [84                  ] MOV D1,D0
+  0x5040ebe4: [85 30               ] MOV 0x30,D1
+  0x5040ebe6: [cd c8 fd 00 00      ] CALL 0x5040e9ae,[],0x0
+  0x5040ebeb: [f8 03 f8            ] MOV (-0x8,A3),D0
+  0x5040ebee: [81                  ] MOV D0,D1
+  0x5040ebef: [44                  ] INC D1
+  0x5040ebf0: [f8 17 f8            ] MOV D1,(-0x8,A3)
+  0x5040ebf3: [ca d9               ] BRA 0x5040ebcc
+  0x5040ebf5: [80 01               ] MOV 0x1,D0
+  0x5040ebf7: [ca 02               ] BRA 0x5040ebf9
+  0x5040ebf9: [f2 fc               ] MOV A3,SP
+  0x5040ebfb: [df 10 04            ] RET [A3],0x4
+```
+
+##### `sd_open_pana_sd_frm` (`0x5040ebfe..0x5040eca8`, 171 B)
+
+Monta sistema de arquivos FAT no SD (`0x504802fc`) e abre `PANA__SD.FRM` (`0x50434a67`), salvando o file handle em `0x50480300`.
+
+<!-- source: prog061_dec.bin (base 0x50400000, SHA-256 c7da9121...) | DISASM 0x5040ebfe..0x5040eca8 -->
+```asm
+  0x5040ebfe: [cf 10               ] MOVM [A3],(SP)
+  0x5040ec00: [3f                  ] MOV SP,A3
+  0x5040ec01: [f8 fe ec            ] ADD -0x14,SP
+  0x5040ec04: [dd 4a 2b 00 00 00 00] CALL 0x5041174e,[],0x0
+  0x5040ec0b: [fc 81 fc 02 48 50   ] MOV D0,(0x504802fc)
+  0x5040ec11: [fc a4 fc 02 48 50   ] MOV (0x504802fc),D0
+  0x5040ec17: [a0 00               ] CMP 0x0,D0
+  0x5040ec19: [c2 1c               ] BGE 0x5040ec35
+  0x5040ec1b: [fc cd 3b 4a 43 50   ] MOV 0x50434a3b,D1  ; 'FAT Mount failed[%d].\n'
+  0x5040ec21: [fc a4 fc 02 48 50   ] MOV (0x504802fc),D0
+  0x5040ec27: [42 0c               ] MOV D0,(0xc,SP)
+  0x5040ec29: [80 01               ] MOV 0x1,D0
+  0x5040ec2b: [dd 35 12 00 00 00 00] CALL 0x5040fe60,[],0x0
+  0x5040ec32: [00                  ] CLR D0
+  0x5040ec33: [ca 71               ] BRA 0x5040eca4
+  0x5040ec35: [fc cc 52 4a 43 50   ] MOV 0x50434a52,D0  ; 'FAT Mount ID = 0x%X\n'
+  0x5040ec3b: [fc a5 fc 02 48 50   ] MOV (0x504802fc),D1
+  0x5040ec41: [dd 8c 61 ff ff 00 00] CALL 0x50404dcd,[],0x0
+  0x5040ec48: [fc a4 fc 02 48 50   ] MOV (0x504802fc),D0
+  0x5040ec4e: [fc cd 67 4a 43 50   ] MOV 0x50434a67,D1  ; 'PANA__SD.FRM'
+  0x5040ec54: [dd cf 2c 00 00 00 00] CALL 0x50411923,[],0x0
+  0x5040ec5b: [fc 81 00 03 48 50   ] MOV D0,(0x50480300)
+  0x5040ec61: [fc a4 00 03 48 50   ] MOV (0x50480300),D0
+  0x5040ec67: [a0 00               ] CMP 0x0,D0
+  0x5040ec69: [c2 24               ] BGE 0x5040ec8d
+  0x5040ec6b: [fc cd 74 4a 43 50   ] MOV 0x50434a74,D1  ; 'FAT Open(%s) failed[%d].\n'
+  0x5040ec71: [fc cc 67 4a 43 50   ] MOV 0x50434a67,D0  ; 'PANA__SD.FRM'
+  0x5040ec77: [42 0c               ] MOV D0,(0xc,SP)
+  0x5040ec79: [fc a4 00 03 48 50   ] MOV (0x50480300),D0
+  0x5040ec7f: [42 10               ] MOV D0,(0x10,SP)
+  0x5040ec81: [80 01               ] MOV 0x1,D0
+  0x5040ec83: [dd dd 11 00 00 00 00] CALL 0x5040fe60,[],0x0
+  0x5040ec8a: [00                  ] CLR D0
+  0x5040ec8b: [ca 19               ] BRA 0x5040eca4
+  0x5040ec8d: [fc cc 8e 4a 43 50   ] MOV 0x50434a8e,D0  ; 'FAT Open Old File ID = 0x%X\n'
+  0x5040ec93: [fc a5 00 03 48 50   ] MOV (0x50480300),D1
+  0x5040ec99: [dd 34 61 ff ff 00 00] CALL 0x50404dcd,[],0x0
+  0x5040eca0: [80 01               ] MOV 0x1,D0
+  0x5040eca2: [ca 02               ] BRA 0x5040eca4
+  0x5040eca4: [f2 fc               ] MOV A3,SP
+  0x5040eca6: [df 10 04            ] RET [A3],0x4
+```
+
+##### `sd_diag_load` (`0x5040eca9..0x5040ed7b`, 211 B)
+
+Monta FAT (`0x504802fc`), abre `DIGADIAG.FRM` (`0x50434aab`, handle em `0x50480300`), posiciona no offset `0` e lê **`0x40000` (262.144 B)** diretamente para `0x90400000`; retorna `1` se exato ou `0` em caso de falha.
+
+<!-- source: prog061_dec.bin (base 0x50400000, SHA-256 c7da9121...) | DISASM 0x5040eca9..0x5040ed7b -->
+```asm
+  0x5040eca9: [cf 10               ] MOVM [A3],(SP)
+  0x5040ecab: [3f                  ] MOV SP,A3
+  0x5040ecac: [f8 fe e8            ] ADD -0x18,SP
+  0x5040ecaf: [dd 9f 2a 00 00 00 00] CALL 0x5041174e,[],0x0
+  0x5040ecb6: [fc 81 fc 02 48 50   ] MOV D0,(0x504802fc)
+  0x5040ecbc: [fc a4 fc 02 48 50   ] MOV (0x504802fc),D0
+  0x5040ecc2: [a0 00               ] CMP 0x0,D0
+  0x5040ecc4: [c2 1d               ] BGE 0x5040ece1
+  0x5040ecc6: [fc cd 3b 4a 43 50   ] MOV 0x50434a3b,D1  ; 'FAT Mount failed[%d].\n'
+  0x5040eccc: [fc a4 fc 02 48 50   ] MOV (0x504802fc),D0
+  0x5040ecd2: [42 0c               ] MOV D0,(0xc,SP)
+  0x5040ecd4: [80 01               ] MOV 0x1,D0
+  0x5040ecd6: [dd 8a 11 00 00 00 00] CALL 0x5040fe60,[],0x0
+  0x5040ecdd: [00                  ] CLR D0
+  0x5040ecde: [cc 99 00            ] JMP 0x5040ed77
+  0x5040ece1: [fc a4 fc 02 48 50   ] MOV (0x504802fc),D0
+  0x5040ece7: [fc cd ab 4a 43 50   ] MOV 0x50434aab,D1  ; 'DIGADIAG.FRM'
+  0x5040eced: [dd 36 2c 00 00 00 00] CALL 0x50411923,[],0x0
+  0x5040ecf4: [fc 81 00 03 48 50   ] MOV D0,(0x50480300)
+  0x5040ecfa: [fc a4 00 03 48 50   ] MOV (0x50480300),D0
+  0x5040ed00: [a0 00               ] CMP 0x0,D0
+  0x5040ed02: [c2 24               ] BGE 0x5040ed26
+  0x5040ed04: [fc cd 74 4a 43 50   ] MOV 0x50434a74,D1  ; 'FAT Open(%s) failed[%d].\n'
+  0x5040ed0a: [fc cc ab 4a 43 50   ] MOV 0x50434aab,D0  ; 'DIGADIAG.FRM'
+  0x5040ed10: [42 0c               ] MOV D0,(0xc,SP)
+  0x5040ed12: [fc a4 00 03 48 50   ] MOV (0x50480300),D0
+  0x5040ed18: [42 10               ] MOV D0,(0x10,SP)
+  0x5040ed1a: [80 01               ] MOV 0x1,D0
+  0x5040ed1c: [dd 44 11 00 00 00 00] CALL 0x5040fe60,[],0x0
+  0x5040ed23: [00                  ] CLR D0
+  0x5040ed24: [ca 53               ] BRA 0x5040ed77
+  0x5040ed26: [fc a4 00 03 48 50   ] MOV (0x50480300),D0
+  0x5040ed2c: [85 01               ] MOV 0x1,D1
+  0x5040ed2e: [46 0c               ] MOV D1,(0xc,SP)
+  0x5040ed30: [04                  ] CLR D1
+  0x5040ed31: [dd bd 2c 00 00 00 00] CALL 0x504119ee,[],0x0
+  0x5040ed38: [f8 13 fc            ] MOV D0,(-0x4,A3)
+  0x5040ed3b: [f8 03 fc            ] MOV (-0x4,A3),D0
+  0x5040ed3e: [a0 00               ] CMP 0x0,D0
+  0x5040ed40: [c8 05               ] BEQ 0x5040ed45
+  0x5040ed42: [00                  ] CLR D0
+  0x5040ed43: [ca 34               ] BRA 0x5040ed77
+  0x5040ed45: [fc a4 00 03 48 50   ] MOV (0x50480300),D0
+  0x5040ed4b: [fc cd 00 00 04 00   ] MOV 0x40000,D1
+  0x5040ed51: [46 0c               ] MOV D1,(0xc,SP)
+  0x5040ed53: [fc cd 00 00 40 90   ] MOV 0x90400000,D1
+  0x5040ed59: [dd 65 2c 00 00 00 00] CALL 0x504119be,[],0x0
+  0x5040ed60: [f8 13 fc            ] MOV D0,(-0x4,A3)
+  0x5040ed63: [f8 03 fc            ] MOV (-0x4,A3),D0
+  0x5040ed66: [fc c8 00 00 04 00   ] CMP 0x40000,D0
+  0x5040ed6c: [c9 08               ] BNE 0x5040ed74
+  0x5040ed6e: [80 01               ] MOV 0x1,D0
+  0x5040ed70: [ca 07               ] BRA 0x5040ed77
+  0x5040ed72: [ca 05               ] BRA 0x5040ed77
+  0x5040ed74: [00                  ] CLR D0
+  0x5040ed75: [ca 02               ] BRA 0x5040ed77
+  0x5040ed77: [f2 fc               ] MOV A3,SP
+  0x5040ed79: [df 10 04            ] RET [A3],0x4
+```
+
+##### `sd_read_firm_list` (`0x5040ed7c..0x5040edd2`, 87 B)
+
+Posiciona `PANA__SD.FRM` (`0x50480300`) no offset `0` e lê **`0x1800` (6.144 B = 128 × 48 B)** em `0x50481b5c` (`sd48`). (Em `0x5040edd3..` inicia imediatamente a função adjacente `Read_VCDDATA`.)
+
+<!-- source: prog061_dec.bin (base 0x50400000, SHA-256 c7da9121...) | DISASM 0x5040ed7c..0x5040edd2 -->
+```asm
+  0x5040ed7c: [cf 10               ] MOVM [A3],(SP)
+  0x5040ed7e: [3f                  ] MOV SP,A3
+  0x5040ed7f: [f8 fe ec            ] ADD -0x14,SP
+  0x5040ed82: [fc a4 00 03 48 50   ] MOV (0x50480300),D0
+  0x5040ed88: [85 01               ] MOV 0x1,D1
+  0x5040ed8a: [46 0c               ] MOV D1,(0xc,SP)
+  0x5040ed8c: [04                  ] CLR D1
+  0x5040ed8d: [dd 61 2c 00 00 00 00] CALL 0x504119ee,[],0x0
+  0x5040ed94: [f8 13 fc            ] MOV D0,(-0x4,A3)
+  0x5040ed97: [f8 03 fc            ] MOV (-0x4,A3),D0
+  0x5040ed9a: [a0 00               ] CMP 0x0,D0
+  0x5040ed9c: [c8 05               ] BEQ 0x5040eda1
+  0x5040ed9e: [00                  ] CLR D0
+  0x5040ed9f: [ca 2f               ] BRA 0x5040edce
+  0x5040eda1: [fc a4 00 03 48 50   ] MOV (0x50480300),D0
+  0x5040eda7: [fc cd 5c 1b 48 50   ] MOV 0x50481b5c,D1
+  0x5040edad: [24 00 18            ] MOV 0x1800,A0
+  0x5040edb0: [43 0c               ] MOV A0,(0xc,SP)
+  0x5040edb2: [dd 0c 2c 00 00 00 00] CALL 0x504119be,[],0x0
+  0x5040edb9: [f8 13 fc            ] MOV D0,(-0x4,A3)
+  0x5040edbc: [f8 03 fc            ] MOV (-0x4,A3),D0
+  0x5040edbf: [fa c8 00 18         ] CMP 0x1800,D0
+  0x5040edc3: [c9 08               ] BNE 0x5040edcb
+  0x5040edc5: [80 01               ] MOV 0x1,D0
+  0x5040edc7: [ca 07               ] BRA 0x5040edce
+  0x5040edc9: [ca 05               ] BRA 0x5040edce
+  0x5040edcb: [00                  ] CLR D0
+  0x5040edcc: [ca 02               ] BRA 0x5040edce
+  0x5040edce: [f2 fc               ] MOV A3,SP
+  0x5040edd0: [df 10 04            ] RET [A3],0x4
+```
+
+##### `fat_debug_printf` (`0x5040fe60..0x5040ff93`, 308 B)
+
+Wrapper variádico de debug do módulo FAT em `PROG061` encaminhando para `uart0_printf` (`0x50404dcd`).
+
+<!-- source: prog061_dec.bin (base 0x50400000, SHA-256 c7da9121...) | DISASM 0x5040fe60..0x5040ff93 -->
+```asm
+  0x5040fe60: [cf 10               ] MOVM [A3],(SP)
+  0x5040fe62: [3f                  ] MOV SP,A3
+  0x5040fe63: [f8 fe a4            ] ADD -0x5c,SP
+  0x5040fe66: [f8 13 08            ] MOV D0,(0x8,A3)
+  0x5040fe69: [f8 17 0c            ] MOV D1,(0xc,A3)
+  0x5040fe6c: [9d                  ] MOV A3,A1
+  0x5040fe6d: [21 10               ] ADD 0x10,A1
+  0x5040fe6f: [94                  ] MOV A1,A0
+  0x5040fe70: [f8 13 08            ] MOV D0,(0x8,A3)
+  0x5040fe73: [f8 17 0c            ] MOV D1,(0xc,A3)
+  0x5040fe76: [00                  ] CLR D0
+  0x5040fe77: [f8 13 08            ] MOV D0,(0x8,A3)
+  0x5040fe7a: [f8 03 08            ] MOV (0x8,A3),D0
+  0x5040fe7d: [a0 00               ] CMP 0x0,D0
+  0x5040fe7f: [c8 05               ] BEQ 0x5040fe84
+  0x5040fe81: [cc 0c 01            ] JMP 0x5040ff8d
+  0x5040fe84: [f1 dc               ] MOV A3,D0
+  0x5040fe86: [28 10               ] ADD 0x10,D0
+  0x5040fe88: [f8 33 d4            ] MOV A0,(-0x2c,A3)
+  0x5040fe8b: [f8 03 d4            ] MOV (-0x2c,A3),D0
+  0x5040fe8e: [81                  ] MOV D0,D1
+  0x5040fe8f: [29 04               ] ADD 0x4,D1
+  0x5040fe91: [f8 17 d4            ] MOV D1,(-0x2c,A3)
+  0x5040fe94: [f8 03 d4            ] MOV (-0x2c,A3),D0
+  0x5040fe97: [f1 e0               ] MOV D0,A0
+  0x5040fe99: [20 fc               ] ADD -0x4,A0
+  0x5040fe9b: [70                  ] MOV (A0),D0
+  0x5040fe9c: [f8 13 fc            ] MOV D0,(-0x4,A3)
+  0x5040fe9f: [f8 03 d4            ] MOV (-0x2c,A3),D0
+  0x5040fea2: [81                  ] MOV D0,D1
+  0x5040fea3: [29 04               ] ADD 0x4,D1
+  0x5040fea5: [f8 17 d4            ] MOV D1,(-0x2c,A3)
+  0x5040fea8: [f8 03 d4            ] MOV (-0x2c,A3),D0
+  0x5040feab: [f1 e0               ] MOV D0,A0
+  0x5040fead: [20 fc               ] ADD -0x4,A0
+  0x5040feaf: [70                  ] MOV (A0),D0
+  0x5040feb0: [f8 13 f8            ] MOV D0,(-0x8,A3)
+  0x5040feb3: [f8 03 d4            ] MOV (-0x2c,A3),D0
+  0x5040feb6: [81                  ] MOV D0,D1
+  0x5040feb7: [29 04               ] ADD 0x4,D1
+  0x5040feb9: [f8 17 d4            ] MOV D1,(-0x2c,A3)
+  0x5040febc: [f8 03 d4            ] MOV (-0x2c,A3),D0
+  0x5040febf: [f1 e0               ] MOV D0,A0
+  0x5040fec1: [20 fc               ] ADD -0x4,A0
+  0x5040fec3: [70                  ] MOV (A0),D0
+  0x5040fec4: [f8 13 f4            ] MOV D0,(-0xc,A3)
+  0x5040fec7: [f8 03 d4            ] MOV (-0x2c,A3),D0
+  0x5040feca: [81                  ] MOV D0,D1
+  0x5040fecb: [29 04               ] ADD 0x4,D1
+  0x5040fecd: [f8 17 d4            ] MOV D1,(-0x2c,A3)
+  0x5040fed0: [f8 03 d4            ] MOV (-0x2c,A3),D0
+  0x5040fed3: [f1 e0               ] MOV D0,A0
+  0x5040fed5: [20 fc               ] ADD -0x4,A0
+  0x5040fed7: [70                  ] MOV (A0),D0
+  0x5040fed8: [f8 13 f0            ] MOV D0,(-0x10,A3)
+  0x5040fedb: [f8 03 d4            ] MOV (-0x2c,A3),D0
+  0x5040fede: [81                  ] MOV D0,D1
+  0x5040fedf: [29 04               ] ADD 0x4,D1
+  0x5040fee1: [f8 17 d4            ] MOV D1,(-0x2c,A3)
+  0x5040fee4: [f8 03 d4            ] MOV (-0x2c,A3),D0
+  0x5040fee7: [f1 e0               ] MOV D0,A0
+  0x5040fee9: [20 fc               ] ADD -0x4,A0
+  0x5040feeb: [70                  ] MOV (A0),D0
+  0x5040feec: [f8 13 ec            ] MOV D0,(-0x14,A3)
+  0x5040feef: [f8 03 d4            ] MOV (-0x2c,A3),D0
+  0x5040fef2: [81                  ] MOV D0,D1
+  0x5040fef3: [29 04               ] ADD 0x4,D1
+  0x5040fef5: [f8 17 d4            ] MOV D1,(-0x2c,A3)
+  0x5040fef8: [f8 03 d4            ] MOV (-0x2c,A3),D0
+  0x5040fefb: [f1 e0               ] MOV D0,A0
+  0x5040fefd: [20 fc               ] ADD -0x4,A0
+  0x5040feff: [70                  ] MOV (A0),D0
+  0x5040ff00: [f8 13 e8            ] MOV D0,(-0x18,A3)
+  0x5040ff03: [f8 03 d4            ] MOV (-0x2c,A3),D0
+  0x5040ff06: [81                  ] MOV D0,D1
+  0x5040ff07: [29 04               ] ADD 0x4,D1
+  0x5040ff09: [f8 17 d4            ] MOV D1,(-0x2c,A3)
+  0x5040ff0c: [f8 03 d4            ] MOV (-0x2c,A3),D0
+  0x5040ff0f: [f1 e0               ] MOV D0,A0
+  0x5040ff11: [20 fc               ] ADD -0x4,A0
+  0x5040ff13: [70                  ] MOV (A0),D0
+  0x5040ff14: [f8 13 e4            ] MOV D0,(-0x1c,A3)
+  0x5040ff17: [f8 03 d4            ] MOV (-0x2c,A3),D0
+  0x5040ff1a: [81                  ] MOV D0,D1
+  0x5040ff1b: [29 04               ] ADD 0x4,D1
+  0x5040ff1d: [f8 17 d4            ] MOV D1,(-0x2c,A3)
+  0x5040ff20: [f8 03 d4            ] MOV (-0x2c,A3),D0
+  0x5040ff23: [f1 e0               ] MOV D0,A0
+  0x5040ff25: [20 fc               ] ADD -0x4,A0
+  0x5040ff27: [70                  ] MOV (A0),D0
+  0x5040ff28: [f8 13 e0            ] MOV D0,(-0x20,A3)
+  0x5040ff2b: [f8 03 d4            ] MOV (-0x2c,A3),D0
+  0x5040ff2e: [81                  ] MOV D0,D1
+  0x5040ff2f: [29 04               ] ADD 0x4,D1
+  0x5040ff31: [f8 17 d4            ] MOV D1,(-0x2c,A3)
+  0x5040ff34: [f8 03 d4            ] MOV (-0x2c,A3),D0
+  0x5040ff37: [f1 e0               ] MOV D0,A0
+  0x5040ff39: [20 fc               ] ADD -0x4,A0
+  0x5040ff3b: [70                  ] MOV (A0),D0
+  0x5040ff3c: [f8 13 dc            ] MOV D0,(-0x24,A3)
+  0x5040ff3f: [f8 03 d4            ] MOV (-0x2c,A3),D0
+  0x5040ff42: [81                  ] MOV D0,D1
+  0x5040ff43: [29 04               ] ADD 0x4,D1
+  0x5040ff45: [f8 17 d4            ] MOV D1,(-0x2c,A3)
+  0x5040ff48: [f8 03 d4            ] MOV (-0x2c,A3),D0
+  0x5040ff4b: [f1 e0               ] MOV D0,A0
+  0x5040ff4d: [20 fc               ] ADD -0x4,A0
+  0x5040ff4f: [70                  ] MOV (A0),D0
+  0x5040ff50: [f8 13 d8            ] MOV D0,(-0x28,A3)
+  0x5040ff53: [f8 03 0c            ] MOV (0xc,A3),D0
+  0x5040ff56: [f8 07 fc            ] MOV (-0x4,A3),D1
+  0x5040ff59: [f8 23 f8            ] MOV (-0x8,A3),A0
+  0x5040ff5c: [43 0c               ] MOV A0,(0xc,SP)
+  0x5040ff5e: [f8 23 f4            ] MOV (-0xc,A3),A0
+  0x5040ff61: [43 10               ] MOV A0,(0x10,SP)
+  0x5040ff63: [f8 23 f0            ] MOV (-0x10,A3),A0
+  0x5040ff66: [43 14               ] MOV A0,(0x14,SP)
+  0x5040ff68: [f8 23 ec            ] MOV (-0x14,A3),A0
+  0x5040ff6b: [43 18               ] MOV A0,(0x18,SP)
+  0x5040ff6d: [f8 23 e8            ] MOV (-0x18,A3),A0
+  0x5040ff70: [43 1c               ] MOV A0,(0x1c,SP)
+  0x5040ff72: [f8 23 e4            ] MOV (-0x1c,A3),A0
+  0x5040ff75: [43 20               ] MOV A0,(0x20,SP)
+  0x5040ff77: [f8 23 e0            ] MOV (-0x20,A3),A0
+  0x5040ff7a: [43 24               ] MOV A0,(0x24,SP)
+  0x5040ff7c: [f8 23 dc            ] MOV (-0x24,A3),A0
+  0x5040ff7f: [43 28               ] MOV A0,(0x28,SP)
+  0x5040ff81: [f8 23 d8            ] MOV (-0x28,A3),A0
+  0x5040ff84: [43 2c               ] MOV A0,(0x2c,SP)
+  0x5040ff86: [dd 47 4e ff ff 00 00] CALL 0x50404dcd,[],0x0
+  0x5040ff8d: [ca 02               ] BRA 0x5040ff8f
+  0x5040ff8f: [f2 fc               ] MOV A3,SP
+  0x5040ff91: [df 10 04            ] RET [A3],0x4
+```
+
+##### `uart0_printf` (`0x50404dcd..0x50404e5c`)
+
+Implementação de `uart0_printf` invocada por todos os chamadores de `sd_load.o` e handlers `FVU` em `PROG061`.
+
+<!-- source: prog061_dec.bin (base 0x50400000, SHA-256 c7da9121...) | DISASM 0x50404dcd..0x50404e5c -->
+```asm
+  0x50404dcd: [cf 10               ] MOVM [A3],(SP)
+  0x50404dcf: [3f                  ] MOV SP,A3
+  0x50404dd0: [f8 fe e8            ] ADD -0x18,SP
+  0x50404dd3: [f8 13 08            ] MOV D0,(0x8,A3)
+  0x50404dd6: [f8 17 0c            ] MOV D1,(0xc,A3)
+  0x50404dd9: [9c                  ] MOV A3,A0
+  0x50404dda: [20 0c               ] ADD 0xc,A0
+  0x50404ddc: [f1 d1               ] MOV A0,D1
+  0x50404dde: [f8 13 08            ] MOV D0,(0x8,A3)
+  0x50404de1: [f1 dc               ] MOV A3,D0
+  0x50404de3: [28 0c               ] ADD 0xc,D0
+  0x50404de5: [f8 17 fc            ] MOV D1,(-0x4,A3)
+  0x50404de8: [fc cc 8a 0b 48 50   ] MOV 0x50480b8a,D0
+  0x50404dee: [f8 07 fc            ] MOV (-0x4,A3),D1
+  0x50404df1: [46 0c               ] MOV D1,(0xc,SP)
+  0x50404df3: [f8 07 08            ] MOV (0x8,A3),D1
+  0x50404df6: [dd 28 87 02 00 00 00] CALL 0x5042d51e,[],0x0
+  0x50404dfd: [00                  ] CLR D0
+  0x50404dfe: [f8 13 f8            ] MOV D0,(-0x8,A3)
+  0x50404e01: [fc cc 8a 0b 48 50   ] MOV 0x50480b8a,D0
+  0x50404e07: [f8 07 f8            ] MOV (-0x8,A3),D1
+  0x50404e0a: [f1 e4               ] MOV D1,A0
+  0x50404e0c: [f1 60               ] ADD D0,A0
+  0x50404e0e: [f0 40               ] MOVBU (A0),D0
+  0x50404e10: [a0 00               ] CMP 0x0,D0
+  0x50404e12: [c9 04               ] BNE 0x50404e16
+  0x50404e14: [ca 44               ] BRA 0x50404e58
+  0x50404e16: [fc cc 8a 0b 48 50   ] MOV 0x50480b8a,D0
+  0x50404e1c: [f8 07 f8            ] MOV (-0x8,A3),D1
+  0x50404e1f: [f1 e4               ] MOV D1,A0
+  0x50404e21: [f1 60               ] ADD D0,A0
+  0x50404e23: [f0 40               ] MOVBU (A0),D0
+  0x50404e25: [a0 0a               ] CMP 0xa,D0
+  0x50404e27: [c9 12               ] BNE 0x50404e39
+  0x50404e29: [80 0d               ] MOV 0xd,D0
+  0x50404e2b: [cd ea fe 00 00      ] CALL 0x50404d15,[],0x0
+  0x50404e30: [80 0a               ] MOV 0xa,D0
+  0x50404e32: [cd e3 fe 00 00      ] CALL 0x50404d15,[],0x0
+  0x50404e37: [ca 17               ] BRA 0x50404e4e
+  0x50404e39: [fc cc 8a 0b 48 50   ] MOV 0x50480b8a,D0
+  0x50404e3f: [f8 07 f8            ] MOV (-0x8,A3),D1
+  0x50404e42: [f1 e4               ] MOV D1,A0
+  0x50404e44: [f1 60               ] ADD D0,A0
+  0x50404e46: [f0 44               ] MOVBU (A0),D1
+  0x50404e48: [84                  ] MOV D1,D0
+  0x50404e49: [cd cc fe 00 00      ] CALL 0x50404d15,[],0x0
+  0x50404e4e: [f8 03 f8            ] MOV (-0x8,A3),D0
+  0x50404e51: [81                  ] MOV D0,D1
+  0x50404e52: [44                  ] INC D1
+  0x50404e53: [f8 17 f8            ] MOV D1,(-0x8,A3)
+  0x50404e56: [ca ab               ] BRA 0x50404e01
+  0x50404e58: [f2 fc               ] MOV A3,SP
+  0x50404e5a: [df 10 04            ] RET [A3],0x4
+```
+
+##### Handlers `Update-Disc` / `Drive-Firm` (`0x50405b8c..0x50406157`, e prólogo anterior até `0x50405b8b`)
+
+Rotinas de busca e atualização em `Update-Disc`/`SD` que invocam `0x5040ebfe`, `0x5040ed7c` e `0x5040ea7d` (cobrindo integralmente a faixa `0x50405b8a..0x50406150`, onde `0x50405b8a` é byte `+1` dentro de `0x50405b89: RET [A3],0x4` e `0x50406150` é byte `+3` dentro de `0x5040614d: CALL 0x50404dcd`). Inclui as funções `0x50405b8c..0x50405cd5`, `0x50405cd6..0x50406126` e entrada de `0x50406129..0x50406155`.
+
+<!-- source: prog061_dec.bin (base 0x50400000, SHA-256 c7da9121...) | DISASM 0x50405b87..0x50406155 -->
+```asm
+  0x50405b87: [f2 fc               ] MOV A3,SP
+  0x50405b89: [df 10 04            ] RET [A3],0x4
+  0x50405b8c: [cf 10               ] MOVM [A3],(SP)
+  0x50405b8e: [3f                  ] MOV SP,A3
+  0x50405b8f: [f8 fe dc            ] ADD -0x24,SP
+  0x50405b92: [f8 13 08            ] MOV D0,(0x8,A3)
+  0x50405b95: [84                  ] MOV D1,D0
+  0x50405b96: [f8 53 ff            ] MOVBU D0,(-0x1,A3)
+  0x50405b99: [00                  ] CLR D0
+  0x50405b9a: [fc 81 84 02 48 50   ] MOV D0,(0x50480284)
+  0x50405ba0: [fc cd dc 0e 48 50   ] MOV 0x50480edc,D1
+  0x50405ba6: [84                  ] MOV D1,D0
+  0x50405ba7: [dd a5 76 00 00 00 00] CALL 0x5040d24c,[],0x0
+  0x50405bae: [f8 13 f8            ] MOV D0,(-0x8,A3)
+  0x50405bb1: [f8 03 f8            ] MOV (-0x8,A3),D0
+  0x50405bb4: [a0 00               ] CMP 0x0,D0
+  0x50405bb6: [c8 1a               ] BEQ 0x50405bd0
+  0x50405bb8: [fc cd ff 30 43 50   ] MOV 0x504330ff,D1  ; 'SD card init error.\n'
+  0x50405bbe: [84                  ] MOV D1,D0
+  0x50405bbf: [dd 0e f2 ff ff 00 00] CALL 0x50404dcd,[],0x0
+  0x50405bc6: [00                  ] CLR D0
+  0x50405bc7: [fc 81 84 02 48 50   ] MOV D0,(0x50480284)
+  0x50405bcd: [cc 04 01            ] JMP 0x50405cd1
+  0x50405bd0: [dd 2e 90 00 00 00 00] CALL 0x5040ebfe,[],0x0
+  0x50405bd7: [f8 13 f8            ] MOV D0,(-0x8,A3)
+  0x50405bda: [f8 03 f8            ] MOV (-0x8,A3),D0
+  0x50405bdd: [a0 01               ] CMP 0x1,D0
+  0x50405bdf: [c8 1a               ] BEQ 0x50405bf9
+  0x50405be1: [fc cd 14 31 43 50   ] MOV 0x50433114,D1  ; 'SD mount or file open error.\n'
+  0x50405be7: [84                  ] MOV D1,D0
+  0x50405be8: [dd e5 f1 ff ff 00 00] CALL 0x50404dcd,[],0x0
+  0x50405bef: [00                  ] CLR D0
+  0x50405bf0: [fc 81 84 02 48 50   ] MOV D0,(0x50480284)
+  0x50405bf6: [cc db 00            ] JMP 0x50405cd1
+  0x50405bf9: [dd 83 91 00 00 00 00] CALL 0x5040ed7c,[],0x0
+  0x50405c00: [f8 13 f8            ] MOV D0,(-0x8,A3)
+  0x50405c03: [f8 03 f8            ] MOV (-0x8,A3),D0
+  0x50405c06: [a0 01               ] CMP 0x1,D0
+  0x50405c08: [c8 1c               ] BEQ 0x50405c24
+  0x50405c0a: [fc cc 32 31 43 50   ] MOV 0x50433132,D0  ; 'Firm list read failed[%d].\n'
+  0x50405c10: [f8 07 f8            ] MOV (-0x8,A3),D1
+  0x50405c13: [dd ba f1 ff ff 00 00] CALL 0x50404dcd,[],0x0
+  0x50405c1a: [00                  ] CLR D0
+  0x50405c1b: [fc 81 84 02 48 50   ] MOV D0,(0x50480284)
+  0x50405c21: [cc b0 00            ] JMP 0x50405cd1
+  0x50405c24: [fc cd d1 30 43 50   ] MOV 0x504330d1,D1  ; 'Search for analyze-code.\n'
+  0x50405c2a: [84                  ] MOV D1,D0
+  0x50405c2b: [dd a2 f1 ff ff 00 00] CALL 0x50404dcd,[],0x0
+  0x50405c32: [00                  ] CLR D0
+  0x50405c33: [f8 13 f4            ] MOV D0,(-0xc,A3)
+  0x50405c36: [f8 03 f4            ] MOV (-0xc,A3),D0
+  0x50405c39: [a0 0a               ] CMP 0xa,D0
+  0x50405c3b: [c7 04               ] BLS 0x50405c3f
+  0x50405c3d: [ca 73               ] BRA 0x50405cb0
+  0x50405c3f: [f8 03 f4            ] MOV (-0xc,A3),D0
+  0x50405c42: [a0 0a               ] CMP 0xa,D0
+  0x50405c44: [c8 62               ] BEQ 0x50405ca6
+  0x50405c46: [f8 47 ff            ] MOVBU (-0x1,A3),D1
+  0x50405c49: [f8 03 f4            ] MOV (-0xc,A3),D0
+  0x50405c4c: [90 34               ] MOV 0x34,A0
+  0x50405c4e: [f9 a9 8c            ] MUL A0,D0
+  0x50405c51: [f1 e0               ] MOV D0,A0
+  0x50405c53: [fc d0 90 0c 48 50   ] ADD 0x50480c90,A0
+  0x50405c59: [43 0c               ] MOV A0,(0xc,SP)
+  0x50405c5b: [f1 dc               ] MOV A3,D0
+  0x50405c5d: [28 f0               ] ADD -0x10,D0
+  0x50405c5f: [42 10               ] MOV D0,(0x10,SP)
+  0x50405c61: [f8 03 08            ] MOV (0x8,A3),D0
+  0x50405c64: [dd 19 8e 00 00 00 00] CALL 0x5040ea7d,[],0x0
+  0x50405c6b: [f8 13 f8            ] MOV D0,(-0x8,A3)
+  0x50405c6e: [f8 03 f8            ] MOV (-0x8,A3),D0
+  0x50405c71: [a0 01               ] CMP 0x1,D0
+  0x50405c73: [c9 33               ] BNE 0x50405ca6
+  0x50405c75: [f8 03 f4            ] MOV (-0xc,A3),D0
+  0x50405c78: [85 34               ] MOV 0x34,D1
+  0x50405c7a: [f2 44               ] MUL D1,D0
+  0x50405c7c: [fc cd bc 0c 48 50   ] MOV 0x50480cbc,D1
+  0x50405c82: [f1 e0               ] MOV D0,A0
+  0x50405c84: [f1 64               ] ADD D1,A0
+  0x50405c86: [f8 03 f0            ] MOV (-0x10,A3),D0
+  0x50405c89: [60                  ] MOV D0,(A0)
+  0x50405c8a: [f8 03 f4            ] MOV (-0xc,A3),D0
+  0x50405c8d: [85 34               ] MOV 0x34,D1
+  0x50405c8f: [f2 44               ] MUL D1,D0
+  0x50405c91: [f1 e0               ] MOV D0,A0
+  0x50405c93: [fc d0 8c 0c 48 50   ] ADD 0x50480c8c,A0
+  0x50405c99: [80 01               ] MOV 0x1,D0
+  0x50405c9b: [f8 50 14            ] MOVBU D0,(0x14,A0)
+  0x50405c9e: [80 05               ] MOV 0x5,D0
+  0x50405ca0: [fc 81 84 02 48 50   ] MOV D0,(0x50480284)
+  0x50405ca6: [f8 03 f4            ] MOV (-0xc,A3),D0
+  0x50405ca9: [81                  ] MOV D0,D1
+  0x50405caa: [44                  ] INC D1
+  0x50405cab: [f8 17 f4            ] MOV D1,(-0xc,A3)
+  0x50405cae: [ca 88               ] BRA 0x50405c36
+  0x50405cb0: [fc a4 84 02 48 50   ] MOV (0x50480284),D0
+  0x50405cb6: [a0 05               ] CMP 0x5,D0
+  0x50405cb8: [c8 17               ] BEQ 0x50405ccf
+  0x50405cba: [fc cd 4e 31 43 50   ] MOV 0x5043314e,D1  ; 'Update firm not found.\n'
+  0x50405cc0: [84                  ] MOV D1,D0
+  0x50405cc1: [dd 0c f1 ff ff 00 00] CALL 0x50404dcd,[],0x0
+  0x50405cc8: [00                  ] CLR D0
+  0x50405cc9: [fc 81 84 02 48 50   ] MOV D0,(0x50480284)
+  0x50405ccf: [ca 02               ] BRA 0x50405cd1
+  0x50405cd1: [f2 fc               ] MOV A3,SP
+  0x50405cd3: [df 10 04            ] RET [A3],0x4
+  0x50405cd6: [cf 90               ] MOVM [D2,A3],(SP)
+  0x50405cd8: [3f                  ] MOV SP,A3
+  0x50405cd9: [f8 fe e0            ] ADD -0x20,SP
+  0x50405cdc: [f8 13 0c            ] MOV D0,(0xc,A3)
+  0x50405cdf: [f8 17 10            ] MOV D1,(0x10,A3)
+  0x50405ce2: [00                  ] CLR D0
+  0x50405ce3: [f8 13 f8            ] MOV D0,(-0x8,A3)
+  0x50405ce6: [00                  ] CLR D0
+  0x50405ce7: [f8 13 f4            ] MOV D0,(-0xc,A3)
+  0x50405cea: [fc a8 a0 0c 48 50   ] MOVBU (0x50480ca0),D0
+  0x50405cf0: [a0 00               ] CMP 0x0,D0
+  0x50405cf2: [c9 2d               ] BNE 0x50405d1f
+  0x50405cf4: [fc cd 66 31 43 50   ] MOV 0x50433166,D1  ; 'error! not found Drive-Firm entry in Update-Disc.\n'
+  0x50405cfa: [84                  ] MOV D1,D0
+  0x50405cfb: [dd d2 f0 ff ff 00 00] CALL 0x50404dcd,[],0x0
+  0x50405d02: [fc a4 98 0c 48 50   ] MOV (0x50480c98),D0
+  0x50405d08: [42 0c               ] MOV D0,(0xc,SP)
+  0x50405d0a: [fc cc ec 01 48 50   ] MOV 0x504801ec,D0
+  0x50405d10: [42 10               ] MOV D0,(0x10,SP)
+  0x50405d12: [80 01               ] MOV 0x1,D0
+  0x50405d14: [85 06               ] MOV 0x6,D1
+  0x50405d16: [cd 6e 25 00 00      ] CALL 0x50408284,[],0x0
+  0x50405d1b: [00                  ] CLR D0
+  0x50405d1c: [cc 08 04            ] JMP 0x50406124
+  0x50405d1f: [fc a4 94 0c 48 50   ] MOV (0x50480c94),D0
+  0x50405d25: [42 0c               ] MOV D0,(0xc,SP)
+  0x50405d27: [fc cc de 01 48 50   ] MOV 0x504801de,D0
+  0x50405d2d: [42 10               ] MOV D0,(0x10,SP)
+  0x50405d2f: [00                  ] CLR D0
+  0x50405d30: [2d 2c 01            ] MOV 0x12c,D1
+  0x50405d33: [cd 51 25 00 00      ] CALL 0x50408284,[],0x0
+  0x50405d38: [fc cd 99 31 43 50   ] MOV 0x50433199,D1  ; 'Read Drive-Firm data.\n'
+  0x50405d3e: [84                  ] MOV D1,D0
+  0x50405d3f: [dd 8e f0 ff ff 00 00] CALL 0x50404dcd,[],0x0
+  0x50405d46: [fc a4 84 02 48 50   ] MOV (0x50480284),D0
+  0x50405d4c: [a0 01               ] CMP 0x1,D0
+  0x50405d4e: [c8 05               ] BEQ 0x50405d53
+  0x50405d50: [cc 2e 01            ] JMP 0x50405e7e
+  0x50405d53: [fc a5 b4 0c 48 50   ] MOV (0x50480cb4),D1
+  0x50405d59: [80 01               ] MOV 0x1,D0
+  0x50405d5b: [42 0c               ] MOV D0,(0xc,SP)
+  0x50405d5d: [00                  ] CLR D0
+  0x50405d5e: [dd 4e 6c 00 00 00 00] CALL 0x5040c9ac,[],0x0
+  0x50405d65: [f8 13 fc            ] MOV D0,(-0x4,A3)
+  0x50405d68: [f8 03 fc            ] MOV (-0x4,A3),D0
+  0x50405d6b: [a0 00               ] CMP 0x0,D0
+  0x50405d6d: [c8 2d               ] BEQ 0x50405d9a
+  0x50405d6f: [fc cd b0 31 43 50   ] MOV 0x504331b0,D1  ; 'error! Failed to read Drive-Header.\n'
+  0x50405d75: [84                  ] MOV D1,D0
+  0x50405d76: [dd 57 f0 ff ff 00 00] CALL 0x50404dcd,[],0x0
+  0x50405d7d: [fc a4 98 0c 48 50   ] MOV (0x50480c98),D0
+  0x50405d83: [42 0c               ] MOV D0,(0xc,SP)
+  0x50405d85: [fc cc e5 01 48 50   ] MOV 0x504801e5,D0
+  0x50405d8b: [42 10               ] MOV D0,(0x10,SP)
+  0x50405d8d: [80 01               ] MOV 0x1,D0
+  0x50405d8f: [85 06               ] MOV 0x6,D1
+  0x50405d91: [cd f3 24 00 00      ] CALL 0x50408284,[],0x0
+  0x50405d96: [00                  ] CLR D0
+  0x50405d97: [cc 8d 03            ] JMP 0x50406124
+  0x50405d9a: [80 24               ] MOV 0x24,D0
+  0x50405d9c: [dd c3 55 00 00 00 00] CALL 0x5040b35f,[],0x0
+  0x50405da3: [f8 23 0c            ] MOV (0xc,A3),A0
+  0x50405da6: [60                  ] MOV D0,(A0)
+  0x50405da7: [80 28               ] MOV 0x28,D0
+  0x50405da9: [dd b6 55 00 00 00 00] CALL 0x5040b35f,[],0x0
+  0x50405db0: [fc 81 b8 0c 48 50   ] MOV D0,(0x50480cb8)
+  0x50405db6: [f8 23 0c            ] MOV (0xc,A3),A0
+  0x50405db9: [70                  ] MOV (A0),D0
+  0x50405dba: [81                  ] MOV D0,D1
+  0x50405dbb: [f8 e1 01            ] AND 0x1,D1
+  0x50405dbe: [f8 17 f8            ] MOV D1,(-0x8,A3)
+  0x50405dc1: [f8 03 f8            ] MOV (-0x8,A3),D0
+  0x50405dc4: [a0 00               ] CMP 0x0,D0
+  0x50405dc6: [c8 0c               ] BEQ 0x50405dd2
+  0x50405dc8: [80 02               ] MOV 0x2,D0
+  0x50405dca: [f8 07 f8            ] MOV (-0x8,A3),D1
+  0x50405dcd: [f1 04               ] SUB D1,D0
+  0x50405dcf: [f8 13 f8            ] MOV D0,(-0x8,A3)
+  0x50405dd2: [f8 23 0c            ] MOV (0xc,A3),A0
+  0x50405dd5: [f8 03 f8            ] MOV (-0x8,A3),D0
+  0x50405dd8: [74                  ] MOV (A0),D1
+  0x50405dd9: [e4                  ] ADD D1,D0
+  0x50405dda: [f8 13 f8            ] MOV D0,(-0x8,A3)
+  0x50405ddd: [f8 23 10            ] MOV (0x10,A3),A0
+  0x50405de0: [00                  ] CLR D0
+  0x50405de1: [60                  ] MOV D0,(A0)
+  0x50405de2: [f8 23 14            ] MOV (0x14,A3),A0
+  0x50405de5: [00                  ] CLR D0
+  0x50405de6: [60                  ] MOV D0,(A0)
+  0x50405de7: [fc cc 00 00 00 01   ] MOV 0x1000000,D0
+  0x50405ded: [f8 13 f4            ] MOV D0,(-0xc,A3)
+  0x50405df0: [f8 23 14            ] MOV (0x14,A3),A0
+  0x50405df3: [70                  ] MOV (A0),D0
+  0x50405df4: [fc a5 b4 0c 48 50   ] MOV (0x50480cb4),D1
+  0x50405dfa: [f8 23 0c            ] MOV (0xc,A3),A0
+  0x50405dfd: [f0 04               ] MOV (A0),A1
+  0x50405dff: [94                  ] MOV A1,A0
+  0x50405e00: [20 30               ] ADD 0x30,A0
+  0x50405e02: [f1 d2               ] MOV A0,D2
+  0x50405e04: [f8 c6 0b            ] LSR 0xb,D2
+  0x50405e07: [f1 e9               ] MOV D2,A1
+  0x50405e09: [94                  ] MOV A1,A0
+  0x50405e0a: [41                  ] INC A0
+  0x50405e0b: [43 0c               ] MOV A0,(0xc,SP)
+  0x50405e0d: [dd 9f 6b 00 00 00 00] CALL 0x5040c9ac,[],0x0
+  0x50405e14: [f8 13 fc            ] MOV D0,(-0x4,A3)
+  0x50405e17: [f8 03 fc            ] MOV (-0x4,A3),D0
+  0x50405e1a: [a0 00               ] CMP 0x0,D0
+  0x50405e1c: [c8 2d               ] BEQ 0x50405e49
+  0x50405e1e: [fc cd d5 31 43 50   ] MOV 0x504331d5,D1  ; 'error! Failed to read Drive-Firm data.\n'
+  0x50405e24: [84                  ] MOV D1,D0
+  0x50405e25: [dd a8 ef ff ff 00 00] CALL 0x50404dcd,[],0x0
+  0x50405e2c: [fc a4 98 0c 48 50   ] MOV (0x50480c98),D0
+  0x50405e32: [42 0c               ] MOV D0,(0xc,SP)
+  0x50405e34: [fc cc e5 01 48 50   ] MOV 0x504801e5,D0
+  0x50405e3a: [42 10               ] MOV D0,(0x10,SP)
+  0x50405e3c: [80 01               ] MOV 0x1,D0
+  0x50405e3e: [85 06               ] MOV 0x6,D1
+  0x50405e40: [cd 44 24 00 00      ] CALL 0x50408284,[],0x0
+  0x50405e45: [00                  ] CLR D0
+  0x50405e46: [cc de 02            ] JMP 0x50406124
+  0x50405e49: [fc a5 b8 0c 48 50   ] MOV (0x50480cb8),D1
+  0x50405e4f: [fc a4 80 02 48 50   ] MOV (0x50480280),D0
+  0x50405e55: [42 0c               ] MOV D0,(0xc,SP)
+  0x50405e57: [f8 23 0c            ] MOV (0xc,A3),A0
+  0x50405e5a: [70                  ] MOV (A0),D0
+  0x50405e5b: [42 10               ] MOV D0,(0x10,SP)
+  0x50405e5d: [00                  ] CLR D0
+  0x50405e5e: [cd 7a 1d 00 00      ] CALL 0x50407bd8,[],0x0
+  0x50405e63: [f8 13 fc            ] MOV D0,(-0x4,A3)
+  0x50405e66: [f8 03 fc            ] MOV (-0x4,A3),D0
+  0x50405e69: [a0 01               ] CMP 0x1,D0
+  0x50405e6b: [c8 06               ] BEQ 0x50405e71
+  0x50405e6d: [00                  ] CLR D0
+  0x50405e6e: [cc b6 02            ] JMP 0x50406124
+  0x50405e71: [f8 23 14            ] MOV (0x14,A3),A0
+  0x50405e74: [fc cc 30 00 c0 90   ] MOV 0x90c00030,D0
+  0x50405e7a: [60                  ] MOV D0,(A0)
+  0x50405e7b: [cc 97 02            ] JMP 0x50406112
+  0x50405e7e: [fc a4 84 02 48 50   ] MOV (0x50480284),D0
+  0x50405e84: [a0 02               ] CMP 0x2,D0
+  0x50405e86: [c8 05               ] BEQ 0x50405e8b
+  0x50405e88: [cc ee 00            ] JMP 0x50405f76
+  0x50405e8b: [f8 23 0c            ] MOV (0xc,A3),A0
+  0x50405e8e: [fc a1 bc 0c 48 50   ] MOV (0x50480cbc),A1
+  0x50405e94: [f8 01 20            ] MOV (0x20,A1),D0
+  0x50405e97: [60                  ] MOV D0,(A0)
+  0x50405e98: [f8 23 0c            ] MOV (0xc,A3),A0
+  0x50405e9b: [70                  ] MOV (A0),D0
+  0x50405e9c: [81                  ] MOV D0,D1
+  0x50405e9d: [f8 e1 07            ] AND 0x7,D1
+  0x50405ea0: [f8 17 f8            ] MOV D1,(-0x8,A3)
+  0x50405ea3: [f8 03 f8            ] MOV (-0x8,A3),D0
+  0x50405ea6: [a0 00               ] CMP 0x0,D0
+  0x50405ea8: [c8 0c               ] BEQ 0x50405eb4
+  0x50405eaa: [80 08               ] MOV 0x8,D0
+  0x50405eac: [f8 07 f8            ] MOV (-0x8,A3),D1
+  0x50405eaf: [f1 04               ] SUB D1,D0
+  0x50405eb1: [f8 13 f8            ] MOV D0,(-0x8,A3)
+  0x50405eb4: [f8 23 0c            ] MOV (0xc,A3),A0
+  0x50405eb7: [f8 03 f8            ] MOV (-0x8,A3),D0
+  0x50405eba: [74                  ] MOV (A0),D1
+  0x50405ebb: [e4                  ] ADD D1,D0
+  0x50405ebc: [f8 13 f8            ] MOV D0,(-0x8,A3)
+  0x50405ebf: [f8 23 10            ] MOV (0x10,A3),A0
+  0x50405ec2: [00                  ] CLR D0
+  0x50405ec3: [60                  ] MOV D0,(A0)
+  0x50405ec4: [f8 23 14            ] MOV (0x14,A3),A0
+  0x50405ec7: [fc a4 80 02 48 50   ] MOV (0x50480280),D0
+  0x50405ecd: [60                  ] MOV D0,(A0)
+  0x50405ece: [fc cc 00 00 00 01   ] MOV 0x1000000,D0
+  0x50405ed4: [f8 13 f4            ] MOV D0,(-0xc,A3)
+  0x50405ed7: [f8 23 14            ] MOV (0x14,A3),A0
+  0x50405eda: [70                  ] MOV (A0),D0
+  0x50405edb: [fc a0 bc 0c 48 50   ] MOV (0x50480cbc),A0
+  0x50405ee1: [f8 04 0c            ] MOV (0xc,A0),D1
+  0x50405ee4: [f8 23 f8            ] MOV (-0x8,A3),A0
+  0x50405ee7: [43 0c               ] MOV A0,(0xc,SP)
+  0x50405ee9: [dd ea 8e 00 00 00 00] CALL 0x5040edd3,[],0x0
+  0x50405ef0: [f8 13 fc            ] MOV D0,(-0x4,A3)
+  0x50405ef3: [f8 03 fc            ] MOV (-0x4,A3),D0
+  0x50405ef6: [f8 07 f8            ] MOV (-0x8,A3),D1
+  0x50405ef9: [a4                  ] CMP D1,D0
+  0x50405efa: [c8 2d               ] BEQ 0x50405f27
+  0x50405efc: [fc cd d5 31 43 50   ] MOV 0x504331d5,D1  ; 'error! Failed to read Drive-Firm data.\n'
+  0x50405f02: [84                  ] MOV D1,D0
+  0x50405f03: [dd ca ee ff ff 00 00] CALL 0x50404dcd,[],0x0
+  0x50405f0a: [fc a4 98 0c 48 50   ] MOV (0x50480c98),D0
+  0x50405f10: [42 0c               ] MOV D0,(0xc,SP)
+  0x50405f12: [fc cc e5 01 48 50   ] MOV 0x504801e5,D0
+  0x50405f18: [42 10               ] MOV D0,(0x10,SP)
+  0x50405f1a: [80 01               ] MOV 0x1,D0
+  0x50405f1c: [85 06               ] MOV 0x6,D1
+  0x50405f1e: [cd 66 23 00 00      ] CALL 0x50408284,[],0x0
+  0x50405f23: [00                  ] CLR D0
+  0x50405f24: [cc 00 02            ] JMP 0x50406124
+  0x50405f27: [fc cd fd 31 43 50   ] MOV 0x504331fd,D1  ; 'decrypting.\n'
+  0x50405f2d: [84                  ] MOV D1,D0
+  0x50405f2e: [dd 9f ee ff ff 00 00] CALL 0x50404dcd,[],0x0
+  0x50405f35: [f8 23 14            ] MOV (0x14,A3),A0
+  0x50405f38: [70                  ] MOV (A0),D0
+  0x50405f39: [f8 07 f8            ] MOV (-0x8,A3),D1
+  0x50405f3c: [dd 72 8a 00 00 00 00] CALL 0x5040e9ae,[],0x0
+  0x50405f43: [fc a0 bc 0c 48 50   ] MOV (0x50480cbc),A0
+  0x50405f49: [f8 04 24            ] MOV (0x24,A0),D1
+  0x50405f4c: [fc a4 80 02 48 50   ] MOV (0x50480280),D0
+  0x50405f52: [42 0c               ] MOV D0,(0xc,SP)
+  0x50405f54: [fc a0 bc 0c 48 50   ] MOV (0x50480cbc),A0
+  0x50405f5a: [f8 00 20            ] MOV (0x20,A0),D0
+  0x50405f5d: [42 10               ] MOV D0,(0x10,SP)
+  0x50405f5f: [00                  ] CLR D0
+  0x50405f60: [cd 78 1c 00 00      ] CALL 0x50407bd8,[],0x0
+  0x50405f65: [f8 13 fc            ] MOV D0,(-0x4,A3)
+  0x50405f68: [f8 03 fc            ] MOV (-0x4,A3),D0
+  0x50405f6b: [a0 01               ] CMP 0x1,D0
+  0x50405f6d: [c8 06               ] BEQ 0x50405f73
+  0x50405f6f: [00                  ] CLR D0
+  0x50405f70: [cc b4 01            ] JMP 0x50406124
+  0x50405f73: [cc 9f 01            ] JMP 0x50406112
+  0x50405f76: [fc a4 84 02 48 50   ] MOV (0x50480284),D0
+  0x50405f7c: [a0 05               ] CMP 0x5,D0
+  0x50405f7e: [c8 05               ] BEQ 0x50405f83
+  0x50405f80: [cc 68 01            ] JMP 0x504060e8
+  0x50405f83: [f8 23 0c            ] MOV (0xc,A3),A0
+  0x50405f86: [fc a1 bc 0c 48 50   ] MOV (0x50480cbc),A1
+  0x50405f8c: [f8 01 20            ] MOV (0x20,A1),D0
+  0x50405f8f: [60                  ] MOV D0,(A0)
+  0x50405f90: [f8 23 0c            ] MOV (0xc,A3),A0
+  0x50405f93: [70                  ] MOV (A0),D0
+  0x50405f94: [81                  ] MOV D0,D1
+  0x50405f95: [f8 e1 07            ] AND 0x7,D1
+  0x50405f98: [f8 17 f8            ] MOV D1,(-0x8,A3)
+  0x50405f9b: [f8 03 f8            ] MOV (-0x8,A3),D0
+  0x50405f9e: [a0 00               ] CMP 0x0,D0
+  0x50405fa0: [c8 0c               ] BEQ 0x50405fac
+  0x50405fa2: [80 08               ] MOV 0x8,D0
+  0x50405fa4: [f8 07 f8            ] MOV (-0x8,A3),D1
+  0x50405fa7: [f1 04               ] SUB D1,D0
+  0x50405fa9: [f8 13 f8            ] MOV D0,(-0x8,A3)
+  0x50405fac: [f8 23 0c            ] MOV (0xc,A3),A0
+  0x50405faf: [f8 03 f8            ] MOV (-0x8,A3),D0
+  0x50405fb2: [74                  ] MOV (A0),D1
+  0x50405fb3: [e4                  ] ADD D1,D0
+  0x50405fb4: [f8 13 f8            ] MOV D0,(-0x8,A3)
+  0x50405fb7: [f8 23 10            ] MOV (0x10,A3),A0
+  0x50405fba: [00                  ] CLR D0
+  0x50405fbb: [60                  ] MOV D0,(A0)
+  0x50405fbc: [f8 23 14            ] MOV (0x14,A3),A0
+  0x50405fbf: [fc a4 80 02 48 50   ] MOV (0x50480280),D0
+  0x50405fc5: [60                  ] MOV D0,(A0)
+  0x50405fc6: [fc cc 00 00 00 01   ] MOV 0x1000000,D0
+  0x50405fcc: [f8 13 f4            ] MOV D0,(-0xc,A3)
+  0x50405fcf: [fc a4 00 03 48 50   ] MOV (0x50480300),D0
+  0x50405fd5: [fc a0 bc 0c 48 50   ] MOV (0x50480cbc),A0
+  0x50405fdb: [f8 04 0c            ] MOV (0xc,A0),D1
+  0x50405fde: [90 01               ] MOV 0x1,A0
+  0x50405fe0: [43 0c               ] MOV A0,(0xc,SP)
+  0x50405fe2: [dd 0c ba 00 00 00 00] CALL 0x504119ee,[],0x0
+  0x50405fe9: [f8 13 fc            ] MOV D0,(-0x4,A3)
+  0x50405fec: [fc a0 bc 0c 48 50   ] MOV (0x50480cbc),A0
+  0x50405ff2: [f8 03 fc            ] MOV (-0x4,A3),D0
+  0x50405ff5: [f8 04 0c            ] MOV (0xc,A0),D1
+  0x50405ff8: [a4                  ] CMP D1,D0
+  0x50405ff9: [c8 3a               ] BEQ 0x50406033
+  0x50405ffb: [fc cc 0a 32 43 50   ] MOV 0x5043320a,D0  ; 'FAT Seek(%d) failed[%d].\n'
+  0x50406001: [fc a0 bc 0c 48 50   ] MOV (0x50480cbc),A0
+  0x50406007: [f8 04 0c            ] MOV (0xc,A0),D1
+  0x5040600a: [f8 23 fc            ] MOV (-0x4,A3),A0
+  0x5040600d: [43 0c               ] MOV A0,(0xc,SP)
+  0x5040600f: [dd be ed ff ff 00 00] CALL 0x50404dcd,[],0x0
+  0x50406016: [fc a4 98 0c 48 50   ] MOV (0x50480c98),D0
+  0x5040601c: [42 0c               ] MOV D0,(0xc,SP)
+  0x5040601e: [fc cc e5 01 48 50   ] MOV 0x504801e5,D0
+  0x50406024: [42 10               ] MOV D0,(0x10,SP)
+  0x50406026: [80 01               ] MOV 0x1,D0
+  0x50406028: [85 06               ] MOV 0x6,D1
+  0x5040602a: [cd 5a 22 00 00      ] CALL 0x50408284,[],0x0
+  0x5040602f: [00                  ] CLR D0
+  0x50406030: [cc f4 00            ] JMP 0x50406124
+  0x50406033: [fc cc 24 32 43 50   ] MOV 0x50433224,D0  ; 'File ID[0x%X] seek to 0x%X.\n'
+  0x50406039: [fc a5 00 03 48 50   ] MOV (0x50480300),D1
+  0x5040603f: [f8 23 fc            ] MOV (-0x4,A3),A0
+  0x50406042: [43 0c               ] MOV A0,(0xc,SP)
+  0x50406044: [dd 89 ed ff ff 00 00] CALL 0x50404dcd,[],0x0
+  0x5040604b: [fc a4 00 03 48 50   ] MOV (0x50480300),D0
+  0x50406051: [f8 23 14            ] MOV (0x14,A3),A0
+  0x50406054: [74                  ] MOV (A0),D1
+  0x50406055: [f8 23 f8            ] MOV (-0x8,A3),A0
+  0x50406058: [43 0c               ] MOV A0,(0xc,SP)
+  0x5040605a: [dd 64 b9 00 00 00 00] CALL 0x504119be,[],0x0
+  0x50406061: [f8 13 fc            ] MOV D0,(-0x4,A3)
+  0x50406064: [f8 03 fc            ] MOV (-0x4,A3),D0
+  0x50406067: [f8 07 f8            ] MOV (-0x8,A3),D1
+  0x5040606a: [a4                  ] CMP D1,D0
+  0x5040606b: [c8 2d               ] BEQ 0x50406098
+  0x5040606d: [fc cd d5 31 43 50   ] MOV 0x504331d5,D1  ; 'error! Failed to read Drive-Firm data.\n'
+  0x50406073: [84                  ] MOV D1,D0
+  0x50406074: [dd 59 ed ff ff 00 00] CALL 0x50404dcd,[],0x0
+  0x5040607b: [fc a4 98 0c 48 50   ] MOV (0x50480c98),D0
+  0x50406081: [42 0c               ] MOV D0,(0xc,SP)
+  0x50406083: [fc cc e5 01 48 50   ] MOV 0x504801e5,D0
+  0x50406089: [42 10               ] MOV D0,(0x10,SP)
+  0x5040608b: [80 01               ] MOV 0x1,D0
+  0x5040608d: [85 06               ] MOV 0x6,D1
+  0x5040608f: [cd f5 21 00 00      ] CALL 0x50408284,[],0x0
+  0x50406094: [00                  ] CLR D0
+  0x50406095: [cc 8f 00            ] JMP 0x50406124
+  0x50406098: [fc cc 41 32 43 50   ] MOV 0x50433241,D0  ; 'File ID[0x%X] read to 0x%X(size=0x%X).\n'
+  0x5040609e: [fc a5 00 03 48 50   ] MOV (0x50480300),D1
+  0x504060a4: [f8 23 14            ] MOV (0x14,A3),A0
+  0x504060a7: [f0 04               ] MOV (A0),A1
+  0x504060a9: [47 0c               ] MOV A1,(0xc,SP)
+  0x504060ab: [f8 23 fc            ] MOV (-0x4,A3),A0
+  0x504060ae: [43 10               ] MOV A0,(0x10,SP)
+  0x504060b0: [dd 1d ed ff ff 00 00] CALL 0x50404dcd,[],0x0
+  0x504060b7: [fc a0 bc 0c 48 50   ] MOV (0x50480cbc),A0
+  0x504060bd: [f8 04 24            ] MOV (0x24,A0),D1
+  0x504060c0: [fc a4 80 02 48 50   ] MOV (0x50480280),D0
+  0x504060c6: [42 0c               ] MOV D0,(0xc,SP)
+  0x504060c8: [fc a0 bc 0c 48 50   ] MOV (0x50480cbc),A0
+  0x504060ce: [f8 00 20            ] MOV (0x20,A0),D0
+  0x504060d1: [42 10               ] MOV D0,(0x10,SP)
+  0x504060d3: [00                  ] CLR D0
+  0x504060d4: [cd 04 1b 00 00      ] CALL 0x50407bd8,[],0x0
+  0x504060d9: [f8 13 fc            ] MOV D0,(-0x4,A3)
+  0x504060dc: [f8 03 fc            ] MOV (-0x4,A3),D0
+  0x504060df: [a0 01               ] CMP 0x1,D0
+  0x504060e1: [c8 05               ] BEQ 0x504060e6
+  0x504060e3: [00                  ] CLR D0
+  0x504060e4: [ca 40               ] BRA 0x50406124
+  0x504060e6: [ca 2c               ] BRA 0x50406112
+  0x504060e8: [fc cd 69 32 43 50   ] MOV 0x50433269,D1  ; 'Update method error.\n'
+  0x504060ee: [84                  ] MOV D1,D0
+  0x504060ef: [dd de ec ff ff 00 00] CALL 0x50404dcd,[],0x0
+  0x504060f6: [fc a4 98 0c 48 50   ] MOV (0x50480c98),D0
+  0x504060fc: [42 0c               ] MOV D0,(0xc,SP)
+  0x504060fe: [fc cc e5 01 48 50   ] MOV 0x504801e5,D0
+  0x50406104: [42 10               ] MOV D0,(0x10,SP)
+  0x50406106: [80 01               ] MOV 0x1,D0
+  0x50406108: [85 06               ] MOV 0x6,D1
+  0x5040610a: [cd 7a 21 00 00      ] CALL 0x50408284,[],0x0
+  0x5040610f: [00                  ] CLR D0
+  0x50406110: [ca 14               ] BRA 0x50406124
+  0x50406112: [fc cd 7f 32 43 50   ] MOV 0x5043327f,D1  ; 'Complete to read Drive-Firm from Update-Disc.\n'
+  0x50406118: [84                  ] MOV D1,D0
+  0x50406119: [dd b4 ec ff ff 00 00] CALL 0x50404dcd,[],0x0
+  0x50406120: [80 01               ] MOV 0x1,D0
+  0x50406122: [ca 02               ] BRA 0x50406124
+  0x50406124: [f2 fc               ] MOV A3,SP
+  0x50406126: [df 90 08            ] RET [D2,A3],0x8
+  0x50406129: [cf 90               ] MOVM [D2,A3],(SP)
+  0x5040612b: [3f                  ] MOV SP,A3
+  0x5040612c: [f8 fe e4            ] ADD -0x1c,SP
+  0x5040612f: [f8 13 0c            ] MOV D0,(0xc,A3)
+  0x50406132: [f8 17 10            ] MOV D1,(0x10,A3)
+  0x50406135: [fc cd ae 32 43 50   ] MOV 0x504332ae,D1  ; 'start to update Drive-Firm.\n'
+  0x5040613b: [84                  ] MOV D1,D0
+  0x5040613c: [dd 91 ec ff ff 00 00] CALL 0x50404dcd,[],0x0
+  0x50406143: [fc cd cb 32 43 50   ] MOV 0x504332cb,D1  ; 'drive-firm-size = 0x%x.\n'
+  0x50406149: [84                  ] MOV D1,D0
+  0x5040614a: [f8 07 0c            ] MOV (0xc,A3),D1
+  0x5040614d: [dd 80 ec ff ff 00 00] CALL 0x50404dcd,[],0x0
+  0x50406154: [fc a4 94 0c 48 50   ] MOV (0x50480c94),D0
+```
+
+##### `p61_verify_and_stage_fmu_7bd8` (`0x50407bd8..0x50407d49`, 370 B)
+
+Verifica checksum de módulo `.FMU` via `0x5040eb35` (`bytes_sum32`) e registra metadados/user-file antes da gravação em NOR.
+
+<!-- source: prog061_dec.bin (base 0x50400000, SHA-256 c7da9121...) | DISASM 0x50407bd8..0x50407d49 -->
+```asm
+  0x50407bd8: [cf 30               ] MOVM [A2,A3],(SP)
+  0x50407bda: [3f                  ] MOV SP,A3
+  0x50407bdb: [f8 fe e8            ] ADD -0x18,SP
+  0x50407bde: [f8 13 0c            ] MOV D0,(0xc,A3)
+  0x50407be1: [f8 17 10            ] MOV D1,(0x10,A3)
+  0x50407be4: [00                  ] CLR D0
+  0x50407be5: [f8 13 fc            ] MOV D0,(-0x4,A3)
+  0x50407be8: [f8 03 0c            ] MOV (0xc,A3),D0
+  0x50407beb: [a0 07               ] CMP 0x7,D0
+  0x50407bed: [c9 32               ] BNE 0x50407c1f
+  0x50407bef: [fc cc d1 0e 48 50   ] MOV 0x50480ed1,D0
+  0x50407bf5: [fc a5 80 02 48 50   ] MOV (0x50480280),D1
+  0x50407bfb: [90 08               ] MOV 0x8,A0
+  0x50407bfd: [43 0c               ] MOV A0,(0xc,SP)
+  0x50407bff: [dd d3 56 02 00 00 00] CALL 0x5042d2d2,[],0x0
+  0x50407c06: [00                  ] CLR D0
+  0x50407c07: [fc 82 d9 0e 48 50   ] MOVBU D0,(0x50480ed9)
+  0x50407c0d: [fc a4 80 02 48 50   ] MOV (0x50480280),D0
+  0x50407c13: [f1 e0               ] MOV D0,A0
+  0x50407c15: [20 0f               ] ADD 0xf,A0
+  0x50407c17: [f0 40               ] MOVBU (A0),D0
+  0x50407c19: [fc 82 94 02 48 50   ] MOVBU D0,(0x50480294)
+  0x50407c1f: [f8 03 0c            ] MOV (0xc,A3),D0
+  0x50407c22: [a0 07               ] CMP 0x7,D0
+  0x50407c24: [c9 22               ] BNE 0x50407c46
+  0x50407c26: [fc a8 94 02 48 50   ] MOVBU (0x50480294),D0
+  0x50407c2c: [a0 01               ] CMP 0x1,D0
+  0x50407c2e: [c9 18               ] BNE 0x50407c46
+  0x50407c30: [fc cc 33 39 43 50   ] MOV 0x50433933,D0  ; 'User file[%s] clear only.\n'
+  0x50407c36: [fc cd d1 0e 48 50   ] MOV 0x50480ed1,D1
+  0x50407c3c: [dd 91 d1 ff ff 00 00] CALL 0x50404dcd,[],0x0
+  0x50407c43: [cc 92 00            ] JMP 0x50407cd5
+  0x50407c46: [fc cc 4e 39 43 50   ] MOV 0x5043394e,D0  ; 'Cheking for %s check-sum.\n'
+  0x50407c4c: [f8 07 0c            ] MOV (0xc,A3),D1
+  0x50407c4f: [90 34               ] MOV 0x34,A0
+  0x50407c51: [f9 a9 8d            ] MUL A0,D1
+  0x50407c54: [f1 e4               ] MOV D1,A0
+  0x50407c56: [fc d0 a1 0c 48 50   ] ADD 0x50480ca1,A0
+  0x50407c5c: [f1 d1               ] MOV A0,D1
+  0x50407c5e: [dd 6f d1 ff ff 00 00] CALL 0x50404dcd,[],0x0
+  0x50407c65: [f8 03 14            ] MOV (0x14,A3),D0
+  0x50407c68: [f8 07 18            ] MOV (0x18,A3),D1
+  0x50407c6b: [dd ca 6e 00 00 00 00] CALL 0x5040eb35,[],0x0
+  0x50407c72: [f8 13 fc            ] MOV D0,(-0x4,A3)
+  0x50407c75: [fc cc 69 39 43 50   ] MOV 0x50433969,D0  ; 'check_sum = 0x%x.\n'
+  0x50407c7b: [f8 07 fc            ] MOV (-0x4,A3),D1
+  0x50407c7e: [dd 4f d1 ff ff 00 00] CALL 0x50404dcd,[],0x0
+  0x50407c85: [f8 03 10            ] MOV (0x10,A3),D0
+  0x50407c88: [f8 07 fc            ] MOV (-0x4,A3),D1
+  0x50407c8b: [a4                  ] CMP D1,D0
+  0x50407c8c: [c8 49               ] BEQ 0x50407cd5
+  0x50407c8e: [fc cc 7c 39 43 50   ] MOV 0x5043397c,D0  ; 'error! %s check-sum invalid.\n'
+  0x50407c94: [f8 07 0c            ] MOV (0xc,A3),D1
+  0x50407c97: [90 34               ] MOV 0x34,A0
+  0x50407c99: [f9 a9 8d            ] MUL A0,D1
+  0x50407c9c: [f1 e4               ] MOV D1,A0
+  0x50407c9e: [fc d0 a1 0c 48 50   ] ADD 0x50480ca1,A0
+  0x50407ca4: [f1 d1               ] MOV A0,D1
+  0x50407ca6: [dd 27 d1 ff ff 00 00] CALL 0x50404dcd,[],0x0
+  0x50407cad: [f8 03 0c            ] MOV (0xc,A3),D0
+  0x50407cb0: [85 34               ] MOV 0x34,D1
+  0x50407cb2: [f2 44               ] MUL D1,D0
+  0x50407cb4: [fc cd 98 0c 48 50   ] MOV 0x50480c98,D1
+  0x50407cba: [f1 e0               ] MOV D0,A0
+  0x50407cbc: [f1 64               ] ADD D1,A0
+  0x50407cbe: [70                  ] MOV (A0),D0
+  0x50407cbf: [42 0c               ] MOV D0,(0xc,SP)
+  0x50407cc1: [fc cc 0f 02 48 50   ] MOV 0x5048020f,D0
+  0x50407cc7: [42 10               ] MOV D0,(0x10,SP)
+  0x50407cc9: [80 01               ] MOV 0x1,D0
+  0x50407ccb: [85 06               ] MOV 0x6,D1
+  0x50407ccd: [cd b7 05 00 00      ] CALL 0x50408284,[],0x0
+  0x50407cd2: [00                  ] CLR D0
+  0x50407cd3: [ca 72               ] BRA 0x50407d45
+  0x50407cd5: [fc a4 84 02 48 50   ] MOV (0x50480284),D0
+  0x50407cdb: [a0 02               ] CMP 0x2,D0
+  0x50407cdd: [c8 0e               ] BEQ 0x50407ceb
+  0x50407cdf: [fc a4 84 02 48 50   ] MOV (0x50480284),D0
+  0x50407ce5: [a0 05               ] CMP 0x5,D0
+  0x50407ce7: [c8 04               ] BEQ 0x50407ceb
+  0x50407ce9: [ca 2a               ] BRA 0x50407d13
+  0x50407ceb: [f8 03 0c            ] MOV (0xc,A3),D0
+  0x50407cee: [85 34               ] MOV 0x34,D1
+  0x50407cf0: [f2 44               ] MUL D1,D0
+  0x50407cf2: [fc cd b0 0c 48 50   ] MOV 0x50480cb0,D1
+  0x50407cf8: [f1 e0               ] MOV D0,A0
+  0x50407cfa: [f1 64               ] ADD D1,A0
+  0x50407cfc: [f8 03 0c            ] MOV (0xc,A3),D0
+  0x50407cff: [85 34               ] MOV 0x34,D1
+  0x50407d01: [f2 44               ] MUL D1,D0
+  0x50407d03: [fc cd bc 0c 48 50   ] MOV 0x50480cbc,D1
+  0x50407d09: [f1 e1               ] MOV D0,A1
+  0x50407d0b: [f1 65               ] ADD D1,A1
+  0x50407d0d: [f0 09               ] MOV (A1),A2
+  0x50407d0f: [f8 02 20            ] MOV (0x20,A2),D0
+  0x50407d12: [60                  ] MOV D0,(A0)
+  0x50407d13: [f8 03 0c            ] MOV (0xc,A3),D0
+  0x50407d16: [a0 07               ] CMP 0x7,D0
+  0x50407d18: [c9 29               ] BNE 0x50407d41
+  0x50407d1a: [f8 03 0c            ] MOV (0xc,A3),D0
+  0x50407d1d: [85 34               ] MOV 0x34,D1
+  0x50407d1f: [f2 44               ] MUL D1,D0
+  0x50407d21: [fc cd b0 0c 48 50   ] MOV 0x50480cb0,D1
+  0x50407d27: [f1 e0               ] MOV D0,A0
+  0x50407d29: [f1 64               ] ADD D1,A0
+  0x50407d2b: [f8 03 0c            ] MOV (0xc,A3),D0
+  0x50407d2e: [85 34               ] MOV 0x34,D1
+  0x50407d30: [f2 44               ] MUL D1,D0
+  0x50407d32: [fc cd b0 0c 48 50   ] MOV 0x50480cb0,D1
+  0x50407d38: [f1 e1               ] MOV D0,A1
+  0x50407d3a: [f1 65               ] ADD D1,A1
+  0x50407d3c: [71                  ] MOV (A1),D0
+  0x50407d3d: [81                  ] MOV D0,D1
+  0x50407d3e: [29 f0               ] ADD -0x10,D1
+  0x50407d40: [64                  ] MOV D1,(A0)
+  0x50407d41: [80 01               ] MOV 0x1,D0
+  0x50407d43: [ca 02               ] BRA 0x50407d45
+  0x50407d45: [f2 fc               ] MOV A3,SP
+  0x50407d47: [df 30 08            ] RET [A2,A3],0x8
+```
+
+#### Paralelo Exato na NOR Flash de Março de 2006 (`dmr-es35v/flash.bin`, `Loader ver0.18 [06/03/13]`, base `0x44000000`)
+
+Diferentemente do `/BOOT.BIN` (`Loader ver0.63 [07/10/24] 4MB/TOP BOOT`, DMR-EZ485V) analisado no projeto `Panadiga_MN103S`, o dump NOR de março de 2006 `dmr-es35v-8mb-nor-flash-and-eeprom-triton-dump.zip -> flash.bin` (`Loader ver0.18 [06/03/13]` @ `0x4402f6d7`/`0x4402f6f5`, SHA-256 `0969f258...`) comprova a arquitetura exata utilizada pela geração **2006** (`DMR-EH55 Loader ver0.61 [06/03/06]` / `DMR-ES35V Loader ver0.18 [06/03/13]`): carga crua direta de **`0x40000` (262.144 B)** em **`0x90400000`** (alias não-cacheado de `0x50400000`), execução direta por **`JMP 0x50400000`** (sem `EXTRHEAD`/`uncompress`) e leitura de **`0x1800` B** (`sd48`, 48 B/entrada) em `0x504814ac` — idêntico ao módulo `sd_load.o` de `PROG061`:
+
+##### Saltos de boot `sd_diag_boot` -> `JMP 0x50400000` (`0x440085d9..0x44008605`)
+
+Invoca `0x440095ab` (`sd_diag_boot`), fecha FAT (`0x4400b91b`), desliga timers (`0x44007def`), faz flush de cache (`0x44010cca`) e transfere controle diretamente via `0x44008601: [dc ff 79 3f 0c] JMP 0x50400000`.
+
+<!-- source: dmr-es35v/flash.bin (Loader ver0.18 [06/03/13], base 0x44000000, SHA-256 0969f258...) | DISASM 0x440085d9..0x44008605 -->
+```asm
+  0x440085d9: [cd d2 0f 00 00      ] CALL 0x440095ab,[],0x0
+  0x440085de: [dd 3d 33 00 00 00 00] CALL 0x4400b91b,[],0x0
+  0x440085e5: [dd 0a f8 ff ff 00 00] CALL 0x44007def,[],0x0
+  0x440085ec: [dd de 86 00 00 00 00] CALL 0x44010cca,[],0x0
+  0x440085f3: [fc cd e6 ff 02 44   ] MOV 0x4402ffe6,D1  ; '\n*** start diag ***\n'
+  0x440085f9: [84                  ] MOV D1,D0
+  0x440085fa: [dd a4 d9 ff ff 00 00] CALL 0x44005f9e,[],0x0
+  0x44008601: [dc ff 79 3f 0c      ] JMP 0x50400000
+```
+
+##### `sd_diag_boot` em `flash.bin` (`0x440095ab..0x4400961e`)
+
+Exibe `SDDIAG`, inicializa cartão via `0x4400b6ab` e chama `0x4400bc70` (`sd_diag_load`); caso `!= 1`, imprime `SD diag load failed[%d].\n`.
+
+<!-- source: dmr-es35v/flash.bin (Loader ver0.18 [06/03/13], base 0x44000000, SHA-256 0969f258...) | DISASM 0x440095ab..0x4400961d -->
+```asm
+  0x440095ab: [cf 10               ] MOVM [A3],(SP)
+  0x440095ad: [3f                  ] MOV SP,A3
+  0x440095ae: [f8 fe f0            ] ADD -0x10,SP
+  0x440095b1: [fc cd a3 05 03 44   ] MOV 0x440305a3,D1  ; 'SDDIAG'
+  0x440095b7: [2c 2c 01            ] MOV 0x12c,D0
+  0x440095ba: [dd 66 d8 ff ff 00 00] CALL 0x44006e20,[],0x0
+  0x440095c1: [fc cd 48 0c 48 50   ] MOV 0x50480c48,D1
+  0x440095c7: [84                  ] MOV D1,D0
+  0x440095c8: [dd e3 20 00 00 00 00] CALL 0x4400b6ab,[],0x0
+  0x440095cf: [f8 13 fc            ] MOV D0,(-0x4,A3)
+  0x440095d2: [f8 03 fc            ] MOV (-0x4,A3),D0
+  0x440095d5: [a0 00               ] CMP 0x0,D0
+  0x440095d7: [c9 2a               ] BNE 0x44009601
+  0x440095d9: [dd 97 26 00 00 00 00] CALL 0x4400bc70,[],0x0
+  0x440095e0: [f8 13 fc            ] MOV D0,(-0x4,A3)
+  0x440095e3: [f8 03 fc            ] MOV (-0x4,A3),D0
+  0x440095e6: [a0 01               ] CMP 0x1,D0
+  0x440095e8: [c8 17               ] BEQ 0x440095ff
+  0x440095ea: [fc cc aa 05 03 44   ] MOV 0x440305aa,D0  ; 'SD diag load failed[%d].\n'
+  0x440095f0: [f8 07 fc            ] MOV (-0x4,A3),D1
+  0x440095f3: [dd ab c9 ff ff 00 00] CALL 0x44005f9e,[],0x0
+  0x440095fa: [cd cc fd 00 00      ] CALL 0x440093c6,[],0x0
+  0x440095ff: [ca 17               ] BRA 0x44009616
+  0x44009601: [fc cc c4 05 03 44   ] MOV 0x440305c4,D0  ; 'SD init failed[%d].\n'
+  0x44009607: [f8 07 fc            ] MOV (-0x4,A3),D1
+  0x4400960a: [dd 94 c9 ff ff 00 00] CALL 0x44005f9e,[],0x0
+  0x44009611: [cd 0c 00 00 00      ] CALL 0x4400961d,[],0x0
+  0x44009616: [ca 02               ] BRA 0x44009618
+  0x44009618: [f2 fc               ] MOV A3,SP
+  0x4400961a: [df 10 04            ] RET [A3],0x4
+  0x4400961d: [cf 10               ] MOVM [A3],(SP)
+```
+
+##### Cauda de `cd_diag_boot_mode` em `flash.bin` (`0x4400983e..0x440098b8`)
+
+Trecho incluindo `0x44009840..0x440098b5` que lê `DIGADIAG.FRM` (`0x440306e5`) com tamanho `0x40000` diretamente em `0x90400000` via `0x4400c5bf`.
+
+<!-- source: dmr-es35v/flash.bin (Loader ver0.18 [06/03/13], base 0x44000000, SHA-256 0969f258...) | DISASM 0x4400983e..0x440098b8 -->
+```asm
+  0x4400983e: [00                  ] CLR D0
+  0x4400983f: [fc 81 88 02 48 50   ] MOV D0,(0x50480288)
+  0x44009845: [00                  ] CLR D0
+  0x44009846: [fc 81 64 02 48 50   ] MOV D0,(0x50480264)
+  0x4400984c: [80 01               ] MOV 0x1,D0
+  0x4400984e: [fc 81 68 02 48 50   ] MOV D0,(0x50480268)
+  0x44009854: [80 01               ] MOV 0x1,D0
+  0x44009856: [42 0c               ] MOV D0,(0xc,SP)
+  0x44009858: [00                  ] CLR D0
+  0x44009859: [04                  ] CLR D1
+  0x4400985a: [dd 52 19 00 00 00 00] CALL 0x4400b1ac,[],0x0
+  0x44009861: [f8 13 fc            ] MOV D0,(-0x4,A3)
+  0x44009864: [fc cc 00 00 04 00   ] MOV 0x40000,D0
+  0x4400986a: [42 0c               ] MOV D0,(0xc,SP)
+  0x4400986c: [fc cc e5 06 03 44   ] MOV 0x440306e5,D0  ; 'DIGADIAG.FRM'
+  0x44009872: [42 10               ] MOV D0,(0x10,SP)
+  0x44009874: [fc cc 00 00 40 90   ] MOV 0x90400000,D0
+  0x4400987a: [04                  ] CLR D1
+  0x4400987b: [dd 44 2d 00 00 00 00] CALL 0x4400c5bf,[],0x0
+  0x44009882: [f8 13 fc            ] MOV D0,(-0x4,A3)
+  0x44009885: [f8 03 fc            ] MOV (-0x4,A3),D0
+  0x44009888: [fc c8 00 00 04 00   ] CMP 0x40000,D0
+  0x4400988e: [c8 24               ] BEQ 0x440098b2
+  0x44009890: [fc cd f2 06 03 44   ] MOV 0x440306f2,D1  ; 'DIGADIAG.FRM read failed.\n'
+  0x44009896: [84                  ] MOV D1,D0
+  0x44009897: [dd 07 c7 ff ff 00 00] CALL 0x44005f9e,[],0x0
+  0x4400989e: [dd bb 1a 00 00 00 00] CALL 0x4400b359,[],0x0
+  0x440098a5: [80 01               ] MOV 0x1,D0
+  0x440098a7: [fc 81 64 02 48 50   ] MOV D0,(0x50480264)
+  0x440098ad: [cd 19 fb 00 00      ] CALL 0x440093c6,[],0x0
+  0x440098b2: [ca 02               ] BRA 0x440098b4
+  0x440098b4: [f2 fc               ] MOV A3,SP
+  0x440098b6: [df 10 04            ] RET [A3],0x4
+```
+
+##### `sd_diag_load` (`0x4400bc70..0x4400bd42`) & `sd_read_firm_list` (`0x4400bd43..0x4400bd99`) em `flash.bin`
+
+Parálogo exato de `0x5040eca9` e `0x5040ed7c` em `PROG061`: lê `DIGADIAG.FRM` (`0x40000` B -> `0x90400000`) e `PANA__SD.FRM` (`0x1800` B `sd48` -> `0x504814ac`).
+
+<!-- source: dmr-es35v/flash.bin (Loader ver0.18 [06/03/13], base 0x44000000, SHA-256 0969f258...) | DISASM 0x4400bc70..0x4400bd99 -->
+```asm
+  0x4400bc70: [cf 10               ] MOVM [A3],(SP)
+  0x4400bc72: [3f                  ] MOV SP,A3
+  0x4400bc73: [f8 fe e8            ] ADD -0x18,SP
+  0x4400bc76: [dd ea 19 00 00 00 00] CALL 0x4400d660,[],0x0
+  0x4400bc7d: [fc 81 7c 02 48 50   ] MOV D0,(0x5048027c)
+  0x4400bc83: [fc a4 7c 02 48 50   ] MOV (0x5048027c),D0
+  0x4400bc89: [a0 00               ] CMP 0x0,D0
+  0x4400bc8b: [c2 1d               ] BGE 0x4400bca8
+  0x4400bc8d: [fc cd b1 0c 03 44   ] MOV 0x44030cb1,D1  ; 'FAT Mount failed[%d].\n'
+  0x4400bc93: [fc a4 7c 02 48 50   ] MOV (0x5048027c),D0
+  0x4400bc99: [42 0c               ] MOV D0,(0xc,SP)
+  0x4400bc9b: [80 01               ] MOV 0x1,D0
+  0x4400bc9d: [dd e7 09 00 00 00 00] CALL 0x4400c684,[],0x0
+  0x4400bca4: [00                  ] CLR D0
+  0x4400bca5: [cc 99 00            ] JMP 0x4400bd3e
+  0x4400bca8: [fc a4 7c 02 48 50   ] MOV (0x5048027c),D0
+  0x4400bcae: [fc cd 21 0d 03 44   ] MOV 0x44030d21,D1  ; 'DIGADIAG.FRM'
+  0x4400bcb4: [dd 81 1b 00 00 00 00] CALL 0x4400d835,[],0x0
+  0x4400bcbb: [fc 81 80 02 48 50   ] MOV D0,(0x50480280)
+  0x4400bcc1: [fc a4 80 02 48 50   ] MOV (0x50480280),D0
+  0x4400bcc7: [a0 00               ] CMP 0x0,D0
+  0x4400bcc9: [c2 24               ] BGE 0x4400bced
+  0x4400bccb: [fc cd ea 0c 03 44   ] MOV 0x44030cea,D1  ; 'FAT Open(%s) failed[%d].\n'
+  0x4400bcd1: [fc cc 21 0d 03 44   ] MOV 0x44030d21,D0  ; 'DIGADIAG.FRM'
+  0x4400bcd7: [42 0c               ] MOV D0,(0xc,SP)
+  0x4400bcd9: [fc a4 80 02 48 50   ] MOV (0x50480280),D0
+  0x4400bcdf: [42 10               ] MOV D0,(0x10,SP)
+  0x4400bce1: [80 01               ] MOV 0x1,D0
+  0x4400bce3: [dd a1 09 00 00 00 00] CALL 0x4400c684,[],0x0
+  0x4400bcea: [00                  ] CLR D0
+  0x4400bceb: [ca 53               ] BRA 0x4400bd3e
+  0x4400bced: [fc a4 80 02 48 50   ] MOV (0x50480280),D0
+  0x4400bcf3: [85 01               ] MOV 0x1,D1
+  0x4400bcf5: [46 0c               ] MOV D1,(0xc,SP)
+  0x4400bcf7: [04                  ] CLR D1
+  0x4400bcf8: [dd 08 1c 00 00 00 00] CALL 0x4400d900,[],0x0
+  0x4400bcff: [f8 13 fc            ] MOV D0,(-0x4,A3)
+  0x4400bd02: [f8 03 fc            ] MOV (-0x4,A3),D0
+  0x4400bd05: [a0 00               ] CMP 0x0,D0
+  0x4400bd07: [c8 05               ] BEQ 0x4400bd0c
+  0x4400bd09: [00                  ] CLR D0
+  0x4400bd0a: [ca 34               ] BRA 0x4400bd3e
+  0x4400bd0c: [fc a4 80 02 48 50   ] MOV (0x50480280),D0
+  0x4400bd12: [fc cd 00 00 04 00   ] MOV 0x40000,D1
+  0x4400bd18: [46 0c               ] MOV D1,(0xc,SP)
+  0x4400bd1a: [fc cd 00 00 40 90   ] MOV 0x90400000,D1
+  0x4400bd20: [dd b0 1b 00 00 00 00] CALL 0x4400d8d0,[],0x0
+  0x4400bd27: [f8 13 fc            ] MOV D0,(-0x4,A3)
+  0x4400bd2a: [f8 03 fc            ] MOV (-0x4,A3),D0
+  0x4400bd2d: [fc c8 00 00 04 00   ] CMP 0x40000,D0
+  0x4400bd33: [c9 08               ] BNE 0x4400bd3b
+  0x4400bd35: [80 01               ] MOV 0x1,D0
+  0x4400bd37: [ca 07               ] BRA 0x4400bd3e
+  0x4400bd39: [ca 05               ] BRA 0x4400bd3e
+  0x4400bd3b: [00                  ] CLR D0
+  0x4400bd3c: [ca 02               ] BRA 0x4400bd3e
+  0x4400bd3e: [f2 fc               ] MOV A3,SP
+  0x4400bd40: [df 10 04            ] RET [A3],0x4
+  0x4400bd43: [cf 10               ] MOVM [A3],(SP)
+  0x4400bd45: [3f                  ] MOV SP,A3
+  0x4400bd46: [f8 fe ec            ] ADD -0x14,SP
+  0x4400bd49: [fc a4 80 02 48 50   ] MOV (0x50480280),D0
+  0x4400bd4f: [85 01               ] MOV 0x1,D1
+  0x4400bd51: [46 0c               ] MOV D1,(0xc,SP)
+  0x4400bd53: [04                  ] CLR D1
+  0x4400bd54: [dd ac 1b 00 00 00 00] CALL 0x4400d900,[],0x0
+  0x4400bd5b: [f8 13 fc            ] MOV D0,(-0x4,A3)
+  0x4400bd5e: [f8 03 fc            ] MOV (-0x4,A3),D0
+  0x4400bd61: [a0 00               ] CMP 0x0,D0
+  0x4400bd63: [c8 05               ] BEQ 0x4400bd68
+  0x4400bd65: [00                  ] CLR D0
+  0x4400bd66: [ca 2f               ] BRA 0x4400bd95
+  0x4400bd68: [fc a4 80 02 48 50   ] MOV (0x50480280),D0
+  0x4400bd6e: [fc cd ac 14 48 50   ] MOV 0x504814ac,D1
+  0x4400bd74: [24 00 18            ] MOV 0x1800,A0
+  0x4400bd77: [43 0c               ] MOV A0,(0xc,SP)
+  0x4400bd79: [dd 57 1b 00 00 00 00] CALL 0x4400d8d0,[],0x0
+  0x4400bd80: [f8 13 fc            ] MOV D0,(-0x4,A3)
+  0x4400bd83: [f8 03 fc            ] MOV (-0x4,A3),D0
+  0x4400bd86: [fa c8 00 18         ] CMP 0x1800,D0
+  0x4400bd8a: [c9 08               ] BNE 0x4400bd92
+  0x4400bd8c: [80 01               ] MOV 0x1,D0
+  0x4400bd8e: [ca 07               ] BRA 0x4400bd95
+  0x4400bd90: [ca 05               ] BRA 0x4400bd95
+  0x4400bd92: [00                  ] CLR D0
+  0x4400bd93: [ca 02               ] BRA 0x4400bd95
+  0x4400bd95: [f2 fc               ] MOV A3,SP
+  0x4400bd97: [df 10 04            ] RET [A3],0x4
+```
 ### 2.2 Drivers BGO, Controles NOR & Os 3 Patch Sites Exatos do PROG061
+
+> **Arquitetura Física dos Setores BGO & Máquina de Estados `SA41 + 0x14` (`PROG061` × `Loader ver0.61`):**
+> 1. **Cabeçalho Físico do Setor NOR (`64 KiB`, passo `0x10000` em `ver0.61` `0x84130000..0x843FFFFF`):** cada bloco físico possui:
+>    - `+0x00..+0x0F`: `block_tag[4]` (`u16[4]` votado por maioria 3-de-4 em `FUN_504236b5`! Valores ativos: `0xF101` = Partição 1, `0xF201..0xF228` = blocos Partição 2, `0xFFFF` = `spare` apagado, `0x0000` = bloco inválido/`dead`).
+>    - **`+0x14..+0x5B` (`SA41 + 0x14` em análise de dumps):** Subestrutura de migração atômica composta por **`4 × u16`** máscaras de estado (`+0x14`: `w0` = *slot invalid*, `+0x16`: `w1`, `+0x18`: `w2`, `+0x1A`: `w3` = *slot allocated/written*, usando programação NOR `1 -> 0`), seguidas de `+0x1C` (`+0x14 + 0x08`: `u16 slot_to_page[16]`) e `+0x3C` (`+0x14 + 0x28`: `u16 old_slot_confirm[16]`, inicializados `0xffff`).
+>    - `+0x200..`: Até `16` (`0xfc` pares / `0x10`) subpáginas de dados de `0x200` bytes (P2) ou entradas de mapeamento.
+> 2. **Anatomia do `FUN_50423540` / `FUN_5042358b` e da Anomalia de Decompilação:** No disassembly de `FUN_50423540` (`0x50423540`), os opcodes reais calculam **`~(w0 | w1 | w2) & w3`**, procuram o primeiro bit setado de MSB->LSB (`BTST 0x8000, R0`), usam `SUB D1, R1, A1` (`slot = 15 - bit`) para verificar `*(u16*)(hdr_14 + 0x28 + slot*2) == 0xffff` e indexam `*(u16*)(hdr_14 + 8 + slot*2)` em `FUN_5042283d`. Por **3 bugs simultâneos do SLEIGH MN103S** (`NOT D0,D0 -> D0^D0 = 0`, `BTST -> mn_todo()` e `Trap #8A SUB`), quase toda essa lógica desaparece no C decompilado!
+> 3. **Erratum `0x504238a5`:** O endereço `0x504238a5` **não** é uma função isolada; cai **`+5 bytes`** no interior da instrução `0x504238a0: [fe 08 00 c4 84 4f 50] MOV 0x504f84c4, R0` em `FUN_5042383c` (`875 B`), que inicializa o ponteiro RAM do controlador de blocos BGO.
+
 
 #### `FUN_5040a294` (`p61_bgo_init_hook_a294`) — `0x5040a294` (130 B)
 
@@ -9461,6 +16518,5821 @@ Listagem exata em máquina MN103S dos 3 sítios de verificação/patch BGO local
   0x5040a319: [f8 fe e8            ] ADD -0x18,SP
   0x5040a31c: [f8 13 08            ] MOV D0,(0x8 ,A3)
   0x5040a31f: [f8 17 0c            ] MOV D1,(0xc ,A3)
+```
+
+
+
+---
+
+#### Subsistema Completo BGO FTL (`FUN_50421e6a..FUN_50428725`) em `PROG061` (C Verificado + Disassembly MN103S)
+
+#### `FUN_50421e6a` (`p61_bgo_init_part_check_21e6a`), `FUN_50421f23` (`bgo_read_D`) & `FUN_50421f85` (`bgo_write_D`)
+
+Pontos de entrada de `ioctl(0)`, `ioctl(3)` (`bgo_read_D` até `0x10` págs de `0x200` B) e `ioctl(4)` (`bgo_write_D`, exige alinhamento dentro de bloco de 16 páginas `(page & 0xf) + count <= 16`).
+
+<!-- source: prog061_bgo_decomp.txt | FUNC FUN_50421e6a @ 0x50421e6a (disassembled + created function, bodySize=84 B) -->
+```c
+undefined4 FUN_50421e6a(void)
+
+{
+  undefined4 uVar1;
+  int iVar2;
+  undefined4 uVar3;
+  uint uVar4;
+  uint uVar5;
+
+  uVar5 = 1;
+  uVar1 = 0x52;
+  uVar3 = 0x14d;
+  do {
+    func_0x504228fe(uVar5,4,uVar1,uVar3);
+    uVar5 = uVar5 + 1;
+  } while (uVar5 < 5);
+  func_0x50422529();
+  func_0x5042679d();
+  uVar5 = 1;
+  do {
+    uVar4 = 2;
+    do {
+      iVar2 = func_0x50422886(uVar5,uVar4);
+      if ((iVar2 != 0) && (iVar2 != 4)) {
+        return 1;
+      }
+      uVar4 = uVar4 + 1;
+    } while (uVar4 < 5);
+    uVar5 = uVar5 + 1;
+    if (1 < uVar5) {
+      return 0;
+    }
+  } while( true );
+}
+
+ (GhidraScript)
+
+uint FUN_50421f23(int param_1,int param_2,int param_3)
+
+{
+  uint uVar1;
+  int iVar2;
+  uint uVar3;
+  undefined4 uStack00000010;
+
+  if (((param_1 == 1) && (param_3 - 1U < 0x10)) && (param_2 != 0)) {
+    uVar3 = (param_3 + param_2) - 1;
+    uVar1 = func_0x50422a1b(1,1);
+    if (uVar3 <= uVar1) {
+      iVar2 = func_0x50422886(param_1,param_1);
+      if (iVar2 - 1U < 0x2f) {
+        return 3;
+      }
+      uVar1 = func_0x50426802(param_1,param_2,param_3,uStack00000010);
+      return (int)(uVar1 | -uVar1) >> 0x1f & 2;
+    }
+  }
+  return 4;
+}
+
+ (GhidraScript)
+
+undefined4 FUN_50421f85(int param_1,uint param_2,uint param_3,int param_4)
+
+{
+  uint uVar1;
+  undefined4 uVar2;
+  int iVar3;
+  uint uVar4;
+  undefined1 auStack_78 [20];
+  int aiStack_64 [25];
+
+  if (param_1 != 1) {
+    return 0x13;
+  }
+  if (param_3 - 1 < 0x10) {
+    if (param_2 != 0) {
+      uVar4 = (param_2 + param_3) - 1;
+      uVar1 = func_0x50422a1b(1,1);
+      if (uVar4 <= uVar1) {
+        if ((param_2 & 0xf) + param_3 < 0x11) {
+          iVar3 = func_0x50422886(param_1,param_1);
+          if (iVar3 == 0) {
+            uVar1 = 0;
+            if (param_3 != 0) {
+              do {
+                aiStack_64[uVar1 & 0xff] = (uVar1 & 0xff) * 0x200 + param_4;
+                uVar1 = uVar1 + 1;
+              } while ((uVar1 & 0xff) < param_3);
+            }
+            uVar2 = func_0x504268a1(auStack_78,param_3);
+            return uVar2;
+          }
+          return 0x11;
+        }
+        goto LAB_50421fc9;
+      }
+    }
+    uVar2 = 0x12;
+  }
+  else {
+LAB_50421fc9:
+    uVar2 = 0x14;
+  }
+  return uVar2;
+}
+
+ (GhidraScript)
+```
+
+#### `FUN_50422529..FUN_50422a9f` (`p61_bgo_geom_and_slot_helpers`)
+
+Nucleo auxiliar do FTL BGO: varredura inicial de tabela `0x50436e5c` (`FUN_50422529`), leitura/substituição de página de mapeamento (`FUN_5042269e`), consulta de tabela `0x50436DC4`/`0x50436E30` (`FUN_504229be`/`FUN_50422a1b`), extração/inserção de bytes `(hi/lo)` (`FUN_50422a69`/`22a78`), leitura do marcador migrado `SA41+0x14` (`FUN_5042283d`), swap por maioria (`FUN_5042285f`) e detecção de palavra programada em NOR (`FUN_50422a9f`: retorna `0` se ≥ 8 bits estiverem em `0`).
+
+<!-- source: prog061_bgo_decomp.txt / prog061_helpers_decomp.txt | FUNCS FUN_50422529..FUN_50422a9f @ 0x50422529..0x50422a9f -->
+```c
+void FUN_50422529(void)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  int iVar3;
+  uint uVar4;
+  undefined4 uVar5;
+
+  uVar4 = 1;
+  uVar5 = 0x145;
+  puVar1 = (undefined4 *)0x50436e5c;
+  do {
+    uVar2 = *puVar1;
+    puVar1 = puVar1 + 0x1b;
+    iVar3 = func_0x50427040(uVar2);
+    if (iVar3 == 0) {
+      func_0x504228fe(uVar4,6,0x16f,uVar5);
+      func_0x50422c08(uVar4);
+    }
+    else {
+      func_0x504228fe(uVar4,5,0x173,uVar5);
+    }
+    func_0x50422a58(uVar4);
+    uVar4 = uVar4 + 1;
+  } while (uVar4 < 2);
+  return;
+}
+
+ (GhidraScript)
+
+undefined4 FUN_5042269e(undefined4 param_1,uint param_2)
+
+{
+  undefined2 *puVar1;
+  uint uVar2;
+  int iVar3;
+  uint uVar4;
+  int iVar5;
+  undefined4 uVar6;
+  uint uVar7;
+  int *piVar8;
+  undefined4 uVar9;
+  int iStack_28;
+  undefined2 auStack_22 [17];
+
+  param_2 = param_2 & 0xffff;
+  uVar2 = func_0x50422a69(1,param_2);
+  uVar2 = uVar2 & 0xff;
+  iVar3 = func_0x504229be(param_1,uVar2);
+  puVar1 = auStack_22;
+  func_0x50422a78(0,puVar1,iVar3 + 1U & 0xffff);
+  func_0x50422a78(1,puVar1,uVar2);
+  piVar8 = &iStack_28;
+  func_0x5042295f(piVar8,param_1,auStack_22[0]);
+  uVar4 = func_0x50423628(param_1,param_2);
+  uVar4 = uVar4 & 0xffff;
+  iVar5 = func_0x5042285f(iStack_28 + 0x5c,uVar4);
+  if (iVar5 == 0) {
+    uVar7 = func_0x50422a69(0,param_2);
+    iVar5 = *(int *)((int)piVar8 * 4 + 0x50436e9c);
+    iVar3 = (iVar5 + iVar3) * 2;
+    puVar1 = (undefined2 *)(iVar3 + 0x504f861a);
+    *(undefined2 *)(((uVar7 & 0xff) + iVar5) * 2 + 0x504f8618) = *puVar1;
+    *puVar1 = 0xffff;
+    *(undefined2 *)(iVar3 + 0x504f861c) = 0xffff;
+    uVar6 = func_0x504235d9(param_1,uVar4);
+    iVar3 = func_0x50423687(uVar6);
+    if (iVar3 == 0) {
+      iVar3 = func_0x5042285f(iStack_28 + 0x5c,0xffff);
+      if (iVar3 == 0) {
+        func_0x5042317c(param_1,uVar4);
+        return 0;
+      }
+      uVar9 = 0x33;
+      uVar6 = 0x23b;
+    }
+    else if (iVar3 == 1) {
+      iVar3 = func_0x5042285f(iStack_28 + 0x5c,0xffff);
+      if (iVar3 == 0) {
+        return 0;
+      }
+      uVar9 = 0x33;
+      uVar6 = 0x24c;
+    }
+    else {
+      uVar9 = 0x34;
+      uVar6 = 0x254;
+    }
+  }
+  else {
+    uVar9 = 0x33;
+    uVar6 = 0x225;
+  }
+  func_0x504228c3(param_1,uVar2,uVar9,uVar6,0x145);
+  return 1;
+}
+
+ (GhidraScript)
+
+bool FUN_504227e1(void)
+
+{
+  short sVar1;
+
+  sVar1 = func_0x50422815();
+  return sVar1 == -1;
+}
+
+ (GhidraScript)
+
+undefined2 FUN_5042283d(int param_1)
+
+{
+  undefined2 uVar1;
+  int iVar2;
+
+  iVar2 = func_0x50423540();
+  if (iVar2 == -1) {
+    uVar1 = 0xffff;
+  }
+  else {
+    uVar1 = *(undefined2 *)(param_1 + iVar2 * 2 + 8);
+  }
+  return uVar1;
+}
+
+ (GhidraScript)
+
+undefined4 FUN_5042285f(undefined4 param_1,uint param_2)
+
+{
+  int iVar1;
+  uint uVar2;
+
+  uVar2 = 0;
+  do {
+    iVar1 = func_0x50423402(param_1,param_2 & 0xffff);
+    if (iVar1 == 0) {
+      return 0;
+    }
+  } while ((iVar1 == 4) && (uVar2 = uVar2 + 1, uVar2 < 4));
+  return 1;
+}
+
+ (GhidraScript)
+
+undefined4 FUN_50422886(int param_1,uint param_2)
+
+{
+  if (param_2 == 3) {
+    return *(undefined4 *)(param_1 * 0xc + 0x504f8468);
+  }
+  if (param_2 < 4) {
+    if (param_2 != 0) {
+      return *(undefined4 *)(param_1 * 0xc + 0x504f8464);
+    }
+  }
+  else if (param_2 == 4) {
+    return *(undefined4 *)(param_1 * 0xc + 0x504f846c);
+  }
+  return 4;
+}
+
+ (GhidraScript)
+
+undefined4 FUN_504228c3(int param_1,uint param_2,undefined4 param_3)
+
+{
+  if (param_2 == 3) {
+    *(undefined4 *)(param_1 * 0xc + 0x504f8468) = param_3;
+    return param_3;
+  }
+  if (param_2 < 4) {
+    if (param_2 != 0) {
+      *(undefined4 *)(param_1 * 0xc + 0x504f8464) = param_3;
+      return param_3;
+    }
+  }
+  else {
+    if (param_2 != 4) {
+      return param_3;
+    }
+    *(undefined4 *)(param_1 * 0xc + 0x504f846c) = param_3;
+  }
+  return param_3;
+}
+
+ (GhidraScript)
+
+void FUN_504228fe(undefined4 param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4)
+
+{
+  uint uVar1;
+
+  uVar1 = 1;
+  do {
+    FUN_504228c3(param_1,uVar1,param_2,param_3,param_4);
+    uVar1 = uVar1 + 1;
+  } while (uVar1 < 5);
+  return;
+}
+
+ (GhidraScript)
+
+bool FUN_50422923(int *param_1,undefined4 param_2,int param_3,int param_4)
+
+{
+  int iVar1;
+
+  iVar1 = func_0x504235d9(param_2,*(undefined2 *)
+                                   ((*(int *)(param_3 * 4 + 0x50436e9c) + param_4) * 2 + 0x504f8618)
+                         );
+  *param_1 = iVar1;
+  return iVar1 == -1;
+}
+
+ (GhidraScript)
+
+undefined4 FUN_504229be(int param_1,uint param_2)
+
+{
+  if (param_2 == 3) {
+    return *(undefined4 *)(param_1 * 0x6c + 0x50436dd0);
+  }
+  if (param_2 < 4) {
+    if (param_2 == 1) {
+      return *(undefined4 *)(param_1 * 0x6c + 0x50436dc8);
+    }
+    if (param_2 == 2) {
+      return *(undefined4 *)(param_1 * 0x6c + 0x50436dcc);
+    }
+  }
+  else {
+    if (param_2 == 4) {
+      return *(undefined4 *)(param_1 * 0x6c + 0x50436dd4);
+    }
+    if (param_2 == 5) {
+      return 8;
+    }
+  }
+  return 0;
+}
+
+ (GhidraScript)
+
+undefined4 FUN_50422a1b(int param_1,uint param_2)
+
+{
+  if ((param_2 < 3) && (param_2 != 0)) {
+    return *(undefined4 *)((param_1 + -1) * 0x6c + 0x50436e48);
+  }
+  return 0;
+}
+
+ (GhidraScript)
+
+undefined4 FUN_50422a58(int param_1)
+
+{
+  *(undefined4 *)(param_1 * 4 + 0x504f849c) = 0;
+  return 0;
+}
+
+ (GhidraScript)
+
+uint FUN_50422a69(int param_1,uint param_2)
+
+{
+  if (param_1 != 1) {
+    return param_2 & 0xff;
+  }
+  return param_2 >> 8 & 0xff;
+}
+
+ (GhidraScript)
+
+ushort * FUN_50422a78(int param_1,ushort *param_2,ushort param_3)
+
+{
+  if (param_1 == 1) {
+    *param_2 = (ushort)(byte)*param_2;
+    param_3 = param_3 << 8;
+  }
+  else {
+    *param_2 = *param_2 & 0xff00;
+    param_3 = param_3 & 0xff;
+  }
+  *param_2 = *param_2 | param_3;
+  return param_2;
+}
+
+ (GhidraScript)
+
+undefined4 FUN_50422a9f(ushort *param_1)
+
+{
+  uint uVar1;
+  int iVar2;
+  uint uVar3;
+  uint uVar4;
+  uint uVar5;
+
+  uVar5 = 0;
+  do {
+    iVar2 = func_0x5042717a(param_1,0);
+    if (iVar2 == 0) {
+      uVar4 = (uint)*param_1;
+      uVar1 = 0;
+      uVar3 = 0;
+      do {
+        if (((uVar4 & 1) == 0) && (uVar3 = uVar3 + 1, 7 < uVar3)) {
+          return 0;
+        }
+        uVar1 = uVar1 + 1;
+        uVar4 = uVar4 >> 1;
+      } while (uVar1 < 0x10);
+    }
+    else {
+      uVar4 = (uint)*param_1;
+      uVar1 = 0;
+      uVar3 = 0;
+      do {
+        if (((uVar4 & 1) == 0) && (uVar3 = uVar3 + 1, 7 < uVar3)) {
+          return 0;
+        }
+        uVar1 = uVar1 + 1;
+        uVar4 = uVar4 >> 1;
+      } while (uVar1 < 0x10);
+    }
+    uVar5 = uVar5 + 1;
+    if (3 < uVar5) {
+      return 1;
+    }
+  } while( true );
+}
+
+ (GhidraScript)
+```
+
+**Disassembly MN103S de `FUN_5042283d` & `FUN_5042285f`:**
+
+<!-- source: prog061_disasm_all.clean.txt | === DISASM FUN_5042283d @ 0x5042283d (size=34 B) === -->
+```asm
+-- === DISASM FUN_5042283d @ 0x5042283d (size=34 B) === --
+  0x5042283d: [cf 80                ] MOVM [D2],(SP)
+  0x5042283f: [f8 fe f4             ] ADD -0xc,SP
+  0x50422842: [82                   ] MOV D0,D2
+  0x50422843: [cd fd 0c 00 00       ] CALL 0x50423540,[],0x0
+  0x50422848: [a0 ff                ] CMP -0x1,D0
+  0x5042284a: [c8 0c                ] BEQ 0x50422856
+  0x5042284c: [e0                   ] ADD D0,D0
+  0x5042284d: [f1 e8                ] MOV D2,A0
+  0x5042284f: [f1 60                ] ADD D0,A0
+  0x50422851: [f8 60 08             ] MOVHU (0x8 ,A0),D0
+  0x50422854: [ca 08                ] BRA 0x5042285c
+  0x50422856: [fc cc ff ff 00 00    ] MOV 0xffff,D0
+  0x5042285c: [df 80 10             ] RET [D2],0x10
+```
+
+<!-- source: prog061_disasm_all.clean.txt | === DISASM FUN_5042285f @ 0x5042285f (size=39 B) === -->
+```asm
+-- === DISASM FUN_5042285f @ 0x5042285f (size=39 B) === --
+  0x5042285f: [cf e0                ] MOVM [D2,D3,A2],(SP)
+  0x50422861: [f8 fe f4             ] ADD -0xc,SP
+  0x50422864: [f1 e2                ] MOV D0,A2
+  0x50422866: [87                   ] MOV D1,D3
+  0x50422867: [08                   ] CLR D2
+  0x50422868: [f1 d8                ] MOV A2,D0
+  0x5042286a: [8d                   ] MOV D3,D1
+  0x5042286b: [1d                   ] EXTHU D1
+  0x5042286c: [cd 96 0b 00 00       ] CALL 0x50423402,[],0x0
+  0x50422871: [a0 00                ] CMP 0x0,D0
+  0x50422873: [c9 05                ] BNE 0x50422878
+  0x50422875: [00                   ] CLR D0
+  0x50422876: [ca 0d                ] BRA 0x50422883
+  0x50422878: [a0 04                ] CMP 0x4,D0
+  0x5042287a: [c9 07                ] BNE 0x50422881
+  0x5042287c: [48                   ] INC D2
+  0x5042287d: [aa 03                ] CMP 0x3,D2
+  0x5042287f: [c7 e9                ] BLS 0x50422868
+  0x50422881: [80 01                ] MOV 0x1,D0
+  0x50422883: [df e0 18             ] RET [A2,D3,D2],0x18
+```
+
+#### `FUN_50422ebf` (`p61_bgo_mount_scan_sectors_22ebf`) — `0x50422ebf` (409 B)
+
+Montador principal de setores FTL: varre setores físicos `1..0x27`, lê endereço via `FUN_504235d9`, decodifica tag de bloco via `FUN_504236b5` (maioria 3-de-4 em `param_1+4..+0xa`), separa blocos apagados (`0`), livres (`0xffff`) e ativos, verifica migração `FUN_5042283d(sector + 0x14)`, chama `FUN_50423058` (Patch Site 1) e apaga setores corrompidos/duplicados via `FUN_50423687` + `FUN_5042317c`.
+
+<!-- source: prog061_bgo_decomp.txt | FUNC FUN_50422ebf @ 0x50422ebf (disassembled + created function, bodySize=409 B) -->
+```c
+undefined4 FUN_50422ebf(void)
+
+{
+  int iVar1;
+  undefined4 uVar2;
+  int *piVar3;
+  uint uVar4;
+  ushort uVar5;
+  short sVar6;
+  uint uVar7;
+  uint uVar8;
+  undefined2 *puVar9;
+  uint uVar10;
+  uint uVar11;
+  short *psVar12;
+  undefined4 extraout_var;
+  undefined4 extraout_var_00;
+  undefined4 extraout_var_01;
+  undefined4 extraout_var_02;
+  undefined4 extraout_var_03;
+  undefined4 extraout_var_04;
+  undefined4 extraout_var_05;
+  undefined4 extraout_var_06;
+  undefined4 extraout_var_07;
+  undefined4 extraout_var_08;
+  undefined4 extraout_var_09;
+  undefined4 uStack_3c;
+  int iStack_38;
+  undefined4 uStack_34;
+  undefined4 uStack_30;
+  undefined4 uStack_2c;
+  undefined4 uStack_28;
+  undefined4 uStack_24;
+  undefined4 uStack_20;
+  undefined4 uStack_1c;
+  undefined4 uStack_18;
+  undefined4 uStack_14;
+
+  uVar4 = 0;
+  puVar9 = (undefined2 *)0x504f8370;
+  func_0x5042d323(0x504f8370,0,0x100);
+  uVar11 = 1;
+  uVar2 = extraout_var;
+  do {
+    iVar1 = func_0x504235d9(uVar2,uVar11);
+    uVar5 = func_0x504236b5(iVar1,extraout_var_00);
+    uVar10 = (uint)uVar5;
+    uVar7 = FUN_50422a69(0,uVar10);
+    uVar8 = FUN_50422a69(1,uVar10);
+    if (uVar10 == 0xffff) {
+      func_0x5042317c(extraout_var_01,uVar11);
+      uVar2 = extraout_var_02;
+    }
+    else if (uVar10 == 0) {
+      uVar2 = extraout_var_01;
+      if (uVar4 < 8) {
+        *puVar9 = (short)uVar11;
+        puVar9 = puVar9 + 1;
+        uVar4 = uVar4 + 1;
+      }
+    }
+    else {
+      sVar6 = FUN_5042283d(iVar1 + 0x14);
+      if (sVar6 == -1) {
+        *(short *)((*(int *)((uVar8 & 0xff) * 4 + 0x50436e9c) + (uVar7 & 0xff)) * 2 + 0x504f8618) =
+             (short)uVar11;
+        (&uStack_34)[uVar8 & 0xff] = (&uStack_34)[uVar8 & 0xff] + (uVar7 & 0xff);
+        uVar2 = extraout_var_03;
+      }
+      else {
+        uVar8 = uVar8 & 0xff;
+        iVar1 = FUN_504229be(extraout_var_03,uVar8);
+        piVar3 = (int *)(uVar8 * 4 + 0x50436e9c);
+        *(short *)((*piVar3 + iVar1) * 2 + 0x504f861a) = (short)uVar11;
+        iVar1 = FUN_504229be(extraout_var_04,uVar8);
+        *(undefined2 *)((*piVar3 + iVar1) * 2 + iStack_38) = uStack_34._2_2_;
+        uVar2 = extraout_var_05;
+      }
+    }
+    uVar11 = uVar11 + 1;
+  } while (uVar11 < 0x28);
+  func_0x50423058(uVar2,uStack_3c);
+  uVar4 = 2;
+  uVar2 = extraout_var_06;
+  while ((iVar1 = FUN_50422886(uVar2,uVar4), iVar1 == 4 || (iVar1 == 2))) {
+    uVar4 = uVar4 + 1;
+    uVar2 = extraout_var_07;
+    if (4 < uVar4) {
+      psVar12 = (short *)0x504f8370;
+      uVar4 = 0;
+      do {
+        if (*psVar12 == 0) {
+          return 0;
+        }
+        uVar2 = func_0x504235d9(uVar2,*psVar12);
+        iVar1 = func_0x50423687(uVar2);
+        if (iVar1 == 0) {
+          func_0x5042317c(extraout_var_08,*psVar12);
+          uVar2 = extraout_var_09;
+        }
+        else {
+          uVar2 = extraout_var_08;
+          if (iVar1 != 1) {
+            FUN_504228fe(extraout_var_08,0x20,0x6c0,0x145);
+            return 1;
+          }
+        }
+        psVar12 = psVar12 + 1;
+        uVar4 = uVar4 + 1;
+      } while (uVar4 < 8);
+      return 0;
+    }
+  }
+  return 1;
+}
+
+ (GhidraScript)
+```
+
+<!-- source: prog061_disasm_all.clean.txt | === DISASM FUN_50422ebf @ 0x50422ebf (size=409 B) === -->
+```asm
+-- === DISASM FUN_50422ebf @ 0x50422ebf (size=409 B) === --
+  0x50422ebf: [cf f2                ] MOVM [D2,D3,A2,A3,EX1],(SP)
+  0x50422ec1: [f8 fe d0             ] ADD -0x30,SP
+  0x50422ec4: [42 54                ] MOV D0,(0x54,SP)
+  0x50422ec6: [9f 00                ] MOV 0x0,A3
+  0x50422ec8: [3c                   ] MOV SP,A0
+  0x50422ec9: [20 20                ] ADD 0x20,A0
+  0x50422ecb: [f9 7a b8             ] MOV A3,(A0+)
+  0x50422ece: [f9 7a b8             ] MOV A3,(A0+)
+  0x50422ed1: [f9 7a b8             ] MOV A3,(A0+)
+  0x50422ed4: [f0 1c                ] MOV A3,(A0)
+  0x50422ed6: [fc ce 70 83 4f 50    ] MOV 0x504f8370,D2
+  0x50422edc: [2c 00 01             ] MOV 0x100,D0
+  0x50422edf: [42 0c                ] MOV D0,(0xc,SP)
+  0x50422ee1: [88                   ] MOV D2,D0
+  0x50422ee2: [04                   ] CLR D1
+  0x50422ee3: [dd 40 a4 00 00 00 00 ] CALL 0x5042d323,[],0x0
+  0x50422eea: [f5 67                ] MOV D2,R7
+  0x50422eec: [8f 01                ] MOV 0x1,D3
+  0x50422eee: [3d                   ] MOV SP,A1
+  0x50422eef: [21 20                ] ADD 0x20,A1
+  0x50422ef1: [47 14                ] MOV A1,(0x14,SP)
+  0x50422ef3: [fe 08 00 1a 86 4f 50 ] MOV 0x504f861a,R0
+  0x50422efa: [fb 78 00 02          ] ADD 0x2,R0
+  0x50422efe: [fb 9a 00 18          ] MOV R0,(0x18,SP)
+  0x50422f02: [58 54                ] MOV (0x54,SP),D0
+  0x50422f04: [8d                   ] MOV D3,D1
+  0x50422f05: [cd d4 06 00 00       ] CALL 0x504235d9,[],0x0
+  0x50422f0a: [92                   ] MOV A0,A2
+  0x50422f0b: [f1 d8                ] MOV A2,D0
+  0x50422f0d: [59 54                ] MOV (0x54,SP),D1
+  0x50422f0f: [cd a6 07 00 00       ] CALL 0x504236b5,[],0x0
+  0x50422f14: [f8 93 1e             ] MOVHU D0,(0x1e ,SP)
+  0x50422f17: [f8 be 1e             ] MOVHU (0x1e ,SP),D2
+  0x50422f1a: [00                   ] CLR D0
+  0x50422f1b: [89                   ] MOV D2,D1
+  0x50422f1c: [cd 4d fb 00 00       ] CALL 0x50422a69,[],0x0
+  0x50422f21: [f5 45                ] MOV D0,R5
+  0x50422f23: [80 01                ] MOV 0x1,D0
+  0x50422f25: [89                   ] MOV D2,D1
+  0x50422f26: [cd 43 fb 00 00       ] CALL 0x50422a69,[],0x0
+  0x50422f2b: [f5 44                ] MOV D0,R4
+  0x50422f2d: [fc ca ff ff 00 00    ] CMP 0xffff,D2
+  0x50422f33: [c9 0d                ] BNE 0x50422f40
+  0x50422f35: [58 54                ] MOV (0x54,SP),D0
+  0x50422f37: [8d                   ] MOV D3,D1
+  0x50422f38: [cd 44 02 00 00       ] CALL 0x5042317c,[],0x0
+  0x50422f3d: [cc 90 00             ] JMP 0x50422fcd
+  0x50422f40: [aa 00                ] CMP 0x0,D2
+  0x50422f42: [c9 0f                ] BNE 0x50422f51
+  0x50422f44: [bf 08                ] CMP 0x8,A3
+  0x50422f46: [c4 05                ] BCS 0x50422f4b
+  0x50422f48: [cc 85 00             ] JMP 0x50422fcd
+  0x50422f4b: [f9 fa f7             ] MOVHU D3,(R7+)
+  0x50422f4e: [4d                   ] INC A3
+  0x50422f4f: [ca 7e                ] BRA 0x50422fcd
+  0x50422f51: [22 14                ] ADD 0x14,A2
+  0x50422f53: [f1 d8                ] MOV A2,D0
+  0x50422f55: [cd e8 f8 00 00       ] CALL 0x5042283d,[],0x0
+  0x50422f5a: [1c                   ] EXTHU D0
+  0x50422f5b: [fc c8 ff ff 00 00    ] CMP 0xffff,D0
+  0x50422f61: [c9 29                ] BNE 0x50422f8a
+  0x50422f63: [f5 d0                ] MOV R4,D0
+  0x50422f65: [14                   ] EXTBU D0
+  0x50422f66: [54                   ] ASL2 D0
+  0x50422f67: [f1 e0                ] MOV D0,A0
+  0x50422f69: [fc d0 9c 6e 43 50    ] ADD 0x50436e9c,A0
+  0x50422f6f: [f5 d5                ] MOV R5,D1
+  0x50422f71: [15                   ] EXTBU D1
+  0x50422f72: [f0 00                ] MOV (A0),A0
+  0x50422f74: [f1 64                ] ADD D1,A0
+  0x50422f76: [f1 70                ] ADD A0,A0
+  0x50422f78: [fc d0 18 86 4f 50    ] ADD 0x504f8618,A0
+  0x50422f7e: [f0 7c                ] MOVHU D3,(A0)
+  0x50422f80: [3c                   ] MOV SP,A0
+  0x50422f81: [20 1c                ] ADD 0x1c,A0
+  0x50422f83: [f1 60                ] ADD D0,A0
+  0x50422f85: [70                   ] MOV (A0),D0
+  0x50422f86: [e4                   ] ADD D1,D0
+  0x50422f87: [60                   ] MOV D0,(A0)
+  0x50422f88: [ca 45                ] BRA 0x50422fcd
+  0x50422f8a: [f9 38 44             ] EXTBU R4
+  0x50422f8d: [58 54                ] MOV (0x54,SP),D0
+  0x50422f8f: [f5 d1                ] MOV R4,D1
+  0x50422f91: [cd 2d fa 00 00       ] CALL 0x504229be,[],0x0
+  0x50422f96: [f5 92                ] MOV R4,A2
+  0x50422f98: [f5 20                ] MOV A2,R0
+  0x50422f9a: [f9 79 00             ] ASL2 R0
+  0x50422f9d: [f5 82                ] MOV R0,A2
+  0x50422f9f: [fc d2 9c 6e 43 50    ] ADD 0x50436e9c,A2
+  0x50422fa5: [f0 02                ] MOV (A2),A0
+  0x50422fa7: [f1 60                ] ADD D0,A0
+  0x50422fa9: [f1 70                ] ADD A0,A0
+  0x50422fab: [fc d0 1a 86 4f 50    ] ADD 0x504f861a,A0
+  0x50422fb1: [f0 7c                ] MOVHU D3,(A0)
+  0x50422fb3: [58 54                ] MOV (0x54,SP),D0
+  0x50422fb5: [f5 d1                ] MOV R4,D1
+  0x50422fb7: [cd 07 fa 00 00       ] CALL 0x504229be,[],0x0
+  0x50422fbc: [f0 02                ] MOV (A2),A0
+  0x50422fbe: [f1 60                ] ADD D0,A0
+  0x50422fc0: [f1 70                ] ADD A0,A0
+  0x50422fc2: [5d 18                ] MOV (0x18,SP),A1
+  0x50422fc4: [f1 74                ] ADD A1,A0
+  0x50422fc6: [fb ca 00 1e          ] MOVHU (0x1e,SP),R0
+  0x50422fca: [f9 5a 08             ] MOVHU R0,(A0)
+  0x50422fcd: [4c                   ] INC D3
+  0x50422fce: [af 27                ] CMP 0x27,D3
+  0x50422fd0: [c5 05                ] BHI 0x50422fd5
+  0x50422fd2: [cc 30 ff             ] JMP 0x50422f02
+  0x50422fd5: [58 54                ] MOV (0x54,SP),D0
+  0x50422fd7: [59 14                ] MOV (0x14,SP),D1
+  0x50422fd9: [cd 7f 00 00 00       ] CALL 0x50423058,[],0x0
+  0x50422fde: [9f 02                ] MOV 0x2,A3
+  0x50422fe0: [58 54                ] MOV (0x54,SP),D0
+  0x50422fe2: [f1 dd                ] MOV A3,D1
+  0x50422fe4: [cd a2 f8 00 00       ] CALL 0x50422886,[],0x0
+  0x50422fe9: [a0 04                ] CMP 0x4,D0
+  0x50422feb: [c8 0a                ] BEQ 0x50422ff5
+  0x50422fed: [a0 02                ] CMP 0x2,D0
+  0x50422fef: [c8 06                ] BEQ 0x50422ff5
+  0x50422ff1: [80 01                ] MOV 0x1,D0
+  0x50422ff3: [ca 62                ] BRA 0x50423055
+  0x50422ff5: [4d                   ] INC A3
+  0x50422ff6: [bf 04                ] CMP 0x4,A3
+  0x50422ff8: [c7 e8                ] BLS 0x50422fe0
+  0x50422ffa: [fe 08 77 70 83 4f 50 ] MOV 0x504f8370,R7
+  0x50423001: [9f 00                ] MOV 0x0,A3
+  0x50423003: [bf 08                ] CMP 0x8,A3
+  0x50423005: [c6 4f                ] BCC 0x50423054
+  0x50423007: [f9 4a 07             ] MOVHU (R7),R0
+  0x5042300a: [fb d8 00 00          ] CMP 0x0,R0
+  0x5042300e: [c8 46                ] BEQ 0x50423054
+  0x50423010: [f9 4a d7             ] MOVHU (R7),D1
+  0x50423013: [58 54                ] MOV (0x54,SP),D0
+  0x50423015: [cd c4 05 00 00       ] CALL 0x504235d9,[],0x0
+  0x5042301a: [92                   ] MOV A0,A2
+  0x5042301b: [f1 d8                ] MOV A2,D0
+  0x5042301d: [cd 6a 06 00 00       ] CALL 0x50423687,[],0x0
+  0x50423022: [a0 00                ] CMP 0x0,D0
+  0x50423024: [c8 1d                ] BEQ 0x50423041
+  0x50423026: [a0 01                ] CMP 0x1,D0
+  0x50423028: [c8 23                ] BEQ 0x5042304b
+  0x5042302a: [2c c0 06             ] MOV 0x6c0,D0
+  0x5042302d: [42 0c                ] MOV D0,(0xc,SP)
+  0x5042302f: [2c 45 01             ] MOV 0x145,D0
+  0x50423032: [42 10                ] MOV D0,(0x10,SP)
+  0x50423034: [58 54                ] MOV (0x54,SP),D0
+  0x50423036: [85 20                ] MOV 0x20,D1
+  0x50423038: [cd c6 f8 00 00       ] CALL 0x504228fe,[],0x0
+  0x5042303d: [80 01                ] MOV 0x1,D0
+  0x5042303f: [ca 16                ] BRA 0x50423055
+  0x50423041: [f9 4a d7             ] MOVHU (R7),D1
+  0x50423044: [58 54                ] MOV (0x54,SP),D0
+  0x50423046: [cd 36 01 00 00       ] CALL 0x5042317c,[],0x0
+  0x5042304b: [fb 78 77 02          ] ADD 0x2,R7
+  0x5042304f: [4d                   ] INC A3
+  0x50423050: [bf 08                ] CMP 0x8,A3
+  0x50423052: [c4 b5                ] BCS 0x50423007
+  0x50423054: [00                   ] CLR D0
+  0x50423055: [df f2 50             ] RET [EX1,A3,A2,D3,D2],0x50
+```
+
+#### `FUN_5042317c`, `FUN_50423402`, `FUN_504234af`, `FUN_50423540` & `FUN_5042358b` (Máquina de Bits `SA41 + 0x14`)
+
+Rotinas críticas de alocação de `spares` (`FUN_5042317c` em `0x504f8618`), transição e invalidação atômica de slots nos 4 registros `u16` em `sector + 0x14` (`FUN_50423402`/`FUN_504234af`: transição por programação `1 -> 0` sem erase), busca de slot antigo migrado (`FUN_50423540` — afetado pelos **Traps #8A, #9 (`NOT D0,D0` `f2 30`) e #10 (`BTST mn_todo()`)**) e busca de slot válido (`FUN_5042358b` — afetado pelos **Traps #8A e #10**).
+
+<!-- source: prog061_bgo_decomp.txt / prog061_helpers_decomp.txt | FUNCS FUN_5042317c..FUN_5042358b @ 0x5042317c..0x5042358b -->
+```c
+short * FUN_5042317c(undefined4 param_1,short param_2)
+
+{
+  short *psVar1;
+  uint uVar2;
+
+  uVar2 = 1;
+  do {
+    psVar1 = (short *)((iRam50436eb0 + uVar2) * 2 + 0x504f8618);
+    if (*psVar1 == -1) {
+      *psVar1 = param_2;
+      return (short *)0xffff;
+    }
+    uVar2 = uVar2 + 1;
+  } while (uVar2 < 9);
+  return psVar1;
+}
+
+ (GhidraScript)
+
+undefined4 FUN_50423402(int param_1,uint param_2)
+
+{
+  uint uVar1;
+  uint uVar2;
+  int iVar3;
+
+  uVar1 = func_0x5042358b();
+  if (uVar1 != 0xffffffff) {
+    if (uVar1 == 0) {
+      return 3;
+    }
+    uVar2 = func_0x50423540(param_1);
+    if (uVar2 < uVar1) {
+      iVar3 = func_0x504234af(param_1,uVar1,0);
+      if (iVar3 == 2) {
+        return 1;
+      }
+      if (iVar3 == 1) {
+        return 4;
+      }
+      iVar3 = func_0x5042717a(uVar1 * 2 + 8 + param_1,param_2 & 0xffff);
+      if (iVar3 == 0) {
+        iVar3 = func_0x504234af(param_1,uVar1,1);
+        if (iVar3 != 2) {
+          if (iVar3 == 1) {
+            return 4;
+          }
+          iVar3 = func_0x504234af(param_1,uVar1,2);
+          if (iVar3 != 2) {
+            if (iVar3 == 1) {
+              return 4;
+            }
+            iVar3 = func_0x504234af(param_1,uVar2,3);
+            if (iVar3 != 2) {
+              return 0;
+            }
+          }
+        }
+      }
+      else {
+        iVar3 = func_0x50422a9f();
+        if (iVar3 == 0) {
+          return 4;
+        }
+      }
+      return 1;
+    }
+  }
+  return 2;
+}
+
+ (GhidraScript)
+
+undefined4 FUN_504234af(ushort *param_1,uint param_2,int param_3)
+
+{
+  int iVar1;
+  uint uVar2;
+
+  if (param_3 == 1) {
+    param_1 = param_1 + 1;
+  }
+  else if (param_3 != 0) {
+    if (param_3 == 2) {
+      param_1 = param_1 + 2;
+    }
+    else {
+      if (param_3 != 3) {
+        return 2;
+      }
+      param_1 = param_1 + 3;
+    }
+  }
+  uVar2 = (param_2 & 0xff ^ 1 << (param_2 & 0x1f)) & (uint)*param_1;
+  iVar1 = func_0x5042717a(param_1,uVar2);
+  if ((iVar1 == 0) && (*param_1 == uVar2)) {
+    return 0;
+  }
+  iVar1 = FUN_50422a9f();
+  if (iVar1 != 0) {
+    return 2;
+  }
+  return 1;
+}
+
+ (GhidraScript)
+
+[TRAP #8 ALERT] Detected 1 AM33/MN103S SLEIGH SUB anomaly site(s) in FUN_50423540: (GhidraScript)
+  -> 0x50423566 [TRAP8A_SUB_3OP_SWAP] fb 9c d1 90      (SUB D1,R1,A1) | real: A1 = R1 - D1       | am33.sinc:184 emits (D1 - R1) inverted in Ghidra C [FUN_50423540] (GhidraScript)
+ (GhidraScript)
+
+int FUN_50423540(int param_1)
+
+{
+  bool bVar1;
+  uint uVar2;
+
+  bVar1 = true;
+  uVar2 = 0;
+  while ((mn_todo(), bVar1 || (*(short *)((uVar2 - 0xf) * 2 + param_1 + 0x28) != -1))) {
+    uVar2 = uVar2 + 1;
+    bVar1 = uVar2 == 0xf;
+    if (0xf < uVar2) {
+      return -1;
+    }
+  }
+  return uVar2 - 0xf;
+}
+
+ (GhidraScript)
+
+[TRAP #8 ALERT] Detected 1 AM33/MN103S SLEIGH SUB anomaly site(s) in FUN_5042358b: (GhidraScript)
+  -> 0x504235af [TRAP8A_SUB_3OP_SWAP] fb 9c d1 80      (SUB D1,R1,A0) | real: A0 = R1 - D1       | am33.sinc:184 emits (D1 - R1) inverted in Ghidra C [FUN_5042358b] (GhidraScript)
+ (GhidraScript)
+
+int FUN_5042358b(ushort *param_1)
+
+{
+  bool bVar1;
+  int iVar2;
+  uint uVar3;
+
+  bVar1 = (param_1[3] & param_1[2] & param_1[1] & *param_1) == 0;
+  uVar3 = 0;
+  do {
+    mn_todo();
+    if ((bVar1) || (param_1[uVar3 + 5] != 0xffff)) break;
+    uVar3 = uVar3 + 1;
+    bVar1 = uVar3 == 0xf;
+  } while (uVar3 < 0x10);
+  if (uVar3 == 0) {
+    iVar2 = -1;
+  }
+  else {
+    iVar2 = 0x10 - uVar3;
+  }
+  return iVar2;
+}
+
+ (GhidraScript)
+```
+
+**Disassembly MN103S de `FUN_50423402`, `FUN_50423540` (`0x50423550 f2 30 NOT D0,D0` + `0x5042355e BTST` + `0x50423566 fb 9c Trap #8A`) e `FUN_5042358b` (`0x504235a7 BTST` + `0x504235af fb 9c Trap #8A`) — a única forma de reconstruir a semântica exata de `SA41 + 0x14`:**
+
+<!-- source: prog061_disasm_all.clean.txt | === DISASM FUN_50423402 @ 0x50423402 (size=173 B) === -->
+```asm
+-- === DISASM FUN_50423402 @ 0x50423402 (size=173 B) === --
+  0x50423402: [cf f2                ] MOVM [D2,D3,A2,A3,EX1],(SP)
+  0x50423404: [f8 fe f0             ] ADD -0x10,SP
+  0x50423407: [f1 e2                ] MOV D0,A2
+  0x50423409: [f1 e7                ] MOV D1,A3
+  0x5042340b: [cd 80 01 00 00       ] CALL 0x5042358b,[],0x0
+  0x50423410: [83                   ] MOV D0,D3
+  0x50423411: [af ff                ] CMP -0x1,D3
+  0x50423413: [c8 19                ] BEQ 0x5042342c
+  0x50423415: [af 00                ] CMP 0x0,D3
+  0x50423417: [c9 07                ] BNE 0x5042341e
+  0x50423419: [80 03                ] MOV 0x3,D0
+  0x5042341b: [cc 91 00             ] JMP 0x504234ac
+  0x5042341e: [f1 d8                ] MOV A2,D0
+  0x50423420: [cd 20 01 00 00       ] CALL 0x50423540,[],0x0
+  0x50423425: [f5 44                ] MOV D0,R4
+  0x50423427: [f9 d8 4f             ] CMP R4,D3
+  0x5042342a: [c5 06                ] BHI 0x50423430
+  0x5042342c: [80 02                ] MOV 0x2,D0
+  0x5042342e: [ca 7e                ] BRA 0x504234ac
+  0x50423430: [00                   ] CLR D0
+  0x50423431: [42 0c                ] MOV D0,(0xc,SP)
+  0x50423433: [f1 d8                ] MOV A2,D0
+  0x50423435: [8d                   ] MOV D3,D1
+  0x50423436: [cd 79 00 00 00       ] CALL 0x504234af,[],0x0
+  0x5042343b: [a0 02                ] CMP 0x2,D0
+  0x5042343d: [c8 6d                ] BEQ 0x504234aa
+  0x5042343f: [a0 01                ] CMP 0x1,D0
+  0x50423441: [c8 51                ] BEQ 0x50423492
+  0x50423443: [8e                   ] MOV D3,D2
+  0x50423444: [ea                   ] ADD D2,D2
+  0x50423445: [2a 08                ] ADD 0x8,D2
+  0x50423447: [88                   ] MOV D2,D0
+  0x50423448: [f1 58                ] ADD A2,D0
+  0x5042344a: [2a f8                ] ADD -0x8,D2
+  0x5042344c: [f1 dd                ] MOV A3,D1
+  0x5042344e: [1d                   ] EXTHU D1
+  0x5042344f: [dd 2b 3d 00 00 00 00 ] CALL 0x5042717a,[],0x0
+  0x50423456: [a0 00                ] CMP 0x0,D0
+  0x50423458: [c8 12                ] BEQ 0x5042346a
+  0x5042345a: [2a 28                ] ADD 0x28,D2
+  0x5042345c: [88                   ] MOV D2,D0
+  0x5042345d: [f1 58                ] ADD A2,D0
+  0x5042345f: [cd 40 f6 00 00       ] CALL 0x50422a9f,[],0x0
+  0x50423464: [a0 00                ] CMP 0x0,D0
+  0x50423466: [c9 44                ] BNE 0x504234aa
+  0x50423468: [ca 2a                ] BRA 0x50423492
+  0x5042346a: [8a 01                ] MOV 0x1,D2
+  0x5042346c: [4a 0c                ] MOV D2,(0xc,SP)
+  0x5042346e: [f1 d8                ] MOV A2,D0
+  0x50423470: [8d                   ] MOV D3,D1
+  0x50423471: [cd 3e 00 00 00       ] CALL 0x504234af,[],0x0
+  0x50423476: [a0 02                ] CMP 0x2,D0
+  0x50423478: [c8 32                ] BEQ 0x504234aa
+  0x5042347a: [a0 01                ] CMP 0x1,D0
+  0x5042347c: [c8 16                ] BEQ 0x50423492
+  0x5042347e: [80 02                ] MOV 0x2,D0
+  0x50423480: [42 0c                ] MOV D0,(0xc,SP)
+  0x50423482: [f1 d8                ] MOV A2,D0
+  0x50423484: [8d                   ] MOV D3,D1
+  0x50423485: [cd 2a 00 00 00       ] CALL 0x504234af,[],0x0
+  0x5042348a: [a0 02                ] CMP 0x2,D0
+  0x5042348c: [c8 1e                ] BEQ 0x504234aa
+  0x5042348e: [a0 01                ] CMP 0x1,D0
+  0x50423490: [c9 06                ] BNE 0x50423496
+  0x50423492: [80 04                ] MOV 0x4,D0
+  0x50423494: [ca 18                ] BRA 0x504234ac
+  0x50423496: [80 03                ] MOV 0x3,D0
+  0x50423498: [42 0c                ] MOV D0,(0xc,SP)
+  0x5042349a: [f1 d8                ] MOV A2,D0
+  0x5042349c: [f5 d1                ] MOV R4,D1
+  0x5042349e: [cd 11 00 00 00       ] CALL 0x504234af,[],0x0
+  0x504234a3: [a0 02                ] CMP 0x2,D0
+  0x504234a5: [c8 05                ] BEQ 0x504234aa
+  0x504234a7: [00                   ] CLR D0
+  0x504234a8: [ca 04                ] BRA 0x504234ac
+  0x504234aa: [80 01                ] MOV 0x1,D0
+  0x504234ac: [df f2 30             ] RET [EX1,A3,A2,D3,D2],0x30
+```
+
+<!-- source: prog061_disasm_all.clean.txt | === DISASM FUN_50423540 @ 0x50423540 (size=75 B) === -->
+```asm
+-- === DISASM FUN_50423540 @ 0x50423540 (size=75 B) === --
+  0x50423540: [cf a0                ] MOVM [D2,A2],(SP)
+  0x50423542: [f1 e2                ] MOV D0,A2
+  0x50423544: [f0 62                ] MOVHU (A2),D0
+  0x50423546: [f8 6a 02             ] MOVHU (0x2 ,A2),D2
+  0x50423549: [f2 18                ] OR D2,D0
+  0x5042354b: [f8 6a 04             ] MOVHU (0x4 ,A2),D2
+  0x5042354e: [f2 18                ] OR D2,D0
+  0x50423550: [f2 30                ] NOT D0,D0
+  0x50423552: [fb 4a 0a 06          ] MOVHU (0x6,A2),R0
+  0x50423556: [f9 09 c0             ] AND D0,R0
+  0x50423559: [04                   ] CLR D1
+  0x5042355a: [fb 08 11 0f          ] MOV 0xf,R1
+  0x5042355e: [fd e9 00 00 80 00    ] BTST 0x8000,R0
+  0x50423564: [c8 1a                ] BEQ 0x5042357e
+  0x50423566: [fb 9c d1 90          ] SUB D1,R1,A1  <-- [TRAP8A_SUB_3OP_SWAP] real: A1 = R1 - D1
+  0x5042356a: [94                   ] MOV A1,A0
+  0x5042356b: [f1 70                ] ADD A0,A0
+  0x5042356d: [f1 78                ] ADD A2,A0
+  0x5042356f: [f8 60 28             ] MOVHU (0x28 ,A0),D0
+  0x50423572: [fc c8 ff ff 00 00    ] CMP 0xffff,D0
+  0x50423578: [c9 06                ] BNE 0x5042357e
+  0x5042357a: [f1 d4                ] MOV A1,D0
+  0x5042357c: [ca 0c                ] BRA 0x50423588
+  0x5042357e: [44                   ] INC D1
+  0x5042357f: [f9 78 00             ] ADD R0,R0
+  0x50423582: [a5 0f                ] CMP 0xf,D1
+  0x50423584: [c7 da                ] BLS 0x5042355e
+  0x50423586: [80 ff                ] MOV 0xff,D0
+  0x50423588: [df a0 08             ] RET [A2,D2],0x8
+```
+
+<!-- source: prog061_disasm_all.clean.txt | === DISASM FUN_5042358b @ 0x5042358b (size=78 B) === -->
+```asm
+-- === DISASM FUN_5042358b @ 0x5042358b (size=78 B) === --
+  0x5042358b: [cf 80                ] MOVM [D2],(SP)
+  0x5042358d: [f1 e1                ] MOV D0,A1
+  0x5042358f: [f0 61                ] MOVHU (A1),D0
+  0x50423591: [f8 69 02             ] MOVHU (0x2 ,A1),D2
+  0x50423594: [f2 08                ] AND D2,D0
+  0x50423596: [f8 69 04             ] MOVHU (0x4 ,A1),D2
+  0x50423599: [f2 08                ] AND D2,D0
+  0x5042359b: [fb 4a 09 06          ] MOVHU (0x6,A1),R0
+  0x5042359f: [f9 09 c0             ] AND D0,R0
+  0x504235a2: [04                   ] CLR D1
+  0x504235a3: [fb 08 11 0f          ] MOV 0xf,R1
+  0x504235a7: [fd e9 00 00 80 00    ] BTST 0x8000,R0
+  0x504235ad: [c8 1d                ] BEQ 0x504235ca
+  0x504235af: [fb 9c d1 80          ] SUB D1,R1,A0  <-- [TRAP8A_SUB_3OP_SWAP] real: A0 = R1 - D1
+  0x504235b3: [f1 70                ] ADD A0,A0
+  0x504235b5: [f1 74                ] ADD A1,A0
+  0x504235b7: [f8 60 28             ] MOVHU (0x28 ,A0),D0
+  0x504235ba: [fc c8 ff ff 00 00    ] CMP 0xffff,D0
+  0x504235c0: [c9 0a                ] BNE 0x504235ca
+  0x504235c2: [44                   ] INC D1
+  0x504235c3: [f9 78 00             ] ADD R0,R0
+  0x504235c6: [a5 0f                ] CMP 0xf,D1
+  0x504235c8: [c7 df                ] BLS 0x504235a7
+  0x504235ca: [a5 00                ] CMP 0x0,D1
+  0x504235cc: [c8 08                ] BEQ 0x504235d4
+  0x504235ce: [80 10                ] MOV 0x10,D0
+  0x504235d0: [f1 04                ] SUB D1,D0
+  0x504235d2: [ca 04                ] BRA 0x504235d6
+  0x504235d4: [80 ff                ] MOV 0xff,D0
+  0x504235d6: [df 80 04             ] RET [D2],0x4
+```
+
+#### `FUN_504235d9`, `FUN_50423687` & `FUN_504236b5` (Decodificador de Endereço Físico & Votação de Header)
+
+`FUN_504235d9` traduz índice de setor físico para endereço na janela `0x84200000..0x84400000` consultando `0x50436de4`/`0x50436E30` (`64 KiB` vs `8 KiB` top-boot; equivalente à tabela `0x440337A4` do `ver0.61`). `FUN_50423687` apaga setor em 4 tentativas; `FUN_504236b5` exige área de dados `0x40` `u32` limpa para `0` e realiza votação 3-de-4 dos campos `u16` do header (`+4..+10`).
+
+<!-- source: prog061_bgo_decomp.txt / prog061_helpers_decomp.txt | FUNCS FUN_504235d9..FUN_504236b5 @ 0x504235d9..0x504236b5 -->
+```c
+int FUN_504235d9(int param_1,uint param_2)
+
+{
+  int *piVar1;
+  int iVar2;
+  uint uVar3;
+
+  iVar2 = param_1 * 0x6c + 0x50436de4;
+  uVar3 = 1;
+  piVar1 = (int *)(param_1 * 0x6c + 0x50436df0);
+  while ((param_2 < *(uint *)(iVar2 + 4) || (*(uint *)(iVar2 + 8) <= param_2))) {
+    uVar3 = uVar3 + 1;
+    piVar1 = piVar1 + 5;
+    iVar2 = iVar2 + 0x14;
+    if (4 < uVar3) {
+      return -1;
+    }
+  }
+  iVar2 = param_2 - *(uint *)(iVar2 + 4);
+  if (uVar3 == 1) {
+    iVar2 = iVar2 * 0x10000;
+  }
+  else {
+    iVar2 = iVar2 * 0x2000;
+  }
+  return iVar2 + *piVar1;
+}
+
+ (GhidraScript)
+
+undefined4 FUN_50423687(undefined4 param_1)
+
+{
+  int iVar1;
+  undefined4 uVar2;
+  uint uVar3;
+
+  uVar3 = 0;
+  do {
+    iVar1 = func_0x504271c4(param_1);
+    if (iVar1 == 0) {
+      return 0;
+    }
+    uVar3 = uVar3 + 1;
+  } while (uVar3 < 4);
+  iVar1 = func_0x504237ed(param_1);
+  if (iVar1 == 0) {
+    uVar2 = 1;
+  }
+  else {
+    uVar2 = 2;
+  }
+  return uVar2;
+}
+
+ (GhidraScript)
+
+undefined2 FUN_504236b5(short *param_1,undefined4 param_2)
+
+{
+  short *psVar1;
+  int *piVar2;
+  uint uVar3;
+  short *psVar4;
+  int iVar5;
+  uint uVar6;
+  uint uVar7;
+  short sStack_1a;
+  short asStack_18 [12];
+
+  sStack_1a = 0;
+  uVar3 = 0;
+  psVar4 = asStack_18;
+  psVar1 = param_1;
+  do {
+    psVar1 = psVar1 + 2;
+    *psVar4 = *psVar1;
+    psVar4 = psVar4 + 1;
+    uVar3 = uVar3 + 1;
+  } while (uVar3 < 4);
+  if (((asStack_18[0] == asStack_18[1]) &&
+      ((asStack_18[0] == asStack_18[2] || (asStack_18[0] == asStack_18[3])))) ||
+     ((asStack_18[0] == asStack_18[2] && (asStack_18[0] == asStack_18[3])))) {
+    sStack_1a = asStack_18[0];
+  }
+  else if ((asStack_18[1] == asStack_18[2]) && (asStack_18[1] == asStack_18[3])) {
+    sStack_1a = asStack_18[1];
+  }
+  if (sStack_1a != 0) {
+    uVar3 = 0;
+    piVar2 = (int *)(param_1 + 0x80);
+    do {
+      iVar5 = *piVar2;
+      piVar2 = piVar2 + 1;
+      if (iVar5 != 0) {
+        return 0;
+      }
+      uVar3 = uVar3 + 1;
+    } while (uVar3 < 0x40);
+    if (sStack_1a == -1) {
+      return 0xffff;
+    }
+    uVar3 = func_0x50422a69(1);
+    if (((uVar3 & 0xf0) == 0xf0) && (uVar3 = uVar3 & 0xf, uVar3 - 1 < 4)) {
+      uVar6 = func_0x50422a69(0,sStack_1a);
+      uVar6 = uVar6 & 0xff;
+      if (uVar6 != 0) {
+        uVar3 = uVar3 & 0xff;
+        uVar7 = func_0x504229be(param_2,uVar3);
+        if (uVar6 <= uVar7) {
+          FUN_50422a78(1,&sStack_1a,uVar3);
+          return sStack_1a;
+        }
+      }
+    }
+  }
+  return 0;
+}
+
+ (GhidraScript)
+```
+
+#### `FUN_5042383c` (`p61_bgo_p2_reconcile_2383c`) — `0x5042383c` (875 B) *[Contém `0x504238a5` = `+5 B` mid-insn]*
+
+Reconciliação do journal e páginas da Partição 2 BGO (`0x504f84a4..0x504f84cc`). Percorre os blocos `1..uVar14`, contabiliza slots usados (`0..0xfc`), detecta paginação incompleta pós-queda de energia e executa fallback entre páginas gravadas no bloco de journal.
+
+<!-- source: prog061_helpers_decomp.txt | FUNC FUN_5042383c @ 0x5042383c (disassembled + created function, bodySize=875 B) -->
+```c
+undefined4 FUN_5042383c(undefined4 param_1)
+
+{
+  short sVar1;
+  uint uVar2;
+  undefined1 uVar3;
+  char cVar4;
+  undefined2 uVar5;
+  ushort uVar6;
+  int iVar7;
+  uint uVar8;
+  int iVar9;
+  uint uVar10;
+  int iVar11;
+  undefined4 uVar12;
+  char *pcVar13;
+  uint uVar14;
+  undefined4 extraout_var;
+  undefined4 extraout_var_00;
+  undefined4 extraout_var_01;
+  int extraout_var_02;
+  undefined4 extraout_var_03;
+  int extraout_var_04;
+  int extraout_var_05;
+  undefined4 extraout_var_06;
+  int extraout_var_07;
+  int extraout_var_08;
+  undefined4 extraout_var_09;
+  int extraout_var_10;
+  int extraout_var_11;
+  int extraout_var_12;
+  int extraout_var_13;
+  int extraout_var_14;
+  int extraout_var_15;
+  int extraout_var_16;
+  undefined4 uVar15;
+  undefined4 extraout_var_17;
+  undefined4 extraout_var_18;
+  undefined4 extraout_var_19;
+  undefined4 extraout_var_20;
+  undefined4 extraout_var_21;
+  undefined4 extraout_var_22;
+  undefined4 extraout_var_23;
+  undefined4 extraout_var_24;
+  undefined4 extraout_var_25;
+  undefined4 extraout_var_26;
+  undefined4 extraout_var_27;
+  int extraout_var_28;
+  int extraout_var_29;
+  int extraout_var_30;
+  int iStack_54;
+  int iStack_50;
+  uint uStack_4c;
+  ushort *puStack_48;
+  int *piStack_44;
+  uint *puStack_40;
+  uint *puStack_3c;
+  int iStack_38;
+  short sStack_32;
+  int iStack_30;
+  int iStack_2c;
+  int iStack_28;
+  ushort auStack_22 [17];
+
+  iVar7 = func_0x504229be(param_1,2);
+  uVar14 = iVar7 + 1;
+  func_0x50424b2e(extraout_var);
+  puStack_48 = auStack_22;
+  uVar12 = 2;
+  FUN_50422a78(1,puStack_48,2);
+  uVar5 = FUN_50422815(extraout_var_00,uVar12);
+  func_0x5042295f(&iStack_28,extraout_var_01,uVar5);
+  iStack_54 = 0x504f84c4;
+  uVar2 = 1;
+  iVar7 = extraout_var_02;
+  uVar12 = extraout_var_17;
+  if (uVar14 != 0) {
+    do {
+      FUN_50422a78(0,puStack_48,uVar2 & 0xffff);
+      iVar11 = func_0x5042295f(piStack_44,extraout_var_03,auStack_22[0]);
+      uStack_4c = uVar2 + 1;
+      iVar7 = extraout_var_04;
+      uVar12 = extraout_var_18;
+      if (iVar11 == 0) {
+        if (*(short *)(iStack_2c + 0x200) == -1) {
+          if (uVar2 == uVar14) {
+            *(uint *)(iStack_38 + 0x504f84a8) = uVar2;
+            *puStack_3c = 0;
+          }
+          else {
+            func_0x50424c6a(extraout_var_04,uVar2);
+            iVar7 = extraout_var_11;
+            uVar12 = extraout_var_22;
+          }
+        }
+        else {
+          uVar8 = 0;
+          iVar11 = 0;
+          uVar10 = 0;
+          do {
+            sVar1 = *(short *)(iStack_2c + uVar10 * 2 + 0x200);
+            if (sVar1 != -1) {
+              if (sVar1 != 0) {
+                func_0x50422a69(0,auStack_22[0]);
+                iVar11 = iVar11 + 1;
+                iVar7 = extraout_var_05;
+              }
+              uVar8 = uVar8 + 2;
+            }
+            uVar10 = uVar10 + 2;
+          } while (uVar10 < 0xfc);
+          if (uVar2 == uVar14) {
+            *(uint *)(iStack_38 + 0x504f84a8) = uVar2;
+            *puStack_3c = uVar8;
+            uVar5 = FUN_50422815(iVar7,2);
+            uVar3 = func_0x50422a69(0,uVar5);
+            func_0x50424d1c(extraout_var_06,uVar3,extraout_var_26);
+            iVar7 = extraout_var_07;
+            uVar12 = extraout_var_19;
+          }
+          else {
+            uVar6 = FUN_50422815(iVar7,2);
+            if (auStack_22[0] == uVar6) {
+              *(int *)(iStack_50 + 0x504f84b4) = iVar11;
+              iVar7 = extraout_var_08;
+              uVar12 = extraout_var_20;
+            }
+            else {
+              iVar7 = func_0x50424e68(iStack_2c);
+              if ((iVar7 == 2) && (uVar8 < *puStack_40)) {
+                *(uint *)(iStack_50 + 0x504f84a8) = uVar2;
+                *puStack_40 = uVar8;
+              }
+              func_0x50424d1c(extraout_var_09,uVar2,extraout_var_27);
+              iVar7 = extraout_var_10;
+              uVar12 = extraout_var_21;
+            }
+          }
+        }
+      }
+      uVar2 = uStack_4c;
+    } while (uStack_4c <= uVar14);
+  }
+  iVar11 = *(int *)(iStack_54 + iVar7 * 4);
+  if (iVar11 != 0) {
+    uVar2 = iVar11 - 2;
+    uVar14 = 0;
+    piStack_44 = &iStack_2c;
+    uVar15 = 2;
+    pcVar13 = (char *)(iVar7 * 4 + 0x504f84a8);
+    iVar11 = uVar2 * 2;
+    do {
+      FUN_50422923(piStack_44,iVar7,uVar15,*(undefined4 *)pcVar13,uVar12,iVar11);
+      sVar1 = *(short *)(iStack_2c + extraout_var_28 + 0x200);
+      iVar7 = extraout_var_12;
+      uVar12 = extraout_var_23;
+      iVar11 = extraout_var_28;
+      if ((sVar1 != -1) && (sVar1 != 0)) {
+        uVar8 = func_0x50423dc3(extraout_var_12,sVar1,uVar15);
+        uVar8 = uVar8 & 0xffff;
+        iVar7 = extraout_var_13;
+        if ((uVar8 == 0) ||
+           ((uVar10 = func_0x50422a69(0,uVar8), iVar7 = extraout_var_15,
+            (uVar10 & 0xff) != (uVar2 & 0xff) ||
+            (cVar4 = func_0x50422a69(1,uVar8), iVar7 = extraout_var_16, uVar12 = extraout_var_25,
+            iVar11 = extraout_var_30, cVar4 != *pcVar13)))) {
+          func_0x50424e15(iVar7,*(undefined4 *)pcVar13,1);
+          iVar9 = FUN_50422a9f();
+          iVar7 = extraout_var_14;
+          uVar12 = extraout_var_24;
+          iVar11 = extraout_var_29;
+          if (iVar9 != 0) {
+            uVar15 = 0xb0;
+            uVar12 = 0x13b;
+            goto LAB_50423b07;
+          }
+        }
+      }
+      if (uVar2 == 0) break;
+      iVar11 = iVar11 + -4;
+      uVar2 = uVar2 - 2;
+      uVar14 = uVar14 + 1;
+    } while (uVar14 < 0x10);
+  }
+  if (((sStack_32 == -1) || (iStack_30 == -1)) ||
+     (*(short *)(iStack_2c + iStack_30 * 2 + 0x200) != *(short *)(iStack_30 * 2 + iStack_28 + 0x200)
+     )) {
+    iVar7 = func_0x50423f86(iVar7);
+    if (iVar7 == 0) {
+      return 0;
+    }
+  }
+  else {
+    uVar15 = 0xb1;
+    uVar12 = 0x159;
+LAB_50423b07:
+    func_0x504228c3(iVar7,2,uVar15,uVar12,0x148);
+  }
+  return 1;
+}
+
+ (GhidraScript)
+```
+
+**Disassembly MN103S de `FUN_5042383c` (`0x5042383c`, notar `0x504238a0: [fe 08 00 c4 84 4f 50] MOV 0x504f84c4,R0` provando que `0x504238a5` é `+5 B` dentro desta instrução):**
+
+<!-- source: prog061_disasm_all.clean.txt | === DISASM FUN_5042383c @ 0x5042383c (size=875 B) === -->
+```asm
+-- === DISASM FUN_5042383c @ 0x5042383c (size=875 B) === --
+  0x5042383c: [cf f2                ] MOVM [D2,D3,A2,A3,EX1],(SP)
+  0x5042383e: [f8 fe b0             ] ADD -0x50,SP
+  0x50423841: [42 74                ] MOV D0,(0x74,SP)
+  0x50423843: [fb 08 00 ff          ] MOV -0x1,R0
+  0x50423847: [fb 9a 00 40          ] MOV R0,(0x40,SP)
+  0x5042384b: [85 02                ] MOV 0x2,D1
+  0x5042384d: [dd 71 f1 ff ff 00 00 ] CALL 0x504229be,[],0x0
+  0x50423854: [f5 47                ] MOV D0,R7
+  0x50423856: [f9 b8 77             ] INC R7
+  0x50423859: [58 74                ] MOV (0x74,SP),D0
+  0x5042385b: [cd d3 12 00 00       ] CALL 0x50424b2e,[],0x0
+  0x50423860: [3e                   ] MOV SP,A2
+  0x50423861: [22 4e                ] ADD 0x4e,A2
+  0x50423863: [f1 db                ] MOV A2,D3
+  0x50423865: [8a 02                ] MOV 0x2,D2
+  0x50423867: [4a 0c                ] MOV D2,(0xc,SP)
+  0x50423869: [80 01                ] MOV 0x1,D0
+  0x5042386b: [8d                   ] MOV D3,D1
+  0x5042386c: [dd 0c f2 ff ff 00 00 ] CALL 0x50422a78,[],0x0
+  0x50423873: [58 74                ] MOV (0x74,SP),D0
+  0x50423875: [89                   ] MOV D2,D1
+  0x50423876: [dd 9f ef ff ff 00 00 ] CALL 0x50422815,[],0x0
+  0x5042387d: [f8 93 3e             ] MOVHU D0,(0x3e ,SP)
+  0x50423880: [f9 e8 00             ] MOV SP,R0
+  0x50423883: [fb 78 00 48          ] ADD 0x48,R0
+  0x50423887: [f5 c0                ] MOV R0,D0
+  0x50423889: [fb ca 00 3e          ] MOVHU (0x3e,SP),R0
+  0x5042388d: [fb 9a 00 0c          ] MOV R0,(0xc,SP)
+  0x50423891: [59 74                ] MOV (0x74,SP),D1
+  0x50423893: [dd cc f0 ff ff 00 00 ] CALL 0x5042295f,[],0x0
+  0x5042389a: [fb 08 44 01          ] MOV 0x1,R4
+  0x5042389e: [4e 28                ] MOV D3,(0x28,SP)
+  0x504238a0: [fe 08 00 c4 84 4f 50 ] MOV 0x504f84c4,R0
+  0x504238a7: [fb 9a 00 1c          ] MOV R0,(0x1c,SP)
+  0x504238ab: [f9 d8 74             ] CMP R7,R4
+  0x504238ae: [c7 05                ] BLS 0x504238b3
+  0x504238b0: [cc b4 01             ] JMP 0x50423a64
+  0x504238b3: [3e                   ] MOV SP,A2
+  0x504238b4: [22 44                ] ADD 0x44,A2
+  0x504238b6: [4b 2c                ] MOV A2,(0x2c,SP)
+  0x504238b8: [fb 8a 00 74          ] MOV (0x74,SP),R0
+  0x504238bc: [fb 9a 00 20          ] MOV R0,(0x20,SP)
+  0x504238c0: [f9 79 00             ] ASL2 R0
+  0x504238c3: [fb 9a 00 20          ] MOV R0,(0x20,SP)
+  0x504238c7: [fb 8a 00 1c          ] MOV (0x1c,SP),R0
+  0x504238cb: [fb 8a 00 20          ] MOV (0x20,SP),R0
+  0x504238cf: [fb 9a 00 38          ] MOV R0,(0x38,SP)
+  0x504238d3: [5e 1c                ] MOV (0x1c,SP),A2
+  0x504238d5: [f9 78 0a             ] ADD R0,A2
+  0x504238d8: [4b 34                ] MOV A2,(0x34,SP)
+  0x504238da: [fb 8a 00 34          ] MOV (0x34,SP),R0
+  0x504238de: [fb 9a 00 30          ] MOV R0,(0x30,SP)
+  0x504238e2: [f9 08 40             ] MOV R4,R0
+  0x504238e5: [f9 58 00             ] EXTHU R0
+  0x504238e8: [fb 9a 00 0c          ] MOV R0,(0xc,SP)
+  0x504238ec: [00                   ] CLR D0
+  0x504238ed: [59 28                ] MOV (0x28,SP),D1
+  0x504238ef: [dd 89 f1 ff ff 00 00 ] CALL 0x50422a78,[],0x0
+  0x504238f6: [fb ca 00 4e          ] MOVHU (0x4e,SP),R0
+  0x504238fa: [fb 9a 00 0c          ] MOV R0,(0xc,SP)
+  0x504238fe: [58 2c                ] MOV (0x2c,SP),D0
+  0x50423900: [59 74                ] MOV (0x74,SP),D1
+  0x50423902: [dd 5d f0 ff ff 00 00 ] CALL 0x5042295f,[],0x0
+  0x50423909: [81                   ] MOV D0,D1
+  0x5042390a: [fb 9a 40 24          ] MOV R4,(0x24,SP)
+  0x5042390e: [fb 8a 00 24          ] MOV (0x24,SP),R0
+  0x50423912: [f9 b8 00             ] INC R0
+  0x50423915: [fb 9a 00 24          ] MOV R0,(0x24,SP)
+  0x50423919: [a5 00                ] CMP 0x0,D1
+  0x5042391b: [c8 05                ] BEQ 0x50423920
+  0x5042391d: [cc 3b 01             ] JMP 0x50423a58
+  0x50423920: [5c 44                ] MOV (0x44,SP),A0
+  0x50423922: [fa 60 00 02          ] MOVHU (0x200,A0),D0
+  0x50423926: [fc c8 ff ff 00 00    ] CMP 0xffff,D0
+  0x5042392c: [c9 05                ] BNE 0x50423931
+  0x5042392e: [cc 0c 01             ] JMP 0x50423a3a
+  0x50423931: [9f 00                ] MOV 0x0,A3
+  0x50423933: [f9 68 00             ] CLR R0
+  0x50423936: [fb 9a 00 18          ] MOV R0,(0x18,SP)
+  0x5042393a: [f9 68 55             ] CLR R5
+  0x5042393d: [0c                   ] CLR D3
+  0x5042393e: [bf fc                ] CMP -0x4,A3
+  0x50423940: [c6 67                ] BCC 0x504239a7
+  0x50423942: [5c 44                ] MOV (0x44,SP),A0
+  0x50423944: [8e                   ] MOV D3,D2
+  0x50423945: [ea                   ] ADD D2,D2
+  0x50423946: [f1 68                ] ADD D2,A0
+  0x50423948: [fa 60 00 02          ] MOVHU (0x200,A0),D0
+  0x5042394c: [fc c8 ff ff 00 00    ] CMP 0xffff,D0
+  0x50423952: [c8 42                ] BEQ 0x50423994
+  0x50423954: [a0 00                ] CMP 0x0,D0
+  0x50423956: [c8 3a                ] BEQ 0x50423990
+  0x50423958: [f8 bd 4e             ] MOVHU (0x4e ,SP),D1
+  0x5042395b: [00                   ] CLR D0
+  0x5042395c: [dd 0d f1 ff ff 00 00 ] CALL 0x50422a69,[],0x0
+  0x50423963: [14                   ] EXTBU D0
+  0x50423964: [f9 d8 7c             ] CMP R7,D0
+  0x50423967: [c9 1b                ] BNE 0x50423982
+  0x50423969: [5d 44                ] MOV (0x44,SP),A1
+  0x5042396b: [f1 69                ] ADD D2,A1
+  0x5042396d: [5c 48                ] MOV (0x48,SP),A0
+  0x5042396f: [f1 68                ] ADD D2,A0
+  0x50423971: [fd 4a 99 00 02 00    ] MOVHU (0x200,A1),A1
+  0x50423977: [fd 4a 88 00 02 00    ] MOVHU (0x200,A0),A0
+  0x5042397d: [b1                   ] CMP A0,A1
+  0x5042397e: [c9 04                ] BNE 0x50423982
+  0x50423980: [4e 40                ] MOV D3,(0x40,SP)
+  0x50423982: [f9 b8 55             ] INC R5
+  0x50423985: [fb 8a 00 18          ] MOV (0x18,SP),R0
+  0x50423989: [f9 b8 00             ] INC R0
+  0x5042398c: [fb 9a 00 18          ] MOV R0,(0x18,SP)
+  0x50423990: [23 02                ] ADD 0x2,A3
+  0x50423992: [ca 0d                ] BRA 0x5042399f
+  0x50423994: [fb 8a 00 18          ] MOV (0x18,SP),R0
+  0x50423998: [f9 b8 00             ] INC R0
+  0x5042399b: [fb 9a 00 18          ] MOV R0,(0x18,SP)
+  0x5042399f: [2b 02                ] ADD 0x2,D3
+  0x504239a1: [fa cb fc 00          ] CMP 0xfc,D3
+  0x504239a5: [c4 9d                ] BCS 0x50423942
+  0x504239a7: [f9 d8 74             ] CMP R7,R4
+  0x504239aa: [c9 3d                ] BNE 0x504239e7
+  0x504239ac: [5c 38                ] MOV (0x38,SP),A0
+  0x504239ae: [fc d0 a8 84 4f 50    ] ADD 0x504f84a8,A0
+  0x504239b4: [f9 1a 48             ] MOV R4,(A0)
+  0x504239b7: [5e 34                ] MOV (0x34,SP),A2
+  0x504239b9: [f0 1e                ] MOV A3,(A2)
+  0x504239bb: [58 74                ] MOV (0x74,SP),D0
+  0x504239bd: [85 02                ] MOV 0x2,D1
+  0x504239bf: [dd 56 ee ff ff 00 00 ] CALL 0x50422815,[],0x0
+  0x504239c6: [f8 93 4e             ] MOVHU D0,(0x4e ,SP)
+  0x504239c9: [f8 bd 4e             ] MOVHU (0x4e ,SP),D1
+  0x504239cc: [00                   ] CLR D0
+  0x504239cd: [dd 9c f0 ff ff 00 00 ] CALL 0x50422a69,[],0x0
+  0x504239d4: [81                   ] MOV D0,D1
+  0x504239d5: [15                   ] EXTBU D1
+  0x504239d6: [fb 8a 00 18          ] MOV (0x18,SP),R0
+  0x504239da: [fb 9a 00 0c          ] MOV R0,(0xc,SP)
+  0x504239de: [58 74                ] MOV (0x74,SP),D0
+  0x504239e0: [cd 3c 13 00 00       ] CALL 0x50424d1c,[],0x0
+  0x504239e5: [ca 73                ] BRA 0x50423a58
+  0x504239e7: [58 74                ] MOV (0x74,SP),D0
+  0x504239e9: [85 02                ] MOV 0x2,D1
+  0x504239eb: [dd 2a ee ff ff 00 00 ] CALL 0x50422815,[],0x0
+  0x504239f2: [1c                   ] EXTHU D0
+  0x504239f3: [fb ca a0 4e          ] MOVHU (0x4e,SP),A2
+  0x504239f7: [f1 a2                ] CMP D0,A2
+  0x504239f9: [c9 0f                ] BNE 0x50423a08
+  0x504239fb: [5c 20                ] MOV (0x20,SP),A0
+  0x504239fd: [fc d0 b4 84 4f 50    ] ADD 0x504f84b4,A0
+  0x50423a03: [f9 1a 58             ] MOV R5,(A0)
+  0x50423a06: [ca 52                ] BRA 0x50423a58
+  0x50423a08: [58 44                ] MOV (0x44,SP),D0
+  0x50423a0a: [cd 5e 14 00 00       ] CALL 0x50424e68,[],0x0
+  0x50423a0f: [a0 02                ] CMP 0x2,D0
+  0x50423a11: [c9 16                ] BNE 0x50423a27
+  0x50423a13: [5e 30                ] MOV (0x30,SP),A2
+  0x50423a15: [72                   ] MOV (A2),D0
+  0x50423a16: [f1 9c                ] CMP A3,D0
+  0x50423a18: [c7 0f                ] BLS 0x50423a27
+  0x50423a1a: [5c 20                ] MOV (0x20,SP),A0
+  0x50423a1c: [fc d0 a8 84 4f 50    ] ADD 0x504f84a8,A0
+  0x50423a22: [f9 1a 48             ] MOV R4,(A0)
+  0x50423a25: [f0 1e                ] MOV A3,(A2)
+  0x50423a27: [fb 8a 00 18          ] MOV (0x18,SP),R0
+  0x50423a2b: [fb 9a 00 0c          ] MOV R0,(0xc,SP)
+  0x50423a2f: [58 74                ] MOV (0x74,SP),D0
+  0x50423a31: [f5 d1                ] MOV R4,D1
+  0x50423a33: [cd e9 12 00 00       ] CALL 0x50424d1c,[],0x0
+  0x50423a38: [ca 20                ] BRA 0x50423a58
+  0x50423a3a: [f9 d8 74             ] CMP R7,R4
+  0x50423a3d: [c9 12                ] BNE 0x50423a4f
+  0x50423a3f: [5c 38                ] MOV (0x38,SP),A0
+  0x50423a41: [fc d0 a8 84 4f 50    ] ADD 0x504f84a8,A0
+  0x50423a47: [f9 1a 48             ] MOV R4,(A0)
+  0x50423a4a: [5e 34                ] MOV (0x34,SP),A2
+  0x50423a4c: [66                   ] MOV D1,(A2)
+  0x50423a4d: [ca 0b                ] BRA 0x50423a58
+  0x50423a4f: [58 74                ] MOV (0x74,SP),D0
+  0x50423a51: [f5 d1                ] MOV R4,D1
+  0x50423a53: [cd 17 12 00 00       ] CALL 0x50424c6a,[],0x0
+  0x50423a58: [fb 8a 40 24          ] MOV (0x24,SP),R4
+  0x50423a5c: [f9 d8 74             ] CMP R7,R4
+  0x50423a5f: [c5 05                ] BHI 0x50423a64
+  0x50423a61: [cc 81 fe             ] JMP 0x504238e2
+  0x50423a64: [58 74                ] MOV (0x74,SP),D0
+  0x50423a66: [54                   ] ASL2 D0
+  0x50423a67: [5c 1c                ] MOV (0x1c,SP),A0
+  0x50423a69: [f1 60                ] ADD D0,A0
+  0x50423a6b: [74                   ] MOV (A0),D1
+  0x50423a6c: [42 20                ] MOV D0,(0x20,SP)
+  0x50423a6e: [a5 00                ] CMP 0x0,D1
+  0x50423a70: [c9 05                ] BNE 0x50423a75
+  0x50423a72: [cc e7 00             ] JMP 0x50423b59
+  0x50423a75: [f1 e7                ] MOV D1,A3
+  0x50423a77: [23 fe                ] ADD -0x2,A3
+  0x50423a79: [f9 68 44             ] CLR R4
+  0x50423a7c: [f9 e8 00             ] MOV SP,R0
+  0x50423a7f: [fb 78 00 44          ] ADD 0x44,R0
+  0x50423a83: [fb 9a 00 2c          ] MOV R0,(0x2c,SP)
+  0x50423a87: [fb 08 77 02          ] MOV 0x2,R7
+  0x50423a8b: [fb 8a 50 20          ] MOV (0x20,SP),R5
+  0x50423a8f: [fe 78 55 a8 84 4f 50 ] ADD 0x504f84a8,R5
+  0x50423a96: [f1 dc                ] MOV A3,D0
+  0x50423a98: [e0                   ] ADD D0,D0
+  0x50423a99: [83                   ] MOV D0,D3
+  0x50423a9a: [fa c3 00 02          ] ADD 0x200,D3
+  0x50423a9e: [42 18                ] MOV D0,(0x18,SP)
+  0x50423aa0: [fb 9a 70 0c          ] MOV R7,(0xc,SP)
+  0x50423aa4: [f9 0a c5             ] MOV (R5),D0
+  0x50423aa7: [42 10                ] MOV D0,(0x10,SP)
+  0x50423aa9: [58 2c                ] MOV (0x2c,SP),D0
+  0x50423aab: [59 74                ] MOV (0x74,SP),D1
+  0x50423aad: [dd 76 ee ff ff 00 00 ] CALL 0x50422923,[],0x0
+  0x50423ab4: [5c 44                ] MOV (0x44,SP),A0
+  0x50423ab6: [5e 18                ] MOV (0x18,SP),A2
+  0x50423ab8: [f1 78                ] ADD A2,A0
+  0x50423aba: [fa 60 00 02          ] MOVHU (0x200,A0),D0
+  0x50423abe: [81                   ] MOV D0,D1
+  0x50423abf: [1d                   ] EXTHU D1
+  0x50423ac0: [fc c9 ff ff 00 00    ] CMP 0xffff,D1
+  0x50423ac6: [c8 79                ] BEQ 0x50423b3f
+  0x50423ac8: [f8 93 4e             ] MOVHU D0,(0x4e ,SP)
+  0x50423acb: [a5 00                ] CMP 0x0,D1
+  0x50423acd: [c8 72                ] BEQ 0x50423b3f
+  0x50423acf: [f8 bd 4e             ] MOVHU (0x4e ,SP),D1
+  0x50423ad2: [fb 9a 70 0c          ] MOV R7,(0xc,SP)
+  0x50423ad6: [58 74                ] MOV (0x74,SP),D0
+  0x50423ad8: [cd eb 02 00 00       ] CALL 0x50423dc3,[],0x0
+  0x50423add: [82                   ] MOV D0,D2
+  0x50423ade: [1e                   ] EXTHU D2
+  0x50423adf: [aa 00                ] CMP 0x0,D2
+  0x50423ae1: [c9 3b                ] BNE 0x50423b1c
+  0x50423ae3: [f9 0a d5             ] MOV (R5),D1
+  0x50423ae6: [8a 01                ] MOV 0x1,D2
+  0x50423ae8: [4a 0c                ] MOV D2,(0xc,SP)
+  0x50423aea: [58 74                ] MOV (0x74,SP),D0
+  0x50423aec: [cd 29 13 00 00       ] CALL 0x50424e15,[],0x0
+  0x50423af1: [58 44                ] MOV (0x44,SP),D0
+  0x50423af3: [ec                   ] ADD D3,D0
+  0x50423af4: [dd ab ef ff ff 00 00 ] CALL 0x50422a9f,[],0x0
+  0x50423afb: [a0 00                ] CMP 0x0,D0
+  0x50423afd: [c8 42                ] BEQ 0x50423b3f
+  0x50423aff: [2c b0 00             ] MOV 0xb0,D0
+  0x50423b02: [42 0c                ] MOV D0,(0xc,SP)
+  0x50423b04: [2c 3b 01             ] MOV 0x13b,D0
+  0x50423b07: [42 10                ] MOV D0,(0x10,SP)
+  0x50423b09: [2c 48 01             ] MOV 0x148,D0
+  0x50423b0c: [42 14                ] MOV D0,(0x14,SP)
+  0x50423b0e: [58 74                ] MOV (0x74,SP),D0
+  0x50423b10: [85 02                ] MOV 0x2,D1
+  0x50423b12: [dd b1 ed ff ff 00 00 ] CALL 0x504228c3,[],0x0
+  0x50423b19: [cc 89 00             ] JMP 0x50423ba2
+  0x50423b1c: [00                   ] CLR D0
+  0x50423b1d: [89                   ] MOV D2,D1
+  0x50423b1e: [dd 4b ef ff ff 00 00 ] CALL 0x50422a69,[],0x0
+  0x50423b25: [14                   ] EXTBU D0
+  0x50423b26: [f1 dd                ] MOV A3,D1
+  0x50423b28: [15                   ] EXTBU D1
+  0x50423b29: [a4                   ] CMP D1,D0
+  0x50423b2a: [c9 b9                ] BNE 0x50423ae3
+  0x50423b2c: [80 01                ] MOV 0x1,D0
+  0x50423b2e: [89                   ] MOV D2,D1
+  0x50423b2f: [dd 3a ef ff ff 00 00 ] CALL 0x50422a69,[],0x0
+  0x50423b36: [14                   ] EXTBU D0
+  0x50423b37: [f9 2a 05             ] MOVBU (R5),R0
+  0x50423b3a: [f9 d8 0c             ] CMP R0,D0
+  0x50423b3d: [c9 a6                ] BNE 0x50423ae3
+  0x50423b3f: [bf 00                ] CMP 0x0,A3
+  0x50423b41: [c8 18                ] BEQ 0x50423b59
+  0x50423b43: [2b fc                ] ADD -0x4,D3
+  0x50423b45: [5e 18                ] MOV (0x18,SP),A2
+  0x50423b47: [22 fc                ] ADD -0x4,A2
+  0x50423b49: [4b 18                ] MOV A2,(0x18,SP)
+  0x50423b4b: [23 fe                ] ADD -0x2,A3
+  0x50423b4d: [f9 b8 44             ] INC R4
+  0x50423b50: [fb d8 44 0f          ] CMP 0xf,R4
+  0x50423b54: [c5 05                ] BHI 0x50423b59
+  0x50423b56: [cc 4a ff             ] JMP 0x50423aa0
+  0x50423b59: [f8 bc 3e             ] MOVHU (0x3e ,SP),D0
+  0x50423b5c: [fc c8 ff ff 00 00    ] CMP 0xffff,D0
+  0x50423b62: [c8 32                ] BEQ 0x50423b94
+  0x50423b64: [fb 8a 00 40          ] MOV (0x40,SP),R0
+  0x50423b68: [fb d8 00 ff          ] CMP -0x1,R0
+  0x50423b6c: [c8 28                ] BEQ 0x50423b94
+  0x50423b6e: [5c 44                ] MOV (0x44,SP),A0
+  0x50423b70: [5d 40                ] MOV (0x40,SP),A1
+  0x50423b72: [f1 75                ] ADD A1,A1
+  0x50423b74: [f1 74                ] ADD A1,A0
+  0x50423b76: [58 48                ] MOV (0x48,SP),D0
+  0x50423b78: [f1 61                ] ADD D0,A1
+  0x50423b7a: [fd 4a 88 00 02 00    ] MOVHU (0x200,A0),A0
+  0x50423b80: [fd 4a 99 00 02 00    ] MOVHU (0x200,A1),A1
+  0x50423b86: [b4                   ] CMP A1,A0
+  0x50423b87: [c9 0d                ] BNE 0x50423b94
+  0x50423b89: [2c b1 00             ] MOV 0xb1,D0
+  0x50423b8c: [42 0c                ] MOV D0,(0xc,SP)
+  0x50423b8e: [2c 59 01             ] MOV 0x159,D0
+  0x50423b91: [cc 76 ff             ] JMP 0x50423b07
+  0x50423b94: [58 74                ] MOV (0x74,SP),D0
+  0x50423b96: [cd f0 03 00 00       ] CALL 0x50423f86,[],0x0
+  0x50423b9b: [a0 00                ] CMP 0x0,D0
+  0x50423b9d: [c9 05                ] BNE 0x50423ba2
+  0x50423b9f: [00                   ] CLR D0
+  0x50423ba0: [ca 04                ] BRA 0x50423ba4
+  0x50423ba2: [80 01                ] MOV 0x1,D0
+  0x50423ba4: [df f2 70             ] RET [EX1,A3,A2,D3,D2],0x70
+```
+
+#### `FUN_50423dc3`, `FUN_50423fc8`, `FUN_50424b2e` & `FUN_50425812` (Lookup OMAP/BMAP & Cache P2)
+
+`FUN_50423dc3` traduz `page_id` lógico via OMAP em dois níveis (`FUN_50426ac2` + `FUN_50422923` journal em `0x200 + slot*2`), retornando par `(bloco_p2, subpágina)` ou `0xffff` se não alocado; `FUN_50423fc8` valida bloco P2 corrente; `FUN_50424b2e` reinicializa cache em `0x504f84a4..cc` + OMAP `0x504f8670` via `0x50436ed0..ed4`; `FUN_50425812` reescreve descritores OMAP durante migração.
+
+<!-- source: prog061_bgo_decomp.txt | FUNCS FUN_50423dc3..FUN_50425812 @ 0x50423dc3..0x50425812 -->
+```c
+undefined2 FUN_50423dc3(undefined4 param_1,undefined2 param_2,uint param_3)
+
+{
+  int iVar1;
+  ushort uVar2;
+  undefined2 uVar3;
+  uint uVar4;
+  uint uVar5;
+  uint uVar6;
+  int iVar7;
+  int iVar8;
+  int *piVar9;
+  uint extraout_var;
+  uint extraout_var_00;
+  int iStack_2c;
+  undefined2 uStack_26;
+  int aiStack_24 [9];
+
+  uVar2 = func_0x50426ac2(param_1,param_2);
+  if (uVar2 < 0xfffd) {
+    uVar4 = FUN_50422a69(1,uVar2);
+    uVar4 = uVar4 & 0xff;
+    uVar5 = FUN_50422a69(0,uStack_26);
+    uVar5 = uVar5 & 0xff;
+    if (((uVar4 != 0) && (uVar6 = FUN_504229be(param_1,2), uVar4 <= uVar6)) && (uVar5 < 0xfc)) {
+      uVar3 = func_0x50422815(param_1,2);
+      uVar6 = FUN_50422a69(0,uVar3);
+      if ((uVar6 & 0xff) == uVar4) {
+        iStack_2c = func_0x50424ea4(param_1,uVar5);
+        iVar1 = 0;
+        piVar9 = aiStack_24;
+        iVar8 = uVar5 * 2;
+        do {
+          uVar5 = uVar4;
+          if ((iStack_2c == 0) || (iVar1 != 0)) {
+            if (param_3 == 0) {
+              iVar7 = FUN_504229be(param_1,2);
+              uVar4 = iVar7 + 1;
+            }
+            func_0x50422923(piVar9,param_1,2,uVar4);
+            if (*(ushort *)(iVar8 + 0x200 + aiStack_24[0]) == extraout_var) {
+              func_0x50422a78(1,&uStack_26,uVar4 & 0xffff);
+              return uStack_26;
+            }
+            if (iVar1 != 0) {
+              return 0;
+            }
+          }
+          param_3 = (uint)(param_3 == 0);
+          iVar1 = 1;
+          uVar4 = uVar5;
+        } while( true );
+      }
+      func_0x50422923(aiStack_24,param_1,2,uVar4);
+      if (*(ushort *)(uVar5 * 2 + 0x200 + aiStack_24[0]) == extraout_var_00) {
+        return uStack_26;
+      }
+      if (param_3 == 2) {
+        return uStack_26;
+      }
+    }
+  }
+  else if (uVar2 == 0xffff) {
+    return 0xffff;
+  }
+  return 0;
+}
+
+ (GhidraScript)
+
+bool FUN_50423fc8(int param_1)
+
+{
+  bool bVar1;
+  uint uVar2;
+  int iVar3;
+
+  uVar2 = func_0x50422815(param_1,2);
+  uVar2 = uVar2 & 0xffff;
+  iVar3 = func_0x5042269e(param_1,uVar2);
+  bVar1 = iVar3 != 0;
+  if (!bVar1) {
+    param_1 = param_1 + -1;
+    uVar2 = FUN_50422a69(0,uVar2);
+    param_1 = param_1 * 4;
+    *(uint *)(param_1 + 0x504f84ac) = uVar2 & 0xff;
+    *(int *)(param_1 + 0x504f84b4) = iVar3;
+    *(int *)(param_1 + 0x504f84b8) = iVar3;
+  }
+  return bVar1;
+}
+
+ (GhidraScript)
+
+int FUN_50424b2e(int param_1)
+
+{
+  undefined4 *puVar1;
+  uint uVar2;
+  int iVar3;
+  uint uVar4;
+
+  iVar3 = (param_1 + -1) * 4;
+  *(undefined4 *)(iVar3 + 0x504f84ac) = 1;
+  *(undefined4 *)(iVar3 + 0x504f84c8) = 0xfc;
+  *(undefined4 *)(iVar3 + 0x504f84cc) = 0xffffffff;
+  *(undefined4 *)(iVar3 + 0x504f84a4) = 0xffffffff;
+  *(undefined4 *)(iVar3 + 0x504f84b0) = 0xffffffff;
+  *(undefined4 *)(iVar3 + 0x504f84c0) = 0xffffffff;
+  *(undefined4 *)(iVar3 + 0x504f84b4) = 0;
+  *(undefined4 *)(iVar3 + 0x504f84b8) = 0;
+  *(undefined4 *)(iVar3 + 0x504f84bc) = 0xffffffff;
+  *(undefined4 *)(iVar3 + 0x504f84c4) = 0;
+  *(undefined4 *)(iVar3 + 0x504f84a8) = 0;
+  uVar2 = *(uint *)(iVar3 + 0x50436ed0);
+  uVar4 = *(uint *)(iVar3 + 0x50436ed4);
+  puVar1 = (undefined4 *)(uVar2 * 0xc + 0x504f8670);
+  for (; uVar2 < uVar4; uVar2 = uVar2 + 1) {
+    *puVar1 = 0xffffffff;
+    puVar1[1] = 0xffffffff;
+    puVar1[2] = 0xffffffff;
+    puVar1 = puVar1 + 3;
+    iVar3 = -1;
+  }
+  return iVar3;
+}
+
+ (GhidraScript)
+
+uint FUN_50425812(undefined4 *param_1,int *param_2)
+
+{
+  uint uVar1;
+  undefined2 uVar2;
+  int iVar3;
+  uint uVar4;
+  uint uVar5;
+  uint uVar6;
+  uint uVar7;
+
+  iVar3 = func_0x50425dde(*param_1,param_1[1]);
+  uVar1 = iVar3 - 1;
+  uVar2 = func_0x50422815(*param_1,param_1[1]);
+  uVar4 = FUN_50422a69(0,uVar2);
+  iVar3 = FUN_504229be(*param_1,param_1[1]);
+  uVar7 = iVar3 + 1;
+  uVar6 = 0;
+  do {
+    iVar3 = uVar6 * 2;
+    if (*(short *)(*param_2 + iVar3) == -1) {
+      uVar5 = FUN_504228c3(*param_1,param_1[1],0x45,0x329,0x14a);
+    }
+    else {
+      uVar5 = FUN_50422a69(1,*(short *)(*param_2 + iVar3));
+      uVar5 = uVar5 & 0xff;
+      if (uVar5 == (uVar7 & 0xff)) {
+        uVar5 = func_0x50422a78(1,*param_2 + iVar3,uVar4 & 0xff);
+      }
+    }
+    uVar6 = uVar6 + 1;
+  } while (uVar6 <= uVar1);
+  return uVar5;
+}
+
+ (GhidraScript)
+```
+
+<!-- source: prog061_disasm_all.clean.txt | === DISASM FUN_50423dc3 @ 0x50423dc3 (size=333 B) === -->
+```asm
+-- === DISASM FUN_50423dc3 @ 0x50423dc3 (size=333 B) === --
+  0x50423dc3: [cf f2                ] MOVM [D2,D3,A2,A3,EX1],(SP)
+  0x50423dc5: [f8 fe e0             ] ADD -0x20,SP
+  0x50423dc8: [f5 47                ] MOV D0,R7
+  0x50423dca: [46 48                ] MOV D1,(0x48,SP)
+  0x50423dcc: [5f 4c                ] MOV (0x4c,SP),A3
+  0x50423dce: [1d                   ] EXTHU D1
+  0x50423dcf: [dd f3 2c 00 00 00 00 ] CALL 0x50426ac2,[],0x0
+  0x50423dd6: [f8 93 1a             ] MOVHU D0,(0x1a ,SP)
+  0x50423dd9: [1c                   ] EXTHU D0
+  0x50423dda: [fc c8 fd ff 00 00    ] CMP 0xfffd,D0
+  0x50423de0: [c0 18                ] BLT 0x50423df8
+  0x50423de2: [fc c8 fe ff 00 00    ] CMP 0xfffe,D0
+  0x50423de8: [c1 05                ] BGT 0x50423ded
+  0x50423dea: [cc 1d 01             ] JMP 0x50423f07
+  0x50423ded: [fc c8 ff ff 00 00    ] CMP 0xffff,D0
+  0x50423df3: [c9 05                ] BNE 0x50423df8
+  0x50423df5: [cc 18 01             ] JMP 0x50423f0d
+  0x50423df8: [f8 bd 1a             ] MOVHU (0x1a ,SP),D1
+  0x50423dfb: [80 01                ] MOV 0x1,D0
+  0x50423dfd: [dd 6c ec ff ff 00 00 ] CALL 0x50422a69,[],0x0
+  0x50423e04: [f5 45                ] MOV D0,R5
+  0x50423e06: [f9 38 55             ] EXTBU R5
+  0x50423e09: [f8 bd 1a             ] MOVHU (0x1a ,SP),D1
+  0x50423e0c: [00                   ] CLR D0
+  0x50423e0d: [dd 5c ec ff ff 00 00 ] CALL 0x50422a69,[],0x0
+  0x50423e14: [82                   ] MOV D0,D2
+  0x50423e15: [16                   ] EXTBU D2
+  0x50423e16: [fb d8 55 00          ] CMP 0x0,R5
+  0x50423e1a: [c9 05                ] BNE 0x50423e1f
+  0x50423e1c: [cc eb 00             ] JMP 0x50423f07
+  0x50423e1f: [f5 dc                ] MOV R7,D0
+  0x50423e21: [85 02                ] MOV 0x2,D1
+  0x50423e23: [dd 9b eb ff ff 00 00 ] CALL 0x504229be,[],0x0
+  0x50423e2a: [f9 d8 c5             ] CMP D0,R5
+  0x50423e2d: [c7 05                ] BLS 0x50423e32
+  0x50423e2f: [cc d8 00             ] JMP 0x50423f07
+  0x50423e32: [fa ca fb 00          ] CMP 0xfb,D2
+  0x50423e36: [c7 05                ] BLS 0x50423e3b
+  0x50423e38: [cc cf 00             ] JMP 0x50423f07
+  0x50423e3b: [f5 dc                ] MOV R7,D0
+  0x50423e3d: [85 02                ] MOV 0x2,D1
+  0x50423e3f: [dd d6 e9 ff ff 00 00 ] CALL 0x50422815,[],0x0
+  0x50423e46: [81                   ] MOV D0,D1
+  0x50423e47: [1d                   ] EXTHU D1
+  0x50423e48: [00                   ] CLR D0
+  0x50423e49: [dd 20 ec ff ff 00 00 ] CALL 0x50422a69,[],0x0
+  0x50423e50: [14                   ] EXTBU D0
+  0x50423e51: [f9 d8 5c             ] CMP R5,D0
+  0x50423e54: [c8 05                ] BEQ 0x50423e59
+  0x50423e56: [cc 84 00             ] JMP 0x50423eda
+  0x50423e59: [f5 dc                ] MOV R7,D0
+  0x50423e5b: [89                   ] MOV D2,D1
+  0x50423e5c: [cd 48 10 00 00       ] CALL 0x50424ea4,[],0x0
+  0x50423e61: [42 14                ] MOV D0,(0x14,SP)
+  0x50423e63: [9a 00                ] MOV 0x0,A2
+  0x50423e65: [f9 e8 04             ] MOV SP,R4
+  0x50423e68: [fb 78 44 1c          ] ADD 0x1c,R4
+  0x50423e6c: [8b                   ] MOV D2,D3
+  0x50423e6d: [ef                   ] ADD D3,D3
+  0x50423e6e: [ca 13                ] BRA 0x50423e81
+  0x50423e70: [ba 00                ] CMP 0x0,A2
+  0x50423e72: [c8 05                ] BEQ 0x50423e77
+  0x50423e74: [cc 93 00             ] JMP 0x50423f07
+  0x50423e77: [00                   ] CLR D0
+  0x50423e78: [bf 00                ] CMP 0x0,A3
+  0x50423e7a: [c9 04                ] BNE 0x50423e7e
+  0x50423e7c: [80 01                ] MOV 0x1,D0
+  0x50423e7e: [f1 e3                ] MOV D0,A3
+  0x50423e80: [49                   ] INC A2
+  0x50423e81: [5d 14                ] MOV (0x14,SP),A1
+  0x50423e83: [b5 00                ] CMP 0x0,A1
+  0x50423e85: [c8 06                ] BEQ 0x50423e8b
+  0x50423e87: [ba 00                ] CMP 0x0,A2
+  0x50423e89: [c8 ee                ] BEQ 0x50423e77
+  0x50423e8b: [bf 00                ] CMP 0x0,A3
+  0x50423e8d: [c9 11                ] BNE 0x50423e9e
+  0x50423e8f: [f5 dc                ] MOV R7,D0
+  0x50423e91: [85 02                ] MOV 0x2,D1
+  0x50423e93: [dd 2b eb ff ff 00 00 ] CALL 0x504229be,[],0x0
+  0x50423e9a: [82                   ] MOV D0,D2
+  0x50423e9b: [48                   ] INC D2
+  0x50423e9c: [ca 04                ] BRA 0x50423ea0
+  0x50423e9e: [f5 d6                ] MOV R5,D2
+  0x50423ea0: [80 02                ] MOV 0x2,D0
+  0x50423ea2: [42 0c                ] MOV D0,(0xc,SP)
+  0x50423ea4: [4a 10                ] MOV D2,(0x10,SP)
+  0x50423ea6: [f5 d0                ] MOV R4,D0
+  0x50423ea8: [f5 dd                ] MOV R7,D1
+  0x50423eaa: [dd 79 ea ff ff 00 00 ] CALL 0x50422923,[],0x0
+  0x50423eb1: [fa c3 00 02          ] ADD 0x200,D3
+  0x50423eb5: [58 1c                ] MOV (0x1c,SP),D0
+  0x50423eb7: [f1 ec                ] MOV D3,A0
+  0x50423eb9: [f1 60                ] ADD D0,A0
+  0x50423ebb: [fa c3 00 fe          ] ADD -0x200,D3
+  0x50423ebf: [f0 60                ] MOVHU (A0),D0
+  0x50423ec1: [5d 48                ] MOV (0x48,SP),A1
+  0x50423ec3: [f1 94                ] CMP A1,D0
+  0x50423ec5: [c9 ab                ] BNE 0x50423e70
+  0x50423ec7: [3d                   ] MOV SP,A1
+  0x50423ec8: [21 1a                ] ADD 0x1a,A1
+  0x50423eca: [f1 d5                ] MOV A1,D1
+  0x50423ecc: [1e                   ] EXTHU D2
+  0x50423ecd: [4a 0c                ] MOV D2,(0xc,SP)
+  0x50423ecf: [80 01                ] MOV 0x1,D0
+  0x50423ed1: [dd a7 eb ff ff 00 00 ] CALL 0x50422a78,[],0x0
+  0x50423ed8: [ca 32                ] BRA 0x50423f0a
+  0x50423eda: [3d                   ] MOV SP,A1
+  0x50423edb: [21 1c                ] ADD 0x1c,A1
+  0x50423edd: [f1 d4                ] MOV A1,D0
+  0x50423edf: [85 02                ] MOV 0x2,D1
+  0x50423ee1: [46 0c                ] MOV D1,(0xc,SP)
+  0x50423ee3: [fb 9a 50 10          ] MOV R5,(0x10,SP)
+  0x50423ee7: [f5 dd                ] MOV R7,D1
+  0x50423ee9: [dd 3a ea ff ff 00 00 ] CALL 0x50422923,[],0x0
+  0x50423ef0: [ea                   ] ADD D2,D2
+  0x50423ef1: [fa c2 00 02          ] ADD 0x200,D2
+  0x50423ef5: [58 1c                ] MOV (0x1c,SP),D0
+  0x50423ef7: [f1 e8                ] MOV D2,A0
+  0x50423ef9: [f1 60                ] ADD D0,A0
+  0x50423efb: [f0 60                ] MOVHU (A0),D0
+  0x50423efd: [5d 48                ] MOV (0x48,SP),A1
+  0x50423eff: [f1 94                ] CMP A1,D0
+  0x50423f01: [c8 09                ] BEQ 0x50423f0a
+  0x50423f03: [bf 02                ] CMP 0x2,A3
+  0x50423f05: [c8 05                ] BEQ 0x50423f0a
+  0x50423f07: [00                   ] CLR D0
+  0x50423f08: [ca 05                ] BRA 0x50423f0d
+  0x50423f0a: [f8 bc 1a             ] MOVHU (0x1a ,SP),D0
+  0x50423f0d: [df f2 40             ] RET [EX1,A3,A2,D3,D2],0x40
+```
+
+<!-- source: prog061_disasm_all.clean.txt | === DISASM FUN_50423fc8 @ 0x50423fc8 (size=85 B) === -->
+```asm
+-- === DISASM FUN_50423fc8 @ 0x50423fc8 (size=85 B) === --
+  0x50423fc8: [cf e0                ] MOVM [D2,D3,A2],(SP)
+  0x50423fca: [f8 fe f4             ] ADD -0xc,SP
+  0x50423fcd: [82                   ] MOV D0,D2
+  0x50423fce: [85 02                ] MOV 0x2,D1
+  0x50423fd0: [dd 45 e8 ff ff 00 00 ] CALL 0x50422815,[],0x0
+  0x50423fd7: [f1 e2                ] MOV D0,A2
+  0x50423fd9: [f9 58 aa             ] EXTHU A2
+  0x50423fdc: [88                   ] MOV D2,D0
+  0x50423fdd: [f1 d9                ] MOV A2,D1
+  0x50423fdf: [dd bf e6 ff ff 00 00 ] CALL 0x5042269e,[],0x0
+  0x50423fe6: [83                   ] MOV D0,D3
+  0x50423fe7: [af 00                ] CMP 0x0,D3
+  0x50423fe9: [c9 2f                ] BNE 0x50424018
+  0x50423feb: [2a ff                ] ADD -0x1,D2
+  0x50423fed: [00                   ] CLR D0
+  0x50423fee: [f1 d9                ] MOV A2,D1
+  0x50423ff0: [dd 79 ea ff ff 00 00 ] CALL 0x50422a69,[],0x0
+  0x50423ff7: [89                   ] MOV D2,D1
+  0x50423ff8: [55                   ] ASL2 D1
+  0x50423ff9: [f1 e4                ] MOV D1,A0
+  0x50423ffb: [fc d0 ac 84 4f 50    ] ADD 0x504f84ac,A0
+  0x50424001: [14                   ] EXTBU D0
+  0x50424002: [60                   ] MOV D0,(A0)
+  0x50424003: [f1 e4                ] MOV D1,A0
+  0x50424005: [fc d0 b4 84 4f 50    ] ADD 0x504f84b4,A0
+  0x5042400b: [6c                   ] MOV D3,(A0)
+  0x5042400c: [f1 e4                ] MOV D1,A0
+  0x5042400e: [fc d0 b8 84 4f 50    ] ADD 0x504f84b8,A0
+  0x50424014: [6c                   ] MOV D3,(A0)
+  0x50424015: [00                   ] CLR D0
+  0x50424016: [ca 04                ] BRA 0x5042401a
+  0x50424018: [80 01                ] MOV 0x1,D0
+  0x5042401a: [df e0 18             ] RET [A2,D3,D2],0x18
+```
+
+<!-- source: prog061_disasm_all.clean.txt | === DISASM FUN_50424b2e @ 0x50424b2e (size=171 B) === -->
+```asm
+-- === DISASM FUN_50424b2e @ 0x50424b2e (size=171 B) === --
+  0x50424b2e: [28 ff                ] ADD -0x1,D0
+  0x50424b30: [54                   ] ASL2 D0
+  0x50424b31: [f1 e0                ] MOV D0,A0
+  0x50424b33: [fc d0 ac 84 4f 50    ] ADD 0x504f84ac,A0
+  0x50424b39: [85 01                ] MOV 0x1,D1
+  0x50424b3b: [64                   ] MOV D1,(A0)
+  0x50424b3c: [f1 e0                ] MOV D0,A0
+  0x50424b3e: [fc d0 c8 84 4f 50    ] ADD 0x504f84c8,A0
+  0x50424b44: [2d fc 00             ] MOV 0xfc,D1
+  0x50424b47: [64                   ] MOV D1,(A0)
+  0x50424b48: [f1 e0                ] MOV D0,A0
+  0x50424b4a: [fc d0 cc 84 4f 50    ] ADD 0x504f84cc,A0
+  0x50424b50: [fb 08 00 ff          ] MOV -0x1,R0
+  0x50424b54: [f9 1a 08             ] MOV R0,(A0)
+  0x50424b57: [f1 e0                ] MOV D0,A0
+  0x50424b59: [fc d0 a4 84 4f 50    ] ADD 0x504f84a4,A0
+  0x50424b5f: [f9 1a 08             ] MOV R0,(A0)
+  0x50424b62: [f1 e0                ] MOV D0,A0
+  0x50424b64: [fc d0 b0 84 4f 50    ] ADD 0x504f84b0,A0
+  0x50424b6a: [f9 1a 08             ] MOV R0,(A0)
+  0x50424b6d: [f1 e0                ] MOV D0,A0
+  0x50424b6f: [fc d0 c0 84 4f 50    ] ADD 0x504f84c0,A0
+  0x50424b75: [f9 1a 08             ] MOV R0,(A0)
+  0x50424b78: [f1 e0                ] MOV D0,A0
+  0x50424b7a: [fc d0 b4 84 4f 50    ] ADD 0x504f84b4,A0
+  0x50424b80: [04                   ] CLR D1
+  0x50424b81: [64                   ] MOV D1,(A0)
+  0x50424b82: [f1 e0                ] MOV D0,A0
+  0x50424b84: [fc d0 b8 84 4f 50    ] ADD 0x504f84b8,A0
+  0x50424b8a: [64                   ] MOV D1,(A0)
+  0x50424b8b: [f1 e0                ] MOV D0,A0
+  0x50424b8d: [fc d0 bc 84 4f 50    ] ADD 0x504f84bc,A0
+  0x50424b93: [f9 1a 08             ] MOV R0,(A0)
+  0x50424b96: [f1 e0                ] MOV D0,A0
+  0x50424b98: [fc d0 c4 84 4f 50    ] ADD 0x504f84c4,A0
+  0x50424b9e: [64                   ] MOV D1,(A0)
+  0x50424b9f: [f1 e0                ] MOV D0,A0
+  0x50424ba1: [fc d0 a8 84 4f 50    ] ADD 0x504f84a8,A0
+  0x50424ba7: [64                   ] MOV D1,(A0)
+  0x50424ba8: [fc dc d0 6e 43 50    ] MOV 0x50436ed0,A0
+  0x50424bae: [91                   ] MOV A0,A1
+  0x50424baf: [f1 61                ] ADD D0,A1
+  0x50424bb1: [f0 05                ] MOV (A1),A1
+  0x50424bb3: [f1 60                ] ADD D0,A0
+  0x50424bb5: [f8 04 04             ] MOV (0x4 ,A0),D1
+  0x50424bb8: [94                   ] MOV A1,A0
+  0x50424bb9: [fb a9 88 0c          ] MUL 0xc,A0
+  0x50424bbd: [fc d0 70 86 4f 50    ] ADD 0x504f8670,A0
+  0x50424bc3: [f1 a5                ] CMP D1,A1
+  0x50424bc5: [c6 12                ] BCC 0x50424bd7
+  0x50424bc7: [f5 c0                ] MOV R0,D0
+  0x50424bc9: [60                   ] MOV D0,(A0)
+  0x50424bca: [f8 10 04             ] MOV D0,(0x4 ,A0)
+  0x50424bcd: [f8 10 08             ] MOV D0,(0x8 ,A0)
+  0x50424bd0: [45                   ] INC A1
+  0x50424bd1: [20 0c                ] ADD 0xc,A0
+  0x50424bd3: [f1 a5                ] CMP D1,A1
+  0x50424bd5: [c4 f4                ] BCS 0x50424bc9
+  0x50424bd7: [f0 fc                ] RETS
+```
+
+<!-- source: prog061_disasm_all.clean.txt | === DISASM FUN_50425812 @ 0x50425812 (size=161 B) === -->
+```asm
+-- === DISASM FUN_50425812 @ 0x50425812 (size=161 B) === --
+  0x50425812: [cf f2                ] MOVM [D2,D3,A2,A3,EX1],(SP)
+  0x50425814: [f8 fe e8             ] ADD -0x18,SP
+  0x50425817: [f1 e2                ] MOV D0,A2
+  0x50425819: [f5 54                ] MOV D1,R4
+  0x5042581b: [72                   ] MOV (A2),D0
+  0x5042581c: [f8 06 04             ] MOV (0x4 ,A2),D1
+  0x5042581f: [cd bf 05 00 00       ] CALL 0x50425dde,[],0x0
+  0x50425824: [f1 e3                ] MOV D0,A3
+  0x50425826: [23 ff                ] ADD -0x1,A3
+  0x50425828: [72                   ] MOV (A2),D0
+  0x50425829: [f8 06 04             ] MOV (0x4 ,A2),D1
+  0x5042582c: [dd e9 cf ff ff 00 00 ] CALL 0x50422815,[],0x0
+  0x50425833: [81                   ] MOV D0,D1
+  0x50425834: [1d                   ] EXTHU D1
+  0x50425835: [00                   ] CLR D0
+  0x50425836: [dd 33 d2 ff ff 00 00 ] CALL 0x50422a69,[],0x0
+  0x5042583d: [f5 47                ] MOV D0,R7
+  0x5042583f: [72                   ] MOV (A2),D0
+  0x50425840: [f8 06 04             ] MOV (0x4 ,A2),D1
+  0x50425843: [dd 7b d1 ff ff 00 00 ] CALL 0x504229be,[],0x0
+  0x5042584a: [f5 45                ] MOV D0,R5
+  0x5042584c: [f9 b8 55             ] INC R5
+  0x5042584f: [0c                   ] CLR D3
+  0x50425850: [f1 9f                ] CMP A3,D3
+  0x50425852: [c5 5e                ] BHI 0x504258b0
+  0x50425854: [f9 0a c4             ] MOV (R4),D0
+  0x50425857: [8e                   ] MOV D3,D2
+  0x50425858: [ea                   ] ADD D2,D2
+  0x50425859: [f1 e0                ] MOV D0,A0
+  0x5042585b: [f1 68                ] ADD D2,A0
+  0x5042585d: [f0 60                ] MOVHU (A0),D0
+  0x5042585f: [fc c8 ff ff 00 00    ] CMP 0xffff,D0
+  0x50425865: [c9 1d                ] BNE 0x50425882
+  0x50425867: [72                   ] MOV (A2),D0
+  0x50425868: [f8 06 04             ] MOV (0x4 ,A2),D1
+  0x5042586b: [90 45                ] MOV 0x45,A0
+  0x5042586d: [43 0c                ] MOV A0,(0xc,SP)
+  0x5042586f: [24 29 03             ] MOV 0x329,A0
+  0x50425872: [43 10                ] MOV A0,(0x10,SP)
+  0x50425874: [24 4a 01             ] MOV 0x14a,A0
+  0x50425877: [43 14                ] MOV A0,(0x14,SP)
+  0x50425879: [dd 4a d0 ff ff 00 00 ] CALL 0x504228c3,[],0x0
+  0x50425880: [ca 2b                ] BRA 0x504258ab
+  0x50425882: [f0 64                ] MOVHU (A0),D1
+  0x50425884: [80 01                ] MOV 0x1,D0
+  0x50425886: [dd e3 d1 ff ff 00 00 ] CALL 0x50422a69,[],0x0
+  0x5042588d: [14                   ] EXTBU D0
+  0x5042588e: [f5 d5                ] MOV R5,D1
+  0x50425890: [15                   ] EXTBU D1
+  0x50425891: [a4                   ] CMP D1,D0
+  0x50425892: [c9 19                ] BNE 0x504258ab
+  0x50425894: [f9 0a d4             ] MOV (R4),D1
+  0x50425897: [e9                   ] ADD D2,D1
+  0x50425898: [f9 08 70             ] MOV R7,R0
+  0x5042589b: [f9 38 00             ] EXTBU R0
+  0x5042589e: [fb 9a 00 0c          ] MOV R0,(0xc,SP)
+  0x504258a2: [80 01                ] MOV 0x1,D0
+  0x504258a4: [dd d4 d1 ff ff 00 00 ] CALL 0x50422a78,[],0x0
+  0x504258ab: [4c                   ] INC D3
+  0x504258ac: [f1 9f                ] CMP A3,D3
+  0x504258ae: [c7 a6                ] BLS 0x50425854
+  0x504258b0: [df f2 38             ] RET [EX1,A3,A2,D3,D2],0x38
+```
+
+#### `FUN_504266e0..FUN_50428725` (Camada CFI / JEDEC NOR & Formatação BGO)
+
+`FUN_50426f78` sonda Flash em `0x84200000` (Trap #5 colapsa leitura para `return 2` no C), `FUN_50427040` carrega tabela de 10 ponteiros CFI/Spansion em `0x504f88dc..0x504f8900`, `FUN_504266e0` monta áreas P1/P2/reconciliação chamando `FUN_5042383c`, `FUN_50426802`/`68a1`/`68f6` executam I/O lógico por páginas e `FUN_5042854d` grava seqüências de páginas no formato inicial de 7 subpáginas por ciclo.
+
+<!-- source: prog061_bgo_decomp.txt / prog061_helpers_decomp.txt | FUNCS FUN_504266e0..FUN_50428725 @ 0x504266e0..0x50428725 -->
+```c
+void FUN_504266e0(undefined4 param_1,undefined4 param_2)
+
+{
+  undefined4 uVar1;
+  int iVar2;
+  undefined4 uVar3;
+  int iVar4;
+  undefined4 uVar5;
+
+  iVar4 = 0;
+  uVar1 = func_0x504235d9(param_1,1);
+  iVar2 = func_0x50427040(uVar1);
+  if (iVar2 == 0) {
+    uVar1 = 0x143;
+    FUN_504228fe(param_1,1,0xc2,0x143);
+    iVar2 = func_0x504223f8(param_1,param_2);
+    if (iVar2 != 0) {
+      iVar4 = 1;
+    }
+    if (iVar4 == 1) {
+      uVar5 = 0x29;
+      uVar3 = 0xf0;
+    }
+    else {
+      iVar2 = FUN_504229be(param_1,1);
+      if (iVar2 == 0) {
+        return;
+      }
+      iVar2 = FUN_504229be(param_1,2);
+      if (iVar2 == 0) {
+        return;
+      }
+      iVar2 = func_0x5042832e(param_1,1);
+      if (iVar2 != 0) {
+        return;
+      }
+      iVar2 = func_0x50426b3a(param_1);
+      if (iVar2 != 0) {
+        return;
+      }
+      iVar2 = func_0x5042383c(param_1);
+      if (iVar2 != 0) {
+        return;
+      }
+      uVar3 = 0xf8;
+      uVar5 = 0;
+    }
+    FUN_504228c3(param_1,2,uVar5,uVar3,uVar1);
+  }
+  else {
+    FUN_504228fe(param_1,5,0xbf,0x143);
+  }
+  return;
+}
+
+ (GhidraScript)
+
+undefined4 FUN_50426802(undefined4 param_1,int param_2,uint param_3,int param_4)
+
+{
+  undefined4 uVar1;
+  undefined1 uVar2;
+  uint uVar3;
+  uint uVar4;
+  undefined4 uVar5;
+  int extraout_var;
+  int extraout_var_00;
+  int aiStack_24 [9];
+
+  uVar4 = 0;
+  if (param_3 != 0) {
+    uVar5 = 1;
+    uVar1 = 0x200;
+    do {
+      uVar3 = func_0x50423dc3(param_1,param_2 + uVar4,uVar5);
+      uVar3 = uVar3 & 0xffff;
+      if (uVar3 == 0) {
+        return 1;
+      }
+      if (uVar3 == 0xffff) {
+        func_0x5042d323(param_4,0xff,uVar1);
+        param_2 = extraout_var;
+      }
+      else {
+        uVar2 = func_0x50422a69(uVar5,uVar3);
+        FUN_50422923(aiStack_24,param_1,2,uVar2);
+        uVar3 = func_0x50422a69(0,uVar3);
+        func_0x5042d2d2(param_4,aiStack_24[0] + (uVar3 & 0xff) * 0x100 + 0x400,uVar1);
+        param_2 = extraout_var_00;
+      }
+      uVar4 = uVar4 + 1;
+      param_4 = param_4 + 0x200;
+    } while (uVar4 < param_3);
+  }
+  return 0;
+}
+
+ (GhidraScript)
+
+uint FUN_504268a1(int param_1,undefined4 param_2)
+
+{
+  int iVar1;
+  uint uVar2;
+
+  uVar2 = 0;
+  while( true ) {
+    iVar1 = func_0x50426b94(param_1);
+    if (iVar1 != 0) {
+      return 0x10;
+    }
+    if (*(int *)(param_1 + 0x10) == 0) break;
+    func_0x5042502b(param_1,param_2);
+  }
+  iVar1 = func_0x504227e1(*(undefined4 *)(param_1 + 4),2);
+  if (iVar1 == 0) {
+    uVar2 = uVar2 | 1;
+  }
+  iVar1 = func_0x504227e1(*(undefined4 *)(param_1 + 4),1);
+  if (iVar1 != 0) {
+    return uVar2;
+  }
+  return uVar2 | 2;
+}
+
+ (GhidraScript)
+
+undefined4 FUN_504268f6(int param_1)
+
+{
+  undefined1 *puVar1;
+  short sVar2;
+  int iVar3;
+  undefined4 uVar4;
+  uint uVar5;
+  uint uVar6;
+  undefined1 *puVar7;
+  undefined1 *puVar8;
+  undefined1 auStack_b8 [12];
+  undefined1 auStack_ac [32];
+  undefined1 auStack_8c [12];
+  undefined1 auStack_80 [128];
+
+  uVar6 = 0;
+  puVar1 = auStack_ac;
+  puVar7 = auStack_b8;
+  if (*(int *)(param_1 + 8) != 0) {
+    puVar8 = auStack_80;
+    do {
+      uVar5 = uVar6 & 0xffff;
+      sVar2 = FUN_50423dc3(*(undefined4 *)(param_1 + 4),*(int *)(param_1 + 0xc) + uVar5,1);
+      *(short *)(puVar8 + uVar5 * 2) = sVar2;
+      if (sVar2 == 0) {
+        *(short *)(puVar8 + uVar5 * 2) = -1;
+      }
+      uVar6 = uVar6 + 1;
+    } while ((uVar6 & 0xffff) < *(uint *)(param_1 + 8));
+  }
+  uVar6 = 0;
+  if (*(int *)(param_1 + 8) != 0) {
+    do {
+      *(undefined2 *)(puVar1 + (uVar6 & 0xffff) * 2) = 0xffff;
+      uVar6 = uVar6 + 1;
+    } while ((uVar6 & 0xffff) < *(uint *)(param_1 + 8));
+  }
+  iVar3 = func_0x50426e45(puVar7);
+  if (((iVar3 == 0) && (iVar3 = func_0x50424333(param_1,auStack_8c), iVar3 == 0)) &&
+     (iVar3 = func_0x50423f86(*(undefined4 *)(param_1 + 4)), iVar3 == 0)) {
+    uVar4 = 0;
+  }
+  else {
+    uVar4 = 1;
+  }
+  return uVar4;
+}
+
+ (GhidraScript)
+
+undefined4 FUN_50426a4a(undefined4 param_1)
+
+{
+  int iVar1;
+  undefined4 uVar2;
+  undefined1 auStack_20 [32];
+
+  iVar1 = FUN_504227e1(param_1,1);
+  if (iVar1 == 1) {
+    uVar2 = 2;
+  }
+  else {
+    iVar1 = func_0x50428725(param_1,1,auStack_20);
+    if (iVar1 == 0) {
+      uVar2 = 1;
+    }
+    else if (iVar1 == 1) {
+      uVar2 = 0;
+    }
+    else {
+      uVar2 = 0x10;
+    }
+  }
+  return uVar2;
+}
+
+ (GhidraScript)
+
+undefined2 FUN_50426ac2(int param_1,uint param_2)
+
+{
+  uint uVar1;
+  undefined2 uVar2;
+  int iVar3;
+  uint uVar4;
+  int aiStack_c [3];
+
+  uVar4 = (param_2 & 0xfff0) >> 4;
+  uVar1 = (uint)*(ushort *)(uVar4 * 2 + *(int *)(param_1 * 0x1c + 0x50436e98));
+  if (uVar1 == 0xffffffff) {
+    uVar2 = 0xfffe;
+  }
+  else {
+    iVar3 = func_0x504258b3(aiStack_c,param_1,1,
+                            *(undefined1 *)(*(int *)(param_1 * 0x1c + 0x50436e9c) + uVar4),uVar1,
+                            uVar4);
+    if (iVar3 == 0) {
+      uVar2 = *(undefined2 *)(aiStack_c[0] + (param_2 & 0xf) * 2 + 4);
+    }
+    else {
+      uVar2 = 0xfffd;
+    }
+  }
+  return uVar2;
+}
+
+ (GhidraScript)
+
+/* WARNING: Removing unreachable block (ram,0x50426fff) */
+/* WARNING: Removing unreachable block (ram,0x5042702f) */
+/* WARNING: Removing unreachable block (ram,0x5042700d) */
+/* WARNING: Removing unreachable block (ram,0x5042701c) */
+/* WARNING: Removing unreachable block (ram,0x50427022) */
+/* WARNING: Removing unreachable block (ram,0x5042702a) */
+/* WARNING: Removing unreachable block (ram,0x50426fac) */
+/* WARNING: Removing unreachable block (ram,0x50426fc3) */
+/* WARNING: Removing unreachable block (ram,0x50426fe4) */
+/* WARNING: Removing unreachable block (ram,0x50426fc9) */
+/* WARNING: Removing unreachable block (ram,0x50426fcd) */
+/* WARNING: Removing unreachable block (ram,0x50426fd1) */
+/* WARNING: Removing unreachable block (ram,0x50426fbb) */
+/* WARNING: Removing unreachable block (ram,0x50426fe8) */
+/* WARNING: Removing unreachable block (ram,0x50426fd3) */
+/* WARNING: Removing unreachable block (ram,0x50426fc1) */
+/* WARNING: Removing unreachable block (ram,0x50426fed) */
+/* WARNING: Removing unreachable block (ram,0x50426ff3) */
+
+undefined4 FUN_50426f78(void)
+
+{
+  uRam84200000 = 0x90;
+  uRam84200554 = 0x55;
+  uRam84200aaa = 0x90;
+  return 2;
+}
+
+ (GhidraScript)
+
+undefined4 FUN_50427040(undefined4 param_1)
+
+{
+  int iVar1;
+  undefined4 uVar2;
+
+  func_0x50428d2a();
+  iVar1 = func_0x50426f78(param_1);
+  if (iVar1 == 0) {
+    pcRam504f88f0 = (code *)0x50427a7e;
+    uRam504f88ec = 0x50427b7a;
+    uRam504f88e4 = 0x50427bf0;
+    uRam504f88f8 = 0x50427ccd;
+    uRam504f88e0 = 0x50427d2d;
+    uRam504f88fc = 0x50427e86;
+    uRam504f88f4 = 0x50427fc7;
+    uRam504f88e8 = 0x50428183;
+    uRam504f8900 = 0x5042820c;
+    uRam504f88dc = 0x50428236;
+  }
+  else {
+    if (iVar1 != 1) {
+      return 1;
+    }
+    pcRam504f88f0 = (code *)0x50428e56;
+    uRam504f88ec = 0x50428eba;
+    uRam504f88e4 = 0x50428f2a;
+    uRam504f88f8 = 0x50428fc6;
+    uRam504f88e0 = 0x50429019;
+    uRam504f88fc = 0x504290e2;
+    uRam504f88f4 = 0x50429144;
+    uRam504f88e8 = 0x50429297;
+    uRam504f8900 = 0x504292f9;
+    uRam504f88dc = 0x50429323;
+  }
+  uVar2 = (*pcRam504f88f0)(param_1);
+  return uVar2;
+}
+
+ (GhidraScript)
+
+void FUN_5042718b(void)
+
+{
+  (*pcRam504f88e0)();
+  return;
+}
+
+ (GhidraScript)
+
+undefined4 FUN_5042854d(void)
+
+{
+  int iVar1;
+  undefined4 uVar2;
+  uint uVar3;
+  uint uVar4;
+  undefined4 uVar5;
+  uint uVar6;
+  undefined2 *puVar7;
+  undefined2 *puVar8;
+  undefined4 extraout_var;
+  undefined4 extraout_var_00;
+  undefined4 extraout_var_01;
+  undefined4 extraout_var_02;
+  undefined4 extraout_var_03;
+  undefined4 extraout_var_04;
+  undefined4 extraout_var_05;
+  undefined4 extraout_var_06;
+  undefined4 uVar9;
+  undefined4 uStack0000000c;
+  uint *in_stack_00000010;
+  undefined4 uVar10;
+  undefined1 auStack_28 [4];
+  undefined4 auStack_24 [9];
+
+  iVar1 = func_0x50425dde();
+  uVar4 = iVar1 - 1;
+  func_0x50422923(auStack_24,extraout_var,extraout_var_03,uStack0000000c);
+  uVar6 = 2;
+  puVar7 = (undefined2 *)0x504f8374;
+  uVar5 = 0x504f8370;
+  do {
+    func_0x5042d323(0x504f8370,0xff,0x100);
+    uVar3 = 0;
+    puVar8 = puVar7;
+    do {
+      if (uVar4 < *in_stack_00000010) break;
+      *puVar7 = (short)*in_stack_00000010;
+      puVar7 = puVar7 + 0x12;
+      func_0x50425cf5(uVar5,0,uVar3);
+      func_0x50425cf5(uVar5,1,uVar3);
+      func_0x50425cf5(uVar5,2,uVar3);
+      uVar3 = uVar3 + 1;
+      *in_stack_00000010 = *in_stack_00000010 + 1;
+    } while (uVar3 < 7);
+    puVar7 = puVar8;
+    iVar1 = func_0x5042718b(auStack_24[0],0x504f8370);
+    if (iVar1 != 0) {
+      uVar10 = 0x11;
+      uVar2 = 0x149;
+      uVar5 = extraout_var_00;
+      uVar9 = extraout_var_04;
+      goto LAB_50428675;
+    }
+    if (uVar4 < *in_stack_00000010) {
+      return 0;
+    }
+    uVar6 = uVar6 + 1;
+    if (0x1f < uVar6) {
+      func_0x50422923(auStack_28,extraout_var_00,extraout_var_04,uStack0000000c);
+      iVar1 = func_0x50422a9f();
+      if (iVar1 == 0) {
+        iVar1 = func_0x50422a9f();
+        if (iVar1 == 0) {
+          return 1;
+        }
+        uVar10 = 0x13;
+        uVar2 = 0x13d;
+        uVar5 = extraout_var_02;
+        uVar9 = extraout_var_06;
+      }
+      else {
+        uVar10 = 0x12;
+        uVar2 = 0x138;
+        uVar5 = extraout_var_01;
+        uVar9 = extraout_var_05;
+      }
+LAB_50428675:
+      FUN_504228c3(uVar5,uVar9,uVar10,uVar2,0x142);
+      return 2;
+    }
+  } while( true );
+}
+
+ (GhidraScript)
+
+undefined4 FUN_50428725(undefined4 param_1,undefined4 param_2,int param_3)
+
+{
+  int iVar1;
+  undefined1 *puVar2;
+  undefined1 *puVar3;
+  undefined1 auStack_5c [4];
+  undefined1 auStack_58 [88];
+
+  puVar2 = auStack_58;
+  func_0x5042d323(puVar2,0xff,0x38);
+  puVar3 = auStack_5c;
+  iVar1 = func_0x504288ed(param_1,param_2,param_3,puVar3);
+  if (iVar1 == 0) {
+    func_0x504289d1(param_1,param_2,param_3,puVar2,puVar3);
+    iVar1 = func_0x50428b72(param_1,param_2,param_3,puVar2);
+    if (iVar1 == 0) {
+      if (**(short **)(param_3 + 0x10) != -1) {
+        return 0;
+      }
+      iVar1 = func_0x50428cb7(param_1,param_2,param_3);
+      if (iVar1 == 0) {
+        return 1;
+      }
+    }
+  }
+  else if (iVar1 == 1) {
+    return 0;
+  }
+  return 2;
+}
+
+ (GhidraScript)
+```
+
+---
+
+### 2.3 Subsistema RTSC, Controladora DAVIS IDE & Carga de `mainsoft` (`PROG061` × `Loader ver0.61`)
+
+Documentação integral e tradução técnica do controlador IDE **DAVIS** / camada **RTSC** no `PROG061` (`FUN_5040c700..FUN_50431303`) e suas contrapartes verificadas no `Loader ver0.61` físico do DMR-EH55 (`FUN_4400b1d5..FUN_4401c733`).
+
+#### Mapa Verificado de Registradores MMIO DAVIS (`Canal ch ∈ {0, 1}`, stride `0x800`)
+
+| Endereço Físico (`ch = 0`) | Expressão no Código (`-0x76fffxxx`) | Registrador / Função | Máscaras & Operação Verificada |
+|---|---|---|---|
+| `0x89000400 + ch*0x800` | `ch*0x800 + -0x76fffc00` | **`DAVIS_CTRL_RESET`** | `FUN_5041b444`: zera bits `[1:0]` (`& ~3`), depois seta bits `[1:0]` (`\| 3`). |
+| `0x89000420 + ch*0x800` | `ch*0x800 + -0x76fffbe0` | **`DAVIS_DMA_MODE_CTL`** | `FUN_5041b444`: limpa bit `0` (`& ~1`). |
+| `0x890004C0 + ch*0x800` | `ch*0x800 + -0x76fffb40` | **`DAVIS_TIMER_28BIT`** | `FUN_5041bcca`: retorna contador `u32 & 0x0fffffff` (~`263 ns/tick`, `0x107` denom. em `FUN_5041b3e6`; `0x9487` ticks = `~10 ms`). |
+| `0x89000520 + reg + ch*0x800` | `ch*0x800 + reg + -0x76fffae0` | **Base Task-File ATA/ATAPI** | Lida por `FUN_5041b49c(reg_off, ch)`; aplica `& 0xff` para `reg_off != 0`. |
+| `0x89000530` (`reg +0x10`) | `0x89000520 + 0x10` | **`LBA_MID` (`Cylinder Low`)** | `FUN_5041f61b`: `0x14` + `0xeb` = assinatura **ATAPI** (`0xEB14`); `0x00` + `0x00` = **ATA HDD**. |
+| `0x89000534` (`reg +0x14`) | `0x89000520 + 0x14` | **`LBA_HIGH` (`Cylinder High`)** | Par superior da assinatura de dispositivo após reset. |
+| **`0x89000538`** (`reg +0x18`) | `ch*0x800 + -0x76fffac8` | **`DRIVE_HEAD` (`DEV Select`)** | `FUN_5041b4e1(mask, ch, val)`: **`mask=0xff10`** altera exclusivamente o bit **`4` (`0x10`: `0`=Master, `1`=Slave)** mantendo bits superiores/LBA (`0xff40` altera bit 6 `LBA`). Contém instrução `NOT` (`f2 31`). |
+| **`0x89000558`** (`reg +0x38`) | `ch*0x800 + -0x76fffaa8` | **`ALTSTATUS` (R) / `DEVCTL` (W)** | Escrita via `FUN_5041b55b`: bit `1` (`nIEN`), bit `2` (**`SRST`** Reset), bit `7`. Leitura via `FUN_5041b49c(0x38, ch)` testa **`BSY = 0x80`**, **`DRDY = 0x40`**, **`ERR = 0x01`**, ou **`0xFF`** (barramento flutuante / sem dispositivo). |
+
+#### Prova dos Timeouts de Detecção IDE (`0xc80 × 10 ms = 32 s` por dispositivo) & Fallback `update`
+1. **`FUN_5041d8e4` (`ver0.61: FUN_4401a9fc`):** executa hard reset (`param_2 == 1`: `1 ms` + `2000 ms` via `FUN_5041b3e6`) ou soft reset (`param_2 == 2`: pulsa `SRST` bit `2` em `0x89000558` por `5 ms`), e em seguida itera **`dev = 0` (Master)** e **`dev = 1` (Slave)**:
+   - Seleciona o dispositivo em **`0x89000538`** (`FUN_5041b4e1(0xff10, ch, dev)`), aguarda `1 ms` e chama **`FUN_5041df27(0xc80, ch, 0x80, 0)`**.
+2. **`FUN_5041df27` (`ver0.61: FUN_4401b03f`):** lê `0x89000558` testando `(status & 0x80) == 0` (**`!BSY`**). Primeiro gira por **`0x9487`** ticks (`38.023` ticks $\approx 10\text{ ms}$) no timer `0x890004C0`; se `BSY` persistir, dorme em laço invocando **`FUN_50431303(1)`** (`func_0x5040d655(10)` = **`10 ms`/tick**) até `0xc80 - 1 = 3.199` vezes (**`32,00 s` exatos por dispositivo**, podendo alcançar **`64 s` por canal** se Master e Slave travarem `BSY = 1`), retornando timeout **`-0x7ffffbf1` (`0x8000040f`)**.
+3. **Fallback na falha de `mainsoft` (`Loader ver0.61 FUN_44007f0e`):** se `FUN_4400b980` (`HDD MAX LBA`) falhar ou se LBA `0x10000` e espelho `max_lba - 0x20000` falharem validação `FUN_4400829d`, o bootloader emite `"mainsoft data is invalid, so set update flag.\n"`, grava `"MATS"`/`"HITA"` em `0x50480c74` (`FUN_44009d5b`) e força boot de atualização (`FUN_44009d83(2)`).
+
+#### `FUN_5040c700`, `FUN_5040ce77`, `FUN_5040ce91` & `FUN_5040ceab` (RTSC Init, Locks & `HDD MAX LBA`)
+
+Equivalentes em `PROG061` de `Loader ver0.61 FUN_4400b1d5` e `FUN_4400b980`: `FUN_5040c700` inicializa os dois canais DAVIS/ATAPI; `FUN_5040ceab` dispara `IDENTIFY DEVICE` (`0xEC`), confere bit `0x400` LBA48 em word `[49/83]` do setor retornado (`puVar1[-0x176]`) e extrai capacidade LBA28 (`-0x1a4`) vs LBA48 (`-0x154`).
+
+<!-- source: rtsc_davis_decomp.txt / prog061_helpers_decomp.txt | FUNCS FUN_5040c700..FUN_5040ceab @ 0x5040c700..0x5040ceab -->
+```c
+undefined4 FUN_5040c700(void)
+
+{
+  undefined4 *puVar1;
+  int iVar2;
+  undefined4 uStack_4;
+
+  puVar1 = &uStack_4;
+  if (iRam504802ec == 0) {
+    if (iRam504802e4 != 1) {
+      func_0x504156ad();
+      iRam504802e4 = 1;
+    }
+    func_0x5040ce77();
+    iVar2 = func_0x504141df(0,0);
+    if (iVar2 == 0) {
+      uRam504802e8 = 1;
+    }
+    func_0x504141df(1,1);
+    func_0x50414268(0,1,0);
+    func_0x5040ce91();
+    iRam504802ec = 1;
+  }
+  return puVar1[-1];
+}
+
+ (GhidraScript)
+
+void FUN_5040ce77(void)
+
+{
+  func_0x5041689e(0,0x2d,0);
+  return;
+}
+
+ (GhidraScript)
+
+void FUN_5040ce91(void)
+
+{
+  func_0x504168d3(0,0x2d,0);
+  return;
+}
+
+ (GhidraScript)
+
+undefined4 FUN_5040ceab(void)
+
+{
+  undefined1 *puVar1;
+  undefined4 uVar2;
+  undefined1 auStack_4 [4];
+
+  puVar1 = auStack_4;
+  func_0x5042d2d2(0x50481730,0x90c00000,0x200);
+  *(undefined4 *)(puVar1 + -0x18) = 0;
+  while (*(uint *)(puVar1 + -0x18) < 0xc) {
+    puVar1[*(int *)(puVar1 + -0x18) + -0xc] = 0;
+    *(int *)(puVar1 + -0x18) = *(int *)(puVar1 + -0x18) + 1;
+  }
+  puVar1[-0xd] = 0;
+  while ((byte)puVar1[-0xd] < 3) {
+    func_0x5040ce77();
+    func_0x50415b53(puVar1 + -0xc,0xec,0,0,0);
+    uVar2 = func_0x504158c3(puVar1 + -0xc,0,0x200,0,1000);
+    *(undefined4 *)(puVar1 + -0x14) = uVar2;
+    func_0x50416331(0,puVar1 + -0x21c,0x200);
+    func_0x5040ce91();
+    if ((-1 < *(int *)(puVar1 + -0x14)) && ((puVar1[-0x21c] & 4) == 0)) break;
+    func_0x5040ce77();
+    func_0x50414268(1,0,0);
+    puVar1[-0xd] = puVar1[-0xd] + '\x01';
+  }
+  func_0x5040ce91();
+  func_0x5042d2d2(0x90c00000,0x50481730,0x200);
+  if (*(int *)(puVar1 + -0x14) < 0) {
+    uVar2 = *(undefined4 *)(puVar1 + -0x14);
+  }
+  else if ((puVar1[-0x21c] & 4) == 0) {
+    *(undefined2 *)(puVar1 + -0x1a) = *(undefined2 *)(puVar1 + -0x176);
+    if ((*(ushort *)(puVar1 + -0x1a) & 0x400) == 0) {
+      **(undefined4 **)(puVar1 + 8) = *(undefined4 *)(puVar1 + -0x1a4);
+    }
+    else {
+      **(undefined4 **)(puVar1 + 8) = *(undefined4 *)(puVar1 + -0x154);
+    }
+    uVar2 = 0;
+  }
+  else {
+    uVar2 = 0x8004f000;
+  }
+  return uVar2;
+}
+
+ (GhidraScript)
+```
+
+<!-- source: prog061_disasm_all.clean.txt | === DISASM FUN_5040c700 @ 0x5040c700 (size=121 B) === -->
+```asm
+-- === DISASM FUN_5040c700 @ 0x5040c700 (size=121 B) === --
+  0x5040c700: [cf 10                ] MOVM [A3],(SP)
+  0x5040c702: [3f                   ] MOV SP,A3
+  0x5040c703: [f8 fe ec             ] ADD -0x14,SP
+  0x5040c706: [fc a4 ec 02 48 50    ] MOV (0x504802ec),D0
+  0x5040c70c: [a0 00                ] CMP 0x0,D0
+  0x5040c70e: [c9 5c                ] BNE 0x5040c76a
+  0x5040c710: [fc a4 e4 02 48 50    ] MOV (0x504802e4),D0
+  0x5040c716: [a0 01                ] CMP 0x1,D0
+  0x5040c718: [c8 11                ] BEQ 0x5040c729
+  0x5040c71a: [dd 93 8f 00 00 00 00 ] CALL 0x504156ad,[],0x0
+  0x5040c721: [80 01                ] MOV 0x1,D0
+  0x5040c723: [fc 81 e4 02 48 50    ] MOV D0,(0x504802e4)
+  0x5040c729: [cd 4e 07 00 00       ] CALL 0x5040ce77,[],0x0
+  0x5040c72e: [00                   ] CLR D0
+  0x5040c72f: [04                   ] CLR D1
+  0x5040c730: [dd af 7a 00 00 00 00 ] CALL 0x504141df,[],0x0
+  0x5040c737: [a0 00                ] CMP 0x0,D0
+  0x5040c739: [c9 0a                ] BNE 0x5040c743
+  0x5040c73b: [80 01                ] MOV 0x1,D0
+  0x5040c73d: [fc 81 e8 02 48 50    ] MOV D0,(0x504802e8)
+  0x5040c743: [80 01                ] MOV 0x1,D0
+  0x5040c745: [85 01                ] MOV 0x1,D1
+  0x5040c747: [dd 98 7a 00 00 00 00 ] CALL 0x504141df,[],0x0
+  0x5040c74e: [00                   ] CLR D0
+  0x5040c74f: [42 0c                ] MOV D0,(0xc,SP)
+  0x5040c751: [00                   ] CLR D0
+  0x5040c752: [85 01                ] MOV 0x1,D1
+  0x5040c754: [dd 14 7b 00 00 00 00 ] CALL 0x50414268,[],0x0
+  0x5040c75b: [cd 36 07 00 00       ] CALL 0x5040ce91,[],0x0
+  0x5040c760: [80 01                ] MOV 0x1,D0
+  0x5040c762: [fc 81 ec 02 48 50    ] MOV D0,(0x504802ec)
+  0x5040c768: [ca 06                ] BRA 0x5040c76e
+  0x5040c76a: [00                   ] CLR D0
+  0x5040c76b: [f8 13 fc             ] MOV D0,(-0x4 ,A3)
+  0x5040c76e: [f8 07 fc             ] MOV (-0x4 ,A3),D1
+  0x5040c771: [84                   ] MOV D1,D0
+  0x5040c772: [ca 02                ] BRA 0x5040c774
+  0x5040c774: [f2 fc                ] MOV A3,SP
+  0x5040c776: [df 10 04             ] RET [A3],0x4
+```
+
+<!-- source: prog061_disasm_all.clean.txt | === DISASM FUN_5040ceab @ 0x5040ceab (size=328 B) === -->
+```asm
+-- === DISASM FUN_5040ceab @ 0x5040ceab (size=328 B) === --
+  0x5040ceab: [cf 10                ] MOVM [A3],(SP)
+  0x5040cead: [3f                   ] MOV SP,A3
+  0x5040ceae: [fa fe cc fd          ] ADD -0x234,SP
+  0x5040ceb2: [f8 13 08             ] MOV D0,(0x8 ,A3)
+  0x5040ceb5: [fc cc 30 17 48 50    ] MOV 0x50481730,D0
+  0x5040cebb: [2d 00 02             ] MOV 0x200,D1
+  0x5040cebe: [46 0c                ] MOV D1,(0xc,SP)
+  0x5040cec0: [fc cd 00 00 c0 90    ] MOV 0x90c00000,D1
+  0x5040cec6: [dd 0c 04 02 00 00 00 ] CALL 0x5042d2d2,[],0x0
+  0x5040cecd: [00                   ] CLR D0
+  0x5040cece: [f8 13 e8             ] MOV D0,(-0x18 ,A3)
+  0x5040ced1: [f8 03 e8             ] MOV (-0x18 ,A3),D0
+  0x5040ced4: [a0 0b                ] CMP 0xb,D0
+  0x5040ced6: [c7 04                ] BLS 0x5040ceda
+  0x5040ced8: [ca 1a                ] BRA 0x5040cef2
+  0x5040ceda: [f1 dc                ] MOV A3,D0
+  0x5040cedc: [28 f4                ] ADD -0xc,D0
+  0x5040cede: [f8 07 e8             ] MOV (-0x18 ,A3),D1
+  0x5040cee1: [f1 e4                ] MOV D1,A0
+  0x5040cee3: [f1 60                ] ADD D0,A0
+  0x5040cee5: [00                   ] CLR D0
+  0x5040cee6: [f0 50                ] MOVBU D0,(A0)
+  0x5040cee8: [f8 03 e8             ] MOV (-0x18 ,A3),D0
+  0x5040ceeb: [81                   ] MOV D0,D1
+  0x5040ceec: [44                   ] INC D1
+  0x5040ceed: [f8 17 e8             ] MOV D1,(-0x18 ,A3)
+  0x5040cef0: [ca e1                ] BRA 0x5040ced1
+  0x5040cef2: [00                   ] CLR D0
+  0x5040cef3: [f8 53 f3             ] MOVBU D0,(-0xd ,A3)
+  0x5040cef6: [f8 43 f3             ] MOVBU (-0xd ,A3),D0
+  0x5040cef9: [a0 02                ] CMP 0x2,D0
+  0x5040cefb: [c7 05                ] BLS 0x5040cf00
+  0x5040cefd: [cc 89 00             ] JMP 0x5040cf86
+  0x5040cf00: [cd 77 ff 00 00       ] CALL 0x5040ce77,[],0x0
+  0x5040cf05: [f1 dc                ] MOV A3,D0
+  0x5040cf07: [28 f4                ] ADD -0xc,D0
+  0x5040cf09: [04                   ] CLR D1
+  0x5040cf0a: [46 0c                ] MOV D1,(0xc,SP)
+  0x5040cf0c: [04                   ] CLR D1
+  0x5040cf0d: [46 10                ] MOV D1,(0x10,SP)
+  0x5040cf0f: [04                   ] CLR D1
+  0x5040cf10: [46 14                ] MOV D1,(0x14,SP)
+  0x5040cf12: [2d ec 00             ] MOV 0xec,D1
+  0x5040cf15: [dd 3e 8c 00 00 00 00 ] CALL 0x50415b53,[],0x0
+  0x5040cf1c: [f1 dc                ] MOV A3,D0
+  0x5040cf1e: [28 f4                ] ADD -0xc,D0
+  0x5040cf20: [2d 00 02             ] MOV 0x200,D1
+  0x5040cf23: [46 0c                ] MOV D1,(0xc,SP)
+  0x5040cf25: [04                   ] CLR D1
+  0x5040cf26: [46 10                ] MOV D1,(0x10,SP)
+  0x5040cf28: [2d e8 03             ] MOV 0x3e8,D1
+  0x5040cf2b: [46 14                ] MOV D1,(0x14,SP)
+  0x5040cf2d: [04                   ] CLR D1
+  0x5040cf2e: [dd 95 89 00 00 00 00 ] CALL 0x504158c3,[],0x0
+  0x5040cf35: [f8 13 ec             ] MOV D0,(-0x14 ,A3)
+  0x5040cf38: [f1 dd                ] MOV A3,D1
+  0x5040cf3a: [fa c1 e4 fd          ] ADD -0x21c,D1
+  0x5040cf3e: [2c 00 02             ] MOV 0x200,D0
+  0x5040cf41: [42 0c                ] MOV D0,(0xc,SP)
+  0x5040cf43: [00                   ] CLR D0
+  0x5040cf44: [dd ed 93 00 00 00 00 ] CALL 0x50416331,[],0x0
+  0x5040cf4b: [cd 46 ff 00 00       ] CALL 0x5040ce91,[],0x0
+  0x5040cf50: [f8 03 ec             ] MOV (-0x14 ,A3),D0
+  0x5040cf53: [a0 00                ] CMP 0x0,D0
+  0x5040cf55: [c0 14                ] BLT 0x5040cf69
+  0x5040cf57: [fa 43 e4 fd          ] MOVBU (-0x21c,A3),D0
+  0x5040cf5b: [81                   ] MOV D0,D1
+  0x5040cf5c: [f8 e1 04             ] AND 0x4,D1
+  0x5040cf5f: [84                   ] MOV D1,D0
+  0x5040cf60: [14                   ] EXTBU D0
+  0x5040cf61: [a0 00                ] CMP 0x0,D0
+  0x5040cf63: [c9 06                ] BNE 0x5040cf69
+  0x5040cf65: [ca 21                ] BRA 0x5040cf86
+  0x5040cf67: [ca                   ] <undef db 0xca>
+  0x5040cf68: [14                   ] <undef db 0x14>
+  0x5040cf69: [cd 0e ff 00 00       ] CALL 0x5040ce77,[],0x0
+  0x5040cf6e: [00                   ] CLR D0
+  0x5040cf6f: [42 0c                ] MOV D0,(0xc,SP)
+  0x5040cf71: [80 01                ] MOV 0x1,D0
+  0x5040cf73: [04                   ] CLR D1
+  0x5040cf74: [dd f4 72 00 00 00 00 ] CALL 0x50414268,[],0x0
+  0x5040cf7b: [f8 43 f3             ] MOVBU (-0xd ,A3),D0
+  0x5040cf7e: [81                   ] MOV D0,D1
+  0x5040cf7f: [44                   ] INC D1
+  0x5040cf80: [f8 57 f3             ] MOVBU D1,(-0xd ,A3)
+  0x5040cf83: [cc 73 ff             ] JMP 0x5040cef6
+  0x5040cf86: [cd 0b ff 00 00       ] CALL 0x5040ce91,[],0x0
+  0x5040cf8b: [fc cd 30 17 48 50    ] MOV 0x50481730,D1
+  0x5040cf91: [2c 00 02             ] MOV 0x200,D0
+  0x5040cf94: [42 0c                ] MOV D0,(0xc,SP)
+  0x5040cf96: [fc cc 00 00 c0 90    ] MOV 0x90c00000,D0
+  0x5040cf9c: [dd 36 03 02 00 00 00 ] CALL 0x5042d2d2,[],0x0
+  0x5040cfa3: [f8 03 ec             ] MOV (-0x14 ,A3),D0
+  0x5040cfa6: [a0 00                ] CMP 0x0,D0
+  0x5040cfa8: [c2 08                ] BGE 0x5040cfb0
+  0x5040cfaa: [f8 07 ec             ] MOV (-0x14 ,A3),D1
+  0x5040cfad: [84                   ] MOV D1,D0
+  0x5040cfae: [ca 42                ] BRA 0x5040cff0
+  0x5040cfb0: [fa 43 e4 fd          ] MOVBU (-0x21c,A3),D0
+  0x5040cfb4: [81                   ] MOV D0,D1
+  0x5040cfb5: [f8 e1 04             ] AND 0x4,D1
+  0x5040cfb8: [84                   ] MOV D1,D0
+  0x5040cfb9: [14                   ] EXTBU D0
+  0x5040cfba: [a0 00                ] CMP 0x0,D0
+  0x5040cfbc: [c8 0a                ] BEQ 0x5040cfc6
+  0x5040cfbe: [fc cc 00 f0 04 80    ] MOV 0x8004f000,D0
+  0x5040cfc4: [ca 2c                ] BRA 0x5040cff0
+  0x5040cfc6: [fa 63 8a fe          ] MOVHU (-0x176,A3),D0
+  0x5040cfca: [f8 73 e6             ] MOVHU D0,(-0x1a ,A3)
+  0x5040cfcd: [f8 63 e6             ] MOVHU (-0x1a ,A3),D0
+  0x5040cfd0: [81                   ] MOV D0,D1
+  0x5040cfd1: [fa e1 00 04          ] AND 0x400,D1
+  0x5040cfd5: [84                   ] MOV D1,D0
+  0x5040cfd6: [1c                   ] EXTHU D0
+  0x5040cfd7: [a0 00                ] CMP 0x0,D0
+  0x5040cfd9: [c8 0c                ] BEQ 0x5040cfe5
+  0x5040cfdb: [f8 23 08             ] MOV (0x8,A3),A0
+  0x5040cfde: [fa 03 ac fe          ] MOV (-0x154,A3),D0
+  0x5040cfe2: [60                   ] MOV D0,(A0)
+  0x5040cfe3: [ca 0a                ] BRA 0x5040cfed
+  0x5040cfe5: [f8 23 08             ] MOV (0x8,A3),A0
+  0x5040cfe8: [fa 03 5c fe          ] MOV (-0x1a4,A3),D0
+  0x5040cfec: [60                   ] MOV D0,(A0)
+  0x5040cfed: [00                   ] CLR D0
+  0x5040cfee: [ca 02                ] BRA 0x5040cff0
+  0x5040cff0: [f2 fc                ] MOV A3,SP
+  0x5040cff2: [df 10 04             ] RET [A3],0x4
+```
+
+#### `FUN_504141df`, `FUN_50414268`, `FUN_504156ad`, `FUN_5041cd4d`, `FUN_5041ceaa`, `FUN_5041cf21` & `FUN_5041e5c1`
+
+Camada intermediária RTSC/ATA (`startup_drive`, resets de canal `mode 0/1/2`, validação de CDB/DMA `FUN_5041cf21` e despachante de execução `FUN_5041e5c1` diferenciando comandos `0x08`/`0xa0` ATAPI de comandos ATA de disco).
+
+<!-- source: rtsc_davis_decomp.txt / rtsc_davis_poll_decomp.txt | FUNCS FUN_504141df..FUN_5041e5c1 -->
+```c
+undefined4 FUN_504141df(uint param_1)
+
+{
+  int iVar1;
+  undefined4 uVar2;
+  byte bVar3;
+  undefined4 uVar4;
+
+  uVar4 = 0;
+  param_1 = param_1 & 0xff;
+  func_0x504150b4(param_1);
+  bVar3 = 0;
+  do {
+    iVar1 = (uint)bVar3 + param_1 * 2;
+    *(undefined1 *)(iVar1 + 0x504f7e54) = 0xff;
+    *(undefined1 *)(iVar1 + 0x504f7e50) = 0xff;
+    *(undefined1 *)(iVar1 + 0x504f7e5c) = 0xff;
+    bVar3 = bVar3 + 1;
+  } while (bVar3 < 2);
+  if (param_1 == 0) {
+    uVar2 = 0;
+  }
+  else {
+    if (param_1 != 1) {
+      uVar4 = 0x80052400;
+      goto LAB_50414252;
+    }
+    uVar2 = 1;
+  }
+  iVar1 = func_0x5041cd4d(uVar2);
+  if (iVar1 != 0) {
+    uVar4 = 0x80049000;
+  }
+LAB_50414252:
+  *(byte *)(param_1 + 0x504f7e34) = *(byte *)(param_1 + 0x504f7e34) | 0xc0;
+  func_0x504150b6(param_1);
+  return uVar4;
+}
+
+ (GhidraScript)
+
+undefined4 FUN_50414268(uint param_1,uint param_2,byte param_3)
+
+{
+  int iVar1;
+  undefined1 *puVar2;
+  uint uVar3;
+  undefined4 uVar4;
+  uint uVar5;
+  undefined1 auStack_6c [4];
+  undefined1 auStack_68 [20];
+  undefined1 auStack_54 [84];
+
+  uVar5 = (uint)param_3;
+  iVar1 = 0;
+  uVar3 = param_1 & 0xff;
+  func_0x504150b4(uVar3);
+  param_2 = param_2 & 0xff;
+  if (param_2 < 2) {
+    if (param_2 != 0) {
+      if (param_2 == 1) {
+        uVar4 = uRam504f7f78;
+        iVar1 = iRam504f7f4c;
+        if (uVar3 == 1) {
+          uVar4 = uRam504f7fb0;
+          iVar1 = iRam504f7f4c + 0x800;
+        }
+        puVar2 = auStack_6c;
+        func_0x5041617e(iVar1,puVar2,auStack_68);
+        func_0x50404dcd(0x50435161);
+        uVar3 = param_1 & 0xff;
+        uVar5 = uVar5 & 0xff;
+        iVar1 = func_0x5041cf21(uVar3 * 2 + uVar5,uVar4,auStack_54,puVar2,0x5dc);
+        if (uVar5 == 0) {
+          *(byte *)(uVar3 + 0x504f7e34) = *(byte *)(uVar3 + 0x504f7e34) | 0x80;
+        }
+        else {
+          *(byte *)(uVar3 + 0x504f7e34) = *(byte *)(uVar3 + 0x504f7e34) | 0x40;
+        }
+      }
+      goto LAB_5041437e;
+    }
+    func_0x50404dcd(0x50435148);
+    uVar4 = 2;
+  }
+  else {
+    if (param_2 != 2) goto LAB_5041437e;
+    func_0x50404dcd(0x5043517f);
+    uVar4 = 1;
+  }
+  iVar1 = func_0x5041ceaa(uVar3 * 2,uVar4);
+  *(byte *)(uVar3 + 0x504f7e34) = *(byte *)(uVar3 + 0x504f7e34) | 0xc0;
+LAB_5041437e:
+  if (iVar1 != 0) {
+    func_0x50404dcd(0x50435196,iVar1);
+  }
+  func_0x504150b6(uVar3);
+  return 0;
+}
+
+ (GhidraScript)
+
+undefined4 FUN_504156ad(void)
+
+{
+  func_0x50416908(1,0x2d,6);
+  func_0x504167b6(1,0x2d,0);
+  func_0x50415c18();
+  func_0x50415cad();
+  func_0x50415d51(0);
+  func_0x50415884();
+  func_0x50429488();
+  return 0;
+}
+
+ (GhidraScript)
+
+undefined4 FUN_5041cd4d(uint param_1)
+
+{
+  ushort uVar1;
+  ushort *puVar2;
+  undefined4 uVar3;
+  uint uVar4;
+
+  func_0x5041fe16(1,0x504366a8);
+  param_1 = param_1 & 0xffff;
+  puVar2 = (ushort *)(param_1 * 0x5c + 0x504f81d8);
+  uVar1 = *(ushort *)(param_1 * 0x5c + 0x504f81da);
+  uVar4 = (uint)uVar1;
+  if (uVar4 == 0) {
+    if (param_1 < 2) {
+      *puVar2 = uVar1;
+      func_0x5041b444(param_1);
+      puVar2[1] = 1;
+      func_0x5041b55b(0,param_1,uVar4);
+      uVar3 = func_0x5041d8e4(param_1,1);
+      func_0x5041f61b(param_1);
+    }
+    else {
+      uVar3 = 0x80000407;
+    }
+  }
+  else {
+    uVar3 = 0x80000404;
+  }
+  return uVar3;
+}
+
+ (GhidraScript)
+
+int FUN_5041ceaa(uint param_1,uint param_2)
+
+{
+  int iVar1;
+  undefined4 uVar2;
+
+  if ((param_2 & 0xffff) == 1) {
+    uVar2 = 0x504366e7;
+  }
+  else {
+    uVar2 = 0x50436706;
+  }
+  func_0x5041fe16(1,uVar2);
+  param_1 = param_1 & 0xffff;
+  if (param_1 < 2) {
+    if (*(short *)(param_1 * 0x5c + 0x504f81da) == 0) {
+      iVar1 = -0x7ffffbfc;
+    }
+    else if (*(short *)(param_1 * 0x5c + 0x504f81d8) == 0) {
+      param_2 = param_2 & 0xffff;
+      iVar1 = FUN_5041d8e4(param_1,param_2);
+      if ((param_2 == 1) && (iVar1 == 0)) {
+        iVar1 = func_0x5041d2a6(param_1);
+      }
+    }
+    else {
+      iVar1 = -0x7ffffbf4;
+    }
+  }
+  else {
+    iVar1 = -0x7ffffbf9;
+  }
+  return iVar1;
+}
+
+ (GhidraScript)
+
+undefined4
+FUN_5041cf21(uint param_1,uint param_2,undefined2 param_3,undefined2 param_4,undefined4 *param_5,
+            int param_6)
+
+{
+  uint uVar1;
+  undefined4 uVar2;
+  int iVar3;
+
+  _param_3 = func_0x5041fe16(1,0x50436723);
+  if ((param_1 & 0xffff) < 4) {
+    if (param_5[3] == 0) {
+      iVar3 = 0;
+    }
+    else {
+      iVar3 = 1;
+      if ((uint)param_5[2] < 2) {
+        iVar3 = 2;
+      }
+    }
+    if (iVar3 == 1) {
+      iVar3 = func_0x50417e15(*param_5);
+      if (iVar3 != 0) {
+        return 0x80000407;
+      }
+      uVar1 = func_0x50418288(*param_5);
+      if (uVar1 < (uint)param_5[1]) {
+        return 0x80000407;
+      }
+    }
+    else if (iVar3 == 2) {
+      if ((param_1 & 0xffff) < 2) {
+        if (0xc < param_2) {
+          return 0x80000407;
+        }
+        if (param_2 < 5) {
+          return 0x80000407;
+        }
+        iVar3 = func_0x50419ec9(param_2);
+        if (iVar3 != 0) {
+          return 0x80000407;
+        }
+      }
+      if ((param_1 - 2 & 0xffff) < 2) {
+        if (0x17 < param_2) {
+          return 0x80000407;
+        }
+        if (param_2 < 0x10) {
+          return 0x80000407;
+        }
+        iVar3 = func_0x50419ec9(param_2);
+        if (iVar3 != 0) {
+          return 0x80000407;
+        }
+      }
+      iVar3 = func_0x50419f19(param_2);
+      if (iVar3 != param_5[2]) {
+        return 0x80000407;
+      }
+      if (0x7fffffe < (uint)param_5[3]) {
+        return 0x80000407;
+      }
+      iVar3 = func_0x50418067(param_5);
+      if (iVar3 != 0) {
+        return 0x80000407;
+      }
+    }
+    if (param_6 - 1U < 30000) {
+      uVar2 = func_0x5041e5c1(param_1 & 0xffff,param_2,_param_3,param_5,param_6);
+      return uVar2;
+    }
+  }
+  return 0x80000407;
+}
+
+ (GhidraScript)
+
+undefined4
+FUN_5041e5c1(uint param_1,undefined4 param_2,short *param_3,int param_4,undefined4 param_5)
+
+{
+  ushort uVar1;
+  int iVar2;
+  short *psVar3;
+  ushort *puVar4;
+  int iVar5;
+  undefined4 uVar6;
+  uint uVar7;
+  uint uVar8;
+  undefined4 extraout_var;
+
+  uVar7 = param_1 >> 1 & 1;
+  param_1 = param_1 & 1;
+  if ((*(int *)(param_4 + 0xc) == 0) || (*(short *)(param_1 * 2 + uVar7 * 0x5c + 0x504f820a) != 0))
+  {
+    iVar2 = uVar7 * 0x5c;
+    puVar4 = (ushort *)(iVar2 + 0x504f81d8);
+    iVar5 = 0x504f81d8;
+    if (*(short *)(iVar2 + 0x504f81da) != 0) {
+      uVar1 = *puVar4;
+      *puVar4 = uVar1 + 1;
+      if (1 < (ushort)(uVar1 + 1)) {
+        *puVar4 = uVar1;
+        return 0x8000040c;
+      }
+      if ((*(char *)(iVar2 + param_1 + 0x504f81dc) != '\0') ||
+         (*(char *)(iVar2 + param_1 + 0x504f81de) != '\0')) {
+        *(undefined2 *)(param_1 * 2 + uVar7 * 0x5c + 0x504f820e) = 0;
+        uVar8 = param_1;
+        func_0x5041e1f5(uVar7,param_1,0);
+        func_0x5041e172(uVar7,8,1);
+        if (*param_3 == 8) {
+          uVar6 = func_0x5041e6fe(uVar7,uVar8,param_5);
+        }
+        else if (*param_3 == 0xa0) {
+          uVar6 = func_0x5041e772(uVar7,uVar8,extraout_var,param_3,param_4,param_5);
+        }
+        else {
+          uVar6 = func_0x5041ec4c(uVar7,param_1,extraout_var,param_3,param_4,param_5);
+        }
+        func_0x5041e172(uVar7,8,0);
+        psVar3 = (short *)(iVar5 + uVar7 * 0x5c);
+        *psVar3 = *psVar3 + -1;
+        return uVar6;
+      }
+      *puVar4 = uVar1;
+    }
+  }
+  return 0x80000404;
+}
+
+ (GhidraScript)
+```
+
+<!-- source: prog061_disasm_all.clean.txt | === DISASM FUN_504141df @ 0x504141df (size=137 B) === -->
+```asm
+-- === DISASM FUN_504141df @ 0x504141df (size=137 B) === --
+  0x504141df: [cf e0                ] MOVM [D2,D3,A2],(SP)
+  0x504141e1: [f8 fe f4             ] ADD -0xc,SP
+  0x504141e4: [82                   ] MOV D0,D2
+  0x504141e5: [0c                   ] CLR D3
+  0x504141e6: [16                   ] EXTBU D2
+  0x504141e7: [88                   ] MOV D2,D0
+  0x504141e8: [cd cc 0e 00 00       ] CALL 0x504150b4,[],0x0
+  0x504141ed: [04                   ] CLR D1
+  0x504141ee: [f5 60                ] MOV D2,R0
+  0x504141f0: [f9 78 00             ] ADD R0,R0
+  0x504141f3: [fc de 54 7e 4f 50    ] MOV 0x504f7e54,A2
+  0x504141f9: [fb 18 11 ff          ] MOVU 0xff,R1
+  0x504141fd: [fe 08 33 50 7e 4f 50 ] MOV 0x504f7e50,R3
+  0x50414204: [fe 08 22 5c 7e 4f 50 ] MOV 0x504f7e5c,R2
+  0x5041420b: [f1 e4                ] MOV D1,A0
+  0x5041420d: [f9 38 88             ] EXTBU A0
+  0x50414210: [f9 78 08             ] ADD R0,A0
+  0x50414213: [91                   ] MOV A0,A1
+  0x50414214: [f1 79                ] ADD A2,A1
+  0x50414216: [f9 3a 19             ] MOVBU R1,(A1)
+  0x50414219: [f5 8d                ] MOV R3,A1
+  0x5041421b: [f1 71                ] ADD A0,A1
+  0x5041421d: [f9 3a 19             ] MOVBU R1,(A1)
+  0x50414220: [f9 78 28             ] ADD R2,A0
+  0x50414223: [f9 3a 18             ] MOVBU R1,(A0)
+  0x50414226: [44                   ] INC D1
+  0x50414227: [84                   ] MOV D1,D0
+  0x50414228: [14                   ] EXTBU D0
+  0x50414229: [a0 01                ] CMP 0x1,D0
+  0x5041422b: [c7 e0                ] BLS 0x5041420b
+  0x5041422d: [aa 00                ] CMP 0x0,D2
+  0x5041422f: [c9 05                ] BNE 0x50414234
+  0x50414231: [00                   ] CLR D0
+  0x50414232: [ca 07                ] BRA 0x50414239
+  0x50414234: [aa 01                ] CMP 0x1,D2
+  0x50414236: [c9 16                ] BNE 0x5041424c
+  0x50414238: [88                   ] MOV D2,D0
+  0x50414239: [dd 14 8b 00 00 00 00 ] CALL 0x5041cd4d,[],0x0
+  0x50414240: [a0 00                ] CMP 0x0,D0
+  0x50414242: [c8 10                ] BEQ 0x50414252
+  0x50414244: [fc cf 00 90 04 80    ] MOV 0x80049000,D3
+  0x5041424a: [ca 08                ] BRA 0x50414252
+  0x5041424c: [fc cf 00 24 05 80    ] MOV 0x80052400,D3
+  0x50414252: [f1 e8                ] MOV D2,A0
+  0x50414254: [fc d0 34 7e 4f 50    ] ADD 0x504f7e34,A0
+  0x5041425a: [fa f0 00 c0          ] BSET 0xc0,(0x0,A0)
+  0x5041425e: [88                   ] MOV D2,D0
+  0x5041425f: [cd 57 0e 00 00       ] CALL 0x504150b6,[],0x0
+  0x50414264: [8c                   ] MOV D3,D0
+  0x50414265: [df e0 18             ] RET [A2,D3,D2],0x18
+```
+
+<!-- source: prog061_disasm_all.clean.txt | === DISASM FUN_50414268 @ 0x50414268 (size=308 B) === -->
+```asm
+-- === DISASM FUN_50414268 @ 0x50414268 (size=308 B) === --
+  0x50414268: [cf f2                ] MOVM [D2,D3,A2,A3,EX1],(SP)
+  0x5041426a: [f8 fe 9c             ] ADD -0x64,SP
+  0x5041426d: [86                   ] MOV D1,D2
+  0x5041426e: [83                   ] MOV D0,D3
+  0x5041426f: [fd aa 40 90 00 00    ] MOVBU (0x90,SP),R4
+  0x50414275: [9a 00                ] MOV 0x0,A2
+  0x50414277: [f1 ef                ] MOV D3,A3
+  0x50414279: [f9 38 bb             ] EXTBU A3
+  0x5041427c: [f1 dc                ] MOV A3,D0
+  0x5041427e: [cd 36 0e 00 00       ] CALL 0x504150b4,[],0x0
+  0x50414283: [16                   ] EXTBU D2
+  0x50414284: [aa 01                ] CMP 0x1,D2
+  0x50414286: [c7 05                ] BLS 0x5041428b
+  0x50414288: [cc cc 00             ] JMP 0x50414354
+  0x5041428b: [aa 00                ] CMP 0x0,D2
+  0x5041428d: [c9 17                ] BNE 0x504142a4
+  0x5041428f: [fc cc 48 51 43 50    ] MOV 0x50435148,D0
+  0x50414295: [dd 38 0b ff ff 00 00 ] CALL 0x50404dcd,[],0x0
+  0x5041429c: [f1 dc                ] MOV A3,D0
+  0x5041429e: [e0                   ] ADD D0,D0
+  0x5041429f: [85 02                ] MOV 0x2,D1
+  0x504142a1: [cc c9 00             ] JMP 0x5041436a
+  0x504142a4: [aa 01                ] CMP 0x1,D2
+  0x504142a6: [c8 05                ] BEQ 0x504142ab
+  0x504142a8: [cc d6 00             ] JMP 0x5041437e
+  0x504142ab: [80 08                ] MOV 0x8,D0
+  0x504142ad: [f8 93 30             ] MOVHU D0,(0x30 ,SP)
+  0x504142b0: [4b 34                ] MOV A2,(0x34,SP)
+  0x504142b2: [4b 38                ] MOV A2,(0x38,SP)
+  0x504142b4: [fb da a0 48          ] MOVHU A2,(0x48,SP)
+  0x504142b8: [fb da a0 4a          ] MOVHU A2,(0x4a,SP)
+  0x504142bc: [fb da a0 4c          ] MOVHU A2,(0x4c,SP)
+  0x504142c0: [fb da a0 4e          ] MOVHU A2,(0x4e,SP)
+  0x504142c4: [fb da a0 50          ] MOVHU A2,(0x50,SP)
+  0x504142c8: [bf 01                ] CMP 0x1,A3
+  0x504142ca: [c9 14                ] BNE 0x504142de
+  0x504142cc: [fc a3 b0 7f 4f 50    ] MOV (0x504f7fb0),A3
+  0x504142d2: [fc a4 4c 7f 4f 50    ] MOV (0x504f7f4c),D0
+  0x504142d8: [fa c0 00 08          ] ADD 0x800,D0
+  0x504142dc: [ca 0e                ] BRA 0x504142ea
+  0x504142de: [fc a3 78 7f 4f 50    ] MOV (0x504f7f78),A3
+  0x504142e4: [fc a4 4c 7f 4f 50    ] MOV (0x504f7f4c),D0
+  0x504142ea: [3d                   ] MOV SP,A1
+  0x504142eb: [21 18                ] ADD 0x18,A1
+  0x504142ed: [f1 d6                ] MOV A1,D2
+  0x504142ef: [3d                   ] MOV SP,A1
+  0x504142f0: [21 1c                ] ADD 0x1c,A1
+  0x504142f2: [f1 d5                ] MOV A1,D1
+  0x504142f4: [46 0c                ] MOV D1,(0xc,SP)
+  0x504142f6: [89                   ] MOV D2,D1
+  0x504142f7: [dd 87 1e 00 00 00 00 ] CALL 0x5041617e,[],0x0
+  0x504142fe: [f1 ea                ] MOV D2,A2
+  0x50414300: [00                   ] CLR D0
+  0x50414301: [42 24                ] MOV D0,(0x24,SP)
+  0x50414303: [80 02                ] MOV 0x2,D0
+  0x50414305: [42 20                ] MOV D0,(0x20,SP)
+  0x50414307: [fc cc 61 51 43 50    ] MOV 0x50435161,D0
+  0x5041430d: [dd c0 0a ff ff 00 00 ] CALL 0x50404dcd,[],0x0
+  0x50414314: [17                   ] EXTBU D3
+  0x50414315: [8c                   ] MOV D3,D0
+  0x50414316: [e0                   ] ADD D0,D0
+  0x50414317: [f5 d2                ] MOV R4,D2
+  0x50414319: [16                   ] EXTBU D2
+  0x5041431a: [e8                   ] ADD D2,D0
+  0x5041431b: [3d                   ] MOV SP,A1
+  0x5041431c: [21 30                ] ADD 0x30,A1
+  0x5041431e: [f1 d5                ] MOV A1,D1
+  0x50414320: [46 0c                ] MOV D1,(0xc,SP)
+  0x50414322: [4b 10                ] MOV A2,(0x10,SP)
+  0x50414324: [2d dc 05             ] MOV 0x5dc,D1
+  0x50414327: [46 14                ] MOV D1,(0x14,SP)
+  0x50414329: [f1 dd                ] MOV A3,D1
+  0x5041432b: [dd f6 8b 00 00 00 00 ] CALL 0x5041cf21,[],0x0
+  0x50414332: [f1 e2                ] MOV D0,A2
+  0x50414334: [f1 ef                ] MOV D3,A3
+  0x50414336: [aa 00                ] CMP 0x0,D2
+  0x50414338: [c9 0f                ] BNE 0x50414347
+  0x5041433a: [9c                   ] MOV A3,A0
+  0x5041433b: [fc d0 34 7e 4f 50    ] ADD 0x504f7e34,A0
+  0x50414341: [fa f0 00 80          ] BSET 0x80,(0x0,A0)
+  0x50414345: [ca 39                ] BRA 0x5041437e
+  0x50414347: [9c                   ] MOV A3,A0
+  0x50414348: [fc d0 34 7e 4f 50    ] ADD 0x504f7e34,A0
+  0x5041434e: [fa f0 00 40          ] BSET 0x40,(0x0,A0)
+  0x50414352: [ca 2c                ] BRA 0x5041437e
+  0x50414354: [aa 02                ] CMP 0x2,D2
+  0x50414356: [c9 28                ] BNE 0x5041437e
+  0x50414358: [fc cc 7f 51 43 50    ] MOV 0x5043517f,D0
+  0x5041435e: [dd 6f 0a ff ff 00 00 ] CALL 0x50404dcd,[],0x0
+  0x50414365: [f1 dc                ] MOV A3,D0
+  0x50414367: [e0                   ] ADD D0,D0
+  0x50414368: [85 01                ] MOV 0x1,D1
+  0x5041436a: [dd 40 8b 00 00 00 00 ] CALL 0x5041ceaa,[],0x0
+  0x50414371: [f1 e2                ] MOV D0,A2
+  0x50414373: [9c                   ] MOV A3,A0
+  0x50414374: [fc d0 34 7e 4f 50    ] ADD 0x504f7e34,A0
+  0x5041437a: [fa f0 00 c0          ] BSET 0xc0,(0x0,A0)
+  0x5041437e: [ba 00                ] CMP 0x0,A2
+  0x50414380: [c8 11                ] BEQ 0x50414391
+  0x50414382: [fc cc 96 51 43 50    ] MOV 0x50435196,D0
+  0x50414388: [f1 d9                ] MOV A2,D1
+  0x5041438a: [dd 43 0a ff ff 00 00 ] CALL 0x50404dcd,[],0x0
+  0x50414391: [f1 dc                ] MOV A3,D0
+  0x50414393: [cd 23 0d 00 00       ] CALL 0x504150b6,[],0x0
+  0x50414398: [00                   ] CLR D0
+  0x50414399: [df f2 84             ] RET [EX1,A3,A2,D3,D2],0x84
+```
+
+<!-- source: prog061_disasm_all.clean.txt | === DISASM FUN_5041cd4d @ 0x5041cd4d (size=113 B) === -->
+```asm
+-- === DISASM FUN_5041cd4d @ 0x5041cd4d (size=113 B) === --
+  0x5041cd4d: [cf b0                ] MOVM [D2,A2,A3],(SP)
+  0x5041cd4f: [f8 fe f0             ] ADD -0x10,SP
+  0x5041cd52: [82                   ] MOV D0,D2
+  0x5041cd53: [fc cd a8 66 43 50    ] MOV 0x504366a8,D1
+  0x5041cd59: [80 01                ] MOV 0x1,D0
+  0x5041cd5b: [dd bb 30 00 00 00 00 ] CALL 0x5041fe16,[],0x0
+  0x5041cd62: [f1 eb                ] MOV D2,A3
+  0x5041cd64: [f9 58 bb             ] EXTHU A3
+  0x5041cd67: [9e                   ] MOV A3,A2
+  0x5041cd68: [fb a9 aa 5c          ] MUL 0x5c,A2
+  0x5041cd6c: [fc d2 d8 81 4f 50    ] ADD 0x504f81d8,A2
+  0x5041cd72: [f8 6a 02             ] MOVHU (0x2 ,A2),D2
+  0x5041cd75: [aa 00                ] CMP 0x0,D2
+  0x5041cd77: [c9 3d                ] BNE 0x5041cdb4
+  0x5041cd79: [bf 01                ] CMP 0x1,A3
+  0x5041cd7b: [c7 0a                ] BLS 0x5041cd85
+  0x5041cd7d: [fc cc 07 04 00 80    ] MOV 0x80000407,D0
+  0x5041cd83: [ca 38                ] BRA 0x5041cdbb
+  0x5041cd85: [f0 7a                ] MOVHU D2,(A2)
+  0x5041cd87: [f1 dc                ] MOV A3,D0
+  0x5041cd89: [dd bb e6 ff ff 00 00 ] CALL 0x5041b444,[],0x0
+  0x5041cd90: [80 01                ] MOV 0x1,D0
+  0x5041cd92: [f8 72 02             ] MOVHU D0,(0x2 ,A2)
+  0x5041cd95: [4a 0c                ] MOV D2,(0xc,SP)
+  0x5041cd97: [00                   ] CLR D0
+  0x5041cd98: [f1 dd                ] MOV A3,D1
+  0x5041cd9a: [dd c1 e7 ff ff 00 00 ] CALL 0x5041b55b,[],0x0
+  0x5041cda1: [f1 dc                ] MOV A3,D0
+  0x5041cda3: [85 01                ] MOV 0x1,D1
+  0x5041cda5: [cd 3f 0b 00 00       ] CALL 0x5041d8e4,[],0x0
+  0x5041cdaa: [82                   ] MOV D0,D2
+  0x5041cdab: [f1 dc                ] MOV A3,D0
+  0x5041cdad: [cd 6e 28 00 00       ] CALL 0x5041f61b,[],0x0
+  0x5041cdb2: [ca 08                ] BRA 0x5041cdba
+  0x5041cdb4: [fc ce 04 04 00 80    ] MOV 0x80000404,D2
+  0x5041cdba: [88                   ] MOV D2,D0
+  0x5041cdbb: [df b0 1c             ] RET [A3,A2,D2],0x1c
+```
+
+#### `FUN_5041b233..FUN_5041bcca` (HAL DAVIS MMIO & Timer 28-bit `0x890004C0`)
+
+Acesso direto aos registradores DAVIS: `FUN_5041b444` (`0x89000400`/`420` reset), `FUN_5041b49c` (`0x89000520+reg`), `FUN_5041b4e1` (`0x89000538` Drive/Head com `f2 31 NOT`), `FUN_5041b55b` (`0x89000558` DevCtl), `FUN_5041b3e6` (delay em `ms` via divisor `0x107`), `FUN_5041bcca` (`0x890004C0` timer).
+
+<!-- source: rtsc_davis_decomp.txt / rtsc_davis_poll_decomp.txt / prog061_helpers_decomp.txt | FUNCS FUN_5041b233..FUN_5041bcca -->
+```c
+void FUN_5041b233(ushort param_1,char param_2)
+
+{
+  ushort uVar1;
+  uint uVar2;
+  int iVar3;
+
+  iVar3 = iRam504f81d4;
+  if ((param_1 == 0) && (uVar1 = Ramdc0f0084, iVar3 = iRam504f81d0, (uVar1 & 1) == 0)) {
+    iVar3 = 2;
+  }
+  if (param_2 == '\x01') {
+    if (iVar3 != 2) {
+      if (iVar3 != 1) {
+        return;
+      }
+      iVar3 = (uint)param_1 * 0x800 + -0x76fffbe0;
+      uVar2 = func_0x5041fe11(iVar3);
+      uVar2 = uVar2 | 2;
+      goto LAB_5041b2c5;
+    }
+  }
+  else {
+    if (iVar3 == 2) {
+      iVar3 = (uint)param_1 * 0x800 + -0x76fffbe0;
+      uVar2 = func_0x5041fe11(iVar3);
+      uVar2 = uVar2 | 2;
+      goto LAB_5041b2c5;
+    }
+    if (iVar3 != 1) {
+      return;
+    }
+  }
+  iVar3 = (uint)param_1 * 0x800 + -0x76fffbe0;
+  uVar2 = func_0x5041fe11(iVar3);
+  uVar2 = uVar2 & 0xfffffffd;
+LAB_5041b2c5:
+  func_0x5041fe0c(iVar3,uVar2);
+  return;
+}
+
+ (GhidraScript)
+
+void FUN_5041b3e6(int param_1,uint param_2)
+
+{
+  uint uVar1;
+  uint uVar2;
+  int iVar3;
+  int iVar4;
+  uint uVar5;
+
+  uVar1 = 0;
+  uVar5 = (uint)(param_1 * 1000) / 0x107 + 1;
+  param_2 = param_2 & 0xffff;
+  uVar2 = func_0x5041bca5(param_2);
+  if (uVar2 == 1) {
+    func_0x5041bce8(param_2,0x10000000);
+    uVar1 = uVar2;
+  }
+  iVar3 = func_0x5041bcca(param_2);
+  uVar1 = uVar1 & 0xffff;
+  do {
+    iVar4 = func_0x5041bcca(param_2);
+  } while ((iVar4 - iVar3 & 0xfffffffU) < uVar5);
+  if (uVar1 != 0) {
+    func_0x5041bd1b(param_2);
+  }
+  return;
+}
+
+ (GhidraScript)
+
+void FUN_5041b444(uint param_1)
+
+{
+  uint uVar1;
+  int iVar2;
+  int iVar3;
+
+  iVar2 = (param_1 & 0xffff) * 0x800;
+  iVar3 = iVar2 + -0x76fffc00;
+  uVar1 = func_0x5041fe11(iVar3);
+  func_0x5041fe0c(iVar3,uVar1 & 0xfffffffc);
+  uVar1 = func_0x5041fe11(iVar3);
+  func_0x5041fe0c(iVar3,uVar1 | 3);
+  iVar2 = iVar2 + -0x76fffbe0;
+  uVar1 = func_0x5041fe11(iVar2);
+  func_0x5041fe0c(iVar2,uVar1 & 0xfffffffe);
+  return;
+}
+
+ (GhidraScript)
+
+ushort FUN_5041b49c(uint param_1)
+
+{
+  ushort uVar1;
+
+  param_1 = param_1 & 0xffff;
+  uVar1 = func_0x5041fe11();
+  if (param_1 != 0) {
+    uVar1 = uVar1 & 0xff;
+  }
+  return uVar1;
+}
+
+ (GhidraScript)
+
+void FUN_5041b4c7(uint param_1,undefined2 param_2)
+
+{
+  func_0x5041fe0c((param_1 & 0xffff) * 0x800 + -0x76fffae0,param_2);
+  return;
+}
+
+ (GhidraScript)
+
+void FUN_5041b4e1(uint param_1,uint param_2,uint param_3)
+
+{
+  uint uVar1;
+  int iVar2;
+  uint uVar3;
+
+  uVar3 = 0;
+  uVar1 = param_1 & 0xffff;
+  if (uVar1 == 0xff10) {
+    uVar3 = (param_3 & 1) << 4;
+  }
+  else if (uVar1 < 0xff10) {
+    if (uVar1 == 0xff0f) {
+      uVar3 = param_3 & 0xf;
+    }
+  }
+  else if (uVar1 == 0xff40) {
+    uVar3 = (param_3 & 1) << 6;
+  }
+  else if (uVar1 == 0xffff) {
+    uVar3 = param_3;
+  }
+  iVar2 = (param_2 & 0xffff) * 0x800 + -0x76fffac8;
+  uVar1 = func_0x5041fe11(iVar2);
+  func_0x5041fe0c(iVar2,(uVar1 ^ param_1 & 0xffff) & uVar1 | uVar3 & 0xffff);
+  return;
+}
+
+ (GhidraScript)
+
+/* WARNING: Removing unreachable block (ram,0x5041b570) */
+
+void FUN_5041b55b(short param_1,uint param_2,ushort param_3)
+
+{
+  ushort uVar1;
+
+  if (param_1 == 1) {
+    uVar1 = (param_3 & 1) * 2;
+  }
+  else {
+    uVar1 = param_3;
+    if (param_1 != 0) {
+      if (param_1 == 2) {
+        uVar1 = (param_3 & 1) << 2;
+      }
+      else {
+        uVar1 = 0;
+        if (param_1 == 3) {
+          uVar1 = (param_3 & 1) << 7;
+        }
+      }
+    }
+  }
+  func_0x5041fe0c((param_2 & 0xffff) * 0x800 + -0x76fffaa8,uVar1);
+  return;
+}
+
+ (GhidraScript)
+
+uint FUN_5041bcca(uint param_1)
+
+{
+  uint uVar1;
+
+  uVar1 = func_0x5041fe11((param_1 & 0xffff) * 0x800 + -0x76fffb40);
+  return uVar1 & 0xfffffff;
+}
+
+ (GhidraScript)
+```
+
+<!-- source: prog061_disasm_all.clean.txt | === DISASM FUN_5041b444 @ 0x5041b444 (size=88 B) === -->
+```asm
+-- === DISASM FUN_5041b444 @ 0x5041b444 (size=88 B) === --
+  0x5041b444: [cf c0                ] MOVM [D2,D3],(SP)
+  0x5041b446: [f8 fe f4             ] ADD -0xc,SP
+  0x5041b449: [82                   ] MOV D0,D2
+  0x5041b44a: [1e                   ] EXTHU D2
+  0x5041b44b: [f8 c2 0b             ] ASL 0xb,D2
+  0x5041b44e: [8b                   ] MOV D2,D3
+  0x5041b44f: [fc c3 00 04 00 89    ] ADD -0x76fffc00,D3
+  0x5041b455: [8c                   ] MOV D3,D0
+  0x5041b456: [dd bb 49 00 00 00 00 ] CALL 0x5041fe11,[],0x0
+  0x5041b45d: [81                   ] MOV D0,D1
+  0x5041b45e: [f8 c5 02             ] LSR 0x2,D1
+  0x5041b461: [55                   ] ASL2 D1
+  0x5041b462: [8c                   ] MOV D3,D0
+  0x5041b463: [dd a9 49 00 00 00 00 ] CALL 0x5041fe0c,[],0x0
+  0x5041b46a: [8c                   ] MOV D3,D0
+  0x5041b46b: [dd a6 49 00 00 00 00 ] CALL 0x5041fe11,[],0x0
+  0x5041b472: [81                   ] MOV D0,D1
+  0x5041b473: [f8 e5 03             ] OR 0x3,D1
+  0x5041b476: [8c                   ] MOV D3,D0
+  0x5041b477: [dd 95 49 00 00 00 00 ] CALL 0x5041fe0c,[],0x0
+  0x5041b47e: [fc c2 20 04 00 89    ] ADD -0x76fffbe0,D2
+  0x5041b484: [88                   ] MOV D2,D0
+  0x5041b485: [dd 8c 49 00 00 00 00 ] CALL 0x5041fe11,[],0x0
+  0x5041b48c: [81                   ] MOV D0,D1
+  0x5041b48d: [f8 c5 01             ] LSR 0x1,D1
+  0x5041b490: [e5                   ] ADD D1,D1
+  0x5041b491: [88                   ] MOV D2,D0
+  0x5041b492: [dd 7a 49 00 00 00 00 ] CALL 0x5041fe0c,[],0x0
+  0x5041b499: [df c0 14             ] RET [D3,D2],0x14
+```
+
+<!-- source: prog061_disasm_all.clean.txt | === DISASM FUN_5041b49c @ 0x5041b49c (size=43 B) === -->
+```asm
+-- === DISASM FUN_5041b49c @ 0x5041b49c (size=43 B) === --
+  0x5041b49c: [cf 80                ] MOVM [D2],(SP)
+  0x5041b49e: [f8 fe f4             ] ADD -0xc,SP
+  0x5041b4a1: [82                   ] MOV D0,D2
+  0x5041b4a2: [84                   ] MOV D1,D0
+  0x5041b4a3: [1c                   ] EXTHU D0
+  0x5041b4a4: [f8 c0 0b             ] ASL 0xb,D0
+  0x5041b4a7: [1e                   ] EXTHU D2
+  0x5041b4a8: [fc c2 20 05 00 89    ] ADD -0x76fffae0,D2
+  0x5041b4ae: [e8                   ] ADD D2,D0
+  0x5041b4af: [fc c2 e0 fa ff 76    ] ADD 0x76fffae0,D2
+  0x5041b4b5: [dd 5c 49 00 00 00 00 ] CALL 0x5041fe11,[],0x0
+  0x5041b4bc: [aa 00                ] CMP 0x0,D2
+  0x5041b4be: [c8 05                ] BEQ 0x5041b4c3
+  0x5041b4c0: [14                   ] EXTBU D0
+  0x5041b4c1: [ca 03                ] BRA 0x5041b4c4
+  0x5041b4c3: [1c                   ] EXTHU D0
+  0x5041b4c4: [df 80 10             ] RET [D2],0x10
+```
+
+**Disassembly MN103S de `FUN_5041b4e1` (`0x5041b548: [f2 31] NOT D0,D1`, máscara `~param_1 & old_reg`) & `FUN_5041b55b` (`0x89000558` DevCtl):**
+
+<!-- source: prog061_disasm_all.clean.txt | === DISASM FUN_5041b4e1 @ 0x5041b4e1 (size=122 B) === -->
+```asm
+-- === DISASM FUN_5041b4e1 @ 0x5041b4e1 (size=122 B) === --
+  0x5041b4e1: [cf e0                ] MOVM [D2,D3,A2],(SP)
+  0x5041b4e3: [f8 fe f4             ] ADD -0xc,SP
+  0x5041b4e6: [fb 8a 00 24          ] MOV (0x24,SP),R0
+  0x5041b4ea: [f1 e2                ] MOV D0,A2
+  0x5041b4ec: [0c                   ] CLR D3
+  0x5041b4ed: [f1 d8                ] MOV A2,D0
+  0x5041b4ef: [1c                   ] EXTHU D0
+  0x5041b4f0: [fc c8 10 ff 00 00    ] CMP 0xff10,D0
+  0x5041b4f6: [c8 22                ] BEQ 0x5041b518
+  0x5041b4f8: [c1 0c                ] BGT 0x5041b504
+  0x5041b4fa: [fc c8 0f ff 00 00    ] CMP 0xff0f,D0
+  0x5041b500: [c8 2d                ] BEQ 0x5041b52d
+  0x5041b502: [ca 30                ] BRA 0x5041b532
+  0x5041b504: [fc c8 40 ff 00 00    ] CMP 0xff40,D0
+  0x5041b50a: [c8 18                ] BEQ 0x5041b522
+  0x5041b50c: [fc c8 ff ff 00 00    ] CMP 0xffff,D0
+  0x5041b512: [c9 20                ] BNE 0x5041b532
+  0x5041b514: [f5 c3                ] MOV R0,D3
+  0x5041b516: [ca 1c                ] BRA 0x5041b532
+  0x5041b518: [fb 09 00 01          ] AND 0x1,R0
+  0x5041b51c: [f5 c3                ] MOV R0,D3
+  0x5041b51e: [57                   ] ASL2 D3
+  0x5041b51f: [57                   ] ASL2 D3
+  0x5041b520: [ca 12                ] BRA 0x5041b532
+  0x5041b522: [fb 09 00 01          ] AND 0x1,R0
+  0x5041b526: [f5 c3                ] MOV R0,D3
+  0x5041b528: [f8 c3 06             ] ASL 0x6,D3
+  0x5041b52b: [ca 07                ] BRA 0x5041b532
+  0x5041b52d: [f5 c3                ] MOV R0,D3
+  0x5041b52f: [f8 e3 0f             ] AND 0xf,D3
+  0x5041b532: [86                   ] MOV D1,D2
+  0x5041b533: [1e                   ] EXTHU D2
+  0x5041b534: [f8 c2 0b             ] ASL 0xb,D2
+  0x5041b537: [fc c2 38 05 00 89    ] ADD -0x76fffac8,D2
+  0x5041b53d: [88                   ] MOV D2,D0
+  0x5041b53e: [dd d3 48 00 00 00 00 ] CALL 0x5041fe11,[],0x0
+  0x5041b545: [f1 d9                ] MOV A2,D1
+  0x5041b547: [1d                   ] EXTHU D1
+  0x5041b548: [f2 31                ] NOT D0,D1
+  0x5041b54a: [f2 04                ] AND D1,D0
+  0x5041b54c: [8d                   ] MOV D3,D1
+  0x5041b54d: [1d                   ] EXTHU D1
+  0x5041b54e: [f2 11                ] OR D0,D1
+  0x5041b550: [88                   ] MOV D2,D0
+  0x5041b551: [dd bb 48 00 00 00 00 ] CALL 0x5041fe0c,[],0x0
+  0x5041b558: [df e0 18             ] RET [A2,D3,D2],0x18
+```
+
+<!-- source: prog061_disasm_all.clean.txt | === DISASM FUN_5041b55b @ 0x5041b55b (size=89 B) === -->
+```asm
+-- === DISASM FUN_5041b55b @ 0x5041b55b (size=89 B) === --
+  0x5041b55b: [f8 fe f4             ] ADD -0xc,SP
+  0x5041b55e: [fb 8a 00 18          ] MOV (0x18,SP),R0
+  0x5041b562: [f1 e4                ] MOV D1,A0
+  0x5041b564: [04                   ] CLR D1
+  0x5041b565: [1c                   ] EXTHU D0
+  0x5041b566: [a0 01                ] CMP 0x1,D0
+  0x5041b568: [c8 21                ] BEQ 0x5041b589
+  0x5041b56a: [c1 08                ] BGT 0x5041b572
+  0x5041b56c: [a0 00                ] CMP 0x0,D0
+  0x5041b56e: [c8 0e                ] BEQ 0x5041b57c
+  0x5041b570: [ca 2b                ] BRA 0x5041b59b
+  0x5041b572: [a0 02                ] CMP 0x2,D0
+  0x5041b574: [c8 0c                ] BEQ 0x5041b580
+  0x5041b576: [a0 03                ] CMP 0x3,D0
+  0x5041b578: [c8 1a                ] BEQ 0x5041b592
+  0x5041b57a: [ca 21                ] BRA 0x5041b59b
+  0x5041b57c: [f5 c1                ] MOV R0,D1
+  0x5041b57e: [ca 1d                ] BRA 0x5041b59b
+  0x5041b580: [fb 09 00 01          ] AND 0x1,R0
+  0x5041b584: [f5 c1                ] MOV R0,D1
+  0x5041b586: [55                   ] ASL2 D1
+  0x5041b587: [ca 14                ] BRA 0x5041b59b
+  0x5041b589: [fb 09 00 01          ] AND 0x1,R0
+  0x5041b58d: [f5 c1                ] MOV R0,D1
+  0x5041b58f: [e5                   ] ADD D1,D1
+  0x5041b590: [ca 0b                ] BRA 0x5041b59b
+  0x5041b592: [fb 09 00 01          ] AND 0x1,R0
+  0x5041b596: [f5 c1                ] MOV R0,D1
+  0x5041b598: [f8 c1 07             ] ASL 0x7,D1
+  0x5041b59b: [f1 d0                ] MOV A0,D0
+  0x5041b59d: [1c                   ] EXTHU D0
+  0x5041b59e: [f8 c0 0b             ] ASL 0xb,D0
+  0x5041b5a1: [fc c0 58 05 00 89    ] ADD -0x76fffaa8,D0
+  0x5041b5a7: [1d                   ] EXTHU D1
+  0x5041b5a8: [dd 64 48 00 00 00 00 ] CALL 0x5041fe0c,[],0x0
+  0x5041b5af: [f8 fe 0c             ] ADD 0xc,SP
+  0x5041b5b2: [f0 fc                ] RETS
+```
+
+#### `FUN_5041d8e4`, `FUN_5041ded0`, `FUN_5041df27`, `FUN_5041e051..5041f782`, `FUN_5043120b` & `FUN_50431303`
+
+Motor de reset, polling de **`0x89000558`** (`BSY 0x80` em janela `0x9487 + 0xc80 * 10ms = 32 s/dev`), detecção Master/Slave `ATAPI 0x14/0xeb` vs `ATA 0x00/0x00 + DRDY 0x40` (`FUN_5041f61b`, contendo `BCLR 0xff` degenerado em `*puVar1 = *puVar1`) e temporizador RTOS `FUN_50431303` (`10 ms/tick`).
+
+<!-- source: rtsc_davis_decomp.txt / rtsc_davis_poll_decomp.txt / prog061_helpers_decomp.txt | FUNCS FUN_5041d8e4..FUN_50431303 -->
+```c
+int FUN_5041d8e4(uint param_1,uint param_2)
+
+{
+  undefined4 uVar1;
+  int *piVar2;
+  int iVar3;
+  uint uVar4;
+  undefined4 uVar5;
+  uint uVar6;
+  int iStack_28;
+  undefined4 uStack_24;
+  undefined4 uStack_20;
+  undefined4 uStack_1c;
+  undefined4 uStack_18;
+  undefined4 uStack_14;
+
+  uVar1 = 0;
+  param_2 = param_2 & 0xffff;
+  if (param_2 == 1) {
+    param_1 = param_1 & 0xffff;
+    func_0x5041b233(param_1,1);
+    func_0x5041b3e6(0x19,param_1);
+    func_0x5041b233(param_1,0x10);
+    func_0x5041b3e6(2000,param_1);
+  }
+  else {
+    if (param_2 != 2) {
+      return -0x7ffffbf9;
+    }
+    param_1 = param_1 & 0xffff;
+    uVar5 = 1;
+    FUN_5041b55b(2,param_1,1);
+    func_0x5041b3e6(5,param_1);
+    FUN_5041b55b(param_2,param_1,uVar1);
+    iVar3 = func_0x5041ded0(uVar5,param_1);
+    if (iVar3 != 0) {
+      return iVar3;
+    }
+  }
+  uVar1 = 0xc80;
+  uVar6 = 0;
+  piVar2 = &iStack_28;
+  do {
+    uVar4 = uVar6 & 0xffff;
+    func_0x5041b4e1(0xff10,param_1,uVar4);
+    func_0x5041b3e6(1,param_1);
+    iVar3 = func_0x5041df27(uVar1,param_1,0x80,0);
+    piVar2[uVar4] = iVar3;
+    uVar6 = uVar6 + 1;
+  } while ((uVar6 & 0xffff) < 2);
+  if (iStack_28 == 0 && piVar2[1] == 0) {
+    iStack_28 = 0;
+  }
+  else if (iStack_28 == 0) {
+    iStack_28 = piVar2[1];
+  }
+  return iStack_28;
+}
+
+ (GhidraScript)
+
+int FUN_5041ded0(undefined4 param_1,uint param_2)
+
+{
+  int iVar1;
+  undefined4 uVar2;
+  uint uVar3;
+  undefined1 auStack_c [12];
+
+  uVar3 = param_2 & 0xffff;
+  iVar1 = func_0x5041e051(param_1,uVar3,0);
+  if (iVar1 == 0) {
+    if (uVar3 == 0) {
+      uVar2 = 3;
+    }
+    else {
+      uVar2 = 4;
+    }
+    iVar1 = func_0x5043120b(uVar2,0x10,2,auStack_c);
+    if ((iVar1 == 0) && (iVar1 = func_0x5041e0d0(param_2 & 0xffff,0), iVar1 == 0)) {
+      iVar1 = 0;
+    }
+  }
+  return iVar1;
+}
+
+ (GhidraScript)
+
+int FUN_5041df27(int param_1,uint param_2,undefined2 param_3,undefined2 param_4,byte param_5)
+
+{
+  uint uVar1;
+  uint uVar2;
+  uint uVar3;
+  int iVar4;
+  uint uVar5;
+  uint uVar6;
+  uint uVar7;
+  int iStack_28;
+  byte bStack_24;
+
+  uVar1 = (uint)param_5;
+  uVar7 = 0;
+  uVar6 = param_2 & 0xffff;
+  uVar3 = func_0x5041bca5(uVar6);
+  if ((uVar3 == 1) && (iVar4 = func_0x5041e051(param_1,uVar6,1), uVar7 = uVar3, iVar4 != 0)) {
+    return iVar4;
+  }
+  param_2 = param_2 & 0xffff;
+  func_0x5041bcca(param_2);
+  uVar1 = uVar1 & 0xff;
+  uVar3 = param_2;
+  do {
+    iVar4 = func_0x5041bcca(param_2);
+    uVar6 = func_0x5041b49c(0x38,param_2);
+    if ((uVar6 & bStack_24) == uVar1) goto joined_r0x5041df99;
+  } while ((iVar4 - iStack_28 & 0xfffffffU) < 0x9487);
+  uVar2 = param_1 - 1;
+  uVar6 = uVar3;
+  if (uVar2 == 0) {
+    uVar2 = func_0x5041b49c(0x38,uVar3);
+    uVar6 = uVar3;
+    param_2 = uVar3;
+    if ((uVar2 & bStack_24) == uVar1) {
+joined_r0x5041df99:
+      if ((uVar7 & 0xff) == 0) {
+        return 0;
+      }
+      iVar4 = func_0x5041e0d0(param_2,1);
+      if (iVar4 == 0) {
+        return 0;
+      }
+      return iVar4;
+    }
+  }
+  else {
+    do {
+      iVar4 = func_0x50431303(1);
+      if (iVar4 != 0) {
+        return iVar4;
+      }
+      uVar5 = func_0x5041b49c(0x38,uVar3);
+      param_2 = uVar3;
+      if ((uVar5 & bStack_24) == uVar1) goto joined_r0x5041df99;
+      uVar2 = uVar2 - 1;
+    } while (1 < uVar2);
+  }
+  uVar3 = func_0x5041b49c(0x38,uVar6);
+  uVar3 = uVar3 & bStack_24;
+  if (((uVar7 & 0xff) != 0) && (iVar4 = func_0x5041e0d0(uVar6,1), iVar4 != 0)) {
+    return iVar4;
+  }
+  if ((uVar3 & 0xff) == uVar1) {
+    return 0;
+  }
+  return -0x7ffffbf1;
+}
+
+ (GhidraScript)
+
+int FUN_5041e051(uint param_1,uint param_2,ushort param_3)
+
+{
+  undefined4 uVar1;
+  int iVar2;
+
+  if (param_3 == 1) {
+    param_2 = param_2 & 0xffff;
+    iVar2 = -0x80000000;
+  }
+  else {
+    param_2 = param_2 & 0xffff;
+    *(uint *)((uint)param_3 * 4 + 0x504f8290) = param_1 / 7000 + 1;
+    if (param_2 == 0) {
+      uVar1 = 3;
+    }
+    else {
+      uVar1 = 4;
+    }
+    iVar2 = func_0x504312b2(uVar1,0x10);
+    if (iVar2 != 0) {
+      return iVar2;
+    }
+    func_0x5041e172(param_2,0x10,1);
+    iVar2 = (param_1 * 0x9486 & 0xffffffe) + 0x50000000;
+  }
+  func_0x5041bce8(param_2,iVar2);
+  return 0;
+}
+
+ (GhidraScript)
+
+int FUN_5041e0d0(ushort param_1,short param_2)
+
+{
+  int iVar1;
+  uint uVar2;
+  undefined4 uVar3;
+
+  uVar3 = 0;
+  if (param_2 == 1) {
+    func_0x5041bd1b(param_1);
+  }
+  else {
+    uVar2 = (uint)param_1;
+    func_0x5041bd1b(uVar2);
+    func_0x5041e172(uVar2,0x10,uVar3);
+    if (uVar2 == 0) {
+      uVar3 = 3;
+    }
+    else {
+      uVar3 = 4;
+    }
+    iVar1 = func_0x504312b2(uVar3,0x10);
+    if (iVar1 != 0) {
+      return iVar1;
+    }
+  }
+  return 0;
+}
+
+ (GhidraScript)
+
+int FUN_5041e172(short param_1,undefined4 param_2,ushort param_3)
+
+{
+  int iVar1;
+  int iVar2;
+  undefined4 uVar3;
+  uint uVar4;
+
+  iVar1 = 0;
+  if (param_1 == 0) {
+    uVar4 = (uint)param_3;
+    if (uVar4 != 1) {
+      if (uVar4 != 0) {
+        return 0;
+      }
+      func_0x50420252(8,param_2,0);
+      uVar3 = 3;
+LAB_5041e1e4:
+      iVar2 = func_0x504312b2(uVar3,param_2);
+      if (iVar2 == 0) {
+        return iVar1;
+      }
+      return iVar2;
+    }
+    iVar2 = func_0x504312b2(3,param_2);
+    if (iVar2 != 0) {
+      return iVar2;
+    }
+    uVar3 = 8;
+  }
+  else {
+    uVar4 = (uint)param_3;
+    if (uVar4 != 1) {
+      if (uVar4 != 0) {
+        return 0;
+      }
+      func_0x50420252(2,param_2,0);
+      uVar3 = 4;
+      goto LAB_5041e1e4;
+    }
+    iVar2 = func_0x504312b2(4,param_2);
+    if (iVar2 != 0) {
+      return iVar2;
+    }
+    uVar3 = 2;
+  }
+  func_0x50420252(uVar3,param_2,uVar4);
+  return iVar1;
+}
+
+ (GhidraScript)
+
+void FUN_5041e1f5(uint param_1,uint param_2,ushort param_3)
+
+{
+  undefined1 *puVar1;
+  uint uVar2;
+  undefined1 auStack_14 [20];
+
+  uVar2 = (uint)param_3;
+  param_1 = param_1 & 0xffff;
+  puVar1 = auStack_14;
+  func_0x5041bc28(param_1,1,puVar1);
+  if ((uVar2 & 0xffff) == 0) {
+    func_0x5041bc28(param_1,2,puVar1);
+  }
+  else if ((uVar2 & 0xffff) == 0x10) {
+    uVar2 = (uint)*(byte *)(param_1 * 0x5c + (param_2 & 0xffff) + 0x504f81ec);
+    if (uVar2 == 1) {
+      func_0x5041bc28(param_1,2,puVar1);
+    }
+    else {
+      uVar2 = 2;
+    }
+    func_0x5041bd45(param_1,uVar2);
+  }
+  return;
+}
+
+ (GhidraScript)
+
+void FUN_5041f61b(uint param_1)
+
+{
+  undefined1 *puVar1;
+  short sVar2;
+  ushort uVar3;
+  uint uVar4;
+  uint uVar5;
+  uint uVar6;
+  uint uVar7;
+  int iVar8;
+  int iVar9;
+  uint uStack_24;
+
+  uStack_24 = 0;
+  param_1 = param_1 & 0xffff;
+  iVar8 = param_1 * 0x5c;
+  iVar9 = 0x504f81de;
+  do {
+    uVar6 = 0;
+    uVar7 = uStack_24 & 0xffff;
+    do {
+      func_0x5041b4e1(0xff10,param_1,uVar7);
+      func_0x5041b3e6(1,param_1);
+      func_0x5041df27(2,param_1,0x81,0);
+      sVar2 = func_0x5041b49c(0x38,param_1);
+      if ((sVar2 == 0xff) || (uVar4 = func_0x5041b49c(0x18,param_1), (uVar4 & 0x10) == uVar7 * 0x10)
+         ) break;
+      func_0x5041ded0(1,param_1);
+      uVar6 = uVar6 + 1;
+    } while ((uVar6 & 0xff) < 100);
+    uVar3 = func_0x5041b49c(0x38,param_1);
+    if (((uVar3 == 0xff) || ((uVar3 & 1) != 0)) || ((uVar6 & 0xff) == 100)) {
+      puVar1 = (undefined1 *)(iVar8 + uVar7 + 0x504f81dc);
+      *puVar1 = *puVar1;
+      puVar1 = (undefined1 *)(iVar8 + uVar7 + iVar9);
+      *puVar1 = *puVar1;
+    }
+    else {
+      uVar6 = func_0x5041b49c(0x10,param_1);
+      sVar2 = func_0x5041b49c(0x14,param_1);
+      if (((uVar6 & 0xffff) == 0x14) && (sVar2 == 0xeb)) {
+        puVar1 = (undefined1 *)(iVar8 + uVar7 + 0x504f81dc);
+LAB_5041f71b:
+        *puVar1 = 1;
+      }
+      else if (((uVar6 & 0xffff) == 0) && (sVar2 == 0)) {
+        uVar6 = 0;
+        puVar1 = (undefined1 *)(iVar8 + uVar7 + 0x504f81de);
+        do {
+          uVar4 = func_0x5041b49c(0x38,param_1);
+          if ((uVar4 & 0x40) != 0) {
+            *puVar1 = 1;
+            break;
+          }
+          func_0x50431303(1);
+          uVar6 = uVar6 + 1;
+          uVar4 = uVar6 & 0xff;
+          if ((uVar4 == 3) && (uVar5 = func_0x5041b49c(0x38,param_1), (uVar5 & 0x40) != 0)) {
+            puVar1 = (undefined1 *)(param_1 * 0x5c + uVar7 + 0x504f81de);
+            goto LAB_5041f71b;
+          }
+        } while (uVar4 < 3);
+      }
+    }
+    if (1 < (uStack_24 & 0xffff)) {
+      return;
+    }
+  } while( true );
+}
+
+ (GhidraScript)
+
+/* WARNING: Removing unreachable block (ram,0x5041f8e0) */
+
+int FUN_5041f782(uint param_1,ushort param_2)
+
+{
+  short sVar1;
+  char *pcVar2;
+  uint uVar3;
+  ushort *puVar4;
+  int iVar5;
+  int iVar6;
+  uint uVar7;
+  undefined4 *puVar8;
+  uint uVar9;
+  undefined4 uVar10;
+  int iVar11;
+  uint uStack_90;
+  uint uStack_8c;
+  uint uStack_88;
+  short *psStack_84;
+  undefined2 *puStack_80;
+  ushort uStack_7c;
+  ushort auStack_78 [4];
+  undefined2 auStack_70 [2];
+  undefined4 uStack_6c;
+  undefined4 uStack_68;
+  undefined2 uStack_58;
+  undefined2 uStack_56;
+  undefined2 uStack_54;
+  undefined2 uStack_52;
+  undefined2 uStack_50;
+  undefined4 uStack_3c;
+  undefined4 uStack_38;
+  undefined4 uStack_34;
+  undefined4 uStack_30;
+  short asStack_24 [2];
+  undefined4 uStack_20;
+  undefined4 uStack_1c;
+  undefined4 uStack_18;
+  undefined4 uStack_14;
+
+  uVar3 = (uint)param_2;
+  iVar6 = (param_1 & 0xffff) * 0x5c + uVar3;
+  if (*(char *)(iVar6 + 0x504f81dc) == '\x01') {
+    asStack_24[uVar3] = 1;
+  }
+  else if (*(char *)(iVar6 + 0x504f81de) == '\x01') {
+    asStack_24[uVar3] = 0;
+  }
+  else {
+    asStack_24[uVar3] = 2;
+  }
+  psStack_84 = asStack_24;
+  uVar3 = (uint)param_2;
+  uStack_90 = param_1 & 0xffff;
+  uStack_8c = uVar3;
+  uStack_88 = uStack_90;
+  uStack_7c = param_2;
+  if (psStack_84[uVar3] != 2) {
+    uVar9 = 0;
+    puVar4 = auStack_78;
+    do {
+      iVar6 = func_0x5041ded0(1,uStack_90);
+      if (iVar6 != 0) {
+        return iVar6;
+      }
+      iVar6 = func_0x5041d9c9(*puStack_80,uStack_88,uVar3,puVar4);
+      uVar7 = (uint)auStack_78[0];
+      if (*(int *)(puVar4 + 2) == 1) {
+        func_0x5041dd6b(uStack_90,uStack_8c);
+      }
+      iVar11 = func_0x5041ded0(1,uStack_90);
+      if (iVar11 != 0) {
+        return iVar11;
+      }
+      iVar11 = func_0x5041d9c9(*puStack_80,uStack_90,uVar3,puVar4);
+      uVar7 = uVar7 & auStack_78[0];
+      if (*(int *)(puVar4 + 2) == 1) {
+        func_0x5041dd6b(uStack_90,uVar3);
+      }
+      if (iVar6 == iVar11) {
+        if (iVar6 != 0) goto LAB_5041f8b7;
+        if (uVar7 != 0) break;
+      }
+      uVar9 = uVar9 + 1;
+    } while ((uVar9 & 0xff) < 5);
+    if ((iVar6 != 0) || ((uVar9 & 0xff) == 5)) {
+LAB_5041f8b7:
+      psStack_84[uStack_8c] = 2;
+    }
+  }
+  iVar11 = 0;
+  iVar6 = uStack_8c * 2;
+  sVar1 = psStack_84[uStack_8c];
+  if (sVar1 == 1) {
+    iVar5 = uStack_8c + uStack_88 * 0x5c;
+    pcVar2 = (char *)(iVar5 + 0x504f81de);
+    if (*pcVar2 != '\x01') {
+      *(undefined1 *)(iVar5 + 0x504f81dc) = 1;
+      *(undefined2 *)(iVar6 + uStack_88 * 0x5c + 0x504f820a) = 1;
+      goto LAB_5041f9bc;
+    }
+    *pcVar2 = *pcVar2;
+  }
+  else {
+    if (sVar1 == 0) {
+      iVar5 = uStack_88 * 0x5c;
+      pcVar2 = (char *)(uStack_8c + iVar5 + 0x504f81dc);
+      if (*pcVar2 == '\x01') {
+        *pcVar2 = *pcVar2;
+        *(undefined2 *)(iVar6 + iVar5 + 0x504f820a) = 0;
+        iVar11 = -0x7ffffbf3;
+      }
+      else {
+        *(undefined1 *)(uStack_8c + iVar5 + 0x504f81de) = 1;
+        *(undefined2 *)(iVar6 + iVar5 + 0x504f820a) = 1;
+      }
+      goto LAB_5041f9bc;
+    }
+    if (sVar1 != 2) goto LAB_5041f9bc;
+    iVar5 = uStack_8c + uStack_88 * 0x5c;
+    pcVar2 = (char *)(iVar5 + 0x504f81de);
+    if ((*pcVar2 != '\x01') && (*(char *)(iVar5 + 0x504f81dc) != '\x01')) {
+      *(undefined2 *)(iVar6 + uStack_88 * 0x5c + 0x504f820a) = 0;
+      goto LAB_5041f9bc;
+    }
+    *pcVar2 = *pcVar2;
+    *(undefined1 *)(iVar5 + 0x504f81dc) = *(undefined1 *)(iVar5 + 0x504f81dc);
+  }
+  *(undefined2 *)(iVar6 + uStack_88 * 0x5c + 0x504f820a) = 0;
+  iVar11 = -0x7ffffbf3;
+LAB_5041f9bc:
+  iVar6 = uStack_8c + uStack_88 * 0x5c;
+  if ((*(char *)(iVar6 + 0x504f81dc) == '\x01') || (*(char *)(iVar6 + 0x504f81de) == '\x01')) {
+    uVar3 = (uint)uStack_7c + uStack_88 * 2 & 0xffff;
+    puVar8 = &uStack_3c;
+    uVar10 = 1000;
+    iVar6 = func_0x5041e5c1(uVar3,0,auStack_70,puVar8,1000);
+    if (iVar6 < 0) {
+      func_0x5043131e(0x5043679d);
+    }
+    iVar6 = func_0x5041e5c1(uVar3,0,uStack_90,puVar8,uVar10);
+    if (iVar6 < 0) {
+      func_0x5043131e(0x50436981);
+    }
+  }
+  return iVar11;
+}
+
+ (GhidraScript)
+
+undefined4 * FUN_5041fe0c(undefined4 *param_1,undefined4 param_2)
+
+{
+  *param_1 = param_2;
+  return param_1;
+}
+
+ (GhidraScript)
+
+undefined4 FUN_5041fe11(undefined4 *param_1)
+
+{
+  return *param_1;
+}
+
+ (GhidraScript)
+
+undefined4
+FUN_5043120b(uint param_1,uint param_2,undefined2 param_3,undefined2 param_4,uint *param_5)
+
+{
+  undefined4 uVar1;
+  uint uVar2;
+
+  if (param_1 == 2) {
+    do {
+      uVar2 = uRam504f7e28;
+    } while ((param_2 & uRam504f7e28) == 0);
+LAB_5043128d:
+    *param_5 = param_2 & uVar2;
+LAB_5043129a:
+    uVar1 = 0;
+  }
+  else {
+    if (param_1 < 3) {
+      if (param_1 == 1) {
+        do {
+          uVar2 = uRam504f7ed8;
+        } while ((param_2 & uRam504f7ed8) == 0);
+        goto LAB_5043128d;
+      }
+    }
+    else if (param_1 < 5) {
+      if ((param_2 & 2) == 0) {
+        do {
+          uVar2 = uRam504f7eec;
+        } while ((param_2 & uRam504f7eec) == 0);
+        goto LAB_5043128d;
+      }
+      uVar2 = 0;
+      do {
+        if ((param_2 & uRam504f7eec) != 0) {
+          *param_5 = param_2 & uRam504f7eec;
+          break;
+        }
+        func_0x50431303(1);
+        uVar2 = uVar2 + 1;
+      } while (uVar2 < 3000);
+      if (uVar2 == 3000) {
+        *param_5 = 2;
+      }
+      goto LAB_5043129a;
+    }
+    uVar1 = 0x80000001;
+  }
+  return uVar1;
+}
+
+ (GhidraScript)
+
+undefined4 FUN_50431303(uint param_1)
+
+{
+  uint uVar1;
+
+  uVar1 = 0;
+  if (param_1 != 0) {
+    do {
+      func_0x5040d655(10);
+      uVar1 = uVar1 + 1;
+    } while (uVar1 < param_1);
+  }
+  return 0;
+}
+
+ (GhidraScript)
+```
+
+<!-- source: prog061_disasm_all.clean.txt | === DISASM FUN_5041d8e4 @ 0x5041d8e4 (size=229 B) === -->
+```asm
+-- === DISASM FUN_5041d8e4 @ 0x5041d8e4 (size=229 B) === --
+  0x5041d8e4: [cf f2                ] MOVM [D2,D3,A2,A3,EX1],(SP)
+  0x5041d8e6: [f8 fe e4             ] ADD -0x1c,SP
+  0x5041d8e9: [90 00                ] MOV 0x0,A0
+  0x5041d8eb: [91                   ] MOV A0,A1
+  0x5041d8ec: [43 14                ] MOV A0,(0x14,SP)
+  0x5041d8ee: [47 18                ] MOV A1,(0x18,SP)
+  0x5041d8f0: [9f 00                ] MOV 0x0,A3
+  0x5041d8f2: [f1 e6                ] MOV D1,A2
+  0x5041d8f4: [f9 58 aa             ] EXTHU A2
+  0x5041d8f7: [ba 01                ] CMP 0x1,A2
+  0x5041d8f9: [c8 0f                ] BEQ 0x5041d908
+  0x5041d8fb: [ba 02                ] CMP 0x2,A2
+  0x5041d8fd: [c8 39                ] BEQ 0x5041d936
+  0x5041d8ff: [fc cc 07 04 00 80    ] MOV 0x80000407,D0
+  0x5041d905: [cc c1 00             ] JMP 0x5041d9c6
+  0x5041d908: [82                   ] MOV D0,D2
+  0x5041d909: [1e                   ] EXTHU D2
+  0x5041d90a: [88                   ] MOV D2,D0
+  0x5041d90b: [f1 d9                ] MOV A2,D1
+  0x5041d90d: [dd 26 d9 ff ff 00 00 ] CALL 0x5041b233,[],0x0
+  0x5041d914: [80 19                ] MOV 0x19,D0
+  0x5041d916: [89                   ] MOV D2,D1
+  0x5041d917: [dd cf da ff ff 00 00 ] CALL 0x5041b3e6,[],0x0
+  0x5041d91e: [88                   ] MOV D2,D0
+  0x5041d91f: [85 10                ] MOV 0x10,D1
+  0x5041d921: [dd 12 d9 ff ff 00 00 ] CALL 0x5041b233,[],0x0
+  0x5041d928: [2c d0 07             ] MOV 0x7d0,D0
+  0x5041d92b: [89                   ] MOV D2,D1
+  0x5041d92c: [dd ba da ff ff 00 00 ] CALL 0x5041b3e6,[],0x0
+  0x5041d933: [89                   ] MOV D2,D1
+  0x5041d934: [ca 36                ] BRA 0x5041d96a
+  0x5041d936: [82                   ] MOV D0,D2
+  0x5041d937: [1e                   ] EXTHU D2
+  0x5041d938: [8f 01                ] MOV 0x1,D3
+  0x5041d93a: [4e 0c                ] MOV D3,(0xc,SP)
+  0x5041d93c: [f1 d8                ] MOV A2,D0
+  0x5041d93e: [89                   ] MOV D2,D1
+  0x5041d93f: [dd 1c dc ff ff 00 00 ] CALL 0x5041b55b,[],0x0
+  0x5041d946: [80 05                ] MOV 0x5,D0
+  0x5041d948: [89                   ] MOV D2,D1
+  0x5041d949: [dd 9d da ff ff 00 00 ] CALL 0x5041b3e6,[],0x0
+  0x5041d950: [4f 0c                ] MOV A3,(0xc,SP)
+  0x5041d952: [f1 d8                ] MOV A2,D0
+  0x5041d954: [89                   ] MOV D2,D1
+  0x5041d955: [dd 06 dc ff ff 00 00 ] CALL 0x5041b55b,[],0x0
+  0x5041d95c: [8c                   ] MOV D3,D0
+  0x5041d95d: [89                   ] MOV D2,D1
+  0x5041d95e: [cd 72 05 00 00       ] CALL 0x5041ded0,[],0x0
+  0x5041d963: [f1 e3                ] MOV D0,A3
+  0x5041d965: [89                   ] MOV D2,D1
+  0x5041d966: [bf 00                ] CMP 0x0,A3
+  0x5041d968: [c9 5e                ] BNE 0x5041d9c6
+  0x5041d96a: [fd 08 44 80 0c 00    ] MOV 0xc80,R4
+  0x5041d970: [0c                   ] CLR D3
+  0x5041d971: [3f                   ] MOV SP,A3
+  0x5041d972: [23 14                ] ADD 0x14,A3
+  0x5041d974: [f1 e6                ] MOV D1,A2
+  0x5041d976: [8e                   ] MOV D3,D2
+  0x5041d977: [1e                   ] EXTHU D2
+  0x5041d978: [4a 0c                ] MOV D2,(0xc,SP)
+  0x5041d97a: [fc cc 10 ff 00 00    ] MOV 0xff10,D0
+  0x5041d980: [f1 d9                ] MOV A2,D1
+  0x5041d982: [dd 5f db ff ff 00 00 ] CALL 0x5041b4e1,[],0x0
+  0x5041d989: [80 01                ] MOV 0x1,D0
+  0x5041d98b: [f1 d9                ] MOV A2,D1
+  0x5041d98d: [dd 59 da ff ff 00 00 ] CALL 0x5041b3e6,[],0x0
+  0x5041d994: [2c 80 00             ] MOV 0x80,D0
+  0x5041d997: [42 0c                ] MOV D0,(0xc,SP)
+  0x5041d999: [00                   ] CLR D0
+  0x5041d99a: [42 10                ] MOV D0,(0x10,SP)
+  0x5041d99c: [f5 d0                ] MOV R4,D0
+  0x5041d99e: [f1 d9                ] MOV A2,D1
+  0x5041d9a0: [cd 87 05 00 00       ] CALL 0x5041df27,[],0x0
+  0x5041d9a5: [56                   ] ASL2 D2
+  0x5041d9a6: [9c                   ] MOV A3,A0
+  0x5041d9a7: [f1 68                ] ADD D2,A0
+  0x5041d9a9: [60                   ] MOV D0,(A0)
+  0x5041d9aa: [4c                   ] INC D3
+  0x5041d9ab: [8c                   ] MOV D3,D0
+  0x5041d9ac: [1c                   ] EXTHU D0
+  0x5041d9ad: [a0 01                ] CMP 0x1,D0
+  0x5041d9af: [c7 c7                ] BLS 0x5041d976
+  0x5041d9b1: [59 14                ] MOV (0x14,SP),D1
+  0x5041d9b3: [f8 23 04             ] MOV (0x4,A3),A0
+  0x5041d9b6: [fb 1d d8 c0          ] OR D1,A0,D0
+  0x5041d9ba: [c8 0b                ] BEQ 0x5041d9c5
+  0x5041d9bc: [84                   ] MOV D1,D0
+  0x5041d9bd: [a0 00                ] CMP 0x0,D0
+  0x5041d9bf: [c9 07                ] BNE 0x5041d9c6
+  0x5041d9c1: [f1 d0                ] MOV A0,D0
+  0x5041d9c3: [ca 03                ] BRA 0x5041d9c6
+  0x5041d9c5: [00                   ] CLR D0
+  0x5041d9c6: [df f2 3c             ] RET [EX1,A3,A2,D3,D2],0x3c
+```
+
+<!-- source: prog061_disasm_all.clean.txt | === DISASM FUN_5041df27 @ 0x5041df27 (size=298 B) === -->
+```asm
+-- === DISASM FUN_5041df27 @ 0x5041df27 (size=298 B) === --
+  0x5041df27: [cf f2                ] MOVM [D2,D3,A2,A3,EX1],(SP)
+  0x5041df29: [f8 fe e8             ] ADD -0x18,SP
+  0x5041df2c: [f1 e3                ] MOV D0,A3
+  0x5041df2e: [86                   ] MOV D1,D2
+  0x5041df2f: [fb aa 80 44          ] MOVBU (0x44,SP),A0
+  0x5041df33: [fb ba 80 14          ] MOVBU A0,(0x14,SP)
+  0x5041df37: [fb aa a0 48          ] MOVBU (0x48,SP),A2
+  0x5041df3b: [f9 68 44             ] CLR R4
+  0x5041df3e: [8b                   ] MOV D2,D3
+  0x5041df3f: [1f                   ] EXTHU D3
+  0x5041df40: [8c                   ] MOV D3,D0
+  0x5041df41: [dd 64 dd ff ff 00 00 ] CALL 0x5041bca5,[],0x0
+  0x5041df48: [a0 01                ] CMP 0x1,D0
+  0x5041df4a: [c9 15                ] BNE 0x5041df5f
+  0x5041df4c: [f5 44                ] MOV D0,R4
+  0x5041df4e: [42 0c                ] MOV D0,(0xc,SP)
+  0x5041df50: [f1 dc                ] MOV A3,D0
+  0x5041df52: [8d                   ] MOV D3,D1
+  0x5041df53: [cd fe 00 00 00       ] CALL 0x5041e051,[],0x0
+  0x5041df58: [a0 00                ] CMP 0x0,D0
+  0x5041df5a: [c8 05                ] BEQ 0x5041df5f
+  0x5041df5c: [cc f2 00             ] JMP 0x5041e04e
+  0x5041df5f: [1e                   ] EXTHU D2
+  0x5041df60: [88                   ] MOV D2,D0
+  0x5041df61: [dd 69 dd ff ff 00 00 ] CALL 0x5041bcca,[],0x0
+  0x5041df68: [42 10                ] MOV D0,(0x10,SP)
+  0x5041df6a: [f5 65                ] MOV D2,R5
+  0x5041df6c: [f5 27                ] MOV A2,R7
+  0x5041df6e: [f9 38 77             ] EXTBU R7
+  0x5041df71: [f5 96                ] MOV R5,A2
+  0x5041df73: [f1 d8                ] MOV A2,D0
+  0x5041df75: [dd 55 dd ff ff 00 00 ] CALL 0x5041bcca,[],0x0
+  0x5041df7c: [83                   ] MOV D0,D3
+  0x5041df7d: [80 38                ] MOV 0x38,D0
+  0x5041df7f: [f1 d9                ] MOV A2,D1
+  0x5041df81: [dd 1b d5 ff ff 00 00 ] CALL 0x5041b49c,[],0x0
+  0x5041df88: [f8 ba 14             ] MOVBU (0x14 ,SP),D2
+  0x5041df8b: [f2 02                ] AND D0,D2
+  0x5041df8d: [88                   ] MOV D2,D0
+  0x5041df8e: [14                   ] EXTBU D0
+  0x5041df8f: [f9 d8 7c             ] CMP R7,D0
+  0x5041df92: [c9 10                ] BNE 0x5041dfa2
+  0x5041df94: [f5 d0                ] MOV R4,D0
+  0x5041df96: [14                   ] EXTBU D0
+  0x5041df97: [a0 00                ] CMP 0x0,D0
+  0x5041df99: [c9 05                ] BNE 0x5041df9e
+  0x5041df9b: [cc b2 00             ] JMP 0x5041e04d
+  0x5041df9e: [f1 d8                ] MOV A2,D0
+  0x5041dfa0: [ca 67                ] BRA 0x5041e007
+  0x5041dfa2: [8c                   ] MOV D3,D0
+  0x5041dfa3: [5c 10                ] MOV (0x10,SP),A0
+  0x5041dfa5: [f1 10                ] SUB A0,D0
+  0x5041dfa7: [54                   ] ASL2 D0
+  0x5041dfa8: [54                   ] ASL2 D0
+  0x5041dfa9: [f8 c4 04             ] LSR 0x4,D0
+  0x5041dfac: [fc c8 86 94 00 00    ] CMP 0x9486,D0
+  0x5041dfb2: [c7 c1                ] BLS 0x5041df73
+  0x5041dfb4: [23 ff                ] ADD -0x1,A3
+  0x5041dfb6: [c9 24                ] BNE 0x5041dfda
+  0x5041dfb8: [80 38                ] MOV 0x38,D0
+  0x5041dfba: [f5 d5                ] MOV R5,D1
+  0x5041dfbc: [dd e0 d4 ff ff 00 00 ] CALL 0x5041b49c,[],0x0
+  0x5041dfc3: [f8 ba 14             ] MOVBU (0x14 ,SP),D2
+  0x5041dfc6: [f2 02                ] AND D0,D2
+  0x5041dfc8: [88                   ] MOV D2,D0
+  0x5041dfc9: [14                   ] EXTBU D0
+  0x5041dfca: [f9 d8 7c             ] CMP R7,D0
+  0x5041dfcd: [c9 4d                ] BNE 0x5041e01a
+  0x5041dfcf: [f5 d0                ] MOV R4,D0
+  0x5041dfd1: [14                   ] EXTBU D0
+  0x5041dfd2: [a0 00                ] CMP 0x0,D0
+  0x5041dfd4: [c8 79                ] BEQ 0x5041e04d
+  0x5041dfd6: [f5 d4                ] MOV R5,D0
+  0x5041dfd8: [ca 2f                ] BRA 0x5041e007
+  0x5041dfda: [f5 d7                ] MOV R5,D3
+  0x5041dfdc: [80 01                ] MOV 0x1,D0
+  0x5041dfde: [dd 25 33 01 00 00 00 ] CALL 0x50431303,[],0x0
+  0x5041dfe5: [a0 00                ] CMP 0x0,D0
+  0x5041dfe7: [c9 67                ] BNE 0x5041e04e
+  0x5041dfe9: [80 38                ] MOV 0x38,D0
+  0x5041dfeb: [8d                   ] MOV D3,D1
+  0x5041dfec: [dd b0 d4 ff ff 00 00 ] CALL 0x5041b49c,[],0x0
+  0x5041dff3: [f8 ba 14             ] MOVBU (0x14 ,SP),D2
+  0x5041dff6: [f2 02                ] AND D0,D2
+  0x5041dff8: [88                   ] MOV D2,D0
+  0x5041dff9: [14                   ] EXTBU D0
+  0x5041dffa: [f9 d8 7c             ] CMP R7,D0
+  0x5041dffd: [c9 17                ] BNE 0x5041e014
+  0x5041dfff: [f5 d0                ] MOV R4,D0
+  0x5041e001: [14                   ] EXTBU D0
+  0x5041e002: [a0 00                ] CMP 0x0,D0
+  0x5041e004: [c8 49                ] BEQ 0x5041e04d
+  0x5041e006: [8c                   ] MOV D3,D0
+  0x5041e007: [85 01                ] MOV 0x1,D1
+  0x5041e009: [cd c7 00 00 00       ] CALL 0x5041e0d0,[],0x0
+  0x5041e00e: [a0 00                ] CMP 0x0,D0
+  0x5041e010: [c9 3e                ] BNE 0x5041e04e
+  0x5041e012: [ca 3b                ] BRA 0x5041e04d
+  0x5041e014: [23 ff                ] ADD -0x1,A3
+  0x5041e016: [bf 01                ] CMP 0x1,A3
+  0x5041e018: [c5 c4                ] BHI 0x5041dfdc
+  0x5041e01a: [80 38                ] MOV 0x38,D0
+  0x5041e01c: [f5 d5                ] MOV R5,D1
+  0x5041e01e: [dd 7e d4 ff ff 00 00 ] CALL 0x5041b49c,[],0x0
+  0x5041e025: [f8 ba 14             ] MOVBU (0x14 ,SP),D2
+  0x5041e028: [f2 02                ] AND D0,D2
+  0x5041e02a: [f5 d0                ] MOV R4,D0
+  0x5041e02c: [14                   ] EXTBU D0
+  0x5041e02d: [a0 00                ] CMP 0x0,D0
+  0x5041e02f: [c8 0f                ] BEQ 0x5041e03e
+  0x5041e031: [f5 d4                ] MOV R5,D0
+  0x5041e033: [85 01                ] MOV 0x1,D1
+  0x5041e035: [cd 9b 00 00 00       ] CALL 0x5041e0d0,[],0x0
+  0x5041e03a: [a0 00                ] CMP 0x0,D0
+  0x5041e03c: [c9 12                ] BNE 0x5041e04e
+  0x5041e03e: [88                   ] MOV D2,D0
+  0x5041e03f: [14                   ] EXTBU D0
+  0x5041e040: [f9 d8 7c             ] CMP R7,D0
+  0x5041e043: [c8 0a                ] BEQ 0x5041e04d
+  0x5041e045: [fc cc 0f 04 00 80    ] MOV 0x8000040f,D0
+  0x5041e04b: [ca 03                ] BRA 0x5041e04e
+  0x5041e04d: [00                   ] CLR D0
+  0x5041e04e: [df f2 38             ] RET [EX1,A3,A2,D3,D2],0x38
+```
+
+<!-- source: prog061_disasm_all.clean.txt | === DISASM FUN_5041f61b @ 0x5041f61b (size=359 B) === -->
+```asm
+-- === DISASM FUN_5041f61b @ 0x5041f61b (size=359 B) === --
+  0x5041f61b: [cf f2                ] MOVM [D2,D3,A2,A3,EX1],(SP)
+  0x5041f61d: [f8 fe e8             ] ADD -0x18,SP
+  0x5041f620: [04                   ] CLR D1
+  0x5041f621: [83                   ] MOV D0,D3
+  0x5041f622: [1f                   ] EXTHU D3
+  0x5041f623: [f5 75                ] MOV D3,R5
+  0x5041f625: [fb a9 55 5c          ] MUL 0x5c,R5
+  0x5041f629: [fe 08 77 dc 81 4f 50 ] MOV 0x504f81dc,R7
+  0x5041f630: [fb 78 77 02          ] ADD 0x2,R7
+  0x5041f634: [08                   ] CLR D2
+  0x5041f635: [f5 54                ] MOV D1,R4
+  0x5041f637: [f9 58 44             ] EXTHU R4
+  0x5041f63a: [f5 50                ] MOV D1,R0
+  0x5041f63c: [f9 b8 00             ] INC R0
+  0x5041f63f: [fb 9a 00 14          ] MOV R0,(0x14,SP)
+  0x5041f643: [fb 9a 40 0c          ] MOV R4,(0xc,SP)
+  0x5041f647: [fc cc 10 ff 00 00    ] MOV 0xff10,D0
+  0x5041f64d: [8d                   ] MOV D3,D1
+  0x5041f64e: [dd 93 be ff ff 00 00 ] CALL 0x5041b4e1,[],0x0
+  0x5041f655: [80 01                ] MOV 0x1,D0
+  0x5041f657: [8d                   ] MOV D3,D1
+  0x5041f658: [dd 8e bd ff ff 00 00 ] CALL 0x5041b3e6,[],0x0
+  0x5041f65f: [2c 81 00             ] MOV 0x81,D0
+  0x5041f662: [42 0c                ] MOV D0,(0xc,SP)
+  0x5041f664: [00                   ] CLR D0
+  0x5041f665: [42 10                ] MOV D0,(0x10,SP)
+  0x5041f667: [80 02                ] MOV 0x2,D0
+  0x5041f669: [8d                   ] MOV D3,D1
+  0x5041f66a: [cd bd e8 00 00       ] CALL 0x5041df27,[],0x0
+  0x5041f66f: [80 38                ] MOV 0x38,D0
+  0x5041f671: [8d                   ] MOV D3,D1
+  0x5041f672: [dd 2a be ff ff 00 00 ] CALL 0x5041b49c,[],0x0
+  0x5041f679: [81                   ] MOV D0,D1
+  0x5041f67a: [84                   ] MOV D1,D0
+  0x5041f67b: [1c                   ] EXTHU D0
+  0x5041f67c: [fa c8 ff 00          ] CMP 0xff,D0
+  0x5041f680: [c8 25                ] BEQ 0x5041f6a5
+  0x5041f682: [80 18                ] MOV 0x18,D0
+  0x5041f684: [8d                   ] MOV D3,D1
+  0x5041f685: [dd 17 be ff ff 00 00 ] CALL 0x5041b49c,[],0x0
+  0x5041f68c: [f8 e0 10             ] AND 0x10,D0
+  0x5041f68f: [f5 d1                ] MOV R4,D1
+  0x5041f691: [55                   ] ASL2 D1
+  0x5041f692: [55                   ] ASL2 D1
+  0x5041f693: [a4                   ] CMP D1,D0
+  0x5041f694: [c8 11                ] BEQ 0x5041f6a5
+  0x5041f696: [80 01                ] MOV 0x1,D0
+  0x5041f698: [8d                   ] MOV D3,D1
+  0x5041f699: [cd 37 e8 00 00       ] CALL 0x5041ded0,[],0x0
+  0x5041f69e: [48                   ] INC D2
+  0x5041f69f: [88                   ] MOV D2,D0
+  0x5041f6a0: [14                   ] EXTBU D0
+  0x5041f6a1: [a0 63                ] CMP 0x63,D0
+  0x5041f6a3: [c7 a0                ] BLS 0x5041f643
+  0x5041f6a5: [80 38                ] MOV 0x38,D0
+  0x5041f6a7: [8d                   ] MOV D3,D1
+  0x5041f6a8: [dd f4 bd ff ff 00 00 ] CALL 0x5041b49c,[],0x0
+  0x5041f6af: [81                   ] MOV D0,D1
+  0x5041f6b0: [84                   ] MOV D1,D0
+  0x5041f6b1: [1c                   ] EXTHU D0
+  0x5041f6b2: [fa c8 ff 00          ] CMP 0xff,D0
+  0x5041f6b6: [c8 0d                ] BEQ 0x5041f6c3
+  0x5041f6b8: [f8 ed 01             ] BTST 0x1,D1
+  0x5041f6bb: [c9 08                ] BNE 0x5041f6c3
+  0x5041f6bd: [88                   ] MOV D2,D0
+  0x5041f6be: [14                   ] EXTBU D0
+  0x5041f6bf: [a0 64                ] CMP 0x64,D0
+  0x5041f6c1: [c9 1b                ] BNE 0x5041f6dc
+  0x5041f6c3: [fb 7c 54 90          ] ADD R5,R4,A1
+  0x5041f6c7: [94                   ] MOV A1,A0
+  0x5041f6c8: [fc d0 dc 81 4f 50    ] ADD 0x504f81dc,A0
+  0x5041f6ce: [fa f4 00 ff          ] BCLR 0xff,(0x0,A0)
+  0x5041f6d2: [f9 78 79             ] ADD R7,A1
+  0x5041f6d5: [fa f5 00 ff          ] BCLR 0xff,(0x0,A1)
+  0x5041f6d9: [cc 9b 00             ] JMP 0x5041f774
+  0x5041f6dc: [80 10                ] MOV 0x10,D0
+  0x5041f6de: [8d                   ] MOV D3,D1
+  0x5041f6df: [dd bd bd ff ff 00 00 ] CALL 0x5041b49c,[],0x0
+  0x5041f6e6: [82                   ] MOV D0,D2
+  0x5041f6e7: [80 14                ] MOV 0x14,D0
+  0x5041f6e9: [8d                   ] MOV D3,D1
+  0x5041f6ea: [dd b2 bd ff ff 00 00 ] CALL 0x5041b49c,[],0x0
+  0x5041f6f1: [81                   ] MOV D0,D1
+  0x5041f6f2: [88                   ] MOV D2,D0
+  0x5041f6f3: [1c                   ] EXTHU D0
+  0x5041f6f4: [a0 14                ] CMP 0x14,D0
+  0x5041f6f6: [c9 2b                ] BNE 0x5041f721
+  0x5041f6f8: [84                   ] MOV D1,D0
+  0x5041f6f9: [1c                   ] EXTHU D0
+  0x5041f6fa: [fa c8 eb 00          ] CMP 0xeb,D0
+  0x5041f6fe: [c9 23                ] BNE 0x5041f721
+  0x5041f700: [fb 7c 54 80          ] ADD R5,R4,A0
+  0x5041f704: [fc d0 dc 81 4f 50    ] ADD 0x504f81dc,A0
+  0x5041f70a: [ca 11                ] BRA 0x5041f71b
+  0x5041f70c: [f1 ec                ] MOV D3,A0
+  0x5041f70e: [fb a9 88 5c          ] MUL 0x5c,A0
+  0x5041f712: [f9 78 48             ] ADD R4,A0
+  0x5041f715: [fc d0 de 81 4f 50    ] ADD 0x504f81de,A0
+  0x5041f71b: [80 01                ] MOV 0x1,D0
+  0x5041f71d: [f0 50                ] MOVBU D0,(A0)
+  0x5041f71f: [ca 55                ] BRA 0x5041f774
+  0x5041f721: [88                   ] MOV D2,D0
+  0x5041f722: [1c                   ] EXTHU D0
+  0x5041f723: [a0 00                ] CMP 0x0,D0
+  0x5041f725: [c9 4f                ] BNE 0x5041f774
+  0x5041f727: [84                   ] MOV D1,D0
+  0x5041f728: [1c                   ] EXTHU D0
+  0x5041f729: [a0 00                ] CMP 0x0,D0
+  0x5041f72b: [c9 49                ] BNE 0x5041f774
+  0x5041f72d: [9a 00                ] MOV 0x0,A2
+  0x5041f72f: [fb 7c 54 b0          ] ADD R5,R4,A3
+  0x5041f733: [fc d3 de 81 4f 50    ] ADD 0x504f81de,A3
+  0x5041f739: [ca 27                ] BRA 0x5041f760
+  0x5041f73b: [80 01                ] MOV 0x1,D0
+  0x5041f73d: [dd c6 1b 01 00 00 00 ] CALL 0x50431303,[],0x0
+  0x5041f744: [49                   ] INC A2
+  0x5041f745: [f1 da                ] MOV A2,D2
+  0x5041f747: [16                   ] EXTBU D2
+  0x5041f748: [aa 03                ] CMP 0x3,D2
+  0x5041f74a: [c9 12                ] BNE 0x5041f75c
+  0x5041f74c: [80 38                ] MOV 0x38,D0
+  0x5041f74e: [8d                   ] MOV D3,D1
+  0x5041f74f: [dd 4d bd ff ff 00 00 ] CALL 0x5041b49c,[],0x0
+  0x5041f756: [81                   ] MOV D0,D1
+  0x5041f757: [f8 ed 40             ] BTST 0x40,D1
+  0x5041f75a: [c9 b2                ] BNE 0x5041f70c
+  0x5041f75c: [aa 02                ] CMP 0x2,D2
+  0x5041f75e: [c5 16                ] BHI 0x5041f774
+  0x5041f760: [80 38                ] MOV 0x38,D0
+  0x5041f762: [8d                   ] MOV D3,D1
+  0x5041f763: [dd 39 bd ff ff 00 00 ] CALL 0x5041b49c,[],0x0
+  0x5041f76a: [81                   ] MOV D0,D1
+  0x5041f76b: [f8 ed 40             ] BTST 0x40,D1
+  0x5041f76e: [c8 cd                ] BEQ 0x5041f73b
+  0x5041f770: [80 01                ] MOV 0x1,D0
+  0x5041f772: [f0 53                ] MOVBU D0,(A3)
+  0x5041f774: [59 14                ] MOV (0x14,SP),D1
+  0x5041f776: [84                   ] MOV D1,D0
+  0x5041f777: [1c                   ] EXTHU D0
+  0x5041f778: [a0 01                ] CMP 0x1,D0
+  0x5041f77a: [c5 05                ] BHI 0x5041f77f
+  0x5041f77c: [cc b8 fe             ] JMP 0x5041f634
+  0x5041f77f: [df f2 38             ] RET [EX1,A3,A2,D3,D2],0x38
+```
+
+<!-- source: prog061_disasm_all.clean.txt | === DISASM FUN_50431303 @ 0x50431303 (size=27 B) === -->
+```asm
+-- === DISASM FUN_50431303 @ 0x50431303 (size=27 B) === --
+  0x50431303: [cf c0                ] MOVM [D2,D3],(SP)
+  0x50431305: [f8 fe f4             ] ADD -0xc,SP
+  0x50431308: [83                   ] MOV D0,D3
+  0x50431309: [08                   ] CLR D2
+  0x5043130a: [ae                   ] CMP D3,D2
+  0x5043130b: [c6 0f                ] BCC 0x5043131a
+  0x5043130d: [80 0a                ] MOV 0xa,D0
+  0x5043130f: [dd 46 c3 fd ff 00 00 ] CALL 0x5040d655,[],0x0
+  0x50431316: [48                   ] INC D2
+  0x50431317: [ae                   ] CMP D3,D2
+  0x50431318: [c4 f5                ] BCS 0x5043130d
+  0x5043131a: [00                   ] CLR D0
+  0x5043131b: [df c0 14             ] RET [D3,D2],0x14
+```
+
+#### Contrapartes Verificadas no `Loader ver0.61 [06/03/06]` (`eh55_loader_ver061_256k.bin` — RTSC/DAVIS Real)
+
+#### `FUN_4400b1d5`, `FUN_4400b980`, `FUN_44012d77` (`Trap #8A @ 0x44012e69`), `FUN_44013007`, `FUN_4401851f`, `FUN_44018636`, `FUN_4401a9fc` & `FUN_4401c733` [`ver0.61`]
+
+C completo e disassembly MN103S das primitivas RTSC & DAVIS do bootloader NOR físico do DMR-EH55, confirmando paridade binária exata com `PROG061` (incluindo **`BCLR 0xff`** em `FUN_4401c733` `0x4401c7e6`/`0x4401c7ed` e **`SUB D0,D1,D0` Trap #8A** em `FUN_44012d77` `0x44012e69`).
+
+<!-- source: ver061_initial_decomp.txt / ver061_full_decomp.txt | FUNCS ver0.61 RTSC & DAVIS @ 0x4400b1d5..0x4401c733 -->
+```c
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+undefined4 FUN_4400b1d5(void)
+
+{
+  undefined4 *puVar1;
+  int iVar2;
+  undefined4 uStack_4;
+
+  puVar1 = &uStack_4;
+  if (_DAT_5048027c == 0) {
+    if (_DAT_50480274 != 1) {
+      FUN_44012b61();
+      _DAT_50480274 = 1;
+    }
+    FUN_4400b94c();
+    iVar2 = FUN_44011651(0,0);
+    if (iVar2 == 0) {
+      _DAT_50480278 = 1;
+    }
+    FUN_44011651(1,1);
+    FUN_440116da(0,1,0);
+    FUN_4400b966();
+    _DAT_5048027c = 1;
+  }
+  return puVar1[-1];
+}
+
+ (GhidraScript)
+
+undefined4 FUN_4400b980(void)
+
+{
+  undefined1 *puVar1;
+  undefined4 uVar2;
+  undefined1 auStack_4 [4];
+
+  puVar1 = auStack_4;
+  FUN_4402a34a(0x504814a4,0x90c00000,0x200);
+  *(undefined4 *)(puVar1 + -0x18) = 0;
+  while (*(uint *)(puVar1 + -0x18) < 0xc) {
+    puVar1[*(int *)(puVar1 + -0x18) + -0xc] = 0;
+    *(int *)(puVar1 + -0x18) = *(int *)(puVar1 + -0x18) + 1;
+  }
+  puVar1[-0xd] = 0;
+  while ((byte)puVar1[-0xd] < 3) {
+    FUN_4400b94c();
+    func_0x44013007(puVar1 + -0xc,0xec,0,0,0);
+    uVar2 = func_0x44012d77(puVar1 + -0xc,0,0x200,0,1000);
+    *(undefined4 *)(puVar1 + -0x14) = uVar2;
+    FUN_440137e5(0,puVar1 + -0x21c,0x200);
+    FUN_4400b966();
+    if ((-1 < *(int *)(puVar1 + -0x14)) && ((puVar1[-0x21c] & 4) == 0)) break;
+    FUN_4400b94c();
+    FUN_440116da(1,0,0);
+    puVar1[-0xd] = puVar1[-0xd] + '\x01';
+  }
+  FUN_4400b966();
+  FUN_4402a34a(0x90c00000,0x504814a4,0x200);
+  if (*(int *)(puVar1 + -0x14) < 0) {
+    uVar2 = *(undefined4 *)(puVar1 + -0x14);
+  }
+  else if ((puVar1[-0x21c] & 4) == 0) {
+    *(undefined2 *)(puVar1 + -0x1a) = *(undefined2 *)(puVar1 + -0x176);
+    if ((*(ushort *)(puVar1 + -0x1a) & 0x400) == 0) {
+      **(undefined4 **)(puVar1 + 8) = *(undefined4 *)(puVar1 + -0x1a4);
+    }
+    else {
+      **(undefined4 **)(puVar1 + 8) = *(undefined4 *)(puVar1 + -0x154);
+    }
+    uVar2 = 0;
+  }
+  else {
+    uVar2 = 0x8004f000;
+  }
+  return uVar2;
+}
+
+ (GhidraScript)
+
+[TRAP #8 ALERT] Detected 1 AM33/MN103S SLEIGH SUB anomaly site(s) in FUN_44012d77: (GhidraScript)
+  -> 0x44012e69 [TRAP8A_SUB_3OP_SWAP] fb 9c cd c0      (SUB D0,D1,D0) | real: D0 = D1 - D0       | am33.sinc:184 emits (D0 - D1) inverted in Ghidra C [FUN_44012d77] (GhidraScript)
+ (GhidraScript)
+
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+uint FUN_44012d77(undefined1 *param_1,uint param_2,uint param_3)
+
+{
+  undefined1 uVar1;
+  char cVar2;
+  uint *puVar3;
+  undefined1 *puVar4;
+  uint *puVar5;
+  uint uVar6;
+  undefined4 uVar7;
+  int iStack00000010;
+  undefined2 uStack00000014;
+
+  puVar5 = (uint *)0x504f42f0;
+  if (param_1[1] == -0x36) {
+    uVar7 = 0x44032304;
+  }
+  else {
+    uVar7 = 0x440322c8;
+  }
+  FUN_4402a34a(0x504f42f0,uVar7,0x3c);
+  if (iStack00000010 != 1) {
+    *puVar5 = *puVar5 | 8;
+  }
+  puVar3 = puVar5 + 1;
+  puVar4 = param_1;
+  do {
+    uVar1 = *puVar4;
+    puVar4 = puVar4 + 1;
+    *(undefined1 *)puVar3 = uVar1;
+    puVar3 = (uint *)((int)puVar3 + 1);
+  } while (puVar3 <= (uint *)((int)puVar5 + 0xf));
+  puVar5[0xc] = param_2;
+  if ((param_3 & 1) != 0) {
+    param_3 = param_3 + 1;
+  }
+  puVar5[10] = param_3;
+  *(undefined2 *)((int)puVar5 + 0x26) = uStack00000014;
+  puVar5[0xe] = _DAT_504f4404;
+  if ((*puVar5 & 0x800) != 0) {
+    puVar5[0xe] = _DAT_504f4400;
+  }
+  *puVar5 = *puVar5 & 0xffffffbf;
+  cVar2 = param_1[1];
+  if (((cVar2 == -0x14) || (cVar2 == -0x11)) || (cVar2 == -0x50)) {
+    *puVar5 = *puVar5 | 0x10;
+  }
+  FUN_4401180e(1,1);
+  if (*(char *)((int)puVar5 + 0x22) == '\0') {
+    if (*(char *)((int)puVar5 + 0x23) == '\0') {
+      uVar6 = puVar5[0xb] - puVar5[10];
+    }
+    else {
+      uVar6 = 0x80049001;
+      if (param_1[1] == -0x36) {
+        uVar6 = 0x80040800;
+      }
+    }
+  }
+  else {
+    uVar6 = (uint)*(byte *)((int)puVar5 + 0x22) << 0x18 | 0x80000000;
+  }
+  return uVar6;
+}
+
+ (GhidraScript)
+
+uint FUN_44013007(undefined1 *param_1,undefined1 param_2,uint param_3,undefined4 param_4,
+                 undefined4 param_5)
+
+{
+  *param_1 = 0xff;
+  param_1[1] = param_2;
+  param_1[2] = (char)((uint)param_4 >> 0x18);
+  param_1[3] = (char)((uint)param_4 >> 0x10);
+  param_1[4] = (char)((uint)param_4 >> 8);
+  param_1[5] = (char)param_4;
+  param_1[6] = (char)((uint)param_5 >> 0x18);
+  param_1[7] = (char)((uint)param_5 >> 0x10);
+  param_1[8] = (char)((uint)param_5 >> 8);
+  param_1[9] = (char)param_5;
+  param_1[10] = param_3._1_1_;
+  param_1[0xb] = (char)(param_3 >> 0x10);
+  return param_3 >> 0x10;
+}
+
+ (GhidraScript)
+
+void FUN_4401851f(uint param_1)
+
+{
+  uint uVar1;
+  int iVar2;
+  int iVar3;
+
+  iVar2 = (param_1 & 0xffff) * 0x800;
+  iVar3 = iVar2 + -0x76fffc00;
+  uVar1 = FUN_4401cf29(iVar3);
+  FUN_4401cf24(iVar3,uVar1 & 0xfffffffc);
+  uVar1 = FUN_4401cf29(iVar3);
+  FUN_4401cf24(iVar3,uVar1 | 3);
+  iVar2 = iVar2 + -0x76fffbe0;
+  uVar1 = FUN_4401cf29(iVar2);
+  FUN_4401cf24(iVar2,uVar1 & 0xfffffffe);
+  return;
+}
+
+ (GhidraScript)
+
+/* WARNING: Removing unreachable block (ram,0x4401864b) */
+
+void FUN_44018636(short param_1,uint param_2,ushort param_3)
+
+{
+  ushort uVar1;
+
+  if (param_1 == 1) {
+    uVar1 = (param_3 & 1) * 2;
+  }
+  else {
+    uVar1 = param_3;
+    if (param_1 != 0) {
+      if (param_1 == 2) {
+        uVar1 = (param_3 & 1) << 2;
+      }
+      else {
+        uVar1 = 0;
+        if (param_1 == 3) {
+          uVar1 = (param_3 & 1) << 7;
+        }
+      }
+    }
+  }
+  FUN_4401cf24((param_2 & 0xffff) * 0x800 + -0x76fffaa8,uVar1);
+  return;
+}
+
+ (GhidraScript)
+
+int FUN_4401a9fc(uint param_1,uint param_2)
+
+{
+  undefined4 uVar1;
+  int *piVar2;
+  int iVar3;
+  uint uVar4;
+  undefined4 uVar5;
+  uint uVar6;
+  int iStack_28;
+  undefined4 uStack_24;
+  undefined4 uStack_20;
+  undefined4 uStack_1c;
+  undefined4 uStack_18;
+  undefined4 uStack_14;
+
+  uVar1 = 0;
+  param_2 = param_2 & 0xffff;
+  if (param_2 == 1) {
+    param_1 = param_1 & 0xffff;
+    FUN_4401830e(param_1,1);
+    FUN_440184c1(0x19,param_1);
+    FUN_4401830e(param_1,0x10);
+    FUN_440184c1(2000,param_1);
+  }
+  else {
+    if (param_2 != 2) {
+      return -0x7ffffbf9;
+    }
+    param_1 = param_1 & 0xffff;
+    uVar5 = 1;
+    FUN_44018636(2,param_1,1);
+    FUN_440184c1(5,param_1);
+    FUN_44018636(param_2,param_1,uVar1);
+    iVar3 = FUN_4401afe8(uVar5,param_1);
+    if (iVar3 != 0) {
+      return iVar3;
+    }
+  }
+  uVar1 = 0xc80;
+  uVar6 = 0;
+  piVar2 = &iStack_28;
+  do {
+    uVar4 = uVar6 & 0xffff;
+    FUN_440185bc(0xff10,param_1,uVar4);
+    FUN_440184c1(1,param_1);
+    iVar3 = FUN_4401b03f(uVar1,param_1,0x80,0);
+    piVar2[uVar4] = iVar3;
+    uVar6 = uVar6 + 1;
+  } while ((uVar6 & 0xffff) < 2);
+  if (iStack_28 == 0 && piVar2[1] == 0) {
+    iStack_28 = 0;
+  }
+  else if (iStack_28 == 0) {
+    iStack_28 = piVar2[1];
+  }
+  return iStack_28;
+}
+
+ (GhidraScript)
+
+void FUN_4401c733(uint param_1)
+
+{
+  undefined1 *puVar1;
+  short sVar2;
+  ushort uVar3;
+  uint uVar4;
+  uint uVar5;
+  uint uVar6;
+  uint uVar7;
+  int iVar8;
+  int iVar9;
+  uint uStack_24;
+
+  uStack_24 = 0;
+  param_1 = param_1 & 0xffff;
+  iVar8 = param_1 * 0x5c;
+  iVar9 = 0x504f463a;
+  do {
+    uVar6 = 0;
+    uVar7 = uStack_24 & 0xffff;
+    do {
+      FUN_440185bc(0xff10,param_1,uVar7);
+      FUN_440184c1(1,param_1);
+      FUN_4401b03f(2,param_1,0x81,0);
+      sVar2 = FUN_44018577(0x38,param_1);
+      if ((sVar2 == 0xff) || (uVar4 = FUN_44018577(0x18,param_1), (uVar4 & 0x10) == uVar7 * 0x10))
+      break;
+      FUN_4401afe8(1,param_1);
+      uVar6 = uVar6 + 1;
+    } while ((uVar6 & 0xff) < 100);
+    uVar3 = FUN_44018577(0x38,param_1);
+    if (((uVar3 == 0xff) || ((uVar3 & 1) != 0)) || ((uVar6 & 0xff) == 100)) {
+      puVar1 = (undefined1 *)(iVar8 + uVar7 + 0x504f4638);
+      *puVar1 = *puVar1;
+      puVar1 = (undefined1 *)(iVar8 + uVar7 + iVar9);
+      *puVar1 = *puVar1;
+    }
+    else {
+      uVar6 = FUN_44018577(0x10,param_1);
+      sVar2 = FUN_44018577(0x14,param_1);
+      if (((uVar6 & 0xffff) == 0x14) && (sVar2 == 0xeb)) {
+        puVar1 = (undefined1 *)(iVar8 + uVar7 + 0x504f4638);
+LAB_4401c833:
+        *puVar1 = 1;
+      }
+      else if (((uVar6 & 0xffff) == 0) && (sVar2 == 0)) {
+        uVar6 = 0;
+        puVar1 = (undefined1 *)(iVar8 + uVar7 + 0x504f463a);
+        do {
+          uVar4 = FUN_44018577(0x38,param_1);
+          if ((uVar4 & 0x40) != 0) {
+            *puVar1 = 1;
+            break;
+          }
+          FUN_4402e37b(1);
+          uVar6 = uVar6 + 1;
+          uVar4 = uVar6 & 0xff;
+          if ((uVar4 == 3) && (uVar5 = FUN_44018577(0x38,param_1), (uVar5 & 0x40) != 0)) {
+            puVar1 = (undefined1 *)(param_1 * 0x5c + uVar7 + 0x504f463a);
+            goto LAB_4401c833;
+          }
+        } while (uVar4 < 3);
+      }
+    }
+    if (1 < (uStack_24 & 0xffff)) {
+      return;
+    }
+  } while( true );
+}
+
+ (GhidraScript)
+```
+
+<!-- source: ver061_inspect.clean.txt | === DISASM FUN_4400b1d5 @ 0x4400b1d5 (size=121 B) === -->
+```asm
+-- === DISASM FUN_4400b1d5 @ 0x4400b1d5 (size=121 B) === --
+  0x4400b1d5: [cf 10                ] MOVM [A3],(SP)
+  0x4400b1d7: [3f                   ] MOV SP,A3
+  0x4400b1d8: [f8 fe ec             ] ADD -0x14,SP
+  0x4400b1db: [fc a4 7c 02 48 50    ] MOV (0x5048027c),D0
+  0x4400b1e1: [a0 00                ] CMP 0x0,D0
+  0x4400b1e3: [c9 5c                ] BNE 0x4400b23f
+  0x4400b1e5: [fc a4 74 02 48 50    ] MOV (0x50480274),D0
+  0x4400b1eb: [a0 01                ] CMP 0x1,D0
+  0x4400b1ed: [c8 11                ] BEQ 0x4400b1fe
+  0x4400b1ef: [dd 72 79 00 00 00 00 ] CALL 0x44012b61,[],0x0
+  0x4400b1f6: [80 01                ] MOV 0x1,D0
+  0x4400b1f8: [fc 81 74 02 48 50    ] MOV D0,(0x50480274)
+  0x4400b1fe: [cd 4e 07 00 00       ] CALL 0x4400b94c,[],0x0
+  0x4400b203: [00                   ] CLR D0
+  0x4400b204: [04                   ] CLR D1
+  0x4400b205: [dd 4c 64 00 00 00 00 ] CALL 0x44011651,[],0x0
+  0x4400b20c: [a0 00                ] CMP 0x0,D0
+  0x4400b20e: [c9 0a                ] BNE 0x4400b218
+  0x4400b210: [80 01                ] MOV 0x1,D0
+  0x4400b212: [fc 81 78 02 48 50    ] MOV D0,(0x50480278)
+  0x4400b218: [80 01                ] MOV 0x1,D0
+  0x4400b21a: [85 01                ] MOV 0x1,D1
+  0x4400b21c: [dd 35 64 00 00 00 00 ] CALL 0x44011651,[],0x0
+  0x4400b223: [00                   ] CLR D0
+  0x4400b224: [42 0c                ] MOV D0,(0xc,SP)
+  0x4400b226: [00                   ] CLR D0
+  0x4400b227: [85 01                ] MOV 0x1,D1
+  0x4400b229: [dd b1 64 00 00 00 00 ] CALL 0x440116da,[],0x0
+  0x4400b230: [cd 36 07 00 00       ] CALL 0x4400b966,[],0x0
+  0x4400b235: [80 01                ] MOV 0x1,D0
+  0x4400b237: [fc 81 7c 02 48 50    ] MOV D0,(0x5048027c)
+  0x4400b23d: [ca 06                ] BRA 0x4400b243
+  0x4400b23f: [00                   ] CLR D0
+  0x4400b240: [f8 13 fc             ] MOV D0,(-0x4 ,A3)
+  0x4400b243: [f8 07 fc             ] MOV (-0x4 ,A3),D1
+  0x4400b246: [84                   ] MOV D1,D0
+  0x4400b247: [ca 02                ] BRA 0x4400b249
+  0x4400b249: [f2 fc                ] MOV A3,SP
+  0x4400b24b: [df 10 04             ] RET [A3],0x4
+```
+
+<!-- source: ver061_inspect.clean.txt | === DISASM FUN_4400b980 @ 0x4400b980 (size=328 B) === -->
+```asm
+-- === DISASM FUN_4400b980 @ 0x4400b980 (size=328 B) === --
+  0x4400b980: [cf 10                ] MOVM [A3],(SP)
+  0x4400b982: [3f                   ] MOV SP,A3
+  0x4400b983: [fa fe cc fd          ] ADD -0x234,SP
+  0x4400b987: [f8 13 08             ] MOV D0,(0x8 ,A3)
+  0x4400b98a: [fc cc a4 14 48 50    ] MOV 0x504814a4,D0
+  0x4400b990: [2d 00 02             ] MOV 0x200,D1
+  0x4400b993: [46 0c                ] MOV D1,(0xc,SP)
+  0x4400b995: [fc cd 00 00 c0 90    ] MOV 0x90c00000,D1
+  0x4400b99b: [dd af e9 01 00 00 00 ] CALL 0x4402a34a,[],0x0
+  0x4400b9a2: [00                   ] CLR D0
+  0x4400b9a3: [f8 13 e8             ] MOV D0,(-0x18 ,A3)
+  0x4400b9a6: [f8 03 e8             ] MOV (-0x18 ,A3),D0
+  0x4400b9a9: [a0 0b                ] CMP 0xb,D0
+  0x4400b9ab: [c7 04                ] BLS 0x4400b9af
+  0x4400b9ad: [ca 1a                ] BRA 0x4400b9c7
+  0x4400b9af: [f1 dc                ] MOV A3,D0
+  0x4400b9b1: [28 f4                ] ADD -0xc,D0
+  0x4400b9b3: [f8 07 e8             ] MOV (-0x18 ,A3),D1
+  0x4400b9b6: [f1 e4                ] MOV D1,A0
+  0x4400b9b8: [f1 60                ] ADD D0,A0
+  0x4400b9ba: [00                   ] CLR D0
+  0x4400b9bb: [f0 50                ] MOVBU D0,(A0)
+  0x4400b9bd: [f8 03 e8             ] MOV (-0x18 ,A3),D0
+  0x4400b9c0: [81                   ] MOV D0,D1
+  0x4400b9c1: [44                   ] INC D1
+  0x4400b9c2: [f8 17 e8             ] MOV D1,(-0x18 ,A3)
+  0x4400b9c5: [ca e1                ] BRA 0x4400b9a6
+  0x4400b9c7: [00                   ] CLR D0
+  0x4400b9c8: [f8 53 f3             ] MOVBU D0,(-0xd ,A3)
+  0x4400b9cb: [f8 43 f3             ] MOVBU (-0xd ,A3),D0
+  0x4400b9ce: [a0 02                ] CMP 0x2,D0
+  0x4400b9d0: [c7 05                ] BLS 0x4400b9d5
+  0x4400b9d2: [cc 89 00             ] JMP 0x4400ba5b
+  0x4400b9d5: [cd 77 ff 00 00       ] CALL 0x4400b94c,[],0x0
+  0x4400b9da: [f1 dc                ] MOV A3,D0
+  0x4400b9dc: [28 f4                ] ADD -0xc,D0
+  0x4400b9de: [04                   ] CLR D1
+  0x4400b9df: [46 0c                ] MOV D1,(0xc,SP)
+  0x4400b9e1: [04                   ] CLR D1
+  0x4400b9e2: [46 10                ] MOV D1,(0x10,SP)
+  0x4400b9e4: [04                   ] CLR D1
+  0x4400b9e5: [46 14                ] MOV D1,(0x14,SP)
+  0x4400b9e7: [2d ec 00             ] MOV 0xec,D1
+  0x4400b9ea: [dd 1d 76 00 00 00 00 ] CALL 0x44013007,[],0x0
+  0x4400b9f1: [f1 dc                ] MOV A3,D0
+  0x4400b9f3: [28 f4                ] ADD -0xc,D0
+  0x4400b9f5: [2d 00 02             ] MOV 0x200,D1
+  0x4400b9f8: [46 0c                ] MOV D1,(0xc,SP)
+  0x4400b9fa: [04                   ] CLR D1
+  0x4400b9fb: [46 10                ] MOV D1,(0x10,SP)
+  0x4400b9fd: [2d e8 03             ] MOV 0x3e8,D1
+  0x4400ba00: [46 14                ] MOV D1,(0x14,SP)
+  0x4400ba02: [04                   ] CLR D1
+  0x4400ba03: [dd 74 73 00 00 00 00 ] CALL 0x44012d77,[],0x0
+  0x4400ba0a: [f8 13 ec             ] MOV D0,(-0x14 ,A3)
+  0x4400ba0d: [f1 dd                ] MOV A3,D1
+  0x4400ba0f: [fa c1 e4 fd          ] ADD -0x21c,D1
+  0x4400ba13: [2c 00 02             ] MOV 0x200,D0
+  0x4400ba16: [42 0c                ] MOV D0,(0xc,SP)
+  0x4400ba18: [00                   ] CLR D0
+  0x4400ba19: [dd cc 7d 00 00 00 00 ] CALL 0x440137e5,[],0x0
+  0x4400ba20: [cd 46 ff 00 00       ] CALL 0x4400b966,[],0x0
+  0x4400ba25: [f8 03 ec             ] MOV (-0x14 ,A3),D0
+  0x4400ba28: [a0 00                ] CMP 0x0,D0
+  0x4400ba2a: [c0 14                ] BLT 0x4400ba3e
+  0x4400ba2c: [fa 43 e4 fd          ] MOVBU (-0x21c,A3),D0
+  0x4400ba30: [81                   ] MOV D0,D1
+  0x4400ba31: [f8 e1 04             ] AND 0x4,D1
+  0x4400ba34: [84                   ] MOV D1,D0
+  0x4400ba35: [14                   ] EXTBU D0
+  0x4400ba36: [a0 00                ] CMP 0x0,D0
+  0x4400ba38: [c9 06                ] BNE 0x4400ba3e
+  0x4400ba3a: [ca 21                ] BRA 0x4400ba5b
+  0x4400ba3c: [ca                   ] <undef db 0xca>
+  0x4400ba3d: [14                   ] <undef db 0x14>
+  0x4400ba3e: [cd 0e ff 00 00       ] CALL 0x4400b94c,[],0x0
+  0x4400ba43: [00                   ] CLR D0
+  0x4400ba44: [42 0c                ] MOV D0,(0xc,SP)
+  0x4400ba46: [80 01                ] MOV 0x1,D0
+  0x4400ba48: [04                   ] CLR D1
+  0x4400ba49: [dd 91 5c 00 00 00 00 ] CALL 0x440116da,[],0x0
+  0x4400ba50: [f8 43 f3             ] MOVBU (-0xd ,A3),D0
+  0x4400ba53: [81                   ] MOV D0,D1
+  0x4400ba54: [44                   ] INC D1
+  0x4400ba55: [f8 57 f3             ] MOVBU D1,(-0xd ,A3)
+  0x4400ba58: [cc 73 ff             ] JMP 0x4400b9cb
+  0x4400ba5b: [cd 0b ff 00 00       ] CALL 0x4400b966,[],0x0
+  0x4400ba60: [fc cd a4 14 48 50    ] MOV 0x504814a4,D1
+  0x4400ba66: [2c 00 02             ] MOV 0x200,D0
+  0x4400ba69: [42 0c                ] MOV D0,(0xc,SP)
+  0x4400ba6b: [fc cc 00 00 c0 90    ] MOV 0x90c00000,D0
+  0x4400ba71: [dd d9 e8 01 00 00 00 ] CALL 0x4402a34a,[],0x0
+  0x4400ba78: [f8 03 ec             ] MOV (-0x14 ,A3),D0
+  0x4400ba7b: [a0 00                ] CMP 0x0,D0
+  0x4400ba7d: [c2 08                ] BGE 0x4400ba85
+  0x4400ba7f: [f8 07 ec             ] MOV (-0x14 ,A3),D1
+  0x4400ba82: [84                   ] MOV D1,D0
+  0x4400ba83: [ca 42                ] BRA 0x4400bac5
+  0x4400ba85: [fa 43 e4 fd          ] MOVBU (-0x21c,A3),D0
+  0x4400ba89: [81                   ] MOV D0,D1
+  0x4400ba8a: [f8 e1 04             ] AND 0x4,D1
+  0x4400ba8d: [84                   ] MOV D1,D0
+  0x4400ba8e: [14                   ] EXTBU D0
+  0x4400ba8f: [a0 00                ] CMP 0x0,D0
+  0x4400ba91: [c8 0a                ] BEQ 0x4400ba9b
+  0x4400ba93: [fc cc 00 f0 04 80    ] MOV 0x8004f000,D0
+  0x4400ba99: [ca 2c                ] BRA 0x4400bac5
+  0x4400ba9b: [fa 63 8a fe          ] MOVHU (-0x176,A3),D0
+  0x4400ba9f: [f8 73 e6             ] MOVHU D0,(-0x1a ,A3)
+  0x4400baa2: [f8 63 e6             ] MOVHU (-0x1a ,A3),D0
+  0x4400baa5: [81                   ] MOV D0,D1
+  0x4400baa6: [fa e1 00 04          ] AND 0x400,D1
+  0x4400baaa: [84                   ] MOV D1,D0
+  0x4400baab: [1c                   ] EXTHU D0
+  0x4400baac: [a0 00                ] CMP 0x0,D0
+  0x4400baae: [c8 0c                ] BEQ 0x4400baba
+  0x4400bab0: [f8 23 08             ] MOV (0x8,A3),A0
+  0x4400bab3: [fa 03 ac fe          ] MOV (-0x154,A3),D0
+  0x4400bab7: [60                   ] MOV D0,(A0)
+  0x4400bab8: [ca 0a                ] BRA 0x4400bac2
+  0x4400baba: [f8 23 08             ] MOV (0x8,A3),A0
+  0x4400babd: [fa 03 5c fe          ] MOV (-0x1a4,A3),D0
+  0x4400bac1: [60                   ] MOV D0,(A0)
+  0x4400bac2: [00                   ] CLR D0
+  0x4400bac3: [ca 02                ] BRA 0x4400bac5
+  0x4400bac5: [f2 fc                ] MOV A3,SP
+  0x4400bac7: [df 10 04             ] RET [A3],0x4
+```
+
+<!-- source: ver061_inspect.clean.txt | === DISASM FUN_4401a9fc @ 0x4401a9fc (size=229 B) === -->
+```asm
+-- === DISASM FUN_4401a9fc @ 0x4401a9fc (size=229 B) === --
+  0x4401a9fc: [cf f2                ] MOVM [D2,D3,A2,A3,EX1],(SP)
+  0x4401a9fe: [f8 fe e4             ] ADD -0x1c,SP
+  0x4401aa01: [90 00                ] MOV 0x0,A0
+  0x4401aa03: [91                   ] MOV A0,A1
+  0x4401aa04: [43 14                ] MOV A0,(0x14,SP)
+  0x4401aa06: [47 18                ] MOV A1,(0x18,SP)
+  0x4401aa08: [9f 00                ] MOV 0x0,A3
+  0x4401aa0a: [f1 e6                ] MOV D1,A2
+  0x4401aa0c: [f9 58 aa             ] EXTHU A2
+  0x4401aa0f: [ba 01                ] CMP 0x1,A2
+  0x4401aa11: [c8 0f                ] BEQ 0x4401aa20
+  0x4401aa13: [ba 02                ] CMP 0x2,A2
+  0x4401aa15: [c8 39                ] BEQ 0x4401aa4e
+  0x4401aa17: [fc cc 07 04 00 80    ] MOV 0x80000407,D0
+  0x4401aa1d: [cc c1 00             ] JMP 0x4401aade
+  0x4401aa20: [82                   ] MOV D0,D2
+  0x4401aa21: [1e                   ] EXTHU D2
+  0x4401aa22: [88                   ] MOV D2,D0
+  0x4401aa23: [f1 d9                ] MOV A2,D1
+  0x4401aa25: [dd e9 d8 ff ff 00 00 ] CALL 0x4401830e,[],0x0
+  0x4401aa2c: [80 19                ] MOV 0x19,D0
+  0x4401aa2e: [89                   ] MOV D2,D1
+  0x4401aa2f: [dd 92 da ff ff 00 00 ] CALL 0x440184c1,[],0x0
+  0x4401aa36: [88                   ] MOV D2,D0
+  0x4401aa37: [85 10                ] MOV 0x10,D1
+  0x4401aa39: [dd d5 d8 ff ff 00 00 ] CALL 0x4401830e,[],0x0
+  0x4401aa40: [2c d0 07             ] MOV 0x7d0,D0
+  0x4401aa43: [89                   ] MOV D2,D1
+  0x4401aa44: [dd 7d da ff ff 00 00 ] CALL 0x440184c1,[],0x0
+  0x4401aa4b: [89                   ] MOV D2,D1
+  0x4401aa4c: [ca 36                ] BRA 0x4401aa82
+  0x4401aa4e: [82                   ] MOV D0,D2
+  0x4401aa4f: [1e                   ] EXTHU D2
+  0x4401aa50: [8f 01                ] MOV 0x1,D3
+  0x4401aa52: [4e 0c                ] MOV D3,(0xc,SP)
+  0x4401aa54: [f1 d8                ] MOV A2,D0
+  0x4401aa56: [89                   ] MOV D2,D1
+  0x4401aa57: [dd df db ff ff 00 00 ] CALL 0x44018636,[],0x0
+  0x4401aa5e: [80 05                ] MOV 0x5,D0
+  0x4401aa60: [89                   ] MOV D2,D1
+  0x4401aa61: [dd 60 da ff ff 00 00 ] CALL 0x440184c1,[],0x0
+  0x4401aa68: [4f 0c                ] MOV A3,(0xc,SP)
+  0x4401aa6a: [f1 d8                ] MOV A2,D0
+  0x4401aa6c: [89                   ] MOV D2,D1
+  0x4401aa6d: [dd c9 db ff ff 00 00 ] CALL 0x44018636,[],0x0
+  0x4401aa74: [8c                   ] MOV D3,D0
+  0x4401aa75: [89                   ] MOV D2,D1
+  0x4401aa76: [cd 72 05 00 00       ] CALL 0x4401afe8,[],0x0
+  0x4401aa7b: [f1 e3                ] MOV D0,A3
+  0x4401aa7d: [89                   ] MOV D2,D1
+  0x4401aa7e: [bf 00                ] CMP 0x0,A3
+  0x4401aa80: [c9 5e                ] BNE 0x4401aade
+  0x4401aa82: [fd 08 44 80 0c 00    ] MOV 0xc80,R4
+  0x4401aa88: [0c                   ] CLR D3
+  0x4401aa89: [3f                   ] MOV SP,A3
+  0x4401aa8a: [23 14                ] ADD 0x14,A3
+  0x4401aa8c: [f1 e6                ] MOV D1,A2
+  0x4401aa8e: [8e                   ] MOV D3,D2
+  0x4401aa8f: [1e                   ] EXTHU D2
+  0x4401aa90: [4a 0c                ] MOV D2,(0xc,SP)
+  0x4401aa92: [fc cc 10 ff 00 00    ] MOV 0xff10,D0
+  0x4401aa98: [f1 d9                ] MOV A2,D1
+  0x4401aa9a: [dd 22 db ff ff 00 00 ] CALL 0x440185bc,[],0x0
+  0x4401aaa1: [80 01                ] MOV 0x1,D0
+  0x4401aaa3: [f1 d9                ] MOV A2,D1
+  0x4401aaa5: [dd 1c da ff ff 00 00 ] CALL 0x440184c1,[],0x0
+  0x4401aaac: [2c 80 00             ] MOV 0x80,D0
+  0x4401aaaf: [42 0c                ] MOV D0,(0xc,SP)
+  0x4401aab1: [00                   ] CLR D0
+  0x4401aab2: [42 10                ] MOV D0,(0x10,SP)
+  0x4401aab4: [f5 d0                ] MOV R4,D0
+  0x4401aab6: [f1 d9                ] MOV A2,D1
+  0x4401aab8: [cd 87 05 00 00       ] CALL 0x4401b03f,[],0x0
+  0x4401aabd: [56                   ] ASL2 D2
+  0x4401aabe: [9c                   ] MOV A3,A0
+  0x4401aabf: [f1 68                ] ADD D2,A0
+  0x4401aac1: [60                   ] MOV D0,(A0)
+  0x4401aac2: [4c                   ] INC D3
+  0x4401aac3: [8c                   ] MOV D3,D0
+  0x4401aac4: [1c                   ] EXTHU D0
+  0x4401aac5: [a0 01                ] CMP 0x1,D0
+  0x4401aac7: [c7 c7                ] BLS 0x4401aa8e
+  0x4401aac9: [59 14                ] MOV (0x14,SP),D1
+  0x4401aacb: [f8 23 04             ] MOV (0x4,A3),A0
+  0x4401aace: [fb 1d d8 c0          ] OR D1,A0,D0
+  0x4401aad2: [c8 0b                ] BEQ 0x4401aadd
+  0x4401aad4: [84                   ] MOV D1,D0
+  0x4401aad5: [a0 00                ] CMP 0x0,D0
+  0x4401aad7: [c9 07                ] BNE 0x4401aade
+  0x4401aad9: [f1 d0                ] MOV A0,D0
+  0x4401aadb: [ca 03                ] BRA 0x4401aade
+  0x4401aadd: [00                   ] CLR D0
+  0x4401aade: [df f2 3c             ] RET [EX1,A3,A2,D3,D2],0x3c
+```
+
+<!-- source: ver061_inspect.clean.txt | === DISASM FUN_4401b03f @ 0x4401b03f (size=298 B) === -->
+```asm
+-- === DISASM FUN_4401b03f @ 0x4401b03f (size=298 B) === --
+  0x4401b03f: [cf f2                ] MOVM [D2,D3,A2,A3,EX1],(SP)
+  0x4401b041: [f8 fe e8             ] ADD -0x18,SP
+  0x4401b044: [f1 e3                ] MOV D0,A3
+  0x4401b046: [86                   ] MOV D1,D2
+  0x4401b047: [fb aa 80 44          ] MOVBU (0x44,SP),A0
+  0x4401b04b: [fb ba 80 14          ] MOVBU A0,(0x14,SP)
+  0x4401b04f: [fb aa a0 48          ] MOVBU (0x48,SP),A2
+  0x4401b053: [f9 68 44             ] CLR R4
+  0x4401b056: [8b                   ] MOV D2,D3
+  0x4401b057: [1f                   ] EXTHU D3
+  0x4401b058: [8c                   ] MOV D3,D0
+  0x4401b059: [dd 27 dd ff ff 00 00 ] CALL 0x44018d80,[],0x0
+  0x4401b060: [a0 01                ] CMP 0x1,D0
+  0x4401b062: [c9 15                ] BNE 0x4401b077
+  0x4401b064: [f5 44                ] MOV D0,R4
+  0x4401b066: [42 0c                ] MOV D0,(0xc,SP)
+  0x4401b068: [f1 dc                ] MOV A3,D0
+  0x4401b06a: [8d                   ] MOV D3,D1
+  0x4401b06b: [cd fe 00 00 00       ] CALL 0x4401b169,[],0x0
+  0x4401b070: [a0 00                ] CMP 0x0,D0
+  0x4401b072: [c8 05                ] BEQ 0x4401b077
+  0x4401b074: [cc f2 00             ] JMP 0x4401b166
+  0x4401b077: [1e                   ] EXTHU D2
+  0x4401b078: [88                   ] MOV D2,D0
+  0x4401b079: [dd 2c dd ff ff 00 00 ] CALL 0x44018da5,[],0x0
+  0x4401b080: [42 10                ] MOV D0,(0x10,SP)
+  0x4401b082: [f5 65                ] MOV D2,R5
+  0x4401b084: [f5 27                ] MOV A2,R7
+  0x4401b086: [f9 38 77             ] EXTBU R7
+  0x4401b089: [f5 96                ] MOV R5,A2
+  0x4401b08b: [f1 d8                ] MOV A2,D0
+  0x4401b08d: [dd 18 dd ff ff 00 00 ] CALL 0x44018da5,[],0x0
+  0x4401b094: [83                   ] MOV D0,D3
+  0x4401b095: [80 38                ] MOV 0x38,D0
+  0x4401b097: [f1 d9                ] MOV A2,D1
+  0x4401b099: [dd de d4 ff ff 00 00 ] CALL 0x44018577,[],0x0
+  0x4401b0a0: [f8 ba 14             ] MOVBU (0x14 ,SP),D2
+  0x4401b0a3: [f2 02                ] AND D0,D2
+  0x4401b0a5: [88                   ] MOV D2,D0
+  0x4401b0a6: [14                   ] EXTBU D0
+  0x4401b0a7: [f9 d8 7c             ] CMP R7,D0
+  0x4401b0aa: [c9 10                ] BNE 0x4401b0ba
+  0x4401b0ac: [f5 d0                ] MOV R4,D0
+  0x4401b0ae: [14                   ] EXTBU D0
+  0x4401b0af: [a0 00                ] CMP 0x0,D0
+  0x4401b0b1: [c9 05                ] BNE 0x4401b0b6
+  0x4401b0b3: [cc b2 00             ] JMP 0x4401b165
+  0x4401b0b6: [f1 d8                ] MOV A2,D0
+  0x4401b0b8: [ca 67                ] BRA 0x4401b11f
+  0x4401b0ba: [8c                   ] MOV D3,D0
+  0x4401b0bb: [5c 10                ] MOV (0x10,SP),A0
+  0x4401b0bd: [f1 10                ] SUB A0,D0
+  0x4401b0bf: [54                   ] ASL2 D0
+  0x4401b0c0: [54                   ] ASL2 D0
+  0x4401b0c1: [f8 c4 04             ] LSR 0x4,D0
+  0x4401b0c4: [fc c8 86 94 00 00    ] CMP 0x9486,D0
+  0x4401b0ca: [c7 c1                ] BLS 0x4401b08b
+  0x4401b0cc: [23 ff                ] ADD -0x1,A3
+  0x4401b0ce: [c9 24                ] BNE 0x4401b0f2
+  0x4401b0d0: [80 38                ] MOV 0x38,D0
+  0x4401b0d2: [f5 d5                ] MOV R5,D1
+  0x4401b0d4: [dd a3 d4 ff ff 00 00 ] CALL 0x44018577,[],0x0
+  0x4401b0db: [f8 ba 14             ] MOVBU (0x14 ,SP),D2
+  0x4401b0de: [f2 02                ] AND D0,D2
+  0x4401b0e0: [88                   ] MOV D2,D0
+  0x4401b0e1: [14                   ] EXTBU D0
+  0x4401b0e2: [f9 d8 7c             ] CMP R7,D0
+  0x4401b0e5: [c9 4d                ] BNE 0x4401b132
+  0x4401b0e7: [f5 d0                ] MOV R4,D0
+  0x4401b0e9: [14                   ] EXTBU D0
+  0x4401b0ea: [a0 00                ] CMP 0x0,D0
+  0x4401b0ec: [c8 79                ] BEQ 0x4401b165
+  0x4401b0ee: [f5 d4                ] MOV R5,D0
+  0x4401b0f0: [ca 2f                ] BRA 0x4401b11f
+  0x4401b0f2: [f5 d7                ] MOV R5,D3
+  0x4401b0f4: [80 01                ] MOV 0x1,D0
+  0x4401b0f6: [dd 85 32 01 00 00 00 ] CALL 0x4402e37b,[],0x0
+  0x4401b0fd: [a0 00                ] CMP 0x0,D0
+  0x4401b0ff: [c9 67                ] BNE 0x4401b166
+  0x4401b101: [80 38                ] MOV 0x38,D0
+  0x4401b103: [8d                   ] MOV D3,D1
+  0x4401b104: [dd 73 d4 ff ff 00 00 ] CALL 0x44018577,[],0x0
+  0x4401b10b: [f8 ba 14             ] MOVBU (0x14 ,SP),D2
+  0x4401b10e: [f2 02                ] AND D0,D2
+  0x4401b110: [88                   ] MOV D2,D0
+  0x4401b111: [14                   ] EXTBU D0
+  0x4401b112: [f9 d8 7c             ] CMP R7,D0
+  0x4401b115: [c9 17                ] BNE 0x4401b12c
+  0x4401b117: [f5 d0                ] MOV R4,D0
+  0x4401b119: [14                   ] EXTBU D0
+  0x4401b11a: [a0 00                ] CMP 0x0,D0
+  0x4401b11c: [c8 49                ] BEQ 0x4401b165
+  0x4401b11e: [8c                   ] MOV D3,D0
+  0x4401b11f: [85 01                ] MOV 0x1,D1
+  0x4401b121: [cd c7 00 00 00       ] CALL 0x4401b1e8,[],0x0
+  0x4401b126: [a0 00                ] CMP 0x0,D0
+  0x4401b128: [c9 3e                ] BNE 0x4401b166
+  0x4401b12a: [ca 3b                ] BRA 0x4401b165
+  0x4401b12c: [23 ff                ] ADD -0x1,A3
+  0x4401b12e: [bf 01                ] CMP 0x1,A3
+  0x4401b130: [c5 c4                ] BHI 0x4401b0f4
+  0x4401b132: [80 38                ] MOV 0x38,D0
+  0x4401b134: [f5 d5                ] MOV R5,D1
+  0x4401b136: [dd 41 d4 ff ff 00 00 ] CALL 0x44018577,[],0x0
+  0x4401b13d: [f8 ba 14             ] MOVBU (0x14 ,SP),D2
+  0x4401b140: [f2 02                ] AND D0,D2
+  0x4401b142: [f5 d0                ] MOV R4,D0
+  0x4401b144: [14                   ] EXTBU D0
+  0x4401b145: [a0 00                ] CMP 0x0,D0
+  0x4401b147: [c8 0f                ] BEQ 0x4401b156
+  0x4401b149: [f5 d4                ] MOV R5,D0
+  0x4401b14b: [85 01                ] MOV 0x1,D1
+  0x4401b14d: [cd 9b 00 00 00       ] CALL 0x4401b1e8,[],0x0
+  0x4401b152: [a0 00                ] CMP 0x0,D0
+  0x4401b154: [c9 12                ] BNE 0x4401b166
+  0x4401b156: [88                   ] MOV D2,D0
+  0x4401b157: [14                   ] EXTBU D0
+  0x4401b158: [f9 d8 7c             ] CMP R7,D0
+  0x4401b15b: [c8 0a                ] BEQ 0x4401b165
+  0x4401b15d: [fc cc 0f 04 00 80    ] MOV 0x8000040f,D0
+  0x4401b163: [ca 03                ] BRA 0x4401b166
+  0x4401b165: [00                   ] CLR D0
+  0x4401b166: [df f2 38             ] RET [EX1,A3,A2,D3,D2],0x38
+```
+
+<!-- source: ver061_inspect.clean.txt | === DISASM FUN_4401c733 @ 0x4401c733 (size=359 B) === -->
+```asm
+-- === DISASM FUN_4401c733 @ 0x4401c733 (size=359 B) === --
+  0x4401c733: [cf f2                ] MOVM [D2,D3,A2,A3,EX1],(SP)
+  0x4401c735: [f8 fe e8             ] ADD -0x18,SP
+  0x4401c738: [04                   ] CLR D1
+  0x4401c739: [83                   ] MOV D0,D3
+  0x4401c73a: [1f                   ] EXTHU D3
+  0x4401c73b: [f5 75                ] MOV D3,R5
+  0x4401c73d: [fb a9 55 5c          ] MUL 0x5c,R5
+  0x4401c741: [fe 08 77 38 46 4f 50 ] MOV 0x504f4638,R7
+  0x4401c748: [fb 78 77 02          ] ADD 0x2,R7
+  0x4401c74c: [08                   ] CLR D2
+  0x4401c74d: [f5 54                ] MOV D1,R4
+  0x4401c74f: [f9 58 44             ] EXTHU R4
+  0x4401c752: [f5 50                ] MOV D1,R0
+  0x4401c754: [f9 b8 00             ] INC R0
+  0x4401c757: [fb 9a 00 14          ] MOV R0,(0x14,SP)
+  0x4401c75b: [fb 9a 40 0c          ] MOV R4,(0xc,SP)
+  0x4401c75f: [fc cc 10 ff 00 00    ] MOV 0xff10,D0
+  0x4401c765: [8d                   ] MOV D3,D1
+  0x4401c766: [dd 56 be ff ff 00 00 ] CALL 0x440185bc,[],0x0
+  0x4401c76d: [80 01                ] MOV 0x1,D0
+  0x4401c76f: [8d                   ] MOV D3,D1
+  0x4401c770: [dd 51 bd ff ff 00 00 ] CALL 0x440184c1,[],0x0
+  0x4401c777: [2c 81 00             ] MOV 0x81,D0
+  0x4401c77a: [42 0c                ] MOV D0,(0xc,SP)
+  0x4401c77c: [00                   ] CLR D0
+  0x4401c77d: [42 10                ] MOV D0,(0x10,SP)
+  0x4401c77f: [80 02                ] MOV 0x2,D0
+  0x4401c781: [8d                   ] MOV D3,D1
+  0x4401c782: [cd bd e8 00 00       ] CALL 0x4401b03f,[],0x0
+  0x4401c787: [80 38                ] MOV 0x38,D0
+  0x4401c789: [8d                   ] MOV D3,D1
+  0x4401c78a: [dd ed bd ff ff 00 00 ] CALL 0x44018577,[],0x0
+  0x4401c791: [81                   ] MOV D0,D1
+  0x4401c792: [84                   ] MOV D1,D0
+  0x4401c793: [1c                   ] EXTHU D0
+  0x4401c794: [fa c8 ff 00          ] CMP 0xff,D0
+  0x4401c798: [c8 25                ] BEQ 0x4401c7bd
+  0x4401c79a: [80 18                ] MOV 0x18,D0
+  0x4401c79c: [8d                   ] MOV D3,D1
+  0x4401c79d: [dd da bd ff ff 00 00 ] CALL 0x44018577,[],0x0
+  0x4401c7a4: [f8 e0 10             ] AND 0x10,D0
+  0x4401c7a7: [f5 d1                ] MOV R4,D1
+  0x4401c7a9: [55                   ] ASL2 D1
+  0x4401c7aa: [55                   ] ASL2 D1
+  0x4401c7ab: [a4                   ] CMP D1,D0
+  0x4401c7ac: [c8 11                ] BEQ 0x4401c7bd
+  0x4401c7ae: [80 01                ] MOV 0x1,D0
+  0x4401c7b0: [8d                   ] MOV D3,D1
+  0x4401c7b1: [cd 37 e8 00 00       ] CALL 0x4401afe8,[],0x0
+  0x4401c7b6: [48                   ] INC D2
+  0x4401c7b7: [88                   ] MOV D2,D0
+  0x4401c7b8: [14                   ] EXTBU D0
+  0x4401c7b9: [a0 63                ] CMP 0x63,D0
+  0x4401c7bb: [c7 a0                ] BLS 0x4401c75b
+  0x4401c7bd: [80 38                ] MOV 0x38,D0
+  0x4401c7bf: [8d                   ] MOV D3,D1
+  0x4401c7c0: [dd b7 bd ff ff 00 00 ] CALL 0x44018577,[],0x0
+  0x4401c7c7: [81                   ] MOV D0,D1
+  0x4401c7c8: [84                   ] MOV D1,D0
+  0x4401c7c9: [1c                   ] EXTHU D0
+  0x4401c7ca: [fa c8 ff 00          ] CMP 0xff,D0
+  0x4401c7ce: [c8 0d                ] BEQ 0x4401c7db
+  0x4401c7d0: [f8 ed 01             ] BTST 0x1,D1
+  0x4401c7d3: [c9 08                ] BNE 0x4401c7db
+  0x4401c7d5: [88                   ] MOV D2,D0
+  0x4401c7d6: [14                   ] EXTBU D0
+  0x4401c7d7: [a0 64                ] CMP 0x64,D0
+  0x4401c7d9: [c9 1b                ] BNE 0x4401c7f4
+  0x4401c7db: [fb 7c 54 90          ] ADD R5,R4,A1
+  0x4401c7df: [94                   ] MOV A1,A0
+  0x4401c7e0: [fc d0 38 46 4f 50    ] ADD 0x504f4638,A0
+  0x4401c7e6: [fa f4 00 ff          ] BCLR 0xff,(0x0,A0)
+  0x4401c7ea: [f9 78 79             ] ADD R7,A1
+  0x4401c7ed: [fa f5 00 ff          ] BCLR 0xff,(0x0,A1)
+  0x4401c7f1: [cc 9b 00             ] JMP 0x4401c88c
+  0x4401c7f4: [80 10                ] MOV 0x10,D0
+  0x4401c7f6: [8d                   ] MOV D3,D1
+  0x4401c7f7: [dd 80 bd ff ff 00 00 ] CALL 0x44018577,[],0x0
+  0x4401c7fe: [82                   ] MOV D0,D2
+  0x4401c7ff: [80 14                ] MOV 0x14,D0
+  0x4401c801: [8d                   ] MOV D3,D1
+  0x4401c802: [dd 75 bd ff ff 00 00 ] CALL 0x44018577,[],0x0
+  0x4401c809: [81                   ] MOV D0,D1
+  0x4401c80a: [88                   ] MOV D2,D0
+  0x4401c80b: [1c                   ] EXTHU D0
+  0x4401c80c: [a0 14                ] CMP 0x14,D0
+  0x4401c80e: [c9 2b                ] BNE 0x4401c839
+  0x4401c810: [84                   ] MOV D1,D0
+  0x4401c811: [1c                   ] EXTHU D0
+  0x4401c812: [fa c8 eb 00          ] CMP 0xeb,D0
+  0x4401c816: [c9 23                ] BNE 0x4401c839
+  0x4401c818: [fb 7c 54 80          ] ADD R5,R4,A0
+  0x4401c81c: [fc d0 38 46 4f 50    ] ADD 0x504f4638,A0
+  0x4401c822: [ca 11                ] BRA 0x4401c833
+  0x4401c824: [f1 ec                ] MOV D3,A0
+  0x4401c826: [fb a9 88 5c          ] MUL 0x5c,A0
+  0x4401c82a: [f9 78 48             ] ADD R4,A0
+  0x4401c82d: [fc d0 3a 46 4f 50    ] ADD 0x504f463a,A0
+  0x4401c833: [80 01                ] MOV 0x1,D0
+  0x4401c835: [f0 50                ] MOVBU D0,(A0)
+  0x4401c837: [ca 55                ] BRA 0x4401c88c
+  0x4401c839: [88                   ] MOV D2,D0
+  0x4401c83a: [1c                   ] EXTHU D0
+  0x4401c83b: [a0 00                ] CMP 0x0,D0
+  0x4401c83d: [c9 4f                ] BNE 0x4401c88c
+  0x4401c83f: [84                   ] MOV D1,D0
+  0x4401c840: [1c                   ] EXTHU D0
+  0x4401c841: [a0 00                ] CMP 0x0,D0
+  0x4401c843: [c9 49                ] BNE 0x4401c88c
+  0x4401c845: [9a 00                ] MOV 0x0,A2
+  0x4401c847: [fb 7c 54 b0          ] ADD R5,R4,A3
+  0x4401c84b: [fc d3 3a 46 4f 50    ] ADD 0x504f463a,A3
+  0x4401c851: [ca 27                ] BRA 0x4401c878
+  0x4401c853: [80 01                ] MOV 0x1,D0
+  0x4401c855: [dd 26 1b 01 00 00 00 ] CALL 0x4402e37b,[],0x0
+  0x4401c85c: [49                   ] INC A2
+  0x4401c85d: [f1 da                ] MOV A2,D2
+  0x4401c85f: [16                   ] EXTBU D2
+  0x4401c860: [aa 03                ] CMP 0x3,D2
+  0x4401c862: [c9 12                ] BNE 0x4401c874
+  0x4401c864: [80 38                ] MOV 0x38,D0
+  0x4401c866: [8d                   ] MOV D3,D1
+  0x4401c867: [dd 10 bd ff ff 00 00 ] CALL 0x44018577,[],0x0
+  0x4401c86e: [81                   ] MOV D0,D1
+  0x4401c86f: [f8 ed 40             ] BTST 0x40,D1
+  0x4401c872: [c9 b2                ] BNE 0x4401c824
+  0x4401c874: [aa 02                ] CMP 0x2,D2
+  0x4401c876: [c5 16                ] BHI 0x4401c88c
+  0x4401c878: [80 38                ] MOV 0x38,D0
+  0x4401c87a: [8d                   ] MOV D3,D1
+  0x4401c87b: [dd fc bc ff ff 00 00 ] CALL 0x44018577,[],0x0
+  0x4401c882: [81                   ] MOV D0,D1
+  0x4401c883: [f8 ed 40             ] BTST 0x40,D1
+  0x4401c886: [c8 cd                ] BEQ 0x4401c853
+  0x4401c888: [80 01                ] MOV 0x1,D0
+  0x4401c88a: [f0 53                ] MOVBU D0,(A3)
+  0x4401c88c: [59 14                ] MOV (0x14,SP),D1
+  0x4401c88e: [84                   ] MOV D1,D0
+  0x4401c88f: [1c                   ] EXTHU D0
+  0x4401c890: [a0 01                ] CMP 0x1,D0
+  0x4401c892: [c5 05                ] BHI 0x4401c897
+  0x4401c894: [cc b8 fe             ] JMP 0x4401c74c
+  0x4401c897: [df f2 38             ] RET [EX1,A3,A2,D3,D2],0x38
 ```
 
 ---
@@ -13661,7 +26533,7 @@ undefined4 FUN_40005772(uint param_1)
 
 ## Parte V — Catálogo de Armadilhas do Decompilador Ghidra no MN103S
 
-Durante a auditoria forense dos 5 binários `mn10300:LE:32:default`, foram comprovadas **7 classes de distorções sistemáticas** no decompilador do Ghidra. Toda interpretação de pseudocódigo C neste repositório deve aplicar estas salvaguardas e conferir o disassembly subjacente nos pontos críticos:
+Durante a auditoria forense dos 5 binários `mn10300:LE:32:default` somada ao exame read-only de `Loader ver0.61` e dos subsistemas BGO FTL + RTSC/DAVIS em `PROG061`, foram comprovadas **10 classes de distorções sistemáticas** no decompilador e especificação SLEIGH (`am33.sinc` e `mn103.sinc`) do Ghidra. Toda interpretação de pseudocódigo C neste repositório deve aplicar estas salvaguardas e conferir o disassembly subjacente nos pontos críticos:
 
 | # | Categoria da Armadilha | Evidência Verificada (Programa & Endereço) | Sintoma no Pseudocódigo C | Disassembly / Fato Real Subjacente | Regra de Leitura Segura |
 |---|---|---|---|---|---|
@@ -13672,9 +26544,12 @@ Durante a auditoria forense dos 5 binários `mn10300:LE:32:default`, foram compr
 | 5 | **Podagem (Dead-Code / Unreachable Block) em escritas MMIO / Flash CFI** | `/BOOT.BIN`: `FUN_440236ed` (size=205 B, 18 warnings `Removing unreachable block`) e `0x4400133e` (`crt0`) | `FUN_440236ed` colapsa para apenas `_DAT_84200554 = 0x55; _DAT_84200aaa = 0x90; _DAT_84200000 = 0xf0; return 2;`, removendo 18 blocos de protocolo NOR Flash em `0x44023721..0x440237a4`. | O disassembly preserva integralmente os loops de leitura/escrita e sequências de desbloqueio/identificação em endereço fixo de barramento `0x8420xxxx` (`volatile`). | Marcar regiões MMIO/NOR Flash (`0x10xxxxxx`, `0x84xxxxxx`, `0x88xxxxxx`) como `volatile` na análise e conferir o disassembly de drivers Flash/IDE/SD. |
 | 6 | **Indexação negativa de frame (`*(in_A3 + -N)` / `puVar1[-N]`) e registradores globais não preservados (`in_A3`, `in_R5`, `in_R7`, `in_D2`, `in_LAR`)** | `PROG061` (`FUN_5040ea30`, `FUN_50404f12` `in_LAR + -4`), `MAIN` (`FUN_574f0590`, `FUN_574dd0fd`) | Variáveis locais aparecem como `*(uint *)(in_A3 + -4)` ou `(*(code *)(in_LAR + -4))()` tratando loop de hardware `LAR` / frame pointer `A3` como ponteiro externo. | O MN103S usa `A3` como frame pointer (`MOVM` / `ADD -imm,SP`) e `LAR`/`Lcc` para loops de hardware zero-overhead. | Ler `in_A3 - k` como variável local de frame e `(*(code *)(in_LAR + -4))()` como reiteração de hardware loop (`SETLB`/`Lcc`). |
 | 7 | **Desalinhamento de endereços e strings entre revisões + encodings Shift-JIS / falsos positivos em bytes** | `/DRV_decomp.bin` vs `/EH55_DRV_S211.bin` (`0x40130efa` vs `0x4013420a`); `DRV_decomp` `0x4006ef08` (`BCLR 0x4,(0x889ee3d9)` = 7 B) & `0x4006f5e1` (`dd a7 83 fb ff b0 14`) | Importar símbolo de uma revisão para outra aponta `0x40130efa` no meio de `"a  = 0x%lh\n"` em `DRV_decomp`; busca por `LE16(0x83a7)` (`a7 83`) dá match falso em `0x4006f5e2` dentro de função de código. | Em `EH55_DRV_S211.bin`, `0x40130efa` é código ativo (`PASS` `MATS`/`HITA` -> `BSET 0x1,(0xd78)`); em `DRV_decomp.bin`, o equivalente é `0x4013420a` (`DAT_00000cd8 |= 1`). Já em `0x4006f5e1`, os bytes `a7 83` estão dentro de `CALL 0x40027988,[D2,A2,A3],0x14` (`dd a7 83 ...`). Strings de erro mecha em `0x400e8a16` usam **Shift-JIS**. | Sempre confirmar SHA-256 do binário alvo e validar `xrefs`/bytes em disassembly antes de transpor endereços entre dumps `DRV`/`S211`/`MAIN`. |
+| 8 | **Inversão sistemática de operandos em `SUB Rm, Rn, Rd` de 3 operandos (`fb 9c`) no SLEIGH** | `/BOOT.BIN` (`am33.sinc:184` vs `mn103.sinc:421`): `0x4400c77b` (`+1` em `0x4400c77c`: `fb 9c dc d0`) em `FUN_4400c696`; `0x4400d525` (`fb 9c cd c0`, + 7 sítios `0x4400d7ef`, `d8b4`, `d921`, `d92e`, `d961`, `d98f`, `db58`) em `FUN_4400d32f`; `0x4400e0c6` (`+1` em `0x4400e0c7`: `fb 9c cd c0`, + 5 sítios) em `FUN_4400dfc8`; `0x4400caeb` (`fb 9c cd c0`; precedido por `0x4400caea` byte final de `0x4400cae8 MOV`) em `FUN_4400ca59`; `0x4400e948` (+ `0x4400eb29`, `0x4400ed63`) em `FUN_4400e737`; **novos sítios verificados:** `PROG061` `FUN_50423540 @ 0x50423566` (`fb 9c d1 90 SUB D1,R1,A1`) e `FUN_5042358b @ 0x504235af` (`fb 9c d1 80 SUB D1,R1,A0`, convertidos em `uVar - 0xf`); `/BOOT.BIN` `FUN_440188fc @ 0x44018963` (`fb 9c 64 c0 SUB R6,R4,D0` -> `iVar3 - iVar4` invertido); `Loader ver0.61` `FUN_44012d77 @ 0x44012e69` (`fb 9c cd c0 SUB D0,D1,D0` -> `puVar5[0xb] - puVar5[10]`) | Pseudocódigo C emite subtração invertida **`src - dst`** (ex.: `ReservedSectors - TotSec32` em `FUN_4400c696`; `FileOffset - FileSize` em `FUN_4400d32f`/`FUN_4400dfc8`; `puVar1[-2] - puVar1[3]` em `FUN_4400ca59`; `CacheStart - FATSectors` em `FUN_4400e737`). | No hardware real AM33/MN103S, `SUB Rm2, Rn0, Rd2` (`fb 9c`) calcula **`Rd = Rn - Rm` (`dst - src`)**, porém `am33.sinc:184` define `local val:4 = Rm2; update_sub(val, Rn0); Rd2 = val;` emitindo `Rm2 - Rn0`. Em contraste, `SUB Dm, Dn` de 2 operandos (`f1 0x` em `mn103.sinc:421`, ex.: `0x4400c782`, `0x4400c787`, `0x4400c7ad`, `0x4400d9ad`) não é invertido. *(Nota forense: em `FUN_4400d32f`, `0x4400d4b0` não é `SUB`, mas byte `+1/+0` de `0x4400d4af e4` `ADD D1,D0` + `0x4400d4b0 f1 60` `ADD D0,A0`; o `SUB` invertido de `FileSize - FileOffset` está em `0x4400d525`.)* | Em qualquer subtração suspeita (saldo de setores/bytes negativo ou invertido), verificar no disassembly os bytes brutos: se **`fb 9c`**, inverter `A - B` -> **`B - A`**; se **`f1 0x` / `f1 2x`**, manter **`A - B`**.
+| 9 | **`NOT Dm1, Dn0` (`0xF2 0x3x`) modelado como XOR (`Dm1 ^ Dn0`) em `mn103.sinc:503`** | `PROG061` `FUN_50423540 @ 0x50423550` (`[f2 30] NOT D0,D0`), `FUN_5041b4e1 @ 0x5041b548` (`[f2 31] NOT D0,D1`); `/BOOT.BIN` `FUN_44016703 @ 0x44016761` (`[f2 33] NOT D0,D3`) | Quando `Dm1 == Dn0` (`0x50423550 [f2 30]`), o SLEIGH emite `D0 = D0 ^ D0` = **`0`**, eliminando por dead-code todo o cálculo `~(w0 \| w1 \| w2) & w3` no C de `FUN_50423540`; quando `Dn0 != D0` e seguido de `& D0` (`FUN_5041b4e1`/`FUN_44016703`), emite `(uVar1 ^ param_1) & uVar1`. | Em `mn103.sinc:503` consta `:NOT Dm1, Dn0 is op8=0xF2; op4=3 & Dm1 & Dn0 { Dn0 = Dm1 ^ Dn0; }` em vez do complemento unário `Dn0 = ~Dn0` (bits `[3:2]=00`). Para `NOT D0,D1; AND D1,D0`, `(D0 ^ mask) & D0` equivale algebricamente a `~mask & D0`, mas para `NOT D0,D0` o C decompilado perde toda a expressão booleana. | Inspecionar qualquer instrução `f2 3x` em assembly; se ambos os registradores forem iguais (`f2 30`, `f2 35`, `f2 3a`, `f2 3f`), reconstruir `Dn = ~Dn` manualmente a partir do disassembly. |
+| 10 | **`BTST SIMM, Rn0` e `NOT Rn0` `AM33` não modelados (`mn_todo()`) em `am33.sinc:293-297`** | `PROG061` `FUN_50423540 @ 0x5042355e` (`[fd e9 00 00 80 00] BTST 0x8000,R0`), `FUN_5042358b @ 0x504235a7` (`[fd e9 00 00 80 00] BTST 0x8000,R0`) | Emite `while ((mn_todo(), bVar1 ...))` e `mn_todo(); if ((bVar1) ...)`, escondendo o teste real do bit `15` (`0x8000`) do registrador estendido `R0`. | `am33.sinc:293` define `:NOT Rn0 { mn_todo(); }` e `am33.sinc:295-297` define `:BTST SIMM8/24/32, Rn0 { mn_todo(); }` sem atualizar `$(ZF)`. No silício, `BTST 0x8000, R0; BEQ ...` testa se o bit 15 de `R0` é zero enquanto o laço desloca `R0` à esquerda (`ADD R0, R0`). | Sempre que surgir `mn_todo()` antes de salto condicional após instruções `fd e9` / `fb e9` / `fe e9` / `f9 39`, ler os operandos do opcode `BTST`/`NOT` diretamente no disassembly. |
 
 ---
 
 ## Verificação de Cobertura
 
-Este documento foi gerado automaticamente por script determinístico com validação pós-geração garantindo **zero funções omitidas**, **zero blocos de tabela/disassembly omitidos**, **cercas de código balanceadas** e **preservação integral das linhas de C e assembly verificadas no projeto read-only `Panadiga_MN103S`**.
+Este documento consolida a extração determinística original (**Ghidra 12.0.3 / PyGhidra**), os blocos FAT12/FAT16/FAT32 & SD (**Ghidra 12.1.4 PUBLIC Headless**, `C:\ghidra\*.java` / `./raw/doc_boot_fat_sd_java.txt`), a análise completa **BGO FTL (`[nfrom]` + `SA41 + 0x14`) & RTSC / DAVIS IDE** no `PROG061` + `Loader ver0.61 [06/03/06]` (`eh55_loader_ver061_256k.bin` via projeto read-only auxiliar) e `/BOOT.BIN` (`ver0.63`), além das listagens verificadas contra `prog061_dec.bin` (`sd_load.o`) e `dmr-es35v/flash.bin` (`Loader ver0.18 [06/03/13]`), com validação pós-geração garantindo **zero funções omitidas**, **cercas de código balanceadas** e **preservação integral do C e disassembly verificados**.

@@ -3,40 +3,47 @@
 
 # Dossiê Técnico: Consolidação `DIGADIAG.FRM` vs `PANA__SD.FRM` / `PANA_DVD.FRM`, Bloqueio SD `-91006` e Viabilidade de TBC Autônomo (DMR-EH55 / MN103S)
 
-> **Escopo & Lastro Forense:** Especificação baseada em desmontagem MN103S verificada de `/BOOT.BIN` (NOR `0x44000000`), `PROG061` (`0x50400000`), `EH55_MAIN_3410PQ.bin` (`0x57000000`), `MAIN3060NP` (`0x57000000`), análise empírica de `sd_card_eh55/`, `PANA_DVD.FRM`, `hdd_partition_firmware_0x02000000.bin` e esquemas oficiais `VEP79138` (`na_p49_blk1.png`, `na_p50_blk2.png`, `vol2_p125_interconnect.png`).
+> **Escopo & Lastro Forense:** Especificação baseada em desmontagem MN103S verificada do bootloader real do **DMR-EH55 (`Loader ver0.61 [06/03/06]`**, espelhado em `prog061_dec.bin` `sd_load.o` @ `0x5040eca9` / `0x5040ed7c` / `0x5040ea7d` e NOR de março de 2006 `flash.bin` @ `0x440085d9` / `0x440095ab` / `0x4400bc70`), contrastado com `/BOOT.BIN` (**`Loader ver0.63 [07/10/24]`**, DMR-EZ485V, NOR `0x44000000`), além de `PROG061` (`0x50400000`), `EH55_MAIN_3410PQ.bin` (`0x57000000`), `MAIN3060NP` (`0x57000000`), `PANA_DVD.FRM`, `hdd_partition_firmware_0x02000000.bin` e esquemas oficiais `VEP79138` (`na_p49_blk1.png`, `na_p50_blk2.png`, `vol2_p125_interconnect.png`).
 
 ---
 
 ## 1. Anatomia dos Contêineres `.FRM` e Como o Gravador os Consome
 
-Uma das maiores fontes de erro ao tentar desbrickar o Panasonic DMR-EH55 é confundir **`DIGADIAG.FRM`** com **`PANA__SD.FRM`** e **`PANA_DVD.FRM`**. Embora compartilhem a extensão `.FRM`, eles são lidos por estágios completamente diferentes da cadeia de boot e possuem formatos criptográficos distintos:
+Uma das maiores fontes de erro ao tentar desbrickar o Panasonic DMR-EH55 é confundir **`DIGADIAG.FRM`** com **`PANA__SD.FRM`** e **`PANA_DVD.FRM`** — e, adicionalmente, confundir o formato esperado pelo **bootloader real do DMR-EH55 (`Loader ver0.61 [06/03/06]`)** com o de geração posterior presente em `/BOOT.BIN` (**`Loader ver0.63 [07/10/24]`**, DMR-EZ485V):
 
-| Arquivo | Estágio Leitor | Formato de Cabeçalho / TOC | Camadas Criptográficas | Módulos / Carga Real Empírica | Uso no Unbrick & Manutenção |
+| Arquivo | Estágio Leitor | Formato no DMR-EH55 Real (`Loader ver0.61 [06/03/06]`) | Formato em `/BOOT.BIN` (`Loader ver0.63 [07/10/24]`, EZ485V) | Módulos / Carga Real Empírica | Uso no Unbrick & Manutenção |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **`DIGADIAG.FRM`** | **Estágio 1: `/BOOT.BIN`** (`SDDIAG` na NOR `0x44000000`) | Único bloco **`EXTRHEAD`** (`131.072 B` / `0x20000` exatos, tag `"FVU "`, `dst=0x50400000`, `adler_step=4`, build `"PROG061"`) | **Plaintext** (sem Feistel no TOC nem no payload `EXTRHEAD`) | Payload único MN103S (`262.144 B` descomprimidos -> RAM `0x50400000`), ex. `PROG061` patched para BGO (`bypass` padrão) ou `NOR_DMP` | **Porta de entrada Pre-MAIN**: executa antes de `NVRAM U99` e antes do HDD/ODD, ideal para **`bypass` / `uart_monitor` (`PANAMON1`)** ou dump NOR (`auto_format` bloqueado fail-closed sem override) |
-| **`PANA__SD.FRM`** | **Estágio 2: `PROG061`** (após carregado em `0x50400000`) | Tabela **TOC em texto claro** com entradas de **`64 bytes` (`0x40`)**, até 128 slots (`8.192 B` TOC), protegida por `list_sum_u16` | TOC em **texto claro**; payloads internos mantêm `EXTRHEAD` Feistel parcial (`DRV`: `0x2800`, `MAIN`: `0x19000`) | Normalmente 3 slots: `DRV S211`, `PROG061 `, `MAIN3410PQ` (ou `MAIN3060NP`), totalizando ~`7,53 MB` (`7.533.792 B`) | Atualização completa gravada na Flash NOR via SD, permitindo persistir **`MAIN3410PQ` com TBC Passthrough (`E-E`) + HDD dinâmico (`>200 GB`)** |
-| **`PANA_DVD.FRM`** | **Atualização Óptica** (`CD-R` / `DVD-R` via `MAIN`/`DRV`) | Tabela **TOC de `48 bytes`** (`"Firm list"`) **cifrada em Feistel** | **Dupla camada**: Feistel completo externo em cada módulo + `EXTRHEAD` parcial interno (`DRV`/`MAIN`) | Empírico (`7.531.744 B`): `[0] DRV S211` (`0x001800`, `720.896 B` -> `1.441.792 B @ 0x90202000`), `[1] PROG061 ` (`0x0B1800`, `262.144 B` raw após outer decrypt), `[2] MAIN3060NP` (`0x0F1800`, `6.542.560 B` -> `13.427.852 B @ 0x57000000`) | Fonte oficial para extração e reconstrução de `DIGADIAG.FRM` e `PANA__SD.FRM` |
+| **`DIGADIAG.FRM`** | **Estágio 1: `sd_diag_load`** (`0x4400bc70` / `0x5040eca9` no `ver0.61`; `FUN_4400a97c` no `ver0.63`) | **Binário bruto descomprimido de exatos `262.144 B` (`0x40000`)**, iniciando em `dc 14 00 00 00` (`JMP 0x50400014`), **sem wrapper `EXTRHEAD`**; lido direto para **`0x90400000`** (alias *uncached* de `0x50400000`) com salto direto para `0x50400000` após `*** start diag ***` | Único bloco **`EXTRHEAD`** (`131.072 B` / `0x20000` exatos, tag `"FVU "`, `dst=0x50400000`, `adler_step=4`), lido para **`0x93fc0000`** e descomprimido via `uncompress()` | Payload único MN103S (`262.144 B` em `0x50400000`), ex. `PROG061` patched para BGO (`bypass` / `PANAMON1`) ou `NOR_DMP` | **Porta de entrada Pre-MAIN**: executa antes de `NVRAM U99` e antes do HDD/ODD; se fornecer `131.072 B` (`EXTRHEAD`) ao `ver0.61`, `boot_fat_read` trunca para `0x20000 != 0x40000` (`0x5040ed67`) e aborta com **`SD diag load failed[0].`** |
+| **`PANA__SD.FRM`** | **Estágio 2: `PROG061`** (`sd_read_firm_list` @ `0x5040ed7c` / `sd_find_firm_entry` @ `0x5040ea7d` no `ver0.61`) | Tabela **TOC em texto claro com entradas de `48 bytes` (`0x30`)**, até 128 slots (**`0x1800 B` = `6.144 B`**, modo **`sd48`**), validada por `list_sum_u16` | Tabela **TOC em texto claro com entradas de `64 bytes` (`0x40`)**, até 128 slots (**`0x2000 B` = `8.192 B`**, modo **`sd64`**) | Normalmente 3 slots: `DRV S211`, `PROG061 `, `MAIN3060NP` (ou `MAIN3410PQ`), totalizando **`7.531.744 B`** no `sd48` stock (`7.533.792 B` no `sd64`) | Atualização completa gravada na Flash NOR via SD, permitindo persistir **`MAIN3410PQ` com TBC Passthrough (`E-E`) + HDD dinâmico (`>200 GB`)** |
+| **`PANA_DVD.FRM`** | **Atualização Óptica** (`CD-R` / `DVD-R` via `MAIN`/`DRV`) | Tabela **TOC de `48 bytes`** (`"Firm list"`) **cifrada em Feistel**; dupla camada (Feistel externo + `EXTRHEAD` parcial interno em `DRV`/`MAIN`) | Mesmo formato óptico Feistel `48 B` | Empírico (`7.531.744 B`): `[0] DRV S211` (`0x001800`, `720.896 B` -> `1.441.792 B @ 0x90202000`), `[1] PROG061 ` (`0x0B1800`, `262.144 B` raw após outer decrypt), `[2] MAIN3060NP` (`0x0F1800`, `6.542.560 B` -> `13.427.852 B @ 0x57000000`) | Fonte oficial para extração e reconstrução de `DIGADIAG.FRM` e `PANA__SD.FRM` |
 
-### Fluxo Completo de Consumo no Boot via Cartão SD (`BOOT.BIN` -> `PROG061` -> `MAIN`)
+### Fluxo Completo de Consumo no Boot via Cartão SD (`Loader ver0.61` vs `/BOOT.BIN` `ver0.63`)
 
 ```text
-[Cartão SD: FAT16 SDSC <= 2 GiB]
+[Cartão SD: FAT16 SDSC <= 2 GiB (<= 0xFFF5 clusters)]
    │
-   ├──► Estágio 1: /BOOT.BIN (NOR 0x44000000, rotina SDDIAG)
-   │       1. Valida SD 1-bit (@ 0x44027826) -> troca para 4-bit via ACMD6 (@ 0x44027F79) -> 2ª checagem (@ 0x44027F93)
-   │       2. Abre DIGADIAG.FRM (precisa ter EXATOS 131.072 bytes)
-   │       3. Descomprime EXTRHEAD ("FVU ") diretamente para 0x50400000 (Adler-32) e salta para lá
+   ├──► Estágio 1 (DMR-EH55 Real): Loader ver0.61 [06/03/06]
+   │       (espelho prog061_dec.bin sd_load.o @ 0x5040eca9 / NOR 03/2006 @ 0x440085d9, 0x440095ab, 0x4400bc70)
+   │       1. Valida SD 1-bit -> troca para 4-bit (ACMD6) -> 2ª checagem ACMD13
+   │       2. Monta FAT16 -> abre DIGADIAG.FRM -> exige EXATOS 262.144 B (0x40000) brutos descomprimidos
+   │          (se tiver 131.072 B EXTRHEAD, 0x5040ed67 falha cmp 0x40000, d0 -> "SD diag load failed[0].")
+   │       3. Carrega direto para 0x90400000 (alias uncached de 0x50400000), fecha FAT, limpa caches,
+   │          imprime "*** start diag ***" e executa JMP 0x50400000 (@ 0x44008601)
    │          ├─► Modo bypass (padrão seguro): pula checagens BGO mantendo CS1 IPL/RAM intocados
    │          ├─► Modo uart_monitor (PANAMON1): ativa monitor interativo pré-MAIN (P7501 115200 8N1)
-   │          ├─► Modo auto_format (BLOQUEADO fail-closed; exige --allow-unsafe-bgo-format: apaga CS1 0x84200000..0x843FFFFF / ponteiros 0x504F8464..6C)
+   │          ├─► Modo auto_format (BLOQUEADO fail-closed; exige --allow-unsafe-bgo-format: atua em CS1 0x84200000..0x843FFFFF no PROG061/ver0.63; no ver0.61 real do EH55 o BGO fica em 0x84130000..0x843FFFFF SA26..SA70)
    │          └─► Stub NOR_DMP: extrai a NOR Flash (0x84000000, 8 MiB) via UART em modo somente-leitura
    │
-   └──► Estágio 2: PROG061 (em 0x50400000) -> lê PANA__SD.FRM (slots 64B em texto claro)
-           └─► Grava os módulos atualizados (DRV S211, PROG061, MAIN3410PQ) com nossas modificações permanentes
+   ├──► Estágio 2 (DMR-EH55 Real): PROG061 em 0x50400000 -> sd_read_firm_list (0x5040ed7c) / sd_find_firm_entry (0x5040ea7d)
+   │       └─► Lê PANA__SD.FRM em modo sd48 (TOC plaintext de 48B x 128 = 0x1800 B; stock 7.531.744 B) e grava módulos na NOR
+   │
+   └──► Contraste (/BOOT.BIN de referência no Ghidra): Loader ver0.63 [07/10/24] (DMR-EZ485V)
+           └─► FUN_4400a97c lê 0x20000 B (131.072 B) EXTRHEAD para 0x93fc0000 + uncompress() -> 0x50400000;
+               PANA__SD.FRM usa TOC plaintext de 64B (0x2000 B, modo sd64)
 ```
 
-> **Nota Crítica sobre Builds `MAIN` (`3410PQ` vs `3060NP`):**
-> A partição de firmware extraída do HD (`firmware_and_images/extracted_partitions/hdd_partition_firmware_0x02000000.bin`, `6.173.264 B`) descomprime via `panadiga frm unpack --mode main` para **exatos `13.003.052 B` = `EH55_MAIN_3410PQ.bin`** (`VA 0x57000000`), onde todos os 3 sítios TBC Passthrough (`0x5771ABFB`, `0x574F7B8C`, `0x574F7C5C`) e o bloqueio LBA48 (`0x574DD1FC`) coincidem byte-a-byte. Já no contêiner óptico `PANA_DVD.FRM` e no `PANA__SD.FRM` de fábrica (`7.533.792 B`), o slot `[2]` contém **`MAIN3060NP`** (`13.427.852 B` descomprimido), onde o desvio `odd_branch` desloca para `0x4FE986`. O comando `panadiga unbrick prepare-sd` exige validação explícita de build (`--expected-main-build` / `--allow-target-mismatch`) ao gravar `MAIN3410PQ` em `PANA__SD.FRM` para impedir mismatch silencioso.
+> **Nota Crítica sobre Builds `MAIN` (`3410PQ` vs `3060NP`) e Modos `sd48` vs `sd64`:**
+> A partição de firmware extraída do HD (`firmware_and_images/extracted_partitions/hdd_partition_firmware_0x02000000.bin`, `6.173.264 B`) descomprime via `panadiga frm unpack --mode main` para **exatos `13.003.052 B` = `EH55_MAIN_3410PQ.bin`** (`VA 0x57000000`), onde todos os 3 sítios TBC Passthrough (`0x5771ABFB`, `0x574F7B8C`, `0x574F7C5C`) e o bloqueio LBA48 (`0x574DD1FC`) coincidem byte-a-byte. Já no contêiner óptico `PANA_DVD.FRM` (`7.531.744 B`) e no `PANA__SD.FRM` stock (`7.531.744 B` no modo `sd48` `0x1800 B` do `ver0.61`, ou `7.533.792 B` no modo `sd64` `0x2000 B` do `ver0.63`), o slot `[2]` contém **`MAIN3060NP`** (`13.427.852 B` descomprimido), onde o desvio `odd_branch` desloca para `0x4FE986`. O comando `panadiga unbrick prepare-sd` exige validação explícita de build (`--expected-main-build` / `--allow-target-mismatch`) ao gravar `MAIN3410PQ` em `PANA__SD.FRM` para impedir mismatch silencioso. Para alvos `Loader ver0.61`, use `panadiga unbrick bgo --raw-prog061` (para gerar `DIGADIAG.FRM` bruto de `262.144 B` / `0x40000`) e `panadiga frm pack --mode sd48` (para gerar `PANA__SD.FRM` com TOC `0x1800 B` de `48 B`), reservando `EXTRHEAD` `131.072 B` (`0x20000`) + `sd64` (`0x2000 B`) para `Loader ver0.63`.
 
 ---
 
@@ -53,7 +60,7 @@ Durante a análise de campo do erro `-91006` no diagnóstico SD, levantou-se a h
    * Além disso, o conector `P7501` **não expõe o clock do depurador On-Chip Debug (`OCD`)**, fazendo com que leituras de controle retornem `DCSR = 0xFFFFFFFF`. Portanto, é fisicamente impossível pausar a CPU ou alterar `0x89001850` no Estágio 1 via Pico.
 3. **Mitigação Prática e Segurança Térmica em Bancada:**
    * **Regra Térmica / Curto Antes de Energizar:** NUNCA energize o conjunto com flat FFC aquecido (especialmente flat de 18 vias do pickup óptico ODD) nem conecte/remova FFC energizado; meça a frio a resistência para `GND` de **`D3R3V`/`D+3.3V`/`DR+5V`/`DR+12V`** e continuidade via a via em `P6801`/`P6802`/`VEP73136A`.
-   * Utilize exclusivamente cartão **SDSC `<= 2 GiB`** (não SDHC >= 4 GiB) formatado em **FAT16** e execute `panadiga unbrick verify-sd <dir>` antes do teste.
+   * Utilize exclusivamente cartão **SDSC `<= 2 GiB`** formatado em **FAT16** (`<= 0xFFF5` clusters; FAT32 falha com `-10025`) com `DIGADIAG.FRM` bruto de **`262.144 B` (`0x40000`)** para `Loader ver0.61` (usar `131.072 B` `EXTRHEAD` do `ver0.63` após passar o portão 4-bit produz **`SD diag load failed[0].`**). Execute `panadiga unbrick verify-sd <dir>` antes do teste.
    * Com o hardware eletricamente validado, use **`SDSNIFF`** (sniffer passivo Hi-Z PIO0 em `GP10..GP15` no Pico, isolando CRC16 por linha `DAT0..DAT3` + `ACMD13`) e `scripts/bench/boot_harness.py` (`ab-boot`) para isolar defeito elétrico em `DAT1..DAT3` vs rejeição do cartão.
 
 ---
@@ -90,21 +97,33 @@ panadiga unbrick status
 # 2. Extrair & decifrar módulos internos de PANA_DVD.FRM (Feistel + EXTRHEAD)
 panadiga unbrick extract-frm --frm firmware_and_images/PANA_DVD.FRM --outdir unbrick_extracted --unpack
 
-# 3. Construir Kit Completo para Cartão SD (DIGADIAG.FRM 128K BGO bypass padrão + PANA__SD.FRM)
+# 3. Construir Kit Completo para Cartão SD (padrão --loader-profile ver061: 256 KiB raw + PANA__SD.FRM sd48 em firmware_and_images/sd_unbrick_kit; ou --loader-profile ver063 para 128K EXTRHEAD + sd64)
 # Nota: --bgo-mode auto_format (0x50401F3C) é bloqueado fail-closed e exige --allow-unsafe-bgo-format
-panadiga unbrick prepare-sd --outdir sd_card_eh55_kit --bgo-mode bypass --passthrough-mode av_passthrough
+panadiga unbrick prepare-sd --loader-profile ver061 --bgo-mode uart_monitor --passthrough-mode av_passthrough
 
-# 4. Auditar integridade do cartão SD (contêineres, Adler-32, list_sum_u16 & alertas -91006)
-panadiga unbrick verify-sd sd_card_eh55_kit
+# Alternativa manual para gerar apenas DIGADIAG.FRM bruto (ver0.61):
+panadiga unbrick bgo --input firmware_and_images/extracted_partitions/prog061_dec.bin --mode uart_monitor --raw-prog061 --output firmware_and_images/sd_unbrick_kit/DIGADIAG.FRM
+
+# 4. Auditar integridade do cartão SD (contêineres, Adler-32, list_sum_u16 & alertas -91006 / consistência ver061 vs ver063)
+panadiga unbrick verify-sd firmware_and_images/sd_unbrick_kit
 
 # 5. Inspecionar/patchar MAIN3410PQ para TBC Passthrough E-E ou gerar frames GDB RSP (_dev_SERIAL)
 panadiga unbrick passthrough --input firmware_and_images/extracted_partitions/hdd_partition_firmware_0x02000000.bin
 panadiga unbrick passthrough --rsp-plan --callback-va 0x50401F3C
 
-# 6. Gerar stub MN103S somente-leitura para dump UART da NOR Flash (opcionalmente encapsulado em DIGADIAG 128K)
+# 6. Gerar stub MN103S somente-leitura para dump UART da NOR Flash (128K EXTRHEAD p/ ver0.63; ver0.61 exige imagem raw 262.144 B @ 0x90400000)
 panadiga unbrick nor-stub --wrap-digadiag --out unbrick_out/DIGADIAG_NOR_DUMPER.FRM
 ```
 
 ### Interface Desktop (`Centro Unbrick`) & Servidor MCP
-* **Desktop Tauri:** Abra a aba **`Centro Unbrick`** na barra lateral para inspecionar vereditos de arquitetura, extrair `.FRM`, gerar e verificar o Kit SD, patchar `MAIN3410PQ` para TBC Passthrough, recalcular frames RSP do Pico e gerar o stub `NOR_DMP`.
-* **Servidor MCP (`panadiga mcp`):** Agentes de IA contam com a ferramenta **#18 `panadiga_sd_unbrick_kit`** (ações `status`, `extract_frm`, `prepare_sd`, `verify_sd`), além de `panadiga_bgo_unbrick` e `panadiga_main_passthrough`.
+* **Desktop Tauri:** Abra a aba **`Centro Unbrick`** na barra lateral para inspecionar vereditos de arquitetura, extrair `.FRM`, selecionar `--loader-profile` (`ver061` padrão EH55 ou `ver063`) ao gerar/verificar o Kit SD em `firmware_and_images/sd_unbrick_kit/`, patchar `MAIN3410PQ` para TBC Passthrough, recalcular frames RSP do Pico e gerar o stub `NOR_DMP` (`ver0.63` `EXTRHEAD` ou stub raw SDRAM).
+* **Servidor MCP (`panadiga mcp`):** Agentes de IA contam com a ferramenta **#18 `panadiga_sd_unbrick_kit`** (`loader_profile`, ações `status`, `extract_frm`, `prepare_sd`, `verify_sd`), além de `panadiga_bgo_unbrick` (`--raw-prog061` / `wrap_as_digadiag: false`) e `panadiga_main_passthrough`.
+
+---
+
+## 5. Compatibilidade Regional (`PAL-M`/`LBS`), Bloqueios Diskless de TBC, Front-End `ES10/ES15/ES35V` e Painel/IR
+
+- **Matriz Regional `PAL-M`/`LBS` & `ifodev2` (`[EVIDÊNCIA ESTÁTICA GHIDRA / ESTÁGIO 0]`):** O bloco `ifodev2` (`2,048 B`, `SHA-256: f4f22dd0...`, destino `0x0055`) possui metadados apenas na cauda `0x400..0x7FF`. Os subsistemas **`AIOF` (`0x8800_0000`, `cps_pal_m 0x8021`)**, **`AVDD` (`0x8980_0000`)** e **`IC3001`** (`C1AB00002379` vs `1979`) governam o padrão de vídeo e compatibilidade entre regiões (`re::region_compat::tv_standard`), enquanto `hdd/capacity_patch` suporta do perfil `5 GB` (`0x0024C388` `SV0511D`) até `2 TB` e `re::tbc_appliance` cataloga os estágios de TBC sem disco.
+- **Rotas Viáveis de TBC sem Disco (`[EVIDÊNCIA ESTÁTICA GHIDRA / ESTÁGIO 0]` vs `[EM INVESTIGAÇÃO / BLOQUEIO FÍSICO CH1]`):** Em `MAIN3410PQ`, `VDM_Init` e `SDM_Init` (além de `FUN_574f5c6a`/`FUN_574f469d`) impõem acoplamento ao HDD (`HDD Err -> P-OFF!`), exigindo o pipeline `Stage15DigadiagTbc` / `PANA__SD.FRM` (`PROG 0x0B1800 -> 0x90400000`) ou `Nor-FROM 0x84040000` para inicialização autônoma do TBC sem `MAIN` carregado via `CH1`.
+- **Veredicto de Incompatibilidade `ES10` / `ES15` / `ES35V` vs `EH55` (`[EVIDÊNCIA ESTÁTICA GHIDRA / ESTÁGIO 0]`):** Imagens `DMR-ES10`/`ES15`/`ES35V` não são intercambiáveis com o `DMR-EH55` e causam *brick* por divergência de SoC/memória/energia: `MN2DS0009` vs `MN2DS0012-H`/`MN2DS00151DB`, EEPROM `RFKFM6016KT` vs `24LC64`, trilhas `X_SW_12V`/`DR12V`/`DR5V`, e execução XIP no `ES35V` (`0x130000..0x40FFFF`).
+- **Painel Frontal `FRONT(L)` e Receptor `IR7501` (`[EVIDÊNCIA ESTÁTICA GHIDRA / ESTÁGIO 0]`):** A subplaca `FRONT(L)` expõe apenas a tecla `[POWER]`; as demais chaves residem em `KEYIN1..3` na placa principal e o receptor `IR7501` (`PNA4618M09VT`, `X_SW_5R2V`) alimenta o modo Standby `SERV` (`[CH UP]+[OPEN/CLOSE]+[REC]` por 5 s em `Power OFF`) antes da transição para `FPC_ReciveTASK`/`R_SERVICEMODE` no `MAIN` ([`HISTORICO_UNBRICK_EH55_BGO_CH1_DAVIS_E_REGIAO.md`](./HISTORICO_UNBRICK_EH55_BGO_CH1_DAVIS_E_REGIAO.md)).

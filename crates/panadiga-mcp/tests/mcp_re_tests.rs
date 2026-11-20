@@ -27,6 +27,8 @@ fn test_new_re_bgo_nor_and_capacity_tools() {
         .copy_from_slice(&[0xC8, 0x0A]);
     prog[panadiga_core::re::OFF_DEVINFO_CHECK_BEQ..panadiga_core::re::OFF_DEVINFO_CHECK_BEQ + 2]
         .copy_from_slice(&[0xC8, 0x15]);
+    prog[panadiga_core::re::OFF_BGO_INIT_CALL..panadiga_core::re::OFF_BGO_INIT_CALL + 7]
+        .copy_from_slice(&panadiga_core::re::ORIG_A2BC_BGO_CALL);
     prog[panadiga_core::re::OFF_BGO_INIT_FAIL_HOOK..panadiga_core::re::OFF_BGO_INIT_FAIL_HOOK + 20]
         .copy_from_slice(&[
             0xFC, 0xCC, 0xB0, 0x3E, 0x43, 0x50, 0xF8, 0x07, 0xFC, 0xDD, 0xF7, 0xAA, 0xFF, 0xFF,

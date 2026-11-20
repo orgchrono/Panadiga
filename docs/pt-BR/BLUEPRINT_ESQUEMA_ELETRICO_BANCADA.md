@@ -182,9 +182,10 @@ A memória Flash principal de boot e sistema é o circuito integrado **`IC5001`*
 * **Tempo de Acesso ($t_{AA}$):** $70\text{ ns}$.
 * **Faixa de Tensão ($V_{CC}$):** $2.7\text{ V}$ a $3.6\text{ V}$ (Nominal: $3.3\text{ V}$).
 * **Encapsulamento:** **TSOP-48 Tipo I** ($12\text{ mm} \times 20\text{ mm}$, passo entre pinos de $0.5\text{ mm}$).
-* **Topologia de Setores (Modelo 00 - Top Boot):**
-  * 126 setores principais homogêneos de $64\text{ KBytes}$.
-  * 8 micro-setores homogêneos de $8\text{ KBytes}$ no topo do mapa de memória (`SA134` a `SA141`, faixa física `0x7F0000` a `0x7FFFFF`), exatamente onde reside a partição de calibração dinâmica `EEMUL`.
+* **Topologia de Setores (Spansion `S29JL064H70TFI00`, 142 setores = `8.388.608` bytes):**
+  * 8 micro-setores inferiores de $8\text{ KBytes}$ (`SA0` a `SA7`, `0x000000..0x00FFFF` = $64\text{ KiB}$, base do `Loader ver0.61`).
+  * 126 setores principais homogêneos de $64\text{ KBytes}$ (`SA8` a `SA133`, `0x010000..0x7EFFFF` = $8.064\text{ KiB}$): abrangem o restante do `Loader ver0.61` (`SA8..SA10` + tabela BGO em `0x440337A4`), `EXTRHEAD "DRV "` (`SA15..SA25`), a partição **BGO `[nfrom]`** real do EH55 (`SA26..SA70`, `0x130000..0x3FFFFF` vs `ver0.63`/`PROG061` `0x200000..0x3FFFFF`) e a área **Upper EEMUL `"1284"`** (`SA71..SA133`, `0x400000..0x7EFFFF`). O apagamento real de setor de $64\text{ KiB}$ dura ~`700 ms` (exigindo polling de leitura `0xFF` além do laço DQ7 `0x00100000`).
+  * 8 micro-setores superiores de $8\text{ KBytes}$ (`SA134` a `SA141`, faixa física `0x7F0000` a `0x7FFFFF` = $64\text{ KiB}$; no dump real `eh55_nor_8mb_ic5001_dump.bin`, `SA134` em `0x7F0000` possui `6` bytes ativos `0ff00000002c` enquanto `SA135..SA141` estão em `0xFF`).
 
 ### 4.2 Diagrama de Pinos do Encapsulamento TSOP-48 (Top View)
 
@@ -535,7 +536,15 @@ Como a partição `EEMUL` do DMR-EH55 abrange até `0x7FFFFF` (`SA134..SA141`), 
 
 ---
 
-## 13. Referências Técnicas Oficiais e Normas de Engenharia
+## 13. Mapeamento IDE Reverso `P58001` (`41 - k`), Cabo `N5EZZ0000003` e Isolamento Elétrico `CH1`
+
+- **Pinagem Invertida Confirmada por Esquemático (`[PROVADO EM HARDWARE REAL]`):** No conector IDE `P58001` (`VEK0K00`, placa principal do DMR-EH55, `vol2_schematics.pdf` p. 113), cada pino físico obedece à regra **`Pino k = ATA (41 - k)`**: `1=GND`, `2=NC`, `3=CS1-`, `4=CS0-`, `5=DA2`, `6=DA0`, `8=DA1`, `10=INTRQ`, `11=GND`, `12=DMACK-`, `13=CSEL`, `14=IORDY`, `15=GND`, `16=DIOR-`, `17=GND`, `18=DIOW-`, `19=GND`, `20=DMARQ`, `21=NC`, `22=GND`, `23=DD15`, `24=DD0`, `25=DD14`, `26=DD1`, `27=DD13`, `28=DD2`, `29=DD12`, `30=DD3`, `31=DD11`, `32=DD4`, `33=DD10`, `34=DD5`, `35=DD9`, `36=DD6`, `37=DD8`, `38=DD7`, `39=GND`, `40=RESET-`.
+- **Cabo `N5EZZ0000003` e Orientação `StarTech IDE2SAT2` (`[PROVADO EM HARDWARE REAL]`):** Verificação elétrica comprovou 40 pinos contínuos no chicote `N5EZZ0000003` (apenas o pino 20 macho do `IDE2SAT2` é bloqueado/*keyed*). Em `0°`, o `IDE2SAT2` lê `0x00000000` (não trava o barramento); em `180°` (equivalente a Type B), o pino invertido lê `0x00002004` (`DD13|DD2`).
+- **Isolamento Ativo de `CH1` (`[EM INVESTIGAÇÃO / BLOQUEIO FÍSICO CH1]`):** Leituras DC no cabo mostraram `IORDY`/`DIOR-`/`DIOW- = 0 V` encaixados vs. `3,29 V` em aberto, e o registrador `CH1` no `DAVIS` (`0x504F81D4 = 1` active-HIGH via `J 504156AD`) segue retornando `0x00000000` (`is_ata=0`) na unidade `EH55` de bancada ([`probe_ch1_full_diag_20261119.log`](../debug_logs/probe_ch1_full_diag_20261119.log) · [`probe_ch1_live_v2_0deg_20261119.log`](../debug_logs/probe_ch1_live_v2_0deg_20261119.log) · [`HISTORICO_UNBRICK_EH55_BGO_CH1_DAVIS_E_REGIAO.md`](./HISTORICO_UNBRICK_EH55_BGO_CH1_DAVIS_E_REGIAO.md)).
+
+---
+
+## 14. Referências Técnicas Oficiais e Normas de Engenharia
 
 1. **Matsushita Electric Industrial Co., Ltd. / Panasonic:**
    * *Panasonic DMR-EH55 Service Manual (North America - NTSC)* — Order No. **`CHM0605028CE`**, Maio de 2006 (Esquemáticos da Main/Digital PCB `VEP79138`, regulador `IC1506` p. 55, circuito discreto `P7501` / `D7510` / `Q7510` / `Q7514` / `QR7503` / `IC7501` pp. 62–64, interconexão `P59001` p. 97).

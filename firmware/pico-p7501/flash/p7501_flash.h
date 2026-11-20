@@ -41,7 +41,9 @@ extern "C" {
 #define P7501_FLASH_JEDEC_SIZE_ADDR    (P7501_FLASH_CACHED_BASE + 0x0000004CUL)
 #define P7501_FLASH_JEDEC_CFI_CMD      0x00980098UL
 #define P7501_FLASH_JEDEC_RESET_CMD    0x00F000F0UL
-/** BGO/[nfrom] partition base offset (2 MiB, `0x84200000..0x843FFFFF`, 32 x 64 KB). */
+/** `PROG061` / `Loader ver0.63` BGO/[nfrom] partition base offset (2 MiB, `0x84200000..0x843FFFFF`, 32 x 64 KB;
+ * note: real DMR-EH55 `Loader ver0.61` `IC5001` table `0x440337A4` places BGO at `0x84130000..0x843FFFFF`, 45 x 64 KiB `SA26..SA70`,
+ * and Upper EEMUL across `SA71..SA141` `0x84400000..0x847FFFFF`). */
 #define P7501_BGO_PARTITION_OFFSET     0x00200000UL
 #define P7501_BGO_PARTITION_SIZE       0x00200000UL
 #define P7501_BGO_SECTOR_SIZE          0x00010000UL
@@ -56,9 +58,9 @@ typedef struct p7501_flash_geometry {
     uint32_t hw_uncached_base; /**< Real MN103S uncached bus window base (0x84000000) */
     uint32_t hw_nvram_base;    /**< Physical uncached NVRAM start (0x84000000 + offset) */
     uint32_t hw_nvram_end;     /**< Physical uncached NVRAM exclusive end */
-    uint32_t bgo_hw_base;      /**< BGO/[nfrom] partition start VA (0x84200000 if >= 4MB) */
-    uint32_t bgo_hw_end;       /**< BGO/[nfrom] partition exclusive end VA */
-    uint32_t bgo_sector_count; /**< Number of 64 KB BGO sectors (32 for 8MB NOR) */
+    uint32_t bgo_hw_base;      /**< PROG061/ver0.63 BGO/[nfrom] start VA (0x84200000 if >= 4MB; EH55 ver0.61 = 0x84130000) */
+    uint32_t bgo_hw_end;       /**< BGO/[nfrom] partition exclusive end VA (`0x84400000`) */
+    uint32_t bgo_sector_count; /**< Number of 64 KB BGO sectors (`32` PROG061/ver0.63; `45` on real EH55 ver0.61) */
     uint32_t base_sector;  /**< First Spansion micro-sector index (e.g. SA134) */
     uint32_t sector_count; /**< Number of 8 KB micro-sectors in NVRAM partition */
 } p7501_flash_geometry_t;

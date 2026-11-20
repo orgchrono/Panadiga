@@ -1,0 +1,70 @@
+=== PLEASE WAIT 90s+ DIAGNOSIS START @ 2026-11-19 00:19:40 ===
+
+--- CMD: STATUS (elapsed 3.05s) ---
+VDD: 3.25V (OK)
+[STANDBY] RXD=1 NSW5V=1 TXD=1 XRESET=1 SW_PU=3.26V | State=POWERED / AWAKE (SW_UART ~3.3V)
+[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=232 wdt_recoveries=0 reboot_src=CLEAN fault_slot=255 fault_stage=IDLE last_cmd=BOOTTRACE last_us=25021577
+PANADIGA> 
+--- CMD: BOOTTRACE 90000 NORMAL (elapsed 90.02s) ---
+=== BOOTTRACE: window=90000ms boot=1 hold=0ms sticky=NO no_xrst=NO (8N1 @ 115200) ===
+[BOOTTRACE +  10ms] DDR CHECK: OK
+[BOOTTRACE +  19ms] Chip select = 1
+[BOOTTRACE +  20ms] F/E Address = 0x90202000 , Drive(compress) Size = 0xACC50
+[BOOTTRACE +  26ms] uncompress dst=90202000 len=160000 src=84080040 len=acc01
+[BOOTTRACE + 774ms] HEADER:5627DD54, DECOMP:5627DD54
+[BOOTTRACE + 777ms] F/E reset release finish ...
+[BOOTTRACE + 780ms] ***** Loader ver0.61 [06/03/06] *****
+[BOOTTRACE + 783ms] ***** normal mode *****
+[BOOTTRACE + 801ms] *** RTSC Initialize ***
+[BOOTTRACE +44902ms] DDR CHECK: OK
+[BOOTTRACE +44911ms] Chip select = 1
+[BOOTTRACE +44913ms] F/E Address = 0x90202000 , Drive(compress) Size = 0xACC50
+[BOOTTRACE +44918ms] uncompress dst=90202000 len=160000 src=84080040 len=acc01
+[BOOTTRACE +45666ms] HEADER:5627DD54, DECOMP:5627DD54
+[BOOTTRACE +45669ms] F/E reset release finish ...
+[BOOTTRACE +45672ms] ***** Loader ver0.61 [06/03/06] *****
+[BOOTTRACE +45675ms] ***** normal mode *****
+[BOOTTRACE +45693ms] *** RTSC Initialize ***
+[BOOTTRACE +55087ms] DDR CHECK: OK
+[BOOTTRACE +55095ms] Chip select = 1
+[BOOTTRACE +55097ms] F/E Address = 0x90202000 , Drive(compress) Size = 0xACC50
+[BOOTTRACE +55102ms] uncompress dst=90202000 len=160000 src=84080040 len=acc01
+[BOOTTRACE +55851ms] HEADER:5627DD54, DECOMP:5627DD54
+[BOOTTRACE +55854ms] F/E reset release finish ...
+[BOOTTRACE +55857ms] ***** Loader ver0.61 [06/03/06] *****
+[BOOTTRACE +55861ms] ***** normal mode *****
+[BOOTTRACE +55879ms] *** RTSC Initialize ***
+[BOOTTRACE +74567ms] DDR CHECK: OK
+[BOOTTRACE +74576ms] Chip select = 1
+[BOOTTRACE +74578ms] F/E Address = 0x90202000 , Drive(compress) Size = 0xACC50
+[BOOTTRACE +74583ms] uncompress dst=90202000 len=160000 src=84080040 len=acc01
+[BOOTTRACE +75332ms] HEADER:5627DD54, DECOMP:5627DD54
+[BOOTTRACE +75335ms] F/E reset release finish ...
+[BOOTTRACE +75338ms] ***** Loader ver0.61 [06/03/06] *****
+[BOOTTRACE +75341ms] ***** normal mode *****
+[BOOTTRACE +75359ms] *** RTSC Initialize ***
+[BOOTTRACE] UART: bytes=1240 first_byte=10233us ferr=3 perr=0 ovf=NO | SW_rel=NO
+[BOOTTRACE] ADC0_SWUART: min=0.07V max=3.30V (low=0 hiz=0.07..3.30V n=9000) | CtrlEdges: NSW5V=6 TXD=6 XRESET=6 (logged=18)
+  [CTRL +44120048us] NSW5V=1 TXD=1 XRESET=0
+  [CTRL +44133538us] NSW5V=0 TXD=1 XRESET=0
+  [CTRL +44144296us] NSW5V=0 TXD=0 XRESET=0
+  [CTRL +44714326us] NSW5V=0 TXD=1 XRESET=0
+  [CTRL +44716449us] NSW5V=1 TXD=1 XRESET=0
+  [CTRL +44892196us] NSW5V=1 TXD=1 XRESET=1
+  [CTRL +52948649us] NSW5V=1 TXD=1 XRESET=0
+  [CTRL +52993483us] NSW5V=0 TXD=1 XRESET=0
+  [CTRL +53002698us] NSW5V=0 TXD=0 XRESET=0
+  [CTRL +54898851us] NSW5V=0 TXD=1 XRESET=0
+  [CTRL +54901074us] NSW5V=1 TXD=1 XRESET=0
+  [CTRL +55076862us] NSW5V=1 TXD=1 XRESET=1
+  [CTRL +69905160us] NSW5V=1 TXD=1 XRESET=0
+  [CTRL +69931847us] NSW5V=0 TXD=1 XRESET=0
+  [CTRL +69949710us] NSW5V=0 TXD=0 XRESET=0
+  [CTRL +74379498us] NSW5V=0 TXD=1 XRESET=0
+BOOTTRACE: OK
+PANADIGA> 
+--- CMD: UARTSTREAM 40000 PASSIVE (elapsed 40.00s) ---
+=== UARTSTREAM: PIO1 115200 8N1 (window=40000 ms, hold=0 ms) ===
+UARTSTREAM: OK (0 bytes, framing_err=0, overflow=NO)
+PANADIGA> 
+=== PLEASE WAIT 90s+ DIAGNOSIS END @ 2026-11-19 00:21:53 ===

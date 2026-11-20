@@ -411,7 +411,7 @@ Service menu handler `Change HDD Capacity` stores 9 hardcoded RTSD entries (`#1`
 > - **Primary Channel (`ch = 0`, MMIO `0x89000500`, `Pri`):** DVD-RAM ODD (`acStack_70[0] = 2`, Primary Master) attached internally to Front-End (`FEP`).
 > - **Secondary Channel (`ch = 1`, MMIO `0x89000D00`, `Sec`):** HDD (`acStack_70[2] = 1`, **Secondary MASTER**; `acStack_70[3] = 0`, Secondary Slave unused) over its dedicated 40-pin `Extension FFC`.
 >
-> Setting **`Slave` (`dev = 1`)** maps to unused slot `acStack_70[3] == 0`. Leaving **`CS` (`Cable Select`, Pin 28 `CSEL`)** risks indeterminate `DEV` selection, `0x8000040d` collisions, or `MultiWord DMA MODE2` lockups in `FUN_5041f61b` / `FUN_5041f782` (`FUN_5710c6c3` / `FUN_5710c82a`). Power-cycling during an IDE hang can corrupt NOR **BGO sectors `0x84200000..0x843FFFFF`**, yielding `BGO driver init failed[1].` and `U99`. **Always jumper HDD / `StarTech IDE2SAT2` explicitly as `MASTER` (`Device 0`) — never `CS` and never `Slave`.**
+> Setting **`Slave` (`dev = 1`)** maps to unused slot `acStack_70[3] == 0`. Leaving **`CS` (`Cable Select`, Pin 28 `CSEL`)** risks indeterminate `DEV` selection, `0x8000040d` collisions, or `MultiWord DMA MODE2` lockups in `FUN_5041f61b` / `FUN_5041f782` (`FUN_5710c6c3` / `FUN_5710c82a`). Power-cycling during an IDE hang can corrupt NOR **BGO sectors (`0x84130000..0x843FFFFF` on real EH55 `Loader ver0.61`; `0x84200000..0x843FFFFF` on `ver0.63`/`PROG061`)**, yielding `BGO driver init failed[1].` and `U99`. **Always jumper HDD / `StarTech IDE2SAT2` explicitly as `MASTER` (`Device 0`) — never `CS` and never `Slave`.**
 
 ### 9.5 On-Call CLI & Desktop UI Workflow
 
@@ -427,6 +427,12 @@ panadiga hdd patch-capacity -i hdd_partition_firmware_0x02000000.bin --mode cap 
 ```
 
 In **Panadiga Desktop (`HddStorageView`)**, open **`Capacity Unlock (250GB / 2TB)`** (`HddCapacityPatcherCard`) followed by the capacity target selector (`Auto (Physical)`, `250 GB`, `300 GB`, `400 GB`, `500 GB`, `1 TB`, `2 TB`, or custom) under **`Physical Write & mkfs`** (`HddWriterCard`).
+
+### 9.4 `DAVIS` `CH1` Hardware Diagnostics, Reversed `P58001` Pinout & `PhysicalDrive1` (250 GB) Flash
+
+* **`PhysicalDrive1` (250 GB SATA via `StarTech IDE2SAT2`) `[PROVEN ON REAL HARDWARE]`:** The 250 GB disk received a `64 KiB` CoW backup of occupied sectors, unified image flashing (`SHA-256: 4fde753c...`), and a high-LBA Partition 1 mirror (`488266096`, `SHA-256: d932692c...`) logged in [`hdd_unbrick_flash_250gb_20261119.log`](../debug_logs/hdd_unbrick_flash_20261119.log).
+* **`DAVIS` asymmetric reset polarity & `P58001` pinout `[PROVEN ON REAL HARDWARE]`:** On the `AM34` IDE bridge, `CH0` uses active-LOW reset (`0x504F81D0 = 2`) whereas **`CH1` requires active-HIGH reset (`0x504F81D4 = 1`)** via helper `J 504156AD`. Connector `P58001` (`VEK0K00` / 40-pin continuous `N5EZZ0000003` ribbon) obeys reversed pin numbering `Pin k = ATA (41 - k)`, explaining why `IDE2SAT2` reads `0x00000000` (non-hanging) at `0°` vs. `0x00002004` (`DD13|DD2`) at `180°`.
+* **Live `CH1` bench state `[UNDER INVESTIGATION / CH1 PHYSICAL BLOCK]`:** While automated `PANAMON1>` probing ([`probe_ch1_full_diag_20261119.log`](../debug_logs/probe_ch1_full_diag_20261119.log) · [`probe_ch1_live_v2_0deg_20261119.log`](../debug_logs/probe_ch1_live_v2_0deg_20261119.log)) and `re::davis_probe` are operational, physical `CH1` still reads `0x00000000` (`is_ata=0`) on the bench `EH55` pending DC/continuity isolation. **Consequently, `MAIN` has NOT yet booted from `PhysicalDrive1` on live `EH55` hardware.**
 
 ---
 

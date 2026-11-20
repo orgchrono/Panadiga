@@ -1,13 +1,20 @@
 import { z } from 'zod';
 import type {
+  BgoAuditSourceMode,
   BgoMode,
+  DavisChannelId,
+  DavisDriveSelector,
   FrmPackMode,
   MainPassthroughMode,
   MatshitaBootScenario,
+  NorSliceKind,
   PicoCommandCategory,
   PicoUf2Variant,
   Sc0BridgeInputMode,
+  SdLoaderProfile,
+  TbcApplianceMode,
 } from '@/models';
+import type { LbsRegionPresetSlug, TvStandardSlug } from '@/constants';
 import type { DynamicKeymapProfile } from '@/models/ir';
 
 /** Narrows an unknown value to a plain string-keyed dictionary. */
@@ -110,6 +117,53 @@ export const isBgoMode: (value: unknown) => value is BgoMode = oneOfGuard([
 export const isMainPassthroughMode: (value: unknown) => value is MainPassthroughMode = oneOfGuard([
   'av_passthrough',
   'factory_original',
+] as const);
+
+export const isSdLoaderProfile: (value: unknown) => value is SdLoaderProfile = oneOfGuard([
+  'ver061',
+  'ver063',
+] as const);
+
+export const isTvStandardSlug: (value: unknown) => value is TvStandardSlug = oneOfGuard([
+  'ntsc',
+  'pal_m',
+  'pal',
+  'secam',
+] as const);
+
+export const isLbsRegionPresetSlug: (value: unknown) => value is LbsRegionPresetSlug = oneOfGuard([
+  'br_pal_m_r4',
+  'us_ntsc_r1',
+  'eu_pal_r2',
+  'custom_inspected',
+] as const);
+
+export const isTbcApplianceMode: (value: unknown) => value is TbcApplianceMode = oneOfGuard([
+  'stage15_digadiag_tbc',
+  'experimental_sd_ram_chainload',
+] as const);
+
+export const isNorSliceKind: (value: unknown) => value is NorSliceKind = oneOfGuard([
+  'full',
+  'bgo',
+  'nvram',
+  'loader',
+  'custom',
+] as const);
+
+export const isBgoAuditSourceMode: (value: unknown) => value is BgoAuditSourceMode = oneOfGuard([
+  'DUMP_FILE',
+  'LIVE_PICO',
+] as const);
+
+export const isDavisChannelId: (value: unknown) => value is DavisChannelId = oneOfGuard([
+  'ch0',
+  'ch1',
+] as const);
+
+export const isDavisDriveSelector: (value: unknown) => value is DavisDriveSelector = oneOfGuard([
+  'master',
+  'slave',
 ] as const);
 
 export function isDynamicKeymapProfile(value: unknown): value is DynamicKeymapProfile {

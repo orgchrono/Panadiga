@@ -1,95 +1,17 @@
 //! MN103S / AM34 position-coupled bytecode emitters used by the `PANAMON1` UART0 monitor.
 
-use anyhow::{Result, bail};
-use byteorder::{ByteOrder, LittleEndian};
+use anyhow::Result;
 
-use crate::re::nor_dumper::PUTC_D3_BYTES;
+pub(super) use crate::re::mn10300_emit::{
+    MONITOR_GETC_BYTES, MONITOR_PUTC_BYTES, PatchTable, emit_branch8_placeholder, emit_call16,
+    emit_call16_leaf, emit_jmp16_placeholder, emit_mov_imm32, patch_s8_rel, patch_s16_rel,
+};
 
-// Re-export so parent builds don't duplicate leaf stubs.
-pub(super) const MONITOR_PUTC_BYTES: [u8; 24] = PUTC_D3_BYTES;
-pub(super) const MONITOR_GETC_BYTES: [u8; 23] = [
-    0xFC, 0xAC, 0x0C, 0x20, 0x00, 0xD4, 0x1C, 0xF8, 0xE0, 0x10, 0xA0, 0x00, 0xC8, 0xF4, 0xFC, 0xA8,
-    0x09, 0x20, 0x00, 0xD4, 0xDF, 0x00, 0x00,
-];
-
-pub(super) struct PatchTable {
-    pub str_refs: Vec<(usize, usize, usize)>, // (patch_a0, patch_a1, str_idx)
-    pub calls16: Vec<(usize, usize)>,         // (call_off, target_off)
-    pub j16s: Vec<(usize, usize)>,            // (jmp_off, target_off)
-    pub beq8s: Vec<(usize, usize)>,           // (beq_off, target_off)
-    pub bne8s: Vec<(usize, usize)>,           // (bne_off, target_off)
-}
-
-pub(super) fn emit_mov_imm32(buf: &mut Vec<u8>, sub_op: u8, imm: u32) -> usize {
-    let off = buf.len() + 2;
-    buf.extend_from_slice(&[0xFC, sub_op]);
-    buf.extend_from_slice(&imm.to_le_bytes());
-    off
-}
-
-fn emit_call16_frame(buf: &mut Vec<u8>, pt: &mut PatchTable, target: usize, frame_bytes: u8) {
-    let off = buf.len();
-    buf.extend_from_slice(&[0xCD, 0x00, 0x00, 0x00, frame_bytes]);
-    pt.calls16.push((off, target));
-}
-
-pub(super) fn emit_call16(buf: &mut Vec<u8>, pt: &mut PatchTable, target: usize) {
-    // Internal monitor routines allocate a 4-byte slot so nested CALL16s preserve caller return PCs.
-    emit_call16_frame(buf, pt, target, 0x04);
-}
-
-pub(super) fn emit_call16_leaf(buf: &mut Vec<u8>, pt: &mut PatchTable, target: usize) {
-    // External leaf stubs (PUTC_D3_BYTES / GETC_D0_BYTES) terminate with `ret [], 0`.
-    emit_call16_frame(buf, pt, target, 0x00);
-}
-
-pub(super) fn emit_jmp16_placeholder(buf: &mut Vec<u8>) -> usize {
-    let off = buf.len();
-    buf.extend_from_slice(&[0xCC, 0x00, 0x00]);
-    off
-}
-
-pub(super) fn emit_branch8_placeholder(buf: &mut Vec<u8>, opcode: u8) -> usize {
-    let off = buf.len();
-    buf.extend_from_slice(&[opcode, 0x00]);
-    off
-}
-
-fn compute_rel_disp(
-    insn_off: usize,
-    target_off: usize,
-    min_disp: isize,
-    max_disp: isize,
-    width_label: &str,
-    kind: &str,
-) -> Result<isize> {
-    let disp = (target_off as isize) - (insn_off as isize);
-    if !(min_disp..=max_disp).contains(&disp) {
-        bail!("MN103S {kind} displacement out of {width_label} range: {disp}");
-    }
-    Ok(disp)
-}
-
-pub(super) fn patch_s16_rel(
-    buf: &mut [u8],
-    insn_off: usize,
-    target_off: usize,
-    kind: &str,
-) -> Result<()> {
-    let disp = compute_rel_disp(insn_off, target_off, -32768, 32767, "s16", kind)?;
-    LittleEndian::write_i16(&mut buf[insn_off + 1..insn_off + 3], disp as i16);
-    Ok(())
-}
-
-pub(super) fn patch_s8_rel(
-    buf: &mut [u8],
-    insn_off: usize,
-    target_off: usize,
-    kind: &str,
-) -> Result<()> {
-    let disp = compute_rel_disp(insn_off, target_off, -128, 127, "s8", kind)?;
-    buf[insn_off + 1] = (disp as i8) as u8;
-    Ok(())
+pub(super) struct NorDumperSubLocations {
+    pub sub_off: usize,
+    pub start_imm_off: usize,
+    pub end_imm_off: usize,
+    pub block_size: u32,
 }
 
 pub(super) fn emit_uppercase_d0(buf: &mut Vec<u8>, tag: &str) -> Result<()> {
@@ -146,15 +68,17 @@ pub(super) fn emit_nor_dumper_sub(
     putc_off: usize,
     hdr_str_idx: usize,
     ftr_str_idx: usize,
-) -> usize {
+) -> NorDumperSubLocations {
+    const BLOCK_SIZE: u32 = 4096;
     let sub_off = buf.len();
+    buf.extend_from_slice(&[0xF8, 0xFE, 0xFC]); // add -4, sp
     emit_print_str(buf, pt, hdr_str_idx, print_span_off);
-    let _ = emit_mov_imm32(buf, 0xDC, 0x8400_0000);
-    let _ = emit_mov_imm32(buf, 0xDD, 0x8480_0000);
+    let start_imm_off = emit_mov_imm32(buf, 0xDC, 0x8400_0000);
+    let end_imm_off = emit_mov_imm32(buf, 0xDD, 0x8480_0000);
 
     let blk_loop = buf.len();
     buf.extend_from_slice(&[0x8A, 0x00]); // mov 0, d2
-    let _ = emit_mov_imm32(buf, 0xCD, 4096); // mov 4096, d1
+    let _ = emit_mov_imm32(buf, 0xCD, BLOCK_SIZE); // mov 4096, d1
 
     let byte_loop = buf.len();
     buf.extend_from_slice(&[0xF0, 0x40, 0x83, 0xE2]); // movbu (a0), d0; mov d0, d3; add d0, d2
@@ -176,8 +100,13 @@ pub(super) fn emit_nor_dumper_sub(
         .push((emit_branch8_placeholder(buf, 0xC9), blk_loop));
 
     emit_print_str(buf, pt, ftr_str_idx, print_span_off);
-    buf.extend_from_slice(&[0xDF, 0x00, 0x04]); // ret [], 4
-    sub_off
+    buf.extend_from_slice(&[0xF8, 0xFE, 0x04, 0xDF, 0x00, 0x00]); // add +4, sp; ret [], 0
+    NorDumperSubLocations {
+        sub_off,
+        start_imm_off,
+        end_imm_off,
+        block_size: BLOCK_SIZE,
+    }
 }
 
 /// Emits `(put_nibble_sub, put_hex_byte_sub)`: prints low byte of `D0` as two uppercase hex chars.
@@ -187,6 +116,7 @@ pub(super) fn emit_put_hex_byte_sub(
     putc_off: usize,
 ) -> Result<usize> {
     let put_nib_off = buf.len();
+    buf.extend_from_slice(&[0xF8, 0xFE, 0xFC]); // add -4, sp
     buf.extend_from_slice(&[0xF8, 0xE0, 0x0F, 0x28, 0x30, 0xA0, 0x3A]); // and 0f,d0; add '0',d0; cmp '9'+1,d0
     let blt_digit = emit_branch8_placeholder(buf, 0xC0); // blt digit
     buf.extend_from_slice(&[0x28, 0x07]); // add 7, d0 ('A'..'F')
@@ -194,13 +124,13 @@ pub(super) fn emit_put_hex_byte_sub(
     patch_s8_rel(buf, blt_digit, digit_off, "PUTHEX_BLT")?;
     buf.push(0x83); // mov d0, d3
     emit_call16_leaf(buf, pt, putc_off);
-    buf.extend_from_slice(&[0xDF, 0x00, 0x04]); // ret [], 4
+    buf.extend_from_slice(&[0xF8, 0xFE, 0x04, 0xDF, 0x00, 0x00]); // add +4, sp; ret [], 0
 
     let sub_off = buf.len();
-    buf.push(0x81); // mov d0, d1
+    buf.extend_from_slice(&[0xF8, 0xFE, 0xFC, 0x81]); // add -4, sp; mov d0, d1
     buf.extend_from_slice(&[0xF8, 0xC4, 0x04]); // lsr 4, d0
     emit_call16(buf, pt, put_nib_off);
-    buf.push(0x84); // mov d1, d0
+    buf.extend_from_slice(&[0x84, 0xF8, 0xFE, 0x04]); // mov d1, d0; add +4, sp
     pt.j16s.push((emit_jmp16_placeholder(buf), put_nib_off));
     Ok(sub_off)
 }
@@ -213,7 +143,7 @@ pub(super) fn emit_read_hex_u32_sub(
     putc_off: usize,
 ) -> Result<usize> {
     let sub_off = buf.len();
-    buf.extend_from_slice(&[0x8A, 0x00, 0x85, 0x00]); // mov 0, d2; mov 0, d1
+    buf.extend_from_slice(&[0xF8, 0xFE, 0xFC, 0x8A, 0x00, 0x85, 0x00]); // add -4, sp; mov 0, d2; mov 0, d1
 
     let rx_loop = buf.len();
     emit_call16_leaf(buf, pt, getc_off);
@@ -271,7 +201,7 @@ pub(super) fn emit_read_hex_u32_sub(
     for br in to_done {
         patch_s8_rel(buf, br, done_off, "HEX_DONE")?;
     }
-    buf.extend_from_slice(&[0xDF, 0x00, 0x04]); // ret [], 4
+    buf.extend_from_slice(&[0xF8, 0xFE, 0x04, 0xDF, 0x00, 0x00]); // add +4, sp; ret [], 0
 
     let drain_off = buf.len();
     for br in [bad_1, bad_2, bad_3] {
@@ -292,6 +222,6 @@ pub(super) fn emit_read_hex_u32_sub(
     for br in to_bad_ret {
         patch_s8_rel(buf, br, bad_ret_off, "HEX_BAD_RET")?;
     }
-    buf.extend_from_slice(&[0x85, 0x00, 0xDF, 0x00, 0x04]); // mov 0, d1; ret [], 4
+    buf.extend_from_slice(&[0x85, 0x00, 0xF8, 0xFE, 0x04, 0xDF, 0x00, 0x00]); // mov 0, d1; add +4, sp; ret [], 0
     Ok(sub_off)
 }

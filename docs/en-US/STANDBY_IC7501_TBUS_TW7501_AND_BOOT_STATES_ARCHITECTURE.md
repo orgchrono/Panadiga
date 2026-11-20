@@ -88,7 +88,7 @@ flowchart TB
 | **76** | `P50(H)/(L)` | Inverter $\rightarrow$ `AV1` Pin 10 | External AV/SCART control output (tested via `SERV` `[8][4]`/`[8][5]`). |
 | **88** | `KEYIN3` | `JW7501 Pin 1 (KEY3_POWER)` $\leftarrow$ **`S7002 [POWER]`** | Dedicated front `[POWER]` button sense (**absent from `P7501`**); long hold triggers Forced Power-Off (`EC p. 20`). |
 | **89** | `VDD2 (5V)` | Timer 5V driver supply | 5V high-side port supply for `IC7501`. |
-| `EEPROM_W_C` | **`NC (OPEN)`** | No Connect | Confirms (`EC vol1 p. 68`, `vol2 p. 122`) **DMR-EH55 has no external Timer EEPROM**: all persistent NVRAM/EEMUL lives inside Spansion `IC5001` (`SA134..SA141`). |
+| `EEPROM_W_C` | **`NC (OPEN)`** | No Connect | Confirms (`EC vol1 p. 68`, `vol2 p. 122`) **DMR-EH55 has no external Timer EEPROM**: all persistent NOR parameters live inside Spansion `IC5001` (`SA26..SA70` BGO `[nfrom]` @ `0x84130000..0x843FFFFF` + `SA71..SA141` Upper EEMUL `"1284"` @ `0x84400000..0x847FFFFF`). |
 
 > [!NOTE]
 > **`IC3001` (`C1AB00002379`):** Is the **100-pin A/V switching matrix IC** (driven over I²C by `IC7501`), **NOT** the Timer MCU and NOT an EEPROM.
@@ -137,7 +137,7 @@ Why does draining **`TW7501`** unpowered cause a 2-second auto-restart loop (`PL
 
 Why do **`PLEASE WAIT (~2s) -> U99`**, **direct `U99`**, and **`HELLO (~2s) -> U99`** all share the exact **~2 second window** and block `SERV`?
 
-Verified MN103S decompilation in [`EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md`](../pseudocode/EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md) (lines 2144–2320) exposes the exact handover sequence in `BOOT.BIN`:
+Verified MN103S decompilation in [`EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md`](../pseudocode/EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md) (lines 2279–2491) exposes the exact handover sequence in `BOOT.BIN`:
 
 ```c
 // wait_1_sec_timer_sync @ 0x4400b34d (140 B)
@@ -229,4 +229,4 @@ sequenceDiagram
 2. **Decision Matrix (`PREJIG WAKE` without `XRESET` pulse):**
    - **`rxd_edges == 0` while `nsw5v_edges > 0`**: Proves AM34 died **before `UART0` emission** during `HELLO -> ~2s -> U99`; inspect `D3R3V`, `X_SW+3.8/+5.8`, `IC5001 SA0..SA3`, SDRAM, or Pin 3 vs Pin 6 wiring.
    - **`rxd_edges > 0` yielding `PANAMON1>` or `_dev_SERIAL`**: Attach Ghidra live via async GDB RSP proxy (`panadiga pico bridge --port COM10 --target-mode panamon1`).
-   - **If `PREJIG` catches `0` UART activity across both passive wake and `PREJIG`:** Fault occurs prior to `BOOT.BIN` reading `SW_UART`, requiring external **`TSOP-48`** inspection/recovery of **`IC5001`** (`SA0..SA3` strictly read-only, surgically repairing `SA4..SA133` / `SA134..SA141` NVRAM).
+   - **If `PREJIG` catches `0` UART activity across both passive wake and `PREJIG`:** Fault occurs prior to `BOOT.BIN` reading `SW_UART`, requiring external **`TSOP-48`** inspection/recovery of **`IC5001`** (keeping `256 KiB` IPL `SA0..SA10` [`SA0..SA3` policy] strictly read-only while surgically repairing BGO `SA26..SA70` or EEMUL `SA71..SA141`).

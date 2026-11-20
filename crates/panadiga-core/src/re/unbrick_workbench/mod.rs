@@ -6,11 +6,12 @@
 pub mod catalog;
 pub mod codec;
 pub mod io;
+mod summaries;
 
 pub(crate) use catalog::bgo_mode_label;
 pub use catalog::{
     ExtractedFrmModuleReport, FrmModuleExtractionReport, UnbrickHardwareFact,
-    UnbrickWorkspaceReport,
+    UnbrickWorkspaceReport, WorkbenchBgoSummary, WorkbenchRegionSummary,
 };
 pub(crate) use codec::{load_main_binary_and_meta, load_prog061_from_bytes};
 pub(crate) use io::discover_sources;

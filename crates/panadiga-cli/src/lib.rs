@@ -1,3 +1,5 @@
+#![deny(unsafe_code)]
+
 //! Panadiga CLI & Interactive Workbench Library Root.
 
 pub use panadiga_core::{

@@ -9,7 +9,7 @@ Este dossiê documenta o **Emulador do Drive Óptico Matshita `R6-MV4`**, o veri
 
 ## 1. Base Empírica em Bancada e Cenários de Boot
 
-Durante o boot do `DMR-EH55` (`Loader ver0.61` em `BOOT.BIN`), a CPU MN103S/AM34 autentica o drive óptico (`MATSHITA R6-MV4          `, revisão `S211` / `1.00`). Os logs empíricos na `COM10` deram origem a quatro cenários determinísticos em [`crates/panadiga-core/src/re/matshita_emu/mod.rs`](../../crates/panadiga-core/src/re/matshita_emu/mod.rs):
+Durante o boot do `DMR-EH55` (**`Loader ver0.61 [06/03/06]`** no aparelho físico; comparado também com `/BOOT.BIN` `ver0.63`), a CPU MN103S/AM34 autentica o drive óptico (`MATSHITA R6-MV4          `, revisão `S211` / `1.00`). Os logs empíricos na `COM10` deram origem a quatro cenários determinísticos em [`crates/panadiga-core/src/re/matshita_emu/mod.rs`](../../crates/panadiga-core/src/re/matshita_emu/mod.rs):
 
 | Cenário (`scenario`) | Condição Física Simulada | Log e Sense ATAPI | Resultado no Emulador |
 | :--- | :--- | :--- | :--- |
@@ -52,8 +52,8 @@ O interpretador emulado reproduz a tabela de despacho `<8sIII>` (`0x400DF5C0` em
 
 ## 4. Containers de Unlock `.FRM` para SD e CD/DVD
 
-- **SD Stage-1 (`DIGADIAG.FRM`)**: Deve estar na raiz de cartão **FAT16** (`FUN_4400c696` rejeita `> 0xFFF5` clusters), com exatos `131.072` bytes (`0x20000`) no formato plaintext `EXTRHEAD` e salto em `0x50400000`.
-- **SD Assinado (`PANA__SD.FRM`)** e **CD/DVD (`PANA_DVD.FRM`)**: Containers validados por `verify_unlock_frm_container` e sintetizados por `build_sample_unlock_frm`.
+- **SD Stage-1 (`DIGADIAG.FRM`)**: Deve estar na raiz de cartão **FAT16** (`FUN_4400c696` rejeita `> 0xFFF5` clusters), com **`262.144` bytes (`0x40000`) brutos descomprimidos** para **`Loader ver0.61`** real do DMR-EH55 (`0x90400000 -> JMP 0x50400000`), ou **`131.072` bytes (`0x20000`) `EXTRHEAD`** para **`Loader ver0.63`** (`/BOOT.BIN` EZ485V/EH58).
+- **SD (`PANA__SD.FRM`)** e **CD/DVD (`PANA_DVD.FRM`)**: Containers (`sd48` para `ver0.61`, `sd64` para `ver0.63`, Feistel para `DVD`) validados por `verify_unlock_frm_container` e sintetizados por `build_sample_unlock_frm`.
 
 ---
 

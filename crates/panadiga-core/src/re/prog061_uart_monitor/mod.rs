@@ -1,9 +1,15 @@
+#![deny(unsafe_code)]
+
 //! Interactive UART0 (`SC0`) pre-MAIN recovery monitor (`PANAMON1`) for `PROG061` / `DIGADIAG.FRM`.
 //!
 //! Placed in the verified `27,496`-byte `0xFF` slack region at file offset `0x039494`
 //! (`VA = 0x50439494`) of `eh55_frm_PROG061_BOOT.bin`, invoked from `0x5040A2CD` when
 //! `bgo_driver_init` fails on a corrupt BGO/NFROM flash partition.
+//!
+//! Command `'F'` (`nfrom_format`) is permanently disabled fail-closed (`ERR:E05_IPL_RO`) because
+//! `0x50401F3C` targets the `ver0.63` `0x84200000..0x843FFFFF` window with uninitialized RAM hooks.
 
+mod cmd_handlers;
 mod jedec_emit;
 mod mn103_emit;
 #[cfg(test)]
@@ -12,19 +18,19 @@ mod tests;
 use anyhow::{Result, bail};
 use byteorder::{ByteOrder, LittleEndian};
 
-use crate::constants::{AM34_FLASH_SIZE, AM34_FLASH_UNCACHED_BASE};
+use crate::constants::{AM34_FLASH_SIZE, AM34_FLASH_UNCACHED_BASE, AM34_SDRAM_UNCACHED_BASE};
 
-use super::bgo_unbrick::{PROG061_BASE_VA, PROG061_NFROM_FORMAT_VA};
+use super::bgo_unbrick::PROG061_BASE_VA;
 use super::nor_dumper::{NOR_MAGIC_FOOTER, NOR_MAGIC_HEADER};
+use cmd_handlers::{HandlerEmitCtx, emit_panamon1_cmd_handlers};
 use jedec_emit::{
     emit_check_nor_access_a2_sub, emit_jedec_erase_a2_sub, emit_jedec_poll_dq7_reset_sub,
-    emit_jedec_prog_a2_d2_sub, emit_nor_unlock_handler, emit_write_or_erase_handler,
+    emit_jedec_prog_a2_d2_sub,
 };
 use mn103_emit::{
-    MONITOR_GETC_BYTES, MONITOR_PUTC_BYTES, PatchTable, emit_branch8_placeholder, emit_call16,
-    emit_call16_leaf, emit_cond_jmp16, emit_jmp16_placeholder, emit_nor_dumper_sub, emit_print_str,
-    emit_put_hex_byte_sub, emit_read_hex_u32_or_syntax, emit_read_hex_u32_sub, emit_uppercase_d0,
-    patch_s8_rel, patch_s16_rel,
+    MONITOR_GETC_BYTES, MONITOR_PUTC_BYTES, PatchTable, emit_branch8_placeholder, emit_call16_leaf,
+    emit_jmp16_placeholder, emit_nor_dumper_sub, emit_print_str, emit_put_hex_byte_sub,
+    emit_read_hex_u32_sub, emit_uppercase_d0, patch_s8_rel, patch_s16_rel,
 };
 
 /// File offset of verified contiguous `0xFF` slack inside `eh55_frm_PROG061_BOOT.bin`.
@@ -34,6 +40,36 @@ pub const PROG061_UART_MONITOR_VA: u32 = PROG061_BASE_VA + OFF_UART_MONITOR_SLAC
 /// Maximum permitted size of the `PANAMON1` payload inside `PROG061` slack (`0x039494..0x040000`).
 pub const UART_MONITOR_MAX_SLACK_BYTES: usize = 27_496;
 
+/// Dynamically computed SDRAM offsets for patching the embedded `PANAMON1` NOR dumper bounds.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct Panamon1NorDumperOffsets {
+    pub entry_va: u32,
+    pub start_imm_off: usize,
+    pub end_imm_off: usize,
+    pub block_size: u32,
+}
+
+const fn sdram_to_uncached(va: u32) -> u32 {
+    if va < AM34_SDRAM_UNCACHED_BASE {
+        (va & 0x0FFF_FFFF) | AM34_SDRAM_UNCACHED_BASE
+    } else {
+        va
+    }
+}
+
+impl Panamon1NorDumperOffsets {
+    /// Returns `(uncached_entry_va, uncached_start_imm_va, uncached_end_imm_va)` for live SDRAM patching.
+    #[must_use]
+    pub const fn uncached_patch_vas(&self, payload_base_va: u32) -> (u32, u32, u32) {
+        let uncached_base = sdram_to_uncached(payload_base_va);
+        (
+            sdram_to_uncached(self.entry_va),
+            uncached_base.wrapping_add(self.start_imm_off as u32),
+            uncached_base.wrapping_add(self.end_imm_off as u32),
+        )
+    }
+}
+
 /// 20-byte branch/return dispatcher installed at `0x5040A2CD..0x5040A2E0` in `uart_monitor` mode.
 pub const PATCH_A2CD_UART_MONITOR: [u8; 20] = [
     0xDD, 0xC7, 0xF1, 0x02, 0x00, 0x00, 0x00, 0xA0, 0x00, 0xC8, 0x30, 0xA0, 0x01, 0xC8, 0x07, 0x80,
@@ -42,6 +78,13 @@ pub const PATCH_A2CD_UART_MONITOR: [u8; 20] = [
 
 /// Assembles the position-coupled `PANAMON1` interactive UART0 monitor for `PROG061` at `base_va`.
 pub fn build_prog061_uart_monitor_payload(base_va: u32) -> Result<Vec<u8>> {
+    build_prog061_uart_monitor_with_offsets(base_va).map(|(buf, _)| buf)
+}
+
+/// Assembles `PANAMON1` and returns `(payload_bytes, Panamon1NorDumperOffsets)`.
+pub fn build_prog061_uart_monitor_with_offsets(
+    base_va: u32,
+) -> Result<(Vec<u8>, Panamon1NorDumperOffsets)> {
     let mut strings: Vec<&[u8]> = vec![
         b"PANAMON1>[B/R/W/D/F/J/E/U/Q]\r\n", // 0: prompt
         b"OK:BYPASS\r\n",                    // 1: bypass msg
@@ -74,7 +117,7 @@ pub fn build_prog061_uart_monitor_payload(base_va: u32) -> Result<Vec<u8>> {
     };
 
     buf.extend_from_slice(&[0xCF, 0xF0]); // movm [d2,d3,a2,a3], (sp)
-    buf.extend_from_slice(&[0xF8, 0xFE, 0xF8, 0x00, 0x42, 0x04]); // add -8,sp; clr d0; mov d0,(4,sp)
+    buf.extend_from_slice(&[0xF8, 0xFE, 0xF0, 0x00, 0x42, 0x0C]); // add -16,sp; clr d0; mov d0,(12,sp)
     let j_main = emit_jmp16_placeholder(&mut buf);
 
     let putc_off = buf.len();
@@ -84,14 +127,17 @@ pub fn build_prog061_uart_monitor_payload(base_va: u32) -> Result<Vec<u8>> {
     buf.extend_from_slice(&MONITOR_GETC_BYTES);
 
     let print_span_off = buf.len();
+    buf.extend_from_slice(&[0xF8, 0xFE, 0xFC]); // add -4, sp
+    let print_span_loop = buf.len();
     buf.extend_from_slice(&[0xF0, 0x40, 0x83]); // movbu (a0), d0; mov d0, d3
     emit_call16_leaf(&mut buf, &mut pt, putc_off);
     buf.extend_from_slice(&[0x20, 0x01, 0xB4]); // add 1, a0; cmp a1, a0
     pt.bne8s
-        .push((emit_branch8_placeholder(&mut buf, 0xC9), print_span_off));
-    buf.extend_from_slice(&[0xDF, 0x00, 0x04]); // ret [], 4
+        .push((emit_branch8_placeholder(&mut buf, 0xC9), print_span_loop));
+    buf.extend_from_slice(&[0xF8, 0xFE, 0x04, 0xDF, 0x00, 0x00]); // add +4, sp; ret [], 0
 
-    let dump_nor_off = emit_nor_dumper_sub(&mut buf, &mut pt, print_span_off, putc_off, 14, 15);
+    let dumper_locs = emit_nor_dumper_sub(&mut buf, &mut pt, print_span_off, putc_off, 14, 15);
+    let dump_nor_off = dumper_locs.sub_off;
     let put_hex_byte_off = emit_put_hex_byte_sub(&mut buf, &mut pt, putc_off)?;
     let read_hex_u32_off = emit_read_hex_u32_sub(&mut buf, &mut pt, getc_off, putc_off)?;
     let check_nor_access_off = emit_check_nor_access_a2_sub(&mut buf)?;
@@ -151,101 +197,21 @@ pub fn build_prog061_uart_monitor_payload(base_va: u32) -> Result<Vec<u8>> {
     pt.j16s
         .push((emit_jmp16_placeholder(&mut buf), prompt_loop));
 
-    for (handler_kind, jmp_off) in handler_jmps {
-        let tgt_off = buf.len();
-        pt.j16s.push((jmp_off, tgt_off));
-        match handler_kind {
-            0 => {
-                emit_print_str(&mut buf, &mut pt, 1, print_span_off);
-                buf.extend_from_slice(&[0x00, 0xDF, 0xF0, 0x18]); // clr d0; ret [d2..a3], 24
-            }
-            1 => {
-                emit_print_str(&mut buf, &mut pt, 2, print_span_off);
-                buf.extend_from_slice(&[0x80, 0xFF, 0xDF, 0xF0, 0x18]); // mov -1,d0; ret [d2..a3], 24
-            }
-            2 => {
-                emit_print_str(&mut buf, &mut pt, 3, print_span_off);
-                let call_fmt_off = buf.len();
-                let call_fmt_va = (base_va as i64) + (call_fmt_off as i64);
-                let rel32 = (PROG061_NFROM_FORMAT_VA as i64) - call_fmt_va;
-                buf.push(0xDD);
-                buf.extend_from_slice(&(rel32 as i32).to_le_bytes());
-                buf.extend_from_slice(&[0x00, 0x00]);
-                emit_print_str(&mut buf, &mut pt, 4, print_span_off);
-                pt.j16s
-                    .push((emit_jmp16_placeholder(&mut buf), prompt_loop));
-            }
-            3 => {
-                emit_print_str(&mut buf, &mut pt, 5, print_span_off);
-                emit_call16(&mut buf, &mut pt, dump_nor_off);
-                emit_print_str(&mut buf, &mut pt, 5, print_span_off);
-                pt.j16s
-                    .push((emit_jmp16_placeholder(&mut buf), prompt_loop));
-            }
-            4 => {
-                emit_read_hex_u32_or_syntax(&mut buf, &mut pt, read_hex_u32_off, syntax_err_off)?;
-                buf.extend_from_slice(&[0xF1, 0xEA, 0xA0, b',']);
-                let bne_default = emit_branch8_placeholder(&mut buf, 0xC9);
-                emit_read_hex_u32_or_syntax(&mut buf, &mut pt, read_hex_u32_off, syntax_err_off)?;
-                let bra_len_ok = emit_branch8_placeholder(&mut buf, 0xCA);
-                let default_off = buf.len();
-                patch_s8_rel(&mut buf, bne_default, default_off, "R_DEF_BNE")?;
-                buf.extend_from_slice(&[0x8A, 0x10]);
-                let len_ok_off = buf.len();
-                patch_s8_rel(&mut buf, bra_len_ok, len_ok_off, "R_LEN_BRA")?;
-                emit_print_str(&mut buf, &mut pt, 5, print_span_off);
-                buf.extend_from_slice(&[0xAA, 0x00]);
-                emit_cond_jmp16(&mut buf, &mut pt, 0xC9, prompt_loop)?;
-                let r_loop = buf.len();
-                buf.extend_from_slice(&[0xF0, 0x42]);
-                emit_call16(&mut buf, &mut pt, put_hex_byte_off);
-                buf.extend_from_slice(&[0x22, 0x01, 0x2A, 0xFF, 0xAA, 0x00]);
-                pt.bne8s
-                    .push((emit_branch8_placeholder(&mut buf, 0xC9), r_loop));
-                emit_print_str(&mut buf, &mut pt, 5, print_span_off);
-                pt.j16s
-                    .push((emit_jmp16_placeholder(&mut buf), prompt_loop));
-            }
-            5 | 7 => {
-                let is_erase = handler_kind == 7;
-                let op_sub = if is_erase {
-                    jedec_erase_a2_off
-                } else {
-                    jedec_prog_a2_d2_off
-                };
-                emit_write_or_erase_handler(
-                    &mut buf,
-                    &mut pt,
-                    (
-                        read_hex_u32_off,
-                        check_nor_access_off,
-                        op_sub,
-                        print_span_off,
-                    ),
-                    (prompt_loop, syntax_err_off, e05_err_off),
-                    is_erase,
-                )?;
-            }
-            6 => {
-                emit_read_hex_u32_or_syntax(&mut buf, &mut pt, read_hex_u32_off, syntax_err_off)?;
-                buf.extend_from_slice(&[0xF1, 0xEA]);
-                emit_print_str(&mut buf, &mut pt, 5, print_span_off);
-                buf.extend_from_slice(&[0xF0, 0xF2]); // calls (a2)
-                emit_print_str(&mut buf, &mut pt, 4, print_span_off);
-                pt.j16s
-                    .push((emit_jmp16_placeholder(&mut buf), prompt_loop));
-            }
-            _ => emit_nor_unlock_handler(
-                &mut buf,
-                &mut pt,
-                getc_off,
-                putc_off,
-                print_span_off,
-                (prompt_loop, syntax_err_off),
-                (12, 13, 5, 10, 11),
-            )?,
-        }
-    }
+    let ctx = HandlerEmitCtx {
+        print_span_off,
+        putc_off,
+        getc_off,
+        dump_nor_off,
+        put_hex_byte_off,
+        read_hex_u32_off,
+        check_nor_access_off,
+        jedec_erase_a2_off,
+        jedec_prog_a2_d2_off,
+        prompt_loop,
+        syntax_err_off,
+        e05_err_off,
+    };
+    emit_panamon1_cmd_handlers(&mut buf, &mut pt, &ctx, &handler_jmps)?;
 
     strings.push(&nor_hdr);
     strings.push(NOR_MAGIC_FOOTER);
@@ -286,5 +252,11 @@ pub fn build_prog061_uart_monitor_payload(base_va: u32) -> Result<Vec<u8>> {
             buf.len()
         );
     }
-    Ok(buf)
+    let offsets = Panamon1NorDumperOffsets {
+        entry_va: base_va.wrapping_add(dumper_locs.sub_off as u32),
+        start_imm_off: dumper_locs.start_imm_off,
+        end_imm_off: dumper_locs.end_imm_off,
+        block_size: dumper_locs.block_size,
+    };
+    Ok((buf, offsets))
 }

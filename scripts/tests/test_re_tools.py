@@ -103,6 +103,24 @@ def test_ghidra_auto_unbrick_audit_helpers() -> None:
     )
     assert auto_bgo["mode"] == "AUTO_FORMAT_BGO"
 
+    mon_ok = audit.classify_prog061_sites(
+        audit.PATCH_SUM_BRA,
+        audit.PATCH_DEVINFO_BRA,
+        audit.PATCH_A2CD_UART_MONITOR,
+        audit.PATCH_A2BC_BRA_MONITOR,
+    )
+    assert mon_ok["mode"] == "UART_MONITOR_PANAMON1"
+    assert mon_ok["sites"]["0x5040A2BC_bgo_init_call"] == "BRA_TO_MONITOR"
+
+    mon_stale = audit.classify_prog061_sites(
+        audit.PATCH_SUM_BRA,
+        audit.PATCH_DEVINFO_BRA,
+        audit.PATCH_A2CD_UART_MONITOR,
+        audit.ORIG_A2BC_BGO_CALL,
+    )
+    assert mon_stale["mode"] == "CUSTOM_OR_PARTIAL"
+    assert mon_stale["sites"]["0x5040A2CD_bgo_init_fail_hook"] == "UART_MONITOR_HOOK_CONDITIONAL_STALE"
+
     factory_main = audit.classify_main3410_sites(
         audit.ORIG_FPC_STATUS_CTRL,
         audit.ORIG_ODD_STATE_BRANCH,

@@ -27,14 +27,19 @@ pub const AM34_FLASH_BASE: u32 = 0x8000_0000;
 pub const AM34_FLASH_BUS_BASE: u32 = AM34_FLASH_BASE;
 /// Spansion NOR Flash Total Memory Aperture (8 Megabytes).
 pub const AM34_FLASH_SIZE: u32 = 0x0080_0000;
-/// Spansion NOR Flash Protected IPL / Kernel Size (SA0..SA133 = 8,128 Kilobytes).
+/// Spansion NOR Flash Protected IPL / Kernel Size (abstract `64 KiB` policy `SA0..SA133` = 8,128 Kilobytes;
+/// physical `SA0..SA133` = `8×8 KiB` + `126×64 KiB` on the 142-sector dual-boot S29JL064H).
 pub const AM34_FLASH_IPL_SIZE: u32 = 0x007F_0000;
-/// Spansion NOR Flash Critical Boot IPL Size (SA0..SA3 = first 256 KiB: 0x8000_0000..0x8003_FFFF).
+/// Spansion NOR Flash Critical Boot IPL Size (first 256 KiB: `0x8000_0000..0x8003_FFFF`;
+/// labeled `SA0..SA3` in abstract `64 KiB` Pico policy units, physically spanning `SA0..SA10` = `8×8 KiB + 3×64 KiB`).
 pub const AM34_FLASH_CRITICAL_IPL_SIZE: u32 = 0x0004_0000;
-/// Physical offset where Upper NOR App / BGO sectors begin (SA4..SA133 = 0x0004_0000..nvram_start - 1).
+/// Physical offset where Upper NOR App / BGO sectors begin (`0x0004_0000..nvram_start - 1`;
+/// policy `SA4..SA133`, physically `SA11..SA133` on real 142-sector S29JL064H silicon).
 pub const AM34_FLASH_UPPER_APP_START_OFFSET: u32 = 0x0004_0000;
 /// Main uniform sector size of Spansion S29JL064H NOR Flash (64 KiB = 65,536 bytes).
 pub const SPANSION_MAIN_SECTOR_SIZE_BYTES: usize = 65_536;
+/// Total physical sectors on Spansion S29JL064H (`8×8 KiB` bottom `SA0..SA7` + `126×64 KiB` `SA8..SA133` + `8×8 KiB` top `SA134..SA141` = 142).
+pub const SPANSION_S29JL064H_SECTOR_COUNT: usize = 142;
 
 /// NVRAM Top-Boot Partition Base Physical Address (0x807F_0000).
 pub const AM34_NVRAM_BASE: u32 = 0x807F_0000;
@@ -58,10 +63,22 @@ pub const AM34_BOOT_BIN_SIZE: u32 = 0x0004_0000;
 
 /// Spansion NOR Flash Uncached Hardware Aperture (CS1, 0x8400_0000..0x8480_0000).
 pub const AM34_FLASH_UNCACHED_BASE: u32 = 0x8400_0000;
-/// Spansion NOR BGO Partition Base inside Uncached Aperture (`0x8420_0000..0x8440_0000`, 32x64 KiB).
+/// `PROG061` / `Loader ver0.63` BGO Partition Base inside Uncached Aperture (`0x8420_0000..0x843F_FFFF`, 32x64 KiB; `nfrom_format` / EZ485V target).
 pub const AM34_FLASH_BGO_BASE: u32 = 0x8420_0000;
 pub const AM34_FLASH_BGO_SIZE: u32 = 0x0020_0000;
-/// Spansion NOR Main Application Region inside Uncached Aperture (`0x8440_0000..0x847F_0000`).
+/// Real DMR-EH55 (`Loader ver0.61 [06/03/06]`, `IC5001` 8 MiB) BGO geometry table VA (`0x0337A4` file offset).
+pub const AM34_EH55_BGO_TABLE_VA: u32 = 0x4403_37A4;
+/// Real DMR-EH55 (`IC5001`) `EXTRHEAD "DRV "` container start inside Uncached Aperture (`SA15..SA25`, payload `0x8408_0040`).
+pub const AM34_EH55_DRV_EXTRHEAD_BASE: u32 = 0x8408_0000;
+/// Real DMR-EH55 (`Loader ver0.61`) BGO `[nfrom]` Partition Start (`SA26..SA70`: `0x8413_0000..0x843F_FFFF`, `45 x 64 KiB` sectors).
+pub const AM34_EH55_FLASH_BGO_BASE: u32 = 0x8413_0000;
+/// Real DMR-EH55 (`Loader ver0.61`) BGO `[nfrom]` Partition Size (`45 x 64 KiB` = `2,880 KiB`).
+pub const AM34_EH55_FLASH_BGO_SIZE: u32 = 0x002D_0000;
+/// Real DMR-EH55 (`IC5001`) Upper EEMUL / NOR Flash FS Start (`SA71..SA141`, `"1284"` `0x0FF0_0000` headers through `SA134`).
+pub const AM34_EH55_UPPER_EEMUL_BASE: u32 = 0x8440_0000;
+/// Real DMR-EH55 (`IC5001`) Upper EEMUL Total Span (`0x8440_0000..0x847F_FFFF`, `4 MiB` across `SA71..SA141`).
+pub const AM34_EH55_UPPER_EEMUL_SIZE: u32 = 0x0040_0000;
+/// Spansion NOR Main Application / Upper EEMUL Region inside Uncached Aperture (`0x8440_0000..0x847E_FFFF`, `SA71..SA133`).
 pub const AM34_FLASH_UNCACHED_APP_BASE: u32 = 0x8440_0000;
 pub const AM34_FLASH_UNCACHED_APP_SIZE: u32 = 0x003F_0000;
 /// NVRAM Top-Boot Partition Uncached Aperture (`0x847F_0000..0x8480_0000`).
@@ -91,6 +108,8 @@ pub const AM34_SC0_STR_VA: u32 = AM34_SC0_BASE + 0x0C;
 
 /// Standard virtual load bases for unpacked Panasonic `PROG061` and `MAIN` modules in SDRAM.
 pub const AM34_PROG061_BASE_VA: u32 = 0x5040_0000;
+/// Uncached SDRAM alias of `AM34_PROG061_BASE_VA` (`0x9040_0000`), required for AM34 D-cache/I-cache coherence (`PANADMP1` `0x9043950E`, RAM stubs `0x90439B40`).
+pub const AM34_PROG061_SDRAM_UNCACHED_BASE: u32 = 0x9040_0000;
 pub const AM34_MAIN_BASE_VA: u32 = 0x5700_0000;
 
 /// Expected unpacked binary sizes for audited `MAIN` firmware builds (`3410PQ` & `3060NP`).

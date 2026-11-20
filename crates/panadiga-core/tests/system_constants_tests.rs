@@ -74,3 +74,42 @@ fn test_constants_memory_map_and_candidate_paths() {
     assert!(!CANDIDATE_HDD_RAW_BACKUP_PATHS.is_empty());
     assert!(!CANDIDATE_MANUALS_DIRS.is_empty());
 }
+
+#[test]
+fn test_real_eh55_ver061_ssot_constants_and_geometry_invariants() {
+    assert_eq!(SPANSION_S29JL064H_SECTOR_COUNT, 142);
+    assert_eq!(
+        8 * SPANSION_MICROSECTOR_SIZE
+            + 126 * SPANSION_MAIN_SECTOR_SIZE_BYTES
+            + 8 * SPANSION_MICROSECTOR_SIZE,
+        SPANSION_FLASH_SIZE_BYTES
+    );
+
+    // Preserve PROG061 / Loader ver0.63 BGO region unchanged
+    assert_eq!(AM34_FLASH_BGO_BASE, 0x8420_0000);
+    assert_eq!(AM34_FLASH_BGO_SIZE, 0x0020_0000);
+
+    // Verified live DMR-EH55 IC5001 (Loader ver0.61 [06/03/06]) constants
+    assert_eq!(AM34_EH55_BGO_TABLE_VA, 0x4403_37A4);
+    assert_eq!(AM34_EH55_DRV_EXTRHEAD_BASE, 0x8408_0000);
+    assert_eq!(AM34_EH55_FLASH_BGO_BASE, 0x8413_0000);
+    assert_eq!(
+        AM34_EH55_FLASH_BGO_SIZE,
+        45 * SPANSION_MAIN_SECTOR_SIZE_BYTES as u32
+    );
+    assert_eq!(
+        AM34_EH55_FLASH_BGO_BASE + AM34_EH55_FLASH_BGO_SIZE,
+        AM34_EH55_UPPER_EEMUL_BASE
+    );
+    assert_eq!(AM34_EH55_UPPER_EEMUL_BASE, 0x8440_0000);
+    assert_eq!(AM34_EH55_UPPER_EEMUL_SIZE, 0x0040_0000);
+    assert_eq!(
+        AM34_EH55_UPPER_EEMUL_BASE + AM34_EH55_UPPER_EEMUL_SIZE,
+        AM34_FLASH_UNCACHED_BASE + AM34_FLASH_SIZE
+    );
+    assert_eq!(AM34_PROG061_SDRAM_UNCACHED_BASE, 0x9040_0000);
+    assert_eq!(
+        AM34_PROG061_SDRAM_UNCACHED_BASE,
+        AM34_SDRAM_UNCACHED_BASE + (AM34_PROG061_BASE_VA & 0x03FF_FFFF)
+    );
+}

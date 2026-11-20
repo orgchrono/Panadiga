@@ -3,7 +3,7 @@
 use anyhow::Result;
 use std::io::{Read, Seek};
 
-use crate::constants::PANA_DIGADIAG_FRM_SIZE;
+use crate::constants::{PANA_DIGADIAG_FRM_SIZE, PANA_DIGADIAG_RAW_VER061_SIZE};
 
 use super::super::verify::{SdUnbrickCheck, check, verify_digadiag_buffer};
 use super::io::read_sectors;
@@ -158,15 +158,17 @@ pub(crate) fn inspect_fat16_root_and_digadiag<R: Read + Seek>(
     }
 
     if let Some(ref d) = digadiag_entry {
-        if d.file_size != PANA_DIGADIAG_FRM_SIZE as u32 {
+        let valid_diag_size = d.file_size == PANA_DIGADIAG_FRM_SIZE as u32
+            || d.file_size == PANA_DIGADIAG_RAW_VER061_SIZE as u32;
+        if !valid_diag_size {
             checks.push(check(
                 "sd_digadiag_entry",
                 "fail",
                 format!(
-                    "Root DIGADIAG.FRM has wrong size {} B (expected {})",
-                    d.file_size, PANA_DIGADIAG_FRM_SIZE
+                    "Root DIGADIAG.FRM has wrong size {} B (expected {} or {})",
+                    d.file_size, PANA_DIGADIAG_RAW_VER061_SIZE, PANA_DIGADIAG_FRM_SIZE
                 ),
-                "FUN_4400a97c requires exact 131072 B (0x20000) plaintext EXTRHEAD container.",
+                "Loader ver0.61 requires 262144 B (0x40000) raw; Loader ver0.63 requires 131072 B (0x20000) plaintext EXTRHEAD.",
             ));
         } else if !d.chain_complete {
             checks.push(check(
@@ -183,11 +185,10 @@ pub(crate) fn inspect_fat16_root_and_digadiag<R: Read + Seek>(
                 &d.chain_clusters,
                 d.file_size,
             )?;
-            let (_, exact_ok, dst_hex, bgo_mode, payload_chk) =
-                verify_digadiag_buffer(Some(Ok(&payload)));
-            digadiag_payload_verified = exact_ok && payload_chk.severity == "pass";
+            let diag = verify_digadiag_buffer(Some(Ok(&payload)));
+            digadiag_payload_verified = diag.exact_size_ok && diag.check.severity == "pass";
             if !digadiag_payload_verified {
-                checks.push(payload_chk);
+                checks.push(diag.check);
             } else {
                 checks.push(check(
                     "sd_digadiag_entry",
@@ -196,11 +197,11 @@ pub(crate) fn inspect_fat16_root_and_digadiag<R: Read + Seek>(
                         "Root 8.3 DIGADIAG.FRM OK: {} B @ cluster {} (dst={}, mode={}, contig={})",
                         d.file_size,
                         d.first_cluster,
-                        dst_hex.as_deref().unwrap_or("?"),
-                        bgo_mode.as_deref().unwrap_or("?"),
+                        diag.dst_addr_hex.as_deref().unwrap_or("?"),
+                        diag.bgo_mode.as_deref().unwrap_or("?"),
                         d.chain_contiguous
                     ),
-                    "Exact 8.3 root directory entry, FAT16 cluster chain, and EXTRHEAD container verified.",
+                    "Exact 8.3 root directory entry, FAT16 cluster chain, and DIGADIAG payload verified.",
                 ));
             }
         }

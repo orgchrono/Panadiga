@@ -4,8 +4,8 @@ use anyhow::{Result, bail};
 
 use super::{
     OFF_BGO_INIT_FAIL_HOOK, PATCH_A2CD_AUTOFORMAT, PROG061_BASE_VA, PROG061_EXPECTED_SIZE,
-    Prog061BgoInspection, Prog061BgoPatchMode, Prog061BgoSiteStatus, SPEC_A2CD_AUTOFORMAT,
-    SPEC_A2CD_UART_MONITOR, SPEC_BGO_SUM, SPEC_DEVINFO_CHECK,
+    Prog061BgoInspection, Prog061BgoPatchMode, Prog061BgoSiteStatus, SPEC_A2BC_BRA_MONITOR,
+    SPEC_A2CD_AUTOFORMAT, SPEC_A2CD_UART_MONITOR, SPEC_BGO_SUM, SPEC_DEVINFO_CHECK,
 };
 use crate::constants::PANA_DIGADIAG_FRM_SIZE;
 use crate::crypto::{ExtrheadCryptMode, unpack_extrhead};
@@ -43,12 +43,18 @@ pub fn inspect_prog061_bgo_sites(data: &[u8]) -> Result<Prog061BgoInspection> {
     let (_, raw_sha256) = calculate_hashes(data);
     let bgo_sum_site = site_status_from_spec(data, &SPEC_BGO_SUM, "BYPASSED_BRA")?;
     let devinfo_site = site_status_from_spec(data, &SPEC_DEVINFO_CHECK, "BYPASSED_BRA")?;
+    let bgo_call_cls = classify_patch_site(data, &SPEC_A2BC_BRA_MONITOR, "BRA_TO_MONITOR")?;
     let mut bgo_init_hook_site =
         site_status_from_spec(data, &SPEC_A2CD_AUTOFORMAT, "AUTO_FORMAT_HOOK")?;
     if bgo_init_hook_site.state == "UNKNOWN_OR_MISMATCH" {
         let mon_cls = classify_patch_site(data, &SPEC_A2CD_UART_MONITOR, "UART_MONITOR_HOOK")?;
         if mon_cls.state == "UART_MONITOR_HOOK" {
-            bgo_init_hook_site.state = "UART_MONITOR_HOOK".to_string();
+            bgo_init_hook_site.state = if bgo_call_cls.state == "BRA_TO_MONITOR" {
+                "UART_MONITOR_HOOK"
+            } else {
+                "UART_MONITOR_HOOK_CONDITIONAL_STALE"
+            }
+            .to_string();
         }
     }
 
@@ -56,11 +62,14 @@ pub fn inspect_prog061_bgo_sites(data: &[u8]) -> Result<Prog061BgoInspection> {
         bgo_sum_site.state.as_str(),
         devinfo_site.state.as_str(),
         bgo_init_hook_site.state.as_str(),
+        bgo_call_cls.state,
     ) {
-        ("FACTORY", "FACTORY", "FACTORY") => "FACTORY_ORIGINAL",
-        ("BYPASSED_BRA", "BYPASSED_BRA", "FACTORY") => "BYPASS_CHECKS_ONLY",
-        ("BYPASSED_BRA", "BYPASSED_BRA", "AUTO_FORMAT_HOOK") => "AUTO_FORMAT_BGO",
-        ("BYPASSED_BRA", "BYPASSED_BRA", "UART_MONITOR_HOOK") => "UART_MONITOR_PANAMON1",
+        ("FACTORY", "FACTORY", "FACTORY", "FACTORY") => "FACTORY_ORIGINAL",
+        ("BYPASSED_BRA", "BYPASSED_BRA", "FACTORY", "FACTORY") => "BYPASS_CHECKS_ONLY",
+        ("BYPASSED_BRA", "BYPASSED_BRA", "AUTO_FORMAT_HOOK", "FACTORY") => "AUTO_FORMAT_BGO",
+        ("BYPASSED_BRA", "BYPASSED_BRA", "UART_MONITOR_HOOK", "BRA_TO_MONITOR") => {
+            "UART_MONITOR_PANAMON1"
+        }
         _ => "CUSTOM_OR_PARTIAL",
     };
 
@@ -78,6 +87,23 @@ fn clear_monitor_slack(buf: &mut [u8], monitor_payload: &[u8], slack_end: usize)
     if &buf[OFF_UART_MONITOR_SLACK..slack_end] == monitor_payload {
         buf[OFF_UART_MONITOR_SLACK..slack_end].fill(0xFF);
     }
+}
+
+fn apply_bgo_bypass_sites(
+    raw_prog061: &mut [u8],
+    bgo_call_action: PatchApplyAction,
+    hook_spec: &PatchSpec<'_>,
+    hook_action: PatchApplyAction,
+) -> Result<()> {
+    apply_patch_specs_in_place(
+        raw_prog061,
+        &[
+            (&SPEC_BGO_SUM, PatchApplyAction::ApplyReplace),
+            (&SPEC_DEVINFO_CHECK, PatchApplyAction::ApplyReplace),
+            (&SPEC_A2BC_BRA_MONITOR, bgo_call_action),
+            (hook_spec, hook_action),
+        ],
+    )
 }
 
 /// Applies the requested BGO recovery patch with fail-closed policy enforcement on `AutoFormatBgo`.
@@ -111,13 +137,11 @@ pub fn patch_prog061_bgo_in_place_with_policy(
 
     match mode {
         Prog061BgoPatchMode::BypassChecksOnly => {
-            apply_patch_specs_in_place(
+            apply_bgo_bypass_sites(
                 raw_prog061,
-                &[
-                    (&SPEC_BGO_SUM, PatchApplyAction::ApplyReplace),
-                    (&SPEC_DEVINFO_CHECK, PatchApplyAction::ApplyReplace),
-                    (active_hook_spec, PatchApplyAction::RestoreExpect),
-                ],
+                PatchApplyAction::RestoreExpect,
+                active_hook_spec,
+                PatchApplyAction::RestoreExpect,
             )?;
             clear_monitor_slack(raw_prog061, &monitor_payload, slack_end);
         }
@@ -129,13 +153,11 @@ pub fn patch_prog061_bgo_in_place_with_policy(
                     &[(active_hook_spec, PatchApplyAction::RestoreExpect)],
                 )?;
             }
-            apply_patch_specs_in_place(
+            apply_bgo_bypass_sites(
                 raw_prog061,
-                &[
-                    (&SPEC_BGO_SUM, PatchApplyAction::ApplyReplace),
-                    (&SPEC_DEVINFO_CHECK, PatchApplyAction::ApplyReplace),
-                    (&SPEC_A2CD_AUTOFORMAT, PatchApplyAction::ApplyReplace),
-                ],
+                PatchApplyAction::RestoreExpect,
+                &SPEC_A2CD_AUTOFORMAT,
+                PatchApplyAction::ApplyReplace,
             )?;
             clear_monitor_slack(raw_prog061, &monitor_payload, slack_end);
         }
@@ -156,13 +178,11 @@ pub fn patch_prog061_bgo_in_place_with_policy(
                     &[(active_hook_spec, PatchApplyAction::RestoreExpect)],
                 )?;
             }
-            apply_patch_specs_in_place(
+            apply_bgo_bypass_sites(
                 raw_prog061,
-                &[
-                    (&SPEC_BGO_SUM, PatchApplyAction::ApplyReplace),
-                    (&SPEC_DEVINFO_CHECK, PatchApplyAction::ApplyReplace),
-                    (&SPEC_A2CD_UART_MONITOR, PatchApplyAction::ApplyReplace),
-                ],
+                PatchApplyAction::ApplyReplace,
+                &SPEC_A2CD_UART_MONITOR,
+                PatchApplyAction::ApplyReplace,
             )?;
             raw_prog061[OFF_UART_MONITOR_SLACK..slack_end].copy_from_slice(&monitor_payload);
         }
@@ -172,6 +192,7 @@ pub fn patch_prog061_bgo_in_place_with_policy(
                 &[
                     (&SPEC_BGO_SUM, PatchApplyAction::RestoreExpect),
                     (&SPEC_DEVINFO_CHECK, PatchApplyAction::RestoreExpect),
+                    (&SPEC_A2BC_BRA_MONITOR, PatchApplyAction::RestoreExpect),
                     (active_hook_spec, PatchApplyAction::RestoreExpect),
                 ],
             )?;

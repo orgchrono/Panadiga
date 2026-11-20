@@ -181,11 +181,11 @@ export const INDEXED_SERVICE_MANUALS_COUNT = 30;
 /** Uniform Spansion S29JL064H main array sector size in bytes (64 KiB) */
 export const SPANSION_STANDARD_SECTOR_SIZE_BYTES = 64 * 1024;
 
-/** Fixed primary bootloader bank sector count (SA0..SA15) */
-export const SPANSION_BOOTLOADER_SECTOR_COUNT = 16;
+/** Fixed primary bootloader bank sector count (SA0..SA10, 256 KiB E05 IPL) */
+export const SPANSION_BOOTLOADER_SECTOR_COUNT = 11;
 
-/** Total unified Flash sector geometry count (SA0..SA70 across uniform + top parameter banks) */
-export const SPANSION_UNIFIED_TOTAL_SECTORS = 71;
+/** Total physical Spansion S29JL064H sector geometry count (SA0..SA141: 8x8K + 126x64K + 8x8K) */
+export const SPANSION_UNIFIED_TOTAL_SECTORS = 142;
 
 /** Standard 16-bit word count spanning the 64 KiB EEMUL NVRAM aperture */
 export const AM34_NVRAM_WORD_COUNT_16BIT = 16384;

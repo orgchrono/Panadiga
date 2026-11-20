@@ -16,8 +16,8 @@ export const MatshitaSerialFrmSection: React.FC<MatshitaSerialFrmProps> = ({
   const { t } = useTranslation();
   const [serialCmd, setSerialCmd] = useState('WW 0x51800000 0xDEADBEEF');
   const [unlockPass, setUnlockPass] = useState(true);
-  const [containerKind, setContainerKind] = useState('sd');
-  const [frmPath, setFrmPath] = useState('sd_card_eh55/DIGADIAG.FRM');
+  const [containerKind, setContainerKind] = useState('sd48');
+  const [frmPath, setFrmPath] = useState('firmware_and_images/sd_unbrick_kit/PANA__SD.FRM');
   const [outPath, setOutPath] = useState('');
 
   const frmSummary = frmPackState.data?.verification ?? frmVerifyState.data;
@@ -85,10 +85,11 @@ export const MatshitaSerialFrmSection: React.FC<MatshitaSerialFrmProps> = ({
               value={containerKind}
               onChange={e => setContainerKind(e.target.value)}
             >
-              <option value="sd">sd (EXTRHEAD 128K)</option>
-              <option value="sd48">sd48 (PANA__SD)</option>
-              <option value="cd">cd (PANA_DVD.FRM)</option>
-              <option value="dvd">dvd (MATSHITA)</option>
+              <option value="sd48">{t('unbrick.matshita.kindSd48')}</option>
+              <option value="sd">{t('unbrick.matshita.kindSd64')}</option>
+              <option value="digadiag">{t('unbrick.matshita.kindDigadiag')}</option>
+              <option value="cd">{t('unbrick.matshita.kindCd')}</option>
+              <option value="dvd">{t('unbrick.matshita.kindDvd')}</option>
             </select>
           </div>
           <div className="space-y-1">
@@ -111,7 +112,7 @@ export const MatshitaSerialFrmSection: React.FC<MatshitaSerialFrmProps> = ({
             id="matshita-frm-path"
             value={frmPath}
             onChange={e => setFrmPath(e.target.value)}
-            placeholder="sd_card_eh55/DIGADIAG.FRM"
+            placeholder="firmware_and_images/sd_unbrick_kit/PANA__SD.FRM"
           />
         </div>
         <div className="flex flex-wrap gap-2">

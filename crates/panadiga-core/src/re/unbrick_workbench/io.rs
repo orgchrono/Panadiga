@@ -1,3 +1,5 @@
+#![deny(unsafe_code)]
+
 //! Thin imperative workspace discovery and `.FRM` filesystem extraction shell.
 
 use std::fs;
@@ -15,6 +17,7 @@ use super::super::main_passthrough::{
     EXPECTED_MAIN_3410PQ_SIZE, MAIN_BASE_VA, build_passthrough_rsp_plan,
     inspect_main_firmware_identity, inspect_main_passthrough_sites,
 };
+use super::super::region_compat::inspect_main_region_compat;
 use super::super::unbrick_sd_kit::verify_sd_unbrick_media;
 use super::catalog::{
     ExtractedFrmModuleReport, FrmModuleExtractionReport, UnbrickWorkspaceReport,
@@ -22,6 +25,9 @@ use super::catalog::{
 };
 use super::codec::{
     detect_and_parse_frm_toc, load_main_binary_and_meta, load_prog061_from_bytes, slice_frm_slot,
+};
+use super::summaries::{
+    RECOMMENDED_RECOVERY_PROFILE, inspect_workbench_bgo, inspect_workbench_region,
 };
 
 fn find_first_existing(base: &Path, candidates: &[&str]) -> Option<PathBuf> {
@@ -37,6 +43,8 @@ pub(crate) struct DiscoveredUnbrickSources {
     pub main_3410: Option<PathBuf>,
     pub drv: Option<PathBuf>,
     pub sd_dir: Option<PathBuf>,
+    pub nor_8mb: Option<PathBuf>,
+    pub dev_bin: Option<PathBuf>,
 }
 
 pub(crate) fn discover_sources(root: &Path) -> DiscoveredUnbrickSources {
@@ -44,6 +52,7 @@ pub(crate) fn discover_sources(root: &Path) -> DiscoveredUnbrickSources {
     let prog061 = find_first_existing(
         root,
         &[
+            "firmware_and_images/sd_unbrick_kit/DIGADIAG.FRM",
             "firmware_and_images/extracted_partitions/frm_unpacked/prog061_dec.bin",
             "firmware_and_images/extracted_partitions/frm_unpacked/prog061_raw.bin",
         ],
@@ -59,15 +68,37 @@ pub(crate) fn discover_sources(root: &Path) -> DiscoveredUnbrickSources {
         root,
         &["firmware_and_images/extracted_partitions/frm_unpacked/drv_s211_dec.bin"],
     );
-    let sd_dir = [root.join("sd_card_eh55"), root.join("unbrick_sd_kit")]
-        .into_iter()
-        .find(|d| d.join("DIGADIAG.FRM").is_file() || d.join("PANA__SD.FRM").is_file());
+    let sd_dir = [
+        root.join(crate::constants::DEFAULT_SD_UNBRICK_KIT_DIR),
+        root.join("sd_card_eh55"),
+        root.join("unbrick_sd_kit"),
+        root.join("sd_card_eh55_kit"),
+    ]
+    .into_iter()
+    .find(|d| d.join("DIGADIAG.FRM").is_file() || d.join("PANA__SD.FRM").is_file());
+    let nor_8mb = find_first_existing(
+        root,
+        &[
+            "firmware_and_images/eh55_nor_8mb_ic5001_repaired.bin",
+            "firmware_and_images/eh55_nor_8mb_ic5001_dump.bin",
+        ],
+    );
+    let dev_bin = find_first_existing(
+        root,
+        &[
+            "firmware_and_images/sd_unbrick_kit/DEV.BIN",
+            "firmware_and_images/DEV.BIN",
+            "firmware_and_images/ifodev2.bin",
+        ],
+    );
     DiscoveredUnbrickSources {
         pana_dvd,
         prog061,
         main_3410,
         drv,
         sd_dir,
+        nor_8mb,
+        dev_bin,
     }
 }
 
@@ -156,18 +187,19 @@ pub fn inspect_unbrick_workspace(workspace_override: Option<&Path>) -> UnbrickWo
         .and_then(|raw| load_prog061_from_bytes(&raw).ok())
         .and_then(|bin| inspect_prog061_bgo_sites(&bin).ok());
 
-    let (main_passthrough, main_capacity) = main_src
+    let (main_passthrough, main_capacity, main_region) = main_src
         .as_ref()
         .and_then(|p| fs::read(p).ok())
         .and_then(|raw| load_main_binary_and_meta(&raw).ok())
         .map(|(bin, build, _, _)| {
-            let identity = inspect_main_firmware_identity(&bin, Some(build.as_str()));
-            let pass =
-                if bin.len() == EXPECTED_MAIN_3410PQ_SIZE && identity.supports_3410pq_tbc_patch {
-                    inspect_main_passthrough_sites(&bin).ok()
-                } else {
-                    None
-                };
+            let pass = if bin.len() == EXPECTED_MAIN_3410PQ_SIZE
+                && inspect_main_firmware_identity(&bin, Some(build.as_str()))
+                    .supports_3410pq_tbc_patch
+            {
+                inspect_main_passthrough_sites(&bin).ok()
+            } else {
+                None
+            };
             let cap = inspect_main_buffer_capacity(
                 &bin,
                 MAIN_BASE_VA,
@@ -176,11 +208,20 @@ pub fn inspect_unbrick_workspace(workspace_override: Option<&Path>) -> UnbrickWo
                 "MAIN",
             )
             .ok();
-            (pass, cap)
+            let reg = inspect_main_region_compat(&bin)
+                .ok()
+                .map(|r| (r.build_profile, r.state));
+            (pass, cap, reg)
         })
-        .unwrap_or((None, None));
+        .unwrap_or((None, None, None));
 
     let sd_verification = sd_dir.as_deref().map(verify_sd_unbrick_media);
+    let bgo_audit_summary = inspect_workbench_bgo(sources.nor_8mb.as_deref());
+    let region_compat_summary = inspect_workbench_region(
+        sources.dev_bin.as_deref(),
+        main_region,
+        bgo_audit_summary.as_ref(),
+    );
 
     UnbrickWorkspaceReport {
         workspace_root: root.to_string_lossy().into_owned(),
@@ -194,6 +235,9 @@ pub fn inspect_unbrick_workspace(workspace_override: Option<&Path>) -> UnbrickWo
         main_capacity,
         rsp_plan: build_passthrough_rsp_plan(Some(0x5040_1F3C)),
         sd_verification,
+        recommended_recovery_profile: RECOMMENDED_RECOVERY_PROFILE.to_string(),
+        region_compat_summary,
+        bgo_audit_summary,
         hardware_facts: hardware_facts_catalog(),
         digadiag_vs_pana_notes: digadiag_vs_pana_notes(),
     }

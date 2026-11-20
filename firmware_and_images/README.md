@@ -8,6 +8,21 @@ Este diretório armazena os dumps brutos de memória e imagens de armazenamento 
 >
 > Ao trabalhar localmente em bancada, baixe ou coloque seus dumps nesta pasta com os nomes descritos abaixo.
 
+## 🧭 Guia Rápido por Função (DMR-EH55 / DMR-EH55LB-S)
+
+| Categoria | Arquivo na Pasta (`firmware_and_images/`) | Tamanho | Função / Uso na Bancada |
+| :--- | :--- | ---: | :--- |
+| **Cartão SD (`LD FVU`)** | [`sd_unbrick_kit/PANA__SD.FRM`](sd_unbrick_kit/PANA__SD.FRM) | `7.181.224 B` | Contêiner `sd48` dual (`M6930LB` + `M6930`): `DRV S211`, `PROG061` `UART_MONITOR_PANAMON1` e `MAIN3410PQ` `AV_PASSTHROUGH` + HDD 250 GB |
+| **Cartão SD (`JIG UART`)** | [`sd_unbrick_kit/DIGADIAG.FRM`](sd_unbrick_kit/DIGADIAG.FRM) | `262.144 B` | Binário bruto `ver0.61` (`0x90400000`) que sobe o monitor serial interativo `PANAMON1>` via sonda Pico `P7501` (`COM10`) |
+| **HDD Unbrick (250 GB)** | `panasonic_dmr_eh55_hdd_250gb_patched.img` | `104.857.600 B` | Imagem `100 MiB` pronta para gravar em HDD 250 GB: cabeçalho `"SH"` + `MAIN3410PQ` desbloqueado para `249.97 GB` (`0xCA` LBA48) |
+| **HDD Stock (250 GB ODD)** | `panasonic_dmr_eh55_hdd_250gb_odd_stock.img` | `104.857.600 B` | Variante `hdd_100.bin` ajustada para geometria de capacidade stock em 250 GB sem alterações extras no `MAIN` |
+| **HDD Referência (160 GB)** | `panasonic DMR EH-55 Firmware hdd_100.bin` | `104.857.600 B` | Dump bruto original de referência (Internet Archive, `MAIN` travado em 160 GB) |
+| **Flash NOR (`IC5001` Pré)** | `eh55_nor_8mb_ic5001_dump.bin` | `8.388.608 B` | Captura física original `S29JL064H` pré-reparo (`Loader ver0.61` + FTL BGO com `U99` + NVRAM original) |
+| **Flash NOR (`IC5001` Pós)** | `eh55_nor_8mb_ic5001_repaired.bin` | `8.388.608 B` | Imagem consolidada pós-cirurgia BGO validada (`U99` eliminado; boot avança até `normal mode -> RTSC Initialize`) |
+| **Bootloader + NVRAM NOR** | `eh55_loader_ver061_256k.bin` / `eh55_nvram_64k_raw.bin` | `256 KiB` / `64 KiB` | Recortes exatos do estágio inicial (`0x84000000`) e da região EEMUL (`0x847F0000`) da NOR real |
+| **CD Óptico (`PANA_DVD`)** | `PANA_DVD.FRM` / `PANA_DVD_PATCHED.FRM` | `7,53 MB` / `7,18 MB` | Pacotes Feistel 48 B para gravação de CD-R (`PANA_DVD.FRM` stock `3060NP` vs versão patched `3410PQ`) |
+| **Partições & Dumps Ref.** | `extracted_partitions/`, `dmr-es35v/`, `dmr-eh58/`, etc. | — | Módulos `DRV`/`PROG061`/`MAIN` extraídos + dumps comparativos de outros modelos DIGA |
+
 ---
 
 ## 📁 Arquivos Esperados
@@ -28,9 +43,17 @@ Este diretório armazena os dumps brutos de memória e imagens de armazenamento 
 * **Tamanho exato:** `7.531.744 bytes`.
 * **Hash SHA-256:** `a596d52a8220a9113777c9caf271ac4d518202d0639d6118a4d0bc03b9a6367f`
 
-### 3. Dump da Flash NOR TSOP-48 (`IC5001.bin`, quando extraído em bancada)
-* **Descrição:** Espaço reservado para futura leitura física de 8 MB da memória NOR Flash TSOP-48 da Digital PCB (nenhum dump físico de Flash ou HDD da placa em bancada foi obtido ainda; da placa real existem apenas capturas UART em `COM10` / `P7501`).
-* **Tamanho esperado:** `8.388.608 bytes`.
+### 3. Dumps Ouro da Flash NOR `IC5001` do DMR-EH55 Real (Spansion `S29JL064H70TFI00`, 8 MiB — Captura `COM10` / `PANADMP1`)
+* **Descrição:** Leitura física integral (somente-leitura, por fatias via `PANAMON1>` + `PANADMP1` na janela *uncached* `0x84000000..0x847FFFFF`, ajustando os limites `MOV` em SDRAM *uncached* `0x9043950E` $\rightarrow$ `J 904394FA`) da NOR Flash TSOP-48 real da placa `VEP79138` em bancada:
+  * **`eh55_nor_8mb_ic5001_dump.bin`** (`8.388.608 bytes` / 8 MiB, **`SHA-256: c1faee798f60545853eefdba0d15f23678b471466dc2bc84f522bc972f15a02d`**): Dump completo pré-reparo (`142` setores `SA0..SA141`: `8×8 KiB` + `126×64 KiB` + `8×8 KiB`), mapeando:
+    * `SA0..SA10` (`0x000000..0x03FFFF` / `0x84000000..0x8403FFFF`, `256 KiB`): `Loader ver0.61 [06/03/06]` em plaintext + tabela BGO em `0x440337A4`.
+    * `SA11..SA14` (`0x040000..0x07FFFF`): Erased `0xFF`.
+    * `SA15..SA25` (`0x080000..0x12FFFF` / `0x84080000..0x8412FFFF`): Contêiner `EXTRHEAD "DRV "` (`src=0x84080040`, `len=0xACC01` $\rightarrow$ `dst=0x90202000`, `len=0x160000`).
+    * `SA26..SA70` (`0x130000..0x3FFFFF` / `0x84130000..0x843FFFFF`, **`45 × 64 KiB`**): FTL **BGO (`[nfrom]`)** real do EH55 (`1` bloco P1 `0xF101`, `40`/`0x28` blocos P2 `0xF201..0xF228`, `4` spares `0xFFFF`, `max_pid=0x0F24`, controle `0x0F01`, dir `0x0F02..0x0F04`, FAT primária `0x0F07..0x0F15`, FAT backup `0x0F16..0x0F24`) — distinto de `Loader ver0.63` / `PROG061` (`0x84200000..0x843FFFFF`).
+    * `SA71..SA141` (`0x400000..0x7FFFFF` / `0x84400000..0x847FFFFF`, `63×64 KiB + 8×8 KiB`): Região **Upper EEMUL / NOR Flash FS** (`0x0FF00000` `"1284"` em `SA71..SA134`; `SA134` em `0x7F0000` com cabeçalho ativo de 6 bytes `0ff00000002c` e `SA135..SA141` em `0xFF`).
+  * **`eh55_loader_ver061_256k.bin`** (`262.144 bytes` / 256 KiB, `0x84000000..0x8403FFFF`, **`SHA-256: 9f5c448d8879106be5ca3da6d6ac649026d50fbc191251ae0f4a003efca63800`**): Recorte exato dos primeiros `256 KiB` (`SA0..SA10`, `Loader ver0.61 [06/03/06]`).
+  * **`eh55_nvram_64k_raw.bin`** (`65.536 bytes` / 64 KiB, `0x847F0000..0x847FFFFF`, **`SHA-256: 803d1465f48fb32e17d3e478e02b2a9a7e707bbb675bb424b02c5c1df92f3643`**): Recorte exato dos últimos `64 KiB` (`SA134..SA141`).
+* **Estado Pós-Reparo Verificado em Bancada (`U99` Eliminado):** **`eh55_nor_8mb_ic5001_repaired.bin`** (`8.388.608 bytes` / 8 MiB, **`SHA-256: adb21d955ed96121249e7abeec58e1ce3951f511a595636d70ebb07a35ca4c9c`**) — imagem consolidada da cirurgia no FTL BGO (`SA70` formatado + `1.629` escritas puras `1 -> 0` em 13 spares `SA42..SA66` + `6` bytes em `SA41+0x14`), que eliminou `BGO driver init failed[1].` (`U99`) e restabeleceu o boot normal até `***** normal mode *****` $\rightarrow$ `*** RTSC Initialize ***`.
 
 ### 4. Pacote de Serviço `DMR-EH58` (`dmr-eh58/DVDRAM.7z`)
 * **Descrição:** Arquivo de serviço comparativo da mesma família MN103S DIGA (`BOOT_VER,0.63`, `DEV_VER,3110PC`):
@@ -44,5 +67,11 @@ Este diretório armazena os dumps brutos de memória e imagens de armazenamento 
 * **Descrição:** Arquivo de captura infravermelho **Kaseikyo** (`Filetype: IR signals file`, `Version: 1`, `305` linhas, **`50` sinais parseados**: `6` comandos TV `0x80` + `44` comandos DVD/HDD `0xB0`) de controle combo DVD/TV norte-americano (com botões `AUDIO [A]`, `DISPLAY [B]`, `SUB MENU [S]`, `F REC`, `CM SKIP`, `TIME SLIP` e `DIRECT NAVIGATOR`, sem fileira de 4 botões de Teletexto).
 * **Origem / Crédito:** `Flipper-IRDB` (`DVD_Players/Panasonic/Panasonic_DVD_TV.ir`, crédito `emptythevoid` — `https://github.com/emptythevoid`).
 * **Tamanho exato:** `4.943 bytes`.
-* **Hash SHA-256:** `82acb0a7611c89ea56799094bf3c71b9e366f38c0301b457cf5c8266279a9b99`.
+* **Hash exato:** `82acb0a7611c89ea56799094bf3c71b9e366f38c0301b457cf5c8266279a9b99`.
 * **Referência Técnica Bilíngue:** [`docs/pt-BR/REFERENCIA_CAPTURA_IR_PANASONIC_DVD_TV.md`](../docs/pt-BR/REFERENCIA_CAPTURA_IR_PANASONIC_DVD_TV.md) · [`docs/en-US/PANASONIC_DVD_TV_IR_CAPTURE_REFERENCE.md`](../docs/en-US/PANASONIC_DVD_TV_IR_CAPTURE_REFERENCE.md)
+
+### 7. Kit Canônico de Recuperação via Cartão SD (`sd_unbrick_kit/`)
+* **Descrição:** Diretório pronto para copiar direto para a raiz de cartão SDSC (`<= 2 GiB`, FAT16) no DMR-EH55 / DMR-EH55LB-S (`Loader ver0.61 [06/03/06]`):
+  * **`DIGADIAG.FRM`** (`262.144 bytes`, SHA-256 `de72e2640ee48a7628a674e3dad731cff71548fc9ea3403ca616f3e5f7e392c0`): `PROG061` bruto descomprimido para `0x90400000` (`JMP 0x50400014`) com salto incondicional em `0x5040A2BC` (`ca 11 cb cb cb cb cb`, `BRA 0x5040A2CD` após `FUN_50404592`) e monitor interativo `PANAMON1` (`0x50439494`, usado no modo JIG via `P7501`).
+  * **`PANA__SD.FRM`** (`7.181.224 bytes`, SHA-256 `cdcc2cdf4617c4f08d8af3f617db369cfd360d8db2601b33c84bae0e6f995d90`): contêiner plaintext **`sd48`** (`0x1800 B` TOC, **6 entradas** cobrindo tanto **`M6930LB`** quanto **`M6930`** com `DRV S211`, `PROG061 ` `UART_MONITOR_PANAMON1` (`DIGADIAG.FRM`, evitando corrupção BGO `0x84200000` do `[05/11/01]` no EH55) e `MAIN3410PQ` `AV_PASSTHROUGH` + HDD LBA48 dinâmico).
+  * **`prepare_report.json`**, **`SHA256SUMS.txt`** & **`LEIA_ME_CARTAO_SD.txt`**: manifesto e guia verificáveis via `panadiga unbrick verify-sd firmware_and_images/sd_unbrick_kit`. *(Consulte [`docs/pt-BR/DOSSIE_FORENSE_BOOTLOADER_SDDIAG_EH55.md`](../docs/pt-BR/DOSSIE_FORENSE_BOOTLOADER_SDDIAG_EH55.md).)*

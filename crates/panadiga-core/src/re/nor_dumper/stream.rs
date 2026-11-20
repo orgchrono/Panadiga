@@ -1,3 +1,5 @@
+#![deny(unsafe_code)]
+
 //! UART capture parser and per-block checksum verifier for `PANADMP1..PANADONE` dumps.
 
 use anyhow::{Result, bail};
@@ -6,10 +8,20 @@ use byteorder::{ByteOrder, LittleEndian};
 use super::{
     HEADER_PREFIX_LEN, NOR_MAGIC_FOOTER, NOR_MAGIC_HEADER, NorDumpResult, validate_nor_dump_range,
 };
+use crate::constants::{AM34_FLASH_BASE, AM34_FLASH_SIZE, AM34_FLASH_UNCACHED_BASE};
 use crate::nvram::calculate_hashes;
 
 /// Parses and checksum-verifies a `PANADMP1..PANADONE` UART NOR capture stream.
 pub fn decode_nor_dump_stream(stream: &[u8]) -> Result<NorDumpResult> {
+    decode_nor_dump_stream_slice(stream, None)
+}
+
+/// Parses and checksum-verifies a `PANADMP1..PANADONE` UART NOR stream, supporting
+/// SDRAM-patched slice captures where the stub emits a static full 8 MiB header.
+pub fn decode_nor_dump_stream_slice(
+    stream: &[u8],
+    expected_slice: Option<(u32, u32)>,
+) -> Result<NorDumpResult> {
     let Some(hdr_pos) = stream
         .windows(NOR_MAGIC_HEADER.len())
         .position(|w| w == NOR_MAGIC_HEADER)
@@ -21,10 +33,27 @@ pub fn decode_nor_dump_stream(stream: &[u8]) -> Result<NorDumpResult> {
     }
 
     let meta = &stream[hdr_pos + NOR_MAGIC_HEADER.len()..hdr_pos + HEADER_PREFIX_LEN];
-    let start_addr = LittleEndian::read_u32(&meta[0..4]);
-    let total_len = LittleEndian::read_u32(&meta[4..8]);
+    let hdr_start_addr = LittleEndian::read_u32(&meta[0..4]);
+    let hdr_total_len = LittleEndian::read_u32(&meta[4..8]);
     let block_size = LittleEndian::read_u32(&meta[8..12]);
-    validate_nor_dump_range(start_addr, total_len, block_size)?;
+    validate_nor_dump_range(hdr_start_addr, hdr_total_len, block_size)?;
+
+    let (start_addr, total_len) = match expected_slice {
+        Some((slice_start, slice_len)) => {
+            validate_nor_dump_range(slice_start, slice_len, block_size)?;
+            let is_static_full_hdr = hdr_total_len == AM34_FLASH_SIZE
+                && (hdr_start_addr == AM34_FLASH_UNCACHED_BASE
+                    || hdr_start_addr == AM34_FLASH_BASE);
+            let matches_slice_hdr = hdr_start_addr == slice_start && hdr_total_len == slice_len;
+            if !is_static_full_hdr && !matches_slice_hdr {
+                bail!(
+                    "PANADMP1 header (0x{hdr_start_addr:08X}, {hdr_total_len} B) incompatible with expected slice (0x{slice_start:08X}, {slice_len} B)"
+                );
+            }
+            (slice_start, slice_len)
+        }
+        None => (hdr_start_addr, hdr_total_len),
+    };
 
     let block_count = (total_len / block_size) as usize;
     let payload_off = hdr_pos + HEADER_PREFIX_LEN;
@@ -110,5 +139,24 @@ mod tests {
             resolve_nor_stub_load_addr(Some(0x5100_0000), true),
             0x5100_0000
         );
+
+        // Static 8 MiB header emitted by SDRAM-patched PANAMON1 stub for a 32-byte slice
+        let mut slice_stream = Vec::new();
+        slice_stream.extend_from_slice(NOR_MAGIC_HEADER);
+        slice_stream.extend_from_slice(&AM34_FLASH_UNCACHED_BASE.to_le_bytes());
+        slice_stream.extend_from_slice(&AM34_FLASH_SIZE.to_le_bytes());
+        slice_stream.extend_from_slice(&16u32.to_le_bytes());
+        slice_stream.extend_from_slice(&b0);
+        slice_stream.extend_from_slice(&s0.to_le_bytes());
+        slice_stream.extend_from_slice(&b1);
+        slice_stream.extend_from_slice(&s1.to_le_bytes());
+        slice_stream.extend_from_slice(b"PANADONEOK:DONE\r\n");
+
+        let parsed_slice =
+            decode_nor_dump_stream_slice(&slice_stream, Some((0x8410_0000, 32))).unwrap();
+        assert_eq!(parsed_slice.start_addr, 0x8410_0000);
+        assert_eq!(parsed_slice.total_len, 32);
+        assert_eq!(parsed_slice.data[..16], b0);
+        assert_eq!(parsed_slice.data[16..], b1);
     }
 }

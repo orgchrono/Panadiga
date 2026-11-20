@@ -2,7 +2,9 @@
 
 use anyhow::{Result, bail};
 
-use super::super::codec::{pad_to_block, write_padded_ascii, write_toc_entry_list_sum};
+use super::super::codec::{
+    compute_fvu_byte_sum, pad_to_block, write_padded_ascii, write_toc_entry_list_sum,
+};
 use super::super::extrhead::{
     ExtrheadCompressionAlgo, ExtrheadCryptMode, pack_extrhead_with_options, parse_extrhead_header,
 };
@@ -77,6 +79,60 @@ pub fn build_digadiag_frm(
     )
 }
 
+struct PayloadPlacement {
+    mod_offset: u32,
+    mod_size: u32,
+    fvu_sum: u32,
+}
+
+fn write_toc_slot(
+    entry: &mut [u8],
+    is_48b: bool,
+    module: &FrmPackModule,
+    hardware_family: &str,
+    placement: &PayloadPlacement,
+) -> u16 {
+    write_padded_ascii(&mut entry[0x00..0x0A], &module.name, 0);
+    entry[0x0A..0x0C].copy_from_slice(&module.version_u16.to_le_bytes());
+    entry[0x0C..0x10].copy_from_slice(&placement.mod_offset.to_le_bytes());
+    write_padded_ascii(&mut entry[0x10..0x18], hardware_family, 0);
+    entry[0x20..0x24].copy_from_slice(&placement.mod_size.to_le_bytes());
+    entry[0x24..0x28].copy_from_slice(&placement.fvu_sum.to_le_bytes());
+
+    if is_48b {
+        entry[0x18] = module.model_prefix;
+        entry[0x19] = module.target_flag;
+        write_padded_ascii(&mut entry[0x1A..0x20], &module.model_group, 0);
+        entry[0x28..0x2E].copy_from_slice(&module.tail_meta);
+    } else {
+        entry[0x18] = module.target_flag;
+        write_padded_ascii(&mut entry[0x30..0x3C], &module.model_group, 0);
+    }
+
+    write_toc_entry_list_sum(entry)
+}
+
+fn record_toc_slot(
+    image: &mut [u8],
+    slot_idx: usize,
+    stride: usize,
+    is_48b: bool,
+    module: &FrmPackModule,
+    hardware_family: &str,
+    placement: &PayloadPlacement,
+) -> PackedFrmModuleSummary {
+    let entry = &mut image[slot_idx * stride..(slot_idx + 1) * stride];
+    let list_sum = write_toc_slot(entry, is_48b, module, hardware_family, placement);
+    PackedFrmModuleSummary {
+        index: slot_idx,
+        name: module.name.clone(),
+        module_offset: placement.mod_offset,
+        module_size: placement.mod_size,
+        fvu_checksum_u32: placement.fvu_sum,
+        list_sum_u16: list_sum,
+    }
+}
+
 /// Packs modules into a `PANA_DVD.FRM` or `PANA__SD.FRM` image using an explicit Feistel round key.
 pub fn pack_frm_with_key(
     modules: &[FrmPackModule],
@@ -101,63 +157,74 @@ pub fn pack_frm_with_key(
         PANA_SD_TOC_REGION_SIZE
     });
 
-    if region_size < modules.len() * stride || (is_48b && !region_size.is_multiple_of(8)) {
+    let total_slots: usize = modules
+        .iter()
+        .map(|m| 1 + m.hardware_family_aliases.len())
+        .sum();
+    if region_size < total_slots * stride || (is_48b && !region_size.is_multiple_of(8)) {
         bail!(
-            "Invalid TOC region size 0x{:X} for {} modules",
+            "Invalid TOC region size 0x{:X} for {} TOC slots",
             region_size,
-            modules.len()
+            total_slots
         );
     }
-    if !is_48b && modules.len() > PANA_SD_TOC_MAX_ENTRIES {
+    if !is_48b && total_slots > PANA_SD_TOC_MAX_ENTRIES {
         bail!(
-            "PANA__SD.FRM supports at most {} modules",
+            "PANA__SD.FRM supports at most {} TOC slots",
             PANA_SD_TOC_MAX_ENTRIES
         );
     }
 
     let mut image = vec![0u8; region_size];
-    let mut summaries = Vec::with_capacity(modules.len());
+    let mut summaries = Vec::with_capacity(total_slots);
+    let mut placements = Vec::with_capacity(modules.len());
 
+    // Pass 1: append each unique module payload once and emit primary TOC slots.
     for (idx, module) in modules.iter().enumerate() {
         let mut mod_bytes = module.payload.clone();
         if is_48b {
             pad_to_block(&mut mod_bytes);
         }
-        let mod_offset = image.len() as u32;
-        let mod_size = mod_bytes.len() as u32;
-        let fvu_sum = mod_bytes
-            .iter()
-            .fold(0u32, |acc, &b| acc.wrapping_add(u32::from(b)));
-
-        let entry = &mut image[idx * stride..(idx + 1) * stride];
-        write_padded_ascii(&mut entry[0x00..0x0A], &module.name, 0);
-        entry[0x0A..0x0C].copy_from_slice(&module.version_u16.to_le_bytes());
-        entry[0x0C..0x10].copy_from_slice(&mod_offset.to_le_bytes());
-        write_padded_ascii(&mut entry[0x10..0x18], &module.hardware_family, 0);
-        entry[0x20..0x24].copy_from_slice(&mod_size.to_le_bytes());
-        entry[0x24..0x28].copy_from_slice(&fvu_sum.to_le_bytes());
-
-        if is_48b {
-            entry[0x18] = module.model_prefix;
-            entry[0x19] = module.target_flag;
-            write_padded_ascii(&mut entry[0x1A..0x20], &module.model_group, 0);
-            entry[0x28..0x2E].copy_from_slice(&module.tail_meta);
-        } else {
-            entry[0x18] = module.target_flag;
-            write_padded_ascii(&mut entry[0x30..0x3C], &module.model_group, 0);
-        }
-
-        let list_sum = write_toc_entry_list_sum(entry);
-
+        let placement = PayloadPlacement {
+            mod_offset: image.len() as u32,
+            mod_size: mod_bytes.len() as u32,
+            fvu_sum: compute_fvu_byte_sum(&mod_bytes),
+        };
         image.extend_from_slice(&mod_bytes);
-        summaries.push(PackedFrmModuleSummary {
-            index: idx,
-            name: module.name.clone(),
-            module_offset: mod_offset,
-            module_size: mod_size,
-            fvu_checksum_u32: fvu_sum,
-            list_sum_u16: list_sum,
-        });
+        summaries.push(record_toc_slot(
+            &mut image,
+            idx,
+            stride,
+            is_48b,
+            module,
+            &module.hardware_family,
+            &placement,
+        ));
+        placements.push(placement);
+    }
+
+    // Pass 2: emit grouped alias TOC slots sharing the already-appended module payloads.
+    let max_aliases = modules
+        .iter()
+        .map(|m| m.hardware_family_aliases.len())
+        .max()
+        .unwrap_or(0);
+    let mut next_slot = modules.len();
+    for alias_idx in 0..max_aliases {
+        for (module, placement) in modules.iter().zip(placements.iter()) {
+            if let Some(alias_family) = module.hardware_family_aliases.get(alias_idx) {
+                summaries.push(record_toc_slot(
+                    &mut image,
+                    next_slot,
+                    stride,
+                    is_48b,
+                    module,
+                    alias_family,
+                    placement,
+                ));
+                next_slot += 1;
+            }
+        }
     }
 
     if is_dvd {

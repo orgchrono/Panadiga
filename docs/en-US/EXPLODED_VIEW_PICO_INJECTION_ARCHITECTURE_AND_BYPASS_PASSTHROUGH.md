@@ -27,7 +27,7 @@ A recurring bench question is whether *"the firmware is already 100% plaintext"*
 | **`EH55_DRV_S211.bin`** | `PANA_DVD.FRM` **≡** HDD Partition 2 (`0x04000000`) | `0x90202000` / `0x40000000` | `1,441,792` | `6f2b61ede80ea9e3e9185d3d677813593f3d361446678e437c905a0037060243` | **100% Unpacked / Byte-for-byte identical** (`DRV S211`, CLI `113` cmds) |
 | **`BOOT.BIN`** *(EH58 comparative)* | `dmr-eh58/DVDRAM.7z` | `0x44000000` | `262,144` | `7c13c72a54c77387f3f7df0ddc213e4800e20b27eecbfd225cbc05a8fc73e377` | **MN103S Reference** (`Loader ver0.63`; holds `DAT_505733d4` absent in EH55) |
 | **`DRV_decomp.bin`** *(EH58 comparative)* | `dmr-eh58/DVDRAM.7z` | `0x40000000` | `1,441,792` | `694a4ab8aa29fcc45350dc0712047663602bdee7e4bff313b8ae62b057efd052` | **MN103S Reference** (`MATSHITA R6-MV4 A0 S415`) |
-| **NOR Flash `IC5001` (`S29JL064H`)** *(pending on bench)* | Physical Digital PCB via Pico `PANADMP1` or TSOP-48 reader | `0x80000000` / `0x84000000` | `8,388,608` | *(to capture from physical unit)* | **Awaiting physical dump** (only `COM10` UART logs captured so far) |
+| **`eh55_nor_8mb_ic5001_dump.bin`** *(captured on bench)* | Physical Digital PCB via `PANADMP1` (`0x9043950E` $\rightarrow$ `J 904394FA`) | `0x84000000..0x847FFFFF` | `8,388,608` | `c1faee798f60545853eefdba0d15f23678b471466dc2bc84f522bc972f15a02d` | **8 MiB Gold Dump Captured** (`Loader ver0.61` `256K` `9f5c448d...` + `SA26..SA70` BGO + `SA71..SA141` Upper EEMUL `803d1465...`); `U99` repair applied & verified live on `COM10` |
 
 ---
 
@@ -41,7 +41,7 @@ Critical RE and bench routines that initially lived across ad-hoc Python scripts
 | `scripts/re/mn10300.py` | [`crates/panadiga-core/src/re/mn10300/`](../../crates/panadiga-core/src/re/mn10300/mod.rs) (`decode_branch_call_refs`, `find_callers_to`, `find_fc_immediate_loads`, `find_pointer_xrefs`) | Internal API + CLI `panadiga re xrefs` |
 | `scripts/bench/nor_dumper.py` | [`crates/panadiga-core/src/re/nor_dumper.rs`](../../crates/panadiga-core/src/re/nor_dumper.rs) (`build_readonly_nor_dumper_stub`, `decode_nor_dump_stream`, strict `0x80000000`/`0x84000000` guard) | **`panadiga_nor_dumper_stub`** (MCP Tool #15) |
 | Historical RE of `hdd_cmd.c` (`MaxProductLBA`) | [`crates/panadiga-core/src/hdd/capacity_patch/`](../../crates/panadiga-core/src/hdd/capacity_patch/mod.rs) (`inspect_main_hdd_capacity`, `patch_main_hdd_capacity`, `DynamicUnclamped`) | **`panadiga_hdd_capacity`** (MCP Tool #14) + CLI `panadiga hdd inspect-capacity` + Desktop UI |
-| Pre-MAIN BGO discovery (`0x50401F3C` / `0x504230F0`) | [`crates/panadiga-core/src/re/bgo_unbrick.rs`](../../crates/panadiga-core/src/re/bgo_unbrick.rs) (`inspect_prog061_bgo_sites`, `patch_prog061_bgo_in_place`, `patch_prog061_or_build_digadiag`) | **`panadiga_bgo_unbrick`** (MCP Tool #16) — outputs `DIGADIAG.FRM` (`131,072 B`) |
+| Pre-MAIN BGO discovery (`0x50401F3C` / `0x504230F0`) | [`crates/panadiga-core/src/re/bgo_unbrick.rs`](../../crates/panadiga-core/src/re/bgo_unbrick.rs) (`inspect_prog061_bgo_sites`, `patch_prog061_bgo_in_place`, `patch_prog061_or_build_digadiag`) | **`panadiga_bgo_unbrick`** (MCP Tool #16) — outputs `DIGADIAG.FRM` (`262,144 B` raw `ver061` / `131,072 B` `EXTRHEAD` `ver063`) |
 | `MAIN` AV TBC (`E-E`) & `_dev_SERIAL` (`0x574F0775`) | [`crates/panadiga-core/src/re/main_passthrough.rs`](../../crates/panadiga-core/src/re/main_passthrough.rs) (`inspect_main_passthrough_sites`, `patch_main_passthrough_file`, `build_passthrough_rsp_plan`) | **`panadiga_main_passthrough`** (MCP Tool #17) + Pico `PANARSP PASSTHROUGH` / `CALL:` |
 | SD Kit & Diag Unbrick Orchestration | [`crates/panadiga-core/src/re/unbrick_sd_kit/`](../../crates/panadiga-core/src/re/unbrick_sd_kit/mod.rs) (`compose`, `io`, `verify`) | **`panadiga_sd_unbrick_kit`** (MCP Tool #18) + `panadiga unbrick` + `Unbrick Center` |
 | PDF Manuals + `docs/` + C11 + Rust | [`panadiga-rag`](../../crates/panadiga-rag/src/indexer/mod.rs) (automatic hierarchical indexing + `FactCritic` + `HardwareSafetyValidator`) | `panadiga_rag_query`, `panadiga_search_code`, `panadiga_search_manuals`, `panadiga://docs/...` |
@@ -84,22 +84,22 @@ flowchart TB
 sequenceDiagram
     participant IPL as "Flash IPL 0x80000000 (Loader v0.61)"
     participant P7501 as "Pico P7501 (SW_UART / UART0)"
-    participant BGO as "NOR BGO (0x84200000..0x843FFFFF)"
+    participant BGO as "NOR BGO EH55 ver0.61 (0x84130000..0x843FFFFF)"
     participant SD as "SD Card P6801 (DIGADIAG.FRM)"
     participant IDE as "DAVIS IDE ch=1 MASTER (HDD)"
 
-    IPL->>IPL: "DDR CHECK: OK -> detect_boot_mode (0x44006454)"
-    alt "SW_UART = HIGH (normal mode)"
-        IPL->>BGO: "bgo_driver_init() (FUN_4401e636)"
+    IPL->>IPL: "DDR CHECK: OK -> F/E uncompress 0x84080040 -> 0x90202000 -> detect_boot_mode (0x44006454)"
+    alt "SW_UART = HIGH (normal mode) - Pre-FTL repair"
+        IPL->>BGO: "bgo_driver_init() (ver0.61: FUN_4401ef82, table 0x440337A4; ver0.63: FUN_4401e636, 0x44036520)"
         BGO-->>IPL: "RETURNS 1 -> BGO driver init failed[1]."
         IPL->>IPL: "BEQ 0x44004ACC -> Main hung-up time changed 255[s] (HALTS BEFORE IDE/HDD!)"
-        Note over IPL,IDE: "FUN_44009741 (IDE init) and HDD MAIN are NEVER REACHED!"
+        Note over IPL,IDE: "Unrepaired BGO halts IDE/MAIN. Post-repair (SA70+13 spares+SA41), normal mode reaches *** RTSC Initialize ***!"
     else "Pico JIG:2500 (SW_UART LOW > 2500 ms) -> serial boot mode"
         P7501->>IPL: "Holds SW_UART LOW past DDR CHECK: OK"
         IPL->>SD: "FUN_44007BA5 (SDDIAG): GetSD_Status 1-bit -> ACMD6 4-bit -> GetSD_Status 4-bit"
         Note over SD: "Watch -91006: fails on 2nd GetSD_Status after 4-bit switch (0x89001850 &= 0x7fff)"
-        SD->>IPL: "Reads 0x20000 (131,072 B) from DIGADIAG.FRM -> decompresses to 0x50400000"
-        IPL->>SD: "JMP 0x50400000 (PROG061 patched via panadiga_bgo_unbrick)"
+        SD->>IPL: "ver0.61 EH55: reads 0x40000 (262,144 B) raw to 0x90400000 (or ver0.63 0x20000 EXTRHEAD)"
+        IPL->>SD: "JMP 0x50400000 (PROG061 patched via panadiga_bgo_unbrick / sd_unbrick_kit)"
         SD->>BGO: "default bypass: 0x504230F0/0x50405097 (auto_format 0x50401F3C blocked unless overridden)"
         BGO-->>IDE: "BGO OK -> PROG061 runs DAVIS_Connect_IDE(1) -> FVU / MAIN Boot"
     end
@@ -135,13 +135,13 @@ Adversarial auditing of schematics (`vol2_schematics.pdf` pp. 46, 52, 113, 125�
 2. **Ordered Paths Out of the Pre-MAIN Brick:**
    * **Solution 1 — No-Desoldering via `JIG:2500` → `SDDIAG` + `DIGADIAG.FRM` BGO Unbrick (`panadiga_bgo_unbrick`):**
      * In `JIG` mode (`SW_UART` held `LOW` $\ge 2500\text{ ms}$ past `DDR CHECK: OK`), `FUN_44006cd9` bypasses the normal `BGO` halt and runs `SDDIAG` (`FUN_44007ba5`).
-     * Apply **`panadiga_bgo_unbrick`** to `eh55_frm_PROG061_BOOT.bin` (**`mode = "bypass"`** safe default or `uart_monitor`, `wrap_as_digadiag = true`) to generate a **`131,072`-byte (`0x20000`)** `DIGADIAG.FRM`:
+     * Run **`panadiga_bgo_unbrick`** / **`panadiga unbrick prepare-sd`** (`--loader-profile ver061`, default output `firmware_and_images/sd_unbrick_kit/`) on `eh55_frm_PROG061_BOOT.bin` (**`mode = "uart_monitor"`** or **`"bypass"`**) to produce an exact **`262,144`-byte (`0x40000`) uncompressed raw** `DIGADIAG.FRM` for real DMR-EH55 `Loader ver0.61` (or `131,072`-byte `EXTRHEAD` via `--loader-profile ver063` for `/BOOT.BIN`):
        * **`0x504230F0` (`0x000230F0`):** `C8 0A -> CA 0A` (bypasses `N(N+1)/2` sum check inside `bgo_sum_23058`).
        * **`0x50405097` (`0x00005097`):** `C8 15 -> CA 15` (bypasses panic when `"INFO"` in `DeviceInfo` is missing/corrupted).
-       * **`0x5040A2CD` (`0x0000A2CD`):** `auto_format` (`nfrom_format @ 0x50401F3C`) remains **blocked fail-closed** unless `--allow-unsafe-bgo-format` is explicitly set (targets CS1 window `0x84200000..0x843FFFFF` and RAM pointers `0x504F8464..6C` before `0x504802B0==1`); prefer **`bypass`** (default) or **`uart_monitor`**.
+       * **`0x5040A2CD` (`0x0000A2CD`):** `auto_format` (`nfrom_format @ 0x50401F3C`) remains **blocked fail-closed** unless `--allow-unsafe-bgo-format` is explicitly set (targets CS1 window `0x84200000..0x843FFFFF` from `PROG061 @ 0x50436E30` — distinct from real EH55 `ver0.61` `0x84130000..0x843FFFFF` at `0x440337A4` — and RAM pointers `0x504F8464..6C` before `0x504802B0==1`); prefer **`bypass`** (default) or **`uart_monitor`**.
      * **Critical Check for SD Error `-91006` (`Fuji 2 GB`):** `FUN_4402791a` passes the 1st `GetSD_Status` (**1-bit**), switches to **4-bit** (`0x89001850 &= 0x7fff`), and fails only on the **2nd 4-bit `ACMD13` read** if `P6802 <-> P53501` ribbon/resistors `RX6801`/`RX6802` have contact issues or `SD_STATUS[2] != 0`. Requires **SDSC $\le 2\text{ GB}$ formatted `FAT16`/`FAT12` ($\le 65,525$ clusters)** with all 4 `DAT0..DAT3` lines healthy.
-   * **Solution 2 — TSOP-48 Bench Recovery (`IC5001` `S29JL064H`):**
-     * If neither `SDDIAG` (blocked by physical 4-bit SD issues) nor `CDDIAG` (blocked by laser `0x83A7` in `DRV`) loads a SDRAM payload, extract the 8 MB dump from `IC5001`, sanitize NVRAM (`SA134..SA141`, `0x7F0000..0x7FFFFF`) + rebuild the BGO region (`0x84200000..0x843FFFFF`) into a validated image before flashing back to the TSOP-48.
+   * **Solution 2 — Surgical Real FTL BGO Repair / TSOP-48 Bench (`IC5001` `S29JL064H`):**
+     * With `PANAMON1>` live (or an external TSOP-48 reader), capture the 8 MiB `IC5001` dump (`eh55_nor_8mb_ic5001_dump.bin`, `SHA-256: c1faee798f60545853eefdba0d15f23678b471466dc2bc84f522bc972f15a02d`) and surgically repair EH55's real BGO window (`SA26..SA70`, `0x84130000..0x843FFFFF`) while leaving Upper EEMUL (`SA71..SA141`, `0x84400000..0x847FFFFF`) untouched: on bench (`COM10`), formatting `SA70` (`0x843F0000`, polling `0xFF` past ~700 ms erase) + `1,629` pure `1 -> 0` writes across 13 spares (`SA42..SA66`) + `6` bytes at `SA41+0x14` (`0x84220014..0x84220023`) cured BGO 100% (`U99` eliminated, booting `***** normal mode *****` $\rightarrow$ `*** RTSC Initialize ***`).
 
 ---
 
@@ -171,7 +171,7 @@ Rust module [`crates/panadiga-core/src/re/nor_dumper.rs`](../../crates/panadiga-
   * `block_size = 4096` (`0x1000`, 2,048 blocks each suffixed with a `u32` LE checksum)
 * **UART Output Protocol (`SC0TXB` `0xD4002008` polling `SC0STR` `0xD400200C & 0xA0`):**
   `PANADMP1` + `<start_u32><len_u32><blk_u32>` → `[4096 B data + sum32 LE] * 2048` → `PANADONE` → safe `BRA .` halt loop.
-* Decoder `decode_nor_dump_stream()` validates every block byte-by-byte and writes `firmware_and_images/IC5001.bin` (`SHA-256` verified).
+* Decoder `decode_nor_dump_stream()` validates every block byte-by-byte, having produced on bench (via sliced uncached SDRAM `0x9043950E` $\rightarrow$ `J 904394FA`) gold artifacts [`eh55_nor_8mb_ic5001_dump.bin`](../../firmware_and_images/README.md) (`SHA-256: c1faee798f60545853eefdba0d15f23678b471466dc2bc84f522bc972f15a02d`), `eh55_loader_ver061_256k.bin` (`9f5c448d...`), and `eh55_nvram_64k_raw.bin` (`803d1465...`).
 
 ---
 
@@ -187,8 +187,8 @@ Many enthusiasts repurpose Panasonic DIGA recorders as a **Time Base Corrector (
 ### Recommended Immediate Bench Sequence
 
 1. **Keep the HDD + `StarTech IDE2SAT2`:** Leave the StarTech jumper strictly on **`MASTER`**. Apply capacity patching (`panadiga_hdd_capacity` `dynamic` or 250 GB `cap`) when preparing `MAIN` on disk.
-2. **Attack the pre-MAIN brick (`BGO driver init failed[1].`) first:** After cold continuity/resistance checks on `DAT1..DAT3` (`P6801`/`P6802`/`VEP73136A`), generate `DIGADIAG.FRM` (`131,072 B`) with `panadiga_bgo_unbrick` (`bypass` safe default or `uart_monitor`) and boot via `JIG:2500` on an **SDSC $\le 2\text{ GB}$ FAT16** card.
-3. **If `SDDIAG` fails physical 4-bit initialization and ODD stays at `0x83A7`:** Perform an external TSOP-48 read of **`IC5001`** (8 MB) for bit-exact SHA-256 backup before writing, restore `BGO`/NVRAM, then validate full NOR dump + TBC passthrough (`MN2DS` + `IC3001`).
+2. **Attack the pre-MAIN brick (`BGO driver init failed[1].`) first:** After cold continuity/resistance checks on `DAT1..DAT3` (`P6801`/`P6802`/`VEP73136A`), generate the `ver061` kit under `firmware_and_images/sd_unbrick_kit/` (raw **`262,144 B`** `DIGADIAG.FRM` in `uart_monitor` or `bypass` mode + **`sd48`** `PANA__SD.FRM`) and boot via `JIG:2500` on an **SDSC $\le 2\text{ GB}$ FAT16** card.
+3. **Physical `IC5001` Capture + Surgical `U99` Cure:** Once BGO (`SA26..SA70`) is repaired via `PANAMON1>` (without touching `MAIN` or desoldering Flash), use the `MASTER` HDD to validate full `MAIN` loading past `*** RTSC Initialize ***` + TBC passthrough (`MN2DS` + `IC3001`).
 
 ---
 
@@ -199,16 +199,16 @@ Many enthusiasts repurpose Panasonic DIGA recorders as a **Time Base Corrector (
 | Aspect | `DIGADIAG.FRM` (Direct Diagnostic / Unbrick) | `PANA_DVD.FRM` (Optical CD/DVD Update) | `PANA__SD.FRM` (`PANA_*`, SD Update) |
 | :--- | :--- | :--- | :--- |
 | **Dispatcher in `/BOOT.BIN`** | `FUN_44007BA5` (`SDDIAG`) / `FUN_4400A97C` (`CDDIAG`) | `FUN_4400A6D0` (`CD-R / ISO9660`, triggered from firmware disc) | `FUN_440075AA` (`PANA__SD.FRM` in FAT12/FAT16 root dir on SD card) |
-| **Cipher Protection** | **100% Plaintext** (`EXTRHEAD` + `zlib` stream + `EXTRFOOT`) | **64-bit Feistel ECB** (`FUN_4400a666`, 16 rounds, S-Box `0x44035D84`, derived 7 B key): full TOC encrypted; `DRV` prefix encrypted; `MAIN` prefix & suffix encrypted | **Plaintext TOC** (`64` B / `0x40` in `/BOOT.BIN` `FUN_440075AA`; `48` B / `0x30` in `PROG061`) pointing to `EXTRHEAD` payloads |
-| **Header / TOC Layout** | No global TOC: starts at `0x00` with 64-byte `EXTRHEAD` header (`tag = "FVU "` or `"DIAG"`, `dst_addr = 0x50400000`, `adler_step = 4`) | `16`-byte header (`0x00..0x0F`) + **`3 x 48`-byte (`0x30`)** `"Firm list"` entries (`list_sum` u16 at `+0x2E`, `fvu_checksum_u32` at `+0x24`) | Up to `128` (`0x2000` B) slots in `BOOT.BIN`: `64`-byte (`0x40`) entries with `list_sum_u16` at `+0x3E` |
-| **Read Budget & RAM Target** | Under `SDDIAG`, `/BOOT.BIN` reads exactly **`0x20000` bytes (`131,072` B = 128 KiB)** into staging buffer **`0x93FC0000`**, validates strided Adler-32 (`FUN_4401e5a3`, step `4`), and inflates `zlib` directly to **`0x50400000`** | Reads encrypted TOC, decrypts in RAM, and streams sequential modules: `DRV` (`EH55_DRV_S211.bin` -> ODD ATAPI `WRITE BUFFER`), `PROG061` (`FVU` -> `0x50400000`), and `MAIN` (HDD Partition 1 at `LBA 65536` / `0x02000000`) | Iterates valid `list_sum_u16` slots, loads `EXTRHEAD` payloads from `FAT16` (`P6801`, `<= 2 GB SDSC`) into SDRAM, and launches `FVU` (`0x50400000`) |
+| **Cipher Protection** | **100% Plaintext** (`262,144 B` raw on EH55 `ver0.61`; `131,072 B` `EXTRHEAD` + `zlib` + `EXTRFOOT` on `/BOOT.BIN` `ver0.63`) | **64-bit Feistel ECB** (`FUN_4400a666`, 16 rounds, S-Box `0x44035D84`, derived 7 B key): full TOC encrypted; `DRV` prefix encrypted; `MAIN` prefix & suffix encrypted | **Plaintext TOC** (`48` B / `0x1800` `sd48` on `PROG061` / EH55 `ver0.61`; `64` B / `0x2000` `sd64` on `/BOOT.BIN` `ver0.63`) pointing to `EXTRHEAD` payloads |
+| **Header / TOC Layout** | No global TOC: `ver0.61` starts directly at `JMP 0x50400014`; `ver0.63` begins with a 64-byte `EXTRHEAD` header (`tag = "FVU "`, `dst_addr = 0x50400000`, `adler_step = 4`) | `16`-byte header (`0x00..0x0F`) + **`3 x 48`-byte (`0x30`)** `"Firm list"` entries (`list_sum` u16 at `+0x2E`, `fvu_checksum_u32` at `+0x24`) | Up to `128` slots of `48 B` (`0x1800 B` `sd48` on EH55 `ver0.61`) or `64 B` (`0x2000 B` `sd64` on `/BOOT.BIN` `ver0.63`) with 16-bit `list_sum_u16` at `+0x2E` (`sd48`) / `+0x3E` (`sd64`) |
+| **Read Budget & RAM Target** | Under `SDDIAG`, real EH55 **`Loader ver0.61`** reads exact **`0x40000` (`262,144`) raw bytes** to **`0x90400000`** (`JMP 0x50400000`); **`ver0.63`** (`/BOOT.BIN`) reads **`0x20000` (`131,072`) B** to `0x93FC0000` and inflates `zlib` to `0x50400000` | Reads encrypted TOC, decrypts in RAM, and streams sequential modules: `DRV` (`EH55_DRV_S211.bin` -> ODD ATAPI `WRITE BUFFER`), `PROG061` (`FVU` -> `0x50400000`), and `MAIN` (HDD Partition 1 at `LBA 65536` / `0x02000000`) | Iterates valid `list_sum_u16` slots, loads `EXTRHEAD` payloads from `FAT16` (`P6801`, `<= 2 GB SDSC`) into SDRAM, and launches `FVU` (`0x50400000`) |
 
 ### 8.2 Consolidating the 4 Open Loose Ends & Autonomous Pico Upgrade (`PANARSP`)
 
 To eliminate underutilization of the **Raspberry Pi Pico (RP2040 / RP2350)** on the bench (`COM10`), the C11 firmware under `firmware/pico-p7501/` and the Rust workspace (`panadiga-core` + `panadiga-mcp`, now exposing **`18` MCP tools**) consolidate the 4 critical fronts:
 
 1. **Pre-MAIN Unblocking (`SDDIAG -91006` / `CDDIAG 0x83A7`) & `PANAMON1` Monitor:**
-   * `DIGADIAG.FRM` (`panadiga_bgo_unbrick`) fits within the strict `131,072` B (`0x20000`) ceiling with valid strided Adler-32 at `0x50400000` in modes `inspect`, `bypass_only` (safe default), **`uart_monitor`** (interactive **`PANAMON1>[B/F/D/Q]`** prompt at `0x50439494`: `B`=bypass BGO, `F`=run `nfrom_format`, `D`=dump 8 MB NOR from `0x84000000`, `Q`=abort), and `auto_format` (`0x50401F3C`, blocked fail-closed without `--allow-unsafe-bgo-format`).
+   * `DIGADIAG.FRM` (`panadiga_bgo_unbrick` / `panadiga_sd_unbrick_kit`) defaults to **`262,144 B` (`0x40000`) raw** (`RAW_VER061` for real DMR-EH55 `Loader ver0.61`) or builds **`EXTRHEAD` $\le 131,072$ B** (`ver0.63`) with valid strided Adler-32 in modes `inspect`, `bypass` (`bypass_only`), **`uart_monitor`** (**`PANAMON1>[B/R/W/D/F/J/E/U/Q]`** at `0x50439494`: `B`=bypass BGO, `R`/`W`=peek/poke `u32` with `E05` guard, `D`=dump 8 MB NOR, `F`=`nfrom_format`, `J`=JEDEC, `E`=sector erase, `U`=unlock Upper NOR `SA4..SA133`, `Q`=abort — updated to MN103S compiler `CALL ..., [], 0` ABI + `46 B` `PUTC_D3_BYTES` `SC0STR & 0xA0`/`0x00040000` after `COM10` `641 B` capture proved `BGO driver init failed[1].` was bypassed), and `auto_format` (`0x50401F3C`, blocked fail-closed without `--allow-unsafe-bgo-format`).
    * Requires a healthy 4-line SD bus (`DAT0..DAT3` across `P6801` and `P53501`) on the 2nd `GetSD_Status` post-`ACMD6`; whenever `0x83A7` disables optical `CDDIAG`, `SDDIAG` via `JIG:2500` remains the primary desolder-free entry vector.
 2. **`_dev_SERIAL` Protocol (`0x574F0775`) & Autonomous Pico Execution (`PANARSP` + `DIAGWATCH`):**
    * The Pico now executes autonomous **`PANARSP`** and **`DIAGWATCH`** commands natively on `PIO1` (`115200 8N1`, TX `GP4`, RX `GP2`, `SW_UART` `GP26`, `XRESET` `GP5`, `NSW5V` Hi-Z `GP3`):
@@ -223,5 +223,5 @@ To eliminate underutilization of the **Raspberry Pi Pico (RP2040 / RP2350)** on 
      * **`DIAGWATCH [ms] [NORMAL|JIG[:ms]|NOPULL] [AUTO|BYPASS|FORMAT|DUMP|NONE] [RELEASE|HOLD]`:** autonomous `PIO1` watchdog with ms timestamps that holds `SW_UART` (`GP26`) `LOW` until detecting `serial boot mode` in `JIG` mode (or `DDR CHECK: OK` in `NORMAL`), releases `Hi-Z` / `Q7514` right after `P50` latching, classifies `SDDIAG (-91006/-90002)`, `CDDIAG (80040904/83A7)`, and `BGO` (`U99`), and auto-replies `'B'`, `'F'`, or `'D'` upon seeing `PANAMON1>`.
 3. **Rust Module `main_passthrough.rs` & MCP Tool #17 (`panadiga_main_passthrough`):**
    * `panadiga-core::re::main_passthrough` inspects/patches the 3 sites above in `EH55_MAIN_3410PQ.bin` images (with reversible `FACTORY_ORIGINAL` restoration) and emits exact `rsp_plan` frames via MCP **`panadiga_main_passthrough`**.
-4. **Safe 8 MB NOR Reading + BGO Geometry (`0x84000000` / `0x84200000..0x843FFFFF`):**
-   * Unifies uncached read-only window `0x84000000` (`panadiga_nor_dumper_stub`, Pico `PANARSP XMEM`/`DUMPNOR`, `FLASH_SIZE`, and `INJECT_LOADER [UNCACHED] CONFIRM`) + BGO partition geometry (`0x84200000..0x843FFFFF`, `32 x 64 KB`), leaving the IPL untouched.
+4. **Safe 8 MB NOR Reading + BGO Geometry (`0x84000000` / `0x84130000..0x843FFFFF` vs `0x84200000..0x843FFFFF`):**
+   * Unifies uncached read-only window `0x84000000` (`panadiga_nor_dumper_stub`, Pico `PANARSP XMEM`/`DUMPNOR`, `FLASH_SIZE`, and `INJECT_LOADER [UNCACHED] CONFIRM`) + real EH55 `Loader ver0.61` BGO partition geometry (`0x84130000..0x843FFFFF`, `45 x 64 KB` in `SA26..SA70` vs `ver0.63`/`PROG061` `0x84200000..0x843FFFFF`) and Upper EEMUL (`SA71..SA141`, `0x84400000..0x847FFFFF`), leaving the opening `256 KiB` IPL untouched.

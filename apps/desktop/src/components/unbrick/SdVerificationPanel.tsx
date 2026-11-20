@@ -27,7 +27,10 @@ export const SdVerificationPanel: React.FC<SdVerificationPanelProps> = ({
   const { t } = useTranslation();
   const [verifyDirError, setVerifyDirError] = useState<string | null>(null);
   const effectiveVerifyDir =
-    verifyDir === 'sd_card_eh55' && autoSdMountDir ? autoSdMountDir : verifyDir;
+    (verifyDir === 'firmware_and_images/sd_unbrick_kit' || verifyDir === 'sd_card_eh55') &&
+    autoSdMountDir
+      ? autoSdMountDir
+      : verifyDir;
   const checks = verifyResult?.checks ?? [];
 
   const handleVerifyClick = async () => {
@@ -53,7 +56,7 @@ export const SdVerificationPanel: React.FC<SdVerificationPanelProps> = ({
               onChangeVerifyDir(e.target.value);
               if (verifyDirError) setVerifyDirError(null);
             }}
-            placeholder="sd_card_eh55"
+            placeholder="firmware_and_images/sd_unbrick_kit"
           />
           {verifyDirError && (
             <p id="sd-verify-dir-err" className="text-[11px] text-rose-400 font-mono">

@@ -1,0 +1,2672 @@
+PROGRAM: /BOOT.BIN (Loader ver0.63 [07/10/24] 4MB/TOP BOOT — Ghidra 12.1.4 PUBLIC Headless Java Scripts & Literal Output)
+SOURCE_PROJECT: C:\ghidra\projects\Panadiga_MN103S (read-only headless invocations, /BOOT.BIN SHA-256: 7c13c72a54c77387f3f7df0ddc213e4800e20b27eecbfd225cbc05a8fc73e377)
+SCOPE: Full source code of all 11 C:\ghidra\*.java scripts, literal Ghidra 12.1.4 Headless output from task-36919.log..task-37066.log + steps/36986/output.txt, and verified raw bytes/disassembly for 0x4400c760..0x4400c7b0.
+
+INDEX OF SCRIPTS AND TARGET FUNCTIONS:
+   1. DecompileFat.java        | task-36919.log  | sd_diag_load + FAT core wrappers (mount/open/read/seek/internal)
+   2. DecompileFat2.java       | task-36929.log  | FAT open internal, main file read, FAT cache init, 8.3 parser, handle alloc
+   3. DecompileFat3.java       | task-36939.log  | FAT dir lookup, direntry unpack, VBR/BPB parser, 0x4400c436 probe
+   4. DecompileFat4.java       | task-36949.log  | MBR/VBR/BPB mount, cluster->LBA, FAT12/FAT16 root dir lookup
+   5. DecompileFat5.java       | task-36960.log  | ASF/FAT32 read, sector wrapper, FAT12/16/32 next cluster, contiguous scanner
+   6. DecompileFat6.java       | task-36967.log  | 0x1fc-sector chunked SD staging reader (0x91c00000) & sector wrapper
+   7. DecompileFat7.java       | task-36974.log  | Block device dispatcher (dev 0 vs dev 3 SD -> FUN_440262cb)
+   8. DecompileFat8.java       | task-36981.log  | FAT/SD debug printf wrapper -> uart0_printf
+   9. DumpAsm.java             | task-36994.log  | MN103S instruction dump probe 0x4400c760..0x4400c7b0 in FUN_4400c696
+  10. DecompileSdRead.java     | task-37053.log  | SD controller block read (CMD17 FUN_440282d6 vs CMD18 FUN_44028257, Card type==2)
+  11. DecompileCardType.java   | task-37066.log  | SD OCR/CSD/RCA negotiation & Card type detection (_DAT_505748f8)
+  --. steps/36986/output.txt   | stdout capture  | Headless capture of DecompileFat2.java FUN_4400d16b
+
+################################################################################
+SCRIPT 01/11: DecompileFat.java (sd_diag_load + FAT core wrappers (mount/open/read/seek/internal))
+JAVA_PATH: C:\ghidra\DecompileFat.java
+LOG_PATH:  C:\Users\danie\.gemini\antigravity\brain\a874cd2a-2809-4db8-acbd-d274c82ed7ed\.system_generated\tasks\task-36919.log
+################################################################################
+
+--- JAVA SOURCE: DecompileFat.java ---
+// Ghidra script DecompileFat.java
+import ghidra.app.script.GhidraScript;
+import ghidra.app.decompiler.DecompInterface;
+import ghidra.app.decompiler.DecompileResults;
+import ghidra.program.model.listing.Function;
+import ghidra.program.model.listing.FunctionManager;
+import ghidra.program.model.address.Address;
+
+public class DecompileFat extends GhidraScript {
+    @Override
+    public void run() throws Exception {
+        DecompInterface decomp = new DecompInterface();
+        decomp.openProgram(currentProgram);
+        
+        long[] addresses = {
+            0x4400a97cL, // sd_diag_load
+            0x4400c696L, // boot_fat_mount
+            0x4400c879L, // boot_fat_open
+            0x4400c922L, // boot_fat_read
+            0x4400c94dL, // boot_fat_seek
+            0x4400c9c0L, // seek internal
+            0x4400d335L, // read internal
+        };
+        
+        FunctionManager fm = currentProgram.getFunctionManager();
+        
+        for (long a : addresses) {
+            Address addr = currentProgram.getAddressFactory().getAddress(Long.toHexString(a));
+            Function func = fm.getFunctionAt(addr);
+            if (func == null) {
+                func = createFunction(addr, null);
+            }
+            println("============================================================");
+            println("FUNCTION AT 0x" + Long.toHexString(a) + " (" + (func != null ? func.getName() : "NULL") + ")");
+            println("============================================================");
+            if (func != null) {
+                DecompileResults res = decomp.decompileFunction(func, 60, monitor);
+                if (res.decompileCompleted()) {
+                    println(res.getDecompiledFunction().getC());
+                } else {
+                    println("Decompilation failed: " + res.getErrorMessage());
+                }
+            } else {
+                println("Could not find or create function at 0x" + Long.toHexString(a));
+            }
+        }
+    }
+}
+
+--- LITERAL GHIDRA 12.1.4 HEADLESS OUTPUT: task-36919.log ---
+INFO  REPORT: Processing project file: /BOOT.BIN (HeadlessAnalyzer)
+INFO  REPORT: Execute script: DecompileFat.java  (HeadlessAnalyzer)
+INFO  SCRIPT: C:\ghidra\DecompileFat.java (HeadlessAnalyzer)
+============================================================
+FUNCTION AT 0x4400a97c (FUN_4400a97c)
+============================================================
+
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+undefined4 FUN_4400a97c(void)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_4;
+  _DAT_50501734 = FUN_4400c696();
+  if (_DAT_50501734 < 0) {
+    FUN_4400b3d9(1,s_FAT_Mount_failed__d___44035192,_DAT_50501734);
+    puVar1[-2] = 0;
+  }
+  else {
+    _DAT_50501730 = FUN_4400c879(_DAT_50501734,s_DIGADIAG_FRM_44035202);
+    if (_DAT_50501730 < 0) {
+      FUN_4400b3d9(1,s_FAT_Open__s__failed__d___440351cb,s_DIGADIAG_FRM_44035202,_DAT_50501730);
+      puVar1[-2] = 0;
+    }
+    else {
+      uVar2 = FUN_4400c94d(_DAT_50501730,0,1);
+      puVar1[-1] = uVar2;
+      if (puVar1[-1] == 0) {
+        uVar2 = FUN_4400c922(_DAT_50501730,&DAT_93fc0000,0x20000);
+        puVar1[-1] = uVar2;
+        if (puVar1[-1] == 0x20000) {
+          puVar1[-2] = 1;
+        }
+        else {
+          puVar1[-2] = 0;
+        }
+      }
+      else {
+        puVar1[-2] = 0;
+      }
+    }
+  }
+  return puVar1[-2];
+}
+
+
+============================================================
+FUNCTION AT 0x4400c696 (FUN_4400c696)
+============================================================
+
+undefined4 FUN_4400c696(void)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  undefined4 uStack_10;
+  undefined4 uStack_c;
+  undefined4 uStack_8;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_10;
+  uVar2 = FUN_4400f0dd();
+  puVar1[-2] = uVar2;
+  if (puVar1[-2] == 0) {
+    puVar1[-1] = 1;
+    puVar1[-5] = puVar1[-1] * 0x40 + 0x5056b600;
+    puVar1[-6] = 0x5056b6d4;
+    *(undefined4 *)puVar1[-5] = puVar1[-1];
+    uVar2 = FUN_4400cb21(puVar1[-1]);
+    puVar1[-2] = uVar2;
+    if ((int)puVar1[-2] < 0) {
+      puVar1[-7] = puVar1[-2];
+    }
+    else {
+      puVar1[-3] = (uint)*(byte *)(puVar1[-5] + 0x26) * *(int *)(puVar1[-5] + 0x2c);
+      puVar1[-4] = (int)(((ulonglong)*(ushort *)(puVar1[-5] + 0x28) << 5) /
+                        (ulonglong)*(ushort *)(puVar1[-1] * 0x40 + 0x5056b620));
+      *(undefined4 *)(puVar1[-5] + 0xc) = 0;
+      *(uint *)(puVar1[-5] + 0x10) = (uint)*(ushort *)(puVar1[-5] + 0x24);
+      *(int *)(puVar1[-5] + 0x14) = puVar1[-3] + *(int *)(puVar1[-5] + 0x10);
+      *(int *)(puVar1[-5] + 0x18) = puVar1[-4] + *(int *)(puVar1[-5] + 0x14);
+      if (*(short *)(puVar1[-5] + 0x2a) == 0) {
+        *(uint *)(puVar1[-5] + 0x3c) =
+             ((((uint)*(ushort *)(puVar1[-5] + 0x24) - *(int *)(puVar1[-5] + 0x34)) - puVar1[-3]) -
+             puVar1[-4]) / (uint)*(byte *)(puVar1[-5] + 0x22);
+      }
+      else {
+        *(uint *)(puVar1[-5] + 0x3c) =
+             ((((uint)*(ushort *)(puVar1[-5] + 0x2a) - (uint)*(ushort *)(puVar1[-5] + 0x24)) -
+              puVar1[-3]) - puVar1[-4]) / (uint)*(byte *)(puVar1[-5] + 0x22);
+      }
+      *(uint *)(puVar1[-5] + 0x1c) =
+           (uint)*(byte *)(puVar1[-5] + 0x22) * *(int *)(puVar1[-5] + 0x3c) +
+           puVar1[-3] + puVar1[-4] + (uint)*(ushort *)(puVar1[-5] + 0x24);
+      *(int *)(puVar1[-5] + 0x3c) = *(int *)(puVar1[-5] + 0x3c) + 1;
+      if (*(uint *)(puVar1[-5] + 0x3c) < 0xff6) {
+        *(undefined4 *)(puVar1[-5] + 4) = 0xc;
+      }
+      else {
+        if (0xfff5 < *(uint *)(puVar1[-5] + 0x3c)) {
+          if (*(uint *)(puVar1[-5] + 0x3c) < 0xffffff6) {
+            *(undefined4 *)(puVar1[-5] + 4) = 0x20;
+            puVar1[-7] = 0xffffd8d7;
+          }
+          else {
+            puVar1[-7] = 0xffffd8d7;
+          }
+          goto LAB_4400c871;
+        }
+        *(undefined4 *)(puVar1[-5] + 4) = 0x10;
+      }
+      uVar2 = FUN_4400ced2(puVar1[-1]);
+      puVar1[-2] = uVar2;
+      if ((int)puVar1[-2] < 0) {
+        puVar1[-7] = puVar1[-2];
+      }
+      else {
+        puVar1[-7] = puVar1[-1];
+      }
+    }
+  }
+  else {
+    puVar1[-7] = puVar1[-2];
+  }
+LAB_4400c871:
+  return puVar1[-7];
+}
+
+
+============================================================
+FUNCTION AT 0x4400c879 (FUN_4400c879)
+============================================================
+
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+undefined4 FUN_4400c879(void)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  undefined1 auStack_18 [20];
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_4;
+  FUN_4402c348(auStack_18,0,9);
+  FUN_4402c348(puVar1 + -6,0,4);
+  if (*(char *)puVar1[3] == -0x1b) {
+    *(undefined1 *)puVar1[3] = 5;
+  }
+  uVar2 = FUN_4400cfde(puVar1[3],puVar1 + -5,puVar1 + -6);
+  puVar1[-2] = uVar2;
+  if ((int)puVar1[-2] < 0) {
+    puVar1[-7] = puVar1[-2];
+  }
+  else {
+    uVar2 = FUN_4400d11e();
+    puVar1[-1] = uVar2;
+    if ((int)puVar1[-1] < 0) {
+      puVar1[-7] = puVar1[-1];
+    }
+    else {
+      _DAT_5056b680 = puVar1[2];
+      uVar2 = FUN_4400d16b(puVar1[-1],puVar1 + -5,puVar1 + -6,2);
+      puVar1[-7] = uVar2;
+    }
+  }
+  return puVar1[-7];
+}
+
+
+============================================================
+FUNCTION AT 0x4400c922 (FUN_4400c922)
+============================================================
+
+void FUN_4400c922(int param_1,undefined4 param_2,undefined4 param_3)
+
+{
+  FUN_4400d32f(param_1 + -200,param_2,param_3);
+  return;
+}
+
+
+============================================================
+FUNCTION AT 0x4400c94d (FUN_4400c94d)
+============================================================
+
+void FUN_4400c94d(undefined4 param_1,undefined4 param_2,undefined4 param_3)
+
+{
+  FUN_4400c9bd(&DAT_5056b680,param_2,param_3);
+  return;
+}
+
+
+============================================================
+FUNCTION AT 0x4400c9c0 (FUN_4400c9c0)
+============================================================
+
+undefined4 FUN_4400c9c0(undefined4 param_1,undefined4 param_2)
+
+{
+  int in_A3;
+  
+  *(undefined4 *)(in_A3 + 8) = param_1;
+  *(undefined4 *)(in_A3 + 0xc) = param_2;
+  *(undefined4 *)(in_A3 + -0xc) = *(undefined4 *)(in_A3 + 0x10);
+  if (*(int *)(in_A3 + -0xc) == 2) {
+    *(int *)(in_A3 + -4) = *(int *)(in_A3 + 0xc) + *(int *)(*(int *)(in_A3 + 8) + 0x44);
+LAB_4400ca1d:
+    *(undefined4 *)(*(int *)(in_A3 + 8) + 0x3c) = 0xffffffff;
+    if ((*(int *)(in_A3 + -4) < 0) ||
+       (*(uint *)(*(int *)(in_A3 + 8) + 0x40) < *(uint *)(in_A3 + -4))) {
+      *(undefined4 *)(in_A3 + -8) = 0xffffd8dc;
+    }
+    else {
+      *(undefined4 *)(*(int *)(in_A3 + 8) + 0x44) = *(undefined4 *)(in_A3 + -4);
+      *(undefined4 *)(in_A3 + -8) = *(undefined4 *)(in_A3 + -4);
+    }
+  }
+  else {
+    if (*(int *)(in_A3 + -0xc) < 3) {
+      if (*(int *)(in_A3 + -0xc) == 1) {
+        *(undefined4 *)(in_A3 + -4) = *(undefined4 *)(in_A3 + 0xc);
+        goto LAB_4400ca1d;
+      }
+    }
+    else if (*(int *)(in_A3 + -0xc) == 3) {
+      *(int *)(in_A3 + -4) = *(int *)(in_A3 + 0xc) + *(int *)(*(int *)(in_A3 + 8) + 0x40);
+      goto LAB_4400ca1d;
+    }
+    *(undefined4 *)(in_A3 + -8) = 0xffffd8dc;
+  }
+  return *(undefined4 *)(in_A3 + -8);
+}
+
+
+============================================================
+FUNCTION AT 0x4400d335 (NULL)
+============================================================
+Could not find or create function at 0x4400d335
+INFO  REPORT: Save succeeded for processed file: /BOOT.BIN (HeadlessAnalyzer)
+
+################################################################################
+SCRIPT 02/11: DecompileFat2.java (FAT open internal, main file read, FAT cache init, 8.3 parser, handle alloc)
+JAVA_PATH: C:\ghidra\DecompileFat2.java
+LOG_PATH:  C:\Users\danie\.gemini\antigravity\brain\a874cd2a-2809-4db8-acbd-d274c82ed7ed\.system_generated\tasks\task-36929.log
+################################################################################
+
+--- JAVA SOURCE: DecompileFat2.java ---
+// Ghidra script DecompileFat2.java
+import ghidra.app.script.GhidraScript;
+import ghidra.app.decompiler.DecompInterface;
+import ghidra.app.decompiler.DecompileResults;
+import ghidra.program.model.listing.Function;
+import ghidra.program.model.listing.FunctionManager;
+import ghidra.program.model.address.Address;
+
+public class DecompileFat2 extends GhidraScript {
+    @Override
+    public void run() throws Exception {
+        DecompInterface decomp = new DecompInterface();
+        decomp.openProgram(currentProgram);
+        
+        long[] addresses = {
+            0x4400d16bL,
+            0x4400d32fL,
+            0x4400ced2L,
+            0x4400cfdeL,
+            0x4400d11eL,
+        };
+        
+        FunctionManager fm = currentProgram.getFunctionManager();
+        
+        for (long a : addresses) {
+            Address addr = currentProgram.getAddressFactory().getAddress(Long.toHexString(a));
+            Function func = fm.getFunctionAt(addr);
+            if (func == null) {
+                func = createFunction(addr, null);
+            }
+            println("============================================================");
+            println("FUNCTION AT 0x" + Long.toHexString(a) + " (" + (func != null ? func.getName() : "NULL") + ")");
+            println("============================================================");
+            if (func != null) {
+                DecompileResults res = decomp.decompileFunction(func, 60, monitor);
+                if (res.decompileCompleted()) {
+                    println(res.getDecompiledFunction().getC());
+                } else {
+                    println("Decompilation failed: " + res.getErrorMessage());
+                }
+            } else {
+                println("Could not find or create function at 0x" + Long.toHexString(a));
+            }
+        }
+    }
+}
+
+--- LITERAL GHIDRA 12.1.4 HEADLESS OUTPUT: task-36929.log ---
+INFO  REPORT: Processing project file: /BOOT.BIN (HeadlessAnalyzer)
+INFO  REPORT: Execute script: DecompileFat2.java  (HeadlessAnalyzer)
+INFO  SCRIPT: C:\ghidra\DecompileFat2.java (HeadlessAnalyzer)
+============================================================
+FUNCTION AT 0x4400d16b (FUN_4400d16b)
+============================================================
+
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+undefined4 FUN_4400d16b(undefined4 param_1,undefined4 param_2,undefined4 param_3)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  undefined1 auStack_14 [4];
+  undefined1 auStack_10 [8];
+  int iStack_8;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_4;
+  iStack_8 = _DAT_5056b680;
+  if (((*(int *)(_DAT_5056b680 * 0x40 + 0x5056b604) == 0xc) ||
+      (*(int *)(_DAT_5056b680 * 0x40 + 0x5056b604) == 0x10)) ||
+     (*(int *)(_DAT_5056b680 * 0x40 + 0x5056b604) == 0x20)) {
+    uVar2 = FUN_4400dce2(_DAT_5056b680,param_2,param_3,auStack_10,auStack_14);
+    puVar1[-2] = uVar2;
+    if ((int)puVar1[-2] < 0) {
+      FUN_4400df9e(puVar1[2]);
+      puVar1[-10] = puVar1[-2];
+    }
+    else {
+      puVar1[-8] = puVar1[-9] + 0x200;
+      uVar2 = FUN_4400c510(puVar1[-4] + puVar1[-9],puVar1[-8]);
+      puVar1[-2] = uVar2;
+      if ((int)puVar1[-2] < 0) {
+        FUN_4400df9e(puVar1[2]);
+        puVar1[-10] = puVar1[-2];
+      }
+      else {
+        *(undefined4 *)(puVar1[-6] + 0x2c) = puVar1[-3];
+        *(undefined4 *)(puVar1[-6] + 0x30) = puVar1[-4];
+        FUN_4402c4d6(puVar1[-6] + 8,puVar1[-8],8);
+        FUN_4402c4d6(puVar1[-6] + 0x11,puVar1[-8] + 8,3);
+        *(undefined1 *)(puVar1[-6] + 0x15) = *(undefined1 *)(puVar1[-8] + 0xb);
+        *(uint *)(puVar1[-6] + 0x34) =
+             CONCAT22(*(undefined2 *)(puVar1[-8] + 0x14),*(undefined2 *)(puVar1[-8] + 0x1a));
+        *(uint *)(puVar1[-6] + 0x34) = *(uint *)(puVar1[-6] + 0x34) & puVar1[-5];
+        *(undefined4 *)(puVar1[-6] + 0x3c) = 0xffffffff;
+        *(undefined4 *)(puVar1[-6] + 0x40) = *(undefined4 *)(puVar1[-8] + 0x1c);
+        *(undefined4 *)(puVar1[-6] + 0x44) = 0;
+        *(undefined4 *)(puVar1[-6] + 4) = puVar1[5];
+        *(undefined2 *)(puVar1[-6] + 0x48) = 1;
+        puVar1[-10] = puVar1[2] + 200;
+      }
+    }
+  }
+  return puVar1[-10];
+}
+
+
+============================================================
+FUNCTION AT 0x4400d32f (FUN_4400d32f)
+============================================================
+
+undefined4 FUN_4400d32f(void)
+
+{
+  undefined4 *puVar1;
+  int iVar2;
+  undefined4 uVar3;
+  undefined4 uStack0000000c;
+  undefined4 uStack_10;
+  undefined4 uStack_c;
+  undefined4 uStack_8;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_10;
+  iVar2 = FUN_4402c398(0x5056b691,&DAT_440356e9);
+  if (iVar2 == 0) {
+    if (*(int *)(puVar1[-5] + 0x40) == 0) {
+      puVar1[-0x1b] = 0;
+    }
+    else {
+      if (*(int *)(puVar1[-1] * 0x40 + 0x5056b604) == 0xc) {
+        puVar1[-10] = 0xfff;
+      }
+      else if (*(int *)(puVar1[-1] * 0x40 + 0x5056b604) == 0x10) {
+        puVar1[-10] = 0xffff;
+      }
+      else {
+        if (*(int *)(puVar1[-1] * 0x40 + 0x5056b604) != 0x20) {
+          puVar1[-0x1b] = 0xffffd8d7;
+          goto LAB_4400dc5c;
+        }
+        puVar1[-10] = 0xfffffff;
+      }
+      if (*(uint *)(puVar1[-5] + 0x40) < *(uint *)(puVar1[-5] + 0x44)) {
+        puVar1[-0x1b] = 0xffffd8d2;
+      }
+      else {
+        if (*(uint *)(puVar1[-5] + 0x40) < (uint)(*(int *)(puVar1[-5] + 0x44) + puVar1[7])) {
+          puVar1[7] = *(int *)(puVar1[-5] + 0x44) - *(int *)(puVar1[-5] + 0x40);
+        }
+        if (puVar1[7] == 0) {
+          puVar1[-0x1b] = 0xffffd8dc;
+        }
+        else {
+          puVar1[-0xf] = (((uint)*(ushort *)(puVar1[-6] + 0x20) +
+                          *(uint *)(puVar1[-5] + 0x44) % (uint)*(ushort *)(puVar1[-6] + 0x20) +
+                          puVar1[7]) - 1) / (uint)*(ushort *)(puVar1[-6] + 0x20);
+          puVar1[-9] = (int)(((ulonglong)*(uint *)(puVar1[-5] + 0x44) /
+                             (ulonglong)*(ushort *)(puVar1[-1] * 0x40 + 0x5056b620)) /
+                            (ulonglong)*(byte *)(puVar1[-1] * 0x40 + 0x5056b622));
+          if (*(int *)(puVar1[-5] + 0x3c) == -1) {
+            puVar1[-8] = 0;
+            while ((uint)puVar1[-8] < (uint)puVar1[-9]) {
+              uVar3 = FUN_4400e737(*(undefined4 *)puVar1[-6],puVar1[-0x10],puVar1 + -0x16);
+              puVar1[-2] = uVar3;
+              if ((int)puVar1[-2] < 0) {
+                puVar1[-0x1b] = puVar1[-2];
+                goto LAB_4400dc5c;
+              }
+              puVar1[-0x10] = puVar1[-0x16];
+              if (((((uint)puVar1[-0x10] < (puVar1[-10] & 2)) || (puVar1[-0x10] == puVar1[-10])) ||
+                  ((puVar1[-10] & 0xfffffff6) == puVar1[-0x10])) ||
+                 (((puVar1[-10] & 0xfffffff7) == puVar1[-0x10] ||
+                  ((puVar1[-10] & 0xfffffff8) == puVar1[-0x10])))) {
+                puVar1[-0x1b] = 0xffffd8d4;
+                goto LAB_4400dc5c;
+              }
+              puVar1[-8] = puVar1[-8] + 1;
+            }
+          }
+          else {
+            puVar1[-0x10] = *(undefined4 *)(puVar1[-5] + 0x3c);
+          }
+          uVar3 = FUN_4400e51f(puVar1[-1],puVar1[-0x10]);
+          puVar1[-0xb] = uVar3;
+          puVar1[-0xe] = *(uint *)(puVar1[-5] + 0x44) %
+                         (uint)*(ushort *)(puVar1[-1] * 0x40 + 0x5056b620);
+          uVar3 = FUN_4400edbf(*(undefined4 *)puVar1[-6],puVar1[-0x10],puVar1 + -0x14,puVar1 + -0x15
+                               ,puVar1[-0x17]);
+          puVar1[-2] = uVar3;
+          if ((int)puVar1[-2] < 0) {
+            puVar1[-0x1b] = puVar1[-2];
+          }
+          else {
+            puVar1[-0x1a] =
+                 ((((puVar1[7] + (uint)*(ushort *)(puVar1[-6] + 0x20)) - 1) /
+                  (uint)*(ushort *)(puVar1[-6] + 0x20)) * (uint)*(ushort *)(puVar1[-6] + 0x20)) /
+                 (uint)*(ushort *)(puVar1[-1] * 0x40 + 0x5056b620);
+            puVar1[-0x19] =
+                 ((((puVar1[-0x1a] + (uint)*(byte *)(puVar1[-6] + 0x22)) - 1) /
+                  (uint)*(byte *)(puVar1[-6] + 0x22)) * (uint)*(byte *)(puVar1[-6] + 0x22)) /
+                 (uint)*(byte *)(puVar1[-1] * 0x40 + 0x5056b622);
+            if (puVar1[-0x19] == puVar1[-0x17]) {
+              if (*(uint *)(puVar1[-5] + 0x44) %
+                  ((uint)*(ushort *)(puVar1[-1] * 0x40 + 0x5056b620) *
+                  (uint)*(byte *)(puVar1[-6] + 0x22)) + puVar1[7] <
+                  (uint)*(ushort *)(puVar1[-1] * 0x40 + 0x5056b620) *
+                  (uint)*(byte *)(puVar1[-6] + 0x22)) {
+                puVar1[-0x15] = puVar1[-0x10];
+              }
+            }
+            else {
+              puVar1[-0x18] = 1;
+              if ((puVar1[-0x14] != 1) && (puVar1[-0x17] == puVar1[-0x14])) {
+                puVar1[-0x15] = puVar1[-0x14] + puVar1[-0x10] + -1;
+              }
+            }
+            puVar1[-0x17] = puVar1[-0x14] - puVar1[-0x17];
+            if (puVar1[-0x17] == 0) {
+              puVar1[-3] = 1;
+              puVar1[-4] = 1;
+            }
+            if ((puVar1[-0x15] == puVar1[-10]) || ((puVar1[-10] & 0xfffffff8) == puVar1[-0x15])) {
+              puVar1[-0x10] = puVar1[-0x15];
+              puVar1[-3] = 1;
+            }
+            else {
+              if ((((puVar1[-10] & 0xfffffff7) == puVar1[-0x15]) ||
+                  ((puVar1[-10] & 0xfffffff6) == puVar1[-0x15])) ||
+                 ((uint)puVar1[-0x15] < (puVar1[-10] & 2))) {
+                puVar1[-0x1b] = 0xffffd8d4;
+                goto LAB_4400dc5c;
+              }
+              puVar1[-0x10] = puVar1[-0x15];
+            }
+            puVar1[-0xd] = (int)(((ulonglong)*(uint *)(puVar1[-5] + 0x44) /
+                                 (ulonglong)*(ushort *)(puVar1[-1] * 0x40 + 0x5056b620)) %
+                                (ulonglong)*(byte *)(puVar1[-6] + 0x22));
+            puVar1[-0x11] = puVar1[-0xd];
+            puVar1[-0x12] = puVar1[-0xd] - puVar1[-0x14] * (uint)*(byte *)(puVar1[-6] + 0x22);
+            while (puVar1[-0xf] != 0) {
+              while (puVar1[-0x12] != 0) {
+                if ((uint)puVar1[-0x12] < (uint)puVar1[-0xc]) {
+                  puVar1[-0xc] = puVar1[-0x12];
+                }
+                if ((uint)puVar1[-0xf] < (uint)puVar1[-0xc]) {
+                  puVar1[-0xc] = puVar1[-0xf];
+                }
+                uVar3 = FUN_4400dc64(puVar1[-1],puVar1[-0xb] + puVar1[-0x11],puVar1[-0xc],puVar1[-7]
+                                    );
+                puVar1[-2] = uVar3;
+                if ((int)puVar1[-2] < 0) {
+                  puVar1[-0x1b] = puVar1[-2];
+                  goto LAB_4400dc5c;
+                }
+                puVar1[-0x12] = puVar1[-0xc] - puVar1[-0x12];
+                puVar1[-0xf] = puVar1[-0xc] - puVar1[-0xf];
+                if ((uint)(puVar1[7] - puVar1[-0x13]) <
+                    (uint)*(ushort *)(puVar1[-6] + 0x20) * puVar1[-0xc]) {
+                  uStack0000000c =
+                       FUN_4402c2f7(puVar1[6],puVar1[-0xe] + puVar1[-7],puVar1[-0x13] - puVar1[7]);
+                }
+                else {
+                  uStack0000000c =
+                       FUN_4402c2f7(puVar1[6],puVar1[-0xe] + puVar1[-7],
+                                    puVar1[-0xe] -
+                                    puVar1[-0xc] * (uint)*(ushort *)(puVar1[-6] + 0x20));
+                }
+                puVar1[-0x13] =
+                     puVar1[-0x13] +
+                     (puVar1[-0xc] * (uint)*(ushort *)(puVar1[-6] + 0x20) - puVar1[-0xe]);
+                if (puVar1[-0xf] == 0) {
+                  puVar1[-0x11] = 0;
+                  goto LAB_4400d9fa;
+                }
+                puVar1[6] = puVar1[6] +
+                            (puVar1[-0xc] * (uint)*(ushort *)(puVar1[-6] + 0x20) - puVar1[-0xe]);
+                puVar1[-0xe] = 0;
+                puVar1[-0x11] = puVar1[-0xc] + puVar1[-0x11];
+              }
+              puVar1[-4] = 1;
+              if (puVar1[-3] == 1) {
+LAB_4400d9fa:
+                if ((puVar1[-0x10] == puVar1[-10]) || ((puVar1[-10] & 0xfffffff8) == puVar1[-0x10]))
+                {
+                  *(undefined4 *)(puVar1[-5] + 0x3c) = 0xffffffff;
+                }
+                else if (puVar1[-4] == 1) {
+                  if ((puVar1[-0x15] != puVar1[-10]) &&
+                     ((puVar1[-10] & 0xfffffff8) != puVar1[-0x15])) {
+                    *(undefined4 *)(puVar1[-5] + 0x3c) = puVar1[-0x15];
+                  }
+                }
+                else if ((uint)(*(int *)(puVar1[-5] + 0x44) + puVar1[7]) %
+                         ((uint)*(ushort *)(puVar1[-1] * 0x40 + 0x5056b620) *
+                         (uint)*(byte *)(puVar1[-6] + 0x22)) == 0) {
+                  uVar3 = FUN_4400e737(*(undefined4 *)puVar1[-6],
+                                       (uint)puVar1[-0x11] /
+                                       (uint)*(byte *)(puVar1[-1] * 0x40 + 0x5056b622) +
+                                       puVar1[-0x10],puVar1 + -0x16);
+                  puVar1[-2] = uVar3;
+                  if ((int)puVar1[-2] < 0) {
+                    *(undefined4 *)(puVar1[-5] + 0x3c) = 0xffffffff;
+                    puVar1[-0x1b] = puVar1[-2];
+                    goto LAB_4400dc5c;
+                  }
+                  if ((puVar1[-0x16] != puVar1[-10]) &&
+                     ((puVar1[-10] & 0xfffffff8) != puVar1[-0x16])) {
+                    *(undefined4 *)(puVar1[-5] + 0x3c) = puVar1[-0x16];
+                  }
+                }
+                else {
+                  *(uint *)(puVar1[-5] + 0x3c) =
+                       puVar1[-0x10] +
+                       (uint)puVar1[-0x11] / (uint)*(byte *)(puVar1[-1] * 0x40 + 0x5056b622);
+                }
+                break;
+              }
+              puVar1[-0x11] = 0;
+              uVar3 = FUN_4400edbf(*(undefined4 *)puVar1[-6],puVar1[-0x10],puVar1 + -0x14,
+                                   puVar1 + -0x15,puVar1[-0x17]);
+              puVar1[-2] = uVar3;
+              puVar1[-0x17] = puVar1[-0x14] - puVar1[-0x17];
+              if ((int)puVar1[-2] < 0) {
+                puVar1[-0x1b] = puVar1[-2];
+                goto LAB_4400dc5c;
+              }
+              if (puVar1[-0x17] == 0) {
+                puVar1[-3] = 1;
+                puVar1[-4] = 1;
+                if (puVar1[-0x18] == 1) {
+                  puVar1[-0x15] = puVar1[-0x14] + puVar1[-0x10] + -1;
+                }
+              }
+              if (puVar1[-0x14] + puVar1[-0x10] + -1 == puVar1[-0x15]) {
+                puVar1[-4] = 0;
+              }
+              if ((puVar1[-0x15] == puVar1[-10]) || ((puVar1[-10] & 0xfffffff8) == puVar1[-0x15])) {
+                puVar1[-0xc] = 0x20;
+                puVar1[-3] = 1;
+                uVar3 = FUN_4400e51f(puVar1[-1],puVar1[-0x10]);
+                puVar1[-0xb] = uVar3;
+                puVar1[-0x10] = puVar1[-0x15];
+              }
+              else {
+                if ((((puVar1[-10] & 0xfffffff7) == puVar1[-0x15]) ||
+                    ((puVar1[-10] & 0xfffffff6) == puVar1[-0x15])) ||
+                   ((uint)puVar1[-0x15] < (puVar1[-10] & 2))) {
+                  puVar1[-0x1b] = 0xffffd8d4;
+                  goto LAB_4400dc5c;
+                }
+                puVar1[-0xc] = 0x20;
+                uVar3 = FUN_4400e51f(puVar1[-1],puVar1[-0x10]);
+                puVar1[-0xb] = uVar3;
+                puVar1[-0x10] = puVar1[-0x15];
+              }
+              puVar1[-0x12] = (uint)*(byte *)(puVar1[-6] + 0x22) * puVar1[-0x14];
+            }
+            *(int *)(puVar1[-5] + 0x44) = puVar1[7] + *(int *)(puVar1[-5] + 0x44);
+            puVar1[-0x1b] = puVar1[7];
+          }
+        }
+      }
+    }
+  }
+  else {
+    *(undefined4 *)(puVar1[-5] + 0x3c) = 0xffffffff;
+    uVar3 = FUN_4400dfc8(puVar1[5],puVar1[6],puVar1[7]);
+    puVar1[-2] = uVar3;
+    puVar1[-0x1b] = puVar1[-2];
+  }
+LAB_4400dc5c:
+  return puVar1[-0x1b];
+}
+
+
+============================================================
+FUNCTION AT 0x4400ced2 (FUN_4400ced2)
+============================================================
+
+undefined4 FUN_4400ced2(int param_1)
+
+{
+  int iVar1;
+  undefined4 *puVar2;
+  int iVar3;
+  undefined4 uVar4;
+  undefined4 uStack_4;
+  
+  puVar2 = &uStack_4;
+  iVar3 = param_1 * 0x40;
+  iVar1 = *(int *)(iVar3 + 0x5056b600) * 0xdec;
+  *(int *)(iVar1 + 0x505716d4) = param_1;
+  *(undefined4 *)(iVar1 + 0x505716dc) = *(undefined4 *)(iVar3 + 0x5056b610);
+  *(undefined4 *)(iVar1 + 0x505716e0) = *(undefined4 *)(iVar3 + 0x5056b62c);
+  *(undefined4 *)(iVar1 + 0x505716e4) = 0;
+  *(undefined4 *)(iVar1 + 0x505716d8) = 0;
+  if (*(uint *)(iVar1 + 0x505716e0) < 3) {
+    *(undefined4 *)(iVar1 + 0x505716e8) = *(undefined4 *)(iVar1 + 0x505716e0);
+  }
+  else {
+    *(undefined4 *)(iVar1 + 0x505716e8) = 3;
+  }
+  uVar4 = FUN_4400dc64(param_1,*(undefined4 *)(iVar1 + 0x505716dc),
+                       *(undefined4 *)(iVar1 + 0x505716e8),iVar1 + 0x505716ec);
+  puVar2[-3] = uVar4;
+  if (((int)puVar2[-3] < 0) && (1 < *(byte *)(puVar2[-5] + 0x26))) {
+    uVar4 = FUN_4400dc64(puVar2[2],*(int *)(puVar2[-4] + 8) + *(int *)(puVar2[-4] + 0xc),
+                         *(undefined4 *)(puVar2[-4] + 0x14),puVar2[-4] + 0x18);
+    puVar2[-3] = uVar4;
+  }
+  puVar2[-1] = 0;
+  while ((int)puVar2[-1] < 500) {
+    *(undefined4 *)(puVar2[-1] * 4 + puVar2[-4] + 0x61c) = 0xffffffff;
+    puVar2[-1] = puVar2[-1] + 1;
+  }
+  *(undefined4 *)(puVar2[-4] + 0x618) = 0;
+  return puVar2[-3];
+}
+
+
+============================================================
+FUNCTION AT 0x4400cfde (FUN_4400cfde)
+============================================================
+
+undefined4 FUN_4400cfde(void)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  undefined1 auStack_1c [16];
+  undefined4 uStack_c;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_4;
+  FUN_4402c348(auStack_1c,0x20,8);
+  FUN_4402c348(puVar1 + -7,0x20,3);
+  uVar2 = FUN_4402c3dd(puVar1[2]);
+  puVar1[-3] = uVar2;
+  if ((int)puVar1[-3] < 0xd) {
+    puVar1[-1] = 0;
+    while ((int)puVar1[-1] < (int)puVar1[-3]) {
+      while (*(char *)(puVar1[-1] + puVar1[2]) != '.') {
+        if (*(char *)(puVar1[-1] + puVar1[2]) == '\0') goto LAB_4400d0ea;
+        if (7 < (int)puVar1[-1]) {
+          puVar1[-8] = 0xffffd8dc;
+          goto LAB_4400d116;
+        }
+        *(undefined1 *)((int)puVar1 + puVar1[-1] + -0x18) = *(undefined1 *)(puVar1[-1] + puVar1[2]);
+        puVar1[-1] = puVar1[-1] + 1;
+      }
+      puVar1[-1] = puVar1[-1] + 1;
+      while ((int)puVar1[-2] < 3) {
+        if (*(char *)(puVar1[-1] + puVar1[2]) == '\0') goto LAB_4400d0ea;
+        *(undefined1 *)((int)puVar1 + puVar1[-2] + -0x1c) = *(undefined1 *)(puVar1[-1] + puVar1[2]);
+        puVar1[-1] = puVar1[-1] + 1;
+        puVar1[-2] = puVar1[-2] + 1;
+      }
+      puVar1[-1] = puVar1[-1] + 1;
+    }
+LAB_4400d0ea:
+    FUN_4402c2f7(puVar1[3],puVar1 + -6,8);
+    FUN_4402c2f7(puVar1[4],puVar1 + -7,3);
+    puVar1[-8] = 0;
+  }
+  else {
+    puVar1[-8] = 0xffffd8dc;
+  }
+LAB_4400d116:
+  return puVar1[-8];
+}
+
+
+============================================================
+FUNCTION AT 0x4400d11e (FUN_4400d11e)
+============================================================
+
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+undefined4 FUN_4400d11e(void)
+
+{
+  undefined4 uStack_8;
+  
+  if (DAT_5056b6d0 == '\0') {
+    uStack_8 = 0xffffd8e5;
+  }
+  else if (_DAT_5056b6c8 == 0) {
+    DAT_5056b6d0 = DAT_5056b6d0 + -1;
+    _DAT_5056b6c8 = 1;
+    uStack_8 = 0;
+  }
+  else {
+    uStack_8 = 0xffffd8e5;
+  }
+  return uStack_8;
+}
+
+
+INFO  REPORT: Save succeeded for processed file: /BOOT.BIN (HeadlessAnalyzer)
+
+--- LITERAL STEP CAPTURE: steps/36986/output.txt (DecompileFat2.java preview) ---
+Created At: 2026-11-18T02:05:29-03:00
+Completed At: 2026-11-18T02:05:29-03:00
+Command exited with code 0.
+
+Command output:
+FUNCTION AT 0x4400d16b (FUN_4400d16b) (GhidraScript)  
+INFO  DecompileFat2.java> ============================================================ (GhidraScript)  
+INFO  DecompileFat2.java> 
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+undefined4 FUN_4400d16b(undefined4 param_1,undefined4 param_2,undefined4 param_3)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  undefined1 auStack_14 [4];
+  undefined1 auStack_10 [8];
+  int iStack_8;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_4;
+  iStack_8 = _DAT_5056b680;
+  if (((*(int *)(_DAT_5056b680 * 0x40 + 0x5056b604) == 0xc) ||
+      (*(int *)(_DAT_5056b680 * 0x40 + 0x5056b604) == 0x10)) ||
+     (*(int *)(_DAT_5056b680 * 0x40 + 0x5056b604) == 0x20)) {
+    uVar2 = FUN_4400dce2(_DAT_5056b680,param_2,param_3,auStack_10,auStack_14);
+    puVar1[-2] = uVar2;
+    if ((int)puVar1[-2] < 0) {
+      FUN_4400df9e(puVar1[2]);
+      puVar1[-10] = puVar1[-2];
+    }
+    else {
+      puVar1[-8] = puVar1[-9] + 0x200;
+      uVar2 = FUN_4400c510(puVar1[-4] + puVar1[-9],puVar1[-8]);
+      puVar1[-2] = uVar2;
+      if ((int)puVar1[-2] < 0) {
+        FUN_4400df9e(puVar1[2]);
+        puVar1[-10] = puVar1[-2];
+      }
+      else {
+        *(undefined4 *)(puVar1[-6] + 0x2c) = puVar1[-3];
+        *(undefined4 *)(puVar1[-6] + 0x30) = puVar1[-4];
+        FUN_4402c4d6(puVar1[-6] + 8,puVar1[-8],8);
+        FUN_4402c4d6(puVar1[-6] + 0x11,puVar1[-8] + 8,3);
+        *(undefined1 *)(puVar1[-6] + 0x15) = *(undefined1 *)(puVar1[-8] + 0xb);
+        *(uint *)(puVar1[-6] + 0x34) =
+             CONCAT22(*(undefined2 *)(puVar1[-8] + 0x14),*(undefined2 *)(puVar1[-8] + 0x1a));
+        *(uint *)(puVar1[-6] + 0x34) = *(uint *)(puVar1[-6] + 0x34) & puVar1[-5];
+        *(undefined4 *)(puVar1[-6] + 0x3c) = 0xffffffff;
+        *(undefined4 *)(puVar1[-6] + 0x40) = *(undefined4 *)(puVar1[-8] + 0x1c);
+        *(undefined4 *)(puVar1[-6] + 0x44) = 0;
+        *(undefined4 *)(puVar1[-6] + 4) = puVar1[5];
+        *(undefined2 *)(puVar1[-6] + 0x48) = 1;
+        puVar1[-10] = puVar1[2] + 200;
+      }
+    }
+  }
+  return puVar1[-10];
+}
+
+ (GhidraScript)  
+INFO  DecompileFat2.java> ============================================================ (GhidraScript)  
+INFO  DecompileFat2.java>
+
+################################################################################
+SCRIPT 03/11: DecompileFat3.java (FAT dir lookup, direntry unpack, VBR/BPB parser, 0x4400c436 probe)
+JAVA_PATH: C:\ghidra\DecompileFat3.java
+LOG_PATH:  C:\Users\danie\.gemini\antigravity\brain\a874cd2a-2809-4db8-acbd-d274c82ed7ed\.system_generated\tasks\task-36939.log
+################################################################################
+
+--- JAVA SOURCE: DecompileFat3.java ---
+// Ghidra script DecompileFat3.java
+import ghidra.app.script.GhidraScript;
+import ghidra.app.decompiler.DecompInterface;
+import ghidra.app.decompiler.DecompileResults;
+import ghidra.program.model.listing.Function;
+import ghidra.program.model.listing.FunctionManager;
+import ghidra.program.model.address.Address;
+
+public class DecompileFat3 extends GhidraScript {
+    @Override
+    public void run() throws Exception {
+        DecompInterface decomp = new DecompInterface();
+        decomp.openProgram(currentProgram);
+        
+        long[] addresses = {
+            0x4400dce2L,
+            0x4400c510L,
+            0x4400c0a8L, // boot_fat_validate_vbr_bpb
+            0x4400c436L,
+        };
+        
+        FunctionManager fm = currentProgram.getFunctionManager();
+        
+        for (long a : addresses) {
+            Address addr = currentProgram.getAddressFactory().getAddress(Long.toHexString(a));
+            Function func = fm.getFunctionAt(addr);
+            if (func == null) {
+                func = createFunction(addr, null);
+            }
+            println("============================================================");
+            println("FUNCTION AT 0x" + Long.toHexString(a) + " (" + (func != null ? func.getName() : "NULL") + ")");
+            println("============================================================");
+            if (func != null) {
+                DecompileResults res = decomp.decompileFunction(func, 60, monitor);
+                if (res.decompileCompleted()) {
+                    println(res.getDecompiledFunction().getC());
+                } else {
+                    println("Decompilation failed: " + res.getErrorMessage());
+                }
+            } else {
+                println("Could not find or create function at 0x" + Long.toHexString(a));
+            }
+        }
+    }
+}
+
+--- LITERAL GHIDRA 12.1.4 HEADLESS OUTPUT: task-36939.log ---
+INFO  REPORT: Processing project file: /BOOT.BIN (HeadlessAnalyzer)
+INFO  REPORT: Execute script: DecompileFat3.java  (HeadlessAnalyzer)
+INFO  SCRIPT: C:\ghidra\DecompileFat3.java (HeadlessAnalyzer)
+============================================================
+FUNCTION AT 0x4400dce2 (FUN_4400dce2)
+============================================================
+
+undefined4 FUN_4400dce2(int param_1)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  int iVar3;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_4;
+  uVar2 = FUN_4400e51f(param_1,*(undefined4 *)(param_1 * 0x40 + 0x5056b638));
+  puVar1[-4] = uVar2;
+  puVar1[-5] = (uint)*(byte *)(puVar1[-10] + 0x22);
+  puVar1[-0xb] = 0x5056b6d4;
+  if (*(int *)(puVar1[2] * 0x40 + 0x5056b604) == 0xc) {
+    puVar1[-2] = 0xfff;
+  }
+  else if (*(int *)(puVar1[2] * 0x40 + 0x5056b604) == 0x10) {
+    puVar1[-2] = 0xffff;
+  }
+  else {
+    if (*(int *)(puVar1[2] * 0x40 + 0x5056b604) != 0x20) {
+      puVar1[-0xc] = 0xffffd8d7;
+      goto LAB_4400df96;
+    }
+    puVar1[-2] = 0xfffffff;
+  }
+  if ((*(int *)(puVar1[-10] + 0x14) == puVar1[-4]) &&
+     ((*(int *)(puVar1[-10] + 4) == 0xc || (*(int *)(puVar1[-10] + 4) == 0x10)))) {
+    uVar2 = FUN_4400e592(puVar1[2],puVar1[3],puVar1[4],puVar1[5],puVar1[6]);
+    puVar1[-1] = uVar2;
+    puVar1[-0xc] = puVar1[-1];
+  }
+  else {
+    while( true ) {
+      puVar1[-6] = 0;
+      while (puVar1[-5] != 0) {
+        uVar2 = FUN_4400dc64(puVar1[2],puVar1[-4] + puVar1[-6],1,puVar1[-0xb]);
+        puVar1[-1] = uVar2;
+        if ((int)puVar1[-1] < 0) {
+          puVar1[-0xc] = puVar1[-1];
+          goto LAB_4400df96;
+        }
+        puVar1[-3] = 0;
+        while ((uint)puVar1[-3] < (uint)*(ushort *)(puVar1[-10] + 0x20)) {
+          puVar1[-9] = puVar1[-0xb] + 0x200;
+          uVar2 = FUN_4400c510(puVar1[-3] + puVar1[-0xb],puVar1[-9]);
+          puVar1[-1] = uVar2;
+          if ((int)puVar1[-1] < 0) {
+            puVar1[-0xc] = puVar1[-1];
+            goto LAB_4400df96;
+          }
+          if (*(char *)puVar1[-9] == '\0') {
+            puVar1[-0xc] = 0xffffd8e6;
+            goto LAB_4400df96;
+          }
+          if (((((*(byte *)(puVar1[-9] + 0xb) & 0xf) != 0xf) &&
+               (((*(byte *)(puVar1[-9] + 0xb) >> 3 ^ 1) & 1) != 0)) &&
+              (iVar3 = FUN_4402c420(puVar1[-9],puVar1[3],8), iVar3 == 0)) &&
+             ((iVar3 = FUN_4402c420(puVar1[-9] + 8,puVar1[4],3), iVar3 == 0 &&
+              (*(char *)puVar1[-9] != -0x1b)))) {
+            *(undefined4 *)puVar1[5] = puVar1[-6] + puVar1[-4];
+            *(undefined4 *)puVar1[6] = puVar1[-3];
+            puVar1[-0xc] = 0;
+            goto LAB_4400df96;
+          }
+          puVar1[-3] = puVar1[-3] + 0x20;
+        }
+        puVar1[-5] = puVar1[-5] + -1;
+        puVar1[-6] = puVar1[-6] + 1;
+      }
+      uVar2 = FUN_4400e737(*(undefined4 *)puVar1[-10],puVar1[-7],puVar1 + -8);
+      puVar1[-1] = uVar2;
+      if ((int)puVar1[-1] < 0) {
+        puVar1[-0xc] = puVar1[-1];
+        goto LAB_4400df96;
+      }
+      puVar1[-7] = puVar1[-8];
+      if ((puVar1[-7] == puVar1[-2]) || ((puVar1[-2] & 0xfffffff8) == puVar1[-7])) {
+        puVar1[-0xc] = 0xffffd8e6;
+        goto LAB_4400df96;
+      }
+      if ((((puVar1[-2] & 0xfffffff7) == puVar1[-7]) || ((puVar1[-2] & 0xfffffff6) == puVar1[-7]))
+         || ((uint)puVar1[-7] < (puVar1[-2] & 2))) break;
+      uVar2 = FUN_4400e51f(puVar1[2],puVar1[-7]);
+      puVar1[-4] = uVar2;
+      puVar1[-5] = (uint)*(byte *)(puVar1[-10] + 0x22);
+    }
+    puVar1[-0xc] = 0xffffd8d4;
+  }
+LAB_4400df96:
+  return puVar1[-0xc];
+}
+
+
+============================================================
+FUNCTION AT 0x4400c510 (FUN_4400c510)
+============================================================
+
+undefined4 FUN_4400c510(undefined4 param_1,undefined4 param_2)
+
+{
+  undefined1 *puVar1;
+  undefined1 auStack_8 [8];
+  
+  puVar1 = auStack_8;
+  FUN_4402c2f7(param_2,param_1,8);
+  FUN_4402c2f7(*(int *)(puVar1 + 0x10) + 8,*(int *)(puVar1 + 0xc) + 8,3);
+  *(undefined1 *)(*(int *)(puVar1 + 0x10) + 0xb) = *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0xb);
+  *(undefined1 *)(*(int *)(puVar1 + 0x10) + 0xc) = *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0xc);
+  *(undefined1 *)(*(int *)(puVar1 + 0x10) + 0xd) = *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0xd);
+  *(ushort *)(*(int *)(puVar1 + 0x10) + 0xe) =
+       CONCAT11(*(undefined1 *)(*(int *)(puVar1 + 0xc) + 0xf),
+                *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0xe));
+  *(ushort *)(*(int *)(puVar1 + 0x10) + 0x10) =
+       CONCAT11(*(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x11),
+                *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x10));
+  *(ushort *)(*(int *)(puVar1 + 0x10) + 0x12) =
+       CONCAT11(*(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x13),
+                *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x12));
+  *(ushort *)(*(int *)(puVar1 + 0x10) + 0x14) =
+       CONCAT11(*(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x15),
+                *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x14));
+  *(ushort *)(*(int *)(puVar1 + 0x10) + 0x16) =
+       CONCAT11(*(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x17),
+                *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x16));
+  *(ushort *)(*(int *)(puVar1 + 0x10) + 0x18) =
+       CONCAT11(*(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x19),
+                *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x18));
+  *(ushort *)(*(int *)(puVar1 + 0x10) + 0x1a) =
+       CONCAT11(*(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x1b),
+                *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x1a));
+  *(uint *)(*(int *)(puVar1 + 0x10) + 0x1c) =
+       (uint)*(byte *)(*(int *)(puVar1 + 0xc) + 0x1d) << 8 |
+       (uint)*(byte *)(*(int *)(puVar1 + 0xc) + 0x1e) << 0x10 |
+       (uint)*(byte *)(*(int *)(puVar1 + 0xc) + 0x1f) << 0x18 |
+       (uint)*(byte *)(*(int *)(puVar1 + 0xc) + 0x1c);
+  return 0;
+}
+
+
+============================================================
+FUNCTION AT 0x4400c0a8 (FUN_4400c0a8)
+============================================================
+
+undefined4 FUN_4400c0a8(undefined1 *param_1,undefined1 *param_2)
+
+{
+  undefined1 *puVar1;
+  undefined1 auStack_8 [8];
+  
+  puVar1 = auStack_8;
+  *param_2 = *param_1;
+  param_2[1] = param_1[1];
+  param_2[2] = param_1[2];
+  FUN_4402c2f7(param_2 + 3,param_1 + 3,8);
+  *(ushort *)(*(int *)(puVar1 + 0x10) + 0xc) =
+       CONCAT11(*(undefined1 *)(*(int *)(puVar1 + 0xc) + 0xc),
+                *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0xb));
+  *(undefined1 *)(*(int *)(puVar1 + 0x10) + 0xe) = *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0xd);
+  *(ushort *)(*(int *)(puVar1 + 0x10) + 0x10) =
+       CONCAT11(*(undefined1 *)(*(int *)(puVar1 + 0xc) + 0xf),
+                *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0xe));
+  *(undefined1 *)(*(int *)(puVar1 + 0x10) + 0x12) = *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x10);
+  *(ushort *)(*(int *)(puVar1 + 0x10) + 0x14) =
+       CONCAT11(*(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x12),
+                *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x11));
+  *(ushort *)(*(int *)(puVar1 + 0x10) + 0x16) =
+       CONCAT11(*(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x14),
+                *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x13));
+  *(undefined1 *)(*(int *)(puVar1 + 0x10) + 0x18) = *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x15);
+  *(ushort *)(*(int *)(puVar1 + 0x10) + 0x1a) =
+       CONCAT11(*(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x17),
+                *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x16));
+  *(ushort *)(*(int *)(puVar1 + 0x10) + 0x1c) =
+       CONCAT11(*(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x19),
+                *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x18));
+  *(ushort *)(*(int *)(puVar1 + 0x10) + 0x1e) =
+       CONCAT11(*(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x1b),
+                *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x1a));
+  *(uint *)(*(int *)(puVar1 + 0x10) + 0x20) =
+       (uint)*(byte *)(*(int *)(puVar1 + 0xc) + 0x1d) << 8 |
+       (uint)*(byte *)(*(int *)(puVar1 + 0xc) + 0x1e) << 0x10 |
+       (uint)*(byte *)(*(int *)(puVar1 + 0xc) + 0x1f) << 0x18 |
+       (uint)*(byte *)(*(int *)(puVar1 + 0xc) + 0x1c);
+  *(uint *)(*(int *)(puVar1 + 0x10) + 0x24) =
+       (uint)*(byte *)(*(int *)(puVar1 + 0xc) + 0x21) << 8 |
+       (uint)*(byte *)(*(int *)(puVar1 + 0xc) + 0x22) << 0x10 |
+       (uint)*(byte *)(*(int *)(puVar1 + 0xc) + 0x23) << 0x18 |
+       (uint)*(byte *)(*(int *)(puVar1 + 0xc) + 0x20);
+  *(undefined1 *)(*(int *)(puVar1 + 0x10) + 0x28) = *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x24);
+  *(undefined1 *)(*(int *)(puVar1 + 0x10) + 0x29) = *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x25);
+  *(undefined1 *)(*(int *)(puVar1 + 0x10) + 0x2a) = *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x26);
+  *(uint *)(*(int *)(puVar1 + 0x10) + 0x2c) =
+       (uint)*(byte *)(*(int *)(puVar1 + 0xc) + 0x28) << 8 |
+       (uint)*(byte *)(*(int *)(puVar1 + 0xc) + 0x29) << 0x10 |
+       (uint)*(byte *)(*(int *)(puVar1 + 0xc) + 0x2a) << 0x18 |
+       (uint)*(byte *)(*(int *)(puVar1 + 0xc) + 0x27);
+  FUN_4402c2f7(*(int *)(puVar1 + 0x10) + 0x30,*(int *)(puVar1 + 0xc) + 0x2b,0xb);
+  FUN_4402c2f7(*(int *)(puVar1 + 0x10) + 0x3b,*(int *)(puVar1 + 0xc) + 0x36,8);
+  FUN_4402c2f7(*(int *)(puVar1 + 0x10) + 0x43,*(int *)(puVar1 + 0xc) + 0x3e,0x1c0);
+  *(undefined1 *)(*(int *)(puVar1 + 0x10) + 0x203) = *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x1fe)
+  ;
+  *(undefined1 *)(*(int *)(puVar1 + 0x10) + 0x204) = *(undefined1 *)(*(int *)(puVar1 + 0xc) + 0x1ff)
+  ;
+  return 0;
+}
+
+
+============================================================
+FUNCTION AT 0x4400c436 (NULL)
+============================================================
+Could not find or create function at 0x4400c436
+INFO  REPORT: Save succeeded for processed file: /BOOT.BIN (HeadlessAnalyzer)
+
+################################################################################
+SCRIPT 04/11: DecompileFat4.java (MBR/VBR/BPB mount, cluster->LBA, FAT12/FAT16 root dir lookup)
+JAVA_PATH: C:\ghidra\DecompileFat4.java
+LOG_PATH:  C:\Users\danie\.gemini\antigravity\brain\a874cd2a-2809-4db8-acbd-d274c82ed7ed\.system_generated\tasks\task-36949.log
+################################################################################
+
+--- JAVA SOURCE: DecompileFat4.java ---
+// Ghidra script DecompileFat4.java
+import ghidra.app.script.GhidraScript;
+import ghidra.app.decompiler.DecompInterface;
+import ghidra.app.decompiler.DecompileResults;
+import ghidra.program.model.listing.Function;
+import ghidra.program.model.listing.FunctionManager;
+import ghidra.program.model.address.Address;
+
+public class DecompileFat4 extends GhidraScript {
+    @Override
+    public void run() throws Exception {
+        DecompInterface decomp = new DecompInterface();
+        decomp.openProgram(currentProgram);
+        
+        long[] addresses = {
+            0x4400cb21L,
+            0x4400e51fL,
+            0x4400e592L,
+        };
+        
+        FunctionManager fm = currentProgram.getFunctionManager();
+        
+        for (long a : addresses) {
+            Address addr = currentProgram.getAddressFactory().getAddress(Long.toHexString(a));
+            Function func = fm.getFunctionAt(addr);
+            if (func == null) {
+                func = createFunction(addr, null);
+            }
+            println("============================================================");
+            println("FUNCTION AT 0x" + Long.toHexString(a) + " (" + (func != null ? func.getName() : "NULL") + ")");
+            println("============================================================");
+            if (func != null) {
+                DecompileResults res = decomp.decompileFunction(func, 60, monitor);
+                if (res.decompileCompleted()) {
+                    println(res.getDecompiledFunction().getC());
+                } else {
+                    println("Decompilation failed: " + res.getErrorMessage());
+                }
+            } else {
+                println("Could not find or create function at 0x" + Long.toHexString(a));
+            }
+        }
+    }
+}
+
+--- LITERAL GHIDRA 12.1.4 HEADLESS OUTPUT: task-36949.log ---
+INFO  REPORT: Processing project file: /BOOT.BIN (HeadlessAnalyzer)
+INFO  REPORT: Execute script: DecompileFat4.java  (HeadlessAnalyzer)
+INFO  SCRIPT: C:\ghidra\DecompileFat4.java (HeadlessAnalyzer)
+============================================================
+FUNCTION AT 0x4400cb21 (FUN_4400cb21)
+============================================================
+
+undefined4 FUN_4400cb21(void)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  int iVar3;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_4;
+  uVar2 = FUN_4400ca59(0x5056b6d4,1,0);
+  puVar1[-2] = uVar2;
+  if ((int)puVar1[-2] < 0) {
+    uVar2 = FUN_4400ca59(puVar1[-8],1,0);
+    puVar1[-2] = uVar2;
+    if ((int)puVar1[-2] < 0) {
+      puVar1[-10] = puVar1[-2];
+      goto LAB_4400ceca;
+    }
+  }
+  puVar1[-4] = puVar1[-8] + 0x200;
+  puVar1[-1] = 0;
+  while ((int)puVar1[-1] < 4) {
+    uVar2 = FUN_4400bfb0(puVar1[-1] + puVar1[-8] + 0x1be,puVar1[-4]);
+    puVar1[-2] = uVar2;
+    if ((int)puVar1[-2] < 0) {
+      puVar1[-10] = puVar1[-2];
+      goto LAB_4400ceca;
+    }
+    if ((((*(char *)(puVar1[-8] + 0x1fe) == 'U') && (*(char *)(puVar1[-8] + 0x1ff) == -0x56)) &&
+        ((*(char *)puVar1[-4] == -0x80 || (*(char *)puVar1[-4] == '\0')))) &&
+       (*(char *)(puVar1[-4] + 4) != '\0')) {
+      puVar1[-3] = *(undefined4 *)(puVar1[-4] + 8);
+      *(undefined4 *)(puVar1[-7] + 8) = *(undefined4 *)(puVar1[-4] + 8);
+      goto LAB_4400cc2c;
+    }
+    puVar1[-1] = puVar1[-1] + 0x10;
+  }
+  puVar1[-3] = 0;
+  *(undefined4 *)(puVar1[-7] + 8) = 0;
+LAB_4400cc2c:
+  do {
+    if (puVar1[-3] == 0) break;
+    uVar2 = FUN_4400ca59(puVar1[-8],1,puVar1[-3]);
+    puVar1[-2] = uVar2;
+    if (-1 < (int)puVar1[-2]) break;
+    if (*(char *)((int)puVar1 + -0x21) != '\0') {
+      puVar1[-10] = puVar1[-2];
+      goto LAB_4400ceca;
+    }
+    puVar1[-3] = *(int *)(puVar1[-7] + 8) + 6;
+    *(undefined1 *)((int)puVar1 + -0x21) = 1;
+  } while( true );
+  puVar1[-5] = puVar1[-8] + 0x200;
+  uVar2 = FUN_4400c0a8(puVar1[-8],puVar1[-5]);
+  puVar1[-2] = uVar2;
+  if ((int)puVar1[-2] < 0) {
+    puVar1[-10] = puVar1[-2];
+  }
+  else if ((*(char *)(puVar1[-5] + 0x203) == 'U') && (*(char *)(puVar1[-5] + 0x204) == -0x56)) {
+    if (*(short *)(puVar1[-5] + 0xc) == 0x200) {
+      *(undefined2 *)(puVar1[-7] + 0x20) = *(undefined2 *)(puVar1[-5] + 0xc);
+      *(undefined1 *)(puVar1[-7] + 0x22) = *(undefined1 *)(puVar1[-5] + 0xe);
+      if (*(char *)(puVar1[-7] + 0x22) == '\0') {
+        puVar1[-10] = 0xffffd8d7;
+      }
+      else {
+        *(undefined2 *)(puVar1[-7] + 0x24) = *(undefined2 *)(puVar1[-5] + 0x10);
+        *(undefined1 *)(puVar1[-7] + 0x26) = *(undefined1 *)(puVar1[-5] + 0x12);
+        if (*(char *)(puVar1[-7] + 0x26) == '\0') {
+          puVar1[-10] = 0xffffd8d7;
+        }
+        else if (*(byte *)(puVar1[-7] + 0x26) < 3) {
+          *(undefined2 *)(puVar1[-7] + 0x28) = *(undefined2 *)(puVar1[-5] + 0x14);
+          *(undefined2 *)(puVar1[-7] + 0x2a) = *(undefined2 *)(puVar1[-5] + 0x16);
+          *(uint *)(puVar1[-7] + 0x2c) = (uint)*(ushort *)(puVar1[-5] + 0x1a);
+          *(undefined4 *)(puVar1[-7] + 0x30) = *(undefined4 *)(puVar1[-5] + 0x20);
+          *(undefined4 *)(puVar1[-7] + 0x34) = *(undefined4 *)(puVar1[-5] + 0x24);
+          iVar3 = FUN_4402c420(puVar1[-5] + 0x3b,s_FAT12_440356ce,5);
+          if (iVar3 == 0) {
+            *(undefined4 *)(puVar1[-7] + 4) = 0xc;
+            if (*(char *)((int)puVar1 + -0x21) == '\x01') {
+              puVar1[-10] = 0xffffd8d7;
+              goto LAB_4400ceca;
+            }
+          }
+          else {
+            iVar3 = FUN_4402c420(puVar1[-5] + 0x3b,s_FAT16_440356d7,5);
+            if (iVar3 == 0) {
+              *(undefined4 *)(puVar1[-7] + 4) = 0x10;
+              if (*(char *)((int)puVar1 + -0x21) == '\x01') {
+                puVar1[-10] = 0xffffd8d7;
+                goto LAB_4400ceca;
+              }
+            }
+            else {
+              iVar3 = FUN_4402c420(puVar1[-5] + 0x3b,s_FAT32_440356e0,5);
+              if (iVar3 == 0) {
+                *(undefined4 *)(puVar1[-7] + 4) = 0x20;
+              }
+              else {
+                *(undefined4 *)(puVar1[-7] + 4) = 0;
+              }
+            }
+          }
+          if ((*(int *)(puVar1[-7] + 0x2c) == 0) &&
+             ((*(int *)(puVar1[-7] + 4) == 0xc || (*(int *)(puVar1[-7] + 4) == 0x10)))) {
+            puVar1[-10] = 0xffffd8d7;
+          }
+          else {
+            if ((*(short *)(puVar1[-7] + 0x28) == 0) && (*(int *)(puVar1[-7] + 0x2c) == 0)) {
+              puVar1[-6] = puVar1[-8] + 0x224;
+              uVar2 = FUN_4400c35a(puVar1[-8] + 0x24,puVar1[-6]);
+              puVar1[-2] = uVar2;
+              if ((int)puVar1[-2] < 0) {
+                puVar1[-10] = puVar1[-2];
+                goto LAB_4400ceca;
+              }
+              *(undefined4 *)(puVar1[-7] + 0x2c) = *(undefined4 *)puVar1[-6];
+              if (*(int *)(puVar1[-7] + 0x2c) == 0) {
+                puVar1[-10] = 0xffffd8d7;
+                goto LAB_4400ceca;
+              }
+              iVar3 = FUN_4402c420(puVar1[-6] + 0x2f,s_FAT32_440356e0,5);
+              if (iVar3 != 0) {
+                puVar1[-10] = 0xffffd8d7;
+                goto LAB_4400ceca;
+              }
+              *(undefined4 *)(puVar1[-7] + 4) = 0x20;
+            }
+            puVar1[-10] = puVar1[-2];
+          }
+        }
+        else {
+          puVar1[-10] = 0xffffd8d7;
+        }
+      }
+    }
+    else {
+      puVar1[-10] = 0xffffd8d7;
+    }
+  }
+  else {
+    puVar1[-10] = 0xffffd8d7;
+  }
+LAB_4400ceca:
+  return puVar1[-10];
+}
+
+
+============================================================
+FUNCTION AT 0x4400e51f (FUN_4400e51f)
+============================================================
+
+int FUN_4400e51f(int param_1,int param_2)
+
+{
+  undefined4 uStack_c;
+  
+  uStack_c = 0;
+  param_1 = param_1 * 0x40;
+  if ((param_2 == 0) || (param_2 == 1)) {
+    if (param_2 == 0) {
+      uStack_c = *(int *)(param_1 + 0x5056b614);
+    }
+    else if (param_2 == 1) {
+      uStack_c = *(int *)(param_1 + 0x5056b610);
+    }
+  }
+  else {
+    uStack_c = *(int *)(param_1 + 0x5056b618) +
+               (uint)*(byte *)(param_1 + 0x5056b622) * (param_2 + -2);
+  }
+  return uStack_c;
+}
+
+
+============================================================
+FUNCTION AT 0x4400e592 (FUN_4400e592)
+============================================================
+
+undefined4 FUN_4400e592(int param_1)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  int iVar3;
+  undefined4 uStack_c;
+  undefined4 uStack_8;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_c;
+  uVar2 = FUN_4400e51f(param_1,*(undefined4 *)(param_1 * 0x40 + 0x5056b638));
+  puVar1[-3] = uVar2;
+  puVar1[-4] = (int)(((ulonglong)*(ushort *)(puVar1[-8] + 0x28) << 5) /
+                    (ulonglong)*(ushort *)(puVar1[4] * 0x40 + 0x5056b620));
+  puVar1[-9] = 0x5056b6d4;
+  if (*(int *)(puVar1[-8] + 4) == 0x20) {
+    puVar1[-10] = 0xffffd8d2;
+  }
+  else {
+    puVar1[-5] = 0;
+    while (puVar1[-4] != 0) {
+      uVar2 = FUN_4400dc64(puVar1[4],puVar1[-3] + puVar1[-5],1,puVar1[-9]);
+      puVar1[-1] = uVar2;
+      if ((int)puVar1[-1] < 0) {
+        puVar1[-10] = puVar1[-1];
+        goto LAB_4400e72f;
+      }
+      puVar1[-2] = 0;
+      while ((uint)puVar1[-2] < (uint)*(ushort *)(puVar1[-8] + 0x20)) {
+        puVar1[-7] = puVar1[-9] + 0x200;
+        uVar2 = FUN_4400c510(puVar1[-2] + puVar1[-9],puVar1[-7]);
+        puVar1[-1] = uVar2;
+        if ((int)puVar1[-1] < 0) {
+          puVar1[-10] = puVar1[-1];
+          goto LAB_4400e72f;
+        }
+        if (*(char *)puVar1[-7] == '\0') {
+          puVar1[-10] = 0xffffd8e6;
+          goto LAB_4400e72f;
+        }
+        if (((*(byte *)(puVar1[-7] + 0xb) & 0xf) != 0xf) &&
+           (((*(byte *)(puVar1[-7] + 0xb) >> 3 ^ 1) & 1) != 0)) {
+          iVar3 = FUN_4402c420(puVar1[-7],puVar1[5],8);
+          if (iVar3 == 0) {
+            iVar3 = FUN_4402c420(puVar1[-7] + 8,puVar1[6],3);
+            if ((iVar3 == 0) && (*(char *)puVar1[-7] != -0x1b)) {
+              *(undefined4 *)puVar1[7] = puVar1[-5] + puVar1[-3];
+              *(undefined4 *)puVar1[8] = puVar1[-2];
+              puVar1[-10] = 0;
+              goto LAB_4400e72f;
+            }
+          }
+        }
+        puVar1[-2] = puVar1[-2] + 0x20;
+      }
+      puVar1[-4] = puVar1[-4] + -1;
+      puVar1[-5] = puVar1[-5] + 1;
+    }
+    puVar1[-10] = 0xffffd8e6;
+  }
+LAB_4400e72f:
+  return puVar1[-10];
+}
+
+
+INFO  REPORT: Save succeeded for processed file: /BOOT.BIN (HeadlessAnalyzer)
+
+################################################################################
+SCRIPT 05/11: DecompileFat5.java (ASF/FAT32 read, sector wrapper, FAT12/16/32 next cluster, contiguous scanner)
+JAVA_PATH: C:\ghidra\DecompileFat5.java
+LOG_PATH:  C:\Users\danie\.gemini\antigravity\brain\a874cd2a-2809-4db8-acbd-d274c82ed7ed\.system_generated\tasks\task-36960.log
+################################################################################
+
+--- JAVA SOURCE: DecompileFat5.java ---
+// Ghidra script DecompileFat5.java
+import ghidra.app.script.GhidraScript;
+import ghidra.app.decompiler.DecompInterface;
+import ghidra.app.decompiler.DecompileResults;
+import ghidra.program.model.listing.Function;
+import ghidra.program.model.listing.FunctionManager;
+import ghidra.program.model.address.Address;
+
+public class DecompileFat5 extends GhidraScript {
+    @Override
+    public void run() throws Exception {
+        DecompInterface decomp = new DecompInterface();
+        decomp.openProgram(currentProgram);
+        
+        long[] addresses = {
+            0x4400dfc8L,
+            0x4400dc64L, // read sector wrapper
+            0x4400e737L, // get next cluster
+            0x4400edbfL,
+        };
+        
+        FunctionManager fm = currentProgram.getFunctionManager();
+        
+        for (long a : addresses) {
+            Address addr = currentProgram.getAddressFactory().getAddress(Long.toHexString(a));
+            Function func = fm.getFunctionAt(addr);
+            if (func == null) {
+                func = createFunction(addr, null);
+            }
+            println("============================================================");
+            println("FUNCTION AT 0x" + Long.toHexString(a) + " (" + (func != null ? func.getName() : "NULL") + ")");
+            println("============================================================");
+            if (func != null) {
+                DecompileResults res = decomp.decompileFunction(func, 60, monitor);
+                if (res.decompileCompleted()) {
+                    println(res.getDecompiledFunction().getC());
+                } else {
+                    println("Decompilation failed: " + res.getErrorMessage());
+                }
+            } else {
+                println("Could not find or create function at 0x" + Long.toHexString(a));
+            }
+        }
+    }
+}
+
+--- LITERAL GHIDRA 12.1.4 HEADLESS OUTPUT: task-36960.log ---
+INFO  REPORT: Processing project file: /BOOT.BIN (HeadlessAnalyzer)
+INFO  REPORT: Execute script: DecompileFat5.java  (HeadlessAnalyzer)
+INFO  SCRIPT: C:\ghidra\DecompileFat5.java (HeadlessAnalyzer)
+============================================================
+FUNCTION AT 0x4400dfc8 (FUN_4400dfc8)
+============================================================
+
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+undefined4 FUN_4400dfc8(undefined4 param_1,undefined4 param_2,int param_3)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  undefined4 uStack_c;
+  undefined4 uStack_8;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_c;
+  if ((_DAT_5056b6c0 != 0) &&
+     ((((*(int *)(_DAT_5056b680 * 0x40 + 0x5056b604) == 0xc ||
+        (*(int *)(_DAT_5056b680 * 0x40 + 0x5056b604) == 0x10)) ||
+       (*(int *)(_DAT_5056b680 * 0x40 + 0x5056b604) == 0x20)) && (_DAT_5056b6c4 <= _DAT_5056b6c0))))
+  {
+    if (_DAT_5056b6c0 < _DAT_5056b6c4 + param_3) {
+      param_3 = _DAT_5056b6c4 - _DAT_5056b6c0;
+    }
+    if (param_3 != 0) {
+      while ((uint)puVar1[-7] < (uint)puVar1[-8]) {
+        uVar2 = FUN_4400e737(*(undefined4 *)puVar1[-5],puVar1[-0xf],puVar1 + -0x15);
+        puVar1[-2] = uVar2;
+        if ((int)puVar1[-2] < 0) {
+          puVar1[-0x16] = puVar1[-2];
+          goto LAB_4400e517;
+        }
+        puVar1[-0xf] = puVar1[-0x15];
+        if ((((uint)puVar1[-0xf] < (puVar1[-9] & 2)) || (puVar1[-0xf] == puVar1[-9])) ||
+           (((puVar1[-9] & 0xfffffff6) == puVar1[-0xf] ||
+            (((puVar1[-9] & 0xfffffff7) == puVar1[-0xf] ||
+             ((puVar1[-9] & 0xfffffff8) == puVar1[-0xf])))))) {
+          puVar1[-0x16] = 0xffffd8d4;
+          goto LAB_4400e517;
+        }
+        puVar1[-7] = puVar1[-7] + 1;
+      }
+      uVar2 = FUN_4400e51f(puVar1[-1],puVar1[-0xf]);
+      puVar1[-10] = uVar2;
+      puVar1[-0xd] = *(uint *)(puVar1[-4] + 0x44) %
+                     (uint)*(ushort *)(puVar1[-1] * 0x40 + 0x5056b620);
+      uVar2 = FUN_4400ef58(*(undefined4 *)puVar1[-5],puVar1[-0xf],puVar1 + -0x13,puVar1 + -0x14);
+      puVar1[-2] = uVar2;
+      if ((int)puVar1[-2] < 0) {
+        puVar1[-0x16] = puVar1[-2];
+      }
+      else {
+        if ((puVar1[-0x14] == puVar1[-9]) || ((puVar1[-9] & 0xfffffff8) == puVar1[-0x14])) {
+          puVar1[-0xf] = puVar1[-0x14];
+          puVar1[-3] = 1;
+        }
+        else {
+          if ((((puVar1[-9] & 0xfffffff7) == puVar1[-0x14]) ||
+              ((puVar1[-9] & 0xfffffff6) == puVar1[-0x14])) ||
+             ((uint)puVar1[-0x14] < (puVar1[-9] & 2))) {
+            puVar1[-0x16] = 0xffffd8d4;
+            goto LAB_4400e517;
+          }
+          puVar1[-0xf] = puVar1[-0x14];
+        }
+        puVar1[-0xc] = (int)(((ulonglong)*(uint *)(puVar1[-4] + 0x44) /
+                             (ulonglong)*(ushort *)(puVar1[-1] * 0x40 + 0x5056b620)) %
+                            (ulonglong)*(byte *)(puVar1[-5] + 0x22));
+        puVar1[-0x10] = puVar1[-0xc];
+        puVar1[-0x11] = puVar1[-0xc] - puVar1[-0x13] * (uint)*(byte *)(puVar1[-5] + 0x22);
+        while (puVar1[-0xe] != 0) {
+          while (puVar1[-0x11] != 0) {
+            if ((uint)puVar1[-0x11] < (uint)puVar1[-0xb]) {
+              puVar1[-0xb] = puVar1[-0x11];
+            }
+            if ((uint)puVar1[-0xe] < (uint)puVar1[-0xb]) {
+              puVar1[-0xb] = puVar1[-0xe];
+            }
+            uVar2 = FUN_4400dc64(puVar1[-1],puVar1[-10] + puVar1[-0x10],puVar1[-0xb],puVar1[-6]);
+            puVar1[-2] = uVar2;
+            if ((int)puVar1[-2] < 0) {
+              puVar1[-0x16] = puVar1[-2];
+              goto LAB_4400e517;
+            }
+            puVar1[-0x11] = puVar1[-0xb] - puVar1[-0x11];
+            puVar1[-0xe] = puVar1[-0xb] - puVar1[-0xe];
+            if ((uint)(puVar1[6] - puVar1[-0x12]) <
+                (uint)*(ushort *)(puVar1[-5] + 0x20) * puVar1[-0xb]) {
+              FUN_4402c2f7(puVar1[5],puVar1[-0xd] + puVar1[-6],puVar1[-0x12] - puVar1[6]);
+            }
+            else {
+              FUN_4402c2f7(puVar1[5],puVar1[-0xd] + puVar1[-6],
+                           puVar1[-0xd] - puVar1[-0xb] * (uint)*(ushort *)(puVar1[-5] + 0x20));
+            }
+            puVar1[-0x12] =
+                 puVar1[-0x12] +
+                 (puVar1[-0xb] * (uint)*(ushort *)(puVar1[-5] + 0x20) - puVar1[-0xd]);
+            if (puVar1[-0xe] == 0) goto LAB_4400e501;
+            puVar1[5] = puVar1[5] +
+                        (puVar1[-0xb] * (uint)*(ushort *)(puVar1[-5] + 0x20) - puVar1[-0xd]);
+            puVar1[-0xd] = 0;
+            puVar1[-0x10] = puVar1[-0xb] + puVar1[-0x10];
+          }
+          if (puVar1[-3] == 1) break;
+          puVar1[-0x10] = 0;
+          uVar2 = FUN_4400ef58(*(undefined4 *)puVar1[-5],puVar1[-0xf],puVar1 + -0x13,puVar1 + -0x14)
+          ;
+          puVar1[-2] = uVar2;
+          if ((int)puVar1[-2] < 0) {
+            puVar1[-0x16] = puVar1[-2];
+            goto LAB_4400e517;
+          }
+          if ((puVar1[-0x14] == puVar1[-9]) || ((puVar1[-9] & 0xfffffff8) == puVar1[-0x14])) {
+            puVar1[-0xb] = 0x20;
+            puVar1[-3] = 1;
+            uVar2 = FUN_4400e51f(puVar1[-1],puVar1[-0xf]);
+            puVar1[-10] = uVar2;
+            puVar1[-0xf] = puVar1[-0x14];
+          }
+          else {
+            if ((((puVar1[-9] & 0xfffffff7) == puVar1[-0x14]) ||
+                ((puVar1[-9] & 0xfffffff6) == puVar1[-0x14])) ||
+               ((uint)puVar1[-0x14] < (puVar1[-9] & 2))) {
+              puVar1[-0x16] = 0xffffd8d4;
+              goto LAB_4400e517;
+            }
+            puVar1[-0xb] = 0x20;
+            uVar2 = FUN_4400e51f(puVar1[-1],puVar1[-0xf]);
+            puVar1[-10] = uVar2;
+            puVar1[-0xf] = puVar1[-0x14];
+          }
+          puVar1[-0x11] = (uint)*(byte *)(puVar1[-5] + 0x22) * puVar1[-0x13];
+        }
+LAB_4400e501:
+        *(int *)(puVar1[-4] + 0x44) = puVar1[6] + *(int *)(puVar1[-4] + 0x44);
+        puVar1[-0x16] = puVar1[6];
+      }
+    }
+  }
+LAB_4400e517:
+  return puVar1[-0x16];
+}
+
+
+============================================================
+FUNCTION AT 0x4400dc64 (FUN_4400dc64)
+============================================================
+
+undefined4 FUN_4400dc64(int param_1,int param_2,undefined4 param_3,undefined4 param_4)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  undefined4 uStack_8;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_8;
+  uVar2 = FUN_4400ca59(param_4,param_3,param_2 + *(int *)(param_1 * 0x40 + 0x5056b608),
+                       param_1 * 0x40 + 0x5056b600);
+  puVar1[-1] = uVar2;
+  if ((int)puVar1[-1] < 0) {
+    uVar2 = FUN_4400ca59(puVar1[6],puVar1[5],puVar1[4] + *(int *)(puVar1[3] * 0x40 + 0x5056b608));
+    puVar1[-1] = uVar2;
+  }
+  return puVar1[-1];
+}
+
+
+============================================================
+FUNCTION AT 0x4400e737 (FUN_4400e737)
+============================================================
+
+undefined4 FUN_4400e737(int param_1,uint param_2)
+
+{
+  undefined4 *puVar1;
+  int iVar2;
+  int iVar3;
+  undefined4 uVar4;
+  undefined4 uStack_10;
+  undefined4 uStack_c;
+  undefined4 uStack_8;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_10;
+  iVar2 = *(int *)(param_1 * 0xdec + 0x505716d4);
+  iVar3 = iVar2 * 0x40;
+  if ((1 < param_2) || (*(int *)(iVar2 * 0x40 + 0x5056b604) == 0x20)) {
+    if (*(int *)(iVar3 + 0x5056b604) == 0xc) {
+LAB_4400e7e0:
+      if ((*(uint *)(puVar1[-6] + 0x10) <= (uint)puVar1[-9]) &&
+         ((uint)puVar1[-9] < (uint)(*(int *)(puVar1[-6] + 0x10) + *(int *)(puVar1[-6] + 0x14)))) {
+        *(undefined1 *)((int)puVar1 + -2) =
+             *(undefined1 *)
+              (puVar1[-8] +
+               puVar1[-6] +
+               (uint)*(ushort *)(puVar1[-2] * 0x40 + 0x5056b620) *
+               (puVar1[-9] - *(int *)(puVar1[-6] + 0x10)) + 0x18);
+        *(undefined1 *)((int)puVar1 + -1) =
+             *(undefined1 *)
+              (puVar1[-8] +
+               puVar1[-6] +
+               (uint)*(ushort *)(puVar1[-2] * 0x40 + 0x5056b620) *
+               (puVar1[-9] - *(int *)(puVar1[-6] + 0x10)) + 0x19);
+        puVar1[-4] = (uint)*(ushort *)((int)puVar1 + -2);
+        if ((puVar1[6] & 1) == 0) {
+          puVar1[-4] = puVar1[-4] & 0xfff;
+        }
+        else {
+          puVar1[-4] = (uint)puVar1[-4] >> 4;
+        }
+        goto LAB_4400edac;
+      }
+      uVar4 = FUN_4400dc64(puVar1[-2],
+                           ((uint)(puVar1[-9] * -0x55555555) >> 1) * 3 + *(int *)(puVar1[-7] + 0x10)
+                           ,3,puVar1[-6] + 0x18);
+      puVar1[-3] = uVar4;
+      if ((int)puVar1[-3] < 0) {
+        if (1 < *(byte *)(puVar1[-7] + 0x26)) {
+          uVar4 = FUN_4400dc64(puVar1[-2],
+                               ((uint)(puVar1[-9] * -0x55555555) >> 1) * 3 +
+                               *(int *)(puVar1[-7] + 0x10) + *(int *)(puVar1[-6] + 0xc),3,
+                               puVar1[-6] + 0x18);
+          puVar1[-3] = uVar4;
+        }
+        if ((int)puVar1[-3] < 0) goto code_r0x4400e8f6;
+      }
+      *(uint *)(puVar1[-6] + 0x10) = ((uint)(puVar1[-9] * -0x55555555) >> 1) * 3;
+      if (*(uint *)(puVar1[-7] + 0x2c) < ((uint)(puVar1[-9] * -0x55555555) >> 1) * 3 + 3) {
+        *(int *)(puVar1[-6] + 0x14) = *(int *)(puVar1[-6] + 0x10) - *(int *)(puVar1[-7] + 0x2c);
+      }
+      else {
+        *(undefined4 *)(puVar1[-6] + 0x14) = 3;
+      }
+      goto LAB_4400e7e0;
+    }
+    if (*(int *)(iVar3 + 0x5056b604) == 0x10) {
+LAB_4400e9cf:
+      if ((*(uint *)(puVar1[-6] + 0x10) <= (uint)puVar1[-9]) &&
+         ((uint)puVar1[-9] < (uint)(*(int *)(puVar1[-6] + 0x10) + *(int *)(puVar1[-6] + 0x14)))) {
+        *(undefined1 *)((int)puVar1 + -2) =
+             *(undefined1 *)
+              (puVar1[-8] +
+               puVar1[-6] +
+               (uint)*(ushort *)(puVar1[-2] * 0x40 + 0x5056b620) *
+               (puVar1[-9] - *(int *)(puVar1[-6] + 0x10)) + 0x18);
+        *(undefined1 *)((int)puVar1 + -1) =
+             *(undefined1 *)
+              (puVar1[-8] +
+               puVar1[-6] +
+               (uint)*(ushort *)(puVar1[-2] * 0x40 + 0x5056b620) *
+               (puVar1[-9] - *(int *)(puVar1[-6] + 0x10)) + 0x19);
+        puVar1[-4] = (uint)*(ushort *)((int)puVar1 + -2);
+        puVar1[-4] = puVar1[-4] & 0xffff;
+        goto LAB_4400edac;
+      }
+      uVar4 = FUN_4400dc64(puVar1[-2],
+                           ((uint)(puVar1[-9] * -0x55555555) >> 1) * 3 + *(int *)(puVar1[-7] + 0x10)
+                           ,3,puVar1[-6] + 0x18);
+      puVar1[-3] = uVar4;
+      if ((int)puVar1[-3] < 0) {
+        if (1 < *(byte *)(puVar1[-7] + 0x26)) {
+          uVar4 = FUN_4400dc64(puVar1[-2],
+                               ((uint)(puVar1[-9] * -0x55555555) >> 1) * 3 +
+                               *(int *)(puVar1[-7] + 0x10) + *(int *)(puVar1[-6] + 0xc),3,
+                               puVar1[-6] + 0x18);
+          puVar1[-3] = uVar4;
+        }
+        if ((int)puVar1[-3] < 0) goto code_r0x4400eae5;
+      }
+      *(uint *)(puVar1[-6] + 0x10) = ((uint)(puVar1[-9] * -0x55555555) >> 1) * 3;
+      if (*(uint *)(puVar1[-7] + 0x2c) < *(int *)(puVar1[-6] + 0x10) + 3U) {
+        *(int *)(puVar1[-6] + 0x14) = *(int *)(puVar1[-6] + 0x10) - *(int *)(puVar1[-7] + 0x2c);
+      }
+      else {
+        *(undefined4 *)(puVar1[-6] + 0x14) = 3;
+      }
+      goto LAB_4400e9cf;
+    }
+    if (*(int *)(iVar3 + 0x5056b604) == 0x20) {
+LAB_4400eb9a:
+      if ((*(uint *)(puVar1[-6] + 0x10) <= (uint)puVar1[-9]) &&
+         ((uint)puVar1[-9] < (uint)(*(int *)(puVar1[-6] + 0x10) + *(int *)(puVar1[-6] + 0x14)))) {
+        *(undefined1 *)((int)puVar1 + -2) =
+             *(undefined1 *)
+              (puVar1[-8] +
+               puVar1[-6] +
+               (uint)*(ushort *)(puVar1[-2] * 0x40 + 0x5056b620) *
+               (puVar1[-9] - *(int *)(puVar1[-6] + 0x10)) + 0x18);
+        *(undefined1 *)((int)puVar1 + -1) =
+             *(undefined1 *)
+              (puVar1[-8] +
+               puVar1[-6] +
+               (uint)*(ushort *)(puVar1[-2] * 0x40 + 0x5056b620) *
+               (puVar1[-9] - *(int *)(puVar1[-6] + 0x10)) + 0x19);
+        *(undefined1 *)(puVar1 + -1) =
+             *(undefined1 *)
+              (puVar1[-8] +
+               puVar1[-6] +
+               (uint)*(ushort *)(puVar1[-2] * 0x40 + 0x5056b620) *
+               (puVar1[-9] - *(int *)(puVar1[-6] + 0x10)) + 0x1a);
+        *(undefined1 *)((int)puVar1 + -3) =
+             *(undefined1 *)
+              (puVar1[-8] +
+               puVar1[-6] +
+               (uint)*(ushort *)(puVar1[-2] * 0x40 + 0x5056b620) *
+               (puVar1[-9] - *(int *)(puVar1[-6] + 0x10)) + 0x1b);
+        puVar1[-4] = (uint)*(byte *)((int)puVar1 + -1) << 8 |
+                     (uint)*(byte *)(puVar1 + -1) << 0x10 |
+                     (uint)*(byte *)((int)puVar1 + -3) << 0x18 | (uint)*(byte *)((int)puVar1 + -2);
+        puVar1[-4] = puVar1[-4] & 0xfffffff;
+LAB_4400edac:
+        *(undefined4 *)puVar1[7] = puVar1[-4];
+        puVar1[-10] = 0;
+        goto LAB_4400edb7;
+      }
+      uVar4 = FUN_4400dc64(puVar1[-2],
+                           ((uint)(puVar1[-9] * -0x55555555) >> 1) * 3 + *(int *)(puVar1[-7] + 0x10)
+                           ,3,puVar1[-6] + 0x18);
+      puVar1[-3] = uVar4;
+      if ((int)puVar1[-3] < 0) {
+        if (1 < *(byte *)(puVar1[-7] + 0x26)) {
+          uVar4 = FUN_4400dc64(puVar1[-2],
+                               ((uint)(puVar1[-9] * -0x55555555) >> 1) * 3 +
+                               *(int *)(puVar1[-7] + 0x10) + *(int *)(puVar1[-6] + 0xc),3,
+                               puVar1[-6] + 0x18);
+          puVar1[-3] = uVar4;
+        }
+        if ((int)puVar1[-3] < 0) goto code_r0x4400ed1f;
+      }
+      *(uint *)(puVar1[-6] + 0x10) = ((uint)(puVar1[-9] * -0x55555555) >> 1) * 3;
+      if (*(uint *)(puVar1[-7] + 0x2c) < *(int *)(puVar1[-6] + 0x10) + 3U) {
+        *(int *)(puVar1[-6] + 0x14) = *(int *)(puVar1[-6] + 0x10) - *(int *)(puVar1[-7] + 0x2c);
+      }
+      else {
+        *(undefined4 *)(puVar1[-6] + 0x14) = 3;
+      }
+      goto LAB_4400eb9a;
+    }
+  }
+LAB_4400edb7:
+  return puVar1[-10];
+code_r0x4400e8f6:
+  puVar1[-10] = puVar1[-3];
+  goto LAB_4400edb7;
+code_r0x4400eae5:
+  puVar1[-10] = puVar1[-3];
+  goto LAB_4400edb7;
+code_r0x4400ed1f:
+  puVar1[-10] = puVar1[-3];
+  goto LAB_4400edb7;
+}
+
+
+============================================================
+FUNCTION AT 0x4400edbf (FUN_4400edbf)
+============================================================
+
+undefined4 FUN_4400edbf(int param_1,uint param_2)
+
+{
+  undefined4 *puVar1;
+  int *piVar2;
+  undefined4 uVar3;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_4;
+  piVar2 = (int *)(param_1 * 0xdec + 0x505716d4);
+  if ((((*(int *)(*piVar2 * 0x40 + 0x5056b604) == 0xc) ||
+       (*(int *)(*piVar2 * 0x40 + 0x5056b604) == 0x10)) ||
+      (*(int *)(*piVar2 * 0x40 + 0x5056b604) == 0x20)) &&
+     ((1 < param_2 || (*(int *)(*piVar2 * 0x40 + 0x5056b604) == 0x20)))) {
+    while( true ) {
+      uVar3 = FUN_4400e737(puVar1[2],puVar1[-5],puVar1 + -7);
+      puVar1[-1] = uVar3;
+      if ((int)puVar1[-1] < 0) break;
+      puVar1[-5] = puVar1[-7];
+      if ((puVar1[-5] == puVar1[-2]) || ((puVar1[-2] & 0xfffffff8) == puVar1[-5])) {
+        *(undefined4 *)puVar1[5] = puVar1[-5];
+        *(undefined4 *)puVar1[4] = puVar1[-4];
+        puVar1[-8] = 0;
+        goto LAB_4400ef50;
+      }
+      if ((((puVar1[-2] & 0xfffffff7) == puVar1[-5]) || ((puVar1[-2] & 0xfffffff6) == puVar1[-5]))
+         || ((uint)puVar1[-5] < (puVar1[-2] & 2))) {
+        puVar1[-8] = 0xffffd8d4;
+        goto LAB_4400ef50;
+      }
+      if (((puVar1[-3] + puVar1[-4] != puVar1[-5]) || (puVar1[6] == 1)) ||
+         ((uint)puVar1[6] <= (uint)puVar1[-4])) {
+        *(undefined4 *)puVar1[5] = puVar1[-5];
+        *(undefined4 *)puVar1[4] = puVar1[-4];
+        puVar1[-8] = 0;
+        goto LAB_4400ef50;
+      }
+      puVar1[-4] = puVar1[-4] + 1;
+    }
+    puVar1[-8] = puVar1[-1];
+  }
+LAB_4400ef50:
+  return puVar1[-8];
+}
+
+
+INFO  REPORT: Save succeeded for processed file: /BOOT.BIN (HeadlessAnalyzer)
+
+################################################################################
+SCRIPT 06/11: DecompileFat6.java (0x1fc-sector chunked SD staging reader (0x91c00000) & sector wrapper)
+JAVA_PATH: C:\ghidra\DecompileFat6.java
+LOG_PATH:  C:\Users\danie\.gemini\antigravity\brain\a874cd2a-2809-4db8-acbd-d274c82ed7ed\.system_generated\tasks\task-36967.log
+################################################################################
+
+--- JAVA SOURCE: DecompileFat6.java ---
+// Ghidra script DecompileFat6.java
+import ghidra.app.script.GhidraScript;
+import ghidra.app.decompiler.DecompInterface;
+import ghidra.app.decompiler.DecompileResults;
+import ghidra.program.model.listing.Function;
+import ghidra.program.model.listing.FunctionManager;
+import ghidra.program.model.address.Address;
+
+public class DecompileFat6 extends GhidraScript {
+    @Override
+    public void run() throws Exception {
+        DecompInterface decomp = new DecompInterface();
+        decomp.openProgram(currentProgram);
+        
+        long[] addresses = {
+            0x4400ca59L,
+            0x4400dc64L,
+        };
+        
+        FunctionManager fm = currentProgram.getFunctionManager();
+        
+        for (long a : addresses) {
+            Address addr = currentProgram.getAddressFactory().getAddress(Long.toHexString(a));
+            Function func = fm.getFunctionAt(addr);
+            if (func == null) {
+                func = createFunction(addr, null);
+            }
+            println("============================================================");
+            println("FUNCTION AT 0x" + Long.toHexString(a) + " (" + (func != null ? func.getName() : "NULL") + ")");
+            println("============================================================");
+            if (func != null) {
+                DecompileResults res = decomp.decompileFunction(func, 60, monitor);
+                if (res.decompileCompleted()) {
+                    println(res.getDecompiledFunction().getC());
+                } else {
+                    println("Decompilation failed: " + res.getErrorMessage());
+                }
+            } else {
+                println("Could not find or create function at 0x" + Long.toHexString(a));
+            }
+        }
+    }
+}
+
+--- LITERAL GHIDRA 12.1.4 HEADLESS OUTPUT: task-36967.log ---
+INFO  REPORT: Processing project file: /BOOT.BIN (HeadlessAnalyzer)
+INFO  REPORT: Execute script: DecompileFat6.java  (HeadlessAnalyzer)
+INFO  SCRIPT: C:\ghidra\DecompileFat6.java (HeadlessAnalyzer)
+============================================================
+FUNCTION AT 0x4400ca59 (FUN_4400ca59)
+============================================================
+
+undefined4 FUN_4400ca59(void)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_4;
+  do {
+    if (puVar1[3] == 0) {
+      puVar1[-6] = puVar1[3];
+LAB_4400cb19:
+      return puVar1[-6];
+    }
+    if ((uint)puVar1[3] < 0x1fd) {
+      puVar1[-2] = puVar1[3];
+    }
+    else {
+      puVar1[-2] = 0x1fc;
+    }
+    puVar1[-3] = puVar1[-2] << 9;
+    uVar2 = FUN_440098fc(3,puVar1[-4],puVar1[4],puVar1[-2]);
+    puVar1[-1] = uVar2;
+    if ((int)puVar1[-1] < 0) {
+      puVar1[-6] = puVar1[-1];
+      goto LAB_4400cb19;
+    }
+    FUN_4402c2f7(puVar1[2],puVar1[-5],puVar1[-3]);
+    puVar1[4] = puVar1[-2] + puVar1[4];
+    puVar1[3] = puVar1[-2] - puVar1[3];
+    puVar1[2] = puVar1[-3] + puVar1[2];
+    puVar1[-4] = puVar1[-3] + puVar1[-4];
+    puVar1[-5] = puVar1[-3] + puVar1[-5];
+  } while( true );
+}
+
+
+============================================================
+FUNCTION AT 0x4400dc64 (FUN_4400dc64)
+============================================================
+
+undefined4 FUN_4400dc64(int param_1,int param_2,undefined4 param_3,undefined4 param_4)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  undefined4 uStack_8;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_8;
+  uVar2 = FUN_4400ca59(param_4,param_3,param_2 + *(int *)(param_1 * 0x40 + 0x5056b608),
+                       param_1 * 0x40 + 0x5056b600);
+  puVar1[-1] = uVar2;
+  if ((int)puVar1[-1] < 0) {
+    uVar2 = FUN_4400ca59(puVar1[6],puVar1[5],puVar1[4] + *(int *)(puVar1[3] * 0x40 + 0x5056b608));
+    puVar1[-1] = uVar2;
+  }
+  return puVar1[-1];
+}
+
+
+INFO  REPORT: Save succeeded for processed file: /BOOT.BIN (HeadlessAnalyzer)
+
+################################################################################
+SCRIPT 07/11: DecompileFat7.java (Block device dispatcher (dev 0 vs dev 3 SD -> FUN_440262cb))
+JAVA_PATH: C:\ghidra\DecompileFat7.java
+LOG_PATH:  C:\Users\danie\.gemini\antigravity\brain\a874cd2a-2809-4db8-acbd-d274c82ed7ed\.system_generated\tasks\task-36974.log
+################################################################################
+
+--- JAVA SOURCE: DecompileFat7.java ---
+// Ghidra script DecompileFat7.java
+import ghidra.app.script.GhidraScript;
+import ghidra.app.decompiler.DecompInterface;
+import ghidra.app.decompiler.DecompileResults;
+import ghidra.program.model.listing.Function;
+import ghidra.program.model.listing.FunctionManager;
+import ghidra.program.model.address.Address;
+
+public class DecompileFat7 extends GhidraScript {
+    @Override
+    public void run() throws Exception {
+        DecompInterface decomp = new DecompInterface();
+        decomp.openProgram(currentProgram);
+        
+        long[] addresses = {
+            0x440098fcL,
+        };
+        
+        FunctionManager fm = currentProgram.getFunctionManager();
+        
+        for (long a : addresses) {
+            Address addr = currentProgram.getAddressFactory().getAddress(Long.toHexString(a));
+            Function func = fm.getFunctionAt(addr);
+            if (func == null) {
+                func = createFunction(addr, null);
+            }
+            println("============================================================");
+            println("FUNCTION AT 0x" + Long.toHexString(a) + " (" + (func != null ? func.getName() : "NULL") + ")");
+            println("============================================================");
+            if (func != null) {
+                DecompileResults res = decomp.decompileFunction(func, 60, monitor);
+                if (res.decompileCompleted()) {
+                    println(res.getDecompiledFunction().getC());
+                } else {
+                    println("Decompilation failed: " + res.getErrorMessage());
+                }
+            } else {
+                println("Could not find or create function at 0x" + Long.toHexString(a));
+            }
+        }
+    }
+}
+
+--- LITERAL GHIDRA 12.1.4 HEADLESS OUTPUT: task-36974.log ---
+INFO  REPORT: Processing project file: /BOOT.BIN (HeadlessAnalyzer)
+INFO  REPORT: Execute script: DecompileFat7.java  (HeadlessAnalyzer)
+INFO  SCRIPT: C:\ghidra\DecompileFat7.java (HeadlessAnalyzer)
+============================================================
+FUNCTION AT 0x440098fc (FUN_440098fc)
+============================================================
+
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+undefined4 FUN_440098fc(int param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4)
+
+{
+  undefined4 *puVar1;
+  undefined4 uVar2;
+  undefined4 uStack_4;
+  
+  puVar1 = &uStack_4;
+  if (param_1 == 0) {
+    uVar2 = FUN_44009980(param_2,param_3,param_4);
+    puVar1[-1] = uVar2;
+  }
+  else {
+    if (param_1 != 3) goto LAB_44009978;
+    FUN_44009e77();
+    puVar1[-7] = _DAT_50573464;
+    puVar1[-6] = puVar1[3];
+    *(undefined1 *)(puVar1 + -3) = 1;
+    uVar2 = FUN_440262cb(puVar1 + -7,puVar1[4],puVar1[5]);
+    puVar1[-1] = uVar2;
+    FUN_44009e8f();
+  }
+  puVar1[-8] = puVar1[-1];
+LAB_44009978:
+  return puVar1[-8];
+}
+
+
+INFO  REPORT: Save succeeded for processed file: /BOOT.BIN (HeadlessAnalyzer)
+
+################################################################################
+SCRIPT 08/11: DecompileFat8.java (FAT/SD debug printf wrapper -> uart0_printf)
+JAVA_PATH: C:\ghidra\DecompileFat8.java
+LOG_PATH:  C:\Users\danie\.gemini\antigravity\brain\a874cd2a-2809-4db8-acbd-d274c82ed7ed\.system_generated\tasks\task-36981.log
+################################################################################
+
+--- JAVA SOURCE: DecompileFat8.java ---
+// Ghidra script DecompileFat8.java
+import ghidra.app.script.GhidraScript;
+import ghidra.app.decompiler.DecompInterface;
+import ghidra.app.decompiler.DecompileResults;
+import ghidra.program.model.listing.Function;
+import ghidra.program.model.listing.FunctionManager;
+import ghidra.program.model.address.Address;
+
+public class DecompileFat8 extends GhidraScript {
+    @Override
+    public void run() throws Exception {
+        DecompInterface decomp = new DecompInterface();
+        decomp.openProgram(currentProgram);
+        
+        long[] addresses = {
+            0x4400b3d9L,
+        };
+        
+        FunctionManager fm = currentProgram.getFunctionManager();
+        
+        for (long a : addresses) {
+            Address addr = currentProgram.getAddressFactory().getAddress(Long.toHexString(a));
+            Function func = fm.getFunctionAt(addr);
+            if (func == null) {
+                func = createFunction(addr, null);
+            }
+            println("============================================================");
+            println("FUNCTION AT 0x" + Long.toHexString(a) + " (" + (func != null ? func.getName() : "NULL") + ")");
+            println("============================================================");
+            if (func != null) {
+                DecompileResults res = decomp.decompileFunction(func, 60, monitor);
+                if (res.decompileCompleted()) {
+                    println(res.getDecompiledFunction().getC());
+                } else {
+                    println("Decompilation failed: " + res.getErrorMessage());
+                }
+            } else {
+                println("Could not find or create function at 0x" + Long.toHexString(a));
+            }
+        }
+    }
+}
+
+--- LITERAL GHIDRA 12.1.4 HEADLESS OUTPUT: task-36981.log ---
+INFO  REPORT: Processing project file: /BOOT.BIN (HeadlessAnalyzer)
+INFO  REPORT: Execute script: DecompileFat8.java  (HeadlessAnalyzer)
+INFO  SCRIPT: C:\ghidra\DecompileFat8.java (HeadlessAnalyzer)
+============================================================
+FUNCTION AT 0x4400b3d9 (FUN_4400b3d9)
+============================================================
+
+void FUN_4400b3d9(undefined4 param_1,char *param_2,undefined4 param_3,undefined4 param_4,
+                 undefined4 param_5,undefined4 param_6,undefined4 param_7,undefined4 param_8,
+                 undefined4 param_9,undefined4 param_10,undefined4 param_11,undefined4 param_12)
+
+{
+  uart0_printf(param_2,param_3,param_4,param_5,param_6,param_7,param_8,param_9,param_10,param_11,
+               param_12,&stack0x00000034);
+  return;
+}
+
+
+INFO  REPORT: Save succeeded for processed file: /BOOT.BIN (HeadlessAnalyzer)
+
+################################################################################
+SCRIPT 09/11: DumpAsm.java (MN103S instruction dump probe 0x4400c760..0x4400c7b0 in FUN_4400c696)
+JAVA_PATH: C:\ghidra\DumpAsm.java
+LOG_PATH:  C:\Users\danie\.gemini\antigravity\brain\a874cd2a-2809-4db8-acbd-d274c82ed7ed\.system_generated\tasks\task-36994.log
+################################################################################
+
+--- JAVA SOURCE: DumpAsm.java ---
+// Ghidra script DumpAsm.java
+import ghidra.app.script.GhidraScript;
+import ghidra.program.model.listing.Instruction;
+import ghidra.program.model.address.Address;
+
+public class DumpAsm extends GhidraScript {
+    @Override
+    public void run() throws Exception {
+        Address start = currentProgram.getAddressFactory().getAddress("4400c760");
+        Address end = currentProgram.getAddressFactory().getAddress("4400c7b0");
+        
+        Instruction inst = getInstructionAt(start);
+        while (inst != null && inst.getAddress().compareTo(end) <= 0) {
+            println(inst.getAddress() + ": " + inst);
+            inst = inst.getNext();
+        }
+    }
+}
+
+--- LITERAL GHIDRA 12.1.4 HEADLESS OUTPUT: task-36994.log ---
+INFO  REPORT: Processing project file: /BOOT.BIN (HeadlessAnalyzer)
+INFO  REPORT: Execute script: DumpAsm.java  (HeadlessAnalyzer)
+INFO  SCRIPT: C:\ghidra\DumpAsm.java (HeadlessAnalyzer)
+INFO  REPORT: Save succeeded for processed file: /BOOT.BIN (HeadlessAnalyzer)
+
+--- VERIFIED BINARY NOTE FOR DumpAsm.java (0x4400c760..0x4400c7b0 in BOOT.BIN) ---
+NOTE: DumpAsm.java emitted 0 instruction lines in task-36994.log because getInstructionAt(0x4400c760) returned null:
+      in BOOT.BIN, the 3-byte instruction `f8 11 18` (`mov d0,(0x18,a1)`) begins at 0x4400c75f,
+      making 0x4400c760 byte +1 (`0x11`) inside that instruction.
+RAW BYTES (0x4400c750..0x4400c7b4):
+  0x4400c750: 11 14 f8 27 ec f8 23 ec f8 04 14 f8 03 f0 e4 f8
+  0x4400c760: 11 18 f8 23 ec f8 60 2a a0 00 c9 34 f8 2b ec f8
+  0x4400c770: 27 ec f8 23 ec f8 64 24 f8 01 34 fb 9c dc d0 f8
+  0x4400c780: 03 f4 f1 01 f8 03 f0 f1 01 f8 23 ec f8 40 22 87
+  0x4400c790: f1 0a f2 fa f2 73 f2 e2 8c f8 12 3c ca 30 f8 27
+  0x4400c7a0: ec f8 23 ec f8 64 2a f8 23 ec f8 60 24 f1 01 f8
+  0x4400c7b0: 03 f4 f1 01 f8 03 f0 f1 01 f8 23 ec f8 40 22 87
+DECODED MN103S INSTRUCTIONS (aligned from 0x4400c755..0x4400c7b4, matching mn103.sinc/am33.sinc):
+  0x4400c755: f8 23 ec             mov (-0x14,a3),a0
+  0x4400c758: f8 04 14             mov (0x14,a0),d1
+  0x4400c75b: f8 03 f0             mov (-0x10,a3),d0
+  0x4400c75e: e4                   add d1,d0
+  0x4400c75f: f8 11 18             mov d0,(0x18,a1)  <-- 0x4400c760 falls at +1 inside `f8 11 18`
+  0x4400c762: f8 23 ec             mov (-0x14,a3),a0
+  0x4400c765: f8 60 2a             movhu (0x2a,a0),d0
+  0x4400c768: a0 00                cmp 0x0,d0
+  0x4400c76a: c9 34                bne 0x4400c79e
+  0x4400c76c: f8 2b ec             mov (-0x14,a3),a2
+  0x4400c76f: f8 27 ec             mov (-0x14,a3),a1
+  0x4400c772: f8 23 ec             mov (-0x14,a3),a0
+  0x4400c775: f8 64 24             movhu (0x24,a0),d1
+  0x4400c778: f8 01 34             mov (0x34,a1),d0
+  0x4400c77b: fb 9c dc d0          sub d1,d0,d1  <-- SLEIGH SUB bug (`am33.sinc` L184 emits D1-D0 instead of D0-D1; 0x4400c77c is byte +1 `0x9c`)
+  0x4400c77f: f8 03 f4             mov (-0xc,a3),d0
+  0x4400c782: f1 01                sub d0,d1
+  0x4400c784: f8 03 f0             mov (-0x10,a3),d0
+  0x4400c787: f1 01                sub d0,d1
+  0x4400c789: f8 23 ec             mov (-0x14,a3),a0
+  0x4400c78c: f8 40 22             movbu (0x22,a0),d0
+  0x4400c78f: 87                   mov d1,d3
+  0x4400c790: f1 0a                sub d2,d2
+  0x4400c792: f2 fa                mov d2,mdr
+  0x4400c794: f2 73                divu d0,d3
+  0x4400c796: f2 e2                mov mdr,d2
+  0x4400c798: 8c                   mov d3,d0
+  0x4400c799: f8 12 3c             mov d0,(0x3c,a2)
+  0x4400c79c: ca 30                bra 0x4400c7cc
+  0x4400c79e: f8 27 ec             mov (-0x14,a3),a1
+  0x4400c7a1: f8 23 ec             mov (-0x14,a3),a0
+  0x4400c7a4: f8 64 2a             movhu (0x2a,a0),d1
+  0x4400c7a7: f8 23 ec             mov (-0x14,a3),a0
+  0x4400c7aa: f8 60 24             movhu (0x24,a0),d0
+  0x4400c7ad: f1 01                sub d0,d1
+  0x4400c7af: f8 03 f4             mov (-0xc,a3),d0
+  0x4400c7b2: f1 01                sub d0,d1
+
+################################################################################
+SCRIPT 10/11: DecompileSdRead.java (SD controller block read (CMD17 FUN_440282d6 vs CMD18 FUN_44028257, Card type==2))
+JAVA_PATH: C:\ghidra\DecompileSdRead.java
+LOG_PATH:  C:\Users\danie\.gemini\antigravity\brain\a874cd2a-2809-4db8-acbd-d274c82ed7ed\.system_generated\tasks\task-37053.log
+################################################################################
+
+--- JAVA SOURCE: DecompileSdRead.java ---
+// Ghidra script DecompileSdRead.java
+import ghidra.app.script.GhidraScript;
+import ghidra.app.decompiler.DecompInterface;
+import ghidra.app.decompiler.DecompileResults;
+import ghidra.program.model.listing.Function;
+import ghidra.program.model.listing.FunctionManager;
+import ghidra.program.model.address.Address;
+
+public class DecompileSdRead extends GhidraScript {
+    @Override
+    public void run() throws Exception {
+        DecompInterface decomp = new DecompInterface();
+        decomp.openProgram(currentProgram);
+        
+        long[] addresses = {
+            0x440262cbL, // SD Read Block
+        };
+        
+        FunctionManager fm = currentProgram.getFunctionManager();
+        
+        for (long a : addresses) {
+            Address addr = currentProgram.getAddressFactory().getAddress(Long.toHexString(a));
+            Function func = fm.getFunctionAt(addr);
+            if (func == null) {
+                func = createFunction(addr, null);
+            }
+            println("============================================================");
+            println("FUNCTION AT 0x" + Long.toHexString(a) + " (" + (func != null ? func.getName() : "NULL") + ")");
+            println("============================================================");
+            if (func != null) {
+                DecompileResults res = decomp.decompileFunction(func, 60, monitor);
+                if (res.decompileCompleted()) {
+                    println(res.getDecompiledFunction().getC());
+                } else {
+                    println("Decompilation failed: " + res.getErrorMessage());
+                }
+            } else {
+                println("Could not find or create function at 0x" + Long.toHexString(a));
+            }
+        }
+    }
+}
+
+--- LITERAL GHIDRA 12.1.4 HEADLESS OUTPUT: task-37053.log ---
+INFO  REPORT: Processing project file: /BOOT.BIN (HeadlessAnalyzer)
+INFO  REPORT: Execute script: DecompileSdRead.java  (HeadlessAnalyzer)
+INFO  SCRIPT: C:\ghidra\DecompileSdRead.java (HeadlessAnalyzer)
+============================================================
+FUNCTION AT 0x440262cb (FUN_440262cb)
+============================================================
+
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+int FUN_440262cb(int param_1,int param_2,uint param_3)
+
+{
+  uint uVar1;
+  int iVar2;
+  int iVar3;
+  uint uVar4;
+  undefined1 auStack_40 [8];
+  int iStack_38;
+  
+  iVar2 = FUN_44026626();
+  iVar3 = iVar2;
+  if ((iVar2 == 0) && (iVar3 = -0x15f97, param_3 != 0)) {
+    FUN_440276a1(1);
+    if (_DAT_505748f8 != 2) {
+      param_2 = param_2 << 9;
+    }
+    *(undefined4 *)(param_1 + 8) = 0;
+    *(undefined4 *)(param_1 + 0xc) = 0x200;
+    while (param_3 != 0) {
+      if (param_3 < 0x10001) {
+        uVar1 = 0;
+        uVar4 = param_3;
+      }
+      else {
+        uVar1 = param_3 - 0x10000;
+        uVar4 = 0x10000;
+      }
+      param_3 = uVar1;
+      iVar3 = FUN_44027600(0x32);
+      if (iVar3 == 0) {
+        if (uVar4 == 1) {
+          iVar3 = FUN_440282d6(param_2,param_1);
+        }
+        else {
+          *(uint *)(param_1 + 0xc) = uVar4 * *(int *)(param_1 + 0xc);
+          iVar3 = FUN_44028257(param_2,param_1,uVar4);
+          if (*(char *)(param_1 + 0x10) == '\x01') {
+            FUN_44013cb1(param_1,auStack_40,0x20);
+            iStack_38 = iStack_38 << 9;
+          }
+          else {
+            iStack_38 = *(int *)(param_1 + 4) + uVar4 * 0x200;
+          }
+          *(int *)(param_1 + 4) = iStack_38;
+          if (_DAT_505748f8 != 2) {
+            uVar4 = uVar4 << 9;
+          }
+          param_2 = param_2 + uVar4;
+        }
+      }
+      if (iVar3 != 0) {
+        iVar2 = -90000;
+        if (iVar3 == -0x1637c) {
+          iVar2 = -0x15f95;
+        }
+        break;
+      }
+      FUN_44026496();
+      iVar2 = 0;
+    }
+    FUN_440276a1(0);
+    iVar3 = iVar2;
+  }
+  return iVar3;
+}
+
+
+INFO  REPORT: Save succeeded for processed file: /BOOT.BIN (HeadlessAnalyzer)
+
+################################################################################
+SCRIPT 11/11: DecompileCardType.java (SD OCR/CSD/RCA negotiation & Card type detection (_DAT_505748f8))
+JAVA_PATH: C:\ghidra\DecompileCardType.java
+LOG_PATH:  C:\Users\danie\.gemini\antigravity\brain\a874cd2a-2809-4db8-acbd-d274c82ed7ed\.system_generated\tasks\task-37066.log
+################################################################################
+
+--- JAVA SOURCE: DecompileCardType.java ---
+// Ghidra script DecompileCardType.java
+import ghidra.app.script.GhidraScript;
+import ghidra.app.decompiler.DecompInterface;
+import ghidra.app.decompiler.DecompileResults;
+import ghidra.program.model.listing.Function;
+import ghidra.program.model.listing.FunctionManager;
+import ghidra.program.model.address.Address;
+
+public class DecompileCardType extends GhidraScript {
+    @Override
+    public void run() throws Exception {
+        DecompInterface decomp = new DecompInterface();
+        decomp.openProgram(currentProgram);
+        
+        long[] addresses = {
+            0x4402724fL, // sd_send_ocr_rca_2724f
+        };
+        
+        FunctionManager fm = currentProgram.getFunctionManager();
+        
+        for (long a : addresses) {
+            Address addr = currentProgram.getAddressFactory().getAddress(Long.toHexString(a));
+            Function func = fm.getFunctionAt(addr);
+            if (func == null) {
+                func = createFunction(addr, null);
+            }
+            println("============================================================");
+            println("FUNCTION AT 0x" + Long.toHexString(a) + " (" + (func != null ? func.getName() : "NULL") + ")");
+            println("============================================================");
+            if (func != null) {
+                DecompileResults res = decomp.decompileFunction(func, 60, monitor);
+                if (res.decompileCompleted()) {
+                    println(res.getDecompiledFunction().getC());
+                } else {
+                    println("Decompilation failed: " + res.getErrorMessage());
+                }
+            } else {
+                println("Could not find or create function at 0x" + Long.toHexString(a));
+            }
+        }
+    }
+}
+
+--- LITERAL GHIDRA 12.1.4 HEADLESS OUTPUT: task-37066.log ---
+INFO  REPORT: Processing project file: /BOOT.BIN (HeadlessAnalyzer)
+INFO  REPORT: Execute script: DecompileCardType.java  (HeadlessAnalyzer)
+INFO  SCRIPT: C:\ghidra\DecompileCardType.java (HeadlessAnalyzer)
+============================================================
+FUNCTION AT 0x4402724f (FUN_4402724f)
+============================================================
+
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+int FUN_4402724f(void)
+
+{
+  uint uVar1;
+  int iVar2;
+  int iVar3;
+  uint uVar4;
+  
+  uVar1 = 0;
+LAB_44027256:
+  FUN_4401c11c(0x89001848,0x140);
+  delay_ms(10);
+  FUN_440271a1(0,0);
+  _DAT_505748ec = 0;
+  _DAT_505748e8 = 0;
+  delay_ms(10);
+  iVar2 = FUN_440271fc();
+  if (iVar2 == -0x1637c) {
+    return -0x1637c;
+  }
+  if (_DAT_505748f8 == 0) {
+    uVar4 = _DAT_505748f8;
+    delay_ms(10);
+    FUN_440271a1(0,0);
+    _DAT_505748e8 = uVar4;
+    _DAT_505748ec = uVar4;
+    delay_ms(10);
+    do {
+      if (_DAT_50574914 == 2) {
+        iVar2 = FUN_440271a1(0x37,0);
+        if (iVar2 == 0) {
+          iVar2 = FUN_440271a1(0x69,0x100000);
+          if (iVar2 == -0x1637c) {
+            iVar2 = -0x1637c;
+            goto LAB_440273e4;
+          }
+        }
+        else {
+          if (iVar2 == -0x1637c) {
+            iVar2 = -0x1637c;
+            goto LAB_440273e4;
+          }
+          if ((iVar2 == -0x1637d) || (uVar4 = uVar4 + 99, iVar2 == -0x1637b)) {
+            uVar4 = 0;
+            _DAT_50574914 = 3;
+            _DAT_505748f8 = 3;
+            _DAT_505748f0 = 1;
+            FUN_440271a1(0,0);
+          }
+        }
+      }
+      else {
+        iVar2 = FUN_440271a1(1,0xff0000);
+        if (iVar2 == -0x1637c) {
+          iVar2 = -0x1637c;
+          goto LAB_44027456;
+        }
+        if (iVar2 != 0) {
+          uVar4 = uVar4 + 99;
+        }
+      }
+      if ((iVar2 == 0) && ((_DAT_50574926 & 0x8000) != 0)) {
+        if ((_DAT_50574926 & 0xff) == 0xff) {
+          _DAT_505748e8 = 1;
+          iVar2 = 0;
+        }
+        else {
+          uart0_printf(s__SDCD_SendOCR_RANG_OUT_44039015);
+          iVar2 = -0x1637e;
+        }
+        goto LAB_44027456;
+      }
+      delay_ms(10);
+      uVar4 = uVar4 + 1;
+    } while ((uVar4 & 0xffff) < 300);
+LAB_44027443:
+    uart0_printf(s__SDCD_SendOCR_TIMEOUT_4403904a);
+    iVar2 = -0x1637e;
+    goto LAB_44027456;
+  }
+  iVar2 = -0x1637e;
+  if (_DAT_505748f8 == 2) {
+    uVar4 = 0;
+    do {
+      iVar2 = FUN_440271a1(0x37,0);
+      if (iVar2 == 0) {
+        iVar2 = FUN_440271a1(0x69,0x40100000);
+        if (iVar2 == -0x1637c) goto LAB_440273e4;
+      }
+      else {
+        if (iVar2 == -0x1637c) goto LAB_440273e4;
+        if (iVar2 == -0x1637b) {
+          _DAT_50574914 = 4;
+          goto LAB_44027456;
+        }
+      }
+      if ((iVar2 == 0) && ((_DAT_50574926 & 0x8000) != 0)) {
+        if ((_DAT_50574926 & 0x4000) == 0) {
+          _DAT_505748f8 = 1;
+        }
+        else {
+          _DAT_505748f8 = 2;
+        }
+        _DAT_505748e8 = 1;
+        iVar2 = 0;
+        goto LAB_44027456;
+      }
+      delay_ms(10);
+      uVar4 = uVar4 + 1;
+    } while ((uVar4 & 0xffff) < 300);
+    goto LAB_44027443;
+  }
+  goto LAB_4402749a;
+LAB_440273e4:
+  uart0_printf(s__SDCD_SendOCR_Card_removed_4403902e);
+LAB_44027456:
+  if (iVar2 == -0x1637c) {
+    return -0x1637c;
+  }
+  if (iVar2 == 0) {
+    iVar2 = FUN_44026ce4(1);
+  }
+  if (iVar2 == 0) {
+    iVar2 = FUN_440271a1(2,0);
+    _DAT_505748e8 = 2;
+    if (iVar2 == -0x1637c) {
+      _DAT_505748e8 = 2;
+      return -0x1637c;
+    }
+    if (iVar2 == 0) {
+      iVar2 = FUN_44026ce4();
+    }
+  }
+  else {
+LAB_4402749a:
+    uart0_printf(s__SDCD_CMD2_command_ALL_SEND_CID__44039061);
+  }
+  if (iVar2 != 0) {
+    uart0_printf(s__SDCD_CMD3_command_SEND_RCA__can_440390ee);
+    return iVar2;
+  }
+  iVar2 = 0;
+  do {
+    iVar3 = FUN_440271a1(3,0x10000);
+    if (iVar3 == 0) {
+      _DAT_505748e8 = 3;
+      if (_DAT_505748f0 != 0) break;
+    }
+    else if (iVar3 == -0x1637c) goto LAB_44027507;
+    delay_ms(10);
+    iVar2 = iVar2 + 1;
+  } while (iVar2 < 10);
+  if ((_DAT_505748f0 == 0) && (iVar3 == 0)) {
+    uart0_printf(s__SDCD_CardSetRCA_RCA_data___04x__44039092,0);
+  }
+LAB_44027507:
+  if (iVar3 == -0x1637c) {
+    return -0x1637c;
+  }
+  if ((iVar3 == 0) || (2 < uVar1)) {
+    if (iVar3 == 0) {
+      iVar2 = FUN_44026ce4(3);
+      return iVar2;
+    }
+    uart0_printf(s__SDCD_Set_RCA_failed_ERROR__d_440390cf);
+    return iVar3;
+  }
+  uVar1 = uVar1 + 1;
+  uart0_printf(s__SDCD_CMD3_Get_RCA_Retry_440390b4);
+  goto LAB_44027256;
+}
+
+
+INFO  REPORT: Save succeeded for processed file: /BOOT.BIN (HeadlessAnalyzer)
+

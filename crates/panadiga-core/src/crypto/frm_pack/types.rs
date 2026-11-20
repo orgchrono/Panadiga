@@ -17,6 +17,8 @@ pub struct FrmPackModule {
     pub payload: Vec<u8>,
     pub version_u16: u16,
     pub hardware_family: String,
+    /// Optional alias families (e.g., `"M6930"` alongside primary `"M6930LB"`) emitted as shared-payload TOC slots.
+    pub hardware_family_aliases: Vec<String>,
     pub model_prefix: u8,
     pub target_flag: u8,
     pub model_group: String,
@@ -31,6 +33,7 @@ impl FrmPackModule {
             payload,
             version_u16: 0x0001,
             hardware_family: "M6930".to_string(),
+            hardware_family_aliases: Vec::new(),
             model_prefix: b'M',
             target_flag: 0,
             model_group: "NP-309".to_string(),

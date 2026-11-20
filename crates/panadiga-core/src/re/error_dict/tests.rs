@@ -51,7 +51,13 @@ fn correlates_boot_logs_and_standby_drop_with_electrical_cues() {
         "Loader ver0.61 [06/03/06]\nBGO driver init failed[1].\nMain hung-up time changed 255[s].";
     let rep =
         correlate_firmware_occurrences(sample_uart, Some("U99"), Some(3.25), Some(1), Some(420));
-    assert!(rep.matches.iter().any(|m| m.code == "BGO_INIT_FAIL_1"));
+    let bgo_match = rep
+        .matches
+        .iter()
+        .find(|m| m.code == "BGO_INIT_FAIL_1")
+        .expect("BGO_INIT_FAIL_1 match");
+    assert!(bgo_match.translation.contains("0x84130000..0x843FFFFF"));
+    assert!(bgo_match.translation.contains("0x84200000..0x843FFFFF"));
     assert!(rep.matches.iter().any(|m| m.code == "U99"));
     assert!(!rep.prioritized_actions.is_empty());
 

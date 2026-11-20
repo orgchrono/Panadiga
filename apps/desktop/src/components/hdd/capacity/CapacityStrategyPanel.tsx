@@ -1,6 +1,7 @@
 import React from 'react';
-import { Cpu, HardDrive, ShieldCheck, Sparkles, Unlock } from 'lucide-react';
+import { Cpu, Unlock } from 'lucide-react';
 import {
+  HDD_BENCH_5GB_CAPACITY,
   HDD_DEFAULT_CAPACITY_GB,
   HDD_MAX_CAPACITY_GB,
   HDD_MIN_CAPACITY_GB,
@@ -9,9 +10,11 @@ import {
   QUICK_CAPACITIES_GB,
   SECTORS_PER_MEIHDFS_BLOCK,
 } from '@/constants';
+import { isValidEh55CapacityGb } from '@/utils/hddCapacity';
 import type { TranslationKey } from '@/i18n/translations';
 import { useTranslation } from '@/i18n/useTranslation';
 import type { CapacityPassthroughMode, PatchMode } from '@/models';
+import { StrategyModeTiles } from './StrategyModeTiles';
 
 const QUICK_CAPACITIES: readonly number[] = QUICK_CAPACITIES_GB;
 
@@ -52,6 +55,8 @@ export const CapacityStrategyPanel: React.FC<CapacityStrategyPanelProps> = ({
   onApply,
 }) => {
   const { t } = useTranslation();
+  const showTargetRange = mode !== 'factory_200gb' && (mode === 'cap' || limitInDynamicMode);
+  const isTargetValid = !showTargetRange || isValidEh55CapacityGb(targetGb);
 
   return (
     <div className="p-5 rounded-xl bg-slate-950 border border-slate-800 space-y-4">
@@ -60,68 +65,7 @@ export const CapacityStrategyPanel: React.FC<CapacityStrategyPanelProps> = ({
         <span>{t('hdd.capacity.strategy.heading')}</span>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-        <button
-          type="button"
-          onClick={() => onModeChange('dynamic')}
-          className={`p-3.5 rounded-xl border text-left transition-all ${
-            mode === 'dynamic'
-              ? 'bg-emerald-500/10 border-emerald-500/60 text-emerald-200 shadow-lg'
-              : 'bg-bench-900 border-slate-800 text-slate-400 hover:border-slate-700'
-          }`}
-        >
-          <div className="font-bold flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-            <span>{t('hdd.capacity.strategy.dynamicTitle')}</span>
-          </div>
-          <p className="text-[11px] text-slate-400 mt-1">
-            {t('hdd.capacity.strategy.dynamicDescPrefix')}{' '}
-            <code>bls +12</code> {t('hdd.capacity.strategy.dynamicDescWith')}{' '}
-            <code>bra +12</code> (<code>0xCA</code>){' '}
-            {t('hdd.capacity.strategy.dynamicDescSuffix')}
-          </p>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onModeChange('cap')}
-          className={`p-3.5 rounded-xl border text-left transition-all ${
-            mode === 'cap'
-              ? 'bg-cyan-500/10 border-cyan-500/60 text-cyan-200 shadow-lg'
-              : 'bg-bench-900 border-slate-800 text-slate-400 hover:border-slate-700'
-          }`}
-        >
-          <div className="font-bold flex items-center gap-1.5">
-            <HardDrive className="w-3.5 h-3.5 text-cyan-400" />
-            <span>{t('hdd.capacity.strategy.capTitle')}</span>
-          </div>
-          <p className="text-[11px] text-slate-400 mt-1">
-            {t('hdd.capacity.strategy.capDescPrefix')}
-            <code>0xC6</code>
-            {t('hdd.capacity.strategy.capDescMid')}{' '}
-            <code>MaxProductLBA</code>{' '}
-            {t('hdd.capacity.strategy.capDescOfficial')}
-          </p>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onModeChange('factory_200gb')}
-          className={`p-3.5 rounded-xl border text-left transition-all ${
-            mode === 'factory_200gb'
-              ? 'bg-amber-500/10 border-amber-500/60 text-amber-200 shadow-lg'
-              : 'bg-bench-900 border-slate-800 text-slate-400 hover:border-slate-700'
-          }`}
-        >
-          <div className="font-bold flex items-center gap-1.5">
-            <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
-            <span>{t('hdd.capacity.strategy.factoryTitle')}</span>
-          </div>
-          <p className="text-[11px] text-slate-400 mt-1">
-            {t('hdd.capacity.strategy.factoryDesc')}
-          </p>
-        </button>
-      </div>
+      <StrategyModeTiles mode={mode} onModeChange={onModeChange} />
 
       {mode !== 'factory_200gb' && (
         <div className="space-y-3 pt-2 border-t border-slate-800/80">
@@ -179,6 +123,7 @@ export const CapacityStrategyPanel: React.FC<CapacityStrategyPanelProps> = ({
                   type="number"
                   min={HDD_MIN_CAPACITY_GB}
                   max={HDD_MAX_CAPACITY_GB}
+                  aria-invalid={!isTargetValid}
                   value={targetGb}
                   onChange={(e) =>
                     onTargetGbChange(
@@ -194,6 +139,16 @@ export const CapacityStrategyPanel: React.FC<CapacityStrategyPanelProps> = ({
                   className="w-24 px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-cyan-300 focus:outline-none focus:border-cyan-400"
                 />
               </div>
+              {targetGb === HDD_BENCH_5GB_CAPACITY && (
+                <span className="w-full text-[11px] font-bold text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-lg px-2.5 py-1">
+                  {t('hdd.capacity.strategy.badge5gb')}
+                </span>
+              )}
+              {!isTargetValid && (
+                <span role="alert" className="w-full text-[11px] font-bold text-rose-300">
+                  {t('pipelines.hddFlash.invalidCapacity', { max: HDD_MAX_CAPACITY_GB })}
+                </span>
+              )}
             </div>
           )}
         </div>
@@ -244,7 +199,7 @@ export const CapacityStrategyPanel: React.FC<CapacityStrategyPanelProps> = ({
         <button
           type="button"
           onClick={onApply}
-          disabled={patching}
+          disabled={patching || !isTargetValid}
           className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center gap-2 transition-all disabled:opacity-50 shrink-0"
         >
           <Unlock className="w-4 h-4" />

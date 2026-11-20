@@ -66,11 +66,12 @@ flowchart TD
 Ghidra é a ferramenta primária de descompilação de código estático e análise dinâmica. A suíte Panadiga gera de forma determinística a partir do SSOT em Rust ([`crates/panadiga-core/src/ghidra/`](../../crates/panadiga-core/src/ghidra/mod.rs)) 7 scripts Jython em [`tools/ghidra/`](../../tools/ghidra/) (disparados pelos lançadores em [`tools/`](../../tools/)):
 
 1. **`tools/ghidra/ghidra_am34_memory_map.py` (Mapeador de Barramento):**
-   - Cria no Ghidra as regiões exatas da placa mãe:
+   - Cria no Ghidra as regiões exatas da placa mãe (verificadas no dump ouro `eh55_nor_8mb_ic5001_dump.bin`):
      - `INTERNAL_SRAM` (`0x00000000` - 256 KB)
      - `SRAM_LOADER` (`0x00004000` - 4 KB para injeção de payload)
-     - `SPANSION_FLASH` (`0x80000000` - 8 MB)
-     - `NVRAM_EEMUL` (`0x807F0000` - 64 KB, setores SA134..SA141)
+     - `MAIN_SDRAM` (`0x40000000` + janelas `0x44000000` BOOT, `0x50400000` PROG061, `0x57000000` MAIN e alias *uncached* `0x90400000` usado por `PANADMP1` `0x9043950E` e stubs `0x90439B40`)
+     - `SPANSION_FLASH` (`0x80000000..0x807FFFFF` / `CS1` *uncached* `0x84000000..0x847FFFFF` — 8 MB: IPL `SA0..SA10` `0x84000000..0x8403FFFF`, BGO EH55 `ver0.61` `SA26..SA70` `0x84130000..0x843FFFFF` vs `ver0.63`/`PROG061` `0x84200000..0x843FFFFF`, Upper EEMUL `SA71..SA133` `0x84400000..0x847EFFFF`)
+     - `NVRAM_EEMUL` (`0x807F0000` / `0x847F0000` - 64 KB, setores `SA134..SA141`: `6 B` ativos em `SA134` + `0xFF` em `SA135..SA141` no `IC5001` real)
      - `ASIC_MMIO` (`0xC0000000` - UniPhier System MMIO)
      - `ATA_IDE_MMIO` (`0xD4000000` - Controladora PATA do disco MEIHDFS)
 2. **`tools/ghidra/ghidra_importar_simbolos_panadiga.py` / `ghidra_import_symbols_panadiga.py` (Anotador de Símbolos):**

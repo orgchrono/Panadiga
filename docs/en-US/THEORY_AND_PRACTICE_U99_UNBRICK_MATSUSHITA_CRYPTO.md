@@ -239,44 +239,76 @@ The simultaneous appearance of `E5D1F34A518B2690` inside optical container `PANA
 
 ---
 
-### 3.3 Physical NOR Flash Spansion `S29JL064H` (`VEP79138` Board — 8,388,608 Bytes)
+### 3.3 Physical NOR Flash Spansion `S29JL064H` (`IC5001` — 142 Sectors, 8,388,608 Bytes)
+
+Audited directly against the physical dump captured from the live DMR-EH55 ([`eh55_nor_8mb_ic5001_dump.bin`](../../firmware_and_images/README.md), `SHA-256: c1faee798f60545853eefdba0d15f23678b471466dc2bc84f522bc972f15a02d`): Spansion `S29JL064H70TFI00` combines `8×8 KiB` bottom sectors (`SA0..SA7`) + `126×64 KiB` main sectors (`SA8..SA133`) + `8×8 KiB` top sectors (`SA134..SA141`), totaling exactly `142` sectors (`8,192 KiB`).
 
 ```text
-     Bus Address Range           File Offset Range        Size      Attr    Architectural Role
-─────────────────────────────   ───────────────────   ───────────   ────   ────────────────────────────────────────
-  0x80000000 .. 0x8000FFFF       0x000000..0x00FFFF       64 KB      RO    Sector SA0: Native Plaintext IPL Bootloader
-  0x80010000 .. 0x807EFFFF       0x010000..0x7EFFFF    8,064 KB      RO    Sectors SA1..SA133: Base Kernel & RTOS
-  0x807F0000 .. 0x807F1FFF       0x7F0000..0x7F1FFF        8 KB      RW    Sector SA134: EEMUL Block 0 (Laser Calib.)
-  0x807F2000 .. 0x807F3FFF       0x7F2000..0x7F3FFF        8 KB      RW    Sector SA135: EEMUL Block 1 (HDD Geometry)
-  0x807F4000 .. 0x807F5FFF       0x7F4000..0x7F5FFF        8 KB      RW    Sector SA136: EEMUL Block 2 (Region/VFD)
-  0x807F6000 .. 0x807F7FFF       0x7F6000..0x7F7FFF        8 KB      RW    Sector SA137: EEMUL Block 3 (Fatal Crash Logs)
-  0x807F8000 .. 0x807F9FFF       0x7F8000..0x7F9FFF        8 KB      RW    Sector SA138: EEMUL Block 4 (Error History)
-  0x807FA000 .. 0x807FBFFF       0x7FA000..0x7FBFFF        8 KB      RW    Sector SA139: EEMUL Block 5 (Power State)
-  0x807FC000 .. 0x807FDFFF       0x7FC000..0x7FDFFF        8 KB      RW    Sector SA140: EEMUL Block 6 (NVRAM Tx)
-  0x807FE000 .. 0x807FFFFF       0x7FE000..0x7FFFFF        8 KB      RW    Sector SA141: EEMUL Block 7 (Master Checksum)
+   Uncached CS1 Window             File Offset Range        Sectors / Size      Attr    Real Architectural Role (DMR-EH55 ver0.61)
+─────────────────────────────   ───────────────────────   ──────────────────   ──────   ────────────────────────────────────────────────────
+  0x84000000 .. 0x8400FFFF       0x000000..0x00FFFF        SA0..SA7 (8×8K)       RO     Lower IPL Loader ver0.61 [06/03/06] (Plaintext)
+  0x84010000 .. 0x8403FFFF       0x010000..0x03FFFF        SA8..SA10 (3×64K)     RO     Upper Loader ver0.61 + BGO table 0x440337A4 (256 KiB)
+  0x84040000 .. 0x8407FFFF       0x040000..0x07FFFF        SA11..SA14 (4×64K)    RO     Erased space (100% 0xFF)
+  0x84080000 .. 0x8412FFFF       0x080000..0x12FFFF        SA15..SA25 (11×64K)   RO     EXTRHEAD "DRV " container (0x84080040 -> 0x90202000)
+  0x84130000 .. 0x843FFFFF       0x130000..0x3FFFFF        SA26..SA70 (45×64K)   RW*    Real EH55 BGO [nfrom] FTL (1 P1 + 40 P2 + 4 spares; 2,880 KiB)
+  0x84400000 .. 0x847EFFFF       0x400000..0x7EFFFF        SA71..SA133 (63×64K)  RW*    Upper EEMUL / NOR FS ("1284", 0x0FF00000 headers)
+  0x847F0000 .. 0x847F1FFF       0x7F0000..0x7F1FFF        SA134 (1×8 KiB)       RW     Upper EEMUL tail (6 active bytes 0ff00000002c on live EH55)
+  0x847F2000 .. 0x847FFFFF       0x7F2000..0x7FFFFF        SA135..SA141 (7×8K)   RW     Top EEMUL micro-sectors (virgin 0xFF in captured dump)
 ```
+*(Note: in abstract `64 KiB` Pico policy units `NorWritePolicy`, `SA0..SA3` spans the opening `256 KiB` `0x80000000..0x8003FFFF` = physical `SA0..SA10`, and `SA4..SA133` spans `0x80040000..0x807EFFFF` = physical `SA11..SA133`; the cached mirror resides at `0x80000000..0x807FFFFF`.)*
 
 ### 3.4 Bus Invariants Summary & Two-Layer NOR Write-Protection Model
-* **Default-Protected Factory Region (99.21875%):** `0x80000000` to `0x807EFFFF` (8,323,072 bytes; uncached mirror `0x84000000..0x847EFFFF`) — Preserved (`immutable` on `SA0..SA3` and write-protected by default with `E05` across `SA4..SA133`) throughout standard operation and `U99` recovery.
-* **Targeted Sanitization Window (0.78125%):** `0x807F0000` to `0x807FFFFF` (`SA134..SA141`, eight `8 KiB` sectors totaling `65,536` bytes) — Erased to `0xFF` via bench JEDEC `Sector Erase` to command the AM34 CPU to execute factory recalibration and restore healthy recorder operation.
+* **Default-Protected Factory Region (99.21875%):** `0x80000000` to `0x807EFFFF` (8,323,072 bytes; uncached mirror `0x84000000..0x847EFFFF`) — Preserved (`immutable RO` across the opening `256 KiB` boot block `SA0..SA10` / policy `SA0..SA3`, and write-protected by default with `E05` across `0x80040000..0x807EFFFF` / `SA4..SA133`) throughout standard operation.
+* **Targeted NVRAM Sanitization Window (`SA134..SA141`, 0.78125%):** `0x807F0000` to `0x807FFFFF` (`8` micro-sectors of `8 KiB`, `65,536` bytes) — Writable by default on the Pico probe. By contrast, FTL BGO metadata faults in **`SA26..SA70`** (`0x84130000..0x843FFFFF`) require explicit `CONFIRM_UPPER_NOR` opt-in and data-preserving surgical writes (pure `1 -> 0` byte programming without erasing live pages).
 
 > [!NOTE]
 > **Two-Layer Controlled NOR Write Model (`SA0..SA3` vs. `SA4..SA133` vs. `SA134..SA141`):**
 > Unified policy enforcement via [`NorWritePolicy`](../../crates/panadiga-core/src/pico/rsp_codec/policy.rs) partitions the `8 MiB` Spansion `S29JL064H` flash into three operational tiers:
-> 1. **Layer 1 — Critical Bootloader / IPL (`SA0..SA3`, `0x80000000..0x8003FFFF` / `0x84000000..0x8403FFFF`, `256 KiB`):** **permanently read-only (`immutable RO`, never writable on the Pico probe)** — never erase or overwrite on hardware; every probe write/erase attempt is unconditionally blocked with error **`E05`** to preserve the serial-boot Root of Trust.
-> 2. **Layer 2 — BGO / Application Upper-NOR Region (`SA4..SA133`, `0x80040000..0x807EFFFF` / `0x84040000..0x847EFFFF`, `64 KiB` sectors):** **write-protected by default (`NorWritePolicy::NvramOnly` → `E05`)** for strict `U99` safety, yet **explicitly unlockable** (`NorWritePolicy::UpperNorAppUnlocked`) for controlled off-NVRAM research after SHA-256 backup verification.
-> 3. **Layer 3 — NVRAM / EEMUL (`SA134..SA141`, `0x807F0000..0x807FFFFF`, `8 KiB` sectors):** writable by default for surgical `U99` sanitization.
+> 1. **Layer 1 — Critical Bootloader / IPL (`256 KiB`: `0x80000000..0x8003FFFF` / `0x84000000..0x8403FFFF`, policy `SA0..SA3` / physical `SA0..SA10`):** **permanently read-only (`immutable RO`, never writable on the Pico probe)** — never erase or overwrite on hardware; every probe write/erase attempt is unconditionally blocked with error **`E05`** to preserve the serial-boot Root of Trust.
+> 2. **Layer 2 — BGO / Application Upper-NOR Region (`0x80040000..0x807EFFFF` / `0x84040000..0x847EFFFF`, policy `SA4..SA133` / physical `SA11..SA133`):** **write-protected by default (`NorWritePolicy::NvramOnly` → `E05`)**, yet **explicitly unlockable** (`NorWritePolicy::UpperNorAppUnlocked`) via `CONFIRM_UPPER_NOR` for surgical BGO FTL repair (`SA26..SA70`) or controlled Upper EEMUL research after SHA-256 backup verification.
+> 3. **Layer 3 — Top NVRAM / EEMUL (`SA134..SA141`, `0x807F0000..0x807FFFFF`, `8 KiB` sectors):** writable by default.
 
 ### 3.5 Upper-NOR Unlock Governance, JEDEC SRAM Stubs (`0x51800000`) & `Mn103Vm` Emulation
 
 | Surface | Mechanism / Command | Scope & Safety Invariant (`E05`) |
 | :--- | :--- | :--- |
-| **GDB RSP (`gdb_rsp_codec.c` / `gdb_rsp_memory.c`)** | `$qPanadigaNorUnlock:CONFIRM_UPPER_NOR#<xx>` / `$qPanadigaNorLock#<xx>` | Toggles `NvramOnly` ↔ `UpperNorAppUnlocked`; **never** unlocks `SA0..SA3` (`0x80000000..0x8003FFFF`, permanently `E05`). |
+| **GDB RSP (`gdb_rsp_codec.c` / `gdb_rsp_memory.c`)** | `$qPanadigaNorUnlock:CONFIRM_UPPER_NOR#<xx>` / `$qPanadigaNorLock#<xx>` | Toggles `NvramOnly` ↔ `UpperNorAppUnlocked`; **never** unlocks the `256 KiB` IPL (`0x80000000..0x8003FFFF`, permanently `E05`). |
 | **`PANAMON1` Monitor ([`jedec_emit.rs`](../../crates/panadiga-core/src/re/prog061_uart_monitor/jedec_emit.rs))** | `U CONFIRM_UPPER_NOR` / `U LOCK` | Serial command inside the AM34 resident monitor; `DIAGWATCH` dispatches a two-step `'U'` handoff prior to `'W'` / `'E'`. |
-| **Pico `PANARSP` & `DIAGWATCH` ([`p7501_pana_rsp_parse.c`](../../firmware/pico-p7501/uart/p7501_pana_rsp_parse.c), [`p7501_diag_watch.c`](../../firmware/pico-p7501/uart/p7501_diag_watch.c))** | `NORUNLOCK:CONFIRM_UPPER_NOR` / `NORLOCK` + `JEDEC_ERASE:<addr>` / `JEDEC_PROG:<addr>,<hex>` | Uploads [`p7501_pana_jedec.c`](../../firmware/pico-p7501/uart/p7501_pana_jedec.c) SRAM stub at `0x51800000` (`1..=16` bytes per write), reporting `PANAJEDEC_OK` or `PANAJEDEC_TO`. `SA0..SA3` remains `immutable RO` (`E05`). |
-| **Offline Copy-on-Write CLI ([`panadiga nvram patch-upper-nor`](../../crates/panadiga-cli/src/cli/handlers/nvram.rs))** | `panadiga nvram patch-upper-nor` with `--backup` ([`upper_nor.rs`](../../crates/panadiga-core/src/nvram/pure/upper_nor.rs), [`io/upper_nor.rs`](../../crates/panadiga-core/src/nvram/io/upper_nor.rs)) | Produces a *Copy-on-Write* output image (**never** mutates source dumps in-place) alongside a SHA-256 verified backup; blocks `SA0..SA3` unless `--allow-critical-ipl` is passed for offline image research. |
+| **Pico `PANARSP` & `DIAGWATCH` ([`p7501_pana_rsp_parse.c`](../../firmware/pico-p7501/uart/p7501_pana_rsp_parse.c), [`p7501_diag_watch.c`](../../firmware/pico-p7501/uart/p7501_diag_watch.c))** | `NORUNLOCK:CONFIRM_UPPER_NOR` / `NORLOCK` + `JEDEC_ERASE:<addr>` / `JEDEC_PROG:<addr>,<hex>` | Uploads [`p7501_pana_jedec.c`](../../firmware/pico-p7501/uart/p7501_pana_jedec.c) SRAM stub at `0x51800000` (`1..=16` bytes per write), reporting `PANAJEDEC_OK` or `PANAJEDEC_TO`. Keeps the `256 KiB` IPL `immutable RO` (`E05`). |
+| **Offline Copy-on-Write CLI ([`panadiga nvram patch-upper-nor`](../../crates/panadiga-cli/src/cli/handlers/nvram.rs))** | `panadiga nvram patch-upper-nor` with `--backup` ([`upper_nor.rs`](../../crates/panadiga-core/src/nvram/pure/upper_nor.rs), [`io/upper_nor.rs`](../../crates/panadiga-core/src/nvram/io/upper_nor.rs)) | Produces a *Copy-on-Write* output image (**never** mutates source dumps in-place) alongside a SHA-256 verified backup; blocks the opening `256 KiB` unless `--allow-critical-ipl` is passed offline. |
 
 * **Real Spansion JEDEC FSM in `Mn103Vm` ([`spansion_nor.rs`](../../crates/panadiga-core/src/re/mn10300_emu/spansion_nor.rs)):**
   Faithfully simulates the `S29JL064H` state machine: **Autoselect `0x90`** (`0x0001` Manufacturer / `0x227E` Device), **6-cycle Sector Erase (`0x80 -> 0x30`)**, **4-cycle Word/Byte Program (`0xA0`, bitwise `&=` NOR semantics)**, and **Reset (`0xF0`)**.
 * **Real-Binary Integration Verification ([`checks_real_nor.rs`](../../crates/panadiga-core/src/re/emu_patch_suite/checks_real_nor.rs)):**
   Tests end-to-end Upper-NOR unlocking, JEDEC programming/erasing, and verification against real firmware artifacts: 8 MiB `flash.bin`, `prog061_dec.bin`, `PANA_DVD.FRM` (`3410PQ`), `main3060np`, and `PANA__SD.FRM`.
+
+---
+
+## 4. Real FTL BGO Anatomy (`SA26..SA70`), `0x90400000` Coherence & Surgical `U99` Repair
+
+### 4.1 Geometry Divergence: Real EH55 `Loader ver0.61` vs. `Loader ver0.63` / `PROG061`
+
+1. **`Loader ver0.63 [07/10/24]` (4MB/TOP BOOT, `/BOOT.BIN` DMR-EZ485V) & `PROG061` (`0x50436E30`):**
+   * Places BGO at **`0x84200000..0x843FFFFF`**, using control page `0x0801`, `8` FAT pages, and `4` directory pages (in `PROG061` table `0x50436E30`: `3` P1 blocks, `28`=`0x1C` P2 blocks, `35`=`0x23` sectors, `max_pid=0x0A1A`).
+2. **Real DMR-EH55 (`Loader ver0.61 [06/03/06]`, geometry table at `0x440337A4`):**
+   * The geometry table at **`0x440337A4`** (file offset `0x0337A4` in [`eh55_loader_ver061_256k.bin`](../../firmware_and_images/README.md)) configures **`45` (`0x2D`) 64 KiB sectors in `0x84130000..0x843FFFFF` (`SA26..SA70`)**:
+     * **Partition 1 (L2P Mapping):** **`1`** block (`0xF101`, `SA29` at `0x160000` + migrating block `SA41` at `0x220000`).
+     * **Partition 2 (`[nfrom]` Data):** **`40` (`0x28`)** logical blocks (`0xF201..0xF228`), each holding `126` 512-byte slots with slot tags at `+0x0200`.
+     * **Spare Pool:** **`4`** formatted spare sectors (`0xFFFF`, `+0x00..+0xFF` all `0xFF`, `0x00*256` marker at `+0x0100..+0x01FF`).
+     * **BGO Control & FAT:** max page ID **`0x0F24`**, control page **`0x0F01`**, directory **`0x0F02..0x0F04`**, primary FAT **`0x0F07..0x0F15`** (`15` pages × `256` `u16` entries), and backup FAT **`0x0F16..0x0F24`**.
+   * **Upper EEMUL (`SA71..SA141`, `0x84400000..0x847FFFFF`):** Independent from `[nfrom]` BGO (`SA26..SA70`), holding `"1284"` (`0x0FF00000`) files such as `UEIdb-*`, `bitmaps_db*`, `gos_db*`, `config.bin`, and `resetdiag.bin`.
+
+### 4.2 AM34 Uncached Coherence (`0x90400000`) & Real `S29JL064H` ~700 ms Erase Timing
+
+* **Uncached SDRAM Mirror (`0x90400000` vs `0x50400000`):** On the AM34 (`MN103S`), writes to cached SDRAM (`0x50400000`) may remain in write-back D-cache and miss I-cache instruction fetch. Consequently, both the `PANADMP1` dumper (`MOV` bounds patched at **`0x9043950E`** $\rightarrow$ **`J 904394FA`**) and test stub **`DD3754BEB30000DF0000`** (`FUN_4401EF77` at **`0x90439B40`**) target the uncached `0x90400000` mirror directly.
+* **Real `S29JL064H` (~700 ms) Erase vs `DQ7` Polling (`jedec_emit.rs`):** Physical 64 KiB sector erase takes ~**`700 ms`**. Because [`emit_jedec_poll_dq7_reset_sub`](../../crates/panadiga-core/src/re/prog061_uart_monitor/jedec_emit.rs) uses a bounded `0x00100000`-iteration DQ7 loop, `PANAMON1>` `E <addr>` returns `OK:ERASE` early while internal erase is still running; scripts must poll `R <addr>,20` for `0xFF*32` before issuing `W` program writes.
+
+### 4.3 Surgical BGO FTL `U99` Repair & Live Normal Boot Proof (`COM10`)
+
+In the pre-repair gold dump ([`eh55_nor_8mb_ic5001_dump.bin`](../../firmware_and_images/README.md), `SHA-256: c1faee798f60545853eefdba0d15f23678b471466dc2bc84f522bc972f15a02d`), `BGO driver init failed[1].` originated from: (a) `13` missing `0xF2xx` blocks (`0xF209`, `0xF21D..0xF228`), leaving `16` formatted spares; (b) `SA70` (`0x843F0000`) with mis-placed `0x00*256` at `+0xE100..+0xE1FF`; and (c) corrupted migration link header at `SA41 + 0x14` (`f8fff8fff8fffcffffff0400ffffffffffffffff`). Live repair via `PANAMON1>` (`OK:NOR_UNLOCK` $\rightarrow$ `OK:NOR_LOCK`) executed:
+
+1. **Clean format of `SA70` (`0x843F0000`):** sector erase + programming `256` zero bytes at `0x843F0100` (`20.7 s`).
+2. **`1,629` pure `1 -> 0` byte writes (zero populated sector erases):** across `13` spare sectors (`SA42=62`, `SA43=36`, `SA44=52`, `SA45=34`, `SA46=936`, `SA51=38`, `SA56=40`, `SA58=40`, `SA59=135`, `SA61=118`, `SA64=46`, `SA65=58`, `SA66=34`), restoring all `13` `0xF2xx` sectors, block 2 of `ifodev2` (`0x0055` @ `0x84250800` in `SA44`), and reconstructed FAT pages `0x0F0A` (`0x8427A200`) and `0x0F19` (`0x8427AE00` in `SA46`).
+3. **`6` pure `1 -> 0` byte writes at `SA41 + 0x14` (`0x84220014..0x84220023`):** programming `F0` (`+14/+16/+18`), `F8` (`+1A`), `04` (`+22`), and `00` (`+23`), yielding `F0FFF0FFF0FFF8FFFFFF0400FFFF0400FFFFFFFF` (migration link `0x0004` $\rightarrow$ `SA29`). Offline verification confirmed `19/19` directory files and `996/996` L2P entries (`eh55_nor_8mb_ic5001_repaired.bin`, `SHA-256: adb21d955ed96121249e7abeec58e1ce3951f511a595636d70ebb07a35ca4c9c`).
+4. **Live `BOOTTRACE 15000 NOJIG` verification (`COM10`):** following live RAM validation of `FUN_4401EF77` at `0x90439B40`, normal boot logged `DDR CHECK: OK` (+10 ms) $\rightarrow$ F/E decompressed from `0x84080040` (`0xACC01`) to `0x90202000` (`0x160000`, `HEADER/DECOMP:5627DD54`) $\rightarrow$ `F/E reset release finish ...` (+778 ms) $\rightarrow$ **`***** Loader ver0.61 [06/03/06] *****`** (+781 ms) $\rightarrow$ **`***** normal mode *****`** (+785 ms) $\rightarrow$ **`*** RTSC Initialize ***`** (+802 ms; `310 B`, `ferr=0 perr=0 ovf=NO`), proving `U99` eliminated and normal boot entering HDD `MAIN` loading via RTSC/DAVIS IDE.
+5. **BGO Cycle 2 (`[PROVEN ON REAL HARDWARE]`):** a subsequent boot with a stock FVU SD card (`0x2182DC9`, legacy `PROG061` restricted to `0x84200000..0x843FFFFF`) triggered a relapse on `SA54` (`[nfrom] file_no[17]`, `BGO driver init failed[1].`); Cycle 2 surgical repair across `SA54` + `SA41` slot 9 + `SA29` (`0x51 -> 0x64`) + `SA39`, using `?\r` + `300 µs` retry and `U CONFIRM_UPPER_NOR`/`U LOCK`, permanently restored clean normal boot ([`verify_bgo_restored_boot_20261119.log`](../debug_logs/verify_bgo_restored_boot_20261119.log) · [`EH55_UNBRICK_BREAKTHROUGH_BGO_CH1_DAVIS_AND_REGION.md`](./EH55_UNBRICK_BREAKTHROUGH_BGO_CH1_DAVIS_AND_REGION.md)).

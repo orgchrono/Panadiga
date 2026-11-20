@@ -79,8 +79,12 @@ pub fn prepare_sd_unbrick_kit(req: &SdUnbrickKitRequest) -> Result<SdUnbrickKitR
 
     let prog_raw = fs::read(&prog_src_path)
         .with_context(|| format!("Reading PROG061 source {}", prog_src_path.display()))?;
-    let (prog_patched, diag_bytes, digadiag_sha256) =
-        compose_digadiag_and_prog061(&prog_raw, req.bgo_mode, req.allow_unsafe_auto_format)?;
+    let (prog_patched, diag_bytes, digadiag_sha256) = compose_digadiag_and_prog061(
+        &prog_raw,
+        req.bgo_mode,
+        req.loader_profile,
+        req.allow_unsafe_auto_format,
+    )?;
 
     fs::create_dir_all(&req.output_dir)?;
     let digadiag_path = req.output_dir.join("DIGADIAG.FRM");
@@ -139,6 +143,7 @@ pub fn prepare_sd_unbrick_kit(req: &SdUnbrickKitRequest) -> Result<SdUnbrickKitR
             drv_bytes,
             prog_patched,
             req.bgo_mode,
+            req.loader_profile,
             composed_main.container,
             &composed_main.slot_name,
             composed_main.build_version_u16,
@@ -165,6 +170,7 @@ pub fn prepare_sd_unbrick_kit(req: &SdUnbrickKitRequest) -> Result<SdUnbrickKitR
         main_source: main_source_label,
         drv_source: drv_source_label,
         bgo_mode_applied: bgo_mode_label(req.bgo_mode).to_string(),
+        loader_profile_applied: req.loader_profile.as_str().to_string(),
         main_passthrough_applied,
         hdd_capacity_applied,
         digadiag_path: digadiag_path.to_string_lossy().into_owned(),

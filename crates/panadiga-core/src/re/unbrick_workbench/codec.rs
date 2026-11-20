@@ -97,7 +97,7 @@ pub(crate) fn detect_and_parse_frm_toc(
         bail!("No valid Feistel 48B or SD 64B TOC entries found in {source_label}");
     }
     let label = match layout_opt {
-        Some(TocLayout::Sd48B) => "PANA_SD_48B_OBSOLETE",
+        Some(TocLayout::Sd48B) => "PANA_SD_48B_PLAIN",
         _ => "PANA_SD_64B_PLAIN",
     };
     Ok((label.to_string(), false, sd_entries))
