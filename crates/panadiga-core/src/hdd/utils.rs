@@ -81,19 +81,16 @@ const BLOCK_READ_CHUNK_BYTES: usize = 64 * 1024;
 pub fn is_raw_block_device_path(path: &Path) -> bool {
     let raw = path.to_string_lossy();
     let trimmed = raw.trim();
-    if trimmed.starts_with(r"\\.\") || trimmed.starts_with("/dev/") {
-        return true;
-    }
+    let prefix_match = trimmed.starts_with(r"\\.\") || trimmed.starts_with("/dev/");
     #[cfg(unix)]
     {
         use std::os::unix::fs::FileTypeExt;
-        if let Ok(meta) = fs::metadata(path)
-            && meta.file_type().is_block_device()
-        {
-            return true;
-        }
+        prefix_match || fs::metadata(path).is_ok_and(|meta| meta.file_type().is_block_device())
     }
-    false
+    #[cfg(not(unix))]
+    {
+        prefix_match
+    }
 }
 
 fn read_block_device_prefix(path: &Path) -> Result<Vec<u8>> {

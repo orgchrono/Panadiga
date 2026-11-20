@@ -104,7 +104,7 @@ pub fn retarget_frm_toc_bytes(
             }
             TocLayout::Sd48B => {
                 // `Loader ver0.61` `sd_find_firm_entry` checks `entry[0x18] == model_prefix` (e.g. `'M'`) and leaves `[0x19] == 0`.
-                if let Some(prefix) = oem_char.map(|c| c as u8).or(target_flag) {
+                if let Some(prefix) = target_flag.or_else(|| oem_char.map(|c| c as u8)) {
                     entry[0x18] = prefix;
                 }
                 if let Some(grp) = model_group {

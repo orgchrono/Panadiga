@@ -1,0 +1,36 @@
+[PRECHECK] Live NOR SA42 & SA70 match expected pre-repair state.
+[UNLOCK] Upper NOR unlocked (OK:NOR_UNLOCK).
+[SA70] Already cleanly erased to FF from previous step; proceeding directly to 0x00 format.
+[SA70] Programmed 256 zero marker bytes in 20.7s.
+[SA42] Programmed  62 bytes (1->0) in 5.0s.
+[SA43] Programmed  36 bytes (1->0) in 2.9s.
+[SA44] Programmed  52 bytes (1->0) in 4.2s.
+[SA45] Programmed  34 bytes (1->0) in 2.7s.
+[SA46] Programmed 936 bytes (1->0) in 75.1s.
+[SA51] Programmed  38 bytes (1->0) in 3.1s.
+[SA56] Programmed  40 bytes (1->0) in 3.2s.
+[SA58] Programmed  40 bytes (1->0) in 3.2s.
+[SA59] Programmed 135 bytes (1->0) in 10.8s.
+[SA61] Programmed 118 bytes (1->0) in 9.4s.
+[SA64] Programmed  46 bytes (1->0) in 3.7s.
+[SA65] Programmed  58 bytes (1->0) in 4.6s.
+[SA66] Programmed  34 bytes (1->0) in 2.7s.
+[LOCK] Upper NOR locked immediately (OK:NOR_LOCK).
+[READBACK] SA70 (0x843F0000) 100% verified.
+[READBACK] SA42 header+tags (1024 B) 100% verified.
+[READBACK] SA43 header+tags (1024 B) 100% verified.
+[READBACK] SA44 header+tags (1024 B) 100% verified.
+[READBACK] SA45 header+tags (1024 B) 100% verified.
+[READBACK] SA46 header+tags (1024 B) 100% verified.
+[READBACK] SA51 header+tags (1024 B) 100% verified.
+[READBACK] SA56 header+tags (1024 B) 100% verified.
+[READBACK] SA58 header+tags (1024 B) 100% verified.
+[READBACK] SA59 header+tags (1024 B) 100% verified.
+[READBACK] SA61 header+tags (1024 B) 100% verified.
+[READBACK] SA64 header+tags (1024 B) 100% verified.
+[READBACK] SA65 header+tags (1024 B) 100% verified.
+[READBACK] SA66 header+tags (1024 B) 100% verified.
+[READBACK] ifodev2_blk2 (0x0055) @ 0x84250800 (512 B) 100% verified.
+[READBACK] FAT_0F0A (0x0F0A) @ 0x8427A200 (512 B) 100% verified.
+[READBACK] FAT_0F19 (0x0F19) @ 0x8427AE00 (512 B) 100% verified.
+[SUCCESS] All 14 BGO sectors written and read-back verified 100%!

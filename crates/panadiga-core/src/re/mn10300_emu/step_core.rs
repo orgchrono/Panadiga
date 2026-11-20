@@ -212,6 +212,10 @@ impl Mn103Vm {
                 let p = self.read_u8(pc + 1)?;
                 self.step_fa(p)?;
             }
+            0xFB => {
+                let p = self.read_u8(pc + 1)?;
+                self.step_fb(p)?;
+            }
             0xFC => {
                 let p = self.read_u8(pc + 1)?;
                 self.step_fc(p)?;

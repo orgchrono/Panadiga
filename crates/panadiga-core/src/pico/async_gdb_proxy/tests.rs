@@ -117,3 +117,41 @@ fn roundtrips_m_read_and_bytewise_nvram_m_write_against_mock_panamon1() {
         vec!["R 847F0010,4", "W 847F0020,A5", "W 847F0021,5A"]
     );
 }
+
+#[test]
+fn replays_real_com10_panamon1_boottrace_and_rw_session_transcript() {
+    let transcript = concat!(
+        "BOOTTRACE: OK\r\n",
+        "PANADIGA>\r\n",
+        "[BRIDGE] PANAMON1> prompt confirmed active.\r\n",
+        "R 90439B00,10\r\n",
+        "000180500000000000000000CAFE0001\r\n",
+        "PANAMON1>[B/R/W/D/F/J/E/U/Q]\r\n",
+    );
+    assert_eq!(
+        parse_panamon1_read_bytes(transcript, 16).unwrap(),
+        vec![
+            0x00, 0x01, 0x80, 0x50, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xCA, 0xFE,
+            0x00, 0x01
+        ]
+    );
+    assert!(
+        parse_panamon1_read_bytes(
+            "W 90439B40,F0\r\nOK:WRITE\r\nPANAMON1>[B/R/W/D/F/J/E/U/Q]\r\n",
+            16
+        )
+        .is_none()
+    );
+
+    let mut port = MockPanamon1Port::new();
+    let ipl_ro = String::from_utf8(handle_panamon1_rsp_packet_io(
+        "M80000000,1:00",
+        Some(&mut port),
+    ))
+    .unwrap();
+    assert!(ipl_ro.starts_with("$E05#"), "rsp={ipl_ro}");
+    assert!(port.tx_log.is_empty());
+
+    let err_reply = "R 80000000,4\r\nERR:E05_IPL_RO\r\nPANAMON1>[B/R/W/D/F/J/E/U/Q]\r\n";
+    assert!(parse_panamon1_read_bytes(err_reply, 4).is_none());
+}

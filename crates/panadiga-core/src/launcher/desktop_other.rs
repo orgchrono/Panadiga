@@ -1,5 +1,6 @@
 //! Windows and macOS shortcut / launcher helpers.
 
+#[cfg(not(target_os = "linux"))]
 use std::path::Path;
 
 #[cfg(not(target_os = "linux"))]

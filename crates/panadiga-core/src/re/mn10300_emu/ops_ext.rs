@@ -140,6 +140,23 @@ impl Mn103Vm {
         Ok(())
     }
 
+    pub(super) fn step_fb(&mut self, p: u8) -> Result<(), Mn103Fault> {
+        let reg_byte = self.read_u8(self.pc.wrapping_add(2))?;
+        let d8 = self.read_u8(self.pc.wrapping_add(3))?;
+        if p != 0xAA || (reg_byte & 0x0F) != 0 {
+            return Err(Mn103Fault::InvalidOpcode(p));
+        }
+        let addr = self.sp.wrapping_add((d8 as i8) as i32 as u32);
+        let val = self.read_u8(addr)? as u32;
+        match reg_byte >> 4 {
+            r @ 8..=11 => self.a[(r - 8) as usize] = val,
+            r @ 12..=15 => self.d[(r - 12) as usize] = val,
+            _ => return Err(Mn103Fault::InvalidOpcode(reg_byte)),
+        }
+        self.pc = self.pc.wrapping_add(4);
+        Ok(())
+    }
+
     pub(super) fn step_fe(&mut self, p: u8) -> Result<(), Mn103Fault> {
         match p {
             0x00..=0x02 => {

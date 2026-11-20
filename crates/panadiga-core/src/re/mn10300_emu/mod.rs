@@ -7,11 +7,11 @@
 //! ## Honest ISA Scope (Audited vs `mn103.sinc`)
 //! - **Supported**: core single-byte moves/ALU/branches (`0x00..=0xEF` subset incl.
 //!   `CALL`/`RET`/`SETLB`/`Lcc`), `MOVM` (`0xCE`/`0xCF` for `D2/D3/A2/A3/OTHER`),
-//!   `0xF0` subset (`CALLS`/`JMP`/`RETS`), `0xF1`/`0xF2` register ops (incl. `MOV Am, SP`),
+//!   `0xF0` subset (`CALLS`/`JMP`/`RETS`), `0xF1`/`0xF2` register ops (incl. `MOV Am, SP` and `CMP Dm, An`),
 //!   `0xF8` subset (`(d8, An)`/`(d8, SP)` moves, `ADD simm8, SP`, `AND/OR/BTST imm8`,
-//!   `ASL/LSR/ASR imm8`, `BVC/BVS/BNC/BNS`), and `0xFC` subset (`(imm32)` abs moves,
-//!   ALU/MOV `imm32`, `ADD simm32, SP`, `CALLS d32rel`).
-//! - **Unimplemented / Out of Scope**: prefixes `0xF3..=0xF7`, `0xF9..=0xFB`, `0xFD..=0xFF`,
+//!   `ASL/LSR/ASR imm8`, `BVC/BVS/BNC/BNS`), `0xFB 0xAA` (`MOVBU (d8, SP), Rn2`), and `0xFC` subset
+//!   (`(imm32)` abs moves, ALU/MOV `imm32`, `ADD simm32, SP`, `CALLS d32rel`).
+//! - **Unimplemented / Out of Scope**: prefixes `0xF3..=0xF7`, `0xF9`, `0xFB` (outside `0xAA`), `0xFD`, `0xFF`,
 //!   `EX0..EX2` extended register masks in `MOVM`, hardware MMIO peripherals (`nfrom`, SDHC,
 //!   DMA, timers), interrupts (`RTI`), caches, and cycle-accurate pipeline timing.
 

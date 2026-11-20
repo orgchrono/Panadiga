@@ -32,7 +32,7 @@ While the primary laboratory focus of this project is the widely deployed **DMR-
 3. **Cryptography & Intellectual Property Protection:** The optical distribution container (`PANA_DVD.FRM`) and the executable HDD partitions are protected with proprietary 64-bit symmetric block ciphers operating in ECB mode, tied to CPRM (*Content Protection for Recordable Media*) and DivX DRM engines.
 4. **The Critical `U99` Error Vulnerability:** Channel presets, HDD volume mount states, and operating parameters are saved into the final 64 KB sector of the Flash memory, which emulates EEPROM wear-leveling (`EEMUL`). Cell degradation, unexpected power loss during disk write operations, or corrupted status words trigger startup validation panics. Consequently, the Matsushita kernel halts permanently with the fatal code **`U99`** on the front VFD vacuum fluorescent display, ignoring remote commands and deadlocking the optical tray mechanism.
 
-This repository establishes the **definitive forensic reverse engineering, physical unbricking, and laboratory diagnosis ecosystem** for the Panasonic DIGA lineup. It provides the high-performance Rust toolchain **`panadiga`**, a zero-latency desktop and mobile Android (`.apk`) bench GUI, C11/PIO firmware for **Raspberry Pi Pico (RP2040) and Pico 2 (RP2350)** with **Bluetooth Low Energy (BLE)** and USB-C OTG support, **30 cataloged factory service manuals and silicon datasheets**, **38 paired bilingual (`en-US` / `pt-BR`) engineering dossiers**, full **Ghidra MN103S disassembly/pseudocode** (`docs/pseudocode/`), and **19 deduplicated live `COM10` / bench logs** (`docs/debug_logs/`).
+This repository establishes the **definitive forensic reverse engineering, physical unbricking, and laboratory diagnosis ecosystem** for the Panasonic DIGA lineup. It provides the high-performance Rust toolchain **`panadiga`**, a zero-latency desktop and mobile Android (`.apk`) bench GUI, C11/PIO firmware for **Raspberry Pi Pico (RP2040) and Pico 2 (RP2350)** with **Bluetooth Low Energy (BLE)** and USB-C OTG support, **30 cataloged factory service manuals and silicon datasheets**, **38 paired bilingual (`en-US` / `pt-BR`) engineering dossiers**, full **Ghidra MN103S disassembly/pseudocode** (`docs/pseudocode/`), and **22 deduplicated live `COM10` / bench logs** (`docs/debug_logs/`).
 
 ---
 
@@ -135,7 +135,7 @@ Panadiga/
 │   ├── pt-BR/                                        <-- Native Portuguese Technical Dossiers (38 pairs)
 │   ├── audits/                                       <-- Preserved Pre-Refactor Historical Audit Snapshots (`2026-11-11`)
 │   ├── pseudocode/                                   <-- Full MN103S Pseudocode, `??` Audit Report & Raw Ghidra Dumps (`raw/*.txt`)
-│   ├── debug_logs/                                   <-- 19 Deduplicated `COM10` / `P7501` / `PhysicalDrive1` Captures & `DOSSIE_COMPLETO_...txt`
+│   ├── debug_logs/                                   <-- 22 Deduplicated `COM10` / `P7501` / `PhysicalDrive1` Captures & `DOSSIE_COMPLETO_...txt`
 │   └── assets/ / images/                             <-- High-Resolution Schematics, 241 Visual Catalog PNGs & Pinouts
 ├── manuals_and_schematics/                           <-- Technical Library (Manuals, Schematics & Datasheets)
 ├── tools/                                            <-- Lab Utilities & Ghidra AM34/MN103S Scripts (Generated from Rust SSOT)
@@ -576,7 +576,7 @@ All official documentation is cataloged and hierarchically structured in `manual
 
 ## 11. Direct Links to Audits, Technical Dossiers, Pseudocode & Logs (`docs/`)
 
-The repository maintains **38 synchronized bilingual (`en-US` / `pt-BR`) engineering dossiers** (indexed in [`docs/INDEX.md`](docs/INDEX.md) and [`docs/translation_pairs.json`](docs/translation_pairs.json)), root technical audits ([`COMPLETE_AUDIT.md`](COMPLETE_AUDIT.md) / [`AUDITORIA_COMPLETA.md`](AUDITORIA_COMPLETA.md)), historical audit snapshots ([`docs/audits/`](docs/audits/README.md)), full MN103S Ghidra pseudocode/disassembly ([`docs/pseudocode/`](docs/pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) & [`docs/pseudocode/raw/`](docs/pseudocode/raw/)), and 19 deduplicated live `COM10` / bench logs ([`docs/debug_logs/`](docs/debug_logs/README.md)):
+The repository maintains **38 synchronized bilingual (`en-US` / `pt-BR`) engineering dossiers** (indexed in [`docs/INDEX.md`](docs/INDEX.md) and [`docs/translation_pairs.json`](docs/translation_pairs.json)), root technical audits ([`COMPLETE_AUDIT.md`](COMPLETE_AUDIT.md) / [`AUDITORIA_COMPLETA.md`](AUDITORIA_COMPLETA.md)), historical audit snapshots ([`docs/audits/`](docs/audits/README.md)), full MN103S Ghidra pseudocode/disassembly ([`docs/pseudocode/`](docs/pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) & [`docs/pseudocode/raw/`](docs/pseudocode/raw/)), and 22 deduplicated live `COM10` / bench logs ([`docs/debug_logs/`](docs/debug_logs/README.md)):
 
 * 📋 **[Consolidated Root Technical Audit](COMPLETE_AUDIT.md)** ([Português: `AUDITORIA_COMPLETA.md`](AUDITORIA_COMPLETA.md))
   *Live repository audit (`crates/`, `firmware/pico-p7501/`, `scripts/`), rebuilt RP2040/RP2350/Unified UF2 hashes, Ghidra `??` root-cause summary, Python-to-Rust parity, and 9 Quality Gates.*
@@ -642,13 +642,13 @@ The Panadiga engineering ecosystem enforces a strict **9 Quality Gates** anti-re
        Layer 5: End-to-End E2E Tests (Playwright Chromium — 23 tests / 8 specs)
        Layer 4: Desktop UI Unit & Component Tests (Vitest + React Testing Library — 116 tests / 36 files)
        Layer 3: C11 Pico Firmware Host Tests (GCC/MSVC Host Test Harness — 31 tests / 4 modules)
-       Layer 2: Python Scripts & RE Pytest Verification (28 Pytest tests / 5 files + mypy --strict 43 files)
-       Layer 1: Native Rust Workspace Tests (Cargo Test — 254 tests across core/cli/desktop/mcp/rag)
+       Layer 2: Python Scripts & RE Pytest Verification (29 Pytest tests / 5 files + mypy --strict 43 files)
+       Layer 1: Native Rust Workspace Tests (Cargo Test — 258 tests across core/cli/desktop/mcp/rag)
 ```
 
 ### 13.1. The 9 Active Quality Gates
 
-1. **Rust Cargo Check & Test Gate:** Verifies formatting (`cargo fmt`), strict clippy (`-D warnings`), and all 254 workspace unit and integration tests across `panadiga-core`, `panadiga-cli`, `panadiga-desktop`, `panadiga-mcp`, and `panadiga-rag`.
+1. **Rust Cargo Check & Test Gate:** Verifies formatting (`cargo fmt`), strict clippy (`-D warnings`), and all 258 workspace unit and integration tests across `panadiga-core`, `panadiga-cli`, `panadiga-desktop`, `panadiga-mcp`, and `panadiga-rag`.
 2. **TypeScript Strict Type-Check Gate:** `oxlint --deny-warnings` + `tsc --noEmit` verifies strict frontend types with zero `any` leaks.
 3. **Frontend Vitest Unit Suite:** Covers ViewModels, binary/doc link resolvers, React components, and algebraic state transitions across 116 tests in 36 files under `apps/desktop/src/**/*.test.{ts,tsx}`.
 4. **Copy/Paste Detector (`jscpd`):** Enforces 0.00% code duplication threshold.
@@ -656,7 +656,7 @@ The Panadiga engineering ecosystem enforces a strict **9 Quality Gates** anti-re
 6. **Playwright E2E Suite:** 23 browser-level functional tests across 8 specs (`calibration-and-tbc`, `frm-packager`, `hdd-safe-flash`, `ir-commander`, `navigation`, `nvram`, `pico-bench`, `pico-bgo-davis`) running against headless Chromium.
 7. **Ghidra Script Generator Gate:** Validates automatic export of memory maps and symbols from Rust SSOT (`tools/ghidra/*.py`, paired with `tools/ghidra/java/`).
 8. **C11 Firmware Host Test Gate:** Compiles and executes 31 bare-metal Pico firmware unit tests across 4 modules (`test_gdb_rsp_host.c`, `test_pana_diag_drv.c`, `test_pana_logic.c`, `test_uart_codec.c`) with `-Wall -Wextra -Werror` / `/W4 /WX`.
-9. **Python & Pytest Gate:** Verifies strict typing (`mypy --strict` across 43 source files) and 28 automated tests across 5 files in `scripts/tests/`.
+9. **Python & Pytest Gate:** Verifies strict typing (`mypy --strict` across 43 source files) and 29 automated tests across 5 files in `scripts/tests/`.
 
 ### 13.2. Executing the Full Validation Suite
 

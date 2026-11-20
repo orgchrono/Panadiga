@@ -16,7 +16,7 @@ This release unifies **three convergent engineering layers** validated directly 
 
 | Layer | Methodology | Verified Artifacts |
 | :--- | :--- | :--- |
-| **Documentary** | `30` official Panasonic service manuals, schematics, and IC datasheets cross-referenced against PCB `VEP79138` | Canonical `P7501` (`B6B-ZR-3R4`) pinout, AM34 memory map, `MEIHDFS` geometry, `38` bilingual dossiers & `19` curated `COM10` bench logs |
+| **Documentary** | `30` official Panasonic service manuals, schematics, and IC datasheets cross-referenced against PCB `VEP79138` | Canonical `P7501` (`B6B-ZR-3R4`) pinout, AM34 memory map, `MEIHDFS` geometry, `38` bilingual dossiers & `22` curated `COM10` bench logs |
 | **Mathematical** | Shannon entropy analysis (`H = 7.99958 bits/byte`), 64-bit ECB KPA codebook, `.FRM` TOC parsing, `XOR 0xFF` extent decoding | `PANA_DVD.FRM` (`48B` Feistel) & `PANA__SD.FRM` (`64B` plaintext) slots, `EEMUL` NVRAM sector cure |
 | **Physical** | Reconstructed **P7501 Asynchronous UART (`115200 8N1`)**, discrete `SW_UART` / `XRESET` / `NSW5V` control, glitch-immune `BAUDSCAN` & PIO timing samplers | Modular C11 + PIO probe firmware (`RP2040` / `RP2350` / `Unified`), `SC0` Live Bridge, `DIAGWATCH`, `PANARSP`, `DRVPANA`, `JEDEC` 2-layer Spansion stub, `PREJIG WAKE` Standby capture, async GDB RSP server |
 
@@ -148,7 +148,7 @@ panadiga unbrick prepare-sd --outdir ./sd_card_eh55_kit
 ## 5. Quality Gates — Automated Enforcement (`scripts/validate.py`)
 
 ```text
-✅ Gate 1   — Rust Workspace (`cargo fmt`, `cargo clippy -D warnings`, 254 workspace tests + Android target check)
+✅ Gate 1   — Rust Workspace (`cargo fmt`, `cargo clippy -D warnings`, 258 workspace tests + Android target check)
 ✅ Gate 2   — Oxlint + TypeScript Strict Check (`apps/desktop`, 354 files)
 ✅ Gate 3   — Vitest Frontend MVVM / Redux / Hooks / Pipelines / IR Commander Suite (116 tests across 36 files)
 ✅ Gate 4   — jscpd Clone Detector (Threshold 0% — zero structural clones across 895 files)
@@ -156,7 +156,7 @@ panadiga unbrick prepare-sd --outdir ./sd_card_eh55_kit
 ✅ Gate 6   — Playwright E2E Chromium Headless Suite (23 tests across 8 specs, incl. Region/TBC/HDD 5GB–2TB/BGO/DAVIS & IR Commander flows)
 ✅ Gate 7   — Ghidra Native SSOT Jython Exporter (Idempotent export check)
 ✅ Gate 8   — C11 Pico Firmware Host Tests (`PICO_HOST_TEST=1`, -Wall -Wextra -Werror / /W4 /WX, 4 modules)
-✅ Gate 9   — Python (`py_compile`, `mypy --strict` 43 files, `pytest scripts/tests` 28 tests across 5 files)
+✅ Gate 9   — Python (`py_compile`, `mypy --strict` 43 files, `pytest scripts/tests` 29 tests across 5 files)
 ✅ Multi-CI — Windows x86_64 · Ubuntu x86_64 · macOS ARM64 · Android APK · Pico RP2040/RP2350 Dual UF2
 ```
 
@@ -165,7 +165,7 @@ panadiga unbrick prepare-sd --outdir ./sd_card_eh55_kit
 ## 6. Documentation & Legal
 
 - **Master Bilingual Portal (38 EN/PT-BR Dossier Pairs):** [`docs/INDEX.md`](docs/INDEX.md)
-- **EH55 Historical Breakthrough (BGO Cycle 2, Direct `PANAMON1>`, `DAVIS`/`CH1` & `PAL-M` Region):** [`docs/en-US/EH55_UNBRICK_BREAKTHROUGH_BGO_CH1_DAVIS_AND_REGION.md`](docs/en-US/EH55_UNBRICK_BREAKTHROUGH_BGO_CH1_DAVIS_AND_REGION.md) ([PT-BR](docs/pt-BR/HISTORICO_UNBRICK_EH55_BGO_CH1_DAVIS_E_REGIAO.md)) · [`19` Curated Bench Logs](docs/debug_logs/README.md)
+- **EH55 Historical Breakthrough (BGO Cycle 2, Direct `PANAMON1>`, `DAVIS`/`CH1` & `PAL-M` Region):** [`docs/en-US/EH55_UNBRICK_BREAKTHROUGH_BGO_CH1_DAVIS_AND_REGION.md`](docs/en-US/EH55_UNBRICK_BREAKTHROUGH_BGO_CH1_DAVIS_AND_REGION.md) ([PT-BR](docs/pt-BR/HISTORICO_UNBRICK_EH55_BGO_CH1_DAVIS_E_REGIAO.md)) · [`22` Curated Bench Logs](docs/debug_logs/README.md)
 - **Root Engineering Audits:** [`COMPLETE_AUDIT.md`](COMPLETE_AUDIT.md) · [`AUDITORIA_COMPLETA.md`](AUDITORIA_COMPLETA.md)
 - **Service Manuals & Datasheets (`30` PDFs):** [`manuals_and_schematics/README.md`](manuals_and_schematics/README.md)
 - **Ghidra Pseudocode & Live `COM10` Logs:** [`docs/pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md`](docs/pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) · [`docs/debug_logs/README.md`](docs/debug_logs/README.md)

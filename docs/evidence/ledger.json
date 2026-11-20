@@ -1,0 +1,431 @@
+{
+  "schema_version": 1,
+  "levels": [
+    "N1_STATIC",
+    "N2_EMULATED",
+    "N3_LIVE_PROBE",
+    "N4_HARDWARE",
+    "N5_REPRODUCED"
+  ],
+  "entries": [
+    {
+      "id": "EV-20261119-001",
+      "level": "N4_HARDWARE",
+      "claim_pt": "Loader ver0.61 exige DIGADIAG.FRM bruto de 262.144 B (0x40000) em 0x50400000 e PANA__SD.FRM sd48 em cartao SDSC FAT16 4-bit.",
+      "claim_en": "Loader ver0.61 requires raw 262,144 B (0x40000) DIGADIAG.FRM at 0x50400000 and sd48 PANA__SD.FRM on 4-bit SDSC FAT16.",
+      "sites": [
+        "VA 0x44008601 (JMP 0x50400000)",
+        "SDCD 0x89001800 / 0x89001850 (Bus Width:4)",
+        "0x3C4000[LBA]"
+      ],
+      "evidence_files": [
+        "docs/debug_logs/sddiag_ver061_live_20261119.log",
+        "docs/debug_logs/verify_bgo_restored_boot_20261119.log",
+        "docs/pseudocode/raw/doc_boot_fat_sd_java.txt"
+      ],
+      "sha256_assertions": [
+        {
+          "path": "docs/debug_logs/sddiag_ver061_live_20261119.log",
+          "sha256": "6C5EC83CC18ABFF4233F50DC1B1586AA049C0F60C39AB81F424E9F0CCBC63B25",
+          "required": true
+        },
+        {
+          "path": "docs/debug_logs/verify_bgo_restored_boot_20261119.log",
+          "sha256": "B102000ED7E38CE5DA9BA3954ED316E540413FFF3B1CF8BC204588BCE7EBCDFC",
+          "required": true
+        },
+        {
+          "path": "firmware_and_images/sd_unbrick_kit/DIGADIAG.FRM",
+          "sha256": "DE72E2640EE48A7628A674E3DAD731CFF71548FC9EA3403CA616F3E5F7E392C0",
+          "required": false
+        },
+        {
+          "path": "firmware_and_images/sd_unbrick_kit/PANA__SD.FRM",
+          "sha256": "CDCC2CDF4617C4F08D8AF3F617DB369CFD360D8DB2601B33C84BAE0E6F995D90",
+          "required": false
+        }
+      ],
+      "docs": [
+        "docs/pt-BR/DOSSIE_FORENSE_BOOTLOADER_SDDIAG_EH55.md",
+        "docs/pt-BR/AUDITORIA_ADVERSARIAL_FIRMWARE_PICO_E_DISASSEMBLY_PROG061_MAIN.md"
+      ]
+    },
+    {
+      "id": "EV-20261119-002",
+      "level": "N4_HARDWARE",
+      "claim_pt": "bgo_unbrick + prog061_uart_monitor (0x5040A2BC BRA +17 -> 0x5040A2CD -> PANAMON1> @ 0x50439494) extraiu 8 MiB de IC5001 e aplicou cirurgia BGO ao vivo em COM10.",
+      "claim_en": "bgo_unbrick + prog061_uart_monitor (0x5040A2BC BRA +17 -> 0x5040A2CD -> PANAMON1> @ 0x50439494) dumped 8 MiB IC5001 and executed live BGO repair on COM10.",
+      "sites": [
+        "0x5040A2BC (CA 11 CB*5)",
+        "0x5040A2CD (PATCH_A2CD_UART_MONITOR)",
+        "0x50439494 (PANAMON1>)"
+      ],
+      "evidence_files": [
+        "docs/debug_logs/apply_bgo_repair_com10_20261119.log",
+        "docs/debug_logs/repair_bgo_sa39_sa54_com10_20261119.log",
+        "crates/panadiga-core/src/re/bgo_unbrick.rs"
+      ],
+      "sha256_assertions": [
+        {
+          "path": "docs/debug_logs/apply_bgo_repair_com10_20261119.log",
+          "sha256": "928CA5AD858DC1FFD677FC7F38AB2A456CB6034A38199F407E85046B57BFA8BC",
+          "required": true
+        },
+        {
+          "path": "docs/debug_logs/repair_bgo_sa39_sa54_com10_20261119.log",
+          "sha256": "E17D9AC36CF31CEAA876673931052C8393CA817AE838DF3D9D1FDCBFF4B3206E",
+          "required": true
+        },
+        {
+          "path": "firmware_and_images/eh55_nor_8mb_ic5001_dump.bin",
+          "sha256": "C1FAEE798F60545853EEFDBA0D15F23678B471466DC2BC84F522BC972F15A02D",
+          "required": false
+        }
+      ],
+      "docs": [
+        "docs/pt-BR/DOSSIE_FORENSE_BOOTLOADER_SDDIAG_EH55.md",
+        "docs/pt-BR/AUDITORIA_ADVERSARIAL_FIRMWARE_PICO_E_DISASSEMBLY_PROG061_MAIN.md",
+        "docs/pt-BR/TEORIA_E_PRATICA_UNBRICK_U99_E_CRIPTOGRAFIA_MATSUSHITA.md"
+      ]
+    },
+    {
+      "id": "EV-20261119-003",
+      "level": "N4_HARDWARE",
+      "claim_pt": "Geometria BGO real do EH55 (SA26..SA70 = 0x84130000..0x843FFFFF, 45 setores, tabela 0x440337A4) restaurada em 2 ciclos eliminando U99 no Loader ver0.61.",
+      "claim_en": "Real EH55 BGO geometry (SA26..SA70 = 0x84130000..0x843FFFFF, 45 sectors, table 0x440337A4) repaired across 2 cycles, eliminating U99 in Loader ver0.61.",
+      "sites": [
+        "0x440337A4 (BGO geometry table)",
+        "0x84130000..0x843FFFFF (SA26..SA70)",
+        "SA29 / SA39 / SA41 / SA54 / SA70"
+      ],
+      "evidence_files": [
+        "docs/debug_logs/verify_bgo_restored_boot_20261119.log",
+        "docs/debug_logs/repair_bgo_sa39_sa54_com10_20261119.log",
+        "docs/debug_logs/apply_bgo_repair_com10_20261119.log"
+      ],
+      "sha256_assertions": [
+        {
+          "path": "docs/debug_logs/verify_bgo_restored_boot_20261119.log",
+          "sha256": "B102000ED7E38CE5DA9BA3954ED316E540413FFF3B1CF8BC204588BCE7EBCDFC",
+          "required": true
+        },
+        {
+          "path": "firmware_and_images/eh55_nor_8mb_ic5001_repaired.bin",
+          "sha256": "ADB21D955ED96121249E7ABEEC58E1CE3951F511A595636D70EBB07A35CA4C9C",
+          "required": false
+        }
+      ],
+      "docs": [
+        "docs/pt-BR/HISTORICO_UNBRICK_EH55_BGO_CH1_DAVIS_E_REGIAO.md",
+        "docs/pt-BR/TEORIA_E_PRATICA_UNBRICK_U99_E_CRIPTOGRAFIA_MATSUSHITA.md",
+        "docs/pt-BR/DOSSIE_FORENSE_BOOTLOADER_SDDIAG_EH55.md"
+      ]
+    },
+    {
+      "id": "EV-20261119-004",
+      "level": "N4_HARDWARE",
+      "claim_pt": "Porta #1: entrada direta em PANAMON1> sem pino SW_UART (JIG) via slot PROG (0x0B1800) de PANA__SD.FRM sd48 (soma 32-bit, sem RSA) quando CH1 HDD falha.",
+      "claim_en": "Door #1: direct PANAMON1> entry without SW_UART (JIG) via PANA__SD.FRM sd48 PROG slot (0x0B1800, 32-bit sum, no RSA) on CH1 HDD failure.",
+      "sites": [
+        "FUN_4400877f / FUN_44008bc5 / FUN_44009703",
+        "func_0x4400c172 (32-bit FVU byte-sum)",
+        "0x0B1800 -> 0x90400000 (checksum 0x0214E681)"
+      ],
+      "evidence_files": [
+        "docs/debug_logs/probe_ch1_full_diag_20261119.log",
+        "docs/debug_logs/probe_ch1_live_v2_0deg_20261119.log"
+      ],
+      "sha256_assertions": [
+        {
+          "path": "docs/debug_logs/probe_ch1_full_diag_20261119.log",
+          "sha256": "A6E71B147C17BAAE6F5F139C3F6D8F604E9C1461B7F22E557A00DBEA8FC0646C",
+          "required": true
+        },
+        {
+          "path": "docs/debug_logs/probe_ch1_live_v2_0deg_20261119.log",
+          "sha256": "F6225540D20818667FF7C81BF48FC45D202D115BCDC71A3F5ECC656C7E935705",
+          "required": true
+        },
+        {
+          "path": "firmware_and_images/sd_unbrick_kit/PANA__SD.FRM",
+          "sha256": "CDCC2CDF4617C4F08D8AF3F617DB369CFD360D8DB2601B33C84BAE0E6F995D90",
+          "required": false
+        }
+      ],
+      "docs": [
+        "docs/pt-BR/HISTORICO_UNBRICK_EH55_BGO_CH1_DAVIS_E_REGIAO.md",
+        "docs/pt-BR/DIGADIAG_PANA_SD_E_TBC_AUTONOMO.md"
+      ]
+    },
+    {
+      "id": "EV-20261119-005",
+      "level": "N4_HARDWARE",
+      "claim_pt": "Polaridade assimetrica DAVIS (CH0 ativo-BAIXO 0x89000420=0x02 vs CH1 ativo-ALTO 0x89000C20=0x00) e CH0 ODD ATAPI funcional (STATUS=0x50, 0xEB14).",
+      "claim_en": "Asymmetric DAVIS reset polarity (CH0 active-LOW 0x89000420=0x02 vs CH1 active-HIGH 0x89000C20=0x00) and functional CH0 ODD ATAPI (STATUS=0x50, 0xEB14).",
+      "sites": [
+        "0x504156AD (rtsd_hw_init)",
+        "0x504F81D0=2 / 0x89000420 (CH0)",
+        "0x504F81D4=1 / 0x89000C20 (CH1)"
+      ],
+      "evidence_files": [
+        "docs/debug_logs/probe_fe_release_com10_20261119.log",
+        "docs/debug_logs/probe_ch1_full_diag_20261119.log"
+      ],
+      "sha256_assertions": [
+        {
+          "path": "docs/debug_logs/probe_fe_release_com10_20261119.log",
+          "sha256": "7973A4AB246AD5D17BCBCD1522979608E4F3D47FA58D836A3E652A189C9BC948",
+          "required": true
+        }
+      ],
+      "docs": [
+        "docs/pt-BR/HISTORICO_UNBRICK_EH55_BGO_CH1_DAVIS_E_REGIAO.md",
+        "docs/pt-BR/ARQUITETURA_STORAGE_MEIHDFS_PARTICOES.md"
+      ]
+    },
+    {
+      "id": "EV-20261119-006",
+      "level": "N4_HARDWARE",
+      "claim_pt": "Pinagem reversa P58001 (Pin k = ATA 41 - k), prova IDE2SAT2 180 graus (0x00002004 DD13|DD2) vs 0 graus (0x00000000), e isolamento eletrico IORDY/DIOR-/DIOW- = 0V em CH1.",
+      "claim_en": "Reversed P58001 pinout (Pin k = ATA 41 - k), IDE2SAT2 180 deg (0x00002004 DD13|DD2) vs 0 deg (0x00000000) proof, and CH1 IORDY/DIOR-/DIOW- = 0V fault isolation.",
+      "sites": [
+        "P58001 (vol2_schematics.pdf p.113)",
+        "VEK0K00 / N5EZZ0000003 / StarTech IDE2SAT2",
+        "0x89000D58 (CH1_DEVCTL)"
+      ],
+      "evidence_files": [
+        "docs/debug_logs/probe_ch1_full_diag_20261119.log",
+        "docs/debug_logs/probe_ch1_live_v2_0deg_20261119.log",
+        "docs/debug_logs/probe_ch1_after_fe_com10_20261119.log"
+      ],
+      "sha256_assertions": [
+        {
+          "path": "docs/debug_logs/probe_ch1_after_fe_com10_20261119.log",
+          "sha256": "3AB8BE1378C9430A3A60E3C0F1016DAB047F6EBB4247A518D70368BEEE532E64",
+          "required": true
+        }
+      ],
+      "docs": [
+        "docs/pt-BR/HISTORICO_UNBRICK_EH55_BGO_CH1_DAVIS_E_REGIAO.md",
+        "docs/pt-BR/ARQUITETURA_STORAGE_MEIHDFS_PARTICOES.md",
+        "docs/pt-BR/BLUEPRINT_ESQUEMA_ELETRICO_BANCADA.md"
+      ]
+    },
+    {
+      "id": "EV-20261119-007",
+      "level": "N4_HARDWARE",
+      "claim_pt": "ifodev2 real na FTL BGO ocupa 2.048 B (4 blocos [0x0001, 0x0002, 0x0055, 0x0004]) com AA55FFFF, M6930LB, 0x0C='M', PANA_DVD_REC.",
+      "claim_en": "Real BGO ifodev2 spans 2,048 B (4 blocks [0x0001, 0x0002, 0x0055, 0x0004]) with AA55FFFF, M6930LB, 0x0C='M', PANA_DVD_REC.",
+      "sites": [
+        "NFROM ifodev2 (2048 B)",
+        "0x84250800 (blk2 0x0055)"
+      ],
+      "evidence_files": [
+        "docs/debug_logs/apply_bgo_repair_com10_20261119.log",
+        "crates/panadiga-core/src/re/region_compat/dev_bin.rs"
+      ],
+      "sha256_assertions": [
+        {
+          "path": "firmware_and_images/eh55_nor_8mb_ic5001_repaired.bin",
+          "sha256": "ADB21D955ED96121249E7ABEEC58E1CE3951F511A595636D70EBB07A35CA4C9C",
+          "required": false
+        }
+      ],
+      "docs": [
+        "docs/pt-BR/HISTORICO_UNBRICK_EH55_BGO_CH1_DAVIS_E_REGIAO.md",
+        "docs/pt-BR/TEORIA_E_PRATICA_UNBRICK_U99_E_CRIPTOGRAFIA_MATSUSHITA.md"
+      ]
+    },
+    {
+      "id": "EV-20261119-008",
+      "level": "N4_HARDWARE",
+      "claim_pt": "Layout MEIHFS 250 GB (LBA 0 'SH', LBA 0[16:512]=0, LBA 24..31, LBA 16384, LBA 57344, P1 patched 0x07466528 + espelho LBA 488266096) gravado e verificado por read-back SHA-256.",
+      "claim_en": "250 GB MEIHFS layout (LBA 0 'SH', LBA 0[16:512]=0, LBA 24..31, LBA 16384, LBA 57344, patched P1 0x07466528 + mirror LBA 488266096) flashed and SHA-256 read-back verified.",
+      "sites": [
+        "LBA 0 / LBA 24..31 / LBA 16384 / LBA 57344",
+        "LBA 488266096 (P1 high-LBA mirror)"
+      ],
+      "evidence_files": [
+        "docs/debug_logs/hdd_unbrick_flash_250gb_20261119.log",
+        "crates/panadiga-core/src/hdd/inspect/probe.rs"
+      ],
+      "sha256_assertions": [
+        {
+          "path": "docs/debug_logs/hdd_unbrick_flash_250gb_20261119.log",
+          "sha256": "021806054BAE733CB6E2514E604877EB75AB7B6C9E55C1E193339DD30F03B67C",
+          "required": true
+        },
+        {
+          "path": "firmware_and_images/panasonic_dmr_eh55_hdd_250gb_patched.img",
+          "sha256": "4FDE753C1F4AEFB8847621E3BEF16DCB9493DC8EF4C52A230F3BB8DFCD34C1C2",
+          "required": false
+        }
+      ],
+      "docs": [
+        "docs/pt-BR/HISTORICO_UNBRICK_EH55_BGO_CH1_DAVIS_E_REGIAO.md",
+        "docs/pt-BR/ARQUITETURA_STORAGE_MEIHDFS_PARTICOES.md"
+      ]
+    },
+    {
+      "id": "EV-20261119-009",
+      "level": "N4_HARDWARE",
+      "claim_pt": "Timeout de ~44s em RTSC Initialize sem SD leva IC7501 a pulsar NSW5V=0 e XRESET=0 em ciclos PLEASE WAIT / SELF CHECK.",
+      "claim_en": "Approx. 44s RTSC Initialize timeout without SD drives IC7501 to pulse NSW5V=0 and XRESET=0 in PLEASE WAIT / SELF CHECK loops.",
+      "sites": [
+        "P7501 Pin 5 (NSW5V)",
+        "P7501 Pin 2 (XRESET)",
+        "IC7501 watchdog"
+      ],
+      "evidence_files": [
+        "docs/debug_logs/diagnose_please_wait_90s_20261119.log"
+      ],
+      "sha256_assertions": [
+        {
+          "path": "docs/debug_logs/diagnose_please_wait_90s_20261119.log",
+          "sha256": "2880A883B7233C9C234DDEE450B665E1FA8ACE32C802BA44BD9E23F4FCC64DE6",
+          "required": true
+        }
+      ],
+      "docs": [
+        "docs/pt-BR/BLUEPRINT_ESQUEMA_ELETRICO_BANCADA.md",
+        "docs/pt-BR/ARQUITETURA_STANDBY_IC7501_TBUS_TW7501_E_MODOS_BOOT.md"
+      ]
+    },
+    {
+      "id": "EV-20261119-010",
+      "level": "N2_EMULATED",
+      "claim_pt": "Protecao Spansion S29JL064H em 2 camadas (SA0..SA3 E05 RO permanente, U CONFIRM_UPPER_NOR / U LOCK, rejeicao fail-closed de AutoFormatBgo / 'F' @ 0x50401F3C) validada no Mn103Vm.",
+      "claim_en": "2-layer Spansion S29JL064H protection (SA0..SA3 permanent E05 RO, U CONFIRM_UPPER_NOR / U LOCK, fail-closed AutoFormatBgo / 'F' @ 0x50401F3C rejection) verified on Mn103Vm.",
+      "sites": [
+        "0x80000000..0x8003FFFF / 0x84000000..0x8403FFFF (SA0..SA3 E05)",
+        "0x50401F3C (nfrom_format)"
+      ],
+      "evidence_files": [
+        "crates/panadiga-core/src/re/prog061_uart_monitor/cmd_handlers.rs",
+        "crates/panadiga-core/src/re/prog061_uart_monitor/tests.rs",
+        "crates/panadiga-core/src/re/emu_patch_suite/checks_real_nor.rs"
+      ],
+      "sha256_assertions": [],
+      "docs": [
+        "docs/pt-BR/TEORIA_E_PRATICA_UNBRICK_U99_E_CRIPTOGRAFIA_MATSUSHITA.md"
+      ]
+    },
+    {
+      "id": "EV-20261119-011",
+      "level": "N2_EMULATED",
+      "claim_pt": "hdd::capacity_patch (3410PQ @ 0x574DD1FC, 3060NP @ 0x574E499C, 0xC6 bls +12 -> 0xCA bra +12, 250GB=0x07466528) validado no bloco basico em Mn103Vm; pendente teste em silicio apos CH1.",
+      "claim_en": "hdd::capacity_patch (3410PQ @ 0x574DD1FC, 3060NP @ 0x574E499C, 0xC6 bls +12 -> 0xCA bra +12, 250GB=0x07466528) verified over basic block on Mn103Vm; silicon boot pending CH1 fix.",
+      "sites": [
+        "0x574DD1FC (MAIN3410PQ)",
+        "0x574E499C (MAIN3060NP)"
+      ],
+      "evidence_files": [
+        "crates/panadiga-core/src/hdd/capacity_patch/specs.rs",
+        "crates/panadiga-core/src/re/emu_patch_suite/checks_hdd_lba.rs"
+      ],
+      "sha256_assertions": [],
+      "docs": [
+        "docs/pt-BR/ARQUITETURA_STORAGE_MEIHDFS_PARTICOES.md",
+        "docs/pt-BR/HISTORICO_UNBRICK_EH55_BGO_CH1_DAVIS_E_REGIAO.md"
+      ]
+    },
+    {
+      "id": "EV-20261119-012",
+      "level": "N2_EMULATED",
+      "claim_pt": "region_compat (DEV.BIN 512 B, ifodev2 2048 B, retarget .FRM, e janela 21B <deviceinfo> 3410PQ @ 0x57498738 / 3060NP @ 0x574A01AA) validado no Mn103Vm.",
+      "claim_en": "region_compat (DEV.BIN 512 B, ifodev2 2048 B, .FRM TOC retarget, and 21B <deviceinfo> guard window 3410PQ @ 0x57498738 / 3060NP @ 0x574A01AA) verified on Mn103Vm.",
+      "sites": [
+        "0x57498738 (3410PQ FUN_5749859a)",
+        "0x574A01AA (3060NP pre_update_firm)"
+      ],
+      "evidence_files": [
+        "crates/panadiga-core/src/re/region_compat/main_fmu.rs",
+        "crates/panadiga-core/src/re/emu_patch_suite/checks_passthrough_region.rs"
+      ],
+      "sha256_assertions": [],
+      "docs": [
+        "docs/pt-BR/DIGADIAG_PANA_SD_E_TBC_AUTONOMO.md"
+      ]
+    },
+    {
+      "id": "EV-20261119-013",
+      "level": "N2_EMULATED",
+      "claim_pt": "main_passthrough (3410PQ: 0x5771ABFB, 0x574F7B8C, 0x574F7C5C) validado em rotinas isoladas no Mn103Vm (aplica-se apenas apos carga do MAIN em SDRAM).",
+      "claim_en": "main_passthrough (3410PQ: 0x5771ABFB, 0x574F7B8C, 0x574F7C5C) verified on isolated routines in Mn103Vm (applies only after MAIN loads into SDRAM).",
+      "sites": [
+        "0x5771ABFB (OFF_FPC_STATUS_CTRL)",
+        "0x574F7B8C (OFF_ODD_STATE_BRANCH)",
+        "0x574F7C5C (OFF_ODD_INIT_STATUS)"
+      ],
+      "evidence_files": [
+        "crates/panadiga-core/src/re/main_passthrough/patcher.rs",
+        "crates/panadiga-core/src/re/emu_patch_suite/checks_passthrough_region.rs"
+      ],
+      "sha256_assertions": [],
+      "docs": [
+        "docs/pt-BR/VISTA_EXPLODIDA_ARQUITETURA_INJECAO_PICO_E_BYPASS_PASSTHROUGH.md",
+        "docs/pt-BR/HISTORICO_UNBRICK_EH55_BGO_CH1_DAVIS_E_REGIAO.md"
+      ]
+    },
+    {
+      "id": "EV-20261120-014",
+      "level": "N1_STATIC",
+      "claim_pt": "Arquitetura Estagio 0 TBC Clean-Room: blocos MMIO AIOF (0x8800_0000..00B4, 98 presets incl. cps_ntsc=0x8020, cps_pal_m=0x8021, cps_pal=0x8027, FS0, CONT IRE) e AVDD (0x8980_0000, DNRPARAM00..09, MVMODEA/B, DACOUT1..5).",
+      "claim_en": "Stage-0 Clean-Room TBC Architecture: SoC MMIO blocks AIOF (0x8800_0000..00B4, 98 presets incl. cps_ntsc=0x8020, cps_pal_m=0x8021, cps_pal=0x8027, FS0, CONT IRE) and AVDD (0x8980_0000, DNRPARAM00..09, MVMODEA/B, DACOUT1..5).",
+      "sites": [
+        "0x8800_0000 (AIOF)",
+        "0x8980_0000 (AVDD)",
+        "0x578935FC..0x5789595C (AIOF tables)"
+      ],
+      "evidence_files": [
+        "crates/panadiga-core/src/constants/tbc_mmio.rs",
+        "crates/panadiga-core/src/re/tbc_appliance/mod.rs",
+        "docs/pseudocode/raw/doc_main.txt"
+      ],
+      "sha256_assertions": [],
+      "docs": [
+        "docs/pt-BR/DIGADIAG_PANA_SD_E_TBC_AUTONOMO.md",
+        "docs/pt-BR/HISTORICO_UNBRICK_EH55_BGO_CH1_DAVIS_E_REGIAO.md"
+      ]
+    },
+    {
+      "id": "EV-20261120-015",
+      "level": "N1_STATIC",
+      "claim_pt": "Dependencia fisica Main PCB (IC3001 C1AB00002379/1979 + IC4001), barramentos IIC0/IIC1 (0xD840_0000 / 0xD840_1000), mailbox TBUS IC7501 (0xDC01_0000..0020, sum - 0x5B, WDT 0x8A) e exclusao do registrador letal 0xC000_100C.",
+      "claim_en": "Main PCB physical dependency (IC3001 C1AB00002379/1979 + IC4001), IIC0/IIC1 controllers (0xD840_0000 / 0xD840_1000), IC7501 TBUS mailbox (0xDC01_0000..0020, sum - 0x5B, WDT 0x8A), and lethal register 0xC000_100C exclusion.",
+      "sites": [
+        "0xD840_0000 (IIC0) / 0xD840_1000 (IIC1)",
+        "0xDC01_0000..0xDC01_0020 (TBUS)",
+        "0xC000_100C (FORBIDDEN)"
+      ],
+      "evidence_files": [
+        "crates/panadiga-core/src/constants/tbc_mmio.rs",
+        "crates/panadiga-core/src/re/tbc_appliance/mod.rs",
+        "docs/pseudocode/raw/doc_boot_core.txt"
+      ],
+      "sha256_assertions": [],
+      "docs": [
+        "docs/pt-BR/ARQUITETURA_STANDBY_IC7501_TBUS_TW7501_E_MODOS_BOOT.md",
+        "docs/pt-BR/DIGADIAG_PANA_SD_E_TBC_AUTONOMO.md"
+      ]
+    },
+    {
+      "id": "EV-20261120-016",
+      "level": "N1_STATIC",
+      "claim_pt": "Incompatibilidade irreconciliavel de gravar imagens ES10/ES15/ES35V na NOR IC5001 do EH55 (MAIN XIP em 0x130000..0x40FFFF colide com BGO SA26..SA70).",
+      "claim_en": "Irreconcilable incompatibility of flashing ES10/ES15/ES35V dumps into EH55 IC5001 NOR (MAIN XIP at 0x130000..0x40FFFF collides with BGO SA26..SA70).",
+      "sites": [
+        "0x130000..0x40FFFF (ES15/ES35V MAIN XIP)",
+        "0x84130000..0x843FFFFF (EH55 BGO SA26..SA70)"
+      ],
+      "evidence_files": [
+        "firmware_and_images/dmr-es35v/README.md",
+        "crates/panadiga-core/src/re/tbc_appliance/mod.rs"
+      ],
+      "sha256_assertions": [],
+      "docs": [
+        "docs/pt-BR/HISTORICO_UNBRICK_EH55_BGO_CH1_DAVIS_E_REGIAO.md"
+      ]
+    }
+  ]
+}

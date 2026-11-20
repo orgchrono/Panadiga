@@ -193,4 +193,30 @@ mod tests {
         let res = generate_meihdfs_layout(sectors, None);
         assert!(res.is_err());
     }
+
+    #[test]
+    fn test_procedural_meihdfs_passes_strict_forensic_probe() {
+        let img = generate_meihdfs_layout(312_581_808, None).unwrap();
+        let mirror_desc_off = ALLOCATION_DESCRIPTORS_MIRROR_OFFSET as usize;
+        let buf_len = mirror_desc_off + ALLOCATION_DESCRIPTORS_SIZE;
+        let mut buf = vec![0u8; buf_len];
+        buf[..LBA_SECTOR_SIZE_BYTES].copy_from_slice(&img.mbr_lba0);
+        let desc_off = ALLOCATION_DESCRIPTORS_OFFSET as usize;
+        buf[desc_off..desc_off + ALLOCATION_DESCRIPTORS_SIZE]
+            .copy_from_slice(&img.descriptors_lba24);
+        let jrnl_off = LBA_JOURNAL_CATALOG_OFFSET as usize;
+        buf[jrnl_off..jrnl_off + LBA_SECTOR_SIZE_BYTES]
+            .copy_from_slice(&img.journal_header_lba16384);
+        let mirror_mbr_off = LBA_MIRROR_MBR_OFFSET as usize;
+        buf[mirror_mbr_off..mirror_mbr_off + LBA_SECTOR_SIZE_BYTES]
+            .copy_from_slice(&img.mirror_mbr_lba57344);
+        buf[mirror_desc_off..mirror_desc_off + ALLOCATION_DESCRIPTORS_SIZE]
+            .copy_from_slice(&img.mirror_descriptors_lba57368);
+
+        let rep = crate::hdd::inspect::inspect_hdd_slice(&buf, "mem://mkfs_roundtrip").unwrap();
+        assert_eq!(rep.mbr_tables.magic_ascii, "SH");
+        assert!(rep.mbr_tables.zeros_after_header_clean);
+        assert!(rep.mbr_tables.mirror_is_bit_identical);
+        assert!(rep.allocation_and_journal.descriptors_mirror_identical);
+    }
 }

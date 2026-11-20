@@ -51,3 +51,45 @@ fn experimental_sd_ram_chainload_requires_explicit_opt_in() {
         TbcApplianceMode::ExperimentalSdRamChainload
     );
 }
+
+#[test]
+fn no_jig_pana_sd_prog_slot_and_stage0_constants_enforce_safety() {
+    use crate::constants::{
+        AIOF_CONT_SETUP_0IRE_LIGHTER, AIOF_CONT_SETUP_75IRE_DARKER, AIOF_FS0_NON_STANDARD,
+        AIOF_FS0_STANDARD, AIOF_YC3_MVAGC_LINE_TBC_BIT, AVDD_DNRPARAM00_OFF, AVDD_MVMODEA_OFF,
+        IC7501_TBUS_CHECKSUM_BIAS, IC7501_WDT_KEEPALIVE_CMD,
+    };
+
+    assert_eq!(
+        "no_jig".parse::<TbcApplianceMode>().unwrap(),
+        TbcApplianceMode::NoJigPanaSdProgSlot
+    );
+    assert_eq!(
+        "porta1".parse::<TbcApplianceMode>().unwrap(),
+        TbcApplianceMode::NoJigPanaSdProgSlot
+    );
+    let plan = build_tbc_appliance_plan(
+        TbcApplianceMode::NoJigPanaSdProgSlot,
+        TvStandardKind::Ntsc,
+        false,
+    )
+    .unwrap();
+    assert!(!plan.requires_experimental_flag);
+    assert!(plan.nor_sa0_to_sa3_untouched);
+    assert!(plan.steps[0].contains("Door #1"));
+    assert!(
+        plan.mmio_ops
+            .iter()
+            .all(|op| op.addr != AM34_FORBIDDEN_LETHAL_REG)
+    );
+
+    assert_eq!(AIOF_FS0_STANDARD, 0x40F0);
+    assert_eq!(AIOF_FS0_NON_STANDARD, 0xC0F0);
+    assert_eq!(AIOF_YC3_MVAGC_LINE_TBC_BIT, 0x0020);
+    assert_eq!(AIOF_CONT_SETUP_0IRE_LIGHTER, 0x4000);
+    assert_eq!(AIOF_CONT_SETUP_75IRE_DARKER, 0x8000);
+    assert_eq!(AVDD_MVMODEA_OFF, 0x03CC);
+    assert_eq!(AVDD_DNRPARAM00_OFF, 0x0754);
+    assert_eq!(IC7501_TBUS_CHECKSUM_BIAS, 0x5B);
+    assert_eq!(IC7501_WDT_KEEPALIVE_CMD, 0x8A);
+}

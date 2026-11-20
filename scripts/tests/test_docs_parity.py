@@ -19,7 +19,7 @@ _PT_MATURITY_BADGES = (
     "[em investigação / bloqueio físico ch1]",
 )
 EXPECTED_PAIRS = 38
-EXPECTED_LOGS = 19
+EXPECTED_LOGS = 22
 
 _INDEX_ROW_RE = re.compile(
     r"^\|\s*\d+\s*\|\s*\[([^\]]+\.md)\]\((en-US|pt-BR)/([^)\s]+)\)"
@@ -189,3 +189,73 @@ def test_stale_hash_absent_and_relative_links_resolve() -> None:
                 continue
             resolved = (src.parent / unquote(target)).resolve()
             assert resolved.exists(), f"Broken link {target!r} in {src.relative_to(ROOT)}"
+
+
+def _require_nonempty_str_list(raw: object, label: str) -> list[str]:
+    assert isinstance(raw, list) and len(raw) > 0, f"{label} must be a non-empty list"
+    out: list[str] = []
+    for item in raw:
+        assert isinstance(item, str) and item.strip(), f"{label} entries must be non-empty strings"
+        out.append(item)
+    return out
+
+
+def test_evidence_ledger_integrity() -> None:
+    """Verify docs/evidence/ledger.json schema, paths, SHA-256 digests, and N4 doc coverage."""
+    ledger_raw: object = json.loads((DOCS / "evidence" / "ledger.json").read_text(encoding="utf-8"))
+    assert isinstance(ledger_raw, dict)
+    assert ledger_raw.get("schema_version") == 1
+    levels = _require_nonempty_str_list(ledger_raw.get("levels"), "ledger.levels")
+    assert set(levels) == {"N1_STATIC", "N2_EMULATED", "N3_LIVE_PROBE", "N4_HARDWARE", "N5_REPRODUCED"}
+
+    entries = ledger_raw.get("entries")
+    assert isinstance(entries, list) and len(entries) >= 16
+
+    seen_ids: set[str] = set()
+    n4_covered_docs: set[str] = set()
+    for raw_entry in entries:
+        assert isinstance(raw_entry, dict)
+        ev_id = raw_entry.get("id")
+        level = raw_entry.get("level")
+        claim_pt = raw_entry.get("claim_pt")
+        claim_en = raw_entry.get("claim_en")
+        assert isinstance(ev_id, str) and ev_id.startswith("EV-") and ev_id not in seen_ids
+        seen_ids.add(ev_id)
+        assert isinstance(level, str) and level in levels
+        assert isinstance(claim_pt, str) and claim_pt.strip()
+        assert isinstance(claim_en, str) and claim_en.strip()
+
+        _ = _require_nonempty_str_list(raw_entry.get("sites"), f"{ev_id}.sites")
+        evidence_files = _require_nonempty_str_list(raw_entry.get("evidence_files"), f"{ev_id}.evidence_files")
+        doc_refs = _require_nonempty_str_list(raw_entry.get("docs"), f"{ev_id}.docs")
+
+        for rel_path in [*evidence_files, *doc_refs]:
+            assert (ROOT / rel_path).is_file(), f"Missing file {rel_path!r} referenced by {ev_id}"
+
+        if level in ("N4_HARDWARE", "N5_REPRODUCED"):
+            n4_covered_docs.update(doc_refs)
+
+        assertions = raw_entry.get("sha256_assertions")
+        assert isinstance(assertions, list)
+        for item in assertions:
+            assert isinstance(item, dict)
+            rel = item.get("path")
+            expected_sha = item.get("sha256")
+            required = item.get("required")
+            assert isinstance(rel, str) and rel.strip()
+            assert isinstance(expected_sha, str) and len(expected_sha) == 64
+            assert isinstance(required, bool)
+            target = ROOT / rel
+            if required:
+                assert target.is_file(), f"Missing required SHA-256 target {rel!r} in {ev_id}"
+            if target.is_file():
+                assert sha256_file(target).upper() == expected_sha.upper(), (
+                    f"SHA-256 mismatch for {rel!r} in {ev_id}"
+                )
+
+    for md in sorted((DOCS / "pt-BR").glob("*.md")):
+        if "[provado em hardware real]" in md.read_text(encoding="utf-8").lower():
+            rel_doc = md.relative_to(ROOT).as_posix()
+            assert rel_doc in n4_covered_docs, (
+                f"{rel_doc} asserts [PROVADO EM HARDWARE REAL] without an N4_HARDWARE ledger entry"
+            )

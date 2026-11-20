@@ -56,7 +56,7 @@ pub fn unmount_drive_partitions(device_path: &str) -> Result<Vec<String>> {
     }
     #[cfg(any(target_os = "linux", target_os = "macos"))]
     {
-        return super::discovery_unix::unmount_unix_partitions(clean);
+        super::discovery_unix::unmount_unix_partitions(clean)
     }
     #[cfg(not(any(target_os = "linux", target_os = "macos")))]
     {

@@ -1,0 +1,14 @@
+VDD: 3.25V (OK)
+[STANDBY] RXD=1 NSW5V=1 TXD=1 XRESET=1 SW_PU=3.26V | State=POWERED / AWAKE (SW_UART ~3.3V)
+[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=329 wdt_recoveries=0 reboot_src=CLEAN fault_slot=255 fault_stage=IDLE last_cmd=PING last_us=112
+PANADIGA>
+=== [2D] CH1 b444(1) + b55b(0,1,0) AFTER F/E Release & TM11 ===
+[FE_REL] Writing 69-byte F/E release stub @ 0x90500000...
+[FE_REL J 90500000 OK in 0.88s] J 90500000
+OK:DONE
+PANAMON1>[B/R/W/D/F/J/E/U/Q]
+[FE_REL RST_C0001000_0C] = 00000200000000007F800000
+[FE_REL SYS_DC0F0080_08] = 0020200000000000
+[FE_REL] Timers (TM2, TM11) and IRQ priorities (0x0F, 0x2D, 0x31, 0x32) initialized.
+[2D FAIL] PANAMON1 timeout after 'J 9040C700' (5.0s); got b'J 9040C700\r\r\n'
+[2E SKIPPED] Skipping unpatched rtsc_init() because [2D] hung on CH1.

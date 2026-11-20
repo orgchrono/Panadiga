@@ -80,7 +80,7 @@ pub fn install_desktop_launcher(
     let exec_path = resolve_desktop_executable_path();
     #[cfg(target_os = "linux")]
     {
-        return linux_xdg::install_linux_xdg_launcher(&exec_path, create_desktop_shortcut);
+        linux_xdg::install_linux_xdg_launcher(&exec_path, create_desktop_shortcut)
     }
     #[cfg(not(target_os = "linux"))]
     {

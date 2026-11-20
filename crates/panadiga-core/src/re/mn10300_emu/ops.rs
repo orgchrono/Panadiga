@@ -132,6 +132,9 @@ impl Mn103Vm {
             0x9 => {
                 let _ = self.alu_sub(self.d[n], self.a[m]);
             }
+            0xA => {
+                let _ = self.alu_sub(self.a[n], self.d[m]);
+            }
             0xD => self.d[n] = self.a[m],
             0xE => self.a[n] = self.d[m],
             _ => return Err(Mn103Fault::InvalidOpcode(p)),

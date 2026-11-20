@@ -97,4 +97,21 @@ fn ifodev2_2048b_and_sd48_retarget_preserve_tail_blocks_and_prefix_semantics() {
     assert_eq!(frm_rep.entries[0].hardware_family, "M6930LB");
     assert_eq!(retargeted[0x18], b'M');
     assert_eq!(retargeted[0x19], 0x00);
+
+    let mut prog_mod = FrmPackModule::new("PROG061 ", vec![0xBBu8; 64]);
+    prog_mod.hardware_family = "M6930LB".to_string();
+    prog_mod.hardware_family_aliases = vec!["M6930".to_string()];
+    prog_mod.model_prefix = b'E';
+    let mut main_mod = FrmPackModule::new("MAIN3410PQ", vec![0xCCu8; 64]);
+    main_mod.hardware_family = "M6930LB".to_string();
+    main_mod.hardware_family_aliases = vec!["M6930".to_string()];
+    main_mod.model_prefix = b'E';
+    let (sd48_dual, _) = pack_frm(&[prog_mod, main_mod], FrmContainerMode::Sd48, None).unwrap();
+    let (retargeted_dual, dual_rep) =
+        retarget_frm_toc_bytes(&sd48_dual, None, Some("NP-309"), Some('E'), Some(b'M')).unwrap();
+    assert_eq!(dual_rep.updated_entries, 4);
+    assert!(
+        crate::re::unbrick_sd_kit::simulate_sd_find_firm_entry_dual(&retargeted_dual)
+            .dual_parity_ok
+    );
 }

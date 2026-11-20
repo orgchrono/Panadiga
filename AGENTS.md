@@ -29,7 +29,7 @@ O repositório está estruturado em subsistemas integrados e desacoplados:
    - Scripts Ghidra Jython (`tools/ghidra/`) gerados a partir da SSOT Rust e lançadores em `tools/`.
 5. **Acervo de Engenharia & Manuais (`manuals_and_schematics/`, `docs/`)**:
    - **30 manuais de serviço e datasheets oficiais** em PDF catalogados em [`manuals_and_schematics/README.md`](manuals_and_schematics/README.md) e indexados para busca automatizada.
-   - **38 dossiês técnicos bilíngues canônicos** em `docs/pt-BR/` e `docs/en-US/` (mapa em [`docs/translation_pairs.json`](docs/translation_pairs.json) e [`docs/INDEX.md`](docs/INDEX.md)), kit canônico [`firmware_and_images/sd_unbrick_kit/`](firmware_and_images/sd_unbrick_kit/SHA256SUMS.txt) (`--loader-profile ver061`: `262,144 B` raw + `sd48`), auditorias na raiz ([`AUDITORIA_COMPLETA.md`](AUDITORIA_COMPLETA.md) / [`COMPLETE_AUDIT.md`](COMPLETE_AUDIT.md)) + históricas ([`docs/audits/`](docs/audits/README.md)), evidência integral de disassembly/pseudocódigo Ghidra ([`docs/pseudocode/`](docs/pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md)) e **19 capturas/logs reais de bancada** ([`docs/debug_logs/`](docs/debug_logs/README.md)).
+   - **38 dossiês técnicos bilíngues canônicos** em `docs/pt-BR/` e `docs/en-US/` (mapa em [`docs/translation_pairs.json`](docs/translation_pairs.json) e [`docs/INDEX.md`](docs/INDEX.md)), kit canônico [`firmware_and_images/sd_unbrick_kit/`](firmware_and_images/sd_unbrick_kit/SHA256SUMS.txt) (`--loader-profile ver061`: `262,144 B` raw + `sd48`), auditorias na raiz ([`AUDITORIA_COMPLETA.md`](AUDITORIA_COMPLETA.md) / [`COMPLETE_AUDIT.md`](COMPLETE_AUDIT.md)) + históricas ([`docs/audits/`](docs/audits/README.md)), evidência integral de disassembly/pseudocódigo Ghidra ([`docs/pseudocode/`](docs/pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md)) e **22 capturas/logs reais de bancada** ([`docs/debug_logs/`](docs/debug_logs/README.md)).
 
 ---
 
@@ -77,7 +77,7 @@ python scripts/validate.py
 ```
 
 O portão valida de forma automatizada:
-1. **Rust Workspace (5 crates)**: `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets --no-deps -- -D warnings` & `cargo test --workspace` (**254 testes**).
+1. **Rust Workspace (5 crates)**: `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets --no-deps -- -D warnings` & `cargo test --workspace` (**258 testes**).
 2. **TypeScript Strict + Oxlint**: `oxlint --deny-warnings && tsc --noEmit` (`npm run lint`) em `apps/desktop` com zero erros.
 3. **Vitest Frontend**: `npm test` em `apps/desktop` (**116 testes em 36 arquivos** em `apps/desktop/src/**/*.test.*`).
 4. **Detector de Duplicação (jscpd)**: `.jscpd.json` com limiar estrito de **0% de duplicação** (0 clones permitidos entre `apps/desktop/src`, `apps/desktop/src-tauri/src`, `crates`, `firmware/pico-p7501`, `tools`, `scripts`).
@@ -85,7 +85,7 @@ O portão valida de forma automatizada:
 6. **Playwright E2E**: Testes ponta a ponta com Chromium headless (**23 testes em 8 specs** em `apps/desktop/e2e/`).
 7. **Ghidra Native Generator**: Exportação idempotente de scripts a partir da SSOT em Rust (`cargo run -p panadiga-cli -- ghidra export-all`).
 8. **Pico C11 Host Test**: Compilação e execução de **31 testes em 4 módulos C11** (`test_gdb_rsp_host`, `test_pana_logic`, `test_pana_diag_drv`, `test_uart_codec`) com `-Wall -Wextra -Werror` / `/W4 /WX`.
-9. **Python Typer/CLI & Pytest**: Verificação `py_compile`, `mypy --strict scripts` (**43 arquivos**) e `pytest scripts/tests` (**28 testes** em `5` arquivos).
+9. **Python Typer/CLI & Pytest**: Verificação `py_compile`, `mypy --strict scripts` (**43 arquivos**) e `pytest scripts/tests` (**29 testes** em `5` arquivos).
 
 ---
 

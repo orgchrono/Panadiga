@@ -76,6 +76,7 @@ fn test_prog061_bgo_patch_modes_and_digadiag_roundtrip() {
     let dir = std::env::temp_dir().join("panadiga_bgo_unbrick_test");
     let _ = fs::create_dir_all(&dir);
     let raw_in = dir.join("prog061_raw.bin");
+    let raw_ver061_out = dir.join("DIGADIAG_ver061.FRM");
     let diag_out = dir.join("DIGADIAG.FRM");
     fs::write(&raw_in, &factory).unwrap();
 
@@ -87,6 +88,22 @@ fn test_prog061_bgo_patch_modes_and_digadiag_roundtrip() {
             true,
         )
         .is_err()
+    );
+
+    let rep_raw061 = patch_prog061_or_build_digadiag(
+        &raw_in,
+        &raw_ver061_out,
+        Prog061BgoPatchMode::UartMonitor,
+        false,
+    )
+    .unwrap();
+    assert!(!rep_raw061.digadiag_wrapped);
+    assert_eq!(rep_raw061.output_size, PROG061_EXPECTED_SIZE);
+    assert_eq!(
+        inspect_prog061_bgo_sites(&fs::read(&raw_ver061_out).unwrap())
+            .unwrap()
+            .detected_mode,
+        "UART_MONITOR_PANAMON1"
     );
 
     let report = patch_prog061_or_build_digadiag(

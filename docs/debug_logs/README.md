@@ -3,8 +3,8 @@
 
 # Logs de Bancada (`COM10` / `P7501`) e Dossiê Unbrick / Live Bench UART Captures
 
-**PT-BR:** Este diretório reúne o dossiê de bancada consolidado e as **19 capturas e transcrições verificadas** (`SHA-256` íntegros) coletadas diretamente no **Panasonic DMR-EH55** via sonda Pico **`P7501`** (`COM10`, `115200 8N1`) e no host Windows (`\\.\PhysicalDrive1`). Todas as capturas UART (`Pure UART Captures` e prefixos `[BOOTTRACE]`/`[CTRL]` nos transcritos híbridos) podem ser decodificadas offline pelo comando nativo em Rust:
-**EN-US:** This directory stores the consolidated hardware unbrick dossier and **19 verified bench captures and transcripts** (`SHA-256` verified) recorded live from a **Panasonic DMR-EH55** via the **`P7501`** Pico probe (`COM10`, `115200 8N1`) and Windows host (`\\.\PhysicalDrive1`). All UART captures (`Pure UART Captures` and `[BOOTTRACE]`/`[CTRL]` frames inside hybrid transcripts) can be decoded offline using the native Rust decoder:
+**PT-BR:** Este diretório reúne o dossiê de bancada consolidado e as **22 capturas e transcrições verificadas** (`SHA-256` íntegros) coletadas diretamente no **Panasonic DMR-EH55** via sonda Pico **`P7501`** (`COM10`, `115200 8N1`) e no host Windows (`\\.\PhysicalDrive1`). Todas as capturas UART (`Pure UART Captures` e prefixos `[BOOTTRACE]`/`[CTRL]` nos transcritos híbridos) podem ser decodificadas offline pelo comando nativo em Rust:
+**EN-US:** This directory stores the consolidated hardware unbrick dossier and **22 verified bench captures and transcripts** (`SHA-256` verified) recorded live from a **Panasonic DMR-EH55** via the **`P7501`** Pico probe (`COM10`, `115200 8N1`) and Windows host (`\\.\PhysicalDrive1`). All UART captures (`Pure UART Captures` and `[BOOTTRACE]`/`[CTRL]` frames inside hybrid transcripts) can be decoded offline using the native Rust decoder:
 
 ```powershell
 cargo run -p panadiga-cli -- pico decode-log --file docs/debug_logs/<arquivo>.log
@@ -42,14 +42,17 @@ Fluxo direto do Pico `P7501` (`UARTMON`, `UARTSTREAM`, `BOOTTRACE`) sem cabeçal
 
 ---
 
-## 2. Transcritos de Automação Python & Sondas Híbridas (`4` Python Bench Harness Transcripts)
+## 2. Transcritos de Automação Python & Sondas Híbridas (`7` Python Bench Harness Transcripts)
 
 Logs estruturados emitidos pelos harnesses de bancada em `COM10` combinando `STATUS`, `BOOTTRACE` e sessões interativas `PANAMON1>` (compatíveis com `panadiga pico decode-log`, preservando linhas `[PRECHECK]`/`[1A..2D]`):
 
 | Arquivo `.log` / File | Tamanho / Size | SHA-256 Verificado | Classe / Escopo | Evidência Empírica Registrada |
 | :--- | ---: | :--- | :--- | :--- |
+| [`apply_bgo_repair_com10_20261119.log`](./apply_bgo_repair_com10_20261119.log) | 1.898 B | `928CA5AD858DC1FFD677FC7F38AB2A456CB6034A38199F407E85046B57BFA8BC` | Cirurgia FTL BGO Ciclo 1 ao vivo via `PANAMON1>` (`U CONFIRM_UPPER_NOR` / `U LOCK`) | Formata `SA70` (`256` zeros em `20.7s`) + `1.629` escritas puras `1->0` em 13 setores (`SA42..SA66`) + `ifodev2_blk2` (`0x0055`) + páginas FAT `0x0F0A`/`0x0F19` com read-back 100% verificado. |
 | [`diagnose_please_wait_90s_20261119.log`](./diagnose_please_wait_90s_20261119.log) | 3.741 B | `2880A883B7233C9C234DDEE450B665E1FA8ACE32C802BA44BD9E23F4FCC64DE6` | Harness `STATUS` + `BOOTTRACE 90000 NORMAL` + `UARTSTREAM 40000 PASSIVE` | Prova ciclos `PLEASE WAIT` / reset WDT (`~43.3s` em `+44.9s` / `+55.0s` / `+74.5s`) antes da isolação do bloqueio em `CH1`. |
 | [`repair_bgo_sa39_sa54_com10_20261119.log`](./repair_bgo_sa39_sa54_com10_20261119.log) | 5.782 B | `E17D9AC36CF31CEAA876673931052C8393CA817AE838DF3D9D1FDCBFF4B3206E` | Harness `STATUS` + `BOOTTRACE 15000 NOJIG` (`--boot-only` pós-reparo `SA54/SA41/SA29/SA39`) | Confirma `VDD: 3.25V (OK)`, `Loader ver0.61 [06/03/06]` -> `normal mode` -> `*** RTSC Initialize ***` **sem `U99` no Loader**; falha `CH1` `80000404`/`E8000000` -> `[nfrom] file_no[17]` -> fallback em FVU stock `05/11/01` (`0x2182DC9`). |
+| [`probe_fe_release_com10_20261119.log`](./probe_fe_release_com10_20261119.log) | 2.839 B | `7973A4AB246AD5D17BCBCD1522979608E4F3D47FA58D836A3E652A189C9BC948` | Sonda `DAVIS` pós-liberação F/E (`0x90500000` + `TM2`/`TM11` + `0x9040C700`) | Prova `CH0` (`[2A]`/`[2B]` `[RTSD] ATAPI Software Reset` OK em `2.20s`, `STATUS=0x50` / `0xEB14` ATAPI) e isola travamento em `CH1_DEVCTL_89000D58` (`R 89000D58,4` timeout `2.5s`) enquanto `CH1_CTL_89000C00` responde `030000007A52...`. |
+| [`probe_ch1_after_fe_com10_20261119.log`](./probe_ch1_after_fe_com10_20261119.log) | 809 B | `3AB8BE1378C9430A3A60E3C0F1016DAB047F6EBB4247A518D70368BEEE532E64` | Sonda `CH1 b444(1) + b55b(0,1,0)` após liberação F/E & `TM11` | Registra `[2D FAIL]` timeout em `J 9040C700` (`5.0s`) sobre `CH1` antes da rotação de orientação `IDE2SAT2` (`180°` vs `0°`). |
 | [`probe_ch1_full_diag_20261119.log`](./probe_ch1_full_diag_20261119.log) | 12.244 B | `A6E71B147C17BAAE6F5F139C3F6D8F604E9C1461B7F22E557A00DBEA8FC0646C` | Híbrido `BOOTTRACE 15000 NORMAL` + `PANAMON1>` (`MN103S` RAM probe) | Entrada direta em `PANAMON1>` via `PANA__SD.FRM` `cdcc2cdf...` (`0x214E681`) sem JIG; `J 504156AD` (`0x504F81D0=2` vs `0x504F81D4=1`); `CH0=0x50` vs `IDE2SAT2 180° = 0x00002004` (`DD13\|DD2`). |
 | [`probe_ch1_live_v2_0deg_20261119.log`](./probe_ch1_live_v2_0deg_20261119.log) | 7.455 B | `F6225540D20818667FF7C81BF48FC45D202D115BCDC71A3F5ECC656C7E935705` | Híbrido `BOOTTRACE 15000 NORMAL` + `PANAMON1>` (`MN103S` RAM probe) | Orientação **`0°`** retorna `0x00000000` em `CH1` (`2A..2C`, sem travamento em `0x89000D58`) e `FUN_5041CD4D(1)` `rc=0x00000000` (`struct_504F8234`: `is_init=1, is_atapi=0, is_ata=0`). |
 
