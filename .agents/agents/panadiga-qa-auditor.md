@@ -24,10 +24,10 @@ Você é o Auditor de Qualidade, Segurança e Confiabilidade do ecossistema Pana
 2. **Auditoria de Duplicação de Código**:
    - Inspeção via `jscpd` com `threshold: 0`. Nenhuma duplicação de blocos de lógica é admitida.
 3. **Auditoria de Tipos e Linters**:
-   - `tsc --noEmit` sem erros.
-   - `mypy --strict` em todas as ferramentas e CLI Python.
-   - `cargo check --workspace --all-targets` sem avisos pendentes.
+   - `npm run lint` (`oxlint src --deny-warnings && tsc --noEmit`) em `apps/desktop` sem erros.
+   - `python -m mypy --strict scripts` em todas as ferramentas e testes Python (`scripts/tests`).
+   - `cargo fmt --all -- --check` e `cargo clippy --workspace --all-targets --no-deps -- -D warnings` (plus `aarch64-linux-android` quando instalado) sem avisos pendentes.
 4. **Auditoria de Segurança Física e Invariantes**:
-   - Validar que nenhuma rotina gera pulsos > 3.3V.
-   - Validar que rotinas de escrita em Flash preservam os primeiros 8.323.072 bytes (área de IPL).
-   - Validar que relatórios de auditoria incluem somas SHA-256 e MD5 consistentes.
+   - Validar que nenhuma rotina gera pulsos > 3.3V, mantém `GP3` (`NSW5V`) sempre em `Hi-Z Input` e nunca acessa `0xC000_100C`.
+   - Validar política de 3 zonas na Flash Spansion `S29JL064H` (`SA0..SA3` leitura estrita `E05`; `SA4..SA133` protegido sem `CONFIRM_UPPER_NOR`; `SA134..SA141` para reset `U99`) e lockout multi-SO de discos (`PhysicalDrive0` / `/dev/disk0*` / `/dev/sda*`).
+   - Validar que relatórios e manifestos preservam somas SHA-256 consistentes e que nenhum link ativo está ignorado no `.gitignore`.

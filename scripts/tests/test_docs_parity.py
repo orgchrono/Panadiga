@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 from pathlib import Path
 from urllib.parse import unquote
 
@@ -158,6 +159,25 @@ def test_debug_logs_inventory_and_sha256() -> None:
         assert digest in readme_upper, f"SHA-256 {digest} missing for {log_path.name}"
 
 
+def _assert_not_git_ignored(paths: list[Path]) -> None:
+    """Fail if any documentation link target or required ledger path is ignored by .gitignore."""
+    if not (ROOT / ".git").exists():
+        return
+    rels = sorted({p.resolve().relative_to(ROOT.resolve()).as_posix() for p in paths})
+    if not rels:
+        return
+    proc = subprocess.run(
+        ["git", "check-ignore", "--stdin"],
+        cwd=ROOT,
+        input="\n".join(rels) + "\n",
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    ignored = [line.strip() for line in proc.stdout.splitlines() if line.strip()]
+    assert not ignored, f"Doc links / required ledger paths ignored by .gitignore: {ignored}"
+
+
 def test_stale_hash_absent_and_relative_links_resolve() -> None:
     """Reject stale PANA__SD.FRM hash in active docs and verify relative links resolve on disk."""
     active_files: list[Path] = [
@@ -181,7 +201,13 @@ def test_stale_hash_absent_and_relative_links_resolve() -> None:
             for badge in _PT_MATURITY_BADGES:
                 assert badge not in lower, f"Portuguese badge {badge} found in English doc {path.relative_to(ROOT)}"
 
-    link_sources = (DOCS / "INDEX.md", ROOT / "AUDITORIA_COMPLETA.md", ROOT / "COMPLETE_AUDIT.md")
+    link_sources = (
+        DOCS / "INDEX.md",
+        DOCS / "STATUS.md",
+        ROOT / "AUDITORIA_COMPLETA.md",
+        ROOT / "COMPLETE_AUDIT.md",
+    )
+    checked_targets: list[Path] = []
     for src in link_sources:
         text = src.read_text(encoding="utf-8")
         for target in _MD_LINK_RE.findall(text):
@@ -189,6 +215,8 @@ def test_stale_hash_absent_and_relative_links_resolve() -> None:
                 continue
             resolved = (src.parent / unquote(target)).resolve()
             assert resolved.exists(), f"Broken link {target!r} in {src.relative_to(ROOT)}"
+            checked_targets.append(resolved)
+    _assert_not_git_ignored(checked_targets)
 
 
 def _require_nonempty_str_list(raw: object, label: str) -> list[str]:
@@ -213,6 +241,7 @@ def test_evidence_ledger_integrity() -> None:
 
     seen_ids: set[str] = set()
     n4_covered_docs: set[str] = set()
+    required_paths: list[Path] = []
     for raw_entry in entries:
         assert isinstance(raw_entry, dict)
         ev_id = raw_entry.get("id")
@@ -230,7 +259,9 @@ def test_evidence_ledger_integrity() -> None:
         doc_refs = _require_nonempty_str_list(raw_entry.get("docs"), f"{ev_id}.docs")
 
         for rel_path in [*evidence_files, *doc_refs]:
-            assert (ROOT / rel_path).is_file(), f"Missing file {rel_path!r} referenced by {ev_id}"
+            ref_file = ROOT / rel_path
+            assert ref_file.is_file(), f"Missing file {rel_path!r} referenced by {ev_id}"
+            required_paths.append(ref_file)
 
         if level in ("N4_HARDWARE", "N5_REPRODUCED"):
             n4_covered_docs.update(doc_refs)
@@ -248,10 +279,13 @@ def test_evidence_ledger_integrity() -> None:
             target = ROOT / rel
             if required:
                 assert target.is_file(), f"Missing required SHA-256 target {rel!r} in {ev_id}"
+                required_paths.append(target)
             if target.is_file():
                 assert sha256_file(target).upper() == expected_sha.upper(), (
                     f"SHA-256 mismatch for {rel!r} in {ev_id}"
                 )
+
+    _assert_not_git_ignored(required_paths)
 
     for md in sorted((DOCS / "pt-BR").glob("*.md")):
         if "[provado em hardware real]" in md.read_text(encoding="utf-8").lower():

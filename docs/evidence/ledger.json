@@ -37,12 +37,12 @@
         {
           "path": "firmware_and_images/sd_unbrick_kit/DIGADIAG.FRM",
           "sha256": "DE72E2640EE48A7628A674E3DAD731CFF71548FC9EA3403CA616F3E5F7E392C0",
-          "required": false
+          "required": true
         },
         {
           "path": "firmware_and_images/sd_unbrick_kit/PANA__SD.FRM",
           "sha256": "CDCC2CDF4617C4F08D8AF3F617DB369CFD360D8DB2601B33C84BAE0E6F995D90",
-          "required": false
+          "required": true
         }
       ],
       "docs": [
@@ -63,6 +63,7 @@
       "evidence_files": [
         "docs/debug_logs/apply_bgo_repair_com10_20261119.log",
         "docs/debug_logs/repair_bgo_sa39_sa54_com10_20261119.log",
+        "docs/evidence/bgo_repair_plan_com10_20261119.json",
         "crates/panadiga-core/src/re/bgo_unbrick.rs"
       ],
       "sha256_assertions": [
@@ -79,7 +80,7 @@
         {
           "path": "firmware_and_images/eh55_nor_8mb_ic5001_dump.bin",
           "sha256": "C1FAEE798F60545853EEFDBA0D15F23678B471466DC2BC84F522BC972F15A02D",
-          "required": false
+          "required": true
         }
       ],
       "docs": [
@@ -112,7 +113,7 @@
         {
           "path": "firmware_and_images/eh55_nor_8mb_ic5001_repaired.bin",
           "sha256": "ADB21D955ED96121249E7ABEEC58E1CE3951F511A595636D70EBB07A35CA4C9C",
-          "required": false
+          "required": true
         }
       ],
       "docs": [
@@ -149,7 +150,7 @@
         {
           "path": "firmware_and_images/sd_unbrick_kit/PANA__SD.FRM",
           "sha256": "CDCC2CDF4617C4F08D8AF3F617DB369CFD360D8DB2601B33C84BAE0E6F995D90",
-          "required": false
+          "required": true
         }
       ],
       "docs": [
@@ -228,7 +229,12 @@
         {
           "path": "firmware_and_images/eh55_nor_8mb_ic5001_repaired.bin",
           "sha256": "ADB21D955ED96121249E7ABEEC58E1CE3951F511A595636D70EBB07A35CA4C9C",
-          "required": false
+          "required": true
+        },
+        {
+          "path": "firmware_and_images/eh55_ifodev2_m6930lb_2048b.bin",
+          "sha256": "F4F22DD0407D9F0BEBF4621E938F2CA02E3B6C5F23B21AE972C5185704A77676",
+          "required": true
         }
       ],
       "docs": [
@@ -425,6 +431,46 @@
       "sha256_assertions": [],
       "docs": [
         "docs/pt-BR/HISTORICO_UNBRICK_EH55_BGO_CH1_DAVIS_E_REGIAO.md"
+      ]
+    },
+    {
+      "id": "EV-20261120-017",
+      "level": "N2_EMULATED",
+      "claim_pt": "Frame keepalive 255s IC7501 TBUS (build_ic7501_wdt_255s_frame [0x8A, 0x02, 0x00, 0xFF, .., 0x30]) e stub M0 (emit_m0_tbus_wdt_keepalive_stub) executados deterministicamente no Mn103Vm.",
+      "claim_en": "IC7501 TBUS 255s keepalive frame (build_ic7501_wdt_255s_frame [0x8A, 0x02, 0x00, 0xFF, .., 0x30]) and M0 stub (emit_m0_tbus_wdt_keepalive_stub) deterministically verified in Mn103Vm.",
+      "sites": [
+        "0xDC01_0000 (TBUS strobe bit 4)",
+        "0xDC01_0010..0xDC01_001F (16B TX frame, sum 0x30)",
+        "0x5180_0000 (SDRAM M0 stub entry)"
+      ],
+      "evidence_files": [
+        "crates/panadiga-core/src/re/tbc_appliance/keepalive.rs",
+        "crates/panadiga-core/src/re/tbc_appliance/tests.rs"
+      ],
+      "sha256_assertions": [],
+      "docs": [
+        "docs/pt-BR/DIGADIAG_PANA_SD_E_TBC_AUTONOMO.md"
+      ]
+    },
+    {
+      "id": "EV-20261120-018",
+      "level": "N1_STATIC",
+      "claim_pt": "Triangulacao estatica AIOF/IC3001 em EH55_MAIN_3410PQ.bin: 82 descritores AIOF (+0x00..+0xB4 em 0x578935FC..0x57893888), 98 presets (0x578957D8..0x5789595C), AIOF_ClockStart (+0x66=0x8001) e endereco I2C 7-bit 0x4A / 8-bit 0x94 para IC3001 em 0x570D627E.",
+      "claim_en": "Static triangulation of AIOF/IC3001 in EH55_MAIN_3410PQ.bin: 82 AIOF register descriptors (+0x00..+0xB4 at 0x578935FC..0x57893888), 98 preset pointers (0x578957D8..0x5789595C), AIOF_ClockStart (+0x66=0x8001), and IC3001 I2C slave 7-bit 0x4A / 8-bit 0x94 at 0x570D627E.",
+      "sites": [
+        "0x578935FC..0x57893888 (82 AIOF descriptors)",
+        "0x578957D8..0x5789595C (98 preset tables)",
+        "0x570D64E4..0x570D65AC (AIOF_SoftReset / ClockStart)",
+        "0x570D627E (iic33 0x94 IC3001)"
+      ],
+      "evidence_files": [
+        "crates/panadiga-core/src/constants/tbc_mmio.rs",
+        "crates/panadiga-core/src/re/region_compat/tv_standard/mmio.rs",
+        "docs/pseudocode/raw/doc_main.txt"
+      ],
+      "sha256_assertions": [],
+      "docs": [
+        "docs/pt-BR/DIGADIAG_PANA_SD_E_TBC_AUTONOMO.md"
       ]
     }
   ]

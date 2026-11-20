@@ -36,7 +36,7 @@ The platform operates across all stages of the hybrid DIGA engineering workflow:
 | **macOS (Apple Silicon ARM64)** | `panadiga-macos-aarch64.tar.gz` (+ `.sha256`) | `panadiga`, `panadiga-desktop`, `tools/ghidra/` |
 | **Android (ARM64 APK)** | `panadiga-android-arm64.apk` (+ `.sha256`) | Native Tauri 2 mobile APK with USB-C OTG CDC-ACM, BLE Nordic UART Service (NUS), and **DIGA IR Commander** (Panasonic Kaseikyo & ConsumerIrManager / Exynos HAL) |
 | **Raspberry Pi Pico Probe** | `panasonic_p7501_uart_rp2040.uf2`, `panasonic_p7501_uart_rp2350.uf2`, `panasonic_p7501_uart_unified.uf2` (+ `.sha256`) | Dual-target C11 + PIO firmware (`RP2040`, `RP2350`, and RP2350-E10 compliant unified UF2) |
-| **Verified Firmware & Recovery Pack** | [Release `firmware-pack-v0.1.0`](https://github.com/orgchrono/Panadiga/releases/tag/firmware-pack-v0.1.0) | `13` verified assets: `DMR-EH55`, `DMR-EH58` (`DVDRAM.7z`), `DMR-EH50`, `DMR-EH49/59/69`, `DMR-EX/EZ` (`19` models incl. `EX78EN`/`EX88EN`), `DMR-ES35V` 8 MB NOR + 8 KB EEPROM (`flash.bin`/`eeprom.bin`), `dmr-am34-unpacked-plaintext-bootloaders-and-kernels.7z` (`47` plaintext binaries), `DMR-EZ485V` 4 MB LSI NOR, HDD `.bin.gz`, extracted partitions, `FIRMWARE_SHA256SUMS.txt` |
+| **Verified Firmware & Recovery Pack** | [Release `firmware-pack-v0.1.0`](https://github.com/orgchrono/Panadiga/releases/tag/firmware-pack-v0.1.0) | `14+` verified assets: `DMR-EH55` & repaired Brazilian **`DMR-EH55LB-S` (`M6930LB` `PAL-M`)** 8 MiB NOR (`eh55_nor_8mb_ic5001_repaired.bin`, `adb21d95...`) + extracted `2,048 B` `ifodev2` (`eh55_ifodev2_m6930lb_2048b.bin`, `f4f22dd0...`) + `sd_unbrick_kit/PANA__SD.FRM` (Door #1 headless boot), `DMR-EH58` (`DVDRAM.7z`), `DMR-EH50`, `DMR-EH49/59/69`, `DMR-EX/EZ` (`19` models incl. `EX78EN`/`EX88EN`), `DMR-ES35V` 8 MB NOR + 8 KB EEPROM (`flash.bin`/`eeprom.bin`), `dmr-am34-unpacked-plaintext-bootloaders-and-kernels.7z` (`47` plaintext binaries), `DMR-EZ485V` 4 MB LSI NOR, HDD `.bin.gz`, extracted partitions, `FIRMWARE_SHA256SUMS.txt` |
 
 ### 2.1 Embedded RP2040 / RP2350 P7501 UART Probe Firmware & Bench Automation
 
@@ -148,10 +148,10 @@ panadiga unbrick prepare-sd --outdir ./sd_card_eh55_kit
 ## 5. Quality Gates — Automated Enforcement (`scripts/validate.py`)
 
 ```text
-✅ Gate 1   — Rust Workspace (`cargo fmt`, `cargo clippy -D warnings`, 258 workspace tests + Android target check)
+✅ Gate 1   — Rust Workspace (`cargo fmt`, `cargo clippy -D warnings`, 259 workspace tests + Android target check)
 ✅ Gate 2   — Oxlint + TypeScript Strict Check (`apps/desktop`, 354 files)
 ✅ Gate 3   — Vitest Frontend MVVM / Redux / Hooks / Pipelines / IR Commander Suite (116 tests across 36 files)
-✅ Gate 4   — jscpd Clone Detector (Threshold 0% — zero structural clones across 895 files)
+✅ Gate 4   — jscpd Clone Detector (Threshold 0% — zero structural clones across 896 files)
 ✅ Gate 5   — ux-guard UI/UX Completeness & State Integrity Audit (100/100 across 354 files)
 ✅ Gate 6   — Playwright E2E Chromium Headless Suite (23 tests across 8 specs, incl. Region/TBC/HDD 5GB–2TB/BGO/DAVIS & IR Commander flows)
 ✅ Gate 7   — Ghidra Native SSOT Jython Exporter (Idempotent export check)

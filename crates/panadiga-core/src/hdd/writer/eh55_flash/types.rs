@@ -46,12 +46,12 @@ pub struct WindowsPhysicalFlashDevice {
 }
 
 impl WindowsPhysicalFlashDevice {
-    /// Opens `device_path` (never `PhysicalDrive0`), enforcing Administrator privilege when
+    /// Opens `device_path` (never OS boot disks), enforcing Administrator/root privilege when
     /// `writable == true` and caching verified length and bus type.
     pub fn open(device_path: &str, writable: bool) -> Result<Self> {
         if writable && !is_current_user_admin() {
             bail!(
-                "Administrator privileges required to open physical disk '{}' for writing",
+                "Administrator/root privileges required to open physical disk '{}' for writing",
                 device_path
             );
         }
@@ -122,7 +122,7 @@ pub struct SafeTargetDiskInfo {
     pub mirror_main_lba: Option<u64>,
 }
 
-fn infer_bus_type_id(bus_type: &str) -> u32 {
+pub(crate) fn infer_bus_type_id(bus_type: &str) -> u32 {
     let low = bus_type.trim().to_ascii_lowercase();
     if low.contains("nvme") {
         BUS_TYPE_NVME
@@ -151,10 +151,7 @@ pub fn enrich_safe_target_disks(drives: &[PhysicalDriveInfo]) -> Vec<SafeTargetD
         .map(|d| {
             let bus_type_id = infer_bus_type_id(&d.bus_type);
             let is_nvme_blocked = bus_type_id == BUS_TYPE_NVME;
-            let is_drive_0 = d
-                .device_path
-                .to_ascii_lowercase()
-                .contains("physicaldrive0");
+            let is_drive_0 = super::super::block_ops::is_unconditional_os_boot_disk(&d.device_path);
             let is_os_blocked = d.is_system_drive || !d.safe_to_write || is_drive_0;
             let safe_to_flash = !is_os_blocked && !is_nvme_blocked;
             let lockout_reason = if is_nvme_blocked {

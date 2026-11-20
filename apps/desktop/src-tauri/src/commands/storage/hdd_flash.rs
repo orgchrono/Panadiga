@@ -9,6 +9,7 @@ use panadiga_core::hdd::capacity_patch::specs::blocks_2kb_for_gb_bounded;
 use panadiga_core::hdd::writer::{
     BlockFlashDevice, Eh55FlashStage, Eh55HddFlashReport, Eh55HddFlashRequest, SafeTargetDiskInfo,
     WindowsPhysicalFlashDevice, execute_eh55_hdd_flash, inspect_safe_target_disks,
+    is_unconditional_os_boot_disk,
 };
 use serde::{Deserialize, Serialize};
 use tauri::Emitter;
@@ -61,9 +62,9 @@ pub fn build_eh55_flash_request_from_dto(
             "devicePath não pode ser vazio.",
         ));
     }
-    if dev.to_ascii_lowercase().contains("physicaldrive0") {
+    if is_unconditional_os_boot_disk(dev) {
         return Err(PanadigaIpcError::validation(
-            "LOCKOUT FÍSICO FATAL: PhysicalDrive0 (disco do SO) é permanentemente bloqueado.",
+            "LOCKOUT FÍSICO FATAL: Disco primário de boot do SO (PhysicalDrive0 / disk0) é permanentemente bloqueado.",
         ));
     }
     let token = normalize_disk_confirm_token(&dto.confirm_disk_model_token);

@@ -657,12 +657,12 @@ O ecossistema Panadiga impõe uma rigorosa pipeline anti-regressão composta por
        Camada 4: Testes Unitários e de Componente da UI Desktop (Vitest + React Testing Library — 116 testes / 36 arquivos)
        Camada 3: Testes de Host C11 do Firmware Pico (Harness GCC/MSVC — 31 testes / 4 módulos)
        Camada 2: Scripts Python & Verificação Pytest (29 testes Pytest / 5 arquivos + Mypy Strict em 43 fontes)
-       Camada 1: Testes Nativos do Workspace Rust (Cargo Test — 258 testes em core/cli/desktop/mcp/rag)
+       Camada 1: Testes Nativos do Workspace Rust (Cargo Test — 259 testes em core/cli/desktop/mcp/rag)
 ```
 
 ### 13.1. Os 9 Quality Gates Integrados e Ativos
 
-1. **Rust Cargo Check & Test Gate:** Formatação (`cargo fmt`), clippy estrito (`-D warnings`) e 258 testes unitários/integração em todo o workspace (`panadiga-core`, `panadiga-cli`, `panadiga-desktop`, `panadiga-mcp` e `panadiga-rag`).
+1. **Rust Cargo Check & Test Gate:** Formatação (`cargo fmt`), clippy estrito (`-D warnings`) e 259 testes unitários/integração em todo o workspace (`panadiga-core`, `panadiga-cli`, `panadiga-desktop`, `panadiga-mcp` e `panadiga-rag`).
 2. **TypeScript Strict Type-Check Gate:** `oxlint --deny-warnings` + `tsc --noEmit` valida tipagem estrita com zero escapes `any`.
 3. **Frontend Vitest Unit Suite:** Cobre ViewModels, resolvedores de links/binários, componentes React e transições de estado algébricas com 116 testes em 36 arquivos em `apps/desktop/src/**/*.test.{ts,tsx}`.
 4. **Copy/Paste Detector (`jscpd`):** Limite estrito de 0.00% de duplicação de código.

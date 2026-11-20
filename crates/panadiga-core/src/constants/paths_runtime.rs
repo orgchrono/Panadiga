@@ -72,7 +72,14 @@ pub fn resolve_writable_data_root() -> std::path::PathBuf {
             return std::path::PathBuf::from(xdg).join("panadiga");
         }
         if let Some(home) = std::env::var_os("HOME").filter(|s| !s.is_empty()) {
-            return std::path::PathBuf::from(home).join("Panadiga");
+            let base = std::path::PathBuf::from(home);
+            #[cfg(target_os = "macos")]
+            return base
+                .join("Library")
+                .join("Application Support")
+                .join("Panadiga");
+            #[cfg(not(target_os = "macos"))]
+            return base.join(".local").join("share").join("panadiga");
         }
     }
     ws

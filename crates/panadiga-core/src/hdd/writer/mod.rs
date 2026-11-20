@@ -9,9 +9,9 @@ mod types;
 pub mod win_ioctl;
 
 pub use block_ops::{
-    DriveWriteReport, open_verified_block_device, restore_meihdfs_from_mirrors,
-    verify_safety_lockout, verify_safety_lockout_with_os_disks, write_meihdfs_procedural_to_drive,
-    write_raw_image_to_drive,
+    DriveWriteReport, is_unconditional_os_boot_disk, open_verified_block_device,
+    restore_meihdfs_from_mirrors, verify_safety_lockout, verify_safety_lockout_with_os_disks,
+    write_meihdfs_procedural_to_drive, write_raw_image_to_drive,
 };
 pub use discovery::{
     list_drives_by_role, list_hard_disk_drives, list_physical_drives, list_sd_card_drives,
@@ -46,11 +46,28 @@ mod tests {
                 .to_string()
                 .contains("SAFETY INVARIANT VIOLATION")
         );
+        for protected in [
+            "/dev/sda",
+            "/dev/sda1",
+            "/dev/disk0",
+            "/dev/rdisk0",
+            "/dev/disk0s1",
+            "/dev/rdisk0s2",
+        ] {
+            let token = format!("CONFIRM-{protected}");
+            assert!(
+                verify_safety_lockout_with_os_disks(protected, &token, None)
+                    .unwrap_err()
+                    .to_string()
+                    .contains("SAFETY INVARIANT VIOLATION"),
+                "Expected lockout for {protected}"
+            );
+        }
         assert!(
-            verify_safety_lockout_with_os_disks("/dev/sda", "CONFIRM-/dev/sda", None)
-                .unwrap_err()
-                .to_string()
-                .contains("SAFETY INVARIANT VIOLATION")
+            verify_safety_lockout_with_os_disks("/dev/disk2", "CONFIRM-/dev/disk2", None).is_ok()
+        );
+        assert!(
+            verify_safety_lockout_with_os_disks("/dev/rdisk2", "CONFIRM-/dev/rdisk2", None).is_ok()
         );
     }
 
@@ -137,5 +154,11 @@ mod tests {
             Some("/dev/sda1".to_string())
         );
         assert!(parse_cim_disk_drives_json_with_sys("", None).is_empty());
+
+        use super::discovery_unix::should_run_macos_diskutil;
+        assert!(should_run_macos_diskutil("/dev/disk0").is_err());
+        assert!(should_run_macos_diskutil("/dev/rdisk0s2").is_err());
+        assert!(should_run_macos_diskutil("/dev/disk2").unwrap());
+        assert!(!should_run_macos_diskutil("/var/folders/tmp/disk_meihdfs.bin").unwrap());
     }
 }

@@ -84,7 +84,17 @@ firmware_and_images/*.zip
 firmware_and_images/*.FRM
 firmware_and_images/*.frm
 firmware_and_images/extracted_partitions/
-firmware_and_images/sd_unbrick_kit/
+!firmware_and_images/sd_unbrick_kit/
+!firmware_and_images/sd_unbrick_kit/SHA256SUMS.txt
+!firmware_and_images/sd_unbrick_kit/LEIA_ME_CARTAO_SD.txt
+!firmware_and_images/sd_unbrick_kit/prepare_report.json
+!firmware_and_images/sd_unbrick_kit/DIGADIAG.FRM
+!firmware_and_images/sd_unbrick_kit/PANA__SD.FRM
+!firmware_and_images/eh55_ifodev2_m6930lb_2048b.bin
+!firmware_and_images/eh55_nvram_64k_raw.bin
+!firmware_and_images/eh55_loader_ver061_256k.bin
+!firmware_and_images/eh55_nor_8mb_ic5001_dump.bin
+!firmware_and_images/eh55_nor_8mb_ic5001_repaired.bin
 !firmware_and_images/**/README.md
 !firmware_and_images/*.bin.gz
 

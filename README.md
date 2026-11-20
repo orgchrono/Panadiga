@@ -643,12 +643,12 @@ The Panadiga engineering ecosystem enforces a strict **9 Quality Gates** anti-re
        Layer 4: Desktop UI Unit & Component Tests (Vitest + React Testing Library — 116 tests / 36 files)
        Layer 3: C11 Pico Firmware Host Tests (GCC/MSVC Host Test Harness — 31 tests / 4 modules)
        Layer 2: Python Scripts & RE Pytest Verification (29 Pytest tests / 5 files + mypy --strict 43 files)
-       Layer 1: Native Rust Workspace Tests (Cargo Test — 258 tests across core/cli/desktop/mcp/rag)
+       Layer 1: Native Rust Workspace Tests (Cargo Test — 259 tests across core/cli/desktop/mcp/rag)
 ```
 
 ### 13.1. The 9 Active Quality Gates
 
-1. **Rust Cargo Check & Test Gate:** Verifies formatting (`cargo fmt`), strict clippy (`-D warnings`), and all 258 workspace unit and integration tests across `panadiga-core`, `panadiga-cli`, `panadiga-desktop`, `panadiga-mcp`, and `panadiga-rag`.
+1. **Rust Cargo Check & Test Gate:** Verifies formatting (`cargo fmt`), strict clippy (`-D warnings`), and all 259 workspace unit and integration tests across `panadiga-core`, `panadiga-cli`, `panadiga-desktop`, `panadiga-mcp`, and `panadiga-rag`.
 2. **TypeScript Strict Type-Check Gate:** `oxlint --deny-warnings` + `tsc --noEmit` verifies strict frontend types with zero `any` leaks.
 3. **Frontend Vitest Unit Suite:** Covers ViewModels, binary/doc link resolvers, React components, and algebraic state transitions across 116 tests in 36 files under `apps/desktop/src/**/*.test.{ts,tsx}`.
 4. **Copy/Paste Detector (`jscpd`):** Enforces 0.00% code duplication threshold.

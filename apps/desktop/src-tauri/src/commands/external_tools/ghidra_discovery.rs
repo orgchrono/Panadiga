@@ -65,15 +65,35 @@ pub(super) fn sync_ghidra_ssot_and_user_scripts(
     Ok((synced, user_scripts_dir))
 }
 
-#[cfg(target_os = "windows")]
-pub(super) fn discover_ghidra_install_and_project() -> GhidraInstallDiscovery {
-    let mut home_candidates: Vec<PathBuf> = Vec::new();
+#[cfg(not(target_os = "android"))]
+pub(super) fn collect_ghidra_home_candidates(scan_roots: &[PathBuf]) -> Vec<PathBuf> {
+    let mut candidates: Vec<PathBuf> = Vec::new();
     if let Ok(env_home) = std::env::var("GHIDRA_HOME") {
         let trimmed = env_home.trim();
         if !trimmed.is_empty() {
-            home_candidates.push(PathBuf::from(trimmed));
+            candidates.push(PathBuf::from(trimmed));
         }
     }
+    for base in scan_roots {
+        candidates.push(base.clone());
+        if let Ok(entries) = std::fs::read_dir(base) {
+            for entry in entries.flatten() {
+                let p = entry.path();
+                if p.is_dir()
+                    && p.file_name()
+                        .and_then(|n| n.to_str())
+                        .is_some_and(|n| n.starts_with("ghidra_"))
+                {
+                    candidates.push(p);
+                }
+            }
+        }
+    }
+    candidates
+}
+
+#[cfg(target_os = "windows")]
+pub(super) fn discover_ghidra_install_and_project() -> GhidraInstallDiscovery {
     let mut scan_roots = vec![
         PathBuf::from(r"C:\ghidra"),
         PathBuf::from(r"C:\tools\ghidra"),
@@ -83,20 +103,7 @@ pub(super) fn discover_ghidra_install_and_project() -> GhidraInstallDiscovery {
     if let Some(user_profile) = std::env::var_os("USERPROFILE").map(PathBuf::from) {
         scan_roots.push(user_profile.join("ghidra"));
     }
-    for base in &scan_roots {
-        if let Ok(entries) = std::fs::read_dir(base) {
-            for entry in entries.flatten() {
-                let p = entry.path();
-                if p.is_dir()
-                    && p.file_name()
-                        .and_then(|n| n.to_str())
-                        .is_some_and(|n| n.starts_with("ghidra_"))
-                {
-                    home_candidates.push(p);
-                }
-            }
-        }
-    }
+    let home_candidates = collect_ghidra_home_candidates(&scan_roots);
 
     let ghidra_home = home_candidates
         .into_iter()

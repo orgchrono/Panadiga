@@ -7,21 +7,10 @@ use windows_sys::Win32::Storage::FileSystem::{
     FILE_BEGIN, FlushFileBuffers, ReadFile, SetFilePointerEx, WriteFile,
 };
 
-use crate::constants::LBA_SECTOR_SIZE_BYTES;
-
 use super::win_impl::OwnedDiskHandle;
+use super::{ensure_writable_sector_io, validate_sector_aligned};
 
 const IO_CHUNK_BYTES: usize = 1024 * 1024;
-
-fn validate_sector_aligned(offset: u64, len: usize) -> Result<()> {
-    let sec = LBA_SECTOR_SIZE_BYTES as u64;
-    if !offset.is_multiple_of(sec) || !len.is_multiple_of(LBA_SECTOR_SIZE_BYTES) {
-        bail!(
-            "Unaligned raw disk I/O rejected (offset=0x{offset:X}, len={len}; must be {LBA_SECTOR_SIZE_BYTES}-byte aligned)"
-        );
-    }
-    Ok(())
-}
 
 impl OwnedDiskHandle {
     /// Flushes pending host buffers via `FlushFileBuffers`.
@@ -92,10 +81,7 @@ impl OwnedDiskHandle {
 
     /// Writes sector-aligned bytes at `offset` in bounded chunks.
     pub fn write_at(&mut self, offset: u64, data: &[u8]) -> Result<()> {
-        if !self.writable {
-            bail!("Cannot write to read-only handle '{}'", self.device_path);
-        }
-        validate_sector_aligned(offset, data.len())?;
+        ensure_writable_sector_io(self.writable, &self.device_path, offset, data.len())?;
         self.seek_abs(offset)?;
         let mut pos = 0usize;
         while pos < data.len() {

@@ -6,9 +6,29 @@ use crate::commands::error::{IpcResult, PanadigaIpcError};
 use std::path::Path;
 
 #[cfg(all(not(target_os = "windows"), not(target_os = "android")))]
-use super::ghidra_discovery::sync_ghidra_ssot_and_user_scripts;
+use super::ghidra_discovery::{collect_ghidra_home_candidates, sync_ghidra_ssot_and_user_scripts};
 #[cfg(all(not(target_os = "windows"), not(target_os = "android")))]
 use super::os_launch::{spawn_detached, unsupported_tool_err};
+
+#[cfg(all(not(target_os = "windows"), not(target_os = "android")))]
+fn discover_unix_ghidra_run() -> std::path::PathBuf {
+    let mut scan_roots: Vec<std::path::PathBuf> = vec![
+        std::path::PathBuf::from("/opt"),
+        std::path::PathBuf::from("/opt/ghidra"),
+        std::path::PathBuf::from("/usr/share"),
+        std::path::PathBuf::from("/usr/local/share"),
+        std::path::PathBuf::from("/usr/local/share/ghidra"),
+        std::path::PathBuf::from("/Applications"),
+    ];
+    if let Some(home) = std::env::var_os("HOME").map(std::path::PathBuf::from) {
+        scan_roots.push(home.join("ghidra"));
+    }
+    collect_ghidra_home_candidates(&scan_roots)
+        .into_iter()
+        .map(|dir| dir.join("ghidraRun"))
+        .find(|cand| cand.is_file())
+        .unwrap_or_else(|| std::path::PathBuf::from("ghidraRun"))
+}
 
 #[cfg(target_os = "linux")]
 fn spawn_first_terminal(root: &Path, shell_cmd: Option<&str>) -> Result<(), std::io::Error> {
@@ -66,11 +86,14 @@ pub(super) fn launch_for_current_os(tool: &str, root: &Path) -> IpcResult<String
         "ghidra_scripts" | "ghidra" | "ghidra_sync" => {
             let (synced, _) = sync_ghidra_ssot_and_user_scripts(root)?;
             let ghidra_dir = root.join("tools").join("ghidra");
-            spawn_detached("open", &[&ghidra_dir.to_string_lossy()], root).map_err(|e| {
-                PanadigaIpcError::io(format!("Falha ao abrir scripts do Ghidra: {}", e))
-            })?;
+            let ghidra_cmd = discover_unix_ghidra_run();
+            spawn_detached(&ghidra_cmd.to_string_lossy(), &[], root)
+                .or_else(|_| spawn_detached("open", &[&ghidra_dir.to_string_lossy()], root))
+                .map_err(|e| {
+                    PanadigaIpcError::io(format!("Falha ao abrir Ghidra / scripts no macOS: {}", e))
+                })?;
             Ok(format!(
-                "Scripts Jython SSOT sincronizados ({} arquivos) e diretório aberto no Finder.",
+                "Ghidra / scripts Jython SSOT sincronizados ({} arquivos) e abertos no macOS.",
                 synced
             ))
         }
@@ -113,32 +136,9 @@ pub(super) fn launch_for_current_os(tool: &str, root: &Path) -> IpcResult<String
         }
         "ghidra_scripts" | "ghidra" | "ghidra_sync" => {
             let (synced, _) = sync_ghidra_ssot_and_user_scripts(root)?;
-            let mut ghidra_cmd: Option<std::path::PathBuf> = None;
-            if let Ok(home_env) = std::env::var("GHIDRA_HOME")
-                && std::path::Path::new(&home_env).join("ghidraRun").is_file()
-            {
-                ghidra_cmd = Some(std::path::PathBuf::from(home_env).join("ghidraRun"));
-            }
-            if ghidra_cmd.is_none() {
-                for base in ["/opt", "/usr/share", "/usr/local/share"] {
-                    if let Ok(entries) = std::fs::read_dir(base) {
-                        for e in entries.flatten() {
-                            let cand = e.path().join("ghidraRun");
-                            if cand.is_file() {
-                                ghidra_cmd = Some(cand);
-                                break;
-                            }
-                        }
-                    }
-                    if ghidra_cmd.is_some() {
-                        break;
-                    }
-                }
-            }
-            let ghidra_res = if let Some(ref bin) = ghidra_cmd {
-                spawn_detached(&bin.to_string_lossy(), &[], root)
-            } else {
-                spawn_detached("ghidraRun", &[], root).or_else(|_| {
+            let ghidra_cmd = discover_unix_ghidra_run();
+            let ghidra_res =
+                spawn_detached(&ghidra_cmd.to_string_lossy(), &[], root).or_else(|_| {
                     spawn_detached("ghidra", &[], root).or_else(|_| {
                         spawn_detached(
                             "xdg-open",
@@ -146,8 +146,7 @@ pub(super) fn launch_for_current_os(tool: &str, root: &Path) -> IpcResult<String
                             root,
                         )
                     })
-                })
-            };
+                });
             ghidra_res.map_err(|e| {
                 PanadigaIpcError::io(format!("Falha ao iniciar Ghidra no Linux: {}", e))
             })?;

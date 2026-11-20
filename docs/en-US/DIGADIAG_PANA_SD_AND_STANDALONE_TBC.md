@@ -125,3 +125,27 @@ panadiga unbrick nor-stub --wrap-digadiag --out unbrick_out/DIGADIAG_NOR_DUMPER.
 - **Viable Diskless TBC Routes (`[GHIDRA STATIC EVIDENCE / STAGE 0]` vs `[UNDER INVESTIGATION / CH1 PHYSICAL BLOCK]`):** Inside `MAIN3410PQ`, `VDM_Init` and `SDM_Init` (plus `FUN_574f5c6a`/`FUN_574f469d`) enforce HDD coupling (`HDD Err -> P-OFF!`), requiring `Stage15DigadiagTbc` / `PANA__SD.FRM` (`PROG 0x0B1800 -> 0x90400000`) or `Nor-FROM 0x84040000` for standalone TBC operation while `CH1` prevents `MAIN` boot.
 - **`ES10` / `ES15` / `ES35V` vs `EH55` Incompatibility Verdict (`[GHIDRA STATIC EVIDENCE / STAGE 0]`):** Firmware images from `DMR-ES10`/`ES15`/`ES35V` are NOT interchangeable with `DMR-EH55` and cause hardware/boot bricks due to SoC, memory, and power-rail mismatches: `MN2DS0009` vs `MN2DS0012-H`/`MN2DS00151DB`, `RFKFM6016KT` vs `24LC64`, `X_SW_12V`/`DR12V`/`DR5V`, and `ES35V` XIP execution (`0x130000..0x40FFFF`).
 - **Front Panel `FRONT(L)` & `IR7501` (`[GHIDRA STATIC EVIDENCE / STAGE 0]`):** The `FRONT(L)` sub-PCB carries only `[POWER]`; remaining keys sit on Main PCB `KEYIN1..3` while `IR7501` (`PNA4618M09VT`, `X_SW_5R2V`) services Standby `SERV` (`[CH UP]+[OPEN/CLOSE]+[REC]` for 5 s in `Power OFF`) before handing off to `FPC_ReciveTASK`/`R_SERVICEMODE` in `MAIN` ([`EH55_UNBRICK_BREAKTHROUGH_BGO_CH1_DAVIS_AND_REGION.md`](./EH55_UNBRICK_BREAKTHROUGH_BGO_CH1_DAVIS_AND_REGION.md)).
+
+---
+
+## 6. Stage-0 Static Triangulation (`AIOF` / `IC3001` / `IC7501 M0`) & Door #1 Bench Runbook
+
+### 6.1 Verified `AIOF` Register Table, Clock Sequencing & `IC3001` (`EH55_MAIN_3410PQ.bin`)
+
+1. **Complete 82-Register `AIOF` Bank (`0x8800_0000..0x8800_00B4`, `{u32 name_ptr, u32 reg_off}` descriptors at `0x578935FC..0x57893888`):**
+   - Mode & Clock Controls: `VMODESEL` (`+0x00`: `0x8020` `cps_ntsc`, `0x8021` `cps_pal_m`, `0x8027` `cps_pal`), `V` (`+0x66`: Preset `[93]` `clock_start = 0x8001`, Preset `[94]` `ddr_stop = 0x8039`), `TEST1` (`+0x6C`: Preset `[0]` `0xB040`; `AIOF_SoftReset` `@ 0x570D64E4` clears bit 15 `& 0x7FFF`).
+   - TBC & Frame Sync: `TBCSS0..2` (`+0x1C/+0x1E/+0x20`), `TBC` (`+0x24`), `FS0..1` (`+0x2C/+0x2E`: Preset `[85]` `standard = 0x40F0`, Preset `[86]` `not_standard = 0xC0F0`), `YC3` (`+0x64`: Preset `[90]` `mvagc_line_tbc_on` bit 5 `0x0020`), `CONT` (`+0xA4`: `[80]` `ntsc_setup_lighter = 0x4000`, `[81]` `ntsc_setup_darker = 0x8000`).
+   - Read-Only Telemetry & Emphasis (`SSOT` synced in `crates/panadiga-core/src/constants/tbc_mmio.rs`): `RDACC` (`+0x80`), `RDMV` (`+0x82`), `RDDET` (`+0x84`), `RDVBID_WSS0..1` (`+0x86/+0x88`), `RDDET1` (`+0x92`), `RDFCNT` (`+0x94`), and `EMPHA` (`+0xB4`).
+   - **98 Static Presets:** Pointers to `{u32 reg_off, u16 and_mask, u16 or_val, u32 extra}` tables at `0x578957D8..0x5789595C` paired with preset names at `0x57C1F57C..0x57C1F704` (`common`, `cps_ntsc`, `cps_pal_m`, `cps_pal`, `cps_secam`, `cpn_*`, `rgb_pal`, `rec656_*`, `mvagc_line_tbc_on/off`, `clock_start`, `ddr_stop`).
+2. **`IC3001` (`C1AB00002379`) I2C Addressing at `0x570D627E` (`src/iic33.c`):**
+   - The `AVIN` caller loads 8-bit I2C write address **`0x94`** (**7-bit `0x4A`**, read `0x95`) prior to invoking `0x573FF1B4` (`IIC1` `0xD840_1000` with Timer arbitration).
+
+### 6.2 `M0` `IC7501 TBUS` Keepalive & Door #1 Bench Runbook (Pico + FAT16 SDSC + Multimeter)
+
+* **`M0` Engine Verified on `Mn103Vm` ([`keepalive.rs`](../../crates/panadiga-core/src/re/tbc_appliance/keepalive.rs)):**
+  - `build_ic7501_wdt_255s_frame()` produces `[0x8A, 0x02, 0x00, 0xFF, 0, ..., 0, 0x30]` (`sum - 0x5B = 0x30`);
+  - `emit_m0_tbus_wdt_keepalive_stub()` emits position-independent MN103S machine code (callable from `PANAMON1>` `J 51800000` via `CALLS (A2)` $\rightarrow$ `RETS 0xF0 FC`), writing `0xDC01_0010..0xDC01_001F`, pulsing `0xDC01_0000` bit 4, and returning `D0 = 0x30`.
+* **Door #1 `M0` Bench Runbook (`NoJigPanaSdProgSlot`, Pico + SDSC FAT16 + Multimeter Only):**
+  1. **Pre-Power Check:** Verify Pin 4 `GND` (`0.0 Ω`), keep `GP3` (`NSW5V`) strict `Hi-Z Input` with no pulls, `GP5` (`XRESET`) strictly Open-Drain, and power the Pico via USB only (`P7501` Pin 1 `< 10 mA`).
+  2. **Door #1 Headless Boot (No HDD / No JIG):** Insert a `<= 2 GiB` FAT16 SDSC card holding [`PANA__SD.FRM`](../../firmware_and_images/sd_unbrick_kit/PANA__SD.FRM) (`cdcc2cdf...`), leave HDD/ODD disconnected, and open `COM10` at `115200 8N1`. Upon `HDD_MAX_LBA get failed[0xE8000000]`, `Loader ver0.61` enters `PANAMON1>` directly.
+  3. **`M0` Injection (`0x5180_0000`):** Upload `emit_m0_tbus_wdt_keepalive_stub()` using `W`, execute `J 51800000` (`< 200 s` cadence), and confirm with the multimeter that `DR_P_ON_H` / `DI_P_ON_H` (`NSW5V ~3.29V`) and `VEP79138` rails stay powered for `> 30 min` without `U99` shutdown. See also [`STATUS.md`](../STATUS.md).

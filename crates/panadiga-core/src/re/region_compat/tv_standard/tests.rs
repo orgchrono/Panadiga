@@ -3,8 +3,9 @@
 //! Unit tests for TV standard MMIO plans, LBS region presets, and read-only bundle audits.
 
 use crate::constants::{
-    AIOF_CONT_OFF, AIOF_FS0_OFF, AIOF_VMODESEL_NTSC, AIOF_VMODESEL_OFF, AIOF_VMODESEL_PAL,
-    AIOF_VMODESEL_PAL_M, AIOF_YC3_OFF, AM34_AIOF_BASE, AM34_AVDD_BASE, SPANSION_NVRAM_SIZE_BYTES,
+    AIOF_CONT_OFF, AIOF_FS0_OFF, AIOF_V_CLOCK_START, AIOF_V_OFF, AIOF_VMODESEL_NTSC,
+    AIOF_VMODESEL_OFF, AIOF_VMODESEL_PAL, AIOF_VMODESEL_PAL_M, AIOF_YC3_OFF, AM34_AIOF_BASE,
+    AM34_AVDD_BASE, SPANSION_NVRAM_SIZE_BYTES,
 };
 use crate::crypto::{FrmContainerMode, FrmPackModule, pack_frm};
 use crate::re::main_passthrough::EXPECTED_MAIN_3410PQ_SIZE;
@@ -20,27 +21,31 @@ use super::{
 #[test]
 fn tv_standard_mmio_plans_emit_verified_aiof_vmodesel_values() {
     let ntsc = build_tv_calibration_mmio_plan(TvStandardKind::Ntsc);
-    assert_eq!(ntsc[0].addr, AM34_AIOF_BASE + AIOF_VMODESEL_OFF);
-    assert_eq!(ntsc[0].value, u32::from(AIOF_VMODESEL_NTSC));
-    assert_eq!(ntsc[0].value, 0x8020);
-    assert_eq!(ntsc[3].value, 0x8000);
+    assert_eq!(ntsc.len(), 6);
+    assert_eq!(ntsc[0].addr, AM34_AIOF_BASE + AIOF_V_OFF);
+    assert_eq!(ntsc[0].value, u32::from(AIOF_V_CLOCK_START));
+    assert_eq!(ntsc[1].addr, AM34_AIOF_BASE + AIOF_VMODESEL_OFF);
+    assert_eq!(ntsc[1].value, u32::from(AIOF_VMODESEL_NTSC));
+    assert_eq!(ntsc[1].value, 0x8020);
+    assert_eq!(ntsc[4].value, 0x8000);
 
     let palm = build_tv_calibration_mmio_plan(TvStandardKind::PalM);
-    assert_eq!(palm[0].value, u32::from(AIOF_VMODESEL_PAL_M));
-    assert_eq!(palm[0].value, 0x8021);
-    assert_eq!(palm[1].addr, AM34_AIOF_BASE + AIOF_FS0_OFF);
-    assert_eq!(palm[2].addr, AM34_AIOF_BASE + AIOF_YC3_OFF);
-    assert_eq!(palm[2].value, 0x0020);
-    assert_eq!(palm[3].addr, AM34_AIOF_BASE + AIOF_CONT_OFF);
-    assert_eq!(palm[3].value, 0x4000);
-    assert_eq!(palm[4].addr, AM34_AVDD_BASE + AVDD_NPALCTL0_OFF);
+    assert_eq!(palm[0].addr, AM34_AIOF_BASE + AIOF_V_OFF);
+    assert_eq!(palm[1].value, u32::from(AIOF_VMODESEL_PAL_M));
+    assert_eq!(palm[1].value, 0x8021);
+    assert_eq!(palm[2].addr, AM34_AIOF_BASE + AIOF_FS0_OFF);
+    assert_eq!(palm[3].addr, AM34_AIOF_BASE + AIOF_YC3_OFF);
+    assert_eq!(palm[3].value, 0x0020);
+    assert_eq!(palm[4].addr, AM34_AIOF_BASE + AIOF_CONT_OFF);
+    assert_eq!(palm[4].value, 0x4000);
+    assert_eq!(palm[5].addr, AM34_AVDD_BASE + AVDD_NPALCTL0_OFF);
 
     let pal = build_tv_calibration_mmio_plan(TvStandardKind::Pal);
-    assert_eq!(pal[0].value, u32::from(AIOF_VMODESEL_PAL));
-    assert_eq!(pal[0].value, 0x8027);
+    assert_eq!(pal[1].value, u32::from(AIOF_VMODESEL_PAL));
+    assert_eq!(pal[1].value, 0x8027);
 
     let secam = build_tv_calibration_mmio_plan(TvStandardKind::Secam);
-    assert!(secam[0].note.contains("SECAM0..1"));
+    assert!(secam[1].note.contains("SECAM0..1"));
 }
 
 #[test]

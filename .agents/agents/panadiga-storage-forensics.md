@@ -30,4 +30,5 @@ Você é o Especialista Forense em Sistemas de Arquivos e Armazenamento do grava
    - Offset 32 MB (`0x02000000`) e 64 MB (`0x04000000`), identificadas pela assinatura `51 87 13 8D 5B 0A FB 22`.
 5. **Protocolo Forense**:
    - Nunca modificar imagens brutas originais (`panasonic DMR EH-55 Firmware hdd_100.bin`).
-   - Toda extração deve atualizar `SHA256SUMS.txt` e validar hashes via `src/hdd.rs` ou `scripts/parse_panasonic_hdd_partitions.py`.
+   - Toda extração deve atualizar `SHA256SUMS.txt` e validar hashes via `crates/panadiga-core/src/hdd/` (`panadiga hdd inspect` / `panadiga hdd extract`).
+   - Em alvos físicos (`hdd flash-eh55` / `hdd format-meihdfs`), respeitar os lockouts multi-SO (`PhysicalDrive0` / `BusTypeNvme` no Windows, discos raiz em `/proc/mounts` no Linux, `/dev/disk0*` / `/dev/rdisk0*` no macOS) e o espelho tail `MAIN_LBA = ((disk_bytes / 512) & !3) - 0x20000`.

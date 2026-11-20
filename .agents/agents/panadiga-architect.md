@@ -20,9 +20,9 @@ Você é o Arquiteto Principal de Sistemas e Engenharia Reversa do Ecossistema P
 
 ## Suas Responsabilidades:
 1. **Coordenação Cross-Stack**:
-   - Manter a sincronização entre a biblioteca/CLI/MCP central em Rust (`src/`), a interface gráfica em Tauri 2 (`apps/desktop/`), o firmware do RP2040/RP2350 em C11/PIO (`firmware/pico-p7501/`), e os scripts de engenharia/Ghidra (`tools/ghidra/`, `scripts/`).
+   - Manter a sincronização entre os crates Rust (`crates/panadiga-core`, `crates/panadiga-rag`, `crates/panadiga-mcp`, `crates/panadiga-cli`), a interface Tauri 2 Desktop & Android (`apps/desktop/`, `apps/desktop/src-tauri/`), o firmware RP2040/RP2350 em C11/PIO (`firmware/pico-p7501/`), e os scripts de engenharia/Ghidra (`tools/ghidra/`, `scripts/`).
 2. **Definição de SSOT (Single Source of Truth)**:
-   - Garantir que constantes de hardware, mapas de memória (Matsushita AM34) e assinaturas de partição tenham a biblioteca Rust (`src/constants.rs`, `src/ghidra.rs`) como fonte primária da verdade.
+   - Garantir que constantes de hardware, mapas de memória (Matsushita AM34) e assinaturas de partição tenham a biblioteca central (`crates/panadiga-core/src/constants.rs`, `crates/panadiga-core/src/ghidra.rs`, `crates/panadiga-core/src/ssot.rs`) como fonte primária da verdade.
 3. **Supervisão dos Quality Gates**:
    - Assegurar que qualquer evolução no ecossistema respeite o pipeline `npm run validate` (`scripts/validate.py`).
 4. **Delegação a Especialistas**:

@@ -1,5 +1,5 @@
 > 🌐 **Language / Idioma:** **Bilingual Portal (English US / Português BR)**
-> 🧭 **Root Docs:** [README (EN)](../README.md) | [README (PT-BR)](../README.pt-BR.md) | [Complete Audit (EN)](../COMPLETE_AUDIT.md) | [Auditoria Completa (PT-BR)](../AUDITORIA_COMPLETA.md) | [Agent Rules](../AGENTS.md)
+> 🧭 **Root Docs:** [README (EN)](../README.md) | [README (PT-BR)](../README.pt-BR.md) | [Complete Audit (EN)](../COMPLETE_AUDIT.md) | [Auditoria Completa (PT-BR)](../AUDITORIA_COMPLETA.md) | [Verified Status & Diátaxis Guide](./STATUS.md) | [Agent Rules](../AGENTS.md)
 
 # Panadiga Technical Documentation Index / Índice da Documentação Técnica
 
@@ -115,7 +115,7 @@ All **38** primary technical engineering dossiers in this repository maintain **
 * [**`pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md`**](./pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) — Bilingual line-indexed guide (`194` blocks/functions)
 * [**`pseudocode/EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md`**](./pseudocode/EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md) — Verbatim decompilation & disassembly dossier
 * [**`pseudocode/GHIDRA_UNDEF_AUDIT_REPORT.md`**](./pseudocode/GHIDRA_UNDEF_AUDIT_REPORT.md) — Exhaustive `??` undefined-byte quantitative root-cause report
-* Raw text captures (`docs/pseudocode/raw/`): [`doc_boot_core.txt`](./pseudocode/raw/doc_boot_core.txt) · [`doc_boot_media_crypto.txt`](./pseudocode/raw/doc_boot_media_crypto.txt) · [`doc_boot_fat_sd_java.txt`](./pseudocode/raw/doc_boot_fat_sd_java.txt) · [`doc_prog061.txt`](./pseudocode/raw/doc_prog061.txt) · [`doc_main.txt`](./pseudocode/raw/doc_main.txt) · [`doc_drv_and_atapi.txt`](./pseudocode/raw/doc_drv_and_atapi.txt)
+* Raw text captures (`docs/pseudocode/raw/`): [`doc_boot_core.txt`](./pseudocode/raw/doc_boot_core.txt) · [`doc_boot_media_crypto.txt`](./pseudocode/raw/doc_boot_media_crypto.txt) · [`doc_boot_fat_sd_java.txt`](./pseudocode/raw/doc_boot_fat_sd_java.txt) · [`doc_prog061.txt`](./pseudocode/raw/doc_prog061.txt) · [`doc_main.txt`](./pseudocode/raw/doc_main.txt) · [`doc_drv_and_atapi.txt`](./pseudocode/raw/doc_drv_and_atapi.txt) · [`doc_ldr061_prog061_davis_rtsc.txt`](./pseudocode/raw/doc_ldr061_prog061_davis_rtsc.txt)
 
 ### Live `COM10` Bench UART Captures & Dossier (`docs/debug_logs/`)
 * [**`debug_logs/README.md`**](./debug_logs/README.md) — Bilingual catalog of `22` verified `SHA-256` captures & bench transcripts (`14` pure UART + `7` Python harness transcripts + `1` host `PhysicalDrive1` flash log)

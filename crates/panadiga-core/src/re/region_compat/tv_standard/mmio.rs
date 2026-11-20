@@ -3,8 +3,8 @@
 //! Clean-room declarative `AIOF`/`AVDD` MMIO sequence and profile builder for `AM34`.
 
 use crate::constants::{
-    AIOF_CONT_OFF, AIOF_FS0_OFF, AIOF_VMODESEL_OFF, AIOF_VMODESEL_PAL, AIOF_YC3_OFF,
-    AM34_AIOF_BASE, AM34_AVDD_BASE,
+    AIOF_CONT_OFF, AIOF_FS0_OFF, AIOF_V_CLOCK_START, AIOF_V_OFF, AIOF_VMODESEL_OFF,
+    AIOF_VMODESEL_PAL, AIOF_YC3_OFF, AM34_AIOF_BASE, AM34_AVDD_BASE,
 };
 
 use super::types::{LbsRegionPresetId, MmioWriteOp, TvCalibrationProfile, TvStandardKind};
@@ -49,6 +49,13 @@ pub fn build_tv_calibration_mmio_plan(standard: TvStandardKind) -> Vec<MmioWrite
     };
 
     vec![
+        mmio_op(
+            AM34_AIOF_BASE + AIOF_V_OFF,
+            16,
+            u32::from(AIOF_V_CLOCK_START),
+            "AIOF_V",
+            "AIOF Preset [93] clock_start (0x8001) prior to VMODESEL",
+        ),
         mmio_op(
             AM34_AIOF_BASE + AIOF_VMODESEL_OFF,
             16,

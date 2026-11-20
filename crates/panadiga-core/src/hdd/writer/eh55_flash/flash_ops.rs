@@ -9,7 +9,8 @@ use anyhow::{Context, Result, bail};
 use crate::constants::LBA_SECTOR_SIZE_BYTES;
 use crate::nvram::calculate_hashes;
 
-use super::super::block_ops::verify_safety_lockout_with_os_disks;
+use super::super::block_ops::{is_unconditional_os_boot_disk, verify_safety_lockout_with_os_disks};
+use super::super::discovery::detect_linux_host_os_disks;
 use super::backup_verify::{
     resolve_mirror_bytes, validate_eh55_primary_image, verify_region_readback_sha256,
     write_chunked_with_progress, write_mandatory_64k_cow_backup,
@@ -40,17 +41,23 @@ where
         detail: format!("Validating safety lockouts for {}", req.device_path),
     });
 
-    if req
-        .device_path
-        .to_ascii_lowercase()
-        .contains("physicaldrive0")
-    {
-        bail!("FATAL SAFETY LOCKOUT: PhysicalDrive0 is unconditionally blocked!");
+    if is_unconditional_os_boot_disk(&req.device_path) {
+        bail!(
+            "FATAL SAFETY LOCKOUT: Primary OS boot disk '{}' is unconditionally blocked!",
+            req.device_path
+        );
     }
-    let os_refs: Option<Vec<&str>> = req
+    let fallback_os_disks = if req.detected_os_disks.is_none() {
+        detect_linux_host_os_disks()
+    } else {
+        None
+    };
+    let effective_os_disks = req
         .detected_os_disks
         .as_ref()
-        .map(|list| list.iter().map(String::as_str).collect());
+        .or(fallback_os_disks.as_ref());
+    let os_refs: Option<Vec<&str>> =
+        effective_os_disks.map(|list| list.iter().map(String::as_str).collect());
     verify_safety_lockout_with_os_disks(
         &req.device_path,
         &req.confirmation_token,

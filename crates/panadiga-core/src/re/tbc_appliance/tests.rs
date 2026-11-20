@@ -93,3 +93,78 @@ fn no_jig_pana_sd_prog_slot_and_stage0_constants_enforce_safety() {
     assert_eq!(IC7501_TBUS_CHECKSUM_BIAS, 0x5B);
     assert_eq!(IC7501_WDT_KEEPALIVE_CMD, 0x8A);
 }
+
+#[test]
+fn m0_ic7501_tbus_frames_and_stub_execute_cleanly_on_mn103vm() {
+    use crate::constants::{
+        AIOF_EMPHA_OFF, AIOF_RDACC_OFF, AIOF_RDDET_OFF, AIOF_RDDET1_OFF, AIOF_RDFCNT_OFF,
+        AIOF_RDMV_OFF, AIOF_TEST1_DEFAULT, AIOF_TEST1_OFF, AIOF_TEST1_SOFT_RESET_MASK,
+        AIOF_V_CLOCK_START, AIOF_V_DDR_STOP, AIOF_V_OFF, AM34_IC7501_TBUS_RX_OFF,
+        AM34_IC7501_TBUS_TX_OFF, IC3001_I2C_ADDR_7BIT, IC3001_I2C_ADDR_8BIT_READ,
+        IC3001_I2C_ADDR_8BIT_WRITE, IC7501_TBUS_ACK_STROBE_BIT, IC7501_VFD_TEXT_CMD,
+        IC7501_WDT_255S_CHECKSUM,
+    };
+    use crate::re::Mn103Vm;
+
+    assert_eq!(AIOF_RDACC_OFF, 0x80);
+    assert_eq!(AIOF_RDMV_OFF, 0x82);
+    assert_eq!(AIOF_RDDET_OFF, 0x84);
+    assert_eq!(AIOF_RDDET1_OFF, 0x92);
+    assert_eq!(AIOF_RDFCNT_OFF, 0x94);
+    assert_eq!(AIOF_EMPHA_OFF, 0xB4);
+    assert_eq!(AIOF_V_OFF, 0x66);
+    assert_eq!(AIOF_V_CLOCK_START, 0x8001);
+    assert_eq!(AIOF_V_DDR_STOP, 0x8039);
+    assert_eq!(AIOF_TEST1_OFF, 0x6C);
+    assert_eq!(AIOF_TEST1_DEFAULT, 0xB040);
+    assert_eq!(AIOF_TEST1_SOFT_RESET_MASK, 0x7FFF);
+    assert_eq!(IC3001_I2C_ADDR_7BIT, 0x4A);
+    assert_eq!(IC3001_I2C_ADDR_8BIT_WRITE, 0x94);
+    assert_eq!(IC3001_I2C_ADDR_8BIT_READ, 0x95);
+    assert_eq!(AM34_IC7501_TBUS_TX_OFF, 0x10);
+    assert_eq!(AM34_IC7501_TBUS_RX_OFF, 0x20);
+    assert_eq!(IC7501_TBUS_ACK_STROBE_BIT, 0x10);
+    assert_eq!(IC7501_VFD_TEXT_CMD, 0xA3);
+    assert_eq!(IC7501_WDT_255S_CHECKSUM, 0x30);
+
+    let wdt = build_ic7501_wdt_255s_frame();
+    assert_eq!(
+        wdt,
+        [
+            0x8A, 0x02, 0x00, 0xFF, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x30
+        ]
+    );
+    let body15: [u8; 15] = wdt[..15].try_into().unwrap();
+    assert_eq!(compute_ic7501_tbus_checksum(&body15), 0x30);
+
+    let vfd = build_ic7501_vfd_text_frame("TBC ON ");
+    assert_eq!(vfd[0], 0xA3);
+    assert_eq!(&vfd[3..10], b"TBC ON ");
+    let vfd15: [u8; 15] = vfd[..15].try_into().unwrap();
+    assert_eq!(vfd[15], compute_ic7501_tbus_checksum(&vfd15));
+
+    let stub = emit_m0_tbus_wdt_keepalive_stub();
+    let stub_va = 0x5180_0000u32;
+    let stack_va = 0x5181_0000u32;
+    let ret_sentinel = 0x5040_BEEFu32;
+
+    let mut vm = Mn103Vm::new();
+    vm.map_segment(stub_va, stub, false);
+    vm.map_segment(AM34_IC7501_TBUS_BASE, vec![0xFFu8; 0x100], true);
+    vm.map_segment(stack_va, vec![0u8; 0x200], true);
+    vm.sp = stack_va + 0x100;
+    vm.write_u32(vm.sp, ret_sentinel).unwrap();
+    vm.pc = stub_va;
+    vm.run_until(ret_sentinel, 64).unwrap();
+
+    assert_eq!(vm.d[0], u32::from(IC7501_WDT_255S_CHECKSUM));
+    assert_eq!(vm.sp, stack_va + 0x104);
+    assert_eq!(vm.read_u8(AM34_IC7501_TBUS_BASE).unwrap(), 0x00);
+    let mut observed = [0u8; 16];
+    for (idx, slot) in observed.iter_mut().enumerate() {
+        *slot = vm
+            .read_u8(AM34_IC7501_TBUS_BASE + AM34_IC7501_TBUS_TX_OFF + idx as u32)
+            .unwrap();
+    }
+    assert_eq!(observed, wdt);
+}

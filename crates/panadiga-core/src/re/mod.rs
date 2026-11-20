@@ -71,6 +71,11 @@ pub use region_compat::{
     inspect_dev_bin_bytes, inspect_main_region_compat, patch_dev_bin_bytes,
     patch_main_region_compat_in_place, retarget_frm_toc_bytes,
 };
+pub use tbc_appliance::{
+    TbcApplianceMode, TbcAppliancePlan, VerifiedMainPassthroughSiteRef,
+    build_ic7501_vfd_text_frame, build_ic7501_wdt_255s_frame, build_tbc_appliance_plan,
+    compute_ic7501_tbus_checksum, emit_m0_tbus_wdt_keepalive_stub,
+};
 pub use unbrick_sd_kit::{
     FatBpbReport, MbrPartitionRecord, RootDirFileReport, SdDiskInspectionReport, SdLoaderProfile,
     SdMediaVerificationReport, SdUnbrickCheck, SdUnbrickKitReport, SdUnbrickKitRequest,

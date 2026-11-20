@@ -29,7 +29,7 @@ O repositório está estruturado em subsistemas integrados e desacoplados:
    - Scripts Ghidra Jython (`tools/ghidra/`) gerados a partir da SSOT Rust e lançadores em `tools/`.
 5. **Acervo de Engenharia & Manuais (`manuals_and_schematics/`, `docs/`)**:
    - **30 manuais de serviço e datasheets oficiais** em PDF catalogados em [`manuals_and_schematics/README.md`](manuals_and_schematics/README.md) e indexados para busca automatizada.
-   - **38 dossiês técnicos bilíngues canônicos** em `docs/pt-BR/` e `docs/en-US/` (mapa em [`docs/translation_pairs.json`](docs/translation_pairs.json) e [`docs/INDEX.md`](docs/INDEX.md)), kit canônico [`firmware_and_images/sd_unbrick_kit/`](firmware_and_images/sd_unbrick_kit/SHA256SUMS.txt) (`--loader-profile ver061`: `262,144 B` raw + `sd48`), auditorias na raiz ([`AUDITORIA_COMPLETA.md`](AUDITORIA_COMPLETA.md) / [`COMPLETE_AUDIT.md`](COMPLETE_AUDIT.md)) + históricas ([`docs/audits/`](docs/audits/README.md)), evidência integral de disassembly/pseudocódigo Ghidra ([`docs/pseudocode/`](docs/pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md)) e **22 capturas/logs reais de bancada** ([`docs/debug_logs/`](docs/debug_logs/README.md)).
+   - **38 dossiês técnicos bilíngues canônicos** em `docs/pt-BR/` e `docs/en-US/` (mapa em [`docs/translation_pairs.json`](docs/translation_pairs.json) e [`docs/INDEX.md`](docs/INDEX.md)), kit canônico [`firmware_and_images/sd_unbrick_kit/`](firmware_and_images/README.md) (`--loader-profile ver061`: `262,144 B` raw + `sd48`), auditorias na raiz ([`AUDITORIA_COMPLETA.md`](AUDITORIA_COMPLETA.md) / [`COMPLETE_AUDIT.md`](COMPLETE_AUDIT.md)) + históricas ([`docs/audits/`](docs/audits/README.md)), evidência integral de disassembly/pseudocódigo Ghidra ([`docs/pseudocode/`](docs/pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md)) e **22 capturas/logs reais de bancada** ([`docs/debug_logs/`](docs/debug_logs/README.md)).
 
 ---
 
@@ -77,7 +77,7 @@ python scripts/validate.py
 ```
 
 O portão valida de forma automatizada:
-1. **Rust Workspace (5 crates)**: `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets --no-deps -- -D warnings` & `cargo test --workspace` (**258 testes**).
+1. **Rust Workspace (5 crates)**: `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets --no-deps -- -D warnings` & `cargo test --workspace` (**259 testes**).
 2. **TypeScript Strict + Oxlint**: `oxlint --deny-warnings && tsc --noEmit` (`npm run lint`) em `apps/desktop` com zero erros.
 3. **Vitest Frontend**: `npm test` em `apps/desktop` (**116 testes em 36 arquivos** em `apps/desktop/src/**/*.test.*`).
 4. **Detector de Duplicação (jscpd)**: `.jscpd.json` com limiar estrito de **0% de duplicação** (0 clones permitidos entre `apps/desktop/src`, `apps/desktop/src-tauri/src`, `crates`, `firmware/pico-p7501`, `tools`, `scripts`).

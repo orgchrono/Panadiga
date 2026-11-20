@@ -19,6 +19,18 @@ pub struct DriveWriteReport {
     pub message: String,
 }
 
+/// Returns `true` when `device_path` refers to an unconditional primary OS boot disk across
+/// Windows (`\\.\PhysicalDrive0`) or macOS (`/dev/disk0*`, `/dev/rdisk0*`).
+#[must_use]
+pub fn is_unconditional_os_boot_disk(device_path: &str) -> bool {
+    let normalized = device_path.trim().to_ascii_lowercase();
+    normalized.contains("physicaldrive0")
+        || normalized == "/dev/disk0"
+        || normalized == "/dev/rdisk0"
+        || normalized.starts_with("/dev/disk0s")
+        || normalized.starts_with("/dev/rdisk0s")
+}
+
 /// Pure safety lockout validator checking host OS boot drives & exact confirmation token.
 pub fn verify_safety_lockout_with_os_disks(
     device_path: &str,
@@ -26,15 +38,15 @@ pub fn verify_safety_lockout_with_os_disks(
     detected_os_disks: Option<&[&str]>,
 ) -> Result<()> {
     let normalized = device_path.trim().to_ascii_lowercase();
-    let is_default_win_boot = normalized.contains("physicaldrive0");
+    let is_default_os_boot = is_unconditional_os_boot_disk(device_path);
     let is_detected_os_disk = match detected_os_disks {
         Some(os_disks) => os_disks.iter().any(|os_dev| {
             let clean_os = os_dev.trim().to_ascii_lowercase();
             !clean_os.is_empty() && (normalized == clean_os || normalized.starts_with(&clean_os))
         }),
-        None => normalized == "/dev/sda",
+        None => normalized == "/dev/sda" || normalized.starts_with("/dev/sda"),
     };
-    if is_default_win_boot || is_detected_os_disk {
+    if is_default_os_boot || is_detected_os_disk {
         bail!(
             "FATAL SAFETY INVARIANT VIOLATION: Access to {} is unconditionally locked! \
             The primary operating system drive can never be overwritten by Panadiga.",

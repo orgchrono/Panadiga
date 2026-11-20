@@ -1,0 +1,44 @@
+================================================================================
+ KIT CANONICO DE RECUPERACAO VIA CARTAO SD - PANASONIC DMR-EH55 / DMR-EH55LB-S
+ Alinhado ao Loader ver0.61 [06/03/06] + DeviceInfo2 (M6930LB & M6930)
+================================================================================
+
+1. O QUE COPIAR PARA A RAIZ DO CARTAO SD (SDSC <= 2 GB em FAT16)
+--------------------------------------------------------------------------------
+Formate um cartao SDSC (<= 2 GB) com tabela DOS/MBR e particao FAT16 (<= 0xFFF5
+clusters; FAT32/exFAT/NTFS falham na montagem):
+  Windows : format E: /FS:FAT /Q /A:8192 /V:SDCARD
+  Linux   : sudo mkfs.fat -F 16 -R 1 -r 512 -f 2 -s 16 -n SDCARD /dev/sdX1
+
+Copie APENAS estes 2 arquivos desta pasta para a RAIZ do cartao SD (nomes 8.3):
+
+1) PANA__SD.FRM  (7.181.224 bytes | SHA-256: cdcc2cdf4617c4f08d8af3f617db369cfd360d8db2601b33c84bae0e6f995d90)
+   - Uso      : Modo Normal "LD FVU" (protegido contra corrupcao BGO [05/11/01]
+                com monitor UART PANAMON1 nos slots PROG061).
+   - Formato  : Conteiner sd48 plaintext (TOC 0x1800 B = slots de 48 B) com
+                6 entradas validas cobrindo M6930LB (DMR-EH55LB-S) e M6930:
+                  * Slots 0/3: DRV S211 (720.896 B, off 0x001800, sum 0x058771C5)
+                  * Slots 1/4: PROG061  UART_MONITOR_PANAMON1 (DIGADIAG.FRM)
+                               (262.144 B, off 0x0B1800, sum 0x0214E681)
+                  * Slots 2/5: MAIN3410PQ patched (6.192.040 B / 0x5E7BA8 em PANA__SD,
+                               AV_PASSTHROUGH + HDD LBA48 dinamico >200 GB,
+                               off 0x0F1800, sum 0x2F825ED9)
+
+2) DIGADIAG.FRM  (262.144 bytes | SHA-256: de72e2640ee48a7628a674e3dad731cff71548fc9ea3403ca616f3e5f7e392c0)
+   - Uso      : Modo JIG / Sonda P7501 (`SW_UART` LOW via `JIGBOOT` / `UARTSTREAM`),
+                iniciando o monitor interativo UART PANAMON1>[B/R/W/D/F/J/E/U/Q]
+                diretamente em 0x90400000 -> JMP 0x50400000.
+
+2. VERIFICACAO NA BANCADA
+--------------------------------------------------------------------------------
+Valide esta pasta a qualquer momento com o comando:
+  panadiga unbrick verify-sd firmware_and_images/sd_unbrick_kit
+
+Nota sobre boot normal e HDD 250 GB / CH1:
+- Apos reparar a Flash NOR, REMOVA o cartao SD para boot normal: o aparelho carrega
+  o `MAIN` diretamente das particoes já gravadas no HDD (via canal IDE Secundario
+  CH1 `0x89000D00`). Se `CH1` retornar todos `0x00` / `LD FVU` / `HDDERR`, revise o
+  cabo IDE 40 vias (Pino 1), FFC P7201 e jumper MASTER / alimentacao do `IDE2SAT2`.
+- Nunca utilize o `prog061_dec.bin` stock `[05/11/01]` neste EH55 em SD: ele usa base BGO
+  de 35 setores (`0x84200000`) em vez dos 45 setores (`0x84130000`) e corrompe `SA54` (`U99`).
+================================================================================

@@ -16,6 +16,8 @@ mod types;
 
 pub use flash_ops::execute_eh55_hdd_flash;
 pub use mock_device::FileBackedMockFlashDevice;
+#[cfg(not(windows))]
+pub(crate) use types::infer_bus_type_id;
 pub use types::{
     BUS_TYPE_NVME, BlockFlashDevice, EH55_BACKUP_SECTOR_COUNT, EH55_FLASH_CHUNK_BYTES,
     EH55_MIRROR_MAIN_BACKSTEP_LBAS, Eh55FlashProgress, Eh55FlashStage, Eh55HddFlashReport,

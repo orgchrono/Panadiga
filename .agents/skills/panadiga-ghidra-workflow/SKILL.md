@@ -1,26 +1,46 @@
 ---
 name: panadiga-ghidra-workflow
 description: >-
-  Exporta o mapa de memória oficial AM34, sincroniza símbolos reversos e configura o ambiente Ghidra para o firmware Panasonic.
-  Use esta skill ao iniciar sessões de engenharia reversa no Ghidra, atualizar símbolos ou exportar scripts de automação.
+  Exporta o mapa de memória oficial AM34, sincroniza símbolos reversos e executa análises MN103S / Ghidra para o firmware Panasonic.
+  Use esta skill ao iniciar sessões de engenharia reversa no Ghidra, atualizar símbolos, auditar as Armadilhas MN103S ou usar ferramentas CLI `panadiga re`.
 ---
 
-# Fluxo de Trabalho Ghidra para Matsushita AM34 / UniPhier
+# Fluxo de Trabalho Ghidra & Auditoria Estática AM34 / MN103S
 
-O processador Matsushita AM34 (família MN103S) requer configuração do mapa de memória correto e importação dos símbolos de hardware mapeados.
+O processador Matsushita **AM34** (`MN103S` / UniPhier) exige o mapa físico exato de memória, correção das **8 Armadilhas MN103S** (incluindo inversão `SUB` `fb 9c` do `am33.sinc` SLEIGH) e sincronização de símbolos gerados pela SSOT Rust.
 
 ## 1. Exportação dos Scripts via Rust SSOT
-Execute o comando na raiz do projeto:
+Na raiz do repositório:
 ```bash
-cargo run -- ghidra export-all --dir tools/ghidra
+cargo run -p panadiga-cli -- ghidra export-all --dir tools/ghidra
 ```
-Isso gera:
-- `tools/ghidra/ghidra_am34_memory_map.py`: Cria todas as regiões físicas de memória (SRAM, SDRAM, Flash, MMIOs, OCD) no projeto aberto do Ghidra.
-- `tools/ghidra/ghidra_import_symbols_panadiga.py`: Mapeia pontos de entrada, vetores de interrupção e funções identificadas do bootloader.
-- `tools/ghidra/ghidra_connect_debugger.py`: Conecta o depurador do Ghidra à ponte GDB RSP do Raspberry Pi Pico.
+Isso gera/sincroniza os scripts Jython em `tools/ghidra/`:
+- `ghidra_am34_memory_map.py`: Regiões físicas AM34 (`SRAM`, `SDRAM`, `Uncached SDRAM 0x9000_0000`, `Flash IC5001`, `MMIO AIOF/AVDD/DAVIS/IIC`, `OCD`).
+- `ghidra_import_symbols_panadiga.py` / `ghidra_importar_simbolos_panadiga.py`: Pontos de entrada, vetores e funções identificadas.
+- `ghidra_auto_unbrick_audit.py`: Varredura automatizada de estágios e sítios de patch BGO/TBC.
+- `ghidra_mn103_fix_decompilation.py`: Recuperação de frames `CALL`, stack purge e switch tables no Ghidra.
+- `ghidra_connect_debugger.py` / `ghidra_conectar_debugger.py`: Ponte de depuração GDB RSP via Pico (`127.0.0.1:3333`).
 
-## 2. Execução Dentro do Ghidra
-1. Abra o arquivo binário desempacotado no Ghidra selecionando a arquitetura `MN10300` / `AM33/AM34`.
-2. No menu **Window -> Script Manager**, adicione a pasta `tools/ghidra/` aos diretórios de scripts.
-3. Execute primeiramente `ghidra_am34_memory_map.py` para estruturar os blocos de memória.
-4. Em seguida, execute `ghidra_import_symbols_panadiga.py`.
+Scripts Java headless adicionais vivem em `tools/ghidra/java/`:
+- `PanadigaBootFatSdDecompiler.java`, `PanadigaMn103sDisasmDump.java`, `PanadigaMn103sTrapAudit.java` e `panadiga/Mn103sAuditSupport.java`.
+
+## 2. Auditoria Estática Nativa em Rust (`panadiga re`, Sem GUI)
+```bash
+# Auditoria Seven Traps + AM33 SLEIGH + heurísticas em BOOT.BIN / PROG061 / MAIN:
+cargo run -p panadiga-cli -- re audit --input <BIN> --base 0x44000000
+
+# Cross-references de chamada/ponteiro, DRV CLI e tabelas de erro:
+cargo run -p panadiga-cli -- re xrefs --input <BIN> --target <HEX_VA>
+cargo run -p panadiga-cli -- re drv-cli --input <DRV_DECOMP>
+cargo run -p panadiga-cli -- re drv-errors --input <DRV_DECOMP>
+
+# Suíte determinística end-to-end (BGO, TBC E-E, Região/PAL-M, HDD >200GB, PANAMON1 via Mn103Vm):
+cargo run -p panadiga-cli -- re verify-patches
+```
+
+## 3. Descoberta Multi-SO do Ghidra & Execução
+- **Variável universal**: defina `GHIDRA_HOME` apontando para o diretório raiz da instalação do Ghidra.
+- **Windows**: descoberta automática em `%GHIDRA_HOME%`, `C:\ghidra\ghidra_*`, `C:\tools\ghidra`, `D:\ghidra`, `C:\Program Files\ghidra` e `%USERPROFILE%\ghidra` (`ghidraRun.bat` / `analyzeHeadless.bat`, ou `tools/iniciar_ghidra.cmd`).
+- **Linux**: `/opt`, `/opt/ghidra`, `/usr/share`, `/usr/local/share`, `/usr/local/share/ghidra`, `~/ghidra` (`ghidraRun` ou `PATH`).
+- **macOS**: `/Applications`, `~/ghidra` (`ghidraRun`) e sincronização automática para `~/ghidra_scripts`.
+- No Ghidra: abra o binário com arquitetura `MN10300` / `AM33/AM34`, adicione `tools/ghidra/` em **Window -> Script Manager** e execute `ghidra_am34_memory_map.py` antes de `ghidra_import_symbols_panadiga.py` e `ghidra_mn103_fix_decompilation.py`.

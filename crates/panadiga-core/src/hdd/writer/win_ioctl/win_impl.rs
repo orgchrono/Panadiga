@@ -217,11 +217,3 @@ impl OwnedDiskHandle {
         self.ioctl_zero(IOCTL_DISK_UPDATE_PROPERTIES, "IOCTL_DISK_UPDATE_PROPERTIES")
     }
 }
-
-/// Probes disk length & `BusType` (`IOCTL_STORAGE_QUERY_PROPERTY`) for an explicit target path.
-pub fn probe_disk_ioctl_metadata(device_path: &str) -> Result<(u64, u32)> {
-    let handle = OwnedDiskHandle::open(device_path, false)?;
-    let len = handle.disk_length_bytes()?;
-    let bus = handle.query_bus_type().unwrap_or(0);
-    Ok((len, bus))
-}

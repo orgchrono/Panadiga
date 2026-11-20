@@ -68,6 +68,10 @@ pub fn resolve_desktop_executable_path() -> PathBuf {
         if Path::new("/usr/bin/panadiga-desktop").is_file() {
             return PathBuf::from("/usr/bin/panadiga-desktop");
         }
+        #[cfg(target_os = "macos")]
+        if Path::new("/Applications/Panadiga.app/Contents/MacOS/panadiga-desktop").is_file() {
+            return PathBuf::from("/Applications/Panadiga.app/Contents/MacOS/panadiga-desktop");
+        }
         return exe;
     }
     PathBuf::from(bin_name)

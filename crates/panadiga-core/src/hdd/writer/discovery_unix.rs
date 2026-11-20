@@ -5,7 +5,9 @@
 use serde_json::Value;
 
 #[cfg(any(target_os = "linux", target_os = "macos"))]
-use anyhow::{Context, Result, bail};
+use anyhow::Context;
+#[cfg(any(target_os = "linux", target_os = "macos", test))]
+use anyhow::{Result, bail};
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 use std::process::Command;
 #[cfg(target_os = "linux")]
@@ -478,8 +480,20 @@ pub(crate) fn unmount_unix_partitions(device_path: &str) -> Result<Vec<String>> 
     Ok(unmounted)
 }
 
+#[cfg(any(target_os = "macos", test))]
+pub(crate) fn should_run_macos_diskutil(device_path: &str) -> Result<bool> {
+    if super::block_ops::is_unconditional_os_boot_disk(device_path) {
+        bail!("Refusing to unmount macOS system OS disk '{device_path}'.");
+    }
+    let lower = device_path.trim().to_ascii_lowercase();
+    Ok(lower.starts_with("/dev/disk") || lower.starts_with("/dev/rdisk"))
+}
+
 #[cfg(target_os = "macos")]
 pub(crate) fn unmount_unix_partitions(device_path: &str) -> Result<Vec<String>> {
+    if !should_run_macos_diskutil(device_path)? {
+        return Ok(Vec::new());
+    }
     let out = Command::new("diskutil")
         .args(["unmountDisk", device_path])
         .output()

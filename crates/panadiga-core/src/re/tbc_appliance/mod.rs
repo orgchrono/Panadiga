@@ -254,5 +254,12 @@ pub fn build_tbc_appliance_plan(
     })
 }
 
+pub mod keepalive;
+
+pub use keepalive::{
+    build_ic7501_vfd_text_frame, build_ic7501_wdt_255s_frame, compute_ic7501_tbus_checksum,
+    emit_m0_tbus_wdt_keepalive_stub,
+};
+
 #[cfg(test)]
 mod tests;

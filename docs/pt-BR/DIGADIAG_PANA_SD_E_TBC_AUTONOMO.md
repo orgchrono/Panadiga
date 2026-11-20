@@ -127,3 +127,27 @@ panadiga unbrick nor-stub --wrap-digadiag --out unbrick_out/DIGADIAG_NOR_DUMPER.
 - **Rotas Viáveis de TBC sem Disco (`[EVIDÊNCIA ESTÁTICA GHIDRA / ESTÁGIO 0]` vs `[EM INVESTIGAÇÃO / BLOQUEIO FÍSICO CH1]`):** Em `MAIN3410PQ`, `VDM_Init` e `SDM_Init` (além de `FUN_574f5c6a`/`FUN_574f469d`) impõem acoplamento ao HDD (`HDD Err -> P-OFF!`), exigindo o pipeline `Stage15DigadiagTbc` / `PANA__SD.FRM` (`PROG 0x0B1800 -> 0x90400000`) ou `Nor-FROM 0x84040000` para inicialização autônoma do TBC sem `MAIN` carregado via `CH1`.
 - **Veredicto de Incompatibilidade `ES10` / `ES15` / `ES35V` vs `EH55` (`[EVIDÊNCIA ESTÁTICA GHIDRA / ESTÁGIO 0]`):** Imagens `DMR-ES10`/`ES15`/`ES35V` não são intercambiáveis com o `DMR-EH55` e causam *brick* por divergência de SoC/memória/energia: `MN2DS0009` vs `MN2DS0012-H`/`MN2DS00151DB`, EEPROM `RFKFM6016KT` vs `24LC64`, trilhas `X_SW_12V`/`DR12V`/`DR5V`, e execução XIP no `ES35V` (`0x130000..0x40FFFF`).
 - **Painel Frontal `FRONT(L)` e Receptor `IR7501` (`[EVIDÊNCIA ESTÁTICA GHIDRA / ESTÁGIO 0]`):** A subplaca `FRONT(L)` expõe apenas a tecla `[POWER]`; as demais chaves residem em `KEYIN1..3` na placa principal e o receptor `IR7501` (`PNA4618M09VT`, `X_SW_5R2V`) alimenta o modo Standby `SERV` (`[CH UP]+[OPEN/CLOSE]+[REC]` por 5 s em `Power OFF`) antes da transição para `FPC_ReciveTASK`/`R_SERVICEMODE` no `MAIN` ([`HISTORICO_UNBRICK_EH55_BGO_CH1_DAVIS_E_REGIAO.md`](./HISTORICO_UNBRICK_EH55_BGO_CH1_DAVIS_E_REGIAO.md)).
+
+---
+
+## 6. Triangulação Estática Estágio 0 (`AIOF` / `IC3001` / `IC7501 M0`) & Runbook Porta #1
+
+### 6.1 Tabela Verificada `AIOF`, Sequência de Clock e `IC3001` (`EH55_MAIN_3410PQ.bin`)
+
+1. **Banco Completo de 82 Registradores `AIOF` (`0x8800_0000..0x8800_00B4`, descritores `{u32 name_ptr, u32 reg_off}` em `0x578935FC..0x57893888`):**
+   - Controle de Modo & Clocks: `VMODESEL` (`+0x00`: `0x8020` `cps_ntsc`, `0x8021` `cps_pal_m`, `0x8027` `cps_pal`), `V` (`+0x66`: Preset `[93]` `clock_start = 0x8001`, Preset `[94]` `ddr_stop = 0x8039`), `TEST1` (`+0x6C`: Preset `[0]` `0xB040`; `AIOF_SoftReset` `@ 0x570D64E4` limpa o bit 15 `& 0x7FFF`).
+   - TBC & Frame Sync: `TBCSS0..2` (`+0x1C/+0x1E/+0x20`), `TBC` (`+0x24`), `FS0..1` (`+0x2C/+0x2E`: Preset `[85]` `standard = 0x40F0`, Preset `[86]` `not_standard = 0xC0F0`), `YC3` (`+0x64`: Preset `[90]` `mvagc_line_tbc_on` bit 5 `0x0020`), `CONT` (`+0xA4`: `[80]` `ntsc_setup_lighter = 0x4000`, `[81]` `ntsc_setup_darker = 0x8000`).
+   - Telemetria Somente-Leitura & Ênfase (`SSOT` corrigida em `crates/panadiga-core/src/constants/tbc_mmio.rs`): `RDACC` (`+0x80`), `RDMV` (`+0x82`), `RDDET` (`+0x84`), `RDVBID_WSS0..1` (`+0x86/+0x88`), `RDDET1` (`+0x92`), `RDFCNT` (`+0x94`) e `EMPHA` (`+0xB4`).
+   - **98 Presets Estáticos:** Ponteiros `{u32 reg_off, u16 and_mask, u16 or_val, u32 extra}` indexados de `0x578957D8..0x5789595C` com strings paralelas de nome em `0x57C1F57C..0x57C1F704` (`common`, `cps_ntsc`, `cps_pal_m`, `cps_pal`, `cps_secam`, `cpn_*`, `rgb_pal`, `rec656_*`, `mvagc_line_tbc_on/off`, `clock_start`, `ddr_stop`).
+2. **Endereçamento I²C de `IC3001` (`C1AB00002379`) em `0x570D627E` (`src/iic33.c`):**
+   - Chamador `AVIN` carrega endereço 8-bit de escrita **`0x94`** (**7-bit `0x4A`**, leitura `0x95`) antes de chamar `0x573FF1B4` (`IIC1` `0xD840_1000` com arbitragem Timer).
+
+### 6.2 Keepalive `M0` `IC7501 TBUS` & Runbook de Bancada (`Porta #1` + Pico + Multímetro)
+
+* **Motor `M0` Verificado em `Mn103Vm` ([`keepalive.rs`](../../crates/panadiga-core/src/re/tbc_appliance/keepalive.rs)):**
+  - `build_ic7501_wdt_255s_frame()` monta `[0x8A, 0x02, 0x00, 0xFF, 0, ..., 0, 0x30]` (`sum - 0x5B = 0x30`);
+  - `emit_m0_tbus_wdt_keepalive_stub()` gera código MN103S *position-independent* (chamável via `PANAMON1>` `J 51800000` via `CALLS (A2)` $\rightarrow$ `RETS 0xF0 FC`), gravando em `0xDC01_0010..0xDC01_001F`, pulsando bit 4 em `0xDC01_0000` e retornando `D0 = 0x30`.
+* **Runbook de Bancada `M0` (`NoJigPanaSdProgSlot`, apenas Pico + SD SDSC FAT16 + Multímetro):**
+  1. **Pré-energização:** Confirmar `GND` Pin 4 (`0.0 Ω`), `GP3` (`NSW5V`) em `Hi-Z Input` sem pull-ups, `GP5` (`XRESET`) em Open-Drain e alimentação do Pico exclusivamente via USB (`P7501` Pin 1 `< 10 mA`).
+  2. **Boot Porta #1 (sem HDD / sem JIG):** Inserir cartão SDSC (`<= 2 GiB` FAT16) com [`PANA__SD.FRM`](../../firmware_and_images/sd_unbrick_kit/PANA__SD.FRM) (`cdcc2cdf...`), manter HDD/ODD desconectados e iniciar a captura em `115200 8N1` (`COM10`). Após `HDD_MAX_LBA get failed[0xE8000000]`, o `Loader ver0.61` entra automaticamente em `PANAMON1>`.
+  3. **Injeção `M0` (`0x5180_0000`):** Gravar os bytes gerados por `emit_m0_tbus_wdt_keepalive_stub()` via comando `W` em `0x5180_0000..`, executar `J 51800000` periodicamente (intervalo `< 200 s`) e confirmar no multímetro que `DR_P_ON_H` / `DI_P_ON_H` (`NSW5V ~3.29V`) e os trilhos da `VEP79138` permanecem estáveis por `> 30 min` sem corte `U99`. Consulte também [`STATUS.md`](../STATUS.md).

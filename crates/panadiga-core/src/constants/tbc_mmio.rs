@@ -39,16 +39,34 @@ pub const AIOF_VOUTSEL_OFF: u32 = 0x5C;
 pub const AIOF_YC3_OFF: u32 = 0x64;
 /// `AIOF_YC3` bit 5 enabling MVAGC Line TBC (`0x0020`).
 pub const AIOF_YC3_MVAGC_LINE_TBC_BIT: u16 = 0x0020;
+/// `AIOF` vertical / clock control register `V` offset (`+0x66`).
+pub const AIOF_V_OFF: u32 = 0x66;
+/// `AIOF_V` preset `[93]` `clock_start` value (`0x8001`).
+pub const AIOF_V_CLOCK_START: u16 = 0x8001;
+/// `AIOF_V` preset `[94]` `ddr_stop` value (`0x8039`).
+pub const AIOF_V_DDR_STOP: u16 = 0x8039;
+/// `AIOF` test/reset control register `TEST1` offset (`+0x6C`).
+pub const AIOF_TEST1_OFF: u32 = 0x6C;
+/// `AIOF_TEST1` default operating value from Preset `[0]` `common` (`0xB040`).
+pub const AIOF_TEST1_DEFAULT: u16 = 0xB040;
+/// `AIOF_TEST1` soft-reset active-low clear mask (`& 0x7FFF`, `AIOF_SoftReset`).
+pub const AIOF_TEST1_SOFT_RESET_MASK: u16 = 0x7FFF;
 /// `AIOF` Noise reduction register 0 offset (`+0x78`).
 pub const AIOF_NR0_OFF: u32 = 0x78;
-/// `AIOF` ACC readback telemetry register offset (`+0x7E`).
-pub const AIOF_RDACC_OFF: u32 = 0x7E;
-/// `AIOF` Macrovision/copy-guard detector readback register offset (`+0x80`).
-pub const AIOF_RDMV_OFF: u32 = 0x80;
-/// `AIOF` Frame counter telemetry register offset (`+0x92`).
-pub const AIOF_RDFCNT_OFF: u32 = 0x92;
+/// `AIOF` ACC readback telemetry register offset (`+0x80`).
+pub const AIOF_RDACC_OFF: u32 = 0x80;
+/// `AIOF` Macrovision/copy-guard detector readback register offset (`+0x82`).
+pub const AIOF_RDMV_OFF: u32 = 0x82;
+/// `AIOF` sync detector status readback register offset (`+0x84`).
+pub const AIOF_RDDET_OFF: u32 = 0x84;
+/// `AIOF` secondary detector status readback register offset (`+0x92`).
+pub const AIOF_RDDET1_OFF: u32 = 0x92;
+/// `AIOF` Frame counter telemetry register offset (`+0x94`).
+pub const AIOF_RDFCNT_OFF: u32 = 0x94;
 /// `AIOF` Contrast / luma control register offset (`+0xA4`).
 pub const AIOF_CONT_OFF: u32 = 0xA4;
+/// `AIOF` Emphasis control register offset (`+0xB4`).
+pub const AIOF_EMPHA_OFF: u32 = 0xB4;
 /// `AIOF_CONT` lighter black-level setup preset (`0 IRE` NTSC-J, `0x4000`).
 pub const AIOF_CONT_SETUP_0IRE_LIGHTER: u16 = 0x4000;
 /// `AIOF_CONT` darker black-level setup preset (`7.5 IRE` NTSC-M, `0x8000`).
@@ -83,15 +101,31 @@ pub const AVDD_VDECCTL1_OFF: u32 = 0x0858;
 pub const AM34_IIC0_BASE: u32 = 0xD840_0000;
 /// AM34 I2C Master Controller 1 MMIO Base (`0xD840_1000`).
 pub const AM34_IIC1_BASE: u32 = 0xD840_1000;
+/// `IC3001` (`C1AB00002379` A/V Switch Matrix) 7-bit I2C slave address (`0x4A`, `src/iic33.c` `@ 0x570D627E`).
+pub const IC3001_I2C_ADDR_7BIT: u8 = 0x4A;
+/// `IC3001` (`C1AB00002379`) 8-bit I2C write address (`0x94`).
+pub const IC3001_I2C_ADDR_8BIT_WRITE: u8 = 0x94;
+/// `IC3001` (`C1AB00002379`) 8-bit I2C read address (`0x95`).
+pub const IC3001_I2C_ADDR_8BIT_READ: u8 = 0x95;
 
 /// `IC7501` Front-Panel / Timer TBUS Bridge MMIO Base (`0xDC01_0000`).
 pub const AM34_IC7501_TBUS_BASE: u32 = 0xDC01_0000;
+/// `IC7501` TBUS TX 16-byte mailbox base offset (`+0x10`, `0xDC01_0010`).
+pub const AM34_IC7501_TBUS_TX_OFF: u32 = 0x10;
+/// `IC7501` TBUS RX 16-byte mailbox base offset (`+0x20`, `0xDC01_0020`).
+pub const AM34_IC7501_TBUS_RX_OFF: u32 = 0x20;
 /// `IC7501` TBUS frame checksum byte offset (`+0x10`, 15-byte packet).
 pub const AM34_IC7501_TBUS_CHECKSUM_OFF: u32 = 0x10;
+/// `IC7501` TBUS RX/TX acknowledge strobe bit on `0xDC01_0000` (`bit 4 = 0x10`).
+pub const IC7501_TBUS_ACK_STROBE_BIT: u8 = 0x10;
 /// `IC7501` TBUS checksum bias subtracted from sum (`sum - 0x5B`).
 pub const IC7501_TBUS_CHECKSUM_BIAS: u8 = 0x5B;
 /// `IC7501` TBUS 255-second hung-up watchdog keepalive opcode (`0x8A`).
 pub const IC7501_WDT_KEEPALIVE_CMD: u8 = 0x8A;
+/// `IC7501` TBUS 7-character VFD text display opcode (`0xA3`, `FUN_4400599a`).
+pub const IC7501_VFD_TEXT_CMD: u8 = 0xA3;
+/// Precomputed checksum byte `[15]` for the 255-second keepalive frame (`(0x8A + 0x02 + 0xFF - 0x5B) & 0xFF = 0x30`).
+pub const IC7501_WDT_255S_CHECKSUM: u8 = 0x30;
 
 /// AM34 Watchdog / System Reset Control Register (`0xC000_1000`).
 pub const AM34_WDBC_REG: u32 = 0xC000_1000;
