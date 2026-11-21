@@ -13,8 +13,8 @@ O repositório está estruturado em subsistemas integrados e desacoplados:
 
 1. **Rust Core Workspace & CLI (`crates/`, `Cargo.toml`)**:
    - **`panadiga-core`** (`crates/panadiga-core`): Núcleo de alta performance para parsing forense de storage (`hdd`), criptoanálise (`crypto`), reparo cirúrgico de NVRAM (`nvram`), ponte serial/CDC RP2040/RP2350 (`pico`), servidor GDB RSP introspectivo (`debugger`), gerador de scripts Ghidra (`ghidra`), catálogo visual e SSOT de hardware (`ssot`).
-   - **`panadiga-rag`** (`crates/panadiga-rag`): Motor RAG Zero-Error nativo em Rust com 6 camadas de defesa, guardrails determinísticos de segurança física (`safety.rs`) e indexação híbrida (Markdown docs, 30 manuais PDF via `lopdf`, fontes Rust/C11/PIO/TS/Python e scripts Ghidra).
-   - **`panadiga-mcp`** (`crates/panadiga-mcp`): Servidor MCP nativo em Rust (`panadiga mcp` via JSON-RPC 2.0 `stdio`) com **24 tools** (expansão dos 18 módulos base + 6 rotas de diagnóstico/BGO/`DAVIS`/`PAL-M`/TBC/flash), **resources** (`panadiga://invariants`, `panadiga://memory-map`, pinouts, catálogo visual e docs/) e **prompts** guiados.
+   - **`panadiga-rag`** (`crates/panadiga-rag`): Motor RAG Zero-Error nativo em Rust com 6 camadas de defesa, guardrails determinísticos de segurança física (`safety.rs`) e indexação híbrida (Markdown docs, 32 manuais/datasheets PDF via `lopdf`, fontes Rust/C11/PIO/TS/Python e scripts Ghidra).
+   - **`panadiga-mcp`** (`crates/panadiga-mcp`): Servidor MCP nativo em Rust (`panadiga mcp` via JSON-RPC 2.0 `stdio`) com **25 tools** (expansão dos 18 módulos base + 7 rotas de diagnóstico/BGO/`DAVIS`/`PAL-M`/TBC/flash/profiles), **resources** (`panadiga://invariants`, `panadiga://memory-map`, `panadiga://profiles/<model>`, pinouts, catálogo visual e docs/) e **prompts** guiados.
    - **`panadiga-cli`** (`crates/panadiga-cli`): Binário unificado multiplataforma (`panadiga` / `panadiga.exe`) com CLI Clap, modo TUI interativo e lançador do workbench.
 2. **Desktop & Mobile Workbench (`apps/desktop/`, `apps/desktop/src-tauri/` / `panadiga-desktop`)**:
    - Interface gráfica **100% livre de mocks em produção** construída com **Tauri 2**, **React 19**, **TypeScript**, **Tailwind CSS**, **Vitest** e **Playwright** (mocks isolados estritamente em `apps/desktop/src/test/mocks/` para suítes de teste).
@@ -28,8 +28,8 @@ O repositório está estruturado em subsistemas integrados e desacoplados:
    - Orquestração cross-platform de build (`scripts/build.py`), validação (`scripts/validate.py`), tipagem estrita (`mypy --strict`) e testes em `scripts/tests/`.
    - Scripts Ghidra Jython (`tools/ghidra/`) gerados a partir da SSOT Rust e lançadores em `tools/`.
 5. **Acervo de Engenharia & Manuais (`manuals_and_schematics/`, `docs/`)**:
-   - **30 manuais de serviço e datasheets oficiais** em PDF catalogados em [`manuals_and_schematics/README.md`](manuals_and_schematics/README.md) e indexados para busca automatizada.
-   - **38 dossiês técnicos bilíngues canônicos** em `docs/pt-BR/` e `docs/en-US/` (mapa em [`docs/translation_pairs.json`](docs/translation_pairs.json) e [`docs/INDEX.md`](docs/INDEX.md)), kit canônico [`firmware_and_images/sd_unbrick_kit/`](firmware_and_images/README.md) (`--loader-profile ver061`: `262,144 B` raw + `sd48`), auditorias na raiz ([`AUDITORIA_COMPLETA.md`](AUDITORIA_COMPLETA.md) / [`COMPLETE_AUDIT.md`](COMPLETE_AUDIT.md)) + históricas ([`docs/audits/`](docs/audits/README.md)), evidência integral de disassembly/pseudocódigo Ghidra ([`docs/pseudocode/`](docs/pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md)) e **22 capturas/logs reais de bancada** ([`docs/debug_logs/`](docs/debug_logs/README.md)).
+   - **32 manuais de serviço e datasheets oficiais** em PDF catalogados em [`manuals_and_schematics/README.md`](manuals_and_schematics/README.md) e indexados para busca automatizada.
+   - **39 dossiês técnicos bilíngues canônicos** em `docs/pt-BR/` e `docs/en-US/` (mapa em [`docs/translation_pairs.json`](docs/translation_pairs.json) e [`docs/INDEX.md`](docs/INDEX.md)), kit canônico [`firmware_and_images/sd_unbrick_kit/`](firmware_and_images/README.md) (`--loader-profile ver061`: `262,144 B` raw + `sd48`), auditorias na raiz ([`AUDITORIA_COMPLETA.md`](AUDITORIA_COMPLETA.md) / [`COMPLETE_AUDIT.md`](COMPLETE_AUDIT.md)) + históricas ([`docs/audits/`](docs/audits/README.md)), evidência integral de disassembly/pseudocódigo Ghidra ([`docs/pseudocode/`](docs/pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md)) e **22 capturas/logs reais de bancada** ([`docs/debug_logs/`](docs/debug_logs/README.md)).
 
 ---
 
@@ -43,8 +43,8 @@ Ao propor scripts, comandos de bancada ou modificações de firmware:
    - **NUNCA ALIMENTE A SONDA PICO PELO CONECTOR P7501**. O pino 1 (`SW_UART` / Sense no P7501) destina-se apenas ao controle de boot/detecção ($< 10\text{ mA}$). O Pico deve receber alimentação externa via USB ou `VSYS`.
 3. **Invariante de Escrita em Memória Flash**:
    - A memória Flash Spansion `S29JL064H70TFI00` (8 MB) possui mapeamento de barramento físico de `0x80000000` a `0x807FFFFF`.
-   - **IPL Crítico de Boot (`SA0..SA3`, `0x80000000` a `0x8003FFFF` / `0x84000000` a `0x8403FFFF`)**: **LEITURA ESTRITA PERMANENTE** na sonda Pico (`E05`), preservando o boot `P7501` e evitando brick irreversível sem gravador TSOP-48.
-   - **Região Upper NOR App / BGO (`SA4..SA133`, `0x80040000` a `0x807EFFFF`)**: protegida por padrão com `E05` para operações de rotina `U99`, mas desbloqueável explicitamente via `qPanadigaNorUnlock:CONFIRM_UPPER_NOR` / `NorWritePolicy::UpperNorAppUnlocked` ou CoW `panadiga nvram patch-upper-nor` (com backup prévio verificado por SHA-256).
+   - **IPL Crítico de Boot (`SA0..SA10`, `256 KiB`, `0x80000000` a `0x8003FFFF` / `0x84000000` a `0x8403FFFF`)**: **LEITURA ESTRITA PERMANENTE** na sonda Pico (`E05`), preservando o boot `P7501` e evitando brick irreversível sem gravador TSOP-48.
+   - **Região Upper NOR App / BGO (`SA11..SA133`, `0x80040000` a `0x807EFFFF`)**: protegida por padrão com `E05` para operações de rotina `U99`, mas desbloqueável explicitamente via `qPanadigaNorUnlock:CONFIRM_UPPER_NOR` / `NorWritePolicy::UpperNorAppUnlocked` ou CoW `panadiga nvram patch-upper-nor` (com backup prévio verificado por SHA-256).
    - **NVRAM/EEMUL (`SA134..SA141`, últimos 64 KB)**: `0x807F0000` a `0x807FFFFF` (offset físico `0x7F0000` a `0x7FFFFF`) — escrita autorizada por padrão para sanitização cirúrgica do erro `U99`.
 4. **Invariante Forense de Storage (MEIHFS)**:
    - Dumps brutos de disco rígido (como `panasonic DMR EH-55 Firmware hdd_100.bin`) são evidências forenses imutáveis.
@@ -89,7 +89,7 @@ O portão valida de forma automatizada:
 
 ---
 
-## 5. Acervo de Documentação Técnica (Raiz + 38 Pares Bilíngues)
+## 5. Acervo de Documentação Técnica (Raiz + 39 Pares Bilíngues)
 
 * **Portal Mestre & Mapa Bilíngue:** [`docs/INDEX.md`](docs/INDEX.md) · [`docs/translation_pairs.json`](docs/translation_pairs.json)
 * **Auditorias na Raiz & Snapshots:** [`AUDITORIA_COMPLETA.md`](AUDITORIA_COMPLETA.md) ([English: `COMPLETE_AUDIT.md`](COMPLETE_AUDIT.md)) · [`docs/audits/README.md`](docs/audits/README.md)

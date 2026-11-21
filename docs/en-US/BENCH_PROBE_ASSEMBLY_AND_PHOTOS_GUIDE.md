@@ -174,6 +174,12 @@ Before touching the Raspberry Pi Pico:
 1. Confirm Pico firmware built from `firmware/pico-p7501/` is flashed and re-check `GP2`, `GP3 (Hi-Z!)`, `GP4`, `GP5 (OD)`, `GP26`, `GND`.
 2. Connect Pico USB cable to the workstation (NEVER back-power Pico through `P7501`) and start Panadiga Desktop:
    ```powershell
-   npm run tauri dev
+   npm start
+   # or live-reload development mode:
+   npm run dev
    ```
 3. Open the **Pico Bench** view and verify the **Physical Wiring (`Pico -> P7501`)** card to start safe `115200 8N1` serial capture.
+
+### Step 5: No-Desolder SD Kit, Bricked-Unit Risk Compliance & IDE Chassis Closure
+1. **100% No-Desoldering `U99` Recovery (`SDDIAG` `ver061` / Door #1):** Format/prepare an **SDSC FAT16 ($\le 2\text{ GB}$)** card via `panadiga unbrick prepare-sd --loader-profile ver061` (`DIGADIAG.FRM` `262,144 B` raw + `PANA__SD.FRM` `sd48`). Before writing Layer 2 (`U CONFIRM_UPPER_NOR` / `SA26..SA70` BGO) or `EEMUL` (`SA134..SA141`), capture a full **`8 MiB` read-only backup (`PANADMP1` + SHA-256)**; because **Layer 1 Critical Boot IPL (`SA0..SA10`) remains `E05`-locked**, attempting in-circuit recovery on an already-bricked `U99` recorder avoids the far riskier hot-air removal of TSOP-48 `IC5001`.
+2. **Low-Profile Chassis Closure with `StarTech IDE2SAT2` (`MASTER`):** Always keep the adapter jumper on **`MASTER`** (never `CS`/`Slave`). Because mating the blue `N5EZZ0000003` board upright at `0°` collides with the top steel lid, rotate it **`180°`** using a **40-pin `0.5 mm` pitch (`20.5 mm` wide, `0.30 mm` stiffened end) `Type B` FFC** (or DIY opposite-face razor-blade strip + Kapton tape) and confirm **`1:1`** multimeter continuity before plugging into AC mains ([see full spec and bench photos in `STORAGE_ARCHITECTURE_MEIHDFS_PARTITIONS.md §9.6`](./STORAGE_ARCHITECTURE_MEIHDFS_PARTITIONS.md#96-low-profile-chassis-closure-modification-40-pin-type-b-ffc-or-diy-strip--180-inverted-blue-panasonic-adapter-n5ezz0000003)).

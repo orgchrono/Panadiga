@@ -5,9 +5,9 @@
 # Central de Engenharia Reversa, Firmware e Diagnóstico de Hardware — Gravadores Panasonic DIGA
 
 [![Rust](https://img.shields.io/badge/Rust-1.85%2B-orange.svg)](https://www.rust-lang.org/)
-[![SoC](https://img.shields.io/badge/SoC-Matsushita%20UniPhier%20%28AM34%2FMN103S%29-blue.svg)](#1-visão-geral-e-apresentação-executiva-do-projeto)
-[![Flash](https://img.shields.io/badge/NOR%20Flash-Spansion%20S29JL%20%2F%20Am29LV%20%282MB--16MB%29-green.svg)](#6-mapa-de-memória-físico-da-arquitetura-matsushita-am34-mn103s--vep79138)
-[![Storage](https://img.shields.io/badge/Storage-MEIHDFS%20%28IDE%2FPATA%2FSATA%29-yellow.svg)](#7-síntese-das-descobertas-criptográficas-e-forenses-forensic-cryptanalysis--storage-deep-dive)
+[![SoC](<https://img.shields.io/badge/SoC-Matsushita%20UniPhier%20%28AM34%2FMN103S%29-blue.svg>)](#1-visão-geral-e-apresentação-executiva-do-projeto)
+[![Flash](<https://img.shields.io/badge/NOR%20Flash-Spansion%20S29JL%20%2F%20Am29LV%20%282MB--16MB%29-green.svg>)](#6-mapa-de-memória-físico-da-arquitetura-matsushita-am34-mn103s--vep79138)
+[![Storage](<https://img.shields.io/badge/Storage-MEIHDFS%20%28IDE%2FPATA%2FSATA%29-yellow.svg>)](#7-síntese-das-descobertas-criptográficas-e-forenses-forensic-cryptanalysis--storage-deep-dive)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 > **Documento Mestre de Referência Técnica de Sistemas e Hardware**
@@ -32,7 +32,7 @@ Embora o foco inicial de laboratório deste projeto seja o modelo amplamente dif
 3. **Criptografia e Proteção de Propriedade Intelectual:** O contêiner de distribuição óptica (`PANA_DVD.FRM`) e as partições executáveis do HD são blindados com cifras de bloco simétricas de 64 bits em modo ECB, associadas a esquemas CPRM (*Content Protection for Recordable Media*) e DivX DRM.
 4. **A Vulnerabilidade Crítica do Erro `U99`:** A calibração de canais, estado de montagem do HDD e parâmetros do gravador são mantidos nos últimos 64 KB da Flash, emulando uma EEPROM (`EEMUL`). Desgaste de células, desligamento abrupto durante gravação ou parâmetros corrompidos provocam falha de validação na inicialização. Como consequência, o firmware Matsushita entra em pânico e trava irreversivelmente com o código **`U99`** no display VFD frontal, rejeitando comandos do controle e travando o mecanismo óptico.
 
-Este repositório consolida o **ecossistema definitivo de engenharia reversa, recuperação física e análise forense** para a linha Panasonic DIGA, disponibilizando a suíte de ferramentas de alta performance em Rust **`panadiga`**, interface de bancada desktop e mobile Android (`.apk`), firmware C11/PIO para microcontroladores **Raspberry Pi Pico (RP2040) e Pico 2 (RP2350)** com suporte a **Bluetooth Low Energy (BLE)** e USB-C OTG, **30 manuais técnicos de fábrica e datasheets de silício**, **38 dossiês técnicos bilíngues sincronizados (`pt-BR` / `en-US`)**, **disassembly e pseudocódigo integral MN103S** (`docs/pseudocode/`) e **22 capturas e logs únicos de bancada (`COM10` / `PhysicalDrive1`)** (`docs/debug_logs/`).
+Este repositório consolida o **ecossistema definitivo de engenharia reversa, recuperação física e análise forense** para a linha Panasonic DIGA, disponibilizando a suíte de ferramentas de alta performance em Rust **`panadiga`**, interface de bancada desktop e mobile Android (`.apk`), firmware C11/PIO para microcontroladores **Raspberry Pi Pico (RP2040) e Pico 2 (RP2350)** com suporte a **Bluetooth Low Energy (BLE)** e USB-C OTG, **32 manuais técnicos de fábrica e datasheets de silício**, **39 dossiês técnicos bilíngues sincronizados (`pt-BR` / `en-US`)**, **disassembly e pseudocódigo integral MN103S** (`docs/pseudocode/`) e **22 capturas e logs únicos de bancada (`COM10` / `PhysicalDrive1`)** (`docs/debug_logs/`).
 
 ---
 
@@ -122,7 +122,7 @@ Panadiga/
 │   ├── panadiga-core/                                <-- Núcleos: NVRAM, MEIHDFS + `hdd/capacity_patch/` (`5 GB..2 TB`) + `hdd/writer/eh55_flash/`, Cripto Feistel/EXTRHEAD, RE (`mn10300/`, `mn10300_traps/`, `mn10300_emu/`, `matshita_emu/`, `nor_dumper/`, `eh55_bgo/`, `davis_probe/`, `region_compat/tv_standard/`, `tbc_appliance/`, `bgo_unbrick/`, `main_passthrough/`, `unbrick_sd_kit/`, `prog061_uart_monitor/`), `pico/panamon1/`, Hardware SSOT
 │   ├── panadiga-cli/                                 <-- Binário `panadiga` & Workbench TUI Interativo
 │   ├── panadiga-rag/                                 <-- Motor RAG Zero-Error 6 Camadas + `HardwareSafetyValidator` + `FactCritic`
-│   └── panadiga-mcp/                                 <-- Servidor MCP JSON-RPC 2.0 `stdio` Expondo 24 Ferramentas Nativas (18 Core + 6 Módulos Wave 3)
+│   └── panadiga-mcp/                                 <-- Servidor MCP JSON-RPC 2.0 `stdio` Expondo 25 Ferramentas Nativas (18 Core + 7 Módulos Wave 3)
 ├── apps/desktop/                                     <-- GUI Desktop & Android Tauri 2.0 (`panadiga-desktop` + React 19 + Vite MVVM)
 │   ├── src-tauri/                                    <-- Comandos Nativos Rust, IPC de Docs/Logs & Ponte GDB RSP
 │   ├── src/                                          <-- Componentes, ViewModels MVVM e Visualizador Interativo de Docs/Logs/Código
@@ -130,14 +130,14 @@ Panadiga/
 │   └── playwright.config.ts                          <-- Configuração de Testes End-to-End em Navegador
 ├── docs/                                             <-- Acervo Oficial de Documentação Técnica
 │   ├── INDEX.md                                      <-- Portal e Índice Gateway de Documentação
-│   ├── translation_pairs.json                        <-- Mapa Canônico de 38 Pares Bilíngues (`pt-BR` <-> `en-US` + Raiz)
-│   ├── en-US/                                        <-- Dossiês Técnicos Canônicos em Inglês (38 pares)
-│   ├── pt-BR/                                        <-- Dossiês Técnicos de Bancada em Português (38 pares)
+│   ├── translation_pairs.json                        <-- Mapa Canônico de 39 Pares Bilíngues (`pt-BR` <-> `en-US` + Raiz)
+│   ├── en-US/                                        <-- Dossiês Técnicos Canônicos em Inglês (39 pares)
+│   ├── pt-BR/                                        <-- Dossiês Técnicos de Bancada em Português (39 pares)
 │   ├── audits/                                       <-- Snapshots Históricos Pré-Refatoração (`2026-11-11`)
 │   ├── pseudocode/                                   <-- Pseudocódigo Integral MN103S, Auditoria `??` & Dumps Brutos (`raw/*.txt`)
 │   ├── debug_logs/                                   <-- 22 Capturas Únicas `COM10` / `P7501` / `PhysicalDrive1` & `DOSSIE_COMPLETO_...txt`
 │   └── assets/ / images/                             <-- Esquemáticos em Alta Resolução, 241 PNGs do Catálogo Visual & Pinouts
-├── manuals_and_schematics/                           <-- Acervo Técnico (30 Manuais PDF, Esquemas & Datasheets)
+├── manuals_and_schematics/                           <-- Acervo Técnico (32 Manuais PDF, Esquemas & Datasheets)
 │   ├── README.md                                     <-- Catálogo Mestre Indexado por Modelo e Disciplina
 │   ├── datasheets/                                   <-- Datasheets de Silício (MN103, RP2040, RP2350, Spansion)
 │   ├── dmr-eh55/                                     <-- Manuais DMR-EH55 (Serviço, Esquemas, Usuário, Firmware)
@@ -180,15 +180,15 @@ Panadiga/
 
 ### 3.1. Comandos Unificados Multiplataforma (`package.json` & `scripts/`)
 
-| Comando | Plataforma | Modo | Descrição |
-| :--- | :--- | :--- | :--- |
-| **`npm start`** | Windows / Linux / macOS | Execução / Auto-Build | Inicia a GUI Desktop diretamente de `dist/` ou `target/release/` (compila via `scripts/build.py --desktop` se ausente). |
-| **`npm run dev`** | Windows / Linux / macOS | Dev Server Vite | Inicia o servidor de desenvolvimento com hot-reload em `apps/desktop`. |
-| **`npm run cli -- <args>`** | Windows / Linux / macOS | Dispatcher CLI Nativa | Encaminha argumentos para `panadiga` (`dist/`, `target/release/`, ou `cargo run -p panadiga --`). |
-| **`npm run build:desktop`** | Windows / Linux / macOS | Release Desktop | Compila bundle React, exporta scripts Ghidra do SSOT, compila Rust release, copia UF2s & `tools/` e empacota `.zip`/`.tar.gz` + `SHA256SUMS.txt`. |
-| **`npm run build:android`** | Windows / Linux / macOS | Release Android APK | Configura SDK/NDK Android, compila APK AArch64 via Tauri Mobile e restaura `Cargo.toml` com segurança. |
-| **`npm run build:all`** | Windows / Linux / macOS | Release Completo | Compila firmwares Pico UF2 (se ARM GCC presente), Release Desktop e APK Android. |
-| **`npm run validate`** (`npm test`) | Windows / Linux / macOS | 9 Quality Gates | Executa `python scripts/validate.py` cobrindo Rust, TypeScript, Vitest, `jscpd`, `uxlint`, Playwright, Ghidra SSOT, testes C11 host, `mypy --strict` e `pytest`. |
+| Comando                                       | Plataforma              | Modo                    | Descrição                                                                                                                                                                |
+| :-------------------------------------------- | :---------------------- | :---------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`npm start`**                       | Windows / Linux / macOS | Execução / Auto-Build | Inicia a GUI Desktop diretamente de `dist/` ou `target/release/` (compila via `scripts/build.py --desktop` se ausente).                                              |
+| **`npm run dev`**                     | Windows / Linux / macOS | Dev Server Vite         | Inicia o servidor de desenvolvimento com hot-reload em `apps/desktop`.                                                                                                   |
+| **`npm run cli -- <args>`**           | Windows / Linux / macOS | Dispatcher CLI Nativa   | Encaminha argumentos para `panadiga` (`dist/`, `target/release/`, ou `cargo run -p panadiga --`).                                                                  |
+| **`npm run build:desktop`**           | Windows / Linux / macOS | Release Desktop         | Compila bundle React, exporta scripts Ghidra do SSOT, compila Rust release, copia UF2s & `tools/` e empacota `.zip`/`.tar.gz` + `SHA256SUMS.txt`.                  |
+| **`npm run build:android`**           | Windows / Linux / macOS | Release Android APK     | Configura SDK/NDK Android, compila APK AArch64 via Tauri Mobile e restaura `Cargo.toml` com segurança.                                                                  |
+| **`npm run build:all`**               | Windows / Linux / macOS | Release Completo        | Compila firmwares Pico UF2 (se ARM GCC presente), Release Desktop e APK Android.                                                                                           |
+| **`npm run validate`** (`npm test`) | Windows / Linux / macOS | 9 Quality Gates         | Executa `python scripts/validate.py` cobrindo Rust, TypeScript, Vitest, `jscpd`, `uxlint`, Playwright, Ghidra SSOT, testes C11 host, `mypy --strict` e `pytest`. |
 
 ---
 
@@ -290,7 +290,7 @@ panadiga scan --input firmware_and_images/PANA_DVD.FRM --terms U99,FIRMWARE,PANA
 
 ### 4.11 Comando 10: Indexação e Busca em Manuais de Serviço e Esquemas Técnicos (`manuals`)
 
-Pesquisa nos 30 manuais técnicos de serviço, esquemas elétricos e datasheets através de busca recursiva ultrarrápida.
+Pesquisa nos 32 manuais técnicos de serviço, esquemas elétricos e datasheets através de busca recursiva ultrarrápida.
 
 ```bash
 panadiga manuals --query "P7501"
@@ -365,14 +365,14 @@ Na placa digital/principal `VEP79138` do DMR-EH55 (legenda *"TO JIGU"* no esquem
 > [!NOTE]
 > **Compatibilidade de Hardware RP2040 / RP2350:** Qualquer placa equipada com **RP2040** (Pico, Pico W) ou **RP2350** (Pico 2) é 100% suportada. O enquadramento padrão `115200 8N1` (`p7501_uart.pio`) e a temporização open-drain determinística de `XRESET`/`SW_UART` rodam diretamente no hardware do RP2040/RP2350.
 
-| Pino P7501 (Canônico) | Sinal Matsushita |     Pino RP2040 / Pico     |              Condicionamento / Rede na PCB              |        Tipo de Sinal        | Veredito de Bancada & Função Técnica                                                                                                         |
-| :--------------------: | :---------------: | :------------------------: | :-----------------------------------------------------: | :-------------------------: | :------------------------------------------------------------------------------------------------------------------------------------------- |
-|    **Pino 1**    | `SW_UART` `(D)` | `GP26 / ADC0` (Pino 31) | Resistor $1.0\text{ k}\Omega$ ADC em série; Q7510/R7562/R7559 | Leitura ADC / Open-Drain | Lê `~3.25V` em Hi-Z (`~2.69V` Pull-Down via `Q7510`). Nível `LOW` ativa boot serial `XFWE` e corta `Q7514` (`I < 10 mA`). |
-|    **Pino 2**    |    `XRESET`    |      `GP5` (Pino 7)      |          Resistor $100\,\Omega$ em série (opcional)          | **Open-Drain Estrito** | Reset mestre da CPU. **Drenar para 0V (`LOW`) para resetar; soltar em `Hi-Z` (~20 µs subida) para rodar. Nunca 3.3V Push-Pull!** |
-|    **Pino 3**    | `UARTM2P_T` (`MAX RXD`) | `GP4` (Pino 6) | Pull-up interno `R7570 10 kΩ` ao `NSW5V` + chave `Q7514` | **UART TX (Pico -> AM34)** | Entrada UART `115200 8N1` no AM34. Exige `SW_UART` em `Hi-Z` para `Q7514` conduzir. **NÃO adicionar pull-up externo para 3.3V.** |
-|    **Pino 4**    | **`GND`** | **Pino 38 (`GND`)** |         **Ligação direta de baixa impedância**         | **Referência de 0V** | **Equipotencial mandatória: $0.0\,\Omega$ contínuo com a carcaça metálica do chassi!**                                                   |
-|    **Pino 5**    | `NSW5V` (`X_SW_5R2V`) | `GP3` (Pino 5) |     Leitura em alta impedância via `IC1506` / `D7510`     | **Sense Estático APENAS** | Linha ~5.15V upstream via `D7510` (`~3.29V` em repouso). **DEVE permanecer `Hi-Z Input` sem pulls — NUNCA configurar como saída push-pull!** |
-|    **Pino 6**    | `UARTP2M_T` (`MAX TXD`) | `GP2` (Pino 4) |    Rede `R7572 10 kΩ`; resistor $100\,\Omega$ (opcional)    | **UART RX (AM34 -> Pico)** | Console assíncrono `115200 8N1` do AM34 (`<00>DDR CHECK: OK`, `CD diag boot mode`, `X(...)`). Pad quadrado na PCB. |
+| Pino P7501 (Canônico) |      Sinal Matsushita      |     Pino RP2040 / Pico     |                  Condicionamento / Rede na PCB                  |          Tipo de Sinal          | Veredito de Bancada & Função Técnica                                                                                                                    |
+| :--------------------: | :-------------------------: | :-------------------------: | :--------------------------------------------------------------: | :------------------------------: | :--------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|    **Pino 1**    |     `SW_UART` `(D)`     |  `GP26 / ADC0` (Pino 31)  | Resistor $1.0\text{ k}\Omega$ ADC em série; Q7510/R7562/R7559 |     Leitura ADC / Open-Drain     | Lê `~3.25V` em Hi-Z (`~2.69V` Pull-Down via `Q7510`). Nível `LOW` ativa boot serial `XFWE` e corta `Q7514` (`I < 10 mA`).                  |
+|    **Pino 2**    |         `XRESET`         |      `GP5` (Pino 7)      |          Resistor $100\,\Omega$ em série (opcional)          |   **Open-Drain Estrito**   | Reset mestre da CPU. **Drenar para 0V (`LOW`) para resetar; soltar em `Hi-Z` (~20 µs subida) para rodar. Nunca 3.3V Push-Pull!**                |
+|    **Pino 3**    | `UARTM2P_T` (`MAX RXD`) |      `GP4` (Pino 6)      | Pull-up interno `R7570 10 kΩ` ao `NSW5V` + chave `Q7514` | **UART TX (Pico -> AM34)** | Entrada UART `115200 8N1` no AM34. Exige `SW_UART` em `Hi-Z` para `Q7514` conduzir. **NÃO adicionar pull-up externo para 3.3V.**            |
+|    **Pino 4**    |      **`GND`**      | **Pino 38 (`GND`)** |         **Ligação direta de baixa impedância**         |   **Referência de 0V**   | **Equipotencial mandatória: $0.0\,\Omega$ contínuo com a carcaça metálica do chassi!**                                                         |
+|    **Pino 5**    |  `NSW5V` (`X_SW_5R2V`)  |      `GP3` (Pino 5)      |      Leitura em alta impedância via `IC1506` / `D7510`      | **Sense Estático APENAS** | Linha ~5.15V upstream via `D7510` (`~3.29V` em repouso). **DEVE permanecer `Hi-Z Input` sem pulls — NUNCA configurar como saída push-pull!** |
+|    **Pino 6**    | `UARTP2M_T` (`MAX TXD`) |      `GP2` (Pino 4)      |    Rede `R7572 10 kΩ`; resistor $100\,\Omega$ (opcional)    | **UART RX (AM34 -> Pico)** | Console assíncrono `115200 8N1` do AM34 (`<00>DDR CHECK: OK`, `CD diag boot mode`, `X(...)`). Pad quadrado na PCB.                                |
 
 <p align="center">
   <img src="docs/pt-BR/images/p7501_pico_probe_assembly_schematic.png" alt="Esquema Elétrico Normatizado de Montagem da Sonda Pico P7501 UART" width="760" />
@@ -408,18 +408,18 @@ Sequência Validada na Bancada DMR-EH55 (Captura CDDIAG via P7501):
 
 ## 6. Mapa de Memória Físico da Arquitetura Matsushita AM34 (`MN103S` / `VEP79138`)
 
-| Faixa Física | Região / Dispositivo (`AM34`) | Descrição Funcional |
-| :--- | :--- | :--- |
-| `0x00000000..0x0003FFFF` | SRAM Interna On-Chip (`256 KB`) | Vetores de exceção e abertura para RAM Loader (`0x00004000`, `4 KB`) |
-| `0x10000000..0x1000FFFF` | Barramento MMIO Core (`64 KB`) | Timers internos e controladores de interrupção |
-| `0x40000000..0x43FFFFFF` | SDRAM Principal (`64 MB`) | SDRAM cacheada / `DRV_S211` `0x40000000` / `BOOT.BIN` em `0x44000000` |
-| `0x50400000..0x5043FFFF` | Updater FVU `PROG061` (`262.144 B`) | Carregador Estágio 2 (`eh55_frm_PROG061_BOOT.bin`) e alvo de salto `DIGADIAG.FRM` |
-| `0x57000000..0x57C664EB` | SO `MAIN` (`EH55_MAIN_3410PQ.bin`) | Kernel principal AM34 (`13.003.052 B`), codecs AV, `"src/hdd_cmd.c"` e `_dev_SERIAL` (`0x574F0775`) |
-| `0x80000000..0x807FFFFF` | NOR Spansion `S29JL064H` (`8 MB`, CS0) | Janela cacheada (`142` setores `SA0..SA141`): IPL `ver0.61` (`SA0..SA10`), `DRV` (`0x80080000`), BGO (`0x80130000..0x803FFFFF` no EH55 `ver0.61`), Upper EEMUL (`SA71..SA141`, `0x80400000..0x807FFFFF`) |
-| `0x84000000..0x847FFFFF` | Janela NOR *Uncached* & BGO (`CS1`) | Base de dump somente-leitura (`PANADMP1` -> `0x84000000`), BGO EH55 `ver0.61` (`0x84130000..0x843FFFFF`, `45×64 KB` em `0x440337A4` vs `ver0.63`/`PROG061` `0x84200000..0x843FFFFF`) e Upper EEMUL (`0x84400000..0x847FFFFF`) |
-| `0x90400000..0x9043FFFF` | Espelho SDRAM *Uncached* (`PROG061`) | Alias não-cacheado de `0x50400000`, usado para coerência D-cache/I-cache em `PANADMP1` (`0x9043950E` -> `J 904394FA`) e stubs (`0x90439B40`) |
-| `0x89000500` / `0x89000D00` | Controladores IDE `DAVIS` (`ch=0`/`ch=1`) | Primary Master (`ch=0, dev=0`) = ODD ATAPI (`DRV S211`); Secondary **MASTER** (`ch=1, dev=0`) = HDD (`StarTech IDE2SAT2` em **MASTER**) |
-| `0xD4002008..0xD400200C` | UART0 `P7501` (`115200 8N1`) | `SC0TXB = 0xD4002008`, `SC0RXB = 0xD4002009`, `SC0STR = 0xD400200C` (`TXBUSY|TXBF` `0xA0`, RX `0x10`) |
+| Faixa Física                   | Região / Dispositivo (`AM34`)                | Descrição Funcional                                                                                                                                                                                                                              |
+| :------------------------------ | :---------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `0x00000000..0x0003FFFF`      | SRAM Interna On-Chip (`256 KB`)               | Vetores de exceção e abertura para RAM Loader (`0x00004000`, `4 KB`)                                                                                                                                                                         |
+| `0x10000000..0x1000FFFF`      | Barramento MMIO Core (`64 KB`)                | Timers internos e controladores de interrupção                                                                                                                                                                                                   |
+| `0x40000000..0x43FFFFFF`      | SDRAM Principal (`64 MB`)                     | SDRAM cacheada / `DRV_S211` `0x40000000` / `BOOT.BIN` em `0x44000000`                                                                                                                                                                      |
+| `0x50400000..0x5043FFFF`      | Updater FVU `PROG061` (`262.144 B`)         | Carregador Estágio 2 (`eh55_frm_PROG061_BOOT.bin`) e alvo de salto `DIGADIAG.FRM`                                                                                                                                                             |
+| `0x57000000..0x57C664EB`      | SO `MAIN` (`EH55_MAIN_3410PQ.bin`)          | Kernel principal AM34 (`13.003.052 B`), codecs AV, `"src/hdd_cmd.c"` e `_dev_SERIAL` (`0x574F0775`)                                                                                                                                        |
+| `0x80000000..0x807FFFFF`      | NOR Spansion `S29JL064H` (`8 MB`, CS0)      | Janela cacheada (`142` setores `SA0..SA141`): IPL `ver0.61` (`SA0..SA10`), `DRV` (`0x80080000`), BGO (`0x80130000..0x803FFFFF` no EH55 `ver0.61`), Upper EEMUL (`SA71..SA141`, `0x80400000..0x807FFFFF`)                       |
+| `0x84000000..0x847FFFFF`      | Janela NOR *Uncached* & BGO (`CS1`)         | Base de dump somente-leitura (`PANADMP1` -> `0x84000000`), BGO EH55 `ver0.61` (`0x84130000..0x843FFFFF`, `45×64 KB` em `0x440337A4` vs `ver0.63`/`PROG061` `0x84200000..0x843FFFFF`) e Upper EEMUL (`0x84400000..0x847FFFFF`) |
+| `0x90400000..0x9043FFFF`      | Espelho SDRAM *Uncached* (`PROG061`)        | Alias não-cacheado de `0x50400000`, usado para coerência D-cache/I-cache em `PANADMP1` (`0x9043950E` -> `J 904394FA`) e stubs (`0x90439B40`)                                                                                           |
+| `0x89000500` / `0x89000D00` | Controladores IDE `DAVIS` (`ch=0`/`ch=1`) | Primary Master (`ch=0, dev=0`) = ODD ATAPI (`DRV S211`); Secondary **MASTER** (`ch=1, dev=0`) = HDD (`StarTech IDE2SAT2` em **MASTER**)                                                                                        |
+| `0xD4002008..0xD400200C`      | UART0 `P7501` (`115200 8N1`)                | `SC0TXB = 0xD4002008`, `SC0RXB = 0xD4002009`, `SC0STR = 0xD400200C` (`TXBUSY                                                                                                                                                                 |
 
 ### 6.1 Regra de Ouro JEDEC & Coerência de Cache *Uncached* (`0x84000000` / `0x90400000`)
 
@@ -488,7 +488,7 @@ O superbloco no LBA 0 armazena a geometria com inversão bit a bit (`XOR 0xFF`):
 
 ```text
                    +---------------------------------------------+
-                   |       PANASONIC DMR-EH55 ERRO U99          |
+                   |       PANASONIC DMR-EH55 ERRO U99           |
                    |      (Pânico Permanente no Display VFD)     |
                    +----------------------+----------------------+
                                           |
@@ -525,13 +525,13 @@ O superbloco no LBA 0 armazena a geometria com inversão bit a bit (`XOR 0xFF`):
 
 A tabela a seguir especifica detalhadamente a arquitetura de silício, capacidade de Flash, endereçamento da NVRAM e métodos de recuperação aplicáveis em todas as 5 gerações de gravadores Panasonic DIGA:
 
-| Família & Modelos de Gravadores                                                                                | Geração / Ano                                      | Processador SoC & Arquitetura                                                     | Memória Flash NOR (Tamanho & Chip)                     | Faixa de Endereço da NVRAM (EEMUL)         | Subsistema de Armazenamento                       | Conector de Serviço / Depuração (`P7501` & Linha)                                                                | Causa do Erro U99 & Solução Panadiga                                                                                         |
-| :-------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------- | :-------------------------------------------------------------------------------- | :------------------------------------------------------ | :------------------------------------------ | :------------------------------------------------ | :------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------- |
-| **DMR-E20, DMR-E30, DMR-E50, DMR-E55, DMR-E60**                                                           | **Geração 1** (2001–2003)                   | Matsushita MN10300 (16/32-bit AM32 / AM33)                                        | **2 MB** (16 Mbit) TSOP-48 (Am29LV160)            | `0x001F0000..0x001FFFFF` (Últimos 64 KB) | Gravador Óptico DVD-RAM / DVD-R (UDF 1.5 direto) | Conector UART / serviço de 5 ou 6 pinos (3.3V)                                                                | Corrupção de wear-leveling na Flash. Limpeza via `panadiga nvram clean` (auto-detecta 2 MB).                               |
-| **DMR-E80H, DMR-E85H, DMR-E95H, DMR-E100H, DMR-E500H, DMR-ES20**                                          | **Geração 2** (2003–2004)                   | Matsushita MN103S / Primeiros UniPhier                                            | **4 MB** (32 Mbit) TSOP-48 (Am29LV320)            | `0x003F0000..0x003FFFFF` (Últimos 64 KB) | HDD PATA/IDE (40–160 GB) + MEIHDFS-V1            | Barra de pinos UART de serviço de 6 vias (3.3V LVTTL)                                                         | Berço do erro `U99` histórico. Limpeza do setor `0x3F0000` via `panadiga nvram clean` (auto-detecta 4 MB).             |
-| **DMR-EH50, DMR-EH52, DMR-EH55, DMR-EH56, DMR-EH60, DMR-EH65, DMR-EH75V, DMR-EH80V, DMR-ES10, DMR-ES30V** | **Geração 3** (2005–2007) [Plataforma Base] | Matsushita `AM34` / `MN103S` (`VEP79138` Main / Syscon `IC7501`)                              | **8 MB** (64 Mbit) TSOP-48 (`IC5001` Spansion S29JL064H)   | `0x007F0000..0x007FFFFF` (Últimos 64 KB) | HDD PATA/IDE (80–250 GB) + MEIHDFS-V2            | Conector Canônico **`P7501`** (JST B6B-ZR-3R4: `SW_UART`, `XRESET`, `UARTM2P_T`, `GND`, `NSW5V`, `UARTP2M_T`) | Erro clássico `U99` por dessincronia do anel EEMUL. Solução via `panadiga nvram clean` ou telemetria UART in-circuit (`P7501`). |
-| **DMR-EX75, DMR-EX85, DMR-EX95V, DMR-EX98V, DMR-EH67, DMR-EH68**                                          | **Geração 4** (2006–2008)                   | Matsushita `MN103S` / `AM34` 2ª Geração | **16 MB** (128 Mbit) TSOP-56 (Spansion S29GL128N) | `0x00FF0000..0x00FFFFFF` (Últimos 64 KB) | HDD SATA / PATA (160–320 GB) + MEIHDFS-V2+       | Barra UART `115200 8N1` / serviço de 6 vias (JST ZR)                                                            | Dessincronia de tabelas de canal DVB-T gerando U99. Limpeza via `panadiga nvram clean` (auto-detecta 16 MB).                 |
-| **DMR-BW500, DMR-BR500, DMR-BW700, DMR-BW800, DMR-BWT700**                                                | **Geração 5** (2008–2011)                   | Matsushita UniPhier Dual-Core (`MN103S` / ARM híbrido)                     | **32 MB -- 64 MB** Flash NOR/NAND                 | Alocação dinâmica por volume             | HDD SATA 3.5" (250 GB -- 1 TB) + Drive BD-RE      | Interface de serviço UART / JTAG                                                                    | Geração Blu-ray. MEIHDFS-V3 com cifras AES. Extração de partições via `panadiga hdd extract`.                          |
+| Família & Modelos de Gravadores                                                                                | Geração / Ano                                      | Processador SoC & Arquitetura                                            | Memória Flash NOR (Tamanho & Chip)                              | Faixa de Endereço da NVRAM (EEMUL)         | Subsistema de Armazenamento                       | Conector de Serviço / Depuração (`P7501` & Linha)                                                                             | Causa do Erro U99 & Solução Panadiga                                                                                                   |
+| :-------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------- | :----------------------------------------------------------------------- | :--------------------------------------------------------------- | :------------------------------------------ | :------------------------------------------------ | :--------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------- |
+| **DMR-E20, DMR-E30, DMR-E50, DMR-E55, DMR-E60**                                                           | **Geração 1** (2001–2003)                   | Matsushita MN10300 (16/32-bit AM32 / AM33)                               | **2 MB** (16 Mbit) TSOP-48 (Am29LV160)                     | `0x001F0000..0x001FFFFF` (Últimos 64 KB) | Gravador Óptico DVD-RAM / DVD-R (UDF 1.5 direto) | Conector UART / serviço de 5 ou 6 pinos (3.3V)                                                                                    | Corrupção de wear-leveling na Flash. Limpeza via `panadiga nvram clean` (auto-detecta 2 MB).                                         |
+| **DMR-E80H, DMR-E85H, DMR-E95H, DMR-E100H, DMR-E500H, DMR-ES20**                                          | **Geração 2** (2003–2004)                   | Matsushita MN103S / Primeiros UniPhier                                   | **4 MB** (32 Mbit) TSOP-48 (Am29LV320)                     | `0x003F0000..0x003FFFFF` (Últimos 64 KB) | HDD PATA/IDE (40–160 GB) + MEIHDFS-V1            | Barra de pinos UART de serviço de 6 vias (3.3V LVTTL)                                                                             | Berço do erro `U99` histórico. Limpeza do setor `0x3F0000` via `panadiga nvram clean` (auto-detecta 4 MB).                       |
+| **DMR-EH50, DMR-EH52, DMR-EH55, DMR-EH56, DMR-EH60, DMR-EH65, DMR-EH75V, DMR-EH80V, DMR-ES10, DMR-ES30V** | **Geração 3** (2005–2007) [Plataforma Base] | Matsushita `AM34` / `MN103S` (`VEP79138` Main / Syscon `IC7501`) | **8 MB** (64 Mbit) TSOP-48 (`IC5001` Spansion S29JL064H) | `0x007F0000..0x007FFFFF` (Últimos 64 KB) | HDD PATA/IDE (80–250 GB) + MEIHDFS-V2            | Conector Canônico **`P7501`** (JST B6B-ZR-3R4: `SW_UART`, `XRESET`, `UARTM2P_T`, `GND`, `NSW5V`, `UARTP2M_T`) | Erro clássico `U99` por dessincronia do anel EEMUL. Solução via `panadiga nvram clean` ou telemetria UART in-circuit (`P7501`). |
+| **DMR-EX75, DMR-EX85, DMR-EX95V, DMR-EX98V, DMR-EH67, DMR-EH68**                                          | **Geração 4** (2006–2008)                   | Matsushita `MN103S` / `AM34` 2ª Geração                           | **16 MB** (128 Mbit) TSOP-56 (Spansion S29GL128N)          | `0x00FF0000..0x00FFFFFF` (Últimos 64 KB) | HDD SATA / PATA (160–320 GB) + MEIHDFS-V2+       | Barra UART `115200 8N1` / serviço de 6 vias (JST ZR)                                                                            | Dessincronia de tabelas de canal DVB-T gerando U99. Limpeza via `panadiga nvram clean` (auto-detecta 16 MB).                           |
+| **DMR-BW500, DMR-BR500, DMR-BW700, DMR-BW800, DMR-BWT700**                                                | **Geração 5** (2008–2011)                   | Matsushita UniPhier Dual-Core (`MN103S` / ARM híbrido)                | **32 MB -- 64 MB** Flash NOR/NAND                          | Alocação dinâmica por volume             | HDD SATA 3.5" (250 GB -- 1 TB) + Drive BD-RE      | Interface de serviço UART / JTAG                                                                                                  | Geração Blu-ray. MEIHDFS-V3 com cifras AES. Extração de partições via `panadiga hdd extract`.                                    |
 
 ### 9.1 Por Que Funciona em Todos os Modelos DIGA ("Invariantes de Silício")
 
@@ -542,7 +542,7 @@ A tabela a seguir especifica detalhadamente a arquitetura de silício, capacidad
 
 ---
 
-## 10. Acervo de Manuais Técnicos, Esquemas e Datasheets (30 Documentos Catalogados)
+## 10. Acervo de Manuais Técnicos, Esquemas e Datasheets (32 Documentos Catalogados)
 
 Todos os manuais de serviço, esquemas e datasheets estão organizados hierarquicamente em `manuals_and_schematics/`:
 
@@ -590,7 +590,7 @@ Todos os manuais de serviço, esquemas e datasheets estão organizados hierarqui
 
 ## 11. Links Diretos para Auditorias, Dossiês Técnicos, Pseudocódigo e Logs (`docs/`)
 
-O acervo oficial reúne **38 dossiês técnicos bilíngues sincronizados (`pt-BR` / `en-US`)** (indexados em [`docs/INDEX.md`](docs/INDEX.md) e [`docs/translation_pairs.json`](docs/translation_pairs.json)), auditorias vivas na raiz ([`AUDITORIA_COMPLETA.md`](AUDITORIA_COMPLETA.md) / [`COMPLETE_AUDIT.md`](COMPLETE_AUDIT.md)), snapshots históricos ([`docs/audits/`](docs/audits/README.md)), evidência integral de disassembly/pseudocódigo Ghidra ([`docs/pseudocode/`](docs/pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) & [`docs/pseudocode/raw/`](docs/pseudocode/raw/)) e 22 capturas e logs únicos de bancada `COM10` / `PhysicalDrive1` ([`docs/debug_logs/`](docs/debug_logs/README.md)):
+O acervo oficial reúne **39 dossiês técnicos bilíngues sincronizados (`pt-BR` / `en-US`)** (indexados em [`docs/INDEX.md`](docs/INDEX.md) e [`docs/translation_pairs.json`](docs/translation_pairs.json)), auditorias vivas na raiz ([`AUDITORIA_COMPLETA.md`](AUDITORIA_COMPLETA.md) / [`COMPLETE_AUDIT.md`](COMPLETE_AUDIT.md)), snapshots históricos ([`docs/audits/`](docs/audits/README.md)), evidência integral de disassembly/pseudocódigo Ghidra ([`docs/pseudocode/`](docs/pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) & [`docs/pseudocode/raw/`](docs/pseudocode/raw/)) e 22 capturas e logs únicos de bancada `COM10` / `PhysicalDrive1` ([`docs/debug_logs/`](docs/debug_logs/README.md)):
 
 * 📋 **[Auditoria Técnica Consolidada (Raiz)](AUDITORIA_COMPLETA.md)** ([English Mirror: `COMPLETE_AUDIT.md`](COMPLETE_AUDIT.md))
   *Estado vivo do workspace (`crates/`, `firmware/pico-p7501/`, `scripts/`), hashes SHA-256 dos UF2 recompilados, síntese da auditoria `??` no Ghidra, paridade Python → Rust e os 9 Quality Gates.*
@@ -627,13 +627,14 @@ O acervo oficial reúne **38 dossiês técnicos bilíngues sincronizados (`pt-BR
 * 🛠️ **[`DIGADIAG.FRM` vs `PANA__SD.FRM`, Erro SD `-91006` e Viabilidade de TBC Autônomo](docs/pt-BR/DIGADIAG_PANA_SD_E_TBC_AUTONOMO.md)** ([English Mirror](docs/en-US/DIGADIAG_PANA_SD_AND_STANDALONE_TBC.md))
   *Como `/BOOT.BIN` (`SDDIAG`) vs `PROG061` consomem `.FRM`, prova do bloqueio 4-bit `ACMD6` (`-91006`), dependências da Main PCB (`IC3001`/`IC7501`/`P7402`) no Digital PCB `MN2DS0009`, e guia completo `panadiga unbrick` + `Centro Unbrick`.*
 * 💿 **[Emulador Matshita `R6-MV4` e Injeção ATAPI](docs/pt-BR/EMULADOR_MATSHITA_R6MV4_E_INJECAO_ATAPI.md)** ([English Mirror](docs/en-US/MATSHITA_R6MV4_EMULATOR_AND_ATAPI_INJECTION.md)) · 🪤 **[Armadilhas MN103S e Resolução Ghidra](docs/pt-BR/ARMADILHAS_MN103S_E_RESOLUCAO_GHIDRA.md)** ([English Mirror](docs/en-US/MN103S_SEVEN_TRAPS_AND_GHIDRA_RESOLUTION.md)) · ✍️ **[`DIGADIAG` Salto `0x50400000` e Escrita Protegida](docs/pt-BR/DIGADIAG_SALTO_50400000_E_ESCRITA_PROTEGIDA.md)** ([English Mirror](docs/en-US/DIGADIAG_JUMP_50400000_AND_GUARDED_RW.md))
-* 🔬 **[Dossiê Forense do Bootloader: `SDDIAG`, `Loader ver0.61` (`COM10`) & ABI MN103S](docs/pt-BR/DOSSIE_FORENSE_BOOTLOADER_SDDIAG_EH55.md)** ([English Mirror](docs/en-US/FORENSIC_DOSSIER_BOOTLOADER_SDDIAG_EH55.md))
+* 🔬 **[Dossiê Forense do Bootloader: `SDDIAG`, `Loader ver0.61` (`COM10`) &amp; ABI MN103S](docs/pt-BR/DOSSIE_FORENSE_BOOTLOADER_SDDIAG_EH55.md)** ([English Mirror](docs/en-US/FORENSIC_DOSSIER_BOOTLOADER_SDDIAG_EH55.md))
   *Hardware real `Loader ver0.61` (`262.144 B` brutos `DIGADIAG.FRM` + `sd48` `PANA__SD.FRM`) vs `/BOOT.BIN` `ver0.63`, capturas `COM10` `669 B`/`641 B`, 11 scripts Java FAT/SD no Ghidra, Armadilha #8 SLEIGH (`fb 9c`) e correções `CALL ..., [], 0` + `PUTC_D3_BYTES` do `PANAMON1`.*
 * ⚡ **[Upgrades C11 no Pico `P7501`, Causas de `??` no Ghidra e Paridade Python → Rust](docs/pt-BR/UPGRADES_PICO_C11_UNDEF_GHIDRA_E_PARIDADE_PYTHON_RUST.md)** ([English Mirror](docs/en-US/PICO_C11_UPGRADES_GHIDRA_UNDEF_AND_PYTHON_RUST_PARITY.md))
   *`DIAGWATCH` parametrizado, `PANARSP REGS`, `DRVPANA`, UF2s recompilados (`RP2040`/`RP2350`), auditoria completa de `??` no Ghidra (`docs/pseudocode/`), logs reais (`docs/debug_logs/`), auditoria mestre (`AUDITORIA_COMPLETA.md`), histórico (`docs/audits/`) e comandos `panadiga re` / `panadiga pico decode-log`.*
 * ⚡ **[Arquitetura de Standby (`IC7501`), `TBUS`, `TW7501` e Estados de Boot](docs/pt-BR/ARQUITETURA_STANDBY_IC7501_TBUS_TW7501_E_MODOS_BOOT.md)** ([English Mirror](docs/en-US/STANDBY_IC7501_TBUS_TW7501_AND_BOOT_STATES_ARCHITECTURE.md))
   *Domínios elétricos (`C7584`, `R7623`, `IC7502`, `IC7505`, `P59001`), handshake `FUN_44005cd0` (`255s`), fluxos reais VFD (`PLEASE WAIT -> U99` vs `HELLO -> U99`), captura `PREJIG WAKE` na sonda Pico e dicionário de 457 entradas (`error-lookup` / `bench-wizard`).*
-* 🗂️ **Catálogo Bilíngue Completo (`38` PT-BR + `38` EN-US + `audits/` + `pseudocode/` + `debug_logs/`):** Consulte [**`docs/INDEX.md`**](docs/INDEX.md).
+* 🗂️ **Catálogo Bilíngue Completo (`39` PT-BR + `39` EN-US + `audits/` + `pseudocode/` + `debug_logs/`):** Consulte [**`docs/INDEX.md`**](docs/INDEX.md).
+* 📦 **Auditoria dos Perfis de Hardware v2 (`89` Modelos DIGA, `T0` -> `T4`):** [**`CATALOGO_E_AUDITORIA_PERFIS_HARDWARE_LINHA_DIGA.md`**](docs/pt-BR/CATALOGO_E_AUDITORIA_PERFIS_HARDWARE_LINHA_DIGA.md) ([EN-US](docs/en-US/DIGA_LINEUP_HARDWARE_PROFILES_CATALOG_AND_AUDIT.md))
 * 🔬 **Histórico do Unbrick EH55 (BGO Ciclo 2, `PANAMON1>` Direto, `DAVIS`/`CH1` e Região `PAL-M`):** [**`HISTORICO_UNBRICK_EH55_BGO_CH1_DAVIS_E_REGIAO.md`**](docs/pt-BR/HISTORICO_UNBRICK_EH55_BGO_CH1_DAVIS_E_REGIAO.md) ([EN-US](docs/en-US/EH55_UNBRICK_BREAKTHROUGH_BGO_CH1_DAVIS_AND_REGION.md))
 
 ---
@@ -698,7 +699,7 @@ O repositório define 6 subagentes de engenharia especializados para suporte aut
 
 ### 14.2. Servidor Nativo Model Context Protocol (`panadiga mcp`)
 
-Um servidor MCP padronizado em JSON-RPC 2.0 via `stdio` (`panadiga mcp`) expõe **24 ferramentas nativas** em Rust para agentes de IA (18 ferramentas core + 6 módulos Wave 3 de `panamon1`/`eh55_bgo`/`davis_probe`/`tv_standard`/`tbc_appliance`/`eh55_flash`):
+Um servidor MCP padronizado em JSON-RPC 2.0 via `stdio` (`panadiga mcp`) expõe **25 ferramentas nativas** em Rust para agentes de IA (18 ferramentas core + 7 módulos Wave 3 de `panamon1`/`eh55_bgo`/`davis_probe`/`tv_standard`/`tbc_appliance`/`eh55_flash`/`profiles`):
 
 * `panadiga_memory_map`: Retorna o mapa de memória físico oficial da arquitetura Matsushita AM34 / MN103S (`VEP79138`).
 * `panadiga_safety_check`: Valida tensões de bancada (`<= 3.3V` LVTTL / teto `3.35V`) e fronteiras de gravação em Flash.

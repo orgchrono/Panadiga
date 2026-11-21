@@ -41,10 +41,10 @@ This document constitutes the **Hardware & Electronics Engineering Blueprint** f
 ```
 
 ### Failure Context & Hardware Mission
-* **Critical Failure Mode:** Continuous reboot loop displaying front-panel fault code **`U99`** (*Drive Communication / Parameter Timeout*), frequently linked to corruption of non-volatile Flash-emulated parameter blocks (`EEMUL` / NVRAM) residing in the top 64 KB of NOR Flash (`0x7F0000` to `0x7FFFFF`, micro-sectors `SA134` to `SA141`) or drive/handshake failures.
+* **Critical Failure Mode:** Continuous reboot loop displaying front-panel fault code **`U99`**, traced on live `DMR-EH55` (`Loader ver0.61`) hardware to corruption in the **BGO FTL (`SA26..SA70`, `0x84130000..0x843FFFFF` — `BGO driver init failed[1].`)**, top `EEMUL` NVRAM (`0x7F0000` to `0x7FFFFF`, micro-sectors `SA134` to `SA141`), or drive/handshake failures.
 * **Engineering Objectives:**
-  1. **In-Circuit `P7501` Async UART (`115200 8N1`) Interface:** Connect a **Raspberry Pi Pico (`RP2040` / `RP2350`)** directly to service connector **`P7501`** (`B6B-ZR-3R4`, `"TO JIGU"`) on board `VEP79138`, maintaining strict **`Hi-Z Input` without pulls on `NSW5V` (`GP3`)**, emulated **Open-Drain** control for **`XRESET` (`GP5`)**, and coordinated **`SW_UART` (`GP26`)** control with respect to transistor **`Q7514`**.
-  2. **Direct TSOP-48 Programming Interface:** Provide complete pin-to-pin mapping for the **Spansion `S29JL064H70TFI00` (`IC5001`)** NOR Flash, low-stress hot-air desoldering profile using `Sn63/Pb37` alloy, ZIF socket insertion, verified sanitization via **`panadiga nvram clean`**, and programming on **SVOD 4** / **XGecu T48**.
+  1. **In-Circuit `P7501` Async UART (`115200 8N1`) & No-Desolder Recovery (`SDDIAG`/`PANAMON1>`):** Connect a **Raspberry Pi Pico (`RP2040` / `RP2350`)** to service connector **`P7501`** (`B6B-ZR-3R4`, `"TO JIGU"`) on board `VEP79138`, maintaining **`NSW5V` (`GP3`) always in `Hi-Z Input` with pulls off**, Open-Drain **`XRESET` (`GP5`)**, and coordinated **`SW_UART` (`GP26`)** frente `Q7514`. On already-bricked `U99` units, this path enables full `8 MiB` SHA-256 readout (`PANADMP1`) and 2-cycle BGO/NVRAM cure while keeping **Layer 1 IPL (`SA0..SA10`) `E05`-locked** and unlocking `CONFIRM_UPPER_NOR` with explicit risk warnings.
+  2. **Direct TSOP-48 Programming Interface (External Fallback):** Provide pin-to-pin mapping for the **Spansion `S29JL064H70TFI00` (`IC5001`)** NOR Flash, low-stress hot-air desoldering (`Sn63/Pb37`), verified sanitization via **`panadiga nvram clean`**, and programming on **SVOD 4** / **XGecu T48** when `SA0..SA10` IPL or SD slot hardware fails.
 
 ---
 
@@ -57,7 +57,7 @@ The physical link between the **Raspberry Pi Pico** and header **`P7501`** on bo
 * **Physical Header Standard for `P7501`:** 6-pin **JST ZR connector with `1.5 mm` pitch**, OEM Panasonic part number **`B6B-ZR-3R4`** (through-hole top entry, silkscreen/schematic legend **`TO JIGU`** on `VEP79138`).
 * **Purchasing Pre-Assembled Harness:** Search commercially for **JST ZR / ZH `1.5 mm` 6-pin Female to Dupont `2.54 mm` cable** (`ZHR-6` housing with `SZH-002T-P0.5` crimp terminals). Avoid incompatible pitches such as JST SH (`1.0 mm`), JST PH (`2.0 mm`), or JST XH (`2.54 mm`).
 * **Pico 1 (`RP2040`) vs. Pico 2 (`RP2350`) Compatibility:** Both families (including wireless `Pico W` / `Pico 2 W` variants) are natively supported by the C11 firmware in [`firmware/pico-p7501/`](../../firmware/pico-p7501/).
-* **Critical Protocol Alert (`P7501` Async UART vs. JTAG / `DWire32A`):** All three official DMR-EH55 service manuals and live `COM10` captures prove that `P7501` does **NOT** expose JTAG (`TDI`/`TDO`/`TMS`) or synchronous `DWire32A` (`SDATA`/`SCLK`). Pin 6 (`UARTP2M_T`) is passive `115200 8N1` RX, Pin 3 (`UARTM2P_T`) is active TX (enabled through `Q7514` when `SW_UART = Hi-Z`), and Pin 5 (`NSW5V`) connects to the `~5.15V` node through `D7510` — **NEVER** drive Pin 5 from the Pico.
+* **Critical Protocol Alert (`P7501` Async UART vs. JTAG / `DWire32A`):** All **5 official DMR-EH55 service manuals (`30` indexed technical PDFs)** and live `COM10` captures prove that `P7501` does **NOT** expose JTAG (`TDI`/`TDO`/`TMS`) or synchronous `DWire32A` (`SDATA`/`SCLK`). Pin 6 (`UARTP2M_T`) is passive `115200 8N1` RX, Pin 3 (`UARTM2P_T`) is active TX (enabled through `Q7514` when `SW_UART = Hi-Z`), and Pin 5 (`NSW5V`) connects to the `~5.15V` node through `D7510` — **NEVER** drive Pin 5 from the Pico.
 
 ### 2.1 Complete Bench Electrical Schematic (Official Panasonic `VEP79138` Reference)
 
@@ -162,9 +162,9 @@ Control and serial lines on **`P7501`** operate in the `3.3V` logic domain (bias
 | `NSW5V` Line (`P7501` Pin 5) | `~5.15V` (`IC1506` $\rightarrow$ `D7510`), `~3.29V` resting | `GPIO_IN` without pulls (`Hi-Z`) | **Strictly forbidden to drive output or pulls on `GP3`** |
 | `Q7510` B-C Junction under Pull-Down on `SW_UART` | $3.30\text{V} - V_{BC} \approx 2.68\text{--}2.69\text{V}$ | `ADC0` Hi-Z / internal PD | Diagnostic signature verified in `PINCHECK` |
 
-### 3.2 PIO UART RX State Machine (`p7501_uart.pio` — `115200 8N1`)
+### 3.2 PIO UART State Machine (`p7501_uart.pio` / `p7501_uart_duplex.pio` — `115200 8N1`)
 
-State machine `PIO0` runs at **8 state-machine cycles oversampling per bit** ($8 \times 115,200 = 921,600\text{ Hz}$):
+State machine `PIO1` (`p7501_uart_duplex.pio`) alongside legacy `PIO0` (`p7501_uart.pio`) runs at **8 state-machine cycles oversampling per bit** ($8 \times 115,200 = 921,600\text{ Hz}$ on RX/TX, using FP16 fractional dividers for `BAUD`/`BAUDSCAN`):
 1. Waits for the falling edge of the **Start Bit** (`wait 0 pin 0` on `GP2`).
 2. Delays exactly **1.5 bit periods** (`12` cycles) to sample center-eye of **Bit 0** (`LSB first`), repeating every `8` cycles across all 8 data bits.
 3. Checks **Stop Bit HIGH** (`jmp pin, good_stop`) before pushing the byte into RX FIFO; otherwise raises framing error IRQ (`irq 4 rel`).
@@ -465,9 +465,10 @@ The Matsushita **AM34 (`MN103S`)** core addresses a flat 32-bit space ($4\text{ 
 * **`0x00000000` to `0x007FFFFF`:** Cached NOR Flash boot mirror.
 * **`0x80000000` to `0x807FFFFF`:** Direct **uncached** physical aperture of Spansion `S29JL064H` (**`IC5001`**, 8 MB / $8,388,608$ bytes), where the top 64 KB (`0x807F0000..0x807FFFFF`) contain NVRAM/EEMUL micro-sectors (`SA134..SA141`).
 
-### 9.2 In-Circuit Access (`P7501` + `GDB` RSP) vs. External TSOP-48 Access (`SVOD 4` / `XGecu T48`)
-* **In-Circuit Route (`P7501` Async UART / `panadiga gdb-bridge`):** Whenever an active serial/monitor stub exposes memory read primitives, `DUMP [hex_addr] [words]` and the GDB RSP bridge (`$m807F0000,0040#`) inspect live 32-bit words without desoldering.
-* **External Physical Route (Confirmed for Full U99 Recovery):** Because standard DMR-EH55 `P7501` boots into `BOOTCAP` / `CD diag boot mode` without synchronous JTAG/OCD, complete 8 MB extraction of `IC5001` on locked units uses controlled hot-air TSOP-48 removal (Section 5) and **`panadiga nvram clean`**.
+### 9.2 In-Circuit Recovery (`P7501` + `SDDIAG`/`PANAMON1>` + `GDB` RSP) vs. TSOP-48 Fallback (`SVOD 4` / `XGecu T48`)
+* **Primary No-Desoldering Route (`SDDIAG` / Door #1 $\rightarrow$ `PANAMON1>`):** Booting an SDSC FAT16 card carrying the canonical `ver061` kit (`DIGADIAG.FRM` + `PANA__SD.FRM`, via `JIG:2500` or headless Door #1 `@ 0x0B1800`) enters `PANAMON1>` and the `PANADMP1` dumper (`0x9043950E` uncached SDRAM mirror $\rightarrow$ `J 904394FA` / `panadiga pico dump-nor`), extracting all **8 MB (`0x84000000..0x847FFFFF`)** with **SHA-256** verification and performing the 2-cycle BGO FTL cure across `SA26..SA70` without removing `IC5001`.
+* **Compliance & Risk Assessment on Bricked Units (`E05` + `CONFIRM_UPPER_NOR`):** While real operational hazards exist (AC brownout during write, `IC7501` `~44s` watchdog, or ~`700 ms` 64 KiB Spansion erase requiring `0xFF × 32` polling), on an already-bricked `U99` unit in-circuit recovery is strongly recommended first because **Layer 1 Critical Boot IPL (`SA0..SA10`) stays permanently locked (`E05`)**, making interrupted Layer 2/3 runs re-entrant over SD/UART.
+* **External TSOP-48 Route (Last-Resort Physical Fallback):** When `SA0..SA10` IPL or SD hardware has failed, remove `IC5001` via controlled hot-air TSOP-48 extraction (Section 5), run `panadiga nvram clean` / `patch-upper-nor` with SHA-256 backup, and program externally on **XGecu T48** or **SVOD 4**.
 
 ---
 
@@ -540,6 +541,7 @@ Because the DMR-EH55 `EEMUL` partition extends through `0x7FFFFF` (`SA134..SA141
 
 - **Schematic-Verified Reversed Pinout (`[PROVEN ON REAL HARDWARE]`):** On the DMR-EH55 main PCB connector `P58001` (`VEK0K00`, `vol2_schematics.pdf` p. 113), every physical pin follows **`Pin k = ATA (41 - k)`**: `1=GND`, `2=NC`, `3=CS1-`, `4=CS0-`, `5=DA2`, `6=DA0`, `8=DA1`, `10=INTRQ`, `11=GND`, `12=DMACK-`, `13=CSEL`, `14=IORDY`, `15=GND`, `16=DIOR-`, `17=GND`, `18=DIOW-`, `19=GND`, `20=DMARQ`, `21=NC`, `22=GND`, `23=DD15`, `24=DD0`, `25=DD14`, `26=DD1`, `27=DD13`, `28=DD2`, `29=DD12`, `30=DD3`, `31=DD11`, `32=DD4`, `33=DD10`, `34=DD5`, `35=DD9`, `36=DD6`, `37=DD8`, `38=DD7`, `39=GND`, `40=RESET-`.
 - **`N5EZZ0000003` Cable & `StarTech IDE2SAT2` Orientation (`[PROVEN ON REAL HARDWARE]`):** Continuity testing confirmed 40 continuous pins in the `N5EZZ0000003` ribbon (only the male `IDE2SAT2` pin 20 is keyed). At `0°`, `IDE2SAT2` reads `0x00000000` (non-hanging); at `180°` (Type B equivalent), `DAVIS` sees `0x00002004` (`DD13|DD2`).
+- **Low-Profile Chassis-Closure Modification (`40P Type B 0.5 mm FFC` + `180°` `N5EZZ0000003`):** To close the top lid cleanly over a `StarTech IDE2SAT2` (always jumpered **`MASTER`**, never `CS`/`Slave`), replace the stock **`VEK0K00` / `VEK0K15`** ribbon (`Type A`, **`40 pins`, `0.5 mm` pitch, `20.5 mm` / `~2.05 cm` total width, `19.5 mm` pin-1-to-40 span, `0.30 mm ± 0.05 mm` stiffened end**, **`UL AWM 20624`**) with a commercial **`Type B` (`100–150 mm`)** ribbon — or shave the opposite insulation face at one end with a brand-new razor blade + Kapton over the old contacts — and rotate `N5EZZ0000003` **`180°`** ($\pi_{180^\circ}(\pi_{\text{TypeB}}(k)) = k$), confirming **`1:1` (`Pin k <-> Pin k`)** continuity with a multimeter before AC power-on ([`STORAGE_ARCHITECTURE_MEIHDFS_PARTITIONS.md §9.6`](./STORAGE_ARCHITECTURE_MEIHDFS_PARTITIONS.md#96-low-profile-chassis-closure-modification-40-pin-type-b-ffc-or-diy-strip--180-inverted-blue-panasonic-adapter-n5ezz0000003)).
 - **Active `CH1` Isolation (`[UNDER INVESTIGATION / CH1 PHYSICAL BLOCK]`):** DC readings showed `IORDY`/`DIOR-`/`DIOW- = 0 V` cabled vs. `3.29 V` open, and `DAVIS` `CH1` (`0x504F81D4 = 1` active-HIGH via `J 504156AD`) still reads `0x00000000` (`is_ata=0`) on the bench `EH55` ([`probe_ch1_full_diag_20261119.log`](../debug_logs/probe_ch1_full_diag_20261119.log) · [`probe_ch1_live_v2_0deg_20261119.log`](../debug_logs/probe_ch1_live_v2_0deg_20261119.log) · [`EH55_UNBRICK_BREAKTHROUGH_BGO_CH1_DAVIS_AND_REGION.md`](./EH55_UNBRICK_BREAKTHROUGH_BGO_CH1_DAVIS_AND_REGION.md)).
 
 ---

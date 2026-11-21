@@ -129,11 +129,14 @@ graph TD
     CHECK_V -- "Não (> 3.3V)" --> ABORT_V["BLOQUEIO FÍSICO IMEDIATO<br/>Risco de queima permanente do SoC UniPhier"]
     CHECK_V -- "Sim (3.3V)" --> CHECK_REG{"Região Alvo de Gravação?"}
     
-    CHECK_REG -- "0x80000000..0x807EFFFF" --> ABORT_BOOT["BLOQUEIO DE ESCRITA (Erro E05)<br/>Bootloader/IPL é Read-Only"]
-    CHECK_REG -- "0x807F0000..0x807FFFFF" --> ALLOW_NVRAM["PERMISSÃO CONCEDIDA<br/>Sanitização dos 64 KB de NVRAM (Erro U99)"]
-    CHECK_REG -- "P7501 Pino 5 (NSW5V) / Alimentação" --> ABORT_PWR["BLOQUEIO ELÉTRICO<br/>NSW5V sempre Hi-Z / Proibido alimentar Pico pelo P7501"]
+    CHECK_REG -- "0x80000000..0x8003FFFF (Camada 1 IPL)" --> ABORT_BOOT["BLOQUEIO PERMANENTE (Erro E05)<br/>IPL Crítico SA0..SA10 é Read-Only"]
+    CHECK_REG -- "0x80040000..0x807EFFFF (Camada 2 BGO)" --> CHECK_OPTIN{"CONFIRM_UPPER_NOR<br/>+ Backup 8 MiB SHA-256?"}
+    CHECK_OPTIN -- "Não" --> ABORT_UPPER["BLOQUEIO PADRÃO (Erro E05)<br/>Requer opt-in para cura U99/BGO"]
+    CHECK_OPTIN -- "Sim (Aparelho Bricado)" --> WARN_BGO["PERMITIDO COM ALERTA DE RISCO<br/>Aguardar ~700 ms / 0xFF×32"]
+    CHECK_REG -- "0x807F0000..0x807FFFFF (Camada 3 NVRAM)" --> ALLOW_NVRAM["PERMISSÃO CONCEDIDA<br/>Sanitização dos 64 KB EEMUL"]
+    CHECK_REG -- "P7501 Pino 5 (NSW5V) / 0xC000100C" --> ABORT_PWR["BLOQUEIO ELÉTRICO / MMIO<br/>NSW5V Hi-Z / Registrador Letal"]
 ```
 
-1. **Invariante 1: Tensão Máxima de 3.3V & Proteção `NSW5V`**: Os sinais lógicos de comunicação e controle em `P7501` (`SW_UART`, `XRESET` Open-Drain, `UARTM2P_T`, `UARTP2M_T`) e a Flash `IC5001` operam em **3.3V LVTTL**; já o **Pino 5 (`NSW5V` / `GP3`)** provém de `IC1506` (`~5.15V` via `D7510`, medido `~3.29V` em repouso) e **DEVE permanecer SEMPRE como entrada `Hi-Z` sem pulls (NUNCA dirigir push-pull!)**.
-2. **Invariante 2: Isolamento de Alimentação da Porta J (P7501)**: Nunca alimente a sonda Pico pelo conector P7501; a extração de corrente nos pinos lógicos é restrita a controle/sensoriamento ($< 10\text{ mA}$). O Pico deve ser alimentado externamente via USB ou `VSYS`.
+1. **Invariante 1: Tensão Máxima de 3.3V & Proteção `NSW5V` + MMIO Letal**: Os sinais lógicos de comunicação e controle em `P7501` (`SW_UART`, `XRESET` Open-Drain, `UARTM2P_T`, `UARTP2M_T`) e a Flash `IC5001` operam em **3.3V LVTTL**; o **Pino 5 (`NSW5V` / `GP3`)** provém de `IC1506` (`~5.15V` via `D7510`, medido `~3.29V` em repouso) e **DEVE permanecer SEMPRE como entrada `Hi-Z` sem pulls (NUNCA dirigir push-pull!)**, e o registrador `0xC000100C` é estritamente bloqueado (trava barramento/WDT).
+2. **Invariante 2: Isolamento de Alimentação da Porta `P7501` & Conformidade NOR em 2 Camadas**: Nunca alimente o Pico por `P7501`. Na `IC5001`, a **Camada 1 IPL (`SA0..SA10`, `256 KiB` iniciais)** é **imutável (`E05`)**, enquanto a **Camada 2 Upper NOR/BGO (`0x80040000..0x807EFFFF`)** só abre via `CONFIRM_UPPER_NOR` após alerta de risco e backup SHA-256 completo de `8 MiB` para curar gravadores já bricados em `U99`.
 3. **Invariante 3: Imutabilidade de Evidências Forenses**: Dumps originais de disco rígido MEIHFS e da Flash Spansion jamais são sobrescritos in-place; a ferramenta opera sempre sobre cópias de trabalho com conferência criptográfica SHA-256.

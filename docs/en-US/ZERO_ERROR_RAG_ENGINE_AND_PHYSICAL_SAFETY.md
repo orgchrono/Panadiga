@@ -18,8 +18,8 @@ In the domain of **reverse engineering proprietary silicon, mixed-signal analog/
 
 > [!CAUTION]
 > **THE COST OF HALLUCINATION IN HARDWARE IS IRREVERSIBLE PHYSICAL DESTRUCTION:**
-> 1. **SoC Overvoltage & `NSW5V` Contention:** The **Matsushita `AM34` / `MN103S`** processor on board `VEP79138` operates logic lines at **3.3V LVTTL**. On service header **`P7501`**, `SW_UART`, `XRESET` (Open-Drain), `UARTM2P_T`, and `UARTP2M_T` use 3.3V levels, while **Pin 5 (`NSW5V`)** originates from regulator `IC1506` (`~5.15V` via diode `D7510`) and MUST remain strictly `Hi-Z Input` without internal pulls. Suggesting 5.0V drive onto LVTTL pins or configuring `GP3`/`NSW5V` push-pull permanently damages silicon junctions.
-> 2. **Bootloader Destruction (IPL Brick):** The Spansion `S29JL064H` NOR Flash (`8 MB`) holds the primary Initial Program Loader (*IPL*) from `0x80000000` through `0x807EFFFF`. If an AI emits a write or erase command anywhere in this range, the unit loses its reset vector permanently and turns into an unrecoverable brick.
+> 1. **SoC Overvoltage, `NSW5V` Contention & Lethal MMIO `0xC000100C`:** The **Matsushita `AM34` / `MN103S`** processor on board `VEP79138` operates logic lines at **3.3V LVTTL**. On service header **`P7501`**, `SW_UART`, `XRESET` (Open-Drain), `UARTM2P_T`, and `UARTP2M_T` use 3.3V levels, while **Pin 5 (`NSW5V`)** originates from regulator `IC1506` (`~5.15V` via diode `D7510`) and MUST remain strictly `Hi-Z Input` without internal pulls. Similarly, lethal MMIO register `0xC000100C` triggers an immediate bus/WDT lockup if accessed outside warning contexts.
+> 2. **Layer 1 Critical Boot IPL Destruction (`SA0..SA10` = `0x80000000..0x8003FFFF`):** The opening `256 KiB` of the Spansion `S29JL064H` NOR Flash hold the primary bootloader (`Loader ver0.61` / `SDDIAG` / `P7501`) and are **permanently read-only (`E05`)**. **Layer 2 Upper NOR/BGO (`SA11..SA133`: `0x80040000..0x807EFFFF`)** is likewise locked by default (`E05`), but allows explicit opt-in (`CONFIRM_UPPER_NOR`) with risk acknowledgment and a verified `8 MiB` SHA-256 backup to rescue already-bricked `U99` units.
 > 3. **Structural MEIHFS Corruption:** Panasonic's proprietary HDD storage subsystem rejects standard PC MBR layouts. Inventing partition offsets corrupts the `"SH"` superblock, the 28 MB redundant mirror, or the transactional journal pool.
 
 To resolve this paradox, Panadiga implements the **Zero-Error RAG Engine**: a deterministic **6-layer pipeline with mutual cross-checks and hard vetoes** where AI inference is mathematically blocked from fabricating values or violating laboratory physics.
@@ -106,10 +106,10 @@ flowchart TD
 
 ### Layer 6: Hardware Safety Shield (Post-Generation Final Physical Gate)
 - **Goal:** Unbypassable final air-gap check prior to user or serial delivery.
-- **Mechanism:** Inspects final guidance against three immutable hardware laws:
-  1. Maximum logic voltage $\le 3.3\text{ V}$ (`NSW5V` Pin 5 / `GP3` strict `Hi-Z Input` only).
-  2. Immutability of the bootloader/IPL (`0x80000000` to `0x807EFFFF`).
-  3. Exclusive in-circuit NVRAM unbrick zone: top 64 KB of Spansion Flash (`0x807F0000` to `0x807FFFFF`).
+- **Mechanism:** Inspects final guidance against immutable hardware laws:
+  1. Maximum logic voltage $\le 3.3\text{ V}$ (`NSW5V` Pin 5 / `GP3` strict `Hi-Z Input` only) plus unnegated lethal register `0xC000100C` blocking.
+  2. Permanent immutability of Layer 1 Critical Boot IPL (`SA0..SA10`, `256 KiB`: `0x80000000..0x8003FFFF` and uncached `0x84000000..0x8403FFFF`).
+  3. Default `E05` write lock across Layer 2 Upper NOR/BGO (`0x80040000..0x807EFFFF` / `0x84040000..0x847EFFFF`), requiring explicit opt-in (`CONFIRM_UPPER_NOR` / `patch-upper-nor`) with risk warning (`~700 ms` erase and verified `8 MiB` SHA-256 backup) for bricked `U99` BGO recovery, plus writable NVRAM (`0x807F0000..0x807FFFFF`).
 
 ---
 
@@ -157,7 +157,7 @@ With `.mcp.json` enabled in Cursor, Antigravity, or Claude Desktop:
 
 ## 6. Test History & Reliability Verification
 
-- **Rust Workspace (Gate 1):** Unit tests inside [`crates/panadiga-rag/src/safety.rs`](../../crates/panadiga-rag/src/safety.rs) and [`crates/panadiga-mcp/`](../../crates/panadiga-mcp/) verifying prompt-injection immunity, safe negation handling, IPL wipe blocks, overvoltage blocks, and clean `stdout` JSON-RPC 2.0 framing.
+- **Rust Workspace (Gate 1):** Unit tests inside [`crates/panadiga-rag/src/safety/mod.rs`](../../crates/panadiga-rag/src/safety/mod.rs) and [`crates/panadiga-mcp/`](../../crates/panadiga-mcp/) verifying prompt-injection immunity, safe negation handling, 2-layer NOR policy + lethal register `0xC000100C` blocks, overvoltage blocks, and clean `stdout` JSON-RPC 2.0 framing.
 - **Python Pytest (Gate 9):** Orchestration tests in [`scripts/tests/test_scripts_ops.py`](../../scripts/tests/test_scripts_ops.py) checked under `mypy --strict`.
 
 ---
@@ -196,13 +196,16 @@ Does the system rely solely on AI advice, or do lower layers enforce physics in 
 * **Scope:** **100% Unrestricted.** Can program the entire 8 MB array (plus 2 MB/4 MB/16 MB sibling DIGA Flash sizes), including Bootloader/IPL (`0x000000..0x7EFFFF`), OSD fonts, and micro-sectors.
 * **Suite Artifact:** `panadiga nvram clean` outputs a verified clean image (e.g., `DMR_EH55_CLEAN.bin`) ready for flashing.
 
-### Route B: In-Circuit Inspection & Assisted Recovery via `P7501` (No Desoldering)
-* **Equipment:** Raspberry Pi Pico (`RP2040` / `RP2350`) wired to **`P7501`** (`UART 115200 8N1` + discrete `SW_UART` / `XRESET` control).
-* **Scope:** Strictly constrained to the top 64 KB calibration window (`0x807F0000..0x807FFFFF`).
-* **Why Bootloader Sectors Stay Write-Protected In-Circuit:**
-  1. **Noise/Power-Loss Brick Risk:** Writing `SA0` (reset vector) in-circuit during a brownout renders the AM34 permanently unbootable without hot-air desoldering.
-  2. **Root Cause of `U99`:** In 99.9% of cases Panasonic's factory bootloader is completely intact; only top EEMUL NVRAM blocks are corrupted.
-  3. **Configurable Airbag:** `is_valid_write_range` in [`firmware/pico-p7501/gdb/gdb_rsp_memory.c`](../../firmware/pico-p7501/gdb/gdb_rsp_memory.c) blocks unauthorized writes with GDB error **`E05`**.
+### Route B: In-Circuit Inspection & No-Desolder Surgical Recovery (`P7501` + `SDDIAG`/`PANAMON1>`)
+* **Equipment:** Raspberry Pi Pico (`RP2040` / `RP2350`) wired to **`P7501`** (`UART 115200 8N1` + discrete `SW_UART` / `XRESET`) + SDSC FAT16 card carrying `DIGADIAG.FRM` (`262,144 B`) / `PANA__SD.FRM` (`sd48`).
+* **Scope (2-Layer NOR Compliance):**
+  * **Layer 3 (`SA134..SA141`, `0x807F0000..0x807FFFFF`):** NVRAM/EEMUL surgical writes permitted by default.
+  * **Layer 2 (`SA11..SA133`, `0x80040000..0x807EFFFF` — BGO FTL `SA26..SA70`):** locked by default (`E05`), **explicitly unlockable (`CONFIRM_UPPER_NOR`)** after full `8 MiB` SHA-256 backup (`PANADMP1`) and `~700 ms` (`0xFF × 32`) erase polling.
+  * **Layer 1 (`SA0..SA10`, `256 KiB`: `0x80000000..0x8003FFFF`):** **permanently read-only (`E05`)**.
+* **Why in-circuit recovery is worth attempting first on an already-bricked `U99` unit:**
+  1. **Layer 1 IPL stays safe:** Because `SA0..SA10` can never be erased via Pico, `Loader ver0.61` (`SDDIAG` and `P7501`) survives even a power brownout during Layer 2/3 BGO or NVRAM writes.
+  2. **Actual `U99` cause on `DMR-EH55` (`ver0.61`):** Beyond `EEMUL`, real units suffer BGO FTL corruption (`SA26..SA70`, `BGO driver init failed[1].`) — cured live in 2 cycles without desoldering `IC5001` TSOP-48.
+  3. **Configurable Airbag:** [`NorWritePolicy`](../../crates/panadiga-core/src/pico/rsp_codec/policy.rs) across Pico firmware (`p7501_flash.c`) and `HardwareSafetyValidator` enforces default `E05` locking, requiring risk warning and explicit opt-in before unlocking Layer 2.
 
 ---
 

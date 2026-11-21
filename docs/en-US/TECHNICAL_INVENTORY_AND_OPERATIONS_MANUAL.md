@@ -145,42 +145,43 @@ The 6-pin **`P7501` (`B6B-ZR-3R4`, `"TO JIGU"`)** connector on board `VEP79138` 
                       └─────────────────────────────────────────────┘
 ```
 
-* **`p7501_uart.pio`:** PIO RX `115200 8N1` state machine for RP2040/RP2350 on `GP2` (`UARTP2M_T` / `MAX TXD`), using 8x bit oversampling and Stop-bit validation without touching `GP3` (`NSW5V`).
-* **`p7501_pico_main.c` & `hal/p7501_hw.c`:** Initializes `P7501` with `NSW5V` (`GP3`) strictly as `Hi-Z Input` without pulls, `XRESET` (`GP5`) Open-Drain, and executes capture/diagnostic commands (`BOOTCAP`, `JIGBOOT`, `UARTMON`, `UARTSEND`, `PINCHECK`, `FMUSCAN`, `ISOLATE`, `ENGAGE`, GDB RSP bridge).
-* **`flash/ram_loader_am34_target.c`:** Position-independent native AM34/MN103S C payload executing the 6-cycle JEDEC erase sequence across uncached physical address space (`0x807F0000..0x807FFFFF`).
+* **`p7501_uart.pio` / `p7501_uart_duplex.pio`:** PIO0/PIO1 UART `115200 8N1` state machines for RP2040/RP2350 on `GP2`/`GP4`, using 8x bit oversampling and FP16 fractional dividers without touching `GP3` (`NSW5V`).
+* **`p7501_pico_main.c` & `hal/p7501_hw.c`:** Initialize `P7501` with `NSW5V` (`GP3`) strictly as pull-disabled `Hi-Z Input`, Open-Drain `XRESET` (`GP5`), and capture/diagnostic routines (`UARTSTREAM 12000 JIG:2500`, `BOOTTRACE 15000 NOJIG`, `HEXCAP`, `BAUDSCAN`, `DIAGWATCH`, `PANARSP`, `PINCHECK`, `FMUSCAN`, `ISOLATE`, `ENGAGE`, GDB RSP bridge).
+* **`flash/ram_loader_am34_target.c` & `uart/p7501_pana_jedec.c`:** Position-independent native AM34/MN103S payloads enforcing permanent `E05` on Layer 1 IPL (`SA0..SA10`) and explicit `CONFIRM_UPPER_NOR` opt-in across Layer 2 (`SA11..SA133`).
 
 ---
 
 ## 4. Standard Bench Operating Procedures (Recovery Workflow)
 
-Recovery of a Panasonic DMR-EH55 suffering from error `U99`, boot failure, or HDD replacement follows this engineering decision tree:
+Recovery of a Panasonic DMR-EH55 suffering from error `U99`, boot failure, or HDD replacement follows this engineering decision tree. For units **already bricked in `U99`**, always prioritize **Route B In-Circuit No-Desoldering Recovery (`P7501` + `SDDIAG` `ver061` / Door #1 $\rightarrow$ `PANAMON1>`)** prior to physical TSOP-48 hot-air removal.
 
 ```mermaid
 flowchart TD
     A["DMR-EH55 Stuck in Reboot / U99 Error"] --> B{"Initial Bench Triage"}
     
     B -->|"Mechanical HDD Failure / No Boot"| C["Route C: HDD Reconstruction"]
-    B -->|"U99 Bootloop / Flash NVRAM Corruption"| D{"Choose Firmware Path"}
+    B -->|"U99 Bootloop / BGO or NVRAM Corruption"| D{"Choose Firmware Path"}
     
-    D -->|"Primary Route (Verified/Direct)"| E["Route A: Desolder Spansion + External Programmer"]
-    D -->|"In-Circuit Diagnostics & Capture"| F["Route B: P7501 Async UART Probe (RP2040/RP2350)"]
+    D -->|"Recommended Primary (100% No Desolder)"| F["Route B: P7501 UART + ver061 SD Kit (SDDIAG / Door #1)"]
+    D -->|"External Physical Fallback (Dead IPL / SD Slot)"| E["Route A: Desolder TSOP-48 + External Programmer"]
     
-    C --> C1["Write hdd_100.bin to Target HDD/SSD"]
-    C1 --> C2["Install HDD & Format via Service Mode"]
+    C --> C1["LBA48 Patch + Write Target HDD/SSD + MASTER Jumper"]
+    C1 --> C2["0.5mm Type B FFC + 180° N5EZZ0000003 & Format"]
     C2 --> Z["Operational Unit"]
+    
+    F --> F1["Connect Pico Probe to P7501 (GP3 NSW5V Hi-Z!)"]
+    F1 --> F2["Validate PINCHECK / BOOTTRACE / UARTSTREAM JIG:2500"]
+    F2 --> F3["Enter PANAMON1> & Capture Full 8 MiB SHA-256 Backup"]
+    F3 --> F4{"E05 Locks Layer 1 IPL SA0..SA10"}
+    F4 -->|"U CONFIRM_UPPER_NOR + 700ms poll"| F5["Cure BGO SA26..SA70 / EEMUL & U LOCK"]
+    F5 --> Z
     
     E --> E1["Desolder Spansion S29JL064H (IC5001)"]
     E1 --> E2["Dual Verified 8 MB Read (T48 / SVOD 4)"]
-    E2 --> E3["Run: panadiga nvram clean"]
-    E3 --> E4["Program DMR_EH55_CLEAN.bin to Flash"]
+    E2 --> E3["Run: panadiga nvram clean / patch-upper-nor"]
+    E3 --> E4["Program SHA-256-Verified Image to Flash"]
     E4 --> E5["Reflow IC5001 onto Digital PCB"]
     E5 --> Z
-    
-    F --> F1["Connect Pico Probe to P7501 (GP3 NSW5V Hi-Z!)"]
-    F1 --> F2["Validate PINCHECK / STATUS / UARTPROBE"]
-    F2 --> F3["Run JIGBOOT / UARTMON (115200 8N1)"]
-    F3 --> F4["Inspect Boot Telemetry & GDB RSP or proceed to Route A"]
-    F4 --> Z
     
     Z --> G{"Need Codec / DVD Drive Update?"}
     G -->|"Yes"| H["Route D: Burn PANA_DVD.FRM to CD-R"]
@@ -192,15 +193,16 @@ flowchart TD
 
 ### Phase 1: Diagnosis & `U99` Symptom Triage
 1. Connect the recorder to a display using Composite or Component output (avoid HDMI during initial low-level diagnostics).
-2. Watch the front-panel controller (`IC7001`) VFD:
-   * If it displays **`HELLO`**, pauses 15–45 seconds, and locks permanently on **`U99`** with HDD and DVD mechanisms idle, classic corrupted `EEMUL` calibration data inside Spansion Flash (`IC5001`) is indicated.
-   * If the panel flickers or drops out with relay clicks, first check the `+5V`, `+12V`, `-12V`, and `+3.3V` SMPS rails against the block diagrams in `c2c7f1.pdf`.
+2. Watch the front-panel (`VFD`) and `P7501` serial telemetry:
+   * If the panel shows **`PLEASE WAIT (~2s) -> U99`** or **`HELLO (~2s) -> U99`**, or UART capture logs **`BGO driver init failed[1].`**, the typical cause on `Loader ver0.61` is corruption in the **BGO FTL (`SA26..SA70`, `0x84130000..0x843FFFFF`)** or top `EEMUL` (`SA134..SA141`) inside Spansion `IC5001`.
+   * If the panel cycles **`PLEASE WAIT` / `SELF CHECK` every `~44s`**, that reflects `IC7501`'s watchdog pulsing `NSW5V=0` and `XRESET=0` when no valid SDSC card or `TBUS` keepalive is active.
+   * If the unit drops out immediately with relay clicks before `<00>DDR CHECK: OK`, measure `+5V`, `+12V`, `-12V`, and `+3.3V` SMPS rails first (`c2c7f1.pdf`).
 
 ---
 
-### Phase 2: Operational Route A — Desoldering & External Programming (Master Procedure)
+### Phase 2: Operational Route A — External Physical Fallback (TSOP-48 Desoldering)
 
-This route is **100% certified**, independent of serial monitor state, and guarantees deterministic NOR Flash restoration.
+Use this procedure **only if Layer 1 Critical Boot IPL (`SA0..SA10`) or the SD card slot is physically damaged**, blocking non-destructive Phase 3 (`Route B`) recovery.
 
 #### Step 1: Mechanical Disassembly & Digital PCB Removal
 1. Unplug AC power and wait 5 minutes for primary SMPS bulk capacitors to bleed completely.
@@ -219,7 +221,7 @@ This route is **100% certified**, independent of serial monitor state, and guara
 #### Step 3: Flash Readout & Firmware Sanitization
 1. Seat `S29JL064H` in a TSOP-48 v3 ZIF adapter for your universal programmer (XGecu T48, TL866II-Plus, or SVOD 4).
 2. Read the entire 8 MB array twice, saving `DMR_EH55_ORIGINAL.bin` and `DMR_EH55_ORIGINAL_TEST.bin`, and compare their SHA-256 digests (`panadiga verify-artifact`). Both dumps must be **100% identical** before proceeding.
-3. Clean the final 64 KB via Rust CLI:
+3. Clean the final 64 KB via Rust CLI (or run `panadiga nvram patch-upper-nor` for offline BGO patching):
    ```bash
    panadiga nvram clean DMR_EH55_ORIGINAL.bin DMR_EH55_CLEAN.bin
    ```
@@ -234,9 +236,9 @@ This route is **100% certified**, independent of serial monitor state, and guara
 
 ---
 
-### Phase 3: Operational Route B — In-Circuit Diagnostics & Capture via `P7501` Async UART (`RP2040` / `RP2350`)
+### Phase 3: Operational Route B — Primary In-Circuit No-Desoldering Recovery (`P7501` + `SDDIAG` `ver061` / Door #1 $\rightarrow$ `PANAMON1>`)
 
-This workflow captures live `AM34` / `MN103S` bootloader telemetry, optical/drive errors (`<00>DDR CHECK: OK`, `CD diag boot mode`), `Q7510`/`Q7514` behavior, and GDB RSP without removing the Flash IC:
+This is the **recommended primary bench path for already-bricked `U99` units**: it captures live `AM34` / `MN103S` bootloader telemetry, extracts the full **8 MiB** read-only dump (`PANADMP1`), and cures corrupted BGO / `EEMUL` blocks in-circuit without risking torn TSOP-48 PCB pads.
 
 1. **RP2040 / RP2350 Compatibility:** Compatible with any **Raspberry Pi Pico (RP2040)** or **Pico 2 (RP2350)** (including `Pico W` / `Pico 2 W` with BLE enabled).
 2. **Canonical Factory Pinout of `P7501` (`B6B-ZR-3R4` `"TO JIGU"`):**
@@ -245,13 +247,13 @@ This workflow captures live `AM34` / `MN103S` bootloader telemetry, optical/driv
    * **Pin 3 (`UARTM2P_T` / `MAX RXD`):** Connect to **`GP4`** (Pico Pin 6, TX UART `115200 8N1`). Already pulled up onboard via `R7570 10 kΩ` — **do NOT attach external `4.7 kΩ` pull-up**.
    * **Pin 4 (`GND`):** Connect to **`GND`** (Pico Pin 38). Confirm **$0.0\,\Omega$** continuity to metal chassis before powering!
    * **Pin 5 (`NSW5V` / `X_SW_5R2V`):** Connect to **`GP3`** (Pico Pin 5). Fed from `IC1506` (`~5.15V` upstream via `D7510`, `~3.29V` at rest). **KEEP PERMANENTLY `Hi-Z Input` with pulls disabled — NEVER drive push-pull!**
-   * **Pin 6 (`UARTP2M_T` / `MAX TXD`):** Connect to **`GP2`** (Pico Pin 4, RX UART `115200 8N1` via PIO0). Identified visually by the **square solder pad** nearest `FP50003`.
-3. **Additional Check (`WP#/ACC` Pin 14 on `IC5001`):** Confirm Pin 14 reads $+3.3\text{V}$ before any in-circuit Flash erase (if $0\text{V}$, `SA140`/`SA141` are hardware write-protected).
-4. **Pico Serial Console Sequence (`PANADIGA> `, `115200 8N1`):**
+   * **Pin 6 (`UARTP2M_T` / `MAX TXD`):** Connect to **`GP2`** (Pico Pin 4, RX UART `115200 8N1` via PIO1/PIO0). Identified visually by the **square solder pad** nearest `FP50003`.
+3. **Additional Check (`WP#/ACC` Pin 14 on `IC5001`):** Confirm Pin 14 reads $+3.3\text{V}$ before any in-circuit `SA140`/`SA141` Flash erase (if $0\text{V}$, those two top micro-sectors are hardware write-protected).
+4. **Verified No-Desoldering Diagnostics & `U99` Repair Flow (`115200 8N1`):**
    * **Step A (`STATUS` / `PINCHECK`):** Confirms safe `SW_UART` levels (`~3.25V Hi-Z | ~2.69V PD | ~3.27V PU`) and enforces `NSW5V` (`GP3`) isolation.
-   * **Step B (`JIGBOOT` / `BOOTCAP` / `UARTMON`):** Captures `115200 8N1` stream on `GP2` (`<00>DDR CHECK: OK`, `CD diag boot mode`).
-   * **Step C (`ENGAGE` $\rightarrow$ `UARTSEND`):** Transmits strings/bytes over `GP4` while holding `SW_UART` in `Hi-Z` so `Q7514` conducts.
-   * **Step D (`UARTPROBE 8` $\rightarrow$ `ISOLATE`):** Releases `GP26` and puts probe pins back into safe high-impedance (`ISOLATE`).
+   * **Step B (`UARTSTREAM 12000 JIG:2500` / `BOOTTRACE 15000 NOJIG`):** Captures `<00>DDR CHECK: OK`, `SD init`, `BGO driver init failed[1].`, or mechanism sense errors.
+   * **Step C (`ver061` SDSC FAT16 Kit + `PANAMON1>`):** Run `panadiga unbrick prepare-sd --loader-profile ver061` (`DIGADIAG.FRM` `262,144 B` raw `@ 0x50400000` + `PANA__SD.FRM` `sd48`, `cdcc2cdf...`) onto an **SDSC FAT16 ($\le 2\text{ GB}$)** card and enter `PANAMON1>` (via `JIG:2500` or headless **Door #1** `@ 0x0B1800` using `?\r` at `300 µs`).
+   * **Step D (Mandatory 8 MiB Backup + Guarded Repair under `E05`):** Extract the full read-only `8 MiB` NOR dump (`PANADMP1` `@ 0x9043950E` $\rightarrow$ `J 904394FA`) and verify SHA-256 before opting into `U CONFIRM_UPPER_NOR`. **Risk Warning:** maintain stable AC mains and wait ~`700 ms` (`0xFF × 32` readback polling) after each 64 KiB erase; because **Layer 1 IPL (`SA0..SA10`) remains `E05`-locked**, any interrupted Layer 2 BGO (`SA26..SA70`) or `EEMUL` (`SA134..SA141`) write remains re-entrant over SD/UART (`UARTPROBE 8` $\rightarrow$ `ISOLATE` on exit).
 
 ---
 
@@ -273,12 +275,14 @@ When replacing a failing factory HDD or upgrading to an IDE/SATA SSD via a compa
    panadiga hdd patch-capacity -i "firmware_and_images/panasonic DMR EH-55 Firmware hdd_100.bin" --mode dynamic
    ```
    Alternatively use the Desktop **`Capacity Unlock (250GB / 2TB)`** (`HddCapacityPatcherCard`) and **`Physical Write & mkfs`** (`HddWriterCard`) panels.
-3. **Write First 100 MB with System-Drive Lockout Protection & Format on Recorder:**
+3. **Write First 100 MB with System-Drive Lockout Protection, Low-Profile Lid Clearance & Format on Recorder:**
    ```bash
    panadiga hdd list-drives
    panadiga hdd write-image --target \\.\PhysicalDrive1 --image "firmware_and_images/panasonic DMR EH-55 Firmware hdd_100_PATCHED_DYNAMIC.bin" --confirm CONFIRM-PhysicalDrive1
    ```
-   Or on Linux (`sudo dd if="panasonic DMR EH-55 Firmware hdd_100_PATCHED_DYNAMIC.bin" of=/dev/sdX bs=1M status=progress conv=fsync` — strictly verify `/dev/sdX`!). Install with jumper **`MASTER`**, boot into Panasonic Service Mode (hold `[STOP]` on front panel + `[0]` + `[0]` on remote for 5 s), and select **HDD Initialize / Format**.
+   Or on Linux (`sudo dd if="panasonic DMR EH-55 Firmware hdd_100_PATCHED_DYNAMIC.bin" of=/dev/sdX bs=1M status=progress conv=fsync` — strictly verify `/dev/sdX`!). Install with jumper **`MASTER`** (`Device 0` on Secondary `ch = 1`).
+   * **Closing the Top Chassis Lid over `StarTech IDE2SAT2`:** Because mating `N5EZZ0000003` upright (`0°`) interferes with the top metal lid, rotate `N5EZZ0000003` **`180°`** using a **40-pin `0.5 mm` pitch (`20.5 mm` wide, `0.30 mm` end thickness) `Type B` FFC** (`100–150 mm`) — or shave the opposite-side jacket at one end of the stock flat with a brand-new razor blade + Kapton tape over the old contacts — and verify **`1:1` (`Pin k <-> Pin k`)** continuity with a multimeter prior to AC power-on ([`STORAGE_ARCHITECTURE_MEIHDFS_PARTITIONS.md §9.6`](./STORAGE_ARCHITECTURE_MEIHDFS_PARTITIONS.md#96-low-profile-chassis-closure-modification-40-pin-type-b-ffc-or-diy-strip--180-inverted-blue-panasonic-adapter-n5ezz0000003)).
+   * Boot into Panasonic Service Mode (hold `[STOP]` on front panel + `[0]` + `[0]` on remote for 5 s) and select **HDD Initialize / Format**.
 
 ---
 
@@ -324,23 +328,27 @@ If the unit boots normally but needs DVD-R/+R/RAM media tables or codec updates:
 | **RSK-03** | Driving push-pull $+3.3\,\text{V}$ onto `XRESET` (`GP5`) | Overload/damage to reset supervisor circuit (`QR7503` / `XRESET`) | **5 (Critical)** | 2 (Low) | `GP5` MUST operate strictly **Open-Drain** (drive `0V` LOW vs `Hi-Z Input`); never push-pull HIGH |
 | **RSK-04** | Driving or enabling pulls on `NSW5V` (`P7501` Pin 5 / `GP3`), fed from $~5.15\,\text{V}$ (`IC1506` via `D7510`) | Overvoltage/overcurrent stress on `GP3` or Panasonic transistors | **5 (Critical)** | 2 (Low) | Keep `GP3` **PERMANENTLY `Hi-Z Input` with pulls disabled**; never power Pico via `P7501` |
 | **RSK-05** | Hardware write-lock active on Spansion Pin 14 (`WP#/ACC`, `IC5001`) | Silent JEDEC Sector Erase failure; `U99` corruption persists | **3 (Medium)** | 3 (Medium) | Probe Pin 14 first with DMM; if $0\,\text{V}$, pull up via $1\text{ k}\Omega$ to $3.3\,\text{V}$ during erase |
-| **RSK-06** | Accidental corruption of bootloader/kernel area (`0x000000..0x7EFFFF`) | Permanent unit bricking due to lost AM34 IPL/OS | **5 (Critical)** | 1 (Minimal) | `panadiga nvram clean` enforces mandatory SHA-256 verification ensuring first 8,323,072 bytes stay untouched |
+| **RSK-06** | Accidental corruption of permanent Layer 1 Critical IPL (`SA0..SA10`, `0x80000000..0x8003FFFF`) or unguarded Layer 2 BGO (`SA11..SA133`) write. | Permanent bootrom loss (`SDDIAG`/`P7501` unbootable without external TSOP-48 programmer). | **5 (Critical)** | 1 (Minimal) | Pico `NorWritePolicy` keeps `SA0..SA10` **permanently `E05` RO**; Layer 2 (`0x80040000..0x807EFFFF`) requires `CONFIRM_UPPER_NOR` opt-in, mandatory `8 MiB` SHA-256 backup, and `~700 ms` (`0xFF × 32`) erase polling; `panadiga nvram clean` / `patch-upper-nor` validates SHA-256 pre/post. |
 | **RSK-07** | Reverse chip orientation (*Pin 1 backwards*) during Flash reflow | Dead short on $V_{\text{CC}}$ / $V_{\text{SS}}$, destroying Flash and regulators | **5 (Critical)** | 2 (Low) | Double-check Pin 1 chamfer/dot against PCB silkscreen before reflowing |
 | **RSK-08** | Incompatible IDE-SATA bridge chipset during SSD/HDD upgrade | System stalls on `HDD CHECK` or ATA/ATAPI timeouts | **3 (Medium)** | 3 (Medium) | Use verified bridges (e.g., Marvell `88SA8052`), avoiding legacy-DMA-broken adapters |
+| **RSK-09** | AC interruption during in-circuit BGO repair (`CONFIRM_UPPER_NOR`) or trace bridge in DIY `0.5 mm` FFC shaving. | Persistent BGO `U99` loop (re-entrant) or `CH1` short pulling `IORDY`/`DIOR-`/`DIOW-` to `0 V`. | **4 (High)** | 2 (Low w/ check) | On already-bricked `U99` units, attempt in-circuit repair after `8 MiB` SHA-256 backup (`SA0..SA10` `E05`-locked stays safe for re-entry without `RSK-01`). For `Type B`/DIY `0.5 mm` FFCs, inspect under magnification and check `1:1` + pin-to-pin isolation before powering. |
 
 ---
 
-### 6.4 Centralized Rust Modules, `PANAMON1>` / `300 µs` Protocol & Promoted Logs (`19` Captures)
+### 6.4 Centralized Rust Modules, `PANAMON1>` / `300 µs` Protocol & Promoted Logs (`22` Total Captures)
 
 Validated bench procedures have been centralized under `crates/panadiga-core/src/`:
 - **`pico::panamon1` (`Panamon1Client`, `Panamon1NorUnlockGuard`):** `?\r` handshake, `300 µs` retry cadence, `U CONFIRM_UPPER_NOR`/`U LOCK` guards, and direct `PANAMON1>` automation.
 - **`re::nor_dumper::{orchestrator, spansion_audit}` & `re::eh55_bgo::{audit, repair_plan, live_apply}`:** `142`-sector Spansion auditing, `SA54`/`SA41`/`SA29`/`SA39` corruption detection, and Cycle 2 BGO repair planning/live application.
 - **`re::davis_probe` (`DavisProbeEngine`), `re::region_compat::tv_standard`, `re::tbc_appliance` & `hdd::writer::eh55_flash`:** `DAVIS` diagnostics (`CH0 0x504F81D0=2` vs `CH1 0x504F81D4=1`), `PAL-M`/`AIOF`/`AVDD` matrix, `tbc_appliance` stages, and `PhysicalDrive1` CoW flashing.
-- **7 newly promoted audited logs in [`docs/debug_logs/`](../debug_logs/README.md) (`12 -> 19`):**
+- **10 newly promoted audited logs in [`docs/debug_logs/`](../debug_logs/README.md) (`12 -> 22` verified captures):**
   - `verify_bgo_restored_boot_20261119.log`: `B102000ED7E38CE5DA9BA3954ED316E540413FFF3B1CF8BC204588BCE7EBCDFC`
   - `sddiag_ver061_live_20261119.log`: `6C5EC83CC18ABFF4233F50DC1B1586AA049C0F60C39AB81F424E9F0CCBC63B25`
+  - `apply_bgo_repair_com10_20261119.log`: `928CA5AD858DC1FFD677FC7F38AB2A456CB6034A38199F407E85046B57BFA8BC`
   - `diagnose_please_wait_90s_20261119.log`: `2880A883B7233C9C234DDEE450B665E1FA8ACE32C802BA44BD9E23F4FCC64DE6`
   - `repair_bgo_sa39_sa54_com10_20261119.log`: `E17D9AC36CF31CEAA876673931052C8393CA817AE838DF3D9D1FDCBFF4B3206E`
+  - `probe_fe_release_com10_20261119.log`: `7973A4AB246AD5D17BCBCD1522979608E4F3D47FA58D836A3E652A189C9BC948`
+  - `probe_ch1_after_fe_com10_20261119.log`: `3AB8BE1378C9430A3A60E3C0F1016DAB047F6EBB4247A518D70368BEEE532E64`
   - `probe_ch1_full_diag_20261119.log`: `A6E71B147C17BAAE6F5F139C3F6D8F604E9C1461B7F22E557A00DBEA8FC0646C`
   - `probe_ch1_live_v2_0deg_20261119.log`: `F6225540D20818667FF7C81BF48FC45D202D115BCDC71A3F5ECC656C7E935705`
   - `hdd_unbrick_flash_250gb_20261119.log`: `021806054BAE733CB6E2514E604877EB75AB7B6C9E55C1E193339DD30F03B67C`

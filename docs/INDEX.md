@@ -3,11 +3,11 @@
 
 # Panadiga Technical Documentation Index / Índice da Documentação Técnica
 
-All **38** primary technical engineering dossiers in this repository maintain **1:1 bidirectional parity** between [**English (`docs/en-US/`)**](#english-documentation-docsen-us--38-dossiers) and [**Português (BR) (`docs/pt-BR/`)**](#documentação-em-português-docspt-br--38-dossiês), paired automatically with [`translation_pairs.json`](./translation_pairs.json), plus root audits, preserved `2026-11-11` audit snapshots ([`audits/`](./audits/README.md)), Ghidra C/disassembly evidence ([`pseudocode/`](./pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md)), and live `COM10` bench UART logs ([`debug_logs/`](./debug_logs/README.md)).
+All **39** primary technical engineering dossiers in this repository maintain **1:1 bidirectional parity** between [**English (`docs/en-US/`)**](#english-documentation-docsen-us--39-dossiers) and [**Português (BR) (`docs/pt-BR/`)**](#documentação-em-português-docspt-br--39-dossiês), paired automatically with [`translation_pairs.json`](./translation_pairs.json), plus root audits, preserved `2026-11-11` audit snapshots ([`audits/`](./audits/README.md)), Ghidra C/disassembly evidence ([`pseudocode/`](./pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md)), and live `COM10` bench UART logs ([`debug_logs/`](./debug_logs/README.md)).
 
 ---
 
-## English Documentation (`docs/en-US/`) — 38 Dossiers
+## English Documentation (`docs/en-US/`) — 39 Dossiers
 
 | # | Document (`en-US`) | PT-BR Counterpart | Engineering Domain & Scope |
 | :---: | :--- | :--- | :--- |
@@ -49,10 +49,11 @@ All **38** primary technical engineering dossiers in this repository maintain **
 | 36 | [THEORY_AND_PRACTICE_U99_UNBRICK_MATSUSHITA_CRYPTO.md](en-US/THEORY_AND_PRACTICE_U99_UNBRICK_MATSUSHITA_CRYPTO.md) | [PT-BR](pt-BR/TEORIA_E_PRATICA_UNBRICK_U99_E_CRIPTOGRAFIA_MATSUSHITA.md) | `S29JL064H` real 142-sector map, FTL BGO `SA26..SA70` vs `Upper EEMUL` `SA71..SA141`, ~700 ms erase & 2-cycle surgical `U99` repair |
 | 37 | [VISUAL_CATALOG_EH55_SCHEMATICS_AND_PCB.md](en-US/VISUAL_CATALOG_EH55_SCHEMATICS_AND_PCB.md) | [PT-BR](pt-BR/CATALOGO_VISUAL_ESQUEMAS_E_PCB_EH55.md) | Visual catalog (`238` entries) of DMR-EH55 schematics, PCBs & RE renders |
 | 38 | [ZERO_ERROR_RAG_ENGINE_AND_PHYSICAL_SAFETY.md](en-US/ZERO_ERROR_RAG_ENGINE_AND_PHYSICAL_SAFETY.md) | [PT-BR](pt-BR/ZERO_ERROR_RAG_ENGINE_E_SEGURANCA_FISICA.md) | 6-layer Zero-Error RAG engine, `FactCritic` & physical voltage guardrails |
+| 39 | [DIGA_LINEUP_HARDWARE_PROFILES_CATALOG_AND_AUDIT.md](en-US/DIGA_LINEUP_HARDWARE_PROFILES_CATALOG_AND_AUDIT.md) | [PT-BR](pt-BR/CATALOGO_E_AUDITORIA_PERFIS_HARDWARE_LINHA_DIGA.md) | 89-model DIGA hardware profile expansion (`T0`->`T4`), CDN/datasheet archive & safety traps |
 
 ---
 
-## Documentação em Português (`docs/pt-BR/`) — 38 Dossiês
+## Documentação em Português (`docs/pt-BR/`) — 39 Dossiês
 
 | # | Documento (`pt-BR`) | Versão `en-US` | Área / Escopo Técnico |
 | :---: | :--- | :--- | :--- |
@@ -94,6 +95,7 @@ All **38** primary technical engineering dossiers in this repository maintain **
 | 36 | [UPGRADES_PICO_C11_UNDEF_GHIDRA_E_PARIDADE_PYTHON_RUST.md](pt-BR/UPGRADES_PICO_C11_UNDEF_GHIDRA_E_PARIDADE_PYTHON_RUST.md) | [EN-US](en-US/PICO_C11_UPGRADES_GHIDRA_UNDEF_AND_PYTHON_RUST_PARITY.md) | Upgrades C11 no Pico, diagnóstico `??` no Ghidra e matriz de paridade Rust |
 | 37 | [VISTA_EXPLODIDA_ARQUITETURA_INJECAO_PICO_E_BYPASS_PASSTHROUGH.md](pt-BR/VISTA_EXPLODIDA_ARQUITETURA_INJECAO_PICO_E_BYPASS_PASSTHROUGH.md) | [EN-US](en-US/EXPLODED_VIEW_PICO_INJECTION_ARCHITECTURE_AND_BYPASS_PASSTHROUGH.md) | Vista explodida (`DMR-EH55`), ferramentas MCP, `PANARSP` e bypass AV `E-E` |
 | 38 | [ZERO_ERROR_RAG_ENGINE_E_SEGURANCA_FISICA.md](pt-BR/ZERO_ERROR_RAG_ENGINE_E_SEGURANCA_FISICA.md) | [EN-US](en-US/ZERO_ERROR_RAG_ENGINE_AND_PHYSICAL_SAFETY.md) | Motor RAG Zero-Error (6 camadas), `FactCritic` e guardrails de tensão |
+| 39 | [CATALOGO_E_AUDITORIA_PERFIS_HARDWARE_LINHA_DIGA.md](pt-BR/CATALOGO_E_AUDITORIA_PERFIS_HARDWARE_LINHA_DIGA.md) | [EN-US](en-US/DIGA_LINEUP_HARDWARE_PROFILES_CATALOG_AND_AUDIT.md) | Auditoria de 89 modelos DIGA (`T0`->`T4`), novos downloads/datasheets e alertas físicos |
 
 ---
 

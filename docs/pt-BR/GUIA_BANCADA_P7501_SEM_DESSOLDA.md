@@ -12,10 +12,16 @@
 Este manual detalha o procedimento seguro de bancada para conectar um **Raspberry Pi Pico (`RP2040`)** ou **Pico 2 (`RP2350`)** ao conector de serviço de 6 pinos **`P7501` (`JST B6B-ZR-3R4`, legenda `"TO JIGU"`)** na placa `VEP79138` do gravador **Panasonic DIGA DMR-EH55**, realizando captura de boot a **`115200 8N1`**, diagnóstico elétrico completo da linha, controle discreto de reset/boot e ponte GDB RSP sem necessidade de soldar ou remover componentes da PCB principal.
 
 > [!IMPORTANT]
-> **Alinhamento Físico Verificado (`P7501` Async UART vs. Gravação Externa `IC5001`):**
-> A verificação completa dos 3 manuais de serviço oficiais do **DMR-EH55** e medições ao vivo em bancada comprovaram que **`P7501`** é uma porta **UART Assíncrona `115200 8N1`** acoplada ao circuito discreto `Q7510` / `Q7514` / `QR7503` / `IC1506` / `D7510`.
-> - A sonda Pico em `P7501` captura telemetria de inicialização ao vivo (`<00>DDR CHECK: OK`, `CD diag boot mode`), testa integridade elétrica de todos os pinos (`PINCHECK`, `UARTPROBE`, `FMUSCAN`) e abre a ponte `GDB` RSP sem dessolda.
-> - Caso o aparelho apresente travamento em `U99` sem monitor interativo de escrita disponível em `P7501`, a reparação definitiva da NVRAM corrompida deve seguir a rota externa dessoldando a Flash Spansion `S29JL064H70TFI00` (**`IC5001`**) e executando `panadiga nvram clean` antes da regravação em programador **XGecu T48** ou **SVOD 4**.
+> **Alinhamento Físico Verificado (`P7501` Async UART vs. Recuperação Sem Dessolda `SDDIAG`/`PANAMON1>` vs. Contingência `IC5001`):**
+> A verificação cruzada dos **5 manuais de serviço oficiais do DMR-EH55 (`30` PDFs técnicos indexados no acervo)** e medições ao vivo em bancada comprovaram que **`P7501`** é uma porta **UART Assíncrona `115200 8N1`** acoplada ao circuito discreto `Q7510` / `Q7514` / `QR7503` / `IC1506` / `D7510`.
+> - A sonda Pico em `P7501` captura telemetria de inicialização ao vivo (`<00>DDR CHECK: OK`, `SD init`, `CD diag boot mode`), valida integridade elétrica dos 6 pinos (`PINCHECK`, `BAUDSCAN`, `HEXCAP`, `PWRTRACE`, `UARTSTREAM`, `FMUSCAN`) e abre a ponte `GDB` RSP sem dessolda.
+> - **Rota Primária `U99` 100% Sem Dessolda (`SDDIAG` + `PANAMON1>`):** Em hardware real `DMR-EH55` (`Loader ver0.61 [06/03/06]`), o erro `U99` decorre tipicamente de corrupção no **FTL BGO de 45 setores (`SA26..SA70`, `0x84130000..0x843FFFFF` — `BGO driver init failed[1].`)** e/ou na área superior `EEMUL` (`SA134..SA141`), tendo sido **eliminado em 2 ciclos diretamente via `P7501` + cartão SDSC (`DIGADIAG.FRM` `262.144 B` bruto `@ 0x50400000` + `PANA__SD.FRM` `sd48`, ou entrada headless *Porta #1* `@ 0x0B1800` → `PANAMON1>`) sem dessoldar `IC5001`**.
+> - A dessoldagem da Flash Spansion `S29JL064H70TFI00` (**`IC5001`**) para gravador externo **XGecu T48** / **SVOD 4** (`panadiga nvram clean`) fica reservada exclusivamente como **contingência de último recurso** caso o bootloader IPL (`SA0..SA10`) ou o leitor SD esteja fisicamente inoperante.
+
+> [!WARNING]
+> **Conformidade & Avaliação de Risco: Por Que Vale Arriscar a Recuperação In-Circuit em um Aparelho Já Bricado (`U99`):**
+> * **Riscos operacionais reais que devem ser respeitados:** (1) queda de energia ou desconexão durante escrita Flash; (2) tempo real de apagamento de `64 KiB` na Spansion `S29JL064H` (~`700 ms`, exigindo polling de leitura `0xFF × 32` após `OK:ERASE` antes de gravar bytes `'W'`); (3) watchdog de `~44s` do Syscon `IC7501` (`PLEASE WAIT` / `SELF CHECK`, pulsando `NSW5V=0` e `XRESET=0` sem cartão SD válido ou keepalive `TBUS`); e (4) **exigência obrigatória de dump completo de `8 MiB` (`PANADMP1`) verificado por SHA-256** antes de desbloquear a Camada 2 (`U CONFIRM_UPPER_NOR`).
+> * **Por que a arquitetura de compliance justifica tentar primeiro sem dessolda:** A **Camada 1 — IPL Crítico de Boot (`SA0..SA10`, `256 KiB` iniciais: `0x80000000..0x8003FFFF` / `0x84000000..0x8403FFFF`) é permanentemente bloqueada (`E05` RO)** na sonda Pico, garantindo que o `Loader ver0.61` (`SDDIAG` + `P7501`) não possa ser sobrescrito em circuito. Em um gravador já bricado em `U99`, qualquer interrupção nas Camadas 2/3 permanece recuperável por nova sessão SD/UART — evitando o risco muito maior de arrancar ilhas SMD da PCB ao retrabalhar um chip TSOP-48 com ar quente.
 
 ---
 
@@ -27,7 +33,7 @@ Este manual detalha o procedimento seguro de bancada para conectar um **Raspberr
 >
 > * **Vantagens do RP2350 na Bancada:**
 >   * **520 KB de SRAM (contra 264 KB do RP2040):** Buffer estendido para capturas seriais contínuas e cache de sessões GDB RSP.
->   * **Clock a 150 MHz e PIO 2.0:** Amostragem UART `115200 8N1` determinística com oversampling `8x` (`921.600 Hz`) em `p7501_uart.pio`.
+>   * **Clock a 150 MHz e PIO 2.0:** Amostragem UART `115200 8N1` determinística com oversampling `8x` (`921.600 Hz`) em `p7501_uart.pio` / `p7501_uart_duplex.pio`.
 >   * **Nível Lógico Nativo de `3.3V` + Guarda `NSW5V` (`GP3`):** Os sinais UART/controle de `P7501` operam em `3.3V LVTTL`, mas o Pino 5 (`NSW5V`) conecta-se ao nó `~5.15V` de `IC1506` via `D7510` — devendo **SEMPRE** permanecer em `Hi-Z Input` sem pulls no RP2040/RP2350.
 
 ---
@@ -202,11 +208,13 @@ flowchart LR
   ├─────────────────────────────────────────────────────────────────────┤
   │ 4. CHECK ELÉTRICO ('STATUS' e 'PINCHECK'): ~3.25V Hi-Z / ~2.69V PD  │
   ├─────────────────────────────────────────────────────────────────────┤
-  │ 5. CAPTURA BOOT ('JIGBOOT' / 'BOOTCAP'): <00>DDR CHECK / CD diag    │
+  │ 5. CAPTURA BOOT ('UARTSTREAM 12000 JIG:2500' / 'BOOTTRACE 15000')   │
   ├─────────────────────────────────────────────────────────────────────┤
-  │ 6. ENVIO SERIAL ('ENGAGE' -> 'UARTSEND'): SW_UART Hi-Z para Q7514   │
+  │ 6. ENVIO / MONITOR ('ENGAGE' -> 'UARTSEND' / 'DIAGWATCH' / 'PANARSP')│
   ├─────────────────────────────────────────────────────────────────────┤
-  │ 7. HIGIENE PÓS-TESTE ('UARTPROBE 8' -> 'ISOLATE'): Volta p/ Hi-Z!   │
+  │ 7. CURA BGO SEM DESSOLDA: Backup 8 MiB ('PANADMP1') -> 'PANAMON1>'  │
+  ├─────────────────────────────────────────────────────────────────────┤
+  │ 8. HIGIENE PÓS-TESTE ('UARTPROBE 8' -> 'ISOLATE'): Volta p/ Hi-Z!   │
   └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -234,13 +242,15 @@ PANADIGA> PINCHECK
 ```
 * **Leitura esperada em `PINCHECK`:** `SW_UART` (`GP26`) marca `~3.25V` em `Hi-Z`, `~2.69V` sob pull-down (grampeado via junção B-C de `Q7510`) e `~3.27V` sob pull-up; `XRESET` (`GP5`) sobe em `~20 µs` ao soltar; `NSW5V` (`GP3`) reportado estritamente em `Hi-Z Input`; `GP2` (`UARTP2M_T`) acusa centenas de bordas seriais ativas durante boot.
 
-### Passo 5: Captura de Boot (`BOOTCAP` / `JIGBOOT` / `UARTMON`)
+### Passo 5: Captura de Boot (`UARTSTREAM` / `BOOTTRACE` / `HEXCAP` / `BAUDSCAN`)
 ```text
-PANADIGA> JIGBOOT
+PANADIGA> BAUDSCAN 3500 NORMAL
+PANADIGA> UARTSTREAM 12000 JIG:2500
+PANADIGA> BOOTTRACE 15000 NOJIG
 ```
-* A captura síncrona PIO em `GP2` (`115200 8N1`) exibirá mensagens do bootloader AM34 (`<00>DDR CHECK: OK`, `CD diag boot mode`, códigos `X(80020401)` / `X(80040904)` e status do mecanismo óptico/drive).
+* A captura determinística PIO1 em `GP2` (`115200 8N1`) exibirá a telemetria completa do bootloader AM34 (`<00>DDR CHECK: OK`, `SD init`, `CD diag boot mode`, códigos `X(80020401)` / `X(80040904)` e estágio `*** RTSC Initialize ***`). *(Para **`Loader ver0.61`**, `UARTSTREAM 12000 JIG:2500` mantém `SW_UART` em `LOW` tempo suficiente para atravessar `DDR CHECK: OK` e carregar `DIGADIAG.FRM` antes de liberar `GP26`; alternativamente, comandos legados PIO0 `JIGBOOT`/`BOOTCAP`/`UARTMON` seguem disponíveis.)*
 
-### Passo 6: Transmissão Serial Interativa (`ENGAGE` + `UARTSEND`) e Restauração (`UARTPROBE 8` + `ISOLATE`)
+### Passo 6: Transmissão Serial Interativa (`ENGAGE` + `UARTSEND` / `DIAGWATCH` / `PANARSP`) e Restauração (`UARTPROBE 8` + `ISOLATE`)
 ```text
 PANADIGA> ENGAGE
 [BUS] P7501 UART TX (GP4) engaged idle HIGH; NSW5V (GP3) kept Hi-Z Input.
@@ -251,6 +261,12 @@ PANADIGA> ISOLATE
 ```
 *(Lembre-se: `UARTSEND` mantendo `SW_UART = Hi-Z` permite a passagem por `Q7514`; ao concluir, rodar `UARTPROBE 8` + `ISOLATE` restaura a leitura limpa de `GP26 / ADC0` para os próximos comandos `STATUS`.)*
 
+### Passo 7: Recuperação Cirúrgica In-Circuit Sem Dessolda (`SDDIAG` / Porta #1 $\rightarrow$ `PANAMON1>` $\rightarrow$ Backup 8 MiB & Cura BGO `U99`)
+1. **Gerar kit SD canônico (`ver061`):** Execute `panadiga unbrick prepare-sd --loader-profile ver061` para gravar `DIGADIAG.FRM` (`262.144 B` brutos `@ 0x50400000`) + `PANA__SD.FRM` (`sd48`, `SHA-256: cdcc2cdf...`) em um cartão **SDSC FAT16 ($\le 2\text{ GB}$)** (cartões SDHC/SDXC não inicializam no boot SD 4-bit do `Loader ver0.61`).
+2. **Entrar em `PANAMON1>`:** Inicialize com o cartão SDSC via **`SDDIAG`** (`UARTSTREAM 12000 JIG:2500`) ou diretamente em modo headless via **Porta #1 (*Door #1*, `NOJIG` pelo slot `PROG` `0x0B1800` quando `CH1` retorna `HDD_MAX_LBA get failed`)**. Confirme o prompt `PANAMON1>[B/R/W/D/F/J/E/U/Q]` com ping `?\r` em cadência de `300 µs`.
+3. **Backup integral obrigatório de 8 MiB (`PANADMP1`):** Antes de alterar qualquer bit na Flash, realize a leitura completa **somente-leitura** de `0x84000000..0x847FFFFF` ajustando os limites `MOV` no espelho *uncached* `0x9043950E` (`J 904394FA`) ou via CLI `panadiga pico dump-nor`, validando o hash **SHA-256** do dump salvo.
+4. **Cura BGO em 2 ciclos com proteção IPL `E05`:** Execute o plano gerado por `panadiga re eh55-bgo` destravando temporariamente a Camada 2 (`U CONFIRM_UPPER_NOR` $\rightarrow$ formatação de setor / escritas puras `1 -> 0` nos setores BGO `SA26..SA70` aguardando ~`700 ms` e `0xFF × 32` no readback após cada erase $\rightarrow$ `U LOCK`). Em seguida valide via `BOOTTRACE 15000 NOJIG` o avanço para `***** normal mode *****` $\rightarrow$ `*** RTSC Initialize ***`.
+
 ---
 
 ## 6. Tabela de Diagnóstico de Falhas de Bancada
@@ -260,7 +276,9 @@ PANADIGA> ISOLATE
 | `VDD: 0.02V (LOW)` após `UARTSEND` / `JIGBOOT` | Estado residual digital em `GP26` ou gravador desligado | Execute `UARTPROBE 8` seguido de `ISOLATE` e verifique energia AC do gravador. |
 | `PINCHECK` acusa `GP2 = 0` transições | Fio do Pino 6 (`UARTP2M_T`, pad quadrado) desconectado/invertido | Cheque continuidade entre o pad quadrado de `P7501` e `GP2` (Pin 4 do Pico) + terra comum `Pin 4 <-> GND`. |
 | `UARTSEND LOW:cmd` retorna `0 bytes` | Comportamento esperado de hardware: `SW_UART = LOW` coloca `Q7514` em corte | Envie `UARTSEND <texto>` sem o prefixo `LOW:` após `ENGAGE`, mantendo `GP26` em `Hi-Z`. |
-| Gravador trava em `U99` após captura `CD diag boot mode` | Setores `SA134..SA141` (`EEMUL`) corrompidos na Spansion `IC5001` e sem monitor ativo p/ escrita | Dessoldar `IC5001` TSOP-48 (Rota A), limpar via `panadiga nvram clean` e gravar no **XGecu T48** / **SVOD 4**. |
+| Gravador trava em `U99` (`BGO driver init failed[1].`) | Corrupção no FTL BGO (`SA26..SA70`, `0x84130000..0x843FFFFF`) ou `EEMUL` (`SA134..SA141`) na `IC5001` | **1º Sem dessolda:** Use kit SDSC FAT16 `ver061` (`SDDIAG` / Porta #1) $\rightarrow$ `PANAMON1>` + backup `8 MiB` + `U CONFIRM_UPPER_NOR` / `panadiga re eh55-bgo` (`SA0..SA10` travado em `E05`). **Último recurso:** remover `IC5001` TSOP-48 e limpar em **XGecu T48** / **SVOD 4**. |
+| Queda `PLEASE WAIT` / `SELF CHECK` aos `~44s` (`NSW5V=0` e `XRESET=0`) | Watchdog do Syscon `IC7501` expirando sem cartão SDSC válido ou keepalive `TBUS` | Utilize cartão **SDSC FAT16 $\le 2\text{ GB}$** com kit `ver061` (evite SDHC/SDXC), ou use keepalive `TBUS` ao trabalhar em stubs `M0` sem `MAIN`. |
+| `HDD_MAX_LBA get failed` / `DAVIS CH1` lendo `0x00002004` ou tampa não fecha | Pinagem reversa `P58001` (`Pin k = ATA(41-k)`), jumper `CS`/`Slave`, cabo FFC invertido ou conflito mecânico da `N5EZZ0000003` a `0°` | Confirme jumper **`MASTER`** na `StarTech IDE2SAT2` (nunca `CS`/`Slave`). Em `0°` use FFC **Tipo A**; para fechar a tampa com `N5EZZ0000003` a `180°`, use cabo **FFC 40 vias passo `0,5 mm` (`20,5 mm` larg.) `Type B`** (ou raspe com estilete + Kapton) e valide continuidade `1:1` no multímetro. |
 | Console serial não responde | Driver USB CDC não selecionado ou porta incorreta | Confirme porta COM/ttyACM com `panadiga pico list` e valide `115200 8N1`. |
 
 ---
@@ -268,7 +286,7 @@ PANADIGA> ISOLATE
 ## 7. Arquitetura da Sonda e Matriz de Compatibilidade Universal
 
 ### 7.1. Sonda `P7501` (`115200 8N1`) vs. Ponte USB-Serial Comum
-* O **Raspberry Pi Pico (`RP2040` / `RP2350`)** une transceptor PIO UART (`p7501_uart.pio`) com controle coordenado de **`SW_UART`** (`GP26` em corte/Hi-Z para `Q7510`/`Q7514`), **`XRESET`** Open-Drain (`GP5`), guarda passiva **`NSW5V`** (`GP3` sempre `Hi-Z`) e bridge **`GDB` RSP**.
+* O **Raspberry Pi Pico (`RP2040` / `RP2350`)** une transceptores PIO UART (`p7501_uart.pio` / `p7501_uart_duplex.pio`) com controle coordenado de **`SW_UART`** (`GP26` em corte/Hi-Z para `Q7510`/`Q7514`), **`XRESET`** Open-Drain (`GP5`), guarda passiva **`NSW5V`** (`GP3` sempre `Hi-Z`) e bridge **`GDB` RSP**.
 * **Alerta Elétrico:** Não ligue conversores USB-Serial genéricos diretamente ao `P7501` sem garantir nível `3.3V` estrito, Open-Drain real em `XRESET` e isolamento completo do Pino 5 (`NSW5V`).
 
 ### 7.2. Compatibilidade com Outros Fabricantes de NOR Flash (Padrão JEDEC CFI)
@@ -299,11 +317,11 @@ Como o conector **`P7501` (`B6B-ZR-3R4`)** utiliza um plugue fêmea **inteiriço
 
 ---
 
-## 9. Checklist da 1ª Conexão Read-Only na Placa Real
+## 9. Checklist da 1ª Conexão Read-Only & Conformidade Graduada por Risco
 
 Antes de qualquer comando de alteração ou intervenção invasiva:
 
-1. **Passo 1 (`STATUS` $\rightarrow$ `PINCHECK`):** Confirma `Pin 4 = GND`, tensão saudável em `SW_UART` (`~3.25V Hi-Z | ~2.69V PD`), isolamento absoluto de `GP3 (NSW5V)` e atividade em `GP2 (UARTP2M_T)`.
-2. **Passo 2 (`BOOTCAP` / `JIGBOOT` / `UARTMON`):** Registra o log completo `115200 8N1` de inicialização (`<00>DDR CHECK: OK`, `CD diag boot mode` ou falhas de sense) para diagnóstico preciso.
-3. **Passo 3 (`UARTPROBE 8` $\rightarrow$ `ISOLATE`):** Verifica resposta serial mantendo `Q7514` habilitado (`SW_UART = Hi-Z`) e finaliza sempre devolvendo o barramento ao estado `ISOLATE`.
-4. **Passo 4 (Reparo Definitivo NVRAM `U99`):** Caso necessário regravar `0x807F0000..0x807FFFFF`, realize leitura dupla verificada por SHA-256 da Spansion `S29JL064H` (**`IC5001`**) e limpe com **`panadiga nvram clean`**.
+1. **Passo 1 — Telemetria Read-Only (`STATUS` $\rightarrow$ `PINCHECK`):** Confirma `Pin 4 = GND`, tensão saudável em `SW_UART` (`~3.25V Hi-Z | ~2.69V PD`), isolamento absoluto de `GP3 (NSW5V)` e atividade em `GP2 (UARTP2M_T)`.
+2. **Passo 2 — Captura de Boot (`UARTSTREAM 12000 JIG:2500` / `BOOTTRACE 15000 NOJIG` / `HEXCAP`):** Registra o log completo `115200 8N1` de inicialização (`<00>DDR CHECK: OK`, `SD init`, `CD diag boot mode` ou `BGO driver init failed[1].`) para diagnóstico preciso.
+3. **Passo 3 — Dump Integral de `8 MiB` (`PANADMP1` + SHA-256) & Higiene (`ISOLATE`):** Antes de qualquer escrita em Flash (`EEMUL` ou `BGO`), capture a cópia completa de `0x84000000..0x847FFFFF` verificada por SHA-256 e finalize testes seriais devolvendo o barramento ao estado `ISOLATE`.
+4. **Passo 4 — Reparo Graduado `U99` (In-Circuit com IPL `E05` $\rightarrow$ Contingência TSOP-48):** Com backup de `8 MiB` salvo em disco, execute a cura in-circuit em `PANAMON1>` (`SA134..SA141` `EEMUL` liberada; Camada 2 BGO `SA26..SA70` mediante aceite explícito `U CONFIRM_UPPER_NOR` + aguardo ~`700 ms` / `0xFF × 32`, mantendo **Camada 1 IPL `SA0..SA10` travada em `E05`**). Em aparelhos já bricados em `U99`, esta tentativa sem dessolda é segura contra brick de bootrom; recorra à remoção física da `IC5001` (`XGecu T48` / `SVOD 4` + `panadiga nvram clean`) somente se o IPL `SA0..SA10` ou o leitor SD estiverem fisicamente danificados.

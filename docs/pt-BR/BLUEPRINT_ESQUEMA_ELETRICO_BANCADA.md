@@ -41,10 +41,10 @@ O presente documento constitui o **Blueprint de Engenharia Eletrônica e Hardwar
 ```
 
 ### Contexto da Falha e Missão de Hardware
-* **Falha Crítica:** Travamento em ciclo fechado com display em código de pane **`U99`** (*Drive Communication / Parameter Timeout*), frequentemente ligado à corrupção dos blocos de parâmetros não-voláteis emulados em Flash (`EEMUL` / NVRAM) no topo da memória NOR (`0x7F0000` a `0x7FFFFF`, micro-setores `SA134` a `SA141`) ou falhas de drive/handshake.
+* **Falha Crítica:** Travamento em ciclo fechado com display em código de pane **`U99`**, causado em unidades reais do `DMR-EH55` (`Loader ver0.61`) pela corrupção do **FTL BGO (`SA26..SA70`, `0x84130000..0x843FFFFF` — `BGO driver init failed[1].`)**, por parâmetros `EEMUL` (`0x7F0000..0x7FFFFF`, `SA134..SA141`) ou por falhas de drive/handshake.
 * **Objetivos de Engenharia:**
-  1. **Interface In-Circuit `P7501` Async UART (`115200 8N1`):** Conectar o **Raspberry Pi Pico (`RP2040` / `RP2350`)** diretamente ao conector de serviço **`P7501`** (`B6B-ZR-3R4`, `"TO JIGU"`) na placa `VEP79138`, mantendo guarda estrita **`Hi-Z Input` sem pulls em `NSW5V` (`GP3`)**, controle em Dreno Aberto (*Open-Drain*) para **`XRESET` (`GP5`)** e controle coordenado de **`SW_UART` (`GP26`)** frente ao transistor **`Q7514`**.
-  2. **Interface de Gravação Direta TSOP-48:** Prover o mapa elétrico completo pino-a-pino da memória **Spansion `S29JL064H70TFI00` (`IC5001`)**, roteiro de dessoldagem térmica de baixo estresse com liga `Sn63/Pb37`, inserção no soquete ZIF, sanitização verificada via **`panadiga nvram clean`** e gravação em **SVOD 4** / **XGecu T48**.
+  1. **Interface In-Circuit `P7501` Async UART (`115200 8N1`) & Cura Sem Dessolda (`SDDIAG`/`PANAMON1>`):** Conectar o **Raspberry Pi Pico (`RP2040` / `RP2350`)** ao conector **`P7501`** (`B6B-ZR-3R4`, `"TO JIGU"`) na `VEP79138` mantendo **`NSW5V` (`GP3`) sempre em `Hi-Z Input` sem pulls**, **`XRESET` (`GP5`)** em Open-Drain e **`SW_UART` (`GP26`)** coordenado com `Q7514`. Para gravadores já bricados em `U99`, esta rota permite captura de `8 MiB` (`PANADMP1` + SHA-256) e reparo BGO/NVRAM mantendo a **Camada 1 IPL (`SA0..SA10`) travada em `E05`** e destravando `CONFIRM_UPPER_NOR` sob alerta de risco.
+  2. **Interface de Gravação Direta TSOP-48 (Contingência Externa):** Prover o mapa elétrico completo pino-a-pino da **Spansion `S29JL064H70TFI00` (`IC5001`)**, perfil térmico de baixo estresse (`Sn63/Pb37`), sanitização via **`panadiga nvram clean`** e gravação em **SVOD 4** / **XGecu T48** quando IPL ou slot SD estiver inoperante.
 
 ---
 
@@ -57,7 +57,7 @@ A interconexão física entre o **Raspberry Pi Pico** e o conector **`P7501`** d
 * **Padrão Físico do Conector `P7501`:** Conector **JST ZR de 6 pinos com passo (*pitch*) de `1.5 mm`**, modelo original Panasonic **`B6B-ZR-3R4`** (*through-hole top entry*, legenda **`TO JIGU`** no esquemático `VEP79138`).
 * **Como Comprar o Chicote Pronto:** Procure por **Cabo JST ZR / ZH `1.5 mm` 6 pinos Fêmea para Dupont `2.54 mm`** (alojamento `ZHR-6` com terminais `SZH-002T-P0.5`). Evite padrões incompatíveis como JST SH (`1.0 mm`), JST PH (`2.0 mm`) ou JST XH (`2.54 mm`).
 * **Compatibilidade Pico 1 (`RP2040`) e Pico 2 (`RP2350`):** Ambas as famílias (incluindo variantes sem fio `Pico W` / `Pico 2 W`) são nativamente suportadas pelo firmware [`firmware/pico-p7501/`](../../firmware/pico-p7501/).
-* **Alerta Crítico de Protocolo (`P7501` Async UART vs. JTAG / `DWire32A`):** Os 3 manuais de serviço do DMR-EH55 e capturas ao vivo (`COM10`) provam que `P7501` **NÃO** possui linhas JTAG (`TDI/TDO/TMS`) nem `DWire32A` síncrono (`SDATA`/`SCLK`). Pino 6 (`UARTP2M_T`) é RX passivo a `115200 8N1`, Pino 3 (`UARTM2P_T`) é TX ativo (liberado por `Q7514` quando `SW_UART = Hi-Z`), e Pino 5 (`NSW5V`) vem do nó de `~5.15V` via `D7510` — **NUNCA** deve ser dirigido pelo Pico.
+* **Alerta Crítico de Protocolo (`P7501` Async UART vs. JTAG / `DWire32A`):** Os **5 manuais de serviço oficiais do DMR-EH55 (`30` PDFs no acervo)** e capturas ao vivo (`COM10`) provam que `P7501` **NÃO** possui linhas JTAG (`TDI/TDO/TMS`) nem `DWire32A` síncrono (`SDATA`/`SCLK`). Pino 6 (`UARTP2M_T`) é RX passivo a `115200 8N1`, Pino 3 (`UARTM2P_T`) é TX ativo (liberado por `Q7514` quando `SW_UART = Hi-Z`), e Pino 5 (`NSW5V`) vem do nó de `~5.15V` via `D7510` — **NUNCA** deve ser dirigido pelo Pico.
 
 ### 2.1 Esquema Elétrico Completo de Bancada (Referência Oficial Panasonic `VEP79138`)
 
@@ -162,9 +162,9 @@ As portas seriais e de controle do conector **`P7501`** operam no domínio lógi
 | Linha `NSW5V` (`P7501` Pino 5) | `~5.15V` (`IC1506` $\rightarrow$ `D7510`), `~3.29V` repouso | `GPIO_IN` sem pulls (`Hi-Z`) | **Proibido acionar output ou pulls em `GP3`** |
 | Circuito `Q7510` B-C sob Pull-Down em `SW_UART` | $3.30\text{V} - V_{BC} \approx 2.68\text{--}2.69\text{V}$ | `ADC0` Hi-Z / PD interno | Assinatura diagnóstica validada no `PINCHECK` |
 
-### 3.2 Máquina de Estados PIO UART RX (`p7501_uart.pio` — `115200 8N1`)
+### 3.2 Máquina de Estados PIO UART (`p7501_uart.pio` / `p7501_uart_duplex.pio` — `115200 8N1`)
 
-A máquina de estados `PIO0` opera com *oversampling* de **8 ciclos de máquina de estados por bit** ($8 \times 115.200 = 921.600\text{ Hz}$):
+A máquina de estados `PIO1` (`p7501_uart_duplex.pio`) e o núcleo legado `PIO0` (`p7501_uart.pio`) operam com *oversampling* de **8 ciclos de máquina de estados por bit** ($8 \times 115.200 = 921.600\text{ Hz}$ em TX/RX, com divisor fracionário FP16 para `BAUD`/`BAUDSCAN`):
 1. Aguarda borda de descida do **Start Bit** (`wait 0 pin 0` em `GP2`).
 2. Salta exatamente **1,5 períodos de bit** (`12` ciclos) para amostrar o centro do **Bit 0** (`LSB first`) e repete a cada `8` ciclos até completar 8 bits.
 3. Valida **Stop Bit HIGH** (`jmp pin, good_stop`) antes de empurrar o byte à FIFO RX; caso contrário, sinaliza erro de framing (`irq 4 rel`).
@@ -465,9 +465,10 @@ O núcleo Matsushita **AM34 (`MN103S`)** opera com espaço de endereçamento lin
 * **`0x00000000` a `0x007FFFFF`:** Espelho cacheado de boot da NOR Flash.
 * **`0x80000000` a `0x807FFFFF`:** Abertura física direta **uncached** da Spansion `S29JL064H` (**`IC5001`**) de 8 MB ($8.388.608$ bytes), onde os últimos 64 KB (`0x807F0000..0x807FFFFF`) armazenam os micro-setores NVRAM/EEMUL (`SA134..SA141`).
 
-### 9.2 Acesso In-Circuit (`P7501` + `GDB` RSP) vs. Acesso Externo TSOP-48 (`SVOD 4` / `XGecu T48`)
-* **Rota In-Circuit (`P7501` Async UART / `panadiga gdb-bridge`):** Quando houver console/monitor ativo expondo leitura em memória, o comando `DUMP [endereço_hex] [palavras]` e a ponte GDB RSP (`$m807F0000,0040#`) permitem inspecionar palavras de 32 bits sem dessolda.
-* **Rota Física Externa (Confirmada para Unbrick U99 Completo):** Como a porta `P7501` padrão do DMR-EH55 entrega console serial `BOOTCAP` / `CD diag boot mode` sem protocolo JTAG/OCD síncrono, a extração integral e segura dos 8 MB de `IC5001` em unidade travada é feita removendo o chip TSOP-48 com perfil térmico controlado (Seção 5) e aplicando **`panadiga nvram clean`**.
+### 9.2 Acesso In-Circuit (`P7501` + `SDDIAG`/`PANAMON1>` + `GDB` RSP) vs. Contingência TSOP-48 (`SVOD 4` / `XGecu T48`)
+* **Rota Primária In-Circuit Sem Dessolda (`SDDIAG` / Porta #1 $\rightarrow$ `PANAMON1>`):** Utilizando cartão SDSC FAT16 com o kit `ver061` (`DIGADIAG.FRM` + `PANA__SD.FRM`, via `JIG:2500` ou headless *Porta #1* `@ 0x0B1800`), o gravador abre `PANAMON1>` e o stub `PANADMP1` (espelho SDRAM *uncached* `0x9043950E` $\rightarrow$ `J 904394FA`), permitindo extrair integralmente os **8 MB (`0x84000000..0x847FFFFF`)** com verificação **SHA-256** e executar a cura BGO FTL de `SA26..SA70` em 2 ciclos sem remover a `IC5001`.
+* **Compliance & Gestão de Risco em Aparelho Bricado (`E05` + `CONFIRM_UPPER_NOR`):** Embora exista risco operacional (queda AC durante escrita ou watchdog de `~44s` de `IC7501`, exigindo ~`700 ms` + readback `0xFF × 32` por setor de `64 KiB`), em unidades já bricadas em `U99` a tentativa in-circuit é recomendada antes da dessoldagem TSOP-48 porque a **Camada 1 IPL (`SA0..SA10`) fica permanentemente bloqueada (`E05`)**, tornando reentrantes quaisquer falhas nas Camadas 2/3.
+* **Rota Física Externa TSOP-48 (Contingência de Último Recurso):** Caso `SA0..SA10` IPL ou o leitor SD esteja inoperante, extraia fisicamente a `IC5001` TSOP-48 com perfil térmico controlado (Seção 5), aplique `panadiga nvram clean` / `patch-upper-nor` com backup SHA-256 e grave em **XGecu T48** ou **SVOD 4**.
 
 ---
 
@@ -540,6 +541,7 @@ Como a partição `EEMUL` do DMR-EH55 abrange até `0x7FFFFF` (`SA134..SA141`), 
 
 - **Pinagem Invertida Confirmada por Esquemático (`[PROVADO EM HARDWARE REAL]`):** No conector IDE `P58001` (`VEK0K00`, placa principal do DMR-EH55, `vol2_schematics.pdf` p. 113), cada pino físico obedece à regra **`Pino k = ATA (41 - k)`**: `1=GND`, `2=NC`, `3=CS1-`, `4=CS0-`, `5=DA2`, `6=DA0`, `8=DA1`, `10=INTRQ`, `11=GND`, `12=DMACK-`, `13=CSEL`, `14=IORDY`, `15=GND`, `16=DIOR-`, `17=GND`, `18=DIOW-`, `19=GND`, `20=DMARQ`, `21=NC`, `22=GND`, `23=DD15`, `24=DD0`, `25=DD14`, `26=DD1`, `27=DD13`, `28=DD2`, `29=DD12`, `30=DD3`, `31=DD11`, `32=DD4`, `33=DD10`, `34=DD5`, `35=DD9`, `36=DD6`, `37=DD8`, `38=DD7`, `39=GND`, `40=RESET-`.
 - **Cabo `N5EZZ0000003` e Orientação `StarTech IDE2SAT2` (`[PROVADO EM HARDWARE REAL]`):** Verificação elétrica comprovou 40 pinos contínuos no chicote `N5EZZ0000003` (apenas o pino 20 macho do `IDE2SAT2` é bloqueado/*keyed*). Em `0°`, o `IDE2SAT2` lê `0x00000000` (não trava o barramento); em `180°` (equivalente a Type B), o pino invertido lê `0x00002004` (`DD13|DD2`).
+- **Adaptação Mecânica *Low-Profile* para Fechar o Chassi (`40P FFC Type B 0,5 mm` + `N5EZZ0000003` a `180°`):** Para fechar a tampa metálica sobre a `StarTech IDE2SAT2` (sempre jumpeada em **`MASTER`**, nunca `CS`/`Slave`), substitua o flat **`VEK0K00` / `VEK0K15`** original (`Type A`, **`40 vias`, passo `0,5 mm`, largura total `20,5 mm` / `~2,05 cm`, distância entre eixos Pino 1–40 `19,5 mm`, espessura na ponta `0,30 mm ± 0,05 mm`**, norma **`UL AWM 20624`**) por um equivalente comercial **`Type B` (`100–150 mm`)** — ou converta uma extremidade raspando o filme isolante oposto com estilete novo + fita Kapton sobre a face antiga — e rotacione a `N5EZZ0000003` em `180°` ($\pi_{180^\circ}(\pi_{\text{TypeB}}(k)) = k$), validando continuidade **`1:1` (`Pino k <-> Pino k`)** no multímetro antes de ligar na tomada ([`ARQUITETURA_STORAGE_MEIHDFS_PARTICOES.md §9.6`](./ARQUITETURA_STORAGE_MEIHDFS_PARTICOES.md#96-adapta%C3%A7%C3%A3o-mec%C3%A2nica-low-profile-para-fechar-o-chassi-cabo-ffc-40-vias-type-b-ou-mod-diy--placa-azul-n5ezz0000003-invertida-180)).
 - **Isolamento Ativo de `CH1` (`[EM INVESTIGAÇÃO / BLOQUEIO FÍSICO CH1]`):** Leituras DC no cabo mostraram `IORDY`/`DIOR-`/`DIOW- = 0 V` encaixados vs. `3,29 V` em aberto, e o registrador `CH1` no `DAVIS` (`0x504F81D4 = 1` active-HIGH via `J 504156AD`) segue retornando `0x00000000` (`is_ata=0`) na unidade `EH55` de bancada ([`probe_ch1_full_diag_20261119.log`](../debug_logs/probe_ch1_full_diag_20261119.log) · [`probe_ch1_live_v2_0deg_20261119.log`](../debug_logs/probe_ch1_live_v2_0deg_20261119.log) · [`HISTORICO_UNBRICK_EH55_BGO_CH1_DAVIS_E_REGIAO.md`](./HISTORICO_UNBRICK_EH55_BGO_CH1_DAVIS_E_REGIAO.md)).
 
 ---

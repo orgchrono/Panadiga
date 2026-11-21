@@ -20,7 +20,7 @@ The modular C11 firmware in [`firmware/pico-p7501/`](../../firmware/pico-p7501/)
    * **`GP26` (`SW_UART`):** Samples voltage via `ADC0` (`~3.24–3.25V` Hi-Z, `~2.70V` pull-down, `~3.26V` pull-up) and pulls `LOW` strictly for the exact serial-boot sampling window (`XFWE`, e.g., `JIG:350`), restoring `ADC0 Hi-Z` via `p7501_hw_restore_sw_uart_adc0()` whenever `GP4` TX must pass through `Q7514`.
 4. **Non-Blocking LED Driver with Manual Lock (`hal/p7501_led.c` & `hal/p7501_led_logic.c`):** Pure 10 Hz state machine driven by an IRQ-safe `repeating_timer` (`GP25` on Pico/RP2040 and Pico 2/RP2350; tick fallback to `CYW43_WL_GPIO_LED_PIN` on Pico W / Pico 2 W), enforcing `MANUAL_LOCK` so periodic `STATUS` polling never overrides operator selection (`LED <IDLE|ACTIVE|GDB|FAULT|OFF|AUTO>`).
 5. **USB CDC + Optional BLE Serial Console (`PANADIGA> `):** Interactive `115200 bps` command shell compatible with standard terminals (PuTTY, TeraTerm), `panadiga` CLI, and the Tauri Desktop/Android app (`panadiga-desktop` / APK). `pico_w` and `pico2_w` builds also enable a Bluetooth LE Nordic UART Service bridge (`PANADIGA_BLE_ENABLED=1`).
-6. **GDB RSP Bridge & Fail-Loud Injection/Sanitization:** Embeds a **GNU Remote Serial Protocol (RSP)** server (`GDB`) plus `AUTODETECT` / `INJECT_LOADER CONFIRM` / `ERASE_NVRAM CONFIRM` primitives that refuse to operate blindly when `DCSR=0xFFFFFFFF` (no synchronous monitor connected on `P7501`); for units locked out without desoldering monitors, the verified recovery write path for Spansion `S29JL064H` (`IC5001`) is an external TSOP-48 programmer (`SVOD 4` / `XGecu T48`) + `panadiga nvram clean` or autonomous `DIGADIAG.FRM` via `SDDIAG`.
+6. **GDB RSP Bridge & Fail-Loud Injection/Sanitization (2-Layer NOR Policy):** Embeds a **GNU Remote Serial Protocol (RSP)** server (`GDB`) plus `AUTODETECT` / `INJECT_LOADER CONFIRM` / `ERASE_NVRAM CONFIRM` primitives that refuse to run blindly if `DCSR=0xFFFFFFFF`. On already-bricked `U99` units, the primary no-desoldering path pairs **`SDDIAG` (`DIGADIAG.FRM` + `PANA__SD.FRM` `ver0.61` with `JIG:2500`)** or headless **Door #1 (`0x0B1800`)** $\rightarrow$ **`PANAMON1>`**, requiring a verified **8 MiB** read-only dump (`PANADMP1` + SHA-256) first and keeping **Layer 1 Critical Boot IPL (`SA0..SA10`) permanently locked (`E05`)** while authorizing explicit `CONFIRM_UPPER_NOR` BGO recovery (leaving `SVOD 4` / `XGecu T48` external TSOP-48 programming as physical fallback if IPL or SD slot fails).
 
 ---
 
@@ -122,16 +122,19 @@ The firmware serves interactive human operators as well as Rust automation (`pan
 | Command | Syntax | Verified Operational Behavior |
 | :--- | :--- | :--- |
 | **`PING`** | `PING` | Replies `PONG` for fast link health checks. |
-| **`STATUS` / `VDD`** | `STATUS` \| `VDD` | Samples `GP26 (ADC0)` on `P7501` Pin 1 (`SW_UART`) and prints `VDD: X.XXV (OK / LOW / FLOATING)`. |
+| **`STATUS` / `VDD` / `WDT`** | `STATUS` \| `VDD` \| `WDT` | Samples `GP26 (ADC0)` on `P7501` Pin 1 (`SW_UART`), prints `VDD: X.XXV (OK / LOW / FLOATING)`, and reports Watchdog (`WDT`) traceability. |
 | **`BANNER`** / **`HELP`** | `BANNER` \| `HELP` \| `?` | Prints the identification banner or complete command list. |
-| **`BAUD`** | `BAUD [bps]` | Queries or configures **`PIO1` (`SM0`/`SM1`)** baud rate using FP16 fractional divisor (`300..921600 bps`). |
+| **`BAUD` / `FRAMING`** | `BAUD [bps]` \| `FRAMING [8N1\|8E1\|8O1]` | Queries or configures **`PIO1` (`SM0`/`SM1`)** baud rate (`300..921600 bps`) and hardware parity framing using FP16 fractional dividers. |
 | **`BAUDSCAN`** | `BAUDSCAN [ms] [NORMAL\|JIG[:ms]\|NOPULL] [APPLY]` | Glitch-immune dual-polarity (LOW/HIGH) bit-width cluster detector + PIO1 `IRQ 4` framing & ASCII counter on `GP2` (`APPLY` switches `PIO1`). **Note:** Changing baud in PuTTY/RealTerm only affects virtual USB CDC — `PIO1` controls physical `P7501` sampling. |
-| **`UARTSTREAM`** | `UARTSTREAM [ms] [NORMAL\|JIG[:ms]\|NOPULL]` | Live capture via `PIO1` with timed `SW_UART` release (`JIG:350`) and automatic `ADC0` restoration. |
+| **`UARTSTREAM`** | `UARTSTREAM [ms] [NORMAL\|JIG[:ms]\|NOPULL]` | Live capture via `PIO1` with timed `SW_UART` release (`JIG:2500` for `Loader ver0.61` or `JIG:350`) and automatic `ADC0` restoration. |
 | **`HEXCAP`** | `HEXCAP [ms] [NORMAL\|JIG[:ms]\|NOPULL]` | RAM capture (`HEXCAP_RAM_BUF_CAP` = `2048` bytes) with `+us` deltas and hex+ASCII dump after window (zero overflow at `115200 bps`). |
 | **`UARTTXHEX`** | `UARTTXHEX [LOW:]<hex\|BRK> [rx_ms]` | Injects arbitrary hex bytes or a `120 ms` `BREAK` pulse over `PIO1 TX` (`Q7514` requires `SW_UART` released unless prefixed with `LOW:`). |
 | **`WAITTX`** | `WAITTX <ms> <NORMAL\|JIG[:ms]\|NOPULL> "<trig>" <hex\|BRK> [post_ms]` | Waits for trigger substring on `GP2` (e.g., `"wait 1"` after `JIG:350`) and injects payload/BREAK via `PIO1 TX` keeping `NSW5V` `Hi-Z`. |
 | **`BRIDGE`** | `BRIDGE [baud] [NORMAL\|JIG[:ms]\|NOPULL]` | Transparent byte bridge USB-CDC ↔ `SC0` (`PIO1`), terminated by escape sequence `~~~` (or timeout). |
-| **`PWRTRACE`** | `PWRTRACE [ms] [NORMAL\|JIG[:ms]\|NOPULL]` | Samples min/max `GP26_SWUART` via `ADC0` and counts edges on `RXD` (`GP2`), `NSW5V` (`GP3`), and `TXD` (`GP4`) during boot. |
+| **`PWRTRACE` / `BOOTTRACE`** | `PWRTRACE [ms] [boot]` \| `BOOTTRACE [ms] [boot\|PREJIG] [WAKE]` | `PWRTRACE` samples min/max `ADC0` + `RXD/NSW5V/TXD` edges; `BOOTTRACE` correlates PIO1 UART + `GP3..5` + `ADC0` (supports `PREJIG WAKE` for `IC7501` standby). |
+| **`PIOLOGIC`** | `PIOLOGIC [ms] [boot] [khz] [CTRL]` | 4-channel `PIO0` logic sampler (`GP2..5`) for control-line edges and FMU/SC0 handshake timing. |
+| **`SDSNIFF`** | `SDSNIFF [ms] [boot]` | Passive `Hi-Z` `PIO0` SD bus sniffer (`GP10..15`) with CRC16 and 4-bit data-lane verification. |
+| **`JIGSWEEP`** | `JIGSWEEP [HOLD\|DELAY\|PREBOOT] [ms..]` | Automated `SW_UART` latch window & pre-DDR Bootrom timing sweep for deterministic `SDDIAG` capture. |
 | **`BOOTCAP`** | `BOOTCAP [ms]` | Asserts Open-Drain `XRESET` with `SW_UART` released and captures `115200 8N1` boot UART stream (`PIO0`). |
 | **`UARTMON`** | `UARTMON [ms]` | Passively listens on `GP2` (`UARTP2M_T`) without forcing reset or `SW_UART`. |
 | **`JIGBOOT`** | `JIGBOOT [ms]` | Boots with `SW_UART = LOW` (`XFWE` / JIG mode) across `XRESET` pulse and captures `GP2` at `115200 8N1`. |
@@ -140,6 +143,7 @@ The firmware serves interactive human operators as well as Rust automation (`pan
 | **`UARTPROBE`** | `UARTPROBE [sec]` | Runs serial probing on `P7501` and restores `GP26` to `ADC0 Hi-Z` afterward. |
 | **`PANARSP`** | `PANARSP [ms] [boot] [WAIT:x] <act>` | `_dev_SERIAL` RSP bridge (`REGS`, `MEM`, `WMEM`, `DUMPNOR`, `CALL`, `NORUNLOCK:CONFIRM_UPPER_NOR`, `NORLOCK`, `JEDEC_ERASE:<addr>`, `JEDEC_PROG:<addr>,<hex>`). |
 | **`DIAGWATCH`** | `DIAGWATCH [ms] [boot] [act] [WAKE]` | Autonomous `SC0` watchdog and resident `PANAMON1>` monitor (`NORUNLOCK:CONFIRM_UPPER_NOR` / `NORLOCK` dispatching two-step `'U'` → `'W'`/`'E'`). |
+| **`DRVPANA`** | `DRVPANA [ms] [boot] [NOPASS] <cmd>` | Matshita `R6-MV4` optical drive factory CLI bridge with automatic `PASS 0x4d415453 0x48495441` unlock (or `NOPASS`). |
 | **`IRTX`** | `IRTX <RED\|SERV\|DEVSUB:CMD...> [GPpin] [repeat]` | 38 kHz Kaseikyo PWM synthesizer ([`p7501_ir_codec.c`](../../firmware/pico-p7501/diag/p7501_ir_codec.c)) constrained to safe spare GPIOs `GP6..9` / `GP16..22` (device `>= 0x01`). |
 | **`FMUSCAN` / `FMUTEST` / `FMUBATCH`** | `FMUSCAN` \| `FMUTEST` \| `FMUBATCH` | Timing probes and byte scans against Bootrom/FMU over `P7501`. |
 | **`PINCHECK`** | `PINCHECK` | 6-pin electrical matrix check on `P7501` (`Hi-Z`, pull-down, pull-up on `GP26`, edge count on `GP2`, `XRESET` rise time, `NSW5V`/`GP3` guard). |
@@ -199,9 +203,9 @@ LED: OK (HEARTBEAT_IDLE, AUTO)
 ```
 
 > [!NOTE]
-> Prefer **`PIO1` commands (`BAUD`, `BAUDSCAN`, `UARTSTREAM`, `HEXCAP`, `PWRTRACE`, `WAITTX`)** for new bench runs. Under `JIG:350`, the hardware timer automatically releases `SW_UART` (`GP26 -> ADC0 Hi-Z`) after `350 ms` so TX injections via `Q7514` reach `UARTM2P_T` without interfering with bootrom sampling. `ISOLATE` remains mandatory after legacy sessions (`UARTSEND` / `UARTPROBE`).
+> Prefer **`PIO1` commands (`BAUD`, `BAUDSCAN`, `UARTSTREAM`, `BOOTTRACE`, `HEXCAP`, `PWRTRACE`, `WAITTX`, `DIAGWATCH`, `PANARSP`)** for new bench runs. For **`Loader ver0.61`**, use `JIG:2500` in `UARTSTREAM 12000 JIG:2500` to hold `SW_UART` through `DIGADIAG.FRM` loading (whereas `JIG:350` suits short bootrom windows); in both cases the timer automatically releases `GP26 -> ADC0 Hi-Z` so `Q7514` conducts TX. `ISOLATE` remains mandatory after legacy sessions (`UARTSEND` / `UARTPROBE`).
 
-### Example 3: Injection / Erase with `CONFIRM` Lock (When Monitor Is Active)
+### Example 3: Injection / Erase with `CONFIRM` Lock & Bricked-`U99` No-Desoldering Compliance
 ```text
 PANADIGA> INJECT_LOADER CONFIRM
 [INJECT_LOADER] Target Address : 0x00004000 (AM34 Internal SRAM)
@@ -217,7 +221,7 @@ PANADIGA> ERASE_NVRAM CONFIRM
 ERASE_NVRAM: OK
 ```
 
-*(Note: If the unit is trapped in a `U99` loop without an interactive monitor exposed on `P7501`, use either `SDDIAG` via `DIGADIAG.FRM` or an external TSOP-48 read of Spansion `S29JL064H` [`IC5001`] combined with `panadiga nvram clean`.)*
+*(Compliance Note: On an already-bricked `U99` DMR-EH55, first attempt **100% no-desoldering** recovery via `SDDIAG` `DIGADIAG.FRM` + `PANA__SD.FRM` `ver0.61` on SDSC FAT16 with `JIG:2500`, or headless **Door #1** `0x0B1800` $\rightarrow$ `PANAMON1>`, taking a mandatory full `8 MiB` SHA-256 read-only backup via `PANADMP1` before authorizing Layer 2 BGO `U CONFIRM_UPPER_NOR` / `NORUNLOCK:CONFIRM_UPPER_NOR` — Layer 1 Critical Boot IPL `SA0..SA10` stays permanently locked (`E05`). External TSOP-48 removal (**SVOD 4** / **XGecu T48** + `panadiga nvram clean`) remains the fallback if `SA0..SA10` IPL or SD hardware has failed.)*
 
 ---
 
@@ -254,7 +258,7 @@ The flash subsystem ([`p7501_flash.c`](../../firmware/pico-p7501/flash/p7501_fla
 | **Layer 3 — Top NVRAM / EEMUL** | `SA134..SA141` (`0x807F0000..0x807FFFFF`, `8 KiB` sectors) | **Writable by default** | On real EH55, `SA134` (`0x847F0000`) holds active `"1284"` header `0ff00000002c` (`6 B`) while `SA135..SA141` are `0xFF`. |
 
 * **JEDEC SRAM Stubs (`0x51800000`), Uncached Mirror (`0x90400000`) & Real `S29JL064H` (~700 ms) Erase Timing:**
-  * `PANARSP JEDEC_ERASE:<addr>` and `PANARSP JEDEC_PROG:<addr>,<hex>` (`1..=16` bytes per call) upload the [`p7501_pana_jedec.h`](../../firmware/pico-p7501/uart/p7501_pana_jedec.h) / [`p7501_pana_jedec.c`](../../firmware/pico-p7501/uart/p7501_pana_jedec.c) stub to `0x51800000`, signaling **`PANAJEDEC_OK`** or timeout **`PANAJEDEC_TO`**. Over `PANAMON1>`, [`p7501_diag_watch.c`](../../firmware/pico-p7501/uart/p7501_diag_watch.c) dispatches `'U'` before `'W'`/`'E'`.
+  * `PANARSP JEDEC_ERASE:<addr>` and `PANARSP JEDEC_PROG:<addr>,<hex>` (`1..=16` bytes per call) upload the [`p7501_pana_jedec.h`](../../firmware/pico-p7501/uart/p7501_pana_jedec.h) / [`p7501_pana_jedec_stubs.c`](../../firmware/pico-p7501/uart/p7501_pana_jedec_stubs.c) stub to `0x51800000`, signaling **`PANAJEDEC_OK`** or timeout **`PANAJEDEC_TO`**. Over `PANAMON1>`, [`p7501_diag_watch.c`](../../firmware/pico-p7501/uart/p7501_diag_watch.c) dispatches `'U'` before `'W'`/`'E'`.
   * **Uncached SDRAM Coherence (`0x90400000`):** when patching executable RAM in `PROG061` (`0x50400000`), target its uncached **`0x90400000`** mirror (e.g., `PANADMP1` `MOV` bounds at `0x9043950E` $\rightarrow$ `J 904394FA`, or test stubs at `0x90439B40`) so writes bypass write-back D-cache and are seen immediately by I-cache.
   * **~700 ms 64 KiB Erase vs DQ7 Polling:** physical `S29JL064H` 64 KiB sector erase requires ~`700 ms`, outlasting the bounded `0x00100000`-iteration DQ7 loop in `jedec_emit.rs`; callers must poll readback for `0xFF` × 32 after `OK:ERASE` before issuing `W` program writes.
 * **Offline Copy-on-Write Fallback:** Image patching runs via `panadiga nvram patch-upper-nor` ([`nvram.rs`](../../crates/panadiga-cli/src/cli/handlers/nvram.rs)) with mandatory SHA-256 `--backup` (blocking the opening `256 KiB` unless `--allow-critical-ipl` is specified offline).

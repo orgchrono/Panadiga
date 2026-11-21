@@ -84,6 +84,8 @@ Biblioteca técnica oficial de referência de engenharia, diagnóstico de hardwa
 | `datasheets/rp2350_datasheet_raspberrypi.pdf` | **Microcontrolador RP2350** | Raspberry Pi Foundation | Especificação do novo SoC RP2350 (Pico 2), melhorias de PIO, periféricos e segurança. |
 | `datasheets/spansion_am29lv640d_nor_flash_datasheet.pdf` | **Flash NOR 64 Mbit (8 MB)** | Spansion / AMD | Manual da Flash NOR paralela TSOP-48: comandos JEDEC (AutoSelect, Sector Erase, Byte/Word Program) e tempos de ciclo. |
 | `datasheets/spansion_s29gl128n_nor_flash_datasheet.pdf` | **Flash NOR 128 Mbit (16 MB)** | Spansion | Manual da Flash NOR MirrorBit para a série DMR-EX: arquitetura de setores de 128 KB e modo de leitura por página. |
+| `datasheets/rohm_br24l16_datasheet.pdf` | **EEPROM I2C 16 Kbit (2 KB)** | ROHM Semiconductor | Datasheet oficial da família `BR24Lxx-W` (`BR24L16F-W`, endereçamento `0x50..0x57`, páginas de 16 B, 1.8V–5.5V) usada em temporização/timer NVRAM DIGA. |
+| `datasheets/microchip_24lc64_datasheet.pdf` | **EEPROM I2C 64 Kbit (8 KB)** | Microchip Technology | Datasheet oficial da família `24LC64` (`0x50` base, páginas de 32 B, 2.5V–5.5V) usada em calibração óptica do drive DVD-RAM/Multi. |
 
 ---
 

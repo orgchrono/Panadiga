@@ -20,7 +20,7 @@ O firmware modular em [`firmware/pico-p7501/`](../../firmware/pico-p7501/) imple
    * **`GP26` (`SW_UART`):** Amostra a tensão via `ADC0` (`~3.24–3.25V` em Hi-Z, `~2.70V` sob pull-down, `~3.26V` sob pull-up) e força nível `LOW` apenas pelo intervalo exato de entrada em modo serial boot (`XFWE`, ex. `JIG:350`), restaurando `ADC0 Hi-Z` via `p7501_hw_restore_sw_uart_adc0()` quando TX em `GP4` precisa cruzar `Q7514`.
 4. **Driver de LED Não-Bloqueante com Trava Manual (`hal/p7501_led.c` & `hal/p7501_led_logic.c`):** Máquina de estados pura (10 Hz) alimentada por `repeating_timer` IRQ-safe (`GP25` em Pico/RP2040 e Pico 2/RP2350; fallback por tick para `CYW43_WL_GPIO_LED_PIN` em Pico W / Pico 2 W), com `MANUAL_LOCK` para impedir que polls `STATUS` sobrescrevam o modo escolhido pelo operador (`LED <IDLE|ACTIVE|GDB|FAULT|OFF|AUTO>`).
 5. **Console Serial USB CDC + BLE Opcional (`PANADIGA> `):** Interface interativa a `115200 bps` compatível com terminais padrão (PuTTY, TeraTerm), `panadiga` CLI e aplicativo desktop/Android Tauri (`panadiga-desktop` / APK). Placas `pico_w` e `pico2_w` habilitam também ponte Bluetooth LE Nordic UART Service (`PANADIGA_BLE_ENABLED=1`).
-6. **Ponte GDB RSP & Injeção/Sanitização Fail-Loud:** Inclui servidor **GNU Remote Serial Protocol (RSP)** (`GDB`) e primitivas `AUTODETECT` / `INJECT_LOADER CONFIRM` / `ERASE_NVRAM CONFIRM` que recusam silenciosamente operar no vazio caso `DCSR=0xFFFFFFFF` (sem monitor síncrono conectado em P7501); para chips travados fora do monitor sem dessoldagem, a rota primária confirmada de gravação da Spansion `S29JL064H` (`IC5001`) é programador externo (`SVOD 4` / `XGecu T48`) + `panadiga nvram clean`.
+6. **Ponte GDB RSP & Injeção/Sanitização Fail-Loud (Política NOR em 2 Camadas):** Inclui servidor **GNU Remote Serial Protocol (RSP)** (`GDB`) e primitivas `AUTODETECT` / `INJECT_LOADER CONFIRM` / `ERASE_NVRAM CONFIRM` que recusam operar no vazio se `DCSR=0xFFFFFFFF`. Para unidades já bricadas em `U99`, a rota primária sem dessolda combina **`SDDIAG` (`DIGADIAG.FRM` + `PANA__SD.FRM` `ver0.61` com `JIG:2500`)** ou entrada headless **Porta #1 (`0x0B1800`)** $\rightarrow$ **`PANAMON1>`**, exigindo backup prévio de **8 MiB** (`PANADMP1` + SHA-256) e mantendo a **Camada 1 IPL (`SA0..SA10`) permanentemente bloqueada (`E05`)** enquanto autoriza explicitamente `CONFIRM_UPPER_NOR` (reservando `SVOD 4` / `XGecu T48` como contingência física se IPL ou slot SD falharem).
 
 ---
 
@@ -68,7 +68,7 @@ A compilação sincroniza imagens `.uf2` auto-contidas em `crates/panadiga-core/
 * Imagens auxiliares (`.elf`, `.bin`, `.hex`, `.map`) geradas por `pico_add_extra_outputs(panasonic_p7501_uart)` permanecem em `target/pico-build/`.
 
 ### Integração Contínua (CI/CD)
-A esteira em [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) e a validação local (`python scripts/validate.py` / `npm run validate`) executam verificações em Rust, TypeScript, C11 host tests ([`test_gdb_rsp_host.c`](../../firmware/pico-p7501/tests/test_gdb_rsp_host.c) e [`test_uart_codec.c`](../../firmware/pico-p7501/tests/test_uart_codec.c)), Python (`mypy --strict`, `pytest`), `jscpd`, Vitest e Playwright.
+A esteira em [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) e a validação local (`python scripts/validate.py` / `npm run validate`) executam verificações em Rust, TypeScript, C11 host tests ([`test_gdb_rsp_host.c`](../../firmware/pico-p7501/tests/test_gdb_rsp_host.c), [`test_pana_diag_drv.c`](../../firmware/pico-p7501/tests/test_pana_diag_drv.c), [`test_pana_logic.c`](../../firmware/pico-p7501/tests/test_pana_logic.c) e [`test_uart_codec.c`](../../firmware/pico-p7501/tests/test_uart_codec.c)), Python (`mypy --strict`, `pytest`), `jscpd`, Vitest e Playwright.
 
 ---
 
@@ -122,16 +122,19 @@ O firmware atende tanto operadores humanos quanto automação em Rust (`panadiga
 | Comando | Sintaxe | Função Operacional Verificada |
 | :--- | :--- | :--- |
 | **`PING`** | `PING` | Responde `PONG` para verificação rápida de conectividade. |
-| **`STATUS` / `VDD`** | `STATUS` \| `VDD` | Amostra `GP26 (ADC0)` em `P7501` Pino 1 (`SW_UART`) e imprime `VDD: X.XXV (OK / LOW / FLOATING)`. |
+| **`STATUS` / `VDD` / `WDT`** | `STATUS` \| `VDD` \| `WDT` | Amostra `GP26 (ADC0)` em `P7501` Pino 1 (`SW_UART`), imprime `VDD: X.XXV (OK / LOW / FLOATING)` e reporta rastreabilidade de Watchdog (`WDT`). |
 | **`BANNER`** / **`HELP`** | `BANNER` \| `HELP` \| `?` | Imprime banner de identificação ou lista completa de comandos. |
-| **`BAUD`** | `BAUD [bps]` | Consulta ou ajusta o baud rate da máquina **`PIO1` (`SM0`/`SM1`)** via divisor fracionário FP16 (`300..921600 bps`). |
+| **`BAUD` / `FRAMING`** | `BAUD [bps]` \| `FRAMING [8N1\|8E1\|8O1]` | Consulta ou ajusta o baud rate (`300..921600 bps`) e paridade por hardware da **`PIO1` (`SM0`/`SM1`)** via divisor fracionário FP16. |
 | **`BAUDSCAN`** | `BAUDSCAN [ms] [NORMAL\|JIG[:ms]\|NOPULL] [APPLY]` | Detector dual-polarity (LOW/HIGH) por cluster anti-glitch + contagem de `framing_errs` (`PIO1 IRQ 4`) e ASCII em `GP2` (`APPLY` aplica na `PIO1`). **Obs.:** trocar baud no PuTTY/RealTerm muda apenas a porta CDC virtual — só `BAUD`/`BAUDSCAN` ajustam o barramento `P7501`. |
-| **`UARTSTREAM`** | `UARTSTREAM [ms] [NORMAL\|JIG[:ms]\|NOPULL]` | Captura em tempo real via `PIO1` com suporte a soltura temporizada de `SW_UART` (`JIG:350`) e restauração automática em `ADC0`. |
+| **`UARTSTREAM`** | `UARTSTREAM [ms] [NORMAL\|JIG[:ms]\|NOPULL]` | Captura em tempo real via `PIO1` com suporte a soltura temporizada de `SW_UART` (`JIG:2500` para `Loader ver0.61` ou `JIG:350`) e restauração automática em `ADC0`. |
 | **`HEXCAP`** | `HEXCAP [ms] [NORMAL\|JIG[:ms]\|NOPULL]` | Captura em RAM (`HEXCAP_RAM_BUF_CAP` = `2048` bytes) com delta `+us` e dump hex+ASCII após a janela (zero `overflow` a `115200 bps`). |
 | **`UARTTXHEX`** | `UARTTXHEX [LOW:]<hex\|BRK> [rx_ms]` | Injeta sequência arbitrária em hexadecimal ou pulso `BREAK` de `120 ms` via `PIO1 TX` (`Q7514` requer `SW_UART` liberado, salvo prefixo `LOW:`). |
 | **`WAITTX`** | `WAITTX <ms> <NORMAL\|JIG[:ms]\|NOPULL> "<trig>" <hex\|BRK> [post_ms]` | Aguarda substring de gatilho em `GP2` (ex.: `"wait 1"` após `JIG:350`) e injeta payload/BREAK pela `PIO1 TX` mantendo `NSW5V` em `Hi-Z`. |
 | **`BRIDGE`** | `BRIDGE [baud] [NORMAL\|JIG[:ms]\|NOPULL]` | Ponte transparente bit/byte USB-CDC ↔ `SC0` (`PIO1`), encerrada pela sequência de escape `~~~` (ou timeout). |
-| **`PWRTRACE`** | `PWRTRACE [ms] [NORMAL\|JIG[:ms]\|NOPULL]` | Amostra min/max de `GP26_SWUART` via `ADC0` e contabiliza bordas em `RXD` (`GP2`), `NSW5V` (`GP3`) e `TXD` (`GP4`) durante o boot. |
+| **`PWRTRACE` / `BOOTTRACE`** | `PWRTRACE [ms] [boot]` \| `BOOTTRACE [ms] [boot\|PREJIG] [WAKE]` | `PWRTRACE` amostra min/max `ADC0` + bordas `RXD/NSW5V/TXD`; `BOOTTRACE` correlaciona PIO1 UART + `GP3..5` + `ADC0` (inclui `PREJIG WAKE` em standby `IC7501`). |
+| **`PIOLOGIC`** | `PIOLOGIC [ms] [boot] [khz] [CTRL]` | Amostrador lógico de 4 canais em `PIO0` (`GP2..5`) para bordas e temporização de handshake FMU/SC0. |
+| **`SDSNIFF`** | `SDSNIFF [ms] [boot]` | Sniffer passivo `Hi-Z` do barramento SD via `PIO0` (`GP10..15`) com validação de CRC16 e lanes de dados 4-bit. |
+| **`JIGSWEEP`** | `JIGSWEEP [HOLD\|DELAY\|PREBOOT] [ms..]` | Varredura de janela de retenção `SW_UART` e temporização pré-DDR na Bootrom para captura determinística de `SDDIAG`. |
 | **`BOOTCAP`** | `BOOTCAP [ms]` | Reseta `XRESET` em Open-Drain com `SW_UART` liberado e captura stream UART `115200 8N1` no boot (`PIO0`). |
 | **`UARTMON`** | `UARTMON [ms]` | Escuta passivamente `GP2` (`UARTP2M_T`) sem forçar reset ou `SW_UART`. |
 | **`JIGBOOT`** | `JIGBOOT [ms]` | Executa boot com `SW_UART = LOW` (`XFWE` / modo JIG) após pulso `XRESET` e captura `GP2` a `115200 8N1`. |
@@ -140,6 +143,7 @@ O firmware atende tanto operadores humanos quanto automação em Rust (`panadiga
 | **`UARTPROBE`** | `UARTPROBE [sec]` | Executa varredura serial em `P7501` e restaura `GP26` ao estado `ADC0 Hi-Z` ao término. |
 | **`PANARSP`** | `PANARSP [ms] [boot] [WAIT:x] <act>` | Cliente `_dev_SERIAL` RSP (`REGS`, `MEM`, `WMEM`, `DUMPNOR`, `CALL`, `NORUNLOCK:CONFIRM_UPPER_NOR`, `NORLOCK`, `JEDEC_ERASE:<addr>`, `JEDEC_PROG:<addr>,<hex>`). |
 | **`DIAGWATCH`** | `DIAGWATCH [ms] [boot] [act] [WAKE]` | Watchdog autônomo em `SC0` e monitor residente `PANAMON1>` (`NORUNLOCK:CONFIRM_UPPER_NOR` / `NORLOCK` com sequência em duas etapas `'U'` → `'W'`/`'E'`). |
+| **`DRVPANA`** | `DRVPANA [ms] [boot] [NOPASS] <cmd>` | Interface CLI de fábrica do drive óptico Matshita `R6-MV4` com envio automático de desbloqueio `PASS 0x4d415453 0x48495441` (ou `NOPASS`). |
 | **`IRTX`** | `IRTX <RED\|SERV\|DEVSUB:CMD...> [GPpin] [repeat]` | Sintetizador PWM 38 kHz Kaseikyo ([`p7501_ir_codec.c`](../../firmware/pico-p7501/diag/p7501_ir_codec.c)) nos GPIOs livres seguros `GP6..9` / `GP16..22` (dispositivo `>= 0x01`). |
 | **`FMUSCAN` / `FMUTEST` / `FMUBATCH`** | `FMUSCAN` \| `FMUTEST` \| `FMUBATCH` | Sondas de temporização e varredura de bytes na Bootrom/FMU via `P7501`. |
 | **`PINCHECK`** | `PINCHECK` | Matriz elétrica dos 6 pinos de `P7501` (`Hi-Z`, pull-down, pull-up em `GP26`, contagem de bordas em `GP2`, tempo de subida `XRESET`, guarda em `NSW5V`/`GP3`). |
@@ -199,9 +203,9 @@ LED: OK (HEARTBEAT_IDLE, AUTO)
 ```
 
 > [!NOTE]
-> Use preferencialmente os comandos **`PIO1` (`BAUD`, `BAUDSCAN`, `UARTSTREAM`, `HEXCAP`, `PWRTRACE`, `WAITTX`)** em novos testes de bancada. Em janelas com `JIG:350`, o temporizador libera automaticamente `SW_UART` (`GP26 -> ADC0 Hi-Z`) após `350 ms` para que injeções via `Q7514` alcancem `UARTM2P_T` sem interferir na leitura da bootrom. O comando `ISOLATE` continua obrigatório após sessões legadas (`UARTSEND` / `UARTPROBE`).
+> Use preferencialmente os comandos **`PIO1` (`BAUD`, `BAUDSCAN`, `UARTSTREAM`, `BOOTTRACE`, `HEXCAP`, `PWRTRACE`, `WAITTX`, `DIAGWATCH`, `PANARSP`)** em novos testes de bancada. Para **`Loader ver0.61`**, utilize `JIG:2500` em `UARTSTREAM 12000 JIG:2500` para reter `SW_UART` até a leitura completa de `DIGADIAG.FRM` (enquanto `JIG:350` atende janelas rápidas de bootrom); em ambos, o temporizador libera `GP26 -> ADC0 Hi-Z` para que `Q7514` conduza `TX`. O comando `ISOLATE` continua obrigatório após sessões legadas (`UARTSEND` / `UARTPROBE`).
 
-### Exemplo 3: Injeção / Apagamento com Trava `CONFIRM` (Quando Monitor Ativo)
+### Exemplo 3: Injeção / Apagamento com Trava `CONFIRM` e Conformidade `U99` Sem Dessolda
 ```text
 PANADIGA> INJECT_LOADER CONFIRM
 [INJECT_LOADER] Target Address : 0x00004000 (AM34 Internal SRAM)
@@ -217,7 +221,7 @@ PANADIGA> ERASE_NVRAM CONFIRM
 ERASE_NVRAM: OK
 ```
 
-*(Observação: Caso o gravador esteja em loop `U99` sem monitor interativo acessível em `P7501`, realize a extração física da Spansion `S29JL064H` [`IC5001`] em programador externo TSOP-48 e aplique `panadiga nvram clean`.)*
+*(Observação de Compliance `U99`: em um gravador DMR-EH55 já bricado em `U99`, tente primeiro a recuperação **100% sem dessolda** via `SDDIAG` `DIGADIAG.FRM` + `PANA__SD.FRM` `ver0.61` em cartão SDSC FAT16 com `JIG:2500`, ou entrada headless **Porta #1** `0x0B1800` $\rightarrow$ `PANAMON1>`, realizando obrigatoriamente backup prévio completo de `8 MiB` via `PANADMP1` + SHA-256 antes de autorizar a Camada 2 BGO `U CONFIRM_UPPER_NOR` / `NORUNLOCK:CONFIRM_UPPER_NOR` — pois a Camada 1 IPL `SA0..SA10` permanece protegida em `E05`. A extração externa TSOP-48 da Spansion `S29JL064H` [`IC5001`] em **SVOD 4** / **XGecu T48** + `panadiga nvram clean` fica como contingência caso o IPL `SA0..SA10` ou o leitor SD esteja fisicamente danificado.)*
 
 ---
 
@@ -254,7 +258,7 @@ O subsistema Flash ([`p7501_flash.c`](../../firmware/pico-p7501/flash/p7501_flas
 | **Camada 3 — NVRAM / EEMUL Topo** | `SA134..SA141` (`0x807F0000..0x807FFFFF`, setores de `8 KiB`) | **Autorizada por padrão** | No EH55 real, `SA134` (`0x847F0000`) contém cabeçalho `"1284"` (`0ff00000002c`, `6 B`) e `SA135..SA141` estão `0xFF`. |
 
 * **Stubs JEDEC em SRAM (`0x51800000`), Espelho *Uncached* (`0x90400000`) & Temporização `S29JL064H` (~700 ms):**
-  * Os comandos `PANARSP JEDEC_ERASE:<addr>` e `PANARSP JEDEC_PROG:<addr>,<hex>` (`1..=16` bytes por chamada) carregam o stub [`p7501_pana_jedec.h`](../../firmware/pico-p7501/uart/p7501_pana_jedec.h) / [`p7501_pana_jedec.c`](../../firmware/pico-p7501/uart/p7501_pana_jedec.c) em `0x51800000`, concluindo com **`PANAJEDEC_OK`** ou **`PANAJEDEC_TO`**. No monitor `PANAMON1>`, o [`p7501_diag_watch.c`](../../firmware/pico-p7501/uart/p7501_diag_watch.c) dispara `'U'` antes de `'W'`/`'E'`.
+  * Os comandos `PANARSP JEDEC_ERASE:<addr>` e `PANARSP JEDEC_PROG:<addr>,<hex>` (`1..=16` bytes por chamada) carregam o stub [`p7501_pana_jedec.h`](../../firmware/pico-p7501/uart/p7501_pana_jedec.h) / [`p7501_pana_jedec_stubs.c`](../../firmware/pico-p7501/uart/p7501_pana_jedec_stubs.c) em `0x51800000`, concluindo com **`PANAJEDEC_OK`** ou **`PANAJEDEC_TO`**. No monitor `PANAMON1>`, o [`p7501_diag_watch.c`](../../firmware/pico-p7501/uart/p7501_diag_watch.c) dispara `'U'` antes de `'W'`/`'E'`.
   * **Coerência `0x90400000` (SDRAM *Uncached*):** ao modificar código em execução na SDRAM do `PROG061` (`0x50400000`), escreva no alias *uncached* **`0x90400000`** (ex.: limites `MOV` do `PANADMP1` em `0x9043950E` $\rightarrow$ `J 904394FA`, ou stub de teste em `0x90439B40`) para evitar desfasamento de D-cache/I-cache.
   * **Temporização real de Erase (~700 ms) vs Polling DQ7:** o apagamento de `64 KiB` na Spansion `S29JL064H` leva ~`700 ms`; como o laço DQ7 limitado (`0x00100000` iterações) em `jedec_emit.rs` pode retornar `OK:ERASE` antes do término interno, aguarde readback `0xFF` × 32 antes de programar bytes `W`.
 * **Fallback Offline Copy-on-Write:** Patches em arquivo usam `panadiga nvram patch-upper-nor` ([`nvram.rs`](../../crates/panadiga-cli/src/cli/handlers/nvram.rs)) com `--backup` SHA-256 obrigatório (mantendo os `256 KiB` iniciais bloqueados salvo `--allow-critical-ipl` offline).

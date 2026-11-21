@@ -5,7 +5,7 @@
 
 ## Validação Multicamadas: FP Pure Domain, MVVM Rigoroso, GDB Introspectivo & SSOT
 
-> **Versão:** 2.0.0 | **Referência Atual dos 9 Quality Gates:** `203` Testes Rust Workspace, `111` Testes Vitest (`32` arquivos), `31` Testes C11 Host em `4` módulos, `19` E2E Playwright (`5` specs), `23` Pytest + `42` `mypy --strict`, `0%` Clones `jscpd`, `100/100` `uxlint` (`0` issues / `301` arquivos)  
+> **Versão:** 2.1.0 | **Referência Atual dos 9 Quality Gates:** `259` Testes Rust Workspace, `116` Testes Vitest (`36` arquivos), `31` Testes C11 Host em `4` módulos, `23` E2E Playwright (`8` specs), `29` Pytest + `43` `mypy --strict`, `0%` Clones `jscpd`, `100/100` `uxlint` (`0` issues / `354` arquivos)  
 > **Autores:** Equipe de Engenharia Reversa e Arquitetura de Sistemas Panadiga
 
 ---
@@ -19,13 +19,13 @@ A evolução arquitetural do **Panadiga** exigiu uma reestruturação profunda d
                                        ▲
                                       / \
                                      /   \
-                                    / E2E \   (19 testes Playwright Chromium / 5 specs + CI/CD)
+                                    / E2E \   (23 testes Playwright Chromium / 8 specs + CI/CD)
                                    /───────\
-                                  /  MVVM   \  (111 Vitest / 32 arquivos + Docs + Logger + i18n)
+                                  /  MVVM   \  (116 Vitest / 36 arquivos + Docs + Logger + i18n)
                                  /───────────\
                                 /  GDB & HAL  \ (31 testes C11 Host em 4 módulos + Telemetria RSP)
                                /───────────────\
-                              /  FP Pure Domain \ (203 testes Rust: &[u8], RE, MCP, RAG, Tauri)
+                              /  FP Pure Domain \ (259 testes Rust: &[u8], RE, MCP, RAG, Tauri)
                              /───────────────────\
 ```
 
@@ -104,22 +104,25 @@ Garantir que argumentos de linha de comando sejam fortemente validados via Clap,
 
 ### Cobertura Playwright (Chromium)
 
-19 testes automatizados em 5 arquivos spec (`apps/desktop/e2e/`) verificam o comportamento visual e reativo da aplicação:
+23 testes automatizados em 8 arquivos spec (`apps/desktop/e2e/`) verificam o comportamento visual e reativo da aplicação:
 
-1. `navigation.spec.ts`: Carregamento do Dashboard, navegação fluida entre todas as telas (`NVRAM`, `MEIHFS`, `Pico`, `Manuais`, `Docs Interativos`) e continuidade de estado.
-2. `nvram.spec.ts`: Renderização da Spansion NOR Flash `S29JL064H`, detalhamento dos 8 microsetores (`SA134..SA141`) e ações cirúrgicas.
-3. `pico-bench.spec.ts`: Telemetria do controlador, pinagem verificada do conector `P7501` (`115200 8N1` + `NSW5V` Hi-Z), modos de boot e console serial interativo.
-4. `frm-packager.spec.ts`: Inspeção criptográfica de `.FRM`, decodificação Feistel/TOC e fluxo do `Centro Unbrick`.
-5. `ir-commander.spec.ts`: Controlador IR Kaseikyo, macros `SYS_SERV`, catálogo offline e envio USB-OTG/Android.
+1. `calibration-and-tbc.spec.ts`: Pipelines de calibração `PAL-M`/`DAVIS`/`TBC` e fluxos visuais de bancada.
+2. `frm-packager.spec.ts`: Inspeção criptográfica de `.FRM`, decodificação Feistel/TOC e fluxo do `Centro Unbrick`.
+3. `hdd-safe-flash.spec.ts`: Bloqueio de disco de sistema, `HddCapacityPatcherCard` e fluxo CoW de gravação segura MEIHFS.
+4. `ir-commander.spec.ts`: Controlador IR Kaseikyo, macros `SYS_SERV`, catálogo offline e envio USB-OTG/Android.
+5. `navigation.spec.ts`: Carregamento do Dashboard, navegação fluida entre todas as telas (`NVRAM`, `MEIHFS`, `Pico`, `Manuais`, `Docs Interativos`) e continuidade de estado.
+6. `nvram.spec.ts`: Renderização da Spansion NOR Flash `S29JL064H`, detalhamento dos 8 microsetores (`SA134..SA141`) e ações cirúrgicas.
+7. `pico-bench.spec.ts`: Telemetria do controlador, pinagem verificada do conector `P7501` (`115200 8N1` + `NSW5V` Hi-Z), modos de boot e console serial interativo.
+8. `pico-bgo-davis.spec.ts`: Diagnósticos interativos BGO FTL (`SA26..SA70`) e painel `DAVIS CH0/CH1` na `Bancada Pico`.
 
 ### Matriz de Integração Contínua (GitHub Actions & `scripts/validate.py`)
 
 Todos os 9 Quality Gates são executados via `python scripts/validate.py`:
 
 - **Android APK Build (Tauri 2.0 / ARM64)**: Compilação de binário Android com `cargo-ndk`.
-- **Rust Workspace (`5` crates)**: `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets --no-deps -- -D warnings` e `cargo test --workspace` (**203 testes**).
-- **Ghidra Generator & Python Tools**: `panadiga ghidra export-all` (7 scripts `.py` + suíte Java `tools/ghidra/java/`), `py_compile`, `mypy --strict scripts` (43 arquivos) e `pytest scripts/tests` (**incluindo `test_docs_parity.py`** para paridade 1:1 de **38** pares em `translation_pairs.json` ↔ `docs/INDEX.md`, **19** capturas em `docs/debug_logs/`, guarda anti-hash obsoleto e validação de links internos).
-- **Desktop UI**: `oxlint --deny-warnings && tsc --noEmit`, Vitest (**111 testes em 32 arquivos** em `apps/desktop/src/**/*.test.*`), `uxlint` (`100/100` com `--fail-on info`, `0` issues em `301` arquivos) e Playwright E2E (**19 testes em 5 specs**).
+- **Rust Workspace (`5` crates)**: `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets --no-deps -- -D warnings` e `cargo test --workspace` (**259 testes**).
+- **Ghidra Generator & Python Tools**: `panadiga ghidra export-all` (7 scripts `.py` + suíte Java `tools/ghidra/java/`), `py_compile`, `mypy --strict scripts` (43 arquivos) e `pytest scripts/tests` (**29 testes em 5 arquivos**, incluindo `test_docs_parity.py` para paridade 1:1 de **38** pares em `translation_pairs.json` ↔ `docs/INDEX.md`, **22** capturas em `docs/debug_logs/`, guarda anti-hash obsoleto e validação de links internos).
+- **Desktop UI**: `oxlint --deny-warnings && tsc --noEmit`, Vitest (**116 testes em 36 arquivos** em `apps/desktop/src/**/*.test.*`), `uxlint` (`100/100` com `--fail-on info`, `0` issues em `354` arquivos) e Playwright E2E (**23 testes em 8 specs**).
 - **Code Quality & Duplication**: Detector de clones `jscpd` (**limite estrito 0% / 0 clones**).
 - **Pico Firmware Dual Target**: Suíte C11 Host (`4` módulos, **31 testes**, `-Wall -Wextra -Werror` / `/W4 /WX`) e compilação UF2 para RP2040 e RP2350.
 
@@ -132,6 +135,7 @@ Todos os 9 Quality Gates são executados via `python scripts/validate.py`:
 | **FP Pure Domain**             | Regressão de decodificadores que dependiam de arquivos locais ou caminhos fixos.  | `nvram/tests.rs`, `hdd/inspect/tests.rs`, `test_entropy_calculation`                        |
 | **MVVM Rigoroso**              | Telas travando em estado intermediário devido a flags booleanas soltas.           | `useInCircuitErase.test.ts`, `useGdbBridge.test.ts`, `useManualsViewModel`                     |
 | **GDB Introspectivo**          | Corrupção de pacotes RSP ou estouro de buffer de telemetria em alta frequência. | `test_gdb_rsp_checksum_calculation`, `test_telemetry_ring_capacity`, `test_gdb_rsp_host.c` |
+| **Conformidade NOR 2 Camadas & MMIO Letal** | Sobrescrita do IPL crítico (`SA0..SA10`), unlock silencioso na Camada 2 BGO (`SA11..SA133`) ou leitura letal de `0xC000100C`. | `policy.rs`, `safety/mod.rs`, `panadiga-rag/src/tests.rs`, `mcp_core_tests.rs` |
 | **SRP em Componentes**         | Regressão nos launchers rápidos ou controles do socket TCP de depuração.       | `GdbServerComponents.test.tsx`, `docLinkResolver.test.ts`                                      |
 | **Zero Raw Prints / Consoles** | Poluição de stdout que quebra integrações JSON-RPC de servidores MCP.          | `logger.test.ts`, `mcp_core_tests.rs`, `mcp_re_tests.rs`                                       |
 | **SSOT de Constantes**         | Conflito de endereços de memória entre Ghidra, TUI, CLI e Desktop.               | `test_constants_memory_map_and_candidate_paths`, `test_system_constants_integrity`           |

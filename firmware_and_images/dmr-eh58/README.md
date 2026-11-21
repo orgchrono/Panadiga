@@ -1,7 +1,7 @@
 # Panasonic DMR-EH58 Firmware Assets
 
 - **Model / Region:** Panasonic DMR-EH58 (`EH58EE` — Gen 4 DIGA, Eastern Europe/Russia/CIS firmware train)
-- **SoC Architecture:** Matsushita UniPhier Gen 2 (`MN2DS0018/22` / MN103S family)
+- **SoC Architecture:** Matsushita UniPhier Gen 2 (`MN2DS0018/22` external attribution; unpacked `MAIN.BIN` embeds verbatim **`MN2DS0019`** alongside **`0x5700_0000`** load VA and `DRV.BIN` **`0x9020_2000`** load VA)
 - **Direct Download (`DVDRAM.7z`):** [`DVDRAM.7z` (`firmware-pack-v0.1.0`)](https://github.com/orgchrono/Panadiga/releases/download/firmware-pack-v0.1.0/DVDRAM.7z)
 - **Full Verified Firmware & Recovery Pack:** [Panadiga Firmware Pack `firmware-pack-v0.1.0`](https://github.com/orgchrono/Panadiga/releases/tag/firmware-pack-v0.1.0)
 - **Usage:** Reference firmware container (`BOOT.BIN`, `DRV.BIN`, `MAIN.BIN`) verified and validated for cross-model static reverse engineering and recovery workflows.

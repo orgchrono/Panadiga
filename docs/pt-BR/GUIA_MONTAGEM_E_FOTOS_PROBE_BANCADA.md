@@ -98,7 +98,7 @@ Abaixo está o desenho mecânico vetorial de engenharia, extraído diretamente d
 
 ---
 
-## 4. Esquema Elétrico de Montagem da Sonda (RP2040 $\leftrightarrow$ P7501)
+## 4. Esquema Elétrico de Montagem da Sonda (RP2040 / RP2350 $\leftrightarrow$ P7501)
 
 Abaixo está o diagrama elétrico oficial de engenharia, desenhado rigorosamente sob os padrões **IEEE Std 315 / IEC 60617** sobre papel milimetrado branco, com bloco de títulos e legendas normatizadas:
 
@@ -174,6 +174,12 @@ Antes de ligar o conector ao Raspberry Pi Pico:
 1. Certifique-se de que o firmware em `firmware/pico-p7501/` esteja gravado no Pico e confira o mapeamento `GP2`, `GP3 (Hi-Z!)`, `GP4`, `GP5 (OD)`, `GP26`, `GND`.
 2. Conecte o cabo USB do Pico ao computador (NUNCA alimente o Pico pelo `P7501`) e inicie o Workbench do Panadiga Desktop:
    ```powershell
-   npm run tauri dev
+   npm start
+   # ou em desenvolvimento live-reload:
+   npm run dev
    ```
 3. Navegue até o módulo **Pico Bench** e observe o painel **Conexões Físicas (`Pico -> P7501`)** para validar a leitura segura e iniciar a captura serial a `115200 8N1`.
+
+### Etapa 5: Kit SD Sem Dessolda, Compliance de Risco em Aparelho Bricado & Fechamento do Chassi IDE
+1. **Recuperação `U99` 100% Sem Dessolda (`SDDIAG` `ver061` / Porta #1):** Prepare um cartão **SDSC FAT16 ($\le 2\text{ GB}$)** com `panadiga unbrick prepare-sd --loader-profile ver061` (`DIGADIAG.FRM` `262.144 B` bruto + `PANA__SD.FRM` `sd48`). Antes de gravar na Camada 2 (`U CONFIRM_UPPER_NOR` / `SA26..SA70` BGO) ou `EEMUL` (`SA134..SA141`), faça o backup completo de **`8 MiB` (`PANADMP1` + SHA-256)**; como a **Camada 1 IPL (`SA0..SA10`) é bloqueada em `E05`**, tentar curar in-circuit um aparelho já bricado em `U99` evita o risco físico de dessoldar `IC5001` TSOP-48.
+2. **Fechamento *Low-Profile* do Chassi com `StarTech IDE2SAT2` (`MASTER`):** Mantenha o jumper sempre em **`MASTER`** (nunca `CS`/`Slave`). Como a placa azul `N5EZZ0000003` em `0°` colide com a tampa metálica superior, rotacione-a em **`180°`** usando um cabo **FFC 40 vias passo `0,5 mm` (`20,5 mm` de largura, `0,30 mm` na ponta) `Type B`** (ou modificação DIY raspando a face oposta com estilete novo + fita Kapton) e confirme identidade **`1:1`** no multímetro antes de ligar na tomada ([veja especificação completa e fotos em `ARQUITETURA_STORAGE_MEIHDFS_PARTICOES.md §9.6`](./ARQUITETURA_STORAGE_MEIHDFS_PARTICOES.md#96-adapta%C3%A7%C3%A3o-mec%C3%A2nica-low-profile-para-fechar-o-chassi-cabo-ffc-40-vias-type-b-ou-mod-diy--placa-azul-n5ezz0000003-invertida-180)).

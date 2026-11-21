@@ -129,11 +129,14 @@ graph TD
     CHECK_V -- "No (> 3.3V)" --> ABORT_V["IMMEDIATE HARDWARE LOCK<br/>Prevents permanent destruction of UniPhier SoC"]
     CHECK_V -- "Yes (3.3V)" --> CHECK_REG{"Target Flash Region?"}
     
-    CHECK_REG -- "0x80000000..0x807EFFFF" --> ABORT_BOOT["WRITE LOCKED (Error E05)<br/>Bootloader/IPL is Immutable"]
-    CHECK_REG -- "0x807F0000..0x807FFFFF" --> ALLOW_NVRAM["WRITE PERMITTED<br/>Sanitizing 64 KB NVRAM (U99 Fix)"]
-    CHECK_REG -- "P7501 Pin 5 (NSW5V)" --> ABORT_PWR["Hi-Z ONLY (GP3)<br/>Never drive push-pull or power Pico from P7501"]
+    CHECK_REG -- "0x80000000..0x8003FFFF (Layer 1 IPL)" --> ABORT_BOOT["PERMANENT WRITE LOCK (Error E05)<br/>Critical Boot IPL SA0..SA10 Is Immutable"]
+    CHECK_REG -- "0x80040000..0x807EFFFF (Layer 2 BGO)" --> CHECK_OPTIN{"CONFIRM_UPPER_NOR<br/>+ 8 MiB SHA-256 Backup?"}
+    CHECK_OPTIN -- "No" --> ABORT_UPPER["DEFAULT WRITE LOCK (Error E05)<br/>Requires opt-in for U99/BGO cure"]
+    CHECK_OPTIN -- "Yes (Bricked Unit)" --> WARN_BGO["AUTHORIZED WITH RISK WARNING<br/>Poll ~700 ms / 0xFF×32"]
+    CHECK_REG -- "0x807F0000..0x807FFFFF (Layer 3 NVRAM)" --> ALLOW_NVRAM["WRITE PERMITTED<br/>Sanitizing 64 KB EEMUL"]
+    CHECK_REG -- "P7501 Pin 5 (NSW5V) / 0xC000100C" --> ABORT_PWR["ELECTRICAL / MMIO LOCK<br/>NSW5V Hi-Z / Lethal Register"]
 ```
 
-1. **Invariant 1: Maximum 3.3V Logic & `NSW5V` Hi-Z Protection**: The `AM34 / MN103S` UART/control pins operate at 3.3V LVTTL; Pin 5 (`NSW5V` / `GP3`) is wired via `D7510` to `~5.15V` and MUST remain `Hi-Z Input` with pulls disabled.
-2. **Invariant 2: P7501 Header Power Isolation**: Never source power from `P7501` (`SW_UART` Pin 1 / `NSW5V` Pin 5 are sense lines only); keep the Pico powered via USB/VSYS.
+1. **Invariant 1: Maximum 3.3V Logic, `NSW5V` Hi-Z Protection & Lethal MMIO Lock**: The `AM34 / MN103S` UART/control pins operate at 3.3V LVTTL; Pin 5 (`NSW5V` / `GP3`) is wired via `D7510` to `~5.15V` and MUST remain `Hi-Z Input` with pulls disabled, while lethal register `0xC000100C` is strictly blocked.
+2. **Invariant 2: `P7501` Power Isolation & 2-Layer NOR Compliance**: Never source power from `P7501`. On `IC5001`, **Layer 1 Critical Boot IPL (`SA0..SA10`, opening `256 KiB`) stays permanently `E05` RO**, whereas **Layer 2 Upper NOR/BGO (`0x80040000..0x807EFFFF`)** unlocks only via `CONFIRM_UPPER_NOR` after risk acknowledgment and a verified `8 MiB` SHA-256 backup to rescue already-bricked `U99` units.
 3. **Invariant 3: Immutability of Forensic Evidence**: Original disk dumps and Spansion Flash images are never edited in place; operations execute on working copies verified with SHA-256 hashes.

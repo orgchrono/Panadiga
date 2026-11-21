@@ -63,8 +63,8 @@ Coleção de pacotes oficiais baixados diretamente de `fdl.jpn.support.panasonic
 | `ex89` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex79/Update_EX79_EX89_EX769EB_V105.exe` |
 | `ex89` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex89/UPDATE_DMR-EX89EF_V14.exe` |
 | `ex93c` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex93/UPDATE_DMR-EX93CEG_V139324.exe` |
-| `ex97` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex97/UPDATE_EX97EB_V110.zip` |
-| `ex97` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex97/UPDATE_EX97SEG_EX97CEG_V105.exe` |
+| `ex97` (UK/EB) | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex97/UPDATE_EX97EB_V110.zip` — **Baixado/Extraído** (`ex97eb/`): `.zip` `107,549,814 B` (`fc444e8d06fc710611664fb771726e9bbe9cb767b7aee483b501dd7c4d6e1ee2`), `PANAEUSB.FRM` `107,417,648 B` (`f62bc64672fe3931a1987ff8d76098ce755e1b4647ad6f3983874c154e892fb2`) — container USB não-Feistel (cifra desconhecida) |
+| `ex97` (SEG/CEG) | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex97/UPDATE_EX97SEG_EX97CEG_V105.exe` — **Baixado/Extraído** (`ex97seg_ceg/`): `.exe` `112,370,424 B` (`dcee8c2c85cfd0f8198551d096062a3d9a100ac7b2e4ba622cd303c1c97853e5`), `PANAEUSB.FRM` `112,152,576 B` (`25131e36cd0e1912d7be4d3ce26c222b0670cacb289b197ce60119c0943a65f8`) — container USB não-Feistel (cifra desconhecida) |
 | `ez49v` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ez49v/UPDATE_DMR-EZ49VEC_V109.exe` |
 | `ez49v` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ez49v/UPDATE_EZ49VEB_V11.exe` |
 | `xs350` | `https://fdl.jpn.support.panasonic.com/pc/en/bd/bs850/UPDATE_BS850_BS750_XS350EG_V16.exe` |

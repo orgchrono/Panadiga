@@ -12,10 +12,16 @@
 This manual details the safe bench procedure for connecting a **Raspberry Pi Pico (`RP2040`)** or **Pico 2 (`RP2350`)** to the 6-pin factory service header **`P7501` (`JST B6B-ZR-3R4`, labeled `"TO JIGU"`)** on board `VEP79138` inside the **Panasonic DIGA DMR-EH55** recorder, enabling **`115200 8N1`** boot capture, complete electrical line diagnostics, discrete boot/reset control, and a GDB RSP bridge without soldering on or desoldering components from the main PCB.
 
 > [!IMPORTANT]
-> **Verified Physical Alignment (`P7501` Async UART vs. External `IC5001` Flashing):**
-> Full cross-verification across all 3 official **DMR-EH55** service manuals and live bench measurements proved that **`P7501`** is an **Asynchronous UART port (`115200 8N1`)** coupled to discrete stage `Q7510` / `Q7514` / `QR7503` / `IC1506` / `D7510`.
-> - The Pico probe on `P7501` captures live boot telemetry (`<00>DDR CHECK: OK`, `CD diag boot mode`), tests electrical integrity across all pins (`PINCHECK`, `UARTPROBE`, `FMUSCAN`), and drives non-destructive recovery without desoldering.
-> - Where a unit is stuck in `U99` with no writable live monitor on `P7501` (and if `SDDIAG` via `DIGADIAG.FRM` cannot load), definitive NVRAM repair follows the external route of reading Spansion `S29JL064H70TFI00` (**`IC5001`**) in a TSOP-48 programmer (**XGecu T48** or **SVOD 4**) and applying `panadiga nvram clean` prior to re-flashing.
+> **Verified Physical Alignment (`P7501` Async UART vs. No-Desoldering `SDDIAG`/`PANAMON1>` Recovery vs. `IC5001` Fallback):**
+> Cross-verification across **5 official DMR-EH55 service manuals (`30` indexed technical PDFs)** and live bench measurements proved that **`P7501`** is an **Asynchronous UART port (`115200 8N1`)** coupled to discrete stage `Q7510` / `Q7514` / `QR7503` / `IC1506` / `D7510`.
+> - The Pico probe on `P7501` captures live boot telemetry (`<00>DDR CHECK: OK`, `SD init`, `CD diag boot mode`), verifies electrical integrity across all 6 pins (`PINCHECK`, `BAUDSCAN`, `HEXCAP`, `PWRTRACE`, `UARTSTREAM`, `FMUSCAN`), and opens the `GDB` RSP bridge without desoldering.
+> - **Primary No-Desoldering `U99` Path (`SDDIAG` + `PANAMON1>`):** On real `DMR-EH55` hardware (`Loader ver0.61 [06/03/06]`), `U99` typically stems from corruption inside the 45-sector **BGO FTL (`SA26..SA70`, `0x84130000..0x843FFFFF` — `BGO driver init failed[1].`)** and/or top `EEMUL` (`SA134..SA141`), and was **cured in 2 cycles directly over `P7501` + SDSC (`DIGADIAG.FRM` `262,144 B` raw `@ 0x50400000` + `PANA__SD.FRM` `sd48`, or headless Door #1 `@ 0x0B1800` → `PANAMON1>`) without desoldering `IC5001`**.
+> - Removing Spansion `S29JL064H70TFI00` (**`IC5001`**) for external TSOP-48 programming (**XGecu T48** / **SVOD 4** + `panadiga nvram clean`) is reserved strictly as a **last-resort fallback** if Layer 1 IPL (`SA0..SA10`) or the SD card slot is physically damaged.
+
+> [!WARNING]
+> **Compliance & Risk Assessment: Why In-Circuit Recovery Is Worth Attempting on an Already-Bricked (`U99`) Unit:**
+> * **Real operational hazards you must respect:** (1) AC power loss or disconnect during Flash writes; (2) real ~`700 ms` 64 KiB sector erase time on Spansion `S29JL064H` (requiring `0xFF × 32` readback polling after `OK:ERASE` before `'W'` programming); (3) Syscon `IC7501` `~44s` watchdog (`PLEASE WAIT` / `SELF CHECK`, pulsing `NSW5V=0` and `XRESET=0` if no valid SDSC or `TBUS` keepalive is active); and (4) **mandatory full 8 MiB read-only backup (`PANADMP1`) verified by SHA-256** prior to unlocking Layer 2 (`U CONFIRM_UPPER_NOR`).
+> * **Why risk-benefit compliance favors trying in-circuit first on a bricked unit:** **Layer 1 Critical Boot IPL (`SA0..SA10`, opening `256 KiB`: `0x80000000..0x8003FFFF` / `0x84000000..0x8403FFFF`) is permanently write-locked (`E05` RO)** on the Pico probe, guaranteeing `Loader ver0.61` (`SDDIAG` + `P7501`) cannot be overwritten in-circuit. On an already-bricked `U99` unit, any interrupted Layer 2/3 operation remains re-entrant via SD/UART — avoiding the far higher physical risk of lifted SMD pads from hot-air TSOP-48 rework (`RSK-01`).
 
 ---
 
@@ -202,11 +208,13 @@ flowchart LR
   ├─────────────────────────────────────────────────────────────────────┤
   │ 4. ELECTRICAL CHECK ('STATUS' & 'PINCHECK'): ~3.25V Hi-Z / ~2.69V PD│
   ├─────────────────────────────────────────────────────────────────────┤
-  │ 5. BOOT CAPTURE ('JIGBOOT' / 'BOOTCAP'): <00>DDR CHECK / CD diag    │
+  │ 5. BOOT CAPTURE ('UARTSTREAM 12000 JIG:2500' / 'BOOTTRACE 15000')   │
   ├─────────────────────────────────────────────────────────────────────┤
-  │ 6. SERIAL TX ('ENGAGE' -> 'UARTSEND'): SW_UART Hi-Z for Q7514       │
+  │ 6. TX / MONITOR ('ENGAGE' -> 'UARTSEND' / 'DIAGWATCH' / 'PANARSP')  │
   ├─────────────────────────────────────────────────────────────────────┤
-  │ 7. POST-TEST HYGIENE ('UARTPROBE 8' -> 'ISOLATE'): Back to Hi-Z!    │
+  │ 7. NO-DESOLDER BGO CURE: 8 MiB Backup ('PANADMP1') -> 'PANAMON1>'   │
+  ├─────────────────────────────────────────────────────────────────────┤
+  │ 8. POST-TEST HYGIENE ('UARTPROBE 8' -> 'ISOLATE'): Back to Hi-Z!    │
   └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -234,13 +242,15 @@ PANADIGA> PINCHECK
 ```
 * **Expected `PINCHECK` values:** `SW_UART` (`GP26`) reads `~3.25V` `Hi-Z`, `~2.69V` pull-down (clamped via `Q7510` B-C junction), and `~3.27V` pull-up; `XRESET` (`GP5`) rises in `~20 µs` on release; `NSW5V` (`GP3`) reports strictly `Hi-Z Input`; `GP2` (`UARTP2M_T`) shows hundreds of active UART edges during boot.
 
-### Step 5: Live Boot Capture (`BOOTCAP` / `JIGBOOT` / `UARTMON`)
+### Step 5: Live Boot Capture (`UARTSTREAM` / `BOOTTRACE` / `HEXCAP` / `BAUDSCAN`)
 ```text
-PANADIGA> JIGBOOT
+PANADIGA> BAUDSCAN 3500 NORMAL
+PANADIGA> UARTSTREAM 12000 JIG:2500
+PANADIGA> BOOTTRACE 15000 NOJIG
 ```
-* Deterministic PIO capture on `GP2` (`115200 8N1`) displays AM34 bootloader telemetry (`<00>DDR CHECK: OK`, `SD init`, `CD diag boot mode`, `X(80020401)` / `X(80040904)` codes, and optical mechanism sense). *(For `LOADER ver0.61`, timed `UARTSTREAM 12000 JIG:2500` holds `SW_UART` LOW long enough to pass `DDR CHECK: OK` before releasing `GP26`.)*
+* Deterministic PIO1 capture on `GP2` (`115200 8N1`) displays complete AM34 bootloader telemetry (`<00>DDR CHECK: OK`, `SD init`, `CD diag boot mode`, `X(80020401)` / `X(80040904)` codes, and `*** RTSC Initialize ***`). *(For **`Loader ver0.61`**, timed `UARTSTREAM 12000 JIG:2500` holds `SW_UART` LOW long enough to clear `DDR CHECK: OK` and load `DIGADIAG.FRM` before releasing `GP26`; legacy PIO0 `JIGBOOT`/`BOOTCAP`/`UARTMON` remain available.)*
 
-### Step 6: Interactive Serial TX (`ENGAGE` + `UARTSEND`) & Cleanup (`UARTPROBE 8` + `ISOLATE`)
+### Step 6: Interactive Serial TX (`ENGAGE` + `UARTSEND` / `DIAGWATCH` / `PANARSP`) & Cleanup (`UARTPROBE 8` + `ISOLATE`)
 ```text
 PANADIGA> ENGAGE
 [BUS] P7501 UART TX (GP4) engaged idle HIGH; NSW5V (GP3) kept Hi-Z Input.
@@ -251,6 +261,12 @@ PANADIGA> ISOLATE
 ```
 *(Remember: `UARTSEND` keeps `SW_UART = Hi-Z` so signals pass through `Q7514`; upon completion, `UARTPROBE 8` + `ISOLATE` leaves `GP26 / ADC0` clean for subsequent `STATUS` checks.)*
 
+### Step 7: No-Desoldering In-Circuit Recovery (`SDDIAG` / Door #1 $\rightarrow$ `PANAMON1>` $\rightarrow$ 8 MiB Backup & `U99` BGO Cure)
+1. **Generate the canonical `ver061` SD kit:** Run `panadiga unbrick prepare-sd --loader-profile ver061` to place `DIGADIAG.FRM` (`262,144 B` raw `@ 0x50400000`) + `PANA__SD.FRM` (`sd48`, `SHA-256: cdcc2cdf...`) onto an **SDSC FAT16 ($\le 2\text{ GB}$)** card (SDHC/SDXC cards fail `Loader ver0.61` 4-bit SD init).
+2. **Enter `PANAMON1>`:** Boot from the SDSC card via **`SDDIAG`** (`UARTSTREAM 12000 JIG:2500`) or headlessly through **Door #1 (`NOJIG` via `PROG` slot `0x0B1800` when `CH1` fails `HDD_MAX_LBA get failed`)**. Confirm the `PANAMON1>[B/R/W/D/F/J/E/U/Q]` prompt with `?\r` at `300 µs` cadence.
+3. **Mandatory read-only 8 MiB backup (`PANADMP1`):** Before modifying any Flash bit, dump the entire `0x84000000..0x847FFFFF` array by patching `MOV` bounds on uncached mirror `0x9043950E` (`J 904394FA`) or via `panadiga pico dump-nor`, and verify the resulting **SHA-256** digest.
+4. **2-Cycle BGO cure under `E05` IPL lock:** Execute the `panadiga re eh55-bgo` repair plan using explicit Layer 2 unlock (`U CONFIRM_UPPER_NOR` $\rightarrow$ sector format / pure `1 -> 0` writes on BGO `SA26..SA70` with ~`700 ms` `0xFF × 32` erase polling $\rightarrow$ `U LOCK`), then verify progression to `***** normal mode *****` $\rightarrow$ `*** RTSC Initialize ***` via `BOOTTRACE 15000 NOJIG`.
+
 ---
 
 ## 6. Bench Troubleshooting Matrix
@@ -260,7 +276,9 @@ PANADIGA> ISOLATE
 | `VDD: 0.02V (LOW)` after `UARTSEND` / `JIGBOOT` | Residual SIO direction state on `GP26` or recorder unpowered | Run `UARTPROBE 8` followed by `ISOLATE`, and check AC power to the recorder. |
 | `PINCHECK` reports `GP2 = 0` transitions | Pin 6 wire (`UARTP2M_T`, square pad) loose or swapped | Check continuity from `P7501` square pad to `GP2` (Pico Pin 4) + common ground `Pin 4 <-> GND`. |
 | `UARTSEND LOW:cmd` captures `0 bytes` | Expected hardware behavior: `SW_UART = LOW` cuts off `Q7514` | Send `UARTSEND <text>` without `LOW:` prefix after `ENGAGE` so `GP26` stays `Hi-Z`. |
-| Unit still drops to `U99` after `CD diag boot mode` | Corrupted `BGO` / `SA134..SA141` (`EEMUL`) in `IC5001` with optical laser `0x83A7` down | Try `SDDIAG` via `DIGADIAG.FRM` (`JIG:2500`), or extract `IC5001` TSOP-48 externally + `panadiga nvram clean` on **XGecu T48** / **SVOD 4**. |
+| Unit stuck in `U99` (`BGO driver init failed[1].`) | Corrupted BGO FTL (`SA26..SA70`, `0x84130000..0x843FFFFF`) or `EEMUL` (`SA134..SA141`) in `IC5001` | **First (No desoldering):** Use SDSC FAT16 `ver061` kit (`SDDIAG` / Door #1) $\rightarrow$ `PANAMON1>` + 8 MiB backup + `U CONFIRM_UPPER_NOR` / `panadiga re eh55-bgo` (`SA0..SA10` stays `E05`-locked). **Last resort:** external TSOP-48 read + `panadiga nvram clean` on **XGecu T48** / **SVOD 4**. |
+| Drops to `PLEASE WAIT` / `SELF CHECK` at `~44s` (`NSW5V=0` & `XRESET=0`) | Syscon `IC7501` watchdog expires without valid SDSC media or `TBUS` keepalive | Use an **SDSC FAT16 $\le 2\text{ GB}$** card with the `ver061` kit (avoid SDHC/SDXC), or run the `TBUS` keepalive when executing `M0` stubs without `MAIN`. |
+| `HDD_MAX_LBA get failed` / `DAVIS CH1` reads `0x00002004` or top lid won't close | Reversed `P58001` pinout (`Pin k = ATA(41-k)`), `CS`/`Slave` jumper, wrong FFC polarity, or `0°` `N5EZZ0000003` height collision | Force **`MASTER`** jumper on `StarTech IDE2SAT2` (never `CS`/`Slave`). Use **Type A** FFC at `0°`; to close the lid with `N5EZZ0000003` rotated `180°`, use a **40-pin `0.5 mm` pitch (`20.5 mm` width) `Type B` FFC** (or DIY razor-blade strip + Kapton) and confirm `1:1` multimeter continuity. |
 | Serial console unresponsive | Wrong COM/ttyACM port or USB CDC driver unbound | Confirm port with `panadiga pico list` and verify `115200 8N1`. |
 
 ---
@@ -299,11 +317,11 @@ Because **`P7501` (`B6B-ZR-3R4`)** uses a **single-piece 6-pin female housing (`
 
 ---
 
-## 9. First-Connection Read-Only Checklist on Real Hardware
+## 9. First-Connection Read-Only & Risk-Graduated Compliance Checklist
 
 Before attempting any invasive write or recovery command:
 
-1. **Step 1 (`STATUS` $\rightarrow$ `PINCHECK`):** Verify `Pin 4 = GND`, clean `SW_UART` voltages (`~3.25V Hi-Z | ~2.69V PD`), strict `GP3 (NSW5V)` isolation, and edges on `GP2 (UARTP2M_T)`.
-2. **Step 2 (`BOOTCAP` / `JIGBOOT` / `UARTSTREAM`):** Capture the full `115200 8N1` startup log (`<00>DDR CHECK: OK`, `SD init`, `CD diag boot mode`, sense codes) for exact diagnosis.
-3. **Step 3 (`UARTPROBE 8` $\rightarrow$ `ISOLATE`):** Probe serial response with `Q7514` enabled (`SW_UART = Hi-Z`) and always end in `ISOLATE`.
-4. **Step 4 (Definitive `U99` Repair):** Whenever rewriting `0x807F0000..0x807FFFFF`, take dual SHA-256-verified reads of Spansion `S29JL064H` (**`IC5001`**) and sanitize with **`panadiga nvram clean`**.
+1. **Step 1 — Read-Only Telemetry (`STATUS` $\rightarrow$ `PINCHECK`):** Verify `Pin 4 = GND`, clean `SW_UART` voltages (`~3.25V Hi-Z | ~2.69V PD`), strict `GP3 (NSW5V)` isolation, and edges on `GP2 (UARTP2M_T)`.
+2. **Step 2 — Boot Capture (`UARTSTREAM 12000 JIG:2500` / `BOOTTRACE 15000 NOJIG` / `HEXCAP`):** Record the full `115200 8N1` startup log (`<00>DDR CHECK: OK`, `SD init`, `CD diag boot mode`, or `BGO driver init failed[1].`) for exact root-cause triage.
+3. **Step 3 — Full 8 MiB Read-Only Backup (`PANADMP1` + SHA-256) & Cleanup (`ISOLATE`):** Before any Flash write (`EEMUL` or `BGO`), acquire a full SHA-256-verified read-only copy of `0x84000000..0x847FFFFF` and always finish serial probe runs in `ISOLATE`.
+4. **Step 4 — Graduated `U99` Repair (In-Circuit under `E05` IPL Lock $\rightarrow$ TSOP-48 Fallback):** With the 8 MiB backup safely on disk, perform in-circuit repair inside `PANAMON1>` (`SA134..SA141` `EEMUL` enabled by default; Layer 2 BGO `SA26..SA70` unlocked only via explicit `U CONFIRM_UPPER_NOR` + ~`700 ms` / `0xFF × 32` erase polling, keeping **Layer 1 IPL `SA0..SA10` permanently locked with `E05`**). For an already-bricked `U99` recorder, trying this no-desolder recovery first carries zero risk to bootrom IPL; resort to physical TSOP-48 removal (**XGecu T48** / **SVOD 4** + `panadiga nvram clean`) only if `SA0..SA10` IPL or the SD slot hardware has failed.

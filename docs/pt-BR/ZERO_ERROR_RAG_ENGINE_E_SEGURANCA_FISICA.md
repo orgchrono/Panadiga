@@ -18,8 +18,8 @@ No entanto, no contexto de **engenharia reversa de hardware proprietário, placa
 
 > [!CAUTION]
 > **O CUSTO DA ALUCINAÇÃO EM HARDWARE É A DESTRUIÇÃO FÍSICA IRREVERSÍVEL:**
-> 1. **Sobretensão no SoC Matsushita e Proteção `NSW5V`:** O processador **Matsushita `AM34` / `MN103S`** na placa `VEP79138` opera em **3.3V LVTTL**. No conector de serviço **`P7501`**, `SW_UART`, `XRESET` (Open-Drain), `UARTM2P_T` e `UARTP2M_T` trabalham em 3.3V, enquanto o **Pino 5 (`NSW5V`)** vem do regulador `IC1506` (`~5.15V` via `D7510`) e deve permanecer SEMPRE como entrada **`Hi-Z`** sem pulls. Se um modelo sugerir aplicar 5.0V em pinos LVTTL ou dirigir `GP3`/`NSW5V` em modo push-pull, ocorrem danos permanentes nas junções de silício.
-> 2. **Destruição do Bootloader (IPL Brick):** A memória NOR Flash Spansion `S29JL064H` (8 MB) armazena o código de inicialização de primeiro estágio (*Initial Program Loader*) de `0x80000000` a `0x807EFFFF`. Se uma IA sugerir um comando de escrita ou apagamento de bloco nessa faixa, o aparelho perde permanentemente o vetor de reset e torna-se um "tijolo" irrecuperável.
+> 1. **Sobretensão no SoC Matsushita, Proteção `NSW5V` & MMIO Letal `0xC000100C`:** O processador **Matsushita `AM34` / `MN103S`** na placa `VEP79138` opera em **3.3V LVTTL**. No conector de serviço **`P7501`**, `SW_UART`, `XRESET` (Open-Drain), `UARTM2P_T` e `UARTP2M_T` trabalham em 3.3V, enquanto o **Pino 5 (`NSW5V`)** vem do regulador `IC1506` (`~5.15V` via `D7510`) e deve permanecer SEMPRE como entrada **`Hi-Z`** sem pulls. Da mesma forma, o registrador MMIO `0xC000100C` trava instantaneamente o barramento/WDT se acessado sem aviso protetivo.
+> 2. **Destruição da Camada 1 IPL Crítica (`SA0..SA10` = `0x80000000..0x8003FFFF`):** Os primeiros `256 KiB` da NOR Flash Spansion `S29JL064H` (`8 MB`) armazenam o bootloader primário (`Loader ver0.61` / `SDDIAG` / `P7501`) e são **permanentemente bloqueados (`E05`)**. A **Camada 2 Upper NOR/BGO (`SA11..SA133`: `0x80040000..0x807EFFFF`)** também fica bloqueada por padrão (`E05`), mas pode ser explicitamente autorizada (`CONFIRM_UPPER_NOR`) mediante alerta dos riscos e backup completo de `8 MiB` por SHA-256 para recuperar aparelhos já bricados em `U99`.
 > 3. **Corrupção Estrutural MEIHFS:** O sistema de arquivos de disco proprietário da Panasonic não possui partições MBR padrão PC. Uma suposição incorreta sobre LBAs ou partições de áudio/vídeo corrompe o superbloco `"SH"`, o espelho em 28 MB ou a área transacional de journaling.
 
 Para resolver este paradoxo, o ecossistema Panadiga implementou o **Zero-Error RAG Engine**, um motor determinístico baseado em **6 camadas ativas de validação e veto mútuo**, onde a IA é matematicamente impedida de alucinar ou emitir recomendações que violem as leis físicas do laboratório.
@@ -107,9 +107,9 @@ flowchart TD
 ### Camada 6: Hardware Safety Shield (Escudo de Segurança Físico Pós-Geração)
 - **Objetivo:** Última linha de defesa intransponível antes da entrega ao usuário ou barramento serial.
 - **Mecanismo:** Inspeção exaustiva do texto contra os invariantes absolutos de bancada:
-  1. Tensão máxima $\le 3.3\text{ V}$.
-  2. Imutabilidade dos 8 MB de Bootloader/IPL (`0x80000000` a `0x807EFFFF`).
-  3. Área exclusiva de unbrick: Últimos 64 KB de NVRAM Spansion (`0x807F0000` a `0x807FFFFF`).
+  1. Tensão máxima $\le 3.3\text{ V}$ e bloqueio de acesso sem negação ao registrador letal `0xC000100C`.
+  2. Imutabilidade permanente da Camada 1 IPL (`SA0..SA10`, `256 KiB`: `0x80000000..0x8003FFFF` e *uncached* `0x84000000..0x8403FFFF`).
+  3. Bloqueio padrão (`E05`) na Camada 2 Upper NOR/BGO (`0x80040000..0x807EFFFF` / `0x84040000..0x847EFFFF`), exigindo opt-in explícito (`CONFIRM_UPPER_NOR` / `patch-upper-nor`) + aviso de risco (`~700 ms` erase e backup `8 MiB` SHA-256) para cura BGO de aparelhos bricados em `U99`, além da área NVRAM aberta (`0x807F0000..0x807FFFFF`).
 
 ---
 
@@ -162,7 +162,7 @@ Se estiver utilizando uma IDE integrada (como Cursor, Antigravity ou Claude Desk
 ## 6. Histórico de Testes e Confiabilidade
 
 O subsistema possui cobertura completa de testes unitários e de integração em ambos os ecossistemas:
-* **Rust Workspace (Gate 1):** Testes unitários em [`crates/panadiga-rag/src/safety.rs`](../../crates/panadiga-rag/src/safety.rs) e [`crates/panadiga-mcp/`](../../crates/panadiga-mcp/) validando resistência a prompt injection, tolerância a negações direcionadas, bloqueio estrito de wipe no IPL, interceptação de sobretensão e transporte JSON-RPC 2.0 limpo em `stdout`.
+* **Rust Workspace (Gate 1):** Testes unitários em [`crates/panadiga-rag/src/safety/mod.rs`](../../crates/panadiga-rag/src/safety/mod.rs) e [`crates/panadiga-mcp/`](../../crates/panadiga-mcp/) validando resistência a prompt injection, tolerância a negações direcionadas, política NOR em 2 camadas + registro letal `0xC000100C`, interceptação de sobretensão e transporte JSON-RPC 2.0 limpo em `stdout`.
 * **Python Pytest (Gate 9):** Testes da suíte de build e validação em [`scripts/tests/test_scripts_ops.py`](../../scripts/tests/test_scripts_ops.py) auditados com `mypy --strict`.
 
 ---
@@ -205,13 +205,16 @@ A suíte distingue rigorosamente os dois procedimentos de gravação em Flash:
 * **Escopo:** **100% Irrestrito.** Permite regravar toda a memória Flash de 8 MB (ou 2MB/4MB/16MB), incluindo Bootloader/IPL (`0x000000..0x7EFFFF`), fontes OSD e microsetores.
 * **Saída da Suíte:** O comando `panadiga nvram clean` gera um arquivo binário completo (ex: `DMR_EH55_CLEAN.bin`) com tamanho exato para gravação direta no software do programador.
 
-### Rota B: Inspeção e Recuperação Assistida In-Circuit via `P7501` (Sem Dessoldar)
-* **Ferramenta:** Raspberry Pi Pico (`RP2040` / `RP2350`) conectado ao conector **`P7501`** (`UART 115200 8N1` + controle discreto `SW_UART` / `XRESET`).
-* **Escopo:** Focado exclusivamente nos últimos 64 KB de calibração (`0x807F0000..0x807FFFFF`).
-* **Por que o Bootloader é protegido contra escrita in-circuit?**
-  1. **Risco de Hard Brick por Ruído:** Se uma escrita em circuito atingir o setor `SA0` (vetor de reset) durante falha de barramento ou queda de energia, o bootloader é corrompido e a CPU AM34 **nunca mais acorda** para permitir novas tentativas sem dessolda.
-  2. **Origem do Erro U99:** Em 99.9% dos casos, o Bootloader de fábrica da Panasonic está intacto. Apenas os parâmetros de calibração da NVRAM foram corrompidos.
-  3. **Airbag Configurável:** A proteção em `firmware/pico-p7501/gdb/gdb_rsp_memory.c` (`is_valid_write_range`) atua como airbag de segurança, bloqueando qualquer escrita fora da faixa autorizada (`E05`).
+### Rota B: Inspeção e Recuperação Cirúrgica In-Circuit Sem Dessolda (`P7501` + `SDDIAG`/`PANAMON1>`)
+* **Ferramenta:** Raspberry Pi Pico (`RP2040` / `RP2350`) conectado ao conector **`P7501`** (`UART 115200 8N1` + controle discreto `SW_UART` / `XRESET`) + cartão SDSC FAT16 com `DIGADIAG.FRM` (`262.144 B`) / `PANA__SD.FRM` (`sd48`).
+* **Escopo (Compliance em Duas Camadas):**
+  * **Camada 3 (`SA134..SA141`, `0x807F0000..0x807FFFFF`):** escrita cirúrgica de NVRAM/EEMUL autorizada por padrão.
+  * **Camada 2 (`SA11..SA133`, `0x80040000..0x807EFFFF` — FTL BGO `SA26..SA70`):** protegida por padrão (`E05`), mas **desbloqueável com aceite explícito (`CONFIRM_UPPER_NOR`)** mediante backup prévio de `8 MiB` verificado por SHA-256 (`PANADMP1`) e polling de apagamento `~700 ms` (`0xFF × 32`).
+  * **Camada 1 (`SA0..SA10`, `256 KiB`: `0x80000000..0x8003FFFF`):** **imutável permanente (`E05`)**.
+* **Por que vale arriscar in-circuit antes de dessoldar um gravador já bricado em `U99`:**
+  1. **Camada 1 IPL preservada:** Como `SA0..SA10` nunca pode ser apagada via Pico, o `Loader ver0.61` (`SDDIAG` e `P7501`) permanece íntegro mesmo em quedas de energia durante escrita BGO/NVRAM nas Camadas 2/3.
+  2. **Causa real de `U99` no `DMR-EH55` (`ver0.61`):** Além da `EEMUL`, falhas no FTL BGO (`SA26..SA70`, `BGO driver init failed[1].`) causam `U99` em unidade real — já curado ao vivo em 2 ciclos sem remover a `IC5001` TSOP-48.
+  3. **Airbag Configurável:** A política [`NorWritePolicy`](../../crates/panadiga-core/src/pico/rsp_codec/policy.rs) no Pico (`p7501_flash.c`) e no `HardwareSafetyValidator` garante bloqueio padrão `E05`, exigindo alerta de risco e confirmação explícita antes de operar na Camada 2.
 
 ---
 
