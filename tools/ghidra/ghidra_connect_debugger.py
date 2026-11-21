@@ -23,7 +23,7 @@ def print_connection_instructions():
     print("1. Bridge Status Check:")
     print("   Ensure the Panadiga GDB Bridge is active on 127.0.0.1:3333")
     print("   (Either click 'Start GDB Server' in Panadiga Desktop, or")
-    print("    execute: cargo run -- gdb-config)")
+    print("    execute: panadiga pico gdb-bridge --port COM10)")
     print("")
     print("2. In Ghidra Debugger Window:")
     print("   - Open 'Debugger' perspective (Window -> Debugger)")

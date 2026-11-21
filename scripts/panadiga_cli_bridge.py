@@ -148,3 +148,36 @@ def req_bool(obj: JsonDict, key: str) -> bool:
     if not isinstance(v, bool):
         raise PanadigaCliError(f"Missing bool field '{key}'")
     return v
+
+
+def _resolve_ghidra_mcp_command() -> str:
+    """Resolve `ghidra-mcp` executable via env override, PATH, or Windows venv fallback."""
+    override = os.environ.get("GHIDRA_MCP_BIN", "").strip()
+    if override and Path(override).is_file():
+        return override
+    on_path = shutil.which("ghidra-mcp")
+    if on_path is not None:
+        return on_path
+    win_default = Path(r"C:\ghidra\.venv\Scripts\ghidra-mcp.exe")
+    if os.name == "nt" and win_default.is_file():
+        return str(win_default)
+    raise PanadigaCliError(
+        "ghidra-mcp executable not found; set GHIDRA_MCP_BIN or add ghidra-mcp to PATH."
+    )
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    """Fast stdio launcher for MCP servers (`mcp` or `ghidra-mcp`), avoiding cold `cargo run` when prebuilt."""
+    args = list(sys.argv[1:] if argv is None else argv)
+    if args[:1] == ["mcp"]:
+        cmd = [*resolve_panadiga_cli_prefix(), *args]
+    elif args[:1] == ["ghidra-mcp"]:
+        cmd = [_resolve_ghidra_mcp_command(), *args[1:]]
+    else:
+        raise SystemExit("Usage: python -m scripts.panadiga_cli_bridge <mcp|ghidra-mcp> [args...]")
+    proc = subprocess.run(cmd, cwd=str(ROOT), env=build_env(), check=False)
+    return int(proc.returncode)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,15 +1,15 @@
 {
   "mcpServers": {
     "panadiga-tools": {
-      "command": "cargo",
-      "args": ["run", "--quiet", "-p", "panadiga-cli", "--bin", "panadiga", "--", "mcp"],
+      "command": "python",
+      "args": ["-m", "scripts.panadiga_cli_bridge", "mcp"],
       "env": {
         "PANADIGA_WORKSPACE_ROOT": "."
       }
     },
     "ghidra": {
-      "command": "C:\\ghidra\\.venv\\Scripts\\ghidra-mcp.exe",
-      "args": ["--ghidra-server", "http://127.0.0.1:8080/"]
+      "command": "python",
+      "args": ["-m", "scripts.panadiga_cli_bridge", "ghidra-mcp", "--ghidra-server", "http://127.0.0.1:8080/"]
     }
   }
 }

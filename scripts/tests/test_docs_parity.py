@@ -19,7 +19,7 @@ _PT_MATURITY_BADGES = (
     "[evidência estática ghidra / estágio 0]",
     "[em investigação / bloqueio físico ch1]",
 )
-EXPECTED_PAIRS = 38
+EXPECTED_PAIRS = 39
 EXPECTED_LOGS = 22
 
 _INDEX_ROW_RE = re.compile(
@@ -99,8 +99,8 @@ def test_root_and_index_counts_synchronized() -> None:
                 f"{EXPECTED_PAIRS} synchronized bilingual",
                 f"`{EXPECTED_PAIRS}` EN + `{EXPECTED_PAIRS}` PT-BR",
                 f"{EXPECTED_LOGS} deduplicated live",
-                "All 24 Native Tools",
-                "**24 native tools**",
+                "All 25 Native Tools",
+                "**25 native tools**",
             ),
         ),
         (
@@ -109,8 +109,8 @@ def test_root_and_index_counts_synchronized() -> None:
                 f"{EXPECTED_PAIRS} dossiês técnicos bilíngues",
                 f"`{EXPECTED_PAIRS}` PT-BR + `{EXPECTED_PAIRS}` EN-US",
                 f"{EXPECTED_LOGS} capturas e logs únicos",
-                "Expondo 24 Ferramentas Nativas",
-                "**24 ferramentas nativas**",
+                "Expondo 25 Ferramentas Nativas",
+                "**25 ferramentas nativas**",
             ),
         ),
         (
@@ -119,7 +119,7 @@ def test_root_and_index_counts_synchronized() -> None:
                 f"**{EXPECTED_PAIRS} dossiês técnicos bilíngues canônicos**",
                 f"Raiz + {EXPECTED_PAIRS} Pares Bilíngues",
                 f"**{EXPECTED_LOGS} capturas/logs reais de bancada**",
-                "**24 tools**",
+                "**25 tools**",
             ),
         ),
         (
@@ -134,7 +134,7 @@ def test_root_and_index_counts_synchronized() -> None:
             (
                 f"`{EXPECTED_PAIRS}` bilingual dossiers & `{EXPECTED_LOGS}` curated",
                 f"({EXPECTED_PAIRS} EN/PT-BR Dossier Pairs)",
-                "**24** JSON-RPC 2.0 stdio tools",
+                "**25** JSON-RPC 2.0 stdio tools",
             ),
         ),
     )

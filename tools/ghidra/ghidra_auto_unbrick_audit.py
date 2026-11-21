@@ -58,9 +58,13 @@ AUDIT_MMIO_CONSTANTS = (
     (0x89001850, "SDCD_BUS_WIDTH_CFG"),
     (0xD4002008, "SC0TXB_UART0_TX_BYTE"),
     (0xD400200C, "SC0STR_UART0_STATUS"),
-    (0x84200000, "FLASH_NOR_BGO_START"),
+    (0x84130000, "FLASH_NOR_EH55_BGO_START"),
+    (0x84200000, "FLASH_NOR_VER063_BGO_START"),
     (0x89000500, "DAVIS_IDE_PRI_ODD_CH0"),
     (0x89000D00, "DAVIS_IDE_SEC_HDD_CH1"),
+    (0x88000000, "AIOF_VMODESEL"),
+    (0x89800624, "AVDD_NPALCTL0"),
+    (0xDC010000, "IC7501_TBUS_CTRL"),
 )
 
 CRITICAL_XREF_TARGETS = (
@@ -70,6 +74,9 @@ CRITICAL_XREF_TARGETS = (
     (0x44027F93, "boot_get_sd_status_4bit"),
     (0x50401F3C, "prog061_nfrom_format"),
     (0x574DD1FC, "main_hdd_cmd_lba48_clamp"),
+    (0x574E499C, "main3060_hdd_cmd_lba48_clamp"),
+    (0x57498738, "main3410_deviceinfo_check"),
+    (0x574A01AA, "main3060_deviceinfo_check"),
 )
 
 def detect_stage_from_metadata(image_base, prog_name, strings_found, exec_size):
