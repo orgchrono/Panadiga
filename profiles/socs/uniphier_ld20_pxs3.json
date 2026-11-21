@@ -1,0 +1,19 @@
+{
+  "id": "uniphier_ld20_pxs3",
+  "part_number": "UniPhier LD11 / LD20 / PXs3 (4K UHD SoC)",
+  "core_ref": "arm64_cortex_a53_uniphier",
+  "bus_windows": [],
+  "mmio": {},
+  "lethal_mmio": [],
+  "p7501_uart_baud": 115200,
+  "p7501_nsw5v_hiz_only": true,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "docs",
+        "reference": "Mainline Linux kernel arch/arm64/boot/dts/socionext/uniphier-{ld11,ld20,pxs3}.dtsi"
+      }
+    ]
+  }
+}

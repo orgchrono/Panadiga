@@ -1,0 +1,62 @@
+{
+  "model_id": "DMR-EZ27",
+  "family_label": "DMR-EZ27",
+  "series": "Série EZ (NA ATSC DVD)",
+  "region_suffix": "P",
+  "tv_standard": "NTSC/ATSC",
+  "hw_code": null,
+  "board_ref": "vep79142_ez27",
+  "train_ref": null,
+  "nor_layout_ref": null,
+  "exact_aliases": [
+    "DMR-EZ27P"
+  ],
+  "fixture_ref": null,
+  "claims": {
+    "board": {
+      "tier": "service_manual_only",
+      "sources": [
+        {
+          "kind": "service_manual",
+          "reference": "CHM0704014CE (VEP79142)"
+        }
+      ]
+    },
+    "flash_chip": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "nor_layout": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "train": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "eeprom": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "id": "vep79195",
+  "pcb_code": "VEP79195A/B/C (Main) / RFKB71134A/AT (D-IF)",
+  "service_module_code": "RFKNEX98VEB / RFKNEX98VEG / RFKNEX98VEC",
+  "soc_ref": null,
+  "flash_ref": null,
+  "eeprom_refs": [
+    "panasonic_rfkfm4016kt_dif"
+  ],
+  "p7501_header_present": true,
+  "has_hdd_interface": true,
+  "has_sd_slot": true,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "service_manual",
+        "reference": "manuals_and_schematics/dmr-ex98v/service/panasonic_dmr_ex98v_service_manual_vol1.pdf",
+        "notes": "DSD0806033CE: VEP79195A/B/C is Analog/VHS Main PCB; RFKNEX98V* is black-boxed Digital PCB; RFKB71134A/AT D-IF hosts IC9705 (RFKFM4016K/KT) and 6-pin UART P9705 (K1KA06AA0188)."
+      }
+    ],
+    "notes": "DSD0806033CE: VEP79195A/B/C is Analog/VHS Main PCB; RFKNEX98V* is black-boxed Digital PCB; RFKB71134A/AT D-IF hosts IC9705 (RFKFM4016K/KT) and 6-pin UART P9705 (K1KA06AA0188)."
+  }
+}

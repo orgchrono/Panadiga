@@ -1,0 +1,22 @@
+{
+  "id": "at24c64_optical_cal",
+  "vendor": "Generic / Atmel-class",
+  "part_number": "24C64",
+  "service_replacement_part": null,
+  "bus": "i2c",
+  "function": "optical_calibration",
+  "i2c_addr_7bit": "0x50",
+  "total_bytes": "0x2000",
+  "page_size": 32,
+  "voltage_mv": 3300,
+  "evidence": {
+    "tier": "physical_dump_verified",
+    "sources": [
+      {
+        "kind": "physical_dump",
+        "reference": "firmware_and_images/dmr-es35v/README.md",
+        "sha256": "17bb5383c287dc90a493aa5c67f729dbb54b587224b267940e1e7133aa2ce32c"
+      }
+    ]
+  }
+}

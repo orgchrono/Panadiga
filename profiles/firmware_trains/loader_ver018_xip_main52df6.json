@@ -1,0 +1,35 @@
+{
+  "id": "loader_ver018_xip_main52df6",
+  "loader_version": "0.18",
+  "loader_date": "06/03/13",
+  "loader_profile_key": "ver018",
+  "loader_fingerprint": {
+    "offset_start": "0x0000_0000",
+    "offset_end": "0x0004_0000",
+    "ascii_marker": "Loader ver0.18"
+  },
+  "frm": null,
+  "prog_load_va": "0x5040_0000",
+  "main_load_va": "0x52DF_6000",
+  "drv_load_va": "0x9020_2000",
+  "symbols": {},
+  "sd_boot_filenames": [
+    "DIGADIAG.FRM",
+    "PANA__SD.FRM"
+  ],
+  "digadiag_raw_bytes": 262144,
+  "media_refs": [
+    "dvd_iso9660_level1",
+    "sd_fat16b_0x06"
+  ],
+  "evidence": {
+    "tier": "physical_dump_verified",
+    "sources": [
+      {
+        "kind": "physical_dump",
+        "reference": "firmware_and_images/dmr-es35v/README.md",
+        "sha256": "0969f2580ad30b98027271a8e3947f5a6ae1c02dec06462b87ce1057a7a1bcf9"
+      }
+    ]
+  }
+}

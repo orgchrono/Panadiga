@@ -1,0 +1,36 @@
+{
+  "id": "eh50_ecb64_frm",
+  "loader_version": "0.19",
+  "loader_date": "05/07/19",
+  "loader_profile_key": "eh50_frm",
+  "loader_fingerprint": null,
+  "frm": {
+    "toc_entry_bytes": 48,
+    "toc_size": "0x1800",
+    "cipher": "feistel64_ecb",
+    "key_id": "le2011_08e0",
+    "official_frm_sha256": "4ed6a64bd6ff1e0f51e3655ab17b1c594e91f3e7bf8d9219a82a1636068b54b7"
+  },
+  "prog_load_va": null,
+  "main_load_va": "0x5700_0400",
+  "drv_load_va": "0x9020_2000",
+  "symbols": {},
+  "sd_boot_filenames": [],
+  "digadiag_raw_bytes": 196608,
+  "media_refs": [
+    "dvd_iso9660_level1",
+    "hdd_meihdfs_v1"
+  ],
+  "evidence": {
+    "tier": "official_frm_verified",
+    "sources": [
+      {
+        "kind": "official_frm",
+        "reference": "firmware_and_images/dmr-eh50/PANA_DVD.FRM",
+        "sha256": "4ed6a64bd6ff1e0f51e3655ab17b1c594e91f3e7bf8d9219a82a1636068b54b7",
+        "notes": "Verified key le2011_08e0 (08E03D859AF9F3EE), PROG019 (05/07/19, 196608 B), DRV J147 (0x1800 alt offset quirk), MAIN3360NA LZSS @ 0x57000400."
+      }
+    ],
+    "notes": "Verified key le2011_08e0 (08E03D859AF9F3EE), PROG019 (05/07/19, 196608 B), DRV J147 (0x1800 alt offset quirk), MAIN3360NA LZSS @ 0x57000400."
+  }
+}

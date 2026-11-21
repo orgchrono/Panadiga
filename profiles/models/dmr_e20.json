@@ -1,0 +1,63 @@
+{
+  "model_id": "DMR-E20",
+  "family_label": "DMR-E20",
+  "series": "Série Exx (Gen 1 DVD-RAM)",
+  "region_suffix": "P/EB/EG",
+  "tv_standard": "NTSC/PAL",
+  "hw_code": null,
+  "board_ref": null,
+  "train_ref": null,
+  "nor_layout_ref": null,
+  "exact_aliases": [
+    "DMR-E20P",
+    "DMR-E20EB"
+  ],
+  "fixture_ref": null,
+  "claims": {
+    "board": {
+      "tier": "service_manual_only",
+      "sources": [
+        {
+          "kind": "service_manual",
+          "reference": "ODSD010953C2 / ODSD011161C3"
+        }
+      ]
+    },
+    "flash_chip": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "nor_layout": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "train": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "eeprom": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    }
+  }
+}

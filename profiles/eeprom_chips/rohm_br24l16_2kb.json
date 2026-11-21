@@ -1,0 +1,24 @@
+{
+  "id": "rohm_br24l16_2kb",
+  "vendor": "ROHM",
+  "part_number": "BR24L16F-W",
+  "service_replacement_part": "RFKFM6016KT",
+  "bus": "i2c",
+  "function": "timer_main_config",
+  "i2c_addr_7bit": "0x50",
+  "total_bytes": "0x0800",
+  "page_size": 16,
+  "voltage_mv": 3300,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "datasheet",
+        "reference": "manuals_and_schematics/datasheets/rohm_br24l16_datasheet.pdf",
+        "sha256": "5811033bbd71708dfe2067878945da59ba8c19fa9ba9d1b0ba6fb72d6b3a149b",
+        "notes": "ROHM 09001EDT04 Rev. D (1.7-5.5V, 2KiB, 16B page); WP=VCC locks entire array."
+      }
+    ],
+    "notes": "ROHM 09001EDT04 Rev. D (1.7-5.5V, 2KiB, 16B page); WP=VCC locks entire array."
+  }
+}

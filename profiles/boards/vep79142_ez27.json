@@ -1,0 +1,22 @@
+{
+  "id": "vep79142_ez27",
+  "pcb_code": "VEP79142 (Digital Main/HDMI)",
+  "service_module_code": "RJB3287A",
+  "soc_ref": null,
+  "flash_ref": null,
+  "eeprom_refs": [],
+  "p7501_header_present": false,
+  "has_hdd_interface": false,
+  "has_sd_slot": true,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "service_manual",
+        "reference": "CHM0704014CE (DMR-EZ27P) / CHM0702006CE (DMR-EZ37VP)",
+        "notes": "2007 NA ATSC Digital Main/HDMI board."
+      }
+    ],
+    "notes": "2007 NA ATSC Digital Main/HDMI board."
+  }
+}

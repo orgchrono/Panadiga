@@ -1,0 +1,19 @@
+{
+  "id": "mn2ws0230",
+  "part_number": "MN2WS0230 (UniPhier PH1-Pro4)",
+  "core_ref": "arm_cortex_a9_uniphier",
+  "bus_windows": [],
+  "mmio": {},
+  "lethal_mmio": [],
+  "p7501_uart_baud": 115200,
+  "p7501_nsw5v_hiz_only": true,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "docs",
+        "reference": "Mainline Linux kernel uniphier-ph1-pro4.dtsi (ARMv7 Cortex-A9)"
+      }
+    ]
+  }
+}

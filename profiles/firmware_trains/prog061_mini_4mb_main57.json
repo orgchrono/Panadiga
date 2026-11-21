@@ -1,0 +1,40 @@
+{
+  "id": "prog061_mini_4mb_main57",
+  "loader_version": "0.61",
+  "loader_date": "07/10/29",
+  "loader_profile_key": "ver063",
+  "loader_fingerprint": null,
+  "frm": {
+    "toc_entry_bytes": 64,
+    "toc_size": "0x2000",
+    "cipher": "feistel64_ecb",
+    "key_id": "old_df72",
+    "official_frm_sha256": "11f72af33eef53c16d2841bc4a8011fd6b2e054dabbff25a3c4936dc05b238f8"
+  },
+  "prog_load_va": "0x9040_0000",
+  "main_load_va": "0x5700_0000",
+  "drv_load_va": null,
+  "symbols": {},
+  "sd_boot_filenames": [
+    "DIGADIAG.FRM",
+    "PANA__SD.FRM"
+  ],
+  "digadiag_raw_bytes": 262144,
+  "media_refs": [
+    "dvd_iso9660_level1",
+    "sd_fat16b_0x06",
+    "hdd_meihdfs_v1"
+  ],
+  "evidence": {
+    "tier": "official_frm_verified",
+    "sources": [
+      {
+        "kind": "official_frm",
+        "reference": "firmware_and_images/dmr-ex_ez_series/README.md",
+        "sha256": "11f72af33eef53c16d2841bc4a8011fd6b2e054dabbff25a3c4936dc05b238f8",
+        "notes": "PROG061 MINI (4MB/TOP BOOT) + MAIN3410MS/3500MM (EX78EN, EX88EN)."
+      }
+    ],
+    "notes": "PROG061 MINI (4MB/TOP BOOT) + MAIN3410MS/3500MM (EX78EN, EX88EN)."
+  }
+}

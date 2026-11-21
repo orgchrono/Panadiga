@@ -1,0 +1,65 @@
+{
+  "id": "spansion_s29jl064h_8mb",
+  "vendor": "Spansion",
+  "part_number": "S29JL064H70TFI00",
+  "package": "TSOP-48",
+  "voltage_min_mv": 2700,
+  "voltage_max_mv": 3600,
+  "nominal_voltage_mv": 3300,
+  "writable": true,
+  "total_bytes": "0x0080_0000",
+  "jedec": {
+    "mfg": "0x0001",
+    "device_cycles": [
+      "0x227E",
+      "0x2202",
+      "0x2201"
+    ]
+  },
+  "sector_banks": [
+    {
+      "name": "bottom_boot",
+      "count": 8,
+      "sector_size": "0x2000"
+    },
+    {
+      "name": "main_uniform",
+      "count": 126,
+      "sector_size": "0x10000"
+    },
+    {
+      "name": "top_nvram",
+      "count": 8,
+      "sector_size": "0x2000"
+    }
+  ],
+  "rw_banks": [
+    {
+      "start_sa": 0,
+      "end_sa": 22
+    },
+    {
+      "start_sa": 23,
+      "end_sa": 70
+    },
+    {
+      "start_sa": 71,
+      "end_sa": 118
+    },
+    {
+      "start_sa": 119,
+      "end_sa": 141
+    }
+  ],
+  "hw_protect": null,
+  "evidence": {
+    "tier": "bench_verified",
+    "sources": [
+      {
+        "kind": "bench_log",
+        "reference": "docs/debug_logs/apply_bgo_repair_com10_20261119.log",
+        "sha256": "c1faee798f60545853eefdba0d15f23678b471466dc2bc84f522bc972f15a02d"
+      }
+    ]
+  }
+}

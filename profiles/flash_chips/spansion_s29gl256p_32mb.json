@@ -1,0 +1,41 @@
+{
+  "id": "spansion_s29gl256p_32mb",
+  "vendor": "Spansion",
+  "part_number": "S29GL256P11FFI01",
+  "package": "TSOP-56 / FBGA-64",
+  "voltage_min_mv": 2700,
+  "voltage_max_mv": 3600,
+  "nominal_voltage_mv": 3300,
+  "writable": true,
+  "total_bytes": "0x0200_0000",
+  "jedec": {
+    "mfg": "0x0001",
+    "device_cycles": [
+      "0x227E",
+      "0x2222",
+      "0x2201"
+    ]
+  },
+  "sector_banks": [
+    {
+      "name": "uniform_128k",
+      "count": 256,
+      "sector_size": "0x20000"
+    }
+  ],
+  "rw_banks": [],
+  "hw_protect": {
+    "pin": "WP#",
+    "protects_region": "outermost_sector_SA255",
+    "affects_top_sector": true
+  },
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "datasheet",
+        "reference": "Spansion / Infineon Document No. 002-00886 Rev. B/G (S29GL256P 256Mbit MirrorBit)"
+      }
+    ]
+  }
+}

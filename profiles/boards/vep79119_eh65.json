@@ -1,0 +1,24 @@
+{
+  "id": "vep79119_eh65",
+  "pcb_code": "VEP79119L/M (Main) / VEP73137A (HDMI)",
+  "service_module_code": "RFKB79119MT / RFKB79119NT",
+  "soc_ref": null,
+  "flash_ref": null,
+  "eeprom_refs": [
+    "panasonic_c3ebfc000053_timer"
+  ],
+  "p7501_header_present": false,
+  "has_hdd_interface": true,
+  "has_sd_slot": true,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "service_manual",
+        "reference": "MAD0605017CE / CHM0605031CE (DMR-EH65)",
+        "notes": "Digital PCB omitted from Vol. 1; IC7404=RFKFM6016KT."
+      }
+    ],
+    "notes": "Digital PCB omitted from Vol. 1; IC7404=RFKFM6016KT."
+  }
+}

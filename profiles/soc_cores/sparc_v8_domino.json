@@ -1,0 +1,17 @@
+{
+  "id": "sparc_v8_domino",
+  "isa": "SPARC V8 (LSI DoMiNo)",
+  "endianness": "big",
+  "logic_voltage_mv": 3300,
+  "evidence": {
+    "tier": "physical_dump_verified",
+    "sources": [
+      {
+        "kind": "physical_dump",
+        "reference": "firmware_and_images/dmr-ez485v/panasonic_dmr_ez485v_flash_dump_4mb.bin",
+        "notes": "ZEBRA 64 VxWorks 1.3 BAL + tbr/psr/pc/npc/sp trap frame proves SPARC V8 LSI DoMiNo (not MN103S)."
+      }
+    ],
+    "notes": "ZEBRA 64 VxWorks 1.3 BAL + tbr/psr/pc/npc/sp trap frame proves SPARC V8 LSI DoMiNo (not MN103S)."
+  }
+}

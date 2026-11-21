@@ -1,0 +1,64 @@
+{
+  "model_id": "DMR-EH59",
+  "family_label": "DMR-EH59",
+  "series": "Série EH (2009 FRM)",
+  "region_suffix": "EG/GC/GN",
+  "tv_standard": "PAL",
+  "hw_code": null,
+  "board_ref": "rfkb79183aa_eh59",
+  "train_ref": "prog071_toc64_main50622",
+  "nor_layout_ref": null,
+  "exact_aliases": [
+    "DMR-EH59GC",
+    "DMR-EH595EG"
+  ],
+  "fixture_ref": null,
+  "claims": {
+    "board": {
+      "tier": "service_manual_only",
+      "sources": [
+        {
+          "kind": "service_manual",
+          "reference": "CHM0903007CE (Main RFKB79183AA; P7501 repurposed for +5.8V_AV; USB only, no SD slot)"
+        }
+      ]
+    },
+    "flash_chip": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "nor_layout": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "train": {
+      "tier": "official_frm_verified",
+      "sources": [
+        {
+          "kind": "official_frm",
+          "reference": "firmware_and_images/dmr-eh49_59_69/README.md",
+          "sha256": "7d7f6ad21f9c0a5b0d2e1c42e39d46389f05a1a87a6a4cb964aaf3343d8df3f8"
+        }
+      ]
+    },
+    "eeprom": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "id": "macronix_mx29lv320_4mb_top",
+  "vendor": "Macronix",
+  "part_number": "MX29LV320T",
+  "package": "TSOP-48",
+  "voltage_min_mv": 2700,
+  "voltage_max_mv": 3600,
+  "nominal_voltage_mv": 3300,
+  "writable": true,
+  "total_bytes": "0x0040_0000",
+  "jedec": {
+    "mfg": "0x00C2",
+    "device_cycles": [
+      "0x22A7"
+    ]
+  },
+  "sector_banks": [
+    {
+      "name": "main_uniform",
+      "count": 63,
+      "sector_size": "0x10000"
+    },
+    {
+      "name": "top_boot",
+      "count": 8,
+      "sector_size": "0x2000"
+    }
+  ],
+  "rw_banks": [],
+  "hw_protect": null,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "datasheet",
+        "reference": "Macronix MX29LV320T datasheet (71 sectors Top Boot, 0xC2/0x22A7)"
+      }
+    ]
+  }
+}

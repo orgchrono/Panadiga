@@ -1,0 +1,22 @@
+{
+  "id": "vep06f77bt",
+  "pcb_code": "VEP06F77BT (Main)",
+  "service_module_code": null,
+  "soc_ref": null,
+  "flash_ref": null,
+  "eeprom_refs": [],
+  "p7501_header_present": false,
+  "has_hdd_interface": false,
+  "has_sd_slot": false,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "service_manual",
+        "reference": "DSD0403007C1 / DSD0404006C2 (DMR-E75V)",
+        "notes": "DVD+VHS Main PCB; Digital PCB sealed module."
+      }
+    ],
+    "notes": "DVD+VHS Main PCB; Digital PCB sealed module."
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "id": "bst700_board",
+  "pcb_code": "DMR-BST700 Digital PCB Module",
+  "service_module_code": null,
+  "soc_ref": null,
+  "flash_ref": null,
+  "eeprom_refs": [
+    "panasonic_c3ebfc000053_timer"
+  ],
+  "p7501_header_present": false,
+  "has_hdd_interface": true,
+  "has_sd_slot": true,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "service_manual",
+        "reference": "DSD1107027CE Vol. 1 (DMR-BST700/BST701/BST800)",
+        "notes": "IC EEPROM C3EBFC000053 verified in DSD1107027CE."
+      }
+    ],
+    "notes": "IC EEPROM C3EBFC000053 verified in DSD1107027CE."
+  }
+}

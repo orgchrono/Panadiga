@@ -1,0 +1,41 @@
+{
+  "id": "spansion_s29gl064n_8mb_uniform",
+  "vendor": "Spansion",
+  "part_number": "S29GL064N90TFI01 (Uniform 64KiB)",
+  "package": "TSOP-48",
+  "voltage_min_mv": 2700,
+  "voltage_max_mv": 3600,
+  "nominal_voltage_mv": 3300,
+  "writable": true,
+  "total_bytes": "0x0080_0000",
+  "jedec": {
+    "mfg": "0x0001",
+    "device_cycles": [
+      "0x227E",
+      "0x220C",
+      "0x2201"
+    ]
+  },
+  "sector_banks": [
+    {
+      "name": "uniform_64k",
+      "count": 128,
+      "sector_size": "0x10000"
+    }
+  ],
+  "rw_banks": [],
+  "hw_protect": {
+    "pin": "WP#/ACC",
+    "protects_region": "highest_sector_SA127",
+    "affects_top_sector": true
+  },
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "datasheet",
+        "reference": "Spansion / Infineon Document No. 001-98525 Rev. B (Model 01/02 Uniform 128x64KiB)"
+      }
+    ]
+  }
+}

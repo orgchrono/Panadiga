@@ -1,0 +1,65 @@
+{
+  "model_id": "DMR-EH50",
+  "family_label": "DMR-EH50",
+  "series": "Série EH (Gen 3 HDD+DVD)",
+  "region_suffix": "P/EB/EG/EP",
+  "tv_standard": "NTSC/PAL",
+  "hw_code": "M7820",
+  "board_ref": "vep79106a",
+  "train_ref": "eh50_ecb64_frm",
+  "nor_layout_ref": null,
+  "exact_aliases": [
+    "DMR-EH50P",
+    "DMR-EH50EB",
+    "DMR-EH50EG"
+  ],
+  "fixture_ref": null,
+  "claims": {
+    "board": {
+      "tier": "service_manual_only",
+      "sources": [
+        {
+          "kind": "service_manual",
+          "reference": "DSD0503038C1 / DSD0503040C2 (Digital VEP79106A, Main VEP79111D, IC7404=RFKFM6016KT)"
+        }
+      ]
+    },
+    "flash_chip": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "nor_layout": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "train": {
+      "tier": "official_frm_verified",
+      "sources": [
+        {
+          "kind": "official_frm",
+          "reference": "firmware_and_images/dmr-eh50/PANA_DVD.FRM",
+          "sha256": "4ed6a64bd6ff1e0f51e3655ab17b1c594e91f3e7bf8d9219a82a1636068b54b7"
+        }
+      ]
+    },
+    "eeprom": {
+      "tier": "service_manual_only",
+      "sources": [
+        {
+          "kind": "service_manual",
+          "reference": "DSD0503038C1 IC7404=RFKFM6016K/KT"
+        }
+      ]
+    }
+  }
+}

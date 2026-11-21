@@ -1,0 +1,268 @@
+{
+  "$defs": {
+    "ClaimEvidence": {
+      "additionalProperties": false,
+      "description": "Evidence bundle bound to one architectural entity or model claim axis.",
+      "properties": {
+        "notes": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sources": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/EvidenceSource"
+          },
+          "type": "array"
+        },
+        "tier": {
+          "$ref": "#/$defs/EvidenceTier"
+        }
+      },
+      "required": [
+        "tier"
+      ],
+      "type": "object"
+    },
+    "EvidenceSource": {
+      "additionalProperties": false,
+      "description": "Primary source reference justifying a claim in a hardware profile.",
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "notes": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reference": {
+          "type": "string"
+        },
+        "sha256": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "reference"
+      ],
+      "type": "object"
+    },
+    "EvidenceTier": {
+      "description": "Empirical confidence tier attached to each individual hardware/firmware claim.",
+      "oneOf": [
+        {
+          "const": "community_unverified",
+          "description": "T0: Forum report, size heuristic, or unverified note (C0 read-only unless offline LabOverride).",
+          "type": "string"
+        },
+        {
+          "const": "service_manual_only",
+          "description": "T1: Verified against official Matsushita/Panasonic service manuals or schematics (no binary dump).",
+          "type": "string"
+        },
+        {
+          "const": "official_frm_verified",
+          "description": "T2: Verified from an official `.FRM` / CDN firmware package (proves train/TOC/load VA, not NOR layout).",
+          "type": "string"
+        },
+        {
+          "const": "physical_dump_verified",
+          "description": "T3: Verified from a full physical chip dump with SHA-256 and static layout analysis.",
+          "type": "string"
+        },
+        {
+          "const": "bench_verified",
+          "description": "T4: Operated and verified live on bench hardware with captured telemetry and before/after hashes.",
+          "type": "string"
+        }
+      ]
+    },
+    "FlashHwProtect": {
+      "additionalProperties": false,
+      "description": "Hardware write-protect pin constraint (e.g. `WP#=VIL` protecting `SA127` on `S29GL128N`).",
+      "properties": {
+        "affects_top_sector": {
+          "type": "boolean"
+        },
+        "pin": {
+          "type": "string"
+        },
+        "protects_region": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "pin",
+        "protects_region",
+        "affects_top_sector"
+      ],
+      "type": "object"
+    },
+    "FlashJedecId": {
+      "additionalProperties": false,
+      "description": "JEDEC manufacturer + device ID sequence read via Autoselect command (`0x90`).",
+      "properties": {
+        "device_cycles": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "mfg": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "mfg",
+        "device_cycles"
+      ],
+      "type": "object"
+    },
+    "FlashRwBank": {
+      "additionalProperties": false,
+      "description": "Simultaneous read-while-write (RWW) bank span in physical `SA` indices.",
+      "properties": {
+        "end_sa": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "start_sa": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "start_sa",
+        "end_sa"
+      ],
+      "type": "object"
+    },
+    "FlashSectorBank": {
+      "additionalProperties": false,
+      "description": "Contiguous bank of uniform sectors ordered from lowest flash offset (`0x000000`) upwards.",
+      "properties": {
+        "count": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "sector_size": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "count",
+        "sector_size"
+      ],
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Physical NOR Flash or OTP PROM part specification.",
+  "properties": {
+    "evidence": {
+      "$ref": "#/$defs/ClaimEvidence"
+    },
+    "hw_protect": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/FlashHwProtect"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "id": {
+      "type": "string"
+    },
+    "jedec": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/FlashJedecId"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "nominal_voltage_mv": {
+      "format": "uint32",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "package": {
+      "type": "string"
+    },
+    "part_number": {
+      "type": "string"
+    },
+    "rw_banks": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/FlashRwBank"
+      },
+      "type": "array"
+    },
+    "sector_banks": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/FlashSectorBank"
+      },
+      "type": "array"
+    },
+    "total_bytes": {
+      "type": "string"
+    },
+    "vendor": {
+      "type": "string"
+    },
+    "voltage_max_mv": {
+      "format": "uint32",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "voltage_min_mv": {
+      "format": "uint32",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "writable": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "id",
+    "vendor",
+    "part_number",
+    "package",
+    "voltage_min_mv",
+    "voltage_max_mv",
+    "nominal_voltage_mv",
+    "writable",
+    "total_bytes",
+    "evidence"
+  ],
+  "title": "FlashChipProfile",
+  "type": "object"
+}

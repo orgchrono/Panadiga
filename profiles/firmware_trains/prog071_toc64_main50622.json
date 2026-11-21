@@ -1,0 +1,40 @@
+{
+  "id": "prog071_toc64_main50622",
+  "loader_version": "0.71",
+  "loader_date": "09/06/29",
+  "loader_profile_key": "prog071",
+  "loader_fingerprint": null,
+  "frm": {
+    "toc_entry_bytes": 64,
+    "toc_size": "0x2000",
+    "cipher": "feistel64_ecb",
+    "key_id": "old_df72",
+    "official_frm_sha256": "7d7f6ad21f9c0a5b0d2e1c42e39d46389f05a1a87a6a4cb964aaf3343d8df3f8"
+  },
+  "prog_load_va": "0x9040_0000",
+  "main_load_va": "0x5062_2000",
+  "drv_load_va": "0x9020_2000",
+  "symbols": {},
+  "sd_boot_filenames": [
+    "DIGADIAG.FRM",
+    "PANA__SD.FRM"
+  ],
+  "digadiag_raw_bytes": 262144,
+  "media_refs": [
+    "dvd_iso9660_level1",
+    "sd_fat16b_0x06",
+    "hdd_meihdfs_v1"
+  ],
+  "evidence": {
+    "tier": "official_frm_verified",
+    "sources": [
+      {
+        "kind": "official_frm",
+        "reference": "firmware_and_images/dmr-eh49_59_69/README.md",
+        "sha256": "7d7f6ad21f9c0a5b0d2e1c42e39d46389f05a1a87a6a4cb964aaf3343d8df3f8",
+        "notes": "Verified across EH49/EH59/EH69, EX72SEG, EX769EF, EX795EP, EX79_89_769EB, EX79EF, EX89EF."
+      }
+    ],
+    "notes": "Verified across EH49/EH59/EH69, EX72SEG, EX769EF, EX795EP, EX79_89_769EB, EX79EF, EX89EF."
+  }
+}

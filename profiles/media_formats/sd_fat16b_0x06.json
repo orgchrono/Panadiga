@@ -1,0 +1,24 @@
+{
+  "id": "sd_fat16b_0x06",
+  "media_kind": "sd_card",
+  "filesystem": "FAT16B",
+  "partition_type": "0x06",
+  "sector_size": 512,
+  "start_lba": 63,
+  "default_volume_mb": 32,
+  "root_filenames": [
+    "DIGADIAG.FRM",
+    "PANA__SD.FRM"
+  ],
+  "magic_hex": "55AA",
+  "write_speed_policy": "raw_block_verified",
+  "evidence": {
+    "tier": "bench_verified",
+    "sources": [
+      {
+        "kind": "bench_log",
+        "reference": "docs/debug_logs/sddiag_ver061_live_20261119.log"
+      }
+    ]
+  }
+}

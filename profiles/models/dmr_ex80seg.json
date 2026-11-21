@@ -1,0 +1,61 @@
+{
+  "model_id": "DMR-EX80SEG",
+  "family_label": "DMR-EX80",
+  "series": "Série EX (HDD+DVB-S)",
+  "region_suffix": "SEG",
+  "tv_standard": "PAL",
+  "hw_code": "M6932EG",
+  "board_ref": null,
+  "train_ref": "toc48_main57_ex80",
+  "nor_layout_ref": null,
+  "exact_aliases": [],
+  "fixture_ref": null,
+  "claims": {
+    "board": {
+      "tier": "service_manual_only",
+      "sources": [
+        {
+          "kind": "service_manual",
+          "reference": "Elektrotanya panasonic_dmr-ex80seg.pdf (93 pp. archived index)"
+        }
+      ]
+    },
+    "flash_chip": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "nor_layout": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "train": {
+      "tier": "official_frm_verified",
+      "sources": [
+        {
+          "kind": "official_frm",
+          "reference": "firmware_and_images/dmr-ex_ez_series/README.md",
+          "sha256": "bb63c998a4f9200d5637c65ca8b1c4e5a19a473ded982ce813d242422734066b"
+        }
+      ]
+    },
+    "eeprom": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    }
+  }
+}

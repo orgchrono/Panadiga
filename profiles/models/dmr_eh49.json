@@ -1,0 +1,64 @@
+{
+  "model_id": "DMR-EH49",
+  "family_label": "DMR-EH49",
+  "series": "Série EH (2009 FRM)",
+  "region_suffix": "EC/EG",
+  "tv_standard": "PAL",
+  "hw_code": null,
+  "board_ref": "rfkb79183_eh69",
+  "train_ref": "prog071_toc64_main50622",
+  "nor_layout_ref": null,
+  "exact_aliases": [
+    "DMR-EH49EC",
+    "DMR-EH495EG"
+  ],
+  "fixture_ref": null,
+  "claims": {
+    "board": {
+      "tier": "service_manual_only",
+      "sources": [
+        {
+          "kind": "service_manual",
+          "reference": "DMR-EH49EC / EH495EGA SM (ManualsLib #1377515: SATA P.C.B., USB only, no SD slot)"
+        }
+      ]
+    },
+    "flash_chip": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "nor_layout": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "train": {
+      "tier": "official_frm_verified",
+      "sources": [
+        {
+          "kind": "official_frm",
+          "reference": "firmware_and_images/dmr-eh49_59_69/README.md",
+          "sha256": "6d7441246fcd1d3032297cf70df90fc64fdc93035e2f7b9dc55eae1d6903a7d8"
+        }
+      ]
+    },
+    "eeprom": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    }
+  }
+}

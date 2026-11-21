@@ -1,0 +1,64 @@
+{
+  "model_id": "DMR-EX79",
+  "family_label": "DMR-EX79",
+  "series": "Série EX (HDD+DVB-T)",
+  "region_suffix": "EF/EB/EC/EX",
+  "tv_standard": "PAL",
+  "hw_code": null,
+  "board_ref": null,
+  "train_ref": "prog071_toc64_main50622",
+  "nor_layout_ref": null,
+  "exact_aliases": [
+    "DMR-EX79EF",
+    "DMR-EX79EB"
+  ],
+  "fixture_ref": null,
+  "claims": {
+    "board": {
+      "tier": "service_manual_only",
+      "sources": [
+        {
+          "kind": "service_manual",
+          "reference": "DSD0903021CE"
+        }
+      ]
+    },
+    "flash_chip": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "nor_layout": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "train": {
+      "tier": "official_frm_verified",
+      "sources": [
+        {
+          "kind": "official_frm",
+          "reference": "firmware_and_images/dmr-ex_ez_series/README.md",
+          "sha256": "7ca219d3a40779674a4402bcf145d51abbc71ab17a1353af1bc334cfba758ca8"
+        }
+      ]
+    },
+    "eeprom": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "model_id": "DMR-EX89",
+  "family_label": "DMR-EX89",
+  "series": "Série EX (HDD+DVB-T)",
+  "region_suffix": "EF/EB",
+  "tv_standard": "PAL",
+  "hw_code": null,
+  "board_ref": null,
+  "train_ref": "prog071_toc64_main50622",
+  "nor_layout_ref": null,
+  "exact_aliases": [
+    "DMR-EX89EF",
+    "DMR-EX89EB"
+  ],
+  "fixture_ref": null,
+  "claims": {
+    "board": {
+      "tier": "service_manual_only",
+      "sources": [
+        {
+          "kind": "service_manual",
+          "reference": "DSD0906027CE (EX89/EH69)"
+        }
+      ]
+    },
+    "flash_chip": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "nor_layout": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "train": {
+      "tier": "official_frm_verified",
+      "sources": [
+        {
+          "kind": "official_frm",
+          "reference": "firmware_and_images/dmr-ex_ez_series/README.md",
+          "sha256": "e7a3368cd94c16017d985901bc34b4ac7e2bad8d64594372de7bb460fe2763a3"
+        }
+      ]
+    },
+    "eeprom": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    }
+  }
+}

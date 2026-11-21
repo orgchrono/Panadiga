@@ -1,0 +1,68 @@
+{
+  "id": "eh55_ver061_on_s29jl064h",
+  "flash_ref": "spansion_s29jl064h_8mb",
+  "train_ref": "loader_ver061_toc48_main57",
+  "regions": [
+    {
+      "kind": "ipl",
+      "start_offset": "0x0000_0000",
+      "end_offset": "0x0003_FFFF",
+      "policy": "read_only_permanent",
+      "tag": "Loader ver0.61 (SA0..SA10)",
+      "signature": null
+    },
+    {
+      "kind": "erased",
+      "start_offset": "0x0004_0000",
+      "end_offset": "0x0007_FFFF",
+      "policy": "gated_upper_nor",
+      "tag": "Reserved/Blank",
+      "signature": null
+    },
+    {
+      "kind": "extrhead",
+      "start_offset": "0x0008_0000",
+      "end_offset": "0x0012_FFFF",
+      "policy": "gated_upper_nor",
+      "tag": "DRV ",
+      "signature": null
+    },
+    {
+      "kind": "bgo",
+      "start_offset": "0x0013_0000",
+      "end_offset": "0x003F_FFFF",
+      "policy": "gated_upper_nor",
+      "tag": "BGO (SA26..SA70)",
+      "signature": null
+    },
+    {
+      "kind": "nor_fs",
+      "start_offset": "0x0040_0000",
+      "end_offset": "0x007E_FFFF",
+      "policy": "gated_upper_nor",
+      "tag": "Upper EEMUL/FS (SA71..SA133)",
+      "signature": null
+    },
+    {
+      "kind": "eemul",
+      "start_offset": "0x007F_0000",
+      "end_offset": "0x007F_FFFF",
+      "policy": "nvram_sanitize",
+      "tag": "EEMUL NVRAM (SA134..SA141)",
+      "signature": {
+        "marker_byte_offset": 5,
+        "marker_value": "0xF1"
+      }
+    }
+  ],
+  "evidence": {
+    "tier": "bench_verified",
+    "sources": [
+      {
+        "kind": "physical_dump",
+        "reference": "firmware_and_images/eh55_nor_8mb_ic5001_dump.bin",
+        "sha256": "c1faee798f60545853eefdba0d15f23678b471466dc2bc84f522bc972f15a02d"
+      }
+    ]
+  }
+}

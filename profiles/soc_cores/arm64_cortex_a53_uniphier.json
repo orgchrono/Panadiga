@@ -1,0 +1,15 @@
+{
+  "id": "arm64_cortex_a53_uniphier",
+  "isa": "ARMv8-A Cortex-A53 (Panasonic UniPhier LD11/LD20/PXs3)",
+  "endianness": "little",
+  "logic_voltage_mv": 3300,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "docs",
+        "reference": "Mainline Linux kernel arch/arm64/boot/dts/socionext/uniphier-{ld11,ld20,pxs3}.dtsi"
+      }
+    ]
+  }
+}

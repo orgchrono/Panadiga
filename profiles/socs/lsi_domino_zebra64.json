@@ -1,0 +1,26 @@
+{
+  "id": "lsi_domino_zebra64",
+  "part_number": "LSI DoMiNo / Magnum DM8635-CHZ (ZEBRA 64 / DMN-8653)",
+  "core_ref": "sparc_v8_domino",
+  "bus_windows": [],
+  "mmio": {},
+  "lethal_mmio": [],
+  "p7501_uart_baud": 115200,
+  "p7501_nsw5v_hiz_only": true,
+  "evidence": {
+    "tier": "physical_dump_verified",
+    "sources": [
+      {
+        "kind": "physical_dump",
+        "reference": "firmware_and_images/dmr-ez485v/panasonic_dmr_ez485v_flash_dump_4mb.bin",
+        "sha256": "6ebb31f21197e911321eeaa501296151ff4de0db18b9f9fe88ef0c376a600d36",
+        "notes": "Verified ZEBRA (E54), balBoardProductZebra_8635.c, mwPAL_DMN8602.cpp, VxWorks:1.3 BFI:020.6."
+      },
+      {
+        "kind": "service_manual",
+        "reference": "CHM0802005CE (DMR-EZ48VP/EZ48VPC/EZ485VP Digital PCB VEP79180 / MSC-RFKB79180C)"
+      }
+    ],
+    "notes": "Verified ZEBRA (E54), balBoardProductZebra_8635.c, mwPAL_DMN8602.cpp, VxWorks:1.3 BFI:020.6."
+  }
+}

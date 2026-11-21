@@ -1,0 +1,24 @@
+{
+  "id": "rfkb79183_eh69",
+  "pcb_code": "VEP79183 (Main+Integrated HDMI)",
+  "service_module_code": "RFKB79183 (EH69)",
+  "soc_ref": null,
+  "flash_ref": null,
+  "eeprom_refs": [
+    "panasonic_c3ebfc000053_timer"
+  ],
+  "p7501_header_present": false,
+  "has_hdd_interface": true,
+  "has_sd_slot": true,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "service_manual",
+        "reference": "DSD0906027CE (DMR-EH69EC/EE/EP/695EG)",
+        "notes": "IC7404=RFKFM6016KT; has SDHC slot unlike EH49/EH59."
+      }
+    ],
+    "notes": "IC7404=RFKFM6016KT; has SDHC slot unlike EH49/EH59."
+  }
+}

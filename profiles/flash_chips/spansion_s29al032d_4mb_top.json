@@ -1,0 +1,40 @@
+{
+  "id": "spansion_s29al032d_4mb_top",
+  "vendor": "Spansion / Infineon",
+  "part_number": "S29AL032D70TFI03",
+  "package": "TSOP-48",
+  "voltage_min_mv": 2700,
+  "voltage_max_mv": 3600,
+  "nominal_voltage_mv": 3300,
+  "writable": true,
+  "total_bytes": "0x0040_0000",
+  "jedec": {
+    "mfg": "0x0001",
+    "device_cycles": [
+      "0x22F6"
+    ]
+  },
+  "sector_banks": [
+    {
+      "name": "main_uniform",
+      "count": 63,
+      "sector_size": "0x10000"
+    },
+    {
+      "name": "top_boot",
+      "count": 8,
+      "sector_size": "0x2000"
+    }
+  ],
+  "rw_banks": [],
+  "hw_protect": null,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "datasheet",
+        "reference": "Spansion S29AL032D model 03 Top Boot datasheet (71 sectors SA0..SA70)"
+      }
+    ]
+  }
+}

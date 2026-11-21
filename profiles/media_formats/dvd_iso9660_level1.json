@@ -1,0 +1,24 @@
+{
+  "id": "dvd_iso9660_level1",
+  "media_kind": "optical_dvd",
+  "filesystem": "ISO9660_LEVEL1",
+  "partition_type": "0x00",
+  "sector_size": 2048,
+  "start_lba": 16,
+  "default_volume_mb": 1,
+  "root_filenames": [
+    "PANA_DVD.FRM",
+    "DIGADIAG.FRM"
+  ],
+  "magic_hex": "4344303031",
+  "write_speed_policy": "1x_or_drive_minimum_dao",
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "service_manual",
+        "reference": "manuals_and_schematics/dmr-eh55/firmware_update/panasonic_dmr_eh55_firmware_installation_guide.pdf"
+      }
+    ]
+  }
+}

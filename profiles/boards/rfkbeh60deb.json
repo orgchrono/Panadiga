@@ -1,0 +1,24 @@
+{
+  "id": "rfkbeh60deb",
+  "pcb_code": "REPD0019B (Main) / RFKBEH60DEB (Digital)",
+  "service_module_code": "RFKBEH60DEB",
+  "soc_ref": null,
+  "flash_ref": null,
+  "eeprom_refs": [
+    "panasonic_c3ebfc000053_timer"
+  ],
+  "p7501_header_present": false,
+  "has_hdd_interface": true,
+  "has_sd_slot": true,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "service_manual",
+        "reference": "DSD0507056CE / MAD0508007CE (DMR-EH60)",
+        "notes": "EH60EG IC7404=RFKFM6016KT."
+      }
+    ],
+    "notes": "EH60EG IC7404=RFKFM6016KT."
+  }
+}

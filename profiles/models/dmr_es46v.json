@@ -1,0 +1,63 @@
+{
+  "model_id": "DMR-ES46V",
+  "family_label": "DMR-ES46V",
+  "series": "Série ES (DVD+VHS+SD)",
+  "region_suffix": "VP",
+  "tv_standard": "NTSC",
+  "hw_code": null,
+  "board_ref": null,
+  "train_ref": null,
+  "nor_layout_ref": null,
+  "exact_aliases": [
+    "DMR-ES45V",
+    "DMR-ES46VP"
+  ],
+  "fixture_ref": null,
+  "claims": {
+    "board": {
+      "tier": "service_manual_only",
+      "sources": [
+        {
+          "kind": "service_manual",
+          "reference": "VR0603003CE (combined DMR-ES45VP/ES46VP manual)"
+        }
+      ]
+    },
+    "flash_chip": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "nor_layout": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "train": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "eeprom": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    }
+  }
+}

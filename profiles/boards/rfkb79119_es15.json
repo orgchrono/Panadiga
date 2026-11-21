@@ -1,0 +1,22 @@
+{
+  "id": "rfkb79119_es15",
+  "pcb_code": "VEP79119 (Main family)",
+  "service_module_code": "RFKB79119AT/BT/C/D/DT",
+  "soc_ref": null,
+  "flash_ref": null,
+  "eeprom_refs": [],
+  "p7501_header_present": false,
+  "has_hdd_interface": false,
+  "has_sd_slot": false,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "service_manual",
+        "reference": "DSD0602001CE / DSD0605507SE (DMR-ES15)",
+        "notes": "Digital module RFKNES15P/VEP79132 omitted from DSD0602001CE."
+      }
+    ],
+    "notes": "Digital module RFKNES15P/VEP79132 omitted from DSD0602001CE."
+  }
+}

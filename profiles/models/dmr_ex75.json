@@ -1,0 +1,63 @@
+{
+  "model_id": "DMR-EX75",
+  "family_label": "DMR-EX75",
+  "series": "Série EX (HDD+DVB-T)",
+  "region_suffix": "EG/EC/EB/GN",
+  "tv_standard": "PAL",
+  "hw_code": null,
+  "board_ref": "rfknex75",
+  "train_ref": null,
+  "nor_layout_ref": null,
+  "exact_aliases": [
+    "DMR-EX75EG",
+    "DMR-EX75EB"
+  ],
+  "fixture_ref": null,
+  "claims": {
+    "board": {
+      "tier": "service_manual_only",
+      "sources": [
+        {
+          "kind": "service_manual",
+          "reference": "MAD0607020CE / CHM0611047CE (RFKNEX75EG/EC/EB, PSU VEP71110, HDMI VEP73137A)"
+        }
+      ]
+    },
+    "flash_chip": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "nor_layout": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "train": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "eeprom": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    }
+  }
+}

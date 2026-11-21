@@ -1,0 +1,24 @@
+{
+  "id": "rfkb79156_eh57",
+  "pcb_code": "VEP79156 (Main) / RFKNEH57EP (Digital)",
+  "service_module_code": "RFKB79156AT/BT/CT/RT",
+  "soc_ref": null,
+  "flash_ref": null,
+  "eeprom_refs": [
+    "panasonic_c3ebfc000053_timer"
+  ],
+  "p7501_header_present": false,
+  "has_hdd_interface": true,
+  "has_sd_slot": true,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "service_manual",
+        "reference": "DSD0703003CE (DMR-EH57/EH575)",
+        "notes": "IC7404=RFKFM6016KT."
+      }
+    ],
+    "notes": "IC7404=RFKFM6016KT."
+  }
+}

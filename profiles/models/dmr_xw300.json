@@ -1,0 +1,64 @@
+{
+  "model_id": "DMR-XW300",
+  "family_label": "DMR-XW300",
+  "series": "Série XW (HD DIGA NAND)",
+  "region_suffix": "GN/EF",
+  "tv_standard": "PAL",
+  "hw_code": null,
+  "board_ref": null,
+  "train_ref": "uniphier_xw300_le2011_nand",
+  "nor_layout_ref": null,
+  "exact_aliases": [
+    "DMR-XW300GN",
+    "DMR-XW300EF"
+  ],
+  "fixture_ref": null,
+  "claims": {
+    "board": {
+      "tier": "service_manual_only",
+      "sources": [
+        {
+          "kind": "service_manual",
+          "reference": "Elektrotanya XW300EF SM + CRT0807054C2 XW400 family (VEP71132 Main)"
+        }
+      ]
+    },
+    "flash_chip": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "nor_layout": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "train": {
+      "tier": "official_frm_verified",
+      "sources": [
+        {
+          "kind": "official_frm",
+          "reference": "firmware_and_images/dmr-xw_bd_series/README.md",
+          "sha256": "193fd4377a1312b4a46aabd60e2449c7349b18c1ed08b1fee228b7befa1c2633"
+        }
+      ]
+    },
+    "eeprom": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    }
+  }
+}

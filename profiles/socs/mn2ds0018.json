@@ -1,0 +1,21 @@
+{
+  "id": "mn2ds0018",
+  "part_number": "MN2DS0018/22",
+  "core_ref": "mn10300_am34",
+  "bus_windows": [],
+  "mmio": {},
+  "lethal_mmio": [
+    "0xC000_100C"
+  ],
+  "p7501_uart_baud": 115200,
+  "p7501_nsw5v_hiz_only": true,
+  "evidence": {
+    "tier": "community_unverified",
+    "sources": [
+      {
+        "kind": "docs",
+        "reference": "firmware_and_images/dmr-eh58/README.md"
+      }
+    ]
+  }
+}

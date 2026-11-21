@@ -1,0 +1,177 @@
+{
+  "$defs": {
+    "ClaimEvidence": {
+      "additionalProperties": false,
+      "description": "Evidence bundle bound to one architectural entity or model claim axis.",
+      "properties": {
+        "notes": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sources": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/EvidenceSource"
+          },
+          "type": "array"
+        },
+        "tier": {
+          "$ref": "#/$defs/EvidenceTier"
+        }
+      },
+      "required": [
+        "tier"
+      ],
+      "type": "object"
+    },
+    "EepromFunction": {
+      "description": "Architectural purpose of an external serial EEPROM on a Panasonic board.",
+      "oneOf": [
+        {
+          "const": "optical_calibration",
+          "description": "Optical pickup laser power / strategy calibration (`@RITEK`, `@MBIPG101R05`).",
+          "type": "string"
+        },
+        {
+          "const": "timer_main_config",
+          "description": "Timer MCU settings/clock/model EEPROM on Main PCB (e.g., `IC7404` `C3EBFC000053`/`RFKFM6016KT`).",
+          "type": "string"
+        },
+        {
+          "const": "system_settings",
+          "description": "Non-U99 system settings store.",
+          "type": "string"
+        },
+        {
+          "const": "unknown",
+          "description": "Unconfirmed function in schematics/dumps.",
+          "type": "string"
+        }
+      ]
+    },
+    "EvidenceSource": {
+      "additionalProperties": false,
+      "description": "Primary source reference justifying a claim in a hardware profile.",
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "notes": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reference": {
+          "type": "string"
+        },
+        "sha256": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "reference"
+      ],
+      "type": "object"
+    },
+    "EvidenceTier": {
+      "description": "Empirical confidence tier attached to each individual hardware/firmware claim.",
+      "oneOf": [
+        {
+          "const": "community_unverified",
+          "description": "T0: Forum report, size heuristic, or unverified note (C0 read-only unless offline LabOverride).",
+          "type": "string"
+        },
+        {
+          "const": "service_manual_only",
+          "description": "T1: Verified against official Matsushita/Panasonic service manuals or schematics (no binary dump).",
+          "type": "string"
+        },
+        {
+          "const": "official_frm_verified",
+          "description": "T2: Verified from an official `.FRM` / CDN firmware package (proves train/TOC/load VA, not NOR layout).",
+          "type": "string"
+        },
+        {
+          "const": "physical_dump_verified",
+          "description": "T3: Verified from a full physical chip dump with SHA-256 and static layout analysis.",
+          "type": "string"
+        },
+        {
+          "const": "bench_verified",
+          "description": "T4: Operated and verified live on bench hardware with captured telemetry and before/after hashes.",
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Concrete serial EEPROM IC profile.",
+  "properties": {
+    "bus": {
+      "type": "string"
+    },
+    "evidence": {
+      "$ref": "#/$defs/ClaimEvidence"
+    },
+    "function": {
+      "$ref": "#/$defs/EepromFunction"
+    },
+    "i2c_addr_7bit": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string"
+    },
+    "page_size": {
+      "format": "uint32",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "part_number": {
+      "type": "string"
+    },
+    "service_replacement_part": {
+      "default": null,
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "total_bytes": {
+      "type": "string"
+    },
+    "vendor": {
+      "type": "string"
+    },
+    "voltage_mv": {
+      "format": "uint32",
+      "minimum": 0,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "id",
+    "vendor",
+    "part_number",
+    "bus",
+    "function",
+    "i2c_addr_7bit",
+    "total_bytes",
+    "page_size",
+    "voltage_mv",
+    "evidence"
+  ],
+  "title": "EepromChipProfile",
+  "type": "object"
+}

@@ -1,0 +1,21 @@
+{
+  "id": "panasonic_c3ebjc000055_dif",
+  "vendor": "Panasonic",
+  "part_number": "C3EBJC000055",
+  "service_replacement_part": null,
+  "bus": "i2c",
+  "function": "timer_main_config",
+  "i2c_addr_7bit": "0x50",
+  "total_bytes": "0x2000",
+  "page_size": 32,
+  "voltage_mv": 3300,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "service_manual",
+        "reference": "manuals_and_schematics/dmr-eh80v/service/panasonic_dmr_eh80v_service_manual_europe.pdf (MAD0510009CE pp. 48, 111: IC37502 on VEP09136G Digital I/F)"
+      }
+    ]
+  }
+}

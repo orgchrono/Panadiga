@@ -1,0 +1,21 @@
+{
+  "id": "mn2ws0030",
+  "part_number": "MN2WS0030 (UniPhier PH1-Pro)",
+  "core_ref": "mn10300_am34",
+  "bus_windows": [],
+  "mmio": {},
+  "lethal_mmio": [
+    "0xC000_100C"
+  ],
+  "p7501_uart_baud": 115200,
+  "p7501_nsw5v_hiz_only": true,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "docs",
+        "reference": "UniPhier PH1-Pro (65nm AM34) Panasonic semiconductor press & Linux UniPhier architecture documentation (DMR-BW200)"
+      }
+    ]
+  }
+}

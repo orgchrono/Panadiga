@@ -1,0 +1,38 @@
+{
+  "id": "loader_ver063_bootbin",
+  "loader_version": "0.63",
+  "loader_date": "07/10/24",
+  "loader_profile_key": "ver063",
+  "loader_fingerprint": {
+    "offset_start": "0x0000_0000",
+    "offset_end": "0x0004_0000",
+    "ascii_marker": "Loader ver0.63"
+  },
+  "frm": null,
+  "prog_load_va": "0x4400_0000",
+  "main_load_va": "0x5700_0000",
+  "drv_load_va": "0x9020_2000",
+  "symbols": {},
+  "sd_boot_filenames": [
+    "DIGADIAG.FRM",
+    "PANA__SD.FRM"
+  ],
+  "digadiag_raw_bytes": 262144,
+  "media_refs": [
+    "dvd_iso9660_level1",
+    "sd_fat16b_0x06",
+    "hdd_meihdfs_v1"
+  ],
+  "evidence": {
+    "tier": "official_frm_verified",
+    "sources": [
+      {
+        "kind": "official_frm",
+        "reference": "firmware_and_images/dmr-eh58/DVDRAM.7z",
+        "sha256": "d58297d6581551a95912ea88b47a6f8c4c291a841b7dd7eb6e47e2b8dcbcea31",
+        "notes": "DVDRAM.7z BOOT.BIN (262144 B, 0x4400_0000), DRV.BIN (0x9020_2000, MATSHITA R6-MV4), MAIN.BIN (0x5700_0000, MN2DS0019, EH58EE)."
+      }
+    ],
+    "notes": "DVDRAM.7z BOOT.BIN (262144 B, 0x4400_0000), DRV.BIN (0x9020_2000, MATSHITA R6-MV4), MAIN.BIN (0x5700_0000, MN2DS0019, EH58EE)."
+  }
+}

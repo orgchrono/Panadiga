@@ -1,0 +1,40 @@
+{
+  "id": "prog205_4mb_main50622",
+  "loader_version": "2.05",
+  "loader_date": "10/07/27",
+  "loader_profile_key": "prog071",
+  "loader_fingerprint": null,
+  "frm": {
+    "toc_entry_bytes": 64,
+    "toc_size": "0x2000",
+    "cipher": "feistel64_ecb",
+    "key_id": "old_df72",
+    "official_frm_sha256": "5ca06ba7a41ab9f41462b4f2b957b7d434c23cfe29a3dbc58f583392894a480e"
+  },
+  "prog_load_va": "0x9040_0000",
+  "main_load_va": "0x5062_2000",
+  "drv_load_va": null,
+  "symbols": {},
+  "sd_boot_filenames": [
+    "DIGADIAG.FRM",
+    "PANA__SD.FRM"
+  ],
+  "digadiag_raw_bytes": 262144,
+  "media_refs": [
+    "dvd_iso9660_level1",
+    "sd_fat16b_0x06",
+    "hdd_meihdfs_v1"
+  ],
+  "evidence": {
+    "tier": "official_frm_verified",
+    "sources": [
+      {
+        "kind": "official_frm",
+        "reference": "firmware_and_images/dmr-ex_ez_series/README.md",
+        "sha256": "5ca06ba7a41ab9f41462b4f2b957b7d434c23cfe29a3dbc58f583392894a480e",
+        "notes": "PROG205 (4MB/TOP BOOT) + MAIN3030YN/3240YM @ 0x50622000 (EX84C, EX93C, EX86/EX99VEB)."
+      }
+    ],
+    "notes": "PROG205 (4MB/TOP BOOT) + MAIN3030YN/3240YM @ 0x50622000 (EX84C, EX93C, EX86/EX99VEB)."
+  }
+}

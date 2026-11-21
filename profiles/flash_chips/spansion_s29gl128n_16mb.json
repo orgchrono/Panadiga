@@ -1,0 +1,44 @@
+{
+  "id": "spansion_s29gl128n_16mb",
+  "vendor": "Spansion",
+  "part_number": "S29GL128N11TFI01",
+  "package": "TSOP-56",
+  "voltage_min_mv": 2700,
+  "voltage_max_mv": 3600,
+  "nominal_voltage_mv": 3300,
+  "writable": true,
+  "total_bytes": "0x0100_0000",
+  "jedec": {
+    "mfg": "0x0001",
+    "device_cycles": [
+      "0x227E",
+      "0x2221",
+      "0x2201"
+    ]
+  },
+  "sector_banks": [
+    {
+      "name": "uniform_128k",
+      "count": 128,
+      "sector_size": "0x20000"
+    }
+  ],
+  "rw_banks": [],
+  "hw_protect": {
+    "pin": "WP#",
+    "protects_region": "highest_sector_SA127",
+    "affects_top_sector": true
+  },
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "datasheet",
+        "reference": "manuals_and_schematics/datasheets/spansion_s29gl128n_nor_flash_datasheet.pdf",
+        "sha256": "a0f68784d599ac23957a1d312d75962d48c57fbaa47f82dbce7db1ce34da1a36",
+        "notes": "128 uniform 128 KiB sectors SA0..SA127."
+      }
+    ],
+    "notes": "128 uniform 128 KiB sectors SA0..SA127."
+  }
+}

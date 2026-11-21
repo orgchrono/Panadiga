@@ -1,0 +1,22 @@
+{
+  "id": "vep06g25bt",
+  "pcb_code": "VEP06G25BT (Main)",
+  "service_module_code": null,
+  "soc_ref": null,
+  "flash_ref": null,
+  "eeprom_refs": [],
+  "p7501_header_present": false,
+  "has_hdd_interface": true,
+  "has_sd_slot": false,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "service_manual",
+        "reference": "VR0603007CE (DMR-EH75V/VP)",
+        "notes": "80GB HDD + DVD + VHS combo."
+      }
+    ],
+    "notes": "80GB HDD + DVD + VHS combo."
+  }
+}

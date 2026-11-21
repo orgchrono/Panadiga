@@ -1,0 +1,21 @@
+{
+  "id": "panasonic_rfkfm4016kt_dif",
+  "vendor": "Panasonic",
+  "part_number": "RFKFM4016K / RFKFM4016KT",
+  "service_replacement_part": "RFKFM4016KT",
+  "bus": "i2c",
+  "function": "timer_main_config",
+  "i2c_addr_7bit": "0x50",
+  "total_bytes": "0x0400",
+  "page_size": 16,
+  "voltage_mv": 3300,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "service_manual",
+        "reference": "manuals_and_schematics/dmr-ex98v/service/panasonic_dmr_ex98v_service_manual_vol1.pdf (DSD0806033CE pp. 35, 142: IC9705 8kbit EEPROM; also IC7404 in EH58 DSD0802009CE)"
+      }
+    ]
+  }
+}

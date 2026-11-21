@@ -1,0 +1,54 @@
+{
+  "id": "macronix_mx29lv160_2mb_top",
+  "vendor": "Macronix",
+  "part_number": "MX29LV160DTI-70G",
+  "package": "TSOP-48",
+  "voltage_min_mv": 2700,
+  "voltage_max_mv": 3600,
+  "nominal_voltage_mv": 3300,
+  "writable": true,
+  "total_bytes": "0x0020_0000",
+  "jedec": {
+    "mfg": "0x00C2",
+    "device_cycles": [
+      "0x22C4"
+    ]
+  },
+  "sector_banks": [
+    {
+      "name": "main_uniform",
+      "count": 31,
+      "sector_size": "0x10000"
+    },
+    {
+      "name": "mid_32k",
+      "count": 1,
+      "sector_size": "0x8000"
+    },
+    {
+      "name": "boot_8k",
+      "count": 2,
+      "sector_size": "0x2000"
+    },
+    {
+      "name": "top_16k",
+      "count": 1,
+      "sector_size": "0x4000"
+    }
+  ],
+  "rw_banks": [],
+  "hw_protect": {
+    "pin": "WP#/ACC",
+    "protects_region": "top_boot_sectors",
+    "affects_top_sector": true
+  },
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "datasheet",
+        "reference": "Macronix PM1315 Rev. 1.2 (MX29LV160DT 35 sectors)"
+      }
+    ]
+  }
+}

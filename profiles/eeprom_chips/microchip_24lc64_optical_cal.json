@@ -1,0 +1,24 @@
+{
+  "id": "microchip_24lc64_optical_cal",
+  "vendor": "Microchip",
+  "part_number": "24LC64",
+  "service_replacement_part": null,
+  "bus": "i2c",
+  "function": "optical_calibration",
+  "i2c_addr_7bit": "0x50",
+  "total_bytes": "0x2000",
+  "page_size": 32,
+  "voltage_mv": 3300,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "datasheet",
+        "reference": "manuals_and_schematics/datasheets/microchip_24lc64_datasheet.pdf",
+        "sha256": "af7781c3d84bdf0fac62ed55db5711c55368e821262bd6e49b5be9be6497329e",
+        "notes": "Microchip DS21189 (2.5-5.5V, 8KiB, 32B page); WP=VCC locks entire array."
+      }
+    ],
+    "notes": "Microchip DS21189 (2.5-5.5V, 8KiB, 32B page); WP=VCC locks entire array."
+  }
+}

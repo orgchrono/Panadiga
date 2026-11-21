@@ -1,0 +1,21 @@
+{
+  "id": "mn2ds0010h",
+  "part_number": "MN2DS0010-H",
+  "core_ref": "mn10300_am33_2",
+  "bus_windows": [],
+  "mmio": {},
+  "lethal_mmio": [
+    "0xC000_100C"
+  ],
+  "p7501_uart_baud": 115200,
+  "p7501_nsw5v_hiz_only": true,
+  "evidence": {
+    "tier": "community_unverified",
+    "sources": [
+      {
+        "kind": "community_report",
+        "reference": "Community teardown / VideoHelp attribution for DMR-E55 & DMR-E85H (IC6001 omitted from DSD0403003C1 BOM)."
+      }
+    ]
+  }
+}

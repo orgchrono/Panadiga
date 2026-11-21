@@ -1,0 +1,63 @@
+{
+  "model_id": "DMR-E80H",
+  "family_label": "DMR-E80H",
+  "series": "Série ExxH (HDD+DVD)",
+  "region_suffix": "P/PC/EB/EG",
+  "tv_standard": "NTSC/PAL",
+  "hw_code": null,
+  "board_ref": "rep3496f",
+  "train_ref": null,
+  "nor_layout_ref": null,
+  "exact_aliases": [
+    "DMR-E80HP",
+    "DMR-E80HEG"
+  ],
+  "fixture_ref": null,
+  "claims": {
+    "board": {
+      "tier": "service_manual_only",
+      "sources": [
+        {
+          "kind": "service_manual",
+          "reference": "DSD0306005C1 (REP3496F/FG)"
+        }
+      ]
+    },
+    "flash_chip": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "nor_layout": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "train": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "eeprom": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    }
+  }
+}

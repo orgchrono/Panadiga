@@ -1,0 +1,22 @@
+{
+  "id": "vep79104",
+  "pcb_code": "VEP79104A",
+  "service_module_code": "RFKBES10PC",
+  "soc_ref": "mn2ds0012h",
+  "flash_ref": "oki_mr27v802_1mb_otp",
+  "eeprom_refs": [],
+  "p7501_header_present": false,
+  "has_hdd_interface": false,
+  "has_sd_slot": false,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "service_manual",
+        "reference": "manuals_and_schematics/dmr-es10/service/panasonic_dmr_es10_service_manual_north_america.pdf",
+        "notes": "DSD0502037C1 p.61: Digital VEP79104A / RFKBES10PC, Main VEP79111B; P7501 absent (P7401<->P9001 88p)."
+      }
+    ],
+    "notes": "DSD0502037C1 p.61: Digital VEP79104A / RFKBES10PC, Main VEP79111B; P7501 absent (P7401<->P9001 88p)."
+  }
+}

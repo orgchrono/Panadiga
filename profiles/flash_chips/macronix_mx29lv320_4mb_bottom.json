@@ -1,0 +1,42 @@
+{
+  "id": "macronix_mx29lv320_4mb_bottom",
+  "vendor": "Macronix",
+  "part_number": "MX29LV320B",
+  "package": "TSOP-48",
+  "voltage_min_mv": 2700,
+  "voltage_max_mv": 3600,
+  "nominal_voltage_mv": 3300,
+  "writable": true,
+  "total_bytes": "0x0040_0000",
+  "jedec": {
+    "mfg": "0x00C2",
+    "device_cycles": [
+      "0x22A8"
+    ]
+  },
+  "sector_banks": [
+    {
+      "name": "bottom_boot",
+      "count": 8,
+      "sector_size": "0x2000"
+    },
+    {
+      "name": "main_uniform",
+      "count": 63,
+      "sector_size": "0x10000"
+    }
+  ],
+  "rw_banks": [],
+  "hw_protect": null,
+  "evidence": {
+    "tier": "physical_dump_verified",
+    "sources": [
+      {
+        "kind": "physical_dump",
+        "reference": "firmware_and_images/dmr-ez485v/panasonic_dmr_ez485v_flash_dump_4mb.bin",
+        "notes": "DMR-EZ485V dump shows 8 KiB-aligned blocks at 0x0000..0xFFFF and 64 KiB blocks at 0x3D0000..0x3F0000 (Bottom Boot)."
+      }
+    ],
+    "notes": "DMR-EZ485V dump shows 8 KiB-aligned blocks at 0x0000..0xFFFF and 64 KiB blocks at 0x3D0000..0x3F0000 (Bottom Boot)."
+  }
+}

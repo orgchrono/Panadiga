@@ -1,0 +1,20 @@
+{
+  "id": "rep3496f",
+  "pcb_code": "REP3496F / REP3496FG",
+  "service_module_code": "REP3496F",
+  "soc_ref": null,
+  "flash_ref": null,
+  "eeprom_refs": [],
+  "p7501_header_present": false,
+  "has_hdd_interface": true,
+  "has_sd_slot": false,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "service_manual",
+        "reference": "DSD0306005C1 (DMR-E80H)"
+      }
+    ]
+  }
+}

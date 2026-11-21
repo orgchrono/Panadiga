@@ -1,0 +1,63 @@
+{
+  "model_id": "DMR-EH57",
+  "family_label": "DMR-EH57",
+  "series": "Série EH (160GB HDD+HDMI)",
+  "region_suffix": "EC/EP/EE/EG",
+  "tv_standard": "PAL",
+  "hw_code": null,
+  "board_ref": "rfkb79156_eh57",
+  "train_ref": null,
+  "nor_layout_ref": null,
+  "exact_aliases": [
+    "DMR-EH575",
+    "DMR-EH575EG"
+  ],
+  "fixture_ref": null,
+  "claims": {
+    "board": {
+      "tier": "service_manual_only",
+      "sources": [
+        {
+          "kind": "service_manual",
+          "reference": "DSD0703003CE (RFKB79156* Main, RFKNEH57EP Digital, IC7404=RFKFM6016KT)"
+        }
+      ]
+    },
+    "flash_chip": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "nor_layout": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "train": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "eeprom": {
+      "tier": "service_manual_only",
+      "sources": [
+        {
+          "kind": "service_manual",
+          "reference": "DSD0703003CE IC7404=RFKFM6016KT"
+        }
+      ]
+    }
+  }
+}

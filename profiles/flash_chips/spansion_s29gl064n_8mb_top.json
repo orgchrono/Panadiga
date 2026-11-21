@@ -1,0 +1,46 @@
+{
+  "id": "spansion_s29gl064n_8mb_top",
+  "vendor": "Spansion",
+  "part_number": "S29GL064N90TFI03 (Top Boot)",
+  "package": "TSOP-48",
+  "voltage_min_mv": 2700,
+  "voltage_max_mv": 3600,
+  "nominal_voltage_mv": 3300,
+  "writable": true,
+  "total_bytes": "0x0080_0000",
+  "jedec": {
+    "mfg": "0x0001",
+    "device_cycles": [
+      "0x227E",
+      "0x2210",
+      "0x2201"
+    ]
+  },
+  "sector_banks": [
+    {
+      "name": "main_uniform",
+      "count": 127,
+      "sector_size": "0x10000"
+    },
+    {
+      "name": "top_boot",
+      "count": 8,
+      "sector_size": "0x2000"
+    }
+  ],
+  "rw_banks": [],
+  "hw_protect": {
+    "pin": "WP#/ACC",
+    "protects_region": "top_two_boot_sectors_SA133_SA134",
+    "affects_top_sector": true
+  },
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "datasheet",
+        "reference": "Spansion / Infineon Document No. 001-98525 Rev. B (Model 03 Top Boot: 135 sectors)"
+      }
+    ]
+  }
+}

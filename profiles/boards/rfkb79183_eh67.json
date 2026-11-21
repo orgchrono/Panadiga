@@ -1,0 +1,20 @@
+{
+  "id": "rfkb79183_eh67",
+  "pcb_code": "VEP79183 (Main) / RFKNEH67EP (Digital)",
+  "service_module_code": "RFKB79183VT / RFKB79183WT",
+  "soc_ref": null,
+  "flash_ref": null,
+  "eeprom_refs": [],
+  "p7501_header_present": false,
+  "has_hdd_interface": true,
+  "has_sd_slot": true,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "service_manual",
+        "reference": "DSD0705011CE (DMR-EH67/EH675)"
+      }
+    ]
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "model_id": "DMR-EH69",
+  "family_label": "DMR-EH69",
+  "series": "Série EH (2009 FRM)",
+  "region_suffix": "EC/EE/EP",
+  "tv_standard": "PAL",
+  "hw_code": null,
+  "board_ref": "rfkb79183_eh69",
+  "train_ref": "prog071_toc64_main50622",
+  "nor_layout_ref": null,
+  "exact_aliases": [
+    "DMR-EH69EC",
+    "DMR-EH695EG"
+  ],
+  "fixture_ref": null,
+  "claims": {
+    "board": {
+      "tier": "service_manual_only",
+      "sources": [
+        {
+          "kind": "service_manual",
+          "reference": "DSD0906027CE (integrated HDMI, SDHC slot present, IC7404=RFKFM6016KT)"
+        }
+      ]
+    },
+    "flash_chip": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "nor_layout": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "train": {
+      "tier": "official_frm_verified",
+      "sources": [
+        {
+          "kind": "official_frm",
+          "reference": "firmware_and_images/dmr-eh49_59_69/README.md",
+          "sha256": "9942349c4c175c2881c3d3e3eecf5f446b012ae28341958ed8dce46889695565"
+        }
+      ]
+    },
+    "eeprom": {
+      "tier": "service_manual_only",
+      "sources": [
+        {
+          "kind": "service_manual",
+          "reference": "DSD0906027CE IC7404=RFKFM6016KT"
+        }
+      ]
+    }
+  }
+}

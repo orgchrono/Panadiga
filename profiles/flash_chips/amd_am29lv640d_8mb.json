@@ -1,0 +1,40 @@
+{
+  "id": "amd_am29lv640d_8mb",
+  "vendor": "AMD / Spansion",
+  "part_number": "AM29LV640DU90REI",
+  "package": "TSOP-48",
+  "voltage_min_mv": 2700,
+  "voltage_max_mv": 3600,
+  "nominal_voltage_mv": 3300,
+  "writable": true,
+  "total_bytes": "0x0080_0000",
+  "jedec": {
+    "mfg": "0x0001",
+    "device_cycles": [
+      "0x22D7"
+    ]
+  },
+  "sector_banks": [
+    {
+      "name": "uniform_64k",
+      "count": 128,
+      "sector_size": "0x10000"
+    }
+  ],
+  "rw_banks": [],
+  "hw_protect": {
+    "pin": "WP#/ACC",
+    "protects_region": "outermost_highest_sector_SA127",
+    "affects_top_sector": true
+  },
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "datasheet",
+        "reference": "manuals_and_schematics/datasheets/spansion_am29lv640d_nor_flash_datasheet.pdf",
+        "sha256": "9dbfc10fce7e190980838ff8a371804c0a306ea54d6637a01318ce59fe5d953b"
+      }
+    ]
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "id": "loader_ver061_toc48_main57",
+  "loader_version": "0.61",
+  "loader_date": "06/03/06",
+  "loader_profile_key": "ver061",
+  "loader_fingerprint": {
+    "offset_start": "0x0000_0000",
+    "offset_end": "0x0004_0000",
+    "ascii_marker": "Loader ver0.61"
+  },
+  "frm": {
+    "toc_entry_bytes": 48,
+    "toc_size": "0x1800",
+    "cipher": "feistel64_ecb",
+    "key_id": "pana_dvd_eh55",
+    "official_frm_sha256": null
+  },
+  "prog_load_va": "0x5040_0000",
+  "main_load_va": "0x5700_0000",
+  "drv_load_va": "0x9020_2000",
+  "symbols": {
+    "panamon1_entry": "0x5043_9494",
+    "bgo_table": "0x4403_37A4"
+  },
+  "sd_boot_filenames": [
+    "DIGADIAG.FRM",
+    "PANA__SD.FRM"
+  ],
+  "digadiag_raw_bytes": 262144,
+  "media_refs": [
+    "sd_fat16b_0x06",
+    "dvd_iso9660_level1",
+    "hdd_meihdfs_v1"
+  ],
+  "evidence": {
+    "tier": "bench_verified",
+    "sources": [
+      {
+        "kind": "bench_log",
+        "reference": "docs/STATUS.md",
+        "sha256": "c1faee798f60545853eefdba0d15f23678b471466dc2bc84f522bc972f15a02d"
+      }
+    ]
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "id": "rfkneh56eg",
+  "pcb_code": "VEP79138 (shared) / RFKB79119GT (Main)",
+  "service_module_code": "RFKNEH56EG",
+  "soc_ref": null,
+  "flash_ref": null,
+  "eeprom_refs": [
+    "panasonic_c3ebfc000053_timer"
+  ],
+  "p7501_header_present": false,
+  "has_hdd_interface": true,
+  "has_sd_slot": true,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "service_manual",
+        "reference": "DSD0603003CE (manuals_and_schematics/dmr-eh55/service/panasonic_dmr_eh55ec_service_manual_europe.pdf pp.7,87,91)",
+        "notes": "Digital PCB BOM omitted in DSD0603003CE; EU/EE manuals have 0 occurrences of P7501."
+      }
+    ],
+    "notes": "Digital PCB BOM omitted in DSD0603003CE; EU/EE manuals have 0 occurrences of P7501."
+  }
+}

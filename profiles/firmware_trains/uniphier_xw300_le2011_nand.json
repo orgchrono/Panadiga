@@ -1,0 +1,39 @@
+{
+  "id": "uniphier_xw300_le2011_nand",
+  "loader_version": "M4220GN_BQ-370",
+  "loader_date": null,
+  "loader_profile_key": "uniphier_nand",
+  "loader_fingerprint": null,
+  "frm": {
+    "toc_entry_bytes": 48,
+    "toc_size": "0x1800",
+    "cipher": "feistel64_ecb",
+    "key_id": "le2011_08e0",
+    "official_frm_sha256": "193fd4377a1312b4a46aabd60e2449c7349b18c1ed08b1fee228b7befa1c2633"
+  },
+  "prog_load_va": null,
+  "main_load_va": null,
+  "drv_load_va": null,
+  "symbols": {},
+  "sd_boot_filenames": [
+    "PANA__SD.FRM"
+  ],
+  "digadiag_raw_bytes": 262144,
+  "media_refs": [
+    "dvd_iso9660_level1",
+    "sd_fat16b_0x06",
+    "hdd_meihdfs_v1"
+  ],
+  "evidence": {
+    "tier": "official_frm_verified",
+    "sources": [
+      {
+        "kind": "official_frm",
+        "reference": "firmware_and_images/dmr-xw_bd_series/xw300gn/PANA_DVD.FRM",
+        "sha256": "193fd4377a1312b4a46aabd60e2449c7349b18c1ed08b1fee228b7befa1c2633",
+        "notes": "le2011_08e0 Dvd48B TOC: PROG0.00 (MN103S CA 10..FC DC, 262144B, byte-sum 0x01032A66), MAIN3700, DRV1J315."
+      }
+    ],
+    "notes": "le2011_08e0 Dvd48B TOC: PROG0.00 (MN103S CA 10..FC DC, 262144B, byte-sum 0x01032A66), MAIN3700, DRV1J315."
+  }
+}

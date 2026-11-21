@@ -1,0 +1,118 @@
+{
+  "$defs": {
+    "AuthorizationMode": {
+      "description": "Authorization mode granted by [`crate::gate::CapabilityGate`].",
+      "enum": [
+        "verified_policy",
+        "lab_override_unverified"
+      ],
+      "type": "string"
+    },
+    "Capability": {
+      "description": "Discrete hardware/forensic actions gated by [`crate::gate::CapabilityGate`].",
+      "oneOf": [
+        {
+          "const": "inspect_read_only",
+          "description": "C0: Read-only analysis, parsing, entropy inspection, and sector breakdown.",
+          "type": "string"
+        },
+        {
+          "const": "nvram_sanitize_offline_cow",
+          "description": "C1: Offline Copy-on-Write erasure/patch confined to verified `Eemul` NVRAM microsectors.",
+          "type": "string"
+        },
+        {
+          "const": "nvram_write_live",
+          "description": "C2: Live P7501 Pico in-circuit write to writable `Eemul` microsectors.",
+          "type": "string"
+        },
+        {
+          "const": "upper_nor_patch_offline_cow",
+          "description": "C3a: Offline Copy-on-Write patch in Upper NOR (`Bgo` / `NorFs`).",
+          "type": "string"
+        },
+        {
+          "const": "upper_nor_write_live",
+          "description": "C3b: Live P7501 Pico write in Upper NOR (`Bgo` / `NorFs`).",
+          "type": "string"
+        },
+        {
+          "const": "official_frm_pass_through",
+          "description": "C4a: Bit-exact official `.FRM` pass-through optical/SD media synthesis.",
+          "type": "string"
+        },
+        {
+          "const": "custom_recovery_media",
+          "description": "C4b: Custom or patched recovery media synthesis (`DIGADIAG.FRM`, `PANA__SD.FRM`, custom homebrew).",
+          "type": "string"
+        },
+        {
+          "const": "critical_ipl_or_lethal_mmio",
+          "description": "C5: Critical IPL boot sector write or forbidden MMIO (`0xC000_100C`) access — ALWAYS DENIED.",
+          "type": "string"
+        }
+      ]
+    },
+    "EvidenceTier": {
+      "description": "Empirical confidence tier attached to each individual hardware/firmware claim.",
+      "oneOf": [
+        {
+          "const": "community_unverified",
+          "description": "T0: Forum report, size heuristic, or unverified note (C0 read-only unless offline LabOverride).",
+          "type": "string"
+        },
+        {
+          "const": "service_manual_only",
+          "description": "T1: Verified against official Matsushita/Panasonic service manuals or schematics (no binary dump).",
+          "type": "string"
+        },
+        {
+          "const": "official_frm_verified",
+          "description": "T2: Verified from an official `.FRM` / CDN firmware package (proves train/TOC/load VA, not NOR layout).",
+          "type": "string"
+        },
+        {
+          "const": "physical_dump_verified",
+          "description": "T3: Verified from a full physical chip dump with SHA-256 and static layout analysis.",
+          "type": "string"
+        },
+        {
+          "const": "bench_verified",
+          "description": "T4: Operated and verified live on bench hardware with captured telemetry and before/after hashes.",
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Affirmative capability decision returned with provenance metadata.",
+  "properties": {
+    "capability": {
+      "$ref": "#/$defs/Capability"
+    },
+    "effectiveTier": {
+      "$ref": "#/$defs/EvidenceTier"
+    },
+    "mode": {
+      "$ref": "#/$defs/AuthorizationMode"
+    },
+    "modelId": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "modelId",
+    "capability",
+    "mode",
+    "effectiveTier",
+    "warnings"
+  ],
+  "title": "Authorization",
+  "type": "object"
+}

@@ -1,0 +1,64 @@
+{
+  "model_id": "DMR-EX98V",
+  "family_label": "DMR-EX98V",
+  "series": "Série EX (HDD+DVD+VHS)",
+  "region_suffix": "EC/EB/EG",
+  "tv_standard": "PAL",
+  "hw_code": null,
+  "board_ref": "vep79195",
+  "train_ref": null,
+  "nor_layout_ref": null,
+  "exact_aliases": [
+    "DMR-EX98VEC",
+    "DMR-EX98VEB",
+    "DMR-EX98VEG"
+  ],
+  "fixture_ref": null,
+  "claims": {
+    "board": {
+      "tier": "service_manual_only",
+      "sources": [
+        {
+          "kind": "service_manual",
+          "reference": "DSD0806033CE (VEP79195A/B/C Analog Main, RFKNEX98V* Digital, RFKB71134A/AT D-IF w/ P9705 UART)"
+        }
+      ]
+    },
+    "flash_chip": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "nor_layout": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "train": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "eeprom": {
+      "tier": "service_manual_only",
+      "sources": [
+        {
+          "kind": "service_manual",
+          "reference": "DSD0806033CE p.35/142 IC9705=RFKFM4016K/KT"
+        }
+      ]
+    }
+  }
+}

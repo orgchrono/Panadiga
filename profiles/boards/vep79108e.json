@@ -1,0 +1,24 @@
+{
+  "id": "vep79108e",
+  "pcb_code": "VEP79108E",
+  "service_module_code": "RFKBEH80VEB",
+  "soc_ref": null,
+  "flash_ref": null,
+  "eeprom_refs": [
+    "panasonic_c3ebjc000055_dif"
+  ],
+  "p7501_header_present": false,
+  "has_hdd_interface": true,
+  "has_sd_slot": true,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "service_manual",
+        "reference": "manuals_and_schematics/dmr-eh80v/service/panasonic_dmr_eh80v_service_manual_europe.pdf",
+        "notes": "MAD0510009CE: Digital VEP79108E/RFKBEH80VEB, Main VEP06F87C/D, D-IF VEP09136G (IC37502=C3EBJC000055); PP7501 is 10p FL, UART routed on P39702/IC37501."
+      }
+    ],
+    "notes": "MAD0510009CE: Digital VEP79108E/RFKBEH80VEB, Main VEP06F87C/D, D-IF VEP09136G (IC37502=C3EBJC000055); PP7501 is 10p FL, UART routed on P39702/IC37501."
+  }
+}

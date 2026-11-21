@@ -1,0 +1,66 @@
+{
+  "model_id": "DMR-EZ485V",
+  "family_label": "DMR-EZ485V",
+  "series": "Série EZ (LSI DoMiNo DVD+VHS)",
+  "region_suffix": "VP",
+  "tv_standard": "NTSC/ATSC",
+  "hw_code": "M4831P",
+  "board_ref": "ez485v_lsi_board",
+  "train_ref": "lsi_zebra64_vxworks_bal",
+  "nor_layout_ref": "ez485v_vxworks_on_mx29lv320b",
+  "exact_aliases": [
+    "DMR-EZ485VP",
+    "DMR-EZ485VK"
+  ],
+  "fixture_ref": "profiles/fixtures/dmr_ez485v.fixture.json",
+  "claims": {
+    "board": {
+      "tier": "service_manual_only",
+      "sources": [
+        {
+          "kind": "service_manual",
+          "reference": "CHM0802005CE (Digital VEP79180 / MSC-RFKB79180C, IC8651 Flash, IC8611 EEPROM)"
+        }
+      ]
+    },
+    "flash_chip": {
+      "tier": "physical_dump_verified",
+      "sources": [
+        {
+          "kind": "physical_dump",
+          "reference": "firmware_and_images/dmr-ez485v/panasonic_dmr_ez485v_flash_dump_4mb.bin",
+          "sha256": "6ebb31f21197e911321eeaa501296151ff4de0db18b9f9fe88ef0c376a600d36"
+        }
+      ]
+    },
+    "nor_layout": {
+      "tier": "physical_dump_verified",
+      "sources": [
+        {
+          "kind": "physical_dump",
+          "reference": "firmware_and_images/dmr-ez485v/panasonic_dmr_ez485v_flash_dump_4mb.bin",
+          "sha256": "6ebb31f21197e911321eeaa501296151ff4de0db18b9f9fe88ef0c376a600d36"
+        }
+      ]
+    },
+    "train": {
+      "tier": "physical_dump_verified",
+      "sources": [
+        {
+          "kind": "physical_dump",
+          "reference": "firmware_and_images/dmr-ez485v/panasonic_dmr_ez485v_flash_dump_4mb.bin",
+          "sha256": "6ebb31f21197e911321eeaa501296151ff4de0db18b9f9fe88ef0c376a600d36"
+        }
+      ]
+    },
+    "eeprom": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    }
+  }
+}

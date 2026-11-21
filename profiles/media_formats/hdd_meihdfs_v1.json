@@ -1,0 +1,24 @@
+{
+  "id": "hdd_meihdfs_v1",
+  "media_kind": "ata_hdd",
+  "filesystem": "MEIHFS1.0",
+  "partition_type": "0x00",
+  "sector_size": 512,
+  "start_lba": 0,
+  "default_volume_mb": 100,
+  "root_filenames": [
+    "MAIN",
+    "DRV"
+  ],
+  "magic_hex": "5348",
+  "write_speed_policy": "composed_streaming_verified",
+  "evidence": {
+    "tier": "bench_verified",
+    "sources": [
+      {
+        "kind": "physical_dump",
+        "reference": "firmware_and_images/README.md"
+      }
+    ]
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "id": "macronix_mx29lv640_8mb_top",
+  "vendor": "Macronix",
+  "part_number": "MX29LV640ET-70G",
+  "package": "TSOP-48",
+  "voltage_min_mv": 2700,
+  "voltage_max_mv": 3600,
+  "nominal_voltage_mv": 3300,
+  "writable": true,
+  "total_bytes": "0x0080_0000",
+  "jedec": {
+    "mfg": "0x00C2",
+    "device_cycles": [
+      "0x22C9"
+    ]
+  },
+  "sector_banks": [
+    {
+      "name": "main_uniform",
+      "count": 127,
+      "sector_size": "0x10000"
+    },
+    {
+      "name": "top_boot",
+      "count": 8,
+      "sector_size": "0x2000"
+    }
+  ],
+  "rw_banks": [],
+  "hw_protect": {
+    "pin": "WP#/ACC",
+    "protects_region": "outermost_top_boot_sectors",
+    "affects_top_sector": true
+  },
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "datasheet",
+        "reference": "Macronix PM1328 Rev. 1.7 (MX29LV640ET 135 sectors)"
+      }
+    ]
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "model_id": "DMR-EZ48V",
+  "family_label": "DMR-EZ48V",
+  "series": "Série EZ (Split NA Magnum vs EU AM34)",
+  "region_suffix": "VP/VPC/EB",
+  "tv_standard": "NTSC/ATSC/PAL",
+  "hw_code": null,
+  "board_ref": "ez485v_lsi_board",
+  "train_ref": null,
+  "nor_layout_ref": null,
+  "exact_aliases": [
+    "DMR-EZ48VP",
+    "DMR-EZ48VPC",
+    "DMR-EZ48VEB"
+  ],
+  "fixture_ref": null,
+  "claims": {
+    "board": {
+      "tier": "service_manual_only",
+      "sources": [
+        {
+          "kind": "service_manual",
+          "reference": "CHM0802005CE (NA VP VEP79180 Magnum) vs DSD0806025CE (EU VEB AM34 Digi-I/F split)"
+        }
+      ]
+    },
+    "flash_chip": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "nor_layout": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "train": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "eeprom": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "model_id": "DMR-EX99V",
+  "family_label": "DMR-EX99V",
+  "series": "Série EX (HDD+DVD+VHS+DVB-T)",
+  "region_suffix": "VEB/VEG",
+  "tv_standard": "PAL",
+  "hw_code": null,
+  "board_ref": null,
+  "train_ref": "prog205_4mb_main50622",
+  "nor_layout_ref": null,
+  "exact_aliases": [
+    "DMR-EX99VEB",
+    "DMR-EX99VEG"
+  ],
+  "fixture_ref": null,
+  "claims": {
+    "board": {
+      "tier": "service_manual_only",
+      "sources": [
+        {
+          "kind": "service_manual",
+          "reference": "DSD1003007CE"
+        }
+      ]
+    },
+    "flash_chip": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "nor_layout": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "train": {
+      "tier": "official_frm_verified",
+      "sources": [
+        {
+          "kind": "official_frm",
+          "reference": "firmware_and_images/dmr-ex_ez_series/README.md",
+          "sha256": "8237b06fd4cce0dbedf32a9ecbf7cdcefa3ca18abff66f5ead1a2fb9b3576dac"
+        }
+      ]
+    },
+    "eeprom": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    }
+  }
+}

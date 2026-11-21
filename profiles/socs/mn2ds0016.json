@@ -1,0 +1,24 @@
+{
+  "id": "mn2ds0016",
+  "part_number": "MN2DS0016",
+  "core_ref": "mn10300_am34",
+  "bus_windows": [],
+  "mmio": {},
+  "lethal_mmio": [
+    "0xC000_100C"
+  ],
+  "p7501_uart_baud": 115200,
+  "p7501_nsw5v_hiz_only": true,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "official_frm",
+        "reference": "firmware_and_images/dmr-eh50/PANA_DVD.FRM",
+        "sha256": "4ed6a64bd6ff1e0f51e3655ab17b1c594e91f3e7bf8d9219a82a1636068b54b7",
+        "notes": "PROG019 + MAIN3360NA (M7820/NA-348) verified from official EH50 FRM; MN2DS0016AAUB catalog attribution."
+      }
+    ],
+    "notes": "PROG019 + MAIN3360NA (M7820/NA-348) verified from official EH50 FRM."
+  }
+}

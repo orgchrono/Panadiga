@@ -1,0 +1,22 @@
+{
+  "id": "vep79138",
+  "pcb_code": "VEP79138",
+  "service_module_code": null,
+  "soc_ref": "mn2ds0009",
+  "flash_ref": "spansion_s29jl064h_8mb",
+  "eeprom_refs": [
+    "panasonic_c3ebfc000053_timer"
+  ],
+  "p7501_header_present": true,
+  "has_hdd_interface": true,
+  "has_sd_slot": true,
+  "evidence": {
+    "tier": "bench_verified",
+    "sources": [
+      {
+        "kind": "service_manual",
+        "reference": "manuals_and_schematics/dmr-eh55/service/panasonic_dmr_eh55ec_service_manual_vol2_schematics.pdf"
+      }
+    ]
+  }
+}

@@ -1,0 +1,1067 @@
+{
+  "$defs": {
+    "BoardProfile": {
+      "additionalProperties": false,
+      "description": "Hardware PCB assembly uniting SoC silicon, Flash chip, optional EEPROMs, and P7501 debug availability.",
+      "properties": {
+        "eeprom_refs": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "evidence": {
+          "$ref": "#/$defs/ClaimEvidence"
+        },
+        "flash_ref": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "has_hdd_interface": {
+          "type": "boolean"
+        },
+        "has_sd_slot": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "string"
+        },
+        "p7501_header_present": {
+          "type": "boolean"
+        },
+        "pcb_code": {
+          "type": "string"
+        },
+        "service_module_code": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "soc_ref": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "pcb_code",
+        "p7501_header_present",
+        "has_hdd_interface",
+        "has_sd_slot",
+        "evidence"
+      ],
+      "type": "object"
+    },
+    "BusWindow": {
+      "additionalProperties": false,
+      "description": "Physical bus aperture window exposed by an SoC silicon block.",
+      "properties": {
+        "base": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "size": {
+          "type": "string"
+        },
+        "uncached_alias_base": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "base",
+        "size"
+      ],
+      "type": "object"
+    },
+    "ClaimEvidence": {
+      "additionalProperties": false,
+      "description": "Evidence bundle bound to one architectural entity or model claim axis.",
+      "properties": {
+        "notes": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sources": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/EvidenceSource"
+          },
+          "type": "array"
+        },
+        "tier": {
+          "$ref": "#/$defs/EvidenceTier"
+        }
+      },
+      "required": [
+        "tier"
+      ],
+      "type": "object"
+    },
+    "EepromChipProfile": {
+      "additionalProperties": false,
+      "description": "Concrete serial EEPROM IC profile.",
+      "properties": {
+        "bus": {
+          "type": "string"
+        },
+        "evidence": {
+          "$ref": "#/$defs/ClaimEvidence"
+        },
+        "function": {
+          "$ref": "#/$defs/EepromFunction"
+        },
+        "i2c_addr_7bit": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "page_size": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "part_number": {
+          "type": "string"
+        },
+        "service_replacement_part": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "total_bytes": {
+          "type": "string"
+        },
+        "vendor": {
+          "type": "string"
+        },
+        "voltage_mv": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "vendor",
+        "part_number",
+        "bus",
+        "function",
+        "i2c_addr_7bit",
+        "total_bytes",
+        "page_size",
+        "voltage_mv",
+        "evidence"
+      ],
+      "type": "object"
+    },
+    "EepromFunction": {
+      "description": "Architectural purpose of an external serial EEPROM on a Panasonic board.",
+      "oneOf": [
+        {
+          "const": "optical_calibration",
+          "description": "Optical pickup laser power / strategy calibration (`@RITEK`, `@MBIPG101R05`).",
+          "type": "string"
+        },
+        {
+          "const": "timer_main_config",
+          "description": "Timer MCU settings/clock/model EEPROM on Main PCB (e.g., `IC7404` `C3EBFC000053`/`RFKFM6016KT`).",
+          "type": "string"
+        },
+        {
+          "const": "system_settings",
+          "description": "Non-U99 system settings store.",
+          "type": "string"
+        },
+        {
+          "const": "unknown",
+          "description": "Unconfirmed function in schematics/dumps.",
+          "type": "string"
+        }
+      ]
+    },
+    "EvidenceSource": {
+      "additionalProperties": false,
+      "description": "Primary source reference justifying a claim in a hardware profile.",
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "notes": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reference": {
+          "type": "string"
+        },
+        "sha256": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "reference"
+      ],
+      "type": "object"
+    },
+    "EvidenceTier": {
+      "description": "Empirical confidence tier attached to each individual hardware/firmware claim.",
+      "oneOf": [
+        {
+          "const": "community_unverified",
+          "description": "T0: Forum report, size heuristic, or unverified note (C0 read-only unless offline LabOverride).",
+          "type": "string"
+        },
+        {
+          "const": "service_manual_only",
+          "description": "T1: Verified against official Matsushita/Panasonic service manuals or schematics (no binary dump).",
+          "type": "string"
+        },
+        {
+          "const": "official_frm_verified",
+          "description": "T2: Verified from an official `.FRM` / CDN firmware package (proves train/TOC/load VA, not NOR layout).",
+          "type": "string"
+        },
+        {
+          "const": "physical_dump_verified",
+          "description": "T3: Verified from a full physical chip dump with SHA-256 and static layout analysis.",
+          "type": "string"
+        },
+        {
+          "const": "bench_verified",
+          "description": "T4: Operated and verified live on bench hardware with captured telemetry and before/after hashes.",
+          "type": "string"
+        }
+      ]
+    },
+    "FirmwareTrainProfile": {
+      "additionalProperties": false,
+      "description": "Firmware build/train profile independent of silicon ISA (`loader_ver061`, `loader_ver018`, `prog071`, etc.).",
+      "properties": {
+        "digadiag_raw_bytes": {
+          "default": null,
+          "format": "uint32",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "drv_load_va": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "evidence": {
+          "$ref": "#/$defs/ClaimEvidence"
+        },
+        "frm": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FrmContainerSpec"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "id": {
+          "type": "string"
+        },
+        "loader_date": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "loader_fingerprint": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LoaderFingerprint"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "loader_profile_key": {
+          "type": "string"
+        },
+        "loader_version": {
+          "type": "string"
+        },
+        "main_load_va": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "media_refs": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "prog_load_va": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sd_boot_filenames": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "symbols": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {},
+          "type": "object"
+        }
+      },
+      "required": [
+        "id",
+        "loader_version",
+        "loader_profile_key",
+        "evidence"
+      ],
+      "type": "object"
+    },
+    "FlashChipProfile": {
+      "additionalProperties": false,
+      "description": "Physical NOR Flash or OTP PROM part specification.",
+      "properties": {
+        "evidence": {
+          "$ref": "#/$defs/ClaimEvidence"
+        },
+        "hw_protect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FlashHwProtect"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "id": {
+          "type": "string"
+        },
+        "jedec": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FlashJedecId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "nominal_voltage_mv": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "package": {
+          "type": "string"
+        },
+        "part_number": {
+          "type": "string"
+        },
+        "rw_banks": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/FlashRwBank"
+          },
+          "type": "array"
+        },
+        "sector_banks": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/FlashSectorBank"
+          },
+          "type": "array"
+        },
+        "total_bytes": {
+          "type": "string"
+        },
+        "vendor": {
+          "type": "string"
+        },
+        "voltage_max_mv": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "voltage_min_mv": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "writable": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "vendor",
+        "part_number",
+        "package",
+        "voltage_min_mv",
+        "voltage_max_mv",
+        "nominal_voltage_mv",
+        "writable",
+        "total_bytes",
+        "evidence"
+      ],
+      "type": "object"
+    },
+    "FlashHwProtect": {
+      "additionalProperties": false,
+      "description": "Hardware write-protect pin constraint (e.g. `WP#=VIL` protecting `SA127` on `S29GL128N`).",
+      "properties": {
+        "affects_top_sector": {
+          "type": "boolean"
+        },
+        "pin": {
+          "type": "string"
+        },
+        "protects_region": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "pin",
+        "protects_region",
+        "affects_top_sector"
+      ],
+      "type": "object"
+    },
+    "FlashJedecId": {
+      "additionalProperties": false,
+      "description": "JEDEC manufacturer + device ID sequence read via Autoselect command (`0x90`).",
+      "properties": {
+        "device_cycles": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "mfg": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "mfg",
+        "device_cycles"
+      ],
+      "type": "object"
+    },
+    "FlashRwBank": {
+      "additionalProperties": false,
+      "description": "Simultaneous read-while-write (RWW) bank span in physical `SA` indices.",
+      "properties": {
+        "end_sa": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "start_sa": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "start_sa",
+        "end_sa"
+      ],
+      "type": "object"
+    },
+    "FlashSectorBank": {
+      "additionalProperties": false,
+      "description": "Contiguous bank of uniform sectors ordered from lowest flash offset (`0x000000`) upwards.",
+      "properties": {
+        "count": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "sector_size": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "count",
+        "sector_size"
+      ],
+      "type": "object"
+    },
+    "FrmContainerSpec": {
+      "additionalProperties": false,
+      "description": "Container and symmetric cipher parameters for `.FRM` / SD / CD recovery images.",
+      "properties": {
+        "cipher": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "key_id": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "official_frm_sha256": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "toc_entry_bytes": {
+          "default": null,
+          "format": "uint32",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "toc_size": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "LoaderFingerprint": {
+      "additionalProperties": false,
+      "description": "Expected bootloader banner fingerprint inside `0x000000..0x03FFFF`.",
+      "properties": {
+        "ascii_marker": {
+          "type": "string"
+        },
+        "offset_end": {
+          "type": "string"
+        },
+        "offset_start": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "offset_start",
+        "offset_end",
+        "ascii_marker"
+      ],
+      "type": "object"
+    },
+    "MediaFormatProfile": {
+      "additionalProperties": false,
+      "properties": {
+        "default_volume_mb": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "evidence": {
+          "$ref": "#/$defs/ClaimEvidence"
+        },
+        "filesystem": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "magic_hex": {
+          "type": "string"
+        },
+        "media_kind": {
+          "type": "string"
+        },
+        "partition_type": {
+          "type": "string"
+        },
+        "root_filenames": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "sector_size": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "start_lba": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "write_speed_policy": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "media_kind",
+        "filesystem",
+        "partition_type",
+        "sector_size",
+        "start_lba",
+        "default_volume_mb",
+        "root_filenames",
+        "magic_hex",
+        "write_speed_policy",
+        "evidence"
+      ],
+      "type": "object"
+    },
+    "ModelClaims": {
+      "additionalProperties": false,
+      "description": "Per-axis provenance matrix attached to each DIGA model variant.",
+      "properties": {
+        "board": {
+          "$ref": "#/$defs/ClaimEvidence"
+        },
+        "eeprom": {
+          "$ref": "#/$defs/ClaimEvidence"
+        },
+        "flash_chip": {
+          "$ref": "#/$defs/ClaimEvidence"
+        },
+        "nor_layout": {
+          "$ref": "#/$defs/ClaimEvidence"
+        },
+        "train": {
+          "$ref": "#/$defs/ClaimEvidence"
+        }
+      },
+      "required": [
+        "board",
+        "flash_chip",
+        "nor_layout",
+        "train",
+        "eeprom"
+      ],
+      "type": "object"
+    },
+    "ModelProfileManifest": {
+      "additionalProperties": false,
+      "description": "Top-level model manifest pointing strictly to normalized hardware/train/layout references.",
+      "properties": {
+        "board_ref": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "claims": {
+          "$ref": "#/$defs/ModelClaims"
+        },
+        "exact_aliases": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "family_label": {
+          "type": "string"
+        },
+        "fixture_ref": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "hw_code": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "model_id": {
+          "type": "string"
+        },
+        "nor_layout_ref": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "region_suffix": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "series": {
+          "type": "string"
+        },
+        "train_ref": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tv_standard": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "model_id",
+        "family_label",
+        "series",
+        "claims"
+      ],
+      "type": "object"
+    },
+    "NorLayoutProfile": {
+      "additionalProperties": false,
+      "description": "Explicit Flash NOR partitioning tying a [`crate::FirmwareTrainProfile`] to a [`crate::FlashChipProfile`].",
+      "properties": {
+        "evidence": {
+          "$ref": "#/$defs/ClaimEvidence"
+        },
+        "flash_ref": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "regions": {
+          "items": {
+            "$ref": "#/$defs/NorRegion"
+          },
+          "type": "array"
+        },
+        "train_ref": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "flash_ref",
+        "train_ref",
+        "regions",
+        "evidence"
+      ],
+      "type": "object"
+    },
+    "NorRegion": {
+      "additionalProperties": false,
+      "description": "Contiguous sector-aligned region inside a [`NorLayoutProfile`].",
+      "properties": {
+        "end_offset": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/NorRegionKind"
+        },
+        "policy": {
+          "$ref": "#/$defs/NorRegionPolicy"
+        },
+        "signature": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RegionSignature"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "start_offset": {
+          "type": "string"
+        },
+        "tag": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "start_offset",
+        "end_offset",
+        "policy"
+      ],
+      "type": "object"
+    },
+    "NorRegionKind": {
+      "description": "Semantic role of a physical byte span in NOR Flash (`IC5001`).",
+      "enum": [
+        "ipl",
+        "erased",
+        "extrhead",
+        "main_xip",
+        "bgo",
+        "nor_fs",
+        "eemul",
+        "vendor_nvram",
+        "unknown"
+      ],
+      "type": "string"
+    },
+    "NorRegionPolicy": {
+      "description": "Fail-closed write policy attached to a NOR region.",
+      "enum": [
+        "read_only_permanent",
+        "gated_upper_nor",
+        "nvram_sanitize",
+        "read_only_reference"
+      ],
+      "type": "string"
+    },
+    "RegionSignature": {
+      "additionalProperties": false,
+      "description": "Structural header marker expected at a region sector head (e.g., byte `[5] == 0xF1`).",
+      "properties": {
+        "marker_byte_offset": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "marker_value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "marker_byte_offset",
+        "marker_value"
+      ],
+      "type": "object"
+    },
+    "SocCoreProfile": {
+      "additionalProperties": false,
+      "description": "CPU core ISA and baseline electrical logic family (`MN10300/AM34`, `MN10300/AM33-2`, `SPARC V8`).",
+      "properties": {
+        "endianness": {
+          "type": "string"
+        },
+        "evidence": {
+          "$ref": "#/$defs/ClaimEvidence"
+        },
+        "id": {
+          "type": "string"
+        },
+        "isa": {
+          "type": "string"
+        },
+        "logic_voltage_mv": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "isa",
+        "endianness",
+        "logic_voltage_mv",
+        "evidence"
+      ],
+      "type": "object"
+    },
+    "SocProfile": {
+      "additionalProperties": false,
+      "description": "Concrete SoC silicon part number (`MN2DS0009`, `MN2DS0012-H`, `MN2DS00151DB`, etc.).",
+      "properties": {
+        "bus_windows": {
+          "items": {
+            "$ref": "#/$defs/BusWindow"
+          },
+          "type": "array"
+        },
+        "core_ref": {
+          "type": "string"
+        },
+        "evidence": {
+          "$ref": "#/$defs/ClaimEvidence"
+        },
+        "id": {
+          "type": "string"
+        },
+        "lethal_mmio": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "mmio": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {},
+          "type": "object"
+        },
+        "p7501_nsw5v_hiz_only": {
+          "type": "boolean"
+        },
+        "p7501_uart_baud": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "part_number": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "part_number",
+        "core_ref",
+        "bus_windows",
+        "p7501_uart_baud",
+        "p7501_nsw5v_hiz_only",
+        "evidence"
+      ],
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Canonical normalized bundle across all 9 relational profile tables.",
+  "properties": {
+    "boards": {
+      "additionalProperties": {
+        "$ref": "#/$defs/BoardProfile"
+      },
+      "type": "object"
+    },
+    "eeprom_chips": {
+      "additionalProperties": {
+        "$ref": "#/$defs/EepromChipProfile"
+      },
+      "type": "object"
+    },
+    "firmware_trains": {
+      "additionalProperties": {
+        "$ref": "#/$defs/FirmwareTrainProfile"
+      },
+      "type": "object"
+    },
+    "flash_chips": {
+      "additionalProperties": {
+        "$ref": "#/$defs/FlashChipProfile"
+      },
+      "type": "object"
+    },
+    "media_formats": {
+      "additionalProperties": {
+        "$ref": "#/$defs/MediaFormatProfile"
+      },
+      "type": "object"
+    },
+    "models": {
+      "additionalProperties": {
+        "$ref": "#/$defs/ModelProfileManifest"
+      },
+      "type": "object"
+    },
+    "nor_layouts": {
+      "additionalProperties": {
+        "$ref": "#/$defs/NorLayoutProfile"
+      },
+      "type": "object"
+    },
+    "schema_version": {
+      "format": "uint32",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "soc_cores": {
+      "additionalProperties": {
+        "$ref": "#/$defs/SocCoreProfile"
+      },
+      "type": "object"
+    },
+    "socs": {
+      "additionalProperties": {
+        "$ref": "#/$defs/SocProfile"
+      },
+      "type": "object"
+    }
+  },
+  "required": [
+    "schema_version",
+    "soc_cores",
+    "socs",
+    "flash_chips",
+    "eeprom_chips",
+    "firmware_trains",
+    "nor_layouts",
+    "media_formats",
+    "boards",
+    "models"
+  ],
+  "title": "ProfilesBundle",
+  "type": "object"
+}

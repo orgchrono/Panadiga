@@ -1,0 +1,22 @@
+{
+  "id": "vep79250a_ez49v",
+  "pcb_code": "VEP79250A (Main)",
+  "service_module_code": null,
+  "soc_ref": null,
+  "flash_ref": null,
+  "eeprom_refs": [],
+  "p7501_header_present": false,
+  "has_hdd_interface": false,
+  "has_sd_slot": false,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "service_manual",
+        "reference": "DSD1002003CE (DMR-EZ49VEB/VEC/VEG)",
+        "notes": "UniPhier AM34 DVD+VHS DVB-T/PAL chassis (NOT LSI DoMiNo)."
+      }
+    ],
+    "notes": "UniPhier AM34 DVD+VHS DVB-T/PAL chassis (NOT LSI DoMiNo)."
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "id": "st_m29w320et_4mb_top",
+  "vendor": "STMicroelectronics / Numonyx",
+  "part_number": "M29W320ET70N6E",
+  "package": "TSOP-48",
+  "voltage_min_mv": 2700,
+  "voltage_max_mv": 3600,
+  "nominal_voltage_mv": 3300,
+  "writable": true,
+  "total_bytes": "0x0040_0000",
+  "jedec": {
+    "mfg": "0x0020",
+    "device_cycles": [
+      "0x2256"
+    ]
+  },
+  "sector_banks": [
+    {
+      "name": "main_uniform",
+      "count": 63,
+      "sector_size": "0x10000"
+    },
+    {
+      "name": "top_boot",
+      "count": 8,
+      "sector_size": "0x2000"
+    }
+  ],
+  "rw_banks": [],
+  "hw_protect": {
+    "pin": "VPP/WP#",
+    "protects_region": "top_8_parameter_blocks",
+    "affects_top_sector": true
+  },
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "datasheet",
+        "reference": "ST/Numonyx Doc ID 11617 (M29W320ET 71 blocks)"
+      }
+    ]
+  }
+}

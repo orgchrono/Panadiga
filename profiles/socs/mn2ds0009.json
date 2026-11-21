@@ -1,0 +1,56 @@
+{
+  "id": "mn2ds0009",
+  "part_number": "MN2DS0009",
+  "core_ref": "mn10300_am34",
+  "bus_windows": [
+    {
+      "name": "nor_cached",
+      "base": "0x8000_0000",
+      "size": "0x0400_0000",
+      "uncached_alias_base": "0x8400_0000"
+    },
+    {
+      "name": "nor_xip_cached",
+      "base": "0x4400_0000",
+      "size": "0x0004_0000",
+      "uncached_alias_base": "0x8400_0000"
+    },
+    {
+      "name": "sdram_main",
+      "base": "0x5000_0000",
+      "size": "0x0400_0000",
+      "uncached_alias_base": "0x9000_0000"
+    },
+    {
+      "name": "drv_s211_exec",
+      "base": "0x4000_0000",
+      "size": "0x0016_0000",
+      "uncached_alias_base": null
+    }
+  ],
+  "mmio": {
+    "sc0_uart": "0xD400_2000",
+    "aiof": "0x8800_0000",
+    "avdd": "0x8980_0000",
+    "davis_pri": "0x8900_0500",
+    "davis_sec": "0x8900_0D00",
+    "sdcd": "0x8900_1800"
+  },
+  "lethal_mmio": [
+    "0xC000_100C"
+  ],
+  "p7501_uart_baud": 115200,
+  "p7501_nsw5v_hiz_only": true,
+  "evidence": {
+    "tier": "bench_verified",
+    "sources": [
+      {
+        "kind": "bench_log",
+        "reference": "docs/STATUS.md",
+        "sha256": "c1faee798f60545853eefdba0d15f23678b471466dc2bc84f522bc972f15a02d",
+        "notes": "Delta 0x4000_0000 cacheability bit verified across PROG061 0x50400000<->0x90400000 & CRT0."
+      }
+    ],
+    "notes": "Delta 0x4000_0000 cacheability bit verified across PROG061 0x50400000<->0x90400000 & CRT0."
+  }
+}

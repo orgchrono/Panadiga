@@ -1,0 +1,22 @@
+{
+  "id": "rfkb79295d_bwt700",
+  "pcb_code": "RFKB79295D (BD Digital PCB)",
+  "service_module_code": "RFKB79295D",
+  "soc_ref": null,
+  "flash_ref": null,
+  "eeprom_refs": [],
+  "p7501_header_present": false,
+  "has_hdd_interface": true,
+  "has_sd_slot": true,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "service_manual",
+        "reference": "CHM1103011CE / DSD1105021CE (DMR-BWT700/BWT800)",
+        "notes": "3D BD + HDD + Twin HD tuner, ttyS0 SLM."
+      }
+    ],
+    "notes": "3D BD + HDD + Twin HD tuner, ttyS0 SLM."
+  }
+}

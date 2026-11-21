@@ -1,0 +1,64 @@
+{
+  "model_id": "DMR-EX81S",
+  "family_label": "DMR-EX81S",
+  "series": "Série EX (HDD+DVB-S)",
+  "region_suffix": "SEG",
+  "tv_standard": "PAL",
+  "hw_code": null,
+  "board_ref": null,
+  "train_ref": "toc64_main57_ex81",
+  "nor_layout_ref": null,
+  "exact_aliases": [
+    "DMR-EX71SEG",
+    "DMR-EX81SEG"
+  ],
+  "fixture_ref": null,
+  "claims": {
+    "board": {
+      "tier": "service_manual_only",
+      "sources": [
+        {
+          "kind": "service_manual",
+          "reference": "Elektrotanya panasonic_dmr-ex71seg_ex81seg.pdf"
+        }
+      ]
+    },
+    "flash_chip": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "nor_layout": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "train": {
+      "tier": "official_frm_verified",
+      "sources": [
+        {
+          "kind": "official_frm",
+          "reference": "firmware_and_images/dmr-ex_ez_series/README.md",
+          "sha256": "df2c572206763c6fdd4309d02881a478b999c54e1bb157bb8c2ee5e92e3599a1"
+        }
+      ]
+    },
+    "eeprom": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    }
+  }
+}

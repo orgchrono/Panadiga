@@ -1,0 +1,63 @@
+{
+  "model_id": "DMR-EX78",
+  "family_label": "DMR-EX78",
+  "series": "Série EX (HDD+DVB-T)",
+  "region_suffix": "EN/EB/EC/EF",
+  "tv_standard": "PAL",
+  "hw_code": null,
+  "board_ref": null,
+  "train_ref": "prog061_mini_4mb_main57",
+  "nor_layout_ref": null,
+  "exact_aliases": [
+    "DMR-EX78EN"
+  ],
+  "fixture_ref": null,
+  "claims": {
+    "board": {
+      "tier": "service_manual_only",
+      "sources": [
+        {
+          "kind": "service_manual",
+          "reference": "Elektrotanya panasonic_dmr-ex78ex_ex88ex.pdf"
+        }
+      ]
+    },
+    "flash_chip": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "nor_layout": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "train": {
+      "tier": "official_frm_verified",
+      "sources": [
+        {
+          "kind": "official_frm",
+          "reference": "firmware_and_images/dmr-ex_ez_series/README.md",
+          "sha256": "11f72af33eef53c16d2841bc4a8011fd6b2e054dabbff25a3c4936dc05b238f8"
+        }
+      ]
+    },
+    "eeprom": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    }
+  }
+}

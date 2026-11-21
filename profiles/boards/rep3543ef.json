@@ -1,0 +1,22 @@
+{
+  "id": "rep3543ef",
+  "pcb_code": "REP3543EF (Digital)",
+  "service_module_code": "REP3543EF",
+  "soc_ref": null,
+  "flash_ref": null,
+  "eeprom_refs": [],
+  "p7501_header_present": false,
+  "has_hdd_interface": true,
+  "has_sd_slot": true,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "service_manual",
+        "reference": "DSD0307011C7 / DSD0307012C2 / DSD0309017C2 (DMR-E100H)",
+        "notes": "HDD + SD + PC Card."
+      }
+    ],
+    "notes": "HDD + SD + PC Card."
+  }
+}

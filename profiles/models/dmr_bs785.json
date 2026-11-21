@@ -1,0 +1,63 @@
+{
+  "model_id": "DMR-BS785",
+  "family_label": "DMR-BS785",
+  "series": "Série BS/XS (2010 Blu-ray/DVD DVB-S2 NAND)",
+  "region_suffix": "EG",
+  "tv_standard": "PAL",
+  "hw_code": null,
+  "board_ref": null,
+  "train_ref": "uniphier_bs885_panasonic_hdr_nand",
+  "nor_layout_ref": null,
+  "exact_aliases": [
+    "DMR-BS785EG"
+  ],
+  "fixture_ref": null,
+  "claims": {
+    "board": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "flash_chip": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "nor_layout": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "train": {
+      "tier": "official_frm_verified",
+      "sources": [
+        {
+          "kind": "official_frm",
+          "reference": "firmware_and_images/dmr-xw_bd_series/README.md",
+          "sha256": "222f213c234c5ec17ba1e026ee6fe9575eade3b8557f257a73b80740d9b30b21"
+        }
+      ]
+    },
+    "eeprom": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    }
+  }
+}

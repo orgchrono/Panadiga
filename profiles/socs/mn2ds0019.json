@@ -1,0 +1,24 @@
+{
+  "id": "mn2ds0019",
+  "part_number": "MN2DS0019",
+  "core_ref": "mn10300_am34",
+  "bus_windows": [],
+  "mmio": {},
+  "lethal_mmio": [
+    "0xC000_100C"
+  ],
+  "p7501_uart_baud": 115200,
+  "p7501_nsw5v_hiz_only": true,
+  "evidence": {
+    "tier": "official_frm_verified",
+    "sources": [
+      {
+        "kind": "official_frm",
+        "reference": "firmware_and_images/dmr-eh58/DVDRAM.7z (MAIN.BIN plaintext embeds verbatim MN2DS0019 string)",
+        "sha256": "d58297d6581551a95912ea88b47a6f8c4c291a841b7dd7eb6e47e2b8dcbcea31",
+        "notes": "Verified verbatim inside unpacked MAIN.BIN (EH58, EX78, EX81S, EH49)."
+      }
+    ],
+    "notes": "Verified verbatim inside unpacked MAIN.BIN (EH58, EX78, EX81S, EH49)."
+  }
+}

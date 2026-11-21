@@ -1,0 +1,40 @@
+{
+  "id": "uniphier_bs885_panasonic_hdr_nand",
+  "loader_version": "M2863EG_ZE-340",
+  "loader_date": null,
+  "loader_profile_key": "uniphier_nand",
+  "loader_fingerprint": null,
+  "frm": {
+    "toc_entry_bytes": 48,
+    "toc_size": "0x1800",
+    "cipher": "panasonic_48b_hdr_feistel64",
+    "key_id": "le2011_08e0",
+    "official_frm_sha256": "222f213c234c5ec17ba1e026ee6fe9575eade3b8557f257a73b80740d9b30b21"
+  },
+  "prog_load_va": null,
+  "main_load_va": null,
+  "drv_load_va": null,
+  "symbols": {},
+  "sd_boot_filenames": [
+    "PANA_ESD.FRM",
+    "PANA__SD.FRM"
+  ],
+  "digadiag_raw_bytes": 163840,
+  "media_refs": [
+    "dvd_iso9660_level1",
+    "sd_fat16b_0x06",
+    "hdd_meihdfs_v1"
+  ],
+  "evidence": {
+    "tier": "official_frm_verified",
+    "sources": [
+      {
+        "kind": "official_frm",
+        "reference": "firmware_and_images/dmr-xw_bd_series/bs885_bs785_xs385eg/PANA_DVD.FRM",
+        "sha256": "222f213c234c5ec17ba1e026ee6fe9575eade3b8557f257a73b80740d9b30b21",
+        "notes": "48B plaintext PANASONIC\\0\\0\\0 outer header + le2011_08e0 TOC @ 0x30 (file-relative 0x2000/0x2A000), PROG0.00 adler32=0x609912FF."
+      }
+    ],
+    "notes": "48B plaintext PANASONIC\\0\\0\\0 outer header + le2011_08e0 TOC @ 0x30 (file-relative 0x2000/0x2A000), PROG0.00 adler32=0x609912FF."
+  }
+}

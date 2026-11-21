@@ -1,0 +1,65 @@
+{
+  "model_id": "DMR-EX97",
+  "family_label": "DMR-EX97",
+  "series": "Série EX (2015 USB PANAEUSB)",
+  "region_suffix": "EB/SEG/CEG",
+  "tv_standard": "PAL",
+  "hw_code": null,
+  "board_ref": null,
+  "train_ref": "panaeusb_ex97_encrypted_usb",
+  "nor_layout_ref": null,
+  "exact_aliases": [
+    "DMR-EX97EB",
+    "DMR-EX97SEG",
+    "DMR-EX97CEG"
+  ],
+  "fixture_ref": null,
+  "claims": {
+    "board": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "User manual SQT0994 (service manual pending)"
+        }
+      ]
+    },
+    "flash_chip": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "nor_layout": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "train": {
+      "tier": "official_frm_verified",
+      "sources": [
+        {
+          "kind": "official_frm",
+          "reference": "firmware_and_images/dmr-ex_ez_series/README.md",
+          "sha256": "f62bc64672fe3931a1987ff8d76098ce755e1b4647ad6f3983874c154e892fb2"
+        }
+      ]
+    },
+    "eeprom": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    }
+  }
+}

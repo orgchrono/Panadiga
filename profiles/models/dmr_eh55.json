@@ -1,0 +1,69 @@
+{
+  "model_id": "DMR-EH55",
+  "family_label": "DMR-EH55",
+  "series": "Série EH (HDD+DVD)",
+  "region_suffix": "EC/LB",
+  "tv_standard": "PAL/PAL-M",
+  "hw_code": "M6930",
+  "board_ref": "vep79138",
+  "train_ref": "loader_ver061_toc48_main57",
+  "nor_layout_ref": "eh55_ver061_on_s29jl064h",
+  "exact_aliases": [
+    "DMR-EH55LB-S",
+    "DMR-EH55EC",
+    "DMR-EH55EP",
+    "DMR-EH55S",
+    "DMR-EH55P"
+  ],
+  "fixture_ref": "profiles/fixtures/dmr_eh55.fixture.json",
+  "claims": {
+    "board": {
+      "tier": "bench_verified",
+      "sources": [
+        {
+          "kind": "bench_log",
+          "reference": "docs/STATUS.md",
+          "sha256": "c1faee798f60545853eefdba0d15f23678b471466dc2bc84f522bc972f15a02d"
+        }
+      ]
+    },
+    "flash_chip": {
+      "tier": "bench_verified",
+      "sources": [
+        {
+          "kind": "physical_dump",
+          "reference": "firmware_and_images/eh55_nor_8mb_ic5001_dump.bin",
+          "sha256": "c1faee798f60545853eefdba0d15f23678b471466dc2bc84f522bc972f15a02d"
+        }
+      ]
+    },
+    "nor_layout": {
+      "tier": "bench_verified",
+      "sources": [
+        {
+          "kind": "physical_dump",
+          "reference": "firmware_and_images/eh55_nor_8mb_ic5001_dump.bin",
+          "sha256": "c1faee798f60545853eefdba0d15f23678b471466dc2bc84f522bc972f15a02d"
+        }
+      ]
+    },
+    "train": {
+      "tier": "bench_verified",
+      "sources": [
+        {
+          "kind": "bench_log",
+          "reference": "docs/debug_logs/sddiag_ver061_live_20261119.log"
+        }
+      ]
+    },
+    "eeprom": {
+      "tier": "service_manual_only",
+      "sources": [
+        {
+          "kind": "service_manual",
+          "reference": "DSD0603003CE IC7404 C3EBFC000053/RFKFM6016KT"
+        }
+      ]
+    }
+  }
+}

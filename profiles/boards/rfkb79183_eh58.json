@@ -1,0 +1,24 @@
+{
+  "id": "rfkb79183_eh58",
+  "pcb_code": "VEP79183 (Main) / VEP73160A (HDMI)",
+  "service_module_code": "RFKB79183AT/BT/CT/ET",
+  "soc_ref": null,
+  "flash_ref": null,
+  "eeprom_refs": [
+    "panasonic_rfkfm4016kt_dif"
+  ],
+  "p7501_header_present": false,
+  "has_hdd_interface": true,
+  "has_sd_slot": true,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "service_manual",
+        "reference": "DSD0802009CE / CHM0805029CE (DMR-EH58/EH68)",
+        "notes": "SAFETY HAZARD: P7501 repurposed to 8-pin K1KA08A00427 carrying +5.8V_AV to HDMI (NOT UART JIG!)."
+      }
+    ],
+    "notes": "SAFETY HAZARD: P7501 repurposed to 8-pin K1KA08A00427 carrying +5.8V_AV to HDMI (NOT UART JIG!)."
+  }
+}

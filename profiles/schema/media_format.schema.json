@@ -1,0 +1,153 @@
+{
+  "$defs": {
+    "ClaimEvidence": {
+      "additionalProperties": false,
+      "description": "Evidence bundle bound to one architectural entity or model claim axis.",
+      "properties": {
+        "notes": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sources": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/EvidenceSource"
+          },
+          "type": "array"
+        },
+        "tier": {
+          "$ref": "#/$defs/EvidenceTier"
+        }
+      },
+      "required": [
+        "tier"
+      ],
+      "type": "object"
+    },
+    "EvidenceSource": {
+      "additionalProperties": false,
+      "description": "Primary source reference justifying a claim in a hardware profile.",
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "notes": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reference": {
+          "type": "string"
+        },
+        "sha256": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "reference"
+      ],
+      "type": "object"
+    },
+    "EvidenceTier": {
+      "description": "Empirical confidence tier attached to each individual hardware/firmware claim.",
+      "oneOf": [
+        {
+          "const": "community_unverified",
+          "description": "T0: Forum report, size heuristic, or unverified note (C0 read-only unless offline LabOverride).",
+          "type": "string"
+        },
+        {
+          "const": "service_manual_only",
+          "description": "T1: Verified against official Matsushita/Panasonic service manuals or schematics (no binary dump).",
+          "type": "string"
+        },
+        {
+          "const": "official_frm_verified",
+          "description": "T2: Verified from an official `.FRM` / CDN firmware package (proves train/TOC/load VA, not NOR layout).",
+          "type": "string"
+        },
+        {
+          "const": "physical_dump_verified",
+          "description": "T3: Verified from a full physical chip dump with SHA-256 and static layout analysis.",
+          "type": "string"
+        },
+        {
+          "const": "bench_verified",
+          "description": "T4: Operated and verified live on bench hardware with captured telemetry and before/after hashes.",
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "default_volume_mb": {
+      "format": "uint32",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "evidence": {
+      "$ref": "#/$defs/ClaimEvidence"
+    },
+    "filesystem": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string"
+    },
+    "magic_hex": {
+      "type": "string"
+    },
+    "media_kind": {
+      "type": "string"
+    },
+    "partition_type": {
+      "type": "string"
+    },
+    "root_filenames": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "sector_size": {
+      "format": "uint32",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "start_lba": {
+      "format": "uint32",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "write_speed_policy": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "media_kind",
+    "filesystem",
+    "partition_type",
+    "sector_size",
+    "start_lba",
+    "default_volume_mb",
+    "root_filenames",
+    "magic_hex",
+    "write_speed_policy",
+    "evidence"
+  ],
+  "title": "MediaFormatProfile",
+  "type": "object"
+}

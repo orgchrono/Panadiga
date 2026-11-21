@@ -1,0 +1,22 @@
+{
+  "id": "rfknex75",
+  "pcb_code": "VEP71110 (PSU) / VEP73137A (HDMI)",
+  "service_module_code": "RFKNEX75EG / RFKNEX75EC / RFKNEX75EB",
+  "soc_ref": null,
+  "flash_ref": null,
+  "eeprom_refs": [],
+  "p7501_header_present": false,
+  "has_hdd_interface": true,
+  "has_sd_slot": true,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "service_manual",
+        "reference": "MAD0607020CE / CHM0611047CE (DMR-EX75/EX85)",
+        "notes": "RAM/Digital PCB RFKNEX75* black-boxed in Vol. 1."
+      }
+    ],
+    "notes": "RAM/Digital PCB RFKNEX75* black-boxed in Vol. 1."
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "id": "vep79338_bwt720",
+  "pcb_code": "VEP79338 (Main/HDMI)",
+  "service_module_code": null,
+  "soc_ref": null,
+  "flash_ref": null,
+  "eeprom_refs": [],
+  "p7501_header_present": false,
+  "has_hdd_interface": true,
+  "has_sd_slot": true,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "service_manual",
+        "reference": "DSD1205011CE (DMR-BWT720EB)",
+        "notes": "1TB HDD + 3D BD."
+      }
+    ],
+    "notes": "1TB HDD + 3D BD."
+  }
+}

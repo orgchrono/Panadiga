@@ -1,0 +1,66 @@
+{
+  "model_id": "DMR-ES35V",
+  "family_label": "DMR-ES35V",
+  "series": "Série ES (DVD+VHS)",
+  "region_suffix": "EE",
+  "tv_standard": "PAL/SECAM",
+  "hw_code": "M6720EE",
+  "board_ref": "es35v_digital_board",
+  "train_ref": "loader_ver018_xip_main52df6",
+  "nor_layout_ref": "es35v_ver018_on_8mb",
+  "exact_aliases": [
+    "DMR-ES35VEE",
+    "DMR-ES35VP"
+  ],
+  "fixture_ref": "profiles/fixtures/dmr_es35v.fixture.json",
+  "claims": {
+    "board": {
+      "tier": "service_manual_only",
+      "sources": [
+        {
+          "kind": "service_manual",
+          "reference": "VR0603001CE / MD0605164CE / MAD0605013CE (Main VEPV0057A, RFKNES35V* module, IC6001/IC7501 verified)"
+        }
+      ]
+    },
+    "flash_chip": {
+      "tier": "physical_dump_verified",
+      "sources": [
+        {
+          "kind": "physical_dump",
+          "reference": "firmware_and_images/dmr-es35v/README.md",
+          "sha256": "0969f2580ad30b98027271a8e3947f5a6ae1c02dec06462b87ce1057a7a1bcf9"
+        }
+      ]
+    },
+    "nor_layout": {
+      "tier": "physical_dump_verified",
+      "sources": [
+        {
+          "kind": "physical_dump",
+          "reference": "firmware_and_images/dmr-es35v/README.md",
+          "sha256": "0969f2580ad30b98027271a8e3947f5a6ae1c02dec06462b87ce1057a7a1bcf9"
+        }
+      ]
+    },
+    "train": {
+      "tier": "physical_dump_verified",
+      "sources": [
+        {
+          "kind": "physical_dump",
+          "reference": "firmware_and_images/dmr-es35v/README.md",
+          "sha256": "0969f2580ad30b98027271a8e3947f5a6ae1c02dec06462b87ce1057a7a1bcf9"
+        }
+      ]
+    },
+    "eeprom": {
+      "tier": "physical_dump_verified",
+      "sources": [
+        {
+          "kind": "physical_dump",
+          "reference": "firmware_and_images/dmr-es35v/README.md (SHA256 17bb5383...)"
+        }
+      ]
+    }
+  }
+}

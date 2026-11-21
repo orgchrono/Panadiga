@@ -1,0 +1,40 @@
+{
+  "id": "uniphier_bs880_le2011_nand",
+  "loader_version": "M2863EB_QD-341",
+  "loader_date": null,
+  "loader_profile_key": "uniphier_nand",
+  "loader_fingerprint": null,
+  "frm": {
+    "toc_entry_bytes": 48,
+    "toc_size": "0x1800",
+    "cipher": "feistel64_ecb",
+    "key_id": "le2011_08e0",
+    "official_frm_sha256": "747b607f61dc20a180beac78969cbf2c32743e7636e269110d27a6033f351468"
+  },
+  "prog_load_va": null,
+  "main_load_va": null,
+  "drv_load_va": null,
+  "symbols": {},
+  "sd_boot_filenames": [
+    "PANA_ESD.FRM",
+    "PANA__SD.FRM"
+  ],
+  "digadiag_raw_bytes": 163840,
+  "media_refs": [
+    "dvd_iso9660_level1",
+    "sd_fat16b_0x06",
+    "hdd_meihdfs_v1"
+  ],
+  "evidence": {
+    "tier": "official_frm_verified",
+    "sources": [
+      {
+        "kind": "official_frm",
+        "reference": "firmware_and_images/dmr-xw_bd_series/bs880_bs780_xs380eb/PANA_DVD.FRM",
+        "sha256": "747b607f61dc20a180beac78969cbf2c32743e7636e269110d27a6033f351468",
+        "notes": "le2011_08e0 Dvd48B TOC: PROG0.00 (MN103S, 163840B NAND updater, adler32=0xA4F374FC), MAIN3410."
+      }
+    ],
+    "notes": "le2011_08e0 Dvd48B TOC: PROG0.00 (MN103S, 163840B NAND updater, adler32=0xA4F374FC), MAIN3410."
+  }
+}

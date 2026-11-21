@@ -1,0 +1,23 @@
+{
+  "id": "panasonic_c3ebfc000053_timer",
+  "vendor": "Panasonic",
+  "part_number": "C3EBFC000053",
+  "service_replacement_part": "RFKFM6016KT",
+  "bus": "i2c_timer_main_pcb",
+  "function": "timer_main_config",
+  "i2c_addr_7bit": "0x50",
+  "total_bytes": "0x0400",
+  "page_size": 16,
+  "voltage_mv": 3300,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "service_manual",
+        "reference": "manuals_and_schematics/dmr-eh55/service/panasonic_dmr_eh55ec_service_manual_vol2_schematics.pdf (pp. 80, 117, 122, 135: IC7404 Main PCB)",
+        "notes": "Main PCB timer MCU EEPROM controlled via (EEPROM_W_C)/QR7404; NOT U99 EEMUL NVRAM."
+      }
+    ],
+    "notes": "Main PCB timer MCU EEPROM controlled via (EEPROM_W_C)/QR7404; NOT U99 EEMUL NVRAM."
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "id": "vep79106a",
+  "pcb_code": "VEP79106A (Digital) / VEP79111D (Main)",
+  "service_module_code": null,
+  "soc_ref": null,
+  "flash_ref": null,
+  "eeprom_refs": [
+    "panasonic_c3ebfc000053_timer"
+  ],
+  "p7501_header_present": true,
+  "has_hdd_interface": true,
+  "has_sd_slot": true,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "service_manual",
+        "reference": "DSD0503038C1 / DSD0503040C2 (DMR-EH50P/PC/EB/EG/EP)",
+        "notes": "IC7404 = RFKFM6016K/KT; MN2DS0016 verified at T2 FRM / Web only (omitted in SM Digital BOM)."
+      }
+    ],
+    "notes": "IC7404 = RFKFM6016K/KT; MN2DS0016 verified at T2 FRM / Web only (omitted in SM Digital BOM)."
+  }
+}

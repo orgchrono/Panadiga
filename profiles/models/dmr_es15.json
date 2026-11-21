@@ -1,0 +1,63 @@
+{
+  "model_id": "DMR-ES15",
+  "family_label": "DMR-ES15",
+  "series": "Série ES (DVD-RAM)",
+  "region_suffix": "P/EB/EC/EG",
+  "tv_standard": "NTSC/PAL",
+  "hw_code": null,
+  "board_ref": "rfkb79119_es15",
+  "train_ref": null,
+  "nor_layout_ref": null,
+  "exact_aliases": [
+    "DMR-ES15EB",
+    "DMR-ES15P"
+  ],
+  "fixture_ref": null,
+  "claims": {
+    "board": {
+      "tier": "service_manual_only",
+      "sources": [
+        {
+          "kind": "service_manual",
+          "reference": "DSD0602001CE / DSD0605507SE (Main RFKB79119AT/BT/C/D/DT; RFKNES15P module BOM omitted)"
+        }
+      ]
+    },
+    "flash_chip": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "nor_layout": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "train": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "eeprom": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    }
+  }
+}

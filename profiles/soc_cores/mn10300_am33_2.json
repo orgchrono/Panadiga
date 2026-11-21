@@ -1,0 +1,15 @@
+{
+  "id": "mn10300_am33_2",
+  "isa": "MN10300/AM33-2",
+  "endianness": "little",
+  "logic_voltage_mv": 3300,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "datasheet",
+        "reference": "Matsushita MN10300 / AM33 series cross-assembler & OCD manuals"
+      }
+    ]
+  }
+}

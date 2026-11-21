@@ -1,0 +1,64 @@
+{
+  "model_id": "DMR-E85H",
+  "family_label": "DMR-E85H",
+  "series": "Série ExxH (HDD+DVD)",
+  "region_suffix": "P/EB/EG/EE",
+  "tv_standard": "NTSC/PAL",
+  "hw_code": null,
+  "board_ref": "rep3774g",
+  "train_ref": null,
+  "nor_layout_ref": null,
+  "exact_aliases": [
+    "DMR-E85HEG",
+    "DMR-E85HEC",
+    "DMR-E85HP"
+  ],
+  "fixture_ref": null,
+  "claims": {
+    "board": {
+      "tier": "service_manual_only",
+      "sources": [
+        {
+          "kind": "service_manual",
+          "reference": "DSD0403003C1 / DSD0403005C2 / DSD0405013C3 (Main REP3662F, Digital REP3774G, IC7501=C2CBJG000398)"
+        }
+      ]
+    },
+    "flash_chip": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "CONFLICT_UNRESOLVED (2MB vs 4MB): REP3774G BOM omitted from DSD0403003C1"
+        }
+      ]
+    },
+    "nor_layout": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "train": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "eeprom": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    }
+  }
+}

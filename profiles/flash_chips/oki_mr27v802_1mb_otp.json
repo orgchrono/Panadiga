@@ -1,0 +1,24 @@
+{
+  "id": "oki_mr27v802_1mb_otp",
+  "vendor": "OKI / LAPIS",
+  "part_number": "MR27V802F",
+  "package": "SOP-44",
+  "voltage_min_mv": 3000,
+  "voltage_max_mv": 3600,
+  "nominal_voltage_mv": 3300,
+  "writable": false,
+  "total_bytes": "0x0010_0000",
+  "jedec": null,
+  "sector_banks": [],
+  "rw_banks": [],
+  "hw_protect": null,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "datasheet",
+        "reference": "OKI / LAPIS Semiconductor FEDR27V802F (1 MiB OTP P2ROM, 3.0V-3.6V, non-erasable read-only)"
+      }
+    ]
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "model_id": "DMR-ES35V",
+  "dump_bytes": 8388608,
+  "expected_sha256": "0969f2580ad30b98027271a8e3947f5a6ae1c02dec06462b87ce1057a7a1bcf9",
+  "probes": [
+    {
+      "offset": "0x0002_F6D7",
+      "ascii": "Loader ver%s [%s] *****"
+    },
+    {
+      "offset": "0x0002_F6F0",
+      "ascii": "0.18"
+    },
+    {
+      "offset": "0x0003_46AE",
+      "ascii": "ver1.50 (2005/11/02) : DAVIS"
+    },
+    {
+      "offset": "0x0008_0000",
+      "ascii": "EXTRHEADDRV "
+    },
+    {
+      "offset": "0x0043_0000",
+      "ascii": "EXTRHEADMAIN"
+    },
+    {
+      "offset": "0x0070_0000",
+      "hex": "FFFFFFFF0AF2FFFF"
+    },
+    {
+      "offset": "0x0072_0604",
+      "ascii": "M6720EE"
+    },
+    {
+      "offset": "0x007F_2000",
+      "hex": "FFFFFFFF02F1FFFF"
+    },
+    {
+      "offset": "0x007F_4000",
+      "hex": "FFFFFFFF01F1FFFF"
+    }
+  ]
+}

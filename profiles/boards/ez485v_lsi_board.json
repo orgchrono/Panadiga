@@ -1,0 +1,20 @@
+{
+  "id": "ez485v_lsi_board",
+  "pcb_code": "VEP79180",
+  "service_module_code": "MSC-RFKB79180C",
+  "soc_ref": "lsi_domino_zebra64",
+  "flash_ref": "macronix_mx29lv320_4mb_bottom",
+  "eeprom_refs": [],
+  "p7501_header_present": false,
+  "has_hdd_interface": false,
+  "has_sd_slot": true,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "service_manual",
+        "reference": "CHM0802005CE (Digital VEP79180 / MSC-RFKB79180C, IC8651 Flash, IC8611 EEPROM, DM8635-CHZ Zebra 64)"
+      }
+    ]
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "id": "fujitsu_mbm29lv160te_2mb_top",
+  "vendor": "Fujitsu",
+  "part_number": "MBM29LV160TE-90PTN",
+  "package": "TSOP-48",
+  "voltage_min_mv": 2700,
+  "voltage_max_mv": 3600,
+  "nominal_voltage_mv": 3300,
+  "writable": true,
+  "total_bytes": "0x0020_0000",
+  "jedec": {
+    "mfg": "0x0004",
+    "device_cycles": [
+      "0x22C4"
+    ]
+  },
+  "sector_banks": [
+    {
+      "name": "main_uniform",
+      "count": 31,
+      "sector_size": "0x10000"
+    },
+    {
+      "name": "mid_32k",
+      "count": 1,
+      "sector_size": "0x8000"
+    },
+    {
+      "name": "boot_8k",
+      "count": 2,
+      "sector_size": "0x2000"
+    },
+    {
+      "name": "top_16k",
+      "count": 1,
+      "sector_size": "0x4000"
+    }
+  ],
+  "rw_banks": [],
+  "hw_protect": null,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "datasheet",
+        "reference": "Fujitsu DS04-212/213 (MBM29LV160TE 35 sectors)"
+      }
+    ]
+  }
+}

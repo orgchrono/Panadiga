@@ -1,0 +1,63 @@
+{
+  "model_id": "DMR-EZ28",
+  "family_label": "DMR-EZ28",
+  "series": "Série EZ (LSI DoMiNo NA ATSC DVD)",
+  "region_suffix": "P/PC",
+  "tv_standard": "NTSC/ATSC",
+  "hw_code": null,
+  "board_ref": "ez485v_lsi_board",
+  "train_ref": null,
+  "nor_layout_ref": null,
+  "exact_aliases": [
+    "DMR-EZ28P",
+    "DMR-EZ28PC"
+  ],
+  "fixture_ref": null,
+  "claims": {
+    "board": {
+      "tier": "service_manual_only",
+      "sources": [
+        {
+          "kind": "service_manual",
+          "reference": "CHM0802003CE (shared VEP79180 LSI Magnum board w/ EZ48VP/EZ485VP)"
+        }
+      ]
+    },
+    "flash_chip": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "nor_layout": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "train": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "eeprom": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    }
+  }
+}

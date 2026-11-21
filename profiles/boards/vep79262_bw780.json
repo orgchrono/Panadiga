@@ -1,0 +1,22 @@
+{
+  "id": "vep79262_bw780",
+  "pcb_code": "VEP79262 (Digital/HDMI) / VEP73177B (AV IO)",
+  "service_module_code": null,
+  "soc_ref": null,
+  "flash_ref": null,
+  "eeprom_refs": [],
+  "p7501_header_present": false,
+  "has_hdd_interface": true,
+  "has_sd_slot": true,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "service_manual",
+        "reference": "DSD1005030CE (DMR-BW780/BW880EB)",
+        "notes": "K1KA06AA0083 6-pin UART ttyS0 (115200 8N1 SLM, XDEBUG)."
+      }
+    ],
+    "notes": "K1KA06AA0083 6-pin UART ttyS0 (115200 8N1 SLM, XDEBUG)."
+  }
+}

@@ -1,0 +1,94 @@
+{
+  "id": "es35v_ver018_on_8mb",
+  "flash_ref": "spansion_s29jl064h_8mb",
+  "train_ref": "loader_ver018_xip_main52df6",
+  "regions": [
+    {
+      "kind": "ipl",
+      "start_offset": "0x0000_0000",
+      "end_offset": "0x0003_FFFF",
+      "policy": "read_only_permanent",
+      "tag": "Loader ver0.18",
+      "signature": null
+    },
+    {
+      "kind": "erased",
+      "start_offset": "0x0004_0000",
+      "end_offset": "0x0007_FFFF",
+      "policy": "read_only_reference",
+      "tag": "Erased",
+      "signature": null
+    },
+    {
+      "kind": "extrhead",
+      "start_offset": "0x0008_0000",
+      "end_offset": "0x0012_FFFF",
+      "policy": "read_only_reference",
+      "tag": "DRV ",
+      "signature": null
+    },
+    {
+      "kind": "main_xip",
+      "start_offset": "0x0013_0000",
+      "end_offset": "0x0040_FFFF",
+      "policy": "read_only_reference",
+      "tag": "MAIN_XIP",
+      "signature": null
+    },
+    {
+      "kind": "erased",
+      "start_offset": "0x0041_0000",
+      "end_offset": "0x0042_FFFF",
+      "policy": "read_only_reference",
+      "tag": "Erased",
+      "signature": null
+    },
+    {
+      "kind": "extrhead",
+      "start_offset": "0x0043_0000",
+      "end_offset": "0x006D_FFFF",
+      "policy": "read_only_reference",
+      "tag": "MAIN_3080GR LZMA",
+      "signature": null
+    },
+    {
+      "kind": "erased",
+      "start_offset": "0x006E_0000",
+      "end_offset": "0x006F_FFFF",
+      "policy": "read_only_reference",
+      "tag": "Erased",
+      "signature": null
+    },
+    {
+      "kind": "bgo",
+      "start_offset": "0x0070_0000",
+      "end_offset": "0x007E_FFFF",
+      "policy": "read_only_reference",
+      "tag": "BGO FTL (0x720600=M6720EE, 0x780000..0x79FFFF erased)",
+      "signature": null
+    },
+    {
+      "kind": "eemul",
+      "start_offset": "0x007F_0000",
+      "end_offset": "0x007F_FFFF",
+      "policy": "nvram_sanitize",
+      "tag": "EEMUL (0x7F0000 FF; 0x7F2000=02F1; 0x7F4000=01F1)",
+      "signature": {
+        "marker_byte_offset": 5,
+        "marker_value": "0xF1"
+      }
+    }
+  ],
+  "evidence": {
+    "tier": "physical_dump_verified",
+    "sources": [
+      {
+        "kind": "physical_dump",
+        "reference": "firmware_and_images/dmr-es35v/README.md",
+        "sha256": "0969f2580ad30b98027271a8e3947f5a6ae1c02dec06462b87ce1057a7a1bcf9",
+        "notes": "0x130000..0x40FFFF is XIP MAIN code, NOT BGO (prevents EH55 Upper NOR bricking). BGO 0x720600 holds live ifodev2 M6720EE."
+      }
+    ],
+    "notes": "0x130000..0x40FFFF is XIP MAIN code, NOT BGO (prevents EH55 Upper NOR bricking). BGO 0x720600 holds live ifodev2 M6720EE."
+  }
+}

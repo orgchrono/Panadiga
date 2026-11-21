@@ -1,0 +1,21 @@
+{
+  "id": "mn2ws0038",
+  "part_number": "MN2WS0038 (UniPhier PH1-Pro II)",
+  "core_ref": "mn10300_am34",
+  "bus_windows": [],
+  "mmio": {},
+  "lethal_mmio": [
+    "0xC000_100C"
+  ],
+  "p7501_uart_baud": 115200,
+  "p7501_nsw5v_hiz_only": true,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "docs",
+        "reference": "UniPhier PH1-Pro II (45nm AM34, H.264 AVC encoder) verified for DMR-BW500/BW700/BW800 generation"
+      }
+    ]
+  }
+}

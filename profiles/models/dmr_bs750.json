@@ -1,0 +1,63 @@
+{
+  "model_id": "DMR-BS750",
+  "family_label": "DMR-BS750",
+  "series": "Série BS/XS (Blu-ray/DVD HD Freesat NAND)",
+  "region_suffix": "EG/EB",
+  "tv_standard": "PAL",
+  "hw_code": null,
+  "board_ref": null,
+  "train_ref": "uniphier_bs850_le2011_nand",
+  "nor_layout_ref": null,
+  "exact_aliases": [
+    "DMR-BS750EG"
+  ],
+  "fixture_ref": null,
+  "claims": {
+    "board": {
+      "tier": "service_manual_only",
+      "sources": [
+        {
+          "kind": "service_manual",
+          "reference": "DSD1003015CE (BS750/BS850)"
+        }
+      ]
+    },
+    "flash_chip": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "nor_layout": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "train": {
+      "tier": "official_frm_verified",
+      "sources": [
+        {
+          "kind": "official_frm",
+          "reference": "firmware_and_images/dmr-xw_bd_series/README.md",
+          "sha256": "a23cc1288222b2816fb1328c24613686ec890b775c9b44daa91085d56d8f913d"
+        }
+      ]
+    },
+    "eeprom": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    }
+  }
+}

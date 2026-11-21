@@ -1,0 +1,64 @@
+{
+  "model_id": "DMR-EH58",
+  "family_label": "DMR-EH58",
+  "series": "Série EH (Gen 4 HDD+DVD)",
+  "region_suffix": "EE/EC/EP",
+  "tv_standard": "PAL/SECAM/NTSC",
+  "hw_code": null,
+  "board_ref": "rfkb79183_eh58",
+  "train_ref": "loader_ver063_bootbin",
+  "nor_layout_ref": null,
+  "exact_aliases": [
+    "DMR-EH58EE",
+    "DMR-EH585EG"
+  ],
+  "fixture_ref": null,
+  "claims": {
+    "board": {
+      "tier": "service_manual_only",
+      "sources": [
+        {
+          "kind": "service_manual",
+          "reference": "DSD0802009CE / CHM0805029CE (Main RFKB79183*, HDMI VEP73160A, P7501=K1KA08A00427 +5.8V_AV trap!)"
+        }
+      ]
+    },
+    "flash_chip": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "nor_layout": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "train": {
+      "tier": "official_frm_verified",
+      "sources": [
+        {
+          "kind": "official_frm",
+          "reference": "firmware_and_images/dmr-eh58/DVDRAM.7z",
+          "sha256": "d58297d6581551a95912ea88b47a6f8c4c291a841b7dd7eb6e47e2b8dcbcea31"
+        }
+      ]
+    },
+    "eeprom": {
+      "tier": "service_manual_only",
+      "sources": [
+        {
+          "kind": "service_manual",
+          "reference": "DSD0802009CE IC7404=RFKFM4016KT"
+        }
+      ]
+    }
+  }
+}

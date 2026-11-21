@@ -1,0 +1,63 @@
+{
+  "model_id": "DMR-BS780",
+  "family_label": "DMR-BS780",
+  "series": "Série BS/XS (2010 Blu-ray/DVD Freesat NAND)",
+  "region_suffix": "EB",
+  "tv_standard": "PAL",
+  "hw_code": null,
+  "board_ref": null,
+  "train_ref": "uniphier_bs880_le2011_nand",
+  "nor_layout_ref": null,
+  "exact_aliases": [
+    "DMR-BS780EB"
+  ],
+  "fixture_ref": null,
+  "claims": {
+    "board": {
+      "tier": "service_manual_only",
+      "sources": [
+        {
+          "kind": "service_manual",
+          "reference": "Elektrotanya/ManualsLib BS780/BS880/XS380EB SM"
+        }
+      ]
+    },
+    "flash_chip": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "nor_layout": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "train": {
+      "tier": "official_frm_verified",
+      "sources": [
+        {
+          "kind": "official_frm",
+          "reference": "firmware_and_images/dmr-xw_bd_series/README.md",
+          "sha256": "747b607f61dc20a180beac78969cbf2c32743e7636e269110d27a6033f351468"
+        }
+      ]
+    },
+    "eeprom": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    }
+  }
+}

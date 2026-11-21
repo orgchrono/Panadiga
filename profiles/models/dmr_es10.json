@@ -1,0 +1,64 @@
+{
+  "model_id": "DMR-ES10",
+  "family_label": "DMR-ES10",
+  "series": "Série ES (DVD-RAM)",
+  "region_suffix": "P/E",
+  "tv_standard": "NTSC/PAL",
+  "hw_code": null,
+  "board_ref": "vep79104",
+  "train_ref": null,
+  "nor_layout_ref": null,
+  "exact_aliases": [
+    "DMR-ES10E",
+    "DMR-ES10P",
+    "DMR-ES10EB"
+  ],
+  "fixture_ref": null,
+  "claims": {
+    "board": {
+      "tier": "service_manual_only",
+      "sources": [
+        {
+          "kind": "service_manual",
+          "reference": "DSD0502037C1 / DSD0503039C2 (Digital VEP79104A/RFKBES10PC, Main VEP79111B, P7501 absent in NA SM)"
+        }
+      ]
+    },
+    "flash_chip": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "nor_layout": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "train": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "eeprom": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    }
+  }
+}

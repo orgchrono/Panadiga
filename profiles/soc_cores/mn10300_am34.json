@@ -1,0 +1,15 @@
+{
+  "id": "mn10300_am34",
+  "isa": "MN10300/AM34",
+  "endianness": "little",
+  "logic_voltage_mv": 3300,
+  "evidence": {
+    "tier": "bench_verified",
+    "sources": [
+      {
+        "kind": "bench_log",
+        "reference": "docs/debug_logs/sddiag_ver061_live_20261119.log"
+      }
+    ]
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "model_id": "DMR-EH65",
+  "family_label": "DMR-EH65",
+  "series": "Série EH (HDD+DVD+HDMI)",
+  "region_suffix": "EC/EE/EP",
+  "tv_standard": "PAL/SECAM",
+  "hw_code": null,
+  "board_ref": "vep79119_eh65",
+  "train_ref": null,
+  "nor_layout_ref": null,
+  "exact_aliases": [
+    "DMR-EH65EC",
+    "DMR-EH65EE"
+  ],
+  "fixture_ref": null,
+  "claims": {
+    "board": {
+      "tier": "service_manual_only",
+      "sources": [
+        {
+          "kind": "service_manual",
+          "reference": "MAD0605017CE / CHM0605031CE (Main VEP79119L/M, RFKB79119MT/NT, HDMI VEP73137A, IC7404=RFKFM6016KT)"
+        }
+      ]
+    },
+    "flash_chip": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "nor_layout": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "train": {
+      "tier": "community_unverified",
+      "sources": [
+        {
+          "kind": "audit",
+          "reference": "Pending service manual / NOR dump extraction"
+        }
+      ]
+    },
+    "eeprom": {
+      "tier": "service_manual_only",
+      "sources": [
+        {
+          "kind": "service_manual",
+          "reference": "MAD0605017CE IC7404=RFKFM6016KT"
+        }
+      ]
+    }
+  }
+}

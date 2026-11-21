@@ -1,0 +1,22 @@
+{
+  "id": "rep3774g",
+  "pcb_code": "REP3662F (Main) / REP3774G (Digital)",
+  "service_module_code": "REP3774G",
+  "soc_ref": null,
+  "flash_ref": null,
+  "eeprom_refs": [],
+  "p7501_header_present": false,
+  "has_hdd_interface": true,
+  "has_sd_slot": false,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "service_manual",
+        "reference": "DSD0403003C1 / DSD0403005C2 / DSD0405013C3 (DMR-E85H)",
+        "notes": "Digital PCB REP3774G BOM omitted (2MB vs 4MB Flash conflict T0). IC7501=C2CBJG000398."
+      }
+    ],
+    "notes": "Digital PCB REP3774G BOM omitted (2MB vs 4MB Flash conflict T0). IC7501=C2CBJG000398."
+  }
+}

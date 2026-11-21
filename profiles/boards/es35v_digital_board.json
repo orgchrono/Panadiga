@@ -1,0 +1,22 @@
+{
+  "id": "es35v_digital_board",
+  "pcb_code": "VEPV0057A (Main) / RFKNES35V* (Digital Module)",
+  "service_module_code": "RFKNES35VP / RFKNES35VGN / RFKNES35VEE",
+  "soc_ref": null,
+  "flash_ref": "spansion_s29jl064h_8mb",
+  "eeprom_refs": [
+    "at24c64_optical_cal"
+  ],
+  "p7501_header_present": false,
+  "has_hdd_interface": false,
+  "has_sd_slot": false,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "service_manual",
+        "reference": "VR0603001CE / MD0605164CE (Main VEPV0057A, RFKNES35V* module, IC6001=C2CBHF000470, IC7501=C2CBJG000720; Triton dump 0969f258...)"
+      }
+    ]
+  }
+}

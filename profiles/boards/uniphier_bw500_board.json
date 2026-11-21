@@ -1,0 +1,22 @@
+{
+  "id": "uniphier_bw500_board",
+  "pcb_code": "DMR-BW500 Sealed Digital PCB",
+  "service_module_code": null,
+  "soc_ref": "mn2ws0038",
+  "flash_ref": null,
+  "eeprom_refs": [],
+  "p7501_header_present": false,
+  "has_hdd_interface": true,
+  "has_sd_slot": true,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "service_manual",
+        "reference": "DSD0811049CE (DMR-BW500EF, MN2WS0038 PH1-Pro II)",
+        "notes": "BD + 500GB HDD + Twin DVB-T."
+      }
+    ],
+    "notes": "BD + 500GB HDD + Twin DVB-T."
+  }
+}

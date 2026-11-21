@@ -1,0 +1,39 @@
+{
+  "id": "uniphier_bs850_le2011_nand",
+  "loader_version": "M3765EG_QG-360",
+  "loader_date": "2009/06/09",
+  "loader_profile_key": "uniphier_nand",
+  "loader_fingerprint": null,
+  "frm": {
+    "toc_entry_bytes": 48,
+    "toc_size": "0x1800",
+    "cipher": "feistel64_ecb",
+    "key_id": "le2011_08e0",
+    "official_frm_sha256": "a23cc1288222b2816fb1328c24613686ec890b775c9b44daa91085d56d8f913d"
+  },
+  "prog_load_va": null,
+  "main_load_va": null,
+  "drv_load_va": null,
+  "symbols": {},
+  "sd_boot_filenames": [
+    "PANA__SD.FRM"
+  ],
+  "digadiag_raw_bytes": 163840,
+  "media_refs": [
+    "dvd_iso9660_level1",
+    "sd_fat16b_0x06",
+    "hdd_meihdfs_v1"
+  ],
+  "evidence": {
+    "tier": "official_frm_verified",
+    "sources": [
+      {
+        "kind": "official_frm",
+        "reference": "firmware_and_images/dmr-xw_bd_series/bs850_bs750_xs350eg/PANA_DVD.FRM",
+        "sha256": "a23cc1288222b2816fb1328c24613686ec890b775c9b44daa91085d56d8f913d",
+        "notes": "le2011_08e0 Dvd48B TOC: PROG0.00 (MN103S, 163840B NAND updater, adler32=0xA5A52CCB), MAIN3600."
+      }
+    ],
+    "notes": "le2011_08e0 Dvd48B TOC: PROG0.00 (MN103S, 163840B NAND updater, adler32=0xA5A52CCB), MAIN3600."
+  }
+}

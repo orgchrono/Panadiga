@@ -1,0 +1,39 @@
+{
+  "id": "prog202_8mb_main50622_ez49v",
+  "loader_version": "2.02",
+  "loader_date": "10/02/22",
+  "loader_profile_key": "prog071",
+  "loader_fingerprint": null,
+  "frm": {
+    "toc_entry_bytes": 64,
+    "toc_size": "0x2000",
+    "cipher": "feistel64_ecb",
+    "key_id": "old_df72",
+    "official_frm_sha256": "a4c5d8b2b7fdb4e69f4081348ba73f23dc43e9f83c5068136834403e2221816c"
+  },
+  "prog_load_va": "0x9040_0000",
+  "main_load_va": "0x5062_2000",
+  "drv_load_va": null,
+  "symbols": {},
+  "sd_boot_filenames": [
+    "DIGADIAG.FRM",
+    "PANA__SD.FRM"
+  ],
+  "digadiag_raw_bytes": 262144,
+  "media_refs": [
+    "dvd_iso9660_level1",
+    "sd_fat16b_0x06"
+  ],
+  "evidence": {
+    "tier": "official_frm_verified",
+    "sources": [
+      {
+        "kind": "official_frm",
+        "reference": "firmware_and_images/dmr-ex_ez_series/README.md",
+        "sha256": "a4c5d8b2b7fdb4e69f4081348ba73f23dc43e9f83c5068136834403e2221816c",
+        "notes": "PROG202 (8MB/TOP BOOT, PCCARD Lib) + MAIN3100Y1 plain_hdr (DMR-EZ49VEB)."
+      }
+    ],
+    "notes": "PROG202 (8MB/TOP BOOT, PCCARD Lib) + MAIN3100Y1 plain_hdr (DMR-EZ49VEB)."
+  }
+}

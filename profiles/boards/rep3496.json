@@ -1,0 +1,20 @@
+{
+  "id": "rep3496",
+  "pcb_code": "REP3496",
+  "service_module_code": "REP3496A / REP3496C / REP3496CD",
+  "soc_ref": null,
+  "flash_ref": null,
+  "eeprom_refs": [],
+  "p7501_header_present": false,
+  "has_hdd_interface": false,
+  "has_sd_slot": false,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "service_manual",
+        "reference": "DSD0302003C8 (DMR-E50)"
+      }
+    ]
+  }
+}

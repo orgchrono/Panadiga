@@ -1,0 +1,31 @@
+{
+  "model_id": "DMR-EH55",
+  "dump_bytes": 8388608,
+  "expected_sha256": "c1faee798f60545853eefdba0d15f23678b471466dc2bc84f522bc972f15a02d",
+  "probes": [
+    {
+      "offset": "0x0002_FFE7",
+      "ascii": "Loader ver%s [%s] *****"
+    },
+    {
+      "offset": "0x0003_0000",
+      "ascii": "0.61"
+    },
+    {
+      "offset": "0x0003_0005",
+      "ascii": "06/03/06"
+    },
+    {
+      "offset": "0x0003_FFE0",
+      "ascii": "0.61"
+    },
+    {
+      "offset": "0x0013_0000",
+      "hex": "FFFFFFFF0AF2FFFF"
+    },
+    {
+      "offset": "0x007F_0000",
+      "hex": "0FF00000002CFFFF"
+    }
+  ]
+}

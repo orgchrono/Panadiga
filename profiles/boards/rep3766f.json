@@ -1,0 +1,22 @@
+{
+  "id": "rep3766f",
+  "pcb_code": "REP3766F (Main)",
+  "service_module_code": "REP3766F",
+  "soc_ref": null,
+  "flash_ref": null,
+  "eeprom_refs": [],
+  "p7501_header_present": false,
+  "has_hdd_interface": false,
+  "has_sd_slot": false,
+  "evidence": {
+    "tier": "service_manual_only",
+    "sources": [
+      {
+        "kind": "service_manual",
+        "reference": "DSD0406008C2 / DSD0407009C8 (DMR-E65)",
+        "notes": "Digital/RAM module BOM omitted."
+      }
+    ],
+    "notes": "Digital/RAM module BOM omitted."
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "id": "prog201_4mb_main50622",
+  "loader_version": "2.01",
+  "loader_date": "09/09/18",
+  "loader_profile_key": "prog071",
+  "loader_fingerprint": null,
+  "frm": {
+    "toc_entry_bytes": 64,
+    "toc_size": "0x2000",
+    "cipher": "feistel64_ecb",
+    "key_id": "old_df72",
+    "official_frm_sha256": "4d2929133a67562c4e52a5a091ecccda117f37f2e35c75fa53e1a198a40cc7c9"
+  },
+  "prog_load_va": "0x9040_0000",
+  "main_load_va": "0x5062_2000",
+  "drv_load_va": null,
+  "symbols": {},
+  "sd_boot_filenames": [
+    "DIGADIAG.FRM",
+    "PANA__SD.FRM"
+  ],
+  "digadiag_raw_bytes": 262144,
+  "media_refs": [
+    "dvd_iso9660_level1",
+    "sd_fat16b_0x06",
+    "hdd_meihdfs_v1"
+  ],
+  "evidence": {
+    "tier": "official_frm_verified",
+    "sources": [
+      {
+        "kind": "official_frm",
+        "reference": "firmware_and_images/dmr-ex_ez_series/README.md",
+        "sha256": "4d2929133a67562c4e52a5a091ecccda117f37f2e35c75fa53e1a198a40cc7c9",
+        "notes": "PROG201 (4MB/TOP BOOT) + MAIN3200XC/3220YE @ 0x50622000 (EX773, EX83)."
+      }
+    ],
+    "notes": "PROG201 (4MB/TOP BOOT) + MAIN3200XC/3220YE @ 0x50622000 (EX773, EX83)."
+  }
+}
