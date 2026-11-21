@@ -1,29 +1,62 @@
-# Panadiga v0.1.0 — Hybrid Reverse Engineering, P7501 UART & U99 Recovery Suite
+# Panadiga v0.2.0 — Relational DIGA Hardware Profiles SSOT, Express Rescue Workbench, Forensic Vault Pipeline & Silicon-Audited P7501 Probe Firmware
 
-**Release Version:** `0.1.0`  
-**Target Hardware:** Panasonic DMR-EH55 (DIGA Chassis / Main Board `VEP79138`)  
-**Ecosystem Scope:** DMR-E, DMR-EH, DMR-ES, DMR-EX, DMR-BW (Gen 1 – Gen 5)  
-**SoC:** Matsushita UniPhier `MN2DS0016` / `MN103S` — 32-bit RISC `AM34` / `MN10300`  
+**Release Version:** `0.2.0`  
+**Target Hardware:** Panasonic DIGA Recorder Family (`89` cataloged models — flagship `DMR-EH55` / `VEP79138`, `DMR-EH50/58/59/65/69`, `DMR-ES10/15/35V`, `DMR-EX/EZ`, `DMR-BW/BWT/XW/XS`)  
+**SoCs Covered:** `12` SoCs across `5` core architectures (`MN10300/AM34`, `MN10300/AM33-2`, `ARM Cortex-A9`, `ARM64 Cortex-A53`, `SPARC v8 Domino`)  
 **License:** MIT
 
 ---
 
-## 1. Technical Summary
+## 1. What's New in `v0.2.0` (Highlights Since `v0.1.0`)
 
-Panadiga `0.1.0` is a cross-platform reverse engineering, forensic storage recovery, in-circuit probe, and unbricking suite for the Panasonic DIGA DVD/HDD recorder family.
+Panadiga `0.2.0` marks a major architectural milestone across all **6 Rust crates**, the **bare-metal C11 Raspberry Pi Pico (`RP2040` / `RP2350` / `Pico W / 2 W`) probe firmware**, the **Tauri 2 Desktop & Android Mobile Workbench**, and the **bilingual hardware archive**:
 
-This release unifies **three convergent engineering layers** validated directly against physical `VEP79138` hardware captures (`COM10`), factory binaries, and official Panasonic documentation:
+### 1.1 Relational Hardware Profiles SSOT (`profiles/` & `panadiga-profiles`)
+- **New `panadiga-profiles` Crate & Multi-Language SSOT Generator (`panadiga ssot export-all`):**
+  - Centralizes **`89` DIGA model manifests**, **`12` SoCs**, **`5` SoC cores**, **`31` mainboards**, **`18` parallel NOR flash chips**, **`6` I2C EEPROM chips**, **`3` NOR partition layouts**, **`18` firmware trains**, **`3` media formats**, and **`12` JSON Schema Draft 2020-12 definitions** (`profiles/schema/`).
+  - Enforces a deterministic **`T0`–`T4` Capability Authorization Gate** (`panadiga profiles validate|show|authorize|export-schema`) respecting hardware WP/OTP limits, `256 KiB` IPL RO floors, and explicit offline CoW lab overrides.
+  - Projects one Single Source of Truth across **Rust**, **C11** (`firmware/pico-p7501/generated/p7501_ssot.{h,c}`), **TypeScript** (`apps/desktop/src/models/generated/{ssot,profiles}.ts`), **Python** (`scripts/profiles_types.py`), and **Ghidra Jython** (`tools/ghidra/`).
 
-| Layer | Methodology | Verified Artifacts |
-| :--- | :--- | :--- |
-| **Documentary** | `30` official Panasonic service manuals, schematics, and IC datasheets cross-referenced against PCB `VEP79138` | Canonical `P7501` (`B6B-ZR-3R4`) pinout, AM34 memory map, `MEIHDFS` geometry, `38` bilingual dossiers & `22` curated `COM10` bench logs |
-| **Mathematical** | Shannon entropy analysis (`H = 7.99958 bits/byte`), 64-bit ECB KPA codebook, `.FRM` TOC parsing, `XOR 0xFF` extent decoding | `PANA_DVD.FRM` (`48B` Feistel) & `PANA__SD.FRM` (`64B` plaintext) slots, `EEMUL` NVRAM sector cure |
-| **Physical** | Reconstructed **P7501 Asynchronous UART (`115200 8N1`)**, discrete `SW_UART` / `XRESET` / `NSW5V` control, glitch-immune `BAUDSCAN` & PIO timing samplers | Modular C11 + PIO probe firmware (`RP2040` / `RP2350` / `Unified`), `SC0` Live Bridge, `DIAGWATCH`, `PANARSP`, `DRVPANA`, `JEDEC` 2-layer Spansion stub, `PREJIG WAKE` Standby capture, async GDB RSP server |
+### 1.2 Express Rescue Mode & Strict Forensic Vault Pipeline (Desktop & Android UI)
+- **Guided Express Workbench (`ExpressView`):** Adds operator-friendly mission cards — **U99 Quick Rescue**, **SD Recovery Media**, **NOR Dump & CoW Patch**, and **Strict Vault Pipeline** — backed by `DigaModelSelect`, `RecorderDisplayGuide`, `PicoConnectionSafetySheet`, `StrictWorkflowStepper`, `VaultMediaAndGatePanel`, and EN/PT-BR localization (`locales/{en-US,pt-BR}/express.json`).
+- **Segregated Forensic Vault Sessions & Auto-Fingerprinting (`panadiga session`, `crates/panadiga-core/src/{vault,ingest}/`):**
+  - Enforces strict separation between immutable `raw/` chip/bus dumps and `frm/` factory containers with SHA-256 chain of custody and automatic binary fingerprinting.
+- **Mn103Vm Pre-Write Verification Gate (`re/prewrite_gate/`, `re/verify_loop/`, `re/sig_locator/`):**
+  - Executes recovery binaries inside the `MN103Vm` emulator before writing to SD, DVD, HDD, or NOR — verifying that the Bootloader IPL (`SA0..SA10`) remains untouched and lethal MMIO (`0xC000100C`) is blocked.
+- **Cleanroom Recovery Media Builders & Composed HDD Flash:**
+  - **`panadiga sd create` (`fat16_builder`, `cleanroom_digadiag`):** Generates verified `32 MiB` FAT16B (`0x06`) SD recovery images (`DIGADIAG.FRM` / patched `PROG061`) with Mn103Vm pre-write verification.
+  - **`panadiga dvd create` (`iso9660_builder`, `dvd_creator`):** Generates verified cleanroom `ISO 9660` (`PANADIGA_REC`) optical recovery images with `1x`/minimum DAO burn policy.
+  - **`panadiga hdd flash-composed` (`composed_flash.rs`, `discovery_unix/lsblk.rs`, `raw_device.rs`):** Safe multi-OS raw disk discovery and composed MEIHDFS + firmware partition flashing with system-drive/NVMe lockouts.
+  - **Expanded MCP Server (`panadiga-mcp`):** **25** JSON-RPC 2.0 stdio tools including `panadiga_profiles_authorize`, BGO/DAVIS probes, region calibration, TBC lab, and vault workflows.
+  - **BGO Partition-1 (`0xF101`) Compaction (`re/eh55_bgo`):** Compacts split/migrating Partition-1 sectors into a single authoritative sector with zero open `+0x14` migration links (`FUN_4402014f` rollback prevention) and updates the verified repaired `eh55_nor_8mb_ic5001_repaired.bin` baseline.
 
-The platform operates across all stages of the hybrid DIGA engineering workflow:
+### 1.3 Silicon-Audited Bare-Metal C11 Pico `P7501` Probe Firmware (`GO` on `RP2040`, `RP2350` & `Pico W / 2 W`)
+Audited adversarially across every silicon, electrical, DMA, QSPI, and protocol path — achieving **unanimous `GO`** across all targets (`PICO_STACK_SIZE = 0x1000`, `-Wframe-larger-than=512` with `0` warnings, `0` soft-float `_ftoa`/`_etoa` symbols):
 
-1. **Two-Stage Hybrid Boot Recovery & Live Bench Wizard:** Handles both onboard Spansion NOR Flash (**IPL + Upper NOR + EEMUL NVRAM**) and internal HDD / SD / CD update stages (`BOOT.BIN`, `PROG061`, `MAIN3410PQ`, `DRV S211`, `DIGADIAG.FRM`, `PANA__SD.FRM`), backed by a **457-entry firmware error dictionary** (`panadiga pico error-lookup`) and multi-boot interactive diagnostics (`panadiga pico bench-wizard` supporting passive Standby wakeup, `PREJIG` without `XRESET`, and active `SW_UART`+`XRESET`).
-2. **Multi-Language Engineering Stack & Android-Exclusive IR Commander:** Native Rust workspace (5 crates), modular C11 + PIO probe firmware, Tauri 2.0 + React 18 TypeScript desktop workbench + dedicated Android APK featuring a React/Radix **DIGA IR Commander** (compile-time isolated out of Desktop `.exe`/Linux/macOS binaries), headless/MCP Ghidra Jython automation, and Python CI/build validation (`mypy --strict`).
+- **Electrical & Silicon Hardening (`p7501_hw.c`, `p7501_pico_main.c`):**
+  - `p7501_hw_init()` executes **first** in `main()` and clears RP2040/RP2350 reset-default pull-downs on `GP3 (NSW5V)` **before** `gpio_init(GP3)`.
+  - Unconditional `p7501_nsw5v_falling_irq()` immediately reclaims `GPIO_FUNC_SIO` + `GPIO_IN` without pulls across `GP2`, `GP3`, `GP4`, `GP5`, `GP26`, **and auxiliary I2C/IR pins `GP6`/`GP7`** on target power loss.
+  - **Boot Integrity & Contention Guards:** Boot-time `p7501_qspi_firmware_crc32()` self-check locks the bus into `SAFE_HIZ` + `LED_MODE_BUS_FAULT` on corruption; `GPIO_SLEW_RATE_SLOW` on `GP4`/`GP5`/`GP26`; `8 µs` pin-contention detector (`ECONTENTION`) before holding LOW drive on `GP4`/`GP26`.
+  - Anti-backpowering (`EPWR`) guards in `I2C_SCAN`, `EEPROM`, `PINCHECK` (pure open-drain `GP5`), `BUSDIAG` (restores `GP4` `4 mA`), and `IDENTIFY`; passive `NSW5V` sensing + duplex TX in `M0KEEPALIVE` eliminating `GP26` pull-down glitches.
+  - `stdio_set_translate_crlf(&stdio_usb, false)` + `putchar_raw()` eliminating `0x0A → 0x0D 0x0A` corruption in binary `PANADMP1` NOR dumps.
+- **Unified Bus Security Policy (`p7501_bus_policy.c` + Rust `policy.rs`) & Adversarial Guards:**
+  - Single gate `p7501_bus_check_access()` blocks AM34 lethal MMIO `0xC000100C..0xC000100F` (R/W/E), CS0 alias mirrors (`0x80000000..0x87FFFFFF`), permanent `SA0..SA10` IPL RO, `DMR-ES35V` `MAIN_XIP` RO, Full-RO profiles (`DMR-EZ485V`/`DMR-ES10`) regardless of flash-size overrides, full sector spans on erase, and `F14` wireless fail-closed auth.
+  - Hardened `p7501_pana_rsp_guard.c` & `p7501_diag_watch_codec.c`: blocks >8-digit hex overflow attacks (`p7501_scan_hex_u32`), leading whitespace / `;` whitespace bypasses, chained `$M` commands, lowercase `w`/`e`/`f`/`j`, bare `W`/`E`/`J` without explicit hex address in `RAW:`/`HEX:`, `DIAGWATCH FORMAT` without unlock + `F14`, and enforces unconditional Upper NOR auto-relock + `F14` op consumption across `PANARSP`, `DIAGWATCH`, `GDB` (including partial writes), `JOB`, `EEPROM`, and `BLE`.
+- **Dual-Core SRAM, RP2350 `.bss` Reduction (`-57.5 KiB`) & On-Probe `PANAMON1>` Bus:**
+  - Core 1 edge-sampler loop and `p7501_spsc_push()` are **100% SRAM-resident (`__not_in_flash_func`)**, removing the 50 ms multicore lockout stall during `BOOTSEL` polling and making QSPI lockout fail-closed (50 ms timeout).
+  - Bounded `GDB_SECTOR_CACHE_SIZE = 512 B` (SSOT) reduces `pico2` `.bss` from `130,284 B` to **`72,816 B` (`-57.5 KiB`)**, eliminates GDB `populate_cache()` WDT timeouts, moves `tx_resp_buf[2048]` off the Core 0 stack, caps `$m` read length (`E02`), and replaces silent `0xFFFFFFFF` reads with checked block reads (`E01`).
+  - Added native on-probe `PANAMON1>` PIO1 target-bus driver (`p7501_target_bus_panamon.c`), live `$m` `0→1` pre-read validation for `BGO_BITCLEAR`, `min_post_hdr_bytes` + incremental `DUMPNOR_RESUME`, `PWROSC` `8192`-sample arena + clean `ADC_FCS` teardown, `EEPROM WRITE` page-boundary splitting, `SELFTEST LOOPBACK`, chronological `BLACKBOX DUMP`, and **100% `@P7501_RES` error-code parity across all 64 CLI handlers**.
+- **Atomic Ping-Pong A/B CoW `P2_VAULT` & RP2350 `P6_NOR_MIRROR`:**
+  - True Copy-on-Write A/B banking across Bank A (`0x100000`) and Bank B (`0x140000`) with sibling-slot preservation and XIP CRC32 verification before manifest commit, plus `P6_NOR_MIRROR` (`2 MiB` extra QSPI partition on `4 MiB` RP2350).
+
+### 1.4 Hardened Pico ↔ Host Boundary (Desktop Tauri Rust, React/TS BLE & Android Kotlin)
+- **Serial Transport (`transport.rs`, `constants.rs`):** Bounded `2 MiB` raw byte buffer, strict newline + `@P7501_RES` / prompt framing (never truncating structured `@P7501_`/`@PROG`/`@EVT` captures on intermediate lines or 350 ms idle gaps), and deterministic `CDC0/CLI` vs `CDC1/Mirror` numeric COM ranking.
+- **Forensic Pre-Erase Guarantees (`backup.rs`, `executor.rs`, `nvram_clean.rs`):** `ClearBuffer::Input` before every sequential command, full double-read SHA-256 verification of NVRAM + `SA134..SA141` micro-sectors, exact size & dead-bus pattern checks (`SRAM` `16,384 B`, `IPL` `4,096 B`), exclusive `fs::create_dir` backup folders (`first_contact_<ms>_<sha8>`), and `File::sync_all()` (`fsync`) + disk readback SHA-256 verification across all 3 backup files.
+- **BLE NUS & Android OTG/BLE (`bleService.ts`, `AndroidPicoBridge.kt`):** Eliminated fake timeout `${command}: OK` fabrication, added `<= 20 B` BLE 4.2 ATT_MTU GATT chunking with per-chunk write status checks, streaming UTF-8 decoding, and strict anchored single-token regex framing (`^[A-Z0-9_]+:\s+(?:OK|...)`) immune to target boot lines like `"DDR CHECK: OK"`.
+- **SSOT Diagnostic Parser (`findingsRules.ts`, `lineParsers.ts`, `index.ts`):** Consumes `SSOT_DIAG_SIGNATURE_RULES` directly, precompiles dump regexes, and matches Rust legacy fallback parity.
+
+### 1.5 Bilingual Hardware Archive, Datasheets & Bench Evidence
+- Curated **`39` bilingual dossiers & `22` curated** `COM10` bench captures, adding the **DIGA Lineup Hardware Profiles Catalog & Audit** ([EN](docs/en-US/DIGA_LINEUP_HARDWARE_PROFILES_CATALOG_AND_AUDIT.md) · [PT-BR](docs/pt-BR/CATALOGO_E_AUDITORIA_PERFIS_HARDWARE_LINHA_DIGA.md)), official `Microchip 24LC64` & `ROHM BR24L16` EEPROM datasheets (`manuals_and_schematics/datasheets/` + `SHA256SUMS.txt`), `DMR-XW / BD` series catalog (`firmware_and_images/dmr-xw_bd_series/`), and `IDE2SAT2` chassis clearance reference photography (`docs/assets/images/re_dmr_eh55/`).
 
 ---
 
@@ -32,146 +65,49 @@ The platform operates across all stages of the hybrid DIGA engineering workflow:
 | Platform | Asset(s) | Contents |
 | :--- | :--- | :--- |
 | **Windows (x86_64)** | `panadiga-windows-x86_64.zip` (+ `.sha256`) | `panadiga.exe`, `panadiga-desktop.exe`, RP2040/RP2350/Unified `.uf2`, `tools/ghidra/` & `.cmd` launchers |
-| **Linux (x86_64)** | `panadiga-linux-x86_64.tar.gz`, `panadiga-linux-amd64.deb` (+ `.sha256`) | `panadiga`, `panadiga-desktop`, `tools/ghidra/` |
+| **Linux (x86_64)** | `panadiga-linux-x86_64.tar.gz`, `panadiga-linux-amd64.deb` (+ `.sha256`) | `panadiga`, `panadiga-desktop`, `tools/ghidra/`, Freedesktop desktop launcher & Hicolor icons |
 | **macOS (Apple Silicon ARM64)** | `panadiga-macos-aarch64.tar.gz` (+ `.sha256`) | `panadiga`, `panadiga-desktop`, `tools/ghidra/` |
-| **Android (ARM64 APK)** | `panadiga-android-arm64.apk` (+ `.sha256`) | Native Tauri 2 mobile APK with USB-C OTG CDC-ACM, BLE Nordic UART Service (NUS), and **DIGA IR Commander** (Panasonic Kaseikyo & ConsumerIrManager / Exynos HAL) |
-| **Raspberry Pi Pico Probe** | `panasonic_p7501_uart_rp2040.uf2`, `panasonic_p7501_uart_rp2350.uf2`, `panasonic_p7501_uart_unified.uf2` (+ `.sha256`) | Dual-target C11 + PIO firmware (`RP2040`, `RP2350`, and RP2350-E10 compliant unified UF2) |
-| **Verified Firmware & Recovery Pack** | [Release `firmware-pack-v0.1.0`](https://github.com/orgchrono/Panadiga/releases/tag/firmware-pack-v0.1.0) | `14+` verified assets: `DMR-EH55` & repaired Brazilian **`DMR-EH55LB-S` (`M6930LB` `PAL-M`)** 8 MiB NOR (`eh55_nor_8mb_ic5001_repaired.bin`, `adb21d95...`) + extracted `2,048 B` `ifodev2` (`eh55_ifodev2_m6930lb_2048b.bin`, `f4f22dd0...`) + `sd_unbrick_kit/PANA__SD.FRM` (Door #1 headless boot), `DMR-EH58` (`DVDRAM.7z`), `DMR-EH50`, `DMR-EH49/59/69`, `DMR-EX/EZ` (`19` models incl. `EX78EN`/`EX88EN`), `DMR-ES35V` 8 MB NOR + 8 KB EEPROM (`flash.bin`/`eeprom.bin`), `dmr-am34-unpacked-plaintext-bootloaders-and-kernels.7z` (`47` plaintext binaries), `DMR-EZ485V` 4 MB LSI NOR, HDD `.bin.gz`, extracted partitions, `FIRMWARE_SHA256SUMS.txt` |
-
-### 2.1 Embedded RP2040 / RP2350 P7501 UART Probe Firmware & Bench Automation
-
-The compiled P7501 Async UART firmware is embedded directly in `panadiga` / `panadiga-desktop` and distributed standalone for drag-and-drop BOOTSEL flashing (`RPI-RP2` / `RP2350`):
-
-- **Interfaces:** USB CDC (`115200`), PIO1 hardware UART samplers/TX (`p7501_uart.pio`, `p7501_uart_duplex.pio`, `p7501_logic_sampler.pio`, `p7501_sds_sampler.pio`), Android USB-C OTG, and optional **Bluetooth LE NUS** (`PANADIGA_BLE_ENABLED=1` for `pico_w` / `pico2_w`).
-- **Diagnostics & Live Control:** `PING`, `STATUS`, `BANNER`, `WDT`, `LED`, `PINCHECK`, `BUSDIAG`, `PWRTRACE`, `BOOTTRACE` (`PREJIG`/`WAKE`), `PIOLOGIC`, `SDSNIFF`, `JIGSWEEP`, `DUMP`, `BAUDSCAN` (dual-polarity anti-glitch detector + `PIO1 IRQ 4` framing telemetry + `WAKE`), `BRIDGE` (`SC0` passthrough), `WAITTX`, `DIAGWATCH` (`PREJIG`/`WAKE`), `PANARSP`, `DRVPANA`, `JEDEC` (2-layer Spansion FSM/stub), and async GDB RSP bridge (`panadiga pico bridge --target-mode ocd|panamon1|panarsp` on `127.0.0.1:3333`).
-- **Error Dictionary & Guided Bench Wizard:** `panadiga pico error-lookup` (457-entry core + `DRV_decomp` `0x0000..0x83FF` + `IC7501` Standby/VFD dictionary) and multi-boot interactive `panadiga pico bench-wizard`.
-
-```bash
-# List connected Pico serial probes or flash embedded UF2 automatically
-panadiga pico list
-panadiga pico flash
-panadiga pico flash --port COM10
-
-# Interactive bench verification & async GDB proxy
-panadiga pico bench-wizard --port COM10
-panadiga pico bridge --port COM10 --target-mode panamon1
-```
-
-### 2.2 Surgical NVRAM U99 Sanitization & 3-Zone NOR Write Policy
-
-Derived directly from the Spansion Top-Boot flash sector invariant (`NVRAM_offset = flash_size - sector_size`):
-
-| NOR Flash Size | Erase Block / Window | Device Example | NVRAM Offset |
-| :---: | :---: | :--- | :--- |
-| 2 MB | 64 KB | Spansion `S29AL016J` / `Am29LV160` | `0x001F0000` |
-| 4 MB | 64 KB | Spansion `S29JL032H` / `Am29LV320` | `0x003F0000` |
-| 8 MB | 64 KB | Spansion `S29JL064H` (`142`-sector asymmetric topology: `SA0..SA3` IPL, BGO `SA26..SA70`, Upper EEMUL `SA71..SA141`) | `0x007F0000` (`SA134..SA141`, 8 × 8 KB) |
-| 16 MB | 128 KB | Spansion `S29GL128P` / `S29GL128N` | `0x00FF0000` |
-
-- **Sanitization:** Restores the writable EEPROM-emulated (`EEMUL`) window to virgin `0xFF`, backed up with MD5/SHA-256 verification.
-- **3-Zone Flash Policy (`E05` Airgap):**
-  1. **Bootloader / IPL (`SA0..SA3`, `0x80000000..0x8003FFFF` on 8 MB):** Permanently **Read-Only (`E05`)** across Rust, C11 GDB RSP stub, and UI.
-  2. **Upper NOR App / BGO (`SA4..SA133`, `0x80040000..0x807EFFFF`):** Protected by default (`E05`) for routine `U99` recovery; explicitly unlockable via `qPanadigaNorUnlock:CONFIRM_UPPER_NOR` or Copy-on-Write `panadiga nvram patch-upper-nor` with verified SHA-256 backup.
-  3. **NVRAM / EEMUL (`SA134..SA141`, `0x807F0000..0x807FFFFF`):** Writable by default for surgical `U99` sanitization.
-
-```bash
-# Sanitize U99 NVRAM without altering the IPL bootloader (8 / 4 / 2 / 16 MB)
-panadiga nvram clean flash_dump_8mb.bin flash_recovered.bin
-
-# Guarded Copy-on-Write byte patch strictly inside the writable NVRAM sector
-panadiga nvram patch --input flash_dump_8mb.bin --output flash_patched.bin --offset 0x0 --hex "FFFFFFFF"
-```
-
-### 2.3 MEIHDFS Storage Forensics, LBA48 Unlocker, Pre-MAIN Unbrick Kit & MN103Vm Verifier
-
-- **MEIHDFS Zero-Copy Forensics:** Validates `"SH"` magic superblock at LBA 0, bit-identical mirror at LBA 57,344 (28 MB), 10-block WAL journal (8 MB / LBA 16,384), `XOR 0xFF` inverted allocation descriptors (LBA 24..31), and firmware partitions at 32 MB (`LBA 65,536`) & 64 MB (`LBA 131,072`).
-- **Dynamic Capacity Unlocker (`5 GB` `SV0511D` through `2 TB` LBA48) & `eh55_flash` CoW Writer:** Scales HDD capacity clamping in `MAIN` (`hdd/capacity_patch`, from `5 GB` `0x0024C388` up to `2 TB`) alongside CoW-backed `PhysicalDrive1` flashing (`hdd/writer/eh55_flash`, verified on a 250 GB disk `4fde753c...` + high-LBA P1 mirror `488266096` `d932692c...`; `[UNDER INVESTIGATION / CH1 PHYSICAL BLOCK]` on live `EH55` bench hardware).
-- **Centralized `panamon1`, `eh55_bgo`, `davis_probe`, `tv_standard` & `tbc_appliance` Engines:** Unifies live `PANAMON1>` automation (`?\r` + `300 µs` retry, `U CONFIRM_UPPER_NOR` / `U LOCK`), Cycle 1/Cycle 2 BGO `U99` repair (`nor_dumper::{orchestrator, spansion_audit}`, `eh55_bgo::{audit, repair_plan, live_apply}`), `DAVIS` `CH0`/`CH1` probing (`0x504F81D0=2` vs `0x504F81D4=1` via `J 504156AD`), `PAL-M`/`LBS` (`ifodev2`, `AIOF 0x8800_0000`, `AVDD 0x8980_0000`), and diskless TBC orchestration (`Stage15DigadiagTbc`, `ES10/ES15/ES35V` incompatibility shields).
-- **Pre-MAIN SD Recovery Kit & End-to-End Patch Suite:** Builds/verifies `DIGADIAG.FRM` (128 KiB), `PANA__SD.FRM` (`PROG061` BGO recovery + `MAIN3410PQ` TBC Passthrough), `_dev_SERIAL` GDB RSP injection plans, Matshita `R6-MV4` ATAPI `0x3B` / `0xED` emulation, and automated MN103Vm + Spansion NOR CFI suite (`panadiga re verify-patches`).
-
-```bash
-# Inspect MEIHDFS disk geometry and extract firmware partitions with SHA256SUMS
-panadiga hdd inspect hdd_100.bin --density
-panadiga hdd extract hdd_100.bin --outdir extracted_partitions
-
-# Analyze PANA_DVD.FRM entropy, ECB codebooks, and cross-correlation with HDD
-panadiga frm analyze firmware_and_images/PANA_DVD.FRM --hdd hdd_100.bin
-panadiga frm dump-toc firmware_and_images/PANA_DVD.FRM
-
-# Generate verified Pre-MAIN SD Recovery Kit
-panadiga unbrick prepare-sd --outdir ./sd_card_eh55_kit
-```
+| **Android (ARM64 APK)** | `panadiga-android-arm64.apk` (+ `.sha256`) | Native Tauri 2 mobile APK with USB-C OTG CDC-ACM, BLE Nordic UART Service (NUS, `<= 20 B` GATT chunking), and **DIGA IR Commander** |
+| **Raspberry Pi Pico Probe** | `panasonic_p7501_uart_rp2040.uf2`, `panasonic_p7501_uart_rp2350.uf2`, `panasonic_p7501_uart_unified.uf2` (+ `.sha256`) | Production-audited C11 + PIO firmware (`RP2040`: `text=201,328 B`, `bss=73,200 B`; `RP2350`: `text=190,260 B`, `bss=72,816 B`; `0` soft-float symbols, `0` frame warnings) |
+| **Verified Firmware & Recovery Pack** | [Release `firmware-pack-v0.1.0`](https://github.com/orgchrono/Panadiga/releases/tag/firmware-pack-v0.1.0) | Companion archive of verified factory/repaired NOR, HDD, EEPROM & plaintext AM34 images + `FIRMWARE_SHA256SUMS.txt` |
 
 ---
 
-## 3. Verified P7501 Connector Pinout (`JST B6B-ZR-3R4` `TO JIGU`) & Cryptanalysis
+## 3. Non-Negotiable Physical & Forensic Safety Invariants
 
-### 3.1 P7501 Canonical Wiring on `VEP79138` (`115200 8N1`)
-
-| Pin | Board Signal | Pico GPIO (Pico Pin) | Electrical Role & Non-Negotiable Constraint |
-| :---: | :--- | :--- | :--- |
-| **1** | `SW_UART` / `XFWE` | `GP26` / `ADC0` (Pin 31) | Sense (`~3.25V` Hi-Z / `~2.69V` PD); LOW forces serial boot (`< 10 mA`). **NEVER power Pico via Pin 1.** |
-| **2** | `XRESET` | `GP5` (Pin 7) | **Strictly Open-Drain** (`Never push-pull +3.3V`). |
-| **3** | `UARTM2P_T` (`Q7514`) | `GP4` (Pin 6) ← Pico TX (`115200 8N1`) | `3.3V LVTTL` (`10kΩ R7570` pull-up to `NSW5V`); conducts when `SW_UART = Hi-Z`. |
-| **4** | `GND` | `GND` (Pin 38) | Mandatory `0.0 Ω` chassis ground reference verified prior to power-on. |
-| **5** | `NSW5V` (`IC1506`) | `GP3` (Pin 5) | `~5.15V` upstream via `D7510` (`~3.29V` idle). **ALWAYS `Hi-Z Input` with NO pulls — NEVER drive push-pull.** |
-| **6** | `UARTP2M_T` (`MAX TXD`) | `GP2` (Pin 4) → Pico RX (`115200 8N1`) | Active AM34 TX channel (`3.3V LVTTL`, `10kΩ R7572` pull-up to `NSW5V`). |
-
-### 3.2 `PANA_DVD.FRM` Optical Container Cryptanalysis
-
-- **Size:** `7,531,744` bytes | **Shannon Entropy:** `7.99958 bits/byte`
-- **48-byte Feistel TOC Entries (`PANA_DVD.FRM`)** & **64-byte SD Plaintext TOC (`PANA__SD.FRM`)**: targets **Main AM34 OS**, **MN102 Optical Servo**, and **MN103S Front Panel**.
-- **Verified 64-bit ECB Known-Plaintext Codebook:**
-  - `DMR-EH55`: `FF×8 → 03 50 65 C8 7B B8 E0 90` (`3,812` hits) · `00×8 → E5 D1 F3 4A 51 8B 26 90` (`196` hits)
-  - `DMR-EH50`: `FF×8 → 79 BB 2C 32 5A D4 FD 34` (`4,107` hits) · `00×8 → B3 A2 5A 0B 9D 86 4F 08` (`178` hits)
-
----
-
-## 4. Ecosystem Architecture & Hard Invariants
-
-| Layer | Implementation | Key Safeguards & Patterns |
-| :--- | :--- | :--- |
-| **Presentation (Desktop & Mobile)** | Tauri `2.0` · React `18.3.1` · TypeScript · Redux Toolkit · Radix UI | Strict MVVM enforced by `oxlint`, immutable Redux slices + `createListenerMiddleware`, separate `dist/` (Desktop) & `dist-android/` (Android APK) bundles (`vite.config.ts` excludes DIGA IR Commander from PC builds), `GuidedPipelineBar`, `DraggableBenchHud`, EN/PT-BR i18n, WCAG high-contrast/colorblind themes |
-| **Core Engine, MCP & RAG** | Rust Workspace (5 crates) | `panadiga-core` (`ir`, `pico::panamon1`, `re::nor_dumper`, `re::eh55_bgo`, `re::davis_probe`, `re::region_compat::tv_standard`, `re::tbc_appliance`, `hdd::writer::eh55_flash`), `panadiga-rag` (6-layer Zero-Error RAG + physical shields), `panadiga-mcp` (**24** JSON-RPC 2.0 stdio tools: 18 core + 6 Wave-3 modules), `panadiga-cli`, `panadiga-desktop` |
-| **Mobile Hardware Bridge & IR** | Android APK (`aarch64-linux-android`) | Minimal Kotlin I/O shims (`AndroidIrExecutor.kt`, USB-C OTG CDC-ACM, BLE NUS) + Rust SSOT (`#[cfg(target_os = "android")]`) |
-| **Probe Firmware** | Modular C11 + PIO (`RP2040` / `RP2350`) | Non-overridable hardware `WDT`, isolated GDB RSP + `JEDEC` context, glitch-immune `BAUDSCAN`, `NSW5V` Hi-Z invariant, Open-Drain `XRESET` |
-| **RE & Automation** | Ghidra Jython + Python (`mypy --strict`) | AM34 SSOT memory map export, `MN103Vm` + Spansion NOR verifier (`verify-patches`), 9-gate automated validation |
-
-### Non-Negotiable Safety Invariants
-1. **Voltage Ceiling & `NSW5V` Protection:** Logic signals operate at `3.3V LVTTL`; Pin 5 (`NSW5V` / `GP3`) stays strictly **`Hi-Z Input` without pulls**.
+1. **Voltage Ceiling & `NSW5V` Protection (`P7501`):** Logic signals operate at `3.3V LVTTL`; Pin 5 (`NSW5V` / `GP3`) stays strictly **`Hi-Z Input` without pulls** (cleared before `gpio_init`); Pin 2 (`XRESET` / `GP5`) is **strictly Open-Drain**; `p7501_nsw5v_falling_irq()` isolates `GP2/GP3/GP4/GP5/GP26/GP6/GP7` unconditionally on power drop.
 2. **Zero Probe Back-Powering:** Never power the Raspberry Pi Pico from `P7501` Pin 1 (`< 10 mA` sense line); supply power exclusively via USB or `VSYS`.
-3. **3-Zone NOR Protection (`E05`):** Bootloader/IPL (`SA0..SA3`) is permanently read-only; Upper NOR App (`SA4..SA133`) is locked by default and requires explicit unlock (`qPanadigaNorUnlock:CONFIRM_UPPER_NOR` / CoW `patch-upper-nor`); NVRAM (`SA134..SA141`) is writable for surgical `U99` sanitization.
-4. **Forensic Copy-on-Write:** Original `.bin` / `.FRM` images are never modified in place; all transformations emit new outputs with SHA-256 verification.
+3. **3-Zone NOR Protection (`E05`) + `0xC000100C` + `F14`:** Bootloader/IPL (`SA0..SA10`), `DMR-ES35V` `MAIN_XIP`, Full-RO profiles, CS0 alias mirrors, and lethal MMIO `0xC000100C..0xC000100F` are blocked; Upper NOR requires explicit unlock (`CONFIRM_UPPER_NOR`) with auto-relock on exit; wireless origins (`BLE_NUS`/`WIFI_TCP`) are fail-closed (`F14`).
+4. **Forensic Copy-on-Write:** Original `.bin` / `.FRM` images are never modified in place; live backups require double-read SHA-256 + `fsync` + disk readback verification before any erase.
 
 ---
 
-## 5. Quality Gates — Automated Enforcement (`scripts/validate.py`)
+## 4. Quality Gates — Automated Enforcement (`scripts/validate.py` — 9/9 PASS)
 
 ```text
-✅ Gate 1   — Rust Workspace (`cargo fmt`, `cargo clippy -D warnings`, 259 workspace tests + Android target check)
-✅ Gate 2   — Oxlint + TypeScript Strict Check (`apps/desktop`, 354 files)
-✅ Gate 3   — Vitest Frontend MVVM / Redux / Hooks / Pipelines / IR Commander Suite (116 tests across 36 files)
-✅ Gate 4   — jscpd Clone Detector (Threshold 0% — zero structural clones across 896 files)
-✅ Gate 5   — ux-guard UI/UX Completeness & State Integrity Audit (100/100 across 354 files)
-✅ Gate 6   — Playwright E2E Chromium Headless Suite (23 tests across 8 specs, incl. Region/TBC/HDD 5GB–2TB/BGO/DAVIS & IR Commander flows)
-✅ Gate 7   — Ghidra Native SSOT Jython Exporter (Idempotent export check)
-✅ Gate 8   — C11 Pico Firmware Host Tests (`PICO_HOST_TEST=1`, -Wall -Wextra -Werror / /W4 /WX, 4 modules)
-✅ Gate 9   — Python (`py_compile`, `mypy --strict` 43 files, `pytest scripts/tests` 29 tests across 5 files)
-✅ Multi-CI — Windows x86_64 · Ubuntu x86_64 · macOS ARM64 · Android APK · Pico RP2040/RP2350 Dual UF2
+✅ Gate 1   — Rust Workspace (6 crates: cargo fmt, clippy --all-targets -D warnings, 329 workspace tests)
+✅ Gate 2   — Oxlint (0 warnings/errors across 378 files, 224 rules) + TypeScript Strict (tsc --noEmit)
+✅ Gate 3   — Vitest Frontend MVVM / Redux / Express / BLE / Parser Suite (125 tests across 38 files)
+✅ Gate 4   — jscpd Clone Detector (0 clones / 0.00% duplication across 1,024+ files)
+✅ Gate 5   — ux-guard UI/UX Completeness & State Integrity Audit (100/100, 0 issues across 378 files)
+✅ Gate 6   — Playwright E2E Chromium Headless Suite (27 tests across 9 specs, incl. Express Rescue Mode)
+✅ Gate 7   — Multi-Language SSOT + Ghidra Jython Exporter (Idempotent export verification)
+✅ Gate 8   — C11 Pico Firmware Host Tests (47 sources, /std:c11 /W4 /WX) + ARM RP2040 & RP2350 Builds (0 frame warnings)
+✅ Gate 9   — Python (py_compile, mypy --strict, pytest scripts/tests — 32 passed)
+✅ Multi-CI — Windows x86_64 · Ubuntu x86_64 (.tar.gz + .deb) · macOS ARM64 · Android ARM64 APK · Pico RP2040/RP2350/Unified UF2
 ```
 
 ---
 
-## 6. Documentation & Legal
+## 5. Documentation & Legal
 
-- **Master Bilingual Portal (38 EN/PT-BR Dossier Pairs):** [`docs/INDEX.md`](docs/INDEX.md)
-- **EH55 Historical Breakthrough (BGO Cycle 2, Direct `PANAMON1>`, `DAVIS`/`CH1` & `PAL-M` Region):** [`docs/en-US/EH55_UNBRICK_BREAKTHROUGH_BGO_CH1_DAVIS_AND_REGION.md`](docs/en-US/EH55_UNBRICK_BREAKTHROUGH_BGO_CH1_DAVIS_AND_REGION.md) ([PT-BR](docs/pt-BR/HISTORICO_UNBRICK_EH55_BGO_CH1_DAVIS_E_REGIAO.md)) · [`22` Curated Bench Logs](docs/debug_logs/README.md)
+- **Master Bilingual Portal (39 EN/PT-BR Dossier Pairs):** [`docs/INDEX.md`](docs/INDEX.md)
+- **DIGA Lineup Hardware Profiles Catalog & Audit:** [`docs/en-US/DIGA_LINEUP_HARDWARE_PROFILES_CATALOG_AND_AUDIT.md`](docs/en-US/DIGA_LINEUP_HARDWARE_PROFILES_CATALOG_AND_AUDIT.md) ([PT-BR](docs/pt-BR/CATALOGO_E_AUDITORIA_PERFIS_HARDWARE_LINHA_DIGA.md))
 - **Root Engineering Audits:** [`COMPLETE_AUDIT.md`](COMPLETE_AUDIT.md) · [`AUDITORIA_COMPLETA.md`](AUDITORIA_COMPLETA.md)
-- **Service Manuals & Datasheets (`30` PDFs):** [`manuals_and_schematics/README.md`](manuals_and_schematics/README.md)
-- **Ghidra Pseudocode & Live `COM10` Logs:** [`docs/pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md`](docs/pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) · [`docs/debug_logs/README.md`](docs/debug_logs/README.md)
+- **Service Manuals & Datasheets (`32+` PDFs):** [`manuals_and_schematics/README.md`](manuals_and_schematics/README.md)
 
 All reverse engineering, cryptanalysis, and hardware documentation were conducted strictly for **interoperability, historical preservation, and repair of obsolete electronics**, in accordance with applicable statutory exceptions. Panasonic, Matsushita, DIGA, UniPhier, and Spansion are trademarks of their respective owners.
 
 ---
 
-**License:** [MIT](LICENSE) · **Tree:** [`v0.1.0`](https://github.com/orgchrono/Panadiga/tree/v0.1.0)
+**License:** [MIT](LICENSE) · **Tree:** [`v0.2.0`](https://github.com/orgchrono/Panadiga/tree/v0.2.0) · **Full Changelog:** [`v0.1.0...v0.2.0`](https://github.com/orgchrono/Panadiga/compare/v0.1.0...v0.2.0)

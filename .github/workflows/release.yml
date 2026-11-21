@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: "Release tag version (e.g. v0.1.0)"
+        description: "Release tag version (e.g. v0.2.0)"
         required: false
-        default: "v0.1.0"
+        default: "v0.2.0"
 
 permissions:
   contents: write
@@ -328,7 +328,9 @@ jobs:
               > "$deb_dir/DEBIAN/postinst"
             cp "$deb_dir/DEBIAN/postinst" "$deb_dir/DEBIAN/postrm"
             chmod 755 "$deb_dir/DEBIAN/postinst" "$deb_dir/DEBIAN/postrm"
-            printf "Package: panadiga\nVersion: 0.1.0\nSection: utils\nPriority: optional\nArchitecture: amd64\nMaintainer: OrgChrono Engineering <support@orgchrono.com>\nDepends: libc6, libwebkit2gtk-4.1-0, libayatana-appindicator3-1 | libappindicator3-1\nDescription: Panasonic DIGA DMR-EH55 Forensic, NVRAM and Reverse Engineering Suite\n" > "$deb_dir/DEBIAN/control"
+            DEB_VERSION="${GITHUB_REF_NAME#v}"
+            if [ -z "$DEB_VERSION" ] || [ "$DEB_VERSION" = "main" ]; then DEB_VERSION="0.2.0"; fi
+            printf "Package: panadiga\nVersion: %s\nSection: utils\nPriority: optional\nArchitecture: amd64\nMaintainer: OrgChrono Engineering <support@orgchrono.com>\nDepends: libc6, libwebkit2gtk-4.1-0, libayatana-appindicator3-1 | libappindicator3-1\nDescription: Panasonic DIGA DMR-EH55 Forensic, NVRAM and Reverse Engineering Suite\n" "$DEB_VERSION" > "$deb_dir/DEBIAN/control"
             dpkg-deb --build "$deb_dir" "panadiga-linux-amd64.deb"
             shasum -a 256 "panadiga-linux-amd64.deb" > "panadiga-linux-amd64.deb.sha256"
           fi
