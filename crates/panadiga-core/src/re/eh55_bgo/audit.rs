@@ -109,9 +109,16 @@ pub fn audit_bgo_nor_with_geometry(
     }
 
     let mut fat_mirror_mismatches = 0usize;
+    let mut fat_pri = Vec::with_capacity(15 * 0x200);
+    let mut fat_pri_complete = true;
     for idx in 0..15u16 {
         let p_pri = read_bgo_page(nor, &l2p, &f2_bases, 0x0F07 + idx);
         let p_bak = read_bgo_page(nor, &l2p, &f2_bases, 0x0F16 + idx);
+        if let Some(a) = p_pri {
+            fat_pri.extend_from_slice(a);
+        } else {
+            fat_pri_complete = false;
+        }
         match (p_pri, p_bak) {
             (Some(a), Some(b)) if a == b => {}
             _ => fat_mirror_mismatches += 1,
@@ -122,9 +129,32 @@ pub fn audit_bgo_nor_with_geometry(
     for dpid in [0x0F02u16, 0x0F03, 0x0F04] {
         if let Some(dp) = read_bgo_page(nor, &l2p, &f2_bases, dpid) {
             for idx in 0..16usize {
-                let first = dp[idx * 16];
-                if first != 0 && first != 0xFF {
+                let ent = &dp[idx * 16..(idx + 1) * 16];
+                if ent[0] != 0 && ent[0] != 0xFF {
                     nfrom_file_count += 1;
+                    let byte_size = u32::from_le_bytes([ent[8], ent[9], ent[10], ent[11]]);
+                    let start_pid = read_le_u16(ent, 12);
+                    if byte_size > 0 && start_pid != 0xFFFF {
+                        let expected_pages = (byte_size as usize).div_ceil(0x200);
+                        let mut cur = start_pid;
+                        let mut ok = fat_pri_complete;
+                        for _ in 0..expected_pages {
+                            let fat_off = usize::from(cur.saturating_sub(1)) * 2;
+                            if !ok
+                                || cur == 0
+                                || cur == 0xFFFF
+                                || cur == 0xFFED
+                                || fat_off + 2 > fat_pri.len()
+                            {
+                                ok = false;
+                                break;
+                            }
+                            cur = read_le_u16(&fat_pri, fat_off);
+                        }
+                        if !ok || cur != 0xFFED {
+                            fat_mirror_mismatches += 1;
+                        }
+                    }
                 }
             }
         }

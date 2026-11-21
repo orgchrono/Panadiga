@@ -13,7 +13,12 @@ use crate::re::eh55_bgo::{
     parse_bgo_l2p_with_geometry,
 };
 
-fn find_superseded_page(nor: &[u8], target_pid: u16, geom: &BgoSectorGeometry) -> Option<Vec<u8>> {
+fn find_f2_page_matching(
+    nor: &[u8],
+    geom: &BgoSectorGeometry,
+    target_pid: u16,
+    predicate: impl Fn(&[u8]) -> bool,
+) -> Option<Vec<u8>> {
     for sa in geom.first_sa..=geom.last_sa {
         let Ok(base) = geom.sector_offset(sa) else {
             continue;
@@ -24,15 +29,30 @@ fn find_superseded_page(nor: &[u8], target_pid: u16, geom: &BgoSectorGeometry) -
         for slot in 0..126usize {
             if read_le_u16(nor, base + 0x200 + slot * 4) == target_pid {
                 let poff = base + 0x400 + slot * 0x200;
-                return Some(nor[poff..poff + 0x200].to_vec());
+                let page = &nor[poff..poff + 0x200];
+                if predicate(page) {
+                    return Some(page.to_vec());
+                }
             }
         }
     }
     None
 }
 
+fn find_superseded_page(nor: &[u8], target_pid: u16, geom: &BgoSectorGeometry) -> Option<Vec<u8>> {
+    find_f2_page_matching(nor, geom, target_pid, |_| true)
+}
+
+fn find_superseded_0f0a_page(nor: &[u8], geom: &BgoSectorGeometry) -> Option<Vec<u8>> {
+    find_superseded_page(nor, 0x0F0A, geom).or_else(|| {
+        find_f2_page_matching(nor, geom, 0x0000, |page| {
+            (0..8usize).all(|i| read_le_u16(page, i * 2) == 0x0302 + i as u16)
+        })
+    })
+}
+
 fn build_reconstructed_0f0a_page(nor: &[u8], geom: &BgoSectorGeometry) -> Vec<u8> {
-    let Some(mut raw) = find_superseded_page(nor, 0x0F0A, geom) else {
+    let Some(mut raw) = find_superseded_0f0a_page(nor, geom) else {
         return vec![0xFFu8; 512];
     };
     let mut set_fat = |pid: u16, nxt: u16| {
