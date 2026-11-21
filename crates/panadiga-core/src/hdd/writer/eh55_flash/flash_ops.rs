@@ -9,16 +9,14 @@ use anyhow::{Context, Result, bail};
 use crate::constants::LBA_SECTOR_SIZE_BYTES;
 use crate::nvram::calculate_hashes;
 
-use super::super::block_ops::{is_unconditional_os_boot_disk, verify_safety_lockout_with_os_disks};
-use super::super::discovery::detect_linux_host_os_disks;
 use super::backup_verify::{
-    resolve_mirror_bytes, validate_eh55_primary_image, verify_region_readback_sha256,
-    write_chunked_with_progress, write_mandatory_64k_cow_backup,
+    HddPreflightParams, preflight_hdd_target_geometry, resolve_mirror_bytes,
+    validate_eh55_primary_image, verify_region_readback_sha256, write_chunked_with_progress,
+    write_mandatory_64k_cow_backup,
 };
 use super::types::{
-    BUS_TYPE_NVME, BlockFlashDevice, DEFAULT_EXPECTED_GB_RANGE, EH55_BACKUP_SECTOR_COUNT,
-    Eh55FlashProgress, Eh55FlashStage, Eh55HddFlashReport, Eh55HddFlashRequest, MAX_ALLOWED_GB,
-    MIN_ALLOWED_GB, compute_eh55_mirror_main_lba,
+    BlockFlashDevice, EH55_BACKUP_SECTOR_COUNT, Eh55FlashProgress, Eh55FlashStage,
+    Eh55HddFlashReport, Eh55HddFlashRequest,
 };
 
 /// Executes the fail-closed EH55 HDD flash workflow over any [`BlockFlashDevice`]:
@@ -34,66 +32,20 @@ where
     D: BlockFlashDevice + ?Sized,
     F: FnMut(Eh55FlashProgress),
 {
-    on_progress(Eh55FlashProgress {
-        stage: Eh55FlashStage::Preflight,
-        bytes_done: 0,
-        bytes_total: 0,
-        detail: format!("Validating safety lockouts for {}", req.device_path),
-    });
-
-    if is_unconditional_os_boot_disk(&req.device_path) {
-        bail!(
-            "FATAL SAFETY LOCKOUT: Primary OS boot disk '{}' is unconditionally blocked!",
-            req.device_path
-        );
-    }
-    let fallback_os_disks = if req.detected_os_disks.is_none() {
-        detect_linux_host_os_disks()
-    } else {
-        None
-    };
-    let effective_os_disks = req
-        .detected_os_disks
-        .as_ref()
-        .or(fallback_os_disks.as_ref());
-    let os_refs: Option<Vec<&str>> =
-        effective_os_disks.map(|list| list.iter().map(String::as_str).collect());
-    verify_safety_lockout_with_os_disks(
-        &req.device_path,
-        &req.confirmation_token,
-        os_refs.as_deref(),
+    let geo = preflight_hdd_target_geometry(
+        device,
+        HddPreflightParams {
+            device_path: &req.device_path,
+            confirmation_token: &req.confirmation_token,
+            expected_gb_range: req.expected_gb_range,
+            detected_os_disks: req.detected_os_disks.as_deref(),
+        },
+        &mut on_progress,
     )?;
-
-    let bus_type_id = device.bus_type();
-    if bus_type_id == BUS_TYPE_NVME {
-        bail!(
-            "SAFETY LOCKOUT: Target '{}' reported BusType::Nvme (17); EH55 targets must be IDE/PATA/SATA/USB",
-            req.device_path
-        );
-    }
-
-    let (min_gb, max_gb) = req.expected_gb_range.unwrap_or(DEFAULT_EXPECTED_GB_RANGE);
-    if min_gb > max_gb || min_gb < MIN_ALLOWED_GB || max_gb > MAX_ALLOWED_GB {
-        bail!(
-            "Invalid expected_gb_range ({min_gb}..{max_gb} GB): must fall within {MIN_ALLOWED_GB}..{MAX_ALLOWED_GB} GB"
-        );
-    }
-
-    let disk_bytes = device.length_bytes()?;
-    let min_bytes = u64::from(min_gb) * 1_000_000_000;
-    let max_bytes = u64::from(max_gb) * 1_000_000_000;
-    if disk_bytes < min_bytes || disk_bytes > max_bytes {
-        bail!(
-            "SAFETY ABORT: Target disk '{}' length {} B outside expected {}..{} GB range",
-            req.device_path,
-            disk_bytes,
-            min_gb,
-            max_gb
-        );
-    }
-
-    let mirror_main_lba = compute_eh55_mirror_main_lba(disk_bytes)?;
-    let mirror_offset_bytes = mirror_main_lba * (LBA_SECTOR_SIZE_BYTES as u64);
+    let disk_bytes = geo.disk_bytes;
+    let bus_type_id = geo.bus_type_id;
+    let mirror_main_lba = geo.mirror_main_lba;
+    let mirror_offset_bytes = geo.mirror_offset_bytes;
 
     let primary_bytes = fs::read(&req.image_path)
         .with_context(|| format!("Reading primary image {}", req.image_path.display()))?;

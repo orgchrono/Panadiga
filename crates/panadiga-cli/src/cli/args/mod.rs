@@ -4,21 +4,32 @@
 //! modularized by functional domain with unified public re-exports.
 
 pub mod crypto;
+pub mod dvd;
 pub mod ghidra;
 pub mod hdd;
 pub mod nvram;
 pub mod pico;
+pub mod profiles;
 pub mod re;
+pub mod sd;
+pub mod session;
 pub mod system;
 pub mod unbrick;
 
 pub use crypto::{FrmActions, FrmArgs, HeadersActions, HeadersArgs, ScanArgs};
+pub use dvd::{DvdActions, DvdArgs, DvdCreateArgs};
 pub use ghidra::{GhidraActions, GhidraArgs};
 pub use hdd::{HddActions, HddArgs};
-pub use nvram::{NvramActions, NvramArgs};
+pub use nvram::{LabOverrideCliArgs, NvramActions, NvramArgs};
 pub use pico::{GdbConfigArgs, PicoActions, PicoArgs};
+pub use profiles::{ProfilesActions, ProfilesArgs};
 pub use re::{ReActions, ReArgs};
-pub use system::{ManualsArgs, McpArgs, MemoryMapArgs, RagActions, RagArgs, VerifyArtifactArgs};
+pub use sd::{SdActions, SdArgs, SdCreateArgs};
+pub use session::{SessionActions, SessionArgs};
+pub use system::{
+    ManualsArgs, McpArgs, MemoryMapArgs, RagActions, RagArgs, SsotActions, SsotArgs,
+    VerifyArtifactArgs,
+};
 pub use unbrick::{UnbrickActions, UnbrickArgs};
 
 use clap::{Parser, Subcommand};
@@ -27,7 +38,7 @@ use clap::{Parser, Subcommand};
 #[command(
     name = "panadiga",
     author = "Antigravity Systems Engineering Team",
-    version = "0.1.0",
+    version,
     about = "Panasonic DMR-EH55 & DIGA Engineering & Forensic Suite",
     long_about = "High-performance, strongly typed systems engineering suite for Panasonic DIGA recorders.\nReplaces legacy Python scripts with zero-copy memory-mapped operations, rigorous\nboundary verification, cryptographic forensics, and technical documentation lookup."
 )]
@@ -75,6 +86,12 @@ pub enum Commands {
     /// Hardware host controller (RP2040 / RP2350) and GDB RSP bridge
     Pico(PicoArgs),
 
+    /// Relational JSON hardware, flash, EEPROM, and media dictionary inspector
+    Profiles(ProfilesArgs),
+
+    /// Multi-language SSOT code & schema projection exporter (`C11`, `TypeScript`, `JSON Schema`, `Ghidra`)
+    Ssot(SsotArgs),
+
     /// Ghidra reverse engineering script generation directly from Rust SSOT
     Ghidra(GhidraArgs),
 
@@ -114,6 +131,15 @@ pub enum Commands {
 
     /// Pre-MAIN Unbrick, SD Recovery Kit Builder, PROG061 BGO, & MAIN AV TBC Passthrough Workbench
     Unbrick(UnbrickArgs),
+
+    /// Deterministic FAT16B (0x06) SD recovery card creator & safe SD target inspector
+    Sd(SdArgs),
+
+    /// ISO 9660 Level 1 (1x / minimum speed) optical DVD recovery creator & burner
+    Dvd(DvdArgs),
+
+    /// Segregated forensic workflow sessions (`raw/`, `frm/`, `recompiled/`)
+    Session(SessionArgs),
 
     /// Static Matsushita MN103S / AM34 reverse-engineering traps, xrefs, & DRV CLI auditors
     Re(ReArgs),

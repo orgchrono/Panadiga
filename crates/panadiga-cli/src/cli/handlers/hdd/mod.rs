@@ -2,6 +2,7 @@
 
 //! Handlers for MEIHDFS HDD image inspection, partition extraction, capacity clamping, and flashing.
 
+pub mod composed;
 pub mod flash;
 
 use super::super::args::{HddActions, HddArgs};
@@ -269,6 +270,7 @@ pub fn handle_hdd(args: HddArgs) -> Result<()> {
             log_println!("Output SHA-256:   {}", rep.patched_sha256);
         }
         HddActions::FlashEh55(flash_args) => flash::handle_flash_eh55(flash_args)?,
+        HddActions::FlashComposed(comp_args) => composed::handle_flash_composed(comp_args)?,
     }
     Ok(())
 }

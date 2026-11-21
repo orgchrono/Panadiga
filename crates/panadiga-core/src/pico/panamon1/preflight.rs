@@ -48,7 +48,7 @@ impl<T: Panamon1Transport> Panamon1Client<T> {
         }
 
         let pincheck = self.transport_mut().pico_cli_exchange(
-            "PINCHECK",
+            "PINCHECK PASSIVE",
             &["PINCHECK: OK"],
             Duration::from_millis(2500),
         )?;

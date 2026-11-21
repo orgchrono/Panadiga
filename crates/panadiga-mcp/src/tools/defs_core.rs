@@ -50,7 +50,15 @@ pub(super) fn core_tool_definitions() -> Vec<Value> {
                     },
                     "address": {
                         "type": "string",
-                        "description": format!("Hexadecimal memory bus address (e.g. '0x{:08X}') to test for write permission.", AM34_NVRAM_BASE)
+                        "description": format!("Hexadecimal memory bus address (e.g. '0x{:08X}' or '0x84000000') to test for write permission.", AM34_NVRAM_BASE)
+                    },
+                    "confirm_upper_nor": {
+                        "type": "boolean",
+                        "description": "Explicit opt-in authorizing Layer 2 Upper NOR/BGO (0x80040000..nvram_start-1); Layer 1 Critical Boot IPL (SA0..SA10) stays permanently E05."
+                    },
+                    "flash_size_bytes": {
+                        "type": "integer",
+                        "description": "Optional target NOR Flash capacity in bytes (default 8388608; pass 16777216 for 16 MiB)."
                     }
                 }
             }
@@ -81,6 +89,18 @@ pub(super) fn core_tool_definitions() -> Vec<Value> {
                     "patch_hex": {
                         "type": "string",
                         "description": "Hex payload bytes to write at nvram_offset when action='patch'."
+                    },
+                    "model_id": {
+                        "type": "string",
+                        "description": "Optional explicit DIGA model ID pinning profile checks (default: structural fingerprint probe)."
+                    },
+                    "lab_override_disclaimer": {
+                        "type": "string",
+                        "description": "Optional exact disclaimer literal 'I_ACCEPT_UNVERIFIED_HARDWARE_RISK' for offline CoW lab override."
+                    },
+                    "lab_override_reason": {
+                        "type": "string",
+                        "description": "Optional operator reason (>= 5 chars) paired with lab_override_disclaimer."
                     }
                 },
                 "required": ["input_file"]

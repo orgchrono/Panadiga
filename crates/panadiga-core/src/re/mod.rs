@@ -13,11 +13,14 @@ pub mod mn10300_emu;
 pub mod mn10300_traps;
 pub mod nor_dumper;
 pub mod patch_spec;
+pub mod prewrite_gate;
 pub mod prog061_uart_monitor;
 pub mod region_compat;
+pub mod sig_locator;
 pub mod tbc_appliance;
 pub mod unbrick_sd_kit;
 pub mod unbrick_workbench;
+pub mod verify_loop;
 
 pub use bgo_unbrick::{
     OFF_BGO_INIT_CALL, OFF_BGO_INIT_FAIL_HOOK, OFF_BGO_SUM_BEQ, OFF_DEVINFO_CHECK_BEQ,
@@ -29,10 +32,12 @@ pub use bgo_unbrick::{
     patch_prog061_or_build_digadiag_with_policy,
 };
 pub use eh55_bgo::{
-    EH55_BGO_EXPECTED_P2_COUNT, EH55_BGO_FIRST_SA, EH55_BGO_LAST_SA, EH55_BGO_MAX_PID,
-    EH55_BGO_SECTOR_COUNT, Eh55BgoAuditReport, Eh55BgoSectorKind, Eh55BgoSectorReport,
-    audit_eh55_bgo_nor_8mb, eh55_bgo_sector_offset, eval_bgo_migration_index,
-    eval_bgo_migration_target, parse_eh55_bgo_l2p, verify_nor_one_to_zero_compatible,
+    BgoSectorGeometry, EH55_BGO_EXPECTED_P2_COUNT, EH55_BGO_FIRST_SA, EH55_BGO_LAST_SA,
+    EH55_BGO_MAX_PID, EH55_BGO_SECTOR_COUNT, Eh55BgoAuditReport, Eh55BgoSectorKind,
+    Eh55BgoSectorReport, audit_bgo_nor_with_geometry, audit_eh55_bgo_nor_8mb,
+    eh55_bgo_sector_offset, eval_bgo_migration_index, eval_bgo_migration_target,
+    is_active_bgo_p1_sector, parse_bgo_l2p_with_geometry, parse_eh55_bgo_l2p,
+    verify_nor_one_to_zero_compatible,
 };
 pub use emu_patch_suite::{
     NorEmuPatchSuiteReport, PatchVerificationCheck, run_nor_emu_patch_verification_suite,
@@ -60,6 +65,10 @@ pub use nor_dumper::{
     NOR_MAGIC_HEADER, NorDumpResult, build_nor_dumper_artifact, build_readonly_nor_dumper_stub,
     decode_nor_dump_stream, resolve_nor_stub_load_addr, validate_nor_dump_range,
 };
+pub use prewrite_gate::{
+    PreWriteCheckItem, PreWriteGateReport, PreWriteTarget, require_prewrite_gate,
+    verify_prewrite_gate,
+};
 pub use prog061_uart_monitor::{
     OFF_UART_MONITOR_SLACK, PATCH_A2CD_UART_MONITOR, PROG061_UART_MONITOR_VA,
     UART_MONITOR_MAX_SLACK_BYTES, build_prog061_uart_monitor_payload,
@@ -71,18 +80,35 @@ pub use region_compat::{
     inspect_dev_bin_bytes, inspect_main_region_compat, patch_dev_bin_bytes,
     patch_main_region_compat_in_place, retarget_frm_toc_bytes,
 };
+pub use sig_locator::{
+    CfgFunctionCandidate, LocatedFunctionMatch, StringXrefHit, detect_prologue_at,
+    discover_cfg_functions, locate_functions_by_string, summarize_function_cfg,
+};
 pub use tbc_appliance::{
     TbcApplianceMode, TbcAppliancePlan, VerifiedMainPassthroughSiteRef,
     build_ic7501_vfd_text_frame, build_ic7501_wdt_255s_frame, build_tbc_appliance_plan,
     compute_ic7501_tbus_checksum, emit_m0_tbus_wdt_keepalive_stub,
 };
 pub use unbrick_sd_kit::{
-    FatBpbReport, MbrPartitionRecord, RootDirFileReport, SdDiskInspectionReport, SdLoaderProfile,
-    SdMediaVerificationReport, SdUnbrickCheck, SdUnbrickKitReport, SdUnbrickKitRequest,
-    inspect_sd_disk_bytes, inspect_sd_reader, inspect_sd_target, prepare_sd_unbrick_kit,
-    verify_sd_buffers, verify_sd_unbrick_media,
+    CLEANROOM_DIGADIAG_MAGIC, CleanroomDigadiagArtifact, DvdCreatorProgress, DvdCreatorReport,
+    DvdCreatorRequest, DvdCreatorStage, Fat16PlacedFileReport, Fat16SdFileInput, Fat16SdGeometry,
+    FatBpbReport, ISO9660_SECTOR_SIZE, Iso9660FileInput, Iso9660InspectionReport,
+    Iso9660PlacedFileReport, MbrPartitionRecord, OpticalBurnBackend, OpticalBurnerDriveInfo,
+    RootDirFileReport, SdCardAdvisory, SdCardCreatorPlan, SdCardCreatorReport,
+    SdCardCreatorRequest, SdCreatorProgress, SdCreatorStage, SdDiskInspectionReport,
+    SdLoaderProfile, SdMediaVerificationReport, SdTargetDriveInfo, SdUnbrickCheck,
+    SdUnbrickKitReport, SdUnbrickKitRequest, SynthesizedIsoImage, SynthesizedSdImage,
+    SystemOpticalBurnBackend, assess_sd_card_size_advisory, build_cleanroom_digadiag,
+    build_layperson_sd_steps, compute_fat16_sd_geometry, create_dvd_recovery_disc,
+    create_dvd_recovery_disc_with_backend, create_dvd_recovery_iso,
+    create_sd_recovery_card_on_device, create_sd_recovery_image, expected_optical_confirm_token,
+    flash_sd_recovery_card, inspect_iso9660_image, inspect_optical_burners,
+    inspect_sd_card_targets, inspect_sd_disk_bytes, inspect_sd_reader, inspect_sd_target,
+    plan_sd_recovery_card, prepare_sd_unbrick_kit, synthesize_fat16_sd_image,
+    synthesize_iso9660_level1_image, verify_sd_buffers, verify_sd_unbrick_media,
 };
 pub use unbrick_workbench::{
     ExtractedFrmModuleReport, FrmModuleExtractionReport, UnbrickHardwareFact,
     UnbrickWorkspaceReport, extract_modules_from_frm, inspect_unbrick_workspace,
 };
+pub use verify_loop::{VerifyExpectation, VerifyLoopReport, VerifySegment, run_verify_loop};

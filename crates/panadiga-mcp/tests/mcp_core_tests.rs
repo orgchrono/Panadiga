@@ -10,7 +10,7 @@ use std::path::Path;
 #[test]
 fn test_tool_definitions_and_memory_map() {
     let defs = tool_definitions();
-    assert_eq!(defs.len(), 24);
+    assert_eq!(defs.len(), 25);
 
     let all = execute_tool("panadiga_memory_map", &json!({}), Path::new(".")).unwrap();
     assert_eq!(all["total"], AM34_SYSTEM_MEMORY_REGIONS.len());
@@ -76,6 +76,64 @@ fn test_safety_check_invariants() {
             .unwrap()
             .contains("mutable NVRAM")
     );
+
+    let uncached_ipl = execute_tool(
+        "panadiga_safety_check",
+        &json!({ "address": "0x84000000" }),
+        Path::new("."),
+    )
+    .unwrap();
+    assert_eq!(uncached_ipl["safe"], false);
+    assert!(
+        uncached_ipl["violations"][0]
+            .as_str()
+            .unwrap()
+            .contains("FLASH_WRITE_VIOLATION")
+    );
+
+    let lethal = execute_tool(
+        "panadiga_safety_check",
+        &json!({ "address": "0xC000100C" }),
+        Path::new("."),
+    )
+    .unwrap();
+    assert_eq!(lethal["safe"], false);
+    assert!(
+        lethal["violations"][0]
+            .as_str()
+            .unwrap()
+            .contains("LETHAL_REGISTER_VIOLATION")
+    );
+
+    let neg_volt = execute_tool(
+        "panadiga_safety_check",
+        &json!({ "voltage": -1.0 }),
+        Path::new("."),
+    )
+    .unwrap();
+    assert_eq!(neg_volt["safe"], false);
+    assert!(
+        neg_volt["violations"][0]
+            .as_str()
+            .unwrap()
+            .contains("NEGATIVE_VOLTAGE_VIOLATION")
+    );
+
+    let upper_locked = execute_tool(
+        "panadiga_safety_check",
+        &json!({ "address": "0x84130000" }),
+        Path::new("."),
+    )
+    .unwrap();
+    assert_eq!(upper_locked["safe"], false);
+
+    let upper_unlocked = execute_tool(
+        "panadiga_safety_check",
+        &json!({ "address": "0x84130000", "confirm_upper_nor": true }),
+        Path::new("."),
+    )
+    .unwrap();
+    assert_eq!(upper_unlocked["safe"], true);
 }
 
 #[test]
@@ -87,6 +145,10 @@ fn test_clean_nvram_rejects_in_place_and_sanitizes_copy() {
     let out_path = tmp.join("flash_out.bin");
 
     let mut flash = vec![0xA5u8; SPANSION_FLASH_SIZE_BYTES];
+    let banner = b"Loader ver0.61 [06/03/06]";
+    flash[0x0003_F000..0x0003_F000 + banner.len()].copy_from_slice(banner);
+    flash[SPANSION_NVRAM_BASE_OFFSET..SPANSION_NVRAM_BASE_OFFSET + 8]
+        .copy_from_slice(&[0xFF, 0xFF, 0xFF, 0xFF, 0x01, 0xF1, 0xFF, 0xFF]);
     flash[SPANSION_NVRAM_BASE_OFFSET] = 0x11;
     fs::write(&in_path, &flash).unwrap();
 
@@ -153,10 +215,23 @@ fn test_new_dev_tools_and_resources_prompts() {
     let res_invariants = resources::read_resource("panadiga://invariants", Path::new(".")).unwrap();
     let text = res_invariants["contents"][0]["text"].as_str().unwrap();
     assert!(text.contains("0x807F0000"));
+    assert!(text.contains("p7501_never_power_pico"));
+    assert!(text.contains("pin5_nsw5v_gp3_hiz_only"));
+    assert!(!text.contains("pin6_never_power_pico"));
     let res_visuals =
         resources::read_resource("panadiga://visual-catalog", Path::new(".")).unwrap();
     let vis_manifest_text = res_visuals["contents"][0]["text"].as_str().unwrap();
     assert!(vis_manifest_text.contains("na_p62_zoom.png"));
+    assert!(vis_manifest_text.len() <= resources::MAX_MCP_RESOURCE_BYTES);
+
+    let large_doc = resources::read_resource(
+        "panadiga://docs/pseudocode/EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md",
+        Path::new("."),
+    )
+    .unwrap();
+    let large_doc_text = large_doc["contents"][0]["text"].as_str().unwrap();
+    assert!(large_doc_text.len() <= resources::MAX_MCP_RESOURCE_BYTES);
+    assert!(large_doc_text.contains("TRUNCATED AT 32 KiB"));
     let vis_search = execute_tool(
         "panadiga_search_visuals",
         &json!({ "query": "Q7514", "limit": 5 }),
@@ -208,7 +283,7 @@ fn test_jsonrpc_stdio_protocol_and_capabilities() {
     assert!(r1["result"]["capabilities"]["prompts"].is_object());
 
     let r2: Value = serde_json::from_str(lines[1]).unwrap();
-    assert_eq!(r2["result"]["tools"].as_array().unwrap().len(), 24);
+    assert_eq!(r2["result"]["tools"].as_array().unwrap().len(), 25);
 
     let r3: Value = serde_json::from_str(lines[2]).unwrap();
     let body = r3["result"]["content"][0]["text"].as_str().unwrap();

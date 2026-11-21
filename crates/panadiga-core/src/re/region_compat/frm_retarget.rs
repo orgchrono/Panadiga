@@ -103,9 +103,16 @@ pub fn retarget_frm_toc_bytes(
                 }
             }
             TocLayout::Sd48B => {
-                // `Loader ver0.61` `sd_find_firm_entry` checks `entry[0x18] == model_prefix` (e.g. `'M'`) and leaves `[0x19] == 0`.
-                if let Some(prefix) = target_flag.or_else(|| oem_char.map(|c| c as u8)) {
-                    entry[0x18] = prefix;
+                // `Loader ver0.61` `sd_find_firm_entry` matches `[0x18] == model_prefix` (e.g. `'M'`) and `[0x19] == target_flag`.
+                if let Some(oem) = oem_char {
+                    entry[0x18] = oem as u8;
+                }
+                if let Some(flag) = target_flag {
+                    if flag.is_ascii_alphabetic() {
+                        entry[0x18] = flag;
+                    } else {
+                        entry[0x19] = flag;
+                    }
                 }
                 if let Some(grp) = model_group {
                     write_padded_ascii(&mut entry[0x1A..0x20], grp.trim(), 0);

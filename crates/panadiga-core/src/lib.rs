@@ -14,15 +14,18 @@ pub mod crypto;
 pub mod ghidra;
 pub mod hdd;
 pub mod headers;
+pub mod ingest;
 #[cfg(any(target_os = "android", test, feature = "android-ir"))]
 pub mod ir;
 pub mod launcher;
 pub mod manuals;
 pub mod nvram;
 pub mod pico;
+pub mod profile;
 pub mod re;
 pub mod scan;
 pub mod settings;
 pub mod ssot;
+pub mod vault;
 
 pub use logger::LogLevel;

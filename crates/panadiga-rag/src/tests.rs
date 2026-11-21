@@ -286,6 +286,46 @@ fn test_safety_utf8_multibyte_context_window_and_sram_vs_ipl() {
         true,
     );
     assert!(rep_sram.is_safe);
+
+    // Layer 1 Critical Boot IPL (256 KiB SA0..SA10) must stay permanently locked even with CONFIRM_UPPER_NOR
+    let rep_layer1_locked = validator.validate(
+        "Erase uncached Layer 1 Critical IPL at 0x84000000 with CONFIRM_UPPER_NOR.",
+        true,
+    );
+    assert!(!rep_layer1_locked.is_safe);
+    assert!(
+        rep_layer1_locked
+            .violations
+            .iter()
+            .any(|v| v.contains("BOOTLOADER HAZARD"))
+    );
+
+    // Layer 2 Upper NOR / BGO requires explicit CONFIRM_UPPER_NOR opt-in + warning compliance
+    let rep_layer2_default =
+        validator.validate("Erase BGO sector at 0x84130000 to attempt repair.", true);
+    assert!(!rep_layer2_default.is_safe);
+
+    let rep_layer2_optin = validator.validate(
+        "With 8 MiB SHA-256 backup verified, unlock via CONFIRM_UPPER_NOR and erase BGO sector at 0x84130000 for U99 recovery.",
+        true,
+    );
+    assert!(rep_layer2_optin.is_safe);
+    assert!(
+        rep_layer2_optin
+            .warnings
+            .iter()
+            .any(|w| w.contains("UPPER NOR / BGO WRITE RISK ACKNOWLEDGED"))
+    );
+
+    // Forbidden lethal AM34 MMIO register 0xC000100C must be blocked
+    let rep_lethal = validator.validate("Read AM34 MMIO register 0xC000100C.", true);
+    assert!(!rep_lethal.is_safe);
+    assert!(
+        rep_lethal
+            .violations
+            .iter()
+            .any(|v| v.contains("MMIO HAZARD"))
+    );
 }
 
 #[test]

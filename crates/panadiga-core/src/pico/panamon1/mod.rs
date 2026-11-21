@@ -88,25 +88,47 @@ impl Panamon1Transport for SerialPanamon1Transport {
     }
 
     fn escape_bridge(&mut self, timeout: Duration) -> Result<String> {
+        std::thread::sleep(Duration::from_millis(60));
         let _ = self.port.clear(ClearBuffer::Input);
         self.port.write_all(b"~~~")?;
         self.port.flush()?;
-        let deadline = Instant::now() + timeout;
+        let _ = self.port.set_timeout(Duration::from_millis(80));
+
+        let total_deadline = Instant::now() + timeout;
+        let tilde_deadline = total_deadline.min(Instant::now() + Duration::from_millis(350));
         let mut out = String::new();
         let mut buf = [0u8; 1024];
-        while Instant::now() < deadline {
+
+        while Instant::now() < total_deadline {
+            if out.contains("PANADIGA>") || out.contains("P7501>") {
+                break;
+            }
+            if !out.contains("BRIDGE: OK") && Instant::now() >= tilde_deadline {
+                break;
+            }
             if let Ok(n) = self.port.read(&mut buf)
                 && n > 0
             {
                 out.push_str(&String::from_utf8_lossy(&buf[..n]));
-                let has_bridge = out
-                    .find("BRIDGE: OK")
-                    .is_some_and(|i| out[i..].contains('\n'));
-                if has_bridge || out.contains("PANADIGA>") || out.contains("P7501>") {
-                    break;
+            }
+        }
+
+        if !out.contains("BRIDGE: OK") && !out.contains("PANADIGA>") && !out.contains("P7501>") {
+            self.port.write_all(b"\x03")?;
+            self.port.flush()?;
+            let ctrl_c_deadline = total_deadline.max(Instant::now() + Duration::from_millis(400));
+            while Instant::now() < ctrl_c_deadline {
+                if let Ok(n) = self.port.read(&mut buf)
+                    && n > 0
+                {
+                    out.push_str(&String::from_utf8_lossy(&buf[..n]));
+                    if out.contains("PANADIGA>") || out.contains("P7501>") {
+                        break;
+                    }
                 }
             }
         }
+
         Ok(strip_leading_prompts(&out).trim().to_string())
     }
 

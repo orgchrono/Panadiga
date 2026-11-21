@@ -205,3 +205,39 @@ fn test_flipper_kaseikyo_decode_matches_panasonic_dvd_tv_capture() {
         assert_eq!(count, 50);
     }
 }
+
+#[test]
+fn test_short_buffer_edge_crypt_parity_with_extrhead_main() {
+    use super::super::extrhead::{ExtrheadCryptMode, apply_partial_crypt_with_key};
+    use super::crypto_utils::apply_edge_crypt_order;
+    use crate::constants::{PANA_EXTRHEAD_MAIN_CRYPT_SPAN, PANA_FEISTEL_ROUND_KEY_32B};
+
+    // span <= len < 2 * span (0x19000 <= 0x20000 < 0x32000)
+    let len = PANA_EXTRHEAD_MAIN_CRYPT_SPAN + 0x7000;
+    let orig: Vec<u8> = (0..len).map(|i| ((i * 7) & 0xFF) as u8).collect();
+    let mut go_buf = orig.clone();
+    let mut extr_buf = orig.clone();
+
+    apply_edge_crypt_order(
+        &mut go_buf,
+        PANA_EXTRHEAD_MAIN_CRYPT_SPAN,
+        &PANA_FEISTEL_ROUND_KEY_32B,
+        true,
+    );
+    apply_partial_crypt_with_key(
+        &mut extr_buf,
+        ExtrheadCryptMode::Main,
+        len,
+        true,
+        &PANA_FEISTEL_ROUND_KEY_32B,
+    );
+    assert_eq!(go_buf, extr_buf);
+
+    apply_edge_crypt_order(
+        &mut go_buf,
+        PANA_EXTRHEAD_MAIN_CRYPT_SPAN,
+        &PANA_FEISTEL_ROUND_KEY_32B,
+        false,
+    );
+    assert_eq!(go_buf, orig);
+}

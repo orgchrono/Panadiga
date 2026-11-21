@@ -78,7 +78,7 @@ pub(super) fn re_ext_tool_definitions() -> Vec<Value> {
         }),
         json!({
             "name": "panadiga_eh55_bgo",
-            "description": "Audits 45-sector EH55 BGO FTL (SA26..=SA70), builds CoW repair plans, or executes guarded live repair (requires confirm_upper_nor=true + backup_dir; SA0..SA3 permanently locked E05).",
+            "description": "Audits 45-sector EH55 BGO FTL (SA26..=SA70), builds CoW repair plans, or executes guarded live repair (requires confirm_upper_nor=true + backup_dir; Layer 1 256 KiB IPL SA0..SA10 permanently locked E05).",
             "inputSchema": {
                 "type": "object",
                 "required": ["action"],
@@ -111,6 +111,45 @@ pub(super) fn re_ext_tool_definitions() -> Vec<Value> {
                     "input_path": { "type": "string", "description": "512B or 1024B PIO IDENTIFY binary file (for parse_ec)." },
                     "ec_hex": { "type": "string", "description": "Alternative hex-encoded 512B or 1024B IDENTIFY buffer (for parse_ec)." },
                     "port": { "type": "string", "description": "Pico serial port (required for run_live)." }
+                }
+            }
+        }),
+        json!({
+            "name": "panadiga_profiles_authorize",
+            "description": "Evaluates fail-closed CapabilityGate policy for a DIGA model profile given runtime probe evidence and optional audited LabOverride.",
+            "inputSchema": {
+                "type": "object",
+                "required": ["model_id", "capability"],
+                "properties": {
+                    "model_id": { "type": "string", "description": "DIGA model ID or exact alias (e.g. DMR-EH55, DMR-ES35V, DMR-EZ485V, DMR-ES10)." },
+                    "capability": {
+                        "type": "string",
+                        "enum": [
+                            "inspect_read_only",
+                            "nvram_sanitize_offline_cow",
+                            "nvram_write_live",
+                            "upper_nor_patch_offline_cow",
+                            "upper_nor_write_live",
+                            "official_frm_pass_through",
+                            "custom_recovery_media",
+                            "critical_ipl_or_lethal_mmio"
+                        ],
+                        "description": "Target capability to evaluate against claim tiers and silicon invariants."
+                    },
+                    "dump_size_bytes": { "type": "integer", "description": "Observed NOR dump byte length." },
+                    "jedec_mfg_id": { "type": ["string", "integer"], "description": "Optional live JEDEC manufacturer ID (e.g. '0x01' or 1)." },
+                    "jedec_device_cycles": {
+                        "type": "array",
+                        "items": { "type": ["string", "integer"] },
+                        "description": "Optional live JEDEC device ID words (e.g. ['0x227E', '0x220A', '0x2201'])."
+                    },
+                    "wp_pin_deasserted": { "type": "boolean", "description": "Verified WP#/ACC deasserted state for chips requiring top-sector protection check." },
+                    "has_eemul_f1_marker": { "type": "boolean", "description": "True if EEMUL 0xF1 active marker was detected in top sectors." },
+                    "loader_banner": { "type": "string", "description": "Optional observed IPL loader banner string." },
+                    "frm_sha256": { "type": "string", "description": "Optional observed official .FRM SHA-256 hex digest." },
+                    "requested_loader_profile": { "type": "string", "description": "Optional requested SD loader profile key (e.g. 'ver061')." },
+                    "lab_override_disclaimer": { "type": "string", "description": "Exact disclaimer ack 'I_ACCEPT_UNVERIFIED_HARDWARE_RISK' for offline R&D override." },
+                    "lab_override_reason": { "type": "string", "description": "Operator justification (>= 5 chars) recorded for offline LabOverride." }
                 }
             }
         }),

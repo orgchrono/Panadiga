@@ -1,3 +1,5 @@
+#![deny(unsafe_code)]
+
 //! Domain types for Panasonic `.FRM` container builders.
 
 use serde::{Deserialize, Serialize};
@@ -6,6 +8,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FrmContainerMode {
     Dvd,
+    Dvd64B,
     Sd,
     Sd48,
 }

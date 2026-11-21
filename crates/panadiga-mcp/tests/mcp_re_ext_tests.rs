@@ -25,7 +25,7 @@ fn temp_ws(tag: &str) -> PathBuf {
 #[test]
 fn all_24_mcp_tools_have_unique_names_and_valid_schemas() {
     let defs = tool_definitions();
-    assert_eq!(defs.len(), 24);
+    assert_eq!(defs.len(), 25);
     let mut names = HashSet::new();
     for d in &defs {
         let name = d["name"].as_str().unwrap();

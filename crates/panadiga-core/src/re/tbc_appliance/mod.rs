@@ -124,7 +124,9 @@ fn verified_passthrough_site_refs() -> Vec<VerifiedMainPassthroughSiteRef> {
 }
 
 fn validate_mmio_plan_safety(mmio_ops: &[MmioWriteOp]) -> Result<()> {
-    let ipl_end = AM34_FLASH_BASE + AM34_FLASH_CRITICAL_IPL_SIZE;
+    let cached_ipl_end = AM34_FLASH_BASE + AM34_FLASH_CRITICAL_IPL_SIZE;
+    let uncached_ipl_end =
+        crate::constants::AM34_FLASH_UNCACHED_BASE + AM34_FLASH_CRITICAL_IPL_SIZE;
     for op in mmio_ops {
         if op.addr == AM34_FORBIDDEN_LETHAL_REG {
             bail!(
@@ -132,7 +134,9 @@ fn validate_mmio_plan_safety(mmio_ops: &[MmioWriteOp]) -> Result<()> {
                 AM34_FORBIDDEN_LETHAL_REG
             );
         }
-        if (AM34_FLASH_BASE..ipl_end).contains(&op.addr) {
+        if (AM34_FLASH_BASE..cached_ipl_end).contains(&op.addr)
+            || (crate::constants::AM34_FLASH_UNCACHED_BASE..uncached_ipl_end).contains(&op.addr)
+        {
             bail!(
                 "Safety invariant violation: MMIO plan writes into read-only NOR IPL 0x{:08X} (E05)",
                 op.addr

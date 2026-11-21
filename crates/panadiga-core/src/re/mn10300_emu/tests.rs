@@ -286,4 +286,24 @@ fn test_spansion_jedec_erase_program_and_two_layer_policy() {
     assert_eq!(vm.read_u8(0x8421_0000).unwrap(), 0x5A);
     run_jedec_program_u8(&mut vm, 0x8400_0000, 0x8420_0020, 0x3C).unwrap();
     assert_eq!(vm.read_u8(0x8420_0020).unwrap(), 0x3C);
+
+    // Bottom 8x8 KiB sectors (SA0..SA7) + CFI Query (0x98) + Lethal 0xC000_100C fail-closed fault
+    assert_eq!(spansion_nor::nor_sector_bounds(0x0020), (0x0000, 0x2000));
+    assert_eq!(spansion_nor::nor_sector_bounds(0x2100), (0x2000, 0x2000));
+    assert_eq!(
+        spansion_nor::nor_sector_bounds(0x1_0100),
+        (0x1_0000, 0x1_0000)
+    );
+    vm.write_u16(0x8400_00AA, 0x0098).unwrap();
+    assert_eq!(vm.read_u16(0x8400_0020).unwrap(), 0x0051);
+    assert_eq!(vm.read_u16(0x8400_0022).unwrap(), 0x0052);
+    assert_eq!(vm.read_u16(0x8400_0024).unwrap(), 0x0059);
+    assert_eq!(vm.read_u16(0x8400_004E).unwrap(), 0x0017);
+    vm.write_u16(0x8400_0000, 0x00F0).unwrap();
+    assert_eq!(
+        vm.read_u32(crate::constants::AM34_FORBIDDEN_LETHAL_REG),
+        Err(Mn103Fault::LethalRegisterRead(
+            crate::constants::AM34_FORBIDDEN_LETHAL_REG
+        ))
+    );
 }

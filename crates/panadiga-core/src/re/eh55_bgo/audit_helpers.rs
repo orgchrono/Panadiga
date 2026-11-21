@@ -1,4 +1,6 @@
-//! Low-level L2P, sector offset, migration bitmap, and 1->0 compatibility helpers for EH55 BGO FTL.
+#![deny(unsafe_code)]
+
+//! Low-level L2P, sector offset, migration bitmap, and 1->0 compatibility helpers for BGO FTL.
 
 use std::collections::BTreeMap;
 
@@ -6,7 +8,56 @@ use anyhow::{Result, bail};
 
 use crate::constants::{AM34_EH55_FLASH_BGO_BASE, AM34_FLASH_SIZE, AM34_FLASH_UNCACHED_BASE};
 
-use super::{EH55_BGO_FIRST_SA, EH55_BGO_LAST_SA, EH55_BGO_SECTOR_STRIDE};
+use super::{
+    EH55_BGO_EXPECTED_P2_COUNT, EH55_BGO_FIRST_SA, EH55_BGO_LAST_SA, EH55_BGO_MAX_PID,
+    EH55_BGO_SECTOR_STRIDE,
+};
+
+/// Parameterized NOR BGO FTL geometry (defaults to DMR-EH55 `SA26..=SA70` in 8 MiB flash).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BgoSectorGeometry {
+    pub first_sa: usize,
+    pub last_sa: usize,
+    pub base_offset: usize,
+    pub sector_stride: usize,
+    pub expected_flash_bytes: usize,
+    pub expected_p2_count: usize,
+    pub max_pid: u16,
+}
+
+impl BgoSectorGeometry {
+    /// Returns the verified Panasonic DMR-EH55 (`Loader ver0.61`) 45-sector BGO geometry.
+    #[must_use]
+    pub const fn eh55_default() -> Self {
+        Self {
+            first_sa: EH55_BGO_FIRST_SA,
+            last_sa: EH55_BGO_LAST_SA,
+            base_offset: (AM34_EH55_FLASH_BGO_BASE - AM34_FLASH_UNCACHED_BASE) as usize,
+            sector_stride: EH55_BGO_SECTOR_STRIDE,
+            expected_flash_bytes: AM34_FLASH_SIZE as usize,
+            expected_p2_count: EH55_BGO_EXPECTED_P2_COUNT,
+            max_pid: EH55_BGO_MAX_PID,
+        }
+    }
+
+    /// Translates a physical sector index inside `[first_sa..=last_sa]` to its NOR byte offset.
+    pub fn sector_offset(&self, sa: usize) -> Result<usize> {
+        if !(self.first_sa..=self.last_sa).contains(&sa) {
+            bail!(
+                "BGO sector SA{sa} outside valid range SA{}..=SA{}",
+                self.first_sa,
+                self.last_sa
+            );
+        }
+        Ok(self.base_offset + (sa - self.first_sa) * self.sector_stride)
+    }
+}
+
+impl Default for BgoSectorGeometry {
+    fn default() -> Self {
+        Self::eh55_default()
+    }
+}
 
 pub(super) fn read_le_u16(buf: &[u8], off: usize) -> u16 {
     u16::from_le_bytes([buf[off], buf[off + 1]])
@@ -14,13 +65,19 @@ pub(super) fn read_le_u16(buf: &[u8], off: usize) -> u16 {
 
 /// Translates a physical Spansion sector index (`26..=70`) into its byte offset inside an 8 MiB NOR dump.
 pub fn eh55_bgo_sector_offset(sa: usize) -> Result<usize> {
-    if !(EH55_BGO_FIRST_SA..=EH55_BGO_LAST_SA).contains(&sa) {
-        bail!(
-            "EH55 BGO sector SA{sa} outside valid range SA{EH55_BGO_FIRST_SA}..=SA{EH55_BGO_LAST_SA}"
-        );
+    BgoSectorGeometry::eh55_default().sector_offset(sa)
+}
+
+/// Returns `true` when the sector at `base` carries a consistent `0xF101` P1 signature and 0x100-byte zero marker.
+#[must_use]
+pub fn is_active_bgo_p1_sector(nor: &[u8], base: usize) -> bool {
+    if base + 0x200 > nor.len() {
+        return false;
     }
-    let rel_base = (AM34_EH55_FLASH_BGO_BASE - AM34_FLASH_UNCACHED_BASE) as usize;
-    Ok(rel_base + (sa - EH55_BGO_FIRST_SA) * EH55_BGO_SECTOR_STRIDE)
+    let w0 = read_le_u16(nor, base + 4);
+    w0 == 0xF101
+        && (0..4).all(|i| read_le_u16(nor, base + 4 + i * 4) == 0xF101)
+        && nor[base + 0x100..base + 0x200].iter().all(|&b| b == 0)
 }
 
 /// Evaluates the highest uncommitted migration bitmap slot (`fun_50423540`) at `buf[off..off+38]`.
@@ -55,27 +112,34 @@ pub fn eval_bgo_migration_target(buf: &[u8], off: usize) -> u16 {
     }
 }
 
-/// Parses active L2P page-to-slot mappings across `SA41` (`0x220000`) and `SA29` (`0x160000`).
-pub fn parse_eh55_bgo_l2p(nor_8mb: &[u8]) -> Result<BTreeMap<u16, u16>> {
-    if nor_8mb.len() != AM34_FLASH_SIZE as usize {
+/// Parses active L2P page-to-slot mappings across all `0xF101` BGO Partition-1 sectors in `geom`.
+pub fn parse_bgo_l2p_with_geometry(
+    nor: &[u8],
+    geom: &BgoSectorGeometry,
+) -> Result<BTreeMap<u16, u16>> {
+    if nor.len() != geom.expected_flash_bytes {
         bail!(
-            "Expected {AM34_FLASH_SIZE}-byte 8 MiB NOR dump, got {}",
-            nor_8mb.len()
+            "Expected {}-byte NOR dump, got {}",
+            geom.expected_flash_bytes,
+            nor.len()
         );
     }
     let mut l2p = BTreeMap::new();
-    for sa in [41usize, 29usize] {
-        let base = eh55_bgo_sector_offset(sa)?;
+    for sa in geom.first_sa..=geom.last_sa {
+        let base = geom.sector_offset(sa)?;
+        if !is_active_bgo_p1_sector(nor, base) {
+            continue;
+        }
         for sp in 2..256usize {
             let off = base + sp * 0x100;
-            let b = &nor_8mb[off..off + 4];
+            let b = &nor[off..off + 4];
             if b == [0xFF, 0xFF, 0xFF, 0xFF] {
                 continue;
             }
             for s in 0..7usize {
                 let soff = off + 4 + s * 0x24;
-                let tid = read_le_u16(nor_8mb, soff);
-                let t2 = read_le_u16(nor_8mb, soff + 2);
+                let tid = read_le_u16(nor, soff);
+                let t2 = read_le_u16(nor, soff + 2);
                 let st = if t2 == 0 {
                     0u8
                 } else {
@@ -86,7 +150,7 @@ pub fn parse_eh55_bgo_l2p(nor_8mb: &[u8]) -> Result<BTreeMap<u16, u16>> {
                 };
                 if st == 8 {
                     for i in 0..16u16 {
-                        let w = read_le_u16(nor_8mb, soff + 4 + usize::from(i) * 2);
+                        let w = read_le_u16(nor, soff + 4 + usize::from(i) * 2);
                         let pid = tid.wrapping_mul(16).wrapping_add(i);
                         if l2p.insert(pid, w).is_some() {
                             bail!("Duplicate active BGO L2P mapping for pid 0x{pid:04X}");
@@ -97,6 +161,11 @@ pub fn parse_eh55_bgo_l2p(nor_8mb: &[u8]) -> Result<BTreeMap<u16, u16>> {
         }
     }
     Ok(l2p)
+}
+
+/// Parses active L2P page-to-slot mappings by scanning all active `0xF101` Partition-1 sectors in EH55 `SA26..=SA70`.
+pub fn parse_eh55_bgo_l2p(nor_8mb: &[u8]) -> Result<BTreeMap<u16, u16>> {
+    parse_bgo_l2p_with_geometry(nor_8mb, &BgoSectorGeometry::eh55_default())
 }
 
 /// Verifies that every byte transition `orig -> target` satisfies pure NOR `1 -> 0` programming (`(o & n) == n`).
@@ -142,4 +211,30 @@ pub(super) fn read_bgo_page<'a>(
     }
     let poff = base + 0x400 + slot * 0x200;
     nor_8mb.get(poff..poff + 0x200)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_dynamic_p1_0xf101_discovery_on_shifted_sectors() {
+        let mut nor = vec![0xFFu8; AM34_FLASH_SIZE as usize];
+        for (sa, tid, slot_val) in [(35usize, 0u16, 0x0204u16), (50usize, 1u16, 0x0306u16)] {
+            let base = eh55_bgo_sector_offset(sa).unwrap();
+            for i in 0..4 {
+                nor[base + 4 + i * 4..base + 6 + i * 4].copy_from_slice(&0xF101u16.to_le_bytes());
+            }
+            nor[base + 0x100..base + 0x200].fill(0x00);
+            let sp = base + 2 * 0x100;
+            nor[sp..sp + 4].copy_from_slice(&[0x00, 0x00, 0x00, 0x01]);
+            let soff = sp + 4;
+            nor[soff..soff + 2].copy_from_slice(&tid.to_le_bytes());
+            nor[soff + 2..soff + 4].copy_from_slice(&0xFFFFu16.to_le_bytes());
+            nor[soff + 4..soff + 6].copy_from_slice(&slot_val.to_le_bytes());
+        }
+        let l2p = parse_eh55_bgo_l2p(&nor).unwrap();
+        assert_eq!(l2p.get(&0x0000), Some(&0x0204));
+        assert_eq!(l2p.get(&0x0010), Some(&0x0306));
+    }
 }

@@ -11,11 +11,10 @@ use serde::{Deserialize, Serialize};
 use crate::constants::LBA_SECTOR_SIZE_BYTES;
 
 use super::super::discovery::list_hard_disk_drives;
+use super::super::raw_device::infer_bus_type_id;
+pub use super::super::raw_device::{BUS_TYPE_NVME, BlockFlashDevice, WindowsPhysicalFlashDevice};
 use super::super::types::PhysicalDriveInfo;
-use super::super::win_ioctl::{OwnedDiskHandle, is_current_user_admin};
 
-/// Windows `STORAGE_BUS_TYPE::BusTypeNvme` (`17`), unconditionally rejected for EH55 IDE/PATA flashing.
-pub const BUS_TYPE_NVME: u32 = 17;
 /// High-LBA backup step (`0x20000` sectors = `64 MiB`) subtracted from 4-sector-aligned disk LBAs.
 pub const EH55_MIRROR_MAIN_BACKSTEP_LBAS: u64 = 0x20000;
 /// Streaming transfer / verification chunk size (`1 MiB`, 2048 sectors).
@@ -26,72 +25,6 @@ pub const EH55_BACKUP_SECTOR_COUNT: usize = 64;
 pub(super) const DEFAULT_EXPECTED_GB_RANGE: (u32, u32) = (240, 260);
 pub(super) const MIN_ALLOWED_GB: u32 = 5;
 pub(super) const MAX_ALLOWED_GB: u32 = 2200;
-
-/// Abstract sector-aligned block flash target implemented for real Windows drives and offline file mocks.
-pub trait BlockFlashDevice {
-    fn read_at(&self, offset: u64, buf: &mut [u8]) -> Result<()>;
-    fn write_at(&mut self, offset: u64, data: &[u8]) -> Result<()>;
-    fn delete_drive_layout(&mut self) -> Result<()>;
-    fn flush_and_update(&mut self) -> Result<()>;
-    fn length_bytes(&self) -> Result<u64>;
-    fn bus_type(&self) -> u32;
-}
-
-/// Safe Windows physical block device adapter delegating to [`OwnedDiskHandle`].
-#[derive(Debug)]
-pub struct WindowsPhysicalFlashDevice {
-    handle: OwnedDiskHandle,
-    cached_len_bytes: u64,
-    cached_bus_type: u32,
-}
-
-impl WindowsPhysicalFlashDevice {
-    /// Opens `device_path` (never OS boot disks), enforcing Administrator/root privilege when
-    /// `writable == true` and caching verified length and bus type.
-    pub fn open(device_path: &str, writable: bool) -> Result<Self> {
-        if writable && !is_current_user_admin() {
-            bail!(
-                "Administrator/root privileges required to open physical disk '{}' for writing",
-                device_path
-            );
-        }
-        let handle = OwnedDiskHandle::open(device_path, writable)?;
-        let cached_len_bytes = handle.disk_length_bytes()?;
-        let cached_bus_type = handle.query_bus_type().unwrap_or(0);
-        Ok(Self {
-            handle,
-            cached_len_bytes,
-            cached_bus_type,
-        })
-    }
-}
-
-impl BlockFlashDevice for WindowsPhysicalFlashDevice {
-    fn read_at(&self, offset: u64, buf: &mut [u8]) -> Result<()> {
-        self.handle.read_at(offset, buf)
-    }
-
-    fn write_at(&mut self, offset: u64, data: &[u8]) -> Result<()> {
-        self.handle.write_at(offset, data)
-    }
-
-    fn delete_drive_layout(&mut self) -> Result<()> {
-        self.handle.delete_drive_layout()
-    }
-
-    fn flush_and_update(&mut self) -> Result<()> {
-        self.handle.flush()?;
-        self.handle.update_properties()
-    }
-
-    fn length_bytes(&self) -> Result<u64> {
-        Ok(self.cached_len_bytes)
-    }
-
-    fn bus_type(&self) -> u32 {
-        self.cached_bus_type
-    }
-}
 
 /// Computes the exact EH55 high-LBA `MAIN` mirror sector `((disk_bytes / 512) & !3) - 0x20000`.
 pub fn compute_eh55_mirror_main_lba(disk_bytes: u64) -> Result<u64> {
@@ -120,27 +53,6 @@ pub struct SafeTargetDiskInfo {
     pub safe_to_flash: bool,
     pub lockout_reason: Option<String>,
     pub mirror_main_lba: Option<u64>,
-}
-
-pub(crate) fn infer_bus_type_id(bus_type: &str) -> u32 {
-    let low = bus_type.trim().to_ascii_lowercase();
-    if low.contains("nvme") {
-        BUS_TYPE_NVME
-    } else if low.contains("usb") {
-        7
-    } else if low.contains("sata") {
-        11
-    } else if low.contains("ata") || low.contains("ide") {
-        3
-    } else if low.contains("scsi") {
-        1
-    } else if low.contains("raid") {
-        8
-    } else if low.contains("mmc") || low == "sd" {
-        12
-    } else {
-        0
-    }
 }
 
 /// Enriches discovered [`PhysicalDriveInfo`] records with NVMe/OS lockout flags and `mirror_main_lba`.

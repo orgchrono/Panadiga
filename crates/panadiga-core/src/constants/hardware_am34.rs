@@ -31,10 +31,10 @@ pub const AM34_FLASH_SIZE: u32 = 0x0080_0000;
 /// physical `SA0..SA133` = `8×8 KiB` + `126×64 KiB` on the 142-sector dual-boot S29JL064H).
 pub const AM34_FLASH_IPL_SIZE: u32 = 0x007F_0000;
 /// Spansion NOR Flash Critical Boot IPL Size (first 256 KiB: `0x8000_0000..0x8003_FFFF`;
-/// labeled `SA0..SA3` in abstract `64 KiB` Pico policy units, physically spanning `SA0..SA10` = `8×8 KiB + 3×64 KiB`).
+/// physical `SA0..SA10` = `8×8 KiB + 3×64 KiB` on the 142-sector S29JL064H).
 pub const AM34_FLASH_CRITICAL_IPL_SIZE: u32 = 0x0004_0000;
 /// Physical offset where Upper NOR App / BGO sectors begin (`0x0004_0000..nvram_start - 1`;
-/// policy `SA4..SA133`, physically `SA11..SA133` on real 142-sector S29JL064H silicon).
+/// physical `SA11..SA133` on the 142-sector S29JL064H silicon).
 pub const AM34_FLASH_UPPER_APP_START_OFFSET: u32 = 0x0004_0000;
 /// Main uniform sector size of Spansion S29JL064H NOR Flash (64 KiB = 65,536 bytes).
 pub const SPANSION_MAIN_SECTOR_SIZE_BYTES: usize = 65_536;

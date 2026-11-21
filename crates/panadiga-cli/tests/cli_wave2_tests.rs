@@ -1,7 +1,7 @@
 #![deny(unsafe_code)]
 
 use clap::Parser;
-use panadiga_cli::cli::args::hdd::FlashEh55Args;
+use panadiga_cli::cli::args::hdd::{FlashEh55Args, HddExpectedRangeArgs};
 use panadiga_cli::cli::args::pico::{CaptureNorArgs, DavisProbeArgs};
 use panadiga_cli::cli::args::unbrick::BgoLiveApplyArgs;
 use panadiga_cli::cli::handlers::hdd::flash::{run_flash_eh55_on_device, run_format_meihdfs};
@@ -490,10 +490,12 @@ fn wave2_hdd_format_meihdfs_inject_frm_and_flash_eh55_mock() {
         mirror_p1: Some(mirror_p1_path.clone()),
         backup_dir: dir.join("flash_bkp"),
         confirm_physical_drive: "PhysicalDrive0".to_string(),
-        expected_min_gb: None,
-        expected_max_gb: None,
-        allow_extended_4tb: false,
-        json: None,
+        range: HddExpectedRangeArgs {
+            expected_min_gb: None,
+            expected_max_gb: None,
+            allow_extended_4tb: false,
+            json: None,
+        },
     };
     assert!(run_flash_eh55_on_device(&mut dev, &bad_args).is_err());
 
@@ -505,16 +507,22 @@ fn wave2_hdd_format_meihdfs_inject_frm_and_flash_eh55_mock() {
         mirror_p1: Some(mirror_p1_path),
         backup_dir: dir.join("flash_bkp"),
         confirm_physical_drive: "PhysicalDrive1".to_string(),
-        expected_min_gb: Some(240),
-        expected_max_gb: Some(260),
-        allow_extended_4tb: false,
-        json: None,
+        range: HddExpectedRangeArgs {
+            expected_min_gb: Some(240),
+            expected_max_gb: Some(260),
+            allow_extended_4tb: false,
+            json: None,
+        },
     };
     assert!(run_flash_eh55_on_device(&mut nvme_dev, &ok_args).is_err());
 
     let over_4tb = FlashEh55Args {
-        expected_max_gb: Some(2500),
-        allow_extended_4tb: false,
+        range: HddExpectedRangeArgs {
+            expected_min_gb: Some(240),
+            expected_max_gb: Some(2500),
+            allow_extended_4tb: false,
+            json: None,
+        },
         ..ok_args.clone()
     };
     assert!(run_flash_eh55_on_device(&mut dev, &over_4tb).is_err());

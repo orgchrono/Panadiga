@@ -4,16 +4,19 @@ use anyhow::Result;
 use panadiga_core::constants::{
     DEFAULT_FRM_CONTAINER_PATH, DEFAULT_HDD_IMAGE_PATH, LBA_JOURNAL_CATALOG_OFFSET,
     LBA_MIRROR_MBR_SECTOR, LBA_PARTITION_1_OFFSET, LBA_PARTITION_2_OFFSET, LBA_SECTOR_SIZE_BYTES,
-    PANASONIC_HDD_PARTITION_MAGIC, SPANSION_BOOTLOADER_SIZE_BYTES, SPANSION_FLASH_SIZE_BYTES,
-    SPANSION_NVRAM_BASE_OFFSET,
+    PANASONIC_HDD_PARTITION_MAGIC, SPANSION_BOOTLOADER_SIZE_BYTES,
 };
 use panadiga_core::crypto::entropy::analyze_frm_slices;
 use panadiga_core::crypto::toc::analyze_toc;
 use panadiga_core::hdd::inspect::inspect_hdd_slice;
 use panadiga_core::hdd::open_image_buffer;
 use panadiga_core::headers::hex_dump;
-use panadiga_core::nvram::{calculate_hashes, clean_flash_nvram_slice, patch_flash_nvram_slice};
+use panadiga_core::nvram::{
+    NvramPolicyOptions, SliceIoLabels, calculate_hashes, clean_flash_nvram_slice_with_policy,
+    patch_flash_nvram_slice_with_policy,
+};
 use panadiga_core::re::matshita_emu::parse_hex_payload;
+use panadiga_core::ssot::is_valid_nor_flash_size;
 use serde_json::{Value, json};
 use std::fs::{self, File};
 use std::io::{Read, Seek, SeekFrom};
@@ -93,43 +96,43 @@ pub fn handle_clean_nvram(args: &Value, workspace_root: &Path) -> Result<Value> 
     }
 
     let data = fs::read(&input_path)?;
-    if data.len() != SPANSION_FLASH_SIZE_BYTES {
+    if !is_valid_nor_flash_size(data.len() as u64) {
         return Ok(json!({
             "error": format!(
-                "Invalid flash dump size: {} bytes (expected {} / 8 MB)",
+                "Invalid flash dump size: {} bytes (expected standard DIGA NOR 2/4/8/16 MiB)",
                 data.len(),
-                SPANSION_FLASH_SIZE_BYTES
             )
         }));
     }
 
-    let (_, ipl_sha256) = calculate_hashes(&data[..SPANSION_BOOTLOADER_SIZE_BYTES]);
-    let (_, nvram_orig_sha256) =
-        calculate_hashes(&data[SPANSION_NVRAM_BASE_OFFSET..SPANSION_FLASH_SIZE_BYTES]);
-
     let action = optional_non_empty_str(args, "action").unwrap_or("clean");
     let patch_hex = optional_non_empty_str(args, "patch_hex");
+    let model_id = optional_non_empty_str(args, "model_id");
+    let lab_override = super::hardware::parse_lab_override_from_args(args)?;
     let out_label = output_raw.unwrap_or("<analysis-only>");
+    let policy = NvramPolicyOptions {
+        model_id,
+        lab_override: lab_override.as_ref(),
+    };
+    let labels = SliceIoLabels::new(input_raw, out_label, "<memory-backup>");
     let cleaned = if action.eq_ignore_ascii_case("patch") || patch_hex.is_some() {
         let hex_str = patch_hex
             .ok_or_else(|| anyhow::anyhow!("Missing 'patch_hex' for NVRAM patch action"))?;
         let patch_bytes = parse_hex_payload(hex_str)?;
         let rel_off = usize::try_from(parse_u32_arg(args, "nvram_offset", 0)?)?;
-        patch_flash_nvram_slice(
-            &data,
-            rel_off,
-            &patch_bytes,
-            input_raw,
-            out_label,
-            "<memory-backup>",
-        )?
+        patch_flash_nvram_slice_with_policy(&data, rel_off, &patch_bytes, &policy, labels)?
     } else if action.eq_ignore_ascii_case("clean") {
-        clean_flash_nvram_slice(&data, input_raw, out_label, "<memory-backup>")?
+        clean_flash_nvram_slice_with_policy(&data, &policy, labels)?
     } else {
         anyhow::bail!(
             "Unsupported action '{action}' for panadiga_clean_nvram (expected 'clean' or 'patch')"
         );
     };
+
+    let nvram_start = cleaned.report.nvram_offset_start;
+    let nvram_end = cleaned.report.nvram_offset_end;
+    let (_, ipl_sha256) = calculate_hashes(&data[..nvram_start]);
+    let (_, nvram_orig_sha256) = calculate_hashes(&data[nvram_start..nvram_end]);
 
     let mut saved = false;
     if let Some(out_str) = output_raw {

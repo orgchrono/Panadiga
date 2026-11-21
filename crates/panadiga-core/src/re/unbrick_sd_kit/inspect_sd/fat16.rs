@@ -1,15 +1,55 @@
-//! FAT16 8.3 root directory scanner, cluster chain tracer, and `DIGADIAG.FRM` verifier.
+#![deny(unsafe_code)]
+
+//! FAT16 8.3 root directory scanner, cluster chain tracer, and `DIGADIAG.FRM`/`PANA__SD.FRM` verifier.
 
 use anyhow::Result;
 use std::io::{Read, Seek};
 
 use crate::constants::{PANA_DIGADIAG_FRM_SIZE, PANA_DIGADIAG_RAW_VER061_SIZE};
 
-use super::super::verify::{SdUnbrickCheck, check, verify_digadiag_buffer};
+use super::super::verify::{SdUnbrickCheck, check, verify_digadiag_buffer, verify_pana_sd_buffer};
 use super::io::read_sectors;
 use super::mbr_bpb::u16_le;
 use super::mbr_bpb::u32_le;
 use super::types::{FatBpbReport, RootDirFileReport};
+
+const OS_JUNK_PREFIXES: [&str; 8] = [
+    "SYSTEM~1", "._", ".TRASH", "TRASH", "SPOTLI", ".SPOTL", "$RECYC", "FSEVEN",
+];
+
+fn is_os_junk_entry(upper_name: &str) -> bool {
+    OS_JUNK_PREFIXES
+        .iter()
+        .any(|pfx| upper_name.starts_with(pfx))
+}
+
+fn validate_fat16_entry_file<R: Read + Seek>(
+    reader: &mut R,
+    data_start_lba: u64,
+    spc: u8,
+    entry: &RootDirFileReport,
+    check_id: &str,
+    label: &str,
+    checks: &mut Vec<SdUnbrickCheck>,
+) -> Result<Option<Vec<u8>>> {
+    if !entry.chain_complete || entry.file_size == 0 {
+        checks.push(check(
+            check_id,
+            "fail",
+            format!("Root {label} FAT16 cluster chain is broken, empty, or truncated"),
+            format!("Clusters traversed: {:?}", entry.chain_clusters),
+        ));
+        return Ok(None);
+    }
+    let payload = read_fat16_file_bytes(
+        reader,
+        data_start_lba,
+        spc,
+        &entry.chain_clusters,
+        entry.file_size,
+    )?;
+    Ok(Some(payload))
+}
 
 pub(crate) struct RootInspectionResult {
     pub digadiag_entry: Option<RootDirFileReport>,
@@ -107,6 +147,8 @@ pub(crate) fn inspect_fat16_root_and_digadiag<R: Read + Seek>(
     let root_bytes = read_sectors(reader, root_start_lba, root_dir_sectors)?;
     let data_start_lba = root_start_lba + root_dir_sectors as u64;
 
+    let mut lfn_count = 0usize;
+    let mut junk_entries: Vec<String> = Vec::new();
     let mut prev_was_lfn = false;
     for entry in root_bytes.as_chunks::<32>().0 {
         if entry[0] == 0x00 {
@@ -118,6 +160,7 @@ pub(crate) fn inspect_fat16_root_and_digadiag<R: Read + Seek>(
         }
         let attr = entry[11];
         if attr == 0x0F {
+            lfn_count += 1;
             prev_was_lfn = true;
             continue;
         }
@@ -126,12 +169,15 @@ pub(crate) fn inspect_fat16_root_and_digadiag<R: Read + Seek>(
             continue;
         }
         let name = format_8_3_name(&entry[0..11]);
+        let upper = name.to_ascii_uppercase();
+        if is_os_junk_entry(&upper) || prev_was_lfn {
+            junk_entries.push(name.clone());
+        }
         if root_files_sample.len() < 16 {
             root_files_sample.push(name.clone());
         }
         let first_cluster = u16_le(entry, 26);
         let file_size = u32_le(entry, 28);
-        let upper = name.to_ascii_uppercase();
         if upper == "DIGADIAG.FRM" || upper == "PANA__SD.FRM" {
             let (chain, contig, complete) =
                 trace_fat16_chain(&fat_bytes, first_cluster, file_size, bpb.cluster_size_bytes);
@@ -157,50 +203,47 @@ pub(crate) fn inspect_fat16_root_and_digadiag<R: Read + Seek>(
         prev_was_lfn = false;
     }
 
+    if lfn_count > 0 || !junk_entries.is_empty() {
+        checks.push(check(
+            "sd_root_lfn_or_junk",
+            "warn",
+            format!(
+                "Root has {lfn_count} LFN (0x0F) entries and {} junk item(s)",
+                junk_entries.len()
+            ),
+            format!(
+                "Non-clean 8.3 entries: [{}]. AM34 IPL SDDIAG prefers clean 8.3 root.",
+                junk_entries.join(", ")
+            ),
+        ));
+    }
+
     if let Some(ref d) = digadiag_entry {
-        let valid_diag_size = d.file_size == PANA_DIGADIAG_FRM_SIZE as u32
+        let valid_size = d.file_size == PANA_DIGADIAG_FRM_SIZE as u32
             || d.file_size == PANA_DIGADIAG_RAW_VER061_SIZE as u32;
-        if !valid_diag_size {
+        if !valid_size {
             checks.push(check(
-                "sd_digadiag_entry",
-                "fail",
-                format!(
-                    "Root DIGADIAG.FRM has wrong size {} B (expected {} or {})",
-                    d.file_size, PANA_DIGADIAG_RAW_VER061_SIZE, PANA_DIGADIAG_FRM_SIZE
-                ),
+                "sd_digadiag_entry", "fail",
+                format!("Root DIGADIAG.FRM wrong size {} B (expected {} or {})", d.file_size, PANA_DIGADIAG_RAW_VER061_SIZE, PANA_DIGADIAG_FRM_SIZE),
                 "Loader ver0.61 requires 262144 B (0x40000) raw; Loader ver0.63 requires 131072 B (0x20000) plaintext EXTRHEAD.",
             ));
-        } else if !d.chain_complete {
-            checks.push(check(
-                "sd_digadiag_entry",
-                "fail",
-                "Root DIGADIAG.FRM FAT16 cluster chain is broken or truncated",
-                format!("Clusters traversed: {:?}", d.chain_clusters),
-            ));
-        } else {
-            let payload = read_fat16_file_bytes(
-                reader,
-                data_start_lba,
-                bpb.sectors_per_cluster,
-                &d.chain_clusters,
-                d.file_size,
-            )?;
+        } else if let Some(payload) = validate_fat16_entry_file(
+            reader,
+            data_start_lba,
+            bpb.sectors_per_cluster,
+            d,
+            "sd_digadiag_entry",
+            "DIGADIAG.FRM",
+            checks,
+        )? {
             let diag = verify_digadiag_buffer(Some(Ok(&payload)));
             digadiag_payload_verified = diag.exact_size_ok && diag.check.severity == "pass";
             if !digadiag_payload_verified {
                 checks.push(diag.check);
             } else {
                 checks.push(check(
-                    "sd_digadiag_entry",
-                    "pass",
-                    format!(
-                        "Root 8.3 DIGADIAG.FRM OK: {} B @ cluster {} (dst={}, mode={}, contig={})",
-                        d.file_size,
-                        d.first_cluster,
-                        diag.dst_addr_hex.as_deref().unwrap_or("?"),
-                        diag.bgo_mode.as_deref().unwrap_or("?"),
-                        d.chain_contiguous
-                    ),
+                    "sd_digadiag_entry", "pass",
+                    format!("Root 8.3 DIGADIAG.FRM OK: {} B @ cluster {} (dst={}, mode={}, contig={})", d.file_size, d.first_cluster, diag.dst_addr_hex.as_deref().unwrap_or("?"), diag.bgo_mode.as_deref().unwrap_or("?"), d.chain_contiguous),
                     "Exact 8.3 root directory entry, FAT16 cluster chain, and DIGADIAG payload verified.",
                 ));
             }
@@ -219,6 +262,38 @@ pub(crate) fn inspect_fat16_root_and_digadiag<R: Read + Seek>(
             "fail",
             "DIGADIAG.FRM missing from FAT16 root directory",
             hint,
+        ));
+    }
+
+    if let Some(ref p) = pana_sd_entry
+        && let Some(payload) = validate_fat16_entry_file(
+            reader,
+            data_start_lba,
+            bpb.sectors_per_cluster,
+            p,
+            "sd_pana_sd_entry",
+            "PANA__SD.FRM",
+            checks,
+        )?
+    {
+        let pana = verify_pana_sd_buffer(Some(&payload));
+        let sev = match pana.check.severity.as_str() {
+            "fail" => "fail",
+            "warn" => "warn",
+            _ => "pass",
+        };
+        checks.push(check(
+            "sd_pana_sd_entry",
+            sev,
+            format!(
+                "Root 8.3 PANA__SD.FRM {}: {} B @ cluster {} ({} clusters, contig={})",
+                sev.to_ascii_uppercase(),
+                p.file_size,
+                p.first_cluster,
+                p.chain_clusters.len(),
+                p.chain_contiguous
+            ),
+            pana.check.detail,
         ));
     }
 

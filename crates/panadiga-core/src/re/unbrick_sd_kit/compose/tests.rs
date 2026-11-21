@@ -167,8 +167,13 @@ fn reproduces_canonical_sd_unbrick_kit_byte_for_byte_if_present() {
         .unwrap();
         assert_eq!(
             digadiag_sha,
-            "60b7fdd2788ec8b1a9ea255deb3ec7430cd5172edfa426522024e1b2ea96d372"
+            "91bfdf47d573615434ad4327ff8e4a1eff2adfb1ea720fda670201dab79c82a5"
         );
         assert_eq!(digadiag_bytes.len(), PROG061_EXPECTED_SIZE);
+        let rep = verify_sd_buffers("/mem/sd", Some(Ok(&digadiag_bytes)), None);
+        assert_eq!(
+            rep.digadiag_bgo_mode.as_deref(),
+            Some("UART_MONITOR_PANAMON1")
+        );
     }
 }

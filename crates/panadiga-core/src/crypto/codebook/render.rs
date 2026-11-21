@@ -1,3 +1,5 @@
+#![deny(unsafe_code)]
+
 use std::path::Path;
 
 use anyhow::{Context, Result};
@@ -11,11 +13,11 @@ pub fn print_codebook(
     hdd_path: Option<&Path>,
     json_path: Option<&Path>,
 ) -> Result<CodebookReport> {
-    let (resolved_frm, _frm_file, frm_mmap) = open_resolved_frm(frm_path)?;
+    let (resolved_frm, frm_bytes) = open_resolved_frm(frm_path)?;
     let (hdd_buf, resolved_hdd_name) = load_optional_hdd_image(hdd_path);
 
     let report = analyze_codebook_slices(
-        &frm_mmap,
+        &frm_bytes,
         hdd_buf.as_deref(),
         &resolved_frm.to_string_lossy(),
         resolved_hdd_name.clone(),

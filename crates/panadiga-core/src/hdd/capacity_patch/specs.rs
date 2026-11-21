@@ -1,3 +1,5 @@
+#![deny(unsafe_code)]
+
 //! Pure immutable RTSD HDD capacity presets, DTO types, and total block-math conversions.
 
 use anyhow::{Result, bail};
@@ -127,20 +129,22 @@ impl std::str::FromStr for HddCapacityPatchMode {
     }
 }
 
+const RTSD_PRESET_SPECS: &[(u8, &str, u32, u32)] = &[
+    (1, "400GB HDD (RTSD)", 400, 0x0BA3_FB74),
+    (2, "300GB HDD (RTSD)", 300, 0x08BA_EC97),
+    (3, "250GB HDD (RTSD)", 250, 0x0746_6528),
+    (4, "200GB HDD (RTSD)", 200, 0x05D1_DDBA),
+    (5, "160GB HDD (RTSD)", 160, 0x04A7_D7C8),
+    (6, "137GB HDD (RTSD)", 137, 0x03FC_7AC3),
+    (7, "120GB HDD (RTSD)", 120, 0x037D_D1D6),
+    (8, "100GB HDD (RTSD)", 100, 0x02E8_CEDD),
+    (9, " 80GB HDD (RTSD)", 80, 0x0253_CBE4),
+];
+
 /// Returns the 9 official RTSD `Change HDD Capacity` presets recovered from `MAIN` firmware.
 pub fn official_rtsd_presets() -> Vec<RtsdCapacityPreset> {
-    let raw: &[(u8, &str, u32, u32)] = &[
-        (1, "400GB HDD (RTSD)", 400, 0x0BA3_FB74),
-        (2, "300GB HDD (RTSD)", 300, 0x08BA_EC97),
-        (3, "250GB HDD (RTSD)", 250, 0x0746_6528),
-        (4, "200GB HDD (RTSD)", 200, 0x05D1_DDBA),
-        (5, "160GB HDD (RTSD)", 160, 0x04A7_D7C8),
-        (6, "137GB HDD (RTSD)", 137, 0x03FC_7AC3),
-        (7, "120GB HDD (RTSD)", 120, 0x037D_D1D6),
-        (8, "100GB HDD (RTSD)", 100, 0x02E8_CEDD),
-        (9, " 80GB HDD (RTSD)", 80, 0x0253_CBE4),
-    ];
-    raw.iter()
+    RTSD_PRESET_SPECS
+        .iter()
         .map(|&(idx, label, gb, blocks)| RtsdCapacityPreset {
             menu_index: idx,
             label: label.to_string(),
@@ -160,16 +164,13 @@ pub fn blocks_2kb_for_gb_bounded(target_gb: u32, allow_extended_4tb: bool) -> Re
     if target_gb != 5 && target_gb < 20 {
         bail!("Target capacity {target_gb} GB is too small (minimum 20 GB required for MEIHDFS)");
     }
+    if let Some(&(_, _, _, rtsd_blocks)) = RTSD_PRESET_SPECS
+        .iter()
+        .find(|&&(_, _, gb, _)| gb == target_gb)
+    {
+        return Ok(rtsd_blocks);
+    }
     let blocks = match target_gb {
-        400 => HDD_CMD_M7920_400GB_BLOCKS,
-        300 => 0x08BA_EC97,
-        250 => 0x0746_6528,
-        200 => HDD_CMD_M7920_200GB_BLOCKS,
-        160 => 0x04A7_D7C8,
-        137 => 0x03FC_7AC3,
-        120 => 0x037D_D1D6,
-        100 => 0x02E8_CEDD,
-        80 => 0x0253_CBE4,
         // SAMSUNG SV0511D (9,965,088 LBAs): ((9,965,088 & !3) - 0x50000) >> 2 = 2,409,352 (2 KB blocks)
         5 => 0x0024_C388,
         other => {
@@ -208,6 +209,14 @@ mod tests {
     fn rtsd_presets_and_gb_conversion_are_monotone_and_bounded() {
         let presets = official_rtsd_presets();
         assert_eq!(presets.len(), 9);
+        for preset in &presets {
+            assert_eq!(
+                blocks_2kb_for_gb(preset.capacity_gb).unwrap(),
+                preset.blocks_2kb
+            );
+        }
+        assert_eq!(blocks_2kb_for_gb(400).unwrap(), 0x0BA3_FB74);
+        assert_eq!(blocks_2kb_for_gb(200).unwrap(), 0x05D1_DDBA);
         assert_eq!(blocks_2kb_for_gb(250).unwrap(), 0x0746_6528);
         assert_eq!(blocks_2kb_for_gb(5).unwrap(), 0x0024_C388);
         assert!(blocks_2kb_for_gb(10).is_err());

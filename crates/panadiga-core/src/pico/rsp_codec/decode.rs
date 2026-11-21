@@ -11,12 +11,16 @@ use super::encode::rsp_checksum;
 pub const G_REGISTER_BYTES: usize = 0x70;
 const G_REGISTER_WORDS: usize = 28;
 
-const E0X_ERRORS: [(&[u8], &str); 5] = [
+const E0X_ERRORS: [(&[u8], &str); 6] = [
     (b"E00", "RSP malformed/bad length"),
     (b"E01", "RSP invalid address or bad argument"),
     (b"E02", "RSP bus/alignment fault"),
     (b"E03", "RSP unsupported command"),
     (b"E04", "RSP overrun / buffer limit"),
+    (
+        b"E05",
+        "RSP read-only IPL/critical NOR flash write lockout (E05)",
+    ),
 ];
 
 /// Decoded GDB RSP reply frame extracted from a UART byte stream.
@@ -31,7 +35,7 @@ pub struct ParsedRspFrame {
     pub raw_nak_0x15: bool,
 }
 
-/// Returns an error if the RSP reply payload matches `E00`..`E04`.
+/// Returns an error if the RSP reply payload matches `E00`..`E05`.
 pub fn check_rsp_e0x_error(payload: &[u8]) -> Result<()> {
     if let Some((_, desc)) = E0X_ERRORS.iter().find(|&(code, _)| *code == payload) {
         let code_str = std::str::from_utf8(payload).unwrap_or("E0?");

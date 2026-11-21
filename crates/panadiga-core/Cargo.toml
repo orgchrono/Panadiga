@@ -21,10 +21,12 @@ dirs = { workspace = true }
 flate2 = { workspace = true }
 hex = { workspace = true }
 lopdf = { workspace = true }
+lzma-rs = { workspace = true }
 md-5 = { workspace = true }
 memmap2 = { workspace = true }
 opentelemetry = { workspace = true }
 opentelemetry_sdk = { workspace = true }
+panadiga-profiles = { workspace = true }
 rayon = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
@@ -43,3 +45,7 @@ windows-sys = { version = "0.61", features = [
     "Win32_System_Ioctl",
     "Win32_UI_Shell",
 ] }
+
+[build-dependencies]
+panadiga-profiles = { workspace = true }
+serde_json = { workspace = true }

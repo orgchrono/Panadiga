@@ -2,13 +2,37 @@
 
 use anyhow::{Result, bail};
 use panadiga_core::constants::{
-    AM34_FLASH_BASE, AM34_FLASH_SIZE, AM34_NVRAM_BASE, AM34_SYSTEM_MEMORY_REGIONS,
-    SPANSION_BOOTLOADER_SIZE_BYTES, SPANSION_NVRAM_SIZE_BYTES,
+    AM34_FLASH_BASE, AM34_FLASH_CRITICAL_IPL_SIZE, AM34_FLASH_IPL_SIZE, AM34_FLASH_SIZE,
+    AM34_FLASH_UNCACHED_BASE, AM34_FORBIDDEN_LETHAL_REG, AM34_NVRAM_BASE,
+    AM34_SYSTEM_MEMORY_REGIONS, SPANSION_NVRAM_SIZE_BYTES,
 };
-use panadiga_core::ssot::{build_hardware_ssot_spec, get_diga_model_catalog_dto};
+use panadiga_core::ssot::{
+    HardwareProfileRegistry, build_hardware_ssot_spec, get_diga_model_catalog_dto,
+};
 use serde_json::{Value, json};
 use std::fs;
 use std::path::{Component, Path, PathBuf};
+
+/// Hard payload ceiling (`32 KiB`) for single-shot MCP `resources/read` responses to prevent token exhaustion.
+pub const MAX_MCP_RESOURCE_BYTES: usize = 32 * 1024;
+
+pub(crate) fn truncate_mcp_text_to_cap(text: &str, max_bytes: usize, uri: &str) -> String {
+    if text.len() <= max_bytes {
+        return text.to_string();
+    }
+    let notice = format!(
+        "\n\n[TRUNCATED AT {} KiB ({} bytes total) for {} — do NOT dump huge logs/pseudocode via resources/read. Use `panadiga_search_code`, `panadiga_search_visuals`, or `panadiga_rag_query` for targeted retrieval.]\n",
+        max_bytes / 1024,
+        text.len(),
+        uri
+    );
+    let keep_budget = max_bytes.saturating_sub(notice.len());
+    let mut end = keep_budget.min(text.len());
+    while end > 0 && !text.is_char_boundary(end) {
+        end -= 1;
+    }
+    format!("{}{}", &text[..end], notice)
+}
 
 fn collect_markdown_docs(docs_dir: &Path, out: &mut Vec<PathBuf>) {
     let Ok(entries) = fs::read_dir(docs_dir) else {
@@ -66,22 +90,46 @@ pub fn list_resources(workspace_root: &Path) -> Vec<Value> {
         }),
     ];
 
-    let docs_root = workspace_root.join("docs");
+    let effective_root = if workspace_root.join("docs").is_dir() {
+        workspace_root.to_path_buf()
+    } else if workspace_root == Path::new(".") {
+        crate::workspace::resolve_workspace_root()
+    } else {
+        workspace_root.to_path_buf()
+    };
+    let docs_root = effective_root.join("docs");
     let mut md_files = Vec::new();
+    for resolved in HardwareProfileRegistry::builtin().list_models() {
+        resources.push(json!({
+            "uri": format!("panadiga://profiles/{}", resolved.manifest.model_id),
+            "name": format!("DIGA Profile: {}", resolved.manifest.model_id),
+            "description": format!(
+                "Resolved hardware/firmware/layout manifest for {} ({})",
+                resolved.manifest.model_id, resolved.manifest.series
+            ),
+            "mimeType": "application/json"
+        }));
+    }
     collect_markdown_docs(&docs_root, &mut md_files);
 
     for path in md_files.into_iter().take(250) {
-        if let Ok(rel) = path.strip_prefix(workspace_root) {
+        if let Ok(rel) = path.strip_prefix(&effective_root) {
             let rel_posix = rel.to_string_lossy().replace('\\', "/");
+            let size_bytes = fs::metadata(&path).map(|m| m.len()).unwrap_or(0);
             let title = path
                 .file_stem()
                 .and_then(|s| s.to_str())
                 .unwrap_or("doc")
                 .replace('_', " ");
+            let size_note = if size_bytes > MAX_MCP_RESOURCE_BYTES as u64 {
+                format!(" ({size_bytes} B; truncated @ 32 KiB — prefer rag/search)")
+            } else {
+                format!(" ({size_bytes} B)")
+            };
             resources.push(json!({
                 "uri": format!("panadiga://{}", rel_posix),
                 "name": title,
-                "description": format!("Technical dossier: {}", rel_posix),
+                "description": format!("Technical dossier: {}{}", rel_posix, size_note),
                 "mimeType": "text/markdown"
             }));
         }
@@ -99,12 +147,21 @@ pub fn read_resource(uri: &str, workspace_root: &Path) -> Result<Value> {
                 "max_safe_voltage_v": spec.thresholds.max_vdd_ceiling_volts,
                 "min_safe_voltage_v": spec.thresholds.safe_operating_min_volts,
                 "min_vdd_threshold_v": spec.thresholds.min_vdd_threshold_volts,
-                "pin6_never_power_pico": true,
+                "p7501_never_power_pico": true,
+                "pin1_sw_uart_gp26_max_ma": 10,
+                "pin2_xreset_gp5_open_drain_only": true,
+                "pin5_nsw5v_gp3_hiz_only": true,
+                "pin6_uartp2m_rx_gp2": true,
                 "spansion_bus_base": format!("0x{:08X}", AM34_FLASH_BASE),
+                "spansion_uncached_bus_base": format!("0x{:08X}", AM34_FLASH_UNCACHED_BASE),
                 "spansion_total_bytes": AM34_FLASH_SIZE,
-                "ipl_read_only_bytes": SPANSION_BOOTLOADER_SIZE_BYTES,
+                "ipl_layer1_ro_bytes": AM34_FLASH_CRITICAL_IPL_SIZE,
+                "ipl_layer1_ro_sectors": "SA0..SA10 (8x8K + 3x64K = 256 KiB permanent E05)",
+                "upper_nor_layer2_default_ro_bytes": AM34_FLASH_IPL_SIZE - AM34_FLASH_CRITICAL_IPL_SIZE,
+                "upper_nor_layer2_unlock_token": "CONFIRM_UPPER_NOR",
                 "nvram_mutable_bus_base": format!("0x{:08X}", AM34_NVRAM_BASE),
                 "nvram_mutable_size_bytes": SPANSION_NVRAM_SIZE_BYTES,
+                "forbidden_lethal_register": format!("0x{:08X}", AM34_FORBIDDEN_LETHAL_REG),
                 "forensic_raw_dumps_immutable": true,
             });
             Ok(json!({
@@ -145,13 +202,16 @@ pub fn read_resource(uri: &str, workspace_root: &Path) -> Result<Value> {
             }))
         }
         "panadiga://visual-catalog" => {
-            let raw = crate::tools::visuals::load_visual_manifest_raw(workspace_root)
-                .map_err(|e| anyhow::anyhow!(e))?;
+            let summary = crate::tools::visuals::load_visual_catalog_summary_json(
+                workspace_root,
+                MAX_MCP_RESOURCE_BYTES,
+            )
+            .map_err(|e| anyhow::anyhow!(e))?;
             Ok(json!({
                 "contents": [{
                     "uri": uri,
                     "mimeType": "application/json",
-                    "text": raw
+                    "text": summary
                 }]
             }))
         }
@@ -175,6 +235,17 @@ pub fn read_resource(uri: &str, workspace_root: &Path) -> Result<Value> {
                 }]
             }))
         }
+        other if other.starts_with("panadiga://profiles/") => {
+            let model_id = other.trim_start_matches("panadiga://profiles/");
+            let resolved = HardwareProfileRegistry::builtin().resolve_model(model_id)?;
+            Ok(json!({
+                "contents": [{
+                    "uri": uri,
+                    "mimeType": "application/json",
+                    "text": serde_json::to_string_pretty(&resolved)?
+                }]
+            }))
+        }
         other if other.starts_with("panadiga://docs/") => {
             let rel_str = other.trim_start_matches("panadiga://");
             let rel_path = Path::new(rel_str);
@@ -186,11 +257,19 @@ pub fn read_resource(uri: &str, workspace_root: &Path) -> Result<Value> {
             }) {
                 bail!("Invalid resource path traversal attempt: {}", uri);
             }
-            let full_path = workspace_root.join(rel_path);
+            let direct = workspace_root.join(rel_path);
+            let full_path = if direct.is_file() {
+                direct
+            } else if workspace_root == Path::new(".") {
+                crate::workspace::resolve_workspace_root().join(rel_path)
+            } else {
+                direct
+            };
             if !full_path.is_file() {
                 bail!("Document resource not found: {}", uri);
             }
-            let text = fs::read_to_string(&full_path)?;
+            let raw = fs::read_to_string(&full_path)?;
+            let text = truncate_mcp_text_to_cap(&raw, MAX_MCP_RESOURCE_BYTES, uri);
             Ok(json!({
                 "contents": [{
                     "uri": uri,

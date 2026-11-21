@@ -1,3 +1,5 @@
+#![deny(unsafe_code)]
+
 //! Pure functional structural inspector for Panasonic DMR-EH55 HDD slices.
 
 use anyhow::{Result, bail};
@@ -166,7 +168,7 @@ fn discover_firmware_partitions(data: &[u8]) -> Vec<PartitionReport> {
 
         partitions.push(PartitionReport {
             partition_id: 2,
-            name: "Sub-sistema / Microcodigo & Fontes OSD".to_string(),
+            name: "DRV S211 (Microcodigo Drive Optico)".to_string(),
             offset: LBA_PARTITION_2_OFFSET,
             offset_hex: format!("0x{:08X}", LBA_PARTITION_2_OFFSET),
             lba_start: LBA_PARTITION_2_SECTOR,

@@ -92,8 +92,7 @@ impl TryFrom<&str> for PicoCommandCategory {
 }
 
 /// C11 `k_cli_commands[]` names intentionally omitted from the interactive Studio catalog
-/// (command aliases `VDD`, `HELP`, `?`, `BOOT_PROFILE`, `HIZ`, `PROBE`, `GDB` and unsafe raw
-/// flash mutation helpers `INJECT_LOADER`, `ERASE_NVRAM` wrapped by guided workflows).
+/// (command aliases `VDD`, `HELP`, `?`, `BOOT_PROFILE`, `HIZ`, `PROBE`, `AUTOPROBE`, `GDB`).
 pub const INTERNAL_OR_ALIAS_CLI_COMMANDS: &[&str] = &[
     "VDD",
     "HELP",
@@ -102,8 +101,7 @@ pub const INTERNAL_OR_ALIAS_CLI_COMMANDS: &[&str] = &[
     "GDB",
     "HIZ",
     "PROBE",
-    "INJECT_LOADER",
-    "ERASE_NVRAM",
+    "AUTOPROBE",
 ];
 
 // ============================================================================

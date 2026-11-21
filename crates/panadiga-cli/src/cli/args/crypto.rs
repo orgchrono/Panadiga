@@ -65,7 +65,7 @@ pub enum FrmActions {
 
 #[derive(Args, Debug)]
 pub struct FrmPackArgs {
-    /// Target container layout: dvd (Feistel 48B TOC), sd (plaintext 64B TOC), sd48 (plaintext 48B TOC), or digadiag (128 KiB EXTRHEAD)
+    /// Target container layout: dvd (Feistel 48B TOC), dvd64b (Feistel 64B TOC), sd (plaintext 64B TOC), sd48 (plaintext 48B TOC), or digadiag (128 KiB EXTRHEAD)
     #[arg(long, default_value = "sd", value_name = "MODE")]
     pub mode: String,
 
@@ -109,7 +109,7 @@ pub struct FrmPackArgs {
     #[arg(long, default_value_t = 0)]
     pub target_flag: u8,
 
-    /// Compression algorithm for digadiag EXTRHEAD container: zlib, gzip, or lzss
+    /// Compression algorithm for digadiag EXTRHEAD container: zlib, gzip, lzss, or lzma
     #[arg(long, default_value = "zlib", value_name = "ALGO")]
     pub algo: String,
 

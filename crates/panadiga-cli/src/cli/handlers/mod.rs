@@ -3,6 +3,7 @@
 //! Modularized by functional domain with unified `dispatch` and handler re-exports.
 
 pub mod crypto;
+pub mod dvd;
 pub mod frm_pack;
 pub mod ghidra;
 pub mod hdd;
@@ -10,19 +11,26 @@ pub mod json_io;
 pub mod nvram;
 pub mod pico;
 pub mod pico_bench;
+pub mod profiles;
 pub mod re;
 pub mod re_extra;
+pub mod sd;
+pub mod session;
 pub mod system;
 pub mod unbrick;
 
 pub use crypto::{handle_frm, handle_headers, handle_scan};
+pub use dvd::handle_dvd;
 pub use ghidra::handle_ghidra;
 pub use hdd::handle_hdd;
 pub use nvram::handle_nvram;
 pub use pico::{handle_gdb_config, handle_pico};
+pub use profiles::handle_profiles;
 pub use re::handle_re;
+pub use sd::handle_sd;
+pub use session::handle_session;
 pub use system::{
-    handle_manuals, handle_mcp, handle_memory_map, handle_rag, handle_verify_artifact,
+    handle_manuals, handle_mcp, handle_memory_map, handle_rag, handle_ssot, handle_verify_artifact,
 };
 pub use unbrick::handle_unbrick;
 
@@ -74,6 +82,8 @@ pub fn dispatch(command: Commands) -> Result<()> {
         Commands::Scan(args) => handle_scan(args),
         Commands::Manuals(args) => handle_manuals(args),
         Commands::Pico(args) => handle_pico(args),
+        Commands::Profiles(args) => handle_profiles(args),
+        Commands::Ssot(args) => handle_ssot(args),
         Commands::Ghidra(args) => handle_ghidra(args),
         Commands::Rag(args) => handle_rag(args),
         Commands::MemoryMap(args) => handle_memory_map(args),
@@ -84,6 +94,9 @@ pub fn dispatch(command: Commands) -> Result<()> {
         }
         Commands::Mcp(args) => handle_mcp(args),
         Commands::Unbrick(args) => handle_unbrick(args),
+        Commands::Sd(args) => handle_sd(args),
+        Commands::Dvd(args) => handle_dvd(args),
+        Commands::Session(args) => handle_session(args),
         Commands::Re(args) => handle_re(args),
         Commands::InstallShortcut { no_desktop } => {
             let report = panadiga_core::launcher::install_desktop_launcher(!no_desktop)?;

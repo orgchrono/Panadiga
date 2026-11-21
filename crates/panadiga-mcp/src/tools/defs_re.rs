@@ -193,12 +193,12 @@ pub(super) fn re_tool_definitions() -> Vec<Value> {
                     },
                     "unlock_pass": {
                         "type": "boolean",
-                        "description": "Run secret PASS command before serial_cmd in emu_action='serial_cmd' (default true)."
+                        "description": "Run secret PASS command before serial_cmd in emu_action='serial_cmd' (default false)."
                     },
                     "container_kind": {
                         "type": "string",
-                        "enum": ["sd", "cd"],
-                        "description": "Unlock .FRM container type for emu_action='pack_unlock_frm' ('sd'=EXTRHEAD or 'cd'=MATSHITA)."
+                        "enum": ["sd", "cd", "digadiag"],
+                        "description": "Unlock .FRM container type for emu_action='verify_frm'/'pack_unlock_frm' ('sd'=EXTRHEAD/sd48/sd64, 'cd'=MATSHITA, 'digadiag'=DIGADIAG.FRM)."
                     },
                     "frm_path": {
                         "type": "string",

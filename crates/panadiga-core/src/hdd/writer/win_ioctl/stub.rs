@@ -16,7 +16,7 @@ use super::super::block_ops::is_unconditional_os_boot_disk;
 use super::super::discovery::{
     detect_linux_host_os_disks, list_physical_drives, unmount_drive_partitions,
 };
-use super::super::eh55_flash::{BUS_TYPE_NVME, infer_bus_type_id};
+use super::super::raw_device::{BUS_TYPE_NVME, infer_bus_type_id};
 use super::{ensure_writable_sector_io, validate_sector_aligned};
 
 /// Returns `true` when the current process runs as root (`EUID=0`) on Linux or macOS.

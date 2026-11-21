@@ -1,3 +1,5 @@
+#![deny(unsafe_code)]
+
 //! Pure functional decoders for MEIHDFS allocation descriptors, extents, and journal blocks.
 
 use std::collections::BTreeMap;
@@ -13,124 +15,129 @@ use super::super::types::{
     MeihdfsExtentSummary,
 };
 
+#[inline]
+fn inv_u16(inv: &[u8; MEIHDFS_RECORD_SIZE], off: usize) -> u16 {
+    LittleEndian::read_u16(&inv[off..off + 2])
+}
+
 /// Pure Functional Core: Decodes a single 16-byte bit-inverted MEIHDFS allocation record.
 pub fn decode_single_meihdfs_record(raw_chunk: &[u8], index: usize) -> MeihdfsAllocationRecord {
     let offset = index * MEIHDFS_RECORD_SIZE;
-    let inv_chunk: [u8; MEIHDFS_RECORD_SIZE] = std::array::from_fn(|j| raw_chunk[j] ^ 0xFF);
-
-    let tag = inv_chunk[0];
-    let raw_tag = raw_chunk[0];
-    let subtag = inv_chunk[1];
+    let inv: [u8; MEIHDFS_RECORD_SIZE] = std::array::from_fn(|j| raw_chunk[j] ^ 0xFF);
+    let (tag, raw_tag, subtag) = (inv[0], raw_chunk[0], inv[1]);
 
     let (tag_name, extent_id, sector_count, lba_offset, flags, description) = match tag {
         MEIHDFS_TAG_EXTENT_HEADER => {
-            let id = LittleEndian::read_u16(&inv_chunk[2..4]);
-            let fl = LittleEndian::read_u16(&inv_chunk[4..6]);
-            let p1 = LittleEndian::read_u16(&inv_chunk[6..8]);
-            let p2 = LittleEndian::read_u32(&inv_chunk[8..12]);
+            let (id, fl, p1) = (inv_u16(&inv, 2), inv_u16(&inv, 4), inv_u16(&inv, 6));
+            let p2 = LittleEndian::read_u32(&inv[8..12]);
+            let desc = format!(
+                "Extent ID: 0x{id:04X} | Subtag: 0x{subtag:02X} | Flags: 0x{fl:04X} | Segments: {p1} | Param: 0x{p2:08X}"
+            );
             (
                 "0x5D (ExtentHeader)".to_string(),
                 Some(id),
                 None,
                 None,
                 Some(fl),
-                format!(
-                    "Extent ID: 0x{:04X} | Subtag: 0x{:02X} | Flags: 0x{:04X} | Segments: {} | Param: 0x{:08X}",
-                    id, subtag, fl, p1, p2
-                ),
+                desc,
             )
         }
         MEIHDFS_TAG_EXTENT_POINTER => {
-            let id = LittleEndian::read_u16(&inv_chunk[2..4]);
-            let sectors = LittleEndian::read_u16(&inv_chunk[4..6]) as u32;
-            let lba = LittleEndian::read_u16(&inv_chunk[6..8]) as u32;
-            let fl = subtag as u16;
+            let id = inv_u16(&inv, 2);
+            let is_procedural_u32 = subtag == 0x00 && inv[12..16] == [0, 0, 0, 0];
+            let l32 = LittleEndian::read_u32(&inv[8..12]);
+            let (sectors, lba) = if is_procedural_u32 && l32 != 0 {
+                (LittleEndian::read_u32(&inv[4..8]), l32)
+            } else {
+                (u32::from(inv_u16(&inv, 4)), u32::from(inv_u16(&inv, 6)))
+            };
+            let desc = format!(
+                "Extent ID: 0x{id:04X} | Sectors: {sectors} ({} bytes) | LBA Off: {lba} | Flags: 0x{subtag:02X}",
+                u64::from(sectors) * 512
+            );
             (
                 "0x55 (ExtentPointer)".to_string(),
                 Some(id),
                 Some(sectors),
                 Some(lba),
-                Some(fl),
-                format!(
-                    "Extent ID: 0x{:04X} | Sectors: {} ({} bytes) | LBA Off: {} | Flags: 0x{:02X}",
-                    id,
-                    sectors,
-                    sectors * 512,
-                    lba,
-                    subtag
-                ),
+                Some(u16::from(subtag)),
+                desc,
             )
         }
         MEIHDFS_TAG_EXTENT_CONTINUATION => {
-            let id = LittleEndian::read_u16(&inv_chunk[2..4]);
+            let id = inv_u16(&inv, 2);
+            let desc = format!(
+                "Continuation ID: 0x{id:04X} | Subtag: 0x{subtag:02X} | Payload: {}",
+                hex::encode_upper(&inv[4..12])
+            );
             (
                 "0x57 (ExtentContinuation)".to_string(),
                 Some(id),
                 None,
                 None,
-                Some(subtag as u16),
-                format!(
-                    "Continuation ID: 0x{:04X} | Subtag: 0x{:02X} | Payload: {}",
-                    id,
-                    subtag,
-                    hex::encode_upper(&inv_chunk[4..12])
-                ),
+                Some(u16::from(subtag)),
+                desc,
             )
         }
         MEIHDFS_TAG_EXTENT_BOUNDARY => {
-            let id = LittleEndian::read_u16(&inv_chunk[2..4]);
+            let id = inv_u16(&inv, 2);
+            let desc = format!(
+                "Boundary ID: 0x{id:04X} | Subtag: 0x{subtag:02X} | Limiter: {}",
+                hex::encode_upper(&inv[4..12])
+            );
             (
                 "0x5F (ExtentBoundary)".to_string(),
                 Some(id),
                 None,
                 None,
-                Some(subtag as u16),
-                format!(
-                    "Boundary ID: 0x{:04X} | Subtag: 0x{:02X} | Limiter: {}",
-                    id,
-                    subtag,
-                    hex::encode_upper(&inv_chunk[4..12])
-                ),
+                Some(u16::from(subtag)),
+                desc,
             )
         }
         MEIHDFS_TAG_VNODE_ENTRY => {
-            let id = LittleEndian::read_u16(&inv_chunk[2..4]);
+            let id = inv_u16(&inv, 2);
+            let desc = format!(
+                "VNode Type: 0x{subtag:02X} | Node Index: 0x{id:04X} | Metadata: {}",
+                hex::encode_upper(&inv[4..12])
+            );
             (
                 "0xE0 (VNodeEntry)".to_string(),
                 Some(id),
                 None,
                 None,
-                Some(subtag as u16),
-                format!(
-                    "VNode Type: 0x{:02X} | Node Index: 0x{:04X} | Metadata: {}",
-                    subtag,
-                    id,
-                    hex::encode_upper(&inv_chunk[4..12])
-                ),
+                Some(u16::from(subtag)),
+                desc,
             )
         }
         MEIHDFS_TAG_VINODE_LINK => {
-            let parent = LittleEndian::read_u16(&inv_chunk[2..4]);
-            let child = LittleEndian::read_u16(&inv_chunk[4..6]);
+            let (parent, child) = (inv_u16(&inv, 2), inv_u16(&inv, 4));
+            let desc = format!(
+                "Directory Link | Flags: 0x{subtag:02X} | Parent: 0x{parent:04X} -> Child: 0x{child:04X}"
+            );
             (
                 "0xE1 (VInodeLink)".to_string(),
                 Some(child),
                 None,
                 None,
-                Some(subtag as u16),
-                format!(
-                    "Directory Link | Flags: 0x{:02X} | Parent: 0x{:04X} -> Child: 0x{:04X}",
-                    subtag, parent, child
-                ),
+                Some(u16::from(subtag)),
+                desc,
             )
         }
+        MEIHDFS_TAG_FREE => (
+            "0xFF (Free)".to_string(),
+            None,
+            None,
+            None,
+            None,
+            "Unallocated / Free Descriptor Slot".to_string(),
+        ),
         _ => (
-            format!("0x{:02X} (Unknown)", tag),
+            format!("0x{tag:02X} (Unknown)"),
             None,
             None,
             None,
             None,
-            format!("Unrecognized Record Tag: 0x{:02X}", tag),
+            format!("Unrecognized Record Tag: 0x{tag:02X}"),
         ),
     };
 
@@ -138,7 +145,7 @@ pub fn decode_single_meihdfs_record(raw_chunk: &[u8], index: usize) -> MeihdfsAl
         index,
         offset_in_table: offset,
         raw_hex: hex::encode_upper(raw_chunk),
-        inverted_hex: hex::encode_upper(inv_chunk),
+        inverted_hex: hex::encode_upper(inv),
         raw_tag,
         decoded_tag: tag,
         tag_name,
@@ -146,7 +153,7 @@ pub fn decode_single_meihdfs_record(raw_chunk: &[u8], index: usize) -> MeihdfsAl
         sector_count,
         lba_offset,
         flags,
-        tail_hex: hex::encode_upper(&inv_chunk[12..16]),
+        tail_hex: hex::encode_upper(&inv[12..16]),
         description,
     }
 }
@@ -239,7 +246,8 @@ pub fn decode_meihdfs_slice(
     source_label: &str,
 ) -> Result<MeihdfsAllocationReport> {
     let file_len = data.len();
-    let is_full_image = file_len >= (LBA_MIRROR_MBR_OFFSET as usize + ALLOCATION_DESCRIPTORS_SIZE);
+    let is_full_image =
+        file_len >= (ALLOCATION_DESCRIPTORS_MIRROR_OFFSET as usize + ALLOCATION_DESCRIPTORS_SIZE);
 
     let (alloc_slice, mirror_verified) = if is_full_image {
         let p_start = ALLOCATION_DESCRIPTORS_OFFSET as usize;

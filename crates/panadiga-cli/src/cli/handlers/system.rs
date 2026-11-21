@@ -1,7 +1,8 @@
 //! CLI handlers for manuals lookup, native RAG engine, AM34 memory map, and artifact hashes.
 
 use super::super::args::{
-    ManualsArgs, McpArgs, MemoryMapArgs, RagActions, RagArgs, VerifyArtifactArgs,
+    ManualsArgs, McpArgs, MemoryMapArgs, RagActions, RagArgs, SsotActions, SsotArgs,
+    VerifyArtifactArgs,
 };
 use anyhow::Result;
 use panadiga_core::constants::{format_memory_map_table, get_am34_memory_map_json};
@@ -179,4 +180,19 @@ pub fn handle_verify_artifact(args: VerifyArtifactArgs) -> Result<()> {
 
 pub fn handle_mcp(args: McpArgs) -> Result<()> {
     panadiga_mcp::run_mcp_server(args.tools, args.ping)
+}
+
+/// Handles `panadiga ssot export-all`.
+pub fn handle_ssot(args: SsotArgs) -> Result<()> {
+    match args.action {
+        SsotActions::ExportAll { root } => {
+            let ws = root.unwrap_or_else(panadiga_core::constants::resolve_workspace_root);
+            panadiga_core::ssot::export_all_ssot_projections(&ws)?;
+            log_println!(
+                "[OK] Multi-language SSOT projections exported under {}",
+                ws.display()
+            );
+        }
+    }
+    Ok(())
 }

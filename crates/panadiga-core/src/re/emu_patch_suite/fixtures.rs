@@ -13,7 +13,7 @@ use crate::re::{
 };
 
 const TEST_MAIN_HDD_CMD_OFFSET: usize = 0x004C_2600;
-pub(super) const TEST_RAM_WORK_BASE: u32 = 0x5000_0000;
+pub(crate) const TEST_RAM_WORK_BASE: u32 = 0x5000_0000;
 const TEST_RAM_WORK_SIZE: usize = 0x2_0000;
 const TEST_BSS_BASE: u32 = 0x5311_B000;
 const TEST_BSS_SIZE: usize = 0x1000;
@@ -30,7 +30,7 @@ pub(super) fn build_synthetic_prog061() -> Vec<u8> {
     img
 }
 
-pub(super) fn build_synthetic_main_3410pq() -> Vec<u8> {
+pub(crate) fn build_synthetic_main_3410pq() -> Vec<u8> {
     let mut img = vec![0xCBu8; EXPECTED_MAIN_3410PQ_SIZE];
     img[OFF_FPC_STATUS_CTRL..OFF_FPC_STATUS_CTRL + ORIG_FPC_STATUS_CTRL.len()]
         .copy_from_slice(&ORIG_FPC_STATUS_CTRL);
@@ -45,7 +45,7 @@ pub(super) fn build_synthetic_main_3410pq() -> Vec<u8> {
     img
 }
 
-pub(super) fn new_spansion_nor_vm() -> Mn103Vm {
+pub(crate) fn new_spansion_nor_vm() -> Mn103Vm {
     let mut vm = Mn103Vm::new();
     let nor_image = vec![0xA5u8; AM34_FLASH_SIZE as usize];
     vm.map_segment(AM34_FLASH_UNCACHED_BASE, nor_image, true);

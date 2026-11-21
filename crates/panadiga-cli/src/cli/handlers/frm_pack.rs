@@ -120,10 +120,14 @@ pub fn handle_frm_pack(args: &FrmPackArgs) -> Result<()> {
                 PANA_DIGADIAG_FRM_SIZE,
             )?
         }
-        "dvd" | "sd" | "sd48" => {
+        "dvd" | "dvd64b" | "dvd64" | "sd" | "sd48" => {
             let modules = parse_pack_modules(args)?;
             let container_mode = if args.mode.eq_ignore_ascii_case("dvd") {
                 FrmContainerMode::Dvd
+            } else if args.mode.eq_ignore_ascii_case("dvd64b")
+                || args.mode.eq_ignore_ascii_case("dvd64")
+            {
+                FrmContainerMode::Dvd64B
             } else if args.mode.eq_ignore_ascii_case("sd48") {
                 FrmContainerMode::Sd48
             } else {
@@ -147,7 +151,9 @@ pub fn handle_frm_pack(args: &FrmPackArgs) -> Result<()> {
             }
             (packed_bytes, pack_report)
         }
-        other => bail!("Unsupported FRM pack mode '{other}': expected dvd, sd, sd48, or digadiag"),
+        other => bail!(
+            "Unsupported FRM pack mode '{other}': expected dvd, dvd64b, sd, sd48, or digadiag"
+        ),
     };
 
     std::fs::write(&args.out, &bytes).with_context(|| format!("Writing {}", args.out.display()))?;

@@ -1,21 +1,29 @@
-//! Pure CoW NVRAM erasure (`0xFF`) and micro-sector patching transformations.
+//! Pure policy-gated CoW NVRAM erasure (`0xFF`) and micro-sector patching transformations.
 
 use anyhow::{Result, bail};
 
-use super::audit::{audit_nvram_slice, calculate_hashes};
-use super::types::{NvramCleanReport, PureNvramCleanOutput, resolve_flash_layout};
+use super::audit::{audit_nvram_sectors, calculate_hashes};
+use super::types::{
+    NvramCleanReport, NvramPolicyOptions, PureNvramCleanOutput, SliceIoLabels,
+    authorize_flash_operation,
+};
 use crate::constants::FLASH_ERASED_BYTE;
+use crate::ssot::Capability;
 
 fn transform_flash_nvram_slice(
     flash_bytes: &[u8],
-    input_label: &str,
-    output_label: &str,
-    backup_label: &str,
+    policy: &NvramPolicyOptions<'_>,
+    labels: SliceIoLabels<'_>,
     mutator: impl FnOnce(&mut [u8]) -> Result<()>,
 ) -> Result<PureNvramCleanOutput> {
-    let layout = resolve_flash_layout(flash_bytes.len())?;
+    let layout = authorize_flash_operation(
+        flash_bytes,
+        Capability::NvramSanitizeOfflineCow,
+        policy.model_id,
+        policy.lab_override,
+    )?;
     let nvram_base_offset = layout.nvram_base_offset;
-    let nvram_end_offset = layout.flash_len;
+    let nvram_end_offset = layout.nvram_end_offset;
     let bootloader_size = nvram_base_offset;
 
     let (orig_md5, orig_sha256) = calculate_hashes(flash_bytes);
@@ -31,17 +39,16 @@ fn transform_flash_nvram_slice(
         );
     }
 
-    let (non_ff, non_zero, microsectors) = audit_nvram_slice(
+    let (non_ff, non_zero, microsectors) = audit_nvram_sectors(
         &cleaned_bytes[nvram_base_offset..nvram_end_offset],
-        nvram_base_offset,
-        layout.base_sector_idx,
+        &layout.nvram_sectors,
     );
     let (clean_md5, clean_sha256) = calculate_hashes(&cleaned_bytes);
 
     let report = NvramCleanReport {
-        input_file: input_label.to_string(),
-        output_file: output_label.to_string(),
-        backup_file: backup_label.to_string(),
+        input_file: labels.input.to_string(),
+        output_file: labels.output.to_string(),
+        backup_file: labels.backup.to_string(),
         original_md5: orig_md5,
         original_sha256: orig_sha256,
         clean_md5,
@@ -62,34 +69,30 @@ fn transform_flash_nvram_slice(
     })
 }
 
-/// 100% pure functional transformation over an immutable flash slice.
-/// Performs forensic validation, microsector audit, 0xFF erasure of NVRAM, and bit-for-bit immutability verification.
-/// Free of any disk I/O side effects.
-pub fn clean_flash_nvram_slice(
+/// Policy-gated Copy-on-Write NVRAM `0xFF` erasure over an immutable flash slice.
+pub fn clean_flash_nvram_slice_with_policy(
     flash_bytes: &[u8],
-    input_label: &str,
-    output_label: &str,
-    backup_label: &str,
+    policy: &NvramPolicyOptions<'_>,
+    labels: SliceIoLabels<'_>,
 ) -> Result<PureNvramCleanOutput> {
-    transform_flash_nvram_slice(flash_bytes, input_label, output_label, backup_label, |nv| {
+    transform_flash_nvram_slice(flash_bytes, policy, labels, |nv| {
         nv.fill(FLASH_ERASED_BYTE);
         Ok(())
     })
 }
 
-/// Copy-on-write NVRAM sector patch strictly confined inside the top writable microsectors.
-pub fn patch_flash_nvram_slice(
+/// Policy-gated Copy-on-Write NVRAM byte patch inside verified EEMUL top micro-sectors.
+pub fn patch_flash_nvram_slice_with_policy(
     flash_bytes: &[u8],
     nvram_rel_offset: usize,
     patch_bytes: &[u8],
-    input_label: &str,
-    output_label: &str,
-    backup_label: &str,
+    policy: &NvramPolicyOptions<'_>,
+    labels: SliceIoLabels<'_>,
 ) -> Result<PureNvramCleanOutput> {
     if patch_bytes.is_empty() {
         bail!("NVRAM patch payload cannot be empty");
     }
-    transform_flash_nvram_slice(flash_bytes, input_label, output_label, backup_label, |nv| {
+    transform_flash_nvram_slice(flash_bytes, policy, labels, |nv| {
         let Some(end) = nvram_rel_offset.checked_add(patch_bytes.len()) else {
             bail!("NVRAM patch offset overflow");
         };
@@ -102,4 +105,36 @@ pub fn patch_flash_nvram_slice(
         nv[nvram_rel_offset..end].copy_from_slice(patch_bytes);
         Ok(())
     })
+}
+
+/// Fail-closed default clean wrapper delegating strictly through `CapabilityGate` (no overrides).
+pub fn clean_flash_nvram_slice(
+    flash_bytes: &[u8],
+    input_label: &str,
+    output_label: &str,
+    backup_label: &str,
+) -> Result<PureNvramCleanOutput> {
+    clean_flash_nvram_slice_with_policy(
+        flash_bytes,
+        &NvramPolicyOptions::default(),
+        SliceIoLabels::new(input_label, output_label, backup_label),
+    )
+}
+
+/// Fail-closed default patch wrapper delegating strictly through `CapabilityGate` (no overrides).
+pub fn patch_flash_nvram_slice(
+    flash_bytes: &[u8],
+    nvram_rel_offset: usize,
+    patch_bytes: &[u8],
+    input_label: &str,
+    output_label: &str,
+    backup_label: &str,
+) -> Result<PureNvramCleanOutput> {
+    patch_flash_nvram_slice_with_policy(
+        flash_bytes,
+        nvram_rel_offset,
+        patch_bytes,
+        &NvramPolicyOptions::default(),
+        SliceIoLabels::new(input_label, output_label, backup_label),
+    )
 }

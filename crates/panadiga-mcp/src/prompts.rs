@@ -73,8 +73,8 @@ pub fn get_prompt(name: &str, args: &Value) -> Result<Value> {
                         "type": "text",
                         "text": format!(
                             "Diagnose DMR-EH55 via P7501 UART on port {}:\n\
-                             1. Read `panadiga://pinout-p7501-uart` and `panadiga://visual-catalog` (use `panadiga_search_visuals` for `P7501`, `Q7510`, `Q7514`, `IC1506` schematics).\n\
-                             2. Enforce Pin 5 (NSW5V -> GP3) strictly Hi-Z Input with pulls disabled.\n\
+                             1. Read `panadiga://pinout-p7501-uart` and use `panadiga_search_visuals` for `P7501`, `Q7510`, `Q7514`, `IC1506` schematics (avoid dumping full `visual-catalog` tokens needlessly).\n\
+                             2. Enforce Pin 5 (NSW5V -> GP3) strictly Hi-Z Input with pulls disabled and never power Pico from P7501.\n\
                              3. Run `python -m scripts.bench.runner health --port {}` (`PING`, `STATUS`, `PINCHECK`) and verify GP26 ADC0 VDD (~2.7V) without sticky LOW.\n\
                              4. Capture live AM34 boot logs via `UARTMON 20000` (normal mode) or `JIGBOOT` (`SW_UART=LOW`), and transmit UART payloads only with `UARTSEND <str>` (`SW_UART=Hi-Z` so Q7514 conducts). Always finish with `ISOLATE`.",
                             port, port
@@ -89,17 +89,17 @@ pub fn get_prompt(name: &str, args: &Value) -> Result<Value> {
                 .and_then(|v| v.as_str())
                 .unwrap_or("COM10");
             Ok(json!({
-                "description": "CDDIAG / P7501 UART boot-telemetry inspection and live Spansion NOR Flash capture workflow.",
+                "description": "P7501 Async UART boot-telemetry inspection and live Spansion NOR Flash capture via PANAMON1> / _dev_SERIAL GDB RSP.",
                 "messages": [{
                     "role": "user",
                     "content": {
                         "type": "text",
                         "text": format!(
-                            "Procedure for P7501 Async UART target (115200 8N1) on port {} (see `p7501_uart_diagnostics` for full probe/send menu):\n\
+                            "Procedure for P7501 Async UART target (115200 8N1) on port {} (P7501 lacks DWire32A clock; legacy DWire HANDSHAKE/DUMP return 0xFFFFFFFF):\n\
                              1. Verify pinout & voltage limits (`panadiga://pinout-p7501-uart` & `panadiga://invariants`).\n\
-                             2. Run `panadiga pico status --port {}` or `panadiga pico breakin --port {} --mode 2` to inspect live DCSR.\n\
-                             3. Capture live NOR Flash blocks with `panadiga pico dump --port {} --addr 0x807F0000 --words 64` or open `panadiga gdb-bridge --port {}` and send `$m80000000,0040#` / `$m807F0000,0040#`.",
-                            port, port, port, port, port
+                             2. Run `panadiga pico status --port {}` and capture boot telemetry via `BOOTTRACE` (`JIGBOOT` + `PANAMON1>` prompt).\n\
+                             3. Dump 8 MiB Spansion NOR cleanly via `PANADMP1` (`panadiga pico live-capture --port {}`) or query live `_dev_SERIAL` via `panadiga gdb-bridge --port {}` (`$m84000000,0040#` / `$m847F0000,0040#`).",
+                            port, port, port, port
                         )
                     }
                 }]

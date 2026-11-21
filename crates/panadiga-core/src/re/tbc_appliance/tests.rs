@@ -53,6 +53,40 @@ fn experimental_sd_ram_chainload_requires_explicit_opt_in() {
 }
 
 #[test]
+fn validate_mmio_plan_safety_blocks_cached_uncached_ipl_and_lethal() {
+    assert!(
+        super::validate_mmio_plan_safety(&[MmioWriteOp {
+            addr: crate::constants::AM34_FLASH_BASE + 0x100,
+            width_bits: 16,
+            value: 0,
+            register_name: "IPL_CACHED".into(),
+            note: "cached_ipl".into(),
+        }])
+        .is_err()
+    );
+    assert!(
+        super::validate_mmio_plan_safety(&[MmioWriteOp {
+            addr: crate::constants::AM34_FLASH_UNCACHED_BASE + 0x100,
+            width_bits: 16,
+            value: 0,
+            register_name: "IPL_UNCACHED".into(),
+            note: "uncached_ipl".into(),
+        }])
+        .is_err()
+    );
+    assert!(
+        super::validate_mmio_plan_safety(&[MmioWriteOp {
+            addr: crate::constants::AM34_FORBIDDEN_LETHAL_REG,
+            width_bits: 32,
+            value: 0,
+            register_name: "LETHAL_REG".into(),
+            note: "lethal".into(),
+        }])
+        .is_err()
+    );
+}
+
+#[test]
 fn no_jig_pana_sd_prog_slot_and_stage0_constants_enforce_safety() {
     use crate::constants::{
         AIOF_CONT_SETUP_0IRE_LIGHTER, AIOF_CONT_SETUP_75IRE_DARKER, AIOF_FS0_NON_STANDARD,

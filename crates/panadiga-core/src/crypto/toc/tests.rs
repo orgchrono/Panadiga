@@ -136,3 +136,108 @@ fn test_decrypt_frm_toc_with_detected_key_real_firmwares() {
         }
     }
 }
+
+#[test]
+fn test_dvd64_at_0x1000_no_false_fallback_and_derived_module_report() {
+    use super::super::feistel::{PANA_DVD_KEY_CATALOG, derive_round_key_from_custom_key_8b};
+    use super::super::frm_pack::{FrmContainerMode, FrmPackModule, pack_frm_with_key};
+    use super::report::analyze_frm_toc_report;
+
+    // 1. Unknown/unencrypted random noise MUST NOT falsely report Some("old_df72").
+    let noise = [0xA5u8; 0x200];
+    let (k_none, _, _, entries_none) = decrypt_frm_toc_with_detected_key(&noise);
+    assert_eq!(k_none, None);
+    assert!(entries_none.is_empty());
+
+    // 2. Dvd64B TOC starting at offset 0x1000 inside 0x2000 region with non-default key.
+    let mut plain = vec![0u8; 0x2400];
+    plain[0x1000..0x1007].copy_from_slice(b"PROG081");
+    plain[0x100C..0x1010].copy_from_slice(&0x0000_2000u32.to_le_bytes());
+    plain[0x1010..0x1016].copy_from_slice(b"EH59EG");
+    plain[0x1018] = b'M';
+    plain[0x1019] = 1;
+    plain[0x101A..0x1020].copy_from_slice(b"000000");
+    plain[0x1020..0x1024].copy_from_slice(&0x0000_0200u32.to_le_bytes());
+    let sum: u16 = plain[0x1000..0x103E]
+        .iter()
+        .fold(0u16, |a, &b| a.wrapping_add(u16::from(b)));
+    plain[0x103E..0x1040].copy_from_slice(&sum.to_le_bytes());
+
+    let alt_key = derive_round_key_from_custom_key_8b(&PANA_DVD_KEY_CATALOG[2].1);
+    feistel_encrypt_buffer(&mut plain, &alt_key, &PANA_FEISTEL_SBOX_256);
+    let (k_det, _, layout, entries) = decrypt_frm_toc_with_detected_key(&plain);
+    assert_eq!(k_det, Some(PANA_DVD_KEY_CATALOG[2].0));
+    assert_eq!(layout, TocLayout::Dvd64B);
+    assert_eq!(entries.len(), 1);
+    assert_eq!(entries[0].index, 64);
+    assert_eq!(entries[0].module_name, "PROG081");
+
+    // 3. Report module catalog derives exact offsets/sizes from decrypted TOC.
+    let (packed, _) = pack_frm_with_key(
+        &[
+            FrmPackModule::new("DRV S211", vec![0x11; 64]),
+            FrmPackModule::new("MAIN3410PQ", vec![0x22; 96]),
+        ],
+        FrmContainerMode::Dvd64B,
+        None,
+        &alt_key,
+    )
+    .unwrap();
+    let rep = analyze_frm_toc_report(&packed, "mem:dvd64b.frm").unwrap();
+    assert_eq!(rep.toc_format, "dvd-64b-feistel");
+    assert_eq!(rep.modules.len(), 2);
+    assert_eq!(rep.modules[0].name, "DRV S211");
+    assert_eq!(rep.modules[0].start_offset_hex, "0x00002000");
+    assert_eq!(rep.modules[0].payload_size_bytes, 64);
+    assert_eq!(rep.modules[1].start_offset_hex, "0x00002040");
+    assert_eq!(rep.modules[1].payload_size_bytes, 96);
+}
+
+#[test]
+fn eh50_drv_j147_slot0_offset_quirk_resolves_to_0x1800() {
+    use super::super::feistel::{PANA_DVD_KEY_CATALOG, derive_round_key_from_custom_key_8b};
+
+    let mut plain = vec![0u8; 0x1800];
+    plain[..8].copy_from_slice(b"DRV J147");
+    plain[0x08..0x0C].copy_from_slice(&0x0000_1800u32.to_le_bytes());
+    plain[0x0C..0x10].copy_from_slice(&0xCDF5_8588u32.to_le_bytes());
+    plain[0x10..0x15].copy_from_slice(b"M7820");
+    plain[0x18] = b'M';
+    plain[0x1A..0x20].copy_from_slice(b"NA-348");
+    plain[0x20..0x24].copy_from_slice(&0x0001_0000u32.to_le_bytes());
+    let sum0: u16 = plain[..0x2E]
+        .iter()
+        .map(|&b| u16::from(b))
+        .fold(0u16, |acc, x| acc.wrapping_add(x));
+    plain[0x2E..0x30].copy_from_slice(&sum0.to_le_bytes());
+
+    let rk = derive_round_key_from_custom_key_8b(&PANA_DVD_KEY_CATALOG[1].1);
+    let mut synthetic_frm = vec![0u8; 0x1800 + 0x10000];
+    synthetic_frm[..0x1800].copy_from_slice(&plain);
+    feistel_encrypt_buffer(&mut synthetic_frm[..0x1800], &rk, &PANA_FEISTEL_SBOX_256);
+
+    let (key_name, _, layout, entries) = decrypt_frm_toc_with_detected_key(&synthetic_frm);
+    assert_eq!(key_name, Some("le2011_08e0"));
+    assert_eq!(layout, TocLayout::Dvd48B);
+    assert_eq!(entries[0].module_name, "DRV J147");
+    assert_eq!(entries[0].module_offset, 0x1800);
+
+    for p in [
+        "firmware_and_images/dmr-eh50/PANA_DVD.FRM",
+        "../../firmware_and_images/dmr-eh50/PANA_DVD.FRM",
+    ] {
+        let path = std::path::Path::new(p);
+        if path.exists() {
+            let real = std::fs::read(path).expect("read eh50 FRM");
+            let (_, _, real_layout, real_entries) = decrypt_frm_toc_with_detected_key(&real);
+            assert_eq!(real_layout, TocLayout::Dvd48B);
+            assert_eq!(real_entries[0].module_name, "DRV J147");
+            assert_eq!(real_entries[0].module_offset, 0x1800);
+            assert!(
+                (real_entries[0].module_offset as usize + real_entries[0].module_size as usize)
+                    <= real.len()
+            );
+            break;
+        }
+    }
+}

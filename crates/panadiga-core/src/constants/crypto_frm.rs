@@ -127,27 +127,27 @@ pub const PANA_DIGADIAG_RAW_VER061_SIZE: usize = 0x0004_0000;
 /// Default MN103S RAM jump target executed by `BOOT.BIN` `FUN_44006cd9` after unpacking `DIGADIAG.FRM`.
 pub const PANA_DIGADIAG_DEFAULT_LOAD_ADDR: u32 = 0x5040_0000;
 
-/// Module 1 (Sub-system / OSD) start offset in PANA_DVD.FRM (0x00A0).
+/// Pre-Feistel legacy heuristic Module 1 start offset (superseded by decrypted TOC `PANA_FRM_DRV_S211_*`).
 pub const PANA_FRM_MOD1_START_OFFSET: usize = 0x00A0;
-/// Module 1 active payload end offset (0x0AE480).
+/// Pre-Feistel legacy heuristic Module 1 active payload end offset.
 pub const PANA_FRM_MOD1_PAYLOAD_END: usize = 0x0AE480;
-/// Module 1 virgin flash padding end offset (0x0AEFD0).
+/// Pre-Feistel legacy heuristic Module 1 virgin flash padding end offset.
 pub const PANA_FRM_MOD1_VIRGIN_PAD_END: usize = 0x0AEFD0;
-/// Module 1 fixed partition structure end offset (0x0B17D0).
+/// Pre-Feistel legacy heuristic Module 1 fixed partition structure end offset.
 pub const PANA_FRM_MOD1_STRUCT_END: usize = 0x0B17D0;
-/// Module 1 boundary offset (0x0B1800).
+/// Pre-Feistel legacy heuristic Module 1 boundary offset (`0x0B1800`).
 pub const PANA_FRM_MOD1_BOUNDARY: usize = 0x0B1800;
 
-/// Module 2 (Drive Servo DSP) start offset in PANA_DVD.FRM (0x0B1800).
+/// Pre-Feistel legacy heuristic Module 2 start offset (superseded by decrypted TOC `PANA_FRM_PROG061_*`).
 pub const PANA_FRM_MOD2_START_OFFSET: usize = 0x0B1800;
-/// Module 2 active payload end offset (0x0EAC98).
+/// Pre-Feistel legacy heuristic Module 2 active payload end offset.
 pub const PANA_FRM_MOD2_PAYLOAD_END: usize = 0x0EAC98;
-/// Module 2 virgin flash padding end offset (0x0F17F8).
+/// Pre-Feistel legacy heuristic Module 2 virgin flash padding end offset.
 pub const PANA_FRM_MOD2_VIRGIN_PAD_END: usize = 0x0F17F8;
-/// Module 2 boundary offset (0x0F1818).
+/// Pre-Feistel legacy heuristic Module 2 boundary offset (`0x0F1818`).
 pub const PANA_FRM_MOD2_BOUNDARY: usize = 0x0F1818;
 
-/// Module 3 (Main CPU OS AM34 / DIGA OS) start offset in PANA_DVD.FRM (0x0F1818).
+/// Pre-Feistel legacy heuristic Module 3 start offset (superseded by decrypted TOC `PANA_FRM_MAIN3060_*`).
 pub const PANA_FRM_MOD3_START_OFFSET: usize = 0x0F1818;
 
 /// Standard `EXTRHEAD` header (`0x40` = 64 B) and `EXTRFOOT` footer (`8` B) sizes.

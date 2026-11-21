@@ -1,3 +1,5 @@
+#![deny(unsafe_code)]
+
 //! Verification and Feistel DVD-to-SD conversion helpers for `.FRM` containers.
 
 use anyhow::{Context, Result, bail};
@@ -10,14 +12,14 @@ use super::pack::pack_frm;
 use super::types::{FrmContainerMode, FrmPackModule, FrmPackReport};
 use crate::constants::*;
 
-/// Re-parses a packed `dvd`, `sd`, or `sd48` `.FRM` image, checking TOC checksums and payload FVU sums.
+/// Re-parses a packed `dvd`, `dvd64b`, `sd`, or `sd48` `.FRM` image, checking TOC checksums and payload FVU sums.
 pub fn verify_packed_frm_roundtrip(
     bytes: &[u8],
     mode: FrmContainerMode,
     expected_modules: usize,
 ) -> Result<Vec<DecryptedFrmTocEntry>> {
     let (detected_key, entries) = match mode {
-        FrmContainerMode::Dvd => {
+        FrmContainerMode::Dvd | FrmContainerMode::Dvd64B => {
             let (_, rk, _, parsed) = decrypt_frm_toc_with_detected_key(bytes);
             (Some(rk), parsed)
         }
@@ -31,7 +33,7 @@ pub fn verify_packed_frm_roundtrip(
         );
     }
 
-    let is_dvd = mode == FrmContainerMode::Dvd;
+    let is_dvd = matches!(mode, FrmContainerMode::Dvd | FrmContainerMode::Dvd64B);
     let dvd_key = detected_key.unwrap_or(PANA_FEISTEL_ROUND_KEY_32B);
     for entry in &entries[..expected_modules] {
         if !entry.list_sum_valid {

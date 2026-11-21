@@ -196,18 +196,30 @@ pub(crate) fn normalize_flash_confirm_token(raw_confirm: &str) -> String {
     }
 }
 
-pub(crate) fn build_eh55_flash_request(args: &FlashEh55Args) -> Result<Eh55HddFlashRequest> {
-    let expected_gb_range = match (args.expected_min_gb, args.expected_max_gb) {
-        (None, None) => None,
+pub(crate) fn resolve_expected_gb_range(
+    expected_min_gb: Option<u64>,
+    expected_max_gb: Option<u64>,
+    allow_extended_4tb: bool,
+) -> Result<Option<(u32, u32)>> {
+    match (expected_min_gb, expected_max_gb) {
+        (None, None) => Ok(None),
         (min_opt, max_opt) => {
             let min_u64 = min_opt.unwrap_or(5);
             let max_u64 = max_opt.unwrap_or(260);
             let min_u32 = u32::try_from(min_u64).context("expected_min_gb overflow")?;
             let max_u32 = u32::try_from(max_u64).context("expected_max_gb overflow")?;
-            blocks_2kb_for_gb_bounded(max_u32, args.allow_extended_4tb)?;
-            Some((min_u32, max_u32))
+            blocks_2kb_for_gb_bounded(max_u32, allow_extended_4tb)?;
+            Ok(Some((min_u32, max_u32)))
         }
-    };
+    }
+}
+
+pub(crate) fn build_eh55_flash_request(args: &FlashEh55Args) -> Result<Eh55HddFlashRequest> {
+    let expected_gb_range = resolve_expected_gb_range(
+        args.range.expected_min_gb,
+        args.range.expected_max_gb,
+        args.range.allow_extended_4tb,
+    )?;
     Ok(Eh55HddFlashRequest {
         device_path: args.drive.clone(),
         confirmation_token: normalize_flash_confirm_token(&args.confirm_physical_drive),
@@ -242,7 +254,7 @@ pub fn run_flash_eh55_on_device<D: BlockFlashDevice>(
         report.mirror_main_lba,
         report.readback_verified
     );
-    emit_json_output(&report, args.json.as_deref())?;
+    emit_json_output(&report, args.range.json.as_deref())?;
     Ok(report)
 }
 

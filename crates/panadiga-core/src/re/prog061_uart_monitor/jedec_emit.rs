@@ -62,20 +62,41 @@ fn emit_jedec_unlock_a0_a3(buf: &mut Vec<u8>) {
     buf.extend_from_slice(&[0x80, 0x55, 0xF0, 0x73]); // 0x0055 -> (0x84000554)
 }
 
-/// Polls `(a1)` DQ7 (`bit 7`) until `(val & 0x80) == d3` or bounded timeout (~2.5-3.0s @ 100 MHz), then resets array `0xF0`.
+/// Polls `(a1)` DQ7 (`bit 7`) and DQ5 exceeded-timing flag until `(val & 0x80) == d3` or bounded timeout (~2.5-3.0s @ 100 MHz).
+/// Resets flash array via `0x00F0` and returns `d0 = 0` on verified completion, or `d0 = 1` on timeout / DQ5 error.
 pub(super) fn emit_jedec_poll_dq7_reset_sub(buf: &mut Vec<u8>) -> Result<usize> {
     let sub_off = buf.len();
-    let _ = emit_mov_imm32(buf, 0xCD, 0x0400_0000);
+    let _ = emit_mov_imm32(buf, 0xCD, 0x0400_0000); // d1 = poll budget
     let poll_loop = buf.len();
-    buf.extend_from_slice(&[0xF0, 0x61, 0xF8, 0xE0, 0x80, 0xAC]); // movhu (a1),d0; and 80,d0; cmp d3,d0
-    let br_done = emit_branch8_placeholder(buf, 0xC8);
+    buf.extend_from_slice(&[0xF0, 0x61, 0x82]); // movhu (a1), d0; mov d0, d2
+    buf.extend_from_slice(&[0xF8, 0xE0, 0x80, 0xAC]); // and 0x80, d0; cmp d3, d0
+    let br_ok1 = emit_branch8_placeholder(buf, 0xC8); // beq ok
+    buf.extend_from_slice(&[0xF8, 0xEE, 0x20]); // btst 0x20, d2 (DQ5 exceeded timing)
+    let br_no_dq5 = emit_branch8_placeholder(buf, 0xC8); // beq dec_d1
+    buf.extend_from_slice(&[0xF0, 0x61, 0xF8, 0xE0, 0x80, 0xAC]); // final DQ7 re-read
+    let br_ok2 = emit_branch8_placeholder(buf, 0xC8); // beq ok
+    let br_dq5_fail = emit_branch8_placeholder(buf, 0xCA); // bra fail
+
+    let dec_d1 = buf.len();
+    patch_s8_rel(buf, br_no_dq5, dec_d1, "JEDEC_NO_DQ5")?;
     buf.extend_from_slice(&[0x29, 0xFF, 0xA5, 0x00]); // add -1,d1; cmp 0,d1
     let br_cont = emit_branch8_placeholder(buf, 0xC9);
     patch_s8_rel(buf, br_cont, poll_loop, "JEDEC_POLL")?;
-    let done_off = buf.len();
-    patch_s8_rel(buf, br_done, done_off, "JEDEC_DONE")?;
+
+    let fail_off = buf.len();
+    patch_s8_rel(buf, br_dq5_fail, fail_off, "JEDEC_DQ5_FAIL")?;
+    buf.extend_from_slice(&[0x8A, 0x01]); // mov 1, d2 (error status)
+    let br_reset = emit_branch8_placeholder(buf, 0xCA);
+
+    let ok_off = buf.len();
+    patch_s8_rel(buf, br_ok1, ok_off, "JEDEC_OK1")?;
+    patch_s8_rel(buf, br_ok2, ok_off, "JEDEC_OK2")?;
+    buf.extend_from_slice(&[0x8A, 0x00]); // mov 0, d2 (ok status)
+
+    let reset_off = buf.len();
+    patch_s8_rel(buf, br_reset, reset_off, "JEDEC_RESET")?;
     let _ = emit_mov_imm32(buf, 0xDC, AM34_FLASH_UNCACHED_BASE);
-    buf.extend_from_slice(&[0x80, 0xF0, 0x14, 0xF0, 0x70, 0xDF, 0x00, 0x00]); // 0x00F0 -> 0x84000000; ret [], 0
+    buf.extend_from_slice(&[0x80, 0xF0, 0x14, 0xF0, 0x70, 0x88, 0xDF, 0x00, 0x00]); // 0x00F0 -> 0x84000000; mov d2, d0; ret [], 0
     Ok(sub_off)
 }
 
@@ -256,7 +277,18 @@ pub(super) fn emit_write_or_erase_handler(
         emit_cond_jmp16(buf, pt, 0xC8, targets.2)?;
         emit_print_str(buf, pt, 5, subs.3);
         emit_call16(buf, pt, subs.2);
-        emit_print_str(buf, pt, 8, subs.3);
+        buf.extend_from_slice(&[0xA0, 0x00]); // cmp 0, d0
+        let br_poll_err = emit_branch8_placeholder(buf, 0xC9);
+        buf.extend_from_slice(&[0xF0, 0x61]); // movhu (a1), d0 (0xFFFF readback verify)
+        let _ = emit_mov_imm32(buf, 0xCD, 0x0000_FFFF); // mov 0xFFFF, d1
+        buf.extend_from_slice(&[0xA4]); // cmp d1, d0
+        let br_rb_err = emit_branch8_placeholder(buf, 0xC9);
+        emit_print_str(buf, pt, 8, subs.3); // OK:ERASE
+        pt.j16s.push((emit_jmp16_placeholder(buf), targets.0));
+        let err_erase = buf.len();
+        patch_s8_rel(buf, br_poll_err, err_erase, "E_POLL_ERR")?;
+        patch_s8_rel(buf, br_rb_err, err_erase, "E_RB_ERR")?;
+        emit_print_str(buf, pt, 16, subs.3); // ERR:ERASE
     } else {
         buf.extend_from_slice(&[0xA0, 0xFF]);
         emit_cond_jmp16(buf, pt, 0xC9, targets.2)?;
@@ -267,10 +299,17 @@ pub(super) fn emit_write_or_erase_handler(
         let nor_prog = buf.len();
         patch_s8_rel(buf, br_nor, nor_prog, "W_NOR_PROG")?;
         emit_call16(buf, pt, subs.2);
+        buf.extend_from_slice(&[0xA0, 0x00]); // cmp 0, d0
+        let br_w_err = emit_branch8_placeholder(buf, 0xC9);
         let wr_done = buf.len();
         patch_s8_rel(buf, br_ok, wr_done, "W_DONE")?;
         emit_print_str(buf, pt, 5, subs.3);
         emit_print_str(buf, pt, 7, subs.3);
+        pt.j16s.push((emit_jmp16_placeholder(buf), targets.0));
+        let err_write = buf.len();
+        patch_s8_rel(buf, br_w_err, err_write, "W_ERR")?;
+        emit_print_str(buf, pt, 5, subs.3);
+        emit_print_str(buf, pt, 17, subs.3); // ERR:WRITE
     }
     pt.j16s.push((emit_jmp16_placeholder(buf), targets.0));
     Ok(())

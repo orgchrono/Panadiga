@@ -17,10 +17,10 @@ pub(in crate::re::eh55_bgo) fn build_synthetic_bgo_test_pair() -> (Vec<u8>, Vec<
     for i in 0..4 {
         healthy[sa29 + 0x04 + i * 4..sa29 + 0x06 + i * 4].copy_from_slice(&0xF101u16.to_le_bytes());
     }
+    let clean_mig = hex::decode("fefffefffeffffff").unwrap();
+    healthy[sa29 + 0x14..sa29 + 0x1C].copy_from_slice(&clean_mig);
+    healthy[sa29 + 0x5C..sa29 + 0x64].copy_from_slice(&clean_mig);
     let sa41 = eh55_bgo_sector_offset(41).unwrap();
-    for i in 0..4 {
-        healthy[sa41 + 0x04 + i * 4..sa41 + 0x06 + i * 4].copy_from_slice(&0xF101u16.to_le_bytes());
-    }
 
     let f2_sas: Vec<usize> = (26..=28).chain(30..=40).chain(42..=67).collect();
     assert_eq!(f2_sas.len(), 40);
@@ -58,33 +58,37 @@ pub(in crate::re::eh55_bgo) fn build_synthetic_bgo_test_pair() -> (Vec<u8>, Vec<
         let entry = by_tid.entry(pid / 16).or_insert([0xFFFF; 16]);
         entry[usize::from(pid % 16)] = w;
     }
-    for (idx, (tid, arr)) in by_tid.into_iter().enumerate() {
-        let off = sa41 + (2 + idx / 7) * 0x100;
-        let s = idx % 7;
-        if s == 0 {
-            healthy[off..off + 4].copy_from_slice(&[0x00; 4]);
+
+    let write_tid_slots = |buf: &mut [u8], base: usize| {
+        for (idx, (&tid, &arr)) in by_tid.iter().enumerate() {
+            let off = base + (2 + idx / 7) * 0x100;
+            let s = idx % 7;
+            if s == 0 {
+                buf[off..off + 4].copy_from_slice(&[0x00; 4]);
+            }
+            buf[off + 3] |= 1u8 << s;
+            let soff = off + 4 + s * 0x24;
+            buf[soff..soff + 2].copy_from_slice(&tid.to_le_bytes());
+            buf[soff + 2..soff + 4].copy_from_slice(&0x0001u16.to_le_bytes());
+            for (i, w) in arr.into_iter().enumerate() {
+                buf[soff + 4 + i * 2..soff + 6 + i * 2].copy_from_slice(&w.to_le_bytes());
+            }
         }
-        healthy[off + 3] |= 1u8 << s;
-        let soff = off + 4 + s * 0x24;
-        healthy[soff..soff + 2].copy_from_slice(&tid.to_le_bytes());
-        healthy[soff + 2..soff + 4].copy_from_slice(&0x0001u16.to_le_bytes());
-        for (i, w) in arr.into_iter().enumerate() {
-            healthy[soff + 4 + i * 2..soff + 6 + i * 2].copy_from_slice(&w.to_le_bytes());
-        }
-    }
+    };
+    write_tid_slots(&mut healthy, sa29);
 
     let mut mig_bad = hex::decode("f8fff8fff8fffcffffff0400").unwrap();
     mig_bad.resize(38, 0xFF);
-    let mut mig_ok = mig_bad.clone();
-    mig_ok[0] = 0xF0;
-    mig_ok[2] = 0xF0;
-    mig_ok[4] = 0xF0;
-    mig_ok[6] = 0xF8;
-    mig_ok[14] = 0x04;
-    mig_ok[15] = 0x00;
-    healthy[sa41 + 0x14..sa41 + 0x14 + 38].copy_from_slice(&mig_ok);
-
     let mut corrupt = healthy.clone();
+    corrupt[sa29..sa29 + EH55_BGO_SECTOR_STRIDE].fill(0xFF);
+    corrupt[sa29 + 0x100..sa29 + 0x200].fill(0x00);
+    for i in 0..4 {
+        corrupt[sa29 + 0x04 + i * 4..sa29 + 0x06 + i * 4].copy_from_slice(&0xF101u16.to_le_bytes());
+    }
+    for i in 0..4 {
+        corrupt[sa41 + 0x04 + i * 4..sa41 + 0x06 + i * 4].copy_from_slice(&0xF101u16.to_le_bytes());
+    }
+    write_tid_slots(&mut corrupt, sa41);
     corrupt[sa41 + 0x14..sa41 + 0x14 + 38].copy_from_slice(&mig_bad);
     for sa in std::iter::once(35).chain(56..=67) {
         let base = eh55_bgo_sector_offset(sa).unwrap();
@@ -105,11 +109,13 @@ fn builds_and_cow_verifies_bgo_repair_plan_offline() {
 
     let plan = build_bgo_repair_plan(&corrupt, None).unwrap();
     assert!(plan.post_audit.healthy);
+    assert_eq!(plan.post_audit.p1_active_count, 1);
+    assert_eq!(plan.post_audit.p1_migrating_count, 0);
     assert!(plan.post_audit.p2_missing_ids.is_empty());
     assert!(plan.post_audit.corrupt_sas.is_empty());
     assert_eq!(plan.post_audit.l2p_tag_mismatches, 0);
     assert_eq!(plan.post_audit.fat_mirror_mismatches, 0);
-    assert_eq!(plan.erased_sas, vec![70]);
+    assert_eq!(plan.erased_sas, vec![41, 70]);
     assert!(!plan.ops.is_empty());
 }
 

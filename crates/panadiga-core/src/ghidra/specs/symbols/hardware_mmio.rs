@@ -3,12 +3,14 @@
 use super::super::SymbolSpec;
 use super::sym;
 use crate::constants::{
-    AM34_ASIC_MMIO_BASE, AM34_DAVIS_PRI_MMIO_BASE, AM34_DAVIS_SEC_MMIO_BASE, AM34_DRV_S211_BASE,
-    AM34_EH55_BGO_TABLE_VA, AM34_EH55_DRV_EXTRHEAD_BASE, AM34_EH55_FLASH_BGO_BASE,
-    AM34_EH55_UPPER_EEMUL_BASE, AM34_FLASH_BASE, AM34_FLASH_BGO_BASE, AM34_FLASH_UNCACHED_BASE,
+    AIOF_V_OFF, AIOF_VMODESEL_OFF, AM34_AIOF_BASE, AM34_ASIC_MMIO_BASE, AM34_AVDD_BASE,
+    AM34_DAVIS_PRI_MMIO_BASE, AM34_DAVIS_SEC_MMIO_BASE, AM34_DRV_S211_BASE, AM34_EH55_BGO_TABLE_VA,
+    AM34_EH55_DRV_EXTRHEAD_BASE, AM34_EH55_FLASH_BGO_BASE, AM34_EH55_UPPER_EEMUL_BASE,
+    AM34_FLASH_BASE, AM34_FLASH_BGO_BASE, AM34_FLASH_UNCACHED_BASE, AM34_FORBIDDEN_LETHAL_REG,
+    AM34_IC7501_TBUS_BASE, AM34_IC7501_TBUS_TX_OFF, AM34_IIC0_BASE, AM34_IIC1_BASE,
     AM34_NVRAM_BASE, AM34_NVRAM_UNCACHED_BASE, AM34_PATA_MMIO_BASE,
     AM34_PROG061_SDRAM_UNCACHED_BASE, AM34_SC0_BASE, AM34_SDCD_BUS_CFG_VA, AM34_SDCD_MMIO_BASE,
-    AM34_SRAM_LOADER_BASE,
+    AM34_SRAM_LOADER_BASE, AM34_SYS_STATUS_REG, AM34_WDBC_REG, AVDD_NPALCTL0_OFF,
 };
 
 pub(super) const SPECS: &[SymbolSpec] = &[
@@ -211,5 +213,66 @@ pub(super) const SPECS: &[SymbolSpec] = &[
         AM34_DRV_S211_BASE,
         "DRV_S211_DECOMP_BASE",
         "DRV S211 F/E Optical Drive Decompressed SDRAM Target",
+    ),
+    // Verified TBC (AIOF/AVDD/IIC0-1/IC7501), DAVIS Resets, and WDBC / FORBIDDEN 0xC000100C
+    sym(
+        AM34_AIOF_BASE + AIOF_VMODESEL_OFF,
+        "AIOF_VMODESEL",
+        "AIOF Video Output Mode Select (0x8020 NTSC, 0x8021 PAL-M, 0x8027 PAL)",
+    ),
+    sym(
+        AM34_AIOF_BASE + AIOF_V_OFF,
+        "AIOF_V_CLK_CTRL",
+        "AIOF Vertical/Clock Control (0x8001 clock_start, 0x8039 ddr_stop)",
+    ),
+    sym(
+        0x8900_0420,
+        "DAVIS_CH0_RESET_CTRL",
+        "DAVIS CH0 ODD Reset Polarity Register (value 2 active-LOW; EV-20261119-005)",
+    ),
+    sym(
+        0x8900_0C20,
+        "DAVIS_CH1_RESET_CTRL",
+        "DAVIS CH1 HDD Reset Polarity Register (value 1 active-HIGH; EV-20261119-005)",
+    ),
+    sym(
+        AM34_AVDD_BASE + AVDD_NPALCTL0_OFF,
+        "AVDD_NPALCTL0",
+        "AVDD Analog Decoder NTSC/PAL Encoder Control 0",
+    ),
+    sym(
+        AM34_WDBC_REG,
+        "WDBC_RESET_CTRL",
+        "AM34 Watchdog / System Reset Control (15s reset guard)",
+    ),
+    sym(
+        AM34_SYS_STATUS_REG,
+        "SYS_STATUS_FE_REL",
+        "AM34 System Status / Front-End Reset Release Register (bit 15 = 0x8000)",
+    ),
+    sym(
+        AM34_FORBIDDEN_LETHAL_REG,
+        "DO_NOT_READ_LETHAL_0xC000100C",
+        "CRITICAL WARNING: NEVER READ 0xC000100C (halts AM34 bus/WDT permanently)",
+    ),
+    sym(
+        AM34_IIC0_BASE,
+        "IIC0_MASTER_BASE",
+        "AM34 I2C Master Controller 0 (IC3001 A/V Switch Matrix bus)",
+    ),
+    sym(
+        AM34_IIC1_BASE,
+        "IIC1_MASTER_BASE",
+        "AM34 I2C Master Controller 1 Base",
+    ),
+    sym(
+        AM34_IC7501_TBUS_BASE,
+        "IC7501_TBUS_CTRL",
+        "IC7501 Front-Panel / Timer MCU TBUS Control Strobe (bit 4 ACK)",
+    ),
+    sym(
+        AM34_IC7501_TBUS_BASE + AM34_IC7501_TBUS_TX_OFF,
+        "IC7501_TBUS_TX_MBOX",
+        "IC7501 TBUS TX 16-byte Mailbox (0x8A 255s keepalive, 0xA3 VFD text)",
     ),
 ];

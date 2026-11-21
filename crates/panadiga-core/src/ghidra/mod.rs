@@ -12,3 +12,4 @@ pub use render::{
     generate_ghidra_auto_unbrick_audit, generate_ghidra_memory_map,
     generate_ghidra_mn103_fix_decompilation, generate_ghidra_symbols,
 };
+pub use specs::{ModelMemoryRegionSpec, memory_region_specs_for_model};

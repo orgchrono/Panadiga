@@ -1,3 +1,5 @@
+#![deny(unsafe_code)]
+
 //! Matsushita MN103S (`BOOT.BIN` `FUN_4400a666`) 64-bit Feistel Block Cipher & Strided Adler-32
 //!
 //! Pure-Rust implementation reconstructed directly from `BOOT.BIN` (`FUN_44011d42` key schedule,
@@ -142,6 +144,36 @@ pub fn feistel_encrypt_buffer(data: &mut [u8], round_key: &[u8; 32], sbox: &[u8;
     transform_buffer_in_place(data, round_key, sbox, false);
 }
 
+/// Applies partial edge Feistel encryption/decryption over `buf`:
+/// - When `aligned_len <= 2 * aligned_span` (including `span <= len < 2 * span`),
+///   transforms `[..aligned_len]` once without double-encrypting the overlapping middle.
+/// - Otherwise, transforms the leading `aligned_span` and trailing `aligned_span` blocks.
+pub(crate) fn feistel_crypt_edges(
+    buf: &mut [u8],
+    span: usize,
+    round_key: &[u8; 32],
+    encrypt: bool,
+) {
+    let aligned_span = span & !7;
+    let aligned_len = buf.len() & !7;
+    if aligned_span == 0 || aligned_len == 0 {
+        return;
+    }
+    let is_decrypt = !encrypt;
+    let sbox = &crate::constants::PANA_FEISTEL_SBOX_256;
+    if aligned_len <= 2 * aligned_span {
+        transform_buffer_in_place(&mut buf[..aligned_len], round_key, sbox, is_decrypt);
+    } else {
+        transform_buffer_in_place(&mut buf[..aligned_span], round_key, sbox, is_decrypt);
+        transform_buffer_in_place(
+            &mut buf[(aligned_len - aligned_span)..aligned_len],
+            round_key,
+            sbox,
+            is_decrypt,
+        );
+    }
+}
+
 /// Computes Panasonic's strided Adler-32 checksum (`FUN_4401e5a3`, `s1 | (s2 << 16)`).
 pub fn adler32_panasonic_strided(data: &[u8], step: usize) -> u32 {
     const MOD_ADLER: u32 = 65_521;
@@ -222,24 +254,18 @@ pub fn derive_round_key_from_custom_key_8b(xored_key: &[u8; 8]) -> [u8; 32] {
 /// Detects the Feistel round key and label matching the provided header buffer.
 ///
 /// Tests `PANA_FEISTEL_ROUND_KEY_32B` first, then each key in `PANA_DVD_KEY_CATALOG`.
-/// Checks prefixes `b"PROG"`, `b"DRV "`, `b"MAIN"`, and `b"STB "` at offset `0` or `48`.
+/// Checks prefixes `b"PROG"`, `b"DRV "`, `b"MAIN"`, and `b"STB "` at offsets `0`, `48` (Dvd48B slot 1), and `64` (Dvd64B slot 1).
 pub fn detect_frm_feistel_key(header_64b: &[u8]) -> Option<(&'static str, [u8; 32])> {
     const PREFIXES: [&[u8; 4]; 4] = [b"PROG", b"DRV ", b"MAIN", b"STB "];
     let check_key = |rk: &[u8; 32]| -> bool {
-        if header_64b.len() >= 8 {
-            let mut blk = [0u8; 8];
-            blk.copy_from_slice(&header_64b[..8]);
-            let dec = feistel_decrypt_block(&blk, rk, &crate::constants::PANA_FEISTEL_SBOX_256);
-            if PREFIXES.iter().any(|pfx| dec.starts_with(*pfx)) {
-                return true;
-            }
-        }
-        if header_64b.len() >= 56 {
-            let mut blk = [0u8; 8];
-            blk.copy_from_slice(&header_64b[48..56]);
-            let dec = feistel_decrypt_block(&blk, rk, &crate::constants::PANA_FEISTEL_SBOX_256);
-            if PREFIXES.iter().any(|pfx| dec.starts_with(*pfx)) {
-                return true;
+        for off in [0usize, 48, 64] {
+            if header_64b.len() >= off + 8 {
+                let mut blk = [0u8; 8];
+                blk.copy_from_slice(&header_64b[off..off + 8]);
+                let dec = feistel_decrypt_block(&blk, rk, &crate::constants::PANA_FEISTEL_SBOX_256);
+                if PREFIXES.iter().any(|pfx| dec.starts_with(*pfx)) {
+                    return true;
+                }
             }
         }
         false
@@ -260,52 +286,5 @@ pub fn detect_frm_feistel_key(header_64b: &[u8]) -> Option<(&'static str, [u8; 3
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::constants::PANA_FEISTEL_ROUND_KEY_32B;
-
-    #[test]
-    fn test_derive_round_key_from_custom_key_8b_matches_old_df72() {
-        let old_df72_key = [0xDF, 0x72, 0x15, 0xC7, 0x42, 0x7F, 0xD0, 0x10];
-        let derived = derive_round_key_from_custom_key_8b(&old_df72_key);
-        assert_eq!(derived, PANA_FEISTEL_ROUND_KEY_32B);
-    }
-
-    #[test]
-    fn test_derive_round_key_le2011_distinct_and_deterministic() {
-        let le2011_key = [0x08, 0xE0, 0x3D, 0x85, 0x9A, 0xF9, 0xF3, 0xEE];
-        let derived = derive_round_key_from_custom_key_8b(&le2011_key);
-        assert_ne!(derived, PANA_FEISTEL_ROUND_KEY_32B);
-        let derived2 = derive_round_key_from_custom_key_8b(&le2011_key);
-        assert_eq!(derived, derived2);
-    }
-
-    #[test]
-    fn test_detect_frm_feistel_key_on_real_files_if_present() {
-        let candidate_paths = [
-            (
-                "firmware_and_images/PANA_DVD.FRM",
-                "../../firmware_and_images/PANA_DVD.FRM",
-                "old_df72",
-            ),
-            (
-                "firmware_and_images/dmr-eh50/PANA_DVD.FRM",
-                "../../firmware_and_images/dmr-eh50/PANA_DVD.FRM",
-                "le2011_08e0",
-            ),
-            (
-                "firmware_and_images/dmr-eh49_59_69/eh49/PANA_DVD.FRM",
-                "../../firmware_and_images/dmr-eh49_59_69/eh49/PANA_DVD.FRM",
-                "old_df72",
-            ),
-        ];
-        for (p1, p2, expected_label) in candidate_paths {
-            if let Ok(data) = std::fs::read(p1).or_else(|_| std::fs::read(p2)) {
-                let res = detect_frm_feistel_key(&data[..64]);
-                assert!(res.is_some(), "Should detect key for {p1}");
-                let (label, _) = res.unwrap();
-                assert_eq!(label, expected_label);
-            }
-        }
-    }
-}
+#[path = "feistel_tests.rs"]
+mod tests;

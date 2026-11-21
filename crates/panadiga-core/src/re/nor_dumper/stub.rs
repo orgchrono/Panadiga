@@ -1,3 +1,5 @@
+#![deny(unsafe_code)]
+
 //! MN103S machine-code stub assembler and `DIGADIAG.FRM` packager for read-only NOR dumps.
 
 use anyhow::{Result, bail};
@@ -6,6 +8,10 @@ use byteorder::{ByteOrder, LittleEndian};
 use super::{HEADER_PREFIX_LEN, NOR_MAGIC_FOOTER, NOR_MAGIC_HEADER, validate_nor_dump_range};
 use crate::constants::PANA_DIGADIAG_FRM_SIZE;
 use crate::crypto::build_digadiag_frm;
+use crate::re::mn10300_emit::{
+    emit_add_sp_imm8, emit_bne_back, emit_call16_placeholder, emit_mov_imm32, emit_movbu_mem,
+    patch_s16_rel,
+};
 
 /// Verified MN103S Sleigh subroutine: polls `SC0STR` (`0xD400200C`) bits `0xA0` (`TXBUSY|TXBF`,
 /// matching `PROG061` `FUN_50404d15` @ `0x50404D37` & `BOOT.BIN` `uart0_putc` @ `0x440047DD`)
@@ -30,40 +36,6 @@ pub(crate) const PUTC_D3_BYTES: [u8; 46] = [
     0xDF, 0x00, 0x00, // RET [], 0
 ];
 
-fn emit_mov_imm32_reg(buf: &mut Vec<u8>, sub_op: u8, imm: u32) -> usize {
-    let off = buf.len();
-    buf.push(0xFC);
-    buf.push(sub_op);
-    buf.extend_from_slice(&imm.to_le_bytes());
-    off + 2
-}
-
-fn emit_call_rel16(buf: &mut Vec<u8>) -> usize {
-    let insn_off = buf.len();
-    buf.extend_from_slice(&[0xCD, 0x00, 0x00, 0x00, 0x00]);
-    insn_off
-}
-
-fn emit_bne_back(buf: &mut Vec<u8>, target_off: usize) -> Result<()> {
-    let insn_off = buf.len();
-    let disp = (target_off as isize) - (insn_off as isize);
-    if !(-128..=127).contains(&disp) {
-        bail!("MN103S BNE displacement out of s8 range: {disp}");
-    }
-    buf.push(0xC9);
-    buf.push((disp as i8) as u8);
-    Ok(())
-}
-
-fn patch_call_rel16(buf: &mut [u8], call_insn_off: usize, target_off: usize) -> Result<()> {
-    let disp = (target_off as isize) - (call_insn_off as isize);
-    if !(-32768..=32767).contains(&disp) {
-        bail!("MN103S CALL displacement out of s16 range: {disp}");
-    }
-    LittleEndian::write_i16(&mut buf[call_insn_off + 1..call_insn_off + 3], disp as i16);
-    Ok(())
-}
-
 /// Assembles an executable MN103S read-only NOR UART dumper stub (`PANADMP1..PANADONE`).
 pub fn build_readonly_nor_dumper_stub(
     start_addr: u32,
@@ -83,46 +55,49 @@ pub fn build_readonly_nor_dumper_stub(
     header_data.extend_from_slice(&total_len.to_le_bytes());
     header_data.extend_from_slice(&block_size.to_le_bytes());
 
-    let hdr_start_patch = emit_mov_imm32_reg(&mut buf, 0xDC, 0);
-    let hdr_end_patch = emit_mov_imm32_reg(&mut buf, 0xDD, 0);
-    let call_emit_hdr = emit_call_rel16(&mut buf);
+    let hdr_start_patch = emit_mov_imm32(&mut buf, 0xDC, 0);
+    let hdr_end_patch = emit_mov_imm32(&mut buf, 0xDD, 0);
+    let call_emit_hdr = emit_call16_placeholder(&mut buf);
 
-    let _ = emit_mov_imm32_reg(&mut buf, 0xDC, start_addr);
-    let _ = emit_mov_imm32_reg(&mut buf, 0xDD, start_addr.wrapping_add(total_len));
+    let _ = emit_mov_imm32(&mut buf, 0xDC, start_addr);
+    let _ = emit_mov_imm32(&mut buf, 0xDD, start_addr.wrapping_add(total_len));
 
     let block_loop_off = buf.len();
     buf.extend_from_slice(&[0x8A, 0x00]); // MOV 0, D2
-    let _ = emit_mov_imm32_reg(&mut buf, 0xCD, block_size); // MOV imm32, D1
+    let _ = emit_mov_imm32(&mut buf, 0xCD, block_size); // MOV imm32, D1
 
     let byte_loop_off = buf.len();
-    buf.extend_from_slice(&[0xF0, 0x40, 0x83, 0xE2]); // MOVBU (A0), D0; MOV D0, D3; ADD D0, D2
-    let call_putc_data = emit_call_rel16(&mut buf);
+    emit_movbu_mem(&mut buf, 0, 0); // MOVBU (A0), D0
+    buf.extend_from_slice(&[0x83, 0xE2]); // MOV D0, D3; ADD D0, D2
+    let call_putc_data = emit_call16_placeholder(&mut buf);
     buf.extend_from_slice(&[0x20, 0x01, 0x29, 0xFF, 0xA5, 0x00]); // ADD 1, A0; ADD -1, D1; CMP 0, D1
-    emit_bne_back(&mut buf, byte_loop_off)?;
+    emit_bne_back(&mut buf, byte_loop_off, "BNE")?;
 
     buf.extend_from_slice(&[0x85, 0x04]); // MOV 4, D1
     let csum_loop_off = buf.len();
     buf.extend_from_slice(&[0x88, 0x83]); // MOV D2, D0; MOV D0, D3
-    let call_putc_csum = emit_call_rel16(&mut buf);
+    let call_putc_csum = emit_call16_placeholder(&mut buf);
     buf.extend_from_slice(&[0xF8, 0xC6, 0x08, 0x29, 0xFF, 0xA5, 0x00]); // LSR 8, D2; ADD -1, D1; CMP 0, D1
-    emit_bne_back(&mut buf, csum_loop_off)?;
+    emit_bne_back(&mut buf, csum_loop_off, "BNE")?;
 
     buf.push(0xB4); // CMP A1, A0
-    emit_bne_back(&mut buf, block_loop_off)?;
+    emit_bne_back(&mut buf, block_loop_off, "BNE")?;
 
-    let ftr_start_patch = emit_mov_imm32_reg(&mut buf, 0xDC, 0);
-    let ftr_end_patch = emit_mov_imm32_reg(&mut buf, 0xDD, 0);
-    let call_emit_ftr = emit_call_rel16(&mut buf);
+    let ftr_start_patch = emit_mov_imm32(&mut buf, 0xDC, 0);
+    let ftr_end_patch = emit_mov_imm32(&mut buf, 0xDD, 0);
+    let call_emit_ftr = emit_call16_placeholder(&mut buf);
     buf.extend_from_slice(&[0xCA, 0x00]); // BRA .
 
     let emit_span_off = buf.len();
-    buf.extend_from_slice(&[0xF8, 0xFE, 0xFC]); // ADD -4, SP (preserve return PC at (4, SP))
+    emit_add_sp_imm8(&mut buf, -4); // preserve return PC at (4, SP)
     let emit_span_loop = buf.len();
-    buf.extend_from_slice(&[0xF0, 0x40, 0x83]); // MOVBU (A0), D0; MOV D0, D3
-    let call_putc_span = emit_call_rel16(&mut buf);
+    emit_movbu_mem(&mut buf, 0, 0); // MOVBU (A0), D0
+    buf.push(0x83); // MOV D0, D3
+    let call_putc_span = emit_call16_placeholder(&mut buf);
     buf.extend_from_slice(&[0x20, 0x01, 0xB4]); // ADD 1, A0; CMP A1, A0
-    emit_bne_back(&mut buf, emit_span_loop)?;
-    buf.extend_from_slice(&[0xF8, 0xFE, 0x04, 0xDF, 0x00, 0x00]); // ADD +4, SP; RET [], 0
+    emit_bne_back(&mut buf, emit_span_loop, "BNE")?;
+    emit_add_sp_imm8(&mut buf, 4);
+    buf.extend_from_slice(&[0xDF, 0x00, 0x00]); // RET [], 0
 
     let putc_off = buf.len();
     buf.extend_from_slice(&PUTC_D3_BYTES);
@@ -140,7 +115,7 @@ pub fn build_readonly_nor_dumper_stub(
         (call_putc_csum, putc_off),
         (call_putc_span, putc_off),
     ] {
-        patch_call_rel16(&mut buf, call_off, tgt)?;
+        patch_s16_rel(&mut buf, call_off, tgt, "CALL")?;
     }
 
     for &(patch_off, rel_off) in &[

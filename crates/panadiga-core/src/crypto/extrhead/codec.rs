@@ -1,3 +1,5 @@
+#![deny(unsafe_code)]
+
 //! `EXTRHEAD`/`EXTRFOOT` header parser, packer, and recursive unpacker.
 
 use anyhow::{Context, Result, bail};
@@ -132,7 +134,7 @@ fn unpack_extrhead_inner(
     }
 
     let header = parse_extrhead_header(&hdr_blk)?;
-    if header.algo > 2 {
+    if header.algo > 3 {
         bail!("Unsupported EXTRHEAD compression algo: {}", header.algo);
     }
 

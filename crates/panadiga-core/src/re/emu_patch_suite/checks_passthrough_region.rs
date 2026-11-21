@@ -16,7 +16,7 @@ use super::types::PatchVerificationCheck;
 
 const TEST_RET_SENTINEL_VA: u32 = 0x577F_BEEF;
 
-pub(super) fn verify_tbc_passthrough_routines(
+pub(crate) fn verify_tbc_passthrough_routines(
     main_patched: &[u8],
 ) -> Result<PatchVerificationCheck> {
     let mut vm = new_spansion_nor_vm();

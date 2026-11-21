@@ -30,10 +30,10 @@
     { "key": "mode3", "mode": 3, "badge_variant": "warning" }
   ],
   "flash_geometries": [
-    { "key": "mb2", "size_mb": 2, "microsector_range": "SA38..SA45" },
-    { "key": "mb4", "size_mb": 4, "microsector_range": "SA70..SA77" },
+    { "key": "mb2", "size_mb": 2, "microsector_range": "SA31..SA34" },
+    { "key": "mb4", "size_mb": 4, "microsector_range": "SA63..SA70" },
     { "key": "mb8", "size_mb": 8, "microsector_range": "SA134..SA141" },
-    { "key": "mb16", "size_mb": 16, "microsector_range": "SA254..SA269" }
+    { "key": "mb16", "size_mb": 16, "microsector_range": "SA127" }
   ],
   "commands": [
     {
@@ -75,9 +75,9 @@
       "timeout": "ctrl_short"
     },
     {
-      "id": "HANDSHAKE",
+      "id": "IDENTIFY",
       "category": "ocd_flash",
-      "syntax": "HANDSHAKE",
+      "syntax": "IDENTIFY [PASSIVE|NORMAL|JIG] [ms]",
       "timeout": "handshake"
     },
     {
@@ -89,9 +89,12 @@
       "timeout": "query_default"
     },
     {
-      "id": "SCAN",
+      "id": "JOB",
       "category": "ocd_flash",
-      "syntax": "SCAN",
+      "syntax": "JOB [STATUS|NVRAM_CLEAN CONFIRM|BGO_APPLY CONFIRM|VAULT_BACKUP]",
+      "default_arg": "STATUS",
+      "options": [["status", "STATUS"], ["vault", "VAULT_BACKUP"]],
+      "dangerous": true,
       "timeout": "logic_sweep"
     },
     {
@@ -297,8 +300,8 @@
         ["autoBypass", "25000 JIG:2500 AUTO RELEASE"],
         ["readNvram", "25000 JIG:2500 READ:{{AM34_NVRAM_UNCACHED_ADDR}},20 RELEASE"],
         ["readMem", "25000 JIG:2500 READ RELEASE"],
-        ["writeMem", "25000 JIG:2500 WRITE RELEASE"],
-        ["formatBgo", "35000 JIG:2500 FORMAT RELEASE"],
+        ["writeMem", "25000 JIG:2500 NORUNLOCK:CONFIRM_UPPER_NOR WRITE RELEASE"],
+        ["formatBgo", "35000 JIG:2500 NORUNLOCK:CONFIRM_UPPER_NOR FORMAT RELEASE"],
         ["dumpNor", "{{WDT_DUMPNOR_CAPTURE_WINDOW_MS}} JIG:2500 DUMP RELEASE"],
         ["passive", "15000 NORMAL NONE RELEASE"],
         ["wakeJig", "25000 JIG:2500 AUTO RELEASE WAKE:30000"]
@@ -429,6 +432,141 @@
       "id": "BOOTSEL",
       "category": "probe",
       "syntax": "BOOTSEL",
+      "dangerous": true,
+      "timeout": "probe_fast"
+    },
+    {
+      "id": "SELFTEST",
+      "category": "probe",
+      "syntax": "SELFTEST [LOOPBACK]",
+      "options": [["loopback", "LOOPBACK"]],
+      "timeout": "probe_fast"
+    },
+    {
+      "id": "TARGET_PROFILE",
+      "category": "ocd_flash",
+      "syntax": "TARGET_PROFILE [DMR-EH55|DMR-ES35V|DMR-EZ485V|DMR-ES10]",
+      "default_arg": "DMR-EH55",
+      "timeout": "ctrl_short"
+    },
+    {
+      "id": "VAULT",
+      "category": "ocd_flash",
+      "syntax": "VAULT [STATUS|LIST|DUMP <1..3>|ERASE <1..3> CONFIRM]",
+      "default_arg": "STATUS",
+      "timeout": "query_default"
+    },
+    {
+      "id": "BLACKBOX",
+      "category": "probe",
+      "syntax": "BLACKBOX [STATUS|DUMP|SNAP [msg]|CLEAR CONFIRM]",
+      "default_arg": "STATUS",
+      "timeout": "query_default"
+    },
+    {
+      "id": "PROBE_CFG",
+      "category": "probe",
+      "syntax": "PROBE_CFG [STATUS|CAL_ADC <gain_ppm> [offset_mv]|RESET CONFIRM]",
+      "default_arg": "STATUS",
+      "timeout": "probe_fast"
+    },
+    {
+      "id": "RECIPE",
+      "category": "ocd_flash",
+      "syntax": "RECIPE [STATUS|LIST|VERIFY]",
+      "default_arg": "STATUS",
+      "timeout": "probe_fast"
+    },
+    {
+      "id": "BGO_INSPECT",
+      "category": "ocd_flash",
+      "syntax": "BGO_INSPECT",
+      "timeout": "query_default"
+    },
+    {
+      "id": "EEMUL_INSPECT",
+      "category": "ocd_flash",
+      "syntax": "EEMUL_INSPECT",
+      "timeout": "query_default"
+    },
+    {
+      "id": "IRRX",
+      "category": "electrical",
+      "syntax": "IRRX [ms] [GP6..9|16..22]",
+      "default_arg": "5000 GP7",
+      "timeout": "capture_medium"
+    },
+    {
+      "id": "SERVMACRO",
+      "category": "electrical",
+      "syntax": "SERVMACRO <SERVICE_MODE|SELF_CHECK|OPTICAL_CAL|ERR_HISTORY|RELEASE> [GPn]",
+      "default_arg": "SELF_CHECK",
+      "timeout": "capture_medium"
+    },
+    {
+      "id": "MMIO_SNAP",
+      "category": "ocd_flash",
+      "syntax": "MMIO_SNAP [DIFF]",
+      "timeout": "query_default"
+    },
+    {
+      "id": "PWROSC",
+      "category": "electrical",
+      "syntax": "PWROSC [ms]",
+      "default_arg": "500",
+      "timeout": "uart_short"
+    },
+    {
+      "id": "TBUSSNIFF",
+      "category": "uart_fmu",
+      "syntax": "TBUSSNIFF [ms]",
+      "default_arg": "2000",
+      "timeout": "uart_medium"
+    },
+    {
+      "id": "M0KEEPALIVE",
+      "category": "uart_fmu",
+      "syntax": "M0KEEPALIVE [ON [1000..30000ms]|OFF|STATUS]",
+      "default_arg": "STATUS",
+      "options": [
+        ["status", "STATUS"],
+        ["on10s", "ON 10000"],
+        ["off", "OFF"]
+      ],
+      "timeout": "probe_fast"
+    },
+    {
+      "id": "I2C_SCAN",
+      "category": "electrical",
+      "syntax": "I2C_SCAN",
+      "timeout": "query_default"
+    },
+    {
+      "id": "EEPROM",
+      "category": "ocd_flash",
+      "syntax": "EEPROM <INFO|READ <addr> <off> <len>|WRITE <addr> <off> <hex> CONFIRM>",
+      "default_arg": "INFO",
+      "timeout": "query_default"
+    },
+    {
+      "id": "USBMODE",
+      "category": "probe",
+      "syntax": "USBMODE [SINGLE|DUAL_CDC|STATUS]",
+      "default_arg": "STATUS",
+      "timeout": "probe_fast"
+    },
+    {
+      "id": "BLE",
+      "category": "probe",
+      "syntax": "BLE [STATUS|DISCONNECT]",
+      "default_arg": "STATUS",
+      "timeout": "probe_fast"
+    },
+    {
+      "id": "BLE_NOR_AUTH",
+      "category": "probe",
+      "syntax": "BLE_NOR_AUTH <CONFIRM [1..16]|REVOKE|STATUS>",
+      "default_arg": "STATUS",
       "dangerous": true,
       "timeout": "probe_fast"
     }

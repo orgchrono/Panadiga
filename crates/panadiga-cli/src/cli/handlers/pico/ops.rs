@@ -48,15 +48,16 @@ fn describe_dcsr_state(dcsr: u32) -> &'static str {
 
 pub(super) fn query_pico_dcsr_flow(port: &str, baud: u32, cmd: &str) -> Result<()> {
     let mut ser = open_cdc(port, baud, Duration::from_millis(1200))?;
-    let ping = send_and_read_until(&mut *ser, "PING", &["PONG"], Duration::from_millis(800));
-    let vdd_raw = send_and_read_until(&mut *ser, "STATUS", &["VDD"], Duration::from_millis(800));
-    let vdd = parse_vdd_reply(&vdd_raw);
-    let reply = send_and_read_until(
+    let prompt_stops = ["PANADIGA>", "P7501>"];
+    let ping = send_and_read_until(&mut *ser, "PING", &prompt_stops, Duration::from_millis(800));
+    let vdd_raw = send_and_read_until(
         &mut *ser,
-        cmd,
-        &["PANADIGA>", "P7501>", "DCSR"],
-        Duration::from_millis(2500),
+        "STATUS",
+        &prompt_stops,
+        Duration::from_millis(800),
     );
+    let vdd = parse_vdd_reply(&vdd_raw);
+    let reply = send_and_read_until(&mut *ser, cmd, &prompt_stops, Duration::from_millis(2500));
 
     log_println!("====================================================================");
     log_println!("   PANADIGA PICO P7501 ASYNC UART TELEMETRY ({})", port);
@@ -76,6 +77,15 @@ pub(super) fn query_pico_dcsr_flow(port: &str, baud: u32, cmd: &str) -> Result<(
     }
     if let Some(dcsr) = extract_dcsr_value(&reply) {
         log_println!("DCSR:   0x{:08X} -> {}", dcsr, describe_dcsr_state(dcsr));
+    } else if let Some(ident) = panadiga_core::pico::protocol::parse_ident_line(&reply) {
+        log_println!(
+            "IDENT:  model={} flash={} jedec=0x{:08X} ipl_crc32=0x{:08X} state={}",
+            ident.model,
+            ident.flash,
+            ident.jedec,
+            ident.ipl_crc32,
+            ident.state
+        );
     }
     log_println!("RAW:    {}", reply.trim());
     log_println!("====================================================================");

@@ -101,9 +101,16 @@ pub fn emit_call32_abs(buf: &mut Vec<u8>, base_va: u32, target_va: u32) {
     buf.extend_from_slice(&[0x00, 0x00]);
 }
 
-fn emit_call16_frame(buf: &mut Vec<u8>, pt: &mut PatchTable, target: usize, frame_bytes: u8) {
+/// Emits `CALL16` (`0xCD 0x00 0x00 0x00 0x00`) placeholder and returns its instruction offset.
+pub fn emit_call16_placeholder(buf: &mut Vec<u8>) -> usize {
     let off = buf.len();
-    buf.extend_from_slice(&[0xCD, 0x00, 0x00, 0x00, frame_bytes]);
+    buf.extend_from_slice(&[0xCD, 0x00, 0x00, 0x00, 0x00]);
+    off
+}
+
+fn emit_call16_frame(buf: &mut Vec<u8>, pt: &mut PatchTable, target: usize, frame_bytes: u8) {
+    let off = emit_call16_placeholder(buf);
+    buf[off + 4] = frame_bytes;
     pt.calls16.push((off, target));
 }
 

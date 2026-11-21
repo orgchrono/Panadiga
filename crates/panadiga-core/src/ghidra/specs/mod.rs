@@ -6,7 +6,7 @@
 mod regions;
 mod symbols;
 
-pub use regions::memory_region_specs;
+pub use regions::{memory_region_specs, memory_region_specs_for_model};
 pub use symbols::symbol_specs;
 
 use crate::constants::*;
@@ -30,13 +30,28 @@ pub const PROG061_FEISTEL_SBOX_VA: u32 = 0x5043_5C0A;
 pub const MAIN_DAVIS_TOPOLOGY_VA: u32 = 0x574D_1DE8;
 pub const MAIN_LBA48_CLAMP_VA: u32 = 0x574D_D1FC;
 pub const MAIN_APP_REGION_SIZE: u32 = 0x00E0_0000;
-pub const MAIN3060_EXPECTED_SIZE: usize = 13_427_852;
+pub const MAIN3060_EXPECTED_SIZE: usize = EXPECTED_MAIN_3060NP_SIZE_BYTES;
 pub const MAIN3410_EXPECTED_SIZE: usize = EXPECTED_MAIN_3410PQ_SIZE;
+pub const MAIN3060_LBA48_CLAMP_VA: u32 = 0x574E_499C;
+pub const MAIN3410_DEVINFO_BEQ_VA: u32 = 0x5749_8738;
+pub const MAIN3060_DEVINFO_BEQ_VA: u32 = 0x574A_01AA;
 pub const DRV_S211_EXPECTED_SIZE: usize = 1_441_792;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MemoryRegionSpec {
     pub name: &'static str,
+    pub start: u32,
+    pub size: u32,
+    pub read: bool,
+    pub write: bool,
+    pub execute: bool,
+    pub is_volatile: bool,
+}
+
+/// Owned memory region projection derived dynamically from `HardwareProfileRegistry` for any DIGA model.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ModelMemoryRegionSpec {
+    pub name: String,
     pub start: u32,
     pub size: u32,
     pub read: bool,
@@ -75,9 +90,9 @@ pub const AUDIT_KEYWORDS: &[&str] = &[
     "DDR CHECK",
 ];
 
-/// MMIO addresses searched as little-endian u32 literal pool constants in audit script.
-pub fn audit_mmio_constants() -> [LabeledAddrSpec; 6] {
-    [
+/// MMIO & firmware signature addresses searched as little-endian u32 literal pool constants in audit script.
+pub fn audit_mmio_constants() -> Vec<LabeledAddrSpec> {
+    vec![
         LabeledAddrSpec {
             address: AM34_SDCD_BUS_CFG_VA,
             label: "SDCD_BUS_WIDTH_CFG",
@@ -91,8 +106,12 @@ pub fn audit_mmio_constants() -> [LabeledAddrSpec; 6] {
             label: "SC0STR_UART0_STATUS",
         },
         LabeledAddrSpec {
+            address: AM34_EH55_FLASH_BGO_BASE,
+            label: "FLASH_NOR_EH55_BGO_START",
+        },
+        LabeledAddrSpec {
             address: AM34_FLASH_BGO_BASE,
-            label: "FLASH_NOR_BGO_START",
+            label: "FLASH_NOR_VER063_BGO_START",
         },
         LabeledAddrSpec {
             address: AM34_DAVIS_PRI_MMIO_BASE,
@@ -102,12 +121,24 @@ pub fn audit_mmio_constants() -> [LabeledAddrSpec; 6] {
             address: AM34_DAVIS_SEC_MMIO_BASE,
             label: "DAVIS_IDE_SEC_HDD_CH1",
         },
+        LabeledAddrSpec {
+            address: AM34_AIOF_BASE + AIOF_VMODESEL_OFF,
+            label: "AIOF_VMODESEL",
+        },
+        LabeledAddrSpec {
+            address: AM34_AVDD_BASE + AVDD_NPALCTL0_OFF,
+            label: "AVDD_NPALCTL0",
+        },
+        LabeledAddrSpec {
+            address: AM34_IC7501_TBUS_BASE,
+            label: "IC7501_TBUS_CTRL",
+        },
     ]
 }
 
 /// Critical function and table virtual addresses inspected for cross-references.
-pub fn critical_xref_targets() -> [LabeledAddrSpec; 6] {
-    [
+pub fn critical_xref_targets() -> Vec<LabeledAddrSpec> {
+    vec![
         LabeledAddrSpec {
             address: BOOT_UART0_GETC_VA,
             label: "boot_uart0_getc_dead",
@@ -131,6 +162,18 @@ pub fn critical_xref_targets() -> [LabeledAddrSpec; 6] {
         LabeledAddrSpec {
             address: MAIN_LBA48_CLAMP_VA,
             label: "main_hdd_cmd_lba48_clamp",
+        },
+        LabeledAddrSpec {
+            address: MAIN3060_LBA48_CLAMP_VA,
+            label: "main3060_hdd_cmd_lba48_clamp",
+        },
+        LabeledAddrSpec {
+            address: MAIN3410_DEVINFO_BEQ_VA,
+            label: "main3410_deviceinfo_check",
+        },
+        LabeledAddrSpec {
+            address: MAIN3060_DEVINFO_BEQ_VA,
+            label: "main3060_deviceinfo_check",
         },
     ]
 }
@@ -159,6 +202,24 @@ mod tests {
             );
         }
 
+        // Strict zero-overlap invariant: every Ghidra memory region must be disjoint so none are skipped.
+        for (i, a) in regions.iter().enumerate() {
+            let a_end = u64::from(a.start) + u64::from(a.size);
+            for b in &regions[i + 1..] {
+                let b_end = u64::from(b.start) + u64::from(b.size);
+                assert!(
+                    a_end <= u64::from(b.start) || b_end <= u64::from(a.start),
+                    "Overlapping Ghidra regions: {} (0x{:08X}..0x{:08X}) vs {} (0x{:08X}..0x{:08X})",
+                    a.name,
+                    a.start,
+                    a_end,
+                    b.name,
+                    b.start,
+                    b_end
+                );
+            }
+        }
+
         let symbols = symbol_specs();
         let mut sym_names = HashSet::new();
         for s in &symbols {
@@ -177,17 +238,25 @@ mod tests {
                 .iter()
                 .any(|r| r.name == "SDCD_HOST_MMIO" && r.start == 0x8900_1800)
         );
-        assert!(
-            regions
-                .iter()
-                .any(|r| r.name == "FLASH_NOR_CS1_BGO" && r.start == 0x8420_0000)
-        );
+        assert!(regions.iter().any(|r| {
+            r.name == "FLASH_NOR_CS1_IPL" && r.start == 0x8400_0000 && r.size == 0x0013_0000
+        }));
         assert!(regions.iter().any(|r| {
             r.name == "FLASH_NOR_CS1_EH55_BGO" && r.start == 0x8413_0000 && r.size == 0x002D_0000
         }));
         assert!(regions.iter().any(|r| {
             r.name == "PROG061_SDRAM_UNCACHED" && r.start == 0x9040_0000 && r.size == 0x0004_0000
         }));
+        assert!(
+            regions
+                .iter()
+                .any(|r| r.name == "AIOF_TBC_MMIO" && r.start == 0x8800_0000)
+        );
+        assert!(
+            regions
+                .iter()
+                .any(|r| r.name == "TBUS_IC7501_MMIO" && r.start == 0xDC01_0000)
+        );
         assert!(
             symbols
                 .iter()

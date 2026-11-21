@@ -4,19 +4,22 @@ use std::path::Path;
 
 use anyhow::Result;
 
-use super::super::pure::{UpperNorPatchReport, patch_flash_upper_nor_slice};
+use super::super::pure::{
+    NvramPolicyOptions, SliceIoLabels, UpperNorPatchReport, patch_flash_upper_nor_slice_with_policy,
+};
 use super::capture::{
     ensure_distinct_cow_path, read_flash_file, resolve_input_path, write_cow_file,
 };
 
-/// Copy-on-write patch in Upper NOR App/BGO (`0x040000..nvram_start-1`) with mandatory sector backup and SHA-256 audit.
-pub fn patch_flash_upper_nor_file(
+/// Policy-gated Copy-on-Write patch in Upper NOR App/BGO (`0x040000..nvram_start-1`) with mandatory sector backup and SHA-256 audit.
+pub fn patch_flash_upper_nor_file_with_policy(
     input_path: &Path,
     output_path: &Path,
     backup_path: Option<&Path>,
     flash_offset: usize,
     patch_bytes: &[u8],
     allow_critical_ipl: bool,
+    policy: &NvramPolicyOptions<'_>,
 ) -> Result<UpperNorPatchReport> {
     let resolved_input = resolve_input_path(input_path)?;
     ensure_distinct_cow_path(&resolved_input, output_path, "Output", "input flash dump")?;
@@ -49,14 +52,17 @@ pub fn patch_flash_upper_nor_file(
     )?;
 
     let flash_bytes = read_flash_file(&resolved_input)?;
-    let pure_output = patch_flash_upper_nor_slice(
+    let pure_output = patch_flash_upper_nor_slice_with_policy(
         &flash_bytes,
         flash_offset,
         patch_bytes,
         allow_critical_ipl,
-        &resolved_input.to_string_lossy(),
-        &output_path.to_string_lossy(),
-        &resolved_backup.to_string_lossy(),
+        policy,
+        SliceIoLabels::new(
+            &resolved_input.to_string_lossy(),
+            &output_path.to_string_lossy(),
+            &resolved_backup.to_string_lossy(),
+        ),
     )?;
 
     write_cow_file(
@@ -88,4 +94,24 @@ pub fn patch_flash_upper_nor_file(
         rep.patched_sha256
     );
     Ok(pure_output.report)
+}
+
+/// Fail-closed default Upper NOR CoW file patcher delegating strictly through `CapabilityGate` (no overrides).
+pub fn patch_flash_upper_nor_file(
+    input_path: &Path,
+    output_path: &Path,
+    backup_path: Option<&Path>,
+    flash_offset: usize,
+    patch_bytes: &[u8],
+    allow_critical_ipl: bool,
+) -> Result<UpperNorPatchReport> {
+    patch_flash_upper_nor_file_with_policy(
+        input_path,
+        output_path,
+        backup_path,
+        flash_offset,
+        patch_bytes,
+        allow_critical_ipl,
+        &NvramPolicyOptions::default(),
+    )
 }

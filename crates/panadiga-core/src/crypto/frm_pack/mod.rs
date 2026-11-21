@@ -1,3 +1,5 @@
+#![deny(unsafe_code)]
+
 //! Panasonic `.FRM` Container Builders (`PANA_DVD.FRM`, `PANA__SD.FRM`, and `DIGADIAG.FRM`)
 
 mod pack;
@@ -27,6 +29,7 @@ mod tests {
             FrmContainerMode::Sd,
             FrmContainerMode::Sd48,
             FrmContainerMode::Dvd,
+            FrmContainerMode::Dvd64B,
         ] {
             let (mut image, _report) = pack_frm(&[main_mod.clone(), prog_mod.clone()], mode, None)
                 .expect("pack container");

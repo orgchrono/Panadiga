@@ -8,9 +8,17 @@ pub use format::format_toc_dump_lines;
 
 use anyhow::{Result, bail};
 
-use super::super::types::{FrmModuleInfo, FrmTocDumpReport, TocEntry, TocReport};
-use super::{TocLayout, decrypt_frm_toc_with_detected_key, parse_sd_frm_toc_with_layout};
-use crate::constants::*;
+use super::super::types::{
+    DecryptedFrmTocEntry, FrmModuleInfo, FrmTocDumpReport, TocEntry, TocReport,
+};
+use super::{
+    TocLayout, decrypt_frm_toc_with_detected_key, interpret_frm_target_flag,
+    parse_sd_frm_toc_with_layout,
+};
+use crate::constants::{
+    CIPHER_BLOCK_SIZE, PANA_FRM_GLOBAL_HEADER_SIZE, PANA_FRM_PAYLOAD_OFFSET,
+    PANA_FRM_TOC_ENTRY_SIZE, PANA_FRM_TOC_SUBBLOCK_1, PANA_FRM_TOC_SUBBLOCK_2,
+};
 
 /// Dissects the first 512 bytes of `PANA_DVD.FRM` to verify the 48-byte TOC entries.
 pub fn analyze_toc(data: &[u8]) -> TocReport {
@@ -101,39 +109,60 @@ fn build_raw_toc_entries(raw: &[u8]) -> (Vec<TocEntry>, bool) {
     (toc_entries, invariants_ok)
 }
 
-fn build_frm_module_catalog(file_size: usize) -> Vec<FrmModuleInfo> {
-    vec![
-        FrmModuleInfo {
-            module_index: 1,
-            name: "Módulo 1: Sub-sistema / OSD & Fontes".to_string(),
-            target: "Front Panel / OSD / Sub-system Controller".to_string(),
-            start_offset_hex: format!("0x{:08X}", PANA_FRM_MOD1_START_OFFSET),
-            end_offset_hex: format!("0x{:08X}", PANA_FRM_MOD1_BOUNDARY),
-            payload_size_bytes: PANA_FRM_MOD1_PAYLOAD_END - PANA_FRM_MOD1_START_OFFSET,
-            padding_size_bytes: PANA_FRM_MOD1_BOUNDARY - PANA_FRM_MOD1_PAYLOAD_END,
-            hdd_correlation: "Partição 2 do HD (LBA 131072 / 64 MB, 704 KB)".to_string(),
-        },
-        FrmModuleInfo {
-            module_index: 2,
-            name: "Módulo 2: Firmware do Drive Óptico (DSP/Servo)".to_string(),
-            target: "Panasonic Optical Drive Servo Controller (MN102)".to_string(),
-            start_offset_hex: format!("0x{:08X}", PANA_FRM_MOD2_START_OFFSET),
-            end_offset_hex: format!("0x{:08X}", PANA_FRM_MOD2_BOUNDARY),
-            payload_size_bytes: PANA_FRM_MOD2_PAYLOAD_END - PANA_FRM_MOD2_START_OFFSET,
-            padding_size_bytes: PANA_FRM_MOD2_BOUNDARY - PANA_FRM_MOD2_PAYLOAD_END,
-            hdd_correlation: "Microcódigo interno transferido ao drive via ATAPI".to_string(),
-        },
-        FrmModuleInfo {
-            module_index: 3,
-            name: "Módulo 3: Main CPU Operating System & Codecs".to_string(),
-            target: "Panasonic AM34 / MN103S (UniPhier Core)".to_string(),
-            start_offset_hex: format!("0x{:08X}", PANA_FRM_MOD3_START_OFFSET),
-            end_offset_hex: format!("0x{:08X}", file_size),
-            payload_size_bytes: file_size.saturating_sub(PANA_FRM_MOD3_START_OFFSET),
-            padding_size_bytes: 0,
-            hdd_correlation: "Partição 1 do HD (LBA 65536 / 32 MB, 5.89 MB)".to_string(),
-        },
-    ]
+fn describe_module_role(entry: &DecryptedFrmTocEntry) -> (String, String) {
+    let upper = entry.module_name.trim().to_ascii_uppercase();
+    let hw = entry.hardware_family.trim();
+    let flag_desc = interpret_frm_target_flag(&entry.module_name, entry.target_flag);
+    if upper.starts_with("DRV") {
+        (
+            format!("Optical Drive Servo / DSP ({hw})"),
+            "Partição 2 do HDD / Microcódigo Drive ATAPI (DRV S211)".to_string(),
+        )
+    } else if upper.starts_with("PROG") {
+        (
+            format!("Bootloader / Diagnostics ({hw}, flag={flag_desc})"),
+            "NOR Bootloader / SD Recovery Stage".to_string(),
+        )
+    } else if upper.starts_with("MAIN") {
+        (
+            format!("Main CPU OS / AM34 ({hw}, flag={flag_desc})"),
+            "Partição 1 do HDD (LBA 65536 / AM34 DIGA OS)".to_string(),
+        )
+    } else {
+        (
+            format!(
+                "Firmware Subsystem ({hw}, model={})",
+                entry.model_group.trim()
+            ),
+            "Módulo em contêiner .FRM".to_string(),
+        )
+    }
+}
+
+fn build_frm_module_catalog(
+    selected_toc: &[DecryptedFrmTocEntry],
+    file_size: usize,
+) -> Vec<FrmModuleInfo> {
+    selected_toc
+        .iter()
+        .filter(|e| e.list_sum_valid && !e.module_name.trim().is_empty())
+        .map(|entry| {
+            let start = entry.module_offset as usize;
+            let size = entry.module_size as usize;
+            let end = start.saturating_add(size).min(file_size);
+            let (target, hdd_correlation) = describe_module_role(entry);
+            FrmModuleInfo {
+                module_index: entry.index + 1,
+                name: entry.module_name.clone(),
+                target,
+                start_offset_hex: format!("0x{start:08X}"),
+                end_offset_hex: format!("0x{end:08X}"),
+                payload_size_bytes: size,
+                padding_size_bytes: 0,
+                hdd_correlation,
+            }
+        })
+        .collect()
 }
 
 /// Pure function that dissects an in-memory `.FRM` container into a structured `FrmTocDumpReport`.
@@ -164,6 +193,7 @@ pub fn analyze_frm_toc_report(raw: &[u8], source_label: &str) -> Result<FrmTocDu
     };
 
     let selected_toc = if use_sd_toc { sd_toc } else { decrypted_toc };
+    let modules = build_frm_module_catalog(&selected_toc, file_size);
 
     Ok(FrmTocDumpReport {
         frm_file: source_label.to_string(),
@@ -172,7 +202,7 @@ pub fn analyze_frm_toc_report(raw: &[u8], source_label: &str) -> Result<FrmTocDu
         global_header_hex,
         toc_entries,
         decrypted_toc: selected_toc,
-        modules: build_frm_module_catalog(file_size),
+        modules,
         toc_invariants_valid: invariants_ok,
     })
 }

@@ -1,11 +1,147 @@
 //! Complete deterministic memory region table for AM34 / VEP79138K.
 
-use super::{MAIN_APP_REGION_SIZE, MemoryRegionSpec};
+use super::{MAIN_APP_REGION_SIZE, MemoryRegionSpec, ModelMemoryRegionSpec};
 use crate::constants::*;
 use crate::re::bgo_unbrick::{PROG061_BASE_VA, PROG061_EXPECTED_SIZE};
 use crate::re::main_passthrough::{
     DEV_SERIAL_ISR_CTX_PTR_VA, DEV_SERIAL_STATE_BASE_VA, MAIN_BASE_VA,
 };
+use crate::ssot::{HardwareProfileRegistry, NorRegionPolicy};
+
+/// Projects Ghidra memory regions dynamically from `HardwareProfileRegistry` (`soc.bus_windows`,
+/// `firmware_train` load addresses, `nor_layout`, and `soc.mmio`) for any registered DIGA model.
+pub fn memory_region_specs_for_model(model_id: &str) -> anyhow::Result<Vec<ModelMemoryRegionSpec>> {
+    let resolved = HardwareProfileRegistry::builtin().resolve_model(model_id)?;
+    let mut specs = Vec::new();
+    let mut push = |name: String,
+                    start: u32,
+                    size: u32,
+                    read: bool,
+                    write: bool,
+                    execute: bool,
+                    is_volatile: bool| {
+        if size > 0 {
+            specs.push(ModelMemoryRegionSpec {
+                name,
+                start,
+                size,
+                read,
+                write,
+                execute,
+                is_volatile,
+            });
+        }
+    };
+
+    if let Some(soc) = &resolved.soc {
+        for win in &soc.bus_windows {
+            let is_rom = win.name.contains("nor");
+            push(
+                format!("BUS_{}", win.name.to_ascii_uppercase()),
+                win.base,
+                win.size,
+                true,
+                !is_rom,
+                true,
+                false,
+            );
+            if let Some(alias) = win.uncached_alias_base
+                && alias != win.base
+            {
+                push(
+                    format!("BUS_{}_UNCACHED", win.name.to_ascii_uppercase()),
+                    alias,
+                    win.size,
+                    true,
+                    !is_rom,
+                    true,
+                    true,
+                );
+            }
+        }
+        for (mmio_name, &addr) in &soc.mmio {
+            push(
+                format!("MMIO_{}", mmio_name.to_ascii_uppercase()),
+                addr,
+                0x0000_1000,
+                true,
+                true,
+                false,
+                true,
+            );
+        }
+    }
+
+    if let (Some(soc), Some(layout)) = (&resolved.soc, &resolved.nor_layout)
+        && let Some(nor_win) = soc.bus_windows.iter().find(|w| w.name == "nor_cached")
+    {
+        for reg in &layout.regions {
+            let len = reg
+                .end_offset
+                .saturating_sub(reg.start_offset)
+                .saturating_add(1);
+            let write = !matches!(
+                reg.policy,
+                NorRegionPolicy::ReadOnlyPermanent | NorRegionPolicy::ReadOnlyReference
+            );
+            push(
+                format!(
+                    "NOR_{:?}_{}",
+                    reg.kind,
+                    reg.tag.as_deref().unwrap_or("REGION").replace(' ', "_")
+                )
+                .to_ascii_uppercase(),
+                nor_win.base.wrapping_add(reg.start_offset),
+                len,
+                true,
+                write,
+                matches!(
+                    reg.kind,
+                    crate::ssot::NorRegionKind::Ipl | crate::ssot::NorRegionKind::MainXip
+                ),
+                false,
+            );
+        }
+    }
+
+    if let Some(train) = &resolved.firmware_train {
+        if let Some(va) = train.prog_load_va {
+            push(
+                "TRAIN_PROG_RAM".to_string(),
+                va,
+                0x0008_0000,
+                true,
+                true,
+                true,
+                false,
+            );
+        }
+        if let Some(va) = train.main_load_va {
+            push(
+                "TRAIN_MAIN_RAM".to_string(),
+                va,
+                MAIN_APP_REGION_SIZE,
+                true,
+                true,
+                true,
+                false,
+            );
+        }
+        if let Some(va) = train.drv_load_va {
+            push(
+                "TRAIN_DRV_RAM".to_string(),
+                va,
+                0x0020_0000,
+                true,
+                true,
+                true,
+                false,
+            );
+        }
+    }
+
+    Ok(specs)
+}
 
 const fn region(
     name: &'static str,
@@ -123,20 +259,11 @@ pub fn memory_region_specs() -> Vec<MemoryRegionSpec> {
         region(
             "FLASH_NOR_CS1_IPL",
             AM34_FLASH_UNCACHED_BASE,
-            0x0020_0000,
+            AM34_EH55_FLASH_BGO_BASE - AM34_FLASH_UNCACHED_BASE,
             true,
             false,
             true,
             false,
-        ),
-        region(
-            "FLASH_NOR_CS1_BGO",
-            AM34_FLASH_BGO_BASE,
-            AM34_FLASH_BGO_SIZE,
-            true,
-            true,
-            false,
-            true,
         ),
         region(
             "FLASH_NOR_CS1_EH55_BGO",
@@ -166,8 +293,35 @@ pub fn memory_region_specs() -> Vec<MemoryRegionSpec> {
             false,
         ),
         region(
+            "AIOF_TBC_MMIO",
+            AM34_AIOF_BASE,
+            0x0000_1000,
+            true,
+            true,
+            false,
+            true,
+        ),
+        region(
+            "DAVIS_CH0_RESET_MMIO",
+            0x8900_0400,
+            AM34_DAVIS_MMIO_SIZE,
+            true,
+            true,
+            false,
+            true,
+        ),
+        region(
             "DAVIS_IDE_PRI_MMIO",
             AM34_DAVIS_PRI_MMIO_BASE,
+            AM34_DAVIS_MMIO_SIZE,
+            true,
+            true,
+            false,
+            true,
+        ),
+        region(
+            "DAVIS_CH1_RESET_MMIO",
+            0x8900_0C00,
             AM34_DAVIS_MMIO_SIZE,
             true,
             true,
@@ -193,9 +347,18 @@ pub fn memory_region_specs() -> Vec<MemoryRegionSpec> {
             true,
         ),
         region(
-            "SDRAM_UNCACHED",
+            "AVDD_DNR_MMIO",
+            AM34_AVDD_BASE,
+            0x0000_1000,
+            true,
+            true,
+            false,
+            true,
+        ),
+        region(
+            "SDRAM_UNCACHED_LO",
             AM34_SDRAM_UNCACHED_BASE,
-            AM34_SDRAM_SIZE,
+            AM34_PROG061_SDRAM_UNCACHED_BASE - AM34_SDRAM_UNCACHED_BASE,
             true,
             true,
             true,
@@ -211,9 +374,38 @@ pub fn memory_region_specs() -> Vec<MemoryRegionSpec> {
             false,
         ),
         region(
+            "SDRAM_UNCACHED_HI",
+            AM34_PROG061_SDRAM_UNCACHED_BASE + PROG061_EXPECTED_SIZE as u32,
+            AM34_SDRAM_SIZE
+                - (AM34_PROG061_SDRAM_UNCACHED_BASE - AM34_SDRAM_UNCACHED_BASE)
+                - PROG061_EXPECTED_SIZE as u32,
+            true,
+            true,
+            true,
+            false,
+        ),
+        region(
             "ASIC_MMIO",
             AM34_ASIC_MMIO_BASE,
-            AM34_ASIC_MMIO_SIZE,
+            0x0000_1000,
+            true,
+            true,
+            false,
+            true,
+        ),
+        region(
+            "WDBC_SYS_STATUS_MMIO",
+            AM34_WDBC_REG,
+            0x0000_1000,
+            true,
+            true,
+            false,
+            true,
+        ),
+        region(
+            "ASIC_MMIO_HI",
+            AM34_WDBC_REG + 0x0000_1000,
+            AM34_ASIC_MMIO_SIZE - 0x0000_2000,
             true,
             true,
             false,
@@ -232,6 +424,33 @@ pub fn memory_region_specs() -> Vec<MemoryRegionSpec> {
             "SC0_UART0_MMIO",
             AM34_SC0_BASE,
             AM34_SC0_SIZE,
+            true,
+            true,
+            false,
+            true,
+        ),
+        region(
+            "IIC0_MMIO",
+            AM34_IIC0_BASE,
+            0x0000_0100,
+            true,
+            true,
+            false,
+            true,
+        ),
+        region(
+            "IIC1_MMIO",
+            AM34_IIC1_BASE,
+            0x0000_0100,
+            true,
+            true,
+            false,
+            true,
+        ),
+        region(
+            "TBUS_IC7501_MMIO",
+            AM34_IC7501_TBUS_BASE,
+            0x0000_0100,
             true,
             true,
             false,

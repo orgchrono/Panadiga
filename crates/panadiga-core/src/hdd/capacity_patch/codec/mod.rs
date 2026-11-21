@@ -95,4 +95,53 @@ mod tests {
         assert_eq!(rep_fac.slot_400gb_blocks_2kb, HDD_CMD_M7920_400GB_BLOCKS);
         assert_eq!(rep_fac.clamp_branch_opcode_hex, "0xC6");
     }
+
+    #[test]
+    fn test_load_main_source_auto_detects_non_default_feistel_key() {
+        use crate::crypto::{
+            ExtrheadCompressionAlgo, ExtrheadCryptMode, PANA_DVD_KEY_CATALOG,
+            derive_round_key_from_custom_key_8b, pack_extrhead_with_options,
+        };
+        let main = build_synthetic_hdd_cmd_main();
+        let alt_key = derive_round_key_from_custom_key_8b(&PANA_DVD_KEY_CATALOG[1].1);
+        let packed = pack_extrhead_with_options(
+            &main,
+            "MAIN",
+            MAIN_DEFAULT_BASE_VA,
+            "ALTKEY",
+            ExtrheadCryptMode::Main,
+            ExtrheadCompressionAlgo::Zlib,
+            &alt_key,
+            16,
+            1,
+        )
+        .unwrap();
+
+        let loaded = load_main_source(packed).expect("should auto-detect non-default key");
+        match loaded {
+            LoadedMainSource::Extrhead {
+                mut unpacked,
+                is_plain,
+                round_key,
+            } => {
+                assert!(!is_plain);
+                assert_eq!(round_key, alt_key);
+                let (_, _, _, repacked) = patch_and_repack_extrhead(
+                    &mut unpacked,
+                    is_plain,
+                    &round_key,
+                    "EXTRHEAD_CONTAINER",
+                    "mem",
+                    HddCapacityPatchMode::DynamicUnclamped,
+                    None,
+                    None,
+                )
+                .unwrap();
+                let post =
+                    verify_and_inspect_repacked(&repacked, "EXTRHEAD_CONTAINER", "out").unwrap();
+                assert!(post.is_dynamic_unclamped);
+            }
+            _ => panic!("expected Extrhead variant"),
+        }
+    }
 }

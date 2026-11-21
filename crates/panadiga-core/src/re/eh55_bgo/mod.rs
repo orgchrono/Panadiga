@@ -8,10 +8,11 @@ mod audit_helpers;
 pub mod live_apply;
 pub mod repair_plan;
 
-pub use audit::audit_eh55_bgo_nor_8mb;
+pub use audit::{audit_bgo_nor_with_geometry, audit_eh55_bgo_nor_8mb};
 pub use audit_helpers::{
-    eh55_bgo_sector_offset, eval_bgo_migration_index, eval_bgo_migration_target,
-    parse_eh55_bgo_l2p, verify_nor_one_to_zero_compatible,
+    BgoSectorGeometry, eh55_bgo_sector_offset, eval_bgo_migration_index, eval_bgo_migration_target,
+    is_active_bgo_p1_sector, parse_bgo_l2p_with_geometry, parse_eh55_bgo_l2p,
+    verify_nor_one_to_zero_compatible,
 };
 pub use live_apply::{
     BgoApplyStage, BgoLiveApplyProgress, BgoLiveApplyReport, apply_bgo_repair_plan_live,
@@ -142,7 +143,8 @@ mod tests {
         assert!(clean_audit.healthy, "repaired BGO must pass full audit");
         assert_eq!(clean_audit.total_sectors, EH55_BGO_SECTOR_COUNT);
         assert_eq!(clean_audit.p1_active_count, 1);
-        assert_eq!(clean_audit.p1_migrating_count, 1);
+        assert_eq!(clean_audit.p1_migrating_count, 0);
+        assert_eq!(clean_audit.spare_sas.len(), 4);
         assert_eq!(clean_audit.p2_present_ids.len(), EH55_BGO_EXPECTED_P2_COUNT);
         assert!(clean_audit.p2_missing_ids.is_empty());
         assert_eq!(clean_audit.corrupt_sas.len(), 0);

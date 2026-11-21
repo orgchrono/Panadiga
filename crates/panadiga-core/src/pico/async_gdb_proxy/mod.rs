@@ -14,7 +14,8 @@ use std::time::Duration;
 use serialport::SerialPort;
 
 use super::panamon1::{
-    PANAMON1_FULL_PROMPT, PANAMON1_READ_CHUNK_BYTES, parse_panamon1_read_bytes, query_panamon1_uart,
+    PANAMON1_FULL_PROMPT, PANAMON1_READ_CHUNK_BYTES, PANAMON1_RETRY_PACING_US,
+    parse_panamon1_read_bytes, query_panamon1_uart,
 };
 use super::rsp_codec::{NorWritePolicy, build_rsp_frame, is_nor_write_blocked_with_policy};
 
@@ -69,23 +70,221 @@ const AM34_MEMORY_MAP_XML: &str = concat!(
     "</memory-map>"
 );
 
-fn parse_two_hex_args(arg: &str) -> Option<(u32, usize)> {
+/// Returns `true` when `[addr, addr + length)` touches the lethal AM34 watchdog/bus register `0xC000100C..0xC000100F`.
+#[must_use]
+pub fn is_lethal_am34_register(addr: u32, length: usize) -> bool {
+    let start = u64::from(addr);
+    let end = start.saturating_add(length.max(1) as u64);
+    let lo = u64::from(crate::constants::AM34_FORBIDDEN_LETHAL_REG);
+    start < lo + 4 && end > lo
+}
+
+/// Parses `addr,len` hexadecimal arguments used by GDB RSP `$m`, `$M`, and `$X`.
+#[must_use]
+pub fn parse_rsp_addr_len(arg: &str) -> Option<(u32, usize)> {
     let (lhs, rhs) = arg.split_once(',')?;
     let addr = u32::from_str_radix(lhs.trim().trim_start_matches("0x"), 16).ok()?;
     let len = usize::from_str_radix(rhs.trim().trim_start_matches("0x"), 16).ok()?;
     Some((addr, len))
 }
 
-pub(super) fn handle_panamon1_rsp_packet_io<T: Read + Write + ?Sized>(
+fn query_panamon1_with_retry<T: Read + Write + ?Sized>(
+    serial: &mut T,
     cmd: &str,
+    max_wait: Duration,
+) -> String {
+    let pacing = Duration::from_micros(PANAMON1_RETRY_PACING_US);
+    for attempt in 0..2 {
+        if attempt > 0 {
+            std::thread::sleep(pacing);
+        }
+        let reply = query_panamon1_uart(serial, cmd, max_wait);
+        let has_syntax_retry = reply.lines().any(|line| line.trim() == "?");
+        let missing_prompt = !reply.contains(PANAMON1_FULL_PROMPT);
+        if attempt == 0 && (has_syntax_retry || missing_prompt) {
+            continue;
+        }
+        std::thread::sleep(pacing);
+        return reply;
+    }
+    String::new()
+}
+
+fn decode_rsp_binary_x(raw: &[u8]) -> Option<Vec<u8>> {
+    let mut out = Vec::with_capacity(raw.len());
+    let mut idx = 0usize;
+    while idx < raw.len() {
+        if raw[idx] == 0x7D {
+            idx += 1;
+            if idx >= raw.len() {
+                return None;
+            }
+            out.push(raw[idx] ^ 0x20);
+        } else {
+            out.push(raw[idx]);
+        }
+        idx += 1;
+    }
+    Some(out)
+}
+
+fn write_bytes_via_panamon1<T: Read + Write + ?Sized>(
+    port: &mut T,
+    addr: u32,
+    bytes: &[u8],
+) -> &'static str {
+    for (idx, &byte) in bytes.iter().enumerate() {
+        let va = addr.wrapping_add(idx as u32);
+        let reply = query_panamon1_with_retry(
+            port,
+            &format!("W {va:08X},{byte:02X}"),
+            Duration::from_millis(400),
+        );
+        if !reply.contains("OK:WRITE")
+            || !reply.contains(PANAMON1_FULL_PROMPT)
+            || reply.contains("ERR:")
+        {
+            return "E05";
+        }
+    }
+    "OK"
+}
+
+fn handle_read_mem_cmd<T: Read + Write + ?Sized>(rest: &str, serial: Option<&mut T>) -> String {
+    let Some((addr, len)) = parse_rsp_addr_len(rest) else {
+        return "E01".to_string();
+    };
+    if len == 0 {
+        return String::new();
+    }
+    if is_lethal_am34_register(addr, len) {
+        return "E05".to_string();
+    }
+    let Some(port) = serial else {
+        return "E0A".to_string();
+    };
+    let mut raw_bytes = Vec::with_capacity(len);
+    let mut offset = 0usize;
+    while offset < len {
+        let chunk = (len - offset).min(PANAMON1_READ_CHUNK_BYTES);
+        let va = addr.wrapping_add(offset as u32);
+        let reply = query_panamon1_with_retry(
+            port,
+            &format!("R {va:08X},{chunk:X}"),
+            Duration::from_millis(500),
+        );
+        if reply.contains("ERR:E05") {
+            return "E05".to_string();
+        }
+        let Some(parsed) = parse_panamon1_read_bytes(&reply, chunk) else {
+            return "E0A".to_string();
+        };
+        raw_bytes.extend_from_slice(&parsed);
+        offset += chunk;
+    }
+    raw_bytes.iter().map(|b| format!("{b:02x}")).collect()
+}
+
+fn handle_write_mem_cmd<T: Read + Write + ?Sized>(
+    is_binary_x: bool,
+    rest: &[u8],
     serial: Option<&mut T>,
+    policy: NorWritePolicy,
+) -> String {
+    let Some(colon) = rest.iter().position(|&b| b == b':') else {
+        return "E01".to_string();
+    };
+    let Ok(hdr) = std::str::from_utf8(&rest[..colon]) else {
+        return "E01".to_string();
+    };
+    let Some((addr, len)) = parse_rsp_addr_len(hdr) else {
+        return "E01".to_string();
+    };
+    if is_lethal_am34_register(addr, len) || is_nor_write_blocked_with_policy(addr, len, policy) {
+        return "E05".to_string();
+    }
+    let payload = &rest[colon + 1..];
+    if is_binary_x && len == 0 && payload.is_empty() {
+        return "OK".to_string();
+    }
+    let bytes = if is_binary_x {
+        let Some(decoded) = decode_rsp_binary_x(payload) else {
+            return "E01".to_string();
+        };
+        decoded
+    } else {
+        let Ok(hex_str) = std::str::from_utf8(payload) else {
+            return "E01".to_string();
+        };
+        let Ok(decoded) = hex::decode(hex_str.trim()) else {
+            return "E01".to_string();
+        };
+        decoded
+    };
+    if len == 0 || bytes.len() != len {
+        return "E01".to_string();
+    }
+    let Some(port) = serial else {
+        return "E0A".to_string();
+    };
+    write_bytes_via_panamon1(port, addr, &bytes).to_string()
+}
+
+pub(super) fn handle_panamon1_rsp_bytes_io<T: Read + Write + ?Sized>(
+    cmd_bytes: &[u8],
+    serial: Option<&mut T>,
+    policy: &mut NorWritePolicy,
 ) -> Vec<u8> {
+    if let Some((&op, rest)) = cmd_bytes.split_first()
+        && matches!(op, b'M' | b'X')
+    {
+        let payload = handle_write_mem_cmd(op == b'X', rest, serial, *policy);
+        return build_rsp_frame(payload.as_bytes(), false).unwrap_or_default();
+    }
+
+    let Ok(cmd) = std::str::from_utf8(cmd_bytes) else {
+        return build_rsp_frame(b"E01", false).unwrap_or_default();
+    };
+
     let payload: String = if cmd.starts_with("qSupported") {
         "PacketSize=400;qXfer:memory-map:read+;qAttached+".to_string()
     } else if cmd == "qAttached" {
         "1".to_string()
     } else if cmd.starts_with("qXfer:memory-map:read::") {
         format!("l{AM34_MEMORY_MAP_XML}")
+    } else if cmd == "qPanadigaNorUnlock:CONFIRM_UPPER_NOR" {
+        if let Some(port) = serial {
+            let reply =
+                query_panamon1_with_retry(port, "U CONFIRM_UPPER_NOR", Duration::from_millis(1000));
+            if reply.contains("OK:NOR_UNLOCK")
+                && reply.contains(PANAMON1_FULL_PROMPT)
+                && !reply.contains("ERR:")
+            {
+                *policy = NorWritePolicy::UpperNorAppUnlocked;
+                "OK".to_string()
+            } else {
+                "E05".to_string()
+            }
+        } else {
+            "E0A".to_string()
+        }
+    } else if cmd.starts_with("qPanadigaNorUnlock") {
+        "E01".to_string()
+    } else if cmd == "qPanadigaNorLock" {
+        *policy = NorWritePolicy::NvramOnly;
+        if let Some(port) = serial {
+            let reply = query_panamon1_with_retry(port, "U LOCK", Duration::from_millis(1000));
+            if reply.contains("OK:NOR_LOCK")
+                && reply.contains(PANAMON1_FULL_PROMPT)
+                && !reply.contains("ERR:")
+            {
+                "OK".to_string()
+            } else {
+                "E0A".to_string()
+            }
+        } else {
+            "OK".to_string()
+        }
     } else if cmd == "?" {
         "S05".to_string()
     } else if cmd.starts_with('H') || cmd == "k" {
@@ -96,72 +295,7 @@ pub(super) fn handle_panamon1_rsp_packet_io<T: Read + Write + ?Sized>(
         regs.replace_range(80..88, "00004050");
         regs
     } else if let Some(rest) = cmd.strip_prefix('m') {
-        let Some((addr, len)) = parse_two_hex_args(rest) else {
-            return build_rsp_frame(b"E01", false).unwrap_or_default();
-        };
-        if len == 0 {
-            return build_rsp_frame(b"", false).unwrap_or_default();
-        }
-        let Some(port) = serial else {
-            return build_rsp_frame(b"E0A", false).unwrap_or_default();
-        };
-        let mut raw_bytes = Vec::with_capacity(len);
-        let mut offset = 0usize;
-        while offset < len {
-            let chunk = (len - offset).min(PANAMON1_READ_CHUNK_BYTES);
-            let va = addr.wrapping_add(offset as u32);
-            let reply = query_panamon1_uart(
-                port,
-                &format!("R {va:08X},{chunk:X}"),
-                Duration::from_millis(500),
-            );
-            let Some(parsed) = parse_panamon1_read_bytes(&reply, chunk) else {
-                return build_rsp_frame(b"E0A", false).unwrap_or_default();
-            };
-            raw_bytes.extend_from_slice(&parsed);
-            offset += chunk;
-        }
-        raw_bytes.iter().map(|b| format!("{b:02x}")).collect()
-    } else if let Some(rest) = cmd.strip_prefix('M') {
-        let Some((hdr, hex_data)) = rest.split_once(':') else {
-            return build_rsp_frame(b"E01", false).unwrap_or_default();
-        };
-        let Some((addr, len)) = parse_two_hex_args(hdr) else {
-            return build_rsp_frame(b"E01", false).unwrap_or_default();
-        };
-        if is_nor_write_blocked_with_policy(addr, len, NorWritePolicy::NvramOnly) {
-            return build_rsp_frame(b"E05", false).unwrap_or_default();
-        }
-        let Some(port) = serial else {
-            return build_rsp_frame(b"E0A", false).unwrap_or_default();
-        };
-        let Ok(bytes) = hex::decode(hex_data.trim()) else {
-            return build_rsp_frame(b"E01", false).unwrap_or_default();
-        };
-        if len == 0 || bytes.len() != len {
-            return build_rsp_frame(b"E01", false).unwrap_or_default();
-        }
-        let mut all_ok = true;
-        for (idx, &byte) in bytes.iter().enumerate() {
-            let va = addr.wrapping_add(idx as u32);
-            let reply = query_panamon1_uart(
-                port,
-                &format!("W {va:08X},{byte:02X}"),
-                Duration::from_millis(400),
-            );
-            if !reply.contains("OK:WRITE")
-                || !reply.contains(PANAMON1_FULL_PROMPT)
-                || reply.contains("ERR:")
-            {
-                all_ok = false;
-                break;
-            }
-        }
-        if all_ok {
-            "OK".to_string()
-        } else {
-            "E05".to_string()
-        }
+        handle_read_mem_cmd(rest, serial)
     } else {
         String::new()
     };
@@ -169,6 +303,16 @@ pub(super) fn handle_panamon1_rsp_packet_io<T: Read + Write + ?Sized>(
     build_rsp_frame(payload.as_bytes(), false).unwrap_or_default()
 }
 
+#[cfg(test)]
+pub(super) fn handle_panamon1_rsp_packet_io<T: Read + Write + ?Sized>(
+    cmd: &str,
+    serial: Option<&mut T>,
+) -> Vec<u8> {
+    let mut policy = NorWritePolicy::NvramOnly;
+    handle_panamon1_rsp_bytes_io(cmd.as_bytes(), serial, &mut policy)
+}
+
+#[cfg(test)]
 pub(super) fn handle_panamon1_rsp_packet(
     cmd: &str,
     serial: Option<&mut dyn SerialPort>,
@@ -184,42 +328,70 @@ pub fn serve_panamon1_tcp_client(
 ) -> std::io::Result<()> {
     let _ = tcp_stream.set_read_timeout(Some(Duration::from_millis(80)));
     let mut buf = [0u8; 2048];
-    let mut rx_acc = String::new();
+    let mut rx_acc: Vec<u8> = Vec::new();
+    let mut nor_policy = NorWritePolicy::NvramOnly;
 
-    loop {
-        match tcp_stream.read(&mut buf) {
-            Ok(0) => break,
-            Ok(n) => {
-                rx_acc.push_str(&String::from_utf8_lossy(&buf[..n]));
-                if rx_acc.contains('\x03') {
-                    rx_acc = rx_acc.replace('\x03', "");
-                    let _ =
-                        tcp_stream.write_all(&build_rsp_frame(b"S05", false).unwrap_or_default());
-                }
-                while let Some(dollar) = rx_acc.find('$') {
-                    let after_dollar = &rx_acc[dollar + 1..];
-                    let Some(hash) = after_dollar.find('#') else {
-                        break;
-                    };
-                    if after_dollar.len() < hash + 3 {
-                        break;
+    let result = (|| -> std::io::Result<()> {
+        loop {
+            match tcp_stream.read(&mut buf) {
+                Ok(0) => break,
+                Ok(n) => {
+                    rx_acc.extend_from_slice(&buf[..n]);
+                    loop {
+                        let first_dollar = rx_acc.iter().position(|&b| b == b'$');
+                        let ctrl_c_limit = first_dollar.unwrap_or(rx_acc.len());
+                        if let Some(ctrl_pos) =
+                            rx_acc[..ctrl_c_limit].iter().position(|&b| b == 0x03)
+                        {
+                            rx_acc.remove(ctrl_pos);
+                            let _ = tcp_stream
+                                .write_all(&build_rsp_frame(b"S05", false).unwrap_or_default());
+                            let _ = tcp_stream.flush();
+                            continue;
+                        }
+                        let Some(dollar) = first_dollar else {
+                            rx_acc.clear();
+                            break;
+                        };
+                        let after_dollar = &rx_acc[dollar + 1..];
+                        let Some(hash) = after_dollar.iter().position(|&b| b == b'#') else {
+                            if dollar > 0 {
+                                rx_acc.drain(..dollar);
+                            }
+                            break;
+                        };
+                        if after_dollar.len() < hash + 3 {
+                            if dollar > 0 {
+                                rx_acc.drain(..dollar);
+                            }
+                            break;
+                        }
+                        let cmd_bytes = after_dollar[..hash].to_vec();
+                        rx_acc.drain(..dollar + 1 + hash + 3);
+                        let _ = tcp_stream.write_all(b"+");
+                        let reply = handle_panamon1_rsp_bytes_io(
+                            &cmd_bytes,
+                            Some(serial_port),
+                            &mut nor_policy,
+                        );
+                        tcp_stream.write_all(&reply)?;
+                        tcp_stream.flush()?;
+                        if cmd_bytes == b"k" {
+                            return Ok(());
+                        }
                     }
-                    let cmd = after_dollar[..hash].to_string();
-                    rx_acc.drain(..dollar + 1 + hash + 3);
-                    let _ = tcp_stream.write_all(b"+");
-                    let reply = handle_panamon1_rsp_packet(&cmd, Some(serial_port));
-                    tcp_stream.write_all(&reply)?;
-                    tcp_stream.flush()?;
-                    if cmd == "k" {
-                        return Ok(());
-                    }
                 }
+                Err(ref e)
+                    if e.kind() == std::io::ErrorKind::TimedOut
+                        || e.kind() == std::io::ErrorKind::WouldBlock => {}
+                Err(e) => return Err(e),
             }
-            Err(ref e)
-                if e.kind() == std::io::ErrorKind::TimedOut
-                    || e.kind() == std::io::ErrorKind::WouldBlock => {}
-            Err(e) => return Err(e),
         }
+        Ok(())
+    })();
+
+    if nor_policy == NorWritePolicy::UpperNorAppUnlocked {
+        let _ = query_panamon1_with_retry(serial_port, "U LOCK", Duration::from_millis(1000));
     }
-    Ok(())
+    result
 }

@@ -169,6 +169,29 @@ pub enum HddActions {
 
     /// Safely flashes a verified EH55 disk image + tail mirror with pre-64K CoW backup and SHA-256 readback
     FlashEh55(FlashEh55Args),
+
+    /// Streams procedurally synthesized MEIHFS metadata + optional MAIN/DRV EXTRHEAD without a 100 MiB `.img`
+    FlashComposed(FlashComposedArgs),
+}
+
+/// Shared drive capacity bounds and JSON export options for EH55 / composed HDD flashing.
+#[derive(Args, Debug, Clone)]
+pub struct HddExpectedRangeArgs {
+    /// Optional minimum expected disk size in GB
+    #[arg(long, value_name = "U64")]
+    pub expected_min_gb: Option<u64>,
+
+    /// Optional maximum expected disk size in GB
+    #[arg(long, value_name = "U64")]
+    pub expected_max_gb: Option<u64>,
+
+    /// Allow 2201..=4096 GB extended ceiling validation (standard EH55 limit is 2200 GB)
+    #[arg(long)]
+    pub allow_extended_4tb: bool,
+
+    /// Exports structured JSON flash & SHA-256 verification report (`-` emits stdout JSON)
+    #[arg(short, long, value_name = "JSON_FILE")]
+    pub json: Option<PathBuf>,
 }
 
 /// CLI parameters for safe physical/file-backed EH55 HDD flashing (`flash-eh55`).
@@ -194,19 +217,45 @@ pub struct FlashEh55Args {
     #[arg(long, value_name = "ID")]
     pub confirm_physical_drive: String,
 
-    /// Optional minimum expected disk size in GB (default 240)
-    #[arg(long, value_name = "U64")]
-    pub expected_min_gb: Option<u64>,
+    #[command(flatten)]
+    pub range: HddExpectedRangeArgs,
+}
 
-    /// Optional maximum expected disk size in GB (default 260)
-    #[arg(long, value_name = "U64")]
-    pub expected_max_gb: Option<u64>,
+/// CLI parameters for streaming MEIHFS HDD composition flashing (`flash-composed`).
+#[derive(Args, Debug, Clone)]
+pub struct FlashComposedArgs {
+    /// Target physical disk path or ID (e.g. `\\.\PhysicalDrive1` or `/dev/sdb`)
+    #[arg(long, value_name = "ID")]
+    pub drive: String,
 
-    /// Allow 2201..=4096 GB extended ceiling validation (standard EH55 limit is 2200 GB)
+    /// Mandatory directory to store pre-flash 64 KiB backup + SHA-256 manifest
+    #[arg(long, value_name = "DIR")]
+    pub backup_dir: PathBuf,
+
+    /// Explicit drive confirmation ID (e.g. `PhysicalDrive1` or `CONFIRM-PhysicalDrive1`)
+    #[arg(long, value_name = "ID")]
+    pub confirm_physical_drive: String,
+
+    /// Optional MAIN binary, EXTRHEAD, or `.FRM` source to inject into P1 & tail mirror
+    #[arg(long, value_name = "FILE")]
+    pub main_source: Option<PathBuf>,
+
+    /// Optional DRV binary, EXTRHEAD, or `.FRM` source to inject into Partition 2
+    #[arg(long, value_name = "FILE")]
+    pub drv_source: Option<PathBuf>,
+
+    /// Apply dynamic LBA48 HDD capacity unlock patch in memory before Mn103Vm gate
     #[arg(long)]
-    pub allow_extended_4tb: bool,
+    pub unlock_capacity: bool,
 
-    /// Exports structured JSON flash & SHA-256 verification report (`-` emits stdout JSON)
-    #[arg(short, long, value_name = "JSON_FILE")]
-    pub json: Option<PathBuf>,
+    /// Target capacity ceiling in GB when applying bounded capacity patch
+    #[arg(long, value_name = "GB")]
+    pub target_gb: Option<u32>,
+
+    /// Apply MAIN AV TBC passthrough patch in memory before Mn103Vm gate
+    #[arg(long)]
+    pub av_passthrough: bool,
+
+    #[command(flatten)]
+    pub range: HddExpectedRangeArgs,
 }

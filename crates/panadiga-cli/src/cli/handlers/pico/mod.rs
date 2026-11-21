@@ -45,7 +45,7 @@ pub fn handle_pico(args: PicoArgs) -> Result<()> {
             log_println!("{}", report);
         }
         PicoActions::Status { port, baud } | PicoActions::Dcsr { port, baud } => {
-            ops::query_pico_dcsr_flow(&port, baud, "HANDSHAKE")?;
+            ops::query_pico_dcsr_flow(&port, baud, "IDENTIFY")?;
         }
         PicoActions::BreakIn(b) => {
             if b.mode > 3 {

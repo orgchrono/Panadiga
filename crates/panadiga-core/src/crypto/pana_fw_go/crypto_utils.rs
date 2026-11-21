@@ -1,43 +1,21 @@
-//! Edge Feistel overlap transform, statistical key recovery, and `libdownloadlib.so` stream cipher.
+#![deny(unsafe_code)]
+
+//! Edge Feistel transform, statistical key recovery, and `libdownloadlib.so` stream cipher.
 
 use super::super::feistel::{
-    PANA_DVD_KEY_CATALOG, derive_round_key_from_custom_key_8b, feistel_decrypt_buffer,
-    feistel_encrypt_buffer,
+    PANA_DVD_KEY_CATALOG, derive_round_key_from_custom_key_8b, feistel_crypt_edges,
+    feistel_decrypt_buffer,
 };
 use crate::constants::{
     PANA_FEISTEL_ROUND_KEY_32B, PANA_FEISTEL_SBOX_256, PANA_LIBDOWNLOADLIB_CIPHER_IV,
     PANA_LIBDOWNLOADLIB_CIPHER_STEP,
 };
 
-/// Applies head+tail Feistel transform preserving `pana-fw` overlap ordering.
-///
-/// Decrypts `[..span]` then `[len-span..]`; encrypts `[len-span..]` then `[..span]`.
-pub(super) fn apply_edge_crypt_order(
-    buf: &mut [u8],
-    span: usize,
-    round_key: &[u8; 32],
-    encrypt: bool,
-) {
-    let aligned_span = span & !7;
-    let aligned_len = buf.len() & !7;
-    if aligned_span == 0 || aligned_len < aligned_span {
-        return;
-    }
-    let tail_start = aligned_len - aligned_span;
-    if encrypt {
-        feistel_encrypt_buffer(
-            &mut buf[tail_start..aligned_len],
-            round_key,
-            &PANA_FEISTEL_SBOX_256,
-        );
-        feistel_encrypt_buffer(&mut buf[..aligned_span], round_key, &PANA_FEISTEL_SBOX_256);
-    } else {
-        feistel_decrypt_buffer(&mut buf[..aligned_span], round_key, &PANA_FEISTEL_SBOX_256);
-        feistel_decrypt_buffer(
-            &mut buf[tail_start..aligned_len],
-            round_key,
-            &PANA_FEISTEL_SBOX_256,
-        );
+/// Applies head+tail Feistel edge transform (`feistel_crypt_edges`) requiring `buf.len() >= (span & !7)`.
+pub(super) fn apply_edge_crypt_order(buf: &mut [u8], span: usize, rk: &[u8; 32], enc: bool) {
+    let min_span = span & !7;
+    if min_span > 0 && (buf.len() & !7) >= min_span {
+        feistel_crypt_edges(buf, min_span, rk, enc);
     }
 }
 

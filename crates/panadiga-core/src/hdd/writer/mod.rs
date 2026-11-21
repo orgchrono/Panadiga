@@ -1,10 +1,12 @@
 //! Cross-Platform Physical HDD / SSD & SD Safe Block Discovery and Writer.
 
 mod block_ops;
+pub mod composed_flash;
 mod discovery;
 mod discovery_unix;
 mod discovery_win;
 pub mod eh55_flash;
+pub mod raw_device;
 mod types;
 pub mod win_ioctl;
 
@@ -13,16 +15,23 @@ pub use block_ops::{
     restore_meihdfs_from_mirrors, verify_safety_lockout, verify_safety_lockout_with_os_disks,
     write_meihdfs_procedural_to_drive, write_raw_image_to_drive,
 };
+pub use composed_flash::{
+    ComposedHddFlashReport, ComposedHddFlashRequest, execute_composed_meihfs_hdd_flash,
+};
 pub use discovery::{
     list_drives_by_role, list_hard_disk_drives, list_physical_drives, list_sd_card_drives,
     resolve_mount_point_to_block_device, unmount_drive_partitions,
 };
 pub use eh55_flash::{
-    BUS_TYPE_NVME, BlockFlashDevice, EH55_BACKUP_SECTOR_COUNT, EH55_FLASH_CHUNK_BYTES,
-    EH55_MIRROR_MAIN_BACKSTEP_LBAS, Eh55FlashProgress, Eh55FlashStage, Eh55HddFlashReport,
-    Eh55HddFlashRequest, FileBackedMockFlashDevice, SafeTargetDiskInfo, WindowsPhysicalFlashDevice,
+    EH55_BACKUP_SECTOR_COUNT, EH55_FLASH_CHUNK_BYTES, EH55_MIRROR_MAIN_BACKSTEP_LBAS,
+    Eh55FlashProgress, Eh55FlashStage, Eh55HddFlashReport, Eh55HddFlashRequest, SafeTargetDiskInfo,
     compute_eh55_mirror_main_lba, enrich_safe_target_disks, execute_eh55_hdd_flash,
     inspect_safe_target_disks,
+};
+pub use raw_device::{
+    BUS_TYPE_NVME, BlockFlashDevice, FileBackedMockFlashDevice, PhysicalFlashDevice,
+    UnixPhysicalFlashDevice, WindowsPhysicalFlashDevice, open_physical_flash_device,
+    readback_sha256_verify, write_chunked_bytes,
 };
 pub use types::{
     MountedPartitionInfo, PhysicalDriveInfo, StorageMediaRole, classify_drive_role,
@@ -85,6 +94,31 @@ mod tests {
         assert!(
             verify_safety_lockout_with_os_disks("/dev/sda", "CONFIRM-/dev/sda", Some(&os_disks))
                 .is_ok()
+        );
+        // Sibling disk names must never be falsely locked out by prefix collision
+        assert!(
+            verify_safety_lockout_with_os_disks(
+                "/dev/disk10",
+                "CONFIRM-/dev/disk10",
+                Some(&["/dev/disk1"])
+            )
+            .is_ok()
+        );
+        assert!(
+            verify_safety_lockout_with_os_disks(
+                "/dev/disk1s1",
+                "CONFIRM-/dev/disk1s1",
+                Some(&["/dev/disk1"])
+            )
+            .is_err()
+        );
+        assert!(
+            verify_safety_lockout_with_os_disks(
+                "/dev/sdaa",
+                "CONFIRM-/dev/sdaa",
+                Some(&["/dev/sda"])
+            )
+            .is_ok()
         );
     }
 

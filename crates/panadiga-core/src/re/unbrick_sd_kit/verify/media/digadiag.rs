@@ -8,6 +8,7 @@ use crate::constants::{
 use crate::crypto::{ExtrheadCryptMode, unpack_extrhead};
 
 use super::super::super::super::bgo_unbrick::inspect_prog061_bgo_sites;
+use super::super::super::cleanroom_digadiag::CLEANROOM_DIGADIAG_MAGIC;
 use super::super::super::compose::SdLoaderProfile;
 use super::super::{SdUnbrickCheck, check};
 use super::dual_parity::is_factory_unpatched_prog061;
@@ -29,10 +30,23 @@ fn looks_like_mn103s_entry(bytes: &[u8]) -> bool {
     ) && bytes.iter().take(64).any(|&b| b != 0x00 && b != 0xFF)
 }
 
+fn is_cleanroom_digadiag_payload(bytes: &[u8]) -> bool {
+    bytes.len() == PANA_DIGADIAG_RAW_VER061_SIZE
+        && bytes.get(0x10..0x10 + CLEANROOM_DIGADIAG_MAGIC.len()) == Some(CLEANROOM_DIGADIAG_MAGIC)
+}
+
+fn detect_digadiag_mode(payload: &[u8]) -> Option<String> {
+    if is_cleanroom_digadiag_payload(payload) {
+        Some("CLEANROOM_PANAMON1_BARE_METAL".to_string())
+    } else {
+        inspect_prog061_bgo_sites(payload)
+            .ok()
+            .map(|r| r.detected_mode)
+    }
+}
+
 fn verify_raw_ver061_digadiag(bytes: &[u8]) -> DigadiagInspection {
-    let bgo_mode = inspect_prog061_bgo_sites(bytes)
-        .ok()
-        .map(|r| r.detected_mode);
+    let bgo_mode = detect_digadiag_mode(bytes);
     let factory_unpatched_prog061 = is_factory_unpatched_prog061(bytes, bgo_mode.as_deref());
     let valid_exec = bgo_mode.is_some() || looks_like_mn103s_entry(bytes);
     let dst_hex = Some(format!("0x{PANA_DIGADIAG_DEFAULT_LOAD_ADDR:08X}"));
@@ -122,9 +136,7 @@ pub(crate) fn verify_digadiag_buffer(bytes_opt: Option<Result<&[u8], &str>>) -> 
     match unpack_extrhead(bytes, ExtrheadCryptMode::Plain) {
         Ok(u) => {
             let dst_hex = Some(format!("0x{:08X}", u.header.dst_addr));
-            let bgo_mode = inspect_prog061_bgo_sites(&u.decompressed)
-                .ok()
-                .map(|r| r.detected_mode);
+            let bgo_mode = detect_digadiag_mode(&u.decompressed);
             let factory_unpatched_prog061 =
                 is_factory_unpatched_prog061(&u.decompressed, bgo_mode.as_deref());
             let ok = exact_sz

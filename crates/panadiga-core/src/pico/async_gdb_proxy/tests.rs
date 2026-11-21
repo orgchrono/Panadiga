@@ -2,9 +2,14 @@
 
 use std::collections::VecDeque;
 use std::io::{self, Read, Write};
+use std::time::{Duration, Instant};
 
-use super::super::panamon1::parse_panamon1_read_bytes;
-use super::{GdbBridgeTargetMode, handle_panamon1_rsp_packet, handle_panamon1_rsp_packet_io};
+use super::super::panamon1::{PANAMON1_RETRY_PACING_US, parse_panamon1_read_bytes};
+use super::super::rsp_codec::NorWritePolicy;
+use super::{
+    GdbBridgeTargetMode, handle_panamon1_rsp_bytes_io, handle_panamon1_rsp_packet,
+    handle_panamon1_rsp_packet_io,
+};
 
 #[test]
 fn parses_target_modes_and_translates_panamon1_rsp_safely() {
@@ -30,6 +35,7 @@ fn parses_target_modes_and_translates_panamon1_rsp_safely() {
 struct MockPanamon1Port {
     tx_log: Vec<String>,
     rx_queue: VecDeque<u8>,
+    pending_glitches: VecDeque<String>,
 }
 
 impl MockPanamon1Port {
@@ -37,12 +43,21 @@ impl MockPanamon1Port {
         Self {
             tx_log: Vec::new(),
             rx_queue: VecDeque::new(),
+            pending_glitches: VecDeque::new(),
         }
     }
 
     fn respond(&mut self, cmd: &str) {
+        if let Some(glitch) = self.pending_glitches.pop_front() {
+            self.rx_queue.extend(glitch.as_bytes());
+            return;
+        }
         let reply = if cmd == "R 847F0010,4" {
             "R 847F0010,4\r\nAA55FFFF\r\nPANAMON1>[B/R/W/D/F/J/E/U/Q]\r\n"
+        } else if cmd == "U CONFIRM_UPPER_NOR" {
+            "U CONFIRM_UPPER_NOR\r\nOK:NOR_UNLOCK\r\nPANAMON1>[B/R/W/D/F/J/E/U/Q]\r\n"
+        } else if cmd == "U LOCK" {
+            "U LOCK\r\nOK:NOR_LOCK\r\nPANAMON1>[B/R/W/D/F/J/E/U/Q]\r\n"
         } else if cmd.starts_with("W ") {
             "W ...\r\nOK:WRITE\r\nPANAMON1>[B/R/W/D/F/J/E/U/Q]\r\n"
         } else {
@@ -154,4 +169,156 @@ fn replays_real_com10_panamon1_boottrace_and_rw_session_transcript() {
 
     let err_reply = "R 80000000,4\r\nERR:E05_IPL_RO\r\nPANAMON1>[B/R/W/D/F/J/E/U/Q]\r\n";
     assert!(parse_panamon1_read_bytes(err_reply, 4).is_none());
+}
+
+#[test]
+fn retries_after_300us_pacing_on_question_mark_or_missing_prompt() {
+    let mut port = MockPanamon1Port::new();
+    port.pending_glitches
+        .push_back("\r\n?\r\nPANAMON1>[B/R/W/D/F/J/E/U/Q]\r\n".to_string());
+
+    let start = Instant::now();
+    let rsp = String::from_utf8(handle_panamon1_rsp_packet_io(
+        "m847f0010,4",
+        Some(&mut port),
+    ))
+    .unwrap();
+    assert!(start.elapsed() >= Duration::from_micros(PANAMON1_RETRY_PACING_US));
+    assert!(rsp.starts_with("$aa55ffff#"), "rsp={rsp}");
+    assert_eq!(port.tx_log, vec!["R 847F0010,4", "R 847F0010,4"]);
+}
+
+#[test]
+fn forwards_nor_unlock_enables_upper_nor_blocks_sa0_sa3_and_relocks() {
+    let mut port = MockPanamon1Port::new();
+    let mut policy = NorWritePolicy::NvramOnly;
+
+    let locked = String::from_utf8(handle_panamon1_rsp_bytes_io(
+        b"M84040000,1:ab",
+        Some(&mut port),
+        &mut policy,
+    ))
+    .unwrap();
+    assert!(locked.starts_with("$E05#"), "rsp={locked}");
+    assert!(port.tx_log.is_empty());
+
+    let bad_unlock = String::from_utf8(handle_panamon1_rsp_bytes_io(
+        b"qPanadigaNorUnlock:BAD_TOKEN",
+        Some(&mut port),
+        &mut policy,
+    ))
+    .unwrap();
+    assert!(bad_unlock.starts_with("$E01#"), "rsp={bad_unlock}");
+
+    let unlock = String::from_utf8(handle_panamon1_rsp_bytes_io(
+        b"qPanadigaNorUnlock:CONFIRM_UPPER_NOR",
+        Some(&mut port),
+        &mut policy,
+    ))
+    .unwrap();
+    assert!(unlock.starts_with("$OK#"), "rsp={unlock}");
+    assert_eq!(policy, NorWritePolicy::UpperNorAppUnlocked);
+
+    let upper_ok = String::from_utf8(handle_panamon1_rsp_bytes_io(
+        b"M84040000,1:ab",
+        Some(&mut port),
+        &mut policy,
+    ))
+    .unwrap();
+    assert!(upper_ok.starts_with("$OK#"), "rsp={upper_ok}");
+
+    // Critical SA0..SA3 bootloader remains permanently E05 even when Upper NOR is unlocked.
+    let ipl_ro = String::from_utf8(handle_panamon1_rsp_bytes_io(
+        b"M84000000,1:cd",
+        Some(&mut port),
+        &mut policy,
+    ))
+    .unwrap();
+    assert!(ipl_ro.starts_with("$E05#"), "rsp={ipl_ro}");
+
+    let straddle_ipl = String::from_utf8(handle_panamon1_rsp_bytes_io(
+        b"X8003ffff,2:ab",
+        Some(&mut port),
+        &mut policy,
+    ))
+    .unwrap();
+    assert!(straddle_ipl.starts_with("$E05#"), "rsp={straddle_ipl}");
+
+    let lock = String::from_utf8(handle_panamon1_rsp_bytes_io(
+        b"qPanadigaNorLock",
+        Some(&mut port),
+        &mut policy,
+    ))
+    .unwrap();
+    assert!(lock.starts_with("$OK#"), "rsp={lock}");
+    assert_eq!(policy, NorWritePolicy::NvramOnly);
+
+    let relocked = String::from_utf8(handle_panamon1_rsp_bytes_io(
+        b"M84040000,1:ef",
+        Some(&mut port),
+        &mut policy,
+    ))
+    .unwrap();
+    assert!(relocked.starts_with("$E05#"), "rsp={relocked}");
+    assert_eq!(
+        port.tx_log,
+        vec!["U CONFIRM_UPPER_NOR", "W 84040000,AB", "U LOCK"]
+    );
+}
+
+#[test]
+fn supports_binary_x_memory_write_with_rsp_unescaping_and_high_bytes() {
+    let mut port = MockPanamon1Port::new();
+    let mut policy = NorWritePolicy::NvramOnly;
+
+    let probe = String::from_utf8(handle_panamon1_rsp_bytes_io(
+        b"X847f0000,0:",
+        Some(&mut port),
+        &mut policy,
+    ))
+    .unwrap();
+    assert!(probe.starts_with("$OK#"), "probe={probe}");
+
+    let mut pkt = b"X847f0030,6:".to_vec();
+    pkt.extend_from_slice(&[0x7D, 0x5D, 0x7D, 0x03, 0x7D, 0x04, 0x7D, 0x0A, 0x80, 0xFF]);
+    let rsp = String::from_utf8(handle_panamon1_rsp_bytes_io(
+        &pkt,
+        Some(&mut port),
+        &mut policy,
+    ))
+    .unwrap();
+    assert!(rsp.starts_with("$OK#"), "rsp={rsp}");
+    assert_eq!(
+        port.tx_log,
+        vec![
+            "W 847F0030,7D",
+            "W 847F0031,23",
+            "W 847F0032,24",
+            "W 847F0033,2A",
+            "W 847F0034,80",
+            "W 847F0035,FF",
+        ]
+    );
+}
+
+#[test]
+fn blocks_lethal_register_c000100c_for_both_reads_and_writes() {
+    let mut port = MockPanamon1Port::new();
+    let mut policy = NorWritePolicy::NvramOnly;
+
+    for raw in [
+        b"mC000100C,4".as_slice(),
+        b"mc0001008,8".as_slice(),
+        b"MC000100C,4:00000000".as_slice(),
+        b"Xc000100f,1:\x00".as_slice(),
+    ] {
+        let rsp = String::from_utf8(handle_panamon1_rsp_bytes_io(
+            raw,
+            Some(&mut port),
+            &mut policy,
+        ))
+        .unwrap();
+        assert!(rsp.starts_with("$E05#"), "raw={raw:?} rsp={rsp}");
+    }
+    assert!(port.tx_log.is_empty());
 }

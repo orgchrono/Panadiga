@@ -1,4 +1,6 @@
-//! Unit tests for `extrhead` (`LZSS`, zlib/gzip, multi-key auto-detection, nested containers).
+#![deny(unsafe_code)]
+
+//! Unit tests for `extrhead` (`LZSS`, zlib/gzip/LZMA, multi-key auto-detection, nested containers).
 
 use super::super::feistel::{
     PANA_DVD_KEY_CATALOG, derive_round_key_from_custom_key_8b, feistel_encrypt_buffer,
@@ -40,6 +42,7 @@ fn test_pack_and_unpack_extrhead_algos_multikey_and_nested() {
         ExtrheadCompressionAlgo::Zlib,
         ExtrheadCompressionAlgo::Gzip,
         ExtrheadCompressionAlgo::Lzss,
+        ExtrheadCompressionAlgo::Lzma,
     ] {
         let packed = pack_extrhead_with_options(
             &payload,
@@ -96,4 +99,45 @@ fn test_pack_and_unpack_extrhead_algos_multikey_and_nested() {
     assert_eq!(unpacked_nested.decompressed, payload);
     assert!(unpacked_nested.checksum_valid);
     assert!(unpacked_nested.footer_present);
+}
+
+#[test]
+fn test_extrhead_lzma_algo3_and_raw_size_header_fallback() {
+    assert_eq!(
+        "lzma".parse::<ExtrheadCompressionAlgo>().unwrap(),
+        ExtrheadCompressionAlgo::Lzma
+    );
+    assert_eq!(
+        "3".parse::<ExtrheadCompressionAlgo>().unwrap(),
+        ExtrheadCompressionAlgo::Lzma
+    );
+
+    let payload = b"PANASONIC UNIPHIER AM34 LZMA ALGO 3 TEST STREAM ".repeat(64);
+    let packed = pack_extrhead_with_options(
+        &payload,
+        "MAIN",
+        0x5700_0000,
+        "LZMA34",
+        ExtrheadCryptMode::Main,
+        ExtrheadCompressionAlgo::Lzma,
+        &PANA_FEISTEL_ROUND_KEY_32B,
+        16,
+        1,
+    )
+    .unwrap();
+    let unpacked = unpack_extrhead(&packed, ExtrheadCryptMode::Auto).unwrap();
+    assert_eq!(unpacked.header.algo, 3);
+    assert_eq!(unpacked.decompressed, payload);
+    assert!(unpacked.checksum_valid);
+
+    // Strip the 8-byte unpacked size field (bytes 5..13) from a standard LZMA header
+    // to verify embedded 5-byte-header LZMA decompression via EXTRHEAD.dst_len.
+    let mut std_lzma = Vec::new();
+    lzma_rs::lzma_compress(&mut std::io::Cursor::new(&payload), &mut std_lzma).unwrap();
+    let mut raw5_lzma = Vec::with_capacity(std_lzma.len() - 8);
+    raw5_lzma.extend_from_slice(&std_lzma[..5]);
+    raw5_lzma.extend_from_slice(&std_lzma[13..]);
+    let decomp_raw =
+        super::crypt::decompress_payload_by_algo(&raw5_lzma, 3, payload.len()).unwrap();
+    assert_eq!(decomp_raw, payload);
 }

@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, bail};
 
-use super::super::pure::{NvramCleanReport, clean_flash_nvram_slice};
+use super::super::pure::{NvramCleanReport, inspect_flash_nvram_slice};
 use crate::constants::SPANSION_FLASH_SIZE_BYTES;
 
 /// Intelligently resolves an input file path across working directory and known folders,
@@ -113,15 +113,5 @@ pub fn inspect_flash_nvram(input_path: &Path) -> Result<NvramCleanReport> {
     let resolved_input = resolve_input_path(input_path)?;
     let flash_bytes = read_flash_file(&resolved_input)?;
 
-    let dummy_output = resolved_input.with_file_name("flash_clean_preview.bin");
-    let dummy_backup = resolved_input.with_file_name("nvram_corrupt_backup.bin");
-
-    let pure_output = clean_flash_nvram_slice(
-        &flash_bytes,
-        &resolved_input.to_string_lossy(),
-        &dummy_output.to_string_lossy(),
-        &dummy_backup.to_string_lossy(),
-    )?;
-
-    Ok(pure_output.report)
+    inspect_flash_nvram_slice(&flash_bytes, &resolved_input.to_string_lossy())
 }

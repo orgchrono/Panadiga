@@ -1,3 +1,5 @@
+#![deny(unsafe_code)]
+
 //! In-place capacity clamp patching, EXTRHEAD repacking, and MEIHDFS MBR capacity synchronization.
 
 use anyhow::{Context, Result, bail};
@@ -5,7 +7,8 @@ use byteorder::{ByteOrder, LittleEndian};
 
 use crate::constants::*;
 use crate::crypto::{
-    ExtrheadCryptMode, ExtrheadHeader, UnpackedExtrhead, pack_extrhead, unpack_extrhead,
+    ExtrheadCompressionAlgo, ExtrheadCryptMode, ExtrheadHeader, UnpackedExtrhead,
+    pack_extrhead_with_options, unpack_extrhead,
 };
 
 use super::super::specs::{
@@ -68,9 +71,11 @@ pub(crate) fn apply_optional_passthrough(
     Ok(Some(mode.as_str().to_string()))
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn patch_and_repack_extrhead(
     unpacked: &mut UnpackedExtrhead,
     is_plain: bool,
+    round_key: &[u8; 32],
     container_format: &str,
     in_label: &str,
     mode: HddCapacityPatchMode,
@@ -80,7 +85,12 @@ pub(crate) fn patch_and_repack_extrhead(
     let before = inspect_unpacked_capacity(unpacked, container_format, in_label)?;
     let applied = apply_capacity_patch_in_place(&mut unpacked.decompressed, mode, target_gb)?;
     let applied_pt = apply_optional_passthrough(&mut unpacked.decompressed, passthrough_mode)?;
-    let repacked = repack_from_header(&unpacked.decompressed, &unpacked.header, is_plain)?;
+    let repacked = repack_from_header(
+        &unpacked.decompressed,
+        &unpacked.header,
+        is_plain,
+        round_key,
+    )?;
     Ok((before, applied, applied_pt, repacked))
 }
 
@@ -97,18 +107,32 @@ pub(crate) fn verify_and_inspect_repacked(
     inspect_unpacked_capacity(&verified, container_format, out_label)
 }
 
-fn repack_from_header(payload: &[u8], hdr: &ExtrheadHeader, is_plain: bool) -> Result<Vec<u8>> {
+fn repack_from_header(
+    payload: &[u8],
+    hdr: &ExtrheadHeader,
+    is_plain: bool,
+    round_key: &[u8; 32],
+) -> Result<Vec<u8>> {
     let mode = if is_plain {
         ExtrheadCryptMode::Plain
     } else {
         ExtrheadCryptMode::Auto
     };
-    pack_extrhead(
+    let algo = match hdr.algo {
+        0 => ExtrheadCompressionAlgo::Zlib,
+        1 => ExtrheadCompressionAlgo::Gzip,
+        2 => ExtrheadCompressionAlgo::Lzss,
+        3 => ExtrheadCompressionAlgo::Lzma,
+        _ => ExtrheadCompressionAlgo::Zlib,
+    };
+    pack_extrhead_with_options(
         payload,
         &hdr.tag,
         hdr.dst_addr,
         &hdr.build_name,
         mode,
+        algo,
+        round_key,
         hdr.adler_step.max(1),
         hdr.flag,
     )

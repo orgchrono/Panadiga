@@ -1,3 +1,5 @@
+#![deny(unsafe_code)]
+
 //! Deterministic `.FRM` TOC entry decoding, Feistel auto-detection, and flag interpretation.
 
 use super::super::codec::{extract_c_ascii, read_u16_le, read_u32_le};
@@ -7,8 +9,8 @@ use super::layout::{
     DVD_TOC_LAYOUT, DVD64_TOC_LAYOUT, SD_TOC_LAYOUT, SD48_TOC_LAYOUT, TocLayout, TocLayoutOffsets,
 };
 use crate::constants::{
-    PANA_FEISTEL_ROUND_KEY_32B, PANA_FEISTEL_SBOX_256, PANA_FRM_TOC_ENTRY_SIZE,
-    PANA_FRM_TOC_REGION_SIZE, PANA_SD_TOC_ENTRY_SIZE, PANA_SD_TOC_MAX_ENTRIES,
+    PANA_FEISTEL_SBOX_256, PANA_FRM_TOC_ENTRY_SIZE, PANA_SD_TOC_ENTRY_SIZE,
+    PANA_SD_TOC_MAX_ENTRIES, PANA_SD_TOC_REGION_SIZE,
 };
 
 fn parse_toc_entries_with_layout(
@@ -51,6 +53,42 @@ fn parse_toc_entries_with_layout(
     entries
 }
 
+fn entry_list_sum_valid(decrypted_slot: &[u8], stride: usize) -> bool {
+    if decrypted_slot.len() < stride || stride < 2 {
+        return false;
+    }
+    let sum_off = stride - 2;
+    let expected = read_u16_le(decrypted_slot, sum_off);
+    let computed = decrypted_slot[..sum_off]
+        .iter()
+        .fold(0u16, |acc, &b| acc.wrapping_add(u16::from(b)));
+    expected == computed
+}
+
+fn detect_toc_feistel_key(bytes: &[u8], toc_span: usize) -> Option<(&'static str, [u8; 32])> {
+    let head_len = toc_span.min(0x80);
+    if head_len >= 8
+        && let Some(found) = detect_frm_feistel_key(&bytes[..head_len])
+    {
+        return Some(found);
+    }
+    let mut off = 0x40usize;
+    while off + 8 <= toc_span {
+        let end = toc_span.min(off + 0x80);
+        if let Some((name, rk)) = detect_frm_feistel_key(&bytes[off..end]) {
+            let mut probe = bytes[off..end].to_vec();
+            feistel_decrypt_buffer(&mut probe, &rk, &PANA_FEISTEL_SBOX_256);
+            if entry_list_sum_valid(&probe, PANA_SD_TOC_ENTRY_SIZE)
+                || entry_list_sum_valid(&probe, PANA_FRM_TOC_ENTRY_SIZE)
+            {
+                return Some((name, rk));
+            }
+        }
+        off += 0x40;
+    }
+    None
+}
+
 /// Decrypts the `.FRM` TOC using the detected Feistel key and auto-discriminates `Dvd48B` vs `Dvd64B`.
 pub fn decrypt_frm_toc_with_detected_key(
     bytes: &[u8],
@@ -60,48 +98,68 @@ pub fn decrypt_frm_toc_with_detected_key(
     TocLayout,
     Vec<DecryptedFrmTocEntry>,
 ) {
-    let probe_len = bytes.len().min(0x80);
-    let (key_name, round_key) = if probe_len >= 8 {
-        detect_frm_feistel_key(&bytes[..probe_len])
-            .unwrap_or(("old_df72", PANA_FEISTEL_ROUND_KEY_32B))
-    } else {
-        ("old_df72", PANA_FEISTEL_ROUND_KEY_32B)
-    };
-
-    let toc_span = bytes.len().min(PANA_FRM_TOC_REGION_SIZE) & !7;
-    if toc_span == 0 {
-        return (Some(key_name), round_key, TocLayout::Dvd48B, Vec::new());
+    let toc_span = bytes.len().min(PANA_SD_TOC_REGION_SIZE) & !7;
+    if toc_span < 8 {
+        return (None, [0u8; 32], TocLayout::Dvd48B, Vec::new());
     }
+    let Some((key_name, round_key)) = detect_toc_feistel_key(bytes, toc_span) else {
+        return (None, [0u8; 32], TocLayout::Dvd48B, Vec::new());
+    };
 
     let mut decrypted = bytes[..toc_span].to_vec();
     feistel_decrypt_buffer(&mut decrypted, &round_key, &PANA_FEISTEL_SBOX_256);
 
+    let count48 = decrypted.len() / PANA_FRM_TOC_ENTRY_SIZE;
+    let valid_entries48: Vec<DecryptedFrmTocEntry> = {
+        let mut entries = parse_toc_entries_with_layout(&decrypted, count48, &DVD_TOC_LAYOUT)
+            .into_iter()
+            .filter(|e| e.list_sum_valid && !e.module_name.trim().is_empty())
+            .collect::<Vec<_>>();
+        // EH50 `DRV J147` stores slot-0's payload offset at byte +0x08 (0x1800) instead of +0x0C.
+        if let Some(first) = entries.first_mut()
+            && first.index == 0
+            && (first.module_offset as usize) >= bytes.len()
+            && decrypted.len() >= PANA_FRM_TOC_ENTRY_SIZE
+        {
+            let alt_off = read_u32_le(&decrypted[..PANA_FRM_TOC_ENTRY_SIZE], 0x08);
+            if alt_off == 0x1800
+                && (alt_off as usize).saturating_add(first.module_size as usize) <= bytes.len()
+            {
+                first.module_offset = alt_off;
+            }
+        }
+        entries
+    };
+
     let count64 = decrypted.len() / PANA_SD_TOC_ENTRY_SIZE;
     if count64 > 0 {
-        let entries64 = parse_toc_entries_with_layout(&decrypted, count64, &DVD64_TOC_LAYOUT);
-        let valid_named_64 = entries64
-            .iter()
-            .filter(|e| e.list_sum_valid && !e.module_name.trim().is_empty())
-            .count();
+        let valid_entries64: Vec<DecryptedFrmTocEntry> =
+            parse_toc_entries_with_layout(&decrypted, count64, &DVD64_TOC_LAYOUT)
+                .into_iter()
+                .filter(|e| e.list_sum_valid && !e.module_name.trim().is_empty())
+                .collect();
 
-        let is_64b = if valid_named_64 > 0 {
-            let entry0_ok = entries64[0].module_offset >= 0x2000;
-            let pfx40_ok = if decrypted.len() >= 0x44 {
+        let is_64b = if let Some(first64) = valid_entries64.first() {
+            let entry0_ok = first64.module_offset >= 0x2000;
+            let next_off = (first64.index + 1) * PANA_SD_TOC_ENTRY_SIZE;
+            let pfx_next_ok = if next_off + 4 <= decrypted.len() {
                 const PREFIXES: [&[u8; 4]; 4] = [b"PROG", b"DRV ", b"MAIN", b"STB "];
-                PREFIXES.iter().any(|pfx| &decrypted[0x40..0x44] == *pfx)
+                PREFIXES
+                    .iter()
+                    .any(|pfx| &decrypted[next_off..next_off + 4] == *pfx)
             } else {
                 false
             };
-            entry0_ok && (pfx40_ok || valid_named_64 >= 2)
+            entry0_ok
+                && (pfx_next_ok
+                    || valid_entries64.len() >= 2
+                    || valid_entries48.is_empty()
+                    || first64.index * PANA_SD_TOC_ENTRY_SIZE >= 0x1000)
         } else {
             false
         };
 
         if is_64b {
-            let valid_entries64: Vec<DecryptedFrmTocEntry> = entries64
-                .into_iter()
-                .filter(|e| e.list_sum_valid && !e.module_name.trim().is_empty())
-                .collect();
             return (
                 Some(key_name),
                 round_key,
@@ -110,13 +168,6 @@ pub fn decrypt_frm_toc_with_detected_key(
             );
         }
     }
-
-    let count48 = decrypted.len() / PANA_FRM_TOC_ENTRY_SIZE;
-    let entries48 = parse_toc_entries_with_layout(&decrypted, count48, &DVD_TOC_LAYOUT);
-    let valid_entries48: Vec<DecryptedFrmTocEntry> = entries48
-        .into_iter()
-        .filter(|e| e.list_sum_valid && !e.module_name.trim().is_empty())
-        .collect();
 
     (
         Some(key_name),

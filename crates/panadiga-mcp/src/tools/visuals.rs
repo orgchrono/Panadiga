@@ -65,6 +65,47 @@ pub fn load_visual_manifest_raw(workspace_root: &Path) -> Result<String, String>
         .map_err(|e| format!("Failed to read {}: {}", manifest_path.display(), e))
 }
 
+pub fn load_visual_catalog_summary_json(
+    workspace_root: &Path,
+    max_bytes: usize,
+) -> Result<String, String> {
+    let raw = load_visual_manifest_raw(workspace_root)?;
+    let manifest: VisualManifest =
+        serde_json::from_str(&raw).map_err(|e| format!("Invalid visual_manifest.json: {e}"))?;
+    let compact_images: Vec<Value> = manifest
+        .images
+        .iter()
+        .map(|entry| {
+            json!({
+                "id": entry.id,
+                "file": entry.filename,
+                "page": entry.page_number,
+                "cat": entry.category,
+            })
+        })
+        .collect();
+    let payload = json!({
+        "unique_valid_pngs": manifest.unique_valid_pngs,
+        "total_mb": manifest.total_mb,
+        "hint": "Use `panadiga_search_visuals(query=...)` for full repo_path, sha256, dimensions, and caption metadata.",
+        "images": compact_images,
+    });
+    let serialized =
+        serde_json::to_string(&payload).map_err(|e| format!("Serialize visual summary: {e}"))?;
+    if serialized.len() <= max_bytes {
+        return Ok(serialized);
+    }
+    let truncated = json!({
+        "unique_valid_pngs": manifest.unique_valid_pngs,
+        "total_mb": manifest.total_mb,
+        "truncated": true,
+        "hint": "Catalog exceeded resource budget; call `panadiga_search_visuals(query=...)` for targeted lookup.",
+        "sample_files": manifest.images.iter().take(64).map(|e| &e.filename).collect::<Vec<_>>(),
+    });
+    serde_json::to_string(&truncated)
+        .map_err(|e| format!("Serialize truncated visual summary: {e}"))
+}
+
 pub fn handle_search_visuals(args: &Value, workspace_root: &Path) -> Value {
     let raw = match load_visual_manifest_raw(workspace_root) {
         Ok(s) => s,

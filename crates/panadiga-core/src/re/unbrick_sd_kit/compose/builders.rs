@@ -167,7 +167,9 @@ pub(crate) fn compose_pana_sd_container(
     }
     let mut prog_mod = FrmPackModule::new("PROG061 ", prog_patched);
     prog_mod.version_u16 = 0x1202;
-    if bgo_mode == Prog061BgoPatchMode::FactoryOriginal {
+    if bgo_mode == Prog061BgoPatchMode::FactoryOriginal
+        && loader_profile != SdLoaderProfile::Ver061RawSd48
+    {
         prog_mod.target_flag = 1;
     }
     sd_modules.push(prog_mod);
@@ -182,7 +184,6 @@ pub(crate) fn compose_pana_sd_container(
             m.hardware_family = "M6930LB".to_string();
             m.hardware_family_aliases = vec!["M6930".to_string()];
             m.model_prefix = b'M';
-            m.target_flag = 0;
         }
     }
 

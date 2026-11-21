@@ -114,4 +114,10 @@ fn ifodev2_2048b_and_sd48_retarget_preserve_tail_blocks_and_prefix_semantics() {
         crate::re::unbrick_sd_kit::simulate_sd_find_firm_entry_dual(&retargeted_dual)
             .dual_parity_ok
     );
+
+    // Passing numeric target_flag=1 must update [0x19] WITHOUT clobbering [0x18] model_prefix 'M'
+    let (retargeted_num_flag, _) =
+        retarget_frm_toc_bytes(&retargeted, None, None, Some('M'), Some(1)).unwrap();
+    assert_eq!(retargeted_num_flag[0x18], b'M');
+    assert_eq!(retargeted_num_flag[0x19], 1);
 }

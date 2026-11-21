@@ -1,11 +1,13 @@
+#![deny(unsafe_code)]
+
 use std::{
     collections::HashMap,
     fs::File,
+    io::{BufReader, Read},
     path::{Path, PathBuf},
 };
 
 use anyhow::{Context, Result};
-use memmap2::Mmap;
 
 use super::super::types::{CodebookEntry, CodebookReport, PartitionCorrelation};
 use crate::constants::*;
@@ -40,13 +42,24 @@ pub(crate) fn check_partition_offset(
     })
 }
 
-pub(crate) fn open_resolved_frm(frm_path: &Path) -> Result<(PathBuf, File, Mmap)> {
+pub(crate) fn open_resolved_frm(frm_path: &Path) -> Result<(PathBuf, Vec<u8>)> {
     let resolved_frm = resolve_input_path(frm_path)?;
     let frm_file = File::open(&resolved_frm)
         .with_context(|| format!("Failed opening FRM file: {}", resolved_frm.display()))?;
-    let frm_mmap = unsafe { Mmap::map(&frm_file) }
-        .with_context(|| format!("Failed creating mmap on: {}", resolved_frm.display()))?;
-    Ok((resolved_frm, frm_file, frm_mmap))
+    let cap = frm_file.metadata().map(|m| m.len() as usize).unwrap_or(0);
+    let mut reader = BufReader::new(frm_file);
+    let mut data = Vec::with_capacity(cap);
+    let mut chunk = [0u8; 64 * 1024];
+    loop {
+        let n = reader
+            .read(&mut chunk)
+            .with_context(|| format!("Failed reading FRM file: {}", resolved_frm.display()))?;
+        if n == 0 {
+            break;
+        }
+        data.extend_from_slice(&chunk[..n]);
+    }
+    Ok((resolved_frm, data))
 }
 
 pub(crate) fn resolve_hdd_candidate(hdd_path: Option<&Path>) -> Option<PathBuf> {
@@ -89,12 +102,12 @@ pub fn correlate_hdd_partitions(
         ),
         (
             (LBA_PARTITION_2_OFFSET + 0x30) as usize,
-            "Particao 2 (64 MB - Sub-sistema OSD)",
+            "Particao 2 (64 MB - DRV S211)",
             "Bloco Nulo [0] Identico detectado no Offset 0x30",
         ),
         (
             (LBA_PARTITION_2_OFFSET + 0x38) as usize,
-            "Particao 2 (64 MB - Sub-sistema OSD)",
+            "Particao 2 (64 MB - DRV S211)",
             "Bloco Nulo [1] Identico detectado no Offset 0x38",
         ),
     ];
@@ -215,7 +228,7 @@ pub fn analyze_codebook_slices(
                 if (PANA_FRM_MOD2_START_OFFSET..PANA_FRM_MOD2_BOUNDARY).contains(&first_off) {
                     "Módulo 2 (Drive Servo DSP / MN102 Code Section)"
                 } else if first_off < PANA_FRM_MOD1_BOUNDARY {
-                    "Módulo 1 (Sub-sistema / OSD Font Section)"
+                    "Módulo 1 (DRV S211 / Drive Servo Firmware)"
                 } else {
                     "Módulo 3 (Main CPU OS / AM34 Core Section)"
                 };

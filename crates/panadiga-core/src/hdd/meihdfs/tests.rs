@@ -53,4 +53,20 @@ pub mod pure_meihdfs_tests {
         assert_eq!(report.extents[0].total_sectors, 8);
         assert_eq!(report.extents[0].total_bytes, 8 * 512);
     }
+
+    #[test]
+    fn test_is_full_image_requires_mirror_descriptors_end() {
+        // Length covers LBA_MIRROR_MBR_OFFSET + 4096 but stops 1 byte short of mirror descriptors end.
+        let mirror_end =
+            ALLOCATION_DESCRIPTORS_MIRROR_OFFSET as usize + ALLOCATION_DESCRIPTORS_SIZE;
+        let short_buf = vec![0u8; mirror_end - 1];
+        let rep_short = decode_meihdfs_slice(&short_buf, false, "short-buf").unwrap();
+        assert!(!rep_short.is_full_hdd_image);
+        assert!(!rep_short.is_mirror_verified);
+
+        let full_buf = vec![0u8; mirror_end];
+        let rep_full = decode_meihdfs_slice(&full_buf, false, "full-buf").unwrap();
+        assert!(rep_full.is_full_hdd_image);
+        assert!(rep_full.is_mirror_verified);
+    }
 }

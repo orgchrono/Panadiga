@@ -17,10 +17,101 @@ use crate::constants::{
 };
 use crate::nvram::calculate_hashes;
 
+use super::super::block_ops::{is_unconditional_os_boot_disk, verify_safety_lockout_with_os_disks};
+use super::super::discovery::detect_linux_host_os_disks;
 use super::types::{
-    BlockFlashDevice, EH55_BACKUP_SECTOR_COUNT, EH55_FLASH_CHUNK_BYTES, Eh55FlashProgress,
-    Eh55FlashStage, Eh55HddFlashRequest,
+    BUS_TYPE_NVME, BlockFlashDevice, DEFAULT_EXPECTED_GB_RANGE, EH55_BACKUP_SECTOR_COUNT,
+    EH55_FLASH_CHUNK_BYTES, Eh55FlashProgress, Eh55FlashStage, Eh55HddFlashRequest, MAX_ALLOWED_GB,
+    MIN_ALLOWED_GB, compute_eh55_mirror_main_lba,
 };
+
+/// Validated target geometry & safety-lockout parameters shared across HDD flash writers.
+pub(in crate::hdd::writer) struct HddPreflightParams<'a> {
+    pub device_path: &'a str,
+    pub confirmation_token: &'a str,
+    pub expected_gb_range: Option<(u32, u32)>,
+    pub detected_os_disks: Option<&'a [String]>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(in crate::hdd::writer) struct HddTargetGeometry {
+    pub disk_bytes: u64,
+    pub total_sectors: u64,
+    pub bus_type_id: u32,
+    pub mirror_main_lba: u64,
+    pub mirror_offset_bytes: u64,
+}
+
+/// Shared fail-closed HDD preflight validating OS disk lockout, NVMe block, capacity bounds, and mirror LBA.
+pub(in crate::hdd::writer) fn preflight_hdd_target_geometry<D, F>(
+    device: &D,
+    params: HddPreflightParams<'_>,
+    on_progress: &mut F,
+) -> Result<HddTargetGeometry>
+where
+    D: BlockFlashDevice + ?Sized,
+    F: FnMut(Eh55FlashProgress),
+{
+    on_progress(Eh55FlashProgress {
+        stage: Eh55FlashStage::Preflight,
+        bytes_done: 0,
+        bytes_total: 0,
+        detail: format!("Validating safety lockouts for {}", params.device_path),
+    });
+    if is_unconditional_os_boot_disk(params.device_path) {
+        bail!(
+            "FATAL SAFETY LOCKOUT: Primary OS boot disk '{}' is unconditionally blocked!",
+            params.device_path
+        );
+    }
+    let fallback_os_disks = if params.detected_os_disks.is_none() {
+        detect_linux_host_os_disks()
+    } else {
+        None
+    };
+    let os_refs: Option<Vec<&str>> = params
+        .detected_os_disks
+        .or(fallback_os_disks.as_deref())
+        .map(|list| list.iter().map(String::as_str).collect());
+    verify_safety_lockout_with_os_disks(
+        params.device_path,
+        params.confirmation_token,
+        os_refs.as_deref(),
+    )?;
+
+    let bus_type_id = device.bus_type();
+    if bus_type_id == BUS_TYPE_NVME {
+        bail!(
+            "SAFETY LOCKOUT: Target '{}' reported BusType::Nvme (17); EH55 targets must be IDE/PATA/SATA/USB",
+            params.device_path
+        );
+    }
+    let (min_gb, max_gb) = params
+        .expected_gb_range
+        .unwrap_or(DEFAULT_EXPECTED_GB_RANGE);
+    if min_gb > max_gb || min_gb < MIN_ALLOWED_GB || max_gb > MAX_ALLOWED_GB {
+        bail!(
+            "Invalid expected_gb_range ({min_gb}..{max_gb} GB): must fall within {MIN_ALLOWED_GB}..{MAX_ALLOWED_GB} GB"
+        );
+    }
+    let disk_bytes = device.length_bytes()?;
+    let min_bytes = u64::from(min_gb) * 1_000_000_000;
+    let max_bytes = u64::from(max_gb) * 1_000_000_000;
+    if disk_bytes < min_bytes || disk_bytes > max_bytes {
+        bail!(
+            "SAFETY ABORT: Target disk '{}' length {disk_bytes} B outside expected {min_gb}..{max_gb} GB range",
+            params.device_path
+        );
+    }
+    let mirror_main_lba = compute_eh55_mirror_main_lba(disk_bytes)?;
+    Ok(HddTargetGeometry {
+        disk_bytes,
+        total_sectors: disk_bytes / (LBA_SECTOR_SIZE_BYTES as u64),
+        bus_type_id,
+        mirror_main_lba,
+        mirror_offset_bytes: mirror_main_lba * (LBA_SECTOR_SIZE_BYTES as u64),
+    })
+}
 
 pub(super) fn validate_eh55_primary_image(bytes: &[u8]) -> Result<()> {
     if bytes.is_empty() || !bytes.len().is_multiple_of(LBA_SECTOR_SIZE_BYTES) {
@@ -41,7 +132,7 @@ pub(super) fn validate_eh55_primary_image(bytes: &[u8]) -> Result<()> {
     Ok(())
 }
 
-pub(super) fn write_chunked_with_progress<D, F>(
+pub(in crate::hdd::writer) fn write_chunked_with_progress<D, F>(
     device: &mut D,
     start_offset: u64,
     data: &[u8],
@@ -53,23 +144,23 @@ where
     D: BlockFlashDevice + ?Sized,
     F: FnMut(Eh55FlashProgress),
 {
-    let total = data.len() as u64;
-    let mut pos = 0usize;
-    while pos < data.len() {
-        let end = (pos + EH55_FLASH_CHUNK_BYTES).min(data.len());
-        device.write_at(start_offset + pos as u64, &data[pos..end])?;
-        pos = end;
-        on_progress(Eh55FlashProgress {
-            stage,
-            bytes_done: pos as u64,
-            bytes_total: total,
-            detail: format!("{label}: {pos} / {total} bytes written"),
-        });
-    }
-    Ok(())
+    super::super::raw_device::write_chunked_bytes(
+        device,
+        start_offset,
+        data,
+        EH55_FLASH_CHUNK_BYTES,
+        |pos, total| {
+            on_progress(Eh55FlashProgress {
+                stage,
+                bytes_done: pos as u64,
+                bytes_total: total,
+                detail: format!("{label}: {pos} / {total} bytes written"),
+            });
+        },
+    )
 }
 
-pub(super) fn verify_region_readback_sha256<D, F>(
+pub(in crate::hdd::writer) fn verify_region_readback_sha256<D, F>(
     device: &D,
     start_offset: u64,
     expected_len: usize,
@@ -81,30 +172,25 @@ where
     D: BlockFlashDevice + ?Sized,
     F: FnMut(Eh55FlashProgress),
 {
-    let mut readback = vec![0u8; expected_len];
-    let mut pos = 0usize;
-    let total = expected_len as u64;
-    while pos < expected_len {
-        let end = (pos + EH55_FLASH_CHUNK_BYTES).min(expected_len);
-        device.read_at(start_offset + pos as u64, &mut readback[pos..end])?;
-        pos = end;
-        on_progress(Eh55FlashProgress {
-            stage: Eh55FlashStage::VerifySha256,
-            bytes_done: pos as u64,
-            bytes_total: total,
-            detail: format!("Read-back {label}: {pos} / {total} bytes"),
-        });
-    }
-    let (_, actual_sha256) = calculate_hashes(&readback);
-    if actual_sha256 != expected_sha256 {
-        bail!(
-            "Read-back SHA-256 mismatch on {label} at offset 0x{start_offset:X}: expected {expected_sha256}, got {actual_sha256}"
-        );
-    }
-    Ok(readback)
+    super::super::raw_device::readback_sha256_verify(
+        device,
+        start_offset,
+        expected_len,
+        expected_sha256,
+        label,
+        EH55_FLASH_CHUNK_BYTES,
+        |pos, total| {
+            on_progress(Eh55FlashProgress {
+                stage: Eh55FlashStage::VerifySha256,
+                bytes_done: pos as u64,
+                bytes_total: total,
+                detail: format!("Read-back {label}: {pos} / {total} bytes"),
+            });
+        },
+    )
 }
 
-pub(super) fn write_mandatory_64k_cow_backup<D>(
+pub(in crate::hdd::writer) fn write_mandatory_64k_cow_backup<D>(
     device: &D,
     backup_dir: &Path,
 ) -> Result<(PathBuf, PathBuf, String)>

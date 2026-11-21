@@ -1,9 +1,12 @@
+#![deny(unsafe_code)]
+
 //! Loader and inspection helpers for `src/hdd_cmd.c` capacity clamping in `MAIN` binaries & HDD P1.
 
 use anyhow::{Context, Result, bail};
 use byteorder::{ByteOrder, LittleEndian};
 
 use crate::constants::*;
+use crate::crypto::extrhead::detect_extrhead_key_and_double;
 use crate::crypto::{ExtrheadCryptMode, UnpackedExtrhead, unpack_extrhead};
 use crate::nvram::calculate_hashes;
 
@@ -56,35 +59,48 @@ pub(crate) enum LoadedMainSource {
     Extrhead {
         unpacked: UnpackedExtrhead,
         is_plain: bool,
+        round_key: [u8; 32],
     },
     FullHddP1 {
         image_bytes: Vec<u8>,
         p1_container_len: usize,
         unpacked: UnpackedExtrhead,
         is_plain: bool,
+        round_key: [u8; 32],
     },
 }
 
-fn is_full_hdd_with_p1(raw: &[u8]) -> bool {
-    raw.len() >= (LBA_PARTITION_2_OFFSET as usize)
-        && raw[..8] == PANASONIC_HDD_MBR_SIGNATURE
-        && (raw[LBA_PARTITION_1_OFFSET as usize..].starts_with(b"EXTRHEAD")
-            || raw[LBA_PARTITION_1_OFFSET as usize..].starts_with(&PANASONIC_HDD_PARTITION_MAGIC))
+fn detect_extrhead_slice_key(slice: &[u8]) -> Option<(bool, [u8; 32], bool)> {
+    if slice.len() < PANA_EXTRHEAD_HEADER_SIZE {
+        return None;
+    }
+    if slice.starts_with(b"EXTRHEAD") {
+        return Some((true, PANA_FEISTEL_ROUND_KEY_32B, false));
+    }
+    detect_extrhead_key_and_double(&slice[..8], None).map(|(rk, dbl)| (false, rk, dbl))
 }
 
-fn detect_extrhead_container_len(slice: &[u8]) -> Result<usize> {
+fn is_full_hdd_with_p1(raw: &[u8]) -> bool {
+    let p1 = LBA_PARTITION_1_OFFSET as usize;
+    raw.len() >= (LBA_PARTITION_2_OFFSET as usize)
+        && raw[..8] == PANASONIC_HDD_MBR_SIGNATURE
+        && (raw[p1..].starts_with(&PANASONIC_HDD_PARTITION_MAGIC)
+            || detect_extrhead_slice_key(&raw[p1..]).is_some())
+}
+
+fn detect_extrhead_container_len(slice: &[u8]) -> Result<(usize, bool, [u8; 32])> {
     if slice.len() < PANA_EXTRHEAD_HEADER_SIZE {
         bail!("EXTRHEAD slice shorter than {PANA_EXTRHEAD_HEADER_SIZE} bytes");
     }
-    let is_plain = slice.starts_with(b"EXTRHEAD");
+    let (is_plain, rk, double_encrypted) = detect_extrhead_slice_key(slice)
+        .context("EXTRHEAD P1 header failed multi-key Feistel auto-detection")?;
     let mut hdr = [0u8; PANA_EXTRHEAD_HEADER_SIZE];
     hdr.copy_from_slice(&slice[..PANA_EXTRHEAD_HEADER_SIZE]);
     if !is_plain {
-        crate::crypto::feistel_decrypt_buffer(
-            &mut hdr,
-            &PANA_FEISTEL_ROUND_KEY_32B,
-            &PANA_FEISTEL_SBOX_256,
-        );
+        crate::crypto::feistel_decrypt_buffer(&mut hdr, &rk, &PANA_FEISTEL_SBOX_256);
+        if double_encrypted {
+            crate::crypto::feistel_decrypt_buffer(&mut hdr, &rk, &PANA_FEISTEL_SBOX_256);
+        }
     }
     let parsed = crate::crypto::parse_extrhead_header(&hdr)?;
     let footer_span = if parsed.footer_offset >= PANA_EXTRHEAD_HEADER_SIZE as u32 {
@@ -93,11 +109,12 @@ fn detect_extrhead_container_len(slice: &[u8]) -> Result<usize> {
         PANA_EXTRHEAD_HEADER_SIZE + parsed.src_len as usize + PANA_EXTRHEAD_FOOTER_SIZE
     };
     let aligned = (footer_span + 7) & !7;
-    if aligned > slice.len() {
-        Ok(slice.len() & !7)
+    let c_len = if aligned > slice.len() {
+        slice.len() & !7
     } else {
-        Ok(aligned)
-    }
+        aligned
+    };
+    Ok((c_len, is_plain, rk))
 }
 
 pub(crate) fn load_main_source(raw: Vec<u8>) -> Result<LoadedMainSource> {
@@ -105,21 +122,24 @@ pub(crate) fn load_main_source(raw: Vec<u8>) -> Result<LoadedMainSource> {
         let p1_off = LBA_PARTITION_1_OFFSET as usize;
         let p2_off = LBA_PARTITION_2_OFFSET as usize;
         let max_p1 = &raw[p1_off..p2_off];
-        let c_len = detect_extrhead_container_len(max_p1)?;
-        let is_plain = max_p1.starts_with(b"EXTRHEAD");
+        let (c_len, is_plain, round_key) = detect_extrhead_container_len(max_p1)?;
         let unpacked = unpack_extrhead(&max_p1[..c_len], ExtrheadCryptMode::Auto)?;
         return Ok(LoadedMainSource::FullHddP1 {
             image_bytes: raw,
             p1_container_len: c_len,
             unpacked,
             is_plain,
+            round_key,
         });
     }
 
-    if raw.starts_with(b"EXTRHEAD") || raw.starts_with(&PANASONIC_HDD_PARTITION_MAGIC) {
-        let is_plain = raw.starts_with(b"EXTRHEAD");
+    if let Some((is_plain, round_key, _)) = detect_extrhead_slice_key(&raw) {
         let unpacked = unpack_extrhead(&raw, ExtrheadCryptMode::Auto)?;
-        return Ok(LoadedMainSource::Extrhead { unpacked, is_plain });
+        return Ok(LoadedMainSource::Extrhead {
+            unpacked,
+            is_plain,
+            round_key,
+        });
     }
 
     Ok(LoadedMainSource::RawMain {

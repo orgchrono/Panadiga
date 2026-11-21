@@ -44,10 +44,25 @@ pub enum CfiStage {
     Unlock555,
     Unlock2AA,
     Autoselect,
+    CfiQuery,
     EraseSetup,
     EraseUnlock555,
     EraseUnlock2AA,
     ProgramPending,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub(super) struct NorBusyOp {
+    pub(super) va_base: u32,
+    pub(super) target_off: u32,
+    pub(super) len: u32,
+    pub(super) is_erase: bool,
+    pub(super) prog_val: u16,
+    pub(super) prog_width: usize,
+    pub(super) expected_dq7: u8,
+    pub(super) remaining_polls: u32,
+    pub(super) toggle_phase: bool,
+    pub(super) force_dq5: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, thiserror::Error)]
@@ -58,6 +73,8 @@ pub enum Mn103Fault {
     UnmappedWrite(u32),
     #[error("Spansion IPL read-only flash write protection triggered @ 0x{0:08X} (E05)")]
     IplWriteProtected(u32),
+    #[error("FORBIDDEN lethal AM34 register access @ 0x{0:08X} (0xC000100C halts WDT/bus)")]
+    LethalRegisterRead(u32),
     #[error("Unaligned memory access @ 0x{0:08X}")]
     AlignError(u32),
     #[error("Attempt to write reserved PSW bits 0x{0:04X}")]
@@ -97,6 +114,11 @@ pub struct Mn103Vm {
     pub sc0_enabled: bool,
     pub cfi_stage: CfiStage,
     pub nor_write_policy: NorWritePolicy,
+    /// Optional Spansion erase/program poll cycles before DQ7 transitions (`0` = instant).
+    pub nor_busy_cycles_config: u32,
+    /// Injects Spansion `DQ5` exceeded timing limit fault on NOR erase/program operations.
+    pub nor_force_dq5_timeout: bool,
+    pub(super) nor_busy_state: Option<NorBusyOp>,
     pub uart_rx: VecDeque<u8>,
     pub uart_tx: Vec<u8>,
     pub(super) segments: Vec<MemSegment>,
@@ -124,6 +146,9 @@ impl Mn103Vm {
             sc0_enabled: false,
             cfi_stage: CfiStage::Normal,
             nor_write_policy: NorWritePolicy::NvramOnly,
+            nor_busy_cycles_config: 0,
+            nor_force_dq5_timeout: false,
+            nor_busy_state: None,
             uart_rx: VecDeque::new(),
             uart_tx: Vec::new(),
             segments: Vec::new(),

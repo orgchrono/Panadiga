@@ -76,3 +76,19 @@ pub struct McpArgs {
     #[arg(long)]
     pub ping: bool,
 }
+
+#[derive(Args, Debug)]
+pub struct SsotArgs {
+    #[command(subcommand)]
+    pub action: SsotActions,
+}
+
+#[derive(Subcommand, Debug)]
+pub enum SsotActions {
+    /// Deterministically regenerates C11, TypeScript, JSON Schema, and Ghidra projections from `profiles/`
+    ExportAll {
+        /// Repository workspace root (defaults to auto-detected workspace root)
+        #[arg(long, value_name = "DIR")]
+        root: Option<PathBuf>,
+    },
+}

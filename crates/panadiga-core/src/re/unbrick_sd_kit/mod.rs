@@ -4,20 +4,51 @@
 //! Splits pure media verification (`verify`), pure artifact composition (`compose`),
 //! sector-aligned raw disk inspection (`inspect_sd`), and thin disk I/O (`io`).
 
+pub mod cleanroom_digadiag;
 pub mod compose;
+pub mod creator;
+pub mod dvd_creator;
+pub mod fat16_builder;
 pub mod inspect_sd;
 pub mod io;
+pub mod iso9660_builder;
 pub mod verify;
+
+pub use cleanroom_digadiag::{
+    CLEANROOM_DIGADIAG_MAGIC, CleanroomDigadiagArtifact, build_cleanroom_digadiag,
+};
 
 pub use compose::{
     HardenedPanamon1KitArtifacts, SdKitBuildPreset, SdLoaderProfile, SdUnbrickKitReport,
     SdUnbrickKitRequest, compose_hardened_panamon1_kit,
+};
+pub use creator::{
+    RecoveryPayloadSpec, ResolvedRecoveryMedia, SDXC_ADVISORY_THRESHOLD_BYTES, SdCardAdvisory,
+    SdCardCreatorPlan, SdCardCreatorReport, SdCardCreatorRequest, SdCreatorProgress,
+    SdCreatorStage, SdTargetDriveInfo, assess_sd_card_size_advisory, build_layperson_sd_steps,
+    create_sd_recovery_card_on_device, create_sd_recovery_image, flash_sd_recovery_card,
+    inspect_sd_card_targets, plan_sd_recovery_card, resolve_recovery_media_payloads,
+};
+pub use dvd_creator::{
+    DvdCreatorProgress, DvdCreatorReport, DvdCreatorRequest, DvdCreatorStage, OpticalBurnBackend,
+    OpticalBurnerDriveInfo, SystemOpticalBurnBackend, create_dvd_recovery_disc,
+    create_dvd_recovery_disc_with_backend, create_dvd_recovery_iso, expected_optical_confirm_token,
+    inspect_optical_burners,
+};
+pub use fat16_builder::{
+    FAT16_DEFAULT_VOLUME_MB, FAT16_MAX_VOLUME_MB, FAT16_MIN_VOLUME_MB, FAT16_PARTITION_TYPE_LBA,
+    FAT16_VBR_LBA_START, Fat16PlacedFileReport, Fat16SdFileInput, Fat16SdGeometry,
+    SynthesizedSdImage, compute_fat16_sd_geometry, encode_dos_8_3_name, synthesize_fat16_sd_image,
 };
 pub use inspect_sd::{
     FatBpbReport, MbrPartitionRecord, RootDirFileReport, SdDiskInspectionReport,
     inspect_sd_disk_bytes, inspect_sd_reader, inspect_sd_target,
 };
 pub use io::{prepare_sd_unbrick_kit, verify_sd_unbrick_media};
+pub use iso9660_builder::{
+    ISO9660_SECTOR_SIZE, Iso9660FileInput, Iso9660InspectionReport, Iso9660PlacedFileReport,
+    SynthesizedIsoImage, inspect_iso9660_image, synthesize_iso9660_level1_image,
+};
 pub use verify::{
     DualFamilyParityReport, DualFamilySlotResolution, SdKitAuditProfile, SdMediaVerificationReport,
     SdUnbrickCheck, simulate_sd_find_firm_entry_dual, verify_sd_buffers,

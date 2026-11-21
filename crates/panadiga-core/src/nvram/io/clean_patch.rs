@@ -5,51 +5,80 @@ use std::path::Path;
 use anyhow::Result;
 
 use super::super::pure::{
-    NvramCleanReport, PureNvramCleanOutput, clean_flash_nvram_slice, patch_flash_nvram_slice,
+    NvramCleanReport, NvramPolicyOptions, PureNvramCleanOutput, SliceIoLabels,
+    clean_flash_nvram_slice_with_policy, patch_flash_nvram_slice_with_policy,
 };
 use super::capture::{
     ensure_distinct_cow_path, read_flash_file, resolve_input_path, write_cow_file,
 };
-use crate::constants::SPANSION_NVRAM_SIZE_BYTES;
 
-/// Executes the complete NVRAM clean, backup, audit, and verification workflow.
-pub fn clean_flash_nvram(
+/// Executes policy-gated CoW NVRAM clean, backup, audit, and SHA-256 verification.
+pub fn clean_flash_nvram_with_policy(
     input_path: &Path,
     output_path: Option<&Path>,
+    policy: &NvramPolicyOptions<'_>,
 ) -> Result<NvramCleanReport> {
     persist_transformed_flash(
         input_path,
         output_path,
         "CLEAN",
-        "PANASONIC DMR-EH55 NVRAM CLEANER & FLASH INTEGRITY ARCHITECT",
+        "PANASONIC DIGA NVRAM CLEANER & FLASH INTEGRITY ARCHITECT",
         |flash_bytes, in_lbl, out_lbl, bak_lbl| {
-            clean_flash_nvram_slice(flash_bytes, in_lbl, out_lbl, bak_lbl)
+            clean_flash_nvram_slice_with_policy(
+                flash_bytes,
+                policy,
+                SliceIoLabels::new(in_lbl, out_lbl, bak_lbl),
+            )
         },
     )
 }
 
-/// Copy-on-write guarded write/patch of bytes strictly within writable NVRAM microsectors.
+/// Fail-closed default NVRAM cleaning workflow (no overrides).
+pub fn clean_flash_nvram(
+    input_path: &Path,
+    output_path: Option<&Path>,
+) -> Result<NvramCleanReport> {
+    clean_flash_nvram_with_policy(input_path, output_path, &NvramPolicyOptions::default())
+}
+
+/// Policy-gated Copy-on-Write byte patch inside verified EEMUL NVRAM micro-sectors.
+pub fn patch_flash_nvram_with_policy(
+    input_path: &Path,
+    output_path: Option<&Path>,
+    nvram_rel_offset: usize,
+    patch_bytes: &[u8],
+    policy: &NvramPolicyOptions<'_>,
+) -> Result<NvramCleanReport> {
+    persist_transformed_flash(
+        input_path,
+        output_path,
+        "PATCHED",
+        "PANASONIC DIGA GUARDED NVRAM PATCHER (IPL PROTECTED)",
+        |flash_bytes, in_lbl, out_lbl, bak_lbl| {
+            patch_flash_nvram_slice_with_policy(
+                flash_bytes,
+                nvram_rel_offset,
+                patch_bytes,
+                policy,
+                SliceIoLabels::new(in_lbl, out_lbl, bak_lbl),
+            )
+        },
+    )
+}
+
+/// Fail-closed default guarded NVRAM patcher (no overrides).
 pub fn patch_flash_nvram(
     input_path: &Path,
     output_path: Option<&Path>,
     nvram_rel_offset: usize,
     patch_bytes: &[u8],
 ) -> Result<NvramCleanReport> {
-    persist_transformed_flash(
+    patch_flash_nvram_with_policy(
         input_path,
         output_path,
-        "PATCHED",
-        "PANASONIC DMR-EH55 GUARDED NVRAM PATCHER (IPL PROTECTED)",
-        |flash_bytes, in_lbl, out_lbl, bak_lbl| {
-            patch_flash_nvram_slice(
-                flash_bytes,
-                nvram_rel_offset,
-                patch_bytes,
-                in_lbl,
-                out_lbl,
-                bak_lbl,
-            )
-        },
+        nvram_rel_offset,
+        patch_bytes,
+        &NvramPolicyOptions::default(),
     )
 }
 
@@ -59,34 +88,41 @@ fn log_nvram_audit_report(
     backup_nvram_path: &Path,
     backup_len: usize,
 ) {
-    let pct_non_ff = (report.nvram_non_ff_bytes as f64 / SPANSION_NVRAM_SIZE_BYTES as f64) * 100.0;
-    let pct_non_zero =
-        (report.nvram_non_zero_bytes as f64 / SPANSION_NVRAM_SIZE_BYTES as f64) * 100.0;
+    let nvram_len = report
+        .nvram_offset_end
+        .saturating_sub(report.nvram_offset_start)
+        .max(1);
+    let pct_non_ff = (report.nvram_non_ff_bytes as f64 / nvram_len as f64) * 100.0;
+    let pct_non_zero = (report.nvram_non_zero_bytes as f64 / nvram_len as f64) * 100.0;
 
     log_println!("\n[+] ANALISE ESTRUTURAL DA NVRAM CORROMPIDA:");
     log_println!(
         "    * Bytes nao-FF (dados gravados) : {:6} / {} ({:.2}%)",
         report.nvram_non_ff_bytes,
-        SPANSION_NVRAM_SIZE_BYTES,
+        nvram_len,
         pct_non_ff
     );
     log_println!(
         "    * Bytes nao-zero                : {:6} / {} ({:.2}%)",
         report.nvram_non_zero_bytes,
-        SPANSION_NVRAM_SIZE_BYTES,
+        nvram_len,
         pct_non_zero
     );
 
-    let base_sector_idx = report
+    let first_sec = report
         .microsectors
         .first()
-        .and_then(|m| m.sector_name.trim_start_matches("SA").parse::<usize>().ok())
-        .unwrap_or(134);
+        .map_or("SA?", |m| m.sector_name.as_str());
+    let last_sec = report
+        .microsectors
+        .last()
+        .map_or("SA?", |m| m.sector_name.as_str());
 
     log_println!(
-        "\n    * Auditoria Detalhada dos 8 Micro-Setores (SA{} a SA{} - 8 KB cada):",
-        base_sector_idx,
-        base_sector_idx + 7
+        "\n    * Auditoria Detalhada dos {} Setores NVRAM ({} a {}):",
+        report.microsectors.len(),
+        first_sec,
+        last_sec
     );
     log_println!("    +-------+----------+--------------------+-------------------------+");
     log_println!("    | Setor |  Offset  | Ativos (Nao-0xFF)  | Header (Primeiros 8B)   |");

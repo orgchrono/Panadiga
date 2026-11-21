@@ -15,7 +15,7 @@ mod checks_nor_frm;
 mod checks_passthrough_region;
 #[cfg(test)]
 mod checks_real_nor;
-mod fixtures;
+pub(crate) mod fixtures;
 mod types;
 
 #[cfg(test)]
@@ -38,9 +38,11 @@ use checks_hdd_lba::verify_hdd_capacity_unlock;
 use checks_nor_frm::{
     verify_bgo_and_panamon_suite, verify_frm_pack_retarget_and_flash, verify_nor_flash_and_cfi,
 };
-use checks_passthrough_region::{verify_region_compat_and_devbin, verify_tbc_passthrough_routines};
+use checks_passthrough_region::verify_region_compat_and_devbin;
 use fixtures::{build_synthetic_main_3410pq, build_synthetic_prog061};
 
+pub(crate) use checks_passthrough_region::verify_tbc_passthrough_routines;
+pub(crate) use fixtures::new_spansion_nor_vm;
 pub use types::{NorEmuPatchSuiteReport, PatchVerificationCheck};
 
 /// Runs the full offline end-to-end Patcher + `.FRM` Pack/Unpack + Spansion NOR + `Mn103Vm` suite.

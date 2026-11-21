@@ -239,9 +239,14 @@ fn test_new_re_bgo_nor_and_capacity_tools() {
     assert_eq!(nor_digadiag["load_addr"], "0x50400000");
     assert_eq!(nor_digadiag["stub_size_bytes"], 131_072);
 
-    // Guarded CoW NVRAM patch leaves original file untouched
+    // Guarded CoW NVRAM patch leaves original file untouched (verified DMR-EH55 dump with Loader ver0.61 + 0xF1 EEMUL marker)
     let flash_src = tmp.join("orig_8mb.bin");
-    fs::write(&flash_src, vec![0xFFu8; 8 * 1024 * 1024]).unwrap();
+    let mut eh55_img = vec![0xFFu8; 8 * 1024 * 1024];
+    let banner = b"Loader ver0.61 [06/03/06]";
+    eh55_img[0x0003_F000..0x0003_F000 + banner.len()].copy_from_slice(banner);
+    eh55_img[0x007F_0000..0x007F_0008]
+        .copy_from_slice(&[0xFF, 0xFF, 0xFF, 0xFF, 0x01, 0xF1, 0xFF, 0xFF]);
+    fs::write(&flash_src, eh55_img).unwrap();
     let patched = execute_tool(
         "panadiga_clean_nvram",
         &json!({
@@ -260,6 +265,47 @@ fn test_new_re_bgo_nor_and_capacity_tools() {
         &patched_bytes[0x7F_0010..0x7F_0014],
         &[0xCA, 0xFE, 0x12, 0x34]
     );
+
+    // Unlabeled 8 MiB dump MUST be denied without lab override
+    let unlabeled_src = tmp.join("unlabeled_8mb.bin");
+    fs::write(&unlabeled_src, vec![0x55u8; 8 * 1024 * 1024]).unwrap();
+    assert!(
+        execute_tool(
+            "panadiga_clean_nvram",
+            &json!({
+                "action": "clean",
+                "input_file": "unlabeled_8mb.bin",
+                "output_file": "out/unlabeled_clean.bin"
+            }),
+            &tmp,
+        )
+        .is_err()
+    );
+
+    // panadiga_profiles_authorize enforces T4 vs C0 read-only policy
+    let auth_eh55 = execute_tool(
+        "panadiga_profiles_authorize",
+        &json!({
+            "model_id": "DMR-EH55",
+            "capability": "nvram_sanitize_offline_cow",
+            "dump_size_bytes": 8_388_608,
+            "has_eemul_f1_marker": true
+        }),
+        &tmp,
+    )
+    .unwrap();
+    assert_eq!(auth_eh55["allowed"], true);
+
+    let auth_ez485v = execute_tool(
+        "panadiga_profiles_authorize",
+        &json!({
+            "model_id": "DMR-EZ485V",
+            "capability": "nvram_sanitize_offline_cow"
+        }),
+        &tmp,
+    )
+    .unwrap();
+    assert_eq!(auth_ez485v["allowed"], false);
 
     let out_of_range = execute_tool(
         "panadiga_clean_nvram",

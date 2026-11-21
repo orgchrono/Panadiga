@@ -121,7 +121,7 @@ pub fn handle_eh55_bgo_with_transport<T: Panamon1Transport>(
             Ok(json!({
                 "out_plan_path": out_plan_saved,
                 "cow_out_path": cow_saved,
-                "sa0_sa3_locked_e05": true,
+                "sa0_to_sa10_locked_e05": true,
                 "plan": plan,
             }))
         }
@@ -132,7 +132,7 @@ pub fn handle_eh55_bgo_with_transport<T: Panamon1Transport>(
                 .unwrap_or(false);
             if !confirm {
                 bail!(
-                    "E05 / Upper NOR safety lockout: live_apply requires confirm_upper_nor=true (SA0..SA3 remain permanently E05-locked)"
+                    "E05 / Upper NOR safety lockout: live_apply requires confirm_upper_nor=true (Layer 1 256 KiB IPL SA0..SA10 remain permanently E05-locked)"
                 );
             }
             let plan_path =

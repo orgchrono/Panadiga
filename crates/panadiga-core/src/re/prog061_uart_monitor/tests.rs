@@ -17,6 +17,14 @@ fn uart_monitor_payload_assembles_cleanly_within_slack() {
     );
 }
 
+fn make_panamon1_call_ram(call_va: u32) -> Vec<u8> {
+    let mut ram = vec![0u8; 0x1_0000];
+    let rel32 = (PROG061_UART_MONITOR_VA as i64 - call_va as i64) as i32;
+    ram[0] = 0xDD;
+    ram[1..5].copy_from_slice(&rel32.to_le_bytes());
+    ram
+}
+
 #[test]
 fn panamon1_executes_guarded_rw_jump_erase_and_blocks_ipl_on_mn103_vm() {
     let payload = build_prog061_uart_monitor_payload(PROG061_UART_MONITOR_VA).unwrap();
@@ -27,11 +35,8 @@ fn panamon1_executes_guarded_rw_jump_erase_and_blocks_ipl_on_mn103_vm() {
     vm.enable_sc0_uart(&[]);
 
     vm.map_segment(PROG061_UART_MONITOR_VA, payload, false);
-    let mut ram = vec![0u8; 0x1_0000];
     let call_va = 0x5000_0000u32;
-    let rel32 = (PROG061_UART_MONITOR_VA as i64 - call_va as i64) as i32;
-    ram[0] = 0xDD;
-    ram[1..5].copy_from_slice(&rel32.to_le_bytes());
+    let mut ram = make_panamon1_call_ram(call_va);
     ram[5] = 0x00;
     ram[6] = 0x00;
     ram[0x1800..0x180C].copy_from_slice(&[
@@ -194,4 +199,48 @@ fn computes_exact_uncached_sdram_nor_dumper_patch_offsets() {
         &payload[offsets.end_imm_off - 2..offsets.end_imm_off],
         &[0xFC, 0xDD]
     );
+}
+
+#[test]
+fn panamon1_honors_multicycle_dq7_busy_and_rejects_dq5_timeout_without_false_ok() {
+    let payload = build_prog061_uart_monitor_payload(PROG061_UART_MONITOR_VA).unwrap();
+
+    // Case 1: Multi-cycle Spansion busy polling succeeds cleanly after 5 polls
+    let mut vm_ok = Mn103Vm::new();
+    vm_ok.nor_write_policy = crate::pico::rsp_codec::policy::NorWritePolicy::UpperNorAppUnlocked;
+    vm_ok.nor_busy_cycles_config = 5;
+    vm_ok.enable_sc0_uart(b"E 847F0000\r\nW 847F0010,55\r\nB");
+    vm_ok.map_segment(PROG061_UART_MONITOR_VA, payload.clone(), false);
+    vm_ok.map_segment(0x8400_0000, vec![0u8; 0x1000], false);
+    vm_ok.map_segment(0x847F_0000, vec![0x12u8; 0x1_0000], true);
+    let call_va = 0x5000_0000u32;
+    let ram = make_panamon1_call_ram(call_va);
+    vm_ok.map_segment(0x5000_0000, ram.clone(), true);
+    vm_ok.sp = 0x5000_F000;
+    vm_ok.pc = call_va;
+    vm_ok.run_until(call_va + 7, 200_000).unwrap();
+    let tx_ok = vm_ok.take_uart_tx_utf8();
+    assert!(tx_ok.contains("OK:ERASE"), "tx={tx_ok}");
+    assert!(tx_ok.contains("OK:WRITE"), "tx={tx_ok}");
+    assert!(!tx_ok.contains("ERR:ERASE"), "tx={tx_ok}");
+    assert!(!tx_ok.contains("ERR:WRITE"), "tx={tx_ok}");
+    assert_eq!(vm_ok.read_u8(0x847F_0010).unwrap(), 0x55);
+
+    // Case 2: DQ5 exceeded-timing fault MUST emit ERR:ERASE / ERR:WRITE and NEVER false OK
+    let mut vm_dq5 = Mn103Vm::new();
+    vm_dq5.nor_write_policy = crate::pico::rsp_codec::policy::NorWritePolicy::UpperNorAppUnlocked;
+    vm_dq5.nor_force_dq5_timeout = true;
+    vm_dq5.enable_sc0_uart(b"E 847F0000\r\nW 847F0010,55\r\nB");
+    vm_dq5.map_segment(PROG061_UART_MONITOR_VA, payload, false);
+    vm_dq5.map_segment(0x8400_0000, vec![0u8; 0x1000], false);
+    vm_dq5.map_segment(0x847F_0000, vec![0x12u8; 0x1_0000], true);
+    vm_dq5.map_segment(0x5000_0000, ram, true);
+    vm_dq5.sp = 0x5000_F000;
+    vm_dq5.pc = call_va;
+    vm_dq5.run_until(call_va + 7, 200_000).unwrap();
+    let tx_dq5 = vm_dq5.take_uart_tx_utf8();
+    assert!(tx_dq5.contains("ERR:ERASE"), "tx={tx_dq5}");
+    assert!(tx_dq5.contains("ERR:WRITE"), "tx={tx_dq5}");
+    assert!(!tx_dq5.contains("OK:ERASE"), "tx={tx_dq5}");
+    assert!(!tx_dq5.contains("OK:WRITE"), "tx={tx_dq5}");
 }

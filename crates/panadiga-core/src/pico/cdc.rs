@@ -201,6 +201,27 @@ pub fn send_and_read_until(
             }
         }
     }
+    let cmd_trimmed = command.trim();
+    let is_streaming_cmd = cmd_trimmed
+        .get(..6)
+        .is_some_and(|p| p.eq_ignore_ascii_case("BRIDGE"))
+        || cmd_trimmed
+            .get(..3)
+            .is_some_and(|p| p.eq_ignore_ascii_case("GDB"));
+    if reply_has_completed(&out, stop_tokens) && !is_streaming_cmd {
+        let prompt_deadline = deadline.min(std::time::Instant::now() + Duration::from_millis(250));
+        while std::time::Instant::now() < prompt_deadline {
+            let body = strip_leading_prompts(&out);
+            if body.contains("PANADIGA>") || body.contains("P7501>") {
+                break;
+            }
+            if let Ok(n) = port.read(&mut buf)
+                && n > 0
+            {
+                out.push_str(&String::from_utf8_lossy(&buf[..n]));
+            }
+        }
+    }
     let clean = strip_leading_prompts(&out).trim();
     if clean.is_empty() {
         out.trim().to_string()

@@ -31,6 +31,28 @@ pub fn is_unconditional_os_boot_disk(device_path: &str) -> bool {
         || normalized.starts_with("/dev/rdisk0s")
 }
 
+/// Checks whether `target` matches `os_disk` or a partition suffix of `os_disk`,
+/// preventing `/dev/disk1` from falsely matching `/dev/disk10` or `/dev/sda` from blocking `/dev/sdaa`.
+pub(crate) fn target_matches_base_disk_or_partition(target: &str, os_disk: &str) -> bool {
+    let t = target.trim().to_ascii_lowercase();
+    let d = os_disk.trim().to_ascii_lowercase();
+    if d.is_empty() || !t.starts_with(&d) {
+        return false;
+    }
+    let suffix = &t[d.len()..];
+    if suffix.is_empty() {
+        return true;
+    }
+    if d.ends_with(|c: char| c.is_ascii_digit()) {
+        // e.g. /dev/disk0 -> /dev/disk0s1, /dev/nvme0n1 -> /dev/nvme0n1p1, /dev/mmcblk0 -> /dev/mmcblk0p1
+        let mut chars = suffix.chars();
+        matches!(chars.next(), Some('p' | 's')) && chars.next().is_some_and(|c| c.is_ascii_digit())
+    } else {
+        // e.g. /dev/sda -> /dev/sda1 (never /dev/sdaa)
+        suffix.chars().all(|c| c.is_ascii_digit())
+    }
+}
+
 /// Pure safety lockout validator checking host OS boot drives & exact confirmation token.
 pub fn verify_safety_lockout_with_os_disks(
     device_path: &str,
@@ -40,11 +62,10 @@ pub fn verify_safety_lockout_with_os_disks(
     let normalized = device_path.trim().to_ascii_lowercase();
     let is_default_os_boot = is_unconditional_os_boot_disk(device_path);
     let is_detected_os_disk = match detected_os_disks {
-        Some(os_disks) => os_disks.iter().any(|os_dev| {
-            let clean_os = os_dev.trim().to_ascii_lowercase();
-            !clean_os.is_empty() && (normalized == clean_os || normalized.starts_with(&clean_os))
-        }),
-        None => normalized == "/dev/sda" || normalized.starts_with("/dev/sda"),
+        Some(os_disks) => os_disks
+            .iter()
+            .any(|os_dev| target_matches_base_disk_or_partition(&normalized, os_dev)),
+        None => target_matches_base_disk_or_partition(&normalized, "/dev/sda"),
     };
     if is_default_os_boot || is_detected_os_disk {
         bail!(

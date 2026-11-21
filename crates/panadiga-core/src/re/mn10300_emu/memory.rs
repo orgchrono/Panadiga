@@ -2,11 +2,24 @@
 
 use super::spansion_nor::is_ipl_readonly_va;
 use super::{MemSegment, Mn103Fault, Mn103Vm};
-use crate::constants::{AM34_SC0_RXB_VA, AM34_SC0_STR_VA, AM34_SC0_TXB_VA};
+use crate::constants::{
+    AM34_FORBIDDEN_LETHAL_REG, AM34_SC0_RXB_VA, AM34_SC0_STR_VA, AM34_SC0_TXB_VA,
+};
 
 const SC0_TXB_VA: u32 = AM34_SC0_TXB_VA;
 const SC0_RXB_VA: u32 = AM34_SC0_RXB_VA;
 const SC0_STR_VA: u32 = AM34_SC0_STR_VA;
+
+fn check_lethal_register(addr: u32, width: usize) -> Result<(), Mn103Fault> {
+    let start = addr as u64;
+    let end = start + width as u64;
+    let lethal_lo = AM34_FORBIDDEN_LETHAL_REG as u64;
+    let lethal_hi = lethal_lo + 4;
+    if start < lethal_hi && end > lethal_lo {
+        return Err(Mn103Fault::LethalRegisterRead(addr));
+    }
+    Ok(())
+}
 
 impl Mn103Vm {
     fn locate_slice(&self, addr: u32, len: usize) -> Option<(&MemSegment, usize)> {
@@ -43,6 +56,7 @@ impl Mn103Vm {
     }
 
     pub fn read_u8(&mut self, addr: u32) -> Result<u8, Mn103Fault> {
+        check_lethal_register(addr, 1)?;
         if self.sc0_enabled {
             if addr == SC0_RXB_VA {
                 return Ok(self.uart_rx.pop_front().unwrap_or(0));
@@ -51,7 +65,7 @@ impl Mn103Vm {
                 return Ok(if self.uart_rx.is_empty() { 0x00 } else { 0x10 });
             }
         }
-        if let Some(id16) = self.read_cfi_autoselect_u16(addr) {
+        if let Some(id16) = self.read_cfi_autoselect_u16(addr)? {
             return Ok(if (addr & 1) == 0 {
                 id16 as u8
             } else {
@@ -64,10 +78,11 @@ impl Mn103Vm {
         Ok(seg.data[off])
     }
 
-    pub fn read_u16(&self, addr: u32) -> Result<u16, Mn103Fault> {
+    pub fn read_u16(&mut self, addr: u32) -> Result<u16, Mn103Fault> {
         if (addr & 1) != 0 {
             return Err(Mn103Fault::AlignError(addr));
         }
+        check_lethal_register(addr, 2)?;
         if self.sc0_enabled && addr == SC0_STR_VA {
             return Ok(if self.uart_rx.is_empty() {
                 0x0000
@@ -75,7 +90,7 @@ impl Mn103Vm {
                 0x0010
             });
         }
-        if let Some(id16) = self.read_cfi_autoselect_u16(addr) {
+        if let Some(id16) = self.read_cfi_autoselect_u16(addr)? {
             return Ok(id16);
         }
         let (seg, off) = self
@@ -84,15 +99,17 @@ impl Mn103Vm {
         Ok(u16::from_le_bytes([seg.data[off], seg.data[off + 1]]))
     }
 
-    pub fn read_u32(&self, addr: u32) -> Result<u32, Mn103Fault> {
+    pub fn read_u32(&mut self, addr: u32) -> Result<u32, Mn103Fault> {
         if (addr & 3) != 0 {
             return Err(Mn103Fault::AlignError(addr));
         }
+        check_lethal_register(addr, 4)?;
         self.fetch_u32(addr)
     }
 
     /// Reads 4 little-endian instruction/literal bytes without data-alignment enforcement.
-    pub(super) fn fetch_u32(&self, addr: u32) -> Result<u32, Mn103Fault> {
+    pub(super) fn fetch_u32(&mut self, addr: u32) -> Result<u32, Mn103Fault> {
+        check_lethal_register(addr, 4)?;
         let (seg, off) = self
             .locate_slice(addr, 4)
             .ok_or(Mn103Fault::UnmappedRead(addr))?;

@@ -9,31 +9,30 @@ use anyhow::{Result, bail};
 use super::read_le_u16;
 use crate::constants::PANA_DEV_BIN_MAGIC;
 use crate::re::eh55_bgo::{
-    EH55_BGO_FIRST_SA, EH55_BGO_LAST_SA, EH55_BGO_MAX_PID, EH55_BGO_SECTOR_STRIDE,
-    Eh55BgoAuditReport, Eh55BgoSectorKind, audit_eh55_bgo_nor_8mb, eh55_bgo_sector_offset,
-    eval_bgo_migration_index, eval_bgo_migration_target, parse_eh55_bgo_l2p,
+    BgoSectorGeometry, Eh55BgoAuditReport, Eh55BgoSectorKind, audit_bgo_nor_with_geometry,
+    parse_bgo_l2p_with_geometry,
 };
 
-fn find_superseded_page(nor_8mb: &[u8], target_pid: u16) -> Option<Vec<u8>> {
-    for sa in EH55_BGO_FIRST_SA..=EH55_BGO_LAST_SA {
-        let Ok(base) = eh55_bgo_sector_offset(sa) else {
+fn find_superseded_page(nor: &[u8], target_pid: u16, geom: &BgoSectorGeometry) -> Option<Vec<u8>> {
+    for sa in geom.first_sa..=geom.last_sa {
+        let Ok(base) = geom.sector_offset(sa) else {
             continue;
         };
-        if (read_le_u16(nor_8mb, base + 4) & 0xFF00) != 0xF200 {
+        if (read_le_u16(nor, base + 4) & 0xFF00) != 0xF200 {
             continue;
         }
         for slot in 0..126usize {
-            if read_le_u16(nor_8mb, base + 0x200 + slot * 4) == target_pid {
+            if read_le_u16(nor, base + 0x200 + slot * 4) == target_pid {
                 let poff = base + 0x400 + slot * 0x200;
-                return Some(nor_8mb[poff..poff + 0x200].to_vec());
+                return Some(nor[poff..poff + 0x200].to_vec());
             }
         }
     }
     None
 }
 
-fn build_reconstructed_0f0a_page(nor_8mb: &[u8]) -> Vec<u8> {
-    let Some(mut raw) = find_superseded_page(nor_8mb, 0x0F0A) else {
+fn build_reconstructed_0f0a_page(nor: &[u8], geom: &BgoSectorGeometry) -> Vec<u8> {
+    let Some(mut raw) = find_superseded_page(nor, 0x0F0A, geom) else {
         return vec![0xFFu8; 512];
     };
     let mut set_fat = |pid: u16, nxt: u16| {
@@ -72,7 +71,7 @@ fn build_reconstructed_0f0a_page(nor_8mb: &[u8]) -> Vec<u8> {
 }
 
 fn read_present_bgo_page(
-    nor_8mb: &[u8],
+    nor: &[u8],
     l2p: &BTreeMap<u16, u16>,
     f2_bases: &BTreeMap<u16, usize>,
     pid: u16,
@@ -80,67 +79,99 @@ fn read_present_bgo_page(
     let &w = l2p.get(&pid).filter(|&&w| w != 0xFFFF)?;
     let &base = f2_bases.get(&(w >> 8))?;
     let poff = base + 0x400 + (usize::from(w & 0xFF) >> 1) * 0x200;
-    nor_8mb.get(poff..poff + 0x200).map(|s| s.to_vec())
+    nor.get(poff..poff + 0x200).map(|s| s.to_vec())
 }
 
-fn repair_p1_migration_in_cow(cow: &mut [u8], audit: &Eh55BgoAuditReport) -> Result<()> {
-    let active_p1: Vec<usize> = audit
+fn format_bgo_header_and_zero_marker(
+    cow: &mut [u8],
+    base: usize,
+    sector_id_word: [u8; 4],
+    sector_stride: usize,
+) {
+    cow[base..base + sector_stride].fill(0xFF);
+    for i in 0..4usize {
+        cow[base + 0x04 + i * 4..base + 0x08 + i * 4].copy_from_slice(&sector_id_word);
+    }
+    let marker = [0xFE, 0xFF, 0xFE, 0xFF, 0xFE, 0xFF, 0xFF, 0xFF];
+    cow[base + 0x14..base + 0x1C].copy_from_slice(&marker);
+    cow[base + 0x5C..base + 0x64].copy_from_slice(&marker);
+    cow[base + 0xFC..base + 0x100].copy_from_slice(&[0x00; 4]);
+    cow[base + 0x100..base + 0x200].fill(0x00);
+}
+
+/// Compacts split or migrating `0xF101` Partition-1 sectors into one authoritative sector
+/// with zero open `+0x14` migration links (`FUN_4402014f` rollback prevention).
+fn compact_p1_sectors_in_cow(
+    cow: &mut [u8],
+    audit: &Eh55BgoAuditReport,
+    geom: &BgoSectorGeometry,
+    l2p: &BTreeMap<u16, u16>,
+) -> Result<()> {
+    let p1_sas: Vec<usize> = audit
         .sectors
         .iter()
-        .filter(|s| s.kind == Eh55BgoSectorKind::Partition1Active)
+        .filter(|s| {
+            matches!(
+                s.kind,
+                Eh55BgoSectorKind::Partition1Active | Eh55BgoSectorKind::Partition1Migrating
+            )
+        })
         .map(|s| s.sa)
         .collect();
-    if active_p1.len() <= 1 {
+    if p1_sas.is_empty() {
+        bail!("No Partition 1 (0xF101) sector found in BGO volume");
+    }
+    if p1_sas.len() == 1 && audit.p1_migrating_count == 0 {
         return Ok(());
     }
-    let target_sa = *active_p1
-        .iter()
-        .find(|&&sa| {
-            eh55_bgo_sector_offset(sa)
-                .is_ok_and(|b| (0..4).all(|i| read_le_u16(cow, b + 0x14 + i * 2) == 0xFFFF))
-        })
-        .unwrap_or(&active_p1[0]);
-    let target_word = (target_sa - 25) as u16;
 
-    for sa in active_p1 {
-        if sa == target_sa {
-            continue;
-        }
-        let mig_off = eh55_bgo_sector_offset(sa)? + 0x14;
-        let orig = cow[mig_off..mig_off + 38].to_vec();
-        let Some(k) = (0..15usize).find(|&k| {
-            let t_word = read_le_u16(&orig, 8 + k * 2);
-            let tail_clean = ((k + 1)..15).all(|u| read_le_u16(&orig, 8 + u * 2) == 0xFFFF);
-            let w3_ok = ((read_le_u16(&orig, 6) & !((1u16 << k) - 1)) & (1u16 << k)) != 0;
-            tail_clean && (t_word == target_word || t_word == 0xFFFF) && w3_ok
-        }) else {
-            bail!("Cannot find 1->0 compatible migration bitmap slot in SA{sa}");
-        };
+    let target_sa = p1_sas[0];
+    let target_base = geom.sector_offset(target_sa)?;
+    format_bgo_header_and_zero_marker(
+        cow,
+        target_base,
+        [0x01, 0xF1, 0xFF, 0xFF],
+        geom.sector_stride,
+    );
 
-        for w_i in 0..3usize {
-            let next = read_le_u16(cow, mig_off + w_i * 2) & !((1u16 << (k + 1)) - 1);
-            cow[mig_off + w_i * 2..mig_off + w_i * 2 + 2].copy_from_slice(&next.to_le_bytes());
+    let max_tid = usize::from(geom.max_pid / 16);
+    if 2 + (max_tid / 7) >= 256 {
+        bail!("BGO Partition 1 overflow: max_tid={max_tid} exceeds 254 sub-pages");
+    }
+    for idx in 0..=max_tid {
+        let tid = idx as u16;
+        let sp = 2 + (idx / 7);
+        let s = idx % 7;
+        let off = target_base + sp * 0x100;
+        for b_i in 0..3usize {
+            cow[off + b_i] &= !(1u8 << s);
         }
-        let w3_next = read_le_u16(cow, mig_off + 6) & !((1u16 << k) - 1);
-        cow[mig_off + 6..mig_off + 8].copy_from_slice(&w3_next.to_le_bytes());
-        let t_off = mig_off + 8 + k * 2;
-        let t_next = read_le_u16(cow, t_off) & target_word;
-        cow[t_off..t_off + 2].copy_from_slice(&t_next.to_le_bytes());
+        let soff = off + 4 + s * 0x24;
+        cow[soff..soff + 2].copy_from_slice(&tid.to_le_bytes());
+        for i in 0..16u16 {
+            let pid = tid.wrapping_mul(16).wrapping_add(i);
+            let w = l2p.get(&pid).copied().unwrap_or(0xFFFF);
+            let w_off = soff + 4 + usize::from(i) * 2;
+            cow[w_off..w_off + 2].copy_from_slice(&w.to_le_bytes());
+        }
+    }
 
-        if eval_bgo_migration_index(cow, mig_off) != Some(k)
-            || eval_bgo_migration_target(cow, mig_off) != target_word
-        {
-            bail!("Failed post-patch verification of SA{sa} migration target");
-        }
+    for &sa in &p1_sas[1..] {
+        let base = geom.sector_offset(sa)?;
+        cow[base..base + geom.sector_stride].fill(0xFF);
+        cow[base + 0x100..base + 0x200].fill(0x00);
     }
     Ok(())
 }
 
-pub(super) fn reconstruct_corrupt_bgo_in_cow(
+/// Reconstructs corrupt/missing F2 sectors inside a CoW buffer using discovered BGO sector geometry.
+pub fn reconstruct_corrupt_bgo_in_cow_with_geometry(
     corrupt_nor: &[u8],
+    geom: &BgoSectorGeometry,
+    default_ifodev2: Option<&[u8; 8]>,
 ) -> Result<(Vec<u8>, Vec<u16>, Vec<usize>)> {
-    let pre_audit = audit_eh55_bgo_nor_8mb(corrupt_nor)?;
-    let l2p = parse_eh55_bgo_l2p(corrupt_nor)?;
+    let pre_audit = audit_bgo_nor_with_geometry(corrupt_nor, geom)?;
+    let l2p = parse_bgo_l2p_with_geometry(corrupt_nor, geom)?;
     let mut cow = corrupt_nor.to_vec();
     if pre_audit.healthy {
         return Ok((cow, Vec::new(), Vec::new()));
@@ -148,8 +179,8 @@ pub(super) fn reconstruct_corrupt_bgo_in_cow(
 
     let mut clean_spares = pre_audit.spare_sas.clone();
     for &sa in &pre_audit.corrupt_sas {
-        let base = eh55_bgo_sector_offset(sa)?;
-        cow[base..base + EH55_BGO_SECTOR_STRIDE].fill(0xFF);
+        let base = geom.sector_offset(sa)?;
+        cow[base..base + geom.sector_stride].fill(0xFF);
         cow[base + 0x100..base + 0x200].fill(0x00);
         if !clean_spares.contains(&sa) {
             clean_spares.push(sa);
@@ -176,7 +207,7 @@ pub(super) fn reconstruct_corrupt_bgo_in_cow(
         .iter()
         .map(|&f| (f, BTreeMap::new()))
         .collect();
-    for pid in 0x0001..=EH55_BGO_MAX_PID {
+    for pid in 0x0001..=geom.max_pid {
         if let Some(&w) = l2p.get(&pid).filter(|&&w| w != 0xFFFF)
             && let Some(map) = f2_slots.get_mut(&(w >> 8))
         {
@@ -187,17 +218,16 @@ pub(super) fn reconstruct_corrupt_bgo_in_cow(
         }
     }
 
-    let recon_0f0a = build_reconstructed_0f0a_page(corrupt_nor);
+    let recon_0f0a = build_reconstructed_0f0a_page(corrupt_nor, geom);
+    let ifodev2_bytes = default_ifodev2.unwrap_or(b"M6930LB\x00");
     for (&fid, &sa) in missing_f2_ids.iter().zip(assigned_spares.iter()) {
-        let base = eh55_bgo_sector_offset(sa)?;
-        let id_word = [fid as u8, 0xF2, 0xFF, 0xFF];
-        for i in 0..4 {
-            cow[base + 0x04 + i * 4..base + 0x08 + i * 4].copy_from_slice(&id_word);
-        }
-        let marker = [0xFE, 0xFF, 0xFE, 0xFF, 0xFE, 0xFF, 0xFF, 0xFF];
-        cow[base + 0x14..base + 0x1C].copy_from_slice(&marker);
-        cow[base + 0x5C..base + 0x64].copy_from_slice(&marker);
-        cow[base + 0xFC..base + 0x100].copy_from_slice(&[0x00; 4]);
+        let base = geom.sector_offset(sa)?;
+        format_bgo_header_and_zero_marker(
+            &mut cow,
+            base,
+            [fid as u8, 0xF2, 0xFF, 0xFF],
+            geom.sector_stride,
+        );
 
         let slots = &f2_slots[&fid];
         if !slots.contains_key(&0) {
@@ -208,8 +238,7 @@ pub(super) fn reconstruct_corrupt_bgo_in_cow(
             cow[tag_off..tag_off + 2].copy_from_slice(&pid.to_le_bytes());
             let poff = base + 0x400 + slot * 0x200;
             if pid == 0x0055 {
-                let fill = find_superseded_page(corrupt_nor, 0x0055);
-                if let Some(sup) = fill {
+                if let Some(sup) = find_superseded_page(corrupt_nor, 0x0055, geom) {
                     cow[poff..poff + 512].copy_from_slice(&sup);
                 } else {
                     cow[poff..poff + 2].copy_from_slice(&[0x01, 0x01]);
@@ -222,18 +251,70 @@ pub(super) fn reconstruct_corrupt_bgo_in_cow(
                     cow[poff..poff + 512].copy_from_slice(&recon_0f0a);
                 }
             } else if pid == 0x0001 {
-                if let Some(sup) = find_superseded_page(corrupt_nor, 0x0001) {
+                if let Some(sup) = find_superseded_page(corrupt_nor, 0x0001, geom) {
                     cow[poff..poff + 512].copy_from_slice(&sup);
                 } else {
                     cow[poff..poff + 4].copy_from_slice(&PANA_DEV_BIN_MAGIC);
-                    cow[poff + 4..poff + 12].copy_from_slice(b"M6930LB\x00");
+                    cow[poff + 4..poff + 12].copy_from_slice(ifodev2_bytes);
                 }
-            } else if let Some(sup) = find_superseded_page(corrupt_nor, pid) {
+            } else if let Some(sup) = find_superseded_page(corrupt_nor, pid, geom) {
                 cow[poff..poff + 512].copy_from_slice(&sup);
             }
         }
     }
 
-    repair_p1_migration_in_cow(&mut cow, &pre_audit)?;
+    compact_p1_sectors_in_cow(&mut cow, &pre_audit, geom, &l2p)?;
     Ok((cow, missing_f2_ids, assigned_spares))
+}
+
+pub(super) fn reconstruct_corrupt_bgo_in_cow(
+    corrupt_nor: &[u8],
+) -> Result<(Vec<u8>, Vec<u16>, Vec<usize>)> {
+    reconstruct_corrupt_bgo_in_cow_with_geometry(
+        corrupt_nor,
+        &BgoSectorGeometry::eh55_default(),
+        None,
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_custom_bgo_geometry_reconstruct_target_word_and_ifodev2() {
+        let geom = BgoSectorGeometry {
+            first_sa: 10,
+            last_sa: 14,
+            base_offset: 0x04_0000,
+            sector_stride: 0x1_0000,
+            expected_flash_bytes: 0x10_0000,
+            expected_p2_count: 1,
+            max_pid: 0x0F24,
+        };
+        let mut nor = vec![0xFFu8; geom.expected_flash_bytes];
+        let p1 = geom.sector_offset(12).unwrap();
+        for i in 0..4 {
+            nor[p1 + 4 + i * 4..p1 + 6 + i * 4].copy_from_slice(&0xF101u16.to_le_bytes());
+        }
+        nor[p1 + 0x100..p1 + 0x200].fill(0x00);
+        let sp = p1 + 2 * 0x100;
+        nor[sp..sp + 4].copy_from_slice(&[0x00, 0x00, 0x00, 0x01]); // slot 0 status=8
+        let soff = sp + 4;
+        nor[soff..soff + 4].copy_from_slice(&[0x00, 0x00, 0xFF, 0xFF]); // tid=0, t2=0xFFFF
+        nor[soff + 6..soff + 8].copy_from_slice(&0x0102u16.to_le_bytes()); // pid=1 -> fid=1, slot=1
+
+        let spare = geom.sector_offset(10).unwrap();
+        nor[spare + 0x100..spare + 0x200].fill(0x00); // make spare clean except zero marker -> corrupt so reclaimed!
+        let (cow, missing, assigned) =
+            reconstruct_corrupt_bgo_in_cow_with_geometry(&nor, &geom, Some(b"M7920EU\x00"))
+                .unwrap();
+        assert_eq!(missing, vec![1]);
+        assert_eq!(assigned, vec![10]);
+        let f2_base = geom.sector_offset(10).unwrap();
+        assert_eq!(
+            &cow[f2_base + 0x400 + 0x200 + 4..f2_base + 0x400 + 0x200 + 12],
+            b"M7920EU\x00"
+        );
+    }
 }

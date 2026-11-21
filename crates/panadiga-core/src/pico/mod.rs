@@ -17,6 +17,7 @@ pub mod flasher;
 pub mod log_decoder;
 pub mod panamon1;
 pub mod platforms;
+pub mod protocol;
 pub mod rsp_codec;
 
 pub use async_gdb_proxy::GdbBridgeTargetMode;
@@ -27,4 +28,5 @@ pub use diagnostics::ping_pico;
 pub use flasher::*;
 pub use log_decoder::*;
 pub use platforms::*;
+pub use protocol::*;
 pub use rsp_codec::*;

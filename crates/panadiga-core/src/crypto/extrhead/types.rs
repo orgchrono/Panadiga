@@ -1,3 +1,5 @@
+#![deny(unsafe_code)]
+
 //! Domain types for Panasonic `EXTRHEAD`/`EXTRFOOT` containers.
 
 use anyhow::{Result, bail};
@@ -19,6 +21,7 @@ pub enum ExtrheadCompressionAlgo {
     Zlib = 0,
     Gzip = 1,
     Lzss = 2,
+    Lzma = 3,
 }
 
 impl std::str::FromStr for ExtrheadCompressionAlgo {
@@ -29,7 +32,10 @@ impl std::str::FromStr for ExtrheadCompressionAlgo {
             "zlib" | "0" => Ok(Self::Zlib),
             "gzip" | "gz" | "1" => Ok(Self::Gzip),
             "lzss" | "2" => Ok(Self::Lzss),
-            other => bail!("Unsupported compression algo '{other}': expected zlib, gzip, or lzss"),
+            "lzma" | "3" => Ok(Self::Lzma),
+            other => {
+                bail!("Unsupported compression algo '{other}': expected zlib, gzip, lzss, or lzma")
+            }
         }
     }
 }

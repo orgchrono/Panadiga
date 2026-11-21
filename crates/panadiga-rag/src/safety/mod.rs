@@ -7,11 +7,43 @@ mod patterns;
 
 pub use patterns::extract_voltages_volts;
 
+use panadiga_core::constants::{
+    AM34_FLASH_BASE, AM34_FLASH_CRITICAL_IPL_SIZE, AM34_FLASH_UNCACHED_BASE,
+    AM34_FORBIDDEN_LETHAL_REG,
+};
+
 use super::config::*;
 use super::models::SafetyReport;
 use patterns::{
     HEX_PATTERN, IPL_ERASE_PATTERN, NEGATION_REGEX, WRITE_ACTION_REGEX, sentence_context_window,
 };
+
+const UPPER_NOR_OPTIN_TOKENS: &[&str] = &[
+    "confirm_upper_nor",
+    "uppernorappunlocked",
+    "bgo_unbrick",
+    "patch-upper-nor",
+];
+
+fn is_critical_boot_ipl_addr(addr: u64) -> bool {
+    let crit_span = u64::from(AM34_FLASH_CRITICAL_IPL_SIZE);
+    let cached_lo = u64::from(AM34_FLASH_BASE);
+    let uncached_lo = u64::from(AM34_FLASH_UNCACHED_BASE);
+    addr < crit_span
+        || (cached_lo..cached_lo + crit_span).contains(&addr)
+        || (uncached_lo..uncached_lo + crit_span).contains(&addr)
+}
+
+fn is_upper_nor_bgo_addr(addr: u64) -> bool {
+    let crit_span = u64::from(AM34_FLASH_CRITICAL_IPL_SIZE);
+    let write_end = FORBIDDEN_FLASH_WRITE_END as u64;
+    let cached_lo = u64::from(AM34_FLASH_BASE) + crit_span;
+    let uncached_lo = u64::from(AM34_FLASH_UNCACHED_BASE) + crit_span;
+    let uncached_end = u64::from(AM34_FLASH_UNCACHED_BASE) + write_end;
+    (crit_span..=write_end).contains(&addr)
+        || (cached_lo..=u64::from(FORBIDDEN_FLASH_BUS_END)).contains(&addr)
+        || (uncached_lo..=uncached_end).contains(&addr)
+}
 
 pub struct HardwareSafetyValidator;
 
@@ -27,6 +59,9 @@ impl HardwareSafetyValidator {
 
         let lower_text = text.to_lowercase();
         let upper_text = text.to_uppercase();
+        let has_upper_nor_optin = UPPER_NOR_OPTIN_TOKENS
+            .iter()
+            .any(|tok| lower_text.contains(tok));
 
         for (val, start_idx, end_idx, matched_str) in extract_voltages_volts(&lower_text) {
             if val > MAX_SAFE_VOLTAGE_VOLTS {
@@ -94,29 +129,83 @@ impl HardwareSafetyValidator {
                 continue;
             }
 
-            let is_ipl_address = (addr <= (FORBIDDEN_FLASH_WRITE_END as u64))
-                || (addr >= (FORBIDDEN_FLASH_BUS_START as u64)
-                    && addr <= (FORBIDDEN_FLASH_BUS_END as u64));
-            if is_ipl_address {
+            let lethal_lo = u64::from(AM34_FORBIDDEN_LETHAL_REG);
+            if (lethal_lo..=lethal_lo + 3).contains(&addr) {
+                let has_warning = NEGATION_REGEX.is_match(context_window);
+                if !has_warning {
+                    violations.push(format!(
+                        "CRITICAL MMIO HAZARD: Address 0x{:08X} targets forbidden AM34 lethal register (causes immediate bus/WDT lockup).",
+                        AM34_FORBIDDEN_LETHAL_REG
+                    ));
+                    critical_alerts.push(format!(
+                        "Forbidden lethal register access detected at {}.",
+                        raw_hex.to_uppercase()
+                    ));
+                } else {
+                    warnings.push(format!(
+                        "Lethal register {} referenced in protective warning context.",
+                        raw_hex.to_uppercase()
+                    ));
+                }
+                continue;
+            }
+
+            if is_critical_boot_ipl_addr(addr) {
                 let has_local_write = WRITE_ACTION_REGEX.is_match(context_window);
                 let has_warning = NEGATION_REGEX.is_match(context_window);
 
                 if (is_query && has_local_write) || (!is_query && has_local_write && !has_warning) {
                     violations.push(format!(
-                        "CRITICAL BOOTLOADER HAZARD: Flash address {} is within protected IPL range (SA0..SA133: 0x{:X}..0x{:X} / 0x{:X}..0x{:X}). Erasing or writing this region permanently bricks the Root of Trust.",
+                        "CRITICAL BOOTLOADER HAZARD: Flash address {} resides in permanently locked Layer 1 Critical Boot IPL (SA0..SA10 / 256 KiB: 0x{:08X}..0x{:08X} / 0x{:08X}..0x{:08X}). Erasing or writing this region permanently bricks the Root of Trust (E05).",
                         raw_hex.to_uppercase(),
-                        FORBIDDEN_FLASH_WRITE_START,
-                        FORBIDDEN_FLASH_WRITE_END,
-                        FORBIDDEN_FLASH_BUS_START,
-                        FORBIDDEN_FLASH_BUS_END
+                        AM34_FLASH_BASE,
+                        AM34_FLASH_BASE + AM34_FLASH_CRITICAL_IPL_SIZE - 1,
+                        AM34_FLASH_UNCACHED_BASE,
+                        AM34_FLASH_UNCACHED_BASE + AM34_FLASH_CRITICAL_IPL_SIZE - 1
                     ));
                     critical_alerts.push(format!(
-                        "Attempted write/erase at IPL address {}. Operation vetoed by air-gap shield.",
+                        "Attempted write/erase at Layer 1 Critical Boot IPL address {}. Operation vetoed by air-gap shield.",
                         raw_hex.to_uppercase()
                     ));
                 } else if has_warning {
                     warnings.push(format!(
-                        "IPL address {} referenced in protective warning context.",
+                        "Layer 1 Critical Boot IPL address {} referenced in protective warning context.",
+                        raw_hex.to_uppercase()
+                    ));
+                }
+            } else if is_upper_nor_bgo_addr(addr) {
+                let has_local_write = WRITE_ACTION_REGEX.is_match(context_window);
+                let has_warning = NEGATION_REGEX.is_match(context_window);
+
+                if has_local_write && has_upper_nor_optin {
+                    warnings.push(format!(
+                        "UPPER NOR / BGO WRITE RISK ACKNOWLEDGED (CONFIRM_UPPER_NOR): Target {} is inside Layer 2 Upper NOR/BGO (0x{:08X}..0x{:08X} / 0x{:08X}..0x{:08X}). Mandatory compliance for bricked U99 recovery: verify a full 8 MiB SHA-256 backup first, wait ~700 ms (poll 0xFF x 32) on 64 KiB Spansion sector erases, and keep Layer 1 Critical IPL (SA0..SA10: 0x{:08X}..0x{:08X}) permanently locked (E05).",
+                        raw_hex.to_uppercase(),
+                        AM34_FLASH_BASE + AM34_FLASH_CRITICAL_IPL_SIZE,
+                        FORBIDDEN_FLASH_BUS_END,
+                        AM34_FLASH_UNCACHED_BASE + AM34_FLASH_CRITICAL_IPL_SIZE,
+                        AM34_FLASH_UNCACHED_BASE + (FORBIDDEN_FLASH_WRITE_END as u32),
+                        AM34_FLASH_BASE,
+                        AM34_FLASH_BASE + AM34_FLASH_CRITICAL_IPL_SIZE - 1
+                    ));
+                } else if (is_query && has_local_write)
+                    || (!is_query && has_local_write && !has_warning)
+                {
+                    violations.push(format!(
+                        "CRITICAL BOOTLOADER HAZARD: Flash address {} is within Layer 2 Upper NOR / BGO (SA11..SA133: 0x{:08X}..0x{:08X} / 0x{:08X}..0x{:08X}). Blocked by default (E05) unless CONFIRM_UPPER_NOR + mandatory 8 MiB SHA-256 backup are used for bricked U99 BGO recovery.",
+                        raw_hex.to_uppercase(),
+                        AM34_FLASH_BASE + AM34_FLASH_CRITICAL_IPL_SIZE,
+                        FORBIDDEN_FLASH_BUS_END,
+                        AM34_FLASH_UNCACHED_BASE + AM34_FLASH_CRITICAL_IPL_SIZE,
+                        AM34_FLASH_UNCACHED_BASE + (FORBIDDEN_FLASH_WRITE_END as u32)
+                    ));
+                    critical_alerts.push(format!(
+                        "Blocked Layer 2 Upper NOR write/erase at {} without explicit CONFIRM_UPPER_NOR opt-in.",
+                        raw_hex.to_uppercase()
+                    ));
+                } else if has_warning {
+                    warnings.push(format!(
+                        "Upper NOR / BGO address {} referenced in protective warning context.",
                         raw_hex.to_uppercase()
                     ));
                 }

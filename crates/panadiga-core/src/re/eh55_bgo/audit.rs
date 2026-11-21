@@ -1,4 +1,6 @@
-//! Pure structural verifier for the DMR-EH55 45-sector BGO FTL.
+#![deny(unsafe_code)]
+
+//! Pure structural verifier for DIGA NOR BGO FTL volumes (default: EH55 `SA26..=SA70`).
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -8,41 +10,42 @@ use crate::constants::{AM34_FLASH_UNCACHED_BASE, PANA_DEV_BIN_MAGIC};
 use crate::crypto::codec::extract_c_ascii;
 
 use super::audit_helpers::{
-    eh55_bgo_sector_offset, eval_bgo_migration_index, eval_bgo_migration_target,
-    parse_eh55_bgo_l2p, read_bgo_page, read_le_u16,
+    BgoSectorGeometry, eval_bgo_migration_index, eval_bgo_migration_target,
+    parse_bgo_l2p_with_geometry, read_bgo_page, read_le_u16,
 };
-use super::{
-    EH55_BGO_EXPECTED_P2_COUNT, EH55_BGO_FIRST_SA, EH55_BGO_LAST_SA, EH55_BGO_MAX_PID,
-    EH55_BGO_SECTOR_COUNT, EH55_BGO_SECTOR_STRIDE, Eh55BgoAuditReport, Eh55BgoSectorKind,
-    Eh55BgoSectorReport,
-};
+use super::{Eh55BgoAuditReport, Eh55BgoSectorKind, Eh55BgoSectorReport};
 
-/// Runs a complete non-destructive structural audit on the EH55 `SA26..=SA70` BGO region inside an 8 MiB NOR dump.
-pub fn audit_eh55_bgo_nor_8mb(nor_8mb: &[u8]) -> Result<Eh55BgoAuditReport> {
-    let l2p = parse_eh55_bgo_l2p(nor_8mb)?;
+/// Runs a non-destructive structural audit on an arbitrary discovered BGO sector geometry.
+pub fn audit_bgo_nor_with_geometry(
+    nor: &[u8],
+    geom: &BgoSectorGeometry,
+) -> Result<Eh55BgoAuditReport> {
+    let l2p = parse_bgo_l2p_with_geometry(nor, geom)?;
 
-    let mut sectors = Vec::with_capacity(EH55_BGO_SECTOR_COUNT);
+    let sector_count = geom.last_sa.saturating_sub(geom.first_sa) + 1;
+    let mut sectors = Vec::with_capacity(sector_count);
     let mut p1_active_count = 0usize;
     let mut p1_migrating_count = 0usize;
     let mut f2_bases: BTreeMap<u16, usize> = BTreeMap::new();
     let mut p2_present_set: BTreeSet<u16> = BTreeSet::new();
     let mut spare_sas = Vec::new();
     let mut corrupt_sas = Vec::new();
+    let max_f2_word = 0xF200u16.saturating_add(geom.expected_p2_count as u16);
 
-    for sa in EH55_BGO_FIRST_SA..=EH55_BGO_LAST_SA {
-        let base = eh55_bgo_sector_offset(sa)?;
+    for sa in geom.first_sa..=geom.last_sa {
+        let base = geom.sector_offset(sa)?;
         let phys_va = AM34_FLASH_UNCACHED_BASE + base as u32;
-        let w0 = read_le_u16(nor_8mb, base + 4);
-        let consistent = (0..4).all(|i| read_le_u16(nor_8mb, base + 4 + i * 4) == w0);
-        let zero_marker_ok = nor_8mb[base + 0x100..base + 0x200].iter().all(|&b| b == 0);
-        let migration_idx = eval_bgo_migration_index(nor_8mb, base + 0x14);
-        let migration_target = eval_bgo_migration_target(nor_8mb, base + 0x14);
+        let w0 = read_le_u16(nor, base + 4);
+        let consistent = (0..4).all(|i| read_le_u16(nor, base + 4 + i * 4) == w0);
+        let zero_marker_ok = nor[base + 0x100..base + 0x200].iter().all(|&b| b == 0);
+        let migration_idx = eval_bgo_migration_index(nor, base + 0x14);
+        let migration_target = eval_bgo_migration_target(nor, base + 0x14);
 
         let kind = if !consistent || !zero_marker_ok {
             Eh55BgoSectorKind::Corrupt
         } else if w0 == 0xFFFF {
-            let hdr_clean = nor_8mb[base..base + 0x100].iter().all(|&b| b == 0xFF);
-            let data_clean = nor_8mb[base + 0x200..base + EH55_BGO_SECTOR_STRIDE]
+            let hdr_clean = nor[base..base + 0x100].iter().all(|&b| b == 0xFF);
+            let data_clean = nor[base + 0x200..base + geom.sector_stride]
                 .iter()
                 .all(|&b| b == 0xFF);
             if hdr_clean && data_clean {
@@ -59,7 +62,7 @@ pub fn audit_eh55_bgo_nor_8mb(nor_8mb: &[u8]) -> Result<Eh55BgoAuditReport> {
                 p1_migrating_count += 1;
                 Eh55BgoSectorKind::Partition1Migrating
             }
-        } else if (0xF201..=0xF228).contains(&w0) && migration_target == 0xFFFF {
+        } else if (0xF201..=max_f2_word).contains(&w0) && migration_target == 0xFFFF {
             let fid = w0 & 0xFF;
             if p2_present_set.insert(fid) {
                 f2_bases.insert(fid, base);
@@ -88,18 +91,18 @@ pub fn audit_eh55_bgo_nor_8mb(nor_8mb: &[u8]) -> Result<Eh55BgoAuditReport> {
     }
 
     let p2_present_ids: Vec<u16> = p2_present_set.iter().copied().collect();
-    let p2_missing_ids: Vec<u16> = (1u16..=(EH55_BGO_EXPECTED_P2_COUNT as u16))
+    let p2_missing_ids: Vec<u16> = (1u16..=(geom.expected_p2_count as u16))
         .filter(|id| !p2_present_set.contains(id))
         .collect();
 
     let mut active_l2p_pages = 0usize;
     let mut l2p_tag_mismatches = 0usize;
-    for pid in 0x0001..=EH55_BGO_MAX_PID {
+    for pid in 0x0001..=geom.max_pid {
         if let Some(&w) = l2p.get(&pid)
             && w != 0xFFFF
         {
             active_l2p_pages += 1;
-            if read_bgo_page(nor_8mb, &l2p, &f2_bases, pid).is_none() {
+            if read_bgo_page(nor, &l2p, &f2_bases, pid).is_none() {
                 l2p_tag_mismatches += 1;
             }
         }
@@ -107,8 +110,8 @@ pub fn audit_eh55_bgo_nor_8mb(nor_8mb: &[u8]) -> Result<Eh55BgoAuditReport> {
 
     let mut fat_mirror_mismatches = 0usize;
     for idx in 0..15u16 {
-        let p_pri = read_bgo_page(nor_8mb, &l2p, &f2_bases, 0x0F07 + idx);
-        let p_bak = read_bgo_page(nor_8mb, &l2p, &f2_bases, 0x0F16 + idx);
+        let p_pri = read_bgo_page(nor, &l2p, &f2_bases, 0x0F07 + idx);
+        let p_bak = read_bgo_page(nor, &l2p, &f2_bases, 0x0F16 + idx);
         match (p_pri, p_bak) {
             (Some(a), Some(b)) if a == b => {}
             _ => fat_mirror_mismatches += 1,
@@ -117,7 +120,7 @@ pub fn audit_eh55_bgo_nor_8mb(nor_8mb: &[u8]) -> Result<Eh55BgoAuditReport> {
 
     let mut nfrom_file_count = 0usize;
     for dpid in [0x0F02u16, 0x0F03, 0x0F04] {
-        if let Some(dp) = read_bgo_page(nor_8mb, &l2p, &f2_bases, dpid) {
+        if let Some(dp) = read_bgo_page(nor, &l2p, &f2_bases, dpid) {
             for idx in 0..16usize {
                 let first = dp[idx * 16];
                 if first != 0 && first != 0xFF {
@@ -127,13 +130,14 @@ pub fn audit_eh55_bgo_nor_8mb(nor_8mb: &[u8]) -> Result<Eh55BgoAuditReport> {
         }
     }
 
-    let ifodev2_model = read_bgo_page(nor_8mb, &l2p, &f2_bases, 0x0001).and_then(|page| {
+    let ifodev2_model = read_bgo_page(nor, &l2p, &f2_bases, 0x0001).and_then(|page| {
         (page.len() >= 12 && page[0..4] == PANA_DEV_BIN_MAGIC)
             .then(|| extract_c_ascii(&page[0x04..0x0C]))
     });
 
     let healthy = corrupt_sas.is_empty()
         && p1_active_count == 1
+        && p1_migrating_count == 0
         && p2_missing_ids.is_empty()
         && active_l2p_pages > 0
         && l2p_tag_mismatches == 0
@@ -156,4 +160,9 @@ pub fn audit_eh55_bgo_nor_8mb(nor_8mb: &[u8]) -> Result<Eh55BgoAuditReport> {
         ifodev2_model,
         sectors,
     })
+}
+
+/// Runs a complete non-destructive structural audit on the EH55 `SA26..=SA70` BGO region inside an 8 MiB NOR dump.
+pub fn audit_eh55_bgo_nor_8mb(nor_8mb: &[u8]) -> Result<Eh55BgoAuditReport> {
+    audit_bgo_nor_with_geometry(nor_8mb, &BgoSectorGeometry::eh55_default())
 }

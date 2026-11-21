@@ -74,54 +74,34 @@ pub fn generate_meihdfs_layout(
             descriptors[base + j] = rec[j] ^ 0xFF;
         }
     };
+    let write_partition_extent =
+        |hdr_idx: usize,
+         id: u16,
+         start_lba: u64,
+         sector_count: u64,
+         write_rec: &mut dyn FnMut(usize, &[u8; 16])| {
+            let mut hdr = [0u8; 16];
+            hdr[0] = MEIHDFS_TAG_EXTENT_HEADER;
+            hdr[1] = id as u8;
+            LittleEndian::write_u16(&mut hdr[2..4], id);
+            LittleEndian::write_u16(&mut hdr[4..6], 0x0001);
+            write_rec(hdr_idx, &hdr);
 
-    // Partition 1 Extent Header (Tag 0x5D, ID 0x0001) & Pointer (Tag 0x5E)
-    let mut p1_hdr = [0u8; 16];
-    p1_hdr[0] = MEIHDFS_TAG_EXTENT_HEADER;
-    p1_hdr[1] = 0x01; // Subtag
-    LittleEndian::write_u16(&mut p1_hdr[2..4], 1); // Extent ID 1
-    LittleEndian::write_u16(&mut p1_hdr[4..6], 0x0001); // Flags
-    write_record(0, &p1_hdr);
+            let mut ptr = [0u8; 16];
+            ptr[0] = MEIHDFS_TAG_EXTENT_POINTER;
+            ptr[1] = 0x00;
+            LittleEndian::write_u16(&mut ptr[2..4], id);
+            // Full 32-bit LBA & sector counts (up to 2 TiB = u32::MAX sectors) with zero 16-bit truncation.
+            let sectors_u32 = sector_count.min(u32::MAX as u64) as u32;
+            let start_u32 = start_lba.min(u32::MAX as u64) as u32;
+            LittleEndian::write_u32(&mut ptr[4..8], sectors_u32);
+            LittleEndian::write_u32(&mut ptr[8..12], start_u32);
+            write_rec(hdr_idx + 1, &ptr);
+        };
 
-    let mut p1_ptr = [0u8; 16];
-    p1_ptr[0] = MEIHDFS_TAG_EXTENT_POINTER;
-    p1_ptr[1] = 0x00;
-    LittleEndian::write_u16(&mut p1_ptr[2..4], 1);
-    LittleEndian::write_u16(&mut p1_ptr[4..6], (p1_sectors & 0xFFFF) as u16);
-    LittleEndian::write_u16(&mut p1_ptr[6..8], (p1_start & 0xFFFF) as u16);
-    write_record(1, &p1_ptr);
-
-    // Partition 2 Extent Header (Tag 0x5D, ID 0x0002) & Pointer (Tag 0x5E)
-    let mut p2_hdr = [0u8; 16];
-    p2_hdr[0] = MEIHDFS_TAG_EXTENT_HEADER;
-    p2_hdr[1] = 0x02;
-    LittleEndian::write_u16(&mut p2_hdr[2..4], 2);
-    LittleEndian::write_u16(&mut p2_hdr[4..6], 0x0001);
-    write_record(2, &p2_hdr);
-
-    let mut p2_ptr = [0u8; 16];
-    p2_ptr[0] = MEIHDFS_TAG_EXTENT_POINTER;
-    p2_ptr[1] = 0x00;
-    LittleEndian::write_u16(&mut p2_ptr[2..4], 2);
-    LittleEndian::write_u16(&mut p2_ptr[4..6], (p2_sectors & 0xFFFF) as u16);
-    LittleEndian::write_u16(&mut p2_ptr[6..8], (p2_start & 0xFFFF) as u16);
-    write_record(3, &p2_ptr);
-
-    // Partition 3 Extent Header (Tag 0x5D, ID 0x0003) & Pointer (Tag 0x5E)
-    let mut p3_hdr = [0u8; 16];
-    p3_hdr[0] = MEIHDFS_TAG_EXTENT_HEADER;
-    p3_hdr[1] = 0x03;
-    LittleEndian::write_u16(&mut p3_hdr[2..4], 3);
-    LittleEndian::write_u16(&mut p3_hdr[4..6], 0x0001);
-    write_record(4, &p3_hdr);
-
-    let mut p3_ptr = [0u8; 16];
-    p3_ptr[0] = MEIHDFS_TAG_EXTENT_POINTER;
-    p3_ptr[1] = 0x00;
-    LittleEndian::write_u16(&mut p3_ptr[2..4], 3);
-    LittleEndian::write_u16(&mut p3_ptr[4..6], (p3_sectors.min(0xFFFF)) as u16);
-    LittleEndian::write_u16(&mut p3_ptr[6..8], (p3_start & 0xFFFF) as u16);
-    write_record(5, &p3_ptr);
+    write_partition_extent(0, 1, p1_start, p1_sectors, &mut write_record);
+    write_partition_extent(2, 2, p2_start, p2_sectors, &mut write_record);
+    write_partition_extent(4, 3, p3_start, p3_sectors, &mut write_record);
 
     // Records 6..255 are free unallocated slots (Tag 0xFF in clear -> 0x00 on disk)
     for i in 6..MEIHDFS_DESCRIPTOR_RECORDS_COUNT {
@@ -130,11 +110,14 @@ pub fn generate_meihdfs_layout(
         write_record(i, &free_rec);
     }
 
-    // 3. Generate Transactional Journal Header (LBA 16384)
+    // 3. Generate Audited 10-Block Transactional Journal Catalog Header (LBA 16384 = 0x00800000)
+    // Matches `hdd/inspect/probe.rs`: [0..4] = total blocks (0x0A), [4..8] = max index (0x09).
     let mut journal_hdr = [0u8; LBA_SECTOR_SIZE_BYTES];
-    journal_hdr[0..4].copy_from_slice(b"MJRN"); // Matsushita Journal Magic
-    LittleEndian::write_u32(&mut journal_hdr[4..8], 1); // Clean journal version
-    LittleEndian::write_u32(&mut journal_hdr[8..12], JOURNAL_BLOCK_COUNT as u32);
+    LittleEndian::write_u32(&mut journal_hdr[0..4], JOURNAL_BLOCK_COUNT as u32);
+    LittleEndian::write_u32(
+        &mut journal_hdr[4..8],
+        (JOURNAL_BLOCK_COUNT.saturating_sub(1)) as u32,
+    );
 
     // 4. Mirror MBR (LBA 57344) and Mirror Descriptors (LBA 57368) - Bit-for-bit replicas
     let mirror_mbr = mbr;
@@ -218,5 +201,18 @@ mod tests {
         assert!(rep.mbr_tables.zeros_after_header_clean);
         assert!(rep.mbr_tables.mirror_is_bit_identical);
         assert!(rep.allocation_and_journal.descriptors_mirror_identical);
+        assert_eq!(rep.allocation_and_journal.journal_total_blocks, 10);
+        assert_eq!(rep.allocation_and_journal.journal_max_index, 9);
+
+        let dec =
+            crate::hdd::meihdfs::decode_meihdfs_slice(&buf, false, "mem://mkfs_roundtrip").unwrap();
+        assert_eq!(dec.extents.len(), 3);
+        assert_eq!(dec.records[1].sector_count, Some(65536));
+        assert_eq!(dec.records[1].lba_offset, Some(65536));
+        assert_eq!(dec.records[3].sector_count, Some(65536));
+        assert_eq!(dec.records[3].lba_offset, Some(131072));
+        assert_eq!(dec.records[5].sector_count, Some(312_385_200));
+        assert_eq!(dec.records[5].lba_offset, Some(196608));
+        assert_eq!(dec.tag_distribution.get("0xFF (Free)").copied(), Some(250));
     }
 }

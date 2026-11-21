@@ -1,3 +1,5 @@
+#![deny(unsafe_code)]
+
 //! Packing routines for `PANA_DVD.FRM`, `PANA__SD.FRM`, and `DIGADIAG.FRM`.
 
 use anyhow::{Result, bail};
@@ -87,7 +89,7 @@ struct PayloadPlacement {
 
 fn write_toc_slot(
     entry: &mut [u8],
-    is_48b: bool,
+    use_dvd_layout: bool,
     module: &FrmPackModule,
     hardware_family: &str,
     placement: &PayloadPlacement,
@@ -99,7 +101,7 @@ fn write_toc_slot(
     entry[0x20..0x24].copy_from_slice(&placement.mod_size.to_le_bytes());
     entry[0x24..0x28].copy_from_slice(&placement.fvu_sum.to_le_bytes());
 
-    if is_48b {
+    if use_dvd_layout {
         entry[0x18] = module.model_prefix;
         entry[0x19] = module.target_flag;
         write_padded_ascii(&mut entry[0x1A..0x20], &module.model_group, 0);
@@ -116,13 +118,13 @@ fn record_toc_slot(
     image: &mut [u8],
     slot_idx: usize,
     stride: usize,
-    is_48b: bool,
+    use_dvd_layout: bool,
     module: &FrmPackModule,
     hardware_family: &str,
     placement: &PayloadPlacement,
 ) -> PackedFrmModuleSummary {
     let entry = &mut image[slot_idx * stride..(slot_idx + 1) * stride];
-    let list_sum = write_toc_slot(entry, is_48b, module, hardware_family, placement);
+    let list_sum = write_toc_slot(entry, use_dvd_layout, module, hardware_family, placement);
     PackedFrmModuleSummary {
         index: slot_idx,
         name: module.name.clone(),
@@ -133,7 +135,7 @@ fn record_toc_slot(
     }
 }
 
-/// Packs modules into a `PANA_DVD.FRM` or `PANA__SD.FRM` image using an explicit Feistel round key.
+/// Packs modules into a `PANA_DVD.FRM` (`Dvd` 48B / `Dvd64B` 64B) or `PANA__SD.FRM` (`Sd` / `Sd48`) image.
 pub fn pack_frm_with_key(
     modules: &[FrmPackModule],
     mode: FrmContainerMode,
@@ -144,31 +146,35 @@ pub fn pack_frm_with_key(
         bail!("At least one module is required to pack an .FRM container");
     }
 
-    let is_dvd = mode == FrmContainerMode::Dvd;
-    let is_48b = matches!(mode, FrmContainerMode::Dvd | FrmContainerMode::Sd48);
-    let stride = if is_48b {
-        PANA_FRM_TOC_ENTRY_SIZE
-    } else {
+    let is_dvd = matches!(mode, FrmContainerMode::Dvd | FrmContainerMode::Dvd64B);
+    let is_64b_stride = matches!(mode, FrmContainerMode::Sd | FrmContainerMode::Dvd64B);
+    let use_dvd_layout = matches!(
+        mode,
+        FrmContainerMode::Dvd | FrmContainerMode::Dvd64B | FrmContainerMode::Sd48
+    );
+    let stride = if is_64b_stride {
         PANA_SD_TOC_ENTRY_SIZE
-    };
-    let region_size = toc_region_size.unwrap_or(if is_48b {
-        PANA_FRM_TOC_REGION_SIZE
     } else {
+        PANA_FRM_TOC_ENTRY_SIZE
+    };
+    let region_size = toc_region_size.unwrap_or(if is_64b_stride {
         PANA_SD_TOC_REGION_SIZE
+    } else {
+        PANA_FRM_TOC_REGION_SIZE
     });
 
     let total_slots: usize = modules
         .iter()
         .map(|m| 1 + m.hardware_family_aliases.len())
         .sum();
-    if region_size < total_slots * stride || (is_48b && !region_size.is_multiple_of(8)) {
+    if region_size < total_slots * stride || (is_dvd && !region_size.is_multiple_of(8)) {
         bail!(
             "Invalid TOC region size 0x{:X} for {} TOC slots",
             region_size,
             total_slots
         );
     }
-    if !is_48b && total_slots > PANA_SD_TOC_MAX_ENTRIES {
+    if !is_dvd && is_64b_stride && total_slots > PANA_SD_TOC_MAX_ENTRIES {
         bail!(
             "PANA__SD.FRM supports at most {} TOC slots",
             PANA_SD_TOC_MAX_ENTRIES
@@ -182,7 +188,7 @@ pub fn pack_frm_with_key(
     // Pass 1: append each unique module payload once and emit primary TOC slots.
     for (idx, module) in modules.iter().enumerate() {
         let mut mod_bytes = module.payload.clone();
-        if is_48b {
+        if is_dvd || !is_64b_stride {
             pad_to_block(&mut mod_bytes);
         }
         let placement = PayloadPlacement {
@@ -195,7 +201,7 @@ pub fn pack_frm_with_key(
             &mut image,
             idx,
             stride,
-            is_48b,
+            use_dvd_layout,
             module,
             &module.hardware_family,
             &placement,
@@ -217,7 +223,7 @@ pub fn pack_frm_with_key(
                     &mut image,
                     next_slot,
                     stride,
-                    is_48b,
+                    use_dvd_layout,
                     module,
                     alias_family,
                     placement,
@@ -233,6 +239,7 @@ pub fn pack_frm_with_key(
 
     let mode_label = match mode {
         FrmContainerMode::Dvd => "dvd",
+        FrmContainerMode::Dvd64B => "dvd64b",
         FrmContainerMode::Sd => "sd",
         FrmContainerMode::Sd48 => "sd48",
     };

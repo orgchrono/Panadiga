@@ -107,13 +107,19 @@ mod tests {
 
         assert!(map_py.contains("SC0_UART0_MMIO") && map_py.contains("0xD4002000"));
         assert!(map_py.contains("SDCD_HOST_MMIO") && map_py.contains("0x89001800"));
-        assert!(map_py.contains("FLASH_NOR_CS1_BGO") && map_py.contains("0x84200000"));
+        assert!(
+            map_py.contains("FLASH_NOR_CS1_IPL")
+                && map_py.contains("0x84000000")
+                && map_py.contains("0x00130000")
+        );
         assert!(
             map_py.contains("FLASH_NOR_CS1_EH55_BGO")
                 && map_py.contains("0x84130000")
                 && map_py.contains("0x002D0000")
         );
         assert!(map_py.contains("PROG061_SDRAM_UNCACHED") && map_py.contains("0x90400000"));
+        assert!(map_py.contains("AIOF_TBC_MMIO") && map_py.contains("0x88000000"));
+        assert!(sym_py.contains("DO_NOT_READ_LETHAL_0xC000100C") && sym_py.contains("0xC000100C"));
         assert!(sym_py.contains("EH55_BGO_GEOMETRY_TABLE") && sym_py.contains("0x440337A4"));
         assert!(sym_py.contains("UPPER_EEMUL_BASE") && sym_py.contains("0x84400000"));
         assert!(sym_py.contains("SC0TXB_UART0_TX_BYTE") && sym_py.contains("0xD4002008"));

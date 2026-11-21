@@ -215,6 +215,8 @@ pub fn build_prog061_uart_monitor_with_offsets(
 
     strings.push(&nor_hdr);
     strings.push(NOR_MAGIC_FOOTER);
+    strings.push(b"ERR:ERASE\r\n"); // index 16
+    strings.push(b"ERR:WRITE\r\n"); // index 17
     let mut str_spans = Vec::with_capacity(strings.len());
     for s in &strings {
         let s_off = buf.len();
