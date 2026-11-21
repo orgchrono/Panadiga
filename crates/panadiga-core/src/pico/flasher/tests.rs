@@ -43,13 +43,46 @@ fn test_uf2_buffer_validation_invalid_length() {
 
 #[test]
 fn test_embedded_uf2_containers_and_unified_layout() {
-    let (b2040, f2040) = validate_uf2_buffer(EMBEDDED_RP2040_UF2).expect("RP2040 UF2 valid");
+    let rp2040_slice = extract_uf2_family_slice(EMBEDDED_UNIFIED_UF2, Uf2TargetFamily::Rp2040)
+        .expect("RP2040 slice extraction valid");
+    let (b2040, f2040) = validate_uf2_buffer(&rp2040_slice).expect("RP2040 UF2 slice valid");
     assert!(b2040 > 0);
     assert!(f2040.contains("RP2040"));
+    assert_eq!(
+        u32::from_le_bytes(rp2040_slice[20..24].try_into().unwrap()),
+        0
+    );
+    assert_eq!(
+        u32::from_le_bytes(rp2040_slice[24..28].try_into().unwrap()),
+        b2040 as u32
+    );
 
-    let (b2350, f2350) = validate_uf2_buffer(EMBEDDED_RP2350_UF2).expect("RP2350 UF2 valid");
+    let rp2350_slice = extract_uf2_family_slice(EMBEDDED_UNIFIED_UF2, Uf2TargetFamily::Rp2350)
+        .expect("RP2350 slice extraction valid");
+    let (b2350, f2350) = validate_uf2_buffer(&rp2350_slice).expect("RP2350 UF2 slice valid");
     assert!(b2350 > 0);
     assert!(f2350.contains("RP2350"));
+    assert_eq!(
+        u32::from_le_bytes(rp2350_slice[20..24].try_into().unwrap()),
+        0
+    );
+    assert_eq!(
+        u32::from_le_bytes(rp2350_slice[24..28].try_into().unwrap()),
+        b2350 as u32
+    );
+
+    assert_eq!(
+        Uf2TargetFamily::detect("Model: Raspberry Pi Pico 2\n", None),
+        Some(Uf2TargetFamily::Rp2350)
+    );
+    assert_eq!(
+        Uf2TargetFamily::detect("Board-ID: RPI-RP2\n", None),
+        Some(Uf2TargetFamily::Rp2040)
+    );
+    assert_eq!(
+        Uf2TargetFamily::detect("Board-ID: RPI-RP2\n", Some("unified")),
+        None
+    );
 
     let (bunified, funified) =
         validate_uf2_buffer(EMBEDDED_UNIFIED_UF2).expect("Unified UF2 valid");

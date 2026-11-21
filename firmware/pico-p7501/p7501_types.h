@@ -23,6 +23,28 @@ extern "C" {
 #endif
 
 /* =========================================================================
+ * Centralized Compile-Time Platform Capability Flags
+ * ========================================================================= */
+
+#if defined(PICO_RP2350) && (PICO_RP2350 != 0)
+    #define P7501_IS_RP2350_BUILD 1
+#else
+    #define P7501_IS_RP2350_BUILD 0
+#endif
+
+#if defined(PICO_RP2350_RISCV) && (PICO_RP2350_RISCV != 0)
+    #define P7501_IS_RISCV_BUILD 1
+#else
+    #define P7501_IS_RISCV_BUILD 0
+#endif
+
+#if defined(PANADIGA_BLE_ENABLED) && (PANADIGA_BLE_ENABLED != 0)
+    #define P7501_HAS_BLE_BUILD 1
+#else
+    #define P7501_HAS_BLE_BUILD 0
+#endif
+
+/* =========================================================================
  * Physical GPIO Pin Allocations (RP2040 / RP2350 -> Panasonic P7501)
  * ========================================================================= */
 

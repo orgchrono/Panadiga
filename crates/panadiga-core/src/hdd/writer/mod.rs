@@ -6,6 +6,8 @@ mod discovery;
 mod discovery_unix;
 mod discovery_win;
 pub mod eh55_flash;
+/// Domain-neutral alias for the Panasonic DIGA physical HDD/flash writer subsystem.
+pub use eh55_flash as diga_hdd_flash;
 pub mod raw_device;
 mod types;
 pub mod win_ioctl;
@@ -25,9 +27,15 @@ pub use discovery::{
 pub use eh55_flash::{
     EH55_BACKUP_SECTOR_COUNT, EH55_FLASH_CHUNK_BYTES, EH55_MIRROR_MAIN_BACKSTEP_LBAS,
     Eh55FlashProgress, Eh55FlashStage, Eh55HddFlashReport, Eh55HddFlashRequest, SafeTargetDiskInfo,
-    compute_eh55_mirror_main_lba, enrich_safe_target_disks, execute_eh55_hdd_flash,
-    inspect_safe_target_disks,
+    compute_eh55_mirror_main_lba, compute_eh55_mirror_main_lba as compute_diga_mirror_main_lba,
+    enrich_safe_target_disks, execute_eh55_hdd_flash,
+    execute_eh55_hdd_flash as flash_diga_physical_hdd, inspect_safe_target_disks,
 };
+/// Domain-neutral aliases for Panasonic DIGA physical flash writer types.
+pub type DigaFlashStage = Eh55FlashStage;
+pub type DigaFlashProgress = Eh55FlashProgress;
+pub type DigaHddFlashRequest = Eh55HddFlashRequest;
+pub type DigaHddFlashReport = Eh55HddFlashReport;
 pub use raw_device::{
     BUS_TYPE_NVME, BlockFlashDevice, FileBackedMockFlashDevice, PhysicalFlashDevice,
     UnixPhysicalFlashDevice, WindowsPhysicalFlashDevice, open_physical_flash_device,

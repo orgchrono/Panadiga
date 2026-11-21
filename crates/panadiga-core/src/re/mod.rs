@@ -3,6 +3,8 @@
 pub mod bgo_unbrick;
 pub mod davis_probe;
 pub mod eh55_bgo;
+/// Domain-neutral alias for the Panasonic DIGA BGO flash-translation-layer (FTL) auditor and repair planner.
+pub use eh55_bgo as bgo_ftl;
 pub mod emu_patch_suite;
 pub mod error_dict;
 pub mod main_passthrough;
@@ -112,3 +114,15 @@ pub use unbrick_workbench::{
     UnbrickWorkspaceReport, extract_modules_from_frm, inspect_unbrick_workspace,
 };
 pub use verify_loop::{VerifyExpectation, VerifyLoopReport, VerifySegment, run_verify_loop};
+
+/// Domain-neutral aliases over [`eh55_bgo`] and model-aware BGO FTL entrypoints.
+pub use eh55_bgo::{
+    BgoApplyStage, BgoLiveApplyProgress, BgoLiveApplyReport, BgoRepairOp, BgoRepairPlan,
+    apply_bgo_repair_plan_live, audit_bgo_nor_auto, audit_bgo_nor_for_model, build_bgo_repair_plan,
+    validate_and_simulate_bgo_plan,
+};
+pub type BgoFtlAuditReport = Eh55BgoAuditReport;
+pub type BgoFtlSectorKind = Eh55BgoSectorKind;
+pub type BgoFtlSectorReport = Eh55BgoSectorReport;
+pub type BgoFtlRepairPlan = BgoRepairPlan;
+pub type BgoFtlLiveApplyReport = BgoLiveApplyReport;

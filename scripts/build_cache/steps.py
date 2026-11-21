@@ -179,11 +179,7 @@ def pico_digest_and_outputs(root: Path, env: Mapping[str, str]) -> tuple[str, tu
     )
     exts = frozenset({".c", ".h", ".pio", ".cmake", "CMakeLists.txt"})
     inputs = (fw_dir,)
-    outputs = (
-        dest_dir / "panasonic_p7501_uart_rp2040.uf2",
-        dest_dir / "panasonic_p7501_uart_rp2350.uf2",
-        dest_dir / "panasonic_p7501_uart_unified.uf2",
-    )
+    outputs = (dest_dir / "panasonic_p7501_uart_unified.uf2",)
     return compute_tree_digest(root, inputs, extensions=exts, extra_salt=salt), outputs
 
 

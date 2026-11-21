@@ -71,7 +71,15 @@ export interface NorRepairExpressOutcome {
   readonly sha256: string;
 }
 
-export interface NorDumpProgressEvent {
+export interface StreamProgressTelemetryFields {
+  readonly activeSa?: number;
+  readonly bytesDone?: number;
+  readonly bytesTotal?: number;
+  readonly bytesPerSec?: number;
+  readonly etaSeconds?: number;
+}
+
+export interface NorDumpProgressEvent extends StreamProgressTelemetryFields {
   readonly port: string;
   readonly stage: string;
   readonly current: number;
@@ -155,7 +163,7 @@ export interface BgoRepairPlan {
   readonly post_audit: Eh55BgoAuditReport;
 }
 
-export interface BgoRepairProgressEvent {
+export interface BgoRepairProgressEvent extends StreamProgressTelemetryFields {
   readonly stage: BgoApplyStage;
   readonly current: number;
   readonly total: number;

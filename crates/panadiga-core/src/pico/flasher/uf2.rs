@@ -31,6 +31,84 @@ fn verify_block_magic(blk: &[u8], blk_idx: usize, label: Option<&str>) -> Result
 }
 
 /// Validates that every 512-byte block in a buffer conforms to the UF2 specification.
+/// Silicon target family carried inside a unified RP2040 / RP2350 UF2 container.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Uf2TargetFamily {
+    /// Raspberry Pi Pico / Pico W (`RP2040`).
+    Rp2040,
+    /// Raspberry Pi Pico 2 / Pico 2 W (`RP2350` ARM Cortex-M33 or RISC-V Hazard3).
+    Rp2350,
+}
+
+impl Uf2TargetFamily {
+    /// Detects the desired UF2 target family from `INFO_UF2.TXT` contents and optional override.
+    ///
+    /// Returns `None` when the caller explicitly requests `"unified"` / `"universal"` or when
+    /// neither target string is recognized (fail-safe fallback writes the full unified UF2).
+    pub fn detect(info_content: &str, target_override: Option<&str>) -> Option<Self> {
+        if let Some(over) = target_override {
+            let lower = over.to_lowercase();
+            if lower.contains("unified") || lower.contains("universal") {
+                return None;
+            }
+            if lower.contains("2350") || lower.contains("pico2") || lower.contains("pico 2") {
+                return Some(Self::Rp2350);
+            }
+            if lower.contains("2040") || lower.contains("pico1") {
+                return Some(Self::Rp2040);
+            }
+            return None;
+        }
+        if info_content.contains("RP2350") || info_content.contains("Pico 2") {
+            Some(Self::Rp2350)
+        } else if info_content.contains("RP2040") || info_content.contains("RPI-RP2") {
+            Some(Self::Rp2040)
+        } else {
+            None
+        }
+    }
+
+    fn matches_family_id(self, family_id: u32) -> bool {
+        match self {
+            Self::Rp2040 => matches!(family_id, RP2040_FAMILY_ID | RP2040_SDK_FAMILY_ID),
+            Self::Rp2350 => matches!(
+                family_id,
+                RP2350_ABS_SDK_FAMILY_ID
+                    | RP2350_ARM_S_FAMILY_ID
+                    | RP2350_ARM_S_SDK_FAMILY_ID
+                    | RP2350_RISCV_FAMILY_ID
+                    | RP2350_RISCV_SDK_FAMILY_ID
+            ),
+        }
+    }
+}
+
+/// Extracts only the blocks belonging to `target` from a unified UF2 buffer and re-indexes
+/// `blockNo` (`0..N-1`) and `numBlocks` (`N`) purely in memory without touching disk.
+pub fn extract_uf2_family_slice(unified_uf2: &[u8], target: Uf2TargetFamily) -> Result<Vec<u8>> {
+    validate_uf2_buffer(unified_uf2)?;
+    let parsed = parse_uf2_blocks(unified_uf2, "unified_uf2")?;
+    let mut selected: Vec<[u8; UF2_BLOCK_SIZE]> = parsed
+        .into_iter()
+        .filter(|blk| target.matches_family_id(block_family_id(blk)))
+        .collect();
+    if selected.is_empty() {
+        anyhow::bail!(
+            "Unified UF2 contains zero blocks matching target {:?}",
+            target
+        );
+    }
+    let total_blocks = u32::try_from(selected.len())?;
+    let mut out = Vec::with_capacity(selected.len() * UF2_BLOCK_SIZE);
+    for (idx, blk) in selected.iter_mut().enumerate() {
+        let block_no = u32::try_from(idx)?;
+        blk[20..24].copy_from_slice(&block_no.to_le_bytes());
+        blk[24..28].copy_from_slice(&total_blocks.to_le_bytes());
+        out.extend_from_slice(blk);
+    }
+    Ok(out)
+}
+
 pub fn validate_uf2_buffer(data: &[u8]) -> Result<(usize, String)> {
     if data.len() < UF2_BLOCK_SIZE || !data.len().is_multiple_of(UF2_BLOCK_SIZE) {
         bail!(

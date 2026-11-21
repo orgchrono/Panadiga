@@ -1,0 +1,324 @@
+[
+  {
+    "program": "BOOT.BIN",
+    "initialized_bytes": 262144,
+    "undefined_code_bytes": 66627,
+    "undefined_ranges": 198,
+    "largest_undefined_ranges": [
+      [
+        25986,
+        "0x44039A7E"
+      ],
+      [
+        3620,
+        "0x4401B2AF"
+      ],
+      [
+        2765,
+        "0x44036EC3"
+      ],
+      [
+        1932,
+        "0x440366A4"
+      ],
+      [
+        1801,
+        "0x44000E99"
+      ],
+      [
+        1032,
+        "0x44015D8A"
+      ],
+      [
+        1015,
+        "0x440042ED"
+      ],
+      [
+        954,
+        "0x44035ACE"
+      ],
+      [
+        837,
+        "0x44003C8B"
+      ],
+      [
+        828,
+        "0x440174BC"
+      ],
+      [
+        818,
+        "0x440129C2"
+      ],
+      [
+        806,
+        "0x4401D94C"
+      ]
+    ],
+    "instructions": 66287,
+    "defined_data_units": 888,
+    "functions": 844,
+    "bad_instruction_bookmarks": 21,
+    "mn_todo_calls": 0,
+    "mn_todo_sample": [],
+    "seconds": 4.5
+  },
+  {
+    "program": "eh55_loader_ver061_256k.bin",
+    "initialized_bytes": 262144,
+    "undefined_code_bytes": 262144,
+    "undefined_ranges": 1,
+    "largest_undefined_ranges": [
+      [
+        262144,
+        "0x44000000"
+      ]
+    ],
+    "instructions": 0,
+    "defined_data_units": 0,
+    "functions": 0,
+    "bad_instruction_bookmarks": 0,
+    "mn_todo_calls": 0,
+    "mn_todo_sample": [],
+    "seconds": 0.0
+  },
+  {
+    "program": "eh55_frm_PROG061_BOOT.bin",
+    "initialized_bytes": 262144,
+    "undefined_code_bytes": 261478,
+    "undefined_ranges": 9,
+    "largest_undefined_ranges": [
+      [
+        157394,
+        "0x50406DAA"
+      ],
+      [
+        76514,
+        "0x5042D51E"
+      ],
+      [
+        25629,
+        "0x50400913"
+      ],
+      [
+        1169,
+        "0x5040032F"
+      ],
+      [
+        527,
+        "0x5040011E"
+      ],
+      [
+        146,
+        "0x5040001F"
+      ],
+      [
+        65,
+        "0x504007CF"
+      ],
+      [
+        19,
+        "0x504000E9"
+      ],
+      [
+        15,
+        "0x50400005"
+      ]
+    ],
+    "instructions": 240,
+    "defined_data_units": 0,
+    "functions": 5,
+    "bad_instruction_bookmarks": 0,
+    "mn_todo_calls": 0,
+    "mn_todo_sample": [],
+    "seconds": 0.0
+  },
+  {
+    "program": "DRV_decomp.bin",
+    "initialized_bytes": 1441792,
+    "undefined_code_bytes": 660402,
+    "undefined_ranges": 2312,
+    "largest_undefined_ranges": [
+      [
+        123373,
+        "0x40139E9B"
+      ],
+      [
+        43566,
+        "0x400F2F94"
+      ],
+      [
+        30580,
+        "0x4015808C"
+      ],
+      [
+        21220,
+        "0x4010D8DC"
+      ],
+      [
+        17030,
+        "0x400E428C"
+      ],
+      [
+        13808,
+        "0x40106C0C"
+      ],
+      [
+        12968,
+        "0x40008D28"
+      ],
+      [
+        9766,
+        "0x40122736"
+      ],
+      [
+        8358,
+        "0x4002A230"
+      ],
+      [
+        8352,
+        "0x400FEB18"
+      ],
+      [
+        8324,
+        "0x4000C000"
+      ],
+      [
+        7976,
+        "0x400D3481"
+      ]
+    ],
+    "instructions": 273659,
+    "defined_data_units": 4539,
+    "functions": 2346,
+    "bad_instruction_bookmarks": 26,
+    "mn_todo_calls": 0,
+    "mn_todo_sample": [],
+    "seconds": 2.9
+  },
+  {
+    "program": "EH55_DRV_S211.bin",
+    "initialized_bytes": 1441792,
+    "undefined_code_bytes": 1434179,
+    "undefined_ranges": 26,
+    "largest_undefined_ranges": [
+      [
+        659193,
+        "0x400301D1"
+      ],
+      [
+        366715,
+        "0x400D7345"
+      ],
+      [
+        191112,
+        "0x40131578"
+      ],
+      [
+        93988,
+        "0x400109F6"
+      ],
+      [
+        37790,
+        "0x40006F2A"
+      ],
+      [
+        31429,
+        "0x400285BB"
+      ],
+      [
+        20674,
+        "0x400D20A2"
+      ],
+      [
+        19149,
+        "0x40001654"
+      ],
+      [
+        4096,
+        "0x40000000"
+      ],
+      [
+        3341,
+        "0x4000618B"
+      ],
+      [
+        1750,
+        "0x400102D0"
+      ],
+      [
+        1278,
+        "0x40027EDA"
+      ]
+    ],
+    "instructions": 3040,
+    "defined_data_units": 0,
+    "functions": 15,
+    "bad_instruction_bookmarks": 0,
+    "mn_todo_calls": 0,
+    "mn_todo_sample": [],
+    "seconds": 0.1
+  },
+  {
+    "program": "EH55_MAIN_3410PQ.bin",
+    "initialized_bytes": 13003052,
+    "undefined_code_bytes": 12177574,
+    "undefined_ranges": 1986,
+    "largest_undefined_ranges": [
+      [
+        4738727,
+        "0x577E1A85"
+      ],
+      [
+        344148,
+        "0x57773665"
+      ],
+      [
+        342440,
+        "0x5765AF6F"
+      ],
+      [
+        218018,
+        "0x5713CDC9"
+      ],
+      [
+        165691,
+        "0x57403559"
+      ],
+      [
+        163043,
+        "0x573B6512"
+      ],
+      [
+        137507,
+        "0x5774DCFD"
+      ],
+      [
+        136225,
+        "0x5722574B"
+      ],
+      [
+        130917,
+        "0x575D9DD5"
+      ],
+      [
+        117150,
+        "0x5703ECD0"
+      ],
+      [
+        107740,
+        "0x573E5D64"
+      ],
+      [
+        96493,
+        "0x571CC13D"
+      ]
+    ],
+    "instructions": 284156,
+    "defined_data_units": 0,
+    "functions": 33,
+    "bad_instruction_bookmarks": 32,
+    "mn_todo_calls": 0,
+    "mn_todo_sample": [],
+    "seconds": 2.6
+  }
+]

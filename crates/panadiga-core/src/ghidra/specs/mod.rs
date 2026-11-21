@@ -4,9 +4,11 @@
 //! Single Source of Truth (SSOT) consumed by pure string renderers.
 
 mod regions;
+mod regions_static;
 mod symbols;
 
-pub use regions::{memory_region_specs, memory_region_specs_for_model};
+pub use regions::memory_region_specs_for_model;
+pub use regions_static::memory_region_specs;
 pub use symbols::symbol_specs;
 
 use crate::constants::*;

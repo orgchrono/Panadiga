@@ -73,7 +73,7 @@ fn ssot_thresholds_match_firmware_and_platform_constants() {
     assert_eq!(spec.flash_geometries[1].nvram_base_hex, "0x803F0000");
     assert_eq!(spec.flash_geometries[2].nvram_base_hex, "0x807F0000");
     assert_eq!(spec.flash_geometries[3].nvram_base_hex, "0x80FE0000");
-    assert_eq!(spec.pico_commands.len(), 64);
+    assert_eq!(spec.pico_commands.len(), 67);
 
     for cmd in &spec.pico_commands {
         assert!(
@@ -196,4 +196,48 @@ fn c11_firmware_and_catalog_ssot_parity() {
     assert_eq!(baud_c, spec.thresholds.default_baud_rate);
     assert!((vdd_min_c - spec.thresholds.min_vdd_threshold_volts).abs() < f32::EPSILON);
     assert!((vdd_ceil_c - spec.thresholds.max_vdd_ceiling_volts).abs() < f32::EPSILON);
+}
+
+#[test]
+fn memory_regions_catalog_matches_am34_constants_and_blueprints() {
+    use crate::constants::AM34_SYSTEM_MEMORY_REGIONS;
+
+    let catalog = hardware_catalog();
+    assert_eq!(
+        catalog.system_memory_regions.len(),
+        AM34_SYSTEM_MEMORY_REGIONS.len()
+    );
+    for (json_reg, rust_reg) in catalog
+        .system_memory_regions
+        .iter()
+        .zip(AM34_SYSTEM_MEMORY_REGIONS.iter())
+    {
+        assert_eq!(json_reg.name, rust_reg.name);
+        assert_eq!(json_reg.start, format!("0x{:08X}", rust_reg.start));
+        assert_eq!(json_reg.end, format!("0x{:08X}", rust_reg.end));
+        assert_eq!(json_reg.size_kb, rust_reg.size_kb);
+        assert_eq!(json_reg.perms, rust_reg.perms);
+    }
+
+    let bp_keys: Vec<&str> = catalog
+        .memory_region_blueprints
+        .iter()
+        .map(|b| b.key.as_str())
+        .collect();
+    assert_eq!(
+        bp_keys,
+        vec![
+            "sram",
+            "mmio",
+            "flash_ipl",
+            "rtos_fw",
+            "flash_nvram",
+            "sdram"
+        ]
+    );
+    for bp in &catalog.memory_region_blueprints {
+        assert!(bp.start.starts_with("0x") && bp.start.len() == 10);
+        assert!(bp.end.starts_with("0x") && bp.end.len() == 10);
+        assert!(bp.size_kb > 0);
+    }
 }

@@ -8,6 +8,7 @@
 #include "cli/p7501_cli_help.h"
 
 #include "gdb/gdb_rsp.h"
+#include "flash/p7501_fast_stream_codec.h"
 #include "hal/p7501_watchdog.h"
 #include "p7501_types.h"
 #include "uart/p7501_uart_codec.h"
@@ -17,13 +18,7 @@
 #include <stdio.h>
 
 static const char *cli_mcu_name(void) {
-#if defined(PICO_RP2350) && (PICO_RP2350 != 0)
-    return "RP2350 (Pico 2 / ARM Cortex-M33 Dual @ 150MHz)";
-#elif defined(PANADIGA_BLE_ENABLED) && (PANADIGA_BLE_ENABLED != 0)
-    return "RP2040-W (Pico W + CYW43 BLE / ARM Cortex-M0+)";
-#else
-    return "RP2040 (Pico / ARM Cortex-M0+)";
-#endif
+    return p7501_describe_mcu_host(P7501_IS_RP2350_BUILD != 0, P7501_HAS_BLE_BUILD != 0);
 }
 
 void p7501_cli_print_banner(void) {
@@ -65,8 +60,9 @@ void p7501_cli_print_help(void) {
     printf("  SERVMACRO <SERVICE_MODE|SELF_CHECK|OPTICAL_CAL|ERR_HISTORY|RELEASE> [GPn]\n");
     printf("  IDENTIFY / AUTOPROBE / JOB <act>     - 4-stage @P7501_IDENT & atomic NVRAM/BGO/VAULT jobs\n");
     printf("  VAULT / BLACKBOX / PROBE_CFG / RECIPE - 2 MiB QSPI P2..P5 forensic storage & ADC0 cal\n");
-    printf("  BGO_INSPECT / EEMUL_INSPECT / MMIO_SNAP / PWROSC / TBUSSNIFF / M0KEEPALIVE\n");
-    printf("  I2C_SCAN / EEPROM / USBMODE / BLE / BLE_NOR_AUTH\n");
+    printf("  BGO_INSPECT / EEMUL_INSPECT / NOR_MAP / FAST_READ / FAST_WRITE\n");
+    printf("  MMIO_SNAP / PWROSC / TBUSSNIFF / M0KEEPALIVE / I2C_SCAN / EEPROM\n");
+    printf("  USBMODE / BLE / BLE_NOR_AUTH\n");
     printf("  FMUSCAN / FMUTEST / FMUBATCH         - Bootrom FMU handshake sweep & batch probes\n");
     printf("  PINCHECK / BUSDIAG / SNIFF           - 6-pin electrical matrix & NSW5V Hi-Z guard\n");
     printf("  ISOLATE / ENGAGE / RESET             - Hi-Z isolate / TX idle HIGH / XRESET pulse\n");

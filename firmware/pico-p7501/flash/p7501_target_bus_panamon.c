@@ -145,6 +145,19 @@ bool p7501_bus_panamon1_probe_open(bool allow_abort, bool *io_panamon_mode) {
     );
 }
 
+bool p7501_bus_panamon1_cmd_open(
+    const char *cmd,
+    uint32_t timeout_ms,
+    bool allow_abort,
+    char *out_buf,
+    size_t out_cap,
+    bool *io_panamon_mode
+) {
+    return panamon1_exchange_open(
+        cmd, timeout_ms, allow_abort, out_buf, out_cap, NULL, io_panamon_mode
+    );
+}
+
 static bool panamon1_extract_hex_line(
     const char *reply,
     size_t expected_hex_chars,

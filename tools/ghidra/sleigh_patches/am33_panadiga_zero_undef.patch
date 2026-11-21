@@ -1,0 +1,195 @@
+--- a/data/languages/mn103.sinc
++++ b/data/languages/mn103.sinc
+@@ -365,7 +365,7 @@
+ 
+ :EXT Dn0 		is op8=0xF2; op4=0xd & op2m=0 & Dn0 	{ MDR = Dn0 s>> 31; }
+-:EXTB Dn0 		is op4=0x1 & op2m=0 & Dn0 	{ local sign:4 = Dn0 s>> 31; MDR = (Dn0 & (sign & 0xFFFFFF00)) & (sign | 0x000000FF); }
++:EXTB Dn0 		is op4=0x1 & op2m=0 & Dn0 	{ Dn0 = sext(Dn0:1); }
+ :EXTBU Dn0 		is op4=0x1 & op2m=1 & Dn0 	{ Dn0 = zext(Dn0:1); }
+-:EXTH Dn0 		is op4=0x1 & op2m=2 & Dn0 	{ local sign:4 = Dn0 s>> 31; Dn0 = (Dn0 & (sign & 0xFFFF0000)) & (sign | 0x0000FFFF); }
++:EXTH Dn0 		is op4=0x1 & op2m=2 & Dn0 	{ Dn0 = sext(Dn0:2); }
+ :EXTHU Dn0 		is op4=0x1 & op2m=3 & Dn0 	{ Dn0 = zext(Dn0:2); }
+ 
+@@ -425,5 +425,5 @@
+ :SUB SIMM32, Dn0 	is op8=0xFC; op4=0xc & op2m=1 & Dn0; SIMM32 	{ update_sub(Dn0, SIMM32); }
+ :SUB SIMM32, An0 	is op8=0xFC; op4=0xd & op2m=1 & An0; SIMM32 	{ update_sub(An0, SIMM32); }
+-:SUBC Dm1, Dn0 		is op8=0xF1; op4=0x8 & Dm1 & Dn0 				{ update_add(Dn0, Dm1 - zext($(CF))); }
++:SUBC Dm1, Dn0 		is op8=0xF1; op4=0x8 & Dm1 & Dn0 				{ update_sub(Dn0, Dm1 + zext($(CF))); }
+ 
+ 
+@@ -501,5 +501,5 @@
+ :XOR IMM32, Dn0 	is op8=0xFC; op4=0xE & op2m=2 & Dn0; IMM32	{ Dn0 = IMM32 ^ Dn0; update_ZN_S32(Dn0); }
+ 
+-:NOT Dm1, Dn0 		is op8=0xF2; op4=3 & Dm1 & Dn0 				{ Dn0 = Dm1 ^ Dn0; update_ZN_S32(Dn0); }
++:NOT Dn0 		is op8=0xF2; op4=3 & op2m=0 & Dn0 			{ Dn0 = ~Dn0; update_ZN_S32(Dn0); }
+ 
+ # bit instructions
+@@ -517,8 +517,8 @@
+ :BSET IMM8, (IMM32) 	is op8=0xFE; op8=0x00; IMM32; IMM8					{ local temp:1 = (*:1  IMM32); 			 $(ZF) = (temp & zext(IMM8)) == 0; *:1 IMM32 = (temp | zext(IMM8)); }
+ 
+-:BCLR Dm1, (An0) 		is op8=0xF0; op4=0x9 & Dm1 & An0					{ local temp:1 = (*:1 An0); 		 $(ZF) = (temp & Dm1:1)  == 0; *:1 An0 = (temp | ~Dm1:1); }
+-:BCLR IMM8, (D8, An0) 	is op8=0xFA; op4=0xf & op2m=1 & An0; D8; IMM8		{ local addr:4 = (An0 + sext(D8)); 	local temp:1 = *:1 addr; $(ZF) = (temp & IMM8) == 0; *:1 addr = (temp | ~zext(IMM8)); }
+-:BCLR IMM8, (IMM16) 	is op8=0xFE; op8=0x81; IMM16; IMM8					{ local addr:4 = zext(IMM16); 		local temp:1 = *:1 addr; $(ZF) = (temp & IMM8) == 0;  *:1 addr = (temp | ~zext(IMM8)); }
+-:BCLR IMM8, (IMM32) 	is op8=0xFE; op8=0x01; IMM32; IMM8					{ local temp:1 = (*:1  IMM32); 			 $(ZF) = (temp & IMM8) == 0; *:1 IMM32 = (temp |  ~zext(IMM8)); }
++:BCLR Dm1, (An0) 		is op8=0xF0; op4=0x9 & Dm1 & An0					{ local temp:1 = (*:1 An0); 		 $(ZF) = (temp & Dm1:1)  == 0; *:1 An0 = (temp & ~Dm1:1); }
++:BCLR IMM8, (D8, An0) 	is op8=0xFA; op4=0xf & op2m=1 & An0; D8; IMM8		{ local addr:4 = (An0 + sext(D8)); 	local temp:1 = *:1 addr; $(ZF) = (temp & IMM8) == 0; *:1 addr = (temp & ~IMM8); }
++:BCLR IMM8, (IMM16) 	is op8=0xFE; op8=0x81; IMM16; IMM8					{ local addr:4 = zext(IMM16); 		local temp:1 = *:1 addr; $(ZF) = (temp & IMM8) == 0;  *:1 addr = (temp & ~IMM8); }
++:BCLR IMM8, (IMM32) 	is op8=0xFE; op8=0x01; IMM32; IMM8					{ local temp:1 = (*:1  IMM32); 			 $(ZF) = (temp & IMM8) == 0; *:1 IMM32 = (temp & ~IMM8); }
+ 
+ # shifters
+@@ -535,6 +535,6 @@
+ :ASL2 Dn0 			is op4=0x5 & op2m=1 & Dn0 						{ Dn0 = (Dn0 << 2); }
+ 
+-:ROR Dn0 		is op8=0xF2; op4=0x8 & op2m=1 & Dn0 				{ mn_todo(); }
+-:ROL Dn0 		is op8=0xF2; op4=0x8 & op2m=0 & Dn0 				{ mn_todo(); }
++:ROR Dn0 		is op8=0xF2; op4=0x8 & op2m=1 & Dn0 				{ local old_cf:4 = zext($(CF)); $(CF) = (Dn0:1 & 1); Dn0 = (Dn0 >> 1) | (old_cf << 31); update_ZN_S32(Dn0); }
++:ROL Dn0 		is op8=0xF2; op4=0x8 & op2m=0 & Dn0 				{ local old_cf:4 = zext($(CF)); $(CF) = ((Dn0 >> 31) != 0); Dn0 = (Dn0 << 1) | old_cf; update_ZN_S32(Dn0); }
+ 
+ 
+--- a/data/languages/am33.sinc
++++ b/data/languages/am33.sinc
+@@ -76,10 +76,10 @@
+ :MOV Rd2, (Rm2, Rn0)		is op8=0xfb; op8=0x9e; Rm2 & Rn0; Rd2 & op4l=0 	{  mn_todo(); } # wtf
+ 
+-:MOV (Rm0+, SIMM8), Rn2		is op8=0xfb; op8=0x6a; Rn2 & Rm0; SIMM8 		{  mn_todo(); }
+-:MOV Rm2, (Rn0+, SIMM8)		is op8=0xfb; op8=0x7a; Rm2 & Rn0; SIMM8 		{  mn_todo(); }
+-:MOV (Rm0+, SIMM24), Rn2	is op8=0xfd; op8=0x6a; Rn2 & Rm0; SIMM24 		{  mn_todo(); }
+-:MOV Rm2, (Rn0+, SIMM24)	is op8=0xfd; op8=0x7a; Rm2 & Rn0; SIMM24 		{  mn_todo(); }
+-:MOV (Rm0+, IMM32), Rn2	is op8=0xfe; op8=0x6a; Rn2 & Rm0; IMM32 		{  mn_todo(); }
+-:MOV Rn2, (Rm0+, IMM32)	is op8=0xfe; op8=0x7a; Rn2 & Rm0; IMM32 		{  mn_todo(); }
++:MOV (Rm0+, SIMM8), Rn2		is op8=0xfb; op8=0x6a; Rn2 & Rm0; SIMM8 		{ Rn2 = *:4 Rm0; Rm0 = Rm0 + sext(SIMM8); }
++:MOV Rm2, (Rn0+, SIMM8)		is op8=0xfb; op8=0x7a; Rm2 & Rn0; SIMM8 		{ *:4 Rn0 = Rm2; Rn0 = Rn0 + sext(SIMM8); }
++:MOV (Rm0+, SIMM24), Rn2	is op8=0xfd; op8=0x6a; Rn2 & Rm0; SIMM24 		{ Rn2 = *:4 Rm0; Rm0 = Rm0 + sext(SIMM24); }
++:MOV Rm2, (Rn0+, SIMM24)	is op8=0xfd; op8=0x7a; Rm2 & Rn0; SIMM24 		{ *:4 Rn0 = Rm2; Rn0 = Rn0 + sext(SIMM24); }
++:MOV (Rm0+, IMM32), Rn2	is op8=0xfe; op8=0x6a; Rn2 & Rm0; IMM32 		{ Rn2 = *:4 Rm0; Rm0 = Rm0 + IMM32; }
++:MOV Rn2, (Rm0+, IMM32)	is op8=0xfe; op8=0x7a; Rn2 & Rm0; IMM32 		{ *:4 Rm0 = Rn2; Rm0 = Rm0 + IMM32; }
+ 
+ #:MOV (D8, Am0), "SP"	is op8=0xf8; op4=0xf & op2m=0 & Am0; D8 		{  mn_todo(); }
+@@ -96,5 +96,5 @@
+ :MOV Rm2, (IMM32) 		is op8=0xfe; op8=0x1e; Rm2 & op4l=0; IMM32  	{ *IMM32 = Rm2; } # TODO: add imm32 mem. abs32
+ :MOV (IMM32, Rm0), Rn2 	is op8=0xfe; op8=0x0a; Rn2 & Rm0; IMM32  		{ local addr:4 = Rm0 + IMM32; Rn2 = *addr; } 
+-:MOV Rm2, (IMM32, Rn0) 	is op8=0xfe; op8=0x1a; Rm2 & Rn0; IMM32  		{ local addr:4 = Rm2 + IMM32; *addr = Rm2; } 
++:MOV Rm2, (IMM32, Rn0) 	is op8=0xfe; op8=0x1a; Rm2 & Rn0; IMM32  		{ local addr:4 = Rn0 + IMM32; *addr = Rm2; }
+ :MOV (IMM32, "SP"), Rn2 is op8=0xfe; op8=0x8a; Rn2 & op4l=0; IMM32  	{ local addr:4 = SP + IMM32; Rn2 = *addr; }
+ :MOV Rm2, (IMM32, "SP") is op8=0xfe; op8=0x9a; Rm2 & op4l=0; IMM32  	{ local addr:4 = SP + IMM32; *addr = Rm2; }
+@@ -128,10 +128,10 @@
+ :MOVBU Rd2, ("RI", Rn0) 	is op8=0xfb; op8=0xbe; Rd2 & Rn0; Rn2 & op4l=0  { mn_todo(); }
+ 
+-:MOVBU (IMM32, Rm0), Rn2 	is op8=0xfe; op8=0x2a; Rn2 & Rm0; IMM32  		{ mn_todo(); }
+-:MOVBU Rm2, (IMM32, Rn0) 	is op8=0xfe; op8=0x3a; Rm2 & Rn0; IMM32  		{ mn_todo(); }
+-:MOVBU (IMM32, "SP"), Rn2 	is op8=0xfe; op8=0xaa; Rn2 & op4l=0; IMM32  	{ mn_todo(); }
+-:MOVBU Rm2, (IMM32, "SP") 	is op8=0xfe; op8=0xba; Rm2 & op4l=0; IMM32  	{ mn_todo(); }
+-:MOVBU (IMM32), Rn2 		is op8=0xfe; op8=0x2e; Rn2 & op4l=0; IMM32  	{ Rn2 = zext(*:2 IMM32); }
+-:MOVBU Rm2, (IMM32) 		is op8=0xfe; op8=0x3e; Rm2 & op4l=0; IMM32  	{ *:2 IMM32 = Rm2:2; }
++:MOVBU (IMM32, Rm0), Rn2 	is op8=0xfe; op8=0x2a; Rn2 & Rm0; IMM32  		{ Rn2 = zext(*:1 (Rm0 + IMM32)); }
++:MOVBU Rm2, (IMM32, Rn0) 	is op8=0xfe; op8=0x3a; Rm2 & Rn0; IMM32  		{ *:1 (Rn0 + IMM32) = Rm2:1; }
++:MOVBU (IMM32, "SP"), Rn2 	is op8=0xfe; op8=0xaa; Rn2 & op4l=0; IMM32  	{ Rn2 = zext(*:1 (SP + IMM32)); }
++:MOVBU Rm2, (IMM32, "SP") 	is op8=0xfe; op8=0xba; Rm2 & op4l=0; IMM32  	{ *:1 (SP + IMM32) = Rm2:1; }
++:MOVBU (IMM32), Rn2 		is op8=0xfe; op8=0x2e; Rn2 & op4l=0; IMM32  	{ Rn2 = zext(*:1 IMM32); }
++:MOVBU Rm2, (IMM32) 		is op8=0xfe; op8=0x3e; Rm2 & op4l=0; IMM32  	{ *:1 IMM32 = Rm2:1; }
+ 
+ # TODO: movhu
+@@ -140,4 +140,5 @@
+ :MOVHU ("SP"), Rn2 			is op8=0xf9; op8=0xca; Rn2 & op4l=0  		{ Rn2 = zext(*:2 SP); }
+ :MOVHU Rm2, ("SP") 			is op8=0xf9; op8=0xda; Rm2 & op4l=0  		{ *:2 SP = Rm2:2; }
++:MOVHU (Rm0+), Rn2 			is op8=0xf9; op8=0xea; Rm0 & Rn2  			{ Rn2 = zext(*:2 Rm0); Rm0 = Rm0 + 2; }
+ :MOVHU Rm2, (Rn0+) 			is op8=0xf9; op8=0xfa; Rm2 & Rn0  			{ *:2 Rn0 = Rm2:2; Rn0 = Rn0 + 2; }
+ :MOVHU (D8, Rm0), Rn2 		is op8=0xfb; op8=0x4a; Rm0 & Rn2; D8  		{ Rn2 = zext(*:2 (Rm0 + sext(D8))); }
+@@ -175,21 +176,21 @@
+ :ADD SIMM24, Rn0 		is op8=0xfd; op8=0x78; Rn2 & Rn0 & op4=op4l; SIMM24  	{ update_add(Rn0, sext(SIMM24)); }
+ :ADD SIMM32, Rn0 		is op8=0xfe; op8=0x78; Rn2 & Rn0 & op4=op4l; SIMM32  	{ update_add(Rn0, SIMM32); }
+-:ADDC Rm2, Rn0, Rd2 	is op8=0xfb; op8=0x8c; Rm2 & Rn0; Rd2 & op4l=0  		{ mn_todo(); }
+-:ADDC Rm2, Rn0 			is op8=0xf9; op8=0x88; Rm2 & Rn0				  		{ mn_todo(); }
+-:ADDC SIMM8, Rn0 		is op8=0xfb; op8=0x88; Rn2 & Rn0 & op4=op4l; SIMM8		{ mn_todo(); }
+-:ADDC SIMM24, Rn0 		is op8=0xfd; op8=0x88; Rn2 & Rn0 & op4=op4l; SIMM24		{ mn_todo(); }
+-:ADDC SIMM32, Rn0 		is op8=0xfe; op8=0x88; Rn2 & Rn0 & op4=op4l; SIMM32		{ mn_todo(); }
+-
+-
+-:SUB Rm2, Rn0, Rd2 		is op8=0xfb; op8=0x9c; Rm2 & Rn0; Rd2 & op4l=0  		{ local val:4 = Rm2; update_sub(val, Rn0); Rd2 = val; }
++:ADDC Rm2, Rn0, Rd2 	is op8=0xfb; op8=0x8c; Rm2 & Rn0; Rd2 & op4l=0  		{ local val:4 = Rn0; update_add(val, Rm2 + zext($(CF))); Rd2 = val; }
++:ADDC Rm2, Rn0 			is op8=0xf9; op8=0x88; Rm2 & Rn0				  		{ update_add(Rn0, Rm2 + zext($(CF))); }
++:ADDC SIMM8, Rn0 		is op8=0xfb; op8=0x88; Rn2 & Rn0 & op4=op4l; SIMM8		{ update_add(Rn0, sext(SIMM8) + zext($(CF))); }
++:ADDC SIMM24, Rn0 		is op8=0xfd; op8=0x88; Rn2 & Rn0 & op4=op4l; SIMM24		{ update_add(Rn0, sext(SIMM24) + zext($(CF))); }
++:ADDC SIMM32, Rn0 		is op8=0xfe; op8=0x88; Rn2 & Rn0 & op4=op4l; SIMM32		{ update_add(Rn0, SIMM32 + zext($(CF))); }
++
++
++:SUB Rm2, Rn0, Rd2 		is op8=0xfb; op8=0x9c; Rm2 & Rn0; Rd2 & op4l=0  		{ local val:4 = Rn0; update_sub(val, Rm2); Rd2 = val; }
+ :SUB Rm2, Rn0 			is op8=0xf9; op8=0x98; Rm2 & Rn0  						{ update_sub(Rn0, Rm2); }
+-:SUB SIMM8, Rn0 		is op8=0xfb; op8=0x98; Rn2 & Rn0 & op4=op4l; SIMM8  	{ update_add(Rn0, sext(SIMM8)); }
+-:SUB SIMM24, Rn0 		is op8=0xfd; op8=0x98; Rn2 & Rn0 & op4=op4l; SIMM24  	{ update_add(Rn0, sext(SIMM24)); }
+-:SUB SIMM32, Rn0 		is op8=0xfe; op8=0x98; Rn2 & Rn0 & op4=op4l; SIMM32  	{ update_add(Rn0, SIMM32); }
+-:SUBC Rm2, Rn0, Rd2 	is op8=0xfa; op8=0x8c; Rm2 & Rn0; Rd2 & op4l=0  		{ mn_todo(); }
+-:SUBC Rm2, Rn0 			is op8=0xf9; op8=0xa8; Rm2 & Rn0				  		{ mn_todo(); }
+-:SUBC SIMM8, Rn0 		is op8=0xfb; op8=0xa8; Rn2 & Rn0 & op4=op4l; SIMM8		{ mn_todo(); }
+-:SUBC SIMM24, Rn0 		is op8=0xfd; op8=0xa8; Rn2 & Rn0 & op4=op4l; SIMM24		{ mn_todo(); }
+-:SUBC SIMM32, Rn0 		is op8=0xfe; op8=0xa8; Rn2 & Rn0 & op4=op4l; SIMM32		{ mn_todo(); }
++:SUB SIMM8, Rn0 		is op8=0xfb; op8=0x98; Rn2 & Rn0 & op4=op4l; SIMM8  	{ update_sub(Rn0, sext(SIMM8)); }
++:SUB SIMM24, Rn0 		is op8=0xfd; op8=0x98; Rn2 & Rn0 & op4=op4l; SIMM24  	{ update_sub(Rn0, sext(SIMM24)); }
++:SUB SIMM32, Rn0 		is op8=0xfe; op8=0x98; Rn2 & Rn0 & op4=op4l; SIMM32  	{ update_sub(Rn0, SIMM32); }
++:SUBC Rm2, Rn0, Rd2 	is op8=0xfa; op8=0x8c; Rm2 & Rn0; Rd2 & op4l=0  		{ local val:4 = Rn0; update_sub(val, Rm2 + zext($(CF))); Rd2 = val; }
++:SUBC Rm2, Rn0 			is op8=0xf9; op8=0xa8; Rm2 & Rn0				  		{ update_sub(Rn0, Rm2 + zext($(CF))); }
++:SUBC SIMM8, Rn0 		is op8=0xfb; op8=0xa8; Rn2 & Rn0 & op4=op4l; SIMM8		{ update_sub(Rn0, sext(SIMM8) + zext($(CF))); }
++:SUBC SIMM24, Rn0 		is op8=0xfd; op8=0xa8; Rn2 & Rn0 & op4=op4l; SIMM24		{ update_sub(Rn0, sext(SIMM24) + zext($(CF))); }
++:SUBC SIMM32, Rn0 		is op8=0xfe; op8=0xa8; Rn2 & Rn0 & op4=op4l; SIMM32		{ update_sub(Rn0, SIMM32 + zext($(CF))); }
+ 
+ 
+@@ -271,5 +272,5 @@
+ 
+ :AND Rm2, Rn0, Rd2		is op8=0xfb; op8=0x0d; Rm2 & Rn0; Rd2 & op4l=0  		{ Rd2 = Rm2 & Rn0; update_ZN_S32(Rd2); }
+-:AND IMM32, "EPSW" 		is op8=0xfc; op8=0xfc; IMM32			  				{ EPSW = EPSW | IMM32; }
++:AND IMM32, "EPSW" 		is op8=0xfc; op8=0xfc; IMM32			  				{ EPSW = EPSW & IMM32; }
+ :AND Rm2, Rn0 			is op8=0xf9; op8=0x09; Rm2 & Rn0  						{ Rn0 = Rn0 & Rm2; 		   update_ZN_S32(Rn0); }
+ :AND IMM8, Rn0 			is op8=0xfb; op8=0x09; Rn2 & Rn0 & op4=op4l; IMM8  		{ Rn0 = Rn0 & zext(IMM8);  update_ZN_S32(Rn0); }
+@@ -291,16 +292,16 @@
+ 
+ 
+-:NOT Rn0 		is op8=0xf9; op8=0x39; Rn2 & Rn0 & op4=op4l  	{ mn_todo(); }
+-
+-:BTST SIMM8, Rn0 		is op8=0xfb; op8=0xe9; Rn2 & Rn0 & op4=op4l; SIMM8  	{ mn_todo(); }
+-:BTST SIMM24, Rn0 		is op8=0xfd; op8=0xe9; Rn2 & Rn0 & op4=op4l; SIMM24  	{ mn_todo(); }
+-:BTST SIMM32, Rn0 		is op8=0xfe; op8=0xe9; Rn2 & Rn0 & op4=op4l; SIMM32  	{ mn_todo(); }
+-
+-
+-:ASR Rm2, Rn0, Rd2		is op8=0xfb; op8=0x4d; Rm2 & Rn0; Rd2 & op4l=0  		{ mn_todo(); }
++:NOT Rn0 		is op8=0xf9; op8=0x39; Rn2 & Rn0 & op4=op4l  	{ Rn0 = ~Rn0; update_ZN_S32(Rn0); }
++
++:BTST SIMM8, Rn0 		is op8=0xfb; op8=0xe9; Rn2 & Rn0 & op4=op4l; SIMM8  	{ update_ZN_S32(Rn0 & zext(SIMM8)); }
++:BTST SIMM24, Rn0 		is op8=0xfd; op8=0xe9; Rn2 & Rn0 & op4=op4l; SIMM24  	{ update_ZN_S32(Rn0 & zext(SIMM24)); }
++:BTST SIMM32, Rn0 		is op8=0xfe; op8=0xe9; Rn2 & Rn0 & op4=op4l; SIMM32  	{ update_ZN_S32(Rn0 & SIMM32); }
++
++
++:ASR Rm2, Rn0, Rd2		is op8=0xfb; op8=0x4d; Rm2 & Rn0; Rd2 & op4l=0  		{ Rd2 = Rn0 s>> (Rm2 & 0x1f); update_ZN_S32(Rd2); }
+ :ASR Rm2, Rn0 			is op8=0xf9; op8=0x49; Rm2 & Rn0  						{ local mask:1 = (Rm2 & 0x1f) != 0;  $(CF) = ($(CF) & ~mask) | (Rm2:1 & mask);  Rn0 = sext(Rn0 s>> (Rm2 & 0x1f));  update_ZN_S32(Rn0);  }
+ :ASR IMM8, Rn0 			is op8=0xfb; op8=0x49; Rn2 & Rn0 & op4=op4l; IMM8  		{ local mask:1 = (IMM8 & 0x1f) != 0; $(CF) = ($(CF) & ~mask) | (IMM8 & mask);   Rn0 = sext(Rn0 s>> (IMM8 & 0x1f));  update_ZN_S32(Rn0); }
+-:ASR IMM24, Rn0 		is op8=0xfd; op8=0x49; Rn2 & Rn0 & op4=op4l; IMM24  	{ mn_todo(); } # who wants to shift a 32 bit valule by imm24?? is this the result of the "UDF" opcode? 
+-:ASR IMM32, Rn0 		is op8=0xfe; op8=0x49; Rn2 & Rn0 & op4=op4l; IMM32  	{ mn_todo(); }
++:ASR IMM24, Rn0 		is op8=0xfd; op8=0x49; Rn2 & Rn0 & op4=op4l; IMM24  	{ Rn0 = Rn0 s>> (IMM24 & 0x1f); update_ZN_S32(Rn0); }
++:ASR IMM32, Rn0 		is op8=0xfe; op8=0x49; Rn2 & Rn0 & op4=op4l; IMM32  	{ Rn0 = Rn0 s>> (IMM32 & 0x1f); update_ZN_S32(Rn0); }
+ 
+ :LSR Rm2, Rn0, Rd2		is op8=0xfb; op8=0x5d; Rm2 & Rn0; Rd2 & op4l=0  		{ $(CF) = Rn0:1 & 1; Rd2 = Rn0 >> Rm2; 		 	update_ZN_S32(Rd2); }
+@@ -313,11 +314,11 @@
+ :ASL Rm2, Rn0 			is op8=0xf9; op8=0x69; Rm2 & Rn0  						{ Rn0 = Rn0 << (Rm2 & 0x1f); }
+ :ASL IMM8, Rn0 			is op8=0xfb; op8=0x69; Rn2 & Rn0 & op4=op4l; IMM8  		{ Rn0 = Rn0 << (IMM8 & 0x1f); }
+-:ASL IMM24, Rn0 		is op8=0xfd; op8=0x69; Rn2 & Rn0 & op4=op4l; IMM24  	{ mn_todo(); }
+-:ASL IMM32, Rn0 		is op8=0xfe; op8=0x69; Rn2 & Rn0 & op4=op4l; IMM32  	{ mn_todo(); }
++:ASL IMM24, Rn0 		is op8=0xfd; op8=0x69; Rn2 & Rn0 & op4=op4l; IMM24  	{ Rn0 = Rn0 << (IMM24 & 0x1f); update_ZN_S32(Rn0); }
++:ASL IMM32, Rn0 		is op8=0xfe; op8=0x69; Rn2 & Rn0 & op4=op4l; IMM32  	{ Rn0 = Rn0 << (IMM32 & 0x1f); update_ZN_S32(Rn0); }
+ 
+ :ASL2 Rn0 				is op8=0xf9; op8=0x79; Rn2 & Rn0 & op4=op4l  		{ Rn0 = (Rn0 << 2); }
+ 
+-:ROR Rn0 				is op8=0xf9; op8=0x89; Rn2 & Rn0 & op4=op4l  		{ mn_todo(); }
+-:ROL Rn0 				is op8=0xf9; op8=0x99; Rn2 & Rn0 & op4=op4l  		{ mn_todo(); }
++:ROR Rn0 				is op8=0xf9; op8=0x89; Rn2 & Rn0 & op4=op4l  		{ local old_cf:4 = zext($(CF)); $(CF) = (Rn0:1 & 1); Rn0 = (Rn0 >> 1) | (old_cf << 31); update_ZN_S32(Rn0); }
++:ROL Rn0 				is op8=0xf9; op8=0x99; Rn2 & Rn0 & op4=op4l  		{ local old_cf:4 = zext($(CF)); $(CF) = ((Rn0 >> 31) != 0); Rn0 = (Rn0 << 1) | old_cf; update_ZN_S32(Rn0); }
+ 
+ 
+@@ -344,4 +345,7 @@
+ # Is this defined in original?
+ define pcodeop syscall;
+-:SYSCALL is op8=0xf0; op4=0xe & op4l 		{  local id:1 = op4l & 0xf; syscall(id); }
+-
++define pcodeop mn_break;
++:SYSCALL is op8=0xf0; op8=0xc0 			{ syscall(0:1); }
++:SYSCALL is op8=0xf0; op4=0xe & op4l 		{ local id:1 = op4l & 0xf; syscall(id); }
++:BREAK   is op8=0xff 				{ mn_break(); }
++

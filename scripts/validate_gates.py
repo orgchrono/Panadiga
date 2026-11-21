@@ -42,6 +42,7 @@ C11_HOST_SOURCES: Final[tuple[str, ...]] = (
     "firmware/pico-p7501/flash/p7501_blackbox_codec.c",
     "firmware/pico-p7501/flash/p7501_bus_policy.c",
     "firmware/pico-p7501/flash/p7501_flash_geo.c",
+    "firmware/pico-p7501/flash/p7501_fast_stream_codec.c",
     "firmware/pico-p7501/flash/p7501_ftl_inspect.c",
     "firmware/pico-p7501/flash/p7501_job_codec.c",
     "firmware/pico-p7501/flash/p7501_probe_cfg_codec.c",

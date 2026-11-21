@@ -31,6 +31,9 @@ export interface PipelineProgressState {
   readonly current: number;
   readonly total: number;
   readonly stageLabel: string;
+  readonly activeSa?: number;
+  readonly bytesPerSec?: number;
+  readonly etaSeconds?: number;
 }
 
 export interface PreflightCheckItem {

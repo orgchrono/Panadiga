@@ -1,9 +1,8 @@
 //! Data-driven electrical thresholds, USB IDs, pinout, break-in modes, and AM34 memory map.
 
 use crate::constants::{
-    AM34_FLASH_BASE, AM34_NVRAM_BASE, AM34_SRAM_LOADER_BASE, AM34_SYSTEM_MEMORY_REGIONS,
-    DEFAULT_BAUD_RATE, DEFAULT_GDB_LISTEN_SOCKET, FLASH_16MB_NVRAM_SIZE_BYTES,
-    SPANSION_NVRAM_SIZE_BYTES,
+    AM34_FLASH_BASE, AM34_NVRAM_BASE, AM34_SRAM_LOADER_BASE, DEFAULT_BAUD_RATE,
+    DEFAULT_GDB_LISTEN_SOCKET, FLASH_16MB_NVRAM_SIZE_BYTES, SPANSION_NVRAM_SIZE_BYTES,
 };
 
 use super::catalog::{hardware_catalog, pt_br_ssot_locale};
@@ -131,14 +130,15 @@ pub(super) fn build_flash_geometries() -> Vec<FlashGeometrySpecDto> {
 }
 
 pub(super) fn build_memory_regions() -> Vec<MemoryRegionDto> {
-    AM34_SYSTEM_MEMORY_REGIONS
+    hardware_catalog()
+        .system_memory_regions
         .iter()
         .map(|r| MemoryRegionDto {
-            name: r.name.to_string(),
-            start: format!("0x{:08X}", r.start),
-            end: format!("0x{:08X}", r.end),
+            name: r.name.clone(),
+            start: r.start.clone(),
+            end: r.end.clone(),
             size_kb: r.size_kb,
-            perms: r.perms.to_string(),
+            perms: r.perms.clone(),
         })
         .collect()
 }

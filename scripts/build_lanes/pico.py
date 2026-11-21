@@ -127,14 +127,14 @@ def merge_and_sync_pico_uf2(
         cwd=ROOT,
         env=pico_env,
     )
-    changed_rp2040 = copy_if_changed(rp2040_uf2, dest_dir / "panasonic_p7501_uart_rp2040.uf2")
-    changed_rp2350 = copy_if_changed(rp2350_uf2, dest_dir / "panasonic_p7501_uart_rp2350.uf2")
+    for obsolete_name in ("panasonic_p7501_uart_rp2040.uf2", "panasonic_p7501_uart_rp2350.uf2"):
+        (dest_dir / obsolete_name).unlink(missing_ok=True)
     changed_unified = copy_if_changed(staged_unified, dest_dir / "panasonic_p7501_uart_unified.uf2")
     dist_dir = ROOT / "dist"
     if dist_dir.is_dir():
         sync_firmware_bins_to_dist(dist_dir)
     record_step_cache(ROOT, "pico", digest, outputs)
-    if changed_rp2040 or changed_rp2350 or changed_unified:
+    if changed_unified:
         print_status("OK", f"Synced updated UF2 binaries into {dest_dir}", "32")
     else:
         print_status("CACHE", "Rebuilt UF2 bytes identical to firmware_bins/ (zero-touch skip).", "36")

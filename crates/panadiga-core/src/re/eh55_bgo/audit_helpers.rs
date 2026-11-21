@@ -40,6 +40,102 @@ impl BgoSectorGeometry {
         }
     }
 
+    /// Derives [`BgoSectorGeometry`] dynamically from a resolved SSOT hardware profile.
+    pub fn from_resolved_profile(resolved: &crate::ssot::ResolvedModelProfile) -> Result<Self> {
+        let chip = resolved.flash_chip.as_ref().ok_or_else(|| {
+            anyhow::anyhow!(
+                "Profile '{}' does not define flash_chip metadata",
+                resolved.manifest.model_id
+            )
+        })?;
+        let layout = resolved.nor_layout.as_ref().ok_or_else(|| {
+            anyhow::anyhow!(
+                "Profile '{}' does not define nor_layout regions",
+                resolved.manifest.model_id
+            )
+        })?;
+        let bgo = layout
+            .find_region(crate::ssot::NorRegionKind::Bgo)
+            .ok_or_else(|| {
+                anyhow::anyhow!(
+                    "Profile '{}' does not contain a BGO NOR region",
+                    resolved.manifest.model_id
+                )
+            })?;
+        let (first_u32, last_u32) =
+            crate::ssot::sector_range_for_aligned_span(chip, bgo.start_offset, bgo.end_offset)?;
+        let sectors = crate::ssot::derive_sector_table(chip)?;
+        let first_sa = first_u32 as usize;
+        let last_sa = last_u32 as usize;
+        let sector_stride = sectors
+            .get(first_sa)
+            .map(|s| s.size_bytes as usize)
+            .ok_or_else(|| anyhow::anyhow!("Derived BGO SA{first_sa} missing from sector table"))?;
+        if sectors[first_sa..=last_sa]
+            .iter()
+            .any(|s| s.size_bytes as usize != sector_stride)
+        {
+            anyhow::bail!(
+                "Profile '{}' BGO span SA{first_sa}..=SA{last_sa} has non-uniform sector stride",
+                resolved.manifest.model_id
+            );
+        }
+        let total_bgo_sectors = last_sa - first_sa + 1;
+        let expected_p2_count = if total_bgo_sectors >= 5 {
+            total_bgo_sectors - 5
+        } else {
+            total_bgo_sectors.saturating_sub(1)
+        };
+        let max_pid = if resolved.manifest.model_id.eq_ignore_ascii_case("DMR-EH55")
+            || expected_p2_count == EH55_BGO_EXPECTED_P2_COUNT
+        {
+            EH55_BGO_MAX_PID
+        } else {
+            (expected_p2_count.saturating_mul(126)).min(usize::from(u16::MAX - 1)) as u16
+        };
+        Ok(Self {
+            first_sa,
+            last_sa,
+            base_offset: usize::try_from(bgo.start_offset)?,
+            sector_stride,
+            expected_flash_bytes: usize::try_from(chip.total_bytes)?,
+            expected_p2_count,
+            max_pid,
+        })
+    }
+
+    /// Resolves a model profile by ID (e.g. `"DMR-EH55"`) from [`HardwareProfileRegistry`]
+    /// and computes its runtime [`BgoSectorGeometry`].
+    pub fn from_model_profile(model_id: &str) -> Result<Self> {
+        let resolved = crate::ssot::HardwareProfileRegistry::builtin().resolve_model(model_id)?;
+        Self::from_resolved_profile(&resolved)
+    }
+
+    /// Resolves a runtime [`BgoSectorGeometry`] matching an arbitrary flash dump byte length.
+    pub fn for_flash_size(flash_len: usize) -> Result<Self> {
+        let reg = crate::ssot::HardwareProfileRegistry::builtin();
+        let models = reg.list_models();
+        let has_bgo_len = |m: &&crate::ssot::ResolvedModelProfile| {
+            m.flash_chip
+                .as_ref()
+                .is_some_and(|c| c.total_bytes as usize == flash_len)
+                && m.nor_layout
+                    .as_ref()
+                    .and_then(|l| l.find_region(crate::ssot::NorRegionKind::Bgo))
+                    .is_some()
+        };
+        let resolved = models
+            .iter()
+            .find(|m| m.manifest.model_id.eq_ignore_ascii_case("DMR-EH55") && has_bgo_len(m))
+            .or_else(|| models.iter().find(has_bgo_len))
+            .ok_or_else(|| {
+                anyhow::anyhow!(
+                    "No SSOT model profile with BGO region matches {flash_len}-byte NOR"
+                )
+            })?;
+        Self::from_resolved_profile(resolved)
+    }
+
     /// Translates a physical sector index inside `[first_sa..=last_sa]` to its NOR byte offset.
     pub fn sector_offset(&self, sa: usize) -> Result<usize> {
         if !(self.first_sa..=self.last_sa).contains(&sa) {

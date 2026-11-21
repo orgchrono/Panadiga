@@ -651,6 +651,22 @@
         "description": "Grants or revokes (strictly from physical USB) temporary NOR write permission for wireless sessions.",
         "arg_label": "F14 Policy",
         "arg_placeholder": "STATUS"
+      },
+      "NOR_MAP": {
+        "label": "Full 142-Sector NOR Map",
+        "description": "Scans all 142 physical IC5001 sectors (SA0..SA141) on-probe, streaming live @P7501_PROG telemetry."
+      },
+      "FAST_READ": {
+        "label": "Fast Binary Read (0x9043A000 Stub)",
+        "description": "Uploads the 606 B MN103S binary stub from Pico and streams 256 B bitmap/sum8 pages with @P7501_PROG.",
+        "arg_label": "VA and Length (hex)",
+        "arg_placeholder": "84000000 1000"
+      },
+      "FAST_WRITE": {
+        "label": "Fast Guarded BGO Write (1->0 JEDEC)",
+        "description": "Pre-validates 1->0 monotonicity on-probe before unlocking Upper NOR, programs via 0x9043A000 stub, and relocks via U LOCK.",
+        "arg_label": "VA, Hex, and Confirmation",
+        "arg_placeholder": "843F0100 0000 CONFIRM_UPPER_NOR"
       }
     }
   }

@@ -112,7 +112,7 @@
         },
         {
           "path": "firmware_and_images/eh55_nor_8mb_ic5001_repaired.bin",
-          "sha256": "FFEB34DDD9951362A9358CC6EE5092F268540AC025C50F66DDC4972DCEEC2250",
+          "sha256": "BD089ED1A062C48756C60407E6555463E8646CDE094B0328B88A253E4F1D4121",
           "required": true
         }
       ],
@@ -228,7 +228,7 @@
       "sha256_assertions": [
         {
           "path": "firmware_and_images/eh55_nor_8mb_ic5001_repaired.bin",
-          "sha256": "FFEB34DDD9951362A9358CC6EE5092F268540AC025C50F66DDC4972DCEEC2250",
+          "sha256": "BD089ED1A062C48756C60407E6555463E8646CDE094B0328B88A253E4F1D4121",
           "required": true
         },
         {

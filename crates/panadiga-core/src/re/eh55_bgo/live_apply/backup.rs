@@ -4,6 +4,7 @@
 
 use std::fs;
 use std::path::Path;
+use std::time::Instant;
 
 use anyhow::{Context, Result, bail};
 
@@ -11,6 +12,7 @@ use super::{BgoApplyStage, BgoLiveApplyProgress};
 use crate::constants::AM34_FLASH_UNCACHED_BASE;
 use crate::nvram::calculate_hashes;
 use crate::pico::panamon1::{Panamon1Client, Panamon1Transport};
+use crate::pico::{StreamProgressTelemetry, compute_rate_and_eta};
 use crate::re::eh55_bgo::{EH55_BGO_SECTOR_STRIDE, eh55_bgo_sector_offset};
 
 pub(super) fn emit_progress(
@@ -20,11 +22,30 @@ pub(super) fn emit_progress(
     total: usize,
     detail: impl Into<String>,
 ) {
+    emit_progress_telemetry(
+        cb,
+        stage,
+        current,
+        total,
+        detail,
+        StreamProgressTelemetry::default(),
+    );
+}
+
+pub(super) fn emit_progress_telemetry(
+    cb: &mut dyn FnMut(BgoLiveApplyProgress),
+    stage: BgoApplyStage,
+    current: usize,
+    total: usize,
+    detail: impl Into<String>,
+    telemetry: StreamProgressTelemetry,
+) {
     cb(BgoLiveApplyProgress {
         stage,
         current,
         total,
         detail: detail.into(),
+        telemetry,
     });
 }
 
@@ -35,20 +56,46 @@ pub(super) fn read_and_hash_bgo_sectors<T: Panamon1Transport>(
     progress: &mut dyn FnMut(BgoLiveApplyProgress),
 ) -> Result<(Vec<u8>, String)> {
     let total = target_sectors.len();
-    let mut buf = Vec::with_capacity(total * EH55_BGO_SECTOR_STRIDE);
+    let total_bytes = total * EH55_BGO_SECTOR_STRIDE;
+    let started = Instant::now();
+    let mut buf = Vec::with_capacity(total_bytes);
     for (idx, &sa) in target_sectors.iter().enumerate() {
         let phys_va = AM34_FLASH_UNCACHED_BASE + eh55_bgo_sector_offset(sa)? as u32;
-        emit_progress(
+        let (bytes_per_sec, eta_seconds) =
+            compute_rate_and_eta(started.elapsed().as_millis(), buf.len(), total_bytes);
+        emit_progress_telemetry(
             progress,
             stage,
             idx,
             total,
             format!("Reading SA{sa} @ 0x{phys_va:08X}"),
+            StreamProgressTelemetry {
+                active_sa: Some(sa),
+                bytes_done: Some(buf.len()),
+                bytes_total: Some(total_bytes),
+                bytes_per_sec,
+                eta_seconds,
+            },
         );
         buf.extend_from_slice(&client.mem_read_bytes(phys_va, EH55_BGO_SECTOR_STRIDE)?);
     }
     let (_, sha256) = calculate_hashes(&buf);
-    emit_progress(progress, stage, total, total, format!("SHA-256={sha256}"));
+    let (bytes_per_sec, _) =
+        compute_rate_and_eta(started.elapsed().as_millis(), buf.len(), total_bytes);
+    emit_progress_telemetry(
+        progress,
+        stage,
+        total,
+        total,
+        format!("SHA-256={sha256}"),
+        StreamProgressTelemetry {
+            active_sa: target_sectors.last().copied(),
+            bytes_done: Some(buf.len()),
+            bytes_total: Some(total_bytes),
+            bytes_per_sec,
+            eta_seconds: Some(0),
+        },
+    );
     Ok((buf, sha256))
 }
 

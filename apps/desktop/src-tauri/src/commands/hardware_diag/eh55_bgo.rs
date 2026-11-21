@@ -3,11 +3,13 @@
 //! Tauri IPC commands for live Spansion NOR capture and EH55 BGO FTL audit (`DUMP_FILE` / `LIVE_PICO`).
 
 use std::fs;
+use std::time::Instant;
 
 use panadiga_core::constants::{
     AM34_EH55_FLASH_BGO_BASE, AM34_EH55_FLASH_BGO_SIZE, AM34_FLASH_SIZE, AM34_FLASH_UNCACHED_BASE,
 };
 use panadiga_core::pico::panamon1::{Panamon1Client, Panamon1Transport, SerialPanamon1Transport};
+use panadiga_core::pico::{StreamProgressTelemetry, compute_rate_and_eta, flash_va_to_sector_sa};
 use panadiga_core::re::eh55_bgo::{Eh55BgoAuditReport, audit_eh55_bgo_nor_8mb};
 use panadiga_core::re::nor_dumper::{NorCaptureOrchestrator, NorSlicePreset};
 use tauri::Emitter;
@@ -38,13 +40,38 @@ where
     })?;
     let mut client = Panamon1Client::new(transport);
     let port_label = req.port_name.trim().to_string();
+    let (start_va, total_bytes_u32) = preset
+        .bounds()
+        .map_err(|e| PanadigaIpcError::validation(format!("Intervalo NOR inválido: {e}")))?;
+    let total_bytes = total_bytes_u32 as usize;
+    let started = Instant::now();
     let cap = orch
         .capture_preset(&mut client, preset, &mut |stage, cur, tot| {
+            let bytes_done = if tot == 0 {
+                0
+            } else {
+                total_bytes
+                    .saturating_mul(cur)
+                    .checked_div(tot)
+                    .unwrap_or(0)
+                    .min(total_bytes)
+            };
+            let active_va =
+                start_va.saturating_add(bytes_done.min(total_bytes.saturating_sub(1)) as u32);
+            let (bps, eta) =
+                compute_rate_and_eta(started.elapsed().as_millis(), bytes_done, total_bytes);
             on_progress(NorDumpProgressEventDto {
                 port: port_label.clone(),
                 stage: stage.to_string(),
                 current: cur,
                 total: tot,
+                telemetry: StreamProgressTelemetry {
+                    active_sa: flash_va_to_sector_sa(active_va),
+                    bytes_done: Some(bytes_done),
+                    bytes_total: Some(total_bytes),
+                    bytes_per_sec: bps,
+                    eta_seconds: eta,
+                },
             });
         })
         .map_err(|e| PanadigaIpcError::serial(format!("Falha capturando NOR via PANAMON1: {e}")))?;

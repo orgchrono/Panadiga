@@ -64,11 +64,11 @@ Audited adversarially across every silicon, electrical, DMA, QSPI, and protocol 
 
 | Platform | Asset(s) | Contents |
 | :--- | :--- | :--- |
-| **Windows (x86_64)** | `panadiga-windows-x86_64.zip` (+ `.sha256`) | `panadiga.exe`, `panadiga-desktop.exe`, RP2040/RP2350/Unified `.uf2`, `tools/ghidra/` & `.cmd` launchers |
+| **Windows (x86_64)** | `panadiga-windows-x86_64.zip` (+ `.sha256`) | `panadiga.exe`, `panadiga-desktop.exe`, Unified `panasonic_p7501_uart_unified.uf2`, `tools/ghidra/` & `.cmd` launchers |
 | **Linux (x86_64)** | `panadiga-linux-x86_64.tar.gz`, `panadiga-linux-amd64.deb` (+ `.sha256`) | `panadiga`, `panadiga-desktop`, `tools/ghidra/`, Freedesktop desktop launcher & Hicolor icons |
 | **macOS (Apple Silicon ARM64)** | `panadiga-macos-aarch64.tar.gz` (+ `.sha256`) | `panadiga`, `panadiga-desktop`, `tools/ghidra/` |
 | **Android (ARM64 APK)** | `panadiga-android-arm64.apk` (+ `.sha256`) | Native Tauri 2 mobile APK with USB-C OTG CDC-ACM, BLE Nordic UART Service (NUS, `<= 20 B` GATT chunking), and **DIGA IR Commander** |
-| **Raspberry Pi Pico Probe** | `panasonic_p7501_uart_rp2040.uf2`, `panasonic_p7501_uart_rp2350.uf2`, `panasonic_p7501_uart_unified.uf2` (+ `.sha256`) | Production-audited C11 + PIO firmware (`RP2040`: `text=201,328 B`, `bss=73,200 B`; `RP2350`: `text=190,260 B`, `bss=72,816 B`; `0` soft-float symbols, `0` frame warnings) |
+| **Raspberry Pi Pico Probe** | `panasonic_p7501_uart_unified.uf2` (+ `.sha256`) | Single size-optimized (`-Os --gc-sections`, `629,248 B` / `1,229` blocks) C11 + PIO container serving both `RP2040` (`316,928 B`) and `RP2350` (`312,320 B`), sliced per target via `extract_uf2_family_slice` |
 | **Verified Firmware & Recovery Pack** | [Release `firmware-pack-v0.1.0`](https://github.com/orgchrono/Panadiga/releases/tag/firmware-pack-v0.1.0) | Companion archive of verified factory/repaired NOR, HDD, EEPROM & plaintext AM34 images + `FIRMWARE_SHA256SUMS.txt` |
 
 ---

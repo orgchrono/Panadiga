@@ -48,12 +48,33 @@ pub(super) struct CatalogCommandEntry {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[cfg_attr(not(test), allow(dead_code))]
+pub(super) struct CatalogMemoryRegionBlueprintEntry {
+    pub key: String,
+    pub start: String,
+    pub end: String,
+    pub size_kb: usize,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(super) struct CatalogSystemMemoryRegionEntry {
+    pub name: String,
+    pub start: String,
+    pub end: String,
+    pub size_kb: usize,
+    pub perms: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 pub(super) struct HardwareCatalog {
     pub timeouts_ms: BTreeMap<String, u64>,
     pub pinout: Vec<CatalogPinEntry>,
     pub breakin_modes: Vec<CatalogBreakInEntry>,
     pub flash_geometries: Vec<CatalogFlashEntry>,
     pub commands: Vec<CatalogCommandEntry>,
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub memory_region_blueprints: Vec<CatalogMemoryRegionBlueprintEntry>,
+    pub system_memory_regions: Vec<CatalogSystemMemoryRegionEntry>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

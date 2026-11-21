@@ -10,6 +10,7 @@ use panadiga_core::constants::{
     resolve_writable_data_root,
 };
 use panadiga_core::crypto::parse_u32_radix;
+use panadiga_core::pico::StreamProgressTelemetry;
 use panadiga_core::pico::panamon1::SerialPanamon1Transport;
 use panadiga_core::re::eh55_bgo::{BgoApplyStage, BgoLiveApplyReport, BgoRepairPlan};
 use panadiga_core::re::nor_dumper::{NorSliceCaptureReport, NorSlicePreset};
@@ -82,6 +83,8 @@ pub struct NorDumpProgressEventDto {
     pub stage: String,
     pub current: usize,
     pub total: usize,
+    #[serde(flatten)]
+    pub telemetry: StreamProgressTelemetry,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -124,6 +127,8 @@ pub struct BgoRepairProgressEventDto {
     pub current: usize,
     pub total: usize,
     pub detail: String,
+    #[serde(flatten)]
+    pub telemetry: StreamProgressTelemetry,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -213,5 +218,6 @@ mod tests {
 
         let d = resolve_auto_backup_dir(Some("   "), "eh55_test_dir").unwrap();
         assert!(d.is_dir());
+        let _ = std::fs::remove_dir_all(&d);
     }
 }

@@ -15,6 +15,7 @@ import type {
   PicoEh55NorDumpResponse,
   PipelineStepDescriptor,
   PreflightCheckItem,
+  StreamProgressTelemetryFields,
 } from '@/models';
 import {
   picoEh55BgoAudit,
@@ -34,6 +35,31 @@ export interface CowBackupSession {
 
 export type BgoSectorViewFilter = 'all' | 'bgo' | 'bootloader' | 'nvram';
 
+type RunnerProgressCallback = Parameters<
+  NonNullable<Parameters<typeof usePipelineRunner>[0]['subscribeProgress']>
+>[0];
+
+function emitBenchProgress(
+  ev: StreamProgressTelemetryFields & { readonly current: number; readonly total: number },
+  stageLabel: string,
+  logLine: string,
+  setSelectedSa: (sa: number) => void,
+  onProgress: RunnerProgressCallback,
+): void {
+  if (typeof ev.activeSa === 'number') setSelectedSa(ev.activeSa);
+  onProgress(
+    {
+      current: ev.current,
+      total: Math.max(1, ev.total),
+      stageLabel,
+      activeSa: ev.activeSa,
+      bytesPerSec: ev.bytesPerSec,
+      etaSeconds: ev.etaSeconds,
+    },
+    logLine,
+  );
+}
+
 export function useBgoBenchViewModel(defaultPort?: string | null) {
   const { showToast } = useToast();
   const [portOverride, setPortOverride] = useState<string | null>(null);
@@ -52,11 +78,14 @@ export function useBgoBenchViewModel(defaultPort?: string | null) {
   const portName = portOverride ?? (defaultPort || '');
 
   const subscribeNor = useCallback(
-    (onProgress: Parameters<NonNullable<Parameters<typeof usePipelineRunner>[0]['subscribeProgress']>>[0]) =>
+    (onProgress: RunnerProgressCallback) =>
       subscribeNorDumpProgress(ev =>
-        onProgress(
-          { current: ev.current, total: Math.max(1, ev.total), stageLabel: `${ev.stage} (${ev.port})` },
+        emitBenchProgress(
+          ev,
+          `${ev.stage} (${ev.port})`,
           `[${ev.port}] ${ev.stage} ${ev.current}/${ev.total}`,
+          setSelectedSa,
+          onProgress,
         ),
       ),
     [],
@@ -116,11 +145,14 @@ export function useBgoBenchViewModel(defaultPort?: string | null) {
   });
 
   const subscribeRepair = useCallback(
-    (onProgress: Parameters<NonNullable<Parameters<typeof usePipelineRunner>[0]['subscribeProgress']>>[0]) =>
+    (onProgress: RunnerProgressCallback) =>
       subscribeBgoRepairProgress(ev =>
-        onProgress(
-          { current: ev.current, total: Math.max(1, ev.total), stageLabel: `${ev.stage}: ${ev.detail}` },
+        emitBenchProgress(
+          ev,
+          `${ev.stage}: ${ev.detail}`,
           `[${ev.stage}] ${ev.detail}`,
+          setSelectedSa,
+          onProgress,
         ),
       ),
     [],

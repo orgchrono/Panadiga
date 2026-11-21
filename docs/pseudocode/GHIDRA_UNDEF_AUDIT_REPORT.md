@@ -58,3 +58,14 @@
    - `panadiga re xrefs`, `panadiga re drv-cli`, and `panadiga re drv-errors` extract cross-references, `<8sIII>` dispatch tables, and the `0x34`-byte Shift-JIS error dictionary.
 2. **Gerador Jython / Jython Generator (`panadiga ghidra export-all`):**
    - Exports [`tools/ghidra/ghidra_mn103_fix_decompilation.py`](../../tools/ghidra/ghidra_mn103_fix_decompilation.py) and [`tools/ghidra/ghidra_auto_unbrick_audit.py`](../../tools/ghidra/ghidra_auto_unbrick_audit.py) so operators can recover orphan prologues, fix stack-purge, and resolve cross-references safely inside Ghidra.
+
+---
+
+## 4. Plano de Remoção 100% de `??` & Patch SLEIGH Verificado / 100% Zero-`??` Recovery Plan & Verified SLEIGH Patch
+
+**PT-BR:** Para eliminar os `??` e os `mn_todo()` sem mutar `C:\ghidra\projects\Panadiga_MN103S`, o repositório agora inclui o patch unificado [`tools/ghidra/sleigh_patches/am33_panadiga_zero_undef.patch`](../../tools/ghidra/sleigh_patches/am33_panadiga_zero_undef.patch) e o roteiro de 4 passes [`tools/ghidra/sleigh_patches/README.md`](../../tools/ghidra/sleigh_patches/README.md), **compilado e verificado com `sleigh.bat -u -f` do Ghidra 12.1.4 (`exit 0`, zero conflitos de construtores)**.
+
+**EN-US:** To eliminate `??` gaps and `mn_todo()` stubs without mutating `C:\ghidra\projects\Panadiga_MN103S`, the repository now ships the unified diff [`tools/ghidra/sleigh_patches/am33_panadiga_zero_undef.patch`](../../tools/ghidra/sleigh_patches/am33_panadiga_zero_undef.patch) and 4-pass headless runbook [`tools/ghidra/sleigh_patches/README.md`](../../tools/ghidra/sleigh_patches/README.md), **compile-verified with Ghidra 12.1.4 `sleigh.bat -u -f` (`exit 0`, zero constructor conflicts)**.
+
+- **12 defeitos SLEIGH corrigidos (`am33.sinc` + `mn103.sinc`):** inclusão de `:MOVHU (Rm0+), Rn2` (`0xF9 0xEA`), `:SYSCALL` (`0xF0 0xC0`) e `:BREAK` (`0xFF`); correção de `SUB` 3-op (`am33.sinc:184`), `SUB SIMM` (`186-188`), `MOV Rm2,(IMM32,Rn0)` (`98`), `MOVBU` 8-bit (`130-135`), `AND IMM32,EPSW` (`273`), `NOT`/`BTST`/`ADDC`/`SUBC`/`ASR`/`ASL`/`ROR`/`ROL` (`am33.sinc`), além de `BCLR` (`| ~` → `& ~` em `mn103.sinc:519-522`), `NOT Dn0` (`503`), `EXTB`/`EXTH` (`367, 369`) e `SUBC` (`427`).
+- **Pipeline Headless de 4 Passes (em clone `Panadiga_MN103S_ZeroUndef`):** (1) compilação isolada de `mn103.sla` + importação dos 6 estágios incluindo `eh55_loader_ver061_256k.bin`; (2) tipagem de strings ASCII/Shift-JIS, tabelas `<8sIII>`/CDB/BGO/Feistel e padding `0xFF`; (3) varredura exaustiva de prólogos `0xCF`/`0xF8 0xFE` + bookmark de sobreposições Trap #4; (4) `ghidra_mn103_fix_decompilation.py` (stack-purge=0, MMIO `volatile`) + gate final `undefined_code_bytes == 0`.

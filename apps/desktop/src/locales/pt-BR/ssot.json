@@ -651,6 +651,22 @@
         "description": "Concede ou revoga (exclusivamente via USB físico) permissão temporária de escrita NOR para sessões sem fio.",
         "arg_label": "Política F14",
         "arg_placeholder": "STATUS"
+      },
+      "NOR_MAP": {
+        "label": "Mapa Completo 142 Setores NOR",
+        "description": "Varre todos os 142 setores físicos (SA0..SA141) da IC5001 direto no Pico, emitindo @P7501_PROG em tempo real."
+      },
+      "FAST_READ": {
+        "label": "Leitura Rápida Stub 0x9043A000",
+        "description": "Injeta o stub binário MN103S de 606 B no alvo e transmite páginas de 256 B com bitmap 0xFF, sum8 e @P7501_PROG.",
+        "arg_label": "VA e Tamanho (hex)",
+        "arg_placeholder": "84000000 1000"
+      },
+      "FAST_WRITE": {
+        "label": "Escrita Rápida BGO 1->0 (JEDEC)",
+        "description": "Valida monotonicidade 1->0 no Pico antes de destravar Upper NOR, grava via stub 0x9043A000 e reloca com U LOCK.",
+        "arg_label": "VA, Hex e Confirmação",
+        "arg_placeholder": "843F0100 0000 CONFIRM_UPPER_NOR"
       }
     }
   }

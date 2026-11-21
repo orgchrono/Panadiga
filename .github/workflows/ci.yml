@@ -149,8 +149,6 @@ jobs:
           path: |
             dist/panadiga.exe
             dist/panadiga-desktop.exe
-            dist/panasonic_p7501_uart_rp2040.uf2
-            dist/panasonic_p7501_uart_rp2350.uf2
             dist/panasonic_p7501_uart_unified.uf2
             dist/tools/
             dist/releases/panadiga-windows-x86_64.zip
@@ -294,8 +292,6 @@ jobs:
           sh -n ./build.sh
           ./build.sh --pico --strict-toolchains
           mkdir -p target/pico-build/out
-          cp crates/panadiga-core/src/pico/firmware_bins/panasonic_p7501_uart_rp2040.uf2 target/pico-build/out/panasonic_p7501_uart_rp2040.uf2
-          cp crates/panadiga-core/src/pico/firmware_bins/panasonic_p7501_uart_rp2350.uf2 target/pico-build/out/panasonic_p7501_uart_rp2350.uf2
           cp crates/panadiga-core/src/pico/firmware_bins/panasonic_p7501_uart_unified.uf2 target/pico-build/out/panasonic_p7501_uart_unified.uf2
           sha256sum target/pico-build/out/*.uf2
 
@@ -304,8 +300,6 @@ jobs:
         with:
           name: panasonic_p7501_uart_firmware_binaries
           path: |
-            target/pico-build/out/panasonic_p7501_uart_rp2040.uf2
-            target/pico-build/out/panasonic_p7501_uart_rp2350.uf2
             target/pico-build/out/panasonic_p7501_uart_unified.uf2
           retention-days: 30
 

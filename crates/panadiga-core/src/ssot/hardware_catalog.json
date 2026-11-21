@@ -569,6 +569,45 @@
       "default_arg": "STATUS",
       "dangerous": true,
       "timeout": "probe_fast"
+    },
+    {
+      "id": "NOR_MAP",
+      "category": "ocd_flash",
+      "syntax": "NOR_MAP",
+      "timeout": "capture_long"
+    },
+    {
+      "id": "FAST_READ",
+      "category": "ocd_flash",
+      "syntax": "FAST_READ <hex_va> <hex_len_mult_100>",
+      "default_arg": "84000000 1000",
+      "timeout": "wdt_ceiling"
+    },
+    {
+      "id": "FAST_WRITE",
+      "category": "ocd_flash",
+      "syntax": "FAST_WRITE <hex_va> <even_hex_bytes> CONFIRM_UPPER_NOR",
+      "default_arg": "843F0100 0000 CONFIRM_UPPER_NOR",
+      "dangerous": true,
+      "timeout": "capture_long"
     }
+  ],
+  "memory_region_blueprints": [
+    { "key": "sram", "start": "0x00000000", "end": "0x0000FFFF", "size_kb": 64 },
+    { "key": "mmio", "start": "0xC0000000", "end": "0xC000FFFF", "size_kb": 64 },
+    { "key": "flash_ipl", "start": "0x80000000", "end": "0x800FFFFF", "size_kb": 1024 },
+    { "key": "rtos_fw", "start": "0x80100000", "end": "0x807EFFFF", "size_kb": 7104 },
+    { "key": "flash_nvram", "start": "0x807F0000", "end": "0x807FFFFF", "size_kb": 64 },
+    { "key": "sdram", "start": "0x40000000", "end": "0x43FFFFFF", "size_kb": 65536 }
+  ],
+  "system_memory_regions": [
+    { "name": "INTERNAL_SRAM", "start": "0x00000000", "end": "0x0003FFFF", "size_kb": 256, "perms": "rwx" },
+    { "name": "CORE_MMIO", "start": "0x10000000", "end": "0x1000FFFF", "size_kb": 64, "perms": "rw-" },
+    { "name": "MAIN_SDRAM", "start": "0x40000000", "end": "0x43FFFFFF", "size_kb": 65536, "perms": "rwx" },
+    { "name": "FLASH_NOR_IPL", "start": "0x80000000", "end": "0x807EFFFF", "size_kb": 8128, "perms": "r-x" },
+    { "name": "NVRAM_U99", "start": "0x807F0000", "end": "0x807FFFFF", "size_kb": 64, "perms": "rw-" },
+    { "name": "SYSTEM_MMIO", "start": "0xC0000000", "end": "0xC0003FFF", "size_kb": 16, "perms": "rw-" },
+    { "name": "AM34_OCD_MMIO", "start": "0xC0004000", "end": "0xC00040FF", "size_kb": 1, "perms": "rw-" },
+    { "name": "ATA_IDE_MMIO", "start": "0xD4000000", "end": "0xD4000FFF", "size_kb": 4, "perms": "rw-" }
   ]
 }

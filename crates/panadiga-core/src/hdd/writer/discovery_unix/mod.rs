@@ -14,7 +14,9 @@ use std::fs;
 use std::process::Command;
 
 #[cfg(any(target_os = "linux", target_os = "macos"))]
-use super::types::{PhysicalDriveInfo, classify_drive_role};
+use super::types::PhysicalDriveInfo;
+#[cfg(target_os = "macos")]
+use super::types::classify_drive_role;
 
 #[cfg(any(target_os = "linux", test))]
 pub(crate) use lsblk::parse_lsblk_blockdevices_json;

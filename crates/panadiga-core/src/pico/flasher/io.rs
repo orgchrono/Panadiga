@@ -7,8 +7,10 @@ use std::time::Duration;
 
 use anyhow::{Context, Result, bail};
 
-use super::uf2::{combine_unified_uf2_bytes, validate_uf2_buffer};
-use super::{EMBEDDED_RP2040_UF2, EMBEDDED_RP2350_UF2, EMBEDDED_UNIFIED_UF2, PicoFlashReport};
+use super::uf2::{
+    Uf2TargetFamily, combine_unified_uf2_bytes, extract_uf2_family_slice, validate_uf2_buffer,
+};
+use super::{EMBEDDED_UNIFIED_UF2, PicoFlashReport};
 
 /// Discovers mounted BOOTSEL mass storage drives across Windows, Linux, and macOS.
 pub fn detect_bootsel_drives() -> Vec<PathBuf> {
@@ -184,26 +186,12 @@ pub fn flash_embedded_firmware(target_override: Option<&str>) -> Result<PicoFlas
     let info_txt_path = target_drive.join("INFO_UF2.TXT");
     let info_content = fs::read_to_string(&info_txt_path).unwrap_or_default();
 
-    let uf2_payload = if let Some(over) = target_override {
-        let lower = over.to_lowercase();
-        if lower.contains("unified") || lower.contains("universal") {
-            EMBEDDED_UNIFIED_UF2
-        } else if lower.contains("2350") {
-            EMBEDDED_RP2350_UF2
-        } else if lower.contains("2040") {
-            EMBEDDED_RP2040_UF2
-        } else {
-            EMBEDDED_UNIFIED_UF2
-        }
-    } else if info_content.contains("RP2350") || info_content.contains("Pico 2") {
-        EMBEDDED_RP2350_UF2
-    } else if info_content.contains("RP2040") || info_content.contains("RPI-RP2") {
-        EMBEDDED_RP2040_UF2
+    if let Some(family) = Uf2TargetFamily::detect(&info_content, target_override) {
+        let sliced = extract_uf2_family_slice(EMBEDDED_UNIFIED_UF2, family)?;
+        flash_uf2_to_drive(target_drive, &sliced)
     } else {
-        EMBEDDED_UNIFIED_UF2
-    };
-
-    flash_uf2_to_drive(target_drive, uf2_payload)
+        flash_uf2_to_drive(target_drive, EMBEDDED_UNIFIED_UF2)
+    }
 }
 
 /// Merges compiled RP2040 and RP2350 `.uf2` images into a single RP2350-E10 compliant universal UF2.

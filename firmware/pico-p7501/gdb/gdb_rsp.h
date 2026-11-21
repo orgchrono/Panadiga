@@ -16,6 +16,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include "p7501_types.h"
+#include "flash/p7501_fast_stream_codec.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,15 +30,7 @@ extern "C" {
  * cache refills stay < 30 ms (never tripping the 4000 ms WDT) and keep `.bss` lean.
  */
 #define GDB_SECTOR_CACHE_SIZE       P7501_SSOT_GDB_SECTOR_CACHE_SIZE
-#if defined(PICO_RP2350) && (PICO_RP2350 != 0)
-    #if defined(PICO_RP2350_RISCV) && (PICO_RP2350_RISCV != 0)
-        #define GDB_TARGET_CHIP_LABEL   "RP2350 (Pico 2 RISC-V Hazard3) - 520KB SRAM - 512B Cache"
-    #else
-        #define GDB_TARGET_CHIP_LABEL   "RP2350 (Pico 2 ARM Cortex-M33) - 520KB SRAM - 512B Cache"
-    #endif
-#else
-    #define GDB_TARGET_CHIP_LABEL   "RP2040 (Pico 1 Dual Cortex-M0+) - 264KB SRAM - 512B Cache"
-#endif
+#define GDB_TARGET_CHIP_LABEL       p7501_describe_gdb_target(P7501_IS_RP2350_BUILD != 0, P7501_IS_RISCV_BUILD != 0)
 
 /** AM34 / MN103S register layout indices exposed to GDB. */
 enum am34_gdb_reg {

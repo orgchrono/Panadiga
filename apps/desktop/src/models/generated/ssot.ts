@@ -158,6 +158,9 @@ export const PICO_COMMAND_IDS = [
   'USBMODE',
   'BLE',
   'BLE_NOR_AUTH',
+  'NOR_MAP',
+  'FAST_READ',
+  'FAST_WRITE',
 ] as const;
 export type PicoCommandId = (typeof PICO_COMMAND_IDS)[number];
 

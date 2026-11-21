@@ -21,6 +21,14 @@ extern "C" {
 bool p7501_bus_panamon1_has_prompt(const uint8_t *buf, size_t len);
 void p7501_bus_panamon1_drain_tail(uint32_t quiet_ms);
 bool p7501_bus_panamon1_probe_open(bool allow_abort, bool *io_panamon_mode);
+bool p7501_bus_panamon1_cmd_open(
+    const char *cmd,
+    uint32_t timeout_ms,
+    bool allow_abort,
+    char *out_buf,
+    size_t out_cap,
+    bool *io_panamon_mode
+);
 bool p7501_bus_panamon1_read_chunk_open(
     uint32_t addr,
     uint8_t *out_buf,

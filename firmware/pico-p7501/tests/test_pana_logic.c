@@ -11,6 +11,7 @@
 #include "uart/p7501_pana_dumpnor.h"
 #include "uart/p7501_pana_jedec.h"
 #include "flash/p7501_bus_policy.h"
+#include "flash/p7501_fast_stream_codec.h"
 #include "flash/p7501_flash.h"
 #include "hal/p7501_wireless_codec.h"
 #include "diag/p7501_piologic_codec.h"
@@ -547,6 +548,133 @@ static void test_bus_policy_hardening_and_bypass_guards(void) {
     assert(!p7501_jedec_validate_bitclear(old_b, bad_b, 2u));
 }
 
+static void test_fast_stream_codec_and_normap(void) {
+    assert(p7501_fast_stub_crc32() == P7501_FAST_STUB_CRC32);
+    const uint8_t sample[4] = { 0x10u, 0x20u, 0x30u, 0xA0u };
+    assert(p7501_fast_sum8(sample, sizeof(sample)) == 0x00u);
+
+    const p7501_session_ctx_t *sctx = p7501_session_default_ctx();
+    const char *reason = NULL;
+    /* Permanent E05 on Layer 1 IPL SA0..SA10 even with upper_nor_unlocked=true */
+    assert(p7501_fast_check_write_guard(sctx, 0x84000000UL, 4u, true, &reason) == P7501_BUS_DENY_IPL_LAYER1);
+    assert(p7501_fast_check_write_guard(sctx, 0x8003FFF0UL, 4u, true, &reason) == P7501_BUS_DENY_IPL_LAYER1);
+    /* Blocked when locked, rejected when unaligned/outside BGO, allowed inside BGO when unlocked */
+    assert(p7501_fast_check_write_guard(sctx, 0x84160000UL, 4u, false, &reason) == P7501_BUS_DENY_UPPER_LOCKED);
+    assert(p7501_fast_check_write_guard(sctx, 0x84160001UL, 4u, true, &reason) != P7501_BUS_ALLOW);
+    assert(p7501_fast_check_write_guard(sctx, 0x84160000UL, 3u, true, &reason) != P7501_BUS_ALLOW);
+    assert(p7501_fast_check_write_guard(sctx, 0x84400000UL, 4u, true, &reason) != P7501_BUS_ALLOW);
+    assert(p7501_fast_check_write_guard(sctx, 0x84160000UL, 4u, true, &reason) == P7501_BUS_ALLOW);
+
+    /* On-Pico pre-flight 1->0 monotonicity check */
+    const uint8_t cur_nor[4] = { 0xFFu, 0xF0u, 0x55u, 0x00u };
+    const uint8_t ok_nor[4]  = { 0xAAu, 0xA0u, 0x51u, 0x00u };
+    const uint8_t bad_nor[4] = { 0xAAu, 0xF1u, 0x55u, 0x00u };
+    size_t bad_off = 99u;
+    assert(p7501_fast_check_monotonic_1_to_0(cur_nor, ok_nor, 4u, &bad_off));
+    assert(!p7501_fast_check_monotonic_1_to_0(cur_nor, bad_nor, 4u, &bad_off) && (bad_off == 1u));
+
+    /* @P7501_PROG structured push line */
+    char prog[128];
+    assert(p7501_fast_format_prog_line(prog, sizeof(prog), "READ", 29u, 2048u, 65536u, 0x1234ABCDUL, 3270u) > 20u);
+    assert(strstr(prog, "@P7501_PROG phase=READ sa=29 done=2048 total=65536 crc32=0x1234ABCD vdd_mv=3270") != NULL);
+
+    /* 142-sector NOR_MAP span & classification */
+    uint32_t va = 0u;
+    uint32_t sz = 0u;
+    assert(p7501_normap_sector_span(0u, &va, &sz) && (va == 0x84000000UL) && (sz == 0x2000UL));
+    assert(p7501_normap_sector_span(26u, &va, &sz) && (va == 0x84130000UL) && (sz == 0x10000UL));
+    assert(p7501_normap_sector_span(134u, &va, &sz) && (va == 0x847F0000UL) && (sz == 0x2000UL));
+    assert(!p7501_normap_sector_span(142u, &va, &sz));
+
+    uint8_t ff20[20];
+    uint8_t z16[16];
+    uint8_t bgo_p1[20];
+    uint8_t bgo_p2[20];
+    uint8_t fe_hdr[20];
+    uint8_t ee_act[20];
+    uint8_t ee_sp[20];
+    memset(ff20, 0xFF, sizeof(ff20));
+    memset(z16, 0x00, sizeof(z16));
+    memset(bgo_p1, 0xFF, sizeof(bgo_p1));
+    memset(bgo_p2, 0xFF, sizeof(bgo_p2));
+    for (size_t off = 4u; off <= 16u; off += 4u) {
+        bgo_p1[off] = 0x01u; bgo_p1[off + 1u] = 0xF1u;
+        bgo_p2[off] = 0x01u; bgo_p2[off + 1u] = 0xF2u;
+    }
+    memcpy(fe_hdr, "EXTRHEADDRV \x01\x00\x00\x00\x00\x00\x16\x00", 20u);
+    memcpy(ee_act, "\x0F\xF0\x00\x00\x00\x00" "1284\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 20u);
+    memcpy(ee_sp,  "\x0F\xF0\x00\x00\x00\x2D\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 20u);
+
+    p7501_normap_summary_t sum;
+    memset(&sum, 0, sizeof(sum));
+    for (uint16_t sa = 0u; sa < P7501_NORMAP_SECTOR_COUNT; ++sa) {
+        p7501_normap_kind_t k;
+        if (sa == 15u) {
+            k = p7501_normap_classify_sector(sa, fe_hdr, NULL);
+        } else if (sa == 29u) {
+            k = p7501_normap_classify_sector(sa, bgo_p1, z16);
+        } else if ((sa >= 26u) && (sa <= 70u)) {
+            k = (sa == 41u || sa == 67u || sa == 68u || sa == 70u)
+                ? p7501_normap_classify_sector(sa, ff20, z16)
+                : p7501_normap_classify_sector(sa, bgo_p2, z16);
+        } else if ((sa >= 71u) && (sa <= 77u)) {
+            k = p7501_normap_classify_sector(sa, ee_act, NULL);
+        } else if ((sa >= 78u) && (sa <= 133u)) {
+            k = p7501_normap_classify_sector(sa, ee_sp, NULL);
+        } else {
+            k = p7501_normap_classify_sector(sa, ff20, NULL);
+        }
+        p7501_normap_accumulate(&sum, k);
+    }
+    p7501_normap_finalize(&sum);
+    assert(sum.healthy && sum.fe_extrhead_ok && (sum.bgo_p1 == 1u) && (sum.bgo_p2 == 40u));
+    assert((sum.bgo_spares == 4u) && (sum.eemul_active_1284 == 7u) && (sum.nvram_blank == 8u));
+
+    /* Exact Spansion S29JL064H VA -> SA mapper */
+    assert(p7501_fast_va_to_sa(0x84000000UL) == 0u);
+    assert(p7501_fast_va_to_sa(0x8000E000UL) == 7u);
+    assert(p7501_fast_va_to_sa(0x84130000UL) == 26u);
+    assert(p7501_fast_va_to_sa(0x807F0000UL) == 134u);
+    assert(p7501_fast_va_to_sa(0x847FE000UL) == 141u);
+    assert(p7501_fast_va_to_sa(0x90000000UL) == 0xFFFFu);
+
+    /* Pure 'R' & 'W' packet encoders */
+    uint8_t pkt[7];
+    assert(p7501_fast_encode_read_pkt(0x84130000UL, 16u, pkt) == 7u);
+    assert((pkt[0] == (uint8_t)'R') && (pkt[1] == 0x00u) && (pkt[2] == 0x00u) &&
+           (pkt[3] == 0x13u) && (pkt[4] == 0x84u) && (pkt[5] == 16u) && (pkt[6] == 0u));
+    assert(p7501_fast_encode_write_hdr(0x847F2004UL, 512u, pkt) == 7u);
+    assert((pkt[0] == (uint8_t)'W') && (pkt[1] == 0x04u) && (pkt[2] == 0x20u) &&
+           (pkt[3] == 0x7Fu) && (pkt[4] == 0x84u) && (pkt[5] == 0x00u) && (pkt[6] == 0x02u));
+
+    /* 256-byte page window math */
+    p7501_fast_page_window_t win;
+    assert(p7501_fast_compute_page_window(0x84130010UL, 500u, &win));
+    assert((win.page_base == 0x84130000UL) && (win.rel_off == 0x10u) && (win.span_pages == 3u));
+    assert(!p7501_fast_compute_page_window(0x84130000UL, 0u, &win));
+
+    /* NOR_MAP formatter & hex serializer */
+    sum.ipl_crc32 = 0x1234ABCDUL;
+    char normap_line[256];
+    assert(p7501_fast_format_normap_line(normap_line, sizeof(normap_line), &sum) > 40u);
+    assert(strstr(normap_line, "[NOR_MAP] sectors=142 ipl_crc32=0x1234ABCD fe_extrhead=YES") != NULL);
+    assert(strstr(normap_line, "bgo_p1=1 bgo_p2=40 bgo_spares=4 bgo_corrupt=0") != NULL);
+    assert(strstr(normap_line, "nvram_blank=8 healthy=YES") != NULL);
+
+    const uint8_t sample_bytes[3] = { 0x0Au, 0xFEu, 0x55u };
+    char sample_hex[16];
+    assert(p7501_fast_format_page_hex(sample_bytes, sizeof(sample_bytes), sample_hex, sizeof(sample_hex)) == 6u);
+    assert(strcmp(sample_hex, "0afe55") == 0);
+
+    /* Pure chip capability descriptors */
+    assert(strstr(p7501_describe_mcu_host(false, false), "RP2040") != NULL);
+    assert(strstr(p7501_describe_mcu_host(false, true), "BLE") != NULL);
+    assert(strstr(p7501_describe_mcu_host(true, false), "RP2350") != NULL);
+    assert(strstr(p7501_describe_gdb_target(false, false), "RP2040") != NULL);
+    assert(strstr(p7501_describe_gdb_target(true, false), "Cortex-M33") != NULL);
+    assert(strstr(p7501_describe_gdb_target(true, true), "Hazard3") != NULL);
+}
+
 int p7501_run_pana_logic_tests(void) {
     test_pana_rsp_frame_codec();
     test_rsp_boot_prose_does_not_trip_nak();
@@ -556,8 +684,9 @@ int p7501_run_pana_logic_tests(void) {
     test_pana_dumpnor_stub_and_args();
     test_pana_rsp_jedec_and_nor_policy();
     test_bus_policy_hardening_and_bypass_guards();
+    test_fast_stream_codec_and_normap();
     p7501_run_pana_diag_drv_tests();
     test_sds_bus_sniffer_codec();
-    printf("[HOST-TEST] PANARSP + BusPolicy + REGS + DUMPNOR + DIAGWATCH + DRVPANA + FlashGeo + PIOLOGIC + SDSNIFF passed.\n");
+    printf("[HOST-TEST] PANARSP + BusPolicy + FastStream + NOR_MAP + REGS + DUMPNOR + DIAGWATCH + DRVPANA + FlashGeo + PIOLOGIC + SDSNIFF passed.\n");
     return 0;
 }

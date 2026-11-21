@@ -83,3 +83,14 @@ Following live `COM10` bring-up of **`PANAMON1`** under `Loader ver0.61` (`641 B
 2. **Bounded `SC0STR` Polling (`PUTC_D3_BYTES` `46 B`):**
    - Both `PROG061 FUN_50404d15` (`0x50404D37`) and `BOOT.BIN uart0_putc` (`0x440047C7`) poll `(SC0STR 0xD400200C) & 0xA0` (`TXBUSY | TXBF`) with a bounded loop counter (`0x1400000` in stock; `MOV 0x00040000, D1` preserving `D1` via `ADD -4, SP` in `PUTC_D3_BYTES`) rather than spinning forever.
    - Both [`crates/panadiga-core/src/re/prog061_uart_monitor/`](../../crates/panadiga-core/src/re/prog061_uart_monitor/mod.rs) and [`crates/panadiga-core/src/re/nor_dumper/stub.rs`](../../crates/panadiga-core/src/re/nor_dumper/stub.rs) enforce this ABI, verified via Ghidra (`SUMMARY_CALLS: total=55 bad=0`) and `Mn103Vm`.
+
+---
+
+## 7. Verified SLEIGH Patch (`am33.sinc` + `mn103.sinc`) & 4-Pass Zero-`??` Pipeline
+
+Line-by-line inspection of the local `GhidraMn10300` extension (`Ghidra 12.1.4 PUBLIC`) captured **12 concrete defects** across `am33.sinc` and `mn103.sinc` into the unified patch [`tools/ghidra/sleigh_patches/am33_panadiga_zero_undef.patch`](../../tools/ghidra/sleigh_patches/am33_panadiga_zero_undef.patch) (compile-verified via `sleigh.bat -u -f` on an isolated copy with zero errors and zero constructor conflicts):
+
+- **Missing constructors generating `??`:** `:MOVHU (Rm0+), Rn2` (`0xF9 0xEA`, primary cause of `3,935` `0xF9` gaps in `MAIN` and unrolled memcpy loops in `Loader ver0.61` `0x440242b7..0x440245ab`), `:SYSCALL` (`0xF0 0xC0`), and `:BREAK` (`0xFF`).
+- **Semantic P-Code bugs:** `am33.sinc:98` (`MOV Rm2,(IMM32,Rn0)` adding `Rm2` instead of `Rn0`), `134-135` (`MOVBU` 16-bit `*:2` instead of `*:1`), `184` (inverted `SUB Rm2,Rn0,Rd2`), `186-188` (`SUB SIMM` calling `update_add`), `273` (`AND IMM32,EPSW` using `|`), plus `mn103.sinc:519-522` (`BCLR` using `temp | ~mask` instead of `temp & ~mask`, root cause of Trap #2), `503` (`NOT Dn0` modeled as XOR, Trap #9), `367/369` (`EXTB`/`EXTH`), and `427` (`SUBC`).
+- **`mn_todo()` elimination:** `NOT Rn0` (`am33.sinc:293`), `BTST SIMM, Rn0` (`295-297`, Trap #10), `MOV (Rm0+, disp)` (`78-83`), `MOVBU (IMM32, ...)` (`130-133`), `ADDC`/`SUBC`, and `ASR`/`ASL`/`ROR`/`ROL`.
+- **4-Pass Execution (on cloned `Panadiga_MN103S_ZeroUndef`):** see the complete headless runbook in [`tools/ghidra/sleigh_patches/README.md`](../../tools/ghidra/sleigh_patches/README.md).

@@ -15,7 +15,7 @@ pub use io::{
     detect_bootsel_drives, flash_embedded_firmware, flash_uf2_to_drive, merge_unified_uf2,
     trigger_1200_baud_bootsel,
 };
-pub use uf2::validate_uf2_buffer;
+pub use uf2::{Uf2TargetFamily, extract_uf2_family_slice, validate_uf2_buffer};
 
 /// Magic numbers identifying Microsoft UF2 (USB Flashing Format) containers.
 pub const UF2_MAGIC_START0: u32 = 0x0A32_4655; // "UF2\n" in little-endian
@@ -40,11 +40,7 @@ pub const RP2350_SDK_FAMILY_ID: u32 = RP2350_ABS_SDK_FAMILY_ID;
 pub const RP2350_ARM_S_SDK_FAMILY_ID: u32 = 0xE48B_FF59;
 pub const RP2350_RISCV_SDK_FAMILY_ID: u32 = 0xE48B_FF5A;
 
-/// Pre-compiled P7501 Async UART firmware binary containers embedded into the application executable.
-pub const EMBEDDED_RP2040_UF2: &[u8] =
-    include_bytes!("firmware_bins/panasonic_p7501_uart_rp2040.uf2");
-pub const EMBEDDED_RP2350_UF2: &[u8] =
-    include_bytes!("firmware_bins/panasonic_p7501_uart_rp2350.uf2");
+/// Pre-compiled P7501 Async UART unified firmware container embedded into the application executable.
 pub const EMBEDDED_UNIFIED_UF2: &[u8] =
     include_bytes!("firmware_bins/panasonic_p7501_uart_unified.uf2");
 

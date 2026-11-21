@@ -47,6 +47,9 @@ add_executable(panasonic_p7501_uart
     flash/p7501_blackbox_codec.c
     flash/p7501_bus_policy.c
     flash/p7501_flash_geo.c
+    flash/p7501_fast_stream_codec.c
+    flash/p7501_fast_stub_io.c
+    flash/p7501_fast_stream.c
     flash/p7501_ftl_inspect.c
     flash/p7501_job_codec.c
     flash/p7501_job.c
@@ -132,7 +135,14 @@ target_compile_definitions(panasonic_p7501_uart PRIVATE
 )
 
 target_compile_options(panasonic_p7501_uart PRIVATE
+    -Os
+    -ffunction-sections
+    -fdata-sections
     -Wframe-larger-than=512
+)
+
+target_link_options(panasonic_p7501_uart PRIVATE
+    -Wl,--gc-sections
 )
 
 # Assemble PIO UART program and generate C header

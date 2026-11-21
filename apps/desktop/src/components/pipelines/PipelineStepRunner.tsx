@@ -6,6 +6,7 @@ import type { PipelineProgressState, PipelineStepDescriptor, PipelineStepStatus 
 import { cn } from '@/lib/utils';
 
 const PROGRESS_MAX_PERCENT = 100;
+const BYTES_PER_KIB = 1024;
 
 export interface PipelineStepRunnerProps {
   readonly title: string;
@@ -123,9 +124,24 @@ export const PipelineStepRunner: React.FC<PipelineStepRunnerProps> = ({
 
       {progress && (
         <div className="space-y-1">
-          <div className="flex items-center justify-between text-[11px] text-cyan-300">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-cyan-300">
             <span className="truncate">{progress.stageLabel}</span>
-            <span>{pct}%</span>
+            <div className="flex items-center gap-2 shrink-0">
+              {typeof progress.activeSa === 'number' && (
+                <Badge variant="outline" className="h-4 px-1.5 text-[10px] border-cyan-500/40 text-cyan-200">
+                  SA{progress.activeSa}
+                </Badge>
+              )}
+              {typeof progress.bytesPerSec === 'number' && progress.bytesPerSec > 0 && (
+                <span className="text-[10px] text-slate-300">
+                  {(progress.bytesPerSec / BYTES_PER_KIB).toFixed(1)} KiB/s
+                </span>
+              )}
+              {typeof progress.etaSeconds === 'number' && (
+                <span className="text-[10px] text-slate-400">ETA {progress.etaSeconds}s</span>
+              )}
+              <span>{pct}%</span>
+            </div>
           </div>
           <progress
             aria-label={t('pipelines.primitives.stepRunner.progressAria')}

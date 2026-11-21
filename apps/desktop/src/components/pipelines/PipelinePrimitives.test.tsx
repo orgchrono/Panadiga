@@ -45,7 +45,13 @@ describe('Pipeline Shared Primitives', () => {
 
     render(
       <div>
-        <PipelineStepRunner title="Test Runner" steps={steps} isBusy={false} logs={['line-a']} />
+        <PipelineStepRunner
+          title="Test Runner"
+          steps={steps}
+          isBusy={false}
+          progress={{ current: 1, total: 2, stageLabel: 'Streaming BGO', activeSa: 26, bytesPerSec: 11264, etaSeconds: 4 }}
+          logs={['line-a']}
+        />
         <SafetyPreflightCard checks={checks} checkedIds={['unlocked']} onToggleCheck={onToggleCheck} severity="critical" />
         <SafetyConfirmGate
           expectedToken="TOKEN_OK"
@@ -63,6 +69,9 @@ describe('Pipeline Shared Primitives', () => {
     );
 
     expect(screen.getByText('Test Runner')).toBeTruthy();
+    expect(screen.getByText('SA26')).toBeTruthy();
+    expect(screen.getByText('11.0 KiB/s')).toBeTruthy();
+    expect(screen.getByText('ETA 4s')).toBeTruthy();
     expect(screen.getByText('line-a')).toBeTruthy();
     const lockedBox = screen.getByTestId('preflight-check-locked');
     expect(lockedBox instanceof HTMLInputElement && lockedBox.disabled).toBe(true);

@@ -116,6 +116,7 @@ where
                 current: p.current,
                 total: p.total,
                 detail: p.detail,
+                telemetry: p.telemetry,
             });
         },
     )

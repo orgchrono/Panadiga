@@ -47,7 +47,12 @@ def _read_bytes_safe(prog, addr_val, count):
     try:
         raw = _alloc_jbyte_buf_traps(req)
         read_len = mem_mgr.getBytes(target_addr, raw)
-        return [int(val) & 0xFF for val in raw[:read_len]] if read_len > 0 else None
+        if read_len <= 0:
+            return None
+        try:
+            return bytearray(memoryview(raw).cast("B"))[:read_len]
+        except Exception:
+            return [int(val) & 0xFF for val in raw[:read_len]]
     except Exception:
         return None
 
@@ -154,7 +159,7 @@ def resolve_mid_instruction_overlaps(prog, monitor_obj=None):
     stale_addr = space.getAddress(0x44004940)
     if prog.getMemory().contains(call_addr) and listing.getInstructionAt(call_addr) is None:
         raw = _read_bytes_safe(prog, 0x4400493B, 7)
-        if raw == [0xDD, 0x0E, 0xFE, 0xFF, 0xFF, 0x00, 0x00]:
+        if raw is not None and list(raw) == [0xDD, 0x0E, 0xFE, 0xFF, 0xFF, 0x00, 0x00]:
             listing.clearCodeUnits(stale_addr, stale_addr.add(1), False)
             if DisassembleCommand(call_addr, None, True).applyTo(prog):
                 fixed += 1
@@ -236,6 +241,24 @@ def annotate_am33_sleigh_gaps(prog, monitor_obj=None):
     mem = prog.getMemory()
     f9_ea_sites = 0
     resumed = 0
+    def _process_f9_ea(blk, raw, i):
+        site = blk.getStart().add(i)
+        if listing.getInstructionContaining(site) is not None:
+            return (0, 0)
+        prev_cu = listing.getInstructionAt(site.subtract(1)) or listing.getInstructionContaining(site.subtract(1))
+        if prev_cu is not None or (i > 0 and raw[i - 1] in (0x81, 0x98, 0xE2, 0xE4)):
+            decoded = decode_am33_f9_ea_postinc_load(raw[i], raw[i + 1], raw[i + 2])
+            msg = "[Trap8-AM33SleighGap] %s (missing in am33.sinc)" % decoded
+            listing.setComment(site, CodeUnit.EOL_COMMENT, msg)
+            bm_mgr.setBookmark(site, "Analysis", "Trap8-AM33-F9EA", msg)
+            after = site.add(3)
+            resumed_inc = 0
+            if listing.getInstructionContaining(after) is None:
+                if DisassembleCommand(after, None, True).applyTo(prog):
+                    resumed_inc = 1
+            return (1, resumed_inc)
+        return (0, 0)
+
     for blk in mem.getBlocks():
         if not (blk.isInitialized() and blk.isExecute()):
             continue
@@ -243,22 +266,23 @@ def annotate_am33_sleigh_gaps(prog, monitor_obj=None):
         raw = _read_bytes_safe(prog, start_va, int(blk.getSize()))
         if raw is None or len(raw) < 4:
             continue
-        for i in range(len(raw) - 3):
-            if raw[i] == 0xF9 and raw[i + 1] == 0xEA:
-                site = blk.getStart().add(i)
-                if listing.getInstructionContaining(site) is not None:
-                    continue
-                prev_cu = listing.getInstructionAt(site.subtract(1)) or listing.getInstructionContaining(site.subtract(1))
-                if prev_cu is not None or (i > 0 and raw[i - 1] in (0x81, 0x98, 0xE2, 0xE4)):
-                    decoded = decode_am33_f9_ea_postinc_load(raw[i], raw[i + 1], raw[i + 2])
-                    msg = "[Trap8-AM33SleighGap] %s (missing in am33.sinc)" % decoded
-                    listing.setComment(site, CodeUnit.EOL_COMMENT, msg)
-                    bm_mgr.setBookmark(site, "Analysis", "Trap8-AM33-F9EA", msg)
-                    f9_ea_sites += 1
-                    after = site.add(3)
-                    if listing.getInstructionContaining(after) is None:
-                        if DisassembleCommand(after, None, True).applyTo(prog):
-                            resumed += 1
+        if isinstance(raw, (bytes, bytearray)):
+            pos = 0
+            end = len(raw) - 2
+            while True:
+                pos = raw.find(b"\xF9\xEA", pos, end)
+                if pos < 0:
+                    break
+                f_inc, r_inc = _process_f9_ea(blk, raw, pos)
+                f9_ea_sites += f_inc
+                resumed += r_inc
+                pos += 1
+        else:
+            for i in range(len(raw) - 3):
+                if raw[i] == 0xF9 and raw[i + 1] == 0xEA:
+                    f_inc, r_inc = _process_f9_ea(blk, raw, i)
+                    f9_ea_sites += f_inc
+                    resumed += r_inc
     return {"f9_ea_annotated": f9_ea_sites, "post_f9_ea_resumed": resumed}
 
 def resolve_all_seven_traps(prog, monitor_obj=None):

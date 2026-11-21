@@ -4,11 +4,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  PICO_DEFAULT_FALLBACK_PORT,
-  SD_DEFAULT_VOLUME_MB,
-  UPPER_NOR_CONFIRM_TOKEN,
-} from '@/constants';
+import { PICO_DEFAULT_FALLBACK_PORT } from '@/constants';
 import { useToast } from '@/context/ToastContext';
 import { useWorkbenchMode } from '@/context/WorkbenchModeContext';
 import { translate } from '@/i18n/useTranslation';
@@ -27,36 +23,36 @@ import type {
   ViewKey,
 } from '@/models';
 import {
-  getDigaModelCatalog,
-  listPicoSerialPorts,
-} from '@/services/picoService';
-import {
-  picoEh55BgoAudit,
-  picoEh55BgoRepair,
-  picoEh55NorDump,
-  picoPanamon1CleanNvram,
-  subscribeNorDumpProgress,
-  subscribeNvramCleanProgress,
-} from '@/services/pipelineService';
-import {
-  analyzeFlashDump,
-  cleanNvramSurgical,
-} from '@/services/storageCryptoService';
-import {
-  emitNvramCleanedEvent,
-  emitUnbrickCompletedEvent,
-} from '@/services/systemService';
-import {
-  flashSdRecoveryCard,
-  inspectSdCardTargets,
-  subscribeSdFlashProgress,
-} from '@/services/unbrickService';
-import { logger } from '@/utils/logger';
+  fetchExpressPicoPorts,
+  fetchExpressSdTargets,
+  fetchInitialExpressDiscovery,
+  formatExpressError,
+  pickDefaultSafeSdPath,
+  runLocalNorInspectMission,
+  runNorRepairMission,
+  runPicoNorInspectMission,
+  runSdFlashMission,
+  runU99RescueMission,
+  type ShowToastFn,
+  validateSdFlashSelection,
+} from './expressMissionLogic';
 
-const PROGRESS_DONE_DEFAULT = 8;
+type ExpressToastTitleKey = Parameters<typeof translate>[0];
 
-function formatErr(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
+async function executeMissionWithGuard(
+  setError: (msg: string | null) => void,
+  errorTitleKey: ExpressToastTitleKey | null,
+  showToast: ShowToastFn,
+  task: () => Promise<void>,
+): Promise<void> {
+  setError(null);
+  try {
+    await task();
+  } catch (err) {
+    const msg = formatExpressError(err);
+    setError(msg);
+    if (errorTitleKey) showToast({ type: 'error', title: translate(errorTitleKey), message: msg });
+  }
 }
 
 export function useExpressViewModel(onOpenEngineeringView: (view: ViewKey) => void) {
@@ -131,58 +127,37 @@ export function useExpressViewModel(onOpenEngineeringView: (view: ViewKey) => vo
 
   const refreshSdTargets = useCallback(async () => {
     setSdTargetsLoading(true);
-    try {
-      const list = await inspectSdCardTargets();
+    const list = await fetchExpressSdTargets();
+    if (list) {
       setSdTargets(list);
-      const firstSafe = list.find(item => item.safe_sd_target);
-      if (firstSafe && !selectedDevicePath) {
-        setSelectedDevicePath(firstSafe.device_path);
-      }
-    } catch (err) {
-      logger.warn('ExpressViewModel', 'Failed enumerating SD card targets', err);
-    } finally {
-      setSdTargetsLoading(false);
+      const firstSafe = pickDefaultSafeSdPath(list);
+      if (firstSafe && !selectedDevicePath) setSelectedDevicePath(firstSafe);
     }
+    setSdTargetsLoading(false);
   }, [selectedDevicePath]);
 
   const refreshPicoPorts = useCallback(async () => {
     setPicoPortsLoading(true);
-    try {
-      const ports = await listPicoSerialPorts();
+    const ports = await fetchExpressPicoPorts();
+    if (ports) {
       setPicoPorts(ports);
       if (ports.length > 0 && (!picoPortInput || picoPortInput === PICO_DEFAULT_FALLBACK_PORT)) {
         setPicoPortInput(ports[0]);
       }
-    } catch (err) {
-      logger.warn('ExpressViewModel', 'Failed enumerating Pico serial ports', err);
-    } finally {
-      setPicoPortsLoading(false);
     }
+    setPicoPortsLoading(false);
   }, [picoPortInput]);
 
   useEffect(() => {
     const controller = new AbortController();
-    void Promise.resolve().then(async () => {
-      try {
-        const [catalog, targets, ports] = await Promise.all([
-          getDigaModelCatalog(),
-          inspectSdCardTargets(),
-          listPicoSerialPorts(),
-        ]);
-        if (controller.signal.aborted) return;
-        setModelCatalog(catalog.filter(item => item.model_id !== 'AUTO'));
-        setSdTargets(targets);
-        const firstSafe = targets.find(item => item.safe_sd_target);
-        if (firstSafe) {
-          setSelectedDevicePath(firstSafe.device_path);
-        }
-        setPicoPorts(ports);
-        if (ports.length > 0) {
-          setPicoPortInput(ports[0]);
-        }
-      } catch (err) {
-        logger.warn('ExpressViewModel', 'Initial Express discovery failed', err);
-      }
+    void fetchInitialExpressDiscovery().then(res => {
+      if (controller.signal.aborted || !res) return;
+      setModelCatalog(res.models);
+      setSdTargets(res.targets);
+      const firstSafe = pickDefaultSafeSdPath(res.targets);
+      if (firstSafe) setSelectedDevicePath(firstSafe);
+      setPicoPorts(res.ports);
+      if (res.ports.length > 0) setPicoPortInput(res.ports[0]);
     });
     return () => controller.abort();
   }, []);
@@ -194,259 +169,105 @@ export function useExpressViewModel(onOpenEngineeringView: (view: ViewKey) => vo
 
   const executeSdFlash = useCallback(async () => {
     setSdError(null);
-    if (sdTargetMode === 'physical') {
-      if (!selectedSdDrive) {
-        setSdError(translate('errors.unbrick.sdTargetRequired'));
-        return;
-      }
-      if (sdConfirmToken.trim() !== selectedSdDrive.expected_confirm_token) {
-        setSdError(
-          translate('errors.unbrick.sdConfirmRequired', {
-            token: selectedSdDrive.expected_confirm_token,
-          }),
-        );
-        return;
-      }
+    const validationError = validateSdFlashSelection(sdTargetMode, selectedSdDrive, sdConfirmToken);
+    if (validationError) {
+      setSdError(validationError);
+      return;
     }
     setSdFlashing(true);
     setSdProgress(null);
-    const unlisten = await subscribeSdFlashProgress(ev => setSdProgress(ev));
-    try {
-      const report = await flashSdRecoveryCard({
-        ...(sdTargetMode === 'physical' && selectedSdDrive
-          ? {
-              devicePath: selectedSdDrive.device_path,
-              confirmToken: sdConfirmToken.trim(),
-            }
-          : {}),
-        model: selectedModel,
-        volumeMb: SD_DEFAULT_VOLUME_MB,
-        loaderProfile: 'ver061',
+    await executeMissionWithGuard(setSdError, 'errors.unbrick.sdFlashTag', showToast, () =>
+      runSdFlashMission({
+        sdTargetMode,
+        selectedSdDrive,
+        sdConfirmToken,
+        selectedModel,
         includePanaSd,
-      });
-      setSdReport(report);
-      emitUnbrickCompletedEvent(true);
-      showToast({
-        type: 'success',
-        title: translate('errors.unbrick.sdFlashTag'),
-        message: translate('errors.unbrick.sdFlashDone'),
-      });
-    } catch (err) {
-      const msg = formatErr(err);
-      setSdError(msg);
-      showToast({ type: 'error', title: translate('errors.unbrick.sdFlashTag'), message: msg });
-    } finally {
-      unlisten();
-      setSdFlashing(false);
-    }
+        onProgress: setSdProgress,
+        onReport: setSdReport,
+        showToast,
+      }),
+    );
+    setSdFlashing(false);
   }, [includePanaSd, sdConfirmToken, sdTargetMode, selectedModel, selectedSdDrive, showToast]);
 
   const executeU99QuickRescue = useCallback(() => {
     const cleanPort = picoPortInput.trim();
-    if (!cleanPort) {
-      setU99Error(translate('errors.pipelines.nvramPortRequired'));
-      return;
-    }
+    if (!cleanPort) { setU99Error(translate('errors.pipelines.nvramPortRequired')); return; }
     setU99Error(null);
     runWithPicoSafetyGate(async () => {
       setU99Cleaning(true);
-      setU99Error(null);
-      setU99Progress({
-        port: cleanPort,
-        stage: 'connect_bridge',
-        current: 0,
-        total: PROGRESS_DONE_DEFAULT,
-        detail: cleanPort,
-      });
-      const unlisten = await subscribeNvramCleanProgress(ev => setU99Progress(ev));
-      try {
-        const report = await picoPanamon1CleanNvram({ portName: cleanPort });
-        setU99Report(report);
-        emitNvramCleanedEvent(true);
-        showToast({
-          type: 'success',
-          title: translate('errors.nvram.surgicalCleanBadgeTitle'),
-          message: translate('errors.pipelines.panamon1CleanDone'),
-        });
-      } catch (err) {
-        const msg = formatErr(err);
-        setU99Error(msg);
-        showToast({
-          type: 'error',
-          title: translate('errors.nvram.surgicalCleanFailedTitle'),
-          message: msg,
-        });
-      } finally {
-        unlisten();
-        setU99Cleaning(false);
-      }
+      await executeMissionWithGuard(setU99Error, 'errors.nvram.surgicalCleanFailedTitle', showToast, () =>
+        runU99RescueMission({ cleanPort, onProgress: setU99Progress, onReport: setU99Report, showToast }),
+      );
+      setU99Cleaning(false);
     });
   }, [picoPortInput, runWithPicoSafetyGate, showToast]);
 
   const runLocalNorInspect = useCallback(async () => {
     setNorAuditing(true);
-    setNorError(null);
-    try {
-      const nvram = await analyzeFlashDump();
-      const bgo = await picoEh55BgoAudit({
-        sourceMode: 'DUMP_FILE',
-        norPath: nvram.input_file,
-      });
-      setNorAuditNvram(nvram);
-      setNorAuditBgo(bgo);
-    } catch (err) {
-      const msg = formatErr(err);
-      setNorError(msg);
-    } finally {
-      setNorAuditing(false);
-    }
-  }, []);
+    await executeMissionWithGuard(setNorError, null, showToast, () =>
+      runLocalNorInspectMission({
+        onAudit: (nvram, bgo) => { setNorAuditNvram(nvram); setNorAuditBgo(bgo); },
+      }),
+    );
+    setNorAuditing(false);
+  }, [showToast]);
 
   const executeNorInspect = useCallback(() => {
-    if (norSourceMode === 'local') {
-      void runLocalNorInspect();
-      return;
-    }
+    if (norSourceMode === 'local') { void runLocalNorInspect(); return; }
     const cleanPort = picoPortInput.trim();
-    if (!cleanPort) {
-      setNorError(translate('errors.pipelines.nvramPortRequired'));
-      return;
-    }
+    if (!cleanPort) { setNorError(translate('errors.pipelines.nvramPortRequired')); return; }
     setNorError(null);
     runWithPicoSafetyGate(async () => {
-      setNorCapturing(true);
-      setNorAuditing(true);
-      setNorProgress(null);
-      const unlisten = await subscribeNorDumpProgress(ev => setNorProgress(ev));
-      try {
-        const dumpRes = await picoEh55NorDump({ portName: cleanPort, slice: 'full' });
-        setNorDumpReport(dumpRes);
-        const [nvram, bgo] = await Promise.all([
-          analyzeFlashDump(),
-          picoEh55BgoAudit({ sourceMode: 'DUMP_FILE', norPath: dumpRes.outputPath }),
-        ]);
-        setNorAuditNvram(nvram);
-        setNorAuditBgo(bgo);
-        showToast({ type: 'success', title: translate('errors.pipelines.norDumped') });
-      } catch (err) {
-        const msg = formatErr(err);
-        setNorError(msg);
-        showToast({ type: 'error', title: translate('errors.pipelines.norDumpFailed'), message: msg });
-      } finally {
-        unlisten();
-        setNorCapturing(false);
-        setNorAuditing(false);
-      }
+      setNorCapturing(true); setNorAuditing(true); setNorProgress(null);
+      await executeMissionWithGuard(setNorError, 'errors.pipelines.norDumpFailed', showToast, () =>
+        runPicoNorInspectMission({
+          cleanPort, onProgress: setNorProgress, onDumpReport: setNorDumpReport,
+          onAudit: (nvram, bgo) => { setNorAuditNvram(nvram); setNorAuditBgo(bgo); }, showToast,
+        }),
+      );
+      setNorCapturing(false); setNorAuditing(false);
     });
   }, [norSourceMode, picoPortInput, runLocalNorInspect, runWithPicoSafetyGate, showToast]);
 
   const executeNorSafeRepair = useCallback(
     async (liveUpperNor = false) => {
       setNorPatching(true);
-      setNorError(null);
-      try {
-        if (norAuditNvram && norAuditNvram.nvram_non_ff_bytes > 0) {
-          const cleaned = await cleanNvramSurgical();
-          setNorAuditNvram(cleaned);
-          emitNvramCleanedEvent(true);
-          setNorRepairResult({
-            mode: 'nvram_clean',
-            summaryPath: cleaned.output_file,
-            sha256: cleaned.clean_sha256,
-          });
-          showToast({
-            type: 'success',
-            title: translate('errors.nvram.surgicalCleanTitle'),
-            message: translate('errors.nvram.surgicalCleanMsg'),
-          });
-          return;
-        }
-        const targetNor = norDumpReport?.outputPath ?? norAuditNvram?.input_file;
-        const bgoRes = await picoEh55BgoRepair({
-          norPath: targetNor,
-          dryRunOnly: !liveUpperNor,
-          ...(liveUpperNor
-            ? { portName: picoPortInput.trim(), confirmToken: UPPER_NOR_CONFIRM_TOKEN }
-            : {}),
-        });
-        setNorAuditBgo(bgoRes.plan.post_audit);
-        setNorRepairResult({
-          mode: liveUpperNor ? 'bgo_live' : 'bgo_cow',
-          summaryPath:
-            bgoRes.liveReport?.backup_path ??
-            bgoRes.cowOutPath ??
-            bgoRes.outPlanPath ??
-            targetNor ??
-            '',
-          sha256: bgoRes.liveReport?.post_bgo_sha256 ?? bgoRes.plan.expected_post_sha256,
-        });
-        showToast({
-          type: 'success',
-          title: translate(
-            liveUpperNor ? 'errors.pipelines.bgoLiveApplied' : 'errors.pipelines.bgoDryRunReady',
-          ),
-        });
-      } catch (err) {
-        const msg = formatErr(err);
-        setNorError(msg);
-        showToast({ type: 'error', title: translate('errors.pipelines.bgoRepairFailed'), message: msg });
-      } finally {
-        setNorPatching(false);
-      }
+      await executeMissionWithGuard(
+        setNorError,
+        'errors.pipelines.bgoRepairFailed',
+        showToast,
+        () =>
+          runNorRepairMission({
+            liveUpperNor,
+            portName: picoPortInput,
+            norAuditNvram,
+            norDumpReport,
+            onNvramUpdated: setNorAuditNvram,
+            onBgoUpdated: setNorAuditBgo,
+            onResult: setNorRepairResult,
+            showToast,
+          }),
+      );
+      setNorPatching(false);
     },
     [norAuditNvram, norDumpReport, picoPortInput, showToast],
   );
 
   return {
-    safetySheetOpen,
-    confirmPicoSafetySheet,
-    cancelPicoSafetySheet,
-    openInEngineering: onOpenEngineeringView,
+    safetySheetOpen, confirmPicoSafetySheet, cancelPicoSafetySheet, openInEngineering: onOpenEngineeringView,
     // Mission 1
-    modelCatalog,
-    selectedModel,
-    setSelectedModel,
-    includePanaSd,
-    setIncludePanaSd,
-    sdTargets,
-    sdTargetsLoading,
-    sdTargetMode,
-    setSdTargetMode,
-    selectedDevicePath,
-    setSelectedDevicePath,
-    selectedSdDrive,
-    sdConfirmToken,
-    setSdConfirmToken,
-    sdFlashing,
-    sdProgress,
-    sdError,
-    sdReport,
-    refreshSdTargets,
-    executeSdFlash,
+    modelCatalog, selectedModel, setSelectedModel, includePanaSd, setIncludePanaSd,
+    sdTargets, sdTargetsLoading, sdTargetMode, setSdTargetMode, selectedDevicePath, setSelectedDevicePath,
+    selectedSdDrive, sdConfirmToken, setSdConfirmToken, sdFlashing, sdProgress, sdError, sdReport,
+    refreshSdTargets, executeSdFlash,
     // Mission 2
-    picoPorts,
-    picoPortsLoading,
-    picoPortInput,
-    setPicoPortInput,
-    refreshPicoPorts,
-    u99Cleaning,
-    u99Progress,
-    u99Error,
-    u99Report,
-    executeU99QuickRescue,
+    picoPorts, picoPortsLoading, picoPortInput, setPicoPortInput, refreshPicoPorts,
+    u99Cleaning, u99Progress, u99Error, u99Report, executeU99QuickRescue,
     // Mission 3
-    norSourceMode,
-    setNorSourceMode,
-    norCapturing,
-    norProgress,
-    norDumpReport,
-    norAuditing,
-    norAuditNvram,
-    norAuditBgo,
-    norPatching,
-    norRepairResult,
-    norError,
-    executeNorInspect,
-    executeNorSafeRepair,
+    norSourceMode, setNorSourceMode, norCapturing, norProgress, norDumpReport, norAuditing,
+    norAuditNvram, norAuditBgo, norPatching, norRepairResult, norError,
+    executeNorInspect, executeNorSafeRepair,
   };
 }

@@ -92,11 +92,13 @@ export const FLASH_GEOMETRY_BLUEPRINTS: readonly FlashGeometryBlueprint[] = Obje
   }),
 );
 
-export const MEMORY_REGION_BLUEPRINTS: readonly MemoryRegionBlueprint[] = Object.freeze([
-  Object.freeze({ key: 'sram', start: '0x00000000', end: '0x0000FFFF', size_kb: 64 }),
-  Object.freeze({ key: 'mmio', start: '0xC0000000', end: '0xC000FFFF', size_kb: 64 }),
-  Object.freeze({ key: 'flash_ipl', start: '0x80000000', end: '0x800FFFFF', size_kb: 1024 }),
-  Object.freeze({ key: 'rtos_fw', start: '0x80100000', end: '0x807EFFFF', size_kb: 7104 }),
-  Object.freeze({ key: 'flash_nvram', start: '0x807F0000', end: '0x807FFFFF', size_kb: 64 }),
-  Object.freeze({ key: 'sdram', start: '0x40000000', end: '0x43FFFFFF', size_kb: 65536 }),
-]);
+export const MEMORY_REGION_BLUEPRINTS: readonly MemoryRegionBlueprint[] = Object.freeze(
+  hardwareCatalog.memory_region_blueprints.map(entry =>
+    Object.freeze({
+      key: entry.key,
+      start: entry.start,
+      end: entry.end,
+      size_kb: entry.size_kb,
+    }),
+  ),
+);

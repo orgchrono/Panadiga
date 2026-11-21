@@ -196,3 +196,32 @@ pub fn audit_bgo_nor_with_geometry(
 pub fn audit_eh55_bgo_nor_8mb(nor_8mb: &[u8]) -> Result<Eh55BgoAuditReport> {
     audit_bgo_nor_with_geometry(nor_8mb, &BgoSectorGeometry::eh55_default())
 }
+
+/// Audits BGO NOR sectors using the SSOT runtime profile selected by `model_id`.
+pub fn audit_bgo_nor_for_model(nor: &[u8], model_id: &str) -> Result<Eh55BgoAuditReport> {
+    let geom = BgoSectorGeometry::from_model_profile(model_id)?;
+    audit_bgo_nor_with_geometry(nor, &geom)
+}
+
+/// Auto-selects the SSOT BGO geometry matching `nor.len()` and audits all BGO sectors.
+pub fn audit_bgo_nor_auto(nor: &[u8]) -> Result<Eh55BgoAuditReport> {
+    let geom = BgoSectorGeometry::for_flash_size(nor.len())?;
+    audit_bgo_nor_with_geometry(nor, &geom)
+}
+
+#[cfg(test)]
+mod ssot_geometry_tests {
+    use super::*;
+    use crate::constants::AM34_FLASH_SIZE;
+
+    #[test]
+    fn bgo_geometry_from_eh55_ssot_matches_default_constants() {
+        let from_model = BgoSectorGeometry::from_model_profile("DMR-EH55")
+            .expect("DMR-EH55 profile resolves BGO geometry");
+        let from_size = BgoSectorGeometry::for_flash_size(AM34_FLASH_SIZE as usize)
+            .expect("8 MiB flash resolves DMR-EH55 BGO geometry");
+        assert_eq!(from_model, BgoSectorGeometry::eh55_default());
+        assert_eq!(from_size, BgoSectorGeometry::eh55_default());
+        assert!(BgoSectorGeometry::for_flash_size(12345).is_err());
+    }
+}

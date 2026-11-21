@@ -31,6 +31,7 @@
 #include "diag/p7501_pwrosc_codec.h"
 #include "diag/p7501_serv_macro.h"
 #include "diag/p7501_tbus_codec.h"
+#include "flash/p7501_fast_stream.h"
 #include "flash/p7501_flash_cli.h"
 #include "flash/p7501_ftl_inspect.h"
 #include "flash/p7501_job.h"
@@ -177,6 +178,9 @@ static const p7501_cli_cmd_entry_t k_cli_commands[] = {
     { "RECIPE",         p7501_cmd_recipe },
     { "BGO_INSPECT",    p7501_cmd_bgo_inspect },
     { "EEMUL_INSPECT",  p7501_cmd_eemul_inspect },
+    { "NOR_MAP",        p7501_cmd_nor_map },
+    { "FAST_READ",      p7501_cmd_fast_read },
+    { "FAST_WRITE",     p7501_cmd_fast_write },
     { "MMIO_SNAP",      p7501_cmd_mmio_snap },
     { "PWROSC",         p7501_cmd_pwrosc },
     { "TBUSSNIFF",      p7501_cmd_tbussniff },

@@ -117,11 +117,7 @@ jobs:
         run: |
           ./build.sh --pico --strict-toolchains
           mkdir -p target/pico-build/out
-          cp crates/panadiga-core/src/pico/firmware_bins/panasonic_p7501_uart_rp2040.uf2 target/pico-build/out/panasonic_p7501_uart_rp2040.uf2
-          cp crates/panadiga-core/src/pico/firmware_bins/panasonic_p7501_uart_rp2350.uf2 target/pico-build/out/panasonic_p7501_uart_rp2350.uf2
           cp crates/panadiga-core/src/pico/firmware_bins/panasonic_p7501_uart_unified.uf2 target/pico-build/out/panasonic_p7501_uart_unified.uf2
-          (cd target/pico-build/out && sha256sum panasonic_p7501_uart_rp2040.uf2 > panasonic_p7501_uart_rp2040.uf2.sha256)
-          (cd target/pico-build/out && sha256sum panasonic_p7501_uart_rp2350.uf2 > panasonic_p7501_uart_rp2350.uf2.sha256)
           (cd target/pico-build/out && sha256sum panasonic_p7501_uart_unified.uf2 > panasonic_p7501_uart_unified.uf2.sha256)
 
       - name: Upload Firmware Artifacts
@@ -139,10 +135,6 @@ jobs:
         with:
           tag_name: ${{ inputs.tag_name || github.ref_name }}
           files: |
-            target/pico-build/out/panasonic_p7501_uart_rp2040.uf2
-            target/pico-build/out/panasonic_p7501_uart_rp2040.uf2.sha256
-            target/pico-build/out/panasonic_p7501_uart_rp2350.uf2
-            target/pico-build/out/panasonic_p7501_uart_rp2350.uf2.sha256
             target/pico-build/out/panasonic_p7501_uart_unified.uf2
             target/pico-build/out/panasonic_p7501_uart_unified.uf2.sha256
           body_path: .github/RELEASE_NOTES.md
@@ -234,11 +226,9 @@ jobs:
           New-Item -ItemType Directory -Path $staging | Out-Null
           Copy-Item "${{ matrix.platform.bin_cli }}" -Destination "$staging\panadiga.exe"
           Copy-Item "${{ matrix.platform.bin_desktop }}" -Destination "$staging\panadiga-desktop.exe"
-          foreach ($uf2 in @("panasonic_p7501_uart_rp2040.uf2", "panasonic_p7501_uart_rp2350.uf2", "panasonic_p7501_uart_unified.uf2")) {
-              $src = "crates/panadiga-core/src/pico/firmware_bins/$uf2"
-              if (Test-Path $src) {
-                  Copy-Item $src -Destination "$staging\$uf2"
-              }
+          $uf2Src = "crates/panadiga-core/src/pico/firmware_bins/panasonic_p7501_uart_unified.uf2"
+          if (Test-Path $uf2Src) {
+              Copy-Item $uf2Src -Destination "$staging\panasonic_p7501_uart_unified.uf2"
           }
           New-Item -ItemType Directory -Path "$staging\tools" | Out-Null
           if (Test-Path "tools\ghidra") {

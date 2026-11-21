@@ -3,7 +3,7 @@
 //! Live guarded application of a CoW-verified [`BgoRepairPlan`] over `PANAMON1>` / Pico `BRIDGE`.
 
 use std::path::Path;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use anyhow::{Result, bail};
 use serde::{Deserialize, Serialize};
@@ -11,12 +11,15 @@ use serde::{Deserialize, Serialize};
 use super::EH55_BGO_SECTOR_STRIDE;
 use super::repair_plan::{BgoRepairOp, BgoRepairPlan, validate_bgo_op_bounds};
 use crate::pico::panamon1::{Panamon1Client, Panamon1Transport};
+use crate::pico::{StreamProgressTelemetry, compute_rate_and_eta};
 
 mod backup;
 #[cfg(test)]
 mod tests;
 
-use backup::{emit_progress, read_and_hash_bgo_sectors, write_verified_cow_backup};
+use backup::{
+    emit_progress, emit_progress_telemetry, read_and_hash_bgo_sectors, write_verified_cow_backup,
+};
 
 /// Execution phase emitted to UI/CLI progress callbacks during live BGO repair.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -39,6 +42,8 @@ pub struct BgoLiveApplyProgress {
     pub current: usize,
     pub total: usize,
     pub detail: String,
+    #[serde(flatten)]
+    pub telemetry: StreamProgressTelemetry,
 }
 
 /// Final live BGO repair audit record returned by [`apply_bgo_repair_plan_live`].
@@ -114,18 +119,40 @@ pub fn apply_bgo_repair_plan_live<T: Panamon1Transport>(
     );
     let mut erased_sectors = 0usize;
     let mut written_bytes = 0usize;
+    let total_write_bytes: usize = plan
+        .ops
+        .iter()
+        .map(|op| match op {
+            BgoRepairOp::EraseSector { .. } => 0,
+            BgoRepairOp::WriteBytes { data, .. } => data.len(),
+        })
+        .sum();
+    let op_started = Instant::now();
     {
         let mut guard = client.unlock_upper_nor(&planned_targets)?;
         let total_ops = plan.ops.len();
         for (idx, op) in plan.ops.iter().enumerate() {
+            let (bytes_per_sec, eta_seconds) = compute_rate_and_eta(
+                op_started.elapsed().as_millis(),
+                written_bytes,
+                total_write_bytes,
+            );
+            let make_tel = |sa: usize| StreamProgressTelemetry {
+                active_sa: Some(sa),
+                bytes_done: Some(written_bytes),
+                bytes_total: Some(total_write_bytes),
+                bytes_per_sec,
+                eta_seconds,
+            };
             match op {
                 BgoRepairOp::EraseSector { sa, phys_va } => {
-                    emit_progress(
+                    emit_progress_telemetry(
                         progress,
                         BgoApplyStage::EraseAndProgram,
                         idx,
                         total_ops,
                         format!("Erasing SA{sa} @ 0x{phys_va:08X}"),
+                        make_tel(*sa),
                     );
                     guard.erase_sector(*phys_va)?;
                     erased_sectors += 1;
@@ -133,12 +160,13 @@ pub fn apply_bgo_repair_plan_live<T: Panamon1Transport>(
                 BgoRepairOp::WriteBytes {
                     sa, phys_va, data, ..
                 } => {
-                    emit_progress(
+                    emit_progress_telemetry(
                         progress,
                         BgoApplyStage::EraseAndProgram,
                         idx,
                         total_ops,
                         format!("Programming {} B in SA{sa} @ 0x{phys_va:08X}", data.len()),
+                        make_tel(*sa),
                     );
                     guard.write_nor_bytes(*phys_va, data)?;
                     written_bytes += data.len();

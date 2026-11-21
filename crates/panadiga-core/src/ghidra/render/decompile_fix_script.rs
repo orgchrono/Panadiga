@@ -172,7 +172,10 @@ def recover_mn103_switches(prog, targets=None, max_passes=2, timeout_secs=60, mo
     from ghidra.app.decompiler import DecompInterface
     from ghidra.program.model.listing import CodeUnit
     from ghidra.program.model.symbol import RefType, SourceType
+    from ghidra.util.task import TaskMonitor
 
+    if monitor_obj is None:
+        monitor_obj = TaskMonitor.DUMMY
     todo = list(targets) if targets is not None else _find_computed_jump_functions(prog)
     decomp = DecompInterface()
     decomp.openProgram(prog)

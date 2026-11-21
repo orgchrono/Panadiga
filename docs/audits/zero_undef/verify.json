@@ -1,0 +1,426 @@
+[
+  {
+    "program": "BOOT.BIN",
+    "initialized_bytes": 262144,
+    "undefined_code_bytes": 0,
+    "undefined_ranges": 0,
+    "largest_undefined_ranges": [],
+    "instructions": 76337,
+    "defined_data_units": 1123,
+    "functions": 1018,
+    "bad_instruction_bookmarks": 0,
+    "mn_todo_calls": 0,
+    "mn_todo_in_functions": 0,
+    "mn_todo_sample": [],
+    "instruction_bytes": 206715,
+    "auto_data": {
+      "alignment_pad": {
+        "items": 45,
+        "bytes": 89
+      },
+      "ascii_string": {
+        "items": 47,
+        "bytes": 400
+      },
+      "feistel_sbox": {
+        "items": 1,
+        "bytes": 256
+      },
+      "padding": {
+        "items": 34,
+        "bytes": 25657
+      },
+      "shift_jis_string": {
+        "items": 2,
+        "bytes": 15
+      }
+    },
+    "residual_unclassified": {
+      "unclassified_raw": {
+        "items": 106,
+        "bytes": 12371
+      }
+    },
+    "trap4_aliases": 2,
+    "external_flows": 3,
+    "decompile_tainted": {
+      "0x4400C696": {
+        "function": "boot_fat_mount",
+        "completed": true,
+        "bad_tokens": [],
+        "lines": 81
+      },
+      "0x4400D32F": {
+        "function": "FUN_4400d32f",
+        "completed": true,
+        "bad_tokens": [],
+        "lines": 266
+      },
+      "0x440236ED": {
+        "function": "FUN_440236ed",
+        "completed": true,
+        "bad_tokens": [],
+        "lines": 60
+      }
+    },
+    "spot_checks": {},
+    "gate_undefined_code_bytes_zero": true,
+    "gate_bad_bookmarks_zero": true,
+    "gate_mn_todo_in_functions_zero": true,
+    "gate_tainted_clean": true,
+    "seconds": 3.9
+  },
+  {
+    "program": "eh55_loader_ver061_256k.bin",
+    "initialized_bytes": 262144,
+    "undefined_code_bytes": 0,
+    "undefined_ranges": 0,
+    "largest_undefined_ranges": [],
+    "instructions": 70058,
+    "defined_data_units": 817,
+    "functions": 487,
+    "bad_instruction_bookmarks": 0,
+    "mn_todo_calls": 0,
+    "mn_todo_in_functions": 0,
+    "mn_todo_sample": [],
+    "instruction_bytes": 188296,
+    "auto_data": {
+      "alignment_pad": {
+        "items": 53,
+        "bytes": 142
+      },
+      "ascii_string": {
+        "items": 540,
+        "bytes": 15844
+      },
+      "bgo_layout_table_u32": {
+        "items": 1,
+        "bytes": 280
+      },
+      "feistel_sbox": {
+        "items": 1,
+        "bytes": 256
+      },
+      "padding": {
+        "items": 33,
+        "bytes": 43396
+      },
+      "pointer_table": {
+        "items": 14,
+        "bytes": 1792
+      },
+      "shift_jis_string": {
+        "items": 1,
+        "bytes": 6
+      }
+    },
+    "residual_unclassified": {
+      "unclassified_raw": {
+        "items": 174,
+        "bytes": 12132
+      }
+    },
+    "trap4_aliases": 0,
+    "external_flows": 3,
+    "decompile_tainted": {},
+    "spot_checks": {
+      "0x440242B7": "MOVHU @ 0x440242B7: MOVHU A0,D0",
+      "0x4400159A": "MOV @ 0x4400159A: MOV A0,D2"
+    },
+    "gate_undefined_code_bytes_zero": true,
+    "gate_bad_bookmarks_zero": true,
+    "gate_mn_todo_in_functions_zero": true,
+    "gate_tainted_clean": true,
+    "seconds": 1.2
+  },
+  {
+    "program": "eh55_frm_PROG061_BOOT.bin",
+    "initialized_bytes": 262144,
+    "undefined_code_bytes": 0,
+    "undefined_ranges": 0,
+    "largest_undefined_ranges": [],
+    "instructions": 75550,
+    "defined_data_units": 934,
+    "functions": 888,
+    "bad_instruction_bookmarks": 0,
+    "mn_todo_calls": 0,
+    "mn_todo_in_functions": 0,
+    "mn_todo_sample": [],
+    "instruction_bytes": 203887,
+    "auto_data": {
+      "alignment_pad": {
+        "items": 58,
+        "bytes": 120
+      },
+      "ascii_string": {
+        "items": 616,
+        "bytes": 17530
+      },
+      "feistel_sbox": {
+        "items": 1,
+        "bytes": 256
+      },
+      "padding": {
+        "items": 35,
+        "bytes": 29177
+      },
+      "pointer_table": {
+        "items": 16,
+        "bytes": 1840
+      },
+      "shift_jis_string": {
+        "items": 1,
+        "bytes": 6
+      }
+    },
+    "residual_unclassified": {
+      "unclassified_raw": {
+        "items": 207,
+        "bytes": 9328
+      }
+    },
+    "trap4_aliases": 0,
+    "external_flows": 0,
+    "decompile_tainted": {
+      "0x50423540": {
+        "function": "FUN_50423540",
+        "completed": true,
+        "bad_tokens": [],
+        "lines": 19
+      },
+      "0x5042358B": {
+        "function": "FUN_5042358b",
+        "completed": true,
+        "bad_tokens": [],
+        "lines": 24
+      }
+    },
+    "spot_checks": {
+      "0x504313E6": "SYSCALL @ 0x504313E6: SYSCALL ",
+      "0x504009E4": "BREAK @ 0x504009E4: BREAK ",
+      "0x5040EA2F": "MOV @ 0x5040EA2F: MOV 0x8,A3,D1"
+    },
+    "gate_undefined_code_bytes_zero": true,
+    "gate_bad_bookmarks_zero": true,
+    "gate_mn_todo_in_functions_zero": true,
+    "gate_tainted_clean": true,
+    "seconds": 1.3
+  },
+  {
+    "program": "DRV_decomp.bin",
+    "initialized_bytes": 1441792,
+    "undefined_code_bytes": 0,
+    "undefined_ranges": 0,
+    "largest_undefined_ranges": [],
+    "instructions": 338305,
+    "defined_data_units": 10658,
+    "functions": 2870,
+    "bad_instruction_bookmarks": 0,
+    "mn_todo_calls": 0,
+    "mn_todo_in_functions": 0,
+    "mn_todo_sample": [],
+    "instruction_bytes": 892718,
+    "auto_data": {
+      "alignment_pad": {
+        "items": 350,
+        "bytes": 1593
+      },
+      "ascii_string": {
+        "items": 399,
+        "bytes": 4112
+      },
+      "atapi_attr2_table": {
+        "items": 2,
+        "bytes": 328
+      },
+      "atapi_attr3_table": {
+        "items": 2,
+        "bytes": 483
+      },
+      "atapi_cdb_lut_256": {
+        "items": 1,
+        "bytes": 256
+      },
+      "atapi_handler_table": {
+        "items": 1,
+        "bytes": 36
+      },
+      "atapi_sense_lut": {
+        "items": 3,
+        "bytes": 338
+      },
+      "drv_cli_name_tail": {
+        "items": 9,
+        "bytes": 65
+      },
+      "drv_cli_table<8sIII>": {
+        "items": 1,
+        "bytes": 1360
+      },
+      "drv_mecha_error_rec": {
+        "items": 439,
+        "bytes": 22405
+      },
+      "padding": {
+        "items": 1125,
+        "bytes": 95633
+      },
+      "pointer_table": {
+        "items": 14,
+        "bytes": 452
+      },
+      "shift_jis_string": {
+        "items": 523,
+        "bytes": 4160
+      }
+    },
+    "residual_unclassified": {
+      "unclassified_raw": {
+        "items": 3155,
+        "bytes": 364397
+      }
+    },
+    "trap4_aliases": 56,
+    "external_flows": 23,
+    "decompile_tainted": {},
+    "spot_checks": {},
+    "gate_undefined_code_bytes_zero": true,
+    "gate_bad_bookmarks_zero": true,
+    "gate_mn_todo_in_functions_zero": true,
+    "gate_tainted_clean": true,
+    "seconds": 4.1
+  },
+  {
+    "program": "EH55_DRV_S211.bin",
+    "initialized_bytes": 1441792,
+    "undefined_code_bytes": 0,
+    "undefined_ranges": 0,
+    "largest_undefined_ranges": [],
+    "instructions": 353745,
+    "defined_data_units": 6189,
+    "functions": 1454,
+    "bad_instruction_bookmarks": 0,
+    "mn_todo_calls": 0,
+    "mn_todo_in_functions": 0,
+    "mn_todo_sample": [],
+    "instruction_bytes": 910702,
+    "auto_data": {
+      "alignment_pad": {
+        "items": 325,
+        "bytes": 1515
+      },
+      "ascii_string": {
+        "items": 1423,
+        "bytes": 30372
+      },
+      "atapi_cdb_lut_256": {
+        "items": 1,
+        "bytes": 256
+      },
+      "atapi_handler_table": {
+        "items": 1,
+        "bytes": 636
+      },
+      "drv_cli_table<8sIII>": {
+        "items": 1,
+        "bytes": 2200
+      },
+      "drv_mecha_error_rec": {
+        "items": 445,
+        "bytes": 23140
+      },
+      "padding": {
+        "items": 993,
+        "bytes": 101504
+      },
+      "pointer_table": {
+        "items": 44,
+        "bytes": 4496
+      },
+      "shift_jis_string": {
+        "items": 430,
+        "bytes": 3152
+      }
+    },
+    "residual_unclassified": {
+      "unclassified_raw": {
+        "items": 2417,
+        "bytes": 363819
+      }
+    },
+    "trap4_aliases": 176,
+    "external_flows": 141,
+    "decompile_tainted": {},
+    "spot_checks": {},
+    "gate_undefined_code_bytes_zero": true,
+    "gate_bad_bookmarks_zero": true,
+    "gate_mn_todo_in_functions_zero": true,
+    "gate_tainted_clean": true,
+    "seconds": 4.2
+  },
+  {
+    "program": "EH55_MAIN_3410PQ.bin",
+    "initialized_bytes": 13003052,
+    "undefined_code_bytes": 0,
+    "undefined_ranges": 0,
+    "largest_undefined_ranges": [],
+    "instructions": 2712328,
+    "defined_data_units": 66676,
+    "functions": 38317,
+    "bad_instruction_bookmarks": 0,
+    "mn_todo_calls": 0,
+    "mn_todo_in_functions": 0,
+    "mn_todo_sample": [],
+    "instruction_bytes": 8087566,
+    "auto_data": {
+      "alignment_pad": {
+        "items": 1640,
+        "bytes": 4053
+      },
+      "ascii_string": {
+        "items": 44423,
+        "bytes": 1429779
+      },
+      "feistel_sbox": {
+        "items": 1,
+        "bytes": 256
+      },
+      "padding": {
+        "items": 2232,
+        "bytes": 238997
+      },
+      "pointer_table": {
+        "items": 3358,
+        "bytes": 314256
+      },
+      "shift_jis_string": {
+        "items": 1765,
+        "bytes": 33786
+      }
+    },
+    "residual_unclassified": {
+      "unclassified_raw": {
+        "items": 13256,
+        "bytes": 2894359
+      }
+    },
+    "trap4_aliases": 1,
+    "external_flows": 0,
+    "decompile_tainted": {
+      "0x5771ABFB": {
+        "function": "main_fpc_status_ctrl",
+        "completed": true,
+        "bad_tokens": [],
+        "lines": 50
+      }
+    },
+    "spot_checks": {
+      "0x57000D2C": "BREAK @ 0x57000D2C: BREAK "
+    },
+    "gate_undefined_code_bytes_zero": true,
+    "gate_bad_bookmarks_zero": true,
+    "gate_mn_todo_in_functions_zero": true,
+    "gate_tainted_clean": true,
+    "seconds": 58.0
+  }
+]

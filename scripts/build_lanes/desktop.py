@@ -33,11 +33,7 @@ from scripts.panadiga_ops import (
     update_sha256_manifest,
 )
 
-UF2_NAMES: Final[tuple[str, ...]] = (
-    "panasonic_p7501_uart_rp2040.uf2",
-    "panasonic_p7501_uart_rp2350.uf2",
-    "panasonic_p7501_uart_unified.uf2",
-)
+UF2_NAMES: Final[tuple[str, ...]] = ("panasonic_p7501_uart_unified.uf2",)
 STALE_DIST_ITEMS: Final[tuple[str, ...]] = (
     "run.cmd",
     "run.ps1",

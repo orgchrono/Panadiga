@@ -76,3 +76,14 @@ Durante o teste ao vivo do monitor **`PANAMON1`** em `COM10` sob `Loader ver0.61
 2. **Polling `SC0STR` com Timeout Limitado (`PUTC_D3_BYTES` `46 B`):**
    - `PROG061 FUN_50404d15` (`0x50404D37`) e `BOOT.BIN uart0_putc` (`0x440047C7`) verificam `(SC0STR 0xD400200C) & 0xA0` (`TXBUSY | TXBF`) com contador de timeout (`0x1400000` em fábrica; `MOV 0x00040000, D1` preservando `D1` via `ADD -4, SP` no `PUTC_D3_BYTES`), evitando travamento infinito se flags de status serial não limparem imediatamente.
    - Tanto [`crates/panadiga-core/src/re/prog061_uart_monitor/`](../../crates/panadiga-core/src/re/prog061_uart_monitor/mod.rs) quanto [`crates/panadiga-core/src/re/nor_dumper/stub.rs`](../../crates/panadiga-core/src/re/nor_dumper/stub.rs) adotam essa ABI, verificada em Ghidra (`SUMMARY_CALLS: total=55 bad=0`) e em `Mn103Vm`.
+
+---
+
+## 7. Patch SLEIGH Verificado (`am33.sinc` + `mn103.sinc`) e Pipeline 100% Zero-`??`
+
+A auditoria linha a linha da extensão local `GhidraMn10300` (`Ghidra 12.1.4 PUBLIC`) consolidou **12 defeitos reais** em `am33.sinc` e `mn103.sinc` no patch unificado [`tools/ghidra/sleigh_patches/am33_panadiga_zero_undef.patch`](../../tools/ghidra/sleigh_patches/am33_panadiga_zero_undef.patch) (compilado com `sleigh.bat -u -f` em cópia isolada sem erros nem conflitos de construtores):
+
+- **Construtores ausentes geradores de `??`:** `:MOVHU (Rm0+), Rn2` (`0xF9 0xEA`, causa dos `3.935` sítios `0xF9` em `MAIN` e dos laços `memcpy` em `Loader ver0.61` `0x440242b7..0x440245ab`), `:SYSCALL` (`0xF0 0xC0`) e `:BREAK` (`0xFF`).
+- **Bugs semânticos de P-Code:** `am33.sinc:98` (`MOV Rm2,(IMM32,Rn0)` somando `Rm2` em vez de `Rn0`), `134-135` (`MOVBU` 16-bit `*:2` em vez de `*:1`), `184` (`SUB Rm2,Rn0,Rd2` invertido), `186-188` (`SUB SIMM` chamando `update_add`), `273` (`AND IMM32,EPSW` usando `|`), além de `mn103.sinc:519-522` (`BCLR` usando `temp | ~mask` em vez de `temp & ~mask`, causa raiz da Armadilha #2), `503` (`NOT Dn0` modelado como XOR, Armadilha #9), `367/369` (`EXTB`/`EXTH`) e `427` (`SUBC`).
+- **Remoção de `mn_todo()`:** `NOT Rn0` (`am33.sinc:293`), `BTST SIMM, Rn0` (`295-297`, Armadilha #10), `MOV (Rm0+, disp)` (`78-83`), `MOVBU (IMM32, ...)` (`130-133`), `ADDC`/`SUBC` e deslocamentos/rotações `ASR`/`ASL`/`ROR`/`ROL`.
+- **Execução em 4 Passes (clone read-only `Panadiga_MN103S_ZeroUndef`):** consulte o roteiro completo em [`tools/ghidra/sleigh_patches/README.md`](../../tools/ghidra/sleigh_patches/README.md).

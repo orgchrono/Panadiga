@@ -197,9 +197,7 @@ pub(super) fn flash_pico_firmware(port: Option<String>, file: Option<PathBuf>) -
             "crates/panadiga-core/src/pico/firmware_bins/panasonic_p7501_uart_unified.uf2",
             "target/pico-build/panasonic_p7501_uart_unified.uf2",
             "firmware/pico-p7501/panasonic_p7501_uart_unified.uf2",
-            "crates/panadiga-core/src/pico/firmware_bins/panasonic_p7501_uart_rp2040.uf2",
             "dist/panasonic_p7501_uart_unified.uf2",
-            "dist/panasonic_p7501_uart_rp2040.uf2",
         ];
         candidates
             .iter()
