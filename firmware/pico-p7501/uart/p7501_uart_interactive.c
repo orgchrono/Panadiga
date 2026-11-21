@@ -12,7 +12,6 @@
 #include "hal/p7501_watchdog.h"
 #include "p7501_types.h"
 #include "uart/p7501_pio_loop.h"
-#include "uart/p7501_uart_bitbang.h"
 #include "uart/p7501_uart_capture.h"
 #include "uart/p7501_uart_codec.h"
 #include "uart/p7501_uart_pio_engine.h"

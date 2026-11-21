@@ -9,6 +9,8 @@
  */
 
 #include "diag/p7501_piologic_codec.h"
+#include "cli/p7501_cli.h"
+#include "common/p7501_cmd_arena.h"
 #include "hal/p7501_hw.h"
 #include "hal/p7501_watchdog.h"
 #include "p7501_logic_sampler.pio.h"
@@ -21,7 +23,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define PIOLOGIC_MAX_EDGES 1024u
+#define PIOLOGIC_MAX_EDGES P7501_ARENA_PIOLOGIC_EDGES
 
 static uint8_t piologic_read_pins4_now(void) {
     const uint32_t all = gpio_get_all();
@@ -33,7 +35,7 @@ static uint32_t piologic_fmt_min_us(uint32_t val) {
 }
 
 void p7501_cmd_piologic(const char *arg) {
-    static p7501_logic_edge_t s_edges[PIOLOGIC_MAX_EDGES];
+    p7501_logic_edge_t *const s_edges = g_p7501_cmd_arena.piologic_edges;
     p7501_window_boot_spec_t boot;
     uint32_t sample_khz = 1000u;
     bool ctrl_only = false;
@@ -43,11 +45,13 @@ void p7501_cmd_piologic(const char *arg) {
     p7501_hw_enforce_nsw5v_hiz();
 
     if (!pio_can_add_program(pio0, &p7501_logic_sampler_program)) {
+        p7501_cli_set_result("ERR", "EBUSY");
         printf("PIOLOGIC: ERROR (No PIO0 instruction slots left)\n");
         return;
     }
     const int sm_signed = pio_claim_unused_sm(pio0, false);
     if (sm_signed < 0) {
+        p7501_cli_set_result("ERR", "EBUSY");
         printf("PIOLOGIC: ERROR (No free PIO0 state machine)\n");
         return;
     }

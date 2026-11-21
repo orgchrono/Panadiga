@@ -6,6 +6,7 @@
  */
 
 #include "uart/p7501_drv_pana.h"
+#include "cli/p7501_cli.h"
 #include "uart/p7501_drv_pana_codec.h"
 #include "uart/p7501_pio_loop.h"
 #include "uart/p7501_uart_pio_engine.h"
@@ -43,16 +44,37 @@ static p7501_pio_loop_metrics_t drvpana_drain_ms(uint32_t wait_ms) {
     return m;
 }
 
+static void drvpana_send_cmd_line(
+    const char *line,
+    size_t len,
+    uint32_t wait_ms,
+    uint32_t *rx_total,
+    uint32_t *ferr_total,
+    bool *aborted
+) {
+    if (*aborted) {
+        return;
+    }
+    p7501_wdt_set_stage(P7501_WDT_STAGE_TX_WAIT);
+    p7501_pio_tx_bytes((const uint8_t *)line, len, false);
+    const p7501_pio_loop_metrics_t m = drvpana_drain_ms(wait_ms);
+    *rx_total += m.rx_bytes;
+    *ferr_total += m.framing_errors;
+    *aborted = m.aborted;
+}
+
 void p7501_cmd_drv_pana(const char *arg) {
     p7501_drv_pana_spec_t spec;
     if (!p7501_drv_pana_parse_args(arg, &spec)) {
-        printf("DRVPANA: ERROR (Usage: DRVPANA [ms] [NORMAL|JIG[:ms]|NOPULL] [NOPASS] <cmd...>)\n");
+        p7501_cli_set_result("ERR", "EINVAL");
+        printf("DRVPANA: ERROR (Usage: DRVPANA [ms] [NORMAL|JIG[:ms]|NOPULL] [NOPASS] <DIAG|cmd...>)\n");
         return;
     }
 
     char cmd_line[104];
     const size_t cmd_len = p7501_drv_pana_format_cmd(&spec, cmd_line, sizeof(cmd_line));
     if (cmd_len == 0u) {
+        p7501_cli_set_result("ERR", "EINVAL");
         printf("DRVPANA: ERROR (command length overflow)\n");
         return;
     }
@@ -60,12 +82,13 @@ void p7501_cmd_drv_pana(const char *arg) {
     p7501_wdt_set_stage(P7501_WDT_STAGE_RESET_SYNC);
     p7501_hw_enforce_nsw5v_hiz();
     p7501_led_set_auto_mode(LED_MODE_BUS_ACTIVE);
-    printf("=== DRVPANA PIO1 (baud=%" PRIu32 " ms=%" PRIu32 " boot=%d hold=%" PRIu32 " pass=%s cmd=\"%s\") ===\n",
+    printf("=== DRVPANA PIO1 (baud=%" PRIu32 " ms=%" PRIu32 " boot=%d hold=%" PRIu32 " pass=%s diag=%s cmd=\"%s\") ===\n",
            p7501_pio_get_baud(),
            spec.timeout_ms,
            (int)spec.boot_action,
            spec.jig_hold_ms,
            spec.send_pass ? "AUTO" : "SKIP",
+           spec.diag_macro ? "YES" : "NO",
            spec.cmd);
 
     p7501_pio_begin_rx_session_ex(spec.boot_action, spec.jig_hold_ms);
@@ -82,23 +105,29 @@ void p7501_cmd_drv_pana(const char *arg) {
         aborted = m1.aborted;
     }
 
-    if (!aborted && spec.send_pass) {
-        p7501_wdt_set_stage(P7501_WDT_STAGE_TX_WAIT);
+    if (spec.send_pass) {
         static const char k_pass_cmd[] = P7501_DRVPANA_PASS_LINE;
-        p7501_pio_tx_bytes((const uint8_t *)k_pass_cmd, sizeof(k_pass_cmd) - 1u, false);
-        const p7501_pio_loop_metrics_t m2 = drvpana_drain_ms(120u);
-        rx_count += m2.rx_bytes;
-        ferr_count += m2.framing_errors;
-        aborted = m2.aborted;
+        drvpana_send_cmd_line(
+            k_pass_cmd, sizeof(k_pass_cmd) - 1u, 120u, &rx_count, &ferr_count, &aborted
+        );
     }
 
-    if (!aborted) {
-        p7501_wdt_set_stage(P7501_WDT_STAGE_TX_WAIT);
-        p7501_pio_tx_bytes((const uint8_t *)cmd_line, cmd_len, false);
-        const p7501_pio_loop_metrics_t m3 = drvpana_drain_ms(spec.timeout_ms);
-        rx_count += m3.rx_bytes;
-        ferr_count += m3.framing_errors;
-        aborted = m3.aborted;
+    if (spec.diag_macro) {
+        static const char *const k_diag_cmds[4] = { "VER", "ERR", "APC", "TRAY" };
+        for (size_t i = 0u; (i < 4u) && !aborted; ++i) {
+            printf("\n@EVT kind=DRVPANA_STEP step=%u/4 cmd=%s\n", (unsigned)(i + 1u), k_diag_cmds[i]);
+            char step_line[16];
+            const int n = snprintf(step_line, sizeof(step_line), "%s\r\n", k_diag_cmds[i]);
+            if (n > 0) {
+                drvpana_send_cmd_line(
+                    step_line, (size_t)n, spec.timeout_ms, &rx_count, &ferr_count, &aborted
+                );
+            }
+        }
+    } else {
+        drvpana_send_cmd_line(
+            cmd_line, cmd_len, spec.timeout_ms, &rx_count, &ferr_count, &aborted
+        );
     }
 
     const bool fifo_ovf = p7501_pio_had_rx_overflow();

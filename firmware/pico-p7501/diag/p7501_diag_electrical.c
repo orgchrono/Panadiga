@@ -9,6 +9,7 @@
 #include "common/p7501_hex.h"
 #include "hal/p7501_hw.h"
 #include "hal/p7501_watchdog.h"
+#include "uart/p7501_uart_codec.h"
 #include "pico/stdlib.h"
 #include "hardware/gpio.h"
 #include <stdio.h>
@@ -100,7 +101,20 @@ void p7501_diag_cmd_sniff(const char *arg) {
     printf("SNIFF: OK\n");
 }
 
-void p7501_diag_cmd_pincheck(void) {
+void p7501_diag_cmd_pincheck(const char *arg) {
+    bool passive_only = false;
+    if (arg != NULL) {
+        char tok[24];
+        const char *cur = arg;
+        while ((cur = p7501_next_token(cur, tok, sizeof(tok))) != NULL) {
+            if (p7501_ascii_ieq(tok, "PASSIVE") ||
+                p7501_ascii_ieq(tok, "NORST") ||
+                p7501_ascii_ieq(tok, "SAFE")) {
+                passive_only = true;
+            }
+        }
+    }
+
     static const uint8_t pins[4] = {
         (uint8_t)P7501_PIN_RXD,
         (uint8_t)P7501_PIN_NSW5V,
@@ -116,6 +130,8 @@ void p7501_diag_cmd_pincheck(void) {
 
     p7501_hw_isolate_bus_hiz();
     sleep_us(500);
+    const uint32_t pre_vdd_mv = p7501_hw_read_vdd_mv();
+    const bool target_powered = p7501_hw_is_nsw5v_high() || (pre_vdd_mv >= P7501_SSOT_VDD_MIN_MV);
 
     printf("\n=== P7501 6-PIN ELECTRICAL MATRIX (PINCHECK) ===\n");
     printf("Pin               | Hi-Z | Pull-Down | Pull-Up | Electrical State\n");
@@ -136,29 +152,58 @@ void p7501_diag_cmd_pincheck(void) {
             sleep_us(300);
             pd = gpio_get(p) ? 1 : 0;
 
-            gpio_pull_up(p);
-            sleep_us(300);
-            pu = gpio_get(p) ? 1 : 0;
+            if (target_powered && (p != (uint8_t)P7501_PIN_XRESET)) {
+                gpio_pull_up(p);
+                sleep_us(300);
+                pu = gpio_get(p) ? 1 : 0;
+            } else {
+                pu = hiz;
+            }
 
             gpio_disable_pulls(p);
-            state = "UNKNOWN";
-            if ((pd == 1) && (pu == 1)) {
-                state = "STRONG HIGH (External Pull-Up / 3.3V Active)";
-            } else if ((pd == 0) && (pu == 0)) {
-                state = "STRONG LOW  (Grounded / Supervisor Held 0V)";
-            } else if ((pd == 0) && (pu == 1)) {
-                state = "HI-Z / CMOS INPUT (No External Pull or Open)";
+            if (!target_powered) {
+                state = (pd == 0 && hiz == 0)
+                    ? "UNPOWERED / HI-Z (Pull-Up Skipped: Anti-Backpower)"
+                    : "UNPOWERED / RESIDUAL LEVEL (Pull-Up Skipped)";
+            } else {
+                state = "UNKNOWN";
+                if ((pd == 1) && (pu == 1)) {
+                    state = "STRONG HIGH (External Pull-Up / 3.3V Active)";
+                } else if ((pd == 0) && (pu == 0)) {
+                    state = "STRONG LOW  (Grounded / Supervisor Held 0V)";
+                } else if ((pd == 0) && (pu == 1)) {
+                    state = "HI-Z / CMOS INPUT (No External Pull or Open)";
+                }
             }
         }
         printf("%-17s |  %d   |     %d     |    %d    | %s\n", names[i], hiz, pd, pu, state);
     }
 
-    const float vdd_hiz = p7501_hw_sample_sw_uart_volts(false, false);
-    const float vdd_pd  = p7501_hw_sample_sw_uart_volts(true, false);
-    const float vdd_pu  = p7501_hw_sample_sw_uart_volts(false, true);
+    const uint32_t mv_hiz = p7501_hw_sample_sw_uart_mv(false, false);
+    const uint32_t mv_pd  = p7501_hw_sample_sw_uart_mv(true, false);
+    const uint32_t mv_pu  = target_powered ? p7501_hw_sample_sw_uart_mv(false, true) : mv_hiz;
+    char s_hiz[8], s_pd[8], s_pu[8];
 
-    printf("GP26(Pin1 SWUART) | %.2fV|   %.2fV   |  %.2fV  | P7501 SW_UART / Target Sense\n",
-           vdd_hiz, vdd_pd, vdd_pu);
+    printf("GP26(Pin1 SWUART) | %sV|   %sV   |  %sV  | P7501 SW_UART / Target Sense\n",
+           p7501_fmt_mv_volts(mv_hiz, s_hiz),
+           p7501_fmt_mv_volts(mv_pd, s_pd),
+           p7501_fmt_mv_volts(mv_pu, s_pu));
+
+    if (passive_only) {
+        printf("------------------------------------------------------------------------\n");
+        printf("[PINCHECK] Passive mode: skipping XRESET pulse to preserve active target session.\n");
+        printf("PINCHECK: OK\n");
+        p7501_hw_isolate_bus_hiz();
+        return;
+    }
+
+    if (!target_powered) {
+        printf("------------------------------------------------------------------------\n");
+        printf("[PINCHECK] Target unpowered (anti-backpower guard active): skipping 3.3V pull-ups and XRESET pulse.\n");
+        printf("PINCHECK: OK\n");
+        p7501_hw_isolate_bus_hiz();
+        return;
+    }
 
     p7501_hw_reset_assert();
     p7501_wdt_sleep_ms(P7501_RESET_DIAG_ASSERT_MS);

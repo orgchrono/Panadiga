@@ -11,6 +11,8 @@
 
 #include "diag/p7501_diag_sdsniff.h"
 
+#include "cli/p7501_cli.h"
+#include "common/p7501_cmd_arena.h"
 #include "diag/p7501_sds_codec.h"
 #include "hal/p7501_hw.h"
 #include "hal/p7501_led.h"
@@ -44,19 +46,24 @@ static void sdsniff_enforce_hiz_inputs(void) {
 }
 
 void p7501_cmd_sdsniff(const char *arg) {
+    _Static_assert(sizeof(p7501_sds_state_t) <= sizeof(g_p7501_cmd_arena.raw),
+                   "p7501_sds_state_t must fit inside shared command arena");
     p7501_sds_spec_t spec;
     if (!p7501_sds_parse_args(arg, &spec)) {
-        printf("SDSNIFF: ERROR (usage: SDSNIFF [ms] [NORMAL|JIG[:ms]|NOPULL] [LEN:64|512])\n");
+        p7501_cli_set_result("ERR", "EINVAL");
+        printf("SDSNIFF: ERROR (usage: SDSNIFF [ms] [NORMAL|JIG[:ms]|NOPULL] [LEN:64|512] [TRIG:ACMD13|CRCERR|91006])\n");
         return;
     }
 
     sdsniff_enforce_hiz_inputs();
     if (!pio_can_add_program(pio0, &p7501_sds_sampler_program)) {
+        p7501_cli_set_result("ERR", "EBUSY");
         printf("SDSNIFF: ERROR (No PIO0 instruction slots left)\n");
         return;
     }
     const int sm_signed = pio_claim_unused_sm(pio0, false);
     if (sm_signed < 0) {
+        p7501_cli_set_result("ERR", "EBUSY");
         printf("SDSNIFF: ERROR (No free PIO0 state machine)\n");
         return;
     }
@@ -65,8 +72,9 @@ void p7501_cmd_sdsniff(const char *arg) {
     const uint offset = pio_add_program(pio0, &p7501_sds_sampler_program);
     p7501_sds_sampler_program_init(pio0, sm, offset, P7501_PIN_SD_CMD);
 
-    p7501_sds_state_t sds;
-    p7501_sds_init(&sds, spec.default_block_bytes);
+    p7501_sds_state_t *const sds = (p7501_sds_state_t *)(void *)g_p7501_cmd_arena.raw;
+    p7501_sds_init(sds, spec.default_block_bytes);
+    p7501_sds_set_trigger(sds, spec.trigger);
 
     bool hold_jig_active = false;
     absolute_time_t jig_deadline = at_the_end_of_time;
@@ -92,6 +100,7 @@ void p7501_cmd_sdsniff(const char *arg) {
 
     const uint64_t t0_us = time_us_64();
     const uint64_t deadline_us = t0_us + ((uint64_t)spec.boot.window_ms * 1000ULL);
+    bool trig_announced = false;
     while (p7501_wdt_loop_step(t0_us, deadline_us, true, NULL)) {
         if (hold_jig_active && time_reached(jig_deadline)) {
             p7501_hw_sw_uart_set_low(false);
@@ -101,8 +110,17 @@ void p7501_cmd_sdsniff(const char *arg) {
         while (!pio_sm_is_rx_fifo_empty(pio0, sm)) {
             const uint32_t w = pio_sm_get(pio0, sm);
             for (uint32_t i = 0u; i < 4u; ++i) {
-                p7501_sds_feed_sample(&sds, (uint8_t)((w >> (i * 8u)) & 0x1Fu));
+                p7501_sds_feed_sample(sds, (uint8_t)((w >> (i * 8u)) & 0x1Fu));
+                if (!trig_announced && p7501_sds_check_trigger(sds)) {
+                    trig_announced = true;
+                    printf("@EVT kind=SDS_TRIG trig=%s clk=%" PRIu32 "\n",
+                           p7501_sds_trigger_name(sds->active_trigger),
+                           sds->trigger_clk);
+                }
             }
+        }
+        if (trig_announced) {
+            break;
         }
     }
 
@@ -112,49 +130,53 @@ void p7501_cmd_sdsniff(const char *arg) {
     pio_sm_unclaim(pio0, sm);
     p7501_hw_isolate_bus_hiz();
     sdsniff_enforce_hiz_inputs();
+    p7501_led_set_auto_mode(LED_MODE_HEARTBEAT_IDLE);
 
-    printf("=== SDSNIFF PIO0 (GP10=CLK GP11=CMD GP12..15=DAT0..3, %" PRIu32 " ms) ===\n",
-           spec.boot.window_ms);
+    printf("=== SDSNIFF PIO0 (GP10=CLK GP11=CMD GP12..15=DAT0..3, %" PRIu32 " ms, TRIG=%s fired=%s @clk=%" PRIu32 ") ===\n",
+           spec.boot.window_ms,
+           p7501_sds_trigger_name(spec.trigger),
+           sds->trigger_fired ? "YES" : "NO",
+           sds->trigger_clk);
     printf("Clocks=%" PRIu32 " | fifo_stall=%s | BusWidth=%ubit | CMD55=%s ACMD6_4bit=%s ACMD13=%s\n",
-           sds.total_clocks,
+           sds->total_clocks,
            rx_stall ? "YES" : "NO",
-           (unsigned)sds.bus_width,
-           sds.saw_cmd55 ? "YES" : "NO",
-           sds.saw_acmd6_4bit ? "YES" : "NO",
-           sds.saw_acmd13 ? "YES" : "NO");
+           (unsigned)sds->bus_width,
+           sds->saw_cmd55 ? "YES" : "NO",
+           sds->saw_acmd6_4bit ? "YES" : "NO",
+           sds->saw_acmd13 ? "YES" : "NO");
     printf("Transitions: CMD=%" PRIu32 " DAT0=%" PRIu32 " DAT1=%" PRIu32 " DAT2=%" PRIu32 " DAT3=%" PRIu32 "\n",
-           sds.transitions[0], sds.transitions[1], sds.transitions[2], sds.transitions[3], sds.transitions[4]);
+           sds->transitions[0], sds->transitions[1], sds->transitions[2], sds->transitions[3], sds->transitions[4]);
     printf("CMD ok=%lu resp_ok=%lu cmd_crc_err=%lu CMD17=%lu CMD18=%lu | Data ok=%lu err=%lu | StartBadMask=0x%02X FailMask=0x%02X\n",
-           (unsigned long)sds.host_cmds_ok,
-           (unsigned long)sds.card_resps_ok,
-           (unsigned long)sds.cmd_crc_err,
-           (unsigned long)sds.cmd17_count,
-           (unsigned long)sds.cmd18_count,
-           (unsigned long)sds.data_blocks_ok,
-           (unsigned long)sds.data_crc_err,
-           (unsigned)sds.start_bit_bad_mask,
-           (unsigned)sds.last_fail_lane_mask);
+           (unsigned long)sds->host_cmds_ok,
+           (unsigned long)sds->card_resps_ok,
+           (unsigned long)sds->cmd_crc_err,
+           (unsigned long)sds->cmd17_count,
+           (unsigned long)sds->cmd18_count,
+           (unsigned long)sds->data_blocks_ok,
+           (unsigned long)sds->data_crc_err,
+           (unsigned)sds->start_bit_bad_mask,
+           (unsigned)sds->last_fail_lane_mask);
     printf("Per-Lane CRC16 Errors: DAT0=%lu DAT1=%lu DAT2=%lu DAT3=%lu\n",
-           (unsigned long)sds.lane_crc_err[0],
-           (unsigned long)sds.lane_crc_err[1],
-           (unsigned long)sds.lane_crc_err[2],
-           (unsigned long)sds.lane_crc_err[3]);
-    if (sds.acmd13_captured) {
+           (unsigned long)sds->lane_crc_err[0],
+           (unsigned long)sds->lane_crc_err[1],
+           (unsigned long)sds->lane_crc_err[2],
+           (unsigned long)sds->lane_crc_err[3]);
+    if (sds->acmd13_captured) {
         printf("ACMD13: crc=%s dat_bus_width=%u sd_card_type=0x%04X head=",
-               sds.acmd13_crc_ok ? "OK" : "FAIL",
-               (unsigned)sds.acmd13_dat_bus_width,
-               (unsigned)sds.acmd13_sd_card_type);
+               sds->acmd13_crc_ok ? "OK" : "FAIL",
+               (unsigned)sds->acmd13_dat_bus_width,
+               (unsigned)sds->acmd13_sd_card_type);
         for (size_t i = 0u; i < 8u; ++i) {
-            printf("%02X", (unsigned)sds.acmd13_raw[i]);
+            printf("%02X", (unsigned)sds->acmd13_raw[i]);
         }
         printf("\n");
     }
-    if (sds.trace_count > 0u) {
+    if (sds->trace_count > 0u) {
         printf("SD Trace (%u/%lu cmds; SDSC CMD17/18 byte_addr/512 -> LBA):\n",
-               (unsigned)sds.trace_count,
-               (unsigned long)sds.trace_total);
-        for (uint8_t i = 0u; i < sds.trace_count; ++i) {
-            const p7501_sds_trace_entry_t *ent = &sds.trace[i];
+               (unsigned)sds->trace_count,
+               (unsigned long)sds->trace_total);
+        for (uint8_t i = 0u; i < sds->trace_count; ++i) {
+            const p7501_sds_trace_entry_t *ent = &sds->trace[i];
             if (!ent->is_app && (ent->cmd == 17u || ent->cmd == 18u)) {
                 printf("  [%02u @clk=%lu] CMD%u arg=0x%08lX (SDSC_LBA=%lu rem=%lu)\n",
                        (unsigned)i,

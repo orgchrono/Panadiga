@@ -6,21 +6,15 @@
  */
 
 #include "uart/p7501_uart_capture.h"
+#include "common/p7501_cmd_arena.h"
+#include "common/p7501_hex.h"
 #include "p7501_types.h"
 #include "uart/p7501_pio_loop.h"
-#include "uart/p7501_uart_bitbang.h"
 #include "uart/p7501_uart_codec.h"
 #include "uart/p7501_uart_pio_engine.h"
 
 #include <inttypes.h>
 #include <stdio.h>
-
-typedef struct p7501_capture_drv {
-    /** Single shared RX capture buffer (16 KB) reused across all UART/FMU probes. */
-    uint8_t rx_buf[16384];
-} p7501_capture_drv_t;
-
-static p7501_capture_drv_t s_capture_drv;
 
 typedef struct capture_buf_ctx {
     uint8_t *buf;
@@ -39,27 +33,16 @@ static void capture_on_byte(void *raw_ctx, uint8_t b, uint32_t rel_us, bool *out
 
 uint8_t *p7501_uart_rx_buffer(size_t *out_capacity) {
     if (out_capacity != NULL) {
-        *out_capacity = sizeof(s_capture_drv.rx_buf);
+        *out_capacity = sizeof(g_p7501_cmd_arena.uart_rx);
     }
-    return s_capture_drv.rx_buf;
-}
-
-bool p7501_uart_poll_capture_byte(bool *prev_high, uint32_t *rx_len, uint32_t max_cap) {
-    uint8_t rx_byte = 0U;
-    if (!p7501_uart_try_sample_byte(prev_high, &rx_byte, NULL)) {
-        return false;
-    }
-    if (*rx_len < max_cap) {
-        s_capture_drv.rx_buf[(*rx_len)++] = rx_byte;
-    }
-    return true;
+    return g_p7501_cmd_arena.uart_rx;
 }
 
 uint32_t p7501_uart_capture_window(uint32_t dur_us, uint32_t max_cap) {
-    const uint32_t lim = (max_cap < (uint32_t)sizeof(s_capture_drv.rx_buf))
+    const uint32_t lim = (max_cap < (uint32_t)sizeof(g_p7501_cmd_arena.uart_rx))
         ? max_cap
-        : (uint32_t)sizeof(s_capture_drv.rx_buf);
-    capture_buf_ctx_t ctx = { s_capture_drv.rx_buf, 0u, lim };
+        : (uint32_t)sizeof(g_p7501_cmd_arena.uart_rx);
+    capture_buf_ctx_t ctx = { g_p7501_cmd_arena.uart_rx, 0u, lim };
     const uint32_t window_ms = (dur_us >= 1000UL) ? (dur_us / 1000UL) : 1u;
 
     const p7501_pio_loop_cfg_t cfg = {
@@ -103,9 +86,9 @@ void p7501_cmd_boot_capture(const char *arg, bool do_reset, bool is_jig, const c
         : (do_reset ? P7501_BOOT_ACTION_NORMAL : P7501_BOOT_ACTION_PASSIVE);
 
     capture_buf_ctx_t ctx = {
-        s_capture_drv.rx_buf,
+        g_p7501_cmd_arena.uart_rx,
         0u,
-        (uint32_t)(sizeof(s_capture_drv.rx_buf) - 1U),
+        (uint32_t)(sizeof(g_p7501_cmd_arena.uart_rx) - 1U),
     };
     const p7501_pio_loop_cfg_t cfg = {
         .window_ms = duration_ms,
@@ -134,6 +117,6 @@ void p7501_cmd_boot_capture(const char *arg, bool do_reset, bool is_jig, const c
         m.overflow ? "YES" : "NO",
         is_jig ? (m.sw_uart_released ? ", sw_rel=YES" : ", sw_rel=END") : ""
     );
-    p7501_uart_print_ascii_stream(s_capture_drv.rx_buf, ctx.len);
+    p7501_uart_print_ascii_stream(g_p7501_cmd_arena.uart_rx, ctx.len);
     printf("\n%s: OK (Bus kept in Hi-Z with pull-up so target continues running)\n", cmd_name);
 }

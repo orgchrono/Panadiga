@@ -9,6 +9,7 @@
 #include "uart/p7501_fmu_internal.h"
 #include "uart/p7501_uart_capture.h"
 #include "uart/p7501_uart_pio_engine.h"
+#include "cli/p7501_cli.h"
 #include "hal/p7501_led.h"
 #include "hal/p7501_watchdog.h"
 #include "p7501_types.h"
@@ -94,5 +95,8 @@ void p7501_cmd_fmu_batch(const char *arg) {
     p7501_wdt_set_stage(P7501_WDT_STAGE_CLEANUP);
     p7501_pio_end_session();
     p7501_led_set_auto_mode(LED_MODE_HEARTBEAT_IDLE);
+    if (aborted) {
+        p7501_cli_set_result("ERR", "EABORT");
+    }
     printf("FMUBATCH: OK%s\n", aborted ? " (aborted=YES)" : "");
 }

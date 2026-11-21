@@ -178,9 +178,9 @@ void p7501_uart_decode_rx_word(
     }
 }
 
-const char *p7501_classify_standby_state(
-    float vdd_v,
-    float sw_pu_v,
+const char *p7501_classify_standby_state_mv(
+    uint32_t vdd_mv,
+    uint32_t sw_pu_mv,
     bool nsw5v_high,
     bool txd_high,
     bool jig_latched
@@ -190,16 +190,16 @@ const char *p7501_classify_standby_state(
             ? "AWAKE / JIGPIN_LOW ACTIVE (TW7501=0V, NSW5V=1)"
             : "STANDBY / JIGPIN_LOW LATCHED (TW7501=0V, NSW5V=0)";
     }
-    if (vdd_v >= P7501_VDD_FLOATING_CEIL_V) {
+    if (vdd_mv >= P7501_SSOT_VDD_FLOATING_CEIL_MV) {
         return "OVER_RANGE / FLOATING ADC";
     }
-    if (vdd_v >= P7501_VDD_THRESHOLD_V) {
+    if (vdd_mv >= P7501_SSOT_VDD_MIN_MV) {
         return "POWERED / AWAKE (SW_UART ~3.3V)";
     }
     if (nsw5v_high) {
         return "AWAKE / NSW5V HIGH (TW7501 GROUNDED OR LOW)";
     }
-    if (sw_pu_v < P7501_VDD_THRESHOLD_V) {
+    if (sw_pu_mv < P7501_SSOT_VDD_MIN_MV) {
         return "STANDBY (P-OFF) OR TW7501 CLAMPED LOW (NSW5V=0)";
     }
     if (txd_high) {

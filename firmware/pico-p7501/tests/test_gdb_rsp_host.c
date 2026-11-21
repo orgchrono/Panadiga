@@ -19,7 +19,16 @@
 #include "../gdb/gdb_rsp.h"
 #include "../flash/p7501_flash.h"
 #include "../hal/p7501_hw.h"
+#include "../hal/p7501_wireless_codec.h"
+#include "../uart/p7501_pana_rsp_ssot.h"
 #include "test_uart_codec.h"
+
+_Static_assert(P7501_PIN_RXD == P7501_SSOT_GPIO_RXD_GP2, "GP2 RXD SSOT drift");
+_Static_assert(P7501_PIN_NSW5V == P7501_SSOT_GPIO_NSW5V_HIZ_GP3, "GP3 NSW5V SSOT drift");
+_Static_assert(P7501_PIN_TXD == P7501_SSOT_GPIO_TXD_GP4, "GP4 TXD SSOT drift");
+_Static_assert(P7501_PIN_XRESET == P7501_SSOT_GPIO_XRESET_OD_GP5, "GP5 XRESET SSOT drift");
+_Static_assert(P7501_PIN_SW_UART_ADC == P7501_SSOT_GPIO_SW_UART_GP26, "GP26 SW_UART SSOT drift");
+_Static_assert(P7501_FLASH_CRITICAL_IPL_SIZE == P7501_SSOT_IPL_LAYER1_SIZE, "Layer 1 IPL size drift");
 
 /* =========================================================================
  * Mock Hardware & Target Memory Subsystem
@@ -50,8 +59,9 @@ static bool resolve_mock_flash_offset(uint32_t addr, uint32_t *out_offset) {
     return false;
 }
 
-/* Mock HAL implementation */
-uint32_t p7501_hw_read_mem32(uint32_t addr) {
+/* Mock HAL VTable callbacks registered cleanly on p7501_target_bus */
+static uint32_t mock_bus_read_mem32(void *ctx, uint32_t addr) {
+    (void)ctx;
     if (addr < MOCK_SRAM_SIZE) {
         uint32_t val;
         memcpy(&val, &s_mock_sram[addr], 4);
@@ -70,7 +80,8 @@ uint32_t p7501_hw_read_mem32(uint32_t addr) {
     return 0xFFFFFFFFUL;
 }
 
-void p7501_hw_write_mem32(uint32_t addr, uint32_t data) {
+static void mock_bus_write_mem32(void *ctx, uint32_t addr, uint32_t data) {
+    (void)ctx;
     if (addr < MOCK_SRAM_SIZE) {
         memcpy(&s_mock_sram[addr], &data, 4);
         return;
@@ -86,22 +97,22 @@ void p7501_hw_write_mem32(uint32_t addr, uint32_t data) {
     }
 }
 
-bool p7501_hw_is_cpu_halted(void) {
-    return s_mock_halted;
-}
+static bool mock_bus_is_online(void *ctx) { (void)ctx; return s_mock_dcsr != 0xFFFFFFFFUL; }
+static bool mock_bus_is_halted(void *ctx) { (void)ctx; return s_mock_halted; }
+static uint32_t mock_bus_read_dcsr(void *ctx) { (void)ctx; return s_mock_dcsr; }
+static void mock_bus_set_pc(void *ctx, uint32_t pc_val) { (void)ctx; s_mock_pc = pc_val; }
+static void mock_bus_resume_cpu(void *ctx) { (void)ctx; s_mock_halted = false; s_mock_dcsr = 0x00000000UL; }
 
-uint32_t p7501_hw_read_dcsr(void) {
-    return s_mock_dcsr;
-}
-
-void p7501_hw_set_pc(uint32_t pc_val) {
-    s_mock_pc = pc_val;
-}
-
-void p7501_hw_resume_cpu(void) {
-    s_mock_halted = false;
-    s_mock_dcsr = 0x00000000UL;
-}
+static const p7501_target_bus_ops_t k_mock_bus_ops = {
+    .read_mem32 = mock_bus_read_mem32,
+    .write_mem32 = mock_bus_write_mem32,
+    .is_online = mock_bus_is_online,
+    .is_halted = mock_bus_is_halted,
+    .read_dcsr = mock_bus_read_dcsr,
+    .set_pc = mock_bus_set_pc,
+    .resume_cpu = mock_bus_resume_cpu,
+    .ctx = NULL,
+};
 
 void p7501_hw_reset_assert(void) {}
 void p7501_hw_reset_release(void) {}
@@ -120,6 +131,7 @@ static void reset_mock_state(void) {
     s_mock_halted = true;
     s_mock_dcsr = 0x00000001UL;
     s_mock_pc = 0x80000000UL;
+    p7501_target_bus_register_ops(&k_mock_bus_ops);
     gdb_rsp_init();
     gdb_rsp_set_active(true);
 }
@@ -293,9 +305,18 @@ static void test_isolated_gdb_ctx_no_aliasing(void) {
     gdb_rsp_ctx_test_get_last_response(&ctx_16mb, resp_b, sizeof(resp_b));
 
     assert(strstr(resp_a, "0x803F0000") != NULL);
-    assert(strstr(resp_b, "0x80FF0000") != NULL);
+    assert(strstr(resp_b, "start=\"0x80FE0000\" length=\"0x00020000\"") != NULL);
 
-    printf("  [PASS] test_isolated_gdb_ctx_no_aliasing\n");
+    /* 16 MiB target: 0x807F0000 is Upper NOR (E05 when locked), while 0x80FE0000..0x80FFFFFF (128 KiB) is writable NVRAM */
+    gdb_rsp_ctx_test_inject_packet(&ctx_16mb, "M807F0000,4:11223344");
+    gdb_rsp_ctx_test_get_last_response(&ctx_16mb, resp_b, sizeof(resp_b));
+    assert(strcmp(resp_b, "E05") == 0);
+
+    gdb_rsp_ctx_test_inject_packet(&ctx_16mb, "M80FE0000,4:11223344");
+    gdb_rsp_ctx_test_get_last_response(&ctx_16mb, resp_b, sizeof(resp_b));
+    assert(strcmp(resp_b, "OK") == 0);
+
+    printf("  [PASS] test_isolated_gdb_ctx_no_aliasing (incl. 16 MiB 128 KiB NVRAM)\n");
 }
 
 static void test_upper_nor_unlock_allows_app_keeps_ipl_e05(void) {
@@ -358,6 +379,17 @@ static void test_upper_nor_unlock_allows_app_keeps_ipl_e05(void) {
     assert(strcmp(resp, "OK") == 0);
     send_cmd_and_get_response("M80800000,4:00000000", resp, sizeof(resp));
     assert(strcmp(resp, "E05") == 0);
+    /* D2: Oversized $m read (> 1023 bytes) returns E02 without overflowing tx_resp_buf[2048] */
+    send_cmd_and_get_response("m80000000,FFFF", resp, sizeof(resp));
+    assert(strcmp(resp, "E02") == 0);
+    /* D4: Full-RO and ES35V MAIN_XIP remain denied even if flash_size_bytes differs from profile */
+    p7501_session_ctx_t prof_ctx;
+    p7501_session_ctx_reset(&prof_ctx);
+    prof_ctx.profile_selected = true;
+    prof_ctx.active_profile = P7501_TARGET_PROFILE_DMR_EZ485V;
+    assert(p7501_bus_check_access(&prof_ctx, P7501_FLASH_SIZE_16MB, 0x80040000UL, 4u, true, false, true) == P7501_BUS_DENY_FULL_RO);
+    prof_ctx.active_profile = P7501_TARGET_PROFILE_DMR_ES35V;
+    assert(p7501_bus_check_access(&prof_ctx, P7501_FLASH_SIZE_16MB, 0x80200000UL, 4u, true, false, true) == P7501_BUS_DENY_PROTECTED_RO);
 
     /* Re-locking restores full NvramOnly E05 protection over Upper NOR */
     send_cmd_and_get_response("qPanadigaNorLock", resp, sizeof(resp));
@@ -396,8 +428,10 @@ static void test_flash_sector_geo_64k_vs_8k(void) {
     assert(!p7501_flash_is_critical_boot_ipl_range(0x807F0000UL, 4u));
     assert(!p7501_flash_is_critical_boot_ipl_range(0x80000000UL, 0u));
 
-    /* 8 MiB S29JL064H: 64 KiB below 0x7F0000, 8 KiB in NVRAM micro-sectors */
-    assert(p7501_flash_get_sector_size_at(P7501_FLASH_SIZE_8MB, 0x80000000UL) == 65536UL);
+    /* 8 MiB S29JL064H: 8x8 KiB bottom SA0..SA7 (<0x10000), 126x64 KiB main, 8x8 KiB top NVRAM */
+    assert(p7501_flash_get_sector_size_at(P7501_FLASH_SIZE_8MB, 0x80000000UL) == 0x2000UL);
+    assert(p7501_flash_get_sector_size_at(P7501_FLASH_SIZE_8MB, 0x8000E000UL) == 0x2000UL);
+    assert(p7501_flash_get_sector_size_at(P7501_FLASH_SIZE_8MB, 0x80010000UL) == 65536UL);
     assert(p7501_flash_get_sector_size_at(P7501_FLASH_SIZE_8MB, 0x80040000UL) == 65536UL);
     assert(p7501_flash_get_sector_size_at(P7501_FLASH_SIZE_8MB, 0x84200000UL) == 65536UL);
     assert(p7501_flash_get_sector_size_at(P7501_FLASH_SIZE_8MB, 0x807EFFFFUL) == 65536UL);
@@ -407,15 +441,126 @@ static void test_flash_sector_geo_64k_vs_8k(void) {
     assert(p7501_flash_get_sector_size_at(P7501_FLASH_SIZE_8MB, 0x80800000UL) == 0UL);
     assert(p7501_flash_get_sector_size_at(P7501_FLASH_SIZE_8MB, 0x40000000UL) == 0UL);
 
-    /* 2 MiB / 4 MiB / 16 MiB boundaries */
+    /* Walk complete 8 MiB S29JL064H sector layout (8x8K bottom + 126x64K main + 8x8K top = 127x64K + 8x8K span) */
+    uint32_t walk_off = 0UL;
+    uint32_t cnt_8k_bottom = 0u;
+    uint32_t cnt_64k_main = 0u;
+    uint32_t cnt_8k_top = 0u;
+    while (walk_off < P7501_FLASH_SIZE_8MB) {
+        const uint32_t sz = p7501_flash_get_sector_size_at(
+            P7501_FLASH_SIZE_8MB, P7501_FLASH_CACHED_BASE + walk_off
+        );
+        assert(sz == 8192UL || sz == 65536UL);
+        if (walk_off < 0x010000UL) {
+            assert(sz == 8192UL);
+            cnt_8k_bottom++;
+        } else if (walk_off < P7501_FLASH_8MB_NVRAM_OFF) {
+            assert(sz == 65536UL);
+            cnt_64k_main++;
+        } else {
+            assert(sz == 8192UL);
+            cnt_8k_top++;
+        }
+        walk_off += sz;
+    }
+    assert(walk_off == P7501_FLASH_SIZE_8MB);
+    assert(cnt_8k_bottom == 8u && cnt_64k_main == 126u && cnt_8k_top == 8u);
+
+    /* 2 MiB (S29AL016D Top Boot: 31x64K + 32K + 2x8K + 16K) / 4 MiB / 16 MiB (S29GL128N uniform 128K) */
+    assert(p7501_flash_get_sector_size_at(P7501_FLASH_SIZE_2MB, 0x80002000UL) == 65536UL);
     assert(p7501_flash_get_sector_size_at(P7501_FLASH_SIZE_2MB, 0x801EFFFFUL) == 65536UL);
-    assert(p7501_flash_get_sector_size_at(P7501_FLASH_SIZE_2MB, 0x801F0000UL) == 8192UL);
+    assert(p7501_flash_get_sector_size_at(P7501_FLASH_SIZE_2MB, 0x801F0000UL) == 32768UL);
+    assert(p7501_flash_get_sector_size_at(P7501_FLASH_SIZE_2MB, 0x801F8000UL) == 8192UL);
+    assert(p7501_flash_get_sector_size_at(P7501_FLASH_SIZE_2MB, 0x801FC000UL) == 16384UL);
     assert(p7501_flash_get_sector_size_at(P7501_FLASH_SIZE_4MB, 0x803EFFFFUL) == 65536UL);
     assert(p7501_flash_get_sector_size_at(P7501_FLASH_SIZE_4MB, 0x803F0000UL) == 8192UL);
-    assert(p7501_flash_get_sector_size_at(P7501_FLASH_SIZE_16MB, 0x80FDFFFFUL) == 65536UL);
-    assert(p7501_flash_get_sector_size_at(P7501_FLASH_SIZE_16MB, 0x80FE0000UL) == 8192UL);
+    assert(p7501_flash_get_sector_size_at(P7501_FLASH_SIZE_16MB, 0x80FC0000UL) == 131072UL);
+    assert(p7501_flash_get_sector_size_at(P7501_FLASH_SIZE_16MB, 0x80FE0000UL) == 131072UL);
+    const p7501_flash_geometry_t g16 = p7501_flash_get_geometry(P7501_FLASH_SIZE_16MB);
+    assert(g16.base_sector == 127u && g16.sector_count == 1u);
 
     printf("  [PASS] test_flash_sector_geo_64k_vs_8k\n");
+}
+
+static void test_lethal_register_c000100c_e05_block(void) {
+    char resp[GDB_RSP_MAX_PACKET_LEN];
+    static const char *k_lethal_cmds[] = {
+        "mC000100C,4",
+        "mC000100E,1",
+        "mC0001008,8",
+        "MC000100C,4:00000000",
+        "MC0001008,8:0011223344556677",
+        "XC000100C,4:ABCD",
+        "MC000100F,1:AA",
+    };
+    for (size_t i = 0u; i < (sizeof(k_lethal_cmds) / sizeof(k_lethal_cmds[0])); ++i) {
+        send_cmd_and_get_response(k_lethal_cmds[i], resp, sizeof(resp));
+        assert(strcmp(resp, "E05") == 0);
+    }
+    /* Adjacent non-lethal system status register (0xC0001008..0xC000100B) remains accessible */
+    send_cmd_and_get_response("mC0001008,4", resp, sizeof(resp));
+    assert(strcmp(resp, "ffffffff") == 0);
+    send_cmd_and_get_response("MC0001008,4:00000000", resp, sizeof(resp));
+    assert(strcmp(resp, "OK") == 0);
+    printf("  [PASS] test_lethal_register_c000100c_e05_block\n");
+}
+
+static bool mock_bus_read_mem32_fail(void *ctx, uint32_t addr, uint32_t *out_val) {
+    (void)ctx;
+    if (addr == 0x00002000UL) {
+        return false;
+    }
+    *out_val = mock_bus_read_mem32(NULL, addr);
+    return true;
+}
+
+static void test_gdb_hardening_relock_ro_xml_bus_err_and_f14(void) {
+    char resp[GDB_RSP_MAX_PACKET_LEN];
+
+    /* 1. Compact gdb_rsp_ctx_t size (fixed 68 KiB RP2350 BSS bloat; <12 KiB even with host test capture buf) */
+    assert(sizeof(gdb_rsp_ctx_t) < 12288u);
+
+    /* 2. Detach ($D), Kill ($k), and Restart ($R) auto-relock Upper NOR */
+    static const char *k_exit_pkts[3] = { "D", "k", "R00" };
+    for (size_t i = 0u; i < 3u; ++i) {
+        gdb_rsp_set_active(true);
+        send_cmd_and_get_response("qPanadigaNorUnlock:CONFIRM_UPPER_NOR", resp, sizeof(resp));
+        assert(strcmp(resp, "OK") == 0 && gdb_rsp_is_upper_nor_unlocked());
+        send_cmd_and_get_response(k_exit_pkts[i], resp, sizeof(resp));
+        assert(!gdb_rsp_is_upper_nor_unlocked());
+        assert(!p7501_flash_is_upper_nor_unlocked());
+    }
+
+    /* 3. Full-RO profile omits empty 0-length <memory type="flash"/> tag in XML memory-map */
+    gdb_rsp_set_active(true);
+    assert(p7501_flash_set_target_profile_by_id(P7501_TARGET_PROFILE_DMR_EZ485V));
+    send_cmd_and_get_response("qXfer:memory-map:read::0,800", resp, sizeof(resp));
+    assert(strstr(resp, "length=\"0x00000000\"") == NULL);
+    assert(strstr(resp, "type=\"flash\"") == NULL);
+    assert(p7501_flash_set_target_profile_by_id(P7501_TARGET_PROFILE_DMR_EH55));
+
+    /* 4. Checked bus read failure returns E01 (never silent 0xFFFFFFFF or corrupt RMW) */
+    p7501_target_bus_ops_t fail_ops = k_mock_bus_ops;
+    fail_ops.read_mem32_checked = mock_bus_read_mem32_fail;
+    p7501_target_bus_register_ops(&fail_ops);
+    send_cmd_and_get_response("m00002000,4", resp, sizeof(resp));
+    assert(strcmp(resp, "E01") == 0);
+    send_cmd_and_get_response("M00002001,1:AA", resp, sizeof(resp));
+    assert(strcmp(resp, "E01") == 0);
+    p7501_target_bus_register_ops(&k_mock_bus_ops);
+
+    /* 5. F14 wireless 1-op quota consumed on GDB NOR write */
+    p7501_wireless_auth_state_t *ws = p7501_wireless_global_state();
+    p7501_wireless_state_init(ws);
+    ws->active_origin = P7501_ORIGIN_BLE_NUS;
+    assert(p7501_wireless_handle_usb_auth_cmd(ws, P7501_ORIGIN_USB_CDC, "CONFIRM 1"));
+    send_cmd_and_get_response("M807F0000,4:12345678", resp, sizeof(resp));
+    assert(strcmp(resp, "OK") == 0);
+    send_cmd_and_get_response("M807F0004,4:87654321", resp, sizeof(resp));
+    assert(strcmp(resp, "E05") == 0);
+    p7501_wireless_state_init(ws);
+
+    printf("  [PASS] test_gdb_hardening_relock_ro_xml_bus_err_and_f14\n");
 }
 
 int main(void) {
@@ -449,6 +594,12 @@ int main(void) {
 
     reset_mock_state();
     test_flash_sector_geo_64k_vs_8k();
+
+    reset_mock_state();
+    test_lethal_register_c000100c_e05_block();
+
+    reset_mock_state();
+    test_gdb_hardening_relock_ro_xml_bus_err_and_f14();
 
     reset_mock_state();
     test_register_access_no_ub();

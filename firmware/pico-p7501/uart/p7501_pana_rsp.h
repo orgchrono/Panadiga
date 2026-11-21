@@ -16,6 +16,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "flash/p7501_flash.h"
 #include "uart/p7501_pana_rsp_ssot.h"
 #include "uart/p7501_uart_codec.h"
 
@@ -61,7 +62,14 @@ typedef enum p7501_pana_rsp_action {
     PANA_RSP_ACT_REGS,
     PANA_RSP_ACT_NOR_POLICY,
     PANA_RSP_ACT_JEDEC_ERASE,
-    PANA_RSP_ACT_JEDEC_PROG
+    PANA_RSP_ACT_JEDEC_PROG,
+    PANA_RSP_ACT_JEDEC_ID,
+    PANA_RSP_ACT_CFI_QUERY,
+    PANA_RSP_ACT_CRC32_NOR,
+    PANA_RSP_ACT_BLANK_CHECK,
+    PANA_RSP_ACT_BGO_BITCLEAR,
+    PANA_RSP_ACT_FAST_DUMPNOR,
+    PANA_RSP_ACT_DUMPNOR_RESUME
 } p7501_pana_rsp_action_t;
 
 typedef struct p7501_pana_rsp_spec {
@@ -72,6 +80,10 @@ typedef struct p7501_pana_rsp_spec {
     bool send_magic_prefix;
     bool wait_trigger_enabled;
     bool nor_unlocked_effective;
+    bool auto_relock_nor;
+    bool rejected_e05;
+    p7501_policy_req_t policy_req;
+    uint32_t baud;
     char trigger[P7501_RSP_MAX_TRIG + 1u];
     p7501_pana_rsp_action_t action;
     char payload[128];
@@ -109,11 +121,24 @@ bool p7501_rsp_inspect_frame_from(
 /** Inspect RX buffer from index 0 for `$<payload>#<xx>` RSP reply (plus `+`/`-` or raw `0x15`). */
 bool p7501_rsp_inspect_frame(const uint8_t *buf, size_t len, p7501_rsp_frame_info_t *out);
 
-/** Decode 48-byte MN103S GDB `$g` register reply (96 ASCII hex chars -> 12 LE u32s: D0..D3, A0..A3, MDR, PSW, PC, SP). */
+/** Decode 48-byte (96 hex chars) or 112-byte `_dev_SERIAL` (224 hex chars) MN103S GDB `$g` register reply. */
 bool p7501_rsp_decode_mn103_regs(const uint8_t *payload, size_t len, uint32_t out_regs[12]);
 
-/** Parse `PANARSP [ms] [NORMAL|JIG[:ms]|NOPULL] [MAGIC] [NONAK|NAK] [WAIT:<trig>] <action>` args. */
+/** Purely parse `PANARSP` args against explicit unlock context (zero global mutation). */
+bool p7501_panarsp_parse_args_ctx(
+    const char *arg,
+    bool session_unlocked,
+    p7501_pana_rsp_spec_t *out
+);
+
+/** Parse `PANARSP [ms] [NORMAL|JIG[:ms]|NOPULL] [MAGIC] [NONAK|NAK] [WAIT:<trig>] <action>` args purely. */
 bool p7501_panarsp_parse_args(const char *arg, p7501_pana_rsp_spec_t *out);
+
+/** Apply parsed policy request (`NORUNLOCK:CONFIRM_UPPER_NOR` / `NORLOCK`) to active session. */
+void p7501_panarsp_apply_policy(const p7501_pana_rsp_spec_t *spec);
+
+/** Apply one-shot Upper NOR auto-relock upon completion of a mutating `PANARSP` command. */
+bool p7501_panarsp_finish_action(const p7501_pana_rsp_spec_t *spec);
 
 /** CLI command `PANARSP`: actively probes MAIN `FUN_574f0590`/`FUN_574f0775` RSP stub over PIO1. */
 void p7501_cmd_pana_rsp(const char *arg);

@@ -41,6 +41,7 @@ void gdb_cpu_sync_registers(am34_reg_file_t *regs);
 void gdb_cpu_handle_ctrl_c(gdb_rsp_ctx_t *ctx);
 void gdb_cpu_dispatch_command(gdb_rsp_ctx_t *ctx, const char *cmd);
 bool gdb_rsp_handle_nor_policy_cmd(gdb_rsp_ctx_t *ctx, const char *cmd);
+bool gdb_rsp_is_default_ctx(const gdb_rsp_ctx_t *ctx);
 
 #ifdef __cplusplus
 }

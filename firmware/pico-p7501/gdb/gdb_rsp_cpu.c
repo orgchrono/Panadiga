@@ -153,7 +153,8 @@ void gdb_cpu_dispatch_command(gdb_rsp_ctx_t *ctx, const char *cmd) {
     if ((ctx == NULL) || (cmd == NULL)) {
         return;
     }
-    char resp_buf[GDB_RSP_MAX_PACKET_LEN];
+    char *resp_buf = ctx->tx_resp_buf;
+    const size_t resp_cap = sizeof(ctx->tx_resp_buf);
     resp_buf[0] = '\0';
 
     switch (cmd[0]) {
@@ -167,7 +168,7 @@ void gdb_cpu_dispatch_command(gdb_rsp_ctx_t *ctx, const char *cmd) {
             break;
 
         case 'q':
-            handle_query_cmd(ctx, cmd, resp_buf, sizeof(resp_buf));
+            handle_query_cmd(ctx, cmd, resp_buf, resp_cap);
             break;
 
         case 'g':
@@ -219,6 +220,7 @@ void gdb_cpu_dispatch_command(gdb_rsp_ctx_t *ctx, const char *cmd) {
             break;
 
         case 'k':
+            gdb_rsp_ctx_set_upper_nor_unlocked(ctx, false);
             p7501_hw_reset_assert();
             sleep_ms(P7501_RESET_ASSERT_MS);
             p7501_hw_reset_release();
@@ -227,11 +229,13 @@ void gdb_cpu_dispatch_command(gdb_rsp_ctx_t *ctx, const char *cmd) {
             break;
 
         case 'D':
+            gdb_rsp_ctx_set_upper_nor_unlocked(ctx, false);
             gdb_rsp_ctx_send_packet(ctx, "OK");
             ctx->active = false;
             break;
 
         case 'R':
+            gdb_rsp_ctx_set_upper_nor_unlocked(ctx, false);
             p7501_hw_boot_sequence(P7501_BOOT_MODE_NORMAL_HIZ);
             gdb_rsp_ctx_invalidate_cache(ctx);
             ctx->regs.pc = P7501_FLASH_CACHED_BASE;

@@ -7,6 +7,8 @@
 
 #include "uart/p7501_uart_stream.h"
 
+#include "common/p7501_cmd_arena.h"
+#include "common/p7501_hex.h"
 #include "p7501_types.h"
 #include "uart/p7501_pio_loop.h"
 #include "uart/p7501_uart_codec.h"
@@ -18,7 +20,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 
-#define HEXCAP_RAM_BUF_CAP 2048u
+#define HEXCAP_RAM_BUF_CAP P7501_ARENA_HEXCAP_CAP
 
 typedef struct stream_ctx {
     uint32_t col;
@@ -36,18 +38,14 @@ static void stream_on_byte(void *raw_ctx, uint8_t b, uint32_t rel_us, bool *out_
     (void)rel_us;
     (void)out_stop;
     stream_ctx_t *ctx = (stream_ctx_t *)raw_ctx;
+    /* CDC1 mirroring is already performed once per RX byte inside p7501_pio_run_session(). */
     if (b == '\r') {
         return;
     }
+    p7501_print_ascii_byte(b, '[', ']');
     if (b == '\n') {
-        putchar('\n');
         ctx->col = 0u;
         return;
-    }
-    if (b >= 0x20u && b <= 0x7Eu) {
-        putchar((int)b);
-    } else {
-        printf("[%02X]", (unsigned)b);
     }
     if (++ctx->col >= 96u) {
         ctx->col = 0u;
@@ -151,8 +149,8 @@ void p7501_cmd_uart_stream(const char *arg) {
 }
 
 void p7501_cmd_hexcap(const char *arg) {
-    static uint8_t hexcap_bytes[HEXCAP_RAM_BUF_CAP];
-    static uint32_t hexcap_gaps_us[HEXCAP_RAM_BUF_CAP];
+    uint8_t *const hexcap_bytes = g_p7501_cmd_arena.hexcap.bytes;
+    uint32_t *const hexcap_gaps_us = g_p7501_cmd_arena.hexcap.gaps_us;
 
     p7501_window_boot_spec_t spec;
     p7501_parse_window_boot_args(arg, 8000u, 200u, P7501_CAPTURE_MAX_MS, &spec);

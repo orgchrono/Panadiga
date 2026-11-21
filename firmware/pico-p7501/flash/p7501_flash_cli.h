@@ -15,8 +15,7 @@ extern "C" {
 void p7501_flash_cmd_autodetect(const char *arg);
 void p7501_flash_cmd_cfi(const char *arg);
 void p7501_flash_cmd_size(const char *arg);
-void p7501_flash_cmd_inject_loader(const char *arg);
-void p7501_flash_cmd_erase_nvram(const char *arg);
+void p7501_flash_cmd_target_profile(const char *arg);
 
 #ifdef __cplusplus
 }

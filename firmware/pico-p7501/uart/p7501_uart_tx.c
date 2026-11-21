@@ -7,8 +7,10 @@
 
 #include "uart/p7501_uart_tx.h"
 
+#include "cli/p7501_cli.h"
 #include "common/p7501_hex.h"
 #include "hal/p7501_led.h"
+#include "hal/p7501_usb_dual_cdc.h"
 #include "hal/p7501_watchdog.h"
 #include "p7501_types.h"
 #include "uart/p7501_pio_loop.h"
@@ -30,21 +32,10 @@ typedef struct tx_stream_ctx {
     bool triggered;
 } tx_stream_ctx_t;
 
-static void emit_printable_byte(uint8_t b) {
-    if (b == '\r') {
-        return;
-    }
-    if (b == '\n' || (b >= 0x20u && b <= 0x7Eu)) {
-        putchar((int)b);
-    } else {
-        printf("[%02X]", (unsigned)b);
-    }
-}
-
 static void tx_print_on_byte(void *raw_ctx, uint8_t byte, uint32_t rel_us, bool *out_stop) {
     (void)rel_us;
     tx_stream_ctx_t *ctx = (tx_stream_ctx_t *)raw_ctx;
-    emit_printable_byte(byte);
+    p7501_print_ascii_byte(byte, '[', ']');
     if (ctx != NULL && ctx->trigger != NULL && !ctx->triggered &&
         p7501_rolling_match_push(ctx->ring, &ctx->ring_len, sizeof(ctx->ring), byte, ctx->trigger)) {
         ctx->triggered = true;
@@ -86,19 +77,22 @@ static void run_tx_print_loop(
 }
 
 void p7501_cmd_uart_tx_hex(const char *arg) {
-    char tok1[(P7501_UART_HEX_MAX_BYTES * 2u) + 12u] = {0};
+    static char s_tok1[(P7501_UART_HEX_MAX_BYTES * 2u) + 12u];
+    static uint8_t s_tx_buf[P7501_UART_HEX_MAX_BYTES];
     char tok2[24] = {0};
-    const char *cur = p7501_next_token(arg, tok1, sizeof(tok1));
-    if (cur == NULL || tok1[0] == '\0') {
+    s_tok1[0] = '\0';
+    const char *cur = p7501_next_token(arg, s_tok1, sizeof(s_tok1));
+    if (cur == NULL || s_tok1[0] == '\0') {
+        p7501_cli_set_result("ERR", "EINVAL");
         printf("[UARTTXHEX] ERROR: Usage UARTTXHEX [LOW:]<hex|BRK> [rx_ms]\n");
         return;
     }
 
     bool force_low = false;
-    const char *payload_tok = tok1;
-    if (p7501_ascii_iprefix(tok1, "LOW:")) {
+    const char *payload_tok = s_tok1;
+    if (p7501_ascii_iprefix(s_tok1, "LOW:")) {
         force_low = true;
-        payload_tok = tok1 + 4;
+        payload_tok = s_tok1 + 4;
     }
 
     uint32_t wait_ms = 1500u;
@@ -106,10 +100,10 @@ void p7501_cmd_uart_tx_hex(const char *arg) {
         wait_ms = p7501_parse_uint32_clamped(tok2, 1500u, 100u, 20000u);
     }
 
-    uint8_t tx_buf[P7501_UART_HEX_MAX_BYTES];
     size_t tx_len = 0u;
     const bool is_break = p7501_ascii_ieq(payload_tok, "BRK") || p7501_ascii_ieq(payload_tok, "BREAK");
-    if (!is_break && !p7501_decode_hex_bytes(payload_tok, tx_buf, sizeof(tx_buf), &tx_len)) {
+    if (!is_break && !p7501_decode_hex_bytes(payload_tok, s_tx_buf, sizeof(s_tx_buf), &tx_len)) {
+        p7501_cli_set_result("ERR", "EINVAL");
         printf("[UARTTXHEX] ERROR: Invalid hex payload '%s'.\n", payload_tok);
         return;
     }
@@ -120,7 +114,7 @@ void p7501_cmd_uart_tx_hex(const char *arg) {
     if (is_break) {
         p7501_pio_tx_break_ms(120u, force_low);
     } else {
-        p7501_pio_tx_bytes(tx_buf, tx_len, force_low);
+        p7501_pio_tx_bytes(s_tx_buf, tx_len, force_low);
     }
 
     tx_stream_ctx_t ctx = { .trigger = NULL, .ring_len = 0u, .triggered = false };
@@ -142,6 +136,7 @@ void p7501_cmd_uart_tx_hex(const char *arg) {
 void p7501_cmd_waittx(const char *arg) {
     p7501_waittx_spec_t spec;
     if (!p7501_parse_waittx_args(arg, &spec)) {
+        p7501_cli_set_result("ERR", "EINVAL");
         printf("[WAITTX] ERROR: Usage WAITTX <timeout_ms> <NORMAL|JIG|JIG:ms|NOPULL> \"<trigger>\" <hex|BRK> [post_ms]\n");
         return;
     }
@@ -192,6 +187,57 @@ void p7501_cmd_waittx(const char *arg) {
            ctx.triggered ? "YES" : "NO", total_rx);
 }
 
+typedef struct bridge_usb_ring {
+    uint8_t buf[256];
+    size_t head;
+    size_t tail;
+    size_t count;
+    uint32_t rx_count;
+} bridge_usb_ring_t;
+
+static bool bridge_flush_usb_ring(bridge_usb_ring_t *r) {
+    if (r->count == 0u) {
+        return false;
+    }
+    while (r->count > 0u) {
+        putchar_raw((int)r->buf[r->tail]);
+        r->tail = (r->tail + 1u) % sizeof(r->buf);
+        --r->count;
+    }
+    fflush(stdout);
+    return true;
+}
+
+static void bridge_push_usb_rx_byte(void *raw_ctx, uint8_t rx_byte) {
+    bridge_usb_ring_t *r = (bridge_usb_ring_t *)raw_ctx;
+    p7501_usb_mirror_rx_byte(rx_byte);
+    if (r->count >= sizeof(r->buf)) {
+        (void)bridge_flush_usb_ring(r);
+    }
+    r->buf[r->head] = rx_byte;
+    r->head = (r->head + 1u) % sizeof(r->buf);
+    ++r->count;
+    ++r->rx_count;
+}
+
+static void bridge_drain_pio_rx(bridge_usb_ring_t *r) {
+    uint8_t rx_byte = 0u;
+    while (p7501_pio_pop_rx_byte(&rx_byte)) {
+        bridge_push_usb_rx_byte(r, rx_byte);
+    }
+}
+
+static void bridge_tx_duplex(
+    bridge_usb_ring_t *r,
+    const uint8_t *batch,
+    size_t len,
+    uint32_t *io_tx_count
+) {
+    p7501_pio_tx_bytes_duplex(batch, len, false, true, bridge_push_usb_rx_byte, r);
+    *io_tx_count += (uint32_t)len;
+    (void)bridge_flush_usb_ring(r);
+}
+
 void p7501_cmd_bridge(const char *arg) {
     const uint32_t orig_baud = p7501_pio_get_baud();
     p7501_bridge_spec_t spec;
@@ -211,11 +257,12 @@ void p7501_cmd_bridge(const char *arg) {
     const uint64_t t0_us = time_us_64();
     uint8_t prev_ctrl3 = (uint8_t)((gpio_get_all() >> P7501_PIN_NSW5V) & 0x07u);
     uint32_t ctrl_edges = 0u;
-    uint32_t rx_count = 0u;
+    bridge_usb_ring_t usb_ring = {0};
     uint32_t tx_count = 0u;
     uint32_t ferr_count = 0u;
     uint8_t tilde_run = 0u;
-    uint8_t rx_byte = 0u;
+    uint64_t last_tx_char_us = 0ULL;
+    uint64_t tilde_first_us = 0ULL;
     uint8_t tx_batch[16];
     bool exit_requested = false;
     absolute_time_t disconnect_deadline = at_the_end_of_time;
@@ -253,49 +300,63 @@ void p7501_cmd_bridge(const char *arg) {
             counting_disconnect = false;
         }
 
-        bool had_rx = false;
-        while (p7501_pio_pop_rx_byte(&rx_byte)) {
-            putchar_raw((int)rx_byte);
-            ++rx_count;
-            had_rx = true;
-        }
-        if (had_rx) {
-            fflush(stdout);
-        }
+        bridge_drain_pio_rx(&usb_ring);
+        const bool had_rx = bridge_flush_usb_ring(&usb_ring);
 
         size_t batch_len = 0u;
+        const uint64_t poll_us = time_us_64();
+        /* Flush pending single/double '~' after 250 ms if user wasn't typing '~~~'. */
+        if ((tilde_run > 0u) && ((poll_us - tilde_first_us) >= 250000ULL)) {
+            while (tilde_run > 0u) {
+                tx_batch[batch_len++] = (uint8_t)'~';
+                --tilde_run;
+            }
+            last_tx_char_us = poll_us;
+        }
         while (batch_len < sizeof(tx_batch)) {
+            bridge_drain_pio_rx(&usb_ring);
             const int ch = getchar_timeout_us(0u);
             if (ch == PICO_ERROR_TIMEOUT) {
                 break;
             }
+            const uint64_t now_us = time_us_64();
             if (ch == '~') {
-                ++tilde_run;
-                if (tilde_run >= 3u) {
-                    exit_requested = true;
-                    break;
+                /* Hayes 50 ms pre-guard prevents binary streams containing '~~~' from exiting. */
+                if ((tilde_run > 0u) || (last_tx_char_us == 0ULL) || ((now_us - last_tx_char_us) >= 50000ULL)) {
+                    if (tilde_run == 0u) {
+                        tilde_first_us = now_us;
+                    }
+                    ++tilde_run;
+                    if (tilde_run >= 3u) {
+                        exit_requested = true;
+                        break;
+                    }
+                    continue;
                 }
-                continue;
             }
             while (tilde_run > 0u) {
                 if (batch_len == sizeof(tx_batch)) {
-                    p7501_pio_tx_bytes(tx_batch, batch_len, false);
-                    tx_count += (uint32_t)batch_len;
+                    bridge_tx_duplex(&usb_ring, tx_batch, batch_len, &tx_count);
                     batch_len = 0u;
                 }
                 tx_batch[batch_len++] = (uint8_t)'~';
                 --tilde_run;
             }
+            last_tx_char_us = now_us;
             tx_batch[batch_len++] = (uint8_t)ch;
         }
         if (batch_len > 0u) {
-            p7501_pio_tx_bytes(tx_batch, batch_len, false);
-            tx_count += (uint32_t)batch_len;
+            bridge_tx_duplex(&usb_ring, tx_batch, batch_len, &tx_count);
         } else if (!had_rx && !exit_requested) {
-            sleep_us(25u);
+            bridge_drain_pio_rx(&usb_ring);
+            if (!bridge_flush_usb_ring(&usb_ring)) {
+                sleep_us(25u);
+            }
         }
     }
 
+    bridge_drain_pio_rx(&usb_ring);
+    (void)bridge_flush_usb_ring(&usb_ring);
     if (p7501_pio_poll_and_clear_framing_err()) {
         ++ferr_count;
     }
@@ -305,5 +366,5 @@ void p7501_cmd_bridge(const char *arg) {
     (void)p7501_pio_set_baud(orig_baud);
     p7501_led_set_auto_mode(LED_MODE_HEARTBEAT_IDLE);
     printf("\nBRIDGE: OK (rx=%" PRIu32 " tx=%" PRIu32 " ferr=%" PRIu32 " ctrl_edges=%" PRIu32 " overflow=%s)\n",
-           rx_count, tx_count, ferr_count, ctrl_edges, ovf ? "YES" : "NO");
+           usb_ring.rx_count, tx_count, ferr_count, ctrl_edges, ovf ? "YES" : "NO");
 }

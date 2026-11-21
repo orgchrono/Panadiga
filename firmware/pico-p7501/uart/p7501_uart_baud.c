@@ -7,6 +7,7 @@
 
 #include "uart/p7501_uart_baud.h"
 
+#include "cli/p7501_cli.h"
 #include "common/p7501_hex.h"
 #include "hal/p7501_led.h"
 #include "hal/p7501_watchdog.h"
@@ -38,6 +39,7 @@ void p7501_cmd_baud(const char *arg) {
     );
     const uint32_t raw_exact = p7501_parse_uint32_clamped(tok, 0u, 1u, 10000000u);
     if (!p7501_baud_is_valid(raw_exact) || !p7501_pio_set_baud(req)) {
+        p7501_cli_set_result("ERR", "EINVAL");
         printf("[BAUD] ERROR: Invalid baudrate '%s' (valid range: %" PRIu32 "..%" PRIu32 ").\n",
                tok, (uint32_t)P7501_UART_MIN_BAUD, (uint32_t)P7501_UART_MAX_BAUD);
         return;
@@ -60,6 +62,7 @@ void p7501_cmd_framing(const char *arg) {
     }
     p7501_uart_framing_t next_framing = P7501_FRAMING_8N1;
     if (!p7501_parse_framing(tok, &next_framing) || !p7501_pio_set_framing(next_framing)) {
+        p7501_cli_set_result("ERR", "EINVAL");
         printf("[FRAMING] ERROR: Unsupported framing '%s' (expected 8N1, 8E1, or 8O1).\n", tok);
         return;
     }
@@ -84,12 +87,13 @@ void p7501_cmd_baudscan(const char *arg) {
     }
 
     if (spec.wait_for_wake) {
-        float wake_v = 0.0f;
+        uint32_t wake_mv = 0u;
         uint32_t wake_ms = 0u;
         const bool prestrap = spec.no_xreset && (spec.boot_action == P7501_BOOT_ACTION_JIG);
-        if (!p7501_pio_wait_standby_wake("BAUDSCAN", spec.wake_timeout_ms, prestrap, &wake_v, &wake_ms)) {
-            printf("[BAUDSCAN] Notice: Standby wake not observed within %" PRIu32 " ms (VDD=%.2fV).\n",
-                   wake_ms, (double)wake_v);
+        if (!p7501_pio_wait_standby_wake("BAUDSCAN", spec.wake_timeout_ms, prestrap, &wake_mv, &wake_ms)) {
+            char v_buf[8];
+            printf("[BAUDSCAN] Notice: Standby wake not observed within %" PRIu32 " ms (VDD=%sV).\n",
+                   wake_ms, p7501_fmt_mv_volts(wake_mv, v_buf));
             printf("BAUDSCAN: OK (no_signal)\n");
             return;
         }
@@ -141,6 +145,9 @@ void p7501_cmd_baudscan(const char *arg) {
     p7501_wdt_set_stage(P7501_WDT_STAGE_CLEANUP);
     p7501_pio_end_session();
     p7501_led_set_auto_mode(LED_MODE_HEARTBEAT_IDLE);
+    if (aborted) {
+        p7501_cli_set_result("ERR", "EABORT");
+    }
 
     if (edges == 0u || (hist.low_pulses + hist.high_pulses) == 0u) {
         printf("[BAUDSCAN] No valid UART pulses observed on GP2 (edges=%" PRIu32 " glitches=%" PRIu32 ").\n",

@@ -11,6 +11,8 @@
 #include "diag/p7501_diag_boottrace.h"
 #include "diag/p7501_diag_pwrtrace.h"
 
+#include "cli/p7501_cli.h"
+#include "common/p7501_cmd_arena.h"
 #include "hal/p7501_led.h"
 #include "p7501_types.h"
 #include "uart/p7501_pio_loop.h"
@@ -23,6 +25,7 @@
 
 #include <inttypes.h>
 #include <stdio.h>
+#include <string.h>
 
 #define BOOTTRACE_MAX_CTRL_EVENTS 64u
 
@@ -129,19 +132,20 @@ void p7501_cmd_boottrace(const char *arg) {
     }
 
     if (spec.wait_for_wake) {
-        float wake_v = 0.0f;
+        uint32_t wake_mv = 0u;
         uint32_t wake_ms = 0u;
+        char s_wake[8];
         const bool prestrap = spec.no_xreset && (spec.boot_action == P7501_BOOT_ACTION_JIG);
-        if (!p7501_pio_wait_standby_wake("BOOTTRACE", spec.wake_timeout_ms, prestrap, &wake_v, &wake_ms)) {
-            printf("[BOOTTRACE] Notice: Standby wake not observed within %" PRIu32 " ms (VDD=%.2fV)\n",
-                   wake_ms, (double)wake_v);
+        if (!p7501_pio_wait_standby_wake("BOOTTRACE", spec.wake_timeout_ms, prestrap, &wake_mv, &wake_ms)) {
+            printf("[BOOTTRACE] Notice: Standby wake not observed within %" PRIu32 " ms (VDD=%sV)\n",
+                   wake_ms, p7501_fmt_mv_volts(wake_mv, s_wake));
             printf("[BOOTTRACE] UART: bytes=0 first_byte=0us ferr=0 perr=0 ovf=NO | SW_rel=NO\n");
             printf("[BOOTTRACE] CtrlEdges: nsw5v_edges=0 rxd_edges=0 txd_edges=0 wake_timeout=YES\n");
             printf("BOOTTRACE: OK\n");
             return;
         }
-        printf("[BOOTTRACE +%" PRIu32 "ms] WAKE edge detected (NSW5V=%u, VDD=%.2fV) -> starting capture\n",
-               wake_ms, gpio_get(P7501_PIN_NSW5V) ? 1u : 0u, (double)wake_v);
+        printf("[BOOTTRACE +%" PRIu32 "ms] WAKE edge detected (NSW5V=%u, VDD=%sV) -> starting capture\n",
+               wake_ms, gpio_get(P7501_PIN_NSW5V) ? 1u : 0u, p7501_fmt_mv_volts(wake_mv, s_wake));
     }
 
     printf("=== BOOTTRACE: window=%" PRIu32 "ms boot=%d hold=%" PRIu32 "ms sticky=%s no_xrst=%s (%s @ %" PRIu32 ") ===\n",
@@ -150,23 +154,15 @@ void p7501_cmd_boottrace(const char *arg) {
            p7501_framing_name(p7501_pio_get_framing()), p7501_pio_get_baud());
     fflush(stdout);
 
-    boottrace_ctx_t ctx = {
-        .ev_count = 0u,
-        .prev_ctrl3 = read_ctrl3(),
-        .nsw_edges = 0u,
-        .txd_edges = 0u,
-        .xrst_edges = 0u,
-        .first_byte_us = 0u,
-        .first_byte_seen = false,
-        .sw_rel_seen = false,
-        .sw_rel_us = 0u,
-        .sw_rel_reason = "NONE",
-        .next_adc_t = make_timeout_time_ms(10u),
-        .line_len = 0u,
-        .line_start_ms = 0u,
-    };
-    p7501_diag_adc0_trace_init(&ctx.adc_trace);
-    p7501_diag_adc0_trace_sample(&ctx.adc_trace);
+    _Static_assert(sizeof(boottrace_ctx_t) <= sizeof(g_p7501_cmd_arena.raw),
+                   "boottrace_ctx_t must fit inside shared command arena");
+    boottrace_ctx_t *const ctx = (boottrace_ctx_t *)(void *)g_p7501_cmd_arena.raw;
+    memset(ctx, 0, sizeof(*ctx));
+    ctx->prev_ctrl3 = read_ctrl3();
+    ctx->sw_rel_reason = "NONE";
+    ctx->next_adc_t = make_timeout_time_ms(10u);
+    p7501_diag_adc0_trace_init(&ctx->adc_trace);
+    p7501_diag_adc0_trace_sample(&ctx->adc_trace);
 
     const p7501_pio_loop_cfg_t cfg = {
         .window_ms = spec.window_ms,
@@ -179,34 +175,38 @@ void p7501_cmd_boottrace(const char *arg) {
         .on_rx_byte = boottrace_on_byte,
         .on_tick = boottrace_on_tick,
         .on_sw_rel = boottrace_on_sw_rel,
-        .ctx = &ctx,
+        .ctx = ctx,
     };
     p7501_pio_loop_metrics_t m;
     p7501_pio_run_session(&cfg, &m);
 
-    flush_uart_line(ctx.line, &ctx.line_len, ctx.line_start_ms);
-    p7501_diag_adc0_trace_finalize(&ctx.adc_trace);
+    flush_uart_line(ctx->line, &ctx->line_len, ctx->line_start_ms);
+    p7501_diag_adc0_trace_finalize(&ctx->adc_trace);
 
     printf("[BOOTTRACE] UART: bytes=%" PRIu32 " first_byte=%" PRIu32 "us ferr=%" PRIu32
            " perr=%" PRIu32 " ovf=%s | SW_rel=%s",
-           m.rx_bytes, ctx.first_byte_us, m.framing_errors, m.parity_errors,
-           m.overflow ? "YES" : "NO", ctx.sw_rel_seen ? "YES@" : "NO");
-    if (ctx.sw_rel_seen) {
-        printf("%" PRIu32 "us(%s)", ctx.sw_rel_us, ctx.sw_rel_reason);
+           m.rx_bytes, ctx->first_byte_us, m.framing_errors, m.parity_errors,
+           m.overflow ? "YES" : "NO", ctx->sw_rel_seen ? "YES@" : "NO");
+    if (ctx->sw_rel_seen) {
+        printf("%" PRIu32 "us(%s)", ctx->sw_rel_us, ctx->sw_rel_reason);
     }
-    printf("\n[BOOTTRACE] ADC0_SWUART: min=%.2fV max=%.2fV (low=%" PRIu32 " hiz=%.2f..%.2fV n=%" PRIu32 ") | CtrlEdges: NSW5V=%" PRIu32
+    char adc_summary[96];
+    p7501_diag_adc0_trace_format(&ctx->adc_trace, adc_summary, sizeof(adc_summary));
+    printf("\n[BOOTTRACE] ADC0_SWUART: %s | CtrlEdges: NSW5V=%" PRIu32
            " TXD=%" PRIu32 " XRESET=%" PRIu32 " (logged=%u)\n",
-           (double)ctx.adc_trace.min_v, (double)ctx.adc_trace.max_v,
-           ctx.adc_trace.low_samples, (double)ctx.adc_trace.hiz_min_v, (double)ctx.adc_trace.hiz_max_v,
-           ctx.adc_trace.hiz_samples, ctx.nsw_edges, ctx.txd_edges, ctx.xrst_edges, (unsigned)ctx.ev_count);
+           adc_summary,
+           ctx->nsw_edges, ctx->txd_edges, ctx->xrst_edges, (unsigned)ctx->ev_count);
 
-    const size_t preview = (ctx.ev_count > 16u) ? 16u : ctx.ev_count;
+    const size_t preview = (ctx->ev_count > 16u) ? 16u : ctx->ev_count;
     for (size_t i = 0u; i < preview; ++i) {
         printf("  [CTRL +%7" PRIu32 "us] NSW5V=%u TXD=%u XRESET=%u\n",
-               ctx.events[i].us,
-               (ctx.events[i].state3 >> 0) & 1u,
-               (ctx.events[i].state3 >> 1) & 1u,
-               (ctx.events[i].state3 >> 2) & 1u);
+               ctx->events[i].us,
+               (ctx->events[i].state3 >> 0) & 1u,
+               (ctx->events[i].state3 >> 1) & 1u,
+               (ctx->events[i].state3 >> 2) & 1u);
     }
-    printf("BOOTTRACE: OK\n");
+    if (m.aborted) {
+        p7501_cli_set_result("ERR", "EABORT");
+    }
+    printf("BOOTTRACE: OK%s\n", m.aborted ? " (aborted=YES)" : "");
 }

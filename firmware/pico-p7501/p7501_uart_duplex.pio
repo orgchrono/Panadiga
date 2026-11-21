@@ -31,7 +31,8 @@ static inline void p7501_uart_rx_fast_init(
     uint sm,
     uint offset,
     uint pin_rx,
-    float clkdiv,
+    uint16_t div_int,
+    uint8_t div_frac,
     uint bit_loop_count
 ) {
     pio_sm_set_enabled(pio, sm, false);
@@ -45,7 +46,7 @@ static inline void p7501_uart_rx_fast_init(
     sm_config_set_jmp_pin(&c, pin_rx);
     sm_config_set_in_shift(&c, true, false, 32u);
     sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
-    sm_config_set_clkdiv(&c, clkdiv);
+    sm_config_set_clkdiv_int_frac(&c, div_int, div_frac);
 
     pio_sm_init(pio, sm, offset, &c);
     pio_sm_exec(pio, sm, pio_encode_set(pio_y, bit_loop_count & 0x1Fu));
@@ -72,7 +73,8 @@ static inline void p7501_uart_tx_fast_init(
     uint sm,
     uint offset,
     uint pin_tx,
-    float clkdiv,
+    uint16_t div_int,
+    uint8_t div_frac,
     uint bit_loop_count
 ) {
     pio_sm_set_enabled(pio, sm, false);
@@ -81,7 +83,7 @@ static inline void p7501_uart_tx_fast_init(
     sm_config_set_out_pins(&c, pin_tx, 1u);
     sm_config_set_sideset_pins(&c, pin_tx);
     sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_TX);
-    sm_config_set_clkdiv(&c, clkdiv);
+    sm_config_set_clkdiv_int_frac(&c, div_int, div_frac);
 
     pio_sm_init(pio, sm, offset, &c);
     pio_sm_exec(pio, sm, pio_encode_set(pio_y, bit_loop_count & 0x1Fu));

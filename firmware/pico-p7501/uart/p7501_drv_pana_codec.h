@@ -28,6 +28,7 @@ typedef struct p7501_drv_pana_spec {
     p7501_boot_action_t boot_action;
     uint32_t jig_hold_ms;
     bool send_pass;
+    bool diag_macro;
     char cmd[96];
 } p7501_drv_pana_spec_t;
 

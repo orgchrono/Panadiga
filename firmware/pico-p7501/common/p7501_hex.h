@@ -40,6 +40,38 @@ bool p7501_parse_u32_auto(const char *str, uint32_t *out_val);
 /** Parse leading hex token (`0x` optional, <= 32 bits) and return unconsumed tail via `out_rest`. */
 bool p7501_parse_hex_u32_prefix(const char *str, uint32_t *out_val, const char **out_rest);
 
+/** Parse null-terminated hex token (`0x` optional, <= `max_chars` & <= 8 hex digits). */
+bool p7501_parse_hex_u32_exact(const char *str, size_t max_chars, uint32_t *out_val);
+
+/** Scan leading hex token (`0x` optional, <= 8 hex digits) inside `buf[start..len]` and return consumed length. */
+size_t p7501_scan_hex_u32(const char *buf, size_t len, size_t start, uint32_t *out_val);
+
+/** Parse an exact non-null-terminated slice `start[0..len]` as hex u32 (`0x` optional). */
+bool p7501_parse_hex_u32_span(const char *start, size_t len, uint32_t *out_val);
+
+/** Parse hex digits until `delim` (e.g. `,`, `:`, `\0`) and return pointer right after `delim` (or NULL). */
+const char *p7501_parse_hex_delim(
+    const char *str,
+    uint32_t *out_val,
+    char delim,
+    const char **out_rest
+);
+
+/** Format a single byte for readable ASCII console logs (returns chars written excluding NUL). */
+size_t p7501_format_ascii_byte(
+    uint8_t b,
+    char left_delim,
+    char right_delim,
+    char *out_buf,
+    size_t cap
+);
+
+/** Print a single byte (`'\r'` suppressed, printable/newline raw, otherwise escaped with delimiters). */
+void p7501_print_ascii_byte(uint8_t b, char left_delim, char right_delim);
+
+/** Print a captured byte buffer as printable ASCII + `<HH>` control escapes. */
+void p7501_uart_print_ascii_stream(const uint8_t *buf, uint32_t len);
+
 /** Copy ASCII string up to `dst_cap - 1` chars converting lowercase letters to uppercase. */
 void p7501_ascii_upper_copy(char *dst, size_t dst_cap, const char *src);
 
@@ -60,6 +92,21 @@ uint8_t p7501_rsp_checksum(const uint8_t *data, size_t len);
 
 /** Compute standard 8-bit mod-256 RSP frame checksum over a null-terminated string. */
 uint8_t p7501_rsp_checksum_str(const char *str);
+
+/** Update running IEEE 802.3 CRC-32 (`seed_crc` starts at `0u` for a fresh stream). */
+uint32_t p7501_crc32_ieee_update(uint32_t seed_crc, const uint8_t *data, size_t len);
+
+/** Compute IEEE 802.3 CRC-32 (`0xEDB88320`) over `data[0..len]` cleanly without lookup tables. */
+uint32_t p7501_crc32_ieee(const uint8_t *data, size_t len);
+
+/** Encode 32-bit unsigned value as 4 little-endian bytes. */
+void p7501_write_u32_le(uint8_t out[4], uint32_t v);
+
+/** Decode 4 little-endian bytes into `uint32_t`. */
+uint32_t p7501_read_u32_le(const uint8_t in[4]);
+
+/** Format integer millivolts `mv` as ASCII `"V.cc"` (e.g. `3295` -> `"3.30"`), zero float linkage. */
+const char *p7501_fmt_mv_volts(uint32_t mv, char buf[8]);
 
 #ifdef __cplusplus
 }

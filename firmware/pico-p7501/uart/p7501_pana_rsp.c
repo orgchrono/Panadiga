@@ -6,10 +6,11 @@
  */
 
 #include "uart/p7501_pana_rsp.h"
+#include "cli/p7501_cli.h"
+#include "uart/p7501_pana_rsp_exec.h"
 #include "uart/p7501_pana_rsp_report.h"
-#include "uart/p7501_pana_dumpnor.h"
-#include "uart/p7501_pana_jedec.h"
 #include "uart/p7501_uart_pio_engine.h"
+#include "common/p7501_cmd_arena.h"
 #include "common/p7501_hex.h"
 #include "hal/p7501_hw.h"
 #include "hal/p7501_led.h"
@@ -21,121 +22,61 @@
 #include <stdio.h>
 #include <string.h>
 
-static size_t panarsp_tx_sequence(
-    panarsp_rx_cap_t *cap,
-    const char *const *payloads,
-    size_t count,
-    uint32_t per_step_ms
-) {
-    size_t first_off = cap->len;
-    for (size_t i = 0u; i < count; ++i) {
-        const size_t step_off = cap->len;
-        if (i == 0u) {
-            first_off = step_off;
-        }
-        (void)panarsp_tx_frame(payloads[i]);
-        panarsp_drain_for_ms(cap, per_step_ms, true, step_off);
-    }
-    return first_off;
-}
-
-static size_t panarsp_execute_dumpnor(
-    panarsp_rx_cap_t *cap,
-    const p7501_pana_rsp_spec_t *spec,
-    bool *out_hdr_seen,
-    bool *out_ftr_seen,
-    uint32_t *out_stream_bytes
-) {
-    uint8_t stub[P7501_DUMPNOR_STUB_SIZE];
-    const size_t stub_len = p7501_dumpnor_build_stub(
-        spec->addr, spec->value_u32, P7501_DUMPNOR_STUB_ADDR, stub, sizeof(stub)
-    );
-    if (stub_len == 0u) {
-        return cap->len;
-    }
-    printf("[PANARSP] Uploading %uB PANADMP1 stub -> 0x%08lX (range 0x%08lX+0x%08lX)...\n",
-           (unsigned)stub_len, (unsigned long)P7501_DUMPNOR_STUB_ADDR,
-           (unsigned long)spec->addr, (unsigned long)spec->value_u32);
-    return panarsp_stream_until_tokens(
-        cap, P7501_DUMPNOR_STUB_ADDR, stub, stub_len, spec->timeout_ms,
-        "PANADMP1", "PANADONE", NULL, out_hdr_seen, out_ftr_seen, NULL, out_stream_bytes
-    );
-}
-
-static size_t panarsp_execute_jedec(
-    panarsp_rx_cap_t *cap,
-    const p7501_pana_rsp_spec_t *spec,
-    bool *out_ok_seen,
-    bool *out_to_seen,
-    uint32_t *out_stream_bytes
-) {
-    uint8_t stub[P7501_JEDEC_MAX_STUB_SIZE];
-    const size_t stub_len = (spec->action == PANA_RSP_ACT_JEDEC_ERASE)
-        ? p7501_jedec_build_erase_stub(spec->addr, P7501_JEDEC_STUB_ADDR, stub, sizeof(stub))
-        : p7501_jedec_build_prog_stub(
-              spec->addr, spec->data_bytes, spec->data_len, P7501_JEDEC_STUB_ADDR, stub, sizeof(stub)
-          );
-    if (stub_len == 0u) {
-        return cap->len;
-    }
-    printf("[PANARSP] Uploading %uB JEDEC %s stub -> 0x%08lX (target 0x%08lX)...\n",
-           (unsigned)stub_len,
-           (spec->action == PANA_RSP_ACT_JEDEC_ERASE) ? "ERASE" : "PROG",
-           (unsigned long)P7501_JEDEC_STUB_ADDR, (unsigned long)spec->addr);
-    bool hdr_unused = false;
-    return panarsp_stream_until_tokens(
-        cap, P7501_JEDEC_STUB_ADDR, stub, stub_len, spec->timeout_ms,
-        NULL, P7501_JEDEC_OK_TOKEN, P7501_JEDEC_TO_TOKEN,
-        &hdr_unused, out_ok_seen, out_to_seen, out_stream_bytes
-    );
-}
+static p7501_pana_rsp_spec_t s_rsp_spec;
 
 void p7501_cmd_pana_rsp(const char *arg) {
-    static panarsp_rx_cap_t s_cap;
-    p7501_pana_rsp_spec_t spec;
+    panarsp_rx_cap_t *const cap = &g_p7501_cmd_arena.panarsp;
+    p7501_pana_rsp_spec_t *const sp = &s_rsp_spec;
 
-    if (!p7501_panarsp_parse_args(arg, &spec)) {
-        printf("PANARSP: ERROR (Usage: PANARSP [ms] [NORMAL|JIG[:ms]|NOPULL] [MAGIC] [NONAK] [NORUNLOCK:CONFIRM_UPPER_NOR|NORLOCK] [WAIT:<trig>] [PROBESEQ|G|REGS|Z0|Z1|MEM:<addr>,<len>|XMEM:<addr>,<len>|WMEM:<addr>,<hex>|WRITE32:<addr>,<u32>|JEDEC_ERASE:<addr>|JEDEC_PROG:<addr>,<hex>|PASSTHROUGH|CALL:<addr>|DUMPNOR [start] [len]|NAK|RAW:<txt>|HEX:<hex>])\n");
+    if (!p7501_panarsp_parse_args(arg, sp)) {
+        if (sp->rejected_e05) {
+            p7501_cli_set_result("ERR", "E05");
+            printf("PANARSP: ERROR E05 (Write/erase blocked: SA0..SA10 is permanent read-only; Upper NOR requires NORUNLOCK:CONFIRM_UPPER_NOR)\n");
+        } else {
+            p7501_cli_set_result("ERR", "EINVAL");
+            printf("PANARSP: ERROR (Usage: PANARSP [ms] [NORMAL|JIG[:ms]|NOPULL] [MAGIC] [NONAK] [NORUNLOCK:CONFIRM_UPPER_NOR|NORLOCK] [WAIT:<trig>] [PROBESEQ|G|REGS|Z0|Z1|MEM:<addr>,<len>|XMEM:<addr>,<len>|WMEM:<addr>,<hex>|WRITE32:<addr>,<u32>|JEDEC_ERASE:<addr>|JEDEC_PROG:<addr>,<hex>|PASSTHROUGH|CALL:<addr>|DUMPNOR [start] [len]|NAK|RAW:<txt>|HEX:<hex>])\n");
+        }
         return;
     }
-    if (spec.action == PANA_RSP_ACT_NOR_POLICY) {
-        printf("PANARSP: OK (upper_nor=%s, sa0_sa3=PERMANENT_E05)\n",
-               spec.nor_unlocked_effective ? "UNLOCKED" : "LOCKED");
+    p7501_panarsp_apply_policy(sp);
+    if (sp->action == PANA_RSP_ACT_NOR_POLICY) {
+        printf("PANARSP: OK (upper_nor=%s, sa0_sa10=PERMANENT_E05)\n",
+               sp->nor_unlocked_effective ? "UNLOCKED" : "LOCKED");
         return;
     }
 
-    memset(&s_cap, 0, sizeof(s_cap));
+    memset(cap, 0, sizeof(*cap));
     p7501_wdt_set_stage(P7501_WDT_STAGE_RESET_SYNC);
     p7501_hw_enforce_nsw5v_hiz();
     p7501_led_set_auto_mode(LED_MODE_BUS_ACTIVE);
     printf("=== PANARSP PIO1 (baud=%" PRIu32 " ms=%" PRIu32 " boot=%d hold=%" PRIu32 " action=%d) ===\n",
            p7501_pio_get_baud(),
-           spec.timeout_ms,
-           (int)spec.boot_action,
-           spec.jig_hold_ms,
-           (int)spec.action);
+           sp->timeout_ms,
+           (int)sp->boot_action,
+           sp->jig_hold_ms,
+           (int)sp->action);
 
-    p7501_pio_begin_rx_session_ex(spec.boot_action, spec.jig_hold_ms);
+    p7501_pio_begin_rx_session_ex(sp->boot_action, sp->jig_hold_ms);
 
-    bool triggered = !spec.wait_trigger_enabled;
-    if (spec.wait_trigger_enabled) {
+    bool triggered = !sp->wait_trigger_enabled;
+    if (sp->wait_trigger_enabled) {
         uint8_t ring[P7501_RSP_MAX_TRIG + 1u];
         uint8_t jig_ring[24];
         size_t ring_len = 0u;
         size_t jig_ring_len = 0u;
         const uint64_t wait_t0 = time_us_64();
-        const uint64_t wait_deadline = wait_t0 + ((uint64_t)spec.timeout_ms * 1000ULL);
+        const uint64_t wait_deadline = wait_t0 + ((uint64_t)sp->timeout_ms * 1000ULL);
         while (!triggered && p7501_wdt_loop_step(wait_t0, wait_deadline, true, NULL)) {
             p7501_pio_poll_sw_uart_release();
             uint8_t b = 0u;
             while (p7501_pio_pop_rx_byte(&b)) {
-                panarsp_push_rx(&s_cap, b, true);
-                if (spec.boot_action == P7501_BOOT_ACTION_JIG) {
+                panarsp_push_rx(cap, b, true);
+                if (sp->boot_action == P7501_BOOT_ACTION_JIG) {
                     (void)p7501_pio_poll_jig_serial_release(
                         jig_ring, &jig_ring_len, sizeof(jig_ring), b
                     );
                 }
-                if (p7501_rolling_match_push(ring, &ring_len, sizeof(ring), b, spec.trigger)) {
+                if (p7501_rolling_match_push(ring, &ring_len, sizeof(ring), b, sp->trigger)) {
                     triggered = true;
                     break;
                 }
@@ -143,40 +84,48 @@ void p7501_cmd_pana_rsp(const char *arg) {
             tight_loop_contents();
         }
         if (triggered) {
-            panarsp_compact_pretrig(&s_cap, PANARSP_PRETRIG_KEEP);
+            panarsp_compact_pretrig(cap, PANARSP_PRETRIG_KEEP);
         }
     }
 
-    const size_t post_tx_off = s_cap.len;
+    const size_t post_tx_off = cap->len;
     size_t primary_off = post_tx_off;
     bool dump_hdr = false;
     bool dump_ftr = false;
     uint32_t dump_bytes = 0u;
+    const char *jedec_err_code = NULL;
     if (triggered) {
         p7501_wdt_set_stage(P7501_WDT_STAGE_TX_WAIT);
-        const bool need_handshake = spec.send_magic_prefix ||
-                                    (spec.action == PANA_RSP_ACT_MAGIC) ||
-                                    (spec.action == PANA_RSP_ACT_PASSTHROUGH) ||
-                                    (spec.action == PANA_RSP_ACT_CALL) ||
-                                    (spec.action == PANA_RSP_ACT_DUMPNOR) ||
-                                    (spec.action == PANA_RSP_ACT_JEDEC_ERASE) ||
-                                    (spec.action == PANA_RSP_ACT_JEDEC_PROG);
+        const bool need_handshake = sp->send_magic_prefix ||
+                                    (sp->action == PANA_RSP_ACT_MAGIC) ||
+                                    (sp->action == PANA_RSP_ACT_PASSTHROUGH) ||
+                                    (sp->action == PANA_RSP_ACT_CALL) ||
+                                    (sp->action == PANA_RSP_ACT_DUMPNOR) ||
+                                    (sp->action == PANA_RSP_ACT_FAST_DUMPNOR) ||
+                                    (sp->action == PANA_RSP_ACT_DUMPNOR_RESUME) ||
+                                    (sp->action == PANA_RSP_ACT_JEDEC_ERASE) ||
+                                    (sp->action == PANA_RSP_ACT_JEDEC_PROG) ||
+                                    (sp->action == PANA_RSP_ACT_BGO_BITCLEAR) ||
+                                    (sp->action == PANA_RSP_ACT_JEDEC_ID) ||
+                                    (sp->action == PANA_RSP_ACT_CFI_QUERY) ||
+                                    (sp->action == PANA_RSP_ACT_CRC32_NOR) ||
+                                    (sp->action == PANA_RSP_ACT_BLANK_CHECK);
         if (need_handshake) {
-            const size_t step_off = s_cap.len;
+            const size_t step_off = cap->len;
             p7501_pio_tx_bytes(k_p7501_rsp_handshake, P7501_RSP_HANDSHAKE_LEN, false);
-            panarsp_drain_for_ms(&s_cap, 30u, false, step_off);
+            panarsp_drain_for_ms(cap, 30u, false, step_off);
         }
-        if (spec.send_nak_prefix && spec.action != PANA_RSP_ACT_MAGIC) {
+        if (sp->send_nak_prefix && sp->action != PANA_RSP_ACT_MAGIC) {
             static const uint8_t k_nak = P7501_RSP_NAK_BYTE;
-            const size_t step_off = s_cap.len;
+            const size_t step_off = cap->len;
             p7501_pio_tx_bytes(&k_nak, 1u, false);
-            panarsp_drain_for_ms(&s_cap, (spec.action == PANA_RSP_ACT_NAK) ? 350u : 80u, true, step_off);
+            panarsp_drain_for_ms(cap, (sp->action == PANA_RSP_ACT_NAK) ? 350u : 80u, true, step_off);
         }
-        primary_off = s_cap.len;
-        switch (spec.action) {
+        primary_off = cap->len;
+        switch (sp->action) {
             case PANA_RSP_ACT_SEQ: {
                 static const char *const k_probe_seq[] = { "g", "Z0" };
-                primary_off = panarsp_tx_sequence(&s_cap, k_probe_seq, 2u, 250u);
+                primary_off = panarsp_tx_sequence(cap, k_probe_seq, 2u, 250u);
                 break;
             }
             case PANA_RSP_ACT_PASSTHROUGH: {
@@ -185,7 +134,7 @@ void p7501_cmd_pana_rsp(const char *arg) {
                 printf("[PANARSP] Applying %u MAIN AV TBC E-E passthrough sites via $M...\n",
                        (unsigned)P7501_TBC_PASSTHROUGH_SEQ_LEN);
                 primary_off = panarsp_tx_sequence(
-                    &s_cap,
+                    cap,
                     k_pass_seq,
                     P7501_TBC_PASSTHROUGH_SEQ_LEN,
                     250u
@@ -193,22 +142,33 @@ void p7501_cmd_pana_rsp(const char *arg) {
                 break;
             }
             case PANA_RSP_ACT_CALL: {
-                const char *call_seq[2] = { spec.payload, "g" };
+                const char *call_seq[2] = { sp->payload, "g" };
                 printf("[PANARSP] Updating serial callback 0x%08X -> 0x%08X and triggering $g...\n",
                        (unsigned)P7501_AM34_SERIAL_CB_PTR_ADDR,
-                       (unsigned)spec.addr);
-                primary_off = panarsp_tx_sequence(&s_cap, call_seq, 2u, 250u);
+                       (unsigned)sp->addr);
+                primary_off = panarsp_tx_sequence(cap, call_seq, 2u, 250u);
                 break;
             }
             case PANA_RSP_ACT_DUMPNOR:
+            case PANA_RSP_ACT_FAST_DUMPNOR:
+            case PANA_RSP_ACT_DUMPNOR_RESUME:
                 primary_off = panarsp_execute_dumpnor(
-                    &s_cap, &spec, &dump_hdr, &dump_ftr, &dump_bytes
+                    cap, sp, &dump_hdr, &dump_ftr, &dump_bytes
                 );
                 break;
             case PANA_RSP_ACT_JEDEC_ERASE:
             case PANA_RSP_ACT_JEDEC_PROG:
+            case PANA_RSP_ACT_BGO_BITCLEAR:
                 primary_off = panarsp_execute_jedec(
-                    &s_cap, &spec, &dump_ftr, &dump_hdr, &dump_bytes
+                    cap, sp, &dump_ftr, &dump_hdr, &dump_bytes, &jedec_err_code
+                );
+                break;
+            case PANA_RSP_ACT_JEDEC_ID:
+            case PANA_RSP_ACT_CFI_QUERY:
+            case PANA_RSP_ACT_CRC32_NOR:
+            case PANA_RSP_ACT_BLANK_CHECK:
+                primary_off = panarsp_execute_jedec_id_or_sum(
+                    cap, sp, &dump_ftr, &dump_bytes
                 );
                 break;
             case PANA_RSP_ACT_G:
@@ -220,12 +180,12 @@ void p7501_cmd_pana_rsp(const char *arg) {
             case PANA_RSP_ACT_WMEM:
             case PANA_RSP_ACT_WRITE32:
             case PANA_RSP_ACT_RAW:
-                (void)panarsp_tx_frame(spec.payload);
-                panarsp_drain_for_ms(&s_cap, (spec.timeout_ms < 700u) ? spec.timeout_ms : 700u, true, primary_off);
+                (void)panarsp_tx_frame(sp->payload);
+                panarsp_drain_for_ms(cap, (sp->timeout_ms < 700u) ? sp->timeout_ms : 700u, true, primary_off);
                 break;
             case PANA_RSP_ACT_HEX:
-                p7501_pio_tx_bytes(spec.raw_bytes, spec.raw_len, false);
-                panarsp_drain_for_ms(&s_cap, 500u, true, primary_off);
+                p7501_pio_tx_bytes(sp->raw_bytes, sp->raw_len, false);
+                panarsp_drain_for_ms(cap, 500u, true, primary_off);
                 break;
             case PANA_RSP_ACT_NAK:
             case PANA_RSP_ACT_MAGIC:
@@ -238,7 +198,18 @@ void p7501_cmd_pana_rsp(const char *arg) {
     const bool fifo_ovf = p7501_pio_had_rx_overflow();
     p7501_pio_end_session();
     p7501_led_set_auto_mode(LED_MODE_HEARTBEAT_IDLE);
-    if (spec.action == PANA_RSP_ACT_DUMPNOR) {
+    const bool relocked_nor = p7501_panarsp_finish_action(sp);
+    if (!triggered) {
+        p7501_cli_set_result("ERR", "ETIMEOUT");
+    }
+    if (sp->action == PANA_RSP_ACT_DUMPNOR ||
+        sp->action == PANA_RSP_ACT_FAST_DUMPNOR ||
+        sp->action == PANA_RSP_ACT_DUMPNOR_RESUME) {
+        const bool ebaud = (sp->action == PANA_RSP_ACT_FAST_DUMPNOR) &&
+                           (sp->baud != 0u) && (sp->baud != P7501_SSOT_DEFAULT_BAUD);
+        if (triggered && !dump_ftr && !ebaud) {
+            p7501_cli_set_result("ERR", "EIO");
+        }
         printf("\nPANARSP: %s (dump_rx=%" PRIu32 " bytes, hdr=%s, ftr=%s, fifo_ovf=%s)\n",
                (triggered && dump_ftr) ? "OK" : "PARTIAL",
                dump_bytes,
@@ -247,14 +218,34 @@ void p7501_cmd_pana_rsp(const char *arg) {
                fifo_ovf ? "YES" : "NO");
         return;
     }
-    if (spec.action == PANA_RSP_ACT_JEDEC_ERASE || spec.action == PANA_RSP_ACT_JEDEC_PROG) {
-        printf("\nPANARSP: %s (jedec_rx=%" PRIu32 " bytes, ok=%s, timeout=%s, fifo_ovf=%s)\n",
+    if (sp->action == PANA_RSP_ACT_JEDEC_ID || sp->action == PANA_RSP_ACT_CFI_QUERY ||
+        sp->action == PANA_RSP_ACT_CRC32_NOR || sp->action == PANA_RSP_ACT_BLANK_CHECK) {
+        if (triggered && !dump_ftr) {
+            p7501_cli_set_result("ERR", "EIO");
+        }
+        printf("\nPANARSP: %s (rx=%" PRIu32 " bytes, done=%s, fifo_ovf=%s)\n",
+               (triggered && dump_ftr) ? "OK" : "PARTIAL",
+               dump_bytes,
+               dump_ftr ? "YES" : "NO",
+               fifo_ovf ? "YES" : "NO");
+        return;
+    }
+    if (sp->action == PANA_RSP_ACT_JEDEC_ERASE || sp->action == PANA_RSP_ACT_JEDEC_PROG ||
+        sp->action == PANA_RSP_ACT_BGO_BITCLEAR) {
+        if (triggered && !dump_ftr) {
+            p7501_cli_set_result("ERR", (jedec_err_code != NULL) ? jedec_err_code : "EJEDEC");
+        }
+        printf("\nPANARSP: %s (jedec_rx=%" PRIu32 " bytes, ok=%s, timeout=%s, relock=%s, fifo_ovf=%s)\n",
                (triggered && dump_ftr) ? "OK" : "PARTIAL",
                dump_bytes,
                dump_ftr ? "YES" : "NO",
                dump_hdr ? "YES" : "NO",
+               relocked_nor ? "YES" : "NO",
                fifo_ovf ? "YES" : "NO");
         return;
     }
-    panarsp_print_report(&spec, &s_cap, post_tx_off, primary_off, triggered, fifo_ovf);
+    panarsp_print_report(sp, cap, post_tx_off, primary_off, triggered, fifo_ovf);
+    if (relocked_nor) {
+        printf("[PANARSP] One-shot Upper NOR auto-relocked (NORLOCK).\n");
+    }
 }

@@ -75,29 +75,7 @@ uint8_t gdb_compute_checksum(const char *payload) {
 }
 
 const char *gdb_parse_hex_u32(const char *str, uint32_t *out_val, char delim) {
-    uint32_t val = 0U;
-    size_t digits = 0U;
-    if ((str == NULL) || (out_val == NULL)) {
-        return NULL;
-    }
-
-    while ((*str != '\0') && (*str != delim)) {
-        const int nibble = gdb_hex_char_to_nibble(*str);
-        if (nibble < 0) {
-            return NULL;
-        }
-        val = (val << 4) | (uint32_t)nibble;
-        str++;
-        digits++;
-    }
-    if ((digits == 0U) || (*str != delim)) {
-        return NULL;
-    }
-    *out_val = val;
-    if ((*str == delim) && (delim != '\0')) {
-        str++;
-    }
-    return str;
+    return p7501_parse_hex_delim(str, out_val, delim, NULL);
 }
 
 const char *gdb_parse_addr_and_len(
@@ -117,14 +95,20 @@ const char *gdb_parse_addr_and_len(
     return p;
 }
 
+bool gdb_rsp_is_default_ctx(const gdb_rsp_ctx_t *ctx) {
+    return ctx == &s_default_gdb_ctx;
+}
+
 void gdb_rsp_ctx_init(gdb_rsp_ctx_t *ctx) {
     if (ctx == NULL) {
         return;
     }
     memset(ctx, 0, sizeof(*ctx));
     ctx->parser_state = GDB_STATE_IDLE;
-    ctx->flash_size_bytes = 0x00800000UL;
-    if (ctx == &s_default_gdb_ctx) p7501_flash_set_upper_nor_unlocked(false);
+    ctx->flash_size_bytes = P7501_FLASH_SIZE_8MB;
+    if (ctx == &s_default_gdb_ctx) {
+        p7501_session_ctx_reset(p7501_session_default_ctx());
+    }
     gdb_cpu_init_registers(&ctx->regs);
     gdb_rsp_ctx_invalidate_cache(ctx);
 }
@@ -133,12 +117,18 @@ void gdb_rsp_ctx_set_upper_nor_unlocked(gdb_rsp_ctx_t *ctx, bool unlocked) {
     if (ctx == NULL) {
         return;
     }
+    if (ctx == &s_default_gdb_ctx) {
+        p7501_flash_set_upper_nor_unlocked(unlocked);
+        ctx->upper_nor_unlocked = p7501_flash_is_upper_nor_unlocked();
+        return;
+    }
     ctx->upper_nor_unlocked = unlocked;
-    if (ctx == &s_default_gdb_ctx) p7501_flash_set_upper_nor_unlocked(unlocked);
 }
 
 bool gdb_rsp_ctx_is_upper_nor_unlocked(const gdb_rsp_ctx_t *ctx) {
-    if (ctx == &s_default_gdb_ctx) return p7501_flash_is_upper_nor_unlocked();
+    if (ctx == &s_default_gdb_ctx) {
+        return p7501_flash_is_upper_nor_unlocked();
+    }
     return (ctx != NULL) && ctx->upper_nor_unlocked;
 }
 
@@ -285,7 +275,10 @@ void gdb_rsp_send_packet(const char *payload) { gdb_rsp_ctx_send_packet(&s_defau
 void gdb_rsp_invalidate_cache(void) { gdb_rsp_ctx_invalidate_cache(&s_default_gdb_ctx); }
 const char *gdb_rsp_get_status_info(void) { return GDB_TARGET_CHIP_LABEL; }
 bool gdb_rsp_set_flash_size(uint32_t flash_size_bytes) {
-    return gdb_rsp_ctx_set_flash_size(&s_default_gdb_ctx, flash_size_bytes);
+    if (!gdb_rsp_ctx_set_flash_size(&s_default_gdb_ctx, flash_size_bytes)) {
+        return false;
+    }
+    return p7501_flash_set_active_size(flash_size_bytes);
 }
 uint32_t gdb_rsp_get_flash_size(void) { return gdb_rsp_ctx_get_flash_size(&s_default_gdb_ctx); }
 void gdb_rsp_set_upper_nor_unlocked(bool unlocked) {

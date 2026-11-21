@@ -9,6 +9,8 @@
 
 #include "diag/p7501_diag_pwrtrace.h"
 
+#include "cli/p7501_cli.h"
+#include "common/p7501_hex.h"
 #include "hal/p7501_hw.h"
 #include "hal/p7501_led.h"
 #include "hal/p7501_watchdog.h"
@@ -17,7 +19,6 @@
 #include "uart/p7501_uart_codec.h"
 #include "uart/p7501_uart_pio_engine.h"
 
-#include "hardware/adc.h"
 #include "hardware/gpio.h"
 #include "pico/stdlib.h"
 #include "pico/time.h"
@@ -39,24 +40,23 @@ typedef struct pwrtrace_ctx {
     absolute_time_t next_adc_t;
 } pwrtrace_ctx_t;
 
-static float read_sw_uart_voltage(bool *is_driven_out) {
+static uint32_t read_sw_uart_mv(bool *is_driven_out) {
     const bool driven = gpio_is_dir_out(P7501_PIN_SW_UART_ADC);
     if (is_driven_out != NULL) {
         *is_driven_out = driven;
     }
     if (driven) {
-        return gpio_get(P7501_PIN_SW_UART_ADC) ? P7501_ADC_VREF : 0.00f;
+        return gpio_get(P7501_PIN_SW_UART_ADC) ? P7501_SSOT_VDD_NOMINAL_MV : 0u;
     }
-    adc_select_input(P7501_ADC_CH_VDD);
-    return ((float)adc_read()) * (P7501_ADC_VREF / P7501_ADC_RESOLUTION);
+    return p7501_hw_sample_sw_uart_mv(false, false);
 }
 
-static void update_minmax_pair(float *min_v, float *max_v, float v) {
-    if (min_v != NULL && v < *min_v) {
-        *min_v = v;
+static void update_minmax_pair_mv(uint32_t *min_mv, uint32_t *max_mv, uint32_t mv) {
+    if (min_mv != NULL && mv < *min_mv) {
+        *min_mv = mv;
     }
-    if (max_v != NULL && v > *max_v) {
-        *max_v = v;
+    if (max_mv != NULL && mv > *max_mv) {
+        *max_mv = mv;
     }
 }
 
@@ -64,10 +64,10 @@ void p7501_diag_adc0_trace_init(p7501_adc0_trace_t *trace) {
     if (trace == NULL) {
         return;
     }
-    trace->min_v = 9.99f;
-    trace->max_v = 0.00f;
-    trace->hiz_min_v = 9.99f;
-    trace->hiz_max_v = 0.00f;
+    trace->min_mv = 9999u;
+    trace->max_mv = 0u;
+    trace->hiz_min_mv = 9999u;
+    trace->hiz_max_mv = 0u;
     trace->low_samples = 0u;
     trace->hiz_samples = 0u;
 }
@@ -77,12 +77,12 @@ void p7501_diag_adc0_trace_sample(p7501_adc0_trace_t *trace) {
         return;
     }
     bool driven = false;
-    const float v = read_sw_uart_voltage(&driven);
-    update_minmax_pair(&trace->min_v, &trace->max_v, v);
+    const uint32_t mv = read_sw_uart_mv(&driven);
+    update_minmax_pair_mv(&trace->min_mv, &trace->max_mv, mv);
     if (driven) {
         ++trace->low_samples;
     } else {
-        update_minmax_pair(&trace->hiz_min_v, &trace->hiz_max_v, v);
+        update_minmax_pair_mv(&trace->hiz_min_mv, &trace->hiz_max_mv, mv);
         ++trace->hiz_samples;
     }
 }
@@ -91,17 +91,35 @@ void p7501_diag_adc0_trace_finalize(p7501_adc0_trace_t *trace) {
     if (trace == NULL) {
         return;
     }
-    if (trace->min_v > trace->max_v) {
-        trace->min_v = 0.00f;
+    if (trace->min_mv > trace->max_mv) {
+        trace->min_mv = 0u;
     }
-    if (trace->hiz_min_v > trace->hiz_max_v) {
-        trace->hiz_min_v = 0.00f;
+    if (trace->hiz_min_mv > trace->hiz_max_mv) {
+        trace->hiz_min_mv = 0u;
     }
 }
 
-void p7501_diag_sample_adc0_minmax(float *min_v, float *max_v) {
-    const float v = read_sw_uart_voltage(NULL);
-    update_minmax_pair(min_v, max_v, v);
+void p7501_diag_adc0_trace_format(const p7501_adc0_trace_t *trace, char *out_buf, size_t cap) {
+    if ((trace == NULL) || (out_buf == NULL) || (cap == 0u)) {
+        return;
+    }
+    char s_min[8], s_max[8], s_hmin[8], s_hmax[8];
+    (void)snprintf(
+        out_buf,
+        cap,
+        "min=%sV max=%sV (low=%" PRIu32 " hiz=%s..%sV n=%" PRIu32 ")",
+        p7501_fmt_mv_volts(trace->min_mv, s_min),
+        p7501_fmt_mv_volts(trace->max_mv, s_max),
+        trace->low_samples,
+        p7501_fmt_mv_volts(trace->hiz_min_mv, s_hmin),
+        p7501_fmt_mv_volts(trace->hiz_max_mv, s_hmax),
+        trace->hiz_samples
+    );
+}
+
+void p7501_diag_sample_adc0_minmax(uint32_t *min_mv, uint32_t *max_mv) {
+    const uint32_t mv = read_sw_uart_mv(NULL);
+    update_minmax_pair_mv(min_mv, max_mv, mv);
 }
 
 static void pwrtrace_on_sw_rel(void *raw_ctx, uint32_t rel_us, const char *reason) {
@@ -176,21 +194,26 @@ void p7501_cmd_pwrtrace(const char *arg) {
         .on_sw_rel = pwrtrace_on_sw_rel,
         .ctx = &ctx,
     };
-    p7501_pio_run_session(&cfg, NULL);
+    p7501_pio_loop_metrics_t m;
+    p7501_pio_run_session(&cfg, &m);
 
     p7501_wdt_set_stage(P7501_WDT_STAGE_CLEANUP);
     p7501_pio_end_session();
     p7501_led_set_auto_mode(LED_MODE_HEARTBEAT_IDLE);
 
     p7501_diag_adc0_trace_finalize(&ctx.adc_trace);
-    printf("[PWRTRACE] GP26_SWUART: min=%.2fV max=%.2fV (low=%" PRIu32 " hiz=%.2f..%.2fV n=%" PRIu32 ") | sw_rel=%s",
-           (double)ctx.adc_trace.min_v, (double)ctx.adc_trace.max_v,
-           ctx.adc_trace.low_samples, (double)ctx.adc_trace.hiz_min_v, (double)ctx.adc_trace.hiz_max_v,
-           ctx.adc_trace.hiz_samples, ctx.sw_rel_seen ? "YES@" : "NO");
+    char adc_summary[96];
+    p7501_diag_adc0_trace_format(&ctx.adc_trace, adc_summary, sizeof(adc_summary));
+    printf("[PWRTRACE] GP26_SWUART: %s | sw_rel=%s",
+           adc_summary,
+           ctx.sw_rel_seen ? "YES@" : "NO");
     if (ctx.sw_rel_seen) {
         printf("%" PRIu32 "ms(%s)", ctx.sw_rel_ms, ctx.sw_rel_reason);
     }
     printf(" | Edges: RXD=%" PRIu32 " NSW5V=%" PRIu32 " TXD=%" PRIu32 " (final NSW5V=%d)\n",
            ctx.rxd_edges, ctx.nsw5v_edges, ctx.txd_edges, gpio_get(P7501_PIN_NSW5V) ? 1 : 0);
-    printf("PWRTRACE: OK\n");
+    if (m.aborted) {
+        p7501_cli_set_result("ERR", "EABORT");
+    }
+    printf("PWRTRACE: OK%s\n", m.aborted ? " (aborted=YES)" : "");
 }

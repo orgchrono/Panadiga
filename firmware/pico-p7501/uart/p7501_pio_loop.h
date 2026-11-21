@@ -55,7 +55,7 @@ bool p7501_pio_wait_standby_wake(
     const char *tag,
     uint32_t wait_ms,
     bool prestrap_sw_uart_low,
-    float *out_vdd,
+    uint32_t *out_vdd_mv,
     uint32_t *out_elapsed_ms
 );
 

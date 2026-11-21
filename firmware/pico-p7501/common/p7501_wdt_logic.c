@@ -6,8 +6,10 @@
  */
 
 #include "common/p7501_wdt_logic.h"
+#include "common/p7501_hex.h"
 
 #include <stddef.h>
+#include <string.h>
 
 uint32_t p7501_wdt_pack_scratch0(uint8_t cmd_id, uint8_t flags, uint16_t recoveries) {
     return (((uint32_t)cmd_id) << 24u) |
@@ -38,6 +40,7 @@ const char *p7501_wdt_stage_name(uint8_t stage) {
         case P7501_WDT_STAGE_PROBE_SWEEP: return "PROBE_SWEEP";
         case P7501_WDT_STAGE_BRIDGE:      return "BRIDGE";
         case P7501_WDT_STAGE_CLEANUP:     return "CLEANUP";
+        case P7501_WDT_STAGE_GDB_RSP:     return "GDB_RSP";
         default:                          return "UNKNOWN";
     }
 }
@@ -82,4 +85,74 @@ bool p7501_wdt_is_genuine_timeout_recovery(
     bool valid_magic
 ) {
     return wdt_caused_reboot && wdt_enable_caused_reboot && valid_magic;
+}
+
+_Static_assert(sizeof(p7501_wdt_postmortem_ring_t) == 4096u, "Postmortem ring must be exactly 4 KiB");
+
+static uint32_t wdt_pm_crc(const p7501_wdt_postmortem_ring_t *ring) {
+    return p7501_crc32_ieee((const uint8_t *)ring, offsetof(p7501_wdt_postmortem_ring_t, crc32));
+}
+
+void p7501_wdt_pm_init_or_recover(p7501_wdt_postmortem_ring_t *ring) {
+    if (ring == NULL) {
+        return;
+    }
+    if ((ring->magic == P7501_WDT_PM_MAGIC) && (ring->crc32 == wdt_pm_crc(ring)) &&
+        (ring->write_idx < P7501_WDT_PM_ENTRY_CAP)) {
+        return;
+    }
+    memset(ring, 0, sizeof(*ring));
+    ring->magic = P7501_WDT_PM_MAGIC;
+    ring->crc32 = wdt_pm_crc(ring);
+}
+
+void p7501_wdt_pm_record(
+    p7501_wdt_postmortem_ring_t *ring,
+    uint32_t seq,
+    uint32_t uptime_ms,
+    uint32_t elapsed_us,
+    uint8_t cmd_id,
+    uint8_t stage,
+    uint8_t flags
+) {
+    if (ring == NULL) {
+        return;
+    }
+    p7501_wdt_pm_init_or_recover(ring);
+    const uint32_t slot = ring->write_idx % P7501_WDT_PM_ENTRY_CAP;
+    p7501_wdt_pm_entry_t *e = &ring->entries[slot];
+    e->seq = seq;
+    e->uptime_ms = uptime_ms;
+    e->elapsed_us = elapsed_us;
+    e->cmd_id = cmd_id;
+    e->stage = stage;
+    e->flags = flags;
+    e->reserved = 0u;
+    ring->write_idx = (slot + 1u) % P7501_WDT_PM_ENTRY_CAP;
+    ring->total_events += 1u;
+    ring->crc32 = wdt_pm_crc(ring);
+}
+
+size_t p7501_wdt_pm_count(const p7501_wdt_postmortem_ring_t *ring) {
+    if ((ring == NULL) || (ring->magic != P7501_WDT_PM_MAGIC) || (ring->crc32 != wdt_pm_crc(ring))) {
+        return 0u;
+    }
+    return (ring->total_events < P7501_WDT_PM_ENTRY_CAP)
+        ? (size_t)ring->total_events
+        : P7501_WDT_PM_ENTRY_CAP;
+}
+
+bool p7501_wdt_pm_get_recent(
+    const p7501_wdt_postmortem_ring_t *ring,
+    size_t back_idx,
+    p7501_wdt_pm_entry_t *out
+) {
+    const size_t cnt = p7501_wdt_pm_count(ring);
+    if ((out == NULL) || (back_idx >= cnt)) {
+        return false;
+    }
+    const size_t newest = (ring->write_idx == 0u) ? (P7501_WDT_PM_ENTRY_CAP - 1u) : (ring->write_idx - 1u);
+    const size_t idx = (newest + P7501_WDT_PM_ENTRY_CAP - (back_idx % P7501_WDT_PM_ENTRY_CAP)) % P7501_WDT_PM_ENTRY_CAP;
+    *out = ring->entries[idx];
+    return true;
 }

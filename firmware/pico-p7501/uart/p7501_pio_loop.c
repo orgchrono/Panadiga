@@ -7,8 +7,10 @@
 
 #include "uart/p7501_pio_loop.h"
 
+#include "common/p7501_hex.h"
 #include "hal/p7501_hw.h"
 #include "hal/p7501_led.h"
+#include "hal/p7501_usb_dual_cdc.h"
 #include "hal/p7501_watchdog.h"
 #include "p7501_types.h"
 #include "uart/p7501_uart_pio_engine.h"
@@ -25,7 +27,7 @@ bool p7501_pio_wait_standby_wake(
     const char *tag,
     uint32_t wait_ms,
     bool prestrap_sw_uart_low,
-    float *out_vdd,
+    uint32_t *out_vdd_mv,
     uint32_t *out_elapsed_ms
 ) {
     const char *label = (tag != NULL && tag[0] != '\0') ? tag : "WAKE";
@@ -34,37 +36,38 @@ bool p7501_pio_wait_standby_wake(
         p7501_hw_sw_uart_set_low(true);
     }
 
-    float v = p7501_hw_read_vdd();
-    if (gpio_get(P7501_PIN_NSW5V) || (!prestrap_sw_uart_low && (v >= P7501_VDD_WAKE_THRESHOLD_V))) {
-        if (out_vdd != NULL) *out_vdd = v;
+    uint32_t v_mv = p7501_hw_read_vdd_mv();
+    if (gpio_get(P7501_PIN_NSW5V) || (!prestrap_sw_uart_low && (v_mv >= P7501_SSOT_VDD_WAKE_MIN_MV))) {
+        if (out_vdd_mv != NULL) *out_vdd_mv = v_mv;
         if (out_elapsed_ms != NULL) *out_elapsed_ms = 0u;
         return true;
     }
 
-    printf("[%s] WAKE armed (Standby VDD=%.2fV, prestrap=%s): press [POWER]/IR/chord within %" PRIu32 " ms...\n",
-           label, (double)v, prestrap_sw_uart_low ? "SW_UART_LOW" : "HI-Z", wait_ms);
+    char v_buf[8];
+    printf("[%s] WAKE armed (Standby VDD=%sV, prestrap=%s): press [POWER]/IR/chord within %" PRIu32 " ms...\n",
+           label, p7501_fmt_mv_volts(v_mv, v_buf), prestrap_sw_uart_low ? "SW_UART_LOW" : "HI-Z", wait_ms);
     fflush(stdout);
 
     const uint64_t t0_us = time_us_64();
     const uint64_t deadline_us = t0_us + ((uint64_t)wait_ms * 1000ULL);
     while (time_us_64() < deadline_us) {
         if (p7501_wdt_poll_abort()) {
-            if (out_vdd != NULL) *out_vdd = p7501_hw_read_vdd();
+            if (out_vdd_mv != NULL) *out_vdd_mv = p7501_hw_read_vdd_mv();
             if (out_elapsed_ms != NULL) *out_elapsed_ms = (uint32_t)((time_us_64() - t0_us) / 1000ULL);
             if (prestrap_sw_uart_low) {
                 p7501_hw_isolate_bus_hiz();
             }
             return false;
         }
-        v = p7501_hw_read_vdd();
-        if (gpio_get(P7501_PIN_NSW5V) || (!prestrap_sw_uart_low && (v >= P7501_VDD_WAKE_THRESHOLD_V))) {
-            if (out_vdd != NULL) *out_vdd = v;
+        v_mv = p7501_hw_read_vdd_mv();
+        if (gpio_get(P7501_PIN_NSW5V) || (!prestrap_sw_uart_low && (v_mv >= P7501_SSOT_VDD_WAKE_MIN_MV))) {
+            if (out_vdd_mv != NULL) *out_vdd_mv = v_mv;
             if (out_elapsed_ms != NULL) *out_elapsed_ms = (uint32_t)((time_us_64() - t0_us) / 1000ULL);
             return true;
         }
         sleep_ms(1u);
     }
-    if (out_vdd != NULL) *out_vdd = p7501_hw_read_vdd();
+    if (out_vdd_mv != NULL) *out_vdd_mv = p7501_hw_read_vdd_mv();
     if (out_elapsed_ms != NULL) *out_elapsed_ms = wait_ms;
     if (prestrap_sw_uart_low) {
         p7501_hw_isolate_bus_hiz();
@@ -115,6 +118,7 @@ void p7501_pio_run_session(
         while (p7501_pio_pop_rx_byte(&byte)) {
             const uint32_t b_rel_us = (uint32_t)(time_us_64() - t0_us);
             local.rx_bytes += 1u;
+            p7501_usb_mirror_rx_byte(byte);
 
             if (cfg->auto_release_serial_boot &&
                 (cfg->boot_action == P7501_BOOT_ACTION_JIG) &&

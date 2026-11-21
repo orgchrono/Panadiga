@@ -13,10 +13,18 @@
 #include "p7501_types.h"
 
 #include "hardware/clocks.h"
+#include "hardware/dma.h"
 #include "hardware/gpio.h"
 #include "hardware/pio.h"
 #include "pico/stdlib.h"
 #include "p7501_uart_duplex.pio.h"
+
+#define P7501_RX_DMA_WORDS          4096u
+#define P7501_RX_DMA_RING_BITS      14u
+/* 28-bit max transfer count (`MODE=0`), required on RP2350 where bits [31:28]=0xF selects ENDLESS mode. */
+#define P7501_RX_DMA_TRANSFER_COUNT 0x0FFFFFFFUL
+
+static uint32_t s_rx_dma_ring[P7501_RX_DMA_WORDS] __attribute__((aligned(16384)));
 
 typedef struct p7501_pio_engine_drv {
     uint32_t active_baud;
@@ -28,6 +36,11 @@ typedef struct p7501_pio_engine_drv {
     uint rx_offset;
     bool tx_loaded;
     uint tx_offset;
+    int rx_dma_chan;
+    bool rx_dma_claimed;
+    bool rx_dma_active;
+    bool rx_dma_overflow;
+    uint32_t rx_dma_total_read;
 } p7501_pio_engine_drv_t;
 
 static p7501_pio_engine_drv_t s_pio_drv = {
@@ -39,22 +52,29 @@ static p7501_pio_engine_drv_t s_pio_drv = {
     .rx_offset = 0u,
     .tx_loaded = false,
     .tx_offset = 0u,
+    .rx_dma_chan = -1,
+    .rx_dma_claimed = false,
+    .rx_dma_active = false,
+    .rx_dma_overflow = false,
+    .rx_dma_total_read = 0u,
 };
 
 static uint framing_bit_loop_count(void) {
     return (s_pio_drv.active_framing == P7501_FRAMING_8N1) ? 7u : 8u;
 }
 
-static float compute_pio_clkdiv(uint32_t baud) {
-    uint16_t div_i = 0u;
-    uint8_t div_f = 0u;
+static void compute_pio_clkdiv_int_frac(uint32_t baud, uint16_t *out_int, uint8_t *out_frac) {
     const uint32_t sys_hz = clock_get_hz(clk_sys);
-
-    p7501_calc_pio_clkdiv_fp16(sys_hz, baud, &div_i, &div_f);
-    return (float)div_i + ((float)div_f / 256.0f);
+    p7501_calc_pio_clkdiv_fp16(sys_hz, baud, out_int, out_frac);
 }
 
 static void ensure_programs_loaded(void) {
+    if (!pio_sm_is_claimed(P7501_PIO_UART_INST, P7501_PIO_RX_SM)) {
+        pio_sm_claim(P7501_PIO_UART_INST, P7501_PIO_RX_SM);
+    }
+    if (!pio_sm_is_claimed(P7501_PIO_UART_INST, P7501_PIO_TX_SM)) {
+        pio_sm_claim(P7501_PIO_UART_INST, P7501_PIO_TX_SM);
+    }
     if (!s_pio_drv.rx_loaded) {
         s_pio_drv.rx_offset = pio_add_program(P7501_PIO_UART_INST, &p7501_uart_rx_fast_program);
         s_pio_drv.rx_loaded = true;
@@ -65,18 +85,58 @@ static void ensure_programs_loaded(void) {
     }
 }
 
-static void clear_rx_diagnostics(void) {
-    pio_sm_clear_fifos(P7501_PIO_UART_INST, P7501_PIO_RX_SM);
+static void clear_pio_status_flags(void) {
     P7501_PIO_UART_INST->fdebug = (1u << (PIO_FDEBUG_RXSTALL_LSB + P7501_PIO_RX_SM));
     pio_interrupt_clear(P7501_PIO_UART_INST, 4u);
     s_pio_drv.parity_err_count = 0u;
+    s_pio_drv.rx_dma_overflow = false;
+}
+
+static void clear_rx_diagnostics(void) {
+    pio_sm_clear_fifos(P7501_PIO_UART_INST, P7501_PIO_RX_SM);
+    clear_pio_status_flags();
+    s_pio_drv.rx_dma_total_read = 0u;
+}
+
+static void start_rx_dma_ring(void) {
+    if (!s_pio_drv.rx_dma_claimed) {
+        const int ch = dma_claim_unused_channel(false);
+        if (ch >= 0) {
+            s_pio_drv.rx_dma_chan = ch;
+            s_pio_drv.rx_dma_claimed = true;
+        }
+    }
+    if (!s_pio_drv.rx_dma_claimed) {
+        s_pio_drv.rx_dma_active = false;
+        return;
+    }
+    const uint ch = (uint)s_pio_drv.rx_dma_chan;
+    dma_channel_abort(ch);
+    dma_channel_config cfg = dma_channel_get_default_config(ch);
+    channel_config_set_transfer_data_size(&cfg, DMA_SIZE_32);
+    channel_config_set_read_increment(&cfg, false);
+    channel_config_set_write_increment(&cfg, true);
+    channel_config_set_ring(&cfg, true, P7501_RX_DMA_RING_BITS);
+    channel_config_set_dreq(&cfg, pio_get_dreq(P7501_PIO_UART_INST, P7501_PIO_RX_SM, false));
+
+    s_pio_drv.rx_dma_total_read = 0u;
+    s_pio_drv.rx_dma_overflow = false;
+    s_pio_drv.rx_dma_active = true;
+    dma_channel_configure(
+        ch,
+        &cfg,
+        s_rx_dma_ring,
+        &P7501_PIO_UART_INST->rxf[P7501_PIO_RX_SM],
+        P7501_RX_DMA_TRANSFER_COUNT,
+        true
+    );
 }
 
 void p7501_pio_internal_prepare_tx(p7501_pio_tx_snapshot_t *out_snap) {
     ensure_programs_loaded();
     out_snap->baud = s_pio_drv.active_baud;
     out_snap->framing = s_pio_drv.active_framing;
-    out_snap->clkdiv = compute_pio_clkdiv(s_pio_drv.active_baud);
+    compute_pio_clkdiv_int_frac(s_pio_drv.active_baud, &out_snap->div_int, &out_snap->div_frac);
     out_snap->bit_loops = framing_bit_loop_count();
     out_snap->tx_offset = s_pio_drv.tx_offset;
 }
@@ -102,11 +162,14 @@ bool p7501_pio_set_baud(uint32_t baud) {
         return false;
     }
     s_pio_drv.active_baud = baud;
+    uint16_t div_i = 0u;
+    uint8_t div_f = 0u;
+    compute_pio_clkdiv_int_frac(s_pio_drv.active_baud, &div_i, &div_f);
     if (s_pio_drv.rx_loaded) {
-        pio_sm_set_clkdiv(P7501_PIO_UART_INST, P7501_PIO_RX_SM, compute_pio_clkdiv(s_pio_drv.active_baud));
+        pio_sm_set_clkdiv_int_frac(P7501_PIO_UART_INST, P7501_PIO_RX_SM, div_i, div_f);
     }
     if (s_pio_drv.tx_loaded) {
-        pio_sm_set_clkdiv(P7501_PIO_UART_INST, P7501_PIO_TX_SM, compute_pio_clkdiv(s_pio_drv.active_baud));
+        pio_sm_set_clkdiv_int_frac(P7501_PIO_UART_INST, P7501_PIO_TX_SM, div_i, div_f);
     }
     return true;
 }
@@ -130,7 +193,9 @@ bool p7501_pio_set_framing(p7501_uart_framing_t framing) {
         clear_rx_diagnostics();
         pio_sm_exec(P7501_PIO_UART_INST, P7501_PIO_RX_SM, pio_encode_set(pio_y, loops));
         pio_sm_restart(P7501_PIO_UART_INST, P7501_PIO_RX_SM);
+        pio_sm_exec(P7501_PIO_UART_INST, P7501_PIO_RX_SM, pio_encode_jmp(s_pio_drv.rx_offset));
         if (was_enabled) {
+            start_rx_dma_ring();
             pio_sm_set_enabled(P7501_PIO_UART_INST, P7501_PIO_RX_SM, true);
         }
     }
@@ -153,7 +218,9 @@ void p7501_pio_begin_rx_session_cfg(
     uint32_t jig_hold_ms,
     bool no_xreset
 ) {
-    const float div = compute_pio_clkdiv(s_pio_drv.active_baud);
+    uint16_t div_i = 0u;
+    uint8_t div_f = 0u;
+    compute_pio_clkdiv_int_frac(s_pio_drv.active_baud, &div_i, &div_f);
 
     s_pio_drv.sw_uart_timed_hold = false;
     ensure_programs_loaded();
@@ -175,10 +242,14 @@ void p7501_pio_begin_rx_session_cfg(
         P7501_PIO_RX_SM,
         s_pio_drv.rx_offset,
         P7501_PIN_RXD,
-        div,
+        div_i,
+        div_f,
         framing_bit_loop_count()
     );
+    pio_sm_set_enabled(P7501_PIO_UART_INST, P7501_PIO_RX_SM, false);
     clear_rx_diagnostics();
+    start_rx_dma_ring();
+    pio_sm_set_enabled(P7501_PIO_UART_INST, P7501_PIO_RX_SM, true);
 
     if (action != P7501_BOOT_ACTION_PASSIVE) {
         if (!no_xreset) {
@@ -222,16 +293,36 @@ bool p7501_pio_poll_jig_serial_release(
 
 void p7501_pio_end_session(void) {
     s_pio_drv.sw_uart_timed_hold = false;
+    if (s_pio_drv.rx_dma_active && s_pio_drv.rx_dma_claimed) {
+        dma_channel_abort((uint)s_pio_drv.rx_dma_chan);
+        s_pio_drv.rx_dma_active = false;
+    }
     pio_sm_set_enabled(P7501_PIO_UART_INST, P7501_PIO_RX_SM, false);
     p7501_pio_internal_release_tx_hiz();
     p7501_hw_isolate_bus_hiz();
 }
 
 bool p7501_pio_pop_rx_byte_ex(uint8_t *out_byte, bool *out_parity_err) {
-    if (pio_sm_is_rx_fifo_empty(P7501_PIO_UART_INST, P7501_PIO_RX_SM)) {
-        return false;
+    uint32_t raw = 0u;
+    if (s_pio_drv.rx_dma_active && s_pio_drv.rx_dma_claimed) {
+        const uint32_t rem = dma_channel_hw_addr((uint)s_pio_drv.rx_dma_chan)->transfer_count & P7501_RX_DMA_TRANSFER_COUNT;
+        const uint32_t total_written = P7501_RX_DMA_TRANSFER_COUNT - rem;
+        const uint32_t pending = total_written - s_pio_drv.rx_dma_total_read;
+        if (pending == 0u) {
+            return false;
+        }
+        if (pending > P7501_RX_DMA_WORDS) {
+            s_pio_drv.rx_dma_overflow = true;
+            s_pio_drv.rx_dma_total_read = total_written - (P7501_RX_DMA_WORDS - 1u);
+        }
+        raw = s_rx_dma_ring[s_pio_drv.rx_dma_total_read & (P7501_RX_DMA_WORDS - 1u)];
+        s_pio_drv.rx_dma_total_read += 1u;
+    } else {
+        if (pio_sm_is_rx_fifo_empty(P7501_PIO_UART_INST, P7501_PIO_RX_SM)) {
+            return false;
+        }
+        raw = pio_sm_get(P7501_PIO_UART_INST, P7501_PIO_RX_SM);
     }
-    const uint32_t raw = pio_sm_get(P7501_PIO_UART_INST, P7501_PIO_RX_SM);
     bool parity_ok = true;
     p7501_uart_decode_rx_word(raw, s_pio_drv.active_framing, out_byte, &parity_ok);
     if (!parity_ok) {
@@ -257,7 +348,7 @@ void p7501_pio_drain_rx(void) {
     uint8_t dummy = 0u;
     while (p7501_pio_pop_rx_byte(&dummy)) {
     }
-    clear_rx_diagnostics();
+    clear_pio_status_flags();
 }
 
 bool p7501_pio_poll_and_clear_framing_err(void) {
@@ -270,5 +361,9 @@ bool p7501_pio_poll_and_clear_framing_err(void) {
 
 bool p7501_pio_had_rx_overflow(void) {
     const uint32_t mask = (1u << (PIO_FDEBUG_RXSTALL_LSB + P7501_PIO_RX_SM));
-    return (P7501_PIO_UART_INST->fdebug & mask) != 0u;
+    return s_pio_drv.rx_dma_overflow || ((P7501_PIO_UART_INST->fdebug & mask) != 0u);
+}
+
+bool p7501_pio_is_rx_dma_active(void) {
+    return s_pio_drv.rx_dma_active;
 }

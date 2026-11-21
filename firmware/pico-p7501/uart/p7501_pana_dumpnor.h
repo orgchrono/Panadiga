@@ -24,6 +24,24 @@ extern "C" {
 #define P7501_DUMPNOR_STUB_ADDR     0x51800000UL
 #define P7501_DUMPNOR_DIGADIAG_ADDR 0x50400000UL
 #define P7501_DUMPNOR_STUB_SIZE     162u
+#define P7501_DUMPNOR_SUM_MAGIC     "PANASUM1"
+
+typedef struct p7501_nor_check_result {
+    bool valid;
+    bool all_blank;
+    uint32_t blocks_checked;
+    uint32_t blank_blocks;
+    uint32_t digest_crc32;
+} p7501_nor_check_result_t;
+
+typedef struct p7501_dumpnor_resume_state {
+    bool active;
+    uint32_t start_addr;
+    uint32_t total_len;
+    uint32_t completed_bytes;
+    uint32_t block_size;
+    uint32_t baud;
+} p7501_dumpnor_resume_state_t;
 
 /** Shared verified 24-byte MN103S SC0 PUTC(D3) leaf subroutine (matches `PUTC_D3_BYTES`). */
 extern const uint8_t k_p7501_mn103_putc_d3[24];
@@ -53,6 +71,49 @@ size_t p7501_dumpnor_build_stub(
     uint8_t *out_buf,
     size_t out_cap
 );
+
+/** Build fast sum32-only NOR digest & blank-check MN103S stub (`PANASUM1`, Feature #2). */
+size_t p7501_dumpnor_build_checksum_stub(
+    uint32_t start_addr,
+    uint32_t total_len,
+    uint32_t load_addr,
+    uint8_t *out_buf,
+    size_t out_cap
+);
+
+/** Evaluate streamed `"PANASUM1"` + 4-byte block sums + `"PANADONE"` reply. */
+bool p7501_dumpnor_eval_sum_only_reply(
+    const uint8_t *buf,
+    size_t len,
+    uint32_t block_size,
+    uint32_t expected_blocks,
+    p7501_nor_check_result_t *out
+);
+
+/** Verify one streamed DUMPNOR block against its trailing 4-byte LE sum and blank state. */
+bool p7501_dumpnor_verify_block(
+    const uint8_t *blk,
+    size_t blk_len,
+    const uint8_t sum_le[4],
+    bool *out_all_ff
+);
+
+/** Check whether `baud` is an approved high-speed DUMPNOR rate (`230400` or `460800`). */
+bool p7501_dumpnor_is_fast_baud(uint32_t baud);
+
+/** Resume-state lifecycle helpers (`FAST_DUMPNOR` / `DUMPNOR_RESUME`, Feature #6). */
+bool p7501_dumpnor_resume_begin(
+    p7501_dumpnor_resume_state_t *st,
+    uint32_t start_addr,
+    uint32_t total_len,
+    uint32_t baud
+);
+bool p7501_dumpnor_resume_next_slice(
+    const p7501_dumpnor_resume_state_t *st,
+    uint32_t *out_addr,
+    uint32_t *out_len
+);
+void p7501_dumpnor_resume_advance(p7501_dumpnor_resume_state_t *st, uint32_t verified_bytes);
 
 #ifdef __cplusplus
 }

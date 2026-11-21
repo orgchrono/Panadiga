@@ -6,10 +6,13 @@
  */
 
 #include "tests/test_pana_logic.h"
+#include "common/p7501_hex.h"
 #include "uart/p7501_pana_rsp.h"
 #include "uart/p7501_pana_dumpnor.h"
 #include "uart/p7501_pana_jedec.h"
+#include "flash/p7501_bus_policy.h"
 #include "flash/p7501_flash.h"
+#include "hal/p7501_wireless_codec.h"
 #include "diag/p7501_piologic_codec.h"
 #include "diag/p7501_sds_codec.h"
 
@@ -185,8 +188,8 @@ static void test_flash_geometry_and_bgo(void) {
     assert(g8.nvram_base == 0x807F0000UL && g8.nvram_end == 0x80800000UL);
     assert(g8.hw_uncached_base == 0x84000000UL);
     assert(g8.hw_nvram_base == 0x847F0000UL && g8.hw_nvram_end == 0x84800000UL);
-    assert(g8.bgo_hw_base == 0x84200000UL && g8.bgo_hw_end == 0x84400000UL);
-    assert(g8.bgo_sector_count == 32u);
+    assert(g8.bgo_hw_base == 0x84130000UL && g8.bgo_hw_end == 0x84400000UL);
+    assert(g8.bgo_sector_count == 45u && P7501_BGO_PARTITION_COUNT == 45u);
 
     assert(p7501_flash_is_readonly_nor_range(g8.bytes, 0x80000000UL, 0x00800000UL));
     assert(p7501_flash_is_readonly_nor_range(g8.bytes, 0x84000000UL, 0x00800000UL));
@@ -246,22 +249,29 @@ static void test_pana_rsp_jedec_and_nor_policy(void) {
     assert(!p7501_panarsp_parse_args("NORUNLOCK:WRONG_TOKEN JEDEC_ERASE:84200000", &spec));
     assert(!p7501_flash_is_upper_nor_unlocked());
 
-    /* Explicit unlock enables SA4..SA133 while SA0..SA3 stays permanently blocked */
+    /* Explicit unlock enables SA11..SA133 while SA0..SA10 stays permanently blocked & parser stays pure (F3) */
     assert(!p7501_panarsp_parse_args("NORUNLOCK:CONFIRM_UPPER_NOR JEDEC_ERASE:84000000", &spec));
     assert(!p7501_flash_is_upper_nor_unlocked()); /* atomic rollback on failure */
     assert(!p7501_panarsp_parse_args("NORUNLOCK:CONFIRM_UPPER_NOR WMEM:8003FFFC,11223344", &spec));
     assert(p7501_panarsp_parse_args("NORUNLOCK:CONFIRM_UPPER_NOR JEDEC_ERASE:80200000", &spec));
+    assert(!p7501_flash_is_upper_nor_unlocked()); /* parse itself is 100% pure */
+    assert(spec.policy_req == P7501_POLICY_REQ_UNLOCK);
+    p7501_panarsp_apply_policy(&spec);
     assert(p7501_flash_is_upper_nor_unlocked());
     assert(p7501_panarsp_parse_args("JEDEC_PROG:84200011,5A", &spec));
     assert(p7501_panarsp_parse_args("WMEM:84400000,11223344", &spec));
     assert(p7501_panarsp_parse_args("WRITE32:80200000,DEADBEEF", &spec));
     assert(p7501_panarsp_parse_args("NORLOCK", &spec));
     assert(spec.action == PANA_RSP_ACT_NOR_POLICY && !spec.nor_unlocked_effective);
+    assert(spec.policy_req == P7501_POLICY_REQ_LOCK);
+    p7501_panarsp_apply_policy(&spec);
     assert(!p7501_flash_is_upper_nor_unlocked());
     assert(!p7501_panarsp_parse_args("JEDEC_ERASE:84200000", &spec));
 
     /* Stub generation invariants: uncached bus literals + completion/timeout banners */
     uint8_t stub[P7501_JEDEC_MAX_STUB_SIZE];
+    assert(p7501_jedec_build_erase_stub(0x80200000UL, P7501_JEDEC_STUB_ADDR, stub, sizeof(stub)) == 0u);
+    p7501_flash_set_upper_nor_unlocked(true);
     const uint8_t unlock1_le[4] = { 0xAAu, 0x0Au, 0x00u, 0x84u };
     const size_t elen = p7501_jedec_build_erase_stub(0x80200000UL, P7501_JEDEC_STUB_ADDR, stub, sizeof(stub));
     assert(elen > 64u && elen <= P7501_JEDEC_MAX_STUB_SIZE);
@@ -275,6 +285,62 @@ static void test_pana_rsp_jedec_and_nor_policy(void) {
     assert(buf_contains_bytes(stub, plen, unlock1_le, sizeof(unlock1_le)));
     assert(buf_contains_bytes(stub, plen, prog_data, sizeof(prog_data)));
     assert(buf_contains_bytes(stub, plen, P7501_JEDEC_OK_TOKEN, sizeof(P7501_JEDEC_OK_TOKEN) - 1u));
+
+    /* Verify upgraded erase budget >= 0x01000000, DQ5 poll (0x20), and 0xFFFF readback verify */
+    const uint8_t erase_budget_le[4] = { 0x00u, 0x00u, 0x00u, 0x01u };
+    const uint8_t readback_ffff_le[4] = { 0xFFu, 0xFFu, 0x00u, 0x00u };
+    const uint8_t dq5_btst[3] = { 0xF8u, 0xECu, 0x20u };
+    assert(buf_contains_bytes(stub, elen > plen ? elen : plen, dq5_btst, sizeof(dq5_btst)));
+    const size_t elen2 = p7501_jedec_build_erase_stub(0x80200000UL, P7501_JEDEC_STUB_ADDR, stub, sizeof(stub));
+    assert(buf_contains_bytes(stub, elen2, erase_budget_le, sizeof(erase_budget_le)));
+    assert(buf_contains_bytes(stub, elen2, dq5_btst, sizeof(dq5_btst)));
+    assert(buf_contains_bytes(stub, elen2, readback_ffff_le, sizeof(readback_ffff_le)));
+    p7501_flash_set_upper_nor_unlocked(false);
+
+    /* Parameterized 16 MiB JEDEC bounds + 128 KiB NVRAM (0x84FE0000..0x84FFFFFF) */
+    uint32_t norm16 = 0u;
+    assert(p7501_jedec_validate_erase_addr_for_flash(P7501_FLASH_SIZE_16MB, 0x80FE0000UL, false, &norm16));
+    assert(norm16 == 0x84FE0000UL);
+    assert(!p7501_jedec_validate_erase_addr_for_flash(P7501_FLASH_SIZE_16MB, 0x847F0000UL, false, &norm16));
+    assert(p7501_jedec_validate_prog_range_for_flash(P7501_FLASH_SIZE_16MB, 0x80FE0010UL, 4u, false, &norm16));
+    assert(norm16 == 0x84FE0010UL);
+    assert(p7501_jedec_build_erase_stub_for_flash(P7501_FLASH_SIZE_16MB, 0x80FE0000UL, P7501_JEDEC_STUB_ADDR, stub, sizeof(stub)) > 64u);
+    assert(p7501_jedec_build_prog_stub_for_flash(P7501_FLASH_SIZE_16MB, 0x80FE0010UL, prog_data, sizeof(prog_data), P7501_JEDEC_STUB_ADDR, stub, sizeof(stub)) > 80u);
+
+    /* One-shot NORUNLOCK:CONFIRM_UPPER_NOR auto-relock on write/erase completion */
+    p7501_flash_set_upper_nor_unlocked(false);
+    assert(p7501_panarsp_parse_args("NORUNLOCK:CONFIRM_UPPER_NOR JEDEC_ERASE:80200000", &spec));
+    p7501_panarsp_apply_policy(&spec);
+    assert(spec.auto_relock_nor && p7501_flash_is_upper_nor_unlocked());
+    assert(p7501_panarsp_finish_action(&spec));
+    assert(!p7501_flash_is_upper_nor_unlocked());
+    assert(!p7501_panarsp_parse_args("JEDEC_ERASE:84200000", &spec) && spec.rejected_e05);
+
+    /* RAW:M / RAW:X and HEX: IPL Layer 1 (SA0..SA10) E05 guards */
+    assert(!p7501_panarsp_parse_args("RAW:M80000000,4:11223344", &spec) && spec.rejected_e05);
+    assert(!p7501_panarsp_parse_args("NORUNLOCK:CONFIRM_UPPER_NOR RAW:M8403FFFE,4:11223344", &spec) && spec.rejected_e05);
+    assert(!p7501_panarsp_parse_args("NORUNLOCK:CONFIRM_UPPER_NOR RAW:X80000000,4:ABCD", &spec) && spec.rejected_e05);
+    assert(!p7501_flash_is_upper_nor_unlocked());
+    assert(p7501_panarsp_parse_args("RAW:M807F0000,4:11223344", &spec));
+    assert(p7501_panarsp_parse_args("RAW:m80000000,4", &spec));
+    /* Adversarial whitespace prefix, chained $M after $m, JUMP to lethal MMIO, and >8-digit len */
+    assert(!p7501_panarsp_parse_args("HEX:204538303030303030300D", &spec) && spec.rejected_e05); /* " E80000000\r" */
+    assert(!p7501_panarsp_parse_args("RAW:m80000000,4$MC000100C,4:00000000", &spec) && spec.rejected_e05);
+    assert(!p7501_panarsp_parse_args("RAW:JC000100C", &spec) && spec.rejected_e05);
+    assert(!p7501_panarsp_parse_args("RAW:RC0001000,000000010", &spec) && spec.rejected_e05);
+    /* D1: Even with CONFIRM_UPPER_NOR, bare W/E/J or non-hex address in RAW:/HEX: must fail E05 */
+    assert(!p7501_panarsp_parse_args("NORUNLOCK:CONFIRM_UPPER_NOR RAW:E", &spec) && spec.rejected_e05);
+    assert(!p7501_panarsp_parse_args("NORUNLOCK:CONFIRM_UPPER_NOR RAW:W", &spec) && spec.rejected_e05);
+    assert(!p7501_panarsp_parse_args("NORUNLOCK:CONFIRM_UPPER_NOR HEX:45202438303030303030300D", &spec) && spec.rejected_e05); /* "E $80000000\r" */
+    /* HEX: `$M80000000,4:00000000#00` & `$X84000000,4:ABCD#00` */
+    assert(!p7501_panarsp_parse_args("NORUNLOCK:CONFIRM_UPPER_NOR HEX:244D38303030303030302C343A3030303030303030233030", &spec) && spec.rejected_e05);
+    assert(!p7501_panarsp_parse_args("HEX:245838343030303030302C343A41424344233030", &spec) && spec.rejected_e05);
+    /* HEX: `W 84200000,AA\r` blocked when locked, allowed once unlocked and auto-relocked on finish */
+    assert(!p7501_panarsp_parse_args("HEX:572038343230303030302C41410D", &spec) && spec.rejected_e05);
+    assert(p7501_panarsp_parse_args("NORUNLOCK:CONFIRM_UPPER_NOR HEX:572038343230303030302C41410D", &spec));
+    p7501_panarsp_apply_policy(&spec);
+    assert(spec.auto_relock_nor && p7501_panarsp_finish_action(&spec));
+    assert(!p7501_flash_is_upper_nor_unlocked());
 }
 
 static void test_rsp_boot_prose_does_not_trip_nak(void) {
@@ -421,6 +487,66 @@ static void test_sds_bus_sniffer_codec(void) {
     assert(st.trace[st.trace_count - 1u].cmd == 18u && st.trace[st.trace_count - 1u].arg == 0u);
 }
 
+static void test_bus_policy_hardening_and_bypass_guards(void) {
+    p7501_flash_set_upper_nor_unlocked(false);
+    p7501_wireless_state_init(p7501_wireless_global_state());
+    p7501_pana_rsp_spec_t spec;
+
+    /* 1. 0xC000100C lethal register blocked for READ & WRITE across PANARSP (MEM/XMEM/WMEM/RAW/HEX) */
+    assert(!p7501_panarsp_parse_args("MEM:C000100C,4", &spec) && spec.rejected_e05);
+    assert(!p7501_panarsp_parse_args("XMEM:C0001008,8", &spec) && spec.rejected_e05);
+    assert(!p7501_panarsp_parse_args("WMEM:C000100C,11223344", &spec) && spec.rejected_e05);
+    assert(!p7501_panarsp_parse_args("WRITE32:C000100C,00000000", &spec) && spec.rejected_e05);
+    assert(!p7501_panarsp_parse_args("RAW:mC000100C,4", &spec) && spec.rejected_e05);
+    assert(!p7501_panarsp_parse_args("RAW:MC000100C,4:00000000", &spec) && spec.rejected_e05);
+    /* HEX: `$mC000100C,4#00` */
+    assert(!p7501_panarsp_parse_args("HEX:246D43303030313030432C34233030", &spec) && spec.rejected_e05);
+
+    /* 2. 9-digit hex overflow attack (`080000000` -> `0x80000000` wrap) rejected in hex scanner & PANARSP */
+    uint32_t scanned = 0u;
+    assert(p7501_scan_hex_u32("080000000", 9u, 0u, &scanned) == 0u);
+    assert(p7501_scan_hex_u32("807F0000", 8u, 0u, &scanned) == 8u && scanned == 0x807F0000UL);
+    assert(!p7501_panarsp_parse_args("RAW:M080000000,4:11223344", &spec) && spec.rejected_e05);
+
+    /* 3. Lowercase 'w'/'e' PANAMON1 commands inside PANARSP HEX: blocked on protected NOR */
+    /* `w 80000000,AA\r` & `e 84000000\r` */
+    assert(!p7501_panarsp_parse_args("NORUNLOCK:CONFIRM_UPPER_NOR HEX:772038303030303030302C41410D", &spec) && spec.rejected_e05);
+    assert(!p7501_panarsp_parse_args("NORUNLOCK:CONFIRM_UPPER_NOR HEX:652038343030303030300D", &spec) && spec.rejected_e05);
+
+    /* 4. CS0 alias mirrors (`0x80800000`, `0x84800000`, 4 MiB `0x80400000`) & straddles blocked */
+    const p7501_session_ctx_t *sctx = p7501_session_default_ctx();
+    assert(p7501_bus_check_access(sctx, P7501_FLASH_SIZE_8MB, 0x80800000UL, 4u, true, false, true) == P7501_BUS_DENY_CS0_MIRROR);
+    assert(p7501_bus_check_access(sctx, P7501_FLASH_SIZE_8MB, 0x84800000UL, 4u, true, false, true) == P7501_BUS_DENY_CS0_MIRROR);
+    assert(p7501_bus_check_access(sctx, P7501_FLASH_SIZE_4MB, 0x80400000UL, 4u, true, false, true) == P7501_BUS_DENY_CS0_MIRROR);
+    assert(p7501_bus_check_access(sctx, P7501_FLASH_SIZE_8MB, 0x807FFFFCUL, 8u, true, false, true) != P7501_BUS_ALLOW);
+    assert(p7501_bus_check_access(sctx, P7501_FLASH_SIZE_8MB, 0x8003F000UL, 1u, true, true, true) == P7501_BUS_DENY_IPL_LAYER1);
+    assert(p7501_bus_check_access(sctx, P7501_FLASH_SIZE_8MB, 0xC000100CUL, 4u, false, false, true) == P7501_BUS_DENY_LETHAL_MMIO);
+
+    /* 5. F14 wireless lockout on PANARSP PASSTHROUGH / CALL & quota consumption in finish_action */
+    p7501_wireless_auth_state_t *ws = p7501_wireless_global_state();
+    ws->active_origin = P7501_ORIGIN_BLE_NUS;
+    assert(!p7501_panarsp_parse_args("PASSTHROUGH", &spec) && spec.rejected_e05);
+    assert(!p7501_panarsp_parse_args("CALL:50401F3C", &spec) && spec.rejected_e05);
+    assert(p7501_wireless_handle_usb_auth_cmd(ws, P7501_ORIGIN_USB_CDC, "CONFIRM 1"));
+    assert(p7501_panarsp_parse_args("JEDEC_ERASE:807FE000", &spec));
+    (void)p7501_panarsp_finish_action(&spec);
+    assert(!p7501_wireless_nor_write_allowed(ws));
+    p7501_wireless_state_init(ws);
+
+    /* 6. JEDEC lookup requires full dev_cycles (3-cycle S29JL064H must not match on 1 cycle) */
+    const uint16_t partial_dev[3] = { 0x227Eu, 0x0000u, 0x0000u };
+    const uint16_t full_dev[3] = { 0x227Eu, 0x2202u, 0x2201u };
+    assert(p7501_flash_find_chip_by_jedec(0x0001u, partial_dev, 1u) == NULL);
+    assert(p7501_flash_find_chip_by_jedec(0x0001u, full_dev, 3u) != NULL);
+
+    /* 7. BGO_BITCLEAR 1->0 allowed, 0->1 rejected */
+    const uint8_t old_b[2] = { 0xFFu, 0x0Fu };
+    const uint8_t ok_b[2]  = { 0xAAu, 0x05u };
+    const uint8_t bad_b[2] = { 0xFFu, 0x1Fu };
+    assert(p7501_jedec_validate_bitclear(old_b, ok_b, 2u));
+    assert(!p7501_jedec_validate_bitclear(old_b, bad_b, 2u));
+}
+
 int p7501_run_pana_logic_tests(void) {
     test_pana_rsp_frame_codec();
     test_rsp_boot_prose_does_not_trip_nak();
@@ -429,8 +555,9 @@ int p7501_run_pana_logic_tests(void) {
     test_flash_geometry_and_bgo();
     test_pana_dumpnor_stub_and_args();
     test_pana_rsp_jedec_and_nor_policy();
+    test_bus_policy_hardening_and_bypass_guards();
     p7501_run_pana_diag_drv_tests();
     test_sds_bus_sniffer_codec();
-    printf("[HOST-TEST] PANARSP + REGS + DUMPNOR + DIAGWATCH + DRVPANA + FlashGeo + PIOLOGIC + SDSNIFF passed.\n");
+    printf("[HOST-TEST] PANARSP + BusPolicy + REGS + DUMPNOR + DIAGWATCH + DRVPANA + FlashGeo + PIOLOGIC + SDSNIFF passed.\n");
     return 0;
 }

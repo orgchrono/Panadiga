@@ -159,10 +159,10 @@ typedef enum p7501_jigpin_mode {
 /** Parse `JIGPIN [LOW|HIZ|STATUS]` argument cleanly (rejects unrecognized tokens). */
 bool p7501_parse_jigpin_arg(const char *arg, p7501_jigpin_mode_t *out_mode);
 
-/** Classify P7501 Standby vs Awake vs Clamped `TW7501` vs Unplugged target state. */
-const char *p7501_classify_standby_state(
-    float vdd_v,
-    float sw_pu_v,
+/** Classify P7501 Standby vs Awake vs Clamped `TW7501` using integer millivolts and SSOT thresholds. */
+const char *p7501_classify_standby_state_mv(
+    uint32_t vdd_mv,
+    uint32_t sw_pu_mv,
     bool nsw5v_high,
     bool txd_high,
     bool jig_latched

@@ -8,6 +8,7 @@
 #include "uart/p7501_uart_codec.h"
 #include "common/p7501_hex.h"
 #include "common/p7501_wdt_logic.h"
+#include "generated/p7501_ssot.h"
 
 #include <stddef.h>
 #include <string.h>
@@ -99,6 +100,9 @@ p7501_boot_action_t p7501_parse_boot_spec_ex(
         return P7501_BOOT_ACTION_NORMAL;
     }
     if (p7501_ascii_ieq(token, "JIG") || p7501_ascii_ieq(token, "SERIAL")) {
+        if (out_jig_hold_ms != NULL) {
+            *out_jig_hold_ms = P7501_SSOT_JIG_DEFAULT_HOLD_MS;
+        }
         return P7501_BOOT_ACTION_JIG;
     }
     if (p7501_ascii_ieq(token, "PREJIG")) {

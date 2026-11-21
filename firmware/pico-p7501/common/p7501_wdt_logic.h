@@ -11,6 +11,7 @@
 #define P7501_WDT_LOGIC_H
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -51,6 +52,7 @@ enum p7501_wdt_stage {
     P7501_WDT_STAGE_PROBE_SWEEP = 5u,
     P7501_WDT_STAGE_BRIDGE      = 6u,
     P7501_WDT_STAGE_CLEANUP     = 7u,
+    P7501_WDT_STAGE_GDB_RSP     = 8u,
 };
 
 /** Pack `[cmd_id:8 | flags:8 | recoveries:16]` deterministically into a 32-bit scratch word. */
@@ -89,6 +91,46 @@ bool p7501_wdt_is_genuine_timeout_recovery(
     bool wdt_caused_reboot,
     bool wdt_enable_caused_reboot,
     bool valid_magic
+);
+
+/** Retained RAM 4 KiB postmortem ring buffer (`WDT POSTMORTEM`, Feature #9). */
+#define P7501_WDT_PM_MAGIC         0x504D3039UL /* 'PM09' */
+#define P7501_WDT_PM_ENTRY_CAP     32u
+
+typedef struct p7501_wdt_pm_entry {
+    uint32_t seq;
+    uint32_t uptime_ms;
+    uint32_t elapsed_us;
+    uint8_t cmd_id;
+    uint8_t stage;
+    uint8_t flags;
+    uint8_t reserved;
+} p7501_wdt_pm_entry_t;
+
+typedef struct p7501_wdt_postmortem_ring {
+    uint32_t magic;
+    uint32_t write_idx;
+    uint32_t total_events;
+    p7501_wdt_pm_entry_t entries[P7501_WDT_PM_ENTRY_CAP];
+    uint8_t reserved_pad[4096u - 12u - (P7501_WDT_PM_ENTRY_CAP * sizeof(p7501_wdt_pm_entry_t)) - 4u];
+    uint32_t crc32;
+} p7501_wdt_postmortem_ring_t;
+
+void p7501_wdt_pm_init_or_recover(p7501_wdt_postmortem_ring_t *ring);
+void p7501_wdt_pm_record(
+    p7501_wdt_postmortem_ring_t *ring,
+    uint32_t seq,
+    uint32_t uptime_ms,
+    uint32_t elapsed_us,
+    uint8_t cmd_id,
+    uint8_t stage,
+    uint8_t flags
+);
+size_t p7501_wdt_pm_count(const p7501_wdt_postmortem_ring_t *ring);
+bool p7501_wdt_pm_get_recent(
+    const p7501_wdt_postmortem_ring_t *ring,
+    size_t back_idx,
+    p7501_wdt_pm_entry_t *out
 );
 
 #ifdef __cplusplus

@@ -18,7 +18,8 @@
 typedef struct p7501_pio_tx_snapshot {
     uint32_t baud;
     p7501_uart_framing_t framing;
-    float clkdiv;
+    uint16_t div_int;
+    uint8_t div_frac;
     uint bit_loops;
     uint tx_offset;
 } p7501_pio_tx_snapshot_t;

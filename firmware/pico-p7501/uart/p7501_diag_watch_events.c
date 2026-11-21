@@ -6,6 +6,7 @@
  */
 
 #include "uart/p7501_diag_watch_codec.h"
+#include "p7501_types.h"
 
 #include <stddef.h>
 #include <string.h>
@@ -16,49 +17,29 @@ typedef struct diag_sig_rule {
     uint32_t flag;
 } diag_sig_rule_t;
 
-#define DIAG_RULE(lit, flag_val) { (lit), sizeof(lit) - 1u, (flag_val) }
+static const diag_sig_rule_t k_diag_rules[] = P7501_SSOT_DIAG_RULES_INIT;
 
-static const diag_sig_rule_t k_diag_rules[] = {
-    DIAG_RULE("DDR CHECK: OK",                  P7501_DIAG_EVT_DDR_OK),
-    DIAG_RULE("serial boot mode",               P7501_DIAG_EVT_SERIAL_BOOT),
-    DIAG_RULE("... SD init end",                P7501_DIAG_EVT_SD_HW_OK),
-    DIAG_RULE("-91006",                         P7501_DIAG_EVT_SD_ERR),
-    DIAG_RULE("-90002",                         P7501_DIAG_EVT_SD_ERR),
-    DIAG_RULE("-90001",                         P7501_DIAG_EVT_SD_ERR),
-    DIAG_RULE("FAT Mount failed",               P7501_DIAG_EVT_FAT_FAIL),
-    DIAG_RULE("FAT Open(",                      P7501_DIAG_EVT_FAT_FAIL),
-    DIAG_RULE("SD diag load failed",            P7501_DIAG_EVT_SD_DIAG_LOAD_FAIL),
-    DIAG_RULE("diag loader uncompress failed",  P7501_DIAG_EVT_SD_UNCOMPRESS_FAIL),
-    DIAG_RULE("fvu uncompress failed",          P7501_DIAG_EVT_SD_UNCOMPRESS_FAIL),
-    DIAG_RULE("no header!",                     P7501_DIAG_EVT_SD_UNCOMPRESS_FAIL),
-    DIAG_RULE("no footer!",                     P7501_DIAG_EVT_SD_UNCOMPRESS_FAIL),
-    DIAG_RULE("check sum mismatch",             P7501_DIAG_EVT_SD_UNCOMPRESS_FAIL),
-    DIAG_RULE("*** start diag ***",             P7501_DIAG_EVT_DIAG_EXEC),
-    DIAG_RULE("diag loader is preserved",       P7501_DIAG_EVT_DIAG_EXEC),
-    DIAG_RULE("** open tray **",                P7501_DIAG_EVT_ODD_OPEN),
-    DIAG_RULE("can not close tray",             P7501_DIAG_EVT_ODD_TRAY_FAIL),
-    DIAG_RULE("80045300",                       P7501_DIAG_EVT_ODD_TRAY_FAIL),
-    DIAG_RULE("80040904",                       P7501_DIAG_EVT_CD_APC_ERR),
-    DIAG_RULE("83A7",                           P7501_DIAG_EVT_CD_APC_ERR),
-    DIAG_RULE("BGO driver init failed",         P7501_DIAG_EVT_BGO_FAIL),
-    DIAG_RULE("hung-up time changed",           P7501_DIAG_EVT_HUNG_U99),
-    DIAG_RULE("PANAMON1>",                      P7501_DIAG_EVT_PANAMON),
-};
+_Static_assert(
+    (sizeof(k_diag_rules) / sizeof(k_diag_rules[0])) == P7501_SSOT_DIAG_RULE_COUNT,
+    "SSOT diag signature rule table count mismatch"
+);
 
-#undef DIAG_RULE
-
-uint32_t p7501_diag_watch_feed_byte(
+uint32_t p7501_diag_watch_feed_byte_ex(
     p7501_diag_watch_state_t *st,
     const p7501_diag_watch_spec_t *spec,
     uint8_t byte,
     char *out_tx_char,
-    bool *out_release_sw_uart
+    bool *out_release_sw_uart,
+    bool *out_relock_now
 ) {
     if (out_tx_char != NULL) {
         *out_tx_char = '\0';
     }
     if (out_release_sw_uart != NULL) {
         *out_release_sw_uart = false;
+    }
+    if (out_relock_now != NULL) {
+        *out_relock_now = false;
     }
     if ((st == NULL) || (spec == NULL)) {
         return 0u;
@@ -101,23 +82,58 @@ uint32_t p7501_diag_watch_feed_byte(
         }
     }
 
-    if (panamon_prompt_now && !st->tx_dispatched) {
-        if (spec->nor_unlock && !st->unlock_dispatched) {
-            st->unlock_dispatched = true;
-            if (out_tx_char != NULL) {
-                *out_tx_char = 'U';
-            }
-        } else {
-            const char ch = p7501_diag_watch_action_char(spec->action);
-            if (ch != '\0') {
-                st->tx_dispatched = true;
+    const bool is_write_or_erase =
+        (spec->action == P7501_DIAG_ACT_WRITE) || (spec->action == P7501_DIAG_ACT_ERASE) ||
+        (spec->action == P7501_DIAG_ACT_FORMAT) ||
+        ((spec->action == P7501_DIAG_ACT_TXN) && spec->nor_unlock);
+    if (panamon_prompt_now) {
+        if (!st->tx_dispatched) {
+            if (spec->nor_unlock && !st->unlock_dispatched) {
+                st->unlock_dispatched = true;
                 if (out_tx_char != NULL) {
-                    *out_tx_char = ch;
+                    *out_tx_char = 'U';
                 }
+            } else if ((spec->action == P7501_DIAG_ACT_TXN) && (st->txn_cursor < spec->txn_count)) {
+                st->txn_cursor += 1u;
+                if (st->txn_cursor >= spec->txn_count) {
+                    st->tx_dispatched = true;
+                }
+                if (out_tx_char != NULL) {
+                    *out_tx_char = 'T';
+                }
+            } else {
+                const char ch = p7501_diag_watch_action_char(spec->action);
+                if (ch != '\0') {
+                    st->tx_dispatched = true;
+                    if (out_tx_char != NULL) {
+                        *out_tx_char = ch;
+                    }
+                }
+            }
+        } else if (spec->nor_unlock && is_write_or_erase && !st->relock_dispatched) {
+            st->relock_dispatched = true;
+            if (out_relock_now != NULL) {
+                *out_relock_now = true;
+            }
+            if (out_tx_char != NULL) {
+                *out_tx_char = 'L';
             }
         }
     }
     return newly_hit;
+}
+
+uint32_t p7501_diag_watch_feed_byte(
+    p7501_diag_watch_state_t *st,
+    const p7501_diag_watch_spec_t *spec,
+    uint8_t byte,
+    char *out_tx_char,
+    bool *out_release_sw_uart
+) {
+    bool unused_relock = false;
+    return p7501_diag_watch_feed_byte_ex(
+        st, spec, byte, out_tx_char, out_release_sw_uart, &unused_relock
+    );
 }
 
 const char *p7501_diag_watch_diagnosis(uint32_t events) {

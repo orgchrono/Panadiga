@@ -42,6 +42,7 @@ bool p7501_sds_parse_args(const char *arg, p7501_sds_spec_t *out_spec) {
     }
     p7501_parse_window_boot_args(arg, 4000u, 200u, 60000u, &out_spec->boot);
     out_spec->default_block_bytes = 0u;
+    out_spec->trigger = P7501_SDS_TRIG_NONE;
 
     const char *cur = arg;
     char tok[32];
@@ -54,6 +55,17 @@ bool p7501_sds_parse_args(const char *arg, p7501_sds_spec_t *out_spec) {
                 return false;
             }
             out_spec->default_block_bytes = (uint16_t)val;
+        } else if (strncmp(tok_upper, "TRIG:", 5u) == 0) {
+            const char *mode = tok_upper + 5u;
+            if (strcmp(mode, "ACMD13") == 0) {
+                out_spec->trigger = P7501_SDS_TRIG_ACMD13;
+            } else if (strcmp(mode, "CRCERR") == 0) {
+                out_spec->trigger = P7501_SDS_TRIG_CRCERR;
+            } else if (strcmp(mode, "91006") == 0) {
+                out_spec->trigger = P7501_SDS_TRIG_91006;
+            } else {
+                return false;
+            }
         }
     }
     return true;
@@ -281,6 +293,55 @@ static void sds_step_data(p7501_sds_state_t *st, uint8_t nibble) {
     sds_finish_data_block(st, nibble);
 }
 
+static void sds_eval_trigger(p7501_sds_state_t *st) {
+    if (st->trigger_fired || (st->active_trigger == P7501_SDS_TRIG_NONE)) {
+        return;
+    }
+    bool match = false;
+    if (st->active_trigger == P7501_SDS_TRIG_ACMD13) {
+        match = st->acmd13_captured;
+    } else if (st->active_trigger == P7501_SDS_TRIG_CRCERR) {
+        match = (st->cmd_crc_err > 0u) || (st->data_crc_err > 0u);
+    } else if (st->active_trigger == P7501_SDS_TRIG_91006) {
+        match = (st->cmd_crc_err > 0u) ||
+                (st->data_crc_err > 0u) ||
+                (st->start_bit_bad_mask != 0u) ||
+                (st->acmd13_captured && !st->acmd13_crc_ok);
+    }
+    if (match) {
+        st->trigger_fired = true;
+        st->trigger_clk = st->total_clocks;
+    }
+}
+
+void p7501_sds_set_trigger(p7501_sds_state_t *st, p7501_sds_trigger_t trig) {
+    if (st == NULL) {
+        return;
+    }
+    st->active_trigger = trig;
+    st->trigger_fired = false;
+    st->trigger_clk = 0u;
+    sds_eval_trigger(st);
+}
+
+bool p7501_sds_check_trigger(const p7501_sds_state_t *st) {
+    return (st != NULL) && st->trigger_fired;
+}
+
+const char *p7501_sds_trigger_name(p7501_sds_trigger_t trig) {
+    switch (trig) {
+        case P7501_SDS_TRIG_ACMD13:
+            return "ACMD13";
+        case P7501_SDS_TRIG_CRCERR:
+            return "CRCERR";
+        case P7501_SDS_TRIG_91006:
+            return "91006";
+        case P7501_SDS_TRIG_NONE:
+        default:
+            return "NONE";
+    }
+}
+
 void p7501_sds_feed_sample(p7501_sds_state_t *st, uint8_t sample) {
     if (st == NULL) {
         return;
@@ -301,6 +362,7 @@ void p7501_sds_feed_sample(p7501_sds_state_t *st, uint8_t sample) {
 
     sds_step_cmd(st, (uint8_t)(s & 1u));
     sds_step_data(st, (uint8_t)((s >> 1u) & 0x0Fu));
+    sds_eval_trigger(st);
 }
 
 void p7501_sds_feed_samples(p7501_sds_state_t *st, const uint8_t *samples, size_t count) {

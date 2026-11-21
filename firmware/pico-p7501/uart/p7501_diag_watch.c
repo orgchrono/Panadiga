@@ -9,12 +9,16 @@
  */
 
 #include "uart/p7501_diag_watch.h"
+#include "cli/p7501_cli.h"
+#include "common/p7501_hex.h"
 #include "uart/p7501_diag_watch_codec.h"
 #include "uart/p7501_pio_loop.h"
 #include "uart/p7501_uart_capture.h"
 #include "uart/p7501_uart_pio_engine.h"
+#include "flash/p7501_flash.h"
 #include "hal/p7501_hw.h"
 #include "hal/p7501_watchdog.h"
+#include "hal/p7501_wireless_codec.h"
 #include "pico/stdlib.h"
 
 #include <inttypes.h>
@@ -41,9 +45,11 @@ typedef struct diagwatch_ctx {
     uint32_t cd_apc_ms;
     uint32_t bgo_fail_ms;
     uint32_t panamon_ms;
+    uint32_t relock_ms;
     char injected_tx[36];
     size_t injected_len;
     bool tx_dispatched;
+    bool relock_pending;
 } diagwatch_ctx_t;
 
 static void record_alert_timestamp(diagwatch_ctx_t *dc, uint32_t hit, uint32_t ms) {
@@ -70,7 +76,13 @@ static void diagwatch_on_byte(void *raw_ctx, uint8_t b, uint32_t rel_us, bool *o
 
     char tx_ch = '\0';
     bool release_now = false;
-    const uint32_t hit = p7501_diag_watch_feed_byte(&dc->fsm, dc->spec, b, &tx_ch, &release_now);
+    bool relock_now = false;
+    const uint32_t hit = p7501_diag_watch_feed_byte_ex(
+        &dc->fsm, dc->spec, b, &tx_ch, &release_now, &relock_now
+    );
+    if (relock_now) {
+        p7501_flash_set_upper_nor_unlocked(false);
+    }
     if (release_now) {
         p7501_pio_release_sw_uart_now();
         dc->rel_sw_ms = ms;
@@ -85,6 +97,30 @@ static void diagwatch_on_byte(void *raw_ctx, uint8_t b, uint32_t rel_us, bool *o
             tx_len = sizeof(P7501_DIAG_WATCH_UNLOCK_TX) - 1u;
             memcpy(dc->injected_tx, P7501_DIAG_WATCH_UNLOCK_TX, tx_len + 1u);
             p7501_pio_tx_bytes((const uint8_t *)dc->injected_tx, tx_len, false);
+            dc->injected_len = tx_len;
+            dc->panamon_ms = ms;
+            dc->tx_dispatched = true;
+        } else if (tx_ch == 'L') {
+            tx_len = sizeof(P7501_DIAG_WATCH_LOCK_TX) - 1u;
+            p7501_pio_tx_bytes((const uint8_t *)P7501_DIAG_WATCH_LOCK_TX, tx_len, false);
+            p7501_flash_set_upper_nor_unlocked(false);
+            dc->relock_ms = ms;
+            dc->relock_pending = true;
+        } else if (tx_ch == 'T') {
+            const uint8_t idx = (dc->fsm.txn_cursor > 0u) ? (uint8_t)(dc->fsm.txn_cursor - 1u) : 0u;
+            const char *step = (idx < dc->spec->txn_count) ? dc->spec->txn_steps[idx] : "";
+            tx_len = strlen(step);
+            if (tx_len > 0u && tx_len < sizeof(dc->injected_tx)) {
+                memcpy(dc->injected_tx, step, tx_len + 1u);
+                p7501_pio_tx_bytes((const uint8_t *)dc->injected_tx, tx_len, false);
+                const char s0 = (char)(step[0] & ~0x20);
+                if (s0 == 'W' || s0 == 'E' || s0 == 'F' || s0 == 'J') {
+                    p7501_wireless_consume_nor_op(p7501_wireless_global_state());
+                }
+                dc->injected_len = tx_len;
+                dc->panamon_ms = ms;
+                dc->tx_dispatched = true;
+            }
         } else {
             tx_len = p7501_diag_watch_format_tx(dc->spec, dc->injected_tx, sizeof(dc->injected_tx));
             if (tx_len <= 1u) {
@@ -95,30 +131,26 @@ static void diagwatch_on_byte(void *raw_ctx, uint8_t b, uint32_t rel_us, bool *o
             } else {
                 p7501_pio_tx_bytes((const uint8_t *)dc->injected_tx, tx_len, false);
             }
+            const char u_ch = (char)(tx_ch & ~0x20);
+            if (u_ch == 'W' || u_ch == 'E' || u_ch == 'F' || u_ch == 'J') {
+                p7501_wireless_consume_nor_op(p7501_wireless_global_state());
+            }
+            dc->injected_len = tx_len;
+            dc->panamon_ms = ms;
+            dc->tx_dispatched = true;
         }
-        dc->injected_len = tx_len;
-        dc->panamon_ms = ms;
-        dc->tx_dispatched = true;
     }
 }
 
 static void flush_pending_rx_bytes(diagwatch_ctx_t *dc) {
     while (dc->flushed_len < dc->total_len) {
-        const uint8_t b = dc->buf[dc->flushed_len++];
-        if (b == '\r') {
-            continue;
-        }
-        if ((b == '\n') || (b >= 0x20u && b <= 0x7Eu)) {
-            putchar((int)b);
-        } else {
-            printf("[%02X]", (unsigned)b);
-        }
+        p7501_print_ascii_byte(dc->buf[dc->flushed_len++], '[', ']');
     }
 }
 
 static void flush_pending_alerts(diagwatch_ctx_t *dc) {
     const uint32_t flags = dc->pending_alerts;
-    if (flags == 0u && !dc->tx_dispatched) {
+    if (flags == 0u && !dc->tx_dispatched && !dc->relock_pending) {
         return;
     }
     dc->pending_alerts = 0u;
@@ -157,6 +189,11 @@ static void flush_pending_alerts(diagwatch_ctx_t *dc) {
                    dc->panamon_ms, (int)(dc->injected_len - 1u), dc->injected_tx);
         }
     }
+    if (dc->relock_pending) {
+        dc->relock_pending = false;
+        printf("\n[DIAGWATCH +%" PRIu32 "ms] PANAMON1> auto-relock -> emitted U LOCK\r\n",
+               dc->relock_ms);
+    }
     stdio_flush();
 }
 
@@ -168,12 +205,17 @@ static void diagwatch_on_tick(void *raw_ctx, uint32_t rel_us, bool *out_stop) {
     flush_pending_alerts(dc);
 }
 
+static p7501_diag_watch_spec_t s_dw_spec;
+static diagwatch_ctx_t s_dw_ctx;
+
 void p7501_cmd_diag_watch(const char *arg) {
-    p7501_diag_watch_spec_t spec;
-    if (!p7501_diag_watch_parse_args(arg, &spec)) {
+    p7501_diag_watch_spec_t *const spec = &s_dw_spec;
+    if (!p7501_diag_watch_parse_args(arg, spec)) {
+        p7501_cli_set_result("ERR", "EINVAL");
         printf("DIAGWATCH: ERROR (Usage: DIAGWATCH [ms] [NORMAL|JIG[:ms]|PREJIG[:ms]|NOPULL] [AUTO|BYPASS|READ[:a[,n]]|WRITE:<a,v>|FORMAT|DUMP|JUMP:<a>|ERASE:<a_nvram>|QUIT|NONE] [RELEASE|HOLD] [WAKE[:ms]])\n");
         return;
     }
+    p7501_diag_watch_apply_policy(spec);
 
     p7501_hw_enforce_nsw5v_hiz();
     if (p7501_pio_get_baud() != P7501_UART_DEFAULT_BAUD) {
@@ -183,73 +225,83 @@ void p7501_cmd_diag_watch(const char *arg) {
         (void)p7501_pio_set_framing(P7501_FRAMING_8N1);
     }
 
-    if (spec.wait_for_wake) {
-        float wake_v = 0.0f;
+    if (spec->wait_for_wake) {
+        uint32_t wake_mv = 0u;
         uint32_t wake_ms = 0u;
-        const bool prestrap = spec.no_xreset && (spec.boot_action == P7501_BOOT_ACTION_JIG);
-        if (!p7501_pio_wait_standby_wake("DIAGWATCH", spec.wake_timeout_ms, prestrap, &wake_v, &wake_ms)) {
+        char v_buf[8];
+        const bool prestrap = spec->no_xreset && (spec->boot_action == P7501_BOOT_ACTION_JIG);
+        if (!p7501_pio_wait_standby_wake("DIAGWATCH", spec->wake_timeout_ms, prestrap, &wake_mv, &wake_ms)) {
+            if (spec->nor_unlock) {
+                p7501_flash_set_upper_nor_unlocked(false);
+            }
             printf("DIAGWATCH: OK (rx=0 bytes, ferr=0, events=0x0000, sw_rel=NO, tx=NO, ovf=NO, aborted=YES)\n");
-            printf("[DIAGWATCH] Notice: Standby wake not observed within %" PRIu32 " ms (VDD=%.2fV)\n",
-                   wake_ms, (double)wake_v);
+            printf("[DIAGWATCH] Notice: Standby wake not observed within %" PRIu32 " ms (VDD=%sV)\n",
+                   wake_ms, p7501_fmt_mv_volts(wake_mv, v_buf));
             return;
         }
-        printf("[DIAGWATCH +%" PRIu32 "ms] WAKE edge detected (VDD=%.2fV) -> starting capture\n",
-               wake_ms, (double)wake_v);
+        printf("[DIAGWATCH +%" PRIu32 "ms] WAKE edge detected (VDD=%sV) -> starting capture\n",
+               wake_ms, p7501_fmt_mv_volts(wake_mv, v_buf));
     }
 
     size_t buf_cap = 0u;
-    diagwatch_ctx_t dc = {
-        .spec = &spec,
-        .buf = p7501_uart_rx_buffer(&buf_cap),
-        .buf_cap = buf_cap,
-    };
-    p7501_diag_watch_init(&dc.fsm);
+    memset(&s_dw_ctx, 0, sizeof(s_dw_ctx));
+    s_dw_ctx.spec = spec;
+    s_dw_ctx.buf = p7501_uart_rx_buffer(&buf_cap);
+    s_dw_ctx.buf_cap = buf_cap;
+    p7501_diag_watch_init(&s_dw_ctx.fsm);
 
     printf("=== DIAGWATCH PIO1 (baud=%" PRIu32 " framing=%s ms=%" PRIu32 " boot=%d hold=%" PRIu32 " act=%d rel_ddr=%s no_xrst=%s) ===\n",
            p7501_pio_get_baud(),
            p7501_framing_name(p7501_pio_get_framing()),
-           spec.timeout_ms,
-           (int)spec.boot_action,
-           spec.jig_hold_ms,
-           (int)spec.action,
-           spec.release_on_ddr ? "YES" : "NO",
-           spec.no_xreset ? "YES" : "NO");
+           spec->timeout_ms,
+           (int)spec->boot_action,
+           spec->jig_hold_ms,
+           (int)spec->action,
+           spec->release_on_ddr ? "YES" : "NO",
+           spec->no_xreset ? "YES" : "NO");
     fflush(stdout);
 
     const p7501_pio_loop_cfg_t cfg = {
-        .window_ms = spec.timeout_ms,
-        .boot_action = spec.boot_action,
-        .jig_hold_ms = spec.jig_hold_ms,
+        .window_ms = spec->timeout_ms,
+        .boot_action = spec->boot_action,
+        .jig_hold_ms = spec->jig_hold_ms,
         .manage_session = true,
-        .no_xreset = spec.no_xreset,
+        .no_xreset = spec->no_xreset,
         .auto_release_serial_boot = false,
         .allow_cdc_abort = true,
         .on_rx_byte = diagwatch_on_byte,
         .on_tick = diagwatch_on_tick,
         .on_sw_rel = NULL,
-        .ctx = &dc,
+        .ctx = &s_dw_ctx,
     };
     p7501_pio_loop_metrics_t m;
     p7501_pio_run_session(&cfg, &m);
-    flush_pending_rx_bytes(&dc);
-    flush_pending_alerts(&dc);
+    if (spec->nor_unlock || spec->action == P7501_DIAG_ACT_WRITE ||
+        spec->action == P7501_DIAG_ACT_ERASE || spec->action == P7501_DIAG_ACT_FORMAT ||
+        spec->action == P7501_DIAG_ACT_TXN) {
+        p7501_flash_set_upper_nor_unlocked(false);
+    }
+    flush_pending_rx_bytes(&s_dw_ctx);
+    flush_pending_alerts(&s_dw_ctx);
     stdio_flush();
 
     if (m.rx_bytes == 0u) {
-        const float end_v = p7501_hw_read_vdd();
-        if (end_v < P7501_VDD_THRESHOLD_V) {
-            printf("\n[DIAGWATCH] Notice: Target P7501 rails OFF / Standby (VDD=%.2fV) — wake unit or use WAKE:30000\n",
-                   end_v);
+        const uint32_t end_mv = p7501_hw_read_vdd_mv();
+        if (end_mv < P7501_SSOT_VDD_MIN_MV) {
+            char v_buf[8];
+            printf("\n[DIAGWATCH] Notice: Target P7501 rails OFF / Standby (VDD=%sV) — wake unit or use WAKE:30000\n",
+                   p7501_fmt_mv_volts(end_mv, v_buf));
         }
     }
 
-    printf("\nDIAGWATCH: OK (rx=%" PRIu32 " bytes, ferr=%" PRIu32 ", events=0x%04" PRIX32 ", sw_rel=%s, tx=%s, ovf=%s, aborted=%s)\n",
+    printf("\nDIAGWATCH: OK (rx=%" PRIu32 " bytes, ferr=%" PRIu32 ", events=0x%04" PRIX32 ", sw_rel=%s, tx=%s, relock=%s, ovf=%s, aborted=%s)\n",
            m.rx_bytes,
            m.framing_errors,
-           dc.fsm.seen_events,
-           dc.fsm.sw_uart_released ? "YES" : "NO",
-           dc.fsm.tx_dispatched ? "YES" : "NO",
+           s_dw_ctx.fsm.seen_events,
+           s_dw_ctx.fsm.sw_uart_released ? "YES" : "NO",
+           s_dw_ctx.fsm.tx_dispatched ? "YES" : "NO",
+           s_dw_ctx.fsm.relock_dispatched ? "YES" : "NO",
            m.overflow ? "YES" : "NO",
            m.aborted ? "YES" : "NO");
-    printf("[DIAGWATCH] Diagnosis: %s\n", p7501_diag_watch_diagnosis(dc.fsm.seen_events));
+    printf("[DIAGWATCH] Diagnosis: %s\n", p7501_diag_watch_diagnosis(s_dw_ctx.fsm.seen_events));
 }

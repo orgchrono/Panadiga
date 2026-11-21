@@ -32,7 +32,7 @@ static inline void p7501_sds_sampler_program_init(
     sm_config_set_in_pins(&c, cmd_pin_base);
     sm_config_set_in_shift(&c, true, true, 32);
     sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
-    sm_config_set_clkdiv(&c, 1.0f);
+    sm_config_set_clkdiv_int_frac(&c, 1u, 0u);
     pio_sm_init(pio, sm, offset, &c);
 }
 %}

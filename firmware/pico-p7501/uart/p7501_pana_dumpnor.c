@@ -96,32 +96,11 @@ uint32_t p7501_dumpnor_block_size(uint32_t total_len) {
 
 bool p7501_dumpnor_validate_range(uint32_t start_addr, uint32_t total_len) {
     return (p7501_dumpnor_block_size(total_len) != 0u) &&
-           p7501_flash_is_readonly_nor_range(0x00800000UL, start_addr, total_len);
+           p7501_flash_is_readonly_nor_range(p7501_flash_get_active_size(), start_addr, total_len);
 }
 
 bool p7501_dumpnor_parse_hex_tok(const char *tok, uint32_t *out_val) {
-    if ((tok == NULL) || (out_val == NULL)) {
-        return false;
-    }
-    const char *p = tok;
-    if ((p[0] == '0') && ((p[1] == 'x') || (p[1] == 'X'))) {
-        p += 2;
-    }
-    if (*p == '\0') {
-        return false;
-    }
-    uint32_t v = 0u;
-    size_t digits = 0u;
-    for (; *p != '\0'; ++p) {
-        const int nib = p7501_hex_char_to_nibble(*p);
-        if ((nib < 0) || (digits >= 8u)) {
-            return false;
-        }
-        v = (v << 4) | (uint32_t)nib;
-        digits += 1u;
-    }
-    *out_val = v;
-    return true;
+    return p7501_parse_hex_u32_exact(tok, 8u, out_val);
 }
 
 bool p7501_dumpnor_parse_colon_spec(const char *spec, uint32_t *out_start, uint32_t *out_len) {
@@ -146,18 +125,22 @@ bool p7501_dumpnor_parse_colon_spec(const char *spec, uint32_t *out_start, uint3
            p7501_dumpnor_validate_range(*out_start, *out_len);
 }
 
-size_t p7501_dumpnor_build_stub(
+static size_t build_dumpnor_stub_core(
     uint32_t start_addr,
     uint32_t total_len,
     uint32_t load_addr,
+    bool stream_raw_bytes,
+    const char *hdr_magic,
     uint8_t *out_buf,
     size_t out_cap
 ) {
     const uint32_t block_size = p7501_dumpnor_block_size(total_len);
+    const size_t min_cap = stream_raw_bytes ? P7501_DUMPNOR_STUB_SIZE : (P7501_DUMPNOR_STUB_SIZE - 5u);
     if (!p7501_dumpnor_validate_range(start_addr, total_len) ||
         (load_addr > 0xFFF00000UL) ||
         (out_buf == NULL) ||
-        (out_cap < P7501_DUMPNOR_STUB_SIZE)) {
+        (hdr_magic == NULL) ||
+        (out_cap < min_cap)) {
         return 0u;
     }
 
@@ -187,7 +170,10 @@ size_t p7501_dumpnor_build_stub(
 
     const size_t byte_loop = b.len;
     emit_bytes(&b, k_rd_byte, sizeof(k_rd_byte));
-    const size_t c_putc_data = emit_call_rel16(&b);
+    size_t c_putc_data = 0u;
+    if (stream_raw_bytes) {
+        c_putc_data = emit_call_rel16(&b);
+    }
     emit_bytes(&b, k_next_byte, sizeof(k_next_byte));
     emit_bne_back(&b, byte_loop);
 
@@ -217,7 +203,7 @@ size_t p7501_dumpnor_build_stub(
     emit_bytes(&b, k_p7501_mn103_putc_d3, sizeof(k_p7501_mn103_putc_d3));
 
     const size_t hdr_off = b.len;
-    emit_bytes(&b, (const uint8_t *)"PANADMP1", 8u);
+    emit_bytes(&b, (const uint8_t *)hdr_magic, 8u);
     uint8_t meta[12];
     write_u32_le(&meta[0], start_addr);
     write_u32_le(&meta[4], total_len);
@@ -228,13 +214,15 @@ size_t p7501_dumpnor_build_stub(
     emit_bytes(&b, (const uint8_t *)"PANADONE", 8u);
     const size_t end_off = b.len;
 
-    if (end_off != P7501_DUMPNOR_STUB_SIZE) {
+    if (stream_raw_bytes && (end_off != P7501_DUMPNOR_STUB_SIZE)) {
         return 0u;
     }
 
     patch_call_rel16(&b, c_emit_hdr, emit_span_off);
     patch_call_rel16(&b, c_emit_ftr, emit_span_off);
-    patch_call_rel16(&b, c_putc_data, putc_off);
+    if (stream_raw_bytes) {
+        patch_call_rel16(&b, c_putc_data, putc_off);
+    }
     patch_call_rel16(&b, c_putc_csum, putc_off);
     patch_call_rel16(&b, c_putc_span, putc_off);
 
@@ -243,4 +231,136 @@ size_t p7501_dumpnor_build_stub(
     write_u32_le(&out_buf[ftr_s_patch], load_addr + (uint32_t)ftr_off);
     write_u32_le(&out_buf[ftr_e_patch], load_addr + (uint32_t)end_off);
     return end_off;
+}
+
+size_t p7501_dumpnor_build_stub(
+    uint32_t start_addr,
+    uint32_t total_len,
+    uint32_t load_addr,
+    uint8_t *out_buf,
+    size_t out_cap
+) {
+    return build_dumpnor_stub_core(
+        start_addr, total_len, load_addr, true, "PANADMP1", out_buf, out_cap
+    );
+}
+
+size_t p7501_dumpnor_build_checksum_stub(
+    uint32_t start_addr,
+    uint32_t total_len,
+    uint32_t load_addr,
+    uint8_t *out_buf,
+    size_t out_cap
+) {
+    return build_dumpnor_stub_core(
+        start_addr, total_len, load_addr, false, P7501_DUMPNOR_SUM_MAGIC, out_buf, out_cap
+    );
+}
+
+bool p7501_dumpnor_eval_sum_only_reply(
+    const uint8_t *buf,
+    size_t len,
+    uint32_t block_size,
+    uint32_t expected_blocks,
+    p7501_nor_check_result_t *out
+) {
+    if ((buf == NULL) || (out == NULL) || (block_size == 0u) || (expected_blocks == 0u)) {
+        return false;
+    }
+    memset(out, 0, sizeof(*out));
+    const size_t body_len = (size_t)expected_blocks * 4u;
+    size_t pos = len;
+    for (size_t i = 0u; i + 20u + body_len + 8u <= len; ++i) {
+        if ((memcmp(&buf[i], P7501_DUMPNOR_SUM_MAGIC, 8u) == 0) &&
+            (memcmp(&buf[i + 20u + body_len], "PANADONE", 8u) == 0)) {
+            pos = i;
+            break;
+        }
+    }
+    if (pos >= len) {
+        return false;
+    }
+    const uint8_t *sums = &buf[pos + 20u];
+    const uint32_t expected_ff_sum = block_size * 0xFFu;
+    uint32_t blank_cnt = 0u;
+    for (uint32_t b = 0u; b < expected_blocks; ++b) {
+        const uint32_t s = p7501_read_u32_le(&sums[b * 4u]);
+        if (s == expected_ff_sum) {
+            blank_cnt += 1u;
+        }
+    }
+    out->valid = true;
+    out->blocks_checked = expected_blocks;
+    out->blank_blocks = blank_cnt;
+    out->all_blank = (blank_cnt == expected_blocks);
+    out->digest_crc32 = p7501_crc32_ieee(sums, body_len);
+    return true;
+}
+
+bool p7501_dumpnor_verify_block(
+    const uint8_t *blk,
+    size_t blk_len,
+    const uint8_t sum_le[4],
+    bool *out_all_ff
+) {
+    if ((blk == NULL) || (sum_le == NULL) || (blk_len == 0u)) {
+        return false;
+    }
+    uint32_t sum = 0u;
+    for (size_t i = 0u; i < blk_len; ++i) {
+        sum += (uint32_t)blk[i];
+    }
+    const uint32_t expected = p7501_read_u32_le(sum_le);
+    if (out_all_ff != NULL) {
+        *out_all_ff = (sum == (uint32_t)blk_len * 0xFFu);
+    }
+    return sum == expected;
+}
+
+bool p7501_dumpnor_is_fast_baud(uint32_t baud) {
+    return (baud == 115200u) || (baud == 230400u) || (baud == 460800u);
+}
+
+bool p7501_dumpnor_resume_begin(
+    p7501_dumpnor_resume_state_t *st,
+    uint32_t start_addr,
+    uint32_t total_len,
+    uint32_t baud
+) {
+    if ((st == NULL) || !p7501_dumpnor_validate_range(start_addr, total_len) ||
+        !p7501_dumpnor_is_fast_baud(baud)) {
+        return false;
+    }
+    st->active = true;
+    st->start_addr = start_addr;
+    st->total_len = total_len;
+    st->completed_bytes = 0u;
+    st->block_size = p7501_dumpnor_block_size(total_len);
+    st->baud = baud;
+    return true;
+}
+
+bool p7501_dumpnor_resume_next_slice(
+    const p7501_dumpnor_resume_state_t *st,
+    uint32_t *out_addr,
+    uint32_t *out_len
+) {
+    if ((st == NULL) || !st->active || (st->completed_bytes >= st->total_len) ||
+        (out_addr == NULL) || (out_len == NULL)) {
+        return false;
+    }
+    *out_addr = st->start_addr + st->completed_bytes;
+    *out_len = st->total_len - st->completed_bytes;
+    return true;
+}
+
+void p7501_dumpnor_resume_advance(p7501_dumpnor_resume_state_t *st, uint32_t verified_bytes) {
+    if ((st == NULL) || !st->active) {
+        return;
+    }
+    const uint32_t rem = st->total_len - st->completed_bytes;
+    st->completed_bytes += (verified_bytes > rem) ? rem : verified_bytes;
+    if (st->completed_bytes >= st->total_len) {
+        st->active = false;
+    }
 }

@@ -10,6 +10,7 @@
 #ifndef P7501_DIAG_WATCH_CODEC_H
 #define P7501_DIAG_WATCH_CODEC_H
 
+#include "flash/p7501_flash.h"
 #include "uart/p7501_uart_codec.h"
 
 #include <stdbool.h>
@@ -30,8 +31,11 @@ typedef enum p7501_diag_action {
     P7501_DIAG_ACT_JUMP,
     P7501_DIAG_ACT_ERASE,
     P7501_DIAG_ACT_QUIT,
+    P7501_DIAG_ACT_TXN,
     P7501_DIAG_ACT_NONE
 } p7501_diag_action_t;
+
+#define P7501_DIAG_TXN_MAX_STEPS 8u
 
 enum {
     P7501_DIAG_EVT_DDR_OK             = (1u << 0),
@@ -51,6 +55,7 @@ enum {
 };
 
 #define P7501_DIAG_WATCH_UNLOCK_TX "U CONFIRM_UPPER_NOR\r"
+#define P7501_DIAG_WATCH_LOCK_TX   "U LOCK\r"
 
 typedef struct p7501_diag_watch_spec {
     uint32_t timeout_ms;
@@ -61,9 +66,12 @@ typedef struct p7501_diag_watch_spec {
     bool no_xreset;
     bool wait_for_wake;
     bool nor_unlock;
+    p7501_policy_req_t policy_req;
     uint32_t wake_timeout_ms;
     uint32_t target_addr;
     char tx_seq[32];
+    uint8_t txn_count;
+    char txn_steps[P7501_DIAG_TXN_MAX_STEPS][32];
 } p7501_diag_watch_spec_t;
 
 typedef struct p7501_diag_watch_state {
@@ -73,10 +81,15 @@ typedef struct p7501_diag_watch_state {
     bool sw_uart_released;
     bool unlock_dispatched;
     bool tx_dispatched;
+    bool relock_dispatched;
+    uint8_t txn_cursor;
 } p7501_diag_watch_state_t;
 
-/** Parse `DIAGWATCH [ms] [NORMAL|JIG[:ms]|NOPULL] [AUTO|BYPASS|READ[:a[,n]]|WRITE:<a,v>|FORMAT|DUMP|JUMP:<a>|ERASE:<a_nvram>|QUIT|NONE] [RELEASE|HOLD]`. */
+/** Purely parse `DIAGWATCH ...` arguments (zero session state mutation). */
 bool p7501_diag_watch_parse_args(const char *arg, p7501_diag_watch_spec_t *out);
+
+/** Apply parsed NOR unlock/lock request from `DIAGWATCH` spec to active session. */
+void p7501_diag_watch_apply_policy(const p7501_diag_watch_spec_t *spec);
 
 /** Initialize a clean rolling `DIAGWATCH` state machine. */
 void p7501_diag_watch_init(p7501_diag_watch_state_t *st);
@@ -95,6 +108,16 @@ size_t p7501_diag_watch_format_tx(const p7501_diag_watch_spec_t *spec, char *out
  * normal-mode fallback so `P50` stays LOW during sampling; in `NORMAL`/`NOPULL` on `DDR CHECK: OK`),
  * and sets `*out_tx_char` once when `PANAMON1>` appears and an active TX action is configured.
  */
+/** Pure RX byte classifier with explicit relock event output (`*out_relock_now`). */
+uint32_t p7501_diag_watch_feed_byte_ex(
+    p7501_diag_watch_state_t *st,
+    const p7501_diag_watch_spec_t *spec,
+    uint8_t byte,
+    char *out_tx_char,
+    bool *out_release_sw_uart,
+    bool *out_relock_now
+);
+
 uint32_t p7501_diag_watch_feed_byte(
     p7501_diag_watch_state_t *st,
     const p7501_diag_watch_spec_t *spec,

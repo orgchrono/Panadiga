@@ -10,6 +10,8 @@
 
 #include "diag/p7501_jigsweep_codec.h"
 
+#include "cli/p7501_cli.h"
+#include "common/p7501_cmd_arena.h"
 #include "hal/p7501_hw.h"
 #include "hal/p7501_led.h"
 #include "hal/p7501_watchdog.h"
@@ -25,7 +27,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define JIGSWEEP_TRIAL_RX_CAP 2048u
+#define JIGSWEEP_TRIAL_RX_CAP P7501_ARENA_JIGSWEEP_CAP
 #define JIGSWEEP_WINDOW_MS 320u
 #define JIGSWEEP_PRE_DDR_US 9500u
 
@@ -48,26 +50,31 @@ static void sweep_print_preview(const uint8_t *buf, size_t len) {
     putchar('"');
 }
 
-static void sweep_run_hold_or_delay_trial(p7501_jigsweep_mode_t mode, uint32_t param_ms) {
-    static uint8_t rx_buf[JIGSWEEP_TRIAL_RX_CAP];
+static bool sweep_run_hold_or_delay_trial(p7501_jigsweep_mode_t mode, uint32_t param_ms) {
+    uint8_t *const rx_buf = g_p7501_cmd_arena.jigsweep_buf;
     const p7501_boot_action_t start_action =
         (mode == P7501_JIGSWEEP_HOLD) ? P7501_BOOT_ACTION_JIG : P7501_BOOT_ACTION_NORMAL;
     const uint32_t release_ms =
         (mode == P7501_JIGSWEEP_HOLD) ? param_ms : ((param_ms + 35u > 50u) ? (param_ms + 35u) : 50u);
 
     p7501_pio_begin_rx_session_ex(start_action, (mode == P7501_JIGSWEEP_HOLD) ? param_ms : 0u);
+    /* HOLD=0ms must release SW_UART immediately at reset release instead of latching LOW all trial. */
+    if ((mode == P7501_JIGSWEEP_HOLD) && (param_ms == 0u)) {
+        p7501_pio_release_sw_uart_now();
+    }
     const uint64_t t0_us = time_us_64();
     const uint64_t deadline_us = t0_us + ((uint64_t)JIGSWEEP_WINDOW_MS * 1000ULL);
 
     bool delay_asserted = false;
     bool delay_released = false;
     bool first_seen = false;
+    bool aborted = false;
     uint32_t first_us = 0u;
     size_t rx_len = 0u;
     uint32_t ferr = 0u;
     uint8_t byte = 0u;
 
-    while (p7501_wdt_loop_step(t0_us, deadline_us, true, NULL)) {
+    while (p7501_wdt_loop_step(t0_us, deadline_us, true, &aborted)) {
         const uint32_t rel_us = (uint32_t)(time_us_64() - t0_us);
         if (mode == P7501_JIGSWEEP_HOLD) {
             (void)p7501_pio_poll_sw_uart_release();
@@ -89,7 +96,7 @@ static void sweep_run_hold_or_delay_trial(p7501_jigsweep_mode_t mode, uint32_t p
                 first_seen = true;
                 first_us = (uint32_t)(time_us_64() - t0_us);
             }
-            if (rx_len < sizeof(rx_buf)) {
+            if (rx_len < JIGSWEEP_TRIAL_RX_CAP) {
                 rx_buf[rx_len++] = byte;
             }
         }
@@ -109,9 +116,10 @@ static void sweep_run_hold_or_delay_trial(p7501_jigsweep_mode_t mode, uint32_t p
            ovf ? "YES" : "NO");
     sweep_print_preview(rx_buf, rx_len);
     putchar('\n');
+    return !aborted;
 }
 
-static void sweep_run_preboot_trial(uint32_t profile) {
+static bool sweep_run_preboot_trial(uint32_t profile) {
     static const char *const k_names[6] = {
         "38400_8E1_AMOBP_SYNC",
         "115200_8E1_AMOBP_SYNC",
@@ -146,16 +154,17 @@ static void sweep_run_preboot_trial(uint32_t profile) {
     const uint64_t deadline_us = t0_us + ((uint64_t)JIGSWEEP_WINDOW_MS * 1000ULL);
     uint8_t pre_buf[64];
     size_t pre_len = 0u;
-    static uint8_t post_buf[JIGSWEEP_TRIAL_RX_CAP];
+    uint8_t *const post_buf = g_p7501_cmd_arena.jigsweep_buf;
     size_t post_len = 0u;
     uint32_t pre_ferr = 0u;
     uint32_t post_ferr = 0u;
     uint32_t bursts = 0u;
     bool switched_post = false;
     bool break_released = (profile != 2u);
+    bool aborted = false;
     uint8_t byte = 0u;
 
-    while (p7501_wdt_loop_step(t0_us, deadline_us, true, NULL)) {
+    while (p7501_wdt_loop_step(t0_us, deadline_us, true, &aborted)) {
         const uint32_t rel_us = (uint32_t)(time_us_64() - t0_us);
         (void)p7501_pio_poll_sw_uart_release();
 
@@ -193,7 +202,7 @@ static void sweep_run_preboot_trial(uint32_t profile) {
             if (!switched_post) {
                 if (pre_len < sizeof(pre_buf)) pre_buf[pre_len++] = byte;
             } else {
-                if (post_len < sizeof(post_buf)) post_buf[post_len++] = byte;
+                if (post_len < JIGSWEEP_TRIAL_RX_CAP) post_buf[post_len++] = byte;
             }
         }
     }
@@ -220,11 +229,13 @@ static void sweep_run_preboot_trial(uint32_t profile) {
     }
     sweep_print_preview(post_buf, post_len);
     putchar('\n');
+    return !aborted;
 }
 
 void p7501_cmd_jigsweep(const char *arg) {
     p7501_jigsweep_spec_t spec;
     if (!p7501_jigsweep_parse_args(arg, &spec)) {
+        p7501_cli_set_result("ERR", "EINVAL");
         printf("[JIGSWEEP] ERROR: Invalid syntax. Use JIGSWEEP [HOLD|DELAY|PREBOOT] [ms_list]\n");
         return;
     }
@@ -240,11 +251,14 @@ void p7501_cmd_jigsweep(const char *arg) {
     fflush(stdout);
 
     p7501_led_set_auto_mode(LED_MODE_BUS_ACTIVE);
+    bool aborted = false;
     for (size_t i = 0u; i < spec.point_count; ++i) {
-        if (spec.mode == P7501_JIGSWEEP_PREBOOT) {
-            sweep_run_preboot_trial(spec.points_ms[i]);
-        } else {
-            sweep_run_hold_or_delay_trial(spec.mode, spec.points_ms[i]);
+        const bool keep_going = (spec.mode == P7501_JIGSWEEP_PREBOOT)
+            ? sweep_run_preboot_trial(spec.points_ms[i])
+            : sweep_run_hold_or_delay_trial(spec.mode, spec.points_ms[i]);
+        if (!keep_going || p7501_wdt_poll_abort()) {
+            aborted = true;
+            break;
         }
         p7501_wdt_sleep_ms(40u);
     }
@@ -252,5 +266,5 @@ void p7501_cmd_jigsweep(const char *arg) {
     (void)p7501_pio_set_baud(saved_baud);
     (void)p7501_pio_set_framing(saved_framing);
     p7501_led_set_auto_mode(LED_MODE_HEARTBEAT_IDLE);
-    printf("JIGSWEEP: OK\n");
+    printf("JIGSWEEP: OK%s\n", aborted ? " (aborted=YES)" : "");
 }

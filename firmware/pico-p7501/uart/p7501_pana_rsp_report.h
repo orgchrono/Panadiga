@@ -18,7 +18,7 @@
 extern "C" {
 #endif
 
-#define PANARSP_RX_RAM_CAP 4096u
+#define PANARSP_RX_RAM_CAP 24576u
 #define PANARSP_PRETRIG_KEEP 512u
 
 typedef struct panarsp_rx_cap {
@@ -45,6 +45,23 @@ void panarsp_print_report(
     bool fifo_ovf
 );
 uint32_t panarsp_tx_frame(const char *payload);
+size_t panarsp_stream_until_tokens_ex(
+    panarsp_rx_cap_t *cap,
+    uint32_t stub_addr,
+    const uint8_t *stub,
+    size_t stub_len,
+    uint32_t timeout_ms,
+    const char *tok_hdr,
+    const char *tok_done,
+    const char *tok_fail,
+    uint32_t min_post_hdr_bytes,
+    bool sliding_timeout,
+    bool *out_hdr_seen,
+    bool *out_done_seen,
+    bool *out_fail_seen,
+    uint32_t *out_stream_bytes,
+    uint32_t *out_post_hdr_bytes
+);
 size_t panarsp_stream_until_tokens(
     panarsp_rx_cap_t *cap,
     uint32_t stub_addr,

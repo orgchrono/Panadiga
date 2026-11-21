@@ -3,32 +3,95 @@
  * @brief Safe Hardware Abstraction Layer implementation for Panasonic P7501 bus.
  *
  * Implements Hi-Z safe defaults, GP26 ADC0 restoration (clearing SIO OE before
- * switching pad mux), Open-Drain XRESET control, and passive PIO0 115200 8N1
- * UART RX initialization on GP2 without ever touching GP3 (NSW5V).
+ * switching pad mux), Open-Drain XRESET control, NSW5V falling-edge anti-backpowering
+ * IRQ guard on GP3 (kept strictly Hi-Z Input with pulls disabled), and integer mV
+ * ADC measurement. PIO1 dual-SM UART is managed exclusively by `p7501_uart_pio_engine`.
  *
  * @standard ISO/IEC 9899:2011 (C11)
  */
 
 #include "hal/p7501_hw.h"
+#include "diag/p7501_i2c_codec.h"
+#include "hal/p7501_watchdog.h"
 #include "pico/stdlib.h"
-#include "hardware/pio.h"
 #include "hardware/adc.h"
-#include "hardware/watchdog.h"
-#include "p7501_uart.pio.h"
+#include "hardware/gpio.h"
 
-static PIO  s_pio_inst    = (PIO)0;
-static uint s_pio_sm      = 0U;
-static uint s_pio_offset  = 0U;
 static bool s_initialized = false;
+static volatile uint32_t s_nsw5v_dropouts = 0u;
+static volatile bool s_nsw5v_fault_latched = false;
+static volatile bool s_nsw5v_power_seen = false;
 
-static void hw_safe_sleep_ms(uint32_t total_ms) {
-    uint32_t rem = total_ms;
-    while (rem > 0U) {
-        const uint32_t slice = (rem > 200U) ? 200U : rem;
-        sleep_ms(slice);
-        watchdog_update();
-        rem -= slice;
+static void p7501_nsw5v_falling_irq(uint gpio, uint32_t event_mask) {
+    if ((gpio == P7501_PIN_NSW5V) && ((event_mask & GPIO_IRQ_EDGE_FALL) != 0u)) {
+        /* Always keep GP3 NSW5V strictly Hi-Z Input with pulls disabled */
+        gpio_disable_pulls(P7501_PIN_NSW5V);
+        gpio_set_function(P7501_PIN_NSW5V, GPIO_FUNC_SIO);
+        gpio_set_dir(P7501_PIN_NSW5V, GPIO_IN);
+
+        /* Anti-backpowering guard (UNCONDITIONAL): reclaim SIO from PIO1/ADC and float all pins. */
+        gpio_set_function(P7501_PIN_TXD, GPIO_FUNC_SIO);
+        gpio_set_dir(P7501_PIN_TXD, GPIO_IN);
+        gpio_disable_pulls(P7501_PIN_TXD);
+
+        gpio_set_function(P7501_PIN_RXD, GPIO_FUNC_SIO);
+        gpio_set_dir(P7501_PIN_RXD, GPIO_IN);
+        gpio_disable_pulls(P7501_PIN_RXD);
+
+        gpio_set_function(P7501_PIN_XRESET, GPIO_FUNC_SIO);
+        gpio_set_dir(P7501_PIN_XRESET, GPIO_IN);
+        gpio_disable_pulls(P7501_PIN_XRESET);
+
+        gpio_set_function(P7501_PIN_SW_UART_ADC, GPIO_FUNC_SIO);
+        gpio_set_dir(P7501_PIN_SW_UART_ADC, GPIO_IN);
+        gpio_disable_pulls(P7501_PIN_SW_UART_ADC);
+
+        /* Also isolate auxiliary I2C/IR pins (GP6/GP7) so active 3.3V pull-ups cannot backpower. */
+        gpio_set_function(P7501_I2C_SDA_PIN, GPIO_FUNC_SIO);
+        gpio_set_dir(P7501_I2C_SDA_PIN, GPIO_IN);
+        gpio_disable_pulls(P7501_I2C_SDA_PIN);
+
+        gpio_set_function(P7501_I2C_SCL_PIN, GPIO_FUNC_SIO);
+        gpio_set_dir(P7501_I2C_SCL_PIN, GPIO_IN);
+        gpio_disable_pulls(P7501_I2C_SCL_PIN);
+
+        s_nsw5v_power_seen = false;
+        s_nsw5v_dropouts += 1u;
+        s_nsw5v_fault_latched = true;
     }
+}
+
+uint32_t p7501_hw_get_nsw5v_dropouts(void) {
+    return s_nsw5v_dropouts;
+}
+
+bool p7501_hw_is_nsw5v_fault_latched(void) {
+    return s_nsw5v_fault_latched;
+}
+
+void p7501_hw_clear_nsw5v_fault_latch(void) {
+    s_nsw5v_fault_latched = false;
+}
+
+static volatile bool s_contention_latched = false;
+
+bool p7501_hw_is_contention_latched(void) {
+    return s_contention_latched;
+}
+
+void p7501_hw_clear_contention_latch(void) {
+    s_contention_latched = false;
+}
+
+static bool p7501_hw_verify_low_no_contention(uint pin) {
+    busy_wait_us_32(8u);
+    if (gpio_get(pin)) {
+        gpio_set_dir(pin, GPIO_IN);
+        gpio_disable_pulls(pin);
+        s_contention_latched = true;
+        return false;
+    }
+    return true;
 }
 
 void p7501_hw_enforce_nsw5v_hiz(void) {
@@ -47,49 +110,45 @@ void p7501_hw_restore_sw_uart_adc0(void) {
 }
 
 p7501_status_t p7501_hw_init(void) {
-    s_pio_inst = pio0;
-    s_pio_sm   = 0U;
+    /* Pin 5 NSW5V (GP3): Clear reset-default PDE pull-down BEFORE gpio_init() (RP2350 ISO safety). */
+    gpio_disable_pulls(P7501_PIN_NSW5V);
+    gpio_init(P7501_PIN_NSW5V);
+    p7501_hw_enforce_nsw5v_hiz();
+    gpio_set_irq_enabled_with_callback(
+        P7501_PIN_NSW5V, GPIO_IRQ_EDGE_FALL, true, &p7501_nsw5v_falling_irq
+    );
 
     adc_init();
     p7501_hw_restore_sw_uart_adc0();
 
-    /* Pin 6 UARTP2M_T (GP2): Input from Target TX */
+    /* Pin 6 UARTP2M_T (GP2): Input from Target TX (start Hi-Z without pull-up to avoid backpowering) */
+    gpio_disable_pulls(P7501_PIN_RXD);
     gpio_init(P7501_PIN_RXD);
     gpio_set_dir(P7501_PIN_RXD, GPIO_IN);
-    gpio_pull_up(P7501_PIN_RXD);
-
-    /* Pin 5 NSW5V (GP3): Strictly Hi-Z Input */
-    gpio_init(P7501_PIN_NSW5V);
-    p7501_hw_enforce_nsw5v_hiz();
+    gpio_disable_pulls(P7501_PIN_RXD);
 
     /* Pin 3 UARTM2P_T (GP4): Idle Hi-Z Input until UART TX requested */
+    gpio_disable_pulls(P7501_PIN_TXD);
     gpio_init(P7501_PIN_TXD);
     gpio_set_dir(P7501_PIN_TXD, GPIO_IN);
     gpio_disable_pulls(P7501_PIN_TXD);
 
     /* Pin 2 XRESET (GP5): Open-Drain (latch 0, released to Hi-Z Input) */
+    gpio_disable_pulls(P7501_PIN_XRESET);
     gpio_init(P7501_PIN_XRESET);
     gpio_disable_pulls(P7501_PIN_XRESET);
     gpio_put(P7501_PIN_XRESET, false);
     p7501_hw_reset_release();
 
-    if (!s_initialized) {
-        if (!pio_can_add_program(s_pio_inst, &p7501_uart_rx_program)) {
-            return P7501_ERR_PIO_INIT_FAILED;
-        }
-        if (!pio_sm_is_claimed(s_pio_inst, s_pio_sm)) {
-            pio_sm_claim(s_pio_inst, s_pio_sm);
-        }
-        s_pio_offset = pio_add_program(s_pio_inst, &p7501_uart_rx_program);
-        p7501_uart_rx_program_init(
-            s_pio_inst,
-            s_pio_sm,
-            s_pio_offset,
-            P7501_PIN_RXD,
-            P7501_UART_BAUD_RATE
-        );
-        s_initialized = true;
-    }
+    gpio_set_slew_rate(P7501_PIN_TXD, GPIO_SLEW_RATE_SLOW);
+    gpio_set_slew_rate(P7501_PIN_XRESET, GPIO_SLEW_RATE_SLOW);
+    gpio_set_slew_rate(P7501_PIN_SW_UART_ADC, GPIO_SLEW_RATE_SLOW);
+
+    s_nsw5v_dropouts = 0u;
+    s_nsw5v_fault_latched = false;
+    s_contention_latched = false;
+    s_nsw5v_power_seen = gpio_get(P7501_PIN_NSW5V);
+    s_initialized = true;
     return P7501_OK;
 }
 
@@ -108,7 +167,7 @@ void p7501_hw_reset_release(void) {
 void p7501_hw_pulse_xreset_ms(uint32_t hold_low_ms) {
     p7501_hw_enforce_nsw5v_hiz();
     p7501_hw_reset_assert();
-    hw_safe_sleep_ms((hold_low_ms > 0U) ? hold_low_ms : P7501_RESET_DIAG_ASSERT_MS);
+    p7501_wdt_sleep_ms((hold_low_ms > 0U) ? hold_low_ms : P7501_RESET_DIAG_ASSERT_MS);
     p7501_hw_reset_release();
 }
 
@@ -117,6 +176,7 @@ void p7501_hw_drive_txd_low(void) {
     gpio_disable_pulls(P7501_PIN_TXD);
     gpio_put(P7501_PIN_TXD, false);
     gpio_set_dir(P7501_PIN_TXD, GPIO_OUT);
+    (void)p7501_hw_verify_low_no_contention(P7501_PIN_TXD);
 }
 
 void p7501_hw_release_txd_hiz(bool with_pull_up) {
@@ -135,12 +195,13 @@ void p7501_hw_sw_uart_set_low(bool assert_low) {
         gpio_disable_pulls(P7501_PIN_SW_UART_ADC);
         gpio_put(P7501_PIN_SW_UART_ADC, false);
         gpio_set_dir(P7501_PIN_SW_UART_ADC, GPIO_OUT);
+        (void)p7501_hw_verify_low_no_contention(P7501_PIN_SW_UART_ADC);
     } else {
         p7501_hw_restore_sw_uart_adc0();
     }
 }
 
-float p7501_hw_sample_sw_uart_volts(bool pull_down, bool pull_up) {
+uint32_t p7501_hw_sample_sw_uart_mv(bool pull_down, bool pull_up) {
     p7501_hw_restore_sw_uart_adc0();
     adc_select_input(P7501_ADC_CH_VDD);
 
@@ -161,23 +222,45 @@ float p7501_hw_sample_sw_uart_volts(bool pull_down, bool pull_up) {
     }
 
     gpio_disable_pulls(P7501_PIN_SW_UART_ADC);
-    const float averaged = (float)accumulator / (float)P7501_ADC_SAMPLE_COUNT;
-    return (averaged * P7501_ADC_VREF) / P7501_ADC_RESOLUTION;
+    const uint32_t denom = 4096UL * (uint32_t)P7501_ADC_SAMPLE_COUNT;
+    return (uint32_t)((((uint64_t)accumulator * (uint64_t)P7501_SSOT_VDD_NOMINAL_MV) + (denom / 2ULL)) / denom);
 }
 
-float p7501_hw_read_vdd(void) {
-    /* Brief pull-down discriminates an open floating pin (~0V) from a connected P7501 (~2.68V via Q7510) */
-    const float v_pd = p7501_hw_sample_sw_uart_volts(true, false);
-    if (v_pd < P7501_VDD_PULLDOWN_PRESENT_V) {
-        return v_pd;
+bool p7501_hw_is_nsw5v_high(void) {
+    const bool high = gpio_get(P7501_PIN_NSW5V);
+    if (high) {
+        s_nsw5v_power_seen = true;
+        s_nsw5v_fault_latched = false;
     }
-    /* Return unloaded Hi-Z rail potential (~3.24V) so STATUS matches PINCHECK Hi-Z exactly */
-    return p7501_hw_sample_sw_uart_volts(false, false);
+    return high;
+}
+
+bool p7501_hw_is_sw_uart_forced_low(void) {
+    return gpio_is_dir_out(P7501_PIN_SW_UART_ADC);
+}
+
+uint32_t p7501_hw_read_vdd_mv(void) {
+    /* Never clobber an active JIGPIN LOW assertion on GP26! */
+    if (gpio_is_dir_out(P7501_PIN_SW_UART_ADC)) {
+        return 0u;
+    }
+    /* Brief pull-down discriminates an open floating pin (~0mV) from connected P7501 (~2680mV) */
+    const uint32_t mv_pd = p7501_hw_sample_sw_uart_mv(true, false);
+    if (mv_pd < P7501_SSOT_VDD_PULLDOWN_MIN_MV) {
+        return mv_pd;
+    }
+    const uint32_t mv = p7501_hw_sample_sw_uart_mv(false, false);
+    if ((mv >= P7501_SSOT_VDD_MIN_MV) && (mv < P7501_SSOT_VDD_FLOATING_CEIL_MV) &&
+        gpio_get(P7501_PIN_NSW5V)) {
+        s_nsw5v_power_seen = true;
+        s_nsw5v_fault_latched = false;
+    }
+    return mv;
 }
 
 bool p7501_hw_is_target_powered(void) {
-    const float vdd = p7501_hw_read_vdd();
-    return (vdd >= P7501_VDD_THRESHOLD_V) && (vdd < P7501_VDD_FLOATING_CEIL_V);
+    const uint32_t mv = p7501_hw_read_vdd_mv();
+    return (mv >= P7501_SSOT_VDD_MIN_MV) && (mv < P7501_SSOT_VDD_FLOATING_CEIL_MV);
 }
 
 bool p7501_hw_is_initialized(void) {
@@ -193,7 +276,7 @@ void p7501_hw_boot_sequence(p7501_boot_mode_t mode) {
     p7501_hw_sw_uart_set_low(use_serial_boot);
 
     p7501_hw_reset_assert();
-    hw_safe_sleep_ms(P7501_RESET_ASSERT_MS);
+    p7501_wdt_sleep_ms(P7501_RESET_ASSERT_MS);
     p7501_hw_reset_release();
 
     for (uint32_t wait_us = 0U; wait_us < 2000U; wait_us += 10U) {
@@ -207,7 +290,7 @@ void p7501_hw_boot_sequence(p7501_boot_mode_t mode) {
         sleep_us(P7501_RESET_SETTLE_US);
         p7501_hw_sw_uart_set_low(false);
     } else if (mode == P7501_BOOT_MODE_HIZ_EXTENDED) {
-        hw_safe_sleep_ms(P7501_RESET_POST_SETTLE_MS);
+        p7501_wdt_sleep_ms(P7501_RESET_POST_SETTLE_MS);
     } else {
         sleep_us(P7501_POST_RESET_DELAY_US);
     }

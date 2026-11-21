@@ -14,37 +14,54 @@
  */
 
 #include "cli/p7501_cli.h"
-#include "diag/p7501_diag_electrical.h"
-#include "diag/p7501_diag_bus.h"
-#include "flash/p7501_flash_cli.h"
-#include "common/p7501_hex.h"
-#include "uart/p7501_uart_codec.h"
-#include "uart/p7501_uart_capture.h"
-#include "uart/p7501_fmu_probe.h"
-#include "uart/p7501_uart_interactive.h"
-#include "uart/p7501_diag_watch.h"
 #include "cli/p7501_cli_help.h"
-#include "uart/p7501_uart_stream.h"
-#include "uart/p7501_uart_baud.h"
-#include "uart/p7501_uart_tx.h"
-#include "uart/p7501_pana_rsp.h"
-#include "uart/p7501_drv_pana.h"
-#include "diag/p7501_diag_pwrtrace.h"
+#include "cli/p7501_cli_sys.h"
+#include "common/p7501_hex.h"
 #include "diag/p7501_diag_boottrace.h"
-#include "diag/p7501_jigsweep_codec.h"
-#include "diag/p7501_ir_kaseikyo.h"
-#include "diag/p7501_piologic_codec.h"
+#include "diag/p7501_diag_bus.h"
+#include "diag/p7501_diag_electrical.h"
+#include "diag/p7501_diag_pwrtrace.h"
 #include "diag/p7501_diag_sdsniff.h"
-#include "hal/p7501_hw.h"
-#include "hal/p7501_led.h"
-#include "hal/p7501_watchdog.h"
+#include "diag/p7501_i2c_codec.h"
+#include "diag/p7501_identify.h"
+#include "diag/p7501_ir_kaseikyo.h"
+#include "diag/p7501_jigsweep_codec.h"
+#include "diag/p7501_mmio_snapshot_codec.h"
+#include "diag/p7501_piologic_codec.h"
+#include "diag/p7501_pwrosc_codec.h"
+#include "diag/p7501_serv_macro.h"
+#include "diag/p7501_tbus_codec.h"
+#include "flash/p7501_flash_cli.h"
+#include "flash/p7501_ftl_inspect.h"
+#include "flash/p7501_job.h"
+#include "flash/p7501_qspi_storage.h"
+#include "flash/p7501_vault_codec.h"
 #include "gdb/gdb_rsp.h"
+#include "hal/p7501_ble_nus.h"
+#include "hal/p7501_led.h"
+#include "hal/p7501_usb_dual_cdc.h"
+#include "hal/p7501_watchdog.h"
+#include "uart/p7501_diag_watch.h"
+#include "uart/p7501_drv_pana.h"
+#include "uart/p7501_fmu_probe.h"
+#include "uart/p7501_pana_rsp.h"
+#include "uart/p7501_uart_baud.h"
+#include "uart/p7501_uart_capture.h"
+#include "uart/p7501_uart_codec.h"
+#include "uart/p7501_uart_interactive.h"
+#include "uart/p7501_uart_stream.h"
+#include "uart/p7501_uart_tx.h"
 
 #include <stdio.h>
 #include <string.h>
-#include "hardware/gpio.h"
-#include "pico/stdlib.h"
-#include "pico/bootrom.h"
+
+static const char *s_cli_res_status = "OK";
+static const char *s_cli_res_code = "0";
+
+void p7501_cli_set_result(const char *status, const char *code) {
+    s_cli_res_status = (status != NULL) ? status : "OK";
+    s_cli_res_code = (code != NULL) ? code : "0";
+}
 
 static bool cli_is_ws(char c) {
     return (c == ' ') || (c == '\t') || (c == '\r') || (c == '\n');
@@ -59,87 +76,6 @@ static const char *cli_extract_arg(const char *trimmed_line) {
         p++;
     }
     return p;
-}
-
-static void cli_cmd_status(void) {
-    const bool jig_latched = gpio_is_dir_out(P7501_PIN_SW_UART_ADC);
-    const float vdd = jig_latched ? 0.00f : p7501_hw_read_vdd();
-    const float sw_pu = jig_latched ? 0.00f : p7501_hw_sample_sw_uart_volts(false, true);
-    const bool rxd_h = gpio_get(P7501_PIN_RXD);
-    const bool nsw_h = gpio_get(P7501_PIN_NSW5V);
-    const bool txd_h = gpio_get(P7501_PIN_TXD);
-    const bool xrst_h = gpio_get(P7501_PIN_XRESET);
-    const char *state = "LOW / UNPOWERED";
-    pico_led_mode_t next_led = LED_MODE_BUS_FAULT;
-
-    if (vdd >= P7501_VDD_FLOATING_CEIL_V) {
-        state = "FLOATING / NO TARGET";
-    } else if (vdd >= P7501_VDD_THRESHOLD_V) {
-        state = "OK";
-        next_led = LED_MODE_HEARTBEAT_IDLE;
-    }
-
-    if (!gdb_rsp_is_active()) {
-        p7501_led_set_auto_mode(next_led);
-    }
-    printf("VDD: %.2fV (%s)\n", (double)vdd, state);
-    printf("[STANDBY] RXD=%d NSW5V=%d TXD=%d XRESET=%d SW_PU=%.2fV | State=%s\n",
-           rxd_h ? 1 : 0, nsw_h ? 1 : 0, txd_h ? 1 : 0, xrst_h ? 1 : 0,
-           (double)sw_pu,
-           p7501_classify_standby_state(vdd, sw_pu, nsw_h, txd_h, jig_latched));
-    p7501_wdt_print_summary_line();
-}
-
-static void cli_cmd_jigpin(const char *arg) {
-    p7501_jigpin_mode_t mode = P7501_JIGPIN_STATUS;
-    if (!p7501_parse_jigpin_arg(arg, &mode)) {
-        printf("[JIGPIN] ERROR: Use JIGPIN LOW, JIGPIN HIZ, or JIGPIN STATUS.\n");
-        return;
-    }
-    if (mode == P7501_JIGPIN_LOW) {
-        p7501_hw_sw_uart_set_low(true);
-        printf("JIGPIN: SW_UART(GP26)=LOW (TW7501_STRAP; XRESET untouched)\n");
-        return;
-    }
-    if (mode == P7501_JIGPIN_HIZ) {
-        p7501_hw_sw_uart_set_low(false);
-    }
-    const bool latched = gpio_is_dir_out(P7501_PIN_SW_UART_ADC);
-    const float v_hiz = latched ? 0.00f : p7501_hw_sample_sw_uart_volts(false, false);
-    printf("JIGPIN: SW_UART(GP26)=%s (%.2fV, NSW5V=%d)\n",
-           latched ? "LOW (TW7501_STRAP)" : "Hi-Z ADC0",
-           (double)v_hiz,
-           gpio_get(P7501_PIN_NSW5V) ? 1 : 0);
-}
-
-static void cli_cmd_led(const char *arg) {
-    pico_led_mode_t req_mode = LED_MODE_HEARTBEAT_IDLE;
-    bool is_auto = false;
-    bool is_query = false;
-
-    if (!p7501_led_parse_arg(arg, &req_mode, &is_auto, &is_query)) {
-        printf("[LED] ERROR: Invalid mode '%s'. Use IDLE, ACTIVE, GDB, FAULT, OFF, or AUTO.\n",
-               arg ? arg : "");
-        return;
-    }
-
-    if (is_auto) {
-        const float vdd = p7501_hw_read_vdd();
-        const bool vdd_ok = (vdd >= P7501_VDD_THRESHOLD_V && vdd < P7501_VDD_FLOATING_CEIL_V);
-        p7501_led_unlock_auto(vdd_ok ? LED_MODE_HEARTBEAT_IDLE : LED_MODE_BUS_FAULT);
-    } else if (!is_query) {
-        p7501_led_set_mode(req_mode);
-    }
-
-    const p7501_led_state_t st = p7501_led_get_state();
-    printf("[LED] Pico %s | mode=%s | lock=%s | pin=%d\n",
-           p7501_led_backend_label(),
-           p7501_led_mode_name(st.mode),
-           st.manual_lock ? "MANUAL" : "AUTO",
-           st.current_on ? 1 : 0);
-    printf("LED: OK (%s, %s)\n",
-           p7501_led_mode_name(st.mode),
-           st.manual_lock ? "MANUAL_LOCK" : "AUTO");
 }
 
 char *p7501_cli_trim_whitespace(char *str) {
@@ -158,73 +94,19 @@ char *p7501_cli_trim_whitespace(char *str) {
 }
 
 static void cli_cmd_ping(const char *arg) { (void)arg; printf("PONG\n"); }
-static void cli_cmd_status_wrap(const char *arg) { (void)arg; cli_cmd_status(); }
 static void cli_cmd_help_wrap(const char *arg) { (void)arg; p7501_cli_print_help(); }
 static void cli_cmd_banner_wrap(const char *arg) { (void)arg; p7501_cli_print_banner(); }
 static void cli_cmd_sniff_wrap(const char *arg) { p7501_diag_cmd_sniff(arg); }
-static void cli_cmd_pincheck_wrap(const char *arg) { (void)arg; p7501_diag_cmd_pincheck(); }
+static void cli_cmd_pincheck_wrap(const char *arg) { p7501_diag_cmd_pincheck(arg); }
 static void cli_cmd_busdiag_wrap(const char *arg) { (void)arg; p7501_diag_cmd_busdiag(); }
 static void cli_cmd_bootcap_wrap(const char *arg) { p7501_cmd_boot_capture(arg, true, false, "BOOTCAP"); }
 static void cli_cmd_uartmon_wrap(const char *arg) { p7501_cmd_boot_capture(arg, false, false, "UARTMON"); }
 static void cli_cmd_jigboot_wrap(const char *arg) { p7501_cmd_boot_capture(arg, true, true, "JIGBOOT"); }
 
-static void cli_cmd_scan_wrap(const char *arg) {
-    (void)arg;
-    p7501_led_set_auto_mode(LED_MODE_BUS_ACTIVE);
-    p7501_diag_cmd_scan();
-    p7501_led_set_auto_mode(LED_MODE_HEARTBEAT_IDLE);
-}
-
-static void cli_cmd_handshake_wrap(const char *arg) {
-    (void)arg;
-    p7501_led_set_auto_mode(LED_MODE_BUS_ACTIVE);
-    p7501_diag_cmd_handshake();
-    p7501_led_set_auto_mode(LED_MODE_HEARTBEAT_IDLE);
-}
-
 static void cli_cmd_dump_wrap(const char *arg) {
     p7501_led_set_auto_mode(LED_MODE_BUS_ACTIVE);
     p7501_diag_cmd_dump(arg);
     p7501_led_set_auto_mode(LED_MODE_HEARTBEAT_IDLE);
-}
-
-static void cli_cmd_gdb(const char *arg) {
-    (void)arg;
-    printf("Switching to GDB Remote Serial Protocol (RSP) Bridge Mode...\n");
-    printf("[GDB] Note: Without DWire32A hardware clock on P7501, use 'BRIDGE <baud>' for AM34 _dev_SERIAL GDB.\n");
-    fflush(stdout);
-    gdb_rsp_set_active(true);
-    p7501_led_set_auto_mode(LED_MODE_GDB_RSP);
-}
-
-static void cli_cmd_isolate(const char *arg) {
-    (void)arg;
-    p7501_hw_isolate_bus_hiz();
-    printf("[BUS] P7501 pins placed in High-Impedance Isolation (NSW5V/XRESET Hi-Z, GP26 ADC0).\n");
-}
-
-static void cli_cmd_engage(const char *arg) {
-    (void)arg;
-    p7501_hw_engage_uart_bus();
-    printf("[BUS] P7501 UART TX (GP4) engaged idle HIGH; NSW5V (GP3) kept Hi-Z Input.\n");
-}
-
-static void cli_cmd_reset_pulse(const char *arg) {
-    (void)arg;
-    p7501_hw_reset_assert();
-    p7501_wdt_sleep_ms(P7501_RESET_ASSERT_MS);
-    p7501_hw_reset_release();
-    printf("[RESET] Open-drain XRESET pulse complete.\n");
-}
-
-static void cli_cmd_bootsel(const char *arg) {
-    (void)arg;
-    printf("[BOOTSEL] Rebooting into USB UF2 Mass-Storage Bootloader...\n");
-    fflush(stdout);
-    p7501_wdt_kick();
-    p7501_wdt_sleep_ms(50U);
-    p7501_wdt_prepare_bootsel_reset();
-    reset_usb_boot(0U, 0U);
 }
 
 typedef void (*p7501_cli_handler_fn)(const char *arg);
@@ -235,60 +117,78 @@ typedef struct p7501_cli_cmd_entry {
 } p7501_cli_cmd_entry_t;
 
 static const p7501_cli_cmd_entry_t k_cli_commands[] = {
-    { "PING",          cli_cmd_ping },
-    { "STATUS",        cli_cmd_status_wrap },
-    { "VDD",           cli_cmd_status_wrap },
-    { "HELP",          cli_cmd_help_wrap },
-    { "?",             cli_cmd_help_wrap },
-    { "BANNER",        cli_cmd_banner_wrap },
-    { "SCAN",          cli_cmd_scan_wrap },
-    { "HANDSHAKE",     cli_cmd_handshake_wrap },
-    { "DUMP",          cli_cmd_dump_wrap },
-    { "SNIFF",         cli_cmd_sniff_wrap },
-    { "BREAK_IN",      p7501_diag_cmd_boot_profile },
-    { "BOOT_PROFILE",  p7501_diag_cmd_boot_profile },
-    { "PINCHECK",      cli_cmd_pincheck_wrap },
-    { "BUSDIAG",       cli_cmd_busdiag_wrap },
-    { "BOOTCAP",       cli_cmd_bootcap_wrap },
-    { "UARTMON",       cli_cmd_uartmon_wrap },
-    { "JIGBOOT",       cli_cmd_jigboot_wrap },
-    { "JIGPIN",        cli_cmd_jigpin },
-    { "FMUSCAN",       p7501_cmd_fmu_scan },
-    { "FMUTEST",       p7501_cmd_fmu_test },
-    { "FMUBATCH",      p7501_cmd_fmu_batch },
-    { "UARTSEND",      p7501_cmd_uart_send },
-    { "UARTPROBE",     p7501_cmd_uart_probe },
-    { "GDB",           cli_cmd_gdb },
-    { "ISOLATE",       cli_cmd_isolate },
-    { "HIZ",           cli_cmd_isolate },
-    { "ENGAGE",        cli_cmd_engage },
-    { "AUTODETECT",    p7501_flash_cmd_autodetect },
-    { "PROBE",         p7501_flash_cmd_autodetect },
-    { "CFI",           p7501_flash_cmd_cfi },
-    { "FLASH_SIZE",    p7501_flash_cmd_size },
-    { "INJECT_LOADER", p7501_flash_cmd_inject_loader },
-    { "ERASE_NVRAM",   p7501_flash_cmd_erase_nvram },
-    { "RESET",         cli_cmd_reset_pulse },
-    { "LED",           cli_cmd_led },
-    { "BAUD",          p7501_cmd_baud },
-    { "FRAMING",       p7501_cmd_framing },
-    { "BAUDSCAN",      p7501_cmd_baudscan },
-    { "UARTSTREAM",    p7501_cmd_uart_stream },
-    { "HEXCAP",        p7501_cmd_hexcap },
-    { "UARTTXHEX",     p7501_cmd_uart_tx_hex },
-    { "WAITTX",        p7501_cmd_waittx },
-    { "PWRTRACE",      p7501_cmd_pwrtrace },
-    { "BOOTTRACE",     p7501_cmd_boottrace },
-    { "PIOLOGIC",      p7501_cmd_piologic },
-    { "SDSNIFF",       p7501_cmd_sdsniff },
-    { "JIGSWEEP",      p7501_cmd_jigsweep },
-    { "PANARSP",       p7501_cmd_pana_rsp },
-    { "DIAGWATCH",     p7501_cmd_diag_watch },
-    { "DRVPANA",       p7501_cmd_drv_pana },
-    { "IRTX",          p7501_cmd_irtx },
-    { "BRIDGE",        p7501_cmd_bridge },
-    { "WDT",           p7501_cmd_wdt_status },
-    { "BOOTSEL",       cli_cmd_bootsel },
+    { "PING",           cli_cmd_ping },
+    { "STATUS",         p7501_cli_cmd_status },
+    { "VDD",            p7501_cli_cmd_status },
+    { "SELFTEST",       p7501_cli_cmd_selftest },
+    { "HELP",           cli_cmd_help_wrap },
+    { "?",              cli_cmd_help_wrap },
+    { "BANNER",         cli_cmd_banner_wrap },
+    { "DUMP",           cli_cmd_dump_wrap },
+    { "SNIFF",          cli_cmd_sniff_wrap },
+    { "BREAK_IN",       p7501_diag_cmd_boot_profile },
+    { "BOOT_PROFILE",   p7501_diag_cmd_boot_profile },
+    { "PINCHECK",       cli_cmd_pincheck_wrap },
+    { "BUSDIAG",        cli_cmd_busdiag_wrap },
+    { "BOOTCAP",        cli_cmd_bootcap_wrap },
+    { "UARTMON",        cli_cmd_uartmon_wrap },
+    { "JIGBOOT",        cli_cmd_jigboot_wrap },
+    { "JIGPIN",         p7501_cli_cmd_jigpin },
+    { "FMUSCAN",        p7501_cmd_fmu_scan },
+    { "FMUTEST",        p7501_cmd_fmu_test },
+    { "FMUBATCH",       p7501_cmd_fmu_batch },
+    { "UARTSEND",       p7501_cmd_uart_send },
+    { "UARTPROBE",      p7501_cmd_uart_probe },
+    { "GDB",            p7501_cli_cmd_gdb },
+    { "ISOLATE",        p7501_cli_cmd_isolate },
+    { "HIZ",            p7501_cli_cmd_isolate },
+    { "ENGAGE",         p7501_cli_cmd_engage },
+    { "AUTODETECT",     p7501_flash_cmd_autodetect },
+    { "PROBE",          p7501_flash_cmd_autodetect },
+    { "CFI",            p7501_flash_cmd_cfi },
+    { "FLASH_SIZE",     p7501_flash_cmd_size },
+    { "TARGET_PROFILE", p7501_flash_cmd_target_profile },
+    { "RESET",          p7501_cli_cmd_reset_pulse },
+    { "LED",            p7501_cli_cmd_led },
+    { "BAUD",           p7501_cmd_baud },
+    { "FRAMING",        p7501_cmd_framing },
+    { "BAUDSCAN",       p7501_cmd_baudscan },
+    { "UARTSTREAM",     p7501_cmd_uart_stream },
+    { "HEXCAP",         p7501_cmd_hexcap },
+    { "UARTTXHEX",      p7501_cmd_uart_tx_hex },
+    { "WAITTX",         p7501_cmd_waittx },
+    { "PWRTRACE",       p7501_cmd_pwrtrace },
+    { "BOOTTRACE",      p7501_cmd_boottrace },
+    { "PIOLOGIC",       p7501_cmd_piologic },
+    { "SDSNIFF",        p7501_cmd_sdsniff },
+    { "JIGSWEEP",       p7501_cmd_jigsweep },
+    { "PANARSP",        p7501_cmd_pana_rsp },
+    { "DIAGWATCH",      p7501_cmd_diag_watch },
+    { "DRVPANA",        p7501_cmd_drv_pana },
+    { "IRTX",           p7501_cmd_irtx },
+    { "IRRX",           p7501_cmd_irrx },
+    { "SERVMACRO",      p7501_cmd_serv_macro },
+    { "IDENTIFY",       p7501_cmd_identify },
+    { "AUTOPROBE",      p7501_cmd_identify },
+    { "JOB",            p7501_cmd_job },
+    { "VAULT",          p7501_cmd_vault },
+    { "BLACKBOX",       p7501_cmd_blackbox },
+    { "PROBE_CFG",      p7501_cmd_probe_cfg },
+    { "RECIPE",         p7501_cmd_recipe },
+    { "BGO_INSPECT",    p7501_cmd_bgo_inspect },
+    { "EEMUL_INSPECT",  p7501_cmd_eemul_inspect },
+    { "MMIO_SNAP",      p7501_cmd_mmio_snap },
+    { "PWROSC",         p7501_cmd_pwrosc },
+    { "TBUSSNIFF",      p7501_cmd_tbussniff },
+    { "M0KEEPALIVE",    p7501_cmd_m0keepalive },
+    { "I2C_SCAN",       p7501_cmd_i2c_scan },
+    { "EEPROM",         p7501_cmd_eeprom },
+    { "USBMODE",        p7501_cmd_usbmode },
+    { "BLE",            p7501_cmd_ble },
+    { "BLE_NOR_AUTH",   p7501_cmd_ble_nor_auth },
+    { "BRIDGE",         p7501_cmd_bridge },
+    { "WDT",            p7501_cmd_wdt_status },
+    { "BOOTSEL",        p7501_cli_cmd_bootsel },
 };
 
 void p7501_cli_process_command(char *line) {
@@ -305,11 +205,20 @@ void p7501_cli_process_command(char *line) {
 
     for (size_t i = 0u; i < (sizeof(k_cli_commands) / sizeof(k_cli_commands[0])); ++i) {
         if (strcmp(cmd, k_cli_commands[i].name) == 0) {
+            p7501_cli_set_result("OK", "0");
             p7501_wdt_begin_cmd((uint8_t)i, k_cli_commands[i].name);
             k_cli_commands[i].handler(arg);
-            p7501_wdt_end_cmd(false);
+            if (!gdb_rsp_is_active()) {
+                p7501_wdt_end_cmd(false);
+                printf("@P7501_RES cmd=%s status=%s code=%s elapsed_us=%llu\n",
+                       k_cli_commands[i].name,
+                       s_cli_res_status,
+                       s_cli_res_code,
+                       (unsigned long long)p7501_wdt_snapshot().last_cmd_elapsed_us);
+            }
             return;
         }
     }
     printf("Unknown command: '%s'. Type HELP for commands.\n", cmd);
+    printf("@P7501_RES cmd=%s status=ERR code=EINVAL elapsed_us=0\n", cmd);
 }

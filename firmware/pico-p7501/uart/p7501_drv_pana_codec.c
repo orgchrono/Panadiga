@@ -65,6 +65,7 @@ bool p7501_drv_pana_parse_args(const char *arg, p7501_drv_pana_spec_t *out) {
     }
     memcpy(out->cmd, cur, clen);
     out->cmd[clen] = '\0';
+    out->diag_macro = p7501_ascii_ieq(out->cmd, "DIAG");
 
     const bool starts_with_pass = p7501_ascii_ieq(out->cmd, "PASS") ||
                                   p7501_ascii_iprefix(out->cmd, "PASS ");

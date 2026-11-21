@@ -8,6 +8,8 @@
  */
 
 #include "hal/p7501_watchdog.h"
+#include "cli/p7501_cli.h"
+#include "common/p7501_hex.h"
 #include "hal/p7501_hw.h"
 #include "hal/p7501_led.h"
 
@@ -17,6 +19,8 @@
 #include "pico/time.h"
 
 #include <stdio.h>
+
+static p7501_wdt_postmortem_ring_t s_pm_ring __attribute__((section(".uninitialized_data")));
 
 typedef struct p7501_wdt_drv {
     p7501_wdt_telemetry_t telemetry;
@@ -65,6 +69,7 @@ void p7501_wdt_init(void) {
                              p7501_wdt_unpack_scratch0(s0, &prev_cmd, &prev_flags, &prev_recoveries);
     (void)p7501_wdt_unpack_scratch3(s3, &prev_stage, &prev_uptime_ms);
 
+    p7501_wdt_pm_init_or_recover(&s_pm_ring);
     if (p7501_wdt_is_genuine_timeout_recovery(
             watchdog_caused_reboot(),
             watchdog_enable_caused_reboot(),
@@ -76,6 +81,9 @@ void p7501_wdt_init(void) {
         s_wdt_drv.telemetry.last_fault_stage = prev_stage;
         s_wdt_drv.telemetry.last_flags = (uint8_t)(prev_flags | P7501_WDT_FLAG_RECOVERED);
         s_wdt_drv.telemetry.cmd_seq = s2;
+        p7501_wdt_pm_record(
+            &s_pm_ring, s2, prev_uptime_ms, 0u, prev_cmd, prev_stage, s_wdt_drv.telemetry.last_flags
+        );
     } else if (valid_magic) {
         s_wdt_drv.telemetry.recoveries = prev_recoveries;
         s_wdt_drv.telemetry.cmd_seq = s2;
@@ -143,6 +151,15 @@ void p7501_wdt_end_cmd(bool aborted) {
                                                   ? (now_us - s_wdt_drv.active_cmd_start_us)
                                                   : 0ULL;
     const uint8_t flags = aborted ? P7501_WDT_FLAG_ABORTED : 0u;
+    p7501_wdt_pm_record(
+        &s_pm_ring,
+        s_wdt_drv.telemetry.cmd_seq,
+        to_ms_since_boot(get_absolute_time()),
+        (uint32_t)s_wdt_drv.telemetry.last_cmd_elapsed_us,
+        s_wdt_drv.active_cmd_id,
+        s_wdt_drv.active_stage,
+        flags
+    );
     s_wdt_drv.telemetry.last_flags = flags;
     s_wdt_drv.active_cmd_id = P7501_WDT_CMD_IDLE;
     s_wdt_drv.active_stage = P7501_WDT_STAGE_IDLE;
@@ -194,8 +211,30 @@ void p7501_wdt_print_summary_line(void) {
 }
 
 void p7501_cmd_wdt_status(const char *arg) {
-    (void)arg;
     p7501_wdt_kick();
+    if ((arg != NULL) && p7501_ascii_ieq(arg, "POSTMORTEM")) {
+        const size_t n = p7501_wdt_pm_count(&s_pm_ring);
+        printf("[WDT POSTMORTEM] retained_events=%u total_recorded=%lu crc32=0x%08lX\n",
+               (unsigned)n,
+               (unsigned long)s_pm_ring.total_events,
+               (unsigned long)s_pm_ring.crc32);
+        for (size_t i = 0u; i < n; ++i) {
+            p7501_wdt_pm_entry_t e;
+            if (p7501_wdt_pm_get_recent(&s_pm_ring, i, &e)) {
+                printf("  #%u seq=%lu up=%lums dur=%luus cmd_id=%u stage=%s flags=0x%02X\n",
+                       (unsigned)i, (unsigned long)e.seq, (unsigned long)e.uptime_ms,
+                       (unsigned long)e.elapsed_us, (unsigned)e.cmd_id,
+                       p7501_wdt_stage_name(e.stage), (unsigned)e.flags);
+            }
+        }
+        printf("WDT: OK (POSTMORTEM)\n");
+        return;
+    }
+    if ((arg != NULL) && (arg[0] != '\0') && !p7501_ascii_ieq(arg, "STATUS")) {
+        p7501_cli_set_result("ERR", "EINVAL");
+        printf("WDT: ERROR (Usage: WDT [STATUS|POSTMORTEM])\n");
+        return;
+    }
     p7501_wdt_print_summary_line();
     printf("WDT: OK (Hardware auto-recovery active @ %ums; override disabled)\n",
            (unsigned)P7501_WDT_TIMEOUT_MS);

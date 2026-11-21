@@ -33,6 +33,15 @@ bool p7501_rsp_build_write_mem_payload(
     size_t cap
 );
 
+/** Validate `PANARSP RAW:` / `HEX:` bytes against E05, lethal MMIO `0xC000100C`, and F14 rules. */
+bool p7501_rsp_validate_raw_or_hex_guard(
+    const uint8_t *buf,
+    size_t len,
+    bool eff_unlocked,
+    bool is_raw_text,
+    bool *out_e05
+);
+
 #ifdef __cplusplus
 }
 #endif

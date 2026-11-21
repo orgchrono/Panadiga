@@ -98,14 +98,10 @@ void p7501_baud_hist_finish(const p7501_baud_hist_t *hist, p7501_baud_estimate_t
         if (hits < min_cluster) {
             continue;
         }
-        /* Favor highest valid baud with meaningful 1T support (>=25% of top cluster or dominant count) */
-        if (best_idx == P7501_AUTOBAUD_CANDIDATES || hits >= (best_score / 2u + 1u)) {
-            if (hits > best_score || (best_idx > i && hits >= 3u)) {
-                if (best_idx == P7501_AUTOBAUD_CANDIDATES || hits > best_score) {
-                    best_score = hits;
-                    best_idx = i;
-                }
-            }
+        /* Select dominant cluster (tie-break toward faster baud as i increases from fast to slow). */
+        if (best_idx == P7501_AUTOBAUD_CANDIDATES || hits > best_score) {
+            best_score = hits;
+            best_idx = i;
         }
     }
 
@@ -117,8 +113,8 @@ void p7501_baud_hist_finish(const p7501_baud_hist_t *hist, p7501_baud_estimate_t
             best_score = hits;
             break;
         }
-        /* Also promote 1T when best_idx looks like a 2T harmonic (e.g. 57600 cluster with >=3 real 115200 1T hits) */
-        if (best_idx < P7501_AUTOBAUD_CANDIDATES && hits >= 3u) {
+        /* Promote 1T over a 2T harmonic only when supported by both >=3 hits and >= best_score / 8 */
+        if (best_idx < P7501_AUTOBAUD_CANDIDATES && hits >= 3u && hits >= (best_score / 8u)) {
             const uint32_t t_fast = rate_nominal_bit_us(k_std_rates[i]);
             const uint32_t t_best = rate_nominal_bit_us(k_std_rates[best_idx]);
             if (u32_abs_diff(t_fast * 2u, t_best) <= 3u) {
@@ -142,7 +138,10 @@ void p7501_baud_hist_finish(const p7501_baud_hist_t *hist, p7501_baud_estimate_t
 
     out_est->snapped_baud = k_std_rates[best_idx];
     out_est->min_cluster_us = rate_nominal_bit_us(out_est->snapped_baud);
-    out_est->raw_bps = (hist->min_low_us < UINT32_MAX) ? (1000000u / hist->min_low_us) : out_est->snapped_baud;
+    out_est->raw_bps = (hist->min_low_us < UINT32_MAX &&
+                        p7501_snap_standard_baud(hist->min_low_us, NULL) == out_est->snapped_baud)
+        ? (1000000u / hist->min_low_us)
+        : ((out_est->min_cluster_us > 0u) ? (1000000u / out_est->min_cluster_us) : out_est->snapped_baud);
     out_est->best_cluster_hits = best_score;
     const uint32_t raw_pct = (best_score * 100u) / total_valid;
     out_est->confidence_pct = (raw_pct < 35u) ? 50u : (raw_pct > 100u ? 100u : raw_pct);

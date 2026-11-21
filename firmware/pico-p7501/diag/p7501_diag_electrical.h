@@ -43,8 +43,8 @@ void p7501_diag_sample_transitions(
 /** Handle `SNIFF [ms]` passive P7501 bus monitor CLI command. */
 void p7501_diag_cmd_sniff(const char *arg);
 
-/** Handle `PINCHECK` P7501 6-pin electrical matrix & XRESET rise-time test. */
-void p7501_diag_cmd_pincheck(void);
+/** Handle `PINCHECK [PASSIVE|NORST|SAFE]` P7501 6-pin electrical matrix & optional XRESET test. */
+void p7501_diag_cmd_pincheck(const char *arg);
 
 /** Handle `BUSDIAG` P7501 TX drive-strength contention & boot transition profiler. */
 void p7501_diag_cmd_busdiag(void);

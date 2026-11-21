@@ -42,7 +42,7 @@ void p7501_cli_print_banner(void) {
 
 void p7501_cli_print_help(void) {
     printf("\n--- Panadiga P7501 Bench CLI Commands ---\n");
-    printf("  PING / STATUS / VDD / WDT            - Heartbeat, GP26 ADC0 sense & WDT traceability\n");
+    printf("  PING / STATUS / SELFTEST / WDT       - Heartbeat, ADC0 sense, bench self-test & WDT\n");
     printf("  BOOTCAP / UARTMON / JIGBOOT          - PIO1 boot/passive/smart-JIG RX capture\n");
     printf("  JIGPIN [LOW|HIZ|STATUS]              - Software TW7501 (SW_UART GP26) open-drain strap\n");
     printf("  UARTSEND / UARTPROBE                 - PIO1 P7501 TX (Q7514 Hi-Z default) & probe\n");
@@ -60,13 +60,17 @@ void p7501_cli_print_help(void) {
     printf("  JIGSWEEP [HOLD|DELAY|PREBOOT] [ms..] - SW_UART latch window & pre-DDR Bootrom sweep\n");
     printf("  PANARSP [ms] [boot] [WAIT:x] <act>   - MAIN _dev_SERIAL RSP (REGS/MEM/WMEM/DUMPNOR/CALL)\n");
     printf("  DIAGWATCH [ms] [boot] [act] [WAKE]   - Autonomous SC0 watchdog, wake-trigger & PANAMON1\n");
-    printf("  DRVPANA [ms] [boot] [NOPASS] <cmd>   - Matshita R6-MV4 Drive Factory CLI (auto PASS unlock)\n");
-    printf("  IRTX <RED|SERV|ND2|POWER|...> [GPn]  - 38 kHz Kaseikyo IR service/remote synthesizer\n");
+    printf("  DRVPANA [ms] [boot] [NOPASS] <DIAG|cmd> - Matshita R6-MV4 Drive Factory CLI (auto PASS)\n");
+    printf("  IRTX <preset|sub:cmd> / IRRX [ms]    - 38 kHz Kaseikyo IR TX & TSOP38238 RX decoder\n");
+    printf("  SERVMACRO <SERVICE_MODE|SELF_CHECK|OPTICAL_CAL|ERR_HISTORY|RELEASE> [GPn]\n");
+    printf("  IDENTIFY / AUTOPROBE / JOB <act>     - 4-stage @P7501_IDENT & atomic NVRAM/BGO/VAULT jobs\n");
+    printf("  VAULT / BLACKBOX / PROBE_CFG / RECIPE - 2 MiB QSPI P2..P5 forensic storage & ADC0 cal\n");
+    printf("  BGO_INSPECT / EEMUL_INSPECT / MMIO_SNAP / PWROSC / TBUSSNIFF / M0KEEPALIVE\n");
+    printf("  I2C_SCAN / EEPROM / USBMODE / BLE / BLE_NOR_AUTH\n");
     printf("  FMUSCAN / FMUTEST / FMUBATCH         - Bootrom FMU handshake sweep & batch probes\n");
     printf("  PINCHECK / BUSDIAG / SNIFF           - 6-pin electrical matrix & NSW5V Hi-Z guard\n");
     printf("  ISOLATE / ENGAGE / RESET             - Hi-Z isolate / TX idle HIGH / XRESET pulse\n");
-    printf("  HANDSHAKE / SCAN / BREAK_IN          - Boot profile sweep & synchronous monitor check\n");
-    printf("  DUMP / AUTODETECT / CFI / FLASH_SIZE - Monitor aperture read & NOR Flash geometry\n");
-    printf("  INJECT_LOADER / ERASE_NVRAM          - Guarded SRAM loader / EEMUL NVRAM erase\n");
+    printf("  BREAK_IN [0..3] / DUMP               - Boot profile trigger & async monitor dump\n");
+    printf("  AUTODETECT / CFI / FLASH_SIZE / TARGET_PROFILE - NOR Flash geometry & DIGA profile\n");
     printf("  GDB / LED <IDLE|ACTIVE|GDB|FAULT|OFF|AUTO> / BOOTSEL\n\n");
 }

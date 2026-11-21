@@ -6,6 +6,7 @@
  */
 
 #include "diag/p7501_diag_electrical.h"
+#include "cli/p7501_cli.h"
 #include "hal/p7501_hw.h"
 #include "hal/p7501_watchdog.h"
 #include "p7501_types.h"
@@ -29,8 +30,12 @@ void p7501_diag_cmd_busdiag(void) {
     };
     static const char *ds_names[4] = { "2mA", "4mA", "8mA", "12mA" };
 
-    for (uint32_t st = 0U; st < 3U; ++st) {
-        p7501_wdt_kick();
+    bool aborted = false;
+    for (uint32_t st = 0U; st < 3U && !aborted; ++st) {
+        if (p7501_wdt_poll_abort()) {
+            aborted = true;
+            break;
+        }
         configure_busdiag_hiz_and_sw_uart(st != 0U);
         if (st == 2U) {
             p7501_hw_reset_assert();
@@ -44,6 +49,10 @@ void p7501_diag_cmd_busdiag(void) {
                (st == 1U) ? "SW_UART=LOW, XRESET=HiZ" : "SW_UART=LOW, XRESET=LOW");
 
         for (uint32_t d = 0U; d < 4U; ++d) {
+            if (p7501_wdt_poll_abort()) {
+                aborted = true;
+                break;
+            }
             gpio_init(P7501_PIN_TXD);
             gpio_disable_pulls(P7501_PIN_TXD);
             gpio_set_drive_strength(P7501_PIN_TXD, ds_list[d]);
@@ -63,7 +72,14 @@ void p7501_diag_cmd_busdiag(void) {
         }
     }
 
-    for (uint32_t mode = 0U; mode < 2U; ++mode) {
+    /* Always restore nominal 4mA drive strength on GP4 before leaving contention sweep. */
+    gpio_set_drive_strength(P7501_PIN_TXD, GPIO_DRIVE_STRENGTH_4MA);
+
+    for (uint32_t mode = 0U; mode < 2U && !aborted; ++mode) {
+        if (p7501_wdt_poll_abort()) {
+            aborted = true;
+            break;
+        }
         configure_busdiag_hiz_and_sw_uart(mode != 0U);
         p7501_wdt_sleep_ms(2U);
         p7501_hw_pulse_xreset_ms(P7501_RESET_DIAG_ASSERT_MS);
@@ -71,6 +87,10 @@ void p7501_diag_cmd_busdiag(void) {
         p7501_bus_transitions_t phase_a;
         p7501_bus_transitions_t phase_b;
         p7501_diag_sample_transitions(1300U, &phase_a, NULL);
+        if (p7501_wdt_poll_abort()) {
+            aborted = true;
+            break;
+        }
         p7501_diag_sample_transitions(2200U, &phase_b, NULL);
 
         printf("Boot Transitions (%s):\n", (mode == 0U) ? "NORMAL SW_UART=HiZ" : "JIG SW_UART=LOW");
@@ -81,6 +101,8 @@ void p7501_diag_cmd_busdiag(void) {
     }
 
     p7501_hw_isolate_bus_hiz();
-    gpio_pull_up(P7501_PIN_RXD);
-    printf("BUSDIAG: OK\n");
+    if (aborted) {
+        p7501_cli_set_result("ERR", "EABORT");
+    }
+    printf("BUSDIAG: OK%s\n", aborted ? " (aborted=YES)" : "");
 }

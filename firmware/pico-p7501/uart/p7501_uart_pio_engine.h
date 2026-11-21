@@ -49,8 +49,19 @@ uint32_t p7501_pio_get_and_clear_parity_errors(void);
 void p7501_pio_drain_rx(void);
 bool p7501_pio_poll_and_clear_framing_err(void);
 bool p7501_pio_had_rx_overflow(void);
+bool p7501_pio_is_rx_dma_active(void);
+
+typedef void (*p7501_pio_rx_drain_cb_t)(void *ctx, uint8_t rx_byte);
 
 void p7501_pio_tx_bytes(const uint8_t *data, size_t len, bool force_sw_uart_low);
+void p7501_pio_tx_bytes_duplex(
+    const uint8_t *data,
+    size_t len,
+    bool force_sw_uart_low,
+    bool skip_sw_uart_settle,
+    p7501_pio_rx_drain_cb_t on_rx_byte,
+    void *rx_ctx
+);
 void p7501_pio_tx_break_ms(uint32_t break_ms, bool force_sw_uart_low);
 
 #ifdef __cplusplus

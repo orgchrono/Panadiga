@@ -36,40 +36,11 @@ size_t p7501_rsp_build_frame(const char *payload, char *out, size_t out_cap) {
 }
 
 bool p7501_rsp_parse_hex_u32(const char *str, size_t max_chars, uint32_t *out_val) {
-    if (str == NULL || out_val == NULL || max_chars == 0u) {
-        return false;
-    }
-    if (str[0] == '0' && (str[1] == 'x' || str[1] == 'X')) {
-        str += 2;
-        if (max_chars < 2u) {
-            return false;
-        }
-    }
-    size_t count = 0u;
-    uint32_t acc = 0u;
-    while (count < max_chars && str[count] != '\0') {
-        const int nib = p7501_hex_char_to_nibble(str[count]);
-        if (nib < 0) {
-            return false;
-        }
-        acc = (acc << 4) | (uint32_t)nib;
-        count++;
-    }
-    if (count == 0u || str[count] != '\0' || count > 8u) {
-        return false;
-    }
-    *out_val = acc;
-    return true;
+    return p7501_parse_hex_u32_exact(str, max_chars, out_val);
 }
 
 bool p7501_rsp_parse_hex_u32_span(const char *start, size_t len, uint32_t *out_val) {
-    char tmp[12];
-    if (start == NULL || len == 0u || len >= sizeof(tmp)) {
-        return false;
-    }
-    memcpy(tmp, start, len);
-    tmp[len] = '\0';
-    return p7501_rsp_parse_hex_u32(tmp, len, out_val);
+    return p7501_parse_hex_u32_span(start, len, out_val);
 }
 
 bool p7501_rsp_build_write_mem_payload(
@@ -228,10 +199,11 @@ bool p7501_rsp_inspect_frame(const uint8_t *buf, size_t len, p7501_rsp_frame_inf
 }
 
 bool p7501_rsp_decode_mn103_regs(const uint8_t *payload, size_t len, uint32_t out_regs[12]) {
-    if ((payload == NULL) || (out_regs == NULL) || (len != 96u)) {
+    if ((payload == NULL) || (out_regs == NULL) || ((len != 96u) && (len != 224u))) {
         return false;
     }
-    for (size_t reg = 0u; reg < 12u; ++reg) {
+    const size_t word_count = len / 8u;
+    for (size_t reg = 0u; reg < word_count; ++reg) {
         uint32_t val = 0u;
         const size_t base = reg * 8u;
         for (size_t b = 0u; b < 4u; ++b) {
@@ -243,7 +215,9 @@ bool p7501_rsp_decode_mn103_regs(const uint8_t *payload, size_t len, uint32_t ou
             const uint32_t byte_val = (uint32_t)((hi << 4) | lo);
             val |= byte_val << (b * 8u);
         }
-        out_regs[reg] = val;
+        if (reg < 12u) {
+            out_regs[reg] = val;
+        }
     }
     return true;
 }

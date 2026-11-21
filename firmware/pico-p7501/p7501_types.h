@@ -16,6 +16,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "generated/p7501_ssot.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -135,11 +136,31 @@ typedef enum p7501_adc_channel p7501_adc_channel_t;
 /** Fail-closed PIO TX FIFO wait ceiling (us) preventing infinite TX blocking. */
 #define P7501_TX_FIFO_TIMEOUT_US     500000UL
 
-/** Critical Boot IPL window (`SA0..SA3` = first 256 KiB: `0x80000000..0x8003FFFF`). */
+/** Critical Boot IPL window (`SA0..SA10` = first 256 KiB: `0x80000000..0x8003FFFF`). */
 #define P7501_FLASH_CRITICAL_IPL_SIZE    0x00040000UL
 
 /** Standard Spansion main uniform sector size (64 KiB = 65536 bytes). */
 #define SPANSION_MAIN_SECTOR_SIZE_BYTES  65536UL
+
+/** Target AM34 internal SRAM workspace base for injected async stubs. */
+#define AM34_SRAM_LOADER_BASE_ADDR       0x00004000UL
+
+/** Physical uncached CS0/SB0 and uncached hardware flash apertures. */
+#define SPANSION_FLASH_UNCACHED_BASE     0x80000000UL
+#define SPANSION_FLASH_HW_UNCACHED_BASE  0x84000000UL
+#define SPANSION_MICROSECTOR_SIZE_BYTES  0x00002000UL
+#define SPANSION_NVRAM_SECTOR_COUNT      8U
+#define SPANSION_NVRAM_BASE_OFFSET       0x007F0000UL
+#define SPANSION_NVRAM_END_OFFSET        0x00800000UL
+#define SPANSION_JEDEC_UNLOCK_ADDR1      (SPANSION_FLASH_UNCACHED_BASE + 0x0AAAUL)
+#define SPANSION_JEDEC_UNLOCK_ADDR2      (SPANSION_FLASH_UNCACHED_BASE + 0x0554UL)
+#define SPANSION_CMD_UNLOCK1             0x00AAU
+#define SPANSION_CMD_UNLOCK2             0x0055U
+#define SPANSION_CMD_ERASE_SETUP         0x0080U
+#define SPANSION_CMD_SECTOR_ERASE        0x0030U
+#define SPANSION_CMD_READ_RESET          0x00F0U
+#define SPANSION_POLL_DQ7_MASK           0x0080U
+#define SPANSION_ERROR_DQ5_MASK          0x0020U
 
 /* =========================================================================
  * Discrete P7501 Boot & Reset Sequence Profiles (SW_UART + XRESET)

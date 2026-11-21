@@ -26,34 +26,66 @@ message(STATUS "[PANADIGA] Configuring P7501 UART Probe for Board: ${PICO_BOARD}
 # Define main firmware executable (modular architecture grouped by concern)
 add_executable(panasonic_p7501_uart
     p7501_pico_main.c
+    common/p7501_cmd_arena.c
     common/p7501_hex.c
+    common/p7501_spsc_ring.c
     common/p7501_wdt_logic.c
+    hal/p7501_ble_nus.c
+    hal/p7501_bootsel_btn.c
+    hal/p7501_bootsel_logic.c
     hal/p7501_hw.c
     hal/p7501_led_logic.c
     hal/p7501_led.c
+    hal/p7501_multicore.c
+    hal/p7501_usb_dual_cdc.c
     hal/p7501_watchdog.c
+    hal/p7501_wireless_codec.c
     gdb/gdb_rsp_codec.c
     gdb/gdb_rsp_memory.c
     gdb/gdb_rsp_cpu.c
-    protocol/p7501_bus_protocol.c
+    generated/p7501_ssot_tables.c
+    flash/p7501_blackbox_codec.c
+    flash/p7501_bus_policy.c
     flash/p7501_flash_geo.c
+    flash/p7501_ftl_inspect.c
+    flash/p7501_job_codec.c
+    flash/p7501_job.c
+    flash/p7501_probe_cfg_codec.c
+    flash/p7501_qspi_hal.c
+    flash/p7501_qspi_map.c
+    flash/p7501_qspi_storage.c
+    flash/p7501_target_bus.c
+    flash/p7501_target_bus_panamon.c
+    flash/p7501_target_bus_pio.c
     flash/p7501_flash.c
-    flash/p7501_ram_loader.c
+    flash/p7501_vault_codec.c
+    flash/p7501_vault.c
     diag/p7501_diag_electrical.c
     diag/p7501_diag_bus.c
     diag/p7501_diag_busdiag.c
     diag/p7501_diag_pwrtrace.c
     diag/p7501_diag_boottrace.c
+    diag/p7501_i2c_codec.c
+    diag/p7501_i2c_master.c
+    diag/p7501_identify_codec.c
+    diag/p7501_identify.c
+    diag/p7501_mmio_snapshot_codec.c
+    diag/p7501_mmio_snapshot.c
     diag/p7501_piologic_codec.c
     diag/p7501_diag_piologic.c
+    diag/p7501_pwrosc_codec.c
+    diag/p7501_pwrosc.c
     diag/p7501_sds_codec.c
     diag/p7501_diag_sdsniff.c
     diag/p7501_jigsweep_codec.c
     diag/p7501_diag_jigsweep.c
     diag/p7501_ir_codec.c
     diag/p7501_ir_kaseikyo.c
+    diag/p7501_serv_macro_codec.c
+    diag/p7501_serv_macro.c
+    diag/p7501_tbus_codec.c
+    diag/p7501_tbus.c
     flash/p7501_flash_cli.c
-    uart/p7501_uart_bitbang.c
     uart/p7501_uart_autobaud.c
     uart/p7501_uart_codec.c
     uart/p7501_uart_args.c
@@ -69,10 +101,13 @@ add_executable(panasonic_p7501_uart
     uart/p7501_uart_stream.c
     uart/p7501_uart_tx.c
     uart/p7501_pana_dumpnor.c
-    uart/p7501_pana_jedec.c
+    uart/p7501_pana_jedec_stubs.c
+    uart/p7501_pana_jedec_id.c
     uart/p7501_pana_rsp_codec.c
+    uart/p7501_pana_rsp_guard.c
     uart/p7501_pana_rsp_parse.c
     uart/p7501_pana_rsp_report.c
+    uart/p7501_pana_rsp_exec.c
     uart/p7501_pana_rsp.c
     uart/p7501_diag_watch_codec.c
     uart/p7501_diag_watch_events.c
@@ -80,6 +115,7 @@ add_executable(panasonic_p7501_uart
     uart/p7501_drv_pana_codec.c
     uart/p7501_drv_pana.c
     cli/p7501_cli_help.c
+    cli/p7501_cli_sys.c
     cli/p7501_cli.c
 )
 
@@ -88,8 +124,18 @@ target_include_directories(panasonic_p7501_uart PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}
 )
 
+# Zero soft-float printf bloat & hardened 4 KiB Core 0 stack + 512 B frame ceiling
+target_compile_definitions(panasonic_p7501_uart PRIVATE
+    PICO_PRINTF_SUPPORT_FLOAT=0
+    PICO_PRINTF_SUPPORT_EXPONENTIAL=0
+    PICO_STACK_SIZE=0x1000
+)
+
+target_compile_options(panasonic_p7501_uart PRIVATE
+    -Wframe-larger-than=512
+)
+
 # Assemble PIO UART program and generate C header
-pico_generate_pio_header(panasonic_p7501_uart ${CMAKE_CURRENT_LIST_DIR}/p7501_uart.pio)
 pico_generate_pio_header(panasonic_p7501_uart ${CMAKE_CURRENT_LIST_DIR}/p7501_uart_duplex.pio)
 pico_generate_pio_header(panasonic_p7501_uart ${CMAKE_CURRENT_LIST_DIR}/p7501_logic_sampler.pio)
 pico_generate_pio_header(panasonic_p7501_uart ${CMAKE_CURRENT_LIST_DIR}/p7501_sds_sampler.pio)
@@ -97,15 +143,20 @@ pico_generate_pio_header(panasonic_p7501_uart ${CMAKE_CURRENT_LIST_DIR}/p7501_sd
 # Link essential Pico SDK and RP2040/RP2350 hardware drivers
 target_link_libraries(panasonic_p7501_uart
     pico_stdlib
+    pico_multicore
     hardware_pio
+    hardware_dma
     hardware_adc
     hardware_clocks
+    hardware_flash
+    hardware_i2c
     hardware_pwm
+    hardware_sync
     hardware_watchdog
 )
 
 # Optional Bluetooth Low Energy (CYW43439 / BTstack) support for Pico W and Pico 2 W
-if(PICO_BOARD STREQUAL "pico_w" OR PICO_BOARD STREQUAL "pico2_w")
+if((PICO_BOARD STREQUAL "pico_w" OR PICO_BOARD STREQUAL "pico2_w") AND TARGET pico_cyw43_arch_none AND TARGET pico_btstack_ble)
     message(STATUS "[PANADIGA] Enabling Bluetooth LE Nordic UART Service (NUS) for ${PICO_BOARD}")
     target_compile_definitions(panasonic_p7501_uart PRIVATE
         PANADIGA_BLE_ENABLED=1
@@ -114,6 +165,8 @@ if(PICO_BOARD STREQUAL "pico_w" OR PICO_BOARD STREQUAL "pico2_w")
         pico_cyw43_arch_none
         pico_btstack_ble
     )
+elseif(PICO_BOARD STREQUAL "pico_w" OR PICO_BOARD STREQUAL "pico2_w")
+    message(STATUS "[PANADIGA] ${PICO_BOARD}: pico_cyw43_arch_none / pico_btstack_ble targets unavailable (Pico SDK wireless submodules uninitialized); building wired USB CDC fallback.")
 endif()
 
 # Enable USB CDC serial console, disable UART0

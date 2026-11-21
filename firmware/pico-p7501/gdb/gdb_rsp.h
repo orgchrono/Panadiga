@@ -25,19 +25,18 @@ extern "C" {
 #define GDB_RSP_MAX_PACKET_LEN      2048U
 
 /**
- * On RP2350 (520 KB SRAM), allocate 64 KB sector cache for full Spansion sector buffering.
- * On RP2040 (264 KB SRAM), allocate 8 KB microsector cache.
+ * Bounded sector cache derived from SSOT (`512 B`) for both RP2040 and RP2350 so
+ * cache refills stay < 30 ms (never tripping the 4000 ms WDT) and keep `.bss` lean.
  */
+#define GDB_SECTOR_CACHE_SIZE       P7501_SSOT_GDB_SECTOR_CACHE_SIZE
 #if defined(PICO_RP2350) && (PICO_RP2350 != 0)
-    #define GDB_SECTOR_CACHE_SIZE   65536U
     #if defined(PICO_RP2350_RISCV) && (PICO_RP2350_RISCV != 0)
-        #define GDB_TARGET_CHIP_LABEL   "RP2350 (Pico 2 RISC-V Hazard3) - 520KB SRAM - 64KB Sector Cache"
+        #define GDB_TARGET_CHIP_LABEL   "RP2350 (Pico 2 RISC-V Hazard3) - 520KB SRAM - 512B Cache"
     #else
-        #define GDB_TARGET_CHIP_LABEL   "RP2350 (Pico 2 ARM Cortex-M33) - 520KB SRAM - 64KB Sector Cache"
+        #define GDB_TARGET_CHIP_LABEL   "RP2350 (Pico 2 ARM Cortex-M33) - 520KB SRAM - 512B Cache"
     #endif
 #else
-    #define GDB_SECTOR_CACHE_SIZE   8192U
-    #define GDB_TARGET_CHIP_LABEL   "RP2040 (Pico 1 Dual Cortex-M0+) - 264KB SRAM - 8KB Sector Cache"
+    #define GDB_TARGET_CHIP_LABEL   "RP2040 (Pico 1 Dual Cortex-M0+) - 264KB SRAM - 512B Cache"
 #endif
 
 /** AM34 / MN103S register layout indices exposed to GDB. */
@@ -87,6 +86,7 @@ typedef struct gdb_rsp_ctx {
     uint8_t            calc_checksum;
     uint8_t            received_checksum;
     char               last_tx_packet[GDB_RSP_MAX_PACKET_LEN];
+    char               tx_resp_buf[GDB_RSP_MAX_PACKET_LEN];
     am34_reg_file_t    regs;
     uint8_t            sector_cache[GDB_SECTOR_CACHE_SIZE];
     uint32_t           cache_base_addr;

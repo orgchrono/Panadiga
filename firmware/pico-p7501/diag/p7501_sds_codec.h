@@ -45,9 +45,17 @@ typedef enum p7501_sds_data_phase {
     P7501_SDS_DATA_END = 3
 } p7501_sds_data_phase_t;
 
+typedef enum p7501_sds_trigger {
+    P7501_SDS_TRIG_NONE = 0,
+    P7501_SDS_TRIG_ACMD13 = 1,
+    P7501_SDS_TRIG_CRCERR = 2,
+    P7501_SDS_TRIG_91006 = 3
+} p7501_sds_trigger_t;
+
 typedef struct p7501_sds_spec {
     p7501_window_boot_spec_t boot;
     uint16_t default_block_bytes;
+    p7501_sds_trigger_t trigger;
 } p7501_sds_spec_t;
 
 typedef struct p7501_sds_state {
@@ -100,6 +108,10 @@ typedef struct p7501_sds_state {
     uint32_t trace_total;
     uint8_t trace_count;
     p7501_sds_trace_entry_t trace[P7501_SDS_TRACE_CAP];
+
+    p7501_sds_trigger_t active_trigger;
+    bool trigger_fired;
+    uint32_t trigger_clk;
 } p7501_sds_state_t;
 
 /** Compute 7-bit SD CRC7 (`poly 0x09`) over `len` bytes. */
@@ -108,8 +120,17 @@ uint8_t p7501_sds_crc7_bytes(const uint8_t *data, size_t len);
 /** Advance one bit into SD CRC16-CCITT (`poly 0x1021`). */
 uint16_t p7501_sds_crc16_step(uint16_t crc, uint8_t bit);
 
-/** Parse `SDSNIFF [ms] [NORMAL|JIG[:ms]|NOPULL] [LEN:64|512]`. */
+/** Parse `SDSNIFF [ms] [NORMAL|JIG[:ms]|NOPULL] [LEN:64|512] [TRIG:ACMD13|CRCERR|91006]`. */
 bool p7501_sds_parse_args(const char *arg, p7501_sds_spec_t *out_spec);
+
+/** Configure active trigger mode on initialized sniffer state. */
+void p7501_sds_set_trigger(p7501_sds_state_t *st, p7501_sds_trigger_t trig);
+
+/** Return true if configured trigger condition has fired. */
+bool p7501_sds_check_trigger(const p7501_sds_state_t *st);
+
+/** Return canonical uppercase trigger name. */
+const char *p7501_sds_trigger_name(p7501_sds_trigger_t trig);
 
 /** Initialize SD bus sniffer state (`default_block_bytes`: 0=auto 512/64 on ACMD13, or 64/512). */
 void p7501_sds_init(p7501_sds_state_t *st, uint16_t default_block_bytes);

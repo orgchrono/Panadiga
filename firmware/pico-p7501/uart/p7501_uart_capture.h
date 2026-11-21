@@ -1,6 +1,6 @@
 /**
  * @file p7501_uart_capture.h
- * @brief Shared 16 KB P7501 UART RX capture engine & passive boot monitor (`BOOTCAP`/`UARTMON`/`JIGBOOT`).
+ * @brief Shared 32 KiB P7501 UART RX capture engine & passive boot monitor (`BOOTCAP`/`UARTMON`/`JIGBOOT`).
  *
  * @standard ISO/IEC 9899:2011 (C11)
  */
@@ -22,11 +22,6 @@ extern "C" {
  * @return Pointer to shared capture buffer.
  */
 uint8_t *p7501_uart_rx_buffer(size_t *out_capacity);
-
-/**
- * @brief Poll GP2 (MAX TXD) and append decoded byte to the shared RX buffer if room permits.
- */
-bool p7501_uart_poll_capture_byte(bool *prev_high, uint32_t *rx_len, uint32_t max_cap);
 
 /**
  * @brief Capture 115200 8N1 serial traffic into the shared RX buffer for `dur_us` microseconds.

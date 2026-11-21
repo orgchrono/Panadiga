@@ -20,6 +20,7 @@
 #include "pico/time.h"
 
 #if defined(PANADIGA_BLE_ENABLED) && (PANADIGA_BLE_ENABLED != 0)
+#include "hal/p7501_ble_nus.h"
 #include "pico/cyw43_arch.h"
 #endif
 
@@ -36,9 +37,13 @@ static p7501_led_drv_t s_led_drv;
 
 static void drive_physical_led(bool on) {
 #if defined(PANADIGA_BLE_ENABLED) && (PANADIGA_BLE_ENABLED != 0)
-    cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, on ? 1 : 0);
-#else
+    if (p7501_ble_is_radio_ready()) {
+        cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, on ? 1 : 0);
+    }
+#elif defined(PICO_DEFAULT_LED_PIN)
     gpio_put(PICO_DEFAULT_LED_PIN, on ? 1 : 0);
+#else
+    (void)on;
 #endif
 }
 
@@ -56,12 +61,14 @@ static bool led_timer_callback(struct repeating_timer *rt) {
 void p7501_led_init(void) {
     const uint32_t irq_state = save_and_disable_interrupts();
     p7501_led_state_init(&s_led_drv.state);
-#if !defined(PANADIGA_BLE_ENABLED) || (PANADIGA_BLE_ENABLED == 0)
+#if (!defined(PANADIGA_BLE_ENABLED) || (PANADIGA_BLE_ENABLED == 0)) && defined(PICO_DEFAULT_LED_PIN)
     gpio_init(PICO_DEFAULT_LED_PIN);
     gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
 #endif
-    drive_physical_led(s_led_drv.state.current_on);
+    const bool initial_on = s_led_drv.state.current_on;
     restore_interrupts(irq_state);
+    /* Drive physical LED outside IRQ-disabled section so CYW43 SPI never deadlocks. */
+    drive_physical_led(initial_on);
 
     s_led_drv.next_poll_tick = make_timeout_time_ms(100u);
 
@@ -75,33 +82,38 @@ void p7501_led_init(void) {
 void p7501_led_set_mode(pico_led_mode_t mode) {
     const uint32_t irq_state = save_and_disable_interrupts();
     p7501_led_state_set_manual(&s_led_drv.state, mode);
-    drive_physical_led(s_led_drv.state.current_on);
+    const bool on = s_led_drv.state.current_on;
     restore_interrupts(irq_state);
+    drive_physical_led(on);
     s_led_drv.next_poll_tick = make_timeout_time_ms(100u);
 }
 
 void p7501_led_set_auto_mode(pico_led_mode_t mode) {
     const uint32_t irq_state = save_and_disable_interrupts();
-    if (p7501_led_state_set_auto(&s_led_drv.state, mode)) {
-        drive_physical_led(s_led_drv.state.current_on);
+    const bool changed = p7501_led_state_set_auto(&s_led_drv.state, mode);
+    const bool on = s_led_drv.state.current_on;
+    restore_interrupts(irq_state);
+    if (changed) {
+        drive_physical_led(on);
         s_led_drv.next_poll_tick = make_timeout_time_ms(100u);
     }
-    restore_interrupts(irq_state);
 }
 
 void p7501_led_unlock_auto(pico_led_mode_t fallback_mode) {
     const uint32_t irq_state = save_and_disable_interrupts();
     p7501_led_state_unlock_auto(&s_led_drv.state, fallback_mode);
-    drive_physical_led(s_led_drv.state.current_on);
+    const bool on = s_led_drv.state.current_on;
     restore_interrupts(irq_state);
+    drive_physical_led(on);
     s_led_drv.next_poll_tick = make_timeout_time_ms(100u);
 }
 
 void p7501_led_notify_activity(void) {
     const uint32_t irq_state = save_and_disable_interrupts();
     p7501_led_state_pulse_activity(&s_led_drv.state);
-    drive_physical_led(s_led_drv.state.current_on);
+    const bool on = s_led_drv.state.current_on;
     restore_interrupts(irq_state);
+    drive_physical_led(on);
 }
 
 void p7501_led_tick(void) {

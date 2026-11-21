@@ -14,6 +14,7 @@
 #include "uart/p7501_uart_codec.h"
 #include "common/p7501_hex.h"
 #include "common/p7501_wdt_logic.h"
+#include "generated/p7501_ssot.h"
 #include "hal/p7501_led_logic.h"
 
 #include <assert.h>
@@ -92,6 +93,30 @@ static void test_hex_and_baud_math(void) {
     assert(est.snapped_baud == 115200u);
     assert(est.best_cluster_hits >= 6u);
     assert(est.confidence_pct >= 50u);
+
+    /* BAUDSCAN 3-glitch 2T harmonic immunity: 3 fast 4us (230400) glitches must NOT hijack dominant 115200 (40 hits) */
+    p7501_baud_hist_init(&hist);
+    for (int i = 0; i < 40; ++i) {
+        p7501_baud_hist_push_pulse(&hist, 9u, (i % 2) == 0);
+    }
+    for (int g = 0; g < 3; ++g) {
+        p7501_baud_hist_push_pulse(&hist, 4u, false);
+    }
+    p7501_baud_hist_finish(&hist, &est);
+    assert(est.snapped_baud == 115200u);
+    assert(est.raw_bps == 111111u);
+    assert(est.best_cluster_hits == 40u);
+
+    /* Genuine 1T promotion when 57600 (2T) has 16 hits and 115200 (1T) has 4 hits (>= 3 and >= 16/8=2) */
+    p7501_baud_hist_init(&hist);
+    for (int i = 0; i < 16; ++i) {
+        p7501_baud_hist_push_pulse(&hist, 17u, (i % 2) == 0);
+    }
+    for (int i = 0; i < 4; ++i) {
+        p7501_baud_hist_push_pulse(&hist, 9u, (i % 2) == 0);
+    }
+    p7501_baud_hist_finish(&hist, &est);
+    assert(est.snapped_baud == 115200u);
 }
 
 static void test_trigger_and_waittx_parser(void) {
@@ -110,7 +135,7 @@ static void test_trigger_and_waittx_parser(void) {
 
     assert(p7501_parse_waittx_args("20000 JIG \"Hit Any Key\" 1B0D 6000", &spec));
     assert(spec.timeout_ms == 20000u);
-    assert(spec.boot_action == P7501_BOOT_ACTION_JIG);
+    assert(spec.boot_action == P7501_BOOT_ACTION_JIG && spec.jig_hold_ms == P7501_SSOT_JIG_DEFAULT_HOLD_MS);
     assert(strcmp(spec.trigger, "Hit Any Key") == 0);
     assert(spec.tx_len == 2u && spec.tx_bytes[0] == 0x1Bu && spec.tx_bytes[1] == 0x0Du);
     assert(spec.post_rx_ms == 6000u);
@@ -274,11 +299,11 @@ static void test_framing_ctrl_and_jigsweep(void) {
     assert(p7501_parse_jigpin_arg("release", &jmode) && jmode == P7501_JIGPIN_HIZ);
     assert(!p7501_parse_jigpin_arg("pushpull_5v", &jmode));
 
-    assert(strstr(p7501_classify_standby_state(3.25f, 3.26f, true, true, false), "POWERED / AWAKE") != NULL);
-    assert(strstr(p7501_classify_standby_state(0.03f, 0.03f, true, true, false), "NSW5V HIGH") != NULL);
-    assert(strstr(p7501_classify_standby_state(0.03f, 0.40f, false, false, false), "CLAMPED LOW") != NULL);
-    assert(strstr(p7501_classify_standby_state(0.03f, 3.25f, false, false, false), "CABLE UNPLUGGED") != NULL);
-    assert(strstr(p7501_classify_standby_state(0.00f, 0.00f, false, false, true), "JIGPIN_LOW LATCHED") != NULL);
+    assert(strstr(p7501_classify_standby_state_mv(3250u, 3260u, true, true, false), "POWERED / AWAKE") != NULL);
+    assert(strstr(p7501_classify_standby_state_mv(30u, 30u, true, true, false), "NSW5V HIGH") != NULL);
+    assert(strstr(p7501_classify_standby_state_mv(30u, 400u, false, false, false), "CLAMPED LOW") != NULL);
+    assert(strstr(p7501_classify_standby_state_mv(30u, 3250u, false, false, false), "CABLE UNPLUGGED") != NULL);
+    assert(strstr(p7501_classify_standby_state_mv(0u, 0u, false, false, true), "JIGPIN_LOW LATCHED") != NULL);
 }
 
 static void test_wdt_stage_and_fmu_codec(void) {

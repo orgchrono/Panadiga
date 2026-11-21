@@ -9,9 +9,9 @@
 
 #include "uart/p7501_fmu_probe.h"
 #include "uart/p7501_fmu_internal.h"
-#include "uart/p7501_uart_bitbang.h"
 #include "uart/p7501_uart_capture.h"
 #include "uart/p7501_uart_pio_engine.h"
+#include "cli/p7501_cli.h"
 #include "common/p7501_hex.h"
 #include "hal/p7501_hw.h"
 #include "hal/p7501_led.h"
@@ -124,6 +124,7 @@ void p7501_cmd_fmu_scan(const char *arg) {
     if ((arg != NULL) && p7501_ascii_ieq(arg, "all")) {
         for (uint32_t m = 0U; m < 4U; ++m) {
             if (!run_single_fmu_scan_mode(m)) {
+                p7501_cli_set_result("ERR", "EABORT");
                 break;
             }
             p7501_wdt_sleep_ms(40u);
@@ -134,12 +135,15 @@ void p7501_cmd_fmu_scan(const char *arg) {
 
     uint32_t fmode = 0U;
     if ((arg != NULL) && (*arg != '\0')) {
-        if (!p7501_parse_u32_strict(arg, &fmode)) {
-            printf("[FMUSCAN] Invalid mode '%s'! Defaulting to mode 0.\n", arg);
-            fmode = 0U;
+        if (!p7501_parse_u32_strict(arg, &fmode) || (fmode >= 4U)) {
+            p7501_cli_set_result("ERR", "EINVAL");
+            printf("FMUSCAN: ERROR (Invalid mode '%s'; expected 0..3 or ALL)\n", arg);
+            return;
         }
     }
-    (void)run_single_fmu_scan_mode(fmode);
+    if (!run_single_fmu_scan_mode(fmode)) {
+        p7501_cli_set_result("ERR", "EABORT");
+    }
     printf("\nFMUSCAN: OK\n");
 }
 
@@ -167,26 +171,28 @@ void p7501_cmd_fmu_test(const char *arg) {
 
     while (!aborted && p7501_wdt_loop_step(t0_us, deadline_us, true, &aborted)) {
         const uint32_t now_us = time_us_32();
-        while (p7501_fmu_pop_rx_byte(rx_buf, &rx_len, (uint32_t)rx_cap) && (!st.wait1_seen)) {
-            const uint8_t b = rx_buf[rx_len - 1U];
-            bool rel_sw = false;
-            bool saw_serial = false;
-            bool saw_wait1 = false;
-            p7501_fmu_feed_byte(&st, fmode, b, now_us, &rel_sw, &saw_serial, &saw_wait1);
-            if (rel_sw) {
-                p7501_pio_release_sw_uart_now();
-            }
-            if ((fmode == 4U) && (!st.sent_after_serial_msg) && saw_serial) {
-                p7501_pio_tx_bytes(tx_bytes, tx_len, !st.sw_uart_flipped);
-                st.sent_after_serial_msg = true;
-                tx_count++;
-            }
-            if (saw_wait1) {
-                if ((fmode == 1U) && (!st.sw_uart_flipped)) {
+        while (p7501_fmu_pop_rx_byte(rx_buf, &rx_len, (uint32_t)rx_cap)) {
+            if (!st.wait1_seen) {
+                const uint8_t b = rx_buf[rx_len - 1U];
+                bool rel_sw = false;
+                bool saw_serial = false;
+                bool saw_wait1 = false;
+                p7501_fmu_feed_byte(&st, fmode, b, now_us, &rel_sw, &saw_serial, &saw_wait1);
+                if (rel_sw) {
                     p7501_pio_release_sw_uart_now();
-                    st.sw_uart_flipped = true;
                 }
-                next_tx_us = now_us + 2000UL;
+                if ((fmode == 4U) && (!st.sent_after_serial_msg) && saw_serial) {
+                    p7501_pio_tx_bytes(tx_bytes, tx_len, !st.sw_uart_flipped);
+                    st.sent_after_serial_msg = true;
+                    tx_count++;
+                }
+                if (saw_wait1) {
+                    if ((fmode == 1U) && (!st.sw_uart_flipped)) {
+                        p7501_pio_release_sw_uart_now();
+                        st.sw_uart_flipped = true;
+                    }
+                    next_tx_us = now_us + 2000UL;
+                }
             }
         }
 
@@ -206,5 +212,8 @@ void p7501_cmd_fmu_test(const char *arg) {
     printf("\n=== FMUTEST MODE %" PRIu32 " (%u tx bytes x%" PRIu32 ") CAPTURE (%" PRIu32 " bytes%s) ===\n",
            fmode, (unsigned)tx_len, tx_count, rx_len, aborted ? ", aborted=YES" : "");
     p7501_uart_print_ascii_stream(rx_buf, rx_len);
+    if (aborted) {
+        p7501_cli_set_result("ERR", "EABORT");
+    }
     printf("\nFMUTEST: OK\n");
 }
