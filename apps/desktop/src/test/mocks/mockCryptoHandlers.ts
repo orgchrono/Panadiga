@@ -23,11 +23,11 @@ export function handleMockCryptoCommand(
       if (!inputPath || !outputPath || inputPath === outputPath) {
         throw new Error('Copy-on-Write obrigatório: defina um output_path diferente do input_path.');
       }
-      const rawOffset = String(args?.nvramOffset ?? args?.nvram_offset ?? '0').trim();
-      const parsedOffset = Number.parseInt(
-        rawOffset,
-        rawOffset.toLowerCase().startsWith('0x') ? 16 : 10,
-      );
+      const rawOffset = args?.nvramOffset ?? args?.nvram_offset ?? 0;
+      if (typeof rawOffset !== 'number' || !Number.isInteger(rawOffset) || rawOffset < 0) {
+        throw new Error('nvramOffset inválido: esperado número inteiro u32 não-negativo.');
+      }
+      const parsedOffset = rawOffset;
       const patchHex = String(args?.patchHex ?? args?.patch_hex ?? '').replace(/\s+/g, '');
       const patchBytes = Math.ceil(patchHex.length / 2);
       if (
@@ -103,75 +103,66 @@ export function handleMockCryptoCommand(
       return [
         {
           model_id: 'AUTO',
-          series: 'Auto-Detect (Passive Address Aliasing / Binary Signature)',
+          series: 'Auto-Detect (Structural Probe & Loader Banner Fingerprinting)',
           flash_size_mb: 8,
           flash_size_bytes: 8388608,
-          nvram_base_hex: 'AUTO (0x801F0000 / 0x803F0000 / 0x807F0000 / 0x80FE0000)',
-          sector_geometry: 'Auto-Detected Top-Boot / Uniform',
-          soc_name: 'UniPhier AM34 / MN103S Auto',
+          nvram_base_hex: 'AUTO (Probe-Verified)',
+          sector_geometry: 'Probe-Detected (Derived from Resolved Flash Chip)',
+          soc_name: 'Matsushita AM33/AM34 / LSI DoMiNo',
         },
         {
           model_id: 'DMR-EH55',
           series: 'Série EH (HDD+DVD)',
           flash_size_mb: 8,
           flash_size_bytes: 8388608,
-          nvram_base_hex: '0x807F0000',
-          sector_geometry: 'Top-Boot 8x8KB (SA134..SA141)',
-          soc_name: 'Matsushita AM34 / MN103S (VEP79138)',
+          nvram_base_hex: '0x847F0000',
+          sector_geometry: 'S29JL064H70TFI00 [8x8KB + 126x64KB + 8x8KB (S29JL064H70TFI00, SA0..SA141)] — NVRAM SA134..SA141',
+          soc_name: 'MN10300/AM34 (MN2DS0009)',
         },
         {
-          model_id: 'DMR-ES15',
-          series: 'Série ES (DVD/Combo)',
+          model_id: 'DMR-ES35V',
+          series: 'Série ES (DVD+VHS)',
           flash_size_mb: 8,
           flash_size_bytes: 8388608,
-          nvram_base_hex: '0x807F0000',
-          sector_geometry: 'Top-Boot 8x8KB (SA134..SA141)',
-          soc_name: 'Matsushita AM34 / MN103S (VEP79138)',
+          nvram_base_hex: '0x847F0000',
+          sector_geometry: 'S29JL064H70TFI00 [8x8KB + 126x64KB + 8x8KB (S29JL064H70TFI00, SA0..SA141)] — NVRAM SA134..SA141',
+          soc_name: 'MN10300/AM34 (MN2DS00151DB)',
         },
         {
           model_id: 'DMR-ES10',
           series: 'Série ES (DVD-RAM)',
-          flash_size_mb: 4,
-          flash_size_bytes: 4194304,
-          nvram_base_hex: '0x803F0000',
-          sector_geometry: 'Top-Boot 8x8KB (SA63..SA70)',
-          soc_name: 'Matsushita AM33 / MN103S',
+          flash_size_mb: 1,
+          flash_size_bytes: 1048576,
+          nvram_base_hex: 'READ_ONLY_OTP',
+          sector_geometry: 'MR27V802 (1 MiB Read-Only OTP PROM, No NVRAM)',
+          soc_name: 'MN10300/AM33-2 (MN2DS0012-H)',
         },
         {
-          model_id: 'DMR-EH50',
-          series: 'Série EH (HDD+DVD)',
+          model_id: 'DMR-EZ485V',
+          series: 'Série EZ (LSI DoMiNo DVD+VHS)',
           flash_size_mb: 4,
           flash_size_bytes: 4194304,
-          nvram_base_hex: '0x803F0000',
-          sector_geometry: 'Top-Boot 8x8KB (SA63..SA70)',
-          soc_name: 'Matsushita AM33 / MN103S',
+          nvram_base_hex: 'UNKNOWN',
+          sector_geometry: 'MX29LV320BT/BB [8x8KB + 63x64KB (MX29LV320B, SA0..SA70)]',
+          soc_name: 'SPARC V8 (LSI DoMiNo) (LSI DoMiNo ZEBRA64)',
         },
         {
           model_id: 'DMR-E85H',
           series: 'Série ExxH (HDD+DVD)',
-          flash_size_mb: 2,
-          flash_size_bytes: 2097152,
-          nvram_base_hex: '0x801F0000',
-          sector_geometry: 'Top-Boot 8x8KB (SA31..SA38)',
-          soc_name: 'Matsushita AM33 / MN103S',
+          flash_size_mb: 0,
+          flash_size_bytes: 0,
+          nvram_base_hex: 'UNKNOWN',
+          sector_geometry: 'UNKNOWN (Flash/Layout Unverified — Inspect Only)',
+          soc_name: 'UNKNOWN',
         },
         {
           model_id: 'DMR-EX75',
           series: 'Série EX (HDD+DVB-T)',
-          flash_size_mb: 16,
-          flash_size_bytes: 16777216,
-          nvram_base_hex: '0x80FE0000',
-          sector_geometry: 'Uniform 128KB (SA126..SA127)',
-          soc_name: 'Matsushita AM34 / MN103S (VEP79138)',
-        },
-        {
-          model_id: 'DMR-EZ27',
-          series: 'Série EZ (DVD+DVB-T)',
-          flash_size_mb: 16,
-          flash_size_bytes: 16777216,
-          nvram_base_hex: '0x80FE0000',
-          sector_geometry: 'Uniform 128KB (SA126..SA127)',
-          soc_name: 'Matsushita AM34 / MN103S (VEP79138)',
+          flash_size_mb: 0,
+          flash_size_bytes: 0,
+          nvram_base_hex: 'UNKNOWN',
+          sector_geometry: 'UNKNOWN (Flash/Layout Unverified — Inspect Only)',
+          soc_name: 'UNKNOWN',
         },
       ];
 

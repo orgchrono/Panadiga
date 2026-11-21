@@ -87,10 +87,10 @@ export const GuidedPipelineBar: React.FC<GuidedPipelineBarProps> = ({
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
           <fieldset aria-label={t('pipeline.modeGroupAria')} className="inline-flex rounded-lg bg-slate-950 border border-slate-800 p-0.5 m-0 text-[11px]">
-            <button type="button" onClick={() => onModeChange('basic')} aria-pressed={mode === 'basic'} className={cn('px-2.5 py-1 rounded-md transition-colors', mode === 'basic' ? 'bg-emerald-500/20 text-emerald-300 font-bold' : 'text-slate-400 hover:text-slate-200')}>
+            <button type="button" onClick={() => onModeChange('express')} aria-pressed={mode === 'express'} className={cn('px-2.5 py-1 rounded-md transition-colors', mode === 'express' ? 'bg-emerald-500/20 text-emerald-300 font-bold' : 'text-slate-400 hover:text-slate-200')}>
               {t('pipeline.basicBtn')}
             </button>
-            <button type="button" onClick={() => onModeChange('advanced')} aria-pressed={mode === 'advanced'} className={cn('px-2.5 py-1 rounded-md transition-colors', mode === 'advanced' ? 'bg-cyan-500/20 text-cyan-300 font-bold' : 'text-slate-400 hover:text-slate-200')}>
+            <button type="button" onClick={() => onModeChange('engineering')} aria-pressed={mode === 'engineering'} className={cn('px-2.5 py-1 rounded-md transition-colors', mode === 'engineering' ? 'bg-cyan-500/20 text-cyan-300 font-bold' : 'text-slate-400 hover:text-slate-200')}>
               {t('pipeline.advancedBtn')}
             </button>
           </fieldset>

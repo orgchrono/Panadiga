@@ -38,16 +38,36 @@ fn ensure_default_uart_and_probe_target(
     if !target_powered {
         return uart_synced.then(|| "PIO1 UART=115200 8N1 sincronizada".to_string());
     }
-    let autodetect_out = panadiga_core::pico::cdc::send_and_read_until(
+    let ident_out = panadiga_core::pico::cdc::send_and_read_until(
         port,
-        "AUTODETECT",
-        &["[AUTODETECT]", "AUTODETECT: OK", "PANADIGA>"],
+        "IDENTIFY 80",
+        &[
+            "@P7501_RES",
+            "IDENTIFY: OK",
+            "IDENTIFY: OFFLINE",
+            "PANADIGA>",
+        ],
         Duration::from_millis(SERIAL_AUTODETECT_TIMEOUT_MS),
     );
-    let clean_probe = autodetect_out
-        .lines()
-        .map(str::trim)
-        .find(|line| line.contains("NOR Flash detected") || line.contains("AUTODETECT: OK"));
+    let clean_probe =
+        if let Some(ident) = panadiga_core::pico::protocol::parse_ident_line(&ident_out) {
+            Some(format!(
+                "{} | {} | {} | ssot={}",
+                ident.model, ident.flash, ident.loader, ident.ssot
+            ))
+        } else {
+            let autodetect_out = panadiga_core::pico::cdc::send_and_read_until(
+                port,
+                "AUTODETECT",
+                &["[AUTODETECT]", "AUTODETECT: OK", "PANADIGA>"],
+                Duration::from_millis(SERIAL_AUTODETECT_TIMEOUT_MS),
+            );
+            autodetect_out
+                .lines()
+                .map(str::trim)
+                .find(|line| line.contains("NOR Flash detected") || line.contains("AUTODETECT: OK"))
+                .map(str::to_string)
+        };
     match (uart_synced, clean_probe) {
         (true, Some(probe)) => Some(format!("PIO1 UART=115200 8N1 | {probe}")),
         (true, None) => {

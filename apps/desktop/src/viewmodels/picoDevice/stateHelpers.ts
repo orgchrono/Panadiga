@@ -44,7 +44,7 @@ export function deriveCoreStateFromVoltage(
   commandId?: string,
   commandSuccess?: boolean,
 ): OcdCoreState {
-  if (commandId === 'HANDSHAKE' && commandSuccess) {
+  if ((commandId === 'IDENTIFY' || commandId === 'BREAK_IN') && commandSuccess) {
     return 'HALTED';
   }
   if (isTargetPowered(vddVolts, PICO_MIN_VDD_THRESHOLD_VOLTS)) {

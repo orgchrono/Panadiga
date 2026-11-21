@@ -164,7 +164,12 @@
       "vddBadge": "VDD {{volts}}V",
       "flashBadge": "Flash {{mb}} MB",
       "xresetRisePrefix": "XRESET Rise: {{value}}",
-      "capturedBytesSuffix": "{{bytes}} bytes UART/FMU"
+      "capturedBytesSuffix": "{{bytes}} bytes UART/FMU",
+      "modelBadge": "Target: {{model}}",
+      "flashChipBadge": "NOR: {{chip}}",
+      "loaderBadge": "Loader: {{loader}}",
+      "resCodeBadge": "RES {{code}}",
+      "wireEventsTitle": "Events & Progress (@PROG / @EVT)"
     },
     "telemetry": {
       "title": "Introspective RSP Telemetry ({{count}} packets in ring buffer)",

@@ -15,6 +15,7 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { syncAccessibilityDom } from '@/store/storage';
 import {
   acceptCompliance as acceptComplianceAction,
+  acknowledgePicoSafetySheet as acknowledgePicoSafetySheetAction,
   markPipelineFlag as markPipelineFlagAction,
   resetPipeline as resetPipelineAction,
   resetWorkbenchPreferences as resetWorkbenchPreferencesAction,
@@ -57,6 +58,7 @@ export type {
 
 interface WorkbenchModeContextValue {
   readonly mode: WorkbenchExperienceMode;
+  readonly isExpress: boolean;
   readonly isAdvanced: boolean;
   readonly setMode: (mode: WorkbenchExperienceMode) => void;
   readonly toggleMode: () => void;
@@ -79,6 +81,8 @@ interface WorkbenchModeContextValue {
   readonly complianceModalOpen: boolean;
   readonly acceptCompliance: () => void;
   readonly setComplianceModalOpen: (open: boolean) => void;
+  readonly picoSafetySheetAcknowledged: boolean;
+  readonly acknowledgePicoSafetySheet: () => void;
   readonly docks: WorkbenchDocksState;
   readonly toggleLeftDock: () => void;
   readonly toggleRightDock: () => void;
@@ -204,6 +208,10 @@ export function useWorkbenchMode(): WorkbenchModeContextValue {
     (open: boolean) => dispatch(setComplianceModalOpenAction(open)),
     [dispatch],
   );
+  const acknowledgePicoSafetySheet = useCallback(
+    () => dispatch(acknowledgePicoSafetySheetAction()),
+    [dispatch],
+  );
   const toggleLeftDock = useCallback(() => dispatch(toggleLeftDockAction()), [dispatch]);
   const toggleRightDock = useCallback(() => dispatch(toggleRightDockAction()), [dispatch]);
   const toggleBottomDock = useCallback(() => dispatch(toggleBottomDockAction()), [dispatch]);
@@ -218,7 +226,8 @@ export function useWorkbenchMode(): WorkbenchModeContextValue {
 
   return {
     mode: workbench.mode,
-    isAdvanced: workbench.mode === 'advanced',
+    isExpress: workbench.mode === 'express',
+    isAdvanced: workbench.mode === 'engineering',
     isLoading: workbench.isLoading,
     setMode,
     toggleMode,
@@ -240,6 +249,8 @@ export function useWorkbenchMode(): WorkbenchModeContextValue {
     complianceModalOpen: workbench.complianceModalOpen,
     acceptCompliance,
     setComplianceModalOpen,
+    picoSafetySheetAcknowledged: workbench.picoSafetySheetAcknowledged,
+    acknowledgePicoSafetySheet,
     docks: workbench.docks,
     toggleLeftDock,
     toggleRightDock,

@@ -1,10 +1,12 @@
 import { test, expect } from '@playwright/test';
 import { installMockIpcBridge } from './fixtures/mockIpcBridge';
+import { enterEngineeringMode } from './fixtures/workbenchHelpers';
 
 test.describe('HDD 5GB-2TB Safe Target Flash E2E', () => {
   test.beforeEach(async ({ page }) => {
     await installMockIpcBridge(page);
     await page.goto('/');
+    await enterEngineeringMode(page);
     await page.click('button[data-testid="nav-hdd"]');
     await expect(page.locator('[data-testid="app-header"]')).toHaveAttribute('data-view', 'hdd');
   });

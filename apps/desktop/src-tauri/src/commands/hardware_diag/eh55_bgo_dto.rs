@@ -2,10 +2,12 @@
 
 //! DTOs and NOR slice parser for EH55 Spansion NOR dumping, BGO audit, and BGO repair commands.
 
-use std::time::Duration;
+use std::path::PathBuf;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use panadiga_core::constants::{
     AM34_EH55_FLASH_BGO_BASE, AM34_EH55_FLASH_BGO_SIZE, DEFAULT_BAUD_RATE,
+    resolve_writable_data_root,
 };
 use panadiga_core::crypto::parse_u32_radix;
 use panadiga_core::pico::panamon1::SerialPanamon1Transport;
@@ -14,10 +16,54 @@ use panadiga_core::re::nor_dumper::{NorSliceCaptureReport, NorSlicePreset};
 use serde::{Deserialize, Serialize};
 
 use crate::commands::error::{IpcResult, PanadigaIpcError};
-use crate::commands::unbrick_dto::opt_trimmed;
+use crate::commands::frm_pack::resolve_write_path;
+use crate::commands::unbrick_dto::{opt_trimmed, resolve_dir_target};
 use crate::state::PanadigaBackendState;
 
 pub(crate) const UPPER_NOR_CONFIRM_TOKEN: &str = "CONFIRM_UPPER_NOR";
+
+fn epoch_secs_now() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs()
+}
+
+/// Resolves an explicit output file path or auto-generates a timestamped file under `<writable_root>/backups/`.
+pub(crate) fn resolve_auto_backup_file(
+    explicit: Option<&str>,
+    prefix: &str,
+    ext: &str,
+) -> IpcResult<PathBuf> {
+    if let Some(raw) = explicit.map(str::trim).filter(|s| !s.is_empty()) {
+        return resolve_write_path(raw);
+    }
+    let dir = resolve_writable_data_root().join("backups");
+    std::fs::create_dir_all(&dir).map_err(|e| {
+        PanadigaIpcError::io(format!(
+            "Falha criando diretório de backup '{}': {e}",
+            dir.display()
+        ))
+    })?;
+    Ok(dir.join(format!("{prefix}_{}.{ext}", epoch_secs_now())))
+}
+
+/// Resolves an explicit backup directory or auto-generates a timestamped folder under `<writable_root>/backups/`.
+pub(crate) fn resolve_auto_backup_dir(explicit: Option<&str>, prefix: &str) -> IpcResult<PathBuf> {
+    if let Some(raw) = explicit.map(str::trim).filter(|s| !s.is_empty()) {
+        return resolve_dir_target(raw);
+    }
+    let dir = resolve_writable_data_root()
+        .join("backups")
+        .join(format!("{prefix}_{}", epoch_secs_now()));
+    std::fs::create_dir_all(&dir).map_err(|e| {
+        PanadigaIpcError::io(format!(
+            "Falha criando diretório de backup '{}': {e}",
+            dir.display()
+        ))
+    })?;
+    Ok(dir)
+}
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -26,7 +72,7 @@ pub struct PicoEh55NorDumpRequestDto {
     pub slice: Option<String>,
     pub custom_start_va_hex: Option<String>,
     pub custom_len_hex: Option<String>,
-    pub output_path: String,
+    pub output_path: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -149,5 +195,23 @@ pub(crate) fn parse_nor_slice_preset(
         other => Err(PanadigaIpcError::validation(format!(
             "Slice NOR inválido '{other}': use full, bgo, nvram, loader ou custom."
         ))),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn auto_backup_path_and_dir_resolve_under_writable_root() {
+        let f = resolve_auto_backup_file(None, "eh55_test_dump", "bin").unwrap();
+        assert!(f.to_string_lossy().contains("backups"));
+        assert!(f.to_string_lossy().ends_with(".bin"));
+
+        let f_blank = resolve_auto_backup_file(Some("   "), "eh55_test_dump", "bin").unwrap();
+        assert!(f_blank.to_string_lossy().contains("backups"));
+
+        let d = resolve_auto_backup_dir(Some("   "), "eh55_test_dir").unwrap();
+        assert!(d.is_dir());
     }
 }

@@ -19,7 +19,7 @@ pub(crate) fn sha256_hex(data: &[u8]) -> String {
     calculate_hashes(data).1
 }
 
-/// Executes `f` under the exclusive serial lock after opening CDC and verifying P7501 HANDSHAKE.
+/// Executes `f` under the exclusive serial lock after opening CDC and verifying P7501 IDENTIFY.
 pub(crate) fn with_p7501_handshake<R>(
     backend: &PanadigaBackendState,
     port_name: &str,
@@ -36,18 +36,43 @@ pub(crate) fn with_p7501_handshake<R>(
                     ))
                 })?;
 
-        port.write_all(b"HANDSHAKE\r\n")
-            .map_err(|e| PanadigaIpcError::serial(format!("Falha ao enviar HANDSHAKE: {}", e)))?;
+        port.write_all(b"IDENTIFY\r\n")
+            .map_err(|e| PanadigaIpcError::serial(format!("Falha ao enviar IDENTIFY: {}", e)))?;
         let _ = port.flush();
         let hs_out = read_serial_response_complete(&mut *port, Duration::from_millis(3000))?;
-        if !hs_out.contains("[HANDSHAKE] SUCCESS") {
+        let offline_or_missing = (!hs_out.contains("@P7501_IDENT")
+            && !hs_out.contains("IDENTIFY: OK"))
+            || hs_out.contains("IDENTIFY: OFFLINE");
+        if offline_or_missing {
             return Err(PanadigaIpcError::serial(format!(
-                "Cold Break-In falhou ao capturar o chip Matsushita AM34 (gravador desligado da tomada VDD=0V ou fiação solta). Resposta: {}",
+                "Identificação P7501 falhou ao sondar o alvo Matsushita AM34 (gravador desligado VDD=0V ou fiação solta). Resposta: {}",
                 hs_out.trim()
+            )));
+        }
+        if let Some(ident) = panadiga_core::pico::parse_ident_line(&hs_out)
+            && (ident.vdd_mv < 2500 || ident.state == "STANDBY_OR_OFF")
+        {
+            return Err(PanadigaIpcError::serial(format!(
+                "Alvo P7501 desligado/offline no IDENTIFY (model={} vdd_mv={} state={}). Conecte e ligue o gravador antes de continuar.",
+                ident.model, ident.vdd_mv, ident.state
             )));
         }
         f(&mut *port, hs_out)
     })
+}
+
+/// Resolves the target EEMUL NVRAM base address from `@P7501_IDENT` (fail-closed if read-only)
+/// or falls back to legacy Flash-size detection when no structured ident frame is present.
+pub(crate) fn resolve_ident_nvram_base_hex(hs_out: &str) -> IpcResult<String> {
+    if let Some(ident) = panadiga_core::pico::parse_ident_line(hs_out) {
+        return ident.nvram_base_hex().ok_or_else(|| {
+            PanadigaIpcError::serial(format!(
+                "Alvo identificado '{}' (flash '{}') não possui EEMUL NVRAM gravável verificada no SSOT; escrita/erase bloqueados.",
+                ident.model, ident.flash
+            ))
+        });
+    }
+    Ok(parse_autodetected_nvram_base(hs_out).to_string())
 }
 
 pub(crate) fn dump_p7501_region_bytes(
@@ -56,6 +81,7 @@ pub(crate) fn dump_p7501_region_bytes(
     words: u32,
     timeout_ms: u64,
 ) -> Vec<u8> {
+    let _ = port.clear(serialport::ClearBuffer::Input);
     let cmd = format!("DUMP {} {}\r\n", addr_hex, words);
     let _ = port.write_all(cmd.as_bytes());
     let _ = port.flush();
@@ -64,26 +90,96 @@ pub(crate) fn dump_p7501_region_bytes(
     parse_pico_dump_hex_to_bytes(&ascii)
 }
 
-pub(crate) fn save_live_backup_files(nvram: &[u8], sram: &[u8], ipl: &[u8]) -> String {
-    // Timestamped, never-overwriting directory: the first-contact capture is immutable evidence.
-    let base = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
-    let ts = std::time::SystemTime::now()
+pub(crate) fn save_live_backup_files(nvram: &[u8], sram: &[u8], ipl: &[u8]) -> IpcResult<String> {
+    // Timestamped, never-overwriting directory under writable user data root: immutable forensic evidence.
+    let base = panadiga_core::constants::resolve_writable_data_root().join("first_contact_backups");
+    let ts_ms = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_secs())
+        .map(|d| d.as_millis())
         .unwrap_or(0);
-    let out_dir = base.join(format!("first_contact_{}", ts));
-    let _ = fs::create_dir_all(&out_dir);
-    let _ = fs::write(out_dir.join("nvram_live_backup.bin"), nvram);
-    let _ = fs::write(out_dir.join("sram_secrets.bin"), sram);
-    let _ = fs::write(out_dir.join("ipl_bootcamp_header.bin"), ipl);
+    let expected_nv_sha = sha256_hex(nvram);
+    let expected_sr_sha = sha256_hex(sram);
+    let expected_ipl_sha = sha256_hex(ipl);
+    let sha_tag = &expected_nv_sha[..expected_nv_sha.len().min(8)];
+    fs::create_dir_all(&base).map_err(|e| {
+        PanadigaIpcError::io(format!(
+            "Falha ao criar raiz de backups forenses '{}': {}",
+            base.display(),
+            e
+        ))
+    })?;
+    let out_dir = base.join(format!("first_contact_{}_{}", ts_ms, sha_tag));
+    fs::create_dir(&out_dir).map_err(|e| {
+        PanadigaIpcError::io(format!(
+            "Falha ao criar diretório exclusivo de backup forense '{}': {}",
+            out_dir.display(),
+            e
+        ))
+    })?;
+
+    let nv_path = out_dir.join("nvram_live_backup.bin");
+    let sr_path = out_dir.join("sram_secrets.bin");
+    let ipl_path = out_dir.join("ipl_bootcamp_header.bin");
+
+    for (path, payload, label, expected_sha) in [
+        (&nv_path, nvram, "NVRAM", expected_nv_sha.as_str()),
+        (&sr_path, sram, "SRAM", expected_sr_sha.as_str()),
+        (&ipl_path, ipl, "IPL", expected_ipl_sha.as_str()),
+    ] {
+        let mut file = fs::File::create(path).map_err(|e| {
+            PanadigaIpcError::io(format!(
+                "Falha ao criar arquivo de backup {} '{}': {}",
+                label,
+                path.display(),
+                e
+            ))
+        })?;
+        std::io::Write::write_all(&mut file, payload).map_err(|e| {
+            PanadigaIpcError::io(format!(
+                "Falha ao gravar backup {} '{}': {}",
+                label,
+                path.display(),
+                e
+            ))
+        })?;
+        file.sync_all().map_err(|e| {
+            PanadigaIpcError::io(format!(
+                "Falha ao sincronizar (fsync) backup {} '{}': {}",
+                label,
+                path.display(),
+                e
+            ))
+        })?;
+        drop(file);
+        let readback = fs::read(path).map_err(|e| {
+            PanadigaIpcError::io(format!(
+                "Falha ao reler backup {} '{}' para verificação SHA-256: {}",
+                label,
+                path.display(),
+                e
+            ))
+        })?;
+        if readback.len() != payload.len() || sha256_hex(&readback) != expected_sha {
+            return Err(PanadigaIpcError::io(format!(
+                "Verificação SHA-256 pós-gravação do backup {} '{}' falhou — operação abortada.",
+                label,
+                path.display()
+            )));
+        }
+    }
+
     let manifest = format!(
         "{}  nvram_live_backup.bin\n{}  sram_secrets.bin\n{}  ipl_bootcamp_header.bin\n",
-        sha256_hex(nvram),
-        sha256_hex(sram),
-        sha256_hex(ipl)
+        expected_nv_sha, expected_sr_sha, expected_ipl_sha
     );
-    let _ = fs::write(out_dir.join("SHA256SUMS.txt"), manifest);
-    out_dir.display().to_string()
+    fs::write(out_dir.join("SHA256SUMS.txt"), manifest).map_err(|e| {
+        PanadigaIpcError::io(format!(
+            "Falha ao gravar manifesto SHA256SUMS.txt em '{}': {}",
+            out_dir.display(),
+            e
+        ))
+    })?;
+    Ok(out_dir.display().to_string())
 }
 
 /// True when a captured buffer is empty or one repeated byte (floating or shorted bus).
@@ -104,7 +200,7 @@ pub fn pico_execute_first_contact_backup(
     port_name: String,
 ) -> IpcResult<FirstContactBackupResult> {
     with_p7501_handshake(backend, &port_name, |port, hs_out| {
-        let nvram_base_hex = parse_autodetected_nvram_base(&hs_out);
+        let nvram_base_hex = resolve_ident_nvram_base_hex(&hs_out)?;
         let mut log_lines = vec![hs_out];
 
         let is_16mb = nvram_base_hex == "0x80FE0000";
@@ -112,8 +208,8 @@ pub fn pico_execute_first_contact_backup(
         let nvram_timeout = if is_16mb { 30000 } else { 15000 };
 
         // Double-Read NVRAM at auto-detected EEMUL base to confirm zero bit-error on P7501 debug link
-        let nv_bytes_1 = dump_p7501_region_bytes(port, nvram_base_hex, nvram_words, nvram_timeout);
-        let nv_bytes_2 = dump_p7501_region_bytes(port, nvram_base_hex, nvram_words, nvram_timeout);
+        let nv_bytes_1 = dump_p7501_region_bytes(port, &nvram_base_hex, nvram_words, nvram_timeout);
+        let nv_bytes_2 = dump_p7501_region_bytes(port, &nvram_base_hex, nvram_words, nvram_timeout);
         let sha_1 = sha256_hex(&nv_bytes_1);
         let sha_2 = sha256_hex(&nv_bytes_2);
 
@@ -121,9 +217,10 @@ pub fn pico_execute_first_contact_backup(
         let ipl_bytes = dump_p7501_region_bytes(port, "0x80000000", 1024, 4000);
 
         // A floating (0xFF..) or shorted (0x00..) bus yields identical reads; that is NOT a valid capture.
-        // Require explicit HALT confirmation and a non-uniform bootloader header.
-        let bus_alive =
-            log_lines[0].contains("[HANDSHAKE] SUCCESS") && !is_uniform_bus_pattern(&ipl_bytes);
+        // Require explicit IDENTIFY confirmation and a non-uniform bootloader header.
+        let bus_alive = (log_lines[0].contains("@P7501_IDENT")
+            || log_lines[0].contains("IDENTIFY: OK"))
+            && !is_uniform_bus_pattern(&ipl_bytes);
         let double_read_verified = bus_alive && !nv_bytes_1.is_empty() && sha_1 == sha_2;
 
         // Auto-detect DIGA model from IPL Header or NVRAM strings
@@ -132,7 +229,7 @@ pub fn pico_execute_first_contact_backup(
         let detected_model = detect_diga_model_from_slice(&combined_probe);
 
         if double_read_verified {
-            let dir = save_live_backup_files(&nv_bytes_1, &sr_bytes, &ipl_bytes);
+            let dir = save_live_backup_files(&nv_bytes_1, &sr_bytes, &ipl_bytes)?;
             log_lines.push(format!(
                 "[DOUBLE-READ VERIFIED] SHA-256 idêntico nas 2 leituras ({} @ {}). Modelo detectado: {}. Salvo em {}/",
                 &sha_1[..16],

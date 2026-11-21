@@ -80,14 +80,36 @@ describe('useNvramViewModel MVVM Test', () => {
     expect(result.current.liveCapture).toBeNull();
   });
 
-  it('enforces Copy-on-Write and blocks guarded patch beyond 64 KiB NVRAM / IPL boundary', async () => {
+  it('enforces Copy-on-Write, numeric u32 offset validation, and IPL boundary', async () => {
     const { result } = await renderReadyNvramHook();
+
+    await act(async () => {
+      const badOffset = await result.current.executeGuardedPatch({
+        inputPath: 'nor.bin',
+        outputPath: 'nor.patched.bin',
+        nvramOffset: -4,
+        patchHex: 'FFFFFFFF',
+      });
+      expect(badOffset).toBeNull();
+    });
+    expect(result.current.patchError).toContain('NVRAM');
+
+    await act(async () => {
+      const nanOffset = await result.current.executeGuardedPatch({
+        inputPath: 'nor.bin',
+        outputPath: 'nor.patched.bin',
+        nvramOffset: Number.NaN,
+        patchHex: 'FFFFFFFF',
+      });
+      expect(nanOffset).toBeNull();
+    });
+    expect(result.current.patchError).toContain('NVRAM');
 
     await act(async () => {
       const samePath = await result.current.executeGuardedPatch({
         inputPath: 'nor.bin',
         outputPath: 'nor.bin',
-        nvramOffset: '0x0',
+        nvramOffset: 0,
         patchHex: 'FFFFFFFF',
       });
       expect(samePath).toBeNull();
@@ -98,7 +120,7 @@ describe('useNvramViewModel MVVM Test', () => {
       const iplBlocked = await result.current.executeGuardedPatch({
         inputPath: 'nor.bin',
         outputPath: 'nor.patched.bin',
-        nvramOffset: '0x10000',
+        nvramOffset: 0x10000,
         patchHex: 'AA55',
       });
       expect(iplBlocked).toBeNull();
@@ -109,7 +131,7 @@ describe('useNvramViewModel MVVM Test', () => {
       const validPatch = await result.current.executeGuardedPatch({
         inputPath: 'nor.bin',
         outputPath: 'nor.patched.bin',
-        nvramOffset: '0x0',
+        nvramOffset: 0,
         patchHex: 'FFFFFFFF',
       });
       expect(validPatch).not.toBeNull();

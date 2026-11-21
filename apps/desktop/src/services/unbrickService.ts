@@ -5,6 +5,7 @@
 
 import type {
   BootSequenceReport,
+  FlashSdRecoveryCardRequest,
   FrmModuleExtractionReport,
   FrmUnlockVerificationSummary,
   MainPassthroughReport,
@@ -13,14 +14,17 @@ import type {
   MatshitaInjectWriteResult,
   NorDumperStubResult,
   PackUnlockFrmResult,
+  SdCardCreatorReport,
   SdDiskInspectionReport,
+  SdFlashProgressEvent,
   SdMediaVerificationReport,
+  SdTargetDriveInfo,
   SdUnbrickKitReport,
   SdUnbrickKitRequestDto,
   SerialCliResponse,
   UnbrickWorkspaceReport,
 } from '@/models';
-import { invokeCommand } from './ipc';
+import { invokeCommand, listenEvent } from './ipc';
 
 export const inspectUnbrickWorkbench = (
   args?: Record<string, unknown>,
@@ -122,3 +126,15 @@ export const packFrmUnlockContainer = (params: {
   payloadHex?: string;
 }): Promise<PackUnlockFrmResult> =>
   invokeCommand<PackUnlockFrmResult>('pack_unlock_frm_command', params);
+
+export const inspectSdCardTargets = (): Promise<SdTargetDriveInfo[]> =>
+  invokeCommand<SdTargetDriveInfo[]>('inspect_sd_card_targets_command');
+
+export const flashSdRecoveryCard = (
+  request: FlashSdRecoveryCardRequest,
+): Promise<SdCardCreatorReport> =>
+  invokeCommand<SdCardCreatorReport>('flash_sd_recovery_card_command', { request });
+
+export const subscribeSdFlashProgress = (
+  handler: (payload: SdFlashProgressEvent) => void,
+): Promise<() => void> => listenEvent('sd://flash-progress', handler);

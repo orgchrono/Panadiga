@@ -39,44 +39,35 @@ fn open_serial_gdb_target(
     }
     super::types::reject_mock_port(clean_port)?;
 
-    let maybe_serial = backend.serial.with_lock(|| {
-        match panadiga_core::pico::cdc::open_cdc(clean_port, 115_200, Duration::from_millis(120)) {
-            Ok(mut p) => {
-                let _ = p.write_all(b"\r\nGDB\r\n");
-                let _ = p.flush();
-                let mut drain_buf = [0u8; 512];
-                let mut accumulated = String::new();
-                for _ in 0..8 {
-                    match p.read(&mut drain_buf) {
-                        Ok(n) if n > 0 => {
-                            accumulated.push_str(&String::from_utf8_lossy(&drain_buf[..n]));
-                            if accumulated.contains("Auto-ready") {
-                                break;
-                            }
-                        }
-                        _ => break,
+    let serial = backend.serial.with_lock(|| {
+        let mut p =
+            panadiga_core::pico::cdc::open_cdc(clean_port, 115_200, Duration::from_millis(120))
+                .map_err(|e| {
+                    PanadigaIpcError::serial(format!(
+                        "[GDB Bridge] Falha ao abrir porta serial física {}: {} (política fail-closed; passe 'LOCAL_STUB' explicitamente para emulação offline).",
+                        clean_port, e
+                    ))
+                })?;
+        let _ = p.write_all(b"\r\nGDB\r\n");
+        let _ = p.flush();
+        let mut drain_buf = [0u8; 512];
+        let mut accumulated = String::new();
+        for _ in 0..8 {
+            match p.read(&mut drain_buf) {
+                Ok(n) if n > 0 => {
+                    accumulated.push_str(&String::from_utf8_lossy(&drain_buf[..n]));
+                    if accumulated.contains("Auto-ready") {
+                        break;
                     }
                 }
-                let _ = p.set_timeout(Duration::from_millis(50));
-                Some(p)
-            }
-            Err(e) => {
-                panadiga_core::log_warn!(
-                    "[GDB Bridge] Porta serial {} indisponível ({}); iniciando servidor em modo Local AM34 Stub.",
-                    clean_port,
-                    e
-                );
-                None
+                _ => break,
             }
         }
-    });
+        let _ = p.set_timeout(Duration::from_millis(50));
+        Ok::<_, PanadigaIpcError>(p)
+    })?;
 
-    let label = if maybe_serial.is_some() {
-        clean_port.to_string()
-    } else {
-        format!("LOCAL_STUB (fallback de {})", clean_port)
-    };
-    Ok((maybe_serial, label))
+    Ok((Some(serial), clean_port.to_string()))
 }
 
 /// Starts the GDB TCP-to-Serial bridge server in a background thread.
@@ -196,4 +187,27 @@ pub fn get_gdb_bridge_status(backend: &PanadigaBackendState) -> IpcResult<GdbBri
 /// Retrieves the current AM34 register state.
 pub fn get_am34_registers(backend: &PanadigaBackendState) -> IpcResult<Am34RegisterState> {
     Ok(backend.gdb_bridge.registers_snapshot())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_open_serial_gdb_target_is_fail_closed_for_real_ports() {
+        let backend = PanadigaBackendState::new();
+
+        let (stub_port, stub_label) =
+            open_serial_gdb_target(&backend, "LOCAL_STUB").expect("LOCAL_STUB explicit opt-in");
+        assert!(stub_port.is_none());
+        assert_eq!(stub_label, "LOCAL_STUB (AM34)");
+
+        let err = match open_serial_gdb_target(&backend, "COM254") {
+            Ok(_) => panic!("nonexistent physical port COM254 must fail closed"),
+            Err(err) => err,
+        };
+        let msg = err.to_string();
+        assert!(msg.contains("COM254"), "msg={msg}");
+        assert!(msg.contains("fail-closed"), "msg={msg}");
+    }
 }

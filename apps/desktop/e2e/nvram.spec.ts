@@ -1,10 +1,12 @@
 import { test, expect } from '@playwright/test';
 import { installMockIpcBridge } from './fixtures/mockIpcBridge';
+import { enterEngineeringMode } from './fixtures/workbenchHelpers';
 
 test.describe('NVRAM & Spansion S29JL064H Surgical Recovery E2E', () => {
   test.beforeEach(async ({ page }) => {
     await installMockIpcBridge(page);
     await page.goto('/');
+    await enterEngineeringMode(page);
     await page.click('button[data-testid="nav-nvram"]');
     await expect(page.locator('[data-testid="app-header"]')).toHaveAttribute('data-view', 'nvram');
   });

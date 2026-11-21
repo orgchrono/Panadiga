@@ -183,6 +183,13 @@ export interface PicoDiagnosticResult {
   dump_rows: DumpWordRow[];
   captured_bytes?: number | null;
   findings?: DiagnosticFinding[];
+  protocol_code?: string | null;
+  protocol_elapsed_us?: number | null;
+  ident_model?: string | null;
+  ident_flash?: string | null;
+  ident_loader?: string | null;
+  progress_steps?: string[];
+  wire_events?: string[];
 }
 
 export interface FlashReport {

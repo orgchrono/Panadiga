@@ -1,10 +1,11 @@
-import React, { useId, useState } from 'react';
+import React from 'react';
 import {
   CheckCircle2,
   Layers,
   ShieldAlert,
   ShieldCheck,
 } from 'lucide-react';
+import { useSafetyAckDialogState } from '@/hooks/useSafetyAckDialogState';
 import type { TranslationKey } from '@/i18n/translations';
 import { useTranslation } from '@/i18n/useTranslation';
 import { Button } from './button';
@@ -43,20 +44,8 @@ export const ComplianceDialog: React.FC<ComplianceDialogProps> = ({
   onAccept,
 }) => {
   const { t } = useTranslation();
-  const checkboxId = useId();
-  const [checked, setChecked] = useState(false);
-
-  const handleOpenChange = (nextOpen: boolean) => {
-    if (!nextOpen) {
-      setChecked(false);
-    }
-    onOpenChange(nextOpen);
-  };
-
-  const handleAccept = () => {
-    setChecked(false);
-    onAccept();
-  };
+  const { checkboxId, checked, setChecked, handleOpenChange, handleConfirm } =
+    useSafetyAckDialogState(onAccept, () => onOpenChange(false));
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -133,7 +122,7 @@ export const ComplianceDialog: React.FC<ComplianceDialogProps> = ({
             type="button"
             data-testid="compliance-accept-btn"
             disabled={!checked}
-            onClick={handleAccept}
+            onClick={handleConfirm}
             className="w-full sm:w-auto gap-1.5"
           >
             <ShieldCheck className="w-4 h-4" />

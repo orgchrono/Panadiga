@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { installMockIpcBridge } from './fixtures/mockIpcBridge';
+import { enterEngineeringMode } from './fixtures/workbenchHelpers';
 
 test.describe('DIGA Commander Android-Only Isolation & Workflows E2E', () => {
   test('never exposes DIGA Commander navigation in default Desktop environment', async ({
@@ -7,6 +8,7 @@ test.describe('DIGA Commander Android-Only Isolation & Workflows E2E', () => {
   }) => {
     await installMockIpcBridge(page);
     await page.goto('/');
+    await enterEngineeringMode(page);
     await expect(page.getByTestId('nav-dashboard')).toBeVisible();
     await expect(page.getByTestId('nav-ircommander')).toHaveCount(0);
   });
@@ -48,6 +50,7 @@ test.describe('DIGA Commander Android-Only Isolation & Workflows E2E', () => {
 
     await installMockIpcBridge(page);
     await page.goto('/');
+    await enterEngineeringMode(page);
 
     await page.click('button[data-testid="nav-ircommander"]');
     await expect(page.locator('[data-testid="app-header"]')).toHaveAttribute(

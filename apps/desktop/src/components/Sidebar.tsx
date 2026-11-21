@@ -46,26 +46,66 @@ interface NavItem {
   readonly badgeVariant?: BadgeVariant;
 }
 
-function buildNavItems(
+interface NavDomainGroup {
+  readonly id: string;
+  readonly label: string;
+  readonly items: readonly NavItem[];
+}
+
+function buildNavGroups(
   t: (key: TranslationKey, options?: Record<string, unknown>) => string,
   vddVolts: number,
   powered: boolean,
   nvramCleaned: boolean,
   indexedManualsCount: number | null,
-): readonly NavItem[] {
+): readonly NavDomainGroup[] {
   const showIr = (import.meta.env.MODE === 'android' || !import.meta.env.PROD) && isAndroidCommanderEnabled();
   return [
-    { key: 'dashboard', label: t('nav.dashboard'), sublabel: t('nav.dashboard.sub'), icon: <LayoutDashboard className="w-3.5 h-3.5" /> },
-    { key: 'picobench', label: t('nav.picobench'), sublabel: t('nav.picobench.sub'), icon: <Radio className="w-3.5 h-3.5" />, badge: `${vddVolts.toFixed(1)}V`, badgeVariant: powered ? 'success' : 'warning' },
-    { key: 'nvram', label: t('nav.nvram'), sublabel: t('nav.nvram.sub'), icon: <Cpu className="w-3.5 h-3.5" />, badge: nvramCleaned ? t('nav.nvram.badgeClean') : 'U99', badgeVariant: nvramCleaned ? 'success' : 'destructive' },
-    { key: 'hdd', label: t('nav.hdd'), sublabel: t('nav.hdd.sub'), icon: <HardDrive className="w-3.5 h-3.5" />, badge: '100 MB', badgeVariant: 'default' },
-    { key: 'frmcrypto', label: t('nav.frmcrypto'), sublabel: t('nav.frmcrypto.sub'), icon: <Lock className="w-3.5 h-3.5" />, badge: '7.999b', badgeVariant: 'secondary' },
-    { key: 'unbrick', label: t('nav.unbrick'), sublabel: t('nav.unbrick.sub'), icon: <ShieldAlert className="w-3.5 h-3.5" />, badge: 'UNBRICK', badgeVariant: 'success' },
-    { key: 'hexinspector', label: t('nav.hexinspector'), sublabel: t('nav.hexinspector.sub'), icon: <Binary className="w-3.5 h-3.5" /> },
-    { key: 'manuals', label: t('nav.manuals'), sublabel: t('nav.manuals.subDynamic', { count: String(indexedManualsCount ?? '--') }), icon: <BookOpen className="w-3.5 h-3.5" />, badge: `${indexedManualsCount ?? '--'}`, badgeVariant: 'secondary' },
-    ...(showIr ? [{ key: 'ircommander' as const, label: t('nav.ircommander'), sublabel: t('nav.ircommander.sub'), icon: <Smartphone className="w-3.5 h-3.5" />, badge: 'IR APK', badgeVariant: 'default' as const }] : []),
-    { key: 'settings', label: t('nav.settings'), sublabel: t('nav.settings.sub'), icon: <Settings className="w-3.5 h-3.5" /> },
+    {
+      id: 'storage',
+      label: t('nav.groups.storage'),
+      items: [
+        { key: 'dashboard', label: t('nav.dashboard'), sublabel: t('nav.dashboard.sub'), icon: <LayoutDashboard className="w-3.5 h-3.5" /> },
+        { key: 'hdd', label: t('nav.hdd'), sublabel: t('nav.hdd.sub'), icon: <HardDrive className="w-3.5 h-3.5" />, badge: '100 MB', badgeVariant: 'default' },
+      ],
+    },
+    {
+      id: 'nvram',
+      label: t('nav.groups.nvram'),
+      items: [
+        { key: 'nvram', label: t('nav.nvram'), sublabel: t('nav.nvram.sub'), icon: <Cpu className="w-3.5 h-3.5" />, badge: nvramCleaned ? t('nav.nvram.badgeClean') : 'U99', badgeVariant: nvramCleaned ? 'success' : 'destructive' },
+      ],
+    },
+    {
+      id: 'sdCrypto',
+      label: t('nav.groups.sdCrypto'),
+      items: [
+        { key: 'unbrick', label: t('nav.unbrick'), sublabel: t('nav.unbrick.sub'), icon: <ShieldAlert className="w-3.5 h-3.5" />, badge: 'UNBRICK', badgeVariant: 'success' },
+        { key: 'frmcrypto', label: t('nav.frmcrypto'), sublabel: t('nav.frmcrypto.sub'), icon: <Lock className="w-3.5 h-3.5" />, badge: '7.999b', badgeVariant: 'secondary' },
+      ],
+    },
+    {
+      id: 'picoProbe',
+      label: t('nav.groups.picoProbe'),
+      items: [
+        { key: 'picobench', label: t('nav.picobench'), sublabel: t('nav.picobench.sub'), icon: <Radio className="w-3.5 h-3.5" />, badge: `${vddVolts.toFixed(1)}V`, badgeVariant: powered ? 'success' : 'warning' },
+        ...(showIr ? [{ key: 'ircommander' as const, label: t('nav.ircommander'), sublabel: t('nav.ircommander.sub'), icon: <Smartphone className="w-3.5 h-3.5" />, badge: 'IR APK', badgeVariant: 'default' as const }] : []),
+      ],
+    },
+    {
+      id: 'forensicsDocs',
+      label: t('nav.groups.forensicsDocs'),
+      items: [
+        { key: 'hexinspector', label: t('nav.hexinspector'), sublabel: t('nav.hexinspector.sub'), icon: <Binary className="w-3.5 h-3.5" /> },
+        { key: 'manuals', label: t('nav.manuals'), sublabel: t('nav.manuals.subDynamic', { count: String(indexedManualsCount ?? '--') }), icon: <BookOpen className="w-3.5 h-3.5" />, badge: `${indexedManualsCount ?? '--'}`, badgeVariant: 'secondary' },
+        { key: 'settings', label: t('nav.settings'), sublabel: t('nav.settings.sub'), icon: <Settings className="w-3.5 h-3.5" /> },
+      ],
+    },
   ];
+}
+
+function getGroupStepOffset(groups: readonly NavDomainGroup[], groupIdx: number): number {
+  return groups.slice(0, groupIdx).reduce((sum, group) => sum + group.items.length, 0);
 }
 
 const NavTabButton: React.FC<{
@@ -128,7 +168,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const { t } = useTranslation();
   const powered = isTargetPowered(vddVolts, minVddThreshold);
-  const navItems = buildNavItems(t, vddVolts, powered, nvramCleaned, indexedManualsCount);
+  const navGroups = buildNavGroups(t, vddVolts, powered, nvramCleaned, indexedManualsCount);
 
   return (
     <div className="hidden lg:block w-full bg-bench-950/95 border-b border-slate-800 px-3 py-1.5 select-none shrink-0">
@@ -143,21 +183,36 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
         <nav
           aria-label={t('nav.menuAria')}
-          className="flex items-center gap-1 overflow-x-auto scrollbar-thin scrollbar-thumb-slate-800 flex-1 min-w-0 py-0.5"
+          className="flex items-center gap-1.5 overflow-x-auto scrollbar-thin scrollbar-thumb-slate-800 flex-1 min-w-0 py-0.5"
         >
-          {navItems.length === 0 ? (
+          {navGroups.length === 0 ? (
             <span className="text-xs text-slate-500 px-2">{t('nav.empty')}</span>
           ) : (
-            navItems.map((item, idx) => (
-              <NavTabButton
-                key={item.key}
-                item={item}
-                stepIndex={idx}
-                isActive={currentView === item.key}
-                layout="horizontal"
-                onSelect={() => onSelectView(item.key)}
-              />
-            ))
+            navGroups.map((group, groupIdx) => {
+              const offset = getGroupStepOffset(navGroups, groupIdx);
+              return (
+                <fieldset
+                  key={group.id}
+                  data-testid={`nav-group-${group.id}`}
+                  aria-label={group.label}
+                  className="flex items-center gap-1 pr-2 mr-1 m-0 p-0 border-0 border-r border-slate-800/80 last:border-r-0 last:pr-0 last:mr-0 shrink-0"
+                >
+                  <span className="text-[9px] font-mono uppercase tracking-wider text-slate-500 px-1 shrink-0">
+                    {group.label}
+                  </span>
+                  {group.items.map((item, idx) => (
+                    <NavTabButton
+                      key={item.key}
+                      item={item}
+                      stepIndex={offset + idx}
+                      isActive={currentView === item.key}
+                      layout="horizontal"
+                      onSelect={() => onSelectView(item.key)}
+                    />
+                  ))}
+                </fieldset>
+              );
+            })
           )}
         </nav>
       </div>
@@ -184,7 +239,7 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
 }) => {
   const { t } = useTranslation();
   const powered = isTargetPowered(vddVolts, minVddThreshold);
-  const navItems = buildNavItems(t, vddVolts, powered, nvramCleaned, indexedManualsCount);
+  const navGroups = buildNavGroups(t, vddVolts, powered, nvramCleaned, indexedManualsCount);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -202,20 +257,30 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
                 DIGA SUITE
               </span>
             </div>
-            <nav className="p-3 space-y-1" aria-label={t('nav.menuAria')}>
-              {navItems.map((item, idx) => (
-                <NavTabButton
-                  key={item.key}
-                  item={item}
-                  stepIndex={idx}
-                  isActive={currentView === item.key}
-                  layout="vertical"
-                  onSelect={() => {
-                    onSelectView(item.key);
-                    onOpenChange(false);
-                  }}
-                />
-              ))}
+            <nav className="p-3 space-y-3" aria-label={t('nav.menuAria')}>
+              {navGroups.map((group, groupIdx) => {
+                const offset = getGroupStepOffset(navGroups, groupIdx);
+                return (
+                  <div key={group.id} className="space-y-1">
+                    <div className="px-2 text-[10px] font-mono uppercase tracking-wider text-slate-500">
+                      {group.label}
+                    </div>
+                    {group.items.map((item, idx) => (
+                      <NavTabButton
+                        key={item.key}
+                        item={item}
+                        stepIndex={offset + idx}
+                        isActive={currentView === item.key}
+                        layout="vertical"
+                        onSelect={() => {
+                          onSelectView(item.key);
+                          onOpenChange(false);
+                        }}
+                      />
+                    ))}
+                  </div>
+                );
+              })}
             </nav>
           </div>
 

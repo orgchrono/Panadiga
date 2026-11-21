@@ -30,7 +30,8 @@
       "gattSendFailed": "GATT NUS transmission failed.",
       "channelNotConnected": "BLE channel not connected. Use native Android BLE or compatible Web Bluetooth.",
       "channelUnavailableSend": "BLE channel not connected. Unable to send data.",
-      "gattReplyFailed": "BLE NUS reply failed."
+      "gattReplyFailed": "BLE NUS reply failed.",
+      "nusTimeout": "BLE NUS timeout ({{timeoutMs}} ms) awaiting reply for '{{command}}'."
     },
     "nvram": {
       "usbOtgDumpFailed": "DUMP command failed via Android USB-OTG.",
@@ -49,7 +50,8 @@
       "cowPatchSameFileBlocked": "Copy-on-Write required: output file cannot overwrite the source dump.",
       "cowPatchSavedMsg": "Saved to {{path}}",
       "cowPatchTitle": "Copy-on-Write Patch Applied",
-      "cowPatchFailedTitle": "NVRAM Patch Blocked / Failed"
+      "cowPatchFailedTitle": "NVRAM Patch Blocked / Failed",
+      "invalidOffset": "Invalid NVRAM offset: enter a non-negative 32-bit hex (e.g. 0x0) or decimal integer."
     },
     "pico": {
       "usbOtgNotConnected": "USB-OTG device not connected.",
@@ -154,7 +156,11 @@
       "frmVerifyTag": "FRM Unlock Verifier",
       "frmVerifyDone": ".FRM container verified",
       "frmPackTag": "FRM Unlock Builder",
-      "frmPackDone": "Unlock .FRM container generated"
+      "frmPackDone": "Unlock .FRM container generated",
+      "sdTargetRequired": "Select a target SD card or offline .img file output.",
+      "sdConfirmRequired": "Type the exact confirmation token {{token}} before flashing the physical SD card.",
+      "sdFlashTag": "SD FAT16B Creator",
+      "sdFlashDone": "FAT16B (0x06) SD recovery card verified"
     },
     "erase": {
       "firstContactStart": "Starting 1st-Contact Procedure (Read-Only Backup & Integrity Check)...",
@@ -191,7 +197,9 @@
       "davisProbeFailed": "DAVIS IDE hardware probe failed",
       "davisProbeComplete": "DAVIS IDE probe completed",
       "copiedSha": "SHA-256 digest copied to clipboard",
-      "validationBlocked": "Pipeline preflight or form validation failed"
+      "validationBlocked": "Pipeline preflight or form validation failed",
+      "nvramPortRequired": "Select or enter the Pico serial port (e.g. COM10 / /dev/ttyACM0) before starting.",
+      "panamon1CleanDone": "NVRAM SA134..SA141 cleared (0xFF verified)"
     }
   }
 }

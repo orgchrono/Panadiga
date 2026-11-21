@@ -35,6 +35,26 @@ pub struct SdUnbrickKitRequestDto {
     pub allow_target_mismatch: Option<bool>,
 }
 
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CommonMediaKitDto {
+    pub model: Option<String>,
+    pub loader_profile: Option<String>,
+    pub digadiag_path: Option<String>,
+    pub pana_dvd_path: Option<String>,
+    pub cleanroom_only: Option<bool>,
+    pub session_id: Option<String>,
+}
+
+impl CommonMediaKitDto {
+    pub(crate) fn parse_loader_profile(&self) -> IpcResult<SdLoaderProfile> {
+        opt_trimmed(&self.loader_profile)
+            .unwrap_or("ver061")
+            .parse()
+            .map_err(|e: anyhow::Error| PanadigaIpcError::validation(e.to_string()))
+    }
+}
+
 pub(crate) fn opt_trimmed(raw: &Option<String>) -> Option<&str> {
     raw.as_deref().map(str::trim).filter(|s| !s.is_empty())
 }

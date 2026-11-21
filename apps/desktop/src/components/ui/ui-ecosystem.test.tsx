@@ -109,10 +109,10 @@ describe('React UI Ecosystem Primitives (Resizable, RangeDnD, Pipeline, HUD, Son
       </WorkbenchModeProvider>
     );
 
-    const basicBtn = screen.getByRole('button', { name: 'Basic (Guided)' });
-    fireEvent.click(basicBtn);
-    expect(basicBtn.getAttribute('aria-pressed')).toBe('true');
-    expect(window.localStorage.getItem('panadiga.workbench.mode')).toBe('basic');
+    const expressBtn = screen.getByRole('button', { name: 'Express (Guided)' });
+    fireEvent.click(expressBtn);
+    expect(expressBtn.getAttribute('aria-pressed')).toBe('true');
+    expect(window.localStorage.getItem('panadiga.workbench.mode')).toBe('express');
 
     expect(screen.queryByText(/P7501 HUD/i)).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Pinout HUD' }));
@@ -166,7 +166,7 @@ describe('React UI Ecosystem Primitives (Resizable, RangeDnD, Pipeline, HUD, Son
       return <span>{`${mode}:${isAdvanced}`}</span>;
     };
     render(<Probe />);
-    expect(screen.getByText('advanced:true')).toBeTruthy();
+    expect(screen.getByText('express:false')).toBeTruthy();
   });
 
   it('SettingsView switches accessible themes, colorblind mode, font scale, locale, and restores defaults', () => {
@@ -352,7 +352,7 @@ describe('React UI Ecosystem Primitives (Resizable, RangeDnD, Pipeline, HUD, Son
     const baseProps = {
       currentView: 'picobench' as const,
       onNavigate: vi.fn(),
-      mode: 'advanced' as const,
+      mode: 'engineering' as const,
       onModeChange: vi.fn(),
       hudOpen: false,
       onToggleHud: vi.fn(),

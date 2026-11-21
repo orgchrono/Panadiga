@@ -211,7 +211,7 @@ async function dispatchViaPicoTransport(params: {
   }
 
   try {
-    const out = await invokeCommand<string>('send_pico_command', { command: cmd });
+    const out = await invokeCommand<string>('pico_send_serial_command', { command: cmd });
     return {
       ok: !out.includes('IRTX: ERROR'),
       backendUsed: `Pico IPC (GP${params.gpioPin})`,

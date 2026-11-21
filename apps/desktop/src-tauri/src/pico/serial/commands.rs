@@ -40,19 +40,12 @@ pub fn pico_send_raw_serial_command(
 
         let response = read_serial_response_complete(&mut *port, Duration::from_millis(8000))?;
 
-        if trimmed.starts_with("SCAN") {
-            let hits = response.find("Hits: ").and_then(|pos| {
-                let after = &response[pos + 6..];
-                after
-                    .find(',')
-                    .and_then(|comma| after[..comma].trim().parse::<u32>().ok())
-            });
-            let probes = response.find("Probes: ").and_then(|pos| {
-                let after = &response[pos + 8..];
-                let end_pos = after.find(')').unwrap_or(after.len());
-                after[..end_pos].trim().parse::<u32>().ok()
-            });
-            backend.telemetry.record_scan_telemetry(probes, hits);
+        if trimmed.starts_with("IDENTIFY")
+            && let Some(ident) = panadiga_core::pico::parse_ident_line(&response)
+        {
+            backend
+                .telemetry
+                .record_scan_telemetry(Some(4), Some(u32::from(ident.nsw5v)));
         }
 
         Ok(response)

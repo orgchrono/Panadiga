@@ -14,6 +14,7 @@ import { handleMockIrCommand } from './mockIrHandlers';
 import { handleMockPicoCommand, buildMockPicoStatus } from './mockPicoHandlers';
 import { handleMockSystemCommand } from './mockSystemHandlers';
 import { handleMockUnbrickCommand } from './mockUnbrickHandlers';
+import { handleMockVaultCommand } from './mockVaultHandlers';
 
 type MockDomainHandler = (cmd: string, args?: Record<string, unknown>) => unknown | undefined;
 
@@ -26,6 +27,7 @@ const DOMAIN_HANDLERS: MockDomainHandler[] = [
   handleMockUnbrickCommand,
   handleMockCalibrationCommand,
   handleMockIrCommand,
+  handleMockVaultCommand,
 ];
 
 export async function handleMockCommand<T>(

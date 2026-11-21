@@ -4,10 +4,12 @@
 
 mod hdd;
 mod hdd_capacity;
+mod hdd_composed;
 mod hdd_flash;
 mod nvram;
 
 pub use hdd::*;
 pub use hdd_capacity::*;
+pub use hdd_composed::*;
 pub use hdd_flash::*;
 pub use nvram::*;

@@ -13,12 +13,12 @@ use tauri::Emitter;
 
 use super::eh55_bgo_dto::{
     BgoRepairProgressEventDto, PicoEh55BgoRepairRequestDto, PicoEh55BgoRepairResponseDto,
-    UPPER_NOR_CONFIRM_TOKEN, run_exclusive_panamon1,
+    UPPER_NOR_CONFIRM_TOKEN, resolve_auto_backup_dir, run_exclusive_panamon1,
 };
 use crate::commands::constants::EVENT_BGO_REPAIR_PROGRESS;
 use crate::commands::error::{IpcResult, PanadigaIpcError};
 use crate::commands::frm_pack::{resolve_read_path, resolve_write_path};
-use crate::commands::unbrick_dto::{opt_read_path, opt_trimmed, resolve_dir_target};
+use crate::commands::unbrick_dto::{opt_read_path, opt_trimmed};
 use crate::state::PanadigaBackendState;
 
 fn load_or_build_bgo_plan(
@@ -100,9 +100,7 @@ where
             UPPER_NOR_CONFIRM_TOKEN
         )));
     }
-    let backup_dir = resolve_dir_target(opt_trimmed(&req.backup_dir).ok_or_else(|| {
-        PanadigaIpcError::validation("backupDir obrigatório para BGO live repair.")
-    })?)?;
+    let backup_dir = resolve_auto_backup_dir(opt_trimmed(&req.backup_dir), "eh55_bgo_backup")?;
     let t = transport
         .ok_or_else(|| PanadigaIpcError::validation("Transporte serial Pico obrigatório."))?;
     let mut client = Panamon1Client::new(t);

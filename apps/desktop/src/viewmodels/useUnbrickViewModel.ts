@@ -5,6 +5,7 @@ import {
   AM34_SDRAM_STUB_RAW_ADDR,
   AM34_SDRAM_STUB_WRAP_ADDR,
   NOR_DUMPER_DEFAULT_BLOCK_SIZE,
+  SD_DEFAULT_VOLUME_MB,
 } from '@/constants';
 import { useToast } from '@/context/ToastContext';
 import { translate } from '@/i18n/useTranslation';
@@ -13,6 +14,7 @@ import type {
   MainPassthroughReport,
   MainPassthroughRspPlan,
   NorDumperStubResult,
+  SdCardCreatorReport,
   SdDiskInspectionReport,
   SdMediaVerificationReport,
   SdUnbrickKitReport,
@@ -23,6 +25,7 @@ import { emitUnbrickCompletedEvent } from '@/services/systemService';
 import {
   buildNorDumperStub,
   extractFrmModules as extractFrmModulesRpc,
+  flashSdRecoveryCard,
   generateMainRspPlan,
   inspectSdDisk as inspectSdDiskRpc,
   inspectUnbrickWorkbench,
@@ -66,6 +69,9 @@ export function useUnbrickViewModel() {
     emptyChannel(),
   );
   const [norStub, setNorStub] = useState<AsyncChannelState<NorDumperStubResult>>(() =>
+    emptyChannel(),
+  );
+  const [sdFat16Image, setSdFat16Image] = useState<AsyncChannelState<SdCardCreatorReport>>(() =>
     emptyChannel(),
   );
 
@@ -158,6 +164,33 @@ export function useUnbrickViewModel() {
         emitUnbrickCompletedEvent(true);
       }
       return report;
+    },
+    [runChannel],
+  );
+
+  const createFat16Image = useCallback(
+    async (params: {
+      panaDvdPath?: string;
+      includePanaSd?: boolean;
+      loaderProfile?: 'ver061' | 'ver063';
+    }): Promise<SdCardCreatorReport | null> => {
+      const rep = await runChannel(
+        setSdFat16Image,
+        translate('errors.unbrick.sdFlashTag'),
+        () =>
+          flashSdRecoveryCard({
+            model: 'DMR-EH55',
+            volumeMb: SD_DEFAULT_VOLUME_MB,
+            loaderProfile: params.loaderProfile ?? 'ver061',
+            panaDvdPath: params.panaDvdPath?.trim() || undefined,
+            includePanaSd: Boolean(params.includePanaSd),
+          }),
+        translate('errors.unbrick.sdFlashDone'),
+      );
+      if (rep) {
+        emitUnbrickCompletedEvent(true);
+      }
+      return rep;
     },
     [runChannel],
   );
@@ -291,6 +324,8 @@ export function useUnbrickViewModel() {
     refreshSdDrives: sdDrivesVm.refresh,
     autoSdDiskTarget: autoSdResolved?.diskTarget ?? null,
     autoSdMountDir: autoSdResolved?.mountPoint ?? null,
+    sdFat16Image,
+    createFat16Image,
     loadWorkbench,
     buildSdKit,
     verifySdMedia,

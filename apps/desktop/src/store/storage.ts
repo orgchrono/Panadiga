@@ -88,7 +88,9 @@ export function readStoragePercent(
 
 export function readInitialWorkbenchMode(): WorkbenchExperienceMode {
   const stored = readStorageString(STORAGE_MODE_KEY);
-  return stored === 'basic' || stored === 'advanced' ? stored : 'advanced';
+  if (stored === 'express' || stored === 'basic') return 'express';
+  if (stored === 'engineering' || stored === 'advanced') return 'engineering';
+  return 'express';
 }
 
 export function readInitialAccessibility(): AccessibilitySettings {

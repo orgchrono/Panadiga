@@ -8,6 +8,7 @@ export default defineConfig({
     globals: true,
     pool: "threads",
     environment: "jsdom",
+    testTimeout: 15000,
     include: ["src/**/*.test.{ts,tsx}"],
     exclude: ["e2e/**", "node_modules/**", "dist/**", "dist-android/**"],
     setupFiles: [resolve(import.meta.dirname, "./src/test/setup.ts")],

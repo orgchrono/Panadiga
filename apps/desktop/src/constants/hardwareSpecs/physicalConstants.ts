@@ -258,3 +258,12 @@ export const IR_CAMERA_BEACON_PULSE_COUNT = 30;
 export const IR_CAMERA_BEACON_INTERVAL_MS = 250;
 export const IR_LONG_HOLD_THRESHOLD_MS = 1000;
 export const IR_CATALOG_DEFAULT_SEARCH_LIMIT = 60;
+
+/** Unsigned 32-bit integer upper bound & FAT16B (0x06) SD recovery card creator constants */
+export const MAX_U32_VALUE = 0xffff_ffff;
+export const SD_DEFAULT_VOLUME_MB = 32;
+export const SD_MBR_FAT16B_TYPE_CODE = 0x06;
+export const SD_MBR_FAT16B_TYPE_HEX = '0x06';
+export const SD_MBR_START_LBA = 63;
+export const SD_CONFIRM_TOKEN_PREFIX = 'CONFIRM-';
+export const PICO_DEFAULT_FALLBACK_PORT = 'COM10';

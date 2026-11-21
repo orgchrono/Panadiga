@@ -41,6 +41,20 @@ pub struct PicoDiagnosticResultDto {
     pub dump_rows: Vec<DumpWordRowDto>,
     pub captured_bytes: Option<u32>,
     pub findings: Vec<DiagnosticFindingDto>,
+    #[serde(default)]
+    pub protocol_code: Option<String>,
+    #[serde(default)]
+    pub protocol_elapsed_us: Option<u64>,
+    #[serde(default)]
+    pub ident_model: Option<String>,
+    #[serde(default)]
+    pub ident_flash: Option<String>,
+    #[serde(default)]
+    pub ident_loader: Option<String>,
+    #[serde(default)]
+    pub progress_steps: Vec<String>,
+    #[serde(default)]
+    pub wire_events: Vec<String>,
 }
 
 /// Validates command ID & optional argument against SSOT catalog and prevents CDC injection.

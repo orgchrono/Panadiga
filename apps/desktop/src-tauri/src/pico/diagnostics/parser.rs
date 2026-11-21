@@ -5,10 +5,38 @@ use panadiga_core::pico::diag_rows::{
     parse_pincheck_rows, parse_transition_rows, parse_wdt_status,
 };
 use panadiga_core::pico::log_decoder::parse_bench_log_text;
+use panadiga_core::pico::protocol::{
+    PicoWireMessage, parse_ident_line, parse_res_line, parse_wire_line,
+};
 
 use super::command::{DiagnosticFindingDto, PicoDiagnosticResultDto};
 
 pub use panadiga_core::pico::diag_rows::extract_pincheck_vdd;
+
+fn infer_flash_mb_from_part(flash_part: &str) -> Option<u32> {
+    let upper = flash_part.to_ascii_uppercase();
+    if upper.contains("128N") || upper.contains("16MB") {
+        Some(16)
+    } else if upper.contains("064H") || upper.contains("8MB") {
+        Some(8)
+    } else if upper.contains("032") || upper.contains("320") || upper.contains("4MB") {
+        Some(4)
+    } else if upper.contains("016") || upper.contains("2MB") {
+        Some(2)
+    } else if upper.contains("27V802") || upper.contains("1MB") {
+        Some(1)
+    } else {
+        None
+    }
+}
+
+fn format_wire_event_label(evt: &panadiga_core::pico::protocol::PicoEventFrame) -> String {
+    if evt.fields.is_empty() {
+        return evt.kind.clone();
+    }
+    let attrs: Vec<String> = evt.fields.iter().map(|(k, v)| format!("{k}={v}")).collect();
+    format!("{} ({})", evt.kind, attrs.join(" "))
+}
 
 fn stage_finding_meta(stage: &str) -> Option<(&'static str, &'static str, &'static str)> {
     match stage {
@@ -103,6 +131,9 @@ pub fn parse_diagnostic_output(
     let cmd_err_prefix = format!("{}: error", norm_lower);
     let bracket_err_prefix = format!("[{}] error:", norm_lower);
 
+    let res_frame = parse_res_line(raw_output);
+    let ident_frame = parse_ident_line(raw_output);
+
     let has_explicit_ok = lower.lines().map(str::trim).any(|line| {
         line.starts_with(&cmd_ok_prefix)
             || (norm_lower == "scan" && line == "scan: completed")
@@ -118,13 +149,19 @@ pub fn parse_diagnostic_output(
             || line.starts_with("unknown command:")
     });
 
-    let failed = raw_output.trim().is_empty()
+    let legacy_failed = raw_output.trim().is_empty()
         || has_pico_fatal
         || (!has_explicit_ok
             && (lower.contains("failed")
                 || lower.contains("error")
                 || lower.contains("abort")
                 || lower.contains("safety interlock")));
+
+    let failed = if let Some(ref res) = res_frame {
+        !res.is_ok()
+    } else {
+        legacy_failed
+    };
 
     let (pincheck_rows, xreset_rise_us) = if norm == "PINCHECK" {
         parse_pincheck_rows(raw_output)
@@ -138,16 +175,97 @@ pub fn parse_diagnostic_output(
         Vec::new()
     };
     let captured_bytes = parse_captured_bytes(raw_output);
-    let detected_flash_mb = parse_flash_mb(raw_output);
-    let vdd_volts = extract_diagnostic_vdd(raw_output, &pincheck_rows);
-    let findings = build_diagnostic_findings(raw_output);
+    let detected_flash_mb = parse_flash_mb(raw_output).or_else(|| {
+        ident_frame
+            .as_ref()
+            .and_then(|id| infer_flash_mb_from_part(&id.flash))
+    });
+    let vdd_volts = extract_diagnostic_vdd(raw_output, &pincheck_rows).or_else(|| {
+        ident_frame
+            .as_ref()
+            .filter(|id| id.vdd_mv > 0)
+            .map(|id| id.vdd_mv as f32 / 1000.0)
+    });
 
-    let summary = if let Some(last_meaningful) = raw_output
-        .lines()
-        .rev()
-        .map(str::trim)
-        .find(|l| !l.is_empty() && !l.starts_with("PANADIGA>") && !l.starts_with("P7501>"))
+    let mut findings = build_diagnostic_findings(raw_output);
+    let mut progress_steps = Vec::new();
+    let mut wire_events = Vec::new();
+    for line in raw_output.lines() {
+        match parse_wire_line(line) {
+            Some(PicoWireMessage::Progress(p)) => {
+                progress_steps.push(format!("{}/{} {}", p.step, p.total, p.msg));
+            }
+            Some(PicoWireMessage::Event(ev)) => {
+                let formatted = format_wire_event_label(&ev);
+                if matches!(ev.kind.as_str(), "SDS_TRIG" | "BOOTSEL" | "M0KEEPALIVE") {
+                    findings.push(DiagnosticFindingDto {
+                        code: format!("EVT_{}", ev.kind),
+                        severity: if ev
+                            .fields
+                            .get("reason")
+                            .is_some_and(|r| r.contains("UNPOWERED"))
+                        {
+                            "warning".to_string()
+                        } else {
+                            "info".to_string()
+                        },
+                        summary: formatted.clone(),
+                        detail: line.trim().to_string(),
+                    });
+                }
+                wire_events.push(formatted);
+            }
+            _ => {}
+        }
+    }
+    if let Some(ref ident) = ident_frame {
+        findings.push(DiagnosticFindingDto {
+            code: "P7501_IDENT".to_string(),
+            severity: if ident.state.eq_ignore_ascii_case("READY") {
+                "info".to_string()
+            } else {
+                "warning".to_string()
+            },
+            summary: format!("{} · {} · {}", ident.model, ident.flash, ident.loader),
+            detail: format!(
+                "elec={} | state={} | jedec=0x{:08X} | ipl_crc32=0x{:08X} | ssot={}",
+                ident.elec, ident.state, ident.jedec, ident.ipl_crc32, ident.ssot
+            ),
+        });
+    }
+    if let Some(ref res) = res_frame
+        && !res.is_ok()
     {
+        findings.push(DiagnosticFindingDto {
+            code: format!("P7501_RES_{}", res.code.to_ascii_uppercase()),
+            severity: "error".to_string(),
+            summary: format!(
+                "@P7501_RES cmd={} status={} code={}",
+                res.cmd, res.status, res.code
+            ),
+            detail: format!(
+                "Firmware Pico retornou falha estruturada em {} us.",
+                res.elapsed_us
+            ),
+        });
+    }
+
+    let summary = if let Some(last_meaningful) =
+        raw_output
+            .lines()
+            .rev()
+            .map(str::trim)
+            .find(|l| {
+                !l.is_empty()
+                    && !l.starts_with("PANADIGA>")
+                    && !l.starts_with("P7501>")
+                    && !l.starts_with("@P7501_RES ")
+            })
+            .or_else(|| {
+                raw_output.lines().rev().map(str::trim).find(|l| {
+                    !l.is_empty() && !l.starts_with("PANADIGA>") && !l.starts_with("P7501>")
+                })
+            }) {
         last_meaningful.to_string()
     } else if raw_output.trim().is_empty() {
         format!("Sem resposta no barramento para '{}'", raw_command)
@@ -170,5 +288,12 @@ pub fn parse_diagnostic_output(
         dump_rows,
         captured_bytes,
         findings,
+        protocol_code: res_frame.as_ref().map(|r| r.code.clone()),
+        protocol_elapsed_us: res_frame.as_ref().map(|r| r.elapsed_us),
+        ident_model: ident_frame.as_ref().map(|id| id.model.clone()),
+        ident_flash: ident_frame.as_ref().map(|id| id.flash.clone()),
+        ident_loader: ident_frame.as_ref().map(|id| id.loader.clone()),
+        progress_steps,
+        wire_events,
     }
 }

@@ -2,17 +2,25 @@
 
 #![deny(unsafe_code)]
 
+mod dvd_creator;
 mod frm_patch;
+mod hardware_profiles;
 mod media_emu;
 mod region_calibration;
+mod sd_creator;
 mod sd_harden;
 mod tbc_lab;
+mod vault_session;
 
+pub use dvd_creator::*;
 pub use frm_patch::*;
+pub use hardware_profiles::*;
 pub use media_emu::*;
 pub use region_calibration::*;
+pub use sd_creator::*;
 pub use sd_harden::*;
 pub use tbc_lab::*;
+pub use vault_session::*;
 
 #[cfg(test)]
 mod tests {

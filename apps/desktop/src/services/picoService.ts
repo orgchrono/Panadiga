@@ -25,17 +25,6 @@ import { emitLocalEvent, hasTestIpcBridge, invokeCommand, isTauriEnvironment, li
 
 export const isPicoIpcAvailable = (): boolean => isTauriEnvironment() || hasTestIpcBridge();
 
-export interface PicoConnectResponse {
-  connected: boolean;
-  port_name: string;
-  baud_rate: number;
-  vdd_voltage: number;
-  target_powered: boolean;
-  breakin_mode: ColdBreakinMode;
-  bus_freq_hz: number;
-  message: string;
-}
-
 export const listPicoSerialPorts = (): Promise<string[]> =>
   invokeCommand<string[]>('list_pico_serial_ports');
 
@@ -47,14 +36,6 @@ export const getPicoStatus = (portName: string): Promise<PicoDeviceStatus> =>
 
 export const setPicoBreakinMode = (portName: string, mode: ColdBreakinMode): Promise<PicoDeviceStatus> =>
   invokeCommand<PicoDeviceStatus>('pico_set_breakin_mode', { portName, port_name: portName, mode });
-
-export const connectPicoPort = (portName: string, baudRate: number): Promise<PicoConnectResponse> =>
-  invokeCommand<PicoConnectResponse>('connect_pico_port', {
-    portName,
-    port_name: portName,
-    baudRate,
-    baud_rate: baudRate,
-  });
 
 export const setPicoTelemetryStream = (active: boolean, portName?: string): Promise<unknown> =>
   invokeCommand('set_pico_telemetry_stream', {

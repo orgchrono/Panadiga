@@ -11,6 +11,7 @@ import enCrypto from '../locales/en-US/crypto.json';
 import enPico from '../locales/en-US/pico.json';
 import enSsot from '../locales/en-US/ssot.json';
 import enErrors from '../locales/en-US/errors.json';
+import enExpress from '../locales/en-US/express.json';
 import enPipelines from '../locales/en-US/pipelines.json';
 import ptCore from '../locales/pt-BR/core.json';
 import ptWorkspace from '../locales/pt-BR/workspace.json';
@@ -19,6 +20,7 @@ import ptCrypto from '../locales/pt-BR/crypto.json';
 import ptPico from '../locales/pt-BR/pico.json';
 import ptSsot from '../locales/pt-BR/ssot.json';
 import ptErrors from '../locales/pt-BR/errors.json';
+import ptExpress from '../locales/pt-BR/express.json';
 import ptPipelines from '../locales/pt-BR/pipelines.json';
 import irEnUSJson from '../locales/ir/en-US.json';
 import irPtBRJson from '../locales/ir/pt-BR.json';
@@ -31,6 +33,7 @@ const enUSJson = {
   ...enPico,
   ...enSsot,
   ...enErrors,
+  ...enExpress,
   ...enPipelines,
 } as const;
 
@@ -42,6 +45,7 @@ const ptBRJson = {
   ...ptPico,
   ...ptSsot,
   ...ptErrors,
+  ...ptExpress,
   ...ptPipelines,
 } as const;
 

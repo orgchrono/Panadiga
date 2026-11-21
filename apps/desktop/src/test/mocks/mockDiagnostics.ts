@@ -131,14 +131,14 @@ export function simulateMockDiagnostic(commandId: string, arg?: string): PicoDia
     ].join('\n');
   } else if (norm.startsWith('FMU') || norm.startsWith('UART')) {
     rawOutput = `UART/FMU Probe Capture (18 bytes): SERI_READY OK\n${norm}: OK`;
-  } else if (norm === 'SCAN') {
-    rawOutput = '[SCAN] Probing 4 Modes x 256 Opcodes...\nMode 2 Opcode 0x01: HIT! DCSR=0x00000001 (HALTED)\nSCAN: COMPLETED';
+  } else if (norm === 'IDENTIFY' || norm === 'AUTOPROBE') {
+    rawOutput = `@P7501_IDENT vdd_mv=3280 nsw5v=1 elec=AWAKE_READY loader="Loader ver0.61" jedec=0x0001227E flash=S29JL064H ipl_crc32=0xA5B6C7D8 hw="VEP79138" tv=PAL/NTSC state=READY model=DMR-EH55 tier=VERIFIED_BANNER caps=0x07 ssot=1234ABCD\nIDENTIFY: OK (model=DMR-EH55 flash=S29JL064H vdd_mv=3280 xip_ro=NONE) VDD=${mockVdd}V`;
   } else if (norm === 'AUTODETECT') {
     rawOutput = 'AUTODETECT: OK (8 MB NOR Flash, EEMUL NVRAM @ 0x807F0000)';
   } else if (norm === 'STATUS' || norm === 'VDD') {
     rawOutput = `STATUS: OK VDD=${mockVdd}V | OCD=HALTED | PC=0x80000000 | MODE=2`;
-  } else if (norm === 'HANDSHAKE' || norm === 'BREAK_IN') {
-    rawOutput = `HANDSHAKE: OK Mode=${cleanArg || '2'} DCSR=0x00000001 (AM34 HALTED) VDD=${mockVdd}V`;
+  } else if (norm === 'BREAK_IN') {
+    rawOutput = `BREAK_IN: OK Mode=${cleanArg || '2'} DCSR=0x00000001 (AM34 HALTED) VDD=${mockVdd}V`;
   } else if (norm === 'BOOTSEL') {
     rawOutput = 'BOOTSEL: OK (Pico reiniciando em modo USB Mass Storage RPI-RP2)';
   }

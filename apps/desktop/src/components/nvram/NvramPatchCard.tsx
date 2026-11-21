@@ -13,6 +13,7 @@ import {
   Input,
 } from '@/components/ui';
 import { useTranslation } from '@/i18n/useTranslation';
+import { parseNvramOffsetInput } from '@/utils/formatters';
 
 interface NvramPatchCardProps {
   defaultInputPath?: string;
@@ -23,7 +24,7 @@ interface NvramPatchCardProps {
   onExecutePatch: (params: {
     inputPath: string;
     outputPath: string;
-    nvramOffset: string;
+    nvramOffset: number;
     patchHex: string;
   }) => Promise<unknown>;
 }
@@ -43,6 +44,22 @@ export const NvramPatchCard: React.FC<NvramPatchCardProps> = ({
   const [outputPath, setOutputPath] = useState('nor_dump.patched.bin');
   const [nvramOffset, setNvramOffset] = useState('0x0');
   const [patchHex, setPatchHex] = useState('FFFFFFFF');
+  const [localOffsetError, setLocalOffsetError] = useState<string | null>(null);
+
+  const handleSubmitPatch = () => {
+    const parsedOffset = parseNvramOffsetInput(nvramOffset);
+    if (parsedOffset === null) {
+      setLocalOffsetError(t('errors.nvram.invalidOffset'));
+      return;
+    }
+    setLocalOffsetError(null);
+    void onExecutePatch({
+      inputPath,
+      outputPath,
+      nvramOffset: parsedOffset,
+      patchHex,
+    });
+  };
 
   return (
     <Card data-testid="nvram-cow-patch-card">
@@ -90,7 +107,11 @@ export const NvramPatchCard: React.FC<NvramPatchCardProps> = ({
             <Input
               id="nvram-patch-offset"
               value={nvramOffset}
-              onChange={e => setNvramOffset(e.target.value)}
+              aria-invalid={Boolean(localOffsetError)}
+              onChange={e => {
+                setNvramOffset(e.target.value);
+                if (localOffsetError) setLocalOffsetError(null);
+              }}
               placeholder="0x0"
             />
           </div>
@@ -112,14 +133,7 @@ export const NvramPatchCard: React.FC<NvramPatchCardProps> = ({
           <Button
             type="button"
             disabled={patching}
-            onClick={() =>
-              void onExecutePatch({
-                inputPath,
-                outputPath,
-                nvramOffset,
-                patchHex,
-              })
-            }
+            onClick={handleSubmitPatch}
             data-testid="nvram-cow-patch-btn"
           >
             {patching && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
@@ -135,10 +149,10 @@ export const NvramPatchCard: React.FC<NvramPatchCardProps> = ({
           )}
         </div>
 
-        {error && (
+        {(localOffsetError ?? error) && (
           <Alert variant="destructive" className="py-2">
             <ShieldAlert className="h-4 w-4" />
-            <AlertDescription className="text-xs font-mono">{error}</AlertDescription>
+            <AlertDescription className="text-xs font-mono">{localOffsetError ?? error}</AlertDescription>
           </Alert>
         )}
       </CardContent>

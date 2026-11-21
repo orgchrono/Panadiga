@@ -1,16 +1,22 @@
 import { test, expect } from '@playwright/test';
 import { installMockIpcBridge } from './fixtures/mockIpcBridge';
+import { enterEngineeringMode } from './fixtures/workbenchHelpers';
 
 test.describe('Panadiga Desktop Navigation & Layout E2E', () => {
   test.beforeEach(async ({ page }) => {
     await installMockIpcBridge(page);
     await page.goto('/');
-    await expect(page.locator('h1')).toContainText('DIGA SUITE');
+    await enterEngineeringMode(page);
     await expect(page.getByText(/Modo Demo|Demonstração/i)).toHaveCount(0);
   });
 
-  test('loads Dashboard View by default with system metrics', async ({ page }) => {
+  test('loads Dashboard View by default with system metrics and 5 domain Sidebar groups', async ({ page }) => {
     await expect(page.locator('[data-testid="app-header"]')).toHaveAttribute('data-view', 'dashboard');
+    await expect(page.getByTestId('nav-group-storage')).toBeVisible();
+    await expect(page.getByTestId('nav-group-nvram')).toBeVisible();
+    await expect(page.getByTestId('nav-group-sdCrypto')).toBeVisible();
+    await expect(page.getByTestId('nav-group-picoProbe')).toBeVisible();
+    await expect(page.getByTestId('nav-group-forensicsDocs')).toBeVisible();
     await expect(page.getByText('Spansion NOR Flash').first()).toBeVisible();
     await expect(page.getByText(/Head Dump/).first()).toBeVisible();
   });
@@ -65,12 +71,14 @@ test.describe('Panadiga Desktop Navigation & Layout E2E', () => {
     await expect(page.getByRole('separator')).toBeVisible();
     await expect(page.getByText(/LBA \/ Physical Offset Scrubber|Scrubber LBA \/ Offset Físico/i)).toBeVisible();
 
-    // 3. Toggle Basic mode in NVRAM view and verify advanced patcher collapses cleanly
+    // 3. Toggle Express -> Engineering round-trip preserving active NVRAM view cleanly
     await page.click('button:has-text("2. NVRAM U99 Surgery"), button:has-text("2. Cirurgia NVRAM U99")');
     await expect(page.getByText(/Sector Window \(RangeDnD\)|Janela de Setores \(RangeDnD\)/i)).toBeVisible();
-    await page.getByRole('button', { name: /Basic \(Guided\)|Básico \(Guiado\)/i }).click();
-    await expect(page.getByText(/Basic Mode active: the Copy-on-Write hex editor|Modo Básico ativo: o editor hexadecimal Copy-on-Write/i)).toBeVisible();
-    await page.getByRole('button', { name: /Advanced \(Engineering\)|Avançado \(Engenharia\)/i }).click();
+    await page.getByRole('button', { name: /Express \(Guided\)|Express \(Guiado\)/i }).click();
+    await expect(page.getByTestId('express-shell')).toBeVisible();
+    await page.getByTestId('express-to-engineering-btn').click();
+    await expect(page.getByTestId('engineering-shell')).toBeVisible();
+    await expect(page.locator('[data-testid="app-header"]')).toHaveAttribute('data-view', 'nvram');
 
     // 4. Open Settings & Accessibility view, toggle High Contrast & Colorblind mode, switch locale, then restore defaults
     await page.click('button[data-testid="nav-settings"]');

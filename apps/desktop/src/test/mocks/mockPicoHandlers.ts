@@ -138,10 +138,11 @@ export function handleMockPicoCommand(
         bytes_erased: 65536,
         verification_sha256: '0a394c8e7710bcf1489e3a6a92ecda46e01768494c8fa72722ee20c5c363dc78',
         log_lines: [
-          'Multi-Mode HANDSHAKE (Mode 2 -> 0 -> 3 -> 1): AM34 core halted (PC=0x80000000, DCSR=0x00000001).',
+          '@P7501_IDENT vdd_mv=3280 nsw5v=1 elec=AWAKE_READY loader="Loader ver0.61" jedec=0x0001227E flash=S29JL064H ipl_crc32=0xA5B6C7D8 hw="VEP79138" tv=PAL/NTSC state=READY model=DMR-EH55 tier=VERIFIED_BANNER caps=0x07 ssot=1234ABCD',
           'Pre-Erase Live Backup: Saved nvram_live_backup.bin (0x807F0000) & sram_secrets.bin (0x00000000).',
-          'INJECT_LOADER CONFIRM: Streaming 80-byte JEDEC RAM loader into SRAM at 0x00004000... OK',
-          'Setting PC=0x00004000 and executing ERASE_NVRAM CONFIRM...',
+          '@PROG step=1/3 msg=READ_TARGET_NVRAM',
+          '@PROG step=2/3 msg=WRITE_P2_VAULT_SLOT_1',
+          'Executing atomic JOB NVRAM_CLEAN CONFIRM...',
           'Spansion Flash Command 0xAA->0x55->0x80 Sector Erase SA134..SA141 issued.',
           'Polling Spansion RY/BY# (DQ7 Data Polling)... Complete in 840ms.',
           'Verifying 65,536 bytes read back as 0xFF: 100% FACTORY VIRGIN STATE.',
@@ -165,8 +166,8 @@ export function handleMockPicoCommand(
       if (cmdStr === 'GDB') {
         return 'GDB Remote Serial Protocol mode active.';
       }
-      if (cmdStr === 'HANDSHAKE') {
-        return 'DCSR: 0x00000001 | [HANDSHAKE] SUCCESS! AM34 core HALTED (Mode 2).';
+      if (cmdStr === 'IDENTIFY' || cmdStr === 'AUTOPROBE') {
+        return '@P7501_IDENT vdd_mv=3280 nsw5v=1 elec=AWAKE_READY loader="Loader ver0.61" jedec=0x0001227E flash=S29JL064H ipl_crc32=0xA5B6C7D8 hw="VEP79138" tv=PAL/NTSC state=READY model=DMR-EH55 tier=VERIFIED_BANNER caps=0x07 ssot=1234ABCD\nIDENTIFY: OK';
       }
       return `ACK: ${cmdStr} (Instrução executada no PIO0 @ 0x00004000)`;
     }

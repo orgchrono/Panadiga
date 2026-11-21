@@ -13,7 +13,10 @@ export interface TbcSdPipelineVm extends TbcBypassLabSectionProps, SdHardenSecti
   readonly resetAll: () => void;
 }
 
-export const TbcLabAndSdHardenPipeline: React.FC<{ readonly vm: TbcSdPipelineVm }> = ({ vm }) => {
+export const TbcLabAndSdHardenPipeline: React.FC<{
+  readonly vm: TbcSdPipelineVm;
+  readonly hideSdHardenSection?: boolean;
+}> = ({ vm, hideSdHardenSection = false }) => {
   const { t } = useTranslation();
   return (
     <Card className="bg-bench-900 border-slate-800 space-y-4">
@@ -34,7 +37,7 @@ export const TbcLabAndSdHardenPipeline: React.FC<{ readonly vm: TbcSdPipelineVm 
           onReset={vm.resetAll}
         />
         <TbcBypassLabSection {...vm} />
-        <SdHardenSection {...vm} />
+        {!hideSdHardenSection && <SdHardenSection {...vm} />}
       </CardContent>
     </Card>
   );

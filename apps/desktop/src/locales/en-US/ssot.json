@@ -156,9 +156,9 @@
         "label": "Open-Drain XRESET Pulse",
         "description": "Pulls XRESET to 0V in open-drain mode for 10 ms and releases back to Hi-Z."
       },
-      "HANDSHAKE": {
-        "label": "Execute JIG Boot",
-        "description": "Runs P7501 JIGBOOT sequence (SW_UART+XRESET) and captures initial boot ROM response."
+      "IDENTIFY": {
+        "label": "Identify Target (4-Stage)",
+        "description": "Runs 4-stage target identification (ADC0/NSW5V, loader banner, JEDEC/IPL CRC32) and emits @P7501_IDENT."
       },
       "BREAK_IN": {
         "label": "Boot/Reset Profile",
@@ -172,9 +172,15 @@
           "m3": "Mode 3 (Hi-Z Extended)"
         }
       },
-      "SCAN": {
-        "label": "Probe UART Bus",
-        "description": "Audits electrical stability and automatically detects P7501 UART activity."
+      "JOB": {
+        "label": "Atomic On-Probe Job",
+        "description": "Executes atomic on-probe job with mandatory pre-backup to P2_VAULT (STATUS, VAULT_BACKUP, NVRAM_CLEAN, BGO_APPLY).",
+        "arg_label": "Job",
+        "arg_placeholder": "STATUS",
+        "options": {
+          "status": "STATUS",
+          "vault": "VAULT_BACKUP"
+        }
       },
       "AUTODETECT": {
         "label": "Autodetect Flash (Read-Only)",
@@ -533,6 +539,118 @@
       "BOOTSEL": {
         "label": "Reboot to USB BOOTSEL",
         "description": "Reboots the Pico probe into USB Mass Storage bootloader (`RPI-RP2` / `RP2350`)."
+      },
+      "SELFTEST": {
+        "label": "Probe Hardware Self-Test",
+        "description": "Validates electrical invariants (GP3 NSW5V Hi-Z, ADC0, PIO0/PIO1, WDT, P0 CRC32) and optional GP4->GP2 loopback on the probe.",
+        "options": {
+          "loopback": "LOOPBACK (GP4->GP2)"
+        }
+      },
+      "TARGET_PROFILE": {
+        "label": "DIGA Target Profile",
+        "description": "Selects the SSOT DIGA target profile (DMR-EH55, DMR-ES35V, DMR-EZ485V, DMR-ES10) and RO locks.",
+        "arg_label": "Model",
+        "arg_placeholder": "DMR-EH55"
+      },
+      "VAULT": {
+        "label": "QSPI Forensic Vault (P2)",
+        "description": "Manages forensic NVRAM backup slots in the P2_VAULT A/B partition of Pico QSPI Flash.",
+        "arg_label": "Vault Action",
+        "arg_placeholder": "STATUS"
+      },
+      "BLACKBOX": {
+        "label": "QSPI Flight Blackbox (P4)",
+        "description": "Inspects or appends wear-leveled telemetry records (48 x 4 KiB pages) in P4_BLACKBOX.",
+        "arg_label": "Blackbox Action",
+        "arg_placeholder": "STATUS"
+      },
+      "PROBE_CFG": {
+        "label": "Calibration & Config (P5)",
+        "description": "Queries or calibrates integer ADC0 gain/offset and SSOT hash in P5_PROBE_CFG A/B banks.",
+        "arg_label": "Config Action",
+        "arg_placeholder": "STATUS"
+      },
+      "RECIPE": {
+        "label": "Signed Repair Recipes (P3)",
+        "description": "Verifies header and CRC32 of repair recipes stored in P3_RECIPE.",
+        "arg_label": "Recipe Action",
+        "arg_placeholder": "STATUS"
+      },
+      "BGO_INSPECT": {
+        "label": "Inspect BGO [nfrom] FTL",
+        "description": "Audits BGO sector headers (SA26..SA70) and detects duplicate or corrupted LBNs."
+      },
+      "EEMUL_INSPECT": {
+        "label": "Inspect EEMUL NVRAM",
+        "description": "Analyzes wear and health of 8 KB EEMUL micro-sectors at the top of NOR Flash."
+      },
+      "IRRX": {
+        "label": "Decode Kaseikyo IR",
+        "description": "Captures and decodes 48-bit Panasonic Kaseikyo infrared frames on a safe spare GPIO.",
+        "arg_label": "Window & Pin",
+        "arg_placeholder": "5000 GP7"
+      },
+      "SERVMACRO": {
+        "label": "Service Mode IR Macro",
+        "description": "Transmits verified service IR macro sequence (SERVICE_MODE, SELF_CHECK, OPTICAL_CAL, ERR_HISTORY, RELEASE).",
+        "arg_label": "IR Macro",
+        "arg_placeholder": "SELF_CHECK"
+      },
+      "MMIO_SNAP": {
+        "label": "Safe MMIO Snapshot",
+        "description": "Reads safe AM34 diagnostic registers (strictly excluding 0xC000100C)."
+      },
+      "PWROSC": {
+        "label": "VDD Ripple & Die Temp",
+        "description": "Samples millivolt ripple on SW_UART/ADC0 and internal RP2 silicon die temperature.",
+        "arg_label": "Window (ms)",
+        "arg_placeholder": "500"
+      },
+      "TBUSSNIFF": {
+        "label": "IC7501 T-BUS Sniffer",
+        "description": "Decodes passive T-BUS protocol frames between Timer MCU IC7501 and AM34.",
+        "arg_label": "Window (ms)",
+        "arg_placeholder": "2000"
+      },
+      "M0KEEPALIVE": {
+        "label": "Timer MCU M0 Keepalive",
+        "description": "Controls periodic T-BUS keepalive frames (ON [ms] / OFF / STATUS) to prevent 44s IC7501 watchdog power-down on the bench.",
+        "arg_label": "Keepalive Mode",
+        "arg_placeholder": "STATUS",
+        "options": {
+          "status": "STATUS",
+          "on10s": "ON 10000 (10 s)",
+          "off": "OFF (Stop)"
+        }
+      },
+      "I2C_SCAN": {
+        "label": "3.3V I2C Scanner (GP6/GP7)",
+        "description": "Scans 3.3V I2C bus and matches 0x50..0x57 addresses against the SSOT EEPROM catalog."
+      },
+      "EEPROM": {
+        "label": "SSOT I2C EEPROM Access",
+        "description": "Queries catalog, reads, or writes 3.3V I2C EEPROM pages with strict boundary checks.",
+        "arg_label": "EEPROM Op",
+        "arg_placeholder": "INFO"
+      },
+      "USBMODE": {
+        "label": "USB Dual-CDC Mode",
+        "description": "Switches or queries passive UART stream mirroring on the second CDC channel (SINGLE / DUAL_CDC).",
+        "arg_label": "USB Mode",
+        "arg_placeholder": "STATUS"
+      },
+      "BLE": {
+        "label": "BLE / Wi-Fi Radio Status",
+        "description": "Displays CYW43439 radio state (BLE NUS / TCP :3333 GDB) and F14 NOR write lock.",
+        "arg_label": "BLE Action",
+        "arg_placeholder": "STATUS"
+      },
+      "BLE_NOR_AUTH": {
+        "label": "Authorize BLE NOR Write (F14)",
+        "description": "Grants or revokes (strictly from physical USB) temporary NOR write permission for wireless sessions.",
+        "arg_label": "F14 Policy",
+        "arg_placeholder": "STATUS"
       }
     }
   }

@@ -30,6 +30,7 @@ export interface SdHardenSectionProps {
   readonly hardenBusy: boolean;
   readonly hardenError: string | null;
   readonly runHardenSdKit: () => Promise<HardenSdUnbrickKitResponse | null>;
+  readonly hideSharedInputs?: boolean;
 }
 
 export const SdHardenSection: React.FC<SdHardenSectionProps> = (props) => {
@@ -60,14 +61,18 @@ export const SdHardenSection: React.FC<SdHardenSectionProps> = (props) => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-        <div className="space-y-1">
-          <label htmlFor="sd-harden-out" className="text-slate-400 block">{t('pipelines.tbcSd.sdOutputDir')}</label>
-          <Input id="sd-harden-out" type="text" value={props.sdOutputDir} aria-invalid={outInvalid} onChange={e => props.setSdOutputDir(e.target.value)} />
-        </div>
-        <div className="space-y-1">
-          <label htmlFor="sd-harden-dvd" className="text-slate-400 block">{t('pipelines.tbcSd.panaDvdPath')}</label>
-          <Input id="sd-harden-dvd" type="text" value={props.panaDvdPath} onChange={e => props.setPanaDvdPath(e.target.value)} />
-        </div>
+        {!props.hideSharedInputs && (
+          <>
+            <div className="space-y-1">
+              <label htmlFor="sd-harden-out" className="text-slate-400 block">{t('pipelines.tbcSd.sdOutputDir')}</label>
+              <Input id="sd-harden-out" type="text" value={props.sdOutputDir} aria-invalid={outInvalid} onChange={e => props.setSdOutputDir(e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <label htmlFor="sd-harden-dvd" className="text-slate-400 block">{t('pipelines.tbcSd.panaDvdPath')}</label>
+              <Input id="sd-harden-dvd" type="text" value={props.panaDvdPath} onChange={e => props.setPanaDvdPath(e.target.value)} />
+            </div>
+          </>
+        )}
         <div className="space-y-1">
           <label htmlFor="sd-harden-prog061" className="text-slate-400 block">{t('pipelines.tbcSd.prog061Path')}</label>
           <Input id="sd-harden-prog061" data-testid="sd-prog061-input" type="text" value={props.prog061Path} onChange={e => props.setProg061Path(e.target.value)} />

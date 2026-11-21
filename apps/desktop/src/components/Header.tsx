@@ -40,7 +40,7 @@ export interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({
   currentView,
   currentViewTitle,
-  mode = 'advanced',
+  mode = 'engineering',
   onToggleMode,
   onRefresh,
   onOpenMobileNav,
@@ -209,7 +209,7 @@ export const Header: React.FC<HeaderProps> = ({
             className="hidden sm:inline-flex h-8 px-2.5 text-[11px] font-mono gap-1.5 bg-bench-950 border-slate-700"
           >
             <Layers className="w-3.5 h-3.5 text-cyan-400" />
-            <span>{mode === 'basic' ? t('shell.modeBasic') : t('shell.modeAdvanced')}</span>
+            <span>{mode === 'express' ? t('shell.modeBasic') : t('shell.modeAdvanced')}</span>
           </Button>
         )}
 

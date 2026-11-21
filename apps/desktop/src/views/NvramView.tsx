@@ -127,7 +127,7 @@ export const NvramView: React.FC<NvramViewProps> = ({ onNavigate }) => {
           <span className="text-slate-400 font-sans">
             {t('nvram.basicModeBanner')}
           </span>
-          <Button type="button" variant="outline" size="sm" onClick={() => setMode('advanced')} className="gap-1.5 text-xs">
+          <Button type="button" variant="outline" size="sm" onClick={() => setMode('engineering')} className="gap-1.5 text-xs">
             <Wrench className="w-3.5 h-3.5 text-cyan-400" />
             <span>{t('nvram.revealAdvancedBtn')}</span>
           </Button>

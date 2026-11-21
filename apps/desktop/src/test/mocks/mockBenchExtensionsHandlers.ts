@@ -18,6 +18,7 @@ import type {
   Eh55BgoSectorReport,
   PicoEh55BgoRepairResponse,
   PicoEh55NorDumpResponse,
+  PicoPanamon1CleanNvramResponse,
   PicoProbeDavisIdeResponse,
 } from '@/models';
 import { readBooleanProp, readStringProp } from '@/utils/typeGuards';
@@ -144,7 +145,8 @@ export function handleMockBenchExtensionsCommand(
     case 'pico_eh55_nor_dump_command': {
       const port = readStringProp(req, 'portName') ?? 'COM10';
       const slice = readStringProp(req, 'slice') ?? 'bgo';
-      const outPath = readStringProp(req, 'outputPath') ?? 'unbrick_out/eh55_nor_bgo_cow.bin';
+      const rawOut = readStringProp(req, 'outputPath')?.trim();
+      const outPath = rawOut || 'backups/eh55_nor_dump_auto.bin';
       const len = slice === 'full' ? NOR_DUMP_TOTAL_LEN : BGO_TOTAL_LEN;
       publishMockEvent('nor://dump-progress', {
         port,
@@ -271,6 +273,47 @@ export function handleMockBenchExtensionsCommand(
       };
       publishMockEvent('davis://probe-result', payload);
       return payload;
+    }
+
+    case 'pico_panamon1_clean_nvram_command': {
+      const port = (readStringProp(req, 'portName') ?? '').trim();
+      if (!port) {
+        throw new Error('portName obrigatório para limpeza ao vivo da NVRAM via Pico.');
+      }
+      const backupDir = (readStringProp(req, 'backupDir') ?? '').trim() || 'backups/nvram_pre_clean';
+      publishMockEvent('nvram://clean-progress', {
+        port,
+        stage: 'complete',
+        current: 8,
+        total: 8,
+        detail: 'SA134..SA141 0xFF readback verified',
+      });
+      const response: PicoPanamon1CleanNvramResponse = {
+        backupPath: `${backupDir}/nvram_pre_clean_mock.bin`,
+        sha256Before: MOCK_BACKUP_SHA,
+        sha256After: 'ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00',
+        erasedSectors: 8,
+        verifiedAllFf: true,
+        bytesErased: 65_536,
+        emuGate: {
+          passed: true,
+          artifactKind: 'nor_cow_repair',
+          artifactSha256: MOCK_BACKUP_SHA,
+          iplUntouched: true,
+          lethalMmioBlocked: true,
+          executedSteps: 0,
+          checks: [
+            {
+              id: 'nor_ipl_sa0_sa10_immutable',
+              passed: true,
+              detail: 'SA0..SA10 (0x000000..0x03FFFF) cryptographic equality verified',
+            },
+          ],
+          notes: ['allow_upper_nor=false'],
+        },
+        nextStep: 'Desconecte o cabo P7501, aguarde 10s sem energia AC e ligue o gravador para confirmar boot sem U99.',
+      };
+      return response;
     }
 
     default:

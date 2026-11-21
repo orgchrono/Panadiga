@@ -68,8 +68,8 @@ BOOTCAP: OK"
     if upper.starts_with("FMU") || upper.starts_with("UART") {
         return "UART/FMU Probe Capture (18 bytes): SERI_READY OK\nFMU: OK".to_string();
     }
-    if upper == "SCAN" {
-        return "[SCAN] Probing 4 Modes x 256 Opcodes (1024 Vectors)...\nMode 2 Opcode 0x01: HIT! DCSR=0x00000001 (HALTED)\nSCAN: COMPLETED".to_string();
+    if upper == "IDENTIFY" {
+        return "@P7501_IDENT vdd_mv=3280 nsw5v=1 elec=AWAKE_READY loader=\"Loader ver0.61\" jedec=0x0001227E flash=S29JL064H ipl_crc32=0xA5B6C7D8 hw=\"VEP79138\" tv=PAL/NTSC state=READY model=DMR-EH55 tier=VERIFIED_BANNER caps=0x07 ssot=1234ABCD\nIDENTIFY: OK".to_string();
     }
     if upper == "AUTODETECT" {
         return "AUTODETECT: OK (8 MB NOR Flash, EEMUL NVRAM @ 0x807F0000)".to_string();
@@ -114,6 +114,14 @@ fn compose_command_validates_modes_and_blocks_injection() {
     let (sd_cmd, sd_dur) = compose_diagnostic_command("SDSNIFF", Some("6000 JIG:350")).unwrap();
     assert_eq!(sd_cmd, "SDSNIFF 6000 JIG:350");
     assert_eq!(sd_dur, Duration::from_millis(8500));
+
+    let (pwrosc_cmd, pwrosc_dur) = compose_diagnostic_command("PWROSC", Some("2000")).unwrap();
+    assert_eq!(pwrosc_cmd, "PWROSC 2000");
+    assert_eq!(pwrosc_dur, Duration::from_millis(4500));
+
+    let (ka_cmd, ka_dur) = compose_diagnostic_command("M0KEEPALIVE", Some("ON 10000")).unwrap();
+    assert_eq!(ka_cmd, "M0KEEPALIVE ON 10000");
+    assert!(ka_dur <= Duration::from_millis(4000));
 }
 
 #[test]
@@ -127,9 +135,9 @@ UARTSTREAM: OK";
     assert!(res.success);
 
     let err_res = parse_diagnostic_output(
-        "ERASE_NVRAM",
-        "ERASE_NVRAM CONFIRM",
-        "ERASE_NVRAM: ERROR (-5)",
+        "JOB",
+        "JOB NVRAM_CLEAN CONFIRM",
+        "JOB: ERROR code=E05 reason=CONFIRM_REQUIRED",
         100,
     );
     assert!(!err_res.success);
@@ -185,7 +193,7 @@ PINCHECK: OK";
     let wdt_res = parse_diagnostic_output(
         "WDT",
         "WDT",
-        "[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=2 wdt_recoveries=1 reboot_src=WDT_RECOVERY fault_slot=5 fault_stage=PROBE_SWEEP last_cmd=SCAN\nWDT: OK",
+        "[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=2 wdt_recoveries=1 reboot_src=WDT_RECOVERY fault_slot=5 fault_stage=PROBE_SWEEP last_cmd=IDENTIFY\nWDT: OK",
         20,
     );
     assert!(wdt_res.success);
@@ -214,4 +222,44 @@ PINCHECK: OK";
             .iter()
             .any(|f| f.code == "BGO_INIT_HALT")
     );
+}
+
+#[test]
+fn parses_wire_protocol_ident_prog_evt_and_res_authoritatively() {
+    let ident_raw = "@P7501_IDENT vdd_mv=3290 nsw5v=1 elec=AWAKE_READY loader=\"Loader ver0.61\" jedec=0x0001227E flash=S29JL064H ipl_crc32=0xA5B6C7D8 hw=\"VEP79138\" tv=PAL/NTSC state=READY model=DMR-EH55 tier=VERIFIED_BANNER caps=0x07 ssot=1234ABCD\nIDENTIFY: OK (model=DMR-EH55 flash=S29JL064H)\n@P7501_RES cmd=IDENTIFY status=OK code=0 elapsed_us=1840";
+    let ident_res = parse_diagnostic_output("IDENTIFY", "IDENTIFY", ident_raw, 50);
+    assert!(ident_res.success);
+    assert_eq!(ident_res.protocol_code.as_deref(), Some("0"));
+    assert_eq!(ident_res.protocol_elapsed_us, Some(1840));
+    assert_eq!(ident_res.ident_model.as_deref(), Some("DMR-EH55"));
+    assert_eq!(ident_res.ident_flash.as_deref(), Some("S29JL064H"));
+    assert_eq!(ident_res.ident_loader.as_deref(), Some("Loader ver0.61"));
+    assert_eq!(ident_res.detected_flash_mb, Some(8));
+    assert!((ident_res.vdd_volts.unwrap() - 3.29).abs() < 0.01);
+    assert!(ident_res.findings.iter().any(|f| f.code == "P7501_IDENT"));
+
+    let job_err_raw = "@PROG step=1/3 msg=READ_TARGET_NVRAM\n@EVT kind=SDS_TRIG trig=91006 clk=12840\n@P7501_RES cmd=JOB status=ERR code=E05 elapsed_us=412";
+    let job_err = parse_diagnostic_output("JOB", "JOB NVRAM_CLEAN CONFIRM", job_err_raw, 80);
+    assert!(!job_err.success);
+    assert_eq!(job_err.protocol_code.as_deref(), Some("E05"));
+    assert_eq!(job_err.progress_steps, vec!["1/3 READ_TARGET_NVRAM"]);
+    assert_eq!(job_err.wire_events, vec!["SDS_TRIG (clk=12840 trig=91006)"]);
+    assert!(job_err.findings.iter().any(|f| f.code == "EVT_SDS_TRIG"));
+    assert!(job_err.findings.iter().any(|f| f.code == "P7501_RES_E05"));
+
+    let mmio_ok = parse_diagnostic_output(
+        "MMIO_SNAP",
+        "MMIO_SNAP",
+        "[MMIO_SNAP] count=8 diff_mask=0x00 (0xC000100C excluded)\nMMIO_SNAP: OK\n@P7501_RES cmd=MMIO_SNAP status=OK code=0 elapsed_us=920",
+        25,
+    );
+    assert!(mmio_ok.success);
+
+    let i2c_ok = parse_diagnostic_output(
+        "I2C_SCAN",
+        "I2C_SCAN",
+        "[I2C_SCAN] Scanning...\nI2C_SCAN: OK (devices=1)\n@P7501_RES cmd=I2C_SCAN status=OK code=0 elapsed_us=1100",
+        30,
+    );
+    assert!(i2c_ok.success);
 }

@@ -31,7 +31,7 @@ const TELEMETRY_RELEVANT_VERBS = new Set([
   'STATUS',
   'VDD',
   'PINCHECK',
-  'HANDSHAKE',
+  'IDENTIFY',
   'ISOLATE',
   'HIZ',
 ]);

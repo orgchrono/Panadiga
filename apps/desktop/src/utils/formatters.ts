@@ -4,12 +4,14 @@
  */
 
 import {
+  MAX_U32_VALUE,
   PICO_MAX_VDD_CEILING_VOLTS,
   PICO_MIN_VDD_THRESHOLD_VOLTS,
   PICO_SAFE_OPERATING_MIN_VOLTS,
 } from '@/constants';
 
 const HEX_RADIX = 16;
+const DECIMAL_RADIX = 10;
 const HEX32_PAD_WIDTH = 8;
 const ID_RADIX = 36;
 const UUID_SEGMENT_LEN = 8;
@@ -145,4 +147,21 @@ export function withUniqueKeys<T>(
     { rows: [], counts: {} },
   );
   return result.rows;
+}
+
+/**
+ * Pure parser: converts a hex ('0x...') or decimal NVRAM offset input into a validated u32 integer.
+ * Returns null for NaN, negative, fractional, malformed, or > 0xFFFFFFFF inputs.
+ */
+export function parseNvramOffsetInput(raw: string | number): number | null {
+  if (typeof raw === 'number') {
+    return Number.isInteger(raw) && raw >= 0 && raw <= MAX_U32_VALUE ? raw : null;
+  }
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const isHex = /^0x[0-9a-f]+$/i.test(trimmed);
+  const isDec = /^\d+$/.test(trimmed);
+  if (!isHex && !isDec) return null;
+  const parsed = Number.parseInt(trimmed, isHex ? HEX_RADIX : DECIMAL_RADIX);
+  return Number.isInteger(parsed) && parsed >= 0 && parsed <= MAX_U32_VALUE ? parsed : null;
 }

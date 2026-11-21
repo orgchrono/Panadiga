@@ -11,6 +11,7 @@ import {
 import { emitNvramCleanedEvent } from '@/services/systemService';
 import { useAppSelector } from '@/store/hooks';
 import { clearLiveNvramCapture, getLatestLiveNvramCapture } from '@/store/nvramCaptureBridge';
+import { parseNvramOffsetInput } from '@/utils/formatters';
 import { logger } from '@/utils/logger';
 import { buildSectorMapFromReport, captureLivePicoNvramDump } from './nvram/nvramHelpers';
 
@@ -178,15 +179,19 @@ export function useNvramViewModel() {
     async (params: {
       inputPath: string;
       outputPath: string;
-      nvramOffset: string;
+      nvramOffset: number | string;
       patchHex: string;
     }): Promise<NvramCleanReport | null> => {
       const inputPath = params.inputPath.trim();
       const outputPath = params.outputPath.trim();
-      const nvramOffset = params.nvramOffset.trim() || '0x0';
+      const parsedOffset = parseNvramOffsetInput(params.nvramOffset);
       const patchHex = params.patchHex.trim();
       if (!inputPath || !outputPath || !patchHex) {
         setPatchError(translate('errors.nvram.cowPatchRequiredFields'));
+        return null;
+      }
+      if (parsedOffset === null) {
+        setPatchError(translate('errors.nvram.invalidOffset'));
         return null;
       }
       if (inputPath === outputPath) {
@@ -200,7 +205,7 @@ export function useNvramViewModel() {
         const data = await patchNvramOffset({
           inputPath,
           outputPath,
-          nvramOffset,
+          nvramOffset: parsedOffset,
           patchHex,
         });
         applyFlashReport(data);

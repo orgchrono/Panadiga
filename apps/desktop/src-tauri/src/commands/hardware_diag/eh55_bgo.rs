@@ -14,11 +14,12 @@ use tauri::Emitter;
 
 use super::eh55_bgo_dto::{
     NorDumpProgressEventDto, PicoEh55BgoAuditRequestDto, PicoEh55NorDumpRequestDto,
-    PicoEh55NorDumpResponseDto, parse_nor_slice_preset, run_exclusive_panamon1,
+    PicoEh55NorDumpResponseDto, parse_nor_slice_preset, resolve_auto_backup_file,
+    run_exclusive_panamon1,
 };
 use crate::commands::constants::EVENT_NOR_DUMP_PROGRESS;
 use crate::commands::error::{IpcResult, PanadigaIpcError};
-use crate::commands::frm_pack::{resolve_read_path, resolve_write_path};
+use crate::commands::frm_pack::resolve_read_path;
 use crate::commands::unbrick_dto::opt_trimmed;
 use crate::state::PanadigaBackendState;
 
@@ -31,7 +32,7 @@ where
     F: FnMut(NorDumpProgressEventDto),
 {
     let preset = parse_nor_slice_preset(&req.slice, &req.custom_start_va_hex, &req.custom_len_hex)?;
-    let out_path = resolve_write_path(req.output_path.trim())?;
+    let out_path = resolve_auto_backup_file(opt_trimmed(&req.output_path), "eh55_nor_dump", "bin")?;
     let orch = NorCaptureOrchestrator::try_default().map_err(|e| {
         PanadigaIpcError::internal(format!("Falha init NorCaptureOrchestrator: {e}"))
     })?;
@@ -71,11 +72,13 @@ pub async fn pico_eh55_nor_dump_command(
         &request.custom_start_va_hex,
         &request.custom_len_hex,
     )?;
-    let _ = resolve_write_path(request.output_path.trim())?;
+    let resolved_out =
+        resolve_auto_backup_file(opt_trimmed(&request.output_path), "eh55_nor_dump", "bin")?;
     let clean_port = request.port_name.trim().to_string();
     let backend = state.inner().clone();
     let app_clone = app.clone();
-    let req_clone = request.clone();
+    let mut req_clone = request.clone();
+    req_clone.output_path = Some(resolved_out.to_string_lossy().into_owned());
 
     run_exclusive_panamon1(backend, clean_port, "NOR dump", move |transport| {
         run_eh55_nor_dump_with_transport(transport, &req_clone, |ev| {

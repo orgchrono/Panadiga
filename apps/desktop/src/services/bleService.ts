@@ -4,6 +4,7 @@
  */
 
 import { translate } from '@/i18n/useTranslation';
+import { SSOT_WIRE_TERMINAL_MARKERS } from '@/models/generated/ssot';
 import {
   connectAndroidBleNus,
   disconnectAndroidBleNus,
@@ -25,7 +26,12 @@ export const NUS_TX_CHARACTERISTIC_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'
 
 const BLE_ANDROID_CONNECT_TIMEOUT_MS = 10000;
 const BLE_CMD_TIMEOUT_MS = 4000;
-const BLE_REPLY_WAIT_CAP_MS = 1500;
+const BLE_MIN_TIMEOUT_MS = 400;
+const BLE_GATT_CHUNK_BYTES = 20;
+const BLE_RES_PREFIX = SSOT_WIRE_TERMINAL_MARKERS[0];
+const BLE_PROMPTS: readonly string[] = SSOT_WIRE_TERMINAL_MARKERS.slice(1);
+const BLE_LEGACY_CLI_STATUS_RE =
+  /^[A-Z0-9_]+:\s+(?:OK|ERROR|ERR|FAILED|OFFLINE|TIMEOUT|DONE)\b/;
 
 export interface BleDeviceInfo {
   id: string;
@@ -63,13 +69,56 @@ function extractCharacteristicDataView(event: Event): DataView | null {
   return value instanceof DataView ? value : null;
 }
 
-function isReplyComplete(buffer: string): boolean {
-  return (
-    buffer.includes('PANADIGA>') ||
-    buffer.includes('P7501>') ||
-    buffer.includes(': OK') ||
-    buffer.includes('FAILED')
-  );
+export function isBleReplyComplete(buffer: string): boolean {
+  const trimmedEnd = buffer.trimEnd();
+  if (trimmedEnd.length === 0) {
+    return false;
+  }
+  if (BLE_PROMPTS.some(prompt => trimmedEnd.endsWith(prompt))) {
+    return true;
+  }
+  if (!buffer.endsWith('\n') && !buffer.endsWith('\r')) {
+    return false;
+  }
+  const lines = buffer.split(/\r?\n/);
+  if (lines.some(line => line.trimStart().startsWith(BLE_RES_PREFIX))) {
+    return true;
+  }
+  const hasStructuredFrames = lines.some(line => {
+    const t = line.trimStart();
+    return t.startsWith('@P7501_') || t.startsWith('@PROG ') || t.startsWith('@EVT ');
+  });
+  if (hasStructuredFrames) {
+    return false;
+  }
+  return lines.some(line => {
+    const trimmed = line.trim();
+    return trimmed === 'PONG' || BLE_LEGACY_CLI_STATUS_RE.test(trimmed);
+  });
+}
+
+export function splitGattChunks(
+  payload: Uint8Array,
+  chunkSize = BLE_GATT_CHUNK_BYTES,
+): Uint8Array<ArrayBuffer>[] {
+  const safeChunkSize = Math.max(1, chunkSize);
+  const count = Math.ceil(payload.byteLength / safeChunkSize);
+  return Array.from({ length: count }, (_, idx) => {
+    const start = idx * safeChunkSize;
+    return payload.slice(start, start + safeChunkSize);
+  });
+}
+
+async function writeGattChunksSequential(
+  rxChar: BluetoothRemoteGATTCharacteristic,
+  chunks: readonly Uint8Array<ArrayBuffer>[],
+  index = 0,
+): Promise<void> {
+  if (index >= chunks.length) {
+    return;
+  }
+  await rxChar.writeValue(chunks[index]);
+  await writeGattChunksSequential(rxChar, chunks, index + 1);
 }
 
 /**
@@ -169,11 +218,12 @@ export function createBleUartService(): BleUartClient {
       const rxCharacteristic = await service.getCharacteristic(NUS_RX_CHARACTERISTIC_UUID);
       const txCharacteristic = await service.getCharacteristic(NUS_TX_CHARACTERISTIC_UUID);
 
+      const utf8StreamDecoder = new TextDecoder('utf-8');
       await txCharacteristic.startNotifications();
       txCharacteristic.addEventListener('characteristicvaluechanged', (event: Event) => {
         const value = extractCharacteristicDataView(event);
         if (value) {
-          emitChunk(new TextDecoder('utf-8').decode(value));
+          emitChunk(utf8StreamDecoder.decode(value, { stream: true }));
         }
       });
 
@@ -219,8 +269,9 @@ export function createBleUartService(): BleUartClient {
       throw new Error(translate('errors.ble.channelUnavailableSend'));
     }
 
+    const rxChar = active.rxCharacteristic;
     const data = new TextEncoder().encode(message.endsWith('\n') ? message : `${message}\n`);
-    await active.rxCharacteristic.writeValue(data);
+    await writeGattChunksSequential(rxChar, splitGattChunks(data, BLE_GATT_CHUNK_BYTES));
   };
 
   const sendAndAwaitReply = async (
@@ -238,6 +289,7 @@ export function createBleUartService(): BleUartClient {
 
     const chunks = new Map<'buf', string>();
     const cleanupRef = new Map<'off', () => void>();
+    const effectiveTimeoutMs = Math.max(BLE_MIN_TIMEOUT_MS, timeoutMs);
 
     return new Promise<string>((resolve, reject) => {
       const settle = (result: string) => {
@@ -245,13 +297,26 @@ export function createBleUartService(): BleUartClient {
         resolve(result);
       };
       const timer = setTimeout(() => {
-        settle((chunks.get('buf') ?? '').trim() || `${command}: OK`);
-      }, Math.min(timeoutMs, BLE_REPLY_WAIT_CAP_MS));
+        cleanupRef.get('off')?.();
+        const collected = (chunks.get('buf') ?? '').trim();
+        if (collected.length === 0) {
+          reject(
+            new Error(
+              translate('errors.ble.nusTimeout', {
+                timeoutMs: effectiveTimeoutMs,
+                command,
+              }),
+            ),
+          );
+          return;
+        }
+        resolve(collected);
+      }, effectiveTimeoutMs);
 
       const off = onReceive(chunk => {
         const next = `${chunks.get('buf') ?? ''}${chunk}`;
         chunks.set('buf', next);
-        if (isReplyComplete(next)) {
+        if (isBleReplyComplete(next)) {
           clearTimeout(timer);
           settle(next.trim());
         }

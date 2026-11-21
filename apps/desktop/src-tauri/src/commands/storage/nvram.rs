@@ -5,30 +5,41 @@ use std::path::Path;
 use crate::commands::constants::{AM34_NVRAM_BASE, DEFAULT_LIVE_NVRAM_LABEL};
 use crate::commands::dto::{NvramCleanReport, resolve_default_flash_path};
 use crate::commands::error::{IpcResult, PanadigaIpcError};
+use panadiga_core::nvram::NvramPolicyOptions;
+use panadiga_core::ssot::LabOverride;
 
-/// Surgically cleans and audits the Spansion S29JL064H flash dump NVRAM emulation partitions.
+/// Surgically cleans and audits flash dump NVRAM emulation partitions under CapabilityGate policy.
 #[tauri::command]
 pub fn clean_nvram_command(
     input_path: String,
     output_path: Option<String>,
+    model_id: Option<String>,
+    lab_override: Option<LabOverride>,
 ) -> IpcResult<NvramCleanReport> {
     let in_p = Path::new(&input_path);
     let out_p = output_path.as_deref().map(Path::new);
-    panadiga_core::nvram::clean_flash_nvram(in_p, out_p).map_err(PanadigaIpcError::from)
+    let policy = NvramPolicyOptions {
+        model_id: model_id.as_deref(),
+        lab_override: lab_override.as_ref(),
+    };
+    panadiga_core::nvram::clean_flash_nvram_with_policy(in_p, out_p, &policy)
+        .map_err(PanadigaIpcError::from)
 }
 
-/// Frontend `analyze_flash_dump` command (non-destructive inspection).
+/// Frontend `analyze_flash_dump` command (non-destructive C0 inspection).
 #[tauri::command]
 pub fn analyze_flash_dump(input_path: Option<String>) -> IpcResult<NvramCleanReport> {
     let path = resolve_default_flash_path(input_path);
     panadiga_core::nvram::inspect_flash_nvram(Path::new(&path)).map_err(PanadigaIpcError::from)
 }
 
-/// Frontend `clean_nvram` command (surgical 64 KB NVRAM reset to 0xFF).
+/// Frontend `clean_nvram` command (surgical NVRAM reset to 0xFF under policy gate).
 #[tauri::command]
 pub fn clean_nvram(
     input_path: Option<String>,
     output_path: Option<String>,
+    model_id: Option<String>,
+    lab_override: Option<LabOverride>,
 ) -> IpcResult<NvramCleanReport> {
     let path = resolve_default_flash_path(input_path);
     let in_p = Path::new(&path);
@@ -43,16 +54,18 @@ pub fn clean_nvram(
             .to_string_lossy()
             .to_string()
     });
-    clean_nvram_command(path, Some(out))
+    clean_nvram_command(path, Some(out), model_id, lab_override)
 }
 
-/// Guarded copy-on-write patch within the 64 KB writable NVRAM sector (`SA134..SA141`); Spansion IPL stays read-only.
+/// Guarded copy-on-write patch within verified writable NVRAM microsectors; IPL stays read-only.
 #[tauri::command]
 pub fn patch_nvram_command(
     input_path: String,
     output_path: Option<String>,
     nvram_offset: u32,
     patch_hex: String,
+    model_id: Option<String>,
+    lab_override: Option<LabOverride>,
 ) -> IpcResult<NvramCleanReport> {
     let patch_bytes = panadiga_core::re::matshita_emu::parse_hex_payload(patch_hex.trim())
         .map_err(|e| {
@@ -64,8 +77,18 @@ pub fn patch_nvram_command(
         .map(str::trim)
         .filter(|s| !s.is_empty());
     let out_p = out_trimmed.map(Path::new);
-    panadiga_core::nvram::patch_flash_nvram(in_p, out_p, nvram_offset as usize, &patch_bytes)
-        .map_err(PanadigaIpcError::from)
+    let policy = NvramPolicyOptions {
+        model_id: model_id.as_deref(),
+        lab_override: lab_override.as_ref(),
+    };
+    panadiga_core::nvram::patch_flash_nvram_with_policy(
+        in_p,
+        out_p,
+        nvram_offset as usize,
+        &patch_bytes,
+        &policy,
+    )
+    .map_err(PanadigaIpcError::from)
 }
 
 /// Audits a live NVRAM byte slice captured in-circuit via Pico (P7501 UART) / Android USB-OTG / BLE NUS.

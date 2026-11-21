@@ -4,7 +4,9 @@ use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::time::Duration;
 
-use super::super::rsp_protocol::compute_mock_rsp_response_pure;
+use panadiga_core::pico::rsp_codec::NorWritePolicy;
+
+use super::super::rsp_protocol::compute_mock_rsp_response_with_policy;
 use super::controller::GdbBridgeController;
 
 enum InboundTcpChunk {
@@ -45,6 +47,7 @@ fn is_session_open(ctrl: &GdbBridgeController) -> bool {
 pub(super) fn handle_local_stub_session(ctrl: &GdbBridgeController, mut tcp_stream: TcpStream) {
     prepare_gdb_tcp_stream(&mut tcp_stream);
     let mut t_buf = [0u8; 1024];
+    let mut nor_policy = NorWritePolicy::NvramOnly;
 
     while is_session_open(ctrl) {
         match read_inbound_tcp_chunk(ctrl, &mut tcp_stream, &mut t_buf) {
@@ -60,7 +63,8 @@ pub(super) fn handle_local_stub_session(ctrl: &GdbBridgeController, mut tcp_stre
                         ctrl.sync_registers(cmd);
                     }
                     let regs_snapshot = ctrl.registers_snapshot();
-                    let reply_bytes = compute_mock_rsp_response_pure(cmd, &regs_snapshot);
+                    let reply_bytes =
+                        compute_mock_rsp_response_with_policy(cmd, &regs_snapshot, &mut nor_policy);
                     let reply_str = String::from_utf8_lossy(&reply_bytes).into_owned();
                     ctrl.record_telemetry("OUTBOUND", &reply_str);
                     if tcp_stream.write_all(&reply_bytes).is_err() {

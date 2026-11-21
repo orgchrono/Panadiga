@@ -3,6 +3,8 @@
  * @brief Domain models for Live Pico NOR Dump, 45-Sector BGO FTL Audit/Repair, and DAVIS CH0/CH1 IDE Probing.
  */
 
+import type { PreWriteGateReport } from './vault';
+
 export interface BridgeExitSummary {
   readonly rx_bytes: number;
   readonly tx_bytes: number;
@@ -35,7 +37,38 @@ export interface PicoEh55NorDumpRequest {
   readonly slice?: NorSliceKind;
   readonly customStartVaHex?: string;
   readonly customLenHex?: string;
-  readonly outputPath: string;
+  readonly outputPath?: string;
+}
+
+export interface PicoPanamon1CleanNvramRequest {
+  readonly portName: string;
+  readonly backupDir?: string;
+  readonly sessionId?: string;
+}
+
+export interface NvramCleanProgressEvent {
+  readonly port: string;
+  readonly stage: string;
+  readonly current: number;
+  readonly total: number;
+  readonly detail: string;
+}
+
+export interface PicoPanamon1CleanNvramResponse {
+  readonly backupPath: string;
+  readonly sha256Before: string;
+  readonly sha256After: string;
+  readonly erasedSectors: number;
+  readonly verifiedAllFf: boolean;
+  readonly bytesErased: number;
+  readonly emuGate?: PreWriteGateReport;
+  readonly nextStep: string;
+}
+
+export interface NorRepairExpressOutcome {
+  readonly mode: 'nvram_clean' | 'bgo_cow' | 'bgo_live';
+  readonly summaryPath: string;
+  readonly sha256: string;
 }
 
 export interface NorDumpProgressEvent {

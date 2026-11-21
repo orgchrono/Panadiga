@@ -40,6 +40,8 @@ import java.util.concurrent.TimeUnit
 private const val USB_PERMISSION_ACTION = "com.panasonic.diga.engineering.USB_PERMISSION"
 private const val RASPBERRY_PI_VID = 0x2E8A
 private const val PICO_BOOTSEL_PID = 0x0003
+private const val BLE_GATT_CHUNK_BYTES = 20
+private const val BLE_GATT_CHUNK_DELAY_MS = 20L
 
 private val NUS_SERVICE_UUID = UUID.fromString("6E400001-B5A3-F393-E0A9-E50E24DCCA9E")
 private val NUS_RX_CHAR_UUID = UUID.fromString("6E400002-B5A3-F393-E0A9-E50E24DCCA9E")
@@ -246,21 +248,24 @@ class AndroidPicoBridge(
 
             val buf = ByteArray(maxOf(64, inEp.maxPacketSize))
             val sb = StringBuilder()
-            val deadline = System.currentTimeMillis() + timeoutMs.coerceIn(400, 35000)
+            val deadline = System.currentTimeMillis() + timeoutMs.coerceIn(400, 125000)
             while (System.currentTimeMillis() < deadline) {
                 val n = conn.bulkTransfer(inEp, buf, buf.size, 250)
                 if (n > 0) {
                     sb.append(String(buf, 0, n, StandardCharsets.UTF_8))
-                    val text = sb.toString()
-                    if (text.contains("P7501>") || text.contains(": OK") || text.contains("PONG") || text.contains("[HANDSHAKE]")) {
+                    if (isWireReplyComplete(sb.toString())) {
                         break
                     }
-                } else if (sb.isNotEmpty()) {
-                    break
                 }
             }
+            val output = sb.toString().trim()
+            if (output.isEmpty()) {
+                outObj.put("ok", false)
+                outObj.put("output", "Timeout USB OTG aguardando resposta de '$command'.")
+                return outObj.toString()
+            }
             outObj.put("ok", true)
-            outObj.put("output", sb.toString().trim())
+            outObj.put("output", output)
             return outObj.toString()
         }
     }
@@ -375,27 +380,75 @@ class AndroidPicoBridge(
         }
         synchronized(bleRxBuffer) { bleRxBuffer.setLength(0) }
         val payload = (command.trim() + "\r\n").toByteArray(StandardCharsets.UTF_8)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            gatt.writeCharacteristic(rx, payload, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT)
-        } else {
-            @Suppress("DEPRECATION")
-            rx.value = payload
-            @Suppress("DEPRECATION")
-            gatt.writeCharacteristic(rx)
+        var offset = 0
+        while (offset < payload.size) {
+            val end = minOf(offset + BLE_GATT_CHUNK_BYTES, payload.size)
+            val chunk = payload.copyOfRange(offset, end)
+            val writeOk = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                gatt.writeCharacteristic(
+                    rx,
+                    chunk,
+                    BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+                ) == android.bluetooth.BluetoothStatusCodes.SUCCESS
+            } else {
+                @Suppress("DEPRECATION")
+                rx.value = chunk
+                @Suppress("DEPRECATION")
+                gatt.writeCharacteristic(rx)
+            }
+            if (!writeOk) {
+                outObj.put("ok", false)
+                outObj.put("output", "Falha GATT writeCharacteristic no envio de '$command'.")
+                return outObj.toString()
+            }
+            offset = end
+            if (offset < payload.size) {
+                Thread.sleep(BLE_GATT_CHUNK_DELAY_MS)
+            }
         }
 
-        val deadline = System.currentTimeMillis() + timeoutMs.coerceIn(500, 35000)
+        val deadline = System.currentTimeMillis() + timeoutMs.coerceIn(500, 125000)
         while (System.currentTimeMillis() < deadline) {
             val snap = synchronized(bleRxBuffer) { bleRxBuffer.toString() }
-            if (snap.contains("P7501>") || snap.contains(": OK") || snap.contains("PONG") || snap.contains("[HANDSHAKE]")) {
+            if (isWireReplyComplete(snap)) {
                 break
             }
             Thread.sleep(60)
         }
-        val output = synchronized(bleRxBuffer) { bleRxBuffer.toString().trim() }
-        outObj.put("ok", true)
+        val rawOutput = synchronized(bleRxBuffer) { bleRxBuffer.toString() }
+        val output = rawOutput.trim()
+        if (output.isEmpty()) {
+            outObj.put("ok", false)
+            outObj.put("output", "Timeout BLE NUS aguardando resposta de '$command'.")
+            return outObj.toString()
+        }
+        outObj.put("ok", isWireReplyComplete(rawOutput))
         outObj.put("output", output)
         return outObj.toString()
+    }
+
+    private val legacyCliStatusRegex = Regex(
+        "^[A-Z0-9_]+:\\s+(?:OK|ERROR|ERR|FAILED|OFFLINE|TIMEOUT|DONE)\\b"
+    )
+
+    private fun isWireReplyComplete(text: String): Boolean {
+        val trimmedEnd = text.trimEnd()
+        if (trimmedEnd.isEmpty()) return false
+        if (trimmedEnd.endsWith("PANADIGA>") || trimmedEnd.endsWith("P7501>")) return true
+        if (!text.endsWith("\n") && !text.endsWith("\r")) return false
+        val lines = text.lines()
+        if (lines.any { it.trimStart().startsWith("@P7501_RES ") }) {
+            return true
+        }
+        val hasStructuredFrames = lines.any { line ->
+            val t = line.trimStart()
+            t.startsWith("@P7501_") || t.startsWith("@PROG ") || t.startsWith("@EVT ")
+        }
+        if (hasStructuredFrames) return false
+        return lines.any { line ->
+            val t = line.trim()
+            t == "PONG" || legacyCliStatusRegex.containsMatchIn(t)
+        }
     }
 
     @SuppressLint("MissingPermission")

@@ -7,6 +7,7 @@ mod davis_ide;
 mod eh55_bgo;
 mod eh55_bgo_dto;
 mod eh55_bgo_repair;
+mod nvram_clean;
 mod telemetry;
 
 pub use capture::pico_capture_nvram_live;
@@ -14,6 +15,7 @@ pub use davis_ide::*;
 pub use eh55_bgo::*;
 pub use eh55_bgo_dto::*;
 pub use eh55_bgo_repair::*;
+pub use nvram_clean::*;
 pub use telemetry::{set_pico_telemetry_stream, start_port_mutation_observer};
 
 use serde::Serialize;

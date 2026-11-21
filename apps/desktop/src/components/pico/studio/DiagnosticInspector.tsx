@@ -13,6 +13,65 @@ export interface DiagnosticInspectorProps {
   onInspect: (item: PicoDiagnosticResult) => void;
 }
 
+type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'success' | 'warning';
+
+interface MetaBadgeItem {
+  readonly key: string;
+  readonly variant: BadgeVariant;
+  readonly label: string;
+}
+
+const DiagnosticMetaBadges: React.FC<{ activeResult: PicoDiagnosticResult }> = ({
+  activeResult,
+}) => {
+  const { t } = useTranslation();
+  const resIsOk =
+    activeResult.protocol_code === '0' || activeResult.protocol_code?.toUpperCase() === 'OK';
+  const resVariant: BadgeVariant = resIsOk ? 'success' : 'destructive';
+
+  const optionalBadges: ReadonlyArray<MetaBadgeItem> = [
+    ...(activeResult.vdd_volts !== null && activeResult.vdd_volts !== undefined
+      ? [{ key: 'vdd', variant: 'default' as const, label: t('pico.studio.vddBadge', { volts: activeResult.vdd_volts.toFixed(2) }) }]
+      : []),
+    ...(activeResult.detected_flash_mb
+      ? [{ key: 'flash', variant: 'success' as const, label: t('pico.studio.flashBadge', { mb: activeResult.detected_flash_mb }) }]
+      : []),
+    ...(activeResult.xreset_rise_us
+      ? [{ key: 'rise', variant: 'secondary' as const, label: t('pico.studio.xresetRisePrefix', { value: activeResult.xreset_rise_us }) }]
+      : []),
+    ...(activeResult.captured_bytes !== null && activeResult.captured_bytes !== undefined
+      ? [{ key: 'cap', variant: 'secondary' as const, label: t('pico.studio.capturedBytesSuffix', { bytes: activeResult.captured_bytes }) }]
+      : []),
+    ...(activeResult.ident_model
+      ? [{ key: 'model', variant: 'default' as const, label: t('pico.studio.modelBadge', { model: activeResult.ident_model }) }]
+      : []),
+    ...(activeResult.ident_flash
+      ? [{ key: 'chip', variant: 'secondary' as const, label: t('pico.studio.flashChipBadge', { chip: activeResult.ident_flash }) }]
+      : []),
+    ...(activeResult.ident_loader
+      ? [{ key: 'loader', variant: 'secondary' as const, label: t('pico.studio.loaderBadge', { loader: activeResult.ident_loader }) }]
+      : []),
+    ...(activeResult.protocol_code
+      ? [{ key: 'res', variant: resVariant, label: t('pico.studio.resCodeBadge', { code: activeResult.protocol_code }) }]
+      : []),
+  ];
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <Badge variant={activeResult.success ? 'success' : 'destructive'}>
+        {activeResult.success ? t('pico.studio.statusOk') : t('pico.studio.statusFail')}
+      </Badge>
+      <code className="text-xs text-cyan-300 font-bold">{activeResult.raw_command}</code>
+      <Badge variant="secondary">{activeResult.elapsed_ms} ms</Badge>
+      {optionalBadges.map((b) => (
+        <Badge key={b.key} variant={b.variant}>
+          {b.label}
+        </Badge>
+      ))}
+    </div>
+  );
+};
+
 export const DiagnosticInspector: React.FC<DiagnosticInspectorProps> = ({
   activeResult,
   history,
@@ -25,6 +84,15 @@ export const DiagnosticInspector: React.FC<DiagnosticInspectorProps> = ({
   );
   const keyedFindings = activeResult?.findings
     ? withUniqueKeys(activeResult.findings, (f) => `${f.code}-${f.summary}`)
+    : [];
+  const wireStreamItems = activeResult
+    ? withUniqueKeys(
+        [
+          ...(activeResult.progress_steps ?? []).map((s) => `@PROG ${s}`),
+          ...(activeResult.wire_events ?? []).map((e) => `@EVT ${e}`),
+        ],
+        (item) => item,
+      )
     : [];
 
   return (
@@ -65,35 +133,27 @@ export const DiagnosticInspector: React.FC<DiagnosticInspectorProps> = ({
         />
       ) : (
         <div className="space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant={activeResult.success ? 'success' : 'destructive'}>
-              {activeResult.success ? t('pico.studio.statusOk') : t('pico.studio.statusFail')}
-            </Badge>
-            <code className="text-xs text-cyan-300 font-bold">{activeResult.raw_command}</code>
-            <Badge variant="secondary">{activeResult.elapsed_ms} ms</Badge>
-            {activeResult.vdd_volts !== null && activeResult.vdd_volts !== undefined && (
-              <Badge variant="default">
-                {t('pico.studio.vddBadge', { volts: activeResult.vdd_volts.toFixed(2) })}
-              </Badge>
-            )}
-            {activeResult.detected_flash_mb && (
-              <Badge variant="success">
-                {t('pico.studio.flashBadge', { mb: activeResult.detected_flash_mb })}
-              </Badge>
-            )}
-            {activeResult.xreset_rise_us && (
-              <Badge variant="secondary">
-                {t('pico.studio.xresetRisePrefix', { value: activeResult.xreset_rise_us })}
-              </Badge>
-            )}
-            {activeResult.captured_bytes !== null && activeResult.captured_bytes !== undefined && (
-              <Badge variant="secondary">
-                {t('pico.studio.capturedBytesSuffix', { bytes: activeResult.captured_bytes })}
-              </Badge>
-            )}
-          </div>
+          <DiagnosticMetaBadges activeResult={activeResult} />
 
           <DiagnosticResultTables result={activeResult} />
+
+          {wireStreamItems.length > 0 && (
+            <div
+              className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2 space-y-1"
+              data-testid="diagnostic-wire-events"
+            >
+              <div className="text-[10px] font-bold uppercase tracking-wider text-cyan-300">
+                {t('pico.studio.wireEventsTitle')}
+              </div>
+              <ul className="space-y-0.5 text-[11px] text-slate-300">
+                {wireStreamItems.map(({ item, key }) => (
+                  <li key={key} className="truncate">
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {keyedFindings.length > 0 && (
             <div className="space-y-1.5" data-testid="diagnostic-findings">

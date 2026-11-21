@@ -3,7 +3,7 @@
  * @brief Shared workbench, accessibility, toast, and shell telemetry domain types for Redux and UI.
  */
 
-export type WorkbenchExperienceMode = 'basic' | 'advanced';
+export type WorkbenchExperienceMode = 'express' | 'engineering';
 export type WorkbenchTheme = 'dark-lab' | 'high-contrast' | 'daylight-bench' | 'amber-crt';
 export type FontScaleMode = 'normal' | 'large';
 

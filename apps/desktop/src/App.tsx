@@ -6,6 +6,7 @@ import { HEADER_VIEW_Y_OFFSET_PX, VIEW_TRANSITION_DURATION_SEC } from './constan
 import { isAndroidCommanderEnabled } from './config/platform';
 import { Sidebar, MobileSidebarDrawer, type ViewKey } from './components/Sidebar';
 import { Header } from './components/Header';
+import { ExpressView } from './views/ExpressView';
 import { ErrorBoundary } from './components/ui/error-boundary';
 import {
   BottomConsoleDrawer,
@@ -88,6 +89,15 @@ const AppShell: React.FC = () => {
 
   const handleSelectView = useCallback((view: ViewKey) => dispatch(setCurrentView(view)), [dispatch]);
   const handleMobileNavChange = useCallback((open: boolean) => dispatch(setMobileNavOpen(open)), [dispatch]);
+  const handleEnterEngineering = useCallback(
+    (targetView?: ViewKey) => {
+      if (targetView) {
+        dispatch(setCurrentView(targetView));
+      }
+      setMode('engineering');
+    },
+    [dispatch, setMode],
+  );
 
   const manualsCountLabel = ssot ? `${ssot.indexed_manuals_count} PDFs` : 'SSOT';
   const viewTitles: Partial<Record<ViewKey, string>> = {
@@ -128,9 +138,21 @@ const AppShell: React.FC = () => {
     indexedManualsCount: ssot?.indexed_manuals_count ?? null,
   };
 
+  if (mode === 'express') {
+    return (
+      <MotionConfig reducedMotion={accessibility.reducedMotion ? 'always' : 'user'}>
+        <ExpressView onEnterEngineering={handleEnterEngineering} />
+        <ComplianceDialog open={complianceModalOpen} onOpenChange={setComplianceModalOpen} onAccept={acceptCompliance} />
+      </MotionConfig>
+    );
+  }
+
   return (
     <MotionConfig reducedMotion={accessibility.reducedMotion ? 'always' : 'user'}>
-      <div className="flex flex-col h-screen w-screen overflow-hidden bg-bench-950 text-slate-100 font-sans">
+      <div
+        data-testid="engineering-shell"
+        className="flex flex-col h-screen w-screen overflow-hidden bg-bench-950 text-slate-100 font-sans"
+      >
         <Header
           currentView={currentView}
           currentViewTitle={activeViewTitle}

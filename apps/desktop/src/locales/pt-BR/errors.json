@@ -30,7 +30,8 @@
       "gattSendFailed": "Falha no envio GATT NUS.",
       "channelNotConnected": "Canal BLE não conectado. Use Android BLE nativo ou Web Bluetooth compatível.",
       "channelUnavailableSend": "Canal BLE não conectado. Impossível enviar dados.",
-      "gattReplyFailed": "Falha na resposta BLE NUS."
+      "gattReplyFailed": "Falha na resposta BLE NUS.",
+      "nusTimeout": "Timeout BLE NUS ({{timeoutMs}} ms) aguardando resposta para '{{command}}'."
     },
     "nvram": {
       "usbOtgDumpFailed": "Falha no comando DUMP via Android USB-OTG.",
@@ -49,7 +50,8 @@
       "cowPatchSameFileBlocked": "Copy-on-Write obrigatório: o arquivo de saída não pode sobrescrever a origem.",
       "cowPatchSavedMsg": "Salvo em {{path}}",
       "cowPatchTitle": "Patch Copy-on-Write Aplicado",
-      "cowPatchFailedTitle": "Patch NVRAM Bloqueado / Falhou"
+      "cowPatchFailedTitle": "Patch NVRAM Bloqueado / Falhou",
+      "invalidOffset": "Offset NVRAM inválido: informe um inteiro u32 não-negativo em hex (ex: 0x0) ou decimal."
     },
     "pico": {
       "usbOtgNotConnected": "Dispositivo USB-OTG não conectado.",
@@ -154,7 +156,11 @@
       "frmVerifyTag": "Verificador FRM Unlock",
       "frmVerifyDone": "Container .FRM verificado",
       "frmPackTag": "Construtor FRM Unlock",
-      "frmPackDone": "Container unlock .FRM gerado"
+      "frmPackDone": "Container unlock .FRM gerado",
+      "sdTargetRequired": "Selecione um cartão SD alvo ou a geração do arquivo .img offline.",
+      "sdConfirmRequired": "Digite exatamente o token {{token}} antes de gravar o cartão SD físico.",
+      "sdFlashTag": "Criador SD FAT16B",
+      "sdFlashDone": "Cartão SD FAT16B (0x06) de recuperação verificado"
     },
     "erase": {
       "firstContactStart": "Iniciando Procedimento de 1º Contato (Backup Read-Only & Verificação de Integridade)...",
@@ -191,7 +197,9 @@
       "davisProbeFailed": "Falha na sonda hardware DAVIS IDE",
       "davisProbeComplete": "Sonda DAVIS IDE concluída",
       "copiedSha": "Digest SHA-256 copiado para a área de transferência",
-      "validationBlocked": "Pré-voo ou validação de formulário pendente"
+      "validationBlocked": "Pré-voo ou validação de formulário pendente",
+      "nvramPortRequired": "Selecione ou informe a porta serial do Pico (ex: COM10 / /dev/ttyACM0) antes de iniciar.",
+      "panamon1CleanDone": "NVRAM SA134..SA141 limpa (0xFF verificado)"
     }
   }
 }

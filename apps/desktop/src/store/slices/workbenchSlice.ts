@@ -39,20 +39,23 @@ export interface WorkbenchSliceState {
   readonly isLoading: boolean;
   readonly complianceAccepted: boolean;
   readonly complianceModalOpen: boolean;
+  readonly picoSafetySheetAcknowledged: boolean;
   readonly docks: WorkbenchDocksState;
 }
 
 export function createInitialWorkbenchState(): WorkbenchSliceState {
+  const initialMode = readInitialWorkbenchMode();
   const complianceAccepted = readInitialComplianceAccepted();
   return {
-    mode: readInitialWorkbenchMode(),
+    mode: initialMode,
     hudOpen: false,
     accessibility: readInitialAccessibility(),
     pipeline: DEFAULT_PIPELINE,
     runtimeSettings: readFallbackRuntimeSettings(),
     isLoading: false,
     complianceAccepted,
-    complianceModalOpen: !complianceAccepted,
+    complianceModalOpen: initialMode === 'engineering' && !complianceAccepted,
+    picoSafetySheetAcknowledged: false,
     docks: readInitialDocksState(),
   };
 }
@@ -62,12 +65,22 @@ const workbenchSlice = createSlice({
   initialState: createInitialWorkbenchState,
   reducers: {
     setMode(state, action: PayloadAction<WorkbenchExperienceMode>) {
-      return { ...state, mode: action.payload };
-    },
-    toggleMode(state) {
+      const nextMode = action.payload;
       return {
         ...state,
-        mode: state.mode === 'advanced' ? 'basic' : 'advanced',
+        mode: nextMode,
+        complianceModalOpen:
+          nextMode === 'engineering' ? !state.complianceAccepted : false,
+      };
+    },
+    toggleMode(state) {
+      const nextMode: WorkbenchExperienceMode =
+        state.mode === 'engineering' ? 'express' : 'engineering';
+      return {
+        ...state,
+        mode: nextMode,
+        complianceModalOpen:
+          nextMode === 'engineering' ? !state.complianceAccepted : false,
       };
     },
     setHudOpen(state, action: PayloadAction<boolean>) {
@@ -128,6 +141,9 @@ const workbenchSlice = createSlice({
     setComplianceModalOpen(state, action: PayloadAction<boolean>) {
       return { ...state, complianceModalOpen: action.payload };
     },
+    acknowledgePicoSafetySheet(state) {
+      return { ...state, picoSafetySheetAcknowledged: true };
+    },
     toggleLeftDock(state) {
       return { ...state, docks: { ...state.docks, leftOpen: !state.docks.leftOpen } };
     },
@@ -153,8 +169,9 @@ const workbenchSlice = createSlice({
     resetWorkbenchPreferences(state) {
       return {
         ...state,
-        mode: 'advanced',
+        mode: 'express',
         hudOpen: false,
+        complianceModalOpen: false,
         accessibility: DEFAULT_ACCESSIBILITY,
         docks: DEFAULT_DOCKS_STATE,
       };
@@ -177,6 +194,7 @@ export const {
   setRuntimeSettingsLoading,
   acceptCompliance,
   setComplianceModalOpen,
+  acknowledgePicoSafetySheet,
   toggleLeftDock,
   toggleRightDock,
   toggleBottomDock,

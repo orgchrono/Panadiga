@@ -97,7 +97,7 @@ export const HddStorageView: React.FC<{ onNavigate?: (view: ViewKey) => void }> 
         activeTab={activeTab}
         onSelectTab={setActiveTab}
         isAdvanced={isAdvanced}
-        onEnableAdvanced={() => setMode('advanced')}
+        onEnableAdvanced={() => setMode('engineering')}
         hasManifest={Boolean(manifest)}
       />
 

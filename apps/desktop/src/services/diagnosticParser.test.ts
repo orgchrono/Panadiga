@@ -59,7 +59,7 @@ describe('diagnosticParser & Hardware SSOT Consistency', () => {
   });
 
   it('marks FAILED or empty responses as unsuccessful', () => {
-    const errRes = parseDiagnosticOutput('HANDSHAKE', 'HANDSHAKE', '[HANDSHAKE] FAILED: DCSR 0xFFFFFFFF', 120);
+    const errRes = parseDiagnosticOutput('IDENTIFY', 'IDENTIFY', 'IDENTIFY: FAILED (Target offline)', 120);
     expect(errRes.success).toBe(false);
     expect(errRes.summary).toContain('FAILED');
   });
@@ -91,9 +91,9 @@ describe('diagnosticParser & Hardware SSOT Consistency', () => {
     expect(parsed.success).toBe(true);
 
     const errParsed = parseDiagnosticOutput(
-      'HANDSHAKE',
-      'HANDSHAKE',
-      '[HANDSHAKE] FAILED: DCSR=0xFFFFFFFF',
+      'IDENTIFY',
+      'IDENTIFY',
+      'IDENTIFY: FAILED (VDD=0.00V)',
       300,
     );
     expect(errParsed.success).toBe(false);
@@ -167,5 +167,47 @@ describe('diagnosticParser & Hardware SSOT Consistency', () => {
     expect(dump?.default_arg).toBe('0x807F0000 16');
     expect(dump?.arg_placeholder).toBe('0x807F0000 16');
     expect(drv?.arg_options[1]?.value).toBe('PASS 0x4d415453 0x48495441');
+  });
+
+  it('treats @P7501_RES as authoritative and extracts @P7501_IDENT, @PROG, and @EVT frames', () => {
+    const okRes = parseDiagnosticOutput(
+      'IDENTIFY',
+      'IDENTIFY',
+      '@P7501_IDENT vdd_mv=3295 nsw5v=1 loader="Loader ver0.61" flash=S29JL064H model=DMR-EH55\n@P7501_RES cmd=IDENTIFY status=OK code=0 elapsed_us=1800',
+      35,
+    );
+    expect(okRes.success).toBe(true);
+    expect(okRes.ident_model).toBe('DMR-EH55');
+    expect(okRes.ident_flash).toBe('S29JL064H');
+    expect(okRes.ident_loader).toBe('Loader ver0.61');
+    expect(okRes.detected_flash_mb).toBe(8);
+    expect(okRes.vdd_volts).toBeCloseTo(3.295, 3);
+    expect(okRes.protocol_code).toBe('0');
+    expect(okRes.protocol_elapsed_us).toBe(1800);
+
+    const errRes = parseDiagnosticOutput(
+      'JOB',
+      'JOB NVRAM_CLEAN CONFIRM',
+      '@PROG step=2/3 msg=WRITE_P2_VAULT_SLOT_1\n@EVT kind=M0KEEPALIVE state=AUTO_OFF reason=TARGET_UNPOWERED\n@P7501_RES cmd=JOB status=ERR code=E05 elapsed_us=412',
+      50,
+    );
+    expect(errRes.success).toBe(false);
+    expect(errRes.protocol_code).toBe('E05');
+    expect(errRes.progress_steps).toEqual(['2/3 WRITE_P2_VAULT_SLOT_1']);
+    expect(errRes.wire_events).toEqual(['M0KEEPALIVE (state=AUTO_OFF reason=TARGET_UNPOWERED)']);
+  });
+
+  it('surfaces SSOT-synced FAT_FAIL, PANAMON_ACTIVE, and HUNG_U99 findings', () => {
+    const raw = [
+      'FAT Mount failed(-10010)',
+      'Main hung-up time changed 255[s].',
+      'PANAMON1>',
+      'DIAGWATCH: OK',
+    ].join('\n');
+    const parsed = parseDiagnosticOutput('DIAGWATCH', 'DIAGWATCH 6000 JIG NONE', raw, 6000);
+    const codes = (parsed.findings ?? []).map(f => f.code);
+    expect(codes).toContain('FAT_FAIL');
+    expect(codes).toContain('PANAMON_ACTIVE');
+    expect(codes).toContain('HUNG_U99');
   });
 });

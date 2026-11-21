@@ -8,3 +8,4 @@ export * from './system';
 export * from './rag';
 export * from './unbrick';
 export * from './pipelines';
+export * from './vault';

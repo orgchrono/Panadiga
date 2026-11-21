@@ -14,6 +14,7 @@ import {
   parsePincheckRows,
   parseTransitionRows,
   parseVddVolts,
+  parseWireProtocolSummary,
 } from './lineParsers';
 
 export { extractTelemetryFindings, parseP7501DumpBytes };
@@ -48,7 +49,12 @@ export function parseDiagnosticOutput(
   const bracketErrPrefix = `[${normLower}] error:`;
 
   const hasExplicitOk = linesTrimmed.some(
-    line => line.startsWith(cmdOkPrefix) || (normLower === 'scan' && line === 'scan: completed'),
+    line =>
+      line.startsWith(cmdOkPrefix) ||
+      (normLower === 'scan' && line === 'scan: completed') ||
+      (normLower === 'ping' && (line === 'pong' || line.startsWith('pong '))) ||
+      ((normLower === 'status' || normLower === 'vdd') && line.startsWith('vdd:')) ||
+      (normLower === 'wdt' && (line.startsWith('wdt armed') || line.startsWith('wdt disarmed'))),
   );
   const hasPicoFatal = linesTrimmed.some(
     line =>
@@ -59,7 +65,8 @@ export function parseDiagnosticOutput(
       line.startsWith('unknown command:'),
   );
 
-  const failed =
+  const wire = parseWireProtocolSummary(rawOutput);
+  const legacyFailed =
     rawOutput.trim().length === 0 ||
     hasPicoFatal ||
     (!hasExplicitOk &&
@@ -67,6 +74,10 @@ export function parseDiagnosticOutput(
         lower.includes('error') ||
         lower.includes('abort') ||
         lower.includes('safety interlock')));
+  const failed =
+    wire.resStatus !== null
+      ? !(wire.resStatus.toUpperCase() === 'OK' && (wire.resCode === null || wire.resCode === '0' || wire.resCode.toUpperCase() === 'OK'))
+      : legacyFailed;
 
   const pinData = norm === 'PINCHECK' ? parsePincheckRows(rawOutput) : { rows: [], riseTime: null };
   const transitionRows = parseTransitionRows(rawOutput);
@@ -75,8 +86,9 @@ export function parseDiagnosticOutput(
     .split(/\r?\n/)
     .map(l => l.trim())
     .filter(l => l.length > 0 && !l.startsWith('PANADIGA>') && !l.startsWith('P7501>'));
+  const displayLines = meaningfulLines.filter(l => !l.startsWith('@P7501_RES '));
 
-  const vddVolts = parseVddVolts(rawOutput) ?? resolvePincheckVdd(pinData.rows);
+  const vddVolts = parseVddVolts(rawOutput) ?? resolvePincheckVdd(pinData.rows) ?? wire.identVddVolts;
 
   return {
     command_id: norm,
@@ -84,16 +96,24 @@ export function parseDiagnosticOutput(
     success: !failed,
     elapsed_ms: elapsedMs,
     summary:
+      displayLines[displayLines.length - 1] ??
       meaningfulLines[meaningfulLines.length - 1] ??
       `Sem resposta no barramento para '${rawCommand}'`,
     raw_output: rawOutput,
     vdd_volts: vddVolts,
-    detected_flash_mb: parseFlashMb(rawOutput),
+    detected_flash_mb: parseFlashMb(rawOutput) ?? wire.identFlashMb,
     xreset_rise_us: pinData.riseTime,
     pincheck_rows: pinData.rows,
     transition_rows: transitionRows,
     dump_rows: dumpRows,
     captured_bytes: parseCapturedBytes(rawOutput),
     findings: extractTelemetryFindings(rawOutput),
+    protocol_code: wire.resCode,
+    protocol_elapsed_us: wire.resElapsedUs,
+    ident_model: wire.identModel,
+    ident_flash: wire.identFlash,
+    ident_loader: wire.identLoader,
+    progress_steps: wire.progressSteps,
+    wire_events: wire.wireEvents,
   };
 }

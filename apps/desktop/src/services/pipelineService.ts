@@ -17,11 +17,14 @@ import type {
   HddFlashProgressEvent,
   InspectRegionCalibrationRequest,
   NorDumpProgressEvent,
+  NvramCleanProgressEvent,
   PicoEh55BgoAuditRequest,
   PicoEh55BgoRepairRequest,
   PicoEh55BgoRepairResponse,
   PicoEh55NorDumpRequest,
   PicoEh55NorDumpResponse,
+  PicoPanamon1CleanNvramRequest,
+  PicoPanamon1CleanNvramResponse,
   PicoProbeDavisIdeRequest,
   PicoProbeDavisIdeResponse,
   SafeTargetDiskInfo,
@@ -77,6 +80,11 @@ export const picoProbeDavisIde = (
 ): Promise<PicoProbeDavisIdeResponse> =>
   invokeCommand<PicoProbeDavisIdeResponse>('pico_probe_davis_ide_command', { request });
 
+export const picoPanamon1CleanNvram = (
+  request: PicoPanamon1CleanNvramRequest,
+): Promise<PicoPanamon1CleanNvramResponse> =>
+  invokeCommand<PicoPanamon1CleanNvramResponse>('pico_panamon1_clean_nvram_command', { request });
+
 export const subscribeHddFlashProgress = (
   handler: (payload: HddFlashProgressEvent) => void,
 ): Promise<() => void> => listenEvent('hdd://flash-progress', handler);
@@ -84,6 +92,10 @@ export const subscribeHddFlashProgress = (
 export const subscribeNorDumpProgress = (
   handler: (payload: NorDumpProgressEvent) => void,
 ): Promise<() => void> => listenEvent('nor://dump-progress', handler);
+
+export const subscribeNvramCleanProgress = (
+  handler: (payload: NvramCleanProgressEvent) => void,
+): Promise<() => void> => listenEvent('nvram://clean-progress', handler);
 
 export const subscribeBgoRepairProgress = (
   handler: (payload: BgoRepairProgressEvent) => void,

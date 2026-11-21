@@ -369,7 +369,7 @@ fn eh55_nor_dump_bgo_audit_repair_and_davis_probe_enforce_guards_with_mock() {
             slice: Some("nvram".into()),
             custom_start_va_hex: None,
             custom_len_hex: None,
-            output_path: dir.join("nvram.bin").to_string_lossy().into(),
+            output_path: Some(dir.join("nvram.bin").to_string_lossy().into()),
         },
         |ev| dump_events.push(ev),
     )

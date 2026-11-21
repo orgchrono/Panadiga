@@ -214,6 +214,8 @@ export interface FrmModuleExtractionReport {
   modules: ExtractedFrmModuleReport[];
 }
 
+import type { PreWriteGateReport } from './vault';
+
 export interface UnbrickHardwareFact {
   topic: string;
   verdict: string;
@@ -256,3 +258,79 @@ export * from './matshita';
 
 export type BgoMode = 'auto_format' | 'bypass' | 'uart_monitor' | 'factory';
 export type MainPassthroughMode = 'av_passthrough' | 'factory_original';
+
+export type SdCreatorStage =
+  | 'synthesize'
+  | 'lockout_verify'
+  | 'delete_layout'
+  | 'write_partition'
+  | 'readback_verify'
+  | 'inspect_fat16';
+
+export interface SdFlashProgressEvent {
+  readonly target: string;
+  readonly stage: SdCreatorStage;
+  readonly bytesDone: number;
+  readonly bytesTotal: number;
+  readonly detail: string;
+}
+
+export interface SdCardAdvisory {
+  readonly is_sdxc_warning: boolean;
+  readonly card_class: string;
+  readonly recommendation: string;
+  readonly detail: string;
+}
+
+export interface SdTargetDriveInfo {
+  readonly device_path: string;
+  readonly display_name: string;
+  readonly size_bytes: number;
+  readonly size_gb: number;
+  readonly drive_role: string;
+  readonly bus_type: string;
+  readonly removable: boolean;
+  readonly safe_sd_target: boolean;
+  readonly expected_confirm_token: string;
+  readonly advisory: SdCardAdvisory;
+  readonly block_reason: string | null;
+}
+
+export interface Fat16PlacedFileReport {
+  readonly name_8_3: string;
+  readonly size_bytes: number;
+  readonly first_cluster: number;
+  readonly sector_count: number;
+  readonly sha256: string;
+}
+
+export interface SdCardCreatorReport {
+  readonly target: string;
+  readonly target_kind: string;
+  readonly model: string;
+  readonly volume_mb: number;
+  readonly cleanroom_only: boolean;
+  readonly bytes_written: number;
+  readonly image_sha256: string;
+  readonly advisory: SdCardAdvisory;
+  readonly files: readonly Fat16PlacedFileReport[];
+  readonly emu_gate: PreWriteGateReport;
+  readonly readback_verified: boolean;
+  readonly inspection: SdDiskInspectionReport;
+  readonly next_steps: readonly string[];
+}
+
+export interface FlashSdRecoveryCardRequest {
+  readonly devicePath?: string;
+  readonly confirmToken?: string;
+  readonly outputImagePath?: string;
+  readonly model?: string;
+  readonly volumeMb?: number;
+  readonly loaderProfile?: SdLoaderProfile;
+  readonly digadiagPath?: string;
+  readonly panaSdPath?: string;
+  readonly panaDvdPath?: string;
+  readonly includePanaSd?: boolean;
+  readonly cleanroomOnly?: boolean;
+  readonly sessionId?: string;
+}

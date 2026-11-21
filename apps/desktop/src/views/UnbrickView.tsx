@@ -62,6 +62,8 @@ export const UnbrickView: React.FC = () => {
     refreshSdDrives,
     autoSdDiskTarget,
     autoSdMountDir,
+    sdFat16Image,
+    createFat16Image,
   } = useUnbrickViewModel();
 
   const data = workbench.data;
@@ -154,6 +156,11 @@ export const UnbrickView: React.FC = () => {
                   onRefreshSdDrives={() => void refreshSdDrives()}
                   autoSdDiskTarget={autoSdDiskTarget}
                   autoSdMountDir={autoSdMountDir}
+                  fat16Loading={sdFat16Image.loading}
+                  fat16Report={sdFat16Image.data}
+                  fat16Error={sdFat16Image.error}
+                  onCreateFat16Image={createFat16Image}
+                  hardenVm={tbcSd}
                 />
 
                 {isAdvanced && (
@@ -172,7 +179,7 @@ export const UnbrickView: React.FC = () => {
                   />
                 )}
               </div>
-              <TbcLabAndSdHardenPipeline vm={tbcSd} />
+              <TbcLabAndSdHardenPipeline vm={tbcSd} hideSdHardenSection />
             </TabsContent>
 
             <TabsContent value="calibration-region">
@@ -196,7 +203,7 @@ export const UnbrickView: React.FC = () => {
               ) : (
                 <div className="rounded-xl bg-bench-900/70 border border-slate-800 px-4 py-3 flex flex-wrap items-center justify-between gap-3 text-xs">
                   <span className="text-slate-400 font-sans">{t('unbrick.basicModeBanner')}</span>
-                  <Button type="button" variant="outline" size="sm" onClick={() => setMode('advanced')} className="gap-1.5 text-xs">
+                  <Button type="button" variant="outline" size="sm" onClick={() => setMode('engineering')} className="gap-1.5 text-xs">
                     <Wrench className="w-3.5 h-3.5 text-cyan-400" />
                     <span>{t('unbrick.revealAdvancedBtn')}</span>
                   </Button>

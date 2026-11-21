@@ -1,10 +1,12 @@
 import { test, expect } from '@playwright/test';
 import { installMockIpcBridge } from './fixtures/mockIpcBridge';
+import { enterEngineeringMode } from './fixtures/workbenchHelpers';
 
 test.describe('PANA_DVD / PANA__SD FRM Decrypted TOC & Packager E2E', () => {
   test.beforeEach(async ({ page }) => {
     await installMockIpcBridge(page);
     await page.goto('/');
+    await enterEngineeringMode(page);
     await page.click('button[data-testid="nav-frmcrypto"]');
     await expect(page.locator('[data-testid="app-header"]')).toHaveAttribute('data-view', 'frmcrypto');
   });

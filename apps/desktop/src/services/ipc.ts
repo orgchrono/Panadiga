@@ -7,14 +7,17 @@
 import { isTauri } from '@tauri-apps/api/core';
 import type {
   BgoRepairProgressEvent,
+  DvdBurnProgressEvent,
   HddFlashProgressEvent,
   LiveNvramCaptureEvent,
   NorDumpProgressEvent,
+  NvramCleanProgressEvent,
   PicoDeviceStatus,
   PicoDiagnosticResult,
   PicoProbeDavisIdeResponse,
   ReactiveSerialEvent,
   Sc0BridgeDataEvent,
+  SdFlashProgressEvent,
 } from '@/models';
 import { translate } from '@/i18n/useTranslation';
 import { logger } from '@/utils/logger';
@@ -25,8 +28,11 @@ export type { PanadigaTestIpcBridge };
 export interface PanadigaEventMap {
   readonly 'unbrick://completed': boolean;
   readonly 'nvram://cleaned': boolean;
+  readonly 'nvram://clean-progress': NvramCleanProgressEvent;
   readonly 'hdd://inspected': boolean;
   readonly 'hdd://flash-progress': HddFlashProgressEvent;
+  readonly 'sd://flash-progress': SdFlashProgressEvent;
+  readonly 'dvd://burn-progress': DvdBurnProgressEvent;
   readonly 'nor://dump-progress': NorDumpProgressEvent;
   readonly 'bgo://repair-progress': BgoRepairProgressEvent;
   readonly 'davis://probe-result': PicoProbeDavisIdeResponse;
@@ -96,8 +102,11 @@ function createLocalEventBus() {
   const registry: EventListenerRegistry = {
     'unbrick://completed': new Set(),
     'nvram://cleaned': new Set(),
+    'nvram://clean-progress': new Set(),
     'hdd://inspected': new Set(),
     'hdd://flash-progress': new Set(),
+    'sd://flash-progress': new Set(),
+    'dvd://burn-progress': new Set(),
     'nor://dump-progress': new Set(),
     'bgo://repair-progress': new Set(),
     'davis://probe-result': new Set(),

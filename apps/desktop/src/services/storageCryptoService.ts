@@ -34,7 +34,7 @@ export const cleanNvramSurgical = (): Promise<NvramCleanReport> =>
 export const patchNvramOffset = (params: {
   inputPath: string;
   outputPath: string;
-  nvramOffset: string;
+  nvramOffset: number;
   patchHex: string;
 }): Promise<NvramCleanReport> =>
   invokeCommand<NvramCleanReport>('patch_nvram_command', params);

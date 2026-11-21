@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { CheckCircle2, Disc3, HardDriveDownload, Loader2 } from 'lucide-react';
 import type {
+  SdCardCreatorReport,
   SdUnbrickKitReport,
   SdUnbrickKitRequestDto,
 } from '@/models';
@@ -18,6 +19,8 @@ import {
   Input,
 } from '@/components/ui';
 import { useTranslation } from '@/i18n/useTranslation';
+import { SdHardenSection } from './SdHardenSection';
+import type { TbcSdPipelineVm } from './TbcLabAndSdHardenPipeline';
 import {
   type BgoMode,
   buildSdKitRequestPayload,
@@ -29,6 +32,63 @@ import {
 import { SdKitProfileControls } from './SdKitProfileControls';
 import { SdVerificationPanel } from './SdVerificationPanel';
 
+interface SdFat16ResultBannerProps {
+  readonly fat16Error: string | null;
+  readonly fat16Report: SdCardCreatorReport | null;
+  readonly kitError: string | null;
+  readonly kitResult: SdUnbrickKitReport | null;
+  readonly kitSuccess: string | null;
+}
+
+const SdFat16ResultBanner: React.FC<SdFat16ResultBannerProps> = ({
+  fat16Error,
+  fat16Report,
+  kitError,
+  kitResult,
+  kitSuccess,
+}) => {
+  const { t } = useTranslation();
+  return (
+    <>
+      {fat16Error && (
+        <Alert variant="destructive">
+          <AlertDescription>{fat16Error}</AlertDescription>
+        </Alert>
+      )}
+      {fat16Report && (
+        <Alert variant="success" data-testid="unbrick-sd-fat16-result">
+          <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+          <div className="space-y-0.5 min-w-0">
+            <AlertTitle>{t('express.sdMission.successTitle')}</AlertTitle>
+            <AlertDescription className="font-mono text-[11px] break-all">
+              {fat16Report.target} • {t('express.sdMission.badgeFat16')} • SHA-256:{' '}
+              {fat16Report.image_sha256}
+            </AlertDescription>
+          </div>
+        </Alert>
+      )}
+      {kitError && (
+        <Alert variant="destructive">
+          <AlertTitle>{t('unbrick.sdKit.errorTitle')}</AlertTitle>
+          <AlertDescription>{kitError}</AlertDescription>
+        </Alert>
+      )}
+      {kitResult && (
+        <Alert variant="success">
+          <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+          <div className="space-y-1 min-w-0">
+            <AlertTitle>{kitSuccess ?? t('unbrick.sdKit.successTitle')}</AlertTitle>
+            <AlertDescription className="font-mono text-[11px] break-all">
+              DIGADIAG: {kitResult.digadiag_path} ({kitResult.bgo_mode_applied})
+              {kitResult.pana_sd_path && ` | PANA__SD: ${kitResult.pana_sd_path}`}
+            </AlertDescription>
+          </div>
+        </Alert>
+      )}
+    </>
+  );
+};
+
 interface SdKitBuilderCardProps extends SdDiskVerificationProps {
   discoveredPanaDvd: string | null;
   discoveredSdDir: string | null;
@@ -36,6 +96,15 @@ interface SdKitBuilderCardProps extends SdDiskVerificationProps {
   kitResult: SdUnbrickKitReport | null;
   kitError: string | null;
   onBuildKit: (request: SdUnbrickKitRequestDto) => Promise<SdUnbrickKitReport | null>;
+  fat16Loading?: boolean;
+  fat16Report?: SdCardCreatorReport | null;
+  fat16Error?: string | null;
+  onCreateFat16Image?: (params: {
+    panaDvdPath?: string;
+    includePanaSd?: boolean;
+    loaderProfile?: SdLoaderProfile;
+  }) => Promise<SdCardCreatorReport | null>;
+  hardenVm?: TbcSdPipelineVm;
 }
 
 export const SdKitBuilderCard: React.FC<SdKitBuilderCardProps> = ({
@@ -60,6 +129,11 @@ export const SdKitBuilderCard: React.FC<SdKitBuilderCardProps> = ({
   onRefreshSdDrives,
   autoSdDiskTarget,
   autoSdMountDir,
+  fat16Loading = false,
+  fat16Report = null,
+  fat16Error = null,
+  onCreateFat16Image,
+  hardenVm,
 }) => {
   const { t } = useTranslation();
   const [outputDir, setOutputDir] = useState('firmware_and_images/sd_unbrick_kit');
@@ -132,6 +206,7 @@ export const SdKitBuilderCard: React.FC<SdKitBuilderCardProps> = ({
                 aria-describedby={outDirError ? 'sd-kit-outdir-err' : undefined}
                 onChange={e => {
                   setOutputDir(e.target.value);
+                  hardenVm?.setSdOutputDir(e.target.value);
                   if (outDirError) setOutDirError(null);
                 }}
                 placeholder="firmware_and_images/sd_unbrick_kit"
@@ -150,7 +225,10 @@ export const SdKitBuilderCard: React.FC<SdKitBuilderCardProps> = ({
               <Input
                 id="sd-kit-pana-dvd"
                 value={panaDvdPath}
-                onChange={e => setEditedPanaDvd(e.target.value)}
+                onChange={e => {
+                  setEditedPanaDvd(e.target.value);
+                  hardenVm?.setPanaDvdPath(e.target.value);
+                }}
                 placeholder="firmware_and_images/PANA_DVD.FRM"
               />
             </div>
@@ -169,42 +247,57 @@ export const SdKitBuilderCard: React.FC<SdKitBuilderCardProps> = ({
             onChangeUnlockHddDynamic={setUnlockHddDynamic}
           />
 
-          <Button
-            type="submit"
-            data-testid="sd-kit-submit-btn"
-            variant="emerald"
-            size="sm"
-            disabled={kitLoading}
-            className="w-full sm:w-auto"
-          >
-            {kitLoading ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
-            ) : (
-              <Disc3 className="w-3.5 h-3.5 mr-1.5" />
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="submit"
+              data-testid="sd-kit-submit-btn"
+              variant="emerald"
+              size="sm"
+              disabled={kitLoading}
+              className="w-full sm:w-auto"
+            >
+              {kitLoading ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+              ) : (
+                <Disc3 className="w-3.5 h-3.5 mr-1.5" />
+              )}
+              <span>{kitLoading ? t('unbrick.sdKit.building') : t('unbrick.sdKit.submit')}</span>
+            </Button>
+
+            {onCreateFat16Image && (
+              <Button
+                type="button"
+                data-testid="unbrick-sd-fat16-img-btn"
+                variant="outline"
+                size="sm"
+                disabled={fat16Loading}
+                onClick={() =>
+                  void onCreateFat16Image({
+                    panaDvdPath,
+                    includePanaSd,
+                    loaderProfile,
+                  })
+                }
+                className="gap-1.5 border-cyan-500/40 text-cyan-200"
+              >
+                {fat16Loading ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <HardDriveDownload className="w-3.5 h-3.5" />
+                )}
+                <span>{t('express.sdMission.createBtn')}</span>
+              </Button>
             )}
-            <span>{kitLoading ? t('unbrick.sdKit.building') : t('unbrick.sdKit.submit')}</span>
-          </Button>
+          </div>
         </form>
 
-        {kitError && (
-          <Alert variant="destructive">
-            <AlertTitle>{t('unbrick.sdKit.errorTitle')}</AlertTitle>
-            <AlertDescription>{kitError}</AlertDescription>
-          </Alert>
-        )}
-
-        {kitResult && (
-          <Alert variant="success">
-            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
-            <div className="space-y-1 min-w-0">
-              <AlertTitle>{success ?? t('unbrick.sdKit.successTitle')}</AlertTitle>
-              <AlertDescription className="font-mono text-[11px] break-all">
-                DIGADIAG: {kitResult.digadiag_path} ({kitResult.bgo_mode_applied})
-                {kitResult.pana_sd_path && ` | PANA__SD: ${kitResult.pana_sd_path}`}
-              </AlertDescription>
-            </div>
-          </Alert>
-        )}
+        <SdFat16ResultBanner
+          fat16Error={fat16Error}
+          fat16Report={fat16Report}
+          kitError={kitError}
+          kitResult={kitResult}
+          kitSuccess={success}
+        />
 
         <SdVerificationPanel
           verifyDir={verifyDir}
@@ -225,6 +318,8 @@ export const SdKitBuilderCard: React.FC<SdKitBuilderCardProps> = ({
           autoSdDiskTarget={autoSdDiskTarget}
           autoSdMountDir={autoSdMountDir}
         />
+
+        {hardenVm && <SdHardenSection {...hardenVm} hideSharedInputs />}
       </CardContent>
     </Card>
   );

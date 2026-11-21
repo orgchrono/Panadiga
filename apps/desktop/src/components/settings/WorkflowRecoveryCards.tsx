@@ -97,16 +97,16 @@ export const WorkflowRecoveryCards: React.FC<WorkflowRecoveryCardsProps> = ({
               <Button
                 type="button"
                 size="sm"
-                variant={mode === 'basic' ? 'emerald' : 'outline'}
-                onClick={() => onSetMode('basic')}
+                variant={mode === 'express' ? 'emerald' : 'outline'}
+                onClick={() => onSetMode('express')}
               >
                 {t('settings.workflow.basicMode')}
               </Button>
               <Button
                 type="button"
                 size="sm"
-                variant={mode === 'advanced' ? 'default' : 'outline'}
-                onClick={() => onSetMode('advanced')}
+                variant={mode === 'engineering' ? 'default' : 'outline'}
+                onClick={() => onSetMode('engineering')}
               >
                 {t('settings.workflow.advancedMode')}
               </Button>

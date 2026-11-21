@@ -31,7 +31,12 @@ import {
   enqueuePicoSerialLine,
   getPicoSessionSnapshot,
 } from './picoSessionBridge';
-import { STORAGE_COMPLIANCE_KEY, STORAGE_DOCKS_KEY } from './storage';
+import {
+  readInitialWorkbenchMode,
+  STORAGE_COMPLIANCE_KEY,
+  STORAGE_DOCKS_KEY,
+  STORAGE_MODE_KEY,
+} from './storage';
 import type { PicoDiagnosticResult } from '@/models';
 import { clearToasts, dismissToast, enqueueToast } from './slices/toastSlice';
 import { clearLiveCapture, recordLiveCapture } from './slices/nvramCaptureSlice';
@@ -83,11 +88,19 @@ describe('Panadiga Redux Store Architecture', () => {
     expect(testStore.getState().shell.ssot?.pico_commands.length).toBeGreaterThanOrEqual(25);
   });
 
-  it('persists workbench accessibility settings and resets storage cleanly', () => {
+  it('defaults to express mode, migrates legacy basic/advanced keys, and persists preferences cleanly', () => {
+    window.localStorage.setItem(STORAGE_MODE_KEY, 'basic');
+    expect(readInitialWorkbenchMode()).toBe('express');
+    window.localStorage.setItem(STORAGE_MODE_KEY, 'advanced');
+    expect(readInitialWorkbenchMode()).toBe('engineering');
+    window.localStorage.removeItem(STORAGE_MODE_KEY);
+    expect(readInitialWorkbenchMode()).toBe('express');
+
     const testStore = createAppStore();
+    expect(testStore.getState().workbench.mode).toBe('express');
 
     testStore.dispatch(toggleMode());
-    expect(testStore.getState().workbench.mode).toBe('basic');
+    expect(testStore.getState().workbench.mode).toBe('engineering');
     testStore.dispatch(toggleHud());
     expect(testStore.getState().workbench.hudOpen).toBe(true);
     testStore.dispatch(setTheme('high-contrast'));
@@ -97,7 +110,7 @@ describe('Panadiga Redux Store Architecture', () => {
     expect(testStore.getState().workbench.pipeline.nvramCleaned).toBe(true);
 
     testStore.dispatch(resetWorkbenchPreferences());
-    expect(testStore.getState().workbench.mode).toBe('advanced');
+    expect(testStore.getState().workbench.mode).toBe('express');
     expect(testStore.getState().workbench.accessibility.theme).toBe('dark-lab');
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark-lab');
   });
@@ -132,11 +145,16 @@ describe('Panadiga Redux Store Architecture', () => {
     expect(testStore.getState().nvramCapture.latestCapture).toBeNull();
   });
 
-  it('requires initial compliance acknowledgment and persists acceptance across fresh stores', () => {
+  it('keeps Express launch unblocked and triggers compliance gate when entering Engineering mode', () => {
     const initialStore = createAppStore();
+    expect(initialStore.getState().workbench.mode).toBe('express');
     expect(initialStore.getState().workbench.complianceAccepted).toBe(false);
-    expect(initialStore.getState().workbench.complianceModalOpen).toBe(true);
+    expect(initialStore.getState().workbench.complianceModalOpen).toBe(false);
     expect(window.localStorage.getItem(STORAGE_COMPLIANCE_KEY)).toBeNull();
+
+    initialStore.dispatch(toggleMode());
+    expect(initialStore.getState().workbench.mode).toBe('engineering');
+    expect(initialStore.getState().workbench.complianceModalOpen).toBe(true);
 
     initialStore.dispatch(acceptCompliance());
     expect(initialStore.getState().workbench.complianceAccepted).toBe(true);
