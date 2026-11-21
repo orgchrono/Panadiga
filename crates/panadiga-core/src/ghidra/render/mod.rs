@@ -4,10 +4,12 @@ mod audit_script;
 mod core_scripts;
 mod decompile_fix_script;
 mod trap_resolvers;
+mod zero_undef_pipeline;
 
 pub use audit_script::generate_ghidra_auto_unbrick_audit;
 pub use core_scripts::{generate_ghidra_memory_map, generate_ghidra_symbols};
 pub use decompile_fix_script::generate_ghidra_mn103_fix_decompilation;
+pub use zero_undef_pipeline::generate_ghidra_zero_undef_pipeline;
 
 use super::specs::{AUDIT_KEYWORDS, LabeledAddrSpec, MemoryRegionSpec, SymbolSpec};
 use std::fmt::Write as _;
@@ -139,5 +141,8 @@ mod tests {
             assert!(!script.contains("from pathlib import"));
             assert!(!script.contains("0xFFFFFFFFL"));
         }
+        let pipe_py = generate_ghidra_zero_undef_pipeline();
+        assert!(pipe_py.contains("ghidra_ssot_maps.json"));
+        assert!(pipe_py.contains("pass4_program"));
     }
 }

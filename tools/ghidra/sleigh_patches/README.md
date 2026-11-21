@@ -57,3 +57,50 @@ Before sweeping orphan code islands, explicitly type non-code regions so linear 
 2. Run a read-only post-audit verifying for each of the 6 binaries:
    - `undefined_code_bytes == 0` (every initialized byte is either a decoded instruction, typed data/literal/padding, or an explicitly bookmarked Trap #4 mid-instruction alias),
    - `mn_todo_calls == 0` across all core bootloader, BGO FTL, DAVIS IDE, SDDIAG, and DRV/MAIN command paths.
+
+---
+
+## 3. Verified 100% Zero-`??` Results & Unified Rust + JSON SSOT Pipeline
+
+All four passes were executed headlessly against the isolated clone `Panadiga_MN103S_ZeroUndef` using `C:\ghidra\staging\ghidra_12.1.4_PATCHED` (`mn103.sla` SHA-256 `F5BEB23DD91B0C3AD2AF62E40DE30A034B0800B07DD64DD5EED611CC8ABCF72F`). The stock `GhidraMn10300\data\languages\mn103.sla` (`514638E29C76BE3F34474C57FE6E00311952CBD82C6E8B8043168E77ADECD48C`) and `C:\ghidra\projects\Panadiga_MN103S` remained completely untouched.
+
+### Before / After Metrics Across All 6 Stages (`baseline.json` -> `verify.json`)
+
+- Baseline report: [`docs/audits/zero_undef/baseline.json`](../../../docs/audits/zero_undef/baseline.json)
+- Final verification gate: [`docs/audits/zero_undef/verify.json`](../../../docs/audits/zero_undef/verify.json) (`exit 0`)
+
+| Program | Undef Bytes (Before -> After) | Instructions (Before -> After) | Functions (Before -> After) | Defined Data (Before -> After) | Error Bookmarks | `mn_todo()` Calls |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| `/BOOT.BIN` | `66,627` -> **`0`** | `66,287` -> `76,337` | `844` -> `1,018` | `888` -> `1,123` | `21` -> **`0`** | **`0`** (`0` in funcs) |
+| `/eh55_loader_ver061_256k.bin` | `262,144` -> **`0`** | `0` -> `70,058` | `0` -> `487` | `0` -> `817` | `0` -> **`0`** | **`0`** (`0` in funcs) |
+| `/eh55_frm_PROG061_BOOT.bin` | `261,478` -> **`0`** | `240` -> `75,550` | `5` -> `888` | `0` -> `934` | `0` -> **`0`** | **`0`** (`0` in funcs) |
+| `/DRV_decomp.bin` | `660,402` -> **`0`** | `273,659` -> `338,305` | `2,346` -> `2,870` | `4,539` -> `10,658` | `26` -> **`0`** | **`0`** (`0` in funcs) |
+| `/EH55_DRV_S211.bin` | `1,434,179` -> **`0`** | `3,040` -> `353,745` | `15` -> `1,454` | `0` -> `6,189` | `0` -> **`0`** | **`0`** (`0` in funcs) |
+| `/EH55_MAIN_3410PQ.bin` | `12,177,574` -> **`0`** | `284,156` -> `2,712,328` | `33` -> `38,317` | `0` -> `66,676` | `32` -> **`0`** | **`0`** (`0` in funcs) |
+| **Total (6 stages)** | **`14,862,404` -> `0`** | **`627,382` -> `3,626,323`** | **`3,243` -> `45,034`** | **`5,427` -> `86,397`** | **`79` -> `0`** | **`0`** |
+
+- **All 6 previously `mn_todo()`-tainted functions decompiled cleanly (`completed: true`, `bad_tokens: []`):** `0x4400C696` (`boot_fat_mount`, `81` lines), `0x4400D32F` (`FUN_4400d32f`, `266` lines), `0x440236ED` (`FUN_440236ed`, `60` lines), `0x50423540` (`19` lines), `0x5042358B` (`24` lines), and `0x5771ABFB` (`main_fpc_status_ctrl`, `50` lines).
+- **Verified opcode spot-checks:** `/eh55_loader_ver061_256k.bin` (`0x440242B7 = MOVHU (A0+),D0`, `0x440242BA = MOVHU D0,(A1+)`, `0x4400159B = BREAK`); `/eh55_frm_PROG061_BOOT.bin` (`0x504313E6 = SYSCALL`, `0x504009E4 = BREAK`, `0x5040EA2C = MOVHU D0,(-0x6 ,A3)`, `0x5040EA2F = MOV (0x8 ,A3),D1`); `/EH55_MAIN_3410PQ.bin` (`0x57000D2C = BREAK`).
+
+### Unified Rust SSOT Generator & JSON Map Architecture
+
+The 4-pass pipeline and all memory/stage/model maps are now unified and generated directly from Rust SSOT:
+
+1. **JSON SSOT Maps:**
+   - Source schema: [`crates/panadiga-core/src/ghidra/specs/ghidra_maps_ssot.json`](../../../crates/panadiga-core/src/ghidra/specs/ghidra_maps_ssot.json) (`32` AM34 regions synchronized 1:1 with `regions_static.rs`, `5` volatile MMIO windows, `6` firmware stages, `6` tainted VAs, and `generic_stage_rules`).
+   - Enriched runtime bundle (projected dynamically across all **`89` DIGA hardware profiles**): [`tools/ghidra/ghidra_ssot_maps.json`](../ghidra_ssot_maps.json).
+2. **Rust Generator & CLI:**
+   - Implementation: [`crates/panadiga-core/src/ghidra/render/zero_undef_pipeline/mod.rs`](../../../crates/panadiga-core/src/ghidra/render/zero_undef_pipeline/mod.rs)
+   - Regenerate all 7 scripts & JSON maps:
+     ```powershell
+     cargo run -p panadiga-cli -- ghidra export-all --dir tools/ghidra
+     # or individually:
+     cargo run -p panadiga-cli -- ghidra zero-undef
+     cargo run -p panadiga-cli -- ghidra ssot-maps
+     ```
+3. **Analyzing Arbitrary Future Firmware Binaries (`all` Stage):**
+   ```powershell
+   C:\ghidra\.venv\Scripts\python.exe tools\ghidra\ghidra_zero_undef_pipeline.py all `
+     --binary C:\path\to\NEW_MODEL_MAIN.bin --model DMR-EH58 --project-name MyClonedProject
+   ```
+   When `--base` is omitted, `ghidra_zero_undef_pipeline.py` infers the load address from `ghidra_ssot_maps.json` (`model_memory_maps` + `generic_stage_rules`), imports the binary safely into the cloned project (still refusing `Panadiga_MN103S`), applies model-projected AM34/MMIO blocks, automatically seeds MN10300 reset-vector branches (`0xDC`/`0xDD`/`0xCA`/`0xCC`) and LE32 header vectors, and runs Passes 2, 3, 4, and the Zero-`??` verification gate end-to-end.

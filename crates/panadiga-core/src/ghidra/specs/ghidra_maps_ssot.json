@@ -1,0 +1,492 @@
+{
+  "schema_version": 1,
+  "language_id": "mn10300:LE:32:default",
+  "compiler_id": "default",
+  "default_model": "DMR-EH55",
+  "am34_memory_regions": [
+    {
+      "name": "INTERNAL_SRAM",
+      "start": "0x00000000",
+      "size": "0x00040000",
+      "read": true,
+      "write": true,
+      "execute": true,
+      "is_volatile": false
+    },
+    {
+      "name": "CORE_MMIO",
+      "start": "0x10000000",
+      "size": "0x00010000",
+      "read": true,
+      "write": true,
+      "execute": false,
+      "is_volatile": true
+    },
+    {
+      "name": "MAIN_SDRAM",
+      "start": "0x40000000",
+      "size": "0x04000000",
+      "read": true,
+      "write": true,
+      "execute": true,
+      "is_volatile": false
+    },
+    {
+      "name": "BOOT_BIN_RAM",
+      "start": "0x44000000",
+      "size": "0x00040000",
+      "read": true,
+      "write": true,
+      "execute": true,
+      "is_volatile": false
+    },
+    {
+      "name": "PROG061_FVU_RAM",
+      "start": "0x50400000",
+      "size": "0x00040000",
+      "read": true,
+      "write": true,
+      "execute": true,
+      "is_volatile": false
+    },
+    {
+      "name": "DEV_SERIAL_DATA",
+      "start": "0x515B2000",
+      "size": "0x00002000",
+      "read": true,
+      "write": true,
+      "execute": false,
+      "is_volatile": true
+    },
+    {
+      "name": "DEV_SERIAL_ISR_CTX",
+      "start": "0x5316A000",
+      "size": "0x00002000",
+      "read": true,
+      "write": true,
+      "execute": false,
+      "is_volatile": true
+    },
+    {
+      "name": "MAIN_APP_RAM",
+      "start": "0x57000000",
+      "size": "0x00E00000",
+      "read": true,
+      "write": true,
+      "execute": true,
+      "is_volatile": false
+    },
+    {
+      "name": "FLASH_NOR_IPL",
+      "start": "0x80000000",
+      "size": "0x007F0000",
+      "read": true,
+      "write": false,
+      "execute": true,
+      "is_volatile": false
+    },
+    {
+      "name": "NVRAM_EEMUL",
+      "start": "0x807F0000",
+      "size": "0x00010000",
+      "read": true,
+      "write": true,
+      "execute": false,
+      "is_volatile": false
+    },
+    {
+      "name": "FLASH_NOR_CS1_IPL",
+      "start": "0x84000000",
+      "size": "0x00130000",
+      "read": true,
+      "write": false,
+      "execute": true,
+      "is_volatile": false
+    },
+    {
+      "name": "FLASH_NOR_CS1_EH55_BGO",
+      "start": "0x84130000",
+      "size": "0x002D0000",
+      "read": true,
+      "write": true,
+      "execute": false,
+      "is_volatile": true
+    },
+    {
+      "name": "FLASH_NOR_CS1_APP",
+      "start": "0x84400000",
+      "size": "0x003F0000",
+      "read": true,
+      "write": false,
+      "execute": true,
+      "is_volatile": false
+    },
+    {
+      "name": "NVRAM_UNCACHED",
+      "start": "0x847F0000",
+      "size": "0x00010000",
+      "read": true,
+      "write": true,
+      "execute": false,
+      "is_volatile": false
+    },
+    {
+      "name": "AIOF_TBC_MMIO",
+      "start": "0x88000000",
+      "size": "0x00001000",
+      "read": true,
+      "write": true,
+      "execute": false,
+      "is_volatile": true
+    },
+    {
+      "name": "DAVIS_CH0_RESET_MMIO",
+      "start": "0x89000400",
+      "size": "0x00000100",
+      "read": true,
+      "write": true,
+      "execute": false,
+      "is_volatile": true
+    },
+    {
+      "name": "DAVIS_IDE_PRI_MMIO",
+      "start": "0x89000500",
+      "size": "0x00000100",
+      "read": true,
+      "write": true,
+      "execute": false,
+      "is_volatile": true
+    },
+    {
+      "name": "DAVIS_CH1_RESET_MMIO",
+      "start": "0x89000C00",
+      "size": "0x00000100",
+      "read": true,
+      "write": true,
+      "execute": false,
+      "is_volatile": true
+    },
+    {
+      "name": "DAVIS_IDE_SEC_MMIO",
+      "start": "0x89000D00",
+      "size": "0x00000100",
+      "read": true,
+      "write": true,
+      "execute": false,
+      "is_volatile": true
+    },
+    {
+      "name": "SDCD_HOST_MMIO",
+      "start": "0x89001800",
+      "size": "0x00000100",
+      "read": true,
+      "write": true,
+      "execute": false,
+      "is_volatile": true
+    },
+    {
+      "name": "AVDD_DNR_MMIO",
+      "start": "0x89800000",
+      "size": "0x00001000",
+      "read": true,
+      "write": true,
+      "execute": false,
+      "is_volatile": true
+    },
+    {
+      "name": "SDRAM_UNCACHED_LO",
+      "start": "0x90000000",
+      "size": "0x00400000",
+      "read": true,
+      "write": true,
+      "execute": true,
+      "is_volatile": false
+    },
+    {
+      "name": "PROG061_SDRAM_UNCACHED",
+      "start": "0x90400000",
+      "size": "0x00040000",
+      "read": true,
+      "write": true,
+      "execute": true,
+      "is_volatile": false
+    },
+    {
+      "name": "SDRAM_UNCACHED_HI",
+      "start": "0x90440000",
+      "size": "0x03BC0000",
+      "read": true,
+      "write": true,
+      "execute": true,
+      "is_volatile": false
+    },
+    {
+      "name": "ASIC_MMIO",
+      "start": "0xC0000000",
+      "size": "0x00001000",
+      "read": true,
+      "write": true,
+      "execute": false,
+      "is_volatile": true
+    },
+    {
+      "name": "WDBC_SYS_STATUS_MMIO",
+      "start": "0xC0001000",
+      "size": "0x00001000",
+      "read": true,
+      "write": true,
+      "execute": false,
+      "is_volatile": true
+    },
+    {
+      "name": "ASIC_MMIO_HI",
+      "start": "0xC0002000",
+      "size": "0x0000E000",
+      "read": true,
+      "write": true,
+      "execute": false,
+      "is_volatile": true
+    },
+    {
+      "name": "ATA_IDE_MMIO",
+      "start": "0xD4000000",
+      "size": "0x00001000",
+      "read": true,
+      "write": true,
+      "execute": false,
+      "is_volatile": true
+    },
+    {
+      "name": "SC0_UART0_MMIO",
+      "start": "0xD4002000",
+      "size": "0x00000020",
+      "read": true,
+      "write": true,
+      "execute": false,
+      "is_volatile": true
+    },
+    {
+      "name": "IIC0_MMIO",
+      "start": "0xD8400000",
+      "size": "0x00000100",
+      "read": true,
+      "write": true,
+      "execute": false,
+      "is_volatile": true
+    },
+    {
+      "name": "IIC1_MMIO",
+      "start": "0xD8401000",
+      "size": "0x00000100",
+      "read": true,
+      "write": true,
+      "execute": false,
+      "is_volatile": true
+    },
+    {
+      "name": "TBUS_IC7501_MMIO",
+      "start": "0xDC010000",
+      "size": "0x00000100",
+      "read": true,
+      "write": true,
+      "execute": false,
+      "is_volatile": true
+    }
+  ],
+  "volatile_mmio_windows": [
+    {
+      "name": "PANADIGA_MMIO_10",
+      "start": "0x10000000",
+      "end": "0x100FFFFF"
+    },
+    {
+      "name": "PANADIGA_NOR_CS1_CFI",
+      "start": "0x84000000",
+      "end": "0x847FFFFF"
+    },
+    {
+      "name": "PANADIGA_AIOF_88",
+      "start": "0x88000000",
+      "end": "0x88FFFFFF"
+    },
+    {
+      "name": "PANADIGA_ASIC_C0",
+      "start": "0xC0000000",
+      "end": "0xC0FFFFFF"
+    },
+    {
+      "name": "PANADIGA_ATA_SC0_D4",
+      "start": "0xD4000000",
+      "end": "0xD4FFFFFF"
+    }
+  ],
+  "stages": [
+    {
+      "key": "BOOT.BIN",
+      "program_path": "/BOOT.BIN",
+      "default_binary": "C:\\ghidra\\binaries\\BOOT.BIN",
+      "base_va": "0x44000000",
+      "model": "DMR-EH55",
+      "entry_seeds": [
+        "0x44000000",
+        "0x4400C696",
+        "0x4400D32F",
+        "0x440236ED"
+      ],
+      "spot_check_opcodes": []
+    },
+    {
+      "key": "eh55_loader_ver061_256k.bin",
+      "program_path": "/eh55_loader_ver061_256k.bin",
+      "repo_relative_binary": "firmware_and_images/eh55_loader_ver061_256k.bin",
+      "base_va": "0x44000000",
+      "model": "DMR-EH55",
+      "entry_seeds": [
+        "0x44000000",
+        "0x44000008",
+        "0x44000014",
+        "0x4402A2AE",
+        "0x4400159A",
+        "0x440242B7"
+      ],
+      "spot_check_opcodes": [
+        "0x440242B7",
+        "0x4400159A"
+      ]
+    },
+    {
+      "key": "eh55_frm_PROG061_BOOT.bin",
+      "program_path": "/eh55_frm_PROG061_BOOT.bin",
+      "default_binary": "C:\\ghidra\\binaries\\unpacked\\eh55_frm_PROG061_BOOT.bin",
+      "base_va": "0x50400000",
+      "model": "DMR-EH55",
+      "entry_seeds": [
+        "0x50400000",
+        "0x50400008",
+        "0x50400014",
+        "0x5042D236",
+        "0x50401F3C",
+        "0x5040A294",
+        "0x5040EA20",
+        "0x50423540",
+        "0x5042358B",
+        "0x504313E6",
+        "0x504009E4"
+      ],
+      "spot_check_opcodes": [
+        "0x504313E6",
+        "0x504009E4",
+        "0x5040EA2F"
+      ]
+    },
+    {
+      "key": "DRV_decomp.bin",
+      "program_path": "/DRV_decomp.bin",
+      "default_binary": "C:\\ghidra\\binaries\\DRV_decomp.bin",
+      "base_va": "0x40000000",
+      "model": "DMR-EH55",
+      "entry_seeds": [
+        "0x40000000",
+        "0x40000014",
+        "0x40030080"
+      ],
+      "spot_check_opcodes": []
+    },
+    {
+      "key": "EH55_DRV_S211.bin",
+      "program_path": "/EH55_DRV_S211.bin",
+      "default_binary": "C:\\ghidra\\binaries\\unpacked\\EH55_DRV_S211.bin",
+      "base_va": "0x40000000",
+      "model": "DMR-EH55",
+      "entry_seeds": [
+        "0x40000000",
+        "0x40000014",
+        "0x40001000",
+        "0x40030080",
+        "0x40130EFA"
+      ],
+      "spot_check_opcodes": []
+    },
+    {
+      "key": "EH55_MAIN_3410PQ.bin",
+      "program_path": "/EH55_MAIN_3410PQ.bin",
+      "default_binary": "C:\\ghidra\\binaries\\unpacked\\EH55_MAIN_3410PQ.bin",
+      "base_va": "0x57000000",
+      "model": "DMR-EH55",
+      "entry_seeds": [
+        "0x57000000",
+        "0x57000010",
+        "0x57000044",
+        "0x574B5A99",
+        "0x57000D2C",
+        "0x574DD208",
+        "0x5771ABFB"
+      ],
+      "spot_check_opcodes": [
+        "0x57000D2C"
+      ]
+    }
+  ],
+  "tainted_functions": [
+    "0x50423540",
+    "0x5042358B",
+    "0x5771ABFB",
+    "0x4400C696",
+    "0x4400D32F",
+    "0x440236ED"
+  ],
+  "generic_stage_rules": {
+    "filename_base_hints": [
+      {
+        "pattern": "MAIN",
+        "base_va": "0x57000000"
+      },
+      {
+        "pattern": "PROG",
+        "base_va": "0x50400000"
+      },
+      {
+        "pattern": "BOOT",
+        "base_va": "0x44000000"
+      },
+      {
+        "pattern": "LOADER",
+        "base_va": "0x44000000"
+      },
+      {
+        "pattern": "DRV",
+        "base_va": "0x40000000"
+      },
+      {
+        "pattern": "NOR",
+        "base_va": "0x80000000"
+      },
+      {
+        "pattern": "FLASH",
+        "base_va": "0x80000000"
+      }
+    ],
+    "default_fallback_base_va": "0x40000000",
+    "header_probe_offsets": [
+      0,
+      4,
+      8,
+      12,
+      16,
+      20,
+      24,
+      28,
+      32,
+      48,
+      64
+    ],
+    "reset_branch_opcodes": {
+      "jmp32_dc": "0xDC",
+      "call32_dd": "0xDD",
+      "bra16_ca": "0xCA",
+      "jmp16_cc": "0xCC"
+    },
+    "min_strong_prologue_bytes": 6,
+    "min_sweep_gap_bytes": 6
+  }
+}

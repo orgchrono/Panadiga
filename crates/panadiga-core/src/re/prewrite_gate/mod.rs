@@ -6,6 +6,7 @@
 //! may be written to physical media or committed to `recompiled/` unless this gate returns `passed = true`.
 
 mod checks;
+mod checks_emu;
 #[cfg(test)]
 mod tests;
 
@@ -87,11 +88,11 @@ pub fn verify_prewrite_gate(target: PreWriteTarget<'_>) -> Result<PreWriteGateRe
             loader_profile,
         } => {
             let (_, sha) = calculate_hashes(bytes);
-            checks::check_cleanroom_digadiag(bytes, loader_profile, sha)
+            checks_emu::check_cleanroom_digadiag(bytes, loader_profile, sha)
         }
         PreWriteTarget::PatchedProg061 { bytes, mode } => {
             let (_, sha) = calculate_hashes(bytes);
-            checks::check_patched_prog061(bytes, mode, sha)
+            checks_emu::check_patched_prog061(bytes, mode, sha)
         }
         PreWriteTarget::PatchedMain {
             raw_main,
@@ -99,7 +100,12 @@ pub fn verify_prewrite_gate(target: PreWriteTarget<'_>) -> Result<PreWriteGateRe
             expect_capacity_unlock,
         } => {
             let (_, sha) = calculate_hashes(raw_main);
-            checks::check_patched_main(raw_main, expect_passthrough, expect_capacity_unlock, sha)
+            checks_emu::check_patched_main(
+                raw_main,
+                expect_passthrough,
+                expect_capacity_unlock,
+                sha,
+            )
         }
         PreWriteTarget::NorCowRepair {
             original_nor,

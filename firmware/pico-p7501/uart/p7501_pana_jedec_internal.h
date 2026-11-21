@@ -8,6 +8,7 @@
 #ifndef P7501_PANA_JEDEC_INTERNAL_H
 #define P7501_PANA_JEDEC_INTERNAL_H
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -30,6 +31,17 @@ void p7501_j_patch_u32(p7501_jedec_buf_t *jb, size_t lit_off, uint32_t val);
 void p7501_j_cmd_a0(p7501_jedec_buf_t *jb, uint32_t bus_va, uint8_t cmd_byte);
 size_t p7501_j_emit_status_msg(p7501_jedec_buf_t *jb, size_t *s_patch, size_t *e_patch);
 void p7501_j_br(p7501_jedec_buf_t *jb, uint8_t op, size_t target_off);
+size_t p7501_j_build_stub_common(
+    bool is_erase,
+    uint32_t norm_addr,
+    uint32_t sector_step,
+    uint32_t sector_count,
+    const uint8_t *data,
+    size_t len,
+    uint32_t load_addr,
+    uint8_t *out_buf,
+    size_t out_cap
+);
 
 #ifdef __cplusplus
 }

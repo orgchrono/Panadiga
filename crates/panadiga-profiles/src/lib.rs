@@ -6,10 +6,12 @@ pub mod derive;
 pub mod gate;
 pub mod hex_serde;
 pub mod loader;
+pub mod loader_resolve;
 pub mod promote;
 pub mod schema;
 pub mod types;
 pub mod validate;
+mod validate_layout;
 
 #[cfg(test)]
 mod tests;

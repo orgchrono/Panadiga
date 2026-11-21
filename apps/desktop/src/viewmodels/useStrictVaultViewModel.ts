@@ -9,71 +9,22 @@ import { useCallback, useEffect, useState } from 'react';
 import { useToast } from '@/context/ToastContext';
 import { translate } from '@/i18n/useTranslation';
 import type {
-  ComposedHddFlashReport,
-  DvdBurnProgressEvent,
-  DvdCreatorReport,
-  FlashReport,
-  OpticalBurnerDriveInfo,
-  PicoUf2Variant,
-  PreWriteGateReport,
-  ResolvedModelProfile,
-  SafeTargetDiskInfo,
-  SdLoaderProfile,
-  StrictWorkflowStep,
-  VaultArtifactRecord,
-  VaultBucket,
-  VaultSessionManifest,
+  ComposedHddFlashReport, DvdBurnProgressEvent, DvdCreatorReport, FlashReport,
+  OpticalBurnerDriveInfo, PicoUf2Variant, PreWriteGateReport, ResolvedModelProfile,
+  SafeTargetDiskInfo, SdLoaderProfile, StrictWorkflowStep, VaultBucket, VaultSessionManifest,
 } from '@/models';
 import { detectPicoBootselDrives, flashPicoFirmwareUf2 } from '@/services/picoService';
-import { inspectSafeTargetDisks } from '@/services/pipelineService';
 import {
-  createDvdRecoveryDisc,
-  flashComposedHddSafe,
-  getResolvedModelProfile,
-  initVaultSession,
-  ingestVaultFile,
-  inspectOpticalBurners,
-  markVaultWorkflowStep,
-  runPreWriteEmuGate,
-  subscribeDvdBurnProgress,
+  createDvdRecoveryDisc, flashComposedHddSafe, initVaultSession, ingestVaultFile,
+  inspectOpticalBurners, markVaultWorkflowStep, runPreWriteEmuGate, subscribeDvdBurnProgress,
 } from '@/services/vaultService';
+import { formatErrorMessage } from '@/utils/formatters';
 import { logger } from '@/utils/logger';
-
-const DEFAULT_MODEL_ID = 'DMR-EH55';
-const DEFAULT_DVD_LABEL = 'PANADIGA_REC';
-const DEFAULT_INGEST_SAMPLE = 'ic5001_nor_8mb.bin';
-const SECTOR_COUNT_ST3250 = 488_397_168;
-
-function formatErr(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
-}
-
-function appendUniqueStep(
-  steps: readonly StrictWorkflowStep[],
-  next: StrictWorkflowStep,
-): readonly StrictWorkflowStep[] {
-  return steps.includes(next) ? steps : [...steps, next];
-}
-
-function appendArtifactRecord(
-  session: VaultSessionManifest,
-  rec: VaultArtifactRecord,
-): VaultSessionManifest {
-  const filterByName = (list: readonly VaultArtifactRecord[]) =>
-    list.filter(item => item.filename !== rec.filename);
-  const rawArtifacts = rec.bucket === 'raw' ? [...filterByName(session.rawArtifacts), rec] : session.rawArtifacts;
-  const frmArtifacts = rec.bucket === 'frm' ? [...filterByName(session.frmArtifacts), rec] : session.frmArtifacts;
-  const recompiledArtifacts =
-    rec.bucket === 'recompiled' ? [...filterByName(session.recompiledArtifacts), rec] : session.recompiledArtifacts;
-  return {
-    ...session,
-    rawArtifacts,
-    frmArtifacts,
-    recompiledArtifacts,
-    completedSteps: appendUniqueStep(session.completedSteps, 'capture_and_backup'),
-    currentStep: 'organize_and_recompile',
-  };
-}
+import {
+  DEFAULT_INGEST_SAMPLE, DEFAULT_MODEL_ID, appendArtifactRecord, appendUniqueStep,
+  buildComposedHddPayload, buildDvdRecoveryPayload, buildPreWriteEmuGatePayload,
+  buildVaultIngestPayload, loadStrictVaultDiscovery,
+} from './strictVaultLogic';
 
 export function useStrictVaultViewModel(selectedModel: string) {
   const { showToast } = useToast();
@@ -87,7 +38,6 @@ export function useStrictVaultViewModel(selectedModel: string) {
   const [sessionBusy, setSessionBusy] = useState(false);
   const [sessionError, setSessionError] = useState<string | null>(null);
 
-  // Step 2: Optical DVD ISO 9660 (1x)
   const [opticalBurners, setOpticalBurners] = useState<readonly OpticalBurnerDriveInfo[]>([]);
   const [dvdTargetMode, setDvdTargetMode] = useState<'iso' | 'burner'>('iso');
   const [selectedBurnerId, setSelectedBurnerId] = useState('');
@@ -97,20 +47,17 @@ export function useStrictVaultViewModel(selectedModel: string) {
   const [dvdReport, setDvdReport] = useState<DvdCreatorReport | null>(null);
   const [dvdError, setDvdError] = useState<string | null>(null);
 
-  // Step 3: Pico BOOTSEL UF2
   const [bootselDrives, setBootselDrives] = useState<readonly string[]>([]);
   const [uf2Variant, setUf2Variant] = useState<PicoUf2Variant>('rp2040');
   const [uf2Busy, setUf2Busy] = useState(false);
   const [uf2Report, setUf2Report] = useState<FlashReport | null>(null);
   const [uf2Error, setUf2Error] = useState<string | null>(null);
 
-  // Step 4: Segregated Vault Ingest
   const [ingestPathInput, setIngestPathInput] = useState(DEFAULT_INGEST_SAMPLE);
   const [ingestBucketOverride, setIngestBucketOverride] = useState<'auto' | VaultBucket>('auto');
   const [ingestBusy, setIngestBusy] = useState(false);
   const [ingestError, setIngestError] = useState<string | null>(null);
 
-  // Step 5 & 6: Mandatory Mn103Vm Gate & Streaming Composed HDD Write
   const [emuGateBusy, setEmuGateBusy] = useState(false);
   const [emuGateReport, setEmuGateReport] = useState<PreWriteGateReport | null>(null);
   const [emuGateError, setEmuGateError] = useState<string | null>(null);
@@ -126,30 +73,18 @@ export function useStrictVaultViewModel(selectedModel: string) {
     void Promise.resolve().then(async () => {
       setIsLoading(true);
       try {
-        const [profile, burners, disks, drives] = await Promise.all([
-          getResolvedModelProfile(effectiveModel),
-          inspectOpticalBurners(),
-          inspectSafeTargetDisks(),
-          detectPicoBootselDrives(),
-        ]);
+        const res = await loadStrictVaultDiscovery(effectiveModel);
         if (controller.signal.aborted) return;
-        setResolvedProfile(profile);
-        setOpticalBurners(burners);
-        if (burners.length > 0 && !selectedBurnerId) {
-          setSelectedBurnerId(burners[0].deviceId);
-        }
-        setHddTargets(disks);
-        const safeDisk = disks.find(d => d.safe_to_flash);
-        if (safeDisk) {
-          setHddDevicePath(safeDisk.device_path);
-        }
-        setBootselDrives(drives);
+        setResolvedProfile(res.profile);
+        setOpticalBurners(res.burners);
+        if (res.burners.length > 0 && !selectedBurnerId) setSelectedBurnerId(res.burners[0].deviceId);
+        setHddTargets(res.disks);
+        if (res.defaultSafeDiskPath) setHddDevicePath(res.defaultSafeDiskPath);
+        setBootselDrives(res.drives);
       } catch (err) {
         logger.warn('StrictVaultViewModel', 'Relational hardware profile load warning', err);
       } finally {
-        if (!controller.signal.aborted) {
-          setIsLoading(false);
-        }
+        if (!controller.signal.aborted) setIsLoading(false);
       }
     });
     return () => controller.abort();
@@ -162,35 +97,24 @@ export function useStrictVaultViewModel(selectedModel: string) {
       const manifest = await initVaultSession({ modelId: effectiveModel, loaderProfile });
       setActiveSession(manifest);
       setEmuGateReport(manifest.lastEmuGate);
-      showToast({
-        type: 'success',
-        title: translate('express.vault.sessionReady'),
-        message: manifest.sessionId,
-      });
+      showToast({ type: 'success', title: translate('express.vault.sessionReady'), message: manifest.sessionId });
     } catch (err) {
-      setSessionError(formatErr(err));
+      setSessionError(formatErrorMessage(err));
     } finally {
       setSessionBusy(false);
     }
   }, [effectiveModel, loaderProfile, showToast]);
 
   const recordStepCompleted = useCallback((step: StrictWorkflowStep, gate?: PreWriteGateReport) => {
-    setActiveSession(prev => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        completedSteps: appendUniqueStep(prev.completedSteps, step),
-        ...(gate ? { lastEmuGate: gate } : {}),
-      };
-    });
+    setActiveSession(prev =>
+      prev ? { ...prev, completedSteps: appendUniqueStep(prev.completedSteps, step), ...(gate ? { lastEmuGate: gate } : {}) } : prev,
+    );
   }, []);
 
   const refreshBurners = useCallback(async () => {
     const list = await inspectOpticalBurners();
     setOpticalBurners(list);
-    if (list.length > 0 && !selectedBurnerId) {
-      setSelectedBurnerId(list[0].deviceId);
-    }
+    if (list.length > 0 && !selectedBurnerId) setSelectedBurnerId(list[0].deviceId);
   }, [selectedBurnerId]);
 
   const executeDvdCreate = useCallback(async () => {
@@ -203,40 +127,26 @@ export function useStrictVaultViewModel(selectedModel: string) {
     setDvdProgress(null);
     const unlisten = await subscribeDvdBurnProgress(ev => setDvdProgress(ev));
     try {
-      const rep = await createDvdRecoveryDisc({
-        ...(dvdTargetMode === 'burner'
-          ? { burnerId: selectedBurnerId.trim(), confirmToken: dvdConfirmToken.trim() }
-          : {}),
-        model: effectiveModel,
-        volumeLabel: DEFAULT_DVD_LABEL,
-        loaderProfile,
-        cleanroomOnly: true,
-        ...(activeSession ? { sessionId: activeSession.sessionId } : {}),
-      });
+      const rep = await createDvdRecoveryDisc(
+        buildDvdRecoveryPayload({
+          dvdTargetMode, selectedBurnerId, dvdConfirmToken,
+          effectiveModel, loaderProfile, sessionId: activeSession?.sessionId,
+        }),
+      );
       setDvdReport(rep);
       setEmuGateReport(rep.emuGate);
       recordStepCompleted('build_cleanroom_sd', rep.emuGate);
       showToast({ type: 'success', title: translate('express.dvd.successTitle') });
     } catch (err) {
-      setDvdError(formatErr(err));
+      setDvdError(formatErrorMessage(err));
     } finally {
       unlisten();
       setDvdBusy(false);
     }
-  }, [
-    activeSession,
-    dvdConfirmToken,
-    dvdTargetMode,
-    effectiveModel,
-    loaderProfile,
-    recordStepCompleted,
-    selectedBurnerId,
-    showToast,
-  ]);
+  }, [activeSession, dvdConfirmToken, dvdTargetMode, effectiveModel, loaderProfile, recordStepCompleted, selectedBurnerId, showToast]);
 
   const detectBootsel = useCallback(async () => {
-    const found = await detectPicoBootselDrives();
-    setBootselDrives(found);
+    setBootselDrives(await detectPicoBootselDrives());
   }, []);
 
   const flashPicoUf2 = useCallback(async () => {
@@ -245,12 +155,10 @@ export function useStrictVaultViewModel(selectedModel: string) {
     try {
       const rep = await flashPicoFirmwareUf2(uf2Variant);
       setUf2Report(rep);
-      if (activeSession) {
-        await markVaultWorkflowStep(activeSession.sessionId, 'setup_pico_probe');
-      }
+      if (activeSession) await markVaultWorkflowStep(activeSession.sessionId, 'setup_pico_probe');
       recordStepCompleted('setup_pico_probe');
     } catch (err) {
-      setUf2Error(formatErr(err));
+      setUf2Error(formatErrorMessage(err));
     } finally {
       setUf2Busy(false);
     }
@@ -263,21 +171,16 @@ export function useStrictVaultViewModel(selectedModel: string) {
       return;
     }
     const targetSession = activeSession ?? (await initVaultSession({ modelId: effectiveModel, loaderProfile }));
-    if (!activeSession) {
-      setActiveSession(targetSession);
-    }
+    if (!activeSession) setActiveSession(targetSession);
     setIngestBusy(true);
     setIngestError(null);
     try {
-      const rec = await ingestVaultFile({
-        sessionId: targetSession.sessionId,
-        sourcePath: cleanPath,
-        ...(ingestBucketOverride !== 'auto' ? { bucketOverride: ingestBucketOverride } : {}),
-        origin: 'express_vault_ingest',
-      });
+      const rec = await ingestVaultFile(
+        buildVaultIngestPayload({ sessionId: targetSession.sessionId, cleanPath, ingestBucketOverride }),
+      );
       setActiveSession(prev => appendArtifactRecord(prev ?? targetSession, rec));
     } catch (err) {
-      setIngestError(formatErr(err));
+      setIngestError(formatErrorMessage(err));
     } finally {
       setIngestBusy(false);
     }
@@ -287,19 +190,12 @@ export function useStrictVaultViewModel(selectedModel: string) {
     setEmuGateBusy(true);
     setEmuGateError(null);
     try {
-      const gate = await runPreWriteEmuGate({
-        ...(activeSession ? { sessionId: activeSession.sessionId } : {}),
-        targetKind: 'composed_hdd_stream',
-        loaderProfile,
-        totalSectors: SECTOR_COUNT_ST3250,
-        expectPassthrough: true,
-        expectCapacityUnlock: true,
-      });
+      const gate = await runPreWriteEmuGate(buildPreWriteEmuGatePayload(loaderProfile, activeSession?.sessionId));
       setEmuGateReport(gate);
       recordStepCompleted('organize_and_recompile', gate);
       showToast({ type: 'success', title: translate('express.gate.passedTitle') });
     } catch (err) {
-      setEmuGateError(formatErr(err));
+      setEmuGateError(formatErrorMessage(err));
     } finally {
       setEmuGateBusy(false);
     }
@@ -313,78 +209,28 @@ export function useStrictVaultViewModel(selectedModel: string) {
     setHddBusy(true);
     setHddError(null);
     try {
-      const rep = await flashComposedHddSafe({
-        devicePath: hddDevicePath.trim(),
-        confirmDiskModelToken: hddConfirmToken.trim(),
-        applyDynamicCapacityUnlock: true,
-        applyAvPassthrough: true,
-        ...(activeSession ? { sessionId: activeSession.sessionId } : {}),
-      });
+      const rep = await flashComposedHddSafe(
+        buildComposedHddPayload({ hddDevicePath, hddConfirmToken, sessionId: activeSession?.sessionId }),
+      );
       setHddReport(rep);
       setEmuGateReport(rep.emuGate);
       recordStepCompleted('emulate_and_flash', rep.emuGate);
       showToast({ type: 'success', title: translate('express.gate.hddWriteDone') });
     } catch (err) {
-      setHddError(formatErr(err));
+      setHddError(formatErrorMessage(err));
     } finally {
       setHddBusy(false);
     }
   }, [activeSession, emuGateReport, hddConfirmToken, hddDevicePath, recordStepCompleted, showToast]);
 
   return {
-    loaderProfile,
-    setLoaderProfile,
-    resolvedProfile,
-    isLoading,
-    activeSession,
-    sessionBusy,
-    sessionError,
-    initializeVaultSession,
-    recordStepCompleted,
-    // Step 2 Optical DVD
-    opticalBurners,
-    dvdTargetMode,
-    setDvdTargetMode,
-    selectedBurnerId,
-    setSelectedBurnerId,
-    dvdConfirmToken,
-    setDvdConfirmToken,
-    dvdBusy,
-    dvdProgress,
-    dvdReport,
-    dvdError,
-    refreshBurners,
-    executeDvdCreate,
-    // Step 3 Pico BOOTSEL
-    bootselDrives,
-    uf2Variant,
-    setUf2Variant,
-    uf2Busy,
-    uf2Report,
-    uf2Error,
-    detectBootsel,
-    flashPicoUf2,
-    // Step 4 Segregated Vault
-    ingestPathInput,
-    setIngestPathInput,
-    ingestBucketOverride,
-    setIngestBucketOverride,
-    ingestBusy,
-    ingestError,
-    ingestIntoVault,
-    // Step 5 & 6 Gate + HDD Streaming
-    emuGateBusy,
-    emuGateReport,
-    emuGateError,
-    executeMandatoryEmuGate,
-    hddTargets,
-    hddDevicePath,
-    setHddDevicePath,
-    hddConfirmToken,
-    setHddConfirmToken,
-    hddBusy,
-    hddReport,
-    hddError,
-    executeComposedHddFlash,
+    loaderProfile, setLoaderProfile, resolvedProfile, isLoading, activeSession, sessionBusy, sessionError,
+    initializeVaultSession, recordStepCompleted, opticalBurners, dvdTargetMode, setDvdTargetMode,
+    selectedBurnerId, setSelectedBurnerId, dvdConfirmToken, setDvdConfirmToken, dvdBusy, dvdProgress,
+    dvdReport, dvdError, refreshBurners, executeDvdCreate, bootselDrives, uf2Variant, setUf2Variant,
+    uf2Busy, uf2Report, uf2Error, detectBootsel, flashPicoUf2, ingestPathInput, setIngestPathInput,
+    ingestBucketOverride, setIngestBucketOverride, ingestBusy, ingestError, ingestIntoVault, emuGateBusy,
+    emuGateReport, emuGateError, executeMandatoryEmuGate, hddTargets, hddDevicePath, setHddDevicePath,
+    hddConfirmToken, setHddConfirmToken, hddBusy, hddReport, hddError, executeComposedHddFlash,
   };
 }

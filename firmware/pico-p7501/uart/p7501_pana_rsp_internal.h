@@ -11,6 +11,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "uart/p7501_pana_rsp.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -41,6 +43,9 @@ bool p7501_rsp_validate_raw_or_hex_guard(
     bool is_raw_text,
     bool *out_e05
 );
+
+/** Decode a single `PANARSP` action token (e.g. `MEM:`, `WMEM:`, `JEDEC_*`, `DUMPNOR`). */
+bool p7501_rsp_apply_action_token(const char *tok, p7501_pana_rsp_spec_t *out, bool *saw_action);
 
 #ifdef __cplusplus
 }

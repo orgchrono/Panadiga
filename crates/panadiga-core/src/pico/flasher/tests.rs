@@ -169,3 +169,42 @@ fn test_merge_unified_uf2_roundtrip() {
 
     let _ = fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn test_flash_uf2_to_drive_auto_slices_unified_by_info_uf2() {
+    let (unified_blocks, _) = validate_uf2_buffer(EMBEDDED_UNIFIED_UF2).unwrap();
+    let root = std::env::temp_dir().join(format!(
+        "panadiga_bootsel_slice_test_{}",
+        std::process::id()
+    ));
+
+    for (tag, info, expected_chip) in [
+        (
+            "rp2040",
+            "UF2 Bootloader v3.0\nModel: Raspberry Pi RP2\nBoard-ID: RPI-RP2\n",
+            "RP2040",
+        ),
+        (
+            "rp2350",
+            "UF2 Bootloader v1.0\nModel: Raspberry Pi Pico 2\nBoard-ID: RP2350\n",
+            "RP2350",
+        ),
+    ] {
+        let drive = root.join(tag);
+        fs::create_dir_all(&drive).unwrap();
+        fs::write(drive.join("INFO_UF2.TXT"), info).unwrap();
+
+        let report = flash_uf2_to_drive(&drive, EMBEDDED_UNIFIED_UF2).unwrap();
+        assert!(report.success);
+        assert!(report.blocks_written < unified_blocks);
+        assert!(report.board_family.contains(expected_chip));
+
+        let flashed = fs::read(drive.join("panadiga_p7501_uart.uf2")).unwrap();
+        assert_eq!(flashed.len(), report.uf2_size_bytes);
+        let (flashed_blocks, flashed_family) = validate_uf2_buffer(&flashed).unwrap();
+        assert_eq!(flashed_blocks, report.blocks_written);
+        assert!(flashed_family.contains(expected_chip));
+    }
+
+    let _ = fs::remove_dir_all(&root);
+}

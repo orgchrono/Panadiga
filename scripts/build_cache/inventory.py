@@ -14,22 +14,9 @@ from scripts.panadiga_ops import ROOT, load_msvc_env
 
 BUILD_IGNORE_DIRS: Final[frozenset[str]] = frozenset(
     {
-        ".git",
-        ".github",
-        ".jscpd-report",
-        ".mypy_cache",
-        ".pytest_cache",
-        ".ruff_cache",
-        ".vite",
-        "__pycache__",
-        "build",
-        "dist",
-        "dist-android",
-        "node_modules",
-        "pico-build",
-        "playwright-report",
-        "target",
-        "test-results",
+        ".git", ".github", ".jscpd-report", ".mypy_cache", ".pytest_cache",
+        ".ruff_cache", ".vite", "__pycache__", "build", "dist", "dist-android",
+        "node_modules", "pico-build", "playwright-report", "target", "test-results",
     }
 )
 

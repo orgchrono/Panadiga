@@ -1,0 +1,2259 @@
+{
+  "am34_memory_regions": [
+    {
+      "execute": true,
+      "is_volatile": false,
+      "name": "INTERNAL_SRAM",
+      "read": true,
+      "size": "0x00040000",
+      "start": "0x00000000",
+      "write": true
+    },
+    {
+      "execute": false,
+      "is_volatile": true,
+      "name": "CORE_MMIO",
+      "read": true,
+      "size": "0x00010000",
+      "start": "0x10000000",
+      "write": true
+    },
+    {
+      "execute": true,
+      "is_volatile": false,
+      "name": "MAIN_SDRAM",
+      "read": true,
+      "size": "0x04000000",
+      "start": "0x40000000",
+      "write": true
+    },
+    {
+      "execute": true,
+      "is_volatile": false,
+      "name": "BOOT_BIN_RAM",
+      "read": true,
+      "size": "0x00040000",
+      "start": "0x44000000",
+      "write": true
+    },
+    {
+      "execute": true,
+      "is_volatile": false,
+      "name": "PROG061_FVU_RAM",
+      "read": true,
+      "size": "0x00040000",
+      "start": "0x50400000",
+      "write": true
+    },
+    {
+      "execute": false,
+      "is_volatile": true,
+      "name": "DEV_SERIAL_DATA",
+      "read": true,
+      "size": "0x00002000",
+      "start": "0x515B2000",
+      "write": true
+    },
+    {
+      "execute": false,
+      "is_volatile": true,
+      "name": "DEV_SERIAL_ISR_CTX",
+      "read": true,
+      "size": "0x00002000",
+      "start": "0x5316A000",
+      "write": true
+    },
+    {
+      "execute": true,
+      "is_volatile": false,
+      "name": "MAIN_APP_RAM",
+      "read": true,
+      "size": "0x00E00000",
+      "start": "0x57000000",
+      "write": true
+    },
+    {
+      "execute": true,
+      "is_volatile": false,
+      "name": "FLASH_NOR_IPL",
+      "read": true,
+      "size": "0x007F0000",
+      "start": "0x80000000",
+      "write": false
+    },
+    {
+      "execute": false,
+      "is_volatile": false,
+      "name": "NVRAM_EEMUL",
+      "read": true,
+      "size": "0x00010000",
+      "start": "0x807F0000",
+      "write": true
+    },
+    {
+      "execute": true,
+      "is_volatile": false,
+      "name": "FLASH_NOR_CS1_IPL",
+      "read": true,
+      "size": "0x00130000",
+      "start": "0x84000000",
+      "write": false
+    },
+    {
+      "execute": false,
+      "is_volatile": true,
+      "name": "FLASH_NOR_CS1_EH55_BGO",
+      "read": true,
+      "size": "0x002D0000",
+      "start": "0x84130000",
+      "write": true
+    },
+    {
+      "execute": true,
+      "is_volatile": false,
+      "name": "FLASH_NOR_CS1_APP",
+      "read": true,
+      "size": "0x003F0000",
+      "start": "0x84400000",
+      "write": false
+    },
+    {
+      "execute": false,
+      "is_volatile": false,
+      "name": "NVRAM_UNCACHED",
+      "read": true,
+      "size": "0x00010000",
+      "start": "0x847F0000",
+      "write": true
+    },
+    {
+      "execute": false,
+      "is_volatile": true,
+      "name": "AIOF_TBC_MMIO",
+      "read": true,
+      "size": "0x00001000",
+      "start": "0x88000000",
+      "write": true
+    },
+    {
+      "execute": false,
+      "is_volatile": true,
+      "name": "DAVIS_CH0_RESET_MMIO",
+      "read": true,
+      "size": "0x00000100",
+      "start": "0x89000400",
+      "write": true
+    },
+    {
+      "execute": false,
+      "is_volatile": true,
+      "name": "DAVIS_IDE_PRI_MMIO",
+      "read": true,
+      "size": "0x00000100",
+      "start": "0x89000500",
+      "write": true
+    },
+    {
+      "execute": false,
+      "is_volatile": true,
+      "name": "DAVIS_CH1_RESET_MMIO",
+      "read": true,
+      "size": "0x00000100",
+      "start": "0x89000C00",
+      "write": true
+    },
+    {
+      "execute": false,
+      "is_volatile": true,
+      "name": "DAVIS_IDE_SEC_MMIO",
+      "read": true,
+      "size": "0x00000100",
+      "start": "0x89000D00",
+      "write": true
+    },
+    {
+      "execute": false,
+      "is_volatile": true,
+      "name": "SDCD_HOST_MMIO",
+      "read": true,
+      "size": "0x00000100",
+      "start": "0x89001800",
+      "write": true
+    },
+    {
+      "execute": false,
+      "is_volatile": true,
+      "name": "AVDD_DNR_MMIO",
+      "read": true,
+      "size": "0x00001000",
+      "start": "0x89800000",
+      "write": true
+    },
+    {
+      "execute": true,
+      "is_volatile": false,
+      "name": "SDRAM_UNCACHED_LO",
+      "read": true,
+      "size": "0x00400000",
+      "start": "0x90000000",
+      "write": true
+    },
+    {
+      "execute": true,
+      "is_volatile": false,
+      "name": "PROG061_SDRAM_UNCACHED",
+      "read": true,
+      "size": "0x00040000",
+      "start": "0x90400000",
+      "write": true
+    },
+    {
+      "execute": true,
+      "is_volatile": false,
+      "name": "SDRAM_UNCACHED_HI",
+      "read": true,
+      "size": "0x03BC0000",
+      "start": "0x90440000",
+      "write": true
+    },
+    {
+      "execute": false,
+      "is_volatile": true,
+      "name": "ASIC_MMIO",
+      "read": true,
+      "size": "0x00001000",
+      "start": "0xC0000000",
+      "write": true
+    },
+    {
+      "execute": false,
+      "is_volatile": true,
+      "name": "WDBC_SYS_STATUS_MMIO",
+      "read": true,
+      "size": "0x00001000",
+      "start": "0xC0001000",
+      "write": true
+    },
+    {
+      "execute": false,
+      "is_volatile": true,
+      "name": "ASIC_MMIO_HI",
+      "read": true,
+      "size": "0x0000E000",
+      "start": "0xC0002000",
+      "write": true
+    },
+    {
+      "execute": false,
+      "is_volatile": true,
+      "name": "ATA_IDE_MMIO",
+      "read": true,
+      "size": "0x00001000",
+      "start": "0xD4000000",
+      "write": true
+    },
+    {
+      "execute": false,
+      "is_volatile": true,
+      "name": "SC0_UART0_MMIO",
+      "read": true,
+      "size": "0x00000020",
+      "start": "0xD4002000",
+      "write": true
+    },
+    {
+      "execute": false,
+      "is_volatile": true,
+      "name": "IIC0_MMIO",
+      "read": true,
+      "size": "0x00000100",
+      "start": "0xD8400000",
+      "write": true
+    },
+    {
+      "execute": false,
+      "is_volatile": true,
+      "name": "IIC1_MMIO",
+      "read": true,
+      "size": "0x00000100",
+      "start": "0xD8401000",
+      "write": true
+    },
+    {
+      "execute": false,
+      "is_volatile": true,
+      "name": "TBUS_IC7501_MMIO",
+      "read": true,
+      "size": "0x00000100",
+      "start": "0xDC010000",
+      "write": true
+    }
+  ],
+  "compiler_id": "default",
+  "default_model": "DMR-EH55",
+  "generic_stage_rules": {
+    "default_fallback_base_va": "0x40000000",
+    "filename_base_hints": [
+      {
+        "base_va": "0x57000000",
+        "pattern": "MAIN"
+      },
+      {
+        "base_va": "0x50400000",
+        "pattern": "PROG"
+      },
+      {
+        "base_va": "0x44000000",
+        "pattern": "BOOT"
+      },
+      {
+        "base_va": "0x44000000",
+        "pattern": "LOADER"
+      },
+      {
+        "base_va": "0x40000000",
+        "pattern": "DRV"
+      },
+      {
+        "base_va": "0x80000000",
+        "pattern": "NOR"
+      },
+      {
+        "base_va": "0x80000000",
+        "pattern": "FLASH"
+      }
+    ],
+    "header_probe_offsets": [
+      0,
+      4,
+      8,
+      12,
+      16,
+      20,
+      24,
+      28,
+      32,
+      48,
+      64
+    ],
+    "min_strong_prologue_bytes": 6,
+    "min_sweep_gap_bytes": 6,
+    "reset_branch_opcodes": {
+      "bra16_ca": "0xCA",
+      "call32_dd": "0xDD",
+      "jmp16_cc": "0xCC",
+      "jmp32_dc": "0xDC"
+    }
+  },
+  "language_id": "mn10300:LE:32:default",
+  "model_memory_maps": {
+    "DMR-BS750": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-BS750",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série BS/XS (Blu-ray/DVD HD Freesat NAND)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-BS780": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-BS780",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série BS/XS (2010 Blu-ray/DVD Freesat NAND)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-BS785": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-BS785",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série BS/XS (2010 Blu-ray/DVD DVB-S2 NAND)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-BS850": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-BS850",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série BS/XS (Blu-ray/DVD HD Freesat NAND)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-BS880": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-BS880",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série BS/XS (2010 Blu-ray/DVD Freesat NAND)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-BS885": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-BS885",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série BS/XS (2010 Blu-ray/DVD DVB-S2 NAND)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-BST700": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-BST700",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série BST (3D Blu-ray DVB-S2)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-BST800": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-BST800",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série BST (3D Blu-ray DVB-S2)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-BW500": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-BW500",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série BW (Blu-ray DIGA)",
+      "soc_isa": "MN10300/AM34",
+      "soc_part": "MN2WS0038 (UniPhier PH1-Pro II)"
+    },
+    "DMR-BW780": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-BW780",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série BW (Blu-ray DIGA SLM UART)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-BW880": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-BW880",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série BW (Blu-ray DIGA SLM UART)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-BWT700": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-BWT700",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série BWT (3D Blu-ray DIGA)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-BWT720": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-BWT720",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série BWT (3D Blu-ray DIGA)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-BWT735": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-BWT735",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série BWT (3D Blu-ray DIGA)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-BWT740": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-BWT740",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série BWT (3D Blu-ray DIGA)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-E100H": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-E100H",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série ExxH (HDD+DVD+PCMCIA)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-E20": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-E20",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série Exx (Gen 1 DVD-RAM)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-E30": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-E30",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série Exx (Gen 1 DVD-RAM)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-E50": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-E50",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série Exx (Gen 2 DVD-RAM)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-E500H": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-E500H",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série ExxH (400GB Ethernet HDD+DVD)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-E55": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-E55",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série Exx (Gen 2 DVD-RAM)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-E60": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-E60",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série Exx (Gen 2 DVD-RAM)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-E65": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-E65",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série Exx (Gen 2 DVD-RAM)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-E75V": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-E75V",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série ExxV (DVD+VHS)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-E80H": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-E80H",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série ExxH (HDD+DVD)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-E85H": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-E85H",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série ExxH (HDD+DVD)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-E95H": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-E95H",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série ExxH (HDD+DVD)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EH49": {
+      "drv_load_va": "0x90202000",
+      "main_load_va": "0x50622000",
+      "model_id": "DMR-EH49",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": "0x90400000",
+      "regions": [
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_PROG_RAM",
+          "read": true,
+          "size": "0x00080000",
+          "start": "0x90400000",
+          "write": true
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_MAIN_RAM",
+          "read": true,
+          "size": "0x00E00000",
+          "start": "0x50622000",
+          "write": true
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_DRV_RAM",
+          "read": true,
+          "size": "0x00200000",
+          "start": "0x90202000",
+          "write": true
+        }
+      ],
+      "series": "Série EH (2009 FRM)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EH50": {
+      "drv_load_va": "0x90202000",
+      "main_load_va": "0x57000400",
+      "model_id": "DMR-EH50",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_MAIN_RAM",
+          "read": true,
+          "size": "0x00E00000",
+          "start": "0x57000400",
+          "write": true
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_DRV_RAM",
+          "read": true,
+          "size": "0x00200000",
+          "start": "0x90202000",
+          "write": true
+        }
+      ],
+      "series": "Série EH (Gen 3 HDD+DVD)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EH52": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-EH52",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série EH (80GB HDD+DVD)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EH53": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-EH53",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série EH (2010 HDD+DVD)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EH54": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-EH54",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série EH (HDD+DVD+DVB-T)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EH55": {
+      "drv_load_va": "0x90202000",
+      "main_load_va": "0x57000000",
+      "model_id": "DMR-EH55",
+      "nvram_cached_va": "0x807F0000",
+      "nvram_uncached_va": "0x847F0000",
+      "prog_load_va": "0x50400000",
+      "regions": [
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "BUS_NOR_CACHED",
+          "read": true,
+          "size": "0x04000000",
+          "start": "0x80000000",
+          "write": false
+        },
+        {
+          "execute": true,
+          "is_volatile": true,
+          "name": "BUS_NOR_CACHED_UNCACHED",
+          "read": true,
+          "size": "0x04000000",
+          "start": "0x84000000",
+          "write": false
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "BUS_NOR_XIP_CACHED",
+          "read": true,
+          "size": "0x00040000",
+          "start": "0x44000000",
+          "write": false
+        },
+        {
+          "execute": true,
+          "is_volatile": true,
+          "name": "BUS_NOR_XIP_CACHED_UNCACHED",
+          "read": true,
+          "size": "0x00040000",
+          "start": "0x84000000",
+          "write": false
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "BUS_SDRAM_MAIN",
+          "read": true,
+          "size": "0x04000000",
+          "start": "0x50000000",
+          "write": true
+        },
+        {
+          "execute": true,
+          "is_volatile": true,
+          "name": "BUS_SDRAM_MAIN_UNCACHED",
+          "read": true,
+          "size": "0x04000000",
+          "start": "0x90000000",
+          "write": true
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "BUS_DRV_S211_EXEC",
+          "read": true,
+          "size": "0x00160000",
+          "start": "0x40000000",
+          "write": true
+        },
+        {
+          "execute": false,
+          "is_volatile": true,
+          "name": "MMIO_AIOF",
+          "read": true,
+          "size": "0x00001000",
+          "start": "0x88000000",
+          "write": true
+        },
+        {
+          "execute": false,
+          "is_volatile": true,
+          "name": "MMIO_AVDD",
+          "read": true,
+          "size": "0x00001000",
+          "start": "0x89800000",
+          "write": true
+        },
+        {
+          "execute": false,
+          "is_volatile": true,
+          "name": "MMIO_DAVIS_PRI",
+          "read": true,
+          "size": "0x00001000",
+          "start": "0x89000500",
+          "write": true
+        },
+        {
+          "execute": false,
+          "is_volatile": true,
+          "name": "MMIO_DAVIS_SEC",
+          "read": true,
+          "size": "0x00001000",
+          "start": "0x89000D00",
+          "write": true
+        },
+        {
+          "execute": false,
+          "is_volatile": true,
+          "name": "MMIO_SC0_UART",
+          "read": true,
+          "size": "0x00001000",
+          "start": "0xD4002000",
+          "write": true
+        },
+        {
+          "execute": false,
+          "is_volatile": true,
+          "name": "MMIO_SDCD",
+          "read": true,
+          "size": "0x00001000",
+          "start": "0x89001800",
+          "write": true
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "NOR_IPL_LOADER_VER0.61_(SA0..SA10)",
+          "read": true,
+          "size": "0x00040000",
+          "start": "0x80000000",
+          "write": false
+        },
+        {
+          "execute": false,
+          "is_volatile": false,
+          "name": "NOR_ERASED_RESERVED/BLANK",
+          "read": true,
+          "size": "0x00040000",
+          "start": "0x80040000",
+          "write": true
+        },
+        {
+          "execute": false,
+          "is_volatile": false,
+          "name": "NOR_EXTRHEAD_DRV_",
+          "read": true,
+          "size": "0x000B0000",
+          "start": "0x80080000",
+          "write": true
+        },
+        {
+          "execute": false,
+          "is_volatile": false,
+          "name": "NOR_BGO_BGO_(SA26..SA70)",
+          "read": true,
+          "size": "0x002D0000",
+          "start": "0x80130000",
+          "write": true
+        },
+        {
+          "execute": false,
+          "is_volatile": false,
+          "name": "NOR_NORFS_UPPER_EEMUL/FS_(SA71..SA133)",
+          "read": true,
+          "size": "0x003F0000",
+          "start": "0x80400000",
+          "write": true
+        },
+        {
+          "execute": false,
+          "is_volatile": false,
+          "name": "NOR_EEMUL_EEMUL_NVRAM_(SA134..SA141)",
+          "read": true,
+          "size": "0x00010000",
+          "start": "0x807F0000",
+          "write": true
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_PROG_RAM",
+          "read": true,
+          "size": "0x00080000",
+          "start": "0x50400000",
+          "write": true
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_MAIN_RAM",
+          "read": true,
+          "size": "0x00E00000",
+          "start": "0x57000000",
+          "write": true
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_DRV_RAM",
+          "read": true,
+          "size": "0x00200000",
+          "start": "0x90202000",
+          "write": true
+        }
+      ],
+      "series": "Série EH (HDD+DVD)",
+      "soc_isa": "MN10300/AM34",
+      "soc_part": "MN2DS0009"
+    },
+    "DMR-EH56": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-EH56",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série EH (HDD+DVD)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EH57": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-EH57",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série EH (160GB HDD+HDMI)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EH58": {
+      "drv_load_va": "0x90202000",
+      "main_load_va": "0x57000000",
+      "model_id": "DMR-EH58",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": "0x44000000",
+      "regions": [
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_PROG_RAM",
+          "read": true,
+          "size": "0x00080000",
+          "start": "0x44000000",
+          "write": true
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_MAIN_RAM",
+          "read": true,
+          "size": "0x00E00000",
+          "start": "0x57000000",
+          "write": true
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_DRV_RAM",
+          "read": true,
+          "size": "0x00200000",
+          "start": "0x90202000",
+          "write": true
+        }
+      ],
+      "series": "Série EH (Gen 4 HDD+DVD)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EH59": {
+      "drv_load_va": "0x90202000",
+      "main_load_va": "0x50622000",
+      "model_id": "DMR-EH59",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": "0x90400000",
+      "regions": [
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_PROG_RAM",
+          "read": true,
+          "size": "0x00080000",
+          "start": "0x90400000",
+          "write": true
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_MAIN_RAM",
+          "read": true,
+          "size": "0x00E00000",
+          "start": "0x50622000",
+          "write": true
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_DRV_RAM",
+          "read": true,
+          "size": "0x00200000",
+          "start": "0x90202000",
+          "write": true
+        }
+      ],
+      "series": "Série EH (2009 FRM)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EH60": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-EH60",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série EH (200GB HDD+DVD)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EH65": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-EH65",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série EH (HDD+DVD+HDMI)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EH67": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-EH67",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série EH (250GB HDD+HDMI)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EH68": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-EH68",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série EH (320GB HDD+HDMI)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EH69": {
+      "drv_load_va": "0x90202000",
+      "main_load_va": "0x50622000",
+      "model_id": "DMR-EH69",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": "0x90400000",
+      "regions": [
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_PROG_RAM",
+          "read": true,
+          "size": "0x00080000",
+          "start": "0x90400000",
+          "write": true
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_MAIN_RAM",
+          "read": true,
+          "size": "0x00E00000",
+          "start": "0x50622000",
+          "write": true
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_DRV_RAM",
+          "read": true,
+          "size": "0x00200000",
+          "start": "0x90202000",
+          "write": true
+        }
+      ],
+      "series": "Série EH (2009 FRM)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EH75V": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-EH75V",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série EH (80GB HDD+DVD+VHS)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EH80V": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-EH80V",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série EH (HDD+DVD+VHS)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-ES10": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-ES10",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série ES (DVD-RAM)",
+      "soc_isa": "MN10300/AM33-2",
+      "soc_part": "MN2DS0012-H"
+    },
+    "DMR-ES15": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-ES15",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série ES (DVD-RAM)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-ES20": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-ES20",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série ES (DVD-RAM)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-ES25": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-ES25",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série ES (DVD+SD+HDMI)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-ES30V": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-ES30V",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série ES (DVD+VHS)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-ES35V": {
+      "drv_load_va": "0x90202000",
+      "main_load_va": "0x52DF6000",
+      "model_id": "DMR-ES35V",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": "0x50400000",
+      "regions": [
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_PROG_RAM",
+          "read": true,
+          "size": "0x00080000",
+          "start": "0x50400000",
+          "write": true
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_MAIN_RAM",
+          "read": true,
+          "size": "0x00E00000",
+          "start": "0x52DF6000",
+          "write": true
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_DRV_RAM",
+          "read": true,
+          "size": "0x00200000",
+          "start": "0x90202000",
+          "write": true
+        }
+      ],
+      "series": "Série ES (DVD+VHS)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-ES40V": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-ES40V",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série ES (DVD+VHS)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-ES46V": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-ES46V",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série ES (DVD+VHS+SD)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EX72S": {
+      "drv_load_va": "0x90202000",
+      "main_load_va": "0x50622000",
+      "model_id": "DMR-EX72S",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": "0x90400000",
+      "regions": [
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_PROG_RAM",
+          "read": true,
+          "size": "0x00080000",
+          "start": "0x90400000",
+          "write": true
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_MAIN_RAM",
+          "read": true,
+          "size": "0x00E00000",
+          "start": "0x50622000",
+          "write": true
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_DRV_RAM",
+          "read": true,
+          "size": "0x00200000",
+          "start": "0x90202000",
+          "write": true
+        }
+      ],
+      "series": "Série EX (HDD+DVB-S)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EX75": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-EX75",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série EX (HDD+DVB-T)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EX768": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-EX768",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série EX (HDD+DVB-T)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EX769": {
+      "drv_load_va": "0x90202000",
+      "main_load_va": "0x50622000",
+      "model_id": "DMR-EX769",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": "0x90400000",
+      "regions": [
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_PROG_RAM",
+          "read": true,
+          "size": "0x00080000",
+          "start": "0x90400000",
+          "write": true
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_MAIN_RAM",
+          "read": true,
+          "size": "0x00E00000",
+          "start": "0x50622000",
+          "write": true
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_DRV_RAM",
+          "read": true,
+          "size": "0x00200000",
+          "start": "0x90202000",
+          "write": true
+        }
+      ],
+      "series": "Série EX (HDD+DVB-T)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EX77": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-EX77",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série EX (HDD+DVB-T)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EX773": {
+      "drv_load_va": null,
+      "main_load_va": "0x50622000",
+      "model_id": "DMR-EX773",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": "0x90400000",
+      "regions": [
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_PROG_RAM",
+          "read": true,
+          "size": "0x00080000",
+          "start": "0x90400000",
+          "write": true
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_MAIN_RAM",
+          "read": true,
+          "size": "0x00E00000",
+          "start": "0x50622000",
+          "write": true
+        }
+      ],
+      "series": "Série EX (HDD+DVB-T)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EX78": {
+      "drv_load_va": null,
+      "main_load_va": "0x57000000",
+      "model_id": "DMR-EX78",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": "0x90400000",
+      "regions": [
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_PROG_RAM",
+          "read": true,
+          "size": "0x00080000",
+          "start": "0x90400000",
+          "write": true
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_MAIN_RAM",
+          "read": true,
+          "size": "0x00E00000",
+          "start": "0x57000000",
+          "write": true
+        }
+      ],
+      "series": "Série EX (HDD+DVB-T)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EX79": {
+      "drv_load_va": "0x90202000",
+      "main_load_va": "0x50622000",
+      "model_id": "DMR-EX79",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": "0x90400000",
+      "regions": [
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_PROG_RAM",
+          "read": true,
+          "size": "0x00080000",
+          "start": "0x90400000",
+          "write": true
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_MAIN_RAM",
+          "read": true,
+          "size": "0x00E00000",
+          "start": "0x50622000",
+          "write": true
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_DRV_RAM",
+          "read": true,
+          "size": "0x00200000",
+          "start": "0x90202000",
+          "write": true
+        }
+      ],
+      "series": "Série EX (HDD+DVB-T)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EX795": {
+      "drv_load_va": "0x90202000",
+      "main_load_va": "0x50622000",
+      "model_id": "DMR-EX795",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": "0x90400000",
+      "regions": [
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_PROG_RAM",
+          "read": true,
+          "size": "0x00080000",
+          "start": "0x90400000",
+          "write": true
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_MAIN_RAM",
+          "read": true,
+          "size": "0x00E00000",
+          "start": "0x50622000",
+          "write": true
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_DRV_RAM",
+          "read": true,
+          "size": "0x00200000",
+          "start": "0x90202000",
+          "write": true
+        }
+      ],
+      "series": "Série EX (HDD+DVB-T)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EX80SEG": {
+      "drv_load_va": "0x90202000",
+      "main_load_va": "0x57000000",
+      "model_id": "DMR-EX80SEG",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": "0x50400000",
+      "regions": [
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_PROG_RAM",
+          "read": true,
+          "size": "0x00080000",
+          "start": "0x50400000",
+          "write": true
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_MAIN_RAM",
+          "read": true,
+          "size": "0x00E00000",
+          "start": "0x57000000",
+          "write": true
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_DRV_RAM",
+          "read": true,
+          "size": "0x00200000",
+          "start": "0x90202000",
+          "write": true
+        }
+      ],
+      "series": "Série EX (HDD+DVB-S)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EX81S": {
+      "drv_load_va": null,
+      "main_load_va": "0x57000000",
+      "model_id": "DMR-EX81S",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": "0x90400000",
+      "regions": [
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_PROG_RAM",
+          "read": true,
+          "size": "0x00080000",
+          "start": "0x90400000",
+          "write": true
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_MAIN_RAM",
+          "read": true,
+          "size": "0x00E00000",
+          "start": "0x57000000",
+          "write": true
+        }
+      ],
+      "series": "Série EX (HDD+DVB-S)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EX83": {
+      "drv_load_va": null,
+      "main_load_va": "0x50622000",
+      "model_id": "DMR-EX83",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": "0x90400000",
+      "regions": [
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_PROG_RAM",
+          "read": true,
+          "size": "0x00080000",
+          "start": "0x90400000",
+          "write": true
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_MAIN_RAM",
+          "read": true,
+          "size": "0x00E00000",
+          "start": "0x50622000",
+          "write": true
+        }
+      ],
+      "series": "Série EX (HDD+DVB-T)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EX84C": {
+      "drv_load_va": null,
+      "main_load_va": "0x50622000",
+      "model_id": "DMR-EX84C",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": "0x90400000",
+      "regions": [
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_PROG_RAM",
+          "read": true,
+          "size": "0x00080000",
+          "start": "0x90400000",
+          "write": true
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_MAIN_RAM",
+          "read": true,
+          "size": "0x00E00000",
+          "start": "0x50622000",
+          "write": true
+        }
+      ],
+      "series": "Série EX (HDD+DVB-C)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EX85": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-EX85",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série EX (250GB HDD+DVB-T)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EX87": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-EX87",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série EX (250GB HDD+DVB-T)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EX88": {
+      "drv_load_va": null,
+      "main_load_va": "0x57000000",
+      "model_id": "DMR-EX88",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": "0x90400000",
+      "regions": [
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_PROG_RAM",
+          "read": true,
+          "size": "0x00080000",
+          "start": "0x90400000",
+          "write": true
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_MAIN_RAM",
+          "read": true,
+          "size": "0x00E00000",
+          "start": "0x57000000",
+          "write": true
+        }
+      ],
+      "series": "Série EX (HDD+DVB-T)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EX89": {
+      "drv_load_va": "0x90202000",
+      "main_load_va": "0x50622000",
+      "model_id": "DMR-EX89",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": "0x90400000",
+      "regions": [
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_PROG_RAM",
+          "read": true,
+          "size": "0x00080000",
+          "start": "0x90400000",
+          "write": true
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_MAIN_RAM",
+          "read": true,
+          "size": "0x00E00000",
+          "start": "0x50622000",
+          "write": true
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_DRV_RAM",
+          "read": true,
+          "size": "0x00200000",
+          "start": "0x90202000",
+          "write": true
+        }
+      ],
+      "series": "Série EX (HDD+DVB-T)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EX93": {
+      "drv_load_va": null,
+      "main_load_va": "0x50622000",
+      "model_id": "DMR-EX93",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": "0x90400000",
+      "regions": [
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_PROG_RAM",
+          "read": true,
+          "size": "0x00080000",
+          "start": "0x90400000",
+          "write": true
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_MAIN_RAM",
+          "read": true,
+          "size": "0x00E00000",
+          "start": "0x50622000",
+          "write": true
+        }
+      ],
+      "series": "Série EX (HDD+DVB-C)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EX95": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-EX95",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série EX (HDD+DVD+VHS+DVB-T)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EX97": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-EX97",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série EX (2015 USB PANAEUSB)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EX98V": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-EX98V",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série EX (HDD+DVD+VHS)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EX99V": {
+      "drv_load_va": null,
+      "main_load_va": "0x50622000",
+      "model_id": "DMR-EX99V",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": "0x90400000",
+      "regions": [
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_PROG_RAM",
+          "read": true,
+          "size": "0x00080000",
+          "start": "0x90400000",
+          "write": true
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_MAIN_RAM",
+          "read": true,
+          "size": "0x00E00000",
+          "start": "0x50622000",
+          "write": true
+        }
+      ],
+      "series": "Série EX (HDD+DVD+VHS+DVB-T)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EZ17": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-EZ17",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série EZ (NA ATSC DVD)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EZ25": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-EZ25",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série EZ (EU DVB-T DVD)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EZ27": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-EZ27",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série EZ (NA ATSC DVD)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EZ28": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-EZ28",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série EZ (LSI DoMiNo NA ATSC DVD)",
+      "soc_isa": "SPARC V8 (LSI DoMiNo)",
+      "soc_part": "LSI DoMiNo / Magnum DM8635-CHZ (ZEBRA 64 / DMN-8653)"
+    },
+    "DMR-EZ37V": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-EZ37V",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série EZ (NA ATSC DVD+VHS)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EZ45V": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-EZ45V",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série EZ (EU DVB-T DVD+VHS)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EZ47V": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-EZ47V",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série EZ (NA ATSC DVD+VHS)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-EZ485V": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-EZ485V",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série EZ (LSI DoMiNo DVD+VHS)",
+      "soc_isa": "SPARC V8 (LSI DoMiNo)",
+      "soc_part": "LSI DoMiNo / Magnum DM8635-CHZ (ZEBRA 64 / DMN-8653)"
+    },
+    "DMR-EZ48V": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-EZ48V",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série EZ (Split NA Magnum vs EU AM34)",
+      "soc_isa": "SPARC V8 (LSI DoMiNo)",
+      "soc_part": "LSI DoMiNo / Magnum DM8635-CHZ (ZEBRA 64 / DMN-8653)"
+    },
+    "DMR-EZ49V": {
+      "drv_load_va": null,
+      "main_load_va": "0x50622000",
+      "model_id": "DMR-EZ49V",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": "0x90400000",
+      "regions": [
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_PROG_RAM",
+          "read": true,
+          "size": "0x00080000",
+          "start": "0x90400000",
+          "write": true
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_MAIN_RAM",
+          "read": true,
+          "size": "0x00E00000",
+          "start": "0x50622000",
+          "write": true
+        }
+      ],
+      "series": "Série EZ (AM34 EU DVD+VHS)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-UBC90": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-UBC90",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série UBC/UBS (4K UHD Blu-ray)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-XS350": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-XS350",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série BS/XS (Blu-ray/DVD HD Freesat NAND)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-XS380": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-XS380",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série BS/XS (2010 Blu-ray/DVD Freesat NAND)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-XS385": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-XS385",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série BS/XS (2010 Blu-ray/DVD DVB-S2 NAND)",
+      "soc_isa": null,
+      "soc_part": null
+    },
+    "DMR-XW300": {
+      "drv_load_va": null,
+      "main_load_va": null,
+      "model_id": "DMR-XW300",
+      "nvram_cached_va": null,
+      "nvram_uncached_va": null,
+      "prog_load_va": null,
+      "regions": [],
+      "series": "Série XW (HD DIGA NAND)",
+      "soc_isa": null,
+      "soc_part": null
+    }
+  },
+  "schema_version": 1,
+  "stages": [
+    {
+      "base_va": "0x44000000",
+      "default_binary": "C:\\ghidra\\binaries\\BOOT.BIN",
+      "entry_seeds": [
+        "0x44000000",
+        "0x4400C696",
+        "0x4400D32F",
+        "0x440236ED"
+      ],
+      "key": "BOOT.BIN",
+      "model": "DMR-EH55",
+      "program_path": "/BOOT.BIN",
+      "spot_check_opcodes": []
+    },
+    {
+      "base_va": "0x44000000",
+      "entry_seeds": [
+        "0x44000000",
+        "0x44000008",
+        "0x44000014",
+        "0x4402A2AE",
+        "0x4400159A",
+        "0x440242B7"
+      ],
+      "key": "eh55_loader_ver061_256k.bin",
+      "model": "DMR-EH55",
+      "program_path": "/eh55_loader_ver061_256k.bin",
+      "repo_relative_binary": "firmware_and_images/eh55_loader_ver061_256k.bin",
+      "spot_check_opcodes": [
+        "0x440242B7",
+        "0x4400159A"
+      ]
+    },
+    {
+      "base_va": "0x50400000",
+      "default_binary": "C:\\ghidra\\binaries\\unpacked\\eh55_frm_PROG061_BOOT.bin",
+      "entry_seeds": [
+        "0x50400000",
+        "0x50400008",
+        "0x50400014",
+        "0x5042D236",
+        "0x50401F3C",
+        "0x5040A294",
+        "0x5040EA20",
+        "0x50423540",
+        "0x5042358B",
+        "0x504313E6",
+        "0x504009E4"
+      ],
+      "key": "eh55_frm_PROG061_BOOT.bin",
+      "model": "DMR-EH55",
+      "program_path": "/eh55_frm_PROG061_BOOT.bin",
+      "spot_check_opcodes": [
+        "0x504313E6",
+        "0x504009E4",
+        "0x5040EA2F"
+      ]
+    },
+    {
+      "base_va": "0x40000000",
+      "default_binary": "C:\\ghidra\\binaries\\DRV_decomp.bin",
+      "entry_seeds": [
+        "0x40000000",
+        "0x40000014",
+        "0x40030080"
+      ],
+      "key": "DRV_decomp.bin",
+      "model": "DMR-EH55",
+      "program_path": "/DRV_decomp.bin",
+      "spot_check_opcodes": []
+    },
+    {
+      "base_va": "0x40000000",
+      "default_binary": "C:\\ghidra\\binaries\\unpacked\\EH55_DRV_S211.bin",
+      "entry_seeds": [
+        "0x40000000",
+        "0x40000014",
+        "0x40001000",
+        "0x40030080",
+        "0x40130EFA"
+      ],
+      "key": "EH55_DRV_S211.bin",
+      "model": "DMR-EH55",
+      "program_path": "/EH55_DRV_S211.bin",
+      "spot_check_opcodes": []
+    },
+    {
+      "base_va": "0x57000000",
+      "default_binary": "C:\\ghidra\\binaries\\unpacked\\EH55_MAIN_3410PQ.bin",
+      "entry_seeds": [
+        "0x57000000",
+        "0x57000010",
+        "0x57000044",
+        "0x574B5A99",
+        "0x57000D2C",
+        "0x574DD208",
+        "0x5771ABFB"
+      ],
+      "key": "EH55_MAIN_3410PQ.bin",
+      "model": "DMR-EH55",
+      "program_path": "/EH55_MAIN_3410PQ.bin",
+      "spot_check_opcodes": [
+        "0x57000D2C"
+      ]
+    }
+  ],
+  "tainted_functions": [
+    "0x50423540",
+    "0x5042358B",
+    "0x5771ABFB",
+    "0x4400C696",
+    "0x4400D32F",
+    "0x440236ED"
+  ],
+  "volatile_mmio_windows": [
+    {
+      "end": "0x100FFFFF",
+      "name": "PANADIGA_MMIO_10",
+      "start": "0x10000000"
+    },
+    {
+      "end": "0x847FFFFF",
+      "name": "PANADIGA_NOR_CS1_CFI",
+      "start": "0x84000000"
+    },
+    {
+      "end": "0x88FFFFFF",
+      "name": "PANADIGA_AIOF_88",
+      "start": "0x88000000"
+    },
+    {
+      "end": "0xC0FFFFFF",
+      "name": "PANADIGA_ASIC_C0",
+      "start": "0xC0000000"
+    },
+    {
+      "end": "0xD4FFFFFF",
+      "name": "PANADIGA_ATA_SC0_D4",
+      "start": "0xD4000000"
+    }
+  ]
+}

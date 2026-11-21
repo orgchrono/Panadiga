@@ -1,50 +1,27 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  AM34_FLASH_SIZE_HEX,
-  AM34_FLASH_UNCACHED_ADDR_HEX,
-  AM34_SDRAM_STUB_RAW_ADDR,
-  AM34_SDRAM_STUB_WRAP_ADDR,
-  NOR_DUMPER_DEFAULT_BLOCK_SIZE,
-  SD_DEFAULT_VOLUME_MB,
-} from '@/constants';
 import { useToast } from '@/context/ToastContext';
 import { translate } from '@/i18n/useTranslation';
 import type {
-  FrmModuleExtractionReport,
-  MainPassthroughReport,
-  MainPassthroughRspPlan,
-  NorDumperStubResult,
-  SdCardCreatorReport,
-  SdDiskInspectionReport,
-  SdMediaVerificationReport,
-  SdUnbrickKitReport,
-  SdUnbrickKitRequestDto,
+  FrmModuleExtractionReport, MainPassthroughReport, MainPassthroughRspPlan,
+  NorDumperStubResult, SdCardCreatorReport, SdDiskInspectionReport,
+  SdMediaVerificationReport, SdUnbrickKitReport, SdUnbrickKitRequestDto,
   UnbrickWorkspaceReport,
 } from '@/models';
 import { emitUnbrickCompletedEvent } from '@/services/systemService';
 import {
-  buildNorDumperStub,
-  extractFrmModules as extractFrmModulesRpc,
-  flashSdRecoveryCard,
-  generateMainRspPlan,
-  inspectSdDisk as inspectSdDiskRpc,
-  inspectUnbrickWorkbench,
-  patchMainPassthrough,
-  prepareSdUnbrickKit,
-  verifySdUnbrickMedia,
+  buildNorDumperStub, extractFrmModules as extractFrmModulesRpc, flashSdRecoveryCard,
+  generateMainRspPlan, inspectSdDisk as inspectSdDiskRpc, inspectUnbrickWorkbench,
+  patchMainPassthrough, prepareSdUnbrickKit, verifySdUnbrickMedia,
 } from '@/services/unbrickService';
+import { formatErrorMessage } from '@/utils/formatters';
 import { logger } from '@/utils/logger';
-import { resolvePrimaryDriveTarget } from '@/utils/storageDrives';
-import {
-  emptyChannel,
-  useMatshitaEmuActions,
-  type AsyncChannelState,
-} from './useMatshitaEmuActions';
+import { emptyChannel, useMatshitaEmuActions, type AsyncChannelState } from './useMatshitaEmuActions';
 import { useStorageDrives } from './useStorageDrives';
-
-function formatErr(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
-}
+import {
+  buildFat16SdFlashPayload, buildFrmExtractPayload, buildMainPassthroughPayload,
+  buildNorStubPayload, buildWorkbenchInspectArgs, resolveAutoSdDriveTarget,
+  shouldNotifyUnbrickVerified,
+} from './unbrickMissionLogic';
 
 export function useUnbrickViewModel() {
   const { showToast } = useToast();
@@ -55,25 +32,13 @@ export function useUnbrickViewModel() {
     error: null,
   }));
   const [sdKit, setSdKit] = useState<AsyncChannelState<SdUnbrickKitReport>>(() => emptyChannel());
-  const [verify, setVerify] = useState<AsyncChannelState<SdMediaVerificationReport>>(() =>
-    emptyChannel(),
-  );
-  const [sdDisk, setSdDisk] = useState<AsyncChannelState<SdDiskInspectionReport>>(() =>
-    emptyChannel(),
-  );
-  const [extract, setExtract] = useState<AsyncChannelState<FrmModuleExtractionReport>>(() =>
-    emptyChannel(),
-  );
+  const [verify, setVerify] = useState<AsyncChannelState<SdMediaVerificationReport>>(() => emptyChannel());
+  const [sdDisk, setSdDisk] = useState<AsyncChannelState<SdDiskInspectionReport>>(() => emptyChannel());
+  const [extract, setExtract] = useState<AsyncChannelState<FrmModuleExtractionReport>>(() => emptyChannel());
   const [tbc, setTbc] = useState<AsyncChannelState<MainPassthroughReport>>(() => emptyChannel());
-  const [rspPlan, setRspPlan] = useState<AsyncChannelState<MainPassthroughRspPlan>>(() =>
-    emptyChannel(),
-  );
-  const [norStub, setNorStub] = useState<AsyncChannelState<NorDumperStubResult>>(() =>
-    emptyChannel(),
-  );
-  const [sdFat16Image, setSdFat16Image] = useState<AsyncChannelState<SdCardCreatorReport>>(() =>
-    emptyChannel(),
-  );
+  const [rspPlan, setRspPlan] = useState<AsyncChannelState<MainPassthroughRspPlan>>(() => emptyChannel());
+  const [norStub, setNorStub] = useState<AsyncChannelState<NorDumperStubResult>>(() => emptyChannel());
+  const [sdFat16Image, setSdFat16Image] = useState<AsyncChannelState<SdCardCreatorReport>>(() => emptyChannel());
 
   const runChannel = useCallback(
     async <T>(
@@ -86,12 +51,10 @@ export function useUnbrickViewModel() {
       try {
         const result = await fn();
         setter({ loading: false, data: result, error: null });
-        if (toastTitle) {
-          showToast({ type: 'success', title: toastTitle });
-        }
+        if (toastTitle) showToast({ type: 'success', title: toastTitle });
         return result;
       } catch (err) {
-        const msg = formatErr(err);
+        const msg = formatErrorMessage(err);
         logger.error('UnbrickViewModel', `${tag} failed`, err);
         setter((prev) => ({ ...prev, loading: false, error: msg }));
         showToast({ type: 'error', title: tag, message: msg });
@@ -103,8 +66,7 @@ export function useUnbrickViewModel() {
 
   const loadWorkbench = useCallback(
     async (workspacePath?: string): Promise<UnbrickWorkspaceReport | null> => {
-      const trimmed = workspacePath?.trim();
-      const args = trimmed ? { workspacePath: trimmed, workspace_path: trimmed } : undefined;
+      const args = buildWorkbenchInspectArgs(workspacePath);
       const report = await runChannel(setWorkbench, translate('errors.unbrick.workbenchTag'), () =>
         inspectUnbrickWorkbench(args),
       );
@@ -113,8 +75,7 @@ export function useUnbrickViewModel() {
         setRspPlan((prev) => ({ ...prev, data: report.rsp_plan }));
         if (report.sd_verification) {
           setVerify((prev) => ({ ...prev, data: report.sd_verification }));
-          const sdStatus = report.sd_verification.overall_status;
-          if (sdStatus && sdStatus !== 'FAIL' && sdStatus !== 'INCOMPLETE_OR_INVALID') {
+          if (shouldNotifyUnbrickVerified(report.sd_verification.overall_status)) {
             emitUnbrickCompletedEvent(true);
           }
         }
@@ -127,9 +88,7 @@ export function useUnbrickViewModel() {
   useEffect(() => {
     const controller = new AbortController();
     void Promise.resolve().then(() => {
-      if (!controller.signal.aborted) {
-        void loadWorkbench();
-      }
+      if (!controller.signal.aborted) void loadWorkbench();
     });
     return () => controller.abort();
   }, [loadWorkbench]);
@@ -137,8 +96,7 @@ export function useUnbrickViewModel() {
   const buildSdKit = useCallback(
     async (request: SdUnbrickKitRequestDto): Promise<SdUnbrickKitReport | null> => {
       const report = await runChannel(
-        setSdKit,
-        translate('errors.unbrick.sdKitTag'),
+        setSdKit, translate('errors.unbrick.sdKitTag'),
         () => prepareSdUnbrickKit(request),
         translate('errors.unbrick.sdKitSaved', { dir: request.output_dir }),
       );
@@ -155,41 +113,24 @@ export function useUnbrickViewModel() {
     async (sdRootDir: string): Promise<SdMediaVerificationReport | null> => {
       const clean = sdRootDir.trim();
       const report = await runChannel(
-        setVerify,
-        translate('errors.unbrick.verifySdTag'),
+        setVerify, translate('errors.unbrick.verifySdTag'),
         () => verifySdUnbrickMedia(clean),
         translate('errors.unbrick.verifySdDone', { dir: clean }),
       );
-      if (report) {
-        emitUnbrickCompletedEvent(true);
-      }
+      if (report) emitUnbrickCompletedEvent(true);
       return report;
     },
     [runChannel],
   );
 
   const createFat16Image = useCallback(
-    async (params: {
-      panaDvdPath?: string;
-      includePanaSd?: boolean;
-      loaderProfile?: 'ver061' | 'ver063';
-    }): Promise<SdCardCreatorReport | null> => {
+    async (params: { panaDvdPath?: string; includePanaSd?: boolean; loaderProfile?: 'ver061' | 'ver063' }): Promise<SdCardCreatorReport | null> => {
       const rep = await runChannel(
-        setSdFat16Image,
-        translate('errors.unbrick.sdFlashTag'),
-        () =>
-          flashSdRecoveryCard({
-            model: 'DMR-EH55',
-            volumeMb: SD_DEFAULT_VOLUME_MB,
-            loaderProfile: params.loaderProfile ?? 'ver061',
-            panaDvdPath: params.panaDvdPath?.trim() || undefined,
-            includePanaSd: Boolean(params.includePanaSd),
-          }),
+        setSdFat16Image, translate('errors.unbrick.sdFlashTag'),
+        () => flashSdRecoveryCard(buildFat16SdFlashPayload(params)),
         translate('errors.unbrick.sdFlashDone'),
       );
-      if (rep) {
-        emitUnbrickCompletedEvent(true);
-      }
+      if (rep) emitUnbrickCompletedEvent(true);
       return rep;
     },
     [runChannel],
@@ -199,8 +140,7 @@ export function useUnbrickViewModel() {
     async (target: string): Promise<SdDiskInspectionReport | null> => {
       const clean = target.trim();
       return runChannel(
-        setSdDisk,
-        translate('errors.unbrick.inspectDiskTag'),
+        setSdDisk, translate('errors.unbrick.inspectDiskTag'),
         () => inspectSdDiskRpc(clean),
         translate('errors.unbrick.inspectDiskDone', { target: clean }),
       );
@@ -209,20 +149,10 @@ export function useUnbrickViewModel() {
   );
 
   const extractFrmModules = useCallback(
-    async (
-      frmPath: string,
-      outDir: string,
-      unpackPayloads = true,
-    ): Promise<FrmModuleExtractionReport | null> =>
+    async (frmPath: string, outDir: string, unpackPayloads = true): Promise<FrmModuleExtractionReport | null> =>
       runChannel(
-        setExtract,
-        translate('errors.unbrick.extractFrmTag'),
-        () =>
-          extractFrmModulesRpc({
-            frmPath: frmPath.trim(),
-            outDir: outDir.trim(),
-            unpackPayloads,
-          }),
+        setExtract, translate('errors.unbrick.extractFrmTag'),
+        () => extractFrmModulesRpc(buildFrmExtractPayload(frmPath, outDir, unpackPayloads)),
         translate('errors.unbrick.extractFrmDone', { dir: outDir.trim() }),
       ),
     [runChannel],
@@ -235,19 +165,12 @@ export function useUnbrickViewModel() {
       outPath?: string;
       mode?: 'av_passthrough' | 'factory_original';
     }): Promise<MainPassthroughReport | null> => {
-      const mode = params.mode ?? 'av_passthrough';
+      const payload = buildMainPassthroughPayload(params);
       return runChannel(
-        setTbc,
-        translate('errors.unbrick.tbcTag'),
-        () =>
-          patchMainPassthrough({
-            action: params.action,
-            inputPath: params.inputPath.trim(),
-            outPath: params.outPath?.trim() || undefined,
-            mode,
-          }),
+        setTbc, translate('errors.unbrick.tbcTag'),
+        () => patchMainPassthrough(payload),
         params.action === 'patch'
-          ? translate('errors.unbrick.tbcPatched', { mode })
+          ? translate('errors.unbrick.tbcPatched', { mode: payload.mode })
           : translate('errors.unbrick.tbcInspected'),
       );
     },
@@ -258,8 +181,7 @@ export function useUnbrickViewModel() {
     async (callbackTargetVa?: string): Promise<MainPassthroughRspPlan | null> => {
       const cb = callbackTargetVa?.trim() || undefined;
       return runChannel(
-        setRspPlan,
-        translate('errors.unbrick.rspPlanTag'),
+        setRspPlan, translate('errors.unbrick.rspPlanTag'),
         () => generateMainRspPlan(cb),
         translate('errors.unbrick.rspPlanUpdated'),
       );
@@ -269,70 +191,33 @@ export function useUnbrickViewModel() {
 
   const buildNorStub = useCallback(
     async (params: {
-      startAddr?: string;
-      totalLen?: string;
-      blockSize?: number;
-      loadAddr?: string;
-      outPath?: string;
-      wrapAsDigadiag?: boolean;
-    }): Promise<NorDumperStubResult | null> => {
-      const wrap = Boolean(params.wrapAsDigadiag);
-      return runChannel(
-        setNorStub,
-        translate('errors.unbrick.norStubTag'),
-        () =>
-          buildNorDumperStub({
-            startAddr: params.startAddr?.trim() || AM34_FLASH_UNCACHED_ADDR_HEX,
-            totalLen: params.totalLen?.trim() || AM34_FLASH_SIZE_HEX,
-            blockSize: params.blockSize ?? NOR_DUMPER_DEFAULT_BLOCK_SIZE,
-            loadAddr:
-              params.loadAddr?.trim() ||
-              (wrap ? AM34_SDRAM_STUB_WRAP_ADDR : AM34_SDRAM_STUB_RAW_ADDR),
-            outPath: params.outPath?.trim() || undefined,
-            wrapAsDigadiag: wrap,
-          }),
+      startAddr?: string; totalLen?: string; blockSize?: number;
+      loadAddr?: string; outPath?: string; wrapAsDigadiag?: boolean;
+    }): Promise<NorDumperStubResult | null> =>
+      runChannel(
+        setNorStub, translate('errors.unbrick.norStubTag'),
+        () => buildNorDumperStub(buildNorStubPayload(params)),
         translate('errors.unbrick.norStubBuilt'),
-      );
-    },
+      ),
     [runChannel],
   );
 
   const matshita = useMatshitaEmuActions(runChannel);
   const sdDrivesVm = useStorageDrives('sd_card', true);
 
-  const autoSdResolved = useMemo(() => {
-    const candidate =
-      sdDrivesVm.filteredDrives.find((d) => d.safe_to_write) ??
-      sdDrivesVm.drives.find((d) => d.drive_role === 'sd_card' && d.safe_to_write);
-    return candidate ? resolvePrimaryDriveTarget(candidate, true) : null;
-  }, [sdDrivesVm.drives, sdDrivesVm.filteredDrives]);
+  const autoSdResolved = useMemo(
+    () => resolveAutoSdDriveTarget(sdDrivesVm.filteredDrives, sdDrivesVm.drives),
+    [sdDrivesVm.drives, sdDrivesVm.filteredDrives],
+  );
 
   return {
-    workbench,
-    sdKit,
-    verify,
-    sdDisk,
-    extract,
-    tbc,
-    rspPlan,
-    norStub,
-    ...matshita,
-    sdDrives: sdDrivesVm.filteredDrives,
-    sdDriveFilter: sdDrivesVm.roleFilter,
-    setSdDriveFilter: sdDrivesVm.setRoleFilter,
-    sdDrivesLoading: sdDrivesVm.loading,
+    workbench, sdKit, verify, sdDisk, extract, tbc, rspPlan, norStub, ...matshita,
+    sdDrives: sdDrivesVm.filteredDrives, sdDriveFilter: sdDrivesVm.roleFilter,
+    setSdDriveFilter: sdDrivesVm.setRoleFilter, sdDrivesLoading: sdDrivesVm.loading,
     refreshSdDrives: sdDrivesVm.refresh,
     autoSdDiskTarget: autoSdResolved?.diskTarget ?? null,
     autoSdMountDir: autoSdResolved?.mountPoint ?? null,
-    sdFat16Image,
-    createFat16Image,
-    loadWorkbench,
-    buildSdKit,
-    verifySdMedia,
-    inspectSdDisk,
-    extractFrmModules,
-    runMainPassthrough,
-    generateRspPlan,
-    buildNorStub,
+    sdFat16Image, createFat16Image, loadWorkbench, buildSdKit, verifySdMedia,
+    inspectSdDisk, extractFrmModules, runMainPassthrough, generateRspPlan, buildNorStub,
   };
 }

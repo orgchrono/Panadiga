@@ -8,6 +8,7 @@ mod eh55_bgo;
 mod eh55_bgo_dto;
 mod eh55_bgo_repair;
 mod nvram_clean;
+mod nvram_clean_steps;
 mod telemetry;
 
 pub use capture::pico_capture_nvram_live;

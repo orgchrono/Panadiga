@@ -5,10 +5,12 @@
 
 mod regions;
 mod regions_static;
+mod ssot_maps;
 mod symbols;
 
 pub use regions::memory_region_specs_for_model;
 pub use regions_static::memory_region_specs;
+pub use ssot_maps::{generate_ghidra_ssot_maps_json, ghidra_maps_ssot_json};
 pub use symbols::symbol_specs;
 
 use crate::constants::*;
@@ -275,5 +277,76 @@ mod tests {
                 .any(|s| s.name == "SC0TXB_UART0_TX_BYTE" && s.address == 0xD400_2008)
         );
         assert!(!symbols.iter().any(|s| s.address == 0xC000_0100));
+    }
+
+    fn parse_hex_u32(val: &serde_json::Value) -> u32 {
+        let s = val.as_str().expect("hex string");
+        u32::from_str_radix(s.trim_start_matches("0x"), 16).expect("valid hex u32")
+    }
+
+    #[test]
+    fn ghidra_ssot_json_matches_static_regions_and_projects_all_models() {
+        let rendered = generate_ghidra_ssot_maps_json().expect("generate json");
+        let root: serde_json::Value =
+            serde_json::from_str(&rendered).expect("valid generated json");
+
+        assert_eq!(root["schema_version"].as_u64(), Some(1));
+        assert_eq!(root["language_id"].as_str(), Some("mn10300:LE:32:default"));
+        assert_eq!(root["compiler_id"].as_str(), Some("default"));
+        assert_eq!(root["default_model"].as_str(), Some("DMR-EH55"));
+
+        let json_regions = root["am34_memory_regions"]
+            .as_array()
+            .expect("am34_memory_regions array");
+        let rust_regions = memory_region_specs();
+        assert_eq!(json_regions.len(), rust_regions.len());
+        for (j, r) in json_regions.iter().zip(rust_regions.iter()) {
+            assert_eq!(j["name"].as_str(), Some(r.name));
+            assert_eq!(parse_hex_u32(&j["start"]), r.start);
+            assert_eq!(parse_hex_u32(&j["size"]), r.size);
+            assert_eq!(j["read"].as_bool(), Some(r.read));
+            assert_eq!(j["write"].as_bool(), Some(r.write));
+            assert_eq!(j["execute"].as_bool(), Some(r.execute));
+            assert_eq!(j["is_volatile"].as_bool(), Some(r.is_volatile));
+        }
+
+        let windows = root["volatile_mmio_windows"]
+            .as_array()
+            .expect("volatile_mmio_windows array");
+        assert_eq!(windows.len(), 5);
+
+        let stages = root["stages"].as_array().expect("stages array");
+        assert_eq!(stages.len(), 6);
+        for key in [
+            "BOOT.BIN",
+            "eh55_loader_ver061_256k.bin",
+            "eh55_frm_PROG061_BOOT.bin",
+            "DRV_decomp.bin",
+            "EH55_DRV_S211.bin",
+            "EH55_MAIN_3410PQ.bin",
+        ] {
+            assert!(
+                stages.iter().any(|s| s["key"].as_str() == Some(key)),
+                "missing stage {key}"
+            );
+        }
+
+        assert!(root["generic_stage_rules"]["filename_base_hints"].is_array());
+
+        let model_maps = root["model_memory_maps"]
+            .as_object()
+            .expect("model_memory_maps object");
+        for model in ["DMR-EH55", "DMR-EH50", "DMR-EH58", "DMR-ES35V"] {
+            let entry = model_maps.get(model).expect("missing projected model");
+            assert!(
+                entry["regions"].as_array().is_some_and(|a| !a.is_empty()),
+                "empty regions for {model}"
+            );
+        }
+        let ez485v = model_maps
+            .get("DMR-EZ485V")
+            .expect("missing projected model DMR-EZ485V");
+        assert_eq!(ez485v["soc_isa"].as_str(), Some("SPARC V8 (LSI DoMiNo)"));
+        assert!(ez485v["regions"].as_array().is_some_and(|a| a.is_empty()));
     }
 }

@@ -51,6 +51,24 @@ pub enum GhidraActions {
         output: PathBuf,
     },
 
+    /// Export the 4-pass SSOT-driven Zero-?? PyGhidra recovery pipeline script
+    ZeroUndef {
+        /// Target Python script file path
+        #[arg(
+            short,
+            long,
+            default_value = "tools/ghidra/ghidra_zero_undef_pipeline.py"
+        )]
+        output: PathBuf,
+    },
+
+    /// Export unified Ghidra JSON SSOT map bundle (AM34 regions, stages, volatile MMIO & per-model projections)
+    SsotMaps {
+        /// Target JSON file path
+        #[arg(short, long, default_value = "tools/ghidra/ghidra_ssot_maps.json")]
+        output: PathBuf,
+    },
+
     /// Export all Ghidra automation scripts into a target directory
     ExportAll {
         /// Destination directory for generated Ghidra scripts

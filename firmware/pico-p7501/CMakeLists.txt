@@ -28,6 +28,7 @@ add_executable(panasonic_p7501_uart
     p7501_pico_main.c
     common/p7501_cmd_arena.c
     common/p7501_hex.c
+    common/p7501_crc_csum.c
     common/p7501_spsc_ring.c
     common/p7501_wdt_logic.c
     hal/p7501_ble_nus.c
@@ -48,6 +49,7 @@ add_executable(panasonic_p7501_uart
     flash/p7501_bus_policy.c
     flash/p7501_flash_geo.c
     flash/p7501_fast_stream_codec.c
+    flash/p7501_normap_codec.c
     flash/p7501_fast_stub_io.c
     flash/p7501_fast_stream.c
     flash/p7501_ftl_inspect.c
@@ -105,10 +107,12 @@ add_executable(panasonic_p7501_uart
     uart/p7501_uart_tx.c
     uart/p7501_pana_dumpnor.c
     uart/p7501_pana_jedec_stubs.c
+    uart/p7501_pana_jedec_exec.c
     uart/p7501_pana_jedec_id.c
     uart/p7501_pana_rsp_codec.c
     uart/p7501_pana_rsp_guard.c
     uart/p7501_pana_rsp_parse.c
+    uart/p7501_pana_rsp_tokens.c
     uart/p7501_pana_rsp_report.c
     uart/p7501_pana_rsp_exec.c
     uart/p7501_pana_rsp.c

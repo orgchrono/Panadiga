@@ -165,3 +165,9 @@ export function parseNvramOffsetInput(raw: string | number): number | null {
   const parsed = Number.parseInt(trimmed, isHex ? HEX_RADIX : DECIMAL_RADIX);
   return Number.isInteger(parsed) && parsed >= 0 && parsed <= MAX_U32_VALUE ? parsed : null;
 }
+
+/**
+ * Pure error-to-string formatter shared cleanly across MVVM ViewModels.
+ */
+export const formatErrorMessage = (err: unknown): string =>
+  err instanceof Error ? err.message : String(err);

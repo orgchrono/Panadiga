@@ -220,7 +220,13 @@ pub(super) fn flash_pico_firmware(port: Option<String>, file: Option<PathBuf>) -
         uf2_data.len()
     );
     let report = flash_uf2_to_drive(target_drive, &uf2_data)?;
-    log_println!("[SUCCESS] {}", report.message);
+    log_println!(
+        "[SUCCESS] {} ({} bytes, family={}, sha256={})",
+        report.message,
+        report.uf2_size_bytes,
+        report.board_family,
+        report.sha256_hash
+    );
     Ok(())
 }
 

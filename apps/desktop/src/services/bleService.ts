@@ -4,7 +4,7 @@
  */
 
 import { translate } from '@/i18n/useTranslation';
-import { SSOT_WIRE_TERMINAL_MARKERS } from '@/models/generated/ssot';
+import { formatErrorMessage } from '@/utils/formatters';
 import {
   connectAndroidBleNus,
   disconnectAndroidBleNus,
@@ -13,113 +13,34 @@ import {
   sendAndroidBleCommand,
 } from './androidBridge';
 import {
-  resolveBluetoothNavigator,
-  subscribeWindowEvent,
-  type BluetoothDevice,
-  type BluetoothRemoteGATTCharacteristic,
-  type BluetoothRemoteGATTServer,
-} from './hostBridge';
+  BLE_ANDROID_CONNECT_TIMEOUT_MS,
+  BLE_CMD_TIMEOUT_MS,
+  BLE_GATT_CHUNK_BYTES,
+  BLE_MIN_TIMEOUT_MS,
+  NUS_RX_CHARACTERISTIC_UUID,
+  NUS_SERVICE_UUID,
+  NUS_TX_CHARACTERISTIC_UUID,
+  extractCharacteristicDataView,
+  isBleReplyComplete,
+  splitGattChunks,
+  writeGattChunksSequential,
+  type BleActiveSession,
+  type BleDataCallback,
+  type BleDeviceInfo,
+  type BleUartClient,
+} from './bleGattCodec';
+import { resolveBluetoothNavigator, subscribeWindowEvent } from './hostBridge';
 
-export const NUS_SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
-export const NUS_RX_CHARACTERISTIC_UUID = '6e400002-b5a3-f393-e0a9-e50e24dcca9e';
-export const NUS_TX_CHARACTERISTIC_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';
-
-const BLE_ANDROID_CONNECT_TIMEOUT_MS = 10000;
-const BLE_CMD_TIMEOUT_MS = 4000;
-const BLE_MIN_TIMEOUT_MS = 400;
-const BLE_GATT_CHUNK_BYTES = 20;
-const BLE_RES_PREFIX = SSOT_WIRE_TERMINAL_MARKERS[0];
-const BLE_PROMPTS: readonly string[] = SSOT_WIRE_TERMINAL_MARKERS.slice(1);
-const BLE_LEGACY_CLI_STATUS_RE =
-  /^[A-Z0-9_]+:\s+(?:OK|ERROR|ERR|FAILED|OFFLINE|TIMEOUT|DONE)\b/;
-
-export interface BleDeviceInfo {
-  id: string;
-  name: string;
-  connected: boolean;
-}
-
-export type BleDataCallback = (data: string) => void;
-
-export interface BleUartClient {
-  readonly isSupported: () => boolean;
-  readonly isConnected: () => boolean;
-  readonly connect: () => Promise<BleDeviceInfo>;
-  readonly send: (message: string) => Promise<void>;
-  readonly sendAndAwaitReply: (command: string, timeoutMs?: number) => Promise<string>;
-  readonly onReceive: (callback: BleDataCallback) => () => void;
-  readonly disconnect: () => void;
-}
-
-interface BleActiveSession {
-  readonly device: BluetoothDevice | null;
-  readonly server: BluetoothRemoteGATTServer | null;
-  readonly rxCharacteristic: BluetoothRemoteGATTCharacteristic | null;
-  readonly txCharacteristic: BluetoothRemoteGATTCharacteristic | null;
-  readonly androidNativeConnected: boolean;
-  readonly unsubAndroidRx: (() => void) | null;
-}
-
-function extractCharacteristicDataView(event: Event): DataView | null {
-  const target: EventTarget | null = event.target;
-  if (!target) {
-    return null;
-  }
-  const value: unknown = Reflect.get(target, 'value');
-  return value instanceof DataView ? value : null;
-}
-
-export function isBleReplyComplete(buffer: string): boolean {
-  const trimmedEnd = buffer.trimEnd();
-  if (trimmedEnd.length === 0) {
-    return false;
-  }
-  if (BLE_PROMPTS.some(prompt => trimmedEnd.endsWith(prompt))) {
-    return true;
-  }
-  if (!buffer.endsWith('\n') && !buffer.endsWith('\r')) {
-    return false;
-  }
-  const lines = buffer.split(/\r?\n/);
-  if (lines.some(line => line.trimStart().startsWith(BLE_RES_PREFIX))) {
-    return true;
-  }
-  const hasStructuredFrames = lines.some(line => {
-    const t = line.trimStart();
-    return t.startsWith('@P7501_') || t.startsWith('@PROG ') || t.startsWith('@EVT ');
-  });
-  if (hasStructuredFrames) {
-    return false;
-  }
-  return lines.some(line => {
-    const trimmed = line.trim();
-    return trimmed === 'PONG' || BLE_LEGACY_CLI_STATUS_RE.test(trimmed);
-  });
-}
-
-export function splitGattChunks(
-  payload: Uint8Array,
-  chunkSize = BLE_GATT_CHUNK_BYTES,
-): Uint8Array<ArrayBuffer>[] {
-  const safeChunkSize = Math.max(1, chunkSize);
-  const count = Math.ceil(payload.byteLength / safeChunkSize);
-  return Array.from({ length: count }, (_, idx) => {
-    const start = idx * safeChunkSize;
-    return payload.slice(start, start + safeChunkSize);
-  });
-}
-
-async function writeGattChunksSequential(
-  rxChar: BluetoothRemoteGATTCharacteristic,
-  chunks: readonly Uint8Array<ArrayBuffer>[],
-  index = 0,
-): Promise<void> {
-  if (index >= chunks.length) {
-    return;
-  }
-  await rxChar.writeValue(chunks[index]);
-  await writeGattChunksSequential(rxChar, chunks, index + 1);
-}
+export {
+  NUS_RX_CHARACTERISTIC_UUID,
+  NUS_SERVICE_UUID,
+  NUS_TX_CHARACTERISTIC_UUID,
+  isBleReplyComplete,
+  splitGattChunks,
+  type BleDataCallback,
+  type BleDeviceInfo,
+  type BleUartClient,
+};
 
 /**
  * Pure closure factory encapsulating Web Bluetooth & Android BLE NUS transport state
@@ -130,7 +51,7 @@ export function createBleUartService(): BleUartClient {
   const sessions = new Map<'active', BleActiveSession>();
 
   const emitChunk = (chunk: string): void => {
-    receiveCallbacks.forEach(cb => cb(chunk));
+    receiveCallbacks.forEach((cb) => cb(chunk));
   };
 
   const handleAndroidRxEvent = (event: Event): void => {
@@ -243,8 +164,7 @@ export function createBleUartService(): BleUartClient {
       };
     } catch (err: unknown) {
       cleanup();
-      const reason = err instanceof Error ? err.message : String(err);
-      throw new Error(translate('errors.ble.connectFailed', { reason }));
+      throw new Error(translate('errors.ble.connectFailed', { reason: formatErrorMessage(err) }));
     }
   };
 
@@ -313,7 +233,7 @@ export function createBleUartService(): BleUartClient {
         resolve(collected);
       }, effectiveTimeoutMs);
 
-      const off = onReceive(chunk => {
+      const off = onReceive((chunk) => {
         const next = `${chunks.get('buf') ?? ''}${chunk}`;
         chunks.set('buf', next);
         if (isBleReplyComplete(next)) {

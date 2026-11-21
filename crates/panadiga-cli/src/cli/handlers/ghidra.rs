@@ -33,6 +33,14 @@ pub fn handle_ghidra(args: GhidraArgs) -> Result<()> {
             let script = panadiga_core::ghidra::generate_ghidra_mn103_fix_decompilation();
             write_ghidra_script(&output, "Ghidra MN103 Decompilation Fixer", &script)?;
         }
+        GhidraActions::ZeroUndef { output } => {
+            let script = panadiga_core::ghidra::generate_ghidra_zero_undef_pipeline();
+            write_ghidra_script(&output, "Ghidra Zero-?? 4-Pass Pipeline", &script)?;
+        }
+        GhidraActions::SsotMaps { output } => {
+            let json = panadiga_core::ghidra::generate_ghidra_ssot_maps_json()?;
+            write_ghidra_script(&output, "Ghidra JSON SSOT Maps", &json)?;
+        }
         GhidraActions::ExportAll { dir } => {
             panadiga_core::ghidra::export_all_ghidra_scripts(&dir)?;
             log_info!(

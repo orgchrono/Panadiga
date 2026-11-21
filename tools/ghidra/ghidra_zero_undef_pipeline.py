@@ -1,14 +1,15 @@
-"""Panadiga 4-pass zero-``??`` Ghidra recovery pipeline (CPython 3 + PyGhidra).
+r"""Panadiga 4-pass zero-``??`` Ghidra recovery pipeline (CPython 3 + PyGhidra).
 
-Operates ONLY on the cloned project ``Panadiga_MN103S_ZeroUndef`` and the patched
-Ghidra install clone (``C:\\ghidra\\staging\\ghidra_12.1.4_PATCHED``); the original
-``Panadiga_MN103S`` project and stock ``GhidraMn10300`` language are never touched.
+Operates ONLY on isolated/cloned Ghidra projects (default ``Panadiga_MN103S_ZeroUndef``)
+and the patched Ghidra install clone (``C:\ghidra\staging\ghidra_12.1.4_PATCHED``);
+the original ``Panadiga_MN103S`` project and stock ``GhidraMn10300`` language are never touched.
 
 Usage (from repo root)::
 
-    C:\\ghidra\\.venv\\Scripts\\python.exe tools\\ghidra\\ghidra_zero_undef_pipeline.py <stage> [--only NAME]
+    C:\ghidra\.venv\Scripts\python.exe tools\ghidra\ghidra_zero_undef_pipeline.py <stage> [--only NAME]
+    C:\ghidra\.venv\Scripts\python.exe tools\ghidra\ghidra_zero_undef_pipeline.py all --binary path\to\fw.bin --model DMR-EH55
 
-Stages: ``import-loader``, ``baseline``, ``pass2``, ``pass3``, ``pass4``, ``verify``.
+Stages: ``import-loader``, ``baseline``, ``pass2``, ``pass3``, ``pass4``, ``verify``, ``all``.
 """
 
 from __future__ import annotations
@@ -33,14 +34,16 @@ PROJECT_NAME = "Panadiga_MN103S_ZeroUndef"
 SOURCE_PROJECT_NAME = "Panadiga_MN103S"
 REPORT_DIR = pathlib.Path(os.environ.get("PANADIGA_ZERO_UNDEF_REPORTS", str(REPO / "docs" / "audits" / "zero_undef")))
 WORK_DIR = pathlib.Path(os.environ.get("PANADIGA_ZERO_UNDEF_WORK", r"C:\ghidra\staging\zero_undef_work"))
-LANGUAGE_ID = "mn10300:LE:32:default"
-COMPILER_ID = "default"
+SSOT_MAPS_PATH = TOOLS / "ghidra_ssot_maps.json"
 
+DEFAULT_LANGUAGE_ID = "mn10300:LE:32:default"
+DEFAULT_COMPILER_ID = "default"
+DEFAULT_MODEL = "DMR-EH55"
 LOADER_NAME = "eh55_loader_ver061_256k.bin"
 LOADER_SRC = REPO / "firmware_and_images" / LOADER_NAME
 LOADER_BASE = 0x44000000
 
-STAGES = {
+_BUILTIN_STAGES = {
     "BOOT.BIN": ("/BOOT.BIN", pathlib.Path(r"C:\ghidra\binaries\BOOT.BIN")),
     LOADER_NAME: ("/" + LOADER_NAME, LOADER_SRC),
     "eh55_frm_PROG061_BOOT.bin": ("/eh55_frm_PROG061_BOOT.bin", pathlib.Path(r"C:\ghidra\binaries\unpacked\eh55_frm_PROG061_BOOT.bin")),
@@ -48,8 +51,15 @@ STAGES = {
     "EH55_DRV_S211.bin": ("/EH55_DRV_S211.bin", pathlib.Path(r"C:\ghidra\binaries\unpacked\EH55_DRV_S211.bin")),
     "EH55_MAIN_3410PQ.bin": ("/EH55_MAIN_3410PQ.bin", pathlib.Path(r"C:\ghidra\binaries\unpacked\EH55_MAIN_3410PQ.bin")),
 }
-
-STAGE_ENTRY_SEEDS = {
+_BUILTIN_STAGE_BASES = {
+    "BOOT.BIN": 0x44000000,
+    LOADER_NAME: 0x44000000,
+    "eh55_frm_PROG061_BOOT.bin": 0x50400000,
+    "DRV_decomp.bin": 0x40000000,
+    "EH55_DRV_S211.bin": 0x40000000,
+    "EH55_MAIN_3410PQ.bin": 0x57000000,
+}
+_BUILTIN_ENTRY_SEEDS = {
     "BOOT.BIN": (0x44000000, 0x4400C696, 0x4400D32F, 0x440236ED),
     LOADER_NAME: (0x44000000, 0x44000008, 0x44000014, 0x4402A2AE, 0x4400159A, 0x440242B7),
     "eh55_frm_PROG061_BOOT.bin": (
@@ -60,23 +70,82 @@ STAGE_ENTRY_SEEDS = {
     "EH55_DRV_S211.bin": (0x40000000, 0x40000014, 0x40001000, 0x40030080, 0x40130EFA),
     "EH55_MAIN_3410PQ.bin": (0x57000000, 0x57000010, 0x57000044, 0x574B5A99, 0x57000D2C, 0x574DD208, 0x5771ABFB),
 }
-
-MMIO_WINDOWS = (
+_BUILTIN_MMIO_WINDOWS = (
     ("PANADIGA_MMIO_10", 0x10000000, 0x100FFFFF),
     ("PANADIGA_NOR_CS1_CFI", 0x84000000, 0x847FFFFF),
     ("PANADIGA_AIOF_88", 0x88000000, 0x88FFFFFF),
     ("PANADIGA_ASIC_C0", 0xC0000000, 0xC0FFFFFF),
     ("PANADIGA_ATA_SC0_D4", 0xD4000000, 0xD4FFFFFF),
 )
-
-TAINTED_FUNCTIONS = (0x50423540, 0x5042358B, 0x5771ABFB, 0x4400C696, 0x4400D32F, 0x440236ED)
-DECOMP_BAD_TOKENS = ("mn_todo", "halt_baddata", "Bad instruction", "BAD_INSTRUCTION")
-SPOT_CHECK_OPCODES = {
+_BUILTIN_TAINTED = (0x50423540, 0x5042358B, 0x5771ABFB, 0x4400C696, 0x4400D32F, 0x440236ED)
+_BUILTIN_SPOT_CHECKS = {
     LOADER_NAME: (0x440242B7, 0x4400159A),
     "eh55_frm_PROG061_BOOT.bin": (0x504313E6, 0x504009E4, 0x5040EA2F),
     "EH55_MAIN_3410PQ.bin": (0x57000D2C,),
 }
+_BUILTIN_GENERIC_RULES = {
+    "filename_base_hints": [
+        {"pattern": "MAIN", "base_va": "0x57000000"},
+        {"pattern": "PROG", "base_va": "0x50400000"},
+        {"pattern": "BOOT", "base_va": "0x44000000"},
+        {"pattern": "LOADER", "base_va": "0x44000000"},
+        {"pattern": "DRV", "base_va": "0x40000000"},
+        {"pattern": "NOR", "base_va": "0x80000000"},
+        {"pattern": "FLASH", "base_va": "0x80000000"},
+    ],
+    "default_fallback_base_va": "0x40000000",
+    "header_probe_offsets": [0, 4, 8, 12, 16, 20, 24, 28, 32, 48, 64],
+}
 
+
+def _load_ssot_maps(path: pathlib.Path = SSOT_MAPS_PATH) -> dict:
+    if not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+_SSOT = _load_ssot_maps()
+LANGUAGE_ID = _SSOT.get("language_id", DEFAULT_LANGUAGE_ID)
+COMPILER_ID = _SSOT.get("compiler_id", DEFAULT_COMPILER_ID)
+MODEL_MEMORY_MAPS = _SSOT.get("model_memory_maps", {})
+GENERIC_STAGE_RULES = _SSOT.get("generic_stage_rules", _BUILTIN_GENERIC_RULES)
+if _SSOT.get("stages"):
+    STAGES = {
+        s["key"]: (
+            s["program_path"],
+            (REPO / s["repo_relative_binary"]) if s.get("repo_relative_binary") else pathlib.Path(s["default_binary"]),
+        )
+        for s in _SSOT["stages"]
+    }
+    STAGE_BASES = {s["key"]: int(s["base_va"], 0) for s in _SSOT["stages"]}
+    STAGE_ENTRY_SEEDS = {s["key"]: tuple(int(v, 0) for v in s.get("entry_seeds", ())) for s in _SSOT["stages"]}
+    SPOT_CHECK_OPCODES = {
+        s["key"]: tuple(int(v, 0) for v in s["spot_check_opcodes"])
+        for s in _SSOT["stages"]
+        if s.get("spot_check_opcodes")
+    }
+else:
+    STAGES = dict(_BUILTIN_STAGES)
+    STAGE_BASES = dict(_BUILTIN_STAGE_BASES)
+    STAGE_ENTRY_SEEDS = dict(_BUILTIN_ENTRY_SEEDS)
+    SPOT_CHECK_OPCODES = dict(_BUILTIN_SPOT_CHECKS)
+
+MMIO_WINDOWS = (
+    tuple((w["name"], int(w["start"], 0), int(w["end"], 0)) for w in _SSOT["volatile_mmio_windows"])
+    if _SSOT.get("volatile_mmio_windows")
+    else _BUILTIN_MMIO_WINDOWS
+)
+TAINTED_FUNCTIONS = (
+    tuple(int(v, 0) for v in _SSOT["tainted_functions"])
+    if _SSOT.get("tainted_functions")
+    else _BUILTIN_TAINTED
+)
+
+DECOMP_BAD_TOKENS = ("mn_todo", "halt_baddata", "Bad instruction", "BAD_INSTRUCTION")
 PAD_BYTES = (0x00, 0xFF)
 ERROR_BM = "Error"
 AUTO_BM_TYPE = "Analysis"
@@ -111,9 +180,9 @@ def start_ghidra():
     return pyghidra
 
 
-def guard_project() -> None:
-    if PROJECT_NAME == SOURCE_PROJECT_NAME:
-        raise SystemExit("refusing to operate on the read-only source project")
+def guard_project(project_name: str = PROJECT_NAME) -> None:
+    if project_name.strip().lower() == SOURCE_PROJECT_NAME.lower():
+        raise SystemExit("refusing to operate on the read-only source project %s" % SOURCE_PROJECT_NAME)
 
 
 def to_u32(value: int) -> int:
@@ -139,7 +208,6 @@ class tx:
     def __exit__(self, exc_type, exc, tb):
         self.prog.endTransaction(self.id, exc_type is None)
         return False
-
 
 class Image:
     """Raw firmware bytes validated against the program's single initialized block."""
@@ -184,10 +252,6 @@ class Image:
     def u32(self, va: int) -> int:
         return struct.unpack_from("<I", self.raw, va - self.base)[0]
 
-
-# ---------------------------------------------------------------------------
-# Measurement & reporting
-# ---------------------------------------------------------------------------
 
 def initialized_set(prog):
     from ghidra.program.model.address import AddressSet
@@ -303,11 +367,45 @@ def write_json(directory: pathlib.Path, name: str, payload) -> pathlib.Path:
     return path
 
 
-# ---------------------------------------------------------------------------
-# Pass 1 - loader import
-# ---------------------------------------------------------------------------
+def _create_uninit_block_if_free(mem, space, name: str, start: int, size: int, r: bool, w: bool, x: bool, vol: bool) -> bool:
+    if size <= 0 or mem.getBlock(name) is not None:
+        return False
+    end = to_u32(start + size - 1)
+    if any(to_u32(b.getStart().getOffset()) <= end and start <= to_u32(b.getEnd().getOffset()) for b in mem.getBlocks()):
+        return False
+    blk = mem.createUninitializedBlock(name, space.getAddress(start), size, False)
+    blk.setRead(r)
+    blk.setWrite(w)
+    blk.setExecute(x)
+    blk.setVolatile(vol)
+    return True
 
-def import_loader(pyghidra, project) -> None:
+
+def infer_base_va(bin_path: pathlib.Path, model_id: str, explicit_base: str | None) -> int:
+    if explicit_base is not None:
+        return to_u32(int(explicit_base, 0))
+    if bin_path.name in STAGE_BASES:
+        return STAGE_BASES[bin_path.name]
+    upper = bin_path.name.upper()
+    model_info = MODEL_MEMORY_MAPS.get(model_id, {})
+    for pat, field in (("PROG", "prog_load_va"), ("MAIN", "main_load_va"), ("DRV", "drv_load_va")):
+        if pat in upper and model_info.get(field):
+            return to_u32(int(model_info[field], 0))
+    for hint in GENERIC_STAGE_RULES.get("filename_base_hints", ()):
+        if hint["pattern"].upper() in upper:
+            return to_u32(int(hint["base_va"], 0))
+    return to_u32(int(GENERIC_STAGE_RULES.get("default_fallback_base_va", "0x40000000"), 0))
+
+
+def import_binary(
+    pyghidra,
+    project,
+    prog_path: str,
+    bin_path: pathlib.Path,
+    base_va: int,
+    language_id: str = LANGUAGE_ID,
+    compiler_id: str = COMPILER_ID,
+) -> bool:
     from generic.stl import Pair
     from ghidra.app.util.importer import ProgramLoader
     from ghidra.app.util.opinion import BinaryLoader
@@ -315,18 +413,21 @@ def import_loader(pyghidra, project) -> None:
     from java.io import File
     from java.util import ArrayList
 
-    if project.getProjectData().getFile("/" + LOADER_NAME) is not None:
-        print("[pass1] %s already present in %s" % (LOADER_NAME, PROJECT_NAME))
-        return
+    if project.getProjectData().getFile(prog_path) is not None:
+        print("[pass1] %s already present in %s" % (prog_path, project.getName()))
+        return False
+    folder_path = prog_path.rsplit("/", 1)[0] or "/"
+    prog_name = prog_path.rsplit("/", 1)[-1]
     args = ArrayList()
-    args.add(Pair("Base Address", "0x%X" % LOADER_BASE))
+    args.add(Pair("Base Address", "0x%X" % base_va))
     loaded = (
         ProgramLoader.builder()
-        .source(File(str(LOADER_SRC)))
+        .source(File(str(bin_path)))
         .project(project)
-        .projectFolderPath("/")
-        .language(LANGUAGE_ID)
-        .compiler(COMPILER_ID)
+        .projectFolderPath(folder_path)
+        .name(prog_name)
+        .language(language_id)
+        .compiler(compiler_id)
         .loaders(BinaryLoader)
         .loaderArgs(args)
         .monitor(TaskMonitor.DUMMY)
@@ -334,37 +435,53 @@ def import_loader(pyghidra, project) -> None:
     )
     try:
         loaded.save(TaskMonitor.DUMMY)
-        print("[pass1] imported %s at 0x%X" % (LOADER_NAME, LOADER_BASE))
+        print("[pass1] imported %s -> %s at 0x%X" % (bin_path, prog_path, base_va))
+        return True
     finally:
         loaded.close()
 
 
-def layout_loader(project, pyghidra) -> None:
-    """Move the raw ``ram`` block to 0x44000000 and mirror BOOT.BIN peripheral blocks."""
+def apply_model_memory_layout(project, pyghidra, prog_path: str, base_va: int, model_id: str = DEFAULT_MODEL) -> dict:
+    import ghidra_am34_memory_map as memmap
     from ghidra.util.task import TaskMonitor
 
-    with pyghidra.program_context(project, "/BOOT.BIN") as ref:
+    templates = []
+    model_regions = MODEL_MEMORY_MAPS.get(model_id, {}).get("regions", [])
+    if model_regions:
         templates = [
-            (b.getName(), to_u32(b.getStart().getOffset()), int(b.getSize()), b.isRead(), b.isWrite(), b.isExecute(), b.isVolatile())
-            for b in ref.getMemory().getBlocks()
-            if not b.isInitialized() and b.getName() != "mmio"
+            (r["name"], int(r["start"], 0), int(r["size"], 0), bool(r["read"]), bool(r["write"]), bool(r["execute"]), bool(r["is_volatile"]))
+            for r in model_regions
         ]
-    with pyghidra.program_context(project, "/" + LOADER_NAME) as prog:
+    elif project.getProjectData().getFile("/BOOT.BIN") is not None:
+        with pyghidra.program_context(project, "/BOOT.BIN") as ref:
+            templates = [
+                (b.getName(), to_u32(b.getStart().getOffset()), int(b.getSize()), b.isRead(), b.isWrite(), b.isExecute(), b.isVolatile())
+                for b in ref.getMemory().getBlocks()
+                if not b.isInitialized() and b.getName() != "mmio"
+            ]
+
+    created = 0
+    with pyghidra.program_context(project, prog_path) as prog:
         mem = prog.getMemory()
         space = prog.getAddressFactory().getDefaultAddressSpace()
-        with tx(prog, "Panadiga loader memory layout"):
+        with tx(prog, "Panadiga SSOT memory layout (%s)" % model_id):
             ram = mem.getBlock("ram")
-            if to_u32(ram.getStart().getOffset()) != LOADER_BASE:
-                mem.moveBlock(ram, space.getAddress(LOADER_BASE), TaskMonitor.DUMMY)
-            for name, start, size, r, w, x, vol in templates:
-                if mem.getBlock(name) is None:
-                    blk = mem.createUninitializedBlock(name, space.getAddress(start), size, False)
-                    blk.setRead(r)
-                    blk.setWrite(w)
-                    blk.setExecute(x)
-                    blk.setVolatile(vol)
-        prog.save("Panadiga loader layout", TaskMonitor.DUMMY)
+            if ram is not None and to_u32(ram.getStart().getOffset()) != base_va:
+                mem.moveBlock(ram, space.getAddress(base_va), TaskMonitor.DUMMY)
+            for bname, start, size, r, w, x, vol in templates:
+                if _create_uninit_block_if_free(mem, space, bname, start, size, r, w, x, vol):
+                    created += 1
+            memmap.setup_memory_map(prog)
+        prog.save("Panadiga layout (%s)" % model_id, TaskMonitor.DUMMY)
+    return {"blocks_created": created, "model": model_id, "base_va": "0x%08X" % base_va}
 
+
+def import_loader(pyghidra, project) -> None:
+    import_binary(pyghidra, project, "/" + LOADER_NAME, LOADER_SRC, LOADER_BASE, LANGUAGE_ID, COMPILER_ID)
+
+
+def layout_loader(project, pyghidra) -> None:
+    apply_model_memory_layout(project, pyghidra, "/" + LOADER_NAME, LOADER_BASE, DEFAULT_MODEL)
 
 # ---------------------------------------------------------------------------
 # Pass 2 - typed data, literal pools, padding
@@ -692,7 +809,6 @@ def _type_padding(prog, img: Image, ranges, stats: dict, min_run: int = MIN_PAD_
                     stats["padding_bytes"] += length
                     stats["padding_runs"] += 1
                     mark_auto(prog, start, "padding_0x%02X" % pad, length)
-    # Also type trailing erased/padding run at image tail when >= 8 bytes
     for pad in PAD_BYTES:
         n = 0
         while n < img.size and img.raw[img.size - 1 - n] == pad:
@@ -724,7 +840,6 @@ def pass2_program(prog, img: Image) -> dict:
         _type_padding(prog, img, undefined_ranges(prog), stats)
     stats["pointer_seeds"] = len(seeds)
     return {"stats": stats, "seeds": sorted(seeds)}
-
 
 # ---------------------------------------------------------------------------
 # Pass 3 - clean validation, entry/orphan seeding, bounded gap sweep, Trap #4
@@ -864,7 +979,6 @@ def _disassemble_validated_ex(prog, va: int, min_insns: int = 2, need_terminal: 
             pre_errors.add(va)
         return None, "decode-fail"
 
-    # Resume any 0xCB NOP delay sled hit inside this single-entry flow before validating.
     for e in sorted(error_snapshot(prog) - pre_errors):
         ea = va_addr(prog, e)
         if _classify_error(prog, ea, _error_comment(prog, ea), False) == ERR_NOP_RUN:
@@ -987,7 +1101,6 @@ def redisassemble_bad_sites(prog, prune_seeds=None) -> dict:
                 stats["remaining"] += 1
     return stats
 
-
 def _iter_bookmarks(bm_mgr, kind: str):
     it = bm_mgr.getBookmarksIterator(kind)
     out = []
@@ -1045,9 +1158,41 @@ def _load_rust_audit(name: str) -> dict:
     return {}
 
 
+def infer_generic_entry_seeds(img: Image) -> tuple:
+    """Infer MN10300 reset-vector branches, header pointers, and early prologues for arbitrary binaries."""
+    seeds = [img.base]
+    seen = {img.base}
+    for off in GENERIC_STAGE_RULES.get("header_probe_offsets", (0, 4, 8, 12, 16, 20, 24, 28, 32, 48, 64)):
+        va = img.base + int(off)
+        if not img.contains(va + 4):
+            continue
+        op = img.raw[off]
+        tgt = None
+        if op in (0xDC, 0xDD):
+            disp = struct.unpack_from("<i", img.raw, off + 1)[0]
+            tgt = to_u32(va + disp)
+        elif op == 0xCC:
+            disp = struct.unpack_from("<h", img.raw, off + 1)[0]
+            tgt = to_u32(va + disp)
+        elif op == 0xCA:
+            disp = struct.unpack_from("<b", img.raw, off + 1)[0]
+            tgt = to_u32(va + disp)
+        for cand in (va if tgt is not None else None, tgt, img.u32(va)):
+            if cand is not None and img.contains(cand) and cand not in seen and img.raw[cand - img.base] not in PAD_BYTES:
+                seen.add(cand)
+                seeds.append(cand)
+    m = STRONG_PROLOGUE_RE.search(img.raw[: min(img.size, 0x2000)])
+    if m is not None:
+        va = img.base + m.start()
+        if va not in seen:
+            seeds.append(va)
+    return tuple(seeds)
+
+
 def _seed_entries(prog, img: Image, name: str, pre: set) -> dict:
     stats = {"candidates": 0, "accepted": 0, "bytes_added": 0}
-    for va in STAGE_ENTRY_SEEDS.get(name, ()):
+    candidates = STAGE_ENTRY_SEEDS.get(name) or infer_generic_entry_seeds(img)
+    for va in candidates:
         if not img.contains(va):
             continue
         stats["candidates"] += 1
@@ -1103,7 +1248,6 @@ def _seed_strong_prologues_in_gaps(prog, img: Image, _pre: set) -> dict:
         for m in STRONG_PROLOGUE_RE.finditer(img.slice(lo, cap + 1)):
             matches.append(lo + m.start())
     return _batch_disassemble_and_prune(prog, matches)
-
 
 def _collect_pointer_seeds(prog, img: Image, name: str, pass2_seeds: list) -> dict:
     import ghidra_mn103_fix_decompilation as fix
@@ -1266,9 +1410,8 @@ def pass3_program(prog, img: Image, name: str, pass2_seeds: list) -> dict:
         report["trap4"] = annotate_trap4(prog, img, name)
     return report
 
-
 # ---------------------------------------------------------------------------
-# Pass 4 - normalization, residual typing, verification
+# Pass 4 - normalization, residual typing, verification & generic CLI
 # ---------------------------------------------------------------------------
 
 def ensure_volatile_windows(prog) -> dict:
@@ -1276,13 +1419,7 @@ def ensure_volatile_windows(prog) -> dict:
     space = prog.getAddressFactory().getDefaultAddressSpace()
     created = 0
     for name, lo, hi in MMIO_WINDOWS:
-        overlap = any(to_u32(b.getStart().getOffset()) <= hi and lo <= to_u32(b.getEnd().getOffset()) for b in mem.getBlocks())
-        if not overlap:
-            blk = mem.createUninitializedBlock(name, space.getAddress(lo), hi - lo + 1, False)
-            blk.setRead(True)
-            blk.setWrite(True)
-            blk.setExecute(False)
-            blk.setVolatile(True)
+        if _create_uninit_block_if_free(mem, space, name, lo, hi - lo + 1, True, True, False, True):
             created += 1
     marked = 0
     for blk in mem.getBlocks():
@@ -1425,30 +1562,81 @@ def load_seed_file(name: str) -> list:
     return []
 
 
+def _resolve_targets(opts) -> list:
+    if opts.binary is not None:
+        bin_path = pathlib.Path(opts.binary).resolve()
+        if not bin_path.is_file():
+            raise SystemExit("binary not found: %s" % bin_path)
+        raw_prog = opts.program_name or ("/" + bin_path.name)
+        prog_path = raw_prog if raw_prog.startswith("/") else "/" + raw_prog
+        name = opts.only or prog_path.rsplit("/", 1)[-1]
+        base_va = infer_base_va(bin_path, opts.model, opts.base)
+        return [(name, prog_path, bin_path, base_va)]
+    names = [opts.only] if opts.only else list(STAGES)
+    targets = []
+    for name in names:
+        if name not in STAGES:
+            raise SystemExit("unknown stage program '%s' (known: %s; or pass --binary)" % (name, ", ".join(STAGES)))
+        proj_path, bin_path = STAGES[name]
+        base_va = to_u32(int(opts.base, 0)) if opts.base is not None else STAGE_BASES[name]
+        targets.append((name, proj_path, bin_path, base_va))
+    return targets
+
+
+def _run_all_passes(prog, img: Image, name: str, opts) -> dict:
+    from ghidra.util.task import TaskMonitor
+
+    rep = {"program": name, "model": opts.model, "base_va": "0x%08X" % img.base, "baseline": measure(prog)}
+    p2 = pass2_program(prog, img)
+    write_json(WORK_DIR, "pass2_seeds_%s.json" % name, p2["seeds"])
+    rep["pass2"] = p2["stats"]
+    rep["pass3"] = pass3_program(prog, img, name, p2["seeds"])
+    rep["pass4"] = pass4_program(prog, img, name, p2["seeds"], not opts.no_switches)
+    rep["verify"] = verify_program(prog, name)
+    if not opts.no_save:
+        prog.save("Panadiga zero-undef all", TaskMonitor.DUMMY)
+    return rep
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("stage", choices=["import-loader", "baseline", "pass2", "pass3", "pass4", "verify"])
+    ap.add_argument("stage", choices=["import-loader", "baseline", "pass2", "pass3", "pass4", "verify", "all"])
     ap.add_argument("--only", default=None, help="restrict to one program name")
-    ap.add_argument("--out", default=None, help="report file name override")
+    ap.add_argument("--binary", default=None, help="path to an arbitrary raw firmware binary to analyze")
+    ap.add_argument("--base", default=None, help="base virtual address for --binary (e.g. 0x57000000); inferred if omitted")
+    ap.add_argument("--program-name", default=None, help="program path inside Ghidra project (default /<binary.name>)")
+    ap.add_argument("--model", default=DEFAULT_MODEL, help="SSOT DIGA model ID for memory map projection (default: %s)" % DEFAULT_MODEL)
+    ap.add_argument("--project-dir", default=PROJECT_DIR, help="Ghidra project directory")
+    ap.add_argument("--project-name", default=PROJECT_NAME, help="cloned Ghidra project name (source project refused)")
+    ap.add_argument("--language", default=LANGUAGE_ID, help="Ghidra SLEIGH language ID")
+    ap.add_argument("--compiler", default=COMPILER_ID, help="Ghidra compiler spec ID")
+    ap.add_argument("--out", default=None, help="report file name or explicit path override")
     ap.add_argument("--no-save", action="store_true", help="dry run: do not save the program")
     ap.add_argument("--no-switches", action="store_true", help="pass4: skip decompiler switch recovery")
     opts = ap.parse_args()
-    guard_project()
+    guard_project(opts.project_name)
     pyghidra = start_ghidra()
     from ghidra.util.task import TaskMonitor
 
-    project = pyghidra.open_project(PROJECT_DIR, PROJECT_NAME)
-    names = [opts.only] if opts.only else list(STAGES)
+    project = pyghidra.open_project(opts.project_dir, opts.project_name)
+    targets = _resolve_targets(opts)
 
     if opts.stage == "import-loader":
-        import_loader(pyghidra, project)
-        layout_loader(project, pyghidra)
+        if opts.binary is not None:
+            for _name, prog_path, bin_path, base_va in targets:
+                import_binary(pyghidra, project, prog_path, bin_path, base_va, opts.language, opts.compiler)
+                apply_model_memory_layout(project, pyghidra, prog_path, base_va, opts.model)
+        else:
+            import_loader(pyghidra, project)
+            layout_loader(project, pyghidra)
         return 0
 
     reports = []
-    for name in names:
-        proj_path, bin_path = STAGES[name]
+    for name, proj_path, bin_path, base_va in targets:
         t0 = time.time()
+        if opts.stage == "all" and project.getProjectData().getFile(proj_path) is None:
+            import_binary(pyghidra, project, proj_path, bin_path, base_va, opts.language, opts.compiler)
+            apply_model_memory_layout(project, pyghidra, proj_path, base_va, opts.model)
         with pyghidra.program_context(project, proj_path) as prog:
             if opts.stage == "baseline":
                 rep = measure(prog)
@@ -1456,7 +1644,9 @@ def main() -> int:
                 rep = verify_program(prog, name)
             else:
                 img = Image(prog, bin_path)
-                if opts.stage == "pass2":
+                if opts.stage == "all":
+                    rep = _run_all_passes(prog, img, name, opts)
+                elif opts.stage == "pass2":
                     res = pass2_program(prog, img)
                     write_json(WORK_DIR, "pass2_seeds_%s.json" % name, res["seeds"])
                     rep = {"program": name, "pass2": res["stats"]}
@@ -1464,8 +1654,9 @@ def main() -> int:
                     rep = {"program": name, "pass3": pass3_program(prog, img, name, load_seed_file(name))}
                 else:
                     rep = {"program": name, "pass4": pass4_program(prog, img, name, load_seed_file(name), not opts.no_switches)}
-                rep["after"] = measure(prog, with_todo=False)
-                if not opts.no_save:
+                if opts.stage != "all":
+                    rep["after"] = measure(prog, with_todo=False)
+                if opts.stage != "all" and not opts.no_save:
                     prog.save("Panadiga zero-undef %s" % opts.stage, TaskMonitor.DUMMY)
         rep["seconds"] = round(time.time() - t0, 1)
         reports.append(rep)
@@ -1473,7 +1664,12 @@ def main() -> int:
         sys.stdout.flush()
 
     dest_dir = REPORT_DIR if opts.stage in ("baseline", "verify") else WORK_DIR
-    out_name = opts.out or ("%s%s.json" % (opts.stage, "_" + opts.only if opts.only else ""))
+    suffix = ("_" + opts.only) if opts.only else (("_" + targets[0][0]) if opts.binary and targets else "")
+    out_name = opts.out or ("%s%s.json" % (opts.stage, suffix))
+    out_path = pathlib.Path(out_name)
+    if out_path.is_absolute() or len(out_path.parts) > 1:
+        dest_dir = out_path.parent
+        out_name = out_path.name
     print("report:", write_json(dest_dir, out_name, reports))
     return 0
 

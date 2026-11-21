@@ -1,6 +1,7 @@
 //! Deterministic C11 SSOT header & `.rodata` table generator for Pico `P7501` (`generated/p7501_ssot.h`).
 
 mod header_gen;
+mod header_sections;
 mod tables_gen;
 
 #[cfg(test)]

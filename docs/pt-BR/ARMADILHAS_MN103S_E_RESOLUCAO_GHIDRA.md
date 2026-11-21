@@ -40,11 +40,23 @@ Para validar patches e fast-paths offline (`crates/panadiga-core/src/re/mn10300_
 
 ---
 
-## 4. Exportação dos Scripts Ghidra
+## 4. Exportação dos Scripts & Mapas SSOT Ghidra
 
 ```powershell
 cargo run -p panadiga-cli -- ghidra export-all --dir tools/ghidra
+# ou subcomandos específicos:
+cargo run -p panadiga-cli -- ghidra zero-undef
+cargo run -p panadiga-cli -- ghidra ssot-maps
 ```
+
+Artefatos gerados diretamente da SSOT em Rust ([`crates/panadiga-core/src/ghidra/`](../../crates/panadiga-core/src/ghidra/mod.rs) e [`ghidra_maps_ssot.json`](../../crates/panadiga-core/src/ghidra/specs/ghidra_maps_ssot.json)):
+- `tools/ghidra/ghidra_am34_memory_map.py`
+- `tools/ghidra/ghidra_importar_simbolos_panadiga.py` / `ghidra_import_symbols_panadiga.py`
+- `tools/ghidra/ghidra_auto_unbrick_audit.py`
+- `tools/ghidra/ghidra_mn103_fix_decompilation.py`
+- `tools/ghidra/ghidra_zero_undef_pipeline.py` (suporta `--binary`, `--base`, `--model`, `--project-name` e estágio `all` para novos binários)
+- `tools/ghidra/ghidra_ssot_maps.json` (`32` regiões AM34, `5` janelas MMIO voláteis, `6` estágios e `89` projeções por modelo DIGA)
+- `tools/ghidra/ghidra_conectar_debugger.py` / `ghidra_connect_debugger.py`
 
 ---
 
@@ -86,4 +98,4 @@ A auditoria linha a linha da extensão local `GhidraMn10300` (`Ghidra 12.1.4 PUB
 - **Construtores ausentes geradores de `??`:** `:MOVHU (Rm0+), Rn2` (`0xF9 0xEA`, causa dos `3.935` sítios `0xF9` em `MAIN` e dos laços `memcpy` em `Loader ver0.61` `0x440242b7..0x440245ab`), `:SYSCALL` (`0xF0 0xC0`) e `:BREAK` (`0xFF`).
 - **Bugs semânticos de P-Code:** `am33.sinc:98` (`MOV Rm2,(IMM32,Rn0)` somando `Rm2` em vez de `Rn0`), `134-135` (`MOVBU` 16-bit `*:2` em vez de `*:1`), `184` (`SUB Rm2,Rn0,Rd2` invertido), `186-188` (`SUB SIMM` chamando `update_add`), `273` (`AND IMM32,EPSW` usando `|`), além de `mn103.sinc:519-522` (`BCLR` usando `temp | ~mask` em vez de `temp & ~mask`, causa raiz da Armadilha #2), `503` (`NOT Dn0` modelado como XOR, Armadilha #9), `367/369` (`EXTB`/`EXTH`) e `427` (`SUBC`).
 - **Remoção de `mn_todo()`:** `NOT Rn0` (`am33.sinc:293`), `BTST SIMM, Rn0` (`295-297`, Armadilha #10), `MOV (Rm0+, disp)` (`78-83`), `MOVBU (IMM32, ...)` (`130-133`), `ADDC`/`SUBC` e deslocamentos/rotações `ASR`/`ASL`/`ROR`/`ROL`.
-- **Execução em 4 Passes (clone read-only `Panadiga_MN103S_ZeroUndef`):** consulte o roteiro completo em [`tools/ghidra/sleigh_patches/README.md`](../../tools/ghidra/sleigh_patches/README.md).
+- **Execução 100% Zero-`??` Verificada & Unificação Rust/JSON (`Panadiga_MN103S_ZeroUndef`):** todos os 6 binários (`BOOT.BIN`, `eh55_loader_ver061_256k.bin`, `eh55_frm_PROG061_BOOT.bin`, `DRV_decomp.bin`, `EH55_DRV_S211.bin`, `EH55_MAIN_3410PQ.bin`) atingiram **`0` bytes indefinidos**, **`0` chamadas `mn_todo()`** e **`0` Error bookmarks** (`3.626.323` instruções e `45.034` funções em [`verify.json`](../audits/zero_undef/verify.json) vs [`baseline.json`](../audits/zero_undef/baseline.json)), preservando `Panadiga_MN103S` intacto; consulte o roteiro completo e o uso em futuros binários (`--binary`/`--model`) em [`tools/ghidra/sleigh_patches/README.md`](../../tools/ghidra/sleigh_patches/README.md).

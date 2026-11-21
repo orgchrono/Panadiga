@@ -1,5 +1,6 @@
 //! Filesystem and USB CDC serial side-effects for Pico BOOTSEL reset and UF2 flashing.
 
+use std::borrow::Cow;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::thread;
@@ -143,23 +144,43 @@ pub fn trigger_1200_baud_bootsel(port_name: &str) -> Result<()> {
     )
 }
 
-/// Flashes a validated UF2 image buffer directly onto a detected BOOTSEL drive.
+/// Flashes a validated UF2 image buffer onto a detected BOOTSEL drive, automatically
+/// slicing multi-family unified UF2 buffers down to the target chip via `INFO_UF2.TXT`.
 pub fn flash_uf2_to_drive(drive_path: &Path, uf2_bytes: &[u8]) -> Result<PicoFlashReport> {
-    let (blocks_count, family_name) = validate_uf2_buffer(uf2_bytes)?;
+    flash_uf2_to_drive_with_override(drive_path, uf2_bytes, None)
+}
 
+/// Flashes a validated UF2 image buffer onto a BOOTSEL drive with optional silicon family override.
+pub fn flash_uf2_to_drive_with_override(
+    drive_path: &Path,
+    uf2_bytes: &[u8],
+    target_override: Option<&str>,
+) -> Result<PicoFlashReport> {
+    let (_raw_blocks, raw_family) = validate_uf2_buffer(uf2_bytes)?;
+    let info_content = fs::read_to_string(drive_path.join("INFO_UF2.TXT")).unwrap_or_default();
+
+    let payload: Cow<'_, [u8]> = if raw_family.contains("Unified")
+        && let Some(family) = Uf2TargetFamily::detect(&info_content, target_override)
+    {
+        Cow::Owned(extract_uf2_family_slice(uf2_bytes, family)?)
+    } else {
+        Cow::Borrowed(uf2_bytes)
+    };
+
+    let (blocks_count, family_name) = validate_uf2_buffer(&payload)?;
     let target_file = drive_path.join("panadiga_p7501_uart.uf2");
-    fs::write(&target_file, uf2_bytes).with_context(|| {
+    fs::write(&target_file, &payload).with_context(|| {
         format!(
             "Failed to write UF2 firmware to destination drive at {}",
             target_file.display()
         )
     })?;
 
-    let (_, hash_hex) = crate::nvram::calculate_hashes(uf2_bytes);
+    let (_, hash_hex) = crate::nvram::calculate_hashes(&payload);
 
     Ok(PicoFlashReport {
         target_drive: drive_path.to_string_lossy().to_string(),
-        uf2_size_bytes: uf2_bytes.len(),
+        uf2_size_bytes: payload.len(),
         blocks_written: blocks_count,
         board_family: family_name,
         sha256_hash: hash_hex,
@@ -173,7 +194,7 @@ pub fn flash_uf2_to_drive(drive_path: &Path, uf2_bytes: &[u8]) -> Result<PicoFla
 }
 
 /// Automatically flashes the embedded Panadiga Pico firmware to any connected BOOTSEL drive.
-/// Inspects INFO_UF2.TXT to auto-detect whether the target chip is RP2040 or RP2350.
+/// Inspects `INFO_UF2.TXT` inside [`flash_uf2_to_drive_with_override`] so only matching target blocks are written.
 pub fn flash_embedded_firmware(target_override: Option<&str>) -> Result<PicoFlashReport> {
     let drives = detect_bootsel_drives();
     if drives.is_empty() {
@@ -181,17 +202,7 @@ pub fn flash_embedded_firmware(target_override: Option<&str>) -> Result<PicoFlas
             "No Raspberry Pi BOOTSEL drives (RPI-RP2 / RP2350) detected! Hold BOOTSEL button while plugging USB."
         );
     }
-    let target_drive = &drives[0];
-
-    let info_txt_path = target_drive.join("INFO_UF2.TXT");
-    let info_content = fs::read_to_string(&info_txt_path).unwrap_or_default();
-
-    if let Some(family) = Uf2TargetFamily::detect(&info_content, target_override) {
-        let sliced = extract_uf2_family_slice(EMBEDDED_UNIFIED_UF2, family)?;
-        flash_uf2_to_drive(target_drive, &sliced)
-    } else {
-        flash_uf2_to_drive(target_drive, EMBEDDED_UNIFIED_UF2)
-    }
+    flash_uf2_to_drive_with_override(&drives[0], EMBEDDED_UNIFIED_UF2, target_override)
 }
 
 /// Merges compiled RP2040 and RP2350 `.uf2` images into a single RP2350-E10 compliant universal UF2.
