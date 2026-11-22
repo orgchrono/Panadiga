@@ -124,6 +124,12 @@ pub fn format_sd_kit_lines(report: &SdUnbrickKitReport) -> Vec<String> {
     if let Some(ref sd) = report.pana_sd_path {
         lines.push(format!("  PANA__SD.FRM : {sd}"));
     }
+    if report.sata_bridge_reset_fix_applied {
+        lines.push(
+            "  SATA Bridge  : SataBridgeResetFix (1000 ms @ PROG061 0x5041D928 + MAIN3060NP 0x571122B2)"
+                .to_string(),
+        );
+    }
     lines
 }
 

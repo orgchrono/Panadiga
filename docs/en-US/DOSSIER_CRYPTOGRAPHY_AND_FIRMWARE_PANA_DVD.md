@@ -438,15 +438,21 @@ Once the Spansion Flash dump is loaded in Ghidra:
 
 ---
 
-## 8. Panadiga Cryptanalysis Tooling
+## 8. Panadiga Universal Cryptography, Unpack & Repack Tooling
+
+Beyond legacy DVD-R containers (`LegacyDvd48B`, `LegacyDvd64B`, `SdPlain48B`, `SdPlain64B`), `panadiga-core` (`universal_frm`, `aes128`, `aes_container`) unifies modern Blu-ray / UniPhier containers: `AesHeader` AES-128-CBC wrapping (`2016`/`2018` catalog pairs, `NetworkKeyIV`, external `--key-file keys.ukf`), `PANASONIC\0\0\0` 48-byte outer headers, Adler-32 / 16-bit TOC checksums, `VGD`/`DRV` edge rules, `MainList` (`GZIP`/`LZSS`/`LZMA`), and validated `fmaX` RootFS partition reassembly.
 
 ```bash
-# Analyze optical container table of contents
+# Analyze optical container table of contents & entropy
 panadiga frm dump-toc "firmware_and_images/PANA_DVD.FRM"
-
-# Detect 64-bit Electronic Codebook (ECB) repetitions
 panadiga frm codebook "firmware_and_images/PANA_DVD.FRM"
-
-# Generate entropy distribution map
 panadiga frm entropy-map "firmware_and_images/PANA_DVD.FRM"
+
+# Universal unpack (Legacy DVD/SD, Blu-ray Feistel, or Blu-ray AES-128-CBC + keys.ukf + fmaX split)
+panadiga frm unpack-all "firmware_and_images/dmr-xw_bd_series/bs850_bs750_xs350eg/PANA_DVD.FRM" --out-dir tmp/bs850 --split-main --json -
+
+# Universal repack with RootFS partition patch and optional outer AES stripping (--drop-aes)
+panadiga frm repack --input tmp/orig.FRM --out tmp/patched.FRM --patch-partition fma5=tmp/rootfs.romfs --patch-force --drop-aes --json -
 ```
+
+For batch container/archive discovery and automated Ghidra Headless reverse engineering, see [`scripts/re/README.md`](../../scripts/re/README.md).

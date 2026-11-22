@@ -93,11 +93,35 @@
   "additionalProperties": false,
   "description": "CPU core ISA and baseline electrical logic family (`MN10300/AM34`, `MN10300/AM33-2`, `SPARC V8`).",
   "properties": {
+    "default_base_address": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
     "endianness": {
       "type": "string"
     },
     "evidence": {
       "$ref": "#/$defs/ClaimEvidence"
+    },
+    "ghidra_compiler_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "ghidra_language_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "ghidra_sleigh_provider": {
+      "type": [
+        "string",
+        "null"
+      ]
     },
     "id": {
       "type": "string"

@@ -10,6 +10,7 @@
 mod scan;
 
 use std::fs;
+use std::io::Cursor;
 use std::path::Path;
 use std::str::FromStr;
 
@@ -20,10 +21,12 @@ use crate::constants::{
     AM34_BOOT_BIN_BASE, AM34_FLASH_BASE, AM34_MAIN_BASE_VA, PANA_FEISTEL_ROUND_KEY_32B,
     PANA_FEISTEL_SBOX_256,
 };
+use crate::crypto::codec::read_u32_le;
 use crate::crypto::{
-    DecryptedFrmTocEntry, ExtrheadCryptMode, adler32_panasonic_strided,
-    decrypt_frm_toc_with_detected_key, extract_drv_module, feistel_decrypt_buffer, parse_main_list,
-    parse_sd_frm_toc_with_layout, unpack_extrhead_with_key,
+    DecryptedFrmTocEntry, ExtrheadCryptMode, FrmKeyring, adler32_panasonic_strided,
+    decrypt_frm_toc_with_keyring, detect_and_unwrap_aes_frm, extract_drv_module,
+    feistel_decrypt_buffer, parse_main_list, parse_sd_frm_toc_with_layout, try_decode_stb_slot,
+    unpack_extrhead_with_key,
 };
 use crate::nvram::{calculate_hashes, resolve_input_path};
 use crate::re::bgo_unbrick::PROG061_BASE_VA;
@@ -63,10 +66,63 @@ fn looks_like_valid_main_list(raw: &[u8]) -> bool {
     }
     let chk = u32::from_le_bytes([raw[0], raw[1], raw[2], raw[3]]);
     let lsz = u32::from_le_bytes([raw[8], raw[9], raw[10], raw[11]]) as usize;
-    lsz >= 20
-        && lsz <= raw.len()
-        && (lsz - 20).is_multiple_of(8)
-        && adler32_panasonic_strided(&raw[4..lsz], 1) == chk
+    if lsz < 20 || lsz > raw.len() || !(lsz - 20).is_multiple_of(8) {
+        return false;
+    }
+    let hdr_tail = &raw[4..lsz];
+    let byte_sum = hdr_tail
+        .iter()
+        .fold(0u32, |acc, &b| acc.wrapping_add(u32::from(b)));
+    adler32_panasonic_strided(hdr_tail, 1) == chk || byte_sum == chk
+}
+
+fn infer_prog_base_va(data: &[u8]) -> u32 {
+    // Check early MOV imm32 instructions (`0xFC 0xDC..0xDF <u32>`) for load VA hints.
+    let probe_end = data.len().min(0x400);
+    for idx in 0..probe_end.saturating_sub(6) {
+        if data[idx] == 0xFC && (0xDC..=0xDF).contains(&data[idx + 1]) {
+            let imm = read_u32_le(data, idx + 2);
+            if (0x5080_0000..0x5084_0000).contains(&imm) {
+                return 0x5080_0000;
+            }
+            if (0x5003_0400..0x5006_0000).contains(&imm) {
+                return 0x5003_0400;
+            }
+        }
+    }
+    PROG061_BASE_VA
+}
+
+fn try_unpack_stb_zlib(stage_buf: &[u8]) -> Option<UnpackedSlotBytes> {
+    let decoded = try_decode_stb_slot(stage_buf)?;
+    Some(UnpackedSlotBytes {
+        bytes: decoded.bytes,
+        source_kind: if decoded.is_zlib {
+            "FRM_FEISTEL+STB_ZLIB".to_string()
+        } else {
+            "FRM_FEISTEL+STB_RAW".to_string()
+        },
+        build_name: decoded.model,
+        algo: decoded.is_zlib.then(|| "zlib".to_string()),
+        dst_addr: Some(0x8000_0400),
+    })
+}
+
+fn try_extract_embedded_lzma(raw: &[u8]) -> Option<(usize, Vec<u8>)> {
+    for idx in 0..raw.len().saturating_sub(32) {
+        if matches!(raw[idx], 0x5D | 0x5C | 0x6D)
+            && raw[idx + 1] == 0x00
+            && raw[idx + 2] == 0x00
+            && (raw[idx + 3] <= 0x80 || raw[idx + 3] == 0xFF)
+        {
+            let mut cursor = Cursor::new(&raw[idx..]);
+            let mut out = Vec::new();
+            if lzma_rs::lzma_decompress(&mut cursor, &mut out).is_ok() && out.len() >= 4096 {
+                return Some((idx, out));
+            }
+        }
+    }
+    None
 }
 
 fn infer_stage_kind_and_base(
@@ -77,17 +133,36 @@ fn infer_stage_kind_and_base(
 ) -> (&'static str, u32) {
     let up = stage_name.trim().to_ascii_uppercase();
     let train = resolved.and_then(|r| r.firmware_train.as_ref());
-    if up.contains("PROG") {
-        let base = fallback_dst
-            .filter(|&a| a != 0)
-            .or_else(|| train.and_then(|t| t.prog_load_va))
-            .unwrap_or(PROG061_BASE_VA);
+    if up.contains("PROG") || up.contains("DIGADIAG") {
+        let inferred = infer_prog_base_va(data);
+        let base = if inferred != PROG061_BASE_VA {
+            inferred
+        } else {
+            fallback_dst
+                .filter(|&a| a != 0 && a != 0x9040_0000)
+                .or_else(|| {
+                    train
+                        .and_then(|t| t.prog_load_va)
+                        .filter(|&a| a != 0 && a != 0x9040_0000)
+                })
+                .unwrap_or(inferred)
+        };
         return ("PROG", base);
+    }
+    if up.starts_with("STB") {
+        return ("STB", fallback_dst.unwrap_or(0x8000_0400));
+    }
+    if data.starts_with(b"\n root=/dev/fma") {
+        return ("MAIN_LINUX_NAND", 0x9010_0000);
     }
     if up.contains("DRV") {
         let base = fallback_dst
-            .filter(|&a| a != 0)
-            .or_else(|| train.and_then(|t| t.drv_load_va))
+            .filter(|&a| a != 0 && a != 0x9020_2000)
+            .or_else(|| {
+                train
+                    .and_then(|t| t.drv_load_va)
+                    .filter(|&a| a != 0 && a != 0x9020_2000)
+            })
             .unwrap_or(0x4000_0000);
         return ("DRV", base);
     }
@@ -118,7 +193,10 @@ fn infer_stage_kind_and_base(
     match rev.stage.as_str() {
         "DRV" => (
             "DRV",
-            train.and_then(|t| t.drv_load_va).unwrap_or(0x4000_0000),
+            train
+                .and_then(|t| t.drv_load_va)
+                .filter(|&a| a != 0 && a != 0x9020_2000)
+                .unwrap_or(0x4000_0000),
         ),
         "BOOT_OR_PROG061" => {
             if data.len() == 0x4_0000 && !data.windows(16).any(|w| w.starts_with(b"Loader ver")) {
@@ -202,12 +280,14 @@ fn try_unpack_main_list_slot(
 
 fn unpack_frm_slot_bytes(
     raw_slot: &[u8],
+    orig_size: usize,
     module_name: &str,
     outer_feistel: bool,
     rk: Option<&[u8; 32]>,
 ) -> UnpackedSlotBytes {
     let up = module_name.trim().to_ascii_uppercase();
-    if let Some(unpacked) = try_unpack_main_list_slot(raw_slot, "FRM_MAIN_LIST", rk) {
+    let exact_slot = &raw_slot[..orig_size.min(raw_slot.len())];
+    if let Some(unpacked) = try_unpack_main_list_slot(exact_slot, "FRM_MAIN_LIST", rk) {
         return unpacked;
     }
 
@@ -215,20 +295,14 @@ fn unpack_frm_slot_bytes(
     if outer_feistel && let Some(key) = rk {
         feistel_decrypt_buffer(&mut stage_buf, key, &PANA_FEISTEL_SBOX_256);
     }
+    stage_buf.truncate(orig_size);
 
     if let Some(unpacked) = try_unpack_main_list_slot(&stage_buf, "FRM_FEISTEL_MAIN_LIST", rk) {
         return unpacked;
     }
 
-    if !up.starts_with("PROG") {
-        let mode = if up.starts_with("MAIN") {
-            ExtrheadCryptMode::Main
-        } else if up.starts_with("DRV") {
-            ExtrheadCryptMode::Drv
-        } else {
-            ExtrheadCryptMode::Auto
-        };
-        if let Ok(u) = unpack_extrhead_with_key(&stage_buf, mode, rk) {
+    if !up.starts_with("PROG") || stage_buf.starts_with(b"EXTRHEAD") {
+        if let Ok(u) = unpack_extrhead_with_key(&stage_buf, ExtrheadCryptMode::Auto, rk) {
             return UnpackedSlotBytes {
                 bytes: u.decompressed,
                 source_kind: if outer_feistel {
@@ -251,6 +325,9 @@ fn unpack_frm_slot_bytes(
                 algo: drv.extrhead.map(|u| algo_name(u.header.algo)),
                 dst_addr: None,
             };
+        }
+        if let Some(stb_unpacked) = try_unpack_stb_zlib(&stage_buf) {
+            return stb_unpacked;
         }
     }
 
@@ -312,12 +389,19 @@ fn push_frm_stages(
 ) -> Result<()> {
     for (idx, entry) in entries.iter().enumerate() {
         let start = entry.module_offset as usize;
-        let end = start.saturating_add(entry.module_size as usize);
-        if end > raw.len() || entry.module_size == 0 {
+        let orig_size = entry.module_size as usize;
+        let end = start.saturating_add(orig_size);
+        if end > raw.len() || orig_size == 0 {
             continue;
         }
+        let slice_end = if ctx.outer_feistel {
+            ((end + 7) & !7).min(raw.len())
+        } else {
+            end
+        };
         let unpacked = unpack_frm_slot_bytes(
-            &raw[start..end],
+            &raw[start..slice_end],
+            orig_size,
             &entry.module_name,
             ctx.outer_feistel,
             ctx.rk,
@@ -350,6 +434,23 @@ pub fn build_dynamic_bench_runtime_plan(
     region_override: Option<&str>,
     out_dir: Option<&Path>,
 ) -> Result<BenchRuntimePlan> {
+    build_dynamic_bench_runtime_plan_with_keyring(
+        input_path,
+        model_query,
+        region_override,
+        out_dir,
+        &FrmKeyring::builtin(),
+    )
+}
+
+/// Automatically decrypts any Panasonic container/dump (including `PANAEUSB.FRM` AES pairs & `keys.ukf`).
+pub fn build_dynamic_bench_runtime_plan_with_keyring(
+    input_path: &Path,
+    model_query: Option<&str>,
+    region_override: Option<&str>,
+    out_dir: Option<&Path>,
+    keyring: &FrmKeyring,
+) -> Result<BenchRuntimePlan> {
     let resolved_path = resolve_input_path(input_path)?;
     let raw =
         fs::read(&resolved_path).with_context(|| format!("Reading {}", resolved_path.display()))?;
@@ -359,7 +460,17 @@ pub fn build_dynamic_bench_runtime_plan(
     let (_, input_sha256) = calculate_hashes(&raw);
     let reg = HardwareProfileRegistry::builtin();
 
-    let (kname_opt, rk_buf, toc_layout, enc_entries) = decrypt_frm_toc_with_detected_key(&raw);
+    let aes_unwrapped = detect_and_unwrap_aes_frm(&raw, keyring)?;
+    let (kname_opt, rk_buf, toc_layout, enc_entries) = if aes_unwrapped.is_some() {
+        (
+            None,
+            [0u8; 32],
+            crate::crypto::TocLayout::Dvd48B,
+            Vec::new(),
+        )
+    } else {
+        decrypt_frm_toc_with_keyring(&raw, keyring)
+    };
     let enc_valid = kname_opt.is_some()
         && !enc_entries.is_empty()
         && enc_entries.iter().all(|e| {
@@ -379,140 +490,182 @@ pub fn build_dynamic_bench_runtime_plan(
         .and_then(|q| reg.resolve_model(q).ok());
 
     let mut stages = Vec::new();
-    let (container_format, detected_key, toc_label, toc_count) = if enc_valid {
-        let layout_str = format!("{toc_layout:?}");
-        let ctx = FrmStageScanCtx {
-            outer_feistel: true,
-            rk: Some(&rk_buf),
-            key_name: kname_opt,
-            resolved: resolved_profile.as_ref(),
-            out_dir,
-        };
-        push_frm_stages(&raw, &enc_entries, &ctx, &mut stages)?;
-        (
-            "FRM_FEISTEL".to_string(),
-            kname_opt.map(str::to_string),
-            Some(layout_str),
-            enc_entries.len(),
-        )
-    } else {
-        let (sd_layout, sd_entries) = parse_sd_frm_toc_with_layout(&raw);
-        let sd_valid = !sd_entries.is_empty()
-            && sd_entries.iter().all(|e| {
-                (e.module_offset as usize)
-                    .checked_add(e.module_size as usize)
-                    .is_some_and(|end| end <= raw.len())
-            });
-        if sd_valid {
-            let layout_str = sd_layout.map(|l| format!("{l:?}"));
+    let (container_format, detected_key, toc_label, toc_count) =
+        if let Some(unwrapped) = aes_unwrapped {
+            let mut total_entries = 0usize;
+            let mut first_layout = None;
+            for (_, sub_bytes) in &unwrapped.sub_containers {
+                let (sub_k, sub_rk, sub_layout, sub_entries) =
+                    decrypt_frm_toc_with_keyring(sub_bytes, keyring);
+                first_layout.get_or_insert_with(|| format!("{sub_layout:?}"));
+                total_entries += sub_entries.len();
+                let ctx = FrmStageScanCtx {
+                    outer_feistel: sub_k.is_some(),
+                    rk: Some(&sub_rk),
+                    key_name: sub_k.as_deref(),
+                    resolved: resolved_profile.as_ref(),
+                    out_dir,
+                };
+                push_frm_stages(sub_bytes, &sub_entries, &ctx, &mut stages)?;
+            }
+            (
+                "FRM_BLURAY_AES".to_string(),
+                Some(unwrapped.key_pair.name),
+                first_layout,
+                total_entries,
+            )
+        } else if enc_valid {
+            let layout_str = format!("{toc_layout:?}");
             let ctx = FrmStageScanCtx {
-                outer_feistel: false,
-                rk: Some(&PANA_FEISTEL_ROUND_KEY_32B),
-                key_name: None,
+                outer_feistel: true,
+                rk: Some(&rk_buf),
+                key_name: kname_opt.as_deref(),
                 resolved: resolved_profile.as_ref(),
                 out_dir,
             };
-            push_frm_stages(&raw, &sd_entries, &ctx, &mut stages)?;
+            push_frm_stages(&raw, &enc_entries, &ctx, &mut stages)?;
             (
-                "FRM_SD_PLAIN".to_string(),
-                None,
-                layout_str,
-                sd_entries.len(),
+                "FRM_FEISTEL".to_string(),
+                kname_opt,
+                Some(layout_str),
+                enc_entries.len(),
             )
-        } else if let Ok(ext) = unpack_extrhead_with_key(&raw, ExtrheadCryptMode::Auto, None) {
-            let key_lbl = if raw.starts_with(b"EXTRHEAD") {
-                None
-            } else {
-                Some("auto_extrhead".to_string())
-            };
-            let stage_key = resolved_path.file_name().map_or_else(
-                || ext.header.tag.clone(),
-                |n| n.to_string_lossy().into_owned(),
-            );
-            let (kind, base_va) = infer_stage_kind_and_base(
-                &stage_key,
-                &ext.decompressed,
-                resolved_profile.as_ref(),
-                Some(ext.header.dst_addr),
-            );
-            let (_, sha) = calculate_hashes(&ext.decompressed);
-            let written = write_stage_if_dir(out_dir, 0, &stage_key, &ext.decompressed)?;
-            stages.push(scan_stage_anchors(
-                stage_key,
-                kind.to_string(),
-                base_va,
-                &ext.decompressed,
-                sha,
-                "EXTRHEAD_STANDALONE".to_string(),
-                key_lbl.clone(),
-                Some(ext.header.build_name),
-                Some(algo_name(ext.header.algo)),
-                written,
-            ));
-            ("EXTRHEAD_STANDALONE".to_string(), key_lbl, None, 1)
         } else {
-            let file_key = resolved_path.file_name().map_or_else(
-                || "raw_stage".to_string(),
-                |n| n.to_string_lossy().into_owned(),
-            );
-            let (kind, base_va) =
-                infer_stage_kind_and_base(&file_key, &raw, resolved_profile.as_ref(), None);
-            let written = write_stage_if_dir(out_dir, 0, &file_key, &raw)?;
-            stages.push(scan_stage_anchors(
-                file_key,
-                kind.to_string(),
-                base_va,
-                &raw,
-                input_sha256.clone(),
-                "RAW_BINARY".to_string(),
-                None,
-                None,
-                None,
-                written,
-            ));
-            for (idx, m) in find_extrhead_containers(&raw, base_va)
-                .into_iter()
-                .enumerate()
-            {
-                if let Ok(ext) =
-                    unpack_extrhead_with_key(&raw[m.offset..], ExtrheadCryptMode::Plain, None)
+            let (sd_layout, sd_entries) = parse_sd_frm_toc_with_layout(&raw);
+            let sd_valid = !sd_entries.is_empty()
+                && sd_entries.iter().all(|e| {
+                    (e.module_offset as usize)
+                        .checked_add(e.module_size as usize)
+                        .is_some_and(|end| end <= raw.len())
+                });
+            if sd_valid {
+                let layout_str = sd_layout.map(|l| format!("{l:?}"));
+                let ctx = FrmStageScanCtx {
+                    outer_feistel: false,
+                    rk: Some(&PANA_FEISTEL_ROUND_KEY_32B),
+                    key_name: None,
+                    resolved: resolved_profile.as_ref(),
+                    out_dir,
+                };
+                push_frm_stages(&raw, &sd_entries, &ctx, &mut stages)?;
+                (
+                    "FRM_SD_PLAIN".to_string(),
+                    None,
+                    layout_str,
+                    sd_entries.len(),
+                )
+            } else if let Ok(ext) = unpack_extrhead_with_key(&raw, ExtrheadCryptMode::Auto, None) {
+                let key_lbl = if raw.starts_with(b"EXTRHEAD") {
+                    None
+                } else {
+                    Some("auto_extrhead".to_string())
+                };
+                let stage_key = resolved_path.file_name().map_or_else(
+                    || ext.header.tag.clone(),
+                    |n| n.to_string_lossy().into_owned(),
+                );
+                let (kind, base_va) = infer_stage_kind_and_base(
+                    &stage_key,
+                    &ext.decompressed,
+                    resolved_profile.as_ref(),
+                    Some(ext.header.dst_addr),
+                );
+                let (_, sha) = calculate_hashes(&ext.decompressed);
+                let written = write_stage_if_dir(out_dir, 0, &stage_key, &ext.decompressed)?;
+                stages.push(scan_stage_anchors(
+                    stage_key,
+                    kind.to_string(),
+                    base_va,
+                    &ext.decompressed,
+                    sha,
+                    "EXTRHEAD_STANDALONE".to_string(),
+                    key_lbl.clone(),
+                    Some(ext.header.build_name),
+                    Some(algo_name(ext.header.algo)),
+                    written,
+                ));
+                ("EXTRHEAD_STANDALONE".to_string(), key_lbl, None, 1)
+            } else {
+                let file_key = resolved_path.file_name().map_or_else(
+                    || "raw_stage".to_string(),
+                    |n| n.to_string_lossy().into_owned(),
+                );
+                let (kind, base_va) =
+                    infer_stage_kind_and_base(&file_key, &raw, resolved_profile.as_ref(), None);
+                let written = write_stage_if_dir(out_dir, 0, &file_key, &raw)?;
+                stages.push(scan_stage_anchors(
+                    file_key,
+                    kind.to_string(),
+                    base_va,
+                    &raw,
+                    input_sha256.clone(),
+                    "RAW_BINARY".to_string(),
+                    None,
+                    None,
+                    None,
+                    written,
+                ));
+                let extr_hits = find_extrhead_containers(&raw, base_va);
+                if extr_hits.is_empty()
+                    && kind == "NOR_FULL"
+                    && let Some((off, lzma_dec)) = try_extract_embedded_lzma(&raw)
                 {
-                    let sub_key = format!("embedded_{}_{idx}", ext.header.tag.trim());
-                    let (sub_kind, sub_base) = infer_stage_kind_and_base(
-                        &sub_key,
-                        &ext.decompressed,
-                        resolved_profile.as_ref(),
-                        Some(ext.header.dst_addr),
-                    );
-                    let (_, sha) = calculate_hashes(&ext.decompressed);
-                    let sub_written =
-                        write_stage_if_dir(out_dir, idx + 1, &sub_key, &ext.decompressed)?;
+                    let sub_key = format!("embedded_lzma_0x{off:06x}");
+                    let (_, sha) = calculate_hashes(&lzma_dec);
+                    let sub_written = write_stage_if_dir(out_dir, 1, &sub_key, &lzma_dec)?;
                     stages.push(scan_stage_anchors(
                         sub_key,
-                        sub_kind.to_string(),
-                        sub_base,
-                        &ext.decompressed,
+                        "VXWORKS_BAL".to_string(),
+                        0x4000_0000,
+                        &lzma_dec,
                         sha,
-                        "EMBEDDED_EXTRHEAD".to_string(),
+                        "EMBEDDED_LZMA".to_string(),
                         None,
-                        Some(ext.header.build_name),
-                        Some(algo_name(ext.header.algo)),
+                        None,
+                        Some("lzma".to_string()),
                         sub_written,
                     ));
                 }
+                for (idx, m) in extr_hits.into_iter().enumerate() {
+                    if let Ok(ext) =
+                        unpack_extrhead_with_key(&raw[m.offset..], ExtrheadCryptMode::Plain, None)
+                    {
+                        let sub_key = format!("embedded_{}_{idx}", ext.header.tag.trim());
+                        let (sub_kind, sub_base) = infer_stage_kind_and_base(
+                            &sub_key,
+                            &ext.decompressed,
+                            resolved_profile.as_ref(),
+                            Some(ext.header.dst_addr),
+                        );
+                        let (_, sha) = calculate_hashes(&ext.decompressed);
+                        let sub_written =
+                            write_stage_if_dir(out_dir, idx + 1, &sub_key, &ext.decompressed)?;
+                        stages.push(scan_stage_anchors(
+                            sub_key,
+                            sub_kind.to_string(),
+                            sub_base,
+                            &ext.decompressed,
+                            sha,
+                            "EMBEDDED_EXTRHEAD".to_string(),
+                            None,
+                            Some(ext.header.build_name),
+                            Some(algo_name(ext.header.algo)),
+                            sub_written,
+                        ));
+                    }
+                }
+                (
+                    if kind == "NOR_FULL" {
+                        "RAW_NOR_DUMP".to_string()
+                    } else {
+                        "RAW_STAGE".to_string()
+                    },
+                    None,
+                    None,
+                    stages.len(),
+                )
             }
-            (
-                if kind == "NOR_FULL" {
-                    "RAW_NOR_DUMP".to_string()
-                } else {
-                    "RAW_STAGE".to_string()
-                },
-                None,
-                None,
-                stages.len(),
-            )
-        }
-    };
+        };
 
     let (interpolated_region, tv_mmio_plan) =
         resolve_region_and_mmio(resolved_profile.as_ref(), region_override);
@@ -656,5 +809,57 @@ mod tests {
         assert!(out_dir.join("bench_runtime_manifest.json").is_file());
 
         let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn stb_unaligned_feistel_tail_and_cached_va_normalization() {
+        use crate::crypto::feistel_encrypt_buffer;
+        use flate2::{Compression, write::ZlibEncoder};
+        use std::io::Write;
+
+        let payload = b"    c    ST20_OS20_MOCK_FIRMWARE_PAYLOAD_WITH_TAIL_ALIGNMENT_TEST";
+        let mut enc = ZlibEncoder::new(Vec::new(), Compression::default());
+        enc.write_all(payload).unwrap();
+        let zbytes = enc.finish().unwrap();
+
+        let mut hdr = vec![0xFFu8; 256];
+        let hdr_str = format!(
+            "CRC:1234\0size:{}\0Type:M4\0AppVer:1.03\0Model: M4EN\0zlib:{}\0",
+            zbytes.len(),
+            payload.len()
+        );
+        hdr[..hdr_str.len()].copy_from_slice(hdr_str.as_bytes());
+        let mut slot = [hdr, zbytes].concat();
+        while slot.len() % 8 != 4 {
+            slot.push(0x41);
+        }
+        let orig_size = slot.len();
+        let pad_len = (orig_size + 7) & !7;
+        slot.resize(pad_len, 0xFF);
+        feistel_encrypt_buffer(
+            &mut slot,
+            &PANA_FEISTEL_ROUND_KEY_32B,
+            &PANA_FEISTEL_SBOX_256,
+        );
+
+        let unpacked = unpack_frm_slot_bytes(
+            &slot,
+            orig_size,
+            "STB 103",
+            true,
+            Some(&PANA_FEISTEL_ROUND_KEY_32B),
+        );
+        assert_eq!(unpacked.source_kind, "FRM_FEISTEL+STB_ZLIB");
+        assert_eq!(unpacked.algo.as_deref(), Some("zlib"));
+        assert!(unpacked.bytes.starts_with(payload));
+
+        assert_eq!(
+            infer_stage_kind_and_base("DIGADIAG", &[0u8; 16], None, Some(0x9040_0000)),
+            ("PROG", PROG061_BASE_VA)
+        );
+        assert_eq!(
+            infer_stage_kind_and_base("DRV S514", &[0u8; 16], None, Some(0x9020_2000)),
+            ("DRV", 0x4000_0000)
+        );
     }
 }

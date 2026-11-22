@@ -123,14 +123,18 @@ All 9 gates must pass cleanly:
 
 When integrating a newly dumped or serviced Panasonic DIGA model into Panadiga, follow the 7-stage end-to-end onboarding guide ([`docs/en-US/WHATS_NEXT_NEW_DEVICE_ONBOARDING.md`](docs/en-US/WHATS_NEXT_NEW_DEVICE_ONBOARDING.md) · [`docs/pt-BR/WHATS_NEXT_ONBOARDING_NOVOS_APARELHOS.md`](docs/pt-BR/WHATS_NEXT_ONBOARDING_NOVOS_APARELHOS.md)):
 
-1. **Zero Hardcoded Product Branches**: Never encode model names, chassis tags, or hardcoded `tv_standard` fields in `crates/panadiga-core`, `apps/desktop/src`, or `profiles/models/*.json`. Parameterize geometry, flash maps, BGO specs, and compressed driver blobs (`profiles/blobs/*.bin.gz`) declaratively inside `profiles/**/*.json` (`region_suffix` drives dynamic TV/region interpolation).
-2. **Physical Capture & Intake Discovery**:
-   - Archive raw `COM10` / bench logs in `docs/debug_logs/` and update `docs/debug_logs/README.md` (`SHA256SUMS`).
-   - Run `panadiga profiles discover-nor --input <NOR.bin> --model-id <MODEL> --out-dir tmp/drafts` (or `python -m scripts.re.nor_intake_analyzer`) to extract `Loader` banner, `EXTRHEAD` offsets, BGO sector IDs, and `EEMUL` markers without mutating dumps.
-3. **.FRM & Service Manual Hydration**:
-   - Run `python -m scripts.re.frm_train_harvester --unpack-missing --apply` and `python -m scripts.re.manual_spec_extractor --apply` to hydrate `T1`/`T2` metadata safely (`T3`/`T4` verified entries are never downgraded).
-   - Rebuild or test recovery SD kits directly from NOR + Partition 1 MAIN using `panadiga unbrick rebuild-from-dump`.
-4. **Ghidra & SSOT Projection Regeneration**:
-   - Export domain-grouped plain-text pseudocode via `tools/ghidra/ghidra_export_pseudocode_bundle.py`, update `tools/ghidra/ghidra_ssot_maps.json`, and run `panadiga ssot export-all`, `panadiga profiles export-schema --out-dir profiles/schema`, and `panadiga ghidra export-all`.
+1. **SMPS Galvanic Isolation & Operational Hardware Tuple**:
+   - Use an AC isolation transformer or `ADuM3160`/`ADuM4160` USB galvanic isolator before probing SMPS-powered DIGA chassis (`~60–110 VAC` Y-capacitor leakage risk), discharge bulk capacitors, and verify rail voltage (`3.3V`/`1.8V`/`5V`) by multimeter prior to connecting Pico probes.
+   - Always identify targets via the 4-tuple **`(model, region, board_rev, flash_jedec_id)`** (never rely on a bare marketing model string alone) and keep zero product-hardcoded logic in `crates/panadiga-core`, `apps/desktop/src`, or `firmware/pico-p7501`.
+2. **Physical Capture Integrity & Runtime `< T3` Gating**:
+   - Archive raw UART bench logs in `docs/debug_logs/` and update `docs/debug_logs/README.md` (`SHA256SUMS`).
+   - Screen NOR dumps via `panadiga profiles discover-nor` or `python -m scripts.re.nor_intake_analyzer --offline-only` to catch 16-bit byte-swapping, floating-address-pin mirroring, `all-0xFF` reads, and stale `EXTRHEAD` magic in erased FTL blocks before claiming `T3`.
+   - Runtime kit builders (`prepare-sd`, `rebuild-from-dump`, `retarget`) fail closed on `< T3` profiles unless `--allow-unverified-profile` (and `--allow-unverified-mix` for mismatched rebuilds) is explicitly supplied.
+3. **Quarantined `.FRM` / Service Manual Hydration (No Direct PDF-to-SSOT Writes)**:
+   - Run `python -m scripts.re.frm_train_harvester --unpack-missing --apply` for `T2` `.FRM` metadata (`T3`/`T4` verified entries are never downgraded).
+   - Run `python -m scripts.re.manual_spec_extractor --apply`, which emits quarantined JSON proposals with `page_citations` into `profiles/staging/manual_proposals/` for human verification — never auto-mutating `profiles/boards/` or `profiles/eeprom_chips/`.
+4. **Ghidra Reachable-Code Coverage, Honest Firmware Framing & SSOT Sync**:
+   - Analyze reachable executable functions (never blind `0 ??` across literal pools/jump tables), export plain-text bundles via `tools/ghidra/ghidra_export_pseudocode_bundle.py`, and run `panadiga ssot export-all`, `panadiga profiles export-schema --out-dir profiles/schema`, and `panadiga ghidra export-all`.
+   - Keep `firmware/panadiga-blackbox-fw` honestly documented as an open-source hardware-interoperability prototype (not clean-room) and treat `Mn103Vm` strictly as an ISA/bounds check rather than real-silicon CFI/IRQ/WDT proof.
 5. **Audit & Pull Request Verification**:
    - Verify `panadiga profiles completeness` and `panadiga profiles validate` pass cleanly, then run the full 9-Gate suite (`python scripts/validate.py`) confirming `0` `jscpd` clones, `100/100` `uxlint`, bilingual doc parity, and all Rust/Vitest/Playwright/C11/Pytest tests passing before opening your PR.

@@ -39,7 +39,7 @@ pub struct NorFingerprintReport {
     pub candidates: Vec<FingerprintCandidate>,
 }
 
-fn contains_bytes(haystack: &[u8], needle: &[u8]) -> bool {
+pub(crate) fn contains_bytes(haystack: &[u8], needle: &[u8]) -> bool {
     !needle.is_empty() && haystack.windows(needle.len()).any(|w| w == needle)
 }
 

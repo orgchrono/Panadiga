@@ -8,9 +8,12 @@ mod hardened;
 mod tests;
 mod types;
 
+#[cfg(test)]
+pub(crate) use builders::compose_digadiag_and_prog061;
 pub(crate) use builders::{
-    compose_digadiag_and_prog061, compose_pana_sd_container, compose_pana_sd_prog061,
-    compose_patched_main_container, format_sha256_manifest,
+    compose_digadiag_and_prog061_with_tier_policy, compose_pana_sd_container,
+    compose_pana_sd_prog061_with_tier_policy, compose_patched_main_container,
+    format_sha256_manifest,
 };
 pub use hardened::compose_hardened_panamon1_kit;
 pub use types::{

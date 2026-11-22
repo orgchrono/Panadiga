@@ -27,6 +27,6 @@ pub use model::{
 };
 pub use soc::{BusWindow, SocCoreProfile, SocProfile};
 pub use train::{
-    AddressReloc, BytePatchEntry, DigadiagSpec, FirmwareTrainProfile, FrmContainerSpec,
-    LoaderFingerprint, OffsetRange, PanaRebuildRecipe, ProgBgoRetargetSpec,
+    AddressReloc, BytePatchEntry, DigadiagSpec, DigadiagTrustModel, FirmwareTrainProfile,
+    FrmContainerSpec, LoaderFingerprint, OffsetRange, PanaRebuildRecipe, ProgBgoRetargetSpec,
 };

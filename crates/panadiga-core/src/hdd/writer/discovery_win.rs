@@ -4,6 +4,8 @@
 
 use serde_json::Value;
 
+use crate::constants::{EFI_SYSTEM_PARTITION_GPT_GUID, MICROSOFT_RESERVED_GPT_GUID};
+
 use super::types::{
     MountedPartitionInfo, PhysicalDriveInfo, classify_drive_role, json_bool_lossy,
     json_str_trimmed, json_u64_lossy,
@@ -11,6 +13,36 @@ use super::types::{
 
 #[cfg(windows)]
 use std::process::Command;
+
+fn gpt_guid_is_os_protected(raw: &str) -> bool {
+    let cleaned = raw
+        .trim()
+        .trim_start_matches('{')
+        .trim_end_matches('}')
+        .to_ascii_lowercase();
+    cleaned == EFI_SYSTEM_PARTITION_GPT_GUID || cleaned == MICROSOFT_RESERVED_GPT_GUID
+}
+
+fn entry_has_os_gpt_partition(entry: &Value) -> bool {
+    let has_gpt_type_list = match entry.get("GptTypes") {
+        Some(Value::Array(arr)) => arr
+            .iter()
+            .filter_map(Value::as_str)
+            .any(gpt_guid_is_os_protected),
+        Some(Value::String(s)) => gpt_guid_is_os_protected(s),
+        _ => false,
+    };
+    if has_gpt_type_list {
+        return true;
+    }
+    match entry.get("Partitions") {
+        Some(Value::Array(arr)) => arr
+            .iter()
+            .any(|p| gpt_guid_is_os_protected(&json_str_trimmed(p, "GptType"))),
+        Some(obj @ Value::Object(_)) => gpt_guid_is_os_protected(&json_str_trimmed(obj, "GptType")),
+        _ => false,
+    }
+}
 
 fn parse_cim_partitions(entry: &Value) -> Vec<MountedPartitionInfo> {
     let mut parts = Vec::new();
@@ -41,14 +73,43 @@ fn parse_cim_partitions(entry: &Value) -> Vec<MountedPartitionInfo> {
     parts
 }
 
+fn build_windows_lockout_reason(
+    idx: u32,
+    norm_sys: &str,
+    hosts_sys_letter: bool,
+    is_system_flag: bool,
+    is_boot_flag: bool,
+    has_os_gpt: bool,
+    has_pagefile: bool,
+) -> String {
+    let mut reasons: Vec<&'static str> = Vec::new();
+    if hosts_sys_letter {
+        reasons.push("SystemDrive");
+    }
+    if is_system_flag || is_boot_flag {
+        reasons.push("IsSystem/IsBoot");
+    }
+    if has_os_gpt {
+        reasons.push("EFI/MSR GPT");
+    }
+    if has_pagefile {
+        reasons.push("Pagefile");
+    }
+    if reasons.is_empty() {
+        reasons.push("Primary Boot Disk0");
+    }
+    format!(
+        "Host OS protected drive (Disk {idx} / {norm_sys} hard-lockout: {})",
+        reasons.join(", ")
+    )
+}
+
 fn parse_cim_disk_drive_entry_with_sys(
     entry: &Value,
     sys_letter: Option<&str>,
 ) -> Option<PhysicalDriveInfo> {
-    let idx = json_u64_lossy(entry.get("Index").or_else(|| entry.get("Number"))) as u32;
-    if entry.get("Index").is_none() && entry.get("Number").is_none() {
-        return None;
-    }
+    let idx_val = entry.get("Index").or_else(|| entry.get("Number"))?;
+    let idx = json_u64_lossy(Some(idx_val)) as u32;
     let model = ["Model", "FriendlyName"]
         .into_iter()
         .map(|k| json_str_trimmed(entry, k))
@@ -76,14 +137,16 @@ fn parse_cim_disk_drive_entry_with_sys(
         mp.trim_end_matches(['\\', '/'])
             .eq_ignore_ascii_case(&norm_sys)
     });
-    let explicit_boot = json_bool_lossy(entry.get("IsSystem"))
-        || json_bool_lossy(entry.get("IsBoot"))
-        || hosts_sys_letter;
-    let is_system_drive = if partitions.is_empty() && entry.get("IsSystem").is_none() {
-        idx == 0
-    } else {
-        explicit_boot || (idx == 0 && norm_sys == "C:" && mount_points.is_empty())
-    };
+    let is_system_flag = json_bool_lossy(entry.get("IsSystem"));
+    let is_boot_flag = json_bool_lossy(entry.get("IsBoot"));
+    let has_pagefile = json_bool_lossy(entry.get("HasPagefile"));
+    let has_os_gpt = entry_has_os_gpt_partition(entry);
+    let explicit_boot =
+        is_system_flag || is_boot_flag || has_pagefile || has_os_gpt || hosts_sys_letter;
+    let is_system_drive = explicit_boot
+        || (idx == 0 && entry.get("IsSystem").is_none() && partitions.is_empty())
+        || (idx == 0 && norm_sys == "C:" && mount_points.is_empty());
+
     let removable = iface.eq_ignore_ascii_case("USB")
         || iface.eq_ignore_ascii_case("SD")
         || media.to_ascii_lowercase().contains("removable");
@@ -104,8 +167,17 @@ fn parse_cim_disk_drive_entry_with_sys(
         size_gb,
         is_system_drive,
         safe_to_write: !is_system_drive,
-        lockout_reason: is_system_drive
-            .then(|| format!("System OS boot drive (Disk {idx} / {norm_sys} hard-lockout)")),
+        lockout_reason: is_system_drive.then(|| {
+            build_windows_lockout_reason(
+                idx,
+                &norm_sys,
+                hosts_sys_letter,
+                is_system_flag,
+                is_boot_flag,
+                has_os_gpt,
+                has_pagefile,
+            )
+        }),
         drive_role,
         bus_type: iface,
         removable,
@@ -173,7 +245,34 @@ fn run_powershell_hidden(script: &str) -> Option<String> {
 #[cfg(windows)]
 pub(crate) fn list_windows_drives() -> Vec<PhysicalDriveInfo> {
     let sys_drive = std::env::var("SystemDrive").unwrap_or_else(|_| "C:".to_string());
-    let script = concat!(
+    // Primary query joins Get-Disk + Get-Partition + Get-Volume + active Pagefile drive letters
+    // so SATA/secondary disks hosting Windows boot, EFI/MSR GPT partitions, SystemDrive, or pagefile
+    // are unconditionally protected even outside PhysicalDrive0.
+    let storage_script = concat!(
+        "$pfLetters = @((Get-CimInstance Win32_PageFileUsage -ErrorAction SilentlyContinue | ForEach-Object { if ($_.Name -and $_.Name.Length -ge 2) { $_.Name.Substring(0,2).ToUpperInvariant() } }) | Sort-Object -Unique);",
+        "$disks = @(Get-Disk -ErrorAction Stop | Sort-Object Number);",
+        "$out = foreach ($d in $disks) {",
+        "  $partsRaw = @(Get-Partition -DiskNumber $d.Number -ErrorAction SilentlyContinue);",
+        "  $gptTypes = @($partsRaw | Where-Object { $_.GptType } | ForEach-Object { [string]$_.GptType });",
+        "  $parts = @(); $hasPf = $false;",
+        "  foreach ($p in $partsRaw) {",
+        "    $dl = if ($p.DriveLetter -and [int][char]$p.DriveLetter -ne 0) { \"$($p.DriveLetter):\" } else { '' };",
+        "    if ($dl -and ($pfLetters -contains $dl.ToUpperInvariant())) { $hasPf = $true; }",
+        "    $vol = if ($dl) { Get-Volume -DriveLetter $p.DriveLetter -ErrorAction SilentlyContinue | Select-Object -First 1 } else { $null };",
+        "    $parts += [PSCustomObject]@{ DriveLetter=$dl; VolumeName=if($vol){[string]$vol.FileSystemLabel}else{''}; FileSystem=if($vol){[string]$vol.FileSystem}else{''}; SizeBytes=[uint64]$p.Size; GptType=if($p.GptType){[string]$p.GptType}else{''} }",
+        "  }",
+        "  [PSCustomObject]@{ Index=$d.Number; Model=$d.FriendlyName; Size=[uint64]$d.Size; InterfaceType=[string]$d.BusType; MediaType=if($d.BusType -eq 'USB'){'Removable Media'}else{'Fixed'}; IsSystem=[bool]$d.IsSystem; IsBoot=[bool]$d.IsBoot; HasPagefile=$hasPf; GptTypes=@($gptTypes); Partitions=@($parts) }",
+        "};",
+        "@($out) | ConvertTo-Json -Depth 5 -Compress"
+    );
+    if let Some(stdout) = run_powershell_hidden(storage_script) {
+        let parsed = parse_cim_disk_drives_json_with_sys(&stdout, Some(&sys_drive));
+        if !parsed.is_empty() {
+            return parsed;
+        }
+    }
+
+    let cim_fallback = concat!(
         "$disks = @(Get-CimInstance Win32_DiskDrive);",
         "$out = foreach ($d in $disks) {",
         "  $parts = @();",
@@ -186,14 +285,7 @@ pub(crate) fn list_windows_drives() -> Vec<PhysicalDriveInfo> {
         "};",
         "@($out) | ConvertTo-Json -Depth 4 -Compress"
     );
-    if let Some(stdout) = run_powershell_hidden(script) {
-        let parsed = parse_cim_disk_drives_json_with_sys(&stdout, Some(&sys_drive));
-        if !parsed.is_empty() {
-            return parsed;
-        }
-    }
-    let fallback_ps = "Get-Disk | Select-Object Number,FriendlyName,Size,BusType,IsSystem,IsBoot | ConvertTo-Json -Compress";
-    if let Some(stdout) = run_powershell_hidden(fallback_ps) {
+    if let Some(stdout) = run_powershell_hidden(cim_fallback) {
         let parsed = parse_cim_disk_drives_json_with_sys(&stdout, Some(&sys_drive));
         if !parsed.is_empty() {
             return parsed;
@@ -227,4 +319,20 @@ pub(crate) fn list_windows_drives() -> Vec<PhysicalDriveInfo> {
         }
     }
     drives
+}
+
+/// Returns detected Windows host OS / boot / EFI / pagefile disk paths across all indices.
+#[cfg(windows)]
+pub(crate) fn detect_windows_host_os_disks() -> Option<Vec<String>> {
+    let os_disks: Vec<String> = list_windows_drives()
+        .into_iter()
+        .filter(|d| d.is_system_drive)
+        .map(|d| d.device_path)
+        .collect();
+    (!os_disks.is_empty()).then_some(os_disks)
+}
+
+#[cfg(not(windows))]
+pub(crate) fn detect_windows_host_os_disks() -> Option<Vec<String>> {
+    None
 }

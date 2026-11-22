@@ -44,8 +44,34 @@ pub fn resolve_mount_point_to_block_device(mount_target: &str) -> Option<String>
     super::discovery_unix::resolve_mount_point_to_block_device(mount_target)
 }
 
-pub(crate) fn detect_linux_host_os_disks() -> Option<Vec<String>> {
-    super::discovery_unix::detect_linux_host_os_disks()
+/// Detects host OS / boot / EFI / pagefile protected disk paths across Windows, Linux, and macOS.
+pub(crate) fn detect_host_os_disks() -> Option<Vec<String>> {
+    #[cfg(windows)]
+    {
+        super::discovery_win::detect_windows_host_os_disks()
+    }
+    #[cfg(target_os = "linux")]
+    {
+        super::discovery_unix::detect_linux_host_os_disks()
+    }
+    #[cfg(target_os = "macos")]
+    {
+        let mut os_disks: Vec<String> = super::discovery_unix::list_macos_drives()
+            .into_iter()
+            .filter(|d| d.is_system_drive)
+            .map(|d| d.device_path)
+            .collect();
+        for base in ["/dev/disk0", "/dev/rdisk0"] {
+            if !os_disks.iter().any(|p| p == base) {
+                os_disks.push(base.to_string());
+            }
+        }
+        Some(os_disks)
+    }
+    #[cfg(not(any(windows, target_os = "linux", target_os = "macos")))]
+    {
+        None
+    }
 }
 
 /// Unmounts any active partitions belonging to `device_path` before raw block operations.

@@ -101,6 +101,12 @@ fn sample_bundle() -> ProfilesBundle {
             isa: "MN10300/AM34".to_string(),
             endianness: "little".to_string(),
             logic_voltage_mv: REQUIRED_LVTTL_MV,
+            ghidra_language_id: Some("mn10300:LE:32:default".to_string()),
+            ghidra_compiler_id: Some("default".to_string()),
+            ghidra_sleigh_provider: Some(
+                "GhidraMn10300+am33_panadiga_zero_undef.patch".to_string(),
+            ),
+            default_base_address: Some(0x4000_0000),
             evidence: ev(EvidenceTier::BenchVerified, "bench"),
         },
     );
@@ -205,6 +211,7 @@ fn sample_bundle() -> ProfilesBundle {
         "loader_ver061_toc48_main57".to_string(),
         FirmwareTrainProfile {
             id: "loader_ver061_toc48_main57".to_string(),
+            soc_core_ref: Some("mn10300_am34".to_string()),
             loader_version: "0.61".to_string(),
             loader_date: Some("06/03/06".to_string()),
             loader_profile_key: "ver061".to_string(),

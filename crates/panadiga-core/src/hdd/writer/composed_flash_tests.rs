@@ -1,5 +1,7 @@
 #![deny(unsafe_code)]
 
+use std::fs;
+
 use super::*;
 use crate::constants::LBA_SECTOR_SIZE_BYTES;
 use crate::hdd::writer::FileBackedMockFlashDevice;

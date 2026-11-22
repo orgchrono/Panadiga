@@ -1,5 +1,6 @@
 {
   "id": "prog201_8mb_main50622_ez49v",
+  "soc_core_ref": "mn10300_am34",
   "loader_version": "2.01",
   "loader_date": "09/09/18",
   "loader_profile_key": "prog071",

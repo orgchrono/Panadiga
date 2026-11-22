@@ -8,29 +8,43 @@ use crate::constants::PANA_DIGADIAG_FRM_SIZE;
 use crate::crypto::{
     ExtrheadCryptMode, FrmContainerMode, FrmPackModule, build_digadiag_frm, pack_extrhead, pack_frm,
 };
-use crate::hdd::{HddCapacityPatchMode, apply_capacity_patch_in_place};
+use crate::hdd::{
+    HDD_CMD_M7920_200GB_BLOCKS, HDD_CMD_M7920_400GB_BLOCKS, HddCapacityPatchMode,
+    apply_capacity_patch_in_place, inspect_main_buffer_capacity,
+};
 use crate::nvram::calculate_hashes;
 
 use super::super::super::bgo_unbrick::{
-    PROG061_BASE_VA, Prog061BgoPatchMode, find_recipe_by_loader_key,
-    patch_prog061_bgo_in_place_with_policy, retarget_prog_for_loader_profile_in_place,
+    PROG061_BASE_VA, Prog061BgoPatchMode, enforce_train_evidence_tier, find_recipe_by_loader_key,
+    patch_prog061_bgo_in_place_with_policy, retarget_prog_for_loader_profile_with_policy,
 };
 use super::super::super::main_passthrough::{
     EXPECTED_MAIN_3410PQ_SIZE, MAIN_BASE_VA, MainPassthroughMode, apply_main_passthrough_in_place,
     inspect_main_firmware_identity, inspect_main_passthrough_sites,
 };
+use super::super::super::sata_bridge_fix::{
+    SataBridgeResetFixMode, apply_main3060np_sata_bridge_reset_fix_in_place,
+    apply_prog061_sata_bridge_reset_fix_in_place,
+};
 use super::super::super::unbrick_workbench::{load_main_binary_and_meta, load_prog061_from_bytes};
 use super::types::{ComposedMainArtifact, SdLoaderProfile};
 
-/// Pure composition of patched `PROG061` and `DIGADIAG.FRM` (256 KiB raw for `ver061`, or 128 KiB `EXTRHEAD` for `ver063`).
-pub(crate) fn compose_digadiag_and_prog061(
+/// Pure composition of patched `PROG061` and `DIGADIAG.FRM` enforcing runtime R1 tier gating
+/// (`< T3` rejected unless `allow_unverified_profile == true`).
+pub(crate) fn compose_digadiag_and_prog061_with_tier_policy(
     prog_raw: &[u8],
     bgo_mode: Prog061BgoPatchMode,
     loader_profile: SdLoaderProfile,
     allow_unsafe_auto_format: bool,
+    allow_unverified_profile: bool,
 ) -> Result<(Vec<u8>, Vec<u8>, String)> {
+    let _ = enforce_train_evidence_tier(loader_profile.as_str(), allow_unverified_profile)?;
     let mut prog_patched = load_prog061_from_bytes(prog_raw)?;
-    retarget_prog_for_loader_profile_in_place(&mut prog_patched, loader_profile.as_str())?;
+    retarget_prog_for_loader_profile_with_policy(
+        &mut prog_patched,
+        loader_profile.as_str(),
+        allow_unverified_profile,
+    )?;
     patch_prog061_bgo_in_place_with_policy(&mut prog_patched, bgo_mode, allow_unsafe_auto_format)?;
     let diag_bytes = match loader_profile {
         SdLoaderProfile::Ver061RawSd48 => prog_patched.clone(),
@@ -50,16 +64,31 @@ pub(crate) fn compose_digadiag_and_prog061(
     Ok((prog_patched, diag_bytes, sha))
 }
 
-/// Composes the `PROG061 ` payload embedded inside `PANA__SD.FRM`.
-///
-/// For `ver061` (`DMR-EH55`) when serial boot `DIGADIAG.FRM` uses `UartMonitor` (`PANAMON1>`),
-/// `PANA__SD.FRM`'s `PROG061 ` slot is built in `BypassChecksOnly` (FVU installer mode) so
-/// normal boot with a blank HDD proceeds through `"SD version up mode."` into `MAIN3410PQ`.
-pub(crate) fn compose_pana_sd_prog061(
+/// Fail-closed composition of patched `PROG061` and `DIGADIAG.FRM` (`allow_unverified_profile = false`).
+#[cfg(test)]
+pub(crate) fn compose_digadiag_and_prog061(
+    prog_raw: &[u8],
+    bgo_mode: Prog061BgoPatchMode,
+    loader_profile: SdLoaderProfile,
+    allow_unsafe_auto_format: bool,
+) -> Result<(Vec<u8>, Vec<u8>, String)> {
+    compose_digadiag_and_prog061_with_tier_policy(
+        prog_raw,
+        bgo_mode,
+        loader_profile,
+        allow_unsafe_auto_format,
+        false,
+    )
+}
+
+/// Composes the `PROG061 ` payload embedded inside `PANA__SD.FRM` enforcing runtime R1 tier gating.
+pub(crate) fn compose_pana_sd_prog061_with_tier_policy(
     prog_raw: &[u8],
     requested_bgo_mode: Prog061BgoPatchMode,
     loader_profile: SdLoaderProfile,
     allow_unsafe_auto_format: bool,
+    allow_unverified_profile: bool,
+    sata_bridge_reset_fix: bool,
 ) -> Result<(Vec<u8>, Prog061BgoPatchMode)> {
     let effective_mode = if loader_profile == SdLoaderProfile::Ver061RawSd48
         && requested_bgo_mode == Prog061BgoPatchMode::UartMonitor
@@ -68,12 +97,19 @@ pub(crate) fn compose_pana_sd_prog061(
     } else {
         requested_bgo_mode
     };
-    let (prog_patched, _, _) = compose_digadiag_and_prog061(
+    let (mut prog_patched, _, _) = compose_digadiag_and_prog061_with_tier_policy(
         prog_raw,
         effective_mode,
         loader_profile,
         allow_unsafe_auto_format,
+        allow_unverified_profile,
     )?;
+    if sata_bridge_reset_fix {
+        apply_prog061_sata_bridge_reset_fix_in_place(
+            &mut prog_patched,
+            SataBridgeResetFixMode::Wait1000Ms,
+        )?;
+    }
     Ok((prog_patched, effective_mode))
 }
 
@@ -85,6 +121,7 @@ pub(crate) fn compose_patched_main_container(
     hdd_target_gb: Option<u32>,
     expected_main_build: Option<&str>,
     allow_target_mismatch: bool,
+    sata_bridge_reset_fix: bool,
 ) -> Result<ComposedMainArtifact> {
     let (mut main_bin, build_name, flag, adler_step) = load_main_binary_and_meta(raw_main)?;
     let identity = inspect_main_firmware_identity(&main_bin, Some(&build_name));
@@ -125,7 +162,22 @@ pub(crate) fn compose_patched_main_container(
 
     let mut hdd_capacity_applied = None;
     if let Some(gb) = hdd_target_gb {
-        if apply_capacity_patch_in_place(
+        let is_already_factory_200gb = gb == 200
+            && inspect_main_buffer_capacity(
+                &main_bin,
+                MAIN_BASE_VA,
+                "RAW_MAIN_BINARY",
+                Some(build_name.clone()),
+                "MAIN",
+            )
+            .is_ok_and(|cap| {
+                !cap.is_dynamic_unclamped
+                    && cap.slot_400gb_blocks_2kb == HDD_CMD_M7920_400GB_BLOCKS
+                    && cap.slot_200gb_blocks_2kb == HDD_CMD_M7920_200GB_BLOCKS
+            });
+        if is_already_factory_200gb {
+            hdd_capacity_applied = Some("factory_200gb".to_string());
+        } else if apply_capacity_patch_in_place(
             &mut main_bin,
             HddCapacityPatchMode::FixedCapacity,
             Some(gb),
@@ -144,6 +196,14 @@ pub(crate) fn compose_patched_main_container(
         .is_ok()
     {
         hdd_capacity_applied = Some("dynamic".to_string());
+        modified = true;
+    }
+
+    if sata_bridge_reset_fix {
+        apply_main3060np_sata_bridge_reset_fix_in_place(
+            &mut main_bin,
+            SataBridgeResetFixMode::Wait1000Ms,
+        )?;
         modified = true;
     }
 
@@ -182,6 +242,7 @@ pub(crate) fn compose_patched_main_container(
         build_version_u16,
         passthrough_applied,
         hdd_capacity_applied,
+        sata_bridge_reset_fix_applied: sata_bridge_reset_fix,
     })
 }
 

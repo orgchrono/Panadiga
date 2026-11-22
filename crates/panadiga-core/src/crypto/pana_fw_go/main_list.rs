@@ -52,7 +52,12 @@ pub fn parse_main_list(raw: &[u8], round_key: Option<&[u8; 32]>) -> Result<Unpac
             raw.len()
         );
     }
-    let header_checksum_valid = adler32_panasonic_strided(&raw[4..list_size_us], 1) == checksum;
+    let hdr_tail = &raw[4..list_size_us];
+    let hdr_byte_sum = hdr_tail
+        .iter()
+        .fold(0u32, |acc, &b| acc.wrapping_add(u32::from(b)));
+    let header_checksum_valid =
+        adler32_panasonic_strided(hdr_tail, 1) == checksum || hdr_byte_sum == checksum;
 
     let count = (list_size_us - PANA_MAIN_LIST_HEADER_SIZE) / PANA_MAIN_LIST_ENTRY_SIZE;
     let crypt_span = main_list_crypt_span(decompressed_segment_size);
@@ -76,7 +81,11 @@ pub fn parse_main_list(raw: &[u8], round_key: Option<&[u8; 32]>) -> Result<Unpac
         }
 
         let mut seg_buf = raw[cursor..seg_end].to_vec();
-        let checksum_valid = adler32_panasonic_strided(&seg_buf, 1) == seg_sum;
+        let seg_byte_sum = seg_buf
+            .iter()
+            .fold(0u32, |acc, &b| acc.wrapping_add(u32::from(b)));
+        let checksum_valid =
+            adler32_panasonic_strided(&seg_buf, 1) == seg_sum || seg_byte_sum == seg_sum;
         if let Some(rk) = round_key {
             if seg_buf.len() < crypt_span {
                 bail!(

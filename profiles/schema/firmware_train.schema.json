@@ -106,6 +106,16 @@
         },
         "sd_media_requirement": {
           "type": "string"
+        },
+        "trust_model": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DigadiagTrustModel"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "required": [
@@ -119,6 +129,16 @@
         "sd_media_requirement"
       ],
       "type": "object"
+    },
+    "DigadiagTrustModel": {
+      "description": "Cryptographic / integrity trust model verified for stage-1.5 `DIGADIAG.FRM` boot.",
+      "enum": [
+        "checksum32_only",
+        "encrypted_toc",
+        "rsa_signed",
+        "unknown"
+      ],
+      "type": "string"
     },
     "EvidenceSource": {
       "additionalProperties": false,
@@ -532,6 +552,12 @@
         "type": "string"
       },
       "type": "array"
+    },
+    "soc_core_ref": {
+      "type": [
+        "string",
+        "null"
+      ]
     },
     "symbols": {
       "additionalProperties": {

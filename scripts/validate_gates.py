@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from concurrent.futures import FIRST_EXCEPTION, Future, ThreadPoolExecutor, wait
+import importlib.util
 import os
 from pathlib import Path
 import subprocess
@@ -133,14 +134,70 @@ def _gate_python(env: Mapping[str, str], *, capture_output: bool = False) -> Non
         print_status("PASS", "Python build scripts, Ghidra syntax, mypy --strict, and pytest passed!", "32")
 
 
+def _resolve_pyghidra_python(env: Mapping[str, str], ghidra_home: Path) -> str:
+    explicit = (env.get("PANADIGA_GHIDRA_PYTHON") or "").strip()
+    if explicit:
+        explicit_path = Path(explicit)
+        if not explicit_path.is_file():
+            raise FileNotFoundError(f"PANADIGA_GHIDRA_PYTHON points to missing interpreter: {explicit_path}")
+        return str(explicit_path)
+    if importlib.util.find_spec("pyghidra") is not None:
+        return sys.executable
+    candidates = (
+        ghidra_home.parent.parent / ".venv" / "Scripts" / "python.exe",
+        ghidra_home.parent / ".venv" / "Scripts" / "python.exe",
+        Path(r"C:\ghidra\.venv\Scripts\python.exe"),
+        ghidra_home.parent.parent / ".venv" / "bin" / "python",
+        ghidra_home.parent / ".venv" / "bin" / "python",
+    )
+    for cand in candidates:
+        if cand.is_file():
+            return str(cand)
+    raise FileNotFoundError(
+        "No Python interpreter with `pyghidra` found for --ghidra-smoke; "
+        "set PANADIGA_GHIDRA_PYTHON or install pyghidra in the active interpreter"
+    )
+
+
+def _gate_ghidra_smoke(env: Mapping[str, str], *, capture_output: bool = False) -> None:
+    if not capture_output:
+        print_banner("10/9. Running Opt-In PyGhidra Headless Smoke + TrapAudit (MN103S Traps)")
+    raw_home = (env.get("PANADIGA_GHIDRA_PATCHED") or env.get("GHIDRA_INSTALL_DIR") or "").strip()
+    if not raw_home:
+        raise FileNotFoundError(
+            "PANADIGA_GHIDRA_PATCHED (or GHIDRA_INSTALL_DIR) must be set for --ghidra-smoke"
+        )
+    ghidra_home = Path(raw_home)
+    if not ghidra_home.is_dir():
+        raise FileNotFoundError(
+            f"PANADIGA_GHIDRA_PATCHED (or GHIDRA_INSTALL_DIR) directory does not exist: {ghidra_home}"
+        )
+    py_exe = _resolve_pyghidra_python(env, ghidra_home)
+    run_step(
+        [
+            py_exe,
+            "-m",
+            "scripts.re.ghidra_fleet_orchestrator",
+            "--ghidra-smoke",
+            "--ghidra-home",
+            str(ghidra_home),
+        ],
+        cwd=ROOT,
+        env=env,
+        capture_output=capture_output,
+    )
+    if not capture_output:
+        print_status("PASS", "PyGhidra MN103S synthetic Traps #1-#8 smoke + Java TrapAudit passed!", "32")
+
+
 def _lane_rust_and_ghidra(env: Mapping[str, str]) -> None:
     _gate_rust(env, capture_output=True)
     _gate_ghidra(env, capture_output=True)
 
 
-def run_sequential_gates(env: Mapping[str, str]) -> None:
-    """Execute all 9 Quality Gates sequentially with unbuffered stdout/stderr."""
-    for gate in (
+def run_sequential_gates(env: Mapping[str, str], *, ghidra_smoke: bool = False) -> None:
+    """Execute all 9 Quality Gates (plus optional Ghidra smoke) sequentially."""
+    gates: list[Callable[[Mapping[str, str]], None]] = [
         _gate_rust,
         _gate_typescript,
         _gate_vitest,
@@ -150,13 +207,16 @@ def run_sequential_gates(env: Mapping[str, str]) -> None:
         _gate_ghidra,
         _gate_c11_host,
         _gate_python,
-    ):
+    ]
+    if ghidra_smoke:
+        gates.append(_gate_ghidra_smoke)
+    for gate in gates:
         gate(env)
 
 
-def run_parallel_lanes(env: Mapping[str, str], max_jobs: int) -> None:
+def run_parallel_lanes(env: Mapping[str, str], max_jobs: int, *, ghidra_smoke: bool = False) -> None:
     """Execute all 9 Quality Gates via thread-pool DAG with fail-fast ProcessTracker cleanup."""
-    lanes: tuple[tuple[str, Callable[[Mapping[str, str]], None]], ...] = (
+    lane_list: list[tuple[str, Callable[[Mapping[str, str]], None]]] = [
         ("1+7/9 Rust Workspace + Ghidra", _lane_rust_and_ghidra),
         ("2/9 Oxlint + TypeScript", lambda e: _gate_typescript(e, capture_output=True)),
         ("3/9 Vitest Unit Suite", lambda e: _gate_vitest(e, capture_output=True)),
@@ -166,7 +226,10 @@ def run_parallel_lanes(env: Mapping[str, str], max_jobs: int) -> None:
         ("8/9 C11 Firmware Host Tests", lambda e: _gate_c11_host(e, capture_output=True)),
         ("9a/9 Python Mypy Strict", lambda e: _gate_python_mypy(e, capture_output=True)),
         ("9b/9 Python Compile + Pytest", lambda e: _gate_python_compile_and_pytest(e, capture_output=True)),
-    )
+    ]
+    if ghidra_smoke:
+        lane_list.append(("10/9 Ghidra Headless Smoke", lambda e: _gate_ghidra_smoke(e, capture_output=True)))
+    lanes = tuple(lane_list)
     worker_count = max(1, min(max_jobs, len(lanes)))
     print_banner(
         f"PANADIGA PARALLEL QUALITY GATES ({len(lanes)} lanes | max_workers={worker_count})"

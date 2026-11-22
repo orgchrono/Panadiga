@@ -74,6 +74,7 @@ pub struct SdUnbrickKitRequest {
     pub allow_unsafe_auto_format: bool,
     pub expected_main_build: Option<String>,
     pub allow_target_mismatch: bool,
+    pub sata_bridge_reset_fix: bool,
 }
 
 /// High-level SD recovery kit preset distinguishing standard builds from the hardened `PANAMON1` `ver0.61` kit.
@@ -129,6 +130,7 @@ impl SdUnbrickKitRequest {
             allow_unsafe_auto_format: false,
             expected_main_build: None,
             allow_target_mismatch: false,
+            sata_bridge_reset_fix: false,
         }
     }
 }
@@ -154,6 +156,8 @@ pub struct SdUnbrickKitReport {
     pub loader_profile_applied: String,
     pub main_passthrough_applied: Option<String>,
     pub hdd_capacity_applied: Option<String>,
+    #[serde(default)]
+    pub sata_bridge_reset_fix_applied: bool,
     pub digadiag_path: String,
     pub digadiag_sha256: String,
     pub pana_sd_path: Option<String>,
@@ -168,4 +172,5 @@ pub(crate) struct ComposedMainArtifact {
     pub build_version_u16: u16,
     pub passthrough_applied: String,
     pub hdd_capacity_applied: Option<String>,
+    pub sata_bridge_reset_fix_applied: bool,
 }

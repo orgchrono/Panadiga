@@ -1,5 +1,6 @@
 {
   "id": "uniphier_bs885_panasonic_hdr_nand",
+  "soc_core_ref": "mn10300_am33_2",
   "loader_version": "M2863EG_ZE-340",
   "loader_date": null,
   "loader_profile_key": "uniphier_nand",

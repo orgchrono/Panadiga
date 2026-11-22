@@ -86,7 +86,9 @@ fn hardened_profile_blocks_factory_unpatched_prog061_while_accepting_panamon1() 
     }));
 
     let panamon_prog = make_synthetic_prog061(true);
-    let panamon_sd = make_dual_sd48(panamon_prog.clone(), b'M', true);
+    let mut bypass_prog = make_synthetic_prog061(false);
+    patch_prog061_bgo_in_place(&mut bypass_prog, Prog061BgoPatchMode::BypassChecksOnly).unwrap();
+    let panamon_sd = make_dual_sd48(bypass_prog, b'M', true);
     let rep_pass = verify_sd_buffers_with_profile(
         "/mem/panamon1",
         Some(Ok(&panamon_prog)),

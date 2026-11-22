@@ -55,7 +55,7 @@ pub fn build_ch1_probe_stub(
     emit_delay_iters(&mut buf, 0x100)?;
     emit_mmio_write32(&mut buf, host_ctl_va, 0x0000_0003);
     emit_mmio_write32(&mut buf, reset_ctl_va, 0x0000_0000);
-    emit_mmio_write32(&mut buf, channel_mmio.wrapping_add(0x58), 0x0000_0000);
+    emit_mmio_write32(&mut buf, channel_mmio.wrapping_add(0x58), 0x0000_0002);
     emit_mmio_write32(&mut buf, channel_mmio.wrapping_add(0x38), 0x0000_00A0);
     emit_delay_iters(&mut buf, 0x1_0000)?;
     emit_taskfile_snapshot(&mut buf, channel_mmio, out_raw_va, 0xCAFE_02A0)?;
@@ -108,7 +108,6 @@ pub fn build_ata_identify_ec_stub(
     } else {
         out_buf_va.wrapping_add(1024)
     };
-    let reset_ctl_va = (channel_mmio & 0xFFFF_FF00).wrapping_sub(0xE0);
     let data_reg = channel_mmio.wrapping_add(0x20);
     let devsel_reg = channel_mmio.wrapping_add(0x38);
     let cmd_reg = channel_mmio.wrapping_add(0x3C);
@@ -118,8 +117,7 @@ pub fn build_ata_identify_ec_stub(
     emit_fill_words(&mut buf, out_buf_va, 256, 0xA5A5_A5A5)?;
     emit_mmio_write32(&mut buf, meta_va, 0xA5A5_A5A5);
     emit_mmio_write32(&mut buf, meta_va.wrapping_add(4), 0xA5A5_A5A5);
-    emit_mmio_write32(&mut buf, reset_ctl_va, 0x0000_0000);
-    emit_mmio_write32(&mut buf, altstat_reg, 0x0000_0000);
+    emit_mmio_write32(&mut buf, altstat_reg, 0x0000_0002);
     emit_mmio_write32(&mut buf, devsel_reg, u32::from(drive_sel));
     emit_delay_iters(&mut buf, 0x1_0000)?;
     emit_mmio_write32(&mut buf, cmd_reg, 0x0000_00EC);

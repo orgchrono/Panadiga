@@ -187,8 +187,8 @@
     {
       "id": "EV-20261119-006",
       "level": "N4_HARDWARE",
-      "claim_pt": "Pinagem reversa P58001 (Pin k = ATA 41 - k), prova IDE2SAT2 180 graus (0x00002004 DD13|DD2) vs 0 graus (0x00000000), e isolamento eletrico IORDY/DIOR-/DIOW- = 0V em CH1.",
-      "claim_en": "Reversed P58001 pinout (Pin k = ATA 41 - k), IDE2SAT2 180 deg (0x00002004 DD13|DD2) vs 0 deg (0x00000000) proof, and CH1 IORDY/DIOR-/DIOW- = 0V fault isolation.",
+      "claim_pt": "Pinagem reversa P58001 (Pin k = ATA 41 - k), prova IDE2SAT2 180 graus (0x00002004 DD13|DD2) vs 0 graus (0x00000000), e tensoes verificadas na IDE2SAT2 (Pin 27 IORDY = 3.34V, Pins 1/23/25/37/38 = 2.45..2.47V).",
+      "claim_en": "Reversed P58001 pinout (Pin k = ATA 41 - k), IDE2SAT2 180 deg (0x00002004 DD13|DD2) vs 0 deg (0x00000000) proof, and verified IDE2SAT2 voltages (Pin 27 IORDY = 3.34V, Pins 1/23/25/37/38 = 2.45..2.47V).",
       "sites": [
         "P58001 (vol2_schematics.pdf p.113)",
         "VEK0K00 / N5EZZ0000003 / StarTech IDE2SAT2",

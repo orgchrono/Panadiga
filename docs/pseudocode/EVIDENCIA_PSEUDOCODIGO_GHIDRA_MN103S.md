@@ -26553,3 +26553,13 @@ Durante a auditoria forense dos 5 binários `mn10300:LE:32:default` somada ao ex
 ## Verificação de Cobertura
 
 Este documento consolida a extração determinística original (**Ghidra 12.0.3 / PyGhidra**), os blocos FAT12/FAT16/FAT32 & SD (**Ghidra 12.1.4 PUBLIC Headless**, `C:\ghidra\*.java` / `./raw/doc_boot_fat_sd_java.txt`), a análise completa **BGO FTL (`[nfrom]` + `SA41 + 0x14`) & RTSC / DAVIS IDE** no `PROG061` + `Loader ver0.61 [06/03/06]` (`eh55_loader_ver061_256k.bin` via projeto read-only auxiliar) e `/BOOT.BIN` (`ver0.63`), além das listagens verificadas contra `prog061_dec.bin` (`sd_load.o`) e `dmr-es35v/flash.bin` (`Loader ver0.18 [06/03/13]`), com validação pós-geração garantindo **zero funções omitidas**, **cercas de código balanceadas** e **preservação integral do C e disassembly verificados**.
+
+
+---
+
+## Parte VI — Expansão Integral da Frota Decriptada & Decompilação Headless (`53/53` MN103S `Zero-Undef` + UniPhier Linux + SPARC V8)
+
+Em complemento às Partes I–V centradas nos binários do `DMR-EH55` e `/BOOT.BIN`, toda a frota de firmwares do repositório (**40 fontes originais** -> **78 binários únicos por SHA-256** decriptados em texto plano via `panadiga re bench-runtime`) foi processada no pipeline headless isolado (`ghidra_zero_undef_pipeline.py` + `PanadigaMn103sTrapAudit.java` + `ghidra_export_pseudocode_bundle.py`) sem mutar `Panadiga_MN103S` nem `Panadiga_MN103S_ZeroUndef`:
+
+- **Cobertura consolidada ([`EVIDENCIA_PSEUDOCODIGO_GHIDRA_FROTA_COMPLETA.md`](./EVIDENCIA_PSEUDOCODIGO_GHIDRA_FROTA_COMPLETA.md) & [`fleet_verify.json`](../audits/zero_undef/fleet_verify.json)):** **`55` programas analisados** (`75.031.001` instruções, **`1.083.676` funções**, `1.083.618` decompiladas em C), com **`53 / 53` programas MN103S em 0 bytes indefinidos (`??`), 0 chamadas `mn_todo()` em funções e 0 bookmarks de erro**, mais **`2` alvos SPARC V8 (`DMR-EZ485V`)** e o inventário completo dos `15` módulos `STB` (ST20/OS20 e MStar), drives `J147`/`J315` e partições UniPhier NAND (`CramFS`/`RomFS`/`SquashFS`).
+- **Bundles em texto plano rastreados em `./raw/`:** [`fleet_ipl_and_progs.txt`](./raw/fleet_ipl_and_progs.txt) · [`fleet_uniphier_progs_and_linux.txt`](./raw/fleet_uniphier_progs_and_linux.txt) · [`fleet_drv_families.txt`](./raw/fleet_drv_families.txt) · [`fleet_main_subsystems.txt`](./raw/fleet_main_subsystems.txt) · [`fleet_main_function_maps_part1.txt`](./raw/fleet_main_function_maps_part1.txt) / [`part2`](./raw/fleet_main_function_maps_part2.txt) / [`part3`](./raw/fleet_main_function_maps_part3.txt) · [`fleet_sparc_ez485v.txt`](./raw/fleet_sparc_ez485v.txt) · [`fleet_stb_and_non_mn103_inventory.txt`](./raw/fleet_stb_and_non_mn103_inventory.txt).

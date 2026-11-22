@@ -17,9 +17,9 @@ use anyhow::Result;
 pub use panadiga_profiles::{
     AM34_LETHAL_MMIO_ADDR, AddressReloc, Authorization, AuthorizationMode, BoardProfile,
     BytePatchEntry, Capability, CapabilityGate, CapabilitySummary, ClaimAxis, ClaimEvidence,
-    Denial, DerivedSector, DigadiagSpec, EepromChipProfile, EepromFunction, EvidenceSource,
-    EvidenceTier, FirmwareTrainProfile, FlashChipProfile, FlashHwProtect, FlashJedecId,
-    FlashRwBank, FlashSectorBank, FrmContainerSpec, InterpolatedRegionVariant,
+    Denial, DerivedSector, DigadiagSpec, DigadiagTrustModel, EepromChipProfile, EepromFunction,
+    EvidenceSource, EvidenceTier, FirmwareTrainProfile, FlashChipProfile, FlashHwProtect,
+    FlashJedecId, FlashRwBank, FlashSectorBank, FrmContainerSpec, InterpolatedRegionVariant,
     LAB_OVERRIDE_DISCLAIMER_ACK, LabOverride, LoaderFingerprint, MIN_CRITICAL_IPL_GUARD_BYTES,
     MediaFormatProfile, ModelClaims, ModelProfileManifest, NorLayoutProfile, NorRegion,
     NorRegionKind, NorRegionPolicy, OffsetRange, PROFILES_SCHEMA_VERSION, PanaRebuildRecipe,

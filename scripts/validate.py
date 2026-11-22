@@ -45,6 +45,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=max(2, min(9, os.cpu_count() or 4)),
         help="Maximum parallel validation lanes (default: min(9, cpu_count)).",
     )
+    parser.add_argument(
+        "--ghidra-smoke",
+        action="store_true",
+        help="Opt-in real PyGhidra + TrapAudit check against synthetic MN103S fixture (requires PANADIGA_GHIDRA_PATCHED).",
+    )
     return parser.parse_args(argv)
 
 
@@ -53,18 +58,20 @@ def run_validation(
     *,
     sequential: bool = False,
     max_jobs: int | None = None,
+    ghidra_smoke: bool = False,
 ) -> float:
-    """Execute all 9 Quality Gates and return total elapsed seconds."""
+    """Execute all 9 Quality Gates (plus optional Ghidra smoke gate) and return total elapsed seconds."""
     start = time.monotonic()
     jobs = max_jobs if max_jobs is not None else max(2, min(9, os.cpu_count() or 4))
     if sequential:
-        run_sequential_gates(env)
+        run_sequential_gates(env, ghidra_smoke=ghidra_smoke)
     else:
-        run_parallel_lanes(env, jobs)
+        run_parallel_lanes(env, jobs, ghidra_smoke=ghidra_smoke)
 
     elapsed = time.monotonic() - start
+    suffix = " (+ Ghidra Smoke)" if ghidra_smoke else ""
     print_banner(
-        f"ALL 9 COMMIT QUALITY GATES PASSED! (Elapsed: {elapsed:.1f}s)\n"
+        f"ALL 9 COMMIT QUALITY GATES{suffix} PASSED! (Elapsed: {elapsed:.1f}s)\n"
         "Repository is in pristine condition for git commit & push.",
         ansi_color="32",
     )
@@ -76,7 +83,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     env = build_env()
     try:
-        run_validation(env, sequential=args.sequential, max_jobs=args.jobs)
+        run_validation(env, sequential=args.sequential, max_jobs=args.jobs, ghidra_smoke=bool(args.ghidra_smoke))
     except (subprocess.CalledProcessError, RuntimeError, FileNotFoundError) as exc:
         print_status("FAIL", f"Validation gate failed: {exc}", "31")
         return 1

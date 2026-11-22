@@ -1,5 +1,6 @@
 {
   "id": "uniphier_xw300_le2011_nand",
+  "soc_core_ref": "mn10300_am33_2",
   "loader_version": "M4220GN_BQ-370",
   "loader_date": null,
   "loader_profile_key": "uniphier_nand",

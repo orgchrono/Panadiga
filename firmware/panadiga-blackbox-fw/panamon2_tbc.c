@@ -1,6 +1,14 @@
 /**
- * Clean-Room Matsushita AM34 / MN103S Standalone PANAMON2 + Safe TBC Monitor
- * Target: Stage-1.5 SDRAM (0x50400000) via DIGADIAG.FRM / P7501 UART0 (115200 8N1)
+ * Open-Source Hardware-Interoperability Prototype (Matsushita AM34 / MN103S)
+ * EXPERIMENTAL FEASIBILITY SPIKE -- NOT LEGALLY CLEAN-ROOM.
+ * Target: Stage-1.5 SDRAM (0x50400000) via DIGADIAG.FRM / P7501 UART0 (115200 8N1).
+ *
+ * Silicon safety notes (enforced by static guards + bench discipline):
+ * 1. AM34 Stage-1.5 has no hardware MPU: always access MMIO/Flash via am34_safe_* wrappers.
+ * 2. Before any future Spansion S29JL064H NOR erase/program command, callers MUST mask
+ *    maskable IRQs (CLI) and remap exception/IRQ vectors to SDRAM (never fetch from NOR
+ *    while Flash is outside Read Array mode).
+ * 3. Physical VEP79138 boards require IC7501 TBUS keepalive frames to prevent WDT shutdown.
  */
 
 #include <stdbool.h>
@@ -94,24 +102,24 @@ static void probe_tbc_aiof_baseline(panadiga_tv_std_t std_mode) {
     (void)am34_safe_read32(AM34_AIOF_TBC_BASE, &aiof_id);
     switch (std_mode) {
     case PANADIGA_TV_PAL_M:
-        uart0_puts("[TBC] PAL-M clean-room stub armed (AIOF safe probe)\n");
+        uart0_puts("[TBC] PAL-M experimental stub armed (AIOF safe probe)\n");
         break;
     case PANADIGA_TV_PAL:
-        uart0_puts("[TBC] PAL clean-room stub armed\n");
+        uart0_puts("[TBC] PAL experimental stub armed\n");
         break;
     case PANADIGA_TV_SECAM:
-        uart0_puts("[TBC] SECAM clean-room stub armed\n");
+        uart0_puts("[TBC] SECAM experimental stub armed\n");
         break;
     case PANADIGA_TV_NTSC:
     default:
-        uart0_puts("[TBC] NTSC clean-room stub armed\n");
+        uart0_puts("[TBC] NTSC experimental stub armed\n");
         break;
     }
 }
 
 int main(void) {
-    uart0_puts("\nPANAMON2 CLEAN-ROOM AM34 MONITOR\n");
-    uart0_puts("GUARDS: 0xC000100C=LOCKED DAVIS>=0x89000080=LOCKED IPL_RO=LOCKED\n");
+    uart0_puts("\nPANAMON2 OPEN INTEROP PROTOTYPE (AM34 SDRAM)\n");
+    uart0_puts("SW_GUARDS: 0xC000100C=LOCKED DAVIS>=0x89000080=LOCKED IPL_RO=LOCKED\n");
     probe_tbc_aiof_baseline(PANADIGA_TV_PAL_M);
     uart0_puts("PANAMON2>\n");
     return 0;

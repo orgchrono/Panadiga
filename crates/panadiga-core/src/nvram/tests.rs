@@ -173,7 +173,10 @@ fn test_patch_flash_upper_nor_slice_layers_and_bounds() {
 
 #[test]
 fn test_patch_flash_upper_nor_file_cow_and_backup() {
-    let dir = std::env::temp_dir().join("panadiga_upper_nor_cow_test");
+    let dir = std::env::temp_dir().join(format!(
+        "panadiga_upper_nor_cow_test_{}",
+        std::process::id()
+    ));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
 

@@ -1,5 +1,6 @@
 {
   "id": "loader_ver018_xip_main52df6",
+  "soc_core_ref": "mn10300_am34",
   "loader_version": "0.18",
   "loader_date": "06/03/13",
   "loader_profile_key": "ver018",

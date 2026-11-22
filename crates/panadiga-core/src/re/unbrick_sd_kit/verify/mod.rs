@@ -7,7 +7,16 @@ mod tests;
 
 use serde::{Deserialize, Serialize};
 
-use super::super::bgo_unbrick::find_retarget_spec_by_loader_key;
+use crate::constants::{
+    AM34_CS1_NOR_OFFSET_MASK, BGO_TABLE_WORD_IDX_FLASH_END, CHK_ID_BGO_ALLOWLIST_INVARIANT,
+    CHK_ID_BGO_GEOMETRY_MISMATCH, CHK_ID_DIGADIAG_BYPASS_TRAP, CHK_ID_FVU_PANAMON_TRAP,
+    CHK_ID_MAIN_EXTRHEAD_CHECKSUM, CHK_ID_RTSD_LBA48_GATE, CHK_ID_RTSD_TARGET_CONSISTENCY,
+    CHK_ID_SATA_BRIDGE_RESET_FIX, LBA28_MAX_BLOCKS_2KB, SD_STATUS_INVALID, SD_STATUS_READY,
+    SD_STATUS_READY_WITH_WARNINGS,
+};
+
+use super::super::bgo_unbrick::{find_train_by_loader_key, validate_bgo_allowlist_invariant};
+use super::super::sata_bridge_fix::{SATA_BRIDGE_STATE_MISMATCH, SATA_BRIDGE_STATE_WAIT_1000MS};
 use super::compose::SdLoaderProfile;
 
 pub(crate) use self::media::{DigadiagInspection, verify_digadiag_buffer, verify_pana_sd_buffer};
@@ -45,11 +54,64 @@ pub struct SdMediaVerificationReport {
     pub pana_sd_prog061_bgo_geometry: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pana_sd_main_hdd_capacity_label: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pana_sd_prog061_sata_bridge_fix: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pana_sd_main_sata_bridge_fix: Option<String>,
     #[serde(default)]
     pub factory_unpatched_prog061_detected: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dual_family_parity: Option<DualFamilyParityReport>,
     pub checks: Vec<SdUnbrickCheck>,
+}
+
+fn push_sata_bridge_fix_check(
+    checks: &mut Vec<SdUnbrickCheck>,
+    sd_present: bool,
+    main_build_present: bool,
+    prog_state: Option<&str>,
+    main_state: Option<&str>,
+    audit_profile: SdKitAuditProfile,
+) {
+    if prog_state == Some(SATA_BRIDGE_STATE_MISMATCH)
+        || main_state == Some(SATA_BRIDGE_STATE_MISMATCH)
+    {
+        checks.push(check(
+            CHK_ID_SATA_BRIDGE_RESET_FIX,
+            "fail",
+            "Corrupt/Unexpected Bytes at SATA-Bridge Hard-Reset Timing Site",
+            format!(
+                "PANA__SD.FRM SATA-bridge timing site failed fail-closed match (prog061={prog_state:?}, main={main_state:?})."
+            ),
+        ));
+        return;
+    }
+
+    let prog_patched = prog_state == Some(SATA_BRIDGE_STATE_WAIT_1000MS);
+    let main_patched = main_state == Some(SATA_BRIDGE_STATE_WAIT_1000MS);
+    if prog_patched && main_patched {
+        checks.push(check(
+            CHK_ID_SATA_BRIDGE_RESET_FIX,
+            "pass",
+            "SATA-PATA Bridge Reset Wait Fix Verified (1000 ms)",
+            "Both PANA__SD.FRM PROG061 @ 0x5041D928 and MAIN3060NP @ 0x571122B2 apply verified 1000 ms post-RESET- wait (100 x 10 ms RTOS ticks).",
+        ));
+    } else if (prog_patched && (main_build_present || main_state.is_some()))
+        || (main_patched && sd_present)
+    {
+        let sev = match audit_profile {
+            SdKitAuditProfile::HardenedRecovery => "fail",
+            SdKitAuditProfile::Standard => "warn",
+        };
+        checks.push(check(
+            CHK_ID_SATA_BRIDGE_RESET_FIX,
+            sev,
+            "Partial SATA-PATA Bridge Reset Wait Fix (PROG061 vs MAIN Mismatch)",
+            format!(
+                "Partial SataBridgeResetFix in PANA__SD.FRM (prog061={prog_state:?}, main={main_state:?}); both PROG061 FVU and MAIN3060NP must use 1000 ms or factory 2 ms consistently."
+            ),
+        ));
+    }
 }
 
 pub(crate) fn check(
@@ -175,14 +237,45 @@ pub fn verify_sd_buffers_with_profile(
     };
     checks.push(hw_warn);
 
-    let retarget_spec = diag
+    let active_train = diag
         .detected_profile
-        .and_then(|p| find_retarget_spec_by_loader_key(p.as_str()))
+        .and_then(|p| find_train_by_loader_key(p.as_str()))
         .or_else(|| {
             sd.detected_profile
-                .and_then(|p| find_retarget_spec_by_loader_key(p.as_str()))
+                .and_then(|p| find_train_by_loader_key(p.as_str()))
         });
-    if let Some(spec) = retarget_spec {
+    if let Some(train) = active_train
+        && let Some(spec) = train.bgo_retarget_spec.as_ref()
+    {
+        match validate_bgo_allowlist_invariant(train, spec) {
+            Ok(()) => {
+                let start_off = spec.detect_flash_base & AM34_CS1_NOR_OFFSET_MASK;
+                let end_incl = spec
+                    .bgo_table_words
+                    .get(BGO_TABLE_WORD_IDX_FLASH_END)
+                    .map_or(start_off, |&w| {
+                        (w & AM34_CS1_NOR_OFFSET_MASK).saturating_sub(1)
+                    });
+                checks.push(check(
+                    CHK_ID_BGO_ALLOWLIST_INVARIANT,
+                    "pass",
+                    "BGO Positive Allowlist & Physical Sector Alignment Verified",
+                    format!(
+                        "SSOT BGO span [0x{start_off:06X}..=0x{end_incl:06X}] is strictly contained inside '{}' BGO allowlist, sector-aligned, and disjoint from IPL/DRV/EEMUL.",
+                        train.id
+                    ),
+                ));
+            }
+            Err(err) => {
+                checks.push(check(
+                    CHK_ID_BGO_ALLOWLIST_INVARIANT,
+                    "fail",
+                    "BGO Positive Allowlist Invariant Failed",
+                    err.to_string(),
+                ));
+            }
+        }
+
         let expected_geo = spec.target_geometry_id.as_str();
         let mismatches: Vec<String> = [
             ("DIGADIAG.FRM", diag.bgo_geometry.as_deref()),
@@ -201,7 +294,7 @@ pub fn verify_sd_buffers_with_profile(
                 SdKitAuditProfile::Standard => "warn",
             };
             checks.push(check(
-                "bgo_geometry_mismatch",
+                CHK_ID_BGO_GEOMETRY_MISMATCH,
                 sev,
                 "BGO Target Geometry Mismatch for Loader ver0.61 (DMR-EH55 8 MiB NOR)",
                 format!(
@@ -215,32 +308,97 @@ pub fn verify_sd_buffers_with_profile(
     if sd.detected_profile == Some(SdLoaderProfile::Ver061RawSd48)
         && sd.prog061_mode.as_deref() == Some("UART_MONITOR_PANAMON1")
     {
+        let sev = match audit_profile {
+            SdKitAuditProfile::HardenedRecovery => "fail",
+            SdKitAuditProfile::Standard => "warn",
+        };
         checks.push(check(
-            "fvu_panamon_trap",
-            "warn",
+            CHK_ID_FVU_PANAMON_TRAP,
+            sev,
             "PANA__SD.FRM Contains UART_MONITOR_PANAMON1 (Halts Instead of Flashing MAIN)",
             "In Loader ver0.61 normal SD update mode, PROG061 inside PANA__SD.FRM must use BYPASS_CHECKS_ONLY so FVU proceeds to flash MAIN onto HDD; UART_MONITOR_PANAMON1 will halt at PANAMON1> instead.",
         ));
     }
 
-    if let Some(cap_label) = sd.main_hdd_capacity_label.as_deref() {
+    if diag.detected_profile == Some(SdLoaderProfile::Ver061RawSd48)
+        && diag.bgo_mode.as_deref() == Some("BYPASS_CHECKS_ONLY")
+        && (audit_profile == SdKitAuditProfile::HardenedRecovery || sd.present)
+    {
+        let sev = match audit_profile {
+            SdKitAuditProfile::HardenedRecovery => "fail",
+            SdKitAuditProfile::Standard => "warn",
+        };
         checks.push(check(
-            "rtsd_target_consistency",
-            "pass",
-            format!("MAIN HDD Capacity Policy Inspected ({cap_label})"),
-            format!(
-                "MAIN src/hdd_cmd.c RTSD limit resolves to '{cap_label}' (dynamic_unclamped={}).",
-                sd.main_hdd_dynamic.unwrap_or(false),
-            ),
+            CHK_ID_DIGADIAG_BYPASS_TRAP,
+            sev,
+            "DIGADIAG.FRM Uses BYPASS_CHECKS_ONLY Instead of Interactive PANAMON1 Monitor",
+            "JIG diagnostic boot DIGADIAG.FRM expects UART_MONITOR_PANAMON1 (or bare-metal PANAMON2); BYPASS_CHECKS_ONLY will attempt FVU installation instead of dropping to serial prompt.",
         ));
     }
 
+    if sd.main_extrhead_checksum_ok == Some(false) {
+        checks.push(check(
+            CHK_ID_MAIN_EXTRHEAD_CHECKSUM,
+            "fail",
+            "PANA__SD.FRM MAIN EXTRHEAD Checksum/Footer Corrupted",
+            "MAIN EXTRHEAD header, Adler-32 strided checksum, or EXTRFOOT trailer failed validation.",
+        ));
+    }
+
+    if let Some(cap_label) = sd.main_hdd_capacity_label.as_deref() {
+        let dynamic = sd.main_hdd_dynamic.unwrap_or(false);
+        checks.push(check(
+            CHK_ID_RTSD_TARGET_CONSISTENCY,
+            "pass",
+            format!("MAIN HDD Capacity Policy Inspected ({cap_label})"),
+            format!("MAIN src/hdd_cmd.c RTSD limit resolves to '{cap_label}' (dynamic_unclamped={dynamic})."),
+        ));
+
+        let exceeds_lba28 = dynamic
+            || sd
+                .main_effective_blocks_2kb
+                .is_some_and(|b| b > LBA28_MAX_BLOCKS_2KB);
+        if exceeds_lba28 {
+            let is_known_lba48_build = sd.detected_profile == Some(SdLoaderProfile::Ver061RawSd48)
+                || sd.main_build.as_deref().is_some_and(|b| {
+                    let up = b.to_ascii_uppercase();
+                    up.contains("3410") || up.contains("3060")
+                });
+            let sev = if is_known_lba48_build {
+                "pass"
+            } else if audit_profile == SdKitAuditProfile::HardenedRecovery {
+                "fail"
+            } else {
+                "warn"
+            };
+            checks.push(check(
+                CHK_ID_RTSD_LBA48_GATE,
+                sev,
+                format!("MAIN >128 GiB LBA48 Addressing Boundary Check ({cap_label})"),
+                format!(
+                    "Target exceeds LBA28 ceiling ({LBA28_MAX_BLOCKS_2KB:#010X} 2KiB blocks = 128 GiB); LBA48 path verified={} for build '{}'.",
+                    is_known_lba48_build,
+                    sd.main_build.as_deref().unwrap_or("unknown"),
+                ),
+            ));
+        }
+    }
+
+    push_sata_bridge_fix_check(
+        &mut checks,
+        sd.present,
+        sd.main_build.is_some(),
+        sd.prog061_sata_bridge_fix.as_deref(),
+        sd.main_sata_bridge_fix.as_deref(),
+        audit_profile,
+    );
+
     let overall_status = if checks.iter().any(|c| c.severity == "fail") {
-        "INCOMPLETE_OR_INVALID"
+        SD_STATUS_INVALID
     } else if checks.iter().any(|c| c.severity == "warn") {
-        "READY_WITH_HW_WARNINGS"
+        SD_STATUS_READY_WITH_WARNINGS
     } else {
-        "READY"
+        SD_STATUS_READY
     }
     .to_string();
 
@@ -261,6 +419,8 @@ pub fn verify_sd_buffers_with_profile(
         digadiag_bgo_geometry: diag.bgo_geometry,
         pana_sd_prog061_bgo_geometry: sd.prog061_bgo_geometry,
         pana_sd_main_hdd_capacity_label: sd.main_hdd_capacity_label,
+        pana_sd_prog061_sata_bridge_fix: sd.prog061_sata_bridge_fix,
+        pana_sd_main_sata_bridge_fix: sd.main_sata_bridge_fix,
         factory_unpatched_prog061_detected,
         dual_family_parity,
         checks,

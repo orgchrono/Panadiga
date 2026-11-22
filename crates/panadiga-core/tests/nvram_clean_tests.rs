@@ -7,7 +7,10 @@ use std::fs;
 
 #[test]
 fn test_nvram_clean_lifecycle() {
-    let temp_dir = std::env::temp_dir().join("panadiga_nvram_test_modular");
+    let temp_dir = std::env::temp_dir().join(format!(
+        "panadiga_nvram_test_modular_{}",
+        std::process::id()
+    ));
     let _ = fs::remove_dir_all(&temp_dir);
     fs::create_dir_all(&temp_dir).expect("Failed to create temp dir");
 

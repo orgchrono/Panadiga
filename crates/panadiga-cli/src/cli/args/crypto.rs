@@ -61,6 +61,17 @@ pub enum FrmActions {
 
     /// Unpacks and verifies a Panasonic EXTRHEAD/EXTRFOOT container (DIGADIAG, DRV, or MAIN)
     Unpack(FrmUnpackArgs),
+
+    /// Auto-detects, decrypts, and unpacks any Legacy DVD/HDD, SD, or Blu-ray/AES .FRM container
+    #[command(name = "unpack-all", alias = "unpack_all")]
+    UnpackAll(FrmUnpackAllArgs),
+
+    /// Unpacks, patches flags/versions/modules/fmaX partitions, and repacks any Legacy or Blu-ray .FRM
+    Repack(FrmRepackArgs),
+
+    /// Extracts RomFS/CramFS rootfs partitions or ELF binaries read-only and Windows-safely
+    #[command(name = "extract-fs", alias = "extract_fs")]
+    ExtractFs(FrmExtractFsArgs),
 }
 
 #[derive(Args, Debug)]
@@ -121,7 +132,13 @@ pub struct FrmPackArgs {
     #[arg(long, default_value_t = false)]
     pub patch_format_hdd: bool,
 
-    /// Re-parse and verify packed .FRM TOC & FVU checksums after packing (default: true)
+    #[command(flatten)]
+    pub report_opts: FrmVerifyJsonArgs,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct FrmVerifyJsonArgs {
+    /// Re-parse and verify packed .FRM TOC & checksums after packing (default: true)
     #[arg(
         long,
         default_value_t = true,
@@ -131,7 +148,7 @@ pub struct FrmPackArgs {
     )]
     pub verify: bool,
 
-    /// Exports structured JSON pack report to specified file
+    /// Exports structured JSON pack/repack report (`-` writes compact JSON to stdout)
     #[arg(short, long, value_name = "JSON_FILE")]
     pub json: Option<PathBuf>,
 }
@@ -153,6 +170,99 @@ pub struct FrmUnpackArgs {
     /// Exports EXTRHEAD metadata and checksum verification JSON to specified file
     #[arg(short, long, value_name = "JSON_FILE")]
     pub json: Option<PathBuf>,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct FrmOutKeyJsonArgs {
+    /// Output directory for extracted/unpacked payloads
+    #[arg(short, long, value_name = "OUT_DIR")]
+    pub out_dir: PathBuf,
+
+    /// Optional unixtract-compatible keys.ukf keyring file
+    #[arg(short, long, value_name = "UKF_FILE")]
+    pub key_file: Option<PathBuf>,
+
+    /// Exports structured JSON report (`-` writes compact JSON to stdout)
+    #[arg(short, long, value_name = "JSON_FILE")]
+    pub json: Option<PathBuf>,
+}
+
+#[derive(Args, Debug)]
+pub struct FrmUnpackAllArgs {
+    /// Path to any Panasonic .FRM update file (PANA_DVD.FRM, PANA__SD.FRM, PANAEUSB.FRM)
+    #[arg(value_name = "FRM_FILE")]
+    pub file: PathBuf,
+
+    /// Also split unpacked Linux MAIN modules into fmaX/SWUP_ADDON partitions
+    #[arg(long, default_value_t = false)]
+    pub split_main: bool,
+
+    #[command(flatten)]
+    pub common: FrmOutKeyJsonArgs,
+}
+
+#[derive(Args, Debug)]
+pub struct FrmRepackArgs {
+    /// Input Panasonic .FRM update file
+    #[arg(short = 'i', long = "in", value_name = "FRM_FILE")]
+    pub input: PathBuf,
+
+    /// Output repacked .FRM file path
+    #[arg(short, long, value_name = "OUT_FILE")]
+    pub out: PathBuf,
+
+    /// Optional unixtract-compatible keys.ukf keyring file
+    #[arg(short, long, value_name = "UKF_FILE")]
+    pub key_file: Option<PathBuf>,
+
+    /// Target container format: preserve, dvd, dvd64b, sd, sd48, bluray, or bluray-aes
+    #[arg(long, default_value = "preserve", value_name = "MODE")]
+    pub target_mode: String,
+
+    /// Re-compression for modified MAIN payloads: preserve, gzip, lzss, or zlib
+    #[arg(long, default_value = "preserve", value_name = "ALGO")]
+    pub compression: String,
+
+    /// Remove outer AES-128-CBC layer when repacking a PANAEUSB.FRM container
+    #[arg(long, default_value_t = false)]
+    pub drop_aes: bool,
+
+    /// Set FormatFlag = 1 on MAIN* modules to force firmware update regardless of version
+    #[arg(long, default_value_t = false)]
+    pub patch_force: bool,
+
+    /// Set FormatFlag = 1 on PROG* modules to schedule HDD format during update
+    #[arg(long, default_value_t = false)]
+    pub patch_format_hdd: bool,
+
+    /// Increment MAIN version numerically by N (e.g. +10)
+    #[arg(long, value_name = "N")]
+    pub patch_version_offset: Option<u32>,
+
+    /// Replace full module payload via NAME=PATH specification (repeatable)
+    #[arg(long = "patch-module", value_name = "NAME=PATH")]
+    pub patch_modules: Vec<String>,
+
+    /// Replace MAIN fmaX/SWUP_ADDON partition via fmaX=PATH specification (repeatable)
+    #[arg(long = "patch-partition", value_name = "PART=PATH")]
+    pub patch_partitions: Vec<String>,
+
+    #[command(flatten)]
+    pub report_opts: FrmVerifyJsonArgs,
+}
+
+#[derive(Args, Debug)]
+pub struct FrmExtractFsArgs {
+    /// Path to a raw partition slice (fma*.bin) or Panasonic .FRM container
+    #[arg(value_name = "INPUT_PATH")]
+    pub input: PathBuf,
+
+    /// Materialize only ELF binaries on disk while still summarizing all entries
+    #[arg(long, default_value_t = false)]
+    pub elf_only: bool,
+
+    #[command(flatten)]
+    pub common: FrmOutKeyJsonArgs,
 }
 
 #[derive(Args, Debug)]

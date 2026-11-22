@@ -192,7 +192,7 @@ impl<'a, T: Panamon1Transport> DavisProbeEngine<'a, T> {
 
         // Step 2D: Factory FUN_5041CD4D(1)
         self.client
-            .mem_write_bytes_burst(DAVIS_CH1_STATE_STRUCT_VA, &[0u8; 4])?;
+            .mem_write_bytes_burst(DAVIS_CH1_STATE_STRUCT_VA, &[0u8; 16])?;
         let s2d = build_ch1_call_stub(DAVIS_CH1_CONNECT_IDE_VA, 1, self.config.sdram_stub_va);
         self.upload_verify_and_run(&s2d)?;
         let rc_va = s2d
@@ -225,8 +225,17 @@ impl<'a, T: Panamon1Transport> DavisProbeEngine<'a, T> {
             identify_info = parse_ata_identify_pio_buffer(&pio_1024).ok();
         }
 
-        let classification =
-            classify_davis_ch1(&ch1_raw, &ch1_master, &ch1_slave, identify_info.as_ref());
+        let effective_master = ch1_2c_reset
+            .as_ref()
+            .filter(|tf| tf.is_valid_ata(true))
+            .or_else(|| ch1_2b_reset.as_ref().filter(|tf| tf.is_valid_ata(true)))
+            .unwrap_or(&ch1_master);
+        let classification = classify_davis_ch1(
+            &ch1_raw,
+            effective_master,
+            &ch1_slave,
+            identify_info.as_ref(),
+        );
         logs.push(format!("[Classification] {classification:?}"));
 
         Ok(DavisProbeReport {

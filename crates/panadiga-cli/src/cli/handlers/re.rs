@@ -301,13 +301,16 @@ pub fn handle_re(args: ReArgs) -> Result<()> {
             model,
             region,
             out_dir,
+            key_file,
             json,
         } => {
-            let plan = panadiga_core::re::build_dynamic_bench_runtime_plan(
+            let keyring = super::frm_universal::load_frm_keyring(key_file.as_deref())?;
+            let plan = panadiga_core::re::build_dynamic_bench_runtime_plan_with_keyring(
                 &input,
                 model.as_deref(),
                 region.as_deref(),
                 out_dir.as_deref(),
+                &keyring,
             )?;
             emit_json_if_requested(&plan, json.as_deref())?;
             if json.is_none() {

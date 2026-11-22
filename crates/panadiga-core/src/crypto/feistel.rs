@@ -251,33 +251,36 @@ pub fn derive_round_key_from_custom_key_8b(xored_key: &[u8; 8]) -> [u8; 32] {
     )
 }
 
+const FRM_HEADER_PREFIXES: [&[u8; 4]; 8] = [
+    b"PROG", b"DRV ", b"MAIN", b"STB ", b"VGD ", b"BOOT", b"DIAG", b"SMAI",
+];
+
+pub(crate) fn header_matches_round_key(header_64b: &[u8], rk: &[u8; 32]) -> bool {
+    for off in [0usize, 48, 64] {
+        if header_64b.len() >= off + 8 {
+            let mut blk = [0u8; 8];
+            blk.copy_from_slice(&header_64b[off..off + 8]);
+            let dec = feistel_decrypt_block(&blk, rk, &crate::constants::PANA_FEISTEL_SBOX_256);
+            if FRM_HEADER_PREFIXES.iter().any(|pfx| dec.starts_with(*pfx)) {
+                return true;
+            }
+        }
+    }
+    false
+}
+
 /// Detects the Feistel round key and label matching the provided header buffer.
 ///
 /// Tests `PANA_FEISTEL_ROUND_KEY_32B` first, then each key in `PANA_DVD_KEY_CATALOG`.
-/// Checks prefixes `b"PROG"`, `b"DRV "`, `b"MAIN"`, and `b"STB "` at offsets `0`, `48` (Dvd48B slot 1), and `64` (Dvd64B slot 1).
+/// Checks known module prefixes at offsets `0`, `48`, and `64`.
 pub fn detect_frm_feistel_key(header_64b: &[u8]) -> Option<(&'static str, [u8; 32])> {
-    const PREFIXES: [&[u8; 4]; 4] = [b"PROG", b"DRV ", b"MAIN", b"STB "];
-    let check_key = |rk: &[u8; 32]| -> bool {
-        for off in [0usize, 48, 64] {
-            if header_64b.len() >= off + 8 {
-                let mut blk = [0u8; 8];
-                blk.copy_from_slice(&header_64b[off..off + 8]);
-                let dec = feistel_decrypt_block(&blk, rk, &crate::constants::PANA_FEISTEL_SBOX_256);
-                if PREFIXES.iter().any(|pfx| dec.starts_with(*pfx)) {
-                    return true;
-                }
-            }
-        }
-        false
-    };
-
-    if check_key(&crate::constants::PANA_FEISTEL_ROUND_KEY_32B) {
+    if header_matches_round_key(header_64b, &crate::constants::PANA_FEISTEL_ROUND_KEY_32B) {
         return Some(("old_df72", crate::constants::PANA_FEISTEL_ROUND_KEY_32B));
     }
 
     for &(name, key_8b) in PANA_DVD_KEY_CATALOG {
         let rk = derive_round_key_from_custom_key_8b(&key_8b);
-        if check_key(&rk) {
+        if header_matches_round_key(header_64b, &rk) {
             return Some((name, rk));
         }
     }

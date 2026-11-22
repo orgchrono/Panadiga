@@ -7,6 +7,7 @@ without modifying any stock or read-only reference projects.
 from __future__ import annotations
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 import json
 import pathlib
 import sys
@@ -19,6 +20,12 @@ if str(TOOLS_GHIDRA) not in sys.path:
 import ghidra_zero_undef_pipeline as zero_undef  # noqa: E402
 
 CATEGORIES = ("boot_core", "bgo_nfrom", "sd_fat", "main_hdd_tbc")
+KEY_SUBSYSTEM_TOKENS = (
+    "bgo", "nfrom", "ifodev", "eemul", "sdcd", "fat", "fmu", "fvu", "digadiag",
+    "pana__sd", "extrhead", "rtsd", "davis", "lba48", "_dev_serial", "slogon",
+    "pass", "atapi", "aiof", "avdd", "tbc", "pal-m", "devinfo", "swup", "nand",
+    "linux version", "vxworks", "zebra",
+)
 
 
 def classify_bundle_category(prog_name: str, func_name: str, string_hits: tuple[str, ...]) -> str:
@@ -71,55 +78,136 @@ def build_model_ssot_map(
     }
 
 
+def func_referenced_strings(prog, func, limit: int = 12) -> list[str]:
+    """Collect defined strings embedded in or referenced from instructions in `func`."""
+    listing = prog.getListing()
+    ref_mgr = prog.getReferenceManager()
+    seen: set[str] = set()
+    hits: list[str] = []
+
+    def _add(data) -> None:
+        if data is not None and data.hasStringValue():
+            txt = str(data.getValue()).replace("\r", " ").replace("\n", "\\n")[:96]
+            if txt and txt not in seen:
+                seen.add(txt)
+                hits.append(txt)
+
+    for d in listing.getDefinedData(func.getBody(), True):
+        _add(d)
+        if len(hits) >= limit:
+            return hits
+    addr_it = ref_mgr.getReferenceSourceIterator(func.getBody(), True)
+    while addr_it.hasNext() and len(hits) < limit:
+        for ref in ref_mgr.getReferencesFrom(addr_it.next()):
+            _add(listing.getDefinedDataAt(ref.getToAddress()))
+            if len(hits) >= limit:
+                break
+    return hits
+
+
+def collect_function_index(prog, limit_refs: int = 12) -> list[dict]:
+    """Collect deterministic metadata (entry VA, name, byte size, strings, callers/callees) for all functions."""
+    from ghidra.util.task import TaskMonitor
+
+    fm = prog.getFunctionManager()
+    prog_name = prog.getName()
+    index: list[dict] = []
+    for func in fm.getFunctions(True):
+        entry_u32 = zero_undef.to_u32(func.getEntryPoint().getOffset())
+        str_hits = func_referenced_strings(prog, func, limit=limit_refs)
+        callers = ["0x%08X" % zero_undef.to_u32(c.getEntryPoint().getOffset()) for c in func.getCallingFunctions(TaskMonitor.DUMMY)][:limit_refs]
+        callees = ["0x%08X" % zero_undef.to_u32(c.getEntryPoint().getOffset()) for c in func.getCalledFunctions(TaskMonitor.DUMMY)][:limit_refs]
+        index.append({
+            "_func": func,
+            "_va": entry_u32,
+            "program": prog_name,
+            "name": func.getName(),
+            "entry_va": "0x%08X" % entry_u32,
+            "size_bytes": int(func.getBody().getNumAddresses()),
+            "strings": str_hits,
+            "callers": callers,
+            "callees": callees,
+        })
+    return index
+
+
+def select_priority_functions(index: list[dict], max_functions: int) -> list[dict]:
+    """Select either all functions (`max_functions <= 0`) or highest-signal subsystem functions."""
+    if max_functions <= 0 or len(index) <= max_functions:
+        return list(index)
+
+    def _score(rec: dict) -> tuple[int, int, int, int]:
+        named = 0 if rec["name"].startswith("FUN_") else 1
+        joined = " ".join([rec["name"].lower()] + [s.lower() for s in rec["strings"]])
+        kw_hits = sum(1 for tok in KEY_SUBSYSTEM_TOKENS if tok in joined)
+        deg = len(rec["callers"]) + len(rec["callees"])
+        return (named, kw_hits, len(rec["strings"]), deg)
+
+    ranked = sorted(index, key=_score, reverse=True)[:max_functions]
+    return sorted(ranked, key=lambda rec: rec["_va"])
+
+
+def decompile_program_parallel(prog, funcs: list, timeout_sec: int = 20, max_workers: int = 8) -> dict[int, str]:
+    """Decompile `funcs` concurrently using one `DecompInterface` per worker thread."""
+    from ghidra.app.decompiler import DecompInterface
+    from ghidra.util.task import TaskMonitor
+
+    if not funcs:
+        return {}
+    workers = max(1, min(max_workers, len(funcs)))
+
+    def _run_chunk(chunk: list) -> dict[int, str]:
+        iface = DecompInterface()
+        iface.openProgram(prog)
+        chunk_out: dict[int, str] = {}
+        try:
+            for fn in chunk:
+                va = zero_undef.to_u32(fn.getEntryPoint().getOffset())
+                res = iface.decompileFunction(fn, timeout_sec, TaskMonitor.DUMMY)
+                if res is not None and res.decompileCompleted() and res.getDecompiledFunction() is not None:
+                    chunk_out[va] = res.getDecompiledFunction().getC()
+                else:
+                    chunk_out[va] = ""
+        finally:
+            iface.dispose()
+        return chunk_out
+
+    if workers == 1:
+        return _run_chunk(funcs)
+    merged: dict[int, str] = {}
+    chunks = [funcs[i::workers] for i in range(workers)]
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        for part in pool.map(_run_chunk, chunks):
+            merged.update(part)
+    return merged
+
+
 def export_program_bundle(
     prog,
     model_id: str,
     max_functions: int = 250,
     timeout_sec: int = 20,
+    max_workers: int = 8,
 ) -> tuple[dict[str, list[dict]], dict[str, str]]:
-    """Decompile verified functions from an open Ghidra `Program` into categorized bundles."""
-    from ghidra.app.decompiler import DecompInterface
-    from ghidra.util.task import TaskMonitor
-
+    """Decompile verified functions from an open Ghidra `Program` into categorized bundles (`<=0` = all)."""
+    index = collect_function_index(prog)
+    symbols: dict[str, str] = {
+        rec["name"]: rec["entry_va"] for rec in index if not rec["name"].startswith("FUN_")
+    }
+    selected = select_priority_functions(index, max_functions)
+    c_map = decompile_program_parallel(prog, [r["_func"] for r in selected], timeout_sec=timeout_sec, max_workers=max_workers)
     buckets: dict[str, list[dict]] = {cat: [] for cat in CATEGORIES}
-    symbols: dict[str, str] = {}
-    iface = DecompInterface()
-    iface.openProgram(prog)
-    try:
-        fm = prog.getFunctionManager()
-        prog_name = prog.getName()
-        listing = prog.getListing()
-        count = 0
-        for func in fm.getFunctions(True):
-            if count >= max_functions:
-                break
-            entry_va = "0x%08X" % zero_undef.to_u32(func.getEntryPoint().getOffset())
-            fname = func.getName()
-            if not fname.startswith("FUN_"):
-                symbols[fname] = entry_va
-            str_hits = []
-            for d in listing.getDefinedData(func.getBody(), True):
-                if d.hasStringValue():
-                    str_hits.append(str(d.getValue())[:80])
-            res = iface.decompileFunction(func, timeout_sec, TaskMonitor.DUMMY)
-            c_code = ""
-            if res is not None and res.decompileCompleted() and res.getDecompiledFunction() is not None:
-                c_code = res.getDecompiledFunction().getC()
-            cat = classify_bundle_category(prog_name, fname, tuple(str_hits))
-            buckets[cat].append(
-                {
-                    "program": prog_name,
-                    "name": fname,
-                    "entry_va": entry_va,
-                    "strings": str_hits[:12],
-                    "callers": ["0x%08X" % zero_undef.to_u32(c.getEntryPoint().getOffset()) for c in func.getCallingFunctions(TaskMonitor.DUMMY)][:12],
-                    "callees": ["0x%08X" % zero_undef.to_u32(c.getEntryPoint().getOffset()) for c in func.getCalledFunctions(TaskMonitor.DUMMY)][:12],
-                    "c_code": c_code,
-                }
-            )
-            count += 1
-    finally:
-        iface.dispose()
+    for rec in selected:
+        cat = classify_bundle_category(rec["program"], rec["name"], tuple(rec["strings"]))
+        buckets[cat].append({
+            "program": rec["program"],
+            "name": rec["name"],
+            "entry_va": rec["entry_va"],
+            "strings": rec["strings"],
+            "callers": rec["callers"],
+            "callees": rec["callees"],
+            "c_code": c_map.get(rec["_va"], ""),
+        })
     return buckets, symbols
 
 

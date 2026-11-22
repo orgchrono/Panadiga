@@ -171,6 +171,10 @@ pub fn handle_sd_unbrick_kit(args: &Value, workspace_root: &Path) -> Result<Valu
                 .get("allow_target_mismatch")
                 .and_then(|v| v.as_bool())
                 .unwrap_or(false);
+            let sata_bridge_reset_fix = args
+                .get("sata_bridge_reset_fix")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
 
             let rep = prepare_sd_unbrick_kit(&SdUnbrickKitRequest {
                 output_dir: resolve_workspace_path(workspace_root, out_dir),
@@ -192,6 +196,7 @@ pub fn handle_sd_unbrick_kit(args: &Value, workspace_root: &Path) -> Result<Valu
                 write_extracted_sources: save_sources,
                 expected_main_build,
                 allow_target_mismatch,
+                sata_bridge_reset_fix,
             })?;
             Ok(serde_json::to_value(rep)?)
         }

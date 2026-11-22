@@ -89,11 +89,33 @@ pub fn verify_safety_lockout_with_os_disks(
 
 /// Verifies that a target drive is safe for writing and validates the confirmation token.
 pub fn verify_safety_lockout(device_path: &str, confirmation_token: &str) -> Result<()> {
-    let os_disks_owned = super::discovery::detect_linux_host_os_disks();
+    let os_disks_owned = super::discovery::detect_host_os_disks();
     let os_refs: Option<Vec<&str>> = os_disks_owned
         .as_ref()
         .map(|list| list.iter().map(String::as_str).collect());
     verify_safety_lockout_with_os_disks(device_path, confirmation_token, os_refs.as_deref())
+}
+
+/// Validates target device safety lockout AND explicit operator confirmation of target model/size identity.
+pub fn verify_target_identity_confirmation(
+    device_path: &str,
+    model_or_serial: &str,
+    size_bytes: u64,
+    confirmation_token: &str,
+) -> Result<()> {
+    if model_or_serial.trim().is_empty() {
+        bail!(
+            "Target identity confirmation rejected for '{}': model/serial descriptor cannot be empty",
+            device_path
+        );
+    }
+    if size_bytes == 0 {
+        bail!(
+            "Target identity confirmation rejected for '{}': reported disk capacity is zero bytes",
+            device_path
+        );
+    }
+    verify_safety_lockout(device_path, confirmation_token)
 }
 
 /// Helper to verify safety lockout, safely unmount non-OS partitions on Unix, and open raw handle.

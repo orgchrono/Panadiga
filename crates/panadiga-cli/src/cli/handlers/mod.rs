@@ -5,6 +5,7 @@
 pub mod crypto;
 pub mod dvd;
 pub mod frm_pack;
+pub mod frm_universal;
 pub mod ghidra;
 pub mod hdd;
 pub mod json_io;

@@ -13,7 +13,7 @@ use crate::constants::{
     PANA_FEISTEL_SBOX_256, PANA_ROMFS_MAGIC,
 };
 
-fn build_synthetic_romfs(vol_name: &str, payload: &[u8]) -> Vec<u8> {
+pub(crate) fn build_synthetic_romfs(vol_name: &str, payload: &[u8]) -> Vec<u8> {
     let mut buf = Vec::new();
     buf.extend_from_slice(PANA_ROMFS_MAGIC);
     let vol_padded_len = (vol_name.len() + 1 + 15) & !15;
@@ -32,7 +32,7 @@ fn build_synthetic_romfs(vol_name: &str, payload: &[u8]) -> Vec<u8> {
     buf
 }
 
-fn build_synthetic_cramfs(name: &str, size: u32) -> Vec<u8> {
+pub(crate) fn build_synthetic_cramfs(name: &str, size: u32) -> Vec<u8> {
     let mut buf = vec![0xAAu8; size as usize];
     buf[0..4].copy_from_slice(&PANA_CRAMFS_MAGIC.to_le_bytes());
     buf[4..8].copy_from_slice(&size.to_le_bytes());
@@ -97,25 +97,36 @@ fn test_drv_module_pack_and_extract_roundtrip() {
     assert!(unpacked.extrhead.unwrap().checksum_valid);
 }
 
-#[test]
-fn test_split_main_partitions_with_romfs_cramfs_and_swup_addon() {
+fn make_synthetic_main_rootfs(with_swup_header: bool) -> (Vec<u8>, Vec<u8>, Vec<u8>) {
     let mut p_kern = vec![0x55u8; 4096];
     let cmdline = b"console=ttyS0 fma4=4k:kernel fma5=4k:root fma6=4k:res root=/dev/fma5\0";
-    p_kern[16..16 + cmdline.len()].copy_from_slice(cmdline);
+    let kern_off = if with_swup_header { 16 } else { 0 };
+    p_kern[kern_off..kern_off + cmdline.len()].copy_from_slice(cmdline);
 
     let mut p_root = build_synthetic_romfs("panaroot", b"hello");
     p_root.resize(4096, 0);
     let mut p_cram = build_synthetic_cramfs("res_fs", 4096);
     p_cram.resize(4096, 0);
 
-    let addon_offset = 12_288u32;
     let mut full = Vec::new();
-    full.extend_from_slice(b"SWUP_ADDON\0\0");
-    full.extend_from_slice(&addon_offset.to_le_bytes());
-    full.extend_from_slice(&p_kern[16..]);
+    if with_swup_header {
+        full.extend_from_slice(b"SWUP_ADDON\0\0");
+        full.extend_from_slice(&12_288u32.to_le_bytes());
+        full.extend_from_slice(&p_kern[16..]);
+    } else {
+        full.extend_from_slice(&p_kern);
+    }
     full.extend_from_slice(&p_root);
     full.extend_from_slice(&p_cram);
-    full.extend_from_slice(b"ADDON_TAIL_PAYLOAD");
+    if with_swup_header {
+        full.extend_from_slice(b"ADDON_TAIL_PAYLOAD");
+    }
+    (full, p_root, p_cram)
+}
+
+#[test]
+fn test_split_main_partitions_with_romfs_cramfs_and_swup_addon() {
+    let (full, _p_root, _p_cram) = make_synthetic_main_rootfs(true);
 
     let slices = split_main_partitions(&full).unwrap();
     assert_eq!(slices.len(), 4);
@@ -240,4 +251,49 @@ fn test_short_buffer_edge_crypt_parity_with_extrhead_main() {
         false,
     );
     assert_eq!(go_buf, orig);
+}
+
+#[test]
+fn test_reassemble_main_partitions_roundtrip_and_guards() {
+    let (full, _p_root, _p_cram) = make_synthetic_main_rootfs(false);
+
+    let new_root = build_synthetic_romfs("root_v2", b"patched_world");
+    let new_cram = build_synthetic_cramfs("res_v2", 2048);
+    let patched = reassemble_main_partitions(
+        &full,
+        &[
+            ("fma5".to_string(), new_root),
+            ("fma6".to_string(), new_cram),
+        ],
+    )
+    .expect("valid RomFS/CramFS partition replacements succeed");
+
+    let slices = split_main_partitions(&patched).unwrap();
+    assert!(matches!(
+        slices[1].fs_kind,
+        PartitionFsKind::RomFs(RomFsHeaderInfo {
+            sum_valid: true,
+            ref volume_name,
+            ..
+        }) if volume_name == "root_v2"
+    ));
+    assert!(matches!(
+        slices[2].fs_kind,
+        PartitionFsKind::CramFs(CramFsHeaderInfo {
+            crc_valid: true,
+            ref name,
+            ..
+        }) if name == "res_v2"
+    ));
+
+    // Reject oversized partition
+    assert!(reassemble_main_partitions(&full, &[("fma5".to_string(), vec![0u8; 5000])]).is_err());
+    // Reject corrupted RomFS checksum
+    let mut bad_rom = build_synthetic_romfs("bad_rom", b"xyz");
+    bad_rom[12] ^= 0xFF;
+    assert!(reassemble_main_partitions(&full, &[("fma5".to_string(), bad_rom)]).is_err());
+    // Reject corrupted CramFS CRC32
+    let mut bad_cram = build_synthetic_cramfs("bad_cram", 1024);
+    bad_cram[33] ^= 0xFF;
+    assert!(reassemble_main_partitions(&full, &[("fma6".to_string(), bad_cram)]).is_err());
 }

@@ -3,7 +3,7 @@
 
 # What's Next: End-to-End Onboarding Pipeline for New DIGA Devices (Bench → JSON SSOT → Pull Request)
 
-> **Purpose:** This guide standardizes the complete *end-to-end* workflow to onboard any additional **Panasonic DIGA** recorder/player into **Panadiga** using a **100% declarative JSON SSOT architecture** — preventing product-hardcoded logic, maintaining strict parity across Rust/CLI/Tauri/Python/Ghidra, and enforcing bench silicon safety invariants.
+> **Purpose:** This guide standardizes the complete *end-to-end* workflow to integrate any additional **Panasonic DIGA** recorder into **Panadiga** using a **100% declarative JSON SSOT architecture** — keying hardware physically via the **`(model, region, board_rev, flash_jedec_id)`** tuple, preventing product-hardcoded logic, and enforcing SMPS/logic electrical safety prior to any flash or disk write.
 
 ---
 
@@ -11,26 +11,35 @@
 
 | Stage | Primary Objective | Canonical Tools / Scripts | Exit Gate |
 | :--- | :--- | :--- | :--- |
-| **1. Bench Wiring & `P7501` Safety** | Verify 3.3V LVTTL logic levels, keep `GP3`/`NSW5V` `Hi-Z`, and `XRESET` Open-Drain | Pico probe + `panadiga pico status` / `bench` | Clean capture in `docs/debug_logs/` with zero 5V overdrive |
-| **2. NOR Capture (`2..16 MiB`)** | Read-only capture of IC5001 via `P7501` UART or external TSOP-48 programmer | `panadiga unbrick nor-stub`, `decode-nor-dump`, `panadiga profiles discover-nor`, `scripts/re/nor_intake_analyzer.py` | Immutable SHA-256 dump + draft `nor_layout` JSON |
-| **3. `.FRM` Unpack, `panamon` & `rebuild-from-dump`** | Pin exact `DIGADIAG` loader family (`ver0.61`, `ver0.63`, ...), unpack `DRV`/`PROG`/`MAIN`, compose `PANA__SD.FRM` | `scripts/re/frm_train_harvester.py`, `scripts/re/pana_frm.py`, `panadiga unbrick extract-frm`, `panadiga unbrick rebuild-from-dump` | Verified `EXTRHEAD` hashes, `MAIN` build IDs & train metadata |
-| **4. PDF Manual Hydration (`T1`)** | Extract PCB codes (`VEP`/`REP`), SoCs (`MN2DS...`), Flash (`S29...`/`MX29...`) & EEPROMs | `scripts/re/manual_spec_extractor.py --apply` | `boards/`, `socs/`, `flash_chips/`, `eeprom_chips/` promoted to `T1` |
-| **5. Ghidra MN103S & Plain-Text Bundles** | Resolve the 7 MN103S traps, eliminate `UNDEF`, locate BGO/FTL, TBC, `DAVIS` & HDD VAs | `tools/ghidra/ghidra_zero_undef_pipeline.py`, `tools/ghidra/ghidra_export_pseudocode_bundle.py`, `panadiga ghidra export-all` | Domain plain-text bundles in `docs/pseudocode/` + `ghidra_ssot_maps.json` |
-| **6. Declarative SSOT JSON Modeling** | Express BGO/NOR/HDD/TBC rules by geometry/train ID (`BGO_*`, `blobs/*.bin.gz`), never by product name in Rust/TS | `profiles/*.json`, `panadiga ssot export-all`, `panadiga profiles promote-evidence`, `panadiga profiles completeness` | `panadiga profiles validate` passes with `0` errors at `T2/T3/T4` |
-| **7. Full Validation & Pull Request** | Verify CLI + Playwright E2E parity + 0% `jscpd` duplication prior to PR | `python scripts/validate.py` (`9/9` gates) | All 9 Quality Gates green + [`CONTRIBUTING.md`](../../CONTRIBUTING.md) Section 8 checklist |
+| **1. SMPS & `P7501` Electrical Safety** | AC/USB galvanic isolation, capacitor discharge, verify `3.3V`/`1.8V`/`5V` logic rails, `GP3`/`NSW5V` `Hi-Z`, `XRESET` Open-Drain | Multimeter + Isolation Transformer / `ADuM3160` USB Isolator + `panadiga pico status` | Verified log in `docs/debug_logs/` with safe ground reference |
+| **2. NOR Capture (`2..16 MiB`) & Intake** | Read-only IC5001 dump, detect 16-bit byte-swapping, floating-address-pin mirroring, and `EEMUL` generations | `panadiga unbrick nor-stub`, `decode-nor-dump`, `panadiga profiles discover-nor`, `scripts/re/nor_intake_analyzer.py` | Integral SHA-256 dump (no swap/mirror) + draft `nor_layout` |
+| **3. `.FRM`, `panamon` & `rebuild-from-dump`** | Pin `Loader` / `trust_model`, unpack `DRV`/`PROG`/`MAIN`/Blu-ray `fmaX`, block unverified mixes, and compose `PANA__SD.FRM` | `scripts/re/fleet_decryptor.py`, `scripts/re/frm_train_harvester.py --frm`, `panadiga frm unpack-all`, `panadiga unbrick rebuild-from-dump` | Verified `EXTRHEAD`/`Adler32` checksums, `MAIN` build IDs & `trust_model` |
+| **4. PDF Quarantine Proposals (`T1`)** | Extract PCB (`VEP`/`REP`), SoC, Flash, and EEPROM tokens with page citations (**never mutate** `profiles/*.json` directly) | `scripts/re/manual_spec_extractor.py --apply` → `profiles/staging/manual_proposals/` | Human-reviewed proposal files with cited pages before `T1` merge |
+| **5. Ghidra Fleet & Reachable Coverage** | Resolve MN103S compiler traps / SPARC / ARM / AArch64 across decoded images while keeping data pools typed as data | `scripts/re/ghidra_fleet_orchestrator.py`, `tools/ghidra/ghidra_zero_undef_pipeline.py`, `panadiga ghidra export-all` | Plain-text bundles in `docs/pseudocode/` + `fleet_verify.json` |
+| **6. Declarative SSOT, Allowlist & `< T3` Gate** | Model `(model, region, board_rev, flash_jedec_id)` tuple and positive BGO allowlist; block `< T3` profiles at runtime | `profiles/*.json`, `panadiga ssot export-all`, `panadiga profiles promote-evidence`, `panadiga profiles completeness` | `panadiga profiles validate` clean + mathematical BGO allowlist proof |
+| **7. `Mn103Vm` Scope, Tests & Pull Request** | Validate ISA control flow in `Mn103Vm` (never mistaking it for silicon IRQ/WDT/CFI proof), Playwright E2E, IPC contracts & `0%` `jscpd` | `python scripts/validate.py` (`9/9` gates) | All 9 Quality Gates green + [`CONTRIBUTING.md`](../../CONTRIBUTING.md) Section 8 checklist |
 
 ---
 
 ## Step-by-Step Bench Execution Guide
 
-### Stage 1 — Mandatory Electrical Checklist (`P7501` / `IC5001` / `CH1`)
+### Stage 1 — Mandatory Electrical Checklist (SMPS / `P7501` / `IC5001` / `CH1`)
 
-Before connecting test leads or powering the unit:
-1. Check the main board service schematic (`VEP79138`, `VEP79106A`, etc.) to confirm **`P7501` (`TO JIGU`)** pinout and **3.3V LVTTL** signaling.
-2. On the Pico probe (`RP2040` / `RP2350`), verify **`GP3` (`NSW5V` / Pin 5)** stays **strict `Hi-Z Input` without pulls**, **`GP5` (`XRESET` / Pin 2)** runs strictly **Open-Drain**, and the Pico is **NEVER powered from `P7501`** (power externally via USB or `VSYS`).
-3. On HDD boot failures (`UPD NG` / `MAIN` / `FINISH` or `0xE8000000` on `DAVIS CH1`), inspect **`P1503 Pin 4 (DR5V = +5.1V)`**, `P1503 Pin 1 (DR12V = +12.3V)`, and FFC ribbon contact polarity (`Type A` vs `Type B` on SATA adapters) before concluding firmware incompatibility.
+> [!CAUTION]
+> **SMPS Floating-Chassis & Ground-Loop Shock Hazard:** Consumer Panasonic switch-mode power supplies couple chassis/secondary reference to mains through **Y-capacitors (~60–110 VAC open-circuit leakage to protective earth)**. Connecting a grounded PC USB-UART directly without galvanic isolation creates a ground loop capable of damaging your USB host, destroying the `AM34` SoC, or shocking the operator.
 
-### Stage 2 — Physical NOR Capture & Automated Triage
+Before connecting probes, test leads, or USB cables:
+1. **Galvanic Isolation & Capacitor Discharge:**
+   - Power the DUT through an **AC/AC isolation transformer** *or* place a **USB galvanic isolator** (`ADuM3160` / `ADuM4160`) inline between the host computer and the Raspberry Pi Pico.
+   - With AC mains disconnected, verify via DC multimeter that primary bulk (**~170–340 VDC**) and secondary filter capacitors have fully discharged prior to soldering or clipping TSOP-48 leads.
+2. **Logic Rail Verification:**
+   - Check the service schematic (`VEP79138`, `VEP79106A`, etc.) and measure actual rail voltage (`3.3V`, `1.8V`, or `5V`) on **`P7501` (`TO JIGU`)** and Flash VCC pins with a multimeter before connecting any Pico GPIO. Never assume `3.3V` on an unfamiliar chassis.
+3. **Pico Probe (`RP2040` / `RP2350`) Pin Invariants:**
+   - Confirm **`GP3` (`NSW5V` / Pin 5)** stays **strict `Hi-Z Input` without pulls**, **`GP5` (`XRESET` / Pin 2)** runs strictly **Open-Drain**, and the Pico is **NEVER powered from `P7501`** (power externally via isolated USB or `VSYS`).
+4. **HDD Bus Inspection (`CH1`):**
+   - On HDD boot failures (`UPD NG` / `MAIN` / `FINISH` or `0xE8000000` on `DAVIS CH1`), inspect `P1503 Pin 4 (DR5V = +5.1V)`, `P1503 Pin 1 (DR12V = +12.3V)`, and FFC ribbon contact polarity (`Type A` vs `Type B`) before diagnosing firmware errors.
+
+### Stage 2 — Physical NOR Capture & Automated Integrity Triage
 
 ```bash
 # 1. Build a read-only UART NOR dumper stub (or enter PANAMON1> via PANA__SD.FRM)
@@ -39,27 +48,22 @@ panadiga unbrick nor-stub --start 0x80000000 --len 0x800000 --out tmp/nor_stub.b
 # 2. Store raw UART captures in docs/debug_logs/ and decode the immutable binary
 panadiga unbrick decode-nor-dump -i docs/debug_logs/new_capture.log -o tmp/dmr_new_8mb.bin
 
-# 3. Auto-discover Loader banners, EXTRHEAD sections, BGO sectors (0xF101/0xF2xx) & EEMUL markers
+# 3. Auto-discover layout and verify dump integrity (flags 16-bit byte-swap, pin mirroring, all-0xFF):
 panadiga profiles discover-nor --input tmp/dmr_new_8mb.bin --model-id DMR-NEW --out-dir tmp/draft_profiles --json tmp/nor_report.json
-# Offline Python triage equivalent:
-python -m scripts.re.nor_intake_analyzer --input tmp/dmr_new_8mb.bin --model-id DMR-NEW --out-dir tmp/draft_profiles
+# Offline Python triage with stale-EXTRHEAD filtering and multi-generation EEMUL tracking:
+python -m scripts.re.nor_intake_analyzer --offline-only --input tmp/dmr_new_8mb.bin --model-id DMR-NEW --out-dir tmp/draft_profiles
 ```
 
-> **Forensic Invariant:** Never mutate original dumps in-place. Record original SHA-256 hashes inside a vault session (`panadiga session init` + `ingest`) and archive verified logs under `docs/debug_logs/` (indexed in `docs/debug_logs/README.md`).
+> **Forensic & Hardware-Identity Invariant:** Never mutate original dumps in-place. Always read the physical CFI/autoselect JEDEC ID and record the full **`(model, region, board_rev, flash_jedec_id)`** hardware identity tuple rather than assuming a bare `--model` name maps 1:1 to physical flash sector geometry.
 
-### Stage 3 — `DIGADIAG` Loader Versioning, `panamon` & `rebuild-from-dump`
+### Stage 3 — `DIGADIAG` Versioning, `trust_model` & `rebuild-from-dump`
 
-Each DIGA hardware train requires a matching `Loader` container layout and `.FRM` TOC width:
-- **`Loader ver0.61` (`06/03/06`, classic `SDDIAG` — e.g. `DMR-EH55`)**: loads **`256 KiB` raw decrypted `DIGADIAG.FRM`** (`PROG` payload stripped of `EXTRHEAD`) and pairs with **`48-byte` TOC `PANA__SD.FRM` (`sd48`)**. `PROG061` executes at **`0x50400000`** (`50400000` jump into `PANAMON1>`).
-- **`Loader ver0.63+` (`bootbin` / later trains)**: loads **`128 KiB EXTRHEAD`-wrapped `DIGADIAG.FRM`** paired with **`64-byte` TOC `PANA__SD.FRM` (`sd64`)**.
-
-Assemble verified SD recovery media directly from factory updates or raw NOR + HDD dumps:
+Each firmware train declares `digadiag_spec.trust_model` (`checksum32_only`, `encrypted_toc`, `rsa_signed`, `unknown`):
+- **`Loader ver0.61` (`06/03/06`, classic `SDDIAG` — `checksum32_only`)**: loads **`256 KiB` raw `DIGADIAG.FRM`** paired with **`48-byte` TOC `PANA__SD.FRM` (`sd48`)** on `<= 2 GiB` FAT16 SDSC. Trains verified at `>= T3` are enabled by default; `< T3` trains (such as `T2` `ver063`) require `--allow-unverified-profile`.
+- **`Loader ver0.63+` (`bootbin` — `encrypted_toc`)**: loads **`128 KiB EXTRHEAD`-wrapped `DIGADIAG.FRM`** paired with **`64-byte` TOC `PANA__SD.FRM` (`sd64`)**.
 
 ```bash
-# Harvest all official PANA_DVD.FRM containers and hydrate firmware_trains JSON metadata:
-python -m scripts.re.frm_train_harvester --unpack-missing --apply
-
-# Rebuild complete DIGADIAG.FRM + PANA__SD.FRM kit directly from NOR dump + Partition 1 MAIN:
+# Rebuild hardened DIGADIAG.FRM + PANA__SD.FRM directly from NOR dump + Partition 1 MAIN:
 panadiga unbrick rebuild-from-dump \
   --model DMR-EH55 \
   --nor-dump tmp/dmr_new_8mb.bin \
@@ -69,34 +73,29 @@ panadiga unbrick rebuild-from-dump \
   --json tmp/rebuild_report.json
 ```
 
-When swapping `MAIN` across sub-revisions causes `UPD NG` (`<deviceinfo>` / `DEV.BIN` checks in `panamon` / `MAIN`), inspect compatibility with `panadiga unbrick region-compat` or pass matching `--hdd-main` and `--frm` images. For clean-room SDRAM `panamon2` / diskless TBC bring-up experiments, consult [`firmware/panadiga-blackbox-fw/README.md`](../../firmware/panadiga-blackbox-fw/README.md).
+`rebuild-from-dump` fails closed on corrupt/byte-swapped/mirrored NOR dumps, IPL loader version mismatches, bad `DRV` checksums, or unrecognized `MAIN` builds (`--allow-unverified-mix` overrides cross-build compatibility checks only). For experimental SDRAM bring-up harnesses, see [`firmware/panadiga-blackbox-fw/README.md`](../../firmware/panadiga-blackbox-fw/README.md) (explicitly marked as an open-source hardware-interoperability spike, **not** legally clean-room).
 
-### Stage 4 — Declarative Service Manual Hydration (`T1`)
+### Stage 4 — Quarantined PDF Manual Proposals (`T1`)
 
-Archive official PDFs under `manuals_and_schematics/` (updating `manuals_and_schematics/README.md`) and run:
+Archive service PDFs under `manuals_and_schematics/` and run:
 
 ```bash
 python -m scripts.re.manual_spec_extractor --apply
 ```
 
-The extractor populates `soc_ref`, `flash_ref`, `service_replacement_part`, and `p7501_header_present` while obeying `T0 → T1` non-destructive guards (entities at `T2+` are never overwritten).
+To prevent OCR typos and multi-region alternate BOM lists from poisoning SSOT JSONs, `manual_spec_extractor.py` **NEVER writes directly to `profiles/boards/` or `profiles/eeprom_chips/`**. Instead it writes review-required proposal files to **`profiles/staging/manual_proposals/*.proposal.json`** with exact 1-based **`page_citations`** for human verification before merging into `profiles/`.
 
-### Stage 5 — Ghidra MN103S Disassembly, Plain-Text Bundles & `ghidra_ssot_maps.json`
+### Stage 5 — Ghidra MN103S Reachable-Code Coverage
 
-1. Review [`MN103S_SEVEN_TRAPS_AND_GHIDRA_RESOLUTION.md`](MN103S_SEVEN_TRAPS_AND_GHIDRA_RESOLUTION.md) to eliminate compiler/disassembly traps (PC-relative `cur_insn`, `setlb/lene`, jump tables, and 64-bit division helpers).
-2. Run [`tools/ghidra/ghidra_zero_undef_pipeline.py`](../../tools/ghidra/ghidra_zero_undef_pipeline.py) and [`tools/ghidra/ghidra_export_pseudocode_bundle.py`](../../tools/ghidra/ghidra_export_pseudocode_bundle.py) to export domain-grouped plain-text bundles (`boot_core`, `bgo_nfrom`, `sd_fat`, `main_hdd_tbc`, `davis_ide`) alongside SSOT map stubs for [`tools/ghidra/ghidra_ssot_maps.json`](../../tools/ghidra/ghidra_ssot_maps.json).
-3. Regenerate native Rust-backed Ghidra helpers cleanly:
+1. Follow [`MN103S_SEVEN_TRAPS_AND_GHIDRA_RESOLUTION.md`](MN103S_SEVEN_TRAPS_AND_GHIDRA_RESOLUTION.md) to resolve Matsushita compiler traps (`cur_insn`, `setlb/lene`, jump tables, 64-bit math helpers).
+2. Measure disassembly coverage strictly across **bounded executable code regions and reachable functions** from known reset/ISR vectors — **never chase blind `0 ??` (*Zero-Undef*) metrics** across literal pools, jump tables, video TBC coefficient tables, or `0xFF` flash padding, which turns data tables into hallucinated MMIO xrefs.
+3. Batch-decrypt and deduplicate new `.FRM`/`.zip`/`.7z`/`.exe` packages via [`scripts/re/fleet_decryptor.py`](../../scripts/re/fleet_decryptor.py), triage train metadata with `python -m scripts.re.frm_train_harvester --frm <PATH> --unpack-missing`, orchestrate SSOT-aware Ghidra analysis via [`scripts/re/ghidra_fleet_orchestrator.py`](../../scripts/re/ghidra_fleet_orchestrator.py), export bundles with [`tools/ghidra/ghidra_export_pseudocode_bundle.py`](../../tools/ghidra/ghidra_export_pseudocode_bundle.py), and regenerate Rust helpers via `panadiga ghidra export-all --dir tools/ghidra` (see [`scripts/re/README.md`](../../scripts/re/README.md)).
 
-```bash
-panadiga ghidra export-all --dir tools/ghidra
-```
+### Stage 6 — Declarative SSOT Tuple, Positive BGO Allowlist & `< T3` Runtime Gate
 
-### Stage 6 — Product-Agnostic JSON SSOT Rule & `T0..T4` Capability Gate
-
-**STRICT PROHIBITION ON PRODUCT-HARDCODED LOGIC:**
-- Never branch on model strings (`match model { "DMR-EH55" => ... }`) or introduce product-named structs/constants (`EH55_TRAIN_ID`) inside `crates/panadiga-core`, `apps/desktop/src`, or `firmware/pico-p7501`.
-- Encode every BGO sector geometry, NVRAM offset, `nor_layout`, compressed driver blob (`profiles/blobs/*.bin.gz`), `firmware_train`, and capacity/TBC patch rule declaratively in `profiles/**/*.json` under geometry/train IDs (e.g., `BGO_45SEC_8MB_0X84130000`, `BGO_35SEC_4MB_0X84200000`).
-- After updating any SSOT entity, regenerate cross-language projections and promote evidence tiers:
+- **No Product-Hardcoded Logic:** Express all BGO sector geometries, NVRAM layouts, compressed blobs, and patch specs declaratively under `(model, region, board_rev, flash_jedec_id)` and geometry IDs in `profiles/**/*.json`.
+- **Positive Mathematical Allowlist:** Every BGO retarget/write proof verifies `[start..=end] ⊆ nor_layout.regions[kind == bgo]`, exact physical sector alignment on `flash_ref`, and empty intersection (`∩ = ∅`) with `ipl`, `extrhead`, `nor_fs`, and `eemul`.
+- **Runtime `< T3` Gate:** Destructive generators block trains below `T3` unless `--allow-unverified-profile` is passed.
 
 ```bash
 panadiga profiles export-schema --out-dir profiles/schema
@@ -106,6 +105,6 @@ panadiga profiles completeness
 panadiga profiles validate
 ```
 
-### Stage 7 — Mandatory 9 Quality Gates & Pull Request
+### Stage 7 — `Mn103Vm` Scope Honesty, Mandatory 9 Quality Gates & Pull Request
 
-Run `python scripts/validate.py` (`npm run validate`) to confirm `0` `jscpd` clones, `100/100` `uxlint`, clean `mypy --strict`, all Rust/Vitest/Playwright/C11 suites passing, and 1:1 bilingual parity (`test_docs_parity.py`) before opening your PR per **Section 8 of [`CONTRIBUTING.md`](../../CONTRIBUTING.md)**.
+Remember that **`Mn103Vm` validates MN103S ISA control flow and synthetic bounds only** — it does **NOT** prove real-silicon bus wait-states, cache coherency, Spansion CFI toggle-bit timing, atomic `CLI` IRQ masking, or `IC7501` watchdog survival. Always confirm on isolated bench hardware before promoting to `T4`, and run `python scripts/validate.py` (`9/9` gates, `0` `jscpd` clones, `100/100` `uxlint`, `mypy --strict`, Rust/Vitest/Playwright/C11 suites, and bilingual parity `test_docs_parity.py`) per **Section 8 of [`CONTRIBUTING.md`](../../CONTRIBUTING.md)**.

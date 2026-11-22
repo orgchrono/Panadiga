@@ -159,7 +159,7 @@ fn decompress_lzma_stream(slice: &[u8], expected_size: usize, buf: &mut Vec<u8>)
     bail!("Decompressing EXTRHEAD LZMA payload failed across standard and raw header modes")
 }
 
-pub(super) fn decompress_payload_by_algo(
+pub(crate) fn decompress_payload_by_algo(
     slice: &[u8],
     algo: u16,
     expected_size: usize,

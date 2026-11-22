@@ -363,6 +363,9 @@ pub(super) fn validate_train_board_layout_model(bundle: &ProfilesBundle, tr: &mu
         tr.check(k == &trn.id, || {
             format!("firmware_train key '{k}' != id '{}'", trn.id)
         });
+        if let Some(cref) = &trn.soc_core_ref {
+            tr.check_fk(&bundle.soc_cores, cref, &trn.id, "soc_core_ref");
+        }
         for mref in &trn.media_refs {
             tr.check_fk(&bundle.media_formats, mref, &trn.id, "media_refs");
         }

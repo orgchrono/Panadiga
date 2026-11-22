@@ -3,6 +3,10 @@
   "isa": "ARMv7-A Cortex-A9 (Panasonic UniPhier PH1-sLD3/Pro4/sLD8)",
   "endianness": "little",
   "logic_voltage_mv": 3300,
+  "ghidra_language_id": "ARM:LE:32:v7",
+  "ghidra_compiler_id": "default",
+  "ghidra_sleigh_provider": "builtin",
+  "default_base_address": "0x8000_8000",
   "evidence": {
     "tier": "service_manual_only",
     "sources": [

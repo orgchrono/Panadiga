@@ -7,7 +7,9 @@
   "board_ref": null,
   "train_ref": "toc48_main57_ex80",
   "nor_layout_ref": null,
-  "exact_aliases": [],
+  "exact_aliases": [
+    "DMR-EX80S"
+  ],
   "fixture_ref": null,
   "claims": {
     "board": {

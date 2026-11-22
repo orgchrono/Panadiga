@@ -4,7 +4,7 @@
 # Evidência Técnica Ghidra MN103S — Panasonic DMR-EH55 / Ghidra Pseudocode & Disassembly Evidence Index
 
 > [!NOTE]
-> **PT-BR:** Este artefato apresenta a síntese estruturada, as provas cirúrgicas em pseudocódigo C/disassembly e o índice navegável por linha para o dossiê integral no workspace: [**EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md**](./EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md) (`1.044.995 B`, `26.555` linhas, `SHA-256: 3be0559934d97106794edfd7eef9f460ba8b9bade5e49ff00b651a6d5f4b84b7`, `219` entradas no Índice Geral e `10` classes de armadilhas MN103S na Parte V).
+> **PT-BR:** Este artefato apresenta a síntese estruturada, as provas cirúrgicas em pseudocódigo C/disassembly e o índice navegável por linha para o dossiê integral no workspace: [**EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md**](./EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md) (`1.044.995 B` base até Parte V `L26555`, `SHA-256` histórico `3be05599...`, `219` entradas e `10` armadilhas + Parte VI frota) e para o novo dossiê da frota completa [**EVIDENCIA_PSEUDOCODIGO_GHIDRA_FROTA_COMPLETA.md**](./EVIDENCIA_PSEUDOCODIGO_GHIDRA_FROTA_COMPLETA.md) (`55` programas analisados, **`53/53` MN103S zero-`??`**, `1.083.676` funções mapeadas em [`fleet_verify.json`](../audits/zero_undef/fleet_verify.json)).
 > **EN-US:** This index provides the structured synthesis, verified C pseudocode/disassembly proofs, line-level jump table into [**EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md**](./EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md) (`1,044,995 B`, `26,555` lines, `219` indexed entries, `10` compiler/SLEIGH trap classes), and direct links to the raw text extractions in [`./raw/`](./raw/doc_boot_core.txt) (original Ghidra 12.0.3 / PyGhidra + [`./raw/doc_boot_fat_sd_java.txt`](./raw/doc_boot_fat_sd_java.txt) via Ghidra 12.1.4 PUBLIC Headless) plus the Ghidra 12.1.4 PUBLIC read-only extractions of BGO FTL (`SA41 + 0x14`), RTSC/DAVIS IDE, and `eh55_loader_ver061_256k.bin` (`Loader ver0.61 [06/03/06]`) and the [Undefined `??` Audit](./GHIDRA_UNDEF_AUDIT_REPORT.md).
 >
 > Toda a extração em `C:\ghidra\projects\Panadiga_MN103S` permaneceu estritamente **read-only** (`endTransaction(tx, False)`), assim como a análise isolada de `eh55_loader_ver061_256k.bin` e as listagens adicionais de `sd_load.o` (`prog061_dec.bin`), `dmr-es35v/flash.bin` e `BOOT.BIN` verificadas diretamente contra os binários originais.
@@ -19,6 +19,13 @@
 | [`./raw/doc_prog061.txt`](./raw/doc_prog061.txt) | `38.145 B` | `/eh55_frm_PROG061_BOOT.bin` — Menu DIGADIAG, `FMU_list_sum`, 3 BGO patch sites |
 | [`./raw/doc_main.txt`](./raw/doc_main.txt) | `34.181 B` | `/EH55_MAIN_3410PQ.bin` — `_dev_SERIAL` GDB RSP, `FPC_TestModeControl`, LBA48 `400GB` |
 | [`./raw/doc_drv_and_atapi.txt`](./raw/doc_drv_and_atapi.txt) | `49.491 B` | `/DRV_decomp.bin` & `/EH55_DRV_S211.bin` — `PASS`, CLI `0x400df55c`, ATAPI `0x3c`, SenseLUT |
+| [`./raw/fleet_ipl_and_progs.txt`](./raw/fleet_ipl_and_progs.txt) | `4.691.118 B` | Frota completa `ES35V IPL ver0.18` + `11` estágios `PROG` (`EH50 PROG019`, `EH49 PROG071`, `DIGADIAG`, `EX80S`, `EX773..EZ49V`) |
+| [`./raw/fleet_uniphier_progs_and_linux.txt`](./raw/fleet_uniphier_progs_and_linux.txt) | `2.403.577 B` | UniPhier `PROG0.00` (`BS850/BS880/BS885/XW300`) + 4 Kernels Linux `2.6.11.12` + partições `CramFS`/`RomFS`/`SquashFS` |
+| [`./raw/fleet_drv_families.txt`](./raw/fleet_drv_families.txt) | `307.785 B` | Drives `DRV S514`, `DRV L104` e `ES35V DRV` (`PASS`, CLI `<8sIII>`, ATAPI, erros Shift-JIS + mapa completo) |
+| [`./raw/fleet_main_subsystems.txt`](./raw/fleet_main_subsystems.txt) | `1.883.819 B` | Subsistemas críticos C em todas as **24 revisões `MAIN`** (`EH50`, `ES35V`, `EH55`, `EH58`, `EH49`, `EX72..EX93`, `EZ49V`) |
+| [`./raw/fleet_main_function_maps_part1.txt`](./raw/fleet_main_function_maps_part1.txt) / [`part2`](./raw/fleet_main_function_maps_part2.txt) / [`part3`](./raw/fleet_main_function_maps_part3.txt) | `13.680.967 B` | Diretório 100% mapeado de todas as funções nas **24 revisões `MAIN`** (VAs, tamanhos, nomes e strings) |
+| [`./raw/fleet_sparc_ez485v.txt`](./raw/fleet_sparc_ez485v.txt) | `3.121.650 B` | `DMR-EZ485V` (`sparc:BE:32:default`): ROM `4 MiB` + VxWorks BAL (`2.418` funções C, UART `ZEBRA64`) |
+| [`./raw/fleet_stb_and_non_mn103_inventory.txt`](./raw/fleet_stb_and_non_mn103_inventory.txt) | `29.734 B` | Inventário plano dos `15` payloads `STB` (`ST20/OS20` & `MStar`), `DRV J147/J315`, `DEV.BIN` e `PANAEUSB` |
 
 ---
 

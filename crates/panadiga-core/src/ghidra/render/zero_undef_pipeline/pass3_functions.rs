@@ -60,9 +60,16 @@ def _load_rust_audit(name: str) -> dict:
 
 def infer_generic_entry_seeds(img: Image) -> tuple:
     """Infer MN10300 reset-vector branches, header pointers, and early prologues for arbitrary binaries."""
-    seeds = [img.base]
-    seen = {img.base}
-    for off in GENERIC_STAGE_RULES.get("header_probe_offsets", (0, 4, 8, 12, 16, 20, 24, 28, 32, 48, 64)):
+    if img.raw[:4] == b"\x00\xf2\xf3\xfe":
+        seeds, seen = [img.base + 0x11], {img.base + 0x11}
+        probe_offs = (0x11, 0x19, 0x22, 0x2B, 0x34)
+    elif img.raw[:8] == b"\n root=/":
+        seeds, seen = [img.base + 0x400, img.base + 0x534], {img.base + 0x400, img.base + 0x534}
+        probe_offs = (0x400, 0x410, 0x534, 0x540, 0x1400)
+    else:
+        seeds, seen = [img.base], {img.base}
+        probe_offs = GENERIC_STAGE_RULES.get("header_probe_offsets", (0, 4, 8, 12, 16, 20, 24, 28, 32, 48, 64))
+    for off in probe_offs:
         va = img.base + int(off)
         if not img.contains(va + 4):
             continue

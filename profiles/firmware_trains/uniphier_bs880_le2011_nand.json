@@ -1,5 +1,6 @@
 {
   "id": "uniphier_bs880_le2011_nand",
+  "soc_core_ref": "mn10300_am33_2",
   "loader_version": "M2863EB_QD-341",
   "loader_date": null,
   "loader_profile_key": "uniphier_nand",

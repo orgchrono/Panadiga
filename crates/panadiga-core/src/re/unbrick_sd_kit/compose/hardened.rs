@@ -10,8 +10,8 @@ use super::super::verify::{
     SdKitAuditProfile, simulate_sd_find_firm_entry_dual, verify_sd_buffers_with_profile,
 };
 use super::builders::{
-    compose_digadiag_and_prog061, compose_pana_sd_container, compose_pana_sd_prog061,
-    compose_patched_main_container,
+    compose_digadiag_and_prog061_with_tier_policy, compose_pana_sd_container,
+    compose_pana_sd_prog061_with_tier_policy, compose_patched_main_container,
 };
 use super::types::{HardenedPanamon1KitArtifacts, SdLoaderProfile};
 
@@ -28,16 +28,20 @@ pub fn compose_hardened_panamon1_kit(
     expected_main_build: Option<&str>,
     allow_target_mismatch: bool,
 ) -> Result<HardenedPanamon1KitArtifacts> {
-    let (_prog_patched, digadiag_bytes, digadiag_sha256) = compose_digadiag_and_prog061(
+    let (_prog_patched, digadiag_bytes, digadiag_sha256) =
+        compose_digadiag_and_prog061_with_tier_policy(
+            prog061_raw,
+            Prog061BgoPatchMode::UartMonitor,
+            SdLoaderProfile::Ver061RawSd48,
+            false,
+            false,
+        )?;
+    let (pana_sd_prog, pana_sd_bgo_mode) = compose_pana_sd_prog061_with_tier_policy(
         prog061_raw,
         Prog061BgoPatchMode::UartMonitor,
         SdLoaderProfile::Ver061RawSd48,
         false,
-    )?;
-    let (pana_sd_prog, pana_sd_bgo_mode) = compose_pana_sd_prog061(
-        prog061_raw,
-        Prog061BgoPatchMode::UartMonitor,
-        SdLoaderProfile::Ver061RawSd48,
+        false,
         false,
     )?;
     let composed_main = compose_patched_main_container(
@@ -47,6 +51,7 @@ pub fn compose_hardened_panamon1_kit(
         hdd_target_gb,
         expected_main_build,
         allow_target_mismatch,
+        false,
     )?;
     let (pana_sd_bytes, pana_sd_sha256) = compose_pana_sd_container(
         drv_bytes,

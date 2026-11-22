@@ -23,9 +23,15 @@ def ensure_volatile_windows(prog) -> dict:
 
 
 def type_residual(prog, img: Image) -> dict:
+    from ghidra.program.model.address import AddressSet
+    from ghidra.util.task import TaskMonitor
+
+    bm_mgr = prog.getBookmarkManager()
+    err_vas = error_snapshot(prog)
     typed_ranges = 0
     pad_bytes = 0
     raw_bytes = 0
+    cleared_errors = 0
     for lo, hi in undefined_ranges(prog):
         length = hi - lo + 1
         if length <= MAX_TINY_PAD and len(set(img.slice(lo, hi + 1))) == 1:
@@ -37,7 +43,18 @@ def type_residual(prog, img: Image) -> dict:
         if create_byte_array(prog, lo, length):
             typed_ranges += 1
             mark_auto(prog, lo, kind, length, cat)
-    return {"residual_ranges": typed_ranges, "tiny_pad_bytes": pad_bytes, "residual_unclassified_bytes": raw_bytes}
+            if err_vas:
+                hits = [va for va in err_vas if lo <= va <= hi]
+                if hits:
+                    bm_mgr.removeBookmarks(AddressSet(va_addr(prog, lo), va_addr(prog, hi)), ERROR_BM, TaskMonitor.DUMMY)
+                    cleared_errors += len(hits)
+                    err_vas.difference_update(hits)
+    return {
+        "residual_ranges": typed_ranges,
+        "tiny_pad_bytes": pad_bytes,
+        "residual_unclassified_bytes": raw_bytes,
+        "stale_error_bookmarks_cleared": cleared_errors,
+    }
 
 
 def decompile_tainted(prog) -> dict:
@@ -198,10 +215,19 @@ def _resolve_targets(opts) -> list:
     return targets
 
 
-def _run_all_passes(prog, img: Image, name: str, opts) -> dict:
+def _run_all_passes(prog, img: Image, name: str, opts, pyghidra=None) -> dict:
     from ghidra.util.task import TaskMonitor
 
     rep = {"program": name, "model": opts.model, "base_va": "0x%08X" % img.base, "baseline": measure(prog)}
+    if not str(prog.getLanguageID()).lower().startswith("mn10300"):
+        if pyghidra is not None:
+            pyghidra.analyze(prog, TaskMonitor.DUMMY)
+        with tx(prog, "Panadiga non-MN103 residual typing"):
+            rep["residual"] = type_residual(prog, img)
+        rep["verify"] = verify_program(prog, name)
+        if not opts.no_save:
+            prog.save("Panadiga generic auto-analyze", TaskMonitor.DUMMY)
+        return rep
     p2 = pass2_program(prog, img)
     write_json(WORK_DIR, "pass2_seeds_%s.json" % name, p2["seeds"])
     rep["pass2"] = p2["stats"]
@@ -246,7 +272,8 @@ def main() -> int:
     pyghidra = start_ghidra()
     from ghidra.util.task import TaskMonitor
 
-    project = pyghidra.open_project(opts.project_dir, opts.project_name)
+    gpr_missing = not (pathlib.Path(opts.project_dir) / ("%s.gpr" % opts.project_name)).exists()
+    project = pyghidra.open_project(opts.project_dir, opts.project_name, create=gpr_missing)
     targets = _resolve_targets(opts)
 
     if opts.stage == "import-loader":
@@ -273,7 +300,7 @@ def main() -> int:
             else:
                 img = Image(prog, bin_path)
                 if opts.stage == "all":
-                    rep = _run_all_passes(prog, img, name, opts)
+                    rep = _run_all_passes(prog, img, name, opts, pyghidra)
                 elif opts.stage == "pass2":
                     res = pass2_program(prog, img)
                     write_json(WORK_DIR, "pass2_seeds_%s.json" % name, res["seeds"])

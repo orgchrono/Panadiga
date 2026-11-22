@@ -30,11 +30,13 @@ pub use patcher::{
 };
 pub use retarget::{
     BASE_FACTORY_BGO_GEOMETRY_ID, DetectedBgoGeometry, detect_prog_bgo_geometry,
-    find_recipe_by_loader_key, find_retarget_spec_by_geometry_id, find_retarget_spec_by_loader_key,
+    enforce_train_evidence_tier, find_recipe_by_loader_key, find_retarget_spec_by_geometry_id,
+    find_retarget_spec_by_loader_key, find_train_by_geometry_id, find_train_by_loader_key,
     inspect_prog_bgo_geometry_with_spec, load_retarget_drv_for_spec, load_train_retarget_spec,
     load_train_retarget_spec_and_drv, prog_has_bgo_table_marker,
     retarget_prog_for_geometry_in_place, retarget_prog_for_loader_profile_in_place,
-    retarget_prog_from_spec_in_place,
+    retarget_prog_for_loader_profile_with_policy, retarget_prog_from_spec_in_place,
+    validate_bgo_allowlist_invariant,
 };
 
 use anyhow::{Result, bail};

@@ -86,6 +86,8 @@ firmware_and_images/*.zip
 firmware_and_images/*.FRM
 firmware_and_images/*.frm
 firmware_and_images/extracted_partitions/
+keys.local.ukf
+*.local.ukf
 !firmware_and_images/sd_unbrick_kit/
 !firmware_and_images/sd_unbrick_kit/SHA256SUMS.txt
 !firmware_and_images/sd_unbrick_kit/LEIA_ME_CARTAO_SD.txt

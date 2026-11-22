@@ -1,0 +1,833 @@
+# Panadiga Full-Fleet Non-MN103 & Container Plaintext Inventory (STB ST20/MStar, DRV J147/J315, PANAEUSB)
+
+
+=== DRV DMR-EH50_DRV_J147_566521ac.bin (sz=623024 B, sha256=566521ac688c586e7c03c56ba1af8ee31ec3040edef15266ce4df324eca09f86, arch=FRM_DRV_EDGE_DECRYPT) ===
+head=00000000000981a000011e740000007b | build=DVD-RAM DMR-EH50
+  (high-entropy/binary payload)
+
+=== DRV DMR-EH58_DEV.BIN_7ae16013.bin (sz=512 B, sha256=7ae160135acb2f3a8012cb00320f334bc2f8124f3ba1ae215cbee66b1c749d6d, arch=RAW_BINARY) ===
+head=aa55ffff45483538454500004dedd1a6 | build=None
+  (high-entropy/binary payload)
+
+=== DRV DMR-XW300_DRV1J315_b4e713a2.bin (sz=688568 B, sha256=b4e713a253bc601019302b061040de37ac177f03eb5d5f80655e3eafd8ffabfb, arch=FRM_DRV_EDGE_DECRYPT) ===
+head=00000000000a81a80001a85400000017 | build=R6-ABC3 C0      
+  (high-entropy/binary payload)
+
+=== MAIN_LINUX_NAND DMR-BS850_MAIN3600_9899b354.bin (sz=64749568 B, sha256=9899b354a6355801fc485e8f28f2db06e0d7f1bfd09f9daa0ceb917df9c4be2a, arch=FRM_MAIN_LIST) ===
+head=0a20726f6f743d2f6465762f666d6135 | build=
+  str: Linux version 2.6.11.12 (             rel@m5atrel3.ved.mei) (gcc version 3.1-0219 20071001) #01 SMP 
+  str: <6>PCI: Discovered peer bus %02x
+  str: <3>VIPER32: Retry over detect!!!
+  str:   task             PC      pid father child younger older
+  str: __put_task_struct
+  str: task_struct
+  str: Attempted to kill the idle task!
+  str: Attempt to kill tasklet from interrupt
+  str: overflowuid
+  str: overflowgid
+  str: overcommit_memory
+  str: overcommit_ratio
+  str: <4>Task %s (pid = %d) is on cpu %d
+  str: __versions
+  str: vermagic
+  str: <3>%s: version magic '%s' should be '%s'
+  str: <4>%s: no version magic, tainting kernel.
+  str: __oom_kill_task
+  str: <4>tried to kill an mm-less task!
+  str: slabinfo - version: 2.1
+  str: <3>proc_file_read: Apparent buffer overflow!
+  str: tty/driver
+  str: tty/drivers
+  str: EXT2-fs: Magic mismatch, very weird !
+  str: <6>JFFS2 version 2.2. (NAND) (C) 2001-2003 Red Hat, Inc.
+  str: autofs: kernel does not match daemon version
+  str: VIDEO_TS
+  str: VIDEO_RM
+  str: VIDEO_TS.IFO
+  str: VIDEO_TS.BUP
+  str: VIDEO_TS.VOB
+  str: VIDEO_RM.IFO
+  str: VIDEO_RM.BUP
+  str: VIDEO_RM.DAT
+  str: DVD_VIDEO_RECORDER
+  str: VIDEO_TS.%s
+  str: oversubscribed dynamic bit lengths tree
+  str: oversubscribed literal/length tree
+  str: oversubscribed distance tree
+  str: drivers/pci/bus.c
+
+=== MAIN_LINUX_NAND DMR-BS880_MAIN3410_8e94dfd7.bin (sz=64749568 B, sha256=8e94dfd7e82f297e631fb5aae2df0ff1f1242fc79094bbaeaff66e4931750cef, arch=FRM_MAIN_LIST) ===
+head=0a20726f6f743d2f6465762f666d6135 | build=
+  str: Linux version 2.6.11.12 (             rel@m5atrel3.ved.mei) (gcc version 3.1-0219 20091203) #01 SMP 
+  str: <6>PCI: Discovered peer bus %02x
+  str: <3>VIPER32: Retry over detect!!!
+  str:   task             PC      pid father child younger older
+  str: __put_task_struct
+  str: task_struct
+  str: Attempted to kill the idle task!
+  str: Attempt to kill tasklet from interrupt
+  str: overflowuid
+  str: overflowgid
+  str: overcommit_memory
+  str: overcommit_ratio
+  str: <4>Task %s (pid = %d) is on cpu %d
+  str: __versions
+  str: vermagic
+  str: <3>%s: version magic '%s' should be '%s'
+  str: <4>%s: no version magic, tainting kernel.
+  str: __oom_kill_task
+  str: <4>tried to kill an mm-less task!
+  str: slabinfo - version: 2.1
+  str: <3>proc_file_read: Apparent buffer overflow!
+  str: tty/driver
+  str: tty/drivers
+  str: EXT2-fs: Magic mismatch, very weird !
+  str: <6>JFFS2 version 2.2. (NAND) (C) 2001-2003 Red Hat, Inc.
+  str: autofs: kernel does not match daemon version
+  str: VIDEO_TS
+  str: VIDEO_RM
+  str: VIDEO_TS.IFO
+  str: VIDEO_TS.BUP
+  str: VIDEO_TS.VOB
+  str: VIDEO_RM.IFO
+  str: VIDEO_RM.BUP
+  str: VIDEO_RM.DAT
+  str: DVD_VIDEO_RECORDER
+  str: VIDEO_TS.%s
+  str: oversubscribed dynamic bit lengths tree
+  str: oversubscribed literal/length tree
+  str: oversubscribed distance tree
+  str: drivers/pci/bus.c
+
+=== MAIN_LINUX_NAND DMR-BS885_MAIN3400_ef3b8191.bin (sz=64749568 B, sha256=ef3b8191147f6c196ecee4f73549692450b88c581901ea87a042e4693956c749, arch=FRM_MAIN_LIST) ===
+head=0a20726f6f743d2f6465762f666d6135 | build=
+  str: Linux version 2.6.11.12 (             rel@m5atrel3.ved.mei) (gcc version 3.1-0219 20100202) #01 SMP 
+  str: <6>PCI: Discovered peer bus %02x
+  str: <3>VIPER32: Retry over detect!!!
+  str:   task             PC      pid father child younger older
+  str: __put_task_struct
+  str: task_struct
+  str: Attempted to kill the idle task!
+  str: Attempt to kill tasklet from interrupt
+  str: overflowuid
+  str: overflowgid
+  str: overcommit_memory
+  str: overcommit_ratio
+  str: <4>Task %s (pid = %d) is on cpu %d
+  str: __versions
+  str: vermagic
+  str: <3>%s: version magic '%s' should be '%s'
+  str: <4>%s: no version magic, tainting kernel.
+  str: __oom_kill_task
+  str: <4>tried to kill an mm-less task!
+  str: slabinfo - version: 2.1
+  str: <3>proc_file_read: Apparent buffer overflow!
+  str: tty/driver
+  str: tty/drivers
+  str: EXT2-fs: Magic mismatch, very weird !
+  str: <6>JFFS2 version 2.2. (NAND) (C) 2001-2003 Red Hat, Inc.
+  str: autofs: kernel does not match daemon version
+  str: VIDEO_TS
+  str: VIDEO_RM
+  str: VIDEO_TS.IFO
+  str: VIDEO_TS.BUP
+  str: VIDEO_TS.VOB
+  str: VIDEO_RM.IFO
+  str: VIDEO_RM.BUP
+  str: VIDEO_RM.DAT
+  str: DVD_VIDEO_RECORDER
+  str: VIDEO_TS.%s
+  str: oversubscribed dynamic bit lengths tree
+  str: oversubscribed literal/length tree
+  str: oversubscribed distance tree
+  str: drivers/pci/bus.c
+
+=== MAIN_LINUX_NAND DMR-XW300_MAIN3700_cd42b71f.bin (sz=51380224 B, sha256=cd42b71f66f9463c3d8e9b0c8ab592e595faf1a58875af0b487ae6a0f7bd602a, arch=FRM_MAIN_LIST) ===
+head=0a20726f6f743d2f6465762f666d6135 | build=
+  str: Linux version 2.6.11.12 (rel@m5atrel4.ved.mei.co.jp) (gcc version 3.1-0219 20071001) #1 SMP Thu Nov 
+  str: <6>PCI: Discovered peer bus %02x
+  str: <3>VIPER32: Retry over detect!!!
+  str:   task             PC      pid father child younger older
+  str: __put_task_struct
+  str: task_struct
+  str: Attempted to kill the idle task!
+  str: Attempt to kill tasklet from interrupt
+  str: overflowuid
+  str: overflowgid
+  str: overcommit_memory
+  str: overcommit_ratio
+  str: <4>Task %s (pid = %d) is on cpu %d
+  str: __versions
+  str: vermagic
+  str: <3>%s: version magic '%s' should be '%s'
+  str: <4>%s: no version magic, tainting kernel.
+  str: __oom_kill_task
+  str: <4>tried to kill an mm-less task!
+  str: slabinfo - version: 2.1
+  str: <3>proc_file_read: Apparent buffer overflow!
+  str: tty/driver
+  str: tty/drivers
+  str: EXT2-fs: Magic mismatch, very weird !
+  str: <4>BUG: Dirent node at 0x%08x never got checked? How?
+  str: <4>Er. New metadata at 0x%08x with ver %d is actually older than previous ver %d at 0x%08x
+  str: <5>Not marking the space at 0x%08x as dirty because the flash driver returned retlen zero
+  str: <4>Node at 0x%08x with length 0x%08x would run over the end of the erase block
+  str: <5>using a buggy version of mkfs.jffs2. Use at least v1.17.
+  str: <4>Failed to allocate page buffer for verifying erase at 0x%08x. Assuming it worked
+  str: <6>JFFS2 version 2.2. (NAND) (C) 2001-2003 Red Hat, Inc.
+  str: <2>Old data are already lost in wbuf recovery. Data loss ensues.
+  str: <4>Failed to allocate space for wbuf recovery. Data loss ensues.
+  str: <2>Recovery of wbuf failed due to a second write error
+  str: <5>Recovery of wbuf succeeded to %08x
+  str: <2>Malloc failure in wbuf recovery. Data loss ensues.
+  str: autofs: kernel does not match daemon version
+  str: dsdx_lnx_create_task2
+  str: retry over
+  str: VIDEO_TS
+
+=== NOR_FULL DMR-EH55_eh55_nor_8mb_ic5001_dump.bin_c1faee79.bin (sz=8388608 B, sha256=c1faee798f60545853eefdba0d15f23678b471466dc2bc84f522bc972f15a02d, arch=RAW_BINARY) ===
+head=dc14000000ffffffdcfb000000ffffff | build=None
+  str: [nfrom] Power failer recovery error[%d].
+  str: ***** Loader ver%s [%s] *****
+  str: Now model is PAL.
+  str: Now model is NTSC.
+  str: HDD MAX LBA = 0x%X.
+  str: HDD_MAX_LBA get failed[0x%X].
+  str: Mainsoft version = %s
+  str: Error! Failed[0x%X] to read main from HDD.
+  str: Error! Read sector num[%u] over flow.
+  str: Error! Failed[0x%X] read main from HDD.
+  str: HDD INNER SECTOR MAIN RECOVERY START.
+  str: Error! Failed[0x%X] write to HDD.
+  str: Error! Failed[0x%X] read to HDD.
+  str: Verify error.
+  str: Recovery history = (total:%u , ok:%u , ng:%u).
+  str: HDD INNER SECTOR MAIN RECOVERY SUCCESS.
+  str: HDD INNER SECTOR MAIN RECOVERY FAILED.
+  str: fvu size over 0x%X.
+  str: [SD] Power failer recovery mode. But, SD read failed[0x%X].
+  str: SD info get failed[%d]. But, DVD-RAM/CD verup check start.
+  str: MATSHITA DVD-RAM RECORDER
+  str: DBGO driver init failed[%u].
+  str: BGO driver no init.
+  str: status recovery error[%d].
+  str: ID[%d] verify error(0x%08X-0x%08X).
+  str: %s[0x%X] verify error[%d].
+  str: [RTSD] HDD already spin-up 
+  str: [RTSD] HDD spin-up error (%X)
+  str: [RTSD] HDD Auto Spin up Mode 
+  str: [RTSD] === HDD STREAM DMA EXT COMMAND STREAM ERROR ===
+  str: [RTSD] === HDD ACCESS ERROR === 
+  str: **** DAVIS LSI illegal Version [0x%08x] ****
+  str: [SDCD] sdcd_insrmv_check:check limit time over 
+  str: DVR_SYSTEM_LIB: irq.a Ver0.22 (2005/09/05) : IRQ Lib
+  str: DVR_SYSTEM_LIB:davis.a ver1.50 (2005/11/02) : DAVIS
+  str: ANU0WeHe
+  str: E20:UDF Ver1.0
+  str: E20:AVFS Ver1.0
+  str: DVDVIDEO-VMG
+  str: dvdvrx010panasonic0100103U01
+
+=== NOR_FULL DMR-ES35V_flash.bin_0969f258.bin (sz=8388608 B, sha256=0969f2580ad30b98027271a8e3947f5a6ae1c02dec06462b87ce1057a7a1bcf9, arch=RAW_BINARY) ===
+head=dc14000000ffffffdcfb000000ffffff | build=None
+  str: [nfrom] Power failer recovery error[%d].
+  str: ***** Loader ver%s [%s] *****
+  str: Now model is PAL.
+  str: Now model is NTSC.
+  str: Mainsoft version = %s
+  str: fvu size over 0x%X.
+  str: [SD] Power failer recovery mode. But, SD read failed[0x%X].
+  str: SD info get failed[%d]. But, DVD-RAM/CD verup check start.
+  str: MATSHITA DVD-RAM RECORDER
+  str: DBGO driver init failed[%u].
+  str: BGO driver no init.
+  str: status recovery error[%d].
+  str: ID[%d] verify error(0x%08X-0x%08X).
+  str: %s[0x%X] verify error[%d].
+  str: [RTSD] HDD already spin-up 
+  str: [RTSD] HDD spin-up error (%X)
+  str: [RTSD] HDD Auto Spin up Mode 
+  str: [RTSD] === HDD STREAM DMA EXT COMMAND STREAM ERROR ===
+  str: [RTSD] === HDD ACCESS ERROR === 
+  str: **** DAVIS LSI illegal Version [0x%08x] ****
+  str: [SDCD] sdcd_insrmv_check:check limit time over 
+  str: DVR_SYSTEM_LIB: irq.a Ver0.22 (2005/09/05) : IRQ Lib
+  str: DVR_SYSTEM_LIB:davis.a ver1.50 (2005/11/02) : DAVIS
+  str: O+:EhZ$M
+  str: [1394avc]ctl:AVC command = Reverse-reproduction 
+  str: [1394avc]ctl:AVC command = Fastest Reverse1 
+  str: [1394avc]ctl:AVC command = Fastest Reverse2 
+  str: [1394avc]ctl:AVC command = Fastest Reverse3 
+  str: [1394avc]ctl:AVC command = Fastest Reverse4 
+  str: [1394avc]ctl:AVC command = Fastest Reverse5 
+  str: [1394avc]ctl:AVC command = Fastest Reverse6 
+  str: [1394avc]ctl:AVC command = Slowest Reverse 
+  str: [1394avc]ctl:AVC command = Slowest Reverse1 
+  str: [1394avc]ctl:AVC command = Slowest Reverse2 
+  str: [1394avc]ctl:AVC command = Slowest Reverse3 
+  str: [1394avc]ctl:AVC command = Slowest Reverse4 
+  str: [1394avc]ctl:AVC command = Slowest Reverse5 
+  str: [1394avc]ctl:AVC command = Slowest Reverse6 
+  str: [1394avc]ctl:AVC command = Pause in reverse playback 
+  str: [1394avc]ctl: ICN_TASK Close completion 
+
+=== STB DMR-EX72S_STB_112_baf40dfa.bin (sz=1536992 B, sha256=baf40dfa582da7eb93e27d5bf6ee864e46d85cf981a747730a61c6612a45f395, arch=STMicro_ST20_OS20) ===
+head=202020632020202028234cfdb87317c0 | build=None
+  str: I2CFRONT
+  str: MPEG_EventTask
+  str: MPEG_VideoDecoderControlTask
+  str: MPEG_AudioDecoderControlTask
+  str: WSS_Control_Task
+  str:   FlashControl_Task
+  str: incompatible version
+  str: FE_ControlTask
+  str:  TimerTaskRx
+  str: TimerTaskTx
+  str:  UART_AM34ReceiveTask
+  str: OSDNavTask
+  str: Multi Audio
+  str: Searching for new version:
+  str: Current version is up to date
+  str: A new software version has been found.
+  str: DVB Auto Setup
+  str: Add New DVB Channels
+  str: ~ new DVB channel found.
+  str: ~ new DVB channels found.
+  str: No new DVB channels found.
+  str: OPTION: Select Advert
+  str: Universal
+  str: Vertical
+  str: Video PID
+  str: Audio PID
+  str: DVB Manual Tuning
+  str: ~ DVB channel found.
+  str: ~ DVB channels found.
+  str: No DVB channels found.
+  str: 9750 MHz (Universal)
+  str: 10600 MHz (Universal)
+  str: Multi Video
+  str: This will take several minutes.
+  str: Universal LNB System
+  str: DVB Channel
+  str: DVB Signal Condition
+  str: OPTION: Select Advert, etc.
+  str: Vertikal
+  str: Multi-Audio
+
+=== STB DMR-EX769_STB_104_2d9a741f.bin (sz=1089596 B, sha256=2d9a741f02afe66609157ea8e7674bb48dd6d067aa4cf8d9d13c79078b9858ad, arch=STMicro_ST20_OS20) ===
+head=2020206320202020202240fd14a010c0 | build=None
+  str: MPEG_EventTask
+  str: MPEG_VideoDecoderControlTask
+  str: MPEG_AudioDecoderControlTask
+  str:  WSS_Control_Task
+  str:  FlashControl_Task
+  str: incompatible version
+  str:    FE_ControlTask
+  str: TimerTaskRx
+  str: TimerTaskTx
+  str:   UART_AM34ReceiveTask
+  str: OSDNavTask
+  str: Multi Audio
+  str: Searching for new version :
+  str: Current version is up to date
+  str: A new software version has been found.
+  str: DVB Auto Setup
+  str: Add New DVB Channels
+  str: ~ new DVB channel found.
+  str: ~ new DVB channels found.
+  str: No new DVB channels found.
+  str: OPTION: Select Advert
+  str: Universal
+  str: Vertical
+  str: Video PID
+  str: Audio PID
+  str: DVB Manual Tuning
+  str: ~ DVB channel found.
+  str: ~ DVB channels found.
+  str: No DVB channels found.
+  str: 9750 MHz (Universal)
+  str: 10600 MHz (Universal)
+  str: Multi Video
+  str: This will take several minutes.
+  str: Universal LNB System
+  str: DVB Channel
+  str: DVB Signal Condition
+  str: OPTION: Select Advert, etc.
+  str: Vertikal
+  str: Multi-Audio
+  str: Kanal nicht verf
+
+=== STB DMR-EX773_STB_109_EC_568b7d8d.bin (sz=1118212 B, sha256=568b7d8dba08d5ae8d0b73b61148922b2f1809ffe1fde7f90adf393fe0af4b46, arch=STMicro_ST20_OS20) ===
+head=2020206320202020202240fddc0f11c0 | build=None
+  str:    MPEG_EventTask
+  str: MPEG_VideoDecoderControlTask
+  str: MPEG_AudioDecoderControlTask
+  str:   WSS_Control_Task
+  str:  FlashControl_Task
+  str: incompatible version
+  str: FE_ControlTask
+  str: TimerTaskRx
+  str: TimerTaskTx
+  str:  UART_AM34ReceiveTask
+  str: OSDNavTask
+  str: Multi Audio
+  str: Searching for new version:
+  str: Current version is up to date
+  str: A new software version has been found.
+  str: DVB Auto Setup
+  str: Add New DVB Channels
+  str: ~ new DVB channel found.
+  str: ~ new DVB channels found.
+  str: No new DVB channels found.
+  str: OPTION: Select Advert
+  str: Universal
+  str: Vertical
+  str: Video PID
+  str: Audio PID
+  str: DVB Manual Tuning
+  str: ~ DVB channel found.
+  str: ~ DVB channels found.
+  str: No DVB channels found.
+  str: 9750 MHz (Universal)
+  str: 10600 MHz (Universal)
+  str: Multi Video
+  str: This will take several minutes.
+  str: Universal LNB System
+  str: DVB Channel
+  str: DVB Signal Condition
+  str: OPTION: Select Advert, etc.
+  str: DVB Region Selection
+  str: Vertikal
+  str: Multi-Audio
+
+=== STB DMR-EX773_STB_109_EP_286c0610.bin (sz=1111456 B, sha256=286c06106aabc5454a6564abee4ca81311e3baab617ae8ee43864df707c235d9, arch=STMicro_ST20_OS20) ===
+head=2020206320202020202240fd78f510c0 | build=None
+  str:    MPEG_EventTask
+  str: MPEG_VideoDecoderControlTask
+  str: MPEG_AudioDecoderControlTask
+  str:   WSS_Control_Task
+  str:  FlashControl_Task
+  str: incompatible version
+  str: FE_ControlTask
+  str: TimerTaskRx
+  str: TimerTaskTx
+  str:  UART_AM34ReceiveTask
+  str: OSDNavTask
+  str: Multi Audio
+  str: Searching for new version:
+  str: Current version is up to date
+  str: A new software version has been found.
+  str: DVB Auto Setup
+  str: Add New DVB Channels
+  str: ~ new DVB channel found.
+  str: ~ new DVB channels found.
+  str: No new DVB channels found.
+  str: OPTION: Select Advert
+  str: Universal
+  str: Vertical
+  str: Video PID
+  str: Audio PID
+  str: DVB Manual Tuning
+  str: ~ DVB channel found.
+  str: ~ DVB channels found.
+  str: No DVB channels found.
+  str: 9750 MHz (Universal)
+  str: 10600 MHz (Universal)
+  str: Multi Video
+  str: This will take several minutes.
+  str: Universal LNB System
+  str: DVB Channel
+  str: DVB Signal Condition
+  str: OPTION: Select Advert, etc.
+  str: DVB Region Selection
+  str: Multi-Audio
+  str:  verze je nejnov
+
+=== STB DMR-EX78_STB_103_d05a2437.bin (sz=1233236 B, sha256=d05a2437d04c558c46946f3861826ce1df60a4b68f09955db6797eaa0bdd36d7, arch=STMicro_ST20_OS20) ===
+head=202020632020202028234cfd2cd112c0 | build=None
+  str:  MPEG_EventTask
+  str: MPEG_VideoDecoderControlTask
+  str: MPEG_AudioDecoderControlTask
+  str:   WSS_Control_Task
+  str:  FlashControl_Task
+  str: incompatible version
+  str:  FE_ControlTask
+  str:   TimerTaskRx
+  str: TimerTaskTx
+  str: UART_AM34ReceiveTask
+  str:  OSDNavTask
+  str: Multi Audio
+  str: Searching for new version :
+  str: Current version ~ is up to date
+  str: A new software version has been found.
+  str: DVB Auto-Setup
+  str: Add New DVB Services
+  str: OPTION: Select Advert
+  str: Universal
+  str: Vertical
+  str: Video PID
+  str: Audio PID
+  str: DVB Manual Tuning
+  str: 9750 MHz (Universal)
+  str: 10600 MHz (Universal)
+  str: Multi Video
+  str: This will take several minutes.
+  str: Universal LNB System
+  str: Vertikal
+  str: En ny version s
+  str: Aktuell version ~ 
+  str: r den senaste versionen
+  str: En ny mjukvaruversion hittades.
+  str: gg till nya DVB-tj
+  str: DVB Manuell s
+  str: !+Dvb*&+
+  str: empty menu: enter behaves like cancel
+  str:    OAD_Task
+  str: CT_EventControl_Task
+  str: CT_TimerControl_Task
+
+=== STB DMR-EX795_STB_108_0928c7b6.bin (sz=2158280 B, sha256=0928c7b6bc03b647cb21a528a2a4ad9760473b9bc0b0bcb549611f7a0ae409cb, arch=MStar_MIPS_ARM_R2) ===
+head=4d5320455837393545504d4e30786237 | build=None
+  str: Eh^J8r`d
+
+=== STB DMR-EX79_STB_104_b67b0792.bin (sz=1589904 B, sha256=b67b0792abf5d4d0b262cb1105fd3126f12db00de94750d818bcdfc1d59c6fe5, arch=STMicro_ST20_OS20) ===
+head=2020206320202020202240fd684218c0 | build=None
+  str:  MPEG_EventTask
+  str: MPEG_VideoDecoderControlTask
+  str: MPEG_AudioDecoderControlTask
+  str:    WSS_Control_Task
+  str:    FlashControl_Task
+  str: incompatible version
+  str:  FE_ControlTask
+  str:   TimerTaskRx
+  str: TimerTaskTx
+  str:   UART_AM34ReceiveTask
+  str: OSDNavTask
+  str: Multi Audio
+  str: Searching for new version :
+  str: Current version is up to date
+  str: A new software version has been found.
+  str: DVB Auto Setup
+  str: Add New DVB Channels
+  str: ~ new DVB channel found.
+  str: ~ new DVB channels found.
+  str: No new DVB channels found.
+  str: OPTION: Select Advert
+  str: Universal
+  str: Vertical
+  str: Video PID
+  str: Audio PID
+  str: DVB Manual Tuning
+  str: ~ DVB channel found.
+  str: ~ DVB channels found.
+  str: No DVB channels found.
+  str: 9750 MHz (Universal)
+  str: 10600 MHz (Universal)
+  str: Multi Video
+  str: This will take several minutes.
+  str: Universal LNB System
+  str: DVB Channel
+  str: DVB Signal Condition
+  str: OPTION: Select Advert, etc.
+  str: Vertikal
+  str: Multi-Audio
+  str: Kanal nicht verf
+
+=== STB DMR-EX79_STB_105_5f5acb56.bin (sz=1954456 B, sha256=5f5acb5609b4a2b609b4ce9d8922389b2eec4cbf87f17c1479e636bd3d703a41, arch=STMicro_ST20_OS20) ===
+head=2020206320202020202240fd70d21dc0 | build=None
+  str:  MPEG_EventTask
+  str: MPEG_VideoDecoderControlTask
+  str: MPEG_AudioDecoderControlTask
+  str:    WSS_Control_Task
+  str:   FlashControl_Task
+  str: incompatible version
+  str:  FE_ControlTask
+  str:   TimerTaskRx
+  str: TimerTaskTx
+  str:   UART_AM34ReceiveTask
+  str: OSDNavTask
+  str: Multi Audio
+  str: Searching for new version :
+  str: Current version is up to date
+  str: A new software version has been found.
+  str: DVB Auto Setup
+  str: Add New DVB Channels
+  str: ~ new DVB channel found.
+  str: ~ new DVB channels found.
+  str: No new DVB channels found.
+  str: OPTION: Select Advert
+  str: Universal
+  str: Vertical
+  str: Video PID
+  str: Audio PID
+  str: DVB Manual Tuning
+  str: ~ DVB channel found.
+  str: ~ DVB channels found.
+  str: No DVB channels found.
+  str: 9750 MHz (Universal)
+  str: 10600 MHz (Universal)
+  str: Multi Video
+  str: This will take several minutes.
+  str: Universal LNB System
+  str: DVB Channel
+  str: DVB Signal Condition
+  str: OPTION: Select Advert, etc.
+  str:   OAD_Task
+  str:  CT_EventControl_Task
+  str: CT_TimerControl_Task
+
+=== STB DMR-EX80S_STB_115_a5d0235f.bin (sz=1438792 B, sha256=a5d0235f7d5cca443537d3c7de52babfd961a71be592d8234a7be075c018d30b, arch=STMicro_ST20_OS20) ===
+head=2020202420202c2029234cfd20f52140 | build=None
+  str:  MPEG_EventTask
+  str: MPEG_VideoDecoderControlTask
+  str: MPEG_AudioDecoderControlTask
+  str:   WSS_Control_Task
+  str: FlashControl_Task
+  str: incompatible version
+  str:    I2CBACK
+  str: FE_ControlTask
+  str:   TimerTaskRx
+  str: TimerTaskTx
+  str:    UART_AM34ReceiveTask
+  str: OSDNavTask
+  str: Multi Audio
+  str: Searching for new version :
+  str: Current version ~ is up to date
+  str: A new software version has been found.
+  str: DVB Auto-Setup
+  str: Add New DVB Services
+  str: Universal
+  str: Vertical
+  str: Video PID
+  str: Audio PID
+  str: DVB Manual Tuning
+  str: 9750 MHz (Universal)
+  str: 10600 MHz (Universal)
+  str: Multi Video
+  str: This will take several minutes.
+  str: Vertikal
+  str: Multi-Audio
+  str: Kanal nicht verf
+  str: Eine neue Version wird gesucht:
+  str: Aktuelle Version ~ ist die neueste Version
+  str: Es wurde eine neue Softwareversion gefunden.
+  str: Neue DVB Programme hinzuf
+  str: System Update fehlgeschlagen.
+  str: Bitte versuchen Sie es sp
+  str: Manueller Suchlauf (DVB)
+  str: Aktualisierung fehlgeschlagen.
+  str: Multi-Video
+  str: empty menu: enter behaves like cancel
+
+=== STB DMR-EX81S_STB_112_a9ad8d2c.bin (sz=1566592 B, sha256=a9ad8d2c6fa6726896d16f052586628292aed946e1748918d82c49ffbd12bf5f, arch=STMicro_ST20_OS20) ===
+head=202020632020202028234cfd58e717c0 | build=None
+  str:  MPEG_EventTask
+  str: MPEG_VideoDecoderControlTask
+  str: MPEG_AudioDecoderControlTask
+  str: WSS_Control_Task
+  str:   FlashControl_Task
+  str: incompatible version
+  str:  I2CBACK
+  str: FE_ControlTask
+  str:   TimerTaskRx
+  str: TimerTaskTx
+  str: UART_AM34ReceiveTask
+  str: OSDNavTask
+  str: Multi Audio
+  str: Searching for new version :
+  str: Current version ~ is up to date
+  str: A new software version has been found.
+  str: DVB Auto-Setup
+  str: Add New DVB Services
+  str: OPTION: Select Advert
+  str: Universal
+  str: Vertical
+  str: Video PID
+  str: Audio PID
+  str: DVB Manual Tuning
+  str: 9750 MHz (Universal)
+  str: 10600 MHz (Universal)
+  str: Multi Video
+  str: This will take several minutes.
+  str: Universal LNB System
+  str: Vertikal
+  str: Multi-Audio
+  str: Kanal nicht verf
+  str: Eine neue Version wird gesucht:
+  str: Aktuelle Version ~ ist die neueste Version
+  str: Es wurde eine neue Softwareversion gefunden.
+  str: Neue DVB Programme hinzuf
+  str: System Update fehlgeschlagen.
+  str: Bitte versuchen Sie es sp
+  str: Videotext
+  str: gehen verloren! Fortfahren?
+
+=== STB DMR-EX83_STB_109_EC_3b693470.bin (sz=1619520 B, sha256=3b693470a0aa644171c50d9a0d803bf107206568952b6ab7e0e96753203bba04, arch=STMicro_ST20_OS20) ===
+head=2020206320202020202240fd18b618c0 | build=None
+  str: MPEG_EventTask
+  str: MPEG_VideoDecoderControlTask
+  str: MPEG_AudioDecoderControlTask
+  str: WSS_Control_Task
+  str:    FlashControl_Task
+  str: incompatible version
+  str:   FE_ControlTask
+  str:   TimerTaskRx
+  str: TimerTaskTx
+  str:  UART_AM34ReceiveTask
+  str: OSDNavTask
+  str: Multi Audio
+  str: Searching for new version:
+  str: Current version is up to date
+  str: A new software version has been found.
+  str: DVB Auto Setup
+  str: Add New DVB Channels
+  str: ~ new DVB channel found.
+  str: ~ new DVB channels found.
+  str: No new DVB channels found.
+  str: OPTION: Select Advert
+  str: Universal
+  str: Vertical
+  str: Video PID
+  str: Audio PID
+  str: DVB Manual Tuning
+  str: ~ DVB channel found.
+  str: ~ DVB channels found.
+  str: No DVB channels found.
+  str: 9750 MHz (Universal)
+  str: 10600 MHz (Universal)
+  str: Multi Video
+  str: This will take several minutes.
+  str: Universal LNB System
+  str: DVB Channel
+  str: DVB Signal Condition
+  str: OPTION: Select Advert, etc.
+  str: DVB Region Selection
+  str: Vertikal
+  str: Multi-Audio
+
+=== STB DMR-EX84C_STB_107_CE_ce81e8cb.bin (sz=3257288 B, sha256=ce81e8cb113b1c76a6ff311867be05d394d45890ca9aed60e4e8d315c6ded35d, arch=MStar_MIPS_ARM_R2) ===
+head=4d532045583834430000000000000000 | build=None
+  (high-entropy/binary payload)
+
+=== STB DMR-EX86_STB_107_f06dd562.bin (sz=1972000 B, sha256=f06dd5623183d38ce37b6813e870ad505f0709345894ba741928273a32fcbb5d, arch=STMicro_ST20_OS20) ===
+head=2020206320202020202240fdf8161ec0 | build=None
+  str: MPEG_EventTask
+  str: MPEG_VideoDecoderControlTask
+  str: MPEG_AudioDecoderControlTask
+  str: WSS_Control_Task
+  str:   FlashControl_Task
+  str: incompatible version
+  str:   FE_ControlTask
+  str:   TimerTaskRx
+  str: TimerTaskTx
+  str:  UART_AM34ReceiveTask
+  str: OSDNavTask
+  str: Multi Audio
+  str: Searching for new version:
+  str: Current version is up to date
+  str: A new software version has been found.
+  str: DVB Auto Setup
+  str: Add New DVB Channels
+  str: ~ new DVB channel found.
+  str: ~ new DVB channels found.
+  str: No new DVB channels found.
+  str: OPTION: Select Advert
+  str: Universal
+  str: Vertical
+  str: Video PID
+  str: Audio PID
+  str: DVB Manual Tuning
+  str: ~ DVB channel found.
+  str: ~ DVB channels found.
+  str: No DVB channels found.
+  str: 9750 MHz (Universal)
+  str: 10600 MHz (Universal)
+  str: Multi Video
+  str: This will take several minutes.
+  str: Universal LNB System
+  str: DVB Channel
+  str: DVB Signal Condition
+  str: OPTION: Select Advert, etc.
+  str: DVB Region Selection
+  str:  OAD_Task
+  str:   CT_EventControl_Task
+
+=== STB DMR-EX93_STB_139_CE_293dbadd.bin (sz=3256840 B, sha256=293dbadd2141575534093e90a31b36f3a9dc80f31b60b97f36466c59f20dc073, arch=MStar_MIPS_ARM_R2) ===
+head=4d532045583933430000000000000000 | build=None
+  str: (iZfheh]
+  str: 3*iCha[Eh`
+  str: O$+@>eh|~
+  str: SwEHkd/i
+  str: !cMeH,F?G
+
+=== STB DMR-EZ49V_STB_105_d7c163f2.bin (sz=1971832 B, sha256=d7c163f290b55a9714161785bf3008262f805228e619ae6230ac1ea338ec958f, arch=STMicro_ST20_OS20) ===
+head=2020206320202020202240fd50161ec0 | build=None
+  str: MPEG_EventTask
+  str: MPEG_VideoDecoderControlTask
+  str: MPEG_AudioDecoderControlTask
+  str: WSS_Control_Task
+  str:   FlashControl_Task
+  str: incompatible version
+  str:   FE_ControlTask
+  str:   TimerTaskRx
+  str: TimerTaskTx
+  str:  UART_AM34ReceiveTask
+  str: OSDNavTask
+  str: Multi Audio
+  str: Searching for new version:
+  str: Current version is up to date
+  str: A new software version has been found.
+  str: DVB Auto Setup
+  str: Add New DVB Channels
+  str: ~ new DVB channel found.
+  str: ~ new DVB channels found.
+  str: No new DVB channels found.
+  str: OPTION: Select Advert
+  str: Universal
+  str: Vertical
+  str: Video PID
+  str: Audio PID
+  str: DVB Manual Tuning
+  str: ~ DVB channel found.
+  str: ~ DVB channels found.
+  str: No DVB channels found.
+  str: 9750 MHz (Universal)
+  str: 10600 MHz (Universal)
+  str: Multi Video
+  str: This will take several minutes.
+  str: Universal LNB System
+  str: DVB Channel
+  str: DVB Signal Condition
+  str: OPTION: Select Advert, etc.
+  str: DVB Region Selection
+  str:  OAD_Task
+  str:   CT_EventControl_Task
+
+=== EXCLUDED EXTERNAL-KEY / SCAN ITEMS ===
+{
+  "origin": "firmware_and_images/dmr-ex_ez_series/ex97eb/PANAEUSB.FRM",
+  "sha256": "f62bc64672fe3931a1987ff8d76098ce755e1b4647ad6f3983874c154e892fb2",
+  "size_bytes": 107417648,
+  "head_hex": "62d200f9291b539942faae11e281c9d6a436d4bb3b14a3ba9dd07bd4d045195c",
+  "entropy": 7.9998,
+  "status": "NON_FEISTEL_OR_NON_EXECUTABLE",
+  "reason": "AES-128-CBC / custom USB container requiring external keys.ukf (entropy ~8.0)"
+}
+{
+  "origin": "firmware_and_images/dmr-ex_ez_series/ex97seg_ceg/PANAEUSB.FRM",
+  "sha256": "25131e36cd0e1912d7be4d3ce26c222b0670cacb289b197ce60119c0943a65f8",
+  "size_bytes": 112152576,
+  "head_hex": "832d6987a1bf3932a85dc23135df7d4baa960a00a79f9c0d0f7f2daf770868d3",
+  "entropy": 7.9998,
+  "status": "NON_FEISTEL_OR_NON_EXECUTABLE",
+  "reason": "AES-128-CBC / custom USB container requiring external keys.ukf (entropy ~8.0)"
+}
+{
+  "origin": "firmware_and_images/dmr-ex98v/panasonic_dmr_ex98v_firmware_cd.zip",
+  "sha256": "55ecfe159a30db2491ceba89f80a37f0d2c934cd7a9e4a8f627866c8bce4f666",
+  "size_bytes": 3273612,
+  "head_hex": "504b03040a0000000000ac83fa5800000000000000000000000026001c005061",
+  "entropy": 7.9995,
+  "status": "NON_FEISTEL_OR_NON_EXECUTABLE",
+  "reason": "ZIP archive containing 11 AVForums .jp2 photo scans only (no executable firmware binary)"
+}

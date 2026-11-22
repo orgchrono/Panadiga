@@ -149,7 +149,7 @@ pub(super) fn emit_scratchpad_probe_seq(
     emit_taskfile_snapshot(buf, channel_mmio, out_va, sentinel)
 }
 
-/// Builds the F/E release + `DRV S211` decompression stub (`0xC000_1008 |= 0x8002`).
+/// Builds the F/E release + `DRV S211` decompression stub (`0xC000_1008 |= 0x807F`).
 pub fn build_fe_release_stub(sdram_base: u32) -> CompiledProbeStub {
     let mut buf = Vec::with_capacity(96);
     emit_add_sp_imm8(&mut buf, -0x10);
@@ -161,7 +161,7 @@ pub fn build_fe_release_stub(sdram_base: u32) -> CompiledProbeStub {
     emit_mmio_write32(&mut buf, 0xDC0F_0080, 0x0020_2000);
     buf.extend_from_slice(&[0xFC, 0xAC]);
     buf.extend_from_slice(&AM34_SYS_STATUS_REG.to_le_bytes());
-    buf.extend_from_slice(&[0x81, 0xFA, 0xE5, 0x02, 0x80, 0xFC, 0x87]);
+    buf.extend_from_slice(&[0x81, 0xFA, 0xE5, 0x7F, 0x80, 0xFC, 0x87]);
     buf.extend_from_slice(&AM34_SYS_STATUS_REG.to_le_bytes());
     emit_add_sp_imm8(&mut buf, 0x10);
     emit_rets(&mut buf);

@@ -3,6 +3,10 @@
   "isa": "MN10300/AM34",
   "endianness": "little",
   "logic_voltage_mv": 3300,
+  "ghidra_language_id": "mn10300:LE:32:default",
+  "ghidra_compiler_id": "default",
+  "ghidra_sleigh_provider": "GhidraMn10300+am33_panadiga_zero_undef.patch",
+  "default_base_address": "0x4000_0000",
   "evidence": {
     "tier": "bench_verified",
     "sources": [

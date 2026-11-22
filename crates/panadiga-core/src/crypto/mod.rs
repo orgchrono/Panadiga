@@ -3,6 +3,7 @@
 //! Analyzes encrypted Panasonic container formats (`PANA_DVD.FRM`) and correlates
 //! 64-bit Feistel cipher blocks with HDD partition structures.
 
+pub mod aes128;
 pub mod codebook;
 pub mod codec;
 pub mod entropy;
@@ -13,9 +14,14 @@ pub mod pana_fw_go;
 pub mod toc;
 pub mod toc_io;
 pub mod types;
+pub mod universal_frm;
 
+pub use aes128::{
+    FrmKeyring, PANA_DVD_AES_CATALOG, PanaAesKeyPair, PanaFeistelKey, aes128_cbc_decrypt_in_place,
+    aes128_cbc_encrypt_in_place, aes128_decrypt_block, aes128_encrypt_block, derive_network_key_iv,
+};
 pub use codebook::{correlate_hdd_partitions, print_codebook};
-pub use codec::parse_u32_radix;
+pub use codec::{DecodedStbSlot, parse_u32_radix, try_decode_stb_slot};
 pub use entropy::{analyze_8byte_frequencies, analyze_frm_container};
 pub use extrhead::{
     ExtrheadCompressionAlgo, ExtrheadCryptMode, ExtrheadHeader, UnpackedExtrhead,
@@ -34,19 +40,28 @@ pub use frm_pack::{
     unpack_dvd_frm_to_modules, verify_packed_frm_roundtrip,
 };
 pub use pana_fw_go::{
-    CramFsHeaderInfo, DRV_HEADER_SIZE, DRV_TAIL_CLEAR_BYTES, DriveHeaderInfo,
+    AesHeader, AesHeaderFileEntry, CramFsHeaderInfo, DRV_HEADER_SIZE, DRV_TAIL_CLEAR_BYTES,
+    DriveHeaderInfo, ElfMetadata, ExtractedFsEntry, ExtractedFsEntryKind, FsExtractReport,
     KaseikyoServiceCommand, MAIN_LIST_LEGACY_CRYPT_SPAN, MAIN_LIST_LEGACY_SEGMENT_TARGET_SIZE,
     MAIN_LIST_MODERN_CRYPT_SPAN, MAIN_LIST_MODERN_SEGMENT_TARGET_SIZE, MainListEntry,
-    MainListHeader, MainPartitionSlice, PANA_KASEIKYO_SERVICE_COMMANDS, PartitionFsKind,
-    RomFsHeaderInfo, UnpackedDrvModule, UnpackedMainList, checksum_affs, extract_drv_module,
-    find_feistel_key_slow, network_decipher_in_place, network_encipher_in_place, pack_drv_module,
-    pack_main_list, parse_main_list, split_main_partitions, verify_cramfs_header,
-    verify_romfs_header,
+    MainListHeader, MainPartitionSlice, PANA_AES_HEADER_MAGIC, PANA_AES_HEADER_SIZE,
+    PANA_KASEIKYO_SERVICE_COMMANDS, PartitionFsKind, RomFsHeaderInfo, UnpackedDrvModule,
+    UnpackedMainList, UnwrappedAesFrm, checksum_affs, detect_and_unwrap_aes_frm,
+    extract_cramfs_to_dir, extract_drv_module, extract_partition_fs, extract_romfs_to_dir,
+    find_feistel_key_slow, find_feistel_key_slow_with_keyring, network_decipher_in_place,
+    network_encipher_in_place, pack_drv_module, pack_main_list, parse_elf_metadata,
+    parse_main_list, reassemble_main_partitions, sanitize_fs_rel_path, split_main_partitions,
+    verify_cramfs_header, verify_romfs_header, wrap_aes_frm,
 };
 pub use toc::{
     TocLayout, analyze_frm_toc_report, analyze_toc, decrypt_and_parse_frm_toc,
-    decrypt_frm_toc_with_detected_key, format_toc_dump_lines, interpret_frm_target_flag,
-    parse_sd_frm_toc, parse_sd_frm_toc_with_layout,
+    decrypt_frm_toc_with_detected_key, decrypt_frm_toc_with_keyring, format_toc_dump_lines,
+    interpret_frm_target_flag, parse_sd_frm_toc, parse_sd_frm_toc_with_layout,
 };
 pub use toc_io::{dump_toc, read_and_analyze_frm_toc};
 pub use types::*;
+pub use universal_frm::{
+    FrmRepackOptions, FrmTargetMode, ModuleEncryptionKind, RepackCompression,
+    UniversalFrmContainer, UniversalFrmFormat, UniversalFrmModule, UniversalFrmRepackReport,
+    UniversalFrmSubContainer, repack_universal_frm, unpack_universal_frm,
+};

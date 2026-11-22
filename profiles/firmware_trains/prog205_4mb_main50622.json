@@ -1,5 +1,6 @@
 {
   "id": "prog205_4mb_main50622",
+  "soc_core_ref": "mn10300_am34",
   "loader_version": "2.05",
   "loader_date": "10/07/27",
   "loader_profile_key": "prog071",

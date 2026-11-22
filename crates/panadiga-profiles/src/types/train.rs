@@ -36,6 +36,16 @@ pub struct FrmContainerSpec {
     pub official_frm_sha256: Option<String>,
 }
 
+/// Cryptographic / integrity trust model verified for stage-1.5 `DIGADIAG.FRM` boot.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum DigadiagTrustModel {
+    Checksum32Only,
+    EncryptedToc,
+    RsaSigned,
+    Unknown,
+}
+
 /// SD stage-1.5 `DIGADIAG.FRM` specification declared per firmware train.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -55,6 +65,8 @@ pub struct DigadiagSpec {
     pub bgo_geometry_target: String,
     pub fvu_decoupled_mode: String,
     pub sd_media_requirement: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub trust_model: Option<DigadiagTrustModel>,
 }
 
 /// Container rebuild recipe defining `PANA__SD.FRM` / `PANA_DVD.FRM` assembly from live dumps.
@@ -179,6 +191,8 @@ pub struct ProgBgoRetargetSpec {
 #[serde(deny_unknown_fields)]
 pub struct FirmwareTrainProfile {
     pub id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub soc_core_ref: Option<String>,
     pub loader_version: String,
     #[serde(default)]
     pub loader_date: Option<String>,

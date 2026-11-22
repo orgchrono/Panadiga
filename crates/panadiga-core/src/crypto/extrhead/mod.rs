@@ -19,6 +19,6 @@ pub use codec::{
 };
 #[cfg(test)]
 pub(crate) use crypt::apply_partial_crypt_with_key;
-pub(crate) use crypt::detect_extrhead_key_and_double;
+pub(crate) use crypt::{decompress_payload_by_algo, detect_extrhead_key_and_double};
 pub use lzss::{compress_pana_lzss, decompress_pana_lzss};
 pub use types::{ExtrheadCompressionAlgo, ExtrheadCryptMode, ExtrheadHeader, UnpackedExtrhead};

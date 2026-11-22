@@ -3,6 +3,10 @@
   "isa": "ARMv8-A Cortex-A53 (Panasonic UniPhier LD11/LD20/PXs3)",
   "endianness": "little",
   "logic_voltage_mv": 3300,
+  "ghidra_language_id": "AARCH64:LE:64:v8A",
+  "ghidra_compiler_id": "default",
+  "ghidra_sleigh_provider": "builtin",
+  "default_base_address": "0x8008_0000",
   "evidence": {
     "tier": "service_manual_only",
     "sources": [

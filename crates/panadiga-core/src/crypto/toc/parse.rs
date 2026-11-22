@@ -2,9 +2,10 @@
 
 //! Deterministic `.FRM` TOC entry decoding, Feistel auto-detection, and flag interpretation.
 
+use super::super::aes128::FrmKeyring;
 use super::super::codec::{extract_c_ascii, read_u16_le, read_u32_le};
 use super::super::feistel::{
-    adler32_panasonic_strided, detect_frm_feistel_key, feistel_decrypt_buffer,
+    adler32_panasonic_strided, feistel_decrypt_buffer, header_matches_round_key,
 };
 use super::super::types::DecryptedFrmTocEntry;
 use super::layout::{
@@ -18,17 +19,17 @@ use crate::constants::{
 const PANASONIC_OUTER_HEADER_MAGIC: &[u8; 12] = b"PANASONIC\0\0\0";
 const PANASONIC_OUTER_HEADER_LEN: usize = 0x30;
 
-fn strip_panasonic_outer_header(bytes: &[u8]) -> &[u8] {
+pub(crate) fn strip_panasonic_outer_header(bytes: &[u8]) -> (&[u8], bool) {
     if bytes.len() >= PANASONIC_OUTER_HEADER_LEN + 8
         && bytes.starts_with(PANASONIC_OUTER_HEADER_MAGIC)
     {
-        &bytes[PANASONIC_OUTER_HEADER_LEN..]
+        (&bytes[PANASONIC_OUTER_HEADER_LEN..], true)
     } else {
-        bytes
+        (bytes, false)
     }
 }
 
-fn is_adler32_toc_entry(entry: &[u8], stride: usize) -> bool {
+pub(crate) fn is_adler32_toc_entry(entry: &[u8], stride: usize) -> bool {
     stride == PANA_FRM_TOC_ENTRY_SIZE
         && entry.len() >= PANA_FRM_TOC_ENTRY_SIZE
         && entry[0] != 0
@@ -92,23 +93,31 @@ fn entry_list_sum_valid(decrypted_slot: &[u8], stride: usize) -> bool {
     expected == computed || is_adler32_toc_entry(decrypted_slot, stride)
 }
 
-fn detect_toc_feistel_key(bytes: &[u8], toc_span: usize) -> Option<(&'static str, [u8; 32])> {
+fn detect_toc_key_in_candidates(
+    bytes: &[u8],
+    toc_span: usize,
+    candidates: &[(String, [u8; 32])],
+) -> Option<(String, [u8; 32])> {
     let head_len = toc_span.min(0x80);
-    if head_len >= 8
-        && let Some(found) = detect_frm_feistel_key(&bytes[..head_len])
-    {
-        return Some(found);
+    if head_len >= 8 {
+        for (name, rk) in candidates {
+            if header_matches_round_key(&bytes[..head_len], rk) {
+                return Some((name.clone(), *rk));
+            }
+        }
     }
     let mut off = 0x40usize;
     while off + 8 <= toc_span {
         let end = toc_span.min(off + 0x80);
-        if let Some((name, rk)) = detect_frm_feistel_key(&bytes[off..end]) {
-            let mut probe = bytes[off..end].to_vec();
-            feistel_decrypt_buffer(&mut probe, &rk, &PANA_FEISTEL_SBOX_256);
-            if entry_list_sum_valid(&probe, PANA_SD_TOC_ENTRY_SIZE)
-                || entry_list_sum_valid(&probe, PANA_FRM_TOC_ENTRY_SIZE)
-            {
-                return Some((name, rk));
+        for (name, rk) in candidates {
+            if header_matches_round_key(&bytes[off..end], rk) {
+                let mut probe = bytes[off..end].to_vec();
+                feistel_decrypt_buffer(&mut probe, rk, &PANA_FEISTEL_SBOX_256);
+                if entry_list_sum_valid(&probe, PANA_SD_TOC_ENTRY_SIZE)
+                    || entry_list_sum_valid(&probe, PANA_FRM_TOC_ENTRY_SIZE)
+                {
+                    return Some((name.clone(), *rk));
+                }
             }
         }
         off += 0x40;
@@ -116,21 +125,27 @@ fn detect_toc_feistel_key(bytes: &[u8], toc_span: usize) -> Option<(&'static str
     None
 }
 
-/// Decrypts the `.FRM` TOC using the detected Feistel key and auto-discriminates `Dvd48B` vs `Dvd64B`.
-pub fn decrypt_frm_toc_with_detected_key(
+/// Decrypts the `.FRM` TOC using `keyring` (`builtin` + optional `keys.ukf`) and auto-discriminates `Dvd48B` vs `Dvd64B`.
+pub fn decrypt_frm_toc_with_keyring(
     bytes: &[u8],
+    keyring: &FrmKeyring,
 ) -> (
-    Option<&'static str>,
+    Option<String>,
     [u8; 32],
     TocLayout,
     Vec<DecryptedFrmTocEntry>,
 ) {
-    let toc_bytes = strip_panasonic_outer_header(bytes);
+    let (toc_bytes, _) = strip_panasonic_outer_header(bytes);
     let toc_span = toc_bytes.len().min(PANA_SD_TOC_REGION_SIZE) & !7;
     if toc_span < 8 {
         return (None, [0u8; 32], TocLayout::Dvd48B, Vec::new());
     }
-    let Some((key_name, round_key)) = detect_toc_feistel_key(toc_bytes, toc_span) else {
+
+    let candidates = keyring.feistel_round_key_candidates();
+
+    let Some((key_name, round_key)) =
+        detect_toc_key_in_candidates(toc_bytes, toc_span, &candidates)
+    else {
         return (None, [0u8; 32], TocLayout::Dvd48B, Vec::new());
     };
 
@@ -203,6 +218,30 @@ pub fn decrypt_frm_toc_with_detected_key(
         TocLayout::Dvd48B,
         valid_entries48,
     )
+}
+
+/// Decrypts the `.FRM` TOC using the built-in Feistel key catalog and auto-discriminates `Dvd48B` vs `Dvd64B`.
+pub fn decrypt_frm_toc_with_detected_key(
+    bytes: &[u8],
+) -> (
+    Option<&'static str>,
+    [u8; 32],
+    TocLayout,
+    Vec<DecryptedFrmTocEntry>,
+) {
+    let (name_opt, rk, layout, entries) =
+        decrypt_frm_toc_with_keyring(bytes, &FrmKeyring::builtin());
+    let static_name = name_opt.and_then(|n| {
+        if n == "old_df72" {
+            Some("old_df72")
+        } else {
+            super::super::feistel::PANA_DVD_KEY_CATALOG
+                .iter()
+                .find(|&&(kname, _)| kname == n)
+                .map(|&(kname, _)| kname)
+        }
+    });
+    (static_name, rk, layout, entries)
 }
 
 /// Decrypts the Table of Contents of `PANA_DVD.FRM` using auto-detected key and layout.

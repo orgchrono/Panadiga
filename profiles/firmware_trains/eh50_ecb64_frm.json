@@ -1,5 +1,6 @@
 {
   "id": "eh50_ecb64_frm",
+  "soc_core_ref": "mn10300_am34",
   "loader_version": "0.19",
   "loader_date": "05/07/19",
   "loader_profile_key": "eh50_frm",
@@ -11,7 +12,7 @@
     "key_id": "le2011_08e0",
     "official_frm_sha256": "4ed6a64bd6ff1e0f51e3655ab17b1c594e91f3e7bf8d9219a82a1636068b54b7"
   },
-  "prog_load_va": "0x5003_0000",
+  "prog_load_va": "0x5003_0400",
   "main_load_va": "0x5700_0400",
   "drv_load_va": "0x9020_2000",
   "symbols": {},

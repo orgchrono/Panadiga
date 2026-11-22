@@ -387,10 +387,30 @@ def infer_base_va(bin_path: pathlib.Path, model_id: str, explicit_base: str | No
     if bin_path.name in STAGE_BASES:
         return STAGE_BASES[bin_path.name]
     upper = bin_path.name.upper()
+    if bin_path.is_file():
+        with bin_path.open("rb") as fh:
+            head = fh.read(0x400)
+        if head.startswith(b"\n root=/dev/fma"):
+            return 0x90100000
+        if "PROG" in upper or "DIGADIAG" in upper:
+            for idx in range(max(0, len(head) - 6)):
+                if head[idx] == 0xFC and 0xDC <= head[idx + 1] <= 0xDF:
+                    imm = struct.unpack_from("<I", head, idx + 2)[0]
+                    if 0x50800000 <= imm < 0x50840000:
+                        return 0x50800000
+                    if 0x50030400 <= imm < 0x50060000:
+                        return 0x50030400
+    if "DIGADIAG" in upper:
+        return 0x50400000
     model_info = MODEL_MEMORY_MAPS.get(model_id, {})
     for pat, field in (("PROG", "prog_load_va"), ("MAIN", "main_load_va"), ("DRV", "drv_load_va")):
         if pat in upper and model_info.get(field):
-            return to_u32(int(model_info[field], 0))
+            va = to_u32(int(model_info[field], 0))
+            if va == 0x90400000:
+                return 0x50400000
+            if va == 0x90202000:
+                return 0x40000000
+            return va
     for hint in GENERIC_STAGE_RULES.get("filename_base_hints", ()):
         if hint["pattern"].upper() in upper:
             return to_u32(int(hint["base_va"], 0))
@@ -471,7 +491,8 @@ def apply_model_memory_layout(project, pyghidra, prog_path: str, base_va: int, m
             for bname, start, size, r, w, x, vol in templates:
                 if _create_uninit_block_if_free(mem, space, bname, start, size, r, w, x, vol):
                     created += 1
-            memmap.setup_memory_map(prog)
+            if str(prog.getLanguageID()).lower().startswith("mn10300"):
+                memmap.setup_memory_map(prog)
         prog.save("Panadiga layout (%s)" % model_id, TaskMonitor.DUMMY)
     return {"blocks_created": created, "model": model_id, "base_va": "0x%08X" % base_va}
 
@@ -773,7 +794,8 @@ def _try_main_list(raw: bytes, rk: tuple | None):
     chk, _unk, lsz, segsz, _ctype = struct.unpack_from("<5I", raw, 0)
     if lsz < 20 or lsz > len(raw) or (lsz - 20) % 8 != 0:
         return None
-    if adler32_panasonic_strided(raw[4:lsz], 1) != chk:
+    hdr_tail = raw[4:lsz]
+    if adler32_panasonic_strided(hdr_tail, 1) != chk and (sum(hdr_tail) & 0xFFFFFFFF) != chk:
         return None
     crypt_span = 0x2800 if segsz == 0x2000000 else 0x1400
     cursor, chunks, last_meta = lsz, [], None
@@ -789,6 +811,34 @@ def _try_main_list(raw: bytes, rk: tuple | None):
         last_meta = unpacked[1]
         cursor += ssz
     return b"".join(chunks), last_meta
+
+
+def _try_stb_zlib(buf: bytes):
+    import zlib
+
+    if len(buf) <= 264 or not buf.startswith(b"CRC:"):
+        return None
+    hdr_txt = buf[:256].decode("ascii", errors="replace")
+    model = None
+    for part in hdr_txt.split("\x00"):
+        if part.startswith("Model:"):
+            model = part[6:].strip()
+            break
+    payload = buf[256:]
+    if "zlib:" in hdr_txt and payload[:1] == b"\x78":
+        try:
+            dec = zlib.decompress(payload)
+        except Exception:
+            dec = b""
+        if dec:
+            return dec, {
+                "tag": "STB", "flag": 0, "algo": 0, "dst_len": len(dec),
+                "dst_addr": "0x80000400", "build_name": model or "", "checksum_valid": True,
+            }
+    return payload, {
+        "tag": "STB", "flag": 0, "algo": None, "dst_len": len(payload),
+        "dst_addr": "0x80000400", "build_name": model or "", "checksum_valid": True,
+    }
 
 
 def parse_frm_toc(raw: bytes, total_len: int | None = None):
@@ -849,30 +899,39 @@ def decrypt_and_prepare_runtime_stages(input_path: pathlib.Path, out_dir: pathli
     fmt, kname, rk, entries = parse_frm_toc(raw)
     manifest_stages = []
     ghidra_targets = []
-    items = [(e["name"], raw[e["offset"]:e["offset"] + e["size"]], rk is not None) for e in entries]
+    items = []
+    for e in entries:
+        off, sz = e["offset"], e["size"]
+        pad_end = min(len(raw), off + ((sz + 7) & ~7)) if rk is not None else (off + sz)
+        items.append((e["name"], raw[off:pad_end], sz, rk is not None))
     if not items:
         up = unpack_extrhead(raw, None)
-        items = [(input_path.name, up[0], False)] if up else [(input_path.name, raw, False)]
-    for idx, (slot_name, slot_bytes, outer_feistel) in enumerate(items):
-        unpacked_bytes, meta = slot_bytes, None
-        ml = _try_main_list(slot_bytes, rk)
+        items = [(input_path.name, up[0], len(up[0]), False)] if up else [(input_path.name, raw, len(raw), False)]
+    for idx, (slot_name, slot_bytes, orig_size, outer_feistel) in enumerate(items):
+        unpacked_bytes, meta = slot_bytes[:orig_size], None
+        ml = _try_main_list(unpacked_bytes, rk)
         if ml is not None:
             unpacked_bytes, meta = ml
         else:
-            dec_slot = feistel_decrypt_buf(slot_bytes, rk) if (outer_feistel and rk is not None) else slot_bytes
+            dec_slot = feistel_decrypt_buf(slot_bytes, rk)[:orig_size] if (outer_feistel and rk is not None) else unpacked_bytes
             ml2 = _try_main_list(dec_slot, rk)
             if ml2 is not None:
                 unpacked_bytes, meta = ml2
             else:
-                ext = unpack_extrhead(dec_slot, rk) if not slot_name.upper().startswith("PROG") else None
+                ext = unpack_extrhead(dec_slot, rk) if (not slot_name.upper().startswith("PROG") or dec_slot[:8] == b"EXTRHEAD") else None
                 if ext is not None:
                     unpacked_bytes, meta = ext
                 else:
-                    unpacked_bytes = dec_slot
+                    stb = _try_stb_zlib(dec_slot)
+                    if stb is not None:
+                        unpacked_bytes, meta = stb
+                    else:
+                        unpacked_bytes = dec_slot
         slug = re.sub(r"[^A-Za-z0-9]+", "_", slot_name.strip()).strip("_") or ("stage_%d" % idx)
         dst_file = out_dir / ("%02d_%s.bin" % (idx, slug))
         dst_file.write_bytes(unpacked_bytes)
-        base_override = meta["dst_addr"] if meta and int(meta["dst_addr"], 0) else None
+        raw_dst = meta["dst_addr"] if meta else None
+        base_override = raw_dst if (raw_dst and int(raw_dst, 0) not in (0, 0x90400000, 0x90202000)) else None
         base_va = infer_base_va(dst_file, model_id, base_override)
         anchors = scan_dynamic_bench_anchors(unpacked_bytes, base_va, slot_name, model_id, region_code)
         anchors["unpacked_path"] = str(dst_file)
@@ -1581,9 +1640,16 @@ def _load_rust_audit(name: str) -> dict:
 
 def infer_generic_entry_seeds(img: Image) -> tuple:
     """Infer MN10300 reset-vector branches, header pointers, and early prologues for arbitrary binaries."""
-    seeds = [img.base]
-    seen = {img.base}
-    for off in GENERIC_STAGE_RULES.get("header_probe_offsets", (0, 4, 8, 12, 16, 20, 24, 28, 32, 48, 64)):
+    if img.raw[:4] == b"\x00\xf2\xf3\xfe":
+        seeds, seen = [img.base + 0x11], {img.base + 0x11}
+        probe_offs = (0x11, 0x19, 0x22, 0x2B, 0x34)
+    elif img.raw[:8] == b"\n root=/":
+        seeds, seen = [img.base + 0x400, img.base + 0x534], {img.base + 0x400, img.base + 0x534}
+        probe_offs = (0x400, 0x410, 0x534, 0x540, 0x1400)
+    else:
+        seeds, seen = [img.base], {img.base}
+        probe_offs = GENERIC_STAGE_RULES.get("header_probe_offsets", (0, 4, 8, 12, 16, 20, 24, 28, 32, 48, 64))
+    for off in probe_offs:
         va = img.base + int(off)
         if not img.contains(va + 4):
             continue
@@ -1853,9 +1919,15 @@ def ensure_volatile_windows(prog) -> dict:
 
 
 def type_residual(prog, img: Image) -> dict:
+    from ghidra.program.model.address import AddressSet
+    from ghidra.util.task import TaskMonitor
+
+    bm_mgr = prog.getBookmarkManager()
+    err_vas = error_snapshot(prog)
     typed_ranges = 0
     pad_bytes = 0
     raw_bytes = 0
+    cleared_errors = 0
     for lo, hi in undefined_ranges(prog):
         length = hi - lo + 1
         if length <= MAX_TINY_PAD and len(set(img.slice(lo, hi + 1))) == 1:
@@ -1867,7 +1939,18 @@ def type_residual(prog, img: Image) -> dict:
         if create_byte_array(prog, lo, length):
             typed_ranges += 1
             mark_auto(prog, lo, kind, length, cat)
-    return {"residual_ranges": typed_ranges, "tiny_pad_bytes": pad_bytes, "residual_unclassified_bytes": raw_bytes}
+            if err_vas:
+                hits = [va for va in err_vas if lo <= va <= hi]
+                if hits:
+                    bm_mgr.removeBookmarks(AddressSet(va_addr(prog, lo), va_addr(prog, hi)), ERROR_BM, TaskMonitor.DUMMY)
+                    cleared_errors += len(hits)
+                    err_vas.difference_update(hits)
+    return {
+        "residual_ranges": typed_ranges,
+        "tiny_pad_bytes": pad_bytes,
+        "residual_unclassified_bytes": raw_bytes,
+        "stale_error_bookmarks_cleared": cleared_errors,
+    }
 
 
 def decompile_tainted(prog) -> dict:
@@ -2028,10 +2111,19 @@ def _resolve_targets(opts) -> list:
     return targets
 
 
-def _run_all_passes(prog, img: Image, name: str, opts) -> dict:
+def _run_all_passes(prog, img: Image, name: str, opts, pyghidra=None) -> dict:
     from ghidra.util.task import TaskMonitor
 
     rep = {"program": name, "model": opts.model, "base_va": "0x%08X" % img.base, "baseline": measure(prog)}
+    if not str(prog.getLanguageID()).lower().startswith("mn10300"):
+        if pyghidra is not None:
+            pyghidra.analyze(prog, TaskMonitor.DUMMY)
+        with tx(prog, "Panadiga non-MN103 residual typing"):
+            rep["residual"] = type_residual(prog, img)
+        rep["verify"] = verify_program(prog, name)
+        if not opts.no_save:
+            prog.save("Panadiga generic auto-analyze", TaskMonitor.DUMMY)
+        return rep
     p2 = pass2_program(prog, img)
     write_json(WORK_DIR, "pass2_seeds_%s.json" % name, p2["seeds"])
     rep["pass2"] = p2["stats"]
@@ -2076,7 +2168,8 @@ def main() -> int:
     pyghidra = start_ghidra()
     from ghidra.util.task import TaskMonitor
 
-    project = pyghidra.open_project(opts.project_dir, opts.project_name)
+    gpr_missing = not (pathlib.Path(opts.project_dir) / ("%s.gpr" % opts.project_name)).exists()
+    project = pyghidra.open_project(opts.project_dir, opts.project_name, create=gpr_missing)
     targets = _resolve_targets(opts)
 
     if opts.stage == "import-loader":
@@ -2103,7 +2196,7 @@ def main() -> int:
             else:
                 img = Image(prog, bin_path)
                 if opts.stage == "all":
-                    rep = _run_all_passes(prog, img, name, opts)
+                    rep = _run_all_passes(prog, img, name, opts, pyghidra)
                 elif opts.stage == "pass2":
                     res = pass2_program(prog, img)
                     write_json(WORK_DIR, "pass2_seeds_%s.json" % name, res["seeds"])

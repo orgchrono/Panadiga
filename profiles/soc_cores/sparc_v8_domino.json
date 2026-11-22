@@ -3,6 +3,10 @@
   "isa": "SPARC V8 (LSI DoMiNo)",
   "endianness": "big",
   "logic_voltage_mv": 3300,
+  "ghidra_language_id": "sparc:BE:32:default",
+  "ghidra_compiler_id": "default",
+  "ghidra_sleigh_provider": "builtin",
+  "default_base_address": "0x8000_0000",
   "evidence": {
     "tier": "physical_dump_verified",
     "sources": [

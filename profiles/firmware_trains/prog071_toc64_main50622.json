@@ -1,5 +1,6 @@
 {
   "id": "prog071_toc64_main50622",
+  "soc_core_ref": "mn10300_am34",
   "loader_version": "0.71",
   "loader_date": "09/06/29",
   "loader_profile_key": "prog071",

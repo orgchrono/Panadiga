@@ -139,6 +139,14 @@ pub struct PrepareSdArgs {
     #[arg(long)]
     pub hardened_sd: bool,
 
+    /// Allow building an SD kit from an experimental/unverified (< T3) firmware_train profile (e.g. ver063 T2)
+    #[arg(long)]
+    pub allow_unverified_profile: bool,
+
+    /// Patch PANA__SD.FRM (PROG061 @ 0x5041D928 + MAIN3060NP @ 0x571122B2) 2 ms -> 1000 ms for SATA bridges (IDE2SAT2)
+    #[arg(long)]
+    pub sata_bridge_reset_fix: bool,
+
     /// Exports structured JSON build & verification report
     #[arg(short, long, value_name = "JSON_FILE")]
     pub json: Option<PathBuf>,
@@ -174,6 +182,14 @@ pub struct RebuildFromDumpArgs {
     /// Destination directory for rebuilt SD unbrick kit
     #[arg(short, long, value_name = "DIR")]
     pub out_dir: PathBuf,
+
+    /// Allow mixing NOR/DRV/MAIN builds whose loader version or family checksums cannot be strictly matched
+    #[arg(long)]
+    pub allow_unverified_mix: bool,
+
+    /// Allow rebuilding using an experimental/unverified (< T3) firmware_train profile
+    #[arg(long)]
+    pub allow_unverified_profile: bool,
 
     /// Exports structured JSON rebuild & verification report (`-` emits stdout JSON)
     #[arg(short, long, value_name = "JSON_FILE")]

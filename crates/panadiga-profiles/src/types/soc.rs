@@ -32,6 +32,15 @@ pub struct SocCoreProfile {
     pub isa: String,
     pub endianness: String,
     pub logic_voltage_mv: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ghidra_language_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ghidra_compiler_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ghidra_sleigh_provider: Option<String>,
+    #[serde(default, with = "opt_hex_u32", skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "Option<String>")]
+    pub default_base_address: Option<u32>,
     pub evidence: ClaimEvidence,
 }
 

@@ -291,7 +291,8 @@ def _try_main_list(raw: bytes, rk: tuple | None):
     chk, _unk, lsz, segsz, _ctype = struct.unpack_from("<5I", raw, 0)
     if lsz < 20 or lsz > len(raw) or (lsz - 20) % 8 != 0:
         return None
-    if adler32_panasonic_strided(raw[4:lsz], 1) != chk:
+    hdr_tail = raw[4:lsz]
+    if adler32_panasonic_strided(hdr_tail, 1) != chk and (sum(hdr_tail) & 0xFFFFFFFF) != chk:
         return None
     crypt_span = 0x2800 if segsz == 0x2000000 else 0x1400
     cursor, chunks, last_meta = lsz, [], None
@@ -307,6 +308,34 @@ def _try_main_list(raw: bytes, rk: tuple | None):
         last_meta = unpacked[1]
         cursor += ssz
     return b"".join(chunks), last_meta
+
+
+def _try_stb_zlib(buf: bytes):
+    import zlib
+
+    if len(buf) <= 264 or not buf.startswith(b"CRC:"):
+        return None
+    hdr_txt = buf[:256].decode("ascii", errors="replace")
+    model = None
+    for part in hdr_txt.split("\x00"):
+        if part.startswith("Model:"):
+            model = part[6:].strip()
+            break
+    payload = buf[256:]
+    if "zlib:" in hdr_txt and payload[:1] == b"\x78":
+        try:
+            dec = zlib.decompress(payload)
+        except Exception:
+            dec = b""
+        if dec:
+            return dec, {
+                "tag": "STB", "flag": 0, "algo": 0, "dst_len": len(dec),
+                "dst_addr": "0x80000400", "build_name": model or "", "checksum_valid": True,
+            }
+    return payload, {
+        "tag": "STB", "flag": 0, "algo": None, "dst_len": len(payload),
+        "dst_addr": "0x80000400", "build_name": model or "", "checksum_valid": True,
+    }
 
 
 def parse_frm_toc(raw: bytes, total_len: int | None = None):
@@ -367,30 +396,39 @@ def decrypt_and_prepare_runtime_stages(input_path: pathlib.Path, out_dir: pathli
     fmt, kname, rk, entries = parse_frm_toc(raw)
     manifest_stages = []
     ghidra_targets = []
-    items = [(e["name"], raw[e["offset"]:e["offset"] + e["size"]], rk is not None) for e in entries]
+    items = []
+    for e in entries:
+        off, sz = e["offset"], e["size"]
+        pad_end = min(len(raw), off + ((sz + 7) & ~7)) if rk is not None else (off + sz)
+        items.append((e["name"], raw[off:pad_end], sz, rk is not None))
     if not items:
         up = unpack_extrhead(raw, None)
-        items = [(input_path.name, up[0], False)] if up else [(input_path.name, raw, False)]
-    for idx, (slot_name, slot_bytes, outer_feistel) in enumerate(items):
-        unpacked_bytes, meta = slot_bytes, None
-        ml = _try_main_list(slot_bytes, rk)
+        items = [(input_path.name, up[0], len(up[0]), False)] if up else [(input_path.name, raw, len(raw), False)]
+    for idx, (slot_name, slot_bytes, orig_size, outer_feistel) in enumerate(items):
+        unpacked_bytes, meta = slot_bytes[:orig_size], None
+        ml = _try_main_list(unpacked_bytes, rk)
         if ml is not None:
             unpacked_bytes, meta = ml
         else:
-            dec_slot = feistel_decrypt_buf(slot_bytes, rk) if (outer_feistel and rk is not None) else slot_bytes
+            dec_slot = feistel_decrypt_buf(slot_bytes, rk)[:orig_size] if (outer_feistel and rk is not None) else unpacked_bytes
             ml2 = _try_main_list(dec_slot, rk)
             if ml2 is not None:
                 unpacked_bytes, meta = ml2
             else:
-                ext = unpack_extrhead(dec_slot, rk) if not slot_name.upper().startswith("PROG") else None
+                ext = unpack_extrhead(dec_slot, rk) if (not slot_name.upper().startswith("PROG") or dec_slot[:8] == b"EXTRHEAD") else None
                 if ext is not None:
                     unpacked_bytes, meta = ext
                 else:
-                    unpacked_bytes = dec_slot
+                    stb = _try_stb_zlib(dec_slot)
+                    if stb is not None:
+                        unpacked_bytes, meta = stb
+                    else:
+                        unpacked_bytes = dec_slot
         slug = re.sub(r"[^A-Za-z0-9]+", "_", slot_name.strip()).strip("_") or ("stage_%d" % idx)
         dst_file = out_dir / ("%02d_%s.bin" % (idx, slug))
         dst_file.write_bytes(unpacked_bytes)
-        base_override = meta["dst_addr"] if meta and int(meta["dst_addr"], 0) else None
+        raw_dst = meta["dst_addr"] if meta else None
+        base_override = raw_dst if (raw_dst and int(raw_dst, 0) not in (0, 0x90400000, 0x90202000)) else None
         base_va = infer_base_va(dst_file, model_id, base_override)
         anchors = scan_dynamic_bench_anchors(unpacked_bytes, base_va, slot_name, model_id, region_code)
         anchors["unpacked_path"] = str(dst_file)

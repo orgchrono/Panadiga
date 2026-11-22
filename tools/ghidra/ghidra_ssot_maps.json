@@ -777,7 +777,7 @@
       "model_id": "DMR-EH50",
       "nvram_cached_va": null,
       "nvram_uncached_va": null,
-      "prog_load_va": "0x50030000",
+      "prog_load_va": "0x50030400",
       "regions": [
         {
           "execute": true,
@@ -839,7 +839,7 @@
           "name": "TRAIN_PROG_RAM",
           "read": true,
           "size": "0x00080000",
-          "start": "0x50030000",
+          "start": "0x50030400",
           "write": true
         },
         {

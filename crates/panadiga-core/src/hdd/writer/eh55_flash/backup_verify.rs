@@ -18,7 +18,7 @@ use crate::constants::{
 use crate::nvram::calculate_hashes;
 
 use super::super::block_ops::{is_unconditional_os_boot_disk, verify_safety_lockout_with_os_disks};
-use super::super::discovery::detect_linux_host_os_disks;
+use super::super::discovery::detect_host_os_disks;
 use super::types::{
     BUS_TYPE_NVME, BlockFlashDevice, DEFAULT_EXPECTED_GB_RANGE, EH55_BACKUP_SECTOR_COUNT,
     EH55_FLASH_CHUNK_BYTES, Eh55FlashProgress, Eh55FlashStage, Eh55HddFlashRequest, MAX_ALLOWED_GB,
@@ -65,7 +65,7 @@ where
         );
     }
     let fallback_os_disks = if params.detected_os_disks.is_none() {
-        detect_linux_host_os_disks()
+        detect_host_os_disks()
     } else {
         None
     };

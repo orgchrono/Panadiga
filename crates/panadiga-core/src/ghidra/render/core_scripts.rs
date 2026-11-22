@@ -86,6 +86,20 @@ def get_panadiga_symbol_specs():
     return [
 {symbols_block}    ]
 
+def _symbol_applies_to_program(prog_name, name, blk):
+    low = (prog_name or "").lower()
+    if name.startswith("boot_"):
+        return "boot.bin" in low
+    if name == "EH55_BGO_GEOMETRY_TABLE":
+        return "ver061" in low
+    if name.startswith("prog061_"):
+        return ("prog061" in low or "digadiag" in low) and "ex78" not in low
+    if name.startswith("main_") or name.startswith("_dev_SERIAL"):
+        return "3410pq" in low
+    if not blk.isInitialized():
+        return True
+    return "eh55" in low or "nor" in low
+
 def import_symbols(prog=None):
     if prog is None:
         prog = currentProgram
@@ -103,7 +117,8 @@ def import_symbols(prog=None):
 
     for addr_val, name, comment, is_primary in symbols:
         addr = default_space.getAddress(addr_val)
-        if mem.getBlock(addr) is None:
+        blk = mem.getBlock(addr)
+        if blk is None or not _symbol_applies_to_program(prog.getName(), name, blk):
             skipped_unmapped += 1
             continue
         try:

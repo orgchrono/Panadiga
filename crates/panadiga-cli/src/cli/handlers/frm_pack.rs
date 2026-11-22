@@ -20,7 +20,7 @@ fn write_json_report<T: Serialize>(json_path: Option<&Path>, value: &T) -> Resul
     Ok(())
 }
 
-fn split_name_and_rest(spec: &str) -> Option<(&str, &str)> {
+pub(super) fn split_name_and_rest(spec: &str) -> Option<(&str, &str)> {
     match (spec.find(':'), spec.find('=')) {
         (Some(c), Some(e)) => {
             if c < e {
@@ -134,7 +134,7 @@ pub fn handle_frm_pack(args: &FrmPackArgs) -> Result<()> {
                 FrmContainerMode::Sd
             };
             let (packed_bytes, pack_report) = pack_frm(&modules, container_mode, None)?;
-            if args.verify {
+            if args.report_opts.verify {
                 let verified =
                     verify_packed_frm_roundtrip(&packed_bytes, container_mode, modules.len())?;
                 for slot in &verified {
@@ -157,7 +157,7 @@ pub fn handle_frm_pack(args: &FrmPackArgs) -> Result<()> {
     };
 
     std::fs::write(&args.out, &bytes).with_context(|| format!("Writing {}", args.out.display()))?;
-    write_json_report(args.json.as_deref(), &report)?;
+    write_json_report(args.report_opts.json.as_deref(), &report)?;
     println!(
         "Packed {} ({}) -> {} bytes ({} module(s))",
         args.out.display(),
@@ -245,8 +245,10 @@ mod tests {
             algo: "zlib".to_string(),
             patch_force: true,
             patch_format_hdd: true,
-            verify: true,
-            json: None,
+            report_opts: crate::cli::args::crypto::FrmVerifyJsonArgs {
+                verify: true,
+                json: None,
+            },
         };
         handle_frm_pack(&args).unwrap();
         let bytes = std::fs::read(&out_frm).unwrap();

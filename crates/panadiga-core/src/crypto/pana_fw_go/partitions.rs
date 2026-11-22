@@ -198,3 +198,81 @@ pub fn split_main_partitions(buf: &[u8]) -> Result<Vec<MainPartitionSlice>> {
 
     Ok(out)
 }
+
+fn validate_replacement_fs(part_name: &str, data: &[u8]) -> Result<()> {
+    if data.starts_with(ROMFS_MAGIC) {
+        let info = verify_romfs_header(data)
+            .with_context(|| format!("Invalid RomFS replacement for '{part_name}'"))?;
+        if !info.sum_valid {
+            bail!(
+                "RomFS checksum mismatch for '{part_name}': header=0x{:08X} computed=0x{:08X}",
+                info.checksum_be,
+                info.computed_checksum_be
+            );
+        }
+    } else if data.len() >= 64
+        && read_u32_le(data, 0) == CRAMFS_MAGIC
+        && &data[16..32] == CRAMFS_SIGNATURE
+    {
+        let info = verify_cramfs_header(data)
+            .with_context(|| format!("Invalid CramFS replacement for '{part_name}'"))?;
+        if !info.crc_valid {
+            bail!(
+                "CramFS FSID CRC32 mismatch for '{part_name}': header=0x{:08X} computed={:?}",
+                info.fsid_crc,
+                info.computed_crc
+            );
+        }
+    }
+    Ok(())
+}
+
+/// Reassembles a `MAIN` image by replacing selected `fmaX` or `SWUP_ADDON` partitions with validation.
+pub fn reassemble_main_partitions(
+    original_main: &[u8],
+    replacements: &[(String, Vec<u8>)],
+) -> Result<Vec<u8>> {
+    let slices = split_main_partitions(original_main)?;
+    let mut out = original_main.to_vec();
+
+    for (raw_name, rep_bytes) in replacements {
+        let target_name = raw_name.trim();
+        let Some(slice) = slices
+            .iter()
+            .find(|s| s.name.eq_ignore_ascii_case(target_name))
+        else {
+            let available: Vec<&str> = slices.iter().map(|s| s.name.as_str()).collect();
+            bail!(
+                "Partition '{target_name}' not found in MAIN image (available: {})",
+                available.join(", ")
+            );
+        };
+
+        if target_name.eq_ignore_ascii_case("SWUP_ADDON") {
+            out.truncate(slice.offset);
+            out.extend_from_slice(rep_bytes);
+            if out.len() >= 16 && out.starts_with(b"SWUP_ADDON") {
+                out[12..16].copy_from_slice(&u32::try_from(slice.offset)?.to_le_bytes());
+            }
+            continue;
+        }
+
+        validate_replacement_fs(target_name, rep_bytes)?;
+        let cap = slice.data.len();
+        if rep_bytes.len() > cap {
+            bail!(
+                "Replacement for '{}' ({} B) exceeds partition capacity ({cap} B)",
+                slice.name,
+                rep_bytes.len()
+            );
+        }
+        let end = slice.offset + cap;
+        if end > out.len() {
+            out.resize(end, 0);
+        }
+        out[slice.offset..slice.offset + rep_bytes.len()].copy_from_slice(rep_bytes);
+        out[slice.offset + rep_bytes.len()..end].fill(0);
+    }
+
+    Ok(out)
+}

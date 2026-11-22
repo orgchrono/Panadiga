@@ -275,6 +275,10 @@ pub enum ReActions {
         #[arg(short, long, value_name = "OUT_DIR")]
         out_dir: Option<PathBuf>,
 
+        /// Optional unixtract-compatible keys.ukf keyring file
+        #[arg(short, long, value_name = "UKF_FILE")]
+        key_file: Option<PathBuf>,
+
         /// Optional JSON output path (`-` prints JSON to stdout)
         #[arg(long, value_name = "JSON_OUT")]
         json: Option<PathBuf>,

@@ -1,5 +1,6 @@
 {
   "id": "uniphier_bs850_le2011_nand",
+  "soc_core_ref": "mn10300_am33_2",
   "loader_version": "M3765EG_QG-360",
   "loader_date": "2009/06/09",
   "loader_profile_key": "uniphier_nand",

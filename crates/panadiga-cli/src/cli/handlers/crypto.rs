@@ -2,6 +2,7 @@
 
 use super::super::args::{FrmActions, FrmArgs, HeadersActions, HeadersArgs, ScanArgs};
 use super::frm_pack::{handle_frm_pack, handle_frm_unpack};
+use super::frm_universal::{handle_frm_extract_fs, handle_frm_repack, handle_frm_unpack_all};
 use anyhow::Result;
 use panadiga_core::constants::DEFAULT_FRM_CONTAINER_PATH;
 use panadiga_core::crypto::{analyze_frm_container, dump_toc, print_codebook};
@@ -34,6 +35,9 @@ pub fn handle_frm(args: FrmArgs) -> Result<()> {
         }
         FrmActions::Pack(pack_args) => handle_frm_pack(&pack_args)?,
         FrmActions::Unpack(unpack_args) => handle_frm_unpack(&unpack_args)?,
+        FrmActions::UnpackAll(unpack_all_args) => handle_frm_unpack_all(&unpack_all_args)?,
+        FrmActions::Repack(repack_args) => handle_frm_repack(&repack_args)?,
+        FrmActions::ExtractFs(extract_fs_args) => handle_frm_extract_fs(&extract_fs_args)?,
     }
     Ok(())
 }

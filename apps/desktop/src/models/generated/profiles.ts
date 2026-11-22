@@ -97,6 +97,10 @@ export interface SocCoreProfile {
   readonly isa: string;
   readonly endianness: string;
   readonly logic_voltage_mv: number;
+  readonly ghidra_language_id?: string | null;
+  readonly ghidra_compiler_id?: string | null;
+  readonly ghidra_sleigh_provider?: string | null;
+  readonly default_base_address?: string | null;
   readonly evidence: ClaimEvidence;
 }
 
@@ -186,8 +190,24 @@ export interface FrmContainerSpec {
   readonly official_frm_sha256?: string | null;
 }
 
+export type DigadiagTrustModel = 'checksum32_only' | 'encrypted_toc' | 'rsa_signed' | 'unknown';
+
+export interface DigadiagSpec {
+  readonly format: string;
+  readonly filename: string;
+  readonly exact_bytes: number;
+  readonly load_va: string;
+  readonly entry_va: string;
+  readonly panamon1_entry_va?: string | null;
+  readonly bgo_geometry_target: string;
+  readonly fvu_decoupled_mode: string;
+  readonly sd_media_requirement: string;
+  readonly trust_model?: DigadiagTrustModel | null;
+}
+
 export interface FirmwareTrainProfile {
   readonly id: string;
+  readonly soc_core_ref?: string | null;
   readonly loader_version: string;
   readonly loader_date?: string | null;
   readonly loader_profile_key: string;
@@ -200,6 +220,7 @@ export interface FirmwareTrainProfile {
   readonly sd_boot_filenames?: readonly string[];
   readonly digadiag_raw_bytes?: number | null;
   readonly media_refs?: readonly string[];
+  readonly digadiag_spec?: DigadiagSpec | null;
   readonly evidence: ClaimEvidence;
 }
 

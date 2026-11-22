@@ -438,4 +438,25 @@ Assim que o dump da Spansion for importado no Ghidra:
    Com a arquitetura `MN10300` configurada, base em `0x80000000` e símbolos MMIO mapeados, teremos visibilidade total do assembly e do código em C reconstruído pelo descompilador, permitindo extrair as chaves e compreender toda a máquina de estados que governa o Panasonic DMR-EH55.
 
 ---
+
+## 8. Ferramental Universal de Desempacotamento, Reempacotamento e Automação
+
+Além dos contêineres legados (`LegacyDvd48B`, `LegacyDvd64B`, `SdPlain48B`, `SdPlain64B`), o núcleo `panadiga-core` (`universal_frm`, `aes128`, `aes_container`) integra nativamente os formatos da linha Blu-ray / UniPhier: encapsulamento `AesHeader` **AES-128-CBC** (`2016`/`2018`, `NetworkKeyIV`, suporte externo `--key-file keys.ukf`), cabeçalho externo `PANASONIC\0\0\0` de 48 bytes, checksums Adler-32 / soma de bytes, regras `VGD`/`DRV` *edge*, `MainList` (`GZIP`/`LZSS`/`LZMA`) e reconstrução validada de partições `fmaX` (`RomFS`/`CramFS`).
+
+```bash
+# Análise da tabela de conteúdo e entropia
+panadiga frm dump-toc "firmware_and_images/PANA_DVD.FRM"
+panadiga frm codebook "firmware_and_images/PANA_DVD.FRM"
+panadiga frm entropy-map "firmware_and_images/PANA_DVD.FRM"
+
+# Desempacotamento universal (DVD/SD legado, Blu-ray Feistel ou AES-128-CBC + keys.ukf + split fmaX)
+panadiga frm unpack-all "firmware_and_images/dmr-xw_bd_series/bs850_bs750_xs350eg/PANA_DVD.FRM" --out-dir tmp/bs850 --split-main --json -
+
+# Reempacotamento universal com patch em partição fmaX e remoção opcional de AES (--drop-aes)
+panadiga frm repack --input tmp/orig.FRM --out tmp/patched.FRM --patch-partition fma5=tmp/rootfs.romfs --patch-force --drop-aes --json -
+```
+
+Para pipelines em lote e orquestração no Ghidra Headless, consulte [`scripts/re/README.md`](../../scripts/re/README.md).
+
+---
 *Fim do Relatório Técnico Forense.*

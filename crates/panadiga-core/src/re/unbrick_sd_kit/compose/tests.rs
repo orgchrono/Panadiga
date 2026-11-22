@@ -10,11 +10,12 @@ use crate::re::bgo_unbrick::{
 };
 use crate::re::main_passthrough::MainPassthroughMode;
 
-use super::super::synthetic_prog061_fixture;
 use super::super::verify::verify_sd_buffers;
+use super::super::{synthetic_packed_main_fixture, synthetic_prog061_fixture};
 use super::{
     SdKitBuildPreset, SdLoaderProfile, SdUnbrickKitRequest, compose_digadiag_and_prog061,
-    compose_hardened_panamon1_kit, compose_patched_main_container, format_sha256_manifest,
+    compose_digadiag_and_prog061_with_tier_policy, compose_hardened_panamon1_kit,
+    compose_patched_main_container, format_sha256_manifest,
 };
 
 #[test]
@@ -41,11 +42,21 @@ fn compose_and_verify_digadiag_and_manifest_in_memory() {
     assert_eq!(diag061.len(), PROG061_EXPECTED_SIZE);
     assert_eq!(sha061.len(), 64);
 
-    let (_patched, diag, sha) = compose_digadiag_and_prog061(
+    let err_t2 = compose_digadiag_and_prog061(
         &prog,
         Prog061BgoPatchMode::BypassChecksOnly,
         SdLoaderProfile::Ver063ExtrheadSd64,
         false,
+    )
+    .unwrap_err();
+    assert!(err_t2.to_string().contains("RUNTIME TIER GATE BLOCKED"));
+
+    let (_patched, diag, sha) = compose_digadiag_and_prog061_with_tier_policy(
+        &prog,
+        Prog061BgoPatchMode::BypassChecksOnly,
+        SdLoaderProfile::Ver063ExtrheadSd64,
+        false,
+        true,
     )
     .unwrap();
     assert_eq!(diag.len(), PANA_DIGADIAG_FRM_SIZE);
@@ -64,6 +75,7 @@ fn compose_and_verify_digadiag_and_manifest_in_memory() {
             None,
             None,
             false,
+            false,
         )
         .is_err()
     );
@@ -75,6 +87,19 @@ fn compose_and_verify_digadiag_and_manifest_in_memory() {
             None,
             Some("3410PQ"),
             false,
+            false,
+        )
+        .is_err()
+    );
+    assert!(
+        compose_patched_main_container(
+            &fake_3060,
+            MainPassthroughMode::FactoryOriginal,
+            false,
+            None,
+            None,
+            true,
+            true,
         )
         .is_err()
     );
@@ -194,22 +219,7 @@ fn reproduces_canonical_sd_unbrick_kit_byte_for_byte_if_present() {
 }
 
 fn synthetic_packed_main(build_name: &str, version_u16: u16) -> Vec<u8> {
-    use crate::constants::PANA_EXTRHEAD_DEFAULT_ADLER_STEP;
-    use crate::crypto::{ExtrheadCryptMode, pack_extrhead};
-    use crate::hdd::capacity_patch::codec::test_helpers::build_synthetic_hdd_cmd_main;
-    use crate::hdd::capacity_patch::specs::MAIN_DEFAULT_BASE_VA;
-
-    let synth_main = build_synthetic_hdd_cmd_main();
-    pack_extrhead(
-        &synth_main,
-        "MAIN",
-        MAIN_DEFAULT_BASE_VA,
-        build_name,
-        ExtrheadCryptMode::Main,
-        PANA_EXTRHEAD_DEFAULT_ADLER_STEP as u32,
-        version_u16,
-    )
-    .unwrap()
+    synthetic_packed_main_fixture(build_name, version_u16, None)
 }
 
 #[test]
@@ -227,6 +237,7 @@ fn compose_patched_main_gives_hdd_target_gb_precedence_over_dynamic() {
         Some(250),
         None,
         true,
+        false,
     )
     .unwrap();
     assert_eq!(composed.hdd_capacity_applied.as_deref(), Some("cap_250gb"));
@@ -260,6 +271,7 @@ fn compose_patched_main_accepts_3060np_and_3410pq_and_explicit_frm_precedence() 
         Some(250),
         req.expected_main_build.as_deref(),
         false,
+        false,
     )
     .unwrap();
     assert_eq!(out_3060.build_version_u16, 0x96AA);
@@ -274,6 +286,7 @@ fn compose_patched_main_accepts_3060np_and_3410pq_and_explicit_frm_precedence() 
         true,
         None,
         req.expected_main_build.as_deref(),
+        false,
         false,
     )
     .unwrap();
@@ -322,5 +335,76 @@ fn compose_patched_main_accepts_3060np_and_3410pq_and_explicit_frm_precedence() 
     assert_eq!(
         super::super::io::resolve_component_path(&explicit_override, true, &frm_rep, "MAIN", None),
         explicit_override
+    );
+
+    let out_200_stock = compose_patched_main_container(
+        &packed_3060,
+        MainPassthroughMode::FactoryOriginal,
+        false,
+        Some(200),
+        None,
+        false,
+        false,
+    )
+    .unwrap();
+    assert_eq!(
+        out_200_stock.hdd_capacity_applied.as_deref(),
+        Some("factory_200gb")
+    );
+    assert_eq!(out_200_stock.container, packed_3060);
+}
+
+#[test]
+fn sata_bridge_reset_fix_patches_pana_sd_prog_without_touching_digadiag() {
+    use crate::re::sata_bridge_fix::{
+        SATA_BRIDGE_STATE_FACTORY_2MS, SATA_BRIDGE_STATE_WAIT_1000MS,
+        inspect_prog061_sata_bridge_reset_site,
+    };
+
+    let prog = synthetic_prog061_fixture();
+    let (_p, diag_bytes, _) = compose_digadiag_and_prog061(
+        &prog,
+        Prog061BgoPatchMode::UartMonitor,
+        SdLoaderProfile::Ver061RawSd48,
+        false,
+    )
+    .unwrap();
+    assert_eq!(
+        inspect_prog061_sata_bridge_reset_site(&diag_bytes)
+            .unwrap()
+            .state,
+        SATA_BRIDGE_STATE_FACTORY_2MS
+    );
+
+    let (sd_prog, mode) = super::compose_pana_sd_prog061_with_tier_policy(
+        &prog,
+        Prog061BgoPatchMode::UartMonitor,
+        SdLoaderProfile::Ver061RawSd48,
+        false,
+        false,
+        true,
+    )
+    .unwrap();
+    assert_eq!(mode, Prog061BgoPatchMode::BypassChecksOnly);
+    assert_eq!(
+        inspect_prog061_sata_bridge_reset_site(&sd_prog)
+            .unwrap()
+            .state,
+        SATA_BRIDGE_STATE_WAIT_1000MS
+    );
+
+    // Non-3060NP container fails closed when sata_bridge_reset_fix = true.
+    let packed = synthetic_packed_main("3060NP", 0x96AA);
+    assert!(
+        compose_patched_main_container(
+            &packed,
+            MainPassthroughMode::FactoryOriginal,
+            false,
+            None,
+            None,
+            true,
+            true,
+        )
+        .is_err()
     );
 }

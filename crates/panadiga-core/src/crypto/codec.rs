@@ -65,3 +65,46 @@ pub fn parse_u32_radix(raw: &str) -> anyhow::Result<u32> {
         .parse::<u32>()
         .with_context(|| format!("Invalid decimal u32 literal: {raw}"))
 }
+
+/// Decoded auxiliary `STB` DVB firmware payload (`CRC:` 256-byte ASCII header + optional zlib stream).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DecodedStbSlot {
+    pub bytes: Vec<u8>,
+    pub model: Option<String>,
+    pub is_zlib: bool,
+}
+
+/// Unpacks an `STB` payload beginning with `CRC:` (extracting `Model:` metadata and decompressing `zlib:` streams).
+pub fn try_decode_stb_slot(slot_buf: &[u8]) -> Option<DecodedStbSlot> {
+    use std::io::Read;
+
+    use flate2::read::ZlibDecoder;
+
+    if slot_buf.len() <= 264 || !slot_buf.starts_with(b"CRC:") {
+        return None;
+    }
+    let hdr_txt = String::from_utf8_lossy(&slot_buf[..256]);
+    let model = hdr_txt
+        .split('\0')
+        .find(|s| s.starts_with("Model:"))
+        .map(|s| s.trim_start_matches("Model:").trim().to_string());
+    let payload = &slot_buf[256..];
+    if hdr_txt.contains("zlib:") && payload.starts_with(&[0x78]) {
+        let mut decoder = ZlibDecoder::new(payload);
+        let mut out = Vec::new();
+        decoder.read_to_end(&mut out).ok()?;
+        if out.is_empty() {
+            return None;
+        }
+        return Some(DecodedStbSlot {
+            bytes: out,
+            model,
+            is_zlib: true,
+        });
+    }
+    Some(DecodedStbSlot {
+        bytes: payload.to_vec(),
+        model,
+        is_zlib: false,
+    })
+}

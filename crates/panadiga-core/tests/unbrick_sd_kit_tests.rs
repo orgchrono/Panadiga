@@ -2,7 +2,8 @@ use panadiga_core::constants::{PANA_DIGADIAG_RAW_VER061_SIZE, resolve_workspace_
 use panadiga_core::crypto::{FrmContainerMode, FrmPackModule, pack_frm};
 use panadiga_core::re::{
     MainPassthroughMode, Prog061BgoPatchMode, SdLoaderProfile, SdUnbrickKitRequest,
-    prepare_sd_unbrick_kit, verify_sd_buffers, verify_sd_unbrick_media,
+    prepare_sd_unbrick_kit, prepare_sd_unbrick_kit_with_tier_policy, verify_sd_buffers,
+    verify_sd_unbrick_media,
 };
 use std::fs;
 
@@ -22,6 +23,7 @@ fn build_workspace_sd_kit_with_mode(
     bgo_mode: Prog061BgoPatchMode,
     loader_profile: SdLoaderProfile,
     allow_unsafe_auto_format: bool,
+    allow_unverified_profile: bool,
 ) -> Option<panadiga_core::re::SdUnbrickKitReport> {
     let ws = resolve_workspace_root();
     let dvd = ws.join("firmware_and_images/PANA_DVD.FRM");
@@ -33,7 +35,7 @@ fn build_workspace_sd_kit_with_mode(
     let tmp =
         std::env::temp_dir().join(format!("panadiga_unbrick_kit_{tag}_{}", std::process::id()));
     let _ = fs::remove_dir_all(&tmp);
-    let result = prepare_sd_unbrick_kit(&SdUnbrickKitRequest {
+    let req = SdUnbrickKitRequest {
         output_dir: tmp.clone(),
         pana_dvd_path: Some(dvd),
         prog061_path: None,
@@ -49,34 +51,48 @@ fn build_workspace_sd_kit_with_mode(
         allow_unsafe_auto_format,
         expected_main_build: Some("3410PQ".to_string()),
         allow_target_mismatch: false,
-    });
+        sata_bridge_reset_fix: false,
+    };
+    if loader_profile == SdLoaderProfile::Ver063ExtrheadSd64 && allow_unverified_profile {
+        let blocked = prepare_sd_unbrick_kit(&req).unwrap_err();
+        assert!(
+            blocked.to_string().contains("RUNTIME TIER GATE BLOCKED"),
+            "ver063 must fail closed by default: {blocked}"
+        );
+    }
+    let result = prepare_sd_unbrick_kit_with_tier_policy(&req, allow_unverified_profile);
     let _ = fs::remove_dir_all(&tmp);
     Some(result.expect("workspace SD recovery kit roundtrip should succeed"))
 }
 
 #[test]
 fn optional_real_workspace_sd_kit_roundtrip() {
-    for (tag, mode, profile, expected_label) in [
+    for (tag, mode, profile, allow_unverified, expected_label) in [
         (
             "bypass_061",
             Prog061BgoPatchMode::BypassChecksOnly,
             SdLoaderProfile::Ver061RawSd48,
+            false,
             "BYPASS_CHECKS_ONLY",
         ),
         (
             "panamon1_061",
             Prog061BgoPatchMode::UartMonitor,
             SdLoaderProfile::Ver061RawSd48,
+            false,
             "UART_MONITOR_PANAMON1",
         ),
         (
             "panamon1_063",
             Prog061BgoPatchMode::UartMonitor,
             SdLoaderProfile::Ver063ExtrheadSd64,
+            true,
             "UART_MONITOR_PANAMON1",
         ),
     ] {
-        let Some(report) = build_workspace_sd_kit_with_mode(tag, mode, profile, false) else {
+        let Some(report) =
+            build_workspace_sd_kit_with_mode(tag, mode, profile, false, allow_unverified)
+        else {
             return;
         };
         let expected_entries = match profile {
@@ -136,6 +152,7 @@ fn auto_format_bgo_policy_fails_closed_without_explicit_override() {
         allow_unsafe_auto_format: false,
         expected_main_build: None,
         allow_target_mismatch: false,
+        sata_bridge_reset_fix: false,
     })
     .unwrap_err();
     let _ = fs::remove_dir_all(&tmp);

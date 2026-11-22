@@ -1,5 +1,6 @@
 {
   "id": "loader_ver061_toc48_main57",
+  "soc_core_ref": "mn10300_am34",
   "loader_version": "0.61",
   "loader_date": "06/03/06",
   "loader_profile_key": "ver061",
@@ -41,7 +42,8 @@
     "panamon1_entry_va": "0x5043_9494",
     "bgo_geometry_target": "BGO_45SEC_8MB_0X84130000",
     "fvu_decoupled_mode": "bypass_checks_only",
-    "sd_media_requirement": "fat16b_0x06_max_2gb"
+    "sd_media_requirement": "fat16b_0x06_max_2gb",
+    "trust_model": "checksum32_only"
   },
   "pana_rebuild_recipe": {
     "output_container": "PANA__SD.FRM",

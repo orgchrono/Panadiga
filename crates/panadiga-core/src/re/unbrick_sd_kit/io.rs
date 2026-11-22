@@ -3,7 +3,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 
 use crate::constants::resolve_workspace_root;
 use crate::nvram::calculate_hashes;
@@ -11,14 +11,17 @@ use crate::nvram::calculate_hashes;
 use super::super::bgo_unbrick::ensure_parent_dir;
 use super::super::unbrick_workbench::{bgo_mode_label, discover_sources, extract_modules_from_frm};
 use super::compose::{
-    SdUnbrickKitReport, SdUnbrickKitRequest, compose_digadiag_and_prog061,
-    compose_pana_sd_container, compose_pana_sd_prog061, compose_patched_main_container,
-    format_sha256_manifest,
+    SdUnbrickKitReport, SdUnbrickKitRequest, compose_digadiag_and_prog061_with_tier_policy,
+    compose_pana_sd_container, compose_pana_sd_prog061_with_tier_policy,
+    compose_patched_main_container, format_sha256_manifest,
 };
-use super::verify::{SdMediaVerificationReport, verify_sd_buffers};
+use super::verify::{SdKitAuditProfile, SdMediaVerificationReport, verify_sd_buffers_with_profile};
 
-/// Validates an SD root directory containing `DIGADIAG.FRM` and/or `PANA__SD.FRM`.
-pub fn verify_sd_unbrick_media(sd_root_dir: &Path) -> SdMediaVerificationReport {
+/// Validates an SD root directory containing `DIGADIAG.FRM` and/or `PANA__SD.FRM` under `profile`.
+pub fn verify_sd_unbrick_media_with_profile(
+    sd_root_dir: &Path,
+    profile: SdKitAuditProfile,
+) -> SdMediaVerificationReport {
     let diag_path = sd_root_dir.join("DIGADIAG.FRM");
     let pana_sd_path = sd_root_dir.join("PANA__SD.FRM");
 
@@ -34,11 +37,18 @@ pub fn verify_sd_unbrick_media(sd_root_dir: &Path) -> SdMediaVerificationReport 
         .then(|| fs::read(&pana_sd_path).ok())
         .flatten();
 
-    verify_sd_buffers(
+    verify_sd_buffers_with_profile(
         &sd_root_dir.to_string_lossy(),
         diag_ref,
         pana_owned.as_deref(),
+        profile,
     )
+}
+
+/// Validates an SD root directory containing `DIGADIAG.FRM` and/or `PANA__SD.FRM`
+/// under [`SdKitAuditProfile::Standard`].
+pub fn verify_sd_unbrick_media(sd_root_dir: &Path) -> SdMediaVerificationReport {
+    verify_sd_unbrick_media_with_profile(sd_root_dir, SdKitAuditProfile::Standard)
 }
 
 fn find_extracted_module(
@@ -69,8 +79,17 @@ pub(crate) fn resolve_component_path(
     })
 }
 
-/// Builds a complete verified SD Unbrick Kit (`DIGADIAG.FRM`, optional `PANA__SD.FRM`, & `SHA256SUMS.txt`).
-pub fn prepare_sd_unbrick_kit(req: &SdUnbrickKitRequest) -> Result<SdUnbrickKitReport> {
+/// Builds a complete verified SD Unbrick Kit (`DIGADIAG.FRM`, optional `PANA__SD.FRM`, & `SHA256SUMS.txt`),
+/// enforcing the R1 runtime `< T3` tier-gate policy unless `allow_unverified_profile == true`.
+pub fn prepare_sd_unbrick_kit_with_tier_policy(
+    req: &SdUnbrickKitRequest,
+    allow_unverified_profile: bool,
+) -> Result<SdUnbrickKitReport> {
+    if req.sata_bridge_reset_fix && !req.include_pana_sd {
+        bail!(
+            "--sata-bridge-reset-fix targets PANA__SD.FRM (PROG061 FVU + MAIN3060NP) and cannot be combined with --diag-only"
+        );
+    }
     let ws_root = resolve_workspace_root();
     let sources = discover_sources(&ws_root);
     let disc_frm = sources.pana_dvd;
@@ -97,12 +116,14 @@ pub fn prepare_sd_unbrick_kit(req: &SdUnbrickKitRequest) -> Result<SdUnbrickKitR
 
     let prog_raw = fs::read(&prog_src_path)
         .with_context(|| format!("Reading PROG061 source {}", prog_src_path.display()))?;
-    let (prog_patched, diag_bytes, digadiag_sha256) = compose_digadiag_and_prog061(
-        &prog_raw,
-        req.bgo_mode,
-        req.loader_profile,
-        req.allow_unsafe_auto_format,
-    )?;
+    let (prog_patched, diag_bytes, digadiag_sha256) =
+        compose_digadiag_and_prog061_with_tier_policy(
+            &prog_raw,
+            req.bgo_mode,
+            req.loader_profile,
+            req.allow_unsafe_auto_format,
+            allow_unverified_profile,
+        )?;
 
     fs::create_dir_all(&req.output_dir)?;
     let digadiag_path = req.output_dir.join("DIGADIAG.FRM");
@@ -121,6 +142,7 @@ pub fn prepare_sd_unbrick_kit(req: &SdUnbrickKitRequest) -> Result<SdUnbrickKitR
     let mut drv_source_label = None;
     let mut main_passthrough_applied = None;
     let mut hdd_capacity_applied = None;
+    let mut sata_bridge_reset_fix_applied = false;
 
     if req.include_pana_sd {
         let drv_path =
@@ -139,9 +161,11 @@ pub fn prepare_sd_unbrick_kit(req: &SdUnbrickKitRequest) -> Result<SdUnbrickKitR
             req.hdd_target_gb,
             req.expected_main_build.as_deref(),
             req.allow_target_mismatch,
+            req.sata_bridge_reset_fix,
         )?;
         main_passthrough_applied = Some(composed_main.passthrough_applied);
         hdd_capacity_applied = composed_main.hdd_capacity_applied;
+        sata_bridge_reset_fix_applied = composed_main.sata_bridge_reset_fix_applied;
 
         let drv_bytes = match drv_path {
             Some(dp) => {
@@ -151,11 +175,13 @@ pub fn prepare_sd_unbrick_kit(req: &SdUnbrickKitRequest) -> Result<SdUnbrickKitR
             None => None,
         };
 
-        let (pana_sd_prog, pana_sd_bgo_mode) = compose_pana_sd_prog061(
+        let (pana_sd_prog, pana_sd_bgo_mode) = compose_pana_sd_prog061_with_tier_policy(
             &prog_raw,
             req.bgo_mode,
             req.loader_profile,
             req.allow_unsafe_auto_format,
+            allow_unverified_profile,
+            req.sata_bridge_reset_fix,
         )?;
         let (sd_bytes, sd_sha) = compose_pana_sd_container(
             drv_bytes,
@@ -191,6 +217,7 @@ pub fn prepare_sd_unbrick_kit(req: &SdUnbrickKitRequest) -> Result<SdUnbrickKitR
         loader_profile_applied: req.loader_profile.as_str().to_string(),
         main_passthrough_applied,
         hdd_capacity_applied,
+        sata_bridge_reset_fix_applied,
         digadiag_path: digadiag_path.to_string_lossy().into_owned(),
         digadiag_sha256,
         pana_sd_path,
@@ -198,4 +225,9 @@ pub fn prepare_sd_unbrick_kit(req: &SdUnbrickKitRequest) -> Result<SdUnbrickKitR
         sha256sums_path: sums_path.to_string_lossy().into_owned(),
         verification,
     })
+}
+
+/// Fail-closed wrapper around [`prepare_sd_unbrick_kit_with_tier_policy`] (`allow_unverified_profile = false`).
+pub fn prepare_sd_unbrick_kit(req: &SdUnbrickKitRequest) -> Result<SdUnbrickKitReport> {
+    prepare_sd_unbrick_kit_with_tier_policy(req, false)
 }

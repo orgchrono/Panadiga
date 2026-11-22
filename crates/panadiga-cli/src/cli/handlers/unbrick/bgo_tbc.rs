@@ -7,8 +7,7 @@ use std::path::Path;
 use std::time::Duration;
 
 use anyhow::{Context, Result, bail};
-use panadiga_core::constants::DEFAULT_BAUD_RATE;
-use panadiga_core::nvram::calculate_hashes;
+use panadiga_core::constants::{DEFAULT_BAUD_RATE, SD_STATUS_INVALID};
 use panadiga_core::pico::panamon1::{Panamon1Client, Panamon1Transport, SerialPanamon1Transport};
 use panadiga_core::re::eh55_bgo::{
     BgoRepairPlan, apply_bgo_repair_plan_live, build_bgo_repair_plan,
@@ -17,17 +16,12 @@ use panadiga_core::re::region_compat::{
     LbsRegionPresetId, TvStandardKind, inspect_tv_calibration_bundle,
 };
 use panadiga_core::re::tbc_appliance::{TbcApplianceMode, build_tbc_appliance_plan};
-use panadiga_core::re::unbrick_sd_kit::{SdKitAuditProfile, verify_sd_buffers_with_profile};
+use panadiga_core::re::unbrick_sd_kit::{SdKitAuditProfile, verify_sd_unbrick_media_with_profile};
 use panadiga_core::re::{
-    MainPassthroughMode, Prog061BgoPatchMode, SdLoaderProfile, SdMediaVerificationReport,
-    SdUnbrickKitReport, SdUnbrickKitRequest, audit_eh55_bgo_nor_8mb, prepare_sd_unbrick_kit,
-    verify_sd_unbrick_media,
+    Prog061BgoPatchMode, RebuildFromDumpRequest, SdLoaderProfile, SdMediaVerificationReport,
+    SdUnbrickKitRequest, audit_eh55_bgo_nor_8mb, prepare_sd_unbrick_kit_with_tier_policy,
+    rebuild_sd_kit_from_dump,
 };
-use panadiga_core::ssot::HardwareProfileRegistry;
-use panadiga_core::vault::{
-    VaultBucket, extract_nor_drv_into_vault, init_vault_session, session_bucket_dir,
-};
-use serde::Serialize;
 
 use super::super::json_io::write_cli_output_bytes;
 use super::render::{
@@ -51,27 +45,7 @@ pub(crate) fn verify_sd_dir_with_profile(
     dir: &Path,
     profile: SdKitAuditProfile,
 ) -> SdMediaVerificationReport {
-    if profile == SdKitAuditProfile::Standard {
-        return verify_sd_unbrick_media(dir);
-    }
-    let diag_path = dir.join("DIGADIAG.FRM");
-    let pana_path = dir.join("PANA__SD.FRM");
-    let diag_owned = diag_path
-        .is_file()
-        .then(|| fs::read(&diag_path).map_err(|e| e.to_string()));
-    let diag_ref = diag_owned
-        .as_ref()
-        .map(|r| r.as_deref().map_err(String::as_str));
-    let pana_owned = pana_path
-        .is_file()
-        .then(|| fs::read(&pana_path).ok())
-        .flatten();
-    verify_sd_buffers_with_profile(
-        &dir.display().to_string(),
-        diag_ref,
-        pana_owned.as_deref(),
-        profile,
-    )
+    verify_sd_unbrick_media_with_profile(dir, profile)
 }
 
 pub(super) fn handle_prepare_sd(sd: PrepareSdArgs) -> Result<()> {
@@ -102,6 +76,7 @@ pub(super) fn handle_prepare_sd(sd: PrepareSdArgs) -> Result<()> {
             hardened.expected_main_build = sd.expected_main_build;
         }
         hardened.allow_target_mismatch = sd.allow_target_mismatch;
+        hardened.sata_bridge_reset_fix = sd.sata_bridge_reset_fix;
         hardened
     } else {
         let bgo_mode: Prog061BgoPatchMode = sd.bgo_mode.parse()?;
@@ -121,10 +96,11 @@ pub(super) fn handle_prepare_sd(sd: PrepareSdArgs) -> Result<()> {
             allow_unsafe_auto_format: sd.allow_unsafe_bgo_format,
             expected_main_build: sd.expected_main_build,
             allow_target_mismatch: sd.allow_target_mismatch,
+            sata_bridge_reset_fix: sd.sata_bridge_reset_fix,
         }
     };
 
-    let report = prepare_sd_unbrick_kit(&req)?;
+    let report = prepare_sd_unbrick_kit_with_tier_policy(&req, sd.allow_unverified_profile)?;
     print_lines(&format_sd_kit_lines(&report));
 
     if sd.hardened_sd {
@@ -132,9 +108,7 @@ pub(super) fn handle_prepare_sd(sd: PrepareSdArgs) -> Result<()> {
             Path::new(&report.output_dir),
             SdKitAuditProfile::HardenedRecovery,
         );
-        if strict.factory_unpatched_prog061_detected
-            || strict.overall_status == "INCOMPLETE_OR_INVALID"
-        {
+        if strict.factory_unpatched_prog061_detected || strict.overall_status == SD_STATUS_INVALID {
             bail!("Hardened SD verification failed: {}", strict.overall_status);
         }
         println!("[HARDENED] Dual-family ver0.61 + PANAMON1 parity verified.");
@@ -178,7 +152,7 @@ pub(super) fn handle_verify_sd(args: VerifySdArgs) -> Result<()> {
         );
     }
     emit_json_if_requested(&report, args.json.as_deref())?;
-    if report.overall_status == "INCOMPLETE_OR_INVALID" {
+    if report.overall_status == SD_STATUS_INVALID {
         bail!("SD media validation failed; inspect missing or corrupt artifacts above");
     }
     Ok(())
@@ -273,101 +247,21 @@ pub fn handle_bgo_live_apply_with_transport<T: Panamon1Transport>(
     emit_json_if_requested(&report, args.json.as_deref())
 }
 
-#[derive(Debug, Serialize)]
-struct RebuildFromDumpReport {
-    model_id: String,
-    resolved_loader_profile: String,
-    nor_dump_path: String,
-    nor_dump_sha256: String,
-    carved_drv_from_nor: bool,
-    kit: SdUnbrickKitReport,
-    verification: SdMediaVerificationReport,
-}
-
 pub(super) fn handle_rebuild_from_dump(args: RebuildFromDumpArgs) -> Result<()> {
-    let nor_bytes = fs::read(&args.nor_dump)
-        .with_context(|| format!("Reading NOR dump {}", args.nor_dump.display()))?;
-    let (_, nor_sha256) = calculate_hashes(&nor_bytes);
-
-    let reg = HardwareProfileRegistry::load_with_overlay(None)?;
-    let resolved = reg.resolve_model(&args.model)?;
-    let profile_key = resolved
-        .firmware_train
-        .as_ref()
-        .map_or("ver061", |t| t.loader_profile_key.as_str());
-    let loader_profile: SdLoaderProfile = profile_key.parse().with_context(|| {
-        format!(
-            "Unsupported resolved loader_profile_key '{profile_key}' for model '{}'",
-            resolved.manifest.model_id
-        )
-    })?;
-
-    let staging_root =
-        std::env::temp_dir().join(format!("panadiga_rebuild_stage_{}", std::process::id()));
-    let _ = fs::remove_dir_all(&staging_root);
-    let carved_drv_path = if args.frm.is_none() {
-        let manifest = init_vault_session(
-            &staging_root,
-            &resolved.manifest.model_id,
-            loader_profile,
-            Some("nor_carve"),
-        )?;
-        let sess_path = Path::new(&manifest.session_dir);
-        match extract_nor_drv_into_vault(sess_path, &nor_bytes) {
-            Ok(rec) => Some(session_bucket_dir(sess_path, VaultBucket::Raw)?.join(&rec.filename)),
-            Err(_) => None,
-        }
-    } else {
-        None
-    };
-
-    let req = SdUnbrickKitRequest {
-        output_dir: args.out_dir.clone(),
-        pana_dvd_path: args.frm,
+    let req = RebuildFromDumpRequest {
+        model_id: args.model,
+        nor_dump_path: args.nor_dump,
+        hdd_main_path: args.hdd_main,
+        frm_path: args.frm,
         prog061_path: args.prog061,
-        main_path: args.hdd_main,
-        drv_path: carved_drv_path.clone(),
-        bgo_mode: Prog061BgoPatchMode::UartMonitor,
-        main_passthrough_mode: MainPassthroughMode::AvPassthrough,
-        loader_profile,
-        include_pana_sd: true,
-        unlock_hdd_dynamic: args.target_gb.is_none(),
-        hdd_target_gb: args.target_gb,
-        write_extracted_sources: false,
-        allow_unsafe_auto_format: false,
-        expected_main_build: None,
-        allow_target_mismatch: false,
+        target_gb: args.target_gb,
+        out_dir: args.out_dir,
+        allow_unverified_mix: args.allow_unverified_mix,
+        allow_unverified_profile: args.allow_unverified_profile,
     };
-
-    let kit_result = prepare_sd_unbrick_kit(&req);
-    let _ = fs::remove_dir_all(&staging_root);
-    let kit = kit_result?;
-
-    print_lines(&format_sd_kit_lines(&kit));
-    let verification = verify_sd_dir_with_profile(
-        Path::new(&kit.output_dir),
-        SdKitAuditProfile::HardenedRecovery,
-    );
-    print_lines(&format_sd_verification_lines(&verification));
-    if verification.overall_status == "INCOMPLETE_OR_INVALID"
-        || verification.factory_unpatched_prog061_detected
-    {
-        bail!(
-            "Rebuilt SD kit verification failed: status={} unpatched_prog={}",
-            verification.overall_status,
-            verification.factory_unpatched_prog061_detected
-        );
-    }
-
-    let report = RebuildFromDumpReport {
-        model_id: resolved.manifest.model_id,
-        resolved_loader_profile: profile_key.to_string(),
-        nor_dump_path: args.nor_dump.to_string_lossy().into_owned(),
-        nor_dump_sha256: nor_sha256,
-        carved_drv_from_nor: carved_drv_path.is_some(),
-        kit,
-        verification,
-    };
+    let report = rebuild_sd_kit_from_dump(&req)?;
+    print_lines(&format_sd_kit_lines(&report.kit));
+    print_lines(&format_sd_verification_lines(&report.verification));
     emit_json_if_requested(&report, args.json.as_deref())
 }
 

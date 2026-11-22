@@ -33,6 +33,8 @@ pub struct SdUnbrickKitRequestDto {
     pub write_extracted_sources: Option<bool>,
     pub expected_main_build: Option<String>,
     pub allow_target_mismatch: Option<bool>,
+    #[serde(default)]
+    pub sata_bridge_reset_fix: Option<bool>,
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -129,6 +131,7 @@ pub(crate) fn to_sd_unbrick_kit_request(
         write_extracted_sources: dto.write_extracted_sources.unwrap_or(false),
         expected_main_build: opt_trimmed(&dto.expected_main_build).map(str::to_string),
         allow_target_mismatch: dto.allow_target_mismatch.unwrap_or(false),
+        sata_bridge_reset_fix: dto.sata_bridge_reset_fix.unwrap_or(false),
     })
 }
 

@@ -2,6 +2,7 @@
 
 //! Edge Feistel transform, statistical key recovery, and `libdownloadlib.so` stream cipher.
 
+use super::super::aes128::FrmKeyring;
 use super::super::feistel::{
     PANA_DVD_KEY_CATALOG, derive_round_key_from_custom_key_8b, feistel_crypt_edges,
     feistel_decrypt_buffer,
@@ -51,32 +52,49 @@ fn count_non_overlapping(haystack: &[u8], needle: &[u8]) -> usize {
     count
 }
 
-/// Statistical Feistel key recovery (`findKeySlow` from `pana-fw`): scores `0x00000000`, `0xFFFFFFFF`, and `PANASONIC\0\0\0`.
-pub fn find_feistel_key_slow(block: &[u8]) -> Option<(&'static str, [u8; 32], usize)> {
+fn score_slow_key_candidates(
+    block: &[u8],
+    candidates: Vec<(String, [u8; 32])>,
+) -> Option<(String, [u8; 32], usize)> {
     let aligned = block.len() & !7;
     if aligned == 0 {
         return None;
     }
 
-    let mut candidates: Vec<(&'static str, [u8; 32])> =
-        Vec::with_capacity(1 + PANA_DVD_KEY_CATALOG.len());
-    candidates.push(("old_df72", PANA_FEISTEL_ROUND_KEY_32B));
-    for &(name, k8) in PANA_DVD_KEY_CATALOG {
-        candidates.push((name, derive_round_key_from_custom_key_8b(&k8)));
-    }
-
-    let mut best: Option<(&'static str, [u8; 32], usize)> = None;
+    let mut best: Option<(String, [u8; 32], usize)> = None;
     for (name, rk) in candidates {
         let mut decrypted = block[..aligned].to_vec();
         feistel_decrypt_buffer(&mut decrypted, &rk, &PANA_FEISTEL_SBOX_256);
         let score = count_non_overlapping(&decrypted, &[0x00; 4])
             + count_non_overlapping(&decrypted, &[0xFF; 4])
             + count_non_overlapping(&decrypted, b"PANASONIC\x00\x00\x00") * 10;
-        if score > best.map_or(0, |b| b.2) {
+        if score > best.as_ref().map_or(0, |b| b.2) {
             best = Some((name, rk, score));
         }
     }
     best
+}
+
+/// Statistical Feistel key recovery (`findKeySlow` from `pana-fw`) using built-in + `keys.ukf` keys.
+pub fn find_feistel_key_slow_with_keyring(
+    block: &[u8],
+    keyring: &FrmKeyring,
+) -> Option<(String, [u8; 32], usize)> {
+    score_slow_key_candidates(block, keyring.feistel_round_key_candidates())
+}
+
+/// Statistical Feistel key recovery (`findKeySlow` from `pana-fw`): scores `0x00000000`, `0xFFFFFFFF`, and `PANASONIC\0\0\0`.
+pub fn find_feistel_key_slow(block: &[u8]) -> Option<(&'static str, [u8; 32], usize)> {
+    let (name, rk, score) = find_feistel_key_slow_with_keyring(block, &FrmKeyring::builtin())?;
+    let static_name = if name == "old_df72" {
+        "old_df72"
+    } else {
+        PANA_DVD_KEY_CATALOG
+            .iter()
+            .find(|&&(k, _)| k == name)
+            .map(|&(k, _)| k)?
+    };
+    Some((static_name, rk, score))
 }
 
 fn network_stream_transform(data: &mut [u8], decrypt: bool) {

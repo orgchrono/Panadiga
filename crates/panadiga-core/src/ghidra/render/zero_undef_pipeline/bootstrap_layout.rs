@@ -179,10 +179,30 @@ def infer_base_va(bin_path: pathlib.Path, model_id: str, explicit_base: str | No
     if bin_path.name in STAGE_BASES:
         return STAGE_BASES[bin_path.name]
     upper = bin_path.name.upper()
+    if bin_path.is_file():
+        with bin_path.open("rb") as fh:
+            head = fh.read(0x400)
+        if head.startswith(b"\n root=/dev/fma"):
+            return 0x90100000
+        if "PROG" in upper or "DIGADIAG" in upper:
+            for idx in range(max(0, len(head) - 6)):
+                if head[idx] == 0xFC and 0xDC <= head[idx + 1] <= 0xDF:
+                    imm = struct.unpack_from("<I", head, idx + 2)[0]
+                    if 0x50800000 <= imm < 0x50840000:
+                        return 0x50800000
+                    if 0x50030400 <= imm < 0x50060000:
+                        return 0x50030400
+    if "DIGADIAG" in upper:
+        return 0x50400000
     model_info = MODEL_MEMORY_MAPS.get(model_id, {})
     for pat, field in (("PROG", "prog_load_va"), ("MAIN", "main_load_va"), ("DRV", "drv_load_va")):
         if pat in upper and model_info.get(field):
-            return to_u32(int(model_info[field], 0))
+            va = to_u32(int(model_info[field], 0))
+            if va == 0x90400000:
+                return 0x50400000
+            if va == 0x90202000:
+                return 0x40000000
+            return va
     for hint in GENERIC_STAGE_RULES.get("filename_base_hints", ()):
         if hint["pattern"].upper() in upper:
             return to_u32(int(hint["base_va"], 0))
@@ -263,7 +283,8 @@ def apply_model_memory_layout(project, pyghidra, prog_path: str, base_va: int, m
             for bname, start, size, r, w, x, vol in templates:
                 if _create_uninit_block_if_free(mem, space, bname, start, size, r, w, x, vol):
                     created += 1
-            memmap.setup_memory_map(prog)
+            if str(prog.getLanguageID()).lower().startswith("mn10300"):
+                memmap.setup_memory_map(prog)
         prog.save("Panadiga layout (%s)" % model_id, TaskMonitor.DUMMY)
     return {"blocks_created": created, "model": model_id, "base_va": "0x%08X" % base_va}
 

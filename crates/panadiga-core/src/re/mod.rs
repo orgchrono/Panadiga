@@ -19,6 +19,7 @@ pub mod patch_spec;
 pub mod prewrite_gate;
 pub mod prog061_uart_monitor;
 pub mod region_compat;
+pub mod sata_bridge_fix;
 pub mod sig_locator;
 pub mod tbc_appliance;
 pub mod unbrick_sd_kit;
@@ -27,6 +28,7 @@ pub mod verify_loop;
 
 pub use bench_runtime::{
     BenchRuntimePlan, BenchRuntimeStageDescriptor, build_dynamic_bench_runtime_plan,
+    build_dynamic_bench_runtime_plan_with_keyring,
 };
 pub use bgo_unbrick::{
     BASE_FACTORY_BGO_GEOMETRY_ID, DetectedBgoGeometry, OFF_BGO_INIT_CALL, OFF_BGO_INIT_FAIL_HOOK,
@@ -34,14 +36,16 @@ pub use bgo_unbrick::{
     ORIG_SUM_BEQ, PATCH_A2BC_BRA_MONITOR, PROG061_BASE_VA, PROG061_EXPECTED_SIZE,
     PROG061_NFROM_FORMAT_VA, Prog061BgoInspection, Prog061BgoPatchMode, Prog061BgoPatchReport,
     Prog061BgoSiteStatus, decode_prog061_payload, detect_prog_bgo_geometry,
-    find_recipe_by_loader_key, find_retarget_spec_by_geometry_id, find_retarget_spec_by_loader_key,
+    enforce_train_evidence_tier, find_recipe_by_loader_key, find_retarget_spec_by_geometry_id,
+    find_retarget_spec_by_loader_key, find_train_by_geometry_id, find_train_by_loader_key,
     inspect_prog_bgo_geometry_with_spec, inspect_prog061_bgo_sites,
     inspect_prog061_container_bytes, load_retarget_drv_for_spec, load_train_retarget_spec,
     load_train_retarget_spec_and_drv, patch_prog061_bgo_in_place,
     patch_prog061_bgo_in_place_with_policy, patch_prog061_or_build_digadiag,
     patch_prog061_or_build_digadiag_with_policy, prog_has_bgo_table_marker,
     retarget_prog_for_geometry_in_place, retarget_prog_for_loader_profile_in_place,
-    retarget_prog_from_spec_in_place,
+    retarget_prog_for_loader_profile_with_policy, retarget_prog_from_spec_in_place,
+    validate_bgo_allowlist_invariant,
 };
 pub use eh55_bgo::{
     BgoSectorGeometry, EH55_BGO_EXPECTED_P2_COUNT, EH55_BGO_FIRST_SA, EH55_BGO_LAST_SA,
@@ -92,6 +96,15 @@ pub use region_compat::{
     inspect_dev_bin_bytes, inspect_main_region_compat, patch_dev_bin_bytes,
     patch_main_region_compat_in_place, retarget_frm_toc_bytes,
 };
+pub use sata_bridge_fix::{
+    OFF_MAIN3060NP_SATA_BRIDGE_RESET_WAIT, OFF_PROG061_SATA_BRIDGE_RESET_WAIT,
+    ORIG_MAIN3060NP_SATA_BRIDGE_RESET_WAIT, ORIG_PROG061_SATA_BRIDGE_RESET_WAIT,
+    PATCH_MAIN3060NP_SATA_BRIDGE_RESET_WAIT, PATCH_PROG061_SATA_BRIDGE_RESET_WAIT,
+    SATA_BRIDGE_STATE_FACTORY_2MS, SATA_BRIDGE_STATE_MISMATCH, SATA_BRIDGE_STATE_WAIT_1000MS,
+    SataBridgeResetFixMode, SataBridgeResetSiteStatus,
+    apply_main3060np_sata_bridge_reset_fix_in_place, apply_prog061_sata_bridge_reset_fix_in_place,
+    inspect_main3060np_sata_bridge_reset_site, inspect_prog061_sata_bridge_reset_site,
+};
 pub use sig_locator::{
     CfgFunctionCandidate, LocatedFunctionMatch, StringXrefHit, detect_prologue_at,
     discover_cfg_functions, locate_functions_by_string, summarize_function_cfg,
@@ -105,19 +118,21 @@ pub use unbrick_sd_kit::{
     CLEANROOM_DIGADIAG_MAGIC, CleanroomDigadiagArtifact, DvdCreatorProgress, DvdCreatorReport,
     DvdCreatorRequest, DvdCreatorStage, Fat16PlacedFileReport, Fat16SdFileInput, Fat16SdGeometry,
     FatBpbReport, ISO9660_SECTOR_SIZE, Iso9660FileInput, Iso9660InspectionReport,
-    Iso9660PlacedFileReport, MbrPartitionRecord, OpticalBurnBackend, OpticalBurnerDriveInfo,
-    RootDirFileReport, SdCardAdvisory, SdCardCreatorPlan, SdCardCreatorReport,
-    SdCardCreatorRequest, SdCreatorProgress, SdCreatorStage, SdDiskInspectionReport,
-    SdLoaderProfile, SdMediaVerificationReport, SdTargetDriveInfo, SdUnbrickCheck,
-    SdUnbrickKitReport, SdUnbrickKitRequest, SynthesizedIsoImage, SynthesizedSdImage,
-    SystemOpticalBurnBackend, assess_sd_card_size_advisory, build_cleanroom_digadiag,
-    build_layperson_sd_steps, compute_fat16_sd_geometry, create_dvd_recovery_disc,
-    create_dvd_recovery_disc_with_backend, create_dvd_recovery_iso,
-    create_sd_recovery_card_on_device, create_sd_recovery_image, expected_optical_confirm_token,
-    flash_sd_recovery_card, inspect_iso9660_image, inspect_optical_burners,
-    inspect_sd_card_targets, inspect_sd_disk_bytes, inspect_sd_reader, inspect_sd_target,
-    plan_sd_recovery_card, prepare_sd_unbrick_kit, synthesize_fat16_sd_image,
-    synthesize_iso9660_level1_image, verify_sd_buffers, verify_sd_unbrick_media,
+    Iso9660PlacedFileReport, MbrPartitionRecord, NorDumpIntegrityReport, OpticalBurnBackend,
+    OpticalBurnerDriveInfo, RebuildFromDumpReport, RebuildFromDumpRequest, RootDirFileReport,
+    SdCardAdvisory, SdCardCreatorPlan, SdCardCreatorReport, SdCardCreatorRequest,
+    SdCreatorProgress, SdCreatorStage, SdDiskInspectionReport, SdLoaderProfile,
+    SdMediaVerificationReport, SdTargetDriveInfo, SdUnbrickCheck, SdUnbrickKitReport,
+    SdUnbrickKitRequest, SynthesizedIsoImage, SynthesizedSdImage, SystemOpticalBurnBackend,
+    assess_sd_card_size_advisory, build_cleanroom_digadiag, build_layperson_sd_steps,
+    compute_fat16_sd_geometry, create_dvd_recovery_disc, create_dvd_recovery_disc_with_backend,
+    create_dvd_recovery_iso, create_sd_recovery_card_on_device, create_sd_recovery_image,
+    expected_optical_confirm_token, flash_sd_recovery_card, inspect_iso9660_image,
+    inspect_nor_dump_integrity, inspect_optical_burners, inspect_sd_card_targets,
+    inspect_sd_disk_bytes, inspect_sd_reader, inspect_sd_target, plan_sd_recovery_card,
+    prepare_sd_unbrick_kit, prepare_sd_unbrick_kit_with_tier_policy, rebuild_sd_kit_from_dump,
+    scan_loader_banner, synthesize_fat16_sd_image, synthesize_iso9660_level1_image,
+    verify_sd_buffers, verify_sd_unbrick_media, verify_sd_unbrick_media_with_profile,
 };
 pub use unbrick_workbench::{
     ExtractedFrmModuleReport, FrmModuleExtractionReport, UnbrickHardwareFact,

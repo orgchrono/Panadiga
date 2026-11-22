@@ -12,9 +12,11 @@ use anyhow::{Context, Result, anyhow, bail};
 
 use crate::constants::LBA_SECTOR_SIZE_BYTES;
 
-use super::super::block_ops::is_unconditional_os_boot_disk;
+use super::super::block_ops::{
+    is_unconditional_os_boot_disk, target_matches_base_disk_or_partition,
+};
 use super::super::discovery::{
-    detect_linux_host_os_disks, list_physical_drives, unmount_drive_partitions,
+    detect_host_os_disks, list_physical_drives, unmount_drive_partitions,
 };
 use super::super::raw_device::{BUS_TYPE_NVME, infer_bus_type_id};
 use super::{ensure_writable_sector_io, validate_sector_aligned};
@@ -113,11 +115,10 @@ impl OwnedDiskHandle {
             );
         }
         let low = trimmed.to_ascii_lowercase();
-        if let Some(os_disks) = detect_linux_host_os_disks()
-            && os_disks.iter().any(|d| {
-                let c = d.trim().to_ascii_lowercase();
-                !c.is_empty() && (low == c || low.starts_with(&c))
-            })
+        if let Some(os_disks) = detect_host_os_disks()
+            && os_disks
+                .iter()
+                .any(|d| target_matches_base_disk_or_partition(&low, d))
         {
             bail!(
                 "FATAL SAFETY LOCKOUT: Refusing to open detected host OS disk '{}'!",

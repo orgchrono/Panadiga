@@ -1,5 +1,6 @@
 {
   "id": "loader_ver063_bootbin",
+  "soc_core_ref": "mn10300_am34",
   "loader_version": "0.63",
   "loader_date": "07/10/24",
   "loader_profile_key": "ver063",
@@ -31,7 +32,8 @@
     "entry_va": "0x5040_0000",
     "bgo_geometry_target": "BGO_35SEC_4MB_0X84200000",
     "fvu_decoupled_mode": "bypass_checks_only",
-    "sd_media_requirement": "fat16b_0x06_max_2gb"
+    "sd_media_requirement": "fat16b_0x06_max_2gb",
+    "trust_model": "encrypted_toc"
   },
   "pana_rebuild_recipe": {
     "output_container": "PANA__SD.FRM",

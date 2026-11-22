@@ -60,18 +60,31 @@ fn ver061_48b_sd_toc_and_raw_digadiag_pass_and_detect_mismatch() {
     );
 }
 
+fn pack_ver061_pair_sd48(prog_bytes: Vec<u8>, main_ctr: Vec<u8>) -> Vec<u8> {
+    use crate::crypto::{FrmContainerMode, FrmPackModule, pack_frm};
+    let mut m_prog = FrmPackModule::new("PROG061 ", prog_bytes);
+    m_prog.hardware_family = "M6930LB".to_string();
+    m_prog.hardware_family_aliases = vec!["M6930".to_string()];
+    m_prog.model_prefix = b'M';
+
+    let mut m_main = FrmPackModule::new("MAIN3060NP", main_ctr);
+    m_main.hardware_family = "M6930LB".to_string();
+    m_main.hardware_family_aliases = vec!["M6930".to_string()];
+    m_main.model_prefix = b'M';
+
+    pack_frm(&[m_prog, m_main], FrmContainerMode::Sd48, None)
+        .unwrap()
+        .0
+}
+
+fn make_synthetic_main_250gb_ctr() -> Vec<u8> {
+    super::super::synthetic_packed_main_fixture("TEST3410PQ", 0x3410, Some(250))
+}
+
 #[test]
 fn hardening_gates_catch_bgo_geometry_mismatch_fvu_panamon_trap_and_report_rtsd() {
-    use crate::constants::PANA_EXTRHEAD_DEFAULT_ADLER_STEP;
-    use crate::crypto::{
-        ExtrheadCryptMode, FrmContainerMode, FrmPackModule, pack_extrhead, pack_frm,
-    };
-    use crate::hdd::capacity_patch::codec::test_helpers::build_synthetic_hdd_cmd_main;
-    use crate::hdd::capacity_patch::specs::MAIN_DEFAULT_BASE_VA;
-    use crate::hdd::{HddCapacityPatchMode, apply_capacity_patch_in_place};
     use crate::re::bgo_unbrick::{
-        BASE_FACTORY_BGO_GEOMETRY_ID, ORIG_SUM_BEQ, Prog061BgoPatchMode,
-        find_retarget_spec_by_loader_key, patch_prog061_bgo_in_place,
+        BASE_FACTORY_BGO_GEOMETRY_ID, Prog061BgoPatchMode, patch_prog061_bgo_in_place,
     };
 
     // 1. Real-marker PROG061 left in EH50 4 MiB geometry fails HardenedRecovery (`bgo_geometry_mismatch`).
@@ -101,45 +114,24 @@ fn hardening_gates_catch_bgo_geometry_mismatch_fvu_panamon_trap_and_report_rtsd(
     );
 
     // 2. PANA__SD with UartMonitor PROG061 triggers `fvu_panamon_trap` warn, and 250 GB MAIN emits `rtsd_target_consistency`.
-    let mut eh55_mon_prog = super::super::synthetic_prog061_fixture();
-    eh55_mon_prog[0x03_6E2C..0x03_6E30].copy_from_slice(&0x8000_0000u32.to_le_bytes());
-    eh55_mon_prog[0x03_6E2C + 0x0C..0x03_6E2C + 0x10].copy_from_slice(&0x28u32.to_le_bytes());
-    eh55_mon_prog[0x03_6E2C + 0x30..0x03_6E2C + 0x34]
-        .copy_from_slice(&0x8413_0000u32.to_le_bytes());
-    let ver061_spec = find_retarget_spec_by_loader_key("ver061").unwrap();
-    let eh55_sum_off = ver061_spec.bgo_sum_beq_offset as usize;
-    eh55_mon_prog[eh55_sum_off..eh55_sum_off + 2].copy_from_slice(&ORIG_SUM_BEQ);
+    let (mut eh55_mon_prog, expected_geo) = super::super::synthetic_eh55_prog061_fixture();
     patch_prog061_bgo_in_place(&mut eh55_mon_prog, Prog061BgoPatchMode::UartMonitor).unwrap();
 
-    let mut synth_main = build_synthetic_hdd_cmd_main();
-    apply_capacity_patch_in_place(
-        &mut synth_main,
-        HddCapacityPatchMode::FixedCapacity,
-        Some(250),
-    )
-    .unwrap();
-    let main_ctr = pack_extrhead(
-        &synth_main,
-        "MAIN",
-        MAIN_DEFAULT_BASE_VA,
-        "TEST3410PQ",
-        ExtrheadCryptMode::Main,
-        PANA_EXTRHEAD_DEFAULT_ADLER_STEP as u32,
-        0x3410,
-    )
-    .unwrap();
+    let main_ctr = make_synthetic_main_250gb_ctr();
+    let sd_bytes = pack_ver061_pair_sd48(eh55_mon_prog.clone(), main_ctr);
 
-    let mut m_prog = FrmPackModule::new("PROG061 ", eh55_mon_prog.clone());
-    m_prog.hardware_family = "M6930LB".to_string();
-    m_prog.hardware_family_aliases = vec!["M6930".to_string()];
-    m_prog.model_prefix = b'M';
-
-    let mut m_main = FrmPackModule::new("MAIN3410", main_ctr);
-    m_main.hardware_family = "M6930LB".to_string();
-    m_main.hardware_family_aliases = vec!["M6930".to_string()];
-    m_main.model_prefix = b'M';
-
-    let (sd_bytes, _) = pack_frm(&[m_prog, m_main], FrmContainerMode::Sd48, None).unwrap();
+    let rep_trap_std = verify_sd_buffers(
+        "/mem/trap_250gb_std",
+        Some(Ok(&eh55_mon_prog)),
+        Some(&sd_bytes),
+    );
+    assert_eq!(rep_trap_std.overall_status, "READY_WITH_HW_WARNINGS");
+    assert!(
+        rep_trap_std
+            .checks
+            .iter()
+            .any(|c| c.id == "fvu_panamon_trap" && c.severity == "warn")
+    );
 
     let rep_trap = verify_sd_buffers_with_profile(
         "/mem/trap_250gb",
@@ -147,14 +139,14 @@ fn hardening_gates_catch_bgo_geometry_mismatch_fvu_panamon_trap_and_report_rtsd(
         Some(&sd_bytes),
         SdKitAuditProfile::HardenedRecovery,
     );
-    assert_eq!(rep_trap.overall_status, "READY_WITH_HW_WARNINGS");
+    assert_eq!(rep_trap.overall_status, "INCOMPLETE_OR_INVALID");
     assert_eq!(
         rep_trap.digadiag_bgo_geometry.as_deref(),
-        Some(ver061_spec.target_geometry_id.as_str())
+        Some(expected_geo.as_str())
     );
     assert_eq!(
         rep_trap.pana_sd_prog061_bgo_geometry.as_deref(),
-        Some(ver061_spec.target_geometry_id.as_str())
+        Some(expected_geo.as_str())
     );
     assert_eq!(
         rep_trap.pana_sd_main_hdd_capacity_label.as_deref(),
@@ -164,7 +156,19 @@ fn hardening_gates_catch_bgo_geometry_mismatch_fvu_panamon_trap_and_report_rtsd(
         rep_trap
             .checks
             .iter()
-            .any(|c| c.id == "fvu_panamon_trap" && c.severity == "warn")
+            .any(|c| c.id == "fvu_panamon_trap" && c.severity == "fail")
+    );
+    assert!(
+        rep_trap
+            .checks
+            .iter()
+            .any(|c| c.id == "bgo_allowlist_invariant" && c.severity == "pass")
+    );
+    assert!(
+        rep_trap
+            .checks
+            .iter()
+            .any(|c| c.id == "rtsd_lba48_gate" && c.severity == "pass")
     );
     assert!(
         rep_trap
@@ -174,4 +178,83 @@ fn hardening_gates_catch_bgo_geometry_mismatch_fvu_panamon_trap_and_report_rtsd(
                 && c.severity == "pass"
                 && c.title.contains("250GB"))
     );
+}
+
+#[test]
+fn sata_bridge_reset_fix_audit_enforces_symmetry_and_catches_corruption() {
+    use crate::constants::CHK_ID_SATA_BRIDGE_RESET_FIX;
+    use crate::re::bgo_unbrick::{Prog061BgoPatchMode, patch_prog061_bgo_in_place};
+    use crate::re::sata_bridge_fix::{
+        OFF_PROG061_SATA_BRIDGE_RESET_WAIT, SATA_BRIDGE_STATE_FACTORY_2MS,
+        SATA_BRIDGE_STATE_WAIT_1000MS, SataBridgeResetFixMode,
+        apply_prog061_sata_bridge_reset_fix_in_place,
+    };
+
+    let (mut eh55_mon_prog, _) = super::super::synthetic_eh55_prog061_fixture();
+
+    let mut prog_sata = eh55_mon_prog.clone();
+    patch_prog061_bgo_in_place(&mut prog_sata, Prog061BgoPatchMode::BypassChecksOnly).unwrap();
+    apply_prog061_sata_bridge_reset_fix_in_place(
+        &mut prog_sata,
+        SataBridgeResetFixMode::Wait1000Ms,
+    )
+    .unwrap();
+    patch_prog061_bgo_in_place(&mut eh55_mon_prog, Prog061BgoPatchMode::UartMonitor).unwrap();
+
+    let main_ctr = make_synthetic_main_250gb_ctr();
+    let sd_partial = pack_ver061_pair_sd48(prog_sata.clone(), main_ctr.clone());
+    let rep_partial_hard = verify_sd_buffers_with_profile(
+        "/mem/sata_partial_hard",
+        Some(Ok(&eh55_mon_prog)),
+        Some(&sd_partial),
+        SdKitAuditProfile::HardenedRecovery,
+    );
+    assert_eq!(rep_partial_hard.overall_status, "INCOMPLETE_OR_INVALID");
+    assert!(
+        rep_partial_hard
+            .checks
+            .iter()
+            .any(|c| c.id == CHK_ID_SATA_BRIDGE_RESET_FIX && c.severity == "fail")
+    );
+
+    let mut prog_corrupt = prog_sata;
+    prog_corrupt[OFF_PROG061_SATA_BRIDGE_RESET_WAIT] ^= 0x01;
+    let sd_corrupt = pack_ver061_pair_sd48(prog_corrupt, main_ctr);
+    let rep_corrupt = verify_sd_buffers(
+        "/mem/sata_corrupt",
+        Some(Ok(&eh55_mon_prog)),
+        Some(&sd_corrupt),
+    );
+    assert_eq!(rep_corrupt.overall_status, "INCOMPLETE_OR_INVALID");
+    assert!(
+        rep_corrupt
+            .checks
+            .iter()
+            .any(|c| c.id == CHK_ID_SATA_BRIDGE_RESET_FIX && c.severity == "fail")
+    );
+
+    // Direct symmetric-pass verification for PROG061 + MAIN3060NP 1000 ms pair and factory 2 ms silence.
+    let mut checks = Vec::new();
+    push_sata_bridge_fix_check(
+        &mut checks,
+        true,
+        true,
+        Some(SATA_BRIDGE_STATE_WAIT_1000MS),
+        Some(SATA_BRIDGE_STATE_WAIT_1000MS),
+        SdKitAuditProfile::HardenedRecovery,
+    );
+    assert_eq!(checks.len(), 1);
+    assert_eq!(checks[0].id, CHK_ID_SATA_BRIDGE_RESET_FIX);
+    assert_eq!(checks[0].severity, "pass");
+
+    checks.clear();
+    push_sata_bridge_fix_check(
+        &mut checks,
+        true,
+        true,
+        Some(SATA_BRIDGE_STATE_FACTORY_2MS),
+        Some(SATA_BRIDGE_STATE_FACTORY_2MS),
+        SdKitAuditProfile::HardenedRecovery,
+    );
+    assert!(checks.is_empty());
 }

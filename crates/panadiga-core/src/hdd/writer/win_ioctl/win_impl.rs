@@ -65,8 +65,20 @@ impl OwnedDiskHandle {
         if trimmed.is_empty() {
             bail!("Device path cannot be empty");
         }
-        if trimmed.to_ascii_lowercase().contains("physicaldrive0") {
+        let lower = trimmed.to_ascii_lowercase();
+        if lower.contains("physicaldrive0") {
             bail!("FATAL SAFETY LOCKOUT: Refusing to open PhysicalDrive0 via Win32 IOCTL!");
+        }
+        if writable
+            && lower.starts_with(r"\\.\physicaldrive")
+            && let Some(os_disks) = super::super::discovery::detect_host_os_disks()
+            && os_disks
+                .iter()
+                .any(|d| super::super::block_ops::target_matches_base_disk_or_partition(&lower, d))
+        {
+            bail!(
+                "FATAL SAFETY LOCKOUT: Refusing to open detected host OS disk '{trimmed}' via Win32 IOCTL!"
+            );
         }
         let wide = encode_wide_nul(trimmed);
         let access = if writable {
