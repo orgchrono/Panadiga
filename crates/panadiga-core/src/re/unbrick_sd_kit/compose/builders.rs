@@ -12,7 +12,8 @@ use crate::hdd::{HddCapacityPatchMode, apply_capacity_patch_in_place};
 use crate::nvram::calculate_hashes;
 
 use super::super::super::bgo_unbrick::{
-    PROG061_BASE_VA, Prog061BgoPatchMode, patch_prog061_bgo_in_place_with_policy,
+    PROG061_BASE_VA, Prog061BgoPatchMode, Prog061BgoTargetGeometry,
+    patch_prog061_bgo_in_place_with_policy, retarget_prog061_bgo_geometry_in_place,
 };
 use super::super::super::main_passthrough::{
     EXPECTED_MAIN_3410PQ_SIZE, MAIN_BASE_VA, MainPassthroughMode, apply_main_passthrough_in_place,
@@ -29,6 +30,12 @@ pub(crate) fn compose_digadiag_and_prog061(
     allow_unsafe_auto_format: bool,
 ) -> Result<(Vec<u8>, Vec<u8>, String)> {
     let mut prog_patched = load_prog061_from_bytes(prog_raw)?;
+    if loader_profile == SdLoaderProfile::Ver061RawSd48 {
+        retarget_prog061_bgo_geometry_in_place(
+            &mut prog_patched,
+            Prog061BgoTargetGeometry::Eh55M6930Lb8Mb,
+        )?;
+    }
     patch_prog061_bgo_in_place_with_policy(&mut prog_patched, bgo_mode, allow_unsafe_auto_format)?;
     let diag_bytes = match loader_profile {
         SdLoaderProfile::Ver061RawSd48 => prog_patched.clone(),
@@ -46,6 +53,33 @@ pub(crate) fn compose_digadiag_and_prog061(
     };
     let (_, sha) = calculate_hashes(&diag_bytes);
     Ok((prog_patched, diag_bytes, sha))
+}
+
+/// Composes the `PROG061 ` payload embedded inside `PANA__SD.FRM`.
+///
+/// For `ver061` (`DMR-EH55`) when serial boot `DIGADIAG.FRM` uses `UartMonitor` (`PANAMON1>`),
+/// `PANA__SD.FRM`'s `PROG061 ` slot is built in `BypassChecksOnly` (FVU installer mode) so
+/// normal boot with a blank HDD proceeds through `"SD version up mode."` into `MAIN3410PQ`.
+pub(crate) fn compose_pana_sd_prog061(
+    prog_raw: &[u8],
+    requested_bgo_mode: Prog061BgoPatchMode,
+    loader_profile: SdLoaderProfile,
+    allow_unsafe_auto_format: bool,
+) -> Result<(Vec<u8>, Prog061BgoPatchMode)> {
+    let effective_mode = if loader_profile == SdLoaderProfile::Ver061RawSd48
+        && requested_bgo_mode == Prog061BgoPatchMode::UartMonitor
+    {
+        Prog061BgoPatchMode::BypassChecksOnly
+    } else {
+        requested_bgo_mode
+    };
+    let (prog_patched, _, _) = compose_digadiag_and_prog061(
+        prog_raw,
+        effective_mode,
+        loader_profile,
+        allow_unsafe_auto_format,
+    )?;
+    Ok((prog_patched, effective_mode))
 }
 
 /// Pure composition of TBC-passthrough + optional HDD-capacity-unlocked `MAIN` container.
@@ -95,20 +129,27 @@ pub(crate) fn compose_patched_main_container(
     };
 
     let mut hdd_capacity_applied = None;
-    if unlock_hdd_dynamic || hdd_target_gb.is_some() {
-        let cap_mode = if unlock_hdd_dynamic {
-            HddCapacityPatchMode::DynamicUnclamped
-        } else {
-            HddCapacityPatchMode::FixedCapacity
-        };
-        if apply_capacity_patch_in_place(&mut main_bin, cap_mode, hdd_target_gb).is_ok() {
-            hdd_capacity_applied = Some(if unlock_hdd_dynamic {
-                "dynamic".to_string()
-            } else {
-                format!("cap_{}gb", hdd_target_gb.unwrap_or(0))
-            });
+    if let Some(gb) = hdd_target_gb {
+        if apply_capacity_patch_in_place(
+            &mut main_bin,
+            HddCapacityPatchMode::FixedCapacity,
+            Some(gb),
+        )
+        .is_ok()
+        {
+            hdd_capacity_applied = Some(format!("cap_{gb}gb"));
             modified = true;
         }
+    } else if unlock_hdd_dynamic
+        && apply_capacity_patch_in_place(
+            &mut main_bin,
+            HddCapacityPatchMode::DynamicUnclamped,
+            None,
+        )
+        .is_ok()
+    {
+        hdd_capacity_applied = Some("dynamic".to_string());
+        modified = true;
     }
 
     let resolved_build = if identity.build_id != "UNKNOWN" {

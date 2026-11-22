@@ -5,6 +5,7 @@ import type {
   DavisChannelId,
   DavisDriveSelector,
   FrmPackMode,
+  HddCapacityTargetOption,
   MainPassthroughMode,
   MatshitaBootScenario,
   NorSliceKind,
@@ -165,6 +166,9 @@ export const isDavisDriveSelector: (value: unknown) => value is DavisDriveSelect
   'master',
   'slave',
 ] as const);
+
+export const isHddCapacityTargetOption: (value: unknown) => value is HddCapacityTargetOption =
+  oneOfGuard(['dynamic', '250', '400', '300', '200', '160', '120', '80'] as const);
 
 export function isDynamicKeymapProfile(value: unknown): value is DynamicKeymapProfile {
   return (

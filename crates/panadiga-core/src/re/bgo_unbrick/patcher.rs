@@ -32,6 +32,17 @@ fn site_status_from_spec(
     })
 }
 
+fn active_bgo_sum_spec(
+    data: &[u8],
+) -> Result<(&'static PatchSpec<'static>, super::Prog061BgoTargetGeometry)> {
+    let geometry = super::inspect_prog061_bgo_geometry(data)?;
+    let spec = match geometry {
+        super::Prog061BgoTargetGeometry::Eh55M6930Lb8Mb => &super::SPEC_BGO_SUM_EH55,
+        super::Prog061BgoTargetGeometry::Eh50M6930_4Mb => &SPEC_BGO_SUM,
+    };
+    Ok((spec, geometry))
+}
+
 /// Inspects the three BGO unbrick/bypass sites in an unpacked `PROG061` image (`262,144` bytes).
 pub fn inspect_prog061_bgo_sites(data: &[u8]) -> Result<Prog061BgoInspection> {
     if data.len() != PROG061_EXPECTED_SIZE {
@@ -41,7 +52,8 @@ pub fn inspect_prog061_bgo_sites(data: &[u8]) -> Result<Prog061BgoInspection> {
         );
     }
     let (_, raw_sha256) = calculate_hashes(data);
-    let bgo_sum_site = site_status_from_spec(data, &SPEC_BGO_SUM, "BYPASSED_BRA")?;
+    let (bgo_sum_spec, geometry) = active_bgo_sum_spec(data)?;
+    let bgo_sum_site = site_status_from_spec(data, bgo_sum_spec, "BYPASSED_BRA")?;
     let devinfo_site = site_status_from_spec(data, &SPEC_DEVINFO_CHECK, "BYPASSED_BRA")?;
     let bgo_call_cls = classify_patch_site(data, &SPEC_A2BC_BRA_MONITOR, "BRA_TO_MONITOR")?;
     let mut bgo_init_hook_site =
@@ -77,6 +89,7 @@ pub fn inspect_prog061_bgo_sites(data: &[u8]) -> Result<Prog061BgoInspection> {
         raw_size: data.len(),
         raw_sha256,
         detected_mode: detected_mode.to_string(),
+        bgo_target_geometry: geometry.as_str().to_string(),
         bgo_sum_site,
         devinfo_site,
         bgo_init_hook_site,
@@ -95,10 +108,11 @@ fn apply_bgo_bypass_sites(
     hook_spec: &PatchSpec<'_>,
     hook_action: PatchApplyAction,
 ) -> Result<()> {
+    let (bgo_sum_spec, _) = active_bgo_sum_spec(raw_prog061)?;
     apply_patch_specs_in_place(
         raw_prog061,
         &[
-            (&SPEC_BGO_SUM, PatchApplyAction::ApplyReplace),
+            (bgo_sum_spec, PatchApplyAction::ApplyReplace),
             (&SPEC_DEVINFO_CHECK, PatchApplyAction::ApplyReplace),
             (&SPEC_A2BC_BRA_MONITOR, bgo_call_action),
             (hook_spec, hook_action),
@@ -187,10 +201,11 @@ pub fn patch_prog061_bgo_in_place_with_policy(
             raw_prog061[OFF_UART_MONITOR_SLACK..slack_end].copy_from_slice(&monitor_payload);
         }
         Prog061BgoPatchMode::FactoryOriginal => {
+            let (bgo_sum_spec, _) = active_bgo_sum_spec(raw_prog061)?;
             apply_patch_specs_in_place(
                 raw_prog061,
                 &[
-                    (&SPEC_BGO_SUM, PatchApplyAction::RestoreExpect),
+                    (bgo_sum_spec, PatchApplyAction::RestoreExpect),
                     (&SPEC_DEVINFO_CHECK, PatchApplyAction::RestoreExpect),
                     (&SPEC_A2BC_BRA_MONITOR, PatchApplyAction::RestoreExpect),
                     (active_hook_spec, PatchApplyAction::RestoreExpect),

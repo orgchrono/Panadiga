@@ -92,9 +92,16 @@ fn optional_real_workspace_sd_kit_roundtrip() {
         assert!(report.verification.pana_sd_present);
         assert_eq!(report.verification.pana_sd_toc_entries, expected_entries);
         assert!(report.verification.pana_sd_list_sums_ok);
+        let expected_sd_prog_label = if profile == SdLoaderProfile::Ver061RawSd48
+            && mode == Prog061BgoPatchMode::UartMonitor
+        {
+            "BYPASS_CHECKS_ONLY"
+        } else {
+            expected_label
+        };
         assert_eq!(
             report.verification.pana_sd_prog061_mode.as_deref(),
-            Some(expected_label)
+            Some(expected_sd_prog_label)
         );
         assert_eq!(
             report.verification.pana_sd_main_passthrough_mode.as_deref(),

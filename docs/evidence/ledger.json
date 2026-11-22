@@ -36,12 +36,12 @@
         },
         {
           "path": "firmware_and_images/sd_unbrick_kit/DIGADIAG.FRM",
-          "sha256": "DE72E2640EE48A7628A674E3DAD731CFF71548FC9EA3403CA616F3E5F7E392C0",
+          "sha256": "305CC2EEBC09BBAA3BB5C5D75C0395EB16831BED4B9F80EAFD57B9945E6A762D",
           "required": true
         },
         {
           "path": "firmware_and_images/sd_unbrick_kit/PANA__SD.FRM",
-          "sha256": "CDCC2CDF4617C4F08D8AF3F617DB369CFD360D8DB2601B33C84BAE0E6F995D90",
+          "sha256": "1E62C6411D132286D580AA82AD6B53C7E19041B7BE2333C28790800F4958557F",
           "required": true
         }
       ],
@@ -149,7 +149,7 @@
         },
         {
           "path": "firmware_and_images/sd_unbrick_kit/PANA__SD.FRM",
-          "sha256": "CDCC2CDF4617C4F08D8AF3F617DB369CFD360D8DB2601B33C84BAE0E6F995D90",
+          "sha256": "1E62C6411D132286D580AA82AD6B53C7E19041B7BE2333C28790800F4958557F",
           "required": true
         }
       ],

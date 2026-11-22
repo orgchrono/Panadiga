@@ -12,22 +12,22 @@ clusters; FAT32/exFAT/NTFS falham na montagem):
 
 Copie APENAS estes 2 arquivos desta pasta para a RAIZ do cartao SD (nomes 8.3):
 
-1) PANA__SD.FRM  (7.181.224 bytes | SHA-256: cdcc2cdf4617c4f08d8af3f617db369cfd360d8db2601b33c84bae0e6f995d90)
-   - Uso      : Modo Normal "LD FVU" (protegido contra corrupcao BGO [05/11/01]
-                com monitor UART PANAMON1 nos slots PROG061).
+1) PANA__SD.FRM  (7.181.224 bytes | SHA-256: 1e62c6411d132286d580aa82ad6b53c7e19041b7be2333c28790800f4958557f)
+   - Uso      : Modo Normal "LD FVU" (retarget EH55_M6930LB_8MB + BypassChecksOnly nos
+                slots PROG061 para instalar/atualizar MAIN3410PQ em HDD zerado).
    - Formato  : Conteiner sd48 plaintext (TOC 0x1800 B = slots de 48 B) com
                 6 entradas validas cobrindo M6930LB (DMR-EH55LB-S) e M6930:
                   * Slots 0/3: DRV S211 (720.896 B, off 0x001800, sum 0x058771C5)
-                  * Slots 1/4: PROG061  UART_MONITOR_PANAMON1 (DIGADIAG.FRM)
-                               (262.144 B, off 0x0B1800, sum 0x0214E681)
+                  * Slots 1/4: PROG061  BYPASS_CHECKS_ONLY (FVU EH55_M6930LB_8MB)
+                               (262.144 B, off 0x0B1800)
                   * Slots 2/5: MAIN3410PQ patched (6.192.040 B / 0x5E7BA8 em PANA__SD,
                                AV_PASSTHROUGH + HDD LBA48 dinamico >200 GB,
                                off 0x0F1800, sum 0x2F825ED9)
 
-2) DIGADIAG.FRM  (262.144 bytes | SHA-256: de72e2640ee48a7628a674e3dad731cff71548fc9ea3403ca616f3e5f7e392c0)
+2) DIGADIAG.FRM  (262.144 bytes | SHA-256: 305cc2eebc09bbaa3bb5c5d75c0395eb16831bed4b9f80eafd57b9945e6a762d)
    - Uso      : Modo JIG / Sonda P7501 (`SW_UART` LOW via `JIGBOOT` / `UARTSTREAM`),
                 iniciando o monitor interativo UART PANAMON1>[B/R/W/D/F/J/E/U/Q]
-                diretamente em 0x90400000 -> JMP 0x50400000.
+                com retarget EH55_M6930LB_8MB diretamente em 0x90400000 -> JMP 0x50400000.
 
 2. VERIFICACAO NA BANCADA
 --------------------------------------------------------------------------------

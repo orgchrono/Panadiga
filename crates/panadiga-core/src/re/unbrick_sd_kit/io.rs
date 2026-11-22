@@ -12,7 +12,8 @@ use super::super::bgo_unbrick::ensure_parent_dir;
 use super::super::unbrick_workbench::{bgo_mode_label, discover_sources, extract_modules_from_frm};
 use super::compose::{
     SdUnbrickKitReport, SdUnbrickKitRequest, compose_digadiag_and_prog061,
-    compose_pana_sd_container, compose_patched_main_container, format_sha256_manifest,
+    compose_pana_sd_container, compose_pana_sd_prog061, compose_patched_main_container,
+    format_sha256_manifest,
 };
 use super::verify::{SdMediaVerificationReport, verify_sd_buffers};
 
@@ -139,10 +140,16 @@ pub fn prepare_sd_unbrick_kit(req: &SdUnbrickKitRequest) -> Result<SdUnbrickKitR
             None => None,
         };
 
+        let (pana_sd_prog, pana_sd_bgo_mode) = compose_pana_sd_prog061(
+            &prog_raw,
+            req.bgo_mode,
+            req.loader_profile,
+            req.allow_unsafe_auto_format,
+        )?;
         let (sd_bytes, sd_sha) = compose_pana_sd_container(
             drv_bytes,
-            prog_patched,
-            req.bgo_mode,
+            pana_sd_prog,
+            pana_sd_bgo_mode,
             req.loader_profile,
             composed_main.container,
             &composed_main.slot_name,

@@ -12,12 +12,19 @@
 //!    mode, `0x5040A2BC` (`call32 FUN_5040248e`) is also bypassed via `bra +17 -> 0x5040A2CD` so
 //!    `PANAMON1` enters unconditionally right after `FUN_50404592` bus/CFI setup.
 
+mod eh55_retarget;
 mod io;
 mod patcher;
 
 #[cfg(test)]
+mod eh55_tests;
+#[cfg(test)]
 mod tests;
 
+pub use eh55_retarget::{
+    OFF_BGO_SUM_BEQ_EH55, Prog061BgoTargetGeometry, inspect_prog061_bgo_geometry,
+    retarget_prog061_bgo_geometry_in_place,
+};
 pub use io::{
     ensure_parent_dir, patch_prog061_or_build_digadiag, patch_prog061_or_build_digadiag_with_policy,
 };
@@ -75,6 +82,17 @@ pub(super) const SPEC_BGO_SUM: PatchSpec<'static> = PatchSpec {
     name: "OFF_BGO_SUM_BEQ",
     description: "bgo_sum_23058 N(N+1)/2 BGO sector sum check -> bra +10",
     va: PROG061_BASE_VA + OFF_BGO_SUM_BEQ as u32,
+    base_va: PROG061_BASE_VA,
+    expect: &ORIG_SUM_BEQ,
+    replace: &PATCH_SUM_BRA,
+    required_len: Some(PROG061_EXPECTED_SIZE),
+    input_sha256: None,
+};
+
+pub(super) const SPEC_BGO_SUM_EH55: PatchSpec<'static> = PatchSpec {
+    name: "OFF_BGO_SUM_BEQ_EH55",
+    description: "EH55 M6930LB BGO sector sum check (relocated nfrom_drv.o) -> bra +10",
+    va: PROG061_BASE_VA + OFF_BGO_SUM_BEQ_EH55 as u32,
     base_va: PROG061_BASE_VA,
     expect: &ORIG_SUM_BEQ,
     replace: &PATCH_SUM_BRA,
@@ -170,6 +188,8 @@ pub struct Prog061BgoInspection {
     pub raw_size: usize,
     pub raw_sha256: String,
     pub detected_mode: String,
+    #[serde(default)]
+    pub bgo_target_geometry: String,
     pub bgo_sum_site: Prog061BgoSiteStatus,
     pub devinfo_site: Prog061BgoSiteStatus,
     pub bgo_init_hook_site: Prog061BgoSiteStatus,

@@ -1,17 +1,17 @@
 {
   "output_dir": "firmware_and_images/sd_unbrick_kit",
-  "prog061_source": "firmware_and_images/sd_unbrick_kit/DIGADIAG.FRM",
-  "main_source": "firmware_and_images/extracted_partitions/hdd_partition_firmware_0x02000000.bin",
-  "drv_source": "firmware_and_images/extracted_partitions/frm_unpacked/drv_s211_dec.bin",
+  "prog061_source": "firmware_and_images/sd_unbrick_kit\\_extracted_frm\\prog061_dec.bin",
+  "main_source": "C:\\Users\\danie\\Documents\\Panadiga\\firmware_and_images/extracted_partitions/hdd_partition_firmware_0x02000000.bin",
+  "drv_source": "C:\\Users\\danie\\Documents\\Panadiga\\firmware_and_images/extracted_partitions/frm_unpacked/drv_s211_dec.bin",
   "bgo_mode_applied": "uart_monitor",
   "loader_profile_applied": "ver061",
   "main_passthrough_applied": "av_passthrough",
   "hdd_capacity_applied": "dynamic",
-  "digadiag_path": "firmware_and_images/sd_unbrick_kit/DIGADIAG.FRM",
-  "digadiag_sha256": "de72e2640ee48a7628a674e3dad731cff71548fc9ea3403ca616f3e5f7e392c0",
-  "pana_sd_path": "firmware_and_images/sd_unbrick_kit/PANA__SD.FRM",
-  "pana_sd_sha256": "cdcc2cdf4617c4f08d8af3f617db369cfd360d8db2601b33c84bae0e6f995d90",
-  "sha256sums_path": "firmware_and_images/sd_unbrick_kit/SHA256SUMS.txt",
+  "digadiag_path": "firmware_and_images/sd_unbrick_kit\\DIGADIAG.FRM",
+  "digadiag_sha256": "305cc2eebc09bbaa3bb5c5d75c0395eb16831bed4b9f80eafd57b9945e6a762d",
+  "pana_sd_path": "firmware_and_images/sd_unbrick_kit\\PANA__SD.FRM",
+  "pana_sd_sha256": "1e62c6411d132286d580aa82ad6b53c7e19041b7be2333c28790800f4958557f",
+  "sha256sums_path": "firmware_and_images/sd_unbrick_kit\\SHA256SUMS.txt",
   "verification": {
     "sd_root_dir": "firmware_and_images/sd_unbrick_kit",
     "overall_status": "READY_WITH_HW_WARNINGS",
@@ -22,10 +22,11 @@
     "pana_sd_present": true,
     "pana_sd_toc_entries": 6,
     "pana_sd_list_sums_ok": true,
-    "pana_sd_prog061_mode": "UART_MONITOR_PANAMON1",
+    "pana_sd_prog061_mode": "BYPASS_CHECKS_ONLY",
     "pana_sd_main_build": "3410PQ",
     "pana_sd_main_passthrough_mode": "AV_PASSTHROUGH",
     "pana_sd_main_hdd_dynamic": true,
+    "factory_unpatched_prog061_detected": false,
     "checks": [
       {
         "id": "digadiag_container",
@@ -37,7 +38,7 @@
         "id": "pana_sd_container",
         "severity": "pass",
         "title": "PANA__SD.FRM (48B Plaintext SD TOC — Loader ver0.61)",
-        "detail": "entries=6, list_sums_ok=true, entry_stride=48B, loader_profile=ver061, prog061=UART_MONITOR_PANAMON1, main_build=3410PQ, tbc_mode=AV_PASSTHROUGH"
+        "detail": "entries=6, list_sums_ok=true, fvu_sums_ok=true, entry_stride=48B, loader_profile=ver061, prog061=BYPASS_CHECKS_ONLY, main_build=3410PQ, tbc_mode=AV_PASSTHROUGH"
       },
       {
         "id": "sd_hw_91006",

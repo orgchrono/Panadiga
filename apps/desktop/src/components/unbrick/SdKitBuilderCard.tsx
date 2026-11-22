@@ -24,7 +24,9 @@ import type { TbcSdPipelineVm } from './TbcLabAndSdHardenPipeline';
 import {
   type BgoMode,
   buildSdKitRequestPayload,
+  type HddCapacityTargetOption,
   type MainPassthroughMode,
+  resolveHddCapacitySelection,
   resolveSdOverallBadgeVariant,
   type SdDiskVerificationProps,
   type SdLoaderProfile,
@@ -147,12 +149,14 @@ export const SdKitBuilderCard: React.FC<SdKitBuilderCardProps> = ({
   const [mainMode, setMainMode] = useState<MainPassthroughMode>('av_passthrough');
   const [includePanaSd, setIncludePanaSd] = useState(true);
   const [unlockHddDynamic, setUnlockHddDynamic] = useState(true);
+  const [hddCapacityTarget, setHddCapacityTarget] = useState<HddCapacityTargetOption>('dynamic');
 
   const [outDirError, setOutDirError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   const handleBuildSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const capacitySelection = resolveHddCapacitySelection(hddCapacityTarget);
     const { errorKey, request } = buildSdKitRequestPayload({
       outputDir,
       panaDvdPath,
@@ -160,7 +164,8 @@ export const SdKitBuilderCard: React.FC<SdKitBuilderCardProps> = ({
       mainMode,
       loaderProfile,
       includePanaSd,
-      unlockHddDynamic,
+      unlockHddDynamic: capacitySelection.unlockHddDynamic,
+      hddTargetGb: capacitySelection.hddTargetGb,
     });
     if (errorKey || !request) {
       setOutDirError(errorKey ? t(errorKey) : null);
@@ -245,6 +250,8 @@ export const SdKitBuilderCard: React.FC<SdKitBuilderCardProps> = ({
             onChangeIncludePanaSd={setIncludePanaSd}
             unlockHddDynamic={unlockHddDynamic}
             onChangeUnlockHddDynamic={setUnlockHddDynamic}
+            hddCapacityTarget={hddCapacityTarget}
+            onChangeHddCapacityTarget={setHddCapacityTarget}
           />
 
           <div className="flex flex-wrap items-center gap-2">

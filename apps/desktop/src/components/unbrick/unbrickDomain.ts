@@ -2,6 +2,7 @@ import type { TranslationKey } from '@/i18n/translations';
 import type {
   BgoMode,
   DriveRoleFilter,
+  HddCapacityTargetOption,
   MainPassthroughMode,
   PhysicalDriveInfo,
   SdDiskInspectionReport,
@@ -10,7 +11,17 @@ import type {
   SdUnbrickKitRequestDto,
 } from '@/models';
 
-export type { BgoMode, MainPassthroughMode, SdLoaderProfile };
+export type { BgoMode, HddCapacityTargetOption, MainPassthroughMode, SdLoaderProfile };
+
+export function resolveHddCapacitySelection(target: HddCapacityTargetOption): {
+  unlockHddDynamic: boolean;
+  hddTargetGb: number | null;
+} {
+  if (target === 'dynamic') {
+    return { unlockHddDynamic: true, hddTargetGb: null };
+  }
+  return { unlockHddDynamic: false, hddTargetGb: Number(target) };
+}
 
 export interface SdDiskVerificationProps {
   verifyLoading: boolean;
@@ -69,6 +80,7 @@ export interface SdKitFormInputs {
   loaderProfile?: SdLoaderProfile;
   includePanaSd: boolean;
   unlockHddDynamic: boolean;
+  hddTargetGb?: number | null;
 }
 
 export function buildSdKitRequestPayload(inputs: SdKitFormInputs): {
@@ -79,6 +91,7 @@ export function buildSdKitRequestPayload(inputs: SdKitFormInputs): {
   if (outCheck.errorKey) {
     return { errorKey: outCheck.errorKey, request: null };
   }
+  const hasExplicitTargetGb = typeof inputs.hddTargetGb === 'number';
   return {
     errorKey: null,
     request: {
@@ -88,7 +101,8 @@ export function buildSdKitRequestPayload(inputs: SdKitFormInputs): {
       main_passthrough_mode: inputs.mainMode,
       ...(inputs.loaderProfile ? { loader_profile: inputs.loaderProfile } : {}),
       include_pana_sd: inputs.includePanaSd,
-      unlock_hdd_dynamic: inputs.unlockHddDynamic,
+      unlock_hdd_dynamic: hasExplicitTargetGb ? false : inputs.unlockHddDynamic,
+      ...(hasExplicitTargetGb ? { hdd_target_gb: inputs.hddTargetGb } : {}),
     },
   };
 }

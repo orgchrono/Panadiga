@@ -5,7 +5,9 @@
 use std::path::PathBuf;
 
 use crate::constants::PANA_DIGADIAG_FRM_SIZE;
-use crate::re::bgo_unbrick::{PROG061_EXPECTED_SIZE, Prog061BgoPatchMode};
+use crate::re::bgo_unbrick::{
+    PROG061_EXPECTED_SIZE, Prog061BgoPatchMode, inspect_prog061_bgo_sites,
+};
 use crate::re::main_passthrough::MainPassthroughMode;
 
 use super::super::synthetic_prog061_fixture;
@@ -110,8 +112,12 @@ fn hardened_panamon1_preset_and_in_memory_composition_pass_dual_parity() {
     assert!(!artifacts.verification.factory_unpatched_prog061_detected);
     assert_eq!(artifacts.verification.pana_sd_toc_entries, 6);
     assert_eq!(
-        artifacts.verification.pana_sd_prog061_mode.as_deref(),
+        artifacts.verification.digadiag_bgo_mode.as_deref(),
         Some("UART_MONITOR_PANAMON1")
+    );
+    assert_eq!(
+        artifacts.verification.pana_sd_prog061_mode.as_deref(),
+        Some("BYPASS_CHECKS_ONLY")
     );
 }
 
@@ -136,12 +142,17 @@ fn reproduces_canonical_sd_unbrick_kit_byte_for_byte_if_present() {
     let drv = pana_sd[0x0000_1800..0x000B_1800].to_vec();
     let prog = pana_sd[0x000B_1800..0x000F_1800].to_vec();
     let main_mod = pana_sd[0x000F_1800..0x006D_93A8].to_vec();
-    assert_eq!(prog, canonical_digadiag);
+    let diag_insp = inspect_prog061_bgo_sites(&canonical_digadiag).unwrap();
+    assert_eq!(diag_insp.detected_mode, "UART_MONITOR_PANAMON1");
+    assert_eq!(diag_insp.bgo_target_geometry, "EH55_M6930LB_8MB");
+    let sd_prog_insp = inspect_prog061_bgo_sites(&prog).unwrap();
+    assert_eq!(sd_prog_insp.detected_mode, "BYPASS_CHECKS_ONLY");
+    assert_eq!(sd_prog_insp.bgo_target_geometry, "EH55_M6930LB_8MB");
 
     let (rebuilt_sd, sd_sha) = super::builders::compose_pana_sd_container(
         Some(drv),
         prog,
-        Prog061BgoPatchMode::UartMonitor,
+        Prog061BgoPatchMode::BypassChecksOnly,
         SdLoaderProfile::Ver061RawSd48,
         main_mod,
         "MAIN3410PQ",
@@ -150,7 +161,7 @@ fn reproduces_canonical_sd_unbrick_kit_byte_for_byte_if_present() {
     .unwrap();
     assert_eq!(
         sd_sha,
-        "cdcc2cdf4617c4f08d8af3f617db369cfd360d8db2601b33c84bae0e6f995d90"
+        "1e62c6411d132286d580aa82ad6b53c7e19041b7be2333c28790800f4958557f"
     );
     assert_eq!(rebuilt_sd, pana_sd);
 
@@ -167,7 +178,7 @@ fn reproduces_canonical_sd_unbrick_kit_byte_for_byte_if_present() {
         .unwrap();
         assert_eq!(
             digadiag_sha,
-            "91bfdf47d573615434ad4327ff8e4a1eff2adfb1ea720fda670201dab79c82a5"
+            "305cc2eebc09bbaa3bb5c5d75c0395eb16831bed4b9f80eafd57b9945e6a762d"
         );
         assert_eq!(digadiag_bytes.len(), PROG061_EXPECTED_SIZE);
         let rep = verify_sd_buffers("/mem/sd", Some(Ok(&digadiag_bytes)), None);
@@ -176,4 +187,49 @@ fn reproduces_canonical_sd_unbrick_kit_byte_for_byte_if_present() {
             Some("UART_MONITOR_PANAMON1")
         );
     }
+}
+
+#[test]
+fn compose_patched_main_gives_hdd_target_gb_precedence_over_dynamic() {
+    use crate::constants::PANA_EXTRHEAD_DEFAULT_ADLER_STEP;
+    use crate::crypto::{ExtrheadCryptMode, pack_extrhead, unpack_extrhead};
+    use crate::hdd::capacity_patch::codec::test_helpers::build_synthetic_hdd_cmd_main;
+    use crate::hdd::capacity_patch::inspect_main_buffer_capacity;
+    use crate::hdd::capacity_patch::specs::MAIN_DEFAULT_BASE_VA;
+
+    let synth_main = build_synthetic_hdd_cmd_main();
+    let packed = pack_extrhead(
+        &synth_main,
+        "MAIN",
+        MAIN_DEFAULT_BASE_VA,
+        "TEST3410PQ",
+        ExtrheadCryptMode::Main,
+        PANA_EXTRHEAD_DEFAULT_ADLER_STEP as u32,
+        0x3410,
+    )
+    .unwrap();
+
+    let composed = compose_patched_main_container(
+        &packed,
+        MainPassthroughMode::FactoryOriginal,
+        true,
+        Some(250),
+        None,
+        true,
+    )
+    .unwrap();
+    assert_eq!(composed.hdd_capacity_applied.as_deref(), Some("cap_250gb"));
+
+    let unpacked = unpack_extrhead(&composed.container, ExtrheadCryptMode::Main).unwrap();
+    let cap = inspect_main_buffer_capacity(
+        &unpacked.decompressed,
+        MAIN_DEFAULT_BASE_VA,
+        "EXTRHEAD_CONTAINER",
+        Some(unpacked.header.build_name),
+        "test",
+    )
+    .unwrap();
+    assert!(!cap.is_dynamic_unclamped);
+    assert_eq!(cap.slot_fallback_blocks_2kb, 0x0746_6528);
+    assert!((cap.effective_default_limit_gb - 250.0).abs() < 1.0);
 }

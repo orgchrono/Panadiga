@@ -1,8 +1,18 @@
 import React from 'react';
 import { Select } from '@/components/ui';
 import { useTranslation } from '@/i18n/useTranslation';
-import { isBgoMode, isMainPassthroughMode, isSdLoaderProfile } from '@/utils/typeGuards';
-import type { BgoMode, MainPassthroughMode, SdLoaderProfile } from './unbrickDomain';
+import {
+  isBgoMode,
+  isHddCapacityTargetOption,
+  isMainPassthroughMode,
+  isSdLoaderProfile,
+} from '@/utils/typeGuards';
+import type {
+  BgoMode,
+  HddCapacityTargetOption,
+  MainPassthroughMode,
+  SdLoaderProfile,
+} from './unbrickDomain';
 
 export interface SdKitProfileControlsProps {
   readonly bgoMode: BgoMode;
@@ -15,6 +25,8 @@ export interface SdKitProfileControlsProps {
   readonly onChangeIncludePanaSd: (checked: boolean) => void;
   readonly unlockHddDynamic: boolean;
   readonly onChangeUnlockHddDynamic: (checked: boolean) => void;
+  readonly hddCapacityTarget?: HddCapacityTargetOption;
+  readonly onChangeHddCapacityTarget?: (target: HddCapacityTargetOption) => void;
 }
 
 export const SdKitProfileControls: React.FC<SdKitProfileControlsProps> = ({
@@ -28,8 +40,11 @@ export const SdKitProfileControls: React.FC<SdKitProfileControlsProps> = ({
   onChangeIncludePanaSd,
   unlockHddDynamic,
   onChangeUnlockHddDynamic,
+  hddCapacityTarget,
+  onChangeHddCapacityTarget,
 }) => {
   const { t } = useTranslation();
+  const resolvedHddTarget = hddCapacityTarget ?? (unlockHddDynamic ? 'dynamic' : '160');
 
   return (
     <>
@@ -74,7 +89,7 @@ export const SdKitProfileControls: React.FC<SdKitProfileControlsProps> = ({
           </Select>
         </div>
 
-        <div className="space-y-1 sm:col-span-2">
+        <div className="space-y-1">
           <label htmlFor="sd-kit-loader-profile" className="text-slate-400 block font-mono">
             {t('unbrick.sdKit.loaderProfile')}
           </label>
@@ -89,6 +104,32 @@ export const SdKitProfileControls: React.FC<SdKitProfileControlsProps> = ({
           >
             <option value="ver061">{t('unbrick.sdKit.loaderVer061')}</option>
             <option value="ver063">{t('unbrick.sdKit.loaderVer063')}</option>
+          </Select>
+        </div>
+
+        <div className="space-y-1">
+          <label htmlFor="sd-kit-hdd-capacity" className="text-slate-400 block font-mono">
+            {t('unbrick.sdKit.hddCapacity')}
+          </label>
+          <Select
+            id="sd-kit-hdd-capacity"
+            data-testid="sd-hdd-capacity-select"
+            value={resolvedHddTarget}
+            onChange={e => {
+              if (isHddCapacityTargetOption(e.target.value)) {
+                onChangeHddCapacityTarget?.(e.target.value);
+                onChangeUnlockHddDynamic(e.target.value === 'dynamic');
+              }
+            }}
+          >
+            <option value="dynamic">{t('unbrick.sdKit.hddCapacityDynamic')}</option>
+            <option value="250">{t('unbrick.sdKit.hddCapacity250')}</option>
+            <option value="400">{t('unbrick.sdKit.hddCapacity400')}</option>
+            <option value="300">{t('unbrick.sdKit.hddCapacity300')}</option>
+            <option value="200">{t('unbrick.sdKit.hddCapacity200')}</option>
+            <option value="160">{t('unbrick.sdKit.hddCapacity160')}</option>
+            <option value="120">{t('unbrick.sdKit.hddCapacity120')}</option>
+            <option value="80">{t('unbrick.sdKit.hddCapacity80')}</option>
           </Select>
         </div>
       </div>
@@ -107,7 +148,11 @@ export const SdKitProfileControls: React.FC<SdKitProfileControlsProps> = ({
           <input
             type="checkbox"
             checked={unlockHddDynamic}
-            onChange={e => onChangeUnlockHddDynamic(e.target.checked)}
+            onChange={e => {
+              const checked = e.target.checked;
+              onChangeUnlockHddDynamic(checked);
+              onChangeHddCapacityTarget?.(checked ? 'dynamic' : '160');
+            }}
             className="rounded border-slate-700 bg-slate-950 text-cyan-500 focus:ring-cyan-500"
           />
           <span>{t('unbrick.sdKit.unlockHddDynamic')}</span>

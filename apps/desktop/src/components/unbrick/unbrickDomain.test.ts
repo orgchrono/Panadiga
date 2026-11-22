@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildSdKitRequestPayload,
   buildTbcActionParams,
+  resolveHddCapacitySelection,
   resolveSdOverallBadgeVariant,
   resolveSeverityBadgeVariant,
   resolveTbcModeBadgeVariant,
@@ -36,6 +37,36 @@ describe('unbrickDomain pure transformations', () => {
       main_passthrough_mode: 'factory_original',
       include_pana_sd: false,
       unlock_hdd_dynamic: false,
+    });
+
+    expect(resolveHddCapacitySelection('dynamic')).toEqual({
+      unlockHddDynamic: true,
+      hddTargetGb: null,
+    });
+    expect(resolveHddCapacitySelection('250')).toEqual({
+      unlockHddDynamic: false,
+      hddTargetGb: 250,
+    });
+
+    const fixed250 = buildSdKitRequestPayload({
+      outputDir: 'sd_kit_250',
+      panaDvdPath: 'PANA_DVD.FRM',
+      bgoMode: 'uart_monitor',
+      mainMode: 'av_passthrough',
+      loaderProfile: 'ver061',
+      includePanaSd: true,
+      ...resolveHddCapacitySelection('250'),
+    });
+    expect(fixed250.errorKey).toBeNull();
+    expect(fixed250.request).toEqual({
+      output_dir: 'sd_kit_250',
+      pana_dvd_path: 'PANA_DVD.FRM',
+      bgo_mode: 'uart_monitor',
+      main_passthrough_mode: 'av_passthrough',
+      loader_profile: 'ver061',
+      include_pana_sd: true,
+      unlock_hdd_dynamic: false,
+      hdd_target_gb: 250,
     });
   });
 

@@ -25,13 +25,14 @@ pub mod unbrick_workbench;
 pub mod verify_loop;
 
 pub use bgo_unbrick::{
-    OFF_BGO_INIT_CALL, OFF_BGO_INIT_FAIL_HOOK, OFF_BGO_SUM_BEQ, OFF_DEVINFO_CHECK_BEQ,
-    ORIG_A2BC_BGO_CALL, ORIG_A2CD_HOOK, ORIG_DEVINFO_BEQ, ORIG_SUM_BEQ, PATCH_A2BC_BRA_MONITOR,
-    PROG061_BASE_VA, PROG061_EXPECTED_SIZE, PROG061_NFROM_FORMAT_VA, Prog061BgoInspection,
-    Prog061BgoPatchMode, Prog061BgoPatchReport, Prog061BgoSiteStatus, decode_prog061_payload,
+    OFF_BGO_INIT_CALL, OFF_BGO_INIT_FAIL_HOOK, OFF_BGO_SUM_BEQ, OFF_BGO_SUM_BEQ_EH55,
+    OFF_DEVINFO_CHECK_BEQ, ORIG_A2BC_BGO_CALL, ORIG_A2CD_HOOK, ORIG_DEVINFO_BEQ, ORIG_SUM_BEQ,
+    PATCH_A2BC_BRA_MONITOR, PROG061_BASE_VA, PROG061_EXPECTED_SIZE, PROG061_NFROM_FORMAT_VA,
+    Prog061BgoInspection, Prog061BgoPatchMode, Prog061BgoPatchReport, Prog061BgoSiteStatus,
+    Prog061BgoTargetGeometry, decode_prog061_payload, inspect_prog061_bgo_geometry,
     inspect_prog061_bgo_sites, inspect_prog061_container_bytes, patch_prog061_bgo_in_place,
     patch_prog061_bgo_in_place_with_policy, patch_prog061_or_build_digadiag,
-    patch_prog061_or_build_digadiag_with_policy,
+    patch_prog061_or_build_digadiag_with_policy, retarget_prog061_bgo_geometry_in_place,
 };
 pub use eh55_bgo::{
     BgoSectorGeometry, EH55_BGO_EXPECTED_P2_COUNT, EH55_BGO_FIRST_SA, EH55_BGO_LAST_SA,

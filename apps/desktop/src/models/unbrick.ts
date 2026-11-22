@@ -258,6 +258,7 @@ export * from './matshita';
 
 export type BgoMode = 'auto_format' | 'bypass' | 'uart_monitor' | 'factory';
 export type MainPassthroughMode = 'av_passthrough' | 'factory_original';
+export type HddCapacityTargetOption = 'dynamic' | '250' | '400' | '300' | '200' | '160' | '120' | '80';
 
 export type SdCreatorStage =
   | 'synthesize'

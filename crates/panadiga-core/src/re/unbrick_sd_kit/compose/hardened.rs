@@ -10,7 +10,8 @@ use super::super::verify::{
     SdKitAuditProfile, simulate_sd_find_firm_entry_dual, verify_sd_buffers_with_profile,
 };
 use super::builders::{
-    compose_digadiag_and_prog061, compose_pana_sd_container, compose_patched_main_container,
+    compose_digadiag_and_prog061, compose_pana_sd_container, compose_pana_sd_prog061,
+    compose_patched_main_container,
 };
 use super::types::{HardenedPanamon1KitArtifacts, SdLoaderProfile};
 
@@ -27,7 +28,13 @@ pub fn compose_hardened_panamon1_kit(
     expected_main_build: Option<&str>,
     allow_target_mismatch: bool,
 ) -> Result<HardenedPanamon1KitArtifacts> {
-    let (prog_patched, digadiag_bytes, digadiag_sha256) = compose_digadiag_and_prog061(
+    let (_prog_patched, digadiag_bytes, digadiag_sha256) = compose_digadiag_and_prog061(
+        prog061_raw,
+        Prog061BgoPatchMode::UartMonitor,
+        SdLoaderProfile::Ver061RawSd48,
+        false,
+    )?;
+    let (pana_sd_prog, pana_sd_bgo_mode) = compose_pana_sd_prog061(
         prog061_raw,
         Prog061BgoPatchMode::UartMonitor,
         SdLoaderProfile::Ver061RawSd48,
@@ -43,8 +50,8 @@ pub fn compose_hardened_panamon1_kit(
     )?;
     let (pana_sd_bytes, pana_sd_sha256) = compose_pana_sd_container(
         drv_bytes,
-        prog_patched,
-        Prog061BgoPatchMode::UartMonitor,
+        pana_sd_prog,
+        pana_sd_bgo_mode,
         SdLoaderProfile::Ver061RawSd48,
         composed_main.container,
         &composed_main.slot_name,
