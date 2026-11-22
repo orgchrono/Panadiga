@@ -55,14 +55,41 @@ static bool vault_verify_slot_xip_crc(
         !p7501_vault_slot_qspi_offset_ab(total_qspi, bank_ab, slot_index, &slot_off)) {
         return false;
     }
-    uint32_t crc = 0UL;
-    const uint8_t *base = p7501_qspi_xip_ptr(slot_off);
-    for (uint32_t off = 0UL; off < sm->byte_len; off += 4096UL) {
-        const uint32_t chunk = ((sm->byte_len - off) > 4096UL) ? 4096UL : (sm->byte_len - off);
-        crc = p7501_crc32_ieee_update(crc, &base[off], chunk);
-        p7501_wdt_kick();
-    }
-    return crc == sm->data_crc32;
+    return p7501_qspi_crc32_fast(p7501_qspi_xip_ptr(slot_off), (size_t)sm->byte_len) == sm->data_crc32;
+}
+
+static bool vault_verify_slot_detail_hw(
+    uint8_t slot_idx,
+    uint32_t *out_crc32,
+    uint32_t *out_non_ff_bytes,
+    bool *out_crc_mismatch
+) {
+    const uint32_t total = p7501_qspi_total_bytes();
+    p7501_vault_manifest_t m;
+    const int active_bank = vault_load_active_ab(&m);
+    uint32_t slot_off = 0UL;
+    const bool have_slot =
+        (active_bank >= 0) &&
+        p7501_vault_slot_qspi_offset_ab(total, (uint8_t)active_bank, slot_idx, &slot_off);
+    return p7501_vault_verify_slot_with_crc(
+        (active_bank >= 0) ? &m : NULL,
+        slot_idx,
+        have_slot ? p7501_qspi_xip_ptr(slot_off) : NULL,
+        P7501_VAULT_SLOT_BYTES,
+        p7501_qspi_crc32_fast,
+        out_crc32,
+        out_non_ff_bytes,
+        out_crc_mismatch
+    );
+}
+
+bool p7501_vault_verify_slot(
+    uint8_t slot_idx,
+    uint32_t *out_crc32,
+    uint32_t *out_non_ff_bytes
+) {
+    bool crc_bad = false;
+    return vault_verify_slot_detail_hw(slot_idx, out_crc32, out_non_ff_bytes, &crc_bad);
 }
 
 static bool vault_copy_sibling_slots(
@@ -259,6 +286,38 @@ void p7501_cmd_vault(const char *arg) {
         (slot_num > P7501_VAULT_PAYLOAD_SLOTS)) {
         p7501_cli_set_result("ERR", "EINVAL");
         printf("[VAULT] ERROR: Specify slot 1..3 (Usage: VAULT [STATUS|LIST|DUMP <1..3>|ERASE <1..3> CONFIRM])\n");
+        return;
+    }
+
+    if (p7501_ascii_ieq(tok1, "VERIFY")) {
+        uint32_t crc32 = 0UL;
+        uint32_t non_ff = 0UL;
+        bool crc_mismatch = false;
+        const bool ok = vault_verify_slot_detail_hw(
+            (uint8_t)slot_num, &crc32, &non_ff, &crc_mismatch
+        );
+        char extra[80];
+        if (!ok) {
+            const char *err_code = crc_mismatch ? "ECRC" : "ENOENT";
+            p7501_cli_set_result("ERR", err_code);
+            (void)snprintf(
+                extra, sizeof(extra), "sub=VERIFY slot=%u crc32=0x%08lX non_ff=%lu",
+                (unsigned)slot_num, (unsigned long)crc32, (unsigned long)non_ff
+            );
+            p7501_cli_set_result_extra(extra);
+            printf("[VAULT] VERIFY ERROR code=%s slot=%lu crc32=0x%08" PRIX32 " non_ff=%" PRIu32 "\n",
+                   err_code, (unsigned long)slot_num, crc32, non_ff);
+            printf("VAULT: ERROR (%s)\n", err_code);
+            return;
+        }
+        (void)snprintf(
+            extra, sizeof(extra), "sub=VERIFY slot=%u crc32=0x%08lX non_ff=%lu",
+            (unsigned)slot_num, (unsigned long)crc32, (unsigned long)non_ff
+        );
+        p7501_cli_set_result_extra(extra);
+        printf("[VAULT] VERIFY OK slot=%lu bank=%s crc32=0x%08" PRIX32 " non_ff=%" PRIu32 "\n",
+               (unsigned long)slot_num, (active_bank == 1) ? "B" : "A", crc32, non_ff);
+        printf("VAULT: OK\n");
         return;
     }
 

@@ -44,6 +44,8 @@ void panarsp_print_report(
     bool triggered,
     bool fifo_ovf
 );
+typedef void (*panarsp_post_hdr_byte_fn)(void *ctx, uint8_t b);
+
 uint32_t panarsp_tx_frame(const char *payload);
 size_t panarsp_stream_until_tokens_ex(
     panarsp_rx_cap_t *cap,
@@ -56,6 +58,8 @@ size_t panarsp_stream_until_tokens_ex(
     const char *tok_fail,
     uint32_t min_post_hdr_bytes,
     bool sliding_timeout,
+    panarsp_post_hdr_byte_fn post_hdr_cb,
+    void *post_hdr_ctx,
     bool *out_hdr_seen,
     bool *out_done_seen,
     bool *out_fail_seen,

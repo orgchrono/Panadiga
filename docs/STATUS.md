@@ -3,9 +3,9 @@
 # Panadiga — Estado Verificado do Ecossistema & Guia Consolidado (Diátaxis)
 # Panadiga — Verified Ecosystem Status & Consolidated Guide (Diátaxis)
 
-Este painel centraliza a matriz verificável de evidências ([`docs/evidence/ledger.json`](./evidence/ledger.json)) e consolida os **38 pares de dossiês bilíngues** + auditorias raiz em **5 Trilhas Temáticas Diátaxis**, eliminando sobreposições sem quebrar os vínculos históricos.
+Este painel centraliza a matriz verificável de evidências ([`docs/evidence/ledger.json`](./evidence/ledger.json)) e consolida os **39 pares de dossiês bilíngues** + auditorias raiz em **5 Trilhas Temáticas Diátaxis**, eliminando sobreposições sem quebrar os vínculos históricos.
 
-This dashboard centralizes the verifiable evidence ledger ([`docs/evidence/ledger.json`](./evidence/ledger.json)) and organizes all **38 bilingual dossier pairs** plus root audits into **5 Consolidated Diátaxis Tracks**, eliminating ambiguity while preserving every historical link.
+This dashboard centralizes the verifiable evidence ledger ([`docs/evidence/ledger.json`](./evidence/ledger.json)) and organizes all **39 bilingual dossier pairs** plus root audits into **5 Consolidated Diátaxis Tracks**, eliminating ambiguity while preserving every historical link.
 
 ---
 
@@ -48,7 +48,7 @@ This dashboard centralizes the verifiable evidence ledger ([`docs/evidence/ledge
 
 ## 3. Consolidação Diátaxis em 5 Trilhas de Leitura / Consolidated Diátaxis Tracks
 
-Para leitura direta por objetivo (sem duplicar esforço), os 38 pares de dossiês agrupam-se em 5 trilhas canônicas:
+Para leitura direta por objetivo (sem duplicar esforço), os **39 pares de dossiês** agrupam-se em 5 trilhas canônicas:
 
 1. **Trilha A — Bancada, Pinagem `P7501`, Pico C11 & Standby `IC7501` (`Tutorials & How-To`):**
    - [Blueprint Elétrico](./pt-BR/BLUEPRINT_ESQUEMA_ELETRICO_BANCADA.md) / [EN](./en-US/BLUEPRINT_BENCH_WIRING_AND_SCHEMATIC.md) · [Guia `P7501`](./pt-BR/GUIA_BANCADA_P7501_SEM_DESSOLDA.md) / [EN](./en-US/BENCH_GUIDE_P7501_NO_DESOLDERING.md) · [Montagem Probe](./pt-BR/GUIA_MONTAGEM_E_FOTOS_PROBE_BANCADA.md) / [EN](./en-US/BENCH_PROBE_ASSEMBLY_AND_PHOTOS_GUIDE.md) · [Standby `IC7501`/`TBUS`](./pt-BR/ARQUITETURA_STANDBY_IC7501_TBUS_TW7501_E_MODOS_BOOT.md) / [EN](./en-US/STANDBY_IC7501_TBUS_TW7501_AND_BOOT_STATES_ARCHITECTURE.md) · [Guia Pico C11](./pt-BR/FIRMWARE_PICO_P7501_GUIA.md) / [EN](./en-US/PICO_P7501_FIRMWARE_GUIDE.md)
@@ -58,5 +58,5 @@ Para leitura direta por objetivo (sem duplicar esforço), os 38 pares de dossiê
    - [Índice Pseudocódigo Ghidra](./pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) · [Armadilhas MN103S](./pt-BR/ARMADILHAS_MN103S_E_RESOLUCAO_GHIDRA.md) / [EN](./en-US/MN103S_SEVEN_TRAPS_AND_GHIDRA_RESOLUTION.md) · [Estratégia Ghidra/GDB](./pt-BR/ESTRATEGIA_INTEGRACAO_GHIDRA_GDB.md) / [EN](./en-US/GHIDRA_GDB_INTEGRATION_STRATEGY.md) · [Inventário & Operação](./pt-BR/INVENTARIO_TECNICO_E_GUIA_DE_OPERACAO.md) / [EN](./en-US/TECHNICAL_INVENTORY_AND_OPERATIONS_MANUAL.md)
 4. **Trilha D — Storage `MEIHFS`, `CH1 IDE`/`DAVIS` & Drive Óptico `R6-MV4`:**
    - [Storage `MEIHFS`](./pt-BR/ARQUITETURA_STORAGE_MEIHDFS_PARTICOES.md) / [EN](./en-US/STORAGE_ARCHITECTURE_MEIHDFS_PARTITIONS.md) · [Emulador `R6-MV4`](./pt-BR/EMULADOR_MATSHITA_R6MV4_E_INJECAO_ATAPI.md) / [EN](./en-US/MATSHITA_R6MV4_EMULATOR_AND_ATAPI_INJECTION.md)
-5. **Trilha E — TBC Autônomo `Clean-Room`, `PAL-M` (`LBS`) & Arquitetura de Sistema:**
-   - [TBC Autônomo & `DIGADIAG`](./pt-BR/DIGADIAG_PANA_SD_E_TBC_AUTONOMO.md) / [EN](./en-US/DIGADIAG_PANA_SD_AND_STANDALONE_TBC.md) · [Blueprint Arquitetura](./pt-BR/ARQUITETURA_E_BLUEPRINT_DE_ENGENHARIA.md) / [EN](./en-US/SYSTEM_ARCHITECTURE_AND_ENGINEERING_BLUEPRINT.md) · [Qualidade & 9 Gates](./pt-BR/ARQUITETURA_DE_TESTES_E_CONFORMIDADE.md) / [EN](./en-US/TESTING_ARCHITECTURE_AND_COMPLIANCE.md) · [Zero-Error RAG](./pt-BR/ZERO_ERROR_RAG_ENGINE_E_SEGURANCA_FISICA.md) / [EN](./en-US/ZERO_ERROR_RAG_ENGINE_AND_PHYSICAL_SAFETY.md)
+5. **Trilha E — TBC Autônomo `Clean-Room`, `PAL-M` (`LBS`), Perfis SSOT & Arquitetura de Sistema:**
+   - [TBC Autônomo & `DIGADIAG`](./pt-BR/DIGADIAG_PANA_SD_E_TBC_AUTONOMO.md) / [EN](./en-US/DIGADIAG_PANA_SD_AND_STANDALONE_TBC.md) · [Blueprint Arquitetura](./pt-BR/ARQUITETURA_E_BLUEPRINT_DE_ENGENHARIA.md) / [EN](./en-US/SYSTEM_ARCHITECTURE_AND_ENGINEERING_BLUEPRINT.md) · [Catálogo Perfis DIGA (`89` Modelos)](./pt-BR/CATALOGO_E_AUDITORIA_PERFIS_HARDWARE_LINHA_DIGA.md) / [EN](./en-US/DIGA_LINEUP_HARDWARE_PROFILES_CATALOG_AND_AUDIT.md) · [Qualidade & 9 Gates](./pt-BR/ARQUITETURA_DE_TESTES_E_CONFORMIDADE.md) / [EN](./en-US/TESTING_ARCHITECTURE_AND_COMPLIANCE.md) · [Zero-Error RAG](./pt-BR/ZERO_ERROR_RAG_ENGINE_E_SEGURANCA_FISICA.md) / [EN](./en-US/ZERO_ERROR_RAG_ENGINE_AND_PHYSICAL_SAFETY.md)

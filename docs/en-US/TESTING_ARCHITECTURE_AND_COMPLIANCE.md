@@ -5,28 +5,50 @@
 
 ## Multi-Layer Verification: Pure FP Domain, Strict MVVM, Introspective GDB & SSOT
 
-> **Version:** 2.1.0 | **Current Status Reference:** Live 9 Quality Gates (`259` Rust Workspace Tests, `116` Vitest Tests across `36` files, `31` C11 Host Tests across `4` modules, `23` Playwright E2E across `8` specs, `29` Pytest + `43` `mypy --strict`, `0%` `jscpd` Clones, `100/100` `uxlint` / `0` issues across `354` files)  
+> **Version:** 2.2.0 | **Current Status Reference:** Live 9 Quality Gates (`337` Rust Workspace Tests across `6` crates, `128` Vitest Tests across `39` files, `38` C11 Host Tests across `4` modules + ARM check, `27` Playwright E2E across `9` specs, `32` Pytest across `6` files + `46` `mypy --strict`, `0%` `jscpd` Clones, `100/100` `uxlint` / `0` issues across `386` files)  
 > **Authors:** Panadiga Systems Architecture & Reverse Engineering Team
 
 ---
 
 ## 1. Overview & Testing Philosophy
 
-The architectural evolution of **Panadiga** required a fundamental restructuring of its testing strategy. The previous approach, based on ad-hoc tests tightly coupled to physical filesystem paths, was replaced by a **Multi-Layer Testing Pyramid**, where each test strictly protects one or more architectural principles:
+The architectural evolution of **Panadiga** required a fundamental restructuring of its testing strategy. The previous approach, based on ad-hoc tests tightly coupled to physical filesystem paths, was replaced by a **Multi-Layer Testing Pyramid** paired with a **Parallel 9 Quality Gates Pipeline**:
 
-```
+```text
                           PANADIGA TESTING PYRAMID
                                        ▲
                                       / \
                                      /   \
-                                    / E2E \   (23 Playwright Chromium tests / 8 specs + CI/CD)
+                                    / E2E \   (27 Playwright Chromium tests / 9 specs + CI/CD)
                                    /───────\
-                                  /  MVVM   \  (116 Vitest / 36 files + Interactive Docs + Logger)
+                                  /  MVVM   \  (128 Vitest / 39 files + ExpressView + Logger)
                                  /───────────\
-                                /  GDB & HAL  \ (31 C11 Host Tests across 4 modules + RSP Telemetry)
+                                /  GDB & HAL  \ (38 C11 Host Tests across 4 modules + ARM RP2040/RP2350 Check)
                                /───────────────\
-                              /  FP Pure Domain \ (259 Rust tests: &[u8] slices, RE, MCP, RAG, Tauri)
+                              /  FP Pure Domain \ (337 Rust tests across 6 crates: profiles/core/cli/desktop/mcp/rag)
                              /───────────────────\
+```
+
+```mermaid
+flowchart LR
+    DEV["Code or Documentation Change"] --> P1["Gate 1: Rust 6 crates (337 tests + clippy -D warnings)"]
+    DEV --> P2["Gate 2: Oxlint --deny-warnings + tsc --noEmit"]
+    DEV --> P3["Gate 3: Vitest Frontend (128 tests / 39 files)"]
+    DEV --> P4["Gate 4: jscpd (0.00% duplication / 0 clones)"]
+    DEV --> P5["Gate 5: uxlint (100/100 across 386 React files)"]
+    DEV --> P6["Gate 6: Playwright E2E (27 tests / 9 Chromium specs)"]
+    DEV --> P7["Gate 7: Ghidra SSOT Export (panadiga ghidra export-all)"]
+    DEV --> P8["Gate 8: Pico C11 Host (38 tests / 4 modules + ARM Check)"]
+    DEV --> P9["Gate 9: Python mypy --strict (46 files) + pytest (32 tests / 6 files)"]
+    P1 --> PASS["ALL 9 QUALITY GATES PASSED"]
+    P2 --> PASS
+    P3 --> PASS
+    P4 --> PASS
+    P5 --> PASS
+    P6 --> PASS
+    P7 --> PASS
+    P8 --> PASS
+    P9 --> PASS
 ```
 
 ---
@@ -61,7 +83,7 @@ Guarantee absolute protocol fidelity in the serial-to-TCP GDB bridge, prevent pa
 | `crates/panadiga-core/tests/debugger_gdb_tests.rs`   | `test_gdb_rsp_checksum_calculation`   | Formal validation of 2-digit hex checksum calculation (`sum % 256`) for RSP commands (`qSupported`, `g`, `?`, `c`, `s`, `OK`).            |
 | `apps/desktop/src-tauri/src/pico/gdb_bridge.rs`      | `test_verify_and_classify_rsp_packet` | Tests formal RSP packet classifier: `$` prefix, `#` delimiter, checksum comparison, and command type tagging.                                       |
 | `apps/desktop/src-tauri/src/pico/gdb_bridge.rs`      | `test_telemetry_ring_capacity`        | Validates introspective circular buffer (`RingBuffer<GdbPacketTelemetryEvent>`): fixed capacity, FIFO eviction without leaks, chronological ordering. |
-| `firmware/pico-p7501/tests/` (`4` modules, `31` tests) | Host C11 Firmware (`-Wall -Wextra -Werror` / `/W4 /WX`) | Protocol, `DIAGWATCH`/`PANARSP`/`DRVPANA`/`SDSNIFF`/`PIOLOGIC` & `E05` IPL write-rejection host tests (`test_gdb_rsp_host.c`, `test_pana_logic.c`, `test_pana_diag_drv.c`, `test_uart_codec.c`). |
+| `firmware/pico-p7501/tests/` (`4` modules, `38` suites/functions) | Host C11 Firmware (`-Wall -Wextra -Werror` / `/W4 /WX`) | Protocol, `DIAGWATCH`/`PANARSP`/`DRVPANA`/`SDSNIFF`/`PIOLOGIC`, `VAULT VERIFY`, `IR VERIFY`, `DUMPNOR ff_blocks`, nibble-LUT CRC32 & `E05` IPL write-rejection host tests (`test_gdb_rsp_host.c`: 13, `test_pana_logic.c`: 10, `test_pana_diag_drv.c`: 9, `test_uart_codec.c`: 6). |
 
 ---
 
@@ -104,27 +126,28 @@ Guarantee strong CLI argument parsing via Clap, deterministic handler routing, a
 
 ### Playwright Coverage (Chromium)
 
-23 automated browser tests across 8 E2E specs (`apps/desktop/e2e/`) verify end-to-end user workflows:
+27 automated browser tests across 9 E2E specs (`apps/desktop/e2e/`) verify end-to-end user workflows:
 
 1. `calibration-and-tbc.spec.ts`: Calibration workflows (`PAL-M`/`DAVIS`/`TBC`) and bench UI pipelines.
-2. `frm-packager.spec.ts`: Cryptographic `.FRM` inspection, Feistel/TOC decoding, and Unbrick Center container workflows.
-3. `hdd-safe-flash.spec.ts`: System-drive lockout guard, `HddCapacityPatcherCard`, and CoW MEIHFS disk flashing flows.
-4. `ir-commander.spec.ts`: Kaseikyo IR commander, `SYS_SERV` macros, offline catalog, and USB-OTG/Android dispatch.
-5. `navigation.spec.ts`: Default dashboard rendering, seamless cross-view navigation (`NVRAM`, `MEIHFS`, `Pico`, `Manuals`, `Interactive Docs`), and workbench state continuity.
-6. `nvram.spec.ts`: Spansion NOR Flash `S29JL064H` specifications, 8 microsector breakdown (`SA134..SA141`), and surgical NVRAM controls.
-7. `pico-bench.spec.ts`: Host controller telemetry, `P7501` (`115200 8N1` Async UART + `NSW5V` Hi-Z) pinout table, boot mode switching, and interactive serial terminal.
-8. `pico-bgo-davis.spec.ts`: Live BGO FTL (`SA26..SA70`) and `DAVIS CH0/CH1` interactive diagnostic panels in Pico Bench.
+2. `express-mode.spec.ts`: Express Rescue Mode (FAT16B SD card, `PANAMON1` `U99`, NOR `8 MiB`, JIT `PicoConnectionSafetySheet`, Vault CoW `raw`/`frm`, ISO 9660 `1x`, and `Mn103Vm` gate).
+3. `frm-packager.spec.ts`: Cryptographic `.FRM` inspection, Feistel/TOC decoding, and Unbrick Center container workflows.
+4. `hdd-safe-flash.spec.ts`: System-drive lockout guard, `HddCapacityPatcherCard`, and CoW MEIHFS disk flashing flows.
+5. `ir-commander.spec.ts`: Kaseikyo IR commander, `SYS_SERV` macros, offline catalog, and USB-OTG/Android dispatch.
+6. `navigation.spec.ts`: Default dashboard rendering, seamless cross-view navigation (`NVRAM`, `MEIHFS`, `Pico`, `Manuals`, `Interactive Docs`), and workbench state continuity.
+7. `nvram.spec.ts`: Spansion NOR Flash `S29JL064H` specifications, 8 microsector breakdown (`SA134..SA141`), and surgical NVRAM controls.
+8. `pico-bench.spec.ts`: Host controller telemetry, `P7501` (`115200 8N1` Async UART + `NSW5V` Hi-Z) pinout table, boot mode switching, and interactive serial terminal.
+9. `pico-bgo-davis.spec.ts`: Live BGO FTL (`SA26..SA70`) and `DAVIS CH0/CH1` interactive diagnostic panels in Pico Bench.
 
 ### Continuous Integration Matrix (GitHub Actions & `scripts/validate.py`)
 
 All 9 Quality Gates execute on push or locally via `python scripts/validate.py`:
 
 - **Android APK Build (Tauri 2.0 / ARM64)**: Native Android compilation with `cargo-ndk`.
-- **Rust Workspace (`5` crates)**: `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets --no-deps -- -D warnings`, and `cargo test --workspace` (**259 tests**).
-- **Ghidra Generator & Python Tools**: `panadiga ghidra export-all` (7 `.py` scripts + `tools/ghidra/java/` suite), `py_compile`, `mypy --strict scripts` (43 files), and `pytest scripts/tests` (**29 tests across 5 files**, including `test_docs_parity.py` enforcing 1:1 parity of all **38** pairs in `translation_pairs.json` ↔ `docs/INDEX.md`, **22** captures in `docs/debug_logs/`, stale-hash guard, and internal markdown link checks).
-- **Desktop UI**: `oxlint --deny-warnings && tsc --noEmit`, Vitest (**116 tests across 36 files** in `apps/desktop/src/**/*.test.*`), `uxlint` (`100/100` with `--fail-on info`, `0` issues across `354` files), and Playwright E2E (**23 tests across 8 specs**).
+- **Rust Workspace (`6` crates)**: `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets --no-deps -- -D warnings`, and `cargo test --workspace` (**337 tests**, including `panadiga-profiles` across **89 models** and **12 JSON Schemas** plus thread-local isolated `logger.rs` tests).
+- **Ghidra Generator & Python Tools**: `panadiga ghidra export-all` (`.py` scripts + `tools/ghidra/java/` suite), `py_compile`, `mypy --strict scripts` (**46 files**), and `pytest scripts/tests` (**32 tests across 6 files**, including `test_docs_parity.py` enforcing 1:1 parity of all **39** pairs in `translation_pairs.json` ↔ `docs/INDEX.md`, **22** captures in `docs/debug_logs/`, stale-hash guard, and internal markdown link checks).
+- **Desktop UI**: `oxlint --deny-warnings && tsc --noEmit`, Vitest (**128 tests across 39 files** in `apps/desktop/src/**/*.test.*`), `uxlint` (`100/100` with `--fail-on info`, `0` issues across **`386` files**), and Playwright E2E (**27 tests across 9 specs**).
 - **Code Quality & Duplication**: `jscpd` clone detector (**0% threshold / 0 clones**).
-- **Pico Firmware Dual Target**: Host C11 tests (`4` modules, **31 tests**, `-Wall -Wextra -Werror` / `/W4 /WX`) and UF2 compilation for RP2040 and RP2350.
+- **Pico Firmware Dual Target**: Host C11 tests (`4` modules, **38 test suites/functions**, `-Wall -Wextra -Werror` / `/W4 /WX`) and RP2040/RP2350 ARM Release compile verification fitting cleanly inside `P0_FW_RO` (`256 KiB`).
 
 ---
 

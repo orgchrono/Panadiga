@@ -3,6 +3,8 @@
  * @brief SSOT presets and MMIO descriptors for TV/Region calibration, MAIN 3410PQ TBC bypasses, and DAVIS IDE probing.
  */
 
+import { SSOT_AM34_BUS_CONSTANTS } from '@/models/generated/ssot';
+
 export type RegionPresetLabelKey =
   | 'pipelines.calibration.presets.brPalM.label'
   | 'pipelines.calibration.presets.usNtsc.label'
@@ -194,7 +196,7 @@ export const DAVIS_MMIO_SPECS = Object.freeze({
   ch1DriveHeadHex: '0x89000D38',
   sysStatusHex: '0xC0001008',
   wdbcHex: '0xC0001000',
-  lethalRegHex: '0xC000100C',
+  lethalRegHex: SSOT_AM34_BUS_CONSTANTS.lethalMmioRegHex,
   errAtapi40dHex: '0x8000040D',
   errTimeout32sHex: '0x8000040F',
   ataIdentifyCmdHex: '0xEC',

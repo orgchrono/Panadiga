@@ -1,6 +1,8 @@
 //! Unit tests for `pico::rsp_codec` guards, binary `$x` escaping, and register decoding.
 
 use super::*;
+use crate::constants::{AM34_FLASH_BASE, AM34_FLASH_CRITICAL_IPL_SIZE, AM34_FLASH_UNCACHED_BASE};
+use policy::is_nor_write_blocked_for_flash;
 
 #[test]
 fn rsp_guard_binary_x_and_register_decoding_work() {
@@ -116,4 +118,101 @@ fn nor_write_policy_unlocks_upper_app_while_keeping_critical_ipl_locked() {
         hex::decode(&lock_parsed.payload_hex).unwrap(),
         b"qPanadigaNorLock"
     );
+}
+
+#[test]
+fn policy_boundaries_match_c11_bus_gate_across_all_capacities() {
+    let capacities = [
+        2u64 * 1024 * 1024,
+        4 * 1024 * 1024,
+        8 * 1024 * 1024,
+        16 * 1024 * 1024,
+    ];
+    for flash_bytes in capacities {
+        let nvram_sz: u32 = if flash_bytes >= 16 * 1024 * 1024 {
+            128 * 1024
+        } else {
+            64 * 1024
+        };
+        let flash_u32 = flash_bytes as u32;
+        let nvram_off = flash_u32 - nvram_sz;
+        for base in [AM34_FLASH_BASE, AM34_FLASH_UNCACHED_BASE] {
+            // Permanent IPL Layer 1 (256 KiB) always blocked regardless of policy
+            assert!(is_nor_write_blocked_for_flash(
+                base,
+                4,
+                flash_bytes,
+                NorWritePolicy::UpperNorAppUnlocked
+            ));
+            assert!(is_nor_write_blocked_for_flash(
+                base + AM34_FLASH_CRITICAL_IPL_SIZE - 2,
+                4,
+                flash_bytes,
+                NorWritePolicy::UpperNorAppUnlocked
+            ));
+            // Upper NOR boundary blocked in NvramOnly, allowed when UpperNorAppUnlocked
+            assert!(is_nor_write_blocked_for_flash(
+                base + AM34_FLASH_CRITICAL_IPL_SIZE,
+                4,
+                flash_bytes,
+                NorWritePolicy::NvramOnly
+            ));
+            assert!(!is_nor_write_blocked_for_flash(
+                base + AM34_FLASH_CRITICAL_IPL_SIZE,
+                4,
+                flash_bytes,
+                NorWritePolicy::UpperNorAppUnlocked
+            ));
+            // Exact byte before NVRAM straddling into NVRAM must be blocked under NvramOnly
+            assert!(is_nor_write_blocked_for_flash(
+                base + nvram_off - 1,
+                2,
+                flash_bytes,
+                NorWritePolicy::NvramOnly
+            ));
+            // NVRAM window allowed even under NvramOnly
+            assert!(!is_nor_write_blocked_for_flash(
+                base + nvram_off,
+                4,
+                flash_bytes,
+                NorWritePolicy::NvramOnly
+            ));
+            // End-of-flash straddle into CS0 alias mirror MUST be blocked even unlocked
+            assert!(is_nor_write_blocked_for_flash(
+                base + flash_u32 - 2,
+                4,
+                flash_bytes,
+                NorWritePolicy::UpperNorAppUnlocked
+            ));
+            // CS0 alias mirror beyond flash_bytes MUST be blocked
+            assert!(is_nor_write_blocked_for_flash(
+                base + flash_u32,
+                4,
+                flash_bytes,
+                NorWritePolicy::UpperNorAppUnlocked
+            ));
+        }
+        // Lethal MMIO 0xC000100C..0xC000100F always blocked even with UpperNorAppUnlocked
+        for addr in [0xC000_100Au32, 0xC000_100C, 0xC000_100F] {
+            assert!(is_nor_write_blocked_for_flash(
+                addr,
+                4,
+                flash_bytes,
+                NorWritePolicy::UpperNorAppUnlocked
+            ));
+        }
+        // SDRAM target RAM outside CS0 / lethal MMIO allowed
+        assert!(!is_nor_write_blocked_for_flash(
+            0x9040_0000,
+            4,
+            flash_bytes,
+            NorWritePolicy::NvramOnly
+        ));
+        assert!(!is_nor_write_blocked_for_flash(
+            0x0000_0000,
+            4,
+            flash_bytes,
+            NorWritePolicy::NvramOnly
+        ));
+    }
 }

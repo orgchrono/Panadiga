@@ -7,6 +7,7 @@
 
 #include "gdb/gdb_rsp_internal.h"
 #include "flash/p7501_flash.h"
+#include "generated/p7501_ssot.h"
 #include "hal/p7501_hw.h"
 #include <string.h>
 
@@ -51,7 +52,7 @@ void gdb_cpu_init_registers(am34_reg_file_t *regs) {
         return;
     }
     memset(regs, 0, sizeof(*regs));
-    regs->pc = 0x80000000UL;
+    regs->pc = P7501_SSOT_CS0_CACHED_BASE;
     regs->sp = 0x0003FFF0UL;
 }
 
@@ -65,7 +66,7 @@ void gdb_cpu_sync_registers(am34_reg_file_t *regs) {
         regs->psw = (regs->psw & 0xFFFF0000UL) | (dcsr & 0x0000FFFFUL);
     }
     if (regs->pc == 0U) {
-        regs->pc = 0x80000000UL;
+        regs->pc = P7501_SSOT_CS0_CACHED_BASE;
     }
     if (regs->sp == 0U) {
         regs->sp = 0x0003FFF0UL;

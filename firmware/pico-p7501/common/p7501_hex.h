@@ -96,8 +96,14 @@ uint8_t p7501_rsp_checksum_str(const char *str);
 /** Update running IEEE 802.3 CRC-32 (`seed_crc` starts at `0u` for a fresh stream). */
 uint32_t p7501_crc32_ieee_update(uint32_t seed_crc, const uint8_t *data, size_t len);
 
-/** Compute IEEE 802.3 CRC-32 (`0xEDB88320`) over `data[0..len]` cleanly without lookup tables. */
+/** Compute IEEE 802.3 CRC-32 (`0xEDB88320`) over `data[0..len]` cleanly via compact nibble LUT. */
 uint32_t p7501_crc32_ieee(const uint8_t *data, size_t len);
+
+/** Return true when `buf[0..len]` is non-empty and consists exclusively of erased `0xFF` bytes. */
+bool p7501_buf_is_all_ff(const uint8_t *buf, size_t len);
+
+/** Count non-erased (`!= 0xFF`) payload bytes across `buf[0..len]`. */
+uint32_t p7501_buf_count_non_ff(const uint8_t *buf, size_t len);
 
 /** Encode 32-bit unsigned value as 4 little-endian bytes. */
 void p7501_write_u32_le(uint8_t out[4], uint32_t v);

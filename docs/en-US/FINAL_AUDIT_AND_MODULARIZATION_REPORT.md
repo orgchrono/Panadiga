@@ -2,13 +2,13 @@
 > 🧭 **Portal:** [Docs Index](../INDEX.md) | [Complete Audit](../../COMPLETE_AUDIT.md) | [Audits](../audits/README.md) | [Ghidra Pseudocode](../pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) | [Debug Logs](../debug_logs/README.md)
 
 # Architectural Audit & Definitive Modularization Report
-## Panasonic DIGA Ecosystem (Panadiga) — Rust Core, Tauri 2 / React 18, C11 PIO & Python CLI
+## Panasonic DIGA Ecosystem (Panadiga) — Rust Core, Tauri 2 / React 19, Zero-Gadget C11 PIO & Python CLI
 
 > [!NOTE]
-> **Historical Milestone Record (`November 07, 2026`):** This report preserves the initial modularization audit decomposing monoliths and establishing the 9 Quality Gates. Following migration to the multi-crate workspace (`crates/panadiga-core`, `crates/panadiga-cli`, `crates/panadiga-rag`, `crates/panadiga-mcp`, `apps/desktop/src-tauri/`), consult the **Live Root Technical Audit** ([`../../COMPLETE_AUDIT.md`](../../COMPLETE_AUDIT.md) | [Português](../../AUDITORIA_COMPLETA.md)) and [`../audits/README.md`](../audits/README.md).
+> **Historical Milestone Record (`November 07, 2026`) -> Current `v0.2.0` Ecosystem:** This report preserves the initial modularization audit decomposing monoliths and establishing the 9 Quality Gates. On the current **6-crate** Rust workspace (`panadiga-profiles`, `panadiga-core`, `panadiga-rag`, `panadiga-mcp` [`25` tools], `panadiga-cli`, `apps/desktop/src-tauri/` + `profiles/` hosting `89` models and `12` JSON Schemas + zero-gadget Pico firmware inside `P0_FW_RO`), also consult the **Live Root Technical Audit** ([`../../COMPLETE_AUDIT.md`](../../COMPLETE_AUDIT.md) | [Português](../../AUDITORIA_COMPLETA.md)), [`TESTING_ARCHITECTURE_AND_COMPLIANCE.md`](./TESTING_ARCHITECTURE_AND_COMPLIANCE.md), and [`../audits/README.md`](../audits/README.md).
 
-> **Milestone Approval Date:** November 07, 2026  
-> **Milestone Gate Snapshot:** 100% Passed (`35` Rust Tests, `26` Vitest Tests, `8` Playwright E2E, `27` Pytest, `0%` `jscpd` Clones, `uxlint` gate passed). Consult [`TESTING_ARCHITECTURE_AND_COMPLIANCE.md`](./TESTING_ARCHITECTURE_AND_COMPLIANCE.md) for current totals.  
+> **Initial Milestone Approval Date:** November 07, 2026  
+> **Initial Snapshot (Nov/2026) -> Current Verified Totals (`v0.2.0`):** Initial `35` Rust / `26` Vitest / `8` E2E / `27` Pytest $\rightarrow$ **Current:** **`337` Rust Tests (`6` crates), `128` Vitest Tests (`39` files), `38` C11 Host Tests (`4` modules + ARM check), `27` Playwright E2E (`9` specs), `32` Pytest (`6` files) + `46` `mypy --strict`, `0%` `jscpd` Clones, `100/100` `uxlint` (`386` files)**.  
 > **Classification:** Software Engineering & Clean Architecture Dossier  
 > **Authors:** Panadiga Systems & Reverse Engineering Team  
 
@@ -157,7 +157,7 @@ All localization tables are organized strictly by application domain namespace:
 * `frmcrypto.*`: `.FRM` container inspection, Shannon entropy, TOC records, and ECB codebook leaks.
 * `nvram.*`: `EEMUL` parameter surgery, Spansion micro-sectors, and targeted unbrick tools.
 * `pico.*`: `P7501` Async UART (`115200 8N1`), `NSW5V` (`Hi-Z`) guardrails, probe commands, and serial terminal.
-* `manuals.*`: 30 PDF manuals/datasheets in `manuals_and_schematics/` plus the interactive `docs/`, `.log`, and `.txt` reference browser.
+* `manuals.*`: **32 PDF** manuals/datasheets in `manuals_and_schematics/` plus the interactive browser across **39** `docs/` pairs, **22** `.log` captures, and `.txt` dumps.
 * `rag.*`: Physical-safety-guarded AI assistant and grounded citations.
 * `hexinspector.*`: LBA sector hex viewer with dual-address mode.
 * `common.*`: Global shared labels (close, copy, refresh, error, success).
@@ -270,7 +270,19 @@ python scripts/validate.py
 | **Frontend Dash** | `apps/desktop/src/components/dashboard/` | Declarative main dashboard cards & tables |
 | **Frontend Manuals** | `apps/desktop/src/components/manuals/` | PDF catalog, interactive markdown docs viewer & telemetry inspector |
 | **Frontend RAG** | `apps/desktop/src/components/rag/` | Decoupled AI assistant panel |
+| **Profiles SSOT v2** | `crates/panadiga-profiles/` & `profiles/` | **89 models**, **12 JSON Schemas**, and Deterministic `T0..T4` Gate for TS/C11 codegen |
+| **Vault & Express** | `crates/panadiga-core/src/{vault,ingest,re/prewrite_gate}/` | `raw`/`frm`/`recompiled` segregation, `Mn103Vm` gate, and `ExpressView.tsx` (`components/express/`) |
+| **Zero-Gadget Firmware** | `firmware/pico-p7501/{cli,common,diag,flash,gdb,generated,hal,tests,uart}/` | Zero external OLED/buzzer (`P0_FW_RO 256 KiB`): `VAULT VERIFY`, `IR VERIFY`, `DUMPNOR ff_blocks`, LUT CRC32 |
 | **Frontend MVVM** | `apps/desktop/src/viewmodels/useRagViewModel.ts` | Isolated RAG assistant state machine |
+
+```mermaid
+flowchart LR
+    PROFILES["panadiga-profiles (89 models / 12 Schemas / T0..T4)"] --> TSGEN["apps/desktop/src/models/generated/ (TypeScript SSOT)"]
+    PROFILES --> CGEN["firmware/pico-p7501/generated/p7501_ssot.h (C11 SSOT)"]
+    PROFILES --> CORE["panadiga-core (100% Deterministic: Vault + Mn103Vm + Thread-Local Logger)"]
+    CORE --> HOST["Desktop Tauri 2 (ExpressView) & Android APK (OTG/BLE/IR)"]
+    HOST --> PICO["Zero-Gadget Probe (P0_FW_RO 256 KiB: RP2040 160 KiB / RP2350 157 KiB)"]
+```
 
 ---
 

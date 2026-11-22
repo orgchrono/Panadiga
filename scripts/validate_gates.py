@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from concurrent.futures import FIRST_EXCEPTION, Future, ThreadPoolExecutor, wait
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -12,6 +13,7 @@ from typing import Callable, Final, Mapping
 from scripts.panadiga_ops import (
     ProcessTracker,
     ROOT,
+    panadiga_binary_name,
     print_banner,
     print_status,
     run_step,
@@ -20,26 +22,19 @@ from scripts.panadiga_ops import (
 from scripts.validate_c11 import C11_HOST_SOURCES as C11_HOST_SOURCES, _gate_c11_host as _gate_c11_host
 
 DESKTOP_DIR: Final[Path] = ROOT / "apps" / "desktop"
-PYTHON_COMPILE_TARGETS: Final[tuple[str, ...]] = (
-    "tools/ghidra/ghidra_am34_memory_map.py", "tools/ghidra/ghidra_import_symbols_panadiga.py",
-    "tools/ghidra/ghidra_importar_simbolos_panadiga.py", "tools/ghidra/ghidra_auto_unbrick_audit.py",
-    "tools/ghidra/ghidra_mn103_fix_decompilation.py", "tools/ghidra/ghidra_zero_undef_pipeline.py",
-    "tools/ghidra/ghidra_connect_debugger.py",
-    "scripts/ops/__init__.py", "scripts/ops/proc.py", "scripts/ops/toolchain.py",
-    "scripts/panadiga_ops.py", "scripts/panadiga_cli_bridge.py", "scripts/panadiga_cache.py",
-    "scripts/build_cache/__init__.py", "scripts/build_cache/inventory.py", "scripts/build_cache/steps.py",
-    "scripts/tui_plan.py", "scripts/tui_term.py", "scripts/tui.py", "scripts/build.py",
-    "scripts/build_lanes/__init__.py", "scripts/build_lanes/concurrency.py",
-    "scripts/build_lanes/desktop.py", "scripts/build_lanes/android.py",
-    "scripts/build_lanes/pico.py", "scripts/build_lanes/dag.py",
-    "scripts/validate_c11.py", "scripts/validate_gates.py", "scripts/validate.py", "scripts/profiles_types.py",
-    "scripts/dev/__init__.py", "scripts/dev/cad_primitives.py", "scripts/dev/schematic_sheet.py",
-    "scripts/dev/generate_schematics_and_cad.py",
-    "scripts/re/__init__.py", "scripts/re/mn10300.py", "scripts/re/mn103_traps.py", "scripts/re/pana_frm.py",
-    "scripts/bench/__init__.py", "scripts/bench/protocol.py", "scripts/bench/decoders.py",
-    "scripts/bench/nor_dumper.py", "scripts/bench/rsp_frames.py", "scripts/bench/rsp_dump.py",
-    "scripts/bench/boot_harness.py", "scripts/bench/runner.py",
-)
+
+
+def _discover_python_compile_targets() -> tuple[str, ...]:
+    targets: list[str] = []
+    for base in (ROOT / "tools" / "ghidra", ROOT / "scripts"):
+        for path in sorted(base.rglob("*.py")):
+            if "__pycache__" in path.parts or "tests" in path.parts:
+                continue
+            targets.append(path.relative_to(ROOT).as_posix())
+    return tuple(targets)
+
+
+PYTHON_COMPILE_TARGETS: Final[tuple[str, ...]] = _discover_python_compile_targets()
 
 
 def _gate_rust(env: Mapping[str, str], *, capture_output: bool = False) -> None:
@@ -47,7 +42,12 @@ def _gate_rust(env: Mapping[str, str], *, capture_output: bool = False) -> None:
         print_banner("1/9. Validating Rust Workspace (Cargo Fmt, Clippy -D warnings & Tests)")
     run_step(["cargo", "fmt", "--all", "--", "--check"], cwd=ROOT, env=env, capture_output=capture_output)
     run_step(["cargo", "clippy", "--workspace", "--all-targets", "--no-deps", "--", "-D", "warnings"], cwd=ROOT, env=env, capture_output=capture_output)
-    run_step(["cargo", "test", "--workspace"], cwd=ROOT, env=env, capture_output=capture_output)
+    run_step(
+        ["cargo", "test", "--workspace", "--bins", "--lib", "--tests"],
+        cwd=ROOT,
+        env=env,
+        capture_output=capture_output,
+    )
     if not capture_output:
         print_status("PASS", "Rust workspace formatted, clippy-clean (-D warnings), and all tests passed!", "32")
 
@@ -96,14 +96,17 @@ def _gate_ghidra(env: Mapping[str, str], *, capture_output: bool = False) -> Non
     if not capture_output:
         print_banner("7/9. Validating SSOT & Ghidra Native Generator (panadiga ssot / ghidra)")
     ghidra_dir = str(ROOT / "tools" / "ghidra")
+    target_dir = Path(env.get("CARGO_TARGET_DIR") or str(ROOT / "target"))
+    cli_bin = target_dir / "debug" / panadiga_binary_name()
+    prefix = [str(cli_bin)] if cli_bin.is_file() else ["cargo", "run", "-p", "panadiga-cli", "--"]
     run_step(
-        ["cargo", "run", "-p", "panadiga-cli", "--", "ssot", "export-all", "--root", str(ROOT)],
+        [*prefix, "ssot", "export-all", "--root", str(ROOT)],
         cwd=ROOT,
         env=env,
         capture_output=capture_output,
     )
     run_step(
-        ["cargo", "run", "-p", "panadiga-cli", "--", "ghidra", "export-all", "--dir", ghidra_dir],
+        [*prefix, "ghidra", "export-all", "--dir", ghidra_dir],
         cwd=ROOT,
         env=env,
         capture_output=capture_output,

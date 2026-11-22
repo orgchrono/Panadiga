@@ -110,6 +110,8 @@ pub const AM34_SC0_STR_VA: u32 = AM34_SC0_BASE + 0x0C;
 pub const AM34_PROG061_BASE_VA: u32 = 0x5040_0000;
 /// Uncached SDRAM alias of `AM34_PROG061_BASE_VA` (`0x9040_0000`), required for AM34 D-cache/I-cache coherence (`PANADMP1` `0x9043950E`, RAM stubs `0x90439B40`).
 pub const AM34_PROG061_SDRAM_UNCACHED_BASE: u32 = 0x9040_0000;
+/// Raw RSP stub injection address in cached AM34 SDRAM (`0x5180_0000`).
+pub const AM34_SDRAM_STUB_RAW_ADDR: u32 = 0x5180_0000;
 pub const AM34_MAIN_BASE_VA: u32 = 0x5700_0000;
 
 /// Expected unpacked binary sizes for audited `MAIN` firmware builds (`3410PQ` & `3060NP`).

@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 from pathlib import Path
+import subprocess
+import sys
+import zipfile
 import pytest
 
 from scripts.build import detect_android_sdk, parse_args
+from scripts.build_lanes.android_verify import validate_apk_artifact
 from scripts.panadiga_cache import (
     compute_tree_digest,
     copy_if_changed,
@@ -141,3 +145,71 @@ def test_recursive_root_cache_roundtrip_and_tui_plan(tmp_path: Path) -> None:
     assert args_tui.tui is True
     assert args_tui.ci is True
     assert args_tui.no_cache is True
+
+
+def _make_fake_sdk_and_apk(tmp_path: Path, *, include_armeabi: bool = True) -> tuple[Path, Path]:
+    sdk_dir = tmp_path / "Sdk"
+    bt_dir = sdk_dir / "build-tools" / "36.0.0"
+    bt_dir.mkdir(parents=True)
+    ext_map = {"zipalign": ".exe" if sys.platform == "win32" else "", "apksigner": ".bat" if sys.platform == "win32" else "", "aapt2": ".exe" if sys.platform == "win32" else ""}
+    for stem, ext in ext_map.items():
+        (bt_dir / f"{stem}{ext}").write_text("", encoding="utf-8")
+
+    apk_path = tmp_path / "panadiga-test.apk"
+    with zipfile.ZipFile(apk_path, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("META-INF/MANIFEST.MF", b"Manifest-Version: 1.0\n")
+        zf.writestr("AndroidManifest.xml", b"manifest")
+        zf.writestr("classes.dex", b"dex\n035\x00")
+        zf.writestr("lib/arm64-v8a/libpanadiga_lib.so", b"\x7fELF" + b"\x00" * 1_100_000)
+        if include_armeabi:
+            zf.writestr("lib/armeabi-v7a/libpanadiga_lib.so", b"\x7fELF" + b"\x00" * 600_000)
+    return sdk_dir, apk_path
+
+
+def test_validate_apk_artifact_checks_signatures_abis_and_sdk(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    sdk_dir, apk_path = _make_fake_sdk_and_apk(tmp_path, include_armeabi=True)
+    xmltree_good = (
+        'A: http://schemas.android.com/apk/res/android:minSdkVersion(0x0101020c)=24\n'
+        'A: http://schemas.android.com/apk/res/android:targetSdkVersion(0x01010270)=34\n'
+    )
+    apksig_good = (
+        "Verifies\n"
+        "Verified using v1 scheme (JAR signing): true\n"
+        "Verified using v2 scheme (APK Signature Scheme v2): true\n"
+        "Verified using v3 scheme (APK Signature Scheme v3): true\n"
+    )
+
+    state = {"xml": xmltree_good, "sig": apksig_good}
+
+    def fake_run(cmd: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        exe = Path(cmd[0]).name.lower()
+        if exe.startswith("zipalign"):
+            return subprocess.CompletedProcess(cmd, 0, "", "")
+        if exe.startswith("apksigner"):
+            return subprocess.CompletedProcess(cmd, 0, state["sig"], "")
+        return subprocess.CompletedProcess(cmd, 0, state["xml"], "")
+
+    monkeypatch.setattr("scripts.build_lanes.android_verify.subprocess.run", fake_run)
+    summary = validate_apk_artifact(sdk_dir, apk_path, require_dual_abi=True, env={})
+    assert summary["abis"] == ["arm64-v8a", "armeabi-v7a"]
+    assert summary["min_sdk"] == 24
+    assert summary["target_sdk"] == 34
+
+    state["xml"] = xmltree_good + 'A: compileSdkVersionCodename(0x01010573)="16"\n'
+    assert validate_apk_artifact(sdk_dir, apk_path, require_dual_abi=True, env={})["target_sdk"] == 34
+
+    state["xml"] = xmltree_good + 'A: compileSdkVersionCodename="17"\n'
+    with pytest.raises(RuntimeError, match="compileSdkVersionCodename"):
+        validate_apk_artifact(sdk_dir, apk_path, require_dual_abi=True, env={})
+
+    state["xml"] = xmltree_good
+    state["sig"] = apksig_good.replace("v1 scheme (JAR signing): true", "v1 scheme (JAR signing): false")
+    with pytest.raises(RuntimeError, match="v1 scheme"):
+        validate_apk_artifact(sdk_dir, apk_path, require_dual_abi=True, env={})
+
+    _, single_apk = _make_fake_sdk_and_apk(tmp_path / "single", include_armeabi=False)
+    state["sig"] = apksig_good
+    with pytest.raises(RuntimeError, match="armeabi-v7a"):
+        validate_apk_artifact(sdk_dir, single_apk, require_dual_abi=True, env={})

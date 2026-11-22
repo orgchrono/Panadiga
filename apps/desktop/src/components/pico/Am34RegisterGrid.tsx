@@ -1,8 +1,9 @@
 import React from 'react';
+import { Cpu } from 'lucide-react';
+import { AM34_FLASH_BASE_HEX } from '@/constants/hardwareSpecs';
 import { useTranslation } from '@/i18n/useTranslation';
 import { Am34RegisterState } from '@/models';
 import { formatHex32 } from '@/utils/formatters';
-import { Cpu } from 'lucide-react';
 
 export interface Am34RegisterGridProps {
   registers: Am34RegisterState | null;
@@ -30,7 +31,7 @@ export const Am34RegisterGrid: React.FC<Am34RegisterGridProps> = ({ registers })
         <div className="p-2 rounded-lg bg-slate-950 border border-cyan-500/30 col-span-2 shadow-sm">
           <span className="text-[10px] text-cyan-400 block font-bold">{t('pico.registers.pcLabel')}</span>
           <span className="font-mono text-cyan-200 text-xs">
-            {formatHex32(registers?.pc, '0x80000000')}
+            {formatHex32(registers?.pc, AM34_FLASH_BASE_HEX)}
           </span>
         </div>
         <div className="p-2 rounded-lg bg-slate-950 border border-purple-500/30 col-span-2 shadow-sm">

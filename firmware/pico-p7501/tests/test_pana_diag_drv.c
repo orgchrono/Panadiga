@@ -408,6 +408,15 @@ static void test_diag_watch_wake_and_ir_kaseikyo(void) {
     assert(p7501_ir_decode_pulses(pulses, P7501_IR_PULSE_COUNT, &dec));
     assert(dec.valid && dec.vendor_ok && dec.parity_ok);
     assert(memcmp(dec.frame, ir.frame, P7501_IR_KASEIKYO_FRAME_BYTES) == 0);
+
+    /* IR VERIFY 48-bit hex validator: valid frame, bad checksum, bad OEM/nibble, malformed length */
+    assert(p7501_ir_verify_hex_frame("0220B00141F0", &dec));
+    assert(dec.valid && dec.vendor_ok && dec.parity_ok && dec.dev == 0xB0u && dec.cmd == 0x41u);
+    assert(p7501_ir_verify_hex_frame("0220B00141FF", &dec));
+    assert(!dec.valid && dec.vendor_ok && !dec.parity_ok);
+    assert(p7501_ir_verify_hex_frame("0221B00141F0", &dec));
+    assert(!dec.valid && !dec.vendor_ok);
+    assert(!p7501_ir_verify_hex_frame("0220B0", &dec));
 }
 
 #include "common/p7501_cmd_arena.h"
@@ -641,6 +650,22 @@ static void test_vault_ab_p6_mmio_pwrosc_and_disconnect_relock(void) {
     vb.header_crc32 ^= 0xFFu;
     assert(p7501_vault_select_ab(&va, &vb, &vout) == 0);
     assert(vout.write_count == va.write_count);
+
+    /* Vault slot payload verify + non-0xFF count + ECRC detection */
+    uint8_t slot_pay[16];
+    memset(slot_pay, 0xFF, sizeof(slot_pay));
+    slot_pay[0] = 0x12u; slot_pay[1] = 0x34u;
+    assert(p7501_vault_manifest_record_slot(&va, 2u, 0x807F0000UL, slot_pay, sizeof(slot_pay), "DMR-EH55"));
+    uint32_t out_crc = 0u, out_non_ff = 0u;
+    bool crc_bad = false;
+    assert(p7501_vault_verify_slot_buffer(&va, 2u, slot_pay, sizeof(slot_pay), &out_crc, &out_non_ff, &crc_bad));
+    assert(out_non_ff == 2u && !crc_bad && out_crc == va.slots[1].data_crc32);
+    slot_pay[3] = 0x55u;
+    assert(!p7501_vault_verify_slot_buffer(&va, 2u, slot_pay, sizeof(slot_pay), &out_crc, &out_non_ff, &crc_bad));
+    assert(crc_bad && out_non_ff == 3u);
+    assert(!p7501_vault_verify_slot_buffer(&va, 3u, slot_pay, sizeof(slot_pay), &out_crc, &out_non_ff, &crc_bad));
+    assert(!crc_bad);
+
     assert(p7501_vault_manifest_clear_slot(&va, 1u));
     assert(va.slots[0].valid == 0u && p7501_vault_manifest_verify(&va));
 

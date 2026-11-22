@@ -12,7 +12,7 @@ use crate::gate::CapabilityGate;
 use crate::loader::{
     load_bundle_from_dir, merge_overlay_dir, model_storage_key, resolve_model_in_bundle,
 };
-use crate::schema::{export_schemas_to_dir, verify_schemas_match_dir};
+use crate::schema::verify_schemas_match_dir;
 use crate::types::{
     AuthorizationMode, BoardProfile, BusWindow, Capability, ClaimEvidence, EepromChipProfile,
     EepromFunction, EvidenceSource, EvidenceTier, FirmwareTrainProfile, FlashChipProfile,
@@ -501,14 +501,63 @@ fn real_profiles_dir_and_schemas_stay_synchronized() {
     assert!(bundle.models.contains_key("dmr_es35v"));
     assert!(bundle.models.contains_key("dmr_ez485v"));
 
-    let schema_dir = profiles_dir.join("schema");
-    if schema_dir.is_dir() && schema_dir.join("profiles_bundle.schema.json").is_file() {
-        verify_schemas_match_dir(&schema_dir).expect("Committed JSON Schemas match schemars");
-    } else {
-        let tmp = std::env::temp_dir().join(format!("panadiga_schema_gen_{}", std::process::id()));
-        let count = export_schemas_to_dir(&tmp).unwrap();
-        assert_eq!(count, 12);
-        verify_schemas_match_dir(&tmp).unwrap();
-        let _ = fs::remove_dir_all(&tmp);
+    let report = validate_bundle(&bundle);
+    assert!(
+        report.valid,
+        "Real profiles/ bundle validation failed: {:?}",
+        report.errors
+    );
+    assert_eq!(report.checks_failed, 0);
+
+    for (storage_key, manifest) in &bundle.models {
+        let resolved = resolve_model_in_bundle(&bundle, &manifest.model_id).unwrap_or_else(|e| {
+            panic!(
+                "Model '{storage_key}' ('{}') must resolve cleanly: {e}",
+                manifest.model_id
+            )
+        });
+        let model_id = &manifest.model_id;
+        if let Some(board_ref) = &resolved.manifest.board_ref {
+            assert!(
+                resolved.board.is_some(),
+                "Model '{model_id}' dangling board_ref '{board_ref}'"
+            );
+        }
+        if let Some(train_ref) = &resolved.manifest.train_ref {
+            assert!(
+                resolved.firmware_train.is_some(),
+                "Model '{model_id}' dangling train_ref '{train_ref}'"
+            );
+        }
+        if let Some(layout_ref) = &resolved.manifest.nor_layout_ref {
+            assert!(
+                resolved.nor_layout.is_some(),
+                "Model '{model_id}' dangling nor_layout_ref '{layout_ref}'"
+            );
+        }
+        if let Some(board) = &resolved.board
+            && let Some(flash_ref) = &board.flash_ref
+        {
+            assert!(
+                resolved.flash_chip.is_some(),
+                "Model '{model_id}' dangling flash_ref '{flash_ref}'"
+            );
+        }
     }
+
+    let schema_dir = profiles_dir.join("schema");
+    assert!(
+        schema_dir.is_dir(),
+        "Committed profiles/schema directory must exist"
+    );
+    let schema_count = fs::read_dir(&schema_dir)
+        .unwrap()
+        .filter_map(Result::ok)
+        .filter(|e| e.path().extension().and_then(|s| s.to_str()) == Some("json"))
+        .count();
+    assert_eq!(
+        schema_count, 12,
+        "profiles/schema must contain all 12 schemas"
+    );
+    verify_schemas_match_dir(&schema_dir).expect("Committed JSON Schemas match schemars");
 }

@@ -92,7 +92,7 @@ impl TryFrom<&str> for PicoCommandCategory {
 }
 
 /// C11 `k_cli_commands[]` names intentionally omitted from the interactive Studio catalog
-/// (command aliases `VDD`, `HELP`, `?`, `BOOT_PROFILE`, `HIZ`, `PROBE`, `AUTOPROBE`, `GDB`).
+/// (command aliases/dispatchers `VDD`, `HELP`, `?`, `BOOT_PROFILE`, `GDB`, `HIZ`, `PROBE`, `AUTOPROBE`, `IR`).
 pub const INTERNAL_OR_ALIAS_CLI_COMMANDS: &[&str] = &[
     "VDD",
     "HELP",
@@ -102,6 +102,7 @@ pub const INTERNAL_OR_ALIAS_CLI_COMMANDS: &[&str] = &[
     "HIZ",
     "PROBE",
     "AUTOPROBE",
+    "IR",
 ];
 
 // ============================================================================

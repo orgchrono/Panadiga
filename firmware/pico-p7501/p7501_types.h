@@ -167,9 +167,9 @@ typedef enum p7501_adc_channel p7501_adc_channel_t;
 /** Target AM34 internal SRAM workspace base for injected async stubs. */
 #define AM34_SRAM_LOADER_BASE_ADDR       0x00004000UL
 
-/** Physical uncached CS0/SB0 and uncached hardware flash apertures. */
-#define SPANSION_FLASH_UNCACHED_BASE     0x80000000UL
-#define SPANSION_FLASH_HW_UNCACHED_BASE  0x84000000UL
+/** Physical uncached CS0/SB0 and uncached hardware flash apertures (projected from Rust SSOT). */
+#define SPANSION_FLASH_UNCACHED_BASE     P7501_SSOT_CS0_CACHED_BASE
+#define SPANSION_FLASH_HW_UNCACHED_BASE  P7501_SSOT_CS0_UNCACHED_BASE
 #define SPANSION_MICROSECTOR_SIZE_BYTES  0x00002000UL
 #define SPANSION_NVRAM_SECTOR_COUNT      8U
 #define SPANSION_NVRAM_BASE_OFFSET       0x007F0000UL

@@ -58,10 +58,19 @@
 
 static const char *s_cli_res_status = "OK";
 static const char *s_cli_res_code = "0";
+static char s_cli_res_extra[96] = {0};
 
 void p7501_cli_set_result(const char *status, const char *code) {
     s_cli_res_status = (status != NULL) ? status : "OK";
     s_cli_res_code = (code != NULL) ? code : "0";
+}
+
+void p7501_cli_set_result_extra(const char *extra_kv) {
+    if ((extra_kv == NULL) || (extra_kv[0] == '\0')) {
+        s_cli_res_extra[0] = '\0';
+        return;
+    }
+    (void)snprintf(s_cli_res_extra, sizeof(s_cli_res_extra), "%s", extra_kv);
 }
 
 static bool cli_is_ws(char c) {
@@ -166,6 +175,7 @@ static const p7501_cli_cmd_entry_t k_cli_commands[] = {
     { "PANARSP",        p7501_cmd_pana_rsp },
     { "DIAGWATCH",      p7501_cmd_diag_watch },
     { "DRVPANA",        p7501_cmd_drv_pana },
+    { "IR",             p7501_cmd_ir },
     { "IRTX",           p7501_cmd_irtx },
     { "IRRX",           p7501_cmd_irrx },
     { "SERVMACRO",      p7501_cmd_serv_macro },
@@ -210,15 +220,18 @@ void p7501_cli_process_command(char *line) {
     for (size_t i = 0u; i < (sizeof(k_cli_commands) / sizeof(k_cli_commands[0])); ++i) {
         if (strcmp(cmd, k_cli_commands[i].name) == 0) {
             p7501_cli_set_result("OK", "0");
+            p7501_cli_set_result_extra(NULL);
             p7501_wdt_begin_cmd((uint8_t)i, k_cli_commands[i].name);
             k_cli_commands[i].handler(arg);
             if (!gdb_rsp_is_active()) {
                 p7501_wdt_end_cmd(false);
-                printf("@P7501_RES cmd=%s status=%s code=%s elapsed_us=%llu\n",
+                printf("@P7501_RES cmd=%s status=%s code=%s elapsed_us=%llu%s%s\n",
                        k_cli_commands[i].name,
                        s_cli_res_status,
                        s_cli_res_code,
-                       (unsigned long long)p7501_wdt_snapshot().last_cmd_elapsed_us);
+                       (unsigned long long)p7501_wdt_snapshot().last_cmd_elapsed_us,
+                       (s_cli_res_extra[0] != '\0') ? " " : "",
+                       s_cli_res_extra);
             }
             return;
         }

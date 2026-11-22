@@ -45,16 +45,16 @@ flowchart TD
 
     subgraph SOFTWARE_SUITE["1 · Panadiga Software"]
         direction TB
-        GUI["Desktop · Android GUI · Tauri 2.0 · React 19 · TypeScript"]
-        CLI["panadiga Core · Rust 1.85+"]
+        GUI["Desktop · Android GUI · Tauri 2.0 · React 19 · ExpressView · IR Commander"]
+        CLI["panadiga Core · Rust Edition 2024 (6 crates + profiles)"]
         GUI <--> |"IPC"| CLI
 
-        P7501_HAL["P7501 UART HAL<br/>115200 8N1 · PIO"]
-        GDB_SRV["GDB RSP<br/>:3333"]
-        MEIHDFS["MEIHDFS Parser<br/>Storage Forensics"]
-        CRYPTO["Cryptanalysis<br/>ECB · KPA"]
-        NVRAM["NVRAM Sanitizer<br/>64 / 128 KB"]
-        RAG["RAG Zero-Error<br/>6 shields"]
+        P7501_HAL["P7501 UART HAL 115200 8N1 - PIO"]
+        GDB_SRV["GDB RSP :3333"]
+        MEIHDFS["MEIHDFS Parser Storage Forensics"]
+        CRYPTO["Cryptanalysis ECB - KPA"]
+        NVRAM["NVRAM Sanitizer 64 / 128 KB"]
+        RAG["RAG Zero-Error 6 shields"]
 
         CLI <--> P7501_HAL
         CLI <--> GDB_SRV
@@ -64,10 +64,10 @@ flowchart TD
         CLI <--> RAG
     end
 
-    subgraph LAB_BENCH["2 · Bench & Probe"]
-        BLE(["BLE NUS · wireless"])
-        USB(["USB-C OTG · wired"])
-        PICO{{"Raspberry Pi Pico · RP2040 · RP2350 · C11 + PIO"}}
+    subgraph LAB_BENCH["2 · Zero-Gadget Probe & Mobile/Desktop Host"]
+        BLE(["BLE NUS · Smartphone IR / UI / Audio"])
+        USB(["USB-C OTG · Desktop / Android"])
+        PICO{{"Raspberry Pi Pico · RP2040 · RP2350 · P0_FW_RO 256 KiB"}}
         BLE <--> PICO
         USB <--> PICO
     end
@@ -116,16 +116,19 @@ flowchart TD
 ```text
 Panadiga/
 ├── package.json                                      <-- Unified Entrypoint (`npm start`, `npm run build:desktop`, `npm run validate`)
-├── Cargo.toml                                        <-- Master Rust Workspace Specification (2024 Edition)
+├── Cargo.toml                                        <-- Master Rust Workspace Specification (2024 Edition, 6 crates)
 ├── COMPLETE_AUDIT.md / AUDITORIA_COMPLETA.md         <-- Live Root Technical Audit (EN / PT-BR)
+├── profiles/                                         <-- Data-Driven Hardware SSOT (89 DIGA models, 12 JSON Schemas Draft 2020-12)
 ├── crates/                                           <-- Modular Multi-Crate Rust Architecture
-│   ├── panadiga-core/                                <-- Core Engines: NVRAM, MEIHDFS + `hdd/capacity_patch/` (`5 GB..2 TB`) + `hdd/writer/eh55_flash/`, Feistel/EXTRHEAD Crypto, RE (`mn10300/`, `mn10300_traps/`, `mn10300_emu/`, `matshita_emu/`, `nor_dumper/`, `eh55_bgo/`, `davis_probe/`, `region_compat/tv_standard/`, `tbc_appliance/`, `bgo_unbrick/`, `main_passthrough/`, `unbrick_sd_kit/`, `prog061_uart_monitor/`), `pico/panamon1/`, Hardware SSOT
+│   ├── panadiga-profiles/                            <-- Relational Chip/Board Registry & Deterministic `T0..T4` Capability Gate
+│   ├── panadiga-core/                                <-- Deterministic Core: NVRAM, `vault/`, `ingest/`, MEIHDFS + `hdd/capacity_patch/` (`5 GB..2 TB`), Crypto, RE (`prewrite_gate/`, `sig_locator/`, `verify_loop/`, `mn10300_emu/`, `eh55_bgo/`, `davis_probe/`, `region_compat/`, `tbc_appliance/`, `bgo_unbrick/`, `unbrick_sd_kit/`, `prog061_uart_monitor/`), `pico/panamon1/`, Hardware SSOT
 │   ├── panadiga-cli/                                 <-- `panadiga` / `panadiga-cli` Binary & Interactive TUI Workbench
 │   ├── panadiga-rag/                                 <-- Zero-Error 6-Layer RAG Engine + `HardwareSafetyValidator` + `FactCritic`
 │   └── panadiga-mcp/                                 <-- JSON-RPC 2.0 MCP Stdio Server Exposing All 25 Native Tools (18 Core + 7 Wave-3 Modules)
 ├── apps/desktop/                                     <-- Tauri 2.0 Desktop & Android GUI (`panadiga-desktop` + React 19 + Vite MVVM)
-│   ├── src-tauri/                                    <-- Tauri 2.0 Native Rust Commands, Engineering Docs/Log IPC & GDB RSP Bridge
-│   ├── src/                                          <-- Strict MVVM Components, ViewModels & Interactive Doc/Log Browser
+│   ├── src-tauri/                                    <-- Tauri 2.0 Native Rust Commands, Android HAL Shims, Docs/Log IPC & GDB RSP Bridge
+│   ├── src/                                          <-- Strict MVVM (`views/ExpressView.tsx`, `views/IrCommanderView.tsx`, `components/express/`, `models/generated/`)
+│   ├── e2e/                                          <-- 9 Playwright E2E Browser Test Specs (27 tests)
 │   ├── package.json                                  <-- Node.js Dependencies, Vitest, uxlint & Playwright Scripts
 │   └── playwright.config.ts                          <-- End-to-End Browser Testing Configuration
 ├── docs/                                             <-- Official Technical Documentation Repository
@@ -137,21 +140,21 @@ Panadiga/
 │   ├── pseudocode/                                   <-- Full MN103S Pseudocode, `??` Audit Report & Raw Ghidra Dumps (`raw/*.txt`)
 │   ├── debug_logs/                                   <-- 22 Deduplicated `COM10` / `P7501` / `PhysicalDrive1` Captures & `DOSSIE_COMPLETO_...txt`
 │   └── assets/ / images/                             <-- High-Resolution Schematics, 241 Visual Catalog PNGs & Pinouts
-├── manuals_and_schematics/                           <-- Technical Library (Manuals, Schematics & Datasheets)
+├── manuals_and_schematics/                           <-- Technical Library (32 Manuals, Schematics & Datasheets in PDF)
 ├── tools/                                            <-- Lab Utilities & Ghidra AM34/MN103S Scripts (Generated from Rust SSOT)
 ├── scripts/                                          <-- Cross-Platform Build & 9-Gate Validation Suite (`build.py`, `validate.py`, `bench/`)
 └── firmware/
-    └── pico-p7501/                                   <-- RP2040/RP2350 C11 Modular P7501 Async UART, PIO Logic & Autonomous `PANARSP` Firmware
-        ├── cli/                                      <-- Interactive USB-CDC / BLE `PANADIGA>` Command Parser & Help
-        ├── common/                                   <-- Pure C11 Hex & Checksum Utilities
-        ├── diag/                                     <-- `PIOLOGIC` 4-Ch Timing Sampler & Electrical Diagnostics
-        ├── flash/                                    <-- Spansion NOR CFI / Mirror Autodetect & Guarded Eraser
+    └── pico-p7501/                                   <-- RP2040/RP2350 C11 Zero-Gadget P7501 Probe Firmware (`P0_FW_RO = 256 KiB`)
+        ├── cli/                                      <-- Interactive USB-CDC / BLE `PANADIGA>` Parser & Help (`IR`, `VAULT`, `DUMPNOR`)
+        ├── common/                                   <-- Pure C11 Hex, SPSC Ring, WDT, Nibble-LUT CRC32 & `ff_blocks` Helpers
+        ├── diag/                                     <-- `PIOLOGIC` 4-Ch Sampler, `SDSNIFF`, `JIGSWEEP`, `IRTX`/`IRRX`/`IR VERIFY`
+        ├── flash/                                    <-- QSPI Vault A/B (`VAULT VERIFY <1..3>`), Spansion NOR CFI & `E05` Bus Policy
         ├── gdb/                                      <-- Deterministic GDB RSP Protocol Codec & Server
-        ├── hal/                                      <-- Open-Drain `XRESET`, `SW_UART` (GP26), `NSW5V` (GP3 Hi-Z) & LED State HAL
-        ├── protocol/                                 <-- Boot Profile Sweep & Bus Handshake Routines
-        ├── uart/                                     <-- PIO1 UART Engine, `UARTSTREAM`, `WAITTX`, `DIAGWATCH` & `PANARSP` (`WMEM`/`WRITE32`/`PASSTHROUGH`/`DUMPNOR`/`CALL`)
-        ├── tests/                                    <-- Host C11 Unit Test Suite (`PICO_HOST_TEST=1`)
-        ├── p7501_uart*.pio / p7501_logic_sampler.pio <-- PIO State Machines (115200 8N1 UART & 2 MHz Edge Sampler)
+        ├── generated/                                <-- Generated `p7501_ssot.h` / `p7501_ssot_tables.c` from Rust SSOT
+        ├── hal/                                      <-- Open-Drain `XRESET`, `SW_UART` (GP26), `NSW5V` (GP3 Hi-Z IRQ) & LED HAL
+        ├── tests/                                    <-- Host C11 Unit Test Suite (`PICO_HOST_TEST=1`, 4 modules / 38 test suites)
+        ├── uart/                                     <-- PIO1 UART Engine, `DIAGWATCH`, `DRVPANA`, `PANARSP` & `DUMPNOR` `ff_blocks`
+        ├── p7501_uart_duplex.pio / p7501_logic_sampler.pio / p7501_sds_sampler.pio <-- PIO State Machines
         ├── p7501_pico_main.c                         <-- Entrypoint & Main Diagnostic Loop
         └── CMakeLists.txt                            <-- Dual-Target Bare-Metal RP2040/RP2350 CMake Pipeline
 ```
@@ -343,7 +346,7 @@ On the digital/main board `VEP79138` (Panasonic DMR-EH55 schematic `TO JIGU`), t
 </p>
 
 > [!NOTE]
-> **RP2040 / RP2350 Hardware Compatibility:** Any board powered by an **RP2040** (Pico, Pico W) or **RP2350** (Pico 2) is 100% compatible. Standard `115200 8N1` UART framing (`p7501_uart.pio`) and deterministic `XRESET`/`SW_UART` open-drain timing are executed directly by the RP2040/RP2350 hardware.
+> **RP2040 / RP2350 Hardware Compatibility:** Any board powered by an **RP2040** (Pico, Pico W) or **RP2350** (Pico 2) is 100% compatible. Standard `115200 8N1` UART framing (`p7501_uart_duplex.pio`) and deterministic `XRESET`/`SW_UART` open-drain timing are executed directly by the RP2040/RP2350 hardware.
 
 | P7501 Pin (Canonical) |      Matsushita Signal      |     RP2040 / Pico Pin     |                 Conditioning / Board Network                 |           Signal Type           | Bench Function & Safety Directive                                                                                                                      |
 | :-------------------: | :-------------------------: | :------------------------: | :-----------------------------------------------------------: | :------------------------------: | :----------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -523,7 +526,7 @@ The following matrix formally specifies the architecture, silicon variants, Flas
 ### 9.1. Why Panadiga Operates Universally Across Generations ("Why It Works")
 
 1. **Mathematical Invariant of Flash Sizing (`len - 64 KB`):** Matsushita firmware engineers strictly allocated the circular EEPROM emulation ring buffer (`EEMUL`) in the highest 64 KB physical sector of the primary NOR Flash across all generations. Instead of hardcoding static offsets, `panadiga nvram clean` dynamically evaluates `offset = len - 65536`. Thus, whether an engineer feeds a 2 MB dump (`0x1F0000`), 4 MB dump (`0x3F0000`), 8 MB dump (`0x7F0000`), or 16 MB dump (`0xFF0000`), the tool safely targets the exact wear-leveling sector without touching IPL code.
-2. **Service UART & Discrete Control Invariance (`115200 8N1`):** Across `VEP79xxx` service headers (`P7501`), console telemetry runs over asynchronous `115200 8N1` UART paired with open-drain reset (`XRESET`) and high-impedance rail sensing (`NSW5V`). The `p7501_uart.pio` + C11 HAL interacts deterministically with these headers while enforcing zero push-pull contention.
+2. **Service UART & Discrete Control Invariance (`115200 8N1`):** Across `VEP79xxx` service headers (`P7501`), console telemetry runs over asynchronous `115200 8N1` UART paired with open-drain reset (`XRESET`) and high-impedance rail sensing (`NSW5V`). The `p7501_uart_duplex.pio` + C11 HAL interacts deterministically with these headers while enforcing zero push-pull contention.
 3. **Storage Superblock Invariance (MEIHDFS-V1 through V2+):**
    The ASCII `"SH"` magic byte sequence and 28 MB backup mirror geometry were preserved from early HDD models (DMR-E85H) through mature digital units (DMR-EH55, DMR-EX98V).
 
@@ -571,6 +574,8 @@ All official documentation is cataloged and hierarchically structured in `manual
 * `datasheets/rp2350_datasheet_raspberrypi.pdf` (11.1 MB, RP2350 microcontroller datasheet, Pico 2 architecture)
 * `datasheets/spansion_am29lv640d_nor_flash_datasheet.pdf` (1.0 MB, Parallel NOR Flash 64 Mbit TSOP-48 specifications)
 * `datasheets/spansion_s29gl128n_nor_flash_datasheet.pdf` (4.2 MB, MirrorBit NOR Flash 128 Mbit TSOP-56 specifications)
+* `datasheets/rohm_br24l16_datasheet.pdf` (I²C EEPROM 16 Kbit timer/standby reference, `0x50..0x57`)
+* `datasheets/microchip_24lc64_datasheet.pdf` (I²C EEPROM 64 Kbit optical drive calibration reference)
 
 ---
 
@@ -625,9 +630,9 @@ The repository maintains **39 synchronized bilingual (`en-US` / `pt-BR`) enginee
 
 ---
 
-## 12. Recommended Laboratory Equipment & Consumables
+## 12. Recommended Laboratory Equipment & Zero-Gadget Probe Architecture
 
-* **Microcontroller Probe:** Raspberry Pi Pico (RP2040) or Raspberry Pi Pico 2 (RP2350).
+* **Microcontroller Probe (Zero External Gadgets):** Raspberry Pi Pico (RP2040) or Raspberry Pi Pico 2 / Pico 2W (RP2350) running `~157–160 KiB` inside `P0_FW_RO` (`256 KiB`). No external OLED display, buzzer, or push-button hardware gadgets are attached to the probe — your Android smartphone (via **USB-C OTG** or **BLE NUS**) and Desktop Tauri 2 Workbench (`ExpressView` + `IrCommanderView`) provide the screen, audio cues, and IR Commander (`IRTX`/`IRRX`/`IR VERIFY`).
 * **Mating Connector:** JST ZR female 6-pin socket, 1.5mm pitch (`B6B-ZR-3R4` compatible).
 * **Passive Protection:** Optional $100\,\Omega$ $0.25\text{W}$ series current-limiting resistors (`GP2`, `GP4`, `GP5`), one $1.0\text{ k}\Omega$ ADC series isolation resistor (`GP26` / `SW_UART`). No external pull-up required (`VEP79138` integrates `R7570` / `R7572` `10 kΩ`).
 * **Instrumentation:** Digital Multimeter (continuity testing), 2-channel 100 MHz Oscilloscope or 24 MHz USB Logic Analyzer.
@@ -640,24 +645,24 @@ The repository maintains **39 synchronized bilingual (`en-US` / `pt-BR`) enginee
 The Panadiga engineering ecosystem enforces a strict **9 Quality Gates** anti-regression pipeline ([`scripts/validate.py`](scripts/validate.py)):
 
 ```text
-       Layer 5: End-to-End E2E Tests (Playwright Chromium — 23 tests / 8 specs)
-       Layer 4: Desktop UI Unit & Component Tests (Vitest + React Testing Library — 116 tests / 36 files)
-       Layer 3: C11 Pico Firmware Host Tests (GCC/MSVC Host Test Harness — 31 tests / 4 modules)
-       Layer 2: Python Scripts & RE Pytest Verification (29 Pytest tests / 5 files + mypy --strict 43 files)
-       Layer 1: Native Rust Workspace Tests (Cargo Test — 259 tests across core/cli/desktop/mcp/rag)
+       Layer 5: End-to-End E2E Tests (Playwright Chromium — 27 tests / 9 specs)
+       Layer 4: Desktop UI Unit & Component Tests (Vitest + React Testing Library — 128 tests / 39 files)
+       Layer 3: C11 Pico Firmware Host Tests (GCC/MSVC Host Harness + ARM Check — 38 tests / 4 modules)
+       Layer 2: Python Scripts & RE Pytest Verification (32 Pytest tests / 6 files + mypy --strict 46 files)
+       Layer 1: Native Rust Workspace Tests (Cargo Test — 337 tests across 6 crates: profiles/core/cli/desktop/mcp/rag)
 ```
 
 ### 13.1. The 9 Active Quality Gates
 
-1. **Rust Cargo Check & Test Gate:** Verifies formatting (`cargo fmt`), strict clippy (`-D warnings`), and all 259 workspace unit and integration tests across `panadiga-core`, `panadiga-cli`, `panadiga-desktop`, `panadiga-mcp`, and `panadiga-rag`.
+1. **Rust Cargo Check & Test Gate:** Verifies formatting (`cargo fmt`), strict clippy (`-D warnings`), and all **337** workspace unit and integration tests across `panadiga-profiles`, `panadiga-core`, `panadiga-cli`, `panadiga-desktop`, `panadiga-mcp`, and `panadiga-rag`.
 2. **TypeScript Strict Type-Check Gate:** `oxlint --deny-warnings` + `tsc --noEmit` verifies strict frontend types with zero `any` leaks.
-3. **Frontend Vitest Unit Suite:** Covers ViewModels, binary/doc link resolvers, React components, and algebraic state transitions across 116 tests in 36 files under `apps/desktop/src/**/*.test.{ts,tsx}`.
+3. **Frontend Vitest Unit Suite:** Covers ViewModels, Express Rescue pipelines, binary/doc link resolvers, React components, and algebraic state transitions across **128** tests in **39** files under `apps/desktop/src/**/*.test.{ts,tsx}`.
 4. **Copy/Paste Detector (`jscpd`):** Enforces 0.00% code duplication threshold.
-5. **UI/UX Completeness Linter (`uxlint`):** Audits 354 React files with score `100/100` (`0` issues) for loading, empty, error, accessibility, and form validation coverage.
-6. **Playwright E2E Suite:** 23 browser-level functional tests across 8 specs (`calibration-and-tbc`, `frm-packager`, `hdd-safe-flash`, `ir-commander`, `navigation`, `nvram`, `pico-bench`, `pico-bgo-davis`) running against headless Chromium.
+5. **UI/UX Completeness Linter (`uxlint`):** Audits **386** React files with score `100/100` (`0` issues) for loading, empty, error, accessibility, and form validation coverage.
+6. **Playwright E2E Suite:** **27** browser-level functional tests across **9** specs (`calibration-and-tbc`, `express-mode`, `frm-packager`, `hdd-safe-flash`, `ir-commander`, `navigation`, `nvram`, `pico-bench`, `pico-bgo-davis`) running against headless Chromium.
 7. **Ghidra Script Generator Gate:** Validates automatic export of memory maps and symbols from Rust SSOT (`tools/ghidra/*.py`, paired with `tools/ghidra/java/`).
-8. **C11 Firmware Host Test Gate:** Compiles and executes 31 bare-metal Pico firmware unit tests across 4 modules (`test_gdb_rsp_host.c`, `test_pana_diag_drv.c`, `test_pana_logic.c`, `test_uart_codec.c`) with `-Wall -Wextra -Werror` / `/W4 /WX`.
-9. **Python & Pytest Gate:** Verifies strict typing (`mypy --strict` across 43 source files) and 29 automated tests across 5 files in `scripts/tests/`.
+8. **C11 Firmware Host Test Gate:** Compiles and executes **38** bare-metal Pico firmware unit test suites/functions across **4** modules (`test_gdb_rsp_host.c`, `test_pana_diag_drv.c`, `test_pana_logic.c`, `test_uart_codec.c`) with `-Wall -Wextra -Werror` / `/W4 /WX`, plus dual-target RP2040/RP2350 ARM Release compile verification.
+9. **Python & Pytest Gate:** Verifies strict typing (`mypy --strict` across **46** source files) and **32** automated tests across **6** files in `scripts/tests/`.
 
 ### 13.2. Executing the Full Validation Suite
 

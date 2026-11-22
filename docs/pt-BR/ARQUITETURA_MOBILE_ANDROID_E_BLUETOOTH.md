@@ -5,9 +5,9 @@
 ## Panadiga Workbench Mobile — Especificação Unificada (Rust SSOT + React/Radix/shadcn + Kotlin I/O Shim)
 
 > **Classificação:** Documento Técnico de Arquitetura e Engenharia de Sistemas  
-> **Dispositivo-Alvo:** Tablets/Smartphones Android (`aarch64-linux-android`, ex.: `SM-T805M` / `GT-N8000`) & Sondas Raspberry Pi Pico / Pico W / Pico 2  
+> **Dispositivo-Alvo:** Tablets/Smartphones Android (`Dual-ABI Universal arm64-v8a + armeabi-v7a`: `aarch64-linux-android` + `armv7-linux-androideabi`, homologado em Samsung `SM-T805` Android `10` API `29` / `SM-T805M` / `GT-N8000`) & Sondas Raspberry Pi Pico / Pico W / Pico 2  
 > **Equipamento Sob Depuração:** Panasonic DIGA DMR-EH55 (Placa Digital `VEP79138`, Conector `P7501` e Receptor IR `Kaseikyo`)  
-> **Status:** Normativo / Homologado (`dist/releases/panadiga-android-arm64.apk`)  
+> **Status:** Normativo / Homologado em Hardware Real (`dist/releases/panadiga-android-arm64.apk`, `compileSdk = 36`, `targetSdk = 34`, `minSdk = 24`, assinatura `v1 + v2 + v3`)  
 
 ---
 
@@ -15,38 +15,38 @@
 
 Para habilitar a operação de bancada em campo, telemetria UART/GDB sem cabo acoplado ao notebook e disparo direto de comandos/macros de serviço IR no **Panasonic DMR-EH55**, o ecossistema **Panadiga** compila um APK unificado (**`dist/releases/panadiga-android-arm64.apk`**) com **Zero Jetpack Compose**, combinando:
 
-1. **Interface Unificada React 18 + Tailwind CSS + Radix UI + shadcn UI** ([`IrCommanderView.tsx`](../../apps/desktop/src/views/IrCommanderView.tsx), `apps/desktop/src/components/ir/*` e painel de sonda `P7501`), empacotada exclusivamente via `vite --mode android` e [`tauri.android.conf.json`](../../apps/desktop/src-tauri/tauri.android.conf.json) em `dist-android/`.
-2. **Núcleo & SSOT em Rust (`aarch64-linux-android`):** [`panadiga-core::ir`](../../crates/panadiga-core/src/ir/mod.rs) concentra o catálogo comprimido `panasonic_ir_catalog.dat.gz` (`1.763` codesets / `14.744` modelos / `80.047` comandos), as 14 macros declarativas (`ir_macros_ssot.json`), o adaptador de hardware Exynos/AOSP (`adapter.rs`) e a HAL serial/BLE de bancada.
+1. **Interface Unificada React 19 + Tailwind CSS + Radix UI + shadcn UI** ([`IrCommanderView.tsx`](../../apps/desktop/src/views/IrCommanderView.tsx), `apps/desktop/src/components/ir/*` e painel de sonda `P7501`), empacotada exclusivamente via `vite --mode android` e [`tauri.android.conf.json`](../../apps/desktop/src-tauri/tauri.android.conf.json) em `dist-android/`.
+2. **Núcleo & SSOT em Rust (`aarch64-linux-android`):** [`panadiga-core::ir`](../../crates/panadiga-core/src/ir/mod.rs) concentra o catálogo comprimido `panasonic_ir_catalog.dat.gz` (`1.763` codesets / `14.744` modelos / `80.047` comandos), as 14 macros declarativas (`ir_macros_ssot.json`), o adaptador de hardware Exynos/AOSP (`adapter.rs`) e a HAL serial/BLE de bancada integrada ao **modelo de sonda zero-gadget** (o smartphone atua como visor, áudio e controlador IR em `P0_FW_RO = 256 KiB`, dispensando OLED ou botões externos no Pico).
 3. **Shims Kotlin Mínimos de I/O (`AndroidIrBridge.kt` / `AndroidPicoBridge.kt`):** Restritos estritamente ao encaminhamento de chamadas de hardware do sistema Android (USB Host, sysfs `sec_ir` com cascata `su`, reflexão `irda` e `ConsumerIrManager`) sem lógica de negócio no Kotlin.
 
 ```mermaid
 flowchart TD
     subgraph Mobile["Estação Mobile Android (APK aarch64-linux-android)"]
         direction TB
-        UI["UI React 18 + Tailwind + Radix + shadcn<br/>(Zero Jetpack Compose)<br/>IrCommanderView + Bancada P7501"]
-        IPC["Tauri IPC (build_invoke_handler!)<br/>7 comandos ir_* isolados por cfg(target_os = android)"]
-        RUST["Rust Core & SSOT (panadiga-core)<br/>feature android-ir + catalog.dat.gz (1.763 / 80.047)<br/>ir::adapter (PeriodScaled vs CarrierCycles)"]
+        UI["UI React 19 + Tailwind + Radix + shadcn (Zero Jetpack Compose / Visor Zero-Gadget)"]
+        IPC["Tauri IPC (build_invoke_handler!: 7 comandos ir_* sob cfg android)"]
+        RUST["Rust Core & SSOT (panadiga-core: android-ir + catalog.dat.gz + ir::adapter)"]
         UI <--> IPC
         IPC <--> RUST
     end
 
     subgraph KotlinShim["Shims Kotlin Mínimos de I/O (MainActivity.kt)"]
         direction LR
-        IR_SHIM["AndroidIrBridge.kt (__PANADIGA_IR_BRIDGE__)<br/>+ AndroidIrExecutor.kt<br/>sysfs sec_ir -> su unlock -> su pipe -> irda -> ConsumerIrManager"]
-        PICO_SHIM["AndroidPicoBridge.kt (__PANADIGA_ANDROID_BRIDGE__)<br/>USB-OTG CDC / BLE NUS Transport"]
+        IR_SHIM["AndroidIrBridge.kt + AndroidIrExecutor.kt (sec_ir -> su -> irda -> ConsumerIrManager)"]
+        PICO_SHIM["AndroidPicoBridge.kt (USB-OTG CDC / BLE NUS Transport)"]
         RUST --- IR_SHIM
         RUST --- PICO_SHIM
     end
 
-    subgraph Probe["Sonda de Bancada / Fallback IR"]
+    subgraph Probe["Sonda de Bancada Zero-Gadget (P0_FW_RO 256 KiB)"]
         direction TB
-        PICO["Raspberry Pi Pico / Pico W / Pico 2W<br/>Firmware C11: UART P7501 (115200 8N1) + GDB RSP<br/>Fallback PWM 38 kHz: IRTX DEVSUB:CMD GPpin repeat"]
+        PICO["Pico / Pico W / Pico 2W (P7501 115200 8N1, GDB RSP, VAULT VERIFY, IR VERIFY/IRTX/IRRX)"]
     end
 
     subgraph Target["Hardware Alvo (Panasonic DMR-EH55)"]
         direction TB
-        P7501["Conector P7501 (VEP79138 / TO JIGU)<br/>1: SW_UART | 2: XRESET | 3: UARTM2P_T<br/>4: GND | 5: NSW5V (Hi-Z!) | 6: UARTP2M_T"]
-        IR_RX["Receptor IR Frontal<br/>Kaseikyo 37.010 Hz (SET 1/2/3 & SERV)"]
+        P7501["Conector P7501 (1: SW_UART | 2: XRESET | 3: UARTM2P_T | 4: GND | 5: NSW5V Hi-Z | 6: UARTP2M_T)"]
+        IR_RX["Receptor IR Frontal (Kaseikyo 37.010 Hz: SET 1/2/3 & SERV)"]
     end
 
     PICO_SHIM <-->|"USB-OTG ou BLE (NUS)"| PICO
@@ -63,7 +63,7 @@ A arquitetura mobile substituiu a premissa original de "Zero Kotlin" por **Shims
 
 ### 2.1 Por que Shims Kotlin Mínimos (em vez de WebUSB ou Kotlin Monolítico)?
 1. **APIs Android Sem Exposição Direta via NDK/WebUSB:** O acesso nativo ao emissor IR do Samsung Galaxy Tab S (`SM-T805M`, `/sys/class/sec/sec_ir/ir_send` e *escalation* via Magisk `su`), ao serviço legado `irda`, ao `ConsumerIrManager` e às permissões `UsbManager` de OTG exigem chamadas às APIs Java/Android do SDK. Isolá-las em shims finos ([`AndroidIrBridge.kt`](../../apps/desktop/src-tauri/gen/android/app/src/main/java/com/panasonic/diga/engineering/ir/AndroidIrBridge.kt), [`AndroidIrExecutor.kt`](../../apps/desktop/src-tauri/gen/android/app/src/main/java/com/panasonic/diga/engineering/ir/AndroidIrExecutor.kt) e [`AndroidPicoBridge.kt`](../../apps/desktop/src-tauri/gen/android/app/src/main/java/com/panasonic/diga/engineering/AndroidPicoBridge.kt), registrados em [`MainActivity.kt`](../../apps/desktop/src-tauri/gen/android/app/src/main/java/com/panasonic/diga/engineering/MainActivity.kt)) evita reescrever drivers frágeis no JavaScript e impede que regras de negócio vazem para o Kotlin.
-2. **UI Única React 18 + Radix + shadcn (`IrCommanderView.tsx`):** Toda a experiência mobile reutiliza o mesmo stack declarativo React/Tailwind/Radix/shadcn do workbench, evitando manter uma segunda base de interface em Jetpack Compose.
+2. **UI Única React 19 + Radix + shadcn (`IrCommanderView.tsx`):** Toda a experiência mobile reutiliza o mesmo stack declarativo React/Tailwind/Radix/shadcn do workbench, evitando manter uma segunda base de interface em Jetpack Compose.
 3. **Sem WebUSB / Web Bluetooth no Motor JS:** Todo o parsing de frames `P7501` / GDB RSP e o empacotamento Kaseikyo permanecem no Rust/C11 sem jitter de GC no caminho crítico.
 
 ### 2.2 Isolamento Estrito Zero-Leakage no Build Desktop
@@ -174,16 +174,16 @@ Caso o engenheiro deseje gerar o APK localmente em sua máquina de bancada:
 $env:ANDROID_HOME = "C:\Users\<Usuario>\AppData\Local\Android\Sdk"
 $env:NDK_HOME = "$env:ANDROID_HOME\ndk\27.0.12077973"
 
-# 2. Adicionar target Rust para arquitetura ARM64
-rustup target add aarch64-linux-android
+# 2. Adicionar targets Rust para arquitetura Dual-ABI (ARM64 + ARMv7)
+rustup target add aarch64-linux-android armv7-linux-androideabi
 
-# 3. Disparar o build unificado do APK a partir da raiz do repositório
+# 3. Disparar o build unificado, assinatura v1+v2+v3 e validação via python
 npm run build:android
-# ou via orquestrador Python:
+# ou via orquestrador Python (emite dist/releases/panadiga-android-arm64.apk validado):
 python scripts/build.py --android
 ```
 
-O APK final assinado/empacotado fica disponível em `dist/releases/panadiga-android-arm64.apk` (além do diretório intermediário `gen/android/app/build/outputs/apk/`).
+O APK universal final empacota `lib/arm64-v8a/libpanadiga_lib.so` e `lib/armeabi-v7a/libpanadiga_lib.so` (`compileSdk = 36`, `targetSdk = 34`, `minSdk = 24`, `jniLibs.useLegacyPackaging = true`), recebe alinhamento `zipalign -p -f 4` e assinatura `v1 + v2 + v3` com o keystore de bancada (`panadiga-bench.keystore`, gerado automaticamente via `ensure_bench_keystore` quando ausente), e passa pelo portão [`android_verify.py`](../../scripts/build_lanes/android_verify.py) (`zipalign -c 4`, `apksigner verify -v --min-sdk-version 21` e `aapt2 dump xmltree`) antes de ser publicado em `dist/releases/panadiga-android-arm64.apk` (verificado via ADB em `SM-T805` com `primaryCpuAbi=armeabi-v7a`).
 
 ---
 

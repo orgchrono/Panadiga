@@ -94,13 +94,21 @@ static bool panarsp_verify_bgo_bitclear_live(
     return true;
 }
 
+static void dumpnor_ff_tracker_cb(void *ctx, uint8_t b) {
+    p7501_dumpnor_ff_tracker_feed((p7501_dumpnor_ff_tracker_t *)ctx, b);
+}
+
 size_t panarsp_execute_dumpnor(
     panarsp_rx_cap_t *cap,
     const p7501_pana_rsp_spec_t *spec,
     bool *out_hdr_seen,
     bool *out_ftr_seen,
-    uint32_t *out_stream_bytes
+    uint32_t *out_stream_bytes,
+    uint32_t *out_ff_blocks
 ) {
+    if (out_ff_blocks != NULL) {
+        *out_ff_blocks = 0u;
+    }
     uint32_t addr = spec->addr;
     uint32_t len = spec->value_u32;
     if (spec->action == PANA_RSP_ACT_DUMPNOR_RESUME) {
@@ -132,14 +140,20 @@ size_t panarsp_execute_dumpnor(
     /* 12-byte metadata + raw payload + 4-byte LE sum per block + 8-byte "PANADONE". */
     const uint32_t min_post_hdr = 12u + len + (nblk * 4u) + 8u;
     uint32_t post_hdr_bytes = 0u;
+    p7501_dumpnor_ff_tracker_t ff_tracker;
+    p7501_dumpnor_ff_tracker_init(&ff_tracker, blk_sz);
     printf("[PANARSP] Uploading %uB PANADMP1 stub @ %" PRIu32 "bps -> 0x%08lX (range 0x%08lX+0x%08lX)...\n",
            (unsigned)stub_len, p7501_pio_get_baud(), (unsigned long)P7501_DUMPNOR_STUB_ADDR,
            (unsigned long)addr, (unsigned long)len);
     const size_t ret = panarsp_stream_until_tokens_ex(
         cap, P7501_DUMPNOR_STUB_ADDR, s_rsp_stub_buf, stub_len, spec->timeout_ms,
         "PANADMP1", "PANADONE", NULL, min_post_hdr, true,
+        dumpnor_ff_tracker_cb, &ff_tracker,
         out_hdr_seen, out_ftr_seen, NULL, out_stream_bytes, &post_hdr_bytes
     );
+    if (out_ff_blocks != NULL) {
+        *out_ff_blocks = ff_tracker.ff_blocks;
+    }
     if (*out_ftr_seen) {
         p7501_dumpnor_resume_advance(&s_dumpnor_resume, len);
     } else if (*out_hdr_seen && (blk_sz > 0u) && (post_hdr_bytes > 12u)) {
@@ -182,7 +196,7 @@ size_t panarsp_execute_jedec_id_or_sum(
     bool hdr_seen = false;
     const size_t off = panarsp_stream_until_tokens_ex(
         cap, P7501_JEDEC_STUB_ADDR, s_rsp_stub_buf, stub_len, spec->timeout_ms,
-        hdr, "PANADONE", NULL, min_post_hdr, !is_id,
+        hdr, "PANADONE", NULL, min_post_hdr, !is_id, NULL, NULL,
         &hdr_seen, out_ok, NULL, out_bytes, NULL
     );
     if (is_id) {

@@ -15,14 +15,16 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "../generated/p7501_ssot.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define P7501_DUMPNOR_DEFAULT_START 0x84000000UL
+#define P7501_DUMPNOR_DEFAULT_START P7501_SSOT_CS0_UNCACHED_BASE
 #define P7501_DUMPNOR_DEFAULT_LEN   0x00800000UL
-#define P7501_DUMPNOR_STUB_ADDR     0x51800000UL
-#define P7501_DUMPNOR_DIGADIAG_ADDR 0x50400000UL
+#define P7501_DUMPNOR_STUB_ADDR     P7501_SSOT_SDRAM_STUB_RAW_ADDR
+#define P7501_DUMPNOR_DIGADIAG_ADDR P7501_SSOT_DIGADIAG_LOAD_ADDR
 #define P7501_DUMPNOR_STUB_SIZE     162u
 #define P7501_DUMPNOR_SUM_MAGIC     "PANASUM1"
 
@@ -42,6 +44,21 @@ typedef struct p7501_dumpnor_resume_state {
     uint32_t block_size;
     uint32_t baud;
 } p7501_dumpnor_resume_state_t;
+
+typedef struct p7501_dumpnor_ff_tracker {
+    uint32_t block_size;
+    uint32_t hdr_skip;
+    uint32_t blk_pos;
+    uint32_t ff_blocks;
+    uint32_t total_blocks;
+    bool cur_all_ff;
+} p7501_dumpnor_ff_tracker_t;
+
+/** Initialize streaming post-header `0xFF` block tracker (`block_size` = 4096 or 256). */
+void p7501_dumpnor_ff_tracker_init(p7501_dumpnor_ff_tracker_t *t, uint32_t block_size);
+
+/** Feed one post-`"PANADMP1"` stream byte into the `0xFF` blank-block counter. */
+void p7501_dumpnor_ff_tracker_feed(p7501_dumpnor_ff_tracker_t *t, uint8_t b);
 
 /** Shared verified 24-byte MN103S SC0 PUTC(D3) leaf subroutine (matches `PUTC_D3_BYTES`). */
 extern const uint8_t k_p7501_mn103_putc_d3[24];

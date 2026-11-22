@@ -141,7 +141,12 @@ pub fn generate_pana_rsp_ssot_header() -> String {
     )
 }
 
-fn write_if_changed_or_create(path: &Path, content: &str) -> Result<()> {
+pub(super) fn write_if_changed_or_create(path: &Path, content: &str) -> Result<()> {
+    if let Ok(existing) = fs::read_to_string(path)
+        && existing.replace("\r\n", "\n") == content
+    {
+        return Ok(());
+    }
     if let Some(parent) = path.parent()
         && !parent.as_os_str().is_empty()
     {

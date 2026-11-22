@@ -5,28 +5,50 @@
 
 ## Validação Multicamadas: FP Pure Domain, MVVM Rigoroso, GDB Introspectivo & SSOT
 
-> **Versão:** 2.1.0 | **Referência Atual dos 9 Quality Gates:** `259` Testes Rust Workspace, `116` Testes Vitest (`36` arquivos), `31` Testes C11 Host em `4` módulos, `23` E2E Playwright (`8` specs), `29` Pytest + `43` `mypy --strict`, `0%` Clones `jscpd`, `100/100` `uxlint` (`0` issues / `354` arquivos)  
+> **Versão:** 2.2.0 | **Referência Atual dos 9 Quality Gates:** `337` Testes Rust Workspace (`6` crates), `128` Testes Vitest (`39` arquivos), `38` Testes C11 Host em `4` módulos (+ check ARM), `27` E2E Playwright (`9` specs), `32` Pytest (`6` arquivos) + `46` `mypy --strict`, `0%` Clones `jscpd`, `100/100` `uxlint` (`0` issues / `386` arquivos)  
 > **Autores:** Equipe de Engenharia Reversa e Arquitetura de Sistemas Panadiga
 
 ---
 
 ## 1. Visão Geral & Filosofia de Testes
 
-A evolução arquitetural do **Panadiga** exigiu uma reestruturação profunda da estratégia de testes. A abordagem anterior, baseada em testes pontuais e acoplados a arquivos físicos em disco, foi substituída por uma **Pirâmide de Testes Multicamadas**, onde cada teste protege estritamente os princípios de engenharia definidos:
+A evolução arquitetural do **Panadiga** exigiu uma reestruturação profunda da estratégia de testes. A abordagem anterior, baseada em testes pontuais e acoplados a arquivos físicos em disco, foi substituída por uma **Pirâmide de Testes Multicamadas** combinada a um **Portão Paralelo de 9 Quality Gates**:
 
-```
+```text
                           PIRÂMIDE DE TESTES PANADIGA
                                        ▲
                                       / \
                                      /   \
-                                    / E2E \   (23 testes Playwright Chromium / 8 specs + CI/CD)
+                                    / E2E \   (27 testes Playwright Chromium / 9 specs + CI/CD)
                                    /───────\
-                                  /  MVVM   \  (116 Vitest / 36 arquivos + Docs + Logger + i18n)
+                                  /  MVVM   \  (128 Vitest / 39 arquivos + ExpressView + Logger + i18n)
                                  /───────────\
-                                /  GDB & HAL  \ (31 testes C11 Host em 4 módulos + Telemetria RSP)
+                                /  GDB & HAL  \ (38 testes C11 Host em 4 módulos + Check ARM RP2040/RP2350)
                                /───────────────\
-                              /  FP Pure Domain \ (259 testes Rust: &[u8], RE, MCP, RAG, Tauri)
+                              /  FP Pure Domain \ (337 testes Rust em 6 crates: profiles/core/cli/desktop/mcp/rag)
                              /───────────────────\
+```
+
+```mermaid
+flowchart LR
+    DEV["Alteração em Código ou Docs"] --> P1["Gate 1: Rust 6 crates (337 testes + clippy -D warnings)"]
+    DEV --> P2["Gate 2: Oxlint --deny-warnings + tsc --noEmit"]
+    DEV --> P3["Gate 3: Vitest Frontend (128 testes / 39 arquivos)"]
+    DEV --> P4["Gate 4: jscpd (0.00% duplicação / 0 clones)"]
+    DEV --> P5["Gate 5: uxlint (100/100 em 386 arquivos React)"]
+    DEV --> P6["Gate 6: Playwright E2E (27 testes / 9 specs Chromium)"]
+    DEV --> P7["Gate 7: Ghidra SSOT Export (panadiga ghidra export-all)"]
+    DEV --> P8["Gate 8: Pico C11 Host (38 testes / 4 módulos + ARM Check)"]
+    DEV --> P9["Gate 9: Python mypy --strict (46 arquivos) + pytest (32 testes / 6 arquivos)"]
+    P1 --> PASS["ALL 9 QUALITY GATES PASSED"]
+    P2 --> PASS
+    P3 --> PASS
+    P4 --> PASS
+    P5 --> PASS
+    P6 --> PASS
+    P7 --> PASS
+    P8 --> PASS
+    P9 --> PASS
 ```
 
 ---
@@ -61,7 +83,7 @@ Garantir fidelidade protocolar absoluta na ponte de depuração serial-para-TCP,
 | `crates/panadiga-core/tests/debugger_gdb_tests.rs`   | `test_gdb_rsp_checksum_calculation`   | Validação formal do cálculo de checksum de dois dígitos hexadecimais (`sum % 256`) para comandos RSP (`qSupported`, `g`, `?`, `c`, `s`, `OK`).                                                                     |
 | `apps/desktop/src-tauri/src/pico/gdb_bridge.rs`      | `test_verify_and_classify_rsp_packet` | Testa o classificador formal de pacotes RSP: validação de prefixo `$`, delimitador `#`, cálculo de checksum e extração do tipo de comando.                                                                                  |
 | `apps/desktop/src-tauri/src/pico/gdb_bridge.rs`      | `test_telemetry_ring_capacity`        | Valida o buffer circular introspectivo (`RingBuffer<GdbPacketTelemetryEvent>`): capacidade máxima fixa, rotação FIFO sem vazamentos e ordenação cronológica.                                                                 |
-| `firmware/pico-p7501/tests/` (`4` módulos, `31` testes) | Host C11 Firmware (`-Wall -Wextra -Werror` / `/W4 /WX`) | Suíte completa de protocolo GDB RSP, codecs `DIAGWATCH`/`PANARSP`/`DRVPANA`/`SDSNIFF`/`PIOLOGIC` e guarda IPL `E05` (`test_gdb_rsp_host.c`, `test_pana_logic.c`, `test_pana_diag_drv.c`, `test_uart_codec.c`). |
+| `firmware/pico-p7501/tests/` (`4` módulos, `38` suítes/funções) | Host C11 Firmware (`-Wall -Wextra -Werror` / `/W4 /WX`) | Protocolo GDB RSP, codecs `DIAGWATCH`/`PANARSP`/`DRVPANA`/`SDSNIFF`/`PIOLOGIC`, `VAULT VERIFY`, `IR VERIFY`, `DUMPNOR ff_blocks`, nibble-LUT CRC32 e guarda IPL `E05` (`test_gdb_rsp_host.c`: 13, `test_pana_logic.c`: 10, `test_pana_diag_drv.c`: 9, `test_uart_codec.c`: 6). |
 
 ---
 
@@ -104,27 +126,28 @@ Garantir que argumentos de linha de comando sejam fortemente validados via Clap,
 
 ### Cobertura Playwright (Chromium)
 
-23 testes automatizados em 8 arquivos spec (`apps/desktop/e2e/`) verificam o comportamento visual e reativo da aplicação:
+27 testes automatizados em 9 arquivos spec (`apps/desktop/e2e/`) verificam o comportamento visual e reativo da aplicação:
 
 1. `calibration-and-tbc.spec.ts`: Pipelines de calibração `PAL-M`/`DAVIS`/`TBC` e fluxos visuais de bancada.
-2. `frm-packager.spec.ts`: Inspeção criptográfica de `.FRM`, decodificação Feistel/TOC e fluxo do `Centro Unbrick`.
-3. `hdd-safe-flash.spec.ts`: Bloqueio de disco de sistema, `HddCapacityPatcherCard` e fluxo CoW de gravação segura MEIHFS.
-4. `ir-commander.spec.ts`: Controlador IR Kaseikyo, macros `SYS_SERV`, catálogo offline e envio USB-OTG/Android.
-5. `navigation.spec.ts`: Carregamento do Dashboard, navegação fluida entre todas as telas (`NVRAM`, `MEIHFS`, `Pico`, `Manuais`, `Docs Interativos`) e continuidade de estado.
-6. `nvram.spec.ts`: Renderização da Spansion NOR Flash `S29JL064H`, detalhamento dos 8 microsetores (`SA134..SA141`) e ações cirúrgicas.
-7. `pico-bench.spec.ts`: Telemetria do controlador, pinagem verificada do conector `P7501` (`115200 8N1` + `NSW5V` Hi-Z), modos de boot e console serial interativo.
-8. `pico-bgo-davis.spec.ts`: Diagnósticos interativos BGO FTL (`SA26..SA70`) e painel `DAVIS CH0/CH1` na `Bancada Pico`.
+2. `express-mode.spec.ts`: Fluxo Express Rescue (Missões FAT16B SD, `PANAMON1` `U99`, NOR `8 MiB`, JIT `PicoConnectionSafetySheet`, CoW Vault `raw`/`frm`, ISO 9660 `1x` e gate `Mn103Vm`).
+3. `frm-packager.spec.ts`: Inspeção criptográfica de `.FRM`, decodificação Feistel/TOC e fluxo do `Centro Unbrick`.
+4. `hdd-safe-flash.spec.ts`: Bloqueio de disco de sistema, `HddCapacityPatcherCard` e fluxo CoW de gravação segura MEIHFS.
+5. `ir-commander.spec.ts`: Controlador IR Kaseikyo, macros `SYS_SERV`, catálogo offline e envio USB-OTG/Android.
+6. `navigation.spec.ts`: Carregamento do Dashboard, navegação fluida entre todas as telas (`NVRAM`, `MEIHFS`, `Pico`, `Manuais`, `Docs Interativos`) e continuidade de estado.
+7. `nvram.spec.ts`: Renderização da Spansion NOR Flash `S29JL064H`, detalhamento dos 8 microsetores (`SA134..SA141`) e ações cirúrgicas.
+8. `pico-bench.spec.ts`: Telemetria do controlador, pinagem verificada do conector `P7501` (`115200 8N1` + `NSW5V` Hi-Z), modos de boot e console serial interativo.
+9. `pico-bgo-davis.spec.ts`: Diagnósticos interativos BGO FTL (`SA26..SA70`) e painel `DAVIS CH0/CH1` na `Bancada Pico`.
 
 ### Matriz de Integração Contínua (GitHub Actions & `scripts/validate.py`)
 
 Todos os 9 Quality Gates são executados via `python scripts/validate.py`:
 
 - **Android APK Build (Tauri 2.0 / ARM64)**: Compilação de binário Android com `cargo-ndk`.
-- **Rust Workspace (`5` crates)**: `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets --no-deps -- -D warnings` e `cargo test --workspace` (**259 testes**).
-- **Ghidra Generator & Python Tools**: `panadiga ghidra export-all` (7 scripts `.py` + suíte Java `tools/ghidra/java/`), `py_compile`, `mypy --strict scripts` (43 arquivos) e `pytest scripts/tests` (**29 testes em 5 arquivos**, incluindo `test_docs_parity.py` para paridade 1:1 de **38** pares em `translation_pairs.json` ↔ `docs/INDEX.md`, **22** capturas em `docs/debug_logs/`, guarda anti-hash obsoleto e validação de links internos).
-- **Desktop UI**: `oxlint --deny-warnings && tsc --noEmit`, Vitest (**116 testes em 36 arquivos** em `apps/desktop/src/**/*.test.*`), `uxlint` (`100/100` com `--fail-on info`, `0` issues em `354` arquivos) e Playwright E2E (**23 testes em 8 specs**).
+- **Rust Workspace (`6` crates)**: `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets --no-deps -- -D warnings` e `cargo test --workspace` (**337 testes**, cobrindo `panadiga-profiles` com **89 modelos** e **12 JSON Schemas**, além de `logger.rs` isolado por thread).
+- **Ghidra Generator & Python Tools**: `panadiga ghidra export-all` (scripts `.py` + suíte Java `tools/ghidra/java/`), `py_compile`, `mypy --strict scripts` (**46 arquivos**) e `pytest scripts/tests` (**32 testes em 6 arquivos**, incluindo `test_docs_parity.py` para paridade 1:1 de **39** pares em `translation_pairs.json` ↔ `docs/INDEX.md`, **22** capturas em `docs/debug_logs/`, guarda anti-hash obsoleto e validação de links internos).
+- **Desktop UI**: `oxlint --deny-warnings && tsc --noEmit`, Vitest (**128 testes em 39 arquivos** em `apps/desktop/src/**/*.test.*`), `uxlint` (`100/100` com `--fail-on info`, `0` issues em **`386` arquivos**) e Playwright E2E (**27 testes em 9 specs**).
 - **Code Quality & Duplication**: Detector de clones `jscpd` (**limite estrito 0% / 0 clones**).
-- **Pico Firmware Dual Target**: Suíte C11 Host (`4` módulos, **31 testes**, `-Wall -Wextra -Werror` / `/W4 /WX`) e compilação UF2 para RP2040 e RP2350.
+- **Pico Firmware Dual Target**: Suíte C11 Host (`4` módulos, **38 suítes/funções de teste**, `-Wall -Wextra -Werror` / `/W4 /WX`) e checagem de compilação UF2 ARM Release para `RP2040` e `RP2350` dentro de `P0_FW_RO` (`256 KiB`).
 
 ---
 

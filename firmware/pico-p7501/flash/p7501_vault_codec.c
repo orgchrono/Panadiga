@@ -167,3 +167,69 @@ bool p7501_vault_manifest_clear_slot(p7501_vault_manifest_t *m, uint8_t slot_ind
     m->header_crc32 = compute_manifest_crc(m);
     return true;
 }
+
+bool p7501_vault_verify_slot_with_crc(
+    const p7501_vault_manifest_t *m,
+    uint8_t slot_index,
+    const uint8_t *slot_payload,
+    size_t payload_buf_len,
+    p7501_vault_crc32_fn_t crc_fn,
+    uint32_t *out_crc32,
+    uint32_t *out_non_ff_bytes,
+    bool *out_crc_mismatch
+) {
+    if (out_crc32 != NULL) {
+        *out_crc32 = 0UL;
+    }
+    if (out_non_ff_bytes != NULL) {
+        *out_non_ff_bytes = 0UL;
+    }
+    if (out_crc_mismatch != NULL) {
+        *out_crc_mismatch = false;
+    }
+    if ((m == NULL) || !p7501_vault_manifest_verify(m) || (crc_fn == NULL) ||
+        (slot_index == 0u) || (slot_index > P7501_VAULT_PAYLOAD_SLOTS)) {
+        return false;
+    }
+    const p7501_vault_slot_meta_t *sm = &m->slots[slot_index - 1u];
+    if (!sm->valid || (sm->byte_len == 0UL) || (sm->byte_len > P7501_VAULT_SLOT_BYTES) ||
+        (slot_payload == NULL) || (payload_buf_len < (size_t)sm->byte_len)) {
+        return false;
+    }
+    const uint32_t actual_crc = crc_fn(slot_payload, (size_t)sm->byte_len);
+    const uint32_t non_ff = p7501_buf_count_non_ff(slot_payload, (size_t)sm->byte_len);
+    if (out_crc32 != NULL) {
+        *out_crc32 = actual_crc;
+    }
+    if (out_non_ff_bytes != NULL) {
+        *out_non_ff_bytes = non_ff;
+    }
+    if (actual_crc != sm->data_crc32) {
+        if (out_crc_mismatch != NULL) {
+            *out_crc_mismatch = true;
+        }
+        return false;
+    }
+    return true;
+}
+
+bool p7501_vault_verify_slot_buffer(
+    const p7501_vault_manifest_t *m,
+    uint8_t slot_index,
+    const uint8_t *slot_payload,
+    size_t payload_buf_len,
+    uint32_t *out_crc32,
+    uint32_t *out_non_ff_bytes,
+    bool *out_crc_mismatch
+) {
+    return p7501_vault_verify_slot_with_crc(
+        m,
+        slot_index,
+        slot_payload,
+        payload_buf_len,
+        p7501_crc32_ieee,
+        out_crc32,
+        out_non_ff_bytes,
+        out_crc_mismatch
+    );
+}

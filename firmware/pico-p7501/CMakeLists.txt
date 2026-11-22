@@ -106,6 +106,7 @@ add_executable(panasonic_p7501_uart
     uart/p7501_uart_stream.c
     uart/p7501_uart_tx.c
     uart/p7501_pana_dumpnor.c
+    uart/p7501_pana_dumpnor_verify.c
     uart/p7501_pana_jedec_stubs.c
     uart/p7501_pana_jedec_exec.c
     uart/p7501_pana_jedec_id.c

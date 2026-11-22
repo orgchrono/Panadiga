@@ -4,6 +4,7 @@
  */
 
 import type { HardwareThresholds, PicoUsbIdentity } from '@/models';
+import { SSOT_AM34_BUS_CONSTANTS } from '@/models/generated/ssot';
 
 /* =========================================================================
  * 1. Spansion S29JL064H NOR Flash & NVRAM Physical Constants
@@ -58,10 +59,10 @@ export const AM34_SRAM_SIZE_BYTES = 0x00040000; // 262,144 bytes
 export const AM34_RAM_LOADER_ENTRY_ADDR = 0x00004000;
 
 /** Flash Memory Hardware Mirror Base Address (8 MB) */
-export const AM34_FLASH_BASE_ADDR = 0x80000000;
+export const AM34_FLASH_BASE_ADDR = SSOT_AM34_BUS_CONSTANTS.flashCachedBaseAddr;
 
 /** NVRAM Top-Boot Partition Base Physical Address in CPU space */
-export const AM34_NVRAM_BASE_ADDR = 0x807f0000;
+export const AM34_NVRAM_BASE_ADDR = SSOT_AM34_BUS_CONSTANTS.nvramCachedBaseAddr;
 
 /** Panasonic UniPhier ASIC MMIO Base Physical Address */
 export const AM34_MMIO_BASE_ADDR = 0xc0000000;
@@ -125,7 +126,7 @@ export const PICO_MAX_VDD_CEILING_VOLTS = 3.45;
 export const PICO_MAX_VDD_THRESHOLD_VOLTS = PICO_MAX_VDD_CEILING_VOLTS;
 
 /** Default serial baud rate for USB CDC UART bridge */
-export const PICO_DEFAULT_BAUD_RATE = 115200;
+export const PICO_DEFAULT_BAUD_RATE = SSOT_AM34_BUS_CONSTANTS.defaultBaudRate;
 
 /** GDB Remote Serial Protocol TCP default listening port */
 export const GDB_DEFAULT_TCP_PORT = 3333;
@@ -163,7 +164,7 @@ export const HARDWARE_THRESHOLDS_SPEC: HardwareThresholds = Object.freeze({
   default_baud_rate: PICO_DEFAULT_BAUD_RATE,
   default_gdb_socket: GDB_DEFAULT_LISTEN_ADDR,
   ram_loader_base_hex: '0x00004000',
-  default_nvram_base_hex: '0x807F0000',
+  default_nvram_base_hex: SSOT_AM34_BUS_CONSTANTS.nvramCachedBaseHex,
 });
 
 export const PICO_USB_IDENTITY_SPEC: PicoUsbIdentity = Object.freeze({

@@ -3,6 +3,7 @@ import { PackagePlus, RefreshCw } from 'lucide-react';
 import type { FrmPackModuleInput, FrmPackReport, PackFrmRequest } from '@/models';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Button } from '@/components/ui';
+import { DIGADIAG_STAGE15_LOAD_ADDR_HEX } from '@/constants/hardwareSpecs';
 import { useTranslation } from '@/i18n/useTranslation';
 import { FrmPackFormFields, type FrmPackMode, type FrmPackModuleRow } from './FrmPackFormFields';
 import { FrmPackResultBanner } from './FrmPackResultBanner';
@@ -44,7 +45,7 @@ export const FrmPackCard: React.FC<FrmPackCardProps> = ({
   const [versionU16, setVersionU16] = useState('0x0001');
 
   const [diagInputPath, setDiagInputPath] = useState('');
-  const [dstAddr, setDstAddr] = useState('0x50400000');
+  const [dstAddr, setDstAddr] = useState<string>(DIGADIAG_STAGE15_LOAD_ADDR_HEX);
   const [tag, setTag] = useState('FVU ');
   const [buildName, setBuildName] = useState('DIAG01');
   const [formError, setFormError] = useState<string | null>(null);
@@ -105,7 +106,7 @@ export const FrmPackCard: React.FC<FrmPackCardProps> = ({
             mode,
             out_path: outPath.trim(),
             input_path: diagInputPath.trim(),
-            dst_addr: dstAddr.trim() || '0x50400000',
+            dst_addr: dstAddr.trim() || DIGADIAG_STAGE15_LOAD_ADDR_HEX,
             tag: tag || 'FVU ',
             build_name: buildName.trim() || 'DIAG01',
           }

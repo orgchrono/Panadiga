@@ -1,18 +1,23 @@
 import React from 'react';
 import { Select } from '@/components/ui';
+import { MIB_BYTES } from '@/constants/hardwareSpecs';
 import type { DigaModelProfile } from '@/models';
+import { SSOT_AM34_BUS_CONSTANTS, SSOT_MODEL_PROJECTIONS } from '@/models/generated/ssot';
 
-const FALLBACK_MODELS: readonly DigaModelProfile[] = [
-  {
-    model_id: 'DMR-EH55',
-    series: 'Série EH (HDD+DVD)',
-    flash_size_mb: 8,
-    flash_size_bytes: 0,
-    nvram_base_hex: '0x807F0000',
-    sector_geometry: 'SA134..SA141',
+const FALLBACK_MODELS: readonly DigaModelProfile[] = SSOT_MODEL_PROJECTIONS.filter(
+  p => p.sectorBanks.length > 0 && p.modelId === 'DMR-EH55',
+).map(p => {
+  const totalBytes = p.sectorBanks.reduce((sum, b) => sum + b.count * b.sectorSizeBytes, 0);
+  return {
+    model_id: p.modelId,
+    series: 'SSOT Profile',
+    flash_size_mb: totalBytes / MIB_BYTES,
+    flash_size_bytes: totalBytes,
+    nvram_base_hex: p.nvramUncachedVaHex ?? SSOT_AM34_BUS_CONSTANTS.nvramCachedBaseHex,
+    sector_geometry: p.derivedSectorGeometry ?? '',
     soc_name: 'AM34',
-  },
-];
+  };
+});
 
 export interface DigaModelSelectProps {
   readonly id?: string;

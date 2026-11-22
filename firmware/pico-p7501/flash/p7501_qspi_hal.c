@@ -49,6 +49,19 @@ static uint32_t qspi_binary_end_offset(void) {
     return 0UL;
 }
 
+uint32_t p7501_qspi_crc32_fast(const uint8_t *buf, size_t len) {
+    if ((buf == NULL) || (len == 0u)) {
+        return 0UL;
+    }
+    uint32_t crc = 0UL;
+    for (size_t off = 0u; off < len; off += 4096u) {
+        const size_t chunk = ((len - off) > 4096u) ? 4096u : (len - off);
+        crc = p7501_crc32_ieee_update(crc, &buf[off], chunk);
+        p7501_wdt_kick();
+    }
+    return crc;
+}
+
 uint32_t p7501_qspi_firmware_crc32(uint32_t *out_bytes) {
     const uint32_t fw_len = qspi_binary_end_offset();
     if (out_bytes != NULL) {
@@ -57,14 +70,7 @@ uint32_t p7501_qspi_firmware_crc32(uint32_t *out_bytes) {
     if (fw_len == 0UL) {
         return 0UL;
     }
-    uint32_t crc = 0UL;
-    const uint8_t *base = p7501_qspi_xip_ptr(0UL);
-    for (uint32_t off = 0UL; off < fw_len; off += 4096UL) {
-        const uint32_t chunk = ((fw_len - off) > 4096UL) ? 4096UL : (fw_len - off);
-        crc = p7501_crc32_ieee_update(crc, &base[off], chunk);
-        p7501_wdt_kick();
-    }
-    return crc;
+    return p7501_qspi_crc32_fast(p7501_qspi_xip_ptr(0UL), (size_t)fw_len);
 }
 
 static bool qspi_check_binary_boundary(uint32_t qspi_offset) {

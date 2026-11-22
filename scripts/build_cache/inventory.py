@@ -197,6 +197,8 @@ def optimize_build_env(
     jobs = str(max(1, os.cpu_count() or 4))
     env.setdefault("CARGO_BUILD_JOBS", jobs)
     env.setdefault("CMAKE_BUILD_PARALLEL_LEVEL", jobs)
+    env.setdefault("CARGO_PROFILE_DEV_DEBUG", "0")
+    env.setdefault("CARGO_PROFILE_TEST_DEBUG", "0")
     env.setdefault("NINJA_STATUS", "[%f/%t %es] ")
     env.setdefault("PYTHONUTF8", "1")
     active["jobs"] = env["CARGO_BUILD_JOBS"]

@@ -68,6 +68,8 @@ env/
 # 6. Local Binaries, Deployments & Third-Party Portable Tools
 # ------------------------------------------------------------------------------
 *.exe
+*.keystore
+apps/desktop/src-tauri/gen/android/keystore/
 tools/HxD/app/
 
 # ------------------------------------------------------------------------------

@@ -7,13 +7,16 @@ Firmware oficial do controlador de bancada baseado em **Raspberry Pi Pico (RP204
 
 ---
 
-## 1. Visão Geral do Sistema
+## 1. Visão Geral do Sistema (Arquitetura Zero-Gadget em `P0_FW_RO`)
 
-O firmware modular em [`firmware/pico-p7501/`](../../firmware/pico-p7501/) implementa em hardware e ISO C11 estrito (com cada módulo de produção $\le 257$ linhas em `common/`, `hal/`, `uart/`, `diag/`, `flash/`, `protocol/`, `gdb/` e `cli/`):
+O firmware modular em [`firmware/pico-p7501/`](../../firmware/pico-p7501/) implementa em hardware e ISO C11 estrito módulos desacoplados em `cli/`, `common/`, `diag/`, `flash/`, `gdb/`, `generated/` (`p7501_ssot.h`), `hal/`, `tests/` e `uart/`:
 
-1. **Motor UART PIO1 Full-Duplex Multi-Baud + PIO0 Legado (`p7501_uart_duplex.pio` / `uart/p7501_uart_pio_engine.c`):**
+> [!NOTE]
+> **Decisão Arquitetural Zero-Gadget (v0.2.0):** A sonda Raspberry Pi Pico (`RP2040` / `RP2350`) opera com **zero periféricos autônomos extras** (sem display OLED `SSD1306`, buzzer ou botões dedicados na sonda). Todo visor, síntese áudio/visual e painel **DIGA Commander IR** rodam no **Smartphone Android (via USB-C OTG / BLE NUS)** ou **Workbench Desktop Tauri 2**, mantendo a sonda enxuta dentro da partição `P0_FW_RO` (`256 KiB`: `RP2040` `text=160.208 B` / `bss=73.280 B`; `RP2350` `text=157.552 B` / `bss=72.900 B`).
+
+1. **Motor UART PIO1 Full-Duplex Multi-Baud + PIO0 (`p7501_uart_duplex.pio` / `uart/p7501_uart_pio_engine.c`):**
    * Recepção passiva determinística via **`PIO1` (`SM0`)** em **`GP2`** (`P7501` Pino 6 `UARTP2M_T` / `MAX TXD`) e transmissão dedicada via **`PIO1` (`SM1`)** em **`GP4`** (`P7501` Pino 3 `UARTM2P_T` / `MAX RXD` via transistor `Q7514`), com divisor fracionário em ponto fixo para taxas dinâmicas (`BAUD` e autobaud `BAUDSCAN`), captura contínua (`UARTSTREAM`), log com deltas em microssegundos em RAM (`HEXCAP`, zero-drop a `115200 8N1`), injeção por gatilho (`WAITTX`) e ponte transparente USB-CDC ↔ SC0 (`BRIDGE`).
-   * Mantém ainda a máquina legada `PIO0` (`p7501_uart.pio` / `uart/p7501_uart_capture.c`) para compatibilidade com `BOOTCAP` / `UARTMON` / `JIGBOOT`.
+   * Mantém ainda a captura dedicada em `PIO0` (`p7501_uart_duplex.pio` + `uart/p7501_uart_capture.c`), `p7501_logic_sampler.pio` e `p7501_sds_sampler.pio` para compatibilidade com `BOOTCAP` / `UARTMON` / `JIGBOOT` / `PIOLOGIC` / `SDSNIFF`.
 2. **Controle Seguro de Reset em Dreno Aberto (`XRESET` / `GP5`):** `GP5` (`P7501` Pino 2) opera exclusivamente alternando entre `0V` (reset ativo) e `Hi-Z` (entrada sem pulls, tempo de subida medido `~10–20 µs` via `QR7503`), prevenindo curto-circuito contra o supervisor de reset da Panasonic.
 3. **Proteção Estrita em `NSW5V` (`GP3` / `P7501` Pino 5) & Controle `SW_UART` (`GP26` / `ADC0`, Pino 1):**
    * **`GP3` (`NSW5V` / `X_SW_5R2V`):** Provém de `IC1506` (`~5.15V` upstream via `D7510`, repouso em `~3.29V` nos resistores `R7570`/`R7572`). **PERMANECE SEMPRE como `Hi-Z Input` sem pull-up/pull-down** e nunca é dirigido em push-pull.
@@ -60,15 +63,29 @@ cargo run -p panadiga-cli -- pico merge-uf2 \
   --out target/pico-build/out/panasonic_p7501_uart_unified.uf2
 ```
 
-### Artefatos Binários Gerados
-A compilação sincroniza imagens `.uf2` auto-contidas em `crates/panadiga-core/src/pico/firmware_bins/` (embutidas no binário Rust) e no empacotamento `dist/`:
-* **`panasonic_p7501_uart_rp2040.uf2`** $\leftarrow$ Imagem para Raspberry Pi Pico / Pico W e placas RP2040 compatíveis (264 KB SRAM).
-* **`panasonic_p7501_uart_rp2350.uf2`** $\leftarrow$ Imagem para Raspberry Pi Pico 2 / Pico 2 W (RP2350 ARM Cortex-M33 / Hazard3 RISC-V, 520 KB SRAM).
-* **`panasonic_p7501_uart_unified.uf2`** $\leftarrow$ Imagem universal concatenando os blocos RP2040 + RP2350 em um único `.uf2`.
+### Artefatos Binários Gerados & Footprint Verificado
+A compilação sincroniza o contêiner unificado em `crates/panadiga-core/src/pico/firmware_bins/` (embutido no binário Rust) e separa fatias por família via `extract_uf2_family_slice`:
+* **`panasonic_p7501_uart_unified.uf2`** (**`636.416 bytes` / `1.243` blocos**, `SHA-256: 1af8da3e15ca65abc78e1a4fb4d3281e99d34cc5c968186584243de717b14077`) $\leftarrow$ Imagem universal `RP2040` + `RP2350`:
+  * **RP2040 (`pico`):** `text = 160.208 B` (`P0_FW_RO = 256 KiB`), `bss = 73.280 B`.
+  * **RP2350 (`pico2`):** `text = 157.552 B` (`P0_FW_RO = 256 KiB`), `bss = 72.900 B` (`s_default_gdb_ctx` otimizado para `6.736 B` / `0x1A50 B`).
 * Imagens auxiliares (`.elf`, `.bin`, `.hex`, `.map`) geradas por `pico_add_extra_outputs(panasonic_p7501_uart)` permanecem em `target/pico-build/`.
 
 ### Integração Contínua (CI/CD)
-A esteira em [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) e a validação local (`python scripts/validate.py` / `npm run validate`) executam verificações em Rust, TypeScript, C11 host tests ([`test_gdb_rsp_host.c`](../../firmware/pico-p7501/tests/test_gdb_rsp_host.c), [`test_pana_diag_drv.c`](../../firmware/pico-p7501/tests/test_pana_diag_drv.c), [`test_pana_logic.c`](../../firmware/pico-p7501/tests/test_pana_logic.c) e [`test_uart_codec.c`](../../firmware/pico-p7501/tests/test_uart_codec.c)), Python (`mypy --strict`, `pytest`), `jscpd`, Vitest e Playwright.
+A esteira em [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) e a validação local (`python scripts/validate.py` / `npm run validate`) executam **38 suítes/funções de teste host C11 em 4 módulos** ([`test_gdb_rsp_host.c`](../../firmware/pico-p7501/tests/test_gdb_rsp_host.c), [`test_pana_diag_drv.c`](../../firmware/pico-p7501/tests/test_pana_diag_drv.c), [`test_pana_logic.c`](../../firmware/pico-p7501/tests/test_pana_logic.c) e [`test_uart_codec.c`](../../firmware/pico-p7501/tests/test_uart_codec.c)) com `-Wall -Wextra -Werror` + check ARM dual-target RP2040/RP2350, além dos demais Quality Gates (Rust `337` testes em `6` crates, Vitest `128`, E2E `27`, `uxlint` `386`, `jscpd` `0%`, Python `mypy`/`pytest`).
+
+```mermaid
+flowchart TD
+    IRQ["IRQ GP3 (NSW5V Borda de Queda / Ausência)"] --> HIZ["Força GP6/GP7 e Linha UART em Hi-Z Sem Pulls"]
+    CMD["Comando Host (UART / USB-CDC / BLE / GDB RSP)"] --> CLI["p7501_cli.c (67 cmds SSOT + 9 aliases incl. IR)"]
+    CLI --> GATE["p7501_bus_check_access()"]
+    GATE -- "0xC000100C ou IPL SA0..SA10 (256 KiB)" --> E05["BLOQUEIO E05 PERMANENTE"]
+    GATE -- "Upper NOR sem F14 + CONFIRM_UPPER_NOR" --> E05
+    GATE -- "NVRAM SA134..SA141 ou Upper NOR Desbloqueado" --> EXEC["PIO1 / PANARSP / DIAGWATCH / JEDEC"]
+    CLI --> VAULT["QSPI Vault A/B (P0..P5 + P6_NOR_MIRROR): VAULT VERIFY <1..3>"]
+    CLI --> CRC["CRC32 Nibble-LUT (16 entradas): p7501_qspi_crc32_fast()"]
+    CLI --> IRCMD["IR VERIFY <12hex> / IRTX / IRRX (Shared XOR + Parity Validator)"]
+    EXEC --> DUMP["DUMPNOR / FAST_DUMPNOR: Tracker ff_blocks (<u32> em @P7501_RES)"]
+```
 
 ---
 
@@ -144,7 +161,9 @@ O firmware atende tanto operadores humanos quanto automação em Rust (`panadiga
 | **`PANARSP`** | `PANARSP [ms] [boot] [WAIT:x] <act>` | Cliente `_dev_SERIAL` RSP (`REGS`, `MEM`, `WMEM`, `DUMPNOR`, `CALL`, `NORUNLOCK:CONFIRM_UPPER_NOR`, `NORLOCK`, `JEDEC_ERASE:<addr>`, `JEDEC_PROG:<addr>,<hex>`). |
 | **`DIAGWATCH`** | `DIAGWATCH [ms] [boot] [act] [WAKE]` | Watchdog autônomo em `SC0` e monitor residente `PANAMON1>` (`NORUNLOCK:CONFIRM_UPPER_NOR` / `NORLOCK` com sequência em duas etapas `'U'` → `'W'`/`'E'`). |
 | **`DRVPANA`** | `DRVPANA [ms] [boot] [NOPASS] <cmd>` | Interface CLI de fábrica do drive óptico Matshita `R6-MV4` com envio automático de desbloqueio `PASS 0x4d415453 0x48495441` (ou `NOPASS`). |
-| **`IRTX`** | `IRTX <RED\|SERV\|DEVSUB:CMD...> [GPpin] [repeat]` | Sintetizador PWM 38 kHz Kaseikyo ([`p7501_ir_codec.c`](../../firmware/pico-p7501/diag/p7501_ir_codec.c)) nos GPIOs livres seguros `GP6..9` / `GP16..22` (dispositivo `>= 0x01`). |
+| **`IR` / `IRTX` / `IRRX`** | `IR [TX\|RX\|VERIFY <12hex>]` \| `IRTX ...` | Emissor PWM 38 kHz Kaseikyo ([`p7501_ir_codec.c`](../../firmware/pico-p7501/diag/p7501_ir_codec.c)) em `GP6..9`/`GP16..22`, captura e verificação estrita offline (`IR VERIFY <12hex>`: OEM `0x02,0x20`, vendor parity + XOR `dev ^ sub ^ cmd` $\rightarrow$ `parity=OK\|ERR`). |
+| **`VAULT`** | `VAULT [STATUS\|VERIFY <1..3>\|DUMP\|ERASE]` | Cofre A/B na QSPI (`P6_NOR_MIRROR`, `P7501_VAULT_PAYLOAD_SLOTS=3`, slot `0` = manifesto). `VAULT VERIFY <1..3>` calcula `CRC32` IEEE nibble-LUT via XIP (`p7501_qspi_crc32_fast`) + contagem `non_ff` emitindo `sub=VERIFY` (`ENOENT`/`ECRC` se ausente/corrupto). |
+| **`DUMPNOR` (`ff_blocks`)** | `PANARSP DUMPNOR ...` \| `FAST_DUMPNOR` | Contagem inline de blocos `0xFF` (512 B) via `p7501_dumpnor_ff_tracker_t` emitindo `ff_blocks=<u32>` em `@P7501_RES` e resumo `PANARSP:`. |
 | **`FMUSCAN` / `FMUTEST` / `FMUBATCH`** | `FMUSCAN` \| `FMUTEST` \| `FMUBATCH` | Sondas de temporização e varredura de bytes na Bootrom/FMU via `P7501`. |
 | **`PINCHECK`** | `PINCHECK` | Matriz elétrica dos 6 pinos de `P7501` (`Hi-Z`, pull-down, pull-up em `GP26`, contagem de bordas em `GP2`, tempo de subida `XRESET`, guarda em `NSW5V`/`GP3`). |
 | **`BUSDIAG` / `SNIFF`** | `BUSDIAG` \| `SNIFF [ms]` | Diagnóstico de atividade de barramento e contagem passiva de transições. |

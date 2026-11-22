@@ -11,8 +11,9 @@ Qualquer agente de IA que opere nesta base de código **DEVE** seguir rigorosame
 
 O repositório está estruturado em subsistemas integrados e desacoplados:
 
-1. **Rust Core Workspace & CLI (`crates/`, `Cargo.toml`)**:
-   - **`panadiga-core`** (`crates/panadiga-core`): Núcleo de alta performance para parsing forense de storage (`hdd`), criptoanálise (`crypto`), reparo cirúrgico de NVRAM (`nvram`), ponte serial/CDC RP2040/RP2350 (`pico`), servidor GDB RSP introspectivo (`debugger`), gerador de scripts Ghidra (`ghidra`), catálogo visual e SSOT de hardware (`ssot`).
+1. **Rust Core Workspace & CLI (`crates/`, `Cargo.toml`) — 6 crates**:
+   - **`panadiga-profiles`** (`crates/panadiga-profiles` + `profiles/`): Camada SSOT relacional data-driven com **89 modelos** DIGA, **12 JSON Schemas** Draft 2020-12 (`profiles/schema/`), decomposição hardware (`soc_cores`, `socs`, `boards`, `flash_chips`, `eeprom_chips`, `firmware_trains`, `nor_layouts`, `media_formats`, `models`) e **T0..T4 Capability Gate** determinístico para codegen TypeScript e C11.
+   - **`panadiga-core`** (`crates/panadiga-core`): Núcleo funcional determinístico de alta performance para parsing forense de storage (`hdd`), criptoanálise (`crypto`), reparo cirúrgico de NVRAM (`nvram`), ponte serial/CDC RP2040/RP2350 (`pico`), servidor GDB RSP introspectivo (`debugger`), gerador de scripts Ghidra (`ghidra`), pipeline de emulação/retarget `re` (`prewrite_gate`, `sig_locator`, `verify_loop`, `bgo_unbrick`, `region_compat`), cofre forense (`vault`), ingestão (`ingest`) e catálogo visual/SSOT (`ssot`).
    - **`panadiga-rag`** (`crates/panadiga-rag`): Motor RAG Zero-Error nativo em Rust com 6 camadas de defesa, guardrails determinísticos de segurança física (`safety.rs`) e indexação híbrida (Markdown docs, 32 manuais/datasheets PDF via `lopdf`, fontes Rust/C11/PIO/TS/Python e scripts Ghidra).
    - **`panadiga-mcp`** (`crates/panadiga-mcp`): Servidor MCP nativo em Rust (`panadiga mcp` via JSON-RPC 2.0 `stdio`) com **25 tools** (expansão dos 18 módulos base + 7 rotas de diagnóstico/BGO/`DAVIS`/`PAL-M`/TBC/flash/profiles), **resources** (`panadiga://invariants`, `panadiga://memory-map`, `panadiga://profiles/<model>`, pinouts, catálogo visual e docs/) e **prompts** guiados.
    - **`panadiga-cli`** (`crates/panadiga-cli`): Binário unificado multiplataforma (`panadiga` / `panadiga.exe`) com CLI Clap, modo TUI interativo e lançador do workbench.
@@ -20,10 +21,10 @@ O repositório está estruturado em subsistemas integrados e desacoplados:
    - Interface gráfica **100% livre de mocks em produção** construída com **Tauri 2**, **React 19**, **TypeScript**, **Tailwind CSS**, **Vitest** e **Playwright** (mocks isolados estritamente em `apps/desktop/src/test/mocks/` para suítes de teste).
    - **Alvo Desktop**: Windows (x64), Linux (`.deb` / `tar.gz`), macOS (ARM64) via binário `panadiga-desktop`.
    - **Alvo Mobile**: Android APK (`aarch64-linux-android`, crate `[lib] name = "panadiga"` permanente) com HAL nativa em Rust + bridge USB-OTG / BLE Nordic UART Service sem necessidade de mutação de `Cargo.toml`.
-   - Fornece módulos visuais para visualização do HDD MEIHFS, cirurgia de NVRAM Spansion com captura ao vivo via Pico (`CDDIAG`/`DUMP`/`pico://nvram-live-capture`), telemetria do Pico, navegador interativo de documentação/logs/pseudocódigo e terminal serial desacoplado.
+   - Fornece **Modo Express Rescue** (`ExpressView.tsx`), visualização do HDD MEIHFS, cirurgia de NVRAM Spansion com captura ao vivo via Pico (`CDDIAG`/`DUMP`/`pico://nvram-live-capture`), telemetria do Pico, **DIGA Commander IR**, navegador interativo de documentação/logs/pseudocódigo e terminal serial desacoplado.
 3. **Firmware C11 & Sonda Pico (`firmware/pico-p7501/`)**:
-   - Firmware C11 modular para Raspberry Pi Pico (RP2040) e Pico 2 (RP2350) com suporte a rádio sem fio (Pico W / Pico 2W via CYW43439).
-   - Implementa a interface verificada **UART assíncrona `P7501` (`115200 8N1` + controle discreto `SW_UART` / `XRESET` / proteção `NSW5V` + PIO `p7501_uart.pio`)** e servidor GDB Remote Serial Protocol (RSP).
+   - Firmware C11 modular para Raspberry Pi Pico (`RP2040`) e Pico 2 (`RP2350`) com suporte a rádio sem fio (`Pico W` / `Pico 2W` via CYW43439), operando **zero gadgets externos na sonda** (smartphone via USB-C OTG/BLE e Workbench Desktop atuam como visor, áudio e controlador IR, mantendo a sonda confortavelmente em `P0_FW_RO` de `256 KiB` com `VAULT VERIFY <1..3>`, `IR VERIFY`/`IRTX`/`IRRX` e `DUMPNOR ff_blocks` via CRC32 nibble-LUT).
+   - Implementa a interface verificada **UART assíncrona `P7501` (`115200 8N1` + controle discreto `SW_UART` / `XRESET` / proteção `NSW5V` + PIO `p7501_uart_duplex.pio`, `p7501_logic_sampler.pio`, `p7501_sds_sampler.pio`)** e servidor GDB Remote Serial Protocol (RSP).
 4. **Automação, Ghidra & Ferramentas de Bancada (`tools/`, `scripts/`)**:
    - Orquestração cross-platform de build (`scripts/build.py`), validação (`scripts/validate.py`), tipagem estrita (`mypy --strict`) e testes em `scripts/tests/`.
    - Scripts Ghidra Jython (`tools/ghidra/`) gerados a partir da SSOT Rust e lançadores em `tools/`.
@@ -77,15 +78,15 @@ python scripts/validate.py
 ```
 
 O portão valida de forma automatizada:
-1. **Rust Workspace (5 crates)**: `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets --no-deps -- -D warnings` & `cargo test --workspace` (**259 testes**).
+1. **Rust Workspace (6 crates)**: `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets --no-deps -- -D warnings` & `cargo test --workspace` (**337 testes**).
 2. **TypeScript Strict + Oxlint**: `oxlint --deny-warnings && tsc --noEmit` (`npm run lint`) em `apps/desktop` com zero erros.
-3. **Vitest Frontend**: `npm test` em `apps/desktop` (**116 testes em 36 arquivos** em `apps/desktop/src/**/*.test.*`).
+3. **Vitest Frontend**: `npm test` em `apps/desktop` (**128 testes em 39 arquivos** em `apps/desktop/src/**/*.test.*`).
 4. **Detector de Duplicação (jscpd)**: `.jscpd.json` com limiar estrito de **0% de duplicação** (0 clones permitidos entre `apps/desktop/src`, `apps/desktop/src-tauri/src`, `crates`, `firmware/pico-p7501`, `tools`, `scripts`).
-5. **Linter de UX (uxlint)**: Auditoria completa de estados de interface (`100/100`, `0` issues em **354 arquivos**).
-6. **Playwright E2E**: Testes ponta a ponta com Chromium headless (**23 testes em 8 specs** em `apps/desktop/e2e/`).
+5. **Linter de UX (uxlint)**: Auditoria completa de estados de interface (`100/100`, `0` issues em **386 arquivos**).
+6. **Playwright E2E**: Testes ponta a ponta com Chromium headless (**27 testes em 9 specs** em `apps/desktop/e2e/`).
 7. **Ghidra Native Generator**: Exportação idempotente de scripts a partir da SSOT em Rust (`cargo run -p panadiga-cli -- ghidra export-all`).
-8. **Pico C11 Host Test**: Compilação e execução de **31 testes em 4 módulos C11** (`test_gdb_rsp_host`, `test_pana_logic`, `test_pana_diag_drv`, `test_uart_codec`) com `-Wall -Wextra -Werror` / `/W4 /WX`.
-9. **Python Typer/CLI & Pytest**: Verificação `py_compile`, `mypy --strict scripts` (**43 arquivos**) e `pytest scripts/tests` (**29 testes** em `5` arquivos).
+8. **Pico C11 Host Test**: Compilação e execução de **38 funções/suítes de teste em 4 módulos C11** (`test_gdb_rsp_host`, `test_pana_logic`, `test_pana_diag_drv`, `test_uart_codec`) com `-Wall -Wextra -Werror` / `/W4 /WX` + checagem ARM RP2040/RP2350.
+9. **Python Typer/CLI & Pytest**: Verificação `py_compile`, `mypy --strict scripts` (**46 arquivos**) e `pytest scripts/tests` (**32 testes** em `6` arquivos).
 
 ---
 

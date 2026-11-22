@@ -222,6 +222,23 @@ size_t p7501_ir_build_pulse_table(
     return idx;
 }
 
+static void ir_populate_decode_result(p7501_ir_decode_result_t *out_res) {
+    out_res->dev = out_res->frame[2];
+    out_res->sub = out_res->frame[3];
+    out_res->cmd = out_res->frame[4];
+    out_res->xor_rx = out_res->frame[5];
+    out_res->xor_expected = (uint8_t)(out_res->dev ^ out_res->sub ^ out_res->cmd);
+    const uint8_t vendor_nibble = (uint8_t)(
+        (out_res->frame[0] ^ (out_res->frame[0] >> 4u) ^
+         out_res->frame[1] ^ (out_res->frame[1] >> 4u)) & 0x0Fu
+    );
+    out_res->vendor_ok = (out_res->frame[0] == P7501_IR_VENDOR_LSB0) &&
+                         (out_res->frame[1] == P7501_IR_VENDOR_LSB1) &&
+                         (vendor_nibble == (uint8_t)(out_res->dev & 0x0Fu));
+    out_res->parity_ok = (out_res->xor_rx == out_res->xor_expected);
+    out_res->valid = out_res->vendor_ok && out_res->parity_ok;
+}
+
 bool p7501_ir_decode_pulses(
     const uint32_t *durations_us,
     size_t count,
@@ -252,15 +269,22 @@ bool p7501_ir_decode_pulses(
         }
         out_res->frame[b] = val;
     }
-    out_res->dev = out_res->frame[2];
-    out_res->sub = out_res->frame[3];
-    out_res->cmd = out_res->frame[4];
-    out_res->xor_rx = out_res->frame[5];
-    out_res->xor_expected = (uint8_t)(out_res->dev ^ out_res->sub ^ out_res->cmd);
-    out_res->vendor_ok = (out_res->frame[0] == P7501_IR_VENDOR_LSB0) &&
-                         (out_res->frame[1] == P7501_IR_VENDOR_LSB1);
-    out_res->parity_ok = (out_res->xor_rx == out_res->xor_expected);
-    out_res->valid = out_res->vendor_ok && out_res->parity_ok;
+    ir_populate_decode_result(out_res);
+    return true;
+}
+
+bool p7501_ir_verify_hex_frame(const char *hex_frame, p7501_ir_decode_result_t *out_res) {
+    if ((hex_frame == NULL) || (out_res == NULL)) {
+        return false;
+    }
+    memset(out_res, 0, sizeof(*out_res));
+    size_t decoded = 0u;
+    if (!p7501_decode_hex_bytes(
+            hex_frame, out_res->frame, P7501_IR_KASEIKYO_FRAME_BYTES, &decoded) ||
+        (decoded != P7501_IR_KASEIKYO_FRAME_BYTES)) {
+        return false;
+    }
+    ir_populate_decode_result(out_res);
     return true;
 }
 

@@ -1,10 +1,16 @@
 //! Deterministic TypeScript SSOT projection compiler (`apps/desktop/src/models/generated/ssot.ts`).
 
 use std::fmt::Write as _;
+#[cfg(test)]
 use std::fs;
 use std::path::Path;
 
-use anyhow::{Context, Result};
+use anyhow::Result;
+
+use crate::constants::{
+    AM34_FLASH_BASE, AM34_FLASH_UNCACHED_BASE, AM34_NVRAM_BASE, AM34_NVRAM_UNCACHED_BASE,
+    AM34_SDRAM_STUB_RAW_ADDR, DEFAULT_BAUD_RATE, PANA_DIGADIAG_DEFAULT_LOAD_ADDR,
+};
 
 use super::pico_header::{
     DIAG_SIGNATURE_RULES, P7501_VDD_FLOATING_CEIL_MV, P7501_VDD_MIN_MV, P7501_VDD_NOMINAL_MV,
@@ -12,6 +18,7 @@ use super::pico_header::{
 };
 use super::registry::{EvidenceTier, HardwareProfileRegistry, derive_sector_table};
 use super::spec::build_hardware_ssot_spec;
+use super::spec::constants::P7501_WDT_MAX_CMD_WINDOW_MS;
 
 fn tier_snake(tier: EvidenceTier) -> &'static str {
     match tier {
@@ -194,21 +201,74 @@ pub fn generate_ts_ssot_module() -> String {
          \x20 '@P7501_RES ',\n\
          \x20 'PANADIGA>',\n\
          \x20 'P7501>',\n\
-         ] as const;\n",
+         ] as const;\n\n",
     );
+
+    let eh55_lethal = reg
+        .resolve_model("DMR-EH55")
+        .ok()
+        .and_then(|m| m.soc)
+        .and_then(|s| s.lethal_mmio.first().copied())
+        .expect("DMR-EH55 SoC lethal_mmio required");
+
+    out.push_str(
+        "export interface SsotAm34BusConstants {\n\
+         \x20 readonly flashCachedBaseAddr: number;\n\
+         \x20 readonly flashCachedBaseHex: string;\n\
+         \x20 readonly flashUncachedBaseAddr: number;\n\
+         \x20 readonly flashUncachedBaseHex: string;\n\
+         \x20 readonly nvramCachedBaseAddr: number;\n\
+         \x20 readonly nvramCachedBaseHex: string;\n\
+         \x20 readonly nvramUncachedBaseAddr: number;\n\
+         \x20 readonly nvramUncachedBaseHex: string;\n\
+         \x20 readonly digadiagStage15LoadAddrHex: string;\n\
+         \x20 readonly sdramStubRawAddrHex: string;\n\
+         \x20 readonly lethalMmioRegAddr: number;\n\
+         \x20 readonly lethalMmioRegHex: string;\n\
+         \x20 readonly defaultBaudRate: number;\n\
+         \x20 readonly wdtMaxCmdWindowMs: number;\n\
+         }\n\n\
+         export const SSOT_AM34_BUS_CONSTANTS: SsotAm34BusConstants = {\n",
+    );
+    let _ = writeln!(out, "  flashCachedBaseAddr: 0x{AM34_FLASH_BASE:08x},");
+    let _ = writeln!(out, "  flashCachedBaseHex: '0x{AM34_FLASH_BASE:08X}',");
+    let _ = writeln!(
+        out,
+        "  flashUncachedBaseAddr: 0x{AM34_FLASH_UNCACHED_BASE:08x},"
+    );
+    let _ = writeln!(
+        out,
+        "  flashUncachedBaseHex: '0x{AM34_FLASH_UNCACHED_BASE:08X}',"
+    );
+    let _ = writeln!(out, "  nvramCachedBaseAddr: 0x{AM34_NVRAM_BASE:08x},");
+    let _ = writeln!(out, "  nvramCachedBaseHex: '0x{AM34_NVRAM_BASE:08X}',");
+    let _ = writeln!(
+        out,
+        "  nvramUncachedBaseAddr: 0x{AM34_NVRAM_UNCACHED_BASE:08x},"
+    );
+    let _ = writeln!(
+        out,
+        "  nvramUncachedBaseHex: '0x{AM34_NVRAM_UNCACHED_BASE:08X}',"
+    );
+    let _ = writeln!(
+        out,
+        "  digadiagStage15LoadAddrHex: '0x{PANA_DIGADIAG_DEFAULT_LOAD_ADDR:08X}',"
+    );
+    let _ = writeln!(
+        out,
+        "  sdramStubRawAddrHex: '0x{AM34_SDRAM_STUB_RAW_ADDR:08X}',"
+    );
+    let _ = writeln!(out, "  lethalMmioRegAddr: 0x{eh55_lethal:08x},");
+    let _ = writeln!(out, "  lethalMmioRegHex: '0x{eh55_lethal:08X}',");
+    let _ = writeln!(out, "  defaultBaudRate: {DEFAULT_BAUD_RATE},");
+    let _ = writeln!(out, "  wdtMaxCmdWindowMs: {P7501_WDT_MAX_CMD_WINDOW_MS},");
+    out.push_str("} as const;\n");
     out
 }
 
 /// Exports TypeScript SSOT projection to `apps/desktop/src/models/generated/ssot.ts`.
 pub fn export_ts_ssot_module(output_path: &Path) -> Result<()> {
-    if let Some(parent) = output_path.parent()
-        && !parent.as_os_str().is_empty()
-    {
-        fs::create_dir_all(parent)
-            .with_context(|| format!("Failed creating directory {}", parent.display()))?;
-    }
-    fs::write(output_path, generate_ts_ssot_module())
-        .with_context(|| format!("Failed writing {}", output_path.display()))
+    super::pico_header::write_if_changed_or_create(output_path, &generate_ts_ssot_module())
 }
 
 #[cfg(test)]

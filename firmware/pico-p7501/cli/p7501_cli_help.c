@@ -56,10 +56,10 @@ void p7501_cli_print_help(void) {
     printf("  PANARSP [ms] [boot] [WAIT:x] <act>   - MAIN _dev_SERIAL RSP (REGS/MEM/WMEM/DUMPNOR/CALL)\n");
     printf("  DIAGWATCH [ms] [boot] [act] [WAKE]   - Autonomous SC0 watchdog, wake-trigger & PANAMON1\n");
     printf("  DRVPANA [ms] [boot] [NOPASS] <DIAG|cmd> - Matshita R6-MV4 Drive Factory CLI (auto PASS)\n");
-    printf("  IRTX <preset|sub:cmd> / IRRX [ms]    - 38 kHz Kaseikyo IR TX & TSOP38238 RX decoder\n");
+    printf("  IRTX <preset|sub:cmd> / IRRX [ms]    - 38 kHz Kaseikyo IR TX & VERIFY <12hex>\n");
     printf("  SERVMACRO <SERVICE_MODE|SELF_CHECK|OPTICAL_CAL|ERR_HISTORY|RELEASE> [GPn]\n");
     printf("  IDENTIFY / AUTOPROBE / JOB <act>     - 4-stage @P7501_IDENT & atomic NVRAM/BGO/VAULT jobs\n");
-    printf("  VAULT / BLACKBOX / PROBE_CFG / RECIPE - 2 MiB QSPI P2..P5 forensic storage & ADC0 cal\n");
+    printf("  VAULT [STATUS|VERIFY|DUMP|ERASE]     - 2 MiB QSPI P2..P5 forensic storage & ADC0 cal\n");
     printf("  BGO_INSPECT / EEMUL_INSPECT / NOR_MAP / FAST_READ / FAST_WRITE\n");
     printf("  MMIO_SNAP / PWROSC / TBUSSNIFF / M0KEEPALIVE / I2C_SCAN / EEPROM\n");
     printf("  USBMODE / BLE / BLE_NOR_AUTH\n");

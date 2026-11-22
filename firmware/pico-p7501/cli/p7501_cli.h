@@ -43,6 +43,9 @@ void p7501_cli_process_command(char *line);
 /** Set status/code metadata emitted by the `@P7501_RES` structured command epilogue. */
 void p7501_cli_set_result(const char *status, const char *code);
 
+/** Attach extra `key=value` fields to the pending `@P7501_RES` epilogue line. */
+void p7501_cli_set_result_extra(const char *extra_kv);
+
 #ifdef __cplusplus
 }
 #endif

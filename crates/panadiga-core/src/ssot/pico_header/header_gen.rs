@@ -2,6 +2,9 @@
 
 use std::fmt::Write as _;
 
+use crate::constants::{
+    AM34_SDRAM_BASE, AM34_SDRAM_SIZE, AM34_SDRAM_STUB_RAW_ADDR, PANA_DIGADIAG_DEFAULT_LOAD_ADDR,
+};
 use crate::re::main_passthrough::{
     DEV_SERIAL_CALLBACK_VA, DEV_SERIAL_HANDSHAKE_BYTES, DEV_SERIAL_ISR_CTX_PTR_VA,
     DEV_SERIAL_PC_OFFSET, passthrough_rsp_payloads,
@@ -199,6 +202,22 @@ pub fn generate_c11_ssot_header() -> String {
         (
             "P7501_SSOT_CS0_APERTURE_END",
             format!("0x{cs0_aperture_end:08X}UL\n"),
+        ),
+        (
+            "P7501_SSOT_SDRAM_CACHED_BASE",
+            format!("0x{AM34_SDRAM_BASE:08X}UL"),
+        ),
+        (
+            "P7501_SSOT_SDRAM_WINDOW_SIZE",
+            format!("0x{AM34_SDRAM_SIZE:08X}UL"),
+        ),
+        (
+            "P7501_SSOT_DIGADIAG_LOAD_ADDR",
+            format!("0x{PANA_DIGADIAG_DEFAULT_LOAD_ADDR:08X}UL"),
+        ),
+        (
+            "P7501_SSOT_SDRAM_STUB_RAW_ADDR",
+            format!("0x{AM34_SDRAM_STUB_RAW_ADDR:08X}UL\n"),
         ),
         (
             "P7501_SSOT_AM34_LETHAL_REG_ADDR",

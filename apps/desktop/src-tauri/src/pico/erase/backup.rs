@@ -3,6 +3,7 @@
 //! Single Responsibility: Executes the non-destructive "What's Next" 1st-Contact
 //! Read-Only Backup, double-read integrity check, and forensic binary serialization.
 
+use panadiga_core::constants::{AM34_FLASH_BASE, AM34_SRAM_BASE};
 use panadiga_core::nvram::calculate_hashes;
 use std::fs;
 use std::io::Write;
@@ -190,6 +191,17 @@ pub(crate) fn is_uniform_bus_pattern(data: &[u8]) -> bool {
     }
 }
 
+/// Captures 16 KiB SRAM secrets (`AM34_SRAM_BASE`) and 4 KiB Bootloader IPL (`AM34_FLASH_BASE`).
+pub(crate) fn dump_sram_and_ipl_backups(
+    port: &mut dyn serialport::SerialPort,
+) -> (Vec<u8>, Vec<u8>) {
+    let sram_hex = format!("0x{AM34_SRAM_BASE:08X}");
+    let flash_hex = format!("0x{AM34_FLASH_BASE:08X}");
+    let sr_bytes = dump_p7501_region_bytes(port, &sram_hex, 4096, 6000);
+    let ipl_bytes = dump_p7501_region_bytes(port, &flash_hex, 1024, 4000);
+    (sr_bytes, ipl_bytes)
+}
+
 /// Executes the non-destructive "What's Next" 1st-Contact Read-Only Backup:
 /// 1. `HANDSHAKE` + Passive Address Aliasing Auto-Detect (`2MB` / `4MB` / `8MB` / `16MB`)
 /// 2. Double-Read of 64KB NVRAM at auto-detected EEMUL base verifying identical SHA-256
@@ -213,8 +225,7 @@ pub fn pico_execute_first_contact_backup(
         let sha_1 = sha256_hex(&nv_bytes_1);
         let sha_2 = sha256_hex(&nv_bytes_2);
 
-        let sr_bytes = dump_p7501_region_bytes(port, "0x00000000", 4096, 6000);
-        let ipl_bytes = dump_p7501_region_bytes(port, "0x80000000", 1024, 4000);
+        let (sr_bytes, ipl_bytes) = dump_sram_and_ipl_backups(port);
 
         // A floating (0xFF..) or shorted (0x00..) bus yields identical reads; that is NOT a valid capture.
         // Require explicit IDENTIFY confirmation and a non-uniform bootloader header.

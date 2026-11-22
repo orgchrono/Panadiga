@@ -250,6 +250,8 @@ size_t panarsp_stream_until_tokens_ex(
     const char *tok_fail,
     uint32_t min_post_hdr_bytes,
     bool sliding_timeout,
+    panarsp_post_hdr_byte_fn post_hdr_cb,
+    void *post_hdr_ctx,
     bool *out_hdr_seen,
     bool *out_done_seen,
     bool *out_fail_seen,
@@ -287,6 +289,9 @@ size_t panarsp_stream_until_tokens_ex(
             rx += 1u;
             if (s1) {
                 post_hdr += 1u;
+                if (post_hdr_cb != NULL) {
+                    post_hdr_cb(post_hdr_ctx, b);
+                }
             } else if (p7501_rolling_match_push(r1, &l1, sizeof(r1), b, tok_hdr)) {
                 s1 = true;
             }
@@ -333,7 +338,7 @@ size_t panarsp_stream_until_tokens(
 ) {
     return panarsp_stream_until_tokens_ex(
         cap, stub_addr, stub, stub_len, timeout_ms,
-        tok_hdr, tok_done, tok_fail, 0u, false,
+        tok_hdr, tok_done, tok_fail, 0u, false, NULL, NULL,
         out_hdr_seen, out_done_seen, out_fail_seen, out_stream_bytes, NULL
     );
 }

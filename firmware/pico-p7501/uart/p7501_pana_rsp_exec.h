@@ -31,7 +31,8 @@ size_t panarsp_execute_dumpnor(
     const p7501_pana_rsp_spec_t *spec,
     bool *out_hdr_seen,
     bool *out_ftr_seen,
-    uint32_t *out_stream_bytes
+    uint32_t *out_stream_bytes,
+    uint32_t *out_ff_blocks
 );
 
 size_t panarsp_execute_jedec_id_or_sum(

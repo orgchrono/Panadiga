@@ -17,6 +17,9 @@ extern "C" {
 /** Transmit a parsed IR spec on hardware 38 kHz PWM (with WDT & Hi-Z safety restore). */
 void p7501_ir_transmit_spec(const p7501_ir_spec_t *spec);
 
+/** CLI command handler for `IR <VERIFY <12hex>|TX <...>|RX [ms]>`. */
+void p7501_cmd_ir(const char *arg);
+
 /** CLI command handler for `IRTX <preset|sub:cmd|cmd> [GPn|gpio] [repeat]`. */
 void p7501_cmd_irtx(const char *arg);
 

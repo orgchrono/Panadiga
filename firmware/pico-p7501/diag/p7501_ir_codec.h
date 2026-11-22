@@ -88,6 +88,9 @@ bool p7501_ir_decode_pulses(
     p7501_ir_decode_result_t *out_res
 );
 
+/** Verify a 48-bit (`12`-hex-digit) Panasonic Kaseikyo frame (`0x2002`, vendor parity nibble, XOR byte). */
+bool p7501_ir_verify_hex_frame(const char *hex_frame, p7501_ir_decode_result_t *out_res);
+
 /** Parse `IRTX <preset|sub:cmd|cmd> [GPn|gpio] [repeat]` deterministically. */
 bool p7501_ir_parse_args(const char *arg, p7501_ir_spec_t *out);
 

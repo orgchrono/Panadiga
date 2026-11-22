@@ -5,7 +5,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::thread;
 
-use panadiga_core::constants::DEFAULT_GDB_LISTEN_SOCKET;
+use panadiga_core::constants::{AM34_FLASH_BASE, DEFAULT_GDB_LISTEN_SOCKET};
 
 use crate::state::ScopedMutex;
 
@@ -52,7 +52,7 @@ impl GdbBridgeController {
                     a: [0x00000000, 0x00000000, 0x00000000, 0x0003FFF0],
                     mdr: 0x00000000,
                     psw: 0x00000100,
-                    pc: 0x80000000,
+                    pc: AM34_FLASH_BASE,
                     sp: 0x0003FFF0,
                     is_halted: true,
                 },

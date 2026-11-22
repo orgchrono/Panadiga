@@ -5,61 +5,65 @@
 ## Panadiga — Master Specification on Modular Decomposition, Silicon, and Invariants
 
 > **Classification:** Master Systems Architecture and Hardware Engineering Specification  
-> **Scope:** Core Rust, Desktop UI (Tauri 2 / React), RP2040/RP2350 Firmware, Android Mobile, RAG & Forensics  
+> **Scope:** Rust Workspace (6 crates, data-driven `panadiga-profiles`), Desktop/Express UI (Tauri 2 / React 19), Zero-Gadget RP2040/RP2350 Firmware, Android Mobile (OTG/BLE/IR), RAG & Forensics  
 > **Status:** Normative / Approved  
 
 ---
 
 ## 1. Ecosystem Architectural Overview
 
-**Panadiga** is an integrated software and hardware suite for reverse engineering, storage forensics, firmware recovery (specifically addressing the critical **`U99`** panics), and low-level in-circuit telemetry for **Panasonic DIGA (DMR-EH55)** DVD/HDD recorders powered by the **Matsushita AM34 / MN103S (`VEP79138`)** platform.
+**Panadiga** is an integrated software and hardware suite for reverse engineering, storage forensics, firmware recovery (specifically addressing critical **`U99`** panics), and low-level in-circuit telemetry across **89 Panasonic DIGA** recorder models (primary bench target **DMR-EH55** powered by **Matsushita AM34 / MN103S**, `VEP79138`).
 
-The system is architected as **Decoupled Layers with Restricted Unidirectional Communication**:
+The system enforces **100% Deterministic Functional Core + Imperative Shell** separation with **Restricted Unidirectional Layers**:
 
 ```mermaid
 flowchart TD
-    subgraph Presentation["1. Presentation & Interaction Layer (UI & MVVM)"]
-        DESKTOP["Desktop Workbench (Tauri 2 / React 18)"]
-        MOBILE["Mobile App (Android APK / Webview)"]
-        TUI["Interactive Terminal UI (Ratatui)"]
-        CLI["Command Line Interface (Clap v4)"]
-        VIEWMODELS["Strict ViewModels (ADTs / Discriminated Unions)<br/>- EraseState | SerialState | GdbState"]
+    subgraph Presentation["1. Presentation & Host Interaction Layer (UI & MVVM)"]
+        DESKTOP["Desktop Workbench (Tauri 2 / React 19 / ExpressView)"]
+        MOBILE["Android APK (aarch64 / USB-OTG / BLE / IrCommanderView)"]
+        TUI["Unified CLI & TUI Workbench (panadiga / Clap v4 / Ratatui)"]
+        VIEWMODELS["Strict ViewModels (ADTs: EraseState / SerialState / GdbState)"]
         DESKTOP --- VIEWMODELS
         MOBILE --- VIEWMODELS
     end
 
-    subgraph Orchestration["2. Orchestration & IPC Layer"]
-        IPC["Tauri IPC Commands / Subprocess Bridge"]
-        LOG_BUS["PanadigaLogger (Reactive Event Bus)<br/>Zero console.log / Zero println!"]
+    subgraph Orchestration["2. Orchestration, IPC & Boundary Services"]
+        IPC["Tauri IPC Commands / Subprocess / PanadigaLogger"]
+        MCP["MCP stdio Server (panadiga-mcp: 25 tools + profiles resources)"]
+        RAG["Zero-Error RAG Engine (panadiga-rag: 6 shields + 32 PDFs)"]
         VIEWMODELS --> IPC
-        VIEWMODELS -.-> LOG_BUS
     end
 
-    subgraph Core["3. Engineering Core & Pure Domain (Rust Core Engine)"]
-        SSOT["SSOT Central Constants (AM34 Memory Map, MEIHDFS Offsets)"]
-        FP_FORENSICS["Forensics Pure Domain (Immutable &[u8])<br/>- inspect_hdd_slice_pure<br/>- clean_nvram_slice<br/>- calculate_entropy"]
-        GDB_BRIDGE["Introspective GDB RSP Bridge (:3333)<br/>- Lossless Circular Telemetry Ring Buffer<br/>- Lexical RSP Checksum Validator"]
-        SSOT --- FP_FORENSICS
-        SSOT --- GDB_BRIDGE
+    subgraph Core["3. 100% Deterministic Functional Core & Data-Driven SSOT"]
+        PROFILES["Relational SSOT (panadiga-profiles + profiles/: 89 models, 12 Schemas, T0..T4)"]
+        FP_FORENSICS["Pure Domain (Immutable slices: MEIHFS, NVRAM, Vault raw/frm/recompiled, Entropy)"]
+        EMULATOR["Mn103Vm Pre-Write Gate + Cleanroom FAT16B / ISO9660 / Streaming HDD"]
+        GDB_BRIDGE["Introspective GDB RSP Bridge (:3333 / RingBuffer + Checksum)"]
+        PROFILES --- FP_FORENSICS
+        FP_FORENSICS --- EMULATOR
         IPC --> Core
+        MCP --> Core
+        RAG --> PROFILES
     end
 
-    subgraph HAL["4. Hardware Abstraction Layer (HAL & Protocols)"]
-        USB_SERIAL["CDC Serial Driver (USB OTG / Virtual COM)"]
-        BLE_NUS["Nordic UART Service Driver (Bluetooth Low Energy)"]
-        P7501_TRANS["P7501 Async UART 115200 8N1 (C11 PIO)"]
+    subgraph HAL["4. Zero-Gadget Probe Layer (P0_FW_RO = 256 KiB / RP2040 & RP2350)"]
+        USB_SERIAL["USB-C OTG / CDC Virtual COM Bridge (Desktop & Android)"]
+        BLE_NUS["Bluetooth BLE Nordic UART Service Bridge (Smartphone)"]
+        P7501_TRANS["C11/PIO Firmware (P7501 115200 8N1, VAULT VERIFY, IR VERIFY, DUMPNOR ff_blocks)"]
         GDB_BRIDGE --> USB_SERIAL
         GDB_BRIDGE --> BLE_NUS
+        MOBILE --> BLE_NUS
+        MOBILE --> USB_SERIAL
         USB_SERIAL --> P7501_TRANS
         BLE_NUS --> P7501_TRANS
     end
 
-    subgraph TargetHW["5. Target Physical Silicon (Panasonic DMR-EH55)"]
-        P7501["P7501 Header (JST ZR 6-Pin 'TO JIGU')"]
+    subgraph TargetHW["5. Target Physical Silicon (Panasonic DIGA VEP79138)"]
+        P7501["P7501 Header (JST B6B-ZR-3R4 'TO JIGU')"]
         SOC["Matsushita AM34 / MN103S (VEP79138)"]
         FLASH["IC5001 Spansion S29JL064H NOR Flash (8 MB TSOP-48)"]
-        HDD["PATA/IDE Drive (MEIHDFS Layout / 'SH' Superblock)"]
-        P7501_TRANS <-->|"Async UART 3.3V / NSW5V Hi-Z"| P7501
+        HDD["PATA/IDE / SATA Drive (MEIHDFS / MBR 'SH')"]
+        P7501_TRANS <-->|"Async UART 115200 8N1 (3.3V LVTTL / NSW5V Hi-Z / XRESET Open-Drain)"| P7501
         P7501 <--> SOC
         SOC <--> FLASH
         SOC <--> HDD
@@ -94,13 +98,17 @@ In-circuit debugging over the P7501 header requires resilient telemetry handling
 - **In-Memory Ring Buffer (`GdbTelemetryRingBuffer`)**: Retains the last $N$ bus transactions in a fixed-capacity ring buffer, eliminating heap allocations during high-frequency stepping.
 - **Formal RSP Packet Checksum Verification**: Every frame (`$<data>#<checksum>`) undergoes strict lexical verification. Corrupted frames trigger immediate retransmission requests (`-`), shielding the session against electrical noise.
 
-### 2.4 SSOT (Single Source of Truth) & Zero Clones
-- **Central Constants**: [`crates/panadiga-core/src/constants.rs`](../../crates/panadiga-core/src/constants.rs) provides the authoritative definition for AM34 memory layouts, candidate file paths, and hardware pinouts.
-- **Zero Duplication Policy (`jscpd`)**: Frontend codebase maintains a strict **0.00% duplication** rate across 10,000+ lines of TypeScript code.
+### 2.4 Data-Driven SSOT, Multi-Target Codegen & Zero Clones
+- **Relational Profiles & `T0..T4` Gate (`panadiga-profiles` + `profiles/`):** Dedicated crate [`crates/panadiga-profiles/`](../../crates/panadiga-profiles/) models **89 DIGA recorders** across 10 normalized collections (`soc_cores`, `socs`, `boards`, `flash_chips`, `eeprom_chips`, `firmware_trains`, `nor_layouts`, `media_formats`, `models`) validated against **12 JSON Schemas** (Draft 2020-12 in `profiles/schema/`), emitting synchronized TypeScript ([`apps/desktop/src/models/generated/`](../../apps/desktop/src/models/generated/)) and C11 ([`firmware/pico-p7501/generated/p7501_ssot.h`](../../firmware/pico-p7501/generated/p7501_ssot.h)) SSOT bindings.
+- **Canonical Constants & Visual Catalog:** [`crates/panadiga-core/src/constants/`](../../crates/panadiga-core/src/constants/) and [`hardware_catalog.json`](../../crates/panadiga-core/src/ssot/hardware_catalog.json) serve as the single authority for AM34 memory regions, BGO layouts, and `P7501` wiring.
+- **Zero Duplication Policy (`jscpd`):** Cross-stack checks maintain a strict **0.00% clone threshold** (`threshold: 0`).
 
-### 2.5 Structured Logging Subsystem
-- Raw `println!`, `eprintln!`, and `console.*` statements are strictly prohibited across production code.
-- Messages route through `PanadigaLogger` (TypeScript) and `tracing` (Rust) with fine-grained level filtering and decoupled sinks.
+### 2.5 Forensic Vault, `Mn103Vm` Gate & Deterministic Logging
+- **Artifact Segregation (`vault/` & `ingest/`):** Strictly separates `raw/`, `.FRM` (`frm/`), and `recompiled/` payloads, gating cleanroom FAT16B (`32 MiB`), ISO 9660, and composed MEIHFS streaming flash images through **`Mn103Vm`** (`re/prewrite_gate/`) before touching target media.
+- **Zero Unstructured Prints & Test-Isolated Logging:** Raw `println!`/`console.*` statements are banned in production; `crates/panadiga-core/src/logger.rs` provides RAII thread-local overrides (`with_thread_log_level`, `ThreadLogSinkGuard`) ensuring parallel `cargo test` determinism.
+
+### 2.6 Architectural Decision v0.2.0 — Zero-Gadget Pico Probe + Phone/Desktop Host
+- Rather than wiring external `SSD1306` OLED displays, buzzers, or extra hardware buttons onto the Raspberry Pi Pico probe (which adds electrical noise, wiring complexity, and firmware bloat), the **Android smartphone (via USB-C OTG or BLE NUS)** and **Desktop Tauri 2 Workbench** (`ExpressView.tsx` + `IrCommanderView.tsx`) act as the screen, audio/visual feedback, and IR Commander. The Pico stays lean (`~157–160 KiB` inside `P0_FW_RO = 256 KiB`) running `P7501` UART, GDB RSP, `VAULT VERIFY <1..3>`, `IR VERIFY <12hex>`/`IRTX`/`IRRX`, `DUMPNOR ff_blocks`, and nibble-LUT CRC32.
 
 ---
 
@@ -124,17 +132,17 @@ In-circuit debugging over the P7501 header requires resilient telemetry handling
 ## 4. Hardware Safety Matrix & Physical Damage Prevention
 
 ```mermaid
-graph TD
+flowchart TD
     REQ["Requested Bench Action"] --> CHECK_V{"Voltage <= 3.3V LVTTL?"}
-    CHECK_V -- "No (> 3.3V)" --> ABORT_V["IMMEDIATE HARDWARE LOCK<br/>Prevents permanent destruction of UniPhier SoC"]
+    CHECK_V -- "No (> 3.3V)" --> ABORT_V["IMMEDIATE HARDWARE LOCK (Prevents UniPhier SoC damage)"]
     CHECK_V -- "Yes (3.3V)" --> CHECK_REG{"Target Flash Region?"}
     
-    CHECK_REG -- "0x80000000..0x8003FFFF (Layer 1 IPL)" --> ABORT_BOOT["PERMANENT WRITE LOCK (Error E05)<br/>Critical Boot IPL SA0..SA10 Is Immutable"]
-    CHECK_REG -- "0x80040000..0x807EFFFF (Layer 2 BGO)" --> CHECK_OPTIN{"CONFIRM_UPPER_NOR<br/>+ 8 MiB SHA-256 Backup?"}
-    CHECK_OPTIN -- "No" --> ABORT_UPPER["DEFAULT WRITE LOCK (Error E05)<br/>Requires opt-in for U99/BGO cure"]
-    CHECK_OPTIN -- "Yes (Bricked Unit)" --> WARN_BGO["AUTHORIZED WITH RISK WARNING<br/>Poll ~700 ms / 0xFF×32"]
-    CHECK_REG -- "0x807F0000..0x807FFFFF (Layer 3 NVRAM)" --> ALLOW_NVRAM["WRITE PERMITTED<br/>Sanitizing 64 KB EEMUL"]
-    CHECK_REG -- "P7501 Pin 5 (NSW5V) / 0xC000100C" --> ABORT_PWR["ELECTRICAL / MMIO LOCK<br/>NSW5V Hi-Z / Lethal Register"]
+    CHECK_REG -- "0x80000000..0x8003FFFF (Layer 1 IPL)" --> ABORT_BOOT["PERMANENT WRITE LOCK E05 (Critical Boot IPL SA0..SA10 Immutable)"]
+    CHECK_REG -- "0x80040000..0x807EFFFF (Layer 2 BGO)" --> CHECK_OPTIN{"CONFIRM_UPPER_NOR + 8 MiB SHA-256 Backup?"}
+    CHECK_OPTIN -- "No" --> ABORT_UPPER["DEFAULT WRITE LOCK E05 (Requires opt-in for U99/BGO cure)"]
+    CHECK_OPTIN -- "Sim (Bricked Unit)" --> WARN_BGO["AUTHORIZED WITH RISK WARNING (Poll ~700 ms / 0xFFx32)"]
+    CHECK_REG -- "0x807F0000..0x807FFFFF (Layer 3 NVRAM)" --> ALLOW_NVRAM["WRITE PERMITTED (Sanitizing 64 KB EEMUL)"]
+    CHECK_REG -- "P7501 Pin 5 (NSW5V) / 0xC000100C" --> ABORT_PWR["ELECTRICAL / MMIO LOCK (NSW5V Hi-Z / Lethal Register)"]
 ```
 
 1. **Invariant 1: Maximum 3.3V Logic, `NSW5V` Hi-Z Protection & Lethal MMIO Lock**: The `AM34 / MN103S` UART/control pins operate at 3.3V LVTTL; Pin 5 (`NSW5V` / `GP3`) is wired via `D7510` to `~5.15V` and MUST remain `Hi-Z Input` with pulls disabled, while lethal register `0xC000100C` is strictly blocked.

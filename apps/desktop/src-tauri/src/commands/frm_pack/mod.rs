@@ -12,6 +12,7 @@ pub(crate) use paths::{resolve_read_path, resolve_write_path};
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::commands::constants::DEFAULT_DIGADIAG_DST_HEX;
     use panadiga_core::constants::PANA_DIGADIAG_FRM_SIZE;
 
     #[test]
@@ -33,7 +34,7 @@ mod tests {
             out_path: digadiag_out.to_string_lossy().to_string(),
             modules: Vec::new(),
             input_path: Some(payload_path.to_string_lossy().to_string()),
-            dst_addr: Some("0x50400000".to_string()),
+            dst_addr: Some(DEFAULT_DIGADIAG_DST_HEX.to_string()),
             tag: Some("FVU ".to_string()),
             build_name: Some("TEST01".to_string()),
             hw_family: None,

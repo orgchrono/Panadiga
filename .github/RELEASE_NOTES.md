@@ -15,7 +15,8 @@ Panadiga `0.2.0` marks a major architectural milestone across all **6 Rust crate
 - **New `panadiga-profiles` Crate & Multi-Language SSOT Generator (`panadiga ssot export-all`):**
   - Centralizes **`89` DIGA model manifests**, **`12` SoCs**, **`5` SoC cores**, **`31` mainboards**, **`18` parallel NOR flash chips**, **`6` I2C EEPROM chips**, **`3` NOR partition layouts**, **`18` firmware trains**, **`3` media formats**, and **`12` JSON Schema Draft 2020-12 definitions** (`profiles/schema/`).
   - Enforces a deterministic **`T0`–`T4` Capability Authorization Gate** (`panadiga profiles validate|show|authorize|export-schema`) respecting hardware WP/OTP limits, `256 KiB` IPL RO floors, and explicit offline CoW lab overrides.
-  - Projects one Single Source of Truth across **Rust**, **C11** (`firmware/pico-p7501/generated/p7501_ssot.{h,c}`), **TypeScript** (`apps/desktop/src/models/generated/{ssot,profiles}.ts`), **Python** (`scripts/profiles_types.py`), and **Ghidra Jython** (`tools/ghidra/`).
+- **Relational Hardware Profiles SSOT (`panadiga ssot export-all`):**
+  - Projects one Single Source of Truth across **Rust**, **C11** (`p7501_ssot.{h,c}` incl. CS0/SDRAM/DIGADIAG/Lethal MMIO constants), **TypeScript** (`apps/desktop/src/models/generated/{ssot,profiles}.ts` incl. `SSOT_AM34_BUS_CONSTANTS`), **Python** (`scripts/profiles_types.py` + dynamic script discovery), and **Ghidra Jython** (`tools/ghidra/`).
 
 ### 1.2 Express Rescue Mode & Strict Forensic Vault Pipeline (Desktop & Android UI)
 - **Guided Express Workbench (`ExpressView`):** Adds operator-friendly mission cards — **U99 Quick Rescue**, **SD Recovery Media**, **NOR Dump & CoW Patch**, and **Strict Vault Pipeline** — backed by `DigaModelSelect`, `RecorderDisplayGuide`, `PicoConnectionSafetySheet`, `StrictWorkflowStepper`, `VaultMediaAndGatePanel`, and EN/PT-BR localization (`locales/{en-US,pt-BR}/express.json`).
@@ -42,10 +43,11 @@ Audited adversarially across every silicon, electrical, DMA, QSPI, and protocol 
 - **Unified Bus Security Policy (`p7501_bus_policy.c` + Rust `policy.rs`) & Adversarial Guards:**
   - Single gate `p7501_bus_check_access()` blocks AM34 lethal MMIO `0xC000100C..0xC000100F` (R/W/E), CS0 alias mirrors (`0x80000000..0x87FFFFFF`), permanent `SA0..SA10` IPL RO, `DMR-ES35V` `MAIN_XIP` RO, Full-RO profiles (`DMR-EZ485V`/`DMR-ES10`) regardless of flash-size overrides, full sector spans on erase, and `F14` wireless fail-closed auth.
   - Hardened `p7501_pana_rsp_guard.c` & `p7501_diag_watch_codec.c`: blocks >8-digit hex overflow attacks (`p7501_scan_hex_u32`), leading whitespace / `;` whitespace bypasses, chained `$M` commands, lowercase `w`/`e`/`f`/`j`, bare `W`/`E`/`J` without explicit hex address in `RAW:`/`HEX:`, `DIAGWATCH FORMAT` without unlock + `F14`, and enforces unconditional Upper NOR auto-relock + `F14` op consumption across `PANARSP`, `DIAGWATCH`, `GDB` (including partial writes), `JOB`, `EEPROM`, and `BLE`.
-- **Dual-Core SRAM, RP2350 `.bss` Reduction (`-57.5 KiB`) & On-Probe `PANAMON1>` Bus:**
+- **Dual-Core SRAM, RP2350 `.bss` Reduction (`-57.5 KiB`) & Zero-Gadget On-Probe Capabilities (`67` Studio Commands):**
   - Core 1 edge-sampler loop and `p7501_spsc_push()` are **100% SRAM-resident (`__not_in_flash_func`)**, removing the 50 ms multicore lockout stall during `BOOTSEL` polling and making QSPI lockout fail-closed (50 ms timeout).
-  - Bounded `GDB_SECTOR_CACHE_SIZE = 512 B` (SSOT) reduces `pico2` `.bss` from `130,284 B` to **`72,816 B` (`-57.5 KiB`)**, eliminates GDB `populate_cache()` WDT timeouts, moves `tx_resp_buf[2048]` off the Core 0 stack, caps `$m` read length (`E02`), and replaces silent `0xFFFFFFFF` reads with checked block reads (`E01`).
-  - Added native on-probe `PANAMON1>` PIO1 target-bus driver (`p7501_target_bus_panamon.c`), live `$m` `0→1` pre-read validation for `BGO_BITCLEAR`, `min_post_hdr_bytes` + incremental `DUMPNOR_RESUME`, `PWROSC` `8192`-sample arena + clean `ADC_FCS` teardown, `EEPROM WRITE` page-boundary splitting, `SELFTEST LOOPBACK`, chronological `BLACKBOX DUMP`, and **100% `@P7501_RES` error-code parity across all 64 CLI handlers**.
+  - Bounded `GDB_SECTOR_CACHE_SIZE = 512 B` (SSOT) reduces `pico2` `.bss` to **`72,900 B`**, eliminates GDB `populate_cache()` WDT timeouts, moves `tx_resp_buf[2048]` off the Core 0 stack, caps `$m` read length (`E02`), and replaces silent `0xFFFFFFFF` reads with checked block reads (`E01`).
+  - **Nibble-LUT CRC32, `VAULT VERIFY <1..3>`, `IR VERIFY <12hex>` & `DUMPNOR ff_blocks`:** Keep all UI, audio cues, and IR Commander control on smartphone (`USB-C OTG` / `BLE`) and Desktop with **zero external probe gadgets**, fitting comfortably inside `P0_FW_RO` (`256 KiB` — `RP2040` `160,208 B` / `RP2350` `157,552 B`).
+  - Added native on-probe `PANAMON1>` PIO1 target-bus driver (`p7501_target_bus_panamon.c`), live `$m` `0→1` pre-read validation for `BGO_BITCLEAR`, `min_post_hdr_bytes` + incremental `DUMPNOR_RESUME` + streaming blank-block counter (`ff_blocks`), `PWROSC` `8192`-sample arena + clean `ADC_FCS` teardown, `EEPROM WRITE` page-boundary splitting, `SELFTEST LOOPBACK`, chronological `BLACKBOX DUMP`, and **100% `@P7501_RES` error-code parity across all CLI handlers**.
 - **Atomic Ping-Pong A/B CoW `P2_VAULT` & RP2350 `P6_NOR_MIRROR`:**
   - True Copy-on-Write A/B banking across Bank A (`0x100000`) and Bank B (`0x140000`) with sibling-slot preservation and XIP CRC32 verification before manifest commit, plus `P6_NOR_MIRROR` (`2 MiB` extra QSPI partition on `4 MiB` RP2350).
 
@@ -65,10 +67,11 @@ Audited adversarially across every silicon, electrical, DMA, QSPI, and protocol 
 | Platform | Asset(s) | Contents |
 | :--- | :--- | :--- |
 | **Windows (x86_64)** | `panadiga-windows-x86_64.zip` (+ `.sha256`) | `panadiga.exe`, `panadiga-desktop.exe`, Unified `panasonic_p7501_uart_unified.uf2`, `tools/ghidra/` & `.cmd` launchers |
-| **Linux (x86_64)** | `panadiga-linux-x86_64.tar.gz`, `panadiga-linux-amd64.deb` (+ `.sha256`) | `panadiga`, `panadiga-desktop`, `tools/ghidra/`, Freedesktop desktop launcher & Hicolor icons |
-| **macOS (Apple Silicon ARM64)** | `panadiga-macos-aarch64.tar.gz` (+ `.sha256`) | `panadiga`, `panadiga-desktop`, `tools/ghidra/` |
+| **Linux (x86_64)** | `panadiga-linux-x86_64.tar.gz`, `panadiga-linux-amd64.deb` (+ `.sha256`) | `panadiga`, `panadiga-desktop`, `panasonic_p7501_uart_unified.uf2`, `tools/ghidra/`, Freedesktop desktop launcher & Hicolor icons |
+| **macOS (Apple Silicon ARM64)** | `panadiga-macos-aarch64.tar.gz` (+ `.sha256`) | `panadiga`, `panadiga-desktop`, `panasonic_p7501_uart_unified.uf2`, `tools/ghidra/` |
 | **Android (ARM64 APK)** | `panadiga-android-arm64.apk` (+ `.sha256`) | Native Tauri 2 mobile APK with USB-C OTG CDC-ACM, BLE Nordic UART Service (NUS, `<= 20 B` GATT chunking), and **DIGA IR Commander** |
-| **Raspberry Pi Pico Probe** | `panasonic_p7501_uart_unified.uf2` (+ `.sha256`) | Single size-optimized (`-Os --gc-sections`, `629,248 B` / `1,229` blocks) C11 + PIO container serving both `RP2040` (`316,928 B`) and `RP2350` (`312,320 B`), sliced per target via `extract_uf2_family_slice` |
+| **Raspberry Pi Pico Probe** | `panasonic_p7501_uart_unified.uf2` (`SHA-256: 1af8da3e15ca65abc78e1a4fb4d3281e99d34cc5c968186584243de717b14077`) | Single size-optimized (`-Os --gc-sections`, `636,416 B` / `1,243` blocks) C11 + PIO container serving both `RP2040` (`320,512 B` UF2 / `160,208 B` ELF) and `RP2350` (`315,904 B` UF2 / `157,552 B` ELF), sliced per target via `extract_uf2_family_slice` |
+| **Checksums** | `SHA256SUMS.txt` | Master unified SHA-256 manifest covering every released binary artifact |
 | **Verified Firmware & Recovery Pack** | [Release `firmware-pack-v0.1.0`](https://github.com/orgchrono/Panadiga/releases/tag/firmware-pack-v0.1.0) | Companion archive of verified factory/repaired NOR, HDD, EEPROM & plaintext AM34 images + `FIRMWARE_SHA256SUMS.txt` |
 
 ---
@@ -85,15 +88,15 @@ Audited adversarially across every silicon, electrical, DMA, QSPI, and protocol 
 ## 4. Quality Gates — Automated Enforcement (`scripts/validate.py` — 9/9 PASS)
 
 ```text
-✅ Gate 1   — Rust Workspace (6 crates: cargo fmt, clippy --all-targets -D warnings, 329 workspace tests)
-✅ Gate 2   — Oxlint (0 warnings/errors across 378 files, 224 rules) + TypeScript Strict (tsc --noEmit)
-✅ Gate 3   — Vitest Frontend MVVM / Redux / Express / BLE / Parser Suite (125 tests across 38 files)
-✅ Gate 4   — jscpd Clone Detector (0 clones / 0.00% duplication across 1,024+ files)
-✅ Gate 5   — ux-guard UI/UX Completeness & State Integrity Audit (100/100, 0 issues across 378 files)
+✅ Gate 1   — Rust Workspace (6 crates: cargo fmt, clippy --all-targets -D warnings, 337 workspace tests)
+✅ Gate 2   — Oxlint (0 warnings/errors across 386 files, 224 rules) + TypeScript Strict (tsc --noEmit)
+✅ Gate 3   — Vitest Frontend MVVM / Redux / Express / BLE / Parser Suite (128 tests across 39 files)
+✅ Gate 4   — jscpd Clone Detector (0 clones / 0.00% duplication across 1,030+ files)
+✅ Gate 5   — ux-guard UI/UX Completeness & State Integrity Audit (100/100, 0 issues across 386 files)
 ✅ Gate 6   — Playwright E2E Chromium Headless Suite (27 tests across 9 specs, incl. Express Rescue Mode)
 ✅ Gate 7   — Multi-Language SSOT + Ghidra Jython Exporter (Idempotent export verification)
-✅ Gate 8   — C11 Pico Firmware Host Tests (47 sources, /std:c11 /W4 /WX) + ARM RP2040 & RP2350 Builds (0 frame warnings)
-✅ Gate 9   — Python (py_compile, mypy --strict, pytest scripts/tests — 32 passed)
+✅ Gate 8   — C11 Pico Firmware Host Tests (48 sources, /std:c11 /W4 /WX, 38 test suites/4 modules) + ARM RP2040 & RP2350 Builds
+✅ Gate 9   — Python (dynamic py_compile, mypy --strict scripts, pytest scripts/tests — 32 passed)
 ✅ Multi-CI — Windows x86_64 · Ubuntu x86_64 (.tar.gz + .deb) · macOS ARM64 · Android ARM64 APK · Pico RP2040/RP2350/Unified UF2
 ```
 

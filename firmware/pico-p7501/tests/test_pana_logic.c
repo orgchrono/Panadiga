@@ -220,6 +220,35 @@ static void test_pana_dumpnor_stub_and_args(void) {
 
     assert(!p7501_panarsp_parse_args("DUMPNOR 00000000 1000", &spec));
     assert(!p7501_panarsp_parse_args("DUMPNOR 847F0000", &spec));
+
+    /* IEEE 802.3 CRC32 standard test vector + 0xFF scanner + DUMPNOR ff_blocks tracker */
+    assert(p7501_crc32_ieee((const uint8_t *)"123456789", 9u) == 0xCBF43926UL);
+    uint8_t ff_block[264];
+    memset(ff_block, 0xFF, sizeof(ff_block));
+    assert(p7501_buf_is_all_ff(&ff_block[1], 256u));
+    assert(p7501_buf_count_non_ff(&ff_block[1], 256u) == 0u);
+    ff_block[17] = 0xA5u;
+    assert(!p7501_buf_is_all_ff(&ff_block[1], 256u));
+    assert(p7501_buf_count_non_ff(&ff_block[1], 256u) == 1u);
+
+    p7501_dumpnor_ff_tracker_t fft;
+    p7501_dumpnor_ff_tracker_init(&fft, 256u);
+    for (size_t i = 0u; i < 12u; ++i) {
+        p7501_dumpnor_ff_tracker_feed(&fft, (uint8_t)i);
+    }
+    for (size_t i = 0u; i < 256u; ++i) {
+        p7501_dumpnor_ff_tracker_feed(&fft, 0xFFu);
+    }
+    for (size_t i = 0u; i < 4u; ++i) {
+        p7501_dumpnor_ff_tracker_feed(&fft, 0x11u);
+    }
+    for (size_t i = 0u; i < 256u; ++i) {
+        p7501_dumpnor_ff_tracker_feed(&fft, (i == 9u) ? 0x5Au : 0xFFu);
+    }
+    for (size_t i = 0u; i < 4u; ++i) {
+        p7501_dumpnor_ff_tracker_feed(&fft, 0x22u);
+    }
+    assert(fft.total_blocks == 2u && fft.ff_blocks == 1u);
 }
 
 static bool buf_contains_bytes(const uint8_t *hay, size_t hlen, const void *needle, size_t nlen) {

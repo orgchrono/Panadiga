@@ -22,6 +22,10 @@ env:
   CARGO_TERM_COLOR: always
   CARGO_INCREMENTAL: "0"
   CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+  CARGO_PROFILE_DEV_DEBUG: "0"
+  CARGO_PROFILE_TEST_DEBUG: "0"
+  CARGO_PROFILE_RELEASE_LTO: "false"
+  CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "16"
 
 jobs:
   # ==========================================================================
@@ -128,17 +132,6 @@ jobs:
             target/pico-build/out/*.uf2
             target/pico-build/out/*.uf2.sha256
           retention-days: 30
-
-      - name: Publish Firmware to GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.tag_name != '')
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
-        with:
-          tag_name: ${{ inputs.tag_name || github.ref_name }}
-          files: |
-            target/pico-build/out/panasonic_p7501_uart_unified.uf2
-            target/pico-build/out/panasonic_p7501_uart_unified.uf2.sha256
-          body_path: .github/RELEASE_NOTES.md
-          generate_release_notes: false
 
   # ==========================================================================
   # 3. Multi-Platform Binary Compilation & Packaging (Windows, Linux, macOS)
@@ -254,6 +247,8 @@ jobs:
           mkdir -p "$staging/tools" "$staging/icons"
           cp "${{ matrix.platform.bin_cli }}" "$staging/panadiga"
           cp "${{ matrix.platform.bin_desktop }}" "$staging/panadiga-desktop"
+          UF2_SRC="crates/panadiga-core/src/pico/firmware_bins/panasonic_p7501_uart_unified.uf2"
+          if [ -f "$UF2_SRC" ]; then cp "$UF2_SRC" "$staging/panasonic_p7501_uart_unified.uf2"; fi
           if [ -d "tools/ghidra" ]; then cp -r tools/ghidra "$staging/tools/ghidra"; fi
           if [ -f "tools/README.md" ]; then cp tools/README.md "$staging/tools/README.md"; fi
           if [ -f "apps/desktop/src-tauri/icons/128x128.png" ]; then cp apps/desktop/src-tauri/icons/128x128.png "$staging/icons/panadiga.png"; fi
@@ -308,6 +303,9 @@ jobs:
               'StartupWMClass=panadiga-desktop' \
               > "$deb_dir/usr/share/applications/panadiga.desktop"
             chmod 644 "$deb_dir/usr/share/applications/panadiga.desktop"
+            if [ -f "crates/panadiga-core/src/pico/firmware_bins/panasonic_p7501_uart_unified.uf2" ]; then
+              cp "crates/panadiga-core/src/pico/firmware_bins/panasonic_p7501_uart_unified.uf2" "$deb_dir/usr/share/panadiga/panasonic_p7501_uart_unified.uf2"
+            fi
             if [ -d "tools/ghidra" ]; then cp -r tools/ghidra "$deb_dir/usr/share/panadiga/tools/ghidra"; fi
             if [ -f "tools/README.md" ]; then cp tools/README.md "$deb_dir/usr/share/panadiga/tools/README.md"; fi
             printf '%s\n' \
@@ -319,7 +317,9 @@ jobs:
             cp "$deb_dir/DEBIAN/postinst" "$deb_dir/DEBIAN/postrm"
             chmod 755 "$deb_dir/DEBIAN/postinst" "$deb_dir/DEBIAN/postrm"
             DEB_VERSION="${GITHUB_REF_NAME#v}"
-            if [ -z "$DEB_VERSION" ] || [ "$DEB_VERSION" = "main" ]; then DEB_VERSION="0.2.0"; fi
+            if [ -z "$DEB_VERSION" ] || [ "$DEB_VERSION" = "main" ] || [ "$DEB_VERSION" = "HEAD" ]; then
+              DEB_VERSION="$(grep -m1 '^version = ' Cargo.toml | cut -d'"' -f2)"
+            fi
             printf "Package: panadiga\nVersion: %s\nSection: utils\nPriority: optional\nArchitecture: amd64\nMaintainer: OrgChrono Engineering <support@orgchrono.com>\nDepends: libc6, libwebkit2gtk-4.1-0, libayatana-appindicator3-1 | libappindicator3-1\nDescription: Panasonic DIGA DMR-EH55 Forensic, NVRAM and Reverse Engineering Suite\n" "$DEB_VERSION" > "$deb_dir/DEBIAN/control"
             dpkg-deb --build "$deb_dir" "panadiga-linux-amd64.deb"
             shasum -a 256 "panadiga-linux-amd64.deb" > "panadiga-linux-amd64.deb.sha256"
@@ -345,34 +345,6 @@ jobs:
             panadiga-linux-amd64.deb.sha256
           if-no-files-found: error
           retention-days: 14
-
-      - name: Publish to GitHub Release (Windows)
-        if: (startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.tag_name != '')) && runner.os == 'Windows'
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
-        with:
-          tag_name: ${{ inputs.tag_name || github.ref_name }}
-          files: |
-            ${{ matrix.platform.archive_name }}
-            ${{ matrix.platform.archive_name }}.sha256
-          body_path: .github/RELEASE_NOTES.md
-          generate_release_notes: false
-          draft: false
-          prerelease: false
-
-      - name: Publish to GitHub Release (Linux & macOS)
-        if: (startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.tag_name != '')) && runner.os != 'Windows'
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
-        with:
-          tag_name: ${{ inputs.tag_name || github.ref_name }}
-          files: |
-            ${{ matrix.platform.archive_name }}
-            ${{ matrix.platform.archive_name }}.sha256
-            ${{ runner.os == 'Linux' && 'panadiga-linux-amd64.deb' || '' }}
-            ${{ runner.os == 'Linux' && 'panadiga-linux-amd64.deb.sha256' || '' }}
-          body_path: .github/RELEASE_NOTES.md
-          generate_release_notes: false
-          draft: false
-          prerelease: false
 
   # ==========================================================================
   # 4. Android Mobile APK Build & Release (AArch64)
@@ -405,12 +377,12 @@ jobs:
       - name: Install stable Rust toolchain
         uses: dtolnay/rust-toolchain@39008827e6b4319a349e9a42dfc90579dd25f1ca # stable
         with:
-          targets: aarch64-linux-android
+          targets: aarch64-linux-android, armv7-linux-androideabi
 
       - name: Rust Cache
         uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         with:
-          key: release-aarch64-linux-android
+          key: release-android-dual-abi
 
       - name: Setup Gradle Cache
         uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
@@ -444,7 +416,7 @@ jobs:
           name: panasonic_p7501_uart_firmware_binaries
           path: crates/panadiga-core/src/pico/firmware_bins
 
-      - name: Build Android Release APK
+      - name: Build, Sign & Verify Android Release APK
         run: |
           export ANDROID_NDK_ROOT=$NDK_HOME
           touch apps/desktop/dist-android/index.html
@@ -452,24 +424,70 @@ jobs:
           if [ ! -d "src-tauri/gen/android" ]; then
             npx --yes @tauri-apps/cli android init --ci --skip-targets-install
           fi
-          npx --yes @tauri-apps/cli android build --apk --target aarch64 --ci --config src-tauri/tauri.android.conf.json
+          npx --yes @tauri-apps/cli android build --apk --ci --config src-tauri/tauri.android.conf.json --target aarch64 armv7
           cd ../..
           mkdir -p release-apk
-          APK_PATH=$(find apps/desktop/src-tauri/gen/android -type f -name "*.apk" | head -n 1)
-          if [ -z "$APK_PATH" ]; then
+          RAW_APK_PATH=$(find apps/desktop/src-tauri/gen/android/app/build/outputs/apk -type f -path "*/universal/release/*.apk" | head -n 1)
+          if [ -z "$RAW_APK_PATH" ]; then
+            RAW_APK_PATH=$(find apps/desktop/src-tauri/gen/android/app/build/outputs/apk -type f -name "*-release*.apk" | head -n 1)
+          fi
+          if [ -z "$RAW_APK_PATH" ]; then
             echo "ERROR: Android release APK not found under apps/desktop/src-tauri/gen/android." >&2
             exit 1
           fi
-          cp "$APK_PATH" release-apk/panadiga-android-arm64.apk
+          python3 -m scripts.build_lanes.android_verify --sign-and-verify "$RAW_APK_PATH" release-apk/panadiga-android-arm64.apk
           shasum -a 256 "release-apk/panadiga-android-arm64.apk" > "release-apk/panadiga-android-arm64.apk.sha256"
 
-      - name: Publish Android APK to GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.tag_name != '')
+      - name: Upload Android APK Artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: panadiga-android-apk
+          path: |
+            release-apk/panadiga-android-arm64.apk
+            release-apk/panadiga-android-arm64.apk.sha256
+          if-no-files-found: error
+          retention-days: 14
+
+  # ==========================================================================
+  # 5. Unified Atomic GitHub Release Publisher + Master SHA256SUMS.txt
+  # ==========================================================================
+  publish-release:
+    name: Publish Atomic GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.tag_name != '')
+    needs: [pico-firmware, build-release, release-android-apk]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout Release Notes
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          sparse-checkout: .github/RELEASE_NOTES.md
+
+      - name: Download Pico Firmware Artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: panasonic_p7501_uart_firmware_binaries
+          path: dist-release
+
+      - name: Download Desktop & Android Artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: "panadiga-*"
+          merge-multiple: true
+          path: dist-release
+
+      - name: Generate Unified SHA256SUMS.txt
+        run: |
+          cd dist-release
+          sha256sum panasonic_p7501_uart_unified.uf2 panadiga-*.zip panadiga-*.tar.gz panadiga-*.deb panadiga-*.apk > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Publish All Assets Atomically to GitHub Release
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           tag_name: ${{ inputs.tag_name || github.ref_name }}
-          files: |
-            release-apk/panadiga-android-arm64.apk
-            release-apk/panadiga-android-arm64.apk.sha256
+          files: dist-release/*
           body_path: .github/RELEASE_NOTES.md
           generate_release_notes: false
+          draft: false
+          prerelease: false

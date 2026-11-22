@@ -7,7 +7,9 @@
 
 #include "diag/p7501_ir_kaseikyo.h"
 #include "cli/p7501_cli.h"
+#include "common/p7501_hex.h"
 #include "diag/p7501_ir_codec.h"
+#include "uart/p7501_uart_codec.h"
 #include "hal/p7501_hw.h"
 #include "hal/p7501_led.h"
 #include "hal/p7501_watchdog.h"
@@ -109,6 +111,15 @@ void p7501_cmd_irtx(const char *arg) {
            (unsigned)spec.frame[5]);
 }
 
+static void ir_format_frame12(const uint8_t frame[6], char out[13]) {
+    static const char hex[] = "0123456789ABCDEF";
+    for (size_t i = 0; i < 6u; ++i) {
+        out[i * 2u] = hex[(frame[i] >> 4u) & 0x0Fu];
+        out[(i * 2u) + 1u] = hex[frame[i] & 0x0Fu];
+    }
+    out[12] = '\0';
+}
+
 void p7501_cmd_irrx(const char *arg) {
     uint32_t window_ms = 5000u;
     uint32_t gpio = P7501_IR_DEFAULT_RX_GPIO;
@@ -175,7 +186,9 @@ void p7501_cmd_irrx(const char *arg) {
     }
 
     const char *preset = p7501_ir_lookup_preset_name(res.dev, res.sub, res.cmd);
-    printf("IRRX: OK (gpio=GP%" PRIu32 " pulses=%u valid=%s parity=%s dev=0x%02X sub=0x%02X cmd=0x%02X preset=%s frame=%02X%02X%02X%02X%02X%02X)\n",
+    char frame_hex[13];
+    ir_format_frame12(res.frame, frame_hex);
+    printf("IRRX: OK (gpio=GP%" PRIu32 " pulses=%u valid=%s parity=%s dev=0x%02X sub=0x%02X cmd=0x%02X preset=%s frame=%s)\n",
            gpio,
            (unsigned)count,
            res.valid ? "YES" : "NO",
@@ -184,10 +197,52 @@ void p7501_cmd_irrx(const char *arg) {
            (unsigned)res.sub,
            (unsigned)res.cmd,
            (preset != NULL) ? preset : "CUSTOM",
-           (unsigned)res.frame[0],
-           (unsigned)res.frame[1],
-           (unsigned)res.frame[2],
-           (unsigned)res.frame[3],
-           (unsigned)res.frame[4],
-           (unsigned)res.frame[5]);
+           frame_hex);
+}
+
+void p7501_cmd_ir(const char *arg) {
+    char sub[16] = {0};
+    const char *rest = p7501_next_token(arg, sub, sizeof(sub));
+    if (p7501_ascii_ieq(sub, "TX")) {
+        p7501_cmd_irtx(rest);
+        return;
+    }
+    if (p7501_ascii_ieq(sub, "RX")) {
+        p7501_cmd_irrx(rest);
+        return;
+    }
+    if (!p7501_ascii_ieq(sub, "VERIFY") || (rest == NULL) || (*rest == '\0')) {
+        p7501_cli_set_result("ERR", "EINVAL");
+        printf("IR: ERROR (Usage: IR VERIFY <12hex> | IR TX <...> | IR RX [ms])\n");
+        return;
+    }
+    char frame_tok[24] = {0};
+    (void)p7501_next_token(rest, frame_tok, sizeof(frame_tok));
+    p7501_ir_decode_result_t res;
+    if (!p7501_ir_verify_hex_frame(frame_tok, &res)) {
+        p7501_cli_set_result("ERR", "EINVAL");
+        printf("IR: ERROR (Invalid 48-bit Kaseikyo hex frame '%s')\n", frame_tok);
+        return;
+    }
+    const bool all_ok = res.valid;
+    const char *preset = p7501_ir_lookup_preset_name(res.dev, res.sub, res.cmd);
+    char frame_hex[13];
+    ir_format_frame12(res.frame, frame_hex);
+    char extra[80];
+    (void)snprintf(
+        extra,
+        sizeof(extra),
+        "mode=VERIFY frame=%s parity=%s",
+        frame_hex,
+        all_ok ? "OK" : "ERR"
+    );
+    p7501_cli_set_result_extra(extra);
+    printf("[IR] VERIFY frame=%s oem=%s xor=0x%02X/0x%02X parity=%s preset=%s\n",
+           frame_hex,
+           res.vendor_ok ? "OK" : "ERR",
+           (unsigned)res.xor_rx,
+           (unsigned)res.xor_expected,
+           all_ok ? "OK" : "ERR",
+           (preset != NULL) ? preset : "CUSTOM");
+    printf("IR: OK (mode=VERIFY parity=%s)\n", all_ok ? "OK" : "ERR");
 }

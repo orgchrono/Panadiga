@@ -40,6 +40,7 @@ C11_HOST_SOURCES: Final[tuple[str, ...]] = (
     "firmware/pico-p7501/flash/p7501_vault_codec.c",
     "firmware/pico-p7501/flash/p7501_target_bus.c",
     "firmware/pico-p7501/uart/p7501_pana_dumpnor.c",
+    "firmware/pico-p7501/uart/p7501_pana_dumpnor_verify.c",
     "firmware/pico-p7501/uart/p7501_pana_jedec_stubs.c",
     "firmware/pico-p7501/uart/p7501_pana_jedec_exec.c",
     "firmware/pico-p7501/uart/p7501_pana_jedec_id.c",

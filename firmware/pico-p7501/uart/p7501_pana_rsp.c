@@ -93,6 +93,7 @@ void p7501_cmd_pana_rsp(const char *arg) {
     bool dump_hdr = false;
     bool dump_ftr = false;
     uint32_t dump_bytes = 0u;
+    uint32_t dump_ff_blocks = 0u;
     const char *jedec_err_code = NULL;
     if (triggered) {
         p7501_wdt_set_stage(P7501_WDT_STAGE_TX_WAIT);
@@ -153,7 +154,7 @@ void p7501_cmd_pana_rsp(const char *arg) {
             case PANA_RSP_ACT_FAST_DUMPNOR:
             case PANA_RSP_ACT_DUMPNOR_RESUME:
                 primary_off = panarsp_execute_dumpnor(
-                    cap, sp, &dump_hdr, &dump_ftr, &dump_bytes
+                    cap, sp, &dump_hdr, &dump_ftr, &dump_bytes, &dump_ff_blocks
                 );
                 break;
             case PANA_RSP_ACT_JEDEC_ERASE:
@@ -210,9 +211,21 @@ void p7501_cmd_pana_rsp(const char *arg) {
         if (triggered && !dump_ftr && !ebaud) {
             p7501_cli_set_result("ERR", "EIO");
         }
-        printf("\nPANARSP: %s (dump_rx=%" PRIu32 " bytes, hdr=%s, ftr=%s, fifo_ovf=%s)\n",
+        char dump_extra[64];
+        (void)snprintf(
+            dump_extra,
+            sizeof(dump_extra),
+            "sub=%s ff_blocks=%lu",
+            (sp->action == PANA_RSP_ACT_DUMPNOR_RESUME)
+                ? "DUMPNOR_RESUME"
+                : ((sp->action == PANA_RSP_ACT_FAST_DUMPNOR) ? "FAST_DUMPNOR" : "DUMPNOR"),
+            (unsigned long)dump_ff_blocks
+        );
+        p7501_cli_set_result_extra(dump_extra);
+        printf("\nPANARSP: %s (dump_rx=%" PRIu32 " bytes, ff_blocks=%" PRIu32 ", hdr=%s, ftr=%s, fifo_ovf=%s)\n",
                (triggered && dump_ftr) ? "OK" : "PARTIAL",
                dump_bytes,
+               dump_ff_blocks,
                dump_hdr ? "YES" : "NO",
                dump_ftr ? "YES" : "NO",
                fifo_ovf ? "YES" : "NO");

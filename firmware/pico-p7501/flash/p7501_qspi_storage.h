@@ -25,6 +25,9 @@ uint32_t p7501_qspi_total_bytes(void);
 /** Return XIP read pointer for a QSPI flash byte offset. */
 const uint8_t *p7501_qspi_xip_ptr(uint32_t qspi_offset);
 
+/** Compute IEEE CRC32 over an XIP/RAM buffer in WDT-kicked 4 KiB slices using nibble LUT. */
+uint32_t p7501_qspi_crc32_fast(const uint8_t *buf, size_t len);
+
 /** Compute IEEE CRC32 over active `P0_FW_RO` binary image up to `__flash_binary_end`. */
 uint32_t p7501_qspi_firmware_crc32(uint32_t *out_bytes);
 

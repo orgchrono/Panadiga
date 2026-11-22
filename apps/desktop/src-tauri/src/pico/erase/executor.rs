@@ -6,8 +6,8 @@
 use std::time::{Duration, Instant};
 
 use super::backup::{
-    dump_p7501_region_bytes, is_uniform_bus_pattern, resolve_ident_nvram_base_hex,
-    save_live_backup_files, sha256_hex, with_p7501_handshake,
+    dump_p7501_region_bytes, dump_sram_and_ipl_backups, is_uniform_bus_pattern,
+    resolve_ident_nvram_base_hex, save_live_backup_files, sha256_hex, with_p7501_handshake,
 };
 use crate::commands::error::{IpcResult, PanadigaIpcError};
 use crate::pico::serial::read_serial_response_complete;
@@ -87,8 +87,7 @@ pub fn pico_execute_in_circuit_erase_full(
                 &nv_sha256_2[..16]
             )));
         }
-        let sr_bytes = dump_p7501_region_bytes(port, "0x00000000", 4096, 6000);
-        let ipl_bytes = dump_p7501_region_bytes(port, "0x80000000", 1024, 4000);
+        let (sr_bytes, ipl_bytes) = dump_sram_and_ipl_backups(port);
         if sr_bytes.len() != 16384 || ipl_bytes.len() != 4096 || is_uniform_bus_pattern(&ipl_bytes)
         {
             return Err(PanadigaIpcError::serial(format!(

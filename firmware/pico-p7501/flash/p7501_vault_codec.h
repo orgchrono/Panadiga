@@ -137,7 +137,40 @@ bool p7501_vault_write_slot_hw(
     const char *model_tag
 );
 
-/** CLI command `VAULT [STATUS|LIST|DUMP <1..3>|ERASE <1..3> CONFIRM]`. */
+/** Callback computing IEEE CRC32 over `len` bytes at `buf` (in-memory or XIP-paged). */
+typedef uint32_t (*p7501_vault_crc32_fn_t)(const uint8_t *buf, size_t len);
+
+/** Verify `slot_index` (`1..3`) payload CRC32 + non-`0xFF` byte count using caller-supplied CRC32 fn. */
+bool p7501_vault_verify_slot_with_crc(
+    const p7501_vault_manifest_t *m,
+    uint8_t slot_index,
+    const uint8_t *slot_payload,
+    size_t payload_buf_len,
+    p7501_vault_crc32_fn_t crc_fn,
+    uint32_t *out_crc32,
+    uint32_t *out_non_ff_bytes,
+    bool *out_crc_mismatch
+);
+
+/** Pure C11 slot payload CRC32 + non-`0xFF` byte verification on an in-memory buffer. */
+bool p7501_vault_verify_slot_buffer(
+    const p7501_vault_manifest_t *m,
+    uint8_t slot_index,
+    const uint8_t *slot_payload,
+    size_t payload_buf_len,
+    uint32_t *out_crc32,
+    uint32_t *out_non_ff_bytes,
+    bool *out_crc_mismatch
+);
+
+/** Verify an active `P2_VAULT` slot in hardware QSPI via XIP CRC32 + non-`0xFF` byte scan. */
+bool p7501_vault_verify_slot(
+    uint8_t slot_idx,
+    uint32_t *out_crc32,
+    uint32_t *out_non_ff_bytes
+);
+
+/** CLI command `VAULT [STATUS|LIST|VERIFY <1..3>|DUMP <1..3>|ERASE <1..3> CONFIRM]`. */
 void p7501_cmd_vault(const char *arg);
 
 #ifdef __cplusplus

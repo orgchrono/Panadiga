@@ -5,61 +5,65 @@
 ## Panadiga — Especificação Mestre de Decomposição Modular, Silício e Invariantes
 
 > **Classificação:** Documento Mestre de Engenharia de Software e Hardware  
-> **Escopo:** Core Rust, Desktop UI (Tauri 2 / React), Firmware RP2040/RP2350, Android Mobile, RAG & Forense  
+> **Escopo:** Workspace Rust (6 crates, `panadiga-profiles` data-driven), Desktop/Express UI (Tauri 2 / React 19), Firmware Pico RP2040/RP2350 Zero-Gadget, Android Mobile (OTG/BLE/IR), RAG & Forense  
 > **Status:** Normativo / Aprovado  
 
 ---
 
 ## 1. Visão Geral da Arquitetura do Ecossistema
 
-O **Panadiga** é uma suíte integrada de engenharia reversa, análise forense de armazenamento, recuperação de firmware (com foco na resolução do erro crítico **`U99`**) e instrumentação de baixo nível para gravadores digitais **Panasonic DIGA (DMR-EH55)** baseados no processador **Matsushita AM34 (MN103S)**.
+O **Panadiga** é uma suíte integrada de engenharia reversa, análise forense de armazenamento, recuperação de firmware (com foco na resolução do erro crítico **`U99`**) e instrumentação de baixo nível para **89 modelos** de gravadores digitais **Panasonic DIGA** (referência principal **DMR-EH55** no SoC **Matsushita AM34 / MN103S**, PCB `VEP79138`).
 
-O sistema opera segundo o modelo de **Camadas Desacopladas com Comunicação Unidirecional Restrita**:
+O sistema opera segundo o paradigma **Functional Core (100% Determinístico) + Imperative Shell** e **Camadas Desacopladas com Comunicação Unidirecional Restrita**:
 
 ```mermaid
 flowchart TD
-    subgraph Presentation["1. Camada de Apresentação e Interação (UI & MVVM)"]
-        DESKTOP["Desktop Workbench (Tauri 2 / React 18)"]
-        MOBILE["Mobile App (Android APK / Webview)"]
-        TUI["Terminal UI Interativo (Ratatui)"]
-        CLI["Interface de Linha de Comando (Clap v4)"]
-        VIEWMODELS["ViewModels Estritos (ADTs / Discriminated Unions)<br/>- EraseState | SerialState | GdbState"]
+    subgraph Presentation["1. Camada de Apresentação e Host (UI & MVVM)"]
+        DESKTOP["Desktop Workbench (Tauri 2 / React 19 / ExpressView)"]
+        MOBILE["Android APK (aarch64 / USB-OTG / BLE / IrCommanderView)"]
+        TUI["Terminal UI e CLI Unificada (panadiga / Clap v4 / Ratatui)"]
+        VIEWMODELS["ViewModels Estritos (ADTs: EraseState / SerialState / GdbState)"]
         DESKTOP --- VIEWMODELS
         MOBILE --- VIEWMODELS
     end
 
-    subgraph Orchestration["2. Camada de Orquestração & IPC"]
-        IPC["Tauri IPC Commands / Subprocess Bridge"]
-        LOG_BUS["PanadigaLogger (Barramento Reativo de Eventos)<br/>Zero console.log / Zero println!"]
+    subgraph Orchestration["2. Orquestração, IPC & Serviços de Borda"]
+        IPC["Tauri IPC Commands / Subprocess / PanadigaLogger"]
+        MCP["Servidor MCP stdio (panadiga-mcp: 25 tools + profiles resources)"]
+        RAG["Motor RAG Zero-Error (panadiga-rag: 6 escudos + 32 PDFs)"]
         VIEWMODELS --> IPC
-        VIEWMODELS -.-> LOG_BUS
     end
 
-    subgraph Core["3. Núcleo de Engenharia & Pure Domain (Rust Core Engine)"]
-        SSOT["SSOT de Constantes (AM34 Memory Map, Offsets MEIHDFS)"]
-        FP_FORENSICS["Forensics Pure Domain (&[u8] Imutável)<br/>- inspect_hdd_slice_pure<br/>- clean_nvram_slice<br/>- calculate_entropy"]
-        GDB_BRIDGE["Bridge GDB RSP Introspectivo (:3333)<br/>- Anel de Telemetria Circular (Zero-Loss)<br/>- Validador Léxico de Checksums RSP"]
-        SSOT --- FP_FORENSICS
-        SSOT --- GDB_BRIDGE
+    subgraph Core["3. Functional Core 100% Determinístico & Data-Driven SSOT"]
+        PROFILES["SSOT Relacional (panadiga-profiles + profiles/: 89 modelos, 12 Schemas, T0..T4)"]
+        FP_FORENSICS["Pure Domain (slices imutáveis: MEIHFS, NVRAM, Vault raw/frm/recompiled, Entropia)"]
+        EMULATOR["Gate Pré-Gravação Mn103Vm + Cleanroom FAT16B / ISO9660 / Streaming HDD"]
+        GDB_BRIDGE["Bridge GDB RSP Introspectivo (:3333 / RingBuffer + Checksum)"]
+        PROFILES --- FP_FORENSICS
+        FP_FORENSICS --- EMULATOR
         IPC --> Core
+        MCP --> Core
+        RAG --> PROFILES
     end
 
-    subgraph HAL["4. Camada de Abstração de Hardware (HAL & Protocolos)"]
-        USB_SERIAL["Driver CDC Serial (USB OTG / Virtual COM)"]
-        BLE_NUS["Driver Nordic UART Service (Bluetooth Low Energy)"]
-        UART_TRANS["Transceptor UART P7501 115200 8N1 (PIO C11)"]
+    subgraph HAL["4. Sonda Zero-Gadget (P0_FW_RO = 256 KiB / RP2040 & RP2350)"]
+        USB_SERIAL["Ponte USB-C OTG / CDC Virtual COM (Desktop & Android)"]
+        BLE_NUS["Ponte Bluetooth BLE Nordic UART Service (Smartphone)"]
+        UART_TRANS["Firmware C11/PIO (P7501 115200 8N1, VAULT VERIFY, IR VERIFY, DUMPNOR ff_blocks)"]
         GDB_BRIDGE --> USB_SERIAL
         GDB_BRIDGE --> BLE_NUS
+        MOBILE --> BLE_NUS
+        MOBILE --> USB_SERIAL
         USB_SERIAL --> UART_TRANS
         BLE_NUS --> UART_TRANS
     end
 
-    subgraph TargetHW["5. Alvo Físico de Silício (Panasonic DMR-EH55)"]
+    subgraph TargetHW["5. Alvo Físico de Silício (Panasonic DIGA VEP79138)"]
         P7501["Conector P7501 (JST B6B-ZR-3R4 'TO JIGU')"]
         SOC["SoC Matsushita AM34 (MN103S)"]
         FLASH["NOR Flash Spansion S29JL064H (IC5001, 8 MB TSOP-48)"]
-        HDD["Disco PATA/IDE (Layout MEIHDFS / Superbloco 'SH')"]
-        UART_TRANS <-->|"UART Assíncrona 115200 8N1 (3.3V LVTTL / NSW5V Hi-Z)"| P7501
+        HDD["Disco PATA/IDE / SATA (MEIHDFS / MBR 'SH')"]
+        UART_TRANS <-->|"UART 115200 8N1 (3.3V LVTTL / NSW5V Hi-Z / XRESET Open-Drain)"| P7501
         P7501 <--> SOC
         SOC <--> FLASH
         SOC <--> HDD
@@ -94,13 +98,17 @@ A depuração in-circuit do núcleo AM34 através do conector P7501 exige taxa d
 - **Anel Circular em Memória (`GdbTelemetryRingBuffer`)**: Armazena os últimos $N$ eventos de barramento com capacidade fixa, evitando alocação contínua de memória durante sessões de depuração prolongadas.
 - **Validação Formal de Checksums RSP**: Cada pacote recebido (`$<dados>#<checksum>`) passa por verificação léxica rigorosa. Pacotes corrompidos disparam retransmissão imediata (`-`), blindando o depurador contra ruído eletromagnético em bancada.
 
-### 2.4 SSOT (Single Source of Truth) e Eliminação de Hardcode
-- **Constantes Canônicas Centralizadas**: O arquivo [`crates/panadiga-core/src/constants.rs`](file:///C:/Users/danie/Documents/Panadiga/crates/panadiga-core/src/constants.rs) é a única autoridade no repositório para o mapeamento de memória do SoC Matsushita AM34 (`AM34_SYSTEM_MEMORY_REGIONS`), pinagens de conectores e caminhos candidatos.
-- **Tolerância Zero a Clones (`jscpd`)**: A base de código do frontend mantém **0.00% de duplicação**, prevenindo divergência lógica entre telas de recuperação e terminais seriais.
+### 2.4 SSOT Data-Driven, Codegen Multi-Alvo e Zero Hardcode
+- **Perfis Relacionais & Portão `T0..T4` (`panadiga-profiles` + `profiles/`):** A crate dedicada [`crates/panadiga-profiles/`](../../crates/panadiga-profiles/) modela **89 gravadores DIGA** em 10 famílias relacionais (`soc_cores`, `socs`, `boards`, `flash_chips`, `eeprom_chips`, `firmware_trains`, `nor_layouts`, `media_formats`, `models`) validadas contra **12 JSON Schemas** Draft 2020-12 (`profiles/schema/`), gerando código SSOT sincronizado para TypeScript ([`apps/desktop/src/models/generated/`](../../apps/desktop/src/models/generated/)) e C11 ([`firmware/pico-p7501/generated/p7501_ssot.h`](../../firmware/pico-p7501/generated/p7501_ssot.h)).
+- **Constantes Canônicas & Catálogo Visual:** O módulo [`crates/panadiga-core/src/constants/`](../../crates/panadiga-core/src/constants/) e [`hardware_catalog.json`](../../crates/panadiga-core/src/ssot/hardware_catalog.json) são a única autoridade para mapas AM34, regiões BGO e pinagens `P7501`.
+- **Tolerância Zero a Clones (`jscpd`):** Toda a codebase mantém **0.00% de duplicação** (`threshold: 0`).
 
-### 2.5 Subsistema de Logging Estruturado
-- Proibição estrita de chamadas `println!`, `eprintln!` ou `console.log` soltas na base de código.
-- Todas as mensagens passam pelo `PanadigaLogger` (TypeScript) e pelo ecossistema `tracing` / `log` (Rust), com filtros por severidade (`debug`, `info`, `warn`, `error`) e múltiplos sinks desacoplados.
+### 2.5 Cofre Forense, Emulador `Mn103Vm` e Isolamento de Logging
+- **Isolamento Estrito de Artefatos (`vault/` & `ingest/`):** Separa fisicamente capturas `raw/`, contêineres `.FRM` (`frm/`) e saídas recompiladas (`recompiled/`), garantindo que imagens cleanroom FAT16B (`32 MiB`), ISO 9660 e *streaming flash* composto MEIHFS passem pelo gate pré-gravação na VM **`Mn103Vm`** (`re/prewrite_gate/`) antes de tocar qualquer mídia.
+- **Logging Determinístico Sem Poluição:** Proibição estrita de `println!`/`console.log` soltos em produção. `crates/panadiga-core/src/logger.rs` suporta overrides *thread-local* (`with_thread_log_level` / `ThreadLogSinkGuard`) garantindo determinismo em testes paralelos (`cargo test`).
+
+### 2.6 Decisão Arquitetural v0.2.0 — Sonda Pico Zero-Gadget + Celular/Desktop
+- Em vez de acoplar displays OLED `SSD1306`, buzzers ou botões externos à sonda Raspberry Pi Pico (que introduziriam ruído elétrico, dependência de montagem e pressão de espaço), o **Smartphone Android (via USB-C OTG ou BLE NUS)** e o **Workbench Desktop Tauri 2** (com o **Modo Express Rescue** em `ExpressView.tsx` e **DIGA Commander IR** em `IrCommanderView.tsx`) atuam como visor, síntese áudio/visual e controlador IR. A sonda mantém-se compacta (`~157–160 KiB` dentro da partição `P0_FW_RO` de `256 KiB`) realizando UART `P7501`, GDB RSP, `VAULT VERIFY <1..3>`, `IR VERIFY <12hex>`/`IRTX`/`IRRX`, `DUMPNOR ff_blocks` e CRC32 nibble-LUT.
 
 ---
 
@@ -124,17 +132,17 @@ A depuração in-circuit do núcleo AM34 através do conector P7501 exige taxa d
 ## 4. Matriz de Segurança e Prevenção de Danos Físicos
 
 ```mermaid
-graph TD
+flowchart TD
     REQ["Operação de Bancada Solicitada"] --> CHECK_V{"Tensão <= 3.3V LVTTL?"}
-    CHECK_V -- "Não (> 3.3V)" --> ABORT_V["BLOQUEIO FÍSICO IMEDIATO<br/>Risco de queima permanente do SoC UniPhier"]
+    CHECK_V -- "Não (> 3.3V)" --> ABORT_V["BLOQUEIO FÍSICO IMEDIATO (Risco de queima do SoC AM34)"]
     CHECK_V -- "Sim (3.3V)" --> CHECK_REG{"Região Alvo de Gravação?"}
     
-    CHECK_REG -- "0x80000000..0x8003FFFF (Camada 1 IPL)" --> ABORT_BOOT["BLOQUEIO PERMANENTE (Erro E05)<br/>IPL Crítico SA0..SA10 é Read-Only"]
-    CHECK_REG -- "0x80040000..0x807EFFFF (Camada 2 BGO)" --> CHECK_OPTIN{"CONFIRM_UPPER_NOR<br/>+ Backup 8 MiB SHA-256?"}
-    CHECK_OPTIN -- "Não" --> ABORT_UPPER["BLOQUEIO PADRÃO (Erro E05)<br/>Requer opt-in para cura U99/BGO"]
-    CHECK_OPTIN -- "Sim (Aparelho Bricado)" --> WARN_BGO["PERMITIDO COM ALERTA DE RISCO<br/>Aguardar ~700 ms / 0xFF×32"]
-    CHECK_REG -- "0x807F0000..0x807FFFFF (Camada 3 NVRAM)" --> ALLOW_NVRAM["PERMISSÃO CONCEDIDA<br/>Sanitização dos 64 KB EEMUL"]
-    CHECK_REG -- "P7501 Pino 5 (NSW5V) / 0xC000100C" --> ABORT_PWR["BLOQUEIO ELÉTRICO / MMIO<br/>NSW5V Hi-Z / Registrador Letal"]
+    CHECK_REG -- "0x80000000..0x8003FFFF (Camada 1 IPL)" --> ABORT_BOOT["BLOQUEIO PERMANENTE E05 (IPL SA0..SA10 é Read-Only)"]
+    CHECK_REG -- "0x80040000..0x807EFFFF (Camada 2 BGO)" --> CHECK_OPTIN{"CONFIRM_UPPER_NOR + Backup 8 MiB SHA-256?"}
+    CHECK_OPTIN -- "Não" --> ABORT_UPPER["BLOQUEIO PADRÃO E05 (Requer opt-in para cura U99/BGO)"]
+    CHECK_OPTIN -- "Sim (Aparelho Bricado)" --> WARN_BGO["PERMITIDO COM ALERTA (Aguardar ~700 ms / 0xFFx32)"]
+    CHECK_REG -- "0x807F0000..0x807FFFFF (Camada 3 NVRAM)" --> ALLOW_NVRAM["PERMISSÃO CONCEDIDA (Sanitização 64 KB EEMUL)"]
+    CHECK_REG -- "P7501 Pino 5 (NSW5V) / 0xC000100C" --> ABORT_PWR["BLOQUEIO ELÉTRICO / MMIO (NSW5V Hi-Z / Registrador Letal)"]
 ```
 
 1. **Invariante 1: Tensão Máxima de 3.3V & Proteção `NSW5V` + MMIO Letal**: Os sinais lógicos de comunicação e controle em `P7501` (`SW_UART`, `XRESET` Open-Drain, `UARTM2P_T`, `UARTP2M_T`) e a Flash `IC5001` operam em **3.3V LVTTL**; o **Pino 5 (`NSW5V` / `GP3`)** provém de `IC1506` (`~5.15V` via `D7510`, medido `~3.29V` em repouso) e **DEVE permanecer SEMPRE como entrada `Hi-Z` sem pulls (NUNCA dirigir push-pull!)**, e o registrador `0xC000100C` é estritamente bloqueado (trava barramento/WDT).
