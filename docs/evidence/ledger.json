@@ -41,7 +41,7 @@
         },
         {
           "path": "firmware_and_images/sd_unbrick_kit/PANA__SD.FRM",
-          "sha256": "1E62C6411D132286D580AA82AD6B53C7E19041B7BE2333C28790800F4958557F",
+          "sha256": "2D3D62A75731F150762F269E3B650E83307DA983D8D4BF222EC078B45298D9D0",
           "required": true
         }
       ],
@@ -149,7 +149,7 @@
         },
         {
           "path": "firmware_and_images/sd_unbrick_kit/PANA__SD.FRM",
-          "sha256": "1E62C6411D132286D580AA82AD6B53C7E19041B7BE2333C28790800F4958557F",
+          "sha256": "2D3D62A75731F150762F269E3B650E83307DA983D8D4BF222EC078B45298D9D0",
           "required": true
         }
       ],

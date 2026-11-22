@@ -265,7 +265,22 @@ pub(super) fn run_optional_real_binaries_integration() -> Result<()> {
                     cap.effective_default_limit_gb,
                     cap.slot_200gb_blocks_2kb
                 );
-                assert!(inspect_main_passthrough_sites(&unpacked.decompressed).is_ok());
+                let main_id = crate::re::inspect_main_firmware_identity(
+                    &unpacked.decompressed,
+                    Some(&unpacked.header.build_name),
+                );
+                assert!(crate::re::inspect_main_region_compat(&unpacked.decompressed).is_ok());
+                if main_id.supports_3410pq_tbc_patch {
+                    if unpacked.decompressed.len()
+                        == crate::constants::EXPECTED_MAIN_3410PQ_SIZE_BYTES
+                    {
+                        assert!(inspect_main_passthrough_sites(&unpacked.decompressed).is_ok());
+                    } else {
+                        assert!(
+                            crate::re::inspect_main_region_compat(&unpacked.decompressed).is_ok()
+                        );
+                    }
+                }
             }
         }
     }

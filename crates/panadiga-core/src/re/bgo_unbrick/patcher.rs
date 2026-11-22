@@ -3,9 +3,10 @@
 use anyhow::{Result, bail};
 
 use super::{
-    OFF_BGO_INIT_FAIL_HOOK, PATCH_A2CD_AUTOFORMAT, PROG061_BASE_VA, PROG061_EXPECTED_SIZE,
-    Prog061BgoInspection, Prog061BgoPatchMode, Prog061BgoSiteStatus, SPEC_A2BC_BRA_MONITOR,
-    SPEC_A2CD_AUTOFORMAT, SPEC_A2CD_UART_MONITOR, SPEC_BGO_SUM, SPEC_DEVINFO_CHECK,
+    OFF_BGO_INIT_FAIL_HOOK, ORIG_SUM_BEQ, PATCH_A2CD_AUTOFORMAT, PATCH_SUM_BRA, PROG061_BASE_VA,
+    PROG061_EXPECTED_SIZE, Prog061BgoInspection, Prog061BgoPatchMode, Prog061BgoSiteStatus,
+    SPEC_A2BC_BRA_MONITOR, SPEC_A2CD_AUTOFORMAT, SPEC_A2CD_UART_MONITOR, SPEC_BGO_SUM,
+    SPEC_DEVINFO_CHECK,
 };
 use crate::constants::PANA_DIGADIAG_FRM_SIZE;
 use crate::crypto::{ExtrheadCryptMode, unpack_extrhead};
@@ -32,13 +33,21 @@ fn site_status_from_spec(
     })
 }
 
-fn active_bgo_sum_spec(
-    data: &[u8],
-) -> Result<(&'static PatchSpec<'static>, super::Prog061BgoTargetGeometry)> {
-    let geometry = super::inspect_prog061_bgo_geometry(data)?;
-    let spec = match geometry {
-        super::Prog061BgoTargetGeometry::Eh55M6930Lb8Mb => &super::SPEC_BGO_SUM_EH55,
-        super::Prog061BgoTargetGeometry::Eh50M6930_4Mb => &SPEC_BGO_SUM,
+fn active_bgo_sum_spec(data: &[u8]) -> Result<(PatchSpec<'static>, super::DetectedBgoGeometry)> {
+    let geometry = super::detect_prog_bgo_geometry(data)?;
+    let spec = if geometry.is_retargeted {
+        PatchSpec {
+            name: "OFF_BGO_SUM_BEQ_SSOT",
+            description: "SSOT-retargeted BGO sector sum check (relocated nfrom_drv.o) -> bra +10",
+            va: PROG061_BASE_VA + geometry.bgo_sum_beq_offset as u32,
+            base_va: PROG061_BASE_VA,
+            expect: &ORIG_SUM_BEQ,
+            replace: &PATCH_SUM_BRA,
+            required_len: Some(PROG061_EXPECTED_SIZE),
+            input_sha256: None,
+        }
+    } else {
+        SPEC_BGO_SUM
     };
     Ok((spec, geometry))
 }
@@ -53,7 +62,7 @@ pub fn inspect_prog061_bgo_sites(data: &[u8]) -> Result<Prog061BgoInspection> {
     }
     let (_, raw_sha256) = calculate_hashes(data);
     let (bgo_sum_spec, geometry) = active_bgo_sum_spec(data)?;
-    let bgo_sum_site = site_status_from_spec(data, bgo_sum_spec, "BYPASSED_BRA")?;
+    let bgo_sum_site = site_status_from_spec(data, &bgo_sum_spec, "BYPASSED_BRA")?;
     let devinfo_site = site_status_from_spec(data, &SPEC_DEVINFO_CHECK, "BYPASSED_BRA")?;
     let bgo_call_cls = classify_patch_site(data, &SPEC_A2BC_BRA_MONITOR, "BRA_TO_MONITOR")?;
     let mut bgo_init_hook_site =
@@ -89,7 +98,7 @@ pub fn inspect_prog061_bgo_sites(data: &[u8]) -> Result<Prog061BgoInspection> {
         raw_size: data.len(),
         raw_sha256,
         detected_mode: detected_mode.to_string(),
-        bgo_target_geometry: geometry.as_str().to_string(),
+        bgo_target_geometry: geometry.geometry_id,
         bgo_sum_site,
         devinfo_site,
         bgo_init_hook_site,
@@ -112,7 +121,7 @@ fn apply_bgo_bypass_sites(
     apply_patch_specs_in_place(
         raw_prog061,
         &[
-            (bgo_sum_spec, PatchApplyAction::ApplyReplace),
+            (&bgo_sum_spec, PatchApplyAction::ApplyReplace),
             (&SPEC_DEVINFO_CHECK, PatchApplyAction::ApplyReplace),
             (&SPEC_A2BC_BRA_MONITOR, bgo_call_action),
             (hook_spec, hook_action),
@@ -205,7 +214,7 @@ pub fn patch_prog061_bgo_in_place_with_policy(
             apply_patch_specs_in_place(
                 raw_prog061,
                 &[
-                    (bgo_sum_spec, PatchApplyAction::RestoreExpect),
+                    (&bgo_sum_spec, PatchApplyAction::RestoreExpect),
                     (&SPEC_DEVINFO_CHECK, PatchApplyAction::RestoreExpect),
                     (&SPEC_A2BC_BRA_MONITOR, PatchApplyAction::RestoreExpect),
                     (active_hook_spec, PatchApplyAction::RestoreExpect),

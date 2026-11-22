@@ -143,3 +143,39 @@ pub struct PrepareSdArgs {
     #[arg(short, long, value_name = "JSON_FILE")]
     pub json: Option<PathBuf>,
 }
+
+/// Rebuilds a verified SD unbrick kit (`DIGADIAG.FRM` + `PANA__SD.FRM`) from an immutable NOR dump and optional HDD `MAIN` partition.
+#[derive(Args, Debug)]
+pub struct RebuildFromDumpArgs {
+    /// Target DIGA model ID or alias resolved via `panadiga-profiles` (e.g. DMR-EH55)
+    #[arg(long, default_value = "DMR-EH55", value_name = "MODEL")]
+    pub model: String,
+
+    /// Immutable physical NOR flash dump binary (`*.bin`) used to locate embedded EXTRHEAD/DRV modules
+    #[arg(long, value_name = "NOR_BIN")]
+    pub nor_dump: PathBuf,
+
+    /// Optional decrypted/EXTRHEAD HDD Partition 1 (`MAIN`) binary override
+    #[arg(long, value_name = "MAIN_BIN")]
+    pub hdd_main: Option<PathBuf>,
+
+    /// Optional factory `PANA_DVD.FRM` fallback container
+    #[arg(long, value_name = "FRM_FILE")]
+    pub frm: Option<PathBuf>,
+
+    /// Optional `PROG061` binary override
+    #[arg(long, value_name = "PROG_BIN")]
+    pub prog061: Option<PathBuf>,
+
+    /// Optional fixed target HDD capacity in GB (e.g. 250; defaults to dynamic LBA48 unlock)
+    #[arg(long, value_name = "GB")]
+    pub target_gb: Option<u32>,
+
+    /// Destination directory for rebuilt SD unbrick kit
+    #[arg(short, long, value_name = "DIR")]
+    pub out_dir: PathBuf,
+
+    /// Exports structured JSON rebuild & verification report (`-` emits stdout JSON)
+    #[arg(short, long, value_name = "JSON_FILE")]
+    pub json: Option<PathBuf>,
+}

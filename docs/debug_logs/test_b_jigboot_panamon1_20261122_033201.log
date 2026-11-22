@@ -1,0 +1,48 @@
+=== TESTE B: JIGBOOT + PANAMON1> (20261122_033201) ===
+=== BOOTTRACE: window=10000ms boot=2 hold=2500ms sticky=NO no_xrst=NO (8N1 @ 115200) ===
+[BOOTTRACE +  10ms] DDR CHECK: OK
+[BOOTTRACE +  19ms] Chip select = 1
+[BOOTTRACE +  20ms] ***** Loader ver0.61 [06/03/06] *****
+[BOOTTRACE +  24ms] ***** serial boot mode *****
+[BOOTTRACE +  27ms] !!! start fmu to read & exec fvu. !!!
+[BOOTTRACE +  30ms] wait 1 second.
+[BOOTTRACE +1032ms] *** timer correspond initialize ***
+[BOOTTRACE +1038ms] startup reason = [70]
+[BOOTTRACE +1044ms] Main hung-up time changed 255[s].
+[BOOTTRACE +1054ms] SD init start...
+[BOOTTRACE +1146ms] [SDCD] sdcd_insrmv_check:SD Card inserted 
+[BOOTTRACE +1218ms] [SDCD] === This Card Spec ==== 
+[BOOTTRACE +1221ms] .Card type:2(condition:3) wp:0
+[BOOTTRACE +1223ms] .capacity:3c4000[LBA](2021654528Byte) . transfer speed:25000[Kbps]
+[BOOTTRACE +1229ms] .RCA:2 . Bus Width:4(current) 4(support)
+[BOOTTRACE +1233ms] .Multi Max Block Len Read:2[SECT] / Write:2[SECT]
+[BOOTTRACE +1238ms] SD = 0x3C4000[LBA]
+[BOOTTRACE +1239ms] ... SD init end
+[BOOTTRACE +1299ms] *** start diag ***
+[BOOTTRACE +1308ms] ***** Fvu ver0.61 [05/11/01] *****
+[BOOTTRACE +1311ms] PANAMON1>[B/R/W/D/F/J/E/U/Q]
+[BOOTTRACE] UART: bytes=671 first_byte=10231us ferr=0 perr=0 ovf=NO | SW_rel=YES@26253us(SERIAL_BOOT)
+[BOOTTRACE] ADC0_SWUART: min=0.00V max=3.28V (low=3 hiz=3.26..3.28V n=999) | CtrlEdges: NSW5V=0 TXD=0 XRESET=0 (logged=0)
+BOOTTRACE: OK
+@P7501_RES cmd=BOOTTRACE status=OK code=0 elapsed_us=10021677
+PANADIGA> 
+[BRIDGE] USB CDC <-> P7501 SC0 115200 8N1 ctrl=OFF active (exit: send '~~~' or unplug USB).
+
+>>> PANAMON1: ?
+??
+PANAMON1>[B/R/W/D/F/J/E/U/Q]
+
+>>> PANAMON1: R 84150604,10
+R 84150604,10
+4D363933304C42004D31C56000000000
+PANAMON1>[B/R/W/D/F/J/E/U/Q]
+
+>>> PANAMON1: R 84000000,10
+R 84000000,10
+DC14000000FFFFFFDCFB000000FFFFFF
+PANAMON1>[B/R/W/D/F/J/E/U/Q]
+
+
+BRIDGE: OK (rx=194 tx=31 ferr=0 ctrl_edges=0 overflow=NO)
+@P7501_RES cmd=BRIDGE status=OK code=0 elapsed_us=1216004
+PANADIGA> 

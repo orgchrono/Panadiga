@@ -184,7 +184,6 @@
       ]
     },
     "tv_standard": {
-      "default": null,
       "type": [
         "string",
         "null"

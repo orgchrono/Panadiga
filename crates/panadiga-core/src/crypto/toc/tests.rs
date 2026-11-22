@@ -241,3 +241,55 @@ fn eh50_drv_j147_slot0_offset_quirk_resolves_to_0x1800() {
         }
     }
 }
+
+#[test]
+fn decrypt_toc_supports_panasonic_48b_outer_header_and_adler32_checksum() {
+    use super::super::feistel::{
+        PANA_DVD_KEY_CATALOG, adler32_panasonic_strided, derive_round_key_from_custom_key_8b,
+    };
+
+    let mut toc_plain = vec![0u8; 0x1800];
+    toc_plain[0..8].copy_from_slice(b"PROG0.00");
+    toc_plain[0x0C..0x10].copy_from_slice(&0x0000_2000u32.to_le_bytes());
+    toc_plain[0x10..0x17].copy_from_slice(b"M2863EG");
+    toc_plain[0x1A..0x20].copy_from_slice(b"ZE-340");
+    toc_plain[0x20..0x24].copy_from_slice(&0x0002_8000u32.to_le_bytes());
+    let adler0 = adler32_panasonic_strided(&toc_plain[..0x2C], 1);
+    toc_plain[0x2C..0x30].copy_from_slice(&adler0.to_le_bytes());
+
+    let rk = derive_round_key_from_custom_key_8b(&PANA_DVD_KEY_CATALOG[1].1);
+    feistel_encrypt_buffer(&mut toc_plain, &rk, &PANA_FEISTEL_SBOX_256);
+
+    let mut container = vec![0u8; 0x30 + toc_plain.len() + 0x28000];
+    container[0..12].copy_from_slice(b"PANASONIC\0\0\0");
+    container[0x30..0x30 + toc_plain.len()].copy_from_slice(&toc_plain);
+
+    let (key_name, _, layout, entries) = decrypt_frm_toc_with_detected_key(&container);
+    assert_eq!(key_name, Some("le2011_08e0"));
+    assert_eq!(layout, TocLayout::Dvd48B);
+    assert_eq!(entries.len(), 1);
+    assert_eq!(entries[0].module_name, "PROG0.00");
+    assert_eq!(entries[0].hardware_family, "M2863EG");
+    assert_eq!(entries[0].model_group, "ZE-340");
+    assert_eq!(entries[0].module_offset, 0x2000);
+    assert_eq!(entries[0].module_size, 0x28000);
+    assert!(entries[0].list_sum_valid);
+
+    for p in [
+        "firmware_and_images/dmr-xw_bd_series/bs885_bs785_xs385eg/PANA_DVD.FRM",
+        "../../firmware_and_images/dmr-xw_bd_series/bs885_bs785_xs385eg/PANA_DVD.FRM",
+    ] {
+        let path = std::path::Path::new(p);
+        if path.exists() {
+            let real = std::fs::read(path).expect("read bs885 FRM");
+            let (k, _, real_layout, real_entries) = decrypt_frm_toc_with_detected_key(&real);
+            assert_eq!(k, Some("le2011_08e0"));
+            assert_eq!(real_layout, TocLayout::Dvd48B);
+            assert_eq!(real_entries.len(), 2);
+            assert_eq!(real_entries[0].module_name, "PROG0.00");
+            assert_eq!(real_entries[1].module_name, "MAIN3400");
+            assert!(real_entries.iter().all(|e| e.list_sum_valid));
+            break;
+        }
+    }
+}

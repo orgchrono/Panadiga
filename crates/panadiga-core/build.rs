@@ -12,9 +12,10 @@ fn emit_rerun_tree(dir: &Path) {
     let mut paths: Vec<PathBuf> = entries.flatten().map(|e| e.path()).collect();
     paths.sort();
     for path in paths {
+        let ext = path.extension().and_then(|s| s.to_str());
         if path.is_dir() {
             emit_rerun_tree(&path);
-        } else if path.extension().and_then(|s| s.to_str()) == Some("json") {
+        } else if matches!(ext, Some("json" | "gz" | "bin")) {
             println!("cargo:rerun-if-changed={}", path.display());
         }
     }

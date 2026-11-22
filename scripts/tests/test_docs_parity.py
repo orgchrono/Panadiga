@@ -19,8 +19,8 @@ _PT_MATURITY_BADGES = (
     "[evidência estática ghidra / estágio 0]",
     "[em investigação / bloqueio físico ch1]",
 )
-EXPECTED_PAIRS = 39
-EXPECTED_LOGS = 22
+EXPECTED_PAIRS = 40
+EXPECTED_LOGS = 28
 
 _INDEX_ROW_RE = re.compile(
     r"^\|\s*\d+\s*\|\s*\[([^\]]+\.md)\]\((en-US|pt-BR)/([^)\s]+)\)"

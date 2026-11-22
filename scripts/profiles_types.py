@@ -71,6 +71,21 @@ class ModelProfileManifestDict(_ModelProfileManifestOptional):
     claims: ModelClaimsDict
 
 
+class _InterpolatedRegionVariantOptional(TypedDict, total=False):
+    interpolatedHwCode: str | None
+
+
+class InterpolatedRegionVariantDict(_InterpolatedRegionVariantOptional):
+    regionCode: str
+    tvStandard: str
+    videoLineSystem: str
+    aiofVmodeselHex: str
+    dvdRegionCode: int
+    oemMarker: str
+    acMainsSpec: str
+    tunerSystem: str
+
+
 class RegistryValidationReportDict(TypedDict):
     valid: bool
     socCoreCount: int

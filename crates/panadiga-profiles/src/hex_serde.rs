@@ -66,12 +66,74 @@ enum StringOrInt {
     Int(u64),
 }
 
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum StringOrSignedInt {
+    Str(String),
+    Int(i64),
+}
+
 fn decode_u32(raw: StringOrInt) -> Result<u32, String> {
     let n = match raw {
         StringOrInt::Int(v) => v,
         StringOrInt::Str(s) => parse_prefixed_u64(&s)?,
     };
     u32::try_from(n).map_err(|e| e.to_string())
+}
+
+fn decode_u8(raw: StringOrInt) -> Result<u8, String> {
+    let n = match raw {
+        StringOrInt::Int(v) => v,
+        StringOrInt::Str(s) => parse_prefixed_u64(&s)?,
+    };
+    u8::try_from(n).map_err(|e| e.to_string())
+}
+
+fn decode_i32(raw: StringOrSignedInt) -> Result<i32, String> {
+    let val: i64 = match raw {
+        StringOrSignedInt::Int(v) => v,
+        StringOrSignedInt::Str(s) => {
+            let trimmed = s.trim();
+            if let Some(rest) = trimmed.strip_prefix('-') {
+                let mag = parse_prefixed_u64(rest)?;
+                let mag_i64 = i64::try_from(mag).map_err(|e| e.to_string())?;
+                -mag_i64
+            } else {
+                let rest = trimmed.strip_prefix('+').unwrap_or(trimmed);
+                let mag = parse_prefixed_u64(rest)?;
+                i64::try_from(mag).map_err(|e| e.to_string())?
+            }
+        }
+    };
+    i32::try_from(val).map_err(|e| e.to_string())
+}
+
+pub mod hex_u8 {
+    use super::*;
+
+    pub fn serialize<S: Serializer>(val: &u8, ser: S) -> Result<S::Ok, S::Error> {
+        ser.serialize_str(&format!("0x{val:02X}"))
+    }
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(de: D) -> Result<u8, D::Error> {
+        decode_u8(StringOrInt::deserialize(de)?).map_err(D::Error::custom)
+    }
+}
+
+pub mod hex_i32 {
+    use super::*;
+
+    pub fn serialize<S: Serializer>(val: &i32, ser: S) -> Result<S::Ok, S::Error> {
+        if *val < 0 {
+            ser.serialize_str(&format!("-0x{:08X}", val.unsigned_abs()))
+        } else {
+            ser.serialize_str(&format!("0x{val:08X}"))
+        }
+    }
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(de: D) -> Result<i32, D::Error> {
+        decode_i32(StringOrSignedInt::deserialize(de)?).map_err(D::Error::custom)
+    }
 }
 
 pub mod hex_u32 {

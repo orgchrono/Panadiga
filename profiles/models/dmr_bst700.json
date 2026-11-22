@@ -3,7 +3,6 @@
   "family_label": "DMR-BST700",
   "series": "Série BST (3D Blu-ray DVB-S2)",
   "region_suffix": "EG",
-  "tv_standard": "PAL",
   "hw_code": null,
   "board_ref": "bst700_board",
   "train_ref": null,
@@ -51,11 +50,11 @@
       ]
     },
     "eeprom": {
-      "tier": "community_unverified",
+      "tier": "service_manual_only",
       "sources": [
         {
-          "kind": "audit",
-          "reference": "Pending service manual / NOR dump extraction"
+          "kind": "service_manual",
+          "reference": "Service manual Main PCB EEPROM IC (C3EBFC000053)"
         }
       ]
     }

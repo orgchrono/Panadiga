@@ -26,4 +26,7 @@ pub use model::{
     RegistryValidationReport, ResolvedModelProfile,
 };
 pub use soc::{BusWindow, SocCoreProfile, SocProfile};
-pub use train::{FirmwareTrainProfile, FrmContainerSpec, LoaderFingerprint};
+pub use train::{
+    AddressReloc, BytePatchEntry, DigadiagSpec, FirmwareTrainProfile, FrmContainerSpec,
+    LoaderFingerprint, OffsetRange, PanaRebuildRecipe, ProgBgoRetargetSpec,
+};

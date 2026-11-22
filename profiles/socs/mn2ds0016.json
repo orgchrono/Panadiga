@@ -2,7 +2,26 @@
   "id": "mn2ds0016",
   "part_number": "MN2DS0016",
   "core_ref": "mn10300_am34",
-  "bus_windows": [],
+  "bus_windows": [
+    {
+      "name": "nor_cached",
+      "base": "0x8000_0000",
+      "size": "0x0400_0000",
+      "uncached_alias_base": "0x8400_0000"
+    },
+    {
+      "name": "nor_xip_cached",
+      "base": "0x4400_0000",
+      "size": "0x0004_0000",
+      "uncached_alias_base": "0x8400_0000"
+    },
+    {
+      "name": "sdram_main",
+      "base": "0x5000_0000",
+      "size": "0x0400_0000",
+      "uncached_alias_base": "0x9000_0000"
+    }
+  ],
   "mmio": {},
   "lethal_mmio": [
     "0xC000_100C"
@@ -10,7 +29,7 @@
   "p7501_uart_baud": 115200,
   "p7501_nsw5v_hiz_only": true,
   "evidence": {
-    "tier": "service_manual_only",
+    "tier": "official_frm_verified",
     "sources": [
       {
         "kind": "official_frm",

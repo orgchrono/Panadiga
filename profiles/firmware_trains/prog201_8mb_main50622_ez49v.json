@@ -32,6 +32,11 @@
         "reference": "firmware_and_images/dmr-ex_ez_series/README.md",
         "sha256": "7fb924b9c71b92ef246c1015dfed944c20c760147fe7a3de47ad32ba76b52af5",
         "notes": "PROG201 (8MB/TOP BOOT distinct build) + MAIN3200Y1 plain_hdr (DMR-EZ49VEC)."
+      },
+      {
+        "kind": "official_frm",
+        "reference": "firmware_and_images/dmr-ex_ez_series/ez49vec/PANA_DVD.FRM",
+        "sha256": "7fb924b9c71b92ef246c1015dfed944c20c760147fe7a3de47ad32ba76b52af5"
       }
     ],
     "notes": "PROG201 (8MB/TOP BOOT distinct build) + MAIN3200Y1 plain_hdr (DMR-EZ49VEC)."

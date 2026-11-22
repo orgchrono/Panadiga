@@ -58,7 +58,7 @@ Audited adversarially across every silicon, electrical, DMA, QSPI, and protocol 
 - **SSOT Diagnostic Parser (`findingsRules.ts`, `lineParsers.ts`, `index.ts`):** Consumes `SSOT_DIAG_SIGNATURE_RULES` directly, precompiles dump regexes, and matches Rust legacy fallback parity.
 
 ### 1.5 Bilingual Hardware Archive, Datasheets & Bench Evidence
-- Curated **`39` bilingual dossiers & `22` curated** `COM10` bench captures, adding the **DIGA Lineup Hardware Profiles Catalog & Audit** ([EN](docs/en-US/DIGA_LINEUP_HARDWARE_PROFILES_CATALOG_AND_AUDIT.md) · [PT-BR](docs/pt-BR/CATALOGO_E_AUDITORIA_PERFIS_HARDWARE_LINHA_DIGA.md)), official `Microchip 24LC64` & `ROHM BR24L16` EEPROM datasheets (`manuals_and_schematics/datasheets/` + `SHA256SUMS.txt`), `DMR-XW / BD` series catalog (`firmware_and_images/dmr-xw_bd_series/`), and `IDE2SAT2` chassis clearance reference photography (`docs/assets/images/re_dmr_eh55/`).
+- Curated **`40` bilingual dossiers & `28` curated** `COM10` bench captures, adding the **DIGA Lineup Hardware Profiles Catalog & Audit** ([EN](docs/en-US/DIGA_LINEUP_HARDWARE_PROFILES_CATALOG_AND_AUDIT.md) · [PT-BR](docs/pt-BR/CATALOGO_E_AUDITORIA_PERFIS_HARDWARE_LINHA_DIGA.md)) and **What's Next: New Device Onboarding Guide** ([EN](docs/en-US/WHATS_NEXT_NEW_DEVICE_ONBOARDING.md) · [PT-BR](docs/pt-BR/WHATS_NEXT_ONBOARDING_NOVOS_APARELHOS.md)), official `Microchip 24LC64` & `ROHM BR24L16` EEPROM datasheets (`manuals_and_schematics/datasheets/` + `SHA256SUMS.txt`), `DMR-XW / BD` series catalog (`firmware_and_images/dmr-xw_bd_series/`), and `IDE2SAT2` chassis clearance reference photography (`docs/assets/images/re_dmr_eh55/`).
 
 ---
 
@@ -104,7 +104,7 @@ Audited adversarially across every silicon, electrical, DMA, QSPI, and protocol 
 
 ## 5. Documentation & Legal
 
-- **Master Bilingual Portal (39 EN/PT-BR Dossier Pairs):** [`docs/INDEX.md`](docs/INDEX.md)
+- **Master Bilingual Portal (40 EN/PT-BR Dossier Pairs):** [`docs/INDEX.md`](docs/INDEX.md)
 - **DIGA Lineup Hardware Profiles Catalog & Audit:** [`docs/en-US/DIGA_LINEUP_HARDWARE_PROFILES_CATALOG_AND_AUDIT.md`](docs/en-US/DIGA_LINEUP_HARDWARE_PROFILES_CATALOG_AND_AUDIT.md) ([PT-BR](docs/pt-BR/CATALOGO_E_AUDITORIA_PERFIS_HARDWARE_LINHA_DIGA.md))
 - **Root Engineering Audits:** [`COMPLETE_AUDIT.md`](COMPLETE_AUDIT.md) · [`AUDITORIA_COMPLETA.md`](AUDITORIA_COMPLETA.md)
 - **Service Manuals & Datasheets (`32+` PDFs):** [`manuals_and_schematics/README.md`](manuals_and_schematics/README.md)

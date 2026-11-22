@@ -353,8 +353,18 @@
       "model_id": "DMR-BS750",
       "nvram_cached_va": null,
       "nvram_uncached_va": null,
-      "prog_load_va": null,
-      "regions": [],
+      "prog_load_va": "0x50800000",
+      "regions": [
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_PROG_RAM",
+          "read": true,
+          "size": "0x00080000",
+          "start": "0x50800000",
+          "write": true
+        }
+      ],
       "series": "Série BS/XS (Blu-ray/DVD HD Freesat NAND)",
       "soc_isa": null,
       "soc_part": null
@@ -365,8 +375,18 @@
       "model_id": "DMR-BS780",
       "nvram_cached_va": null,
       "nvram_uncached_va": null,
-      "prog_load_va": null,
-      "regions": [],
+      "prog_load_va": "0x50800000",
+      "regions": [
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_PROG_RAM",
+          "read": true,
+          "size": "0x00080000",
+          "start": "0x50800000",
+          "write": true
+        }
+      ],
       "series": "Série BS/XS (2010 Blu-ray/DVD Freesat NAND)",
       "soc_isa": null,
       "soc_part": null
@@ -377,8 +397,18 @@
       "model_id": "DMR-BS785",
       "nvram_cached_va": null,
       "nvram_uncached_va": null,
-      "prog_load_va": null,
-      "regions": [],
+      "prog_load_va": "0x50800000",
+      "regions": [
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_PROG_RAM",
+          "read": true,
+          "size": "0x00080000",
+          "start": "0x50800000",
+          "write": true
+        }
+      ],
       "series": "Série BS/XS (2010 Blu-ray/DVD DVB-S2 NAND)",
       "soc_isa": null,
       "soc_part": null
@@ -389,8 +419,18 @@
       "model_id": "DMR-BS850",
       "nvram_cached_va": null,
       "nvram_uncached_va": null,
-      "prog_load_va": null,
-      "regions": [],
+      "prog_load_va": "0x50800000",
+      "regions": [
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_PROG_RAM",
+          "read": true,
+          "size": "0x00080000",
+          "start": "0x50800000",
+          "write": true
+        }
+      ],
       "series": "Série BS/XS (Blu-ray/DVD HD Freesat NAND)",
       "soc_isa": null,
       "soc_part": null
@@ -401,8 +441,18 @@
       "model_id": "DMR-BS880",
       "nvram_cached_va": null,
       "nvram_uncached_va": null,
-      "prog_load_va": null,
-      "regions": [],
+      "prog_load_va": "0x50800000",
+      "regions": [
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_PROG_RAM",
+          "read": true,
+          "size": "0x00080000",
+          "start": "0x50800000",
+          "write": true
+        }
+      ],
       "series": "Série BS/XS (2010 Blu-ray/DVD Freesat NAND)",
       "soc_isa": null,
       "soc_part": null
@@ -413,8 +463,18 @@
       "model_id": "DMR-BS885",
       "nvram_cached_va": null,
       "nvram_uncached_va": null,
-      "prog_load_va": null,
-      "regions": [],
+      "prog_load_va": "0x50800000",
+      "regions": [
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_PROG_RAM",
+          "read": true,
+          "size": "0x00080000",
+          "start": "0x50800000",
+          "write": true
+        }
+      ],
       "series": "Série BS/XS (2010 Blu-ray/DVD DVB-S2 NAND)",
       "soc_isa": null,
       "soc_part": null
@@ -717,8 +777,71 @@
       "model_id": "DMR-EH50",
       "nvram_cached_va": null,
       "nvram_uncached_va": null,
-      "prog_load_va": null,
+      "prog_load_va": "0x50030000",
       "regions": [
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "BUS_NOR_CACHED",
+          "read": true,
+          "size": "0x04000000",
+          "start": "0x80000000",
+          "write": false
+        },
+        {
+          "execute": true,
+          "is_volatile": true,
+          "name": "BUS_NOR_CACHED_UNCACHED",
+          "read": true,
+          "size": "0x04000000",
+          "start": "0x84000000",
+          "write": false
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "BUS_NOR_XIP_CACHED",
+          "read": true,
+          "size": "0x00040000",
+          "start": "0x44000000",
+          "write": false
+        },
+        {
+          "execute": true,
+          "is_volatile": true,
+          "name": "BUS_NOR_XIP_CACHED_UNCACHED",
+          "read": true,
+          "size": "0x00040000",
+          "start": "0x84000000",
+          "write": false
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "BUS_SDRAM_MAIN",
+          "read": true,
+          "size": "0x04000000",
+          "start": "0x50000000",
+          "write": true
+        },
+        {
+          "execute": true,
+          "is_volatile": true,
+          "name": "BUS_SDRAM_MAIN_UNCACHED",
+          "read": true,
+          "size": "0x04000000",
+          "start": "0x90000000",
+          "write": true
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_PROG_RAM",
+          "read": true,
+          "size": "0x00080000",
+          "start": "0x50030000",
+          "write": true
+        },
         {
           "execute": true,
           "is_volatile": false,
@@ -739,8 +862,8 @@
         }
       ],
       "series": "Série EH (Gen 3 HDD+DVD)",
-      "soc_isa": null,
-      "soc_part": null
+      "soc_isa": "MN10300/AM34",
+      "soc_part": "MN2DS0016"
     },
     "DMR-EH52": {
       "drv_load_va": null,
@@ -1024,6 +1147,60 @@
         {
           "execute": true,
           "is_volatile": false,
+          "name": "BUS_NOR_CACHED",
+          "read": true,
+          "size": "0x04000000",
+          "start": "0x80000000",
+          "write": false
+        },
+        {
+          "execute": true,
+          "is_volatile": true,
+          "name": "BUS_NOR_CACHED_UNCACHED",
+          "read": true,
+          "size": "0x04000000",
+          "start": "0x84000000",
+          "write": false
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "BUS_NOR_XIP_CACHED",
+          "read": true,
+          "size": "0x00040000",
+          "start": "0x44000000",
+          "write": false
+        },
+        {
+          "execute": true,
+          "is_volatile": true,
+          "name": "BUS_NOR_XIP_CACHED_UNCACHED",
+          "read": true,
+          "size": "0x00040000",
+          "start": "0x84000000",
+          "write": false
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "BUS_SDRAM_MAIN",
+          "read": true,
+          "size": "0x04000000",
+          "start": "0x50000000",
+          "write": true
+        },
+        {
+          "execute": true,
+          "is_volatile": true,
+          "name": "BUS_SDRAM_MAIN_UNCACHED",
+          "read": true,
+          "size": "0x04000000",
+          "start": "0x90000000",
+          "write": true
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
           "name": "TRAIN_PROG_RAM",
           "read": true,
           "size": "0x00080000",
@@ -1050,8 +1227,8 @@
         }
       ],
       "series": "Série EH (Gen 4 HDD+DVD)",
-      "soc_isa": null,
-      "soc_part": null
+      "soc_isa": "MN10300/AM34",
+      "soc_part": "MN2DS0019"
     },
     "DMR-EH59": {
       "drv_load_va": "0x90202000",
@@ -1136,10 +1313,65 @@
       "nvram_cached_va": null,
       "nvram_uncached_va": null,
       "prog_load_va": null,
-      "regions": [],
+      "regions": [
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "BUS_NOR_CACHED",
+          "read": true,
+          "size": "0x04000000",
+          "start": "0x80000000",
+          "write": false
+        },
+        {
+          "execute": true,
+          "is_volatile": true,
+          "name": "BUS_NOR_CACHED_UNCACHED",
+          "read": true,
+          "size": "0x04000000",
+          "start": "0x84000000",
+          "write": false
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "BUS_NOR_XIP_CACHED",
+          "read": true,
+          "size": "0x00040000",
+          "start": "0x44000000",
+          "write": false
+        },
+        {
+          "execute": true,
+          "is_volatile": true,
+          "name": "BUS_NOR_XIP_CACHED_UNCACHED",
+          "read": true,
+          "size": "0x00040000",
+          "start": "0x84000000",
+          "write": false
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "BUS_SDRAM_MAIN",
+          "read": true,
+          "size": "0x04000000",
+          "start": "0x50000000",
+          "write": true
+        },
+        {
+          "execute": true,
+          "is_volatile": true,
+          "name": "BUS_SDRAM_MAIN_UNCACHED",
+          "read": true,
+          "size": "0x04000000",
+          "start": "0x90000000",
+          "write": true
+        }
+      ],
       "series": "Série EH (320GB HDD+HDMI)",
-      "soc_isa": null,
-      "soc_part": null
+      "soc_isa": "MN10300/AM34",
+      "soc_part": "MN2DS0019"
     },
     "DMR-EH69": {
       "drv_load_va": "0x90202000",
@@ -1273,6 +1505,87 @@
       "nvram_uncached_va": null,
       "prog_load_va": "0x50400000",
       "regions": [
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "NOR_IPL_LOADER_VER0.18",
+          "read": true,
+          "size": "0x00040000",
+          "start": "0x80000000",
+          "write": false
+        },
+        {
+          "execute": false,
+          "is_volatile": false,
+          "name": "NOR_ERASED_ERASED",
+          "read": true,
+          "size": "0x00040000",
+          "start": "0x80040000",
+          "write": false
+        },
+        {
+          "execute": false,
+          "is_volatile": false,
+          "name": "NOR_EXTRHEAD_DRV_",
+          "read": true,
+          "size": "0x000B0000",
+          "start": "0x80080000",
+          "write": false
+        },
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "NOR_MAINXIP_MAIN_XIP",
+          "read": true,
+          "size": "0x002E0000",
+          "start": "0x80130000",
+          "write": false
+        },
+        {
+          "execute": false,
+          "is_volatile": false,
+          "name": "NOR_ERASED_ERASED",
+          "read": true,
+          "size": "0x00020000",
+          "start": "0x80410000",
+          "write": false
+        },
+        {
+          "execute": false,
+          "is_volatile": false,
+          "name": "NOR_EXTRHEAD_MAIN_3080GR_LZMA",
+          "read": true,
+          "size": "0x002B0000",
+          "start": "0x80430000",
+          "write": false
+        },
+        {
+          "execute": false,
+          "is_volatile": false,
+          "name": "NOR_ERASED_ERASED",
+          "read": true,
+          "size": "0x00020000",
+          "start": "0x806E0000",
+          "write": false
+        },
+        {
+          "execute": false,
+          "is_volatile": false,
+          "name": "NOR_BGO_BGO_FTL_(0X720600=M6720EE,_0X780000..0X79FFFF_ERASED)",
+          "read": true,
+          "size": "0x000F0000",
+          "start": "0x80700000",
+          "write": false
+        },
+        {
+          "execute": false,
+          "is_volatile": false,
+          "name": "NOR_EEMUL_EEMUL_(0X7F0000_FF;_0X7F2000=02F1;_0X7F4000=01F1)",
+          "read": true,
+          "size": "0x00010000",
+          "start": "0x807F0000",
+          "write": true
+        },
         {
           "execute": true,
           "is_volatile": false,
@@ -2004,7 +2317,26 @@
       "nvram_cached_va": null,
       "nvram_uncached_va": null,
       "prog_load_va": null,
-      "regions": [],
+      "regions": [
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "NOR_IPL_ZEBRA_64_BAL_+_CONS_+_VXWORKS_1.3_APP",
+          "read": true,
+          "size": "0x00360000",
+          "start": "0x00000000",
+          "write": false
+        },
+        {
+          "execute": false,
+          "is_volatile": false,
+          "name": "NOR_VENDORNVRAM_LSI_DOMINO_NV_(CLSIPMABS@0X360000_+_CINCREMENTALABS@0X3D0000/0X3F0000,_NOT_EEMUL)",
+          "read": true,
+          "size": "0x000A0000",
+          "start": "0x00360000",
+          "write": false
+        }
+      ],
       "series": "Série EZ (LSI DoMiNo DVD+VHS)",
       "soc_isa": "SPARC V8 (LSI DoMiNo)",
       "soc_part": "LSI DoMiNo / Magnum DM8635-CHZ (ZEBRA 64 / DMN-8653)"
@@ -2070,8 +2402,18 @@
       "model_id": "DMR-XS350",
       "nvram_cached_va": null,
       "nvram_uncached_va": null,
-      "prog_load_va": null,
-      "regions": [],
+      "prog_load_va": "0x50800000",
+      "regions": [
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_PROG_RAM",
+          "read": true,
+          "size": "0x00080000",
+          "start": "0x50800000",
+          "write": true
+        }
+      ],
       "series": "Série BS/XS (Blu-ray/DVD HD Freesat NAND)",
       "soc_isa": null,
       "soc_part": null
@@ -2082,8 +2424,18 @@
       "model_id": "DMR-XS380",
       "nvram_cached_va": null,
       "nvram_uncached_va": null,
-      "prog_load_va": null,
-      "regions": [],
+      "prog_load_va": "0x50800000",
+      "regions": [
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_PROG_RAM",
+          "read": true,
+          "size": "0x00080000",
+          "start": "0x50800000",
+          "write": true
+        }
+      ],
       "series": "Série BS/XS (2010 Blu-ray/DVD Freesat NAND)",
       "soc_isa": null,
       "soc_part": null
@@ -2094,8 +2446,18 @@
       "model_id": "DMR-XS385",
       "nvram_cached_va": null,
       "nvram_uncached_va": null,
-      "prog_load_va": null,
-      "regions": [],
+      "prog_load_va": "0x50800000",
+      "regions": [
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_PROG_RAM",
+          "read": true,
+          "size": "0x00080000",
+          "start": "0x50800000",
+          "write": true
+        }
+      ],
       "series": "Série BS/XS (2010 Blu-ray/DVD DVB-S2 NAND)",
       "soc_isa": null,
       "soc_part": null
@@ -2106,8 +2468,18 @@
       "model_id": "DMR-XW300",
       "nvram_cached_va": null,
       "nvram_uncached_va": null,
-      "prog_load_va": null,
-      "regions": [],
+      "prog_load_va": "0x50800000",
+      "regions": [
+        {
+          "execute": true,
+          "is_volatile": false,
+          "name": "TRAIN_PROG_RAM",
+          "read": true,
+          "size": "0x00080000",
+          "start": "0x50800000",
+          "write": true
+        }
+      ],
       "series": "Série XW (HD DIGA NAND)",
       "soc_isa": null,
       "soc_part": null
@@ -2125,7 +2497,7 @@
         "0x440236ED"
       ],
       "key": "BOOT.BIN",
-      "model": "DMR-EH55",
+      "model": "DMR-EH58",
       "program_path": "/BOOT.BIN",
       "spot_check_opcodes": []
     },
@@ -2182,7 +2554,7 @@
         "0x40030080"
       ],
       "key": "DRV_decomp.bin",
-      "model": "DMR-EH55",
+      "model": "DMR-EH58",
       "program_path": "/DRV_decomp.bin",
       "spot_check_opcodes": []
     },

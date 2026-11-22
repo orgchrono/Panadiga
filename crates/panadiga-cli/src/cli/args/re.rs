@@ -255,4 +255,28 @@ pub enum ReActions {
         #[arg(long, value_name = "JSON_OUT")]
         json: Option<PathBuf>,
     },
+
+    /// Auto-decrypt any .FRM / EXTRHEAD / NOR binary, discover dynamic runtime anchors, and synthesize bench execution plans
+    #[command(name = "bench-runtime", alias = "bench_runtime")]
+    BenchRuntime {
+        /// Input firmware path (.FRM, EXTRHEAD container, raw NOR dump, or unpacked stage)
+        #[arg(short, long, value_name = "INPUT")]
+        input: PathBuf,
+
+        /// DIGA model ID or regional alias (e.g. DMR-EH55LB-S, DMR-BS885, DMR-ES35V)
+        #[arg(short, long, value_name = "MODEL")]
+        model: Option<String>,
+
+        /// Optional region code override for TV/electrical interpolation (e.g. LB, EC, EE, VP)
+        #[arg(long, value_name = "REGION")]
+        region: Option<String>,
+
+        /// Directory to write unpacked stage binaries and bench_runtime_manifest.json
+        #[arg(short, long, value_name = "OUT_DIR")]
+        out_dir: Option<PathBuf>,
+
+        /// Optional JSON output path (`-` prints JSON to stdout)
+        #[arg(long, value_name = "JSON_OUT")]
+        json: Option<PathBuf>,
+    },
 }

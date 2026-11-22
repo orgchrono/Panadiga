@@ -17,13 +17,21 @@ pub(super) fn infer_tv_standard_slug(
     build_profile: Option<&str>,
 ) -> &'static str {
     let m = model.unwrap_or("").to_ascii_uppercase();
-    if m.contains("LB") {
-        "pal_m"
-    } else if m.contains("EC")
-        || m.contains("EB")
-        || m.contains("EG")
-        || build_profile == Some("3060NP")
-    {
+    for region_tok in [
+        "LBS", "LB", "EE", "GC", "GCS", "EC", "EB", "EG", "EF", "EP", "EN",
+    ] {
+        if m.contains(region_tok) {
+            let interpolated =
+                crate::ssot::registry::interpolate_region_variant(region_tok, &m, "", Some(&m));
+            return match interpolated.tv_standard.as_str() {
+                "PAL-M" => "pal_m",
+                "PAL/SECAM" => "secam",
+                "PAL" | "PAL/NTSC" => "pal",
+                _ => "ntsc",
+            };
+        }
+    }
+    if build_profile == Some("3060NP") {
         "pal"
     } else {
         "ntsc"

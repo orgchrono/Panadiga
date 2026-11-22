@@ -12,8 +12,8 @@ use crate::hdd::{HddCapacityPatchMode, apply_capacity_patch_in_place};
 use crate::nvram::calculate_hashes;
 
 use super::super::super::bgo_unbrick::{
-    PROG061_BASE_VA, Prog061BgoPatchMode, Prog061BgoTargetGeometry,
-    patch_prog061_bgo_in_place_with_policy, retarget_prog061_bgo_geometry_in_place,
+    PROG061_BASE_VA, Prog061BgoPatchMode, find_recipe_by_loader_key,
+    patch_prog061_bgo_in_place_with_policy, retarget_prog_for_loader_profile_in_place,
 };
 use super::super::super::main_passthrough::{
     EXPECTED_MAIN_3410PQ_SIZE, MAIN_BASE_VA, MainPassthroughMode, apply_main_passthrough_in_place,
@@ -30,12 +30,7 @@ pub(crate) fn compose_digadiag_and_prog061(
     allow_unsafe_auto_format: bool,
 ) -> Result<(Vec<u8>, Vec<u8>, String)> {
     let mut prog_patched = load_prog061_from_bytes(prog_raw)?;
-    if loader_profile == SdLoaderProfile::Ver061RawSd48 {
-        retarget_prog061_bgo_geometry_in_place(
-            &mut prog_patched,
-            Prog061BgoTargetGeometry::Eh55M6930Lb8Mb,
-        )?;
-    }
+    retarget_prog_for_loader_profile_in_place(&mut prog_patched, loader_profile.as_str())?;
     patch_prog061_bgo_in_place_with_policy(&mut prog_patched, bgo_mode, allow_unsafe_auto_format)?;
     let diag_bytes = match loader_profile {
         SdLoaderProfile::Ver061RawSd48 => prog_patched.clone(),
@@ -219,12 +214,14 @@ pub(crate) fn compose_pana_sd_container(
     main_mod.version_u16 = main_version_u16;
     sd_modules.push(main_mod);
 
-    if loader_profile == SdLoaderProfile::Ver061RawSd48 {
-        // Real DMR-EH55 (`M6930LB`) and generic `M6930` share payloads across 6 `sd48` TOC slots (`[0x18] = 'M'`, `[0x19] = 0`).
+    if loader_profile == SdLoaderProfile::Ver061RawSd48
+        && let Some(recipe) = find_recipe_by_loader_key(loader_profile.as_str())
+        && let Some((primary_family, aliases)) = recipe.family_aliases.split_first()
+    {
         for m in &mut sd_modules {
-            m.hardware_family = "M6930LB".to_string();
-            m.hardware_family_aliases = vec!["M6930".to_string()];
-            m.model_prefix = b'M';
+            m.hardware_family = primary_family.clone();
+            m.hardware_family_aliases = aliases.to_vec();
+            m.model_prefix = recipe.model_prefix_byte;
         }
     }
 

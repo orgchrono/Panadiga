@@ -3,7 +3,6 @@
   "family_label": "DMR-ES35V",
   "series": "Série ES (DVD+VHS)",
   "region_suffix": "EE",
-  "tv_standard": "PAL/SECAM",
   "hw_code": "M6720EE",
   "board_ref": "es35v_digital_board",
   "train_ref": "loader_ver018_xip_main52df6",

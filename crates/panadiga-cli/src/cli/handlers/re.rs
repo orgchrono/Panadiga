@@ -296,5 +296,60 @@ pub fn handle_re(args: ReArgs) -> Result<()> {
             }
             Ok(())
         }
+        ReActions::BenchRuntime {
+            input,
+            model,
+            region,
+            out_dir,
+            json,
+        } => {
+            let plan = panadiga_core::re::build_dynamic_bench_runtime_plan(
+                &input,
+                model.as_deref(),
+                region.as_deref(),
+                out_dir.as_deref(),
+            )?;
+            emit_json_if_requested(&plan, json.as_deref())?;
+            if json.is_none() {
+                log_println!(
+                    "=== PANADIGA DYNAMIC BENCH RUNTIME ({}) ===",
+                    plan.detected_container_format
+                );
+                log_println!(
+                    "Input        : {} | Key={:?} | Model={:?} | Stages={}",
+                    plan.input_path,
+                    plan.detected_feistel_key,
+                    plan.resolved_model_id,
+                    plan.stages.len()
+                );
+                if let Some(reg) = &plan.interpolated_region {
+                    log_println!(
+                        "Region       : {} -> TV={} ({}) VMODESEL={} DVD-R{} Mains={}",
+                        reg.region_code,
+                        reg.tv_standard,
+                        reg.video_line_system,
+                        reg.aiof_vmodesel_hex,
+                        reg.dvd_region_code,
+                        reg.ac_mains_spec
+                    );
+                }
+                for st in &plan.stages {
+                    log_println!(
+                        "  - [{}] {} @ {} ({} B) | BGO={:?} | Slack={:?} ({} B) | CLI={} ({:?})",
+                        st.stage_kind,
+                        st.stage_key,
+                        st.base_va_hex,
+                        st.size_bytes,
+                        st.bgo_partition_base_hex,
+                        st.panamon1_slack_va_hex,
+                        st.panamon1_slack_size_bytes,
+                        st.cli_command_count,
+                        st.cli_table_va_hex
+                    );
+                }
+                log_println!("PyGhidra Cmd : {}", plan.pyghidra_command);
+            }
+            Ok(())
+        }
     }
 }

@@ -3,7 +3,6 @@
   "family_label": "DMR-EZ48V",
   "series": "Série EZ (Split NA Magnum vs EU AM34)",
   "region_suffix": "VP/VPC/EB",
-  "tv_standard": "NTSC/ATSC/PAL",
   "hw_code": null,
   "board_ref": "ez485v_lsi_board",
   "train_ref": null,

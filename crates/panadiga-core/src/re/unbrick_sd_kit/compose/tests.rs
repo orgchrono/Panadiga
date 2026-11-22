@@ -137,17 +137,21 @@ fn reproduces_canonical_sd_unbrick_kit_byte_for_byte_if_present() {
     let pana_sd = std::fs::read(&pana_sd_path).unwrap();
     let canonical_digadiag = std::fs::read(&digadiag_path).unwrap();
     assert_eq!(canonical_digadiag.len(), PROG061_EXPECTED_SIZE);
-    assert_eq!(pana_sd.len(), 7_181_224);
+    assert_eq!(pana_sd.len(), 7_563_224);
 
     let drv = pana_sd[0x0000_1800..0x000B_1800].to_vec();
     let prog = pana_sd[0x000B_1800..0x000F_1800].to_vec();
-    let main_mod = pana_sd[0x000F_1800..0x006D_93A8].to_vec();
+    let main_mod = pana_sd[0x000F_1800..0x0073_67D8].to_vec();
+    let expected_geo = crate::re::bgo_unbrick::find_retarget_spec_by_loader_key("ver061")
+        .expect("SSOT ver061 retarget spec")
+        .target_geometry_id
+        .as_str();
     let diag_insp = inspect_prog061_bgo_sites(&canonical_digadiag).unwrap();
     assert_eq!(diag_insp.detected_mode, "UART_MONITOR_PANAMON1");
-    assert_eq!(diag_insp.bgo_target_geometry, "EH55_M6930LB_8MB");
+    assert_eq!(diag_insp.bgo_target_geometry, expected_geo);
     let sd_prog_insp = inspect_prog061_bgo_sites(&prog).unwrap();
     assert_eq!(sd_prog_insp.detected_mode, "BYPASS_CHECKS_ONLY");
-    assert_eq!(sd_prog_insp.bgo_target_geometry, "EH55_M6930LB_8MB");
+    assert_eq!(sd_prog_insp.bgo_target_geometry, expected_geo);
 
     let (rebuilt_sd, sd_sha) = super::builders::compose_pana_sd_container(
         Some(drv),
@@ -155,13 +159,13 @@ fn reproduces_canonical_sd_unbrick_kit_byte_for_byte_if_present() {
         Prog061BgoPatchMode::BypassChecksOnly,
         SdLoaderProfile::Ver061RawSd48,
         main_mod,
-        "MAIN3410PQ",
-        0x3410,
+        "MAIN3060NP",
+        0x96AA,
     )
     .unwrap();
     assert_eq!(
         sd_sha,
-        "1e62c6411d132286d580aa82ad6b53c7e19041b7be2333c28790800f4958557f"
+        "2d3d62a75731f150762f269e3b650e83307da983d8d4bf222ec078b45298d9d0"
     );
     assert_eq!(rebuilt_sd, pana_sd);
 
@@ -189,25 +193,32 @@ fn reproduces_canonical_sd_unbrick_kit_byte_for_byte_if_present() {
     }
 }
 
-#[test]
-fn compose_patched_main_gives_hdd_target_gb_precedence_over_dynamic() {
+fn synthetic_packed_main(build_name: &str, version_u16: u16) -> Vec<u8> {
     use crate::constants::PANA_EXTRHEAD_DEFAULT_ADLER_STEP;
-    use crate::crypto::{ExtrheadCryptMode, pack_extrhead, unpack_extrhead};
+    use crate::crypto::{ExtrheadCryptMode, pack_extrhead};
     use crate::hdd::capacity_patch::codec::test_helpers::build_synthetic_hdd_cmd_main;
-    use crate::hdd::capacity_patch::inspect_main_buffer_capacity;
     use crate::hdd::capacity_patch::specs::MAIN_DEFAULT_BASE_VA;
 
     let synth_main = build_synthetic_hdd_cmd_main();
-    let packed = pack_extrhead(
+    pack_extrhead(
         &synth_main,
         "MAIN",
         MAIN_DEFAULT_BASE_VA,
-        "TEST3410PQ",
+        build_name,
         ExtrheadCryptMode::Main,
         PANA_EXTRHEAD_DEFAULT_ADLER_STEP as u32,
-        0x3410,
+        version_u16,
     )
-    .unwrap();
+    .unwrap()
+}
+
+#[test]
+fn compose_patched_main_gives_hdd_target_gb_precedence_over_dynamic() {
+    use crate::crypto::{ExtrheadCryptMode, unpack_extrhead};
+    use crate::hdd::capacity_patch::inspect_main_buffer_capacity;
+    use crate::hdd::capacity_patch::specs::MAIN_DEFAULT_BASE_VA;
+
+    let packed = synthetic_packed_main("TEST3410PQ", 0x3410);
 
     let composed = compose_patched_main_container(
         &packed,
@@ -232,4 +243,84 @@ fn compose_patched_main_gives_hdd_target_gb_precedence_over_dynamic() {
     assert!(!cap.is_dynamic_unclamped);
     assert_eq!(cap.slot_fallback_blocks_2kb, 0x0746_6528);
     assert!((cap.effective_default_limit_gb - 250.0).abs() < 1.0);
+}
+
+#[test]
+fn compose_patched_main_accepts_3060np_and_3410pq_and_explicit_frm_precedence() {
+    use crate::re::unbrick_workbench::{ExtractedFrmModuleReport, FrmModuleExtractionReport};
+
+    let req = SdUnbrickKitRequest::hardened_panamon1(PathBuf::from("/tmp/sd_flex"));
+    assert_eq!(req.expected_main_build, None);
+
+    let packed_3060 = synthetic_packed_main("3060NP", 0x3060);
+    let out_3060 = compose_patched_main_container(
+        &packed_3060,
+        MainPassthroughMode::FactoryOriginal,
+        true,
+        Some(250),
+        req.expected_main_build.as_deref(),
+        false,
+    )
+    .unwrap();
+    assert_eq!(out_3060.build_version_u16, 0x96AA);
+    assert_eq!(out_3060.slot_name, "MAIN3060NP");
+    assert_eq!(out_3060.passthrough_applied, "skipped_non_3410pq_build");
+    assert_eq!(out_3060.hdd_capacity_applied.as_deref(), Some("cap_250gb"));
+
+    let packed_3410 = synthetic_packed_main("TEST3410PQ", 0x3410);
+    let out_3410 = compose_patched_main_container(
+        &packed_3410,
+        MainPassthroughMode::FactoryOriginal,
+        true,
+        None,
+        req.expected_main_build.as_deref(),
+        false,
+    )
+    .unwrap();
+    assert_eq!(out_3410.build_version_u16, 0x3410);
+    assert_eq!(out_3410.hdd_capacity_applied.as_deref(), Some("dynamic"));
+
+    let frm_rep = Some(FrmModuleExtractionReport {
+        source_frm_path: "custom/PANA_DVD.FRM".to_string(),
+        container_format: "feistel64_ecb".to_string(),
+        output_dir: "tmp".to_string(),
+        modules: vec![ExtractedFrmModuleReport {
+            name: "MAIN3060NP".to_string(),
+            offset_hex: "0x0F1800".to_string(),
+            encrypted_size: 123,
+            decrypted_path: "tmp/main3060np_dec.bin".to_string(),
+            decrypted_sha256: "00".repeat(32),
+            unpacked_path: None,
+            unpacked_size: None,
+            dst_addr_hex: None,
+            checksum_valid: None,
+        }],
+    });
+    let disc_fallback = Some(PathBuf::from("workspace/hdd_part1_3410pq.bin"));
+    let explicit_override = Some(PathBuf::from("explicit/MAIN_CUSTOM.bin"));
+
+    assert_eq!(
+        super::super::io::resolve_component_path(
+            &None,
+            true,
+            &frm_rep,
+            "MAIN",
+            disc_fallback.clone()
+        ),
+        Some(PathBuf::from("tmp/main3060np_dec.bin"))
+    );
+    assert_eq!(
+        super::super::io::resolve_component_path(
+            &None,
+            false,
+            &frm_rep,
+            "MAIN",
+            disc_fallback.clone()
+        ),
+        disc_fallback
+    );
+    assert_eq!(
+        super::super::io::resolve_component_path(&explicit_override, true, &frm_rep, "MAIN", None),
+        explicit_override
+    );
 }

@@ -53,6 +53,22 @@ fn find_extracted_module(
     })
 }
 
+pub(crate) fn resolve_component_path(
+    explicit_path: &Option<PathBuf>,
+    explicit_frm: bool,
+    frm_report: &Option<super::super::unbrick_workbench::FrmModuleExtractionReport>,
+    module_prefix: &str,
+    disc_fallback: Option<PathBuf>,
+) -> Option<PathBuf> {
+    explicit_path.clone().or_else(|| {
+        if explicit_frm {
+            find_extracted_module(frm_report, module_prefix).or(disc_fallback)
+        } else {
+            disc_fallback.or_else(|| find_extracted_module(frm_report, module_prefix))
+        }
+    })
+}
+
 /// Builds a complete verified SD Unbrick Kit (`DIGADIAG.FRM`, optional `PANA__SD.FRM`, & `SHA256SUMS.txt`).
 pub fn prepare_sd_unbrick_kit(req: &SdUnbrickKitRequest) -> Result<SdUnbrickKitReport> {
     let ws_root = resolve_workspace_root();
@@ -61,6 +77,7 @@ pub fn prepare_sd_unbrick_kit(req: &SdUnbrickKitRequest) -> Result<SdUnbrickKitR
     let disc_prog = sources.prog061;
     let disc_main = sources.main_3410;
     let disc_drv = sources.drv;
+    let explicit_frm = req.pana_dvd_path.is_some();
     let frm_path = req.pana_dvd_path.clone().or(disc_frm);
 
     let extracted_tmp = req.output_dir.join("_extracted_frm");
@@ -106,17 +123,11 @@ pub fn prepare_sd_unbrick_kit(req: &SdUnbrickKitRequest) -> Result<SdUnbrickKitR
     let mut hdd_capacity_applied = None;
 
     if req.include_pana_sd {
-        let drv_path = req
-            .drv_path
-            .clone()
-            .or(disc_drv)
-            .or_else(|| find_extracted_module(&frm_report, "DRV"));
-        let main_path = req
-            .main_path
-            .clone()
-            .or(disc_main)
-            .or_else(|| find_extracted_module(&frm_report, "MAIN"))
-            .context("No MAIN firmware or PANA_DVD.FRM source available for PANA__SD.FRM")?;
+        let drv_path =
+            resolve_component_path(&req.drv_path, explicit_frm, &frm_report, "DRV", disc_drv);
+        let main_path =
+            resolve_component_path(&req.main_path, explicit_frm, &frm_report, "MAIN", disc_main)
+                .context("No MAIN firmware or PANA_DVD.FRM source available for PANA__SD.FRM")?;
 
         main_source_label = Some(main_path.to_string_lossy().into_owned());
         let raw_main = fs::read(&main_path)

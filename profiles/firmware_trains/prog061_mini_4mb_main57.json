@@ -33,6 +33,11 @@
         "reference": "firmware_and_images/dmr-ex_ez_series/README.md",
         "sha256": "11f72af33eef53c16d2841bc4a8011fd6b2e054dabbff25a3c4936dc05b238f8",
         "notes": "PROG061 MINI (4MB/TOP BOOT) + MAIN3410MS/3500MM (EX78EN, EX88EN)."
+      },
+      {
+        "kind": "official_frm",
+        "reference": "firmware_and_images/dmr-ex_ez_series/ex78en/PANA_DVD.FRM",
+        "sha256": "11f72af33eef53c16d2841bc4a8011fd6b2e054dabbff25a3c4936dc05b238f8"
       }
     ],
     "notes": "PROG061 MINI (4MB/TOP BOOT) + MAIN3410MS/3500MM (EX78EN, EX88EN)."

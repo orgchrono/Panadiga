@@ -1,0 +1,84 @@
+
+=== ESCAPE ===
+Unknown command: '~~~'. Type HELP for commands.
+@P7501_RES cmd=~~~ status=ERR code=EINVAL elapsed_us=0
+PANADIGA> 
+=== BOOTTRACE_JIG ===
+=== BOOTTRACE: window=8000ms boot=2 hold=2500ms sticky=NO no_xrst=NO (8N1 @ 115200) ===
+[BOOTTRACE +  10ms] DDR CHECK: OK
+[BOOTTRACE +  19ms] Chip select = 1
+[BOOTTRACE +  20ms] ***** Loader ver0.61 [06/03/06] *****
+[BOOTTRACE +  24ms] ***** serial boot mode *****
+[BOOTTRACE +  27ms] !!! start fmu to read & exec fvu. !!!
+[BOOTTRACE +  30ms] wait 1 second.
+[BOOTTRACE +1032ms] *** timer correspond initialize ***
+[BOOTTRACE +1038ms] startup reason = [70]
+[BOOTTRACE +1043ms] Main hung-up time changed 255[s].
+[BOOTTRACE +1053ms] SD init start...
+[BOOTTRACE +1145ms] [SDCD] sdcd_insrmv_check:SD Card inserted 
+[BOOTTRACE +1217ms] [SDCD] === This Card Spec ==== 
+[BOOTTRACE +1220ms] .Card type:2(condition:3) wp:0
+[BOOTTRACE +1222ms] .capacity:3c4000[LBA](2021654528Byte) . transfer speed:25000[Kbps]
+[BOOTTRACE +1228ms] .RCA:2 . Bus Width:4(current) 4(support)
+[BOOTTRACE +1232ms] .Multi Max Block Len Read:2[SECT] / Write:2[SECT]
+[BOOTTRACE +1237ms] SD = 0x3C4000[LBA]
+[BOOTTRACE +1238ms] ... SD init end
+[BOOTTRACE +1298ms] *** start diag ***
+[BOOTTRACE +1307ms] ***** Fvu ver0.61 [05/11/01] *****
+[BOOTTRACE +1310ms] PANAMON1>[B/R/W/D/F/J/E/U/Q]
+[BOOTTRACE] UART: bytes=671 first_byte=10230us ferr=0 perr=0 ovf=NO | SW_rel=YES@26271us(SERIAL_BOOT)
+[BOOTTRACE] ADC0_SWUART: min=0.00V max=3.28V (low=3 hiz=3.25..3.28V n=799) | CtrlEdges: NSW5V=0 TXD=0 XRESET=0 (logged=0)
+BOOTTRACE: OK
+@P7501_RES cmd=BOOTTRACE status=OK code=0 elapsed_us=8021562
+PANADIGA> 
+=== BRIDGE ===
+[BRIDGE] USB CDC <-> P7501 SC0 115200 8N1 ctrl=OFF active (exit: send '~~~' or unplug USB).
+
+=== PING ===
+??
+PANAMON1>[B/R/W/D/F/J/E/U/Q]
+
+=== R_GLOBAL_000 ===
+R 89000000,120
+4C46635900000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+=== R_CH0_400 ===
+
+=== R_CH0_4C0 ===
+
+=== R_CH1_C00 ===
+
+=== R_CH1_CC0 ===
+
+=== R_C0001000 ===
+
+=== BSS_BEFORE ===
+
+=== J_50404B11 ===
+
+=== J_5040C352 ===
+
+=== J_5040B61B ===
+
+=== J_5040D516 ===
+
+=== J_5040D587 ===
+
+=== J_504156AD ===
+
+=== BSS_AFTER ===
+
+=== R_GLOBAL_000_POST ===
+
+=== R_CH0_400_POST ===
+
+=== R_CH1_C00_POST ===
+
+=== R_CH0_TF_PRE ===
+
+=== R_CH1_TF_PRE ===
+
+=== EXIT_BRIDGE ===
+
+BRIDGE: OK (rx=307 tx=253 ferr=0 ctrl_edges=0 overflow=NO)
+@P7501_RES cmd=BRIDGE status=OK code=0 elapsed_us=37439319
+PANADIGA> PANADIGA> 

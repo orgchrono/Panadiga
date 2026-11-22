@@ -32,6 +32,11 @@
         "reference": "firmware_and_images/dmr-ex_ez_series/README.md",
         "sha256": "a4c5d8b2b7fdb4e69f4081348ba73f23dc43e9f83c5068136834403e2221816c",
         "notes": "PROG202 (8MB/TOP BOOT, PCCARD Lib) + MAIN3100Y1 plain_hdr (DMR-EZ49VEB)."
+      },
+      {
+        "kind": "official_frm",
+        "reference": "firmware_and_images/dmr-ex_ez_series/ez49veb/PANA_DVD.FRM",
+        "sha256": "a4c5d8b2b7fdb4e69f4081348ba73f23dc43e9f83c5068136834403e2221816c"
       }
     ],
     "notes": "PROG202 (8MB/TOP BOOT, PCCARD Lib) + MAIN3100Y1 plain_hdr (DMR-EZ49VEB)."

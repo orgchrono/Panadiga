@@ -7,6 +7,7 @@ mod tests;
 
 use serde::{Deserialize, Serialize};
 
+use super::super::bgo_unbrick::find_retarget_spec_by_loader_key;
 use super::compose::SdLoaderProfile;
 
 pub(crate) use self::media::{DigadiagInspection, verify_digadiag_buffer, verify_pana_sd_buffer};
@@ -38,6 +39,12 @@ pub struct SdMediaVerificationReport {
     pub pana_sd_main_build: Option<String>,
     pub pana_sd_main_passthrough_mode: Option<String>,
     pub pana_sd_main_hdd_dynamic: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub digadiag_bgo_geometry: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pana_sd_prog061_bgo_geometry: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pana_sd_main_hdd_capacity_label: Option<String>,
     #[serde(default)]
     pub factory_unpatched_prog061_detected: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -168,6 +175,66 @@ pub fn verify_sd_buffers_with_profile(
     };
     checks.push(hw_warn);
 
+    let retarget_spec = diag
+        .detected_profile
+        .and_then(|p| find_retarget_spec_by_loader_key(p.as_str()))
+        .or_else(|| {
+            sd.detected_profile
+                .and_then(|p| find_retarget_spec_by_loader_key(p.as_str()))
+        });
+    if let Some(spec) = retarget_spec {
+        let expected_geo = spec.target_geometry_id.as_str();
+        let mismatches: Vec<String> = [
+            ("DIGADIAG.FRM", diag.bgo_geometry.as_deref()),
+            ("PANA__SD.FRM:PROG061", sd.prog061_bgo_geometry.as_deref()),
+        ]
+        .into_iter()
+        .filter_map(|(src, geo_opt)| {
+            geo_opt
+                .filter(|&geo| geo != expected_geo)
+                .map(|geo| format!("{src}='{geo}'"))
+        })
+        .collect();
+        if !mismatches.is_empty() {
+            let sev = match audit_profile {
+                SdKitAuditProfile::HardenedRecovery => "fail",
+                SdKitAuditProfile::Standard => "warn",
+            };
+            checks.push(check(
+                "bgo_geometry_mismatch",
+                sev,
+                "BGO Target Geometry Mismatch for Loader ver0.61 (DMR-EH55 8 MiB NOR)",
+                format!(
+                    "Expected SSOT geometry '{expected_geo}' for 8 MiB Spansion S29JL064H (0x84130000..0x84400000, 45 sectors), found {}. Using un-retargeted EH50 4 MiB geometry risks U99/SA54-SA70 corruption.",
+                    mismatches.join(", "),
+                ),
+            ));
+        }
+    }
+
+    if sd.detected_profile == Some(SdLoaderProfile::Ver061RawSd48)
+        && sd.prog061_mode.as_deref() == Some("UART_MONITOR_PANAMON1")
+    {
+        checks.push(check(
+            "fvu_panamon_trap",
+            "warn",
+            "PANA__SD.FRM Contains UART_MONITOR_PANAMON1 (Halts Instead of Flashing MAIN)",
+            "In Loader ver0.61 normal SD update mode, PROG061 inside PANA__SD.FRM must use BYPASS_CHECKS_ONLY so FVU proceeds to flash MAIN onto HDD; UART_MONITOR_PANAMON1 will halt at PANAMON1> instead.",
+        ));
+    }
+
+    if let Some(cap_label) = sd.main_hdd_capacity_label.as_deref() {
+        checks.push(check(
+            "rtsd_target_consistency",
+            "pass",
+            format!("MAIN HDD Capacity Policy Inspected ({cap_label})"),
+            format!(
+                "MAIN src/hdd_cmd.c RTSD limit resolves to '{cap_label}' (dynamic_unclamped={}).",
+                sd.main_hdd_dynamic.unwrap_or(false),
+            ),
+        ));
+    }
+
     let overall_status = if checks.iter().any(|c| c.severity == "fail") {
         "INCOMPLETE_OR_INVALID"
     } else if checks.iter().any(|c| c.severity == "warn") {
@@ -191,6 +258,9 @@ pub fn verify_sd_buffers_with_profile(
         pana_sd_main_build: sd.main_build,
         pana_sd_main_passthrough_mode: sd.main_passthrough_mode,
         pana_sd_main_hdd_dynamic: sd.main_hdd_dynamic,
+        digadiag_bgo_geometry: diag.bgo_geometry,
+        pana_sd_prog061_bgo_geometry: sd.prog061_bgo_geometry,
+        pana_sd_main_hdd_capacity_label: sd.main_hdd_capacity_label,
         factory_unpatched_prog061_detected,
         dual_family_parity,
         checks,

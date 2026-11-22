@@ -41,14 +41,14 @@
 
 | Programa no Projeto Ghidra | Papel no DMR-EH55 | Faixa Inicializada (`ram`) | Tamanho Inicializado | `funcs` | `defined_strings` | SHA-256 do Bloco Inicializado |
 |---|---|---|---:|---:|---:|---|
-| `/BOOT.BIN` | Estágio 1: IPL / Bootloader NOR XIP — **`Loader ver0.63 [07/10/24] (4MB/TOP BOOT)`** (DMR-EZ485V; distinto do `ver0.61 [06/03/06]` do DMR-EH55) | `0x44000000..0x4403ffff` | `0x40000` (262.144 B) | 843 | 512 | `7c13c72a54c77387f3f7df0ddc213e4800e20b27eecbfd225cbc05a8fc73e377` |
+| `/BOOT.BIN` | Estágio 1: IPL / Bootloader NOR XIP — **`Loader ver0.63 [07/10/24] (4MB/TOP BOOT)`** (DMR-EH58; distinto do `ver0.61 [06/03/06]` do DMR-EH55) | `0x44000000..0x4403ffff` | `0x40000` (262.144 B) | 843 | 512 | `7c13c72a54c77387f3f7df0ddc213e4800e20b27eecbfd225cbc05a8fc73e377` |
 | `/eh55_frm_PROG061_BOOT.bin` | Estágio 2: DIGADIAG / FVU Loader (`PROG061` do DMR-EH55; inclui `sd_load.o` @ `0x5040e9b0..0x5040edde`) | `0x50400000..0x5043ffff` | `0x40000` (262.144 B) | 5 | 0 | `c7da9121174fcf4c54f35f5bb1f7b23a3dc0c93ab227158ad4fdd90a1ea24a81` |
 | `/EH55_MAIN_3410PQ.bin` | Estágio 3: Main OS / `_dev_SERIAL` / LBA48 | `0x57000000..0x57c6692b` | `0xc6692c` (13.003.052 B) | 33 | 0 | `c3275d39549b68f48db16bc5fd043c6f8a373d4ba416826de09be5c55dc991b1` |
 | `/DRV_decomp.bin` | FE S211 Drive Firmware (imagem principal analisada) | `0x40000000..0x4015ffff` | `0x160000` (1.441.792 B) | 2.346 | 1.913 | `694a4ab8aa29fcc45350dc0712047663602bdee7e4bff313b8ae62b057efd052` |
 | `/EH55_DRV_S211.bin` | FE S211 Drive Firmware (revisão alterna comparada) | `0x40000000..0x4015ffff` | `0x160000` (1.441.792 B) | 15 | 0 | `6f2b61ede80ea9e3e9185d3d677813593f3d361446678e437c905a0037060243` |
 | `eh55_loader_ver061_256k.bin` *(NOR real EH55, proj. read-only auxiliar)* | Estágio 1 Real: IPL / NOR Flash XIP — **`Loader ver0.61 [06/03/06]`** do DMR-EH55 (`IC5001` `SA0..SA10`), com tabela BGO em **`0x440337A4`** (`45` setores `0x84130000..0x843FFFFF` / `SA26..SA70`) | `0x44000000..0x4403ffff` | `0x40000` (262.144 B) | *(análise sob demanda)* | *(strings `0x4402f746..0x440339xx`)* | `9f5c448d8879106be5ca3da6d6ac649026d50fbc191251ae0f4a003efca63800` |
 
-> **Nota Crítica de Proveniência (`/BOOT.BIN` `ver0.63` vs NOR DMR-EH55 `ver0.61`):** O binário `/BOOT.BIN` carregado em `Panadiga_MN103S` (SHA-256 `7c13c72a...`) é o **`Loader ver0.63 [07/10/24] (4MB/TOP BOOT)`** (DMR-EZ485V, strings em `0x44033abf..0x44033afe`): em carga de diagnóstico SD, ele lê `DIGADIAG.FRM` comprimido (`0x20000` = 131.072 B `EXTRHEAD`) para `0x93fc0000` (`uncompress`) e lê `PANA__SD.FRM` com tabela de `0x2000` B (entradas de 64 B, modo `sd64`). Já o hardware **DMR-EH55** executa na NOR o **`Loader ver0.61 [06/03/06]`**, cujo módulo `sd_load.o` corresponde ao presente em `/eh55_frm_PROG061_BOOT.bin` (`0x5040e9ae..0x5040edd2` / `0x5040e9b0..0x5040edde`) e no dump NOR de março de 2006 `dmr-es35v/flash.bin` (`Loader ver0.18 [06/03/13]`, base `0x44000000`, `0x440085d9` / `0x440095ab` / `0x4400bc70`, SHA-256 `0969f258...`): nesses bootloaders de 2006, `DIGADIAG.FRM` (`0x40000` = 262.144 B crus) é carregado diretamente em **`0x90400000`** (alias não-cacheado de `0x50400000`) com salto direto **`JMP 0x50400000`** (sem `EXTRHEAD`/`uncompress`), e `PANA__SD.FRM` usa TOC de **`0x1800` B** (entradas de 48 B em modo `sd48`).
+> **Nota Crítica de Proveniência (`/BOOT.BIN` `ver0.63` vs NOR DMR-EH55 `ver0.61`):** O binário `/BOOT.BIN` carregado em `Panadiga_MN103S` (SHA-256 `7c13c72a...`) é o **`Loader ver0.63 [07/10/24] (4MB/TOP BOOT)`** (DMR-EH58, strings em `0x44033abf..0x44033afe`): em carga de diagnóstico SD, ele lê `DIGADIAG.FRM` comprimido (`0x20000` = 131.072 B `EXTRHEAD`) para `0x93fc0000` (`uncompress`) e lê `PANA__SD.FRM` com tabela de `0x2000` B (entradas de 64 B, modo `sd64`). Já o hardware **DMR-EH55** executa na NOR o **`Loader ver0.61 [06/03/06]`**, cujo módulo `sd_load.o` corresponde ao presente em `/eh55_frm_PROG061_BOOT.bin` (`0x5040e9ae..0x5040edd2` / `0x5040e9b0..0x5040edde`) e no dump NOR de março de 2006 `dmr-es35v/flash.bin` (`Loader ver0.18 [06/03/13]`, base `0x44000000`, `0x440085d9` / `0x440095ab` / `0x4400bc70`, SHA-256 `0969f258...`): nesses bootloaders de 2006, `DIGADIAG.FRM` (`0x40000` = 262.144 B crus) é carregado diretamente em **`0x90400000`** (alias não-cacheado de `0x50400000`) com salto direto **`JMP 0x50400000`** (sem `EXTRHEAD`/`uncompress`), e `PANA__SD.FRM` usa TOC de **`0x1800` B** (entradas de 48 B em modo `sd48`).
 
 Saída literal da inspeção PyGhidra (`verified_extra_facts.txt` — Seção 1):
 
@@ -84,7 +84,7 @@ Saída literal da inspeção PyGhidra (`verified_extra_facts.txt` — Seção 1)
 1. **Reset e Estágio 1 (`/BOOT.BIN` @ `0x44000000`)**:
    - O vetor de reset em `0x44000000` salta (`JMP 0x440000a0`) para o código de inicialização de barramento/SDRAM (`0x440000a0..`), executa `crt0` (`0x4400133e`, limpando `.bss` de `0x50480b80` até `0x505044d0` e copiando `0x0b80` bytes de `.data` de `0x44039830` para `0x50480000`) e entra em `boot_main` (`0x4400492e`).
    - **Chave Feistel derivada em memória**: o ponteiro `0x50480278` passado para `FUN_4400a666` / `FUN_44011d42` corresponde a `0x44039830 + 0x278 = 0x44039aa8` na ROM (`72 eb ca 91 30 45 68` como os 7 bytes de `param_1`, e `0x44039aaf` = `0x5048027f` começando em `ad 99 df 56 72 3a b8 10` como os 8 bytes de `param_2`).
-   - `boot_main` inicializa BGO (`bgo_driver_init`), lê flags em NVRAM/EEPROM, consulta `FUN_440046e4` (GPIOs/switches), dispara recuperação de mapa NFROM se necessário (`FUN_440041dc` -> `FUN_44003fd0` -> `FUN_440018bb`) e chama `FUN_44006cd9` / `FUN_44006fe7` para rotear o boot normal (`MAINSOFT` no HDD via `FUN_440068f5` + `ExtrHead`/`uncompress` em RAM -> salto) ou modo de diagnóstico/atualização via **CD/DVD-RAM** (`cd_diag_boot_mode`) ou **Cartão SD** (`fmu_sd_dispatcher` / `sd_fvu_load_7a12`). Em `/BOOT.BIN` (`ver0.63` DMR-EZ485V), `sd_diag_load_a97c` lê `0x20000` B (`EXTRHEAD`) para `0x93fc0000` (`uncompress`) e `0x2000` B `sd64`; no **DMR-EH55 real (`Loader ver0.61 [06/03/06]` na NOR)** — comprovado pelo `sd_load.o` de `PROG061` e por `dmr-es35v/flash.bin` (`0x440085d9`/`0x440095ab`/`0x4400bc70`) — o IPL lê `DIGADIAG.FRM` cru de `0x40000` B (262.144 B) diretamente em `0x90400000` (alias não-cacheado de `0x50400000`) e salta com `JMP 0x50400000` (com TOC `PANA__SD.FRM` de `0x1800` B em `sd48`).
+   - `boot_main` inicializa BGO (`bgo_driver_init`), lê flags em NVRAM/EEPROM, consulta `FUN_440046e4` (GPIOs/switches), dispara recuperação de mapa NFROM se necessário (`FUN_440041dc` -> `FUN_44003fd0` -> `FUN_440018bb`) e chama `FUN_44006cd9` / `FUN_44006fe7` para rotear o boot normal (`MAINSOFT` no HDD via `FUN_440068f5` + `ExtrHead`/`uncompress` em RAM -> salto) ou modo de diagnóstico/atualização via **CD/DVD-RAM** (`cd_diag_boot_mode`) ou **Cartão SD** (`fmu_sd_dispatcher` / `sd_fvu_load_7a12`). Em `/BOOT.BIN` (`ver0.63` DMR-EH58), `sd_diag_load_a97c` lê `0x20000` B (`EXTRHEAD`) para `0x93fc0000` (`uncompress`) e `0x2000` B `sd64`; no **DMR-EH55 real (`Loader ver0.61 [06/03/06]` na NOR)** — comprovado pelo `sd_load.o` de `PROG061` e por `dmr-es35v/flash.bin` (`0x440085d9`/`0x440095ab`/`0x4400bc70`) — o IPL lê `DIGADIAG.FRM` cru de `0x40000` B (262.144 B) diretamente em `0x90400000` (alias não-cacheado de `0x50400000`) e salta com `JMP 0x50400000` (com TOC `PANA__SD.FRM` de `0x1800` B em `sd48`).
 2. **Estágio 2 (`/eh55_frm_PROG061_BOOT.bin` @ `0x50400000`)**:
    - Executável carregado em RAM (`PROG061`) que apresenta o menu interativo serial DIGADIAG/FVU (`FUN_50404fa7`, `FUN_50405416`), soma listas `.FMU` (`FUN_5040ea30` com loop overlapping em `0x5040ea2f`), controla VFD/Timer MCU (`FUN_5040df40`), opera gravação BGO NOR (`FUN_50421ebe`, `FUN_5042201e`, `FUN_50422359`, `FUN_50423058`) e exibe **3 sítios de patch exatos** que explicam bloqueios/assinaturas na atualização de partições.
 3. **Estágio 3 (`/EH55_MAIN_3410PQ.bin` @ `0x57000000`)**:
@@ -96,7 +96,7 @@ Saída literal da inspeção PyGhidra (`verified_extra_facts.txt` — Seção 1)
 
 ## Mapa de Correspondência Exata entre Revisões (Loader ver0.61 × PROG061 × Loader ver0.63)
 
-Parte do material histórico do projeto se baseou no **`/BOOT.BIN` (`Loader ver0.63 [07/10/24] (4MB/TOP BOOT)`, DMR-EZ485V)** carregado no banco principal Ghidra. Como o hardware físico **DMR-EH55** executa **`Loader ver0.61 [06/03/06]`** na NOR Spansion 8 MiB (`eh55_loader_ver061_256k.bin`, SHA-256 `9f5c448d...`) e carrega o executável de serviço **`PROG061`** (`eh55_frm_PROG061_BOOT.bin`) em `0x50400000`, as quatro tabelas abaixo estabelecem a correspondência exata **endereço a endereço** entre as três imagens e documentam dois desalinhamentos/erratas críticos corrigidos nesta auditoria.
+Parte do material histórico do projeto se baseou no **`/BOOT.BIN` (`Loader ver0.63 [07/10/24] (4MB/TOP BOOT)`, DMR-EH58)** carregado no banco principal Ghidra. Como o hardware físico **DMR-EH55** executa **`Loader ver0.61 [06/03/06]`** na NOR Spansion 8 MiB (`eh55_loader_ver061_256k.bin`, SHA-256 `9f5c448d...`) e carrega o executável de serviço **`PROG061`** (`eh55_frm_PROG061_BOOT.bin`) em `0x50400000`, as quatro tabelas abaixo estabelecem a correspondência exata **endereço a endereço** entre as três imagens e documentam dois desalinhamentos/erratas críticos corrigidos nesta auditoria.
 
 > [!IMPORTANT]
 > **Erratas de Endereçamento e Símbolos Corrigidos Nesta Auditoria:**
@@ -106,7 +106,7 @@ Parte do material histórico do projeto se baseou no **`/BOOT.BIN` (`Loader ver0
 
 ### Tabela A — Boot Principal, `fmu_sd_dispatcher`, Carga `mainsoft` HDD & Flags `update`
 
-| Papel Arquitetural | `Loader ver0.61 [06/03/06]` (`eh55_loader_ver061_256k.bin`, NOR EH55) | `PROG061` (`eh55_frm_PROG061_BOOT.bin` @ `0x50400000`) | `/BOOT.BIN` `ver0.63 [07/10/24]` (EZ485V ref.) | Observações Técnicas & Evidências |
+| Papel Arquitetural | `Loader ver0.61 [06/03/06]` (`eh55_loader_ver061_256k.bin`, NOR EH55) | `PROG061` (`eh55_frm_PROG061_BOOT.bin` @ `0x50400000`) | `/BOOT.BIN` `ver0.63 [07/10/24]` (DMR-EH58 ref.) | Observações Técnicas & Evidências |
 |---|---|---|---|---|
 | **Orquestrador de Boot (`boot_main`)** | `FUN_44005fb3` (`0x44005fb3`, `1076 B`) | `FUN_50404fa7` (menu DIGADIAG) | `boot_main` (`0x4400492e`, `13 B` + corpo) | Em `ver0.61`, `FUN_44005fb3` carrega FE de `0x84080000` -> `0x90202000`, imprime `"Loader ver0.61 [06/03/06]"` e despacha `serial boot` (`2`), `normal` (`1`) ou `support card` (`3`). |
 | **Despachante FMU / HDD `mainsoft`** | **`FUN_44007f0e`** (`0x44007f0e`, `911 B`; `0x44008020` = `+0x112` / mid-insn) | *(fluxo interativo via menu `FUN_50404fa7`)* | `fmu_sd_dispatcher` (`0x440065bc`, `614 B`) | Lê NVRAM `"MATS"`/`"HITA"` (`FUN_44009cef..9dd6`), imprime `"*** RTSC Initialize ***"`, consulta `HDD MAX LBA`, carrega LBA `0x10000` ou espelho `max_lba - 0x20000`; se falhar, imprime `"mainsoft data is invalid, so set update flag."` |
@@ -249,13 +249,13 @@ Ao ler o pseudocódigo C bruto preservado nas Partes I–IV, o decompilador Ghid
 | `/BOOT.BIN` | 0x440236ed | `FUN_440236ed` | `bgo_nor_cfi_cmd_236ed` | 205 B | Sequência CFI `0xAA`/`0x55` para NOR Flash — exemplo clássico de pruning MMIO pelo decompilador (`bgo_nor_cfi_cmd_236ed`). |
 | `/BOOT.BIN` | 0x440065bc | `fmu_sd_dispatcher` | `fmu_sd_dispatcher` | 614 B | Despachante principal de carga `.FMU`/`.FVU` via SD (`fmu_sd_dispatcher`). |
 | `/BOOT.BIN` | 0x44007a12 | `FUN_44007a12` | `sd_fvu_load_7a12` | 403 B | Carregamento de arquivo `.FVU` / `PROG061` via SD (`sd_fvu_load_7a12`). |
-| `/BOOT.BIN` | 0x44007ba5 | `FUN_44007ba5` | `sd_diag_boot_7ba5` | 180 B | Boot de diagnóstico via SD em `/BOOT.BIN` (`ver0.63` EZ485V: `uncompress(0x93fc0000)`; no EH55 `ver0.61` é substituído por carga crua em `0x90400000` e `JMP 0x50400000`). |
+| `/BOOT.BIN` | 0x44007ba5 | `FUN_44007ba5` | `sd_diag_boot_7ba5` | 180 B | Boot de diagnóstico via SD em `/BOOT.BIN` (`ver0.63` DMR-EH58: `uncompress(0x93fc0000)`; no EH55 `ver0.61` é substituído por carga crua em `0x90400000` e `JMP 0x50400000`). |
 | `/BOOT.BIN` | 0x44007e48 | `FUN_44007e48` | `sd_card_read_test_7e48` | 97 B | Teste de leitura do cartão SD (`sd_card_read_test_7e48`). |
 | `/BOOT.BIN` | 0x4400a247 | `FUN_4400a247` | `sd_mount_and_read_a247` | 163 B | Monta o cartão SD e abre fluxo de leitura (`sd_mount_and_read_a247`). |
 | `/BOOT.BIN` | 0x4400a32d | `FUN_4400a32d` | `sd_read_file_stream_a32d` | 216 B | Leitura em stream de arquivo SD (`sd_read_file_stream_a32d`). |
 | `/BOOT.BIN` | 0x4400a8c7 | `FUN_4400a8c7` | `sd_load_file_a8c7` | 181 B | Carregamento de arquivo nomeado do SD para buffer/RAM (`sd_load_file_a8c7`). |
-| `/BOOT.BIN` | 0x4400a97c | `FUN_4400a97c` | `sd_diag_load_a97c` | 227 B | Carga de `DIGADIAG.FRM` via SD em `/BOOT.BIN` (`ver0.63` EZ485V: `0x20000` B -> `0x93fc0000`; no EH55 `ver0.61`/`PROG061`/`flash.bin`: `0x40000` B -> `0x90400000`). |
-| `/BOOT.BIN` | 0x4400aa5f | `FUN_4400aa5f` | `sd_read_firm_list_aa5f` | 99 B | Leitura de `PANA__SD.FRM` via SD em `/BOOT.BIN` (`ver0.63` EZ485V: `0x2000` B `sd64`; no EH55 `ver0.61`/`PROG061`/`flash.bin`: `0x1800` B `sd48`). |
+| `/BOOT.BIN` | 0x4400a97c | `FUN_4400a97c` | `sd_diag_load_a97c` | 227 B | Carga de `DIGADIAG.FRM` via SD em `/BOOT.BIN` (`ver0.63` DMR-EH58: `0x20000` B -> `0x93fc0000`; no EH55 `ver0.61`/`PROG061`/`flash.bin`: `0x40000` B -> `0x90400000`). |
+| `/BOOT.BIN` | 0x4400aa5f | `FUN_4400aa5f` | `sd_read_firm_list_aa5f` | 99 B | Leitura de `PANA__SD.FRM` via SD em `/BOOT.BIN` (`ver0.63` DMR-EH58: `0x2000` B `sd64`; no EH55 `ver0.61`/`PROG061`/`flash.bin`: `0x1800` B `sd48`). |
 | `/BOOT.BIN` | 0x4402618b | `FUN_4402618b` | `sd_get_info_2618b` | 88 B | Consulta informações e estado atual do controlador SD (`sd_get_info_2618b`). |
 | `/BOOT.BIN` | 0x44026278 | `FUN_44026278` | `sd_slot_init_26278` | 83 B | Inicialização básica de slot SD (`sd_slot_init_26278`). |
 | `/BOOT.BIN` | 0x440264a6 | `FUN_440264a6` | `sd_set_state_264a6` | 163 B | Configuração de máquina de estados SD (`sd_set_state_264a6`). |
@@ -427,7 +427,7 @@ Ao ler o pseudocódigo C bruto preservado nas Partes I–IV, o decompilador Ghid
 
 ## Parte I — `/BOOT.BIN` (Estágio 1 / NOR Flash XIP)
 
-> **Identificação real deste binário:** `/BOOT.BIN` em `Panadiga_MN103S` (SHA-256 `7c13c72a...`) é o **`Loader ver0.63 [07/10/24] (4MB/TOP BOOT)`** (DMR-EZ485V), distinto do **`Loader ver0.61 [06/03/06]`** gravado na NOR do DMR-EH55 (`sd_load.o` equivalente em `PROG061` e em `dmr-es35v/flash.bin` `ver0.18 [06/03/13]`, Seção 2.1).
+> **Identificação real deste binário:** `/BOOT.BIN` em `Panadiga_MN103S` (SHA-256 `7c13c72a...`) é o **`Loader ver0.63 [07/10/24] (4MB/TOP BOOT)`** (DMR-EH58), distinto do **`Loader ver0.61 [06/03/06]`** gravado na NOR do DMR-EH55 (`sd_load.o` equivalente em `PROG061` e em `dmr-es35v/flash.bin` `ver0.18 [06/03/13]`, Seção 2.1).
 
 ### 1.1 Vetores de Reset, CRT0 (`.bss` + `.data` -> `0x50480000`), Nomes BGO & Strings
 
@@ -5119,7 +5119,7 @@ void FUN_44025328(undefined4 param_1,int param_2,undefined4 *param_3,undefined4 
 
 ### 1.4 Subsistema SD/MMC (`FMU`, `SetBusWidth`, erro `-91006`)
 
-Funções do `/BOOT.BIN` (`Loader ver0.63 [07/10/24] (4MB/TOP BOOT)` do DMR-EZ485V, SHA-256 `7c13c72a...`) responsáveis pela montagem de cartão SD/MMC, controlador SD (`CMD8`/`ACMD41`/`CMD2`/`CMD3`/`CMD17`/`CMD18`), `SetBusWidth` (falha `-91006`), leitura FAT12/FAT16/FAT32 e carga de `.FVU`/`DIGADIAG.FRM`/`PANA__SD.FRM`. Onde `ver0.63` lê `DIGADIAG.FRM` comprimido (`0x20000` B `EXTRHEAD` em `0x93fc0000`) e `PANA__SD.FRM` de `0x2000` B (`sd64`), o bootloader real do DMR-EH55 (`ver0.61 [06/03/06]`, cf. Seção 2.1) lê `0x40000` B crus em `0x90400000` (`JMP 0x50400000`) e `0x1800` B (`sd48`).
+Funções do `/BOOT.BIN` (`Loader ver0.63 [07/10/24] (4MB/TOP BOOT)` do DMR-EH58, SHA-256 `7c13c72a...`) responsáveis pela montagem de cartão SD/MMC, controlador SD (`CMD8`/`ACMD41`/`CMD2`/`CMD3`/`CMD17`/`CMD18`), `SetBusWidth` (falha `-91006`), leitura FAT12/FAT16/FAT32 e carga de `.FVU`/`DIGADIAG.FRM`/`PANA__SD.FRM`. Onde `ver0.63` lê `DIGADIAG.FRM` comprimido (`0x20000` B `EXTRHEAD` em `0x93fc0000`) e `PANA__SD.FRM` de `0x2000` B (`sd64`), o bootloader real do DMR-EH55 (`ver0.61 [06/03/06]`, cf. Seção 2.1) lê `0x40000` B crus em `0x90400000` (`JMP 0x50400000`) e `0x1800` B (`sd48`).
 
 > **Correspondência & Fallback de `update` (`fmu_sd_dispatcher` `0x440065bc` × `ver0.61 FUN_44007f0e`):**
 > - Se apenas um dos flags (`puVar1[-3]` validade `mainsoft` vs `puVar1[-2]` flag `update` NVRAM) estiver ativo, o bootloader imprime `"Clear update data.\n"` e limpa a pendência de atualização; se `mainsoft` não puder ser carregado nem de LBA `0x10000` nem do espelho `max_lba - 0x20000`, ele imprime **`"mainsoft data is invalid, so set update flag.\n"`**, grava as assinaturas **`"MATS"`/`"HITA"`** em `0x50480c74` e aciona o modo de recuperação/atualização (`FUN_44009d5b` + `FUN_44009d83(2)` no `ver0.61`).
@@ -5324,7 +5324,7 @@ undefined4 FUN_44007a12(void)
 
 #### `FUN_44007ba5` (`sd_diag_boot_7ba5`) — `0x44007ba5` (180 B)
 
-Boot de diagnóstico via SD em `/BOOT.BIN` (`Loader ver0.63` DMR-EZ485V: chama `FUN_4400a97c` para `0x20000` B e `uncompress(0x93fc0000)`; distinto do EH55 `ver0.61` que lê `0x40000` B crus em `0x90400000` e executa `JMP 0x50400000`).
+Boot de diagnóstico via SD em `/BOOT.BIN` (`Loader ver0.63` DMR-EH58: chama `FUN_4400a97c` para `0x20000` B e `uncompress(0x93fc0000)`; distinto do EH55 `ver0.61` que lê `0x40000` B crus em `0x90400000` e executa `JMP 0x50400000`).
 
 <!-- source: doc_boot_media_crypto.txt | FUNC FUN_44007ba5 (sd_diag_boot_7ba5) @ 0x44007ba5 (size=180 B, req=0x44007ba5) -->
 ```c
@@ -5550,7 +5550,7 @@ undefined4 FUN_4400a8c7(void)
 
 #### `FUN_4400a97c` (`sd_diag_load_a97c`) — `0x4400a97c` (227 B)
 
-Carga de `DIGADIAG.FRM` a partir do SD em `/BOOT.BIN` (`Loader ver0.63` DMR-EZ485V: `0x20000` B -> `0x93fc0000`; reconfirmada idêntica sob **Ghidra 12.1.4 Headless** em `DecompileFat.java` / `task-36919.log`). No EH55 `ver0.61` (`PROG061` `0x5040eca9` e `flash.bin` `0x4400bc70`), lê `0x40000` B para `0x90400000`.
+Carga de `DIGADIAG.FRM` a partir do SD em `/BOOT.BIN` (`Loader ver0.63` DMR-EH58: `0x20000` B -> `0x93fc0000`; reconfirmada idêntica sob **Ghidra 12.1.4 Headless** em `DecompileFat.java` / `task-36919.log`). No EH55 `ver0.61` (`PROG061` `0x5040eca9` e `flash.bin` `0x4400bc70`), lê `0x40000` B para `0x90400000`.
 
 <!-- source: doc_boot_media_crypto.txt | FUNC FUN_4400a97c (sd_diag_load_a97c) @ 0x4400a97c (size=227 B, req=0x4400a97c) -->
 ```c
@@ -5604,7 +5604,7 @@ undefined4 FUN_4400a97c(void)
 
 #### `FUN_4400aa5f` (`sd_read_firm_list_aa5f`) — `0x4400aa5f` (99 B)
 
-Leitura de `PANA__SD.FRM` no SD em `/BOOT.BIN` (`Loader ver0.63` DMR-EZ485V: `0x2000` B -> `0x5050175c`, modo `sd64`; no EH55 `ver0.61`/`PROG061`/`flash.bin`: `0x1800` B `sd48`).
+Leitura de `PANA__SD.FRM` no SD em `/BOOT.BIN` (`Loader ver0.63` DMR-EH58: `0x2000` B -> `0x5050175c`, modo `sd64`; no EH55 `ver0.61`/`PROG061`/`flash.bin`: `0x1800` B `sd48`).
 
 <!-- source: doc_boot_media_crypto.txt | FUNC FUN_4400aa5f (sd_read_firm_list_aa5f) @ 0x4400aa5f (size=99 B, req=0x4400aa5f) -->
 ```c
@@ -6517,7 +6517,7 @@ Strings de diagnóstico do driver SD em `/BOOT.BIN` associadas à falha em barra
 
 #### Subsistema FAT12 / FAT16 / FAT32 & Bloco SD (`/BOOT.BIN` — Ghidra 12.1.4 PUBLIC Headless)
 
-> **Origem e Integridade (`C:\ghidra\*.java` -> `./raw/doc_boot_fat_sd_java.txt`):** Todos os blocos C abaixo reproduzem **literalmente** a saída do decompilador **Ghidra 12.1.4 PUBLIC Headless** sobre `/BOOT.BIN` (`Loader ver0.63 [07/10/24] 4MB/TOP BOOT`, DMR-EZ485V, projeto read-only `Panadiga_MN103S`). Nenhuma expressão C original do Ghidra foi alterada; apenas foram adicionados comentários cirúrgicos `// [SLEIGH Trap #8 ...]` nas 19 linhas onde instruções `SUB Rm, Rn, Rd` (`fb 9c`) sofreram inversão de operandos no SLEIGH (`am33.sinc:184`). As sondas nulas esperadas (`DecompileFat.java` em `0x4400d335` = byte `+3` dentro de `0x4400d332 [fa fe 7c ff] ADD -0x84,SP` de `FUN_4400d32f`; `DecompileFat3.java` em `0x4400c436` = byte `+1` dentro de `0x4400c435 [f8 03 0c] MOV (0xc,A3),D0` do helper `0x4400c35a..0x4400c50f`; e `DumpAsm.java` em `0x4400c760` = byte `+1` dentro de `0x4400c75f [f8 11 18] MOV D0,(0x18,A1)`) e as duas rotinas fora do conjunto dos 11 scripts Java (`FUN_4400c984` e `FUN_4400ef58`) são documentadas abaixo com disassembly MN103S verificado diretamente em `BOOT.BIN`. Além destas, `FUN_4400a97c` (listada acima em [FUN_4400a97c](#fun_4400a97c-sd_diag_load_a97c--0x4400a97c-227-b)) e `FUN_4402724f` (listada acima em [FUN_4402724f](#fun_4402724f-sd_send_ocr_rca_2724f--0x4402724f-776-b)) foram reconfirmadas bit-a-bit idênticas por `DecompileFat.java` (`task-36919.log`) e `DecompileCardType.java` (`task-37066.log`) no Ghidra 12.1.4 Headless.
+> **Origem e Integridade (`C:\ghidra\*.java` -> `./raw/doc_boot_fat_sd_java.txt`):** Todos os blocos C abaixo reproduzem **literalmente** a saída do decompilador **Ghidra 12.1.4 PUBLIC Headless** sobre `/BOOT.BIN` (`Loader ver0.63 [07/10/24] 4MB/TOP BOOT`, DMR-EH58, projeto read-only `Panadiga_MN103S`). Nenhuma expressão C original do Ghidra foi alterada; apenas foram adicionados comentários cirúrgicos `// [SLEIGH Trap #8 ...]` nas 19 linhas onde instruções `SUB Rm, Rn, Rd` (`fb 9c`) sofreram inversão de operandos no SLEIGH (`am33.sinc:184`). As sondas nulas esperadas (`DecompileFat.java` em `0x4400d335` = byte `+3` dentro de `0x4400d332 [fa fe 7c ff] ADD -0x84,SP` de `FUN_4400d32f`; `DecompileFat3.java` em `0x4400c436` = byte `+1` dentro de `0x4400c435 [f8 03 0c] MOV (0xc,A3),D0` do helper `0x4400c35a..0x4400c50f`; e `DumpAsm.java` em `0x4400c760` = byte `+1` dentro de `0x4400c75f [f8 11 18] MOV D0,(0x18,A1)`) e as duas rotinas fora do conjunto dos 11 scripts Java (`FUN_4400c984` e `FUN_4400ef58`) são documentadas abaixo com disassembly MN103S verificado diretamente em `BOOT.BIN`. Além destas, `FUN_4400a97c` (listada acima em [FUN_4400a97c](#fun_4400a97c-sd_diag_load_a97c--0x4400a97c-227-b)) e `FUN_4402724f` (listada acima em [FUN_4402724f](#fun_4402724f-sd_send_ocr_rca_2724f--0x4402724f-776-b)) foram reconfirmadas bit-a-bit idênticas por `DecompileFat.java` (`task-36919.log`) e `DecompileCardType.java` (`task-37066.log`) no Ghidra 12.1.4 Headless.
 
 #### `FUN_440098fc` (`fat_dev_read_sectors_98fc`) — `0x440098fc` (132 B)
 
@@ -14687,7 +14687,7 @@ bool FUN_5040ea30(int param_1,int param_2)
 
 #### Módulo `sd_load.o` e Chamadores em `/eh55_frm_PROG061_BOOT.bin` (Disassembly MN103S Verificado no Binário)
 
-> **Equivalência com a NOR do DMR-EH55 (`Loader ver0.61 [06/03/06]`):** Os binários brutos de `/eh55_frm_PROG061_BOOT.bin` (`0x50400000`, SHA-256 `c7da9121...`) possuem apenas 5 funções criadas no projeto `Panadiga_MN103S`. O disassembly MN103S completo abaixo — verificado diretamente contra `prog061_dec.bin` — comprova o módulo `sd_load.o` compilado no Estágio 2 do DMR-EH55 e seu alinhamento semântico exato com o bootloader NOR de março de 2006 (`dmr-es35v/flash.bin`, `Loader ver0.18 [06/03/13]`), diferindo do `/BOOT.BIN` (`ver0.63` EZ485V) ao ler `DIGADIAG.FRM` cru de `0x40000` B diretamente para `0x90400000` e tabela `PANA__SD.FRM` de `0x1800` B (`sd48`, registros de `0x30` = 48 B) em RAM (`0x50481b5c` em `PROG061`; `0x504814ac` em `dmr-es35v/flash.bin`).
+> **Equivalência com a NOR do DMR-EH55 (`Loader ver0.61 [06/03/06]`):** Os binários brutos de `/eh55_frm_PROG061_BOOT.bin` (`0x50400000`, SHA-256 `c7da9121...`) possuem apenas 5 funções criadas no projeto `Panadiga_MN103S`. O disassembly MN103S completo abaixo — verificado diretamente contra `prog061_dec.bin` — comprova o módulo `sd_load.o` compilado no Estágio 2 do DMR-EH55 e seu alinhamento semântico exato com o bootloader NOR de março de 2006 (`dmr-es35v/flash.bin`, `Loader ver0.18 [06/03/13]`), diferindo do `/BOOT.BIN` (`ver0.63` DMR-EH58) ao ler `DIGADIAG.FRM` cru de `0x40000` B diretamente para `0x90400000` e tabela `PANA__SD.FRM` de `0x1800` B (`sd48`, registros de `0x30` = 48 B) em RAM (`0x50481b5c` em `PROG061`; `0x504814ac` em `dmr-es35v/flash.bin`).
 
 ##### `sd_decrypt_toc_48b` (`0x5040e9ae` / `+4` em `0x5040e9b2` .. `0x5040ea1b`)
 
@@ -15911,7 +15911,7 @@ Verifica checksum de módulo `.FMU` via `0x5040eb35` (`bytes_sum32`) e registra 
 
 #### Paralelo Exato na NOR Flash de Março de 2006 (`dmr-es35v/flash.bin`, `Loader ver0.18 [06/03/13]`, base `0x44000000`)
 
-Diferentemente do `/BOOT.BIN` (`Loader ver0.63 [07/10/24] 4MB/TOP BOOT`, DMR-EZ485V) analisado no projeto `Panadiga_MN103S`, o dump NOR de março de 2006 `dmr-es35v-8mb-nor-flash-and-eeprom-triton-dump.zip -> flash.bin` (`Loader ver0.18 [06/03/13]` @ `0x4402f6d7`/`0x4402f6f5`, SHA-256 `0969f258...`) comprova a arquitetura exata utilizada pela geração **2006** (`DMR-EH55 Loader ver0.61 [06/03/06]` / `DMR-ES35V Loader ver0.18 [06/03/13]`): carga crua direta de **`0x40000` (262.144 B)** em **`0x90400000`** (alias não-cacheado de `0x50400000`), execução direta por **`JMP 0x50400000`** (sem `EXTRHEAD`/`uncompress`) e leitura de **`0x1800` B** (`sd48`, 48 B/entrada) em `0x504814ac` — idêntico ao módulo `sd_load.o` de `PROG061`:
+Diferentemente do `/BOOT.BIN` (`Loader ver0.63 [07/10/24] 4MB/TOP BOOT`, DMR-EH58) analisado no projeto `Panadiga_MN103S`, o dump NOR de março de 2006 `dmr-es35v-8mb-nor-flash-and-eeprom-triton-dump.zip -> flash.bin` (`Loader ver0.18 [06/03/13]` @ `0x4402f6d7`/`0x4402f6f5`, SHA-256 `0969f258...`) comprova a arquitetura exata utilizada pela geração **2006** (`DMR-EH55 Loader ver0.61 [06/03/06]` / `DMR-ES35V Loader ver0.18 [06/03/13]`): carga crua direta de **`0x40000` (262.144 B)** em **`0x90400000`** (alias não-cacheado de `0x50400000`), execução direta por **`JMP 0x50400000`** (sem `EXTRHEAD`/`uncompress`) e leitura de **`0x1800` B** (`sd48`, 48 B/entrada) em `0x504814ac` — idêntico ao módulo `sd_load.o` de `PROG061`:
 
 ##### Saltos de boot `sd_diag_boot` -> `JMP 0x50400000` (`0x440085d9..0x44008605`)
 

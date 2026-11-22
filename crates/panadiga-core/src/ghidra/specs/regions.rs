@@ -67,9 +67,25 @@ pub fn memory_region_specs_for_model(model_id: &str) -> anyhow::Result<Vec<Model
         }
     }
 
-    if let (Some(soc), Some(layout)) = (&resolved.soc, &resolved.nor_layout)
-        && let Some(nor_win) = soc.bus_windows.iter().find(|w| w.name == "nor_cached")
-    {
+    if let Some(layout) = &resolved.nor_layout {
+        let nor_base = resolved
+            .soc
+            .as_ref()
+            .and_then(|soc| soc.bus_windows.iter().find(|w| w.name == "nor_cached"))
+            .map_or_else(
+                || {
+                    if resolved
+                        .soc_core
+                        .as_ref()
+                        .is_some_and(|core| !core.isa.to_ascii_uppercase().contains("MN103"))
+                    {
+                        0x0000_0000
+                    } else {
+                        0x8000_0000
+                    }
+                },
+                |w| w.base,
+            );
         for reg in &layout.regions {
             let len = reg
                 .end_offset
@@ -86,7 +102,7 @@ pub fn memory_region_specs_for_model(model_id: &str) -> anyhow::Result<Vec<Model
                     reg.tag.as_deref().unwrap_or("REGION").replace(' ', "_")
                 )
                 .to_ascii_uppercase(),
-                nor_win.base.wrapping_add(reg.start_offset),
+                nor_base.wrapping_add(reg.start_offset),
                 len,
                 true,
                 write,

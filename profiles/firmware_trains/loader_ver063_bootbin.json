@@ -23,6 +23,30 @@
     "sd_fat16b_0x06",
     "hdd_meihdfs_v1"
   ],
+  "digadiag_spec": {
+    "format": "extrhead_128k",
+    "filename": "DIGADIAG.FRM",
+    "exact_bytes": 131072,
+    "load_va": "0x5040_0000",
+    "entry_va": "0x5040_0000",
+    "bgo_geometry_target": "BGO_35SEC_4MB_0X84200000",
+    "fvu_decoupled_mode": "bypass_checks_only",
+    "sd_media_requirement": "fat16b_0x06_max_2gb"
+  },
+  "pana_rebuild_recipe": {
+    "output_container": "PANA__SD.FRM",
+    "toc_format": "sd64",
+    "family_aliases": [
+      "M6930",
+      "MN2DS0019"
+    ],
+    "model_prefix_byte": "0x4D",
+    "sources_from_panamon_dump": [
+      "nor_drv_extrhead",
+      "sd_prog_stage15",
+      "hdd_part1_main"
+    ]
+  },
   "evidence": {
     "tier": "official_frm_verified",
     "sources": [

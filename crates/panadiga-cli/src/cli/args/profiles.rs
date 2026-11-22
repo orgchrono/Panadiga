@@ -175,4 +175,38 @@ pub enum ProfilesActions {
         #[arg(long, default_value = ".", value_name = "DIR")]
         workspace_root: PathBuf,
     },
+
+    /// Reports per-collection and per-tier SSOT completeness metrics and missing relational fields
+    Completeness {
+        /// Optional runtime v2 JSON overlay directory
+        #[arg(long, value_name = "DIR")]
+        overlay_dir: Option<PathBuf>,
+
+        /// Optional minimum model claim tier filter (`T0`..`T4` or snake_case name)
+        #[arg(long, value_name = "TIER")]
+        min_tier: Option<String>,
+
+        /// Exports structured JSON completeness report (`-` emits stdout JSON)
+        #[arg(short, long, value_name = "JSON_FILE")]
+        json: Option<PathBuf>,
+    },
+
+    /// Scans a raw NOR flash dump (2..16 MiB) for Loader banners, EXTRHEAD sections, BGO FTL, and EEMUL markers
+    DiscoverNor {
+        /// Input physical NOR dump binary file (2..16 MiB)
+        #[arg(short, long, value_name = "NOR_BIN")]
+        input: PathBuf,
+
+        /// DIGA model ID used when generating draft SSOT JSONs
+        #[arg(long, default_value = "DMR-UNKNOWN", value_name = "MODEL")]
+        model_id: String,
+
+        /// Optional output directory for draft `nor_layout`, `model_manifest`, and `fixture` JSON stubs
+        #[arg(long, value_name = "DIR")]
+        out_dir: Option<PathBuf>,
+
+        /// Exports structured JSON discovery report (`-` emits stdout JSON)
+        #[arg(short, long, value_name = "JSON_FILE")]
+        json: Option<PathBuf>,
+    },
 }

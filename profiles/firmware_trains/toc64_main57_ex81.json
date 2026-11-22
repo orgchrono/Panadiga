@@ -33,6 +33,11 @@
         "reference": "firmware_and_images/dmr-ex_ez_series/README.md",
         "sha256": "df2c572206763c6fdd4309d02881a478b999c54e1bb157bb8c2ee5e92e3599a1",
         "notes": "PROG061 MINI (07/10/29 -> 0x90400000) + MAIN3410EE (0x5700_0000, MN2DS0019) + STB 112."
+      },
+      {
+        "kind": "official_frm",
+        "reference": "firmware_and_images/dmr-ex_ez_series/ex81s_71seg/PANA_DVD.FRM",
+        "sha256": "df2c572206763c6fdd4309d02881a478b999c54e1bb157bb8c2ee5e92e3599a1"
       }
     ],
     "notes": "PROG061 MINI (07/10/29 -> 0x90400000) + MAIN3410EE (0x5700_0000, MN2DS0019) + STB 112."

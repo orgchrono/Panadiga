@@ -12,22 +12,21 @@ clusters; FAT32/exFAT/NTFS falham na montagem):
 
 Copie APENAS estes 2 arquivos desta pasta para a RAIZ do cartao SD (nomes 8.3):
 
-1) PANA__SD.FRM  (7.181.224 bytes | SHA-256: 1e62c6411d132286d580aa82ad6b53c7e19041b7be2333c28790800f4958557f)
-   - Uso      : Modo Normal "LD FVU" (retarget EH55_M6930LB_8MB + BypassChecksOnly nos
-                slots PROG061 para instalar/atualizar MAIN3410PQ em HDD zerado).
+1) PANA__SD.FRM  (7.563.224 bytes | SHA-256: 2d3d62a75731f150762f269e3b650e83307da983d8d4bf222ec078b45298d9d0)
+   - Uso      : Modo Normal "LD FVU" (retarget BGO_45SEC_8MB_0X84130000 + BypassChecksOnly nos
+                slots PROG061 para instalar/atualizar MAIN3060NP em HDD 250 GB zerado).
    - Formato  : Conteiner sd48 plaintext (TOC 0x1800 B = slots de 48 B) com
                 6 entradas validas cobrindo M6930LB (DMR-EH55LB-S) e M6930:
                   * Slots 0/3: DRV S211 (720.896 B, off 0x001800, sum 0x058771C5)
-                  * Slots 1/4: PROG061  BYPASS_CHECKS_ONLY (FVU EH55_M6930LB_8MB)
+                  * Slots 1/4: PROG061  BYPASS_CHECKS_ONLY (FVU BGO_45SEC_8MB_0X84130000)
                                (262.144 B, off 0x0B1800)
-                  * Slots 2/5: MAIN3410PQ patched (6.192.040 B / 0x5E7BA8 em PANA__SD,
-                               AV_PASSTHROUGH + HDD LBA48 dinamico >200 GB,
-                               off 0x0F1800, sum 0x2F825ED9)
+                  * Slots 2/5: MAIN3060NP + HDD 250 GB (0x07466528, off 0x0F1800,
+                               6.574.040 B em PANA__SD)
 
 2) DIGADIAG.FRM  (262.144 bytes | SHA-256: 305cc2eebc09bbaa3bb5c5d75c0395eb16831bed4b9f80eafd57b9945e6a762d)
    - Uso      : Modo JIG / Sonda P7501 (`SW_UART` LOW via `JIGBOOT` / `UARTSTREAM`),
                 iniciando o monitor interativo UART PANAMON1>[B/R/W/D/F/J/E/U/Q]
-                com retarget EH55_M6930LB_8MB diretamente em 0x90400000 -> JMP 0x50400000.
+                com retarget BGO_45SEC_8MB_0X84130000 diretamente em 0x90400000 -> JMP 0x50400000.
 
 2. VERIFICACAO NA BANCADA
 --------------------------------------------------------------------------------

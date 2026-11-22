@@ -192,11 +192,34 @@ def _type_mecha_table(prog, img: Image, stats: dict) -> None:
     set_eol(prog, img.base + start, "[Pass2] CP932 mecha error table (%d x 0x34-byte records)" % count)
 
 
+def _type_signature_blocks(
+    prog, img: Image, sig: bytes, length: int, kind: str, label: str, stats: dict
+) -> None:
+    pos = img.raw.find(sig)
+    while pos != -1:
+        va = img.base + pos
+        if pos + length <= img.size:
+            if _type_undefined_bytes(prog, va, va + length - 1, kind, "structured_table_bytes", stats):
+                set_eol(prog, va, label)
+        pos = img.raw.find(sig, pos + 1)
+
+
 def _type_bgo_and_jump_tables(prog, img: Image, stats: dict, seeds: set) -> None:
     from ghidra.program.model.data import Pointer32DataType, UnsignedIntegerDataType
 
-    if img.base == 0x44000000 and img.contains(0x440337D0) and img.u32(0x440337D0) == 0x84130000:
-        _type_undefined_array(prog, 0x440337A4, 70, UnsignedIntegerDataType.dataType, 4, "bgo_layout_table_u32", "structured_table_bytes", stats)
+    if img.base in (0x44000000, 0x80000000):
+        bgo_tbl_va = img.base + 0x337A4
+        bgo_probe_va = img.base + 0x337D0
+        if img.contains(bgo_probe_va) and img.u32(bgo_probe_va) in (0x84130000, 0x84200000):
+            _type_undefined_array(prog, bgo_tbl_va, 70, UnsignedIntegerDataType.dataType, 4, "bgo_layout_table_u32", "structured_table_bytes", stats)
+    for bgo_sig in (b"\x00\x00\x13\x84\x00\x00\x40\x84", b"\x00\x00\x20\x84\x00\x00\x40\x84"):
+        pos = img.raw.find(bgo_sig)
+        while pos != -1:
+            if pos % 4 == 0 and pos >= 44 and pos + 236 <= img.size:
+                tbl_va = img.base + pos - 44
+                if img.u32(tbl_va + 32) == 0x10000 and img.u32(tbl_va + 52) == 0x10000:
+                    _type_undefined_array(prog, tbl_va, 70, UnsignedIntegerDataType.dataType, 4, "bgo_layout_table_u32", "structured_table_bytes", stats)
+            pos = img.raw.find(bgo_sig, pos + 4)
     if img.base == 0x44000000 and img.contains(0x44035F07):
         words = [img.u32(0x44035E98 + 4 * i) for i in range(28)]
         if all(img.contains(w) for w in words):
@@ -214,14 +237,11 @@ def _type_bgo_and_jump_tables(prog, img: Image, stats: dict, seeds: set) -> None
 
 
 def _type_sboxes(prog, img: Image, stats: dict) -> None:
-    pos = img.raw.find(S_BOX_SIGNATURE)
-    while pos != -1:
-        va = img.base + pos
-        if pos + 256 <= img.size:
-            typed = _type_undefined_bytes(prog, va, va + 255, "feistel_sbox", "structured_table_bytes", stats)
-            if typed:
-                set_eol(prog, va, "[Pass2] Feistel S-Box (256 bytes)")
-        pos = img.raw.find(S_BOX_SIGNATURE, pos + 1)
+    for sig, length, kind, label in (
+        (S_BOX_SIGNATURE, 256, "feistel_sbox", "[Pass2] Feistel S-Box (256 bytes)"),
+        (b"EXTRHEAD", 64, "extrhead_container_hdr", "[Pass2] EXTRHEAD container header (64 bytes)"),
+    ):
+        _type_signature_blocks(prog, img, sig, length, kind, label, stats)
 
 
 def _looks_textual(blob: bytes, strict: bool = False) -> bool:

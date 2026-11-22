@@ -9,7 +9,7 @@ pub use ext::{
     VerifySdArgs,
 };
 pub use payloads::{DecodeNorDumpArgs, ExtractFrmArgs, MatshitaEmuAction, NorStubArgs};
-pub use recovery::{BgoArgs, PassthroughArgs, PrepareSdArgs};
+pub use recovery::{BgoArgs, PassthroughArgs, PrepareSdArgs, RebuildFromDumpArgs};
 
 use clap::{Args, Subcommand};
 use std::path::PathBuf;
@@ -44,6 +44,9 @@ pub enum UnbrickActions {
 
     /// Builds a complete post-verified SD recovery kit (DIGADIAG.FRM + PANA__SD.FRM + SHA256SUMS.txt)
     PrepareSd(PrepareSdArgs),
+
+    /// Rebuilds a verified SD unbrick kit directly from an immutable NOR dump and optional HDD MAIN partition
+    RebuildFromDump(RebuildFromDumpArgs),
 
     /// Verifies an SD card root directory (DIGADIAG.FRM, PANA__SD.FRM, and -91006 hardware checklist)
     VerifySd(VerifySdArgs),

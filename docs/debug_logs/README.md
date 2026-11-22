@@ -3,8 +3,8 @@
 
 # Logs de Bancada (`COM10` / `P7501`) e Dossiê Unbrick / Live Bench UART Captures
 
-**PT-BR:** Este diretório reúne o dossiê de bancada consolidado e as **22 capturas e transcrições verificadas** (`SHA-256` íntegros) coletadas diretamente no **Panasonic DMR-EH55** via sonda Pico **`P7501`** (`COM10`, `115200 8N1`) e no host Windows (`\\.\PhysicalDrive1`). Todas as capturas UART (`Pure UART Captures` e prefixos `[BOOTTRACE]`/`[CTRL]` nos transcritos híbridos) podem ser decodificadas offline pelo comando nativo em Rust:
-**EN-US:** This directory stores the consolidated hardware unbrick dossier and **22 verified bench captures and transcripts** (`SHA-256` verified) recorded live from a **Panasonic DMR-EH55** via the **`P7501`** Pico probe (`COM10`, `115200 8N1`) and Windows host (`\\.\PhysicalDrive1`). All UART captures (`Pure UART Captures` and `[BOOTTRACE]`/`[CTRL]` frames inside hybrid transcripts) can be decoded offline using the native Rust decoder:
+**PT-BR:** Este diretório reúne o dossiê de bancada consolidado e as **28 capturas e transcrições verificadas** (`SHA-256` íntegros) coletadas diretamente no **Panasonic DMR-EH55** via sonda Pico **`P7501`** (`COM10`, `115200 8N1`) e no host Windows (`\\.\PhysicalDrive1`). Todas as capturas UART (`Pure UART Captures` e prefixos `[BOOTTRACE]`/`[CTRL]` nos transcritos híbridos) podem ser decodificadas offline pelo comando nativo em Rust:
+**EN-US:** This directory stores the consolidated hardware unbrick dossier and **28 verified bench captures and transcripts** (`SHA-256` verified) recorded live from a **Panasonic DMR-EH55** via the **`P7501`** Pico probe (`COM10`, `115200 8N1`) and Windows host (`\\.\PhysicalDrive1`). All UART captures (`Pure UART Captures` and `[BOOTTRACE]`/`[CTRL]` frames inside hybrid transcripts) can be decoded offline using the native Rust decoder:
 
 ```powershell
 cargo run -p panadiga-cli -- pico decode-log --file docs/debug_logs/<arquivo>.log
@@ -19,7 +19,7 @@ cargo run -p panadiga-cli -- pico decode-log --file docs/debug_logs/<arquivo>.lo
 
 ---
 
-## 1. Capturas Puras de UART (`14` Pure UART Captures — `panadiga pico decode-log`)
+## 1. Capturas Puras de UART (`16` Pure UART Captures — `panadiga pico decode-log`)
 
 Fluxo direto do Pico `P7501` (`UARTMON`, `UARTSTREAM`, `BOOTTRACE`) sem cabeçalhos de orquestração Python externos:
 
@@ -39,10 +39,12 @@ Fluxo direto do Pico `P7501` (`UARTMON`, `UARTSTREAM`, `BOOTTRACE`) sem cabeçal
 | [`captura_sd_flat_fix_20261115_025903.log`](./captura_sd_flat_fix_20261115_025903.log) | 3.265 B | `987EF8C43925FACA27C4CC4D458FF3C6C738168D9078ECE6AA63A819AE8B2C54` | `Loader ver0.61 [06/03/06]` · `cd_diag` (`JIG:2500`) | `5` | SD `-91006/-90002`; `80020401`, `80040904` (9 SENSE) | `3.25 V` |
 | [`sddiag_ver061_live_20261119.log`](./sddiag_ver061_live_20261119.log) | 1.147 B | `6C5EC83CC18ABFF4233F50DC1B1586AA049C0F60C39AB81F424E9F0CCBC63B25` | `Loader ver0.61 [06/03/06]` · `serial boot mode` (`UARTSTREAM`, `641 B`, `ferr=0`) | `70` | SD `0x3c4000[LBA]` `4-bit` OK -> `Fvu ver0.61 [05/11/01]` | `3.25 V` |
 | [`verify_bgo_restored_boot_20261119.log`](./verify_bgo_restored_boot_20261119.log) | 5.434 B | `B102000ED7E38CE5DA9BA3954ED316E540413FFF3B1CF8BC204588BCE7EBCDFC` | `Loader ver0.61 [06/03/06]` · `normal mode` (`BOOTTRACE 15000 NOJIG`) | `70` / Loader BGO OK! | `CH0` OK -> `CH1` `80000404`/`E8000000` -> `[nfrom] file_no[17]` -> stock `Fvu 05/11/01` (`0x2182DC9`, `BGO driver init failed[1]`) | `3.30 V` (`SW_PU`) |
+| [`sd_fvu_upd_ng_diag_20261122.log`](./sd_fvu_upd_ng_diag_20261122.log) | 8.881 B | `9FFC8842185F5E799E9131F4326C3BFB1028CFC4F3E0C881857CE65F5459D839` | `Loader ver0.61 [06/03/06]` · `normal mode` (`BOOTTRACE 60000 NOJIG`, retargeted `PANA__SD.FRM` `0x218A128`) | `70` / `BGO` OK (0 `U99`) | Retargeted FVU mounts BGO & verifies `MAIN3410PQ` (`0x2f825ed9`), then fails on `CH1` (`80000404`/`E8000000` `Reg[00..00]` `HDD MAX_LBA get failed`) | `3.28 V` |
+| [`boottrace_cabo_novo_20261122.log`](./boottrace_cabo_novo_20261122.log) | 7.695 B | `681AA1AAD2783D658B78CC52F5310032091C9AB78DE909C1C54A4477B9771A75` | `Loader ver0.61 [06/03/06]` · `normal mode` (`BOOTTRACE 20000 NOJIG`, `PANA__SD.FRM` `MAIN3060NP` `0x644FD8`) | `70` / `BGO` OK (0 `U99`) | Pós-cabo flat novo: FVU `0x218A128` valida `MAIN3060NP` (`0x3287e591`) e falha na escrita `start to update mainsoft.` (`80000404`/`E8000000` `Reg[00..00]`) | `3.25..3.30 V` |
 
 ---
 
-## 2. Transcritos de Automação Python & Sondas Híbridas (`7` Python Bench Harness Transcripts)
+## 2. Transcritos de Automação Python & Sondas Híbridas (`11` Python & Probe Bench Transcripts)
 
 Logs estruturados emitidos pelos harnesses de bancada em `COM10` combinando `STATUS`, `BOOTTRACE` e sessões interativas `PANAMON1>` (compatíveis com `panadiga pico decode-log`, preservando linhas `[PRECHECK]`/`[1A..2D]`):
 
@@ -55,6 +57,10 @@ Logs estruturados emitidos pelos harnesses de bancada em `COM10` combinando `STA
 | [`probe_ch1_after_fe_com10_20261119.log`](./probe_ch1_after_fe_com10_20261119.log) | 809 B | `3AB8BE1378C9430A3A60E3C0F1016DAB047F6EBB4247A518D70368BEEE532E64` | Sonda `CH1 b444(1) + b55b(0,1,0)` após liberação F/E & `TM11` | Registra `[2D FAIL]` timeout em `J 9040C700` (`5.0s`) sobre `CH1` antes da rotação de orientação `IDE2SAT2` (`180°` vs `0°`). |
 | [`probe_ch1_full_diag_20261119.log`](./probe_ch1_full_diag_20261119.log) | 12.244 B | `A6E71B147C17BAAE6F5F139C3F6D8F604E9C1461B7F22E557A00DBEA8FC0646C` | Híbrido `BOOTTRACE 15000 NORMAL` + `PANAMON1>` (`MN103S` RAM probe) | Entrada direta em `PANAMON1>` via `PANA__SD.FRM` `cdcc2cdf...` (`0x214E681`) sem JIG; `J 504156AD` (`0x504F81D0=2` vs `0x504F81D4=1`); `CH0=0x50` vs `IDE2SAT2 180° = 0x00002004` (`DD13\|DD2`). |
 | [`probe_ch1_live_v2_0deg_20261119.log`](./probe_ch1_live_v2_0deg_20261119.log) | 7.455 B | `F6225540D20818667FF7C81BF48FC45D202D115BCDC71A3F5ECC656C7E935705` | Híbrido `BOOTTRACE 15000 NORMAL` + `PANAMON1>` (`MN103S` RAM probe) | Orientação **`0°`** retorna `0x00000000` em `CH1` (`2A..2C`, sem travamento em `0x89000D58`) e `FUN_5041CD4D(1)` `rc=0x00000000` (`struct_504F8234`: `is_init=1, is_atapi=0, is_ata=0`). |
+| [`test_b_jigboot_panamon1_20261122_033201.log`](./test_b_jigboot_panamon1_20261122_033201.log) | 2.054 B | `068F58C819F5A7460BFDD8A893A484C94B19985F608059C4A42A06B0A1D139B9` | Híbrido `BOOTTRACE 10000 JIG` + `BRIDGE` `PANAMON1>` | Retargeted `DIGADIAG.FRM` (`305cc2ee...`) entra em `PANAMON1>` na primeira tentativa e lê `ifodev2` `"M6930LB"` (`4D363933304C42004D...`) em `0x84150604`. |
+| [`davis_probe_ch1_20261122.log`](./davis_probe_ch1_20261122.log) | 320 B | `5120C52E929B8542F87D52B8120C152483CB443BEF8FE8FDCDC423C034262A5A` | Sonda `panadiga pico davis-probe --port COM10` (relatório JSON em [`davis_probe_ch1_20261122.json`](../evidence/davis_probe_ch1_20261122.json)) | Pós-troca de cabo flat novo + `IDE2SAT2` + HDD SATA 250 GB: `fe_released=true` (`C0001008=0x007F->0x807F`), `CH0` (`0xEB14`) ativo e `CH1` todos `0x00` (`ResetStuckOrUnclocked`). |
+| [`davis_deep_probe_cabo_novo_20261122.log`](./davis_deep_probe_cabo_novo_20261122.log) | 2.678 B | `B4FDC37AFB7508B206F42DC7F70B154DE4358AFF690AC89936C4CFD109C7744A` | Híbrido `BOOTTRACE 8000 JIG` + `BRIDGE` `PANAMON1>` (cabo flat novo) | `PANAMON1>` lê bloco global `R 89000000,120 -> 4C466359...` no cabo flat novo antes do diagnóstico `davis-probe`. |
+| [`davis_mmio_dump_20261122.log`](./davis_mmio_dump_20261122.log) | 2.854 B | `36661DFFAC675F5896E05F44384C1B442F83997DBA0DD8E2A4F9DF023B34D11B` | Dump MMIO DAVIS/SysCtrl via `PANAMON1>` (relatório JSON [`davis_probe_ch1_cabo_novo_20261122.json`](../evidence/davis_probe_ch1_cabo_novo_20261122.json)) | Comparativo `CH0_520` (`01 01 01 14 EB A0`) vs `CH1_D20` (`00..00` em 4 leituras `TEST_C20`), `BSS_81D0`, `C0001000=7F800000` e `DC0F0080=00202000`. |
 
 ---
 

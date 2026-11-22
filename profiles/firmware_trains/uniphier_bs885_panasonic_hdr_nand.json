@@ -11,7 +11,7 @@
     "key_id": "le2011_08e0",
     "official_frm_sha256": "222f213c234c5ec17ba1e026ee6fe9575eade3b8557f257a73b80740d9b30b21"
   },
-  "prog_load_va": null,
+  "prog_load_va": "0x5080_0000",
   "main_load_va": null,
   "drv_load_va": null,
   "symbols": {},

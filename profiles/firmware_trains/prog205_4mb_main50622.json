@@ -33,6 +33,11 @@
         "reference": "firmware_and_images/dmr-ex_ez_series/README.md",
         "sha256": "5ca06ba7a41ab9f41462b4f2b957b7d434c23cfe29a3dbc58f583392894a480e",
         "notes": "PROG205 (4MB/TOP BOOT) + MAIN3030YN/3240YM @ 0x50622000 (EX84C, EX93C, EX86/EX99VEB)."
+      },
+      {
+        "kind": "official_frm",
+        "reference": "firmware_and_images/dmr-ex_ez_series/ex93ceg/PANA_DVD.FRM",
+        "sha256": "5ca06ba7a41ab9f41462b4f2b957b7d434c23cfe29a3dbc58f583392894a480e"
       }
     ],
     "notes": "PROG205 (4MB/TOP BOOT) + MAIN3030YN/3240YM @ 0x50622000 (EX84C, EX93C, EX86/EX99VEB)."

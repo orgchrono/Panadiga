@@ -14,12 +14,13 @@ use crate::loader::{
 };
 use crate::schema::verify_schemas_match_dir;
 use crate::types::{
-    AuthorizationMode, BoardProfile, BusWindow, Capability, ClaimEvidence, EepromChipProfile,
-    EepromFunction, EvidenceSource, EvidenceTier, FirmwareTrainProfile, FlashChipProfile,
-    FlashHwProtect, FlashJedecId, FlashRwBank, FlashSectorBank, FrmContainerSpec,
-    LAB_OVERRIDE_DISCLAIMER_ACK, LabOverride, MediaFormatProfile, ModelClaims,
-    ModelProfileManifest, NorLayoutProfile, NorRegion, NorRegionKind, NorRegionPolicy,
-    ProfilesBundle, RegionSignature, RuntimeFingerprint, SocCoreProfile, SocProfile,
+    AddressReloc, AuthorizationMode, BoardProfile, BusWindow, BytePatchEntry, Capability,
+    ClaimEvidence, EepromChipProfile, EepromFunction, EvidenceSource, EvidenceTier,
+    FirmwareTrainProfile, FlashChipProfile, FlashHwProtect, FlashJedecId, FlashRwBank,
+    FlashSectorBank, FrmContainerSpec, LAB_OVERRIDE_DISCLAIMER_ACK, LabOverride,
+    MediaFormatProfile, ModelClaims, ModelProfileManifest, NorLayoutProfile, NorRegion,
+    NorRegionKind, NorRegionPolicy, OffsetRange, ProfilesBundle, ProgBgoRetargetSpec,
+    RegionSignature, RuntimeFingerprint, SocCoreProfile, SocProfile,
 };
 use crate::validate::{AM34_LETHAL_MMIO_ADDR, REQUIRED_LVTTL_MV, validate_bundle};
 
@@ -222,6 +223,9 @@ fn sample_bundle() -> ProfilesBundle {
             sd_boot_filenames: vec!["DIGADIAG.FRM".to_string(), "PANA__SD.FRM".to_string()],
             digadiag_raw_bytes: Some(262_144),
             media_refs: vec!["sd_fat16b_0x06".to_string()],
+            digadiag_spec: None,
+            pana_rebuild_recipe: None,
+            bgo_retarget_spec: None,
             evidence: ev(EvidenceTier::BenchVerified, "bench"),
         },
     );
@@ -285,7 +289,7 @@ fn sample_bundle() -> ProfilesBundle {
             family_label: "DMR-EH55".to_string(),
             series: "Série EH (HDD+DVD)".to_string(),
             region_suffix: Some("EC".to_string()),
-            tv_standard: Some("PAL".to_string()),
+            tv_standard: None,
             hw_code: Some("M6930".to_string()),
             board_ref: Some("vep79138".to_string()),
             train_ref: Some("loader_ver061_toc48_main57".to_string()),
@@ -560,4 +564,131 @@ fn real_profiles_dir_and_schemas_stay_synchronized() {
         "profiles/schema must contain all 12 schemas"
     );
     verify_schemas_match_dir(&schema_dir).expect("Committed JSON Schemas match schemars");
+}
+
+#[test]
+fn bgo_retarget_spec_and_blob_validation_enforce_bounds_and_integrity() {
+    let mut b = sample_bundle();
+    let blob_rel = "blobs/test_drv.bin.gz".to_string();
+    b.blobs.insert(
+        blob_rel.clone(),
+        crate::blob_b64::encode_base64(b"test-drv"),
+    );
+    let spec = ProgBgoRetargetSpec {
+        target_geometry_id: "TEST_GEO".to_string(),
+        expected_prog_size: 0x0004_0000,
+        bgo_table_offset: 0x0003_6E2C,
+        bgo_table_marker: 0x8000_0000,
+        detect_logical_sectors: 0x28,
+        detect_flash_base: 0x8413_0000,
+        bgo_table_words: vec![0u32; 64],
+        bgo_sum_beq_offset: 0x0002_30CF,
+        nfrom_drv_start: 0x0002_1E6A,
+        nfrom_drv_end: 0x0002_9356,
+        nfrom_drv_uncompressed_bytes: 29_770,
+        nfrom_drv_blob_relpath: blob_rel.clone(),
+        nfrom_drv_uncompressed_sha256: "a".repeat(64),
+        nop_fill_byte: 0xCB,
+        bss_zero_end_offset: 0x07C0,
+        orig_bss_zero_end: 0x504F_9178,
+        target_bss_zero_end: 0x504F_E000,
+        init2_call_offset: 0x24C6,
+        orig_init2_rel32: 0x0001_FE93,
+        target_init2_rel32: 0x0001_FE82,
+        hi_ram_ranges: vec![OffsetRange {
+            start: 0x100,
+            end: 0x200,
+        }],
+        hi_ram_relocs: vec![AddressReloc {
+            from: 0x5049_0000,
+            to: 0x504F_A000,
+        }],
+        byte_patches: vec![BytePatchEntry {
+            offset: 0x150,
+            expect: 0x0A,
+            replace: 0x0F,
+            note: None,
+        }],
+    };
+    b.firmware_trains
+        .get_mut("loader_ver061_toc48_main57")
+        .unwrap()
+        .bgo_retarget_spec = Some(spec.clone());
+    assert!(validate_bundle(&b).valid);
+
+    // Mismatched flash base against model's nor_layout BGO region must fail validation.
+    let mut bad_base = b.clone();
+    bad_base
+        .firmware_trains
+        .get_mut("loader_ver061_toc48_main57")
+        .unwrap()
+        .bgo_retarget_spec
+        .as_mut()
+        .unwrap()
+        .detect_flash_base = 0x8420_0000;
+    let rep_bad_base = validate_bundle(&bad_base);
+    assert!(!rep_bad_base.valid);
+    assert!(
+        rep_bad_base
+            .errors
+            .iter()
+            .any(|e| e.contains("BGO start 0x130000"))
+    );
+
+    // Malformed base64 or missing blob fails validation.
+    let mut bad_blob = b.clone();
+    bad_blob.blobs.insert(blob_rel, "!!!".to_string());
+    assert!(!validate_bundle(&bad_blob).valid);
+
+    // Path traversal rejected by validate_bundle.
+    let mut bad_rel = b.clone();
+    bad_rel
+        .firmware_trains
+        .get_mut("loader_ver061_toc48_main57")
+        .unwrap()
+        .bgo_retarget_spec
+        .as_mut()
+        .unwrap()
+        .nfrom_drv_blob_relpath = "../escape.gz".to_string();
+    assert!(!validate_bundle(&bad_rel).valid);
+}
+
+#[test]
+fn region_interpolation_derives_tv_standard_hw_code_and_electrical_specs() {
+    let profiles_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../profiles");
+    let b = load_bundle_from_dir(&profiles_dir).expect("load real profiles");
+
+    let eh55 = resolve_model_in_bundle(&b, "DMR-EH55").unwrap();
+    assert_eq!(eh55.manifest.tv_standard.as_deref(), Some("PAL/PAL-M"));
+    assert!(eh55.active_region.is_none());
+    assert_eq!(eh55.regional_variants.len(), 2);
+
+    let eh55_lb = resolve_model_in_bundle(&b, "DMR-EH55LB-S").unwrap();
+    assert_eq!(eh55_lb.manifest.tv_standard.as_deref(), Some("PAL-M"));
+    assert_eq!(eh55_lb.manifest.hw_code.as_deref(), Some("M6930LB"));
+    let active_lb = eh55_lb.active_region.expect("active LB region");
+    assert_eq!(active_lb.dvd_region_code, 4);
+    assert_eq!(active_lb.oem_marker, "M");
+    assert_eq!(active_lb.aiof_vmodesel_hex, "0x0002");
+
+    let eh55_ec = resolve_model_in_bundle(&b, "DMR-EH55EC").unwrap();
+    assert_eq!(eh55_ec.manifest.tv_standard.as_deref(), Some("PAL"));
+    assert_eq!(eh55_ec.manifest.hw_code.as_deref(), Some("M6930"));
+    assert_eq!(eh55_ec.active_region.expect("active EC").dvd_region_code, 2);
+
+    let es35v = resolve_model_in_bundle(&b, "DMR-ES35V").unwrap();
+    assert_eq!(es35v.manifest.tv_standard.as_deref(), Some("PAL/SECAM"));
+    assert_eq!(es35v.active_region.expect("active EE").dvd_region_code, 5);
+
+    let ez485v = resolve_model_in_bundle(&b, "DMR-EZ485V").unwrap();
+    assert_eq!(ez485v.manifest.tv_standard.as_deref(), Some("NTSC/ATSC"));
+    assert_eq!(ez485v.manifest.hw_code.as_deref(), Some("M4831P"));
+    assert_eq!(ez485v.active_region.expect("active VP").dvd_region_code, 1);
+
+    let eh58 = resolve_model_in_bundle(&b, "DMR-EH58").unwrap();
+    assert_eq!(eh58.manifest.tv_standard.as_deref(), Some("PAL/SECAM"));
+    assert_eq!(
+        eh58.regional_variants[1].interpolated_hw_code.as_deref(),
+        Some("EH58EC")
+    );
 }

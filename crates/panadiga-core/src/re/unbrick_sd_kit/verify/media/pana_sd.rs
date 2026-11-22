@@ -4,9 +4,11 @@
 
 use crate::constants::PANA_SD_TOC_ENTRY_SIZE;
 use crate::crypto::{ExtrheadCryptMode, TocLayout, parse_sd_frm_toc_with_layout, unpack_extrhead};
-use crate::hdd::inspect_main_buffer_capacity;
+use crate::hdd::{HDD_CMD_M7920_200GB_BLOCKS, inspect_main_buffer_capacity};
 
-use super::super::super::super::bgo_unbrick::inspect_prog061_bgo_sites;
+use super::super::super::super::bgo_unbrick::{
+    inspect_prog061_bgo_sites, prog_has_bgo_table_marker,
+};
 use super::super::super::super::main_passthrough::{MAIN_BASE_VA, inspect_main_passthrough_sites};
 use super::super::super::compose::SdLoaderProfile;
 use super::super::{SdUnbrickCheck, check};
@@ -17,10 +19,12 @@ pub(crate) struct PanaSdInspection {
     pub toc_entries: usize,
     pub list_sums_ok: bool,
     pub prog061_mode: Option<String>,
+    pub prog061_bgo_geometry: Option<String>,
     pub factory_unpatched_prog061: bool,
     pub main_build: Option<String>,
     pub main_passthrough_mode: Option<String>,
     pub main_hdd_dynamic: Option<bool>,
+    pub main_hdd_capacity_label: Option<String>,
     pub detected_profile: Option<SdLoaderProfile>,
     pub check: SdUnbrickCheck,
 }
@@ -32,10 +36,12 @@ pub(crate) fn verify_pana_sd_buffer(bytes_opt: Option<&[u8]>) -> PanaSdInspectio
             toc_entries: 0,
             list_sums_ok: false,
             prog061_mode: None,
+            prog061_bgo_geometry: None,
             factory_unpatched_prog061: false,
             main_build: None,
             main_passthrough_mode: None,
             main_hdd_dynamic: None,
+            main_hdd_capacity_label: None,
             detected_profile: None,
             check: check(
                 "pana_sd_container",
@@ -58,10 +64,12 @@ pub(crate) fn verify_pana_sd_buffer(bytes_opt: Option<&[u8]>) -> PanaSdInspectio
 
     let mut fvu_sums_ok = !toc.is_empty();
     let mut prog061_mode = None;
+    let mut prog061_bgo_geometry = None;
     let mut factory_unpatched_prog061 = false;
     let mut main_build = None;
     let mut main_passthrough_mode = None;
     let mut main_hdd_dynamic = None;
+    let mut main_hdd_capacity_label = None;
 
     for e in &toc {
         let Some((mod_slice, slot_fvu_ok)) = slice_module_and_check_fvu(sd_bytes, e) else {
@@ -81,9 +89,12 @@ pub(crate) fn verify_pana_sd_buffer(bytes_opt: Option<&[u8]>) -> PanaSdInspectio
                 None
             };
             let prog_buf = unpacked_prog.as_deref().unwrap_or(mod_slice);
-            prog061_mode = inspect_prog061_bgo_sites(prog_buf)
-                .ok()
-                .map(|b| b.detected_mode);
+            if let Ok(b) = inspect_prog061_bgo_sites(prog_buf) {
+                if prog_has_bgo_table_marker(prog_buf) {
+                    prog061_bgo_geometry = Some(b.bgo_target_geometry);
+                }
+                prog061_mode = Some(b.detected_mode);
+            }
             if is_factory_unpatched_prog061(prog_buf, prog061_mode.as_deref()) {
                 factory_unpatched_prog061 = true;
             }
@@ -98,15 +109,22 @@ pub(crate) fn verify_pana_sd_buffer(bytes_opt: Option<&[u8]>) -> PanaSdInspectio
             main_passthrough_mode = inspect_main_passthrough_sites(&u.decompressed)
                 .ok()
                 .map(|p| p.detected_mode);
-            main_hdd_dynamic = inspect_main_buffer_capacity(
+            if let Ok(cap) = inspect_main_buffer_capacity(
                 &u.decompressed,
                 MAIN_BASE_VA,
                 "EXTRHEAD_CONTAINER",
                 Some(u.header.build_name.clone()),
                 "PANA__SD.FRM:MAIN",
-            )
-            .ok()
-            .map(|cap| cap.is_dynamic_unclamped);
+            ) {
+                main_hdd_dynamic = Some(cap.is_dynamic_unclamped);
+                main_hdd_capacity_label = Some(if cap.is_dynamic_unclamped {
+                    "dynamic".to_string()
+                } else if cap.slot_fallback_blocks_2kb == HDD_CMD_M7920_200GB_BLOCKS {
+                    "factory".to_string()
+                } else {
+                    format!("{}GB", cap.effective_default_limit_gb.round() as u32)
+                });
+            }
         }
     }
 
@@ -147,10 +165,12 @@ pub(crate) fn verify_pana_sd_buffer(bytes_opt: Option<&[u8]>) -> PanaSdInspectio
         toc_entries,
         list_sums_ok,
         prog061_mode,
+        prog061_bgo_geometry,
         factory_unpatched_prog061,
         main_build,
         main_passthrough_mode,
         main_hdd_dynamic,
+        main_hdd_capacity_label,
         detected_profile: (list_sums_ok && fvu_sums_ok)
             .then_some(detected_profile)
             .flatten(),

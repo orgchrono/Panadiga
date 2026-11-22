@@ -2,13 +2,14 @@
 > 🧭 **Portal:** [Índice de Documentos](../INDEX.md) | [Auditoria Completa](../../AUDITORIA_COMPLETA.md) | [Auditorias Históricas](../audits/README.md) | [Pseudocódigo Ghidra](../pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) | [Logs de Depuração](../debug_logs/README.md)
 
 # Compêndio Global da Comunidade: Firmware, Hardware e Engenharia Reversa Panasonic DIGA
+
 ## Referência Canônica de Matrizes Oficiais, Bases Internacionais, Modos de Serviço e Ferramentas Forenses
 
-**Documento:** `COMPENDIO_GLOBAL_COMUNIDADE_FIRMWARE_E_HARDWARE_DIGA.md`  
-**Autor:** Especialista em Inteligência Comunitária e Dossiês Técnicos Bilíngues  
-**Ecossistema:** Panadiga — Engenharia Reversa, Forense de Storage e Laboratório de Hardware DMR-EH55  
-**Data:** Novembro de 2026  
-**Classificação:** Referência Técnica Canônica / Inteligência Global de Engenharia Reversa  
+**Documento:** `COMPENDIO_GLOBAL_COMUNIDADE_FIRMWARE_E_HARDWARE_DIGA.md`
+**Autor:** Especialista em Inteligência Comunitária e Dossiês Técnicos Bilíngues
+**Ecossistema:** Panadiga — Engenharia Reversa, Forense de Storage e Laboratório de Hardware DMR-EH55
+**Data:** Novembro de 2026
+**Classificação:** Referência Técnica Canônica / Inteligência Global de Engenharia Reversa
 
 ---
 
@@ -17,12 +18,13 @@
 A linha de gravadores digitais de DVD/HDD **Panasonic DIGA** (abrangendo as famílias DMR-E, DMR-EH, DMR-EX, DMR-EZ e as gerações posteriores baseadas na arquitetura Matsushita/UniPhier AM34, MN103S e MN2DS) representou o ápice do design eletrônico japonês para gravação de consumo entre 2003 e 2012. No entanto, sua arquitetura fortemente protegida por DRM industrial (CPRM, C-BSA, Macrovision, assinaturas proprietárias MBR `"SH"`, criptografia Feistel de firmware em blocos de 64 bits e emaranhamento estrito entre sub-CPUs e drive óptico) transformou diagnósticos de bancada e recuperações de falhas críticas — em especial o infame código **`U99`** — em verdadeiros enigmas técnicos.
 
 Ao longo de duas décadas, o conhecimento sobre esses gravadores desenvolveu-se de forma fragmentada em ecossistemas fechados pelo mundo:
+
 1. **Comunidade Técnica do Japão (2channel / 5ch / fóruns ncos1):** Investigou os comandos proprietários de gravação contínua AV do padrão ATA-7, setores de teste com a assinatura `"Panasonic DIGA RTSC"` e os menus de serviço de fábrica (*Service Mode* `SERV`) acessíveis por códigos de controle remoto.
 2. **Reparadores do Leste Europeu (`remont-aud.net`, `monitor.espec.ws`, `telemaster.ru`):** Documentaram esquemas elétricos, realizaram dumps físicos com programadores universais (Triton, Orange, ChipProg) de memórias Flash TSOP-48 e EEPROMs I²C (`24LC64`), e correlacionaram falhas de capacitores eletrolíticos nas fontes de alimentação chaveadas com corrupções de NVRAM e o travamento `U99`.
 3. **Engenheiros e Entusiastas Poloneses e Alemães (`elektroda.pl`, `hardwarefetish.com`):** Mapearam substituições de discos rígidos, clonagem de setores de boot, descompressão de partições de firmware e as primeiras tentativas de engenharia reversa do sistema de arquivos MEIHDFS.
 4. **Comunidade Open-Source Moderna de Engenharia Reversa (`unixtract`, `pana-fw`, `panasonic-rec`, `dvr-recover`, `sddl_dec`):** Identificou as 12 chaves simétricas Feistel (`PANA_DVD`), os esquemas de encapsulamento `EXTRHEAD`/`EXTRFOOT`, as variantes de compressão LZSS (Okumura) e os consoles seriais SLM (*Serial Log Menu*) em equipamentos UniPhier com Linux embarcado.
 
-Este compêndio unifica e valida rigorosamente todos esses achados em uma única especificação canônica, dividida em quatro grandes seções técnicas.
+Este compêndio unifica e valida rigorosamente todos esses achados em uma única especificação canônica, dividida em cinco grandes seções técnicas (seguidas da matriz de síntese e das referências correlatas), incorporando integralmente a crônica de engenharia reversa do projeto Panadiga até o commit `475fd48`.
 
 ---
 
@@ -34,74 +36,75 @@ A Panasonic manteve sua infraestrutura oficial de distribuição de firmwares em
 
 Todas as 30 URLs a seguir foram testadas e validadas com retorno `HTTP/1.1 200 OK`:
 
-| # | Linha / Família | URL Oficial Direta (CDN Panasonic Japão) |
-| :---: | :--- | :--- |
-| 1 | `eh49` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/eh49/UPDATE_EH49_495.exe` |
-| 2 | `eh49` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/eh59/UPDATE_EH59_595.exe` |
-| 3 | `eh49` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/eh69/UPDATE_EH69_695.exe` |
-| 4 | `ex769` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex769/UPDATE_DMR-EX769EF_V14.exe` |
-| 5 | `ex769` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex79/Update_EX79_EX89_EX769EB_V105.exe` |
-| 6 | `ex773` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex773/UPDATE_DMR-EX773EC_V109.exe` |
-| 7 | `ex773` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex773/UPDATE_DMR-EX773EP_V109.exe` |
-| 8 | `ex773` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex86/Update_EX86_EX83_EX773_EX99V_EZ49VEB_V107.exe` |
-| 9 | `ex79` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex79/UPDATE_DMR-EX79EF_V14.exe` |
-| 10 | `ex79` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex79/Update_EX79_EX89_EX769EB_V105.exe` |
-| 11 | `ex795` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex795/UPDATE_EX795EP_V108.exe` |
-| 12 | `ex80` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex80/UPDATE_DMR-EX72SEG_V112.exe` |
-| 13 | `ex80` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex80/UPDATE_DMR-EX81S_71SEG_V112.exe` |
-| 14 | `ex80` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex80/Update_DMR-EX80SEG_V115.exe` |
-| 15 | `ex83` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex83/UPDATE_DMR-EX83EC_V109.exe` |
-| 16 | `ex83` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex83/UPDATE_DMR-EX83EP_V109.exe` |
-| 17 | `ex83` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex86/Update_EX86_EX83_EX773_EX99V_EZ49VEB_V107.exe` |
-| 18 | `ex84c` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex84/UPDATE_DMR-EX84CEG_V107303.exe` |
-| 19 | `ex86` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex86/Update_EX86_EX83_EX773_EX99V_EZ49VEB_V107.exe` |
-| 20 | `ex89` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex79/Update_EX79_EX89_EX769EB_V105.exe` |
-| 21 | `ex89` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex89/UPDATE_DMR-EX89EF_V14.exe` |
-| 22 | `ex93c` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex93/UPDATE_DMR-EX93CEG_V139324.exe` |
-| 23 | `ex97` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex97/UPDATE_EX97EB_V110.zip` |
-| 24 | `ex97` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex97/UPDATE_EX97SEG_EX97CEG_V105.exe` |
-| 25 | `ez49v` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ez49v/UPDATE_DMR-EZ49VEC_V109.exe` |
-| 26 | `ez49v` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ez49v/UPDATE_EZ49VEB_V11.exe` |
-| 27 | `xs350` | `https://fdl.jpn.support.panasonic.com/pc/en/bd/bs850/UPDATE_BS850_BS750_XS350EG_V16.exe` |
-| 28 | `xs385` | `https://fdl.jpn.support.panasonic.com/pc/en/bd/bs885/UPDATE_BS880_BS780_XS380EB_V141.exe` |
-| 29 | `xs385` | `https://fdl.jpn.support.panasonic.com/pc/en/bd/bs885/UPDATE_BS885_BS785_XS385EG_V140.exe` |
-| 30 | `xw300` | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/xw300/UPDATE_XW300GN_V17.exe` |
+| # | Linha / Família | URL Oficial Direta (CDN Panasonic Japão)                                                              |
+| :-: | :--------------- | :----------------------------------------------------------------------------------------------------- |
+| 1 | `eh49`         | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/eh49/UPDATE_EH49_495.exe`                           |
+| 2 | `eh49`         | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/eh59/UPDATE_EH59_595.exe`                           |
+| 3 | `eh49`         | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/eh69/UPDATE_EH69_695.exe`                           |
+| 4 | `ex769`        | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex769/UPDATE_DMR-EX769EF_V14.exe`                   |
+| 5 | `ex769`        | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex79/Update_EX79_EX89_EX769EB_V105.exe`             |
+| 6 | `ex773`        | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex773/UPDATE_DMR-EX773EC_V109.exe`                  |
+| 7 | `ex773`        | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex773/UPDATE_DMR-EX773EP_V109.exe`                  |
+| 8 | `ex773`        | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex86/Update_EX86_EX83_EX773_EX99V_EZ49VEB_V107.exe` |
+| 9 | `ex79`         | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex79/UPDATE_DMR-EX79EF_V14.exe`                     |
+| 10 | `ex79`         | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex79/Update_EX79_EX89_EX769EB_V105.exe`             |
+| 11 | `ex795`        | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex795/UPDATE_EX795EP_V108.exe`                      |
+| 12 | `ex80`         | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex80/UPDATE_DMR-EX72SEG_V112.exe`                   |
+| 13 | `ex80`         | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex80/UPDATE_DMR-EX81S_71SEG_V112.exe`               |
+| 14 | `ex80`         | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex80/Update_DMR-EX80SEG_V115.exe`                   |
+| 15 | `ex83`         | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex83/UPDATE_DMR-EX83EC_V109.exe`                    |
+| 16 | `ex83`         | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex83/UPDATE_DMR-EX83EP_V109.exe`                    |
+| 17 | `ex83`         | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex86/Update_EX86_EX83_EX773_EX99V_EZ49VEB_V107.exe` |
+| 18 | `ex84c`        | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex84/UPDATE_DMR-EX84CEG_V107303.exe`                |
+| 19 | `ex86`         | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex86/Update_EX86_EX83_EX773_EX99V_EZ49VEB_V107.exe` |
+| 20 | `ex89`         | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex79/Update_EX79_EX89_EX769EB_V105.exe`             |
+| 21 | `ex89`         | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex89/UPDATE_DMR-EX89EF_V14.exe`                     |
+| 22 | `ex93c`        | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex93/UPDATE_DMR-EX93CEG_V139324.exe`                |
+| 23 | `ex97`         | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex97/UPDATE_EX97EB_V110.zip`                        |
+| 24 | `ex97`         | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ex97/UPDATE_EX97SEG_EX97CEG_V105.exe`               |
+| 25 | `ez49v`        | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ez49v/UPDATE_DMR-EZ49VEC_V109.exe`                  |
+| 26 | `ez49v`        | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/ez49v/UPDATE_EZ49VEB_V11.exe`                       |
+| 27 | `xs350`        | `https://fdl.jpn.support.panasonic.com/pc/en/bd/bs850/UPDATE_BS850_BS750_XS350EG_V16.exe`            |
+| 28 | `xs385`        | `https://fdl.jpn.support.panasonic.com/pc/en/bd/bs885/UPDATE_BS880_BS780_XS380EB_V141.exe`           |
+| 29 | `xs385`        | `https://fdl.jpn.support.panasonic.com/pc/en/bd/bs885/UPDATE_BS885_BS785_XS385EG_V140.exe`           |
+| 30 | `xw300`        | `https://fdl.jpn.support.panasonic.com/pc/en/dvd/xw300/UPDATE_XW300GN_V17.exe`                       |
 
 ### 1.2 Pacotes Auditados, Extraídos e Hashes SHA-256
 
 Os pacotes baixados compreendem as gerações clássicas (`DMR-EH55`, `DMR-EH50`), a linha tardia analógica/HDMI (`EH49`, `EH59`, `EH69`) e a linha com sintonizadores digitais DVB-T/DVB-S (`DMR-EX`, `DMR-EZ`).
 
 #### Matriz DMR-EH49 / DMR-EH59 / DMR-EH69
+
 * Chave Feistel do contêiner: `DF7215C7427FD010` (coleção `PANA_DVD_KEYONLY "Old"`).
 * Estrutura de TOC: 64 bytes (`0x40`) com payload iniciando em `0x2000` (8.192 bytes).
 
-| Modelo | Instalador (`.exe`) Bytes & SHA-256 | `PANA_DVD.FRM` Bytes & SHA-256 | `MAIN.bin` Bytes / Base / SHA-256 | `PROG.bin` SHA-256 |
-| :--- | :--- | :--- | :--- | :--- |
-| **DMR-EH49** / EH495 | `7,492,387` B<br>`ff12c1d02e5bc8a10a78f0935177af4e70e188867af8c9b523e0638d39c59762` | `7,461,592` B<br>`6d7441246fcd1d3032297cf70df90fc64fdc93035e2f7b9dc55eae1d6903a7d8` | `13,653,820` B<br>`0x50622000` (`0x513276B8`)<br>`594b6c5aa5872bb46b7fb117e21a1129ecc5ce520fd76dbf049f77e44aec25ce` | `3bf48f806898643a1f4fbd3bf9e7bebff0d97eab25449a604dac498d0744383b` |
-| **DMR-EH59** / EH595 | `7,546,243` B<br>`f35345fc4c0603a13c80e9bc762d64b61db72ab74ce317b7d130a0203afc46fb` | `7,515,448` B<br>`7d7f6ad21f9c0a5b0d2e1c42e39d46389f05a1a87a6a4cb964aaf3343d8df3f8` | `13,773,740` B<br>`0x50622000` (`0x51344B28`)<br>`9d8a4bca9209bbfe135586ed94bbe902f0b721e56c45b32a9ad9b34afb38fec2` | `3bf48f806898643a1f4fbd3bf9e7bebff0d97eab25449a604dac498d0744383b` |
-| **DMR-EH69** / EH695 | `7,512,090` B<br>`20af7c95088ba7f1242ebd6a63dd08201665261f6121242e8eb58644cfa34da8` | `7,567,480` B<br>`9942349c4c175c2881c3d3e3eecf5f446b012ae28341958ed8dce46889695565` | `13,886,636` B<br>`0x50622000` (`0x51360428`)<br>`a7182537e8859b83cbf082855844a2845fcd57303fa1113898721708cbc435b2` | `3bf48f806898643a1f4fbd3bf9e7bebff0d97eab25449a604dac498d0744383b` |
+| Modelo                     | Instalador (`.exe`) Bytes & SHA-256                                               | `PANA_DVD.FRM` Bytes & SHA-256                                                    | `MAIN.bin` Bytes / Base / SHA-256                                                                                 | `PROG.bin` SHA-256                                                 |
+| :------------------------- | :---------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------ | :------------------------------------------------------------------- |
+| **DMR-EH49** / EH495 | `7,492,387` B`ff12c1d02e5bc8a10a78f0935177af4e70e188867af8c9b523e0638d39c59762` | `7,461,592` B`6d7441246fcd1d3032297cf70df90fc64fdc93035e2f7b9dc55eae1d6903a7d8` | `13,653,820` B`0x50622000` (`0x513276B8`)`594b6c5aa5872bb46b7fb117e21a1129ecc5ce520fd76dbf049f77e44aec25ce` | `3bf48f806898643a1f4fbd3bf9e7bebff0d97eab25449a604dac498d0744383b` |
+| **DMR-EH59** / EH595 | `7,546,243` B`f35345fc4c0603a13c80e9bc762d64b61db72ab74ce317b7d130a0203afc46fb` | `7,515,448` B`7d7f6ad21f9c0a5b0d2e1c42e39d46389f05a1a87a6a4cb964aaf3343d8df3f8` | `13,773,740` B`0x50622000` (`0x51344B28`)`9d8a4bca9209bbfe135586ed94bbe902f0b721e56c45b32a9ad9b34afb38fec2` | `3bf48f806898643a1f4fbd3bf9e7bebff0d97eab25449a604dac498d0744383b` |
+| **DMR-EH69** / EH695 | `7,512,090` B`20af7c95088ba7f1242ebd6a63dd08201665261f6121242e8eb58644cfa34da8` | `7,567,480` B`9942349c4c175c2881c3d3e3eecf5f446b012ae28341958ed8dce46889695565` | `13,886,636` B`0x50622000` (`0x51360428`)`a7182537e8859b83cbf082855844a2845fcd57303fa1113898721708cbc435b2` | `3bf48f806898643a1f4fbd3bf9e7bebff0d97eab25449a604dac498d0744383b` |
 
 #### Matriz Séries DMR-EX e DMR-EZ (17 Subdiretórios Auditados)
 
-| Subdiretório | Instalador Oficial (`.exe`) | Bytes `.exe` | Bytes `.FRM` | SHA-256 do Arquivo `.FRM` |
-| :--- | :--- | ---: | ---: | :--- |
-| `ex72seg/` | `UPDATE_DMR-EX72SEG_V112.exe` | `7,321,784` | `7,213,584` | `2abdfbeb8888ff66ac41f15aa1c7eb9a7bb587ea7de6d46e2bbf6dac7dd0e2f9` |
-| `ex769ef/` | `UPDATE_DMR-EX769EF_V14.exe` | `6,365,331` | `6,264,392` | `b1d55c1f15467341ce7becfbf3d32c50ef3564ad5a9f611dc0e859f68b29012f` |
-| `ex773ec/` | `UPDATE_DMR-EX773EC_V109.exe` | `7,126,264` | `7,018,064` | `ef8ead563883809f5d6a01aaf1fdd9de8e7a64e15f51c07abb68515a16057ff6` |
-| `ex773ep/` | `UPDATE_DMR-EX773EP_V109.exe` | `7,123,800` | `7,015,608` | `e602b452d2a981e2b3021b436d699c54158f475a3d5d1a5161d8aabafa1f0e42` |
-| `ex795ep/` | `UPDATE_EX795EP_V108.exe` | `2,516,032` | `2,297,800` | `9e0c849d7253cd5163fcc86959c52d71e8ca60ed7c3322a2545899f699f1df39` |
-| `ex79_89_769eb/` | `Update_EX79_EX89_EX769EB_V105.exe` | `1,795,184` | `1,576,960` | `3b78fb68384fe4ffb26aaef28067cc3a336c7036696fda6b4ce09beff53acbfe` |
-| `ex79ef/` | `UPDATE_DMR-EX79EF_V14.exe` | `13,806,904` | `13,700,448` | `7ca219d3a40779674a4402bcf145d51abbc71ab17a1353af1bc334cfba758ca8` |
-| `ex80seg/` | `Update_DMR-EX80SEG_V115.exe` | `7,355,464` | `7,453,680` | `bb63c998a4f9200d5637c65ca8b1c4e5a19a473ded982ce813d242422734066b` |
-| `ex81s_71seg/` | `UPDATE_DMR-EX81S_71SEG_V112.exe` | `7,002,744` | `6,894,544` | `df2c572206763c6fdd4309d02881a478b999c54e1bb157bb8c2ee5e92e3599a1` |
-| `ex83ec/` | `UPDATE_DMR-EX83EC_V109.exe` | `8,215,768` | `8,107,576` | `4d2929133a67562c4e52a5a091ecccda117f37f2e35c75fa53e1a198a40cc7c9` |
-| `ex83ep/` | `UPDATE_DMR-EX83EP_V109.exe` | `7,931,720` | `7,823,528` | `9115c7a9dd517c35376745163cbeca2d5ca73c6681683e8acff7dfee2ebbfbaf` |
-| `ex84ceg/` | `UPDATE_DMR-EX84CEG_V107303.exe` | `10,413,976` | `10,305,272` | `216a7b72ae117be26a07b319e231bc8e19816b3fc37bfe4551c76e2723789771` |
-| `ex86_83_773_eb/` | `Update_EX86_EX83_EX773_EX99V_EZ49VEB_V107.exe` | `1,792,600` | `1,576,960` | `8237b06fd4cce0dbedf32a9ecbf7cdcefa3ca18abff66f5ead1a2fb9b3576dac` |
-| `ex89ef/` | `UPDATE_DMR-EX89EF_V14.exe` | `7,502,744` | `7,396,288` | `e7a3368cd94c16017d985901bc34b4ac7e2bad8d64594372de7bb460fe2763a3` |
-| `ex93ceg/` | `UPDATE_DMR-EX93CEG_V139324.exe` | `10,654,152` | `10,545,448` | `5ca06ba7a41ab9f41462b4f2b957b7d434c23cfe29a3dbc58f583392894a480e` |
-| `ez49veb/` | `UPDATE_EZ49VEB_V11.exe` | `6,150,285` | `6,049,344` | `a4c5d8b2b7fdb4e69f4081348ba73f23dc43e9f83c5068136834403e2221816c` |
-| `ez49vec/` | `UPDATE_DMR-EZ49VEC_V109.exe` | `5,986,400` | `5,878,208` | `7fb924b9c71b92ef246c1015dfed944c20c760147fe7a3de47ad32ba76b52af5` |
+| Subdiretório       | Instalador Oficial (`.exe`)                     | Bytes `.exe` | Bytes `.FRM` | SHA-256 do Arquivo `.FRM`                                          |
+| :------------------ | :------------------------------------------------ | -------------: | -------------: | :------------------------------------------------------------------- |
+| `ex72seg/`        | `UPDATE_DMR-EX72SEG_V112.exe`                   |  `7,321,784` |  `7,213,584` | `2abdfbeb8888ff66ac41f15aa1c7eb9a7bb587ea7de6d46e2bbf6dac7dd0e2f9` |
+| `ex769ef/`        | `UPDATE_DMR-EX769EF_V14.exe`                    |  `6,365,331` |  `6,264,392` | `b1d55c1f15467341ce7becfbf3d32c50ef3564ad5a9f611dc0e859f68b29012f` |
+| `ex773ec/`        | `UPDATE_DMR-EX773EC_V109.exe`                   |  `7,126,264` |  `7,018,064` | `ef8ead563883809f5d6a01aaf1fdd9de8e7a64e15f51c07abb68515a16057ff6` |
+| `ex773ep/`        | `UPDATE_DMR-EX773EP_V109.exe`                   |  `7,123,800` |  `7,015,608` | `e602b452d2a981e2b3021b436d699c54158f475a3d5d1a5161d8aabafa1f0e42` |
+| `ex795ep/`        | `UPDATE_EX795EP_V108.exe`                       |  `2,516,032` |  `2,297,800` | `9e0c849d7253cd5163fcc86959c52d71e8ca60ed7c3322a2545899f699f1df39` |
+| `ex79_89_769eb/`  | `Update_EX79_EX89_EX769EB_V105.exe`             |  `1,795,184` |  `1,576,960` | `3b78fb68384fe4ffb26aaef28067cc3a336c7036696fda6b4ce09beff53acbfe` |
+| `ex79ef/`         | `UPDATE_DMR-EX79EF_V14.exe`                     | `13,806,904` | `13,700,448` | `7ca219d3a40779674a4402bcf145d51abbc71ab17a1353af1bc334cfba758ca8` |
+| `ex80seg/`        | `Update_DMR-EX80SEG_V115.exe`                   |  `7,355,464` |  `7,453,680` | `bb63c998a4f9200d5637c65ca8b1c4e5a19a473ded982ce813d242422734066b` |
+| `ex81s_71seg/`    | `UPDATE_DMR-EX81S_71SEG_V112.exe`               |  `7,002,744` |  `6,894,544` | `df2c572206763c6fdd4309d02881a478b999c54e1bb157bb8c2ee5e92e3599a1` |
+| `ex83ec/`         | `UPDATE_DMR-EX83EC_V109.exe`                    |  `8,215,768` |  `8,107,576` | `4d2929133a67562c4e52a5a091ecccda117f37f2e35c75fa53e1a198a40cc7c9` |
+| `ex83ep/`         | `UPDATE_DMR-EX83EP_V109.exe`                    |  `7,931,720` |  `7,823,528` | `9115c7a9dd517c35376745163cbeca2d5ca73c6681683e8acff7dfee2ebbfbaf` |
+| `ex84ceg/`        | `UPDATE_DMR-EX84CEG_V107303.exe`                | `10,413,976` | `10,305,272` | `216a7b72ae117be26a07b319e231bc8e19816b3fc37bfe4551c76e2723789771` |
+| `ex86_83_773_eb/` | `Update_EX86_EX83_EX773_EX99V_EZ49VEB_V107.exe` |  `1,792,600` |  `1,576,960` | `8237b06fd4cce0dbedf32a9ecbf7cdcefa3ca18abff66f5ead1a2fb9b3576dac` |
+| `ex89ef/`         | `UPDATE_DMR-EX89EF_V14.exe`                     |  `7,502,744` |  `7,396,288` | `e7a3368cd94c16017d985901bc34b4ac7e2bad8d64594372de7bb460fe2763a3` |
+| `ex93ceg/`        | `UPDATE_DMR-EX93CEG_V139324.exe`                | `10,654,152` | `10,545,448` | `5ca06ba7a41ab9f41462b4f2b957b7d434c23cfe29a3dbc58f583392894a480e` |
+| `ez49veb/`        | `UPDATE_EZ49VEB_V11.exe`                        |  `6,150,285` |  `6,049,344` | `a4c5d8b2b7fdb4e69f4081348ba73f23dc43e9f83c5068136834403e2221816c` |
+| `ez49vec/`        | `UPDATE_DMR-EZ49VEC_V109.exe`                   |  `5,986,400` |  `5,878,208` | `7fb924b9c71b92ef246c1015dfed944c20c760147fe7a3de47ad32ba76b52af5` |
 
 ### 1.3 Diferenças Estruturais de TOC: Feistel 48B vs Feistel 64B vs Plaintext `PANA__SD.FRM`
 
@@ -153,6 +156,7 @@ A extração completa do módulo principal (`MAIN.bin`) da CPU Matsushita AM34 c
 ### 1.5 Estruturas Internas, `<deviceinfo>`, `pre_update_firm.c` e `_dev_SERIAL`
 
 Nos binários `MAIN.bin` extraídos em plaintext (tanto `0x57000000` quanto `0x50622000`), a análise de strings confirma o módulo de validação pré-gravação:
+
 * Caminho do código-fonte compilado: `src/fmupre/pre_update_firm.c`.
 * Cadeia exata observada de identificação de hardware antes da comparação modelo/OEM:
   ```c
@@ -163,6 +167,7 @@ Nos binários `MAIN.bin` extraídos em plaintext (tanto `0x57000000` quanto `0x5
 ### 1.6 O Bootloader em Plaintext `PROG.bin` (262.144 Bytes / 256 KB)
 
 Diferente do contêiner Feistel cifrado, o módulo extraído `PROG.bin` (`262,144` bytes = `0x40000`) fornece código AM34/MN103S plano para análise direta em disassemblers como o Ghidra:
+
 1. **Assinatura Inicial Divergente:**
    - Nos modelos `DMR-EH55` e `DMR-EX80SEG`, o arquivo inicia com o cabeçalho de 16 bytes `dc 14 00 00 00 ff ff ff dc e1 00 00 00 ff ff ff` (`0x14DC`).
    - Nos modelos `EH49/59/69`, `EX81S`, `EX72..EX93` e `EZ49V`, inicia diretamente com a sequência `00 F2 F3 FE 01 04 10 00 ...` (word LE `0xFEF3F200`).
@@ -184,6 +189,7 @@ O reparo de gravadores Panasonic DIGA atingiu seu maior nível de maturidade pr�
 ### 2.1 Fóruns Especializados do Leste Europeu e Repositórios Técnicos
 
 As fontes canônicas de dados de hardware identificadas pelo projeto são:
+
 1. **`remont-aud.net` (Rússia/CEI):** A mais qualificada e rigorosa base de dados de dumps de firmware e engenharia eletrônica do mundo.
 2. **`elektroda.pl` (Polônia):** O maior portal europeu de eletrônica aplicada, com tópicos históricos detalhando recuperações de fontes de alimentação e trocas de drives e HDDs na linha DIGA.
 3. **`monitor.espec.ws` (Rússia):** Fórum técnico de alta complexidade com discussões profundas sobre as sub-CPUs MN102/MN103 e mecânicas de drive RFKN.
@@ -237,6 +243,7 @@ flowchart LR
 ### 2.3 Comunidade Polonesa de Engenharia de Hardware (`elektroda.pl`)
 
 O portal `elektroda.pl` preserva discussões e anexos técnicos relevantes da família DIGA:
+
 1. **Tópico `topic2896624.html` (`dmr-ex75-ex85.zip`):**
    - Disponibiliza o pacote de inicialização para substituição de HDD, erros `HDD Error`, loop de ejeção de bandeja e falhas `U81`.
 2. **Tópico `topic1598940.html` e `topic1320603.html` (`DMR-EH55`):**
@@ -284,46 +291,46 @@ Os gravadores Panasonic DIGA incorporam rotinas de diagnóstico de fábrica docu
 
 ### 3.2 Modos Especiais Oficiais no Painel Frontal (DMR-EH55 `DSD0603003CE`, pp. 17–21)
 
-| Modo Especial | Display FL | Operação exata (Manual de Serviço `DSD0603003CE`, pp. 17–21) | Efeito / Uso de Bancada |
-| :--- | :---: | :--- | :--- |
-| **Service Mode (`SERV`)** | `SERV` | Com a energia **desligada (Standby)**, manter pressionadas simultaneamente **`[CH UP] + [OPEN/CLOSE] + [REC]`** no painel frontal por **5 segundos**. | Libera o menu de engenharia interno (`[0][0]`..`[9][9]`) via controle remoto. |
-| **TEST Mode (`TM AV1`)** | `TM AV1` | Com a energia **desligada (Standby)**, manter pressionadas **`[STOP] + [CH UP] + [OPEN/CLOSE]`** por **5 segundos**. | **NÃO é Service Mode**: reinicializa todos os parâmetros do aparelho (sintonizador/preferências de usuário). |
-| **Forced Disc Eject** | *(anterior)* | Com a energia **desligada**, manter **`[STOP] + [CH UP]`** por **5 segundos**. | Ejeção forçada da bandeja (inativo sob Child/Demo Lock). |
-| **Forced Power-Off** | *(P-off)* | Pressionar **`[POWER]`** no painel frontal por **mais de 10 segundos**. | Desligamento forçado da unidade principal quando travada. |
-| **First Time Setup Reset** | `HELLO` | *(Firmware Guide p. 7–8)* Com a unidade sintonizada, manter **`[CH UP] + [CH DOWN]`** por **10–15 segundos** até desligar. | Força tela de configuração inicial no próximo boot. |
-| **NTSC / PAL Switch** | *(anterior)* | Com o aparelho **ligado (E-E mode)**, manter **`[STOP] + [OPEN/CLOSE]`** por **5 segundos**. | Alterna saída entre sistema PAL e NTSC. |
-| **Rating Password Reset** | *(nível 8)* | Abrir bandeja e manter **`[REC] + [PLAY]`** por **5 segundos**. | Reseta senha de controle parental para Nível 8. |
-| **Progressive Init** | *(anterior)* | Ligado (E-E): **`[STOP] + [PLAY]`** por **5 segundos**. | Retorna saída de vídeo para Interlace. |
-| **Demo Lock / Unlock** | `LOCK` / `UNLOCK` | Ligado: **`[STOP] + [POWER]`** por **5 segundos**. | Bloqueia/desbloqueia ejeção da bandeja (persiste após Factory Init). |
-| **Child Lock (`X-HOLD`)** | `X-HOLD` | No controle remoto: manter **`[ENTER] + [RETURN]`** simultaneamente até exibir `[X-HOLD]`. | Bloqueia comandos frontais e remotos (não aceita 10 pulsos de `ENTER`). |
+| Modo Especial                     |      Display FL      | Operação exata (Manual de Serviço `DSD0603003CE`, pp. 17–21)                                                                                                        | Efeito / Uso de Bancada                                                                                                 |
+| :-------------------------------- | :-------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :---------------------------------------------------------------------------------------------------------------------- |
+| **Service Mode (`SERV`)** |       `SERV`       | Com a energia **desligada (Standby)**, manter pressionadas simultaneamente **`[CH UP] + [OPEN/CLOSE] + [REC]`** no painel frontal por **5 segundos**. | Libera o menu de engenharia interno (`[0][0]`..`[9][9]`) via controle remoto.                                       |
+| **TEST Mode (`TM AV1`)**  |      `TM AV1`      | Com a energia **desligada (Standby)**, manter pressionadas **`[STOP] + [CH UP] + [OPEN/CLOSE]`** por **5 segundos**.                                  | **NÃO é Service Mode**: reinicializa todos os parâmetros do aparelho (sintonizador/preferências de usuário). |
+| **Forced Disc Eject**       |    *(anterior)*    | Com a energia **desligada**, manter **`[STOP] + [CH UP]`** por **5 segundos**.                                                                        | Ejeção forçada da bandeja (inativo sob Child/Demo Lock).                                                             |
+| **Forced Power-Off**        |      *(P-off)*      | Pressionar **`[POWER]`** no painel frontal por **mais de 10 segundos**.                                                                                     | Desligamento forçado da unidade principal quando travada.                                                              |
+| **First Time Setup Reset**  |       `HELLO`       | *(Firmware Guide p. 7–8)* Com a unidade sintonizada, manter **`[CH UP] + [CH DOWN]`** por **10–15 segundos** até desligar.                             | Força tela de configuração inicial no próximo boot.                                                                 |
+| **NTSC / PAL Switch**       |    *(anterior)*    | Com o aparelho **ligado (E-E mode)**, manter **`[STOP] + [OPEN/CLOSE]`** por **5 segundos**.                                                          | Alterna saída entre sistema PAL e NTSC.                                                                                |
+| **Rating Password Reset**   |    *(nível 8)*    | Abrir bandeja e manter **`[REC] + [PLAY]`** por **5 segundos**.                                                                                             | Reseta senha de controle parental para Nível 8.                                                                        |
+| **Progressive Init**        |    *(anterior)*    | Ligado (E-E): **`[STOP] + [PLAY]`** por **5 segundos**.                                                                                                     | Retorna saída de vídeo para Interlace.                                                                                |
+| **Demo Lock / Unlock**      | `LOCK` / `UNLOCK` | Ligado: **`[STOP] + [POWER]`** por **5 segundos**.                                                                                                          | Bloqueia/desbloqueia ejeção da bandeja (persiste após Factory Init).                                                 |
+| **Child Lock (`X-HOLD`)** |      `X-HOLD`      | No controle remoto: manter **`[ENTER] + [RETURN]`** simultaneamente até exibir `[X-HOLD]`.                                                                     | Bloqueia comandos frontais e remotos (não aceita 10 pulsos de `ENTER`).                                              |
 
 ### 3.3 Tabela Completa de Comandos Remotos do Modo `SERV` (DMR-EH55 `DSD0603003CE`, pp. 21–26)
 
 Uma vez exibido **`SERV`** no display fluorescente (VFD), o técnico digita os **dois dígitos no controle remoto**:
 
-| Código | Nome Oficial (Manual `DSD0603003CE`, pp. 21–26) | Descrição & Diagnóstico Verificado |
-| :---: | :--- | :--- |
-| **`[0][0]`** ou **`[RETURN]`** | **Release Items** | Cancela o item atual do Service Mode e retorna para `SERV` (não é teste do VFD; o teste de VFD é `[5][1]`). |
-| **`[0][1]`** | **Error Code Display** | Exibe o **último código de erro (`U**`/`H**`/`F**`) retido pelo Timer `IC7501`** (`F00` se vazio). |
-| **`[0][2]`** | **ROM Version Display** | Sequência (5s cada): **1. Region code** $\rightarrow$ **2. Main firm** $\rightarrow$ **3. Timer firm** $\rightarrow$ **4. Drive firm** $\rightarrow$ **5. ROM correction**. |
-| **`[1][1]` / `[1][2]`** | **White / Magenta Picture Output** | Gera padrão interno 100% branco ou magenta no AV Decoder (componente). |
-| **`[1][3]` / `[1][4]`** | **RTSC Return in XP / I-P Switch** | Codifica e decodifica AV1 em tempo real (`XP`, 48kHz) sem gravar em disco; `[1][4]` alterna Interlace/Progressive. |
-| **`[2][1]` / `[2][2]`** | **Audio Mute (`XTMUTE` / `XDMUTE`)** | Testa mute controlado pelo Timer (`T MUTE`) ou pela PCB Digital (`D MUTE`). |
-| **`[2][3]` / `[2][4]`** | **Audio Pattern Output** | Emite tons internos (`L=1kHz/-18dB`, `R=400Hz/-18dB`); `[2][4]` alterna 48kHz / 44.1kHz. |
-| **`[3][1]`** | **HDD READ inspection** | Varredura de leitura completa do HDD (**`HDD OK`** ou código de defeito; sair com `[POWER] > 10s`). |
-| **`[4][1]` / `[9][5]`** | **Laser Used Time / Delete Laser Time** | Exibe horas acumuladas de uso do laser óptico (`*****`); **`[9][5]`** zera o contador (`CLR`, destrutivo). |
-| **`[4][2]` / `[9][6]`** | **RAM Drive Last Error (`NO **`) / Delete** | Detalha número, timestamp (`DD/hh/mm`), tipo de mídia e fabricante; `[0][1]`..`[1][9]` mostra últimos 19 erros (`[9][6]` limpa). |
-| **`[4][4]`** | **Laser Power Confirmation** | Compara calibração atual do laser contra o valor de fábrica com DVD-RAM inserido (`CHK *` / `NO DISC` / `ERROR`). |
-| **`[5][1]` / `[5][4]`** | **All FL/LEDs / Front Key Inspection** | `[5][1]` acende todos segmentos do VFD/LEDs; `[5][4]` testa cada tecla do painel frontal incrementalmente. |
-| **`[6][1]` / `[6][4]`** | **Production Date / Accumulated Working Time** | `[6][1]` exibe data de fabricação (`YYMMDD`); `[6][4]` exibe tempo total ligado em segundos. |
-| **`[6][5]` / `[9][7]`** | **Display Error History (`[0][1]`..`[1][9]`) / Delete** | Lista os últimos **19 eventos de erro** com código de causa (5s): **`01`/`05`** = Digital PCB (`AV DEC / MAIN CPU`), **`02`** = RAM Drive, **`03`** = Disco, **`04`** = Digital PCB / Erro de Comunicação, **`06`** = Defeito de HDD (`[9][7]` limpa). |
-| **`[7][4]`** | **SD Card WRITE check** | Inserir cartão SD em Standby (`[CARD SD]`): testa escrita (`SD OK` / `SD NG`; **apaga imagens no cartão!**). |
-| **`[8][0]`..`[8][3]`** | **AV1/AV2/AV4 Video I/O Routing** | Comuta roteamento analógico Y/C, V e RGB para aferição de entrada/saída (testes de passthrough SCART nos modelos europeus, ausentes nos modelos NA). |
-| **`[8][4]` / `[8][5]`** | **`P50(H)` / `P50(L)` Timer Output Check** | Testa saída `IC7501-76` passando pelo inversor até AV1 pino 10 (`~0V` vs `~4.4V DC`). |
-| **`[9][1]`** | **Tray OPEN/CLOSE Test** | Abre/fecha a bandeja continuamente contando ciclos (liberar segurando `[POWER]` no controle `> 10s`). |
-| **`[9][8]`** | **Error Code Initialization** | Limpa o último código de erro retido pelo Timer `IC7501` $\rightarrow$ grava `F00` (`CLR`). |
-| **`[9][9]`** | **Initialize Service (`CLR SERV`)** | Inicializa simultaneamente **Last Drive Error**, **Error History** e **Error Codes** para padrão de fábrica (`CLR`). |
-| **`[POWER]`** | **Finishing Service Mode** | Sai do modo `SERV` retornando ao modo `STOP (E-E)`. |
+|                    Código                    | Nome Oficial (Manual `DSD0603003CE`, pp. 21–26)                | Descrição & Diagnóstico Verificado                                                                                                                                                                                                                                                                          |
+| :--------------------------------------------: | :---------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`[0][0]`** ou **`[RETURN]`** | **Release Items**                                           | Cancela o item atual do Service Mode e retorna para `SERV` (não é teste do VFD; o teste de VFD é `[5][1]`).                                                                                                                                                                                             |
+|              **`[0][1]`**              | **Error Code Display**                                      | Exibe o **último código de erro (`U**`/`H**`/`F**`) retido pelo Timer `IC7501`** (`F00` se vazio).                                                                                                                                                                                           |
+|              **`[0][2]`**              | **ROM Version Display**                                     | Sequência (5s cada): **1. Region code** $\rightarrow$ **2. Main firm** $\rightarrow$ **3. Timer firm** $\rightarrow$ **4. Drive firm** $\rightarrow$ **5. ROM correction**.                                                                                             |
+|       **`[1][1]` / `[1][2]`**       | **White / Magenta Picture Output**                          | Gera padrão interno 100% branco ou magenta no AV Decoder (componente).                                                                                                                                                                                                                                        |
+|       **`[1][3]` / `[1][4]`**       | **RTSC Return in XP / I-P Switch**                          | Codifica e decodifica AV1 em tempo real (`XP`, 48kHz) sem gravar em disco; `[1][4]` alterna Interlace/Progressive.                                                                                                                                                                                         |
+|       **`[2][1]` / `[2][2]`**       | **Audio Mute (`XTMUTE` / `XDMUTE`)**                    | Testa mute controlado pelo Timer (`T MUTE`) ou pela PCB Digital (`D MUTE`).                                                                                                                                                                                                                                |
+|       **`[2][3]` / `[2][4]`**       | **Audio Pattern Output**                                    | Emite tons internos (`L=1kHz/-18dB`, `R=400Hz/-18dB`); `[2][4]` alterna 48kHz / 44.1kHz.                                                                                                                                                                                                                 |
+|              **`[3][1]`**              | **HDD READ inspection**                                     | Varredura de leitura completa do HDD (**`HDD OK`** ou código de defeito; sair com `[POWER] > 10s`).                                                                                                                                                                                                 |
+|       **`[4][1]` / `[9][5]`**       | **Laser Used Time / Delete Laser Time**                     | Exibe horas acumuladas de uso do laser óptico (`*****`); **`[9][5]`** zera o contador (`CLR`, destrutivo).                                                                                                                                                                                        |
+|       **`[4][2]` / `[9][6]`**       | **RAM Drive Last Error (`NO **`) / Delete**               | Detalha número, timestamp (`DD/hh/mm`), tipo de mídia e fabricante; `[0][1]`..`[1][9]` mostra últimos 19 erros (`[9][6]` limpa).                                                                                                                                                                    |
+|              **`[4][4]`**              | **Laser Power Confirmation**                                | Compara calibração atual do laser contra o valor de fábrica com DVD-RAM inserido (`CHK *` / `NO DISC` / `ERROR`).                                                                                                                                                                                     |
+|       **`[5][1]` / `[5][4]`**       | **All FL/LEDs / Front Key Inspection**                      | `[5][1]` acende todos segmentos do VFD/LEDs; `[5][4]` testa cada tecla do painel frontal incrementalmente.                                                                                                                                                                                                 |
+|       **`[6][1]` / `[6][4]`**       | **Production Date / Accumulated Working Time**              | `[6][1]` exibe data de fabricação (`YYMMDD`); `[6][4]` exibe tempo total ligado em segundos.                                                                                                                                                                                                           |
+|       **`[6][5]` / `[9][7]`**       | **Display Error History (`[0][1]`..`[1][9]`) / Delete** | Lista os últimos **19 eventos de erro** com código de causa (5s): **`01`/`05`** = Digital PCB (`AV DEC / MAIN CPU`), **`02`** = RAM Drive, **`03`** = Disco, **`04`** = Digital PCB / Erro de Comunicação, **`06`** = Defeito de HDD (`[9][7]` limpa). |
+|              **`[7][4]`**              | **SD Card WRITE check**                                     | Inserir cartão SD em Standby (`[CARD SD]`): testa escrita (`SD OK` / `SD NG`; **apaga imagens no cartão!**).                                                                                                                                                                                     |
+|        **`[8][0]`..`[8][3]`**        | **AV1/AV2/AV4 Video I/O Routing**                           | Comuta roteamento analógico Y/C, V e RGB para aferição de entrada/saída (testes de passthrough SCART nos modelos europeus, ausentes nos modelos NA).                                                                                                                                                       |
+|       **`[8][4]` / `[8][5]`**       | **`P50(H)` / `P50(L)` Timer Output Check**              | Testa saída `IC7501-76` passando pelo inversor até AV1 pino 10 (`~0V` vs `~4.4V DC`).                                                                                                                                                                                                                  |
+|              **`[9][1]`**              | **Tray OPEN/CLOSE Test**                                    | Abre/fecha a bandeja continuamente contando ciclos (liberar segurando `[POWER]` no controle `> 10s`).                                                                                                                                                                                                      |
+|              **`[9][8]`**              | **Error Code Initialization**                               | Limpa o último código de erro retido pelo Timer `IC7501` $\rightarrow$ grava `F00` (`CLR`).                                                                                                                                                                                                          |
+|              **`[9][9]`**              | **Initialize Service (`CLR SERV`)**                       | Inicializa simultaneamente **Last Drive Error**, **Error History** e **Error Codes** para padrão de fábrica (`CLR`).                                                                                                                                                                     |
+|             **`[POWER]`**             | **Finishing Service Mode**                                  | Sai do modo `SERV` retornando ao modo `STOP (E-E)`.                                                                                                                                                                                                                                                        |
 
 > [!NOTE]
 > Em modelos japoneses (JDM) ou geração Blu-ray posteriores, códigos adicionais de controle remoto incluem `38 + [ENTER]` (`HDDCHK`), `03 VL`, `04 PRG`, `06 FTO` e `08 FIN`.
@@ -448,6 +455,7 @@ Para atualizações distribuídas através de cartões Secure Digital (SD) ou do
      ```text
      Master DES Key: C2A421F6ADEB44BE B0FDA68C234BB3C5 E98EC68C326FD395 07C8D75EF1B1B142
      ```
+
      As chaves intermediárias obtidas descriptografam o conteúdo via AES ou DES.
    - **Família Pós-2011 (`SDDL_SEC_NEW_KEY`):**
      Extraída do binário do cliente `/usr/local/customer_dl/crypto_key`:
@@ -458,21 +466,21 @@ Para atualizações distribuídas através de cartões Secure Digital (SD) ou do
 
 O cabeçalho comprimido `EXTRHEAD` (exatamente 64 bytes) gerencia a integridade e descompressão dos dados de firmware de cada módulo:
 
-| Offset | Tamanho | Campo | Descrição e Validação |
-| :---: | :---: | :--- | :--- |
-| `0x00` | 8 B | `Magic` | Caracteres fixos ASCII: `"EXTRHEAD"` |
-| `0x08` | 4 B | `Subtype` | Identificador de subsistema (geralmente ASCII `"DRV "` ou `"MAIN"`) |
-| `0x0C` | uint16 | `Compression Flag` | Flag de compressão: deve ser `0x0001` (senão erro `"Error! Not compress"`) |
-| `0x0E` | uint16 | `Compression Type` | Algoritmo: `0` = Sem compressão, `1` = GZIP, `2` = LZSS, `3` = Zlib, `4` = LZMA |
-| `0x10` | uint32 | `Destination Size` | Tamanho exato dos dados após descompressão |
-| `0x14` | uint32 | `Destination Address`| Endereço de destino em RAM (não utilizado, tipicamente 0) |
-| `0x18` | uint32 | `Source Size` | Tamanho dos dados comprimidos no contêiner |
-| `0x1C` | uint32 | `Source Address` | Contador de bloco / endereço de origem de transferência |
-| `0x20` | uint32 | `Footer Offset` | Deslocamento relativo até o cabeçalho de rodapé `"EXTRFOOT"` |
-| `0x24` | 4 B | `Reserved` | Uso interno de sincronização |
-| `0x28` | uint32 | `Sum` | Soma Adler32 dos dados descomprimidos calculada a cada salto |
-| `0x2C` | uint32 | `Sum Skip` | Passo em bytes utilizado no cálculo da soma de verificação |
-| `0x30` | 16 B | `Padding` | Preenchimento nulo (`0x00`) para alinhamento de 64 bytes |
+|  Offset  | Tamanho | Campo                   | Descrição e Validação                                                                  |
+| :------: | :-----: | :---------------------- | :----------------------------------------------------------------------------------------- |
+| `0x00` |   8 B   | `Magic`               | Caracteres fixos ASCII: `"EXTRHEAD"`                                                     |
+| `0x08` |   4 B   | `Subtype`             | Identificador de subsistema (geralmente ASCII `"DRV "` ou `"MAIN"`)                    |
+| `0x0C` | uint16 | `Compression Flag`    | Flag de compressão: deve ser `0x0001` (senão erro `"Error! Not compress"`)           |
+| `0x0E` | uint16 | `Compression Type`    | Algoritmo: `0` = Sem compressão, `1` = GZIP, `2` = LZSS, `3` = Zlib, `4` = LZMA |
+| `0x10` | uint32 | `Destination Size`    | Tamanho exato dos dados após descompressão                                               |
+| `0x14` | uint32 | `Destination Address` | Endereço de destino em RAM (não utilizado, tipicamente 0)                                |
+| `0x18` | uint32 | `Source Size`         | Tamanho dos dados comprimidos no contêiner                                                |
+| `0x1C` | uint32 | `Source Address`      | Contador de bloco / endereço de origem de transferência                                  |
+| `0x20` | uint32 | `Footer Offset`       | Deslocamento relativo até o cabeçalho de rodapé `"EXTRFOOT"`                          |
+| `0x24` |   4 B   | `Reserved`            | Uso interno de sincronização                                                             |
+| `0x28` | uint32 | `Sum`                 | Soma Adler32 dos dados descomprimidos calculada a cada salto                               |
+| `0x2C` | uint32 | `Sum Skip`            | Passo em bytes utilizado no cálculo da soma de verificação                              |
+| `0x30` |  16 B  | `Padding`             | Preenchimento nulo (`0x00`) para alinhamento de 64 bytes                                 |
 
 O rodapé **`EXTRFOOT`** (8 bytes) alinha os dados na fronteira de 8 bytes requerida pela cifra Feistel em bloco de 64 bits.
 
@@ -484,7 +492,7 @@ Uma das mais refinadas otimizações implementadas pela Matsushita foi a descrip
 flowchart TD
     MLH["MainListHeader (20 Bytes)"] --> CNT["Quantidade de Entradas = (List Size - 20) / 8"]
     MLH --> CHK{"Tamanho da Parte Descomprimida\n(decompressed_part_size)"}
-    
+  
     CHK -- "== 0x2000000 (Legado)" --> LEG["LegacyMainSegmentEncryptedSize = 0x2800 (10.240 Bytes)\nDescriptografa apenas os PRIMEIROS 10 KB\ne os ÚLTIMOS 10 KB do segmento"]
     CHK -- "!= 0x2000000 (Moderno)" --> MOD["ModernMainSegmentEncryptedSize = 0x1400 (5.120 Bytes)\nDescriptografa apenas os PRIMEIROS 5 KB\ne os ÚLTIMOS 5 KB do segmento"]
 
@@ -503,16 +511,25 @@ flowchart TD
 ### 4.5 Algoritmo LZSS de Haruhiko Okumura (Janela Circular em `0xFEE`)
 
 Quando o cabeçalho indica compressão LZSS (`Compression Type = 2`), o firmware utiliza a implementação canônica formulada pelo pesquisador japonês **Haruhiko Okumura** (1989):
+
 * Tamanho do anel circular (*sliding window*): `4,096` bytes (`0x1000`).
 * **Offset inicial de pré-carga do buffer:** exatamente **`0xFEE`** (4.078 em decimal), preenchido com espaços em branco (`0x20`) ou nulos (`0x00`).
 * Formato dos ponteiros de retrovisor (*backreference*): 2 bytes (`b1`, `b2`):
-  $$\text{Offset} = b_1 \mid ((b_2 \ \& \ \text{0xF0}) \ll 4)$$
-  $$\text{Comprimento} = (b_2 \ \& \ \text{0x0F}) + 3$$
+
+  $$
+  \text{Offset} = b_1 \mid ((b_2 \ \& \ \text{0xF0}) \ll 4)
+  $$
+
+  $$
+  \text{Comprimento} = (b_2 \ \& \ \text{0x0F}) + 3
+  $$
+
   Permitindo cópias entre 3 e 18 bytes repetidos a uma distância de até 4.095 bytes atrás no fluxo de vídeo/código.
 
 ### 4.6 Terminal Serial SLM (*Serial Log Menu*) em Equipamentos UniPhier com Linux
 
 Nos gravadores Panasonic de gerações posteriores baseados em processadores UniPhier multicore com sistema operacional Linux embarcado, o utilitário **`pana-fw`** identificou o protocolo de console de serviço **SLM** (*Serial Log Menu*):
+
 1. **Conector Físico de Diagnóstico (`K1KA06AA0083`):**
    - Conector miniatura de 6 pinos operando em UART assíncrona com nível TTL 3.3V e taxa de transmissão de **`115200 bps 8N1`**:
      - Pino 1: `XDIAG` (Interrupção de diagnóstico / entrada SLM)
@@ -562,6 +579,7 @@ O sistema de arquivos proprietário gravado nos discos rígidos Panasonic DIGA d
 ```
 
 #### Anatomia do Inode MEIHDFS e Cadeia de Blocos (*Extents*)
+
 Cada arquivo de vídeo gravado no disco rígido possui um Inode de exatamente `4,096` bytes (`0x1000`). Diferente do ext4 ou NTFS, o MEIHDFS organiza a localização dos clusters de vídeo através de um vetor de **`0x140` (320) extensões de bloco contíguo** (`struct block_run runs[320]`):
 
 ```c
@@ -573,6 +591,7 @@ typedef struct block_run {
 ```
 
 Essa arquitetura explica o comportamento de bancada do DMR-EH55:
+
 1. **Zero Fragmentação em Arquivos Grandes:** Como a alocação mínima de vídeo opera em blocos de `768 KB` (`ASIZE`), o sistema garante taxa de transferência contínua sem jitter mecânico na cabeça do disco.
 2. **Registro de Data/Hora:** Todas as gravações utilizam carimbos de data/hora em segundos transcorridos desde `01/01/1980 00:00:00 UTC` (`TIME_OFFSET = 315532800`).
 3. **Mascaramento e Criptografia Forense:** Conforme catalogado no projeto Panadiga, os metadados do Inode nos primeiros modelos utilizam operadores de inversão de bits (`XOR 0xFF`), o que impediu durante décadas que utilitários comerciais de recuperação de dados em PC reconhecessem a estrutura dos vídeos gravados.
@@ -581,38 +600,39 @@ Essa arquitetura explica o comportamento de bancada do DMR-EH55:
 
 Nem todo gravador de DVD com marca europeia ou etiqueta parecida usa eletrônica Panasonic. O cruzamento de placas (`VEP`), SoCs (`MN2DS` / `MN103S`), assinaturas de partição (`MEIHFS`) e cabeçalhos criptografados (`PANA_DVD.FRM`) separa claramente o que é compatível do que pertence a outro fabricante:
 
-| Plataforma / Marca | Evidência de Hardware / Cifra | Compatibilidade Prática com Panadiga | Regra de Bancada e Fontes Localizadas |
-| :--- | :--- | :---: | :--- |
-| **Loewe Centros `1102` / `1172` / `2102 HD` / `2172 HD` & `ViewVision DR+`** | Projeto OEM Matsushita/Panasonic (`MN2DS` SoC, placas série `VEP`, convenções de atualização/serviço Panasonic) | **Mesma Arquitetura (OEM Genuíno)** | Compartilha ferramentas de análise (`MEIHFS` / estrutura `.FRM`); exige conferência exata do `DEV.BIN` antes de qualquer gravação cruzada. Manuais de serviço no Elektrotanya; versões SW `090410L`/`070627a` citadas no `die-oberklasse.de` (sem links públicos diretos sem autenticação para `.FRM`/`.bin`). |
-| **Hualu `BDR-9800`** | Catálogo `PANA_DVD_KEY_CATALOG` com chave Feistel de 8 bytes `0x0A1EE6C5BDC4933F` (`bfhualu.com`) | **Confirmada (Mesma Cifra Feistel `.FRM`)** | Aceita descriptografia/empacotamento `.FRM` pela mesma engine matemática usada no DMR-EH55 (com sua chave própria de 8 bytes). |
-| **Subsistema `SW-9585` / SoCs `MN2DS0003`..`0018` & Submarcas Matsushita** | Unidade IDE DVD-RAM `SW-9585` e SoCs `MN2DS0003`/`0009`/`0016`/`0018` em unidades selecionadas JVC, Pioneer, Marantz, Cambridge Audio e Nintendo RVT-R; Quasar / National | **Parcial (Peças / Driver / Subsistema)** | Útil para mapeamento de firmware de drive óptico ou reaproveitamento mecânico/SoC, **não** intercambiável diretamente por imagem `.FRM` inteira sem checar placa e modelo. |
-| **Tevion / Medion / Funai / maioria Philips** | Plataforma Funai/MediaTek (`FUNAI_UPG` em `unixtract/src/keys.ukf`) | **Incompatível** | Arquitetura de CPU, formato de pacote e cifra totalmente distintos — **nunca** tentar gravar binários Panadiga/DIGA nessas placas. |
+| Plataforma / Marca                                                                           | Evidência de Hardware / Cifra                                                                                                                                                      |        Compatibilidade Prática com Panadiga        | Regra de Bancada e Fontes Localizadas                                                                                                                                                                                                                                                                                                   |
+| :------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :-------------------------------------------------: | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Loewe Centros `1102` / `1172` / `2102 HD` / `2172 HD` & `ViewVision DR+`** | Projeto OEM Matsushita/Panasonic (`MN2DS` SoC, placas série `VEP`, convenções de atualização/serviço Panasonic)                                                           |     **Mesma Arquitetura (OEM Genuíno)**     | Compartilha ferramentas de análise (`MEIHFS` / estrutura `.FRM`); exige conferência exata do `DEV.BIN` antes de qualquer gravação cruzada. Manuais de serviço no Elektrotanya; versões SW `090410L`/`070627a` citadas no `die-oberklasse.de` (sem links públicos diretos sem autenticação para `.FRM`/`.bin`). |
+| **Hualu `BDR-9800`**                                                                 | Catálogo `PANA_DVD_KEY_CATALOG` com chave Feistel de 8 bytes `0x0A1EE6C5BDC4933F` (`bfhualu.com`)                                                                            | **Confirmada (Mesma Cifra Feistel `.FRM`)** | Aceita descriptografia/empacotamento `.FRM` pela mesma engine matemática usada no DMR-EH55 (com sua chave própria de 8 bytes).                                                                                                                                                                                                      |
+| **Subsistema `SW-9585` / SoCs `MN2DS0003`..`0018` & Submarcas Matsushita**       | Unidade IDE DVD-RAM `SW-9585` e SoCs `MN2DS0003`/`0009`/`0016`/`0018` em unidades selecionadas JVC, Pioneer, Marantz, Cambridge Audio e Nintendo RVT-R; Quasar / National |  **Parcial (Peças / Driver / Subsistema)**  | Útil para mapeamento de firmware de drive óptico ou reaproveitamento mecânico/SoC, **não** intercambiável diretamente por imagem `.FRM` inteira sem checar placa e modelo.                                                                                                                                                 |
+| **Tevion / Medion / Funai / maioria Philips**                                          | Plataforma Funai/MediaTek (`FUNAI_UPG` em `unixtract/src/keys.ukf`)                                                                                                             |               **Incompatível**               | Arquitetura de CPU, formato de pacote e cifra totalmente distintos — **nunca** tentar gravar binários Panadiga/DIGA nessas placas.                                                                                                                                                                                              |
 
 ### 4.9 Mapa Prático de IR Kaseikyo: Controle `EUR7659Y70`, `AUDIO [A]` vs. `[RED]`, Android CIR e `IRTX` no Pico
 
 #### 1. Preciso do botão `[RED]` no controle `EUR7659Y70`? Existe substituto?
+
 * **SIM — no DMR-EH55 você PODE usar o `EUR7659Y70` sem o botão `[RED]`:** no **Panasonic DMR-EH55** (Manual de Serviço `DSD0603003CE`), a entrada no **Modo de Serviço (`SERV`)** é feita pelos **botões do painel frontal** em Standby (**`[CH UP] + [OPEN/CLOSE] + [REC]` por 5s**) — **não** pela sequência JDM `[5]+[9]+[RED]`. Depois que o visor exibe `SERV`, todos os códigos internos (`00`, `01`, `02`, `31`, `41`, `42`, `65`, `80`, `81`, `91`, `98`, `99`) usam **exclusivamente as teclas numéricas `0`..`9`**, que já existem normalmente no seu **`EUR7659Y70`**.
 * **Nenhum botão do `EUR7659Y70` ou dos controles combo norte-americanos substitui o `[RED]` (`0x141`) nem `ND2` (`0x182`):** nos controles norte-americanos (`DVD/VHS POWER`, `AUDIO [A]`, `DISPLAY [B]`, `SUB MENU [S]`), a fileira de 4 botões coloridos de Teletexto foi removida de fábrica e substituída pelos atalhos de Guide/VCR+ `[A]` e `[B]`. Decodificação cruzada (`Flipper-IRDB`, `pana-fw` e o perfil real `Panasonic_DMR_EH55_Commander.irplus` em `android-remote-panasonic`):
 
-| Botão / Comando | Kaseikyo | Bytes Wire LSB-first | Origem Verificada | Função Real |
-| :--- | :---: | :--- | :--- | :--- |
-| **`POWER`** | `0x03D` | `02 20 B0 00 3D 8D` | `.irplus` (`0000 0070...`) | Liga / Standby |
-| **`AUDIO [A]`** | `0x033` | `02 20 B0 00 33 83` | `.irplus` + `Flipper-IRDB` | Faixa de áudio / softkey `[A]` (**NÃO** é `[RED]`) |
-| **`DISPLAY [B]`** | `0x092` | `02 20 B0 00 92 22` | `.irplus` + `Flipper-IRDB` | Informações na tela (OSD) / softkey `[B]` |
-| **`FUNCTIONS` / `ENTER`** | `0x057` / `0x082` | `02 20 B0 00 57 E7` / `82 32` | `.irplus` | Menus OSD e confirmação (e destrave `SET 2`/`SET 3`) |
-| **`1`..`9`, `0`** | `0x010`..`0x019` | `02 20 B0 00 10 A0`..`19 A9` | `.irplus` | Dígitos do modo `SERV` (`00`..`99`) no `EUR7659Y70` |
-| **`MEDIA SERVER`** | `0x004` | `02 20 B0 00 04 B4` | `.irplus` (`MULTI_REGION_HACK`) | Pulso discreto final após `1..0 -> AUDIO` no desbloqueio Region Free |
-| **Teletexto `[RED]`** | `0x141` | `02 20 B0 01 41 F0` | `pana-fw` (`41 B0 01 41`) | Apenas controles EU/JDM (`EUR7659Y60`) ou emissor programável |
-| **`ND2` (`[5]+[9]+[RED]`)** | `0x182` | `02 20 B0 01 82 33` | `pana-fw` (`40 B0 01 82`) | Sequência Service Non-Disclosure mode 2 em modelos JDM/Blu-ray |
+| Botão / Comando                      |       Kaseikyo       | Bytes Wire LSB-first              | Origem Verificada                   | Função Real                                                           |
+| :------------------------------------ | :-------------------: | :-------------------------------- | :---------------------------------- | :---------------------------------------------------------------------- |
+| **`POWER`**                   |       `0x03D`       | `02 20 B0 00 3D 8D`             | `.irplus` (`0000 0070...`)      | Liga / Standby                                                          |
+| **`AUDIO [A]`**               |       `0x033`       | `02 20 B0 00 33 83`             | `.irplus` + `Flipper-IRDB`      | Faixa de áudio / softkey `[A]` (**NÃO** é `[RED]`)         |
+| **`DISPLAY [B]`**             |       `0x092`       | `02 20 B0 00 92 22`             | `.irplus` + `Flipper-IRDB`      | Informações na tela (OSD) / softkey `[B]`                           |
+| **`FUNCTIONS` / `ENTER`**   | `0x057` / `0x082` | `02 20 B0 00 57 E7` / `82 32` | `.irplus`                         | Menus OSD e confirmação (e destrave `SET 2`/`SET 3`)              |
+| **`1`..`9`, `0`**         | `0x010`..`0x019` | `02 20 B0 00 10 A0`..`19 A9`  | `.irplus`                         | Dígitos do modo `SERV` (`00`..`99`) no `EUR7659Y70`            |
+| **`MEDIA SERVER`**            |       `0x004`       | `02 20 B0 00 04 B4`             | `.irplus` (`MULTI_REGION_HACK`) | Pulso discreto final após `1..0 -> AUDIO` no desbloqueio Region Free |
+| **Teletexto `[RED]`**         |       `0x141`       | `02 20 B0 01 41 F0`             | `pana-fw` (`41 B0 01 41`)       | Apenas controles EU/JDM (`EUR7659Y60`) ou emissor programável        |
+| **`ND2` (`[5]+[9]+[RED]`)** |       `0x182`       | `02 20 B0 01 82 33`             | `pana-fw` (`40 B0 01 82`)       | Sequência Service Non-Disclosure mode 2 em modelos JDM/Blu-ray         |
 
 #### 2. Preciso ligar um transmissor IR no Raspberry Pi Pico ou posso usar controle normal / celular Android?
 
-| Cenário / Ferramenta na Bancada | Precisa de LED IR no Pico? | O que você consegue fazer na prática |
-| :--- | :---: | :--- |
-| **1. Controle Físico Comum (`EUR7659Y70` / `EUR7729KG0`)** | **NÃO** | Suficiente para ligar/desligar e rodar **todos os códigos `00`..`99` do modo `SERV`** do DMR-EH55 após acionar o painel frontal (`[CH UP] + [OPEN/CLOSE] + [REC]`). Não possui `[RED]` (`0x141`) nem `ND2` (`0x182`). |
-| **2. Tablet / Celular Android com IR Blaster nativo (`SM-T805M` + perfis `.irplus` / `android-remote-panasonic`)** | **NÃO** | Usa o emissor IR infravermelho **embutido no aparelho Android** (`ConsumerIrManager` / `/sys/class/sec/sec_ir/ir_send` @ `37.010 kHz`). Envia qualquer código sem fios extras: modos `SET 1`/`2`/`3` (subdevices `0x00`/`0x10`/`0x20`), deck VCR `0x90`, macros `AUTO_RESTORE`, Region Free (`1..0 -> AUDIO -> MEDIA SERVER`) e `[RED]`/`ND2`. |
-| **3. Sonda Pico UART `P7501` (`STATUS`, `CDDIAG`, `DUMP`, `ERASE_NVRAM`, `GDB`, `DIAGWATCH WAKE`)** | **NÃO** | Toda a depuração serial/JTAG/NVRAM ocorre eletricamente pelo conector `P7501`. Os novos modos **`DIAGWATCH WAKE`** e **`DIAGWATCH WAKE:<ms>`** monitoram a subida de tensão do trilho (`VDD >= P7501_VDD_WAKE_THRESHOLD_V`, limiar `2.0f`) ao sair do Standby antes de capturar via PIO, avisando estado Standby quando `rx=0`. |
-| **4. Comando `IRTX` do Pico (`firmware/pico-p7501/`)** | **SIM (LED IR 940 nm externo)** | `IRTX <RED|GREEN|YELLOW|BLUE|POWER|AUDIO|DISPLAY|SERV|ND2|0..9|sub:cmd> [GP6..9|16..22] [repeat]` gera portadora Kaseikyo 38 kHz via hardware PWM, com trava estrita nos GPIOs livres `GP6..9`/`GP16..22`. **Só útil se você NÃO tiver celular com IR blaster e quiser que o Pico dispare luz IR** ligando um **LED IR 940 nm** (+ resistor/transistor) a um desses pinos. |
+| Cenário / Ferramenta na Bancada                                                                                               |      Precisa de LED IR no Pico?      | O que você consegue fazer na prática                                                                                                                                                                                                                                                                                                                                            |
+| :----------------------------------------------------------------------------------------------------------------------------- | :-----------------------------------: | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **1. Controle Físico Comum (`EUR7659Y70` / `EUR7729KG0`)**                                                          |            **NÃO**            | Suficiente para ligar/desligar e rodar **todos os códigos `00`..`99` do modo `SERV`** do DMR-EH55 após acionar o painel frontal (`[CH UP] + [OPEN/CLOSE] + [REC]`). Não possui `[RED]` (`0x141`) nem `ND2` (`0x182`).                                                                                                                                    |
+| **2. Tablet / Celular Android com IR Blaster nativo (`SM-T805M` + perfis `.irplus` / `android-remote-panasonic`)** |            **NÃO**            | Usa o emissor IR infravermelho **embutido no aparelho Android** (`ConsumerIrManager` / `/sys/class/sec/sec_ir/ir_send` @ `37.010 kHz`). Envia qualquer código sem fios extras: modos `SET 1`/`2`/`3` (subdevices `0x00`/`0x10`/`0x20`), deck VCR `0x90`, macros `AUTO_RESTORE`, Region Free (`1..0 -> AUDIO -> MEDIA SERVER`) e `[RED]`/`ND2`. |
+| **3. Sonda Pico UART `P7501` (`STATUS`, `CDDIAG`, `DUMP`, `ERASE_NVRAM`, `GDB`, `DIAGWATCH WAKE`)**        |            **NÃO**            | Toda a depuração serial/JTAG/NVRAM ocorre eletricamente pelo conector `P7501`. Os novos modos **`DIAGWATCH WAKE`** e **`DIAGWATCH WAKE:<ms>`** monitoram a subida de tensão do trilho (`VDD >= P7501_VDD_WAKE_THRESHOLD_V`, limiar `2.0f`) ao sair do Standby antes de capturar via PIO, avisando estado Standby quando `rx=0`.                        |
+| **4. Comando `IRTX` do Pico (`firmware/pico-p7501/`)**                                                               | **SIM (LED IR 940 nm externo)** | `IRTX <RED                                                                                                                                                                                                                                                                                                                                                                        |
 
 O catálogo de referência em `crates/panadiga-core/src/crypto/pana_fw_go.rs` (`PANA_KASEIKYO_SERVICE_COMMANDS`) espelha `"Audio / Subtitles [A]"`, `"Display [B]"`, `"Teletext Red [RED]"` e `"Power On/Off"` para decodificação uniforme em desktop e terminal serial.
 
@@ -629,19 +649,131 @@ O módulo [`crates/panadiga-core/src/re/emu_patch_suite.rs`](../../crates/panadi
 
 ---
 
-## 5. Matriz de Síntese e Diretrizes de Engenharia para o Ecossistema Panadiga
+## 5. Crônica Integral da Pesquisa Panadiga: Da Hipótese `DWIRE32A` à Engenharia Reversa Completa do DMR-EH55
+
+Ao longo da investigação no **Panasonic DMR-EH55 (`VEP79138`)**, o projeto Panadiga evoluiu de hipóteses herdadas de literatura fechada até provas em hardware real (`N4_HARDWARE`), validação em emulador (`N2_EMULATED`) e triangulação estática em Ghidra (`N1_STATIC`) registradas no [ledger verificável de evidências](../evidence/ledger.json) (`EV-20261119-001` .. `EV-20261120-018`) e nas **22 capturas** catalogadas em [`docs/debug_logs/README.md`](../debug_logs/README.md).
+
+```mermaid
+flowchart LR
+    F1["2026-11-06..12\nHipotese DWIRE32A e\nMock 99,999% 0xFF"] --> F2["2026-11-12..13\nRefutacao via 3 Manuais\nP7501 = UART 115200 8N1"]
+    F2 --> F3["2026-11-13..15\nEsquemas VEP79138, S29JL064H,\nPINCHECK, BUSDIAG e PIO 8x"]
+    F3 --> F4["2026-11-19\nDump 8 MiB, BGO 45 Setores\nCura U99 em 2 Ciclos e 250 GB"]
+    F4 --> F5["Commit 475fd48\nZero-Undef, SSOT 89 Modelos,\nEH55_M6930LB_8MB e FVU SD"]
+```
+
+### 5.1 Sondagem Inicial & Refutação da Hipótese `DWIRE32A`
+
+Na fase inicial do repositório (`3843833` / `04894f8` / `ffbb8bc`), assumiu-se por analogia com outros chassis DIGA (`MN2DS` / `MN2WS` / `PanaX NEO` / `PX-ADPDWA` / conector `CN55001`) que a porta de 6 pinos do DMR-EH55 operava o depurador síncrono On-Chip Debug **`DWire32A`** (`EXTRG` / `SCLK` / `SDATA` / `nRESET`). Essa hipótese caiu diante de quatro constatações empíricas entre `2026-11-12` e `2026-11-13`:
+
+1. **Auditoria Forense do Mock Sintético (`panasonic_dmr-eh55_flash_dump.bin`):** A inspeção estatística de entropia do primeiro dump de `8.388.608 B` provou que `8.388.509 B` (`99,999%`) eram preenchimento `0xFF` acompanhados por apenas `99` bytes sintéticos de fixture de teste (`PANASONIC DMR-EH55 AM34 IPL BOOTLOADER VEP79138`). A engenharia reversa estática foi redirecionada integralmente para binários reais: [`PANA_DVD.FRM`](../../firmware_and_images/README.md) (`7.531.744 B`) e `dmr-eh58/DVDRAM.7z` (`BOOT.BIN` + `DRV.BIN`).
+2. **Falha de Conversores Seriais Passivos e `DCSR: 0xFFFFFFFF` em `DWire32A`:** Adaptadores passivos de 3 fios (`FT232RL`, Arduino sem ATmega) não controlavam o pino de modo (`SW_UART`) nem o pulso de `XRESET` necessários para chavear `XFWE`. Simultaneamente, o comando `HANDSHAKE` do protocolo síncrono `DWire32A` retornava invariavelmente `DCSR: 0xFFFFFFFF` em `P7501`: no chicote conectado, `GP3` ligava-se ao rail estático `Pin 5 (NSW5V)` (não `SCLK`), e `GP4` ligava-se ao pull-up `R7570` em `Pin 3 (UARTM2P_T)` (não `SDATA` bidirecional).
+3. **Captura do Ponto de Inflexão em `COM10` (`captura_live_20261112_*.log`):** As primeiras capturas preservadas em [`docs/debug_logs/`](../debug_logs/README.md) documentam literalmente essa transição histórica no firmware do Pico em `2026-11-12`:
+   * [`captura_live_20261112_143843.log`](../debug_logs/captura_live_20261112_143843.log) (`126 B`, SHA-256 `5F8A1712...`) e [`captura_live_20261112_151352.log`](../debug_logs/captura_live_20261112_151352.log) (`126 B`, `FC82AFBC...`) ainda imprimem o banner legado **`DWIRE32A>`** ao acionar `UARTMON 30000`.
+   * Na execução imediatamente seguinte, [`captura_live_20261112_144101.log`](../debug_logs/captura_live_20261112_144101.log) (`324.209 B`, SHA-256 `C7775A5C...`), o mesmo prompt `DWIRE32A> UARTMON 30000` decodificou em `GP2` o fluxo assíncrono **`115200 8N1`** vivo do SoC AM34: `Loader ver0.61 [06/03/06]`, `cd_diag`, `startup reason = [70]`, erros de cartão `SD -91006/-90002/-90001` e `1.361` frames `SENSE` em `X(80020401)` $\rightarrow$ `[RTSD] === DRIVE ACCESS ERROR === ( 80040904 )` (`0x83A7`).
+4. **Refutação Documental Cruzada nos 3 Manuais Oficiais do DMR-EH55:** A varredura integral dos manuais **`CHM0605028CE`** (`panasonic_dmr_eh55p9_eh55pc9_service_manual_north_america.pdf`) e **`DSD0603003CE` Vol. 1 / Vol. 2** (`europe.pdf`, `vol1_diagnostics.pdf`, `vol2_schematics.pdf`) retornou **zero ocorrências** para `MN2DS`, `MN2WS`, `CN55001`, `P55001`, `DWire` ou `IC55007`. Ficou provado que **`P7501` (`JST B6B-ZR-3R4`, legenda `"TO JIGU"` / `"TO WRITE JIGU"`)** na placa `VEP79138` é uma porta **UART assíncrona `115200 8N1`** com controle discreto de boot/reset — motivando a migração arquitetural do firmware e da documentação para `P7501 Async UART` (commit `d0740f6`).
+
+### 5.2 Diagnóstico Eletrônico via Datasheet & Esquemáticos (`VEP79138`)
+
+A correlação vetorial dos esquemáticos (`NA pp. 55, 62–64`, `EC Vol. 1 p. 68`, `Vol. 2 pp. 113, 122, 151, 153`) com datasheets oficiais e medições em DC esclareceu todos os aparentes paradoxos de bancada:
+
+1. **Alimentação `IC1506` / `D7510` $\rightarrow$ `NSW5V` (`P7501` Pino 5 / `GP3`):**
+   * O regulador **`IC1506` (`C0DAEYH00002` / `SI-3011ZFE`)** gera `~5.15V` nominais (`X_SW_5R2V` via divisor `R1510 1.5 kΩ`, `R1509 39 kΩ`, `R1511 11 kΩ`) e alimenta o nó `NSW5V` através do diodo duplo **`D7510` (`B0JDCE000002`)** rumo aos pull-ups **`R7570` / `R7572` (`10 kΩ`)** e ao `VDD` do **`IC7501`** (em wired-OR com a bateria `B7501` `CR2354`). Embora o multímetro leia **`~3.29V` em repouso** no Pino 5 de `P7501` devido à queda/divisão no barramento, o potencial upstream de `~5.15V` impõe o invariante absoluto: **`GP3` (`NSW5V`) deve permanecer SEMPRE como `Hi-Z Input` sem pull-up/pull-down internos — NUNCA dirigir em push-pull**.
+2. **Estágio Transistorizado Discreto (`Q7510`, `Q7514`, `QR7503`) & Acoplamento `SW_UART` $\leftrightarrow$ `TX`:**
+   * **`Q7510` (`2SD0601A0L` NPN):** tem o Coletor ligado ao **`P7501` Pino 1 (`SW_UART`)** e ao `IC7501` Pino 80, Base polarizada em `D3R3V (3.30V)` por `R7562 (4.7 kΩ)`, e Emissor ligado a **`XFWE`**, ao pull-up `R7559 (10 kΩ)` (`3.30V`) e, via **`R7528 (4.7 kΩ)`**, à Base de **`Q7514` (`2SD0601A0L`)**.
+   * Esse circuito explicou simultaneamente dois fenômenos medidos na bancada: (a) sob pull-down interno do Pico (`~50–80 kΩ`), a junção Base-Coletor de `Q7510` conduz e grampeia `GP26` exatamente em **`2.68–2.69V`** ($3.30\text{ V} - V_{BC}$, vs **`3.24–3.25V`** em `Hi-Z`), protegendo o ADC0; e (b) forçar **`SW_UART = LOW`** drena `XFWE` para `0V` e **coloca `Q7514` em corte via `R7528` (`4.7 kΩ`)**, bloqueando fisicamente `Pin 3 (UARTM2P_T)` (`R7570 10 kΩ`) de alcançar `UARTM2P` no SoC (`R7527 4.7 kΩ`) até que `SW_UART` seja liberado para `Hi-Z` (provando por que tentativas precoces de `UARTSEND` com `SW_UART = LOW` obtiveram `0` bytes, somado ao fato de `uart_gets` em `0x4400488a` ter `0` chamadores em `BOOT.BIN`).
+   * **`QR7503` (`UNR511300L` PNP digital)** e **`XRESET` (`Pin 2` / `GP5`):** `QR7503` acopla `SW_UART` ao pino 15 (`MMOD`, `R7513 4.7 kΩ`) do `IC7501` e compõe a malha `XRESET`, cujo controle em **`GP5`** deve ser estritamente **Open-Drain** (`0V` ou `Hi-Z`, subida medida de **`~20 µs`**). Em Standby real (`P-OFF`, `DI_P_ON=0V`), o domínio comutado de `P7501` zera (`VDD = 0.03V`), enquanto o domínio Always-On mantém `IC7501` / `TW7501` / `C7584 (0.047F)` / `R7623 (180 Ω)` / `IC7502`.
+3. **Ausência de EEPROM Externa no Timer MCU (`IC7501` `EEPROM_W_C = NC (OPEN)`):**
+   * Os esquemáticos (`EC Vol. 1 p. 68`, `Vol. 2 p. 122`) mostram o pino **`EEPROM_W_C` de `IC7501` explicitamente como `NC (OPEN)`**, confirmando que o **DMR-EH55 não possui EEPROM serial externa no Timer MCU** (`IC3001` `C1AB00002379`/`1979` é a matriz I²C de A/V nos endereços 7-bit `0x4A` / 8-bit `0x94`). Toda persistência de configuração, BGO e NVRAM reside na Flash NOR `IC5001`.
+4. **Datasheet da Flash NOR Spansion `S29JL064H70TFI00` (`IC5001`, Pub. `S29JL064H_00` Rev. B, Dez/2005):**
+   * Memória **8 MiB (`8.388.608 B`)** TSOP-48 Top-Boot 3.0V com **142 setores (`SA0..SA141`: `8×8 KiB` + `126×64 KiB` + `8×8 KiB`)**.
+   * **Pino 14 (`WP#/ACC`):** quando aterrado (`0V` / $V_{IL}$), protege por hardware os dois micro-setores superiores **`SA140` (`0x007FC000`) e `SA141` (`0x007FE000`)**, exigindo nível lógico HIGH (`3.3V`) antes de qualquer apagamento in-circuit de NVRAM.
+   * **Temporização real de apagamento (~`700 ms`):** o erase físico de setor de `64 KiB` leva ~`700 ms` (superando laços limitados de `DQ7` de `0x00100000` iterações em `jedec_emit.rs`), impondo polling externo de leitura **`0xFF × 32`** após `OK:ERASE` antes de programar bytes.
+5. **Pinagem Invertida `P58001` & Polaridade Assimétrica `DAVIS` (`EV-20261119-005`/`006`, `N4_HARDWARE`):**
+   * O esquemático `vol2_schematics.pdf` p. 113 revelou que o conector FFC de 40 vias do HDD **`P58001`** inverte integralmente a ordem ATA segundo $\text{Pino}_{P58001}(k) \equiv \text{ATA}(41 - k)$ ao longo do conjunto `VEK0K00` $\rightarrow$ placa adaptadora `N5EZZ0000003` $\rightarrow$ ponte `StarTech IDE2SAT2`. Testes ao vivo confirmaram que girar `IDE2SAT2` para **`180°`** com cabo Tipo A lia `0x00002004` em todos os registradores (`DD13|DD2`, expondo `IORDY`/`CSEL` `3.3V`), enquanto **`0°`** ([`probe_ch1_live_v2_0deg_20261119.log`](../debug_logs/probe_ch1_live_v2_0deg_20261119.log)) eliminou o travamento de `R 89000D58,4` retornando `0x00000000` (ainda sob bloqueio elétrico ativo `IORDY`/`DIOR-`/`DIOW- = 0V` sob carga no adaptador).
+   * A sonda ao vivo `J 504156AD` ([`probe_fe_release_com10_20261119.log`](../debug_logs/probe_fe_release_com10_20261119.log), [`probe_ch1_full_diag_20261119.log`](../debug_logs/probe_ch1_full_diag_20261119.log)) provou a polaridade assimétrica de reset do controlador **`DAVIS`**: **`CH0` (ODD) é ativo-BAIXO** (`0x504F81D0 = 2`, liberado por `0x89000420 = 0x02/0x03`, respondendo `STATUS=0x50` / `0xEB14` ATAPI), enquanto **`CH1` (HDD) é ativo-ALTO** (`0x504F81D4 = 1`, liberado por `0x89000C20 = 0x00` por inversor externo).
+
+### 5.3 Disparo de Pulsos Controlados pela Sonda Pico (`RP2040`/`RP2350`) e Captura da UART
+
+O firmware C11 modular em `firmware/pico-p7501/` consolidou uma sonda **Zero-Gadget** dual-target (`RP2040` e `RP2350`, com BLE NUS opcional em `Pico W`/`Pico 2W` via CYW43439) contida integralmente em `P0_FW_RO` (`256 KiB`), empacotada no UF2 universal `panasonic_p7501_uart_unified.uf2` (auto-fatiado por `INFO_UF2.TXT`) e coberta por **38 suítes/funções de teste host C11** em `4` módulos:
+
+1. **Varredura Elétrica `PINCHECK` & `BUSDIAG` ([`p7501_diag_electrical.c`](../../firmware/pico-p7501/diag/p7501_diag_electrical.c), [`p7501_diag_busdiag.c`](../../firmware/pico-p7501/diag/p7501_diag_busdiag.c)):**
+   * `PINCHECK` mede os 6 pinos de `P7501` em Hi-Z, pull-down e pull-up (exceto `GP3/NSW5V`, mantido sem pulls) e amostra `GP26/ADC0` (**`~3.25V`** Hi-Z / **`~2.69V`** pull-down / **`~3.27V`** pull-up), aplica guarda anti-backpower quando `VDD` está desligado e cronometra a subida `~20 µs` de `XRESET` em Open-Drain. (Corrigiu-se o bug em `ISOLATE` que deixava `GP26` como saída SIO `LOW` lendo `0.02V`, restaurando `adc_gpio_init(GP26)`.)
+   * `BUSDIAG` varre a força de drive (`2mA`, `4mA`, `8mA`, `12mA`) em `GP4` através dos 3 estados de `SW_UART`/`XRESET` e contabiliza transições nas janelas `Phase A (0..1300ms)` e `Phase B (1300..3500ms)`, comprovando `GP2 = 872 / 2124 / 3308` transições frente a `0` em `GP3` e `GP4`.
+2. **Máquina de Estados PIO 8x & Amostradores Lógicos ([`p7501_uart_duplex.pio`](../../firmware/pico-p7501/p7501_uart_duplex.pio), [`p7501_logic_sampler.pio`](../../firmware/pico-p7501/p7501_logic_sampler.pio), [`p7501_sds_sampler.pio`](../../firmware/pico-p7501/p7501_sds_sampler.pio)):**
+   * `p7501_uart_rx_fast` (`PIO1 SM0` em `GP2`) executa **oversampling 8x** (`921.600 Hz` @ `115200 8N1`), aguarda `1,5` bit (`[10]` + ciclos de setup) até o centro de `D0`, amostra cada bit a cada `8` ciclos e verifica o Stop bit via `jmp pin` sinalizando erro de enquadramento em `irq 4` sem jamais tocar `GP3`. `p7501_uart_tx_fast` (`PIO1 SM1`) transmite em `GP4` via `Q7514`. Em paralelo, `PIO0` opera o amostrador lógico de 4 canais (`PIOLOGIC`) e o sniffer SD passivo (`SDSNIFF`, `GP10..15`).
+3. **Orquestração `UARTPROBE`, `JIGBOOT`, `BOOTTRACE`, `UARTSTREAM` & `DIAGWATCH` ([`p7501_diag_watch.c`](../../firmware/pico-p7501/uart/p7501_diag_watch.c)):**
+   * Coordenando o pulso Open-Drain em `XRESET` (`GP5`) com retenção cronometrada de `SW_UART = LOW` (`JIGBOOT` / `JIG:2500` ou disparo automático por padrão `"serial boot mode"` / `"DDR CHECK: OK"`), a sonda capturou `<00>DDR CHECK: OK`, `Chip select = 1`, `***** Loader ver0.61 [06/03/06] *****`, `***** serial boot mode *****`, `startup reason = [70]`, `CD diag boot mode`, o boot SD 4-bit ao vivo em [`sddiag_ver061_live_20261119.log`](../debug_logs/sddiag_ver061_live_20261119.log) (`0x3c4000[LBA]`, `25000 Kbps`, `641 B`, `ferr=0` $\rightarrow$ `***** Fvu ver0.61 [05/11/01] *****`), detecção automática de acordamento `PREJIG WAKE` (`VDD >= 2.0V`) e injeção de comandos no monitor **`PANAMON1>`**.
+4. **Ponte Transparente `BRIDGE 115200 PASSIVE` ([`p7501_uart_tx.c`](../../firmware/pico-p7501/uart/p7501_uart_tx.c), `crates/panadiga-core/src/pico/panamon1/`):**
+   * Estabelece passthrough full-duplex USB-CDC $\leftrightarrow$ `SC0` com guarda Hayes de `50 ms` para saída `~~~`, telemetria de bordas `[CTRL]`, sonda segura `?\r` (evitando `\r` nu ou frames GDB `#B1` que disparariam `'B'` = `OK:BYPASS`) e espaçamento determinístico de `300–350 µs` entre bytes para respeitar o registrador `SC0RXB` (1 byte) do MN103S durante dumps de `8 MiB`, reparos BGO e sondas `DAVIS`.
+
+### 5.4 Avanços Subsequentes até a Arquitetura Atual (`475fd48`)
+
+A posse de acesso vivo ao monitor `PANAMON1>` em `COM10` impulsionou quatro saltos sucessivos até o estado consolidado no commit **`475fd48`**:
+
+1. **Dump Ouro de `8 MiB` (`IC5001`) & Descoberta da Geometria BGO Real de `45` Setores (`0x440337A4`):**
+   * Via `PANAMON1>` + `PANADMP1` na janela *uncached* `0x84000000..0x847FFFFF`, capturou-se o dump integral [`eh55_nor_8mb_ic5001_dump.bin`](../../firmware_and_images/README.md) (`8.388.608 B`, SHA-256 `c1faee798f60545853eefdba0d15f23678b471466dc2bc84f522bc972f15a02d`), além dos recortes `eh55_loader_ver061_256k.bin` (`9f5c448d...`) e `eh55_nvram_64k_raw.bin` (`803d1465...`).
+   * A desmontagem cruzada de `Loader ver0.61` provou que o DMR-EH55 usa a tabela **`0x440337A4`** com **`45 × 64 KiB` setores em `SA26..SA70` (`0x84130000..0x843FFFFF`, `40` blocos lógicos `0xF2xx`, `D_ID 0x0F01..0x0F24`)** — refutando a assunção prévia baseada na tabela de **`35` setores em `0x84200000..0x843FFFFF` (`28` blocos, `D_ID 0x0A01`)** do `Loader ver0.63` (`/BOOT.BIN`) e do `PROG061` stock (`0x50436E30`, EH50 `M6930`). Também comprovou que `Loader ver0.61` exige `DIGADIAG.FRM` **bruto de `262.144 B` (`0x40000`)** em `0x90400000` (`EV-20261119-001`) e TOC plaintext **`sd48`** (`0x1800 B`, stride 48 B) em `PANA__SD.FRM`.
+2. **Cura Cirúrgica BGO/`U99` em 2 Ciclos (`SA54`/`SA41`/`SA29`/`SA39`) & Porta #1 Sem JIG (`EV-20261119-002`/`003`/`004`/`007`):**
+   * **Ciclo 1** ([`apply_bgo_repair_com10_20261119.log`](../debug_logs/apply_bgo_repair_com10_20261119.log)): sob `U CONFIRM_UPPER_NOR` / `U LOCK` (preservando `SA0..SA3` bloqueados em `E05`), formatou `SA70` (`256` zeros) e aplicou `1.629` escritas puras `1 -> 0` em `13` setores *spare* (`SA42..SA66`, restaurando `ifodev2` blk2 `0x0055` e páginas FAT `0x0F0A`/`0x0F19`, equivalente offline `adb21d95...`).
+   * **Diagnóstico da Recaída & Ciclo 2** ([`repair_bgo_sa39_sa54_com10_20261119.log`](../debug_logs/repair_bgo_sa39_sa54_com10_20261119.log), [`verify_bgo_restored_boot_20261119.log`](../debug_logs/verify_bgo_restored_boot_20261119.log)): explicou-se o rollback `+0x14` em `SA41 -> SA29` (`FUN_4401F536`), a exaustão de `0xF20A` em `5` ciclos `"ATIHSTAM"` (`SA26 -> SA29`) e o apagamento de `SA54`/`SA39..SA69` + aborto em `SA70` (`0x843FE100`) causado pelo `Fvu` stock `0x2182DC9`. O Ciclo 2 restaurou `SA54`, `SA41` slot 9, `SA29` (`0x51 -> 0x64`) e `SA39` (`E 84200000`), compactando para **`1` `0xF101` (`SA29`) + `40` `0xF2xx` + `4` spares limpos (`SA41, 67, 68, 70`)** e `19/19` cadeias FAT íntegras. O boot normal passou a executar `Loader ver0.61` $\rightarrow$ `normal mode` $\rightarrow$ `*** RTSC Initialize ***` **sem `U99`**, gerando a captura pós-reparo ao vivo [`eh55_nor_8mb_ic5001_repaired.bin`](../../firmware_and_images/README.md) (`8.388.608 B`, SHA-256 `bd089ed1a062c48756c60407e6555463e8646cde094b0328b88a253e4f1d4121`, `317,8 s`, `ferr=0`), o descritor brasileiro `eh55_ifodev2_m6930lb_2048b.bin` (`M6930LB`, `f4f22dd0...`) e a prova da **Porta #1** de entrada direta em `PANAMON1>` sem pino JIG quando `CH1` falha ([`probe_ch1_full_diag_20261119.log`](../debug_logs/probe_ch1_full_diag_20261119.log)).
+3. **Pipeline Ghidra Zero-Undef (`0 ??`) & Camada Relacional SSOT (`profiles/`):**
+   * O patch [`am33_panadiga_zero_undef.patch`](../../tools/ghidra/sleigh_patches/am33_panadiga_zero_undef.patch) (corrigindo `12` defeitos SLEIGH em `am33.sinc` e `mn103.sinc` sobre o clone isolado `Panadiga_MN103S_ZeroUndef`) zerou os bytes indefinidos e `mn_todo()` em todos os `6` estágios binários: **`3.626.323` instruções e `45.034` funções com `0` `??`** ([`GHIDRA_UNDEF_AUDIT_REPORT.md`](../pseudocode/GHIDRA_UNDEF_AUDIT_REPORT.md)), unificados em SSOT Rust/JSON (`ghidra_maps_ssot.json` $\rightarrow$ `ghidra_ssot_maps.json`).
+   * O crate `panadiga-profiles` e `profiles/` consolidaram **89 modelos DIGA**, **12 JSON Schemas** Draft 2020-12, **796 checagens relacionais** e o **T0..T4 Capability Gate** (restringindo escrita ao vivo ao `DMR-EH55` `T4`).
+4. **Desbloqueio de HDD `5 GB..2 TB`, Preset `250 GB` RTSD (`0x07466528`) & Gravação em `PhysicalDrive1` (`EV-20261119-008`):**
+   * [`crates/panadiga-core/src/hdd/capacity_patch/specs.rs`](../../crates/panadiga-core/src/hdd/capacity_patch/specs.rs) passou a cobrir de **`5 GB` (`0x0024C388`, `SAMSUNG SV0511D`) até `2 TB` (`DYNAMIC_UNCLAMPED_MAX_BLOCKS_2KB = 0x3FFF_FFFF`, mais teto explícito `4 TiB`)** via bypass `0xC6 -> 0xCA` em `src/hdd_cmd.c` (`3410PQ @ 0x574DD1FC`, `3060NP @ 0x574E499C`) e os 9 presets RTSD (`#3 250GB = 0x07466528` = `122.053.928` blocos 2 KiB = `488.215.712` LBAs). Em [`hdd_unbrick_flash_250gb_20261119.log`](../debug_logs/hdd_unbrick_flash_250gb_20261119.log), o disco `\\.\PhysicalDrive1` (`250 GB`) recebeu backup CoW (`354d38bd...`), imagem `panasonic_dmr_eh55_hdd_250gb_patched.img` (`4fde753c...`) e espelho P1 no `LBA 488266096` (`d932692c...`) validados por SHA-256 read-back.
+5. **Estado Pós-`475fd48` (SSOT Consolidada) — Retarget Declarativo `BGO_45SEC_8MB_0X84130000`, `PANA__SD.FRM` FVU Desacoplado (`MAIN3060NP` + `250 GB`) & Seletor RTSD:**
+   * [`crates/panadiga-core/src/re/bgo_unbrick/retarget.rs`](../../crates/panadiga-core/src/re/bgo_unbrick/retarget.rs) (evoluído do módulo inicial do commit `475fd48`) traduz declarativamente via `profiles/firmware_trains/` o `PROG061` de fábrica (`BGO_35SEC_4MB_0X84200000`) para **`BGO_45SEC_8MB_0X84130000`** (`0x84130000..0x84400000`, `45` setores físicos / `40` lógicos, `D_ID 0x0F01..0x0F24`), transplantando `nfrom_drv.o` de `Loader ver0.61` (`29.770 B`, [`profiles/blobs/loader_ver061_nfrom_drv.bin.gz`](../../profiles/blobs/loader_ver061_nfrom_drv.bin.gz)), relocando `211` ponteiros RAM para `0x504FA000..0x504FE000`, ajustando `.bss` (`0x504FE000`) e aplicando `34` patches de geometria/`D_ID` — sem nomes de produto hardcoded no código Rust.
+   * [`crates/panadiga-core/src/re/unbrick_sd_kit/compose/builders.rs`](../../crates/panadiga-core/src/re/unbrick_sd_kit/compose/builders.rs) e [`firmware_and_images/sd_unbrick_kit/SHA256SUMS.txt`](../../firmware_and_images/sd_unbrick_kit/SHA256SUMS.txt) desacoplaram os dois modos do kit SD: **`DIGADIAG.FRM`** (`305cc2ee...`, `262.144 B`) carrega `UART_MONITOR_PANAMON1` + `BGO_45SEC_8MB_0X84130000` para JIG `P7501`, enquanto **`PANA__SD.FRM`** (`2d3d62a7...`, `7.563.224 B`, `sd48`, `6` slots lidos do SSOT) embute `PROG061` em **`BYPASS_CHECKS_ONLY`** + `BGO_45SEC_8MB_0X84130000` para instalar flexivelmente `MAIN3060NP` (padrão do kit com HDD **`250 GB`** `0x07466528`) ou `MAIN3410PQ` em HDDs zerados via `"SD version up mode."`, controlado na UI desktop por [`SdKitBuilderCard.tsx`](../../apps/desktop/src/components/unbrick/SdKitBuilderCard.tsx) e [`SdKitProfileControls.tsx`](../../apps/desktop/src/components/unbrick/SdKitProfileControls.tsx) (`Auto`, `250 GB` RTSD, `400..80 GB`).
+   * **Fronteira Aberta Documentada:** o firmware `MAIN` ainda aguarda a desobstrução elétrica física do canal `CH1` (`IORDY`/`DIOR-`/`DIOW- = 0V` sob carga no enlace `P58001`–`VEK0K00`–`N5EZZ0000003`–`IDE2SAT2`) para bootar pelo HDD em hardware real, junto aos ensaios de Estágio 0 `PAL-M` / TBC (`AIOF` `0x8800_0000`, `AVDD` `0x8980_0000`, keepalive `M0` `TBUS`).
+
+### 5.5 Ecossistema Open-Source & Repositórios Citados (Emulação EEPROM/Flash & Ferramentas Panasonic)
+
+O desenvolvimento do Panadiga apoiou-se na análise comparativa entre arquiteturas modernas abertas de emulação EEPROM/drivers NOR e os utilitários comunitários de engenharia reversa Panasonic:
+
+#### Emulação EEPROM em Flash Spansion / Cypress / Infineon vs. `EEMUL` & `BGO` Matsushita
+
+| Projeto / Fonte Aberta                                   | URL Canônica                                                                | Papel Técnico & Contraste com a `S29JL064H` (`IC5001`) do DMR-EH55                                                                                                                                                                                                                                                                                                                                                                                            |
+| :------------------------------------------------------- | :--------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`Infineon/emeeprom`**                          | https://github.com/Infineon/emeeprom                                         | Middleware canônico Emulated EEPROM da ModusToolbox (PSoC / XMC / Traveo): gerencia *wear-leveling*, filas redundantes e checksums em Flash interna. Contrasta diretamente com o motor proprietário **`EEMUL`** (`"1284"`, cabeçalho `0x0FF00000`, `1.158` tags em `SA71..SA141`, cauda `0ff00000002c` em `SA134`) que substitui EEPROM I²C externa ausente no EH55 (`EEPROM_W_C = NC`).                                               |
+| **`Infineon/mtb-xmc-emeeprom`**                  | https://github.com/Infineon/mtb-xmc-emeeprom                                 | Biblioteca ModusToolbox que adapta o algoritmo `emeeprom` sobre o driver Flash `XMCLib` (famílias industriais XMC1xxx/XMC4xxx), ilustrando paginação lógica sobre setores físicos grandes — paralelo conceitual útil ao particionamento de slots `512 B` dentro de setores `64 KiB` da FTL BGO `[nfrom]` (`SA26..SA70`).                                                                                                                        |
+| **`Infineon/mtb-example-psoc6-emulated-eeprom`** | https://github.com/Infineon/mtb-example-psoc6-emulated-eeprom                | Aplicação de referência demonstrando persistência não-volátil em Flash auxiliar/interna de MCUs PSoC 6 com `emeeprom`, evidenciando a distância arquitetural entre esquemas modernos documentados por linha/checksum e a ausência de documentação pública para os headers dual-bitmap (`+0x14` rollback / `+0x5C` forward) da Matsushita.                                                                                                         |
+| **Linux MTD `drivers/mtd/spi-nor/spansion.c`**   | https://github.com/torvalds/linux/blob/master/drivers/mtd/spi-nor/spansion.c | Driver mainline do kernel Linux para Flash NOR Spansion/Cypress/Infineon (ID fabricante `0x01`, tabelas SFDP, quirks de geometria multi-die e proteção de setores). Diferente de dispositivos SPI-NOR modernos atendidos por `spansion.c`, a **`S29JL064H70TFI00`** do EH55 é **NOR paralela 16-bit TSOP-48** (barramento CFI/JEDEC `0xAA`/`0x55`/`0xA0`, `8×8K + 126×64K + 8×8K`, `WP#/ACC` no Pino 14 e ~`700 ms` de erase). |
+
+#### Decompiladores, Desempacotadores, Recompiladores, Forense & IR Panasonic
+
+| Repositório / Projeto                        | URL Canônica                                                               | Linguagem & Função no Ecossistema / Integração Panadiga                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| :-------------------------------------------- | :-------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`WeebDataHoarder/pana-fw`**         | https://git.gammaspectra.live/WeebDataHoarder/pana-fw                       | **Go:** referência estrutural para `MainListHeader` (`20 B`, decifração parcial `0x1400`/`0x2800` nas extremidades), cabeçalho `DRV` (`32 B` + trailer `-48`), divisão `fmaX` (`RomFS`/`CramFS`), recuperação estatística `findKeySlow`, cifra de rede `libdownloadlib.so`, console `SLM` UniPhier e códigos IR Kaseikyo `[RED]`/`ND2` — portado para Rust em [`crates/panadiga-core/src/crypto/pana_fw_go/`](../../crates/panadiga-core/src/crypto/pana_fw_go/mod.rs). |
+| **`theubusu/unixtract`**              | https://github.com/theubusu/unixtract                                       | **Rust:** desempacotador universal de contêineres `PANA_DVD.FRM` / `PANA_ESD.FRM` e catálogos de chaves (`keys.ukf`, `12` chaves Feistel/AES `PANA_DVD`), `EXTRHEAD`/`EXTRFOOT` e compressão Okumura LZSS (`0xFEE`) / DEFLATE / LZMA.                                                                                                                                                                                                                                                         |
+| **`theubusu/sddl_dec`**               | https://github.com/theubusu/sddl_dec                                        | **Decodificador `SDBOOT` / `SDDL.SEC`:** decifra pacotes de atualização SD e de rede Panasonic (`tbl2009`/`tbl2010`/3DES e chaves AES-128-CBC pós-2011 `SDDL_SEC_NEW_KEY`).                                                                                                                                                                                                                                                                                                                         |
+| **`txt231/GhidraMn10300`**            | https://github.com/txt231/GhidraMn10300                                     | **Ghidra SLEIGH (`mn10300:LE:32:default`):** especificação de processador para a família Matsushita `MN103`/`MN10300`/`AM33`; serviu de base sobre a qual o Panadiga desenvolveu [`am33_panadiga_zero_undef.patch`](../../tools/ghidra/sleigh_patches/am33_panadiga_zero_undef.patch) corrigindo `12` defeitos de decodificação/semântica até atingir `0 ??`.                                                                                                                                |
+| **`leecher1337/panasonic-rec`**       | https://github.com/leecher1337/panasonic-rec                                | **C (`extract_meihdfs` / `meihdfs1.h`):** projeto pioneiro na engenharia reversa do **`MEIHDFS-V2.0` / `V2.1`**, mapeando superblocos, `itbl`, unidade de alocação `ASIZE` de `768 KiB`, `320` extents por inode e época `1980-01-01` (`TIME_OFFSET = 315532800`).                                                                                                                                                                                                                  |
+| **`haliner/dvr-recover`**             | https://github.com/haliner/dvr-recover                                      | **Python:** ferramenta forense de varredura de superfície bruta de discos DVR/CCTV por assinaturas de stream de vídeo, citada como referência comparativa de recuperação de mídia sem metadados intactos.                                                                                                                                                                                                                                                                                                  |
+| **`lukasz-gratkowski/diga-archive`**  | https://github.com/lukasz-gratkowski/diga-archive                           | **Windows / Rede:** utilitário para conectar-se via rede local a gravadores Panasonic DIGA, navegar por títulos gravados e arquivá-los localmente ou em nuvem sem recodificação.                                                                                                                                                                                                                                                                                                                            |
+| **`Flipper-IRDB` (`emptythevoid`)** | https://github.com/Lucaslhm/Flipper-IRDB · https://github.com/emptythevoid | **Base Comunitária IR:** forneceu o arquivo verificado `DVD_Players/Panasonic/Panasonic_DVD_TV.ir` (`4.943 B`, SHA-256 `82acb0a7...`, `50` sinais Kaseikyo: `6` TV `0x80` + `44` DVD/DIGA `0xB0`), cruzado com o controle físico `EUR7659Y70` e perfis Android `.irplus`.                                                                                                                                                                                                                  |
+
+---
+
+## 6. Matriz de Síntese e Diretrizes de Engenharia para o Ecossistema Panadiga
 
 A consolidação de todos os dados da comunidade internacional estabelece as seguintes diretrizes para o ecossistema Panadiga:
 
 1. **Validação da Cifra Feistel:** A compatibilidade da chave `DF7215C7427FD010` abrange desde o `DMR-EH55` até a série `EH49/59/69` e `EX72..EX93`, confirmando que o algoritmo `FUN_4400a666` é o padrão canônico da Matsushita para todas as imagens `.FRM` da era SD/DVD analógica e DVB inicial.
 2. **Regra de Ouro da Tensão do Conector P7501:** O pino 5 (`NSW5V`), originado em `IC1506` com potencial upstream de ~5.15V, deve **SEMPRE permanecer como entrada em alta impedância (`Hi-Z Input`) sem resistores de pull no microcontrolador Raspberry Pi Pico**, garantindo proteção física absoluta contra a queima do silício do SoC Matsushita AM34.
-3. **Cura do Erro `U99`:** O código `U99` não é um erro de defeito de componente único, mas o resultado determinístico do travamento do bootloader `PROG.bin` quando a verificação dos últimos 64 KB da NVRAM Spansion falha. Sua resolução definitiva consiste na sanitização precisa da faixa de memória `0x807F0000..0x807FFFFF`, preservando intocada a região do bootloader de `0x80000000` a `0x807EFFFF`.
+3. **Cura do Erro `U99`:** O código `U99` não é um erro de defeito de componente único, mas o resultado determinístico do travamento do bootloader `PROG.bin` quando a verificação dos últimos 64 KB da NVRAM Spansion falha — ou, no DMR-EH55 real (`Loader ver0.61`), da corrupção do FTL BGO `[nfrom]` em `SA26..SA70` (`0x84130000..0x843FFFFF`). Sua resolução definitiva exige preservação integral do bootloader IPL (`SA0..SA10`, `256 KiB` em `E05`), sanitização precisa da faixa NVRAM `0x807F0000..0x807FFFFF` quando aplicável e reconstrução BGO verificada por SHA-256 com retarget declarativo `BGO_45SEC_8MB_0X84130000`.
 
 ---
 
-## 6. Referências Técnicas e Documentos Correlatos
+## 7. Referências Técnicas e Documentos Correlatos
 
 * [Auditoria Completa do Ecossistema Panadiga](../../AUDITORIA_COMPLETA.md)
+* [Relatório 100% Fiel da Sessão de Engenharia Reversa (`DMR-EH55` / `COM10` / `P7501`)](RELATORIO_SESSAO_ENGENHARIA_REVERSA_EH55_100_FIEL.md)
+* [Dossiê Histórico e Forense EH55: BGO (`SA39`/`SA54`), `PANAMON1>`, `DAVIS`, `P58001` &amp; `PAL-M`](HISTORICO_UNBRICK_EH55_BGO_CH1_DAVIS_E_REGIAO.md)
+* [Blueprint de Engenharia de Hardware e Circuitos de Bancada (`VEP79138` / `S29JL064H`)](BLUEPRINT_ESQUEMA_ELETRICO_BANCADA.md)
+* [Guia do Firmware Pico `P7501` (`RP2040` / `RP2350`)](FIRMWARE_PICO_P7501_GUIA.md)
+* [Dossiê Técnico Forense do Bootloader SDDIAG (`Loader ver0.61` vs `ver0.63`)](DOSSIE_FORENSE_BOOTLOADER_SDDIAG_EH55.md)
+* [Armadilhas MN103S e Resolução Ghidra Zero-Undef](ARMADILHAS_MN103S_E_RESOLUCAO_GHIDRA.md)
+* [Catálogo e Auditoria de Perfis de Hardware DIGA (89 Modelos)](CATALOGO_E_AUDITORIA_PERFIS_HARDWARE_LINHA_DIGA.md)
 * [Dossiê Técnico de Criptografia e Firmware PANA_DVD](DOSSIE_CRIPTOGRAFIA_E_FIRMWARE_PANA_DVD.md)
 * [Teoria e Prática de Unbrick U99 e Criptografia Matsushita](TEORIA_E_PRATICA_UNBRICK_U99_E_CRIPTOGRAFIA_MATSUSHITA.md)
 * [Arquitetura de Storage MEIHDFS e Partições](ARQUITETURA_STORAGE_MEIHDFS_PARTICOES.md)

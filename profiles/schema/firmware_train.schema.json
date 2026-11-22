@@ -1,5 +1,49 @@
 {
   "$defs": {
+    "AddressReloc": {
+      "additionalProperties": false,
+      "description": "32-bit SDRAM pointer relocation mapping (`from -> to`).",
+      "properties": {
+        "from": {
+          "type": "string"
+        },
+        "to": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "from",
+        "to"
+      ],
+      "type": "object"
+    },
+    "BytePatchEntry": {
+      "additionalProperties": false,
+      "description": "Verified single-byte immediate patch (`offset: expect -> replace`) inside a retargeted `PROG`.",
+      "properties": {
+        "expect": {
+          "type": "string"
+        },
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "offset": {
+          "type": "string"
+        },
+        "replace": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "offset",
+        "expect",
+        "replace"
+      ],
+      "type": "object"
+    },
     "ClaimEvidence": {
       "additionalProperties": false,
       "description": "Evidence bundle bound to one architectural entity or model claim axis.",
@@ -24,6 +68,55 @@
       },
       "required": [
         "tier"
+      ],
+      "type": "object"
+    },
+    "DigadiagSpec": {
+      "additionalProperties": false,
+      "description": "SD stage-1.5 `DIGADIAG.FRM` specification declared per firmware train.",
+      "properties": {
+        "bgo_geometry_target": {
+          "type": "string"
+        },
+        "entry_va": {
+          "type": "string"
+        },
+        "exact_bytes": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "filename": {
+          "type": "string"
+        },
+        "format": {
+          "type": "string"
+        },
+        "fvu_decoupled_mode": {
+          "type": "string"
+        },
+        "load_va": {
+          "type": "string"
+        },
+        "panamon1_entry_va": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sd_media_requirement": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "format",
+        "filename",
+        "exact_bytes",
+        "load_va",
+        "entry_va",
+        "bgo_geometry_target",
+        "fvu_decoupled_mode",
+        "sd_media_requirement"
       ],
       "type": "object"
     },
@@ -152,12 +245,189 @@
         "ascii_marker"
       ],
       "type": "object"
+    },
+    "OffsetRange": {
+      "additionalProperties": false,
+      "description": "Half-open byte offset range `[start, end)` inside an unpacked `PROG` binary.",
+      "properties": {
+        "end": {
+          "type": "string"
+        },
+        "start": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "type": "object"
+    },
+    "PanaRebuildRecipe": {
+      "additionalProperties": false,
+      "description": "Container rebuild recipe defining `PANA__SD.FRM` / `PANA_DVD.FRM` assembly from live dumps.",
+      "properties": {
+        "family_aliases": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "model_prefix_byte": {
+          "type": "string"
+        },
+        "output_container": {
+          "type": "string"
+        },
+        "sources_from_panamon_dump": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "toc_format": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "output_container",
+        "toc_format",
+        "model_prefix_byte"
+      ],
+      "type": "object"
+    },
+    "ProgBgoRetargetSpec": {
+      "additionalProperties": false,
+      "description": "Pure SSOT recipe to retarget a donor `PROG` binary from a factory baseline BGO geometry to a target flash geometry (e.g. `BGO_45SEC_8MB_0X84130000`).",
+      "properties": {
+        "bgo_sum_beq_offset": {
+          "type": "string"
+        },
+        "bgo_table_marker": {
+          "type": "string"
+        },
+        "bgo_table_offset": {
+          "type": "string"
+        },
+        "bgo_table_words": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "bss_zero_end_offset": {
+          "type": "string"
+        },
+        "byte_patches": {
+          "items": {
+            "$ref": "#/$defs/BytePatchEntry"
+          },
+          "type": "array"
+        },
+        "detect_flash_base": {
+          "type": "string"
+        },
+        "detect_logical_sectors": {
+          "type": "string"
+        },
+        "expected_prog_size": {
+          "type": "string"
+        },
+        "hi_ram_ranges": {
+          "items": {
+            "$ref": "#/$defs/OffsetRange"
+          },
+          "type": "array"
+        },
+        "hi_ram_relocs": {
+          "items": {
+            "$ref": "#/$defs/AddressReloc"
+          },
+          "type": "array"
+        },
+        "init2_call_offset": {
+          "type": "string"
+        },
+        "nfrom_drv_blob_relpath": {
+          "type": "string"
+        },
+        "nfrom_drv_end": {
+          "type": "string"
+        },
+        "nfrom_drv_start": {
+          "type": "string"
+        },
+        "nfrom_drv_uncompressed_bytes": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "nfrom_drv_uncompressed_sha256": {
+          "type": "string"
+        },
+        "nop_fill_byte": {
+          "type": "string"
+        },
+        "orig_bss_zero_end": {
+          "type": "string"
+        },
+        "orig_init2_rel32": {
+          "type": "string"
+        },
+        "target_bss_zero_end": {
+          "type": "string"
+        },
+        "target_geometry_id": {
+          "type": "string"
+        },
+        "target_init2_rel32": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "target_geometry_id",
+        "expected_prog_size",
+        "bgo_table_offset",
+        "bgo_table_marker",
+        "detect_logical_sectors",
+        "detect_flash_base",
+        "bgo_table_words",
+        "bgo_sum_beq_offset",
+        "nfrom_drv_start",
+        "nfrom_drv_end",
+        "nfrom_drv_uncompressed_bytes",
+        "nfrom_drv_blob_relpath",
+        "nfrom_drv_uncompressed_sha256",
+        "nop_fill_byte",
+        "bss_zero_end_offset",
+        "orig_bss_zero_end",
+        "target_bss_zero_end",
+        "init2_call_offset",
+        "orig_init2_rel32",
+        "target_init2_rel32",
+        "hi_ram_ranges",
+        "hi_ram_relocs",
+        "byte_patches"
+      ],
+      "type": "object"
     }
   },
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "Firmware build/train profile independent of silicon ISA (`loader_ver061`, `loader_ver018`, `prog071`, etc.).",
   "properties": {
+    "bgo_retarget_spec": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ProgBgoRetargetSpec"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
     "digadiag_raw_bytes": {
       "default": null,
       "format": "uint32",
@@ -165,6 +435,16 @@
       "type": [
         "integer",
         "null"
+      ]
+    },
+    "digadiag_spec": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/DigadiagSpec"
+        },
+        {
+          "type": "null"
+        }
       ]
     },
     "drv_load_va": {
@@ -228,6 +508,16 @@
         "type": "string"
       },
       "type": "array"
+    },
+    "pana_rebuild_recipe": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PanaRebuildRecipe"
+        },
+        {
+          "type": "null"
+        }
+      ]
     },
     "prog_load_va": {
       "default": null,

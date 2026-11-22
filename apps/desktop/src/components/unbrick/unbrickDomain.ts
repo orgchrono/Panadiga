@@ -75,6 +75,7 @@ export function validateRequiredText(
 export interface SdKitFormInputs {
   outputDir: string;
   panaDvdPath: string;
+  mainPath?: string;
   bgoMode: BgoMode;
   mainMode: MainPassthroughMode;
   loaderProfile?: SdLoaderProfile;
@@ -92,11 +93,13 @@ export function buildSdKitRequestPayload(inputs: SdKitFormInputs): {
     return { errorKey: outCheck.errorKey, request: null };
   }
   const hasExplicitTargetGb = typeof inputs.hddTargetGb === 'number';
+  const trimmedMainPath = inputs.mainPath?.trim();
   return {
     errorKey: null,
     request: {
       output_dir: outCheck.trimmed,
       pana_dvd_path: inputs.panaDvdPath.trim() || undefined,
+      ...(trimmedMainPath ? { main_path: trimmedMainPath } : {}),
       bgo_mode: inputs.bgoMode,
       main_passthrough_mode: inputs.mainMode,
       ...(inputs.loaderProfile ? { loader_profile: inputs.loaderProfile } : {}),

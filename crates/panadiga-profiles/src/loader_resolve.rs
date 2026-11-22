@@ -8,6 +8,9 @@ use anyhow::{Context, Result};
 
 use crate::derive::{derived_geometry_label, format_sa_range, sector_range_for_aligned_span};
 use crate::gate::CapabilityGate;
+use crate::region::{
+    interpolate_composite_tv_standard, interpolate_model_regions, match_queried_region_variant,
+};
 use crate::types::{
     CapabilitySummary, FlashChipProfile, NorLayoutProfile, NorRegionKind, ProfilesBundle,
     ResolvedModelProfile, SocProfile,
@@ -46,7 +49,7 @@ pub fn resolve_model_in_bundle(
     model_query: &str,
 ) -> Result<ResolvedModelProfile> {
     let needle = model_query.trim();
-    let manifest = bundle
+    let mut manifest = bundle
         .models
         .values()
         .find(|m| {
@@ -57,6 +60,26 @@ pub fn resolve_model_in_bundle(
         })
         .with_context(|| format!("Unknown DIGA model profile '{model_query}'"))?
         .clone();
+
+    let regional_variants = interpolate_model_regions(
+        manifest.region_suffix.as_deref(),
+        &manifest.model_id,
+        &manifest.series,
+        manifest.hw_code.as_deref(),
+    );
+    let active_region =
+        match_queried_region_variant(needle, &manifest.model_id, &regional_variants);
+    if manifest.tv_standard.is_none() {
+        manifest.tv_standard = active_region
+            .as_ref()
+            .map(|r| r.tv_standard.clone())
+            .or_else(|| interpolate_composite_tv_standard(&regional_variants));
+    }
+    if let Some(active) = &active_region
+        && let Some(interp_hw) = &active.interpolated_hw_code
+    {
+        manifest.hw_code = Some(interp_hw.clone());
+    }
 
     let board = manifest
         .board_ref
@@ -169,6 +192,8 @@ pub fn resolve_model_in_bundle(
         bgo_sector_range_derived,
         nvram_sector_range_derived,
         derived_sector_geometry,
+        regional_variants,
+        active_region,
         effective_capabilities: dummy_summary,
     };
     resolved.effective_capabilities = CapabilityGate::summarize(&resolved);

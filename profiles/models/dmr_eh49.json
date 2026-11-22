@@ -3,8 +3,7 @@
   "family_label": "DMR-EH49",
   "series": "Série EH (2009 FRM)",
   "region_suffix": "EC/EG",
-  "tv_standard": "PAL",
-  "hw_code": null,
+  "hw_code": "EH49EG",
   "board_ref": "rfkb79183_eh69",
   "train_ref": "prog071_toc64_main50622",
   "nor_layout_ref": null,
@@ -52,11 +51,11 @@
       ]
     },
     "eeprom": {
-      "tier": "community_unverified",
+      "tier": "service_manual_only",
       "sources": [
         {
-          "kind": "audit",
-          "reference": "Pending service manual / NOR dump extraction"
+          "kind": "service_manual",
+          "reference": "CHM0903007CE IC7404=C3EBFC000053 (RFKFM6016KT)"
         }
       ]
     }

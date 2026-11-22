@@ -2,12 +2,14 @@
 
 //! Panadiga Manifest-Driven, Policy-Gated Hardware Profile SSOT Crate.
 
+pub mod blob_b64;
 pub mod derive;
 pub mod gate;
 pub mod hex_serde;
 pub mod loader;
 pub mod loader_resolve;
 pub mod promote;
+pub mod region;
 pub mod schema;
 pub mod types;
 pub mod validate;
@@ -15,6 +17,8 @@ mod validate_layout;
 
 #[cfg(test)]
 mod tests;
+
+pub use blob_b64::{decode_base64, encode_base64};
 
 pub use derive::{
     DerivedSector, derive_sector_table, derived_geometry_label, format_sa_range, sector_of_offset,
@@ -27,6 +31,10 @@ pub use loader::{
     load_bundle_from_str, merge_overlay_dir, model_storage_key, resolve_model_in_bundle,
 };
 pub use promote::{PromoteClaimRequest, promote_model_claim};
+pub use region::{
+    InterpolatedRegionVariant, interpolate_composite_tv_standard, interpolate_model_regions,
+    interpolate_region_variant, match_queried_region_variant,
+};
 pub use schema::{export_schemas_to_dir, generate_all_schemas, verify_schemas_match_dir};
 pub use types::*;
 pub use validate::{

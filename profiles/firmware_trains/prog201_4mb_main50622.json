@@ -33,6 +33,11 @@
         "reference": "firmware_and_images/dmr-ex_ez_series/README.md",
         "sha256": "4d2929133a67562c4e52a5a091ecccda117f37f2e35c75fa53e1a198a40cc7c9",
         "notes": "PROG201 (4MB/TOP BOOT) + MAIN3200XC/3220YE @ 0x50622000 (EX773, EX83)."
+      },
+      {
+        "kind": "official_frm",
+        "reference": "firmware_and_images/dmr-ex_ez_series/ex83ec/PANA_DVD.FRM",
+        "sha256": "4d2929133a67562c4e52a5a091ecccda117f37f2e35c75fa53e1a198a40cc7c9"
       }
     ],
     "notes": "PROG201 (4MB/TOP BOOT) + MAIN3200XC/3220YE @ 0x50622000 (EX773, EX83)."

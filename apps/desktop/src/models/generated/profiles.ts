@@ -286,6 +286,18 @@ export interface CapabilitySummary {
   readonly labOverrideOfflineCowEligible: boolean;
 }
 
+export interface InterpolatedRegionVariant {
+  readonly regionCode: string;
+  readonly tvStandard: string;
+  readonly videoLineSystem: string;
+  readonly aiofVmodeselHex: string;
+  readonly dvdRegionCode: number;
+  readonly oemMarker: string;
+  readonly acMainsSpec: string;
+  readonly tunerSystem: string;
+  readonly interpolatedHwCode?: string | null;
+}
+
 export interface ResolvedModelProfile {
   readonly manifest: ModelProfileManifest;
   readonly board: BoardProfile | null;
@@ -302,6 +314,8 @@ export interface ResolvedModelProfile {
   readonly bgoSectorRangeDerived: string | null;
   readonly nvramSectorRangeDerived: string | null;
   readonly derivedSectorGeometry: string | null;
+  readonly regionalVariants?: readonly InterpolatedRegionVariant[];
+  readonly activeRegion?: InterpolatedRegionVariant | null;
   readonly effectiveCapabilities: CapabilitySummary;
 }
 

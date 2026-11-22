@@ -26,14 +26,14 @@
 
 | Programa Ghidra | Papel no Sistema | Bloco Inicializado (`ram`) | Tamanho | `funcs` | `defined_strings` | SHA-256 | Link no Dossiê Integral |
 |---|---|---|---:|---:|---:|---|---|
-| `/BOOT.BIN` | Estágio 1: IPL / NOR XIP — **`Loader ver0.63 [07/10/24] (4MB/TOP BOOT)`** (DMR-EZ485V; distinto do `ver0.61 [06/03/06]` do EH55) | `0x44000000..0x4403ffff` | `0x40000` (262.144 B) | 843 | 512 | `7c13c72a54c77387f3f7df0ddc213e4800e20b27eecbfd225cbc05a8fc73e377` | [Parte I](./EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md#L428) |
+| `/BOOT.BIN` | Estágio 1: IPL / NOR XIP — **`Loader ver0.63 [07/10/24] (4MB/TOP BOOT)`** (DMR-EH58; distinto do `ver0.61 [06/03/06]` do EH55) | `0x44000000..0x4403ffff` | `0x40000` (262.144 B) | 843 | 512 | `7c13c72a54c77387f3f7df0ddc213e4800e20b27eecbfd225cbc05a8fc73e377` | [Parte I](./EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md#L428) |
 | `eh55_loader_ver061_256k.bin` *(NOR real EH55, proj. read-only auxiliar)* | Estágio 1 Real EH55: IPL / NOR XIP — **`Loader ver0.61 [06/03/06]`** (`IC5001` `SA0..SA10`), geometria BGO `0x440337A4` (`45` setores `0x84130000..0x843FFFFF` / `SA26..SA70`) | `0x44000000..0x4403ffff` | `0x40000` (262.144 B) | *(sob demanda)* | *(0x4402f746..)* | `9f5c448d8879106be5ca3da6d6ac649026d50fbc191251ae0f4a003efca63800` | [1.3-B](./EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md#L4095) · [1.4-B](./EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md#L8787) · [2.3](./EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md#L21420) |
 | `/eh55_frm_PROG061_BOOT.bin` | Estágio 2: DIGADIAG / FVU Loader (`PROG061` do DMR-EH55; inclui `sd_load.o` @ `0x5040e9b0..0x5040edde`) | `0x50400000..0x5043ffff` | `0x40000` (262.144 B) | 5 | 0 | `c7da9121174fcf4c54f35f5bb1f7b23a3dc0c93ab227158ad4fdd90a1ea24a81` | [Parte II](./EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md#L12869) |
 | `/EH55_MAIN_3410PQ.bin` | Estágio 3: Main OS / `_dev_SERIAL` / LBA48 | `0x57000000..0x57c6692b` | `0xc6692c` (13.003.052 B) | 33 | 0 | `c3275d39549b68f48db16bc5fd043c6f8a373d4ba416826de09be5c55dc991b1` | [Parte III](./EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md#L22340) |
 | `/DRV_decomp.bin` | FE Drive S211 (dump principal analisado) | `0x40000000..0x4015ffff` | `0x160000` (1.441.792 B) | 2.346 | 1.913 | `694a4ab8aa29fcc45350dc0712047663602bdee7e4bff313b8ae62b057efd052` | [Parte IV](./EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md#L23864) |
 | `/EH55_DRV_S211.bin` | FE Drive S211 (revisão alterna comparada) | `0x40000000..0x4015ffff` | `0x160000` (1.441.792 B) | 15 | 0 | `6f2b61ede80ea9e3e9185d3d677813593f3d361446678e437c905a0037060243` | [Seção 4.2](./EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md#L24420) |
 
-> **Nota Crítica (`/BOOT.BIN` `ver0.63` vs NOR DMR-EH55 `ver0.61`):** `/BOOT.BIN` (`7c13c72a...`) é o **`Loader ver0.63 [07/10/24]`** (DMR-EZ485V): lê `DIGADIAG.FRM` comprimido (`0x20000` = `131.072 B` `EXTRHEAD` em `0x93fc0000` -> `uncompress`) e `PANA__SD.FRM` TOC `0x2000` (`sd64`, 64 B/entrada). Já a NOR do hardware **DMR-EH55 (`Loader ver0.61 [06/03/06]`)** — idêntica em `sd_load.o` a `/eh55_frm_PROG061_BOOT.bin` (`0x5040e9ae..0x5040edd2` / `0x5040e9b0..0x5040edde`) e ao NOR de março de 2006 `dmr-es35v/flash.bin` (`Loader ver0.18 [06/03/13]`, `0x440085d9` / `0x440095ab` / `0x4400bc70`, `SHA-256: 0969f258...`) — lê `DIGADIAG.FRM` **`0x40000` (`262.144 B`) cru diretamente em `0x90400000`** (alias não-cacheado de `0x50400000`) com salto **`JMP 0x50400000`**, além de `PANA__SD.FRM` **`0x1800` B** em modo `sd48` (entradas de 48 B).
+> **Nota Crítica (`/BOOT.BIN` `ver0.63` vs NOR DMR-EH55 `ver0.61`):** `/BOOT.BIN` (`7c13c72a...`) é o **`Loader ver0.63 [07/10/24]`** (DMR-EH58): lê `DIGADIAG.FRM` comprimido (`0x20000` = `131.072 B` `EXTRHEAD` em `0x93fc0000` -> `uncompress`) e `PANA__SD.FRM` TOC `0x2000` (`sd64`, 64 B/entrada). Já a NOR do hardware **DMR-EH55 (`Loader ver0.61 [06/03/06]`)** — idêntica em `sd_load.o` a `/eh55_frm_PROG061_BOOT.bin` (`0x5040e9ae..0x5040edd2` / `0x5040e9b0..0x5040edde`) e ao NOR de março de 2006 `dmr-es35v/flash.bin` (`Loader ver0.18 [06/03/13]`, `0x440085d9` / `0x440095ab` / `0x4400bc70`, `SHA-256: 0969f258...`) — lê `DIGADIAG.FRM` **`0x40000` (`262.144 B`) cru diretamente em `0x90400000`** (alias não-cacheado de `0x50400000`) com salto **`JMP 0x50400000`**, além de `PANA__SD.FRM` **`0x1800` B** em modo `sd48` (entradas de 48 B).
 
 ---
 
@@ -42,12 +42,12 @@
 ```mermaid
 flowchart TD
     VECT["Reset Vector 0x44000000 JMP 0x440000a0"] --> CRT0["crt0 0x4400133e: .bss 0x50480b80..0x505044d0 + .data 0x44039830 -> 0x50480000"]
-    CRT0 --> MAINB["boot_main 0x4400492e (BOOT.BIN = Loader ver 0.63 07/10/24 EZ485V; EH55 NOR = ver 0.61 06/03/06)"]
+    CRT0 --> MAINB["boot_main 0x4400492e (BOOT.BIN = Loader ver 0.63 07/10/24 DMR-EH58; EH55 NOR = ver 0.61 06/03/06)"]
     MAINB -->|"nvram_read_id(2)==0"| FEONLY["feonly_mode 0x44004b06"]
     MAINB -->|"detect_boot_mode == 2"| SDSER["serial boot mode -> fmu_sd_dispatcher(2)"]
     MAINB -->|"detect_boot_mode == 1"| NORM["normal mode -> bgo_driver_init -> fmu_sd_dispatcher(1)"]
     MAINB -->|"detect_boot_mode == 3"| SUPP["support card mode -> parse_support_card_hdr(0x40000400) -> jump"]
-    NORM -->|"BOOT.BIN ver0.63 EZ485V: DIGADIAG 0x20000 + PANA__SD 0x2000 sd64"| FEISTEL["Feistel 0x44039aa8 + ExtrHead/uncompress -> 0x93fc0000"]
+    NORM -->|"BOOT.BIN ver0.63 DMR-EH58: DIGADIAG 0x20000 + PANA__SD 0x2000 sd64"| FEISTEL["Feistel 0x44039aa8 + ExtrHead/uncompress -> 0x93fc0000"]
     NORM -->|"EH55 NOR ver0.61 / ES35V ver0.18: DIGADIAG 0x40000 + PANA__SD 0x1800 sd48"| RAWDIAG["Carga crua -> 0x90400000 (alias 0x50400000) -> JMP 0x50400000"]
     FEISTEL --> PROG["Estágio 2: eh55_frm_PROG061_BOOT.bin @ 0x50400000"]
     RAWDIAG --> PROG
@@ -87,7 +87,7 @@ flowchart TD
 
 ### 3.1-B Mapa 3-Vias (`Loader ver0.61` × `PROG061` × `Loader ver0.63`), Erratas & Geometria BGO (`0x440337A4`)
 
-Para eliminar confusões entre o dump `/BOOT.BIN` (`ver0.63` EZ485V) e o firmware físico do DMR-EH55 (`eh55_loader_ver061_256k.bin` `Loader ver0.61 [06/03/06]` + `PROG061`), o [Mapa Completo de Correspondência 3-Vias](./EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md#L97) consolida:
+Para eliminar confusões entre o dump `/BOOT.BIN` (`ver0.63` DMR-EH58) e o firmware físico do DMR-EH55 (`eh55_loader_ver061_256k.bin` `Loader ver0.61 [06/03/06]` + `PROG061`), o [Mapa Completo de Correspondência 3-Vias](./EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md#L97) consolida:
 
 1. **Errata `0x44008020` (`ver0.61`):** Não é função — é `+0x112` (+5 B dentro de `0x4400801b MOVBU D0,(0x504992c4)`) em [`FUN_44007f0e` (`v61_fmu_sd_dispatcher_7f0e`)](./EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md#L8947), contraparte exata de `ver0.63 fmu_sd_dispatcher` (`0x440065bc`) e acompanhada por [`FUN_44005fb3` (`v61_boot_main_5fb3`)](./EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md#L8791).
 2. **Errata `0x504238a5` (`PROG061`):** Não é função — recai `+5 B` dentro de `0x504238a0 MOV 0x504f84c4,R0` em [`FUN_5042383c` (`p61_bgo_p2_reconcile_2383c`, 875 B)](./EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md#L17775).
@@ -187,3 +187,13 @@ Detalhes completos e regras de verificação em [Parte V do Dossiê Integral](./
 - **Parte III (`/EH55_MAIN_3410PQ.bin`):** [3.1 `_dev_SERIAL` GDB RSP](./EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md#L22344) · [3.2 `FPC_TestModeControl`/ODD/`ATIH`](./EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md#L22662) · [3.3 HDD LBA48 & `400GB` Disasm](./EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md#L23227)
 - **Parte IV (`/DRV_decomp` & `/EH55_DRV_S211`):** [4.1 Serial CLI & `PASS`](./EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md#L23868) · [4.2 Comparativo `S211` vs `DRV_decomp`](./EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md#L24420) · [4.3 ATAPI `0x3c`, SenseTable & `DRV12`](./EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md#L24840)
 - **Parte V:** [Catálogo Completo de 10 Armadilhas MN103S](./EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md#L26534) · [Armadilha #8 (`SUB fb 9c`)](./EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md#L26547) · [Armadilha #9 (`NOT f2 3x`)](./EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md#L26548) · [Armadilha #10 (`BTST mn_todo`)](./EVIDENCIA_PSEUDOCODIGO_GHIDRA_MN103S.md#L26549)
+
+---
+
+## 6. Estado Pós-4-Passes (`Panadiga_MN103S_ZeroUndef`) & Âncora `panamon1_entry`
+
+Além dos números iniciais do snapshot histórico `Panadiga_MN103S` (Seção 1), a execução completa do pipeline SSOT de 4 passes (`ghidra_zero_undef_pipeline.py` + patch SLEIGH `am33_panadiga_zero_undef.patch` no projeto isolado `Panadiga_MN103S_ZeroUndef`, registrada em [`GHIDRA_UNDEF_AUDIT_REPORT.md`](./GHIDRA_UNDEF_AUDIT_REPORT.md#L64-L72) e [`verify.json`](../audits/zero_undef/verify.json)) atingiu **0% de bytes indefinidos** nos **6 estágios** MN103S:
+
+- **Totais consolidados (`Panadiga_MN103S_ZeroUndef`):** **`3.626.323` instruções**, **`45.034` funções**, **`0` bytes indefinidos (`??`)**, **`0` chamadas `mn_todo()`** e **`0` Error bookmarks**.
+- **Breakdown por binário:** `/BOOT.BIN` (`1.018` funcs, `76.337` insns, `0` undef), `/eh55_loader_ver061_256k.bin` (`487` funcs, `70.058` insns, `0` undef), `/eh55_frm_PROG061_BOOT.bin` (`888` funcs, `75.550` insns, `0` undef), `/DRV_decomp.bin` (`2.870` funcs, `338.305` insns, `0` undef), `/EH55_DRV_S211.bin` (`1.454` funcs, `353.745` insns, `0` undef) e `/EH55_MAIN_3410PQ.bin` (`38.317` funcs, `2.712.328` insns, `0` undef).
+- **Âncora `panamon1_entry` (`0x50439494` / offset `0x039494` em `PROG061`):** símbolo SSOT [`prog061_panamon1_uart_monitor`](../../crates/panadiga-core/src/ghidra/specs/symbols/stages_prog_main.rs#L71-L74) / `panamon1_entry` na faixa `0xFF` slack de `eh55_frm_PROG061_BOOT.bin`, acionado a partir do hook `0x5040A2BC -> 0x5040A2CD` para diagnóstico e cirurgia BGO ao vivo via UART0 (`PANAMON1>`).

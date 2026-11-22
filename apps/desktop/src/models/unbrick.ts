@@ -153,6 +153,9 @@ export interface SdMediaVerificationReport {
   pana_sd_main_build: string | null;
   pana_sd_main_passthrough_mode: string | null;
   pana_sd_main_hdd_dynamic: boolean | null;
+  digadiag_bgo_geometry?: string | null;
+  pana_sd_prog061_bgo_geometry?: string | null;
+  pana_sd_main_hdd_capacity_label?: string | null;
   factory_unpatched_prog061_detected?: boolean;
   dual_family_parity?: DualFamilyParityReport | null;
   checks: SdUnbrickCheck[];

@@ -33,6 +33,11 @@
         "reference": "firmware_and_images/dmr-eh49_59_69/README.md",
         "sha256": "7d7f6ad21f9c0a5b0d2e1c42e39d46389f05a1a87a6a4cb964aaf3343d8df3f8",
         "notes": "Verified across EH49/EH59/EH69, EX72SEG, EX769EF, EX795EP, EX79_89_769EB, EX79EF, EX89EF."
+      },
+      {
+        "kind": "official_frm",
+        "reference": "firmware_and_images/dmr-eh49_59_69/eh59/PANA_DVD.FRM",
+        "sha256": "7d7f6ad21f9c0a5b0d2e1c42e39d46389f05a1a87a6a4cb964aaf3343d8df3f8"
       }
     ],
     "notes": "Verified across EH49/EH59/EH69, EX72SEG, EX769EF, EX795EP, EX79_89_769EB, EX79EF, EX89EF."

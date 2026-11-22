@@ -89,6 +89,7 @@ pub fn handle_unbrick(args: UnbrickArgs) -> Result<()> {
             }
         }
         UnbrickActions::PrepareSd(sd) => bgo_tbc::handle_prepare_sd(sd),
+        UnbrickActions::RebuildFromDump(args) => bgo_tbc::handle_rebuild_from_dump(args),
         UnbrickActions::VerifySd(args) => bgo_tbc::handle_verify_sd(args),
         UnbrickActions::TbcPlan(args) => bgo_tbc::handle_tbc_plan(args),
         UnbrickActions::BgoAudit(args) => bgo_tbc::handle_bgo_audit(args),

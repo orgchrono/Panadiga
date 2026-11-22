@@ -24,6 +24,7 @@ describe('unbrickDomain pure transformations', () => {
     const valid = buildSdKitRequestPayload({
       outputDir: ' sd_kit ',
       panaDvdPath: '   ',
+      mainPath: '   ',
       bgoMode: 'uart_monitor',
       mainMode: 'factory_original',
       includePanaSd: false,
@@ -37,6 +38,26 @@ describe('unbrickDomain pure transformations', () => {
       main_passthrough_mode: 'factory_original',
       include_pana_sd: false,
       unlock_hdd_dynamic: false,
+    });
+
+    const withMainOverride = buildSdKitRequestPayload({
+      outputDir: 'sd_kit_main3060',
+      panaDvdPath: 'firmware_and_images/PANA_DVD.FRM',
+      mainPath: ' firmware_and_images/MAIN3060NP.bin ',
+      bgoMode: 'bypass',
+      mainMode: 'av_passthrough',
+      includePanaSd: true,
+      unlockHddDynamic: true,
+    });
+    expect(withMainOverride.errorKey).toBeNull();
+    expect(withMainOverride.request).toEqual({
+      output_dir: 'sd_kit_main3060',
+      pana_dvd_path: 'firmware_and_images/PANA_DVD.FRM',
+      main_path: 'firmware_and_images/MAIN3060NP.bin',
+      bgo_mode: 'bypass',
+      main_passthrough_mode: 'av_passthrough',
+      include_pana_sd: true,
+      unlock_hdd_dynamic: true,
     });
 
     expect(resolveHddCapacitySelection('dynamic')).toEqual({

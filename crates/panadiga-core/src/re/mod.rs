@@ -1,5 +1,6 @@
 //! Reverse Engineering, MN103S Disassembly, UART NOR Dumper & BGO Unbrick Primitives
 
+pub mod bench_runtime;
 pub mod bgo_unbrick;
 pub mod davis_probe;
 pub mod eh55_bgo;
@@ -24,15 +25,23 @@ pub mod unbrick_sd_kit;
 pub mod unbrick_workbench;
 pub mod verify_loop;
 
+pub use bench_runtime::{
+    BenchRuntimePlan, BenchRuntimeStageDescriptor, build_dynamic_bench_runtime_plan,
+};
 pub use bgo_unbrick::{
-    OFF_BGO_INIT_CALL, OFF_BGO_INIT_FAIL_HOOK, OFF_BGO_SUM_BEQ, OFF_BGO_SUM_BEQ_EH55,
-    OFF_DEVINFO_CHECK_BEQ, ORIG_A2BC_BGO_CALL, ORIG_A2CD_HOOK, ORIG_DEVINFO_BEQ, ORIG_SUM_BEQ,
-    PATCH_A2BC_BRA_MONITOR, PROG061_BASE_VA, PROG061_EXPECTED_SIZE, PROG061_NFROM_FORMAT_VA,
-    Prog061BgoInspection, Prog061BgoPatchMode, Prog061BgoPatchReport, Prog061BgoSiteStatus,
-    Prog061BgoTargetGeometry, decode_prog061_payload, inspect_prog061_bgo_geometry,
-    inspect_prog061_bgo_sites, inspect_prog061_container_bytes, patch_prog061_bgo_in_place,
+    BASE_FACTORY_BGO_GEOMETRY_ID, DetectedBgoGeometry, OFF_BGO_INIT_CALL, OFF_BGO_INIT_FAIL_HOOK,
+    OFF_BGO_SUM_BEQ, OFF_DEVINFO_CHECK_BEQ, ORIG_A2BC_BGO_CALL, ORIG_A2CD_HOOK, ORIG_DEVINFO_BEQ,
+    ORIG_SUM_BEQ, PATCH_A2BC_BRA_MONITOR, PROG061_BASE_VA, PROG061_EXPECTED_SIZE,
+    PROG061_NFROM_FORMAT_VA, Prog061BgoInspection, Prog061BgoPatchMode, Prog061BgoPatchReport,
+    Prog061BgoSiteStatus, decode_prog061_payload, detect_prog_bgo_geometry,
+    find_recipe_by_loader_key, find_retarget_spec_by_geometry_id, find_retarget_spec_by_loader_key,
+    inspect_prog_bgo_geometry_with_spec, inspect_prog061_bgo_sites,
+    inspect_prog061_container_bytes, load_retarget_drv_for_spec, load_train_retarget_spec,
+    load_train_retarget_spec_and_drv, patch_prog061_bgo_in_place,
     patch_prog061_bgo_in_place_with_policy, patch_prog061_or_build_digadiag,
-    patch_prog061_or_build_digadiag_with_policy, retarget_prog061_bgo_geometry_in_place,
+    patch_prog061_or_build_digadiag_with_policy, prog_has_bgo_table_marker,
+    retarget_prog_for_geometry_in_place, retarget_prog_for_loader_profile_in_place,
+    retarget_prog_from_spec_in_place,
 };
 pub use eh55_bgo::{
     BgoSectorGeometry, EH55_BGO_EXPECTED_P2_COUNT, EH55_BGO_FIRST_SA, EH55_BGO_LAST_SA,

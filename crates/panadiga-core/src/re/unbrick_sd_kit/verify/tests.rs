@@ -59,3 +59,119 @@ fn ver061_48b_sd_toc_and_raw_digadiag_pass_and_detect_mismatch() {
             .any(|c| c.id == "loader_profile_mismatch" && c.severity == "fail")
     );
 }
+
+#[test]
+fn hardening_gates_catch_bgo_geometry_mismatch_fvu_panamon_trap_and_report_rtsd() {
+    use crate::constants::PANA_EXTRHEAD_DEFAULT_ADLER_STEP;
+    use crate::crypto::{
+        ExtrheadCryptMode, FrmContainerMode, FrmPackModule, pack_extrhead, pack_frm,
+    };
+    use crate::hdd::capacity_patch::codec::test_helpers::build_synthetic_hdd_cmd_main;
+    use crate::hdd::capacity_patch::specs::MAIN_DEFAULT_BASE_VA;
+    use crate::hdd::{HddCapacityPatchMode, apply_capacity_patch_in_place};
+    use crate::re::bgo_unbrick::{
+        BASE_FACTORY_BGO_GEOMETRY_ID, ORIG_SUM_BEQ, Prog061BgoPatchMode,
+        find_retarget_spec_by_loader_key, patch_prog061_bgo_in_place,
+    };
+
+    // 1. Real-marker PROG061 left in EH50 4 MiB geometry fails HardenedRecovery (`bgo_geometry_mismatch`).
+    let mut eh50_marker_prog = super::super::synthetic_prog061_fixture();
+    eh50_marker_prog[0x03_6E2C..0x03_6E30].copy_from_slice(&0x8000_0000u32.to_le_bytes());
+    eh50_marker_prog[0x03_6E2C + 0x0C..0x03_6E2C + 0x10].copy_from_slice(&0x1Cu32.to_le_bytes());
+    eh50_marker_prog[0x03_6E2C + 0x30..0x03_6E2C + 0x34]
+        .copy_from_slice(&0x8420_0000u32.to_le_bytes());
+    patch_prog061_bgo_in_place(&mut eh50_marker_prog, Prog061BgoPatchMode::UartMonitor).unwrap();
+
+    let rep_geo_fail = verify_sd_buffers_with_profile(
+        "/mem/eh50_in_ver061",
+        Some(Ok(&eh50_marker_prog)),
+        None,
+        SdKitAuditProfile::HardenedRecovery,
+    );
+    assert_eq!(rep_geo_fail.overall_status, "INCOMPLETE_OR_INVALID");
+    assert_eq!(
+        rep_geo_fail.digadiag_bgo_geometry.as_deref(),
+        Some(BASE_FACTORY_BGO_GEOMETRY_ID)
+    );
+    assert!(
+        rep_geo_fail
+            .checks
+            .iter()
+            .any(|c| c.id == "bgo_geometry_mismatch" && c.severity == "fail")
+    );
+
+    // 2. PANA__SD with UartMonitor PROG061 triggers `fvu_panamon_trap` warn, and 250 GB MAIN emits `rtsd_target_consistency`.
+    let mut eh55_mon_prog = super::super::synthetic_prog061_fixture();
+    eh55_mon_prog[0x03_6E2C..0x03_6E30].copy_from_slice(&0x8000_0000u32.to_le_bytes());
+    eh55_mon_prog[0x03_6E2C + 0x0C..0x03_6E2C + 0x10].copy_from_slice(&0x28u32.to_le_bytes());
+    eh55_mon_prog[0x03_6E2C + 0x30..0x03_6E2C + 0x34]
+        .copy_from_slice(&0x8413_0000u32.to_le_bytes());
+    let ver061_spec = find_retarget_spec_by_loader_key("ver061").unwrap();
+    let eh55_sum_off = ver061_spec.bgo_sum_beq_offset as usize;
+    eh55_mon_prog[eh55_sum_off..eh55_sum_off + 2].copy_from_slice(&ORIG_SUM_BEQ);
+    patch_prog061_bgo_in_place(&mut eh55_mon_prog, Prog061BgoPatchMode::UartMonitor).unwrap();
+
+    let mut synth_main = build_synthetic_hdd_cmd_main();
+    apply_capacity_patch_in_place(
+        &mut synth_main,
+        HddCapacityPatchMode::FixedCapacity,
+        Some(250),
+    )
+    .unwrap();
+    let main_ctr = pack_extrhead(
+        &synth_main,
+        "MAIN",
+        MAIN_DEFAULT_BASE_VA,
+        "TEST3410PQ",
+        ExtrheadCryptMode::Main,
+        PANA_EXTRHEAD_DEFAULT_ADLER_STEP as u32,
+        0x3410,
+    )
+    .unwrap();
+
+    let mut m_prog = FrmPackModule::new("PROG061 ", eh55_mon_prog.clone());
+    m_prog.hardware_family = "M6930LB".to_string();
+    m_prog.hardware_family_aliases = vec!["M6930".to_string()];
+    m_prog.model_prefix = b'M';
+
+    let mut m_main = FrmPackModule::new("MAIN3410", main_ctr);
+    m_main.hardware_family = "M6930LB".to_string();
+    m_main.hardware_family_aliases = vec!["M6930".to_string()];
+    m_main.model_prefix = b'M';
+
+    let (sd_bytes, _) = pack_frm(&[m_prog, m_main], FrmContainerMode::Sd48, None).unwrap();
+
+    let rep_trap = verify_sd_buffers_with_profile(
+        "/mem/trap_250gb",
+        Some(Ok(&eh55_mon_prog)),
+        Some(&sd_bytes),
+        SdKitAuditProfile::HardenedRecovery,
+    );
+    assert_eq!(rep_trap.overall_status, "READY_WITH_HW_WARNINGS");
+    assert_eq!(
+        rep_trap.digadiag_bgo_geometry.as_deref(),
+        Some(ver061_spec.target_geometry_id.as_str())
+    );
+    assert_eq!(
+        rep_trap.pana_sd_prog061_bgo_geometry.as_deref(),
+        Some(ver061_spec.target_geometry_id.as_str())
+    );
+    assert_eq!(
+        rep_trap.pana_sd_main_hdd_capacity_label.as_deref(),
+        Some("250GB")
+    );
+    assert!(
+        rep_trap
+            .checks
+            .iter()
+            .any(|c| c.id == "fvu_panamon_trap" && c.severity == "warn")
+    );
+    assert!(
+        rep_trap
+            .checks
+            .iter()
+            .any(|c| c.id == "rtsd_target_consistency"
+                && c.severity == "pass"
+                && c.title.contains("250GB"))
+    );
+}

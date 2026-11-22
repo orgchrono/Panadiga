@@ -336,7 +336,13 @@ mod tests {
         let model_maps = root["model_memory_maps"]
             .as_object()
             .expect("model_memory_maps object");
-        for model in ["DMR-EH55", "DMR-EH50", "DMR-EH58", "DMR-ES35V"] {
+        for model in [
+            "DMR-EH55",
+            "DMR-EH50",
+            "DMR-EH58",
+            "DMR-ES35V",
+            "DMR-EZ485V",
+        ] {
             let entry = model_maps.get(model).expect("missing projected model");
             assert!(
                 entry["regions"].as_array().is_some_and(|a| !a.is_empty()),
@@ -347,6 +353,5 @@ mod tests {
             .get("DMR-EZ485V")
             .expect("missing projected model DMR-EZ485V");
         assert_eq!(ez485v["soc_isa"].as_str(), Some("SPARC V8 (LSI DoMiNo)"));
-        assert!(ez485v["regions"].as_array().is_some_and(|a| a.is_empty()));
     }
 }

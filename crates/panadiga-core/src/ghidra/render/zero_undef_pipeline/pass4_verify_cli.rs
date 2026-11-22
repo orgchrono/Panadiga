@@ -153,11 +153,35 @@ def load_seed_file(name: str) -> list:
     return []
 
 
+def _auto_unpack_if_container(bin_path: pathlib.Path, opts):
+    total_len = bin_path.stat().st_size
+    with bin_path.open("rb") as fh:
+        raw_head = fh.read(0x2000)
+    _fmt, _kname, rk, entries = parse_frm_toc(raw_head, total_len=total_len)
+    is_container = opts.frm is not None or bool(entries) or rk is not None or raw_head[:8] == b"EXTRHEAD" or raw_head[:12] == b"PANASONIC\x00\x00\x00"
+    if not is_container:
+        return None
+    out_dir = WORK_DIR / "decrypted_stages"
+    manifest, targets = decrypt_and_prepare_runtime_stages(bin_path, out_dir, opts.model, opts.region)
+    return manifest, targets
+
+
 def _resolve_targets(opts) -> list:
+    if opts.frm is not None:
+        frm_path = pathlib.Path(opts.frm).resolve()
+        if not frm_path.is_file():
+            raise SystemExit("frm container not found: %s" % frm_path)
+        _manifest, targets = decrypt_and_prepare_runtime_stages(
+            frm_path, WORK_DIR / "decrypted_stages", opts.model, opts.region
+        )
+        return targets
     if opts.binary is not None:
         bin_path = pathlib.Path(opts.binary).resolve()
         if not bin_path.is_file():
             raise SystemExit("binary not found: %s" % bin_path)
+        unpacked = _auto_unpack_if_container(bin_path, opts)
+        if unpacked is not None:
+            return unpacked[1]
         raw_prog = opts.program_name or ("/" + bin_path.name)
         prog_path = raw_prog if raw_prog.startswith("/") else "/" + raw_prog
         name = opts.only or prog_path.rsplit("/", 1)[-1]
@@ -191,9 +215,11 @@ def _run_all_passes(prog, img: Image, name: str, opts) -> dict:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("stage", choices=["import-loader", "baseline", "pass2", "pass3", "pass4", "verify", "all"])
+    ap.add_argument("stage", choices=["decrypt-runtime", "import-loader", "baseline", "pass2", "pass3", "pass4", "verify", "all"])
     ap.add_argument("--only", default=None, help="restrict to one program name")
-    ap.add_argument("--binary", default=None, help="path to an arbitrary raw firmware binary to analyze")
+    ap.add_argument("--binary", default=None, help="path to an arbitrary raw firmware binary or container to analyze")
+    ap.add_argument("--frm", default=None, help="path to PANA_DVD.FRM / PANA__SD.FRM / DIGADIAG.FRM for full PyGhidra decrypt + analysis")
+    ap.add_argument("--region", default=None, help="region code override (e.g. LB, EC, EE, VP) for TV/electrical interpolation")
     ap.add_argument("--base", default=None, help="base virtual address for --binary (e.g. 0x57000000); inferred if omitted")
     ap.add_argument("--program-name", default=None, help="program path inside Ghidra project (default /<binary.name>)")
     ap.add_argument("--model", default=DEFAULT_MODEL, help="SSOT DIGA model ID for memory map projection (default: %s)" % DEFAULT_MODEL)
@@ -205,6 +231,17 @@ def main() -> int:
     ap.add_argument("--no-save", action="store_true", help="dry run: do not save the program")
     ap.add_argument("--no-switches", action="store_true", help="pass4: skip decompiler switch recovery")
     opts = ap.parse_args()
+    if opts.stage == "decrypt-runtime":
+        src_arg = opts.frm or opts.binary
+        if not src_arg:
+            raise SystemExit("decrypt-runtime requires --frm <PATH> or --binary <PATH>")
+        src_path = pathlib.Path(src_arg).resolve()
+        if not src_path.is_file():
+            raise SystemExit("input not found: %s" % src_path)
+        out_dir = pathlib.Path(opts.out).resolve() if opts.out else (WORK_DIR / "decrypted_stages")
+        manifest, _targets = decrypt_and_prepare_runtime_stages(src_path, out_dir, opts.model, opts.region)
+        print(json.dumps(manifest, indent=2))
+        return 0
     guard_project(opts.project_name)
     pyghidra = start_ghidra()
     from ghidra.util.task import TaskMonitor
@@ -213,7 +250,7 @@ def main() -> int:
     targets = _resolve_targets(opts)
 
     if opts.stage == "import-loader":
-        if opts.binary is not None:
+        if opts.binary is not None or opts.frm is not None:
             for _name, prog_path, bin_path, base_va in targets:
                 import_binary(pyghidra, project, prog_path, bin_path, base_va, opts.language, opts.compiler)
                 apply_model_memory_layout(project, pyghidra, prog_path, base_va, opts.model)

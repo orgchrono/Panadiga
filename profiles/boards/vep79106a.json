@@ -2,7 +2,7 @@
   "id": "vep79106a",
   "pcb_code": "VEP79106A (Digital) / VEP79111D (Main)",
   "service_module_code": null,
-  "soc_ref": null,
+  "soc_ref": "mn2ds0016",
   "flash_ref": null,
   "eeprom_refs": [
     "panasonic_c3ebfc000053_timer"

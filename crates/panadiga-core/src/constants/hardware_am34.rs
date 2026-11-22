@@ -63,7 +63,7 @@ pub const AM34_BOOT_BIN_SIZE: u32 = 0x0004_0000;
 
 /// Spansion NOR Flash Uncached Hardware Aperture (CS1, 0x8400_0000..0x8480_0000).
 pub const AM34_FLASH_UNCACHED_BASE: u32 = 0x8400_0000;
-/// `PROG061` / `Loader ver0.63` BGO Partition Base inside Uncached Aperture (`0x8420_0000..0x843F_FFFF`, 32x64 KiB; `nfrom_format` / EZ485V target).
+/// `PROG061` / `Loader ver0.63` BGO Partition Base inside Uncached Aperture (`0x8420_0000..0x843F_FFFF`, 32x64 KiB; `nfrom_format` / DMR-EH58 `BOOT.BIN` target).
 pub const AM34_FLASH_BGO_BASE: u32 = 0x8420_0000;
 pub const AM34_FLASH_BGO_SIZE: u32 = 0x0020_0000;
 /// Real DMR-EH55 (`Loader ver0.61 [06/03/06]`, `IC5001` 8 MiB) BGO geometry table VA (`0x0337A4` file offset).

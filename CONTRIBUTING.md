@@ -116,3 +116,21 @@ All 9 gates must pass cleanly:
 7. **Ghidra Native Export**: `cargo run -p panadiga-cli -- ghidra export-all`
 8. **Pico C11 Host Tests**: strict `-Wall -Wextra -Werror` / `/W4 /WX`
 9. **Python Strict Typing & Tests**: `mypy --strict scripts`, `py_compile`, `pytest scripts/tests`
+
+---
+
+## 8. New Device Onboarding, Discovery Scripts & PR Checklist
+
+When integrating a newly dumped or serviced Panasonic DIGA model into Panadiga, follow the 7-stage end-to-end onboarding guide ([`docs/en-US/WHATS_NEXT_NEW_DEVICE_ONBOARDING.md`](docs/en-US/WHATS_NEXT_NEW_DEVICE_ONBOARDING.md) · [`docs/pt-BR/WHATS_NEXT_ONBOARDING_NOVOS_APARELHOS.md`](docs/pt-BR/WHATS_NEXT_ONBOARDING_NOVOS_APARELHOS.md)):
+
+1. **Zero Hardcoded Product Branches**: Never encode model names, chassis tags, or hardcoded `tv_standard` fields in `crates/panadiga-core`, `apps/desktop/src`, or `profiles/models/*.json`. Parameterize geometry, flash maps, BGO specs, and compressed driver blobs (`profiles/blobs/*.bin.gz`) declaratively inside `profiles/**/*.json` (`region_suffix` drives dynamic TV/region interpolation).
+2. **Physical Capture & Intake Discovery**:
+   - Archive raw `COM10` / bench logs in `docs/debug_logs/` and update `docs/debug_logs/README.md` (`SHA256SUMS`).
+   - Run `panadiga profiles discover-nor --input <NOR.bin> --model-id <MODEL> --out-dir tmp/drafts` (or `python -m scripts.re.nor_intake_analyzer`) to extract `Loader` banner, `EXTRHEAD` offsets, BGO sector IDs, and `EEMUL` markers without mutating dumps.
+3. **.FRM & Service Manual Hydration**:
+   - Run `python -m scripts.re.frm_train_harvester --unpack-missing --apply` and `python -m scripts.re.manual_spec_extractor --apply` to hydrate `T1`/`T2` metadata safely (`T3`/`T4` verified entries are never downgraded).
+   - Rebuild or test recovery SD kits directly from NOR + Partition 1 MAIN using `panadiga unbrick rebuild-from-dump`.
+4. **Ghidra & SSOT Projection Regeneration**:
+   - Export domain-grouped plain-text pseudocode via `tools/ghidra/ghidra_export_pseudocode_bundle.py`, update `tools/ghidra/ghidra_ssot_maps.json`, and run `panadiga ssot export-all`, `panadiga profiles export-schema --out-dir profiles/schema`, and `panadiga ghidra export-all`.
+5. **Audit & Pull Request Verification**:
+   - Verify `panadiga profiles completeness` and `panadiga profiles validate` pass cleanly, then run the full 9-Gate suite (`python scripts/validate.py`) confirming `0` `jscpd` clones, `100/100` `uxlint`, bilingual doc parity, and all Rust/Vitest/Playwright/C11/Pytest tests passing before opening your PR.

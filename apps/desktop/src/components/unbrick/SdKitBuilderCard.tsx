@@ -144,6 +144,7 @@ export const SdKitBuilderCard: React.FC<SdKitBuilderCardProps> = ({
   const panaDvdPath = editedPanaDvd ?? discoveredPanaDvd ?? 'firmware_and_images/PANA_DVD.FRM';
   const verifyDir =
     editedVerifyDir ?? discoveredSdDir ?? 'firmware_and_images/sd_unbrick_kit';
+  const [mainPath, setMainPath] = useState('');
   const [loaderProfile, setLoaderProfile] = useState<SdLoaderProfile>('ver061');
   const [bgoMode, setBgoMode] = useState<BgoMode>('bypass');
   const [mainMode, setMainMode] = useState<MainPassthroughMode>('av_passthrough');
@@ -160,6 +161,7 @@ export const SdKitBuilderCard: React.FC<SdKitBuilderCardProps> = ({
     const { errorKey, request } = buildSdKitRequestPayload({
       outputDir,
       panaDvdPath,
+      mainPath,
       bgoMode,
       mainMode,
       loaderProfile,
@@ -237,6 +239,19 @@ export const SdKitBuilderCard: React.FC<SdKitBuilderCardProps> = ({
                 placeholder="firmware_and_images/PANA_DVD.FRM"
               />
             </div>
+          </div>
+
+          <div className="space-y-1">
+            <label htmlFor="sd-kit-main-path" className="text-slate-400 block font-mono">
+              {t('unbrick.sdKit.mainPath')}
+            </label>
+            <Input
+              id="sd-kit-main-path"
+              data-testid="sd-kit-main-path"
+              value={mainPath}
+              onChange={e => setMainPath(e.target.value)}
+              placeholder={t('unbrick.sdKit.mainPathPlaceholder')}
+            />
           </div>
 
           <SdKitProfileControls

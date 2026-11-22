@@ -32,6 +32,436 @@
     "dvd_iso9660_level1",
     "hdd_meihdfs_v1"
   ],
+  "digadiag_spec": {
+    "format": "raw_256k_prog061",
+    "filename": "DIGADIAG.FRM",
+    "exact_bytes": 262144,
+    "load_va": "0x5040_0000",
+    "entry_va": "0x5040_0000",
+    "panamon1_entry_va": "0x5043_9494",
+    "bgo_geometry_target": "BGO_45SEC_8MB_0X84130000",
+    "fvu_decoupled_mode": "bypass_checks_only",
+    "sd_media_requirement": "fat16b_0x06_max_2gb"
+  },
+  "pana_rebuild_recipe": {
+    "output_container": "PANA__SD.FRM",
+    "toc_format": "sd48",
+    "family_aliases": [
+      "M6930LB",
+      "M6930"
+    ],
+    "model_prefix_byte": "0x4D",
+    "sources_from_panamon_dump": [
+      "nor_sa15_sa25_drv",
+      "sd_prog061_retargeted",
+      "hdd_part1_main"
+    ]
+  },
+  "bgo_retarget_spec": {
+    "target_geometry_id": "BGO_45SEC_8MB_0X84130000",
+    "expected_prog_size": "0x0004_0000",
+    "bgo_table_offset": "0x0003_6E2C",
+    "bgo_table_marker": "0x8000_0000",
+    "detect_logical_sectors": "0x0000_0028",
+    "detect_flash_base": "0x8413_0000",
+    "bgo_table_words": [
+      "0x80000000",
+      "0x00000000",
+      "0x00000001",
+      "0x00000028",
+      "0x00000000",
+      "0x00000000",
+      "0x00000000",
+      "0x00000F24",
+      "0x00000000",
+      "0x00010000",
+      "0x00000001",
+      "0x0000002E",
+      "0x84130000",
+      "0x84400000",
+      "0x00010000",
+      "0xFFFFFFFF",
+      "0xFFFFFFFF",
+      "0xFFFFFFFF",
+      "0xFFFFFFFF",
+      "0x00010000",
+      "0xFFFFFFFF",
+      "0xFFFFFFFF",
+      "0xFFFFFFFF",
+      "0xFFFFFFFF",
+      "0x00010000",
+      "0xFFFFFFFF",
+      "0xFFFFFFFF",
+      "0xFFFFFFFF",
+      "0xFFFFFFFF",
+      "0x00000000",
+      "0x00000003",
+      "0x0000002D",
+      "0x0000002D",
+      "0x0000002D",
+      "0x504FD164",
+      "0x504FD5C4",
+      "0x504FD5B4",
+      "0x504FD6BC",
+      "0x504FD6BA",
+      "0x504FD594",
+      "0xFFFFFFFF",
+      "0x00000000",
+      "0x00000028",
+      "0x00000028",
+      "0x00000028",
+      "0x00000028",
+      "0x00000001",
+      "0x84130000",
+      "0xFFFFFFFF",
+      "0xFFFFFFFF",
+      "0xFFFFFFFF",
+      "0xFFFFFFFF",
+      "0xFFFFFFFF",
+      "0xFFFFFFFF",
+      "0xFFFFFFFF",
+      "0x00000001",
+      "0x84130000",
+      "0xFFFFFFFF",
+      "0xFFFFFFFF",
+      "0xFFFFFFFF",
+      "0xFFFFFFFF",
+      "0xFFFFFFFF",
+      "0xFFFFFFFF",
+      "0xFFFFFFFF"
+    ],
+    "bgo_sum_beq_offset": "0x0002_30CF",
+    "nfrom_drv_start": "0x0002_1E6A",
+    "nfrom_drv_end": "0x0002_9356",
+    "nfrom_drv_uncompressed_bytes": 29770,
+    "nfrom_drv_blob_relpath": "blobs/loader_ver061_nfrom_drv.bin.gz",
+    "nfrom_drv_uncompressed_sha256": "d7ed6e0eb4c263210be4712da3507491fd5ee19d06dce4dd583c79ea91ed41b0",
+    "nop_fill_byte": "0xCB",
+    "bss_zero_end_offset": "0x0000_07C0",
+    "orig_bss_zero_end": "0x504F_9178",
+    "target_bss_zero_end": "0x504F_E000",
+    "init2_call_offset": "0x0000_24C6",
+    "orig_init2_rel32": "0x0001_FE93",
+    "target_init2_rel32": "0x0001_FE82",
+    "hi_ram_ranges": [
+      {
+        "start": "0x0000_1F3C",
+        "end": "0x0000_4A80"
+      },
+      {
+        "start": "0x0000_A294",
+        "end": "0x0000_AF8C"
+      }
+    ],
+    "hi_ram_relocs": [
+      {
+        "from": "0x50496D10",
+        "to": "0x504FA000"
+      },
+      {
+        "from": "0x50496D14",
+        "to": "0x504FA004"
+      },
+      {
+        "from": "0x50496D16",
+        "to": "0x504FA006"
+      },
+      {
+        "from": "0x50496D18",
+        "to": "0x504FA008"
+      },
+      {
+        "from": "0x50496D1A",
+        "to": "0x504FA00A"
+      },
+      {
+        "from": "0x50496D1C",
+        "to": "0x504FA00C"
+      },
+      {
+        "from": "0x50496D1E",
+        "to": "0x504FA00E"
+      },
+      {
+        "from": "0x50496F10",
+        "to": "0x504FA200"
+      },
+      {
+        "from": "0x50496F18",
+        "to": "0x504FA208"
+      },
+      {
+        "from": "0x50497010",
+        "to": "0x504FA300"
+      },
+      {
+        "from": "0x50497018",
+        "to": "0x504FA308"
+      },
+      {
+        "from": "0x50497510",
+        "to": "0x504FA800"
+      },
+      {
+        "from": "0x50498910",
+        "to": "0x504FC600"
+      },
+      {
+        "from": "0x50498912",
+        "to": "0x504FC602"
+      },
+      {
+        "from": "0x504989D0",
+        "to": "0x504FC6C0"
+      },
+      {
+        "from": "0x504989D2",
+        "to": "0x504FC6C2"
+      },
+      {
+        "from": "0x504989E0",
+        "to": "0x504FC6D0"
+      },
+      {
+        "from": "0x50498BF0",
+        "to": "0x504FC8E0"
+      },
+      {
+        "from": "0x50498DF0",
+        "to": "0x504FCAE0"
+      }
+    ],
+    "byte_patches": [
+      {
+        "offset": "0x001F78",
+        "expect": "0x1C",
+        "replace": "0x26",
+        "note": "clear_size_0x1cc4_to_0x26c4"
+      },
+      {
+        "offset": "0x0043A9",
+        "expect": "0x1C",
+        "replace": "0x26",
+        "note": "clear_size_0x1cc4_to_0x26c4"
+      },
+      {
+        "offset": "0x002027",
+        "expect": "0x09",
+        "replace": "0x0E",
+        "note": "page_map_block_count_0_to_14"
+      },
+      {
+        "offset": "0x002084",
+        "expect": "0x09",
+        "replace": "0x0E",
+        "note": "page_map_block_count_0_to_14"
+      },
+      {
+        "offset": "0x0021CC",
+        "expect": "0x09",
+        "replace": "0x0E",
+        "note": "page_map_block_count_0_to_14"
+      },
+      {
+        "offset": "0x002237",
+        "expect": "0x09",
+        "replace": "0x0E",
+        "note": "page_map_block_count_0_to_14"
+      },
+      {
+        "offset": "0x0025EC",
+        "expect": "0x09",
+        "replace": "0x0E",
+        "note": "page_map_block_count_0_to_14"
+      },
+      {
+        "offset": "0x00268B",
+        "expect": "0x09",
+        "replace": "0x0E",
+        "note": "page_map_block_count_0_to_14"
+      },
+      {
+        "offset": "0x003850",
+        "expect": "0x09",
+        "replace": "0x0E",
+        "note": "page_map_block_count_0_to_14"
+      },
+      {
+        "offset": "0x0049F9",
+        "expect": "0x09",
+        "replace": "0x0E",
+        "note": "page_map_block_count_0_to_14"
+      },
+      {
+        "offset": "0x00208F",
+        "expect": "0x11",
+        "replace": "0x16",
+        "note": "backup_page_map_did_0a11_to_0f16_lo"
+      },
+      {
+        "offset": "0x002160",
+        "expect": "0x11",
+        "replace": "0x16",
+        "note": "backup_page_map_did_0a11_to_0f16_lo"
+      },
+      {
+        "offset": "0x002195",
+        "expect": "0x11",
+        "replace": "0x16",
+        "note": "backup_page_map_did_0a11_to_0f16_lo"
+      },
+      {
+        "offset": "0x002917",
+        "expect": "0x11",
+        "replace": "0x16",
+        "note": "backup_page_map_did_0a11_to_0f16_lo"
+      },
+      {
+        "offset": "0x001FD6",
+        "expect": "0x0A",
+        "replace": "0x0F",
+        "note": "primary_did_0axx_to_0fxx"
+      },
+      {
+        "offset": "0x002033",
+        "expect": "0x0A",
+        "replace": "0x0F",
+        "note": "primary_did_0axx_to_0fxx"
+      },
+      {
+        "offset": "0x002090",
+        "expect": "0x0A",
+        "replace": "0x0F",
+        "note": "primary_did_0axx_to_0fxx"
+      },
+      {
+        "offset": "0x0020DA",
+        "expect": "0x0A",
+        "replace": "0x0F",
+        "note": "primary_did_0axx_to_0fxx"
+      },
+      {
+        "offset": "0x0020E8",
+        "expect": "0x0A",
+        "replace": "0x0F",
+        "note": "primary_did_0axx_to_0fxx"
+      },
+      {
+        "offset": "0x00214D",
+        "expect": "0x0A",
+        "replace": "0x0F",
+        "note": "primary_did_0axx_to_0fxx"
+      },
+      {
+        "offset": "0x002161",
+        "expect": "0x0A",
+        "replace": "0x0F",
+        "note": "primary_did_0axx_to_0fxx"
+      },
+      {
+        "offset": "0x002167",
+        "expect": "0x0A",
+        "replace": "0x0F",
+        "note": "primary_did_0axx_to_0fxx"
+      },
+      {
+        "offset": "0x002190",
+        "expect": "0x0A",
+        "replace": "0x0F",
+        "note": "primary_did_0axx_to_0fxx"
+      },
+      {
+        "offset": "0x002196",
+        "expect": "0x0A",
+        "replace": "0x0F",
+        "note": "primary_did_0axx_to_0fxx"
+      },
+      {
+        "offset": "0x002311",
+        "expect": "0x0A",
+        "replace": "0x0F",
+        "note": "primary_did_0axx_to_0fxx"
+      },
+      {
+        "offset": "0x0023BD",
+        "expect": "0x0A",
+        "replace": "0x0F",
+        "note": "primary_did_0axx_to_0fxx"
+      },
+      {
+        "offset": "0x002449",
+        "expect": "0x0A",
+        "replace": "0x0F",
+        "note": "primary_did_0axx_to_0fxx"
+      },
+      {
+        "offset": "0x002457",
+        "expect": "0x0A",
+        "replace": "0x0F",
+        "note": "primary_did_0axx_to_0fxx"
+      },
+      {
+        "offset": "0x002619",
+        "expect": "0x0A",
+        "replace": "0x0F",
+        "note": "primary_did_0axx_to_0fxx"
+      },
+      {
+        "offset": "0x00270D",
+        "expect": "0x0A",
+        "replace": "0x0F",
+        "note": "primary_did_0axx_to_0fxx"
+      },
+      {
+        "offset": "0x002793",
+        "expect": "0x0A",
+        "replace": "0x0F",
+        "note": "primary_did_0axx_to_0fxx"
+      },
+      {
+        "offset": "0x002883",
+        "expect": "0x0A",
+        "replace": "0x0F",
+        "note": "primary_did_0axx_to_0fxx"
+      },
+      {
+        "offset": "0x002918",
+        "expect": "0x0A",
+        "replace": "0x0F",
+        "note": "primary_did_0axx_to_0fxx"
+      },
+      {
+        "offset": "0x0029D4",
+        "expect": "0x0A",
+        "replace": "0x0F",
+        "note": "primary_did_0axx_to_0fxx"
+      },
+      {
+        "offset": "0x00387D",
+        "expect": "0x0A",
+        "replace": "0x0F",
+        "note": "primary_did_0axx_to_0fxx"
+      },
+      {
+        "offset": "0x0043C2",
+        "expect": "0x0A",
+        "replace": "0x0F",
+        "note": "primary_did_0axx_to_0fxx"
+      },
+      {
+        "offset": "0x004738",
+        "expect": "0x0A",
+        "replace": "0x0F",
+        "note": "primary_did_0axx_to_0fxx"
+      },
+      {
+        "offset": "0x00A534",
+        "expect": "0x0A",
+        "replace": "0x0F",
+        "note": "wrapper_did_0axx_to_0fxx"
+      }
+    ]
+  },
   "evidence": {
     "tier": "bench_verified",
     "sources": [

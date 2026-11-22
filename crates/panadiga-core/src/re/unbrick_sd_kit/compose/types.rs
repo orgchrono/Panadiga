@@ -17,7 +17,7 @@ pub enum SdLoaderProfile {
     /// DMR-EH55 `Loader ver0.61 [06/03/06]`: 256 KiB (`0x40000`) raw `DIGADIAG.FRM` + 48B `sd48` TOC `PANA__SD.FRM`.
     #[default]
     Ver061RawSd48,
-    /// Later `Loader ver0.63` (e.g. EZ485V): 128 KiB (`0x20000`) plaintext `EXTRHEAD` `DIGADIAG.FRM` + 64B `sd64` TOC.
+    /// Later `Loader ver0.63` (e.g. DMR-EH58): 128 KiB (`0x20000`) plaintext `EXTRHEAD` `DIGADIAG.FRM` + 64B `sd64` TOC.
     Ver063ExtrheadSd64,
 }
 
@@ -127,7 +127,7 @@ impl SdUnbrickKitRequest {
             hdd_target_gb: None,
             write_extracted_sources: false,
             allow_unsafe_auto_format: false,
-            expected_main_build: Some("3410PQ".to_string()),
+            expected_main_build: None,
             allow_target_mismatch: false,
         }
     }

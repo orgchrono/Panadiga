@@ -326,7 +326,7 @@
       "program_path": "/BOOT.BIN",
       "default_binary": "C:\\ghidra\\binaries\\BOOT.BIN",
       "base_va": "0x44000000",
-      "model": "DMR-EH55",
+      "model": "DMR-EH58",
       "entry_seeds": [
         "0x44000000",
         "0x4400C696",
@@ -384,7 +384,7 @@
       "program_path": "/DRV_decomp.bin",
       "default_binary": "C:\\ghidra\\binaries\\DRV_decomp.bin",
       "base_va": "0x40000000",
-      "model": "DMR-EH55",
+      "model": "DMR-EH58",
       "entry_seeds": [
         "0x40000000",
         "0x40000014",

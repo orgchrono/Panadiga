@@ -2,7 +2,7 @@
   "id": "rfkb79183_eh58",
   "pcb_code": "VEP79183 (Main) / VEP73160A (HDMI)",
   "service_module_code": "RFKB79183AT/BT/CT/ET",
-  "soc_ref": null,
+  "soc_ref": "mn2ds0019",
   "flash_ref": null,
   "eeprom_refs": [
     "panasonic_rfkfm4016kt_dif"

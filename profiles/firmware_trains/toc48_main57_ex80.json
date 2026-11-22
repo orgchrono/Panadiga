@@ -33,6 +33,11 @@
         "reference": "firmware_and_images/dmr-ex_ez_series/README.md",
         "sha256": "bb63c998a4f9200d5637c65ca8b1c4e5a19a473ded982ce813d242422734066b",
         "notes": "PROG062 RAW (262144 B, 06/05/10) + MAIN3020PZ (0x5700_0000, M6932EG/PZ-317)."
+      },
+      {
+        "kind": "official_frm",
+        "reference": "firmware_and_images/dmr-ex_ez_series/ex80seg/PANA_DVD.FRM",
+        "sha256": "bb63c998a4f9200d5637c65ca8b1c4e5a19a473ded982ce813d242422734066b"
       }
     ],
     "notes": "PROG062 RAW (262144 B, 06/05/10) + MAIN3020PZ (0x5700_0000, M6932EG/PZ-317)."

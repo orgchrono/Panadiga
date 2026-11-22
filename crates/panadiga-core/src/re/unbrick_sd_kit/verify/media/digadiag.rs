@@ -7,7 +7,9 @@ use crate::constants::{
 };
 use crate::crypto::{ExtrheadCryptMode, unpack_extrhead};
 
-use super::super::super::super::bgo_unbrick::inspect_prog061_bgo_sites;
+use super::super::super::super::bgo_unbrick::{
+    inspect_prog061_bgo_sites, prog_has_bgo_table_marker,
+};
 use super::super::super::cleanroom_digadiag::CLEANROOM_DIGADIAG_MAGIC;
 use super::super::super::compose::SdLoaderProfile;
 use super::super::{SdUnbrickCheck, check};
@@ -18,6 +20,7 @@ pub(crate) struct DigadiagInspection {
     pub exact_size_ok: bool,
     pub dst_addr_hex: Option<String>,
     pub bgo_mode: Option<String>,
+    pub bgo_geometry: Option<String>,
     pub factory_unpatched_prog061: bool,
     pub detected_profile: Option<SdLoaderProfile>,
     pub check: SdUnbrickCheck,
@@ -35,18 +38,19 @@ fn is_cleanroom_digadiag_payload(bytes: &[u8]) -> bool {
         && bytes.get(0x10..0x10 + CLEANROOM_DIGADIAG_MAGIC.len()) == Some(CLEANROOM_DIGADIAG_MAGIC)
 }
 
-fn detect_digadiag_mode(payload: &[u8]) -> Option<String> {
+fn detect_digadiag_mode_and_geometry(payload: &[u8]) -> (Option<String>, Option<String>) {
     if is_cleanroom_digadiag_payload(payload) {
-        Some("CLEANROOM_PANAMON1_BARE_METAL".to_string())
+        (Some("CLEANROOM_PANAMON1_BARE_METAL".to_string()), None)
+    } else if let Ok(r) = inspect_prog061_bgo_sites(payload) {
+        let geo = prog_has_bgo_table_marker(payload).then_some(r.bgo_target_geometry);
+        (Some(r.detected_mode), geo)
     } else {
-        inspect_prog061_bgo_sites(payload)
-            .ok()
-            .map(|r| r.detected_mode)
+        (None, None)
     }
 }
 
 fn verify_raw_ver061_digadiag(bytes: &[u8]) -> DigadiagInspection {
-    let bgo_mode = detect_digadiag_mode(bytes);
+    let (bgo_mode, bgo_geometry) = detect_digadiag_mode_and_geometry(bytes);
     let factory_unpatched_prog061 = is_factory_unpatched_prog061(bytes, bgo_mode.as_deref());
     let valid_exec = bgo_mode.is_some() || looks_like_mn103s_entry(bytes);
     let dst_hex = Some(format!("0x{PANA_DIGADIAG_DEFAULT_LOAD_ADDR:08X}"));
@@ -71,6 +75,7 @@ fn verify_raw_ver061_digadiag(bytes: &[u8]) -> DigadiagInspection {
         exact_size_ok: valid_exec,
         dst_addr_hex: if valid_exec { dst_hex } else { None },
         bgo_mode,
+        bgo_geometry,
         factory_unpatched_prog061,
         detected_profile: valid_exec.then_some(SdLoaderProfile::Ver061RawSd48),
         check: chk,
@@ -85,6 +90,7 @@ pub(crate) fn verify_digadiag_buffer(bytes_opt: Option<Result<&[u8], &str>>) -> 
                 exact_size_ok: false,
                 dst_addr_hex: None,
                 bgo_mode: None,
+                bgo_geometry: None,
                 factory_unpatched_prog061: false,
                 detected_profile: None,
                 check: check(
@@ -101,6 +107,7 @@ pub(crate) fn verify_digadiag_buffer(bytes_opt: Option<Result<&[u8], &str>>) -> 
                 exact_size_ok: false,
                 dst_addr_hex: None,
                 bgo_mode: None,
+                bgo_geometry: None,
                 factory_unpatched_prog061: false,
                 detected_profile: None,
                 check: check("digadiag_container", "fail", "DIGADIAG.FRM read error", err),
@@ -118,6 +125,7 @@ pub(crate) fn verify_digadiag_buffer(bytes_opt: Option<Result<&[u8], &str>>) -> 
             exact_size_ok: false,
             dst_addr_hex: None,
             bgo_mode: None,
+            bgo_geometry: None,
             factory_unpatched_prog061: false,
             detected_profile: None,
             check: check(
@@ -136,7 +144,7 @@ pub(crate) fn verify_digadiag_buffer(bytes_opt: Option<Result<&[u8], &str>>) -> 
     match unpack_extrhead(bytes, ExtrheadCryptMode::Plain) {
         Ok(u) => {
             let dst_hex = Some(format!("0x{:08X}", u.header.dst_addr));
-            let bgo_mode = detect_digadiag_mode(&u.decompressed);
+            let (bgo_mode, bgo_geometry) = detect_digadiag_mode_and_geometry(&u.decompressed);
             let factory_unpatched_prog061 =
                 is_factory_unpatched_prog061(&u.decompressed, bgo_mode.as_deref());
             let ok = exact_sz
@@ -163,6 +171,7 @@ pub(crate) fn verify_digadiag_buffer(bytes_opt: Option<Result<&[u8], &str>>) -> 
                 exact_size_ok: exact_sz,
                 dst_addr_hex: dst_hex,
                 bgo_mode,
+                bgo_geometry,
                 factory_unpatched_prog061,
                 detected_profile: ok.then_some(SdLoaderProfile::Ver063ExtrheadSd64),
                 check: chk,
@@ -173,6 +182,7 @@ pub(crate) fn verify_digadiag_buffer(bytes_opt: Option<Result<&[u8], &str>>) -> 
             exact_size_ok: exact_sz,
             dst_addr_hex: None,
             bgo_mode: None,
+            bgo_geometry: None,
             factory_unpatched_prog061: false,
             detected_profile: None,
             check: check(

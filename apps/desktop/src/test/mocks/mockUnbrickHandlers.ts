@@ -70,6 +70,10 @@ export function handleMockUnbrickCommand(
       const loaderProfile = (req.loader_profile as string) || 'ver061';
       const includeSd = req.include_pana_sd !== false;
       const unlockDyn = req.unlock_hdd_dynamic !== false;
+      const targetHddGb = typeof req.target_hdd_gb === 'number' ? req.target_hdd_gb : null;
+      const hddCapacityApplied = includeSd
+        ? (targetHddGb !== null ? `${targetHddGb}GB` : unlockDyn ? 'dynamic' : null)
+        : null;
       const rep: SdUnbrickKitReport = {
         output_dir: outDir,
         prog061_source: 'firmware_and_images/PANA_DVD.FRM',
@@ -78,7 +82,7 @@ export function handleMockUnbrickCommand(
         bgo_mode_applied: bgoMode,
         loader_profile_applied: loaderProfile,
         main_passthrough_applied: includeSd ? passthroughMode : null,
-        hdd_capacity_applied: includeSd && unlockDyn ? 'dynamic' : null,
+        hdd_capacity_applied: hddCapacityApplied,
         digadiag_path: `${outDir}/DIGADIAG.FRM`,
         digadiag_sha256: 'deadbeef'.repeat(8),
         pana_sd_path: includeSd ? `${outDir}/PANA__SD.FRM` : null,

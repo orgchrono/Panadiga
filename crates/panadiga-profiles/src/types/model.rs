@@ -15,6 +15,7 @@ use super::layout::NorLayoutProfile;
 use super::media::MediaFormatProfile;
 use super::soc::{SocCoreProfile, SocProfile};
 use super::train::FirmwareTrainProfile;
+use crate::region::InterpolatedRegionVariant;
 
 /// Per-axis provenance matrix attached to each DIGA model variant.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -47,7 +48,7 @@ pub struct ModelProfileManifest {
     pub series: String,
     #[serde(default)]
     pub region_suffix: Option<String>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tv_standard: Option<String>,
     #[serde(default)]
     pub hw_code: Option<String>,
@@ -97,6 +98,10 @@ pub struct ResolvedModelProfile {
     pub bgo_sector_range_derived: Option<String>,
     pub nvram_sector_range_derived: Option<String>,
     pub derived_sector_geometry: Option<String>,
+    #[serde(default)]
+    pub regional_variants: Vec<InterpolatedRegionVariant>,
+    #[serde(default)]
+    pub active_region: Option<InterpolatedRegionVariant>,
     pub effective_capabilities: CapabilitySummary,
 }
 
@@ -134,4 +139,6 @@ pub struct ProfilesBundle {
     pub media_formats: BTreeMap<String, MediaFormatProfile>,
     pub boards: BTreeMap<String, BoardProfile>,
     pub models: BTreeMap<String, ModelProfileManifest>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub blobs: BTreeMap<String, String>,
 }

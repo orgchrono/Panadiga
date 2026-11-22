@@ -90,7 +90,51 @@ pub fn empty_bundle() -> ProfilesBundle {
         media_formats: BTreeMap::new(),
         boards: BTreeMap::new(),
         models: BTreeMap::new(),
+        blobs: BTreeMap::new(),
     }
+}
+
+fn validate_blob_relpath(relpath: &str) -> Result<()> {
+    if !relpath.starts_with("blobs/")
+        || relpath.starts_with('/')
+        || relpath.starts_with('\\')
+        || relpath.contains('\\')
+        || relpath
+            .split('/')
+            .any(|seg| seg.is_empty() || seg == "." || seg == "..")
+    {
+        bail!(
+            "Security violation: invalid nfrom_drv_blob_relpath '{relpath}' (must stay strictly under blobs/ without traversal)"
+        );
+    }
+    Ok(())
+}
+
+fn load_referenced_blobs(root: &Path, bundle: &mut ProfilesBundle, required: bool) -> Result<()> {
+    let relpaths: Vec<String> = bundle
+        .firmware_trains
+        .values()
+        .filter_map(|t| t.bgo_retarget_spec.as_ref())
+        .map(|s| s.nfrom_drv_blob_relpath.clone())
+        .collect();
+    for rel in relpaths {
+        validate_blob_relpath(&rel)?;
+        let full = root.join(&rel);
+        if full.is_file() {
+            let bytes = fs::read(&full)
+                .with_context(|| format!("Reading referenced profile blob {}", full.display()))?;
+            let encoded = crate::blob_b64::encode_base64(&bytes);
+            if let Some(prev) = bundle.blobs.get(&rel)
+                && prev != &encoded
+            {
+                bail!("Conflicting blob contents for '{rel}'");
+            }
+            bundle.blobs.insert(rel, encoded);
+        } else if required {
+            bail!("Missing referenced profile blob {}", full.display());
+        }
+    }
+    Ok(())
 }
 
 fn load_tree_raw(root: &Path, required: bool) -> Result<ProfilesBundle> {
@@ -158,6 +202,7 @@ fn load_tree_raw(root: &Path, required: bool) -> Result<ProfilesBundle> {
         |m: &ModelProfileManifest| model_storage_key(&m.model_id),
         &mut b.models,
     )?;
+    load_referenced_blobs(root, &mut b, required)?;
     Ok(b)
 }
 
@@ -264,6 +309,12 @@ pub fn merge_overlay_dir(mut base: ProfilesBundle, overlay_root: &Path) -> Resul
         },
         "model",
     )?;
+    for (k, v) in overlay.blobs {
+        if base.blobs.contains_key(&k) {
+            bail!("Security violation: runtime overlay attempted to overwrite built-in blob '{k}'");
+        }
+        base.blobs.insert(k, v);
+    }
     ensure_bundle_valid(&base)?;
     Ok(base)
 }
