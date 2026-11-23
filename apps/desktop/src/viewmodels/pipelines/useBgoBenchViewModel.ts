@@ -17,6 +17,7 @@ import type {
   PreflightCheckItem,
   StreamProgressTelemetryFields,
 } from '@/models';
+import { requestLiveBgoNonce } from '@/services/benchStreamService';
 import {
   picoEh55BgoAudit,
   picoEh55BgoRepair,
@@ -167,13 +168,16 @@ export function useBgoBenchViewModel(defaultPort?: string | null) {
       return null;
     },
     executeFn: async () => {
+      const targetNorPath = cowSession?.path ?? (norPath.trim() || undefined);
+      const nonce = await requestLiveBgoNonce(targetNorPath);
       const res = await picoEh55BgoRepair({
-        norPath: cowSession?.path ?? (norPath.trim() || undefined),
+        norPath: targetNorPath,
         dryRunOnly: false,
         portName: portName.trim(),
         backupDir: backupDir.trim(),
         confirmToken: confirmTokenInput.trim(),
         runBootTraceMs: enableBootTrace ? DEFAULT_BGO_BOOTTRACE_MS : undefined,
+        nonceId: nonce.nonce_id,
       });
       showToast({ type: 'success', title: translate('errors.pipelines.bgoLiveApplied') });
       return res;

@@ -206,10 +206,11 @@ export const Header: React.FC<HeaderProps> = ({
             data-testid="header-mode-toggle"
             onClick={onToggleMode}
             title={t('shell.modeTooltip')}
-            className="hidden sm:inline-flex h-8 px-2.5 text-[11px] font-mono gap-1.5 bg-bench-950 border-slate-700"
+            aria-label={mode === 'express' ? t('shell.modeBasic') : t('shell.modeAdvanced')}
+            className="inline-flex h-8 px-2 sm:px-2.5 text-[11px] font-mono gap-1.5 bg-bench-950 border-slate-700"
           >
             <Layers className="w-3.5 h-3.5 text-cyan-400" />
-            <span>{mode === 'express' ? t('shell.modeBasic') : t('shell.modeAdvanced')}</span>
+            <span className="hidden sm:inline">{mode === 'express' ? t('shell.modeBasic') : t('shell.modeAdvanced')}</span>
           </Button>
         )}
 

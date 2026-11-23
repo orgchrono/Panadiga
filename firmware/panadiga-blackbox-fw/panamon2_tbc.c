@@ -15,19 +15,24 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/* Verified AM34 Memory Map & Safety Boundaries */
-#define AM34_UART0_TX_REG        0x10000000u
-#define AM34_UART0_STAT_REG      0x10000004u
+/* Verified AM34 Memory Map & Safety Boundaries (SC0 UART0: CTRL +00, TXB +08, STR +0C) */
+#define AM34_SC0_CTR_REG         0xD4002000u
+#define AM34_SC0_TXB_REG         0xD4002008u
+#define AM34_SC0_STR_REG         0xD400200Cu
+#define AM34_SC0_TX_BUSY_MASK    0x00A0u
+#define AM34_SC0_TX_SPIN_LIMIT   0x00040000u
 #define AM34_AIOF_TBC_BASE       0x88000000u
 #define AM34_AIOF_TBC_END        0x88001000u
 #define AM34_LETHAL_MMIO_START   0xC000100Cu
 #define AM34_LETHAL_MMIO_END     0xC0001010u
-#define AM34_DAVIS_SAFE_END      0x89000080u
-#define AM34_DAVIS_DANGER_END    0x8A000000u
+#define AM34_SYSCON_DANGER_START 0xDC0F0000u
+#define AM34_SYSCON_DANGER_END   0xDC0F1000u
 #define AM34_IPL_CS0_END         0x80040000u
 #define AM34_IPL_CS1_BASE        0x84000000u
 #define AM34_IPL_CS1_END         0x84040000u
 
+_Static_assert(AM34_SC0_TXB_REG == 0xD4002008u && AM34_SC0_STR_REG == 0xD400200Cu,
+               "Silicon invariant: AM34 SC0 UART0 TXB/STR registers must match 0xD4002008/0xD400200C");
 _Static_assert(AM34_LETHAL_MMIO_START == 0xC000100Cu,
                "Silicon invariant: 0xC000100C lethal MMIO address must stay exact");
 _Static_assert(AM34_IPL_CS1_END - AM34_IPL_CS1_BASE == 0x00040000u,
@@ -44,8 +49,8 @@ static inline bool am34_addr_is_safe(uint32_t addr, bool is_write) {
     if (addr >= AM34_LETHAL_MMIO_START && addr < AM34_LETHAL_MMIO_END) {
         return false; /* Fatal bus-hang / WDT register */
     }
-    if (addr >= AM34_DAVIS_SAFE_END && addr < AM34_DAVIS_DANGER_END) {
-        return false; /* Unmapped DAVIS space locks AM34 AHB bus */
+    if (addr >= AM34_SYSCON_DANGER_START && addr < AM34_SYSCON_DANGER_END) {
+        return false; /* Initial probes reported AHB lockup at 0xDC0F0000..0xDC0F0FFF */
     }
     if (is_write) {
         if (addr >= 0x80000000u && addr < AM34_IPL_CS0_END) {
@@ -67,22 +72,22 @@ static inline bool am34_safe_read32(uint32_t addr, uint32_t *out_val) {
     return true;
 }
 
-static inline bool am34_safe_write32(uint32_t addr, uint32_t val) {
+static inline bool am34_safe_write8(uint32_t addr, uint8_t val) {
     if (!am34_addr_is_safe(addr, true)) {
         return false;
     }
-    volatile uint32_t *ptr = (volatile uint32_t *)(uintptr_t)addr;
+    volatile uint8_t *ptr = (volatile uint8_t *)(uintptr_t)addr;
     *ptr = val;
     return true;
 }
 
 static void uart0_putc(char ch) {
-    volatile const uint32_t *stat = (volatile const uint32_t *)(uintptr_t)AM34_UART0_STAT_REG;
+    volatile const uint16_t *stat = (volatile const uint16_t *)(uintptr_t)AM34_SC0_STR_REG;
     uint32_t spin = 0;
-    while (((*stat) & 0x20u) == 0u && spin < 50000u) {
+    while (((*stat) & AM34_SC0_TX_BUSY_MASK) != 0u && spin < AM34_SC0_TX_SPIN_LIMIT) {
         spin++;
     }
-    (void)am34_safe_write32(AM34_UART0_TX_REG, (uint32_t)(uint8_t)ch);
+    (void)am34_safe_write8(AM34_SC0_TXB_REG, (uint8_t)ch);
 }
 
 static void uart0_puts(const char *s) {
@@ -119,7 +124,7 @@ static void probe_tbc_aiof_baseline(panadiga_tv_std_t std_mode) {
 
 int main(void) {
     uart0_puts("\nPANAMON2 OPEN INTEROP PROTOTYPE (AM34 SDRAM)\n");
-    uart0_puts("SW_GUARDS: 0xC000100C=LOCKED DAVIS>=0x89000080=LOCKED IPL_RO=LOCKED\n");
+    uart0_puts("SW_GUARDS: 0xC000100C=LOCKED 0xDC0F0000=LOCKED IPL_RO=LOCKED\n");
     probe_tbc_aiof_baseline(PANADIGA_TV_PAL_M);
     uart0_puts("PANAMON2>\n");
     return 0;

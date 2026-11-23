@@ -9,6 +9,12 @@ use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use panadiga_core::bench::{
+    BenchEventEnvelope, BenchEventSink, BenchPublisher, BenchSnapshot, NoopBenchSink,
+    OperationNonceStore,
+};
+use panadiga_core::ssot::pico_header::compute_pico_ssot_hash;
+
 use crate::commands::error::{IpcResult, PanadigaIpcError};
 use crate::pico::bridge_session::Sc0BridgeController;
 use crate::pico::gdb_bridge::GdbBridgeController;
@@ -164,13 +170,89 @@ impl TelemetryRuntimeState {
     }
 }
 
+/// Thread-safe swappable sink bridge allowing `Default` construction before Tauri setup.
+#[derive(Clone)]
+pub struct SharedBenchSink(ScopedMutex<Arc<dyn BenchEventSink>>);
+
+impl Default for SharedBenchSink {
+    fn default() -> Self {
+        Self(ScopedMutex::new(Arc::new(NoopBenchSink)))
+    }
+}
+
+impl SharedBenchSink {
+    /// Installs a concrete live transport sink (e.g., Tauri WebView emitter).
+    pub fn set_inner(&self, sink: Arc<dyn BenchEventSink>) {
+        self.0.with_lock(|slot| *slot = sink);
+    }
+}
+
+impl BenchEventSink for SharedBenchSink {
+    fn emit(&self, env: &BenchEventEnvelope) {
+        let sink = self.0.with_lock(|slot| Arc::clone(slot));
+        sink.emit(env);
+    }
+}
+
+/// Thread-safe holder around the single `Plano B` pull-snapshot + push-stream publisher.
+#[derive(Clone)]
+pub struct BenchRuntimeStream {
+    sink: SharedBenchSink,
+    publisher: ScopedMutex<BenchPublisher<SharedBenchSink>>,
+}
+
+impl Default for BenchRuntimeStream {
+    fn default() -> Self {
+        let sink = SharedBenchSink::default();
+        let contract_hash = format!("{:08X}", compute_pico_ssot_hash());
+        let publisher = ScopedMutex::new(BenchPublisher::new(contract_hash, sink.clone()));
+        Self { sink, publisher }
+    }
+}
+
+impl BenchRuntimeStream {
+    /// Attaches a concrete event sink for all subsequent publisher emissions.
+    pub fn attach_sink(&self, sink: Arc<dyn BenchEventSink>) {
+        self.sink.set_inner(sink);
+    }
+
+    /// Returns a consistent [`BenchSnapshot`] matching the latest emitted sequence number.
+    pub fn snapshot(&self) -> BenchSnapshot {
+        self.publisher.with_lock(|pub_ref| pub_ref.snapshot())
+    }
+
+    /// Executes `f` against the active [`BenchPublisher`] together with current epoch milliseconds.
+    pub fn with_publisher<R>(
+        &self,
+        f: impl FnOnce(&mut BenchPublisher<SharedBenchSink>, u64) -> R,
+    ) -> R {
+        let now_ms = epoch_ms_now();
+        self.publisher.with_lock(|pub_ref| f(pub_ref, now_ms))
+    }
+}
+
 /// Unified Tauri-managed hardware runtime state injected via `tauri::State<'_, PanadigaBackendState>`.
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct PanadigaBackendState {
     pub serial: SerialIoGate,
     pub telemetry: TelemetryRuntimeState,
     pub sc0_bridge: Sc0BridgeController,
     pub gdb_bridge: GdbBridgeController,
+    pub nonces: ScopedMutex<OperationNonceStore>,
+    pub bench_stream: BenchRuntimeStream,
+}
+
+impl Default for PanadigaBackendState {
+    fn default() -> Self {
+        Self {
+            serial: SerialIoGate::default(),
+            telemetry: TelemetryRuntimeState::default(),
+            sc0_bridge: Sc0BridgeController::default(),
+            gdb_bridge: GdbBridgeController::default(),
+            nonces: ScopedMutex::new(panadiga_core::bench::new_ssot_nonce_store()),
+            bench_stream: BenchRuntimeStream::default(),
+        }
+    }
 }
 
 impl PanadigaBackendState {
@@ -208,6 +290,14 @@ impl PanadigaBackendState {
             f()
         })
     }
+}
+
+/// Returns current UNIX epoch milliseconds clamped cleanly to `u64`.
+pub(crate) fn epoch_ms_now() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| u64::try_from(d.as_millis()).unwrap_or(u64::MAX))
+        .unwrap_or(0)
 }
 
 /// Formats current UTC wall-clock time as `HH:MM:SS` for live event streams.

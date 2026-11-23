@@ -10,6 +10,7 @@ import {
   DEFAULT_RUNTIME_SETTINGS,
   RUNTIME_LOG_LEVEL_OPTIONS,
   RUNTIME_SETTINGS_BOUNDS,
+  SAFE_PICO_IR_GPIOS,
 } from '@/constants';
 import type { RuntimeSettings } from '@/models';
 
@@ -59,7 +60,10 @@ export const runtimeSettingsSchema: z.ZodType<RuntimeSettings> = z.object({
       .number()
       .int()
       .min(RUNTIME_SETTINGS_BOUNDS.safeIrGpioMin)
-      .max(RUNTIME_SETTINGS_BOUNDS.safeIrGpioMax),
+      .max(RUNTIME_SETTINGS_BOUNDS.safeIrGpioMax)
+      .refine((pin) => SAFE_PICO_IR_GPIOS.includes(pin), {
+        message: 'Pico IR TX GPIO must be in the safe GP6..GP9 or GP16..GP22 set',
+      }),
     ir_catalog_search_limit: z
       .number()
       .int()

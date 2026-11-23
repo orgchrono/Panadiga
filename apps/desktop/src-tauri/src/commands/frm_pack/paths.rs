@@ -5,7 +5,7 @@ use panadiga_core::constants::{
 };
 use panadiga_core::crypto::ExtrheadHeader;
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
 use crate::commands::constants::{
     FIRMWARE_IMAGES_DIR_NAME, FRM_COLLECTION_MAX_DEPTH, FRM_FILE_EXTENSION, FRM_IGNORED_SUBDIR,
@@ -50,6 +50,103 @@ pub struct ExtrheadUnpackReportDto {
     pub written_output_path: Option<String>,
 }
 
+fn normalize_path_for_guard(path: &Path) -> String {
+    path.to_string_lossy()
+        .replace('\\', "/")
+        .trim_start_matches("//?/")
+        .trim_end_matches('/')
+        .to_ascii_lowercase()
+}
+
+fn canonicalize_with_tail(target: &Path) -> IpcResult<String> {
+    let mut probe = Some(target);
+    while let Some(anc) = probe {
+        if anc.exists() {
+            let canon = anc.canonicalize().map_err(|e| {
+                PanadigaIpcError::io(format!("Falha ao canonicalizar '{}': {}", anc.display(), e))
+            })?;
+            let tail = target.strip_prefix(anc).unwrap_or(Path::new(""));
+            return Ok(normalize_path_for_guard(&canon.join(tail)));
+        }
+        probe = anc.parent();
+    }
+    Ok(normalize_path_for_guard(target))
+}
+
+/// Validates caller-supplied IPC file paths against NUL bytes, `..` traversal, and raw device namespaces.
+pub(crate) fn validate_ipc_path_input(raw: &str) -> IpcResult<String> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return Err(PanadigaIpcError::validation(FRM_WRITE_EMPTY_PATH_ERR));
+    }
+    if trimmed.contains('\0') {
+        return Err(PanadigaIpcError::validation(
+            "Caminho IPC inválido: byte NUL proibido.",
+        ));
+    }
+    let lower = trimmed.to_ascii_lowercase();
+    if lower.starts_with("\\\\.\\")
+        || lower.starts_with("\\\\?\\")
+        || lower.starts_with("\\device\\")
+        || lower.starts_with("//./")
+        || lower.starts_with("//?/")
+        || lower == "/dev"
+        || lower.starts_with("/dev/")
+    {
+        return Err(PanadigaIpcError::validation(format!(
+            "Acesso direto a namespace de dispositivo '{}' é bloqueado via IPC.",
+            trimmed
+        )));
+    }
+    if Path::new(trimmed)
+        .components()
+        .any(|c| matches!(c, Component::ParentDir))
+    {
+        return Err(PanadigaIpcError::validation(format!(
+            "Path traversal '..' não permitido via IPC: '{}'.",
+            trimmed
+        )));
+    }
+    Ok(trimmed.to_string())
+}
+
+fn ensure_safe_write_target(resolved: &Path) -> IpcResult<()> {
+    let norm = canonicalize_with_tail(resolved)?;
+    const FORBIDDEN_PREFIXES: &[&str] = &[
+        "c:/windows",
+        "/etc",
+        "/usr",
+        "/bin",
+        "/sbin",
+        "/system",
+        "/dev",
+    ];
+    for prefix in FORBIDDEN_PREFIXES {
+        if norm == *prefix || norm.starts_with(&format!("{prefix}/")) {
+            return Err(PanadigaIpcError::validation(format!(
+                "Escrita em diretório protegido do sistema bloqueada via IPC: '{}'.",
+                resolved.display()
+            )));
+        }
+    }
+    if norm.contains("/.git/") || norm.ends_with("/.git") {
+        return Err(PanadigaIpcError::validation(format!(
+            "Escrita em metadados Git bloqueada via IPC: '{}'.",
+            resolved.display()
+        )));
+    }
+    if let Ok(ws_canon) = resolve_workspace_root().canonicalize() {
+        let schema_dir = format!("{}/profiles/schema", normalize_path_for_guard(&ws_canon));
+        if norm == schema_dir || norm.starts_with(&format!("{schema_dir}/")) {
+            return Err(PanadigaIpcError::validation(format!(
+                "Escrita direta em schemas SSOT bloqueada via IPC: '{}'.",
+                resolved.display()
+            )));
+        }
+    }
+    Ok(())
+}
+
 pub(crate) fn resolve_read_path(raw: &str) -> PathBuf {
     let trimmed = raw.trim();
     let direct = PathBuf::from(trimmed);
@@ -70,17 +167,29 @@ pub(crate) fn resolve_read_path(raw: &str) -> PathBuf {
     ws_rel
 }
 
-pub(crate) fn resolve_write_path(raw: &str) -> IpcResult<PathBuf> {
-    let trimmed = raw.trim();
-    if trimmed.is_empty() {
-        return Err(PanadigaIpcError::validation(FRM_WRITE_EMPTY_PATH_ERR));
+/// Validates and resolves a readable regular-file path supplied over Tauri IPC.
+pub(crate) fn resolve_safe_read_path(raw: &str) -> IpcResult<PathBuf> {
+    let validated = validate_ipc_path_input(raw)?;
+    let resolved = resolve_read_path(&validated);
+    let norm = canonicalize_with_tail(&resolved)?;
+    if norm == "/dev" || norm.starts_with("/dev/") {
+        return Err(PanadigaIpcError::validation(format!(
+            "Leitura direta de dispositivo '{}' bloqueada via IPC.",
+            raw.trim()
+        )));
     }
-    let path = PathBuf::from(trimmed);
+    Ok(resolved)
+}
+
+pub(crate) fn resolve_write_path(raw: &str) -> IpcResult<PathBuf> {
+    let trimmed = validate_ipc_path_input(raw)?;
+    let path = PathBuf::from(&trimmed);
     let resolved = if path.is_absolute() {
         path
     } else {
         resolve_writable_data_root().join(path)
     };
+    ensure_safe_write_target(&resolved)?;
     if let Some(parent) = resolved.parent()
         && !parent.as_os_str().is_empty()
     {

@@ -2,6 +2,7 @@
 
 #![deny(unsafe_code)]
 
+mod bench_control;
 mod capture;
 mod davis_ide;
 mod eh55_bgo;
@@ -11,6 +12,7 @@ mod nvram_clean;
 mod nvram_clean_steps;
 mod telemetry;
 
+pub use bench_control::*;
 pub use capture::pico_capture_nvram_live;
 pub use davis_ide::*;
 pub use eh55_bgo::*;

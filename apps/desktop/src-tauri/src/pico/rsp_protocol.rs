@@ -4,8 +4,14 @@
 //! packet framing, checksum verification, AM34 register serialization, and
 //! deterministic mock RSP emulation with IPL hardware write-protection invariants.
 
+use panadiga_core::constants::{
+    AM34_FLASH_BASE, AM34_FLASH_IPL_SIZE, AM34_FLASH_SIZE, AM34_FLASH_UNCACHED_BASE,
+    AM34_NVRAM_BASE, PANA_FRM_GLOBAL_HEADER, SPANSION_NVRAM_SIZE_BYTES,
+};
 use panadiga_core::pico::async_gdb_proxy::{is_lethal_am34_register, parse_rsp_addr_len};
-use panadiga_core::pico::rsp_codec::{NorWritePolicy, is_nor_write_blocked_with_policy};
+use panadiga_core::pico::rsp_codec::{
+    NorWritePolicy, build_am34_gdb_memory_map_xml, is_nor_write_blocked_with_policy,
+};
 
 use super::types::Am34RegisterState;
 
@@ -140,16 +146,8 @@ pub fn compute_mock_rsp_response_with_policy(
     if cmd.starts_with("qSupported") {
         build_rsp_packet("PacketSize=800;qXfer:memory-map:read+")
     } else if cmd.starts_with("qXfer:memory-map:read::") {
-        let xml = concat!(
-            "l<memory-map>",
-            "<memory type=\"ram\" start=\"0x00000000\" length=\"0x00040000\"/>",
-            "<memory type=\"flash\" start=\"0x80000000\" length=\"0x007f0000\">",
-            "<property name=\"blocksize\">0x10000</property></memory>",
-            "<memory type=\"flash\" start=\"0x807f0000\" length=\"0x00010000\">",
-            "<property name=\"blocksize\">0x2000</property></memory>",
-            "</memory-map>"
-        );
-        build_rsp_packet(xml)
+        let xml = format!("l{}", build_am34_gdb_memory_map_xml(false, true));
+        build_rsp_packet(&xml)
     } else if cmd == "qPanadigaNorUnlock:CONFIRM_UPPER_NOR" {
         *policy = NorWritePolicy::UpperNorAppUnlocked;
         build_rsp_packet("OK")
@@ -176,16 +174,22 @@ pub fn compute_mock_rsp_response_with_policy(
         let mut hex_out = String::with_capacity(len * 2);
         for i in 0..len {
             let cur = addr.wrapping_add(i as u32);
-            let canonical = if (0x8400_0000..=0x847F_FFFF).contains(&cur) {
-                cur - 0x0400_0000
+            let canonical = if (AM34_FLASH_UNCACHED_BASE
+                ..AM34_FLASH_UNCACHED_BASE + AM34_FLASH_SIZE)
+                .contains(&cur)
+            {
+                cur - (AM34_FLASH_UNCACHED_BASE - AM34_FLASH_BASE)
             } else {
                 cur
             };
-            let byte_val: u8 = if (0x807F_0000..=0x807F_FFFF).contains(&canonical) {
+            let hdr_end = AM34_FLASH_BASE + PANA_FRM_GLOBAL_HEADER.len() as u32;
+            let nvram_end = AM34_NVRAM_BASE + SPANSION_NVRAM_SIZE_BYTES as u32;
+            let ipl_end = AM34_FLASH_BASE + AM34_FLASH_IPL_SIZE;
+            let byte_val: u8 = if (AM34_NVRAM_BASE..nvram_end).contains(&canonical) {
                 0xFF // Virgin / erased NVRAM sector state
-            } else if (0x8000_0000..=0x8000_000F).contains(&canonical) {
-                panadiga_core::constants::PANA_FRM_GLOBAL_HEADER[(canonical - 0x8000_0000) as usize]
-            } else if (0x8000_0000..=0x807E_FFFF).contains(&canonical) {
+            } else if (AM34_FLASH_BASE..hdr_end).contains(&canonical) {
+                PANA_FRM_GLOBAL_HEADER[(canonical - AM34_FLASH_BASE) as usize]
+            } else if (AM34_FLASH_BASE..ipl_end).contains(&canonical) {
                 ((canonical & 0xFF) as u8) ^ 0xA5
             } else {
                 0x00

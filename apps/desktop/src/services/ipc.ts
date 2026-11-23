@@ -5,6 +5,7 @@
  */
 
 import { isTauri } from '@tauri-apps/api/core';
+import type { BenchEventEnvelope } from '@/models/generated/ssot';
 import type {
   BgoRepairProgressEvent,
   DvdBurnProgressEvent,
@@ -36,8 +37,8 @@ export interface PanadigaEventMap {
   readonly 'nor://dump-progress': NorDumpProgressEvent;
   readonly 'bgo://repair-progress': BgoRepairProgressEvent;
   readonly 'davis://probe-result': PicoProbeDavisIdeResponse;
-  readonly pico_telemetry: PicoDeviceStatus;
   readonly 'pico://telemetry': PicoDeviceStatus;
+  readonly 'panadiga://bench-event': BenchEventEnvelope;
   readonly 'pico://nvram-live-capture': LiveNvramCaptureEvent;
   readonly 'pico://diagnostic-result': PicoDiagnosticResult;
   readonly 'pico://bridge-data': Sc0BridgeDataEvent;
@@ -110,8 +111,8 @@ function createLocalEventBus() {
     'nor://dump-progress': new Set(),
     'bgo://repair-progress': new Set(),
     'davis://probe-result': new Set(),
-    pico_telemetry: new Set(),
     'pico://telemetry': new Set(),
+    'panadiga://bench-event': new Set(),
     'pico://nvram-live-capture': new Set(),
     'pico://diagnostic-result': new Set(),
     'pico://bridge-data': new Set(),

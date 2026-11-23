@@ -27,7 +27,7 @@ pub(super) fn emit_bridge_event(
         bytes: bytes.to_vec(),
         timestamp: format_utc_hms(),
     };
-    let _ = app.emit("pico://bridge-data", payload);
+    let _ = app.emit(crate::commands::constants::EVENT_PICO_BRIDGE_DATA, payload);
 }
 
 pub(super) fn run_bridge_worker(

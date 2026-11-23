@@ -43,6 +43,7 @@ export interface FlashEh55HddSafeRequest {
   readonly expectedMinGb?: number;
   readonly expectedMaxGb?: number;
   readonly allowExtended4tb?: boolean;
+  readonly nonceId?: string;
 }
 
 export interface Eh55HddFlashReport {

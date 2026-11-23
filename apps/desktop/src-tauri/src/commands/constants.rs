@@ -12,19 +12,8 @@ pub use panadiga_core::constants::{
     PANA_EXTRHEAD_DEFAULT_ADLER_STEP, SPANSION_FLASH_SIZE_BYTES,
 };
 
-// 1. Tauri IPC Reactive Event Channels & Transport Prefixes
-pub const EVENT_PICO_SERIAL_LOG: &str = "pico://serial-log";
-pub const EVENT_PICO_DIAG_RESULT: &str = "pico://diagnostic-result";
-pub const EVENT_PICO_TELEMETRY: &str = "pico://telemetry";
-pub const EVENT_PICO_NVRAM_CAPTURE: &str = "pico://nvram-live-capture";
-pub const EVENT_PICO_PORTS_CHANGED: &str = "pico://ports-changed";
-pub const EVENT_HDD_FLASH_PROGRESS: &str = "hdd://flash-progress";
-pub const EVENT_SD_FLASH_PROGRESS: &str = "sd://flash-progress";
-pub const EVENT_DVD_BURN_PROGRESS: &str = "dvd://burn-progress";
-pub const EVENT_NVRAM_CLEAN_PROGRESS: &str = "nvram://clean-progress";
-pub const EVENT_NOR_DUMP_PROGRESS: &str = "nor://dump-progress";
-pub const EVENT_BGO_REPAIR_PROGRESS: &str = "bgo://repair-progress";
-pub const EVENT_DAVIS_PROBE_RESULT: &str = "davis://probe-result";
+// 1. Tauri IPC Reactive Event Channels & Transport Prefixes (SSOT in panadiga-core::ssot::events)
+pub use panadiga_core::ssot::events::*;
 
 pub const TRANSPORT_PREFIX_BLE: &str = "BLE";
 pub const TRANSPORT_PREFIX_ANDROID_OTG: &str = "ANDROID-USB-OTG";
@@ -54,7 +43,7 @@ pub const SERIAL_READ_CHUNK_BYTES: usize = 1_024;
 
 pub const DIAG_DURATION_SLACK_MS: u64 = 2_500;
 pub const DIAG_MIN_TIMEOUT_MS: u64 = 2_000;
-pub const DIAG_MAX_TIMEOUT_MS: u64 = 125_000;
+pub const DIAG_MAX_TIMEOUT_MS: u64 = 185_000;
 
 pub const DEFAULT_COLD_BREAKIN_MODE: u8 = 2;
 pub const DEFAULT_OCD_BUS_FREQ_HZ: u32 = 1_000_000;

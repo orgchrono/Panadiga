@@ -68,6 +68,34 @@ pub fn set_pico_telemetry_stream(
                     crate::pico::try_pico_get_device_status_dto(&worker_state, port)
                 {
                     let _ = app_clone.emit(EVENT_PICO_TELEMETRY, &status);
+                    worker_state.bench_stream.with_publisher(|pub_ref, now_ms| {
+                        let current_state = pub_ref.snapshot().state;
+                        if status.connected
+                            && matches!(
+                                current_state,
+                                panadiga_core::bench::BenchState::Disconnected
+                            )
+                        {
+                            pub_ref.set_state(
+                                panadiga_core::bench::BenchState::Idle {
+                                    port: status.port.clone(),
+                                    fw_contract_hash: status.firmware_version.clone(),
+                                },
+                                now_ms,
+                            );
+                        }
+                        pub_ref.push_telemetry(
+                            panadiga_core::bench::TelemetrySample {
+                                ts_ms: now_ms,
+                                vdd_mv: (status.vdd_volts.clamp(0.0, 65.535) * 1000.0).round()
+                                    as u16,
+                                nsw5v_high: status.target_powered,
+                                jig_asserted: status.breakin_mode > 0,
+                                uart_rx_bytes: u64::from(status.total_probes),
+                            },
+                            now_ms,
+                        );
+                    });
                 }
             }
         });

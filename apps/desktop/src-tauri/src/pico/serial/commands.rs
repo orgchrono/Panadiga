@@ -15,11 +15,12 @@ pub fn pico_send_raw_serial_command(
     port_name: String,
     command: String,
 ) -> IpcResult<String> {
+    let validated = panadiga_core::pico::validate_interactive_pico_command(&command)
+        .map_err(|e| PanadigaIpcError::validation(e.to_string()))?;
     let clean = extract_port_name(&port_name);
-    let trimmed = command.trim().to_uppercase();
 
     backend.with_exclusive_serial(&clean, || {
-        if trimmed == "ISOLATE" || trimmed == "HIZ" {
+        if validated == "ISOLATE" || validated == "HIZ" {
             backend.telemetry.set_ram_loader_injected(false);
         }
 
@@ -32,7 +33,7 @@ pub fn pico_send_raw_serial_command(
                     ))
                 })?;
 
-        let payload = format!("{}\r\n", trimmed);
+        let payload = format!("{}\r\n", validated);
         port.write_all(payload.as_bytes()).map_err(|e| {
             PanadigaIpcError::serial(format!("Falha ao transmitir comando CDC: {}", e))
         })?;
@@ -40,7 +41,7 @@ pub fn pico_send_raw_serial_command(
 
         let response = read_serial_response_complete(&mut *port, Duration::from_millis(8000))?;
 
-        if trimmed.starts_with("IDENTIFY")
+        if validated.starts_with("IDENTIFY")
             && let Some(ident) = panadiga_core::pico::parse_ident_line(&response)
         {
             backend

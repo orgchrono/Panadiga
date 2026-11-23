@@ -53,7 +53,7 @@ export function subscribeMockEventStream<T>(
   handler: (payload: T) => void
 ): () => void {
   const unsubChannel = subscribeMockChannel(eventName, handler);
-  if (eventName === 'pico_telemetry' || eventName === 'pico://telemetry') {
+  if (eventName === 'pico://telemetry') {
     const interval = setInterval(() => {
       const statusPayload: unknown = buildMockPicoStatus();
       handler(statusPayload as T);

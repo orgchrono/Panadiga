@@ -151,7 +151,7 @@ const AppShell: React.FC = () => {
     <MotionConfig reducedMotion={accessibility.reducedMotion ? 'always' : 'user'}>
       <div
         data-testid="engineering-shell"
-        className="flex flex-col h-screen w-screen overflow-hidden bg-bench-950 text-slate-100 font-sans"
+        className="flex flex-col h-dvh w-screen overflow-hidden bg-bench-950 text-slate-100 font-sans"
       >
         <Header
           currentView={currentView}

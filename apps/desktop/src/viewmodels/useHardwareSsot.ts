@@ -6,7 +6,6 @@
 import { useCallback, useEffect } from 'react';
 import type { PicoDeviceStatus } from '@/models';
 import {
-  subscribeLegacyPicoTelemetry,
   subscribePicoNvramLiveCapture,
   subscribePicoTelemetry,
 } from '@/services/picoService';
@@ -46,7 +45,6 @@ export function useShellTelemetryListener(): ShellTelemetryStatus {
     };
 
     return registerAsyncSubscriptions([
-      () => subscribeLegacyPicoTelemetry(onTelemetry),
       () => subscribePicoTelemetry(onTelemetry),
       () =>
         subscribePicoNvramLiveCapture(evt => {

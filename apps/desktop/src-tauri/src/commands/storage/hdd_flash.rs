@@ -30,6 +30,8 @@ pub struct FlashEh55HddSafeRequestDto {
     pub expected_min_gb: Option<u32>,
     pub expected_max_gb: Option<u32>,
     pub allow_extended_4tb: Option<bool>,
+    #[serde(default)]
+    pub nonce_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -203,9 +205,19 @@ pub fn inspect_safe_target_disks_command() -> IpcResult<Vec<SafeTargetDiskInfo>>
 #[tauri::command]
 pub async fn flash_eh55_hdd_safe_command(
     app: tauri::AppHandle,
+    state: tauri::State<'_, crate::state::PanadigaBackendState>,
     request: FlashEh55HddSafeRequestDto,
 ) -> IpcResult<Eh55HddFlashReport> {
     let req = build_eh55_flash_request_from_dto(&request)?;
+    let image_ref = opt_trimmed(&request.image_path).unwrap_or("default_hdd");
+    crate::commands::hardware_diag::consume_operation_nonce_with_state(
+        state.inner(),
+        request.nonce_id.as_deref(),
+        panadiga_core::bench::OpKind::NorWrite,
+        req.device_path.trim(),
+        image_ref,
+        false,
+    )?;
     let req_clone = request.clone();
     run_physical_hdd_flash_task(app, req.device_path, "HDD flash", move |device, emit| {
         run_flash_eh55_with_device(device, &req_clone, emit)

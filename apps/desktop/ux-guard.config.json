@@ -1,0 +1,21 @@
+{
+  "framework": "react",
+  "include": ["**/*.{tsx,jsx,ts,js}"],
+  "exclude": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/setup.ts",
+    "**/test/**"
+  ],
+  "rules": {
+    "loadingState": "warn",
+    "emptyState": "warn",
+    "errorState": "error",
+    "formValidation": "error",
+    "disabledSubmit": "warn",
+    "successFeedback": "warn"
+  }
+}

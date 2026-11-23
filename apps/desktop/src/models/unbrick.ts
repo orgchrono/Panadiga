@@ -157,6 +157,7 @@ export interface SdMediaVerificationReport {
   pana_sd_prog061_bgo_geometry?: string | null;
   pana_sd_main_hdd_capacity_label?: string | null;
   pana_sd_prog061_sata_bridge_fix?: string | null;
+  pana_sd_prog061_stage2_boot?: string | null;
   pana_sd_main_sata_bridge_fix?: string | null;
   factory_unpatched_prog061_detected?: boolean;
   dual_family_parity?: DualFamilyParityReport | null;
@@ -182,6 +183,7 @@ export interface SdUnbrickKitRequestDto {
   expected_main_build?: string;
   allow_target_mismatch?: boolean;
   sata_bridge_reset_fix?: boolean;
+  sata_bridge_stage2_boot?: boolean;
 }
 
 export interface SdUnbrickKitReport {
@@ -194,6 +196,7 @@ export interface SdUnbrickKitReport {
   main_passthrough_applied: string | null;
   hdd_capacity_applied: string | null;
   sata_bridge_reset_fix_applied?: boolean;
+  sata_bridge_stage2_boot_applied?: boolean;
   digadiag_path: string;
   digadiag_sha256: string;
   pana_sd_path: string | null;

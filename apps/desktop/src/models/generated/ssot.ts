@@ -93,6 +93,30 @@ export const DIGA_MODEL_IDS = [
 ] as const;
 export type DigaModelId = (typeof DIGA_MODEL_IDS)[number];
 
+export const SSOT_CONTRACT_HASH_U32 = 0xA6F75ECE;
+export const SSOT_CONTRACT_HASH_STR = 'A6F75ECE';
+
+export const SSOT_IPC_EVENTS = {
+  PICO_SERIAL_LOG: 'pico://serial-log',
+  PICO_DIAG_RESULT: 'pico://diagnostic-result',
+  PICO_TELEMETRY: 'pico://telemetry',
+  PICO_NVRAM_CAPTURE: 'pico://nvram-live-capture',
+  PICO_PORTS_CHANGED: 'pico://ports-changed',
+  PICO_BRIDGE_DATA: 'pico://bridge-data',
+  BENCH_STREAM: 'panadiga://bench-event',
+  HDD_FLASH_PROGRESS: 'hdd://flash-progress',
+  SD_FLASH_PROGRESS: 'sd://flash-progress',
+  DVD_BURN_PROGRESS: 'dvd://burn-progress',
+  NVRAM_CLEAN_PROGRESS: 'nvram://clean-progress',
+  NOR_DUMP_PROGRESS: 'nor://dump-progress',
+  BGO_REPAIR_PROGRESS: 'bgo://repair-progress',
+  DAVIS_PROBE_RESULT: 'davis://probe-result',
+  UNBRICK_COMPLETED: 'unbrick://completed',
+  NVRAM_CLEANED: 'nvram://cleaned',
+  HDD_INSPECTED: 'hdd://inspected',
+} as const;
+export type SsotIpcEventName = (typeof SSOT_IPC_EVENTS)[keyof typeof SSOT_IPC_EVENTS];
+
 export const PICO_COMMAND_IDS = [
   'PINCHECK',
   'BUSDIAG',
@@ -1181,3 +1205,101 @@ export const SSOT_AM34_BUS_CONSTANTS: SsotAm34BusConstants = {
   defaultBaudRate: 115200,
   wdtMaxCmdWindowMs: 185000,
 } as const;
+
+export interface SsotBenchStreamLimits {
+  readonly telemetryFlushIntervalMs: number;
+  readonly progressFlushIntervalMs: number;
+  readonly logFlushIntervalMs: number;
+  readonly logBatchMaxLines: number;
+  readonly logBatchMaxBytes: number;
+  readonly logBufferCapLines: number;
+  readonly defaultNonceTtlMs: number;
+}
+
+export const SSOT_BENCH_STREAM_LIMITS: SsotBenchStreamLimits = {
+  telemetryFlushIntervalMs: 50,
+  progressFlushIntervalMs: 100,
+  logFlushIntervalMs: 50,
+  logBatchMaxLines: 128,
+  logBatchMaxBytes: 32768,
+  logBufferCapLines: 512,
+  defaultNonceTtlMs: 120000,
+} as const;
+
+export type BenchOpKind =
+  | 'nor_dump'
+  | 'nor_write'
+  | 'sd_kit_build'
+  | 'boottrace'
+  | 'ram_probe';
+
+export interface OperationNonceChallenge {
+  readonly nonce_id: string;
+  readonly op_kind: BenchOpKind;
+  readonly target: string;
+  readonly input_sha256: string;
+  readonly ssot_contract_hash: string;
+  readonly issued_at_ms: number;
+  readonly expires_at_ms: number;
+}
+
+export type BenchState =
+  | { readonly kind: 'disconnected' }
+  | { readonly kind: 'idle'; readonly port: string; readonly fw_contract_hash: string }
+  | { readonly kind: 'busy'; readonly op_id: string; readonly op_kind: BenchOpKind }
+  | { readonly kind: 'fault'; readonly code: string; readonly message: string };
+
+export interface TelemetrySample {
+  readonly ts_ms: number;
+  readonly vdd_mv: number;
+  readonly nsw5v_high: boolean;
+  readonly jig_asserted: boolean;
+  readonly uart_rx_bytes: number;
+}
+
+export interface OpProgressSample {
+  readonly op_id: string;
+  readonly phase: string;
+  readonly done_units: number;
+  readonly total_units: number;
+}
+
+export type LogStream = 'uart0' | 'pico_diag' | 'host_core';
+
+export interface LogLine {
+  readonly ts_ms: number;
+  readonly text: string;
+}
+
+export interface IncompleteOpNotice {
+  readonly op_id: string;
+  readonly op_kind: BenchOpKind;
+  readonly target: string;
+  readonly started_ts_ms: number;
+}
+
+export type JournalAlertKind =
+  | { readonly kind: 'truncated_tail_quarantined'; readonly backup_file: string; readonly bytes: number }
+  | ({ readonly kind: 'incomplete_op_detected' } & IncompleteOpNotice);
+
+export type BenchEvent =
+  | { readonly kind: 'state_changed'; readonly state: BenchState }
+  | ({ readonly kind: 'telemetry' } & TelemetrySample)
+  | ({ readonly kind: 'op_progress' } & OpProgressSample)
+  | { readonly kind: 'log_batch'; readonly stream: LogStream; readonly lines: readonly LogLine[]; readonly dropped_lines: number }
+  | { readonly kind: 'journal_alert'; readonly alert: JournalAlertKind };
+
+export interface BenchEventEnvelope {
+  readonly seq: number;
+  readonly ts_ms: number;
+  readonly payload: BenchEvent;
+}
+
+export interface BenchSnapshot {
+  readonly seq: number;
+  readonly ssot_contract_hash: string;
+  readonly state: BenchState;
+  readonly latest_telemetry: TelemetrySample | null;
+  readonly active_progress: OpProgressSample | null;
+  readonly incomplete_op: IncompleteOpNotice | null;
+}

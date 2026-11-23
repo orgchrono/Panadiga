@@ -132,6 +132,14 @@ where
     })
 }
 
+/// Computes the normalized input reference bound into ephemeral `NorWrite` confirmation nonces.
+pub fn normalize_bgo_nonce_input_ref(req: &PicoEh55BgoRepairRequestDto) -> String {
+    opt_trimmed(&req.nor_path)
+        .or_else(|| opt_trimmed(&req.plan_path))
+        .unwrap_or("live_plan")
+        .to_string()
+}
+
 /// Builds a CoW BGO FTL repair plan (`dryRunOnly=true`) or applies it live with `CONFIRM_UPPER_NOR`
 /// (`SA0..SA3` permanently locked `E05`), emitting `"bgo://repair-progress"`.
 #[tauri::command]
@@ -156,6 +164,15 @@ pub async fn pico_eh55_bgo_repair_command(
     let clean_port = opt_trimmed(&request.port_name)
         .ok_or_else(|| PanadigaIpcError::validation("portName obrigatório para BGO live repair."))?
         .to_string();
+    let input_ref = normalize_bgo_nonce_input_ref(&request);
+    super::bench_control::consume_operation_nonce_with_state(
+        state.inner(),
+        request.nonce_id.as_deref(),
+        panadiga_core::bench::OpKind::NorWrite,
+        "SA26..SA70",
+        &input_ref,
+        true,
+    )?;
     let backend = state.inner().clone();
     let app_clone = app.clone();
     let req_clone = request.clone();

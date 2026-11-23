@@ -7,7 +7,7 @@ pub use ops::*;
 pub use paths::{
     ExtrheadUnpackReportDto, FrmPackModuleInputDto, PackFrmRequestDto, list_frm_containers_command,
 };
-pub(crate) use paths::{resolve_read_path, resolve_write_path};
+pub(crate) use paths::{resolve_read_path, resolve_safe_read_path, resolve_write_path};
 
 #[cfg(test)]
 mod tests {
@@ -78,5 +78,46 @@ mod tests {
         assert_eq!(pack_sd.modules.len(), 1);
 
         let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn ipc_path_confinement_blocks_traversal_devices_and_protected_dirs() {
+        static TEST_SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+        let seq = TEST_SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let safe_dir = std::env::temp_dir().join(format!(
+            "panadiga_ipc_path_test_{}_{}",
+            std::process::id(),
+            seq
+        ));
+        std::fs::create_dir_all(&safe_dir).unwrap();
+        let safe_file = safe_dir.join("sample.bin");
+        std::fs::write(&safe_file, b"PANADIGA").unwrap();
+
+        assert!(resolve_write_path(&safe_dir.join("out.bin").to_string_lossy()).is_ok());
+        assert!(resolve_safe_read_path(&safe_file.to_string_lossy()).is_ok());
+
+        assert!(resolve_write_path("../escape.bin").is_err());
+        assert!(resolve_safe_read_path("../escape.bin").is_err());
+        assert!(resolve_write_path("\\\\.\\PhysicalDrive0").is_err());
+        assert!(resolve_safe_read_path("\\\\.\\PhysicalDrive0").is_err());
+        assert!(resolve_write_path("bad\0path.bin").is_err());
+        assert!(resolve_safe_read_path("bad\0path.bin").is_err());
+
+        let ws_root = panadiga_core::constants::resolve_workspace_root();
+        assert!(resolve_write_path(&ws_root.join(".git/config").to_string_lossy()).is_err());
+        assert!(
+            resolve_write_path(
+                &ws_root
+                    .join("profiles/schema/tamper.json")
+                    .to_string_lossy()
+            )
+            .is_err()
+        );
+        #[cfg(windows)]
+        assert!(resolve_write_path("C:\\Windows\\System32\\evil.bin").is_err());
+        #[cfg(not(windows))]
+        assert!(resolve_write_path("/etc/passwd").is_err());
+
+        let _ = std::fs::remove_dir_all(&safe_dir);
     }
 }

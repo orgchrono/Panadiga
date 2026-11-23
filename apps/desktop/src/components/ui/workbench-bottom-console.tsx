@@ -67,7 +67,7 @@ export const BottomConsoleDrawer: React.FC<BottomConsoleDrawerProps> = ({
     <section
       data-testid="bottom-console-drawer"
       aria-label={t('shell.docks.consoleTitle')}
-      className={cn('flex flex-col border-t border-slate-800 bg-bench-950/95 font-mono shrink-0 transition-all', expanded ? 'h-80' : 'h-52')}
+      className={cn('flex flex-col border-t border-slate-800 bg-bench-950/95 font-mono shrink-0 transition-all', expanded ? 'h-80 max-h-[55dvh]' : 'h-52 max-h-[45dvh]')}
     >
       <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 bg-bench-900/90 border-b border-slate-800">
         <div className="flex items-center gap-2 min-w-0">

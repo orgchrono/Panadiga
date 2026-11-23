@@ -38,7 +38,7 @@ const LOCKED_INVARIANT_BADGES: readonly string[] = [
   '3.3V LVTTL',
   'NSW5V GP3 Hi-Z',
   'XRESET Open-Drain',
-  'SA0..SA3 RO',
+  'SA0..SA10 RO',
 ];
 
 const LatestDiagnosticCard: React.FC<{

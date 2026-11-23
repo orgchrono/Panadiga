@@ -118,6 +118,8 @@ pub struct PicoEh55BgoRepairRequestDto {
     pub backup_dir: Option<String>,
     pub confirm_token: Option<String>,
     pub run_boot_trace_ms: Option<u32>,
+    #[serde(default)]
+    pub nonce_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]

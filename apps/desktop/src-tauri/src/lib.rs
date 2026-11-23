@@ -126,6 +126,8 @@ macro_rules! build_invoke_handler {
             pico_eh55_bgo_repair_command,
             pico_panamon1_clean_nvram_command,
             pico_probe_davis_ide_command,
+            request_operation_nonce,
+            get_bench_snapshot,
             get_runtime_settings,
             save_runtime_settings,
             reset_runtime_settings,
@@ -143,11 +145,14 @@ pub fn run_desktop_app() {
     panadiga_core::logger::init_telemetry(initial_level);
     tauri::Builder::default()
         .manage(state::PanadigaBackendState::new())
-        .plugin(tauri_plugin_shell::init())
         .setup(|app| {
             #[cfg(not(target_os = "android"))]
             panadiga_core::launcher::ensure_linux_desktop_launcher_if_missing();
             let backend = app.state::<state::PanadigaBackendState>();
+            crate::commands::hardware_diag::attach_bench_stream_sink(
+                app.handle().clone(),
+                backend.inner(),
+            );
             crate::commands::hardware_diag::start_port_mutation_observer(
                 app.handle().clone(),
                 backend.inner(),

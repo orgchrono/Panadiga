@@ -192,6 +192,7 @@ export interface PicoEh55BgoRepairRequest {
   readonly backupDir?: string;
   readonly confirmToken?: string;
   readonly runBootTraceMs?: number;
+  readonly nonceId?: string;
 }
 
 export interface PicoEh55BgoRepairResponse {

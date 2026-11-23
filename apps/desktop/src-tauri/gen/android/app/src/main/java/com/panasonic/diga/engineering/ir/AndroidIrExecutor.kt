@@ -174,24 +174,32 @@ class AndroidIrExecutor(context: Context) {
         return "consumer_ir_manager"
     }
 
-    private fun tryWriteSysfsDirect(payload: String): Boolean =
-        runCatching {
+    private val sysfsIrPayloadRegex = Regex("^[0-9]{1,7}(,[0-9]{1,7}){0,2047}$")
+
+    private fun isValidSysfsIrPayload(payload: String): Boolean =
+        sysfsIrPayloadRegex.matches(payload)
+
+    private fun tryWriteSysfsDirect(payload: String): Boolean {
+        if (!isValidSysfsIrPayload(payload)) return false
+        return runCatching {
             if (!sysfsIrSend.exists() || !sysfsIrSend.canWrite()) return false
             sysfsIrSend.writeText(payload)
             true
         }.getOrDefault(false)
+    }
 
     private fun unlockSysfsViaSu() {
         suUnlockAttempted = true
         runSuCommand(
-            "chmod 0666 $SYSFS_SEC_IR_SEND 2>/dev/null; " +
+            "chmod 0660 $SYSFS_SEC_IR_SEND 2>/dev/null; " +
                 "chown system:radio $SYSFS_SEC_IR_SEND 2>/dev/null; " +
-                "chmod 0666 $SYSFS_SEC_IR_RESULT 2>/dev/null || true",
+                "chmod 0660 $SYSFS_SEC_IR_RESULT 2>/dev/null || true",
             SU_TX_TIMEOUT_MS,
         )
     }
 
     private fun tryWriteSysfsViaSu(payload: String): Boolean {
+        if (!isValidSysfsIrPayload(payload)) return false
         val piped = runCatching {
             val process = ProcessBuilder("su").redirectErrorStream(true).start()
             process.outputStream.bufferedWriter().use { writer ->
@@ -212,6 +220,7 @@ class AndroidIrExecutor(context: Context) {
     }
 
     private fun tryWriteLegacyIrda(payload: String): Boolean {
+        if (!isValidSysfsIrPayload(payload)) return false
         val service = irdaService ?: return false
         val method = irdaWriteMethod ?: return false
         return runCatching {

@@ -1,5 +1,6 @@
 #![deny(unsafe_code)]
 
+use panadiga_core::bench::OpKind;
 use panadiga_core::constants::{
     AM34_FLASH_SIZE, AM34_FLASH_UNCACHED_BASE, AM34_NVRAM_SIZE, AM34_NVRAM_UNCACHED_BASE,
     AM34_SDRAM_UNCACHED_BASE, PANA_DEV_BIN_MAGIC, PANASONIC_HDD_MBR_FULL_SIGNATURE,
@@ -20,8 +21,10 @@ use panadiga_lib::commands::constants::{
 };
 use panadiga_lib::commands::hardware_diag::{
     PicoEh55BgoAuditRequestDto, PicoEh55BgoRepairRequestDto, PicoEh55NorDumpRequestDto,
-    PicoProbeDavisIdeRequestDto, run_davis_probe_with_transport, run_eh55_bgo_audit_with_transport,
-    run_eh55_bgo_repair_with_transport, run_eh55_nor_dump_with_transport,
+    PicoProbeDavisIdeRequestDto, RequestOperationNonceDto, consume_operation_nonce_with_state,
+    issue_operation_nonce_with_state, run_davis_probe_with_transport,
+    run_eh55_bgo_audit_with_transport, run_eh55_bgo_repair_with_transport,
+    run_eh55_nor_dump_with_transport,
 };
 use panadiga_lib::commands::storage::{
     FlashEh55HddSafeRequestDto, inspect_safe_target_disks_command, run_flash_eh55_with_device,
@@ -310,6 +313,7 @@ fn hdd_flash_safe_enforces_physicaldrive0_nvme_4tb_and_executes_mock_flash() {
         expected_min_gb: Some(240),
         expected_max_gb: Some(260),
         allow_extended_4tb: Some(false),
+        nonce_id: None,
     };
     assert!(run_flash_eh55_with_device(&mut ata_dev, &pd0, |_| {}).is_err());
 
@@ -400,6 +404,7 @@ fn eh55_nor_dump_bgo_audit_repair_and_davis_probe_enforce_guards_with_mock() {
             backup_dir: None,
             confirm_token: None,
             run_boot_trace_ms: None,
+            nonce_id: None,
         },
         None,
         |_| {},
@@ -425,6 +430,7 @@ fn eh55_nor_dump_bgo_audit_repair_and_davis_probe_enforce_guards_with_mock() {
                 backup_dir: Some(dir.join("bkp").to_string_lossy().into()),
                 confirm_token: Some("WRONG".into()),
                 run_boot_trace_ms: None,
+                nonce_id: None,
             },
             Some(mock_deny),
             |_| {},
@@ -449,6 +455,7 @@ fn eh55_nor_dump_bgo_audit_repair_and_davis_probe_enforce_guards_with_mock() {
             backup_dir: Some(dir.join("bkp").to_string_lossy().into()),
             confirm_token: Some("CONFIRM_UPPER_NOR".into()),
             run_boot_trace_ms: Some(5000),
+            nonce_id: None,
         },
         Some(mock_ok),
         |ev| bgo_events.push(ev),
@@ -478,4 +485,108 @@ fn eh55_nor_dump_bgo_audit_repair_and_davis_probe_enforce_guards_with_mock() {
     .unwrap();
     assert!(davis_res.lethal_0xc000100c_blocked);
     let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn operation_nonce_requires_single_use_exact_binding() {
+    let state = panadiga_lib::state::PanadigaBackendState::new();
+    assert!(
+        consume_operation_nonce_with_state(
+            &state,
+            None,
+            OpKind::NorWrite,
+            "SA26..SA70",
+            "live_plan",
+            true
+        )
+        .is_err()
+    );
+    let bad_target = issue_operation_nonce_with_state(
+        &state,
+        &RequestOperationNonceDto {
+            op_kind: OpKind::NorWrite,
+            target: "SA26..SA70".into(),
+            input_sha256: "live_plan".into(),
+        },
+    )
+    .unwrap();
+    // Mismatch fails closed AND burns the single-use challenge immediately.
+    assert!(
+        consume_operation_nonce_with_state(
+            &state,
+            Some(&bad_target.nonce_id),
+            OpKind::NorWrite,
+            "SA26..SA71",
+            "live_plan",
+            true
+        )
+        .is_err()
+    );
+    assert!(
+        consume_operation_nonce_with_state(
+            &state,
+            Some(&bad_target.nonce_id),
+            OpKind::NorWrite,
+            "SA26..SA70",
+            "live_plan",
+            true
+        )
+        .is_err()
+    );
+
+    let bad_input = issue_operation_nonce_with_state(
+        &state,
+        &RequestOperationNonceDto {
+            op_kind: OpKind::NorWrite,
+            target: "SA26..SA70".into(),
+            input_sha256: "live_plan".into(),
+        },
+    )
+    .unwrap();
+    assert!(
+        consume_operation_nonce_with_state(
+            &state,
+            Some(&bad_input.nonce_id),
+            OpKind::NorWrite,
+            "SA26..SA70",
+            "other_plan",
+            true
+        )
+        .is_err()
+    );
+
+    let issued = issue_operation_nonce_with_state(
+        &state,
+        &RequestOperationNonceDto {
+            op_kind: OpKind::NorWrite,
+            target: "SA26..SA70".into(),
+            input_sha256: "LIVE_PLAN".into(),
+        },
+    )
+    .unwrap();
+    let consumed = consume_operation_nonce_with_state(
+        &state,
+        Some(&issued.nonce_id),
+        OpKind::NorWrite,
+        "SA26..SA70",
+        "live_plan",
+        true,
+    )
+    .unwrap();
+    assert_eq!(
+        consumed.as_ref().map(|c| c.nonce_id.as_str()),
+        Some(issued.nonce_id.as_str())
+    );
+    assert!(
+        consume_operation_nonce_with_state(
+            &state,
+            Some(&issued.nonce_id),
+            OpKind::NorWrite,
+            "SA26..SA70",
+            "live_plan",
+            true
+        )
+        .is_err()
+    );
+    assert_eq!(state.bench_stream.snapshot().seq, 0);
 }

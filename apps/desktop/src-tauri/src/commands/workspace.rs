@@ -61,8 +61,10 @@ pub fn get_system_overview() -> IpcResult<SystemOverviewDto> {
             ),
             FLASH_SIZE_8MB_BYTES => (
                 "Matsushita AM34 / MN103S (VEP79138)".to_string(),
-                "Spansion S29JL064H (8 MB NOR, Top-Boot 8x8KB SA134..SA141 @ 0x807F0000)"
-                    .to_string(),
+                format!(
+                    "Spansion S29JL064H (8 MB NOR, Top-Boot 8x8KB SA134..SA141 @ {})",
+                    panadiga_core::constants::AM34_NVRAM_BASE_HEX
+                ),
             ),
             FLASH_SIZE_16MB_BYTES => (
                 "Matsushita AM34 / MN103S (VEP79138)".to_string(),
@@ -126,15 +128,31 @@ pub fn read_hex_dump(
     offset: Option<usize>,
     count: Option<usize>,
 ) -> IpcResult<Vec<HexDumpRowDto>> {
-    let path = file_path.unwrap_or_else(|| {
-        resolve_candidate(
+    let path = match file_path {
+        Some(raw) if !raw.trim().is_empty() => {
+            crate::commands::frm_pack::resolve_safe_read_path(&raw)?
+        }
+        _ => std::path::PathBuf::from(resolve_candidate(
             &[
                 CANDIDATE_HDD_IMAGE_PATHS[0],
                 CANDIDATE_FRM_CONTAINER_PATHS[0],
             ],
             DEFAULT_HDD_IMAGE_PATH,
-        )
-    });
+        )),
+    };
+    let meta = fs::metadata(&path).map_err(|e| {
+        PanadigaIpcError::io(format!(
+            "Falha ao inspecionar binário '{}' para Hex Dump: {}",
+            path.display(),
+            e
+        ))
+    })?;
+    if !meta.is_file() {
+        return Err(PanadigaIpcError::validation(format!(
+            "Caminho '{}' não é um arquivo regular seguro para Hex Dump",
+            path.display()
+        )));
+    }
     let base_offset = offset.unwrap_or(0);
     let row_count = count
         .unwrap_or(DEFAULT_HEX_DUMP_ROWS)
@@ -143,10 +161,11 @@ pub fn read_hex_dump(
     let mut file = File::open(&path).map_err(|e| {
         PanadigaIpcError::io(format!(
             "Falha ao abrir binário '{}' para Hex Dump: {}",
-            path, e
+            path.display(),
+            e
         ))
     })?;
-    let file_len = file.metadata().map(|m| m.len() as usize).unwrap_or(0);
+    let file_len = meta.len() as usize;
 
     let mut rows = Vec::with_capacity(row_count);
     let mut buf = [0u8; HEX_DUMP_ROW_BYTES];

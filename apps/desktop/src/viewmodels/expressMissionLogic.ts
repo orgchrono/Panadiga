@@ -22,6 +22,7 @@ import type {
   SdFlashProgressEvent,
   SdTargetDriveInfo,
 } from '@/models';
+import { requestLiveBgoNonce } from '@/services/benchStreamService';
 import {
   getDigaModelCatalog,
   listPicoSerialPorts,
@@ -276,11 +277,16 @@ export async function runNorRepairMission(params: {
     return;
   }
   const targetNor = params.norDumpReport?.outputPath ?? params.norAuditNvram?.input_file;
+  const liveNonce = params.liveUpperNor ? await requestLiveBgoNonce(targetNor) : null;
   const bgoRes = await picoEh55BgoRepair({
     norPath: targetNor,
     dryRunOnly: !params.liveUpperNor,
     ...(params.liveUpperNor
-      ? { portName: params.portName.trim(), confirmToken: UPPER_NOR_CONFIRM_TOKEN }
+      ? {
+          portName: params.portName.trim(),
+          confirmToken: UPPER_NOR_CONFIRM_TOKEN,
+          ...(liveNonce ? { nonceId: liveNonce.nonce_id } : {}),
+        }
       : {}),
   });
   params.onBgoUpdated(bgoRes.plan.post_audit);

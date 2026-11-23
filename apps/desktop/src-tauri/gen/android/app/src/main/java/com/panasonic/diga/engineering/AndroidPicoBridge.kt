@@ -492,7 +492,8 @@ class AndroidPicoBridge(
             activity.registerReceiver(receiver, filter)
         }
         val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0
-        val pi = PendingIntent.getBroadcast(activity, 0, Intent(USB_PERMISSION_ACTION), flags)
+        val permissionIntent = Intent(USB_PERMISSION_ACTION).setPackage(activity.packageName)
+        val pi = PendingIntent.getBroadcast(activity, 0, permissionIntent, flags)
         mgr.requestPermission(dev, pi)
         latch.await(20, TimeUnit.SECONDS)
         runCatching { activity.unregisterReceiver(receiver) }

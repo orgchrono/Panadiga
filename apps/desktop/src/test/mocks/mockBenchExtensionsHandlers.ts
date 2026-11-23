@@ -21,6 +21,13 @@ import type {
   PicoPanamon1CleanNvramResponse,
   PicoProbeDavisIdeResponse,
 } from '@/models';
+import {
+  SSOT_BENCH_STREAM_LIMITS,
+  SSOT_CONTRACT_HASH_STR,
+  type BenchOpKind,
+  type BenchSnapshot,
+  type OperationNonceChallenge,
+} from '@/models/generated/ssot';
 import { readBooleanProp, readStringProp } from '@/utils/typeGuards';
 import { publishMockEvent, readMockRequest } from './mockEventBus';
 
@@ -52,6 +59,19 @@ const DEVSEL_SLAVE = 0xb0;
 const ATAPI_MID = 0x14;
 const ATAPI_HIGH = 0xeb;
 const MOCK_PROGRESS_STEPS = 4;
+
+const mockNonceStore = new Map<string, OperationNonceChallenge>();
+const mockNonceCounter = new Map<'seq', number>();
+
+function isBenchOpKind(value: string): value is BenchOpKind {
+  return (
+    value === 'nor_dump' ||
+    value === 'nor_write' ||
+    value === 'sd_kit_build' ||
+    value === 'boottrace' ||
+    value === 'ram_probe'
+  );
+}
 
 function buildBgoAuditReport(): Eh55BgoAuditReport {
   const totalBgoSectors = SPANSION_BGO_LAST_SA - SPANSION_BGO_FIRST_SA + 1;
@@ -142,6 +162,39 @@ export function handleMockBenchExtensionsCommand(
 ): unknown | undefined {
   const req = readMockRequest(args);
   switch (cmd) {
+    case 'request_operation_nonce': {
+      const opKindRaw = readStringProp(req, 'opKind')?.trim() ?? 'nor_write';
+      const opKind: BenchOpKind = isBenchOpKind(opKindRaw) ? opKindRaw : 'nor_write';
+      const target = readStringProp(req, 'target')?.trim() || 'SA26..SA70';
+      const inputSha256 = (readStringProp(req, 'inputSha256')?.trim() || 'live_plan').toLowerCase();
+      const nextSeq = (mockNonceCounter.get('seq') ?? 0) + 1;
+      mockNonceCounter.set('seq', nextSeq);
+      const nowMs = Date.now();
+      const challenge: OperationNonceChallenge = {
+        nonce_id: `n_mock_${nextSeq}`,
+        op_kind: opKind,
+        target,
+        input_sha256: inputSha256,
+        ssot_contract_hash: SSOT_CONTRACT_HASH_STR,
+        issued_at_ms: nowMs,
+        expires_at_ms: nowMs + SSOT_BENCH_STREAM_LIMITS.defaultNonceTtlMs,
+      };
+      mockNonceStore.set(challenge.nonce_id, challenge);
+      return challenge;
+    }
+
+    case 'get_bench_snapshot': {
+      const snapshot: BenchSnapshot = {
+        seq: 0,
+        ssot_contract_hash: SSOT_CONTRACT_HASH_STR,
+        state: { kind: 'disconnected' },
+        latest_telemetry: null,
+        active_progress: null,
+        incomplete_op: null,
+      };
+      return snapshot;
+    }
+
     case 'pico_eh55_nor_dump_command': {
       const port = readStringProp(req, 'portName') ?? 'COM10';
       const slice = readStringProp(req, 'slice') ?? 'bgo';
@@ -195,6 +248,26 @@ export function handleMockBenchExtensionsCommand(
       const token = readStringProp(req, 'confirmToken') ?? '';
       if (token !== UPPER_NOR_CONFIRM_TOKEN) {
         throw new Error(`Invalid Upper NOR unlock token: expected ${UPPER_NOR_CONFIRM_TOKEN}`);
+      }
+      const nonceId = readStringProp(req, 'nonceId')?.trim() ?? '';
+      if (!nonceId) {
+        throw new Error('nonceId obrigatório: solicite request_operation_nonce antes de live repair.');
+      }
+      const challenge = mockNonceStore.get(nonceId);
+      mockNonceStore.delete(nonceId);
+      const expectedInput = (
+        readStringProp(req, 'norPath')?.trim() ||
+        readStringProp(req, 'planPath')?.trim() ||
+        'live_plan'
+      ).toLowerCase();
+      if (
+        !challenge ||
+        Date.now() > challenge.expires_at_ms ||
+        challenge.op_kind !== 'nor_write' ||
+        challenge.target !== 'SA26..SA70' ||
+        challenge.input_sha256 !== expectedInput
+      ) {
+        throw new Error(`Invalid or expired operation nonce '${nonceId}'.`);
       }
       const backupDir = readStringProp(req, 'backupDir') ?? 'unbrick_out/bgo_pre_repair_backup';
       publishMockEvent('bgo://repair-progress', {

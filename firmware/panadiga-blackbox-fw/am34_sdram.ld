@@ -1,4 +1,4 @@
-/* Clean-Room GNU LD Script for Panasonic DIGA AM34 / MN103S Stage-1.5 SDRAM (0x50400000) */
+/* Open-Source Hardware-Interop GNU LD Script for Panasonic DIGA AM34 / MN103S Stage-1.5 SDRAM (0x50400000) */
 ENTRY(_start)
 
 MEMORY

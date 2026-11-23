@@ -202,13 +202,10 @@ export const sendSc0BridgeInput = (inputMode: Sc0BridgeInputMode, payload: strin
   invokeCommand<number>('pico_send_bridge_input', { inputMode, payload });
 
 export const emitPicoTelemetry = (status: PicoDeviceStatus): void =>
-  emitLocalEvent('pico_telemetry', status);
+  emitLocalEvent('pico://telemetry', status);
 
 export const subscribePicoTelemetry = (handler: (status: PicoDeviceStatus) => void) =>
   listenEvent('pico://telemetry', handler);
-
-export const subscribeLegacyPicoTelemetry = (handler: (status: PicoDeviceStatus) => void) =>
-  listenEvent('pico_telemetry', handler);
 
 export const subscribePicoDiagnosticResult = (handler: (diag: PicoDiagnosticResult) => void) =>
   listenEvent('pico://diagnostic-result', handler);
