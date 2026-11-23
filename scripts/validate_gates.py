@@ -190,11 +190,6 @@ def _gate_ghidra_smoke(env: Mapping[str, str], *, capture_output: bool = False) 
         print_status("PASS", "PyGhidra MN103S synthetic Traps #1-#8 smoke + Java TrapAudit passed!", "32")
 
 
-def _lane_rust_and_ghidra(env: Mapping[str, str]) -> None:
-    _gate_rust(env, capture_output=True)
-    _gate_ghidra(env, capture_output=True)
-
-
 def run_sequential_gates(env: Mapping[str, str], *, ghidra_smoke: bool = False) -> None:
     """Execute all 9 Quality Gates (plus optional Ghidra smoke) sequentially."""
     gates: list[Callable[[Mapping[str, str]], None]] = [
@@ -215,9 +210,11 @@ def run_sequential_gates(env: Mapping[str, str], *, ghidra_smoke: bool = False) 
 
 
 def run_parallel_lanes(env: Mapping[str, str], max_jobs: int, *, ghidra_smoke: bool = False) -> None:
-    """Execute all 9 Quality Gates via thread-pool DAG with fail-fast ProcessTracker cleanup."""
-    lane_list: list[tuple[str, Callable[[Mapping[str, str]], None]]] = [
-        ("1+7/9 Rust Workspace + Ghidra", _lane_rust_and_ghidra),
+    """Execute all 9 Quality Gates via thread-pool DAG without SSOT write-races."""
+    ghidra_lane_label = "7/9 SSOT + Ghidra Native Export"
+    pytest_lane_label = "9b/9 Python Compile + Pytest"
+    initial_list: list[tuple[str, Callable[[Mapping[str, str]], None]]] = [
+        ("1/9 Rust Workspace", lambda e: _gate_rust(e, capture_output=True)),
         ("2/9 Oxlint + TypeScript", lambda e: _gate_typescript(e, capture_output=True)),
         ("3/9 Vitest Unit Suite", lambda e: _gate_vitest(e, capture_output=True)),
         ("4/9 Copy/Paste (jscpd 0%)", lambda e: _gate_jscpd(e, capture_output=True)),
@@ -225,14 +222,14 @@ def run_parallel_lanes(env: Mapping[str, str], max_jobs: int, *, ghidra_smoke: b
         ("6/9 Playwright E2E", lambda e: _gate_playwright(e, capture_output=True)),
         ("8/9 C11 Firmware Host Tests", lambda e: _gate_c11_host(e, capture_output=True)),
         ("9a/9 Python Mypy Strict", lambda e: _gate_python_mypy(e, capture_output=True)),
-        ("9b/9 Python Compile + Pytest", lambda e: _gate_python_compile_and_pytest(e, capture_output=True)),
     ]
     if ghidra_smoke:
-        lane_list.append(("10/9 Ghidra Headless Smoke", lambda e: _gate_ghidra_smoke(e, capture_output=True)))
-    lanes = tuple(lane_list)
-    worker_count = max(1, min(max_jobs, len(lanes)))
+        initial_list.append(("10/9 Ghidra Headless Smoke", lambda e: _gate_ghidra_smoke(e, capture_output=True)))
+    initial_lanes = tuple(initial_list)
+    total_lanes = len(initial_lanes) + 2
+    worker_count = max(1, min(max_jobs, total_lanes))
     print_banner(
-        f"PANADIGA PARALLEL QUALITY GATES ({len(lanes)} lanes | max_workers={worker_count})"
+        f"PANADIGA PARALLEL QUALITY GATES ({total_lanes} lanes | max_workers={worker_count})"
     )
 
     tracker = ProcessTracker()
@@ -243,10 +240,7 @@ def run_parallel_lanes(env: Mapping[str, str], max_jobs: int, *, ghidra_smoke: b
             fn(env)
         return label, time.monotonic() - t0
 
-    rust_lane_label = "1+7/9 Rust Workspace + Ghidra"
-    pytest_lane_label = "9b/9 Python Compile + Pytest"
-    initial_lanes = tuple((label, fn) for label, fn in lanes if label != pytest_lane_label)
-
+    ghidra_submitted = False
     with ThreadPoolExecutor(max_workers=worker_count) as pool:
         future_map: dict[Future[tuple[str, float]], str] = {
             pool.submit(_timed_run, label, fn): label for label, fn in initial_lanes
@@ -260,7 +254,7 @@ def run_parallel_lanes(env: Mapping[str, str], max_jobs: int, *, ghidra_smoke: b
                     try:
                         done_label, dt = fut.result()
                         print_status("PASS", f"{done_label} ({dt:.2f}s)", "32")
-                        if done_label == rust_lane_label:
+                        if done_label == ghidra_lane_label:
                             py_fut = pool.submit(
                                 _timed_run,
                                 pytest_lane_label,
@@ -283,6 +277,16 @@ def run_parallel_lanes(env: Mapping[str, str], max_jobs: int, *, ghidra_smoke: b
                         tracker.terminate_all()
                         print_status("FAIL", f"{label} failed", "31")
                         raise
+                if not pending and not ghidra_submitted:
+                    ghidra_submitted = True
+                    # Run SSOT + Ghidra regeneration only after all reader lanes finish cleanly.
+                    gh_fut = pool.submit(
+                        _timed_run,
+                        ghidra_lane_label,
+                        lambda e: _gate_ghidra(e, capture_output=True),
+                    )
+                    future_map[gh_fut] = ghidra_lane_label
+                    pending.add(gh_fut)
         except KeyboardInterrupt:
             for p in pending:
                 p.cancel()

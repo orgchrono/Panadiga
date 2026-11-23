@@ -43,7 +43,7 @@ def run_build_pipeline(
     print_banner(f"PANADIGA PIPELINE DAG | {accel_desc}")
 
     summary: list[tuple[str, str, float]] = []
-    need_frontend = selection.frontend or selection.desktop or selection.android
+    need_desktop_frontend = selection.frontend or selection.desktop
     pico_env = prepare_pico_env(env) if selection.pico else env
     pico_digest = ""
     pico_outputs: tuple[Path, ...] = ()
@@ -81,11 +81,23 @@ def run_build_pipeline(
     # Wave 1: Parallel independent build & preparation tasks.
     wave1_tasks: list[tuple[str, Callable[[], object]]] = []
     wave1_t0 = time.monotonic()
-    if need_frontend:
+    if need_desktop_frontend:
         wave1_tasks.append(
             (
                 "frontend",
                 lambda: build_frontend(env, use_cache=selection.use_cache, capture_output=True),
+            )
+        )
+    if run_android:
+        wave1_tasks.append(
+            (
+                "frontend_android",
+                lambda: build_frontend(
+                    env,
+                    use_cache=selection.use_cache,
+                    capture_output=True,
+                    android=True,
+                ),
             )
         )
     if run_pico and not pico_cached:
@@ -99,6 +111,9 @@ def run_build_pipeline(
         if "frontend" in w1:
             fe_hit = bool(w1["frontend"])
             summary.append(("Frontend Vite UI", "CACHE HIT" if fe_hit else "BUILT", w1_dt))
+        if "frontend_android" in w1:
+            fa_hit = bool(w1["frontend_android"])
+            summary.append(("Frontend Android UI", "CACHE HIT" if fa_hit else "BUILT", w1_dt))
         pico_res = w1.get("pico_boards")
         if isinstance(pico_res, tuple) and len(pico_res) == 2:
             rp2040_uf2, rp2350_uf2 = pico_res

@@ -78,24 +78,65 @@ def _run_profiles_validate(overlay_dir: Path | None = None) -> subprocess.Comple
     return subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, check=False)
 
 
+ENTITY_SCHEMA_MAP: Final[dict[str, str]] = {
+    "soc_cores": "soc_core.schema.json",
+    "socs": "soc.schema.json",
+    "flash_chips": "flash_chip.schema.json",
+    "eeprom_chips": "eeprom_chip.schema.json",
+    "firmware_trains": "firmware_train.schema.json",
+    "nor_layouts": "nor_layout.schema.json",
+    "media_formats": "media_format.schema.json",
+    "boards": "board.schema.json",
+    "models": "model_manifest.schema.json",
+}
+
+CORE_JSON_CATALOGS: Final[tuple[str, ...]] = (
+    "crates/panadiga-core/src/ssot/hardware_catalog.json",
+    "crates/panadiga-core/src/ssot/hardware_catalog_labels.json",
+    "crates/panadiga-core/src/ghidra/specs/ghidra_maps_ssot.json",
+    "crates/panadiga-ir/src/ir_macros_ssot.json",
+    "crates/panadiga-core/src/re/error_dict/firmware_error_dict.json",
+)
+
+
 def test_all_12_json_schemas_and_v2_entities_parse_cleanly() -> None:
-    """Every Draft 2020-12 schema and every v2 entity JSON parses cleanly with valid tiers."""
+    """Every Draft 2020-12 schema and every v2 entity JSON parses cleanly with required fields & valid tiers."""
+    schemas: dict[str, dict[str, object]] = {}
     for name in EXPECTED_SCHEMAS:
         schema_path = SCHEMA_DIR / name
         assert schema_path.is_file(), f"Missing schema file: {schema_path}"
         parsed = json.loads(schema_path.read_text(encoding="utf-8"))
         assert "$schema" in parsed
+        schemas[name] = parsed
 
     for sub in ENTITY_DIRS:
         files = sorted((PROFILES_DIR / sub).glob("*.json"))
         assert files, f"Expected entity files under profiles/{sub}"
+        schema_obj = schemas[ENTITY_SCHEMA_MAP[sub]]
+        required_keys = schema_obj.get("required")
         for path in files:
             data = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(required_keys, list):
+                for req_key in required_keys:
+                    assert req_key in data, f"Missing required key {req_key!r} in {path.relative_to(ROOT)}"
             if sub == "models":
                 for axis_data in data["claims"].values():
                     assert axis_data["tier"] in VALID_TIERS
             else:
                 assert data["evidence"]["tier"] in VALID_TIERS
+
+    for rel in CORE_JSON_CATALOGS:
+        catalog_path = ROOT / rel
+        assert catalog_path.is_file(), f"Missing core JSON catalog: {rel}"
+        parsed_cat = json.loads(catalog_path.read_text(encoding="utf-8"))
+        assert isinstance(parsed_cat, (dict, list)) and bool(parsed_cat), (
+            f"Core JSON catalog must be non-empty object or array: {rel}"
+        )
+
+    traps_cat = json.loads((PROFILES_DIR / "traps" / "geometry_and_binary_traps.json").read_text(encoding="utf-8"))
+    assert isinstance(traps_cat, dict) and traps_cat.get("schema_version") == 1 and traps_cat.get("traps")
+    atlas_cat = json.loads((PROFILES_DIR / "forensic_atlas" / "firmware_forensic_atlas.json").read_text(encoding="utf-8"))
+    assert isinstance(atlas_cat, dict) and isinstance(atlas_cat.get("atlas_sha256"), str) and atlas_cat.get("summary")
 
 
 def test_cli_profiles_validate_succeeds_and_rejects_tampered_overlay() -> None:
@@ -130,6 +171,7 @@ def test_no_stale_sa_labels_in_rules_release_or_profiles() -> None:
         ROOT / "GEMINI.md",
         ROOT / ".agents" / "rules" / "AGENTS.md",
         ROOT / ".github" / "RELEASE_NOTES.md",
+        *(ROOT / rel for rel in CORE_JSON_CATALOGS),
         *sorted(PROFILES_DIR.rglob("*.json")),
     ]
     for path in targets:
