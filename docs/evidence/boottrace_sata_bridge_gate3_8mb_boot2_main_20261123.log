@@ -1,0 +1,797 @@
+=== BOOTTRACE: window=60000ms boot=1 hold=0ms sticky=NO no_xrst=NO (8N1 @ 115200) ===
+[BOOTTRACE +  10ms] DDR CHECK: OK
+[BOOTTRACE +  19ms] Chip select = 1
+[BOOTTRACE +  20ms] F/E Address = 0x90202000 , Drive(compress) Size = 0xACC50
+[BOOTTRACE +  26ms] uncompress dst=90202000 len=160000 src=84080040 len=acc01
+[BOOTTRACE + 775ms] HEADER:5627DD54, DECOMP:5627DD54
+[BOOTTRACE + 778ms] F/E reset release finish ...
+[BOOTTRACE + 781ms] ***** Loader ver0.61 [06/03/06] *****
+[BOOTTRACE + 784ms] ***** normal mode *****
+[BOOTTRACE + 802ms] !!! start fmu to read & exec fvu. !!!
+[BOOTTRACE + 805ms] wait 1 second.
+[BOOTTRACE +1807ms] *** timer correspond initialize ***
+[BOOTTRACE +1812ms] startup reason = [70]
+[BOOTTRACE +1816ms] Main hung-up time changed 255[s].
+[BOOTTRACE +1828ms] *** RTSC Initialize ***
+[BOOTTRACE +4607ms] [RTSD] ATAPI Software Reset 
+[BOOTTRACE +4610ms] error! startup reason is invalid.
+[BOOTTRACE +5935ms] DDR CHECK: OK
+[BOOTTRACE +5944ms] Chip select = 1
+[BOOTTRACE +5945ms] F/E Address = 0x90202000 , Drive(compress) Size = 0xACC50
+[BOOTTRACE +5950ms] uncompress dst=90202000 len=160000 src=84080040 len=acc01
+[BOOTTRACE +6699ms] HEADER:5627DD54, DECOMP:5627DD54
+[BOOTTRACE +6702ms] F/E reset release finish ...
+[BOOTTRACE +6705ms] ***** Loader ver0.61 [06/03/06] *****
+[BOOTTRACE +6708ms] ***** normal mode *****
+[BOOTTRACE +6725ms] *** RTSC Initialize ***
+[BOOTTRACE +9455ms] [RTSD] ATAPI Software Reset 
+[BOOTTRACE +9468ms] [RTSD] HDD spin-up error (80000404)
+[BOOTTRACE +9471ms] miniboot : system assert!!
+[BOOTTRACE +9474ms] [RTSD] === IDE HOST ERROR === ( E8000000 )
+[BOOTTRACE +9478ms] *** ATAPI DEVICE ERROR
+[BOOTTRACE +9480ms] CDB  [FF EC 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +9484ms] Reg[00 00 00 00 00 00 00 : Err SecC SecN CylL CylH D/H Status] 
+[BOOTTRACE +9489ms] H_STAT [E8] T_STAT [0]
+[BOOTTRACE +9492ms] [RTSD] SRST Command Set
+[BOOTTRACE +9494ms] [RTSD] Reset Failed !! (80000407)
+[BOOTTRACE +9507ms] [RTSD] HDD spin-up error (80000404)
+[BOOTTRACE +9510ms] miniboot : system assert!!
+[BOOTTRACE +9513ms] [RTSD] === IDE HOST ERROR === ( E8000000 )
+[BOOTTRACE +9517ms] *** ATAPI DEVICE ERROR
+[BOOTTRACE +9519ms] CDB  [FF EC 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +9523ms] Reg[00 00 00 00 00 00 00 : Err SecC SecN CylL CylH D/H Status] 
+[BOOTTRACE +9528ms] H_STAT [E8] T_STAT [0]
+[BOOTTRACE +9531ms] [RTSD] SRST Command Set
+[BOOTTRACE +9533ms] [RTSD] Reset Failed !! (80000407)
+[BOOTTRACE +9546ms] [RTSD] HDD spin-up error (80000404)
+[BOOTTRACE +9549ms] miniboot : system assert!!
+[BOOTTRACE +9552ms] [RTSD] === IDE HOST ERROR === ( E8000000 )
+[BOOTTRACE +9556ms] *** ATAPI DEVICE ERROR
+[BOOTTRACE +9558ms] CDB  [FF EC 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +9562ms] Reg[00 00 00 00 00 00 00 : Err SecC SecN CylL CylH D/H Status] 
+[BOOTTRACE +9568ms] H_STAT [E8] T_STAT [0]
+[BOOTTRACE +9570ms] [RTSD] SRST Command Set
+[BOOTTRACE +9572ms] [RTSD] Reset Failed !! (80000407)
+[BOOTTRACE +9575ms] HDD_MAX_LBA get failed[0xE8000000].
+[BOOTTRACE +9578ms] mainsoft data is invalid, so set update flag.
+[BOOTTRACE +9599ms] [nfrom] file_no[17],skip(0),non_skip(1),erase(0),new_write(0).
+[BOOTTRACE +10233ms] !!! start fmu to read & exec fvu. !!!
+[BOOTTRACE +10237ms] wait 1 second.
+[BOOTTRACE +11239ms] *** timer correspond initialize ***
+[BOOTTRACE +11245ms] startup reason = [70]
+[BOOTTRACE +11251ms] Main hung-up time changed 255[s].
+[BOOTTRACE +11260ms] Read fvu program from Update-Disk to 0x90400000.
+[BOOTTRACE +11265ms] SD card check start
+[BOOTTRACE +11267ms] SD init start...
+[BOOTTRACE +11359ms] [SDCD] sdcd_insrmv_check:SD Card inserted 
+[BOOTTRACE +11615ms] [SDCD] === This Card Spec ==== 
+[BOOTTRACE +11618ms] .Card type:2(condition:3) wp:0
+[BOOTTRACE +11621ms] .capacity:3c4000[LBA](2021654528Byte) . transfer speed:25000[Kbps]
+[BOOTTRACE +11627ms] .RCA:2 . Bus Width:4(current) 4(support)
+[BOOTTRACE +11630ms] .Multi Max Block Len Read:2[SECT] / Write:2[SECT]
+[BOOTTRACE +11635ms] SD = 0x3C4000[LBA]
+[BOOTTRACE +11637ms] ... SD init end
+[BOOTTRACE +11645ms] FAT Mount ID = 0x1
+[BOOTTRACE +11650ms] FAT Open Old File ID = 0xC8
+[BOOTTRACE +11652ms] treat as SD.
+[BOOTTRACE +11670ms] File ID[0xC8] seek to 0xB1800.
+[BOOTTRACE +11739ms] File ID[0xC8] read to 0x90400000(size=0x40000).
+[BOOTTRACE +11744ms] cheking for fvu program check-sum[0x216507A].
+[BOOTTRACE +11829ms] [nfrom] file_no[17],skip(0),non_skip(1),erase(0),new_write(0).
+[BOOTTRACE +11844ms] success to read fvu program from Update-Disc.
+[BOOTTRACE +11879ms] [RTSD] Device Reset Occurred(0x62900) 
+[BOOTTRACE +11883ms] X(80062900)X(80023a00)X(80023a00)X(80023a00)
+[BOOTTRACE +11890ms] *** start fvu ***
+[BOOTTRACE +11898ms] ***** Fvu ver0.61 [05/11/01] *****
+[BOOTTRACE +11916ms] *** RTSC Initialize ***
+[BOOTTRACE +15106ms] [RTSD] ATAPI Software Reset 
+[BOOTTRACE +15109ms] [STAGE2] SATA HDD boot ('F'->FVU)...
+[BOOTTRACE +15612ms] SD init start...
+[BOOTTRACE +15704ms] [SDCD] sdcd_insrmv_check:SD Card inserted 
+[BOOTTRACE +15775ms] [SDCD] === This Card Spec ==== 
+[BOOTTRACE +15778ms] .Card type:2(condition:3) wp:0
+[BOOTTRACE +15781ms] .capacity:3c4000[LBA](2021654528Byte) . transfer speed:25000[Kbps]
+[BOOTTRACE +15787ms] .RCA:2 . Bus Width:4(current) 4(support)
+[BOOTTRACE +15790ms] .Multi Max Block Len Read:2[SECT] / Write:2[SECT]
+[BOOTTRACE +15795ms] SD = 0x3C4000[LBA]
+[BOOTTRACE +15797ms] ... SD init end
+[BOOTTRACE +15802ms] [RTSD] HDD already spin-up 
+[BOOTTRACE +15836ms] [RTSD] HDD Auto Spin up Mode 
+[BOOTTRACE +15842ms] [STAGE2] HDD MAX LBA=0x1D1C5970
+[BOOTTRACE +17747ms] uncompress dst=57000000 len=cce48c src=94000040 len=644fdd
+[BOOTTRACE +21659ms] HEADER:81132B55, DECOMP:81132B55
+[BOOTTRACE +21662ms] [STAGE2] Boot MAIN @ 0x57000000
+[BOOTTRACE +22206ms] [nfrom] DeviceInfo(EEPROM : 8Kbit)
+[BOOTTRACE +22336ms] **************************************************
+[BOOTTRACE +22341ms] [ftrec]Simple obstacle history
+[BOOTTRACE +22344ms] [ftrec]Running time  : -1 [s]
+[BOOTTRACE +22347ms] [ftrec]Fault history : 255
+[BOOTTRACE +22349ms] [ftrec]NAND-FROM read error! Fault history clear!
+[BOOTTRACE +22354ms] --------------------------------------------------
+[BOOTTRACE +22359ms] kind, tick, running, other1, other2, other3
+[BOOTTRACE +22363ms] [ 0]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22368ms] [ 1]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22372ms] [ 2]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22377ms] [ 3]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22382ms] [ 4]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22387ms] [ 5]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22392ms] [ 6]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22397ms] [ 7]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22401ms] [ 8]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22406ms] [ 9]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22411ms] [10]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22416ms] [11]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22421ms] [12]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22426ms] [13]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22430ms] [14]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22435ms] [15]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22440ms] [16]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22445ms] [17]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22450ms] [18]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22455ms] [19]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22460ms] [20]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22464ms] [21]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22469ms] [22]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22474ms] [23]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22479ms] [24]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22484ms] [25]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22489ms] [26]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22493ms] [27]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22498ms] [28]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22503ms] [29]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22508ms] [30]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22513ms] [31]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22518ms] [32]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22522ms] [33]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22527ms] [34]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22532ms] [35]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22537ms] [36]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22542ms] [37]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22547ms] [38]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22552ms] [39]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22556ms] [40]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22561ms] [41]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22566ms] [42]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22571ms] [43]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22576ms] [44]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22581ms] [45]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22585ms] [46]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22590ms] [47]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22595ms] [48]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22600ms] [49]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22605ms] [50]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22610ms] [51]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22615ms] [52]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22619ms] [53]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22624ms] [54]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22629ms] [55]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22634ms] [56]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22639ms] [57]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22644ms] [58]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22649ms] [59]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22653ms] [60]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22658ms] [61]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22663ms] [62]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22668ms] [63]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22673ms] [64]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22677ms] [65]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22682ms] [66]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22687ms] [67]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22692ms] [68]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22697ms] [69]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22702ms] [70]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22706ms] [71]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22711ms] [72]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22716ms] [73]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22721ms] [74]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22726ms] [75]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22731ms] [76]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22736ms] [77]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22740ms] [78]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22745ms] [79]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22750ms] [80]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22755ms] [81]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22760ms] [82]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22765ms] [83]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22769ms] [84]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22774ms] [85]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22779ms] [86]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22784ms] [87]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22789ms] [88]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22794ms] [89]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22799ms] [90]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22803ms] [91]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22808ms] [92]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22813ms] [93]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22818ms] [94]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22823ms] [95]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22828ms] [96]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22832ms] [97]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22837ms] [98]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22842ms] [99]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22847ms] [100]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22852ms] [101]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22857ms] [102]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22862ms] [103]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22867ms] [104]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22872ms] [105]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22877ms] [106]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22882ms] [107]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22886ms] [108]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22891ms] [109]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22896ms] [110]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22901ms] [111]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22906ms] [112]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22911ms] [113]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22916ms] [114]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22921ms] [115]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22926ms] [116]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22931ms] [117]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22936ms] [118]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22941ms] [119]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22946ms] [120]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22951ms] [121]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22956ms] [122]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22960ms] [123]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22965ms] [124]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22970ms] [125]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22975ms] [126]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22980ms] [127]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22985ms] [128]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22990ms] [129]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +22995ms] [130]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23000ms] [131]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23005ms] [132]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23010ms] [133]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23015ms] [134]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23020ms] [135]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23025ms] [136]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23029ms] [137]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23034ms] [138]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23039ms] [139]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23044ms] [140]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23049ms] [141]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23054ms] [142]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23059ms] [143]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23064ms] [144]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23069ms] [145]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23074ms] [146]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23079ms] [147]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23084ms] [148]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23089ms] [149]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23094ms] [150]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23099ms] [151]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23104ms] [152]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23109ms] [153]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23113ms] [154]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23119ms] [155]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23123ms] [156]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23128ms] [157]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23133ms] [158]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23138ms] [159]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23143ms] [160]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23148ms] [161]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23153ms] [162]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23158ms] [163]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23163ms] [164]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23168ms] [165]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23173ms] [166]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23178ms] [167]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23182ms] [168]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23187ms] [169]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23192ms] [170]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23197ms] [171]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23202ms] [172]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23207ms] [173]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23212ms] [174]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23217ms] [175]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23222ms] [176]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23227ms] [177]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23232ms] [178]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23237ms] [179]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23242ms] [180]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23247ms] [181]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23252ms] [182]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23256ms] [183]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23261ms] [184]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23266ms] [185]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23271ms] [186]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23276ms] [187]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23281ms] [188]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23286ms] [189]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23291ms] [190]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23296ms] [191]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23301ms] [192]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23306ms] [193]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23311ms] [194]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23316ms] [195]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23321ms] [196]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23326ms] [197]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23330ms] [198]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23335ms] [199]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23340ms] [200]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23345ms] [201]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23350ms] [202]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23355ms] [203]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23360ms] [204]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23365ms] [205]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23370ms] [206]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23375ms] [207]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23380ms] [208]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23385ms] [209]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23390ms] [210]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23395ms] [211]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23400ms] [212]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23404ms] [213]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23409ms] [214]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23414ms] [215]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23419ms] [216]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23424ms] [217]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23429ms] [218]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23434ms] [219]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23439ms] [220]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23444ms] [221]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23449ms] [222]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23454ms] [223]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23459ms] [224]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23464ms] [225]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23469ms] [226]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23473ms] [227]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23478ms] [228]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23483ms] [229]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23488ms] [230]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23493ms] [231]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23498ms] [232]0x0 , 1980/01/01 00:00:00 ,         0 , , 0 , 0
+[BOOTTRACE +23503ms] [233]0x0 , 1980/01/01 00:00:00 , 855965696 , , 0 , 0
+[BOOTTRACE +23508ms] [234]0xff , 2116/02/07 06:28:15 ,        -1 , , 0 , 855965696
+[BOOTTRACE +23514ms] [235]0xff , 2116/02/07 06:28:15 ,        -1 , , -1 , -1
+[BOOTTRACE +23519ms] [236]0xff , 2116/02/07 06:28:15 ,        -1 , , -1 , -1
+[BOOTTRACE +23524ms] [237]0xff , 2116/02/07 06:28:15 ,        -1 , , -1 , -1
+[BOOTTRACE +23529ms] [238]0xff , 2116/02/07 06:28:15 ,        -1 , , -1 , -1
+[BOOTTRACE +23535ms] [239]0xff , 2116/02/07 06:28:15 ,        -1 , , -1 , -1
+[BOOTTRACE +23540ms] [240]0xff , 2116/02/07 06:28:15 ,        -1 , , -1 , -1
+[BOOTTRACE +23545ms] [241]0xff , 2116/02/07 06:28:15 ,        -1 , , -1 , -1
+[BOOTTRACE +23550ms] [242]0xff , 2116/02/07 06:28:15 ,        -1 , , -1 , -1
+[BOOTTRACE +23555ms] [243]0xff , 2116/02/07 06:28:15 ,        -1 , , -1 , -1
+[BOOTTRACE +23561ms] [244]0xff , 2116/02/07 06:28:15 ,        -1 , , -1 , -1
+[BOOTTRACE +23566ms] [245]0xff , 2116/02/07 06:28:15 ,        -1 , , -1 , -1
+[BOOTTRACE +23571ms] [246]0xff , 2116/02/07 06:28:15 ,        -1 , , -1 , -1
+[BOOTTRACE +23576ms] [247]0xff , 2116/02/07 06:28:15 ,        -1 , , -1 , -1
+[BOOTTRACE +23581ms] [248]0xff , 2116/02/07 06:28:15 ,        -1 , , -1 , -1
+[BOOTTRACE +23587ms] [249]0xff , 2116/02/07 06:28:15 ,        -1 , , -1 , -1
+[BOOTTRACE +23592ms] [250]0xff , 2116/02/07 06:28:15 ,        -1 , , -1 , -1
+[BOOTTRACE +23597ms] [251]0xff , 2116/02/07 06:28:15 ,        -1 , , -1 , -1
+[BOOTTRACE +23602ms] [252]0xff , 2116/02/07 06:28:15 ,        -1 , , -1 , -1
+[BOOTTRACE +23607ms] [253]0xff , 2116/02/07 06:28:15 ,        -1 , , -1 , -1
+[BOOTTRACE +23613ms] [254]0xff , 2116/02/07 06:28:15 ,        -1 , , -1 , -1
+[BOOTTRACE +23618ms] **************************************************
+[BOOTTRACE +23623ms] PiE-OS --- Personal Information & Entertainment - Operating System
+[BOOTTRACE +23629ms] Copyright (c) 1996-2001 by Matsushita Electric Industrial Co., Ltd.
+[BOOTTRACE +23635ms]   DVD Recorder DMR5x Series System Version : 3060NP (2006/04/27)
+[BOOTTRACE +23641ms]     Factory System Version = 3060NP
+[BOOTTRACE +23644ms]           1394avc.a Ver2.17(2006/02/09) : 1394AVC
+[BOOTTRACE +23649ms]            lnx_dd.a Ver2.01(2005/10/26) : 1394dd
+[BOOTTRACE +23654ms]               hsb.a Ver2.01(2005/09/12) : 1394lib
+[BOOTTRACE +23658ms]            fpc.a V7.1R12.1 (2006/04/27) : FPC(FrontPanelCommunication)
+[BOOTTRACE +23665ms]              log.a Ver1.77 (2006/02/13) : LOG Module
+[BOOTTRACE +23670ms]           ptk.a(M6) 2.2.06 (2006/01/17) : PiE-Toolkit
+[BOOTTRACE +23675ms]            timer.a V4.70.2 (2006/02/26) : Timer
+[BOOTTRACE +23679ms]        TitleSort.a Ver1.00 (2005/08/27) : Title Sort Module
+[BOOTTRACE +23685ms]          tuner.a V7.1R13.2 (2006/03/02) : Tuner I/F
+[BOOTTRACE +23690ms]            vbisl.a V2.0R21 (2005/12/26) : Vbisl Driver
+[BOOTTRACE +23695ms]             avin.a Ver0.82 (2006/02/14) : AVIN Lib.(mv3base)
+[BOOTTRACE +23701ms]         cd_core.a Ver 5.02 (2005/09/14) : CD/VCD CoreSoft
+[BOOTTRACE +23706ms]            davis.a ver2.10 (2006/01/16) : DAVIS
+[BOOTTRACE +23710ms]       decoder.a(DCS) Ver3.10 2005/12/16 : Decorder System Control
+[BOOTTRACE +23716ms]  decoder.a(DCR) DCR Ver2.120 2005/11/30 : DecorderVideoRecording
+[BOOTTRACE +23722ms]          decoder.a Ver0.49 (2005/05/20) : Decorder CD
+[BOOTTRACE +23727ms]    decoder.a(DCO) Ver0.083 (2006/02/17) : Decorder AVOUT
+[BOOTTRACE +23733ms]     decoder.a(DCV) Ver0.23 (2005/12/26) : M6xxx-Series Decorder DVD-Video
+[BOOTTRACE +23740ms]          decoder.a Ver0.73 (2005/11/21) : Decorder Video-CD
+[BOOTTRACE +23745ms]     decoder.a(DCA) Ver0.16 (2005/10/07) : M7xxx-Series Decorder DVD-Audio
+[BOOTTRACE +23752ms]          decoder.a Ver0.49 (2005/10/04) : Decorder MP3
+[BOOTTRACE +23757ms]          decoder.a Ver0.08 (2004/05/21) : Decorder SD MPEG2
+[BOOTTRACE +23763ms]          decoder.a Ver0.03 (2005/05/23) : Decorder GDP3
+[BOOTTRACE +23768ms]              dml.a Ver1.00 (2004/10/20) : DiscManagementLibrary
+[BOOTTRACE +23774ms]              dvdcore.a v0.200(06/02/27) : DVD-Video/AudioCoreSoft
+[BOOTTRACE +23780ms]            dvdcore_ext.a v1.2(05/11/18) : DVD-Video/AudioCoreSoft
+[BOOTTRACE +23786ms]          dvr_core.a Ver0.75(2006/01/24) : DVR CORE
+[BOOTTRACE +23791ms]          dvr_ifo.a Ver0.02 (2003/10/22) : RTR_IFO Manager
+[BOOTTRACE +23796ms]                                                                                                                                                                
+[BOOTTRACE +23811ms]                                                                                              SRISC VerMv3SriscDrs-v0.90r037 (2005/10/11) : ENCODER-SRISC
+[BOOTTRACE +23825ms]                                                                                                                                                                
+[BOOTTRACE +23840ms]                                                                                           ERISC VerMv3RomEriscRAM-v0.90r010 (2005/11/07) : ENCODER-ERISC
+[BOOTTRACE +23853ms]               eif.a Ver0.08(2005/11/08) : Encoder I/F
+[BOOTTRACE +23858ms]              evp.a Ver0.07 (2004/06/08) : EVP Lib.
+[BOOTTRACE +23863ms]            fcore.a Ver0.25 (2006/01/10) : Finalize Core Module
+[BOOTTRACE +23869ms]             flib.a Ver0.28 (2005/12/06) : Finalize-Library.
+[BOOTTRACE +23875ms]         fs.a       Ver0.72a(2006/02/08) : File System (VDM Ver.0.92base)
+[BOOTTRACE +23881ms]         fs.a(HDFS) Ver0.80 (2006/02/07) : File System (HDFS)
+[BOOTTRACE +23887ms]         fs.a(UDF)  Ver0.12 (2005/08/31) : File System (UDF)
+[BOOTTRACE +23893ms]            ftrec.a Ver0.10 (2005/11/01) : FTREC
+[BOOTTRACE +23897ms]        gem_engine.a Ver0.57(2005/10/31) : G-Guide M/W
+[BOOTTRACE +23902ms]              iic.a Ver3.04 (2005/09/29) : IIC Lib.
+[BOOTTRACE +23907ms]         input.a 3.0.5(M6)  (2005/12/19) : PiE Input
+[BOOTTRACE +23912ms]              irq.a Ver0.22 (2005/09/05) : IRQ Lib
+[BOOTTRACE +23916ms]        jpg_core.a Ver4.131 (2005/12/15) : JPEG CoreSoft
+[BOOTTRACE +23921ms]        ld_gen.a Ver 0.14.0 (2005/10/28) : LD_gen - generic file loader
+[BOOTTRACE +23928ms]                lda.a Ver0.28 2005/08/25 : DVD-AUDIO Loader
+[BOOTTRACE +23934ms]      loader_vcd.a Ver 0.13 (2005/08/25) : Loder VCD/CD-DA
+[BOOTTRACE +23939ms]             ldg.a Ver 0.08 (2004/05/21) : Loder SD MPEG2
+[BOOTTRACE +23944ms]             ldm.a Ver 0.13 (2005/08/23) : Loder MP3
+[BOOTTRACE +23949ms]             ldr.a ver 0.203(2005/10/12) : RAM Loader
+[BOOTTRACE +23954ms]             ldu.a Ver 0.12 (2005/08/25) : Loader Guide MP3
+[BOOTTRACE +23959ms]                ldv.a v0.100(2005/12/28) : DVDVideo Loader
+[BOOTTRACE +23965ms]              mbm.a Ver1.48 (2005/11/24) : Memory Back UP System
+[BOOTTRACE +23971ms]        mcm.a ver Ver 2.269 (2006/02/17) : MCM
+[BOOTTRACE +23975ms]           fmupre.a Ver0.28 (2005/11/30) : pre-update-firm
+[BOOTTRACE +23980ms]       mp3_core.a Ver1.09.5 (2005/11/30) : MP3 CoreSoft
+[BOOTTRACE +23986ms]            nfrom.a Ver0.33 (2005/12/06) : Nor-FROM Lib.
+[BOOTTRACE +23991ms]            nmi.a Ver 0.7.0 (2005/12/20) : NMI Handler Lib.
+[BOOTTRACE +23996ms]           robust.a Ver0.038(2003/12/26) : Robust
+[BOOTTRACE +24001ms]             rtscdd.a K0.54 (2006/04/19) : RTSD
+[BOOTTRACE +24005ms]     rtsdauth.a Ver0.15-MV3 (2005/12/14) : Copyright
+[BOOTTRACE +24010ms]           serial.a Ver0.33 (2005/06/28) : Debug Serial
+[BOOTTRACE +24015ms]       sys_boot.a Ver6.0.082(2006/02/17) : sys_boot(M6)
+[BOOTTRACE +24020ms]           sys_cd.a Ver 7.07(2006/01/30) : CD Media App
+[BOOTTRACE +24025ms]    sys_cntl.a Ver6.0.174.03(2006/03/14) : sys_cntl(M6)
+[BOOTTRACE +24031ms]        sys_dvdv.a Ver 1.054(2005/11/02) : M6 :DVD-Video System App 
+[BOOTTRACE +24037ms]        sys_epg.a Ver1.04.16(2006/02/13) : EPG App. (M6:JPN:DVD.HDD)
+[BOOTTRACE +24043ms]    sys_fact.a Ver.M6.077.02(2006/03/22) : Fact App.
+[BOOTTRACE +24049ms]      sys_fip.a Ver1.004.01 (2006/03/02) : FL&OSD Control
+[BOOTTRACE +24054ms]         sys_font.a Ver1.58 (2005/10/21) : sys_font
+[BOOTTRACE +24059ms]       sys_guibar.a Ver2.31 (2006/01/27) : GUIbar Lib (M6)
+[BOOTTRACE +24064ms]     sys_init.a Ver0.163.001(2006/02/23) : Initial Setting(M6Series)
+[BOOTTRACE +24071ms]                                                                                                                                                                
+[BOOTTRACE +24086ms]                                                                                         sys_media.a Ver2.275.6740S_6930S.02 (2006/03/14) : SYS_MEDIA
+[BOOTTRACE +24100ms]        sys_mp3.a Ver 0.48.0(2005/09/28) : MP3 Media App
+[BOOTTRACE +24105ms]          sys_msg.a Ver0.52 (2006/02/10) : MSG TASK(M6Series)
+[BOOTTRACE +24111ms] sys_navi.a Ver 1.03.135.01 (2006/03/02) : navi-gui app.
+[BOOTTRACE +24117ms]         sys_net.a Ver 0.003(2005/09/26) : Network App.(M6)
+[BOOTTRACE +24123ms]    sys_rsv.a Ver1.02.127.02(2006/03/14) : TimerREC App.(M6:JPN:DVD.HDD)
+[BOOTTRACE +24130ms]       sys_serv.a Ver.M6.026(2005/02/21) : Serv App.
+[BOOTTRACE +24135ms]      sys_text.a Ver6.0.007 (2006/02/17) : Soft-Keyboard
+[BOOTTRACE +24140ms]       sys_tun.a Ver0.393.01(2006/02/20) : Tuner App.(M6)
+[BOOTTRACE +24145ms]             time.a V7.0R03 (2005/12/15) : Clock & Calendar
+[BOOTTRACE +24151ms]          version.a Ver0.27  (2004/9/08) : Version Display Lib.
+[BOOTTRACE +24157ms]        wincap.a 4.0.4(M6)  (2005/11/29) : PiE WinCAP
+[BOOTTRACE +24162ms]                 kernel.a Ver 2005/10/11 : Kernel(M6_MV3Base) V2.0-1-5
+[BOOTTRACE +24169ms]          Dub_core.a Ver0.26(2006/01/19) : Dub_core
+[BOOTTRACE +24174ms]              itc.a Ver0.93 (2005/08/30) : itc
+[BOOTTRACE +24179ms]             avrec.a Ver0.13(2005/11/14) : AVREC
+[BOOTTRACE +24183ms]      decoder_jpg.a 0.11.0  (2005/12/02) : Decoder JPEG
+[BOOTTRACE +24189ms]        decoder_thu.a 1.04  (2005/12/06) : Thumbnail(MV3)
+[BOOTTRACE +24194ms]         fs.a(SDM)  Ver1.35 (2005/10/25) : File System (SDM)
+[BOOTTRACE +24200ms]    sys_app_lib.a Ver6.0.312(2006/02/17) : sys_app_lib(M6)
+[BOOTTRACE +24206ms]                gda.a Ver0.93 2005/09/07 : UD Audio Playback
+[BOOTTRACE +24211ms] [SYS_BOOT]FPC_init... 
+[BOOTTRACE +24214ms] [SYS_CNTL]SYS_CNTL_InitDeckMode
+[BOOTTRACE +24217ms] [SYS_CNTL]SYS_CNTL_InitDeckMode completed.
+[BOOTTRACE +24221ms] [FPC]fpc_ChangeKeyCodeInit 
+[BOOTTRACE +24224ms] [FPC]FPC_ReciveTASK() : 00 70 20 01 00 00 33 06 00 02 00 00 00 00 00 CC 
+[BOOTTRACE +24231ms] [SYS_BOOT]FPC_GetPowerOnReason 0x70 0x0 0x0
+[BOOTTRACE +24235ms] [SYS_BOOT]RegionCode(EEPROM) [0x04]
+[BOOTTRACE +24239ms] [FPC]FPC_ReciveTASK() : 65 70 07 4D 31 C5 60 00 00 00 00 00 00 00 00 7F 
+[BOOTTRACE +24246ms] [FPC]FPC_ReciveTASK() : 7D 00 70 52 41 00 00 00 00 02 02 05 11 02 00 9C 
+[BOOTTRACE +24253ms] [SYS_BOOT]Timer Version [022]
+[BOOTTRACE +24256ms] [FPC]num = 1 size=390 [0x0 0x2 0x3 0x52 0x43]
+[BOOTTRACE +24260ms] [FPC]num = 0 size=390 [0x0 0x2 0x2 0x52 0x41]
+[BOOTTRACE +24265ms] [FPC]FPC_ReciveTASK() : 67 01 00 02 41 00 00 00 00 02 02 05 11 02 00 C7 
+[BOOTTRACE +24272ms] [FPC]FPC_ReciveTASK() : 67 02 00 03 41 00 00 00 00 02 02 05 11 02 00 C9 
+[BOOTTRACE +24279ms] [FPC]FPC_ReciveTASK() : 67 03 00 04 41 00 00 00 00 02 02 05 11 02 00 CB 
+[BOOTTRACE +24285ms] [FPC]FPC_ReciveTASK() : 67 04 00 05 41 00 00 00 00 02 02 05 11 02 00 CD 
+[BOOTTRACE +24292ms] [FPC]FPC_ReciveTASK() : 67 05 00 06 41 00 00 00 00 02 02 05 11 02 00 CF 
+[BOOTTRACE +24299ms] [FPC]FPC_ReciveTASK() : 67 06 00 07 41 00 00 00 00 02 02 05 11 02 00 D1 
+[BOOTTRACE +24306ms] [FPC]FPC_ReciveTASK() : 67 07 00 08 41 00 00 00 00 02 02 05 11 02 00 D3 
+[BOOTTRACE +24313ms] [FPC]FPC_ReciveTASK() : 67 08 00 09 41 00 00 00 00 02 02 05 11 02 00 D5 
+[BOOTTRACE +24320ms] [FPC]FPC_ReciveTASK() : 67 09 00 0A 41 00 00 00 00 02 02 05 11 02 00 D7 
+[BOOTTRACE +24327ms] [FPC]FPC_ReciveTASK() : 67 0A 00 0B 41 00 00 00 00 02 02 05 11 02 00 D9 
+[BOOTTRACE +24334ms] [FPC]FPC_ReciveTASK() : 67 0B 00 0C 41 00 00 00 00 02 02 05 11 02 00 DB 
+[BOOTTRACE +24341ms] [FPC]FPC_ReciveTASK() : 67 0C 00 0D 41 00 00 00 00 02 02 05 11 02 00 DD 
+[BOOTTRACE +24348ms] [FPC]FPC_ReciveTASK() : 67 0D 00 0E 41 00 00 00 00 02 02 05 11 02 00 DF 
+[BOOTTRACE +24355ms] [FPC]FPC_ReciveTASK() : 67 0E 00 0F 41 00 00 00 00 02 02 05 11 02 00 E1 
+[BOOTTRACE +24361ms] [FPC]FPC_ReciveTASK() : 67 0F 00 10 41 00 00 00 00 02 02 05 11 02 00 E3 
+[BOOTTRACE +24368ms] [FPC]FPC_ReciveTASK() : 67 10 00 11 41 00 00 00 00 02 02 05 11 02 00 E5 
+[BOOTTRACE +24375ms] [FPC]FPC_ReciveTASK() : 67 11 00 12 41 00 00 00 00 02 02 05 11 02 00 E7 
+[BOOTTRACE +24382ms] [FPC]FPC_ReciveTASK() : 67 12 00 13 41 00 00 00 00 02 02 05 11 02 00 E9 
+[BOOTTRACE +24389ms] [FPC]FPC_ReciveTASK() : 67 13 00 14 41 00 00 00 00 02 02 05 11 02 00 EB 
+[BOOTTRACE +24395ms] [FPC]FPC_ReciveTASK() : 67 14 00 15 41 00 00 00 00 02 02 05 11 02 00 ED 
+[BOOTTRACE +24402ms] [FPC]FPC_ReciveTASK() : 67 15 00 16 41 00 00 00 00 02 02 05 11 02 00 EF 
+[BOOTTRACE +24410ms] [FPC]FPC_ReciveTASK() : 67 16 00 17 41 00 00 00 00 02 02 05 11 02 00 F1 
+[BOOTTRACE +24416ms] [FPC]FPC_ReciveTASK() : 67 17 00 18 41 00 00 00 00 02 02 05 11 02 00 F3 
+[BOOTTRACE +24423ms] [FPC]FPC_ReciveTASK() : 67 18 00 19 41 00 00 00 00 02 02 05 11 02 00 F5 
+[BOOTTRACE +24430ms] [FPC]FPC_ReciveTASK() : 67 19 00 1A 41 00 00 00 00 02 02 05 11 02 00 F7 
+[BOOTTRACE +24437ms] [FPC]FPC_ReciveTASK() : 67 1A 00 1B 41 00 00 00 00 02 02 05 11 02 00 F9 
+[BOOTTRACE +24444ms] [FPC]FPC_ReciveTASK() : 67 1B 00 1C 41 00 00 00 00 02 02 05 11 02 00 FB 
+[BOOTTRACE +24451ms] [FPC]FPC_ReciveTASK() : 67 1C 00 1D 41 00 00 00 00 02 02 05 11 02 00 FD 
+[BOOTTRACE +24457ms] [FPC]FPC_ReciveTASK() : 67 1D 00 1E 41 00 00 00 00 02 02 05 11 02 00 FF 
+[BOOTTRACE +24464ms] [FPC]FPC_ReciveTASK() : 67 1E 01 1E 41 00 00 00 00 02 02 05 11 02 00 01 
+[BOOTTRACE +24471ms] [SYS_BOOT]ITC_init
+[BOOTTRACE +24473ms] [SYS_BOOT]ITC_init success. 
+[BOOTTRACE +24476ms] [SYS_BOOT]reading system info on EEPROM ... ok
+[BOOTTRACE +24480ms] [SYS_BOOT]H/W System  = M6930LB
+[BOOTTRACE +24483ms] [SYS_BOOT]model_code=0x07
+[BOOTTRACE +24485ms] [SYS_BOOT]market_code=PL(0x04)
+[BOOTTRACE +24488ms] [SYS_BOOT]OptionCode  = 0x31 0xC5 0x60 0x00 0x00 0x00
+[BOOTTRACE +24493ms] [SYS_BOOT]H/W Version = 0x0003
+[BOOTTRACE +24496ms] [SYS_CNTL]WakeupReason:[FACT(18)]
+[BOOTTRACE +24500ms] [SYS_CNTL]KeyAction   :NEW[15] OLD[0]
+[BOOTTRACE +24503ms] :::SYS_RSV::: >> NF_FILENO_SYSCTRL2:nfrom size ERROR! true-size=5636 error-size=104
+[BOOTTRACE +24511ms] :::SYS_RSV::: >> nfrom back up ok.
+[BOOTTRACE +24514ms] :::SYS_RSV::: >> NF_FILENO_SYSCTRL2:nfrom size init.
+[BOOTTRACE +24519ms] :::SYS_RSV::: >> _StandbyClear(not init)
+[BOOTTRACE +24523ms] :::SYS_RSV::: >> nfrom back up ok.
+[BOOTTRACE +24526ms] [SYS_BOOT]AVOUT_init
+[BOOTTRACE +24528ms] [DCS] AVDEC LSI : MV3BASE IROM 32bit
+[BOOTTRACE +24532ms] [DCS] DDR ALIGN_CHECK start....
+[BOOTTRACE +24535ms] [DCS] ALIGN OK 
+[BOOTTRACE +24536ms] [DCS] AVDEC version: avdd=0x5091621, ucode iop=0x809a, setup=0x8097, patch=0x701e
+[BOOTTRACE +24639ms] [SYS_BOOT]AVOUT_init() success. 
+[BOOTTRACE +24642ms] [SYS_BOOT]SYS_APP_VoiceGuide_Init()
+[BOOTTRACE +24645ms] [SYS_BOOT]SYS_APP_VoiceGuide_Init() success. 
+[BOOTTRACE +24650ms] [SYS_BOOT]DCJ_Init
+[BOOTTRACE +24651ms] [SYS_BOOT]DCJ_Init() success. 
+[BOOTTRACE +24791ms] [DCS]dco_api :AVOUT_A_Mute_ID: ON_ID[ALL]=2 , [EE]=0
+[BOOTTRACE +24806ms] [DCS]dco_api :AVOUT_V_Mute: onoff=1
+[BOOTTRACE +24822ms] [SYS_BOOT]CAV_Init1394
+[BOOTTRACE +24825ms] [SYS_BOOT]CAV_Init1394 success. 
+[BOOTTRACE +24828ms] [SYS_BOOT]AVIN_init
+[BOOTTRACE +24830ms] [AVIN]0: *** AVIN_init() *** (FF=1,CI=0,TN=2)
+[BOOTTRACE +24834ms] [AVIN] tsk_stat avin0010 inside_v0010 callback0010
+[BOOTTRACE +24840ms] [AVIN]0: avin_hw_input_source_select(SOURCE_TUNER,L/R,0) end.
+[BOOTTRACE +24846ms] [AVIN]1: avin_hw_input_source_select(SOURCE_TUNER,L/R,0) end.
+[BOOTTRACE +24852ms] [AVIN]0: *** AVIN_init() END ***
+[BOOTTRACE +24855ms] [SYS_BOOT]AVIN_init() success. 
+[BOOTTRACE +24858ms] [SYS_BOOT]CAV:N/PAL
+[BOOTTRACE +24860ms] [SYS_BOOT]TIM_Init
+[BOOTTRACE +24862ms] [1394avc]ctl: HSB_ini completion 
+[BOOTTRACE +24865ms] [AVIN]0: set nr->3 [0:off 1:on 2:fdown 3:lv1 4:lv2 5:lv3 6:lv4 7:lv5]
+[BOOTTRACE +24872ms] [DC0]dco_subseq_v_S1s2 call TUN_SelectS1S2: param0=1
+[BOOTTRACE +24890ms] [SYS_BOOT]TUN_Init
+[BOOTTRACE +24893ms] [FPC]FPC_ReciveTASK() : 60 00 01 02 00 00 00 01 00 00 00 00 00 00 00 64 
+[BOOTTRACE +24900ms] [FPC]FPC_ReciveTASK() : 61 00 00 01 00 01 00 00 00 00 00 00 00 00 00 63 
+[BOOTTRACE +25007ms] [SYS_BOOT]TUN_Init() success. 
+[BOOTTRACE +25010ms] [SYS_BOOT]VBISL_Task_Init() success
+[BOOTTRACE +25014ms] :::SYS_RSV::: >> nfrom read
+[BOOTTRACE +25016ms] [SYS_CNTL]UION_CH->LAST_CH(1)
+[BOOTTRACE +25041ms] [DCS]dco_api :AVOUT_A_Mute_ID: ON_ID[ALL]=2 , [EE]=8
+[BOOTTRACE +25069ms] [AVIN]0: avin_set_now_state() state = STATE_CHG_CHANNEL(2).
+[BOOTTRACE +25075ms] [AVIN] 0_Prefilter = 1
+[BOOTTRACE +25077ms] [TIM]TIM_ChangeChannel(1 0) 
+[BOOTTRACE +25124ms] [SYS_BOOT]MBM_Init() success.
+[BOOTTRACE +25127ms] [SYS_BOOT]VDM_Init() 
+[BOOTTRACE +25211ms] [SDCD] sdcd_insrmv_check:SD Card inserted 
+[BOOTTRACE +25386ms] [AVIN]0: avin_set_now_state() state = STATE_NORMAL(0).
+[BOOTTRACE +25391ms] [AVIN]0: avin_hw_input_source_select(SOURCE_TUNER,L/R,0) end.
+[BOOTTRACE +25397ms] [SDCD] === This Card Spec ==== 
+[BOOTTRACE +25400ms] .Card type:2(condition:3) wp:0
+[BOOTTRACE +25404ms] .capacity:3c4000[LBA](2021654528Byte) . transfer speed:25000[Kbps]
+[BOOTTRACE +25410ms] .RCA:2 . Bus Width:4(current) 4(support)
+[BOOTTRACE +25414ms] .Multi Max Block Len Read:2[SECT] / Write:2[SECT]
+[BOOTTRACE +25681ms] [AVIN] target:0 input:0x0 --IIC send error retry 3 all err
+[BOOTTRACE +25688ms] System assert!! File:src/avin_funcs_com.c Line:3756 Err:0
+[BOOTTRACE +25694ms] System assert!! File:src/ftrec_api.c Line:1227 Err:0
+[BOOTTRACE +25699ms] [AVIN]0: set nr->3 [0:off 1:on 2:fdown 3:lv1 4:lv2 5:lv3 6:lv4 7:lv5]
+[BOOTTRACE +25705ms] [DCS]dco_api :avout_API_MuteID = 0x10
+[BOOTTRACE +25709ms] [DCS]dco_api :AVOUT_A_Mute_ID: OFF_ID[ALL]=2 , [EE]=8
+[BOOTTRACE +25771ms] [DCS]dco_api :AVOUT_A_Mute_ID: ON_ID[ALL]=2 , [EE]=18
+[BOOTTRACE +25831ms] [1394avc]ctl: ICN_TASK start completion 
+[BOOTTRACE +25836ms] [1394avc]ctl: CAV_TASK start completion 
+[BOOTTRACE +25840ms] [1394avc]ctl: TAV_TASK start completion 
+[BOOTTRACE +25890ms] [DCS]dco_api :avout_API_MuteID = 0x8
+[BOOTTRACE +25907ms] [DCS]dco_api :AVOUT_A_Mute_ID: OFF_ID[ALL]=2 , [EE]=10
+[BOOTTRACE +25971ms] [AVIN]0: set nr->7 [0:off 1:on 2:fdown 3:lv1 4:lv2 5:lv3 6:lv4 7:lv5]
+[BOOTTRACE +26842ms] [1394avc]ctl: BUS Reset Start 
+[BOOTTRACE +26845ms] [1394avc]ctl: BUS Reset END 
+[BOOTTRACE +26848ms] [1394avc]ctl: GETEUI64 OK 
+[BOOTTRACE +26851ms] [1394avc]cold_start: GET EUI64_H = 0080459a 
+[BOOTTRACE +26855ms] [1394avc]cold_start: GET EUI64_L = f1a9801b 
+[BOOTTRACE +26859ms] [1394avc]CTL: Equipment recognition end.
+[BOOTTRACE +27314ms] [RTSD] Device Reset Occurred(0x62900) 
+[BOOTTRACE +27322ms] [RTSD] HDD already spin-up 
+[BOOTTRACE +27354ms] [RTSD] HDD Auto Spin up Mode 
+[BOOTTRACE +27359ms] [RTSD] HDD Model No.  : SAMSUNG HM251JI                          
+[BOOTTRACE +27365ms] [RTSD] HDD Stream feature Not Suport
+[BOOTTRACE +27455ms] [RTSD] Hdd illegal (HDD ID mismatched) 
+[BOOTTRACE +27461ms] [RTSD] Hdd illegal (Contents Missmach) 
+[BOOTTRACE +27465ms] [RTSD] Drive Revision : S211 
+[BOOTTRACE +27468ms] [RTSD] Drive Region   : 4    
+[BOOTTRACE +27471ms] [RTSD] Drive Model    : 12
+[BOOTTRACE +27473ms] [RTSD] Temperature    : 17
+[BOOTTRACE +27476ms] [RTSD] CPRM DK: 1, CPPM DK: 1
+[BOOTTRACE +27479ms] [RTSD] HDD Model No.  : SAMSUNG HM251JI                          
+[BOOTTRACE +27485ms] [RTSD] HDD Stream feature Not Suport
+[BOOTTRACE +27489ms] [HDFS]  HDD Offset Sect:0x20000 - Byte:268435456
+[BOOTTRACE +27538ms] [SYS_BOOT]VDM_Init() success. 
+[BOOTTRACE +27542ms] [SYS_BOOT]SDM_Init() success.
+[BOOTTRACE +27546ms] [AVIN]0: AVIN task Delayed 3
+[BOOTTRACE +27560ms] [SFS] ERROR 1485 [sfs_read_a_dt_mng_tbl] invalid indexes, eaaafaad, a48377dd
+[BOOTTRACE +27581ms] [SFS] ERROR 1485 [sfs_read_a_dt_mng_tbl] invalid indexes, 3a60494b, 2daca662
+[BOOTTRACE +27589ms] [SFS] ERROR 1598 [sfs_read_dt_mng_tbl] rsv's broken, too. 0x90000006
+[BOOTTRACE +27649ms] [SYS_BOOT]SDM_Mount() success.
+[BOOTTRACE +27652ms] [SYS_APP]VoiceGuideData[/HDDEX/UDA_M6930_H_JPN_V006] not found! (0x90000001)
+[BOOTTRACE +27659ms] [SYS_BOOT]SYS_APP_VoiceGuide_CheckData() NG!
+[BOOTTRACE +27664ms] System assert!! File:src/sys_boot.c Line:5239 Err:0
+[BOOTTRACE +27671ms] [SYS_BOOT]sys_boot_init_dev_io_pre() success
+[BOOTTRACE +27675ms] [SYS_BOOT]DVR_Init_Core 
+[BOOTTRACE +27678ms] [SYS_BOOT]dvr_state == DVR_WARN && fs_state != VDM_W_POW_FAILURE
+[BOOTTRACE +27752ms] fs_hdfs/src/mil/hdfs/hdfs_super.c:345:HDFS_read_superblock -  HDFS_check_newest_sb error 
+[BOOTTRACE +27761ms] fs_hdfs/src/mil/hdfs/hdfs_super.c:109:HDFS_read_super -  HDFS_read_superblock error 
+[BOOTTRACE +27769ms] fs_hdfs/src/glue/hddfs_gv.c:112:hddfs_shared_mount - MIL_mount -1744830429(0x98000023)
+[BOOTTRACE +27777ms] fs_hdfs/src/glue/hddfs_io.c:451:HDDFS_Mount - hddfs_shared_mount -10002(0xffffd8ee)
+[BOOTTRACE +27785ms] [SYS_BOOT]VDM_OpenDisc HDD err. 
+[BOOTTRACE +27789ms] [FS]VDM_ReportMediaEx : slot_id = 1 disc = 80000000 protect = 1 format = 0
+[BOOTTRACE +27796ms] [SYS_BOOT]VDM_OpenDisc DVD err. 
+[BOOTTRACE +27799ms] [DVR CORE] (5.72)RESTORE DVD
+[BOOTTRACE +27801ms] [FS]VDM_ReportMediaEx : slot_id = 1 disc = 80000000 protect = 6ae70805 format = 483b84c
+[BOOTTRACE +27841ms] [1394avc]ctl: cav_Equipment_Notification() SYS_APP_DV_DISCONNECT
+[BOOTTRACE +27850ms] [GEM]:ARCHIVE > load_epgdata_frombackup  start 
+[BOOTTRACE +27855ms] [GEM] ARC: EPG_DATA Not Found
+[BOOTTRACE +27858ms] [GEM]:ARCHIVE > err happened at arc_get_arcfile : err number = -12 
+[BOOTTRACE +27864ms] [GEM] EPGS: Rcv FINISH_FLASH_READ
+[BOOTTRACE +27988ms] [DVR CORE] (5.93)RESTORE(DVR_RECOVERY_END)
+[BOOTTRACE +27993ms] [DVR CORE] (5.93)RESTORE HDD
+[BOOTTRACE +27996ms] [GEM] RSTR: READ FILE OPEN ERR(-12)
+[BOOTTRACE +28572ms] [SYS_BOOT]VDM_CloseDisc HDD err. 
+[BOOTTRACE +28576ms] [SYS_BOOT]VDM_CloseDisc DVD err. 
+[BOOTTRACE +28579ms] [SYS_BOOT]DVD_Core_Init 
+[BOOTTRACE +28581ms] [SYS_BOOT]CD_Init 
+[BOOTTRACE +28583ms] [SYS_BOOT]MP3_Core_Init
+[BOOTTRACE +28586ms] [SYS_BOOT]DUB_Init_Core() success. 
+[BOOTTRACE +28589ms] [SYS_BOOT]JPG_CoreInit() success. 
+[BOOTTRACE +28593ms] [SYS_BOOT]REC_InitDevice
+[BOOTTRACE +28595ms] [EIF]0:EIF >>  SDM report(SDRAM OFFSET ADDRESS) = 00000301,
+[BOOTTRACE +28601ms] [EIF]0:EIF >>  SDM report(VBB) = 014C,
+[BOOTTRACE +28604ms] [EIF]0:EIF >>  SDM report(ABB) = 005A,
+[BOOTTRACE +28609ms] [SYS_BOOT]REC_InitDevice() success. 
+[BOOTTRACE +28620ms] [REC]0:time over = 6568msec
+[BOOTTRACE +28622ms] [REC]0: -- FREE -> FREE(no cpp info) -- 
+[BOOTTRACE +28673ms] [AVIN] 1_Prefilter = 2
+[BOOTTRACE +28710ms] [FPC]FPC_ReciveTASK() : 61 00 00 01 00 01 00 00 00 00 00 00 00 00 00 63 
+[BOOTTRACE +28717ms] [FPC]FPC_ReciveTASK() : 60 00 01 02 01 00 00 01 00 00 00 00 00 00 00 65 
+[BOOTTRACE +28811ms] [SYS_CNTL]TimeZone 9 
+[BOOTTRACE +28819ms] [FPC]FPC_ReciveTASK() : 61 00 00 01 00 01 00 00 00 00 00 00 00 00 00 63 
+[BOOTTRACE +28836ms] [SYS_CNTL][Now Time 2000/1/1 0:0:0]
+[BOOTTRACE +28839ms] [SYS_CNTL]sys_app_nfrom size 9044
+[BOOTTRACE +28843ms] [SYS_CNTL]EASY SETTING[0]
+[BOOTTRACE +28865ms] [SYS_CNTL]set standby status = 0
+[BOOTTRACE +28868ms] [SYS_CNTL]SYS_CNTL_SetSysState[INIT]
+[BOOTTRACE +28872ms] [SYS_CNTL]SYS_CNTL_set_pow_status(SYS_CNTL_POW_OFF_TO_ON)
+[BOOTTRACE +28878ms] [SYS_APP]MainOptionCode
+[BOOTTRACE +28880ms] [SYS_APP]btn     : A[0x0033] B[0x0092] C[0xFFFF] D[0xFFFF]
+[BOOTTRACE +28886ms] [SYS_APP]rcmode  : [0x00]
+[BOOTTRACE +28889ms] [SYS_APP]gui     : A[ 0x10 ] B[ 0x20 ] C[ 0xFF ] D[ 0xFF ]
+[BOOTTRACE +28895ms] [SYS_APP]chmode  : [0x02]
+[BOOTTRACE +28898ms] [SYS_APP]MainOptionCode(gui) setting[0xFF] Nothing!
+[BOOTTRACE +28903ms] [SYS_APP]MainOptionCode(gui) setting[0xFF] Nothing!
+[BOOTTRACE +28930ms] [SYS_CNTL]sys_cntl_set_pow_attr attr[0x1] state[0]
+[BOOTTRACE +28944ms] [FPC]fpc_ChangeKeyCodeInit 
+[BOOTTRACE +28946ms] [FPC]fpc_ChangeKeyCodeWrite beforeKey = 161 : afterKey = 85 
+[BOOTTRACE +28953ms] [FPC]fpc_ChangeKeyCodeWrite beforeKey = 160 : afterKey = 86 
+[BOOTTRACE +28959ms] [SYS_CNTL]SYS_APP_Datatype_t [ 214 <= 255 ]
+[BOOTTRACE +29041ms] [SYS_CNTL].[SYS_TUN]TUN_Ext_Input_AudioModeNotify(line_audio == 1)
+[BOOTTRACE +29059ms] [SYS_TUN]4::::::::::AVIN_AudioSetLR(0)::::::::::
+[BOOTTRACE +29064ms] [SYS_TUN]TUN_Ext_Input_AudioModeNotify(line_audio == 1)
+[BOOTTRACE +29069ms] [SYS_TUN]MONORAL
+[BOOTTRACE +29154ms] [SYS_CNTL]setgui start. tsk=108 mode=0
+[BOOTTRACE +29159ms] [SYS_CNTL]sys_cntl_get_catchscreen[255(255)]
+[BOOTTRACE +29164ms] [SYS_CNTL]SYS_CNTL_SetGuiMode task ID=0x6c set_gui_fg=0 mode=0
+[BOOTTRACE +29179ms] [SYS_CNTL]sys_cntl_CatchScreen() success. task ID 111(sys_fip)
+[BOOTTRACE +29185ms] [SYS_CNTL]VDM_ReportDrv: 2
+[BOOTTRACE +29187ms] [SYS_CNTL]sys_cntl_ChangeKeyAction_fact
+[BOOTTRACE +29192ms] [DCS]dco_api :AVOUT_AV_Select: video=0, audio=0
+[BOOTTRACE +29241ms] [DCS]dco_api :AVOUT_A_Mute_ID: ON_ID[ALL]=3 , [EE]=10
+[BOOTTRACE +29329ms] [DCS]AVDEC Interrupt           :RELOADDONE
+[BOOTTRACE +29333ms] [DCS]AVDEC Interrupt           :RELOADDONE
+[BOOTTRACE +29384ms] [DCS]AVDEC Interrupt           :BBFLUSHST
+[BOOTTRACE +29477ms] [DCO]Audio Output = L/R.
+[BOOTTRACE +29544ms] [DCS]dco_api :avout_API_MuteID = 0x1
+[BOOTTRACE +29581ms] [DCS]dco_api :AVOUT_A_Mute_ID: OFF_ID[ALL]=2 , [EE]=10
+[BOOTTRACE +29678ms] [SYS_CNTL]SetDeckModeStateEx task[sys_cntl(103)] drive[DVD] rec.drive[DVD] deck[READ(0x00000040)]
+[BOOTTRACE +29688ms] [SYS_TUN]SYS_TUN_SysCntl_DeckMode_Callback()
+[BOOTTRACE +29692ms] [SYS_CNTL]SYS_CNTL_tmp_AVOUT_A_eeOutputMode 0 3 3 3
+[BOOTTRACE +29698ms] :::SYS_RSV::: >> nfrom read
+[BOOTTRACE +29701ms] :::SYS_RSV::: >> nfrom read
+[BOOTTRACE +29704ms] [SYS_CNTL]sys_cntl_isNowTimerRec 18
+[BOOTTRACE +29707ms] [SYS_CNTL]SYS_CNTL_RESUME_TASK = 0
+[BOOTTRACE +29712ms] [SYS_CNTL]SYS_CNTL_SRAM_RESUME_FLAG = 0
+[BOOTTRACE +29715ms] [SYS_CNTL]sys_cntl_card_blinkcall drv[0x0003(SD)] blink[0xC5(BLINK only 5sec)]
+[BOOTTRACE +29723ms] [FS]BPB:FileSystemType:FAT16
+[BOOTTRACE +29726ms] [FS]CAL:FileSystemType:FAT16
+[BOOTTRACE +29746ms] [FS]VDM_ReportMediaEx : slot_id = 3 disc = 200040 protect = 0 format = 3
+[BOOTTRACE +29753ms] [FS]BPB:FileSystemType:FAT16
+[BOOTTRACE +29756ms] [FS]CAL:FileSystemType:FAT16
+[BOOTTRACE +29795ms] [FS]VDM_ReportMediaEx : slot_id = 3 disc = 200040 protect = 0 format = 3
+[BOOTTRACE +29803ms] [SYS_CNTL]VDM_ReportMediaEx(): vdm_res=0x0 
+[BOOTTRACE +29808ms] [SYS_CNTL] disc  =0x00200040  protect=0x00000000 
+[BOOTTRACE +29813ms] [SYS_CNTL] format=0x00000003  authent=0x00000000 
+[BOOTTRACE +29818ms] [SYS_CNTL]CARD is_writable=0x0
+[BOOTTRACE +29821ms] [SYS_CNTL]sys_cntl_card_blinkcall drv[0x0003(SD)] blink[0x80(ON)]
+[BOOTTRACE +29827ms] [SYS_CNTL]SetDeckModeStateEx task[sys_cntl(103)] drive[SD] rec.drive[SD] deck[STOP2(0x00000000)]
+[BOOTTRACE +29837ms] [SYS_TUN]SYS_TUN_SysCntl_DeckMode_Callback()
+[BOOTTRACE +29841ms] [SYS_CNTL]SYS_CNTL_tmp_AVOUT_A_eeOutputMode 0 3 3 3
+[BOOTTRACE +29846ms] :::SYS_RSV::: >> nfrom read
+[BOOTTRACE +29849ms] :::SYS_RSV::: >> nfrom read
+[BOOTTRACE +29852ms] [DCS]dco_api :avout_API_MuteID = 0x2
+[BOOTTRACE +29855ms] [DCS]dco_api :AVOUT_A_Mute_ID: OFF_ID[ALL]=0 , [EE]=10
+[BOOTTRACE +29862ms] [DCS]dco_api :AVOUT_V_Mute: onoff=0
+[BOOTTRACE +29878ms] [SYS_CNTL]SYS_CNTL_UION_FLAG(1)
+[BOOTTRACE +29882ms] :::SYS_RSV::: >> _GetExecMode_Device initialize yet! 
+[BOOTTRACE +29901ms] [SYS_CNTL]SetDeckModeStateEx task[sys_cntl(103)] drive[DVD] rec.drive[DVD] deck[READ(0x00000040)]
+[BOOTTRACE +29911ms] [SYS_TUN]SYS_TUN_SysCntl_DeckMode_Callback()
+[BOOTTRACE +29916ms] [SYS_CNTL]SYS_CNTL_tmp_AVOUT_A_eeOutputMode 0 3 3 3
+[BOOTTRACE +29922ms] :::SYS_RSV::: >> nfrom read
+[BOOTTRACE +29924ms] :::SYS_RSV::: >> nfrom read
+[BOOTTRACE +29927ms] [FS]VDM_ReportMediaEx : slot_id = 1 disc = 80000000 protect = 5778a144 format = 0
+[BOOTTRACE +29935ms] [SYS_CNTL]VDM_ReportMediaEx(): VDM_MTEX_BREADY 
+[BOOTTRACE +29940ms] [SYS_CNTL].. FPC_StartCommunication()
+[BOOTTRACE +29944ms] [SYS_CNTL]SYS_CNTL_set_pow_status(SYS_CNTL_POW_ON)
+[BOOTTRACE +29949ms] [SYS_CNTL]Q task[3(3)] datatype[DV_STAT(57)]
+[BOOTTRACE +29953ms] [SYS_CNTL]sys_cntl_media_dv_disconnect():
+[BOOTTRACE +29957ms] [SYS_CNTL]Q task[sys_fip(111)] datatype[FIP_MODE(158)]
+[BOOTTRACE +29962ms] [SYS_CNTL]SYS_CNTL_FIP_MODE sys_cntl_avout_v_output. =0 0
+[BOOTTRACE +29968ms] [DCS]dco_api :AVOUT_AV_Select: video=0, audio=0
+[BOOTTRACE +30045ms] [SYS_CNTL]Q task[sys_fip(111)] datatype[READY(16)]
+[BOOTTRACE +30051ms] [SYS_CNTL]Q task[sys_net(117)] datatype[READY(16)]
+[BOOTTRACE +30056ms] [SYS_CNTL]### HDD WAKEUP ###
+[BOOTTRACE +30059ms] [SYS_CNTL]Q task[sys_tun(125)] datatype[READY(16)]
+[BOOTTRACE +30064ms] [SYS_CNTL]Q task[sys_pcdv(119)] datatype[READY(16)]
+[BOOTTRACE +30069ms] [SYS_CNTL]Q task[sys_fact(108)] datatype[READY(16)]
+[BOOTTRACE +30074ms] [SYS_CNTL]Q task[sys_fact(108)] datatype[SET_GUI_MODE(134)]
+[BOOTTRACE +30080ms] [SYS_CNTL]callback pre (id==0x6c) send=0x75
+[BOOTTRACE +30101ms] send=0x6f
+[BOOTTRACE +30142ms]  pre_end
+[BOOTTRACE +30143ms] [SYS_CNTL]Q task[44(44)] datatype[PCCARD_CALLBACK(169)]
+[BOOTTRACE +30150ms] [SYS_CNTL]sys_cntl_card_blinkcall drv[0x0003(SD)] blink[0xFF(BLINK continuously 0.25sec)]
+[BOOTTRACE +30163ms] [SYS_CNTL]sys_cntl_CatchScreen() success. task ID 108(sys_fact)
+[BOOTTRACE +30169ms] [SYS_CNTL]Q task[sys_fact(108)] datatype[SET_GUI_MODE2(135)]
+[BOOTTRACE +30175ms] [SYS_CNTL]SetGuiMode mode=0 task ID=0x6c(sys_fact) Catch taskID=0x6c(sys_fact)
+[BOOTTRACE +30183ms] [DCS]dco_api :AVOUT_V_Select: video=0
+[BOOTTRACE +30186ms] [DCS]dco_api :AVOUT_AV_Select: video=0, audio=0
+[BOOTTRACE +30295ms] [SYS_CNTL]SYS_CNTL_SetSysState[EE]
+[BOOTTRACE +30299ms] [SYS_CNTL]EndGuiFunc not execute! gui_task[108] RunGuiFuncBit[0x00]
+[BOOTTRACE +30305ms] [SYS_CNTL]callback after (id==0x6c) send=0x7d
+[BOOTTRACE +30310ms] [SYS_TUN]SYS_TUN_SysCntl_GuiMode_Callback()
+[BOOTTRACE +30314ms] [SYS_CNTL]SYS_CNTL_tmp_AVOUT_A_eeOutputMode 0 3 3 3
+[BOOTTRACE +30319ms] send=0x75
+[BOOTTRACE +30331ms] send=0x6f
+[BOOTTRACE +30352ms]  after mid
+[BOOTTRACE +30353ms] [SYS_CNTL]PTK_IsWindowEventTask(6c) fg=1,tsk_stat=4
+[BOOTTRACE +30358ms]  end
+[BOOTTRACE +30359ms] [SYS_CNTL]setgui end. tsk=108
+[BOOTTRACE +30362ms] [DCS]dco_api :AVOUT_AV_Select: video=0, audio=0
+[BOOTTRACE +30412ms] [SYS_CNTL]read disc: 2
+[BOOTTRACE +30542ms] [AVIN] 0_Prefilter = 1
+[BOOTTRACE +30544ms] [TIM]TIM_ChangeChannel(129 1) 
+[BOOTTRACE +30579ms] [FPC]FPC_Send() : 8A 02 00 FF 00 00 00 00 00 00 00 00 00 00 00 00 
+[BOOTTRACE +30589ms] DRIVE = Set Factmode
+[BOOTTRACE +30591ms] [FPC]FPC_SendAndRecv() : E0 08 01 02 01 FF 00 01 00 00 00 00 00 00 00 00 
+[BOOTTRACE +30598ms] [FPC]FPC_ReciveTASK() : 60 00 01 02 01 FF 00 01 00 00 00 00 00 00 00 64 
+[BOOTTRACE +30846ms] HDD check Result = 122017371
+[BOOTTRACE +30849ms] HDDCheck = ## Unknown ##
+[BOOTTRACE +30852ms] [FPC]FPC_Send() : A3 00 00 14 20 E8 0C 00 00 00 00 80 88 40 04 00 
+[BOOTTRACE +30859ms] [FPC]FPC_Send() : C2 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+[BOOTTRACE +30865ms] FactoryMode = Start
+[BOOTTRACE +33143ms] [FPC]FPC_Send() : A4 00 00 00 00 00 00 00 00 00 80 00 00 00 00 00 
+[BOOTTRACE +34812ms] [RTSD] === DRIVE ACCESS ERROR === ( 80040904 )  [2000/ 1/ 1  0. 0. 0]
+[BOOTTRACE +34818ms] *** CDB  [00 00 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +34823ms] *** SENSE[70 00 04 00 00 00 00 0A 00 00 83 A7 09 04 00 00 00 00] 
+[BOOTTRACE +34829ms] H_STAT [0] T_STAT [2]
+[BOOTTRACE +35449ms] [FPC]FPC_Send() : A3 00 00 14 20 E8 0C 00 00 00 00 80 88 40 04 00 
+[BOOTTRACE +35456ms] [FPC]FPC_Send() : A4 00 00 00 00 00 00 00 00 00 00 00 40 00 00 00 
+[BOOTTRACE +35463ms] [FPC]FPC_Send() : A8 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 
+[BOOTTRACE +35642ms] [FPC]FPC_Send() : A3 00 00 14 20 E8 0C 00 00 00 00 80 88 40 04 00 
+[BOOTTRACE +35723ms] Media Confirm = OK
+[BOOTTRACE +39412ms] [FPC]FPC_ReciveTASK() : 08 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+[BOOTTRACE +39419ms] [FPC]FPC_Send() : 88 5C 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+[BOOTTRACE] UART: bytes=39652 first_byte=10432us ferr=1 perr=0 ovf=NO | SW_rel=NO
+[BOOTTRACE] ADC0_SWUART: min=0.05V max=3.30V (low=0 hiz=0.05..3.30V n=5999) | CtrlEdges: NSW5V=2 TXD=2 XRESET=2 (logged=6)
+  [CTRL +4636491us] NSW5V=1 TXD=1 XRESET=0
+  [CTRL +4668195us] NSW5V=0 TXD=1 XRESET=0
+  [CTRL +4669080us] NSW5V=0 TXD=0 XRESET=0
+  [CTRL +5749023us] NSW5V=1 TXD=0 XRESET=0
+  [CTRL +5749148us] NSW5V=1 TXD=1 XRESET=0
+  [CTRL +5924856us] NSW5V=1 TXD=1 XRESET=1
+BOOTTRACE: OK
+@P7501_RES cmd=BOOTTRACE status=OK code=0 elapsed_us=60021973
+PANADIGA> 
