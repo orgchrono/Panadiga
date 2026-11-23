@@ -89,15 +89,22 @@ export function useManualsViewModel() {
     return () => controller.abort();
   }, []);
 
-  const performSearch = useCallback(async (q: string) => {
+  const performSearch = useCallback(async (q: string, signal?: AbortSignal) => {
+    if (signal?.aborted) return;
     setLoading(true);
     try {
       const results = await searchServiceManuals(q);
-      setSearchResults(results);
+      if (!signal?.aborted) {
+        setSearchResults(results);
+      }
     } catch (err) {
-      setRawError(err instanceof Error ? err.message : String(err));
+      if (!signal?.aborted) {
+        setRawError(err instanceof Error ? err.message : String(err));
+      }
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
     }
   }, []);
 
@@ -121,7 +128,7 @@ export function useManualsViewModel() {
     const controller = new AbortController();
     void Promise.resolve().then(() => {
       if (!controller.signal.aborted) {
-        void performSearch('U99');
+        void performSearch('U99', controller.signal);
       }
     });
     return () => controller.abort();

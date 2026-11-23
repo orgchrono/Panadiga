@@ -98,6 +98,14 @@ export default defineConfig(({ command, mode }) => ({
   server: {
     port: 1420,
     strictPort: true,
+    warmup: {
+      clientFiles: [
+        "./src/main.tsx",
+        "./src/App.tsx",
+        "./src/views/ExpressView.tsx",
+        "./src/views/UnbrickView.tsx",
+      ],
+    },
   },
   resolve: {
     dedupe: ["react", "react-dom"],
@@ -107,15 +115,27 @@ export default defineConfig(({ command, mode }) => ({
   },
   optimizeDeps: {
     include: [
-      "react",
-      "react-dom",
-      "react-i18next",
-      "i18next",
+      "@opentelemetry/api",
       "@radix-ui/react-dialog",
       "@radix-ui/react-slot",
       "@radix-ui/react-tabs",
+      "@reduxjs/toolkit",
+      "@tauri-apps/api/core",
+      "@tauri-apps/api/event",
+      "class-variance-authority",
+      "clsx",
       "framer-motion",
+      "i18next",
       "lucide-react",
+      "pino",
+      "react",
+      "react-dom",
+      "react-dom/client",
+      "react-i18next",
+      "react-redux",
+      "sonner",
+      "tailwind-merge",
+      "zod",
     ],
   },
   css: {
