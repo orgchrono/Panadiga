@@ -581,14 +581,19 @@ fn bgo_retarget_spec_and_blob_validation_enforce_bounds_and_integrity() {
         blob_rel.clone(),
         crate::blob_b64::encode_base64(b"test-drv"),
     );
+    let mut table_words = vec![0u32; 64];
+    table_words[12] = 0x8413_0000;
+    table_words[13] = 0x8440_0000;
+    table_words[15] = 0xFFFF_FFFF;
+    table_words[31] = 45;
     let spec = ProgBgoRetargetSpec {
-        target_geometry_id: "TEST_GEO".to_string(),
+        target_geometry_id: "BGO_45SEC_8MB_0X84130000".to_string(),
         expected_prog_size: 0x0004_0000,
         bgo_table_offset: 0x0003_6E2C,
         bgo_table_marker: 0x8000_0000,
         detect_logical_sectors: 0x28,
         detect_flash_base: 0x8413_0000,
-        bgo_table_words: vec![0u32; 64],
+        bgo_table_words: table_words,
         bgo_sum_beq_offset: 0x0002_30CF,
         nfrom_drv_start: 0x0002_1E6A,
         nfrom_drv_end: 0x0002_9356,
@@ -697,5 +702,108 @@ fn region_interpolation_derives_tv_standard_hw_code_and_electrical_specs() {
     assert_eq!(
         eh58.regional_variants[1].interpolated_hw_code.as_deref(),
         Some("EH58EC")
+    );
+}
+
+#[test]
+fn validate_bundle_rejects_mismatched_schema_version() {
+    let profiles_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../profiles");
+    let mut b = load_bundle_from_dir(&profiles_dir).expect("load real profiles");
+    b.schema_version = 999;
+    let report = validate_bundle(&b);
+    assert!(!report.valid);
+    assert!(
+        report
+            .errors
+            .iter()
+            .any(|e| e.contains("schema_version 999"))
+    );
+}
+
+#[test]
+fn validate_bundle_rejects_4mb_vs_8mb_bgo_flash_and_sector_traps() {
+    let profiles_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../profiles");
+    let base_real = load_bundle_from_dir(&profiles_dir).expect("load real profiles");
+    assert!(
+        validate_bundle(&base_real).valid,
+        "Built-in profiles including 4MB ver0.63 layout must pass"
+    );
+
+    // 1. 8MB BGO train bound to a 4MB Flash layout fails closed.
+    let mut mis_8_on_4 = base_real.clone();
+    mis_8_on_4
+        .flash_chips
+        .get_mut("spansion_s29jl064h_8mb")
+        .unwrap()
+        .total_bytes = 0x0040_0000;
+    let rep_8_on_4 = validate_bundle(&mis_8_on_4);
+    assert!(!rep_8_on_4.valid);
+    assert!(
+        rep_8_on_4
+            .errors
+            .iter()
+            .any(|e| e.contains("declares flash capacity 0x800000"))
+    );
+
+    // 2. 4MB BGO geometry bound to an 8MB Flash layout fails closed.
+    let mut mis_4_on_8 = base_real.clone();
+    mis_4_on_8
+        .nor_layouts
+        .get_mut("loader_ver063_4mb_top_bgo35")
+        .unwrap()
+        .flash_ref = "spansion_s29jl064h_8mb".to_string();
+    let rep_4_on_8 = validate_bundle(&mis_4_on_8);
+    assert!(!rep_4_on_8.valid);
+    assert!(
+        rep_4_on_8
+            .errors
+            .iter()
+            .any(|e| e.contains("declares flash capacity 0x400000"))
+    );
+
+    // 3. Wrong word[31] sector count (35 instead of 45) for 0x84130000..0x84400000 fails closed.
+    let mut bad_sectors = base_real.clone();
+    bad_sectors
+        .firmware_trains
+        .get_mut("loader_ver061_toc48_main57")
+        .unwrap()
+        .bgo_retarget_spec
+        .as_mut()
+        .unwrap()
+        .bgo_table_words[31] = 35;
+    let rep_sectors = validate_bundle(&bad_sectors);
+    assert!(!rep_sectors.valid);
+    assert!(
+        rep_sectors
+            .errors
+            .iter()
+            .any(|e| e.contains("word[31]*64KiB"))
+    );
+
+    // 4. Wrong digadiag_spec.exact_bytes for extrhead_128k (e.g. 262144 instead of 131072) fails closed.
+    let mut bad_diag = base_real;
+    bad_diag
+        .firmware_trains
+        .get_mut("loader_ver063_bootbin")
+        .unwrap()
+        .digadiag_spec = Some(crate::types::DigadiagSpec {
+        format: "extrhead_128k".to_string(),
+        filename: "DIGADIAG.FRM".to_string(),
+        exact_bytes: 262_144,
+        load_va: 0x5040_0000,
+        entry_va: 0x5040_0000,
+        panamon1_entry_va: None,
+        bgo_geometry_target: "BGO_35SEC_4MB_0X84200000".to_string(),
+        fvu_decoupled_mode: "bypass_checks_only".to_string(),
+        sd_media_requirement: "fat16b_0x06_max_2gb".to_string(),
+        trust_model: Some(crate::types::DigadiagTrustModel::EncryptedToc),
+    });
+    let rep_diag = validate_bundle(&bad_diag);
+    assert!(!rep_diag.valid);
+    assert!(
+        rep_diag
+            .errors
+            .iter()
+            .any(|e| e.contains("requires exact_bytes=131072"))
     );
 }

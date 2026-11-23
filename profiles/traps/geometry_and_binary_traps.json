@@ -1,0 +1,137 @@
+{
+  "schema_version": 1,
+  "description": "Catalogo declarativo SSOT de armadilhas fisicas, de geometria Flash NOR/BGO, protocolos de midia e decompilador MN103S.",
+  "traps": [
+    {
+      "id": "TRAP_BGO_4MB_VS_8MB",
+      "category": "nor_bgo_geometry",
+      "severity": "critical",
+      "wrong_assumption": "Assumir uma unica geometria BGO fixa (ex.: confundir janela de 4 MiB vs 8 MiB, base 0x84200000 vs 0x84130000 ou 35 vs 45 setores de 64 KiB) entre Loader ver0.63 / PROG061 stock e o hardware real DMR-EH55.",
+      "verified_ground_truth": "Loader ver0.63 (/BOOT.BIN 4MB/TOP BOOT @ 0x44036520) e PROG061 stock (@ 0x50436E30) operam BGO a partir de 0x84200000..0x843FFFFF (2 MiB / 4 MiB ceiling, 28 P2 ou 24 P2). No DMR-EH55 real (IC5001 Spansion S29JL064H de 8 MiB, Loader ver0.61 @ 0x440337A4), o BGO FTL ocupa 45 setores uniformes de 64 KiB em 0x84130000..0x843FFFFF (SA26..SA70, 2.880 KiB: 1 P1 + 40 P2 + 4 spares, max_pid=0x0F24) enquanto SA71..SA141 ficam em 0x84400000..0x847FFFFF.",
+      "affected_entities": [
+        "loader_ver061_toc48_main57",
+        "eh55_ver061_on_s29jl064h",
+        "loader_ver063_bootbin",
+        "loader_ver063_4mb_top_bgo35"
+      ],
+      "automated_guard": "crates/panadiga-profiles/src/validate_bgo.rs + scripts/verify_geometry_traps.py",
+      "evidence_refs": [
+        "profiles/firmware_trains/loader_ver061_toc48_main57.json",
+        "profiles/nor_layouts/eh55_ver061_on_s29jl064h.json",
+        "profiles/nor_layouts/loader_ver063_4mb_top_bgo35.json",
+        "docs/pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md"
+      ]
+    },
+    {
+      "id": "TRAP_TOP_BOOT_NON_UNIFORM_SECTORS",
+      "category": "flash_sector_table",
+      "severity": "high",
+      "wrong_assumption": "Assumir setores uniformes de 64 KiB em toda a Flash Spansion S29JL064H ou S29JL032H sem calcular boot banks de 8 KiB.",
+      "verified_ground_truth": "S29JL064H (8 MiB, SA0..SA141) tem 8x8 KiB bottom-boot + 126x64 KiB + 8x8 KiB top-boot (IPL RO = SA0..SA10 = 256 KiB; EEMUL = SA134..SA141 = 64 KiB). S29JL032H Model 01 Top Boot (4 MiB, SA0..SA70) tem 63x64 KiB + 8x8 KiB top-boot.",
+      "affected_entities": [
+        "spansion_s29jl064h_8mb",
+        "spansion_s29jl032h_4mb_top"
+      ],
+      "automated_guard": "crates/panadiga-profiles/src/derive.rs + crates/panadiga-profiles/src/validate_layout.rs",
+      "evidence_refs": [
+        "profiles/flash_chips/spansion_s29jl064h_8mb.json",
+        "profiles/flash_chips/spansion_s29jl032h_4mb_top.json"
+      ]
+    },
+    {
+      "id": "TRAP_ES35V_MAIN_XIP_VS_EH55_BGO",
+      "category": "cross_model_nor_layout",
+      "severity": "critical",
+      "wrong_assumption": "Aplicar offsets BGO do DMR-EH55 (0x130000..0x3FFFFF) em placas da serie ES (DMR-ES10/ES15/ES35V) ou vice-versa.",
+      "verified_ground_truth": "No DMR-ES35V (es35v_ver018_on_8mb), o intervalo 0x0013_0000..0x0040_FFFF contem codigo executavel MAIN_XIP, NAO BGO! O BGO do ES35V fica em 0x0070_0000..0x007E_FFFF.",
+      "affected_entities": [
+        "es35v_ver018_on_8mb",
+        "eh55_ver061_on_s29jl064h"
+      ],
+      "automated_guard": "crates/panadiga-core/src/ssot/fingerprint + profiles/nor_layouts/es35v_ver018_on_8mb.json",
+      "evidence_refs": [
+        "profiles/nor_layouts/es35v_ver018_on_8mb.json",
+        "docs/evidence/ledger.json"
+      ]
+    },
+    {
+      "id": "TRAP_EZ485V_4MB_SPARC_VENDOR_NVRAM",
+      "category": "cross_model_nor_layout",
+      "severity": "high",
+      "wrong_assumption": "Tratar flash de 4 MiB SPARC/VxWorks (DMR-EZ485V, Macronix MX29LV320 bottom-boot) como layout MN103S EEMUL 0xF1 nos ultimos 64 KiB.",
+      "verified_ground_truth": "O DMR-EZ485V (4 MiB) roda LSI ZEBRA64 SPARC/VxWorks com vendor_nvram CLsiPMABS iniciando em 0x0036_0000..0x003F_FFFF (nao EEMUL 0xF1).",
+      "affected_entities": [
+        "ez485v_vxworks_on_mx29lv320b",
+        "macronix_mx29lv320_4mb_bottom",
+        "lsi_zebra64_vxworks_bal"
+      ],
+      "automated_guard": "profiles/nor_layouts/ez485v_vxworks_on_mx29lv320b.json + validate_layout.rs",
+      "evidence_refs": [
+        "profiles/nor_layouts/ez485v_vxworks_on_mx29lv320b.json",
+        "profiles/flash_chips/macronix_mx29lv320_4mb_bottom.json"
+      ]
+    },
+    {
+      "id": "TRAP_DIGADIAG_256K_RAW_VS_128K_EXTRHEAD",
+      "category": "sd_stage15_format",
+      "severity": "high",
+      "wrong_assumption": "Usar formato EXTRHEAD de 128 KiB em loaders ver0.61/ver0.18 ou payload cru de 256 KiB em loader ver0.63.",
+      "verified_ground_truth": "Loader ver0.61 (EH55) e ver0.18 (ES35V) carregam DIGADIAG.FRM cru de exatos 262.144 B (0x40000) em 0x90400000 -> JMP 0x50400000 com PANA__SD.FRM sd48 (TOC 0x1800). Loader ver0.63 (EH58) espera DIGADIAG.FRM EXTRHEAD de 131.072 B (0x20000) em 0x93FC0000 + PANA__SD.FRM sd64 (TOC 0x2000).",
+      "affected_entities": [
+        "loader_ver061_toc48_main57",
+        "loader_ver063_bootbin"
+      ],
+      "automated_guard": "crates/panadiga-profiles/src/validate_bgo.rs + unbrick_sd_kit",
+      "evidence_refs": [
+        "profiles/firmware_trains/loader_ver061_toc48_main57.json",
+        "profiles/firmware_trains/loader_ver063_bootbin.json",
+        "docs/pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md"
+      ]
+    },
+    {
+      "id": "TRAP_EH58_P7501_5V8_HDMI",
+      "category": "electrical_hardware_pinout",
+      "severity": "critical",
+      "wrong_assumption": "Conectar a sonda Pico 3.3V ao conector P7501 de outros modelos DIGA como EH58/EH59/EH68 sem checar o SSOT da placa.",
+      "verified_ground_truth": "Na placa VEP79138 (DMR-EH55), P7501 e UART JIG 115200 8N1 (Pino 5 NSW5V sempre Hi-Z Input sem pulls). Na placa VEP79183 (DMR-EH58/EH59/EH68), P7501 e conector HDMI K1KA08A00427 levando +5.8V_AV.",
+      "affected_entities": [
+        "rfkb79183_eh58"
+      ],
+      "automated_guard": "crates/panadiga-profiles/src/validate.rs (p7501_nsw5v_hiz_only) + profiles/boards/rfkb79183_eh58.json",
+      "evidence_refs": [
+        "profiles/boards/rfkb79183_eh58.json",
+        "AGENTS.md"
+      ]
+    },
+    {
+      "id": "TRAP_MN103S_SLEIGH_10_CLASSES",
+      "category": "decompiler_sleigh_fidelity",
+      "severity": "high",
+      "wrong_assumption": "Confiar cegamente em pseudocodigo C do Ghidra sem verificar o disassembly MN103S bruto para operandos invertidos, NOT/BTST ou blocos removidos.",
+      "verified_ground_truth": "O SLEIGH padrao do MN103S apresenta 10 armadilhas catalogadas (ex.: SUB fb 9c invertido Rm-Rn, NOT f2 3x como XOR, BTST -> mn_todo(), BCLR 0xff -> local=local, Removing unreachable block ocultando 400GB em 0x574dd15b). Sempre usar o patch am33_panadiga_zero_undef.patch e validar enderecos no atlas forense.",
+      "affected_entities": [
+        "mn10300_am34"
+      ],
+      "automated_guard": "tools/ghidra/ + crates/panadiga-core/src/ghidra/",
+      "evidence_refs": [
+        "docs/pseudocode/GHIDRA_UNDEF_AUDIT_REPORT.md",
+        "docs/pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md"
+      ]
+    },
+    {
+      "id": "TRAP_PROG061_BGO_DESTRUCTIVE_CALLERS",
+      "category": "firmware_symbol_side_effect",
+      "severity": "critical",
+      "wrong_assumption": "Invocar sub-rotinas BGO descobertas em PROG061 diretamente sem passar pelo fluxo de backup e verificacao CoW.",
+      "verified_ground_truth": "Em PROG061 (loader_ver061_toc48_main57), 0x50409DF2 e 0x50409E65 mutam flags persistentes NOR/BGO via 0x504800a6..0x5048009d (iRam504802b0 == 1) e sao chamadas a partir de 0x50404FA7.",
+      "affected_entities": [
+        "loader_ver061_toc48_main57"
+      ],
+      "automated_guard": "profiles/symbols/loader_ver061_toc48_main57/PROG061.json + panadiga_symbol_lookup + panadiga-rag safety",
+      "evidence_refs": [
+        "profiles/symbols/loader_ver061_toc48_main57/PROG061.json",
+        "crates/panadiga-core/src/re/symbol_index/store.rs"
+      ]
+    }
+  ]
+}

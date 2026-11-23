@@ -15,7 +15,7 @@ use super::super::registry::{
 };
 use super::super::spec::constants::P7501_WDT_MAX_CMD_WINDOW_MS;
 use super::header_sections::{
-    append_c11_struct_decls, append_diag_enums_and_externs, compute_fnv1a_u32, write_padded_define,
+    append_c11_struct_decls, append_diag_enums_and_externs, write_padded_define,
 };
 use super::{
     DEV_SERIAL_NAK_BYTE, P7501_AM34_LETHAL_REG_LEN_SSOT, P7501_CLI_LINE_MAX_SSOT,
@@ -23,7 +23,7 @@ use super::{
     P7501_GPIO_SW_UART_GP26, P7501_GPIO_TX_GP4, P7501_GPIO_XRESET_OD_GP5,
     P7501_JIG_DEFAULT_HOLD_MS_SSOT, P7501_VDD_FLOATING_CEIL_MV, P7501_VDD_MIN_MV,
     P7501_VDD_NOMINAL_MV, P7501_VDD_PULLDOWN_MIN_MV, P7501_VDD_SAFE_MIN_MV, P7501_VDD_WAKE_MIN_MV,
-    P7501_WDT_TIMEOUT_MS_SSOT, generate_c11_ssot_tables,
+    P7501_WDT_TIMEOUT_MS_SSOT, compute_pico_ssot_hash,
 };
 
 /// Renders the master declarative C11 SSOT header `firmware/pico-p7501/generated/p7501_ssot.h`.
@@ -285,7 +285,7 @@ pub fn generate_c11_ssot_header() -> String {
     out.push_str("}\n\n");
 
     append_c11_struct_decls(&mut out, reg.bundle().eeprom_chips.len());
-    let ssot_hash = compute_fnv1a_u32(generate_c11_ssot_tables().as_bytes());
+    let ssot_hash = compute_pico_ssot_hash();
     append_diag_enums_and_externs(&mut out, ssot_hash);
     out.push_str("#ifdef __cplusplus\n}\n#endif\n\n#endif /* P7501_SSOT_GENERATED_H */\n");
     out

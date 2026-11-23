@@ -1,0 +1,161 @@
+#![deny(unsafe_code)]
+
+//! Strict Python 3.10+ TypedDict/Literal mirrors for `scripts/profiles_types.py`.
+
+pub(super) const PY_PROFILES_TYPES_BODY: &str = r#"from __future__ import annotations
+
+from typing import Final, Literal, TypedDict
+
+EvidenceTier = Literal[
+    "community_unverified",
+    "service_manual_only",
+    "official_frm_verified",
+    "physical_dump_verified",
+    "bench_verified",
+]
+
+Capability = Literal[
+    "inspect_read_only",
+    "nvram_sanitize_offline_cow",
+    "nvram_write_live",
+    "upper_nor_patch_offline_cow",
+    "upper_nor_write_live",
+    "official_frm_pass_through",
+    "custom_recovery_media",
+    "critical_ipl_or_lethal_mmio",
+]
+
+AuthorizationMode = Literal["verified_policy", "lab_override_unverified"]
+
+
+class _EvidenceSourceOptional(TypedDict, total=False):
+    sha256: str | None
+    notes: str | None
+
+
+class EvidenceSourceDict(_EvidenceSourceOptional):
+    kind: str
+    reference: str
+
+
+class _ClaimEvidenceOptional(TypedDict, total=False):
+    sources: list[EvidenceSourceDict]
+    notes: str | None
+
+
+class ClaimEvidenceDict(_ClaimEvidenceOptional):
+    tier: EvidenceTier
+
+
+class ModelClaimsDict(TypedDict):
+    board: ClaimEvidenceDict
+    flash_chip: ClaimEvidenceDict
+    nor_layout: ClaimEvidenceDict
+    train: ClaimEvidenceDict
+    eeprom: ClaimEvidenceDict
+
+
+class _ModelProfileManifestOptional(TypedDict, total=False):
+    region_suffix: str | None
+    tv_standard: str | None
+    hw_code: str | None
+    board_ref: str | None
+    train_ref: str | None
+    nor_layout_ref: str | None
+    exact_aliases: list[str]
+    fixture_ref: str | None
+
+
+class ModelProfileManifestDict(_ModelProfileManifestOptional):
+    model_id: str
+    family_label: str
+    series: str
+    claims: ModelClaimsDict
+
+
+class _PanaRebuildRecipeOptional(TypedDict, total=False):
+    family_aliases: list[str]
+    sources_from_panamon_dump: list[str]
+
+
+class PanaRebuildRecipeDict(_PanaRebuildRecipeOptional):
+    output_container: str
+    toc_format: str
+    model_prefix_byte: str
+
+
+class OffsetRangeDict(TypedDict):
+    start: str
+    end: str
+
+
+AddressRelocDict = TypedDict("AddressRelocDict", {"from": str, "to": str})
+
+
+class _BytePatchEntryOptional(TypedDict, total=False):
+    note: str | None
+
+
+class BytePatchEntryDict(_BytePatchEntryOptional):
+    offset: str
+    expect: str
+    replace: str
+
+
+class ProgBgoRetargetSpecDict(TypedDict):
+    target_geometry_id: str
+    expected_prog_size: int
+    bgo_table_offset: str
+    bgo_table_marker: str
+    detect_logical_sectors: str
+    detect_flash_base: str
+    bgo_table_words: list[str]
+    bgo_sum_beq_offset: str
+    nfrom_drv_start: str
+    nfrom_drv_end: str
+    nfrom_drv_uncompressed_bytes: int
+    nfrom_drv_blob_relpath: str
+    nfrom_drv_uncompressed_sha256: str
+    nop_fill_byte: str
+    bss_zero_end_offset: str
+    orig_bss_zero_end: str
+    target_bss_zero_end: str
+    init2_call_offset: str
+    orig_init2_rel32: str
+    target_init2_rel32: str
+    hi_ram_ranges: list[OffsetRangeDict]
+    hi_ram_relocs: list[AddressRelocDict]
+    byte_patches: list[BytePatchEntryDict]
+
+
+class _InterpolatedRegionVariantOptional(TypedDict, total=False):
+    interpolatedHwCode: str | None
+
+
+class InterpolatedRegionVariantDict(_InterpolatedRegionVariantOptional):
+    regionCode: str
+    tvStandard: str
+    videoLineSystem: str
+    aiofVmodeselHex: str
+    dvdRegionCode: int
+    oemMarker: str
+    acMainsSpec: str
+    tunerSystem: str
+
+
+class RegistryValidationReportDict(TypedDict):
+    valid: bool
+    socCoreCount: int
+    socCount: int
+    flashChipCount: int
+    eepromChipCount: int
+    firmwareTrainCount: int
+    norLayoutCount: int
+    mediaFormatCount: int
+    boardCount: int
+    modelCount: int
+    checksRun: int
+    checksFailed: int
+    safetyChecksPassed: int
+    errors: list[str]
+"#;

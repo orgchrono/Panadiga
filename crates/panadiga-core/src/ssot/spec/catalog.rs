@@ -1,5 +1,5 @@
 //! Data-driven loader for the shared SSOT hardware catalog (`hardware_catalog.json`)
-//! and localized text tables (`apps/desktop/src/locales/pt-BR/ssot.json`).
+//! and canonical default hardware catalog labels (`hardware_catalog_labels.json`).
 
 use std::collections::BTreeMap;
 use std::sync::OnceLock;
@@ -7,10 +7,7 @@ use std::sync::OnceLock;
 use serde::Deserialize;
 
 const RAW_HARDWARE_CATALOG_JSON: &str = include_str!("../hardware_catalog.json");
-const RAW_PT_BR_LOCALE_JSON: &str = include_str!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../apps/desktop/src/locales/pt-BR/ssot.json"
-));
+const RAW_PT_BR_LOCALE_JSON: &str = include_str!("../hardware_catalog_labels.json");
 
 #[derive(Debug, Clone, Deserialize)]
 pub(super) struct CatalogPinEntry {

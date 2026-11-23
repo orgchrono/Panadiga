@@ -26,6 +26,7 @@ pnpm-debug.log*
 # ------------------------------------------------------------------------------
 # 3. Test Runners, Coverage & Quality Reports
 # ------------------------------------------------------------------------------
+/test-results/
 apps/desktop/test-results/
 apps/desktop/playwright-report/
 .jscpd-report/
@@ -70,6 +71,10 @@ env/
 *.exe
 *.keystore
 apps/desktop/src-tauri/gen/android/keystore/
+.env*
+*.pem
+*.key
+*.jks
 tools/HxD/app/
 
 # ------------------------------------------------------------------------------
@@ -86,6 +91,7 @@ firmware_and_images/*.zip
 firmware_and_images/*.FRM
 firmware_and_images/*.frm
 firmware_and_images/extracted_partitions/
+firmware_and_images/sd_unbrick_kit_*/
 keys.local.ukf
 *.local.ukf
 !firmware_and_images/sd_unbrick_kit/
@@ -101,6 +107,9 @@ keys.local.ukf
 !firmware_and_images/eh55_nor_8mb_ic5001_repaired.bin
 !firmware_and_images/**/README.md
 !firmware_and_images/*.bin.gz
+
+# Runtime & Bench Backups
+/backups/
 
 # ------------------------------------------------------------------------------
 # 8. Operating System & Temporary Files

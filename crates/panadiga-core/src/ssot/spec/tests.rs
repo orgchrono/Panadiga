@@ -240,4 +240,61 @@ fn memory_regions_catalog_matches_am34_constants_and_blueprints() {
         assert!(bp.end.starts_with("0x") && bp.end.len() == 10);
         assert!(bp.size_kb > 0);
     }
+
+    let sram_bp = &catalog.memory_region_blueprints[0];
+    let ipl_bp = &catalog.memory_region_blueprints[2];
+    let rtos_bp = &catalog.memory_region_blueprints[3];
+    assert_eq!(
+        (
+            sram_bp.start.as_str(),
+            sram_bp.end.as_str(),
+            sram_bp.size_kb
+        ),
+        ("0x00000000", "0x0003FFFF", 256)
+    );
+    assert_eq!(
+        (ipl_bp.start.as_str(), ipl_bp.end.as_str(), ipl_bp.size_kb),
+        ("0x80000000", "0x8003FFFF", 256)
+    );
+    assert_eq!(
+        (
+            rtos_bp.start.as_str(),
+            rtos_bp.end.as_str(),
+            rtos_bp.size_kb
+        ),
+        ("0x80040000", "0x807EFFFF", 7872)
+    );
+}
+
+#[test]
+fn core_catalogs_and_decoupled_labels_stay_valid_and_synced() {
+    let labels_core: serde_json::Value = serde_json::from_str(&repo_file(
+        "crates/panadiga-core/src/ssot/hardware_catalog_labels.json",
+    ))
+    .expect("valid hardware_catalog_labels.json");
+    let labels_ui: serde_json::Value =
+        serde_json::from_str(&repo_file("apps/desktop/src/locales/pt-BR/ssot.json"))
+            .expect("valid apps/desktop/src/locales/pt-BR/ssot.json");
+    assert_eq!(
+        labels_core, labels_ui,
+        "crates/panadiga-core/src/ssot/hardware_catalog_labels.json drifted from pt-BR/ssot.json"
+    );
+
+    for rel in [
+        "crates/panadiga-core/src/ssot/hardware_catalog.json",
+        "crates/panadiga-core/src/ghidra/specs/ghidra_maps_ssot.json",
+        "crates/panadiga-ir/src/ir_macros_ssot.json",
+        "crates/panadiga-core/src/re/error_dict/firmware_error_dict.json",
+    ] {
+        let raw = repo_file(rel);
+        let parsed: serde_json::Value =
+            serde_json::from_str(&raw).unwrap_or_else(|e| panic!("Invalid JSON {rel}: {e}"));
+        let non_empty = parsed.as_object().is_some_and(|m| !m.is_empty())
+            || parsed.as_array().is_some_and(|a| !a.is_empty());
+        assert!(non_empty, "{rel} must be a non-empty JSON object or array");
+        assert!(
+            !raw.contains("SA0..SA3"),
+            "Stale SA0..SA3 token found in {rel}"
+        );
+    }
 }

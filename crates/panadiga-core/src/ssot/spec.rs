@@ -9,6 +9,7 @@ mod hardware;
 #[cfg(test)]
 mod tests;
 
+pub use commands::is_known_pico_command_id as check_known_pico_command_id;
 pub use dto::{
     BreakInModeSpecDto, FlashGeometrySpecDto, HardwareSsotSpecDto, HardwareThresholdsDto,
     MemoryRegionDto, P7501PinMappingDto, PicoCommandArgOptionDto, PicoCommandSpecDto,

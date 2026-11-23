@@ -8,10 +8,11 @@ use std::collections::BTreeMap;
 use crate::derive::sector_range_for_aligned_span;
 use crate::hex_serde::parse_hex_bytes;
 use crate::types::{
-    FirmwareTrainProfile, FlashChipProfile, ModelProfileManifest, NorLayoutProfile, NorRegionKind,
-    NorRegionPolicy, ProfilesBundle,
+    FlashChipProfile, ModelProfileManifest, NorLayoutProfile, NorRegionKind, NorRegionPolicy,
+    ProfilesBundle,
 };
 use crate::validate::{CheckTracker, MIN_CRITICAL_IPL_GUARD_BYTES, check_hex_digest};
+use crate::validate_bgo::validate_bgo_retarget_spec;
 
 fn validate_single_nor_layout(
     layout: &NorLayoutProfile,
@@ -208,144 +209,6 @@ fn validate_model_manifest(
                 )
             });
         }
-    }
-}
-
-fn validate_bgo_retarget_spec(
-    bundle: &ProfilesBundle,
-    trn: &FirmwareTrainProfile,
-    tr: &mut CheckTracker,
-) {
-    let Some(spec) = &trn.bgo_retarget_spec else {
-        return;
-    };
-    tr.check(!spec.target_geometry_id.trim().is_empty(), || {
-        format!(
-            "train '{}': bgo_retarget_spec.target_geometry_id cannot be empty",
-            trn.id
-        )
-    });
-    tr.check(spec.expected_prog_size > 0, || {
-        format!(
-            "train '{}': bgo_retarget_spec.expected_prog_size must be > 0",
-            trn.id
-        )
-    });
-    tr.check(spec.bgo_table_words.len() == 64, || {
-        format!(
-            "train '{}': bgo_retarget_spec.bgo_table_words must have 64 words (got {})",
-            trn.id,
-            spec.bgo_table_words.len()
-        )
-    });
-    let prog_len = usize::try_from(spec.expected_prog_size).unwrap_or(0);
-    let table_end = (spec.bgo_table_offset as usize).saturating_add(spec.bgo_table_words.len() * 4);
-    tr.check(table_end <= prog_len, || {
-        format!(
-            "train '{}': bgo_table range [0x{:X}..0x{table_end:X}) exceeds expected_prog_size 0x{prog_len:X}",
-            trn.id, spec.bgo_table_offset
-        )
-    });
-    tr.check(
-        spec.nfrom_drv_start < spec.nfrom_drv_end && spec.nfrom_drv_end <= spec.expected_prog_size,
-        || {
-            format!(
-                "train '{}': invalid nfrom_drv window [0x{:X}..0x{:X}) within 0x{prog_len:X}",
-                trn.id, spec.nfrom_drv_start, spec.nfrom_drv_end
-            )
-        },
-    );
-    tr.check(
-        spec.nfrom_drv_uncompressed_bytes > 0
-            && spec
-                .nfrom_drv_start
-                .saturating_add(spec.nfrom_drv_uncompressed_bytes)
-                <= spec.nfrom_drv_end,
-        || {
-            format!(
-                "train '{}': nfrom_drv_uncompressed_bytes ({}) does not fit in [0x{:X}..0x{:X})",
-                trn.id, spec.nfrom_drv_uncompressed_bytes, spec.nfrom_drv_start, spec.nfrom_drv_end
-            )
-        },
-    );
-    tr.check(
-        spec.bgo_sum_beq_offset >= spec.nfrom_drv_start
-            && spec.bgo_sum_beq_offset.saturating_add(2) <= spec.nfrom_drv_end,
-        || {
-            format!(
-                "train '{}': bgo_sum_beq_offset 0x{:X} outside [0x{:X}..0x{:X})",
-                trn.id, spec.bgo_sum_beq_offset, spec.nfrom_drv_start, spec.nfrom_drv_end
-            )
-        },
-    );
-    tr.check(
-        spec.bss_zero_end_offset.saturating_add(4) <= spec.expected_prog_size,
-        || {
-            format!(
-                "train '{}': bss_zero_end_offset 0x{:X} out of bounds",
-                trn.id, spec.bss_zero_end_offset
-            )
-        },
-    );
-    tr.check(
-        spec.init2_call_offset.saturating_add(5) <= spec.expected_prog_size,
-        || {
-            format!(
-                "train '{}': init2_call_offset 0x{:X} out of bounds",
-                trn.id, spec.init2_call_offset
-            )
-        },
-    );
-    tr.check(
-        check_hex_digest(Some(&spec.nfrom_drv_uncompressed_sha256)),
-        || {
-            format!(
-                "train '{}': invalid nfrom_drv_uncompressed_sha256 '{}'",
-                trn.id, spec.nfrom_drv_uncompressed_sha256
-            )
-        },
-    );
-    for rng in &spec.hi_ram_ranges {
-        tr.check(
-            rng.start < rng.end && rng.end <= spec.expected_prog_size,
-            || {
-                format!(
-                    "train '{}': hi_ram_range [0x{:X}..0x{:X}) out of bounds",
-                    trn.id, rng.start, rng.end
-                )
-            },
-        );
-    }
-    for bp in &spec.byte_patches {
-        tr.check(bp.offset < spec.expected_prog_size, || {
-            format!(
-                "train '{}': byte_patch offset 0x{:X} out of bounds",
-                trn.id, bp.offset
-            )
-        });
-    }
-    let relpath_ok = spec.nfrom_drv_blob_relpath.starts_with("blobs/")
-        && !spec.nfrom_drv_blob_relpath.contains("..");
-    tr.check(relpath_ok, || {
-        format!(
-            "train '{}': invalid nfrom_drv_blob_relpath '{}'",
-            trn.id, spec.nfrom_drv_blob_relpath
-        )
-    });
-    let b64_opt = bundle.blobs.get(&spec.nfrom_drv_blob_relpath);
-    tr.check(b64_opt.is_some(), || {
-        format!(
-            "train '{}': missing embedded blob '{}' in bundle.blobs",
-            trn.id, spec.nfrom_drv_blob_relpath
-        )
-    });
-    if let Some(b64) = b64_opt {
-        tr.check(crate::blob_b64::decode_base64(b64).is_ok(), || {
-            format!(
-                "train '{}': embedded blob '{}' contains malformed base64",
-                trn.id, spec.nfrom_drv_blob_relpath
-            )
-        });
     }
 }
 

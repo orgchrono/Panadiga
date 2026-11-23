@@ -1,0 +1,217 @@
+#![deny(unsafe_code)]
+
+//! Layout, fingerprint, and authorization TS interfaces.
+
+pub(super) const TS_PROFILES_TYPES_MODELS: &str = r#"export interface OffsetRange {
+  readonly start: string;
+  readonly end: string;
+}
+
+export interface AddressReloc {
+  readonly from: string;
+  readonly to: string;
+}
+
+export interface BytePatchEntry {
+  readonly offset: string;
+  readonly expect: string;
+  readonly replace: string;
+  readonly note?: string | null;
+}
+
+export interface ProgBgoRetargetSpec {
+  readonly target_geometry_id: string;
+  readonly expected_prog_size: number;
+  readonly bgo_table_offset: string;
+  readonly bgo_table_marker: string;
+  readonly detect_logical_sectors: string;
+  readonly detect_flash_base: string;
+  readonly bgo_table_words: readonly string[];
+  readonly bgo_sum_beq_offset: string;
+  readonly nfrom_drv_start: string;
+  readonly nfrom_drv_end: string;
+  readonly nfrom_drv_uncompressed_bytes: number;
+  readonly nfrom_drv_blob_relpath: string;
+  readonly nfrom_drv_uncompressed_sha256: string;
+  readonly nop_fill_byte: string;
+  readonly bss_zero_end_offset: string;
+  readonly orig_bss_zero_end: string;
+  readonly target_bss_zero_end: string;
+  readonly init2_call_offset: string;
+  readonly orig_init2_rel32: string;
+  readonly target_init2_rel32: string;
+  readonly hi_ram_ranges: readonly OffsetRange[];
+  readonly hi_ram_relocs: readonly AddressReloc[];
+  readonly byte_patches: readonly BytePatchEntry[];
+}
+
+export interface FirmwareTrainProfile {
+  readonly id: string;
+  readonly soc_core_ref?: string | null;
+  readonly loader_version: string;
+  readonly loader_date?: string | null;
+  readonly loader_profile_key: string;
+  readonly loader_fingerprint?: LoaderFingerprint | null;
+  readonly frm?: FrmContainerSpec | null;
+  readonly prog_load_va?: string | null;
+  readonly main_load_va?: string | null;
+  readonly drv_load_va?: string | null;
+  readonly symbols?: Readonly<Record<string, string>>;
+  readonly sd_boot_filenames?: readonly string[];
+  readonly digadiag_raw_bytes?: number | null;
+  readonly media_refs?: readonly string[];
+  readonly digadiag_spec?: DigadiagSpec | null;
+  readonly pana_rebuild_recipe?: PanaRebuildRecipe | null;
+  readonly bgo_retarget_spec?: ProgBgoRetargetSpec | null;
+  readonly evidence: ClaimEvidence;
+}
+
+export interface RegionSignature {
+  readonly marker_byte_offset: number;
+  readonly marker_value: string;
+}
+
+export interface NorRegion {
+  readonly kind: NorRegionKind;
+  readonly start_offset: string;
+  readonly end_offset: string;
+  readonly policy: NorRegionPolicy;
+  readonly tag?: string | null;
+  readonly signature?: RegionSignature | null;
+}
+
+export interface NorLayoutProfile {
+  readonly id: string;
+  readonly flash_ref: string;
+  readonly train_ref: string;
+  readonly regions: readonly NorRegion[];
+  readonly evidence: ClaimEvidence;
+}
+
+export interface MediaFormatProfile {
+  readonly id: string;
+  readonly media_kind: string;
+  readonly filesystem: string;
+  readonly partition_type: string;
+  readonly sector_size: number;
+  readonly start_lba: number;
+  readonly default_volume_mb: number;
+  readonly root_filenames: readonly string[];
+  readonly magic_hex: string;
+  readonly write_speed_policy: string;
+  readonly evidence: ClaimEvidence;
+}
+
+export interface BoardProfile {
+  readonly id: string;
+  readonly pcb_code: string;
+  readonly service_module_code?: string | null;
+  readonly soc_ref?: string | null;
+  readonly flash_ref?: string | null;
+  readonly eeprom_refs?: readonly string[];
+  readonly p7501_header_present: boolean;
+  readonly has_hdd_interface: boolean;
+  readonly has_sd_slot: boolean;
+  readonly evidence: ClaimEvidence;
+}
+
+export interface ModelClaims {
+  readonly board: ClaimEvidence;
+  readonly flash_chip: ClaimEvidence;
+  readonly nor_layout: ClaimEvidence;
+  readonly train: ClaimEvidence;
+  readonly eeprom: ClaimEvidence;
+}
+
+export interface ModelProfileManifest {
+  readonly model_id: string;
+  readonly family_label: string;
+  readonly series: string;
+  readonly region_suffix?: string | null;
+  readonly tv_standard?: string | null;
+  readonly hw_code?: string | null;
+  readonly board_ref?: string | null;
+  readonly train_ref?: string | null;
+  readonly nor_layout_ref?: string | null;
+  readonly exact_aliases?: readonly string[];
+  readonly fixture_ref?: string | null;
+  readonly claims: ModelClaims;
+}
+
+export interface CapabilitySummary {
+  readonly inspectReadOnly: boolean;
+  readonly nvramSanitizeOfflineCow: boolean;
+  readonly nvramWriteLive: boolean;
+  readonly upperNorPatchOfflineCow: boolean;
+  readonly upperNorWriteLive: boolean;
+  readonly officialFrmPassThrough: boolean;
+  readonly customRecoveryMedia: boolean;
+  readonly labOverrideOfflineCowEligible: boolean;
+}
+
+export interface InterpolatedRegionVariant {
+  readonly regionCode: string;
+  readonly tvStandard: string;
+  readonly videoLineSystem: string;
+  readonly aiofVmodeselHex: string;
+  readonly dvdRegionCode: number;
+  readonly oemMarker: string;
+  readonly acMainsSpec: string;
+  readonly tunerSystem: string;
+  readonly interpolatedHwCode?: string | null;
+}
+
+export interface ResolvedModelProfile {
+  readonly manifest: ModelProfileManifest;
+  readonly board: BoardProfile | null;
+  readonly socCore: SocCoreProfile | null;
+  readonly soc: SocProfile | null;
+  readonly flashChip: FlashChipProfile | null;
+  readonly eepromChips: readonly EepromChipProfile[];
+  readonly firmwareTrain: FirmwareTrainProfile | null;
+  readonly norLayout: NorLayoutProfile | null;
+  readonly mediaFormats: readonly MediaFormatProfile[];
+  readonly nvramCachedVaHex: string | null;
+  readonly nvramUncachedVaHex: string | null;
+  readonly iplProtectedRangeHex: string | null;
+  readonly bgoSectorRangeDerived: string | null;
+  readonly nvramSectorRangeDerived: string | null;
+  readonly derivedSectorGeometry: string | null;
+  readonly regionalVariants?: readonly InterpolatedRegionVariant[];
+  readonly activeRegion?: InterpolatedRegionVariant | null;
+  readonly effectiveCapabilities: CapabilitySummary;
+}
+
+export interface RegistryValidationReport {
+  readonly valid: boolean;
+  readonly socCoreCount: number;
+  readonly socCount: number;
+  readonly flashChipCount: number;
+  readonly eepromChipCount: number;
+  readonly firmwareTrainCount: number;
+  readonly norLayoutCount: number;
+  readonly mediaFormatCount: number;
+  readonly boardCount: number;
+  readonly modelCount: number;
+  readonly checksRun: number;
+  readonly checksFailed: number;
+  readonly safetyChecksPassed: number;
+  readonly errors: readonly string[];
+}
+
+export interface FingerprintCandidate {
+  readonly modelId: string;
+  readonly matchedProbe: string;
+  readonly confidenceBps: number;
+}
+
+export interface NorFingerprintReport {
+  readonly detectedModel: string | null;
+  readonly displayLabel: string;
+  readonly isSizeOnly: boolean;
+  readonly matchedProbe: string | null;
+  readonly hasEemulF1Marker: boolean;
+  readonly dumpSizeBytes: number;
+  readonly candidates: readonly FingerprintCandidate[];
+}
+"#;

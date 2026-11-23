@@ -175,6 +175,16 @@ fn validate_flash_and_eeprom_layer(bundle: &ProfilesBundle, tr: &mut CheckTracke
 /// Validates an entire [`ProfilesBundle`] and returns an accurate [`RegistryValidationReport`].
 pub fn validate_bundle(bundle: &ProfilesBundle) -> RegistryValidationReport {
     let mut tr = CheckTracker::new();
+    tr.check(
+        bundle.schema_version == crate::loader::PROFILES_SCHEMA_VERSION,
+        || {
+            format!(
+                "Unsupported ProfilesBundle schema_version {} (expected {})",
+                bundle.schema_version,
+                crate::loader::PROFILES_SCHEMA_VERSION
+            )
+        },
+    );
     validate_soc_layer(bundle, &mut tr);
     validate_flash_and_eeprom_layer(bundle, &mut tr);
     validate_train_board_layout_model(bundle, &mut tr);

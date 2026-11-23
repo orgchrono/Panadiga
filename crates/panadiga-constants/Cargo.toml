@@ -1,0 +1,27 @@
+[package]
+name = "panadiga-constants"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "L0 leaf hardware constants, IPC channels, telemetry logger, and pure forensic I/O helpers for Panadiga"
+
+[lib]
+name = "panadiga_constants"
+crate-type = ["rlib"]
+
+[dependencies]
+anyhow = { workspace = true }
+flate2 = { workspace = true }
+hex = { workspace = true }
+md-5 = { workspace = true }
+memmap2 = { workspace = true }
+opentelemetry = { workspace = true }
+opentelemetry_sdk = { workspace = true }
+rayon = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+tracing = { workspace = true }
+tracing-opentelemetry = { workspace = true }
+tracing-subscriber = { workspace = true }

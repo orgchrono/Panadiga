@@ -7,14 +7,19 @@ use std::path::Path;
 
 use anyhow::Result;
 
+mod bench_contracts;
+
 use crate::constants::{
     AM34_FLASH_BASE, AM34_FLASH_UNCACHED_BASE, AM34_NVRAM_BASE, AM34_NVRAM_UNCACHED_BASE,
     AM34_SDRAM_STUB_RAW_ADDR, DEFAULT_BAUD_RATE, PANA_DIGADIAG_DEFAULT_LOAD_ADDR,
 };
+use bench_contracts::append_bench_stream_contracts;
 
+use super::events::ALL_IPC_EVENT_CHANNELS;
 use super::pico_header::{
     DIAG_SIGNATURE_RULES, P7501_VDD_FLOATING_CEIL_MV, P7501_VDD_MIN_MV, P7501_VDD_NOMINAL_MV,
     P7501_VDD_PULLDOWN_MIN_MV, P7501_VDD_SAFE_MIN_MV, P7501_VDD_WAKE_MIN_MV,
+    compute_pico_ssot_hash,
 };
 use super::registry::{EvidenceTier, HardwareProfileRegistry, derive_sector_table};
 use super::spec::build_hardware_ssot_spec;
@@ -47,6 +52,23 @@ pub fn generate_ts_ssot_module() -> String {
     }
     out.push_str("] as const;\n");
     out.push_str("export type DigaModelId = (typeof DIGA_MODEL_IDS)[number];\n\n");
+
+    let contract_hash = compute_pico_ssot_hash();
+    let _ = writeln!(
+        out,
+        "export const SSOT_CONTRACT_HASH_U32 = 0x{contract_hash:08X};"
+    );
+    let _ = writeln!(
+        out,
+        "export const SSOT_CONTRACT_HASH_STR = '{contract_hash:08X}';\n"
+    );
+
+    out.push_str("export const SSOT_IPC_EVENTS = {\n");
+    for &(sym, channel) in ALL_IPC_EVENT_CHANNELS {
+        let _ = writeln!(out, "  {sym}: '{channel}',");
+    }
+    out.push_str("} as const;\n");
+    out.push_str("export type SsotIpcEventName = (typeof SSOT_IPC_EVENTS)[keyof typeof SSOT_IPC_EVENTS];\n\n");
 
     out.push_str("export const PICO_COMMAND_IDS = [\n");
     for cmd in &spec.pico_commands {
@@ -262,7 +284,8 @@ pub fn generate_ts_ssot_module() -> String {
     let _ = writeln!(out, "  lethalMmioRegHex: '0x{eh55_lethal:08X}',");
     let _ = writeln!(out, "  defaultBaudRate: {DEFAULT_BAUD_RATE},");
     let _ = writeln!(out, "  wdtMaxCmdWindowMs: {P7501_WDT_MAX_CMD_WINDOW_MS},");
-    out.push_str("} as const;\n");
+    out.push_str("} as const;\n\n");
+    append_bench_stream_contracts(&mut out);
     out
 }
 

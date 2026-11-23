@@ -1,0 +1,51 @@
+{
+  "id": "loader_ver063_4mb_top_bgo35",
+  "flash_ref": "spansion_s29jl032h_4mb_top",
+  "train_ref": "loader_ver063_bootbin",
+  "regions": [
+    {
+      "kind": "ipl",
+      "start_offset": "0x0000_0000",
+      "end_offset": "0x0003_FFFF",
+      "policy": "read_only_permanent",
+      "tag": "Loader ver0.63 IPL (256 KiB RO, 0x000000..0x03FFFF)",
+      "signature": null
+    },
+    {
+      "kind": "unknown",
+      "start_offset": "0x0004_0000",
+      "end_offset": "0x001F_FFFF",
+      "policy": "read_only_reference",
+      "tag": "Upper NOR App/DRV 4MB Span (0x040000..0x1FFFFF)",
+      "signature": null
+    },
+    {
+      "kind": "bgo",
+      "start_offset": "0x0020_0000",
+      "end_offset": "0x003E_FFFF",
+      "policy": "read_only_reference",
+      "tag": "BGO Bank 1 4MB/TOP BOOT (0x84200000..0x843EFFFF, 31x64KiB; ver0.63 0x44036520 / PROG061 0x50436E30)",
+      "signature": null
+    },
+    {
+      "kind": "eemul",
+      "start_offset": "0x003F_0000",
+      "end_offset": "0x003F_FFFF",
+      "policy": "read_only_reference",
+      "tag": "Top-Boot 8x8KiB (0x843F0000..0x843FFFFF; Bank 2 8x8KiB in PROG061 / EEMUL boundary)",
+      "signature": null
+    }
+  ],
+  "evidence": {
+    "tier": "official_frm_verified",
+    "sources": [
+      {
+        "kind": "official_frm",
+        "reference": "docs/pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md",
+        "sha256": "7c13c72a54c77387f3f7df0ddc213e4800e20b27eecbfd225cbc05a8fc73e377",
+        "notes": "Table 0x44036520 in /BOOT.BIN (Loader ver0.63 [07/10/24], 4MB/TOP BOOT) and donor PROG061 table 0x50436E30 place BGO at 0x84200000..0x843FFFFF on 4 MiB flash, contrasting with real EH55 8 MiB BGO 0x84130000..0x843FFFFF (SA26..SA70)."
+      }
+    ],
+    "notes": "Reference 4 MiB Top-Boot layout preventing 4 MiB vs 8 MiB BGO size/offset confusion."
+  }
+}

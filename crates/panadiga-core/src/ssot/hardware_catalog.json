@@ -593,10 +593,10 @@
     }
   ],
   "memory_region_blueprints": [
-    { "key": "sram", "start": "0x00000000", "end": "0x0000FFFF", "size_kb": 64 },
+    { "key": "sram", "start": "0x00000000", "end": "0x0003FFFF", "size_kb": 256 },
     { "key": "mmio", "start": "0xC0000000", "end": "0xC000FFFF", "size_kb": 64 },
-    { "key": "flash_ipl", "start": "0x80000000", "end": "0x800FFFFF", "size_kb": 1024 },
-    { "key": "rtos_fw", "start": "0x80100000", "end": "0x807EFFFF", "size_kb": 7104 },
+    { "key": "flash_ipl", "start": "0x80000000", "end": "0x8003FFFF", "size_kb": 256 },
+    { "key": "rtos_fw", "start": "0x80040000", "end": "0x807EFFFF", "size_kb": 7872 },
     { "key": "flash_nvram", "start": "0x807F0000", "end": "0x807FFFFF", "size_kb": 64 },
     { "key": "sdram", "start": "0x40000000", "end": "0x43FFFFFF", "size_kb": 65536 }
   ],
@@ -604,10 +604,12 @@
     { "name": "INTERNAL_SRAM", "start": "0x00000000", "end": "0x0003FFFF", "size_kb": 256, "perms": "rwx" },
     { "name": "CORE_MMIO", "start": "0x10000000", "end": "0x1000FFFF", "size_kb": 64, "perms": "rw-" },
     { "name": "MAIN_SDRAM", "start": "0x40000000", "end": "0x43FFFFFF", "size_kb": 65536, "perms": "rwx" },
-    { "name": "FLASH_NOR_IPL", "start": "0x80000000", "end": "0x807EFFFF", "size_kb": 8128, "perms": "r-x" },
+    { "name": "FLASH_NOR_IPL", "start": "0x80000000", "end": "0x8003FFFF", "size_kb": 256, "perms": "r-x" },
+    { "name": "FLASH_NOR_UPPER_APP", "start": "0x80040000", "end": "0x807EFFFF", "size_kb": 7872, "perms": "r-x" },
     { "name": "NVRAM_U99", "start": "0x807F0000", "end": "0x807FFFFF", "size_kb": 64, "perms": "rw-" },
+    { "name": "DAVIS_IDE_MMIO", "start": "0x89000400", "end": "0x89000FFF", "size_kb": 3, "perms": "rw-" },
     { "name": "SYSTEM_MMIO", "start": "0xC0000000", "end": "0xC0003FFF", "size_kb": 16, "perms": "rw-" },
     { "name": "AM34_OCD_MMIO", "start": "0xC0004000", "end": "0xC00040FF", "size_kb": 1, "perms": "rw-" },
-    { "name": "ATA_IDE_MMIO", "start": "0xD4000000", "end": "0xD4000FFF", "size_kb": 4, "perms": "rw-" }
+    { "name": "SC0_UART0_MMIO", "start": "0xD4002000", "end": "0xD400201F", "size_kb": 1, "perms": "rw-" }
   ]
 }

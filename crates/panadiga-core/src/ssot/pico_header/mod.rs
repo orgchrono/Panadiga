@@ -130,6 +130,12 @@ pub(super) const LOADER_FINGERPRINTS: &[(&str, &str, &str, bool)] = &[
     ("ES10", "DMR-ES10", "P7501_TARGET_PROFILE_DMR_ES10", true),
 ];
 
+/// Computes the deterministic FNV-1a contract hash over the generated Pico C11 SSOT tables.
+#[must_use]
+pub fn compute_pico_ssot_hash() -> u32 {
+    header_sections::compute_fnv1a_u32(generate_c11_ssot_tables().as_bytes())
+}
+
 /// Renders compatibility wrapper `firmware/pico-p7501/uart/p7501_pana_rsp_ssot.h` forwarding to `generated/p7501_ssot.h`.
 pub fn generate_pana_rsp_ssot_header() -> String {
     String::from(

@@ -76,3 +76,18 @@ pub(super) fn build_pico_commands() -> Vec<PicoCommandSpecDto> {
         })
         .collect()
 }
+
+/// Returns `true` when `head` matches a known Pico CLI verb in `hardware_catalog.json`
+/// or `INTERNAL_OR_ALIAS_CLI_COMMANDS`.
+#[must_use]
+pub fn is_known_pico_command_id(head: &str) -> bool {
+    let trimmed = head.trim();
+    !trimmed.is_empty()
+        && (hardware_catalog()
+            .commands
+            .iter()
+            .any(|c| c.id.eq_ignore_ascii_case(trimmed))
+            || super::constants::INTERNAL_OR_ALIAS_CLI_COMMANDS
+                .iter()
+                .any(|c| c.eq_ignore_ascii_case(trimmed)))
+}

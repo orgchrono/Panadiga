@@ -13,6 +13,7 @@ pub mod region;
 pub mod schema;
 pub mod types;
 pub mod validate;
+mod validate_bgo;
 mod validate_layout;
 
 #[cfg(test)]
