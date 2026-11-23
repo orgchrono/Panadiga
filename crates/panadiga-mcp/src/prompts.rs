@@ -64,7 +64,7 @@ pub fn get_prompt(name: &str, args: &Value) -> Result<Value> {
             let port = args
                 .get("serial_port")
                 .and_then(|v| v.as_str())
-                .unwrap_or("COM10");
+                .unwrap_or(panadiga_core::constants::DEFAULT_SERIAL_PORT);
             Ok(json!({
                 "description": "Primary DMR-EH55 P7501 115200 8N1 UART & discrete Boot/Reset diagnostic workflow.",
                 "messages": [{
@@ -87,7 +87,7 @@ pub fn get_prompt(name: &str, args: &Value) -> Result<Value> {
             let port = args
                 .get("serial_port")
                 .and_then(|v| v.as_str())
-                .unwrap_or("COM10");
+                .unwrap_or(panadiga_core::constants::DEFAULT_SERIAL_PORT);
             Ok(json!({
                 "description": "P7501 Async UART boot-telemetry inspection and live Spansion NOR Flash capture via PANAMON1> / _dev_SERIAL GDB RSP.",
                 "messages": [{
@@ -98,7 +98,7 @@ pub fn get_prompt(name: &str, args: &Value) -> Result<Value> {
                             "Procedure for P7501 Async UART target (115200 8N1) on port {} (P7501 lacks DWire32A clock; legacy DWire HANDSHAKE/DUMP return 0xFFFFFFFF):\n\
                              1. Verify pinout & voltage limits (`panadiga://pinout-p7501-uart` & `panadiga://invariants`).\n\
                              2. Run `panadiga pico status --port {}` and capture boot telemetry via `BOOTTRACE` (`JIGBOOT` + `PANAMON1>` prompt).\n\
-                             3. Dump 8 MiB Spansion NOR cleanly via `PANADMP1` (`panadiga pico live-capture --port {}`) or query live `_dev_SERIAL` via `panadiga gdb-bridge --port {}` (`$m84000000,0040#` / `$m847F0000,0040#`).",
+                             3. Dump 8 MiB Spansion NOR cleanly via `PANADMP1` (`panadiga pico capture-nor --port {} --slice full --out eh55_nor_live.bin`) or query live `_dev_SERIAL` via `panadiga gdb-bridge --port {}` (`$m84000000,0040#` / `$m847F0000,0040#`).",
                             port, port, port, port
                         )
                     }

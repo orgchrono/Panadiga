@@ -11,6 +11,7 @@ pub mod hardware;
 pub mod knowledge;
 pub mod re_ext;
 pub mod re_ext_bench;
+pub mod symbols;
 pub mod unbrick;
 pub mod visuals;
 
@@ -52,6 +53,7 @@ pub fn execute_tool(name: &str, args: &Value, workspace_root: &Path) -> Result<V
         "panadiga_eh55_bgo" => re_ext_bench::handle_eh55_bgo(args, workspace_root),
         "panadiga_davis_probe" => re_ext_bench::handle_davis_probe(args, workspace_root),
         "panadiga_profiles_authorize" => hardware::handle_profiles_authorize(args),
+        "panadiga_symbol_lookup" => symbols::handle_symbol_lookup(args, workspace_root),
         _ => anyhow::bail!("Unknown tool: {}", name),
     }
 }

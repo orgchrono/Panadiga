@@ -6,6 +6,7 @@ use panadiga_core::constants::{
     AM34_FLASH_UNCACHED_BASE, AM34_FORBIDDEN_LETHAL_REG, AM34_NVRAM_BASE,
     AM34_SYSTEM_MEMORY_REGIONS, SPANSION_NVRAM_SIZE_BYTES,
 };
+use panadiga_core::re::symbol_index::{list_symbol_indexes, load_symbol_index};
 use panadiga_core::ssot::{
     HardwareProfileRegistry, build_hardware_ssot_spec, get_diga_model_catalog_dto,
 };
@@ -106,6 +107,16 @@ pub fn list_resources(workspace_root: &Path) -> Vec<Value> {
             "description": format!(
                 "Resolved hardware/firmware/layout manifest for {} ({})",
                 resolved.manifest.model_id, resolved.manifest.series
+            ),
+            "mimeType": "application/json"
+        }));
+    }
+    for (train_id, module, _) in list_symbol_indexes(&effective_root) {
+        resources.push(json!({
+            "uri": format!("panadiga://symbols/{train_id}/{module}"),
+            "name": format!("Symbols: {train_id}/{module}"),
+            "description": format!(
+                "Train-keyed function, ABI, caller/callee, xref & side-effect dictionary for {train_id} ({module})."
             ),
             "mimeType": "application/json"
         }));
@@ -243,6 +254,24 @@ pub fn read_resource(uri: &str, workspace_root: &Path) -> Result<Value> {
                     "uri": uri,
                     "mimeType": "application/json",
                     "text": serde_json::to_string_pretty(&resolved)?
+                }]
+            }))
+        }
+        other if other.starts_with("panadiga://symbols/") => {
+            let tail = other.trim_start_matches("panadiga://symbols/");
+            let Some((train_id, module)) = tail.split_once('/') else {
+                bail!(
+                    "Invalid symbol resource URI '{uri}': expected panadiga://symbols/<train_id>/<module>"
+                );
+            };
+            let sym_idx = load_symbol_index(workspace_root, train_id, module)?;
+            let raw = serde_json::to_string_pretty(&sym_idx)?;
+            let text = truncate_mcp_text_to_cap(&raw, MAX_MCP_RESOURCE_BYTES, uri);
+            Ok(json!({
+                "contents": [{
+                    "uri": uri,
+                    "mimeType": "application/json",
+                    "text": text
                 }]
             }))
         }

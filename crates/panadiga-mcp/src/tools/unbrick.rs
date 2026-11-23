@@ -175,6 +175,14 @@ pub fn handle_sd_unbrick_kit(args: &Value, workspace_root: &Path) -> Result<Valu
                 .get("sata_bridge_reset_fix")
                 .and_then(|v| v.as_bool())
                 .unwrap_or(false);
+            let sata_bridge_stage2_boot = args
+                .get("sata_bridge_stage2_boot")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            let main_bgo_retarget = args
+                .get("main_bgo_retarget")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
 
             let rep = prepare_sd_unbrick_kit(&SdUnbrickKitRequest {
                 output_dir: resolve_workspace_path(workspace_root, out_dir),
@@ -197,6 +205,8 @@ pub fn handle_sd_unbrick_kit(args: &Value, workspace_root: &Path) -> Result<Valu
                 expected_main_build,
                 allow_target_mismatch,
                 sata_bridge_reset_fix,
+                sata_bridge_stage2_boot,
+                main_bgo_retarget,
             })?;
             Ok(serde_json::to_value(rep)?)
         }

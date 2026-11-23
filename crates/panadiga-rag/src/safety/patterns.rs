@@ -16,6 +16,11 @@ pub(super) static WRITE_ACTION_REGEX: LazyLock<Regex> = LazyLock::new(|| {
         .expect("Invalid regex: WRITE_ACTION_REGEX")
 });
 
+pub(super) static SYMBOL_CALL_ACTION_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)\b(?:call|calling|invoke|invoking|execute|executing|run|running|jump|jumping|branch|branching|trigger|triggering|hook|hooking|patch|patching|chamar|executar|rodar|disparar)\b")
+        .expect("Invalid regex: SYMBOL_CALL_ACTION_REGEX")
+});
+
 pub(super) static NEGATION_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?i)\b(?:never|not|no|do\s+not|must\s+not|cannot|prohibited|forbidden|avoid|warning|danger|destroy|damage|destruction|fatal|burn|bricks?|hazard|violation|exceeds|blocks|preserve|preserving|immutable)\b")
         .expect("Invalid regex: NEGATION_REGEX")

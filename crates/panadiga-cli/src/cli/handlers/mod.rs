@@ -15,6 +15,7 @@ pub mod pico_bench;
 pub mod profiles;
 pub mod re;
 pub mod re_extra;
+pub mod re_symbols;
 pub mod sd;
 pub mod session;
 pub mod system;

@@ -153,5 +153,24 @@ pub(super) fn re_ext_tool_definitions() -> Vec<Value> {
                 }
             }
         }),
+        json!({
+            "name": "panadiga_symbol_lookup",
+            "description": "Queries train-keyed MN103S symbol dictionary (profiles/symbols/<train>/<module>.json) returning VA, name, ABI (D0/D1/(0x0C,SP)), ret, callers[], callees[], string/MMIO xrefs, and destructive side_effects safety gate (writes_nor_bgo | writes_hdd | writes_nvram).",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "train_id": { "type": "string", "description": "Firmware train ID filter (e.g. loader_ver061_toc48_main57; never model names)." },
+                    "module": { "type": "string", "description": "Module filter (e.g. PROG061, BOOT, MAIN)." },
+                    "va": { "type": "string", "description": "Exact hex virtual address lookup (e.g. 0x50409DF2)." },
+                    "name": { "type": "string", "description": "Substring match against resolved symbol name." },
+                    "caller_of": { "type": "string", "description": "Return functions that directly call this target VA." },
+                    "callee_of": { "type": "string", "description": "Return functions called by this caller VA." },
+                    "side_effect": { "type": "string", "enum": ["read_only", "writes_nor_bgo", "writes_hdd", "writes_nvram", "writes_mmio", "unknown"], "description": "Filter by classified hardware side effect." },
+                    "string_xref": { "type": "string", "description": "Filter by embedded ASCII string reference." },
+                    "mmio_xref": { "type": "string", "description": "Filter by referenced Flash/DAVIS/MMIO hex address." },
+                    "limit": { "type": "integer", "description": "Max symbols to return (1..200, default 50)." }
+                }
+            }
+        }),
     ]
 }

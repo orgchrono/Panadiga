@@ -77,6 +77,8 @@ pub(super) fn handle_prepare_sd(sd: PrepareSdArgs) -> Result<()> {
         }
         hardened.allow_target_mismatch = sd.allow_target_mismatch;
         hardened.sata_bridge_reset_fix = sd.sata_bridge_reset_fix;
+        hardened.sata_bridge_stage2_boot = sd.sata_bridge_stage2_boot;
+        hardened.main_bgo_retarget = sd.main_bgo_retarget;
         hardened
     } else {
         let bgo_mode: Prog061BgoPatchMode = sd.bgo_mode.parse()?;
@@ -97,6 +99,8 @@ pub(super) fn handle_prepare_sd(sd: PrepareSdArgs) -> Result<()> {
             expected_main_build: sd.expected_main_build,
             allow_target_mismatch: sd.allow_target_mismatch,
             sata_bridge_reset_fix: sd.sata_bridge_reset_fix,
+            sata_bridge_stage2_boot: sd.sata_bridge_stage2_boot,
+            main_bgo_retarget: sd.main_bgo_retarget,
         }
     };
 

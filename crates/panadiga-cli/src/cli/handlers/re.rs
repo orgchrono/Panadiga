@@ -49,7 +49,10 @@ fn infer_base_va(data: &[u8]) -> u32 {
     }
 }
 
-fn load_binary_and_base(input: &std::path::Path, base: Option<&str>) -> Result<(Vec<u8>, u32)> {
+pub(super) fn load_binary_and_base(
+    input: &std::path::Path,
+    base: Option<&str>,
+) -> Result<(Vec<u8>, u32)> {
     let data = read_cli_input_bytes(input)?;
     let base_va = match base {
         Some(raw) => parse_u32_radix(raw)?,
@@ -354,5 +357,24 @@ pub fn handle_re(args: ReArgs) -> Result<()> {
             }
             Ok(())
         }
+        ReActions::IndexSymbols {
+            input,
+            train,
+            module,
+            base,
+            annotations,
+            write_profile,
+            out,
+            json,
+        } => super::re_symbols::handle_re_index_symbols(
+            &input,
+            &train,
+            &module,
+            base.as_deref(),
+            annotations.as_deref(),
+            write_profile,
+            out.as_deref(),
+            json.as_deref(),
+        ),
     }
 }

@@ -25,7 +25,7 @@ fn temp_ws(tag: &str) -> PathBuf {
 #[test]
 fn all_24_mcp_tools_have_unique_names_and_valid_schemas() {
     let defs = tool_definitions();
-    assert_eq!(defs.len(), 25);
+    assert_eq!(defs.len(), 26);
     let mut names = HashSet::new();
     for d in &defs {
         let name = d["name"].as_str().unwrap();
@@ -40,6 +40,7 @@ fn all_24_mcp_tools_have_unique_names_and_valid_schemas() {
         "panadiga_nor_sector_audit",
         "panadiga_eh55_bgo",
         "panadiga_davis_probe",
+        "panadiga_symbol_lookup",
     ] {
         assert!(names.contains(expected), "missing {expected}");
     }
@@ -284,4 +285,42 @@ fn eh55_bgo_and_davis_probe_tools_enforce_guards_with_mock_transport() {
     .unwrap();
     assert_eq!(live_davis["lethal_0xc000100c_blocked"], true);
     let _ = fs::remove_dir_all(&ws);
+}
+
+#[test]
+fn symbol_lookup_tool_and_resource_block_destructive_bgo_calls() {
+    let real_ws = panadiga_mcp::resolve_workspace_root();
+    if !real_ws
+        .join("profiles/symbols/loader_ver061_toc48_main57/PROG061.json")
+        .is_file()
+    {
+        return;
+    }
+    let res = execute_tool(
+        "panadiga_symbol_lookup",
+        &json!({
+            "train_id": "loader_ver061_toc48_main57",
+            "module": "PROG061",
+            "va": "0x50409DF2"
+        }),
+        &real_ws,
+    )
+    .unwrap();
+    assert_eq!(res["total_matches"], 1);
+    assert_eq!(
+        res["safety_gate"]["blocked_for_unattended_call"],
+        json!(true)
+    );
+    assert_eq!(
+        res["matches"][0]["symbol"]["side_effects"],
+        json!("writes_nor_bgo")
+    );
+
+    let read_res = panadiga_mcp::resources::read_resource(
+        "panadiga://symbols/loader_ver061_toc48_main57/PROG061",
+        &real_ws,
+    )
+    .unwrap();
+    let txt = read_res["contents"][0]["text"].as_str().unwrap();
+    assert!(txt.contains("loader_ver061_toc48_main57"));
 }

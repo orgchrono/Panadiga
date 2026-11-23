@@ -147,6 +147,14 @@ pub struct PrepareSdArgs {
     #[arg(long)]
     pub sata_bridge_reset_fix: bool,
 
+    /// Embed pre-FVU Stage-2 SATA HDD boot hook in PANA__SD.FRM PROG061 (requires --sata-bridge-reset-fix & ver061)
+    #[arg(long)]
+    pub sata_bridge_stage2_boot: bool,
+
+    /// Retarget MAIN3060NP BGO/NFROM tables from 4 MiB (0x84200000) to 8 MiB EH55 NOR (0x84130000, 45 sectors)
+    #[arg(long)]
+    pub main_bgo_retarget: bool,
+
     /// Exports structured JSON build & verification report
     #[arg(short, long, value_name = "JSON_FILE")]
     pub json: Option<PathBuf>,

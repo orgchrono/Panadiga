@@ -130,6 +130,18 @@ pub fn format_sd_kit_lines(report: &SdUnbrickKitReport) -> Vec<String> {
                 .to_string(),
         );
     }
+    if report.sata_bridge_stage2_boot_applied {
+        lines.push(
+            "  Stage-2 HDD  : PROG061 @ 0x504050D3 -> 0x50439600 (Pre-FVU SATA HDD Boot Hook)"
+                .to_string(),
+        );
+    }
+    if report.main_bgo_retarget_applied {
+        lines.push(
+            "  MAIN BGO     : MAIN3060NP retargeted to 8 MiB Uniform BGO (0x84130000, 45 sectors)"
+                .to_string(),
+        );
+    }
     lines
 }
 
@@ -149,6 +161,9 @@ pub fn format_sd_verification_lines(report: &SdMediaVerificationReport) -> Vec<S
         "SD Verification ({}): {}",
         report.sd_root_dir, report.overall_status
     )];
+    if let Some(ref geo) = report.pana_sd_main_bgo_geometry {
+        lines.push(format!("  MAIN3060NP BGO : {geo}"));
+    }
     push_sd_checks(&mut lines, &report.checks);
     lines
 }

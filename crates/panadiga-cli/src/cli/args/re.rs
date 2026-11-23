@@ -283,4 +283,40 @@ pub enum ReActions {
         #[arg(long, value_name = "JSON_OUT")]
         json: Option<PathBuf>,
     },
+
+    /// Index MN103S functions, ABI, callers/callees, string/MMIO xrefs, and destructive side-effects by train + module
+    #[command(name = "index-symbols", alias = "index_symbols")]
+    IndexSymbols {
+        /// Unpacked binary stage path (e.g. prog061_dec.bin, BOOT.BIN, MAIN3410PQ.bin)
+        #[arg(short, long, value_name = "BINARY")]
+        input: PathBuf,
+
+        /// Firmware train ID in profiles/firmware_trains/ (e.g. loader_ver061_toc48_main57; never model names)
+        #[arg(long, value_name = "TRAIN_ID")]
+        train: String,
+
+        /// Stage module name (e.g. PROG061, BOOT, MAIN, DRV)
+        #[arg(long, value_name = "MODULE")]
+        module: String,
+
+        /// Image base virtual address in hex (auto-inferred when omitted)
+        #[arg(long, value_name = "HEX_VA")]
+        base: Option<String>,
+
+        /// Optional curated JSON annotation overlay path
+        #[arg(long, value_name = "JSON_PATH")]
+        annotations: Option<PathBuf>,
+
+        /// Write output deterministically to profiles/symbols/<train>/<module>.json
+        #[arg(long, default_value_t = false)]
+        write_profile: bool,
+
+        /// Optional explicit output JSON file path
+        #[arg(short, long, value_name = "OUT_JSON")]
+        out: Option<PathBuf>,
+
+        /// Optional JSON report output path (`-` prints JSON to stdout)
+        #[arg(long, value_name = "JSON_OUT")]
+        json: Option<PathBuf>,
+    },
 }

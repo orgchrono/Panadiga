@@ -9,14 +9,40 @@ pub use patterns::extract_voltages_volts;
 
 use panadiga_core::constants::{
     AM34_FLASH_BASE, AM34_FLASH_CRITICAL_IPL_SIZE, AM34_FLASH_UNCACHED_BASE,
-    AM34_FORBIDDEN_LETHAL_REG,
+    AM34_FORBIDDEN_LETHAL_REG, resolve_workspace_root,
 };
+use panadiga_core::re::symbol_index::{load_all_destructive_symbols, parse_va_hex};
+use std::sync::LazyLock;
 
 use super::config::*;
 use super::models::SafetyReport;
 use patterns::{
-    HEX_PATTERN, IPL_ERASE_PATTERN, NEGATION_REGEX, WRITE_ACTION_REGEX, sentence_context_window,
+    HEX_PATTERN, IPL_ERASE_PATTERN, NEGATION_REGEX, SYMBOL_CALL_ACTION_REGEX, WRITE_ACTION_REGEX,
+    sentence_context_window,
 };
+
+static DESTRUCTIVE_SYMBOLS: LazyLock<Vec<(u64, String, String, String)>> = LazyLock::new(|| {
+    load_all_destructive_symbols(&resolve_workspace_root())
+        .into_iter()
+        .filter_map(|(train, module, sym)| {
+            parse_va_hex(&sym.va).ok().map(|va| {
+                (
+                    u64::from(va),
+                    sym.name,
+                    sym.side_effects.as_str().to_string(),
+                    format!("{train}/{module}"),
+                )
+            })
+        })
+        .collect()
+});
+
+fn find_destructive_symbol(addr: u64) -> Option<(&'static str, &'static str, &'static str)> {
+    DESTRUCTIVE_SYMBOLS
+        .iter()
+        .find(|(va, _, _, _)| *va == addr)
+        .map(|(_, name, eff, loc)| (name.as_str(), eff.as_str(), loc.as_str()))
+}
 
 const UPPER_NOR_OPTIN_TOKENS: &[&str] = &[
     "confirm_upper_nor",
@@ -207,6 +233,40 @@ impl HardwareSafetyValidator {
                     warnings.push(format!(
                         "Upper NOR / BGO address {} referenced in protective warning context.",
                         raw_hex.to_uppercase()
+                    ));
+                }
+            } else if let Some((sym_name, side_eff, sym_loc)) = find_destructive_symbol(addr) {
+                let has_call_intent = SYMBOL_CALL_ACTION_REGEX.is_match(context_window);
+                let has_warning = NEGATION_REGEX.is_match(context_window);
+                if side_eff == "writes_nor_bgo" && has_upper_nor_optin && has_call_intent {
+                    warnings.push(format!(
+                        "DESTRUCTIVE FIRMWARE SYMBOL ACKNOWLEDGED (CONFIRM_UPPER_NOR): {} ({}) at {} [{}].",
+                        sym_name,
+                        side_eff,
+                        raw_hex.to_uppercase(),
+                        sym_loc
+                    ));
+                } else if has_call_intent && (is_query || !has_warning) {
+                    violations.push(format!(
+                        "CRITICAL FIRMWARE SIDE-EFFECT VIOLATION: Symbol '{}' ({}) has side_effects='{}' in {} and mutates persistent hardware state. Unattended call blocked; use guarded workflow / CONFIRM_UPPER_NOR.",
+                        sym_name,
+                        raw_hex.to_uppercase(),
+                        side_eff,
+                        sym_loc
+                    ));
+                    critical_alerts.push(format!(
+                        "Blocked destructive firmware symbol {} ({} -> {}).",
+                        raw_hex.to_uppercase(),
+                        sym_name,
+                        side_eff
+                    ));
+                } else {
+                    warnings.push(format!(
+                        "Destructive firmware symbol {} ({}, side_effects='{}' in {}) referenced in read-only/advisory context.",
+                        sym_name,
+                        raw_hex.to_uppercase(),
+                        side_eff,
+                        sym_loc
                     ));
                 }
             }

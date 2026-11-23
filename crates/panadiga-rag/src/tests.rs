@@ -362,3 +362,20 @@ fn test_vista_explodida_and_re_consolidation_indexed_in_rag() {
     assert!(frm_ans.confidence > 0.0);
     assert!(frm_ans.critic_report.as_ref().unwrap().is_faithful);
 }
+
+#[test]
+fn test_symbol_dictionary_indexed_in_rag_and_blocks_unguarded_bgo_calls() {
+    let lookup_ans = shared_query("p61_bgo_flag_clear_9df2 0x50409DF2 p61_main_menu_4fa7");
+    assert!(!lookup_ans.is_abstained);
+    assert!(lookup_ans.confidence > 0.0);
+
+    let validator = HardwareSafetyValidator::new();
+    let call_rep = validator.validate("Call 0x50409DF2 directly to clear BGO flags.", true);
+    assert!(!call_rep.is_safe);
+    assert!(
+        call_rep
+            .violations
+            .iter()
+            .any(|v| v.contains("FIRMWARE SIDE-EFFECT VIOLATION") && v.contains("writes_nor_bgo"))
+    );
+}

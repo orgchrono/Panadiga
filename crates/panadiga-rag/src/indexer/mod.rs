@@ -4,6 +4,7 @@ pub mod bm25;
 pub mod code;
 pub mod markdown;
 pub mod pdf;
+pub mod symbols;
 pub mod tokenizer;
 pub mod vector;
 mod visual;
@@ -30,6 +31,7 @@ enum IndexedBucket {
     },
     Code(Vec<Chunk>),
     Ghidra(Vec<Chunk>),
+    Symbols(Vec<Chunk>),
     Skipped,
 }
 
@@ -41,6 +43,8 @@ pub struct CorpusIndexStats {
     pub pdf_files_indexed: usize,
     pub code_chunks: usize,
     pub ghidra_chunks: usize,
+    #[serde(default)]
+    pub symbol_chunks: usize,
     pub vocab_size: usize,
     pub corpus_root: String,
 }
@@ -107,6 +111,7 @@ impl HierarchicalIndexer {
                 root.join("manuals_and_schematics"),
                 root.join("firmware").join("pico-p7501"),
                 root.join("tools").join("ghidra"),
+                root.join("profiles").join("symbols"),
                 root.join("crates"),
                 root.join("apps")
                     .join("desktop")
@@ -157,6 +162,10 @@ impl HierarchicalIndexer {
                     self.stats.ghidra_chunks += added.len();
                     all_chunks.extend(added);
                 }
+                IndexedBucket::Symbols(added) => {
+                    self.stats.symbol_chunks += added.len();
+                    all_chunks.extend(added);
+                }
                 IndexedBucket::Skipped => {}
             }
         }
@@ -199,6 +208,10 @@ impl HierarchicalIndexer {
             IndexedBucket::Markdown(self.chunk_markdown_file(path))
         } else if fname == "visual_manifest.json" {
             IndexedBucket::Markdown(self.chunk_visual_manifest(path))
+        } else if fname.ends_with(".json")
+            && (path_lower.contains("\\symbols\\") || path_lower.contains("/symbols/"))
+        {
+            IndexedBucket::Symbols(symbols::chunk_symbol_index(&self.guard, path))
         } else if fname.to_lowercase().ends_with(".pdf") {
             let subsystem = self.determine_subsystem(path, "");
             let parsed = pdf::chunk_pdf_file(&self.guard, subsystem, path, pdf_cache);

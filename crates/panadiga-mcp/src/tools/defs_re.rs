@@ -250,6 +250,18 @@ pub(super) fn re_tool_definitions() -> Vec<Value> {
                     "unlock_hdd_dynamic": {
                         "type": "boolean",
                         "description": "Unlock LBA48 HDD capacity ceiling in MAIN when building PANA__SD.FRM (default true)."
+                    },
+                    "sata_bridge_reset_fix": {
+                        "type": "boolean",
+                        "description": "Opt-in 2 ms -> 1000 ms post-RESET- wait fix in PANA__SD.FRM PROG061 and MAIN3060NP for slow SATA-PATA bridges (default false)."
+                    },
+                    "sata_bridge_stage2_boot": {
+                        "type": "boolean",
+                        "description": "Opt-in Stage-2 SATA HDD boot hook in PANA__SD.FRM PROG061 (requires sata_bridge_reset_fix=true, main_bgo_retarget=true, and loader_profile='ver061', default false)."
+                    },
+                    "main_bgo_retarget": {
+                        "type": "boolean",
+                        "description": "Retarget MAIN3060NP BGO/NFROM tables from 4 MiB Top-Boot (0x84200000) to 8 MiB Uniform EH55 NOR (0x84130000, 45 sectors; required when sata_bridge_stage2_boot=true on ver061, default false)."
                     }
                 }
             }
