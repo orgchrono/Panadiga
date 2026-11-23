@@ -379,3 +379,24 @@ fn test_symbol_dictionary_indexed_in_rag_and_blocks_unguarded_bgo_calls() {
             .any(|v| v.contains("FIRMWARE SIDE-EFFECT VIOLATION") && v.contains("writes_nor_bgo"))
     );
 }
+
+#[test]
+fn test_ssot_traps_and_gate4_symbols_indexed_for_fast_rag_lookup() {
+    let trap_ans = shared_query(
+        "TRAP_MAIN3060NP_4MB_BGO_ON_8MB_EH55 0x531B8000 TRAP_SATA_BRIDGE_2MS_POST_RESET_RACE",
+    );
+    assert!(!trap_ans.is_abstained);
+    assert!(trap_ans.confidence > 0.0);
+
+    let sym_ans = shared_query(
+        "rtsd_sleep_10ms 0x574DF538 MAIN3410PQ norfrom_fvu_load_check 0x4400894B LOADER_VER061",
+    );
+    assert!(!sym_ans.is_abstained);
+    assert!(sym_ans.confidence > 0.0);
+
+    let train_ans = shared_query(
+        "MAIN3410PQ stage2_boot_spec BGO_45SEC_8MB_0X84130000 0x5710A9D0 0x574DF538 pal_m",
+    );
+    assert!(!train_ans.is_abstained);
+    assert!(train_ans.confidence > 0.0);
+}

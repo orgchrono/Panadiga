@@ -5,6 +5,9 @@ use panadiga_core::re::matshita_emu::{
     BootSequenceReport, FrmUnlockVerificationSummary, MatshitaEmulatorSnapshot,
     WriteInjectionRecord,
 };
+use panadiga_core::re::ssot_patches::{
+    find_main_build_by_id, find_prog_sata_reset_spec, stage2_boot_spec_for_loader,
+};
 use panadiga_core::re::{
     FrmModuleExtractionReport, MainPassthroughReport, MainPassthroughRspPlan, Prog061BgoInspection,
     SdDiskInspectionReport, SdMediaVerificationReport, SdUnbrickCheck, SdUnbrickKitReport,
@@ -124,23 +127,58 @@ pub fn format_sd_kit_lines(report: &SdUnbrickKitReport) -> Vec<String> {
     if let Some(ref sd) = report.pana_sd_path {
         lines.push(format!("  PANA__SD.FRM : {sd}"));
     }
+    let main_build_id = report
+        .verification
+        .pana_sd_main_build
+        .as_deref()
+        .filter(|s| !s.is_empty());
+    let main_spec = main_build_id
+        .and_then(find_main_build_by_id)
+        .map(|(_, b)| b);
+    let main_label = main_spec.map_or_else(
+        || main_build_id.map_or_else(|| "MAIN".to_string(), |b| format!("MAIN{b}")),
+        |b| b.slot_name.clone(),
+    );
     if report.sata_bridge_reset_fix_applied {
-        lines.push(
-            "  SATA Bridge  : SataBridgeResetFix (1000 ms @ PROG061 0x5041D928 + MAIN3060NP 0x571122B2)"
-                .to_string(),
+        let prog_va = find_prog_sata_reset_spec(&report.loader_profile_applied)
+            .map_or(0x5041_D928, |(_, s)| s.site.va);
+        let main_va = main_spec
+            .and_then(|b| b.sata_bridge_reset_spec.as_ref())
+            .map(|s| s.site.va);
+        let main_part = main_va.map_or_else(
+            || main_label.clone(),
+            |va| format!("{main_label} 0x{va:08X}"),
         );
+        lines.push(format!(
+            "  SATA Bridge  : SataBridgeResetFix (1000 ms @ PROG061 0x{prog_va:08X} + {main_part})"
+        ));
     }
     if report.sata_bridge_stage2_boot_applied {
-        lines.push(
-            "  Stage-2 HDD  : PROG061 @ 0x504050D3 -> 0x50439600 (Pre-FVU SATA HDD Boot Hook)"
-                .to_string(),
-        );
+        let (hook_va, payload_va) = stage2_boot_spec_for_loader(&report.loader_profile_applied)
+            .map_or((0x5040_50D3, 0x5043_9600), |s| {
+                (
+                    s.base_va.wrapping_add(s.hook_offset as u32),
+                    s.base_va.wrapping_add(s.payload_offset as u32),
+                )
+            });
+        lines.push(format!(
+            "  Stage-2 HDD  : PROG061 @ 0x{hook_va:08X} -> 0x{payload_va:08X} (Pre-FVU SATA HDD Boot Hook)"
+        ));
     }
     if report.main_bgo_retarget_applied {
-        lines.push(
-            "  MAIN BGO     : MAIN3060NP retargeted to 8 MiB Uniform BGO (0x84130000, 45 sectors)"
-                .to_string(),
-        );
+        let geo = report
+            .verification
+            .pana_sd_main_bgo_geometry
+            .as_deref()
+            .unwrap_or("BGO_45SEC_8MB_0X84130000");
+        let bgo_desc = if main_spec.is_some_and(|b| {
+            b.supports_bgo_retarget_to.is_empty() && b.native_bgo_detect_va.is_some()
+        }) {
+            format!("{main_label} native 8 MiB Uniform BGO verified ({geo})")
+        } else {
+            format!("{main_label} retargeted to 8 MiB Uniform BGO ({geo})")
+        };
+        lines.push(format!("  MAIN BGO     : {bgo_desc}"));
     }
     lines
 }
@@ -162,7 +200,12 @@ pub fn format_sd_verification_lines(report: &SdMediaVerificationReport) -> Vec<S
         report.sd_root_dir, report.overall_status
     )];
     if let Some(ref geo) = report.pana_sd_main_bgo_geometry {
-        lines.push(format!("  MAIN3060NP BGO : {geo}"));
+        let label = report
+            .pana_sd_main_build
+            .as_deref()
+            .filter(|s| !s.is_empty())
+            .map_or_else(|| "MAIN".to_string(), |b| format!("MAIN{b}"));
+        lines.push(format!("  {label} BGO : {geo}"));
     }
     push_sd_checks(&mut lines, &report.checks);
     lines

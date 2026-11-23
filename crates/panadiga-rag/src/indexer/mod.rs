@@ -4,6 +4,7 @@ pub mod bm25;
 pub mod code;
 pub mod markdown;
 pub mod pdf;
+pub mod ssot_atlas;
 pub mod symbols;
 pub mod tokenizer;
 pub mod vector;
@@ -112,6 +113,9 @@ impl HierarchicalIndexer {
                 root.join("firmware").join("pico-p7501"),
                 root.join("tools").join("ghidra"),
                 root.join("profiles").join("symbols"),
+                root.join("profiles").join("traps"),
+                root.join("profiles").join("forensic_atlas"),
+                root.join("profiles").join("firmware_trains"),
                 root.join("crates"),
                 root.join("apps")
                     .join("desktop")
@@ -212,6 +216,14 @@ impl HierarchicalIndexer {
             && (path_lower.contains("\\symbols\\") || path_lower.contains("/symbols/"))
         {
             IndexedBucket::Symbols(symbols::chunk_symbol_index(&self.guard, path))
+        } else if matches!(
+            fname,
+            "geometry_and_binary_traps.json" | "firmware_forensic_atlas.json"
+        ) || (fname.ends_with(".json")
+            && (path_lower.contains("\\firmware_trains\\")
+                || path_lower.contains("/firmware_trains/")))
+        {
+            IndexedBucket::Symbols(ssot_atlas::chunk_ssot_traps_or_atlas(&self.guard, path))
         } else if fname.to_lowercase().ends_with(".pdf") {
             let subsystem = self.determine_subsystem(path, "");
             let parsed = pdf::chunk_pdf_file(&self.guard, subsystem, path, pdf_cache);

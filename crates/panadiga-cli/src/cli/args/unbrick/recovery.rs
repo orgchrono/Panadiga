@@ -143,7 +143,7 @@ pub struct PrepareSdArgs {
     #[arg(long)]
     pub allow_unverified_profile: bool,
 
-    /// Patch PANA__SD.FRM (PROG061 @ 0x5041D928 + MAIN3060NP @ 0x571122B2) 2 ms -> 1000 ms for SATA bridges (IDE2SAT2)
+    /// Patch PANA__SD.FRM (PROG061 + SSOT MAIN builds (3060NP/3410PQ)) 2 ms -> 1000 ms for SATA bridges (IDE2SAT2)
     #[arg(long)]
     pub sata_bridge_reset_fix: bool,
 
@@ -151,7 +151,7 @@ pub struct PrepareSdArgs {
     #[arg(long)]
     pub sata_bridge_stage2_boot: bool,
 
-    /// Retarget MAIN3060NP BGO/NFROM tables from 4 MiB (0x84200000) to 8 MiB EH55 NOR (0x84130000, 45 sectors)
+    /// Retarget 4 MiB MAIN builds (3060NP) to 8 MiB EH55 NOR (0x84130000) or verify native 8 MiB MAIN builds (3410PQ)
     #[arg(long)]
     pub main_bgo_retarget: bool,
 
