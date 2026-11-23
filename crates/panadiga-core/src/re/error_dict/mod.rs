@@ -163,7 +163,7 @@ pub fn correlate_firmware_occurrences(
     if matches!(rxd_edges, Some(0)) && nsw5v_edges.unwrap_or(0) > 0 {
         actions.push(
             "NSW5V toggled during wakeup while GP2 (UARTP2M_T Pin 6) had 0 edges: Digital PCB powered on briefly, \
-             indicating pre-UART freeze (power rail droop/PFAIL[L], SA0..SA3 IPL lockup, SDRAM fault, or swapped Pin 3/Pin 6)."
+             indicating pre-UART freeze (power rail droop/PFAIL[L], SA0..SA10 IPL lockup, SDRAM fault, or swapped Pin 3/Pin 6)."
                 .to_string(),
         );
     } else if matches!(vdd_volts, Some(v) if v <= 0.20) && matches.is_empty() {

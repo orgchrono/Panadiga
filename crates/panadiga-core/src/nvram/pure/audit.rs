@@ -1,8 +1,8 @@
 //! Pure hashing, derived NVRAM sector breakdown, C0 dump inspection, and live Pico NVRAM capture audit.
 
 use anyhow::{Result, bail};
-use md5::{Digest as _, Md5};
-use sha2::Sha256;
+
+pub use panadiga_constants::forensic::calculate_hashes;
 
 use super::types::{
     MicroSectorAudit, NvramCleanReport, nvram_sectors_for_capacity, resolve_flash_layout,
@@ -12,28 +12,6 @@ use crate::constants::{
     SPANSION_NVRAM_BASE_OFFSET,
 };
 use crate::ssot::{DerivedSector, HardwareProfileRegistry, fingerprint_nor_or_firmware};
-
-const PARALLEL_HASH_THRESHOLD_BYTES: usize = 64 * 1024;
-
-/// Computes MD5 and SHA-256 hashes of a byte slice (in parallel above 64 KiB).
-pub fn calculate_hashes(data: &[u8]) -> (String, String) {
-    let compute_md5 = || {
-        let mut md5_hasher = Md5::new();
-        md5_hasher.update(data);
-        hex::encode(md5_hasher.finalize())
-    };
-    let compute_sha256 = || {
-        let mut sha_hasher = Sha256::new();
-        sha_hasher.update(data);
-        hex::encode(sha_hasher.finalize())
-    };
-
-    if data.len() >= PARALLEL_HASH_THRESHOLD_BYTES {
-        rayon::join(compute_md5, compute_sha256)
-    } else {
-        (compute_md5(), compute_sha256())
-    }
-}
 
 /// Computes activity counters and exact derived sector audits over `[nvram_base..]`.
 pub fn audit_nvram_sectors(

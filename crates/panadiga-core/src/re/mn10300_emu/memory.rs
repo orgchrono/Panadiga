@@ -128,6 +128,18 @@ impl Mn103Vm {
         Ok(i16::from_le_bytes([seg.data[off], seg.data[off + 1]]))
     }
 
+    pub(super) fn fetch_u24(&self, addr: u32) -> Result<u32, Mn103Fault> {
+        let (seg, off) = self
+            .locate_slice(addr, 3)
+            .ok_or(Mn103Fault::UnmappedRead(addr))?;
+        Ok(u32::from_le_bytes([
+            seg.data[off],
+            seg.data[off + 1],
+            seg.data[off + 2],
+            0,
+        ]))
+    }
+
     pub fn write_u8(&mut self, addr: u32, val: u8) -> Result<(), Mn103Fault> {
         if self.sc0_enabled && addr == SC0_TXB_VA {
             self.uart_tx.push(val);
@@ -165,13 +177,6 @@ impl Mn103Vm {
         Ok(())
     }
 
-    pub(super) fn validate_movm_mask(regs_mask: u8, op: u8) -> Result<(), Mn103Fault> {
-        if (regs_mask & 0x07) != 0 {
-            return Err(Mn103Fault::InvalidOpcode(op));
-        }
-        Ok(())
-    }
-
     pub(super) fn reg_mask_stack_bytes(regs_mask: u8) -> u32 {
         let mut bytes = 0u32;
         for bit in [0x80u8, 0x40, 0x20, 0x10] {
@@ -181,6 +186,15 @@ impl Mn103Vm {
         }
         if (regs_mask & 0x08) != 0 {
             bytes += 32;
+        }
+        if (regs_mask & 0x04) != 0 {
+            bytes += 8;
+        }
+        if (regs_mask & 0x02) != 0 {
+            bytes += 16;
+        }
+        if (regs_mask & 0x01) != 0 {
+            bytes += 24;
         }
         bytes
     }
@@ -202,6 +216,26 @@ impl Mn103Vm {
         if (regs_mask & 0x08) != 0 {
             for val in [
                 self.d[0], self.d[1], self.a[0], self.a[1], self.mdr, self.lir, self.lar, 0,
+            ] {
+                cursor = cursor.wrapping_sub(4);
+                self.write_u32(cursor, val)?;
+            }
+        }
+        if (regs_mask & 0x04) != 0 {
+            for val in [self.r[2], self.r[3]] {
+                cursor = cursor.wrapping_sub(4);
+                self.write_u32(cursor, val)?;
+            }
+        }
+        if (regs_mask & 0x02) != 0 {
+            for val in [self.r[4], self.r[5], self.r[6], self.r[7]] {
+                cursor = cursor.wrapping_sub(4);
+                self.write_u32(cursor, val)?;
+            }
+        }
+        if (regs_mask & 0x01) != 0 {
+            for val in [
+                self.r[0], self.r[1], self.mdrq, self.mcrh, self.mcrl, self.mcvf,
             ] {
                 cursor = cursor.wrapping_sub(4);
                 self.write_u32(cursor, val)?;
@@ -245,6 +279,31 @@ impl Mn103Vm {
             self.mdr = vals[4];
             self.lir = vals[5];
             self.lar = vals[6];
+        }
+        if (regs_mask & 0x04) != 0 {
+            for idx in 2..=3 {
+                cursor = cursor.wrapping_sub(4);
+                self.r[idx] = self.read_u32(cursor)?;
+            }
+        }
+        if (regs_mask & 0x02) != 0 {
+            for idx in 4..=7 {
+                cursor = cursor.wrapping_sub(4);
+                self.r[idx] = self.read_u32(cursor)?;
+            }
+        }
+        if (regs_mask & 0x01) != 0 {
+            let mut vals = [0u32; 6];
+            for slot in &mut vals {
+                cursor = cursor.wrapping_sub(4);
+                *slot = self.read_u32(cursor)?;
+            }
+            self.r[0] = vals[0];
+            self.r[1] = vals[1];
+            self.mdrq = vals[2];
+            self.mcrh = vals[3];
+            self.mcrl = vals[4];
+            self.mcvf = vals[5];
         }
         self.d[2] = d2;
         self.d[3] = d3;

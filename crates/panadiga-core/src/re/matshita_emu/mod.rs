@@ -24,7 +24,10 @@ pub use frm_unlock::{
 };
 pub use types::*;
 
-use crate::constants::PANA_DIGADIAG_DEFAULT_LOAD_ADDR;
+use crate::constants::{
+    AM34_FLASH_BASE, AM34_FLASH_UNCACHED_BASE, AM34_NVRAM_BASE, AM34_NVRAM_UNCACHED_BASE,
+    PANA_DIGADIAG_DEFAULT_LOAD_ADDR,
+};
 use crate::nvram::calculate_hashes;
 pub(crate) use crate::re::mn10300_traps::{
     DRV_ATAPI_READ_BUFFER_3C_VA, DRV_ATAPI_VENDOR_ED_VA, DRV_ATAPI_VENDOR_FD_VA,
@@ -49,8 +52,8 @@ pub(super) const fn encode_be24(val: usize) -> [u8; 3] {
 
 pub(super) fn is_protected_ipl_address(addr: u32, len: usize) -> bool {
     let end = addr.saturating_add(len.max(1) as u32);
-    let in_cached_ipl = addr < 0x807F_0000 && end > 0x8000_0000;
-    let in_uncached_ipl = addr < 0x847F_0000 && end > 0x8400_0000;
+    let in_cached_ipl = addr < AM34_NVRAM_BASE && end > AM34_FLASH_BASE;
+    let in_uncached_ipl = addr < AM34_NVRAM_UNCACHED_BASE && end > AM34_FLASH_UNCACHED_BASE;
     in_cached_ipl || in_uncached_ipl
 }
 

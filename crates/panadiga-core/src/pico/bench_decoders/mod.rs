@@ -9,7 +9,7 @@ pub use ab_harness::{
 };
 pub use telemetry::{
     parse_busdiag_report, parse_panarsp_report, parse_pincheck_report, parse_piologic_report,
-    parse_status_output_report, validate_safe_bench_command,
+    parse_status_output_report, validate_interactive_pico_command, validate_safe_bench_command,
 };
 pub use types::{
     AbBootRun, AbHarnessSummary, AbModeStats, BenchStatusReport, BusDiagBenchReport,
@@ -49,5 +49,37 @@ mod tests {
         assert_eq!(rsp.rx_bytes, Some(14));
         assert_eq!(rsp.payload_hex.as_deref(), Some("DEADBEEF"));
         assert_eq!(rsp.checksum_ok, Some(true));
+    }
+
+    #[test]
+    fn validate_interactive_pico_command_enforces_catalog_and_safety_barriers() {
+        assert_eq!(
+            validate_interactive_pico_command("  status ").unwrap(),
+            "STATUS"
+        );
+        assert_eq!(
+            validate_interactive_pico_command("identify").unwrap(),
+            "IDENTIFY"
+        );
+        assert!(validate_interactive_pico_command("isolate").is_ok());
+        assert!(validate_interactive_pico_command("hiz").is_ok());
+        assert!(validate_interactive_pico_command("help").is_ok());
+        assert!(validate_interactive_pico_command("FAST_READ 84000000 1000").is_ok());
+        assert!(
+            validate_interactive_pico_command("FAST_WRITE 843F0100 0000 CONFIRM_UPPER_NOR").is_ok()
+        );
+
+        assert!(validate_interactive_pico_command("").is_err());
+        assert!(validate_interactive_pico_command("STATUS\r\nPING").is_err());
+        assert!(validate_interactive_pico_command("STATUS\0PING").is_err());
+        assert!(validate_interactive_pico_command("RM_RF_SLASH").is_err());
+        assert!(validate_interactive_pico_command("PANARSP MEM:C000100C,4").is_err());
+        assert!(validate_interactive_pico_command("FAST_READ 0xC000_100C 10").is_err());
+        assert!(validate_interactive_pico_command("FAST_WRITE 843F0100 0000").is_err());
+        assert!(
+            validate_interactive_pico_command("FAST_WRITE 84000000 0000 CONFIRM_UPPER_NOR")
+                .is_err()
+        );
+        assert!(validate_interactive_pico_command("ERASE 80001000").is_err());
     }
 }

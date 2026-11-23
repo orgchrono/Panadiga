@@ -1,22 +1,23 @@
-//! Deterministic partial Matsushita MN10300 / MN103S Mini-VM for offline patch
-//! and prologue/fast-path verification.
+//! Deterministic Matsushita MN10300 / MN103S / AM33-AM34 integer VM for offline
+//! patch and firmware-subsystem verification.
 //!
-//! Models D0..D3, A0..A3, SP, PC, MDR, LIR, LAR, PSW (plus undefined-flag poison mask)
-//! and segmented RAM/ROM mappings with zero `unsafe` code.
+//! Models base MN103 (`D0..D3`, `A0..A3`, `SP`, `PC`, `MDR`, `LIR`, `LAR`, `PSW` +
+//! undefined-flag poison mask) and AM33/AM34 extensions (`R0..R7`/`E0..E7`, `MDRQ`,
+//! `MCRH`, `MCRL`, `MCVF`, `EPSW`, `EX0`/`EX1`/`EX2` stack masks) with zero `unsafe`.
 //!
-//! ## Honest ISA Scope (Audited vs `mn103.sinc`)
-//! - **Supported**: core single-byte moves/ALU/branches (`0x00..=0xEF` subset incl.
-//!   `CALL`/`RET`/`SETLB`/`Lcc`), `MOVM` (`0xCE`/`0xCF` for `D2/D3/A2/A3/OTHER`),
-//!   `0xF0` subset (`CALLS`/`JMP`/`RETS`), `0xF1`/`0xF2` register ops (incl. `MOV Am, SP` and `CMP Dm, An`),
-//!   `0xF8` subset (`(d8, An)`/`(d8, SP)` moves, `ADD simm8, SP`, `AND/OR/BTST imm8`,
-//!   `ASL/LSR/ASR imm8`, `BVC/BVS/BNC/BNS`), `0xFB 0xAA` (`MOVBU (d8, SP), Rn2`), and `0xFC` subset
-//!   (`(imm32)` abs moves, ALU/MOV `imm32`, `ADD simm32, SP`, `CALLS d32rel`).
-//! - **Unimplemented / Out of Scope**: prefixes `0xF3..=0xF7`, `0xF9`, `0xFB` (outside `0xAA`), `0xFD`, `0xFF`,
-//!   `EX0..EX2` extended register masks in `MOVM`, hardware MMIO peripherals (`nfrom`, SDHC,
-//!   DMA, timers), interrupts (`RTI`), caches, and cycle-accurate pipeline timing.
+//! ## Honest ISA Scope (Audited vs `mn103.sinc` + `am33.sinc`)
+//! - **Supported**: core `0x00..=0xEF` (incl. `MOV`/`MOVBU`/`MOVHU` `(u16)`/`(u8, SP)`,
+//!   `MOV imm16/simm16`, `ASL2`, `CALL`/`RET`/`SETLB`/`Lcc`), `MOVM` (`0xCE`/`0xCF` incl.
+//!   `EX0`/`EX1`/`EX2`), `0xF0`..`0xF5` (indexed `(Dm, An)` + AM33 `A/D <-> R0..R15`),
+//!   `0xF8`..`0xFE` (incl. AM33 `0xF9` reg/indirect/mul/div, `0xFB` 3-op/indexed/`simm8`,
+//!   `0xFD` `imm24`, and `0xFE` bitops/`imm32`).
+//! - **Unimplemented / Out of Scope**: FPU coprocessor (`FMOV`/`FMUL`), hardware MMIO
+//!   peripherals beyond `SC0` UART and Spansion CFI NOR (`nfrom` DMA, timers), interrupts
+//!   (`RTI`), caches, and cycle-accurate pipeline timing.
 
 mod memory;
 mod ops;
+mod ops_am33;
 mod ops_ext;
 mod spansion_nor;
 mod step_core;
@@ -103,12 +104,19 @@ pub(super) struct MemSegment {
 pub struct Mn103Vm {
     pub d: [u32; 4],
     pub a: [u32; 4],
+    /// AM33/AM34 extended general-purpose registers `R0..R7` (`E0..E7`).
+    pub r: [u32; 8],
     pub sp: u32,
     pub pc: u32,
     pub mdr: u32,
+    pub mdrq: u32,
+    pub mcrh: u32,
+    pub mcrl: u32,
+    pub mcvf: u32,
     pub lir: u32,
     pub lar: u32,
     pub psw: u16,
+    pub epsw: u32,
     pub psw_undef: u16,
     pub steps: u64,
     pub sc0_enabled: bool,
@@ -135,12 +143,18 @@ impl Mn103Vm {
         Self {
             d: [0; 4],
             a: [0; 4],
+            r: [0; 8],
             sp: 0,
             pc: 0,
             mdr: 0,
+            mdrq: 0,
+            mcrh: 0,
+            mcrl: 0,
+            mcvf: 0,
             lir: 0,
             lar: 0,
             psw: 0,
+            epsw: 0,
             psw_undef: 0,
             steps: 0,
             sc0_enabled: false,
@@ -152,6 +166,28 @@ impl Mn103Vm {
             uart_rx: VecDeque::new(),
             uart_tx: Vec::new(),
             segments: Vec::new(),
+        }
+    }
+
+    /// Reads one of the 16 AM33 registers (`0..=7 => R0..R7`, `8..=11 => A0..A3`, `12..=15 => D0..D3`).
+    #[inline]
+    pub(super) fn read_reg16(&self, idx: usize) -> u32 {
+        match idx {
+            0..=7 => self.r[idx],
+            8..=11 => self.a[idx - 8],
+            12..=15 => self.d[idx - 12],
+            _ => unreachable!(),
+        }
+    }
+
+    /// Writes one of the 16 AM33 registers (`0..=7 => R0..R7`, `8..=11 => A0..A3`, `12..=15 => D0..D3`).
+    #[inline]
+    pub(super) fn write_reg16(&mut self, idx: usize, val: u32) {
+        match idx {
+            0..=7 => self.r[idx] = val,
+            8..=11 => self.a[idx - 8] = val,
+            12..=15 => self.d[idx - 12] = val,
+            _ => unreachable!(),
         }
     }
 
@@ -178,5 +214,12 @@ impl Mn103Vm {
             writable,
             data,
         });
+    }
+
+    pub fn segment_bytes(&self, base: u32) -> Option<&[u8]> {
+        self.segments
+            .iter()
+            .find(|s| s.base == base)
+            .map(|s| s.data.as_slice())
     }
 }

@@ -59,15 +59,15 @@ fn assemble_cleanroom_ver061_raw() -> Result<Vec<u8>> {
     }
     img[OFF_UART_MONITOR_SLACK..OFF_UART_MONITOR_SLACK + panamon1.len()].copy_from_slice(&panamon1);
 
-    // Entry stub at 0x0040: CALLS WDT keepalive -> allocate 4B stack slot -> CALL32 PANAMON1 -> RETS
+    // Entry stub at 0x0040: reserve 4B outgoing return slot -> CALLS WDT keepalive -> CALL32 PANAMON1 -> release 4B -> RETS
     let mut entry = Vec::with_capacity(64);
+    emit_add_sp_imm8(&mut entry, -4);
     let _ = emit_mov_imm32(
         &mut entry,
         0xDC,
         PROG061_BASE_VA + CLEANROOM_WDT_STUB_OFFSET as u32,
     );
     entry.extend_from_slice(&[0xF0, 0xF0]); // CALLS (A0)
-    emit_add_sp_imm8(&mut entry, -4);
     emit_call32_abs(
         &mut entry,
         PROG061_BASE_VA + CLEANROOM_ENTRY_OFFSET as u32,

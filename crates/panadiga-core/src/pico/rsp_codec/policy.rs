@@ -3,13 +3,22 @@
 use serde::{Deserialize, Serialize};
 
 use crate::constants::{
-    AM34_FLASH_BASE, AM34_FLASH_CRITICAL_IPL_SIZE, AM34_FLASH_SIZE, AM34_FLASH_UNCACHED_BASE,
-    FLASH_16MB_NVRAM_SIZE_BYTES, SPANSION_NVRAM_SIZE_BYTES,
+    AM34_FLASH_BASE, AM34_FLASH_CRITICAL_IPL_SIZE, AM34_FLASH_IPL_SIZE, AM34_FLASH_SIZE,
+    AM34_FLASH_UNCACHED_BASE, AM34_NVRAM_BASE, AM34_NVRAM_UNCACHED_BASE, AM34_SDRAM_BASE,
+    AM34_SDRAM_SIZE, AM34_SRAM_BASE, AM34_SRAM_SIZE, FLASH_16MB_NVRAM_SIZE_BYTES,
+    SPANSION_MICROSECTOR_SIZE, SPANSION_NVRAM_SIZE_BYTES,
 };
 
+pub use crate::constants::AM34_LETHAL_MMIO_ADDR;
+
 /// Strictly read-only IPL NOR windows (`0x80000000..0x807EFFFF` cached & `0x84000000..0x847EFFFF` uncached).
-pub const IPL_READONLY_RANGES: [(u64, u64); 2] =
-    [(0x8000_0000, 0x807F_0000), (0x8400_0000, 0x847F_0000)];
+pub const IPL_READONLY_RANGES: [(u64, u64); 2] = [
+    (AM34_FLASH_BASE as u64, AM34_NVRAM_BASE as u64),
+    (
+        AM34_FLASH_UNCACHED_BASE as u64,
+        AM34_NVRAM_UNCACHED_BASE as u64,
+    ),
+];
 
 /// Permanently read-only Critical Boot IPL windows (`SA0..SA10` = 256 KiB: `0x80000000..0x8003FFFF` & `0x84000000..0x8403FFFF`).
 pub const CRITICAL_IPL_BOOT_RANGES: [(u64, u64); 2] = [
@@ -95,7 +104,6 @@ pub fn is_ipl_readonly_address_for_flash(addr: u32, length: usize, flash_bytes: 
 }
 
 /// Permanently blocked AM34 lethal MMIO register (`0xC000100C..0xC000100F`, WDT/bus hang on read or write).
-pub const AM34_LETHAL_MMIO_ADDR: u32 = 0xC000_100C;
 pub const AM34_LETHAL_MMIO_LEN: usize = 4;
 
 /// Full AM34 CS0 NOR bus aperture (`0x80000000..0x88000000`, cached + uncached + address-alias mirrors).
@@ -156,6 +164,33 @@ pub fn is_critical_ipl_boot_address(addr: u32, length: usize) -> bool {
 /// Evaluates whether a GDB RSP memory write is blocked (`E05`) under the given [`NorWritePolicy`].
 pub fn is_nor_write_blocked_with_policy(addr: u32, length: usize, policy: NorWritePolicy) -> bool {
     is_nor_write_blocked_for_flash(addr, length, AM34_FLASH_SIZE as u64, policy)
+}
+
+/// Renders the canonical AM34 GDB `qXfer:memory-map:read` XML descriptor from SSOT constants.
+#[must_use]
+pub fn build_am34_gdb_memory_map_xml(include_sdram: bool, ipl_as_flash_sectors: bool) -> String {
+    let mut xml = format!(
+        "<memory-map><memory type=\"ram\" start=\"0x{AM34_SRAM_BASE:08X}\" length=\"0x{AM34_SRAM_SIZE:08X}\"/>"
+    );
+    if include_sdram {
+        xml.push_str(&format!(
+            "<memory type=\"ram\" start=\"0x{AM34_SDRAM_BASE:08X}\" length=\"0x{AM34_SDRAM_SIZE:08X}\"/>"
+        ));
+    }
+    if ipl_as_flash_sectors {
+        let sector_64k = SPANSION_MICROSECTOR_SIZE * 8;
+        xml.push_str(&format!(
+            "<memory type=\"flash\" start=\"0x{AM34_FLASH_BASE:08X}\" length=\"0x{AM34_FLASH_IPL_SIZE:08X}\"><property name=\"blocksize\">0x{sector_64k:X}</property></memory>"
+        ));
+    } else {
+        xml.push_str(&format!(
+            "<memory type=\"rom\" start=\"0x{AM34_FLASH_BASE:08X}\" length=\"0x{AM34_FLASH_IPL_SIZE:08X}\"/>"
+        ));
+    }
+    xml.push_str(&format!(
+        "<memory type=\"flash\" start=\"0x{AM34_NVRAM_BASE:08X}\" length=\"0x{SPANSION_NVRAM_SIZE_BYTES:08X}\"><property name=\"blocksize\">0x{SPANSION_MICROSECTOR_SIZE:X}</property></memory></memory-map>"
+    ));
+    xml
 }
 
 #[cfg(test)]

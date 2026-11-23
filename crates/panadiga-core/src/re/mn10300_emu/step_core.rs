@@ -14,6 +14,21 @@ impl Mn103Vm {
                 self.set_nzvc(false, false, 0);
                 self.pc = pc.wrapping_add(1);
             }
+            0x01 | 0x05 | 0x09 | 0x0D => {
+                let addr = (self.fetch_i16(pc + 1)? as u16) as u32;
+                self.write_u32(addr, self.d[m])?;
+                self.pc = pc.wrapping_add(3);
+            }
+            0x02 | 0x06 | 0x0A | 0x0E => {
+                let addr = (self.fetch_i16(pc + 1)? as u16) as u32;
+                self.write_u8(addr, self.d[m] as u8)?;
+                self.pc = pc.wrapping_add(3);
+            }
+            0x03 | 0x07 | 0x0B | 0x0F => {
+                let addr = (self.fetch_i16(pc + 1)? as u16) as u32;
+                self.write_u16(addr, self.d[m] as u16)?;
+                self.pc = pc.wrapping_add(3);
+            }
             0x10..=0x13 => {
                 self.d[n] = (self.d[n] as i8) as i32 as u32;
                 self.pc = pc.wrapping_add(1);
@@ -35,10 +50,33 @@ impl Mn103Vm {
                 self.a[n] = self.alu_add(self.a[n], imm);
                 self.pc = pc.wrapping_add(2);
             }
+            0x24..=0x27 => {
+                self.a[n] = (self.fetch_i16(pc + 1)? as u16) as u32;
+                self.pc = pc.wrapping_add(3);
+            }
             0x28..=0x2B => {
                 let imm = (self.read_u8(pc + 1)? as i8) as i32 as u32;
                 self.d[n] = self.alu_add(self.d[n], imm);
                 self.pc = pc.wrapping_add(2);
+            }
+            0x2C..=0x2F => {
+                self.d[n] = (self.fetch_i16(pc + 1)? as i32) as u32;
+                self.pc = pc.wrapping_add(3);
+            }
+            0x30..=0x33 => {
+                let addr = (self.fetch_i16(pc + 1)? as u16) as u32;
+                self.d[n] = self.read_u32(addr)?;
+                self.pc = pc.wrapping_add(3);
+            }
+            0x34..=0x37 => {
+                let addr = (self.fetch_i16(pc + 1)? as u16) as u32;
+                self.d[n] = self.read_u8(addr)? as u32;
+                self.pc = pc.wrapping_add(3);
+            }
+            0x38..=0x3B => {
+                let addr = (self.fetch_i16(pc + 1)? as u16) as u32;
+                self.d[n] = self.read_u16(addr)? as u32;
+                self.pc = pc.wrapping_add(3);
             }
             0x3C..=0x3F => {
                 self.a[n] = self.sp;
@@ -57,13 +95,27 @@ impl Mn103Vm {
                 self.write_u32(self.sp.wrapping_add(d8), self.d[m])?;
                 self.pc = pc.wrapping_add(2);
             }
+            0x43 | 0x47 | 0x4B | 0x4F => {
+                let d8 = self.read_u8(pc + 1)? as u32;
+                self.write_u32(self.sp.wrapping_add(d8), self.a[m])?;
+                self.pc = pc.wrapping_add(2);
+            }
             0x50..=0x53 => {
                 self.a[n] = self.a[n].wrapping_add(4);
+                self.pc = pc.wrapping_add(1);
+            }
+            0x54..=0x57 => {
+                self.d[n] = self.d[n].wrapping_shl(2);
                 self.pc = pc.wrapping_add(1);
             }
             0x58..=0x5B => {
                 let d8 = self.read_u8(pc + 1)? as u32;
                 self.d[n] = self.read_u32(self.sp.wrapping_add(d8))?;
+                self.pc = pc.wrapping_add(2);
+            }
+            0x5C..=0x5F => {
+                let d8 = self.read_u8(pc + 1)? as u32;
+                self.a[n] = self.read_u32(self.sp.wrapping_add(d8))?;
                 self.pc = pc.wrapping_add(2);
             }
             0x60..=0x6F => {
@@ -143,7 +195,6 @@ impl Mn103Vm {
             }
             0xCE => {
                 let regs = self.read_u8(pc + 1)?;
-                Self::validate_movm_mask(regs, op)?;
                 let new_sp = self.sp.wrapping_add(Self::reg_mask_stack_bytes(regs));
                 self.restore_regs(new_sp, regs)?;
                 self.sp = new_sp;
@@ -151,7 +202,6 @@ impl Mn103Vm {
             }
             0xCF => {
                 let regs = self.read_u8(pc + 1)?;
-                Self::validate_movm_mask(regs, op)?;
                 self.save_regs(self.sp, regs)?;
                 self.sp = self.sp.wrapping_sub(Self::reg_mask_stack_bytes(regs));
                 self.pc = pc.wrapping_add(2);
@@ -204,9 +254,25 @@ impl Mn103Vm {
                 let p = self.read_u8(pc + 1)?;
                 self.step_f2(p)?;
             }
+            0xF3 => {
+                let p = self.read_u8(pc + 1)?;
+                self.step_f3(p)?;
+            }
+            0xF4 => {
+                let p = self.read_u8(pc + 1)?;
+                self.step_f4(p)?;
+            }
+            0xF5 => {
+                let p = self.read_u8(pc + 1)?;
+                self.step_f5(p)?;
+            }
             0xF8 => {
                 let p = self.read_u8(pc + 1)?;
                 self.step_f8(p)?;
+            }
+            0xF9 => {
+                let p = self.read_u8(pc + 1)?;
+                self.step_f9(p)?;
             }
             0xFA => {
                 let p = self.read_u8(pc + 1)?;
@@ -219,6 +285,10 @@ impl Mn103Vm {
             0xFC => {
                 let p = self.read_u8(pc + 1)?;
                 self.step_fc(p)?;
+            }
+            0xFD => {
+                let p = self.read_u8(pc + 1)?;
+                self.step_fd(p)?;
             }
             0xFE => {
                 let p = self.read_u8(pc + 1)?;

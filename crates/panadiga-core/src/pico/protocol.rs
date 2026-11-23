@@ -43,7 +43,12 @@ impl PicoIdentFrame {
                 .as_ref()
                 .and_then(|l| l.find_region(NorRegionKind::Eemul))
                 .filter(|r| r.policy == NorRegionPolicy::NvramSanitize)
-                .map(|ee| format!("0x{:08X}", 0x8000_0000u32 + ee.start_offset));
+                .map(|ee| {
+                    format!(
+                        "0x{:08X}",
+                        crate::constants::AM34_FLASH_BASE + ee.start_offset
+                    )
+                });
         }
 
         let f = self.flash.to_ascii_uppercase();
@@ -52,7 +57,7 @@ impl PicoIdentFrame {
         } else if f.contains("S29GL128N") || f.contains("16MB") {
             Some("0x80FE0000".to_string())
         } else if f.contains("S29JL064H") || f.contains("8MB") {
-            Some("0x807F0000".to_string())
+            Some(crate::constants::AM34_NVRAM_BASE_HEX.to_string())
         } else if f.contains("S29AL032D")
             || f.contains("S29JL032H")
             || f.contains("MX29LV320T")

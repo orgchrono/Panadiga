@@ -1,49 +1,59 @@
 //! Extended prefixed MN103S opcode handlers (`0xF8`, `0xFA`, `0xFC`, `0xFE`).
 
-use super::{Mn103Fault, Mn103Vm, PSW_C, PSW_N, PSW_V};
+use super::{Mn103Fault, Mn103Vm, PSW_N, PSW_RESERVED_MASK, PSW_V};
 
 impl Mn103Vm {
-    fn step_f8_shift(&mut self, p: u8, n: usize, imm8: u8) {
-        let k = (imm8 & 0x1F) as u32;
-        let orig = self.d[n];
-        let (res, carry) = if k == 0 {
-            (orig, (self.psw & PSW_C) != 0)
-        } else {
-            match (p >> 2) & 3 {
-                0 => (orig.wrapping_shl(k), ((orig >> (32 - k)) & 1) != 0),
-                1 => (orig.wrapping_shr(k), ((orig >> (k - 1)) & 1) != 0),
-                _ => (
-                    ((orig as i32).wrapping_shr(k)) as u32,
-                    ((orig >> (k - 1)) & 1) != 0,
-                ),
-            }
-        };
-        self.d[n] = res;
-        self.set_nzvc(false, carry, res);
+    fn step_an_disp_mem(&mut self, p: u8, disp: u32) -> Result<(), Mn103Fault> {
+        let m = ((p >> 2) & 3) as usize;
+        match p >> 4 {
+            0x0 => self.d[m] = self.read_u32(disp)?,
+            0x1 => self.write_u32(disp, self.d[m])?,
+            0x2 => self.a[m] = self.read_u32(disp)?,
+            0x3 => self.write_u32(disp, self.a[m])?,
+            0x4 => self.d[m] = self.read_u8(disp)? as u32,
+            0x5 => self.write_u8(disp, self.d[m] as u8)?,
+            0x6 => self.d[m] = self.read_u16(disp)? as u32,
+            0x7 => self.write_u16(disp, self.d[m] as u16)?,
+            _ => return Err(Mn103Fault::InvalidOpcode(p)),
+        }
+        Ok(())
+    }
+
+    fn step_sp_store(&mut self, p: u8, disp_sp: u32) -> Result<(), Mn103Fault> {
+        let m = ((p >> 2) & 3) as usize;
+        match p & 3 {
+            0 => self.write_u32(disp_sp, self.a[m])?,
+            1 => self.write_u32(disp_sp, self.d[m])?,
+            2 => self.write_u8(disp_sp, self.d[m] as u8)?,
+            _ => self.write_u16(disp_sp, self.d[m] as u16)?,
+        }
+        Ok(())
+    }
+
+    fn step_sp_load(&mut self, p: u8, disp_sp: u32) -> Result<(), Mn103Fault> {
+        let n = (p & 3) as usize;
+        match (p >> 2) & 3 {
+            0 => self.a[n] = self.read_u32(disp_sp)?,
+            1 => self.d[n] = self.read_u32(disp_sp)?,
+            2 => self.d[n] = self.read_u8(disp_sp)? as u32,
+            _ => self.d[n] = self.read_u16(disp_sp)? as u32,
+        }
+        Ok(())
     }
 
     pub(super) fn step_f8(&mut self, p: u8) -> Result<(), Mn103Fault> {
         let op3 = self.read_u8(self.pc.wrapping_add(2))?;
-        let m = ((p >> 2) & 3) as usize;
         let n = (p & 3) as usize;
         let sext8 = (op3 as i8) as i32 as u32;
         let disp_an = self.a[n].wrapping_add(sext8);
-        let disp_sp_sext = self.sp.wrapping_add(sext8);
-        let disp_sp_zext = self.sp.wrapping_add(op3 as u32);
+        let disp_sp = self.sp.wrapping_add(op3 as u32);
         match p {
-            0x00..=0x0F => self.d[m] = self.read_u32(disp_an)?,
-            0x10..=0x1F => self.write_u32(disp_an, self.d[m])?,
-            0x20..=0x2F => self.a[m] = self.read_u32(disp_an)?,
-            0x30..=0x3F => self.write_u32(disp_an, self.a[m])?,
-            0x40..=0x4F => self.d[m] = self.read_u8(disp_an)? as u32,
-            0x50..=0x5F => self.write_u8(disp_an, self.d[m] as u8)?,
-            0x60..=0x6F => self.d[m] = self.read_u16(disp_an)? as u32,
-            0x70..=0x7F => self.write_u16(disp_an, self.d[m] as u16)?,
-            0x92 | 0x96 | 0x9A | 0x9E => self.write_u8(disp_sp_zext, self.d[m] as u8)?,
-            0x93 | 0x97 | 0x9B | 0x9F => self.write_u16(disp_sp_zext, self.d[m] as u16)?,
-            0xB8..=0xBB => self.d[n] = self.read_u8(disp_sp_sext)? as u32,
-            0xBC..=0xBF => self.d[n] = self.read_u16(disp_sp_sext)? as u32,
-            0xC0..=0xCB => self.step_f8_shift(p, n, op3),
+            0x00..=0x7F => self.step_an_disp_mem(p, disp_an)?,
+            0x92 | 0x96 | 0x9A | 0x9E | 0x93 | 0x97 | 0x9B | 0x9F => {
+                self.step_sp_store(p, disp_sp)?;
+            }
+            0xB8..=0xBF => self.step_sp_load(p, disp_sp)?,
+            0xC0..=0xCB => self.d[n] = self.alu_shift(self.d[n], op3 as u32, (p >> 2) & 3),
             0xE0..=0xE3 => {
                 let r = self.d[n] & (op3 as u32);
                 self.d[n] = r;
@@ -69,7 +79,7 @@ impl Mn103Vm {
                 return Ok(());
             }
             0xEC..=0xEF => self.set_nzvc(false, false, self.d[n] & (op3 as u32)),
-            0xF0..=0xF3 => self.a[n] = self.read_u32(disp_sp_sext)?,
+            0xF0..=0xF3 => self.a[n] = self.read_u32(disp_sp)?,
             0xFE => self.sp = self.alu_add(self.sp, sext8),
             _ => return Err(Mn103Fault::InvalidOpcode(p)),
         }
@@ -82,14 +92,17 @@ impl Mn103Vm {
         let m = ((p >> 2) & 3) as usize;
         let n = (p & 3) as usize;
         match p {
+            0x00..=0x7F => self.step_an_disp_mem(p, self.a[n].wrapping_add(imm32))?,
             0x80 | 0x84 | 0x88 | 0x8C => self.write_u32(imm32, self.a[m])?,
             0x81 | 0x85 | 0x89 | 0x8D => self.write_u32(imm32, self.d[m])?,
             0x82 | 0x86 | 0x8A | 0x8E => self.write_u8(imm32, self.d[m] as u8)?,
             0x83 | 0x87 | 0x8B | 0x8F => self.write_u16(imm32, self.d[m] as u16)?,
+            0x90..=0x9F => self.step_sp_store(p, self.sp.wrapping_add(imm32))?,
             0xA0..=0xA3 => self.a[n] = self.read_u32(imm32)?,
             0xA4..=0xA7 => self.d[n] = self.read_u32(imm32)?,
             0xA8..=0xAB => self.d[n] = self.read_u8(imm32)? as u32,
             0xAC..=0xAF => self.d[n] = self.read_u16(imm32)? as u32,
+            0xB0..=0xBF => self.step_sp_load(p, self.sp.wrapping_add(imm32))?,
             0xC0..=0xC3 => self.d[n] = self.alu_add(self.d[n], imm32),
             0xC4..=0xC7 => self.d[n] = self.alu_sub(self.d[n], imm32),
             0xC8..=0xCB => {
@@ -107,10 +120,30 @@ impl Mn103Vm {
                 self.d[n] = r;
                 self.set_nzvc(false, false, r);
             }
+            0xE4..=0xE7 => {
+                let r = self.d[n] | imm32;
+                self.d[n] = r;
+                self.set_nzvc(false, false, r);
+            }
+            0xE8..=0xEB => {
+                let r = self.d[n] ^ imm32;
+                self.d[n] = r;
+                self.set_nzvc(false, false, r);
+            }
+            0xEC..=0xEF => self.set_nzvc(false, false, self.d[n] & imm32),
+            0xFC => {
+                self.epsw &= imm32;
+                self.psw &= (imm32 & 0xFFFF) as u16;
+                self.psw_undef = 0;
+            }
+            0xFD => {
+                self.epsw |= imm32;
+                self.psw |= (imm32 & 0xFFFF) as u16;
+                self.psw_undef = 0;
+            }
             0xFE => self.sp = self.alu_add(self.sp, imm32),
             0xFF => {
                 let ret = self.pc.wrapping_add(6);
-                self.sp = self.sp.wrapping_sub(4);
                 self.write_u32(self.sp, ret)?;
                 self.mdr = ret;
                 self.pc = self.pc.wrapping_add(imm32);
@@ -123,35 +156,75 @@ impl Mn103Vm {
     }
 
     pub(super) fn step_fa(&mut self, p: u8) -> Result<(), Mn103Fault> {
-        if !(0xF0..=0xFB).contains(&p) {
-            return Err(Mn103Fault::InvalidOpcode(p));
-        }
-        let mode = (p >> 2) & 3;
+        let m = ((p >> 2) & 3) as usize;
         let n = (p & 3) as usize;
-        let d8 = self.read_u8(self.pc.wrapping_add(2))?;
-        let imm8 = self.read_u8(self.pc.wrapping_add(3))?;
-        let disp = if mode == 2 {
-            d8 as u32
-        } else {
-            (d8 as i8) as i32 as u32
-        };
-        self.exec_bitop(self.a[n].wrapping_add(disp), imm8, mode)?;
-        self.pc = self.pc.wrapping_add(4);
-        Ok(())
-    }
-
-    pub(super) fn step_fb(&mut self, p: u8) -> Result<(), Mn103Fault> {
-        let reg_byte = self.read_u8(self.pc.wrapping_add(2))?;
-        let d8 = self.read_u8(self.pc.wrapping_add(3))?;
-        if p != 0xAA || (reg_byte & 0x0F) != 0 {
-            return Err(Mn103Fault::InvalidOpcode(p));
+        if (0xF0..=0xFB).contains(&p) {
+            let mode = (p >> 2) & 3;
+            let d8 = self.read_u8(self.pc.wrapping_add(2))?;
+            let imm8 = self.read_u8(self.pc.wrapping_add(3))?;
+            let disp = if mode == 2 {
+                d8 as u32
+            } else {
+                (d8 as i8) as i32 as u32
+            };
+            self.exec_bitop(self.a[n].wrapping_add(disp), imm8, mode)?;
+            self.pc = self.pc.wrapping_add(4);
+            return Ok(());
         }
-        let addr = self.sp.wrapping_add((d8 as i8) as i32 as u32);
-        let val = self.read_u8(addr)? as u32;
-        match reg_byte >> 4 {
-            r @ 8..=11 => self.a[(r - 8) as usize] = val,
-            r @ 12..=15 => self.d[(r - 12) as usize] = val,
-            _ => return Err(Mn103Fault::InvalidOpcode(reg_byte)),
+        let s16 = self.fetch_i16(self.pc.wrapping_add(2))?;
+        let uval = (s16 as u16) as u32;
+        let sval = (s16 as i32) as u32;
+        match p {
+            0x00..=0x7F => self.step_an_disp_mem(p, self.a[n].wrapping_add(sval))?,
+            0x80 | 0x84 | 0x88 | 0x8C => self.write_u32(uval, self.a[m])?,
+            0x90..=0x9F => self.step_sp_store(p, self.sp.wrapping_add(uval))?,
+            0xA0..=0xA3 => self.a[n] = self.read_u32(uval)?,
+            0xB0..=0xBF => self.step_sp_load(p, self.sp.wrapping_add(uval))?,
+            0xC0..=0xC3 => self.d[n] = self.alu_add(self.d[n], sval),
+            0xC8..=0xCB => {
+                let _ = self.alu_sub(self.d[n], sval);
+            }
+            0xD0..=0xD3 => self.a[n] = self.alu_add(self.a[n], sval),
+            0xD8..=0xDB => {
+                let _ = self.alu_sub(self.a[n], sval);
+            }
+            0xE0..=0xE3 => {
+                let r = self.d[n] & uval;
+                self.d[n] = r;
+                self.set_nzvc(false, false, r);
+            }
+            0xE4..=0xE7 => {
+                let r = self.d[n] | uval;
+                self.d[n] = r;
+                self.set_nzvc(false, false, r);
+            }
+            0xE8..=0xEB => {
+                let r = self.d[n] ^ uval;
+                self.d[n] = r;
+                self.set_nzvc(false, false, r);
+            }
+            0xEC..=0xEF => self.set_nzvc(false, false, self.d[n] & uval),
+            0xFC | 0xFD => {
+                let v = if p == 0xFC {
+                    self.psw & (uval as u16)
+                } else {
+                    self.psw | (uval as u16)
+                };
+                if (v & PSW_RESERVED_MASK) != 0 {
+                    return Err(Mn103Fault::ReservedPswBits(v));
+                }
+                self.psw = v;
+                self.psw_undef = 0;
+            }
+            0xFE => self.sp = self.alu_add(self.sp, sval),
+            0xFF => {
+                let ret = self.pc.wrapping_add(4);
+                self.write_u32(self.sp, ret)?;
+                self.mdr = ret;
+                self.pc = self.pc.wrapping_add(sval);
+                return Ok(());
+            }
+            _ => return Err(Mn103Fault::InvalidOpcode(p)),
         }
         self.pc = self.pc.wrapping_add(4);
         Ok(())
@@ -173,7 +246,7 @@ impl Mn103Vm {
                 self.pc = self.pc.wrapping_add(5);
                 Ok(())
             }
-            _ => Err(Mn103Fault::InvalidOpcode(p)),
+            _ => self.step_fe_am33(p),
         }
     }
 }

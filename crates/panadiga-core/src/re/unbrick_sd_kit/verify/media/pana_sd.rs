@@ -11,11 +11,17 @@ use crate::hdd::{
 use super::super::super::super::bgo_unbrick::{
     PROG061_EXPECTED_SIZE, inspect_prog061_bgo_sites, prog_has_bgo_table_marker,
 };
+use super::super::super::super::main_bgo_retarget::{
+    MAIN_BGO_STATE_MISMATCH, inspect_main_bgo_geometry,
+};
 use super::super::super::super::main_passthrough::{MAIN_BASE_VA, inspect_main_passthrough_sites};
 use super::super::super::super::region_compat::EXPECTED_MAIN_3060NP_SIZE;
 use super::super::super::super::sata_bridge_fix::{
     OFF_PROG061_SATA_BRIDGE_RESET_WAIT, inspect_main3060np_sata_bridge_reset_site,
     inspect_prog061_sata_bridge_reset_site,
+};
+use super::super::super::super::sata_bridge_stage2::{
+    OFF_PROG061_STAGE2_HOOK_SITE, inspect_prog061_stage2_boot_site,
 };
 use super::super::super::compose::SdLoaderProfile;
 use super::super::{SdUnbrickCheck, check};
@@ -28,13 +34,16 @@ pub(crate) struct PanaSdInspection {
     pub prog061_mode: Option<String>,
     pub prog061_bgo_geometry: Option<String>,
     pub prog061_sata_bridge_fix: Option<String>,
+    pub prog061_stage2_boot: Option<String>,
     pub factory_unpatched_prog061: bool,
     pub main_build: Option<String>,
     pub main_passthrough_mode: Option<String>,
     pub main_sata_bridge_fix: Option<String>,
+    pub main_bgo_geometry: Option<String>,
     pub main_hdd_dynamic: Option<bool>,
     pub main_hdd_capacity_label: Option<String>,
     pub main_extrhead_checksum_ok: Option<bool>,
+    pub main_extrhead_src_addr: Option<u32>,
     pub main_effective_blocks_2kb: Option<u32>,
     pub detected_profile: Option<SdLoaderProfile>,
     pub check: SdUnbrickCheck,
@@ -49,13 +58,16 @@ pub(crate) fn verify_pana_sd_buffer(bytes_opt: Option<&[u8]>) -> PanaSdInspectio
             prog061_mode: None,
             prog061_bgo_geometry: None,
             prog061_sata_bridge_fix: None,
+            prog061_stage2_boot: None,
             factory_unpatched_prog061: false,
             main_build: None,
             main_passthrough_mode: None,
             main_sata_bridge_fix: None,
+            main_bgo_geometry: None,
             main_hdd_dynamic: None,
             main_hdd_capacity_label: None,
             main_extrhead_checksum_ok: None,
+            main_extrhead_src_addr: None,
             main_effective_blocks_2kb: None,
             detected_profile: None,
             check: check(
@@ -81,13 +93,16 @@ pub(crate) fn verify_pana_sd_buffer(bytes_opt: Option<&[u8]>) -> PanaSdInspectio
     let mut prog061_mode = None;
     let mut prog061_bgo_geometry = None;
     let mut prog061_sata_bridge_fix = None;
+    let mut prog061_stage2_boot = None;
     let mut factory_unpatched_prog061 = false;
     let mut main_build = None;
     let mut main_passthrough_mode = None;
     let mut main_sata_bridge_fix = None;
+    let mut main_bgo_geometry = None;
     let mut main_hdd_dynamic = None;
     let mut main_hdd_capacity_label = None;
     let mut main_extrhead_checksum_ok = None;
+    let mut main_extrhead_src_addr = None;
     let mut main_effective_blocks_2kb = None;
 
     for e in &toc {
@@ -115,15 +130,25 @@ pub(crate) fn verify_pana_sd_buffer(bytes_opt: Option<&[u8]>) -> PanaSdInspectio
                 prog061_mode = Some(b.detected_mode);
             }
             if prog_buf.len() == PROG061_EXPECTED_SIZE {
+                let is_populated_slice = |slice_opt: Option<&[u8]>| {
+                    slice_opt.is_some_and(|s| {
+                        !s.iter().all(|&b| b == 0xFF) && !s.iter().all(|&b| b == 0x00)
+                    })
+                };
                 let site_slice = prog_buf.get(
                     OFF_PROG061_SATA_BRIDGE_RESET_WAIT..OFF_PROG061_SATA_BRIDGE_RESET_WAIT + 11,
                 );
-                let should_inspect = prog_has_bgo_table_marker(prog_buf)
-                    || site_slice.is_some_and(|s| {
-                        !s.iter().all(|&b| b == 0xFF) && !s.iter().all(|&b| b == 0x00)
-                    });
+                let should_inspect =
+                    prog_has_bgo_table_marker(prog_buf) || is_populated_slice(site_slice);
                 if should_inspect && let Ok(st) = inspect_prog061_sata_bridge_reset_site(prog_buf) {
                     prog061_sata_bridge_fix = Some(st.state);
+                }
+                let hook_slice =
+                    prog_buf.get(OFF_PROG061_STAGE2_HOOK_SITE..OFF_PROG061_STAGE2_HOOK_SITE + 7);
+                if is_populated_slice(hook_slice)
+                    && let Ok(s2) = inspect_prog061_stage2_boot_site(prog_buf)
+                {
+                    prog061_stage2_boot = Some(s2.state);
                 }
             }
             if is_factory_unpatched_prog061(prog_buf, prog061_mode.as_deref()) {
@@ -137,6 +162,7 @@ pub(crate) fn verify_pana_sd_buffer(bytes_opt: Option<&[u8]>) -> PanaSdInspectio
             match unpack_extrhead(mod_slice, ExtrheadCryptMode::Main) {
                 Ok(u) => {
                     main_extrhead_checksum_ok = Some(u.checksum_valid && u.footer_present);
+                    main_extrhead_src_addr = Some(u.header.src_addr);
                     main_build = Some(if u.header.build_name.is_empty() {
                         e.module_name.trim().to_string()
                     } else {
@@ -145,10 +171,15 @@ pub(crate) fn verify_pana_sd_buffer(bytes_opt: Option<&[u8]>) -> PanaSdInspectio
                     main_passthrough_mode = inspect_main_passthrough_sites(&u.decompressed)
                         .ok()
                         .map(|p| p.detected_mode);
-                    if u.decompressed.len() == EXPECTED_MAIN_3060NP_SIZE
-                        && let Ok(st) = inspect_main3060np_sata_bridge_reset_site(&u.decompressed)
-                    {
-                        main_sata_bridge_fix = Some(st.state);
+                    if u.decompressed.len() == EXPECTED_MAIN_3060NP_SIZE {
+                        if let Ok(st) = inspect_main3060np_sata_bridge_reset_site(&u.decompressed) {
+                            main_sata_bridge_fix = Some(st.state);
+                        }
+                        main_bgo_geometry =
+                            Some(match inspect_main_bgo_geometry(&u.decompressed) {
+                                Ok(st) => st.state,
+                                Err(_) => MAIN_BGO_STATE_MISMATCH.to_string(),
+                            });
                     }
                     if let Ok(cap) = inspect_main_buffer_capacity(
                         &u.decompressed,
@@ -222,13 +253,16 @@ pub(crate) fn verify_pana_sd_buffer(bytes_opt: Option<&[u8]>) -> PanaSdInspectio
         prog061_mode,
         prog061_bgo_geometry,
         prog061_sata_bridge_fix,
+        prog061_stage2_boot,
         factory_unpatched_prog061,
         main_build,
         main_passthrough_mode,
         main_sata_bridge_fix,
+        main_bgo_geometry,
         main_hdd_dynamic,
         main_hdd_capacity_label,
         main_extrhead_checksum_ok,
+        main_extrhead_src_addr,
         main_effective_blocks_2kb,
         detected_profile: (list_sums_ok && fvu_sums_ok)
             .then_some(detected_profile)

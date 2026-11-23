@@ -1,6 +1,9 @@
 //! Trap 4, Trap 5, Trap 7 false-constant filtering, and AM33 missing Sleigh opcode detectors.
 
 use super::{ExtendedOpcodeHit, InstructionSpan, MidInstructionOverlap};
+use crate::constants::{
+    AM34_FLASH_BASE, AM34_FLASH_UNCACHED_BASE, AM34_NVRAM_BASE, AM34_NVRAM_UNCACHED_BASE,
+};
 use crate::crypto::codec::read_u32_le;
 use crate::re::mn10300::{decode_branch_call_refs, decode_setlb_loops};
 
@@ -78,8 +81,8 @@ pub fn detect_mid_instruction_overlaps(
 /// Trap 5: checks whether a virtual address hits Spansion CS1 Flash CFI / JEDEC command cycles.
 pub fn is_flash_cfi_command_va(va: u32) -> bool {
     let low = va & 0x0FFF;
-    let in_nor =
-        (0x8400_0000..0x847F_0000).contains(&va) || (0x8000_0000..0x807F_0000).contains(&va);
+    let in_nor = (AM34_FLASH_UNCACHED_BASE..AM34_NVRAM_UNCACHED_BASE).contains(&va)
+        || (AM34_FLASH_BASE..AM34_NVRAM_BASE).contains(&va);
     in_nor && matches!(low, 0x000 | 0x554 | 0x555 | 0xAAA | 0xAAB)
 }
 

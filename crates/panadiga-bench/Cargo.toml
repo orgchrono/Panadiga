@@ -1,0 +1,19 @@
+[package]
+name = "panadiga-bench"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "L1 unidirectional bench event stream, backpressure publisher, and single-use operation nonces for Panadiga"
+
+[lib]
+name = "panadiga_bench"
+crate-type = ["rlib"]
+
+[dependencies]
+anyhow = { workspace = true }
+hex = { workspace = true }
+panadiga-constants = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }

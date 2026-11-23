@@ -13,16 +13,7 @@ use crate::constants::PANA_DIGADIAG_FRM_SIZE;
 use crate::crypto::build_digadiag_frm;
 use crate::nvram::{calculate_hashes, resolve_input_path};
 
-/// Ensures `path.parent()` exists before writing an output binary artifact.
-pub fn ensure_parent_dir(path: &Path) -> Result<()> {
-    if let Some(parent) = path.parent()
-        && !parent.as_os_str().is_empty()
-    {
-        fs::create_dir_all(parent)
-            .with_context(|| format!("Creating output directory {}", parent.display()))?;
-    }
-    Ok(())
-}
+pub use panadiga_constants::forensic::ensure_parent_dir;
 
 /// Applies `mode` using explicit unsafe-override policy and optionally wraps as 128 KiB `DIGADIAG.FRM`.
 pub fn patch_prog061_or_build_digadiag_with_policy(

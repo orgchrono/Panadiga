@@ -2,73 +2,14 @@
 
 use std::fs::{self, File};
 use std::io::Read;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use anyhow::{Context, Result, bail};
 
+pub use panadiga_constants::forensic::resolve_input_path;
+
 use super::super::pure::{NvramCleanReport, inspect_flash_nvram_slice};
 use crate::constants::SPANSION_FLASH_SIZE_BYTES;
-
-/// Intelligently resolves an input file path across working directory and known folders,
-/// transparently handling both uncompressed (.bin) and compressed (.bin.gz) files.
-pub fn resolve_input_path(input: &Path) -> Result<PathBuf> {
-    let raw = input.to_string_lossy();
-    let trimmed = raw.trim();
-    if trimmed.starts_with(r"\\.\") || trimmed.starts_with("/dev/") {
-        return Ok(PathBuf::from(trimmed));
-    }
-    if input.exists() {
-        return Ok(input.to_path_buf());
-    }
-
-    let gz_input = PathBuf::from(format!("{}.gz", input.display()));
-    if gz_input.exists() {
-        return Ok(gz_input);
-    }
-
-    let filename = input.file_name().unwrap_or(input.as_os_str());
-
-    let mut candidate_dirs = vec![
-        PathBuf::from("firmware_and_images"),
-        PathBuf::from("../firmware_and_images"),
-        PathBuf::from("../../firmware_and_images"),
-        PathBuf::from(".."),
-        PathBuf::from("../.."),
-        PathBuf::from("."),
-    ];
-
-    if let Ok(exe) = std::env::current_exe()
-        && let Some(exe_dir) = exe.parent()
-    {
-        candidate_dirs.push(exe_dir.join("firmware_and_images"));
-        candidate_dirs.push(exe_dir.to_path_buf());
-        if let Some(parent) = exe_dir.parent() {
-            candidate_dirs.push(parent.join("firmware_and_images"));
-            candidate_dirs.push(parent.to_path_buf());
-        }
-    }
-
-    for dir in candidate_dirs {
-        let direct = dir.join(input);
-        if direct.exists() {
-            return Ok(direct);
-        }
-        let direct_gz = dir.join(&gz_input);
-        if direct_gz.exists() {
-            return Ok(direct_gz);
-        }
-        let by_name = dir.join(filename);
-        if by_name.exists() {
-            return Ok(by_name);
-        }
-        let by_name_gz = dir.join(format!("{}.gz", filename.to_string_lossy()));
-        if by_name_gz.exists() {
-            return Ok(by_name_gz);
-        }
-    }
-
-    bail!("Flash binary input file not found: {}", input.display())
-}
 
 /// Reads a resolved flash binary file into a byte vector.
 /// Shared by both `inspect_flash_nvram` (read-only) and `clean_flash_nvram` (read-write).

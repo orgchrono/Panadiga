@@ -8,6 +8,7 @@ pub mod eh55_bgo;
 pub use eh55_bgo as bgo_ftl;
 pub mod emu_patch_suite;
 pub mod error_dict;
+pub mod main_bgo_retarget;
 pub mod main_passthrough;
 pub mod matshita_emu;
 pub mod mn10300;
@@ -20,7 +21,9 @@ pub mod prewrite_gate;
 pub mod prog061_uart_monitor;
 pub mod region_compat;
 pub mod sata_bridge_fix;
+pub mod sata_bridge_stage2;
 pub mod sig_locator;
+pub mod symbol_index;
 pub mod tbc_appliance;
 pub mod unbrick_sd_kit;
 pub mod unbrick_workbench;
@@ -57,6 +60,12 @@ pub use eh55_bgo::{
 };
 pub use emu_patch_suite::{
     NorEmuPatchSuiteReport, PatchVerificationCheck, run_nor_emu_patch_verification_suite,
+};
+pub use main_bgo_retarget::{
+    BytePatchSite, MAIN_BGO_STATE_8MB, MAIN_BGO_STATE_FACTORY_4MB, MAIN_BGO_STATE_MISMATCH,
+    MAIN3060NP_BGO_8MB_SPEC, MainBgoGeometryStatus, MainBgoRetargetSpec, U32RelocSpec,
+    WordPatchSite, apply_main_bgo_retarget_for_spec_in_place, apply_main_bgo_retarget_in_place,
+    inspect_main_bgo_geometry, inspect_main_bgo_geometry_for_spec,
 };
 pub use main_passthrough::{
     DEV_SERIAL_CALLBACK_VA, DEV_SERIAL_HANDSHAKE_BYTES, DEV_SERIAL_ISR_CTX_PTR_VA,
@@ -105,9 +114,23 @@ pub use sata_bridge_fix::{
     apply_main3060np_sata_bridge_reset_fix_in_place, apply_prog061_sata_bridge_reset_fix_in_place,
     inspect_main3060np_sata_bridge_reset_site, inspect_prog061_sata_bridge_reset_site,
 };
+pub use sata_bridge_stage2::{
+    PROG061_STAGE2_PAYLOAD_OFFSET, PROG061_STAGE2_PAYLOAD_VA, PROG061_STAGE2_STATE_ENABLED,
+    PROG061_STAGE2_STATE_FACTORY, PROG061_STAGE2_STATE_MISMATCH, Prog061Stage2BootStatus,
+    Stage2BootTrainSpec, VER061_STAGE2_BOOT_SPEC, apply_prog061_stage2_boot_in_place,
+    apply_stage2_boot_in_place_for_spec, assemble_prog061_stage2_payload,
+    assemble_stage2_payload_for_spec, compute_stage2_hook_bytes, inspect_prog061_stage2_boot_site,
+    inspect_stage2_boot_site_for_spec,
+};
 pub use sig_locator::{
     CfgFunctionCandidate, LocatedFunctionMatch, StringXrefHit, detect_prologue_at,
     discover_cfg_functions, locate_functions_by_string, summarize_function_cfg,
+};
+pub use symbol_index::{
+    FirmwareSymbolIndex, FunctionSymbolEntry, SymbolAbiDetail, SymbolAnnotationOverlay,
+    SymbolLookupMatch, SymbolLookupQuery, SymbolLookupResponse, SymbolLookupSafetyGate,
+    SymbolSideEffect, build_symbol_index, list_symbol_indexes, load_all_destructive_symbols,
+    load_symbol_index, lookup_symbols, write_symbol_index,
 };
 pub use tbc_appliance::{
     TbcApplianceMode, TbcAppliancePlan, VerifiedMainPassthroughSiteRef,

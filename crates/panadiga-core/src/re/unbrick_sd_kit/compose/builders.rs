@@ -18,6 +18,7 @@ use super::super::super::bgo_unbrick::{
     PROG061_BASE_VA, Prog061BgoPatchMode, enforce_train_evidence_tier, find_recipe_by_loader_key,
     patch_prog061_bgo_in_place_with_policy, retarget_prog_for_loader_profile_with_policy,
 };
+use super::super::super::main_bgo_retarget::apply_main_bgo_retarget_in_place;
 use super::super::super::main_passthrough::{
     EXPECTED_MAIN_3410PQ_SIZE, MAIN_BASE_VA, MainPassthroughMode, apply_main_passthrough_in_place,
     inspect_main_firmware_identity, inspect_main_passthrough_sites,
@@ -26,6 +27,7 @@ use super::super::super::sata_bridge_fix::{
     SataBridgeResetFixMode, apply_main3060np_sata_bridge_reset_fix_in_place,
     apply_prog061_sata_bridge_reset_fix_in_place,
 };
+use super::super::super::sata_bridge_stage2::apply_prog061_stage2_boot_in_place;
 use super::super::super::unbrick_workbench::{load_main_binary_and_meta, load_prog061_from_bytes};
 use super::types::{ComposedMainArtifact, SdLoaderProfile};
 
@@ -89,7 +91,14 @@ pub(crate) fn compose_pana_sd_prog061_with_tier_policy(
     allow_unsafe_auto_format: bool,
     allow_unverified_profile: bool,
     sata_bridge_reset_fix: bool,
+    sata_bridge_stage2_boot: bool,
 ) -> Result<(Vec<u8>, Prog061BgoPatchMode)> {
+    if sata_bridge_stage2_boot && !sata_bridge_reset_fix {
+        bail!("--sata-bridge-stage2-boot requires --sata-bridge-reset-fix (fail-closed)");
+    }
+    if sata_bridge_stage2_boot && loader_profile != SdLoaderProfile::Ver061RawSd48 {
+        bail!("--sata-bridge-stage2-boot currently supports only Loader ver0.61 (ver061)");
+    }
     let effective_mode = if loader_profile == SdLoaderProfile::Ver061RawSd48
         && requested_bgo_mode == Prog061BgoPatchMode::UartMonitor
     {
@@ -110,10 +119,14 @@ pub(crate) fn compose_pana_sd_prog061_with_tier_policy(
             SataBridgeResetFixMode::Wait1000Ms,
         )?;
     }
+    if sata_bridge_stage2_boot {
+        apply_prog061_stage2_boot_in_place(&mut prog_patched, true)?;
+    }
     Ok((prog_patched, effective_mode))
 }
 
 /// Pure composition of TBC-passthrough + optional HDD-capacity-unlocked `MAIN` container.
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn compose_patched_main_container(
     raw_main: &[u8],
     passthrough_mode: MainPassthroughMode,
@@ -122,6 +135,7 @@ pub(crate) fn compose_patched_main_container(
     expected_main_build: Option<&str>,
     allow_target_mismatch: bool,
     sata_bridge_reset_fix: bool,
+    main_bgo_retarget: bool,
 ) -> Result<ComposedMainArtifact> {
     let (mut main_bin, build_name, flag, adler_step) = load_main_binary_and_meta(raw_main)?;
     let identity = inspect_main_firmware_identity(&main_bin, Some(&build_name));
@@ -207,6 +221,11 @@ pub(crate) fn compose_patched_main_container(
         modified = true;
     }
 
+    if main_bgo_retarget {
+        apply_main_bgo_retarget_in_place(&mut main_bin, true)?;
+        modified = true;
+    }
+
     let resolved_build = if identity.build_id != "UNKNOWN" {
         identity.build_id
     } else if !build_name.is_empty() {
@@ -243,6 +262,7 @@ pub(crate) fn compose_patched_main_container(
         passthrough_applied,
         hdd_capacity_applied,
         sata_bridge_reset_fix_applied: sata_bridge_reset_fix,
+        main_bgo_retarget_applied: main_bgo_retarget,
     })
 }
 

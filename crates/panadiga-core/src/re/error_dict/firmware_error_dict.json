@@ -13,7 +13,7 @@
     "native_text": "Communication error between Main CPU (AM34) and Timer MCU (IC7501)",
     "translation": "AM34 froze, failed initial TBUS handshake (<2s pre-watchdog), or halted in boot_panic_or_halt_7812 / BGO failure.",
     "actions": [
-      "Check elapsed time from PLEASE WAIT to U99: <=2s means AM34 crashed BEFORE FUN_44005cd0 set the 255s TBUS watchdog (check X_SW+3.8/+5.8/+12/3.3V rails, PFAIL[L], SA0..SA3, SDRAM, or TBUS).",
+      "Check elapsed time from PLEASE WAIT to U99: <=2s means AM34 crashed BEFORE FUN_44005cd0 set the 255s TBUS watchdog (check X_SW+3.8/+5.8/+12/3.3V rails, PFAIL[L], SA0..SA10, SDRAM, or TBUS).",
       "Capture P7501 during Standby wakeup (`BOOTTRACE`/`PWRTRACE`) to verify if any serial bytes leave UARTP2M_T (Pin 6 -> Pico GP2 RX)."
     ]
   },
@@ -54,7 +54,7 @@
     "translation": "When woken from stabilized Standby (`0:00`, via [POWER] or [CH UP]+[OPEN/CLOSE]+[REC]/[STOP] chord), IC7501 displayed its clean wakeup banner `HELLO` (`EC p.40` Step 11) and raised `DI_P_ON[H]`, then dropped to `U99` before AM34 completed startup / `MAIN` / `FUN_44005cd0()`.",
     "actions": [
       "Arm `BOOTTRACE 12000 WAKE` or `PREJIG WAKE` while parked in stabilized Standby (`VDD ~0.03V`), then wake with `[POWER]` or front-panel chord to capture `UARTP2M_T` from t=0ms.",
-      "If `rxd_edges == 0` while `NSW5V` toggles, inspect Digital PCB switched rails (`X_SW+3.8/+5.8/+12`, `D3R3V`), `PFAIL[L]`, `IC5001 SA0..SA3` IPL, SDRAM (`DDR CHECK`), and `TBUS` continuity."
+      "If `rxd_edges == 0` while `NSW5V` toggles, inspect Digital PCB switched rails (`X_SW+3.8/+5.8/+12`, `D3R3V`), `PFAIL[L]`, `IC5001 SA0..SA10` IPL, SDRAM (`DDR CHECK`), and `TBUS` continuity."
     ]
   },
   {
@@ -69,7 +69,7 @@
     "severity": "critical",
     "title": "PLEASE WAIT (>10s) -> U99 Post-Handshake AM34 Timeout",
     "native_text": "Extended initialization hang after TBUS 255s watchdog setup (PLEASE WAIT >10s -> U99)",
-    "translation": "AM34 passed early `SA0..SA3` IPL and extended the IC7501 watchdog via `FUN_44005cd0()`, then stalled later in BGO/CS1 NOR, HDD `MEIHDFS` init, or optical drive `DRV` startup before `MAIN` ready.",
+    "translation": "AM34 passed early `SA0..SA10` IPL and extended the IC7501 watchdog via `FUN_44005cd0()`, then stalled later in BGO/CS1 NOR, HDD `MEIHDFS` init, or optical drive `DRV` startup before `MAIN` ready.",
     "actions": [
       "Decode captured `UARTP2M_T` serial text around `BGO driver init failed[1].`, `-91006`, or `DRV` timeout; retry with `JIGPIN LOW` (`PREJIG WAKE`) + `<=2GB` FAT16 SDSC holding `DIGADIAG.FRM`."
     ]

@@ -43,6 +43,7 @@ pub fn compose_hardened_panamon1_kit(
         false,
         false,
         false,
+        false,
     )?;
     let composed_main = compose_patched_main_container(
         main_raw,
@@ -51,6 +52,7 @@ pub fn compose_hardened_panamon1_kit(
         hdd_target_gb,
         expected_main_build,
         allow_target_mismatch,
+        false,
         false,
     )?;
     let (pana_sd_bytes, pana_sd_sha256) = compose_pana_sd_container(

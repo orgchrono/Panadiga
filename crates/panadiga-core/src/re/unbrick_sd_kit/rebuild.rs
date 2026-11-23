@@ -292,9 +292,21 @@ pub fn rebuild_sd_kit_from_dump(req: &RebuildFromDumpRequest) -> Result<RebuildF
         }
     }
 
-    let staging_root =
-        std::env::temp_dir().join(format!("panadiga_rebuild_stage_{}", std::process::id()));
+    struct TempDirCleanup(PathBuf);
+    impl Drop for TempDirCleanup {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.0);
+        }
+    }
+    static REBUILD_STAGE_SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let stage_seq = REBUILD_STAGE_SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let staging_root = std::env::temp_dir().join(format!(
+        "panadiga_rebuild_stage_{}_{}",
+        std::process::id(),
+        stage_seq
+    ));
     let _ = fs::remove_dir_all(&staging_root);
+    let _staging_guard = TempDirCleanup(staging_root.clone());
     let carved_drv_path = if req.frm_path.is_none() {
         let manifest = init_vault_session(
             &staging_root,
@@ -337,6 +349,8 @@ pub fn rebuild_sd_kit_from_dump(req: &RebuildFromDumpRequest) -> Result<RebuildF
         expected_main_build: None,
         allow_target_mismatch: false,
         sata_bridge_reset_fix: false,
+        sata_bridge_stage2_boot: false,
+        main_bgo_retarget: false,
     };
 
     let kit_result = prepare_sd_unbrick_kit_with_tier_policy(&sd_req, req.allow_unverified_profile);

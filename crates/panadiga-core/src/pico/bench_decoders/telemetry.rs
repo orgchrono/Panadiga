@@ -9,15 +9,27 @@ use super::types::{
     PinCheckBenchRow, PiologicBenchReport, SAFE_BENCH_COMMANDS,
 };
 
-/// Validates that `command` belongs strictly to the read-only P7501 bench allowlist.
-pub fn validate_safe_bench_command(command: &str) -> Result<String> {
+fn normalize_single_line_command(command: &str) -> Result<&str> {
     let normalized = command.trim();
     if normalized.is_empty() {
         bail!("Empty bench command is not permitted");
     }
-    if normalized.contains('\n') || normalized.contains('\r') {
-        bail!("Multiline commands are rejected to prevent command injection");
+    if normalized.len() > crate::ssot::pico_header::P7501_CLI_LINE_MAX_SSOT as usize {
+        bail!(
+            "Command length {} exceeds P7501 CLI limit ({})",
+            normalized.len(),
+            crate::ssot::pico_header::P7501_CLI_LINE_MAX_SSOT
+        );
     }
+    if normalized.bytes().any(|b| !(0x20..=0x7E).contains(&b)) {
+        bail!("Only single-line printable ASCII commands are permitted on P7501 serial CDC");
+    }
+    Ok(normalized)
+}
+
+/// Validates that `command` belongs strictly to the read-only P7501 bench allowlist.
+pub fn validate_safe_bench_command(command: &str) -> Result<String> {
+    let normalized = normalize_single_line_command(command)?;
     let head = normalized
         .split_whitespace()
         .next()
@@ -33,6 +45,53 @@ pub fn validate_safe_bench_command(command: &str) -> Result<String> {
         }
     }
     Ok(normalized.to_string())
+}
+
+fn is_ipl_sa0_sa10_token(token: &str) -> bool {
+    let stripped = token
+        .trim_end_matches([',', ';'])
+        .trim_start_matches("0X")
+        .trim_start_matches('$');
+    if stripped.len() < 4 || !stripped.bytes().all(|b| b.is_ascii_hexdigit()) {
+        return false;
+    }
+    if let Ok(addr) = u32::from_str_radix(stripped, 16)
+        && ((0x8000_0000..0x8004_0000).contains(&addr)
+            || (0x8400_0000..0x8404_0000).contains(&addr))
+    {
+        return true;
+    }
+    stripped.starts_with("8000")
+        || stripped.starts_with("8001")
+        || stripped.starts_with("8002")
+        || stripped.starts_with("8003")
+        || stripped.starts_with("8400")
+        || stripped.starts_with("8401")
+        || stripped.starts_with("8402")
+        || stripped.starts_with("8403")
+}
+
+/// Validates an interactive Pico CDC serial command against the SSOT catalog and hardware barriers.
+pub fn validate_interactive_pico_command(command: &str) -> Result<String> {
+    let normalized = normalize_single_line_command(command)?;
+    let upper = normalized.to_ascii_uppercase();
+    let head = upper.split_whitespace().next().unwrap_or_default();
+    if !crate::ssot::spec::check_known_pico_command_id(head) {
+        bail!("Command '{head}' is outside SSOT Pico CLI catalog");
+    }
+    let compact: String = upper.chars().filter(|c| *c != '_').collect();
+    if compact.contains("C000100C") {
+        bail!("Lethal AM34 MMIO address 0xC000100C is permanently blocked");
+    }
+    if matches!(head, "FAST_WRITE" | "ERASE" | "WRITEMEM") {
+        if head == "FAST_WRITE" && !upper.split_whitespace().any(|t| t == "CONFIRM_UPPER_NOR") {
+            bail!("FAST_WRITE requires explicit CONFIRM_UPPER_NOR token");
+        }
+        if upper.split_whitespace().skip(1).any(is_ipl_sa0_sa10_token) {
+            bail!("IPL SA0..SA10 write target is permanently Read-Only (E05)");
+        }
+    }
+    Ok(upper)
 }
 
 /// Parses `STATUS` or `VDD` output into voltage, rail state, and sticky-LOW detection.

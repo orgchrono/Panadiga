@@ -1,7 +1,7 @@
 //! Canonical Runtime Operational Settings & Atomic Persistence (`panadiga-core`).
 //!
 //! Centralizes user-configurable runtime defaults in Rust (keeping physical hardware safety
-//! invariants immutable: `NSW5V` GP3 Hi-Z, `XRESET` Open-Drain, IPL `SA0..SA3` read-only).
+//! invariants immutable: `NSW5V` GP3 Hi-Z, `XRESET` Open-Drain, IPL `SA0..SA10` read-only).
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -20,6 +20,12 @@ pub const ALLOWED_NOR_BLOCK_SIZES: &[u32] = &[512, 1_024, 2_048, 4_096, 8_192];
 pub const ALLOWED_LOG_LEVELS: &[&str] = &["off", "error", "warn", "info", "debug", "trace"];
 pub const RESERVED_P7501_MAX_GPIO: u8 = 5;
 pub const MAX_SAFE_RP2040_USER_GPIO: u8 = 28;
+
+/// Returns true only when `pin` is within the non-reserved bench IR LED TX set (`GP6..GP9` or `GP16..GP22`).
+#[must_use]
+pub const fn is_safe_ir_pico_gpio(pin: u8) -> bool {
+    matches!(pin, 6..=9 | 16..=22)
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SerialRuntimeSettings {
@@ -157,11 +163,9 @@ impl RuntimeSettings {
             return Err("forensic_keywords must contain between 1 and 32 entries".to_string());
         }
 
-        if self.ir.default_ir_pico_gpio <= RESERVED_P7501_MAX_GPIO
-            || self.ir.default_ir_pico_gpio > MAX_SAFE_RP2040_USER_GPIO
-        {
+        if !is_safe_ir_pico_gpio(self.ir.default_ir_pico_gpio) {
             return Err(format!(
-                "GPIO {} is reserved/unsafe on P7501 (GP0..GP5 protect UART, NSW5V Hi-Z GP3, and XRESET GP5); select GP6..GP28",
+                "GPIO {} is reserved/unsafe on P7501 or bench (GP0..GP5 protect UART, NSW5V Hi-Z GP3, XRESET GP5; GP10..GP15 & GP23..GP28 reserved); select GP6..GP9 or GP16..GP22",
                 self.ir.default_ir_pico_gpio
             ));
         }
@@ -320,6 +324,23 @@ mod tests {
             .validate()
             .expect_err("GP3 (NSW5V Hi-Z) MUST be rejected by hardware safety shield");
         assert!(err.contains("NSW5V"));
+
+        for invalid_gpio in [10u8, 15, 26, 28] {
+            let mut disallowed = RuntimeSettings::default();
+            disallowed.ir.default_ir_pico_gpio = invalid_gpio;
+            assert!(
+                disallowed.validate().is_err(),
+                "GPIO {invalid_gpio} must be rejected outside GP6..GP9 / GP16..GP22"
+            );
+        }
+        for valid_gpio in [6u8, 9, 16, 22] {
+            let mut allowed = RuntimeSettings::default();
+            allowed.ir.default_ir_pico_gpio = valid_gpio;
+            assert!(
+                allowed.validate().is_ok(),
+                "GPIO {valid_gpio} should be allowed"
+            );
+        }
     }
 
     #[test]

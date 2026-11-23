@@ -3,6 +3,7 @@
 mod bootstrap;
 mod bootstrap_layout;
 mod decrypt_runtime;
+mod decrypt_runtime_plan;
 mod pass2_typing;
 mod pass3_functions;
 mod pass3_gaps;
@@ -13,10 +14,11 @@ mod pass4_verify_cli;
 /// backed dynamically by `ghidra_ssot_maps.json` and supporting arbitrary future binaries via `--binary` / `--model`.
 pub fn generate_ghidra_zero_undef_pipeline() -> String {
     format!(
-        "{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}",
+        "{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}",
         bootstrap::PY_BOOTSTRAP,
         bootstrap_layout::PY_BOOTSTRAP_LAYOUT,
         decrypt_runtime::PY_DECRYPT_RUNTIME,
+        decrypt_runtime_plan::PY_DECRYPT_RUNTIME_PLAN,
         pass2_typing::PY_PASS2,
         pass3_seeding::PY_PASS3,
         pass3_functions::PY_PASS3_FUNCS,

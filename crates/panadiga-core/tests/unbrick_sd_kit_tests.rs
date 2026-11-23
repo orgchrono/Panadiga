@@ -52,6 +52,8 @@ fn build_workspace_sd_kit_with_mode(
         expected_main_build: Some("3410PQ".to_string()),
         allow_target_mismatch: false,
         sata_bridge_reset_fix: false,
+        sata_bridge_stage2_boot: false,
+        main_bgo_retarget: false,
     };
     if loader_profile == SdLoaderProfile::Ver063ExtrheadSd64 && allow_unverified_profile {
         let blocked = prepare_sd_unbrick_kit(&req).unwrap_err();
@@ -153,6 +155,8 @@ fn auto_format_bgo_policy_fails_closed_without_explicit_override() {
         expected_main_build: None,
         allow_target_mismatch: false,
         sata_bridge_reset_fix: false,
+        sata_bridge_stage2_boot: false,
+        main_bgo_retarget: false,
     })
     .unwrap_err();
     let _ = fs::remove_dir_all(&tmp);
@@ -192,4 +196,101 @@ fn corrupt_pana_sd_payload_fails_fvu_checksum_verification() {
         .unwrap();
     assert_eq!(sd_chk.severity, "fail");
     assert!(sd_chk.detail.contains("fvu_sums_ok=false"));
+}
+
+#[test]
+fn ver061_stage2_fails_closed_without_main_bgo_retarget_and_passes_with_8mb_main() {
+    use panadiga_core::constants::CHK_ID_MAIN_BGO_GEOMETRY;
+    use panadiga_core::crypto::{ExtrheadCryptMode, pack_extrhead};
+    use panadiga_core::re::bgo_unbrick::Prog061BgoPatchMode::BypassChecksOnly;
+    use panadiga_core::re::main_bgo_retarget::{MAIN_BGO_STATE_8MB, MAIN_BGO_STATE_FACTORY_4MB};
+    use panadiga_core::re::sata_bridge_stage2::apply_prog061_stage2_boot_in_place;
+
+    let tmp_guard =
+        std::env::temp_dir().join(format!("panadiga_stage2_guard_{}", std::process::id()));
+    let _ = fs::remove_dir_all(&tmp_guard);
+    let mut req = SdUnbrickKitRequest::hardened_panamon1(tmp_guard.clone());
+    req.sata_bridge_reset_fix = true;
+    req.sata_bridge_stage2_boot = true;
+    let err = prepare_sd_unbrick_kit(&req).unwrap_err();
+    assert!(
+        err.to_string().contains("--main-bgo-retarget"),
+        "expected fail-closed --main-bgo-retarget guard, got: {err}"
+    );
+    let _ = fs::remove_dir_all(&tmp_guard);
+
+    let ws = resolve_workspace_root();
+    let dvd = ws.join("firmware_and_images/PANA_DVD.FRM");
+    let main_unpacked =
+        ws.join("firmware_and_images/extracted_partitions/frm_unpacked/main3060np_unpacked.bin");
+    let prog_unpacked =
+        ws.join("firmware_and_images/extracted_partitions/frm_unpacked/prog061_unpacked.bin");
+    if !dvd.is_file() || !main_unpacked.is_file() || !prog_unpacked.is_file() {
+        return;
+    }
+
+    let tmp_pass = std::env::temp_dir().join(format!("panadiga_stage2_8mb_{}", std::process::id()));
+    let _ = fs::remove_dir_all(&tmp_pass);
+    let mut pass_req = SdUnbrickKitRequest::hardened_panamon1(tmp_pass.clone());
+    pass_req.pana_dvd_path = Some(dvd);
+    pass_req.prog061_path = Some(prog_unpacked.clone());
+    pass_req.main_path = Some(main_unpacked.clone());
+    pass_req.sata_bridge_reset_fix = true;
+    pass_req.sata_bridge_stage2_boot = true;
+    pass_req.main_bgo_retarget = true;
+    let ok_rep = prepare_sd_unbrick_kit(&pass_req).unwrap();
+    assert!(ok_rep.main_bgo_retarget_applied);
+    assert_eq!(
+        ok_rep.verification.pana_sd_main_bgo_geometry.as_deref(),
+        Some(MAIN_BGO_STATE_8MB)
+    );
+    assert!(
+        ok_rep
+            .verification
+            .checks
+            .iter()
+            .any(|c| c.id == CHK_ID_MAIN_BGO_GEOMETRY && c.severity == "pass")
+    );
+    let _ = fs::remove_dir_all(&tmp_pass);
+
+    // Construct an in-memory ver061 Stage-2 kit pairing Stage-2 PROG061 with factory 4 MiB MAIN3060NP:
+    // verify_sd_buffers must fail closed with CHK_ID_MAIN_BGO_GEOMETRY == "fail".
+    let mut prog_stage2 = fs::read(prog_unpacked).unwrap();
+    let bgo_done = panadiga_core::re::bgo_unbrick::patch_prog061_bgo_in_place(
+        &mut prog_stage2,
+        BypassChecksOnly,
+    );
+    bgo_done.unwrap();
+    apply_prog061_stage2_boot_in_place(&mut prog_stage2, true).unwrap();
+    let main_4mb_ctr = pack_extrhead(
+        &fs::read(main_unpacked).unwrap(),
+        "MAIN",
+        panadiga_core::constants::AM34_MAIN_BASE_VA,
+        "3060NP",
+        ExtrheadCryptMode::Main,
+        16,
+        1,
+    )
+    .unwrap();
+    let mut m_prog = FrmPackModule::new("PROG061 ", prog_stage2);
+    m_prog.hardware_family = "M6930LB".to_string();
+    m_prog.hardware_family_aliases = vec!["M6930".to_string()];
+    m_prog.model_prefix = b'M';
+    let mut m_main = FrmPackModule::new("MAIN3060NP", main_4mb_ctr);
+    m_main.hardware_family = "M6930LB".to_string();
+    m_main.hardware_family_aliases = vec!["M6930".to_string()];
+    m_main.model_prefix = b'M';
+    let (bad_sd, _) = pack_frm(&[m_prog, m_main], FrmContainerMode::Sd48, None).unwrap();
+    let bad_rep = verify_sd_buffers("/mem/stage2_4mb_fail", None, Some(&bad_sd));
+    assert_eq!(bad_rep.overall_status, "INCOMPLETE_OR_INVALID");
+    assert_eq!(
+        bad_rep.pana_sd_main_bgo_geometry.as_deref(),
+        Some(MAIN_BGO_STATE_FACTORY_4MB)
+    );
+    assert!(
+        bad_rep
+            .checks
+            .iter()
+            .any(|c| c.id == CHK_ID_MAIN_BGO_GEOMETRY && c.severity == "fail")
+    );
 }

@@ -10,13 +10,20 @@ use serde::{Deserialize, Serialize};
 use crate::constants::{
     AM34_CS1_NOR_OFFSET_MASK, BGO_TABLE_WORD_IDX_FLASH_END, CHK_ID_BGO_ALLOWLIST_INVARIANT,
     CHK_ID_BGO_GEOMETRY_MISMATCH, CHK_ID_DIGADIAG_BYPASS_TRAP, CHK_ID_FVU_PANAMON_TRAP,
-    CHK_ID_MAIN_EXTRHEAD_CHECKSUM, CHK_ID_RTSD_LBA48_GATE, CHK_ID_RTSD_TARGET_CONSISTENCY,
-    CHK_ID_SATA_BRIDGE_RESET_FIX, LBA28_MAX_BLOCKS_2KB, SD_STATUS_INVALID, SD_STATUS_READY,
-    SD_STATUS_READY_WITH_WARNINGS,
+    CHK_ID_MAIN_BGO_GEOMETRY, CHK_ID_MAIN_EXTRHEAD_CHECKSUM, CHK_ID_MAIN_EXTRHEAD_SRC_ADDR,
+    CHK_ID_RTSD_LBA48_GATE, CHK_ID_RTSD_TARGET_CONSISTENCY, CHK_ID_SATA_BRIDGE_RESET_FIX,
+    CHK_ID_SATA_BRIDGE_STAGE2_BOOT, LBA28_MAX_BLOCKS_2KB, PANA_EXTRHEAD_MAIN_SRC_ADDR,
+    SD_STATUS_INVALID, SD_STATUS_READY, SD_STATUS_READY_WITH_WARNINGS,
 };
 
 use super::super::bgo_unbrick::{find_train_by_loader_key, validate_bgo_allowlist_invariant};
+use super::super::main_bgo_retarget::{
+    MAIN_BGO_STATE_8MB, MAIN_BGO_STATE_FACTORY_4MB, MAIN_BGO_STATE_MISMATCH,
+};
 use super::super::sata_bridge_fix::{SATA_BRIDGE_STATE_MISMATCH, SATA_BRIDGE_STATE_WAIT_1000MS};
+use super::super::sata_bridge_stage2::{
+    PROG061_STAGE2_STATE_ENABLED, PROG061_STAGE2_STATE_MISMATCH,
+};
 use super::compose::SdLoaderProfile;
 
 pub(crate) use self::media::{DigadiagInspection, verify_digadiag_buffer, verify_pana_sd_buffer};
@@ -57,7 +64,11 @@ pub struct SdMediaVerificationReport {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pana_sd_prog061_sata_bridge_fix: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pana_sd_prog061_stage2_boot: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pana_sd_main_sata_bridge_fix: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pana_sd_main_bgo_geometry: Option<String>,
     #[serde(default)]
     pub factory_unpatched_prog061_detected: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -111,6 +122,115 @@ fn push_sata_bridge_fix_check(
                 "Partial SataBridgeResetFix in PANA__SD.FRM (prog061={prog_state:?}, main={main_state:?}); both PROG061 FVU and MAIN3060NP must use 1000 ms or factory 2 ms consistently."
             ),
         ));
+    }
+}
+
+fn push_stage2_boot_check(
+    checks: &mut Vec<SdUnbrickCheck>,
+    stage2_state: Option<&str>,
+    prog_reset_state: Option<&str>,
+    main_reset_state: Option<&str>,
+    audit_profile: SdKitAuditProfile,
+) {
+    match stage2_state {
+        Some(PROG061_STAGE2_STATE_MISMATCH) => {
+            checks.push(check(
+                CHK_ID_SATA_BRIDGE_STAGE2_BOOT,
+                "fail",
+                "Corrupt/Mismatched PROG061 Stage-2 HDD Boot Hook or Payload",
+                "PANA__SD.FRM PROG061 hook 0x504050D3 and tail payload 0x50439600 failed fail-closed consistency.",
+            ));
+        }
+        Some(PROG061_STAGE2_STATE_ENABLED) => {
+            let prog_reset_ok = prog_reset_state == Some(SATA_BRIDGE_STATE_WAIT_1000MS);
+            let main_reset_ok = main_reset_state == Some(SATA_BRIDGE_STATE_WAIT_1000MS);
+            if prog_reset_ok && main_reset_ok {
+                checks.push(check(
+                    CHK_ID_SATA_BRIDGE_STAGE2_BOOT,
+                    "pass",
+                    "PROG061 Stage-2 SATA HDD Boot Hook Verified (Pre-FVU)",
+                    "PANA__SD.FRM PROG061 embeds verified Stage-2 HDD boot hook at 0x504050D3 -> 0x50439600 paired with 1000 ms SataBridgeResetFix and escape hatches.",
+                ));
+            } else if !prog_reset_ok {
+                checks.push(check(
+                    CHK_ID_SATA_BRIDGE_STAGE2_BOOT,
+                    "fail",
+                    "PROG061 Stage-2 Hook Present Without 1000 ms SataBridgeResetFix",
+                    format!(
+                        "Stage-2 HDD boot hook requires PROG061 1000 ms SATA-bridge reset wait (prog_reset={prog_reset_state:?}, main_reset={main_reset_state:?})."
+                    ),
+                ));
+            } else {
+                let sev = match audit_profile {
+                    SdKitAuditProfile::HardenedRecovery => "fail",
+                    SdKitAuditProfile::Standard => "warn",
+                };
+                checks.push(check(
+                    CHK_ID_SATA_BRIDGE_STAGE2_BOOT,
+                    sev,
+                    "PROG061 Stage-2 Paired With Unpatched MAIN SATA-Bridge Wait",
+                    format!(
+                        "PROG061 has Stage-2 + 1000 ms wait, but MAIN SATA-bridge timing is {main_reset_state:?} (expected SATA_BRIDGE_1000MS)."
+                    ),
+                ));
+            }
+        }
+        _ => {}
+    }
+}
+
+fn push_main_bgo_geometry_check(
+    checks: &mut Vec<SdUnbrickCheck>,
+    main_bgo_geo: Option<&str>,
+    loader_profile: Option<SdLoaderProfile>,
+    stage2_state: Option<&str>,
+) {
+    let Some(geo) = main_bgo_geo else {
+        return;
+    };
+    let is_ver061 = loader_profile == Some(SdLoaderProfile::Ver061RawSd48);
+    let is_stage2 = stage2_state == Some(PROG061_STAGE2_STATE_ENABLED);
+    match geo {
+        MAIN_BGO_STATE_8MB => checks.push(check(
+            CHK_ID_MAIN_BGO_GEOMETRY,
+            "pass",
+            "MAIN3060NP BGO/NFROM NOR Geometry Verified (8 MiB 0x84130000, 45 Sectors)",
+            "PANA__SD.FRM MAIN3060NP targets 8 MiB Uniform BGO (0x531B8000..0x531BC000, 0x84130000..0x84400000, P1=1, P2=40, P5=4, max_did=0x0F24).",
+        )),
+        MAIN_BGO_STATE_MISMATCH => checks.push(check(
+            CHK_ID_MAIN_BGO_GEOMETRY,
+            "fail",
+            "Corrupt/Partial MAIN3060NP BGO/NFROM NOR Geometry Sites",
+            "PANA__SD.FRM MAIN3060NP BGO retarget sites failed fail-closed validation (mixed 4 MiB/8 MiB tables).",
+        )),
+        MAIN_BGO_STATE_FACTORY_4MB => {
+            let (sev, title, detail) = if is_ver061 && is_stage2 {
+                (
+                    "fail",
+                    "Stock 4 MiB MAIN3060NP BGO Geometry Incompatible With ver061 Stage-2 (8 MiB EH55)",
+                    "Stage-2 SATA HDD boot on 8 MiB DMR-EH55 NOR halts in '[nfrom] BGO driver init failed[1].' (src/nfd_api.c:228) unless MAIN3060NP is retargeted via --main-bgo-retarget.",
+                )
+            } else if is_ver061 {
+                (
+                    "warn",
+                    "Factory 4 MiB MAIN3060NP BGO Geometry Detected (Requires 8 MiB Retarget for EH55 NOR)",
+                    "PANA__SD.FRM MAIN3060NP targets 4 MiB Top-Boot BGO (0x84200000, 35 sectors); pass --main-bgo-retarget when targeting 8 MiB DMR-EH55 NOR.",
+                )
+            } else {
+                (
+                    "pass",
+                    "Factory 4 MiB MAIN3060NP BGO Geometry Matches Non-ver061 Target",
+                    "PANA__SD.FRM MAIN3060NP uses 4 MiB Top-Boot BGO geometry (0x84200000, 35 sectors).",
+                )
+            };
+            checks.push(check(CHK_ID_MAIN_BGO_GEOMETRY, sev, title, detail));
+        }
+        other => checks.push(check(
+            CHK_ID_MAIN_BGO_GEOMETRY,
+            "fail",
+            "Unexpected MAIN3060NP BGO/NFROM Geometry State",
+            format!("Unexpected MAIN BGO geometry state '{other}' in PANA__SD.FRM."),
+        )),
     }
 }
 
@@ -345,6 +465,22 @@ pub fn verify_sd_buffers_with_profile(
         ));
     }
 
+    if let Some(src_addr) = sd.main_extrhead_src_addr {
+        let valid_src = src_addr == PANA_EXTRHEAD_MAIN_SRC_ADDR;
+        checks.push(check(
+            CHK_ID_MAIN_EXTRHEAD_SRC_ADDR,
+            if valid_src { "pass" } else { "warn" },
+            if valid_src {
+                "MAIN EXTRHEAD Staging Base Valid (0x94000000)"
+            } else {
+                "MAIN EXTRHEAD Staging Base (+0x1C) Is Null/Non-Standard"
+            },
+            format!(
+                "PANA__SD.FRM MAIN EXTRHEAD+0x1C src_addr={src_addr:#010X} (expected {PANA_EXTRHEAD_MAIN_SRC_ADDR:#010X} for direct Loader/Stage-2 HDD boot)."
+            ),
+        ));
+    }
+
     if let Some(cap_label) = sd.main_hdd_capacity_label.as_deref() {
         let dynamic = sd.main_hdd_dynamic.unwrap_or(false);
         checks.push(check(
@@ -392,6 +528,19 @@ pub fn verify_sd_buffers_with_profile(
         sd.main_sata_bridge_fix.as_deref(),
         audit_profile,
     );
+    push_stage2_boot_check(
+        &mut checks,
+        sd.prog061_stage2_boot.as_deref(),
+        sd.prog061_sata_bridge_fix.as_deref(),
+        sd.main_sata_bridge_fix.as_deref(),
+        audit_profile,
+    );
+    push_main_bgo_geometry_check(
+        &mut checks,
+        sd.main_bgo_geometry.as_deref(),
+        sd.detected_profile.or(diag.detected_profile),
+        sd.prog061_stage2_boot.as_deref(),
+    );
 
     let overall_status = if checks.iter().any(|c| c.severity == "fail") {
         SD_STATUS_INVALID
@@ -420,7 +569,9 @@ pub fn verify_sd_buffers_with_profile(
         pana_sd_prog061_bgo_geometry: sd.prog061_bgo_geometry,
         pana_sd_main_hdd_capacity_label: sd.main_hdd_capacity_label,
         pana_sd_prog061_sata_bridge_fix: sd.prog061_sata_bridge_fix,
+        pana_sd_prog061_stage2_boot: sd.prog061_stage2_boot,
         pana_sd_main_sata_bridge_fix: sd.main_sata_bridge_fix,
+        pana_sd_main_bgo_geometry: sd.main_bgo_geometry,
         factory_unpatched_prog061_detected,
         dual_family_parity,
         checks,

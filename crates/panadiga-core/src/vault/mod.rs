@@ -3,6 +3,8 @@
 //! Strict Forensic Session Vault segregating immutable `raw/` dumps, `.FRM` containers (`frm/`),
 //! and `Mn103Vm`-verified recompilations (`recompiled/`).
 
+pub use panadiga_vault::{journal, lock};
+
 pub mod layout;
 pub mod manifest;
 
@@ -14,10 +16,16 @@ use serde::{Deserialize, Serialize};
 use crate::re::prewrite_gate::PreWriteGateReport;
 use crate::re::unbrick_sd_kit::SdLoaderProfile;
 
+pub use journal::{
+    GENESIS_PREV_HASH, JOURNAL_FILENAME, JOURNAL_SCHEMA_VERSION, JOURNAL_SUBDIR, Journal,
+    JournalActor, JournalBody, JournalEnvelope, JournalError, JournalEvent,
+    JournalVerificationReport, OpBeginParams, OpOutcome, compute_journal_entry_hash,
+};
 pub use layout::{
     auto_classify_and_ingest_file, extract_nor_drv_into_vault, ingest_vault_artifact,
     session_bucket_dir, validate_safe_segment,
 };
+pub use lock::{VAULT_LOCK_FILENAME, VaultLock, VaultLockMode};
 pub use manifest::{
     init_vault_session, list_vault_sessions, load_vault_session, mark_workflow_step_complete,
     record_session_emu_gate, save_vault_session,

@@ -76,6 +76,7 @@ fn compose_and_verify_digadiag_and_manifest_in_memory() {
             None,
             false,
             false,
+            false,
         )
         .is_err()
     );
@@ -88,6 +89,7 @@ fn compose_and_verify_digadiag_and_manifest_in_memory() {
             Some("3410PQ"),
             false,
             false,
+            false,
         )
         .is_err()
     );
@@ -100,6 +102,7 @@ fn compose_and_verify_digadiag_and_manifest_in_memory() {
             None,
             true,
             true,
+            false,
         )
         .is_err()
     );
@@ -238,6 +241,7 @@ fn compose_patched_main_gives_hdd_target_gb_precedence_over_dynamic() {
         None,
         true,
         false,
+        false,
     )
     .unwrap();
     assert_eq!(composed.hdd_capacity_applied.as_deref(), Some("cap_250gb"));
@@ -272,6 +276,7 @@ fn compose_patched_main_accepts_3060np_and_3410pq_and_explicit_frm_precedence() 
         req.expected_main_build.as_deref(),
         false,
         false,
+        false,
     )
     .unwrap();
     assert_eq!(out_3060.build_version_u16, 0x96AA);
@@ -286,6 +291,7 @@ fn compose_patched_main_accepts_3060np_and_3410pq_and_explicit_frm_precedence() 
         true,
         None,
         req.expected_main_build.as_deref(),
+        false,
         false,
         false,
     )
@@ -345,6 +351,7 @@ fn compose_patched_main_accepts_3060np_and_3410pq_and_explicit_frm_precedence() 
         None,
         false,
         false,
+        false,
     )
     .unwrap();
     assert_eq!(
@@ -383,6 +390,7 @@ fn sata_bridge_reset_fix_patches_pana_sd_prog_without_touching_digadiag() {
         false,
         false,
         true,
+        false,
     )
     .unwrap();
     assert_eq!(mode, Prog061BgoPatchMode::BypassChecksOnly);
@@ -393,7 +401,44 @@ fn sata_bridge_reset_fix_patches_pana_sd_prog_without_touching_digadiag() {
         SATA_BRIDGE_STATE_WAIT_1000MS
     );
 
-    // Non-3060NP container fails closed when sata_bridge_reset_fix = true.
+    // Stage-2 fail-closed without reset fix, and patches only PROG061 (leaving DIGADIAG untouched) when enabled.
+    assert!(
+        super::compose_pana_sd_prog061_with_tier_policy(
+            &prog,
+            Prog061BgoPatchMode::UartMonitor,
+            SdLoaderProfile::Ver061RawSd48,
+            false,
+            false,
+            false,
+            true,
+        )
+        .is_err()
+    );
+    let (sd_stage2_prog, mode2) = super::compose_pana_sd_prog061_with_tier_policy(
+        &prog,
+        Prog061BgoPatchMode::UartMonitor,
+        SdLoaderProfile::Ver061RawSd48,
+        false,
+        false,
+        true,
+        true,
+    )
+    .unwrap();
+    assert_eq!(mode2, Prog061BgoPatchMode::BypassChecksOnly);
+    assert_eq!(
+        crate::re::sata_bridge_stage2::inspect_prog061_stage2_boot_site(&sd_stage2_prog)
+            .unwrap()
+            .state,
+        crate::re::sata_bridge_stage2::PROG061_STAGE2_STATE_ENABLED
+    );
+    assert_eq!(
+        crate::re::sata_bridge_stage2::inspect_prog061_stage2_boot_site(&diag_bytes)
+            .unwrap()
+            .state,
+        crate::re::sata_bridge_stage2::PROG061_STAGE2_STATE_FACTORY
+    );
+
+    // Non-3060NP container fails closed when sata_bridge_reset_fix = true or main_bgo_retarget = true.
     let packed = synthetic_packed_main("3060NP", 0x96AA);
     assert!(
         compose_patched_main_container(
@@ -403,6 +448,20 @@ fn sata_bridge_reset_fix_patches_pana_sd_prog_without_touching_digadiag() {
             None,
             None,
             true,
+            true,
+            false,
+        )
+        .is_err()
+    );
+    assert!(
+        compose_patched_main_container(
+            &packed,
+            MainPassthroughMode::FactoryOriginal,
+            false,
+            None,
+            None,
+            true,
+            false,
             true,
         )
         .is_err()

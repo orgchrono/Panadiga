@@ -69,7 +69,7 @@ pub fn parse_autodetected_nvram_base(handshake_output: &str) -> &'static str {
             "0x80FF0000"
         }
     } else {
-        "0x807F0000"
+        crate::constants::AM34_NVRAM_BASE_HEX
     }
 }
 

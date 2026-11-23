@@ -167,7 +167,7 @@ pub fn memory_region_specs() -> Vec<MemoryRegionSpec> {
         ),
         region(
             "DAVIS_CH0_RESET_MMIO",
-            0x8900_0400,
+            AM34_DAVIS_IDE_BASE,
             AM34_DAVIS_MMIO_SIZE,
             true,
             true,

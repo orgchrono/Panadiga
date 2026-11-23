@@ -17,7 +17,10 @@ use super::panamon1::{
     PANAMON1_FULL_PROMPT, PANAMON1_READ_CHUNK_BYTES, PANAMON1_RETRY_PACING_US,
     parse_panamon1_read_bytes, query_panamon1_uart,
 };
-use super::rsp_codec::{NorWritePolicy, build_rsp_frame, is_nor_write_blocked_with_policy};
+use super::rsp_codec::{
+    NorWritePolicy, build_am34_gdb_memory_map_xml, build_rsp_frame,
+    is_nor_write_blocked_with_policy,
+};
 
 mod tcp_server;
 
@@ -63,16 +66,6 @@ impl GdbBridgeTargetMode {
         }
     }
 }
-
-const AM34_MEMORY_MAP_XML: &str = concat!(
-    "<memory-map>",
-    "<memory type=\"ram\" start=\"0x00000000\" length=\"0x00040000\"/>",
-    "<memory type=\"ram\" start=\"0x40000000\" length=\"0x04000000\"/>",
-    "<memory type=\"rom\" start=\"0x80000000\" length=\"0x007F0000\"/>",
-    "<memory type=\"flash\" start=\"0x807F0000\" length=\"0x00010000\">",
-    "<property name=\"blocksize\">0x2000</property></memory>",
-    "</memory-map>"
-);
 
 /// Returns `true` when `[addr, addr + length)` touches the lethal AM34 watchdog/bus register `0xC000100C..0xC000100F`.
 #[must_use]
@@ -255,7 +248,7 @@ pub(super) fn handle_panamon1_rsp_bytes_io<T: Read + Write + ?Sized>(
     } else if cmd == "qAttached" {
         "1".to_string()
     } else if cmd.starts_with("qXfer:memory-map:read::") {
-        format!("l{AM34_MEMORY_MAP_XML}")
+        format!("l{}", build_am34_gdb_memory_map_xml(true, false))
     } else if cmd == "qPanadigaNorUnlock:CONFIRM_UPPER_NOR" {
         if let Some(port) = serial {
             let reply =

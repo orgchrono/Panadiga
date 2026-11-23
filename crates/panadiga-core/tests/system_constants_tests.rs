@@ -37,8 +37,8 @@ fn test_system_constants_integrity() {
 
 #[test]
 fn test_constants_memory_map_and_candidate_paths() {
-    // Verify 8 architectural regions defined in SSOT
-    assert_eq!(AM34_SYSTEM_MEMORY_REGIONS.len(), 8);
+    // Verify 10 architectural regions defined in SSOT
+    assert_eq!(AM34_SYSTEM_MEMORY_REGIONS.len(), 10);
 
     let names: Vec<&str> = AM34_SYSTEM_MEMORY_REGIONS.iter().map(|r| r.name).collect();
     assert_eq!(
@@ -48,25 +48,47 @@ fn test_constants_memory_map_and_candidate_paths() {
             "CORE_MMIO",
             "MAIN_SDRAM",
             "FLASH_NOR_IPL",
+            "FLASH_NOR_UPPER_APP",
             "NVRAM_U99",
+            "DAVIS_IDE_MMIO",
             "SYSTEM_MMIO",
             "AM34_OCD_MMIO",
-            "ATA_IDE_MMIO",
+            "SC0_UART0_MMIO",
         ]
+    );
+
+    let ipl = &AM34_SYSTEM_MEMORY_REGIONS[3];
+    assert_eq!(
+        (ipl.start, ipl.end, ipl.size_kb),
+        (0x8000_0000, 0x8003_FFFF, 256)
+    );
+    let davis = &AM34_SYSTEM_MEMORY_REGIONS[6];
+    assert_eq!(
+        (davis.start, davis.end, davis.size_kb),
+        (0x8900_0400, 0x8900_0FFF, 3)
+    );
+    let sc0 = &AM34_SYSTEM_MEMORY_REGIONS[9];
+    assert_eq!(
+        (sc0.start, sc0.end, sc0.size_kb),
+        (0xD400_2000, 0xD400_201F, 1)
     );
 
     // Verify ASCII table generation
     let table = format_memory_map_table();
     assert!(table.contains("INTERNAL_SRAM"));
     assert!(table.contains("0x00000000"));
+    assert!(table.contains("DAVIS_IDE_MMIO"));
+    assert!(table.contains("0x89000400"));
     assert!(table.contains("AM34_OCD_MMIO"));
     assert!(table.contains("0xC0004000"));
+    assert!(table.contains("SC0_UART0_MMIO"));
+    assert!(table.contains("0xD4002000"));
 
     // Verify JSON array generation
     let json_val = get_am34_memory_map_json();
     assert!(json_val.is_array());
     let arr = json_val.as_array().unwrap();
-    assert_eq!(arr.len(), 8);
+    assert_eq!(arr.len(), 10);
     assert_eq!(arr[0]["name"], "INTERNAL_SRAM");
     assert_eq!(arr[0]["perms"], "rwx");
 

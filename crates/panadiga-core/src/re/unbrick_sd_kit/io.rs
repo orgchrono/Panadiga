@@ -11,9 +11,10 @@ use crate::nvram::calculate_hashes;
 use super::super::bgo_unbrick::ensure_parent_dir;
 use super::super::unbrick_workbench::{bgo_mode_label, discover_sources, extract_modules_from_frm};
 use super::compose::{
-    SdUnbrickKitReport, SdUnbrickKitRequest, compose_digadiag_and_prog061_with_tier_policy,
-    compose_pana_sd_container, compose_pana_sd_prog061_with_tier_policy,
-    compose_patched_main_container, format_sha256_manifest,
+    SdLoaderProfile, SdUnbrickKitReport, SdUnbrickKitRequest,
+    compose_digadiag_and_prog061_with_tier_policy, compose_pana_sd_container,
+    compose_pana_sd_prog061_with_tier_policy, compose_patched_main_container,
+    format_sha256_manifest,
 };
 use super::verify::{SdKitAuditProfile, SdMediaVerificationReport, verify_sd_buffers_with_profile};
 
@@ -90,6 +91,28 @@ pub fn prepare_sd_unbrick_kit_with_tier_policy(
             "--sata-bridge-reset-fix targets PANA__SD.FRM (PROG061 FVU + MAIN3060NP) and cannot be combined with --diag-only"
         );
     }
+    if req.main_bgo_retarget && !req.include_pana_sd {
+        bail!(
+            "--main-bgo-retarget targets MAIN3060NP inside PANA__SD.FRM and cannot be combined with --diag-only"
+        );
+    }
+    if req.sata_bridge_stage2_boot
+        && (!req.include_pana_sd
+            || !req.sata_bridge_reset_fix
+            || req.loader_profile != SdLoaderProfile::Ver061RawSd48)
+    {
+        bail!(
+            "--sata-bridge-stage2-boot requires PANA__SD.FRM (--include_pana_sd), --sata-bridge-reset-fix, and --loader-profile ver061 (fail-closed)"
+        );
+    }
+    if req.sata_bridge_stage2_boot
+        && req.loader_profile == SdLoaderProfile::Ver061RawSd48
+        && !req.main_bgo_retarget
+    {
+        bail!(
+            "Refusing ver061 Stage-2 SATA bridge kit without --main-bgo-retarget: stock 4 MiB MAIN3060NP fails BGO_Init() on 8 MiB EH55 NOR (src/nfd_api.c:228)"
+        );
+    }
     let ws_root = resolve_workspace_root();
     let sources = discover_sources(&ws_root);
     let disc_frm = sources.pana_dvd;
@@ -143,6 +166,8 @@ pub fn prepare_sd_unbrick_kit_with_tier_policy(
     let mut main_passthrough_applied = None;
     let mut hdd_capacity_applied = None;
     let mut sata_bridge_reset_fix_applied = false;
+    let mut sata_bridge_stage2_boot_applied = false;
+    let mut main_bgo_retarget_applied = false;
 
     if req.include_pana_sd {
         let drv_path =
@@ -162,10 +187,12 @@ pub fn prepare_sd_unbrick_kit_with_tier_policy(
             req.expected_main_build.as_deref(),
             req.allow_target_mismatch,
             req.sata_bridge_reset_fix,
+            req.main_bgo_retarget,
         )?;
         main_passthrough_applied = Some(composed_main.passthrough_applied);
         hdd_capacity_applied = composed_main.hdd_capacity_applied;
         sata_bridge_reset_fix_applied = composed_main.sata_bridge_reset_fix_applied;
+        main_bgo_retarget_applied = composed_main.main_bgo_retarget_applied;
 
         let drv_bytes = match drv_path {
             Some(dp) => {
@@ -182,7 +209,9 @@ pub fn prepare_sd_unbrick_kit_with_tier_policy(
             req.allow_unsafe_auto_format,
             allow_unverified_profile,
             req.sata_bridge_reset_fix,
+            req.sata_bridge_stage2_boot,
         )?;
+        sata_bridge_stage2_boot_applied = req.sata_bridge_stage2_boot;
         let (sd_bytes, sd_sha) = compose_pana_sd_container(
             drv_bytes,
             pana_sd_prog,
@@ -218,6 +247,8 @@ pub fn prepare_sd_unbrick_kit_with_tier_policy(
         main_passthrough_applied,
         hdd_capacity_applied,
         sata_bridge_reset_fix_applied,
+        sata_bridge_stage2_boot_applied,
+        main_bgo_retarget_applied,
         digadiag_path: digadiag_path.to_string_lossy().into_owned(),
         digadiag_sha256,
         pana_sd_path,

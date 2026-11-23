@@ -135,7 +135,10 @@ pub fn search_manuals(
     let mut all_results = Vec::new();
 
     for pdf_path in &pdf_files {
-        let file_name = pdf_path.file_name().unwrap().to_string_lossy().to_string();
+        let file_name = pdf_path
+            .file_name()
+            .map(|s| s.to_string_lossy().into_owned())
+            .unwrap_or_else(|| pdf_path.to_string_lossy().into_owned());
         log_println!("\n[*] Indexing PDF: {}", file_name);
 
         let doc = match Document::load(pdf_path) {

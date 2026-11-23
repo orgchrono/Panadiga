@@ -17,7 +17,7 @@ fn test_main_passthrough_and_bgo_patches_execute_as_designed() {
     vm.pc = fpc_va;
     vm.run_until(0x5700_1234, 16).unwrap();
     assert_eq!(vm.d[0], 1);
-    assert_eq!(vm.sp, 0x5000_1004);
+    assert_eq!(vm.sp, 0x5000_1000);
 
     // 2. ODD state branch + init status: `jmp16 +0x00D0` -> 0x574F7C5C -> `clr d0 (80 00)` -> D0=0.
     let mut odd_vm = Mn103Vm::new();
@@ -224,6 +224,13 @@ fn test_bitops_cfi_autoselect_and_ipl_write_protection() {
         vm.write_u32(0x8400_0000, 0x1234_5678),
         Err(Mn103Fault::IplWriteProtected(0x8400_0000))
     ));
+    // Benign 16-bit multi-vendor Read-ID/Reset probes at Upper-NOR bank bases are ignored; critical IPL stays E05
+    vm.write_u16(0x8420_0000, 0x0090).unwrap();
+    vm.write_u16(0x8420_0000, 0xFFFF).unwrap();
+    assert!(matches!(
+        vm.write_u16(0x8400_0000, 0x0090),
+        Err(Mn103Fault::IplWriteProtected(0x8400_0000))
+    ));
 }
 
 fn run_jedec_erase(vm: &mut Mn103Vm, base: u32, sector_addr: u32) -> Result<(), Mn103Fault> {
@@ -306,4 +313,110 @@ fn test_spansion_jedec_erase_program_and_two_layer_policy() {
             crate::constants::AM34_FORBIDDEN_LETHAL_REG
         ))
     );
+}
+
+#[test]
+fn test_am33_extended_registers_movm_and_prefixes() {
+    let mut vm = Mn103Vm::new();
+    let code_base = 0x5000_0000u32;
+    #[rustfmt::skip]
+    let code = vec![
+        // Save all AM33 extended groups EXREG0(0x04) + EXREG1(0x02) + EXOTHER(0x01) = 48 bytes
+        0xCF, 0x07,                         // movm [exreg0, exreg1, exother], (sp)
+        // F5: MOV A1, R0 (0x10), MOV D2, R5 (0x65)
+        0xF5, 0x10,                         // mov a1, r0
+        0xF5, 0x65,                         // mov d2, r5
+        // FB: MOV simm8 (-5=0xFB), R2 (0x08 0x02 0xFB); MOVU 0x90, R3 (0x18 0x03 0x90)
+        0xFB, 0x08, 0x02, 0xFB,             // mov -5, r2 -> 0xFFFFFFFB
+        0xFB, 0x18, 0x03, 0x90,             // movu 0x90, r3 -> 0x00000090
+        // FB 9C: SUB Rm2(D0=C), Rn0(R3=3), Rd2(A2=A) -> A2 = R3 - D0 = 0x90 - 0x10 = 0x80
+        0xFB, 0x9C, 0xC3, 0xA0,             // sub d0, r3, a2
+        // FB 9A / AA / CA with unsigned u8 stack offset d8 = 0x84 (> 127!)
+        0xFB, 0x9A, 0xA0, 0x84,             // mov a2, (0x84, sp)
+        0xFB, 0xAA, 0x40, 0x84,             // movbu (0x84, sp), r4 -> 0x80
+        // FB indexed memory: MOV R4, (R2, R3)? Use A1=0x5002_0000 (9), R5=4 (5) -> write/read
+        0xF9, 0x08, 0x34,                   // mov r3, r4 (r4 = 0x90)
+        0xFB, 0x78, 0x44, 0x05,             // add 5, r4 -> 0x95
+        0xFB, 0x9E, 0x95, 0x40,             // mov r4, (a1, r5) -> [0x50020004] = 0x95
+        0xFB, 0xCE, 0x95, 0x60,             // movhu (a1, r5), r6 -> r6 = 0x95
+        // FD imm24 + FE imm32
+        0xFD, 0x08, 0x77, 0x34, 0x12, 0x80, // mov 0xFF801234, r7 (sext imm24)
+        0xFE, 0x1E, 0x70, 0x10, 0x00, 0x02, 0x50, // mov r7, (0x50020010)
+        // Base F3/F4 indexed (D0/D1, A1) & FA 16-bit
+        0xF3, 0x01,                         // mov (d0, a1), d0 -> d0 = [0x50020010]
+        0xF4, 0x05,                         // movbu (d1, a1), d0 -> d0 = [0x50020010] & 0xFF = 0x34
+        0xFA, 0xC0, 0x10, 0x00,             // add 0x10, d0
+        // F9 MULU / DIVU: 100 * 3 = 300, 300 / 7 -> q=42, mdr=6
+        0xFB, 0x18, 0x11, 100,              // movu 100, r1
+        0xFB, 0x18, 0x22, 3,                // movu 3, r2
+        0xF9, 0xB9, 0x21,                   // mulu r2, r1 -> r1=300, mdr=0
+        0xFB, 0x18, 0x33, 7,                // movu 7, r3
+        0xF9, 0xD9, 0x31,                   // divu r3, r1 -> r1=42, mdr=6
+        // Restore saved AM33 registers and verify sentinel intact
+        0xCE, 0x07,                         // movm (sp), [exreg0, exreg1, exother]
+        0xCB,                               // nop
+    ];
+
+    let stop_pc = code_base + code.len() as u32 - 1;
+    vm.map_segment(code_base, code, false);
+    vm.map_segment(0x5002_0000, vec![0; 0x1000], true);
+    vm.r = [
+        0x1111_0000,
+        0x2222_0001,
+        0x3333_0002,
+        0x4444_0003,
+        0x5555_0004,
+        0x6666_0005,
+        0x7777_0006,
+        0x8888_0007,
+    ];
+    vm.mdrq = 0xAAAA_BBBB;
+    vm.a[1] = 0x5002_0000;
+    vm.d[0] = 0x10;
+    vm.d[1] = 0x10;
+    vm.d[2] = 4;
+    vm.sp = 0x5002_0800;
+    vm.pc = code_base;
+
+    vm.run_until(stop_pc, 128).unwrap();
+
+    assert_eq!(vm.sp, 0x5002_0800);
+    assert_eq!(vm.r[0], 0x1111_0000);
+    assert_eq!(vm.r[2], 0x3333_0002);
+    assert_eq!(vm.r[7], 0x8888_0007);
+    assert_eq!(vm.mdrq, 0xAAAA_BBBB);
+    assert_eq!(vm.a[2], 0x80);
+    assert_eq!(vm.read_u32(0x5002_0004).unwrap(), 0x95);
+    assert_eq!(vm.read_u32(0x5002_0010).unwrap(), 0xFF80_1234);
+    assert_eq!(vm.d[0], 0x44); // 0x34 + 0x10
+    assert_eq!(vm.mdr, 6);
+}
+
+#[test]
+fn test_calls_and_rets_preserve_sp_contract() {
+    let mut vm = Mn103Vm::new();
+    let code_base = 0x5000_0000u32;
+    let mut code = vec![0xCB; 0x80];
+    // +0x00: CALL +0x20, [], 0 -> leaf @ +0x20 ending in RETS; returns to +0x05 with SP unchanged
+    code[0x00..0x05].copy_from_slice(&[0xCD, 0x20, 0x00, 0x00, 0x00]);
+    // +0x05: MOV 0x50000040, A0; CALLS (A0); NOP (+0x0D)
+    code[0x05..0x0B].copy_from_slice(&[0xFC, 0xDC, 0x40, 0x00, 0x00, 0x50]);
+    code[0x0B..0x0D].copy_from_slice(&[0xF0, 0xF0]);
+    code[0x0D] = 0xCB;
+    // +0x20 (leaf): MOV 0x42, D0; RETS
+    code[0x20..0x24].copy_from_slice(&[0x80, 0x42, 0xF0, 0xFC]);
+    // +0x40 (framed): MOVM [d2], (SP); ADD -8, SP; MOV 0x77, D1; RET [d2], 12
+    code[0x40..0x4A].copy_from_slice(&[0xCF, 0x80, 0xF8, 0xFE, 0xF8, 0x85, 0x77, 0xDF, 0x80, 0x0C]);
+
+    vm.map_segment(code_base, code, false);
+    vm.map_segment(0x5001_0000, vec![0; 0x200], true);
+    vm.sp = 0x5001_0100;
+    vm.d[2] = 0xDEAD_BEEF;
+    vm.pc = code_base;
+
+    vm.run_until(code_base + 0x0D, 64).unwrap();
+    assert_eq!(vm.d[0], 0x42);
+    assert_eq!(vm.d[1], 0x77);
+    assert_eq!(vm.d[2], 0xDEAD_BEEF);
+    assert_eq!(vm.sp, 0x5001_0100);
 }

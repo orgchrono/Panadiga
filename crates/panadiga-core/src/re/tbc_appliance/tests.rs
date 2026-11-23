@@ -192,7 +192,7 @@ fn m0_ic7501_tbus_frames_and_stub_execute_cleanly_on_mn103vm() {
     vm.run_until(ret_sentinel, 64).unwrap();
 
     assert_eq!(vm.d[0], u32::from(IC7501_WDT_255S_CHECKSUM));
-    assert_eq!(vm.sp, stack_va + 0x104);
+    assert_eq!(vm.sp, stack_va + 0x100);
     assert_eq!(vm.read_u8(AM34_IC7501_TBUS_BASE).unwrap(), 0x00);
     let mut observed = [0u8; 16];
     for (idx, slot) in observed.iter_mut().enumerate() {

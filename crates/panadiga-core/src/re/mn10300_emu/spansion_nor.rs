@@ -149,6 +149,14 @@ impl Mn103Vm {
                 } else if is_cfi_addr && cmd == 0x98 {
                     self.cfi_stage = CfiStage::CfiQuery;
                     Some(Ok(()))
+                } else if width == 2
+                    && (addr & 0xFFFF) == 0
+                    && off >= AM34_FLASH_CRITICAL_IPL_SIZE
+                    && matches!(raw_val, 0x0090 | 0xFFFF)
+                {
+                    // Multi-vendor firmware probers emit Sharp/Intel 0x0090 / 0xFFFF at bank base
+                    // before AMD/Spansion AA->55->90; Spansion S29JL064H ignores them in array read mode.
+                    Some(Ok(()))
                 } else if off >= AM34_FLASH_IPL_SIZE {
                     None
                 } else {
