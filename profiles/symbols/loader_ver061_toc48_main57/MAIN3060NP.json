@@ -1,0 +1,152 @@
+{
+  "schema_version": 1,
+  "firmware_train_id": "loader_ver061_toc48_main57",
+  "module": "MAIN3060NP",
+  "sha256": "075f552ed583ba1835c0d44d1b533ff5a016b8d81d15d7166240098461ddcca7",
+  "base_va": "0x57000000",
+  "size_bytes": 13427852,
+  "function_count": 7,
+  "destructive_function_count": 1,
+  "functions": [
+    {
+      "va": "0x57000320",
+      "end_va": "0x570003C5",
+      "name": "bgo_retarget_trampoline_cave",
+      "abi": "internal_stub",
+      "abi_detail": {
+        "params": ["A0", "D0"],
+        "saved_regs": [],
+        "frame_bytes": 0
+      },
+      "ret": "void",
+      "callers": ["0x574AE800", "0x574AF2F0"],
+      "callees": [],
+      "string_xrefs": [],
+      "mmio_xrefs": ["0x531B8000", "0x531BC000"],
+      "side_effects": "read_only",
+      "side_effect_reasons": [],
+      "evidence_tier": "mn103vm_verified",
+      "notes": "165-byte SDRAM stub cave serving 12 trampolines for expanded struct nfd_ctrl (0x531B8000..0x531BC000) in --main-bgo-retarget."
+    },
+    {
+      "va": "0x57000B08",
+      "end_va": "0x57000B80",
+      "name": "crt0_data_copy_and_bss_zero",
+      "abi": "bare_metal_entry",
+      "abi_detail": {
+        "params": [],
+        "saved_regs": [],
+        "frame_bytes": 0
+      },
+      "ret": "void",
+      "callers": ["0x57000000"],
+      "callees": [],
+      "string_xrefs": [],
+      "mmio_xrefs": ["0x531BC000"],
+      "side_effects": "read_only",
+      "side_effect_reasons": [],
+      "evidence_tier": "mn103vm_verified",
+      "notes": "Expanded _end literal (0x531B7774 -> 0x531BC000) when --main-bgo-retarget is enabled; note 0x57000B65 must remain untouched."
+    },
+    {
+      "va": "0x5711226E",
+      "end_va": "0x57112300",
+      "name": "rtsd_ata_hard_reset_wait",
+      "abi": "D0/D1",
+      "abi_detail": {
+        "params": ["D0", "D1"],
+        "saved_regs": ["D2", "D3"],
+        "frame_bytes": 16
+      },
+      "ret": "D0 (i32)",
+      "callers": [],
+      "callees": ["0x574E6BBD"],
+      "string_xrefs": [],
+      "mmio_xrefs": ["0x89000C00", "0x89000D58"],
+      "side_effects": "writes_mmio",
+      "side_effect_reasons": ["Drives DAVIS CH1 RESET- pulse and post-reset wait (0x571122B2 patched 2 ms -> 1000 ms for IDE2SAT2)"],
+      "evidence_tier": "hardware_bench_verified",
+      "notes": "Live-verified on EH55 + StarTech IDE2SAT2 + SAMSUNG HM251JI (0x32836a32, PiE-OS 3060NP boot, VFD TM LI)."
+    },
+    {
+      "va": "0x574A68E9",
+      "end_va": "0x574A6BA8",
+      "name": "NFD_Init",
+      "abi": "void_ret_d0",
+      "abi_detail": {
+        "params": [],
+        "saved_regs": ["A2", "A3", "D2", "D3"],
+        "frame_bytes": 32
+      },
+      "ret": "D0 (0 = ok, 1 = init failed)",
+      "callers": ["0x574AF2F0"],
+      "callees": [],
+      "string_xrefs": ["src/nfd_api.c:228 ('[nfrom] BGO driver init failed[1].')"],
+      "mmio_xrefs": ["0x84130000", "0x84400000"],
+      "side_effects": "writes_nor_bgo",
+      "side_effect_reasons": ["Autoselects Spansion IC5001 (0x0001/0x2202) and mounts 45-sector 8 MiB BGO after retarget (48 nfd_ctrl relative offsets)"],
+      "evidence_tier": "hardware_bench_verified",
+      "notes": "Requires 7 NFD_API sites + Extended CFI 0x2202 + 48 struct nfd_ctrl offsets to pass on 8 MiB EH55 NOR."
+    },
+    {
+      "va": "0x574AF2F0",
+      "end_va": "0x574AF420",
+      "name": "BGO_Init_entry",
+      "abi": "void_ret_d0",
+      "abi_detail": {
+        "params": [],
+        "saved_regs": ["A2", "A3", "D2", "D3"],
+        "frame_bytes": 24
+      },
+      "ret": "D0 (0 = ok)",
+      "callers": [],
+      "callees": ["0x574A68E9"],
+      "string_xrefs": ["src/ftrec_api.c:638"],
+      "mmio_xrefs": ["0x84130000"],
+      "side_effects": "read_only",
+      "side_effect_reasons": [],
+      "evidence_tier": "hardware_bench_verified",
+      "notes": "P5 reserve corrected 8 -> 4 at 0x574AF32A and blt jump target fixed at 0x574B2411 for 8 MiB uniform geometry."
+    },
+    {
+      "va": "0x574E499C",
+      "end_va": "0x574E4A80",
+      "name": "hdd_cmd_rtsd_capacity",
+      "abi": "D0",
+      "abi_detail": {
+        "params": ["D0"],
+        "saved_regs": [],
+        "frame_bytes": 0
+      },
+      "ret": "D0 (u32)",
+      "callers": [],
+      "callees": [],
+      "string_xrefs": [],
+      "mmio_xrefs": [],
+      "side_effects": "read_only",
+      "side_effect_reasons": [],
+      "evidence_tier": "hardware_bench_verified",
+      "notes": "RTSD capacity policy clamp site patched for 250 GB SATA HDD (0x1D1C5970 LBAs)."
+    },
+    {
+      "va": "0x574E6BBD",
+      "end_va": "0x574E6C40",
+      "name": "rtsd_sleep_10ms",
+      "abi": "D0_ticks_10ms",
+      "abi_detail": {
+        "params": ["D0"],
+        "saved_regs": ["D2", "A2"],
+        "frame_bytes": 8
+      },
+      "ret": "D0 (i32)",
+      "callers": ["0x57111D34", "0x571122B2", "0x57112968", "0x57112E91", "0x571140C7"],
+      "callees": [],
+      "string_xrefs": [],
+      "mmio_xrefs": [],
+      "side_effects": "read_only",
+      "side_effect_reasons": [],
+      "evidence_tier": "hardware_bench_verified",
+      "notes": "PiE-OS 10 ms/tick RTOS sleep callee used by MAIN3060NP SataBridgeResetFix (D0=100 -> 1000 ms)."
+    }
+  ]
+}

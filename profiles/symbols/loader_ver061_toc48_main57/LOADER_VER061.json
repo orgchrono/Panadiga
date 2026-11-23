@@ -1,0 +1,152 @@
+{
+  "schema_version": 1,
+  "firmware_train_id": "loader_ver061_toc48_main57",
+  "module": "LOADER_VER061",
+  "sha256": "9f5c448d8879106be5ca3da6d6ac649026d50fbc191251ae0f4a003efca63800",
+  "base_va": "0x44000000",
+  "size_bytes": 262144,
+  "function_count": 7,
+  "destructive_function_count": 2,
+  "functions": [
+    {
+      "va": "0x44005DEE",
+      "end_va": "0x44005E80",
+      "name": "uart0_printf",
+      "abi": "D0/D1",
+      "abi_detail": {
+        "params": ["D0", "D1"],
+        "saved_regs": [],
+        "frame_bytes": null
+      },
+      "ret": "D0 (i32)",
+      "callers": ["0x44008976", "0x440089DA"],
+      "callees": [],
+      "string_xrefs": [],
+      "mmio_xrefs": ["0xD4002000"],
+      "side_effects": "read_only",
+      "side_effect_reasons": [],
+      "evidence_tier": "mn103vm_verified",
+      "notes": "Loader ver0.61 SC0 UART0 console printf entry point (115200 8N1)."
+    },
+    {
+      "va": "0x4400894B",
+      "end_va": "0x44008B98",
+      "name": "norfrom_fvu_load_check",
+      "abi": "A3_frame",
+      "abi_detail": {
+        "params": [],
+        "saved_regs": ["A3"],
+        "frame_bytes": null
+      },
+      "ret": "void (sets loaded_from_nor flag at -12(A3))",
+      "callers": [],
+      "callees": ["0x44005DEE", "0x4400A1F1", "0x4402A30A", "0x4402A34A"],
+      "string_xrefs": [
+        "0x504800AF ('fvu.exe')",
+        "0x44030B32 ('Read fvu program from Nor-FROM to 0x%x.')",
+        "0x44030B5B ('retry[%d]...')"
+      ],
+      "mmio_xrefs": ["0x84040000", "0x90400000"],
+      "side_effects": "read_only",
+      "side_effect_reasons": [],
+      "evidence_tier": "mn103vm_verified",
+      "notes": "Gate 4 verified path: checks BGO marker 'fvu.exe' via NFD before copying 0x40000 B from SA11..SA14 (0x84040000) to 0x90400000 and branching to 0x44008B98."
+    },
+    {
+      "va": "0x44009BED",
+      "end_va": "0x44009C60",
+      "name": "cleanup_bgo_temp_files",
+      "abi": "D0",
+      "abi_detail": {
+        "params": ["D0"],
+        "saved_regs": [],
+        "frame_bytes": 16
+      },
+      "ret": "D0 (i32)",
+      "callers": ["0x44008101", "0x44008914", "0x44008A28", "0x44008AD2", "0x44008B7E"],
+      "callees": ["0x4400A1F1", "0x4400A705"],
+      "string_xrefs": ["0x504800AF ('fvu.exe')", "0x504800A6 ('drvfirm')"],
+      "mmio_xrefs": [],
+      "side_effects": "writes_nor_bgo",
+      "side_effect_reasons": ["Calls NFD rewrite/delete on 'fvu.exe' & 'update' when startup reason invalid hits"],
+      "evidence_tier": "static_cfg_inferred",
+      "notes": "Triggered at 0x44008914 on 'error! startup reason is invalid'; leaves SA11..SA14 code sectors intact unless NFD marker exists."
+    },
+    {
+      "va": "0x4400A1F1",
+      "end_va": "0x4400A2F0",
+      "name": "nfd_file_exists",
+      "abi": "D0_filename_ptr",
+      "abi_detail": {
+        "params": ["D0"],
+        "saved_regs": ["A2", "A3", "D2", "D3"],
+        "frame_bytes": 16
+      },
+      "ret": "D0 (0 = found, <0 = absent)",
+      "callers": ["0x44008956", "0x44009BED"],
+      "callees": [],
+      "string_xrefs": ["0x44031397 ('%s not found.')"],
+      "mmio_xrefs": [],
+      "side_effects": "read_only",
+      "side_effect_reasons": [],
+      "evidence_tier": "mn103vm_verified"
+    },
+    {
+      "va": "0x4400A705",
+      "end_va": "0x4400A850",
+      "name": "nfd_clear_or_rewrite",
+      "abi": "D0/D1",
+      "abi_detail": {
+        "params": ["D0", "D1"],
+        "saved_regs": ["A2", "A3", "D2", "D3"],
+        "frame_bytes": 16
+      },
+      "ret": "D0 (i32)",
+      "callers": ["0x44009C42"],
+      "callees": [],
+      "string_xrefs": [],
+      "mmio_xrefs": [],
+      "side_effects": "writes_nor_bgo",
+      "side_effect_reasons": ["Mutates BGO directory records inside SA26..SA70"],
+      "evidence_tier": "static_cfg_inferred"
+    },
+    {
+      "va": "0x4402A30A",
+      "end_va": "0x4402A34A",
+      "name": "loader_memcmp",
+      "abi": "D0/D1/(12,SP)",
+      "abi_detail": {
+        "params": ["D0", "D1"],
+        "saved_regs": ["D2", "D3"],
+        "frame_bytes": 0
+      },
+      "ret": "D0 (0 = equal)",
+      "callers": ["0x440089B9"],
+      "callees": [],
+      "string_xrefs": [],
+      "mmio_xrefs": [],
+      "side_effects": "read_only",
+      "side_effect_reasons": [],
+      "evidence_tier": "mn103vm_verified"
+    },
+    {
+      "va": "0x4402A34A",
+      "end_va": "0x4402A3B0",
+      "name": "loader_memcpy",
+      "abi": "D0/D1/(12,SP)",
+      "abi_detail": {
+        "params": ["D0", "D1"],
+        "saved_regs": ["D2", "D3"],
+        "frame_bytes": 0
+      },
+      "ret": "D0 (dst)",
+      "callers": ["0x4400899E"],
+      "callees": [],
+      "string_xrefs": [],
+      "mmio_xrefs": [],
+      "side_effects": "read_only",
+      "side_effect_reasons": [],
+      "evidence_tier": "mn103vm_verified"
+    }
+  ]
+}

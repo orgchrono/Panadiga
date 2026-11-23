@@ -132,6 +132,57 @@
         "profiles/symbols/loader_ver061_toc48_main57/PROG061.json",
         "crates/panadiga-core/src/re/symbol_index/store.rs"
       ]
+    },
+    {
+      "id": "TRAP_MAIN3060NP_4MB_BGO_ON_8MB_EH55",
+      "category": "nor_bgo_geometry",
+      "severity": "critical",
+      "wrong_assumption": "Assumir que um binario MAIN3060NP compilado para 4 MiB Top-Boot (0x84200000, 35 setores, P5=8, max_did=0x0A1A) consegue inicializar BGO/NFD no DMR-EH55 de 8 MiB sem relocacao e expansao de structs.",
+      "verified_ground_truth": "No Stage-2 via IDE2SAT2, MAIN3060NP stock aborta em '[nfrom] BGO driver init failed[1].' (src/nfd_api.c:228). Aplicar --main-bgo-retarget expande nfd_ctrl para 0x531B8000..0x531BC000 (12 trampolins + stub cave 165 B em 0x57000320..0x570003C5 + 48 offsets relativos + P5=4 + crt0/sbrk uncached + 0x2202), provado em Mn103Vm e em hardware real EH55 (check_sum 0x32836a32, PiE-OS 3060NP, VFD TM LI). Ja MAIN3410PQ possui BGO 8 MiB nativo (0x5756EFD4=0x84130000).",
+      "affected_entities": [
+        "loader_ver061_toc48_main57",
+        "eh55_ver061_on_s29jl064h"
+      ],
+      "automated_guard": "crates/panadiga-core/src/re/main_bgo_retarget.rs + CHK_ID_MAIN_BGO_GEOMETRY",
+      "evidence_refs": [
+        "crates/panadiga-core/src/re/main_bgo_retarget.rs",
+        "crates/panadiga-core/src/re/unbrick_sd_kit/verify/mod.rs",
+        "docs/evidence/boottrace_sata_bridge_gate3_8mb_boot2_main_20261123.log"
+      ]
+    },
+    {
+      "id": "TRAP_SATA_BRIDGE_2MS_POST_RESET_RACE",
+      "category": "hardware_ata_timing",
+      "severity": "critical",
+      "wrong_assumption": "Assumir que o atraso pos-RESET- de fabrica de 2000 us (2 ms) em PROG061 (0x5041D928) e MAIN (3060NP @ 0x571122B2 / 3410PQ @ 0x5710A9D0) basta para pontes SATA-PATA atras da porta DAVIS CH1.",
+      "verified_ground_truth": "Pontes StarTech IDE2SAT2 (Marvell 88SA8052) precisam ~32 ms para BSY e ~555 ms para DRDY apos RESET-; a espera stock de 2 ms falha em HDD_MAX_LBA 0xE8000000 / 80000404. Aplicar --sata-bridge-reset-fix (MOV 100, D0 -> 1000 ms via rtsd_sleep_10ms em PROG061 @ 0x50431303, MAIN3060NP @ 0x574E6BBD, MAIN3410PQ @ 0x574DF538) + jumper MASTER + cabo FFC Type B para fechar tampa com N5EZZ0000003 a 180 deg.",
+      "affected_entities": [
+        "loader_ver061_toc48_main57",
+        "eh55_ver061_on_s29jl064h"
+      ],
+      "automated_guard": "crates/panadiga-core/src/re/sata_bridge_fix.rs + CHK_ID_SATA_BRIDGE_RESET_FIX",
+      "evidence_refs": [
+        "crates/panadiga-core/src/re/sata_bridge_fix.rs",
+        "crates/panadiga-core/src/re/sata_bridge_stage2.rs",
+        "docs/evidence/boottrace_sata_bridge_gate2_20261122.log"
+      ]
+    },
+    {
+      "id": "TRAP_NORFROM_FVU_BGO_MARKER_VER061",
+      "category": "nor_bgo_geometry",
+      "severity": "high",
+      "wrong_assumption": "Assumir que gravar apenas SA11..SA14 (0x84040000..0x8407FFFF, 256 KiB) faz o Loader ver0.61 bootar fvu.exe da NOR sem o arquivo marcador BGO 'fvu.exe' ou que startup reason invalid apaga arquivos fora dos temporarios BGO.",
+      "verified_ground_truth": "No Loader ver0.61 (eh55_loader_ver061_256k.bin @ 0x4400894B..0x44008B98), FUN_4400A1F1 verifica o arquivo 'fvu.exe' (0x504800AF) via NFD na BGO antes de executar memcpy/memcmp de 0x84040000 para 0x90400000; na NOR reparada SA11..SA14 esta virgem (0xFF) e o Stage-2 exige escape hatches (UART 'F', FORCEFVU.TXT, PANA__SD.FRM em boot Nor-FROM).",
+      "affected_entities": [
+        "loader_ver061_toc48_main57",
+        "eh55_ver061_on_s29jl064h"
+      ],
+      "automated_guard": "crates/panadiga-core/src/re/sata_bridge_stage2.rs (mn103vm_proves_portao4_loader_ver061_norfrom_boot_and_escape_hatch)",
+      "evidence_refs": [
+        "crates/panadiga-core/src/re/sata_bridge_stage2.rs",
+        "firmware_and_images/eh55_loader_ver061_256k.bin",
+        "firmware_and_images/eh55_nor_8mb_ic5001_repaired.bin"
+      ]
     }
   ]
 }

@@ -1,0 +1,151 @@
+{
+  "schema_version": 1,
+  "firmware_train_id": "loader_ver061_toc48_main57",
+  "module": "MAIN3410PQ",
+  "sha256": "c3275d39549b68f48db16bc5fd043c6f8a373d4ba416826de09be5c55dc991b1",
+  "base_va": "0x57000000",
+  "size_bytes": 13003052,
+  "function_count": 7,
+  "destructive_function_count": 0,
+  "functions": [
+    {
+      "va": "0x570D627E",
+      "end_va": "0x570D6600",
+      "name": "aiof_ic3001_pal_m_setup",
+      "abi": "D0/D1",
+      "abi_detail": {
+        "params": ["D0", "D1"],
+        "saved_regs": [],
+        "frame_bytes": 16
+      },
+      "ret": "D0 (i32)",
+      "callers": [],
+      "callees": [],
+      "string_xrefs": [],
+      "mmio_xrefs": ["0x88000000", "0x89800000"],
+      "side_effects": "writes_mmio",
+      "side_effect_reasons": ["Programs IC3001 I2C 0x4A/0x94 and AIOF/AVDD PAL-M (LBS) presets"],
+      "evidence_tier": "static_cfg_inferred",
+      "notes": "Brazilian DMR-EH55LB-S native PAL-M (M6930LB) AIOF/IC3001 initialization block."
+    },
+    {
+      "va": "0x5710A98C",
+      "end_va": "0x5710AA10",
+      "name": "rtsd_ata_hard_reset_wait",
+      "abi": "D0/D1",
+      "abi_detail": {
+        "params": ["D0", "D1"],
+        "saved_regs": ["D2", "D3"],
+        "frame_bytes": 16
+      },
+      "ret": "D0 (i32)",
+      "callers": [],
+      "callees": ["0x574DF538"],
+      "string_xrefs": [],
+      "mmio_xrefs": ["0x89000C00", "0x89000D58"],
+      "side_effects": "writes_mmio",
+      "side_effect_reasons": ["Drives DAVIS CH1 RESET- pulse; 0x5710A9D0 patchable 2 ms -> 1000 ms (CALL 0x574DF538)"],
+      "evidence_tier": "mn103vm_verified",
+      "notes": "Brazilian MAIN3410PQ equivalent of MAIN3060NP 0x5711226E/0x571122B2 (-0x78E2 offset shift)."
+    },
+    {
+      "va": "0x574DD1FC",
+      "end_va": "0x574DD2E0",
+      "name": "hdd_cmd_rtsd_capacity",
+      "abi": "D0",
+      "abi_detail": {
+        "params": ["D0"],
+        "saved_regs": [],
+        "frame_bytes": 0
+      },
+      "ret": "D0 (u32)",
+      "callers": [],
+      "callees": [],
+      "string_xrefs": [],
+      "mmio_xrefs": [],
+      "side_effects": "read_only",
+      "side_effect_reasons": [],
+      "evidence_tier": "mn103vm_verified",
+      "notes": "RTSD capacity limit descriptor table unlocking >200 GB HDD up to 2 TiB/4 TiB LBA48."
+    },
+    {
+      "va": "0x574DF538",
+      "end_va": "0x574DF5B0",
+      "name": "rtsd_sleep_10ms",
+      "abi": "D0_ticks_10ms",
+      "abi_detail": {
+        "params": ["D0"],
+        "saved_regs": ["D2", "A2"],
+        "frame_bytes": 8
+      },
+      "ret": "D0 (i32)",
+      "callers": ["0x5710A452", "0x5710A9D0", "0x5710B086", "0x5710B5AF", "0x5710C7E5"],
+      "callees": [],
+      "string_xrefs": [],
+      "mmio_xrefs": [],
+      "side_effects": "read_only",
+      "side_effect_reasons": [],
+      "evidence_tier": "mn103vm_verified",
+      "notes": "PiE-OS 10 ms/tick RTOS sleep callee verified across all 4 identical RTSD caller offsets vs MAIN3060NP."
+    },
+    {
+      "va": "0x574F7B8C",
+      "end_va": "0x574F7CA0",
+      "name": "av_passthrough_tbc_gates",
+      "abi": "D0/D1",
+      "abi_detail": {
+        "params": ["D0", "D1"],
+        "saved_regs": [],
+        "frame_bytes": 8
+      },
+      "ret": "D0 (i32)",
+      "callers": ["0x5771ABFB"],
+      "callees": [],
+      "string_xrefs": [],
+      "mmio_xrefs": [],
+      "side_effects": "read_only",
+      "side_effect_reasons": [],
+      "evidence_tier": "mn103vm_verified",
+      "notes": "AV passthrough TBC E-E monitor gate sites (0x574F7B8C and 0x574F7C5C) in MAIN3410PQ."
+    },
+    {
+      "va": "0x5756EFD4",
+      "end_va": "0x5756F040",
+      "name": "bgo_native_8mb_table_setup",
+      "abi": "internal",
+      "abi_detail": {
+        "params": [],
+        "saved_regs": [],
+        "frame_bytes": 0
+      },
+      "ret": "void",
+      "callers": [],
+      "callees": [],
+      "string_xrefs": [],
+      "mmio_xrefs": ["0x84130000", "0x843A0000", "0x84430000"],
+      "side_effects": "read_only",
+      "side_effect_reasons": [],
+      "evidence_tier": "static_cfg_inferred",
+      "notes": "MAIN3410PQ natively compiles 8 MiB EH55 BGO bounds (0x84130000 @ 0x5756EFD4), requiring no struct nfd_ctrl relocation."
+    },
+    {
+      "va": "0x5771ABFB",
+      "end_va": "0x5771AC50",
+      "name": "av_passthrough_tbc_entry",
+      "abi": "void",
+      "abi_detail": {
+        "params": [],
+        "saved_regs": [],
+        "frame_bytes": 0
+      },
+      "ret": "void",
+      "callers": [],
+      "callees": ["0x574F7B8C"],
+      "string_xrefs": [],
+      "mmio_xrefs": ["0x88000000"],
+      "side_effects": "writes_mmio",
+      "side_effect_reasons": ["Configures TBC passthrough path without optical/HDD recording"],
+      "evidence_tier": "mn103vm_verified"
+    }
+  ]
+}
