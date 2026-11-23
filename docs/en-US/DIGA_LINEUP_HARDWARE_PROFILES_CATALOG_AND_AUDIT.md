@@ -76,7 +76,7 @@ Tracked in [`datasheets/SHA256SUMS.txt`](../../manuals_and_schematics/datasheets
 
 ## 4. Code & Physical Probe Fixture Fixes Applied
 
-1. **`DRV J147` Offset Fix (`DMR-EH50` `le2011_08e0`):** In `dmr-eh50/PANA_DVD.FRM`, TOC slot 0 (`DRV J147`) places the real payload offset `0x1800` at `+0x08` instead of `+0x0C` (`0xCDF58588`). Updated [`parse.rs`](../../crates/panadiga-core/src/crypto/toc/parse.rs) to normalize slot 0 when `+0x08 == 0x1800` lies within file bounds, verified by unit test `eh50_drv_j147_slot0_offset_quirk_resolves_to_0x1800`.
+1. **`DRV J147` Offset Fix (`DMR-EH50` `le2011_08e0`):** In `dmr-eh50/PANA_DVD.FRM`, TOC slot 0 (`DRV J147`) places the real payload offset `0x1800` at `+0x08` instead of `+0x0C` (`0xCDF58588`). Updated [`parse.rs`](../../crates/panadiga-crypto/src/toc/parse.rs) to normalize slot 0 when `+0x08 == 0x1800` lies within file bounds, verified by unit test `eh50_drv_j147_slot0_offset_quirk_resolves_to_0x1800`.
 2. **Fixture Alignment Against On-Disk Dumps (`profiles/fixtures/`):**
    - [`dmr_eh55.fixture.json`](../../profiles/fixtures/dmr_eh55.fixture.json): verified byte probes in `eh55_nor_8mb_ic5001_dump.bin` (`0x0002_FFE7`, `0x0003_0000`, `0x0003_FFE0`, `0x0013_0000`, `0x007F_0000`).
    - [`dmr_es35v.fixture.json`](../../profiles/fixtures/dmr_es35v.fixture.json): fixed 3 stale probes (`0x0002_F6F0`, `0x0003_46AE` `DAVIS`, `0x0070_0000` `0AF2`, `0x0072_0604` `M6720EE`, `0x007F_4000` `01F1`).

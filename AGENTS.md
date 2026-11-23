@@ -11,11 +11,12 @@ Qualquer agente de IA que opere nesta base de código **DEVE** seguir rigorosame
 
 O repositório está estruturado em subsistemas integrados e desacoplados:
 
-1. **Rust Core Workspace & CLI (`crates/`, `Cargo.toml`) — 6 crates**:
-   - **`panadiga-profiles`** (`crates/panadiga-profiles` + `profiles/`): Camada SSOT relacional data-driven com **89 modelos** DIGA, **12 JSON Schemas** Draft 2020-12 (`profiles/schema/`), decomposição hardware (`soc_cores`, `socs`, `boards`, `flash_chips`, `eeprom_chips`, `firmware_trains`, `nor_layouts`, `media_formats`, `models`) e **T0..T4 Capability Gate** determinístico para codegen TypeScript e C11.
-   - **`panadiga-core`** (`crates/panadiga-core`): Núcleo funcional determinístico de alta performance para parsing forense de storage (`hdd`), criptoanálise (`crypto`), reparo cirúrgico de NVRAM (`nvram`), ponte serial/CDC RP2040/RP2350 (`pico`), servidor GDB RSP introspectivo (`debugger`), gerador de scripts Ghidra (`ghidra`), pipeline de emulação/retarget `re` (`prewrite_gate`, `sig_locator`, `verify_loop`, `bgo_unbrick`, `region_compat`), cofre forense (`vault`), ingestão (`ingest`) e catálogo visual/SSOT (`ssot`).
+1. **Rust Core Workspace & CLI (`crates/`, `Cargo.toml`) — 11 crates**:
+   - **`panadiga-constants` / `panadiga-ir` / `panadiga-crypto` / `panadiga-bench` / `panadiga-vault`** (`crates/`): Camadas acíclicas dedicadas para IR/constantes/hashes SSOT (`SSOT_CONTRACT_HASH`), cifras/contêineres PANA_DVD/Feistel/LZSS, stream unidirecional de telemetria (`panadiga-bench`) e cofre + journal forense append-only (`panadiga-vault`).
+   - **`panadiga-profiles`** (`crates/panadiga-profiles` + `profiles/`): Camada SSOT relacional data-driven com **89 modelos** DIGA, **12 JSON Schemas** Draft 2020-12 (`profiles/schema/`), decomposição hardware (`soc_cores`, `socs`, `boards`, `flash_chips`, `eeprom_chips`, `firmware_trains`, `nor_layouts`, `media_formats`, `models`, `traps/`, `forensic_atlas/`, `symbols/`) e **T0..T4 Capability Gate** determinístico para codegen TypeScript e C11.
+   - **`panadiga-core`** (`crates/panadiga-core`): Núcleo funcional determinístico de alta performance para parsing forense de storage (`hdd`), reexports `crypto`/`vault`/`bench`/`ir`, reparo cirúrgico de NVRAM (`nvram`), ponte serial/CDC RP2040/RP2350 (`pico`), servidor GDB RSP introspectivo (`debugger`), gerador de scripts Ghidra (`ghidra`), pipeline de emulação/retarget `re` (`prewrite_gate`, `sig_locator`, `verify_loop`, `bgo_unbrick`, `region_compat`), ingestão (`ingest`) e catálogo visual/SSOT (`ssot`).
    - **`panadiga-rag`** (`crates/panadiga-rag`): Motor RAG Zero-Error nativo em Rust com 6 camadas de defesa, guardrails determinísticos de segurança física (`safety.rs`) e indexação híbrida (Markdown docs, 32 manuais/datasheets PDF via `lopdf`, fontes Rust/C11/PIO/TS/Python e scripts Ghidra).
-   - **`panadiga-mcp`** (`crates/panadiga-mcp`): Servidor MCP nativo em Rust (`panadiga mcp` via JSON-RPC 2.0 `stdio`) com **25 tools** (expansão dos 18 módulos base + 7 rotas de diagnóstico/BGO/`DAVIS`/`PAL-M`/TBC/flash/profiles), **resources** (`panadiga://invariants`, `panadiga://memory-map`, `panadiga://profiles/<model>`, pinouts, catálogo visual e docs/) e **prompts** guiados.
+   - **`panadiga-mcp`** (`crates/panadiga-mcp`): Servidor MCP nativo em Rust (`panadiga mcp` via JSON-RPC 2.0 `stdio`) com **26 tools** (expansão dos 18 módulos base + 8 rotas de diagnóstico/BGO/`DAVIS`/`PAL-M`/TBC/flash/profiles/`panadiga_symbol_lookup`), **resources** (`panadiga://invariants`, `panadiga://memory-map`, `panadiga://profiles/<model>`, `panadiga://symbols/<train_id>/<module>`, pinouts, catálogo visual e docs/) e **prompts** guiados.
    - **`panadiga-cli`** (`crates/panadiga-cli`): Binário unificado multiplataforma (`panadiga` / `panadiga.exe`) com CLI Clap, modo TUI interativo e lançador do workbench.
 2. **Desktop & Mobile Workbench (`apps/desktop/`, `apps/desktop/src-tauri/` / `panadiga-desktop`)**:
    - Interface gráfica **100% livre de mocks em produção** construída com **Tauri 2**, **React 19**, **TypeScript**, **Tailwind CSS**, **Vitest** e **Playwright** (mocks isolados estritamente em `apps/desktop/src/test/mocks/` para suítes de teste).
@@ -30,7 +31,7 @@ O repositório está estruturado em subsistemas integrados e desacoplados:
    - Scripts Ghidra Jython (`tools/ghidra/`) gerados a partir da SSOT Rust e lançadores em `tools/`.
 5. **Acervo de Engenharia & Manuais (`manuals_and_schematics/`, `docs/`)**:
    - **32 manuais de serviço e datasheets oficiais** em PDF catalogados em [`manuals_and_schematics/README.md`](manuals_and_schematics/README.md) e indexados para busca automatizada.
-   - **40 dossiês técnicos bilíngues canônicos** em `docs/pt-BR/` e `docs/en-US/` (mapa em [`docs/translation_pairs.json`](docs/translation_pairs.json) e [`docs/INDEX.md`](docs/INDEX.md)), kit canônico [`firmware_and_images/sd_unbrick_kit/`](firmware_and_images/README.md) (`--loader-profile ver061`: `262,144 B` raw + `sd48`), auditorias na raiz ([`AUDITORIA_COMPLETA.md`](AUDITORIA_COMPLETA.md) / [`COMPLETE_AUDIT.md`](COMPLETE_AUDIT.md)) + históricas ([`docs/audits/`](docs/audits/README.md)), evidência integral de disassembly/pseudocódigo Ghidra ([`docs/pseudocode/`](docs/pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md)) e **28 capturas/logs reais de bancada** ([`docs/debug_logs/`](docs/debug_logs/README.md)).
+   - **41 dossiês técnicos bilíngues canônicos** em `docs/pt-BR/` e `docs/en-US/` (mapa em [`docs/translation_pairs.json`](docs/translation_pairs.json) e [`docs/INDEX.md`](docs/INDEX.md)), kit canônico [`firmware_and_images/sd_unbrick_kit/`](firmware_and_images/README.md) (`--loader-profile ver061`: `262,144 B` raw + `sd48`), auditorias na raiz ([`AUDITORIA_COMPLETA.md`](AUDITORIA_COMPLETA.md) / [`COMPLETE_AUDIT.md`](COMPLETE_AUDIT.md)) + históricas ([`docs/audits/`](docs/audits/README.md)), evidência integral de disassembly/pseudocódigo Ghidra ([`docs/pseudocode/`](docs/pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md)) e **28 capturas/logs reais de bancada** ([`docs/debug_logs/`](docs/debug_logs/README.md)).
 
 ---
 
@@ -78,7 +79,7 @@ python scripts/validate.py
 ```
 
 O portão valida de forma automatizada:
-1. **Rust Workspace (6 crates)**: `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets --no-deps -- -D warnings` & `cargo test --workspace` (**337 testes**).
+1. **Rust Workspace (11 crates)**: `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets --no-deps -- -D warnings` & `cargo test --workspace` (**337 testes**).
 2. **TypeScript Strict + Oxlint**: `oxlint --deny-warnings && tsc --noEmit` (`npm run lint`) em `apps/desktop` com zero erros.
 3. **Vitest Frontend**: `npm test` em `apps/desktop` (**128 testes em 39 arquivos** em `apps/desktop/src/**/*.test.*`).
 4. **Detector de Duplicação (jscpd)**: `.jscpd.json` com limiar estrito de **0% de duplicação** (0 clones permitidos entre `apps/desktop/src`, `apps/desktop/src-tauri/src`, `crates`, `firmware/pico-p7501`, `tools`, `scripts`).
@@ -90,7 +91,7 @@ O portão valida de forma automatizada:
 
 ---
 
-## 5. Acervo de Documentação Técnica (Raiz + 40 Pares Bilíngues)
+## 5. Acervo de Documentação Técnica (Raiz + 41 Pares Bilíngues)
 
 * **Portal Mestre & Mapa Bilíngue:** [`docs/INDEX.md`](docs/INDEX.md) · [`docs/translation_pairs.json`](docs/translation_pairs.json)
 * **Auditorias na Raiz & Snapshots:** [`AUDITORIA_COMPLETA.md`](AUDITORIA_COMPLETA.md) ([English: `COMPLETE_AUDIT.md`](COMPLETE_AUDIT.md)) · [`docs/audits/README.md`](docs/audits/README.md)

@@ -12,3 +12,16 @@
    - Rust: código idiomático, memory safety estrita (`#![deny(unsafe_code)]` onde aplicável).
    - Python: tipagem completa verificada por `mypy --strict`.
    - TypeScript: modo estrito (`noImplicitAny`, etc.), testes Vitest e Playwright cobrindo novos fluxos.
+
+## 4. Orquestração Obrigatória de Skills, Metas, Plan Mode, Testes e Subagentes (Always-On)
+1. **Bootstrap Obrigatório do Orquestrador:**
+   - Em qualquer tarefa não-trivial (2+ etapas, bancada, forense, decrypto, RE, código, docs, pesquisa ou testes), **LEIA OBRIGATORIAMENTE primeiro** [`.agents/skills/panadiga-skill-orchestrator/SKILL.md`](../skills/panadiga-skill-orchestrator/SKILL.md) para ativar just-in-time apenas as skills certas pelos caminhos explícitos ali definidos.
+   - O mapa completo e diagrama do ecossistema das 35 skills reside em [`.agents/skills/README.md`](../skills/README.md).
+2. **Pilares Transversais & Economia de Tokens:**
+   - **Segurança & Barreiras:** [`.agents/skills/panadiga-security-and-violation-guards/SKILL.md`](../skills/panadiga-security-and-violation-guards/SKILL.md).
+   - **Auditoria Anti-Alucinação & Red-Team:** [`.agents/skills/panadiga-adversarial-and-hallucination-auditor/SKILL.md`](../skills/panadiga-adversarial-and-hallucination-auditor/SKILL.md).
+   - **Subagentes & Pesquisa:** [`.agents/skills/panadiga-subagent-and-research/SKILL.md`](../skills/panadiga-subagent-and-research/SKILL.md).
+   - **Validação & Portões (9+1):** [`.agents/skills/panadiga-validate/SKILL.md`](../skills/panadiga-validate/SKILL.md).
+   - Economize tokens apenas no uso de ferramentas (`panadiga_rag_query`/`panadiga_search_code` antes de leituras amplas, CLI `--json -`, `read_file` segmentado, `references/*.md` sob demanda), **nunca** abreviando raciocínio técnico, FMEA ou checagens de segurança.
+3. **Disciplina de Plan Mode & Recursos Nativos:**
+   - Consulte [`.agents/skills/panadiga-skill-orchestrator/references/agent-runtime-and-plan-mode.md`](../skills/panadiga-skill-orchestrator/references/agent-runtime-and-plan-mode.md) para usar corretamente `enter_plan_mode`/`exit_plan_mode` (devolver na 2ª falha ou `[plan review due]`, nunca improvisar na 3ª), `update_steps`, `update_focus`, `run_workflow`, `swarm`, `schedule` (jamais usar `sleep` como timer), `scratch/` (nunca sujar o repo Git) e slash commands (`/plan`, `/grill-me`, `/boost`, `/teamwork`, `/goal`).

@@ -76,7 +76,7 @@ Manifesto versionado em [`datasheets/SHA256SUMS.txt`](../../manuals_and_schemati
 
 ## 4. Correções Aplicadas em Código e Fixtures Físicas
 
-1. **Correção do offset `DRV J147` (`DMR-EH50` `le2011_08e0`):** Em `dmr-eh50/PANA_DVD.FRM`, o slot 0 (`DRV J147`) grava o offset `0x1800` no byte `+0x08` em vez de `+0x0C` (`0xCDF58588`). O parser em [`parse.rs`](../../crates/panadiga-core/src/crypto/toc/parse.rs) foi corrigido para normalizar o slot 0 quando `+0x08 == 0x1800` dentro dos limites do arquivo, coberto pelo teste `eh50_drv_j147_slot0_offset_quirk_resolves_to_0x1800`.
+1. **Correção do offset `DRV J147` (`DMR-EH50` `le2011_08e0`):** Em `dmr-eh50/PANA_DVD.FRM`, o slot 0 (`DRV J147`) grava o offset `0x1800` no byte `+0x08` em vez de `+0x0C` (`0xCDF58588`). O parser em [`parse.rs`](../../crates/panadiga-crypto/src/toc/parse.rs) foi corrigido para normalizar o slot 0 quando `+0x08 == 0x1800` dentro dos limites do arquivo, coberto pelo teste `eh50_drv_j147_slot0_offset_quirk_resolves_to_0x1800`.
 2. **Alinhamento das 3 fixtures aos dumps reais (`profiles/fixtures/`):**
    - [`dmr_eh55.fixture.json`](../../profiles/fixtures/dmr_eh55.fixture.json): offsets exatos verificados em `eh55_nor_8mb_ic5001_dump.bin` (`0x0002_FFE7`, `0x0003_0000`, `0x0003_FFE0`, `0x0013_0000`, `0x007F_0000`).
    - [`dmr_es35v.fixture.json`](../../profiles/fixtures/dmr_es35v.fixture.json): corrigidos 3 offsets obsoletos (`0x0002_F6F0`, `0x0003_46AE` `DAVIS`, `0x0070_0000` `0AF2`, `0x0072_0604` `M6720EE`, `0x007F_4000` `01F1`).

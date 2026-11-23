@@ -3,11 +3,11 @@
 
 # Panadiga Technical Documentation Index / Índice da Documentação Técnica
 
-All **40** primary technical engineering dossiers in this repository maintain **1:1 bidirectional parity** between [**English (`docs/en-US/`)**](#english-documentation-docsen-us--40-dossiers) and [**Português (BR) (`docs/pt-BR/`)**](#documentação-em-português-docspt-br--40-dossiês), paired automatically with [`translation_pairs.json`](./translation_pairs.json), plus root audits, preserved `2026-11-11` audit snapshots ([`audits/`](./audits/README.md)), Ghidra C/disassembly evidence ([`pseudocode/`](./pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md)), and live `COM10` bench UART logs ([`debug_logs/`](./debug_logs/README.md)).
+All **41** primary technical engineering dossiers in this repository maintain **1:1 bidirectional parity** between [**English (`docs/en-US/`)**](#english-documentation-docsen-us--41-dossiers) and [**Português (BR) (`docs/pt-BR/`)**](#documentação-em-português-docspt-br--41-dossiês), paired automatically with [`translation_pairs.json`](./translation_pairs.json), plus root audits, preserved `2026-11-11` audit snapshots ([`audits/`](./audits/README.md)), Ghidra C/disassembly evidence ([`pseudocode/`](./pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md)), and live `COM10` bench UART logs ([`debug_logs/`](./debug_logs/README.md)).
 
 ---
 
-## English Documentation (`docs/en-US/`) — 40 Dossiers
+## English Documentation (`docs/en-US/`) — 41 Dossiers
 
 | # | Document (`en-US`) | PT-BR Counterpart | Engineering Domain & Scope |
 | :---: | :--- | :--- | :--- |
@@ -51,10 +51,11 @@ All **40** primary technical engineering dossiers in this repository maintain **
 | 38 | [ZERO_ERROR_RAG_ENGINE_AND_PHYSICAL_SAFETY.md](en-US/ZERO_ERROR_RAG_ENGINE_AND_PHYSICAL_SAFETY.md) | [PT-BR](pt-BR/ZERO_ERROR_RAG_ENGINE_E_SEGURANCA_FISICA.md) | 6-layer Zero-Error RAG engine, `FactCritic` & physical voltage guardrails |
 | 39 | [DIGA_LINEUP_HARDWARE_PROFILES_CATALOG_AND_AUDIT.md](en-US/DIGA_LINEUP_HARDWARE_PROFILES_CATALOG_AND_AUDIT.md) | [PT-BR](pt-BR/CATALOGO_E_AUDITORIA_PERFIS_HARDWARE_LINHA_DIGA.md) | 89-model DIGA hardware profile expansion (`T0`->`T4`), CDN/datasheet archive & safety traps |
 | 40 | [WHATS_NEXT_NEW_DEVICE_ONBOARDING.md](en-US/WHATS_NEXT_NEW_DEVICE_ONBOARDING.md) | [PT-BR](pt-BR/WHATS_NEXT_ONBOARDING_NOVOS_APARELHOS.md) | 7-stage onboarding pipeline for new DIGA models (bench capture, `rebuild-from-dump`, Ghidra, SSOT JSON & PR checklist) |
+| 41 | [ANTI_TRAP_BGO_GEOMETRY_AND_SSOT_FORENSIC_ATLAS_GUIDE.md](en-US/ANTI_TRAP_BGO_GEOMETRY_AND_SSOT_FORENSIC_ATLAS_GUIDE.md) | [PT-BR](pt-BR/GUIA_ANTI_ARMADILHAS_GEOMETRIA_BGO_E_ATLAS_FORENSE_SSOT.md) | Anti-trap BGO geometry verification (`4 MiB` vs `8 MiB`, `35` vs `45` sectors, `DIGADIAG` `256K` vs `128K`) & 100%-disassembled Ghidra Forensic Atlas (`SSOT`) |
 
 ---
 
-## Documentação em Português (`docs/pt-BR/`) — 40 Dossiês
+## Documentação em Português (`docs/pt-BR/`) — 41 Dossiês
 
 | # | Documento (`pt-BR`) | Versão `en-US` | Área / Escopo Técnico |
 | :---: | :--- | :--- | :--- |
@@ -98,6 +99,7 @@ All **40** primary technical engineering dossiers in this repository maintain **
 | 38 | [ZERO_ERROR_RAG_ENGINE_E_SEGURANCA_FISICA.md](pt-BR/ZERO_ERROR_RAG_ENGINE_E_SEGURANCA_FISICA.md) | [EN-US](en-US/ZERO_ERROR_RAG_ENGINE_AND_PHYSICAL_SAFETY.md) | Motor RAG Zero-Error (6 camadas), `FactCritic` e guardrails de tensão |
 | 39 | [CATALOGO_E_AUDITORIA_PERFIS_HARDWARE_LINHA_DIGA.md](pt-BR/CATALOGO_E_AUDITORIA_PERFIS_HARDWARE_LINHA_DIGA.md) | [EN-US](en-US/DIGA_LINEUP_HARDWARE_PROFILES_CATALOG_AND_AUDIT.md) | Auditoria de 89 modelos DIGA (`T0`->`T4`), novos downloads/datasheets e alertas físicos |
 | 40 | [WHATS_NEXT_ONBOARDING_NOVOS_APARELHOS.md](pt-BR/WHATS_NEXT_ONBOARDING_NOVOS_APARELHOS.md) | [EN-US](en-US/WHATS_NEXT_NEW_DEVICE_ONBOARDING.md) | Pipeline em 7 estágios para integrar novos aparelhos DIGA (bancada, `rebuild-from-dump`, Ghidra, SSOT JSON e PR) |
+| 41 | [GUIA_ANTI_ARMADILHAS_GEOMETRIA_BGO_E_ATLAS_FORENSE_SSOT.md](pt-BR/GUIA_ANTI_ARMADILHAS_GEOMETRIA_BGO_E_ATLAS_FORENSE_SSOT.md) | [EN-US](en-US/ANTI_TRAP_BGO_GEOMETRY_AND_SSOT_FORENSIC_ATLAS_GUIDE.md) | Verificação anti-armadilhas de geometria BGO (`4 MiB` vs `8 MiB`, `35` vs `45` setores, `DIGADIAG` `256K` vs `128K`) & Atlas Forense Ghidra 100% disassemblado (`SSOT`) |
 
 ---
 

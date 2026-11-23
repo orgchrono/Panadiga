@@ -13,7 +13,7 @@
 Uma pergunta recorrente em bancada é se *"o firmware já está 100% em texto claro (`plaintext`)"*. A resposta exige separar **dois níveis de representação**:
 
 1. **Nível Binário Executável (`100% Plaintext / Unpacked` em Disco — Concluído):**
-   * **Zero criptografia ou compressão residual:** todos os contêineres proprietários da Panasonic (cifra de bloco **Feistel 64-bit ECB** em `PANA_DVD.FRM` e partições de firmware do HDD `0x02000000`/`0x04000000`, além do empacotamento `EXTRHEAD`/`zlib` + Adler-32 amostrado) foram completamente quebrados, validados e automatizados em Rust (`crates/panadiga-core/src/crypto/`).
+   * **Zero criptografia ou compressão residual:** todos os contêineres proprietários da Panasonic (cifra de bloco **Feistel 64-bit ECB** em `PANA_DVD.FRM` e partições de firmware do HDD `0x02000000`/`0x04000000`, além do empacotamento `EXTRHEAD`/`zlib` + Adler-32 amostrado) foram completamente quebrados, validados e automatizados em Rust (`crates/panadiga-crypto/src/`).
    * Todas as instruções de máquina **Matsushita AM34 / MN103S**, tabelas de despacho, ponteiros MMIO e strings **ASCII / Shift-JIS (CP932)** estão 100% abertas para leitura, cross-reference (`XREF`), disassembly, decompilação C no Ghidra (`Panadiga_MN103S`) e patching direto com reempacotamento válido para `DIGADIAG.FRM`, `PANA__SD.FRM`, `PANA_DVD.FRM` e HDD `MEIHDFS1.0`.
 2. **Nível Código-Fonte C Original (`Stripped ELF` vs Reconstrução Funcional):**
    * Os firmwares de produção da Panasonic foram compilados sem tabelas DWARF de nomes de variáveis locais, porém preservaram strings de asserts, drivers e caminhos de módulos originais (`src/hdd_cmd.c`, `src/hdd_ctl.c`, `DVR_SYSTEM_LIB: serial.a`, `rtscdd.a`, `rtsdauth.a`, `sys_boot.a`, `sys_cd.a`, `sys_cntl.a`, `DAVIS`, `nfrom`, `FPC`, `RTSC`).
@@ -37,7 +37,7 @@ As rotinas críticas de engenharia reversa e bancada que antes residiam dispersa
 
 | Origem Histórica (Python / Pesquisa) | Módulo Rust Consolidado (`crates/panadiga-core`) | Exposição MCP / Interface |
 | :--- | :--- | :--- |
-| `scripts/re/pana_frm.py` *(cifra/packing)* | [`crates/panadiga-core/src/crypto/`](../../crates/panadiga-core/src/crypto/mod.rs) (`feistel_decrypt_buffer`, `unpack_extrhead`, `build_digadiag_frm`, `pack_frm`) | `panadiga_inspect_frm` + CLI `panadiga frm` |
+| `scripts/re/pana_frm.py` *(cifra/packing)* | [`crates/panadiga-crypto/src/`](../../crates/panadiga-crypto/src/mod.rs) (`feistel_decrypt_buffer`, `unpack_extrhead`, `build_digadiag_frm`, `pack_frm`) | `panadiga_inspect_frm` + CLI `panadiga frm` |
 | `scripts/re/mn10300.py` | [`crates/panadiga-core/src/re/mn10300/`](../../crates/panadiga-core/src/re/mn10300/mod.rs) (`decode_branch_call_refs`, `find_callers_to`, `find_fc_immediate_loads`, `find_pointer_xrefs`) | API interna + CLI `panadiga re xrefs` |
 | `scripts/bench/nor_dumper.py` | [`crates/panadiga-core/src/re/nor_dumper.rs`](../../crates/panadiga-core/src/re/nor_dumper.rs) (`build_readonly_nor_dumper_stub`, `decode_nor_dump_stream`, guarda estrita `0x80000000`/`0x84000000`) | **`panadiga_nor_dumper_stub`** (MCP Tool #15) |
 | Análise histórica `hdd_cmd.c` (`MaxProductLBA`) | [`crates/panadiga-core/src/hdd/capacity_patch/`](../../crates/panadiga-core/src/hdd/capacity_patch/mod.rs) (`inspect_main_hdd_capacity`, `patch_main_hdd_capacity`, `DynamicUnclamped`) | **`panadiga_hdd_capacity`** (MCP Tool #14) + CLI `panadiga hdd inspect-capacity` + Desktop UI |

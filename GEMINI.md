@@ -4,7 +4,7 @@ Este arquivo define as diretrizes de projeto para Antigravity e assistentes base
 
 ## Contexto do Projeto
 - **Nome do Projeto**: Panadiga (Panasonic DIGA DMR-EH55 Engineering, Forensics, and Hardware Lab)
-- **Idiomas Principais**: Rust Edition 2024 (6 crates: `panadiga-profiles`, `panadiga-core`, `panadiga-rag`, `panadiga-mcp`, `panadiga-cli`, `panadiga-desktop`), TypeScript (React 19/Tauri 2 Desktop + Android APK), C11 (RP2040/RP2350 sem gadgets externos na sonda), Python 3.10+ (Typer, Pytest, Mypy Strict)
+- **Idiomas Principais**: Rust Edition 2024 (11 crates: `panadiga-constants`, `panadiga-bench`, `panadiga-vault`, `panadiga-crypto`, `panadiga-ir`, `panadiga-profiles`, `panadiga-core`, `panadiga-rag`, `panadiga-mcp`, `panadiga-cli`, `panadiga-desktop`), TypeScript (React 19/Tauri 2 Desktop + Android APK), C11 (RP2040/RP2350 sem gadgets externos na sonda), Python 3.10+ (Typer, Pytest, Mypy Strict)
 - **Objetivo**: Engenharia reversa, recuperação forense do sistema de arquivos de disco MEIHFS, unbrick cirúrgico de NVRAM (erro U99) e diagnóstico via interface UART assíncrona `P7501` (`115200 8N1`).
 
 ## Diretrizes de Execução do Agente

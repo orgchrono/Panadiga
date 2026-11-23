@@ -119,7 +119,8 @@
       "docs": [
         "docs/pt-BR/HISTORICO_UNBRICK_EH55_BGO_CH1_DAVIS_E_REGIAO.md",
         "docs/pt-BR/TEORIA_E_PRATICA_UNBRICK_U99_E_CRIPTOGRAFIA_MATSUSHITA.md",
-        "docs/pt-BR/DOSSIE_FORENSE_BOOTLOADER_SDDIAG_EH55.md"
+        "docs/pt-BR/DOSSIE_FORENSE_BOOTLOADER_SDDIAG_EH55.md",
+        "docs/pt-BR/GUIA_ANTI_ARMADILHAS_GEOMETRIA_BGO_E_ATLAS_FORENSE_SSOT.md"
       ]
     },
     {
@@ -384,7 +385,7 @@
         "0x578935FC..0x5789595C (AIOF tables)"
       ],
       "evidence_files": [
-        "crates/panadiga-core/src/constants/tbc_mmio.rs",
+        "crates/panadiga-constants/src/constants/tbc_mmio.rs",
         "crates/panadiga-core/src/re/tbc_appliance/mod.rs",
         "docs/pseudocode/raw/doc_main.txt"
       ],
@@ -405,7 +406,7 @@
         "0xC000_100C (FORBIDDEN)"
       ],
       "evidence_files": [
-        "crates/panadiga-core/src/constants/tbc_mmio.rs",
+        "crates/panadiga-constants/src/constants/tbc_mmio.rs",
         "crates/panadiga-core/src/re/tbc_appliance/mod.rs",
         "docs/pseudocode/raw/doc_boot_core.txt"
       ],
@@ -464,7 +465,7 @@
         "0x570D627E (iic33 0x94 IC3001)"
       ],
       "evidence_files": [
-        "crates/panadiga-core/src/constants/tbc_mmio.rs",
+        "crates/panadiga-constants/src/constants/tbc_mmio.rs",
         "crates/panadiga-core/src/re/region_compat/tv_standard/mmio.rs",
         "docs/pseudocode/raw/doc_main.txt"
       ],

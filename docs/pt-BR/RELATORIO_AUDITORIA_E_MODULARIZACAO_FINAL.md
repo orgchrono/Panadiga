@@ -254,11 +254,11 @@ Abaixo está o mapeamento exato de todos os novos módulos e estruturas incorpor
 | **Rust Storage** | `crates/panadiga-core/src/hdd/inspect.rs` | Inspeção de LBA 0, espelho de 28MB e journal de 8MB |
 | **Rust Storage** | `crates/panadiga-core/src/hdd/meihdfs.rs` | Parser dos 256 registros do sistema de arquivos MEIHFS |
 | **Rust Storage** | `crates/panadiga-core/src/hdd/partitions.rs` | Extrator e validador SHA-256 das partições de 32MB e 64MB |
-| **Rust Crypto** | `crates/panadiga-core/src/crypto/mod.rs` | Fachada pública e interface de criptoanálise do firmware |
-| **Rust Crypto** | `crates/panadiga-core/src/crypto/types.rs` | Estruturas de entrada da TOC de 48B e relatórios de entropia |
-| **Rust Crypto** | `crates/panadiga-core/src/crypto/entropy.rs` | Algoritmo de entropia de Shannon e janela deslizante |
-| **Rust Crypto** | `crates/panadiga-core/src/crypto/toc.rs` | Parser da tabela de conteúdos de 48 bytes do contêiner FRM |
-| **Rust Crypto** | `crates/panadiga-core/src/crypto/codebook.rs` | Análise de frequência de blocos ECB de 64 bits e vazamento |
+| **Rust Crypto** | `crates/panadiga-crypto/src/mod.rs` | Fachada pública e interface de criptoanálise do firmware |
+| **Rust Crypto** | `crates/panadiga-crypto/src/types.rs` | Estruturas de entrada da TOC de 48B e relatórios de entropia |
+| **Rust Crypto** | `crates/panadiga-crypto/src/entropy.rs` | Algoritmo de entropia de Shannon e janela deslizante |
+| **Rust Crypto** | `crates/panadiga-crypto/src/toc/mod.rs` | Parser da tabela de conteúdos de 48 bytes do contêiner FRM |
+| **Rust Crypto** | `crates/panadiga-crypto/src/codebook/mod.rs` | Análise de frequência de blocos ECB de 64 bits e vazamento |
 | **Rust Pico** | `crates/panadiga-core/src/pico/mod.rs` | Fachada de controle e despacho de comandos da bancada RP2040/RP2350 |
 | **Rust Pico** | `crates/panadiga-core/src/pico/platforms.rs` | Definição de pinagem verificada do conector `P7501` e telemetria real |
 | **Rust Pico** | `crates/panadiga-core/src/pico/diagnostics.rs` | Interpretador de erros e códigos de diagnóstico Matsushita |

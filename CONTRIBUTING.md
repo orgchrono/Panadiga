@@ -32,7 +32,7 @@ These parameters are **physical invariants**, never user-editable runtime settin
 | :--- | :--- | :--- |
 | **`P7501` (`VEP79138` UART `115200 8N1`)** | `SW_UART` / `XRESET` (Open-Drain) / `UARTM2P_T` / `UARTP2M_T` operate at **3.3V LVTTL**. Pin 5 (`NSW5V` / `GP3`, `~5.15V` upstream via `D7510`) MUST stay **`Hi-Z Input` without pulls (NEVER push-pull)**. | Pico C11 firmware, `panadiga-core::settings` (`RESERVED_P7501_MAX_GPIO = 5`, rejecting `GP0..GP5` for user I/O), RAG `safety.rs` |
 | **Probe Power (`P7501 TO JIGU`)** | NEVER power the Raspberry Pi Pico from `P7501` Pin 1 (`< 10 mA` sense). Always power externally via USB or `VSYS`. | Bench schematic + RAG shield |
-| **Spansion `S29JL064H` (`IC5001` 8 MB)** | Physical bus `0x80000000..0x807FFFFF`. Critical boot IPL (`SA0..SA3`) is **permanently Read-Only (`E05`)**. Routine NVRAM surgery targets `SA134..SA141` (`0x807F0000..0x807FFFFF`, file offset `0x7F0000..0x7FFFFF`) via Copy-on-Write. | `panadiga-core::nvram`, Pico firmware, Tauri `E05` error taxonomy |
+| **Spansion `S29JL064H` (`IC5001` 8 MB)** | Physical bus `0x80000000..0x807FFFFF`. Critical boot IPL (`SA0..SA10`) is **permanently Read-Only (`E05`)**. Routine NVRAM surgery targets `SA134..SA141` (`0x807F0000..0x807FFFFF`, file offset `0x7F0000..0x7FFFFF`) via Copy-on-Write. | `panadiga-core::nvram`, Pico firmware, Tauri `E05` error taxonomy |
 | **HDD Forensics (`MEIHFS`)** | Raw disk dumps (`hdd_100.bin`) are immutable evidence: never mutate in place. `MBR` (`"SH"`) at LBA `0`, mirror at LBA `57344` (`28 MB`), journal at `8 MB` (LBA `16384`). Validate SHA-256 against manifests. | `panadiga-core::hdd` |
 
 ---

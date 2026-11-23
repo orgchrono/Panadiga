@@ -12,7 +12,7 @@ on:
         default: "v0.2.0"
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: release-${{ github.ref }}
@@ -238,7 +238,8 @@ jobs:
           } else {
               Compress-Archive -Path "$staging\*" -DestinationPath "${{ matrix.platform.archive_name }}" -CompressionLevel Optimal
           }
-          Get-FileHash -Algorithm SHA256 "${{ matrix.platform.archive_name }}" | Out-File -FilePath "${{ matrix.platform.archive_name }}.sha256"
+          $hash = (Get-FileHash -Algorithm SHA256 "${{ matrix.platform.archive_name }}").Hash.ToLowerInvariant()
+          [System.IO.File]::WriteAllText((Join-Path $PWD "${{ matrix.platform.archive_name }}.sha256"), "$hash  ${{ matrix.platform.archive_name }}`n")
 
       - name: Package Unix Artifacts (Linux / macOS)
         if: runner.os != 'Windows'
@@ -316,8 +317,9 @@ jobs:
               > "$deb_dir/DEBIAN/postinst"
             cp "$deb_dir/DEBIAN/postinst" "$deb_dir/DEBIAN/postrm"
             chmod 755 "$deb_dir/DEBIAN/postinst" "$deb_dir/DEBIAN/postrm"
-            DEB_VERSION="${GITHUB_REF_NAME#v}"
-            if [ -z "$DEB_VERSION" ] || [ "$DEB_VERSION" = "main" ] || [ "$DEB_VERSION" = "HEAD" ]; then
+            RAW_VERSION="${{ inputs.tag_name || github.ref_name }}"
+            DEB_VERSION="${RAW_VERSION#v}"
+            if ! printf '%s' "$DEB_VERSION" | grep -Eq '^[0-9][0-9A-Za-z.+~-]*$'; then
               DEB_VERSION="$(grep -m1 '^version = ' Cargo.toml | cut -d'"' -f2)"
             fi
             printf "Package: panadiga\nVersion: %s\nSection: utils\nPriority: optional\nArchitecture: amd64\nMaintainer: OrgChrono Engineering <support@orgchrono.com>\nDepends: libc6, libwebkit2gtk-4.1-0, libayatana-appindicator3-1 | libappindicator3-1\nDescription: Panasonic DIGA DMR-EH55 Forensic, NVRAM and Reverse Engineering Suite\n" "$DEB_VERSION" > "$deb_dir/DEBIAN/control"
@@ -453,6 +455,8 @@ jobs:
   # ==========================================================================
   publish-release:
     name: Publish Atomic GitHub Release
+    permissions:
+      contents: write
     if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.tag_name != '')
     needs: [pico-firmware, build-release, release-android-apk]
     runs-on: ubuntu-latest

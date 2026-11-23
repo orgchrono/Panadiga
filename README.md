@@ -32,7 +32,7 @@ While the primary laboratory focus of this project is the widely deployed **DMR-
 3. **Cryptography & Intellectual Property Protection:** The optical distribution container (`PANA_DVD.FRM`) and the executable HDD partitions are protected with proprietary 64-bit symmetric block ciphers operating in ECB mode, tied to CPRM (*Content Protection for Recordable Media*) and DivX DRM engines.
 4. **The Critical `U99` Error Vulnerability:** Channel presets, HDD volume mount states, and operating parameters are saved into the final 64 KB sector of the Flash memory, which emulates EEPROM wear-leveling (`EEMUL`). Cell degradation, unexpected power loss during disk write operations, or corrupted status words trigger startup validation panics. Consequently, the Matsushita kernel halts permanently with the fatal code **`U99`** on the front VFD vacuum fluorescent display, ignoring remote commands and deadlocking the optical tray mechanism.
 
-This repository establishes the **definitive forensic reverse engineering, physical unbricking, and laboratory diagnosis ecosystem** for the Panasonic DIGA lineup. It provides the high-performance Rust toolchain **`panadiga`**, a zero-latency desktop and mobile Android (`.apk`) bench GUI, C11/PIO firmware for **Raspberry Pi Pico (RP2040) and Pico 2 (RP2350)** with **Bluetooth Low Energy (BLE)** and USB-C OTG support, **32 cataloged factory service manuals and silicon datasheets**, **40 paired bilingual (`en-US` / `pt-BR`) engineering dossiers**, full **Ghidra MN103S disassembly/pseudocode** (`docs/pseudocode/`), and **28 deduplicated live `COM10` / bench logs** (`docs/debug_logs/`).
+This repository establishes the **definitive forensic reverse engineering, physical unbricking, and laboratory diagnosis ecosystem** for the Panasonic DIGA lineup. It provides the high-performance Rust toolchain **`panadiga`**, a zero-latency desktop and mobile Android (`.apk`) bench GUI, C11/PIO firmware for **Raspberry Pi Pico (RP2040) and Pico 2 (RP2350)** with **Bluetooth Low Energy (BLE)** and USB-C OTG support, **32 cataloged factory service manuals and silicon datasheets**, **41 paired bilingual (`en-US` / `pt-BR`) engineering dossiers**, full **Ghidra MN103S disassembly/pseudocode** (`docs/pseudocode/`), and **28 deduplicated live `COM10` / bench logs** (`docs/debug_logs/`).
 
 ---
 
@@ -46,7 +46,7 @@ flowchart TD
     subgraph SOFTWARE_SUITE["1 · Panadiga Software"]
         direction TB
         GUI["Desktop · Android GUI · Tauri 2.0 · React 19 · ExpressView · IR Commander"]
-        CLI["panadiga Core · Rust Edition 2024 (6 crates + profiles)"]
+        CLI["panadiga Core · Rust Edition 2024 (11 crates + profiles)"]
         GUI <--> |"IPC"| CLI
 
         P7501_HAL["P7501 UART HAL 115200 8N1 - PIO"]
@@ -116,15 +116,20 @@ flowchart TD
 ```text
 Panadiga/
 ├── package.json                                      <-- Unified Entrypoint (`npm start`, `npm run build:desktop`, `npm run validate`)
-├── Cargo.toml                                        <-- Master Rust Workspace Specification (2024 Edition, 6 crates)
+├── Cargo.toml                                        <-- Master Rust Workspace Specification (2024 Edition, 11 crates)
 ├── COMPLETE_AUDIT.md / AUDITORIA_COMPLETA.md         <-- Live Root Technical Audit (EN / PT-BR)
 ├── profiles/                                         <-- Data-Driven Hardware SSOT (89 DIGA models, 12 JSON Schemas Draft 2020-12)
-├── crates/                                           <-- Modular Multi-Crate Rust Architecture
-│   ├── panadiga-profiles/                            <-- Relational Chip/Board Registry & Deterministic `T0..T4` Capability Gate
-│   ├── panadiga-core/                                <-- Deterministic Core: NVRAM, `vault/`, `ingest/`, MEIHDFS + `hdd/capacity_patch/` (`5 GB..2 TB`), Crypto, RE (`prewrite_gate/`, `sig_locator/`, `verify_loop/`, `mn10300_emu/`, `eh55_bgo/`, `davis_probe/`, `region_compat/`, `tbc_appliance/`, `bgo_unbrick/`, `unbrick_sd_kit/`, `prog061_uart_monitor/`), `pico/panamon1/`, Hardware SSOT
+├── crates/                                           <-- Modular Multi-Crate Rust Architecture (acyclic layers)
+│   ├── panadiga-constants/                           <-- Physical/Flash/MMIO/BGO SSOT Constants & Trap/Geometry Rules
+│   ├── panadiga-ir/                                  <-- Compiled Hardware IR & Cross-Language Contract Hashes (`SSOT_CONTRACT_HASH`)
+│   ├── panadiga-crypto/                              <-- `.FRM` Containers, 64-bit ECB/Feistel, `keys.ukf`, Okumura LZSS & SHA-256
+│   ├── panadiga-bench/                               <-- Unidirectional Coalesced/Batched Bench Stream (`BenchSnapshot`, `BenchEvent`)
+│   ├── panadiga-vault/                               <-- Content-Addressed Forensic Vault, Atomic `manifest.json` & Append-Only Journal
+│   ├── panadiga-profiles/                            <-- Relational Chip/Board Registry, `traps/`, `forensic_atlas/` & `T0..T4` Gate
+│   ├── panadiga-core/                                <-- Deterministic Core: NVRAM, MEIHDFS + `hdd/capacity_patch/` (`5 GB..2 TB`), RE (`prewrite_gate/`, `sig_locator/`, `verify_loop/`, `mn10300_emu/`, `eh55_bgo/`, `davis_probe/`, `region_compat/`, `tbc_appliance/`, `bgo_unbrick/`, `unbrick_sd_kit/`, `prog061_uart_monitor/`, `symbol_index/`), `pico/panamon1/`, Hardware SSOT
 │   ├── panadiga-cli/                                 <-- `panadiga` / `panadiga-cli` Binary & Interactive TUI Workbench
 │   ├── panadiga-rag/                                 <-- Zero-Error 6-Layer RAG Engine + `HardwareSafetyValidator` + `FactCritic`
-│   └── panadiga-mcp/                                 <-- JSON-RPC 2.0 MCP Stdio Server Exposing All 25 Native Tools (18 Core + 7 Wave-3 Modules)
+│   └── panadiga-mcp/                                 <-- JSON-RPC 2.0 MCP Stdio Server Exposing All 26 Native Tools (18 Core + 8 Wave-3/Symbol Modules)
 ├── apps/desktop/                                     <-- Tauri 2.0 Desktop & Android GUI (`panadiga-desktop` + React 19 + Vite MVVM)
 │   ├── src-tauri/                                    <-- Tauri 2.0 Native Rust Commands, Android HAL Shims, Docs/Log IPC & GDB RSP Bridge
 │   ├── src/                                          <-- Strict MVVM (`views/ExpressView.tsx`, `views/IrCommanderView.tsx`, `components/express/`, `models/generated/`)
@@ -133,9 +138,9 @@ Panadiga/
 │   └── playwright.config.ts                          <-- End-to-End Browser Testing Configuration
 ├── docs/                                             <-- Official Technical Documentation Repository
 │   ├── INDEX.md                                      <-- Master Documentation Index & Gateway Portal
-│   ├── translation_pairs.json                        <-- Authoritative 40-Pair Bilingual Mapping (`pt-BR` <-> `en-US` + Root)
-│   ├── en-US/                                        <-- Canonical English Technical Dossiers (40 pairs)
-│   ├── pt-BR/                                        <-- Native Portuguese Technical Dossiers (40 pairs)
+│   ├── translation_pairs.json                        <-- Authoritative 41-Pair Bilingual Mapping (`pt-BR` <-> `en-US` + Root)
+│   ├── en-US/                                        <-- Canonical English Technical Dossiers (41 pairs)
+│   ├── pt-BR/                                        <-- Native Portuguese Technical Dossiers (41 pairs)
 │   ├── audits/                                       <-- Preserved Pre-Refactor Historical Audit Snapshots (`2026-11-11`)
 │   ├── pseudocode/                                   <-- Full MN103S Pseudocode, `??` Audit Report & Raw Ghidra Dumps (`raw/*.txt`)
 │   ├── debug_logs/                                   <-- 22 Deduplicated `COM10` / `P7501` / `PhysicalDrive1` Captures & `DOSSIE_COMPLETO_...txt`
@@ -581,7 +586,7 @@ All official documentation is cataloged and hierarchically structured in `manual
 
 ## 11. Direct Links to Audits, Technical Dossiers, Pseudocode & Logs (`docs/`)
 
-The repository maintains **40 synchronized bilingual (`en-US` / `pt-BR`) engineering dossiers** (indexed in [`docs/INDEX.md`](docs/INDEX.md) and [`docs/translation_pairs.json`](docs/translation_pairs.json)), root technical audits ([`COMPLETE_AUDIT.md`](COMPLETE_AUDIT.md) / [`AUDITORIA_COMPLETA.md`](AUDITORIA_COMPLETA.md)), historical audit snapshots ([`docs/audits/`](docs/audits/README.md)), full MN103S Ghidra pseudocode/disassembly ([`docs/pseudocode/`](docs/pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) & [`docs/pseudocode/raw/`](docs/pseudocode/raw/)), and 28 deduplicated live `COM10` / bench logs ([`docs/debug_logs/`](docs/debug_logs/README.md)):
+The repository maintains **41 synchronized bilingual (`en-US` / `pt-BR`) engineering dossiers** (indexed in [`docs/INDEX.md`](docs/INDEX.md) and [`docs/translation_pairs.json`](docs/translation_pairs.json)), root technical audits ([`COMPLETE_AUDIT.md`](COMPLETE_AUDIT.md) / [`AUDITORIA_COMPLETA.md`](AUDITORIA_COMPLETA.md)), historical audit snapshots ([`docs/audits/`](docs/audits/README.md)), full MN103S Ghidra pseudocode/disassembly ([`docs/pseudocode/`](docs/pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) & [`docs/pseudocode/raw/`](docs/pseudocode/raw/)), and 28 deduplicated live `COM10` / bench logs ([`docs/debug_logs/`](docs/debug_logs/README.md)):
 
 * 📋 **[Consolidated Root Technical Audit](COMPLETE_AUDIT.md)** ([Português: `AUDITORIA_COMPLETA.md`](AUDITORIA_COMPLETA.md))
   *Live repository audit (`crates/`, `firmware/pico-p7501/`, `scripts/`), rebuilt RP2040/RP2350/Unified UF2 hashes, Ghidra `??` root-cause summary, Python-to-Rust parity, and 9 Quality Gates.*
@@ -624,10 +629,11 @@ The repository maintains **40 synchronized bilingual (`en-US` / `pt-BR`) enginee
   *Parameterized `DIAGWATCH` / `PANARSP REGS` / `DRVPANA`, rebuilt RP2040/RP2350/Unified UF2 hashes, exhaustive MN103S `??` breakdown across 5 Ghidra binaries (`docs/pseudocode/`), live bench captures (`docs/debug_logs/`), root audit (`COMPLETE_AUDIT.md`), historical audits (`docs/audits/`), and `panadiga re` + `panadiga pico decode-log` parity.*
 * ⚡ **[Standby (`IC7501`), `TBUS`, `TW7501` &amp; Empirical Boot States](docs/en-US/STANDBY_IC7501_TBUS_TW7501_AND_BOOT_STATES_ARCHITECTURE.md)** ([Portuguese Mirror](docs/pt-BR/ARQUITETURA_STANDBY_IC7501_TBUS_TW7501_E_MODOS_BOOT.md))
   *Schematic power domains (`C7584`, `R7623`, `IC7502`, `IC7505`, `P59001`), `FUN_44005cd0` `255s` handshake, true `PLEASE WAIT -> U99` vs `HELLO -> U99` VFD states, `PREJIG WAKE` probe capture & 457-entry `error-lookup` / `bench-wizard` triage.*
-* 🗂️ **Full Bilingual Directory (`40` EN + `40` PT-BR pairs + `audits/` + `pseudocode/` + `debug_logs/`):** See [**`docs/INDEX.md`**](docs/INDEX.md).
+* 🗂️ **Full Bilingual Directory (`41` EN + `41` PT-BR pairs + `audits/` + `pseudocode/` + `debug_logs/`):** See [**`docs/INDEX.md`**](docs/INDEX.md).
 * 📦 **Hardware Profiles v2 Audit (`89` Models, `T0` -> `T4`):** [**`DIGA_LINEUP_HARDWARE_PROFILES_CATALOG_AND_AUDIT.md`**](docs/en-US/DIGA_LINEUP_HARDWARE_PROFILES_CATALOG_AND_AUDIT.md) ([PT-BR](docs/pt-BR/CATALOGO_E_AUDITORIA_PERFIS_HARDWARE_LINHA_DIGA.md))
 * 🔬 **EH55 Unbrick Breakthrough (BGO Cycle 2, Direct `PANAMON1>`, `DAVIS`/`CH1` & `PAL-M` Region):** [**`EH55_UNBRICK_BREAKTHROUGH_BGO_CH1_DAVIS_AND_REGION.md`**](docs/en-US/EH55_UNBRICK_BREAKTHROUGH_BGO_CH1_DAVIS_AND_REGION.md) ([PT-BR](docs/pt-BR/HISTORICO_UNBRICK_EH55_BGO_CH1_DAVIS_E_REGIAO.md))
 * 🚀 **What's Next: End-to-End New Device Onboarding (`T0` -> `T4` & PR Checklist):** [**`WHATS_NEXT_NEW_DEVICE_ONBOARDING.md`**](docs/en-US/WHATS_NEXT_NEW_DEVICE_ONBOARDING.md) ([PT-BR](docs/pt-BR/WHATS_NEXT_ONBOARDING_NOVOS_APARELHOS.md))
+* 🧭 **Anti-Trap BGO Geometry Verification & 100%-Disassembled Ghidra Forensic Atlas (`SSOT`):** [**`ANTI_TRAP_BGO_GEOMETRY_AND_SSOT_FORENSIC_ATLAS_GUIDE.md`**](docs/en-US/ANTI_TRAP_BGO_GEOMETRY_AND_SSOT_FORENSIC_ATLAS_GUIDE.md) ([PT-BR](docs/pt-BR/GUIA_ANTI_ARMADILHAS_GEOMETRIA_BGO_E_ATLAS_FORENSE_SSOT.md))
 
 ---
 
@@ -650,12 +656,12 @@ The Panadiga engineering ecosystem enforces a strict **9 Quality Gates** anti-re
        Layer 4: Desktop UI Unit & Component Tests (Vitest + React Testing Library — 128 tests / 39 files)
        Layer 3: C11 Pico Firmware Host Tests (GCC/MSVC Host Harness + ARM Check — 38 tests / 4 modules)
        Layer 2: Python Scripts & RE Pytest Verification (32 Pytest tests / 6 files + mypy --strict 46 files)
-       Layer 1: Native Rust Workspace Tests (Cargo Test — 337 tests across 6 crates: profiles/core/cli/desktop/mcp/rag)
+       Layer 1: Native Rust Workspace Tests (Cargo Test across 11 crates: constants/ir/crypto/bench/vault/profiles/core/cli/desktop/mcp/rag)
 ```
 
 ### 13.1. The 9 Active Quality Gates
 
-1. **Rust Cargo Check & Test Gate:** Verifies formatting (`cargo fmt`), strict clippy (`-D warnings`), and all **337** workspace unit and integration tests across `panadiga-profiles`, `panadiga-core`, `panadiga-cli`, `panadiga-desktop`, `panadiga-mcp`, and `panadiga-rag`.
+1. **Rust Cargo Check & Test Gate:** Verifies formatting (`cargo fmt`), strict clippy (`-D warnings`), and workspace unit and integration tests across all 11 crates (`panadiga-constants`, `panadiga-ir`, `panadiga-crypto`, `panadiga-bench`, `panadiga-vault`, `panadiga-profiles`, `panadiga-core`, `panadiga-cli`, `panadiga-desktop`, `panadiga-mcp`, and `panadiga-rag`).
 2. **TypeScript Strict Type-Check Gate:** `oxlint --deny-warnings` + `tsc --noEmit` verifies strict frontend types with zero `any` leaks.
 3. **Frontend Vitest Unit Suite:** Covers ViewModels, Express Rescue pipelines, binary/doc link resolvers, React components, and algebraic state transitions across **128** tests in **39** files under `apps/desktop/src/**/*.test.{ts,tsx}`.
 4. **Copy/Paste Detector (`jscpd`):** Enforces 0.00% code duplication threshold.
@@ -691,7 +697,7 @@ The project configures 6 specialized subagents for autonomous engineering assist
 
 ### 14.2. Native Rust Model Context Protocol (MCP) Server (`panadiga mcp`)
 
-A standardized JSON-RPC 2.0 MCP stdio server (`panadiga mcp`) exposes **25 native tools** for AI agents (18 core tools + 7 Wave-3 `panamon1`/`eh55_bgo`/`davis_probe`/`tv_standard`/`tbc_appliance`/`eh55_flash`/`profiles` modules):
+A standardized JSON-RPC 2.0 MCP stdio server (`panadiga mcp`) exposes **26 native tools** for AI agents (18 core tools + 8 Wave-3/Symbol `panamon1`/`eh55_bgo`/`davis_probe`/`tv_standard`/`tbc_appliance`/`eh55_flash`/`profiles`/`panadiga_symbol_lookup` modules):
 
 * `panadiga_memory_map`: Returns the official physical memory map of the Matsushita AM34 / MN103S (`VEP79138`) architecture.
 * `panadiga_safety_check`: Validates bench voltages (`<= 3.3V` LVTTL / `3.35V` ceiling) and memory write ranges.

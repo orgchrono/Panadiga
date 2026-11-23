@@ -110,7 +110,7 @@ Substituição definitiva de booleanos soltos por máquinas de estado fechadas (
 
 ### Objetivo Arquitetural
 
-Garantir que argumentos de linha de comando sejam fortemente validados via Clap, que handlers atuem de forma determinística e que nenhuma constante física ou caminho de arquivo seja hardcoded fora do SSOT (`crates/panadiga-core/src/constants/`).
+Garantir que argumentos de linha de comando sejam fortemente validados via Clap, que handlers atuem de forma determinística e que nenhuma constante física ou caminho de arquivo seja hardcoded fora do SSOT (`crates/panadiga-constants/src/constants/`).
 
 ### Suíte de Testes Implementada
 

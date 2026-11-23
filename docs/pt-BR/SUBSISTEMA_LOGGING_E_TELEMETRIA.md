@@ -149,7 +149,7 @@ Foram migradas **365 chamadas brutas** para o subsistema unificado:
 
 | Componente | Arquivo | Total de Chamadas |
 | :--- | :--- | :--- |
-| **Criptoanálise & CPRM** | `src/crypto.rs` *(pré-workspace -> [`crates/panadiga-core/src/crypto/`](../../crates/panadiga-core/src/crypto/mod.rs))* | 119 chamadas |
+| **Criptoanálise & CPRM** | `src/crypto.rs` *(pré-workspace -> [`crates/panadiga-crypto/src/`](../../crates/panadiga-crypto/src/mod.rs))* | 119 chamadas |
 | **Storage Forensics & MEIHFS** | `src/hdd.rs` *(pré-workspace -> [`crates/panadiga-core/src/hdd/`](../../crates/panadiga-core/src/hdd/mod.rs))* | 91 chamadas |
 | **CLI & Dispatcher** | `src/main.rs` *(pré-workspace -> [`crates/panadiga-cli/src/main.rs`](../../crates/panadiga-cli/src/main.rs))* | 56 chamadas |
 | **Cirurgia de NVRAM Spansion** | `src/nvram.rs` *(pré-workspace -> [`crates/panadiga-core/src/nvram.rs`](../../crates/panadiga-core/src/nvram.rs))* | 34 chamadas |

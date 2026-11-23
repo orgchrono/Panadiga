@@ -1,0 +1,128 @@
+=== BOOTTRACE: window=60000ms boot=1 hold=0ms sticky=NO no_xrst=NO (8N1 @ 115200) ===
+[BOOTTRACE +  10ms] DDR CHECK: OK
+[BOOTTRACE +  19ms] Chip select = 1
+[BOOTTRACE +  20ms] F/E Address = 0x90202000 , Drive(compress) Size = 0xACC50
+[BOOTTRACE +  26ms] uncompress dst=90202000 len=160000 src=84080040 len=acc01
+[BOOTTRACE + 774ms] HEADER:5627DD54, DECOMP:5627DD54
+[BOOTTRACE + 777ms] F/E reset release finish ...
+[BOOTTRACE + 780ms] ***** Loader ver0.61 [06/03/06] *****
+[BOOTTRACE + 783ms] ***** normal mode *****
+[BOOTTRACE + 800ms] *** RTSC Initialize ***
+[BOOTTRACE +3528ms] [RTSD] ATAPI Software Reset 
+[BOOTTRACE +3541ms] [RTSD] HDD spin-up error (80000404)
+[BOOTTRACE +3544ms] miniboot : system assert!!
+[BOOTTRACE +3547ms] [RTSD] === IDE HOST ERROR === ( E8000000 )
+[BOOTTRACE +3550ms] *** ATAPI DEVICE ERROR
+[BOOTTRACE +3553ms] CDB  [FF EC 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +3557ms] Reg[00 00 00 00 00 00 00 : Err SecC SecN CylL CylH D/H Status] 
+[BOOTTRACE +3562ms] H_STAT [E8] T_STAT [0]
+[BOOTTRACE +3564ms] [RTSD] SRST Command Set
+[BOOTTRACE +3567ms] [RTSD] Reset Failed !! (80000407)
+[BOOTTRACE +3580ms] [RTSD] HDD spin-up error (80000404)
+[BOOTTRACE +3583ms] miniboot : system assert!!
+[BOOTTRACE +3586ms] [RTSD] === IDE HOST ERROR === ( E8000000 )
+[BOOTTRACE +3590ms] *** ATAPI DEVICE ERROR
+[BOOTTRACE +3592ms] CDB  [FF EC 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +3596ms] Reg[00 00 00 00 00 00 00 : Err SecC SecN CylL CylH D/H Status] 
+[BOOTTRACE +3601ms] H_STAT [E8] T_STAT [0]
+[BOOTTRACE +3604ms] [RTSD] SRST Command Set
+[BOOTTRACE +3606ms] [RTSD] Reset Failed !! (80000407)
+[BOOTTRACE +3619ms] [RTSD] HDD spin-up error (80000404)
+[BOOTTRACE +3622ms] miniboot : system assert!!
+[BOOTTRACE +3625ms] [RTSD] === IDE HOST ERROR === ( E8000000 )
+[BOOTTRACE +3629ms] *** ATAPI DEVICE ERROR
+[BOOTTRACE +3631ms] CDB  [FF EC 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +3635ms] Reg[00 00 00 00 00 00 00 : Err SecC SecN CylL CylH D/H Status] 
+[BOOTTRACE +3640ms] H_STAT [E8] T_STAT [0]
+[BOOTTRACE +3643ms] [RTSD] SRST Command Set
+[BOOTTRACE +3645ms] [RTSD] Reset Failed !! (80000407)
+[BOOTTRACE +3648ms] HDD_MAX_LBA get failed[0xE8000000].
+[BOOTTRACE +3651ms] mainsoft data is invalid, so set update flag.
+[BOOTTRACE +3672ms] [nfrom] file_no[17],skip(0),non_skip(1),erase(0),new_write(0).
+[BOOTTRACE +3687ms] !!! start fmu to read & exec fvu. !!!
+[BOOTTRACE +3691ms] wait 1 second.
+[BOOTTRACE +4693ms] *** timer correspond initialize ***
+[BOOTTRACE +4698ms] startup reason = [41]
+[BOOTTRACE +4703ms] Main hung-up time changed 255[s].
+[BOOTTRACE +4717ms] Read fvu program from Update-Disk to 0x90400000.
+[BOOTTRACE +4722ms] SD card check start
+[BOOTTRACE +4724ms] SD init start...
+[BOOTTRACE +4816ms] [SDCD] sdcd_insrmv_check:SD Card inserted 
+[BOOTTRACE +5073ms] [SDCD] === This Card Spec ==== 
+[BOOTTRACE +5076ms] .Card type:2(condition:3) wp:0
+[BOOTTRACE +5079ms] .capacity:3c4000[LBA](2021654528Byte) . transfer speed:25000[Kbps]
+[BOOTTRACE +5085ms] .RCA:2 . Bus Width:4(current) 4(support)
+[BOOTTRACE +5088ms] .Multi Max Block Len Read:2[SECT] / Write:2[SECT]
+[BOOTTRACE +5093ms] SD = 0x3C4000[LBA]
+[BOOTTRACE +5095ms] ... SD init end
+[BOOTTRACE +5102ms] FAT Mount ID = 0x1
+[BOOTTRACE +5107ms] FAT Open Old File ID = 0xC8
+[BOOTTRACE +5109ms] treat as SD.
+[BOOTTRACE +5128ms] File ID[0xC8] seek to 0xB1800.
+[BOOTTRACE +5197ms] File ID[0xC8] read to 0x90400000(size=0x40000).
+[BOOTTRACE +5202ms] cheking for fvu program check-sum[0x216507A].
+[BOOTTRACE +5287ms] [nfrom] file_no[17],skip(0),non_skip(1),erase(0),new_write(0).
+[BOOTTRACE +5302ms] success to read fvu program from Update-Disc.
+[BOOTTRACE +5337ms] [RTSD] Device Reset Occurred(0x62900) 
+[BOOTTRACE +5341ms] X(80062900)X(80023a00)X(80023a00)X(80023a00)
+[BOOTTRACE +5348ms] *** start fvu ***
+[BOOTTRACE +5356ms] ***** Fvu ver0.61 [05/11/01] *****
+[BOOTTRACE +5374ms] *** RTSC Initialize ***
+[BOOTTRACE +8563ms] [RTSD] ATAPI Software Reset 
+[BOOTTRACE +8566ms] [STAGE2] SATA HDD boot ('F'->FVU)...
+[BOOTTRACE +9070ms] SD init start...
+[BOOTTRACE +9162ms] [SDCD] sdcd_insrmv_check:SD Card inserted 
+[BOOTTRACE +9233ms] [SDCD] === This Card Spec ==== 
+[BOOTTRACE +9235ms] .Card type:2(condition:3) wp:0
+[BOOTTRACE +9238ms] .capacity:3c4000[LBA](2021654528Byte) . transfer speed:25000[Kbps]
+[BOOTTRACE +9244ms] .RCA:2 . Bus Width:4(current) 4(support)
+[BOOTTRACE +9248ms] .Multi Max Block Len Read:2[SECT] / Write:2[SECT]
+[BOOTTRACE +9253ms] SD = 0x3C4000[LBA]
+[BOOTTRACE +9254ms] ... SD init end
+[BOOTTRACE +9259ms] [RTSD] HDD already spin-up 
+[BOOTTRACE +9293ms] [RTSD] HDD Auto Spin up Mode 
+[BOOTTRACE +9300ms] [STAGE2] HDD MAX LBA=0x1D1C5970
+[BOOTTRACE +11210ms] uncompress dst=57000000 len=cce48c src=94000040 len=644f8f
+[BOOTTRACE +15124ms] HEADER:E6BE3513, DECOMP:E6BE3513
+[BOOTTRACE +15127ms] [STAGE2] Boot MAIN @ 0x57000000
+[BOOTTRACE +15520ms] [nfrom] BGO driver init failed[1].
+[BOOTTRACE +15524ms] System assert!! File:src/nfd_api.c Line:228 Err:0
+[BOOTTRACE +15529ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15534ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15537ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15542ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15546ms] [nfrom] Error. NFD_Init() not call.
+[BOOTTRACE +15550ms] System assert!! File:src/nfd_api.c Line:332 Err:0
+[BOOTTRACE +15554ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15559ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15563ms] System assert!! File:src/nfd_api.c Line:967 Err:0
+[BOOTTRACE +15567ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15572ms] [nfrom] Error. NFD_Init() not call.
+[BOOTTRACE +15575ms] System assert!! File:src/nfd_api.c Line:332 Err:0
+[BOOTTRACE +15580ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15585ms] [nfrom] Error. NFD_Init() not call.
+[BOOTTRACE +15588ms] System assert!! File:src/nfd_api.c Line:332 Err:0
+[BOOTTRACE +15593ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15598ms] [nfrom] Error. NFD_Init() not call.
+[BOOTTRACE +15601ms] System assert!! File:src/nfd_api.c Line:332 Err:0
+[BOOTTRACE +15606ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15611ms] System assert!! File:src/sys_rsv_set.c Line:1216 Err:0
+[BOOTTRACE +15616ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15621ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15624ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15629ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15633ms] [nfrom] Error. NFD_Init() not call.
+[BOOTTRACE +15637ms] System assert!! File:src/nfd_api.c Line:332 Err:0
+[BOOTTRACE +15642ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15646ms] System assert!! File:src/sys_rsv_set.c Line:1149 Err:0
+[BOOTTRACE +15651ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15656ms] [nfrom] Error. NFD_Init() not call.
+[BOOTTRACE +15660ms] System assert!! File:src/nfd_api.c Line:332 Err:0
+[BOOTTRACE +15664ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15669ms] System assert!! File:src/sys_rsv_set.c Line:1030 Err:0
+[BOOTTRACE +15674ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE] UART: bytes=4835 first_byte=10441us ferr=0 perr=0 ovf=NO | SW_rel=NO
+[BOOTTRACE] ADC0_SWUART: min=3.24V max=3.30V (low=0 hiz=3.24..3.30V n=5999) | CtrlEdges: NSW5V=0 TXD=0 XRESET=0 (logged=0)
+BOOTTRACE: OK
+@P7501_RES cmd=BOOTTRACE status=OK code=0 elapsed_us=60021436
+PANADIGA> 

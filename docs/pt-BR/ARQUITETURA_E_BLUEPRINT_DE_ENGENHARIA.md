@@ -100,7 +100,7 @@ A depuração in-circuit do núcleo AM34 através do conector P7501 exige taxa d
 
 ### 2.4 SSOT Data-Driven, Codegen Multi-Alvo e Zero Hardcode
 - **Perfis Relacionais & Portão `T0..T4` (`panadiga-profiles` + `profiles/`):** A crate dedicada [`crates/panadiga-profiles/`](../../crates/panadiga-profiles/) modela **89 gravadores DIGA** em 10 famílias relacionais (`soc_cores`, `socs`, `boards`, `flash_chips`, `eeprom_chips`, `firmware_trains`, `nor_layouts`, `media_formats`, `models`) validadas contra **12 JSON Schemas** Draft 2020-12 (`profiles/schema/`), gerando código SSOT sincronizado para TypeScript ([`apps/desktop/src/models/generated/`](../../apps/desktop/src/models/generated/)) e C11 ([`firmware/pico-p7501/generated/p7501_ssot.h`](../../firmware/pico-p7501/generated/p7501_ssot.h)).
-- **Constantes Canônicas & Catálogo Visual:** O módulo [`crates/panadiga-core/src/constants/`](../../crates/panadiga-core/src/constants/) e [`hardware_catalog.json`](../../crates/panadiga-core/src/ssot/hardware_catalog.json) são a única autoridade para mapas AM34, regiões BGO e pinagens `P7501`.
+- **Constantes Canônicas & Catálogo Visual:** O módulo [`crates/panadiga-constants/src/constants/`](../../crates/panadiga-constants/src/constants/) e [`hardware_catalog.json`](../../crates/panadiga-core/src/ssot/hardware_catalog.json) são a única autoridade para mapas AM34, regiões BGO e pinagens `P7501`.
 - **Tolerância Zero a Clones (`jscpd`):** Toda a codebase mantém **0.00% de duplicação** (`threshold: 0`).
 
 ### 2.5 Cofre Forense, Emulador `Mn103Vm` e Isolamento de Logging

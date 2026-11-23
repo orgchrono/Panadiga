@@ -3,7 +3,7 @@
 
 # INDEPENDENT FORENSIC AUDIT OPINION & CRYPTANALYSIS DELIBERATION
 **Target:** Optical Ecosystem (`PANA_DVD.FRM`) and MEIHDFS Storage (`hdd_100.bin`) — Panasonic DIGA DMR-EH55  
-**Audited Single Source of Truth (SSOT):** [`crates/panadiga-core/src/constants.rs`](../../crates/panadiga-core/src/constants.rs), [`crates/panadiga-core/src/crypto/toc.rs`](../../crates/panadiga-core/src/crypto/toc.rs), [`crates/panadiga-core/src/crypto/codebook.rs`](../../crates/panadiga-core/src/crypto/codebook.rs), and [`crates/panadiga-core/src/hdd/meihdfs.rs`](../../crates/panadiga-core/src/hdd/meihdfs.rs).
+**Audited Single Source of Truth (SSOT):** [`crates/panadiga-constants/src/lib.rs`](../../crates/panadiga-constants/src/lib.rs), [`crates/panadiga-crypto/src/toc/mod.rs`](../../crates/panadiga-crypto/src/toc/mod.rs), [`crates/panadiga-crypto/src/codebook/mod.rs`](../../crates/panadiga-crypto/src/codebook/mod.rs), and [`crates/panadiga-core/src/hdd/meihdfs.rs`](../../crates/panadiga-core/src/hdd/meihdfs.rs).
 
 ---
 

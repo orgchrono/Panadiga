@@ -1,52 +1,48 @@
 ---
 name: panadiga-pico-flashing
 description: >-
-  Compilação e gravação do firmware C11 P7501 Async UART (115200 8N1) no Raspberry Pi Pico (RP2040/RP2350) para bancada do Panasonic DMR-EH55.
-  Use esta skill para construir UF2 dual-target, gravar em modo BOOTSEL, escolher portas seriais por SO ou operar comandos da sonda P7501.
+  Desenvolvimento modular em C11 (firmware/pico-p7501/ em 9 pastas), arquitetura Zero-Gadget
+  (256 KiB P0_FW_RO, PIO 8x, Pico W/2W BLE NUS), compilação dual-target RP2040/RP2350 com
+  auto-fatiamento UF2 (INFO_UF2.TXT), gravação via BOOTSEL ou pico flash, testes host C11
+  (53 arquivos, 4 suítes) e operação da sonda P7501. Use ao modificar o firmware C11 ou gravar o Pico.
 ---
 
-# Firmware & Operação da Sonda Raspberry Pi Pico (`P7501` Async UART)
+# Firmware C11 & Operação da Sonda Pico (`RP2040` / `RP2350` `P7501`)
 
-Esta skill orienta a compilação do firmware C11 modular (`firmware/pico-p7501/`), a gravação `.uf2` em **RP2040** / **RP2350** e a operação segura na porta de serviço **`P7501`** (`115200 8N1`) nos sistemas **Windows**, **Linux** e **macOS**.
+Esta skill governa o desenvolvimento em C11 (`firmware/pico-p7501/`), a compilação e merge de `.uf2` dual-target e a operação/seleção de portas da sonda `P7501` (`115200 8N1`).
 
-## 1. Invariantes Elétricas Obrigatórias (`P7501` / Placa `VEP79138`)
-- **NUNCA exceda 3.3V LVTTL** nos pinos do SoC AM34.
-- **`GP3` (`P7501` Pino 5 `NSW5V`, ~`5.15V` upstream via `D7510`)**: SEMPRE `Hi-Z Input` sem pulls — **NUNCA dirigir push-pull**.
-- **`GP5` (`P7501` Pino 2 `XRESET`)**: estritamente **Open-Drain** (`0V` ou `Hi-Z`).
-- **`GP26` (`P7501` Pino 1 `SW_UART`)**: sinal/sense (`< 10 mA`). **NUNCA alimente o Pico pelo conector `P7501`**; use USB ou `VSYS`.
-- **Bloqueio Letal DAVIS**: jamais leia ou escreva no registrador `0xC000_100C`.
+## 1. Quando Usar & Handoffs
+- Ative ao editar módulos C11/PIO da sonda, rodar testes host C11, compilar `panasonic_p7501_uart_unified.uf2` ou gravar o Raspberry Pi Pico / Pico 2 / Pico W.
+- Para protocolos de bancada ao vivo, isolamento SMPS/ADuM, física `Q7510`/`Q7514` e `DAVIS`, use `.agents/skills/panadiga-bench-operations/SKILL.md`.
+- Para automação em bancada e modo `--mock`, use `.agents/skills/panadiga-bench-automation-and-headless/SKILL.md`.
+- Mapa das 9 pastas C11, 3 PIOs, comandos da sonda e testes host em [pico-c11-module-architecture.md](./references/pico-c11-module-architecture.md).
 
-## 2. Compilação Dual-Target (`RP2040` + `RP2350` + Unified UF2)
-Requer `arm-none-eabi-gcc`, `cmake`, `ninja` e `PICO_SDK_PATH` (2.1.1+):
+## 2. Invariantes Elétricas & de Arquitetura Pico
+1. **Zero-Gadget na Sonda (`P0_FW_RO = 256 KiB`):** Nenhum display, buzzer ou botão extra conectado ao Pico; smartphone (USB-OTG/BLE NUS) e desktop atuam como interface.
+2. **Pinos Reservados `P7501` (`GP0..GP5` + `GP26`):** `GP3` (`NSW5V`) sempre `Hi-Z Input` sem pulls; `GP5` (`XRESET`) sempre Open-Drain; `GP26` (`SW_UART`) retorna a `adc_gpio_init` após `ISOLATE`; nunca alimentar Pico por `P7501`; GPIO de IR livre apenas em `GP6..GP28` fora da faixa reservada (`RESERVED_P7501_MAX_GPIO = 5`).
+3. **SSOT Gerada:** Não edite `firmware/pico-p7501/generated/p7501_ssot_tables.*` à mão; regenere com `panadiga ssot export-all`.
+4. **C11 Estrito (`-Wall -Wextra -Werror` / `/W4 /WX`):** Todo módulo novo deve compilar limpo tanto para host (`-DPICO_HOST_TEST=1`) quanto para ARM (`RP2040`/`RP2350`).
+
+## 3. Compilação Dual-Target, Merge & Gravação UF2
 ```bash
-# Cross-platform via Python DAG (Windows, Linux, macOS):
+# Compilar RP2040 + RP2350 + UF2 unificado (requer arm-none-eabi-gcc, cmake, ninja, PICO_SDK_PATH >= 2.1.1)
 python scripts/build.py --pico
-# ou via launchers nativos:
-# Windows: .\build.cmd --pico
-# Linux / macOS: ./build.sh --pico
+# ou: npm run build:pico | .\build.cmd --pico | ./build.sh --pico
 
-# Merge manual para UF2 universal RP2350-E10 compatível:
-cargo run -p panadiga-cli -- pico merge-uf2 --help
+# Merge manual de UF2 universal (compatível com errata RP2350-E10 via INFO_UF2.TXT):
+cargo run -q -p panadiga-cli -- pico merge-uf2 --rp2040 <RP2040.uf2> --rp2350 <RP2350.uf2> -o <UNIFIED.uf2>
+
+# Gravação automática (toca CDC 1200-baud ou usa drive RPI-RP2 / RP2350 em BOOTSEL):
+cargo run -q -p panadiga-cli -- pico flash [-p COM10] [-f crates/panadiga-core/src/pico/firmware_bins/panasonic_p7501_uart_unified.uf2]
 ```
-Binários pré-compilados ficam em `crates/panadiga-core/src/pico/firmware_bins/panasonic_p7501_uart_unified.uf2` (e variantes `_rp2040.uf2` / `_rp2350.uf2`).
+- **Montagem BOOTSEL por SO:** Windows `D:\..Z:\`; Linux `/media`, `/run/media/$USER/`, `/mnt`; macOS `/Volumes/RPI-RP2` ou `/Volumes/RP2350`.
+- **Portas Seriais por SO:** Windows `COM*`; Linux `/dev/ttyACM*` (grupo `dialout`/`uucp`); macOS `/dev/cu.usbmodem*`.
 
-## 3. Gravação Automática ou BOOTSEL por Sistema Operacional
-```bash
-cargo run -p panadiga-cli -- pico flash
-```
-Caso não haja firmware anterior rodando CDC 1200-baud, segure o botão **BOOTSEL** ao conectar o USB (`RPI-RP2` / `RP2350`) e copie o `.uf2`:
-- **Windows**: detectado automaticamente de `D:\` a `Z:\` (`Copy-Item "...\panasonic_p7501_uart_unified.uf2" "E:\"`).
-- **Linux**: detectado em `/media`, `/run/media`, `/mnt`, `$XDG_RUNTIME_DIR/media` e `/proc/mounts` (`cp .../panasonic_p7501_uart_unified.uf2 /run/media/$USER/RPI-RP2/`).
-- **macOS**: detectado em `/Volumes/RPI-RP2` ou `/Volumes/RP2350` (`cp .../panasonic_p7501_uart_unified.uf2 /Volumes/RPI-RP2/`).
+## 4. Subcomandos CLI Reais (`panadiga pico`)
+- Descoberta & saúde: `list`, `ping -p <PORT>`, `status -p <PORT>`, `dcsr -p <PORT>`
+- Controle & captura: `breakin -p <PORT> -m <0..3>` (**flag `-m`/`--mode`**), `dump -p <PORT> -a <HEX> -w <1..16384> -o <BIN>`, `capture-nor -p <PORT> --slice <full|bgo|nvram|loader|custom> -o <BIN>`, `davis-probe -p <PORT> --drive <master|slave|both>`
+- Depuração & automação: `gdb-bridge -p <PORT> --target-mode <ocd|panamon1|panarsp>`, `bench-wizard -p <PORT> --profile <passive|prejig|diagwatch|jig|all>`, `ab-boot`, `rsp-codec`, `validate-bench-cmd`, `parse-diag`, `decode-log`, `error-lookup`
 
-## 4. Portas Seriais & Comandos de Bancada por SO
-- **Identificador de Porta**:
-  - **Windows**: `COM*` (ex.: `COM5`, `COM10`)
-  - **Linux**: `/dev/ttyACM*` (requer usuário no grupo `dialout` ou `uucp`)
-  - **macOS**: `/dev/cu.usbmodem*` (ex.: `/dev/cu.usbmodem101`)
-- **Principais Subcomandos CLI (`panadiga pico`)**:
-  - `list`, `ping --port <PORT>`, `status --port <PORT>`, `dcsr --port <PORT>`
-  - `breakin --port <PORT> --profile <0..3>`, `dump`, `gdb-bridge`
-  - `capture-nor --port <PORT> --mode <full|bgo|nvram|loader|custom>` (via `PANAMON1>`)
-  - `davis-probe --port <PORT>` (probe seguro CH0/CH1/0xEC sem tocar `0xC000_100C`)
-  - `decode-log`, `parse-diag`, `error-lookup <QUERY>`, `bench-wizard`
+## 5. Daqui pra Frente & Verificação
+- **Expansão C11:** Mantenha novos drivers em subpastas temáticas (`diag/`, `uart/`, `flash/`, `gdb/`), sem inchamento de `cli/`, respeitando `256 KiB` em `P0_FW_RO` e adicionando testes host em `firmware/pico-p7501/tests/`.
+- **Verificação:** `python scripts/validate.py` Gate 8 compila os `53` arquivos C11 e roda os 4 executáveis de teste host + checagem ARM (quando `PICO_SDK_PATH` estiver presente).

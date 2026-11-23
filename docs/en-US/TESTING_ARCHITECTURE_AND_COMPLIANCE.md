@@ -110,7 +110,7 @@ Eliminate scattered booleans in favor of closed finite state machines (ADTs / Di
 
 ### Architectural Goal
 
-Guarantee strong CLI argument parsing via Clap, deterministic handler routing, and zero magic numbers or file paths hardcoded outside SSOT (`crates/panadiga-core/src/constants/`).
+Guarantee strong CLI argument parsing via Clap, deterministic handler routing, and zero magic numbers or file paths hardcoded outside SSOT (`crates/panadiga-constants/src/constants/`).
 
 ### Implemented Test Suite
 

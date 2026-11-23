@@ -24,7 +24,7 @@ The protection layer used in `PANA_DVD.FRM` and the HDD firmware partitions (`ME
 
 ### 1.2 Key Reconstruction, Key Schedule, and Feistel Round
 
-1. **7-Byte Master Key Reconstruction (`reconstruct_master_key_7b` in [`crates/panadiga-core/src/crypto/feistel.rs`](../../crates/panadiga-core/src/crypto/feistel.rs)):**
+1. **7-Byte Master Key Reconstruction (`reconstruct_master_key_7b` in [`crates/panadiga-crypto/src/feistel.rs`](../../crates/panadiga-crypto/src/feistel.rs)):**
    - For `i` in `0..7`: `master[i] = p2[i] ^ p1[i]`.
    - Then: `master[1] ^= p2[7]` and `master[4] ^= p2[7]`.
 2. **F-Round Function (`FUN_44012191` / `feistel_f_round`):**
@@ -80,11 +80,11 @@ Each entry also stores `fvu_checksum_u32` (byte sum of the module at `+0x24`), `
 
 Initial Python prototypes were ported to focused Rust modules inside crate `panadiga-core`:
 
-- [`crates/panadiga-core/src/crypto/feistel.rs`](../../crates/panadiga-core/src/crypto/feistel.rs) — master key, `feistel_f_round`, `derive_round_key_32b`, ECB block/buffer cipher, and `adler32_panasonic_strided`.
-- [`crates/panadiga-core/src/crypto/codec.rs`](../../crates/panadiga-core/src/crypto/codec.rs) — binary helpers (`pad_to_block`, LE read/write, and ASCII strings).
-- [`crates/panadiga-core/src/crypto/extrhead.rs`](../../crates/panadiga-core/src/crypto/extrhead.rs) — parser, `pack_extrhead`, and `unpack_extrhead` with `ExtrheadCryptMode::{Auto, Main, Drv, Plain}`.
-- [`crates/panadiga-core/src/crypto/frm_pack.rs`](../../crates/panadiga-core/src/crypto/frm_pack.rs) — `build_digadiag_frm` and `pack_frm` (`FrmContainerMode::{Dvd, Sd}`).
-- [`crates/panadiga-core/src/crypto/toc.rs`](../../crates/panadiga-core/src/crypto/toc.rs) — structural analysis, `decrypt_and_parse_frm_toc`, `parse_sd_frm_toc`, and `dump_toc`.
+- [`crates/panadiga-crypto/src/feistel.rs`](../../crates/panadiga-crypto/src/feistel.rs) — master key, `feistel_f_round`, `derive_round_key_32b`, ECB block/buffer cipher, and `adler32_panasonic_strided`.
+- [`crates/panadiga-crypto/src/codec.rs`](../../crates/panadiga-crypto/src/codec.rs) — binary helpers (`pad_to_block`, LE read/write, and ASCII strings).
+- [`crates/panadiga-crypto/src/extrhead.rs`](../../crates/panadiga-crypto/src/extrhead.rs) — parser, `pack_extrhead`, and `unpack_extrhead` with `ExtrheadCryptMode::{Auto, Main, Drv, Plain}`.
+- [`crates/panadiga-crypto/src/frm_pack.rs`](../../crates/panadiga-crypto/src/frm_pack.rs) — `build_digadiag_frm` and `pack_frm` (`FrmContainerMode::{Dvd, Sd}`).
+- [`crates/panadiga-crypto/src/toc/mod.rs`](../../crates/panadiga-crypto/src/toc/mod.rs) — structural analysis, `decrypt_and_parse_frm_toc`, `parse_sd_frm_toc`, and `dump_toc`.
 - [`crates/panadiga-cli/src/cli/handlers/frm_pack.rs`](../../crates/panadiga-cli/src/cli/handlers/frm_pack.rs) and [`args/crypto.rs`](../../crates/panadiga-cli/src/cli/args/crypto.rs) — subcommands `panadiga frm pack` (`--mode sd|dvd|digadiag`, `--out`, `--module NAME:PATH`, `--input`, `--dst-addr`, `--tag`, `--build`, `--hw`, `--model`, `--version-u16`, `--target-flag`, `--json`) and `panadiga frm unpack` (`<EXTRHEAD_FILE>`, `--out`, `--mode auto|main|drv|plain`, `--json`).
 
 ---

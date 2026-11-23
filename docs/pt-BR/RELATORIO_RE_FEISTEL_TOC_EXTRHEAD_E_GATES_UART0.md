@@ -24,7 +24,7 @@ A camada de proteção de `PANA_DVD.FRM` e das partições de firmware do disco 
 
 ### 1.2 Reconstrução da Chave, Key Schedule e Rodada Feistel
 
-1. **Reconstrução da Chave Mestra de 7 bytes (`reconstruct_master_key_7b` em `crates/panadiga-core/src/crypto/feistel.rs`):**
+1. **Reconstrução da Chave Mestra de 7 bytes (`reconstruct_master_key_7b` em `crates/panadiga-crypto/src/feistel.rs`):**
    - Para `i` em `0..7`: `master[i] = p2[i] ^ p1[i]`.
    - Em seguida: `master[1] ^= p2[7]` e `master[4] ^= p2[7]`.
 2. **Função de Rodada F (`FUN_44012191` / `feistel_f_round`):**
@@ -80,11 +80,11 @@ Cada entrada inclui ainda `fvu_checksum_u32` (soma de bytes do módulo em `+0x24
 
 Os protótipos iniciais em Python foram portados para módulos focados em Rust no crate `panadiga-core`:
 
-- `crates/panadiga-core/src/crypto/feistel.rs` — chave mestra, `feistel_f_round`, `derive_round_key_32b`, cifra/decifra ECB de bloco/buffer e `adler32_panasonic_strided`.
-- `crates/panadiga-core/src/crypto/codec.rs` — utilitários binários (`pad_to_block`, leituras/escritas LE e strings ASCII).
-- `crates/panadiga-core/src/crypto/extrhead.rs` — parser, `pack_extrhead` e `unpack_extrhead` com `ExtrheadCryptMode::{Auto, Main, Drv, Plain}`.
-- `crates/panadiga-core/src/crypto/frm_pack.rs` — `build_digadiag_frm` e `pack_frm` (`FrmContainerMode::{Dvd, Sd}`).
-- `crates/panadiga-core/src/crypto/toc.rs` — análise estrutural, `decrypt_and_parse_frm_toc`, `parse_sd_frm_toc` e `dump_toc`.
+- `crates/panadiga-crypto/src/feistel.rs` — chave mestra, `feistel_f_round`, `derive_round_key_32b`, cifra/decifra ECB de bloco/buffer e `adler32_panasonic_strided`.
+- `crates/panadiga-crypto/src/codec.rs` — utilitários binários (`pad_to_block`, leituras/escritas LE e strings ASCII).
+- `crates/panadiga-crypto/src/extrhead.rs` — parser, `pack_extrhead` e `unpack_extrhead` com `ExtrheadCryptMode::{Auto, Main, Drv, Plain}`.
+- `crates/panadiga-crypto/src/frm_pack.rs` — `build_digadiag_frm` e `pack_frm` (`FrmContainerMode::{Dvd, Sd}`).
+- `crates/panadiga-crypto/src/toc/mod.rs` — análise estrutural, `decrypt_and_parse_frm_toc`, `parse_sd_frm_toc` e `dump_toc`.
 - `crates/panadiga-cli/src/cli/handlers/frm_pack.rs` e `args/crypto.rs` — subcomandos `panadiga frm pack` (`--mode sd|dvd|digadiag`, `--out`, `--module NAME:PATH`, `--input`, `--dst-addr`, `--tag`, `--build`, `--hw`, `--model`, `--version-u16`, `--target-flag`, `--json`) e `panadiga frm unpack` (`<EXTRHEAD_FILE>`, `--out`, `--mode auto|main|drv|plain`, `--json`).
 
 ---

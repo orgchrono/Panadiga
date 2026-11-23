@@ -23,7 +23,7 @@ An exhaustive architectural audit across the **Panadiga** ecosystem drove the tr
 | Audited Domain | Initial Classification | Previous State | Corrective Action Implemented | Certified Status |
 | :--- | :---: | :--- | :--- | :---: |
 | **God-Modules & Monoliths** | ⚠️ **Critical** | 5 files > 500 lines (`mockData.ts` 1003 l., `src/hdd.rs` 1017 l., `src/crypto.rs` 873 l., `HddStorageView.tsx` 575 l., `src/pico.rs` 590 l.). | Decomposed into cohesive submodules and UI subcomponents with facade re-exports. | ✅ **100% Decomposed (< 200 lines/file)** |
-| **Magic Numbers & Literals** | ⚠️ **Moderate** | Physical offsets and partition sizes (`0x01C00000`, `104857600`, `57344`, `65536`) scattered. | Strict centralization in `crates/panadiga-core/src/constants/` & `ssot/`. | ✅ **100% Centralized in SSOT** |
+| **Magic Numbers & Literals** | ⚠️ **Moderate** | Physical offsets and partition sizes (`0x01C00000`, `104857600`, `57344`, `65536`) scattered. | Strict centralization in `crates/panadiga-constants/src/constants/` & `ssot/`. | ✅ **100% Centralized in SSOT** |
 | **i18n Coverage** | ❌ **Severe** | ~70% UI hardcoded strings across PT/EN; incomplete manual TS map. | Adopted industry-standard `i18next` with typed JSON bundles (`en-US.json`, `pt-BR.json`). | ✅ **100% Internationalized (EN/PT)** |
 | **Pipeline & IPC Logic** | ⚠️ **Safety Alert** | Silent fallback to mock payloads during live hardware failures. | Explicit hardware error propagation (`throw new Error`) outside demo mode. | ✅ **Active Bench Safety Guard** |
 | **Radix UI & shadcn** | ⚠️ **Inconsistent** | Custom `Modal.tsx` hand-rolled tabs mixed with Radix primitives. | Eliminated `Modal.tsx`; standardized on `@radix-ui/react-dialog` and `@radix-ui/react-tabs`. | ✅ **Standardized Radix UI & shadcn** |
@@ -252,11 +252,11 @@ python scripts/validate.py
 | **Rust Storage** | `crates/panadiga-core/src/hdd/inspect.rs` | LBA 0, 28 MB mirror, and 8 MB journal inspection |
 | **Rust Storage** | `crates/panadiga-core/src/hdd/meihdfs.rs` | 256-record MEIHFS directory parser |
 | **Rust Storage** | `crates/panadiga-core/src/hdd/partitions.rs` | 32 MB / 64 MB partition extractor & SHA-256 validator |
-| **Rust Crypto** | `crates/panadiga-core/src/crypto/mod.rs` | Public facade & firmware cryptanalysis API |
-| **Rust Crypto** | `crates/panadiga-core/src/crypto/types.rs` | 48-byte TOC entry & entropy report types |
-| **Rust Crypto** | `crates/panadiga-core/src/crypto/entropy.rs` | Shannon entropy & sliding-window analyzer |
-| **Rust Crypto** | `crates/panadiga-core/src/crypto/toc.rs` | Optical `.FRM` 48-byte TOC parser |
-| **Rust Crypto** | `crates/panadiga-core/src/crypto/codebook.rs` | 64-bit ECB block frequency & leakage detector |
+| **Rust Crypto** | `crates/panadiga-crypto/src/mod.rs` | Public facade & firmware cryptanalysis API |
+| **Rust Crypto** | `crates/panadiga-crypto/src/types.rs` | 48-byte TOC entry & entropy report types |
+| **Rust Crypto** | `crates/panadiga-crypto/src/entropy.rs` | Shannon entropy & sliding-window analyzer |
+| **Rust Crypto** | `crates/panadiga-crypto/src/toc/mod.rs` | Optical `.FRM` 48-byte TOC parser |
+| **Rust Crypto** | `crates/panadiga-crypto/src/codebook/mod.rs` | 64-bit ECB block frequency & leakage detector |
 | **Rust Pico** | `crates/panadiga-core/src/pico/mod.rs` | RP2040/RP2350 bench command dispatch facade |
 | **Rust Pico** | `crates/panadiga-core/src/pico/platforms.rs` | Verified `P7501` pinout definition & real bench telemetry |
 | **Rust Pico** | `crates/panadiga-core/src/pico/diagnostics.rs` | Matsushita diagnostic & error-code interpreter |

@@ -9,11 +9,11 @@
 
 ## 1. What's New in `v0.2.0` (Highlights Since `v0.1.0`)
 
-Panadiga `0.2.0` marks a major architectural milestone across all **6 Rust crates**, the **bare-metal C11 Raspberry Pi Pico (`RP2040` / `RP2350` / `Pico W / 2 W`) probe firmware**, the **Tauri 2 Desktop & Android Mobile Workbench**, and the **bilingual hardware archive**:
+Panadiga `0.2.0` marks a major architectural milestone across all **11 Rust crates**, the **bare-metal C11 Raspberry Pi Pico (`RP2040` / `RP2350` / `Pico W / 2 W`) probe firmware**, the **Tauri 2 Desktop & Android Mobile Workbench**, and the **bilingual hardware archive**:
 
 ### 1.1 Relational Hardware Profiles SSOT (`profiles/` & `panadiga-profiles`)
 - **New `panadiga-profiles` Crate & Multi-Language SSOT Generator (`panadiga ssot export-all`):**
-  - Centralizes **`89` DIGA model manifests**, **`12` SoCs**, **`5` SoC cores**, **`31` mainboards**, **`18` parallel NOR flash chips**, **`6` I2C EEPROM chips**, **`3` NOR partition layouts**, **`18` firmware trains**, **`3` media formats**, and **`12` JSON Schema Draft 2020-12 definitions** (`profiles/schema/`).
+  - Centralizes **`89` DIGA model manifests**, **`12` SoCs**, **`5` SoC cores**, **`31` mainboards**, **`18` parallel NOR flash chips**, **`6` I2C EEPROM chips**, **`4` NOR partition layouts** (incl. `loader_ver063_4mb_top_bgo35.json`), **`18` firmware trains**, **`3` media formats**, cataloged **`geometry_and_binary_traps.json`**, **`profiles/forensic_atlas/`**, and **`12` JSON Schema Draft 2020-12 definitions** (`profiles/schema/`).
   - Enforces a deterministic **`T0`–`T4` Capability Authorization Gate** (`panadiga profiles validate|show|authorize|export-schema`) respecting hardware WP/OTP limits, `256 KiB` IPL RO floors, and explicit offline CoW lab overrides.
 - **Relational Hardware Profiles SSOT (`panadiga ssot export-all`):**
   - Projects one Single Source of Truth across **Rust**, **C11** (`p7501_ssot.{h,c}` incl. CS0/SDRAM/DIGADIAG/Lethal MMIO constants), **TypeScript** (`apps/desktop/src/models/generated/{ssot,profiles}.ts` incl. `SSOT_AM34_BUS_CONSTANTS`), **Python** (`scripts/profiles_types.py` + dynamic script discovery), and **Ghidra Jython** (`tools/ghidra/`).
@@ -28,7 +28,7 @@ Panadiga `0.2.0` marks a major architectural milestone across all **6 Rust crate
   - **`panadiga sd create` (`fat16_builder`, `cleanroom_digadiag`):** Generates verified `32 MiB` FAT16B (`0x06`) SD recovery images (`DIGADIAG.FRM` / patched `PROG061`) with Mn103Vm pre-write verification.
   - **`panadiga dvd create` (`iso9660_builder`, `dvd_creator`):** Generates verified cleanroom `ISO 9660` (`PANADIGA_REC`) optical recovery images with `1x`/minimum DAO burn policy.
   - **`panadiga hdd flash-composed` (`composed_flash.rs`, `discovery_unix/lsblk.rs`, `raw_device.rs`):** Safe multi-OS raw disk discovery and composed MEIHDFS + firmware partition flashing with system-drive/NVMe lockouts.
-  - **Expanded MCP Server (`panadiga-mcp`):** **25** JSON-RPC 2.0 stdio tools including `panadiga_profiles_authorize`, BGO/DAVIS probes, region calibration, TBC lab, and vault workflows.
+  - **Expanded MCP Server (`panadiga-mcp`):** **26** JSON-RPC 2.0 stdio tools including `panadiga_profiles_authorize`, `panadiga_symbol_lookup`, BGO/DAVIS probes, region calibration, TBC lab, and vault workflows.
   - **BGO Partition-1 (`0xF101`) Compaction (`re/eh55_bgo`):** Compacts split/migrating Partition-1 sectors into a single authoritative sector with zero open `+0x14` migration links (`FUN_4402014f` rollback prevention) and updates the verified repaired `eh55_nor_8mb_ic5001_repaired.bin` baseline.
 
 ### 1.3 Silicon-Audited Bare-Metal C11 Pico `P7501` Probe Firmware (`GO` on `RP2040`, `RP2350` & `Pico W / 2 W`)
@@ -58,7 +58,7 @@ Audited adversarially across every silicon, electrical, DMA, QSPI, and protocol 
 - **SSOT Diagnostic Parser (`findingsRules.ts`, `lineParsers.ts`, `index.ts`):** Consumes `SSOT_DIAG_SIGNATURE_RULES` directly, precompiles dump regexes, and matches Rust legacy fallback parity.
 
 ### 1.5 Bilingual Hardware Archive, Datasheets & Bench Evidence
-- Curated **`40` bilingual dossiers & `28` curated** `COM10` bench captures, adding the **DIGA Lineup Hardware Profiles Catalog & Audit** ([EN](docs/en-US/DIGA_LINEUP_HARDWARE_PROFILES_CATALOG_AND_AUDIT.md) · [PT-BR](docs/pt-BR/CATALOGO_E_AUDITORIA_PERFIS_HARDWARE_LINHA_DIGA.md)) and **What's Next: New Device Onboarding Guide** ([EN](docs/en-US/WHATS_NEXT_NEW_DEVICE_ONBOARDING.md) · [PT-BR](docs/pt-BR/WHATS_NEXT_ONBOARDING_NOVOS_APARELHOS.md)), official `Microchip 24LC64` & `ROHM BR24L16` EEPROM datasheets (`manuals_and_schematics/datasheets/` + `SHA256SUMS.txt`), `DMR-XW / BD` series catalog (`firmware_and_images/dmr-xw_bd_series/`), and `IDE2SAT2` chassis clearance reference photography (`docs/assets/images/re_dmr_eh55/`).
+- Curated **`41` bilingual dossiers & `28` curated** `COM10` bench captures, adding the **DIGA Lineup Hardware Profiles Catalog & Audit** ([EN](docs/en-US/DIGA_LINEUP_HARDWARE_PROFILES_CATALOG_AND_AUDIT.md) · [PT-BR](docs/pt-BR/CATALOGO_E_AUDITORIA_PERFIS_HARDWARE_LINHA_DIGA.md)), **What's Next: New Device Onboarding Guide** ([EN](docs/en-US/WHATS_NEXT_NEW_DEVICE_ONBOARDING.md) · [PT-BR](docs/pt-BR/WHATS_NEXT_ONBOARDING_NOVOS_APARELHOS.md)), and **Anti-Trap BGO Geometry & SSOT Forensic Atlas Guide** ([EN](docs/en-US/ANTI_TRAP_BGO_GEOMETRY_AND_SSOT_FORENSIC_ATLAS_GUIDE.md) · [PT-BR](docs/pt-BR/GUIA_ANTI_ARMADILHAS_GEOMETRIA_BGO_E_ATLAS_FORENSE_SSOT.md)), official `Microchip 24LC64` & `ROHM BR24L16` EEPROM datasheets (`manuals_and_schematics/datasheets/` + `SHA256SUMS.txt`), `DMR-XW / BD` series catalog (`firmware_and_images/dmr-xw_bd_series/`), and `IDE2SAT2` chassis clearance reference photography (`docs/assets/images/re_dmr_eh55/`).
 
 ---
 
@@ -88,7 +88,7 @@ Audited adversarially across every silicon, electrical, DMA, QSPI, and protocol 
 ## 4. Quality Gates — Automated Enforcement (`scripts/validate.py` — 9/9 PASS)
 
 ```text
-✅ Gate 1   — Rust Workspace (6 crates: cargo fmt, clippy --all-targets -D warnings, 337 workspace tests)
+✅ Gate 1   — Rust Workspace (11 crates: cargo fmt, clippy --all-targets -D warnings, workspace tests)
 ✅ Gate 2   — Oxlint (0 warnings/errors across 386 files, 224 rules) + TypeScript Strict (tsc --noEmit)
 ✅ Gate 3   — Vitest Frontend MVVM / Redux / Express / BLE / Parser Suite (128 tests across 39 files)
 ✅ Gate 4   — jscpd Clone Detector (0 clones / 0.00% duplication across 1,030+ files)
@@ -96,7 +96,7 @@ Audited adversarially across every silicon, electrical, DMA, QSPI, and protocol 
 ✅ Gate 6   — Playwright E2E Chromium Headless Suite (27 tests across 9 specs, incl. Express Rescue Mode)
 ✅ Gate 7   — Multi-Language SSOT + Ghidra Jython Exporter (Idempotent export verification)
 ✅ Gate 8   — C11 Pico Firmware Host Tests (48 sources, /std:c11 /W4 /WX, 38 test suites/4 modules) + ARM RP2040 & RP2350 Builds
-✅ Gate 9   — Python (dynamic py_compile, mypy --strict scripts, pytest scripts/tests — 32 passed)
+✅ Gate 9   — Python (dynamic py_compile, mypy --strict scripts, pytest scripts/tests — 58 tests)
 ✅ Multi-CI — Windows x86_64 · Ubuntu x86_64 (.tar.gz + .deb) · macOS ARM64 · Android ARM64 APK · Pico RP2040/RP2350/Unified UF2
 ```
 
@@ -104,8 +104,9 @@ Audited adversarially across every silicon, electrical, DMA, QSPI, and protocol 
 
 ## 5. Documentation & Legal
 
-- **Master Bilingual Portal (40 EN/PT-BR Dossier Pairs):** [`docs/INDEX.md`](docs/INDEX.md)
+- **Master Bilingual Portal (41 EN/PT-BR Dossier Pairs):** [`docs/INDEX.md`](docs/INDEX.md)
 - **DIGA Lineup Hardware Profiles Catalog & Audit:** [`docs/en-US/DIGA_LINEUP_HARDWARE_PROFILES_CATALOG_AND_AUDIT.md`](docs/en-US/DIGA_LINEUP_HARDWARE_PROFILES_CATALOG_AND_AUDIT.md) ([PT-BR](docs/pt-BR/CATALOGO_E_AUDITORIA_PERFIS_HARDWARE_LINHA_DIGA.md))
+- **Anti-Trap BGO Geometry & SSOT Forensic Atlas Guide:** [`docs/en-US/ANTI_TRAP_BGO_GEOMETRY_AND_SSOT_FORENSIC_ATLAS_GUIDE.md`](docs/en-US/ANTI_TRAP_BGO_GEOMETRY_AND_SSOT_FORENSIC_ATLAS_GUIDE.md) ([PT-BR](docs/pt-BR/GUIA_ANTI_ARMADILHAS_GEOMETRIA_BGO_E_ATLAS_FORENSE_SSOT.md))
 - **Root Engineering Audits:** [`COMPLETE_AUDIT.md`](COMPLETE_AUDIT.md) · [`AUDITORIA_COMPLETA.md`](AUDITORIA_COMPLETA.md)
 - **Service Manuals & Datasheets (`32+` PDFs):** [`manuals_and_schematics/README.md`](manuals_and_schematics/README.md)
 

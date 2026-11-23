@@ -1,0 +1,138 @@
+PRE_STATUS:
+VDD: 3.27V (OK)
+[STANDBY] RXD=1 NSW5V=1 TXD=1 XRESET=1 SW_PU=3.28V NSW5V_DROPS=107 | State=POWERED / AWAKE (SW_UART ~3.3V)
+[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=39 wdt_recoveries=0 reboot_src=CLEAN fault_slot=255 fault_stage=IDLE last_cmd=STATUS last_us=1665
+@P7501_RES cmd=STATUS status=OK code=0 elapsed_us=1646
+PANADIGA>
+
+=== GATE2_WINDOW_1: BOOTTRACE 90000 NORMAL @ 2026-11-22 20:39:26 ===
+=== BOOTTRACE: window=90000ms boot=1 hold=0ms sticky=NO no_xrst=NO (8N1 @ 115200) ===
+[BOOTTRACE +  10ms] DDR CHECK: OK
+[BOOTTRACE +  19ms] Chip select = 1
+[BOOTTRACE +  20ms] F/E Address = 0x90202000 , Drive(compress) Size = 0xACC50
+[BOOTTRACE +  26ms] uncompress dst=90202000 len=160000 src=84080040 len=acc01
+[BOOTTRACE + 774ms] HEADER:5627DD54, DECOMP:5627DD54
+[BOOTTRACE + 777ms] F/E reset release finish ...
+[BOOTTRACE + 780ms] ***** Loader ver0.61 [06/03/06] *****
+[BOOTTRACE + 783ms] ***** normal mode *****
+[BOOTTRACE + 800ms] *** RTSC Initialize ***
+[BOOTTRACE +3520ms] [RTSD] ATAPI Software Reset 
+[BOOTTRACE +3533ms] [RTSD] HDD spin-up error (80000404)
+[BOOTTRACE +3536ms] miniboot : system assert!!
+[BOOTTRACE +3539ms] [RTSD] === IDE HOST ERROR === ( E8000000 )
+[BOOTTRACE +3542ms] *** ATAPI DEVICE ERROR
+[BOOTTRACE +3545ms] CDB  [FF EC 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +3549ms] Reg[00 00 00 00 00 00 00 : Err SecC SecN CylL CylH D/H Status] 
+[BOOTTRACE +3554ms] H_STAT [E8] T_STAT [0]
+[BOOTTRACE +3556ms] [RTSD] SRST Command Set
+[BOOTTRACE +3559ms] [RTSD] Reset Failed !! (80000407)
+[BOOTTRACE +3572ms] [RTSD] HDD spin-up error (80000404)
+[BOOTTRACE +3575ms] miniboot : system assert!!
+[BOOTTRACE +3578ms] [RTSD] === IDE HOST ERROR === ( E8000000 )
+[BOOTTRACE +3581ms] *** ATAPI DEVICE ERROR
+[BOOTTRACE +3584ms] CDB  [FF EC 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +3588ms] Reg[00 00 00 00 00 00 00 : Err SecC SecN CylL CylH D/H Status] 
+[BOOTTRACE +3593ms] H_STAT [E8] T_STAT [0]
+[BOOTTRACE +3595ms] [RTSD] SRST Command Set
+[BOOTTRACE +3598ms] [RTSD] Reset Failed !! (80000407)
+[BOOTTRACE +3611ms] [RTSD] HDD spin-up error (80000404)
+[BOOTTRACE +3614ms] miniboot : system assert!!
+[BOOTTRACE +3617ms] [RTSD] === IDE HOST ERROR === ( E8000000 )
+[BOOTTRACE +3621ms] *** ATAPI DEVICE ERROR
+[BOOTTRACE +3623ms] CDB  [FF EC 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +3627ms] Reg[00 00 00 00 00 00 00 : Err SecC SecN CylL CylH D/H Status] 
+[BOOTTRACE +3632ms] H_STAT [E8] T_STAT [0]
+[BOOTTRACE +3634ms] [RTSD] SRST Command Set
+[BOOTTRACE +3637ms] [RTSD] Reset Failed !! (80000407)
+[BOOTTRACE +3640ms] HDD_MAX_LBA get failed[0xE8000000].
+[BOOTTRACE +3643ms] mainsoft data is invalid, so set update flag.
+[BOOTTRACE +3664ms] [nfrom] file_no[17],skip(0),non_skip(1),erase(0),new_write(0).
+[BOOTTRACE +3679ms] !!! start fmu to read & exec fvu. !!!
+[BOOTTRACE +3682ms] wait 1 second.
+[BOOTTRACE +4684ms] *** timer correspond initialize ***
+[BOOTTRACE +4690ms] startup reason = [70]
+[BOOTTRACE +4694ms] Main hung-up time changed 255[s].
+[BOOTTRACE +4708ms] Read fvu program from Update-Disk to 0x90400000.
+[BOOTTRACE +4713ms] SD card check start
+[BOOTTRACE +4715ms] SD init start...
+[BOOTTRACE +4807ms] [SDCD] sdcd_insrmv_check:SD Card inserted 
+[BOOTTRACE +4878ms] [SDCD] === This Card Spec ==== 
+[BOOTTRACE +4881ms] .Card type:2(condition:3) wp:0
+[BOOTTRACE +4884ms] .capacity:3c4000[LBA](2021654528Byte) . transfer speed:25000[Kbps]
+[BOOTTRACE +4890ms] .RCA:2 . Bus Width:4(current) 4(support)
+[BOOTTRACE +4894ms] .Multi Max Block Len Read:2[SECT] / Write:2[SECT]
+[BOOTTRACE +4898ms] SD = 0x3C4000[LBA]
+[BOOTTRACE +4900ms] ... SD init end
+[BOOTTRACE +4907ms] FAT Mount ID = 0x1
+[BOOTTRACE +4911ms] FAT Open Old File ID = 0xC8
+[BOOTTRACE +4913ms] treat as SD.
+[BOOTTRACE +4932ms] File ID[0xC8] seek to 0xB1800.
+[BOOTTRACE +5001ms] File ID[0xC8] read to 0x90400000(size=0x40000).
+[BOOTTRACE +5005ms] cheking for fvu program check-sum[0x2189E34].
+[BOOTTRACE +5091ms] [nfrom] file_no[17],skip(0),non_skip(1),erase(0),new_write(0).
+[BOOTTRACE +5106ms] success to read fvu program from Update-Disc.
+[BOOTTRACE +5141ms] [RTSD] Device Reset Occurred(0x62900) 
+[BOOTTRACE +5145ms] X(80062900)X(80023a00)X(80023a00)X(80023a00)
+[BOOTTRACE +5152ms] *** start fvu ***
+[BOOTTRACE +5160ms] ***** Fvu ver0.61 [05/11/01] *****
+[BOOTTRACE +5178ms] *** RTSC Initialize ***
+[BOOTTRACE +8367ms] [RTSD] ATAPI Software Reset 
+[BOOTTRACE +8371ms] SD version up mode.
+[BOOTTRACE +8372ms] Read Firm-list from Update-Disc or HDD.
+[BOOTTRACE +8376ms] treat as SD.
+[BOOTTRACE +8377ms] SD init start...
+[BOOTTRACE +8469ms] [SDCD] sdcd_insrmv_check:SD Card inserted 
+[BOOTTRACE +8540ms] [SDCD] === This Card Spec ==== 
+[BOOTTRACE +8543ms] .Card type:2(condition:3) wp:0
+[BOOTTRACE +8546ms] .capacity:3c4000[LBA](2021654528Byte) . transfer speed:25000[Kbps]
+[BOOTTRACE +8552ms] .RCA:2 . Bus Width:4(current) 4(support)
+[BOOTTRACE +8555ms] .Multi Max Block Len Read:2[SECT] / Write:2[SECT]
+[BOOTTRACE +8560ms] SD = 0x3C4000[LBA]
+[BOOTTRACE +8562ms] ... SD init end
+[BOOTTRACE +8565ms] FAT Mount ID = 0x1
+[BOOTTRACE +8568ms] FAT Open Old File ID = 0xC8
+[BOOTTRACE +8585ms] Search for analyze-code.
+[BOOTTRACE +8588ms] Complete to scan Firm-list.
+[BOOTTRACE +8591ms] do not need to update drive-firm.
+[BOOTTRACE +8594ms] Read mainsoft from Update-Disk or HDD to 0x90c00030.
+[BOOTTRACE +8599ms] Read mainsoft data.
+[BOOTTRACE +8601ms] File ID[0xC8] seek to 0xF1800.
+[BOOTTRACE +9820ms] File ID[0xC8] read to 0x90C00030(size=0x644FD8).
+[BOOTTRACE +9824ms] Cheking for mainsoft check-sum.
+[BOOTTRACE +11699ms] check_sum = 0x3287a242.
+[BOOTTRACE +11701ms] Complete to read mainsoft from Update-Disc or HDD.
+[BOOTTRACE +11706ms] start to update mainsoft.
+[BOOTTRACE +11709ms] [RTSD] HDD already spin-up 
+[BOOTTRACE +11742ms] [RTSD] HDD Auto Spin up Mode 
+[BOOTTRACE +11749ms] HDD MAX LBA = 0x1D1C5970.
+[BOOTTRACE +11755ms] [nfrom] file_no[17],skip(0),non_skip(1),erase(0),new_write(0).
+[BOOTTRACE +12121ms] Verify start...
+[BOOTTRACE +13407ms] Vefify OK
+[BOOTTRACE +13408ms] HDD write success(0x00010000-0x00013227 sector).
+[BOOTTRACE +13412ms] mainsoft write success to hdd inner sector[0x10000].
+[BOOTTRACE +13860ms] Verify start...
+[BOOTTRACE +15146ms] Vefify OK
+[BOOTTRACE +15147ms] HDD write success(0x1D1A5970-0x1D1A8B97 sector).
+[BOOTTRACE +15151ms] mainsoft write success to hdd outer sector[0x1D1A5970].
+[BOOTTRACE +15160ms] [nfrom] file_no[17],skip(0),non_skip(1),erase(0),new_write(0).
+[BOOTTRACE +15185ms] success to update mainsoft.
+[BOOTTRACE +17193ms] [nfrom] file_no[17],skip(0),non_skip(1),erase(0),new_write(0).
+[BOOTTRACE +17224ms] do not need to update loader.
+[BOOTTRACE +17227ms] do not need to update Voice.
+[BOOTTRACE +17230ms] do not need to update user-file.
+[BOOTTRACE +17233ms] do not need to update deviceinfo.
+[BOOTTRACE +17236ms] do not need to update STB-data.
+[BOOTTRACE +17239ms] do not need to update VHS-data.
+[BOOTTRACE +17242ms] do not need to update timer-data.
+[BOOTTRACE] UART: bytes=4155 first_byte=10411us ferr=0 perr=0 ovf=NO | SW_rel=NO
+[BOOTTRACE] ADC0_SWUART: min=3.24V max=3.30V (low=0 hiz=3.24..3.30V n=8998) | CtrlEdges: NSW5V=0 TXD=0 XRESET=0 (logged=0)
+BOOTTRACE: OK
+@P7501_RES cmd=BOOTTRACE status=OK code=0 elapsed_us=90021471
+PANADIGA> 
+
+POST_STATUS:
+VDD: 3.27V (OK)
+[STANDBY] RXD=1 NSW5V=1 TXD=1 XRESET=1 SW_PU=3.28V NSW5V_DROPS=107 | State=POWERED / AWAKE (SW_UART ~3.3V)
+[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=41 wdt_recoveries=0 reboot_src=CLEAN fault_slot=255 fault_stage=IDLE last_cmd=BOOTTRACE last_us=90021471
+@P7501_RES cmd=STATUS status=OK code=0 elapsed_us=1672
+PANADIGA>

@@ -132,7 +132,7 @@ A total of **365 legacy `println!`/`eprintln!` calls** were audited and migrated
 
 | Domain | Legacy File (Pre-Workspace -> Current Crate) | Migrated Calls |
 | :--- | :--- | :---: |
-| **Cryptanalysis & CPRM** | `src/crypto.rs` *(pre-workspace -> [`crates/panadiga-core/src/crypto/`](../../crates/panadiga-core/src/crypto/mod.rs))* | 119 calls |
+| **Cryptanalysis & CPRM** | `src/crypto.rs` *(pre-workspace -> [`crates/panadiga-crypto/src/`](../../crates/panadiga-crypto/src/mod.rs))* | 119 calls |
 | **Storage Forensics & MEIHFS** | `src/hdd.rs` *(pre-workspace -> [`crates/panadiga-core/src/hdd/`](../../crates/panadiga-core/src/hdd/mod.rs))* | 91 calls |
 | **CLI & Dispatcher** | `src/main.rs` *(pre-workspace -> [`crates/panadiga-cli/src/main.rs`](../../crates/panadiga-cli/src/main.rs))* | 56 calls |
 | **Spansion NVRAM Surgery** | `src/nvram.rs` *(pre-workspace -> [`crates/panadiga-core/src/nvram.rs`](../../crates/panadiga-core/src/nvram.rs))* | 34 calls |
