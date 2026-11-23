@@ -18,6 +18,9 @@ use byteorder::{ByteOrder, LittleEndian};
 use serde::{Deserialize, Serialize};
 
 use super::region_compat::EXPECTED_MAIN_3060NP_SIZE;
+use super::ssot_patches::{
+    find_main_build_by_id, find_main_build_by_size, verify_main_native_bgo_from_spec,
+};
 use crate::constants::AM34_MAIN_BASE_VA;
 
 pub const MAIN_BGO_STATE_FACTORY_4MB: &str = "BGO_35SEC_4MB_0X84200000";
@@ -1129,6 +1132,36 @@ pub fn apply_main_bgo_retarget_for_spec_in_place(
         );
     }
     Ok(())
+}
+
+/// File offset inside unpacked `MAIN3410PQ` (`13,003,052 B`, `VA 0x5756_EFD4`) of the native `0x8413_0000` BGO base literal.
+pub const OFF_MAIN3410PQ_NATIVE_BGO_BASE_LIT: usize = 0x0056_EFD4;
+
+/// Verifies that an unpacked `MAIN3410PQ` buffer natively targets `8 MiB` `0x8413_0000` BGO geometry via SSOT (`fail-closed`).
+pub fn verify_main3410pq_native_8mb_bgo(buf: &[u8]) -> Result<&'static str> {
+    let (_, build) = find_main_build_by_id("3410PQ")
+        .ok_or_else(|| anyhow::anyhow!("SSOT firmware_trains missing MAIN3410PQ definition"))?;
+    let status = verify_main_native_bgo_from_spec(buf, build)?;
+    if status.state == MAIN_BGO_STATE_8MB {
+        Ok(MAIN_BGO_STATE_8MB)
+    } else {
+        bail!("Unexpected MAIN3410PQ BGO state '{}'", status.state);
+    }
+}
+
+/// Inspects or natively verifies any SSOT-registered `MAIN` build's BGO/NFROM NOR geometry (`fail-closed`).
+pub fn inspect_or_verify_main_bgo_geometry(buf: &[u8]) -> Result<MainBgoGeometryStatus> {
+    let (_, build) = find_main_build_by_size(buf.len()).ok_or_else(|| {
+        anyhow::anyhow!(
+            "Unsupported MAIN size {} B for BGO geometry inspection",
+            buf.len()
+        )
+    })?;
+    if build.supports_bgo_retarget_to.is_empty() && build.native_bgo_detect_va.is_some() {
+        verify_main_native_bgo_from_spec(buf, build)
+    } else {
+        inspect_main_bgo_geometry(buf)
+    }
 }
 
 /// Inspects `MAIN3060NP` BGO/NFROM NOR geometry (`4 MiB Top-Boot` vs `8 MiB Uniform`).

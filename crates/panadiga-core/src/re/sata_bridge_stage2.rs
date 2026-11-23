@@ -34,8 +34,10 @@ use super::patch_spec::{
     PatchApplyAction, PatchSpec, apply_patch_specs_in_place, classify_patch_site,
 };
 use super::sata_bridge_fix::{
-    SATA_BRIDGE_STATE_WAIT_1000MS, inspect_prog061_sata_bridge_reset_site,
+    SATA_BRIDGE_STATE_WAIT_1000MS, inspect_prog_sata_bridge_reset_site_for_profile,
+    inspect_prog061_sata_bridge_reset_site,
 };
+use super::ssot_patches::stage2_boot_spec_for_loader;
 
 /// File offset inside raw `PROG061` (`0x40000` B, `VA 0x5040_50D3`) hooked for Stage-2 HDD boot.
 pub const OFF_PROG061_STAGE2_HOOK_SITE: usize = 0x0000_50D3;
@@ -664,9 +666,29 @@ pub fn inspect_stage2_boot_site_for_spec(
     })
 }
 
+/// Resolves a verified [`Stage2BootTrainSpec`] from SSOT `profiles/firmware_trains/*.json`.
+pub fn stage2_spec_for_loader_profile(loader_profile_key: &str) -> Result<Stage2BootTrainSpec> {
+    stage2_boot_spec_for_loader(loader_profile_key).ok_or_else(|| {
+        anyhow::anyhow!(
+            "No SSOT stage2_boot_spec defined for loader profile '{}'",
+            loader_profile_key
+        )
+    })
+}
+
 /// Inspects `PROG061` (`Loader ver0.61`) for factory vs Stage-2 HDD boot hook.
 pub fn inspect_prog061_stage2_boot_site(buf: &[u8]) -> Result<Prog061Stage2BootStatus> {
-    inspect_stage2_boot_site_for_spec(buf, &VER061_STAGE2_BOOT_SPEC)
+    let spec = stage2_spec_for_loader_profile("ver061").unwrap_or(VER061_STAGE2_BOOT_SPEC);
+    inspect_stage2_boot_site_for_spec(buf, &spec)
+}
+
+/// Inspects an updater RAM binary against the SSOT Stage-2 spec for `loader_profile_key`.
+pub fn inspect_stage2_boot_for_loader_profile(
+    buf: &[u8],
+    loader_profile_key: &str,
+) -> Result<Prog061Stage2BootStatus> {
+    let spec = stage2_spec_for_loader_profile(loader_profile_key)?;
+    inspect_stage2_boot_site_for_spec(buf, &spec)
 }
 
 /// Applies or removes the Stage-2 HDD boot hook atomically for a train spec (`fail-closed`).
@@ -686,10 +708,20 @@ pub fn apply_stage2_boot_in_place_for_spec(
         );
     }
     if enable && spec.require_reset_fix_1000ms {
-        let reset_status = inspect_prog061_sata_bridge_reset_site(buf)?;
+        let reset_status = crate::ssot::registry::HardwareProfileRegistry::builtin()
+            .bundle()
+            .firmware_trains
+            .get(spec.train_id)
+            .map(|t| t.loader_profile_key.as_str())
+            .and_then(|key| inspect_prog_sata_bridge_reset_site_for_profile(buf, key).ok());
+        let reset_status = match reset_status {
+            Some(st) => st,
+            None => inspect_prog061_sata_bridge_reset_site(buf)?,
+        };
         if reset_status.state != SATA_BRIDGE_STATE_WAIT_1000MS {
             bail!(
-                "Refusing to enable Stage-2 HDD boot before SataBridgeResetFix (0x5041D928 state={})",
+                "Refusing to enable Stage-2 HDD boot before SataBridgeResetFix ({} state={})",
+                reset_status.va_hex,
                 reset_status.state
             );
         }
@@ -739,7 +771,18 @@ pub fn apply_stage2_boot_in_place_for_spec(
 
 /// Applies or removes the `PROG061` (`Loader ver0.61`) Stage-2 HDD boot hook atomically (`fail-closed`).
 pub fn apply_prog061_stage2_boot_in_place(buf: &mut [u8], enable: bool) -> Result<()> {
-    apply_stage2_boot_in_place_for_spec(buf, &VER061_STAGE2_BOOT_SPEC, enable)
+    let spec = stage2_spec_for_loader_profile("ver061").unwrap_or(VER061_STAGE2_BOOT_SPEC);
+    apply_stage2_boot_in_place_for_spec(buf, &spec, enable)
+}
+
+/// Applies or removes the SSOT Stage-2 HDD boot hook for `loader_profile_key` atomically.
+pub fn apply_stage2_boot_for_loader_profile_in_place(
+    buf: &mut [u8],
+    loader_profile_key: &str,
+    enable: bool,
+) -> Result<()> {
+    let spec = stage2_spec_for_loader_profile(loader_profile_key)?;
+    apply_stage2_boot_in_place_for_spec(buf, &spec, enable)
 }
 
 #[cfg(test)]
@@ -888,10 +931,15 @@ mod tests {
 
     impl Stage2VmHarness {
         fn new(prog061: &[u8]) -> Self {
-            Self::new_with_nor(prog061, false)
+            Self::new_full(prog061, false, None)
         }
 
         fn new_with_nor(prog061: &[u8], nor_has_stage2: bool) -> Self {
+            Self::new_full(prog061, nor_has_stage2, None)
+        }
+
+        fn new_full(prog061: &[u8], nor_has_stage2: bool, real_main: Option<Vec<u8>>) -> Self {
+            let has_real_main = real_main.is_some();
             let s = &VER061_STAGE2_BOOT_SPEC;
             let mut vm = Mn103Vm::new();
             let mut prog_seg = prog061.to_vec();
@@ -984,21 +1032,25 @@ mod tests {
                     a.label("get_src_done");
                 });
 
-                alloc.install_custom(s.extrhead_uncomp_va, |a, _| {
-                    emit_record_call(a, TAG_UNCOMP);
-                    emit_mov_imm32(&mut a.code, 0xA0, VM_CFG_ENTRY_VA); // A0 = *(entry_va)
-                    a.code.extend_from_slice(&[0x20, 0x08]); // ADD 8, A0
-                    a.mov_imm32_d(0, VA_MAIN_BITWALK_TABLE);
-                    emit_st_w_an_dm(&mut a.code, 0, 0); // *(entry + 8) = bitwalk_table
-                    a.ld_abs32_d(VM_CFG_BITWALK_FAIL, 0);
-                    a.cmp_imm8_d(0, 0);
-                    a.jcc(0xC8, "uncomp_ok");
-                    a.mov_imm32_a(0, VA_MAIN_BITWALK_TABLE);
-                    a.clr_d(0);
-                    emit_st_w_an_dm(&mut a.code, 0, 0); // corrupt word 0
-                    a.label("uncomp_ok");
-                    a.mov_imm8_d(0, 1);
-                });
+                if has_real_main {
+                    alloc.install_simple(s.extrhead_uncomp_va, TAG_UNCOMP, Some(1), None);
+                } else {
+                    alloc.install_custom(s.extrhead_uncomp_va, |a, _| {
+                        emit_record_call(a, TAG_UNCOMP);
+                        emit_mov_imm32(&mut a.code, 0xA0, VM_CFG_ENTRY_VA); // A0 = *(entry_va)
+                        a.code.extend_from_slice(&[0x20, 0x08]); // ADD 8, A0
+                        a.mov_imm32_d(0, VA_MAIN_BITWALK_TABLE);
+                        emit_st_w_an_dm(&mut a.code, 0, 0); // *(entry + 8) = bitwalk_table
+                        a.ld_abs32_d(VM_CFG_BITWALK_FAIL, 0);
+                        a.cmp_imm8_d(0, 0);
+                        a.jcc(0xC8, "uncomp_ok");
+                        a.mov_imm32_a(0, VA_MAIN_BITWALK_TABLE);
+                        a.clr_d(0);
+                        emit_st_w_an_dm(&mut a.code, 0, 0); // corrupt word 0
+                        a.label("uncomp_ok");
+                        a.mov_imm8_d(0, 1);
+                    });
+                }
 
                 alloc.stub_pool
             };
@@ -1018,11 +1070,14 @@ mod tests {
             vm.map_segment(ram_entry_va, ram_entry_bytes, false);
             vm.map_segment(nor_entry_va, nor_entry_bytes, false);
             vm.map_segment(s.hdd_dma_buf_va, vec![0u8; 0x200], true);
-            vm.map_segment(0x5700_0000, vec![0xCBu8; 0x1000], true);
-
-            for bit in 0..32u32 {
-                vm.write_u32(VA_MAIN_BITWALK_TABLE + bit * 4, 1u32 << bit)
-                    .unwrap();
+            if let Some(main_img) = real_main {
+                vm.map_segment(0x5700_0000, main_img, false);
+            } else {
+                vm.map_segment(0x5700_0000, vec![0xCBu8; 0x1000], true);
+                for bit in 0..32u32 {
+                    vm.write_u32(VA_MAIN_BITWALK_TABLE + bit * 4, 1u32 << bit)
+                        .unwrap();
+                }
             }
             vm.sp = 0x50FF_FF00;
             vm.pc = s.base_va + s.hook_offset as u32;
@@ -1236,5 +1291,238 @@ mod tests {
             .unwrap();
             assert_eq!(calculate_hashes(&work).1, orig_sha);
         }
+    }
+
+    #[test]
+    fn mn103vm_proves_portao4_loader_ver061_norfrom_boot_and_escape_hatch() {
+        use crate::constants::{
+            AM34_FLASH_CRITICAL_IPL_SIZE, AM34_FLASH_SIZE, AM34_FLASH_UNCACHED_BASE,
+        };
+        use crate::pico::rsp_codec::policy::NorWritePolicy;
+        use crate::re::bgo_unbrick::{Prog061BgoPatchMode, patch_prog061_bgo_in_place};
+
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join("..");
+        let loader_path = root.join("firmware_and_images/eh55_loader_ver061_256k.bin");
+        let nor_path = root.join("firmware_and_images/eh55_nor_8mb_ic5001_repaired.bin");
+        let prog_path =
+            root.join("firmware_and_images/extracted_partitions/frm_unpacked/prog061_dec.bin");
+        if !loader_path.is_file() || !nor_path.is_file() || !prog_path.is_file() {
+            return;
+        }
+
+        let loader = std::fs::read(&loader_path).unwrap();
+        let base_nor = std::fs::read(&nor_path).unwrap();
+        assert_eq!(loader.len(), PROG061_EXPECTED_SIZE);
+        assert_eq!(base_nor.len(), AM34_FLASH_SIZE as usize);
+        // Confirm SA11..SA14 (0x40000..0x80000) is virgin 0xFF and stock BGO lacks "fvu.exe".
+        assert!(base_nor[0x4_0000..0x8_0000].iter().all(|&b| b == 0xFF));
+        assert!(
+            !base_nor[0x13_0000..0x40_0000]
+                .windows(7)
+                .any(|w| w == b"fvu.exe")
+        );
+
+        let mut stage2_prog = std::fs::read(&prog_path).unwrap();
+        patch_prog061_bgo_in_place(&mut stage2_prog, Prog061BgoPatchMode::BypassChecksOnly)
+            .unwrap();
+        apply_prog061_sata_bridge_reset_fix_in_place(
+            &mut stage2_prog,
+            SataBridgeResetFixMode::Wait1000Ms,
+        )
+        .unwrap();
+        apply_prog061_stage2_boot_in_place(&mut stage2_prog, true).unwrap();
+        let stage2_sha = calculate_hashes(&stage2_prog).1;
+
+        let run_norfrom_stage = |fvu_exists_rc: i32| -> (u32, Vec<u8>, Vec<u8>, u32) {
+            let mut loader_img = loader.clone();
+            // Patch only FUN_44005DEE (uart0_printf) and FUN_4400A1F1 (NFD_FileExists) to pure MN103S RET/stub.
+            // Keep real Loader memcpy (0x4402A34A), memcmp (0x4402A30A), and 0x4400894B..0x44008B98 intact!
+            loader_img[0x5DEE..0x5DF1].copy_from_slice(&[0xDF, 0x00, 0x00]); // RET [], 0
+            let stub_exists = if fvu_exists_rc == 0 {
+                vec![0x00u8, 0xDF, 0x00, 0x00] // CLR D0; RET [], 0
+            } else {
+                vec![0x2C, 0xFF, 0xFF, 0xDF, 0x00, 0x00] // MOV 0xFFFF, D0; RET [], 0
+            };
+            loader_img[0xA1F1..0xA1F1 + stub_exists.len()].copy_from_slice(&stub_exists);
+
+            let mut nor_cow = base_nor.clone();
+            // Program Stage-2 PROG061 in SA11..SA14 (0x40000..0x80000) in CoW memory only.
+            nor_cow[0x4_0000..0x8_0000].copy_from_slice(&stage2_prog);
+            let ipl_sha_before =
+                calculate_hashes(&nor_cow[..AM34_FLASH_CRITICAL_IPL_SIZE as usize]).1;
+
+            let mut data_seg = vec![0u8; 0x2000];
+            data_seg[..0xB38].copy_from_slice(&loader[0x3_52A0..0x3_5DD8]);
+            assert_eq!(&data_seg[0xAF..0xB7], b"fvu.exe\0");
+
+            let mut vm = Mn103Vm::new();
+            vm.nor_write_policy = NorWritePolicy::NvramOnly;
+            vm.map_segment(0x4400_0000, loader_img, false);
+            vm.map_segment(AM34_FLASH_UNCACHED_BASE, nor_cow, false);
+            vm.map_segment(0x5048_0000, data_seg, true);
+            vm.map_segment(0x9040_0000, vec![0xAAu8; PROG061_EXPECTED_SIZE], true);
+            vm.map_segment(0x50FF_0000, vec![0u8; 0x1_0000], true);
+            let frame_a3 = 0x50FF_F800u32;
+            vm.a[3] = frame_a3;
+            vm.sp = 0x50FF_F700;
+            vm.pc = 0x4400_894B;
+
+            let stop_pc = if fvu_exists_rc == 0 {
+                0x4400_8B98
+            } else {
+                0x4400_89F5
+            };
+            vm.run_until(stop_pc, 4_000_000)
+                .unwrap_or_else(|e| panic!("Loader ver0.61 Nor-FROM run failed: {e}"));
+            let loaded_flag = vm.read_u32(frame_a3 - 12).unwrap();
+            let ram_copy = vm.segment_bytes(0x9040_0000).unwrap().to_vec();
+            let ipl_sha_after = calculate_hashes(
+                &vm.segment_bytes(AM34_FLASH_UNCACHED_BASE).unwrap()
+                    [..AM34_FLASH_CRITICAL_IPL_SIZE as usize],
+            )
+            .1;
+            assert_eq!(
+                ipl_sha_before, ipl_sha_after,
+                "IPL SA0..SA10 must remain bit-exact"
+            );
+            let nor_sa11_14 =
+                vm.segment_bytes(AM34_FLASH_UNCACHED_BASE).unwrap()[0x4_0000..0x8_0000].to_vec();
+            (vm.pc, ram_copy, nor_sa11_14, loaded_flag)
+        };
+
+        // 1. Negative control: when NFD finds no "fvu.exe" marker, Loader skips NOR copy and branches to Update-Disk.
+        let (neg_pc, neg_ram, _, neg_flag) = run_norfrom_stage(-1);
+        assert_eq!(neg_pc, 0x4400_89F5);
+        assert_eq!(neg_flag, 0);
+        assert!(neg_ram.iter().all(|&b| b == 0xAA));
+
+        // 2. Positive Portao 4 proof: real Loader memcpy/memcmp copies SA11..SA14 -> 0x9040_0000 byte-for-byte.
+        let (pos_pc, pos_ram, pos_nor, pos_flag) = run_norfrom_stage(0);
+        assert_eq!(pos_pc, 0x4400_8B98);
+        assert_eq!(pos_flag, 1);
+        assert_eq!(calculate_hashes(&pos_ram).1, stage2_sha);
+        assert_eq!(pos_ram, pos_nor);
+
+        // 3. Chain into copied Stage-2 payload: without SD boots HDD MAIN; with PANA__SD.FRM hits Nor-FROM escape hatch.
+        let mut h_boot = Stage2VmHarness::new_with_nor(&pos_ram, true);
+        h_boot.run(0x5700_0000).unwrap();
+        assert!(
+            h_boot
+                .calls()
+                .iter()
+                .any(|&(t, lba, off)| t == TAG_HDD_READ && lba == 0x10000 && off == 0)
+        );
+        let mut h_escape = Stage2VmHarness::new_with_nor(&pos_ram, true);
+        h_escape.vm.write_u32(VM_CFG_SD_INIT_RC, 0).unwrap();
+        h_escape.vm.write_u32(VM_CFG_PANA_OPEN_RC, 0xC8).unwrap();
+        let hook_ret_pc = PROG061_BASE_VA + OFF_PROG061_STAGE2_HOOK_SITE as u32 + 7;
+        h_escape.run(hook_ret_pc).unwrap();
+        assert!(h_escape.calls().iter().any(|c| c.0 == TAG_FAT_OPEN_PANA));
+        assert!(!h_escape.calls().iter().any(|c| c.0 == TAG_HDD_MAX_LBA));
+    }
+
+    #[test]
+    fn ssot_stage2_spec_matches_ver061_contract_field_for_field() {
+        let from_ssot = stage2_spec_for_loader_profile("ver061").unwrap();
+        assert_eq!(from_ssot, VER061_STAGE2_BOOT_SPEC);
+        assert!(stage2_spec_for_loader_profile("ver063").is_err());
+    }
+
+    #[test]
+    fn mn103vm_proves_main3410pq_stage2_bitwalk_and_hdd_boot() {
+        use crate::constants::AM34_MAIN_BASE_VA;
+        use crate::crypto::{ExtrheadCryptMode, pack_extrhead, unpack_extrhead};
+        use crate::hdd::{HddCapacityPatchMode, apply_capacity_patch_in_place};
+        use crate::re::main_bgo_retarget::{
+            MAIN_BGO_STATE_8MB, inspect_or_verify_main_bgo_geometry,
+        };
+        use crate::re::main_passthrough::EXPECTED_MAIN_3410PQ_SIZE;
+        use crate::re::sata_bridge_fix::{
+            SATA_BRIDGE_STATE_WAIT_1000MS, apply_main_sata_bridge_reset_fix_in_place,
+            inspect_main_sata_bridge_reset_site,
+        };
+
+        let part1 = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join("..")
+            .join("firmware_and_images/extracted_partitions/hdd_partition_firmware_0x02000000.bin");
+        if !part1.is_file() {
+            return;
+        }
+        let raw_ctr = std::fs::read(&part1).unwrap();
+        let unpacked_meta = unpack_extrhead(&raw_ctr, ExtrheadCryptMode::Main).unwrap();
+        let mut main_3410 = unpacked_meta.decompressed;
+        assert_eq!(main_3410.len(), EXPECTED_MAIN_3410PQ_SIZE);
+
+        // Verify real MAIN3410PQ *(0x5700_0008) pointer & 32-word power-of-two bit-walk table.
+        let bitwalk_va = LittleEndian::read_u32(&main_3410[8..12]);
+        assert!(
+            bitwalk_va >= AM34_MAIN_BASE_VA && bitwalk_va & 3 == 0,
+            "Invalid MAIN3410PQ bitwalk pointer 0x{bitwalk_va:08X}"
+        );
+        let bw_off = (bitwalk_va - AM34_MAIN_BASE_VA) as usize;
+        for bit in 0..32usize {
+            let word = LittleEndian::read_u32(&main_3410[bw_off + bit * 4..bw_off + bit * 4 + 4]);
+            assert_eq!(
+                word,
+                1u32 << bit,
+                "MAIN3410PQ bitwalk mismatch at word {bit} (off 0x{bw_off:X}): got 0x{word:08X}"
+            );
+        }
+
+        // Apply universal 1000 ms SATA fix + 250 GB HDD capacity + verify native 8 MiB BGO + pack EXTRHEAD(0x94000000).
+        apply_main_sata_bridge_reset_fix_in_place(
+            &mut main_3410,
+            SataBridgeResetFixMode::Wait1000Ms,
+        )
+        .unwrap();
+        assert_eq!(
+            inspect_main_sata_bridge_reset_site(&main_3410)
+                .unwrap()
+                .state,
+            SATA_BRIDGE_STATE_WAIT_1000MS
+        );
+        apply_capacity_patch_in_place(
+            &mut main_3410,
+            HddCapacityPatchMode::FixedCapacity,
+            Some(250),
+        )
+        .unwrap();
+        assert_eq!(
+            inspect_or_verify_main_bgo_geometry(&main_3410)
+                .unwrap()
+                .state,
+            MAIN_BGO_STATE_8MB
+        );
+        let packed = pack_extrhead(
+            &main_3410,
+            "MAIN",
+            AM34_MAIN_BASE_VA,
+            "3410PQ",
+            ExtrheadCryptMode::Main,
+            unpacked_meta.header.adler_step.max(16),
+            unpacked_meta.header.flag.max(1),
+        )
+        .unwrap();
+        let repacked = unpack_extrhead(&packed, ExtrheadCryptMode::Main).unwrap();
+        assert_eq!(repacked.header.src_addr, 0x9400_0000);
+
+        // Execute Stage-2 assembly in Mn103Vm with REAL MAIN3410PQ mapped at 0x5700_0000
+        // (no synthetic bit-walk stub — Stage-2 walks MAIN3410PQ's real *(0x5700_0008) table).
+        let prog = build_stage2_prog_fixture();
+        let mut h = Stage2VmHarness::new_full(&prog, false, Some(repacked.decompressed));
+        h.vm.write_u32(VM_CFG_ENTRY_VA, repacked.header.dst_addr)
+            .unwrap();
+        h.vm.write_u32(VM_CFG_PRIMARY_SRC, repacked.header.src_addr)
+            .unwrap();
+        h.run(AM34_MAIN_BASE_VA).unwrap();
+        assert_eq!(h.vm.pc, AM34_MAIN_BASE_VA);
+        let calls = h.calls();
+        assert!(calls.iter().any(|&(t, _, _)| t == TAG_UNCOMP));
+        assert!(calls.iter().any(|&(t, _, _)| t == TAG_DCACHE));
+        assert!(calls.iter().any(|&(t, _, _)| t == TAG_STOP_TMR));
+        assert!(calls.iter().any(|&(t, _, _)| t == TAG_DISABLE_IRQ));
     }
 }

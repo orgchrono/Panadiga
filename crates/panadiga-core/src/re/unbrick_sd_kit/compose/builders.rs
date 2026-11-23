@@ -18,16 +18,21 @@ use super::super::super::bgo_unbrick::{
     PROG061_BASE_VA, Prog061BgoPatchMode, enforce_train_evidence_tier, find_recipe_by_loader_key,
     patch_prog061_bgo_in_place_with_policy, retarget_prog_for_loader_profile_with_policy,
 };
-use super::super::super::main_bgo_retarget::apply_main_bgo_retarget_in_place;
+use super::super::super::main_bgo_retarget::{
+    apply_main_bgo_retarget_in_place, inspect_or_verify_main_bgo_geometry,
+};
 use super::super::super::main_passthrough::{
     EXPECTED_MAIN_3410PQ_SIZE, MAIN_BASE_VA, MainPassthroughMode, apply_main_passthrough_in_place,
     inspect_main_firmware_identity, inspect_main_passthrough_sites,
 };
 use super::super::super::sata_bridge_fix::{
-    SataBridgeResetFixMode, apply_main3060np_sata_bridge_reset_fix_in_place,
-    apply_prog061_sata_bridge_reset_fix_in_place,
+    SataBridgeResetFixMode, apply_main_sata_bridge_reset_fix_in_place,
+    apply_prog_sata_bridge_reset_fix_for_profile_in_place,
 };
-use super::super::super::sata_bridge_stage2::apply_prog061_stage2_boot_in_place;
+use super::super::super::sata_bridge_stage2::{
+    apply_stage2_boot_for_loader_profile_in_place, stage2_spec_for_loader_profile,
+};
+use super::super::super::ssot_patches::{find_main_build_by_id, find_main_build_by_size};
 use super::super::super::unbrick_workbench::{load_main_binary_and_meta, load_prog061_from_bytes};
 use super::types::{ComposedMainArtifact, SdLoaderProfile};
 
@@ -96,8 +101,11 @@ pub(crate) fn compose_pana_sd_prog061_with_tier_policy(
     if sata_bridge_stage2_boot && !sata_bridge_reset_fix {
         bail!("--sata-bridge-stage2-boot requires --sata-bridge-reset-fix (fail-closed)");
     }
-    if sata_bridge_stage2_boot && loader_profile != SdLoaderProfile::Ver061RawSd48 {
-        bail!("--sata-bridge-stage2-boot currently supports only Loader ver0.61 (ver061)");
+    if sata_bridge_stage2_boot && stage2_spec_for_loader_profile(loader_profile.as_str()).is_err() {
+        bail!(
+            "--sata-bridge-stage2-boot requires an SSOT stage2_boot_spec for loader '{}'",
+            loader_profile.as_str()
+        );
     }
     let effective_mode = if loader_profile == SdLoaderProfile::Ver061RawSd48
         && requested_bgo_mode == Prog061BgoPatchMode::UartMonitor
@@ -114,13 +122,18 @@ pub(crate) fn compose_pana_sd_prog061_with_tier_policy(
         allow_unverified_profile,
     )?;
     if sata_bridge_reset_fix {
-        apply_prog061_sata_bridge_reset_fix_in_place(
+        apply_prog_sata_bridge_reset_fix_for_profile_in_place(
             &mut prog_patched,
+            loader_profile.as_str(),
             SataBridgeResetFixMode::Wait1000Ms,
         )?;
     }
     if sata_bridge_stage2_boot {
-        apply_prog061_stage2_boot_in_place(&mut prog_patched, true)?;
+        apply_stage2_boot_for_loader_profile_in_place(
+            &mut prog_patched,
+            loader_profile.as_str(),
+            true,
+        )?;
     }
     Ok((prog_patched, effective_mode))
 }
@@ -153,9 +166,10 @@ pub(crate) fn compose_patched_main_container(
         );
     }
     let mut modified = false;
+    let size_build_spec = find_main_build_by_size(main_bin.len()).map(|(_, b)| b);
+    let has_ssot_tbc = size_build_spec.is_some_and(|b| !b.av_passthrough_sites.is_empty());
 
-    let passthrough_applied = if main_bin.len() == EXPECTED_MAIN_3410PQ_SIZE
-        && identity.supports_3410pq_tbc_patch
+    let passthrough_applied = if (has_ssot_tbc || identity.supports_3410pq_tbc_patch)
         && inspect_main_passthrough_sites(&main_bin).is_ok()
     {
         apply_main_passthrough_in_place(&mut main_bin, passthrough_mode)?;
@@ -214,7 +228,7 @@ pub(crate) fn compose_patched_main_container(
     }
 
     if sata_bridge_reset_fix {
-        apply_main3060np_sata_bridge_reset_fix_in_place(
+        apply_main_sata_bridge_reset_fix_in_place(
             &mut main_bin,
             SataBridgeResetFixMode::Wait1000Ms,
         )?;
@@ -222,8 +236,15 @@ pub(crate) fn compose_patched_main_container(
     }
 
     if main_bgo_retarget {
-        apply_main_bgo_retarget_in_place(&mut main_bin, true)?;
-        modified = true;
+        if let Some(spec) = size_build_spec
+            && spec.supports_bgo_retarget_to.is_empty()
+            && spec.native_bgo_detect_va.is_some()
+        {
+            let _ = inspect_or_verify_main_bgo_geometry(&main_bin)?;
+        } else {
+            apply_main_bgo_retarget_in_place(&mut main_bin, true)?;
+            modified = true;
+        }
     }
 
     let resolved_build = if identity.build_id != "UNKNOWN" {
@@ -248,11 +269,19 @@ pub(crate) fn compose_patched_main_container(
         raw_main.to_vec()
     };
 
-    let slot_name = format!("MAIN{resolved_build}").chars().take(10).collect();
-    let build_version_u16 = if resolved_build == "3060NP" {
-        0x96AA
+    let meta_build_spec =
+        size_build_spec.or_else(|| find_main_build_by_id(&resolved_build).map(|(_, b)| b));
+    let (slot_name, build_version_u16) = if let Some(spec) = meta_build_spec {
+        (spec.slot_name.clone(), spec.frm_version_u16)
     } else {
-        0x3410
+        (
+            format!("MAIN{resolved_build}").chars().take(10).collect(),
+            if resolved_build == "3060NP" {
+                0x96AA
+            } else {
+                0x3410
+            },
+        )
     };
 
     Ok(ComposedMainArtifact {

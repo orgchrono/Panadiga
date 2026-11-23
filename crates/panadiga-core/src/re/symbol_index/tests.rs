@@ -121,4 +121,23 @@ fn real_prog061_checked_in_symbol_index_blocks_bgo_mutators_if_present() {
             "{target} should list 0x50404FA7 in callers"
         );
     }
+
+    for (module, va, expected_name) in [
+        ("LOADER_VER061", "0x4400894B", "norfrom_fvu_load_check"),
+        ("MAIN3060NP", "0x574AF2F0", "BGO_Init_entry"),
+        ("MAIN3410PQ", "0x5710A98C", "rtsd_ata_hard_reset_wait"),
+    ] {
+        let hit = lookup_symbols(
+            &root,
+            &SymbolLookupQuery {
+                train_id: Some("loader_ver061_toc48_main57".to_string()),
+                module: Some(module.to_string()),
+                va: Some(va.to_string()),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        assert_eq!(hit.total_matches, 1, "missing {module} {va}");
+        assert_eq!(hit.matches[0].symbol.name, expected_name);
+    }
 }

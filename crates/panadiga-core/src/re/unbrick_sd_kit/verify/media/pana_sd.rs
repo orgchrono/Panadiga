@@ -12,17 +12,17 @@ use super::super::super::super::bgo_unbrick::{
     PROG061_EXPECTED_SIZE, inspect_prog061_bgo_sites, prog_has_bgo_table_marker,
 };
 use super::super::super::super::main_bgo_retarget::{
-    MAIN_BGO_STATE_MISMATCH, inspect_main_bgo_geometry,
+    MAIN_BGO_STATE_MISMATCH, inspect_or_verify_main_bgo_geometry,
 };
 use super::super::super::super::main_passthrough::{MAIN_BASE_VA, inspect_main_passthrough_sites};
-use super::super::super::super::region_compat::EXPECTED_MAIN_3060NP_SIZE;
 use super::super::super::super::sata_bridge_fix::{
-    OFF_PROG061_SATA_BRIDGE_RESET_WAIT, inspect_main3060np_sata_bridge_reset_site,
+    OFF_PROG061_SATA_BRIDGE_RESET_WAIT, inspect_main_sata_bridge_reset_site,
     inspect_prog061_sata_bridge_reset_site,
 };
 use super::super::super::super::sata_bridge_stage2::{
     OFF_PROG061_STAGE2_HOOK_SITE, inspect_prog061_stage2_boot_site,
 };
+use super::super::super::super::ssot_patches::find_main_build_by_size;
 use super::super::super::compose::SdLoaderProfile;
 use super::super::{SdUnbrickCheck, check};
 use super::dual_parity::{is_factory_unpatched_prog061, slice_module_and_check_fvu};
@@ -171,15 +171,16 @@ pub(crate) fn verify_pana_sd_buffer(bytes_opt: Option<&[u8]>) -> PanaSdInspectio
                     main_passthrough_mode = inspect_main_passthrough_sites(&u.decompressed)
                         .ok()
                         .map(|p| p.detected_mode);
-                    if u.decompressed.len() == EXPECTED_MAIN_3060NP_SIZE {
-                        if let Ok(st) = inspect_main3060np_sata_bridge_reset_site(&u.decompressed) {
+                    if find_main_build_by_size(u.decompressed.len()).is_some() {
+                        if let Ok(st) = inspect_main_sata_bridge_reset_site(&u.decompressed) {
                             main_sata_bridge_fix = Some(st.state);
                         }
-                        main_bgo_geometry =
-                            Some(match inspect_main_bgo_geometry(&u.decompressed) {
-                                Ok(st) => st.state,
-                                Err(_) => MAIN_BGO_STATE_MISMATCH.to_string(),
-                            });
+                        main_bgo_geometry = Some(
+                            inspect_or_verify_main_bgo_geometry(&u.decompressed).map_or_else(
+                                |_| MAIN_BGO_STATE_MISMATCH.to_string(),
+                                |st| st.state,
+                            ),
+                        );
                     }
                     if let Ok(cap) = inspect_main_buffer_capacity(
                         &u.decompressed,

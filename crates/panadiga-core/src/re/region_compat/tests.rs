@@ -121,3 +121,40 @@ fn ifodev2_2048b_and_sd48_retarget_preserve_tail_blocks_and_prefix_semantics() {
     assert_eq!(retargeted_num_flag[0x18], b'M');
     assert_eq!(retargeted_num_flag[0x19], 1);
 }
+
+#[test]
+fn tv_calibration_bundle_accepts_extrhead_packed_main3410pq() {
+    use crate::constants::AM34_MAIN_BASE_VA;
+    use crate::crypto::{ExtrheadCryptMode, pack_extrhead};
+    use crate::re::main_passthrough::EXPECTED_MAIN_3410PQ_SIZE;
+    use crate::re::region_compat::{
+        LbsRegionPresetId, OFF_FMU_DEVINFO_3410PQ, ORIG_FMU_DEVINFO_3410PQ, TvStandardKind,
+        inspect_tv_calibration_bundle,
+    };
+
+    let mut raw = vec![0u8; EXPECTED_MAIN_3410PQ_SIZE];
+    raw[OFF_FMU_DEVINFO_3410PQ..OFF_FMU_DEVINFO_3410PQ + ORIG_FMU_DEVINFO_3410PQ.len()]
+        .copy_from_slice(&ORIG_FMU_DEVINFO_3410PQ);
+    let packed = pack_extrhead(
+        &raw,
+        "MAIN",
+        AM34_MAIN_BASE_VA,
+        "3410PQ",
+        ExtrheadCryptMode::Main,
+        16,
+        1,
+    )
+    .unwrap();
+    let rep = inspect_tv_calibration_bundle(
+        LbsRegionPresetId::BrPalMR4,
+        Some(TvStandardKind::PalM),
+        None,
+        Some(&packed),
+        None,
+        None,
+    )
+    .unwrap();
+    let main_reg = rep.main_region.as_ref().unwrap();
+    assert_eq!(main_reg.build_profile, "3410PQ");
+    assert_eq!(main_reg.state, "FACTORY");
+}

@@ -9,11 +9,15 @@ use crate::constants::{
     AM34_NVRAM_BASE, SPANSION_FLASH_SIZE_BYTES, SPANSION_NVRAM_BASE_OFFSET,
     SPANSION_NVRAM_END_OFFSET, SPANSION_NVRAM_SIZE_BYTES,
 };
-use crate::crypto::{decrypt_frm_toc_with_detected_key, parse_sd_frm_toc_with_layout};
+use crate::crypto::{
+    ExtrheadCryptMode, decrypt_frm_toc_with_detected_key, parse_sd_frm_toc_with_layout,
+    unpack_extrhead,
+};
 use crate::nvram::{NvramCleanReport, calculate_hashes, inspect_partial_nvram_capture};
 
 use super::super::dev_bin::{PANA_IFODEV2_SIZE, inspect_dev_bin_bytes};
 use super::super::main_fmu::inspect_main_region_compat;
+use super::super::types::MainRegionCompatReport;
 use super::mmio::build_tv_calibration_profile;
 use super::types::{
     FrmTocInspectionSummary, Ifodev2TailMetadata, LbsRegionPresetId, TvCalibrationBundleReport,
@@ -60,6 +64,16 @@ fn inspect_nvram_sa134_sa141(bytes: &[u8]) -> Result<NvramCleanReport> {
         );
     };
     inspect_partial_nvram_capture(slice, AM34_NVRAM_BASE, "SA134..SA141")
+}
+
+fn inspect_main_region_bytes(bytes: &[u8]) -> Result<MainRegionCompatReport> {
+    if crate::re::ssot_patches::find_main_build_by_size(bytes.len()).is_some() {
+        return inspect_main_region_compat(bytes);
+    }
+    if let Ok(unpacked) = unpack_extrhead(bytes, ExtrheadCryptMode::Main) {
+        return inspect_main_region_compat(&unpacked.decompressed);
+    }
+    inspect_main_region_compat(bytes)
 }
 
 /// Inspects an optional bundle of `DEV.BIN`/`ifodev2`, `MAIN`, `.FRM`, and NVRAM `SA134..SA141`
@@ -109,7 +123,7 @@ pub fn inspect_tv_calibration_bundle(
         None => (None, None),
     };
 
-    let main_region = main_bytes.map(inspect_main_region_compat).transpose()?;
+    let main_region = main_bytes.map(inspect_main_region_bytes).transpose()?;
     let frm_toc = frm_bytes.map(inspect_frm_toc_summary).transpose()?;
     let nvram_sa134_sa141 = nvram_or_flash_bytes
         .map(inspect_nvram_sa134_sa141)

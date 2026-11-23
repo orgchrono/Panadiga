@@ -233,12 +233,12 @@ fn sata_bridge_reset_fix_audit_enforces_symmetry_and_catches_corruption() {
             .any(|c| c.id == CHK_ID_SATA_BRIDGE_RESET_FIX && c.severity == "fail")
     );
 
-    // Direct symmetric-pass verification for PROG061 + MAIN3060NP 1000 ms pair and factory 2 ms silence.
+    // Direct symmetric-pass verification for PROG061 + MAIN 1000 ms pair and factory 2 ms silence.
     let mut checks = Vec::new();
     push_sata_bridge_fix_check(
         &mut checks,
         true,
-        true,
+        Some("3060NP"),
         Some(SATA_BRIDGE_STATE_WAIT_1000MS),
         Some(SATA_BRIDGE_STATE_WAIT_1000MS),
         SdKitAuditProfile::HardenedRecovery,
@@ -251,7 +251,7 @@ fn sata_bridge_reset_fix_audit_enforces_symmetry_and_catches_corruption() {
     push_sata_bridge_fix_check(
         &mut checks,
         true,
-        true,
+        Some("3410PQ"),
         Some(SATA_BRIDGE_STATE_FACTORY_2MS),
         Some(SATA_BRIDGE_STATE_FACTORY_2MS),
         SdKitAuditProfile::HardenedRecovery,
@@ -367,7 +367,7 @@ fn main_bgo_geometry_audit_enforces_ver061_stage2_hardening() {
 
     for (geo, profile, stage2, expected_sev) in cases {
         let mut checks = Vec::new();
-        push_main_bgo_geometry_check(&mut checks, geo, profile, stage2);
+        push_main_bgo_geometry_check(&mut checks, Some("3060NP"), geo, profile, stage2);
         assert_eq!(checks.len(), usize::from(expected_sev.is_some()));
         if let Some(sev) = expected_sev {
             assert_eq!(checks[0].id, CHK_ID_MAIN_BGO_GEOMETRY);

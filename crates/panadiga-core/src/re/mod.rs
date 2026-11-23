@@ -23,6 +23,7 @@ pub mod region_compat;
 pub mod sata_bridge_fix;
 pub mod sata_bridge_stage2;
 pub mod sig_locator;
+pub mod ssot_patches;
 pub mod symbol_index;
 pub mod tbc_appliance;
 pub mod unbrick_sd_kit;
@@ -66,6 +67,7 @@ pub use main_bgo_retarget::{
     MAIN3060NP_BGO_8MB_SPEC, MainBgoGeometryStatus, MainBgoRetargetSpec, U32RelocSpec,
     WordPatchSite, apply_main_bgo_retarget_for_spec_in_place, apply_main_bgo_retarget_in_place,
     inspect_main_bgo_geometry, inspect_main_bgo_geometry_for_spec,
+    inspect_or_verify_main_bgo_geometry, verify_main3410pq_native_8mb_bgo,
 };
 pub use main_passthrough::{
     DEV_SERIAL_CALLBACK_VA, DEV_SERIAL_HANDSHAKE_BYTES, DEV_SERIAL_ISR_CTX_PTR_VA,
@@ -106,25 +108,36 @@ pub use region_compat::{
     patch_main_region_compat_in_place, retarget_frm_toc_bytes,
 };
 pub use sata_bridge_fix::{
-    OFF_MAIN3060NP_SATA_BRIDGE_RESET_WAIT, OFF_PROG061_SATA_BRIDGE_RESET_WAIT,
-    ORIG_MAIN3060NP_SATA_BRIDGE_RESET_WAIT, ORIG_PROG061_SATA_BRIDGE_RESET_WAIT,
-    PATCH_MAIN3060NP_SATA_BRIDGE_RESET_WAIT, PATCH_PROG061_SATA_BRIDGE_RESET_WAIT,
-    SATA_BRIDGE_STATE_FACTORY_2MS, SATA_BRIDGE_STATE_MISMATCH, SATA_BRIDGE_STATE_WAIT_1000MS,
-    SataBridgeResetFixMode, SataBridgeResetSiteStatus,
-    apply_main3060np_sata_bridge_reset_fix_in_place, apply_prog061_sata_bridge_reset_fix_in_place,
-    inspect_main3060np_sata_bridge_reset_site, inspect_prog061_sata_bridge_reset_site,
+    OFF_MAIN3060NP_SATA_BRIDGE_RESET_WAIT, OFF_MAIN3410PQ_SATA_BRIDGE_RESET_WAIT,
+    OFF_PROG061_SATA_BRIDGE_RESET_WAIT, ORIG_MAIN3060NP_SATA_BRIDGE_RESET_WAIT,
+    ORIG_MAIN3410PQ_SATA_BRIDGE_RESET_WAIT, ORIG_PROG061_SATA_BRIDGE_RESET_WAIT,
+    PATCH_MAIN3060NP_SATA_BRIDGE_RESET_WAIT, PATCH_MAIN3410PQ_SATA_BRIDGE_RESET_WAIT,
+    PATCH_PROG061_SATA_BRIDGE_RESET_WAIT, SATA_BRIDGE_STATE_FACTORY_2MS,
+    SATA_BRIDGE_STATE_MISMATCH, SATA_BRIDGE_STATE_WAIT_1000MS, SataBridgeResetFixMode,
+    SataBridgeResetSiteStatus, apply_main_sata_bridge_reset_fix_in_place,
+    apply_main3060np_sata_bridge_reset_fix_in_place,
+    apply_main3410pq_sata_bridge_reset_fix_in_place,
+    apply_prog_sata_bridge_reset_fix_for_profile_in_place,
+    apply_prog061_sata_bridge_reset_fix_in_place, inspect_main_sata_bridge_reset_site,
+    inspect_main3060np_sata_bridge_reset_site, inspect_main3410pq_sata_bridge_reset_site,
+    inspect_prog_sata_bridge_reset_site_for_profile, inspect_prog061_sata_bridge_reset_site,
 };
 pub use sata_bridge_stage2::{
     PROG061_STAGE2_PAYLOAD_OFFSET, PROG061_STAGE2_PAYLOAD_VA, PROG061_STAGE2_STATE_ENABLED,
     PROG061_STAGE2_STATE_FACTORY, PROG061_STAGE2_STATE_MISMATCH, Prog061Stage2BootStatus,
     Stage2BootTrainSpec, VER061_STAGE2_BOOT_SPEC, apply_prog061_stage2_boot_in_place,
-    apply_stage2_boot_in_place_for_spec, assemble_prog061_stage2_payload,
-    assemble_stage2_payload_for_spec, compute_stage2_hook_bytes, inspect_prog061_stage2_boot_site,
-    inspect_stage2_boot_site_for_spec,
+    apply_stage2_boot_for_loader_profile_in_place, apply_stage2_boot_in_place_for_spec,
+    assemble_prog061_stage2_payload, assemble_stage2_payload_for_spec, compute_stage2_hook_bytes,
+    inspect_prog061_stage2_boot_site, inspect_stage2_boot_for_loader_profile,
+    inspect_stage2_boot_site_for_spec, stage2_spec_for_loader_profile,
 };
 pub use sig_locator::{
     CfgFunctionCandidate, LocatedFunctionMatch, StringXrefHit, detect_prologue_at,
     discover_cfg_functions, locate_functions_by_string, summarize_function_cfg,
+};
+pub use ssot_patches::{
+    find_main_build_by_id, find_main_build_by_size, find_prog_sata_reset_spec,
+    stage2_boot_spec_for_loader, verify_main_native_bgo_from_spec,
 };
 pub use symbol_index::{
     FirmwareSymbolIndex, FunctionSymbolEntry, SymbolAbiDetail, SymbolAnnotationOverlay,

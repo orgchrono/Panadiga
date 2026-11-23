@@ -76,14 +76,24 @@ pub struct SdMediaVerificationReport {
     pub checks: Vec<SdUnbrickCheck>,
 }
 
+fn format_main_label(main_build: Option<&str>) -> String {
+    match main_build.map(str::trim).filter(|s| !s.is_empty()) {
+        Some(b) if b.to_ascii_uppercase().starts_with("MAIN") => b.to_ascii_uppercase(),
+        Some(b) => format!("MAIN{}", b.to_ascii_uppercase()),
+        None => "MAIN".to_string(),
+    }
+}
+
 fn push_sata_bridge_fix_check(
     checks: &mut Vec<SdUnbrickCheck>,
     sd_present: bool,
-    main_build_present: bool,
+    main_build: Option<&str>,
     prog_state: Option<&str>,
     main_state: Option<&str>,
     audit_profile: SdKitAuditProfile,
 ) {
+    let main_build_present = main_build.is_some();
+    let main_label = format_main_label(main_build);
     if prog_state == Some(SATA_BRIDGE_STATE_MISMATCH)
         || main_state == Some(SATA_BRIDGE_STATE_MISMATCH)
     {
@@ -92,7 +102,7 @@ fn push_sata_bridge_fix_check(
             "fail",
             "Corrupt/Unexpected Bytes at SATA-Bridge Hard-Reset Timing Site",
             format!(
-                "PANA__SD.FRM SATA-bridge timing site failed fail-closed match (prog061={prog_state:?}, main={main_state:?})."
+                "PANA__SD.FRM SATA-bridge timing site failed fail-closed match (prog061={prog_state:?}, {main_label}={main_state:?})."
             ),
         ));
         return;
@@ -105,7 +115,9 @@ fn push_sata_bridge_fix_check(
             CHK_ID_SATA_BRIDGE_RESET_FIX,
             "pass",
             "SATA-PATA Bridge Reset Wait Fix Verified (1000 ms)",
-            "Both PANA__SD.FRM PROG061 @ 0x5041D928 and MAIN3060NP @ 0x571122B2 apply verified 1000 ms post-RESET- wait (100 x 10 ms RTOS ticks).",
+            format!(
+                "Both PANA__SD.FRM PROG061 and {main_label} apply verified 1000 ms post-RESET- wait (100 x 10 ms RTOS ticks)."
+            ),
         ));
     } else if (prog_patched && (main_build_present || main_state.is_some()))
         || (main_patched && sd_present)
@@ -119,7 +131,7 @@ fn push_sata_bridge_fix_check(
             sev,
             "Partial SATA-PATA Bridge Reset Wait Fix (PROG061 vs MAIN Mismatch)",
             format!(
-                "Partial SataBridgeResetFix in PANA__SD.FRM (prog061={prog_state:?}, main={main_state:?}); both PROG061 FVU and MAIN3060NP must use 1000 ms or factory 2 ms consistently."
+                "Partial SataBridgeResetFix in PANA__SD.FRM (prog061={prog_state:?}, {main_label}={main_state:?}); both PROG061 FVU and {main_label} must use 1000 ms or factory 2 ms consistently."
             ),
         ));
     }
@@ -181,6 +193,7 @@ fn push_stage2_boot_check(
 
 fn push_main_bgo_geometry_check(
     checks: &mut Vec<SdUnbrickCheck>,
+    main_build: Option<&str>,
     main_bgo_geo: Option<&str>,
     loader_profile: Option<SdLoaderProfile>,
     stage2_state: Option<&str>,
@@ -188,39 +201,50 @@ fn push_main_bgo_geometry_check(
     let Some(geo) = main_bgo_geo else {
         return;
     };
+    let main_label = format_main_label(main_build);
     let is_ver061 = loader_profile == Some(SdLoaderProfile::Ver061RawSd48);
     let is_stage2 = stage2_state == Some(PROG061_STAGE2_STATE_ENABLED);
     match geo {
         MAIN_BGO_STATE_8MB => checks.push(check(
             CHK_ID_MAIN_BGO_GEOMETRY,
             "pass",
-            "MAIN3060NP BGO/NFROM NOR Geometry Verified (8 MiB 0x84130000, 45 Sectors)",
-            "PANA__SD.FRM MAIN3060NP targets 8 MiB Uniform BGO (0x531B8000..0x531BC000, 0x84130000..0x84400000, P1=1, P2=40, P5=4, max_did=0x0F24).",
+            format!("{main_label} BGO/NFROM NOR Geometry Verified (8 MiB 0x84130000, 45 Sectors)"),
+            format!(
+                "PANA__SD.FRM {main_label} targets 8 MiB Uniform BGO (0x84130000..0x84400000, 45 sectors)."
+            ),
         )),
         MAIN_BGO_STATE_MISMATCH => checks.push(check(
             CHK_ID_MAIN_BGO_GEOMETRY,
             "fail",
-            "Corrupt/Partial MAIN3060NP BGO/NFROM NOR Geometry Sites",
-            "PANA__SD.FRM MAIN3060NP BGO retarget sites failed fail-closed validation (mixed 4 MiB/8 MiB tables).",
+            format!("Corrupt/Partial {main_label} BGO/NFROM NOR Geometry Sites"),
+            format!(
+                "PANA__SD.FRM {main_label} BGO verification failed fail-closed validation (mixed 4 MiB/8 MiB tables)."
+            ),
         )),
         MAIN_BGO_STATE_FACTORY_4MB => {
             let (sev, title, detail) = if is_ver061 && is_stage2 {
                 (
                     "fail",
-                    "Stock 4 MiB MAIN3060NP BGO Geometry Incompatible With ver061 Stage-2 (8 MiB EH55)",
-                    "Stage-2 SATA HDD boot on 8 MiB DMR-EH55 NOR halts in '[nfrom] BGO driver init failed[1].' (src/nfd_api.c:228) unless MAIN3060NP is retargeted via --main-bgo-retarget.",
+                    format!("Stock 4 MiB {main_label} BGO Geometry Incompatible With ver061 Stage-2 (8 MiB EH55)"),
+                    format!(
+                        "Stage-2 SATA HDD boot on 8 MiB DMR-EH55 NOR halts in '[nfrom] BGO driver init failed[1].' (src/nfd_api.c:228) unless {main_label} is retargeted via --main-bgo-retarget."
+                    ),
                 )
             } else if is_ver061 {
                 (
                     "warn",
-                    "Factory 4 MiB MAIN3060NP BGO Geometry Detected (Requires 8 MiB Retarget for EH55 NOR)",
-                    "PANA__SD.FRM MAIN3060NP targets 4 MiB Top-Boot BGO (0x84200000, 35 sectors); pass --main-bgo-retarget when targeting 8 MiB DMR-EH55 NOR.",
+                    format!("Factory 4 MiB {main_label} BGO Geometry Detected (Requires 8 MiB Retarget for EH55 NOR)"),
+                    format!(
+                        "PANA__SD.FRM {main_label} targets 4 MiB Top-Boot BGO (0x84200000, 35 sectors); pass --main-bgo-retarget when targeting 8 MiB DMR-EH55 NOR."
+                    ),
                 )
             } else {
                 (
                     "pass",
-                    "Factory 4 MiB MAIN3060NP BGO Geometry Matches Non-ver061 Target",
-                    "PANA__SD.FRM MAIN3060NP uses 4 MiB Top-Boot BGO geometry (0x84200000, 35 sectors).",
+                    format!("Factory 4 MiB {main_label} BGO Geometry Matches Non-ver061 Target"),
+                    format!(
+                        "PANA__SD.FRM {main_label} uses 4 MiB Top-Boot BGO geometry (0x84200000, 35 sectors)."
+                    ),
                 )
             };
             checks.push(check(CHK_ID_MAIN_BGO_GEOMETRY, sev, title, detail));
@@ -228,7 +252,7 @@ fn push_main_bgo_geometry_check(
         other => checks.push(check(
             CHK_ID_MAIN_BGO_GEOMETRY,
             "fail",
-            "Unexpected MAIN3060NP BGO/NFROM Geometry State",
+            format!("Unexpected {main_label} BGO/NFROM Geometry State"),
             format!("Unexpected MAIN BGO geometry state '{other}' in PANA__SD.FRM."),
         )),
     }
@@ -523,7 +547,7 @@ pub fn verify_sd_buffers_with_profile(
     push_sata_bridge_fix_check(
         &mut checks,
         sd.present,
-        sd.main_build.is_some(),
+        sd.main_build.as_deref(),
         sd.prog061_sata_bridge_fix.as_deref(),
         sd.main_sata_bridge_fix.as_deref(),
         audit_profile,
@@ -537,6 +561,7 @@ pub fn verify_sd_buffers_with_profile(
     );
     push_main_bgo_geometry_check(
         &mut checks,
+        sd.main_build.as_deref(),
         sd.main_bgo_geometry.as_deref(),
         sd.detected_profile.or(diag.detected_profile),
         sd.prog061_stage2_boot.as_deref(),
