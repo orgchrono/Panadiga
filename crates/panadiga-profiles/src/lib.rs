@@ -15,6 +15,7 @@ pub mod types;
 pub mod validate;
 mod validate_bgo;
 mod validate_layout;
+mod validate_patches;
 
 #[cfg(test)]
 mod tests;

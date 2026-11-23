@@ -1,6 +1,7 @@
 //! Compiled firmware train contracts (bootloaders, `.FRM` TOC geometry, Feistel ciphers, SDRAM load VAs, and binary symbols).
 
 use super::evidence::ClaimEvidence;
+use super::patch_specs::{MainBuildSpec, SataBridgeResetSpec, Stage2BootSpec};
 use crate::hex_serde::{hex_i32, hex_u8, hex_u32, hex_u32_map, hex_u32_vec, opt_hex_u32};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -225,5 +226,11 @@ pub struct FirmwareTrainProfile {
     pub pana_rebuild_recipe: Option<PanaRebuildRecipe>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bgo_retarget_spec: Option<ProgBgoRetargetSpec>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prog_sata_bridge_reset_spec: Option<SataBridgeResetSpec>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stage2_boot_spec: Option<Stage2BootSpec>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub main_builds: Vec<MainBuildSpec>,
     pub evidence: ClaimEvidence,
 }

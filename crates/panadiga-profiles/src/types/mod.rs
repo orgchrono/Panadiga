@@ -9,6 +9,7 @@ pub mod flash;
 pub mod layout;
 pub mod media;
 pub mod model;
+pub mod patch_specs;
 pub mod soc;
 pub mod train;
 
@@ -24,6 +25,9 @@ pub use media::MediaFormatProfile;
 pub use model::{
     CapabilitySummary, ClaimAxis, ModelClaims, ModelProfileManifest, ProfilesBundle,
     RegistryValidationReport, ResolvedModelProfile,
+};
+pub use patch_specs::{
+    BinaryPatchSiteSpec, MainBuildSpec, SataBridgeResetSpec, Stage2BootSpec, Stage2BootSymbolsSpec,
 };
 pub use soc::{BusWindow, SocCoreProfile, SocProfile};
 pub use train::{

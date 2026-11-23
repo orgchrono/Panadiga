@@ -13,6 +13,7 @@ use crate::types::{
 };
 use crate::validate::{CheckTracker, MIN_CRITICAL_IPL_GUARD_BYTES, check_hex_digest};
 use crate::validate_bgo::validate_bgo_retarget_spec;
+use crate::validate_patches::validate_train_patch_specs;
 
 fn validate_single_nor_layout(
     layout: &NorLayoutProfile,
@@ -238,6 +239,7 @@ pub(super) fn validate_train_board_layout_model(bundle: &ProfilesBundle, tr: &mu
             });
         }
         validate_bgo_retarget_spec(bundle, trn, tr);
+        validate_train_patch_specs(trn, tr);
     }
 
     for (k, bd) in &bundle.boards {

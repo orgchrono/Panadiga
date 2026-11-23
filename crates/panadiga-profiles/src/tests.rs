@@ -14,13 +14,14 @@ use crate::loader::{
 };
 use crate::schema::verify_schemas_match_dir;
 use crate::types::{
-    AddressReloc, AuthorizationMode, BoardProfile, BusWindow, BytePatchEntry, Capability,
-    ClaimEvidence, EepromChipProfile, EepromFunction, EvidenceSource, EvidenceTier,
+    AddressReloc, AuthorizationMode, BinaryPatchSiteSpec, BoardProfile, BusWindow, BytePatchEntry,
+    Capability, ClaimEvidence, EepromChipProfile, EepromFunction, EvidenceSource, EvidenceTier,
     FirmwareTrainProfile, FlashChipProfile, FlashHwProtect, FlashJedecId, FlashRwBank,
-    FlashSectorBank, FrmContainerSpec, LAB_OVERRIDE_DISCLAIMER_ACK, LabOverride,
+    FlashSectorBank, FrmContainerSpec, LAB_OVERRIDE_DISCLAIMER_ACK, LabOverride, MainBuildSpec,
     MediaFormatProfile, ModelClaims, ModelProfileManifest, NorLayoutProfile, NorRegion,
     NorRegionKind, NorRegionPolicy, OffsetRange, ProfilesBundle, ProgBgoRetargetSpec,
-    RegionSignature, RuntimeFingerprint, SocCoreProfile, SocProfile,
+    RegionSignature, RuntimeFingerprint, SataBridgeResetSpec, SocCoreProfile, SocProfile,
+    Stage2BootSpec, Stage2BootSymbolsSpec,
 };
 use crate::validate::{AM34_LETHAL_MMIO_ADDR, REQUIRED_LVTTL_MV, validate_bundle};
 
@@ -233,6 +234,9 @@ fn sample_bundle() -> ProfilesBundle {
             digadiag_spec: None,
             pana_rebuild_recipe: None,
             bgo_retarget_spec: None,
+            prog_sata_bridge_reset_spec: None,
+            stage2_boot_spec: None,
+            main_builds: Vec::new(),
             evidence: ev(EvidenceTier::BenchVerified, "bench"),
         },
     );
@@ -805,5 +809,130 @@ fn validate_bundle_rejects_4mb_vs_8mb_bgo_flash_and_sector_traps() {
             .errors
             .iter()
             .any(|e| e.contains("requires exact_bytes=131072"))
+    );
+}
+
+#[test]
+fn universal_patch_stage2_and_main_build_specs_enforce_bounds_ipl_and_geometry() {
+    let mut good = sample_bundle();
+    let trn = good
+        .firmware_trains
+        .get_mut("loader_ver061_toc48_main57")
+        .unwrap();
+    trn.prog_sata_bridge_reset_spec = Some(SataBridgeResetSpec {
+        target_name: "PROG061".to_string(),
+        base_va: 0x5040_0000,
+        expected_size: 262_144,
+        factory_wait_ms: 2,
+        patched_wait_ms: 1000,
+        sleep_callee_va: 0x5043_1303,
+        site: BinaryPatchSiteSpec {
+            name: "prog061_sata_reset".to_string(),
+            description: "2 ms -> 1000 ms".to_string(),
+            va: 0x5041_D928,
+            expect_hex: "2cd00789ddbadaffff0000".to_string(),
+            replace_hex: "2c640089ddd73901000000".to_string(),
+            symbol_ref: None,
+        },
+    });
+    let sym = |idx: u32| 0x5040_1000 + idx * 0x100;
+    trn.stage2_boot_spec = Some(Stage2BootSpec {
+        base_va: 0x5040_0000,
+        expected_size: 262_144,
+        hook_offset: 0x0000_5100,
+        hook_expect_hex: "dd084f00000000".to_string(),
+        payload_offset: 0x0003_A000,
+        require_reset_fix_1000ms: true,
+        uart_abort_polls: 25,
+        uart_poll_ticks_10ms: 2,
+        hdd_primary_lba: 0x0001_2000,
+        hdd_mirror_lba_delta: 0x0002_4000,
+        hdd_probe_sectors: 128,
+        feistel_crypt_span: 0x0001_0000,
+        main_va_min: 0x5000_0000,
+        main_va_max: 0x57FF_FFFF,
+        dcache_purge_base: 0x5710_0000,
+        dcache_purge_len: 0x0010_0000,
+        sd_info_bss_va: 0x5048_1000,
+        hdd_dma_buf_va: 0x90C1_0000,
+        fvu_load_uncached_va: 0x9040_0000,
+        norfrom_fvu_base_va: 0x8404_0000,
+        symbols: Stage2BootSymbolsSpec {
+            dcache_purge_va: sym(1),
+            uart0_getc_nb_va: sym(2),
+            uart0_printf_va: sym(3),
+            check_update_flag_va: sym(4),
+            hdd_max_lba_va: sym(5),
+            hdd_read_va: sym(6),
+            sd_init_va: sym(7),
+            stop_timer_irq_va: sym(8),
+            feistel_decrypt_va: sym(9),
+            extrhead_get_size_va: sym(10),
+            extrhead_check_hdr_va: sym(11),
+            extrhead_is_comp_va: sym(12),
+            extrhead_get_src_va: sym(13),
+            extrhead_get_entry_va: sym(14),
+            extrhead_uncomp_va: sym(15),
+            fat_mount_va: sym(16),
+            fat_open_va: sym(17),
+            fat_close_va: sym(18),
+            disable_irq_va: sym(19),
+            memcpy_va: sym(20),
+            sleep_10ms_va: sym(21),
+        },
+    });
+    trn.main_builds = vec![MainBuildSpec {
+        build_id: "3410PQ".to_string(),
+        slot_name: "MAIN3410PQ".to_string(),
+        frm_version_u16: 0x3410,
+        base_va: 0x5700_0000,
+        unpacked_size: 13_003_052,
+        region_tv_standard: Some("pal_m".to_string()),
+        model_markers: vec!["DMR-EH55".to_string()],
+        chassis_family: Some("M6930LB".to_string()),
+        native_bgo_geometry_id: "BGO_45SEC_8MB_0X84130000".to_string(),
+        native_bgo_detect_va: Some(0x5756_EFD4),
+        native_bgo_flash_base_va: Some(0x8413_0000),
+        supports_bgo_retarget_to: Vec::new(),
+        sata_bridge_reset_spec: None,
+        av_passthrough_sites: Vec::new(),
+        unpacked_sha256: Some(
+            "c3275d39549b68f48db16bc5fd043c6f8a373d4ba416826de09be5c55dc991b1".to_string(),
+        ),
+    }];
+    assert!(validate_bundle(&good).valid);
+
+    let mut bad = good;
+    let bad_trn = bad
+        .firmware_trains
+        .get_mut("loader_ver061_toc48_main57")
+        .unwrap();
+    let bad_prog = bad_trn.prog_sata_bridge_reset_spec.as_mut().unwrap();
+    bad_prog.site.va = 0x5045_0000;
+    bad_trn
+        .stage2_boot_spec
+        .as_mut()
+        .unwrap()
+        .norfrom_fvu_base_va = 0x8401_0000;
+    bad_trn.main_builds[0].native_bgo_flash_base_va = Some(0x8420_0000);
+    bad_trn.main_builds[0]
+        .av_passthrough_sites
+        .push(BinaryPatchSiteSpec {
+            name: "bad_hex_site".to_string(),
+            description: "malformed hex test".to_string(),
+            va: 0x5700_0000,
+            expect_hex: "ZZ".to_string(),
+            replace_hex: "00".to_string(),
+            symbol_ref: None,
+        });
+    let rep = validate_bundle(&bad);
+    assert!(!rep.valid);
+    assert!(rep.errors.iter().any(|e| e.contains("invalid hex bytes")));
+    assert!(rep.errors.iter().any(|e| e.contains("out of bounds")));
+    assert!(rep.errors.iter().any(|e| e.contains("immutable IPL guard")));
+    assert!(
+        rep.errors
+            .iter()
+            .any(|e| e.contains("native_bgo_flash_base_va"))
     );
 }

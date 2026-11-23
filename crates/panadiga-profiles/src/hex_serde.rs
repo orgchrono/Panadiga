@@ -89,6 +89,14 @@ fn decode_u8(raw: StringOrInt) -> Result<u8, String> {
     u8::try_from(n).map_err(|e| e.to_string())
 }
 
+fn decode_u16(raw: StringOrInt) -> Result<u16, String> {
+    let n = match raw {
+        StringOrInt::Int(v) => v,
+        StringOrInt::Str(s) => parse_prefixed_u64(&s)?,
+    };
+    u16::try_from(n).map_err(|e| e.to_string())
+}
+
 fn decode_i32(raw: StringOrSignedInt) -> Result<i32, String> {
     let val: i64 = match raw {
         StringOrSignedInt::Int(v) => v,
@@ -117,6 +125,18 @@ pub mod hex_u8 {
 
     pub fn deserialize<'de, D: Deserializer<'de>>(de: D) -> Result<u8, D::Error> {
         decode_u8(StringOrInt::deserialize(de)?).map_err(D::Error::custom)
+    }
+}
+
+pub mod hex_u16 {
+    use super::*;
+
+    pub fn serialize<S: Serializer>(val: &u16, ser: S) -> Result<S::Ok, S::Error> {
+        ser.serialize_str(&format!("0x{val:04X}"))
+    }
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(de: D) -> Result<u16, D::Error> {
+        decode_u16(StringOrInt::deserialize(de)?).map_err(D::Error::custom)
     }
 }
 

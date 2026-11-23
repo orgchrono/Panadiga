@@ -45,6 +45,91 @@ export interface ProgBgoRetargetSpec {
   readonly byte_patches: readonly BytePatchEntry[];
 }
 
+export interface BinaryPatchSiteSpec {
+  readonly name: string;
+  readonly description: string;
+  readonly va: string;
+  readonly expect_hex: string;
+  readonly replace_hex: string;
+  readonly symbol_ref?: string | null;
+}
+
+export interface SataBridgeResetSpec {
+  readonly target_name: string;
+  readonly base_va: string;
+  readonly expected_size: number;
+  readonly factory_wait_ms: number;
+  readonly patched_wait_ms: number;
+  readonly sleep_callee_va: string;
+  readonly site: BinaryPatchSiteSpec;
+}
+
+export interface Stage2BootSymbolsSpec {
+  readonly dcache_purge_va: string;
+  readonly uart0_getc_nb_va: string;
+  readonly uart0_printf_va: string;
+  readonly check_update_flag_va: string;
+  readonly hdd_max_lba_va: string;
+  readonly hdd_read_va: string;
+  readonly sd_init_va: string;
+  readonly stop_timer_irq_va: string;
+  readonly feistel_decrypt_va: string;
+  readonly extrhead_get_size_va: string;
+  readonly extrhead_check_hdr_va: string;
+  readonly extrhead_is_comp_va: string;
+  readonly extrhead_get_src_va: string;
+  readonly extrhead_get_entry_va: string;
+  readonly extrhead_uncomp_va: string;
+  readonly fat_mount_va: string;
+  readonly fat_open_va: string;
+  readonly fat_close_va: string;
+  readonly disable_irq_va: string;
+  readonly memcpy_va: string;
+  readonly sleep_10ms_va: string;
+}
+
+export interface Stage2BootSpec {
+  readonly base_va: string;
+  readonly expected_size: number;
+  readonly hook_offset: string;
+  readonly hook_expect_hex: string;
+  readonly payload_offset: string;
+  readonly require_reset_fix_1000ms: boolean;
+  readonly uart_abort_polls: number;
+  readonly uart_poll_ticks_10ms: number;
+  readonly hdd_primary_lba: string;
+  readonly hdd_mirror_lba_delta: string;
+  readonly hdd_probe_sectors: number;
+  readonly feistel_crypt_span: string;
+  readonly main_va_min: string;
+  readonly main_va_max: string;
+  readonly dcache_purge_base: string;
+  readonly dcache_purge_len: string;
+  readonly sd_info_bss_va: string;
+  readonly hdd_dma_buf_va: string;
+  readonly fvu_load_uncached_va: string;
+  readonly norfrom_fvu_base_va: string;
+  readonly symbols: Stage2BootSymbolsSpec;
+}
+
+export interface MainBuildSpec {
+  readonly build_id: string;
+  readonly slot_name: string;
+  readonly frm_version_u16: string;
+  readonly base_va: string;
+  readonly unpacked_size: number;
+  readonly region_tv_standard?: string | null;
+  readonly model_markers?: readonly string[];
+  readonly chassis_family?: string | null;
+  readonly native_bgo_geometry_id: string;
+  readonly native_bgo_detect_va?: string | null;
+  readonly native_bgo_flash_base_va?: string | null;
+  readonly supports_bgo_retarget_to?: readonly string[];
+  readonly sata_bridge_reset_spec?: SataBridgeResetSpec | null;
+  readonly av_passthrough_sites?: readonly BinaryPatchSiteSpec[];
+  readonly unpacked_sha256?: string | null;
+}
+
 export interface FirmwareTrainProfile {
   readonly id: string;
   readonly soc_core_ref?: string | null;
@@ -63,6 +148,9 @@ export interface FirmwareTrainProfile {
   readonly digadiag_spec?: DigadiagSpec | null;
   readonly pana_rebuild_recipe?: PanaRebuildRecipe | null;
   readonly bgo_retarget_spec?: ProgBgoRetargetSpec | null;
+  readonly prog_sata_bridge_reset_spec?: SataBridgeResetSpec | null;
+  readonly stage2_boot_spec?: Stage2BootSpec | null;
+  readonly main_builds?: readonly MainBuildSpec[];
   readonly evidence: ClaimEvidence;
 }
 

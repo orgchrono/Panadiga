@@ -17,6 +17,41 @@
       ],
       "type": "object"
     },
+    "BinaryPatchSiteSpec": {
+      "additionalProperties": false,
+      "description": "Single fail-closed machine-code patch site inside a firmware image (`VA`, expected bytes, replacement).",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "expect_hex": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "replace_hex": {
+          "type": "string"
+        },
+        "symbol_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "va": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "description",
+        "va",
+        "expect_hex",
+        "replace_hex"
+      ],
+      "type": "object"
+    },
     "BoardProfile": {
       "additionalProperties": false,
       "description": "Hardware PCB assembly uniting SoC silicon, Flash chip, optional EEPROMs, and P7501 debug availability.",
@@ -496,6 +531,12 @@
         "loader_version": {
           "type": "string"
         },
+        "main_builds": {
+          "items": {
+            "$ref": "#/$defs/MainBuildSpec"
+          },
+          "type": "array"
+        },
         "main_load_va": {
           "default": null,
           "type": [
@@ -527,6 +568,16 @@
             "null"
           ]
         },
+        "prog_sata_bridge_reset_spec": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SataBridgeResetSpec"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "sd_boot_filenames": {
           "default": [],
           "items": {
@@ -538,6 +589,16 @@
           "type": [
             "string",
             "null"
+          ]
+        },
+        "stage2_boot_spec": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Stage2BootSpec"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "symbols": {
@@ -843,6 +904,99 @@
         "offset_start",
         "offset_end",
         "ascii_marker"
+      ],
+      "type": "object"
+    },
+    "MainBuildSpec": {
+      "additionalProperties": false,
+      "description": "Declarative descriptor for an individual `MAIN` firmware build belonging to a firmware train.",
+      "properties": {
+        "av_passthrough_sites": {
+          "items": {
+            "$ref": "#/$defs/BinaryPatchSiteSpec"
+          },
+          "type": "array"
+        },
+        "base_va": {
+          "type": "string"
+        },
+        "build_id": {
+          "type": "string"
+        },
+        "chassis_family": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "frm_version_u16": {
+          "type": "string"
+        },
+        "model_markers": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "native_bgo_detect_va": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "native_bgo_flash_base_va": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "native_bgo_geometry_id": {
+          "type": "string"
+        },
+        "region_tv_standard": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sata_bridge_reset_spec": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SataBridgeResetSpec"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "slot_name": {
+          "type": "string"
+        },
+        "supports_bgo_retarget_to": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "unpacked_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "unpacked_size": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "build_id",
+        "slot_name",
+        "frm_version_u16",
+        "base_va",
+        "unpacked_size",
+        "native_bgo_geometry_id"
       ],
       "type": "object"
     },
@@ -1302,6 +1456,49 @@
       ],
       "type": "object"
     },
+    "SataBridgeResetSpec": {
+      "additionalProperties": false,
+      "description": "Declarative post-`RESET-` ATA/SATA bridge polling wait site specification (`2 ms -> 1000 ms`).",
+      "properties": {
+        "base_va": {
+          "type": "string"
+        },
+        "expected_size": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "factory_wait_ms": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "patched_wait_ms": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "site": {
+          "$ref": "#/$defs/BinaryPatchSiteSpec"
+        },
+        "sleep_callee_va": {
+          "type": "string"
+        },
+        "target_name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "target_name",
+        "base_va",
+        "expected_size",
+        "factory_wait_ms",
+        "patched_wait_ms",
+        "sleep_callee_va",
+        "site"
+      ],
+      "type": "object"
+    },
     "SocCoreProfile": {
       "additionalProperties": false,
       "description": "CPU core ISA and baseline electrical logic family (`MN10300/AM34`, `MN10300/AM33-2`, `SPARC V8`).",
@@ -1410,6 +1607,202 @@
         "p7501_uart_baud",
         "p7501_nsw5v_hiz_only",
         "evidence"
+      ],
+      "type": "object"
+    },
+    "Stage2BootSpec": {
+      "additionalProperties": false,
+      "description": "Complete declarative Stage-2 SATA HDD boot hook contract for a firmware train.",
+      "properties": {
+        "base_va": {
+          "type": "string"
+        },
+        "dcache_purge_base": {
+          "type": "string"
+        },
+        "dcache_purge_len": {
+          "type": "string"
+        },
+        "expected_size": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "feistel_crypt_span": {
+          "type": "string"
+        },
+        "fvu_load_uncached_va": {
+          "type": "string"
+        },
+        "hdd_dma_buf_va": {
+          "type": "string"
+        },
+        "hdd_mirror_lba_delta": {
+          "type": "string"
+        },
+        "hdd_primary_lba": {
+          "type": "string"
+        },
+        "hdd_probe_sectors": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "hook_expect_hex": {
+          "type": "string"
+        },
+        "hook_offset": {
+          "type": "string"
+        },
+        "main_va_max": {
+          "type": "string"
+        },
+        "main_va_min": {
+          "type": "string"
+        },
+        "norfrom_fvu_base_va": {
+          "type": "string"
+        },
+        "payload_offset": {
+          "type": "string"
+        },
+        "require_reset_fix_1000ms": {
+          "type": "boolean"
+        },
+        "sd_info_bss_va": {
+          "type": "string"
+        },
+        "symbols": {
+          "$ref": "#/$defs/Stage2BootSymbolsSpec"
+        },
+        "uart_abort_polls": {
+          "format": "int8",
+          "maximum": 127,
+          "minimum": -128,
+          "type": "integer"
+        },
+        "uart_poll_ticks_10ms": {
+          "format": "int8",
+          "maximum": 127,
+          "minimum": -128,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "base_va",
+        "expected_size",
+        "hook_offset",
+        "hook_expect_hex",
+        "payload_offset",
+        "require_reset_fix_1000ms",
+        "uart_abort_polls",
+        "uart_poll_ticks_10ms",
+        "hdd_primary_lba",
+        "hdd_mirror_lba_delta",
+        "hdd_probe_sectors",
+        "feistel_crypt_span",
+        "main_va_min",
+        "main_va_max",
+        "dcache_purge_base",
+        "dcache_purge_len",
+        "sd_info_bss_va",
+        "hdd_dma_buf_va",
+        "fvu_load_uncached_va",
+        "norfrom_fvu_base_va",
+        "symbols"
+      ],
+      "type": "object"
+    },
+    "Stage2BootSymbolsSpec": {
+      "additionalProperties": false,
+      "description": "Verified `PROG` / bootloader callee virtual addresses required to assemble the Stage-2 HDD boot hook.",
+      "properties": {
+        "check_update_flag_va": {
+          "type": "string"
+        },
+        "dcache_purge_va": {
+          "type": "string"
+        },
+        "disable_irq_va": {
+          "type": "string"
+        },
+        "extrhead_check_hdr_va": {
+          "type": "string"
+        },
+        "extrhead_get_entry_va": {
+          "type": "string"
+        },
+        "extrhead_get_size_va": {
+          "type": "string"
+        },
+        "extrhead_get_src_va": {
+          "type": "string"
+        },
+        "extrhead_is_comp_va": {
+          "type": "string"
+        },
+        "extrhead_uncomp_va": {
+          "type": "string"
+        },
+        "fat_close_va": {
+          "type": "string"
+        },
+        "fat_mount_va": {
+          "type": "string"
+        },
+        "fat_open_va": {
+          "type": "string"
+        },
+        "feistel_decrypt_va": {
+          "type": "string"
+        },
+        "hdd_max_lba_va": {
+          "type": "string"
+        },
+        "hdd_read_va": {
+          "type": "string"
+        },
+        "memcpy_va": {
+          "type": "string"
+        },
+        "sd_init_va": {
+          "type": "string"
+        },
+        "sleep_10ms_va": {
+          "type": "string"
+        },
+        "stop_timer_irq_va": {
+          "type": "string"
+        },
+        "uart0_getc_nb_va": {
+          "type": "string"
+        },
+        "uart0_printf_va": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "dcache_purge_va",
+        "uart0_getc_nb_va",
+        "uart0_printf_va",
+        "check_update_flag_va",
+        "hdd_max_lba_va",
+        "hdd_read_va",
+        "sd_init_va",
+        "stop_timer_irq_va",
+        "feistel_decrypt_va",
+        "extrhead_get_size_va",
+        "extrhead_check_hdr_va",
+        "extrhead_is_comp_va",
+        "extrhead_get_src_va",
+        "extrhead_get_entry_va",
+        "extrhead_uncomp_va",
+        "fat_mount_va",
+        "fat_open_va",
+        "fat_close_va",
+        "disable_irq_va",
+        "memcpy_va",
+        "sleep_10ms_va"
       ],
       "type": "object"
     }

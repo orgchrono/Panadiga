@@ -464,6 +464,161 @@
       }
     ]
   },
+  "prog_sata_bridge_reset_spec": {
+    "target_name": "PROG061",
+    "base_va": "0x50400000",
+    "expected_size": 262144,
+    "factory_wait_ms": 2,
+    "patched_wait_ms": 1000,
+    "sleep_callee_va": "0x50431303",
+    "site": {
+      "name": "prog061_sata_bridge_reset_wait",
+      "description": "PROG061 FUN_5041d8e4 post-RESET- 2 ms udelay -> 1000 ms RTOS wait (0x50431303)",
+      "va": "0x5041D928",
+      "expect_hex": "2cd00789ddbadaffff0000",
+      "replace_hex": "2c640089ddd73901000000",
+      "symbol_ref": "rtsd_sleep_10ms"
+    }
+  },
+  "stage2_boot_spec": {
+    "base_va": "0x50400000",
+    "expected_size": 262144,
+    "hook_offset": "0x000050D3",
+    "hook_expect_hex": "dd084f00000000",
+    "payload_offset": "0x00039600",
+    "require_reset_fix_1000ms": true,
+    "uart_abort_polls": 50,
+    "uart_poll_ticks_10ms": 1,
+    "hdd_primary_lba": "0x00010000",
+    "hdd_mirror_lba_delta": "0x00020000",
+    "hdd_probe_sectors": 200,
+    "feistel_crypt_span": "0x00019000",
+    "main_va_min": "0x50000000",
+    "main_va_max": "0x57FFFFFF",
+    "dcache_purge_base": "0x57000000",
+    "dcache_purge_len": "0x01000000",
+    "sd_info_bss_va": "0x50480EDC",
+    "hdd_dma_buf_va": "0x90C00000",
+    "fvu_load_uncached_va": "0x90400000",
+    "norfrom_fvu_base_va": "0x84040000",
+    "symbols": {
+      "dcache_purge_va": "0x504008A6",
+      "uart0_getc_nb_va": "0x50404CEF",
+      "uart0_printf_va": "0x50404DCD",
+      "check_update_flag_va": "0x50409FDB",
+      "hdd_max_lba_va": "0x5040CEAB",
+      "hdd_read_va": "0x5040CFF5",
+      "sd_init_va": "0x5040D24C",
+      "stop_timer_irq_va": "0x5040D59F",
+      "feistel_decrypt_va": "0x5040E9AE",
+      "extrhead_get_size_va": "0x504108A6",
+      "extrhead_check_hdr_va": "0x5041091B",
+      "extrhead_is_comp_va": "0x5041098E",
+      "extrhead_get_src_va": "0x504109B3",
+      "extrhead_get_entry_va": "0x504109E7",
+      "extrhead_uncomp_va": "0x50410A8E",
+      "fat_mount_va": "0x5041174E",
+      "fat_open_va": "0x50411923",
+      "fat_close_va": "0x50411A27",
+      "disable_irq_va": "0x50416765",
+      "memcpy_va": "0x5042D2D2",
+      "sleep_10ms_va": "0x50431303"
+    }
+  },
+  "main_builds": [
+    {
+      "build_id": "3060NP",
+      "slot_name": "MAIN3060NP",
+      "frm_version_u16": "0x96AA",
+      "base_va": "0x57000000",
+      "unpacked_size": 13427852,
+      "region_tv_standard": "ntsc",
+      "model_markers": [
+        "DMR-EH55"
+      ],
+      "chassis_family": "M6930",
+      "native_bgo_geometry_id": "BGO_35SEC_4MB_0X84200000",
+      "native_bgo_detect_va": "0x579ED354",
+      "native_bgo_flash_base_va": "0x84200000",
+      "supports_bgo_retarget_to": [
+        "BGO_45SEC_8MB_0X84130000"
+      ],
+      "sata_bridge_reset_spec": {
+        "target_name": "MAIN3060NP",
+        "base_va": "0x57000000",
+        "expected_size": 13427852,
+        "factory_wait_ms": 2,
+        "patched_wait_ms": 1000,
+        "sleep_callee_va": "0x574E6BBD",
+        "site": {
+          "name": "main3060np_sata_bridge_reset_wait",
+          "description": "MAIN3060NP FUN_5711226E post-RESET- 2 ms udelay -> 1000 ms RTOS wait (0x574E6BBD)",
+          "va": "0x571122B2",
+          "expect_hex": "2cd00789dda7c9ffff0000",
+          "replace_hex": "2c640089dd07493d000000",
+          "symbol_ref": "rtsd_sleep_10ms"
+        }
+      },
+      "av_passthrough_sites": [],
+      "unpacked_sha256": "075f552ed583ba1835c0d44d1b533ff5a016b8d81d15d7166240098461ddcca7"
+    },
+    {
+      "build_id": "3410PQ",
+      "slot_name": "MAIN3410PQ",
+      "frm_version_u16": "0x3410",
+      "base_va": "0x57000000",
+      "unpacked_size": 13003052,
+      "region_tv_standard": "pal_m",
+      "model_markers": [
+        "DMR-EH55"
+      ],
+      "chassis_family": "M6930LB",
+      "native_bgo_geometry_id": "BGO_45SEC_8MB_0X84130000",
+      "native_bgo_detect_va": "0x5756EFD4",
+      "native_bgo_flash_base_va": "0x84130000",
+      "supports_bgo_retarget_to": [],
+      "sata_bridge_reset_spec": {
+        "target_name": "MAIN3410PQ",
+        "base_va": "0x57000000",
+        "expected_size": 13003052,
+        "factory_wait_ms": 2,
+        "patched_wait_ms": 1000,
+        "sleep_callee_va": "0x574DF538",
+        "site": {
+          "name": "main3410pq_sata_bridge_reset_wait",
+          "description": "MAIN3410PQ FUN_5710A98C post-RESET- 2 ms udelay -> 1000 ms RTOS wait (0x574DF538)",
+          "va": "0x5710A9D0",
+          "expect_hex": "2cd00789dda7c9ffff0000",
+          "replace_hex": "2c640089dd644b3d000000",
+          "symbol_ref": "rtsd_sleep_10ms"
+        }
+      },
+      "av_passthrough_sites": [
+        {
+          "name": "fpc_status_ctrl",
+          "description": "Front-panel status control -> mov 1, d0; ret; nop; nop",
+          "va": "0x5771ABFB",
+          "expect_hex": "cfe0f8fed082",
+          "replace_hex": "8001f0fccbcb"
+        },
+        {
+          "name": "odd_state_branch",
+          "description": "ODD state check branch -> jmp16 +0x00D0 (0x574F7C5C); nop",
+          "va": "0x574F7B8C",
+          "expect_hex": "bf03c110",
+          "replace_hex": "ccd000cb"
+        },
+        {
+          "name": "odd_init_status",
+          "description": "ODD init return status -> clr d0; nop x5",
+          "va": "0x574F7C5C",
+          "expect_hex": "ddcd3c00000000",
+          "replace_hex": "8000cbcbcbcbcb"
+        }
+      ],
+      "unpacked_sha256": "c3275d39549b68f48db16bc5fd043c6f8a373d4ba416826de09be5c55dc991b1"
+    }
+  ],
   "evidence": {
     "tier": "bench_verified",
     "sources": [
