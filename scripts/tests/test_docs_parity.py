@@ -19,7 +19,7 @@ _PT_MATURITY_BADGES = (
     "[evidência estática ghidra / estágio 0]",
     "[em investigação / bloqueio físico ch1]",
 )
-EXPECTED_PAIRS = 41
+EXPECTED_PAIRS = 43
 EXPECTED_LOGS = 28
 
 _INDEX_ROW_RE = re.compile(
