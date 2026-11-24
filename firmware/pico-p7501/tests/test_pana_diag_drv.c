@@ -6,7 +6,9 @@
  */
 
 #include "tests/test_pana_logic.h"
+#include "diag/p7501_boottrace_codec.h"
 #include "diag/p7501_ir_codec.h"
+#include "diag/p7501_tbus_codec.h"
 #include "uart/p7501_diag_watch_codec.h"
 #include "uart/p7501_drv_pana_codec.h"
 #include "uart/p7501_pana_rsp.h"
@@ -702,6 +704,78 @@ static void test_vault_ab_p6_mmio_pwrosc_and_disconnect_relock(void) {
     assert(!p7501_flash_is_upper_nor_unlocked());
 }
 
+static void test_boottrace_baremetal_classifier(void) {
+    p7501_boot_classifier_t cls;
+    char buf[224];
+
+    /* 1. Clean MAIN 3060NP Stage-2 boot */
+    p7501_boot_classifier_init(&cls);
+    p7501_boot_classifier_feed_line(&cls, "[STAGE2] Boot MAIN @ 0x57000000");
+    p7501_boot_classifier_feed_line(&cls, "  DVD Recorder DMR5x Series System Version : 3060NP (2006/04/27)");
+    p7501_boot_classifier_feed_line(&cls, "[SYS_BOOT]AVOUT_init() success.");
+    p7501_boot_classifier_feed_line(&cls, "[DCS]dco_api :AVOUT_V_Mute: onoff=0");
+    p7501_boot_classifier_feed_line(&cls, ":::SYS_RSV::: >> nfrom back up ok.");
+    assert(p7501_boot_classifier_verdict(&cls) == P7501_BOOT_VERDICT_CLEAN_MAIN_OK);
+    (void)p7501_boot_classifier_format_summary(&cls, buf, sizeof(buf));
+    assert(strstr(buf, "verdict=CLEAN_MAIN_OK build=3060NP stage2=1 avout_ok=1 vmute0=1") != NULL);
+    assert(strstr(buf, "rsv_ok=1 hdd_fail=0 bgo_err=0 fpc_err=0") != NULL);
+    assert(strstr(buf, "op7f_cnt=0 op7f=NONE") != NULL);
+
+    /* 2. European MAIN 3410PQ on Brazilian IC7501 (MN67788RA) */
+    p7501_boot_classifier_init(&cls);
+    p7501_boot_classifier_feed_line(&cls, "[STAGE2] Boot MAIN @ 0x57000000");
+    p7501_boot_classifier_feed_line(&cls, "  DVD Recorder DMR5x Series System Version : 3410PQ (2006/10/20)");
+    p7501_boot_classifier_feed_line(&cls, "[FPC]FPC_ReciveTASK() : 7F A9 01 01 00 00 0E 06 00 02 00 00 00 00 00 40");
+    p7501_boot_classifier_feed_line(&cls, "[FPC]FPC_ReciveTASK() : 7F F9 02 11 00 06 82 32 00 00 00 00 00 00 00 45");
+    p7501_boot_classifier_feed_line(&cls, "[FPC]FPC_ReciveTASK() : 7F A9 01 01 00 00 0E 06 00 02 00 00 00 00 00 40");
+    p7501_boot_classifier_feed_line(&cls, "[SYS_CNTL]FPC_EMERGENCY_ERROR");
+    p7501_boot_classifier_feed_line(&cls, "[SYS_CNTL]FPC_EMERGENCY_TIMEOUT");
+    p7501_boot_classifier_feed_line(&cls, "[AVIN] target:0 input:0x0 --IIC send error retry 3 all err");
+    p7501_boot_classifier_feed_line(&cls, "[RTSD] === DRIVE ACCESS ERROR === ( 80040904 )");
+    assert(p7501_boot_classifier_verdict(&cls) == P7501_BOOT_VERDICT_FPC_IC7501_MISMATCH);
+    (void)p7501_boot_classifier_format_summary(&cls, buf, sizeof(buf));
+    assert(strstr(buf, "verdict=FPC_IC7501_MISMATCH build=3410PQ") != NULL);
+    assert(strstr(buf, "fpc_err=1 fpc_to=1 iic_err=1 odd_err=1 op7f_cnt=2 op7f=A9,F9") != NULL);
+
+    /* 3. L1489 BGO/NFROM failure */
+    p7501_boot_classifier_init(&cls);
+    p7501_boot_classifier_feed_line(&cls, "[nfrom] bgo_writeD(ID=0xF07) return error(19).");
+    p7501_boot_classifier_feed_line(&cls, "[SYS_CNTL]##### NFROMError Power off !!!!! #####");
+    assert(p7501_boot_classifier_verdict(&cls) == P7501_BOOT_VERDICT_BGO_NFROM_FAULT);
+
+    /* 4. Cold SATA bridge timeout without Stage-2 hook */
+    p7501_boot_classifier_init(&cls);
+    p7501_boot_classifier_feed_line(&cls, "HDD_MAX_LBA get failed[0xE8000000].");
+    assert(p7501_boot_classifier_verdict(&cls) == P7501_BOOT_VERDICT_HDD_BRIDGE_WAIT_FAIL);
+}
+
+static void test_tbus_br_ic7501_audit(void) {
+    static const uint8_t k_expected_rejected[13] = {
+        0x85u, 0x89u, 0x9Bu, 0xA9u, 0xAAu, 0xC9u, 0xDAu,
+        0xE3u, 0xE4u, 0xECu, 0xF0u, 0xF9u, 0xFAu
+    };
+    for (size_t i = 0u; i < sizeof(k_expected_rejected); ++i) {
+        assert(p7501_tbus_opcode_rejected_by_br_ic7501(k_expected_rejected[i]));
+    }
+    assert(!p7501_tbus_opcode_rejected_by_br_ic7501(0x10u));
+    assert(!p7501_tbus_opcode_rejected_by_br_ic7501(0x20u));
+
+    p7501_tbus_audit_t audit;
+    p7501_tbus_audit_init(&audit);
+
+    p7501_tbus_frame_t ok_frm = { P7501_TBUS_SYNC_BYTE, 0x10u, 2u, { 0x01u, 0x01u }, 0u };
+    p7501_tbus_frame_t eu_frm = { P7501_TBUS_SYNC_BYTE, 0xA9u, 1u, { 0x01u }, 0u };
+    p7501_tbus_frame_t nak_frm = { P7501_TBUS_SYNC_BYTE, 0x7Fu, 1u, { 0xF9u }, 0u };
+    p7501_tbus_audit_record_frame(&audit, &ok_frm);
+    p7501_tbus_audit_record_frame(&audit, &eu_frm);
+    p7501_tbus_audit_record_frame(&audit, &nak_frm);
+
+    char line[160];
+    const size_t len = p7501_tbus_audit_format_summary(&audit, line, sizeof(line));
+    assert(len > 0u);
+    assert(strcmp(line, "@P7501_TBUS_AUDIT frames=3 br_rejected=2 nak7f=1 ops=A9,F9") == 0);
+}
+
 void p7501_run_pana_diag_drv_tests(void) {
     test_diag_watch_legacy_and_fsm();
     test_diag_watch_parameterized_tx_and_e05();
@@ -712,4 +786,6 @@ void p7501_run_pana_diag_drv_tests(void) {
     test_smart_probe_qspi_arena_and_zero_float();
     test_identify_job_f14_and_bootsel();
     test_vault_ab_p6_mmio_pwrosc_and_disconnect_relock();
+    test_boottrace_baremetal_classifier();
+    test_tbus_br_ic7501_audit();
 }

@@ -173,3 +173,20 @@ void p7501_cmd_eeprom(const char *arg) {
         printf("EEPROM: OK\n");
     }
 }
+
+uint8_t p7501_i2c_probe_addrs_safe(const uint8_t *addrs, size_t count) {
+    if ((addrs == NULL) || (count == 0u) || !i2c_target_power_ok()) {
+        return 0u;
+    }
+    init_i2c_safe_bus();
+    uint8_t mask = 0u;
+    const size_t limit = (count > 8u) ? 8u : count;
+    for (size_t i = 0u; i < limit; ++i) {
+        uint8_t dummy = 0u;
+        if (i2c_read_timeout_us(i2c1, addrs[i], &dummy, 1u, false, P7501_I2C_TIMEOUT_US) >= 0) {
+            mask |= (uint8_t)(1u << i);
+        }
+    }
+    deinit_i2c_safe_bus();
+    return mask;
+}

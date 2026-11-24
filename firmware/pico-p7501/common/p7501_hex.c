@@ -240,3 +240,99 @@ const char *p7501_parse_hex_delim(
     }
     return str;
 }
+
+uint32_t p7501_format_hex_bitmap_csv(const uint8_t bitmap[32], char *out, size_t cap) {
+    if ((bitmap == NULL) || (out == NULL) || (cap == 0u)) {
+        return 0u;
+    }
+    uint32_t count = 0u;
+    size_t pos = 0u;
+    out[0] = '\0';
+    for (unsigned op = 0u; op < 256u; ++op) {
+        if ((bitmap[op >> 3u] & (uint8_t)(1u << (op & 7u))) == 0u) {
+            continue;
+        }
+        if ((count > 0u) && ((pos + 1u) < cap)) {
+            out[pos++] = ',';
+        }
+        if ((pos + 2u) < cap) {
+            const uint8_t hi = (uint8_t)((op >> 4u) & 0x0Fu);
+            const uint8_t lo = (uint8_t)(op & 0x0Fu);
+            out[pos++] = (char)(hi < 10u ? ('0' + hi) : ('A' + (hi - 10u)));
+            out[pos++] = (char)(lo < 10u ? ('0' + lo) : ('A' + (lo - 10u)));
+        }
+        ++count;
+    }
+    if (count == 0u) {
+        static const char k_none[] = "NONE";
+        if (cap >= sizeof(k_none)) {
+            for (size_t i = 0u; i < sizeof(k_none); ++i) {
+                out[i] = k_none[i];
+            }
+        }
+    } else {
+        out[pos < cap ? pos : (cap - 1u)] = '\0';
+    }
+    return count;
+}
+
+size_t p7501_split_ws_tokens(char *buf, char *out_toks[], size_t max_toks) {
+    if ((buf == NULL) || (out_toks == NULL) || (max_toks == 0u)) {
+        return 0u;
+    }
+    size_t n = 0u;
+    char *p = buf;
+    while ((*p != '\0') && (n < max_toks)) {
+        while ((*p == ' ') || (*p == '\t')) {
+            ++p;
+        }
+        if (*p == '\0') {
+            break;
+        }
+        out_toks[n++] = p;
+        while ((*p != '\0') && (*p != ' ') && (*p != '\t')) {
+            ++p;
+        }
+        if (*p != '\0') {
+            *p++ = '\0';
+        }
+    }
+    return n;
+}
+
+size_t p7501_copy_and_split_ws(
+    const char *arg,
+    char *scratch,
+    size_t scratch_cap,
+    char *out_toks[],
+    size_t max_toks
+) {
+    if ((arg == NULL) || (*arg == '\0') || (scratch == NULL) || (scratch_cap == 0u)) {
+        return 0u;
+    }
+    size_t i = 0u;
+    while (((i + 1u) < scratch_cap) && (arg[i] != '\0')) {
+        scratch[i] = arg[i];
+        ++i;
+    }
+    scratch[i] = '\0';
+    return p7501_split_ws_tokens(scratch, out_toks, max_toks);
+}
+
+bool p7501_line_accum_push_byte(
+    char *buf,
+    size_t *io_len,
+    size_t cap,
+    uint8_t byte
+) {
+    if ((buf == NULL) || (io_len == NULL) || (cap == 0u)) {
+        return false;
+    }
+    if ((byte == '\r') || (byte == '\n')) {
+        return true;
+    }
+    if (((*io_len + 1u) < cap) && (byte >= 0x20u) && (byte <= 0x7Eu)) {
+        buf[(*io_len)++] = (char)byte;
+    }
+    return false;
+}

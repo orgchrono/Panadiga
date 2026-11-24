@@ -12,6 +12,7 @@
 #define P7501_FAST_STREAM_CODEC_H
 
 #include "flash/p7501_bus_policy.h"
+#include "generated/p7501_ssot.h"
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -25,7 +26,8 @@ extern "C" {
 #define P7501_FAST_STUB_BUF_VA      0x9043B000UL
 #define P7501_FAST_STUB_LEN         606u
 #define P7501_FAST_STUB_MAX_CHUNK   4096u
-#define P7501_FAST_STUB_PAGE_BYTES  256u
+#define P7501_FAST_STUB_PAGE_BYTES  P7501_SSOT_FAST_STUB_PAGE_BYTES
+#define P7501_MAX_FAST_WRITE_BYTES  P7501_SSOT_MAX_FAST_WRITE_BYTES
 #define P7501_FAST_STUB_CRC32       0x3D2D3D4AUL
 #define P7501_FAST_BGO_START_VA     0x84130000UL
 #define P7501_FAST_BGO_SPAN_BYTES   0x002D0000UL
@@ -94,6 +96,18 @@ p7501_bus_deny_t p7501_fast_check_write_guard(
     const p7501_session_ctx_t *ctx,
     uint32_t addr,
     uint32_t len,
+    bool upper_nor_unlocked,
+    const char **out_reason
+);
+
+/**
+ * Validate `FAST_ERASE` sector VA against single-authoritative `p7501_bus_check_access`
+ * (permanent `SA0..SA10` `E05` RO + F14 lockout + `CONFIRM_UPPER_NOR`) plus 64 KiB alignment
+ * within the BGO FTL window (`0x84130000..0x843FFFFF`).
+ */
+p7501_bus_deny_t p7501_fast_check_erase_guard(
+    const p7501_session_ctx_t *ctx,
+    uint32_t sector_va,
     bool upper_nor_unlocked,
     const char **out_reason
 );

@@ -38,17 +38,21 @@ void p7501_cmd_tbussniff(const char *arg) {
     const uint32_t got = p7501_uart_capture_window(dur_ms * 1000UL, 2048u);
     p7501_pio_end_session();
 
-    uint32_t valid_frames = 0u;
+    p7501_tbus_audit_t audit;
+    p7501_tbus_audit_init(&audit);
     for (uint32_t i = 0u; i + 4u <= got; ++i) {
         p7501_tbus_frame_t frm;
         if (p7501_tbus_decode_frame(&buf[i], got - i, &frm)) {
-            valid_frames += 1u;
+            p7501_tbus_audit_record_frame(&audit, &frm);
             printf("[TBUSSNIFF] frame off=%lu op=0x%02X len=%u csum=0x%02X\n",
                    (unsigned long)i, frm.opcode, frm.len, frm.checksum);
         }
     }
+    char audit_line[160];
+    (void)p7501_tbus_audit_format_summary(&audit, audit_line, sizeof(audit_line));
+    printf("%s\n", audit_line);
     printf("TBUSSNIFF: OK (transport=P7501_SC0_PASSIVE bytes=%" PRIu32 ", frames=%" PRIu32 ")\n",
-           got, valid_frames);
+           got, audit.frames_valid);
 }
 
 void p7501_cmd_m0keepalive(const char *arg) {

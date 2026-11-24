@@ -15,6 +15,7 @@
 #define P7501_HW_H
 
 #include "p7501_types.h"
+#include "diag/p7501_hotplug_codec.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -72,6 +73,15 @@ bool p7501_hw_is_nsw5v_fault_latched(void);
 
 /** Clear NSW5V fault latch after host acknowledgment or intentional power cycle. */
 void p7501_hw_clear_nsw5v_fault_latch(void);
+
+/** Return total automatic NSW5V fault-latch recoveries performed in idle loop. */
+uint32_t p7501_hw_get_nsw5v_recoveries(void);
+
+/** Access the probe-wide debounced P7501 hotplug FSM state. */
+p7501_hotplug_fsm_t *p7501_hw_hotplug_fsm(void);
+
+/** Poll Hi-Z NSW5V/ADC0 at >=50ms cadence and auto-heal fault latch + LED Fault mode. */
+void p7501_hw_poll_rail_recovery(void);
 
 /** Return true if a LOW-drive pin contention fault (`ECONTENTION`) was detected on GP4/GP26. */
 bool p7501_hw_is_contention_latched(void);

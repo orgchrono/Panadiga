@@ -126,6 +126,7 @@ int main(void) {
         p7501_ble_nus_poll();
         if (!gdb_rsp_is_active() && (line_idx == 0U)) {
             p7501_bootsel_poll();
+            p7501_hw_poll_rail_recovery();
             p7501_tbus_keepalive_poll();
         }
 

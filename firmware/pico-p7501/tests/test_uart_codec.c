@@ -153,6 +153,16 @@ static void test_trigger_and_waittx_parser(void) {
     assert(spec.jig_hold_ms == 350u);
     assert(strcmp(spec.trigger, "wait 1") == 0);
     assert(spec.tx_len == 1u && spec.tx_bytes[0] == 0x0Du);
+
+    assert(p7501_parse_waittx_args("45000 NORMAL \"FVU)...\" 46 45000", &spec));
+    assert(spec.timeout_ms == 45000u);
+    assert(spec.boot_action == P7501_BOOT_ACTION_NORMAL);
+    assert(strcmp(spec.trigger, "FVU)...") == 0);
+    assert(spec.tx_len == 1u && spec.tx_bytes[0] == 0x46u);
+    assert(spec.post_rx_ms == 45000u);
+
+    assert(p7501_parse_waittx_args("45000 NORMAL \"FVU)...\" 46 95000", &spec));
+    assert(spec.post_rx_ms == 60000u);
 }
 
 static void test_hex_window_and_led_logic(void) {

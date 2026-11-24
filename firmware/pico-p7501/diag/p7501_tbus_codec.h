@@ -54,6 +54,25 @@ bool p7501_tbus_parse_keepalive_args(
     uint32_t *out_interval_ms
 );
 
+typedef struct p7501_tbus_audit {
+    uint32_t frames_valid;
+    uint32_t frames_rejected_br;
+    uint32_t nak_7f_seen;
+    uint8_t rejected_bitmap[32];
+} p7501_tbus_audit_t;
+
+/** Return true for the 13 European SCART/FPC opcodes rejected by Brazilian `IC7501` (`MN67788RA`). */
+bool p7501_tbus_opcode_rejected_by_br_ic7501(uint8_t opcode);
+
+/** Reset deterministic T-BUS audit counters and rejected opcode bitmap. */
+void p7501_tbus_audit_init(p7501_tbus_audit_t *st);
+
+/** Record a decoded T-BUS frame (direct EU opcode or `0x7F <OP>` NAK) into `st`. */
+void p7501_tbus_audit_record_frame(p7501_tbus_audit_t *st, const p7501_tbus_frame_t *frame);
+
+/** Format `@P7501_TBUS_AUDIT frames=... br_rejected=... nak7f=... ops=<CSV|NONE>`. */
+size_t p7501_tbus_audit_format_summary(const p7501_tbus_audit_t *st, char *out, size_t cap);
+
 void p7501_cmd_tbussniff(const char *arg);
 void p7501_cmd_m0keepalive(const char *arg);
 void p7501_tbus_keepalive_poll(void);

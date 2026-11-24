@@ -44,9 +44,12 @@ static bool flash_range_overlaps_off_span(
 }
 
 bool p7501_bus_is_lethal_mmio_range(uint32_t addr, size_t len) {
-    const uint64_t lo = (uint64_t)P7501_SSOT_AM34_LETHAL_REG_ADDR;
-    const uint64_t hi = lo + (uint64_t)P7501_SSOT_AM34_LETHAL_REG_LEN;
-    return range_overlaps_u64(addr, len, lo, hi);
+    const uint64_t lo1 = (uint64_t)P7501_SSOT_AM34_LETHAL_REG_ADDR;
+    const uint64_t hi1 = lo1 + (uint64_t)P7501_SSOT_AM34_LETHAL_REG_LEN;
+    const uint64_t lo2 = (uint64_t)P7501_SSOT_AM34_LETHAL_REG2_ADDR;
+    const uint64_t hi2 = lo2 + (uint64_t)P7501_SSOT_AM34_LETHAL_REG2_LEN;
+    return range_overlaps_u64(addr, len, lo1, hi1) ||
+           range_overlaps_u64(addr, len, lo2, hi2);
 }
 
 bool p7501_bus_touches_cs0_aperture(uint32_t addr, size_t len) {

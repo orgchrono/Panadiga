@@ -29,8 +29,13 @@ add_executable(panasonic_p7501_uart
     common/p7501_cmd_arena.c
     common/p7501_hex.c
     common/p7501_crc_csum.c
+    common/p7501_push_stream.c
     common/p7501_spsc_ring.c
     common/p7501_wdt_logic.c
+    crypto/p7501_feistel.c
+    crypto/p7501_compress.c
+    crypto/p7501_decomp.c
+    crypto/p7501_crypto_cli.c
     hal/p7501_ble_nus.c
     hal/p7501_bootsel_btn.c
     hal/p7501_bootsel_logic.c
@@ -55,10 +60,14 @@ add_executable(panasonic_p7501_uart
     flash/p7501_ftl_inspect.c
     flash/p7501_job_codec.c
     flash/p7501_job.c
+    flash/p7501_payload_cli.c
+    flash/p7501_payloads.c
+    flash/p7501_trap_guard.c
     flash/p7501_probe_cfg_codec.c
     flash/p7501_qspi_hal.c
     flash/p7501_qspi_map.c
     flash/p7501_qspi_storage.c
+    flash/p7501_sector_ops.c
     flash/p7501_target_bus.c
     flash/p7501_target_bus_panamon.c
     flash/p7501_target_bus_pio.c
@@ -69,8 +78,24 @@ add_executable(panasonic_p7501_uart
     diag/p7501_diag_bus.c
     diag/p7501_diag_busdiag.c
     diag/p7501_diag_pwrtrace.c
+    diag/p7501_boottrace_codec.c
     diag/p7501_diag_boottrace.c
+    diag/p7501_gps_cli.c
+    diag/p7501_hotplug_codec.c
+    diag/p7501_hotplug_map.c
     diag/p7501_i2c_codec.c
+    diag/p7501_bitwise_search.c
+    diag/p7501_hdd_unlock.c
+    diag/p7501_math_gps.c
+    diag/p7501_math_stats.c
+    diag/p7501_meihfs_probe.c
+    diag/p7501_microsurgery.c
+    diag/p7501_mn103_asm.c
+    diag/p7501_mn103_disasm.c
+    diag/p7501_pieos_xray.c
+    diag/p7501_surg_cli.c
+    diag/p7501_surg_live.c
+    diag/p7501_xray_cli.c
     diag/p7501_i2c_master.c
     diag/p7501_identify_codec.c
     diag/p7501_identify.c

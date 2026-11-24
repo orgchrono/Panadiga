@@ -158,38 +158,27 @@ void p7501_cmd_fast_read(const char *arg) {
     printf("FAST_READ: OK\n");
 }
 
-void p7501_cmd_fast_write(const char *arg) {
+bool p7501_fast_write_bytes_hw(
+    const char *tag,
+    uint32_t addr,
+    const uint8_t *payload,
+    size_t pay_len,
+    bool has_confirm
+) {
     p7501_hw_enforce_nsw5v_hiz();
-    char tok_va[24];
-    char tok_confirm[32];
-    const char *after_va = p7501_next_token(arg, tok_va, sizeof(tok_va));
-    uint8_t *const payload = g_p7501_cmd_arena.raw;
-    char *const tok_hex = (char *)&g_p7501_cmd_arena.raw[4096u];
-    const char *after_hex = p7501_next_token(after_va, tok_hex, 2048u);
-    (void)p7501_next_token(after_hex, tok_confirm, sizeof(tok_confirm));
-
-    uint32_t addr = 0u;
-    size_t pay_len = 0u;
-    if (!p7501_parse_hex_u32_exact(tok_va, 10u, &addr) ||
-        !p7501_decode_hex_bytes(tok_hex, payload, 1024u, &pay_len) || (pay_len < 2u)) {
-        p7501_cli_set_result("ERR", "EINVAL");
-        printf("FAST_WRITE: ERROR (Usage: FAST_WRITE <hex_va> <even_hex_bytes> CONFIRM_UPPER_NOR)\n");
-        return;
-    }
-
-    const bool has_confirm = p7501_ascii_ieq(tok_confirm, "CONFIRM_UPPER_NOR");
     const char *deny_reason = NULL;
     const p7501_bus_deny_t deny = p7501_fast_check_write_guard(
         p7501_session_default_ctx(), addr, (uint32_t)pay_len, has_confirm, &deny_reason);
     if (deny != P7501_BUS_ALLOW) {
         p7501_cli_set_result("ERR", "E05");
-        printf("FAST_WRITE: ERROR code=E05 reason=%s addr=0x%08" PRIX32 " len=%u\n", deny_reason, addr, (unsigned)pay_len);
-        return;
+        printf("%s: ERROR code=E05 reason=%s addr=0x%08" PRIX32 " len=%u\n",
+               tag, deny_reason, addr, (unsigned)pay_len);
+        return false;
     }
     if (!p7501_hw_is_target_powered()) {
         p7501_cli_set_result("ERR", "EOFFLINE");
-        printf("FAST_WRITE: ERROR (Target unpowered)\n");
-        return;
+        printf("%s: ERROR (Target unpowered)\n", tag);
+        return false;
     }
 
     p7501_pio_begin_rx_session(P7501_BOOT_ACTION_PASSIVE);
@@ -197,8 +186,8 @@ void p7501_cmd_fast_write(const char *arg) {
     if (!p7501_fast_stub_upload_and_enter_open(&uploaded)) {
         p7501_pio_end_session();
         p7501_cli_set_result("ERR", "EOFFLINE");
-        printf("FAST_WRITE: ERROR (Failed entering 0x9043A000 stub)\n");
-        return;
+        printf("%s: ERROR (Failed entering 0x9043A000 stub)\n", tag);
+        return false;
     }
 
     /* On-Pico Pre-Flight NOR 1->0 Monotonicity Verification BEFORE unlocking Upper NOR! */
@@ -213,8 +202,8 @@ void p7501_cmd_fast_write(const char *arg) {
         (void)p7501_fast_stub_exit_open();
         p7501_pio_end_session();
         p7501_cli_set_result("ERR", "EBUS");
-        printf("FAST_WRITE: ERROR (Pre-flight live read failed)\n");
-        return;
+        printf("%s: ERROR (Pre-flight live read failed)\n", tag);
+        return false;
     }
 
     size_t bad_off = 0u;
@@ -222,9 +211,9 @@ void p7501_cmd_fast_write(const char *arg) {
         (void)p7501_fast_stub_exit_open();
         p7501_pio_end_session();
         p7501_cli_set_result("ERR", "EMONO");
-        printf("FAST_WRITE: ERROR code=EMONO reason=REQUIRES_ERASE_0_TO_1 off=%u cur=0x%02X tgt=0x%02X\n",
-               (unsigned)bad_off, (unsigned)cur_buf[win.rel_off + bad_off], (unsigned)payload[bad_off]);
-        return;
+        printf("%s: ERROR code=EMONO reason=REQUIRES_ERASE_0_TO_1 off=%u cur=0x%02X tgt=0x%02X\n",
+               tag, (unsigned)bad_off, (unsigned)cur_buf[win.rel_off + bad_off], (unsigned)payload[bad_off]);
+        return false;
     }
 
     /* Exit stub to unlock Upper NOR cleanly, re-enter stub, program, and unconditionally U LOCK. */
@@ -250,12 +239,104 @@ void p7501_cmd_fast_write(const char *arg) {
 
     if (!write_ok) {
         p7501_cli_set_result("ERR", "EJEDEC");
-        printf("FAST_WRITE: ERROR code=EJEDEC ack=0x%02X relocked=YES\n", (unsigned)ack);
-        return;
+        printf("%s: ERROR code=EJEDEC ack=0x%02X relocked=YES\n", tag, (unsigned)ack);
+        return false;
     }
     const uint32_t crc = p7501_crc32_ieee(payload, pay_len);
     p7501_wireless_consume_nor_op(p7501_wireless_global_state());
     p7501_fast_emit_prog_push("WRITE", p7501_fast_va_to_sa(addr), (uint32_t)pay_len, (uint32_t)pay_len, crc);
-    printf("[FAST_WRITE] va=0x%08" PRIX32 " len=%u crc32=0x%08" PRIX32 " relocked=YES\n", addr, (unsigned)pay_len, crc);
-    printf("FAST_WRITE: OK\n");
+    printf("[%s] va=0x%08" PRIX32 " len=%u crc32=0x%08" PRIX32 " relocked=YES\n", tag, addr, (unsigned)pay_len, crc);
+    return true;
+}
+
+void p7501_cmd_fast_write(const char *arg) {
+    p7501_hw_enforce_nsw5v_hiz();
+    char tok_va[24];
+    char tok_confirm[32];
+    const char *after_va = p7501_next_token(arg, tok_va, sizeof(tok_va));
+    uint8_t *const payload = g_p7501_cmd_arena.raw;
+    char *const tok_hex = (char *)&g_p7501_cmd_arena.raw[4096u];
+    const char *after_hex = p7501_next_token(after_va, tok_hex, 2048u);
+    (void)p7501_next_token(after_hex, tok_confirm, sizeof(tok_confirm));
+
+    uint32_t addr = 0u;
+    size_t pay_len = 0u;
+    if (!p7501_parse_hex_u32_exact(tok_va, 10u, &addr) ||
+        !p7501_decode_hex_bytes(tok_hex, payload, 1024u, &pay_len) || (pay_len < 2u)) {
+        p7501_cli_set_result("ERR", "EINVAL");
+        printf("FAST_WRITE: ERROR (Usage: FAST_WRITE <hex_va> <even_hex_bytes> CONFIRM_UPPER_NOR)\n");
+        return;
+    }
+    if (p7501_fast_write_bytes_hw(
+            "FAST_WRITE", addr, payload, pay_len, p7501_ascii_ieq(tok_confirm, "CONFIRM_UPPER_NOR"))) {
+        printf("FAST_WRITE: OK\n");
+    }
+}
+
+void p7501_cmd_fast_erase(const char *arg) {
+    p7501_hw_enforce_nsw5v_hiz();
+    char tok_va[24];
+    char tok_confirm[32];
+    const char *rest = p7501_next_token(arg, tok_va, sizeof(tok_va));
+    (void)p7501_next_token(rest, tok_confirm, sizeof(tok_confirm));
+
+    uint32_t sector_va = 0u;
+    if (!p7501_parse_hex_u32_exact(tok_va, 10u, &sector_va)) {
+        p7501_cli_set_result("ERR", "EINVAL");
+        printf("FAST_ERASE: ERROR (Usage: FAST_ERASE <hex_sector_va> CONFIRM_UPPER_NOR)\n");
+        return;
+    }
+    const bool has_confirm = p7501_ascii_ieq(tok_confirm, "CONFIRM_UPPER_NOR");
+    const char *deny_reason = NULL;
+    if (p7501_fast_check_erase_guard(
+            p7501_session_default_ctx(), sector_va, has_confirm, &deny_reason) != P7501_BUS_ALLOW) {
+        p7501_cli_set_result("ERR", "E05");
+        printf("FAST_ERASE: ERROR code=E05 reason=%s va=0x%08" PRIX32 "\n", deny_reason, sector_va);
+        return;
+    }
+    if (!p7501_hw_is_target_powered()) {
+        p7501_cli_set_result("ERR", "EOFFLINE");
+        printf("FAST_ERASE: ERROR (Target unpowered)\n");
+        return;
+    }
+
+    p7501_pio_begin_rx_session(P7501_BOOT_ACTION_PASSIVE);
+    if (p7501_fast_stub_ping_open()) {
+        (void)p7501_fast_stub_exit_open();
+    }
+    char rep[128];
+    char erase_cmd[32];
+    bool pm_ok = false;
+    bool erase_ok = false;
+    if (p7501_bus_panamon1_cmd_open("U CONFIRM_UPPER_NOR\r", 1000u, true, rep, sizeof(rep), &pm_ok) &&
+        (strstr(rep, "OK:NOR_UNLOCK") != NULL)) {
+        (void)snprintf(erase_cmd, sizeof(erase_cmd), "E %08" PRIX32 "\r", sector_va);
+        erase_ok = p7501_bus_panamon1_cmd_open(erase_cmd, 10000u, false, rep, sizeof(rep), &pm_ok) &&
+                   (strstr(rep, "OK:ERASE") != NULL);
+    }
+    /* Guaranteed fail-closed Upper NOR relock on ALL exit paths */
+    (void)p7501_bus_panamon1_cmd_open("U LOCK\r", 1000u, false, rep, sizeof(rep), &pm_ok);
+    p7501_pio_end_session();
+
+    if (!erase_ok) {
+        p7501_cli_set_result("ERR", "EJEDEC");
+        printf("FAST_ERASE: ERROR code=EJEDEC va=0x%08" PRIX32 " relocked=YES\n", sector_va);
+        return;
+    }
+    uint8_t *const verify_buf = g_p7501_cmd_arena.raw;
+    bool all_ff = p7501_hw_read_block_checked(sector_va, verify_buf, 64u, true);
+    for (size_t i = 0u; all_ff && (i < 64u); ++i) {
+        all_ff = (verify_buf[i] == 0xFFu);
+    }
+    if (!all_ff) {
+        p7501_cli_set_result("ERR", "EVERIFY");
+        printf("FAST_ERASE: ERROR code=EVERIFY va=0x%08" PRIX32 " verified_ff=NO relocked=YES\n", sector_va);
+        return;
+    }
+    const uint16_t sa = p7501_fast_va_to_sa(sector_va);
+    p7501_wireless_consume_nor_op(p7501_wireless_global_state());
+    p7501_fast_emit_prog_push("ERASE", sa, 0x10000u, 0x10000u, 0u);
+    printf("[FAST_ERASE] va=0x%08" PRIX32 " sa=%u verified_ff=YES relocked=YES\n",
+           sector_va, (unsigned)sa);
+    printf("FAST_ERASE: OK\n");
 }

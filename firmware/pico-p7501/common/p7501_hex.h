@@ -114,6 +114,29 @@ uint32_t p7501_read_u32_le(const uint8_t in[4]);
 /** Format integer millivolts `mv` as ASCII `"V.cc"` (e.g. `3295` -> `"3.30"`), zero float linkage. */
 const char *p7501_fmt_mv_volts(uint32_t mv, char buf[8]);
 
+/** Format a 256-bit opcode bitmap (`bitmap[32]`) as sorted uppercase hex CSV (`"A9,F9"`) or `"NONE"`. */
+uint32_t p7501_format_hex_bitmap_csv(const uint8_t bitmap[32], char *out, size_t cap);
+
+/** Split mutable whitespace-separated ASCII tokens in `buf` into `out_toks[0..max_toks)`. */
+size_t p7501_split_ws_tokens(char *buf, char *out_toks[], size_t max_toks);
+
+/** Bounded-copy `arg` into `scratch` and split whitespace tokens (returns `0` when empty). */
+size_t p7501_copy_and_split_ws(
+    const char *arg,
+    char *scratch,
+    size_t scratch_cap,
+    char *out_toks[],
+    size_t max_toks
+);
+
+/** Accumulate printable ASCII byte into `buf`; terminate on CR/LF and return true to flush line. */
+bool p7501_line_accum_push_byte(
+    char *buf,
+    size_t *io_len,
+    size_t cap,
+    uint8_t byte
+);
+
 #ifdef __cplusplus
 }
 #endif

@@ -8,6 +8,7 @@
 #include "diag/p7501_tbus_codec.h"
 #include "common/p7501_hex.h"
 #include "uart/p7501_uart_codec.h"
+#include <stdio.h>
 #include <string.h>
 
 uint8_t p7501_tbus_checksum(uint8_t opcode, const uint8_t *payload, uint8_t len) {
@@ -100,4 +101,66 @@ bool p7501_tbus_parse_keepalive_args(
         return true;
     }
     return false;
+}
+
+bool p7501_tbus_opcode_rejected_by_br_ic7501(uint8_t opcode) {
+    static const uint8_t k_rejected[13] = {
+        0x85u, 0x89u, 0x9Bu, 0xA9u, 0xAAu, 0xC9u, 0xDAu,
+        0xE3u, 0xE4u, 0xECu, 0xF0u, 0xF9u, 0xFAu
+    };
+    for (size_t i = 0u; i < sizeof(k_rejected); ++i) {
+        if (k_rejected[i] == opcode) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void p7501_tbus_audit_init(p7501_tbus_audit_t *st) {
+    if (st == NULL) {
+        return;
+    }
+    memset(st, 0, sizeof(*st));
+}
+
+void p7501_tbus_audit_record_frame(p7501_tbus_audit_t *st, const p7501_tbus_frame_t *frame) {
+    if ((st == NULL) || (frame == NULL)) {
+        return;
+    }
+    st->frames_valid += 1u;
+    if ((frame->opcode == 0x7Fu) && (frame->len >= 1u)) {
+        st->nak_7f_seen += 1u;
+        const uint8_t orig_op = frame->payload[0];
+        st->rejected_bitmap[orig_op >> 3u] |= (uint8_t)(1u << (orig_op & 7u));
+        if (p7501_tbus_opcode_rejected_by_br_ic7501(orig_op)) {
+            st->frames_rejected_br += 1u;
+        }
+        return;
+    }
+    if (p7501_tbus_opcode_rejected_by_br_ic7501(frame->opcode)) {
+        st->frames_rejected_br += 1u;
+        st->rejected_bitmap[frame->opcode >> 3u] |= (uint8_t)(1u << (frame->opcode & 7u));
+    }
+}
+
+size_t p7501_tbus_audit_format_summary(const p7501_tbus_audit_t *st, char *out, size_t cap) {
+    if ((st == NULL) || (out == NULL) || (cap == 0u)) {
+        return 0u;
+    }
+    char ops_csv[96];
+    (void)p7501_format_hex_bitmap_csv(st->rejected_bitmap, ops_csv, sizeof(ops_csv));
+    const int n = snprintf(
+        out,
+        cap,
+        "@P7501_TBUS_AUDIT frames=%lu br_rejected=%lu nak7f=%lu ops=%s",
+        (unsigned long)st->frames_valid,
+        (unsigned long)st->frames_rejected_br,
+        (unsigned long)st->nak_7f_seen,
+        ops_csv
+    );
+    if (n < 0) {
+        out[0] = '\0';
+        return 0u;
+    }
+    return ((size_t)n < cap) ? (size_t)n : (cap - 1u);
 }

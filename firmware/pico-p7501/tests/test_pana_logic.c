@@ -594,6 +594,13 @@ static void test_fast_stream_codec_and_normap(void) {
     assert(p7501_fast_check_write_guard(sctx, 0x84400000UL, 4u, true, &reason) != P7501_BUS_ALLOW);
     assert(p7501_fast_check_write_guard(sctx, 0x84160000UL, 4u, true, &reason) == P7501_BUS_ALLOW);
 
+    /* FAST_ERASE guard: blocks IPL SA0..SA10 even unlocked, requires 64 KiB align + CONFIRM_UPPER_NOR */
+    assert(p7501_fast_check_erase_guard(sctx, 0x84000000UL, true, &reason) == P7501_BUS_DENY_IPL_LAYER1);
+    assert(p7501_fast_check_erase_guard(sctx, 0x84130000UL, false, &reason) == P7501_BUS_DENY_UPPER_LOCKED);
+    assert(p7501_fast_check_erase_guard(sctx, 0x84130100UL, true, &reason) == P7501_BUS_DENY_PROTECTED_RO);
+    assert(p7501_fast_check_erase_guard(sctx, 0x84400000UL, true, &reason) == P7501_BUS_DENY_PROTECTED_RO);
+    assert(p7501_fast_check_erase_guard(sctx, 0x84130000UL, true, &reason) == P7501_BUS_ALLOW);
+
     /* On-Pico pre-flight 1->0 monotonicity check */
     const uint8_t cur_nor[4] = { 0xFFu, 0xF0u, 0x55u, 0x00u };
     const uint8_t ok_nor[4]  = { 0xAAu, 0xA0u, 0x51u, 0x00u };

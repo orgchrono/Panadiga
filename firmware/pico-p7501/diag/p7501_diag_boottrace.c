@@ -9,10 +9,13 @@
  */
 
 #include "diag/p7501_diag_boottrace.h"
+#include "diag/p7501_boottrace_codec.h"
 #include "diag/p7501_diag_pwrtrace.h"
+#include "diag/p7501_gps_cli.h"
 
 #include "cli/p7501_cli.h"
 #include "common/p7501_cmd_arena.h"
+#include "common/p7501_push_stream.h"
 #include "hal/p7501_led.h"
 #include "p7501_types.h"
 #include "uart/p7501_pio_loop.h"
@@ -51,6 +54,7 @@ typedef struct boottrace_ctx {
     char line[160];
     size_t line_len;
     uint32_t line_start_ms;
+    p7501_boot_classifier_t classifier;
 } boottrace_ctx_t;
 
 static uint8_t read_ctrl3(void) {
@@ -58,13 +62,33 @@ static uint8_t read_ctrl3(void) {
     return (uint8_t)((all >> P7501_PIN_NSW5V) & 0x07u);
 }
 
-static void flush_uart_line(char *line, size_t *line_len, uint32_t line_start_ms) {
-    if (*line_len == 0u) {
+static void flush_uart_line(boottrace_ctx_t *ctx) {
+    if (ctx->line_len == 0u) {
         return;
     }
-    line[*line_len] = '\0';
-    printf("[BOOTTRACE +%4" PRIu32 "ms] %s\n", line_start_ms, line);
-    *line_len = 0u;
+    ctx->line[ctx->line_len] = '\0';
+    printf("[BOOTTRACE +%4" PRIu32 "ms] %s\n", ctx->line_start_ms, ctx->line);
+    p7501_boot_classifier_feed_line(&ctx->classifier, ctx->line);
+    ctx->line_len = 0u;
+}
+
+void p7501_boottrace_emit_reports(const p7501_boot_classifier_t *cls) {
+    p7501_gps_sync_from_classifier(cls);
+    char summary[224];
+    if (p7501_boot_classifier_format_summary(cls, summary, sizeof(summary)) > 0u) {
+        printf("%s\n", summary);
+    }
+    char deep[256];
+    const size_t dlen = p7501_boot_classifier_format_deep(cls, deep, sizeof(deep));
+    if (dlen > 0u) {
+        printf("%s\n", deep);
+        const char *kv = deep;
+        if (strncmp(deep, "@P7501_DIAG_DEEP ", 17u) == 0) {
+            kv = deep + 17u;
+        }
+        (void)p7501_push_emit_str("DIAG_DEEP", kv);
+        (void)p7501_push_flush_global();
+    }
 }
 
 static void boottrace_on_sw_rel(void *raw_ctx, uint32_t rel_us, const char *reason) {
@@ -85,7 +109,7 @@ static void boottrace_on_byte(void *raw_ctx, uint8_t byte, uint32_t rel_us, bool
         ctx->first_byte_us = rel_us;
     }
     if (byte == '\r' || byte == '\n') {
-        flush_uart_line(ctx->line, &ctx->line_len, ctx->line_start_ms);
+        flush_uart_line(ctx);
         return;
     }
     if (ctx->line_len == 0u) {
@@ -95,7 +119,7 @@ static void boottrace_on_byte(void *raw_ctx, uint8_t byte, uint32_t rel_us, bool
         ctx->line[ctx->line_len++] = (byte >= 0x20u && byte < 0x7Fu) ? (char)byte : '.';
     }
     if (ctx->line_len >= (sizeof(ctx->line) - 1u)) {
-        flush_uart_line(ctx->line, &ctx->line_len, ctx->line_start_ms);
+        flush_uart_line(ctx);
     }
 }
 
@@ -161,6 +185,7 @@ void p7501_cmd_boottrace(const char *arg) {
     ctx->prev_ctrl3 = read_ctrl3();
     ctx->sw_rel_reason = "NONE";
     ctx->next_adc_t = make_timeout_time_ms(10u);
+    p7501_boot_classifier_init(&ctx->classifier);
     p7501_diag_adc0_trace_init(&ctx->adc_trace);
     p7501_diag_adc0_trace_sample(&ctx->adc_trace);
 
@@ -180,7 +205,7 @@ void p7501_cmd_boottrace(const char *arg) {
     p7501_pio_loop_metrics_t m;
     p7501_pio_run_session(&cfg, &m);
 
-    flush_uart_line(ctx->line, &ctx->line_len, ctx->line_start_ms);
+    flush_uart_line(ctx);
     p7501_diag_adc0_trace_finalize(&ctx->adc_trace);
 
     printf("[BOOTTRACE] UART: bytes=%" PRIu32 " first_byte=%" PRIu32 "us ferr=%" PRIu32
@@ -208,5 +233,6 @@ void p7501_cmd_boottrace(const char *arg) {
     if (m.aborted) {
         p7501_cli_set_result("ERR", "EABORT");
     }
+    p7501_boottrace_emit_reports(&ctx->classifier);
     printf("BOOTTRACE: OK%s\n", m.aborted ? " (aborted=YES)" : "");
 }

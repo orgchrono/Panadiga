@@ -17,11 +17,16 @@
 #include "cli/p7501_cli_help.h"
 #include "cli/p7501_cli_sys.h"
 #include "common/p7501_hex.h"
+#include "common/p7501_push_stream.h"
+#include "crypto/p7501_crypto_cli.h"
 #include "diag/p7501_diag_boottrace.h"
 #include "diag/p7501_diag_bus.h"
 #include "diag/p7501_diag_electrical.h"
 #include "diag/p7501_diag_pwrtrace.h"
 #include "diag/p7501_diag_sdsniff.h"
+#include "diag/p7501_gps_cli.h"
+#include "diag/p7501_hotplug_map.h"
+#include "diag/p7501_surg_cli.h"
 #include "diag/p7501_i2c_codec.h"
 #include "diag/p7501_identify.h"
 #include "diag/p7501_ir_kaseikyo.h"
@@ -35,7 +40,9 @@
 #include "flash/p7501_flash_cli.h"
 #include "flash/p7501_ftl_inspect.h"
 #include "flash/p7501_job.h"
+#include "flash/p7501_payloads.h"
 #include "flash/p7501_qspi_storage.h"
+#include "flash/p7501_sector_ops.h"
 #include "flash/p7501_vault_codec.h"
 #include "gdb/gdb_rsp.h"
 #include "hal/p7501_ble_nus.h"
@@ -191,7 +198,20 @@ static const p7501_cli_cmd_entry_t k_cli_commands[] = {
     { "NOR_MAP",        p7501_cmd_nor_map },
     { "FAST_READ",      p7501_cmd_fast_read },
     { "FAST_WRITE",     p7501_cmd_fast_write },
+    { "FAST_ERASE",     p7501_cmd_fast_erase },
     { "MMIO_SNAP",      p7501_cmd_mmio_snap },
+    { "HOTPLUG",        p7501_cmd_hotplug },
+    { "LIVE_MAP",       p7501_cmd_live_map },
+    { "STREAM",         p7501_cmd_stream },
+    { "TRAP",           p7501_cmd_trap },
+    { "PAYLOAD",        p7501_cmd_payload },
+    { "SECTOR",         p7501_cmd_sector },
+    { "CRYPTO",         p7501_cmd_crypto },
+    { "DECOMP",         p7501_cmd_decomp },
+    { "GPS",            p7501_cmd_gps },
+    { "ROUTE",          p7501_cmd_route },
+    { "XRAY",           p7501_cmd_xray },
+    { "SURG",           p7501_cmd_surg },
     { "PWROSC",         p7501_cmd_pwrosc },
     { "TBUSSNIFF",      p7501_cmd_tbussniff },
     { "M0KEEPALIVE",    p7501_cmd_m0keepalive },

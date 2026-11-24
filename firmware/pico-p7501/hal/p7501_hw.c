@@ -12,15 +12,25 @@
 
 #include "hal/p7501_hw.h"
 #include "diag/p7501_i2c_codec.h"
+#include "gdb/gdb_rsp.h"
+#include "hal/p7501_led.h"
 #include "hal/p7501_watchdog.h"
 #include "pico/stdlib.h"
+#include "pico/time.h"
 #include "hardware/adc.h"
 #include "hardware/gpio.h"
+
+#include <inttypes.h>
+#include <stdio.h>
 
 static bool s_initialized = false;
 static volatile uint32_t s_nsw5v_dropouts = 0u;
 static volatile bool s_nsw5v_fault_latched = false;
 static volatile bool s_nsw5v_power_seen = false;
+static uint32_t s_nsw5v_recoveries = 0u;
+static uint32_t s_last_rail_poll_ms = 0u;
+static p7501_hotplug_fsm_t s_hp_fsm;
+static bool s_hp_fsm_init = false;
 
 static void p7501_nsw5v_falling_irq(uint gpio, uint32_t event_mask) {
     if ((gpio == P7501_PIN_NSW5V) && ((event_mask & GPIO_IRQ_EDGE_FALL) != 0u)) {
@@ -71,6 +81,60 @@ bool p7501_hw_is_nsw5v_fault_latched(void) {
 
 void p7501_hw_clear_nsw5v_fault_latch(void) {
     s_nsw5v_fault_latched = false;
+}
+
+uint32_t p7501_hw_get_nsw5v_recoveries(void) {
+    return s_nsw5v_recoveries;
+}
+
+p7501_hotplug_fsm_t *p7501_hw_hotplug_fsm(void) {
+    if (!s_hp_fsm_init) {
+        p7501_hotplug_fsm_init(&s_hp_fsm);
+        s_hp_fsm_init = true;
+    }
+    return &s_hp_fsm;
+}
+
+void p7501_hw_poll_rail_recovery(void) {
+    if (!s_initialized || gpio_is_dir_out(P7501_PIN_SW_UART_ADC)) {
+        return;
+    }
+    const uint32_t now_ms = to_ms_since_boot(get_absolute_time());
+    if ((uint32_t)(now_ms - s_last_rail_poll_ms) < 50u) {
+        return;
+    }
+    s_last_rail_poll_ms = now_ms;
+
+    p7501_hw_enforce_nsw5v_hiz();
+    const uint32_t vdd_mv = p7501_hw_sample_sw_uart_mv(false, false);
+    const bool nsw_h = gpio_get(P7501_PIN_NSW5V);
+    const bool fault = s_nsw5v_fault_latched;
+
+    bool changed = false;
+    bool clear_fault = false;
+    p7501_hotplug_fsm_t *const fsm = p7501_hw_hotplug_fsm();
+    p7501_hotplug_fsm_step(fsm, vdd_mv, nsw_h, fault, &changed, &clear_fault);
+
+    if (clear_fault) {
+        s_nsw5v_fault_latched = false;
+        s_nsw5v_power_seen = true;
+        s_nsw5v_recoveries += 1u;
+    }
+    if (!gdb_rsp_is_active()) {
+        if ((fsm->state == P7501_HP_ONLINE_AWAKE) &&
+            (p7501_led_get_state().mode == LED_MODE_BUS_FAULT)) {
+            p7501_led_set_auto_mode(LED_MODE_HEARTBEAT_IDLE);
+        } else if (changed && (fsm->state == P7501_HP_DROPOUT_FAULT)) {
+            p7501_led_set_auto_mode(LED_MODE_BUS_FAULT);
+        }
+    }
+    if (changed && fsm->push_enabled) {
+        char kv[160];
+        if (p7501_hotplug_format_kv(fsm, s_nsw5v_fault_latched, s_nsw5v_dropouts, kv, sizeof(kv)) > 0u) {
+            printf("@P7501_HOTPLUG %s\n", kv);
+            fflush(stdout);
+        }
+    }
 }
 
 static volatile bool s_contention_latched = false;
@@ -145,9 +209,12 @@ p7501_status_t p7501_hw_init(void) {
     gpio_set_slew_rate(P7501_PIN_SW_UART_ADC, GPIO_SLEW_RATE_SLOW);
 
     s_nsw5v_dropouts = 0u;
+    s_nsw5v_recoveries = 0u;
+    s_last_rail_poll_ms = 0u;
     s_nsw5v_fault_latched = false;
     s_contention_latched = false;
     s_nsw5v_power_seen = gpio_get(P7501_PIN_NSW5V);
+    p7501_hotplug_fsm_init(p7501_hw_hotplug_fsm());
     s_initialized = true;
     return P7501_OK;
 }

@@ -292,7 +292,7 @@ bool p7501_parse_waittx_args(const char *arg, p7501_waittx_spec_t *out) {
     }
 
     if (p7501_next_token(cur, tok_post, sizeof(tok_post)) != NULL) {
-        out->post_rx_ms = p7501_parse_uint32_clamped(tok_post, 4000u, 100u, 30000u);
+        out->post_rx_ms = p7501_parse_uint32_clamped(tok_post, 4000u, 100u, 60000u);
     } else {
         out->post_rx_ms = 4000u;
     }

@@ -76,16 +76,19 @@ uint8_t p7501_fast_sum8(const uint8_t *data, size_t len) {
     return p7501_rsp_checksum(data, len);
 }
 
-p7501_bus_deny_t p7501_fast_check_write_guard(
+static p7501_bus_deny_t fast_check_common_bgo_guard(
     const p7501_session_ctx_t *ctx,
     uint32_t addr,
     uint32_t len,
+    bool is_erase,
     bool upper_nor_unlocked,
+    bool extra_ok,
+    const char *extra_fail_reason,
     const char **out_reason
 ) {
     const p7501_bus_deny_t deny = p7501_bus_check_access(
         ctx, P7501_FLASH_SIZE_8MB, addr, (size_t)(len > 0u ? len : 1u),
-        true, false, upper_nor_unlocked
+        true, is_erase, upper_nor_unlocked
     );
     if (deny != P7501_BUS_ALLOW) {
         if (out_reason != NULL) {
@@ -93,9 +96,9 @@ p7501_bus_deny_t p7501_fast_check_write_guard(
         }
         return deny;
     }
-    if ((len < 2u) || (len > P7501_FAST_STUB_MAX_CHUNK) || ((addr & 1u) != 0u) || ((len & 1u) != 0u)) {
+    if (!extra_ok) {
         if (out_reason != NULL) {
-            *out_reason = "UNALIGNED_OR_LEN";
+            *out_reason = extra_fail_reason;
         }
         return P7501_BUS_DENY_PROTECTED_RO;
     }
@@ -111,6 +114,32 @@ p7501_bus_deny_t p7501_fast_check_write_guard(
         *out_reason = "ALLOW";
     }
     return P7501_BUS_ALLOW;
+}
+
+p7501_bus_deny_t p7501_fast_check_write_guard(
+    const p7501_session_ctx_t *ctx,
+    uint32_t addr,
+    uint32_t len,
+    bool upper_nor_unlocked,
+    const char **out_reason
+) {
+    const bool align_ok = (len >= 2u) && (len <= P7501_FAST_STUB_MAX_CHUNK) &&
+                          ((addr & 1u) == 0u) && ((len & 1u) == 0u);
+    return fast_check_common_bgo_guard(
+        ctx, addr, len, false, upper_nor_unlocked, align_ok, "UNALIGNED_OR_LEN", out_reason
+    );
+}
+
+p7501_bus_deny_t p7501_fast_check_erase_guard(
+    const p7501_session_ctx_t *ctx,
+    uint32_t sector_va,
+    bool upper_nor_unlocked,
+    const char **out_reason
+) {
+    const bool align_ok = ((sector_va & 0xFFFFu) == 0u);
+    return fast_check_common_bgo_guard(
+        ctx, sector_va, 0x10000u, true, upper_nor_unlocked, align_ok, "UNALIGNED_SECTOR", out_reason
+    );
 }
 
 bool p7501_fast_check_monotonic_1_to_0(

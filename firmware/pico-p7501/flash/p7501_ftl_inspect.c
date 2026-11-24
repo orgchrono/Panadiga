@@ -13,6 +13,7 @@
 #include "cli/p7501_cli.h"
 #include "common/p7501_cmd_arena.h"
 #include "common/p7501_hex.h"
+#include "flash/p7501_fast_stream_codec.h"
 #include "flash/p7501_flash.h"
 #include "hal/p7501_hw.h"
 
@@ -159,7 +160,8 @@ static bool check_ftl_target_ready(const char *tag) {
 }
 
 void p7501_cmd_bgo_inspect(const char *arg) {
-    (void)arg;
+    const bool detail = (arg != NULL) &&
+                        ((strstr(arg, "DETAIL") != NULL) || (strstr(arg, "detail") != NULL));
     if (!check_ftl_target_ready("BGO_INSPECT")) {
         return;
     }
@@ -187,22 +189,31 @@ void p7501_cmd_bgo_inspect(const char *arg) {
     /* Verify +0x100 zero-marker on VALID and ERASED (formatted spare) sectors; SA70 all-FF +0x100 is unformatted. */
     uint16_t zero_marker_bad = 0u;
     for (uint32_t i = 0u; i < geo.bgo_sector_count; ++i) {
-        if ((rep.states[i] != (uint8_t)P7501_BGO_SEC_VALID) &&
-            (rep.states[i] != (uint8_t)P7501_BGO_SEC_ERASED)) {
-            continue;
-        }
-        const uint32_t z_addr = geo.bgo_hw_base + (i * P7501_BGO_SECTOR_SIZE) + 0x100UL;
-        uint8_t zbuf[16];
-        if (!p7501_hw_read_block_checked(z_addr, zbuf, sizeof(zbuf), true)) {
-            p7501_cli_set_result("ERR", "EBUS");
-            printf("BGO_INSPECT: ERROR (Bus read failed at zmarker 0x%08" PRIX32 ")\n", z_addr);
-            return;
-        }
-        for (size_t k = 0u; k < sizeof(zbuf); ++k) {
-            if (zbuf[k] != 0x00u) {
-                zero_marker_bad += 1u;
-                break;
+        const uint32_t sec_base = geo.bgo_hw_base + (i * P7501_BGO_SECTOR_SIZE);
+        bool z100_ok = true;
+        if ((rep.states[i] == (uint8_t)P7501_BGO_SEC_VALID) ||
+            (rep.states[i] == (uint8_t)P7501_BGO_SEC_ERASED)) {
+            const uint32_t z_addr = sec_base + 0x100UL;
+            uint8_t zbuf[16];
+            if (!p7501_hw_read_block_checked(z_addr, zbuf, sizeof(zbuf), true)) {
+                p7501_cli_set_result("ERR", "EBUS");
+                printf("BGO_INSPECT: ERROR (Bus read failed at zmarker 0x%08" PRIX32 ")\n", z_addr);
+                return;
             }
+            for (size_t k = 0u; k < sizeof(zbuf); ++k) {
+                if (zbuf[k] != 0x00u) {
+                    z100_ok = false;
+                    zero_marker_bad += 1u;
+                    break;
+                }
+            }
+        } else {
+            z100_ok = false;
+        }
+        if (detail) {
+            printf("@P7501_BGO_SEC sa=%u va=0x%08" PRIX32 " lbn=0x%04X state=%u z100_ok=%u\n",
+                   (unsigned)p7501_fast_va_to_sa(sec_base), sec_base, (unsigned)rep.lbns[i],
+                   (unsigned)rep.states[i], z100_ok ? 1u : 0u);
         }
     }
     if (zero_marker_bad > 0u) {

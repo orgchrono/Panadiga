@@ -80,6 +80,59 @@ static size_t find_subbytes(const uint8_t *hay, size_t hlen, const char *needle,
     return hlen;
 }
 
+bool p7501_j_append_span_putc_msgs(
+    p7501_jedec_buf_t *jb,
+    uint32_t load_addr,
+    const char hdr8[8],
+    size_t c_hdr,
+    size_t hdr_s,
+    size_t hdr_e,
+    size_t c_done,
+    size_t done_s,
+    size_t done_e,
+    size_t *out_putc_off
+) {
+    static const uint8_t k_call_placeholder[5] = { 0xCDu, 0x00u, 0x00u, 0x00u, 0x00u };
+    static const uint8_t k_ret0[3] = { 0xDFu, 0x00u, 0x00u };
+    static const uint8_t k_span_rd[3] = { 0xF0u, 0x40u, 0x83u };
+    static const uint8_t k_span_nxt[3] = { 0x20u, 0x01u, 0xB4u };
+    static const char k_done[] = "PANADONE";
+
+    if ((jb == NULL) || (hdr8 == NULL) || (out_putc_off == NULL)) {
+        return false;
+    }
+
+    const size_t span_off = jb->pos;
+    p7501_j_arr(jb, k_span_rd, sizeof(k_span_rd));
+    const size_t c_p_sp = jb->pos;
+    p7501_j_arr(jb, k_call_placeholder, sizeof(k_call_placeholder));
+    p7501_j_arr(jb, k_span_nxt, sizeof(k_span_nxt));
+    p7501_j_br(jb, 0xC9u, span_off);
+    p7501_j_arr(jb, k_ret0, sizeof(k_ret0));
+
+    const size_t putc_off = jb->pos;
+    p7501_j_arr(jb, k_p7501_mn103_putc_d3, sizeof(k_p7501_mn103_putc_d3));
+
+    const size_t hdr_off = jb->pos;
+    p7501_j_arr(jb, (const uint8_t *)hdr8, 8u);
+    const size_t done_off = jb->pos;
+    p7501_j_arr(jb, (const uint8_t *)k_done, 8u);
+    const size_t end_off = jb->pos;
+
+    if (jb->pos > jb->cap) {
+        return false;
+    }
+    p7501_j_patch_s16(jb, c_hdr, span_off);
+    p7501_j_patch_s16(jb, c_done, span_off);
+    p7501_j_patch_s16(jb, c_p_sp, putc_off);
+    p7501_j_patch_u32(jb, hdr_s, load_addr + (uint32_t)hdr_off);
+    p7501_j_patch_u32(jb, hdr_e, load_addr + (uint32_t)done_off);
+    p7501_j_patch_u32(jb, done_s, load_addr + (uint32_t)done_off);
+    p7501_j_patch_u32(jb, done_e, load_addr + (uint32_t)end_off);
+    *out_putc_off = putc_off;
+    return true;
+}
+
 size_t p7501_jedec_build_autoselect_stub(
     bool is_cfi,
     uint32_t load_addr,
@@ -97,7 +150,6 @@ size_t p7501_jedec_build_autoselect_stub(
         hw_base + (is_cfi ? 0x004EUL : 0x001EUL),
     };
     const char *hdr = is_cfi ? P7501_CFI_QUERY_MAGIC : P7501_JEDEC_ID_MAGIC;
-    static const char k_done[] = "PANADONE";
     static const uint8_t k_call_placeholder[5] = { 0xCDu, 0x00u, 0x00u, 0x00u, 0x00u };
 
     p7501_jedec_buf_t jb = { out_buf, 0u, out_cap };
@@ -134,40 +186,16 @@ size_t p7501_jedec_build_autoselect_stub(
     static const uint8_t k_ret0[3] = { 0xDFu, 0x00u, 0x00u };
     p7501_j_arr(&jb, k_ret0, sizeof(k_ret0));
 
-    const size_t span_off = jb.pos;
-    static const uint8_t k_span_rd[3] = { 0xF0u, 0x40u, 0x83u };
-    p7501_j_arr(&jb, k_span_rd, sizeof(k_span_rd));
-    const size_t c_p_sp = jb.pos;
-    p7501_j_arr(&jb, k_call_placeholder, sizeof(k_call_placeholder));
-    static const uint8_t k_span_nxt[3] = { 0x20u, 0x01u, 0xB4u };
-    p7501_j_arr(&jb, k_span_nxt, sizeof(k_span_nxt));
-    p7501_j_br(&jb, 0xC9u, span_off);
-    p7501_j_arr(&jb, k_ret0, sizeof(k_ret0));
-
-    const size_t putc_off = jb.pos;
-    p7501_j_arr(&jb, k_p7501_mn103_putc_d3, sizeof(k_p7501_mn103_putc_d3));
-
-    const size_t hdr_off = jb.pos;
-    p7501_j_arr(&jb, (const uint8_t *)hdr, 8u);
-    const size_t done_off = jb.pos;
-    p7501_j_arr(&jb, (const uint8_t *)k_done, sizeof(k_done) - 1u);
-    const size_t end_off = jb.pos;
-
-    if (jb.pos > out_cap) {
+    size_t putc_off = 0u;
+    if (!p7501_j_append_span_putc_msgs(&jb, load_addr, hdr, c_hdr, hdr_s, hdr_e,
+                                       c_done, done_s, done_e, &putc_off)) {
         return 0u;
     }
-    p7501_j_patch_s16(&jb, c_hdr, span_off);
-    p7501_j_patch_s16(&jb, c_done, span_off);
     for (size_t i = 0u; i < 4u; ++i) {
         p7501_j_patch_s16(&jb, rd_calls[i], emit_hw_off);
     }
     p7501_j_patch_s16(&jb, c_p_lo, putc_off);
     p7501_j_patch_s16(&jb, c_p_hi, putc_off);
-    p7501_j_patch_s16(&jb, c_p_sp, putc_off);
-    p7501_j_patch_u32(&jb, hdr_s, load_addr + (uint32_t)hdr_off);
-    p7501_j_patch_u32(&jb, hdr_e, load_addr + (uint32_t)done_off);
-    p7501_j_patch_u32(&jb, done_s, load_addr + (uint32_t)done_off);
-    p7501_j_patch_u32(&jb, done_e, load_addr + (uint32_t)end_off);
     return jb.pos;
 }
 

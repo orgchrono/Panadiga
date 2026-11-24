@@ -22,6 +22,7 @@
 #include "../hal/p7501_wireless_codec.h"
 #include "../uart/p7501_pana_rsp_ssot.h"
 #include "test_uart_codec.h"
+#include "test_pico_autonomous.h"
 
 _Static_assert(P7501_PIN_RXD == P7501_SSOT_GPIO_RXD_GP2, "GP2 RXD SSOT drift");
 _Static_assert(P7501_PIN_NSW5V == P7501_SSOT_GPIO_NSW5V_HIZ_GP3, "GP3 NSW5V SSOT drift");
@@ -608,6 +609,9 @@ int main(void) {
     test_halt_and_continue_status();
 
     if (p7501_run_uart_codec_tests() != 0) {
+        return 1;
+    }
+    if (p7501_run_pico_autonomous_tests() != 0) {
         return 1;
     }
 

@@ -45,6 +45,9 @@ const p7501_ssot_eeprom_chip_t *p7501_eeprom_lookup_addr(uint8_t addr_7bit);
 /** Validate 3.3V-safe EEPROM operation and bounded offset/page length. */
 bool p7501_eeprom_parse_args(const char *arg, p7501_eeprom_spec_t *out);
 
+/** Probe up to 8 candidate 7-bit I2C addresses safely when target rail is powered; returns bitmask. */
+uint8_t p7501_i2c_probe_addrs_safe(const uint8_t *addrs, size_t count);
+
 void p7501_cmd_i2c_scan(const char *arg);
 void p7501_cmd_eeprom(const char *arg);
 

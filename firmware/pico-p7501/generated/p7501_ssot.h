@@ -20,6 +20,8 @@ extern "C" {
 #define P7501_SSOT_WDT_TIMEOUT_MS          4000u
 #define P7501_SSOT_WDT_MAX_CMD_WINDOW_MS   185000u
 #define P7501_SSOT_CLI_LINE_MAX            512u
+#define P7501_SSOT_MAX_FAST_WRITE_BYTES    128u
+#define P7501_SSOT_FAST_STUB_PAGE_BYTES    256u
 #define P7501_SSOT_JIG_DEFAULT_HOLD_MS     2500u
 #define P7501_SSOT_GDB_SECTOR_CACHE_SIZE   512u
 
@@ -48,6 +50,18 @@ extern "C" {
 
 #define P7501_SSOT_AM34_LETHAL_REG_ADDR    0xC000100CUL
 #define P7501_SSOT_AM34_LETHAL_REG_LEN     4UL
+#define P7501_SSOT_AM34_LETHAL_REG2_ADDR   0xDC0F0000UL
+#define P7501_SSOT_AM34_LETHAL_REG2_LEN    0x00000010UL
+#define P7501_SSOT_LZSS_WINDOW_SIZE        0x1000u
+#define P7501_SSOT_LZSS_WINDOW_INIT        0x0FEEu
+#define P7501_SSOT_IC3001_BR_NA_ADDR7_L    0x48u
+#define P7501_SSOT_IC3001_BR_NA_ADDR7_H    0x49u
+#define P7501_SSOT_IC3001_EC_ADDR7         0x4Au
+#define P7501_SSOT_AIOF_BASE               0x88000000UL
+#define P7501_SSOT_AVDD_BASE               0x89800000UL
+#define P7501_SSOT_IIC0_BASE               0xD8400000UL
+#define P7501_SSOT_IIC1_BASE               0xD8401000UL
+#define P7501_SSOT_TBUS_BASE               0xDC010000UL
 #define P7501_SSOT_AM34_SC0_CTR_ADDR       0xD4002000UL
 #define P7501_SSOT_AM34_SDCD_BASE_ADDR     0x89001800UL
 #define P7501_SSOT_AM34_DAVIS_PRI_ADDR     0x89000500UL
@@ -63,6 +77,20 @@ extern "C" {
 #define P7501_SSOT_BGO_HW_BASE             0x84130000UL
 #define P7501_SSOT_BGO_SIZE                0x002D0000UL
 #define P7501_SSOT_BGO_SECTOR_COUNT        45u
+
+#define P7501_SSOT_HDD_CLAMP_WIN_LEN       0x72u
+#define P7501_SSOT_HDD_CLAMP_OFF_400GB     0x0Eu
+#define P7501_SSOT_HDD_CLAMP_OFF_200GB     0x29u
+#define P7501_SSOT_HDD_CLAMP_OFF_FALLBACK  0x44u
+#define P7501_SSOT_HDD_CLAMP_OFF_BRANCH    0x5Bu
+#define P7501_SSOT_HDD_OPCODE_BLS          0xC6u
+#define P7501_SSOT_HDD_OPCODE_BRA          0xCAu
+#define P7501_SSOT_HDD_DYNAMIC_MAX_2KB     0x3FFFFFFFUL
+#define P7501_SSOT_MEIHFS_PRIMARY_FW_LBA   0x00010000UL
+#define P7501_SSOT_MEIHFS_MIRROR_DELTA_LBA 0x00020000UL
+#define P7501_SSOT_DAVIS_IDENTIFY_BUF_VA   0x90502000UL
+#define P7501_SSOT_DAVIS_IDENTIFY_META_VA  0x905013F4UL
+#define P7501_SSOT_DAVIS_IDENTIFY_SENTINEL 0xCAFE00ECUL
 
 #define P7501_TBC_PASSTHROUGH_SEQ_LEN 3u
 #define P7501_TBC_PASSTHROUGH_SEQ_INIT { \
@@ -192,8 +220,8 @@ enum {
     { "PANAMON1>", 9u, P7501_SSOT_DIAG_EVT_PANAMON }, \
 }
 
-#define P7501_SSOT_HASH_U32 0xA6F75ECEUL
-#define P7501_SSOT_HASH_STR "A6F75ECE"
+#define P7501_SSOT_HASH_U32 0xC22028D7UL
+#define P7501_SSOT_HASH_STR "C22028D7"
 
 #define P7501_SSOT_LOADER_FP_COUNT 4u
 typedef struct p7501_ssot_loader_fp {
@@ -204,10 +232,83 @@ typedef struct p7501_ssot_loader_fp {
     bool lock_xip_main_ro;
 } p7501_ssot_loader_fp_t;
 
+#define P7501_SSOT_FEISTEL_KEY_COUNT 12u
+typedef struct p7501_ssot_feistel_key {
+    const char *name;
+    uint8_t key8[8];
+} p7501_ssot_feistel_key_t;
+
+#define P7501_SSOT_TRAP_R 1u
+#define P7501_SSOT_TRAP_W 2u
+#define P7501_SSOT_TRAP_E 4u
+#define P7501_SSOT_TRAP_SEV_WARN 1u
+#define P7501_SSOT_TRAP_SEV_DENY 2u
+#define P7501_SSOT_TRAP_COUNT 7u
+typedef struct p7501_ssot_trap {
+    const char *id;
+    uint32_t start;
+    uint32_t len;
+    uint8_t mask_rwe;
+    uint8_t severity;
+    const char *reason;
+} p7501_ssot_trap_t;
+
+#define P7501_SSOT_MMIO_DOM_CORE 1u
+#define P7501_SSOT_MMIO_DOM_VIDEO 2u
+#define P7501_SSOT_MMIO_DOM_STORAGE 4u
+#define P7501_SSOT_MMIO_DOM_ALL 7u
+#define P7501_SSOT_MMIO_REG_COUNT 27u
+typedef struct p7501_ssot_mmio_reg {
+    uint32_t addr;
+    const char *name;
+    uint8_t domain;
+    uint8_t width_bits;
+} p7501_ssot_mmio_reg_t;
+
+#define P7501_SSOT_SIG_COUNT 8u
+typedef struct p7501_ssot_sig {
+    const char *name;
+    uint8_t len;
+    uint8_t bytes[16];
+} p7501_ssot_sig_t;
+
+#define P7501_SSOT_PIEOS_ANCHOR_COUNT 11u
+typedef struct p7501_ssot_pieos_anchor {
+    const char *name;
+    uint32_t va_3060np;
+    uint32_t va_3410pq;
+    uint32_t mmio_ref;
+    uint8_t stage_id;
+    uint8_t flags;
+    const char *caller;
+} p7501_ssot_pieos_anchor_t;
+
+#define P7501_SSOT_REGION_RULE_COUNT 14u
+typedef struct p7501_ssot_region_rule {
+    const char *suffix;
+    const char *tv_standard;
+    const char *line_system;
+    uint16_t aiof_vmodesel;
+    uint8_t dvd_region;
+    char oem_marker;
+    uint8_t ic3001_addr7_primary;
+    uint8_t ic3001_addr7_alt;
+} p7501_ssot_region_rule_t;
+
+
 extern const p7501_ssot_flash_chip_t k_p7501_ssot_flash_chips[P7501_FLASH_ID_COUNT];
 extern const p7501_ssot_target_profile_t k_p7501_ssot_target_profiles[P7501_TARGET_PROFILE_COUNT];
 extern const p7501_ssot_eeprom_chip_t k_p7501_ssot_eeprom_chips[P7501_SSOT_EEPROM_COUNT];
 extern const p7501_ssot_loader_fp_t k_p7501_ssot_loader_fingerprints[P7501_SSOT_LOADER_FP_COUNT];
+extern const uint8_t k_p7501_ssot_feistel_sbox[256];
+extern const uint8_t k_p7501_ssot_feistel_iv[4];
+extern const p7501_ssot_feistel_key_t k_p7501_ssot_feistel_keys[P7501_SSOT_FEISTEL_KEY_COUNT];
+extern const p7501_ssot_trap_t k_p7501_ssot_traps[P7501_SSOT_TRAP_COUNT];
+extern const p7501_ssot_mmio_reg_t k_p7501_ssot_mmio_regs[P7501_SSOT_MMIO_REG_COUNT];
+extern const p7501_ssot_sig_t k_p7501_ssot_sigs[P7501_SSOT_SIG_COUNT];
+extern const p7501_ssot_pieos_anchor_t k_p7501_ssot_pieos_anchors[P7501_SSOT_PIEOS_ANCHOR_COUNT];
+extern const p7501_ssot_region_rule_t k_p7501_ssot_region_rules[P7501_SSOT_REGION_RULE_COUNT];
+extern const uint8_t k_p7501_ssot_hdd_clamp_prefix[14];
 
 #ifdef __cplusplus
 }

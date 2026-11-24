@@ -31,6 +31,18 @@ void p7501_j_patch_u32(p7501_jedec_buf_t *jb, size_t lit_off, uint32_t val);
 void p7501_j_cmd_a0(p7501_jedec_buf_t *jb, uint32_t bus_va, uint8_t cmd_byte);
 size_t p7501_j_emit_status_msg(p7501_jedec_buf_t *jb, size_t *s_patch, size_t *e_patch);
 void p7501_j_br(p7501_jedec_buf_t *jb, uint8_t op, size_t target_off);
+bool p7501_j_append_span_putc_msgs(
+    p7501_jedec_buf_t *jb,
+    uint32_t load_addr,
+    const char hdr8[8],
+    size_t c_hdr,
+    size_t hdr_s,
+    size_t hdr_e,
+    size_t c_done,
+    size_t done_s,
+    size_t done_e,
+    size_t *out_putc_off
+);
 size_t p7501_j_build_stub_common(
     bool is_erase,
     uint32_t norm_addr,

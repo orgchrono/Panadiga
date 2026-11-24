@@ -9,6 +9,10 @@
 #ifndef P7501_FAST_STREAM_H
 #define P7501_FAST_STREAM_H
 
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -21,6 +25,20 @@ void p7501_cmd_fast_read(const char *arg);
 
 /** CLI `FAST_WRITE <hex_va> <hex_payload> [CONFIRM_UPPER_NOR]`: guarded `1->0` JEDEC writer. */
 void p7501_cmd_fast_write(const char *arg);
+
+/**
+ * @brief Shared physical guarded `1->0` NOR writer (enforces E05, pre-image check, and unconditional `U LOCK`).
+ */
+bool p7501_fast_write_bytes_hw(
+    const char *tag,
+    uint32_t addr,
+    const uint8_t *payload,
+    size_t pay_len,
+    bool has_confirm
+);
+
+/** CLI `FAST_ERASE <hex_sector_va> CONFIRM_UPPER_NOR`: guarded 64 KiB BGO sector erase + verify. */
+void p7501_cmd_fast_erase(const char *arg);
 
 #ifdef __cplusplus
 }

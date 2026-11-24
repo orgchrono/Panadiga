@@ -53,10 +53,12 @@ void p7501_cli_cmd_status(const char *arg) {
         p7501_led_set_auto_mode(next_led);
     }
     printf("VDD: %sV (%s)\n", p7501_fmt_mv_volts(vdd_mv, s_vdd), state);
-    printf("[STANDBY] RXD=%d NSW5V=%d TXD=%d XRESET=%d SW_PU=%sV NSW5V_DROPS=%lu | State=%s\n",
+    printf("[STANDBY] RXD=%d NSW5V=%d TXD=%d XRESET=%d SW_PU=%sV NSW5V_DROPS=%lu fault_latch=%u recoveries=%lu | State=%s\n",
            rxd_h ? 1 : 0, nsw_h ? 1 : 0, txd_h ? 1 : 0, xrst_h ? 1 : 0,
            p7501_fmt_mv_volts(sw_pu_mv, s_pu),
            (unsigned long)p7501_hw_get_nsw5v_dropouts(),
+           p7501_hw_is_nsw5v_fault_latched() ? 1u : 0u,
+           (unsigned long)p7501_hw_get_nsw5v_recoveries(),
            p7501_classify_standby_state_mv(vdd_mv, sw_pu_mv, nsw_h, txd_h, jig_latched));
     p7501_wdt_print_summary_line();
 }
@@ -178,7 +180,7 @@ void p7501_cli_cmd_selftest(const char *arg) {
     uint32_t fw_len = 0u;
     const uint32_t fw_crc = p7501_qspi_firmware_crc32(&fw_len);
 
-    printf("[SELFTEST] hal_init=%s nsw5v_hiz=%s xreset_od_hiz=%s txd_hiz=%s dma_ring=%s vdd=%lumV nsw5v_dropouts=%lu wdt_ms=%u core1_ticks=%lu core1_drop=%lu fw_bytes=%lu fw_crc32=0x%08lX\n",
+    printf("[SELFTEST] hal_init=%s nsw5v_hiz=%s xreset_od_hiz=%s txd_hiz=%s dma_ring=%s vdd=%lumV nsw5v_dropouts=%lu fault_latch=%u recoveries=%lu wdt_ms=%u core1_ticks=%lu core1_drop=%lu fw_bytes=%lu fw_crc32=0x%08lX\n",
            hw_ok ? "OK" : "ERR",
            nsw5v_hiz_safe ? "SAFE_IN" : "FAULT",
            xreset_hiz ? "SAFE_IN" : "LOW",
@@ -186,6 +188,8 @@ void p7501_cli_cmd_selftest(const char *arg) {
            dma_ok ? "ARMED_16K" : "ON_DEMAND",
            (unsigned long)vdd_mv,
            (unsigned long)drops,
+           p7501_hw_is_nsw5v_fault_latched() ? 1u : 0u,
+           (unsigned long)p7501_hw_get_nsw5v_recoveries(),
            (unsigned)P7501_WDT_TIMEOUT_MS,
            (unsigned long)c1_ticks,
            (unsigned long)c1_drop,
