@@ -38,6 +38,9 @@ typedef enum p7501_bus_deny {
     P7501_BUS_DENY_UPPER_LOCKED = 7
 } p7501_bus_deny_t;
 
+/** True when `[addr, addr + max(len,1))` wraps past 32-bit address space `0xFFFFFFFF`. */
+bool p7501_bus_span_wraps_u32(uint32_t addr, size_t len);
+
 /** True when `[addr, addr + max(len,1))` overlaps AM34 lethal MMIO `0xC000100C..0xC000100F`. */
 bool p7501_bus_is_lethal_mmio_range(uint32_t addr, size_t len);
 
@@ -78,6 +81,45 @@ bool p7501_bus_check_uart_tx_payload(
     const uint8_t *payload,
     size_t len,
     bool is_bridge_stream,
+    p7501_bus_deny_t *out_reason
+);
+
+#define P7501_BRIDGE_LINE_CAP 256u
+#define P7501_BRIDGE_RSP_CAP  512u
+
+typedef enum p7501_bridge_filter_action {
+    P7501_BRIDGE_ACT_HOLD = 0,
+    P7501_BRIDGE_ACT_FORWARD = 1,
+    P7501_BRIDGE_ACT_PASS_CTL = 2,
+    P7501_BRIDGE_ACT_BLOCKED = 3
+} p7501_bridge_filter_action_t;
+
+typedef struct p7501_bridge_tx_filter {
+    uint8_t line_buf[P7501_BRIDGE_LINE_CAP];
+    size_t line_len;
+    bool line_overflow;
+    uint8_t rsp_buf[P7501_BRIDGE_RSP_CAP];
+    size_t rsp_len;
+    bool in_rsp;
+    uint8_t rsp_hash_tail;
+    bool rsp_overflow;
+} p7501_bridge_tx_filter_t;
+
+/** Reset fail-closed buffered `BRIDGE-POLICY` filter state. */
+void p7501_bridge_tx_filter_init(p7501_bridge_tx_filter_t *f);
+
+/**
+ * @brief Feed one host USB TX byte into fail-closed buffered `BRIDGE-POLICY` filter.
+ *
+ * Holds text lines until `\r`/`\n` and GDB RSP frames until `#xx` or `\r`/`\n`.
+ * On `P7501_BRIDGE_ACT_FORWARD`, `out_buf[0..*out_len)` contains the validated bytes to transmit.
+ */
+p7501_bridge_filter_action_t p7501_bridge_tx_filter_feed(
+    p7501_bridge_tx_filter_t *f,
+    uint8_t byte,
+    uint8_t *out_buf,
+    size_t out_cap,
+    size_t *out_len,
     p7501_bus_deny_t *out_reason
 );
 

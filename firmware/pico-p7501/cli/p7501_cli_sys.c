@@ -8,6 +8,9 @@
 #include "cli/p7501_cli_sys.h"
 #include "cli/p7501_cli.h"
 #include "common/p7501_hex.h"
+#include "common/p7501_push_stream.h"
+#include "diag/p7501_tbus_codec.h"
+#include "flash/p7501_flash.h"
 #include "flash/p7501_qspi_storage.h"
 #include "gdb/gdb_rsp.h"
 #include "hal/p7501_hw.h"
@@ -27,18 +30,57 @@
 #include <stdio.h>
 #include <string.h>
 
+static p7501_ps_t s_probe_state = P7501_PS_ISOLATED;
+
+p7501_ps_t p7501_probe_get_state(void) {
+    return s_probe_state;
+}
+
+bool p7501_probe_dispatch_event(p7501_ev_t ev, bool active_vdd_sample) {
+    p7501_rail_snap_t snap;
+    p7501_hw_rail_snapshot(&snap, active_vdd_sample);
+    const p7501_step_res_t res = p7501_probe_step(s_probe_state, ev, &snap);
+    s_probe_state = res.next;
+
+    if ((res.effects & P7501_EFF_UPPER_NOR_LOCK) != 0u) {
+        p7501_flash_set_upper_nor_unlocked(false);
+    }
+    if ((res.effects & P7501_EFF_KEEPALIVE_OFF) != 0u) {
+        p7501_tbus_keepalive_stop();
+    }
+    if ((res.effects & P7501_EFF_PIO_END) != 0u) {
+        p7501_pio_end_session();
+    }
+    if ((res.effects & P7501_EFF_HIZ_ALL) != 0u) {
+        p7501_hw_isolate_bus_hiz();
+    }
+    if ((res.effects & P7501_EFF_ACK_FAULT) != 0u) {
+        (void)p7501_hw_ack_fault();
+    }
+    if ((res.effects & P7501_EFF_ENGAGE_TX) != 0u) {
+        p7501_hw_engage_uart_bus();
+    }
+    if ((res.effects & P7501_EFF_EMIT_FAULT) != 0u) {
+        if (!gdb_rsp_is_active()) {
+            p7501_led_set_auto_mode(LED_MODE_BUS_FAULT);
+        }
+        (void)p7501_push_emit_str("FAULT", "nsw5v_dropout=1");
+    }
+    return res.allowed;
+}
+
 void p7501_cli_cmd_status(const char *arg) {
     (void)arg;
-    const bool jig_latched = gpio_is_dir_out(P7501_PIN_SW_UART_ADC);
-    const uint32_t vdd_mv = jig_latched ? 0u : p7501_hw_read_vdd_mv();
-    const bool nsw_h = gpio_get(P7501_PIN_NSW5V);
-    const bool powered = nsw_h || (vdd_mv >= P7501_SSOT_VDD_MIN_MV);
-    /* Avoid engaging GP26 internal pull-up into an unpowered board (anti-backpower). */
-    const uint32_t sw_pu_mv = (jig_latched || !powered) ? vdd_mv : p7501_hw_sample_sw_uart_mv(false, true);
+    p7501_bus_pin_sample_t pins;
+    p7501_hw_sample_bus_pins(&pins);
+    const bool jig_latched = pins.jig_latched;
+    const uint32_t vdd_mv = pins.vdd_mv;
+    const bool nsw_h = pins.nsw5v_high;
+    const uint32_t sw_pu_mv = pins.sw_pu_mv;
+    const bool rxd_h = pins.rxd_high;
+    const bool txd_h = pins.txd_high;
+    const bool xrst_h = pins.xreset_high;
     char s_vdd[8], s_pu[8];
-    const bool rxd_h = gpio_get(P7501_PIN_RXD);
-    const bool txd_h = gpio_get(P7501_PIN_TXD);
-    const bool xrst_h = gpio_get(P7501_PIN_XRESET);
     const char *state = "LOW / UNPOWERED";
     pico_led_mode_t next_led = LED_MODE_BUS_FAULT;
 
@@ -205,6 +247,11 @@ void p7501_cli_cmd_selftest(const char *arg) {
 
 void p7501_cli_cmd_gdb(const char *arg) {
     (void)arg;
+    if (!p7501_probe_dispatch_event(P7501_EV_GDB_ENTER, true)) {
+        p7501_cli_set_result("ERR", p7501_hw_is_nsw5v_fault_latched() ? "EDROPOUT" : "EOFFLINE");
+        printf("[GDB] ERROR: Target rail not healthy (NSW5V/VDD/fault_latch); refusing GDB.\n");
+        return;
+    }
     printf("Switching to GDB Remote Serial Protocol (RSP) Bridge Mode...\n");
     printf("[GDB] WDT armed (STAGE=GDB_RSP). Send '$D#44' to detach cleanly.\n");
     fflush(stdout);
@@ -214,14 +261,30 @@ void p7501_cli_cmd_gdb(const char *arg) {
 }
 
 void p7501_cli_cmd_isolate(const char *arg) {
-    (void)arg;
-    p7501_hw_isolate_bus_hiz();
+    if ((arg != NULL) && (p7501_ascii_ieq(arg, "CLEAR") || p7501_ascii_ieq(arg, "CLEAR_FAULT"))) {
+        (void)p7501_probe_dispatch_event(P7501_EV_FAULT_ACK, true);
+    }
+    (void)p7501_probe_dispatch_event(P7501_EV_ISOLATE, false);
     printf("[BUS] P7501 pins placed in High-Impedance Isolation (NSW5V/XRESET Hi-Z, GP26 ADC0).\n");
+}
+
+void p7501_cli_cmd_faultack(const char *arg) {
+    (void)arg;
+    if (p7501_probe_dispatch_event(P7501_EV_FAULT_ACK, true)) {
+        printf("FAULTACK: OK (bus isolated Hi-Z)\n");
+        return;
+    }
+    p7501_cli_set_result("ERR", "EOFFLINE");
+    printf("FAULTACK: ERROR code=EOFFLINE reason=RAIL_UNHEALTHY\n");
 }
 
 void p7501_cli_cmd_engage(const char *arg) {
     (void)arg;
-    p7501_hw_engage_uart_bus();
+    if (!p7501_probe_dispatch_event(P7501_EV_ENGAGE, true)) {
+        p7501_cli_set_result("ERR", p7501_hw_is_nsw5v_fault_latched() ? "EDROPOUT" : "EOFFLINE");
+        printf("[BUS] ERROR: Target rail not healthy (NSW5V/VDD/fault_latch); refusing ENGAGE.\n");
+        return;
+    }
     printf("[BUS] P7501 UART TX (GP4) engaged idle HIGH; NSW5V (GP3) kept Hi-Z Input.\n");
 }
 

@@ -29,6 +29,25 @@ bool openos_uart0_putc(char ch) {
     return am34_mmio_write8(AM34_OPENOS_SC0_TXB, (uint8_t)ch);
 }
 
+bool openos_uart0_try_getc(char *out_ch) {
+    if (out_ch == NULL) {
+        return false;
+    }
+    uint16_t status = 0u;
+    if (!am34_mmio_read16(AM34_OPENOS_SC0_STR, &status)) {
+        return false;
+    }
+    if ((status & AM34_OPENOS_SC0_RX_READY_MASK) == 0u) {
+        return false;
+    }
+    uint8_t raw = 0u;
+    if (!am34_mmio_read8(AM34_OPENOS_SC0_RXB, &raw)) {
+        return false;
+    }
+    *out_ch = (char)raw;
+    return true;
+}
+
 void openos_uart0_puts(const char *str) {
     if (str == NULL) {
         return;

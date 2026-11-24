@@ -17,9 +17,10 @@ use panadiga_core::constants::{
 };
 use panadiga_core::crypto::frm_pack::{FrmContainerMode, FrmPackModule, pack_frm};
 use panadiga_core::hdd::writer::{BUS_TYPE_NVME, FileBackedMockFlashDevice};
-use panadiga_core::pico::panamon1::MockPanamon1Transport;
+use panadiga_core::pico::panamon1::{MockPanamon1Transport, Panamon1Client};
 use panadiga_core::re::davis_probe::{
-    DAVIS_IDENTIFY_BUF_DEFAULT_VA, DAVIS_IDENTIFY_SENTINEL, DAVIS_STUB_DEFAULT_VA,
+    DAVIS_IDENTIFY_BUF_DEFAULT_VA, DAVIS_IDENTIFY_META_DEFAULT_VA, DAVIS_IDENTIFY_SENTINEL,
+    DAVIS_STUB_DEFAULT_VA, DavisProbeConfig, DavisProbeEngine,
 };
 use panadiga_core::re::eh55_bgo::eh55_bgo_sector_offset;
 use panadiga_core::re::nor_dumper::NorCaptureConfig;
@@ -427,6 +428,21 @@ fn wave2_pico_capture_nor_and_davis_probe_mock_offline() {
     assert_eq!(cap.total_len, AM34_NVRAM_SIZE as usize);
     assert_eq!(&fs::read(&out_nvram).unwrap()[..16], b"PANANVRAM_TEST_1");
 
+    let tf_row = |status: u32, seccnt: u32, lbalo: u32, marker: u32| -> Vec<u8> {
+        [0u32, 0, seccnt, lbalo, 0, 0, 0xA0, status, status, marker]
+            .into_iter()
+            .flat_map(u32::to_le_bytes)
+            .collect()
+    };
+    let mut pio_1024 = vec![0u8; 1024];
+    pio_1024[0..2].copy_from_slice(&0x0040u16.to_le_bytes());
+    pio_1024[54 * 4..54 * 4 + 2].copy_from_slice(b"AS");
+    pio_1024[83 * 4..83 * 4 + 2].copy_from_slice(&(1u16 << 10).to_le_bytes());
+    pio_1024[100 * 4..100 * 4 + 2].copy_from_slice(&0x1234u16.to_le_bytes());
+    pio_1024[101 * 4..101 * 4 + 2].copy_from_slice(&0x1D1Cu16.to_le_bytes());
+    let mut meta_ec = DAVIS_IDENTIFY_SENTINEL.to_le_bytes().to_vec();
+    meta_ec.extend_from_slice(&0x50u32.to_le_bytes());
+
     let build_mock = |bridge_overflow: bool| -> MockPanamon1Transport {
         let mut dmock = MockPanamon1Transport::new();
         dmock.bridge_active = true;
@@ -437,25 +453,73 @@ fn wave2_pico_capture_nor_and_davis_probe_mock_offline() {
         let mut sys = vec![0u8; 0x0C];
         sys[8..10].copy_from_slice(&0x8002u16.to_le_bytes());
         dmock.map_memory(0xC000_1000, sys);
-        dmock.write_memory_bytes(DAVIS_STUB_DEFAULT_VA, &[]);
+        dmock.set_jump_mem_effect(
+            DAVIS_STUB_DEFAULT_VA,
+            vec![
+                (0x9050_1000, tf_row(0x50, 1, 1, 0xCAFE_0001)),
+                (0x9050_1100, tf_row(0x50, 0x55, 0xAA, 0xCAFE_02A0)),
+                (0x9050_1140, tf_row(0x50, 0x55, 0xAA, 0xCAFE_02A1)),
+                (0x9050_1180, tf_row(0x00, 0x00, 0x00, 0xCAFE_02A2)),
+                (0x9050_12FC, 0u32.to_le_bytes().to_vec()),
+                (0x504F_8234, vec![0, 0, 0, 0, 0, 0, 1, 0]),
+                (DAVIS_IDENTIFY_META_DEFAULT_VA, meta_ec.clone()),
+                (DAVIS_IDENTIFY_BUF_DEFAULT_VA, pio_1024.clone()),
+            ],
+        );
         dmock
     };
-    let make_args = |out_ec| DavisProbeArgs {
+    let make_args = |no_identify, out_ec| DavisProbeArgs {
         port: "MOCK".to_string(),
         drive: "master".to_string(),
-        no_identify: true,
+        no_identify,
         out_ec,
         json: None,
     };
     let out_ec = dir.join("identify.bin");
-    let rep = run_davis_probe_with_transport(build_mock(false), &make_args(Some(out_ec.clone())))
-        .unwrap();
+    let rep =
+        run_davis_probe_with_transport(build_mock(false), &make_args(true, Some(out_ec.clone())))
+            .unwrap();
     assert!(rep.identify_info.is_none());
     assert!(!out_ec.exists());
-    let overflow_res = run_davis_probe_with_transport(build_mock(true), &make_args(None));
+
+    let out_ec_full = dir.join("identify_full.bin");
+    let rep_full = run_davis_probe_with_transport(
+        build_mock(false),
+        &make_args(false, Some(out_ec_full.clone())),
+    )
+    .unwrap();
+    assert!(rep_full.identify_info.is_some());
+    assert_eq!(fs::read(&out_ec_full).unwrap().len(), 512);
+
+    let overflow_res = run_davis_probe_with_transport(build_mock(true), &make_args(true, None));
     assert!(overflow_res.is_err());
-    let _ = DAVIS_IDENTIFY_BUF_DEFAULT_VA;
-    let _ = DAVIS_IDENTIFY_SENTINEL;
+
+    let mut standby_mock = build_mock(false);
+    standby_mock.status_reply =
+        "[STANDBY] RXD=1 NSW5V=0 VDD=0.00V fault_latch=0 dropouts=0\r\n@P7501_RES cmd=STATUS status=OK\r\nPANADIGA> "
+            .to_string();
+    let mut standby_client = Panamon1Client::new(standby_mock);
+    let standby_err = DavisProbeEngine::new(&mut standby_client, DavisProbeConfig::default())
+        .run_probe()
+        .unwrap_err()
+        .to_string();
+    assert!(
+        standby_err.contains("STANDBY_GATE_STOP"),
+        "err={standby_err}"
+    );
+    assert!(
+        !standby_client
+            .transport()
+            .tx_cli_log
+            .iter()
+            .any(|c| c.starts_with("BRIDGE"))
+    );
+    assert!(
+        standby_client
+            .transport()
+            .tx_cli_log
+            .contains(&"ISOLATE".to_string())
+    );
     let _ = fs::remove_dir_all(&dir);
 }
 

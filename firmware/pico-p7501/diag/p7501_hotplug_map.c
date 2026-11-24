@@ -73,13 +73,16 @@ static void live_on_rx_byte(void *raw_ctx, uint8_t byte, uint32_t rel_us, bool *
 void p7501_cmd_hotplug(const char *arg) {
     p7501_hotplug_fsm_t *const fsm = p7501_hw_hotplug_fsm();
     const bool has_arg = (arg != NULL) && (*arg != '\0');
+    bool ack_req = false;
     if (has_arg && p7501_ascii_ieq(arg, "ON")) {
         fsm->push_enabled = true;
     } else if (has_arg && p7501_ascii_ieq(arg, "OFF")) {
         fsm->push_enabled = false;
+    } else if (has_arg && p7501_ascii_ieq(arg, "ACK")) {
+        ack_req = true;
     } else if (has_arg && !p7501_ascii_ieq(arg, "STATUS")) {
         p7501_cli_set_result("ERR", "EINVAL");
-        printf("HOTPLUG: ERROR (Usage: HOTPLUG [ON|OFF|STATUS])\n");
+        printf("HOTPLUG: ERROR (Usage: HOTPLUG [ON|OFF|ACK|STATUS])\n");
         return;
     }
 
@@ -88,9 +91,12 @@ void p7501_cmd_hotplug(const char *arg) {
     const bool nsw_h = gpio_get(P7501_PIN_NSW5V);
     bool changed = false;
     bool clear_fault = false;
+    if (ack_req) {
+        (void)p7501_hw_ack_fault();
+    }
     p7501_hotplug_fsm_step(fsm, vdd_mv, nsw_h, p7501_hw_is_nsw5v_fault_latched(), &changed, &clear_fault);
     if (clear_fault) {
-        p7501_hw_clear_nsw5v_fault_latch();
+        (void)p7501_hw_ack_fault();
     }
 
     char kv[160];
@@ -173,20 +179,16 @@ void p7501_cmd_live_map(const char *arg) {
         return;
     }
 
-    p7501_hw_enforce_nsw5v_hiz();
-    const uint32_t vdd_mv = p7501_hw_read_vdd_mv();
-    const uint32_t sw_pu_mv = p7501_hw_sample_sw_uart_mv(false, true);
-    const bool nsw_h = gpio_get(P7501_PIN_NSW5V);
-    const bool rxd_h = gpio_get(P7501_PIN_RXD);
-    const bool txd_h = gpio_get(P7501_PIN_TXD);
-    const bool xrst_h = gpio_get(P7501_PIN_XRESET);
+    p7501_bus_pin_sample_t pins;
+    p7501_hw_sample_bus_pins(&pins);
 
     char *const elec_msg = (char *)&g_p7501_cmd_arena.raw[8192];
     (void)snprintf(
         elec_msg, 224u,
         "vdd_mv=%" PRIu32 " sw_pu_mv=%" PRIu32 " nsw5v=%u rxd=%u txd=%u xreset=%u "
         "dropouts=%" PRIu32 " fault_latch=%u recoveries=%" PRIu32 " core1_edges=%" PRIu32,
-        vdd_mv, sw_pu_mv, nsw_h ? 1u : 0u, rxd_h ? 1u : 0u, txd_h ? 1u : 0u, xrst_h ? 1u : 0u,
+        pins.vdd_mv, pins.sw_pu_mv, pins.nsw5v_high ? 1u : 0u, pins.rxd_high ? 1u : 0u,
+        pins.txd_high ? 1u : 0u, pins.xreset_high ? 1u : 0u,
         p7501_hw_get_nsw5v_dropouts(), p7501_hw_is_nsw5v_fault_latched() ? 1u : 0u,
         p7501_hw_get_nsw5v_recoveries(), p7501_multicore_edge_count()
     );
@@ -226,7 +228,7 @@ void p7501_cmd_live_map(const char *arg) {
         if (mode == LIVE_MODE_FULL) {
             push_live_nor_headers();
         }
-    } else if (nsw_h || (vdd_mv >= P7501_SSOT_VDD_WAKE_MIN_MV)) {
+    } else if (pins.nsw5v_high || (pins.vdd_mv >= P7501_SSOT_VDD_WAKE_MIN_MV)) {
         _Static_assert(sizeof(live_map_uart_ctx_t) <= sizeof(g_p7501_cmd_arena.raw),
                        "live_map_uart_ctx_t must fit inside cmd arena");
         live_map_uart_ctx_t *const ctx = (live_map_uart_ctx_t *)(void *)g_p7501_cmd_arena.raw;
@@ -262,8 +264,8 @@ void p7501_cmd_live_map(const char *arg) {
            " drops=%" PRIu32 "\n",
            live_mode_name(mode),
            bus_tag,
-           vdd_mv,
-           nsw_h ? 1u : 0u,
+           pins.vdd_mv,
+           pins.nsw5v_high ? 1u : 0u,
            (unsigned)i2c_mask,
            mmio_valid,
            uart_bytes,

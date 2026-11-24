@@ -162,4 +162,81 @@ P7501_SSOT_CLI_LINE_MAX: Final[int] = 512
 P7501_SSOT_MAX_FAST_WRITE_BYTES: Final[int] = 128
 P7501_SSOT_FAST_STUB_PAGE_BYTES: Final[int] = 256
 
-SSOT_CONTRACT_HASH_STR: Final[str] = "C22028D7"
+SAFE_BENCH_COMMANDS: Final[tuple[str, ...]] = (
+    "PING",
+    "HELP",
+    "BANNER",
+    "STATUS",
+    "VDD",
+    "LED",
+    "PINCHECK",
+    "BUSDIAG",
+    "SNIFF",
+    "ISOLATE",
+    "FAULTACK",
+    "UARTMON",
+    "BOOTCAP",
+    "JIGBOOT",
+    "UARTPROBE",
+    "UARTSEND",
+    "BAUD",
+    "FRAMING",
+    "BAUDSCAN",
+    "UARTSTREAM",
+    "HEXCAP",
+    "UARTTXHEX",
+    "WAITTX",
+    "PWRTRACE",
+    "BOOTTRACE",
+    "PIOLOGIC",
+    "SDSNIFF",
+    "JIGSWEEP",
+    "DIAGWATCH",
+    "PANARSP",
+    "DRVPANA",
+    "IRTX",
+    "GPS",
+    "ROUTE",
+    "XRAY",
+)
+
+FORBIDDEN_BENCH_TOKENS: Final[tuple[str, ...]] = (
+    "ERASE",
+    "WRITE",
+    "FLASH",
+    "PROGRAM",
+    "WRITEMEM",
+    "PATCH",
+    "UNLOCK",
+    "JEDEC",
+    "POKE",
+    "WMEM",
+    "WRITE32",
+    "RAW:M",
+    "RAW:X",
+    "VFLASH",
+    "C000100C",
+    "DC0F0000",
+)
+
+SSOT_CONTRACT_HASH_STR: Final[str] = "C045CA85"
+
+P7501_WIRE_TAGS: Final[dict[str, str]] = {
+    "RES": "@P7501_RES",
+    "EVT": "@P7501_EVT",
+    "FRAME": "@P7501_FRAME",
+    "IDENT": "@P7501_IDENT",
+    "SURG": "@P7501_SURG",
+    "BOOT_CLASS": "@P7501_BOOT_CLASS",
+}
+
+P7501_RES_CODES: Final[dict[str, str]] = {
+    "OK": "0",
+    "EINVAL": "EINVAL",
+    "E05": "E05",
+    "EOFFLINE": "EOFFLINE",
+    "ETIMEOUT": "ETIMEOUT",
+    "EDROPOUT": "EDROPOUT",
+    "EBUS_POLICY": "EBUS_POLICY",
+    "EFAULT_LATCHED": "EFaultLatched",
+}

@@ -151,3 +151,15 @@ panadiga unbrick nor-stub --wrap-digadiag --out unbrick_out/DIGADIAG_NOR_DUMPER.
   1. **Pré-energização:** Confirmar `GND` Pin 4 (`0.0 Ω`), `GP3` (`NSW5V`) em `Hi-Z Input` sem pull-ups, `GP5` (`XRESET`) em Open-Drain e alimentação do Pico exclusivamente via USB (`P7501` Pin 1 `< 10 mA`).
   2. **Boot Porta #1 (sem HDD / sem JIG):** Inserir cartão SDSC (`<= 2 GiB` FAT16) com [`PANA__SD.FRM`](../../firmware_and_images/sd_unbrick_kit/PANA__SD.FRM) (`cdcc2cdf...`), manter HDD/ODD desconectados e iniciar a captura em `115200 8N1` (`COM10`). Após `HDD_MAX_LBA get failed[0xE8000000]`, o `Loader ver0.61` entra automaticamente em `PANAMON1>`.
   3. **Injeção `M0` (`0x5180_0000`):** Gravar os bytes gerados por `emit_m0_tbus_wdt_keepalive_stub()` via comando `W` em `0x5180_0000..`, executar `J 51800000` periodicamente (intervalo `< 200 s`) e confirmar no multímetro que `DR_P_ON_H` / `DI_P_ON_H` (`NSW5V ~3.29V`) e os trilhos da `VEP79138` permanecem estáveis por `> 30 min` sem corte `U99`. Consulte também [`STATUS.md`](../STATUS.md).
+
+---
+
+## 7. `Panadiga OpenOS` Customizado (`M1..M3`, `NOT LEGALLY CLEAN-ROOM`) & Diagnóstico SD ao Vivo (`EV-20261124-004`)
+
+O firmware aberto [`firmware/panadiga-openos/`](../../firmware/panadiga-openos/README.md) (protótipo de interoperabilidade de hardware **não *clean-room* jurídico**, zero blobs proprietários) passou a consumir diretamente o contrato SSOT gerado [`generated/openos_ssot.h`](../../firmware/panadiga-openos/generated/openos_ssot.h) (`SSOT_CONTRACT_HASH = C045CA85`) em [`hal/am34_mmio.h`](../../firmware/panadiga-openos/hal/am34_mmio.h):
+
+1. **Shell Interativo `OPENOS>` Não-Bloqueante & Keepalive `IC7501`:** [`uart_sc0.c`](../../firmware/panadiga-openos/drivers/uart_sc0.c) adiciona `openos_uart0_try_getc()` lendo `SC0STR` (`0xD400_200C & 0x0010`) $\rightarrow$ `SC0RXB` (`0xD400_2009`) via `am34_mmio_read8()`, e [`openos_main.c`](../../firmware/panadiga-openos/kernel/openos_main.c) fornece `openos_shell_poll_once()` com eco, backspace, limite de 63 caracteres e heartbeat automático `IC7501` `255 s` a cada `65.536` ciclos ociosos (prevenindo o corte em `~44 s`).
+2. **Inspeção Somente-Leitura `SDCD` (`sd`) & NOR/BGO (`bgo`) + `ssot`:**
+   - [`sdcd_sd.c`](../../firmware/panadiga-openos/drivers/sdcd_sd.c) inspeciona `SDCD` (`0x8900_1800`) e `SDCD_CFG4` (`0x8900_1850`, bit 15 = 0 em `4BIT` vs 1 em `1BIT`).
+   - [`nor_bgo_ro.c`](../../firmware/panadiga-openos/drivers/nor_bgo_ro.c) lê o estado de Portão 4 (`SA11 0x8404_0000`), os 45 cabeçalhos BGO (`SA26..SA70`) e `EEMUL SA134` (`0x847F_0000`, `"1284"`), respeitando integralmente `am34_mmio_is_forbidden()`.
+3. **Alinhamento ao Silício em `EV-20261124-004` (`COM10`, SD inserido):** `MMIO_SNAP STORAGE` provou em bancada `SDCD_CFG4 = 0x000040B8` (`sd_bus=4BIT`), `SDCD_BASE = 0x0000000D`, `TBUS_MBX0 = 0x840000A3`, `BGO` 45/45 saudável (`p1_sa=41`) e `SA11 = ERASED_FF`, permitindo boot seguro do OpenOS via SDRAM (`DIGADIAG.FRM` `0x5040_0000`) sem alterar `SA0..SA141`.

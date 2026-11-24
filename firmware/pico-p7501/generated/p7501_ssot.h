@@ -220,8 +220,22 @@ enum {
     { "PANAMON1>", 9u, P7501_SSOT_DIAG_EVT_PANAMON }, \
 }
 
-#define P7501_SSOT_HASH_U32 0xC22028D7UL
-#define P7501_SSOT_HASH_STR "C22028D7"
+#define P7501_SSOT_HASH_U32 0xC045CA85UL
+#define P7501_SSOT_HASH_STR "C045CA85"
+#define P7501_WIRE_TAG_RES               "@P7501_RES"
+#define P7501_WIRE_TAG_EVT               "@P7501_EVT"
+#define P7501_WIRE_TAG_FRAME             "@P7501_FRAME"
+#define P7501_WIRE_TAG_IDENT             "@P7501_IDENT"
+#define P7501_WIRE_TAG_SURG              "@P7501_SURG"
+#define P7501_WIRE_TAG_BOOT_CLASS        "@P7501_BOOT_CLASS"
+#define P7501_RES_CODE_OK                "0"
+#define P7501_RES_CODE_EINVAL            "EINVAL"
+#define P7501_RES_CODE_E05               "E05"
+#define P7501_RES_CODE_EOFFLINE          "EOFFLINE"
+#define P7501_RES_CODE_ETIMEOUT          "ETIMEOUT"
+#define P7501_RES_CODE_EDROPOUT          "EDROPOUT"
+#define P7501_RES_CODE_EBUS_POLICY       "EBUS_POLICY"
+#define P7501_RES_CODE_EFAULT_LATCHED    "EFaultLatched"
 
 #define P7501_SSOT_LOADER_FP_COUNT 4u
 typedef struct p7501_ssot_loader_fp {
@@ -257,7 +271,7 @@ typedef struct p7501_ssot_trap {
 #define P7501_SSOT_MMIO_DOM_VIDEO 2u
 #define P7501_SSOT_MMIO_DOM_STORAGE 4u
 #define P7501_SSOT_MMIO_DOM_ALL 7u
-#define P7501_SSOT_MMIO_REG_COUNT 27u
+#define P7501_SSOT_MMIO_REG_COUNT 31u
 typedef struct p7501_ssot_mmio_reg {
     uint32_t addr;
     const char *name;

@@ -151,6 +151,7 @@ uint32_t p7501_flash_get_sector_size_at(uint32_t flash_size_bytes, uint32_t addr
 bool p7501_flash_is_nvram_microsector_addr_for_flash(uint32_t flash_size_bytes, uint32_t addr);
 bool p7501_flash_is_nvram_microsector_addr(uint32_t addr);
 uint32_t p7501_hw_autodetect_flash_size(void);
+bool p7501_hw_query_jedec_id(uint16_t *out_mfg, uint16_t out_dev[3], bool *out_verified);
 bool p7501_hw_query_cfi(uint32_t *out_size_bytes);
 p7501_flash_geometry_t p7501_probe_flash_geometry(void);
 

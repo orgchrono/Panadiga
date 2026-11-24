@@ -36,10 +36,18 @@ typedef struct p7501_bgo_report {
     uint16_t valid_count;
     uint16_t corrupt_count;
     uint16_t duplicate_lbn_count;
+    uint16_t p1_sa_index;
     bool healthy_bgo_ftl;
     uint8_t states[P7501_BGO_MAX_SECTORS];
     uint16_t lbns[P7501_BGO_MAX_SECTORS];
 } p7501_bgo_report_t;
+
+typedef enum p7501_norfrom_slot_state {
+    P7501_NORFROM_ERASED_FF = 0,
+    P7501_NORFROM_P4ZU_STUB = 1,
+    P7501_NORFROM_EXTRHEAD = 2,
+    P7501_NORFROM_NON_EMPTY = 3
+} p7501_norfrom_slot_state_t;
 
 typedef struct p7501_eemul_report {
     uint16_t total_microsectors;
@@ -63,6 +71,16 @@ bool p7501_eemul_inspect_slice(
     size_t total_bytes,
     size_t microsector_bytes,
     p7501_eemul_report_t *out
+);
+
+/** Return canonical ASCII label for `p7501_norfrom_slot_state_t`. */
+const char *p7501_norfrom_state_name(p7501_norfrom_slot_state_t st);
+
+/** Classify first 64 bytes of Portao 4 Nor-FROM slot (`SA11 @ 0x84040000`) & compute CRC32. */
+p7501_norfrom_slot_state_t p7501_norfrom_classify_prefix(
+    const uint8_t *buf64,
+    size_t len,
+    uint32_t *out_crc32
 );
 
 /** CLI command handlers reading target via `p7501_hw_read_mem32`. */

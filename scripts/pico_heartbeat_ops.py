@@ -21,29 +21,28 @@ from typing import Callable, Final, Sequence
 from scripts.bench.protocol import SAFE_BENCH_COMMANDS, validate_safe_bench_command
 from scripts.panadiga_cli_bridge import JsonDict, JsonValue, resolve_panadiga_cli_prefix
 from scripts.panadiga_ops import ROOT, build_env
+from scripts.profiles_types import FORBIDDEN_BENCH_TOKENS
 
-FORBIDDEN_TOKENS: Final[tuple[str, ...]] = (
-    "ERASE",
-    "WRITE",
-    "FLASH",
-    "POKE",
-    "PATCH",
-    "MEMW",
-    "W32",
-    "W16",
-    "W8",
-    "CONFIRM_UPPER_NOR",
-    "0XC000100C",
-    "0XC000_100C",
-    "0X50409DF2",
-    "0X50409E65",
-    "BGO_WRITE",
-    "NVRAM_WRITE",
-    "M80",
-    "X80",
-    "PROGRAM",
-    "WRITEMEM",
-    "JOB",
+FORBIDDEN_TOKENS: Final[tuple[str, ...]] = tuple(
+    dict.fromkeys(
+        (
+            *FORBIDDEN_BENCH_TOKENS,
+            "CONFIRM_UPPER_NOR",
+            "0XC000100C",
+            "0XC000_100C",
+            "0X50409DF2",
+            "0X50409E65",
+            "BGO_WRITE",
+            "NVRAM_WRITE",
+            "M80",
+            "X80",
+            "MEMW",
+            "W32",
+            "W16",
+            "W8",
+            "JOB",
+        )
+    )
 )
 
 SAFE_GUIDED_PROFILES: Final[dict[str, tuple[str, ...]]] = {
@@ -56,7 +55,7 @@ _LIST_PORT_RE: Final[re.Pattern[str]] = re.compile(
     r"^\s*Port:\s*(\S+)\s*\|\s*([^|]+?)\s*\|\s*VID:([0-9A-Fa-f]{4})\s+PID:([0-9A-Fa-f]{4})\s*\|\s*(.*)$",
     re.MULTILINE,
 )
-_VDD_RE: Final[re.Pattern[str]] = re.compile(r"VDD:\s*([0-9]+(?:\.[0-9]+)?)\s*V", re.IGNORECASE)
+_VDD_RE: Final[re.Pattern[str]] = re.compile(r"VDD[:=]\s*([0-9]+(?:\.[0-9]+)?)\s*V", re.IGNORECASE)
 _DCSR_RE: Final[re.Pattern[str]] = re.compile(r"DCSR:\s*(0x[0-9A-Fa-f]{8})", re.IGNORECASE)
 _WDT_RECOVERY_NONZERO_RE: Final[re.Pattern[str]] = re.compile(r"\bWDT_RECOVERIES=[1-9]\d*\b")
 
@@ -153,19 +152,47 @@ def discover_pico_port(
     return detected[0].port, "auto_first_port", detected
 
 
+_WRITE_VERB_WORDS: Final[frozenset[str]] = frozenset(
+    {"MW", "MB", "MH", "WB", "WH", "WW", "PW", "PB", "PH", "PO", "EW", "SW"}
+)
+
+
+def _decode_uart_hex_upper(head: str, tokens: list[str]) -> str | None:
+    if head not in {"UARTTXHEX", "WAITTX"}:
+        return None
+    raw_hex = ""
+    if head == "UARTTXHEX" and len(tokens) >= 2:
+        raw_hex = tokens[1].removeprefix("LOW:")
+    if not raw_hex or raw_hex in {"BRK", "BREAK"} or len(raw_hex) % 2 != 0:
+        return None
+    try:
+        return bytes.fromhex(raw_hex).decode("ascii", errors="ignore").upper()
+    except ValueError:
+        return None
+
+
 def check_command_safety(cmd: str) -> tuple[bool, str]:
     """Hard-block destructive/MMIO-unsafe tokens with explicit `SAFETY_DENIED` verdict."""
     normalized = cmd.strip()
     if not normalized:
         return False, "SAFETY_DENIED: empty command"
-    upper_tokens = [tok for tok in re.split(r"[\s,;]+", normalized.upper()) if tok]
     upper_full = normalized.upper()
-    for bad in FORBIDDEN_TOKENS:
-        if bad in upper_tokens or (bad.startswith("0X") and bad in upper_full) or bad in upper_full:
-            return False, f"SAFETY_DENIED: forbidden token '{bad}' in command '{normalized}'"
-    head = upper_tokens[0]
+    upper_tokens = [tok for tok in re.split(r"[\s,;:=]+", upper_full) if tok]
+    head = upper_full.split()[0]
     if head not in SAFE_BENCH_COMMANDS:
         return False, f"SAFETY_DENIED: command '{head}' is outside SAFE_BENCH_COMMANDS"
+    decoded_upper = _decode_uart_hex_upper(head, upper_full.split())
+    for candidate_full, candidate_toks in [
+        (upper_full, upper_tokens),
+        *((decoded_upper, [t for t in re.split(r"[\s,;:=]+", decoded_upper) if t]) for _ in [0] if decoded_upper),
+    ]:
+        for bad in FORBIDDEN_TOKENS:
+            if bad in candidate_toks or (bad.startswith("0X") and bad in candidate_full) or bad in candidate_full:
+                return False, f"SAFETY_DENIED: forbidden token '{bad}' in command '{normalized}'"
+        if head in {"UARTSEND", "UARTTXHEX", "WAITTX", "PANARSP"} and any(
+            t in _WRITE_VERB_WORDS or t.startswith(("$M", "$X")) for t in candidate_toks
+        ):
+            return False, f"SAFETY_DENIED: write-intent payload in '{normalized}'"
     return True, f"ALLOWED:{normalized}"
 
 
@@ -195,6 +222,8 @@ def grade_heartbeat(
         return "WDT_STALL", "Probe or target reported stall/watchdog timeout"
     if ping_rc != 0 or not ping_ok:
         return "DISCONNECTED", "Pico did not reply with PONG"
+    if "NSW5V=0" in upper or "FAULT_LATCH=1" in upper:
+        return "TARGET_OFF_OR_STANDBY", "STANDBY_GATE_STOP: NSW5V=0 or fault_latch=1 in STATUS"
     if dcsr_hex is not None and dcsr_hex.upper() == "0XFFFFFFFF":
         return "TARGET_OFF_OR_STANDBY", "DCSR=0xFFFFFFFF (target off or STANDBY / UART disconnected)"
     if vdd_volts is not None and vdd_volts < 2.50:

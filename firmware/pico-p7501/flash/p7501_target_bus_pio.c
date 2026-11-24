@@ -52,12 +52,7 @@ static bool pio_rsp_exchange_open(
         if (p7501_hw_is_nsw5v_fault_latched()) {
             return false;
         }
-        uint8_t b = 0u;
-        while (p7501_pio_pop_rx_byte(&b)) {
-            if (rx_len < sizeof(rx)) {
-                rx[rx_len++] = b;
-            }
-        }
+        rx_len = p7501_pio_pop_rx_bounded(rx, sizeof(rx), rx_len, false);
         if ((rx_len > 0u) && p7501_rsp_inspect_frame(rx, rx_len, &info) &&
             info.found && info.checksum_ok) {
             break;
@@ -87,7 +82,7 @@ static bool pio_rsp_exchange_open(
 }
 
 static bool pio_rsp_transact_frame(const char *frame, size_t flen, char *out_reply, size_t out_cap) {
-    if ((frame == NULL) || (flen == 0u) || !p7501_hw_is_nsw5v_high()) {
+    if ((frame == NULL) || (flen == 0u) || !p7501_hw_is_nsw5v_high() || p7501_hw_is_nsw5v_fault_latched()) {
         return false;
     }
     p7501_pio_begin_rx_session(P7501_BOOT_ACTION_PASSIVE);
@@ -117,7 +112,7 @@ static bool pio_read_block_checked(
         return false;
     }
     /* One passive NSW5V rail check up front: zero GP26 pull-down glitches during bulk reads. */
-    if (!p7501_hw_is_nsw5v_high()) {
+    if (!p7501_hw_is_nsw5v_high() || p7501_hw_is_nsw5v_fault_latched()) {
         s_panamon1_mode = false;
         return false;
     }
@@ -207,18 +202,32 @@ static uint32_t pio_read_mem32(void *ctx, uint32_t addr) {
 
 static void pio_write_mem32(void *ctx, uint32_t addr, uint32_t data) {
     (void)ctx;
-    if (!s_panamon1_mode && p7501_hw_is_nsw5v_high()) {
+    const uint32_t aligned = addr & ~0x03UL;
+    if (p7501_bus_check_access(
+            p7501_session_default_ctx(),
+            p7501_flash_get_active_size(),
+            aligned,
+            sizeof(uint32_t),
+            true,
+            false,
+            p7501_flash_is_upper_nor_unlocked()) != P7501_BUS_ALLOW) {
+        return;
+    }
+    if (!p7501_hw_is_nsw5v_high() || p7501_hw_is_nsw5v_fault_latched()) {
+        return;
+    }
+    if (!s_panamon1_mode) {
         p7501_pio_begin_rx_session(P7501_BOOT_ACTION_PASSIVE);
         (void)p7501_bus_panamon1_probe_open(true, &s_panamon1_mode);
         p7501_pio_end_session();
     }
     if (s_panamon1_mode) {
-        (void)p7501_bus_panamon1_write_u32(addr & ~0x03UL, data, &s_panamon1_mode);
+        (void)p7501_bus_panamon1_write_u32(aligned, data, &s_panamon1_mode);
         return;
     }
     char frame[96];
     char reply[32];
-    const size_t flen = p7501_rsp_build_write_u32(addr & ~0x03UL, data, frame, sizeof(frame));
+    const size_t flen = p7501_rsp_build_write_u32(aligned, data, frame, sizeof(frame));
     if (flen == 0u) {
         return;
     }
@@ -229,7 +238,7 @@ static bool pio_probe_target_mode(bool *out_halted) {
     if (out_halted != NULL) {
         *out_halted = false;
     }
-    if (!p7501_hw_is_nsw5v_high()) {
+    if (!p7501_hw_is_nsw5v_high() || p7501_hw_is_nsw5v_fault_latched()) {
         s_panamon1_mode = false;
         return false;
     }

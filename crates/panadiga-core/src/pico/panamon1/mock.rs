@@ -55,7 +55,7 @@ impl MockPanamon1Transport {
             recorded_sleeps: Vec::new(),
             bridge_active: false,
             nor_unlocked: false,
-            status_reply: "VDD: 3.24V (OK)\r\nPANADIGA> ".to_string(),
+            status_reply: "[STANDBY] RXD=1 NSW5V=1 VDD=3.24V fault_latch=0 dropouts=0\r\nVDD: 3.24V (OK)\r\n@P7501_RES cmd=STATUS status=OK\r\nPANADIGA> ".to_string(),
             pincheck_reply: "PINCHECK: OK\r\nPANADIGA> ".to_string(),
             boottrace_reply: format!("BOOTTRACE: OK\r\n{PANAMON1_FULL_PROMPT}\r\n"),
             bridge_ctrl_edges: 0,
@@ -148,6 +148,13 @@ impl Panamon1Transport for MockPanamon1Transport {
             "PING" => "PONG\r\nPANADIGA> ".to_string(),
             "STATUS" => self.status_reply.clone(),
             "PINCHECK" => self.pincheck_reply.clone(),
+            "ISOLATE" => {
+                self.bridge_active = false;
+                "ISOLATE: OK\r\n@P7501_RES cmd=ISOLATE status=OK\r\nPANADIGA> ".to_string()
+            }
+            "FAULTACK" => {
+                "FAULTACK: OK\r\n@P7501_RES cmd=FAULTACK status=OK\r\nPANADIGA> ".to_string()
+            }
             "BRIDGE" => {
                 self.bridge_active = self.auto_bridge_ping_ready;
                 "[BRIDGE] USB CDC <-> P7501 SC0 115200 PASSIVE active\r\n".to_string()

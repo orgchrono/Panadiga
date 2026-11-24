@@ -94,6 +94,10 @@ impl DavisTaskfileSnapshot {
     }
 }
 
+const fn default_run_identify() -> bool {
+    true
+}
+
 /// Configuration for [`DavisProbeEngine`].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DavisProbeConfig {
@@ -102,6 +106,8 @@ pub struct DavisProbeConfig {
     pub drive_sel: u8,
     pub boot_mode: Option<String>,
     pub boot_timeout_ms: u32,
+    #[serde(default = "default_run_identify")]
+    pub run_identify: bool,
 }
 
 impl Default for DavisProbeConfig {
@@ -112,6 +118,7 @@ impl Default for DavisProbeConfig {
             drive_sel: 0xA0,
             boot_mode: Some("NORMAL".to_string()),
             boot_timeout_ms: 15_000,
+            run_identify: true,
         }
     }
 }
@@ -133,6 +140,8 @@ pub struct DavisProbeReport {
     pub identify_sentinel: Option<u32>,
     pub identify_post_altstat: Option<u32>,
     pub identify_info: Option<AtaIdentifyInfo>,
+    #[serde(skip)]
+    pub identify_raw_512: Option<Vec<u8>>,
     pub classification: DavisHangClassification,
     pub step_logs: Vec<String>,
 }

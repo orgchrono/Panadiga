@@ -11,10 +11,10 @@
 
 #include <string.h>
 
-#define IC7501_CMD_WDT_255S     0x8Au
-#define IC7501_CMD_VFD_TEXT     0xA3u
-#define IC7501_CHECKSUM_BIAS    0x5Bu
-#define IC7501_TBUS_STROBE_BIT  0x00000010UL
+#define IC7501_CMD_WDT_255S     OPENOS_SSOT_TBUS_WDT_CMD
+#define IC7501_CMD_VFD_TEXT     OPENOS_SSOT_TBUS_VFD_CMD
+#define IC7501_CHECKSUM_BIAS    OPENOS_SSOT_TBUS_CSUM_BIAS
+#define IC7501_TBUS_STROBE_BIT  ((uint32_t)OPENOS_SSOT_TBUS_ACK_BIT)
 
 static uint32_t load_le32(const uint8_t *p) {
     return (uint32_t)p[0] | ((uint32_t)p[1] << 8u) |

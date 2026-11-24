@@ -6,13 +6,16 @@
  */
 
 #include "tests/test_pana_logic.h"
+#include "common/p7501_cmd_arena.h"
 #include "common/p7501_hex.h"
+#include "common/p7501_probe_fsm.h"
 #include "uart/p7501_pana_rsp.h"
 #include "uart/p7501_pana_dumpnor.h"
 #include "uart/p7501_pana_jedec.h"
 #include "flash/p7501_bus_policy.h"
 #include "flash/p7501_fast_stream_codec.h"
 #include "flash/p7501_flash.h"
+#include "flash/p7501_ftl_inspect.h"
 #include "hal/p7501_wireless_codec.h"
 #include "diag/p7501_piologic_codec.h"
 #include "diag/p7501_sds_codec.h"
@@ -767,6 +770,202 @@ static void test_jedec_autoselect_and_cfi_stubs(void) {
     assert(rep.valid && (rep.mfg == 0x0001u) && (rep.size_bytes == 8388608UL));
 }
 
+static uint64_t next_xorshift64(uint64_t *state) {
+    uint64_t x = *state;
+    x ^= x >> 12;
+    x ^= x << 25;
+    x ^= x >> 27;
+    *state = x;
+    return x * 0x2545F4914F6CDD1DULL;
+}
+
+static p7501_bridge_filter_action_t feed_slice_through_bridge_filter(
+    const char *s,
+    p7501_bus_deny_t *out_reason
+) {
+    p7501_bridge_tx_filter_t filt;
+    p7501_bridge_tx_filter_init(&filt);
+    uint8_t out_buf[P7501_BRIDGE_RSP_CAP];
+    size_t out_len = 0u;
+    p7501_bridge_filter_action_t last = P7501_BRIDGE_ACT_HOLD;
+    const size_t slen = strlen(s);
+    for (size_t i = 0u; i < slen; ++i) {
+        last = p7501_bridge_tx_filter_feed(
+            &filt, (uint8_t)s[i], out_buf, sizeof(out_buf), &out_len, out_reason
+        );
+        if ((i + 1u) < slen) {
+            assert(last == P7501_BRIDGE_ACT_HOLD);
+        }
+    }
+    return last;
+}
+
+static void test_probe_fsm_exhaustive(void) {
+    const p7501_rail_snap_t snaps[4] = {
+        { .vdd_mv = 3240u, .dropouts = 0u, .acked_dropouts = 0u, .nsw5v_high = true, .jig_strapped_low = false },
+        { .vdd_mv = 0u, .dropouts = 0u, .acked_dropouts = 0u, .nsw5v_high = false, .jig_strapped_low = false },
+        { .vdd_mv = 3240u, .dropouts = 2u, .acked_dropouts = 1u, .nsw5v_high = true, .jig_strapped_low = false },
+        { .vdd_mv = 0u, .dropouts = 0u, .acked_dropouts = 0u, .nsw5v_high = true, .jig_strapped_low = true },
+    };
+    const uint32_t iso_all =
+        P7501_EFF_HIZ_ALL | P7501_EFF_PIO_END | P7501_EFF_KEEPALIVE_OFF | P7501_EFF_UPPER_NOR_LOCK;
+
+    for (unsigned st = 0u; st < (unsigned)P7501_PS_COUNT; ++st) {
+        for (unsigned ev = 0u; ev < (unsigned)P7501_EV_COUNT; ++ev) {
+            for (unsigned si = 0u; si < 4u; ++si) {
+                const p7501_step_res_t r =
+                    p7501_probe_step((p7501_ps_t)st, (p7501_ev_t)ev, &snaps[si]);
+                assert((unsigned)r.next < (unsigned)P7501_PS_COUNT);
+                if (si == 2u) {
+                    if (ev == (unsigned)P7501_EV_FAULT_ACK) {
+                        assert(r.allowed && (r.next == P7501_PS_ISOLATED) &&
+                               ((r.effects & P7501_EFF_ACK_FAULT) != 0u));
+                    } else {
+                        assert((r.next == P7501_PS_FAULT) && ((r.effects & iso_all) == iso_all));
+                    }
+                } else if (si == 3u) {
+                    if (ev == (unsigned)P7501_EV_FAULT_ACK) {
+                        assert(!r.allowed);
+                    } else if ((ev == (unsigned)P7501_EV_ENGAGE) ||
+                               (ev == (unsigned)P7501_EV_BRIDGE_ENTER) ||
+                               (ev == (unsigned)P7501_EV_GDB_ENTER) ||
+                               (ev == (unsigned)P7501_EV_OP_BEGIN)) {
+                        assert(r.allowed);
+                    }
+                } else if (si == 1u) {
+                    if ((ev == (unsigned)P7501_EV_ENGAGE) ||
+                        (ev == (unsigned)P7501_EV_BRIDGE_ENTER) ||
+                        (ev == (unsigned)P7501_EV_GDB_ENTER) ||
+                        (ev == (unsigned)P7501_EV_OP_BEGIN) ||
+                        (ev == (unsigned)P7501_EV_FAULT_ACK)) {
+                        assert(!r.allowed && ((r.effects & iso_all) == iso_all));
+                    }
+                }
+            }
+        }
+    }
+}
+
+static void test_wrap_and_protocol_bypass_matrix(void) {
+    p7501_flash_set_upper_nor_unlocked(false);
+    const p7501_session_ctx_t *sctx = p7501_session_default_ctx();
+    p7501_bus_deny_t deny = P7501_BUS_ALLOW;
+
+    /* 1. Exact u32 wraparound boundaries and lethal MMIO priority */
+    assert(!p7501_bus_span_wraps_u32(0xFFFFFFFFUL, 1u));
+    assert(p7501_bus_span_wraps_u32(0xFFFFFFFFUL, 2u));
+    assert(p7501_bus_span_wraps_u32(0x80000000UL, 0x80000001UL));
+    assert(p7501_bus_check_access(sctx, P7501_FLASH_SIZE_8MB, 0xFFFFFFFFUL, 2u, false, false, true) ==
+           P7501_BUS_DENY_CS0_MIRROR);
+    assert(p7501_bus_check_access(sctx, P7501_FLASH_SIZE_8MB, 0xC000100CUL, 0xFFFFFFFFu, false, false, true) ==
+           P7501_BUS_DENY_LETHAL_MMIO);
+    assert(p7501_bus_check_access(sctx, P7501_FLASH_SIZE_8MB, 0xD0000000UL, 0xF000100Du, false, false, true) ==
+           P7501_BUS_DENY_LETHAL_MMIO);
+
+    /* 2. A01 UART TX / BRIDGE-POLICY bypass vectors */
+    static const char *const k_blocked[] = {
+        "$m080000000,4#00",
+        "$M080000000,4:11223344#00",
+        "$vFlashWrite:80000000:AABB#00",
+        "$vFlashErase:8003E000,2000#00",
+        "MW 00000000C000100C 0\r",
+        "W 80000000 11\r",
+        "E 80000000\r",
+        "w 80000000,1\r",
+        "e 84000000\r",
+        "MD C000100C\r",
+    };
+    for (size_t i = 0u; i < (sizeof(k_blocked) / sizeof(k_blocked[0])); ++i) {
+        deny = P7501_BUS_ALLOW;
+        assert(feed_slice_through_bridge_filter(k_blocked[i], &deny) == P7501_BRIDGE_ACT_BLOCKED);
+        assert(deny != P7501_BUS_ALLOW);
+    }
+
+    assert(feed_slice_through_bridge_filter("MD 80000000\r", &deny) == P7501_BRIDGE_ACT_FORWARD);
+    assert(feed_slice_through_bridge_filter("MW 807F0000 00\r", &deny) == P7501_BRIDGE_ACT_FORWARD);
+
+    /* Fail-closed overflow (>255B line) and PASS_CTL */
+    p7501_bridge_tx_filter_t filt;
+    p7501_bridge_tx_filter_init(&filt);
+    uint8_t out[P7501_BRIDGE_RSP_CAP];
+    size_t out_len = 0u;
+    assert(p7501_bridge_tx_filter_feed(&filt, 0x03u, out, sizeof(out), &out_len, &deny) == P7501_BRIDGE_ACT_PASS_CTL);
+    for (size_t i = 0u; i < 260u; ++i) {
+        assert(p7501_bridge_tx_filter_feed(&filt, (uint8_t)'A', out, sizeof(out), &out_len, &deny) == P7501_BRIDGE_ACT_HOLD);
+    }
+    assert(p7501_bridge_tx_filter_feed(&filt, (uint8_t)'\r', out, sizeof(out), &out_len, &deny) == P7501_BRIDGE_ACT_BLOCKED);
+
+    /* 3. 10,000-vector pseudo-random differential check on bus policy */
+    uint64_t rng = 0x9E3779B97F4A7C15ULL;
+    for (uint32_t i = 0u; i < 10000u; ++i) {
+        const uint32_t rnd_a = (uint32_t)(next_xorshift64(&rng) & 0xFFFFFFFFULL);
+        const size_t rnd_l = (size_t)((next_xorshift64(&rng) % 0x20000u) + 1u);
+        const bool wr = (i & 1u) != 0u;
+        const p7501_bus_deny_t res =
+            p7501_bus_check_access(sctx, P7501_FLASH_SIZE_8MB, rnd_a, rnd_l, wr, false, false);
+        if (p7501_bus_is_lethal_mmio_range(rnd_a, rnd_l)) {
+            assert(res == P7501_BUS_DENY_LETHAL_MMIO);
+        } else if (p7501_bus_span_wraps_u32(rnd_a, rnd_l)) {
+            assert(res == P7501_BUS_DENY_CS0_MIRROR);
+        }
+        /* Cached <-> uncached equivalence across CS0 primary 8 MiB */
+        const uint32_t off = (uint32_t)(next_xorshift64(&rng) & 0x007FFF00ULL);
+        const size_t span = (size_t)((next_xorshift64(&rng) % 256u) + 1u);
+        assert(p7501_bus_check_access(sctx, P7501_FLASH_SIZE_8MB, 0x80000000UL + off, span, true, false, false) ==
+               p7501_bus_check_access(sctx, P7501_FLASH_SIZE_8MB, 0x84000000UL + off, span, true, false, false));
+    }
+}
+
+static void test_cmd_arena_invariants(void) {
+    assert(sizeof(g_p7501_cmd_arena) == P7501_CMD_ARENA_BYTES);
+    assert(p7501_arena_current_owner() == P7501_ARENA_FREE);
+    assert(!p7501_arena_try_acquire(P7501_ARENA_FREE));
+    assert(p7501_arena_try_acquire(P7501_ARENA_OWNER_FLASH));
+    assert(!p7501_arena_try_acquire(P7501_ARENA_OWNER_DIAG));
+    p7501_arena_release(P7501_ARENA_OWNER_DIAG);
+    assert(p7501_arena_current_owner() == P7501_ARENA_OWNER_FLASH);
+    p7501_arena_release(P7501_ARENA_OWNER_FLASH);
+    assert(p7501_arena_current_owner() == P7501_ARENA_FREE);
+}
+
+static void test_ftl_bgo_portao4_inspect(void) {
+    uint8_t blk[64];
+    memset(blk, 0xFF, sizeof(blk));
+    uint32_t crc = 0u;
+    assert(p7501_norfrom_classify_prefix(blk, sizeof(blk), &crc) == P7501_NORFROM_ERASED_FF);
+    assert(strcmp(p7501_norfrom_state_name(P7501_NORFROM_ERASED_FF), "ERASED_FF") == 0);
+    assert(crc != 0u);
+
+    memcpy(blk, "P4ZU", 4u);
+    assert(p7501_norfrom_classify_prefix(blk, sizeof(blk), &crc) == P7501_NORFROM_P4ZU_STUB);
+    memcpy(blk, "EXTRHEAD", 8u);
+    assert(p7501_norfrom_classify_prefix(blk, sizeof(blk), &crc) == P7501_NORFROM_EXTRHEAD);
+    blk[0] = 0x12u;
+    assert(p7501_norfrom_classify_prefix(blk, sizeof(blk), &crc) == P7501_NORFROM_NON_EMPTY);
+
+    uint8_t hdrs[45u * P7501_BGO_HEADER_BYTES];
+    memset(hdrs, 0xFF, sizeof(hdrs));
+    uint16_t next_p2 = 0xF201u;
+    for (size_t i = 0u; i < 45u; ++i) {
+        if (i >= 41u) {
+            continue; /* 4 erased spares */
+        }
+        const uint16_t lbn = (i == 3u) ? 0xF101u : next_p2++;
+        uint8_t *const h = &hdrs[i * P7501_BGO_HEADER_BYTES];
+        memset(h, 0x00, 4u);
+        for (size_t w = 4u; w < 20u; w += 4u) {
+            h[w] = (uint8_t)(lbn & 0xFFu);
+            h[w + 1u] = (uint8_t)(lbn >> 8u);
+            h[w + 2u] = 0xFFu;
+            h[w + 3u] = 0xFFu;
+        }
+    }
+    p7501_bgo_report_t rep;
+    assert(p7501_bgo_inspect_headers(hdrs, 45u, &rep));
+    assert(rep.healthy_bgo_ftl);
+    assert((rep.valid_count == 41u) && (rep.erased_count == 4u) && (rep.p1_sa_index == 29u));
+}
+
 int p7501_run_pana_logic_tests(void) {
     test_pana_rsp_frame_codec();
     test_rsp_boot_prose_does_not_trip_nak();
@@ -777,9 +976,13 @@ int p7501_run_pana_logic_tests(void) {
     test_jedec_autoselect_and_cfi_stubs();
     test_pana_rsp_jedec_and_nor_policy();
     test_bus_policy_hardening_and_bypass_guards();
+    test_probe_fsm_exhaustive();
+    test_wrap_and_protocol_bypass_matrix();
+    test_cmd_arena_invariants();
     test_fast_stream_codec_and_normap();
+    test_ftl_bgo_portao4_inspect();
     p7501_run_pana_diag_drv_tests();
     test_sds_bus_sniffer_codec();
-    printf("[HOST-TEST] PANARSP + BusPolicy + FastStream + NOR_MAP + REGS + DUMPNOR + DIAGWATCH + DRVPANA + FlashGeo + PIOLOGIC + SDSNIFF passed.\n");
+    printf("[HOST-TEST] PANARSP + BusPolicy + ProbeFSM + Arena + FastStream + NOR_MAP + REGS + DUMPNOR + DIAGWATCH + DRVPANA + FlashGeo + PIOLOGIC + SDSNIFF passed.\n");
     return 0;
 }

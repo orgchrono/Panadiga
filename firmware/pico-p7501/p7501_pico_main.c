@@ -20,6 +20,7 @@
 #include "pico/stdio_usb.h"
 
 #include "cli/p7501_cli.h"
+#include "cli/p7501_cli_sys.h"
 #include "common/p7501_wdt_logic.h"
 #include "diag/p7501_tbus_codec.h"
 #include "flash/p7501_flash.h"
@@ -139,7 +140,11 @@ int main(void) {
         if (!gdb_rsp_is_active() && (line_idx == 0U)) {
             p7501_bootsel_poll();
             p7501_hw_poll_rail_recovery();
-            p7501_tbus_keepalive_poll();
+            (void)p7501_probe_dispatch_event(P7501_EV_TICK, false);
+            const p7501_ps_t ps = p7501_probe_get_state();
+            if ((ps == P7501_PS_ENGAGED) || (ps == P7501_PS_ACTIVE_OP)) {
+                p7501_tbus_keepalive_poll();
+            }
         }
 
         const int ch = getchar_timeout_us(0);
@@ -152,7 +157,7 @@ int main(void) {
         if (gdb_rsp_is_active()) {
             gdb_rsp_process_char(c);
             if (!gdb_rsp_is_active()) {
-                p7501_flash_set_upper_nor_unlocked(false);
+                (void)p7501_probe_dispatch_event(P7501_EV_GDB_DETACH, false);
                 p7501_wdt_end_cmd(false);
                 p7501_led_set_auto_mode(LED_MODE_HEARTBEAT_IDLE);
                 printf("\n[GDB RSP] Detached. Returning to CLI.\n@P7501_RES cmd=GDB status=OK code=0 elapsed_us=%llu\nPANADIGA> ",

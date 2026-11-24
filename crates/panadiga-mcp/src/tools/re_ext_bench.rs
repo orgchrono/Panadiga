@@ -34,13 +34,17 @@ fn run_with_panamon1_client<T: Panamon1Transport, R>(
 ) -> Result<R> {
     if let Some(t) = transport_override {
         let mut client = Panamon1Client::new(t);
-        f(&mut client)
+        let out = f(&mut client)?;
+        let _ = client.close_bridge_and_isolate()?;
+        Ok(out)
     } else {
         let port = require_non_empty_str(args, "port")?;
         let t =
             SerialPanamon1Transport::open(port, DEFAULT_BAUD_RATE, Duration::from_millis(1_500))?;
         let mut client = Panamon1Client::new(t);
-        f_serial(&mut client)
+        let out = f_serial(&mut client)?;
+        let _ = client.close_bridge_and_isolate()?;
+        Ok(out)
     }
 }
 

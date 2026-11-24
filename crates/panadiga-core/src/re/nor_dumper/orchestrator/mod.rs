@@ -230,6 +230,7 @@ impl NorCaptureOrchestrator {
             });
         }
 
+        let _ = client.close_bridge_and_isolate()?;
         progress("NOR capture complete", total_slices, total_slices);
         let (_, sha256) = calculate_hashes(&assembled);
         Ok(NorCaptureResult {

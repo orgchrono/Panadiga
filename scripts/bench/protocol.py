@@ -8,37 +8,11 @@ import time
 from typing import Final, Protocol, cast
 
 from scripts.panadiga_cli_bridge import PanadigaCliError, run_panadiga_json
-
-SAFE_BENCH_COMMANDS: Final[tuple[str, ...]] = (
-    "PING",
-    "HELP",
-    "BANNER",
-    "STATUS",
-    "VDD",
-    "LED",
-    "PINCHECK",
-    "BUSDIAG",
-    "SNIFF",
-    "ISOLATE",
-    "UARTMON",
-    "BOOTCAP",
-    "JIGBOOT",
-    "UARTPROBE",
-    "UARTSEND",
-    "BAUD",
-    "FRAMING",
-    "BAUDSCAN",
-    "UARTSTREAM",
-    "HEXCAP",
-    "UARTTXHEX",
-    "WAITTX",
-    "PWRTRACE",
-    "BOOTTRACE",
-    "PIOLOGIC",
-    "SDSNIFF",
-    "JIGSWEEP",
-    "DIAGWATCH",
-    "PANARSP",
+from scripts.profiles_types import (
+    FORBIDDEN_BENCH_TOKENS as FORBIDDEN_BENCH_TOKENS,
+    P7501_RES_CODES,
+    P7501_WIRE_TAGS,
+    SAFE_BENCH_COMMANDS as SAFE_BENCH_COMMANDS,
 )
 
 _PROMPT_MARKERS: Final[tuple[str, ...]] = ("P7501>", "PANADIGA>")
@@ -133,6 +107,9 @@ class MockBenchTransport:
     """Deterministic offline simulator matching empirical COM10 DMR-EH55 telemetry."""
 
     vdd_volts: float = 2.70
+    nsw5v_high: bool = True
+    fault_latch: bool = False
+    dropouts: int = 0
     simulate_gp26_sticky_low: bool = False
     target_is_normal_bgo_brick: bool = True
     sd_status_code: int = -91006
@@ -149,23 +126,36 @@ class MockBenchTransport:
 
         if head == "PING":
             return "PING\r\nPONG\r\nP7501> "
+        if head == "FAULTACK":
+            res_tag = P7501_WIRE_TAGS["RES"]
+            if self.nsw5v_high:
+                self.fault_latch = False
+                return f"FAULTACK\r\nFAULTACK: OK\r\n{res_tag} cmd=FAULTACK status=OK\r\nPANADIGA> "
+            err_code = P7501_RES_CODES["EFAULT_LATCHED"]
+            return f"FAULTACK\r\nFAULTACK: ERROR\r\n{res_tag} cmd=FAULTACK status=ERR code={err_code}\r\nPANADIGA> "
         if head in ("ISOLATE", "UARTPROBE"):
             if self.simulate_gp26_sticky_low and head == "UARTPROBE":
                 self._gp26_latched_low = False
             if head == "ISOLATE":
+                res_tag = P7501_WIRE_TAGS["RES"]
                 return (
                     "ISOLATE\r\n"
                     "ISOLATE: OK (All 6 pins in High-Impedance Hi-Z mode; unified JST ZR-6 plug is electrically invisible)\r\n"
+                    f"{res_tag} cmd=ISOLATE status=OK\r\n"
                     "P7501> "
                 )
             return "=== UARTPROBE MODE 8 CAPTURE (0 bytes) ===\r\nUARTPROBE: OK\r\nP7501> "
         if head in ("STATUS", "VDD"):
             vdd = 0.02 if self._gp26_latched_low else self.vdd_volts
-            state = "LOW" if vdd < 1.5 else "OK"
+            state = "OK" if (self.nsw5v_high and not self.fault_latch and vdd >= 2.50) else "LOW"
+            res_tag = P7501_WIRE_TAGS["RES"]
             return (
                 f"{head}\r\n"
+                f"[STANDBY] RXD=1 NSW5V={1 if self.nsw5v_high else 0} VDD={vdd:.2f}V "
+                f"fault_latch={1 if self.fault_latch else 0} dropouts={self.dropouts}\r\n"
                 f"VDD: {vdd:.2f}V ({state})\r\n"
                 "  [STATUS] Lines static: GP2=1, GP3=1, GP4=1, GP5=1.\r\n"
+                f"{res_tag} cmd={head} status=OK\r\n"
                 "P7501> "
             )
         if head == "PINCHECK":

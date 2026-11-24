@@ -26,9 +26,9 @@
 
 static uint8_t s_cfi_stub_buf[P7501_JEDEC_MAX_STUB_SIZE];
 
-static bool query_cfi_via_panamon1_open(panarsp_rx_cap_t *cap, bool *io_pm_ok) {
+static bool query_flash_id_via_panamon1_open(bool is_cfi, panarsp_rx_cap_t *cap, bool *io_pm_ok) {
     const size_t stub_len = p7501_jedec_build_autoselect_stub_ex(
-        true, true, P7501_CFI_PANAMON_STUB_VA, s_cfi_stub_buf, sizeof(s_cfi_stub_buf)
+        is_cfi, true, P7501_CFI_PANAMON_STUB_VA, s_cfi_stub_buf, sizeof(s_cfi_stub_buf)
     );
     if (stub_len == 0u) {
         return false;
@@ -99,11 +99,14 @@ uint32_t p7501_hw_autodetect_flash_size(void) {
     return P7501_FLASH_SIZE_16MB;
 }
 
-bool p7501_hw_query_cfi(uint32_t *out_size_bytes) {
-    if (out_size_bytes != NULL) {
-        *out_size_bytes = 0UL;
+static bool p7501_hw_probe_flash_id(bool is_cfi, p7501_jedec_id_reply_t *out_reply) {
+    if (out_reply != NULL) {
+        memset(out_reply, 0, sizeof(*out_reply));
     }
-    if (!p7501_hw_is_target_powered()) {
+    if (!p7501_hw_is_rail_healthy()) {
+        return false;
+    }
+    if (!p7501_arena_try_acquire(P7501_ARENA_OWNER_FLASH)) {
         return false;
     }
 
@@ -114,10 +117,10 @@ bool p7501_hw_query_cfi(uint32_t *out_size_bytes) {
     bool pm_ok = false;
     bool done_seen = false;
     if (p7501_bus_panamon1_probe_open(true, &pm_ok)) {
-        done_seen = query_cfi_via_panamon1_open(cap, &pm_ok);
+        done_seen = query_flash_id_via_panamon1_open(is_cfi, cap, &pm_ok);
     } else {
         const size_t stub_len = p7501_jedec_build_autoselect_stub(
-            true, P7501_JEDEC_STUB_ADDR, s_cfi_stub_buf, sizeof(s_cfi_stub_buf)
+            is_cfi, P7501_JEDEC_STUB_ADDR, s_cfi_stub_buf, sizeof(s_cfi_stub_buf)
         );
         if (stub_len > 0u) {
             p7501_pio_tx_bytes(k_p7501_rsp_handshake, P7501_RSP_HANDSHAKE_LEN, false);
@@ -132,7 +135,7 @@ bool p7501_hw_query_cfi(uint32_t *out_size_bytes) {
                 s_cfi_stub_buf,
                 stub_len,
                 2500u,
-                P7501_CFI_QUERY_MAGIC,
+                is_cfi ? P7501_CFI_QUERY_MAGIC : P7501_JEDEC_ID_MAGIC,
                 "PANADONE",
                 NULL,
                 &hdr_seen,
@@ -145,14 +148,56 @@ bool p7501_hw_query_cfi(uint32_t *out_size_bytes) {
     p7501_pio_end_session();
 
     p7501_jedec_id_reply_t rep;
-    if (!done_seen || !p7501_jedec_parse_autoselect_reply(cap->buf, cap->len, true, &rep)) {
+    const bool ok = done_seen && p7501_jedec_parse_autoselect_reply(cap->buf, cap->len, is_cfi, &rep);
+    p7501_arena_release(P7501_ARENA_OWNER_FLASH);
+    if (!ok) {
+        return false;
+    }
+
+    p7501_session_ctx_t *const ctx = p7501_session_default_ctx();
+    if (is_cfi) {
+        if (rep.size_bytes > 0UL) {
+            (void)gdb_rsp_set_flash_size(rep.size_bytes);
+        }
+    } else if (ctx != NULL) {
+        ctx->jedec_mfg = rep.mfg;
+        memcpy(ctx->jedec_dev, rep.dev, sizeof(ctx->jedec_dev));
+        ctx->jedec_verified = p7501_jedec_verify_chip_match(rep.mfg, rep.dev, ctx->active_flash_size);
+    }
+    if (out_reply != NULL) {
+        *out_reply = rep;
+    }
+    return true;
+}
+
+bool p7501_hw_query_jedec_id(uint16_t *out_mfg, uint16_t out_dev[3], bool *out_verified) {
+    p7501_jedec_id_reply_t rep;
+    if (!p7501_hw_probe_flash_id(false, &rep)) {
+        return false;
+    }
+    if (out_mfg != NULL) {
+        *out_mfg = rep.mfg;
+    }
+    if (out_dev != NULL) {
+        memcpy(out_dev, rep.dev, sizeof(rep.dev));
+    }
+    if (out_verified != NULL) {
+        const p7501_session_ctx_t *const ctx = p7501_session_default_ctx();
+        *out_verified = (ctx != NULL) ? ctx->jedec_verified : false;
+    }
+    return true;
+}
+
+bool p7501_hw_query_cfi(uint32_t *out_size_bytes) {
+    if (out_size_bytes != NULL) {
+        *out_size_bytes = 0UL;
+    }
+    p7501_jedec_id_reply_t rep;
+    if (!p7501_hw_probe_flash_id(true, &rep)) {
         return false;
     }
     if (out_size_bytes != NULL) {
         *out_size_bytes = rep.size_bytes;
-    }
-    if (rep.size_bytes > 0UL) {
-        (void)gdb_rsp_set_flash_size(rep.size_bytes);
     }
     return true;
 }

@@ -114,6 +114,16 @@ size_t p7501_mmio_decode_video_reg(uint32_t addr, uint32_t val, char *out, size_
         case (P7501_SSOT_AVDD_BASE + 0x0858UL):
             n = snprintf(out, cap, "lo16=0x%04" PRIX32, lo16);
             break;
+        case 0x89000420UL:
+            n = snprintf(out, cap, "ch0_rst=%s", ((lo16 & 0x0002UL) != 0u) ? "RELEASED" : "HELD");
+            break;
+        case 0x89000C20UL:
+            n = snprintf(out, cap, "ch1_rst=%s", ((lo16 & 0x0001UL) == 0u) ? "RELEASED" : "HELD");
+            break;
+        case 0x89001850UL:
+            n = snprintf(out, cap, "sd_cfg4=0x%08" PRIX32 " sd_bus=%s",
+                         val, ((lo16 & 0x8000UL) == 0u) ? "4BIT" : "1BIT");
+            break;
         default:
             return 0u;
     }

@@ -223,6 +223,9 @@ pub const COMPLETION_MARKERS: &[&str] = &[
     "FLASH_SIZE: ERROR",
     "Auto-ready",
     "PONG",
+    "FAULTACK: OK",
+    "FAULTACK: ERROR",
+    P7501_WIRE_TAG_RES,
 ];
 
 // ============================================================================

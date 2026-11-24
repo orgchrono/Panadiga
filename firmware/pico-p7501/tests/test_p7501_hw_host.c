@@ -11,6 +11,7 @@
  */
 
 #include "hal/p7501_hw.h"
+#include "diag/p7501_i2c_codec.h"
 #include "hal/p7501_led.h"
 #include "hal/p7501_watchdog.h"
 #include "gdb/gdb_rsp.h"
@@ -25,6 +26,7 @@
 
 /* ---- Stateful mock backing storage ---- */
 uint64_t p7501_mock_now_us = 10000ULL;
+static gpio_irq_callback_t s_mock_irq_cb = NULL;
 p7501_mock_gpio_pin_t p7501_mock_pins[32];
 uint16_t p7501_mock_adc_raw = 0u;
 bool p7501_mock_adc_initialized = false;
@@ -33,6 +35,7 @@ uint p7501_mock_adc_input = 0u;
 static void mock_reset_hw(void) {
     memset(p7501_mock_pins, 0, sizeof(p7501_mock_pins));
     p7501_mock_now_us = 10000ULL;
+    s_mock_irq_cb = NULL;
     p7501_mock_adc_raw = 0u;
     p7501_mock_adc_initialized = false;
     p7501_mock_adc_input = 0u;
@@ -135,10 +138,10 @@ void gpio_set_irq_enabled_with_callback(
     bool enabled,
     gpio_irq_callback_t callback
 ) {
-    (void)gpio;
     (void)event_mask;
-    (void)enabled;
-    (void)callback;
+    if (gpio == P7501_PIN_NSW5V) {
+        s_mock_irq_cb = enabled ? callback : NULL;
+    }
 }
 
 void adc_init(void) {
@@ -232,18 +235,58 @@ int main(void) {
     assert(!p7501_mock_pins[P7501_PIN_SW_UART_ADC].dir_out);
     assert(!p7501_mock_pins[P7501_PIN_SW_UART_ADC].pull_down);
 
-    /* NSW5V query never alters GP3 Hi-Z state */
+    /* S01: Pure getters NEVER mutate fault latch or dropout counters */
+    const uint32_t drops_before = p7501_hw_get_nsw5v_dropouts();
+    assert(!p7501_hw_is_nsw5v_fault_latched());
     p7501_mock_pins[P7501_PIN_NSW5V].ext_input_level = false;
+    p7501_mock_adc_raw = 0u;
     assert(!p7501_hw_is_nsw5v_high());
-    p7501_mock_pins[P7501_PIN_NSW5V].ext_input_level = true;
-    assert(p7501_hw_is_nsw5v_high());
+    assert(p7501_hw_read_vdd_mv() == 0u);
+    assert(p7501_hw_get_nsw5v_dropouts() == drops_before);
+    assert(!p7501_hw_is_nsw5v_fault_latched());
 
-    /* Isolate bus restores strict Hi-Z with zero pulls on all P7501 pins */
+    /* Real GPIO falling-edge ISR triggers latch; poll keeps fault latched until explicit ACK (S08) */
+    assert(s_mock_irq_cb != NULL);
+    s_mock_irq_cb(P7501_PIN_NSW5V, GPIO_IRQ_EDGE_FALL);
+    assert(p7501_hw_get_nsw5v_dropouts() == (drops_before + 1u));
+    assert(p7501_hw_is_nsw5v_fault_latched());
+    assert(!p7501_hw_is_rail_healthy());
+
+    /* Cannot ACK while rail is LOW or while JIG is strapped LOW */
+    assert(!p7501_hw_ack_fault());
+    p7501_mock_pins[P7501_PIN_NSW5V].ext_input_level = true;
+    p7501_mock_adc_raw = 4095u;
+    p7501_mock_now_us += 60000ULL;
+    p7501_hw_poll_rail_recovery();
+    assert(p7501_hw_is_nsw5v_fault_latched());
+
     p7501_hw_sw_uart_set_low(true);
+    assert(!p7501_hw_ack_fault());
+    p7501_hw_sw_uart_set_low(false);
+
+    /* ACK succeeds once unstrapped + NSW5V=1 + VDD 3.3V */
+    assert(p7501_hw_ack_fault());
+    assert(!p7501_hw_is_nsw5v_fault_latched());
+    assert(p7501_hw_is_rail_healthy());
+
+    /* Active operation with JIG strapped LOW reports jig_strapped_low=true and stays healthy while NSW5V=1 */
+    p7501_hw_sw_uart_set_low(true);
+    p7501_rail_snap_t jig_snap;
+    p7501_hw_rail_snapshot(&jig_snap, true);
+    assert(jig_snap.nsw5v_high && jig_snap.jig_strapped_low && (jig_snap.vdd_mv == 0u));
+    assert(p7501_hw_is_rail_healthy());
+
+    /* S02: Isolate bus restores strict Hi-Z with zero pulls on all P7501 + GP6/GP7 I2C pins */
     p7501_hw_isolate_bus_hiz();
     assert(!p7501_mock_pins[P7501_PIN_SW_UART_ADC].dir_out);
+    assert(!p7501_mock_pins[P7501_I2C_SDA_PIN].dir_out &&
+           !p7501_mock_pins[P7501_I2C_SDA_PIN].pull_up &&
+           !p7501_mock_pins[P7501_I2C_SDA_PIN].pull_down);
+    assert(!p7501_mock_pins[P7501_I2C_SCL_PIN].dir_out &&
+           !p7501_mock_pins[P7501_I2C_SCL_PIN].pull_up &&
+           !p7501_mock_pins[P7501_I2C_SCL_PIN].pull_down);
     assert_nsw5v_strictly_hiz();
 
-    printf("[HOST-TEST] test_p7501_hw_host (GP3 NSW5V Hi-Z, OD XRESET/SW_UART, isolate) passed.\n");
+    printf("[HOST-TEST] test_p7501_hw_host (GP3 NSW5V Hi-Z, S01/S02/S08 IRQ+ACK+JIG, OD XRESET/SW_UART, isolate) passed.\n");
     return 0;
 }

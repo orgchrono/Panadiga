@@ -8,8 +8,10 @@
 #include "uart/p7501_uart_tx.h"
 
 #include "cli/p7501_cli.h"
+#include "cli/p7501_cli_sys.h"
 #include "common/p7501_hex.h"
 #include "flash/p7501_bus_policy.h"
+#include "hal/p7501_hw.h"
 #include "hal/p7501_led.h"
 #include "hal/p7501_usb_dual_cdc.h"
 #include "hal/p7501_watchdog.h"
@@ -235,7 +237,10 @@ static void bridge_push_usb_rx_byte(void *raw_ctx, uint8_t rx_byte) {
 
 static void bridge_drain_pio_rx(bridge_usb_ring_t *r) {
     uint8_t rx_byte = 0u;
-    while (p7501_pio_pop_rx_byte(&rx_byte)) {
+    for (uint32_t i = 0u; (i < 4096u) && p7501_pio_pop_rx_byte(&rx_byte); ++i) {
+        if ((i & 63u) == 63u) {
+            p7501_wdt_kick();
+        }
         bridge_push_usb_rx_byte(r, rx_byte);
     }
 }
@@ -246,114 +251,55 @@ static void bridge_tx_duplex(
     size_t len,
     uint32_t *io_tx_count
 ) {
-    p7501_pio_tx_bytes_duplex(batch, len, false, true, bridge_push_usb_rx_byte, r);
-    *io_tx_count += (uint32_t)len;
+    if (len == 1u) {
+        p7501_pio_tx_bytes_duplex(batch, 1u, false, true, bridge_push_usb_rx_byte, r);
+        *io_tx_count += 1u;
+    } else {
+        for (size_t k = 0u; k < len; ++k) {
+            p7501_wdt_kick();
+            p7501_pio_tx_bytes_duplex(&batch[k], 1u, false, true, bridge_push_usb_rx_byte, r);
+            *io_tx_count += 1u;
+            if ((k + 1u) < len) {
+                sleep_us(150u);
+                bridge_drain_pio_rx(r);
+            }
+        }
+    }
     (void)bridge_flush_usb_ring(r);
 }
 
-typedef struct bridge_policy_ctx {
-    uint8_t line_buf[128];
-    size_t line_len;
-    uint8_t rsp_buf[256];
-    size_t rsp_len;
-    bool in_rsp;
-    uint8_t rsp_hash_tail;
-} bridge_policy_ctx_t;
-
-static bridge_policy_ctx_t s_bridge_pol;
-
-static void bridge_emit_or_flush(
-    bridge_usb_ring_t *r,
-    uint8_t b,
-    uint8_t *batch,
-    size_t *io_batch_len,
-    size_t batch_cap,
-    uint32_t *io_tx_count
-) {
-    if (*io_batch_len == batch_cap) {
-        bridge_tx_duplex(r, batch, *io_batch_len, io_tx_count);
-        *io_batch_len = 0u;
-    }
-    batch[(*io_batch_len)++] = b;
-}
+static p7501_bridge_tx_filter_t s_bridge_pol;
+static uint8_t s_bridge_tx_frame[P7501_BRIDGE_RSP_CAP];
 
 static void bridge_filter_tx_byte(
     bridge_usb_ring_t *r,
     uint8_t b,
-    uint8_t *batch,
-    size_t *io_batch_len,
-    size_t batch_cap,
     uint32_t *io_tx_count
 ) {
-    if (s_bridge_pol.in_rsp || (b == (uint8_t)'$')) {
-        if (!s_bridge_pol.in_rsp) {
-            if (*io_batch_len > 0u) {
-                bridge_tx_duplex(r, batch, *io_batch_len, io_tx_count);
-                *io_batch_len = 0u;
-            }
-            s_bridge_pol.in_rsp = true;
-            s_bridge_pol.rsp_len = 0u;
-            s_bridge_pol.rsp_hash_tail = 0u;
+    size_t out_len = 0u;
+    p7501_bus_deny_t deny = P7501_BUS_ALLOW;
+    const p7501_bridge_filter_action_t act = p7501_bridge_tx_filter_feed(
+        &s_bridge_pol, b, s_bridge_tx_frame, sizeof(s_bridge_tx_frame), &out_len, &deny
+    );
+    if ((act == P7501_BRIDGE_ACT_FORWARD) || (act == P7501_BRIDGE_ACT_PASS_CTL)) {
+        if (out_len > 0u) {
+            bridge_tx_duplex(r, s_bridge_tx_frame, out_len, io_tx_count);
         }
-        if (s_bridge_pol.rsp_len < sizeof(s_bridge_pol.rsp_buf)) {
-            s_bridge_pol.rsp_buf[s_bridge_pol.rsp_len++] = b;
-        }
-        if (b == (uint8_t)'#') {
-            s_bridge_pol.rsp_hash_tail = 2u;
-        } else if (s_bridge_pol.rsp_hash_tail > 0u) {
-            --s_bridge_pol.rsp_hash_tail;
-        }
-
-        const bool rsp_done = (b == (uint8_t)'\r') || (b == (uint8_t)'\n') ||
-                              (s_bridge_pol.rsp_len >= sizeof(s_bridge_pol.rsp_buf)) ||
-                              ((s_bridge_pol.rsp_len > 3u) &&
-                               (s_bridge_pol.rsp_buf[s_bridge_pol.rsp_len - 3u] == (uint8_t)'#') &&
-                               (s_bridge_pol.rsp_hash_tail == 0u));
-        if (rsp_done) {
-            p7501_bus_deny_t deny = P7501_BUS_ALLOW;
-            if (p7501_bus_check_uart_tx_payload(
-                    s_bridge_pol.rsp_buf, s_bridge_pol.rsp_len, true, &deny)) {
-                bridge_tx_duplex(r, s_bridge_pol.rsp_buf, s_bridge_pol.rsp_len, io_tx_count);
-            } else {
-                printf("\r\n[BRIDGE-POLICY] BLOCKED (%s)\r\n", p7501_bus_deny_name(deny));
-                fflush(stdout);
-            }
-            s_bridge_pol.in_rsp = false;
-            s_bridge_pol.rsp_len = 0u;
-            s_bridge_pol.rsp_hash_tail = 0u;
-        }
-        return;
+    } else if (act == P7501_BRIDGE_ACT_BLOCKED) {
+        printf("\r\n[BRIDGE-POLICY] BLOCKED (%s)\r\n", p7501_bus_deny_name(deny));
+        fflush(stdout);
     }
-
-    if ((b == (uint8_t)'\r') || (b == (uint8_t)'\n')) {
-        p7501_bus_deny_t deny = P7501_BUS_ALLOW;
-        const bool ok = p7501_bus_check_uart_tx_payload(
-            s_bridge_pol.line_buf, s_bridge_pol.line_len, true, &deny);
-        s_bridge_pol.line_len = 0u;
-        if (!ok) {
-            bridge_emit_or_flush(r, 0x15u, batch, io_batch_len, batch_cap, io_tx_count);
-            printf("\r\n[BRIDGE-POLICY] BLOCKED (%s)\r\n", p7501_bus_deny_name(deny));
-            fflush(stdout);
-            return;
-        }
-        bridge_emit_or_flush(r, b, batch, io_batch_len, batch_cap, io_tx_count);
-        return;
-    }
-
-    if ((b == 0x08u) || (b == 0x7Fu)) {
-        if (s_bridge_pol.line_len > 0u) {
-            --s_bridge_pol.line_len;
-        }
-    } else if ((b == 0x15u) || (b == 0x03u)) {
-        s_bridge_pol.line_len = 0u;
-    } else if (s_bridge_pol.line_len < sizeof(s_bridge_pol.line_buf)) {
-        s_bridge_pol.line_buf[s_bridge_pol.line_len++] = b;
-    }
-    bridge_emit_or_flush(r, b, batch, io_batch_len, batch_cap, io_tx_count);
 }
 
 void p7501_cmd_bridge(const char *arg) {
-    memset(&s_bridge_pol, 0, sizeof(s_bridge_pol));
+    p7501_bridge_tx_filter_init(&s_bridge_pol);
+    if (!p7501_probe_dispatch_event(P7501_EV_BRIDGE_ENTER, true)) {
+        p7501_cli_set_result("ERR", p7501_hw_is_nsw5v_fault_latched() ? "EDROPOUT" : "EOFFLINE");
+        printf("BRIDGE: ERROR (reason=%s)\n",
+               p7501_hw_is_nsw5v_fault_latched() ? "NSW5V_DROPOUT" : "TARGET_UNPOWERED");
+        return;
+    }
+
     const uint32_t orig_baud = p7501_pio_get_baud();
     p7501_bridge_spec_t spec;
     p7501_parse_bridge_args(arg, orig_baud, &spec);
@@ -378,13 +324,17 @@ void p7501_cmd_bridge(const char *arg) {
     uint8_t tilde_run = 0u;
     uint64_t last_tx_char_us = 0ULL;
     uint64_t tilde_first_us = 0ULL;
-    uint8_t tx_batch[16];
     bool exit_requested = false;
+    bool dropout_abort = false;
     absolute_time_t disconnect_deadline = at_the_end_of_time;
     bool counting_disconnect = false;
 
     while (!exit_requested) {
         p7501_wdt_kick();
+        if (p7501_hw_is_nsw5v_fault_latched() || !p7501_hw_is_nsw5v_high()) {
+            dropout_abort = true;
+            break;
+        }
         (void)p7501_pio_poll_sw_uart_release();
         if (p7501_pio_poll_and_clear_framing_err()) {
             ++ferr_count;
@@ -418,18 +368,22 @@ void p7501_cmd_bridge(const char *arg) {
         bridge_drain_pio_rx(&usb_ring);
         const bool had_rx = bridge_flush_usb_ring(&usb_ring);
 
-        size_t batch_len = 0u;
         const uint64_t poll_us = time_us_64();
         /* Flush pending single/double '~' after 250 ms if user wasn't typing '~~~'. */
         if ((tilde_run > 0u) && ((poll_us - tilde_first_us) >= 250000ULL)) {
             while (tilde_run > 0u) {
-                bridge_filter_tx_byte(&usb_ring, (uint8_t)'~', tx_batch, &batch_len, sizeof(tx_batch), &tx_count);
+                bridge_filter_tx_byte(&usb_ring, (uint8_t)'~', &tx_count);
                 --tilde_run;
             }
             last_tx_char_us = poll_us;
         }
-        while (batch_len < sizeof(tx_batch)) {
+        for (size_t burst = 0u; burst < 16u; ++burst) {
             bridge_drain_pio_rx(&usb_ring);
+            if (p7501_hw_is_nsw5v_fault_latched() || !p7501_hw_is_nsw5v_high()) {
+                dropout_abort = true;
+                exit_requested = true;
+                break;
+            }
             const int ch = getchar_timeout_us(0u);
             if (ch == PICO_ERROR_TIMEOUT) {
                 break;
@@ -450,15 +404,13 @@ void p7501_cmd_bridge(const char *arg) {
                 }
             }
             while (tilde_run > 0u) {
-                bridge_filter_tx_byte(&usb_ring, (uint8_t)'~', tx_batch, &batch_len, sizeof(tx_batch), &tx_count);
+                bridge_filter_tx_byte(&usb_ring, (uint8_t)'~', &tx_count);
                 --tilde_run;
             }
             last_tx_char_us = now_us;
-            bridge_filter_tx_byte(&usb_ring, (uint8_t)ch, tx_batch, &batch_len, sizeof(tx_batch), &tx_count);
+            bridge_filter_tx_byte(&usb_ring, (uint8_t)ch, &tx_count);
         }
-        if (batch_len > 0u) {
-            bridge_tx_duplex(&usb_ring, tx_batch, batch_len, &tx_count);
-        } else if (!had_rx && !exit_requested) {
+        if (!had_rx && !exit_requested) {
             bridge_drain_pio_rx(&usb_ring);
             if (!bridge_flush_usb_ring(&usb_ring)) {
                 sleep_us(25u);
@@ -473,9 +425,15 @@ void p7501_cmd_bridge(const char *arg) {
     }
     const bool ovf = p7501_pio_had_rx_overflow();
     p7501_wdt_set_stage(P7501_WDT_STAGE_CLEANUP);
-    p7501_pio_end_session();
+    (void)p7501_probe_dispatch_event(P7501_EV_BRIDGE_EXIT, false);
     (void)p7501_pio_set_baud(orig_baud);
-    p7501_led_set_auto_mode(LED_MODE_HEARTBEAT_IDLE);
+    p7501_led_set_auto_mode(dropout_abort ? LED_MODE_BUS_FAULT : LED_MODE_HEARTBEAT_IDLE);
+    if (dropout_abort) {
+        p7501_cli_set_result("ERR", "EDROPOUT");
+        printf("\nBRIDGE: ERROR (reason=NSW5V_DROPOUT rx=%" PRIu32 " tx=%" PRIu32 " ferr=%" PRIu32 " ctrl_edges=%" PRIu32 " overflow=%s)\n",
+               usb_ring.rx_count, tx_count, ferr_count, ctrl_edges, ovf ? "YES" : "NO");
+        return;
+    }
     printf("\nBRIDGE: OK (rx=%" PRIu32 " tx=%" PRIu32 " ferr=%" PRIu32 " ctrl_edges=%" PRIu32 " overflow=%s)\n",
            usb_ring.rx_count, tx_count, ferr_count, ctrl_edges, ovf ? "YES" : "NO");
 }

@@ -159,12 +159,14 @@ where
         after_bytes.extend_from_slice(&chunk);
     }
 
-    let exit_summary = client
-        .exit_bridge_checked()
-        .map_err(|e| PanadigaIpcError::serial(format!("Falha fechando BRIDGE P7501: {e}")))?;
-    exit_summary
-        .validate_healthy()
-        .map_err(|e| PanadigaIpcError::serial(format!("Telemetria BRIDGE anômala: {e}")))?;
+    let _exit_summary = client
+        .close_bridge_and_isolate()
+        .map_err(|e| {
+            PanadigaIpcError::serial(format!("Falha fechando/isolando BRIDGE P7501: {e}"))
+        })?
+        .ok_or_else(|| {
+            PanadigaIpcError::serial("Sessão BRIDGE não estava ativa ao concluir NVRAM clean.")
+        })?;
 
     let verified_all_ff =
         after_bytes.len() == AM34_NVRAM_SIZE as usize && after_bytes.iter().all(|&b| b == 0xFF);

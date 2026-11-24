@@ -76,6 +76,7 @@ size_t p7501_tbus_audit_format_summary(const p7501_tbus_audit_t *st, char *out, 
 void p7501_cmd_tbussniff(const char *arg);
 void p7501_cmd_m0keepalive(const char *arg);
 void p7501_tbus_keepalive_poll(void);
+void p7501_tbus_keepalive_stop(void);
 
 #ifdef __cplusplus
 }

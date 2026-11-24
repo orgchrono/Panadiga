@@ -30,18 +30,28 @@ class BridgeByteStream:
         serial_mod = importlib.import_module("serial")
         serial_cls = getattr(serial_mod, "Serial")
         self._ser: RawByteStream = serial_cls(port, baudrate=115200, timeout=0.05)
+        self._ser.write(b"STATUS\r\n")
+        status_bytes = self._drain_any((b"@P7501_RES cmd=STATUS", b"VDD:", b"PANADIGA>"), timeout_s=1.5)
+        status_text = status_bytes.decode("utf-8", errors="replace").upper()
+        if "NSW5V=0" in status_text or "FAULT_LATCH=1" in status_text:
+            try:
+                self._ser.write(b"ISOLATE\r\n")
+                self._drain_any((b"@P7501_RES cmd=ISOLATE status=OK", b"ISOLATE: OK"), timeout_s=1.0)
+            finally:
+                self._ser.close()
+            raise RuntimeError(f"STANDBY_GATE_STOP: refused BRIDGE entry (STATUS={status_text.strip()})")
         cmd = f"BRIDGE {baud} {boot_mode}".strip() + "\r\n"
         self._ser.write(cmd.encode("ascii"))
-        self._drain_until(b"active", timeout_s=2.0)
+        self._drain_any((b"active", b"@P7501_RES cmd=BRIDGE"), timeout_s=2.0)
 
-    def _drain_until(self, marker: bytes, timeout_s: float) -> bytes:
+    def _drain_any(self, markers: tuple[bytes, ...], timeout_s: float) -> bytes:
         buf = bytearray()
         deadline = time.monotonic() + timeout_s
         while time.monotonic() < deadline:
             chunk = self._ser.read(1024)
             if chunk:
                 buf.extend(chunk)
-                if marker in buf:
+                if any(m in buf for m in markers):
                     break
             else:
                 time.sleep(0.01)
@@ -56,12 +66,16 @@ class BridgeByteStream:
         return self._ser.read(size)
 
     def close(self) -> None:
-        """Exit `BRIDGE` via `~~~`, enforce `ISOLATE`, and close serial device."""
+        """Exit `BRIDGE` via 60ms Hayes guard + `~~~`, enforce `ISOLATE`, and close serial device."""
         try:
+            time.sleep(0.065)
             self._ser.write(b"~~~")
-            self._drain_until(b"BRIDGE: OK", timeout_s=1.5)
+            self._drain_any(
+                (b"@P7501_RES cmd=BRIDGE", b"BRIDGE: OK", b"BRIDGE: ERR"),
+                timeout_s=1.5,
+            )
             self._ser.write(b"ISOLATE\r\n")
-            self._drain_until(b"ISOLATE: OK", timeout_s=1.0)
+            self._drain_any((b"@P7501_RES cmd=ISOLATE status=OK", b"ISOLATE: OK"), timeout_s=1.0)
         finally:
             self._ser.close()
 

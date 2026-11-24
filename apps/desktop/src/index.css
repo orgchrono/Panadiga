@@ -1,6 +1,21 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --color-bench-950: #090d16;
+  --color-bench-900: #0f172a;
+  --color-bench-850: #131d33;
+  --color-bench-800: #1e293b;
+  --color-diga-dark: #0b0f19;
+  --color-diga-panel: #111827;
+  --color-diga-border: #1f2937;
+  --color-diga-accent: #2563eb;
+  --color-diga-accentHover: #1d4ed8;
+  --color-diga-emerald: #10b981;
+  --color-diga-amber: #f59e0b;
+  --color-diga-rose: #ef4444;
+  --color-diga-cyan: #06b6d4;
+  --font-mono: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+}
 
 :root {
   color-scheme: dark;

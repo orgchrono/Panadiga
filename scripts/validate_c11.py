@@ -16,6 +16,7 @@ C11_HOST_SOURCES: Final[tuple[str, ...]] = (
     "firmware/pico-p7501/common/p7501_cmd_arena.c",
     "firmware/pico-p7501/common/p7501_hex.c",
     "firmware/pico-p7501/common/p7501_crc_csum.c",
+    "firmware/pico-p7501/common/p7501_probe_fsm.c",
     "firmware/pico-p7501/common/p7501_push_stream.c",
     "firmware/pico-p7501/common/p7501_spsc_ring.c",
     "firmware/pico-p7501/common/p7501_wdt_logic.c",
@@ -34,6 +35,7 @@ C11_HOST_SOURCES: Final[tuple[str, ...]] = (
     "firmware/pico-p7501/uart/p7501_fmu_codec.c",
     "firmware/pico-p7501/flash/p7501_blackbox_codec.c",
     "firmware/pico-p7501/flash/p7501_bus_policy.c",
+    "firmware/pico-p7501/flash/p7501_bus_tx_guard.c",
     "firmware/pico-p7501/flash/p7501_flash_geo.c",
     "firmware/pico-p7501/flash/p7501_fast_stream_codec.c",
     "firmware/pico-p7501/flash/p7501_normap_codec.c",
@@ -93,11 +95,14 @@ OPENOS_HOST_SOURCES: tuple[str, ...] = (
     "firmware/panadiga-openos/drivers/avdd_iic_video.c",
     "firmware/panadiga-openos/drivers/davis_sata.c",
     "firmware/panadiga-openos/drivers/storage_provisioner.c",
+    "firmware/panadiga-openos/drivers/sdcd_sd.c",
+    "firmware/panadiga-openos/drivers/nor_bgo_ro.c",
     "firmware/panadiga-openos/kernel/openos_main.c",
     "firmware/panadiga-openos/tests/test_openos_host.c",
 )
 
 C11_HW_HOST_SOURCES: Final[tuple[str, ...]] = (
+    "firmware/pico-p7501/common/p7501_probe_fsm.c",
     "firmware/pico-p7501/diag/p7501_hotplug_codec.c",
     "firmware/pico-p7501/hal/p7501_hw.c",
     "firmware/pico-p7501/tests/test_p7501_hw_host.c",

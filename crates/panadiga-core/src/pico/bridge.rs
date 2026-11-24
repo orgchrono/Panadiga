@@ -8,9 +8,28 @@ use std::time::Duration;
 use anyhow::{Context, Result};
 
 use super::async_gdb_proxy::{GdbBridgeTargetMode, serve_panamon1_tcp_client};
+use super::bench_decoders::{evaluate_live_rail_gate, parse_status_output_report};
+use super::cdc::send_and_read_until;
 use super::rsp_codec::{
     NorWritePolicy, build_nor_lock_frame, filter_host_rsp_tcp_stream, parse_loopback_socket_addr,
 };
+
+struct BridgeIsolateGuard {
+    port: Box<dyn serialport::SerialPort>,
+    mode: GdbBridgeTargetMode,
+}
+
+impl Drop for BridgeIsolateGuard {
+    fn drop(&mut self) {
+        if self.mode != GdbBridgeTargetMode::OcdRaw {
+            let _ = self.port.write_all(b"~~~");
+            let _ = self.port.flush();
+            thread::sleep(Duration::from_millis(60));
+        }
+        let _ = self.port.write_all(b"\r\nISOLATE\r\n");
+        let _ = self.port.flush();
+    }
+}
 
 fn pump_filtered_tcp_to_serial<R: Read, W: Write, C: Write>(
     mut tcp_rx: R,
@@ -113,18 +132,37 @@ pub fn run_gdb_bridge_with_mode(
         crate::pico::cdc::open_cdc(port_name, baud_rate, Duration::from_millis(100))
             .with_context(|| format!("Failed to open serial port '{}'", port_name))?;
 
+    let status_reply = send_and_read_until(
+        &mut *serial_port,
+        "STATUS",
+        &["@P7501_RES cmd=STATUS", "VDD:", "PANADIGA>"],
+        Duration::from_millis(1_500),
+    );
+    let status_report = parse_status_output_report(&status_reply);
+    if let Err(err) = evaluate_live_rail_gate(&status_report) {
+        let _ = serial_port.write_all(b"\r\nISOLATE\r\n");
+        let _ = serial_port.flush();
+        return Err(err);
+    }
+
+    let mut guard = BridgeIsolateGuard {
+        port: serial_port,
+        mode,
+    };
+
     match mode {
         GdbBridgeTargetMode::OcdRaw => {
             log_info!(
                 "[Bridge] Requesting Pico native GDB handler (note: P7501 lacks DWire32A clock)..."
             );
-            let _ = serial_port.write_all(b"\r\nGDB\r\n");
+            let _ = guard.port.write_all(b"\r\nGDB\r\n");
         }
         GdbBridgeTargetMode::Panamon1 | GdbBridgeTargetMode::Panarsp => {
             log_info!("[Bridge] Entering Pico SC0 UART passthrough (BRIDGE 115200 PASSIVE)...");
-            let _ = serial_port.write_all(b"\r\nBRIDGE 115200 PASSIVE\r\n");
+            let _ = guard.port.write_all(b"\r\nBRIDGE 115200 PASSIVE\r\n");
         }
     }
+    let _ = guard.port.flush();
     thread::sleep(Duration::from_millis(120));
 
     let listener = TcpListener::bind(validated_listen)
@@ -151,7 +189,7 @@ pub fn run_gdb_bridge_with_mode(
                 log_info!("[Bridge] GDB client connected from: {}", peer_addr);
 
                 if mode == GdbBridgeTargetMode::Panamon1 {
-                    if let Err(err) = serve_panamon1_tcp_client(tcp_stream, &mut *serial_port) {
+                    if let Err(err) = serve_panamon1_tcp_client(tcp_stream, &mut *guard.port) {
                         log_warn!("[Bridge] PANAMON1 async session ended: {err}");
                     }
                     continue;
@@ -160,7 +198,8 @@ pub fn run_gdb_bridge_with_mode(
                 let running = Arc::new(AtomicBool::new(true));
 
                 // Thread 1: Serial -> TCP
-                let serial_reader = serial_port
+                let serial_reader = guard
+                    .port
                     .try_clone()
                     .context("Failed to clone serial port handle")?;
                 let tcp_writer = tcp_stream
@@ -179,7 +218,7 @@ pub fn run_gdb_bridge_with_mode(
                 pump_filtered_tcp_to_serial(
                     &mut tcp_stream,
                     tcp_err_writer,
-                    &mut serial_port,
+                    &mut guard.port,
                     running,
                 );
 
@@ -192,8 +231,5 @@ pub fn run_gdb_bridge_with_mode(
         }
     }
 
-    if mode != GdbBridgeTargetMode::OcdRaw {
-        let _ = serial_port.write_all(b"~~~");
-    }
     Ok(())
 }

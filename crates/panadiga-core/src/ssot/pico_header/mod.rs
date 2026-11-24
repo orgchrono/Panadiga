@@ -13,6 +13,7 @@ use std::path::Path;
 use anyhow::{Context, Result};
 
 pub use header_gen::generate_c11_ssot_header;
+pub(super) use header_gen::resolve_eh55_verified_nor_context;
 pub use tables_gen::generate_c11_ssot_tables;
 
 /// Single-byte `_dev_SERIAL` RSP entry ACK/NAK strobe confirmed empirically in `3410PQ`.
@@ -144,15 +145,16 @@ pub(super) const fn pico_trap_specs() -> [(&'static str, u32, u32, u8, u8, &'sta
     ]
 }
 
-pub(super) const fn pico_mmio_reg_specs() -> [(u32, &'static str, u8, u8); 27] {
+pub(super) const fn pico_mmio_reg_specs() -> [(u32, &'static str, u8, u8); 31] {
     use crate::constants::{
         AIOF_CONT_OFF, AIOF_FS0_OFF, AIOF_RDDET_OFF, AIOF_SDET_OFF, AIOF_TEST1_OFF,
         AIOF_VMODDET_OFF, AIOF_VMODESEL_OFF, AIOF_VOUTSEL_OFF, AIOF_YC3_OFF, AM34_AIOF_BASE,
         AM34_AVDD_BASE, AM34_DAVIS_PRI_MMIO_BASE, AM34_DAVIS_SEC_MMIO_BASE, AM34_IC7501_TBUS_BASE,
-        AM34_IIC0_BASE, AM34_IIC1_BASE, AM34_SC0_BASE, AM34_SC0_STR_VA, AM34_SC0_TXB_VA,
-        AM34_SDCD_MMIO_BASE, AM34_SYS_STATUS_REG, AM34_WDBC_REG, AVDD_DACOUT1_OFF,
-        AVDD_NPALCTL0_OFF, AVDD_VDECCTL1_OFF, AVDD_VOUTMODE0_OFF,
+        AM34_IC7501_TBUS_TX_OFF, AM34_IIC0_BASE, AM34_IIC1_BASE, AM34_SC0_BASE, AM34_SC0_STR_VA,
+        AM34_SC0_TXB_VA, AM34_SDCD_BUS_CFG_VA, AM34_SDCD_MMIO_BASE, AM34_SYS_STATUS_REG,
+        AM34_WDBC_REG, AVDD_DACOUT1_OFF, AVDD_NPALCTL0_OFF, AVDD_VDECCTL1_OFF, AVDD_VOUTMODE0_OFF,
     };
+    use crate::re::davis_probe::{DAVIS_CH0_CONTROL_REG_VA, DAVIS_CH1_RESET_REG_VA};
     use crate::re::main_passthrough::{DEV_SERIAL_CALLBACK_VA, DEV_SERIAL_ISR_CTX_PTR_VA};
     let c = P7501_MMIO_DOM_CORE;
     let v = P7501_MMIO_DOM_VIDEO;
@@ -183,11 +185,20 @@ pub(super) const fn pico_mmio_reg_specs() -> [(u32, &'static str, u8, u8); 27] {
         (AM34_AVDD_BASE + AVDD_VDECCTL1_OFF, "AVDD_VDEC", v, 16),
         (AM34_IIC0_BASE, "IIC0_BASE", v, 32),
         (AM34_IIC1_BASE, "IIC1_BASE", v, 32),
-        // Storage / Sys (4)
+        // Storage / Sys (8)
         (AM34_DAVIS_PRI_MMIO_BASE, "DAVIS_PRI", s, 32),
         (AM34_DAVIS_SEC_MMIO_BASE, "DAVIS_SEC", s, 32),
         (AM34_SDCD_MMIO_BASE, "SDCD_BASE", s, 32),
         (AM34_IC7501_TBUS_BASE, "TBUS_BASE", s, 32),
+        (DAVIS_CH0_CONTROL_REG_VA, "DAVIS_PRST", s, 16),
+        (DAVIS_CH1_RESET_REG_VA, "DAVIS_SRST", s, 16),
+        (AM34_SDCD_BUS_CFG_VA, "SDCD_CFG4", s, 32),
+        (
+            AM34_IC7501_TBUS_BASE + AM34_IC7501_TBUS_TX_OFF,
+            "TBUS_MBX0",
+            s,
+            32,
+        ),
     ]
 }
 
@@ -430,10 +441,20 @@ pub(super) const LOADER_FINGERPRINTS: &[(&str, &str, &str, bool)] = &[
     ("ES10", "DMR-ES10", "P7501_TARGET_PROFILE_DMR_ES10", true),
 ];
 
-/// Computes the deterministic FNV-1a contract hash over the generated Pico C11 SSOT tables.
+/// Computes the deterministic FNV-1a contract hash over generated Pico C11 SSOT tables & wire contracts.
 #[must_use]
 pub fn compute_pico_ssot_hash() -> u32 {
-    header_sections::compute_fnv1a_u32(generate_c11_ssot_tables().as_bytes())
+    let mut material = generate_c11_ssot_tables().into_bytes();
+    for &(sym, val) in crate::constants::events::P7501_WIRE_TAGS
+        .iter()
+        .chain(crate::constants::events::P7501_RES_CODES.iter())
+    {
+        material.push(0);
+        material.extend_from_slice(sym.as_bytes());
+        material.push(b'=');
+        material.extend_from_slice(val.as_bytes());
+    }
+    header_sections::compute_fnv1a_u32(&material)
 }
 
 /// Renders compatibility wrapper `firmware/pico-p7501/uart/p7501_pana_rsp_ssot.h` forwarding to `generated/p7501_ssot.h`.

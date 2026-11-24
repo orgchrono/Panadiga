@@ -8,12 +8,14 @@ pub use ab_harness::{
     build_ab_boot_command, classify_ab_boot_log, format_ab_csv, summarize_ab_runs,
 };
 pub use telemetry::{
-    parse_busdiag_report, parse_panarsp_report, parse_pincheck_report, parse_piologic_report,
-    parse_status_output_report, validate_interactive_pico_command, validate_safe_bench_command,
+    evaluate_live_rail_gate, parse_busdiag_report, parse_panarsp_report, parse_pincheck_report,
+    parse_piologic_report, parse_status_output_report, validate_interactive_pico_command,
+    validate_safe_bench_command,
 };
 pub use types::{
     AbBootRun, AbHarnessSummary, AbModeStats, BenchStatusReport, BusDiagBenchReport,
-    PanarspBenchReport, PinCheckBenchRow, PiologicBenchReport, SAFE_BENCH_COMMANDS,
+    FORBIDDEN_BENCH_TOKENS, PanarspBenchReport, PinCheckBenchRow, PiologicBenchReport,
+    SAFE_BENCH_COMMANDS,
 };
 
 #[cfg(test)]
@@ -102,5 +104,67 @@ mod tests {
         );
         assert!(validate_interactive_pico_command("UARTTXHEX 3F0D").is_ok());
         assert!(validate_interactive_pico_command("UARTSEND R 847F0000,10").is_ok());
+    }
+
+    #[test]
+    fn golden_wire_contract_matches_rust_decoders_and_gates() {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let raw = std::fs::read_to_string(
+            root.join("firmware/pico-p7501/tests/golden/p7501_wire_contract.json"),
+        )
+        .expect("missing golden wire contract json");
+        let doc: serde_json::Value = serde_json::from_str(&raw).expect("valid golden json");
+
+        for sample in doc["status_samples"].as_array().expect("status_samples") {
+            let lines: Vec<String> = sample["lines"]
+                .as_array()
+                .expect("lines array")
+                .iter()
+                .map(|v| v.as_str().expect("str").to_string())
+                .collect();
+            let joined = lines.join("\r\n");
+            let report = parse_status_output_report(&joined);
+            let exp = &sample["expected"];
+            assert_eq!(report.nsw5v_high, exp["nsw5v_high"].as_bool());
+            assert_eq!(report.fault_latch, exp["fault_latch"].as_bool());
+            assert_eq!(report.dropouts, exp["dropouts"].as_u64().map(|n| n as u32));
+            let gate = evaluate_live_rail_gate(&report);
+            if exp["gate_allowed"].as_bool().expect("gate_allowed") {
+                assert!(
+                    gate.is_ok(),
+                    "expected gate OK for {}: {gate:?}",
+                    sample["name"]
+                );
+            } else {
+                let err_msg = gate.expect_err("expected gate STOP").to_string();
+                let needle = exp["gate_reason_contains"].as_str().expect("reason");
+                assert!(err_msg.contains(needle), "err={err_msg} missing {needle}");
+            }
+        }
+
+        for cmd in doc["safe_commands"].as_array().expect("safe_commands") {
+            let s = cmd.as_str().expect("cmd str");
+            assert!(
+                validate_safe_bench_command(s).is_ok(),
+                "safe cmd rejected: {s}"
+            );
+        }
+        for cmd in doc["blocked_commands"]
+            .as_array()
+            .expect("blocked_commands")
+        {
+            let s = cmd.as_str().expect("cmd str");
+            assert!(
+                validate_safe_bench_command(s).is_err(),
+                "unsafe cmd NOT blocked: {s}"
+            );
+        }
+
+        for &(sym, expected_tag) in crate::constants::events::P7501_WIRE_TAGS {
+            assert_eq!(doc["wire_tags"][sym].as_str(), Some(expected_tag));
+        }
+        for &(sym, expected_code) in crate::constants::events::P7501_RES_CODES {
+            assert_eq!(doc["res_codes"][sym].as_str(), Some(expected_code));
+        }
     }
 }

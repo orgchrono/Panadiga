@@ -45,6 +45,7 @@ void p7501_pio_end_session(void);
 
 bool p7501_pio_pop_rx_byte(uint8_t *out_byte);
 bool p7501_pio_pop_rx_byte_ex(uint8_t *out_byte, bool *out_parity_err);
+size_t p7501_pio_pop_rx_bounded(uint8_t *buf, size_t cap, size_t cur_len, bool slide_on_full);
 uint32_t p7501_pio_get_and_clear_parity_errors(void);
 void p7501_pio_drain_rx(void);
 bool p7501_pio_poll_and_clear_framing_err(void);

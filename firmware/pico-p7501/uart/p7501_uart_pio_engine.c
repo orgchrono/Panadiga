@@ -19,6 +19,8 @@
 #include "pico/stdlib.h"
 #include "p7501_uart_duplex.pio.h"
 
+#include <string.h>
+
 #define P7501_RX_DMA_WORDS          4096u
 #define P7501_RX_DMA_RING_BITS      14u
 /* 28-bit max transfer count (`MODE=0`), required on RP2350 where bits [31:28]=0xF selects ENDLESS mode. */
@@ -338,6 +340,27 @@ bool p7501_pio_pop_rx_byte(uint8_t *out_byte) {
     return p7501_pio_pop_rx_byte_ex(out_byte, NULL);
 }
 
+size_t p7501_pio_pop_rx_bounded(uint8_t *buf, size_t cap, size_t cur_len, bool slide_on_full) {
+    if ((buf == NULL) || (cap == 0u)) {
+        return cur_len;
+    }
+    uint8_t b = 0u;
+    for (uint32_t k = 0u; (k < 4096u) && p7501_pio_pop_rx_byte(&b); ++k) {
+        if ((k & 63u) == 63u) {
+            p7501_wdt_kick();
+        }
+        if (cur_len >= cap) {
+            if (!slide_on_full || (cap < 32u)) {
+                continue;
+            }
+            memmove(buf, &buf[cap - 32u], 32u);
+            cur_len = 32u;
+        }
+        buf[cur_len++] = b;
+    }
+    return cur_len;
+}
+
 uint32_t p7501_pio_get_and_clear_parity_errors(void) {
     const uint32_t count = s_pio_drv.parity_err_count;
     s_pio_drv.parity_err_count = 0u;
@@ -346,7 +369,10 @@ uint32_t p7501_pio_get_and_clear_parity_errors(void) {
 
 void p7501_pio_drain_rx(void) {
     uint8_t dummy = 0u;
-    while (p7501_pio_pop_rx_byte(&dummy)) {
+    for (uint32_t k = 0u; (k < 4096u) && p7501_pio_pop_rx_byte(&dummy); ++k) {
+        if ((k & 63u) == 63u) {
+            p7501_wdt_kick();
+        }
     }
     clear_pio_status_flags();
 }

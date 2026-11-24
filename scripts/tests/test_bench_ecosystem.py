@@ -359,3 +359,67 @@ def test_parse_am34_uart_log_sd_stage_funnel_not_masked_by_bgo() -> None:
     mount_rep = parse_am34_uart_log("SD = 0x3BB000[LBA]\r\n... SD init end\r\nFAT Mount failed[-10025].\r\nSD diag load failed[0].\r\n")
     assert mount_rep.fat_mount_failed == -10025
     assert "FAT_ERR_INVALID_FS_OR_IO" in mount_rep.diagnosis
+
+
+def test_golden_wire_contract_cross_stack_python_parity() -> None:
+    """Verify Python check_command_safety, MockBenchTransport, and Rust CLI share the C11 wire contract."""
+    import json
+    from scripts.pico_heartbeat_ops import check_command_safety, grade_heartbeat
+
+    contract_path = (
+        Path(__file__).resolve().parents[2]
+        / "firmware"
+        / "pico-p7501"
+        / "tests"
+        / "golden"
+        / "p7501_wire_contract.json"
+    )
+    doc = json.loads(contract_path.read_text(encoding="utf-8"))
+
+    for safe_cmd in doc["safe_commands"]:
+        ok, msg = check_command_safety(safe_cmd)
+        assert ok, f"Python rejected safe command {safe_cmd!r}: {msg}"
+        assert validate_safe_bench_command(safe_cmd)
+
+    for bad_cmd in doc["blocked_commands"]:
+        ok, _ = check_command_safety(bad_cmd)
+        assert not ok, f"Python failed to block unsafe command {bad_cmd!r}"
+        with pytest.raises(BenchSafetyError):
+            validate_safe_bench_command(bad_cmd)
+
+    standby_lines = "\n".join(doc["status_samples"][0]["lines"])
+    health_standby, _ = grade_heartbeat(
+        ping_ok=True,
+        vdd_volts=0.0,
+        dcsr_hex=None,
+        ping_rc=0,
+        status_rc=0,
+        combined_text=standby_lines,
+    )
+    assert health_standby == "TARGET_OFF_OR_STANDBY"
+
+    fault_lines = "\n".join(doc["status_samples"][1]["lines"])
+    health_fault, _ = grade_heartbeat(
+        ping_ok=True,
+        vdd_volts=3.24,
+        dcsr_hex=None,
+        ping_rc=0,
+        status_rc=0,
+        combined_text=fault_lines,
+    )
+    assert health_fault == "TARGET_OFF_OR_STANDBY"
+
+    mock = MockBenchTransport(vdd_volts=3.24, nsw5v_high=True, fault_latch=True, dropouts=2)
+    with BenchSession(mock) as session:
+        st_out = session.send("STATUS")
+        assert "fault_latch=1" in st_out and "@P7501_RES cmd=STATUS status=OK" in st_out
+        ack_out = session.send("FAULTACK")
+        assert "@P7501_RES cmd=FAULTACK status=OK" in ack_out
+        iso_out = session.send("ISOLATE")
+        assert "@P7501_RES cmd=ISOLATE status=OK" in iso_out
+        assert mock.fault_latch is False
+
+    from scripts.profiles_types import P7501_RES_CODES, P7501_WIRE_TAGS
+
+    assert doc["wire_tags"] == P7501_WIRE_TAGS
+    assert doc["res_codes"] == P7501_RES_CODES

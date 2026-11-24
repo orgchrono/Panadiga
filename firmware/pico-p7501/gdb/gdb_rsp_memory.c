@@ -113,7 +113,9 @@ static bool is_writable_nor_window(
 }
 
 static bool is_valid_write_range(const gdb_rsp_ctx_t *ctx, uint32_t addr, uint32_t length) {
-    if ((length == 0U) || p7501_bus_is_lethal_mmio_range(addr, (size_t)length)) {
+    if ((length == 0U) ||
+        p7501_bus_span_wraps_u32(addr, (size_t)length) ||
+        p7501_bus_is_lethal_mmio_range(addr, (size_t)length)) {
         return false;
     }
     const uint32_t end_addr = addr + (length - 1U);
@@ -215,7 +217,8 @@ void gdb_mem_handle_read_cmd(gdb_rsp_ctx_t *ctx, const char *arg, char *resp_buf
         gdb_rsp_ctx_send_packet(ctx, "E02");
         return;
     }
-    if (p7501_bus_is_lethal_mmio_range(addr, (size_t)length)) {
+    if (p7501_bus_span_wraps_u32(addr, (size_t)length) ||
+        p7501_bus_is_lethal_mmio_range(addr, (size_t)length)) {
         gdb_rsp_ctx_send_packet(ctx, "E05");
         return;
     }

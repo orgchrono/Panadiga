@@ -91,7 +91,10 @@ static bool sweep_run_hold_or_delay_trial(p7501_jigsweep_mode_t mode, uint32_t p
         if (p7501_pio_poll_and_clear_framing_err()) {
             ++ferr;
         }
-        while (p7501_pio_pop_rx_byte(&byte)) {
+        for (uint32_t k = 0u; (k < 4096u) && p7501_pio_pop_rx_byte(&byte); ++k) {
+            if ((k & 63u) == 63u) {
+                p7501_wdt_kick();
+            }
             if (!first_seen) {
                 first_seen = true;
                 first_us = (uint32_t)(time_us_64() - t0_us);

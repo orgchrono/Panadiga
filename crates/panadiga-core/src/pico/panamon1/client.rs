@@ -12,39 +12,63 @@ use super::protocol::{
     PANAMON1_RETRY_PACING_US, Panamon1Transport, parse_panamon1_read_bytes,
 };
 
-/// High-level `PANAMON1>` host client with retry, safety preflight, and RAII Upper NOR lock.
+/// High-level `PANAMON1>` host client with retry, safety preflight, and RAII Upper NOR lock + BRIDGE isolate.
 pub struct Panamon1Client<T: Panamon1Transport> {
-    transport: T,
+    transport: Option<T>,
     needs_post_write_jump_settle: bool,
+    pub(super) bridge_entered: bool,
 }
 
 impl<T: Panamon1Transport> Panamon1Client<T> {
     pub fn new(transport: T) -> Self {
         Self {
-            transport,
+            transport: Some(transport),
             needs_post_write_jump_settle: false,
+            bridge_entered: false,
         }
     }
 
     pub fn transport(&self) -> &T {
-        &self.transport
+        self.transport
+            .as_ref()
+            .expect("Panamon1Client transport unavailable")
     }
 
     pub fn transport_mut(&mut self) -> &mut T {
-        &mut self.transport
+        self.transport
+            .as_mut()
+            .expect("Panamon1Client transport unavailable")
     }
 
-    pub fn into_transport(self) -> T {
+    pub fn into_transport(mut self) -> T {
+        self.close_bridge_best_effort();
         self.transport
+            .take()
+            .expect("Panamon1Client transport unavailable")
+    }
+
+    pub(super) fn close_bridge_best_effort(&mut self) {
+        if !self.bridge_entered {
+            return;
+        }
+        self.bridge_entered = false;
+        if let Some(tr) = self.transport.as_mut() {
+            let _ = tr.escape_bridge(Duration::from_millis(800));
+            let _ = tr.pico_cli_exchange(
+                "ISOLATE",
+                &["ISOLATE: OK", "@P7501_RES cmd=ISOLATE"],
+                Duration::from_millis(800),
+            );
+        }
     }
 
     pub fn sleep(&mut self, duration: Duration) {
-        self.transport.sleep(duration);
+        self.transport_mut().sleep(duration);
     }
 
     /// Safe `PANAMON1>` liveness probe sending `?\r` (never bare `\r`).
     pub fn ping(&mut self) -> Result<()> {
-        let raw = self.transport.target_exchange_bytes(
+        let raw = self.transport_mut().target_exchange_bytes(
             "?",
             Duration::ZERO,
             &[PANAMON1_FULL_PROMPT.as_bytes()],
@@ -72,10 +96,10 @@ impl<T: Panamon1Transport> Panamon1Client<T> {
             let pace = if attempt == 0 {
                 Duration::ZERO
             } else {
-                self.transport.sleep(retry_pace);
+                self.transport_mut().sleep(retry_pace);
                 retry_pace
             };
-            let raw = self.transport.target_exchange_bytes(
+            let raw = self.transport_mut().target_exchange_bytes(
                 cmd,
                 pace,
                 &[PANAMON1_FULL_PROMPT.as_bytes()],
@@ -164,7 +188,7 @@ impl<T: Panamon1Transport> Panamon1Client<T> {
 
     fn settle_before_jump(&mut self) {
         if self.needs_post_write_jump_settle {
-            self.transport
+            self.transport_mut()
                 .sleep(Duration::from_millis(PANAMON1_POST_WRITE_JUMP_DELAY_MS));
             self.needs_post_write_jump_settle = false;
         }
@@ -189,11 +213,17 @@ impl<T: Panamon1Transport> Panamon1Client<T> {
         timeout: Duration,
     ) -> Result<Vec<u8>> {
         self.settle_before_jump();
-        self.transport.target_exchange_bytes(
+        self.transport_mut().target_exchange_bytes(
             &format!("J {va:08X}"),
             Duration::from_millis(3),
             required_tokens,
             timeout,
         )
+    }
+}
+
+impl<T: Panamon1Transport> Drop for Panamon1Client<T> {
+    fn drop(&mut self) {
+        self.close_bridge_best_effort();
     }
 }

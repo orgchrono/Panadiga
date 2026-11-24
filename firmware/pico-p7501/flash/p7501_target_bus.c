@@ -120,7 +120,8 @@ bool p7501_hw_read_block_checked(uint32_t addr, uint8_t *out_buf, uint32_t len, 
     if ((out_buf == NULL) || (len == 0UL)) {
         return false;
     }
-    if (p7501_bus_is_lethal_mmio_range(addr, (size_t)len)) {
+    if (p7501_bus_span_wraps_u32(addr, (size_t)len) ||
+        p7501_bus_is_lethal_mmio_range(addr, (size_t)len)) {
         return false;
     }
     if (s_bus_ops.read_block_checked != NULL) {
@@ -154,10 +155,14 @@ uint32_t p7501_hw_read_mem32(uint32_t addr) {
 }
 
 void p7501_hw_write_mem32(uint32_t addr, uint32_t data) {
-    if (p7501_bus_is_lethal_mmio_range(addr, sizeof(uint32_t))) {
-        return;
-    }
-    if (p7501_flash_is_critical_boot_ipl_range(addr, sizeof(uint32_t))) {
+    if (p7501_bus_check_access(
+            p7501_session_default_ctx(),
+            p7501_flash_get_active_size(),
+            addr,
+            sizeof(uint32_t),
+            true,
+            false,
+            p7501_flash_is_upper_nor_unlocked()) != P7501_BUS_ALLOW) {
         return;
     }
     s_bus_ops.write_mem32(s_bus_ops.ctx, addr, data);

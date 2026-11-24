@@ -45,7 +45,10 @@ bool p7501_fast_pio_read_exact_ms(uint8_t *dst, size_t n, uint32_t timeout_ms) {
             return false;
         }
         uint8_t b = 0u;
-        while ((got < n) && p7501_pio_pop_rx_byte(&b)) {
+        for (uint32_t k = 0u; (k < 4096u) && (got < n) && p7501_pio_pop_rx_byte(&b); ++k) {
+            if ((k & 63u) == 63u) {
+                p7501_wdt_kick();
+            }
             dst[got++] = b;
         }
     }
@@ -58,7 +61,7 @@ void p7501_fast_pio_tx_paced_ascii(const char *str) {
         p7501_pio_tx_bytes((const uint8_t *)&str[i], 1u, false);
         sleep_us(350u);
         uint8_t drop = 0u;
-        while (p7501_pio_pop_rx_byte(&drop)) {
+        for (uint32_t k = 0u; (k < 4096u) && p7501_pio_pop_rx_byte(&drop); ++k) {
             /* Drain synchronous echo from MN103S SC0 */
         }
     }
@@ -88,6 +91,7 @@ bool p7501_fast_stub_ping_open(void) {
 }
 
 bool p7501_fast_stub_exit_open(void) {
+    p7501_pio_drain_rx();
     const uint8_t q = (uint8_t)'Q';
     p7501_pio_tx_bytes(&q, 1u, false);
     uint8_t rx[96];
@@ -96,12 +100,10 @@ bool p7501_fast_stub_exit_open(void) {
     const uint64_t deadline = t0 + 400000ULL;
     bool aborted = false;
     while (p7501_wdt_loop_step(t0, deadline, true, &aborted)) {
-        uint8_t b = 0u;
-        while (p7501_pio_pop_rx_byte(&b)) {
-            if (len < sizeof(rx)) {
-                rx[len++] = b;
-            }
+        if (p7501_hw_is_nsw5v_fault_latched()) {
+            return false;
         }
+        len = p7501_pio_pop_rx_bounded(rx, sizeof(rx), len, true);
         if (p7501_bus_panamon1_has_prompt(rx, len)) {
             p7501_bus_panamon1_drain_tail(2u);
             return true;

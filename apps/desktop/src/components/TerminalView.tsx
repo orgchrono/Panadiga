@@ -8,7 +8,7 @@ interface TerminalViewProps {
   onClear: () => void;
   title?: string;
   autoScroll?: boolean;
-  containerRef?: React.RefObject<HTMLDivElement>;
+  containerRef?: React.RefObject<HTMLDivElement | null>;
 }
 
 function getLevelColorClass(level: SerialLogEntry['level']): string {

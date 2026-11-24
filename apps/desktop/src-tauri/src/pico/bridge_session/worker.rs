@@ -38,6 +38,8 @@ pub(super) fn run_bridge_worker(
 ) {
     let mut buf = [0u8; 512];
     let mut stop_requested = false;
+    let mut saw_bridge_res = false;
+    let mut saw_dropout = false;
 
     loop {
         while let Ok(msg) = rx_chan.try_recv() {
@@ -78,7 +80,15 @@ pub(super) fn run_bridge_worker(
                     st.bytes_rx += n as u64;
                 });
                 emit_bridge_event(&app, "rx", slice, None);
-                if text.contains("BRIDGE: OK") || text.contains("BRIDGE: ERROR") {
+                if text.contains("EDROPOUT") || text.contains("NSW5V_DROPOUT") {
+                    saw_dropout = true;
+                }
+                if text.contains("BRIDGE: OK")
+                    || text.contains("BRIDGE: ERROR")
+                    || text.contains("BRIDGE: ERR")
+                    || text.contains("@P7501_RES cmd=BRIDGE")
+                {
+                    saw_bridge_res = true;
                     break;
                 }
             }
@@ -97,16 +107,24 @@ pub(super) fn run_bridge_worker(
         }
     }
 
+    if !saw_bridge_res {
+        let _ = port.write_all(b"~~~");
+        let _ = port.flush();
+        thread::sleep(Duration::from_millis(60));
+    }
+    let _ = port.write_all(b"\r\nISOLATE\r\n");
+    let _ = port.flush();
     drop(port);
+
+    let end_msg = if saw_dropout {
+        "Ponte SC0 abortada por queda NSW5V (EDROPOUT); P7501 isolado em Hi-Z."
+    } else {
+        "Ponte SC0 encerrada e P7501 isolado em Hi-Z (~~~ + ISOLATE)."
+    };
     ctrl.set_active(false);
     ctrl.update_status(|st| {
         st.running = false;
-        st.last_event = "Ponte SC0 encerrada cleanly (~~~)".to_string();
+        st.last_event = end_msg.to_string();
     });
-    emit_bridge_event(
-        &app,
-        "sys",
-        b"",
-        Some("Ponte SC0 finalizada e porta serial liberada."),
-    );
+    emit_bridge_event(&app, "sys", b"", Some(end_msg));
 }

@@ -1,7 +1,7 @@
 # Panadiga Auto-Generated Tool Arsenal Index
 
 > Gerado deterministicamente por `python scripts/generate_tool_arsenal.py --write`. Verifique deriva com `--check`.
-> **Arsenal Fingerprint (`SHA-256`):** `69ff0e5802e0b33171c59247cf692d1cae815284fef1a1e0e63e1d3fe49fd924`
+> **Arsenal Fingerprint (`SHA-256`):** `aa84907a8b276e43e25792f1c07e50b20d60f8c21ae623e71bdab13eed356fb8`
 
 ## 1. Resumo Quantitativo
 
@@ -15,8 +15,8 @@
 | Comandos IPC Tauri 2 | 122 | `apps/desktop/src-tauri/src/lib.rs` |
 | Comandos Sonda Pico `P7501` | 79 | `crates/panadiga-core/src/ssot/hardware_catalog.json` |
 | Codecs C11 Pico `P7501` | 24 | `firmware/pico-p7501/**/*codec*.c` |
-| Módulos `Panadiga OpenOS` | 11 | `firmware/panadiga-openos/` |
-| Comandos Shell `OpenOS` | 18 | `firmware/panadiga-openos/kernel/openos_main.c` |
+| Módulos `Panadiga OpenOS` | 13 | `firmware/panadiga-openos/` |
+| Comandos Shell `OpenOS` | 21 | `firmware/panadiga-openos/kernel/openos_main.c` |
 | Scripts Python Operacionais | 53 | `scripts/**/*.py` |
 | Scripts Ghidra Jython | 9 | `tools/ghidra/*.py` |
 | Skills `.agents/skills/` | 29 | `.agents/skills/*/SKILL.md` |
@@ -141,5 +141,5 @@
 ## 6. Firmware Bare-Metal (`Pico P7501 C11` & `Panadiga OpenOS AM34`)
 
 - **Codecs C11 Pico:** `firmware/pico-p7501/diag/p7501_boottrace_codec.c`, `firmware/pico-p7501/diag/p7501_hotplug_codec.c`, `firmware/pico-p7501/diag/p7501_i2c_codec.c`, `firmware/pico-p7501/diag/p7501_identify_codec.c`, `firmware/pico-p7501/diag/p7501_ir_codec.c`, `firmware/pico-p7501/diag/p7501_jigsweep_codec.c`, `firmware/pico-p7501/diag/p7501_mmio_snapshot_codec.c`, `firmware/pico-p7501/diag/p7501_piologic_codec.c`, `firmware/pico-p7501/diag/p7501_pwrosc_codec.c`, `firmware/pico-p7501/diag/p7501_sds_codec.c`, `firmware/pico-p7501/diag/p7501_serv_macro_codec.c`, `firmware/pico-p7501/diag/p7501_tbus_codec.c`, `firmware/pico-p7501/flash/p7501_blackbox_codec.c`, `firmware/pico-p7501/flash/p7501_fast_stream_codec.c`, `firmware/pico-p7501/flash/p7501_job_codec.c`, `firmware/pico-p7501/flash/p7501_normap_codec.c`, `firmware/pico-p7501/flash/p7501_probe_cfg_codec.c`, `firmware/pico-p7501/flash/p7501_vault_codec.c`, `firmware/pico-p7501/gdb/gdb_rsp_codec.c`, `firmware/pico-p7501/uart/p7501_diag_watch_codec.c`, `firmware/pico-p7501/uart/p7501_drv_pana_codec.c`, `firmware/pico-p7501/uart/p7501_fmu_codec.c`, `firmware/pico-p7501/uart/p7501_pana_rsp_codec.c`, `firmware/pico-p7501/uart/p7501_uart_codec.c`
-- **Módulos OpenOS AM34:** `firmware/panadiga-openos/boot/am34_sdram.ld`, `firmware/panadiga-openos/boot/crt0_am34.S`, `firmware/panadiga-openos/drivers/aiof_video.c`, `firmware/panadiga-openos/drivers/avdd_iic_video.c`, `firmware/panadiga-openos/drivers/davis_sata.c`, `firmware/panadiga-openos/drivers/openos_drivers.h`, `firmware/panadiga-openos/drivers/storage_provisioner.c`, `firmware/panadiga-openos/drivers/tbus_ic7501.c`, `firmware/panadiga-openos/drivers/uart_sc0.c`, `firmware/panadiga-openos/hal/am34_mmio.h`, `firmware/panadiga-openos/kernel/openos_main.c`
-- **Comandos Shell OpenOS:** `help`, `status`, `ntsc`, `palm`, `pal`, `tbc on`, `tbc off`, `video br`, `video ec`, `video probe`, `dac on`, `dac off`, `colorbar on`, `colorbar off`, `provision`, `wdt`, `sata`, `vfd <arg>`
+- **Módulos OpenOS AM34:** `firmware/panadiga-openos/boot/am34_sdram.ld`, `firmware/panadiga-openos/boot/crt0_am34.S`, `firmware/panadiga-openos/drivers/aiof_video.c`, `firmware/panadiga-openos/drivers/avdd_iic_video.c`, `firmware/panadiga-openos/drivers/davis_sata.c`, `firmware/panadiga-openos/drivers/nor_bgo_ro.c`, `firmware/panadiga-openos/drivers/openos_drivers.h`, `firmware/panadiga-openos/drivers/sdcd_sd.c`, `firmware/panadiga-openos/drivers/storage_provisioner.c`, `firmware/panadiga-openos/drivers/tbus_ic7501.c`, `firmware/panadiga-openos/drivers/uart_sc0.c`, `firmware/panadiga-openos/hal/am34_mmio.h`, `firmware/panadiga-openos/kernel/openos_main.c`
+- **Comandos Shell OpenOS:** `help`, `status`, `ntsc`, `palm`, `pal`, `tbc on`, `tbc off`, `video br`, `video ec`, `video probe`, `dac on`, `dac off`, `colorbar on`, `colorbar off`, `provision`, `sd`, `bgo`, `ssot`, `wdt`, `sata`, `vfd <arg>`

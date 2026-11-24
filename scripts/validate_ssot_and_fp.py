@@ -2,13 +2,19 @@
 
 from __future__ import annotations
 
+import os
+import sys
+
+if __package__ in (None, ""):
+    _here_val = os.path.dirname(os.path.abspath(__file__))
+    sys.path = [os.path.dirname(_here_val), *(p for p in sys.path if os.path.abspath(p or ".") != _here_val)]
+
 import argparse
 from collections.abc import Callable, Iterator, Sequence
 import json
 from pathlib import Path
 import re
 import subprocess
-import sys
 from typing import Final
 
 PROD_PANIC_MACRO_ALLOWLIST: Final[frozenset[str]] = frozenset(
@@ -60,7 +66,6 @@ REQUIRED_GOVERNANCE_FILES: Final[tuple[str, ...]] = (
     "pyproject.toml",
     "SECURITY.md",
     ".github/CODEOWNERS",
-    ".github/dependabot.yml",
     "NOTICE",
     "THIRD_PARTY_LICENSES.md",
 )

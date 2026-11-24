@@ -150,7 +150,16 @@ pub(super) fn append_diag_enums_and_externs(out: &mut String, ssot_hash: u32) {
     out.push_str("}\n\n");
 
     let _ = writeln!(out, "#define P7501_SSOT_HASH_U32 0x{ssot_hash:08X}UL");
-    let _ = writeln!(out, "#define P7501_SSOT_HASH_STR \"{ssot_hash:08X}\"\n");
+    let _ = writeln!(out, "#define P7501_SSOT_HASH_STR \"{ssot_hash:08X}\"");
+    for &(sym, tag) in crate::constants::events::P7501_WIRE_TAGS {
+        let name = format!("P7501_WIRE_TAG_{sym}");
+        let _ = writeln!(out, "#define {name:<32} \"{tag}\"");
+    }
+    for &(sym, code) in crate::constants::events::P7501_RES_CODES {
+        let name = format!("P7501_RES_CODE_{sym}");
+        let _ = writeln!(out, "#define {name:<32} \"{code}\"");
+    }
+    out.push('\n');
     let _ = writeln!(
         out,
         "#define P7501_SSOT_LOADER_FP_COUNT {}u\n\

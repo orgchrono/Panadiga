@@ -16,6 +16,7 @@
 #include "cli/p7501_cli.h"
 #include "cli/p7501_cli_help.h"
 #include "cli/p7501_cli_sys.h"
+#include "generated/p7501_ssot.h"
 #include "common/p7501_hex.h"
 #include "common/p7501_push_stream.h"
 #include "crypto/p7501_crypto_cli.h"
@@ -62,6 +63,10 @@
 
 #include <stdio.h>
 #include <string.h>
+
+#ifndef P7501_ENABLE_LAB_DIAG
+#define P7501_ENABLE_LAB_DIAG 1
+#endif
 
 static const char *s_cli_res_status = "OK";
 static const char *s_cli_res_code = "0";
@@ -159,6 +164,7 @@ static const p7501_cli_cmd_entry_t k_cli_commands[] = {
     { "GDB",            p7501_cli_cmd_gdb },
     { "ISOLATE",        p7501_cli_cmd_isolate },
     { "HIZ",            p7501_cli_cmd_isolate },
+    { "FAULTACK",       p7501_cli_cmd_faultack },
     { "ENGAGE",         p7501_cli_cmd_engage },
     { "AUTODETECT",     p7501_flash_cmd_autodetect },
     { "PROBE",          p7501_flash_cmd_autodetect },
@@ -190,9 +196,11 @@ static const p7501_cli_cmd_entry_t k_cli_commands[] = {
     { "AUTOPROBE",      p7501_cmd_identify },
     { "JOB",            p7501_cmd_job },
     { "VAULT",          p7501_cmd_vault },
+#if P7501_ENABLE_LAB_DIAG
     { "BLACKBOX",       p7501_cmd_blackbox },
     { "PROBE_CFG",      p7501_cmd_probe_cfg },
     { "RECIPE",         p7501_cmd_recipe },
+#endif
     { "BGO_INSPECT",    p7501_cmd_bgo_inspect },
     { "EEMUL_INSPECT",  p7501_cmd_eemul_inspect },
     { "NOR_MAP",        p7501_cmd_nor_map },
@@ -206,6 +214,7 @@ static const p7501_cli_cmd_entry_t k_cli_commands[] = {
     { "TRAP",           p7501_cmd_trap },
     { "PAYLOAD",        p7501_cmd_payload },
     { "SECTOR",         p7501_cmd_sector },
+#if P7501_ENABLE_LAB_DIAG
     { "CRYPTO",         p7501_cmd_crypto },
     { "DECOMP",         p7501_cmd_decomp },
     { "GPS",            p7501_cmd_gps },
@@ -213,6 +222,7 @@ static const p7501_cli_cmd_entry_t k_cli_commands[] = {
     { "XRAY",           p7501_cmd_xray },
     { "SURG",           p7501_cmd_surg },
     { "PWROSC",         p7501_cmd_pwrosc },
+#endif
     { "TBUSSNIFF",      p7501_cmd_tbussniff },
     { "M0KEEPALIVE",    p7501_cmd_m0keepalive },
     { "I2C_SCAN",       p7501_cmd_i2c_scan },
@@ -239,13 +249,13 @@ void p7501_cli_process_command(char *line) {
 
     for (size_t i = 0u; i < (sizeof(k_cli_commands) / sizeof(k_cli_commands[0])); ++i) {
         if (strcmp(cmd, k_cli_commands[i].name) == 0) {
-            p7501_cli_set_result("OK", "0");
+            p7501_cli_set_result("OK", P7501_RES_CODE_OK);
             p7501_cli_set_result_extra(NULL);
             p7501_wdt_begin_cmd((uint8_t)i, k_cli_commands[i].name);
             k_cli_commands[i].handler(arg);
             if (!gdb_rsp_is_active()) {
                 p7501_wdt_end_cmd(false);
-                printf("@P7501_RES cmd=%s status=%s code=%s elapsed_us=%llu%s%s\n",
+                printf(P7501_WIRE_TAG_RES " cmd=%s status=%s code=%s elapsed_us=%llu%s%s\n",
                        k_cli_commands[i].name,
                        s_cli_res_status,
                        s_cli_res_code,
@@ -257,5 +267,5 @@ void p7501_cli_process_command(char *line) {
         }
     }
     printf("Unknown command: '%s'. Type HELP for commands.\n", cmd);
-    printf("@P7501_RES cmd=%s status=ERR code=EINVAL elapsed_us=0\n", cmd);
+    printf(P7501_WIRE_TAG_RES " cmd=%s status=ERR code=%s elapsed_us=0\n", cmd, P7501_RES_CODE_EINVAL);
 }

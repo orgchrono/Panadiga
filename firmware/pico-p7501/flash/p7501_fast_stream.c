@@ -31,9 +31,14 @@
 void p7501_cmd_nor_map(const char *arg) {
     (void)arg;
     p7501_hw_enforce_nsw5v_hiz();
-    if (!p7501_hw_is_target_powered() || !p7501_hw_is_target_online()) {
+    if (!p7501_hw_is_rail_healthy() || !p7501_hw_is_target_online()) {
         p7501_cli_set_result("ERR", "EOFFLINE");
         printf("NOR_MAP: ERROR (Target offline or unpowered)\n");
+        return;
+    }
+    if (!p7501_arena_try_acquire(P7501_ARENA_OWNER_FAST_STREAM)) {
+        p7501_cli_set_result("ERR", "EBUSY");
+        printf("NOR_MAP: ERROR (Command arena busy)\n");
         return;
     }
 
@@ -49,6 +54,7 @@ void p7501_cmd_nor_map(const char *arg) {
         uint32_t sz = 0u;
         (void)p7501_normap_sector_span(sa, &va, &sz);
         if (!p7501_hw_read_block_checked(va, hdr20, sizeof(hdr20), true)) {
+            p7501_arena_release(P7501_ARENA_OWNER_FAST_STREAM);
             p7501_cli_set_result("ERR", "EBUS");
             printf("NOR_MAP: ERROR (Bus read failed at SA%u @ 0x%08" PRIX32 ")\n", (unsigned)sa, va);
             return;
@@ -56,6 +62,7 @@ void p7501_cmd_nor_map(const char *arg) {
         const uint8_t *zptr = NULL;
         if ((sa >= 26u) && (sa <= 70u)) {
             if (!p7501_hw_read_block_checked(va + 0x100UL, z16, sizeof(z16), true)) {
+                p7501_arena_release(P7501_ARENA_OWNER_FAST_STREAM);
                 p7501_cli_set_result("ERR", "EBUS");
                 printf("NOR_MAP: ERROR (Bus read failed at SA%u +0x100)\n", (unsigned)sa);
                 return;
@@ -76,6 +83,7 @@ void p7501_cmd_nor_map(const char *arg) {
     char *const line = (char *)g_p7501_cmd_arena.raw;
     (void)p7501_fast_format_normap_line(line, 512u, &sum);
     printf("%s\nNOR_MAP: OK\n", line);
+    p7501_arena_release(P7501_ARENA_OWNER_FAST_STREAM);
 }
 
 void p7501_cmd_fast_read(const char *arg) {
@@ -98,9 +106,14 @@ void p7501_cmd_fast_read(const char *arg) {
         printf("FAST_READ: ERROR code=E05 reason=LETHAL_MMIO\n");
         return;
     }
-    if (!p7501_hw_is_target_powered()) {
+    if (!p7501_hw_is_rail_healthy()) {
         p7501_cli_set_result("ERR", "EOFFLINE");
         printf("FAST_READ: ERROR (Target unpowered)\n");
+        return;
+    }
+    if (!p7501_arena_try_acquire(P7501_ARENA_OWNER_FAST_STREAM)) {
+        p7501_cli_set_result("ERR", "EBUSY");
+        printf("FAST_READ: ERROR (Command arena busy)\n");
         return;
     }
 
@@ -108,6 +121,7 @@ void p7501_cmd_fast_read(const char *arg) {
     bool uploaded = false;
     if (!p7501_fast_stub_upload_and_enter_open(&uploaded)) {
         p7501_pio_end_session();
+        p7501_arena_release(P7501_ARENA_OWNER_FAST_STREAM);
         p7501_cli_set_result("ERR", "EOFFLINE");
         printf("FAST_READ: ERROR (Failed entering 0x9043A000 stub from PANAMON1>)\n");
         return;
@@ -146,6 +160,7 @@ void p7501_cmd_fast_read(const char *arg) {
 
     (void)p7501_fast_stub_exit_open();
     p7501_pio_end_session();
+    p7501_arena_release(P7501_ARENA_OWNER_FAST_STREAM);
 
     if (!ok) {
         p7501_cli_set_result("ERR", "EBUS");
@@ -175,9 +190,15 @@ bool p7501_fast_write_bytes_hw(
                tag, deny_reason, addr, (unsigned)pay_len);
         return false;
     }
-    if (!p7501_hw_is_target_powered()) {
+    if (!p7501_hw_is_rail_healthy()) {
         p7501_cli_set_result("ERR", "EOFFLINE");
         printf("%s: ERROR (Target unpowered)\n", tag);
+        return false;
+    }
+    const bool own_arena = p7501_arena_try_acquire(P7501_ARENA_OWNER_FLASH);
+    if (!own_arena && (p7501_arena_current_owner() != P7501_ARENA_OWNER_FAST_STREAM)) {
+        p7501_cli_set_result("ERR", "EBUSY");
+        printf("%s: ERROR (Command arena busy)\n", tag);
         return false;
     }
 
@@ -185,6 +206,9 @@ bool p7501_fast_write_bytes_hw(
     bool uploaded = false;
     if (!p7501_fast_stub_upload_and_enter_open(&uploaded)) {
         p7501_pio_end_session();
+        if (own_arena) {
+            p7501_arena_release(P7501_ARENA_OWNER_FLASH);
+        }
         p7501_cli_set_result("ERR", "EOFFLINE");
         printf("%s: ERROR (Failed entering 0x9043A000 stub)\n", tag);
         return false;
@@ -201,6 +225,9 @@ bool p7501_fast_write_bytes_hw(
     if (!pre_ok) {
         (void)p7501_fast_stub_exit_open();
         p7501_pio_end_session();
+        if (own_arena) {
+            p7501_arena_release(P7501_ARENA_OWNER_FLASH);
+        }
         p7501_cli_set_result("ERR", "EBUS");
         printf("%s: ERROR (Pre-flight live read failed)\n", tag);
         return false;
@@ -210,6 +237,9 @@ bool p7501_fast_write_bytes_hw(
     if (!p7501_fast_check_monotonic_1_to_0(&cur_buf[win.rel_off], payload, pay_len, &bad_off)) {
         (void)p7501_fast_stub_exit_open();
         p7501_pio_end_session();
+        if (own_arena) {
+            p7501_arena_release(P7501_ARENA_OWNER_FLASH);
+        }
         p7501_cli_set_result("ERR", "EMONO");
         printf("%s: ERROR code=EMONO reason=REQUIRES_ERASE_0_TO_1 off=%u cur=0x%02X tgt=0x%02X\n",
                tag, (unsigned)bad_off, (unsigned)cur_buf[win.rel_off + bad_off], (unsigned)payload[bad_off]);
@@ -238,6 +268,9 @@ bool p7501_fast_write_bytes_hw(
     p7501_pio_end_session();
 
     if (!write_ok) {
+        if (own_arena) {
+            p7501_arena_release(P7501_ARENA_OWNER_FLASH);
+        }
         p7501_cli_set_result("ERR", "EJEDEC");
         printf("%s: ERROR code=EJEDEC ack=0x%02X relocked=YES\n", tag, (unsigned)ack);
         return false;
@@ -246,11 +279,19 @@ bool p7501_fast_write_bytes_hw(
     p7501_wireless_consume_nor_op(p7501_wireless_global_state());
     p7501_fast_emit_prog_push("WRITE", p7501_fast_va_to_sa(addr), (uint32_t)pay_len, (uint32_t)pay_len, crc);
     printf("[%s] va=0x%08" PRIX32 " len=%u crc32=0x%08" PRIX32 " relocked=YES\n", tag, addr, (unsigned)pay_len, crc);
+    if (own_arena) {
+        p7501_arena_release(P7501_ARENA_OWNER_FLASH);
+    }
     return true;
 }
 
 void p7501_cmd_fast_write(const char *arg) {
     p7501_hw_enforce_nsw5v_hiz();
+    if (!p7501_arena_try_acquire(P7501_ARENA_OWNER_FAST_STREAM)) {
+        p7501_cli_set_result("ERR", "EBUSY");
+        printf("FAST_WRITE: ERROR (Command arena busy)\n");
+        return;
+    }
     char tok_va[24];
     char tok_confirm[32];
     const char *after_va = p7501_next_token(arg, tok_va, sizeof(tok_va));
@@ -263,6 +304,7 @@ void p7501_cmd_fast_write(const char *arg) {
     size_t pay_len = 0u;
     if (!p7501_parse_hex_u32_exact(tok_va, 10u, &addr) ||
         !p7501_decode_hex_bytes(tok_hex, payload, 1024u, &pay_len) || (pay_len < 2u)) {
+        p7501_arena_release(P7501_ARENA_OWNER_FAST_STREAM);
         p7501_cli_set_result("ERR", "EINVAL");
         printf("FAST_WRITE: ERROR (Usage: FAST_WRITE <hex_va> <even_hex_bytes> CONFIRM_UPPER_NOR)\n");
         return;
@@ -271,6 +313,7 @@ void p7501_cmd_fast_write(const char *arg) {
             "FAST_WRITE", addr, payload, pay_len, p7501_ascii_ieq(tok_confirm, "CONFIRM_UPPER_NOR"))) {
         printf("FAST_WRITE: OK\n");
     }
+    p7501_arena_release(P7501_ARENA_OWNER_FAST_STREAM);
 }
 
 void p7501_cmd_fast_erase(const char *arg) {
@@ -294,9 +337,14 @@ void p7501_cmd_fast_erase(const char *arg) {
         printf("FAST_ERASE: ERROR code=E05 reason=%s va=0x%08" PRIX32 "\n", deny_reason, sector_va);
         return;
     }
-    if (!p7501_hw_is_target_powered()) {
+    if (!p7501_hw_is_rail_healthy()) {
         p7501_cli_set_result("ERR", "EOFFLINE");
         printf("FAST_ERASE: ERROR (Target unpowered)\n");
+        return;
+    }
+    if (!p7501_arena_try_acquire(P7501_ARENA_OWNER_FAST_STREAM)) {
+        p7501_cli_set_result("ERR", "EBUSY");
+        printf("FAST_ERASE: ERROR (Command arena busy)\n");
         return;
     }
 
@@ -319,6 +367,7 @@ void p7501_cmd_fast_erase(const char *arg) {
     p7501_pio_end_session();
 
     if (!erase_ok) {
+        p7501_arena_release(P7501_ARENA_OWNER_FAST_STREAM);
         p7501_cli_set_result("ERR", "EJEDEC");
         printf("FAST_ERASE: ERROR code=EJEDEC va=0x%08" PRIX32 " relocked=YES\n", sector_va);
         return;
@@ -328,6 +377,7 @@ void p7501_cmd_fast_erase(const char *arg) {
     for (size_t i = 0u; all_ff && (i < 64u); ++i) {
         all_ff = (verify_buf[i] == 0xFFu);
     }
+    p7501_arena_release(P7501_ARENA_OWNER_FAST_STREAM);
     if (!all_ff) {
         p7501_cli_set_result("ERR", "EVERIFY");
         printf("FAST_ERASE: ERROR code=EVERIFY va=0x%08" PRIX32 " verified_ff=NO relocked=YES\n", sector_va);

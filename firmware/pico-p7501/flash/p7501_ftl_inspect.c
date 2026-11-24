@@ -13,6 +13,7 @@
 #include "cli/p7501_cli.h"
 #include "common/p7501_cmd_arena.h"
 #include "common/p7501_hex.h"
+#include "common/p7501_push_stream.h"
 #include "flash/p7501_fast_stream_codec.h"
 #include "flash/p7501_flash.h"
 #include "hal/p7501_hw.h"
@@ -45,6 +46,7 @@ bool p7501_bgo_inspect_headers(
     }
     memset(out, 0, sizeof(*out));
     out->total_sectors = (uint16_t)sector_count;
+    out->p1_sa_index = 0xFFFFu;
 
     uint16_t seen_p2[P7501_BGO_MAX_SECTORS];
     size_t seen_count = 0u;
@@ -73,6 +75,9 @@ bool p7501_bgo_inspect_headers(
             continue;
         }
         if (w0 == 0xF101u) {
+            if (out->p1_sa_index == 0xFFFFu) {
+                out->p1_sa_index = (uint16_t)(26u + i);
+            }
             out->states[i] = (uint8_t)P7501_BGO_SEC_VALID;
             out->valid_count += 1u;
             p1_count += 1u;
@@ -149,7 +154,67 @@ bool p7501_eemul_inspect_slice(
     return true;
 }
 
+const char *p7501_norfrom_state_name(p7501_norfrom_slot_state_t st) {
+    switch (st) {
+        case P7501_NORFROM_ERASED_FF:
+            return "ERASED_FF";
+        case P7501_NORFROM_P4ZU_STUB:
+            return "P4ZU_STUB";
+        case P7501_NORFROM_EXTRHEAD:
+            return "EXTRHEAD";
+        default:
+            return "NON_EMPTY";
+    }
+}
+
+p7501_norfrom_slot_state_t p7501_norfrom_classify_prefix(
+    const uint8_t *buf64,
+    size_t len,
+    uint32_t *out_crc32
+) {
+    if (out_crc32 != NULL) {
+        *out_crc32 = ((buf64 != NULL) && (len > 0u)) ? p7501_crc32_ieee(buf64, len) : 0u;
+    }
+    if ((buf64 == NULL) || (len < 8u)) {
+        return P7501_NORFROM_NON_EMPTY;
+    }
+    if (all_ff_bytes(buf64, len)) {
+        return P7501_NORFROM_ERASED_FF;
+    }
+    if (memcmp(buf64, "P4ZU", 4u) == 0) {
+        return P7501_NORFROM_P4ZU_STUB;
+    }
+    if (memcmp(buf64, "EXTRHEAD", 8u) == 0) {
+        return P7501_NORFROM_EXTRHEAD;
+    }
+    return P7501_NORFROM_NON_EMPTY;
+}
+
 #if !defined(PICO_HOST_TEST) || (PICO_HOST_TEST == 0)
+static bool arg_has_token_ci(const char *arg, const char *upper_tok) {
+    if ((arg == NULL) || (upper_tok == NULL) || (*upper_tok == '\0')) {
+        return false;
+    }
+    const size_t nlen = strlen(upper_tok);
+    for (size_t i = 0u; arg[i] != '\0'; ++i) {
+        size_t j = 0u;
+        while ((j < nlen) && (arg[i + j] != '\0')) {
+            char c = arg[i + j];
+            if ((c >= 'a') && (c <= 'z')) {
+                c = (char)(c - ('a' - 'A'));
+            }
+            if (c != upper_tok[j]) {
+                break;
+            }
+            j += 1u;
+        }
+        if (j == nlen) {
+            return true;
+        }
+    }
+    return false;
+}
+
 static bool check_ftl_target_ready(const char *tag) {
     if (!p7501_hw_is_target_powered() || !p7501_hw_is_target_online()) {
         p7501_cli_set_result("ERR", "EOFFLINE");
@@ -160,8 +225,8 @@ static bool check_ftl_target_ready(const char *tag) {
 }
 
 void p7501_cmd_bgo_inspect(const char *arg) {
-    const bool detail = (arg != NULL) &&
-                        ((strstr(arg, "DETAIL") != NULL) || (strstr(arg, "detail") != NULL));
+    const bool detail = arg_has_token_ci(arg, "DETAIL");
+    const bool portao4 = arg_has_token_ci(arg, "PORTAO4") || arg_has_token_ci(arg, "FULL");
     if (!check_ftl_target_ready("BGO_INSPECT")) {
         return;
     }
@@ -225,6 +290,30 @@ void p7501_cmd_bgo_inspect(const char *arg) {
            (unsigned)rep.valid_count, (unsigned)rep.corrupt_count,
            (unsigned)rep.duplicate_lbn_count, (unsigned)zero_marker_bad,
            rep.healthy_bgo_ftl ? "YES" : "NO");
+    if (portao4) {
+        const uint32_t sa11_va = P7501_SSOT_IPL_LAYER1_MIRROR_START + P7501_SSOT_IPL_LAYER1_SIZE;
+        uint8_t sa11_hdr[64];
+        if (!p7501_hw_read_block_checked(sa11_va, sa11_hdr, sizeof(sa11_hdr), true)) {
+            p7501_cli_set_result("ERR", "EBUS");
+            printf("BGO_INSPECT: ERROR (Bus read failed at SA11 @ 0x%08" PRIX32 ")\n", sa11_va);
+            return;
+        }
+        uint32_t sa11_crc = 0u;
+        const p7501_norfrom_slot_state_t st11 =
+            p7501_norfrom_classify_prefix(sa11_hdr, sizeof(sa11_hdr), &sa11_crc);
+        char frame_msg[128];
+        (void)snprintf(
+            frame_msg, sizeof(frame_msg),
+            "p1_sa=%u valid=%u erased=%u corrupt=%u sa11=%s sa11_crc32=0x%08" PRIX32,
+            (unsigned)rep.p1_sa_index, (unsigned)rep.valid_count,
+            (unsigned)rep.erased_count, (unsigned)rep.corrupt_count,
+            p7501_norfrom_state_name(st11), sa11_crc
+        );
+        (void)p7501_push_emit_str("UNBRICK_READY", frame_msg);
+        (void)p7501_push_flush_global();
+        printf("[PORTAO4] SA11_0x%08" PRIX32 "=%s crc32=0x%08" PRIX32 " p1_sa=%u\n",
+               sa11_va, p7501_norfrom_state_name(st11), sa11_crc, (unsigned)rep.p1_sa_index);
+    }
     printf("BGO_INSPECT: OK\n");
 }
 

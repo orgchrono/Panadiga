@@ -210,7 +210,7 @@ pub fn apply_bgo_repair_plan_live<T: Panamon1Transport>(
             1,
             format!("Running BOOTTRACE {bt_ms} NOJIG"),
         );
-        let _ = client.exit_bridge_raw()?;
+        let _ = client.exit_bridge_checked()?;
         let bt_out = client.transport_mut().pico_cli_exchange(
             &format!("BOOTTRACE {bt_ms} NOJIG"),
             &["BOOTTRACE: OK"],
@@ -221,6 +221,7 @@ pub fn apply_bgo_repair_plan_live<T: Panamon1Transport>(
     } else {
         (None, None)
     };
+    let _ = client.close_bridge_and_isolate()?;
 
     emit_progress(
         progress,

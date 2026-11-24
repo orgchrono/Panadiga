@@ -48,6 +48,33 @@ afterEach(() => {
   }
 });
 
+function installMockSnapshotBridge(
+  onSnapshotReq: (idx: number, resolve: (snap: BenchSnapshot) => void, reject: (err: Error) => void) => void,
+): void {
+  const invokeCount = new Map<'count', number>();
+  installTestIpcBridge({
+    listen: <T,>(eventName: string, handler: (payload: T) => void) =>
+      subscribeMockEventStream<T>(eventName, handler),
+    invoke: async <T,>(cmd: string, args?: Record<string, unknown>): Promise<T> => {
+      if (cmd === 'get_bench_snapshot') {
+        const idx = invokeCount.get('count') ?? 0;
+        invokeCount.set('count', idx + 1);
+        return await new Promise<T>((resolve, reject) => {
+          onSnapshotReq(
+            idx,
+            snap => {
+              const raw: unknown = snap;
+              resolve(raw as T);
+            },
+            reject,
+          );
+        });
+      }
+      return handleMockCommand<T>(cmd, args);
+    },
+  });
+}
+
 describe('benchStreamService (Plano B stream + ephemeral nonces)', () => {
   it('buffers envelopes during initial snapshot pull, drops stale seq <= snap.seq, and resyncs on gaps', async () => {
     const snapshotsQueue: BenchSnapshot[] = [makeSnapshot(2), makeSnapshot(7)];
@@ -59,30 +86,15 @@ describe('benchStreamService (Plano B stream + ephemeral nonces)', () => {
     const resyncSnapshotRequested = new Promise<void>(resolve => {
       gates.set('resyncReq', resolve);
     });
-    const invokeCount = new Map<'count', number>();
 
-    installTestIpcBridge({
-      listen: <T,>(eventName: string, handler: (payload: T) => void) =>
-        subscribeMockEventStream<T>(eventName, handler),
-      invoke: async <T,>(cmd: string, args?: Record<string, unknown>): Promise<T> => {
-        if (cmd === 'get_bench_snapshot') {
-          const idx = invokeCount.get('count') ?? 0;
-          invokeCount.set('count', idx + 1);
-          if (idx === 0) {
-            return await new Promise<T>(resolve => {
-              resolveQueue.set(idx, snap => {
-                const raw: unknown = snap;
-                resolve(raw as T);
-              });
-              gates.get('firstReq')?.();
-            });
-          }
-          gates.get('resyncReq')?.();
-          const raw: unknown = snapshotsQueue[idx] ?? makeSnapshot(7);
-          return raw as T;
-        }
-        return handleMockCommand<T>(cmd, args);
-      },
+    installMockSnapshotBridge((idx, resolve) => {
+      if (idx === 0) {
+        resolveQueue.set(idx, resolve);
+        gates.get('firstReq')?.();
+        return;
+      }
+      gates.get('resyncReq')?.();
+      resolve(snapshotsQueue[idx] ?? makeSnapshot(7));
     });
 
     const receivedSnapshots = new Map<number, BenchSnapshot>();
@@ -128,6 +140,56 @@ describe('benchStreamService (Plano B stream + ephemeral nonces)', () => {
     expect(Array.from(receivedEvents.values()).map(e => e.seq)).toEqual([3, 4]);
 
     unlisten();
+  });
+
+  it('logs a warning via logger.warn and clears resyncing flag if resync snapshot fails', async () => {
+    const { logger } = await import('@/utils/logger');
+    logger.setMinLevel('info');
+    const resyncLog = new Map<number, string>();
+    const warnGates = new Map<'warned' | 'recovered', () => void>();
+    const warningLogged = new Promise<void>(resolve => {
+      warnGates.set('warned', resolve);
+    });
+    const recoveredSnapshot = new Promise<void>(resolve => {
+      warnGates.set('recovered', resolve);
+    });
+    const unsubSink = logger.addSink(entry => {
+      if (entry.severity === 'warn' && entry.subsystem === 'BENCH_STREAM') {
+        resyncLog.set(resyncLog.size, entry.message);
+        warnGates.get('warned')?.();
+      }
+    });
+    const recoveredSeqs = new Map<number, number>();
+    installMockSnapshotBridge((idx, resolve, reject) => {
+      if (idx === 0) {
+        resolve(makeSnapshot(1));
+      } else if (idx === 1) {
+        reject(new Error('backend snapshot unavailable'));
+      } else {
+        resolve(makeSnapshot(6));
+      }
+    });
+
+    const unlisten = await subscribeBenchStreamWithSnapshot({
+      onSnapshot: snap => {
+        recoveredSeqs.set(recoveredSeqs.size, snap.seq);
+        if (snap.seq === 6) {
+          warnGates.get('recovered')?.();
+        }
+      },
+      onEvent: () => {},
+    });
+
+    emitLocalEvent(SSOT_IPC_EVENTS.BENCH_STREAM, makeTelemetryEnvelope(4, 3290));
+    await warningLogged;
+    expect(Array.from(resyncLog.values())).toContain('Failed resyncing bench stream snapshot');
+
+    emitLocalEvent(SSOT_IPC_EVENTS.BENCH_STREAM, makeTelemetryEnvelope(6, 3310));
+    await recoveredSnapshot;
+    expect(Array.from(recoveredSeqs.values())).toEqual([1, 6]);
+
+    unlisten();
+    unsubSink();
   });
 
   it('mints ephemeral operation nonces bound to live BGO target and rejects replay or target mismatch', async () => {

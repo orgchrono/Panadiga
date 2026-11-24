@@ -5,7 +5,7 @@ use anyhow::{Result, bail};
 use super::super::cdc::parse_vdd_reply;
 use super::super::diag_rows::{parse_pincheck_rows, parse_voltage_cell};
 use super::types::{
-    BenchStatusReport, BusDiagBenchReport, FORBIDDEN_WRITE_TOKENS, PanarspBenchReport,
+    BenchStatusReport, BusDiagBenchReport, FORBIDDEN_BENCH_TOKENS, PanarspBenchReport,
     PinCheckBenchRow, PiologicBenchReport, SAFE_BENCH_COMMANDS,
 };
 
@@ -27,23 +27,62 @@ fn normalize_single_line_command(command: &str) -> Result<&str> {
     Ok(normalized)
 }
 
+fn reject_uart_payload_writes(
+    head: &str,
+    upper_full: &str,
+    decoded_payload: Option<&str>,
+    allow_nvram_or_upper_writes: bool,
+) -> Result<()> {
+    if !matches!(head, "UARTSEND" | "UARTTXHEX" | "WAITTX" | "PANARSP") {
+        return Ok(());
+    }
+    let body = upper_full
+        .split_once(head)
+        .map(|(_, r)| r.trim())
+        .unwrap_or("");
+    let inner_body = body.strip_prefix("LOW:").map(str::trim).unwrap_or(body);
+    for candidate in [Some(inner_body), decoded_payload].into_iter().flatten() {
+        if !allow_nvram_or_upper_writes {
+            for &tok in FORBIDDEN_BENCH_TOKENS {
+                if candidate.contains(tok) {
+                    bail!("Forbidden bench token '{tok}' in {head} payload");
+                }
+            }
+            if contains_lethal_am34_address(candidate) {
+                bail!("Lethal AM34 MMIO address inside {head} payload is blocked");
+            }
+            if payload_has_write_intent(candidate) {
+                bail!("Write-intent payload inside {head} is blocked in safe bench mode");
+            }
+        } else if payload_has_write_intent(candidate)
+            && candidate
+                .split(|c: char| c.is_whitespace() || c == ':' || c == ',')
+                .any(is_ipl_sa0_sa10_token)
+        {
+            bail!("IPL SA0..SA10 write/erase payload inside {head} is permanently Read-Only (E05)");
+        }
+    }
+    Ok(())
+}
+
 /// Validates that `command` belongs strictly to the read-only P7501 bench allowlist.
 pub fn validate_safe_bench_command(command: &str) -> Result<String> {
     let normalized = normalize_single_line_command(command)?;
-    let head = normalized
-        .split_whitespace()
-        .next()
-        .unwrap_or_default()
-        .to_ascii_uppercase();
-    if !SAFE_BENCH_COMMANDS.contains(&head.as_str()) {
+    let upper_full = normalized.to_ascii_uppercase();
+    let head = upper_full.split_whitespace().next().unwrap_or_default();
+    if !SAFE_BENCH_COMMANDS.contains(&head) {
         bail!("Command '{head}' is outside SAFE_BENCH_COMMANDS");
     }
-    let upper_full = normalized.to_ascii_uppercase();
-    for tok in FORBIDDEN_WRITE_TOKENS {
+    for &tok in FORBIDDEN_BENCH_TOKENS {
         if upper_full.contains(tok) {
-            bail!("Forbidden mutating token '{tok}' in bench command");
+            bail!("Forbidden bench token '{tok}' in bench command");
         }
     }
+    if contains_lethal_am34_address(&upper_full) {
+        bail!("Lethal AM34 MMIO address 0xC000100C..0xC000100F / 0xDC0F0000 is blocked");
+    }
+    let decoded_payload = extract_decoded_payload_text(head, &upper_full)?;
+    reject_uart_payload_writes(head, &upper_full, decoded_payload.as_deref(), false)?;
     Ok(normalized.to_string())
 }
 
@@ -120,7 +159,29 @@ fn payload_has_write_intent(upper_text: &str) -> bool {
     words.iter().enumerate().any(|(idx, &w)| {
         matches!(
             w,
-            "WRITE" | "ERASE" | "PATCH" | "FAST_WRITE" | "FAST_ERASE" | "WRITEMEM" | "MEMW"
+            "WRITE"
+                | "ERASE"
+                | "PATCH"
+                | "FAST_WRITE"
+                | "FAST_ERASE"
+                | "WRITEMEM"
+                | "MEMW"
+                | "MW"
+                | "MB"
+                | "MH"
+                | "WB"
+                | "WH"
+                | "WW"
+                | "PW"
+                | "PB"
+                | "PH"
+                | "PO"
+                | "EW"
+                | "SW"
+                | "POKE"
+                | "WMEM"
+                | "JEDEC"
+                | "VFLASH"
         ) || (matches!(w, "W" | "E") && idx + 1 < words.len())
             || (w.starts_with("$M") || w.starts_with("$X"))
     })
@@ -208,47 +269,97 @@ pub fn validate_interactive_pico_command(command: &str) -> Result<String> {
         }
     }
 
-    if matches!(head, "UARTSEND" | "UARTTXHEX" | "WAITTX" | "PANARSP") {
-        let mut inner_body = upper.split_once(head).map(|(_, r)| r.trim()).unwrap_or("");
-        if let Some(stripped) = inner_body.strip_prefix("LOW:") {
-            inner_body = stripped.trim();
-        }
-        for candidate in [Some(inner_body), decoded_payload.as_deref()]
-            .into_iter()
-            .flatten()
-        {
-            if payload_has_write_intent(candidate)
-                && candidate
-                    .split(|c: char| c.is_whitespace() || c == ':' || c == ',')
-                    .any(is_ipl_sa0_sa10_token)
-            {
-                bail!(
-                    "IPL SA0..SA10 write/erase payload inside {head} is permanently Read-Only (E05)"
-                );
-            }
-        }
-    }
+    reject_uart_payload_writes(head, &upper, decoded_payload.as_deref(), true)?;
     Ok(upper)
 }
 
-/// Parses `STATUS` or `VDD` output into voltage, rail state, and sticky-LOW detection.
+fn extract_kv_token<'a>(text: &'a str, key: &str) -> Option<&'a str> {
+    let prefix = format!("{key}=");
+    text.split_whitespace().find_map(|tok| {
+        tok.trim_matches(|c: char| matches!(c, ',' | ';' | '(' | ')' | '[' | ']'))
+            .strip_prefix(&prefix)
+    })
+}
+
+fn parse_bool_bit_kv(text: &str, key: &str) -> Option<bool> {
+    match extract_kv_token(text, key)? {
+        "1" | "YES" | "TRUE" | "yes" | "true" => Some(true),
+        "0" | "NO" | "FALSE" | "no" | "false" => Some(false),
+        _ => None,
+    }
+}
+
+/// Parses `STATUS` or `VDD` output into voltage, rail state, NSW5V, fault latch, and sticky-LOW detection.
 pub fn parse_status_output_report(text: &str) -> BenchStatusReport {
     let vdd_volts = parse_vdd_reply(text);
-    let vdd_status = text
+    let nsw5v_high = parse_bool_bit_kv(text, "NSW5V");
+    let fault_latch = parse_bool_bit_kv(text, "fault_latch");
+    let dropouts = extract_kv_token(text, "dropouts")
+        .or_else(|| extract_kv_token(text, "NSW5V_DROPS"))
+        .and_then(|v| v.parse::<u32>().ok());
+    let explicit_status = text
         .split("VDD:")
         .nth(1)
         .and_then(|after| after.split_once('('))
         .and_then(|(_, rhs)| rhs.split_once(')'))
         .map(|(st, _)| st.trim().to_ascii_uppercase())
-        .filter(|st| !st.is_empty())
-        .unwrap_or_else(|| "UNKNOWN".to_string());
+        .filter(|st| !st.is_empty());
     let gp26_sticky_low_suspected = vdd_volts.is_some_and(|v| v <= 0.10);
+    let vdd_status = explicit_status.unwrap_or_else(|| {
+        if fault_latch == Some(true) || nsw5v_high == Some(false) {
+            "STANDBY_OR_FAULT".to_string()
+        } else if vdd_volts.is_some_and(|v| v >= 2.50 && !gp26_sticky_low_suspected) {
+            "OK".to_string()
+        } else if vdd_volts.is_some() {
+            "LOW".to_string()
+        } else {
+            "UNKNOWN".to_string()
+        }
+    });
     BenchStatusReport {
         vdd_volts,
         vdd_status,
         gp26_sticky_low_suspected,
+        nsw5v_high,
+        fault_latch,
+        dropouts,
         raw_text: text.to_string(),
     }
+}
+
+/// Enforces the mandatory Standby / NSW5V / Fault-Latch Gate before any active `P7501` probe.
+pub fn evaluate_live_rail_gate(status: &BenchStatusReport) -> Result<()> {
+    if status.nsw5v_high == Some(false) {
+        bail!(
+            "STANDBY_GATE_STOP: NSW5V=0 (target unpowered or in STANDBY P-OFF; raw={:?})",
+            status.raw_text.trim()
+        );
+    }
+    if status.fault_latch == Some(true) {
+        bail!(
+            "STANDBY_GATE_STOP: fault_latch=1 (dropouts={:?}; run FAULTACK after stabilizing power; raw={:?})",
+            status.dropouts,
+            status.raw_text.trim()
+        );
+    }
+    if status.gp26_sticky_low_suspected
+        || status.raw_text.to_ascii_uppercase().contains("GP26 STICKY")
+    {
+        bail!(
+            "STANDBY_GATE_STOP: GP26 sticky-LOW suspected (VDD={:?}, raw={:?})",
+            status.vdd_volts,
+            status.raw_text.trim()
+        );
+    }
+    if status.vdd_status != "OK" || status.vdd_volts.is_none_or(|v| v < 2.50) {
+        bail!(
+            "STANDBY_GATE_STOP: Unsafe target VDD in Pico STATUS (expected OK >= 2.50V, got {:?} {}): {:?}",
+            status.vdd_volts,
+            status.vdd_status,
+            status.raw_text.trim()
+        );
+    }
+    Ok(())
 }
 
 /// Converts `diag_rows::parse_pincheck_rows` into numeric voltage matrix rows.

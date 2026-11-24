@@ -29,6 +29,7 @@ add_executable(panasonic_p7501_uart
     common/p7501_cmd_arena.c
     common/p7501_hex.c
     common/p7501_crc_csum.c
+    common/p7501_probe_fsm.c
     common/p7501_push_stream.c
     common/p7501_spsc_ring.c
     common/p7501_wdt_logic.c
@@ -52,6 +53,7 @@ add_executable(panasonic_p7501_uart
     generated/p7501_ssot_tables.c
     flash/p7501_blackbox_codec.c
     flash/p7501_bus_policy.c
+    flash/p7501_bus_tx_guard.c
     flash/p7501_flash_geo.c
     flash/p7501_fast_stream_codec.c
     flash/p7501_normap_codec.c

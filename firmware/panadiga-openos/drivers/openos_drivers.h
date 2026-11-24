@@ -25,6 +25,9 @@ void openos_uart0_init(void);
 /** Transmit one character via `SC0` after polling `TXBUSY | TXBF` with bounded timeout. */
 bool openos_uart0_putc(char ch);
 
+/** Non-blocking single-byte receive from `SC0` RX FIFO (`SC0STR & 0x0010` -> `SC0RXB`). */
+bool openos_uart0_try_getc(char *out_ch);
+
 /** Transmit NUL-terminated string via `SC0` normalizing `\n` -> `\r\n`. */
 void openos_uart0_puts(const char *str);
 
@@ -130,7 +133,48 @@ bool openos_storage_provision_execute(
     openos_provision_stage_t *out_last_stage
 );
 
-/** Execute one interactive `OPENOS>` command line (`help`, `ntsc`, `palm`, `pal`, `tbc on/off`, `video br/ec/probe`, `dac on/off`, `colorbar on/off`, `provision`, `wdt`, `sata`, `vfd <txt>`). */
+/** Read-only `SDCD` host controller status (`0x89001800` + `0x89001850`). */
+typedef struct openos_sdcd_status {
+    uint32_t ctrl_reg;
+    uint32_t bus_cfg_reg;
+    bool bus_width_4bit;
+} openos_sdcd_status_t;
+
+/** Probe AM34 `SDCD` controller registers strictly read-only. */
+bool openos_sdcd_probe_status(openos_sdcd_status_t *out);
+
+/** Read-only Nor-FROM (`SA11`), BGO (`SA26..SA70`), and EEMUL (`SA134`) readiness summary. */
+typedef struct openos_unbrick_status {
+    uint16_t bgo_p1_sa;
+    uint16_t bgo_p1_count;
+    uint16_t bgo_p2_count;
+    uint16_t bgo_erased_count;
+    bool sa11_is_erased;
+    bool sa11_has_p4zu;
+    bool eemul_has_1284;
+    bool ready_for_portao4;
+} openos_unbrick_status_t;
+
+/** Inspect live NOR flash `SA11`, `SA26..SA70` headers, and `EEMUL` tag strictly read-only. */
+bool openos_nor_inspect_unbrick(openos_unbrick_status_t *out);
+
+#define OPENOS_SHELL_LINE_CAP 64U
+
+/** Bounded zero-heap state for the interactive `OPENOS>` UART0 shell (`SC0` RX). */
+typedef struct openos_shell_state {
+    char line[OPENOS_SHELL_LINE_CAP];
+    size_t len;
+    uint32_t idle_ticks;
+    uint32_t keepalives_sent;
+} openos_shell_state_t;
+
+/** Initialize bounded interactive `OPENOS>` shell state. */
+void openos_shell_init(openos_shell_state_t *st);
+
+/** Poll `SC0` RX once, accumulate/echo line, dispatch command on CR/LF, and feed `TBUS` keepalive on idle. */
+bool openos_shell_poll_once(openos_shell_state_t *st, bool *out_cmd_ran);
+
+/** Execute one interactive `OPENOS>` command line (`help`, `status`, `ntsc`, `palm`, `pal`, `tbc on/off`, `video br/ec/probe`, `dac on/off`, `colorbar on/off`, `provision`, `sd`, `bgo`, `ssot`, `wdt`, `sata`, `vfd <txt>`). */
 bool openos_shell_exec_line(const char *line);
 
 /** Stage-1.5 / Stage-2 C kernel entry invoked by `crt0_am34.S`. */

@@ -41,3 +41,33 @@ pub const ALL_IPC_EVENT_CHANNELS: &[(&str, &str)] = &[
     ("NVRAM_CLEANED", EVENT_NVRAM_CLEANED),
     ("HDD_INSPECTED", EVENT_HDD_INSPECTED),
 ];
+
+/// Canonical Pico P7501 USB CDC structured line tags shared across C11, Rust, TypeScript, and Python.
+pub const P7501_WIRE_TAG_RES: &str = "@P7501_RES";
+pub const P7501_WIRE_TAG_EVT: &str = "@P7501_EVT";
+pub const P7501_WIRE_TAG_FRAME: &str = "@P7501_FRAME";
+pub const P7501_WIRE_TAG_IDENT: &str = "@P7501_IDENT";
+pub const P7501_WIRE_TAG_SURG: &str = "@P7501_SURG";
+pub const P7501_WIRE_TAG_BOOT_CLASS: &str = "@P7501_BOOT_CLASS";
+
+/// Exhaustive `(SYMBOL, WIRE_TAG)` registry emitted into C11, TypeScript, and Python SSOT projections.
+pub const P7501_WIRE_TAGS: &[(&str, &str)] = &[
+    ("RES", P7501_WIRE_TAG_RES),
+    ("EVT", P7501_WIRE_TAG_EVT),
+    ("FRAME", P7501_WIRE_TAG_FRAME),
+    ("IDENT", P7501_WIRE_TAG_IDENT),
+    ("SURG", P7501_WIRE_TAG_SURG),
+    ("BOOT_CLASS", P7501_WIRE_TAG_BOOT_CLASS),
+];
+
+/// Exhaustive `(SYMBOL, RESULT_CODE)` registry for `@P7501_RES` emitted across C11, Rust, TypeScript, and Python.
+pub const P7501_RES_CODES: &[(&str, &str)] = &[
+    ("OK", "0"),
+    ("EINVAL", "EINVAL"),
+    ("E05", "E05"),
+    ("EOFFLINE", "EOFFLINE"),
+    ("ETIMEOUT", "ETIMEOUT"),
+    ("EDROPOUT", "EDROPOUT"),
+    ("EBUS_POLICY", "EBUS_POLICY"),
+    ("EFAULT_LATCHED", "EFaultLatched"),
+];

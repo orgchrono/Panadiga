@@ -191,7 +191,7 @@ static void handle_payload_run(p7501_payload_id_t pid, const p7501_payload_info_
         return;
     }
     if (pid == P7501_PAY_FAST_BGO_STREAM) {
-        if (!p7501_hw_is_target_powered()) {
+        if (!p7501_hw_is_rail_healthy()) {
             p7501_cli_set_result("ERR", "EOFFLINE");
             printf("PAYLOAD: ERROR (fast_bgo_stream requires active PANAMON1>)\n");
             return;
@@ -217,17 +217,21 @@ static void handle_payload_run(p7501_payload_id_t pid, const p7501_payload_info_
         return;
     }
     if (pid == P7501_PAY_JEDEC_PROBE_ID) {
-        uint32_t cfi_sz = 0u;
-        if (!p7501_hw_query_cfi(&cfi_sz)) {
+        uint16_t mfg = 0u;
+        uint16_t dev[3] = { 0u, 0u, 0u };
+        bool jedec_ok = false;
+        if (!p7501_hw_query_jedec_id(&mfg, dev, &jedec_ok)) {
             p7501_cli_set_result("ERR", "EOFFLINE");
             printf("PAYLOAD: ERROR (jedec_probe_id failed or monitor offline)\n");
             return;
         }
-        printf("[PAYLOAD RUN] jedec_probe_id CFI size=%" PRIu32 " bytes\n", cfi_sz);
+        printf("[PAYLOAD RUN] jedec_probe_id mfg=0x%04X dev=0x%04X:0x%04X:0x%04X verified=%s\n",
+               (unsigned)mfg, (unsigned)dev[0], (unsigned)dev[1], (unsigned)dev[2],
+               jedec_ok ? "YES" : "NO");
         return;
     }
     if (pid == P7501_PAY_TBC_PASSTHROUGH) {
-        if (!p7501_hw_is_target_online()) {
+        if (!p7501_hw_is_rail_healthy() || !p7501_hw_is_target_online()) {
             p7501_cli_set_result("ERR", "EOFFLINE");
             printf("PAYLOAD: ERROR (tbc_passthrough requires active PANAMON1>)\n");
             return;

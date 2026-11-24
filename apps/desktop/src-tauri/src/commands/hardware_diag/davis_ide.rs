@@ -77,6 +77,11 @@ pub fn run_davis_probe_with_transport<T: Panamon1Transport>(
             .run_probe()
             .map_err(|e| PanadigaIpcError::serial(format!("Falha no probe DAVIS IDE: {e}")))?
     };
+    let _ = client.close_bridge_and_isolate().map_err(|e| {
+        PanadigaIpcError::serial(format!(
+            "Falha fechando BRIDGE / ISOLATE após DAVIS probe: {e}"
+        ))
+    })?;
 
     Ok(PicoProbeDavisIdeResponseDto {
         port: req.port_name.trim().to_string(),

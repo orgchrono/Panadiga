@@ -13,7 +13,7 @@ export interface PicoBenchTerminalSplitProps {
   readonly onSelectMode: (mode: ColdBreakinMode) => void;
   readonly logs: SerialLogEntry[];
   readonly clearLogs: () => void;
-  readonly logContainerRef: RefObject<HTMLDivElement>;
+  readonly logContainerRef: RefObject<HTMLDivElement | null>;
   readonly commandInput: string;
   readonly setCommandInput: (val: string) => void;
   readonly sendCommand: () => void;

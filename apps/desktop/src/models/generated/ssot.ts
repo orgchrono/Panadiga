@@ -93,8 +93,8 @@ export const DIGA_MODEL_IDS = [
 ] as const;
 export type DigaModelId = (typeof DIGA_MODEL_IDS)[number];
 
-export const SSOT_CONTRACT_HASH_U32 = 0xC22028D7;
-export const SSOT_CONTRACT_HASH_STR = 'C22028D7';
+export const SSOT_CONTRACT_HASH_U32 = 0xC045CA85;
+export const SSOT_CONTRACT_HASH_STR = 'C045CA85';
 
 export const SSOT_IPC_EVENTS = {
   PICO_SERIAL_LOG: 'pico://serial-log',
@@ -116,6 +116,26 @@ export const SSOT_IPC_EVENTS = {
   HDD_INSPECTED: 'hdd://inspected',
 } as const;
 export type SsotIpcEventName = (typeof SSOT_IPC_EVENTS)[keyof typeof SSOT_IPC_EVENTS];
+
+export const SSOT_P7501_WIRE_TAGS = {
+  RES: '@P7501_RES',
+  EVT: '@P7501_EVT',
+  FRAME: '@P7501_FRAME',
+  IDENT: '@P7501_IDENT',
+  SURG: '@P7501_SURG',
+  BOOT_CLASS: '@P7501_BOOT_CLASS',
+} as const;
+
+export const SSOT_P7501_RES_CODES = {
+  OK: '0',
+  EINVAL: 'EINVAL',
+  E05: 'E05',
+  EOFFLINE: 'EOFFLINE',
+  ETIMEOUT: 'ETIMEOUT',
+  EDROPOUT: 'EDROPOUT',
+  EBUS_POLICY: 'EBUS_POLICY',
+  EFAULT_LATCHED: 'EFaultLatched',
+} as const;
 
 export const PICO_COMMAND_IDS = [
   'PINCHECK',

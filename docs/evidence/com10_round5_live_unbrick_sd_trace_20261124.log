@@ -1,0 +1,312 @@
+=== PANADIGA ROUND-5 LIVE TRACE START 2026-11-24T19:37:46Z ===
+
+=== CMD: PING === [2026-11-24T19:37:47Z]
+PONG
+@P7501_RES cmd=PING status=OK code=0 elapsed_us=94
+PANADIGA> 
+
+=== CMD: STATUS === [2026-11-24T19:37:47Z]
+VDD: 3.25V (OK)
+[STANDBY] RXD=1 NSW5V=1 TXD=1 XRESET=1 SW_PU=3.27V NSW5V_DROPS=0 fault_latch=0 recoveries=0 | State=POWERED / AWAKE (SW_UART ~3.3V)
+[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=7 wdt_recoveries=0 reboot_src=CLEAN fault_slot=255 fault_stage=IDLE last_cmd=PING last_us=94
+@P7501_RES cmd=STATUS status=OK code=0 elapsed_us=1774
+PANADIGA> 
+
+=== CMD: WDT === [2026-11-24T19:37:47Z]
+[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=8 wdt_recoveries=0 reboot_src=CLEAN fault_slot=255 fault_stage=IDLE last_cmd=STATUS last_us=1774
+WDT: OK (Hardware auto-recovery active @ 4000ms; override disabled)
+@P7501_RES cmd=WDT status=OK code=0 elapsed_us=513
+PANADIGA> 
+
+=== CMD: FAULTACK === [2026-11-24T19:37:47Z]
+FAULTACK: OK (bus isolated Hi-Z)
+@P7501_RES cmd=FAULTACK status=OK code=0 elapsed_us=1451
+PANADIGA> 
+
+=== CMD: IDENTIFY === [2026-11-24T19:37:47Z]
+@P7501_IDENT vdd_mv=3251 nsw5v=1 elec=POWERED / AWAKE (SW_UART ~3.3V) loader="NONE" jedec=0x00000000 flash=S29JL064H70TFI00 ipl_crc32=0xECBB4B55 hw="VEP79138" tv=PAL/PAL-M state=READY model=DMR-EH55 tier=PROFILE_ACTIVE caps=0x07 ssot=C045CA85
+IDENTIFY: OK (model=DMR-EH55 flash=S29JL064H70TFI00 vdd_mv=3251 xip_ro=NONE)
+@P7501_RES cmd=IDENTIFY status=OK code=0 elapsed_us=98651
+PANADIGA> 
+
+=== CMD: PINCHECK === [2026-11-24T19:37:47Z]
+
+=== P7501 6-PIN ELECTRICAL MATRIX (PINCHECK) ===
+Pin               | Hi-Z | Pull-Down | Pull-Up | Electrical State
+------------------+------+-----------+---------+----------------------------------------
+GP2 (Pin6 RXD   ) |  1   |     1     |    1    | STRONG HIGH (External Pull-Up / 3.3V Active)
+GP3 (Pin5 NSW5V ) |  1   |     1     |    1    | NSW5V HI-Z SENSE (Pulls Disabled Safe Rail)
+GP4 (Pin3 TXD   ) |  1   |     1     |    1    | STRONG HIGH (External Pull-Up / 3.3V Active)
+GP5 (Pin2 XRESET) |  1   |     1     |    1    | STRONG HIGH (External Pull-Up / 3.3V Active)
+GP26(Pin1 SWUART) | 3.25V|   2.71V   |  3.27V  | P7501 SW_UART / Target Sense
+------------------------------------------------------------------------
+While GP5 (XRESET) asserted LOW (0V): GP2=1, GP3=1, GP4=1, GP5=0
+XRESET Release Rise Time (Hi-Z)     : 20 us
+Post-Reset 250ms Transitions        : GP2=872, GP3=0, GP4=0, GP5=0
+PINCHECK: OK
+@P7501_RES cmd=PINCHECK status=OK code=0 elapsed_us=271651
+PANADIGA> 
+
+=== CMD: BUSDIAG === [2026-11-24T19:37:54Z]
+
+=== P7501 ELECTRICAL CONTENTION & DUAL-CHANNEL DIAGNOSTIC (BUSDIAG) ===
+State 0 (SW_UART=HiZ, XRESET=HiZ):
+  GP4 (MAX RXD) @ 2mA  -> pad_low=0, release_rise_ticks=0
+  GP4 (MAX RXD) @ 4mA  -> pad_low=0, release_rise_ticks=0
+  GP4 (MAX RXD) @ 8mA  -> pad_low=0, release_rise_ticks=0
+  GP4 (MAX RXD) @ 12mA -> pad_low=0, release_rise_ticks=0
+State 1 (SW_UART=LOW, XRESET=HiZ):
+  GP4 (MAX RXD) @ 2mA  -> pad_low=0, release_rise_ticks=0
+  GP4 (MAX RXD) @ 4mA  -> pad_low=0, release_rise_ticks=0
+  GP4 (MAX RXD) @ 8mA  -> pad_low=0, release_rise_ticks=0
+  GP4 (MAX RXD) @ 12mA -> pad_low=0, release_rise_ticks=0
+State 2 (SW_UART=LOW, XRESET=LOW):
+  GP4 (MAX RXD) @ 2mA  -> pad_low=0, release_rise_ticks=0
+  GP4 (MAX RXD) @ 4mA  -> pad_low=0, release_rise_ticks=1
+  GP4 (MAX RXD) @ 8mA  -> pad_low=0, release_rise_ticks=0
+  GP4 (MAX RXD) @ 12mA -> pad_low=0, release_rise_ticks=0
+Boot Transitions (NORMAL SW_UART=HiZ):
+  Phase A (0..1300ms)   : GP2=2056 GP3=0 GP4=0 GP5=1
+  Phase B (1300..3500ms): GP2=778 GP3=0 GP4=0 GP5=0
+Boot Transitions (JIG SW_UART=LOW):
+  Phase A (0..1300ms)   : GP2=3695 GP3=0 GP4=0 GP5=1
+  Phase B (1300..3500ms): GP2=478 GP3=0 GP4=0 GP5=0
+BUSDIAG: OK
+@P7501_RES cmd=BUSDIAG status=OK code=0 elapsed_us=7053420
+PANADIGA> 
+
+=== CMD: LIVE_MAP === [2026-11-24T19:37:55Z]
+@P7501_FRAME seq=1 ts_us=71599671 type=ELEC len=109 crc32=3C6A52E4 vdd_mv=3257 sw_pu_mv=3268 nsw5v=1 rxd=1 txd=1 xreset=1 dropouts=0 fault_latch=0 recoveries=0 core1_edges=9104
+@P7501_FRAME seq=2 ts_us=71600413 type=IC3001 len=40 crc32=3C878696 ic48=0 ic49=0 ic4a_ec=0 ee50=0 mask=0x00
+@P7501_FRAME seq=3 ts_us=71622124 type=MMIO len=50 crc32=CC4A77EB reg=SC0TXB addr=0xD4002008 val=0x00000D0A dom=0x01
+@P7501_FRAME seq=4 ts_us=71635926 type=MMIO len=50 crc32=9B5E2378 reg=SC0CTR addr=0xD4002000 val=0x0000C085 dom=0x01
+@P7501_FRAME seq=5 ts_us=71649664 type=MMIO len=50 crc32=33C6AA2E reg=SC0STR addr=0xD400200C val=0x000000A0 dom=0x01
+@P7501_FRAME seq=6 ts_us=71663395 type=MMIO len=52 crc32=D694AE4F reg=OCD_CTRL addr=0xC0001000 val=0x00020000 dom=0x01
+@P7501_FRAME seq=7 ts_us=71677145 type=MMIO len=52 crc32=5A09D3E3 reg=OCD_STAT addr=0xC0001008 val=0x0000007F dom=0x01
+@P7501_FRAME seq=8 ts_us=71690868 type=MMIO len=50 crc32=5C030F76 reg=SYS_ID addr=0x10000000 val=0x000000DC dom=0x01
+@P7501_FRAME seq=9 ts_us=71704600 type=MMIO len=50 crc32=6FED343D reg=SER_CB addr=0x515B2E40 val=0x01000100 dom=0x01
+@P7501_FRAME seq=10 ts_us=71718306 type=MMIO len=51 crc32=F22DD5CF reg=ISR_CTX addr=0x5316AE8C val=0x00000000 dom=0x01
+@P7501_FRAME seq=11 ts_us=71732076 type=MMIO len=71 crc32=939E4564 reg=AIOF_VMOD addr=0x88000000 val=0x00008020 dom=0x02 mode=NTSC(0x8020)
+@P7501_FRAME seq=12 ts_us=71745840 type=MMIO len=71 crc32=F5967249 reg=AIOF_FS0 addr=0x8800002C val=0x000040F1 dom=0x02 fs0=CUSTOM(0x40F1)
+@P7501_FRAME seq=13 ts_us=71759592 type=MMIO len=53 crc32=FC6A0CD1 reg=AIOF_SDET addr=0x88000030 val=0x00000000 dom=0x02
+@P7501_FRAME seq=14 ts_us=71773311 type=MMIO len=53 crc32=09F56075 reg=AIOF_VDET addr=0x88000038 val=0x00004100 dom=0x02
+@P7501_FRAME seq=15 ts_us=71787035 type=MMIO len=53 crc32=DF1EC273 reg=AIOF_VOUT addr=0x8800005C val=0x00018040 dom=0x02
+@P7501_FRAME seq=16 ts_us=71800775 type=MMIO len=76 crc32=DF512DFF reg=AIOF_YC3V addr=0x88000064 val=0x80391504 dom=0x02 line_tbc=0 clk_start=1
+@P7501_FRAME seq=17 ts_us=71814513 type=MMIO len=53 crc32=1BF78997 reg=AIOF_TST1 addr=0x8800006C val=0x00018040 dom=0x02
+@P7501_FRAME seq=18 ts_us=71828218 type=MMIO len=53 crc32=213477DE reg=AIOF_RDET addr=0x88000084 val=0xC000C100 dom=0x02
+@P7501_FRAME seq=19 ts_us=71841960 type=MMIO len=64 crc32=45120339 reg=AIOF_CONT addr=0x880000A4 val=0x40404000 dom=0x02 setup=0IRE
+@P7501_FRAME seq=20 ts_us=71855706 type=MMIO len=65 crc32=048BB8DB reg=AVDD_DAC1 addr=0x89800404 val=0x00000D00 dom=0x02 lo16=0x0D00
+@P7501_FRAME seq=21 ts_us=71869462 type=MMIO len=65 crc32=E6161478 reg=AVDD_VOUT addr=0x89800484 val=0x00000000 dom=0x02 lo16=0x0000
+@P7501_FRAME seq=22 ts_us=71883199 type=MMIO len=65 crc32=9B6E83AD reg=AVDD_NPAL addr=0x89800624 val=0x00050000 dom=0x02 lo16=0x0000
+@P7501_FRAME seq=23 ts_us=71896920 type=MMIO len=65 crc32=7841C58D reg=AVDD_VDEC addr=0x89800858 val=0x44643263 dom=0x02 lo16=0x3263
+@P7501_FRAME seq=24 ts_us=71910651 type=MMIO len=53 crc32=32F2214A reg=IIC0_BASE addr=0xD8400000 val=0x00000000 dom=0x02
+@P7501_FRAME seq=25 ts_us=71924380 type=MMIO len=53 crc32=4C8E47C4 reg=IIC1_BASE addr=0xD8401000 val=0x00000000 dom=0x02
+@P7501_FRAME seq=26 ts_us=71943700 type=MMIO len=53 crc32=AD343C4F reg=DAVIS_PRI addr=0x89000500 val=0x00000000 dom=0x04
+@P7501_FRAME seq=27 ts_us=71957508 type=MMIO len=53 crc32=AEEC2A80 reg=DAVIS_SEC addr=0x89000D00 val=0x00000000 dom=0x04
+@P7501_FRAME seq=28 ts_us=71971283 type=MMIO len=53 crc32=BD441A10 reg=SDCD_BASE addr=0x89001800 val=0x0000000D dom=0x04
+@P7501_FRAME seq=29 ts_us=71984995 type=MMIO len=53 crc32=81008E8C reg=TBUS_BASE addr=0xDC010000 val=0x00000000 dom=0x04
+@P7501_FRAME seq=30 ts_us=71998734 type=MMIO len=71 crc32=3F60B41F reg=DAVIS_PRST addr=0x89000420 val=0x00000003 dom=0x04 ch0_rst=RELEASED
+@P7501_FRAME seq=31 ts_us=72012478 type=MMIO len=67 crc32=8729EED0 reg=DAVIS_SRST addr=0x89000C20 val=0x00000003 dom=0x04 ch1_rst=HELD
+@P7501_FRAME seq=32 ts_us=72026247 type=MMIO len=84 crc32=4E0B67BB reg=SDCD_CFG4 addr=0x89001850 val=0x000040B8 dom=0x04 sd_cfg4=0x000040B8 sd_bus=4BIT
+@P7501_FRAME seq=33 ts_us=72040000 type=MMIO len=53 crc32=85D6A52A reg=TBUS_MBX0 addr=0xDC010010 val=0x840000A3 dom=0x04
+@P7501_FRAME seq=34 ts_us=72058418 type=NOR_HDR len=61 crc32=53CC2EFD sa=SA0_IPL va=0x84000000 hex=dc14000000ffffffdcfb000000ffffff
+@P7501_FRAME seq=35 ts_us=72075096 type=NOR_HDR len=61 crc32=CD6B0DE8 sa=SA15_FE va=0x84080000 hex=45585452484541444452562001000000
+@P7501_FRAME seq=36 ts_us=72091748 type=NOR_HDR len=62 crc32=3245F417 sa=SA26_BGO va=0x84130000 hex=ffffffff08f2ffff08f2ffff08f2ffff
+@P7501_FRAME seq=37 ts_us=72108373 type=NOR_HDR len=63 crc32=A16C3433 sa=SA134_NVR va=0x847F0000 hex=0ff00000002cffffffffffffffffffff
+@P7501_LIVE_MAP mode=FULL bus=PANAMON1 vdd_mv=3257 nsw5v=1 ic3001_mask=0x00 mmio_valid=31 uart_bytes=0 frames=37 flushes=3 drops=0
+@P7501_RES cmd=LIVE_MAP status=OK code=0 elapsed_us=511230
+PANADIGA> 
+
+=== CMD: TRAP LIST === [2026-11-24T19:37:55Z]
+[TRAP #1] id=LETHAL_MMIO_C000100C start=0xC000100C len=0x00000004 mask=0x07 sev=DENY reason=AM34 WDT/bus hardware hang on read/write/erase
+[TRAP #2] id=LETHAL_MMIO_DC0F0000 start=0xDC0F0000 len=0x00000010 mask=0x07 sev=DENY reason=AM34 SysCtrl/DAVIS bus-stall trap range
+[TRAP #3] id=IPL_L1_CACHED_RO start=0x80000000 len=0x00040000 mask=0x06 sev=DENY reason=SA0..SA10 critical boot IPL permanently read-only (E05)
+[TRAP #4] id=IPL_L1_UNCACHED_RO start=0x84000000 len=0x00040000 mask=0x06 sev=DENY reason=SA0..SA10 uncached boot IPL permanently read-only (E05)
+[TRAP #5] id=CS0_MIRROR_CACHED start=0x80800000 len=0x03800000 mask=0x06 sev=DENY reason=8MB flash CS0 cached alias mirror (blocks phantom wrap writes)
+[TRAP #6] id=CS0_MIRROR_UNCACHED start=0x84800000 len=0x03800000 mask=0x06 sev=DENY reason=8MB flash CS0 uncached alias mirror (blocks phantom wrap writes)
+[TRAP #7] id=BGO_4MB_ALIAS_TRAP start=0x84200000 len=0x00010000 mask=0x06 sev=WARN reason=BGO_4MB_ALIAS_TRAP_USE_84130000 (SA39 mid-FTL vs EH55 0x84130000 SA26)
+@P7501_FRAME seq=38 ts_us=72130033 type=TRAP len=128 crc32=6652CD91 id=LETHAL_MMIO_C000100C start=0xC000100C len=0x00000004 mask=0x07 sev=DENY reason=AM34 WDT/bus hardware hang on read/write/erase
+@P7501_FRAME seq=39 ts_us=72130618 type=TRAP len=121 crc32=A9811636 id=LETHAL_MMIO_DC0F0000 start=0xDC0F0000 len=0x00000010 mask=0x07 sev=DENY reason=AM34 SysCtrl/DAVIS bus-stall trap range
+@P7501_FRAME seq=40 ts_us=72131129 type=TRAP len=133 crc32=C0FEAD9B id=IPL_L1_CACHED_RO start=0x80000000 len=0x00040000 mask=0x06 sev=DENY reason=SA0..SA10 critical boot IPL permanently read-only (E05)
+@P7501_FRAME seq=41 ts_us=72131630 type=TRAP len=135 crc32=FE72A0C7 id=IPL_L1_UNCACHED_RO start=0x84000000 len=0x00040000 mask=0x06 sev=DENY reason=SA0..SA10 uncached boot IPL permanently read-only (E05)
+@P7501_FRAME seq=42 ts_us=72132150 type=TRAP len=141 crc32=B711F783 id=CS0_MIRROR_CACHED start=0x80800000 len=0x03800000 mask=0x06 sev=DENY reason=8MB flash CS0 cached alias mirror (blocks phantom wrap writes)
+@P7501_FRAME seq=43 ts_us=72132665 type=TRAP len=145 crc32=AB237C34 id=CS0_MIRROR_UNCACHED start=0x84800000 len=0x03800000 mask=0x06 sev=DENY reason=8MB flash CS0 uncached alias mirror (blocks phantom wrap writes)
+@P7501_FRAME seq=44 ts_us=72133167 type=TRAP len=150 crc32=229803AF id=BGO_4MB_ALIAS_TRAP start=0x84200000 len=0x00010000 mask=0x06 sev=WARN reason=BGO_4MB_ALIAS_TRAP_USE_84130000 (SA39 mid-FTL vs EH55 0x84130000 SA26)
+@P7501_RES cmd=TRAP status=OK code=0 elapsed_us=5920
+PANADIGA> 
+
+=== CMD: TRAP CHECK 0xC000100C 4 R === [2026-11-24T19:37:55Z]
+@P7501_FRAME seq=45 ts_us=72151542 type=TRAP len=155 crc32=6400B178 addr=0xC000100C len=0x4 op=R verdict=DENY trap=LETHAL_MMIO_C000100C bus_policy=LETHAL_MMIO_0xC000100C reason=AM34 WDT/bus hardware hang on read/write/erase
+[TRAP] CHECK addr=0xC000100C len=0x4 op=R verdict=DENY trap=LETHAL_MMIO_C000100C bus_policy=LETHAL_MMIO_0xC000100C reason=AM34 WDT/bus hardware hang on read/write/erase
+@P7501_RES cmd=TRAP status=ERR code=E05 elapsed_us=1155
+PANADIGA> 
+
+=== CMD: TRAP CHECK 0xFFFFFFFE 4 R === [2026-11-24T19:37:55Z]
+@P7501_FRAME seq=46 ts_us=72172135 type=TRAP len=91 crc32=AE329BCA addr=0xFFFFFFFE len=0x4 op=R verdict=DENY trap=NONE bus_policy=CS0_ALIAS_MIRROR reason=none
+[TRAP] CHECK addr=0xFFFFFFFE len=0x4 op=R verdict=DENY trap=NONE bus_policy=CS0_ALIAS_MIRROR reason=none
+@P7501_RES cmd=TRAP status=ERR code=E05 elapsed_us=775
+PANADIGA> 
+
+=== CMD: UARTSEND ? === [2026-11-24T19:37:57Z]
+
+=== UARTSEND PIO1 REPLY (34 bytes, 8N1 @ 115200, SW_UART=Hi-Z, perr=0) ===
+??
+PANAMON1>[B/R/W/D/F/J/E/U/Q]
+
+UARTSEND: OK
+@P7501_RES cmd=UARTSEND status=OK code=0 elapsed_us=2501710
+PANADIGA> 
+
+=== CMD: PAYLOAD RUN jedec_probe_id === [2026-11-24T19:38:00Z]
+[PAYLOAD RUN] jedec_probe_id mfg=0x0001 dev=0x227E:0x2202:0x2201 verified=YES
+@P7501_RES cmd=PAYLOAD status=OK code=0 elapsed_us=3193238
+PANADIGA> 
+
+=== CMD: CFI === [2026-11-24T19:38:03Z]
+[CFI] Spansion QRY valid: 8388608 bytes (8 MB).
+CFI: OK (8 MB)
+@P7501_RES cmd=CFI status=OK code=0 elapsed_us=2880967
+PANADIGA> 
+
+=== CMD: BGO_INSPECT === [2026-11-24T19:38:05Z]
+[BGO_INSPECT] sectors=45 erased=4 valid=41 corrupt=0 dup_lbn=0 zmarker_bad=0 healthy=YES
+BGO_INSPECT: OK
+@P7501_RES cmd=BGO_INSPECT status=OK code=0 elapsed_us=1516701
+PANADIGA> 
+
+=== CMD: BGO_INSPECT PORTAO4 === [2026-11-24T19:38:06Z]
+[BGO_INSPECT] sectors=45 erased=4 valid=41 corrupt=0 dup_lbn=0 zmarker_bad=0 healthy=YES
+@P7501_FRAME seq=47 ts_us=83877314 type=UNBRICK_READY len=73 crc32=F8588BD4 p1_sa=41 valid=41 erased=4 corrupt=0 sa11=ERASED_FF sa11_crc32=0x0F6187BA
+[PORTAO4] SA11_0x84040000=ERASED_FF crc32=0x0F6187BA p1_sa=41
+BGO_INSPECT: OK
+@P7501_RES cmd=BGO_INSPECT status=OK code=0 elapsed_us=1542391
+PANADIGA> 
+
+=== CMD: EEMUL_INSPECT === [2026-11-24T19:38:07Z]
+[EEMUL_INSPECT] base=0x847F0000 sectors=8 blank=7 active=1 hdr_dirty=1% crc32=0xCA6AB312 healthy=YES
+EEMUL_INSPECT: OK
+@P7501_RES cmd=EEMUL_INSPECT status=OK code=0 elapsed_us=205289
+PANADIGA> 
+
+=== CMD: NOR_MAP === [2026-11-24T19:38:10Z]
+@P7501_PROG phase=MAP sa=7 done=8 total=142 crc32=0x34F3E56C vdd_mv=3255
+@P7501_PROG phase=MAP sa=15 done=16 total=142 crc32=0x183F9399 vdd_mv=3256
+@P7501_PROG phase=MAP sa=23 done=24 total=142 crc32=0x183F9399 vdd_mv=3254
+@P7501_PROG phase=MAP sa=31 done=32 total=142 crc32=0x183F9399 vdd_mv=3256
+@P7501_PROG phase=MAP sa=39 done=40 total=142 crc32=0x183F9399 vdd_mv=3256
+@P7501_PROG phase=MAP sa=47 done=48 total=142 crc32=0x183F9399 vdd_mv=3256
+@P7501_PROG phase=MAP sa=55 done=56 total=142 crc32=0x183F9399 vdd_mv=3256
+@P7501_PROG phase=MAP sa=63 done=64 total=142 crc32=0x183F9399 vdd_mv=3256
+@P7501_PROG phase=MAP sa=71 done=72 total=142 crc32=0x183F9399 vdd_mv=3256
+@P7501_PROG phase=MAP sa=79 done=80 total=142 crc32=0x183F9399 vdd_mv=3256
+@P7501_PROG phase=MAP sa=87 done=88 total=142 crc32=0x183F9399 vdd_mv=3256
+@P7501_PROG phase=MAP sa=95 done=96 total=142 crc32=0x183F9399 vdd_mv=3257
+@P7501_PROG phase=MAP sa=103 done=104 total=142 crc32=0x183F9399 vdd_mv=3256
+@P7501_PROG phase=MAP sa=111 done=112 total=142 crc32=0x183F9399 vdd_mv=3256
+@P7501_PROG phase=MAP sa=119 done=120 total=142 crc32=0x183F9399 vdd_mv=3256
+@P7501_PROG phase=MAP sa=127 done=128 total=142 crc32=0x183F9399 vdd_mv=3256
+@P7501_PROG phase=MAP sa=135 done=136 total=142 crc32=0x183F9399 vdd_mv=3257
+@P7501_PROG phase=MAP sa=141 done=142 total=142 crc32=0x183F9399 vdd_mv=3257
+[NOR_MAP] sectors=142 ipl_crc32=0x183F9399 fe_extrhead=YES norfrom_used=0 bgo_p1=1 bgo_p2=40 bgo_spares=4 bgo_corrupt=0 eemul_active=7 eemul_superseded=11 eemul_empty=9 eemul_spare=36 nvram_active=1 nvram_blank=7 healthy=YES
+NOR_MAP: OK
+@P7501_RES cmd=NOR_MAP status=OK code=0 elapsed_us=3204737
+PANADIGA> 
+
+=== CMD: MMIO_SNAP CORE === [2026-11-24T19:38:10Z]
+@P7501_FRAME seq=48 ts_us=87341952 type=MMIO len=50 crc32=CC4A77EB reg=SC0TXB addr=0xD4002008 val=0x00000D0A dom=0x01
+@P7501_FRAME seq=49 ts_us=87355756 type=MMIO len=50 crc32=9B5E2378 reg=SC0CTR addr=0xD4002000 val=0x0000C085 dom=0x01
+@P7501_FRAME seq=50 ts_us=87369485 type=MMIO len=50 crc32=33C6AA2E reg=SC0STR addr=0xD400200C val=0x000000A0 dom=0x01
+@P7501_FRAME seq=51 ts_us=87383194 type=MMIO len=52 crc32=D694AE4F reg=OCD_CTRL addr=0xC0001000 val=0x00020000 dom=0x01
+@P7501_FRAME seq=52 ts_us=87396939 type=MMIO len=52 crc32=5A09D3E3 reg=OCD_STAT addr=0xC0001008 val=0x0000007F dom=0x01
+@P7501_FRAME seq=53 ts_us=87410644 type=MMIO len=50 crc32=5C030F76 reg=SYS_ID addr=0x10000000 val=0x000000DC dom=0x01
+@P7501_FRAME seq=54 ts_us=87424341 type=MMIO len=50 crc32=6FED343D reg=SER_CB addr=0x515B2E40 val=0x01000100 dom=0x01
+@P7501_FRAME seq=55 ts_us=87438059 type=MMIO len=51 crc32=F22DD5CF reg=ISR_CTX addr=0x5316AE8C val=0x00000000 dom=0x01
+[MMIO_SNAP] dom=0x01 valid=8 diff_mask=0x0000000 (0xC000100C+0xDC0F0000 excluded)
+  SC0TXB    0xD4002008 = 0x00000D0A
+  SC0CTR    0xD4002000 = 0x0000C085
+  SC0STR    0xD400200C = 0x000000A0
+  OCD_CTRL  0xC0001000 = 0x00020000
+  OCD_STAT  0xC0001008 = 0x0000007F
+  SYS_ID    0x10000000 = 0x000000DC
+  SER_CB    0x515B2E40 = 0x01000100
+  ISR_CTX   0x5316AE8C = 0x00000000
+MMIO_SNAP: OK
+@P7501_RES cmd=MMIO_SNAP status=OK code=0 elapsed_us=117220
+PANADIGA> 
+
+=== CMD: MMIO_SNAP VIDEO === [2026-11-24T19:38:10Z]
+@P7501_FRAME seq=56 ts_us=87465986 type=MMIO len=71 crc32=939E4564 reg=AIOF_VMOD addr=0x88000000 val=0x00008020 dom=0x02 mode=NTSC(0x8020)
+@P7501_FRAME seq=57 ts_us=87479792 type=MMIO len=71 crc32=F5967249 reg=AIOF_FS0 addr=0x8800002C val=0x000040F1 dom=0x02 fs0=CUSTOM(0x40F1)
+@P7501_FRAME seq=58 ts_us=87493537 type=MMIO len=53 crc32=FC6A0CD1 reg=AIOF_SDET addr=0x88000030 val=0x00000000 dom=0x02
+@P7501_FRAME seq=59 ts_us=87507270 type=MMIO len=53 crc32=09F56075 reg=AIOF_VDET addr=0x88000038 val=0x00004100 dom=0x02
+@P7501_FRAME seq=60 ts_us=87521033 type=MMIO len=53 crc32=DF1EC273 reg=AIOF_VOUT addr=0x8800005C val=0x00018040 dom=0x02
+@P7501_FRAME seq=61 ts_us=87534797 type=MMIO len=76 crc32=DF512DFF reg=AIOF_YC3V addr=0x88000064 val=0x80391504 dom=0x02 line_tbc=0 clk_start=1
+@P7501_FRAME seq=62 ts_us=87548512 type=MMIO len=53 crc32=1BF78997 reg=AIOF_TST1 addr=0x8800006C val=0x00018040 dom=0x02
+@P7501_FRAME seq=63 ts_us=87562237 type=MMIO len=53 crc32=213477DE reg=AIOF_RDET addr=0x88000084 val=0xC000C100 dom=0x02
+@P7501_FRAME seq=64 ts_us=87576000 type=MMIO len=64 crc32=45120339 reg=AIOF_CONT addr=0x880000A4 val=0x40404000 dom=0x02 setup=0IRE
+@P7501_FRAME seq=65 ts_us=87589758 type=MMIO len=65 crc32=048BB8DB reg=AVDD_DAC1 addr=0x89800404 val=0x00000D00 dom=0x02 lo16=0x0D00
+@P7501_FRAME seq=66 ts_us=87603501 type=MMIO len=65 crc32=E6161478 reg=AVDD_VOUT addr=0x89800484 val=0x00000000 dom=0x02 lo16=0x0000
+@P7501_FRAME seq=67 ts_us=87617246 type=MMIO len=65 crc32=9B6E83AD reg=AVDD_NPAL addr=0x89800624 val=0x00050000 dom=0x02 lo16=0x0000
+@P7501_FRAME seq=68 ts_us=87630990 type=MMIO len=65 crc32=7841C58D reg=AVDD_VDEC addr=0x89800858 val=0x44643263 dom=0x02 lo16=0x3263
+@P7501_FRAME seq=69 ts_us=87644729 type=MMIO len=53 crc32=32F2214A reg=IIC0_BASE addr=0xD8400000 val=0x00000000 dom=0x02
+@P7501_FRAME seq=70 ts_us=87658504 type=MMIO len=53 crc32=4C8E47C4 reg=IIC1_BASE addr=0xD8401000 val=0x00000000 dom=0x02
+[MMIO_SNAP] dom=0x02 valid=15 diff_mask=0x0000000 (0xC000100C+0xDC0F0000 excluded)
+  AIOF_VMOD 0x88000000 = 0x00008020 [mode=NTSC(0x8020)]
+  AIOF_FS0  0x8800002C = 0x000040F1 [fs0=CUSTOM(0x40F1)]
+  AIOF_SDET 0x88000030 = 0x00000000
+  AIOF_VDET 0x88000038 = 0x00004100
+  AIOF_VOUT 0x8800005C = 0x00018040
+  AIOF_YC3V 0x88000064 = 0x80391504 [line_tbc=0 clk_start=1]
+  AIOF_TST1 0x8800006C = 0x00018040
+  AIOF_RDET 0x88000084 = 0xC000C100
+  AIOF_CONT 0x880000A4 = 0x40404000 [setup=0IRE]
+  AVDD_DAC1 0x89800404 = 0x00000D00 [lo16=0x0D00]
+  AVDD_VOUT 0x89800484 = 0x00000000 [lo16=0x0000]
+  AVDD_NPAL 0x89800624 = 0x00050000 [lo16=0x0000]
+  AVDD_VDEC 0x89800858 = 0x44643263 [lo16=0x3263]
+  IIC0_BASE 0xD8400000 = 0x00000000
+  IIC1_BASE 0xD8401000 = 0x00000000
+MMIO_SNAP: OK
+@P7501_RES cmd=MMIO_SNAP status=OK code=0 elapsed_us=216149
+PANADIGA> 
+
+=== CMD: MMIO_SNAP STORAGE === [2026-11-24T19:38:10Z]
+@P7501_FRAME seq=71 ts_us=87719406 type=MMIO len=53 crc32=AD343C4F reg=DAVIS_PRI addr=0x89000500 val=0x00000000 dom=0x04
+@P7501_FRAME seq=72 ts_us=87733191 type=MMIO len=53 crc32=AEEC2A80 reg=DAVIS_SEC addr=0x89000D00 val=0x00000000 dom=0x04
+@P7501_FRAME seq=73 ts_us=87746929 type=MMIO len=53 crc32=BD441A10 reg=SDCD_BASE addr=0x89001800 val=0x0000000D dom=0x04
+@P7501_FRAME seq=74 ts_us=87760632 type=MMIO len=53 crc32=81008E8C reg=TBUS_BASE addr=0xDC010000 val=0x00000000 dom=0x04
+@P7501_FRAME seq=75 ts_us=87774384 type=MMIO len=71 crc32=3F60B41F reg=DAVIS_PRST addr=0x89000420 val=0x00000003 dom=0x04 ch0_rst=RELEASED
+@P7501_FRAME seq=76 ts_us=87788132 type=MMIO len=67 crc32=8729EED0 reg=DAVIS_SRST addr=0x89000C20 val=0x00000003 dom=0x04 ch1_rst=HELD
+@P7501_FRAME seq=77 ts_us=87801911 type=MMIO len=84 crc32=4E0B67BB reg=SDCD_CFG4 addr=0x89001850 val=0x000040B8 dom=0x04 sd_cfg4=0x000040B8 sd_bus=4BIT
+@P7501_FRAME seq=78 ts_us=87815660 type=MMIO len=53 crc32=85D6A52A reg=TBUS_MBX0 addr=0xDC010010 val=0x840000A3 dom=0x04
+[MMIO_SNAP] dom=0x04 valid=8 diff_mask=0x0000000 (0xC000100C+0xDC0F0000 excluded)
+  DAVIS_PRI 0x89000500 = 0x00000000
+  DAVIS_SEC 0x89000D00 = 0x00000000
+  SDCD_BASE 0x89001800 = 0x0000000D
+  TBUS_BASE 0xDC010000 = 0x00000000
+  DAVIS_PRST 0x89000420 = 0x00000003 [ch0_rst=RELEASED]
+  DAVIS_SRST 0x89000C20 = 0x00000003 [ch1_rst=HELD]
+  SDCD_CFG4 0x89001850 = 0x000040B8 [sd_cfg4=0x000040B8 sd_bus=4BIT]
+  TBUS_MBX0 0xDC010010 = 0x840000A3
+MMIO_SNAP: OK
+@P7501_RES cmd=MMIO_SNAP status=OK code=0 elapsed_us=117523
+PANADIGA> 
+
+=== CMD: panadiga pico davis-probe -p COM10 --drive master --json - (rc=0) === [2026-11-24T19:38:22Z]
+{"c0001008_before":127,"c0001008_after":32895,"fe_released":true,"ch0_taskfile":{"data":65535,"err":1,"seccnt":1,"lbalo":1,"lbamid":20,"lbahi":235,"devsel":160,"status":0,"altstat":0,"sentinel":3405643777},"ch1_raw":{"data":0,"err":0,"seccnt":0,"lbalo":1,"lbamid":0,"lbahi":0,"devsel":160,"status":80,"altstat":80,"sentinel":3405644448},"ch1_master":{"data":0,"err":0,"seccnt":85,"lbalo":170,"lbamid":0,"lbahi":0,"devsel":160,"status":80,"altstat":80,"sentinel":3405644449},"ch1_slave":{"data":0,"err":0,"seccnt":85,"lbalo":170,"lbamid":0,"lbahi":0,"devsel":176,"status":0,"altstat":0,"sentinel":3405644450},"ch1_2b_reset":null,"ch1_2c_reset":null,"fun_cd4d_rc":0,"ch1_struct_hex":"000001000000000000000000000000000000000000000000000004000400040004000000000000000000000000000000","identify_sentinel":3405644012,"identify_post_altstat":88,"identify_info":{"word0":1114,"is_atapi":false,"model":"SAMSUNG HM251JI","serial_number":"S1KEJ56S606290","firmware_revision":"2SS00_01","lba28_sectors":268435455,"lba48_supported":true,"lba48_sectors":488397168,"effective_sectors":488397168,"capacity_bytes":250059350016,"mirror_main_lba":488266096,"word63_mwdma":7,"mwdma2_supported":true,"mwdma_active_mode":null,"word88_udma":1279,"udma_supported_mask":255,"udma_active_mode":2},"classification":"ata_ready","step_logs":["[Step A] PANAMON1> active over BRIDGE 115200 PASSIVE","[Step 1A] C0001008_before=0x007F","[Step 1B] C0001008_after=0x807F fe_released=true","[Step 1C CH0] status=0x00000000","[Step 2D] rc=0x00000000 is_ata_m=0","[Classification] AtaReady"]}
+
+
+=== FINAL ISOLATE & STATUS === [2026-11-24T19:38:23Z]
+
+=== CMD: ISOLATE ===
+[BUS] P7501 pins placed in High-Impedance Isolation (NSW5V/XRESET Hi-Z, GP26 ADC0).
+@P7501_RES cmd=ISOLATE status=OK code=0 elapsed_us=174
+PANADIGA> 
+=== CMD: STATUS ===
+VDD: 3.25V (OK)
+[STANDBY] RXD=1 NSW5V=1 TXD=1 XRESET=1 SW_PU=3.26V NSW5V_DROPS=0 fault_latch=0 recoveries=0 | State=POWERED / AWAKE (SW_UART ~3.3V)
+[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=33 wdt_recoveries=0 reboot_src=CLEAN fault_slot=255 fault_stage=IDLE last_cmd=ISOLATE last_us=174
+@P7501_RES cmd=STATUS status=OK code=0 elapsed_us=1797
+PANADIGA> 
+
+=== ROUND5_LIVE_TRACE_COMPLETE 2026-11-24T19:38:23Z ===

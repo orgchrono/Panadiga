@@ -25,8 +25,7 @@
 
 static bool s_initialized = false;
 static volatile uint32_t s_nsw5v_dropouts = 0u;
-static volatile bool s_nsw5v_fault_latched = false;
-static volatile bool s_nsw5v_power_seen = false;
+static uint32_t s_nsw5v_acked_dropouts = 0u;
 static uint32_t s_nsw5v_recoveries = 0u;
 static uint32_t s_last_rail_poll_ms = 0u;
 static p7501_hotplug_fsm_t s_hp_fsm;
@@ -65,9 +64,7 @@ static void p7501_nsw5v_falling_irq(uint gpio, uint32_t event_mask) {
         gpio_set_dir(P7501_I2C_SCL_PIN, GPIO_IN);
         gpio_disable_pulls(P7501_I2C_SCL_PIN);
 
-        s_nsw5v_power_seen = false;
         s_nsw5v_dropouts += 1u;
-        s_nsw5v_fault_latched = true;
     }
 }
 
@@ -76,11 +73,27 @@ uint32_t p7501_hw_get_nsw5v_dropouts(void) {
 }
 
 bool p7501_hw_is_nsw5v_fault_latched(void) {
-    return s_nsw5v_fault_latched;
+    return s_nsw5v_dropouts != s_nsw5v_acked_dropouts;
+}
+
+bool p7501_hw_ack_fault(void) {
+    const uint32_t snap = s_nsw5v_dropouts;
+    if (!gpio_get(P7501_PIN_NSW5V)) {
+        return false;
+    }
+    const uint32_t vdd_mv = p7501_hw_read_vdd_mv();
+    if ((vdd_mv < P7501_SSOT_VDD_MIN_MV) || (vdd_mv >= P7501_SSOT_VDD_FLOATING_CEIL_MV)) {
+        return false;
+    }
+    if (s_nsw5v_dropouts == snap) {
+        s_nsw5v_acked_dropouts = snap;
+        return true;
+    }
+    return false;
 }
 
 void p7501_hw_clear_nsw5v_fault_latch(void) {
-    s_nsw5v_fault_latched = false;
+    (void)p7501_hw_ack_fault();
 }
 
 uint32_t p7501_hw_get_nsw5v_recoveries(void) {
@@ -105,19 +118,19 @@ void p7501_hw_poll_rail_recovery(void) {
     }
     s_last_rail_poll_ms = now_ms;
 
+    const uint32_t drops_snap = s_nsw5v_dropouts;
     p7501_hw_enforce_nsw5v_hiz();
     const uint32_t vdd_mv = p7501_hw_sample_sw_uart_mv(false, false);
     const bool nsw_h = gpio_get(P7501_PIN_NSW5V);
-    const bool fault = s_nsw5v_fault_latched;
+    const bool fault = (drops_snap != s_nsw5v_acked_dropouts);
 
     bool changed = false;
     bool clear_fault = false;
     p7501_hotplug_fsm_t *const fsm = p7501_hw_hotplug_fsm();
     p7501_hotplug_fsm_step(fsm, vdd_mv, nsw_h, fault, &changed, &clear_fault);
 
-    if (clear_fault) {
-        s_nsw5v_fault_latched = false;
-        s_nsw5v_power_seen = true;
+    if (clear_fault && (s_nsw5v_dropouts == drops_snap)) {
+        s_nsw5v_acked_dropouts = drops_snap;
         s_nsw5v_recoveries += 1u;
     }
     if (!gdb_rsp_is_active()) {
@@ -130,7 +143,7 @@ void p7501_hw_poll_rail_recovery(void) {
     }
     if (changed && fsm->push_enabled) {
         char kv[160];
-        if (p7501_hotplug_format_kv(fsm, s_nsw5v_fault_latched, s_nsw5v_dropouts, kv, sizeof(kv)) > 0u) {
+        if (p7501_hotplug_format_kv(fsm, p7501_hw_is_nsw5v_fault_latched(), s_nsw5v_dropouts, kv, sizeof(kv)) > 0u) {
             printf("@P7501_HOTPLUG %s\n", kv);
             fflush(stdout);
         }
@@ -209,11 +222,10 @@ p7501_status_t p7501_hw_init(void) {
     gpio_set_slew_rate(P7501_PIN_SW_UART_ADC, GPIO_SLEW_RATE_SLOW);
 
     s_nsw5v_dropouts = 0u;
+    s_nsw5v_acked_dropouts = 0u;
     s_nsw5v_recoveries = 0u;
     s_last_rail_poll_ms = 0u;
-    s_nsw5v_fault_latched = false;
     s_contention_latched = false;
-    s_nsw5v_power_seen = gpio_get(P7501_PIN_NSW5V);
     p7501_hotplug_fsm_init(p7501_hw_hotplug_fsm());
     s_initialized = true;
     return P7501_OK;
@@ -294,12 +306,7 @@ uint32_t p7501_hw_sample_sw_uart_mv(bool pull_down, bool pull_up) {
 }
 
 bool p7501_hw_is_nsw5v_high(void) {
-    const bool high = gpio_get(P7501_PIN_NSW5V);
-    if (high) {
-        s_nsw5v_power_seen = true;
-        s_nsw5v_fault_latched = false;
-    }
-    return high;
+    return gpio_get(P7501_PIN_NSW5V);
 }
 
 bool p7501_hw_is_sw_uart_forced_low(void) {
@@ -316,18 +323,36 @@ uint32_t p7501_hw_read_vdd_mv(void) {
     if (mv_pd < P7501_SSOT_VDD_PULLDOWN_MIN_MV) {
         return mv_pd;
     }
-    const uint32_t mv = p7501_hw_sample_sw_uart_mv(false, false);
-    if ((mv >= P7501_SSOT_VDD_MIN_MV) && (mv < P7501_SSOT_VDD_FLOATING_CEIL_MV) &&
-        gpio_get(P7501_PIN_NSW5V)) {
-        s_nsw5v_power_seen = true;
-        s_nsw5v_fault_latched = false;
-    }
-    return mv;
+    return p7501_hw_sample_sw_uart_mv(false, false);
 }
 
 bool p7501_hw_is_target_powered(void) {
     const uint32_t mv = p7501_hw_read_vdd_mv();
     return (mv >= P7501_SSOT_VDD_MIN_MV) && (mv < P7501_SSOT_VDD_FLOATING_CEIL_MV);
+}
+
+void p7501_hw_rail_snapshot(p7501_rail_snap_t *out, bool active_vdd_sample) {
+    if (out == NULL) {
+        return;
+    }
+    const bool jig = gpio_is_dir_out(P7501_PIN_SW_UART_ADC);
+    out->dropouts = s_nsw5v_dropouts;
+    out->acked_dropouts = s_nsw5v_acked_dropouts;
+    out->nsw5v_high = gpio_get(P7501_PIN_NSW5V);
+    out->jig_strapped_low = jig;
+    if (jig) {
+        out->vdd_mv = 0u;
+    } else if (active_vdd_sample) {
+        out->vdd_mv = p7501_hw_read_vdd_mv();
+    } else {
+        out->vdd_mv = p7501_hw_hotplug_fsm()->last_vdd_mv;
+    }
+}
+
+bool p7501_hw_is_rail_healthy(void) {
+    p7501_rail_snap_t snap;
+    p7501_hw_rail_snapshot(&snap, true);
+    return p7501_rail_is_healthy(&snap);
 }
 
 bool p7501_hw_is_initialized(void) {
@@ -377,7 +402,33 @@ void p7501_hw_isolate_bus_hiz(void) {
     gpio_set_dir(P7501_PIN_RXD, GPIO_IN);
     gpio_disable_pulls(P7501_PIN_RXD);
 
+    gpio_set_function(P7501_I2C_SDA_PIN, GPIO_FUNC_SIO);
+    gpio_set_dir(P7501_I2C_SDA_PIN, GPIO_IN);
+    gpio_disable_pulls(P7501_I2C_SDA_PIN);
+
+    gpio_set_function(P7501_I2C_SCL_PIN, GPIO_FUNC_SIO);
+    gpio_set_dir(P7501_I2C_SCL_PIN, GPIO_IN);
+    gpio_disable_pulls(P7501_I2C_SCL_PIN);
+
     p7501_hw_restore_sw_uart_adc0();
+}
+
+void p7501_hw_sample_bus_pins(p7501_bus_pin_sample_t *out) {
+    if (out == NULL) {
+        return;
+    }
+    p7501_hw_enforce_nsw5v_hiz();
+    out->jig_latched = gpio_is_dir_out(P7501_PIN_SW_UART_ADC);
+    out->vdd_mv = out->jig_latched ? 0u : p7501_hw_read_vdd_mv();
+    out->nsw5v_high = gpio_get(P7501_PIN_NSW5V);
+    const bool powered = out->nsw5v_high || (out->vdd_mv >= P7501_SSOT_VDD_MIN_MV);
+    /* Avoid engaging GP26 internal pull-up into an unpowered or JIG-held board (anti-backpower). */
+    out->sw_pu_mv = (out->jig_latched || !powered)
+        ? out->vdd_mv
+        : p7501_hw_sample_sw_uart_mv(false, true);
+    out->rxd_high = gpio_get(P7501_PIN_RXD);
+    out->txd_high = gpio_get(P7501_PIN_TXD);
+    out->xreset_high = gpio_get(P7501_PIN_XRESET);
 }
 
 void p7501_hw_engage_uart_bus(void) {

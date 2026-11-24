@@ -5,6 +5,7 @@
 pub mod catalog;
 pub mod events;
 pub mod fingerprint;
+pub mod openos_header;
 pub mod pico_header;
 pub mod profiles_codegen;
 pub mod registry;
@@ -20,6 +21,7 @@ pub use fingerprint::{
     FingerprintCandidate, NorFingerprintReport, detect_diga_model_from_slice_safe,
     fingerprint_nor_or_firmware,
 };
+pub use openos_header::{export_openos_ssot_header, generate_openos_ssot_header};
 pub use pico_header::{
     DEV_SERIAL_NAK_BYTE, compute_pico_ssot_hash, export_pico_rsp_ssot_header,
     export_pico_ssot_files, generate_c11_ssot_header, generate_c11_ssot_tables,
@@ -34,6 +36,7 @@ pub use ts_codegen::{export_ts_ssot_module, generate_ts_ssot_module};
 /// Regenerates all deterministic multi-language SSOT projections (`C11`, `TypeScript`, `Python`, `JSON Schema`, `Ghidra`) under `root`.
 pub fn export_all_ssot_projections(root: &std::path::Path) -> anyhow::Result<()> {
     export_pico_ssot_files(&root.join("firmware/pico-p7501"))?;
+    export_openos_ssot_header(&root.join("firmware/panadiga-openos/generated/openos_ssot.h"))?;
     export_ts_ssot_module(&root.join("apps/desktop/src/models/generated/ssot.ts"))?;
     export_ts_profiles_module(&root.join("apps/desktop/src/models/generated/profiles.ts"))?;
     export_python_profiles_types(&root.join("scripts/profiles_types.py"))?;

@@ -108,3 +108,14 @@ panadiga profiles validate
 ### Stage 7 — `Mn103Vm` Scope Honesty, Mandatory 9 Quality Gates & Pull Request
 
 Remember that **`Mn103Vm` validates MN103S ISA control flow and synthetic bounds only** — it does **NOT** prove real-silicon bus wait-states, cache coherency, Spansion CFI toggle-bit timing, atomic `CLI` IRQ masking, or `IC7501` watchdog survival. Always confirm on isolated bench hardware before promoting to `T4`, and run `python scripts/validate.py` (`9/9` gates, `0` `jscpd` clones, `100/100` `uxlint`, `mypy --strict`, Rust/Vitest/Playwright/C11 suites, and bilingual parity `test_docs_parity.py`) per **Section 8 of [`CONTRIBUTING.md`](../../CONTRIBUTING.md)**.
+
+---
+
+## Future Research & Next Gates After `EV-20261124-004`
+
+With `S11` verified on real silicon and `BGO` (`p1_sa=41`, 45/45 healthy) + `SDCD_CFG4` (`0x000040B8` `4BIT`) captured live in [`com10_round5_live_unbrick_sd_trace_20261124.log`](../evidence/com10_round5_live_unbrick_sd_trace_20261124.log), the immediate engineering gates are:
+
+1. **Opt-In Portão 4 Stage 2 (Persistent SD-Less Boot in `Nor-FROM` `SA11..SA14`):** `NOR_MAP` and `BGO_INSPECT PORTAO4` proved `SA11 0x84040000 = ERASED_FF` (`norfrom_used=0`), explaining why `MAIN` still relies on the inserted SD card for Stage-2 launch. When explicitly authorized by the operator, program `SA11..SA14` (keeping `SA0..SA10` `E05` RO) after a full SHA-256-verified NOR backup.
+2. **Live `Panadiga OpenOS` SDRAM Bring-Up (`M1 -> M3`):** Package `firmware/panadiga-openos` (`SSOT=C045CA85`, `openos_shell_poll_once()`, `sd`/`bgo`/`ssot` commands) as a raw `262,144 B` `DIGADIAG.FRM` image at `0x5040_0000` and validate live interactive shell + `IC7501` `255s` keepalive without touching NOR.
+3. **Full `Upper EEMUL` (`SA71..SA133` `"1284"`) Parser:** Decode the `7` active and `11` superseded records observed by `NOR_MAP` for fine-grained NV configuration auditing beyond `SA134`.
+4. **`PANAEUSB.FRM` & NAND/eMMC `Schema v2.1` Expansion:** Extend USB installer container unpacking and non-NOR flash SSOT schemas across `T1 -> T4` hardware profiles.

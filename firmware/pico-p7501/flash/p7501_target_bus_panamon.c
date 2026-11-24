@@ -7,6 +7,8 @@
 
 #include "flash/p7501_target_bus_panamon.h"
 #include "common/p7501_hex.h"
+#include "flash/p7501_bus_policy.h"
+#include "flash/p7501_flash.h"
 #include "hal/p7501_hw.h"
 #include "hal/p7501_watchdog.h"
 #include "uart/p7501_uart_pio_engine.h"
@@ -44,7 +46,10 @@ void p7501_bus_panamon1_drain_tail(uint32_t quiet_ms) {
         p7501_wdt_kick();
         uint8_t b = 0u;
         bool got = false;
-        while (p7501_pio_pop_rx_byte(&b)) {
+        for (uint32_t k = 0u; (k < 4096u) && p7501_pio_pop_rx_byte(&b); ++k) {
+            if ((k & 63u) == 63u) {
+                p7501_wdt_kick();
+            }
             got = true;
         }
         const uint64_t now = time_us_64();
@@ -84,8 +89,8 @@ static bool panamon1_exchange_open(
         p7501_pio_tx_bytes((const uint8_t *)&cmd[i], 1u, false);
         sleep_us(350u);
         uint8_t echo = 0u;
-        while (p7501_pio_pop_rx_byte(&echo)) {
-            if (len + 1u < out_cap) {
+        for (uint32_t k = 0u; (k < 4096u) && p7501_pio_pop_rx_byte(&echo); ++k) {
+            if ((len + 1u) < out_cap) {
                 out_buf[len++] = (char)echo;
             }
         }
@@ -103,12 +108,9 @@ static bool panamon1_exchange_open(
             }
             return false;
         }
-        uint8_t b = 0u;
-        while (p7501_pio_pop_rx_byte(&b)) {
-            if (len + 1u < out_cap) {
-                out_buf[len++] = (char)b;
-            }
-        }
+        len = p7501_pio_pop_rx_bounded(
+            (uint8_t *)out_buf, (out_cap > 0u) ? (out_cap - 1u) : 0u, len, false
+        );
         if (p7501_bus_panamon1_has_prompt((const uint8_t *)out_buf, len)) {
             has_prompt = true;
             break;
@@ -116,12 +118,9 @@ static bool panamon1_exchange_open(
     }
 
     sleep_us(300u);
-    uint8_t tail = 0u;
-    while (p7501_pio_pop_rx_byte(&tail)) {
-        if (len + 1u < out_cap) {
-            out_buf[len++] = (char)tail;
-        }
-    }
+    len = p7501_pio_pop_rx_bounded(
+        (uint8_t *)out_buf, (out_cap > 0u) ? (out_cap - 1u) : 0u, len, false
+    );
     out_buf[len] = '\0';
     if (out_len != NULL) {
         *out_len = len;
@@ -182,6 +181,16 @@ bool p7501_bus_panamon1_write_buf_open(
     if ((buf == NULL) || (len == 0u)) {
         return false;
     }
+    if (p7501_bus_check_access(
+            p7501_session_default_ctx(),
+            p7501_flash_get_active_size(),
+            addr,
+            len,
+            true,
+            false,
+            p7501_flash_is_upper_nor_unlocked()) != P7501_BUS_ALLOW) {
+        return false;
+    }
     char req[24];
     char rx_buf[128];
     for (size_t i = 0u; i < len; ++i) {
@@ -210,16 +219,26 @@ bool p7501_bus_panamon1_buf_matches_open(
     bool allow_abort,
     bool *io_panamon_mode
 ) {
-    if ((buf == NULL) || (len < 4u)) {
+    if ((buf == NULL) || (len == 0u) || p7501_bus_span_wraps_u32(addr, len)) {
         return false;
     }
-    uint8_t pfx[4] = { 0u, 0u, 0u, 0u };
-    uint8_t sfx[4] = { 0u, 0u, 0u, 0u };
-    const uint32_t tail_va = addr + (uint32_t)(len - 4u);
-    return p7501_bus_panamon1_read_chunk_open(addr, pfx, 4u, allow_abort, io_panamon_mode) &&
-           (memcmp(pfx, buf, 4u) == 0) &&
-           p7501_bus_panamon1_read_chunk_open(tail_va, sfx, 4u, allow_abort, io_panamon_mode) &&
-           (memcmp(sfx, &buf[len - 4u], 4u) == 0);
+    uint8_t read_chunk[P7501_PIO_BUS_BLOCK_CHUNK_MAX];
+    size_t off = 0u;
+    while (off < len) {
+        p7501_wdt_kick();
+        const size_t rem = len - off;
+        const size_t chunk = (rem > P7501_PIO_BUS_BLOCK_CHUNK_MAX)
+            ? P7501_PIO_BUS_BLOCK_CHUNK_MAX
+            : rem;
+        if (!p7501_bus_panamon1_read_chunk_open(
+                addr + (uint32_t)off, read_chunk, (uint32_t)chunk, allow_abort, io_panamon_mode
+            ) ||
+            (memcmp(read_chunk, &buf[off], chunk) != 0)) {
+            return false;
+        }
+        off += chunk;
+    }
+    return true;
 }
 
 static bool panamon1_extract_hex_line(
@@ -290,7 +309,7 @@ bool p7501_bus_panamon1_read_chunk_open(
 }
 
 bool p7501_bus_panamon1_write_u32(uint32_t addr, uint32_t data, bool *io_panamon_mode) {
-    if (!p7501_hw_is_nsw5v_high()) {
+    if (!p7501_hw_is_nsw5v_high() || p7501_hw_is_nsw5v_fault_latched()) {
         return false;
     }
     uint8_t bytes[4];

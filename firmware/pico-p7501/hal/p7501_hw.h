@@ -15,6 +15,7 @@
 #define P7501_HW_H
 
 #include "p7501_types.h"
+#include "common/p7501_probe_fsm.h"
 #include "diag/p7501_hotplug_codec.h"
 
 #ifdef __cplusplus
@@ -71,8 +72,17 @@ uint32_t p7501_hw_get_nsw5v_dropouts(void);
 /** Return true if NSW5V anti-backpowering Hi-Z latch fired since last clear. */
 bool p7501_hw_is_nsw5v_fault_latched(void);
 
-/** Clear NSW5V fault latch after host acknowledgment or intentional power cycle. */
+/** Clear NSW5V fault latch after host acknowledgment when rail is verified healthy; returns true on ack. */
+bool p7501_hw_ack_fault(void);
+
+/** Legacy void wrapper delegating to `p7501_hw_ack_fault()`. */
 void p7501_hw_clear_nsw5v_fault_latch(void);
+
+/** Capture one consistent snapshot of rail voltages, NSW5V, and dropout/ack counters. */
+void p7501_hw_rail_snapshot(p7501_rail_snap_t *out, bool active_vdd_sample);
+
+/** True when `!fault_latched && nsw5v_high && target_powered` (strict rail safety gate). */
+bool p7501_hw_is_rail_healthy(void);
 
 /** Return total automatic NSW5V fault-latch recoveries performed in idle loop. */
 uint32_t p7501_hw_get_nsw5v_recoveries(void);
@@ -133,6 +143,19 @@ void p7501_hw_boot_sequence(p7501_boot_mode_t mode);
 
 /** Place all 5 digital/analog P7501 pins safely into High-Z Isolation (NSW5V Hi-Z, XRESET Hi-Z, GP26 ADC0). */
 void p7501_hw_isolate_bus_hiz(void);
+
+typedef struct p7501_bus_pin_sample {
+    bool jig_latched;
+    bool nsw5v_high;
+    bool rxd_high;
+    bool txd_high;
+    bool xreset_high;
+    uint32_t vdd_mv;
+    uint32_t sw_pu_mv;
+} p7501_bus_pin_sample_t;
+
+/** Capture live Hi-Z P7501 electrical pin levels with anti-backpower pull-up guard. */
+void p7501_hw_sample_bus_pins(p7501_bus_pin_sample_t *out);
 
 /** Engage P7501 TX pin (GP4 UARTM2P_T) idle HIGH for active UART transmission, keeping NSW5V (GP3) Hi-Z. */
 void p7501_hw_engage_uart_bus(void);

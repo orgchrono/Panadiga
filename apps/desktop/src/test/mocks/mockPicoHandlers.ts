@@ -89,6 +89,12 @@ export function handleMockPicoCommand(
       if (cmdStr === 'GDB') {
         return 'GDB Remote Serial Protocol mode active.';
       }
+      if (cmdStr === 'ISOLATE' || cmdStr.startsWith('ISOLATE ')) {
+        return 'ISOLATE: OK (all P7501 pins Hi-Z)\n@P7501_RES cmd=ISOLATE status=OK';
+      }
+      if (cmdStr === 'FAULTACK') {
+        return 'FAULTACK: OK\n@P7501_RES cmd=FAULTACK status=OK';
+      }
       if (cmdStr === 'IDENTIFY' || cmdStr === 'AUTOPROBE') {
         return '@P7501_IDENT vdd_mv=3280 nsw5v=1 elec=AWAKE_READY loader="Loader ver0.61" jedec=0x0001227E flash=S29JL064H ipl_crc32=0xA5B6C7D8 hw="VEP79138" tv=PAL/NTSC state=READY model=DMR-EH55 tier=VERIFIED_BANNER caps=0x07 ssot=1234ABCD\nIDENTIFY: OK';
       }

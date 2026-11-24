@@ -349,6 +349,10 @@ const p7501_ssot_mmio_reg_t k_p7501_ssot_mmio_regs[P7501_SSOT_MMIO_REG_COUNT] = 
     { 0x89000D00UL, "DAVIS_SEC", 4u, 32u },
     { 0x89001800UL, "SDCD_BASE", 4u, 32u },
     { 0xDC010000UL, "TBUS_BASE", 4u, 32u },
+    { 0x89000420UL, "DAVIS_PRST", 4u, 16u },
+    { 0x89000C20UL, "DAVIS_SRST", 4u, 16u },
+    { 0x89001850UL, "SDCD_CFG4", 4u, 32u },
+    { 0xDC010010UL, "TBUS_MBX0", 4u, 32u },
 };
 
 const p7501_ssot_sig_t k_p7501_ssot_sigs[P7501_SSOT_SIG_COUNT] = {

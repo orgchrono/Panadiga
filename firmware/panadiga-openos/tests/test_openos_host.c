@@ -16,8 +16,16 @@
 #include <string.h>
 
 typedef struct mock_mmio_state {
-    char uart_log[1024];
+    char uart_log[2048];
     size_t uart_len;
+    char rx_queue[128];
+    size_t rx_head;
+    size_t rx_tail;
+    uint32_t sdcd_ctrl;
+    uint32_t sdcd_cfg4;
+    uint32_t sa11_w0;
+    uint32_t eemul_w0;
+    uint16_t bgo_lbn[45];
     uint32_t tbus_mbox[4];
     uint32_t tbus_ctrl;
     uint32_t tbus_tx_count;
@@ -56,6 +64,18 @@ uint32_t openos_host_mmio_read32(uint32_t addr) {
         }
         return 0UL;
     }
+    if (addr == AM34_OPENOS_SDCD_BASE) {
+        return g_mock.sdcd_ctrl;
+    }
+    if (addr == AM34_OPENOS_SDCD_BUS_CFG) {
+        return g_mock.sdcd_cfg4;
+    }
+    if (addr == OPENOS_SSOT_NORFROM_SA11_BASE) {
+        return g_mock.sa11_w0;
+    }
+    if (addr == OPENOS_SSOT_EEMUL_BASE) {
+        return g_mock.eemul_w0;
+    }
     return 0u;
 }
 
@@ -64,10 +84,28 @@ uint16_t openos_host_mmio_read16(uint32_t addr) {
         g_mock.forbidden_touched = true;
     }
     if (addr == AM34_OPENOS_SC0_STR) {
-        return 0x0000U; /* TXFIFO ready */
+        return (g_mock.rx_head < g_mock.rx_tail) ? AM34_OPENOS_SC0_RX_READY_MASK : 0x0000U;
     }
     if (addr == AM34_OPENOS_DAVIS_CH1_BASE) {
         return 0x0050U; /* DRDY | DSC */
+    }
+    if ((addr >= (OPENOS_SSOT_BGO_BASE + 4UL)) &&
+        (((addr - OPENOS_SSOT_BGO_BASE) % OPENOS_SSOT_BGO_SECTOR_BYTES) == 4UL)) {
+        const uint32_t idx = (addr - OPENOS_SSOT_BGO_BASE) / OPENOS_SSOT_BGO_SECTOR_BYTES;
+        if (idx < 45UL) {
+            return g_mock.bgo_lbn[idx];
+        }
+    }
+    return 0u;
+}
+
+uint8_t openos_host_mmio_read8(uint32_t addr) {
+    if (am34_mmio_is_forbidden(addr)) {
+        g_mock.forbidden_touched = true;
+        return 0u;
+    }
+    if ((addr == AM34_OPENOS_SC0_RXB) && (g_mock.rx_head < g_mock.rx_tail)) {
+        return (uint8_t)g_mock.rx_queue[g_mock.rx_head++];
     }
     return 0u;
 }
@@ -346,9 +384,61 @@ int main(void) {
     assert(openos_shell_exec_line("provision"));
     assert(strstr(g_mock.uart_log, "[OPENOS] PROVISION PLAN OK") != NULL);
 
+    /* 9. Verify SC0 read8 barrier, SDCD 4-bit/1-bit probe, read-only BGO/Portao4/EEMUL & interactive RX shell */
+    uint8_t b8 = 0u;
+    assert(!am34_mmio_read8(0xC000100CUL, &b8));
+    assert(!g_mock.forbidden_touched);
+
+    g_mock.sdcd_ctrl = 0x00000001UL;
+    g_mock.sdcd_cfg4 = 0x000000B8UL;
+    g_mock.sa11_w0 = 0xFFFFFFFFUL;
+    g_mock.eemul_w0 = OPENOS_SSOT_EEMUL_TAG_1284_LE;
+    uint16_t p2_id = 0xF201u;
+    for (size_t i = 0u; i < 45u; ++i) {
+        if (i >= 41u) {
+            g_mock.bgo_lbn[i] = 0xFFFFu;
+        } else if (i == 3u) {
+            g_mock.bgo_lbn[i] = 0xF101u;
+        } else {
+            g_mock.bgo_lbn[i] = p2_id++;
+        }
+    }
+    assert(openos_shell_exec_line("sd"));
+    assert(strstr(g_mock.uart_log, "[OPENOS] SDCD bus=4BIT") != NULL);
+    g_mock.sdcd_cfg4 = 0x000080B8UL;
+    openos_sdcd_status_t sd_chk;
+    assert(openos_sdcd_probe_status(&sd_chk) && !sd_chk.bus_width_4bit);
+    g_mock.sdcd_cfg4 = 0x000000B8UL;
+
+    assert(openos_shell_exec_line("bgo"));
+    assert(strstr(g_mock.uart_log, "[OPENOS] BGO p1_sa=29 p2=40 erased=4 sa11=FF eemul1284=1 portao4=READY") != NULL);
+    assert(openos_shell_exec_line("ssot"));
+    assert(strstr(g_mock.uart_log, "[OPENOS] SSOT=" OPENOS_SSOT_CONTRACT_HASH_STR " IPL_RO=E05") != NULL);
+
+    static const char k_rx_cmd[] = "sx\bd\r";
+    memcpy(g_mock.rx_queue, k_rx_cmd, sizeof(k_rx_cmd) - 1u);
+    g_mock.rx_head = 0u;
+    g_mock.rx_tail = sizeof(k_rx_cmd) - 1u;
+    openos_shell_state_t sh;
+    openos_shell_init(&sh);
+    bool ran_cmd = false;
+    for (size_t i = 0u; i < 16u; ++i) {
+        bool step_ran = false;
+        (void)openos_shell_poll_once(&sh, &step_ran);
+        if (step_ran) {
+            ran_cmd = true;
+            break;
+        }
+    }
+    assert(ran_cmd);
+    for (uint32_t p = 0u; p < 65536UL; ++p) {
+        (void)openos_shell_poll_once(&sh, NULL);
+    }
+    assert(sh.keepalives_sent == 1UL);
+
     assert(!openos_shell_exec_line("bogus"));
     assert(!openos_shell_exec_line(NULL));
 
-    printf("[PASS] test_openos_host: MMIO barriers, 13-op BR TBUS guard, AVDD colorbar/IIC1 probe, storage provisioner, declarative shell & 1000ms DAVIS CH1 verified.\n");
+    printf("[PASS] test_openos_host: MMIO barriers, 13-op BR TBUS guard, AVDD colorbar/IIC1 probe, storage provisioner, SDCD/BGO RO, interactive RX shell & 1000ms DAVIS CH1 verified.\n");
     return 0;
 }

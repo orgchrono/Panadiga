@@ -181,6 +181,78 @@ static bool cmd_provision(const char *arg) {
     return true;
 }
 
+static void openos_put_hex_u32(uint32_t val) {
+    static const char k_hex[] = "0123456789ABCDEF";
+    openos_uart0_puts("0x");
+    for (int shift = 28; shift >= 0; shift -= 4) {
+        (void)openos_uart0_putc(k_hex[(val >> (uint32_t)shift) & 0x0FUL]);
+    }
+}
+
+static void openos_put_u16_dec(uint16_t val) {
+    char buf[8];
+    size_t idx = 0u;
+    if (val == 0u) {
+        (void)openos_uart0_putc('0');
+        return;
+    }
+    uint16_t tmp = val;
+    while ((tmp > 0u) && (idx < sizeof(buf))) {
+        buf[idx++] = (char)('0' + (tmp % 10u));
+        tmp = (uint16_t)(tmp / 10u);
+    }
+    while (idx > 0u) {
+        (void)openos_uart0_putc(buf[--idx]);
+    }
+}
+
+static bool cmd_sd(const char *arg) {
+    (void)arg;
+    openos_sdcd_status_t sd;
+    if (!openos_sdcd_probe_status(&sd)) {
+        return false;
+    }
+    openos_uart0_puts("[OPENOS] SDCD bus=");
+    openos_uart0_puts(sd.bus_width_4bit ? "4BIT" : "1BIT");
+    openos_uart0_puts(" ctrl=");
+    openos_put_hex_u32(sd.ctrl_reg);
+    openos_uart0_puts(" cfg=");
+    openos_put_hex_u32(sd.bus_cfg_reg);
+    openos_uart0_putc('\n');
+    return true;
+}
+
+static bool cmd_bgo(const char *arg) {
+    (void)arg;
+    openos_unbrick_status_t st;
+    if (!openos_nor_inspect_unbrick(&st)) {
+        return false;
+    }
+    openos_uart0_puts("[OPENOS] BGO p1_sa=");
+    if (st.bgo_p1_sa == 0xFFFFu) {
+        openos_uart0_puts("NONE");
+    } else {
+        openos_put_u16_dec(st.bgo_p1_sa);
+    }
+    openos_uart0_puts(" p2=");
+    openos_put_u16_dec(st.bgo_p2_count);
+    openos_uart0_puts(" erased=");
+    openos_put_u16_dec(st.bgo_erased_count);
+    openos_uart0_puts(" sa11=");
+    openos_uart0_puts(st.sa11_is_erased ? "FF" : (st.sa11_has_p4zu ? "P4ZU" : "USED"));
+    openos_uart0_puts(" eemul1284=");
+    openos_uart0_puts(st.eemul_has_1284 ? "1" : "0");
+    openos_uart0_puts(" portao4=");
+    openos_uart0_puts(st.ready_for_portao4 ? "READY\n" : "NO\n");
+    return true;
+}
+
+static bool cmd_ssot(const char *arg) {
+    (void)arg;
+    openos_uart0_puts("[OPENOS] SSOT=" OPENOS_SSOT_CONTRACT_HASH_STR " IPL_RO=E05\n");
+    return true;
+}
+
 static bool cmd_wdt(const char *arg) {
     (void)arg;
     const bool ok = openos_tbus_send_keepalive_255s();
@@ -225,6 +297,9 @@ static const openos_shell_cmd_t k_shell_cmds[] = {
     { "colorbar on",  false, cmd_colorbar_on },
     { "colorbar off", false, cmd_colorbar_off },
     { "provision",    false, cmd_provision },
+    { "sd",           false, cmd_sd },
+    { "bgo",          false, cmd_bgo },
+    { "ssot",         false, cmd_ssot },
     { "wdt",          false, cmd_wdt },
     { "sata",         false, cmd_sata },
     { "vfd ",         true,  cmd_vfd },
@@ -261,6 +336,63 @@ bool openos_shell_exec_line(const char *line) {
         }
     }
     openos_uart0_puts("[OPENOS] ERR unknown cmd\n");
+    return false;
+}
+
+#define OPENOS_SHELL_IDLE_KEEPALIVE_POLLS 65536UL
+
+void openos_shell_init(openos_shell_state_t *st) {
+    if (st == NULL) {
+        return;
+    }
+    memset(st, 0, sizeof(*st));
+}
+
+bool openos_shell_poll_once(openos_shell_state_t *st, bool *out_cmd_ran) {
+    if (out_cmd_ran != NULL) {
+        *out_cmd_ran = false;
+    }
+    if (st == NULL) {
+        return false;
+    }
+    char ch = '\0';
+    if (openos_uart0_try_getc(&ch)) {
+        st->idle_ticks = 0UL;
+        if ((ch == '\r') || (ch == '\n')) {
+            openos_uart0_putc('\n');
+            if (st->len > 0u) {
+                st->line[st->len] = '\0';
+                (void)openos_shell_exec_line(st->line);
+                st->len = 0u;
+                st->line[0] = '\0';
+                if (out_cmd_ran != NULL) {
+                    *out_cmd_ran = true;
+                }
+            }
+            openos_uart0_puts("OPENOS> ");
+        } else if ((ch == '\b') || ((uint8_t)ch == 0x7Fu)) {
+            if (st->len > 0u) {
+                st->len -= 1u;
+                st->line[st->len] = '\0';
+                openos_uart0_puts("\b \b");
+            }
+        } else if (((uint8_t)ch >= 0x20u) && ((uint8_t)ch <= 0x7Eu) &&
+                   ((st->len + 1u) < OPENOS_SHELL_LINE_CAP)) {
+            st->line[st->len] = ch;
+            st->len += 1u;
+            st->line[st->len] = '\0';
+            (void)openos_uart0_putc(ch);
+        }
+        return true;
+    }
+
+    st->idle_ticks += 1UL;
+    if (st->idle_ticks >= OPENOS_SHELL_IDLE_KEEPALIVE_POLLS) {
+        st->idle_ticks = 0UL;
+        if (openos_tbus_send_keepalive_255s()) {
+            st->keepalives_sent += 1UL;
+        }
+    }
     return false;
 }
 

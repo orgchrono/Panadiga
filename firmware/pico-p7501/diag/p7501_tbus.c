@@ -7,7 +7,9 @@
 
 #include "diag/p7501_tbus_codec.h"
 #include "cli/p7501_cli.h"
+#include "cli/p7501_cli_sys.h"
 #include "common/p7501_hex.h"
+#include "common/p7501_push_stream.h"
 #include "hal/p7501_hw.h"
 #include "pico/time.h"
 #include "uart/p7501_uart_capture.h"
@@ -55,6 +57,10 @@ void p7501_cmd_tbussniff(const char *arg) {
            got, audit.frames_valid);
 }
 
+void p7501_tbus_keepalive_stop(void) {
+    s_m0_keepalive_enabled = false;
+}
+
 void p7501_cmd_m0keepalive(const char *arg) {
     p7501_m0_keepalive_action_t action = P7501_M0_KA_ON;
     uint32_t req_ms = P7501_M0_KEEPALIVE_DEFAULT_MS;
@@ -76,7 +82,8 @@ void p7501_cmd_m0keepalive(const char *arg) {
                (unsigned)s_m0_seq);
         return;
     }
-    if (!p7501_hw_is_target_powered() || p7501_hw_is_nsw5v_fault_latched()) {
+    if (!p7501_probe_dispatch_event(P7501_EV_ENGAGE, true)) {
+        s_m0_keepalive_enabled = false;
         p7501_cli_set_result("ERR", "EOFFLINE");
         printf("M0KEEPALIVE: ERROR code=EOFFLINE reason=TARGET_UNPOWERED\n");
         return;
@@ -93,6 +100,11 @@ void p7501_tbus_keepalive_poll(void) {
     if (!s_m0_keepalive_enabled) {
         return;
     }
+    const p7501_ps_t ps = p7501_probe_get_state();
+    if ((ps != P7501_PS_ENGAGED) && (ps != P7501_PS_ACTIVE_OP)) {
+        s_m0_keepalive_enabled = false;
+        return;
+    }
     const uint64_t now_us = time_us_64();
     if (now_us < s_m0_next_due_us) {
         return;
@@ -100,8 +112,7 @@ void p7501_tbus_keepalive_poll(void) {
     /* Passive NSW5V sense avoids pulling GP26 (SW_UART) LOW during active sessions. */
     if (!p7501_hw_is_nsw5v_high() || p7501_hw_is_nsw5v_fault_latched()) {
         s_m0_keepalive_enabled = false;
-        printf("\n@EVT kind=M0KEEPALIVE state=AUTO_OFF reason=TARGET_UNPOWERED\nPANADIGA> ");
-        fflush(stdout);
+        (void)p7501_push_emit_str("M0KEEPALIVE", "state=AUTO_OFF reason=TARGET_UNPOWERED");
         return;
     }
     (void)send_m0_keepalive_frame();

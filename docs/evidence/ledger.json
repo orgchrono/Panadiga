@@ -1045,8 +1045,8 @@
     {
       "id": "EV-20261124-003",
       "level": "N4_HARDWARE",
-      "claim_pt": "Validacao Rodada 4 AO VIVO (COM10, DMR-EH55LB-S, UF2 Pico unificado SHA-256 735B88F8C76041F77C2F2852C9E74598B7A5DE1AC734BCEFABAE59AD2804923C, somente leitura NOR/HDD): bare-metal SURG ASM (5 instrucoes), CRYPTO (SELFTEST/KEYS/ENC/DEC/ADLER32), DECOMP (SELFTEST/LZSS/ZLIB), SURG HDD_PLAN (mirror=0x1D1A5970), TRAP (0xC000100C e 0x84000000 DENY/E05), PAYLOAD VERIFY ALL (5/5 ok=1), payloads PANAMON1> (video_mmio_dump valid_regs=15, jedec_probe_id 8388608 B com 0 $g#67, CFI: OK (8 MB), fast_bgo_stream exited=1), e E2E panadiga pico davis-probe -p COM10 --drive master -j - (SAMSUNG HM251JI 488397168 LBA48, classification=ata_ready, IDENTIFY 0xEC 512 B) com saida limpa de BRIDGE confirmada por ISOLATE + STATUS diretos em PANADIGA> (VDD=3.25V, NSW5V=1, wdt_recoveries=0).",
-      "claim_en": "Live Round 4 bench validation (COM10, DMR-EH55LB-S, unified Pico UF2 SHA-256 735B88F8C76041F77C2F2852C9E74598B7A5DE1AC734BCEFABAE59AD2804923C, read-only NOR/HDD): bare-metal SURG ASM (5 instructions), CRYPTO (SELFTEST/KEYS/ENC/DEC/ADLER32), DECOMP (SELFTEST/LZSS/ZLIB), SURG HDD_PLAN (mirror=0x1D1A5970), TRAP (0xC000100C and 0x84000000 DENY/E05), PAYLOAD VERIFY ALL (5/5 ok=1), live PANAMON1> payloads (video_mmio_dump valid_regs=15, jedec_probe_id 8388608 B with zero $g#67, CFI: OK (8 MB), fast_bgo_stream exited=1), plus E2E panadiga pico davis-probe -p COM10 --drive master -j - (SAMSUNG HM251JI 488397168 LBA48, classification=ata_ready, 512 B IDENTIFY 0xEC) with clean BRIDGE exit verified via direct ISOLATE + STATUS at PANADIGA> (VDD=3.25V, NSW5V=1, wdt_recoveries=0).",
+      "claim_pt": "Validacao Rodada 4 AO VIVO (COM10, DMR-EH55LB-S, UF2 Pico unificado SHA-256 735B88F8C76041F77C2F2852C9E74598B7A5DE1AC734BCEFABAE59AD2804923C, somente leitura NOR/HDD): bare-metal SURG ASM (5 instrucoes), CRYPTO (SELFTEST/KEYS/ENC/DEC/ADLER32), DECOMP (SELFTEST/LZSS/ZLIB), SURG HDD_PLAN (mirror=0x1D1A5970), TRAP (0xC000100C e 0x84000000 DENY/E05), PAYLOAD VERIFY ALL (5/5 ok=1), payloads PANAMON1> (video_mmio_dump valid_regs=15, jedec_probe_id 8388608 B com 0 $g#67 — nota forense S11: PAYLOAD RUN jedec_probe_id nessa compilacao consultou CFI antes do patch p7501_hw_query_jedec_id, CFI: OK (8 MB), fast_bgo_stream exited=1), e E2E panadiga pico davis-probe -p COM10 --drive master -j - (SAMSUNG HM251JI 488397168 LBA48, classification=ata_ready, IDENTIFY 0xEC 512 B) com saida limpa de BRIDGE confirmada por ISOLATE + STATUS diretos em PANADIGA> (VDD=3.25V, NSW5V=1, wdt_recoveries=0).",
+      "claim_en": "Live Round 4 bench validation (COM10, DMR-EH55LB-S, unified Pico UF2 SHA-256 735B88F8C76041F77C2F2852C9E74598B7A5DE1AC734BCEFABAE59AD2804923C, read-only NOR/HDD): bare-metal SURG ASM (5 instructions), CRYPTO (SELFTEST/KEYS/ENC/DEC/ADLER32), DECOMP (SELFTEST/LZSS/ZLIB), SURG HDD_PLAN (mirror=0x1D1A5970), TRAP (0xC000100C and 0x84000000 DENY/E05), PAYLOAD VERIFY ALL (5/5 ok=1), live PANAMON1> payloads (video_mmio_dump valid_regs=15, jedec_probe_id 8388608 B with zero $g#67 — forensic note S11: PAYLOAD RUN jedec_probe_id on this build queried CFI prior to the p7501_hw_query_jedec_id fix, CFI: OK (8 MB), fast_bgo_stream exited=1), plus E2E panadiga pico davis-probe -p COM10 --drive master -j - (SAMSUNG HM251JI 488397168 LBA48, classification=ata_ready, 512 B IDENTIFY 0xEC) with clean BRIDGE exit verified via direct ISOLATE + STATUS at PANADIGA> (VDD=3.25V, NSW5V=1, wdt_recoveries=0).",
       "sites": [
         "PANADIGA> SURG ASM/CRYPTO/DECOMP/HDD_PLAN/TRAP/PAYLOAD",
         "PANAMON1> video_mmio_dump (valid_regs=15), jedec_probe_id (CFI 8388608 B), fast_bgo_stream (exited=1)",
@@ -1077,6 +1077,36 @@
       "docs": [
         "docs/pt-BR/FIRMWARE_PICO_P7501_GUIA.md",
         "docs/en-US/PICO_P7501_FIRMWARE_GUIDE.md"
+      ]
+    },
+    {
+      "id": "EV-20261124-004",
+      "level": "N4_HARDWARE",
+      "claim_pt": "Rodada 5 AO VIVO (COM10, DMR-EH55LB-S com SD inserido, UF2 unificado SHA-256 DA847750278F7857CD7904506A6D80DDBD7F09EE0E0F1A910936F8C6DBF85476 / fatia RP2040 876 blocos = 448.512 B SHA-256 88C3B2F176346F6DF1D486E2944109BED19B49EA26EC2BA2165218A6C79559BD, SSOT_CONTRACT_HASH=C045CA85, 100% somente leitura NOR/HDD): IDENTIFY confirmou ssot=C045CA85 e ipl_crc32=0xECBB4B55; TRAP CHECK bloqueou 0xC000100C e 0xFFFFFFFE com E05; LIVE_MAP e MMIO_SNAP coletaram 31/31 registradores com SDCD_CFG4 0x89001850=0x000040B8 (sd_bus=4BIT), DAVIS_PRST 0x89000420=0x00000003 (ch0_rst=RELEASED), DAVIS_SRST 0x89000C20=0x00000003 (ch1_rst=HELD) e TBUS_MBX0 0xDC010010=0x840000A3; PAYLOAD RUN jedec_probe_id fechou S11 AO VIVO com mfg=0x0001 dev=0x227E:0x2202:0x2201 verified=YES; BGO_INSPECT PORTAO4 + NOR_MAP confirmaram 45 setores BGO saudaveis (p1_sa=41, valid=41, erased=4, corrupt=0), EEMUL NVRAM saudavel (active=1, blank=7, hdr_dirty=1%) e SA11 0x84040000=ERASED_FF (norfrom_used=0, pronto para Portao 4 Etapa 2 opt-in); davis-probe retornou SAMSUNG HM251JI (488397168 LBA48) e ISOLATE + STATUS finais confirmaram NSW5V=1, VDD=3.25V, fault_latch=0.",
+      "claim_en": "Live Round 5 bench trace (COM10, DMR-EH55LB-S with SD inserted, unified UF2 SHA-256 DA847750278F7857CD7904506A6D80DDBD7F09EE0E0F1A910936F8C6DBF85476 / RP2040 slice 876 blocks = 448,512 B SHA-256 88C3B2F176346F6DF1D486E2944109BED19B49EA26EC2BA2165218A6C79559BD, SSOT_CONTRACT_HASH=C045CA85, 100% read-only NOR/HDD): IDENTIFY confirmed ssot=C045CA85 and ipl_crc32=0xECBB4B55; TRAP CHECK denied 0xC000100C and 0xFFFFFFFE with E05; LIVE_MAP and MMIO_SNAP captured 31/31 registers including SDCD_CFG4 0x89001850=0x000040B8 (sd_bus=4BIT), DAVIS_PRST 0x89000420=0x00000003 (ch0_rst=RELEASED), DAVIS_SRST 0x89000C20=0x00000003 (ch1_rst=HELD), and TBUS_MBX0 0xDC010010=0x840000A3; PAYLOAD RUN jedec_probe_id closed S11 LIVE with mfg=0x0001 dev=0x227E:0x2202:0x2201 verified=YES; BGO_INSPECT PORTAO4 + NOR_MAP verified healthy 45 BGO sectors (p1_sa=41, valid=41, erased=4, corrupt=0), healthy EEMUL NVRAM (active=1, blank=7, hdr_dirty=1%), and SA11 0x84040000=ERASED_FF (norfrom_used=0, ready for opt-in Portao 4 Stage 2); davis-probe identified SAMSUNG HM251JI (488397168 LBA48), and final ISOLATE + STATUS confirmed NSW5V=1, VDD=3.25V, fault_latch=0.",
+      "sites": [
+        "@P7501_IDENT ssot=C045CA85 / ipl_crc32=0xECBB4B55",
+        "PAYLOAD RUN jedec_probe_id mfg=0x0001 dev=0x227E:0x2202:0x2201 (S11 live hardware closure)",
+        "BGO_INSPECT PORTAO4 p1_sa=41 SA11_0x84040000=ERASED_FF (norfrom_used=0)",
+        "MMIO_SNAP STORAGE 31 regs: SDCD_CFG4 0x89001850=0x000040B8 (4BIT), DAVIS_PRST/SRST=0x3, TBUS_MBX0=0x840000A3"
+      ],
+      "evidence_files": [
+        "docs/evidence/com10_round5_live_unbrick_sd_trace_20261124.log"
+      ],
+      "sha256_assertions": [
+        {
+          "path": "docs/evidence/com10_round5_live_unbrick_sd_trace_20261124.log",
+          "sha256": "29F20455FC65C72972FA93D0E5A6C20BA72FCBBA8C81A7158227F6AD00E000C6",
+          "required": true
+        }
+      ],
+      "docs": [
+        "docs/pt-BR/FIRMWARE_PICO_P7501_GUIA.md",
+        "docs/en-US/PICO_P7501_FIRMWARE_GUIDE.md",
+        "docs/pt-BR/DIGADIAG_PANA_SD_E_TBC_AUTONOMO.md",
+        "docs/en-US/DIGADIAG_PANA_SD_AND_STANDALONE_TBC.md",
+        "docs/pt-BR/WHATS_NEXT_ONBOARDING_NOVOS_APARELHOS.md",
+        "docs/en-US/WHATS_NEXT_NEW_DEVICE_ONBOARDING.md"
       ]
     }
   ]

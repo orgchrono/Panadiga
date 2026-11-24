@@ -149,3 +149,15 @@ panadiga unbrick nor-stub --wrap-digadiag --out unbrick_out/DIGADIAG_NOR_DUMPER.
   1. **Pre-Power Check:** Verify Pin 4 `GND` (`0.0 Ω`), keep `GP3` (`NSW5V`) strict `Hi-Z Input` with no pulls, `GP5` (`XRESET`) strictly Open-Drain, and power the Pico via USB only (`P7501` Pin 1 `< 10 mA`).
   2. **Door #1 Headless Boot (No HDD / No JIG):** Insert a `<= 2 GiB` FAT16 SDSC card holding [`PANA__SD.FRM`](../../firmware_and_images/sd_unbrick_kit/PANA__SD.FRM) (`cdcc2cdf...`), leave HDD/ODD disconnected, and open `COM10` at `115200 8N1`. Upon `HDD_MAX_LBA get failed[0xE8000000]`, `Loader ver0.61` enters `PANAMON1>` directly.
   3. **`M0` Injection (`0x5180_0000`):** Upload `emit_m0_tbus_wdt_keepalive_stub()` using `W`, execute `J 51800000` (`< 200 s` cadence), and confirm with the multimeter that `DR_P_ON_H` / `DI_P_ON_H` (`NSW5V ~3.29V`) and `VEP79138` rails stay powered for `> 30 min` without `U99` shutdown. See also [`STATUS.md`](../STATUS.md).
+
+---
+
+## 7. Custom `Panadiga OpenOS` (`M1..M3`, `NOT LEGALLY CLEAN-ROOM`) & Live SD Triage (`EV-20261124-004`)
+
+The open-source firmware [`firmware/panadiga-openos/`](../../firmware/panadiga-openos/README.md) (hardware-interoperability prototype, **NOT legally clean-room**, zero proprietary binary blobs) now builds directly against the exported SSOT header [`generated/openos_ssot.h`](../../firmware/panadiga-openos/generated/openos_ssot.h) (`SSOT_CONTRACT_HASH = C045CA85`) inside [`hal/am34_mmio.h`](../../firmware/panadiga-openos/hal/am34_mmio.h):
+
+1. **Non-Blocking `OPENOS>` Interactive Shell & `IC7501` Keepalive:** [`uart_sc0.c`](../../firmware/panadiga-openos/drivers/uart_sc0.c) adds `openos_uart0_try_getc()` reading `SC0STR` (`0xD400_200C & 0x0010`) $\rightarrow$ `SC0RXB` (`0xD400_2009`) via `am34_mmio_read8()`, while [`openos_main.c`](../../firmware/panadiga-openos/kernel/openos_main.c) runs `openos_shell_poll_once()` with echo, backspace, 63-char cap, and automatic `IC7501` `255 s` keepalive every `65,536` idle polls (preventing the ~`44 s` rail drop).
+2. **Read-Only `SDCD` (`sd`) & NOR/BGO (`bgo`) + `ssot` Triage Commands:**
+   - [`sdcd_sd.c`](../../firmware/panadiga-openos/drivers/sdcd_sd.c) inspects `SDCD` (`0x8900_1800`) and `SDCD_CFG4` (`0x8900_1850`, bit 15 = 0 for `4BIT` vs 1 for `1BIT`).
+   - [`nor_bgo_ro.c`](../../firmware/panadiga-openos/drivers/nor_bgo_ro.c) reads Portão 4 readiness (`SA11 0x8404_0000`), all 45 BGO headers (`SA26..SA70`), and `EEMUL SA134` (`0x847F_0000`, `"1284"`), strictly honoring `am34_mmio_is_forbidden()`.
+3. **Live Silicon Alignment in `EV-20261124-004` (`COM10`, SD Inserted):** `MMIO_SNAP STORAGE` proved on live hardware `SDCD_CFG4 = 0x000040B8` (`sd_bus=4BIT`), `SDCD_BASE = 0x0000000D`, `TBUS_MBX0 = 0x840000A3`, 45/45 healthy BGO sectors (`p1_sa=41`), and `SA11 = ERASED_FF`, enabling safe OpenOS SDRAM bring-up (`DIGADIAG.FRM` `0x5040_0000`) with zero NOR mutations.

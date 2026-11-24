@@ -33,26 +33,25 @@ export const getDigaModelCatalog = (): Promise<DigaModelProfile[]> =>
   invokeCommand<DigaModelProfile[]>('get_diga_model_catalog');
 
 export const getPicoStatus = (portName: string): Promise<PicoDeviceStatus> =>
-  invokeCommand<PicoDeviceStatus>('pico_get_status', { portName, port_name: portName });
+  invokeCommand<PicoDeviceStatus>('pico_get_status', { portName });
 
 export const setPicoBreakinMode = (portName: string, mode: ColdBreakinMode): Promise<PicoDeviceStatus> =>
-  invokeCommand<PicoDeviceStatus>('pico_set_breakin_mode', { portName, port_name: portName, mode });
+  invokeCommand<PicoDeviceStatus>('pico_set_breakin_mode', { portName, mode });
 
 export const setPicoTelemetryStream = (active: boolean, portName?: string): Promise<unknown> =>
   invokeCommand('set_pico_telemetry_stream', {
     active,
-    ...(portName ? { portName, port_name: portName } : {}),
+    ...(portName ? { portName } : {}),
   });
 
 export const sendPicoSerialCommand = (portName: string, command: string): Promise<string> =>
   invokeCommand<string>('pico_send_serial_command', {
     portName,
-    port_name: portName,
     command,
   });
 
 export const triggerPicoBootselReboot = (portName: string): Promise<string> =>
-  invokeCommand<string>('pico_trigger_bootsel_reboot', { portName, port_name: portName });
+  invokeCommand<string>('pico_trigger_bootsel_reboot', { portName });
 
 export const detectPicoBootselDrives = (): Promise<string[]> =>
   invokeCommand<string[]>('pico_detect_bootsel_drives');
@@ -65,7 +64,6 @@ export const flashPicoFirmwareUf2 = async (targetFamily: PicoUf2Variant): Promis
   );
   return invokeCommand<FlashReport>('pico_flash_firmware', {
     targetFamily,
-    target_family: targetFamily,
     ...(nonceId ? { nonceId } : {}),
   });
 };
@@ -99,9 +97,7 @@ export const connectAndTestPicoPort = (
 ): Promise<PicoConnectTestResult> =>
   invokeCommand<PicoConnectTestResult>('pico_connect_and_test', {
     portName,
-    port_name: portName,
     baudRate,
-    baud_rate: baudRate,
   });
 
 export const executePicoDiagnostic = (
@@ -111,9 +107,7 @@ export const executePicoDiagnostic = (
 ): Promise<PicoDiagnosticResult> =>
   invokeCommand<PicoDiagnosticResult>('pico_execute_diagnostic', {
     portName,
-    port_name: portName,
     commandId,
-    command_id: commandId,
     arg: arg ?? null,
   });
 
@@ -125,13 +119,9 @@ export const parsePicoDiagnosticOutput = (
 ): Promise<PicoDiagnosticResult> =>
   invokeCommand<PicoDiagnosticResult>('pico_parse_diagnostic_output', {
     commandId,
-    command_id: commandId,
     rawCommand,
-    raw_command: rawCommand,
     rawOutput,
-    raw_output: rawOutput,
     elapsedMs,
-    elapsed_ms: elapsedMs,
   });
 
 export const runPicoFirstContactBackup = (
@@ -140,8 +130,7 @@ export const runPicoFirstContactBackup = (
 ): Promise<FirstContactBackupResult> =>
   invokeCommand<FirstContactBackupResult>('pico_first_contact_backup', {
     portName,
-    port_name: portName,
-    ...(timeoutMs !== undefined ? { timeoutMs, timeout_ms: timeoutMs } : {}),
+    ...(timeoutMs !== undefined ? { timeoutMs } : {}),
   });
 
 export const runPicoInCircuitErase = async (
@@ -155,8 +144,7 @@ export const runPicoInCircuitErase = async (
   );
   return invokeCommand<InCircuitNvramEraseResult>('pico_inject_ram_loader', {
     portName,
-    port_name: portName,
-    ...(confirmToken !== undefined ? { confirmToken, confirm_token: confirmToken } : {}),
+    ...(confirmToken !== undefined ? { confirmToken } : {}),
     ...(nonceId ? { nonceId } : {}),
   });
 };
@@ -182,9 +170,7 @@ export const getGdbTelemetry = (): Promise<GdbPacketTelemetryEvent[]> =>
 export const startGdbBridge = (listenAddr: string, portName?: string): Promise<GdbBridgeStatus> =>
   invokeCommand<GdbBridgeStatus>('start_gdb_bridge_command', {
     portName: portName || undefined,
-    port_name: portName || undefined,
     listenAddr,
-    listen_addr: listenAddr,
   });
 
 export const stopGdbBridge = (): Promise<GdbBridgeStatus> =>
@@ -203,11 +189,8 @@ export const startSc0Bridge = (
 ): Promise<Sc0BridgeStatus> =>
   invokeCommand<Sc0BridgeStatus>('pico_start_sc0_bridge', {
     portName,
-    port_name: portName,
     baudRate,
-    baud_rate: baudRate,
     bootMode,
-    boot_mode: bootMode,
   });
 
 export const stopSc0Bridge = (): Promise<Sc0BridgeStatus> =>

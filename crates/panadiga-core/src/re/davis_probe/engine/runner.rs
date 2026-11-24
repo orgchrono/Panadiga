@@ -15,7 +15,9 @@ use crate::constants::{
     AM34_WDBC_REG,
 };
 use crate::pico::panamon1::{Panamon1Client, Panamon1Transport};
-use crate::re::davis_probe::ata_identify::parse_ata_identify_pio_buffer;
+use crate::re::davis_probe::ata_identify::{
+    extract_ata_identify_512_from_pio_1024, parse_ata_identify_pio_buffer,
+};
 use crate::re::davis_probe::stub_builder::{
     CompiledProbeStub, DAVIS_CH1_CONNECT_IDE_VA, DAVIS_CH1_RESET_REG_VA, DAVIS_CH1_STATE_STRUCT_VA,
     DAVIS_FE_TIMER_IRQ_INIT_VAS, build_ata_identify_ec_stub, build_ch0_probe_stub,
@@ -210,7 +212,8 @@ impl<'a, T: Panamon1Transport> DavisProbeEngine<'a, T> {
         let mut identify_sentinel = None;
         let mut identify_post_altstat = None;
         let mut identify_info = None;
-        if ata_alive || is_ata_m != 0 {
+        let mut identify_raw_512 = None;
+        if self.config.run_identify && (ata_alive || is_ata_m != 0) {
             let ec_stub = build_ata_identify_ec_stub(
                 AM34_DAVIS_SEC_MMIO_BASE,
                 self.config.drive_sel,
@@ -223,6 +226,9 @@ impl<'a, T: Panamon1Transport> DavisProbeEngine<'a, T> {
             identify_post_altstat = Some(u32::from_le_bytes([meta[4], meta[5], meta[6], meta[7]]));
             let pio_1024 = self.safe_read_reg(self.config.identify_out_va, 1024)?;
             identify_info = parse_ata_identify_pio_buffer(&pio_1024).ok();
+            identify_raw_512 = extract_ata_identify_512_from_pio_1024(&pio_1024)
+                .ok()
+                .map(|raw| raw.to_vec());
         }
 
         let effective_master = ch1_2c_reset
@@ -253,6 +259,7 @@ impl<'a, T: Panamon1Transport> DavisProbeEngine<'a, T> {
             identify_sentinel,
             identify_post_altstat,
             identify_info,
+            identify_raw_512,
             classification,
             step_logs: logs,
         })

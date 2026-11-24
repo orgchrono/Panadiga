@@ -15,7 +15,7 @@ use crate::constants::{
 };
 use bench_contracts::append_bench_stream_contracts;
 
-use super::events::ALL_IPC_EVENT_CHANNELS;
+use super::events::{ALL_IPC_EVENT_CHANNELS, P7501_RES_CODES, P7501_WIRE_TAGS};
 use super::pico_header::{
     DIAG_SIGNATURE_RULES, P7501_VDD_FLOATING_CEIL_MV, P7501_VDD_MIN_MV, P7501_VDD_NOMINAL_MV,
     P7501_VDD_PULLDOWN_MIN_MV, P7501_VDD_SAFE_MIN_MV, P7501_VDD_WAKE_MIN_MV,
@@ -69,6 +69,18 @@ pub fn generate_ts_ssot_module() -> String {
     }
     out.push_str("} as const;\n");
     out.push_str("export type SsotIpcEventName = (typeof SSOT_IPC_EVENTS)[keyof typeof SSOT_IPC_EVENTS];\n\n");
+
+    out.push_str("export const SSOT_P7501_WIRE_TAGS = {\n");
+    for &(sym, tag) in P7501_WIRE_TAGS {
+        let _ = writeln!(out, "  {sym}: '{tag}',");
+    }
+    out.push_str("} as const;\n\n");
+
+    out.push_str("export const SSOT_P7501_RES_CODES = {\n");
+    for &(sym, code) in P7501_RES_CODES {
+        let _ = writeln!(out, "  {sym}: '{code}',");
+    }
+    out.push_str("} as const;\n\n");
 
     out.push_str("export const PICO_COMMAND_IDS = [\n");
     for cmd in &spec.pico_commands {

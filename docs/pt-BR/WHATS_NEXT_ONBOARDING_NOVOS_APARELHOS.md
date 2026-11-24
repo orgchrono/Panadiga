@@ -108,3 +108,14 @@ panadiga profiles validate
 ### Estágio 7 — Limites do `Mn103Vm`, Portão (`9/9`) e Pull Request
 
 O emulador `Mn103Vm` valida apenas fluxo de controle ISA (`MN103S`) e fronteiras estáticas de memória — **não aprova sozinho** temporização real de barramento/CFI Spansion, mascaramento atômico de IRQ (`CLI`), coerência I/D-cache ou watchdog `IC7501`. Sempre valide em hardware real isolado antes de promover a `T4`, e execute `python scripts/validate.py` (`9/9` Quality Gates verdes, `0` clones `jscpd`, `100/100` `uxlint`, `mypy --strict`, testes Rust/Vitest/Playwright/C11 e paridade bilíngue `test_docs_parity.py`) conforme a **Seção 8 de [`CONTRIBUTING.md`](../../CONTRIBUTING.md)**.
+
+---
+
+## Pesquisa Futura & Próximos Portões Pós-`EV-20261124-004`
+
+Com o bloqueio `S11` encerrado em silício real e o mapa completo `BGO` (`p1_sa=41`, `45/45` saudáveis) + `SDCD_CFG4` (`0x000040B8` `4BIT`) verificados em [`com10_round5_live_unbrick_sd_trace_20261124.log`](../evidence/com10_round5_live_unbrick_sd_trace_20261124.log), as frentes imediatas de evolução são:
+
+1. **Portão 4 Etapa 2 Opt-In (Boot Autônomo Sem SD via `Nor-FROM` `SA11..SA14`):** `NOR_MAP` e `BGO_INSPECT PORTAO4` confirmaram `SA11 0x84040000 = ERASED_FF` (`norfrom_used=0`), explicando por que o `MAIN` ainda depende do SD inserido para carregar `Stage-2`. Quando houver autorização explícita do operador, gravar `SA11..SA14` (protegendo `SA0..SA10` com `E05`) via fluxo Stage-2 + `--confirm-upper-nor` com backup SHA-256 completo.
+2. **Bring-Up AO VIVO do `Panadiga OpenOS` (`M1 -> M3`) em SDRAM:** empacotar `firmware/panadiga-openos` (`SSOT=C045CA85`, `openos_shell_poll_once()`, comandos `sd`/`bgo`/`ssot`) como `DIGADIAG.FRM` (`262.144 B` `@ 0x5040_0000`) e validar boot e keepalive `IC7501` `255s` em bancada sem tocar em `SA0..SA141`.
+3. **Parser Completo `Upper EEMUL` (`SA71..SA133` `"1284"`):** decodificar os `7` registros ativos e `11` superseded identificados pelo `NOR_MAP` para auditoria fina de calibração/opções além de `SA134`.
+4. **`PANAEUSB.FRM` & Expansão NAND/eMMC (`Schema v2.1`):** estender extração/desofuscação USB e modelagem SSOT de armazenamento não-NOR nos perfis de modelos `T1 -> T4`.

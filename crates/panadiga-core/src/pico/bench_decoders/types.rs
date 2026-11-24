@@ -16,11 +16,10 @@ pub const SAFE_BENCH_COMMANDS: &[&str] = &[
     "BUSDIAG",
     "SNIFF",
     "ISOLATE",
-    "RESET",
+    "FAULTACK",
     "UARTMON",
     "BOOTCAP",
     "JIGBOOT",
-    "JIGPIN",
     "UARTPROBE",
     "UARTSEND",
     "BAUD",
@@ -44,8 +43,10 @@ pub const SAFE_BENCH_COMMANDS: &[&str] = &[
     "XRAY",
 ];
 
-pub(super) const FORBIDDEN_WRITE_TOKENS: [&str; 5] =
-    ["ERASE", "WRITE", "FLASH", "PROGRAM", "WRITEMEM"];
+pub const FORBIDDEN_BENCH_TOKENS: &[&str] = &[
+    "ERASE", "WRITE", "FLASH", "PROGRAM", "WRITEMEM", "PATCH", "UNLOCK", "JEDEC", "POKE", "WMEM",
+    "WRITE32", "RAW:M", "RAW:X", "VFLASH", "C000100C", "DC0F0000",
+];
 pub(super) const ALLOWED_AB_MODES: [&str; 2] = ["NORMAL", "JIG"];
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -53,6 +54,9 @@ pub struct BenchStatusReport {
     pub vdd_volts: Option<f32>,
     pub vdd_status: String,
     pub gp26_sticky_low_suspected: bool,
+    pub nsw5v_high: Option<bool>,
+    pub fault_latch: Option<bool>,
+    pub dropouts: Option<u32>,
     pub raw_text: String,
 }
 

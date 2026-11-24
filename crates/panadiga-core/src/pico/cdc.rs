@@ -29,12 +29,19 @@ pub fn open_cdc(
     Ok(port)
 }
 
-/// Extracts the numeric voltage from a firmware reply such as `VDD: 3.24V (OK)`.
-/// Returns `None` when the reply carries no `VDD:` field (e.g. the device was mute).
+/// Extracts the numeric voltage from a firmware reply such as `VDD: 3.24V (OK)` or
+/// `[STANDBY] RXD=1 NSW5V=1 VDD=3.24V fault_latch=0 dropouts=0`.
+/// Returns `None` when the reply carries no `VDD:`/`VDD=` field (e.g. the device was mute).
 pub fn parse_vdd_reply(reply: &str) -> Option<f32> {
-    let after = reply.split("VDD:").nth(1)?;
+    let after = reply
+        .split("VDD:")
+        .nth(1)
+        .or_else(|| reply.split("VDD=").nth(1))?;
     let token = after.split_whitespace().next()?;
-    token.trim_end_matches(['V', 'v']).parse::<f32>().ok()
+    token
+        .trim_end_matches(['V', 'v', ',', ';'])
+        .parse::<f32>()
+        .ok()
 }
 
 /// Appends one 32-bit hexadecimal word string (`0xAABBCCDD` or `AABBCCDD`) as Little-Endian bytes.

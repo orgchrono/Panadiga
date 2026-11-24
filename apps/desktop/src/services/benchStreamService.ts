@@ -12,6 +12,7 @@ import {
   type OperationNonceChallenge,
 } from '@/models/generated/ssot';
 import { invokeCommand, listenEvent } from './ipc';
+import { logger } from '@/utils/logger';
 
 export interface RequestOperationNonceInput {
   readonly opKind: BenchOpKind;
@@ -122,8 +123,9 @@ export async function subscribeBenchStreamWithSnapshot(
     flags.add('resyncing');
     try {
       await pullSnapshotAndDrain();
-    } catch {
+    } catch (err) {
       flags.delete('resyncing');
+      logger.warn('BENCH_STREAM', 'Failed resyncing bench stream snapshot', err);
     }
   };
 

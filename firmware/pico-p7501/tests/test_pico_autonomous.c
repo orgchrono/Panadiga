@@ -240,8 +240,10 @@ static void test_hotplug_mmio_and_diag_deep(void) {
     assert(strstr(hp_kv, "event=ONLINE_AWAKE") != NULL);
     assert(strstr(hp_kv, "recoveries=1") != NULL);
 
-    /* 2. 27-reg MMIO domain parser, safe guard (DC0F0000 vs DC0F0080), and video decoder */
-    assert(P7501_MMIO_SNAP_COUNT == 27u);
+    /* 2. 31-reg MMIO domain parser, safe guard (DC0F0000 vs DC0F0080), SSOT wire tags & video/storage decoder */
+    assert(P7501_MMIO_SNAP_COUNT == 31u);
+    assert(strcmp(P7501_WIRE_TAG_RES, "@P7501_RES") == 0);
+    assert(strcmp(P7501_RES_CODE_EFAULT_LATCHED, "EFaultLatched") == 0);
     bool diff_only = false;
     assert(p7501_mmio_parse_domain(NULL, &diff_only) == P7501_SSOT_MMIO_DOM_CORE);
     assert(p7501_mmio_parse_domain("VIDEO DIFF", &diff_only) == P7501_SSOT_MMIO_DOM_VIDEO);
@@ -255,6 +257,12 @@ static void test_hotplug_mmio_and_diag_deep(void) {
     assert(strstr(dec, "PAL-M") != NULL);
     assert(p7501_mmio_decode_video_reg(0x88000064UL, 0x80010020UL, dec, sizeof(dec)) > 0u);
     assert(strstr(dec, "line_tbc=1 clk_start=1") != NULL);
+    assert(p7501_mmio_decode_video_reg(0x89000C20UL, 0x00000000UL, dec, sizeof(dec)) > 0u);
+    assert(strstr(dec, "ch1_rst=RELEASED") != NULL);
+    assert(p7501_mmio_decode_video_reg(0x89001850UL, 0x00000004UL, dec, sizeof(dec)) > 0u);
+    assert((strstr(dec, "sd_cfg4=0x00000004") != NULL) && (strstr(dec, "sd_bus=4BIT") != NULL));
+    assert(p7501_mmio_decode_video_reg(0x89001850UL, 0x000080B8UL, dec, sizeof(dec)) > 0u);
+    assert(strstr(dec, "sd_bus=1BIT") != NULL);
 
     /* 3. @P7501_DIAG_DEEP extraction from real EH55 3060NP UART trace lines */
     p7501_boot_classifier_t cls;

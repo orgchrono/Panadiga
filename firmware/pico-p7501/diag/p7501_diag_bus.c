@@ -54,9 +54,10 @@ void p7501_diag_cmd_dump(const char *arg) {
     }
 
     const uint32_t total_bytes = count * 4U;
-    if (p7501_bus_is_lethal_mmio_range(addr, total_bytes)) {
+    if (p7501_bus_span_wraps_u32(addr, (size_t)total_bytes) ||
+        p7501_bus_is_lethal_mmio_range(addr, total_bytes)) {
         p7501_cli_set_result("ERR", "E05");
-        printf("[DUMP] ERROR E05: Range 0x%08" PRIX32 "+%" PRIu32 " overlaps lethal AM34 MMIO 0xC000100C.\n",
+        printf("[DUMP] ERROR E05: Range 0x%08" PRIX32 "+%" PRIu32 " wraps or overlaps lethal AM34 MMIO 0xC000100C.\n",
                addr, total_bytes);
         return;
     }

@@ -2,9 +2,9 @@
  * @file p7501_bus_policy.c
  * @brief Single Authoritative AM34 Bus & NOR Flash Access Policy Gate (SSOT-driven).
  *
- * Extracted from `p7501_flash_geo.c` to cleanly separate physical security policy
- * enforcement from pure flash geometry / chip lookup tables.
- * Host-testable with zero Pico SDK hardware dependencies (`C11_HOST_SOURCES`).
+ * Enforces all physical and forensic silicon invariants across CLI, GDB RSP,
+ * PANARSP, DIAGWATCH, JEDEC stubs, and target bus HAL. UART TX payload and
+ * buffered `BRIDGE-POLICY` framing live in `flash/p7501_bus_tx_guard.c`.
  *
  * @standard ISO/IEC 9899:2011 (C11)
  */
@@ -16,14 +16,27 @@
 
 #include <string.h>
 
+bool p7501_bus_span_wraps_u32(uint32_t addr, size_t len) {
+    const uint64_t span = (len == 0u) ? 1ULL : (uint64_t)len;
+    return span > (0x100000000ULL - (uint64_t)addr);
+}
+
 static bool range_overlaps_u64(uint32_t addr, size_t len, uint64_t lo, uint64_t hi_excl) {
     if (hi_excl <= lo) {
         return false;
     }
-    const uint64_t span = (len == 0u) ? 1ULL : (uint64_t)len;
+    const uint64_t raw_span = (len == 0u) ? 1ULL : (uint64_t)len;
+    const uint64_t span = (raw_span > 0x100000000ULL) ? 0x100000000ULL : raw_span;
     const uint64_t s64 = (uint64_t)addr;
     const uint64_t e64 = s64 + span - 1ULL;
-    return (s64 <= (hi_excl - 1ULL)) && (e64 >= lo);
+    if ((s64 <= (hi_excl - 1ULL)) && (e64 >= lo)) {
+        return true;
+    }
+    if (e64 >= 0x100000000ULL) {
+        const uint64_t wrap_e64 = e64 - 0x100000000ULL;
+        return wrap_e64 >= lo;
+    }
+    return false;
 }
 
 static bool flash_range_overlaps_off_span(
@@ -62,6 +75,9 @@ bool p7501_bus_touches_cs0_aperture(uint32_t addr, size_t len) {
 }
 
 bool p7501_bus_is_cs0_alias_mirror(uint32_t flash_size_bytes, uint32_t addr, size_t len) {
+    if (p7501_bus_span_wraps_u32(addr, len)) {
+        return true;
+    }
     if (!p7501_bus_touches_cs0_aperture(addr, len)) {
         return false;
     }
@@ -97,7 +113,7 @@ bool p7501_flash_is_readonly_nor_range(
     uint32_t start_addr,
     uint32_t total_len
 ) {
-    if (total_len == 0U) {
+    if ((total_len == 0U) || p7501_bus_span_wraps_u32(start_addr, (size_t)total_len)) {
         return false;
     }
     const uint32_t eff_size = p7501_flash_normalize_size(flash_size_bytes);
@@ -175,6 +191,9 @@ p7501_bus_deny_t p7501_bus_check_access(
     if (p7501_bus_is_lethal_mmio_range(addr, len)) {
         return P7501_BUS_DENY_LETHAL_MMIO;
     }
+    if (p7501_bus_span_wraps_u32(addr, len)) {
+        return P7501_BUS_DENY_CS0_MIRROR;
+    }
     if (!is_write && !is_erase) {
         return P7501_BUS_ALLOW;
     }
@@ -198,8 +217,14 @@ p7501_bus_deny_t p7501_bus_check_access(
         if (!p7501_flash_get_sector_span_at(eff_size, addr, &sec_base, &sec_size) || (sec_size == 0UL)) {
             return P7501_BUS_DENY_CS0_MIRROR;
         }
+        const uint64_t req_end = (uint64_t)addr + (uint64_t)check_len;
+        const uint64_t sec_end = (uint64_t)sec_base + (uint64_t)sec_size;
+        const uint64_t eff_end = (req_end > sec_end) ? req_end : sec_end;
+        if ((eff_end > 0x100000000ULL) || ((eff_end - (uint64_t)sec_base) > (uint64_t)eff_size)) {
+            return P7501_BUS_DENY_CS0_MIRROR;
+        }
         check_addr = sec_base;
-        check_len = (size_t)sec_size;
+        check_len = (size_t)(eff_end - (uint64_t)sec_base);
     }
 
     if (p7501_bus_is_cs0_alias_mirror(eff_size, check_addr, check_len)) {
@@ -338,255 +363,4 @@ bool p7501_flash_effective_policy(int policy_override) {
         return false;
     }
     return sess->upper_nor_unlocked;
-}
-
-static char bus_ascii_upper(uint8_t c) {
-    return (c >= (uint8_t)'a' && c <= (uint8_t)'z') ? (char)(c - ('a' - 'A')) : (char)c;
-}
-
-static bool bus_is_delim_char(uint8_t c) {
-    return (c <= 0x20u) || (c == (uint8_t)',') || (c == (uint8_t)';') || (c == (uint8_t)'=') ||
-           (c == (uint8_t)':') || (c == (uint8_t)'(') || (c == (uint8_t)')') ||
-           (c == (uint8_t)'[') || (c == (uint8_t)']') || (c == (uint8_t)'<') ||
-           (c == (uint8_t)'>') || (c == (uint8_t)'#') || (c == (uint8_t)'"');
-}
-
-static size_t bus_parse_hex_u32_slice(
-    const uint8_t *buf,
-    size_t len,
-    size_t start,
-    uint32_t *out_val
-) {
-    size_t pos = start;
-    uint32_t val = 0u;
-    size_t digits = 0u;
-    while (pos < len) {
-        const int nib = p7501_hex_char_to_nibble((char)buf[pos]);
-        if (nib < 0) {
-            break;
-        }
-        if (digits >= 8u) {
-            return 0u;
-        }
-        val = (val << 4) | (uint32_t)nib;
-        ++digits;
-        ++pos;
-    }
-    if (digits == 0u) {
-        return 0u;
-    }
-    *out_val = val;
-    return pos - start;
-}
-
-static bool bus_payload_matches_ci_at(
-    const uint8_t *buf,
-    size_t len,
-    size_t pos,
-    const char *lit
-) {
-    for (size_t i = 0u; lit[i] != '\0'; ++i) {
-        if ((pos + i) >= len) {
-            return false;
-        }
-        if (bus_ascii_upper(buf[pos + i]) != bus_ascii_upper((uint8_t)lit[i])) {
-            return false;
-        }
-    }
-    return true;
-}
-
-static bool bus_check_rsp_packets(
-    const uint8_t *payload,
-    size_t len,
-    p7501_bus_deny_t *out_reason
-) {
-    const p7501_session_ctx_t *sess = p7501_session_default_ctx();
-    const uint32_t flash_bytes = p7501_flash_get_active_size();
-    const bool upper_ok = p7501_flash_is_upper_nor_unlocked();
-
-    for (size_t i = 0u; i < len; ++i) {
-        if (payload[i] != (uint8_t)'$' || (i + 1u) >= len) {
-            continue;
-        }
-        size_t pos = i + 1u;
-        bool is_read = false;
-        bool is_write = false;
-        bool is_erase = false;
-        if (payload[pos] == (uint8_t)'m') {
-            is_read = true;
-            pos += 1u;
-        } else if (payload[pos] == (uint8_t)'M' || payload[pos] == (uint8_t)'X') {
-            is_write = true;
-            pos += 1u;
-        } else if (bus_payload_matches_ci_at(payload, len, pos, "vFlashErase:")) {
-            is_write = true;
-            is_erase = true;
-            pos += strlen("vFlashErase:");
-        } else if (bus_payload_matches_ci_at(payload, len, pos, "vFlashWrite:")) {
-            is_write = true;
-            pos += strlen("vFlashWrite:");
-        } else {
-            continue;
-        }
-
-        uint32_t addr = 0u;
-        const size_t consumed = bus_parse_hex_u32_slice(payload, len, pos, &addr);
-        if (consumed == 0u) {
-            if (is_write) {
-                if (out_reason != NULL) {
-                    *out_reason = P7501_BUS_DENY_PROTECTED_RO;
-                }
-                return false;
-            }
-            continue;
-        }
-        pos += consumed;
-
-        uint32_t span = 4u;
-        if (pos < len && payload[pos] == (uint8_t)',') {
-            uint32_t parsed_len = 0u;
-            if (bus_parse_hex_u32_slice(payload, len, pos + 1u, &parsed_len) > 0u && parsed_len > 0u) {
-                span = parsed_len;
-            }
-        }
-
-        const p7501_bus_deny_t deny = is_read
-            ? (p7501_bus_is_lethal_mmio_range(addr, (size_t)span) ? P7501_BUS_DENY_LETHAL_MMIO : P7501_BUS_ALLOW)
-            : p7501_bus_check_access(sess, flash_bytes, addr, (size_t)span, true, is_erase, upper_ok);
-        if (deny != P7501_BUS_ALLOW) {
-            if (out_reason != NULL) {
-                *out_reason = deny;
-            }
-            return false;
-        }
-    }
-    return true;
-}
-
-static bool bus_token_is_write_verb(const char *tok) {
-    static const char *const k_write_verbs[] = {
-        "P", "PW", "PB", "PH", "PO",
-        "W", "MW", "MB", "MH", "WB", "WH", "WW",
-        "POKE", "ERASE", "FLASH", "PROG", "WRITE", "MEMSET",
-        "MEMW", "WRITEMEM", "FAST_WRITE", "FAST_ERASE", "PATCH",
-        "EW", "SW", "BURN"
-    };
-    for (size_t i = 0u; i < (sizeof(k_write_verbs) / sizeof(k_write_verbs[0])); ++i) {
-        if (p7501_ascii_ieq(tok, k_write_verbs[i])) {
-            return true;
-        }
-    }
-    return false;
-}
-
-static bool bus_token_parse_am34_addr(const char *tok, uint32_t *out_addr) {
-    const char *p = tok;
-    if (p[0] == '$') {
-        ++p;
-    } else if (p[0] == '0' && (p[1] == 'x' || p[1] == 'X')) {
-        p += 2;
-    }
-    size_t digits = 0u;
-    uint32_t addr = 0u;
-    for (; *p != '\0'; ++p) {
-        if (*p == '_') {
-            continue;
-        }
-        const int nib = p7501_hex_char_to_nibble(*p);
-        if (nib < 0 || digits >= 8u) {
-            return false;
-        }
-        addr = (addr << 4) | (uint32_t)nib;
-        ++digits;
-    }
-    if (digits < 7u) {
-        return false;
-    }
-    *out_addr = addr;
-    return true;
-}
-
-bool p7501_bus_check_uart_tx_payload(
-    const uint8_t *payload,
-    size_t len,
-    bool is_bridge_stream,
-    p7501_bus_deny_t *out_reason
-) {
-    if (out_reason != NULL) {
-        *out_reason = P7501_BUS_ALLOW;
-    }
-    if (payload == NULL || len == 0u) {
-        return true;
-    }
-    (void)is_bridge_stream;
-
-    if (!bus_check_rsp_packets(payload, len, out_reason)) {
-        return false;
-    }
-
-    bool has_write_intent = false;
-    uint32_t addrs[8] = {0};
-    size_t addr_count = 0u;
-
-    size_t pos = 0u;
-    while (pos < len) {
-        while (pos < len && bus_is_delim_char(payload[pos])) {
-            ++pos;
-        }
-        if (pos >= len) {
-            break;
-        }
-        char tok[48];
-        size_t tlen = 0u;
-        while (pos < len && !bus_is_delim_char(payload[pos])) {
-            if (tlen + 1u < sizeof(tok)) {
-                tok[tlen++] = (char)payload[pos];
-            }
-            ++pos;
-        }
-        tok[tlen] = '\0';
-
-        if (bus_token_is_write_verb(tok)) {
-            has_write_intent = true;
-            continue;
-        }
-
-        uint32_t addr = 0u;
-        if (bus_token_parse_am34_addr(tok, &addr)) {
-            if (p7501_bus_is_lethal_mmio_range(addr, 4u)) {
-                if (out_reason != NULL) {
-                    *out_reason = P7501_BUS_DENY_LETHAL_MMIO;
-                }
-                return false;
-            }
-            if (addr_count < (sizeof(addrs) / sizeof(addrs[0]))) {
-                addrs[addr_count++] = addr;
-            }
-        }
-    }
-
-    if (has_write_intent) {
-        const p7501_session_ctx_t *sess = p7501_session_default_ctx();
-        const uint32_t flash_bytes = p7501_flash_get_active_size();
-        const bool upper_ok = p7501_flash_is_upper_nor_unlocked();
-        for (size_t i = 0u; i < addr_count; ++i) {
-            const p7501_bus_deny_t deny = p7501_bus_check_access(
-                sess,
-                flash_bytes,
-                addrs[i],
-                4u,
-                true,
-                false,
-                upper_ok
-            );
-            if (deny != P7501_BUS_ALLOW) {
-                if (out_reason != NULL) {
-                    *out_reason = deny;
-                }
-                return false;
-            }
-        }
-    }
-    return true;
 }

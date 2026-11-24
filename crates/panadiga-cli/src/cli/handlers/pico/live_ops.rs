@@ -11,9 +11,7 @@ use panadiga_core::constants::{
 use panadiga_core::crypto::parse_u32_radix;
 use panadiga_core::log_println;
 use panadiga_core::pico::panamon1::{Panamon1Client, Panamon1Transport, SerialPanamon1Transport};
-use panadiga_core::re::davis_probe::{
-    DavisProbeConfig, DavisProbeEngine, DavisProbeReport, extract_ata_identify_512_from_pio_1024,
-};
+use panadiga_core::re::davis_probe::{DavisProbeConfig, DavisProbeEngine, DavisProbeReport};
 use panadiga_core::re::nor_dumper::{NorCaptureOrchestrator, NorCaptureResult, NorSlicePreset};
 
 use super::super::json_io::{emit_json_output, write_cli_output_bytes};
@@ -64,6 +62,7 @@ pub fn run_capture_nor_with_transport<T: Panamon1Transport>(
     let cap = orch.capture_preset(&mut client, preset, &mut |stage, cur, tot| {
         log_println!("[NOR {cur}/{tot}] {stage}");
     })?;
+    let _ = client.close_bridge_and_isolate()?;
     write_cli_output_bytes(&args.out, &cap.data)?;
     log_println!(
         "[OK] Captured NOR 0x{:08X} ({} B, sha256={}) -> {}",
@@ -90,40 +89,25 @@ pub fn run_davis_probe_with_transport<T: Panamon1Transport>(
     let drive_sel = parse_davis_drive_sel(&args.drive)?;
     let cfg = DavisProbeConfig {
         drive_sel,
+        run_identify: !args.no_identify,
         ..DavisProbeConfig::default()
     };
-    let identify_out_va = cfg.identify_out_va;
     let mut client = Panamon1Client::new(transport);
-    let probe_res = (|| -> Result<DavisProbeReport> {
-        let mut report = {
-            let mut engine = DavisProbeEngine::new(&mut client, cfg);
-            engine.run_probe()?
-        };
-        if args.no_identify {
-            report.identify_info = None;
-        } else if let Some(ref out_ec) = args.out_ec
-            && report.identify_info.is_some()
-        {
-            let pio_1024 = client.mem_read_bytes(identify_out_va, 1024)?;
-            let ec_512 = extract_ata_identify_512_from_pio_1024(&pio_1024)?;
-            write_cli_output_bytes(out_ec, &ec_512)?;
-            log_println!(
-                "[OK] Wrote 512-byte ATA IDENTIFY DEVICE payload -> {}",
-                out_ec.display()
-            );
-        }
-        Ok(report)
-    })();
-    let report = match probe_res {
-        Ok(report) => {
-            let _ = client.exit_bridge_checked()?;
-            report
-        }
-        Err(err) => {
-            let _ = client.exit_bridge_raw();
-            return Err(err);
-        }
+    let report = {
+        let mut engine = DavisProbeEngine::new(&mut client, cfg);
+        engine.run_probe()?
     };
+    let _ = client.close_bridge_and_isolate()?;
+    if !args.no_identify
+        && let Some(ref out_ec) = args.out_ec
+        && let Some(ref ec_512) = report.identify_raw_512
+    {
+        write_cli_output_bytes(out_ec, ec_512)?;
+        log_println!(
+            "[OK] Wrote 512-byte ATA IDENTIFY DEVICE payload -> {}",
+            out_ec.display()
+        );
+    }
     log_println!(
         "[DAVIS] class={:?} fe_released={} C0001008=0x{:04X}->0x{:04X} model={:?}",
         report.classification,
