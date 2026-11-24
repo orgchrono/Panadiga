@@ -1,5 +1,3 @@
-#![deny(unsafe_code)]
-
 //! Handlers for `panadiga_region_compat`, `panadiga_hdd_flash_inspect`,
 //! `panadiga_tbc_appliance_plan`, and `panadiga_nor_sector_audit`.
 
@@ -24,6 +22,7 @@ use panadiga_core::re::{
 };
 use serde_json::{Value, json};
 
+use crate::policy::McpSecurityPolicy;
 use crate::workspace::{
     optional_non_empty_str, paths_refer_to_same_file, require_non_empty_str, resolve_workspace_path,
 };
@@ -58,11 +57,16 @@ fn parse_mock_drive(item: &Value) -> Result<PhysicalDriveInfo> {
     serde_json::from_value(Value::Object(obj)).context("Invalid mock_disks entry")
 }
 
-pub(super) fn resolve_cow_paths(args: &Value, workspace_root: &Path) -> Result<(PathBuf, PathBuf)> {
+pub(super) fn resolve_cow_paths(
+    args: &Value,
+    workspace_root: &Path,
+    policy: &McpSecurityPolicy,
+) -> Result<(PathBuf, PathBuf)> {
     let in_path =
-        resolve_workspace_path(workspace_root, require_non_empty_str(args, "input_path")?);
+        resolve_workspace_path(workspace_root, require_non_empty_str(args, "input_path")?)?;
     let out_path =
-        resolve_workspace_path(workspace_root, require_non_empty_str(args, "output_path")?);
+        resolve_workspace_path(workspace_root, require_non_empty_str(args, "output_path")?)?;
+    policy.require_file_write("panadiga_region_compat", Some(&out_path))?;
     if !in_path.is_file() {
         bail!("Input file not found: {}", in_path.display());
     }
@@ -87,25 +91,33 @@ fn optional_single_char(args: &Value, key: &str) -> Result<Option<char>> {
 fn read_opt_file(args: &Value, key: &str, ws: &Path) -> Result<Option<Vec<u8>>> {
     optional_non_empty_str(args, key)
         .map(|p| {
-            let abs = resolve_workspace_path(ws, p);
+            let abs = resolve_workspace_path(ws, p)?;
             fs::read(&abs).with_context(|| format!("Reading {key}: {}", abs.display()))
         })
         .transpose()
 }
 
 pub fn handle_region_compat(args: &Value, workspace_root: &Path) -> Result<Value> {
+    handle_region_compat_with_policy(args, workspace_root, &McpSecurityPolicy::read_only())
+}
+
+pub fn handle_region_compat_with_policy(
+    args: &Value,
+    workspace_root: &Path,
+    policy: &McpSecurityPolicy,
+) -> Result<Value> {
     let action = optional_non_empty_str(args, "action")
         .unwrap_or("inspect_tv_bundle")
         .to_ascii_lowercase();
     match action.as_str() {
         "inspect_main" => {
             let in_path =
-                resolve_workspace_path(workspace_root, require_non_empty_str(args, "input_path")?);
+                resolve_workspace_path(workspace_root, require_non_empty_str(args, "input_path")?)?;
             let bytes = fs::read(&in_path)?;
             Ok(serde_json::to_value(inspect_main_region_compat(&bytes)?)?)
         }
         "patch_main" => {
-            let (in_path, out_path) = resolve_cow_paths(args, workspace_root)?;
+            let (in_path, out_path) = resolve_cow_paths(args, workspace_root, policy)?;
             let mut bytes = fs::read(&in_path)?;
             let mode: RegionCompatMode = optional_non_empty_str(args, "mode")
                 .unwrap_or("bypass")
@@ -117,12 +129,12 @@ pub fn handle_region_compat(args: &Value, workspace_root: &Path) -> Result<Value
         }
         "inspect_dev" => {
             let in_path =
-                resolve_workspace_path(workspace_root, require_non_empty_str(args, "input_path")?);
+                resolve_workspace_path(workspace_root, require_non_empty_str(args, "input_path")?)?;
             let bytes = fs::read(&in_path)?;
             Ok(serde_json::to_value(inspect_dev_bin_bytes(&bytes)?)?)
         }
         "patch_dev" => {
-            let (in_path, out_path) = resolve_cow_paths(args, workspace_root)?;
+            let (in_path, out_path) = resolve_cow_paths(args, workspace_root, policy)?;
             let model = require_non_empty_str(args, "model")?;
             let oem = optional_single_char(args, "oem")?;
             let bytes = fs::read(&in_path)?;
@@ -136,7 +148,7 @@ pub fn handle_region_compat(args: &Value, workspace_root: &Path) -> Result<Value
             }))
         }
         "retarget_frm" => {
-            let (in_path, out_path) = resolve_cow_paths(args, workspace_root)?;
+            let (in_path, out_path) = resolve_cow_paths(args, workspace_root, policy)?;
             let oem = optional_single_char(args, "oem")?;
             let flag = args
                 .get("target_flag")
@@ -244,7 +256,7 @@ pub fn handle_nor_sector_audit(args: &Value, workspace_root: &Path) -> Result<Va
     let raw_path = optional_non_empty_str(args, "nor_path")
         .or_else(|| optional_non_empty_str(args, "input_path"))
         .context("Missing required 'nor_path' argument")?;
-    let nor_path = resolve_workspace_path(workspace_root, raw_path);
+    let nor_path = resolve_workspace_path(workspace_root, raw_path)?;
     let nor = fs::read(&nor_path).with_context(|| format!("Reading {}", nor_path.display()))?;
     let rep = analyze_spansion_nor_sectors(&nor)?;
     Ok(serde_json::to_value(rep)?)

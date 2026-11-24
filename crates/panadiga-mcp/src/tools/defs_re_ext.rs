@@ -1,5 +1,3 @@
-#![deny(unsafe_code)]
-
 //! Extended Reverse Engineering & Bench Integration MCP tool schemas (`panadiga_region_compat`,
 //! `panadiga_hdd_flash_inspect`, `panadiga_tbc_appliance_plan`, `panadiga_nor_sector_audit`,
 //! `panadiga_eh55_bgo`, `panadiga_davis_probe`).
@@ -92,6 +90,7 @@ pub(super) fn re_ext_tool_definitions() -> Vec<Value> {
                     "plan_path": { "type": "string", "description": "Saved BgoRepairPlan JSON path (required for live_apply)." },
                     "backup_dir": { "type": "string", "description": "Mandatory CoW backup dir (required for live_apply)." },
                     "confirm_upper_nor": { "type": "boolean", "description": "Explicit opt-in unlocking Upper NOR SA26..=SA70 (must be true for live_apply)." },
+                    "hitl_token": { "type": "string", "description": "Required Human-In-The-Loop authorization token matching PANADIGA_MCP_HITL_TOKEN for live_apply." },
                     "boot_trace_ms": { "type": "integer", "description": "Optional post-repair BOOTTRACE window ms (default 15000)." },
                     "no_boottrace": { "type": "boolean", "description": "Skip post-repair BOOTTRACE check." }
                 }
@@ -110,7 +109,8 @@ pub(super) fn re_ext_tool_definitions() -> Vec<Value> {
                     "drive": { "type": "string", "enum": ["master", "slave"], "description": "CH1 drive selector (default master)." },
                     "input_path": { "type": "string", "description": "512B or 1024B PIO IDENTIFY binary file (for parse_ec)." },
                     "ec_hex": { "type": "string", "description": "Alternative hex-encoded 512B or 1024B IDENTIFY buffer (for parse_ec)." },
-                    "port": { "type": "string", "description": "Pico serial port (required for run_live)." }
+                    "port": { "type": "string", "description": "Pico serial port (required for run_live)." },
+                    "hitl_token": { "type": "string", "description": "Required Human-In-The-Loop authorization token matching PANADIGA_MCP_HITL_TOKEN for run_live." }
                 }
             }
         }),
@@ -148,7 +148,7 @@ pub(super) fn re_ext_tool_definitions() -> Vec<Value> {
                     "loader_banner": { "type": "string", "description": "Optional observed IPL loader banner string." },
                     "frm_sha256": { "type": "string", "description": "Optional observed official .FRM SHA-256 hex digest." },
                     "requested_loader_profile": { "type": "string", "description": "Optional requested SD loader profile key (e.g. 'ver061')." },
-                    "lab_override_disclaimer": { "type": "string", "description": "Exact disclaimer ack 'I_ACCEPT_UNVERIFIED_HARDWARE_RISK' for offline R&D override." },
+                    "lab_override_disclaimer": { "type": "string", "description": "Optional operator-supplied LabOverride disclaimer acknowledgement for offline R&D override (never auto-filled by agents)." },
                     "lab_override_reason": { "type": "string", "description": "Operator justification (>= 5 chars) recorded for offline LabOverride." }
                 }
             }

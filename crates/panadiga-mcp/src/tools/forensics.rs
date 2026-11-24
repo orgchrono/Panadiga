@@ -23,14 +23,19 @@ use std::io::{Read, Seek, SeekFrom};
 use std::path::Path;
 
 use super::forensics_re::parse_u32_arg;
+use crate::policy::McpSecurityPolicy;
 use crate::workspace::{
     optional_non_empty_str, parse_u64_hex_or_dec, paths_refer_to_same_file, require_non_empty_str,
     resolve_workspace_path,
 };
+
 pub fn handle_inspect_hdd(args: &Value, workspace_root: &Path) -> Value {
     let rel_path = optional_non_empty_str(args, "image_path").unwrap_or(DEFAULT_HDD_IMAGE_PATH);
 
-    let img_file = resolve_workspace_path(workspace_root, rel_path);
+    let img_file = match resolve_workspace_path(workspace_root, rel_path) {
+        Ok(p) => p,
+        Err(e) => return json!({ "error": e.to_string() }),
+    };
     if !img_file.is_file() {
         return json!({ "error": format!("Image file not found: {}", img_file.display()) });
     }
@@ -77,22 +82,34 @@ pub fn handle_inspect_hdd(args: &Value, workspace_root: &Path) -> Value {
 }
 
 pub fn handle_clean_nvram(args: &Value, workspace_root: &Path) -> Result<Value> {
+    handle_clean_nvram_with_policy(args, workspace_root, &McpSecurityPolicy::read_only())
+}
+
+pub fn handle_clean_nvram_with_policy(
+    args: &Value,
+    workspace_root: &Path,
+    policy: &McpSecurityPolicy,
+) -> Result<Value> {
     let input_raw = require_non_empty_str(args, "input_file")?;
-    let input_path = resolve_workspace_path(workspace_root, input_raw);
-    if !input_path.is_file() {
-        return Ok(json!({
-            "error": format!("Input flash dump not found: {}", input_path.display())
-        }));
-    }
+    let input_path = resolve_workspace_path(workspace_root, input_raw)?;
 
     let output_raw = optional_non_empty_str(args, "output_file");
-    if let Some(out_str) = output_raw {
-        let out_path = resolve_workspace_path(workspace_root, out_str);
-        if paths_refer_to_same_file(&input_path, &out_path) {
+    let out_path_opt = output_raw
+        .map(|out_str| resolve_workspace_path(workspace_root, out_str))
+        .transpose()?;
+    if let Some(out_path) = out_path_opt.as_deref() {
+        policy.require_file_write("panadiga_clean_nvram", Some(out_path))?;
+        if paths_refer_to_same_file(&input_path, out_path) {
             return Ok(json!({
                 "error": "Forensic Invariant Violation: Cannot overwrite original flash dump in-place."
             }));
         }
+    }
+
+    if !input_path.is_file() {
+        return Ok(json!({
+            "error": format!("Input flash dump not found: {}", input_path.display())
+        }));
     }
 
     let data = fs::read(&input_path)?;
@@ -110,7 +127,7 @@ pub fn handle_clean_nvram(args: &Value, workspace_root: &Path) -> Result<Value> 
     let model_id = optional_non_empty_str(args, "model_id");
     let lab_override = super::hardware::parse_lab_override_from_args(args)?;
     let out_label = output_raw.unwrap_or("<analysis-only>");
-    let policy = NvramPolicyOptions {
+    let nvram_policy = NvramPolicyOptions {
         model_id,
         lab_override: lab_override.as_ref(),
     };
@@ -120,9 +137,9 @@ pub fn handle_clean_nvram(args: &Value, workspace_root: &Path) -> Result<Value> 
             .ok_or_else(|| anyhow::anyhow!("Missing 'patch_hex' for NVRAM patch action"))?;
         let patch_bytes = parse_hex_payload(hex_str)?;
         let rel_off = usize::try_from(parse_u32_arg(args, "nvram_offset", 0)?)?;
-        patch_flash_nvram_slice_with_policy(&data, rel_off, &patch_bytes, &policy, labels)?
+        patch_flash_nvram_slice_with_policy(&data, rel_off, &patch_bytes, &nvram_policy, labels)?
     } else if action.eq_ignore_ascii_case("clean") {
-        clean_flash_nvram_slice_with_policy(&data, &policy, labels)?
+        clean_flash_nvram_slice_with_policy(&data, &nvram_policy, labels)?
     } else {
         anyhow::bail!(
             "Unsupported action '{action}' for panadiga_clean_nvram (expected 'clean' or 'patch')"
@@ -135,14 +152,8 @@ pub fn handle_clean_nvram(args: &Value, workspace_root: &Path) -> Result<Value> 
     let (_, nvram_orig_sha256) = calculate_hashes(&data[nvram_start..nvram_end]);
 
     let mut saved = false;
-    if let Some(out_str) = output_raw {
-        let out_path = resolve_workspace_path(workspace_root, out_str);
-        if let Some(parent) = out_path.parent()
-            && !parent.as_os_str().is_empty()
-        {
-            fs::create_dir_all(parent)?;
-        }
-        fs::write(&out_path, &cleaned.cleaned_bytes)?;
+    if let Some(out_path) = out_path_opt.as_deref() {
+        crate::workspace::write_cow_artifact(out_path, &cleaned.cleaned_bytes)?;
         saved = true;
     }
 
@@ -161,7 +172,7 @@ pub fn handle_clean_nvram(args: &Value, workspace_root: &Path) -> Result<Value> 
 
 pub fn handle_inspect_frm(args: &Value, workspace_root: &Path) -> Result<Value> {
     let rel_path = optional_non_empty_str(args, "frm_path").unwrap_or(DEFAULT_FRM_CONTAINER_PATH);
-    let frm_path = resolve_workspace_path(workspace_root, rel_path);
+    let frm_path = resolve_workspace_path(workspace_root, rel_path)?;
     if !frm_path.is_file() {
         return Ok(json!({ "error": format!("FRM file not found: {}", frm_path.display()) }));
     }
@@ -181,7 +192,7 @@ pub fn handle_inspect_frm(args: &Value, workspace_root: &Path) -> Result<Value> 
 
 pub fn handle_read_hex(args: &Value, workspace_root: &Path) -> Result<Value> {
     let rel_path = require_non_empty_str(args, "file_path")?;
-    let path = resolve_workspace_path(workspace_root, rel_path);
+    let path = resolve_workspace_path(workspace_root, rel_path)?;
     if !path.is_file() {
         return Ok(json!({ "error": format!("Binary file not found: {}", path.display()) }));
     }

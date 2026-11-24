@@ -2,7 +2,10 @@ use panadiga_core::constants::{
     AM34_SYSTEM_MEMORY_REGIONS, SPANSION_BOOTLOADER_SIZE_BYTES, SPANSION_FLASH_SIZE_BYTES,
     SPANSION_NVRAM_BASE_OFFSET,
 };
-use panadiga_mcp::{execute_tool, prompts, resources, run_stdio_with_io, tool_definitions};
+use panadiga_mcp::{
+    McpSecurityPolicy, execute_tool, execute_tool_with_policy, prompts, resources,
+    run_stdio_with_io, tool_definitions,
+};
 use serde_json::{Value, json};
 use std::fs;
 use std::io::Cursor;
@@ -152,13 +155,19 @@ fn test_clean_nvram_rejects_in_place_and_sanitizes_copy() {
     flash[SPANSION_NVRAM_BASE_OFFSET] = 0x11;
     fs::write(&in_path, &flash).unwrap();
 
-    let same_res = execute_tool(
+    let rw_policy = McpSecurityPolicy {
+        allow_file_write: true,
+        ..McpSecurityPolicy::read_only()
+    };
+
+    let same_res = execute_tool_with_policy(
         "panadiga_clean_nvram",
         &json!({
             "input_file": "flash_in.bin",
             "output_file": "flash_in.bin"
         }),
         &tmp,
+        &rw_policy,
     )
     .unwrap();
     assert!(
@@ -168,13 +177,14 @@ fn test_clean_nvram_rejects_in_place_and_sanitizes_copy() {
             .contains("Forensic Invariant Violation")
     );
 
-    let clean_res = execute_tool(
+    let clean_res = execute_tool_with_policy(
         "panadiga_clean_nvram",
         &json!({
             "input_file": "flash_in.bin",
             "output_file": "flash_out.bin"
         }),
         &tmp,
+        &rw_policy,
     )
     .unwrap();
     assert_eq!(clean_res["status"], "success");

@@ -16,6 +16,7 @@ use serde_json::{Value, json};
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use crate::policy::McpSecurityPolicy;
 use crate::workspace::{
     optional_non_empty_str, parse_u64_hex_or_dec, paths_refer_to_same_file, require_non_empty_str,
     resolve_workspace_path,
@@ -32,10 +33,16 @@ pub(super) fn parse_u32_arg(args: &Value, key: &str, default: u32) -> Result<u32
     u32::try_from(val).map_err(|_| anyhow::anyhow!("Value for '{key}' exceeds u32: {val}"))
 }
 
+struct DispatchContext<'a> {
+    tool_name: &'a str,
+    workspace_root: &'a Path,
+    policy: &'a McpSecurityPolicy,
+    missing_label: &'a str,
+}
+
 fn dispatch_inspect_or_patch<FInspect, FDefaultOut, FPatch>(
+    ctx: DispatchContext<'_>,
     args: &Value,
-    workspace_root: &Path,
-    missing_label: &str,
     inspect_fn: FInspect,
     default_out_fn: FDefaultOut,
     patch_fn: FPatch,
@@ -46,13 +53,15 @@ where
     FPatch: FnOnce(&Path, &Path) -> Result<Value>,
 {
     let in_raw = require_non_empty_str(args, "input_path")?;
-    let in_path = resolve_workspace_path(workspace_root, in_raw);
-    if !in_path.is_file() {
-        return Ok(json!({ "error": format!("{missing_label} not found: {}", in_path.display()) }));
-    }
+    let in_path = resolve_workspace_path(ctx.workspace_root, in_raw)?;
 
     let action = optional_non_empty_str(args, "action").unwrap_or("inspect");
     if action.eq_ignore_ascii_case("inspect") {
+        if !in_path.is_file() {
+            return Ok(json!({
+                "error": format!("{} not found: {}", ctx.missing_label, in_path.display())
+            }));
+        }
         return inspect_fn(&in_path);
     }
     if !action.eq_ignore_ascii_case("patch") {
@@ -62,9 +71,16 @@ where
     }
 
     let out_path = match optional_non_empty_str(args, "output_path") {
-        Some(out_raw) => resolve_workspace_path(workspace_root, out_raw),
+        Some(out_raw) => resolve_workspace_path(ctx.workspace_root, out_raw)?,
         None => default_out_fn(&in_path)?,
     };
+    ctx.policy
+        .require_file_write(ctx.tool_name, Some(&out_path))?;
+    if !in_path.is_file() {
+        return Ok(json!({
+            "error": format!("{} not found: {}", ctx.missing_label, in_path.display())
+        }));
+    }
     if paths_refer_to_same_file(&in_path, &out_path) {
         return Ok(json!({
             "error": "NON-DESTRUCTIVE SAFETY RULE: output_path must be a separate copy and cannot overwrite input_path."
@@ -74,6 +90,14 @@ where
 }
 
 pub fn handle_hdd_capacity(args: &Value, workspace_root: &Path) -> Result<Value> {
+    handle_hdd_capacity_with_policy(args, workspace_root, &McpSecurityPolicy::read_only())
+}
+
+pub fn handle_hdd_capacity_with_policy(
+    args: &Value,
+    workspace_root: &Path,
+    policy: &McpSecurityPolicy,
+) -> Result<Value> {
     let mode_str = optional_non_empty_str(args, "mode").unwrap_or("dynamic");
     let target_gb = args
         .get("target_gb")
@@ -83,9 +107,13 @@ pub fn handle_hdd_capacity(args: &Value, workspace_root: &Path) -> Result<Value>
         .map_err(|_| anyhow::anyhow!("target_gb exceeds u32 range"))?;
 
     dispatch_inspect_or_patch(
+        DispatchContext {
+            tool_name: "panadiga_hdd_capacity",
+            workspace_root,
+            policy,
+            missing_label: "Input firmware/HDD file",
+        },
         args,
-        workspace_root,
-        "Input firmware/HDD file",
         |in_path| Ok(serde_json::to_value(inspect_main_hdd_capacity(in_path)?)?),
         |in_path| {
             Ok(default_capacity_patched_output_path(
@@ -100,6 +128,14 @@ pub fn handle_hdd_capacity(args: &Value, workspace_root: &Path) -> Result<Value>
 }
 
 pub fn handle_nor_dumper_stub(args: &Value, workspace_root: &Path) -> Result<Value> {
+    handle_nor_dumper_stub_with_policy(args, workspace_root, &McpSecurityPolicy::read_only())
+}
+
+pub fn handle_nor_dumper_stub_with_policy(
+    args: &Value,
+    workspace_root: &Path,
+    policy: &McpSecurityPolicy,
+) -> Result<Value> {
     let start_addr = parse_u32_arg(args, "start_addr", 0x8400_0000)?;
     let total_len = parse_u32_arg(args, "total_len", 0x0080_0000)?;
     let block_size = parse_u32_arg(args, "block_size", 4096)?;
@@ -113,15 +149,21 @@ pub fn handle_nor_dumper_stub(args: &Value, workspace_root: &Path) -> Result<Val
     };
     let load_addr = resolve_nor_stub_load_addr(explicit_load, wrap_digadiag);
 
+    let out_path_opt = optional_non_empty_str(args, "output_path")
+        .map(|out_raw| resolve_workspace_path(workspace_root, out_raw))
+        .transpose()?;
+    if let Some(out_path) = out_path_opt.as_deref() {
+        policy.require_file_write("panadiga_nor_dumper_stub", Some(out_path))?;
+    }
+
     let (raw_stub_size_bytes, payload) =
         build_nor_dumper_artifact(start_addr, total_len, block_size, load_addr, wrap_digadiag)?;
     let (_, stub_sha256) = calculate_hashes(&payload);
 
     let mut saved_path: Option<String> = None;
-    if let Some(out_raw) = optional_non_empty_str(args, "output_path") {
-        let out_path = resolve_workspace_path(workspace_root, out_raw);
-        panadiga_core::re::bgo_unbrick::ensure_parent_dir(&out_path)?;
-        fs::write(&out_path, &payload)?;
+    if let Some(out_path) = out_path_opt.as_deref() {
+        panadiga_core::re::bgo_unbrick::ensure_parent_dir(out_path)?;
+        fs::write(out_path, &payload)?;
         saved_path = Some(out_path.to_string_lossy().into_owned());
     }
 
@@ -141,6 +183,14 @@ pub fn handle_nor_dumper_stub(args: &Value, workspace_root: &Path) -> Result<Val
 }
 
 pub fn handle_bgo_unbrick(args: &Value, workspace_root: &Path) -> Result<Value> {
+    handle_bgo_unbrick_with_policy(args, workspace_root, &McpSecurityPolicy::read_only())
+}
+
+pub fn handle_bgo_unbrick_with_policy(
+    args: &Value,
+    workspace_root: &Path,
+    policy: &McpSecurityPolicy,
+) -> Result<Value> {
     let mode_str = optional_non_empty_str(args, "mode").unwrap_or("bypass");
     let allow_unsafe_bgo_format = args
         .get("allow_unsafe_bgo_format")
@@ -152,9 +202,13 @@ pub fn handle_bgo_unbrick(args: &Value, workspace_root: &Path) -> Result<Value> 
         .unwrap_or(true);
 
     dispatch_inspect_or_patch(
+        DispatchContext {
+            tool_name: "panadiga_bgo_unbrick",
+            workspace_root,
+            policy,
+            missing_label: "PROG061/DIGADIAG file",
+        },
         args,
-        workspace_root,
-        "PROG061/DIGADIAG file",
         |in_path| {
             let raw = fs::read(in_path)?;
             let payload = if raw.starts_with(b"EXTRHEAD") || raw.len() != PROG061_EXPECTED_SIZE {
@@ -187,6 +241,14 @@ pub fn handle_bgo_unbrick(args: &Value, workspace_root: &Path) -> Result<Value> 
 }
 
 pub fn handle_main_passthrough(args: &Value, workspace_root: &Path) -> Result<Value> {
+    handle_main_passthrough_with_policy(args, workspace_root, &McpSecurityPolicy::read_only())
+}
+
+pub fn handle_main_passthrough_with_policy(
+    args: &Value,
+    workspace_root: &Path,
+    policy: &McpSecurityPolicy,
+) -> Result<Value> {
     let action = optional_non_empty_str(args, "action").unwrap_or("inspect");
     if action.eq_ignore_ascii_case("rsp_plan") {
         let cb_va = if args.get("callback_target_va").is_some_and(|v| !v.is_null()) {
@@ -201,9 +263,13 @@ pub fn handle_main_passthrough(args: &Value, workspace_root: &Path) -> Result<Va
     let mode = MainPassthroughMode::from_str_mode(mode_str)?;
 
     dispatch_inspect_or_patch(
+        DispatchContext {
+            tool_name: "panadiga_main_passthrough",
+            workspace_root,
+            policy,
+            missing_label: "Unpacked EH55_MAIN binary",
+        },
         args,
-        workspace_root,
-        "Unpacked EH55_MAIN binary",
         |in_path| {
             let data = fs::read(in_path)?;
             Ok(serde_json::to_value(inspect_main_passthrough_sites(

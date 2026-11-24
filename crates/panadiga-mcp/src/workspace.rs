@@ -1,17 +1,102 @@
-//! Workspace path resolution and forensic input helpers shared across MCP handlers.
+//! Workspace root-jail confinement and forensic input helpers shared across MCP handlers.
 
-use anyhow::Result;
+use anyhow::{Context, Result, bail};
 pub use panadiga_core::constants::resolve_workspace_root;
 use serde_json::Value;
+use std::ffi::OsString;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
-pub fn resolve_workspace_path(root: &Path, raw: &str) -> PathBuf {
-    let candidate = Path::new(raw);
-    if candidate.is_absolute() {
+/// Resolves `raw` strictly inside canonicalized `root`, blocking traversal, NULs, and symlink escapes.
+pub fn resolve_workspace_path(root: &Path, raw: &str) -> Result<PathBuf> {
+    if raw.contains('\0') {
+        bail!("Path containment violation: embedded NUL byte is forbidden");
+    }
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        bail!("Path containment violation: empty path is forbidden");
+    }
+
+    let candidate = Path::new(trimmed);
+    if candidate
+        .components()
+        .any(|c| matches!(c, Component::ParentDir))
+    {
+        bail!("Path containment violation: '..' traversal is forbidden in '{trimmed}'");
+    }
+
+    let canon_root = fs::canonicalize(root)
+        .with_context(|| format!("Invalid MCP workspace root '{}'", root.display()))?;
+
+    let joined = if candidate.is_absolute() {
         candidate.to_path_buf()
     } else {
-        root.join(candidate)
+        if candidate
+            .components()
+            .any(|c| matches!(c, Component::Prefix(_) | Component::RootDir))
+        {
+            bail!(
+                "Path containment violation: rooted or drive-relative path '{trimmed}' is forbidden"
+            );
+        }
+        canon_root.join(candidate)
+    };
+
+    canonicalize_within(&canon_root, &joined, trimmed)
+}
+
+fn canonicalize_within(canon_root: &Path, target: &Path, raw_label: &str) -> Result<PathBuf> {
+    let mut cur = target.to_path_buf();
+    let mut tail_segments: Vec<OsString> = Vec::new();
+
+    while !cur.exists() {
+        if cur.symlink_metadata().is_ok() {
+            bail!("Path containment violation: dangling symlink is not permitted at '{raw_label}'");
+        }
+        let Some(name) = cur.file_name().map(|n| n.to_os_string()) else {
+            bail!("Path containment violation: '{raw_label}' has no ancestor inside workspace");
+        };
+        tail_segments.push(name);
+        let Some(parent) = cur.parent() else {
+            bail!("Path containment violation: '{raw_label}' escapes workspace root");
+        };
+        cur = parent.to_path_buf();
+    }
+
+    let canon_existing = fs::canonicalize(&cur)
+        .with_context(|| format!("Canonicalizing workspace path '{raw_label}'"))?;
+    if !canon_existing.starts_with(canon_root) {
+        bail!(
+            "Path containment violation: '{raw_label}' resolves outside workspace root '{}'",
+            canon_root.display()
+        );
+    }
+
+    Ok(tail_segments
+        .into_iter()
+        .rev()
+        .fold(canon_existing, |acc, seg| acc.join(seg)))
+}
+
+/// Ensures parent directories exist and writes a Copy-on-Write output artifact cleanly.
+pub fn write_cow_artifact(out_path: &Path, bytes: &[u8]) -> Result<()> {
+    if let Some(parent) = out_path.parent()
+        && !parent.as_os_str().is_empty()
+    {
+        fs::create_dir_all(parent)?;
+    }
+    fs::write(out_path, bytes)?;
+    Ok(())
+}
+
+/// Returns `workspace_root` when it contains `marker_dir`, falling back to canonical repo root if `.`.
+pub fn resolve_effective_workspace_for(workspace_root: &Path, marker_dir: &str) -> PathBuf {
+    if workspace_root.join(marker_dir).is_dir() {
+        workspace_root.to_path_buf()
+    } else if workspace_root == Path::new(".") {
+        resolve_workspace_root()
+    } else {
+        workspace_root.to_path_buf()
     }
 }
 

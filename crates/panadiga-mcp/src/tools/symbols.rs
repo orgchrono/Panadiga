@@ -1,5 +1,3 @@
-#![deny(unsafe_code)]
-
 //! MCP tool handler for `panadiga_symbol_lookup` (train-keyed Function/Caller/Side-Effect index).
 
 use std::path::Path;

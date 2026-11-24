@@ -1,5 +1,3 @@
-#![deny(unsafe_code)]
-
 //! Compact SSOT indexer for `profiles/traps/` and `profiles/forensic_atlas/` summaries.
 //!
 //! Enables sub-millisecond Zero-Error RAG retrieval over geometry traps, hex/MMIO catalogs,

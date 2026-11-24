@@ -5,7 +5,7 @@ use panadiga_core::constants::*;
 /// Absolute maximum permissible voltage on digital PCB test points and debug bus (VEP79138).
 pub const MAX_SAFE_VOLTAGE_VOLTS: f64 = 3.35;
 
-/// Physical flash offset boundaries for SA0..SA133 IPL protection
+/// Physical flash offset boundaries for Layer 1 IPL (SA0..SA10) + Layer 2 Upper NOR (SA11..SA133) protection
 pub const FORBIDDEN_FLASH_WRITE_START: usize = 0x0000_0000;
 pub const FORBIDDEN_FLASH_WRITE_END: usize = SPANSION_BOOTLOADER_SIZE_BYTES - 1; // 0x007E_FFFF
 
@@ -13,7 +13,7 @@ pub const FORBIDDEN_FLASH_WRITE_END: usize = SPANSION_BOOTLOADER_SIZE_BYTES - 1;
 pub const SAFE_NVRAM_BASE_OFFSET: usize = SPANSION_NVRAM_BASE_OFFSET; // 0x007F_0000
 pub const SAFE_NVRAM_END_OFFSET: usize = SPANSION_NVRAM_END_OFFSET; // 0x0080_0000
 
-/// AM34 Architectural Bus boundaries for SA0..SA133 IPL protection
+/// AM34 Architectural Bus boundaries for Layer 1 IPL (SA0..SA10) + Layer 2 Upper NOR (SA11..SA133) protection
 pub const FORBIDDEN_FLASH_BUS_START: u32 = AM34_FLASH_BASE; // 0x8000_0000
 pub const FORBIDDEN_FLASH_BUS_END: u32 =
     AM34_FLASH_BASE + (SPANSION_BOOTLOADER_SIZE_BYTES as u32) - 1; // 0x807E_FFFF

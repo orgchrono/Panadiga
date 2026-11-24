@@ -1,3 +1,4 @@
+#![forbid(unsafe_code)]
 //! Panadiga Zero-Error RAG Engine (Native Rust Implementation)
 //!
 //! Replaces legacy Python RAG with a deterministic, memory-safe, zero-copy,

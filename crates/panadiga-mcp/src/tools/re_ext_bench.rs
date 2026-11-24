@@ -1,5 +1,3 @@
-#![deny(unsafe_code)]
-
 //! Handlers for `panadiga_eh55_bgo` and `panadiga_davis_probe` MCP tools.
 
 use anyhow::{Context, Result, bail};
@@ -23,6 +21,7 @@ use panadiga_core::re::eh55_bgo::{
 };
 
 use super::forensics_re::parse_u32_arg;
+use crate::policy::McpSecurityPolicy;
 use crate::workspace::{
     optional_non_empty_str, paths_refer_to_same_file, require_non_empty_str, resolve_workspace_path,
 };
@@ -71,10 +70,11 @@ fn parse_drive_sel_opt(args: &Value) -> Result<u8> {
     }
 }
 
-pub fn handle_eh55_bgo_with_transport<T: Panamon1Transport>(
+pub fn handle_eh55_bgo_with_policy<T: Panamon1Transport>(
     args: &Value,
     workspace_root: &Path,
     transport_override: Option<T>,
+    policy: &McpSecurityPolicy,
 ) -> Result<Value> {
     let action = require_non_empty_str(args, "action")?.to_ascii_lowercase();
     match action.as_str() {
@@ -82,7 +82,7 @@ pub fn handle_eh55_bgo_with_transport<T: Panamon1Transport>(
             let nor_raw = optional_non_empty_str(args, "nor_path")
                 .or_else(|| optional_non_empty_str(args, "input_path"))
                 .context("Missing 'nor_path' for eh55_bgo audit")?;
-            let nor_path = resolve_workspace_path(workspace_root, nor_raw);
+            let nor_path = resolve_workspace_path(workspace_root, nor_raw)?;
             let nor = fs::read(&nor_path)?;
             Ok(serde_json::to_value(audit_eh55_bgo_nor_8mb(&nor)?)?)
         }
@@ -90,32 +90,45 @@ pub fn handle_eh55_bgo_with_transport<T: Panamon1Transport>(
             let nor_raw = optional_non_empty_str(args, "nor_path")
                 .or_else(|| optional_non_empty_str(args, "input_path"))
                 .context("Missing 'nor_path' for eh55_bgo plan")?;
-            let nor_path = resolve_workspace_path(workspace_root, nor_raw);
+            let nor_path = resolve_workspace_path(workspace_root, nor_raw)?;
+            let out_plan_dst = optional_non_empty_str(args, "out_plan_path")
+                .map(|p| resolve_workspace_path(workspace_root, p))
+                .transpose()?;
+            let cow_dst = optional_non_empty_str(args, "cow_out_path")
+                .map(|p| resolve_workspace_path(workspace_root, p))
+                .transpose()?;
+            if let Some(dst) = out_plan_dst.as_deref() {
+                policy.require_file_write("panadiga_eh55_bgo", Some(dst))?;
+            }
+            if let Some(dst) = cow_dst.as_deref() {
+                policy.require_file_write("panadiga_eh55_bgo", Some(dst))?;
+                if paths_refer_to_same_file(&nor_path, dst) {
+                    bail!("CoW safety violation: cow_out_path must differ from nor_path");
+                }
+            }
+
             let nor = fs::read(&nor_path)?;
             let ref_bytes = optional_non_empty_str(args, "reference_nor_path")
-                .map(|p| fs::read(resolve_workspace_path(workspace_root, p)))
+                .map(|p| {
+                    resolve_workspace_path(workspace_root, p).and_then(|abs| Ok(fs::read(abs)?))
+                })
                 .transpose()?;
             let plan = build_bgo_repair_plan(&nor, ref_bytes.as_deref())?;
 
             let mut out_plan_saved = None;
-            if let Some(p) = optional_non_empty_str(args, "out_plan_path") {
-                let dst = resolve_workspace_path(workspace_root, p);
-                ensure_parent_dir(&dst)?;
-                fs::write(&dst, serde_json::to_vec_pretty(&plan)?)?;
+            if let Some(dst) = out_plan_dst.as_deref() {
+                ensure_parent_dir(dst)?;
+                fs::write(dst, serde_json::to_vec_pretty(&plan)?)?;
                 out_plan_saved = Some(dst.display().to_string());
             }
             let mut cow_saved = None;
-            if let Some(p) = optional_non_empty_str(args, "cow_out_path") {
-                let dst = resolve_workspace_path(workspace_root, p);
-                if paths_refer_to_same_file(&nor_path, &dst) {
-                    bail!("CoW safety violation: cow_out_path must differ from nor_path");
-                }
+            if let Some(dst) = cow_dst.as_deref() {
                 let img = plan
                     .repaired_nor_image
                     .as_deref()
                     .context("Missing CoW repaired_nor_image")?;
-                ensure_parent_dir(&dst)?;
-                fs::write(&dst, img)?;
+                ensure_parent_dir(dst)?;
+                fs::write(dst, img)?;
                 cow_saved = Some(dst.display().to_string());
             }
             Ok(json!({
@@ -126,6 +139,10 @@ pub fn handle_eh55_bgo_with_transport<T: Panamon1Transport>(
             }))
         }
         "live_apply" => {
+            policy.require_hardware_hitl(
+                "panadiga_eh55_bgo",
+                optional_non_empty_str(args, "hitl_token"),
+            )?;
             let confirm = args
                 .get("confirm_upper_nor")
                 .and_then(|v| v.as_bool())
@@ -136,9 +153,10 @@ pub fn handle_eh55_bgo_with_transport<T: Panamon1Transport>(
                 );
             }
             let plan_path =
-                resolve_workspace_path(workspace_root, require_non_empty_str(args, "plan_path")?);
+                resolve_workspace_path(workspace_root, require_non_empty_str(args, "plan_path")?)?;
             let backup_dir =
-                resolve_workspace_path(workspace_root, require_non_empty_str(args, "backup_dir")?);
+                resolve_workspace_path(workspace_root, require_non_empty_str(args, "backup_dir")?)?;
+            policy.require_file_write("panadiga_eh55_bgo", Some(&backup_dir))?;
             let plan: BgoRepairPlan = serde_json::from_slice(&fs::read(&plan_path)?)
                 .with_context(|| format!("Parsing BgoRepairPlan {}", plan_path.display()))?;
             let no_trace = args
@@ -180,22 +198,46 @@ pub fn handle_eh55_bgo_with_transport<T: Panamon1Transport>(
     }
 }
 
-pub fn handle_eh55_bgo(args: &Value, workspace_root: &Path) -> Result<Value> {
-    handle_eh55_bgo_with_transport::<SerialPanamon1Transport>(args, workspace_root, None)
+macro_rules! define_bench_ro_wrappers {
+    ($with_transport:ident, $plain:ident, $with_policy:ident) => {
+        pub fn $with_transport<T: Panamon1Transport>(
+            args: &Value,
+            workspace_root: &Path,
+            transport_override: Option<T>,
+        ) -> Result<Value> {
+            $with_policy(
+                args,
+                workspace_root,
+                transport_override,
+                &McpSecurityPolicy::read_only(),
+            )
+        }
+
+        pub fn $plain(args: &Value, workspace_root: &Path) -> Result<Value> {
+            $with_transport::<SerialPanamon1Transport>(args, workspace_root, None)
+        }
+    };
 }
 
-pub fn handle_davis_probe_with_transport<T: Panamon1Transport>(
+define_bench_ro_wrappers!(
+    handle_eh55_bgo_with_transport,
+    handle_eh55_bgo,
+    handle_eh55_bgo_with_policy
+);
+
+pub fn handle_davis_probe_with_policy<T: Panamon1Transport>(
     args: &Value,
     workspace_root: &Path,
     transport_override: Option<T>,
+    policy: &McpSecurityPolicy,
 ) -> Result<Value> {
-    let action = require_non_empty_str(args, "action")?.to_ascii_lowercase();
     let stub_va = parse_u32_arg(args, "sdram_stub_va", DAVIS_STUB_DEFAULT_VA)?;
     let out_va = parse_u32_arg(args, "identify_out_va", DAVIS_IDENTIFY_BUF_DEFAULT_VA)?;
     let drive_sel = parse_drive_sel_opt(args)?;
     let lethal_blocked = validate_safe_mmio_read_range(AM34_FORBIDDEN_LETHAL_REG, 4).is_err();
+    let mode = require_non_empty_str(args, "action")?.to_ascii_lowercase();
 
-    match action.as_str() {
+    match mode.as_str() {
         "build_stubs" => {
             let scratch = stub_va & 0xFFFF_0000;
             let fe = build_fe_release_stub(stub_va);
@@ -226,7 +268,7 @@ pub fn handle_davis_probe_with_transport<T: Panamon1Transport>(
                 let p = resolve_workspace_path(
                     workspace_root,
                     require_non_empty_str(args, "input_path")?,
-                );
+                )?;
                 fs::read(&p)?
             };
             let info = if raw.len() == 1024 {
@@ -246,6 +288,10 @@ pub fn handle_davis_probe_with_transport<T: Panamon1Transport>(
             }))
         }
         "run_live" => {
+            policy.require_hardware_hitl(
+                "panadiga_davis_probe",
+                optional_non_empty_str(args, "hitl_token"),
+            )?;
             let cfg = DavisProbeConfig {
                 sdram_stub_va: stub_va,
                 identify_out_va: out_va,
@@ -267,6 +313,8 @@ pub fn handle_davis_probe_with_transport<T: Panamon1Transport>(
     }
 }
 
-pub fn handle_davis_probe(args: &Value, workspace_root: &Path) -> Result<Value> {
-    handle_davis_probe_with_transport::<SerialPanamon1Transport>(args, workspace_root, None)
-}
+define_bench_ro_wrappers!(
+    handle_davis_probe_with_transport,
+    handle_davis_probe,
+    handle_davis_probe_with_policy
+);

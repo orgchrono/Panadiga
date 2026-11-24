@@ -158,7 +158,7 @@ impl HardwareSafetyValidator {
             let lethal_lo = u64::from(AM34_FORBIDDEN_LETHAL_REG);
             if (lethal_lo..=lethal_lo + 3).contains(&addr) {
                 let has_warning = NEGATION_REGEX.is_match(context_window);
-                if !has_warning {
+                if is_query || !has_warning {
                     violations.push(format!(
                         "CRITICAL MMIO HAZARD: Address 0x{:08X} targets forbidden AM34 lethal register (causes immediate bus/WDT lockup).",
                         AM34_FORBIDDEN_LETHAL_REG
@@ -276,7 +276,7 @@ impl HardwareSafetyValidator {
             let context_window = sentence_context_window(&lower_text, m.start(), m.end(), 80);
             if is_query || !NEGATION_REGEX.is_match(context_window) {
                 violations.push(format!(
-                    "CRITICAL BOOTLOADER HAZARD: Direct instruction to modify IPL detected ('{}'). Erasing IPL sectors SA0..SA133 is strictly prohibited.",
+                    "CRITICAL BOOTLOADER HAZARD: Direct instruction to modify IPL detected ('{}'). Erasing Layer 1 Critical Boot IPL sectors SA0..SA10 (256 KiB) is permanently prohibited (E05); Layer 2 Upper NOR/BGO (SA11..SA133) stays blocked by default unless explicitly unlocked with CONFIRM_UPPER_NOR and a verified 8 MiB SHA-256 backup.",
                     m.as_str()
                 ));
             }
@@ -299,6 +299,27 @@ impl HardwareSafetyValidator {
                     "Forbidden JTAG pin assignment on P7501: {}",
                     mentioned_jtag.join(", ")
                 ));
+            }
+        }
+
+        if patterns::NSW5V_TARGET_REGEX.is_match(&lower_text) {
+            for m in patterns::NSW5V_DRIVE_REGEX.find_iter(&lower_text) {
+                let context_window = sentence_context_window(&lower_text, m.start(), m.end(), 90);
+                if is_query || !NEGATION_REGEX.is_match(context_window) {
+                    violations.push(
+                        "CRITICAL ELECTRICAL HAZARD: P7501 Pin 5 (NSW5V / Pico GP3, ~5.15V upstream via D7510) MUST remain Hi-Z Input without pulls; push-pull drive or pull-up/pull-down resistors risk permanent SoC/RP2040 damage."
+                            .to_string(),
+                    );
+                    critical_alerts.push(format!(
+                        "Forbidden active drive/pull ('{}') targeting NSW5V (P7501 Pin 5 / GP3).",
+                        m.as_str()
+                    ));
+                } else {
+                    warnings.push(format!(
+                        "NSW5V (P7501 Pin 5 / GP3) drive restriction ('{}') referenced in protective warning context.",
+                        m.as_str()
+                    ));
+                }
             }
         }
 

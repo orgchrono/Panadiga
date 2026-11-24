@@ -29,8 +29,7 @@ pub(crate) fn parse_lab_override_from_args(args: &Value) -> anyhow::Result<Optio
         (Some(a), Some(r)) => {
             if a != LAB_OVERRIDE_DISCLAIMER_ACK {
                 anyhow::bail!(
-                    "lab_override_disclaimer must equal '{}'",
-                    LAB_OVERRIDE_DISCLAIMER_ACK
+                    "Invalid 'lab_override_disclaimer' acknowledgement for offline R&D LabOverride"
                 );
             }
             if r.len() < 5 {
@@ -354,6 +353,11 @@ pub fn handle_project_status(args: &Value, workspace_root: &Path) -> Value {
     json!({
         "workspace_root": workspace_root.to_string_lossy(),
         "cargo_workspace_crates": [
+            "panadiga-constants",
+            "panadiga-bench",
+            "panadiga-vault",
+            "panadiga-crypto",
+            "panadiga-ir",
             "panadiga-profiles",
             "panadiga-core",
             "panadiga-rag",

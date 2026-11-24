@@ -42,7 +42,7 @@ impl GroundedGenerator {
             1. Answer ONLY based on the verified technical context below. Do not extrapolate, guess, or infer from standard PC conventions.\n\
             2. If the answer is not in the context, explicitly state: 'Information not verified in technical corpus.'\n\
             3. Every factual claim must include a bracketed citation in the form [DocTitle, SectionTitle].\n\
-            4. NEVER recommend voltages above 3.3V, push-pull drive on NSW5V (P7501 Pin 5 / GP3) or XRESET (Pin 2 / GP5), flash operations in SA0..SA133, or JTAG TDI/TDO on P7501.\n\n\
+            4. NEVER recommend voltages above 3.3V, push-pull drive on NSW5V (P7501 Pin 5 / GP3) or XRESET (Pin 2 / GP5), flash writes/erases in Layer 1 Critical Boot IPL SA0..SA10 (256 KiB, permanent E05) or unguarded Layer 2 Upper NOR SA11..SA133, or JTAG TDI/TDO on P7501.\n\n\
             TECHNICAL CONTEXT:\n{}\n\n\
             ENGINEER QUERY: {}\n\
             GROUNDED ANSWER:",
@@ -120,7 +120,7 @@ impl GroundedGenerator {
             "Verified technical diagnosis for '{}':\n\n",
             query.sanitized_text
         );
-        let footer = "\n\n[Hardware Safety Note: All operations must comply with 3.3V maximum nominal tolerance and preserve flash IPL sectors SA0..SA133].";
+        let footer = "\n\n[Hardware Safety Note: All operations must comply with 3.3V maximum nominal tolerance, keep P7501 Pin 5 NSW5V GP3 strictly Hi-Z Input without pulls, preserve Layer 1 Critical Boot IPL sectors SA0..SA10 (256 KiB, E05), and keep Layer 2 Upper NOR SA11..SA133 guarded].";
         format!("{}{}{}", header, body, footer)
     }
 

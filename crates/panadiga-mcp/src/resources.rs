@@ -12,7 +12,7 @@ use panadiga_core::ssot::{
 };
 use serde_json::{Value, json};
 use std::fs;
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 
 /// Hard payload ceiling (`32 KiB`) for single-shot MCP `resources/read` responses to prevent token exhaustion.
 pub const MAX_MCP_RESOURCE_BYTES: usize = 32 * 1024;
@@ -91,13 +91,7 @@ pub fn list_resources(workspace_root: &Path) -> Vec<Value> {
         }),
     ];
 
-    let effective_root = if workspace_root.join("docs").is_dir() {
-        workspace_root.to_path_buf()
-    } else if workspace_root == Path::new(".") {
-        crate::workspace::resolve_workspace_root()
-    } else {
-        workspace_root.to_path_buf()
-    };
+    let effective_root = crate::workspace::resolve_effective_workspace_for(workspace_root, "docs");
     let docs_root = effective_root.join("docs");
     let mut md_files = Vec::new();
     for resolved in HardwareProfileRegistry::builtin().list_models() {
@@ -276,24 +270,11 @@ pub fn read_resource(uri: &str, workspace_root: &Path) -> Result<Value> {
             }))
         }
         other if other.starts_with("panadiga://docs/") => {
-            let rel_str = other.trim_start_matches("panadiga://");
-            let rel_path = Path::new(rel_str);
-            if rel_path.components().any(|c| {
-                matches!(
-                    c,
-                    Component::ParentDir | Component::RootDir | Component::Prefix(_)
-                )
-            }) {
-                bail!("Invalid resource path traversal attempt: {}", uri);
-            }
-            let direct = workspace_root.join(rel_path);
-            let full_path = if direct.is_file() {
-                direct
-            } else if workspace_root == Path::new(".") {
-                crate::workspace::resolve_workspace_root().join(rel_path)
-            } else {
-                direct
-            };
+            let tail = other.trim_start_matches("panadiga://docs/");
+            let effective_root =
+                crate::workspace::resolve_effective_workspace_for(workspace_root, "docs");
+            let docs_root = effective_root.join("docs");
+            let full_path = crate::workspace::resolve_workspace_path(&docs_root, tail)?;
             if !full_path.is_file() {
                 bail!("Document resource not found: {}", uri);
             }

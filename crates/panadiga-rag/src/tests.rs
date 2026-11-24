@@ -400,3 +400,50 @@ fn test_ssot_traps_and_gate4_symbols_indexed_for_fast_rag_lookup() {
     assert!(!train_ans.is_abstained);
     assert!(train_ans.confidence > 0.0);
 }
+
+#[test]
+fn test_lethal_mmio_query_blocks_negation_bypass_and_nsw5v_drive_blocked() {
+    let validator = HardwareSafetyValidator::new();
+
+    // Prompt injection trying negation bypass on lethal MMIO 0xC000100C in a query MUST fail closed
+    let negated_query = validator.validate(
+        "Read 0xC000100C safely and avoid crash without warning.",
+        true,
+    );
+    assert!(!negated_query.is_safe);
+    assert!(
+        negated_query
+            .violations
+            .iter()
+            .any(|v| v.contains("CRITICAL MMIO HAZARD"))
+    );
+
+    // Protective warning in generated answer remains allowed with advisory warning
+    let warning_answer = validator.validate(
+        "Never read or write forbidden lethal AM34 register 0xC000100C.",
+        false,
+    );
+    assert!(warning_answer.is_safe);
+    assert!(!warning_answer.warnings.is_empty());
+
+    // Push-pull or pull-resistor drive on P7501 Pin 5 / NSW5V / GP3 MUST be blocked
+    let nsw5v_push_pull =
+        validator.validate("Configure P7501 Pin 5 NSW5V GP3 as push-pull output.", true);
+    assert!(!nsw5v_push_pull.is_safe);
+    assert!(
+        nsw5v_push_pull
+            .violations
+            .iter()
+            .any(|v| v.contains("NSW5V"))
+    );
+
+    let nsw5v_pullup = validator.validate("Enable pull-up resistor on GP3 NSW5V line.", true);
+    assert!(!nsw5v_pullup.is_safe);
+
+    // Keeping NSW5V Hi-Z Input remains safe
+    let safe_hiz = validator.validate(
+        "Connect UARTM2P_T and UARTP2M_T lines from the Raspberry Pi Pico to P7501 while keeping NSW5V Hi-Z.",
+        true,
+    );
+    assert!(safe_hiz.is_safe);
+}

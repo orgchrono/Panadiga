@@ -3,9 +3,10 @@
 use serde_json::{Value, json};
 use std::path::Path;
 
+use crate::policy::{McpSecurityPolicy, append_audit_entry, truncate_tool_output};
 use crate::prompts::{get_prompt, list_prompts};
 use crate::resources::{list_resources, read_resource};
-use crate::tools::{execute_tool, tool_definitions};
+use crate::tools::{execute_tool_with_policy, tool_definitions};
 
 fn rpc_error(id: Value, code: i32, message: impl Into<String>) -> Value {
     json!({
@@ -15,7 +16,17 @@ fn rpc_error(id: Value, code: i32, message: impl Into<String>) -> Value {
     })
 }
 
+/// Handles a single JSON-RPC 2.0 line in default fail-closed read-only policy mode.
 pub fn handle_jsonrpc_line(line: &str, workspace_root: &Path) -> Option<Value> {
+    handle_jsonrpc_line_with_policy(line, workspace_root, &McpSecurityPolicy::read_only())
+}
+
+/// Handles a single JSON-RPC 2.0 line under an explicit [`McpSecurityPolicy`].
+pub fn handle_jsonrpc_line_with_policy(
+    line: &str,
+    workspace_root: &Path,
+    policy: &McpSecurityPolicy,
+) -> Option<Value> {
     let trimmed = line.trim();
     if trimmed.is_empty() {
         return None;
@@ -61,18 +72,36 @@ pub fn handle_jsonrpc_line(line: &str, workspace_root: &Path) -> Option<Value> {
                 .cloned()
                 .unwrap_or_else(|| json!({}));
 
-            match execute_tool(tool_name, &tool_args, workspace_root) {
+            match execute_tool_with_policy(tool_name, &tool_args, workspace_root, policy) {
                 Ok(out) => {
+                    append_audit_entry(
+                        policy.audit_log_path.as_deref(),
+                        tool_name,
+                        &tool_args,
+                        "ok",
+                        None,
+                    );
                     let pretty = serde_json::to_string_pretty(&out).unwrap_or_default();
+                    let bounded = truncate_tool_output(&pretty, policy.max_output_bytes);
                     json!({
                         "jsonrpc": "2.0",
                         "id": id,
                         "result": {
-                            "content": [{ "type": "text", "text": pretty }]
+                            "content": [{ "type": "text", "text": bounded }]
                         }
                     })
                 }
-                Err(e) => rpc_error(id, -32000, e.to_string()),
+                Err(e) => {
+                    let msg = e.to_string();
+                    append_audit_entry(
+                        policy.audit_log_path.as_deref(),
+                        tool_name,
+                        &tool_args,
+                        "error",
+                        Some(&msg),
+                    );
+                    rpc_error(id, -32000, msg)
+                }
             }
         }
         "resources/list" => json!({

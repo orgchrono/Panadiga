@@ -75,6 +75,18 @@ pub struct McpArgs {
     /// Check MCP server readiness and exit with PONG message
     #[arg(long)]
     pub ping: bool,
+
+    /// Allow MCP tools to write Copy-on-Write or generated artifacts inside workspace root
+    #[arg(long)]
+    pub allow_file_write: bool,
+
+    /// Allow guarded live hardware actions (requires PANADIGA_MCP_HITL_TOKEN match)
+    #[arg(long)]
+    pub allow_hardware_write: bool,
+
+    /// Optional JSONL forensic audit log path for tools/call invocations
+    #[arg(long, value_name = "PATH")]
+    pub audit_log: Option<PathBuf>,
 }
 
 #[derive(Args, Debug)]

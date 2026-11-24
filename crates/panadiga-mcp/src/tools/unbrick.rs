@@ -17,9 +17,14 @@ use panadiga_core::re::{
     prepare_sd_unbrick_kit, verify_sd_unbrick_media,
 };
 
+use crate::policy::McpSecurityPolicy;
 use crate::workspace::{optional_non_empty_str, require_non_empty_str, resolve_workspace_path};
 
-fn handle_matshita_emu_action(args: &Value, workspace_root: &Path) -> Result<Value> {
+fn handle_matshita_emu_action(
+    args: &Value,
+    workspace_root: &Path,
+    policy: &McpSecurityPolicy,
+) -> Result<Value> {
     let sub = optional_non_empty_str(args, "emu_action")
         .unwrap_or("boot")
         .to_ascii_lowercase();
@@ -30,7 +35,7 @@ fn handle_matshita_emu_action(args: &Value, workspace_root: &Path) -> Result<Val
                 .parse()?;
             let mut emu = MatshitaOddEmulator::new(scenario);
             if let Some(rel) = optional_non_empty_str(args, "frm_path") {
-                let bytes = fs::read(resolve_workspace_path(workspace_root, rel))?;
+                let bytes = fs::read(resolve_workspace_path(workspace_root, rel)?)?;
                 let _ = emu.mount_unlock_frm("dvd", &bytes)?;
             }
             Ok(serde_json::to_value(emu.run_boot_sequence()?)?)
@@ -67,7 +72,7 @@ fn handle_matshita_emu_action(args: &Value, workspace_root: &Path) -> Result<Val
         "verify_frm" => {
             let kind = optional_non_empty_str(args, "container_kind").unwrap_or("digadiag");
             let rel = require_non_empty_str(args, "frm_path")?;
-            let bytes = fs::read(resolve_workspace_path(workspace_root, rel))?;
+            let bytes = fs::read(resolve_workspace_path(workspace_root, rel)?)?;
             Ok(serde_json::to_value(verify_unlock_frm_container(
                 kind, &bytes,
             )?)?)
@@ -75,20 +80,20 @@ fn handle_matshita_emu_action(args: &Value, workspace_root: &Path) -> Result<Val
         "pack_unlock_frm" => {
             let kind = optional_non_empty_str(args, "container_kind").unwrap_or("sd");
             let mode = parse_unlock_container_mode(kind)?;
+            let out_path_opt = optional_non_empty_str(args, "output_path")
+                .map(|out_rel| resolve_workspace_path(workspace_root, out_rel))
+                .transpose()?;
+            if let Some(out_path) = out_path_opt.as_deref() {
+                policy.require_file_write("panadiga_sd_unbrick_kit", Some(out_path))?;
+            }
             let payload = match optional_non_empty_str(args, "payload_hex") {
                 Some(h) => parse_hex_payload(h)?,
                 None => vec![0xCBu8; 1024],
             };
             let (bytes, summary) = build_sample_unlock_frm(mode, &payload)?;
             let mut saved_path: Option<String> = None;
-            if let Some(out_rel) = optional_non_empty_str(args, "output_path") {
-                let out_path = resolve_workspace_path(workspace_root, out_rel);
-                if let Some(parent) = out_path.parent()
-                    && !parent.as_os_str().is_empty()
-                {
-                    fs::create_dir_all(parent)?;
-                }
-                fs::write(&out_path, &bytes)?;
+            if let Some(out_path) = out_path_opt.as_deref() {
+                crate::workspace::write_cow_artifact(out_path, &bytes)?;
                 saved_path = Some(out_path.to_string_lossy().into_owned());
             }
             Ok(json!({
@@ -103,6 +108,14 @@ fn handle_matshita_emu_action(args: &Value, workspace_root: &Path) -> Result<Val
 }
 
 pub fn handle_sd_unbrick_kit(args: &Value, workspace_root: &Path) -> Result<Value> {
+    handle_sd_unbrick_kit_with_policy(args, workspace_root, &McpSecurityPolicy::read_only())
+}
+
+pub fn handle_sd_unbrick_kit_with_policy(
+    args: &Value,
+    workspace_root: &Path,
+    policy: &McpSecurityPolicy,
+) -> Result<Value> {
     let action = optional_non_empty_str(args, "action")
         .unwrap_or("status")
         .to_ascii_lowercase();
@@ -115,26 +128,28 @@ pub fn handle_sd_unbrick_kit(args: &Value, workspace_root: &Path) -> Result<Valu
             let frm = optional_non_empty_str(args, "pana_dvd_path")
                 .unwrap_or("firmware_and_images/PANA_DVD.FRM");
             let out = require_non_empty_str(args, "output_dir")?;
+            let frm_path = resolve_workspace_path(workspace_root, frm)?;
+            let out_path = resolve_workspace_path(workspace_root, out)?;
+            policy.require_file_write("panadiga_sd_unbrick_kit", Some(&out_path))?;
             let unpack = args
                 .get("unpack_payloads")
                 .and_then(|v| v.as_bool())
                 .unwrap_or(false);
-            let rep = extract_modules_from_frm(
-                &resolve_workspace_path(workspace_root, frm),
-                &resolve_workspace_path(workspace_root, out),
-                unpack,
-            )?;
+            let rep = extract_modules_from_frm(&frm_path, &out_path, unpack)?;
             Ok(serde_json::to_value(rep)?)
         }
         "verify_sd" => {
             let dir =
                 optional_non_empty_str(args, "sd_root_dir").unwrap_or(DEFAULT_SD_UNBRICK_KIT_DIR);
-            let rep = verify_sd_unbrick_media(&resolve_workspace_path(workspace_root, dir));
+            let dir_path = resolve_workspace_path(workspace_root, dir)?;
+            let rep = verify_sd_unbrick_media(&dir_path);
             Ok(serde_json::to_value(rep)?)
         }
         "prepare_sd" => {
             let out_dir =
                 optional_non_empty_str(args, "output_dir").unwrap_or(DEFAULT_SD_UNBRICK_KIT_DIR);
+            let resolved_out_dir = resolve_workspace_path(workspace_root, out_dir)?;
+            policy.require_file_write("panadiga_sd_unbrick_kit", Some(&resolved_out_dir))?;
             let loader_profile: SdLoaderProfile = optional_non_empty_str(args, "loader_profile")
                 .unwrap_or("ver061")
                 .parse()?;
@@ -185,15 +200,19 @@ pub fn handle_sd_unbrick_kit(args: &Value, workspace_root: &Path) -> Result<Valu
                 .unwrap_or(false);
 
             let rep = prepare_sd_unbrick_kit(&SdUnbrickKitRequest {
-                output_dir: resolve_workspace_path(workspace_root, out_dir),
+                output_dir: resolved_out_dir,
                 pana_dvd_path: optional_non_empty_str(args, "pana_dvd_path")
-                    .map(|p| resolve_workspace_path(workspace_root, p)),
+                    .map(|p| resolve_workspace_path(workspace_root, p))
+                    .transpose()?,
                 prog061_path: optional_non_empty_str(args, "prog061_path")
-                    .map(|p| resolve_workspace_path(workspace_root, p)),
+                    .map(|p| resolve_workspace_path(workspace_root, p))
+                    .transpose()?,
                 main_path: optional_non_empty_str(args, "main_path")
-                    .map(|p| resolve_workspace_path(workspace_root, p)),
+                    .map(|p| resolve_workspace_path(workspace_root, p))
+                    .transpose()?,
                 drv_path: optional_non_empty_str(args, "drv_path")
-                    .map(|p| resolve_workspace_path(workspace_root, p)),
+                    .map(|p| resolve_workspace_path(workspace_root, p))
+                    .transpose()?,
                 bgo_mode,
                 allow_unsafe_auto_format,
                 main_passthrough_mode: passthrough_mode,
@@ -211,7 +230,7 @@ pub fn handle_sd_unbrick_kit(args: &Value, workspace_root: &Path) -> Result<Valu
             })?;
             Ok(serde_json::to_value(rep)?)
         }
-        "matshita_emu" => handle_matshita_emu_action(args, workspace_root),
+        "matshita_emu" => handle_matshita_emu_action(args, workspace_root, policy),
         other => Ok(json!({
             "error": format!("Unsupported panadiga_sd_unbrick_kit action '{other}': expected status, extract_frm, prepare_sd, verify_sd, or matshita_emu")
         })),

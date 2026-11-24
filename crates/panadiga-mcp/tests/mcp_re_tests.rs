@@ -1,13 +1,17 @@
-use panadiga_mcp::execute_tool;
+use panadiga_mcp::{McpSecurityPolicy, execute_tool, execute_tool_with_policy};
 use serde_json::json;
 use std::fs;
 #[test]
 fn test_new_re_bgo_nor_and_capacity_tools() {
     let tmp = std::env::temp_dir().join(format!("panadiga_mcp_re_{}", std::process::id()));
     fs::create_dir_all(&tmp).unwrap();
+    let rw_policy = McpSecurityPolicy {
+        allow_file_write: true,
+        ..McpSecurityPolicy::read_only()
+    };
 
     // 1. Test panadiga_nor_dumper_stub
-    let stub_res = execute_tool(
+    let stub_res = execute_tool_with_policy(
         "panadiga_nor_dumper_stub",
         &json!({
             "start_addr": "0x84000000",
@@ -16,6 +20,7 @@ fn test_new_re_bgo_nor_and_capacity_tools() {
             "output_path": "nor_stub.bin"
         }),
         &tmp,
+        &rw_policy,
     )
     .unwrap();
     assert_eq!(stub_res["status"], "success");
@@ -36,7 +41,7 @@ fn test_new_re_bgo_nor_and_capacity_tools() {
         ]);
     fs::write(tmp.join("prog061.bin"), &prog).unwrap();
 
-    let blocked_auto = execute_tool(
+    let blocked_auto = execute_tool_with_policy(
         "panadiga_bgo_unbrick",
         &json!({
             "input_path": "prog061.bin",
@@ -46,11 +51,12 @@ fn test_new_re_bgo_nor_and_capacity_tools() {
             "output_path": "DIGADIAG_BLOCKED.FRM"
         }),
         &tmp,
+        &rw_policy,
     )
     .unwrap_err();
     assert!(blocked_auto.to_string().contains("AutoFormatBgo"));
 
-    let bgo_res = execute_tool(
+    let bgo_res = execute_tool_with_policy(
         "panadiga_bgo_unbrick",
         &json!({
             "input_path": "prog061.bin",
@@ -60,6 +66,7 @@ fn test_new_re_bgo_nor_and_capacity_tools() {
             "output_path": "DIGADIAG.FRM"
         }),
         &tmp,
+        &rw_policy,
     )
     .unwrap();
     assert_eq!(
@@ -72,7 +79,7 @@ fn test_new_re_bgo_nor_and_capacity_tools() {
     );
     assert!(tmp.join("DIGADIAG.FRM").is_file());
 
-    let mon_res = execute_tool(
+    let mon_res = execute_tool_with_policy(
         "panadiga_bgo_unbrick",
         &json!({
             "input_path": "prog061.bin",
@@ -82,6 +89,7 @@ fn test_new_re_bgo_nor_and_capacity_tools() {
             "output_path": "DIGADIAG_MON.FRM"
         }),
         &tmp,
+        &rw_policy,
     )
     .unwrap();
     assert_eq!(
@@ -212,7 +220,7 @@ fn test_new_re_bgo_nor_and_capacity_tools() {
     assert!(emu_ipl_block.is_err());
     assert!(emu_ipl_block.unwrap_err().to_string().contains("E05"));
 
-    let packed_frm = execute_tool(
+    let packed_frm = execute_tool_with_policy(
         "panadiga_sd_unbrick_kit",
         &json!({
             "action": "matshita_emu",
@@ -221,19 +229,21 @@ fn test_new_re_bgo_nor_and_capacity_tools() {
             "output_path": "out/PANA_CD.FRM"
         }),
         &tmp,
+        &rw_policy,
     )
     .unwrap();
     assert_eq!(packed_frm["verification"]["verified"], true);
     assert!(tmp.join("out/PANA_CD.FRM").is_file());
 
     // NOR dumper DIGADIAG defaults to 0x50400000
-    let nor_digadiag = execute_tool(
+    let nor_digadiag = execute_tool_with_policy(
         "panadiga_nor_dumper_stub",
         &json!({
             "wrap_digadiag": true,
             "output_path": "out/DIGADIAG_DMP.FRM"
         }),
         &tmp,
+        &rw_policy,
     )
     .unwrap();
     assert_eq!(nor_digadiag["load_addr"], "0x50400000");
@@ -247,7 +257,7 @@ fn test_new_re_bgo_nor_and_capacity_tools() {
     eh55_img[0x007F_0000..0x007F_0008]
         .copy_from_slice(&[0xFF, 0xFF, 0xFF, 0xFF, 0x01, 0xF1, 0xFF, 0xFF]);
     fs::write(&flash_src, eh55_img).unwrap();
-    let patched = execute_tool(
+    let patched = execute_tool_with_policy(
         "panadiga_clean_nvram",
         &json!({
             "action": "patch",
@@ -257,6 +267,7 @@ fn test_new_re_bgo_nor_and_capacity_tools() {
             "patch_hex": "cafe1234"
         }),
         &tmp,
+        &rw_policy,
     )
     .unwrap();
     assert_eq!(patched["sanitized_file_created"], true);
@@ -270,7 +281,7 @@ fn test_new_re_bgo_nor_and_capacity_tools() {
     let unlabeled_src = tmp.join("unlabeled_8mb.bin");
     fs::write(&unlabeled_src, vec![0x55u8; 8 * 1024 * 1024]).unwrap();
     assert!(
-        execute_tool(
+        execute_tool_with_policy(
             "panadiga_clean_nvram",
             &json!({
                 "action": "clean",
@@ -278,6 +289,7 @@ fn test_new_re_bgo_nor_and_capacity_tools() {
                 "output_file": "out/unlabeled_clean.bin"
             }),
             &tmp,
+            &rw_policy,
         )
         .is_err()
     );

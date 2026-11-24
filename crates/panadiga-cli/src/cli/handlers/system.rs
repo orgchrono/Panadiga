@@ -179,7 +179,14 @@ pub fn handle_verify_artifact(args: VerifyArtifactArgs) -> Result<()> {
 }
 
 pub fn handle_mcp(args: McpArgs) -> Result<()> {
-    panadiga_mcp::run_mcp_server(args.tools, args.ping)
+    let workspace_root = panadiga_mcp::resolve_workspace_root();
+    let policy = panadiga_mcp::McpSecurityPolicy::from_cli_and_env(
+        args.allow_file_write,
+        args.allow_hardware_write,
+        args.audit_log.as_deref(),
+        &workspace_root,
+    );
+    panadiga_mcp::run_mcp_server_with_policy(args.tools, args.ping, &policy)
 }
 
 /// Handles `panadiga ssot export-all`.

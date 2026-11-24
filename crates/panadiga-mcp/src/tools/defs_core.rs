@@ -96,7 +96,7 @@ pub(super) fn core_tool_definitions() -> Vec<Value> {
                     },
                     "lab_override_disclaimer": {
                         "type": "string",
-                        "description": "Optional exact disclaimer literal 'I_ACCEPT_UNVERIFIED_HARDWARE_RISK' for offline CoW lab override."
+                        "description": "Optional operator-supplied LabOverride disclaimer acknowledgement for offline CoW R&D override (never auto-filled by agents)."
                     },
                     "lab_override_reason": {
                         "type": "string",

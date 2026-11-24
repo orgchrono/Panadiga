@@ -7,9 +7,9 @@ use panadiga_core::pico::panamon1::MockPanamon1Transport;
 use panadiga_core::re::eh55_bgo::eh55_bgo_sector_offset;
 use panadiga_core::re::eh55_bgo::repair_plan::{BgoRepairOp, BgoRepairPlan};
 use panadiga_mcp::tools::re_ext_bench::{
-    handle_davis_probe_with_transport, handle_eh55_bgo_with_transport,
+    handle_davis_probe_with_policy, handle_eh55_bgo_with_policy,
 };
-use panadiga_mcp::{execute_tool, tool_definitions};
+use panadiga_mcp::{McpSecurityPolicy, execute_tool, execute_tool_with_policy, tool_definitions};
 use serde_json::json;
 use std::collections::HashSet;
 use std::fs;
@@ -56,7 +56,11 @@ fn region_compat_and_ifodev2_tail_preserve_readonly_tail_cow() {
     ifodev2[0x400..0x408].copy_from_slice(b"TAIL_RO!");
     fs::write(ws.join("ifodev2.bin"), &ifodev2).unwrap();
 
-    let patched = execute_tool(
+    let rw_policy = McpSecurityPolicy {
+        allow_file_write: true,
+        ..McpSecurityPolicy::read_only()
+    };
+    let patched = execute_tool_with_policy(
         "panadiga_region_compat",
         &json!({
             "action": "patch_dev",
@@ -66,6 +70,7 @@ fn region_compat_and_ifodev2_tail_preserve_readonly_tail_cow() {
             "oem": "E"
         }),
         &ws,
+        &rw_policy,
     )
     .unwrap();
     assert_eq!(patched["metadata_and_dev_oem_only"], true);
@@ -209,17 +214,26 @@ fn eh55_bgo_and_davis_probe_tools_enforce_guards_with_mock_transport() {
     )
     .unwrap();
 
+    let hw_policy = McpSecurityPolicy {
+        allow_file_write: true,
+        allow_hardware_write: true,
+        hitl_token: Some("test-hitl-token".to_string()),
+        ..McpSecurityPolicy::read_only()
+    };
+
     assert!(
-        execute_tool(
-            "panadiga_eh55_bgo",
+        handle_eh55_bgo_with_policy::<MockPanamon1Transport>(
             &json!({
                 "action": "live_apply",
                 "port": "COM99",
                 "plan_path": "plan.json",
                 "backup_dir": "bkp",
-                "confirm_upper_nor": false
+                "confirm_upper_nor": false,
+                "hitl_token": "test-hitl-token"
             }),
-            &ws
+            &ws,
+            None,
+            &hw_policy,
         )
         .is_err()
     );
@@ -228,17 +242,19 @@ fn eh55_bgo_and_davis_probe_tools_enforce_guards_with_mock_transport() {
     mock_bgo.bridge_active = true;
     mock_bgo.map_memory(AM34_FLASH_UNCACHED_BASE, nor);
     mock_bgo.boottrace_reply = "***** normal mode *****\r\nBOOTTRACE: OK\r\nPANADIGA> ".to_string();
-    let live_bgo = handle_eh55_bgo_with_transport(
+    let live_bgo = handle_eh55_bgo_with_policy(
         &json!({
             "action": "live_apply",
             "port": "MOCK",
             "plan_path": "plan.json",
             "backup_dir": "bkp",
             "confirm_upper_nor": true,
+            "hitl_token": "test-hitl-token",
             "boot_trace_ms": 5000
         }),
         &ws,
         Some(mock_bgo),
+        &hw_policy,
     )
     .unwrap();
     assert_eq!(live_bgo["boot_normal_ok"], true);
@@ -277,10 +293,16 @@ fn eh55_bgo_and_davis_probe_tools_enforce_guards_with_mock_transport() {
         .flat_map(u16::to_le_bytes)
         .collect();
     dmock.map_memory(0xC000_1000, sys_bytes);
-    let live_davis = handle_davis_probe_with_transport(
-        &json!({ "action": "run_live", "port": "MOCK", "drive": "master" }),
+    let live_davis = handle_davis_probe_with_policy(
+        &json!({
+            "action": "run_live",
+            "port": "MOCK",
+            "drive": "master",
+            "hitl_token": "test-hitl-token"
+        }),
         &ws,
         Some(dmock),
+        &hw_policy,
     )
     .unwrap();
     assert_eq!(live_davis["lethal_0xc000100c_blocked"], true);

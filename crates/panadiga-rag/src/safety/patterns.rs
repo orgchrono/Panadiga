@@ -26,6 +26,16 @@ pub(super) static NEGATION_REGEX: LazyLock<Regex> = LazyLock::new(|| {
         .expect("Invalid regex: NEGATION_REGEX")
 });
 
+pub(super) static NSW5V_TARGET_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)\bnsw5v\b|\bp7501\b[^\n.;]{0,32}\bpin(?:o)?\s*5\b|\bgp3\b[^\n.;]{0,32}\b(?:nsw5v|p7501|pin(?:o)?\s*5)\b")
+        .expect("Invalid regex: NSW5V_TARGET_REGEX")
+});
+
+pub(super) static NSW5V_DRIVE_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)\b(?:push[\s-]?pull|gpio_out|gpio_set_dir|gpio_pull_(?:up|down)|pull[\s-]?(?:up|down)|output\s+mode|as\s+(?:an?\s+)?output|(?:drive|driving|force|forcing|set|setting|configure|configuring)\s+(?:as\s+)?(?:an?\s+)?(?:output|high|low|3\.3v|5v))\b")
+        .expect("Invalid regex: NSW5V_DRIVE_REGEX")
+});
+
 static MV_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?i)(?:^|[^\w])(\d+(?:[.,]\d+)?)\s*m(?:vdc|vac|v|volts?)(?:_[a-z0-9_]+|\b)")
         .expect("Invalid regex: MV_PATTERN")
