@@ -62,7 +62,7 @@ jobs:
           "
 
       - name: Upload Reusable Desktop Frontend Dist Artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: panadiga-frontend-dist
           path: apps/desktop/dist/
@@ -70,7 +70,7 @@ jobs:
           retention-days: 1
 
       - name: Upload Reusable Android Frontend Dist Artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: panadiga-frontend-android-dist
           path: apps/desktop/dist-android/
@@ -145,7 +145,7 @@ jobs:
         run: .\build.cmd --ci --desktop --strict-toolchains
 
       - name: Upload Windows Distribution Artifacts
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: panadiga-windows-x86_64
           path: |
@@ -241,7 +241,7 @@ jobs:
           if [ -f "tools/README.md" ]; then cp -f tools/README.md dist/tools/README.md; fi
 
       - name: Upload Platform Release Binary
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: panadiga-${{ matrix.os }}
           path: |
@@ -315,7 +315,7 @@ jobs:
           sha256sum target/pico-build/out/*.uf2
 
       - name: Upload Compiled Firmware Artifacts (UF2)
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: panasonic_p7501_uart_firmware_binaries
           path: |
@@ -415,7 +415,7 @@ jobs:
           shasum -a 256 "release-apk/panadiga-android-arm64.apk" > "release-apk/panadiga-android-arm64.apk.sha256"
 
       - name: Upload Android APK Artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: panadiga-android-apk
           path: |

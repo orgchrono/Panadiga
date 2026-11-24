@@ -54,7 +54,7 @@ jobs:
           npm run build:android
 
       - name: Upload Shared Desktop Frontend Dist
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-frontend-dist
           path: apps/desktop/dist/
@@ -62,7 +62,7 @@ jobs:
           retention-days: 1
 
       - name: Upload Shared Android Frontend Dist
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-frontend-android-dist
           path: apps/desktop/dist-android/
@@ -134,7 +134,7 @@ jobs:
           (cd target/pico-build/out && sha256sum panasonic_p7501_uart_unified.uf2 > panasonic_p7501_uart_unified.uf2.sha256)
 
       - name: Upload Firmware Artifacts
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: panasonic_p7501_uart_firmware_binaries
           path: |
@@ -339,7 +339,7 @@ jobs:
           fi
 
       - name: Upload Release Archive Artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: panadiga-${{ matrix.platform.name }}
           path: |
@@ -350,7 +350,7 @@ jobs:
 
       - name: Upload Debian Package Artifact (Linux)
         if: runner.os == 'Linux'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: panadiga-linux-deb
           path: |
@@ -475,7 +475,7 @@ jobs:
           shasum -a 256 "release-apk/panadiga-android-arm64.apk" > "release-apk/panadiga-android-arm64.apk.sha256"
 
       - name: Upload Android APK Artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: panadiga-android-apk
           path: |
