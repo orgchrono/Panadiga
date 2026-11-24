@@ -320,8 +320,8 @@ fn hdd_flash_safe_enforces_physicaldrive0_nvme_4tb_and_executes_mock_flash() {
     let mut nvme_dev =
         FileBackedMockFlashDevice::create(&mock_path, 250_000_000_000, BUS_TYPE_NVME).unwrap();
     let valid_dto = FlashEh55HddSafeRequestDto {
-        device_path: r"\\.\PhysicalDrive1".into(),
-        confirm_disk_model_token: "PhysicalDrive1".into(),
+        device_path: r"\\.\PhysicalDrive99".into(),
+        confirm_disk_model_token: "PhysicalDrive99".into(),
         ..pd0.clone()
     };
     assert!(run_flash_eh55_with_device(&mut nvme_dev, &valid_dto, |_| {}).is_err());

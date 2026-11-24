@@ -534,11 +534,11 @@ fn wave2_hdd_format_meihdfs_inject_frm_and_flash_eh55_mock() {
     let mut nvme_dev =
         FileBackedMockFlashDevice::create(&mock_disk_path, disk_250gb, BUS_TYPE_NVME).unwrap();
     let ok_args = FlashEh55Args {
-        drive: r"\\.\PhysicalDrive1".to_string(),
+        drive: r"\\.\PhysicalDrive99".to_string(),
         image: img_path,
         mirror_p1: Some(mirror_p1_path),
         backup_dir: dir.join("flash_bkp"),
-        confirm_physical_drive: "PhysicalDrive1".to_string(),
+        confirm_physical_drive: "PhysicalDrive99".to_string(),
         range: HddExpectedRangeArgs {
             expected_min_gb: Some(240),
             expected_max_gb: Some(260),

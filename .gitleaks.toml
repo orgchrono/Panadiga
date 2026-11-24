@@ -1,0 +1,40 @@
+title = "Panadiga secret-scan configuration"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "UI i18n hex bookmark localeKey identifiers (hexBookmarks.ts)"
+regexTarget = "line"
+regexes = [
+  '''^\s*localeKey:\s*'(?:journal_wal_8mb|partition[12]_(?:32|64)mb)',\s*$''',
+]
+
+[[allowlists]]
+description = "Android SharedPreferences constant name (AndroidIrExecutor.kt)"
+regexTarget = "line"
+regexes = [
+  '''^\s*private const val KEY_REPEAT_COUNT = "repeat_count_v1"\s*$''',
+]
+
+[[allowlists]]
+description = "SSOT Ghidra binary identifier keys (EH55 firmware modules)"
+regexTarget = "line"
+regexes = [
+  '''^\s*"key":\s*"EH55_(?:DRV_S211|MAIN_3410PQ)\.bin",?\s*$''',
+]
+
+[[allowlists]]
+description = "Unit-test mock HITL placeholder (mcp_security_tests.rs)"
+regexTarget = "line"
+regexes = [
+  '''^\s*"hitl_token":\s*"op-secret-hitl-42",?\s*$''',
+]
+
+[[allowlists]]
+description = "Publicly documented legacy Panasonic DIGA .FRM and SDDL_SEC firmware container keys in historical compendium"
+regexTarget = "line"
+regexes = [
+  '''^\s*AES Key\s*:\s*0x(?:A692605194CF7F4917E50521C1DF0BBA|62A39E1C5594AE09244EB326EF7938FA)\s*$''',
+  '''^\s*-\s*AES-128 Key:\s*`26E096D3EF8A8FBBAA5E516F7726C22C`\s*$''',
+]
