@@ -32,7 +32,7 @@ Embora o foco inicial de laboratório deste projeto seja o modelo amplamente dif
 3. **Criptografia e Proteção de Propriedade Intelectual:** O contêiner de distribuição óptica (`PANA_DVD.FRM`) e as partições executáveis do HD são blindados com cifras de bloco simétricas de 64 bits em modo ECB, associadas a esquemas CPRM (*Content Protection for Recordable Media*) e DivX DRM.
 4. **A Vulnerabilidade Crítica do Erro `U99`:** A calibração de canais, estado de montagem do HDD e parâmetros do gravador são mantidos nos últimos 64 KB da Flash, emulando uma EEPROM (`EEMUL`). Desgaste de células, desligamento abrupto durante gravação ou parâmetros corrompidos provocam falha de validação na inicialização. Como consequência, o firmware Matsushita entra em pânico e trava irreversivelmente com o código **`U99`** no display VFD frontal, rejeitando comandos do controle e travando o mecanismo óptico.
 
-Este repositório consolida o **ecossistema definitivo de engenharia reversa, recuperação física e análise forense** para a linha Panasonic DIGA, disponibilizando a suíte de ferramentas de alta performance em Rust **`panadiga`**, interface de bancada desktop e mobile Android (`.apk`), firmware C11/PIO para microcontroladores **Raspberry Pi Pico (RP2040) e Pico 2 (RP2350)** com suporte a **Bluetooth Low Energy (BLE)** e USB-C OTG, **32 manuais técnicos de fábrica e datasheets de silício**, **43 dossiês técnicos bilíngues sincronizados (`pt-BR` / `en-US`)**, **disassembly e pseudocódigo integral MN103S** (`docs/pseudocode/`) e **28 capturas e logs únicos de bancada (`COM10` / `PhysicalDrive1`)** (`docs/debug_logs/`).
+Este repositório consolida o **ecossistema definitivo de engenharia reversa, recuperação física e análise forense** para a linha Panasonic DIGA, disponibilizando a suíte de ferramentas de alta performance em Rust **`panadiga`**, interface de bancada desktop e mobile Android (`.apk`), firmware C11/PIO para microcontroladores **Raspberry Pi Pico (RP2040) e Pico 2 (RP2350)** com suporte a **Bluetooth Low Energy (BLE)** e USB-C OTG, **32 manuais técnicos de fábrica e datasheets de silício**, **44 dossiês técnicos bilíngues sincronizados (`pt-BR` / `en-US`)**, **disassembly e pseudocódigo integral MN103S** (`docs/pseudocode/`) e **28 capturas e logs únicos de bancada (`COM10` / `PhysicalDrive1`)** (`docs/debug_logs/`).
 
 ---
 
@@ -138,9 +138,9 @@ Panadiga/
 │   └── playwright.config.ts                          <-- Configuração de Testes End-to-End em Navegador
 ├── docs/                                             <-- Acervo Oficial de Documentação Técnica
 │   ├── INDEX.md                                      <-- Portal e Índice Gateway de Documentação
-│   ├── translation_pairs.json                        <-- Mapa Canônico de 43 Pares Bilíngues (`pt-BR` <-> `en-US` + Raiz)
-│   ├── en-US/                                        <-- Dossiês Técnicos Canônicos em Inglês (43 pares)
-│   ├── pt-BR/                                        <-- Dossiês Técnicos de Bancada em Português (43 pares)
+│   ├── translation_pairs.json                        <-- Mapa Canônico de 44 Pares Bilíngues (`pt-BR` <-> `en-US` + Raiz)
+│   ├── en-US/                                        <-- Dossiês Técnicos Canônicos em Inglês (44 pares)
+│   ├── pt-BR/                                        <-- Dossiês Técnicos de Bancada em Português (44 pares)
 │   ├── audits/                                       <-- Snapshots Históricos Pré-Refatoração (`2026-11-11`)
 │   ├── pseudocode/                                   <-- Pseudocódigo Integral MN103S, Auditoria `??` & Dumps Brutos (`raw/*.txt`)
 │   ├── debug_logs/                                   <-- 22 Capturas Únicas `COM10` / `P7501` / `PhysicalDrive1` & `DOSSIE_COMPLETO_...txt`
@@ -600,7 +600,7 @@ Todos os manuais de serviço, esquemas e datasheets estão organizados hierarqui
 
 ## 11. Links Diretos para Auditorias, Dossiês Técnicos, Pseudocódigo e Logs (`docs/`)
 
-O acervo oficial reúne **43 dossiês técnicos bilíngues sincronizados (`pt-BR` / `en-US`)** (indexados em [`docs/INDEX.md`](docs/INDEX.md) e [`docs/translation_pairs.json`](docs/translation_pairs.json)), auditorias vivas na raiz ([`AUDITORIA_COMPLETA.md`](AUDITORIA_COMPLETA.md) / [`COMPLETE_AUDIT.md`](COMPLETE_AUDIT.md)), snapshots históricos ([`docs/audits/`](docs/audits/README.md)), evidência integral de disassembly/pseudocódigo Ghidra ([`docs/pseudocode/`](docs/pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) & [`docs/pseudocode/raw/`](docs/pseudocode/raw/)) e 28 capturas e logs únicos de bancada `COM10` / `PhysicalDrive1` ([`docs/debug_logs/`](docs/debug_logs/README.md)):
+O acervo oficial reúne **44 dossiês técnicos bilíngues sincronizados (`pt-BR` / `en-US`)** (indexados em [`docs/INDEX.md`](docs/INDEX.md) e [`docs/translation_pairs.json`](docs/translation_pairs.json)), auditorias vivas na raiz ([`AUDITORIA_COMPLETA.md`](AUDITORIA_COMPLETA.md) / [`COMPLETE_AUDIT.md`](COMPLETE_AUDIT.md)), snapshots históricos ([`docs/audits/`](docs/audits/README.md)), evidência integral de disassembly/pseudocódigo Ghidra ([`docs/pseudocode/`](docs/pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) & [`docs/pseudocode/raw/`](docs/pseudocode/raw/)) e 28 capturas e logs únicos de bancada `COM10` / `PhysicalDrive1` ([`docs/debug_logs/`](docs/debug_logs/README.md)):
 
 * 📋 **[Auditoria Técnica Consolidada (Raiz)](AUDITORIA_COMPLETA.md)** ([English Mirror: `COMPLETE_AUDIT.md`](COMPLETE_AUDIT.md))
   *Estado vivo do workspace (`crates/`, `firmware/pico-p7501/`, `scripts/`), hashes SHA-256 dos UF2 recompilados, síntese da auditoria `??` no Ghidra, paridade Python → Rust e os 9 Quality Gates.*
@@ -643,7 +643,8 @@ O acervo oficial reúne **43 dossiês técnicos bilíngues sincronizados (`pt-BR
   *`DIAGWATCH` parametrizado, `PANARSP REGS`, `DRVPANA`, UF2s recompilados (`RP2040`/`RP2350`), auditoria completa de `??` no Ghidra (`docs/pseudocode/`), logs reais (`docs/debug_logs/`), auditoria mestre (`AUDITORIA_COMPLETA.md`), histórico (`docs/audits/`) e comandos `panadiga re` / `panadiga pico decode-log`.*
 * ⚡ **[Arquitetura de Standby (`IC7501`), `TBUS`, `TW7501` e Estados de Boot](docs/pt-BR/ARQUITETURA_STANDBY_IC7501_TBUS_TW7501_E_MODOS_BOOT.md)** ([English Mirror](docs/en-US/STANDBY_IC7501_TBUS_TW7501_AND_BOOT_STATES_ARCHITECTURE.md))
   *Domínios elétricos (`C7584`, `R7623`, `IC7502`, `IC7505`, `P59001`), handshake `FUN_44005cd0` (`255s`), fluxos reais VFD (`PLEASE WAIT -> U99` vs `HELLO -> U99`), captura `PREJIG WAKE` na sonda Pico e dicionário de 457 entradas (`error-lookup` / `bench-wizard`).*
-* 🗂️ **Catálogo Bilíngue Completo (`43` PT-BR + `43` EN-US + `audits/` + `pseudocode/` + `debug_logs/`):** Consulte [**`docs/INDEX.md`**](docs/INDEX.md).
+* 🗂️ **Catálogo Bilíngue Completo (`44` PT-BR + `44` EN-US + `audits/` + `pseudocode/` + `debug_logs/`):** Consulte [**`docs/INDEX.md`**](docs/INDEX.md).
+* 🏆 **Padrão Ouro para Arquitetura Forense RE & Auditoria Ponto a Ponto (`7` Dimensões, `P0..P3`):** [**`PADRAO_OURO_ARQUITETURA_FORENSE_RE_E_AUDITORIA.md`**](docs/pt-BR/PADRAO_OURO_ARQUITETURA_FORENSE_RE_E_AUDITORIA.md) ([EN-US](docs/en-US/GOLD_STANDARD_FORENSIC_RE_ARCHITECTURE_AND_AUDIT.md))
 * 📦 **Auditoria dos Perfis de Hardware v2 (`89` Modelos DIGA, `T0` -> `T4`):** [**`CATALOGO_E_AUDITORIA_PERFIS_HARDWARE_LINHA_DIGA.md`**](docs/pt-BR/CATALOGO_E_AUDITORIA_PERFIS_HARDWARE_LINHA_DIGA.md) ([EN-US](docs/en-US/DIGA_LINEUP_HARDWARE_PROFILES_CATALOG_AND_AUDIT.md))
 * 🔬 **Histórico do Unbrick EH55 (BGO Ciclo 2, `PANAMON1>` Direto, `DAVIS`/`CH1` e Região `PAL-M`):** [**`HISTORICO_UNBRICK_EH55_BGO_CH1_DAVIS_E_REGIAO.md`**](docs/pt-BR/HISTORICO_UNBRICK_EH55_BGO_CH1_DAVIS_E_REGIAO.md) ([EN-US](docs/en-US/EH55_UNBRICK_BREAKTHROUGH_BGO_CH1_DAVIS_AND_REGION.md))
 * 🚀 **What's Next: Onboarding Completo de Novos Aparelhos DIGA (`T0` -> `T4` e PR):** [**`WHATS_NEXT_ONBOARDING_NOVOS_APARELHOS.md`**](docs/pt-BR/WHATS_NEXT_ONBOARDING_NOVOS_APARELHOS.md) ([EN-US](docs/en-US/WHATS_NEXT_NEW_DEVICE_ONBOARDING.md))

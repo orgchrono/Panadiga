@@ -19,7 +19,7 @@ _PT_MATURITY_BADGES = (
     "[evidência estática ghidra / estágio 0]",
     "[em investigação / bloqueio físico ch1]",
 )
-EXPECTED_PAIRS = 43
+EXPECTED_PAIRS = 44
 EXPECTED_LOGS = 28
 
 _INDEX_ROW_RE = re.compile(
@@ -293,3 +293,27 @@ def test_evidence_ledger_integrity() -> None:
             assert rel_doc in n4_covered_docs, (
                 f"{rel_doc} asserts [PROVADO EM HARDWARE REAL] without an N4_HARDWARE ledger entry"
             )
+
+
+def test_datasheets_and_kit_sha256sums_integrity() -> None:
+    """Every SHA256SUMS.txt entry in datasheets and tracked sd_unbrick_kit matches 64-hex SHA-256 on disk."""
+    hex64_re = re.compile(r"^[0-9a-fA-F]{64}$")
+    manifests = (
+        (ROOT / "manuals_and_schematics" / "datasheets" / "SHA256SUMS.txt", True),
+        (ROOT / "firmware_and_images" / "sd_unbrick_kit" / "SHA256SUMS.txt", False),
+    )
+    for manifest_path, require_all in manifests:
+        assert manifest_path.is_file(), f"Missing SHA256SUMS manifest: {manifest_path}"
+        lines = [ln.strip() for ln in manifest_path.read_text(encoding="utf-8").splitlines() if ln.strip()]
+        assert lines, f"Empty SHA256SUMS manifest: {manifest_path}"
+        for line in lines:
+            parts = line.split(None, 1)
+            assert len(parts) == 2, f"Malformed SHA256SUMS line in {manifest_path}: {line!r}"
+            digest, raw_name = parts[0], parts[1].lstrip("*").strip()
+            assert hex64_re.match(digest), f"Non-64-hex SHA-256 in {manifest_path}: {digest!r}"
+            target = manifest_path.parent / raw_name
+            if require_all or target.is_file():
+                assert target.is_file(), f"Missing manifest target {target}"
+                assert sha256_file(target).lower() == digest.lower(), (
+                    f"SHA-256 mismatch for {target.relative_to(ROOT)}"
+                )

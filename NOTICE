@@ -1,0 +1,26 @@
+Panadiga — Notice & Intellectual Property Scope
+============================================
+
+Copyright (c) 2026 Panadiga Contributors
+
+1. Original Works License (MIT)
+   The MIT License in `LICENSE` applies exclusively to original Panadiga
+   source code (`crates/`, `apps/`, `firmware/`, `scripts/`, `tools/ghidra/`),
+   original declarative SSOT schemas/manifests (`profiles/`), and original
+   engineering documentation (`docs/` authored by Panadiga contributors).
+
+2. Third-Party Materials & Trademarks (Excluded from MIT Grant)
+   This repository does NOT grant any license, patent right, or copyright
+   over third-party vendor assets, trademarks, binary firmware images,
+   or vendor service/user manuals. Panasonic, Matsushita, DIGA, UniPhier,
+   Spansion, Cypress/Infineon, Raspberry Pi, Marvell, and Microchip are
+   trademarks or registered trademarks of their respective owners.
+
+3. Clean-Room Interoperability & Offload Policy
+   All reverse engineering, cryptanalysis, and hardware tooling in Panadiga
+   are conducted strictly for interoperability, archival preservation, and
+   repair of obsolete electronics under applicable statutory exemptions.
+   Tracked vendor manuals/binaries remain flagged for clean-room migration
+   and external vault offload as documented in:
+     docs/audits/GIT_FILTER_REPO_PLAN.md
+   (See `THIRD_PARTY_LICENSES.md` for external software and IR attributions.)

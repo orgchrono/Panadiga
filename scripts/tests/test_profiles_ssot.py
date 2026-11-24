@@ -171,6 +171,7 @@ def test_no_stale_sa_labels_in_rules_release_or_profiles() -> None:
         ROOT / "GEMINI.md",
         ROOT / ".agents" / "rules" / "AGENTS.md",
         ROOT / ".github" / "RELEASE_NOTES.md",
+        ROOT / "docs" / "evidence" / "ledger.json",
         *(ROOT / rel for rel in CORE_JSON_CATALOGS),
         *sorted(PROFILES_DIR.rglob("*.json")),
     ]
