@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from functools import lru_cache
 import hashlib
 import os
 from pathlib import Path
@@ -18,6 +17,9 @@ TOOLS_PYCACHE_IGNORE: Final[frozenset[str]] = frozenset(
     {"__pycache__", ".mypy_cache", ".pytest_cache", ".ruff_cache"}
 )
 _MANIFEST_LOCK = threading.Lock()
+_MSVC_CACHE_LOCK = threading.Lock()
+_MSVC_DELTA_CACHE: dict[str, str] | None = None
+_MSVC_PROBE_TIMEOUT_SECONDS: Final[int] = 120
 
 
 class _HashDigestLike(Protocol):
@@ -147,62 +149,69 @@ def find_msvc_vcvars64() -> Path | None:
     return None
 
 
-@lru_cache(maxsize=1)
 def _discover_msvc_delta() -> dict[str, str] | None:
-    """Discover MSVC x64 toolchain environment variables once per process (thread-safe cache)."""
-    vcvars = find_msvc_vcvars64()
-    if vcvars is None:
-        return None
+    """Discover MSVC x64 toolchain environment variables once per process on success."""
+    global _MSVC_DELTA_CACHE
+    with _MSVC_CACHE_LOCK:
+        if _MSVC_DELTA_CACHE is not None:
+            return dict(_MSVC_DELTA_CACHE)
 
-    probe_env: dict[str, str] = {}
-    for sys_key in (
-        "SystemDrive",
-        "SystemRoot",
-        "WINDIR",
-        "ComSpec",
-        "TEMP",
-        "TMP",
-        "ProgramData",
-        "ALLUSERSPROFILE",
-        "ProgramFiles",
-        "ProgramFiles(x86)",
-        "CommonProgramFiles",
-        "CommonProgramFiles(x86)",
-        "USERPROFILE",
-        "APPDATA",
-        "LOCALAPPDATA",
-    ):
-        if sys_key in os.environ:
-            probe_env[sys_key] = os.environ[sys_key]
-    sys_root = probe_env.get("SystemRoot") or r"C:\Windows"
-    probe_env["VSCMD_SKIP_SENDTELEMETRY"] = "1"
-    probe_env["PATH"] = (
-        f"{sys_root}\\System32;{sys_root};"
-        f"{sys_root}\\System32\\Wbem;{sys_root}\\System32\\WindowsPowerShell\\v1.0"
-    )
-    cmd_line = f'cmd.exe /d /s /c "call "{vcvars}" >nul 2>&1 && set"'
-    try:
-        proc = subprocess.run(
-            cmd_line,
-            env=probe_env,
-            stdin=subprocess.DEVNULL,
-            capture_output=True,
-            text=True,
-            timeout=60,
-            check=False,
+        vcvars = find_msvc_vcvars64()
+        if vcvars is None:
+            return None
+
+        probe_env: dict[str, str] = {}
+        for sys_key in (
+            "SystemDrive",
+            "SystemRoot",
+            "WINDIR",
+            "ComSpec",
+            "TEMP",
+            "TMP",
+            "ProgramData",
+            "ALLUSERSPROFILE",
+            "ProgramFiles",
+            "ProgramFiles(x86)",
+            "CommonProgramFiles",
+            "CommonProgramFiles(x86)",
+            "USERPROFILE",
+            "APPDATA",
+            "LOCALAPPDATA",
+        ):
+            if sys_key in os.environ:
+                probe_env[sys_key] = os.environ[sys_key]
+        sys_root = probe_env.get("SystemRoot") or r"C:\Windows"
+        probe_env["VSCMD_SKIP_SENDTELEMETRY"] = "1"
+        probe_env["PATH"] = (
+            f"{sys_root}\\System32;{sys_root};"
+            f"{sys_root}\\System32\\Wbem;{sys_root}\\System32\\WindowsPowerShell\\v1.0"
         )
-    except subprocess.TimeoutExpired:
-        return None
+        cmd_line = f'cmd.exe /d /s /c "call "{vcvars}" >nul 2>&1 && set"'
+        try:
+            proc = subprocess.run(
+                cmd_line,
+                env=probe_env,
+                stdin=subprocess.DEVNULL,
+                capture_output=True,
+                text=True,
+                timeout=_MSVC_PROBE_TIMEOUT_SECONDS,
+                check=False,
+            )
+        except subprocess.TimeoutExpired:
+            return None
 
-    if proc.returncode != 0:
-        return None
+        if proc.returncode != 0:
+            return None
 
-    delta: dict[str, str] = {}
-    for line in proc.stdout.splitlines():
-        key, sep, value = line.partition("=")
-        if sep and key:
-            delta[key] = value
-    return delta
+        delta: dict[str, str] = {}
+        for line in proc.stdout.splitlines():
+            key, sep, value = line.partition("=")
+            if sep and key:
+                delta[key] = value
+        if not delta:
+            return None
+        _MSVC_DELTA_CACHE = dict(delta)
+        return delta
 
 
 def load_msvc_env(base_env: Mapping[str, str]) -> dict[str, str]:

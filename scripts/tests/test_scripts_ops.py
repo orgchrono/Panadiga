@@ -11,6 +11,7 @@ import zipfile
 import pytest
 
 from scripts.build import detect_android_sdk, parse_args
+import scripts.ops.toolchain as toolchain
 import scripts.validate_gates as validate_gates
 from scripts.build_lanes.android_verify import validate_apk_artifact
 from scripts.panadiga_cache import (
@@ -246,9 +247,18 @@ def test_validate_parallel_lanes_schedules_playwright_after_ssot(
     ):
         monkeypatch.setattr(validate_gates, attr, _rec(key))
 
+    def _fake_load_msvc(base: Mapping[str, str]) -> dict[str, str]:
+        with lock:
+            order.append("msvc_prewarm")
+        return dict(base)
+
+    monkeypatch.setattr(validate_gates, "load_msvc_env", _fake_load_msvc)
+
     validate_gates.run_parallel_lanes({}, max_jobs=4, ghidra_smoke=False)
 
+    assert order[0] == "msvc_prewarm"
     assert set(order) == {
+        "msvc_prewarm",
         "rust",
         "ts",
         "vitest",
@@ -264,3 +274,36 @@ def test_validate_parallel_lanes_schedules_playwright_after_ssot(
         assert order.index(lane) < order.index("ghidra")
     assert order.index("ghidra") < order.index("playwright")
     assert order.index("ghidra") < order.index("pytest")
+
+
+def test_discover_msvc_delta_does_not_cache_transient_timeout(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(toolchain, "_MSVC_DELTA_CACHE", None)
+    vcvars = tmp_path / "vcvars64.bat"
+    vcvars.write_text("", encoding="utf-8")
+    monkeypatch.setattr(toolchain, "find_msvc_vcvars64", lambda: vcvars)
+
+    calls = 0
+
+    def fake_run(cmd: str, **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise subprocess.TimeoutExpired(cmd=cmd, timeout=120)
+        if calls == 2:
+            return subprocess.CompletedProcess(
+                cmd,
+                0,
+                "INCLUDE=C:\\inc\nPATH=C:\\msvc\\bin\n",
+                "",
+            )
+        raise AssertionError("MSVC probe should not run after positive cache hit")
+
+    monkeypatch.setattr("scripts.ops.toolchain.subprocess.run", fake_run)
+
+    assert toolchain._discover_msvc_delta() is None
+    assert toolchain._discover_msvc_delta() == {"INCLUDE": "C:\\inc", "PATH": "C:\\msvc\\bin"}
+    assert toolchain._discover_msvc_delta() == {"INCLUDE": "C:\\inc", "PATH": "C:\\msvc\\bin"}
+    assert calls == 2

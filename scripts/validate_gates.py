@@ -14,6 +14,7 @@ from typing import Callable, Final, Mapping
 from scripts.panadiga_ops import (
     ProcessTracker,
     ROOT,
+    load_msvc_env,
     panadiga_binary_name,
     print_banner,
     print_status,
@@ -220,7 +221,7 @@ def run_parallel_lanes(env: Mapping[str, str], max_jobs: int, *, ghidra_smoke: b
         ("3/9 Vitest Unit Suite", lambda e: _gate_vitest(e, capture_output=True)),
         ("4/9 Copy/Paste (jscpd 0%)", lambda e: _gate_jscpd(e, capture_output=True)),
         ("5/9 UI/UX State Lint", lambda e: _gate_uxlint(e, capture_output=True)),
-        ("8/9 C11 Firmware Host Tests", lambda e: _gate_c11_host(e, capture_output=True)),
+        ("8/9 C11 Firmware Host Tests", lambda _e: _gate_c11_host(c11_env, capture_output=True)),
         ("9a/9 Python Mypy Strict", lambda e: _gate_python_mypy(e, capture_output=True)),
     ]
     if ghidra_smoke:
@@ -240,6 +241,7 @@ def run_parallel_lanes(env: Mapping[str, str], max_jobs: int, *, ghidra_smoke: b
             fn(env)
         return label, time.monotonic() - t0
 
+    c11_env: Mapping[str, str] = load_msvc_env(env)
     ghidra_submitted = False
     with ThreadPoolExecutor(max_workers=worker_count) as pool:
         future_map: dict[Future[tuple[str, float]], str] = {
