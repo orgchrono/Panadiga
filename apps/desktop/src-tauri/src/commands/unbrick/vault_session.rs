@@ -13,9 +13,9 @@ use panadiga_core::re::Prog061BgoPatchMode;
 use panadiga_core::re::prewrite_gate::{PreWriteGateReport, PreWriteTarget, verify_prewrite_gate};
 use panadiga_core::re::unbrick_sd_kit::{SdLoaderProfile, build_cleanroom_digadiag};
 use panadiga_core::vault::{
-    StrictWorkflowStep, VaultArtifactRecord, VaultBucket, VaultSessionManifest,
-    auto_classify_and_ingest_file, ingest_vault_artifact, init_vault_session, list_vault_sessions,
-    load_vault_session, mark_workflow_step_complete, record_session_emu_gate,
+    JournalActor, StrictWorkflowStep, VaultArtifactRecord, VaultBucket, VaultSessionManifest,
+    auto_classify_and_ingest_file_with_actor, ingest_vault_artifact_with_actor, init_vault_session,
+    list_vault_sessions, load_vault_session, mark_workflow_step_complete, record_session_emu_gate,
     validate_safe_segment,
 };
 use serde::Deserialize;
@@ -82,8 +82,16 @@ pub(crate) fn record_vault_outcome_in(
     record_session_emu_gate(&sdir, emu_gate).map_err(|e| PanadigaIpcError::io(e.to_string()))?;
     if let Some((bytes, filename, bucket, origin)) = artifact {
         let gate_opt = emu_gate.passed.then_some(emu_gate);
-        ingest_vault_artifact(&sdir, bytes, filename, bucket, origin, gate_opt)
-            .map_err(|e| PanadigaIpcError::io(e.to_string()))?;
+        ingest_vault_artifact_with_actor(
+            &sdir,
+            bytes,
+            filename,
+            bucket,
+            origin,
+            gate_opt,
+            JournalActor::Desktop,
+        )
+        .map_err(|e| PanadigaIpcError::io(e.to_string()))?;
     }
     for &step in completed_steps {
         mark_workflow_step_complete(&sdir, step)
@@ -127,8 +135,15 @@ pub(crate) fn ingest_file_with_root(
     let src = resolve_safe_read_path(request.source_path.trim())?;
     let bucket = parse_bucket_opt(opt_trimmed(&request.bucket_override))?;
     let origin = opt_trimmed(&request.origin).unwrap_or("desktop_manual_ingest");
-    auto_classify_and_ingest_file(&sdir, &src, bucket, origin, None)
-        .map_err(|e| PanadigaIpcError::validation(e.to_string()))
+    auto_classify_and_ingest_file_with_actor(
+        &sdir,
+        &src,
+        bucket,
+        origin,
+        None,
+        JournalActor::Desktop,
+    )
+    .map_err(|e| PanadigaIpcError::validation(e.to_string()))
 }
 
 pub(crate) fn run_prewrite_emu_gate_with_root(
@@ -259,12 +274,13 @@ pub fn vault_run_prewrite_emu_gate_command(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use panadiga_core::vault::remove_dir_all_readonly_safe;
 
     #[test]
     fn vault_ipc_init_segregates_raw_frm_and_persists_mn103vm_gate() {
         let root =
             std::env::temp_dir().join(format!("panadiga_tauri_vault_{}", std::process::id()));
-        let _ = fs::remove_dir_all(&root);
+        let _ = remove_dir_all_readonly_safe(&root);
         fs::create_dir_all(&root).unwrap();
 
         let sess = init_session_with_root(
@@ -341,6 +357,6 @@ mod tests {
 
         let loaded = load_vault_session(Path::new(&sess.session_dir)).unwrap();
         assert!(loaded.last_emu_gate.is_some());
-        let _ = fs::remove_dir_all(&root);
+        remove_dir_all_readonly_safe(&root).unwrap();
     }
 }

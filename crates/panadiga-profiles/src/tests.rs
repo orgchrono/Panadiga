@@ -1048,3 +1048,160 @@ fn validate_locale_catalog_rejects_mismatch_hardcoded_hex_and_missing_trap() {
         "expected locale_trap_coverage in {failures:?}"
     );
 }
+
+#[test]
+fn promote_and_review_proposal_verify_real_on_disk_sha256_and_ledger() {
+    let real_profiles = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../profiles");
+    let root = std::env::temp_dir().join(format!(
+        "panadiga_promote_verify_{}_{}",
+        std::process::id(),
+        file!().len()
+    ));
+    let _ = fs::remove_dir_all(&root);
+    let profiles_dir = root.join("profiles");
+    let models_dir = profiles_dir.join("models");
+    let staging_dir = profiles_dir.join("staging").join("manual_proposals");
+    fs::create_dir_all(&models_dir).unwrap();
+    fs::create_dir_all(&staging_dir).unwrap();
+
+    // Copy relational dictionaries and blobs needed for load_bundle_from_dir
+    for sub in
+        crate::loader::ENTITY_SUBDIRS
+            .iter()
+            .copied()
+            .chain(["blobs", "traps", "forensic_atlas"])
+    {
+        let src_sub = real_profiles.join(sub);
+        if !src_sub.is_dir() {
+            continue;
+        }
+        let dst_sub = profiles_dir.join(sub);
+        fs::create_dir_all(&dst_sub).unwrap();
+        for entry in fs::read_dir(&src_sub).unwrap() {
+            let p = entry.unwrap().path();
+            if p.is_file() {
+                fs::copy(&p, dst_sub.join(p.file_name().unwrap())).unwrap();
+            }
+        }
+    }
+
+    let fixture_rel = "fixtures/eh55_probe.json";
+    let fixture_abs = root.join(fixture_rel);
+    fs::create_dir_all(fixture_abs.parent().unwrap()).unwrap();
+    fs::write(&fixture_abs, br#"{"model":"DMR-EH55","vdd_mv":3300}"#).unwrap();
+    let real_sha = crate::promote::compute_file_sha256_hex(&fixture_abs).unwrap();
+    let spoofed_sha = "0".repeat(64);
+
+    // 1. Spoofed 64-hex SHA-256 MUST fail closed
+    let err = crate::promote::promote_model_claim(&crate::promote::PromoteClaimRequest {
+        workspace_root: &root,
+        profiles_dir: &profiles_dir,
+        model_id: "DMR-EH55",
+        axis: crate::ClaimAxis::Eeprom,
+        new_tier: EvidenceTier::PhysicalDumpVerified,
+        evidence_sha256: &spoofed_sha,
+        fixture_rel_path: fixture_rel,
+        bench_log_rel_path: None,
+        notes: None,
+    })
+    .unwrap_err();
+    assert!(err.to_string().contains("SHA-256 verification failed"));
+
+    // 2. Staged proposal with spoofed SHA-256 fails review cleanly
+    let bad_prop = crate::staging::ManualClaimProposal {
+        proposal_id: "PROP-BAD".to_string(),
+        model_id: "DMR-EH55".to_string(),
+        axis: crate::ClaimAxis::Eeprom,
+        proposed_tier: EvidenceTier::PhysicalDumpVerified,
+        fixture_rel_path: fixture_rel.to_string(),
+        bench_log_rel_path: None,
+        declared_sha256: spoofed_sha,
+        notes: Some("spoofed hash check".to_string()),
+        submitted_by: Some("test".to_string()),
+        ledger_entry_id: Some("EV-TEST-1".to_string()),
+    };
+    let bad_prop_path = staging_dir.join("bad.json");
+    fs::write(
+        &bad_prop_path,
+        serde_json::to_string_pretty(&bad_prop).unwrap(),
+    )
+    .unwrap();
+    let ledger_path = root.join("ledger.json");
+    fs::write(
+        &ledger_path,
+        serde_json::json!({
+            "schema_version": 1,
+            "entries": [{
+                "id": "EV-TEST-1",
+                "sha256_assertions": [{ "path": fixture_rel, "sha256": real_sha.to_uppercase() }]
+            }]
+        })
+        .to_string(),
+    )
+    .unwrap();
+    let bad_rep = crate::staging::review_manual_proposal(
+        &root,
+        &profiles_dir,
+        &bad_prop_path,
+        true,
+        Some(&ledger_path),
+    )
+    .unwrap();
+    assert!(!bad_rep.valid);
+    assert!(!bad_rep.sha256_verified);
+    assert!(!bad_rep.promoted);
+
+    // 3. Valid staged proposal passes SHA-256 + ledger check and promotes when apply=true
+    let ok_prop = crate::staging::ManualClaimProposal {
+        declared_sha256: real_sha.clone(),
+        proposal_id: "PROP-OK".to_string(),
+        ..bad_prop
+    };
+    let ok_prop_path = staging_dir.join("ok.json");
+    fs::write(
+        &ok_prop_path,
+        serde_json::to_string_pretty(&ok_prop).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(
+        crate::staging::list_manual_proposals(&profiles_dir)
+            .unwrap()
+            .len(),
+        2
+    );
+
+    let ok_rep = crate::staging::review_manual_proposal(
+        &root,
+        &profiles_dir,
+        &ok_prop_path,
+        true,
+        Some(&ledger_path),
+    )
+    .unwrap();
+    assert!(ok_rep.valid);
+    assert!(ok_rep.sha256_verified);
+    assert!(ok_rep.ledger_synced);
+    assert!(ok_rep.promoted);
+    assert_eq!(ok_rep.computed_sha256.as_deref(), Some(real_sha.as_str()));
+
+    let updated = load_bundle_from_dir(&profiles_dir)
+        .unwrap()
+        .models
+        .get("dmr_eh55")
+        .unwrap()
+        .clone();
+    assert_eq!(
+        updated.claims.eeprom.tier,
+        EvidenceTier::PhysicalDumpVerified
+    );
+    assert!(
+        updated
+            .claims
+            .eeprom
+            .sources
+            .iter()
+            .any(|s| s.sha256.as_deref() == Some(real_sha.as_str()))
+    );
+
+    let _ = fs::remove_dir_all(&root);
+}

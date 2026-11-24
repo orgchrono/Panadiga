@@ -22,8 +22,10 @@ pub use journal::{
     JournalVerificationReport, OpBeginParams, OpOutcome, compute_journal_entry_hash,
 };
 pub use layout::{
-    auto_classify_and_ingest_file, extract_nor_drv_into_vault, ingest_vault_artifact,
-    session_bucket_dir, validate_safe_segment,
+    auto_classify_and_ingest_file, auto_classify_and_ingest_file_with_actor,
+    extract_nor_drv_into_vault, ingest_vault_artifact, ingest_vault_artifact_with_actor,
+    remove_dir_all_readonly_safe, session_bucket_dir, validate_safe_segment,
+    verify_vault_session_journal,
 };
 pub use lock::{VAULT_LOCK_FILENAME, VaultLock, VaultLockMode};
 pub use manifest::{

@@ -209,4 +209,35 @@ pub enum ProfilesActions {
         #[arg(short, long, value_name = "JSON_FILE")]
         json: Option<PathBuf>,
     },
+
+    /// Audits a staged `profiles/staging/manual_proposals/*.json` claim against real on-disk SHA-256 and ledger
+    ReviewProposal {
+        /// Path to staged `ManualClaimProposal` JSON file
+        #[arg(long, value_name = "PROPOSAL_JSON")]
+        proposal: PathBuf,
+
+        /// Apply the validated claim promotion onto `profiles/models/*.json`
+        #[arg(long)]
+        apply: bool,
+
+        /// Target `profiles/` root directory
+        #[arg(long, default_value = "profiles", value_name = "DIR")]
+        profiles_dir: PathBuf,
+
+        /// Workspace root directory resolving confined fixture and bench log paths
+        #[arg(long, default_value = ".", value_name = "DIR")]
+        workspace_root: PathBuf,
+
+        /// Optional evidence ledger JSON path checked for SHA-256 synchronization
+        #[arg(
+            long,
+            default_value = "docs/evidence/ledger.json",
+            value_name = "LEDGER_JSON"
+        )]
+        ledger: Option<PathBuf>,
+
+        /// Exports structured JSON proposal review report (`-` emits stdout JSON)
+        #[arg(short, long, value_name = "JSON_FILE")]
+        json: Option<PathBuf>,
+    },
 }

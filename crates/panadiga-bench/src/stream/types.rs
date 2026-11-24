@@ -54,6 +54,8 @@ pub enum OpKind {
     SdKitBuild,
     Boottrace,
     RamProbe,
+    VaultIngest,
+    ProfilePromote,
 }
 
 impl fmt::Display for OpKind {
@@ -64,6 +66,8 @@ impl fmt::Display for OpKind {
             Self::SdKitBuild => "sd_kit_build",
             Self::Boottrace => "boottrace",
             Self::RamProbe => "ram_probe",
+            Self::VaultIngest => "vault_ingest",
+            Self::ProfilePromote => "profile_promote",
         };
         f.write_str(label)
     }

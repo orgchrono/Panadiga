@@ -1,4 +1,4 @@
-#![deny(unsafe_code)]
+#![forbid(unsafe_code)]
 
 //! Panadiga Manifest-Driven, Policy-Gated Hardware Profile SSOT Crate.
 
@@ -12,6 +12,7 @@ pub mod loader_resolve;
 pub mod promote;
 pub mod region;
 pub mod schema;
+pub mod staging;
 pub mod types;
 pub mod validate;
 mod validate_bgo;
@@ -38,12 +39,16 @@ pub use loader::{
     ENTITY_SUBDIRS, PROFILES_SCHEMA_VERSION, list_resolved_models, load_bundle_from_dir,
     load_bundle_from_str, merge_overlay_dir, model_storage_key, resolve_model_in_bundle,
 };
-pub use promote::{PromoteClaimRequest, promote_model_claim};
+pub use promote::{PromoteClaimRequest, compute_file_sha256_hex, promote_model_claim};
 pub use region::{
     InterpolatedRegionVariant, interpolate_composite_tv_standard, interpolate_model_regions,
     interpolate_region_variant, match_queried_region_variant,
 };
 pub use schema::{export_schemas_to_dir, generate_all_schemas, verify_schemas_match_dir};
+pub use staging::{
+    MANUAL_PROPOSALS_REL_DIR, ManualClaimProposal, ProposalReviewReport, list_manual_proposals,
+    review_manual_proposal,
+};
 pub use types::*;
 pub use validate::{
     AM34_LETHAL_MMIO_ADDR, MIN_CRITICAL_IPL_GUARD_BYTES, REQUIRED_LVTTL_MV, ensure_bundle_valid,

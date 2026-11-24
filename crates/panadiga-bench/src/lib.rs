@@ -1,4 +1,4 @@
-#![deny(unsafe_code)]
+#![forbid(unsafe_code)]
 
 //! Panadiga L1 Hardware Bench Telemetry Stream, Snapshot & Ephemeral Operation Nonces.
 

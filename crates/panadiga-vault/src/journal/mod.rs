@@ -1,4 +1,4 @@
-#![deny(unsafe_code)]
+#![forbid(unsafe_code)]
 
 //! Append-only chained SHA-256 Operation Journal (`vault_dir/journal/ops.jsonl`) with
 //! write-ahead `fsync`, advisory locking, EOF truncated-tail forensic quarantine, and crash notice recovery.

@@ -1,4 +1,4 @@
-#![deny(unsafe_code)]
+#![forbid(unsafe_code)]
 
 //! Panadiga L1 Forensic Operation Journal (`ops.jsonl`) & Multi-Process Advisory Vault Locking.
 

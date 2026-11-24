@@ -13,7 +13,7 @@ use crate::re::unbrick_sd_kit::build_cleanroom_digadiag;
 #[test]
 fn vault_enforces_raw_vs_frm_vs_recompiled_segregation_immutability_and_nor_drv_extraction() {
     let root = std::env::temp_dir().join(format!("panadiga_vault_test_{}", std::process::id()));
-    let _ = fs::remove_dir_all(&root);
+    let _ = remove_dir_all_readonly_safe(&root);
     let manifest = init_vault_session(
         &root,
         "DMR-EH55",
@@ -119,7 +119,32 @@ fn vault_enforces_raw_vs_frm_vs_recompiled_segregation_immutability_and_nor_drv_
     let rec_drv = extract_nor_drv_into_vault(&sdir, &nor).unwrap();
     assert_eq!(rec_drv.filename, "drv_from_nor.bin");
 
+    // Verify WORM read-only enforcement on raw/ and frm/ + chained ops.jsonl journal integrity
+    assert!(
+        fs::metadata(sdir.join("raw").join("nor_8mb.bin"))
+            .unwrap()
+            .permissions()
+            .readonly()
+    );
+    assert!(
+        fs::metadata(sdir.join("frm").join("PANA_DVD.FRM"))
+            .unwrap()
+            .permissions()
+            .readonly()
+    );
+    assert!(
+        fs::metadata(sdir.join("raw").join("drv_from_nor.bin"))
+            .unwrap()
+            .permissions()
+            .readonly()
+    );
+    assert!(sdir.join("journal").join("ops.jsonl").is_file());
+    let j_rep = verify_vault_session_journal(&sdir).unwrap();
+    assert!(j_rep.valid);
+    assert!(j_rep.seq >= 2);
+    assert_ne!(j_rep.head_hash, panadiga_vault::GENESIS_PREV_HASH);
+
     let sessions = list_vault_sessions(&root).unwrap();
     assert_eq!(sessions.len(), 1);
-    let _ = fs::remove_dir_all(&root);
+    remove_dir_all_readonly_safe(&root).unwrap();
 }

@@ -287,6 +287,41 @@ pub fn handle_profiles(args: ProfilesArgs) -> Result<()> {
             }
             emit_json_output(&report, json.as_deref())?;
         }
+        ProfilesActions::ReviewProposal {
+            proposal,
+            apply,
+            profiles_dir,
+            workspace_root,
+            ledger,
+            json,
+        } => {
+            let report = panadiga_core::ssot::review_manual_proposal(
+                &workspace_root,
+                &profiles_dir,
+                &proposal,
+                apply,
+                ledger.as_deref(),
+            )?;
+            if json.as_deref() != Some(std::path::Path::new("-")) {
+                log_println!(
+                    "Proposal {} ({}): valid={} sha256_verified={} ledger_synced={} promoted={}",
+                    report.proposal_id,
+                    report.model_id,
+                    report.valid,
+                    report.sha256_verified,
+                    report.ledger_synced,
+                    report.promoted
+                );
+            }
+            emit_json_output(&report, json.as_deref())?;
+            if apply && !report.valid {
+                anyhow::bail!(
+                    "Refusing to apply invalid manual proposal '{}': {}",
+                    report.proposal_id,
+                    report.issues.join("; ")
+                );
+            }
+        }
     }
     Ok(())
 }

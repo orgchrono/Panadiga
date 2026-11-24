@@ -11,7 +11,7 @@ use panadiga_core::log_println;
 use panadiga_core::re::unbrick_sd_kit::SdLoaderProfile;
 use panadiga_core::vault::{
     VaultBucket, auto_classify_and_ingest_file, extract_nor_drv_into_vault, init_vault_session,
-    list_vault_sessions, load_vault_session,
+    list_vault_sessions, load_vault_session, verify_vault_session_journal,
 };
 
 use super::json_io::emit_json_output;
@@ -75,14 +75,17 @@ pub fn handle_session(args: SessionArgs) -> Result<()> {
         } => {
             if let Some(dir) = session_dir {
                 let manifest = load_vault_session(&dir)?;
+                let journal_rep = verify_vault_session_journal(&dir)?;
                 log_println!(
-                    "Session {} | model={} | step={:?} | raw={} frm={} recompiled={}",
+                    "Session {} | model={} | step={:?} | raw={} frm={} recompiled={} | journal_valid={} journal_seq={}",
                     manifest.session_id,
                     manifest.model_id,
                     manifest.current_step,
                     manifest.raw_artifacts.len(),
                     manifest.frm_artifacts.len(),
-                    manifest.recompiled_artifacts.len()
+                    manifest.recompiled_artifacts.len(),
+                    journal_rep.valid,
+                    journal_rep.seq
                 );
                 emit_json_output(&manifest, json.as_deref())?;
             } else {
@@ -129,13 +132,13 @@ mod tests {
     use crate::cli::args::Cli;
     use crate::cli::handlers::dispatch;
     use clap::Parser;
-    use panadiga_core::vault::load_vault_session;
+    use panadiga_core::vault::{load_vault_session, remove_dir_all_readonly_safe};
 
     #[test]
     fn cli_session_init_ingest_segregates_raw_and_frm_and_blocks_cross_bucket() {
         let base =
             std::env::temp_dir().join(format!("panadiga_cli_session_{}", std::process::id()));
-        let _ = fs::remove_dir_all(&base);
+        let _ = remove_dir_all_readonly_safe(&base);
         fs::create_dir_all(&base).unwrap();
 
         let cli_init = Cli::try_parse_from([
@@ -201,7 +204,10 @@ mod tests {
         assert_eq!(m.raw_artifacts.len(), 1);
         assert!(sess_dir.join("frm").join("PANA_DVD.FRM").is_file());
         assert!(sess_dir.join("raw").join("ic5001.bin").is_file());
+        let j_rep = verify_vault_session_journal(&sess_dir).unwrap();
+        assert!(j_rep.valid);
+        assert_eq!(j_rep.seq, 4);
 
-        let _ = fs::remove_dir_all(&base);
+        remove_dir_all_readonly_safe(&base).unwrap();
     }
 }

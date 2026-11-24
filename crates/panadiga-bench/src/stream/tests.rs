@@ -119,3 +119,17 @@ fn serde_roundtrip_and_publisher_backpressure_work_deterministically() {
         assert_eq!(decoded, *env);
     }
 }
+
+#[test]
+fn op_kind_vault_and_promote_roundtrip_and_display() {
+    for (kind, expected_str) in [
+        (OpKind::VaultIngest, "vault_ingest"),
+        (OpKind::ProfilePromote, "profile_promote"),
+    ] {
+        assert_eq!(kind.to_string(), expected_str);
+        let encoded = serde_json::to_string(&kind).unwrap();
+        assert_eq!(encoded, format!("\"{expected_str}\""));
+        let decoded: OpKind = serde_json::from_str(&encoded).unwrap();
+        assert_eq!(decoded, kind);
+    }
+}

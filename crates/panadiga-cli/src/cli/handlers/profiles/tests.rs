@@ -135,3 +135,71 @@ fn cli_profiles_completeness_and_discover_nor_emit_valid_drafts() {
     assert_eq!(draft_model.model_id, "DMR-EH99");
     let _ = fs::remove_dir_all(&work_dir);
 }
+
+#[test]
+fn cli_profiles_review_proposal_verifies_hash_and_reports_json() {
+    let pid = std::process::id();
+    let root = std::env::temp_dir().join(format!("panadiga_cli_review_prop_{pid}"));
+    let _ = fs::remove_dir_all(&root);
+    fs::create_dir_all(root.join("fixtures")).unwrap();
+
+    let fix_rel = "fixtures/sample.bin";
+    fs::write(root.join(fix_rel), b"PANADIGA-FIXTURE-V1").unwrap();
+    let real_sha = panadiga_core::ssot::compute_file_sha256_hex(&root.join(fix_rel)).unwrap();
+
+    let ledger_path = root.join("ledger.json");
+    fs::write(
+        &ledger_path,
+        serde_json::json!({
+            "schema_version": 1,
+            "entries": [{
+                "id": "EV-CLI-1",
+                "sha256_assertions": [{ "path": fix_rel, "sha256": real_sha }]
+            }]
+        })
+        .to_string(),
+    )
+    .unwrap();
+
+    let prop_path = root.join("proposal.json");
+    let prop = panadiga_core::ssot::ManualClaimProposal {
+        proposal_id: "CLI-PROP-1".to_string(),
+        model_id: "DMR-EH55".to_string(),
+        axis: panadiga_core::ssot::ClaimAxis::Eeprom,
+        proposed_tier: panadiga_core::ssot::EvidenceTier::PhysicalDumpVerified,
+        fixture_rel_path: fix_rel.to_string(),
+        bench_log_rel_path: None,
+        declared_sha256: real_sha.clone(),
+        notes: None,
+        submitted_by: Some("cli_test".to_string()),
+        ledger_entry_id: Some("EV-CLI-1".to_string()),
+    };
+    fs::write(&prop_path, serde_json::to_string_pretty(&prop).unwrap()).unwrap();
+
+    let out_rep = root.join("review_out.json");
+    let cli = Cli::try_parse_from([
+        "panadiga",
+        "profiles",
+        "review-proposal",
+        "--proposal",
+        prop_path.to_str().unwrap(),
+        "--workspace-root",
+        root.to_str().unwrap(),
+        "--profiles-dir",
+        "profiles",
+        "--ledger",
+        ledger_path.to_str().unwrap(),
+        "--json",
+        out_rep.to_str().unwrap(),
+    ])
+    .unwrap();
+    dispatch(cli.command.unwrap()).unwrap();
+
+    let rep: panadiga_core::ssot::ProposalReviewReport =
+        serde_json::from_str(&fs::read_to_string(&out_rep).unwrap()).unwrap();
+    assert!(rep.valid);
+    assert!(rep.sha256_verified);
+    assert!(rep.ledger_synced);
+    assert!(!rep.promoted);
+    let _ = fs::remove_dir_all(&root);
+}

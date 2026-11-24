@@ -2587,9 +2587,11 @@ name = "panadiga-profiles"
 version = "0.2.0"
 dependencies = [
  "anyhow",
+ "hex",
  "schemars 1.2.3",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
 ]
 
 [[package]]

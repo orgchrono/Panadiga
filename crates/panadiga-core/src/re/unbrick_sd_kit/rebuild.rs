@@ -295,7 +295,7 @@ pub fn rebuild_sd_kit_from_dump(req: &RebuildFromDumpRequest) -> Result<RebuildF
     struct TempDirCleanup(PathBuf);
     impl Drop for TempDirCleanup {
         fn drop(&mut self) {
-            let _ = fs::remove_dir_all(&self.0);
+            let _ = crate::vault::remove_dir_all_readonly_safe(&self.0);
         }
     }
     static REBUILD_STAGE_SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
@@ -305,7 +305,7 @@ pub fn rebuild_sd_kit_from_dump(req: &RebuildFromDumpRequest) -> Result<RebuildF
         std::process::id(),
         stage_seq
     ));
-    let _ = fs::remove_dir_all(&staging_root);
+    let _ = crate::vault::remove_dir_all_readonly_safe(&staging_root);
     let _staging_guard = TempDirCleanup(staging_root.clone());
     let carved_drv_path = if req.frm_path.is_none() {
         let manifest = init_vault_session(
@@ -355,7 +355,7 @@ pub fn rebuild_sd_kit_from_dump(req: &RebuildFromDumpRequest) -> Result<RebuildF
     };
 
     let kit_result = prepare_sd_unbrick_kit_with_tier_policy(&sd_req, req.allow_unverified_profile);
-    let _ = fs::remove_dir_all(&staging_root);
+    let _ = crate::vault::remove_dir_all_readonly_safe(&staging_root);
     let kit = kit_result?;
 
     let verification = verify_sd_unbrick_media_with_profile(
