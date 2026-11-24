@@ -18,7 +18,7 @@ use crate::commands::constants::{
     DEFAULT_MAIN_PASSTHROUGH_MODE, SAMPLE_UNLOCK_PAYLOAD_BYTE, SAMPLE_UNLOCK_PAYLOAD_LEN,
 };
 use crate::commands::error::{IpcResult, PanadigaIpcError};
-use crate::commands::frm_pack::{resolve_read_path, resolve_write_path};
+use crate::commands::frm_pack::{resolve_safe_read_path, resolve_write_path};
 use crate::commands::unbrick_dto::{opt_trimmed, resolve_dir_target};
 
 fn serialize_value<T: serde::Serialize>(val: T) -> IpcResult<Value> {
@@ -41,7 +41,7 @@ pub fn extract_frm_modules_command(
     out_dir: String,
     unpack_payloads: Option<bool>,
 ) -> IpcResult<FrmModuleExtractionReport> {
-    let in_file = resolve_read_path(frm_path.trim());
+    let in_file = resolve_safe_read_path(frm_path.trim())?;
     let dest = resolve_dir_target(&out_dir)?;
     extract_modules_from_frm(&in_file, &dest, unpack_payloads.unwrap_or(true))
         .map_err(|e| PanadigaIpcError::classify(format!("Falha ao extrair módulos do .FRM: {e}")))
@@ -56,7 +56,7 @@ pub fn patch_bgo_unbrick_command(
     wrap_as_digadiag: Option<bool>,
     allow_unsafe_bgo_format: Option<bool>,
 ) -> IpcResult<Value> {
-    let in_file = resolve_read_path(input_path.trim());
+    let in_file = resolve_safe_read_path(input_path.trim())?;
     let parsed_mode: Prog061BgoPatchMode = mode.parse().map_err(|e: anyhow::Error| {
         PanadigaIpcError::validation(format!("Modo BGO inválido: {e}"))
     })?;
@@ -102,7 +102,7 @@ pub fn patch_main_passthrough_command(
     let in_raw = opt_trimmed(&input_path).ok_or_else(|| {
         PanadigaIpcError::validation("Caminho do binário MAIN (3410PQ) é obrigatório.")
     })?;
-    let in_file = resolve_read_path(in_raw);
+    let in_file = resolve_safe_read_path(in_raw)?;
 
     if action.trim().eq_ignore_ascii_case("patch") {
         let out_raw = opt_trimmed(&out_path).ok_or_else(|| {
@@ -133,7 +133,7 @@ pub fn verify_frm_unlock_command(
     container_kind: String,
     frm_path: String,
 ) -> IpcResult<FrmUnlockVerificationSummary> {
-    let path = resolve_read_path(frm_path.trim());
+    let path = resolve_safe_read_path(frm_path.trim())?;
     let bytes = std::fs::read(&path).map_err(|e| {
         PanadigaIpcError::io(format!("Falha lendo container '{}': {e}", path.display()))
     })?;

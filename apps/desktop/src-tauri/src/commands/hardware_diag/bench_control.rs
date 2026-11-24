@@ -89,6 +89,18 @@ pub fn consume_operation_nonce_with_state(
         .map_err(|e| PanadigaIpcError::validation(format!("Nonce efêmero inválido: {e}")))
 }
 
+/// Enforces mandatory single-use nonce authorization on every destructive Tauri IPC command.
+pub fn require_destructive_nonce(
+    state: &PanadigaBackendState,
+    nonce_id: Option<&str>,
+    op_kind: OpKind,
+    target: &str,
+    input_ref: &str,
+) -> IpcResult<()> {
+    consume_operation_nonce_with_state(state, nonce_id, op_kind, target, input_ref, true)
+        .map(|_| ())
+}
+
 /// Issues a single-use WebView confirmation nonce bound to `(opKind, target, inputSha256)`.
 #[tauri::command]
 pub fn request_operation_nonce(

@@ -15,7 +15,7 @@ use super::hdd_flash::{
     HddFlashProgressEventDto, run_physical_hdd_flash_task, validate_hdd_target_and_range,
 };
 use crate::commands::error::{IpcResult, PanadigaIpcError};
-use crate::commands::frm_pack::resolve_read_path;
+use crate::commands::frm_pack::resolve_safe_read_path;
 use crate::commands::hardware_diag::resolve_auto_backup_dir;
 use crate::commands::unbrick::record_vault_outcome_in;
 use crate::commands::unbrick_dto::opt_trimmed;
@@ -35,6 +35,8 @@ pub struct FlashComposedHddSafeRequestDto {
     pub expected_max_gb: Option<u32>,
     pub allow_extended_4tb: Option<bool>,
     pub session_id: Option<String>,
+    #[serde(default)]
+    pub nonce_id: Option<String>,
 }
 
 pub fn build_composed_hdd_request_from_dto(
@@ -54,8 +56,12 @@ pub fn build_composed_hdd_request_from_dto(
         backup_dir,
         expected_gb_range: target.expected_gb_range,
         detected_os_disks: None,
-        main_source_path: opt_trimmed(&dto.main_source_path).map(resolve_read_path),
-        drv_source_path: opt_trimmed(&dto.drv_source_path).map(resolve_read_path),
+        main_source_path: opt_trimmed(&dto.main_source_path)
+            .map(resolve_safe_read_path)
+            .transpose()?,
+        drv_source_path: opt_trimmed(&dto.drv_source_path)
+            .map(resolve_safe_read_path)
+            .transpose()?,
         apply_dynamic_capacity_unlock: dto.apply_dynamic_capacity_unlock.unwrap_or(false),
         target_capacity_gb: dto.target_capacity_gb,
         apply_av_passthrough: dto.apply_av_passthrough.unwrap_or(false),
@@ -94,9 +100,18 @@ where
 #[tauri::command]
 pub async fn flash_composed_hdd_safe_command(
     app: tauri::AppHandle,
+    state: tauri::State<'_, crate::state::PanadigaBackendState>,
     request: FlashComposedHddSafeRequestDto,
 ) -> IpcResult<ComposedHddFlashReport> {
     let req = build_composed_hdd_request_from_dto(&request)?;
+    let input_ref = opt_trimmed(&request.main_source_path).unwrap_or("composed_hdd");
+    crate::commands::hardware_diag::require_destructive_nonce(
+        state.inner(),
+        request.nonce_id.as_deref(),
+        panadiga_core::bench::OpKind::NorWrite,
+        req.device_path.trim(),
+        input_ref,
+    )?;
     let req_clone = request.clone();
     run_physical_hdd_flash_task(
         app,
@@ -137,6 +152,7 @@ mod tests {
             expected_max_gb: Some(260),
             allow_extended_4tb: None,
             session_id: None,
+            nonce_id: None,
         };
         assert!(build_composed_hdd_request_from_dto(&blocked_dto).is_err());
 

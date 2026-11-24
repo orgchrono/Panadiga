@@ -21,6 +21,7 @@ import type {
   Sc0BridgeInputMode,
   Sc0BridgeStatus,
 } from '@/models';
+import { mintOperationNonceId } from './benchStreamService';
 import { emitLocalEvent, hasTestIpcBridge, invokeCommand, isTauriEnvironment, listenEvent } from './ipc';
 
 export const isPicoIpcAvailable = (): boolean => isTauriEnvironment() || hasTestIpcBridge();
@@ -56,11 +57,18 @@ export const triggerPicoBootselReboot = (portName: string): Promise<string> =>
 export const detectPicoBootselDrives = (): Promise<string[]> =>
   invokeCommand<string[]>('pico_detect_bootsel_drives');
 
-export const flashPicoFirmwareUf2 = (targetFamily: PicoUf2Variant): Promise<FlashReport> =>
-  invokeCommand<FlashReport>('pico_flash_firmware', {
+export const flashPicoFirmwareUf2 = async (targetFamily: PicoUf2Variant): Promise<FlashReport> => {
+  const nonceId = await mintOperationNonceId(
+    'nor_write',
+    targetFamily.trim() || 'auto',
+    'pico_uf2',
+  );
+  return invokeCommand<FlashReport>('pico_flash_firmware', {
     targetFamily,
     target_family: targetFamily,
+    ...(nonceId ? { nonceId } : {}),
   });
+};
 
 export const capturePicoNvramLive = (
   portName: string,
@@ -136,15 +144,22 @@ export const runPicoFirstContactBackup = (
     ...(timeoutMs !== undefined ? { timeoutMs, timeout_ms: timeoutMs } : {}),
   });
 
-export const runPicoInCircuitErase = (
+export const runPicoInCircuitErase = async (
   portName: string,
   confirmToken?: string,
-): Promise<InCircuitNvramEraseResult> =>
-  invokeCommand<InCircuitNvramEraseResult>('pico_inject_ram_loader', {
+): Promise<InCircuitNvramEraseResult> => {
+  const nonceId = await mintOperationNonceId(
+    'ram_probe',
+    portName.trim() || 'auto',
+    'ram_loader',
+  );
+  return invokeCommand<InCircuitNvramEraseResult>('pico_inject_ram_loader', {
     portName,
     port_name: portName,
     ...(confirmToken !== undefined ? { confirmToken, confirm_token: confirmToken } : {}),
+    ...(nonceId ? { nonceId } : {}),
   });
+};
 
 export const getGdbBridgeStatus = (): Promise<GdbBridgeStatus> =>
   invokeCommand<GdbBridgeStatus>('get_gdb_bridge_status_command');

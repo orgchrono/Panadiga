@@ -24,6 +24,7 @@ import type {
   SerialCliResponse,
   UnbrickWorkspaceReport,
 } from '@/models';
+import { mintOperationNonceId } from './benchStreamService';
 import { invokeCommand, listenEvent } from './ipc';
 
 export const inspectUnbrickWorkbench = (
@@ -130,10 +131,22 @@ export const packFrmUnlockContainer = (params: {
 export const inspectSdCardTargets = (): Promise<SdTargetDriveInfo[]> =>
   invokeCommand<SdTargetDriveInfo[]>('inspect_sd_card_targets_command');
 
-export const flashSdRecoveryCard = (
+export const flashSdRecoveryCard = async (
   request: FlashSdRecoveryCardRequest,
-): Promise<SdCardCreatorReport> =>
-  invokeCommand<SdCardCreatorReport>('flash_sd_recovery_card_command', { request });
+): Promise<SdCardCreatorReport> => {
+  const devPath = request.devicePath?.trim();
+  const nonceId = devPath
+    ? await mintOperationNonceId(
+        'sd_kit_build',
+        devPath,
+        request.confirmToken?.trim() || 'sd_flash',
+        request.nonceId,
+      )
+    : request.nonceId;
+  return invokeCommand<SdCardCreatorReport>('flash_sd_recovery_card_command', {
+    request: { ...request, ...(nonceId ? { nonceId } : {}) },
+  });
+};
 
 export const subscribeSdFlashProgress = (
   handler: (payload: SdFlashProgressEvent) => void,

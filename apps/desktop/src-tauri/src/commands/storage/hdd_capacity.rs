@@ -40,19 +40,42 @@ pub fn list_sd_card_drives() -> IpcResult<Vec<panadiga_core::hdd::PhysicalDriveI
     panadiga_core::hdd::list_sd_card_drives().map_err(PanadigaIpcError::from)
 }
 
+fn require_hdd_write_nonce(
+    state: &tauri::State<'_, crate::state::PanadigaBackendState>,
+    nonce_id: Option<&str>,
+    device_path: &str,
+    input_ref: &str,
+) -> IpcResult<()> {
+    crate::commands::hardware_diag::require_destructive_nonce(
+        state.inner(),
+        nonce_id,
+        panadiga_core::bench::OpKind::NorWrite,
+        device_path.trim(),
+        input_ref,
+    )
+}
+
 /// Unmounts non-OS partitions of `device_path` (e.g. via `udisksctl` / `umount` on Linux).
 #[tauri::command]
-pub fn unmount_physical_drive(device_path: String) -> IpcResult<Vec<String>> {
+pub fn unmount_physical_drive(
+    state: tauri::State<'_, crate::state::PanadigaBackendState>,
+    device_path: String,
+    nonce_id: Option<String>,
+) -> IpcResult<Vec<String>> {
+    require_hdd_write_nonce(&state, nonce_id.as_deref(), &device_path, "unmount")?;
     panadiga_core::hdd::unmount_drive_partitions(&device_path).map_err(PanadigaIpcError::from)
 }
 
 /// Formats a physical disk with procedural MEIHDFS filesystem structures (mkfs.meihdfs).
 #[tauri::command]
 pub fn format_hdd_meihdfs(
+    state: tauri::State<'_, crate::state::PanadigaBackendState>,
     device_path: String,
     total_sectors: u64,
     confirmation_token: String,
+    nonce_id: Option<String>,
 ) -> IpcResult<panadiga_core::hdd::DriveWriteReport> {
+    require_hdd_write_nonce(&state, nonce_id.as_deref(), &device_path, "format_meihdfs")?;
     let layout = panadiga_core::hdd::mkfs::generate_meihdfs_layout(total_sectors, None)?;
     panadiga_core::hdd::write_meihdfs_procedural_to_drive(
         &device_path,
@@ -65,14 +88,35 @@ pub fn format_hdd_meihdfs(
 /// Safely writes an existing raw image file to a verified physical drive.
 #[tauri::command]
 pub fn write_hdd_image(
+    state: tauri::State<'_, crate::state::PanadigaBackendState>,
     device_path: String,
     image_path: Option<String>,
     confirmation_token: String,
+    nonce_id: Option<String>,
 ) -> IpcResult<panadiga_core::hdd::DriveWriteReport> {
-    let img_path = image_path
-        .unwrap_or_else(|| resolve_candidate(CANDIDATE_HDD_IMAGE_PATHS, DEFAULT_HDD_IMAGE_PATH));
-    let buf = panadiga_core::hdd::open_image_buffer(Path::new(&img_path))
-        .map_err(|e| PanadigaIpcError::io(format!("Failed reading image file {img_path}: {e}")))?;
+    let input_ref = image_path
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .unwrap_or("default_hdd_image");
+    require_hdd_write_nonce(&state, nonce_id.as_deref(), &device_path, input_ref)?;
+    let img_path = match image_path
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+    {
+        Some(raw) => crate::commands::frm_pack::resolve_safe_read_path(raw)?,
+        None => std::path::PathBuf::from(resolve_candidate(
+            CANDIDATE_HDD_IMAGE_PATHS,
+            DEFAULT_HDD_IMAGE_PATH,
+        )),
+    };
+    let buf = panadiga_core::hdd::open_image_buffer(&img_path).map_err(|e| {
+        PanadigaIpcError::io(format!(
+            "Failed reading image file {}: {e}",
+            img_path.display()
+        ))
+    })?;
     panadiga_core::hdd::write_raw_image_to_drive(&device_path, &buf, &confirmation_token)
         .map_err(PanadigaIpcError::from)
 }
@@ -80,9 +124,12 @@ pub fn write_hdd_image(
 /// Atomically restores primary MEIHDFS structures from dual redundancy mirrors.
 #[tauri::command]
 pub fn restore_hdd_mirrors(
+    state: tauri::State<'_, crate::state::PanadigaBackendState>,
     device_path: String,
     confirmation_token: String,
+    nonce_id: Option<String>,
 ) -> IpcResult<panadiga_core::hdd::DriveWriteReport> {
+    require_hdd_write_nonce(&state, nonce_id.as_deref(), &device_path, "restore_mirrors")?;
     panadiga_core::hdd::restore_meihdfs_from_mirrors(&device_path, &confirmation_token)
         .map_err(PanadigaIpcError::from)
 }

@@ -44,6 +44,7 @@ export interface PicoPanamon1CleanNvramRequest {
   readonly portName: string;
   readonly backupDir?: string;
   readonly sessionId?: string;
+  readonly nonceId?: string;
 }
 
 export interface NvramCleanProgressEvent {
@@ -272,6 +273,7 @@ export interface PicoProbeDavisIdeRequest {
   readonly drive?: DavisDriveSelector;
   readonly bootMode?: string;
   readonly bootTimeoutMs?: number;
+  readonly nonceId?: string;
 }
 
 export interface PicoProbeDavisIdeResponse {

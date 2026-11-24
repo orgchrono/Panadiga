@@ -32,6 +32,8 @@ pub struct PicoPanamon1CleanNvramRequestDto {
     pub backup_dir: Option<String>,
     #[serde(default)]
     pub session_id: Option<String>,
+    #[serde(default)]
+    pub nonce_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]

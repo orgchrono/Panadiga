@@ -13,7 +13,7 @@ use crate::commands::constants::{
 use crate::commands::error::{IpcResult, PanadigaIpcError};
 
 use super::paths::{
-    ExtrheadUnpackReportDto, PackFrmRequestDto, resolve_read_path, resolve_write_path,
+    ExtrheadUnpackReportDto, PackFrmRequestDto, resolve_safe_read_path, resolve_write_path,
 };
 
 /// Packs modules or raw diagnostic binaries into `PANA_DVD.FRM`, `PANA__SD.FRM`, or `DIGADIAG.FRM`.
@@ -34,7 +34,7 @@ pub fn pack_frm_command(request: PackFrmRequestDto) -> IpcResult<FrmPackReport> 
                         "Modo 'digadiag' exige arquivo binário de entrada.",
                     )
                 })?;
-            let in_path = resolve_read_path(in_raw);
+            let in_path = resolve_safe_read_path(in_raw)?;
             let payload = std::fs::read(&in_path).map_err(|e| {
                 PanadigaIpcError::io(format!("Falha lendo '{}': {}", in_path.display(), e))
             })?;
@@ -94,7 +94,7 @@ pub fn pack_frm_command(request: PackFrmRequestDto) -> IpcResult<FrmPackReport> 
                         "Cada módulo requer nome e caminho não vazios.",
                     ));
                 }
-                let mod_path = resolve_read_path(path_str);
+                let mod_path = resolve_safe_read_path(path_str)?;
                 let payload = std::fs::read(&mod_path).map_err(|e| {
                     PanadigaIpcError::io(format!(
                         "Falha lendo módulo '{}': {}",
@@ -148,7 +148,7 @@ pub fn unpack_extrhead_command(
             "Caminho do contêiner EXTRHEAD é obrigatório.",
         ));
     }
-    let resolved_in = resolve_read_path(trimmed);
+    let resolved_in = resolve_safe_read_path(trimmed)?;
     let raw = std::fs::read(&resolved_in).map_err(|e| {
         PanadigaIpcError::io(format!("Falha lendo '{}': {}", resolved_in.display(), e))
     })?;

@@ -109,13 +109,40 @@ export const listHddDrives = (): Promise<PhysicalDriveInfo[]> =>
 export const listSdCardDrives = (): Promise<PhysicalDriveInfo[]> =>
   invokeCommand<PhysicalDriveInfo[]>('list_sd_card_drives');
 
-export const unmountPhysicalDrive = (devicePath: string): Promise<string[]> =>
-  invokeCommand<string[]>('unmount_physical_drive', { devicePath });
+export const unmountPhysicalDrive = async (devicePath: string): Promise<string[]> => {
+  const { mintOperationNonceId } = await import('./benchStreamService');
+  const nonceId = await mintOperationNonceId('nor_write', devicePath.trim(), 'unmount');
+  return invokeCommand<string[]>('unmount_physical_drive', {
+    devicePath,
+    ...(nonceId ? { nonceId } : {}),
+  });
+};
 
-export const executeDiskWriteCommand = (
-  cmd: 'format_hdd_meihdfs' | 'write_hdd_image' | 'restore_hdd_mirrors',
+type HddWriteCmd = 'format_hdd_meihdfs' | 'write_hdd_image' | 'restore_hdd_mirrors';
+
+function hddWriteInputRef(cmd: HddWriteCmd, args: Record<string, unknown>): string {
+  if (cmd === 'format_hdd_meihdfs') {
+    return 'format_meihdfs';
+  }
+  if (cmd === 'restore_hdd_mirrors') {
+    return 'restore_mirrors';
+  }
+  const img = typeof args.imagePath === 'string' ? args.imagePath.trim() : '';
+  return img || 'default_hdd_image';
+}
+
+export const executeDiskWriteCommand = async (
+  cmd: HddWriteCmd,
   args: Record<string, unknown>,
-): Promise<DriveWriteReport> => invokeCommand<DriveWriteReport>(cmd, args);
+): Promise<DriveWriteReport> => {
+  const { mintOperationNonceId } = await import('./benchStreamService');
+  const target = typeof args.devicePath === 'string' ? args.devicePath.trim() : '';
+  const nonceId = await mintOperationNonceId('nor_write', target, hddWriteInputRef(cmd, args));
+  return invokeCommand<DriveWriteReport>(cmd, {
+    ...args,
+    ...(nonceId ? { nonceId } : {}),
+  });
+};
 
 export const analyzeFrmBundle = (frmPath: string) => {
   const trimmedPath = frmPath.trim();

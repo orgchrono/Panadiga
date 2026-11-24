@@ -30,6 +30,7 @@ import type {
   SafeTargetDiskInfo,
   TvCalibrationBundleReport,
 } from '@/models';
+import { mintOperationNonceId } from './benchStreamService';
 import { invokeCommand, listenEvent } from './ipc';
 
 export const inspectRegionCalibration = (
@@ -55,10 +56,19 @@ export const applyMainTbcBypasses = (
 export const inspectSafeTargetDisks = (): Promise<SafeTargetDiskInfo[]> =>
   invokeCommand<SafeTargetDiskInfo[]>('inspect_safe_target_disks_command');
 
-export const flashEh55HddSafe = (
+export const flashEh55HddSafe = async (
   request: FlashEh55HddSafeRequest,
-): Promise<Eh55HddFlashReport> =>
-  invokeCommand<Eh55HddFlashReport>('flash_eh55_hdd_safe_command', { request });
+): Promise<Eh55HddFlashReport> => {
+  const nonceId = await mintOperationNonceId(
+    'nor_write',
+    request.devicePath.trim(),
+    request.imagePath?.trim() || 'default_hdd',
+    request.nonceId,
+  );
+  return invokeCommand<Eh55HddFlashReport>('flash_eh55_hdd_safe_command', {
+    request: { ...request, ...(nonceId ? { nonceId } : {}) },
+  });
+};
 
 export const picoEh55NorDump = (
   request: PicoEh55NorDumpRequest,
@@ -75,15 +85,33 @@ export const picoEh55BgoRepair = (
 ): Promise<PicoEh55BgoRepairResponse> =>
   invokeCommand<PicoEh55BgoRepairResponse>('pico_eh55_bgo_repair_command', { request });
 
-export const picoProbeDavisIde = (
+export const picoProbeDavisIde = async (
   request: PicoProbeDavisIdeRequest,
-): Promise<PicoProbeDavisIdeResponse> =>
-  invokeCommand<PicoProbeDavisIdeResponse>('pico_probe_davis_ide_command', { request });
+): Promise<PicoProbeDavisIdeResponse> => {
+  const nonceId = await mintOperationNonceId(
+    'ram_probe',
+    request.drive ?? 'master',
+    request.portName.trim(),
+    request.nonceId,
+  );
+  return invokeCommand<PicoProbeDavisIdeResponse>('pico_probe_davis_ide_command', {
+    request: { ...request, ...(nonceId ? { nonceId } : {}) },
+  });
+};
 
-export const picoPanamon1CleanNvram = (
+export const picoPanamon1CleanNvram = async (
   request: PicoPanamon1CleanNvramRequest,
-): Promise<PicoPanamon1CleanNvramResponse> =>
-  invokeCommand<PicoPanamon1CleanNvramResponse>('pico_panamon1_clean_nvram_command', { request });
+): Promise<PicoPanamon1CleanNvramResponse> => {
+  const nonceId = await mintOperationNonceId(
+    'nor_write',
+    'SA134..SA141',
+    request.portName.trim(),
+    request.nonceId,
+  );
+  return invokeCommand<PicoPanamon1CleanNvramResponse>('pico_panamon1_clean_nvram_command', {
+    request: { ...request, ...(nonceId ? { nonceId } : {}) },
+  });
+};
 
 export const subscribeHddFlashProgress = (
   handler: (payload: HddFlashProgressEvent) => void,

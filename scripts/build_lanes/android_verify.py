@@ -8,6 +8,7 @@ import re
 import subprocess
 import sys
 import zipfile
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Mapping
 
@@ -18,6 +19,68 @@ DEFAULT_BENCH_KEYSTORE = (
 )
 BENCH_KEY_ALIAS = "panadigabench"
 BENCH_KEY_PASS = "panadiga"
+ENV_KS_PASS = "PANADIGA_KS_PASS"
+ENV_KEY_PASS = "PANADIGA_KEY_PASS"
+ENV_KEY_ALIAS = "PANADIGA_KEY_ALIAS"
+ENV_REQUIRE_RELEASE_KEYSTORE = "PANADIGA_REQUIRE_RELEASE_KEYSTORE"
+
+
+@dataclass(frozen=True)
+class SigningConfig:
+    """Resolved Android APK signing configuration passing credentials strictly via env."""
+
+    keystore_path: Path
+    key_alias: str
+    ks_pass: str
+    key_pass: str
+    require_release_keystore: bool = False
+
+
+def resolve_signing_config(
+    keystore_path: Path = DEFAULT_BENCH_KEYSTORE,
+    *,
+    key_alias: str | None = None,
+    require_release_keystore: bool = False,
+    env: Mapping[str, str] | None = None,
+) -> SigningConfig:
+    """Resolve signing configuration cleanly, failing closed when release credentials are required."""
+    src_env = env if env is not None else os.environ
+    strict = require_release_keystore or src_env.get(ENV_REQUIRE_RELEASE_KEYSTORE, "").strip() == "1"
+    alias = (key_alias or src_env.get(ENV_KEY_ALIAS, "")).strip() or BENCH_KEY_ALIAS
+    ks_pass = src_env.get(ENV_KS_PASS, "").strip()
+    key_pass = src_env.get(ENV_KEY_PASS, "").strip() or ks_pass
+
+    if strict:
+        if keystore_path.resolve() == DEFAULT_BENCH_KEYSTORE.resolve():
+            raise RuntimeError(
+                "Release signing requires a dedicated --keystore; DEFAULT_BENCH_KEYSTORE is forbidden."
+            )
+        if not keystore_path.is_file():
+            raise FileNotFoundError(f"Release keystore not found: {keystore_path}")
+        if not ks_pass or ks_pass == BENCH_KEY_PASS or not key_pass or key_pass == BENCH_KEY_PASS:
+            raise RuntimeError(
+                f"Release signing requires non-default {ENV_KS_PASS} and {ENV_KEY_PASS} environment variables."
+            )
+    else:
+        if not ks_pass:
+            ks_pass = BENCH_KEY_PASS
+        if not key_pass:
+            key_pass = BENCH_KEY_PASS
+
+    return SigningConfig(
+        keystore_path=keystore_path,
+        key_alias=alias,
+        ks_pass=ks_pass,
+        key_pass=key_pass,
+        require_release_keystore=strict,
+    )
+
+
+def _with_signing_env(base_env: Mapping[str, str], cfg: SigningConfig) -> dict[str, str]:
+    merged = dict(base_env)
+    merged[ENV_KS_PASS] = cfg.ks_pass
+    merged[ENV_KEY_PASS] = cfg.key_pass
+    return merged
 REQUIRED_APK_ENTRIES = (
     "META-INF/MANIFEST.MF",
     "AndroidManifest.xml",
@@ -72,40 +135,77 @@ def find_build_tool(sdk_dir: Path, tool_stem: str) -> Path:
     raise FileNotFoundError(f"Android SDK tool '{tool_stem}' not found under {bt_dir}")
 
 
+def build_keytool_cmd(cfg: SigningConfig) -> list[str]:
+    """Build keytool generation argv reading passwords strictly from env variables."""
+    return [
+        "keytool",
+        "-genkey",
+        "-v",
+        "-keystore",
+        str(cfg.keystore_path),
+        "-alias",
+        cfg.key_alias,
+        "-keyalg",
+        "RSA",
+        "-keysize",
+        "2048",
+        "-validity",
+        "10000",
+        "-storepass:env",
+        ENV_KS_PASS,
+        "-keypass:env",
+        ENV_KEY_PASS,
+        "-dname",
+        "CN=Panadiga Bench,O=Panadiga Engineering,C=BR",
+    ]
+
+
+def build_apksigner_cmd(
+    apksigner: Path,
+    cfg: SigningConfig,
+    aligned_apk: Path,
+    output_apk: Path,
+) -> list[str]:
+    """Build apksigner sign argv reading passwords strictly from env variables."""
+    return [
+        str(apksigner),
+        "sign",
+        "--v1-signing-enabled",
+        "true",
+        "--v2-signing-enabled",
+        "true",
+        "--v3-signing-enabled",
+        "true",
+        "--ks",
+        str(cfg.keystore_path),
+        "--ks-key-alias",
+        cfg.key_alias,
+        "--ks-pass",
+        f"env:{ENV_KS_PASS}",
+        "--key-pass",
+        f"env:{ENV_KEY_PASS}",
+        "--out",
+        str(output_apk),
+        str(aligned_apk),
+    ]
+
+
 def ensure_bench_keystore(
     keystore_path: Path = DEFAULT_BENCH_KEYSTORE,
     env: Mapping[str, str] | None = None,
+    *,
+    signing_config: SigningConfig | None = None,
 ) -> Path:
-    """Return existing bench keystore or synthesize a standard RSA-2048 keystore."""
-    if keystore_path.is_file():
-        return keystore_path
-    keystore_path.parent.mkdir(parents=True, exist_ok=True)
-    run_step(
-        [
-            "keytool",
-            "-genkey",
-            "-v",
-            "-keystore",
-            str(keystore_path),
-            "-alias",
-            BENCH_KEY_ALIAS,
-            "-keyalg",
-            "RSA",
-            "-keysize",
-            "2048",
-            "-validity",
-            "10000",
-            "-storepass",
-            BENCH_KEY_PASS,
-            "-keypass",
-            BENCH_KEY_PASS,
-            "-dname",
-            "CN=Panadiga Bench,O=Panadiga Engineering,C=BR",
-        ],
-        cwd=ROOT,
-        env=env or os.environ,
-    )
-    return keystore_path
+    """Return existing keystore or synthesize a dev bench RSA-2048 keystore when allowed."""
+    cfg = signing_config or resolve_signing_config(keystore_path, env=env)
+    if cfg.keystore_path.is_file():
+        return cfg.keystore_path
+    if cfg.require_release_keystore:
+        raise FileNotFoundError(f"Release keystore not found: {cfg.keystore_path}")
+    cfg.keystore_path.parent.mkdir(parents=True, exist_ok=True)
+    run_env = _with_signing_env(env or os.environ, cfg)
+    run_step(build_keytool_cmd(cfg), cwd=ROOT, env=run_env)
+    return cfg.keystore_path
 
 
 def _run_tool_checked(cmd: list[str], env: Mapping[str, str], label: str) -> str:
@@ -141,42 +241,31 @@ def sign_and_align_apk(
     output_apk: Path,
     keystore_path: Path = DEFAULT_BENCH_KEYSTORE,
     *,
+    key_alias: str | None = None,
+    require_release_keystore: bool = False,
     env: Mapping[str, str] | None = None,
 ) -> Path:
-    """Zipalign an APK cleanly and sign with v1 + v2 + v3 schemes using the bench keystore."""
+    """Zipalign an APK cleanly and sign with v1 + v2 + v3 schemes using env-passed credentials."""
     if not unsigned_apk.is_file():
         raise FileNotFoundError(f"Source APK not found: {unsigned_apk}")
-    run_env = env or os.environ
+    base_env = env or os.environ
+    cfg = resolve_signing_config(
+        keystore_path,
+        key_alias=key_alias,
+        require_release_keystore=require_release_keystore,
+        env=base_env,
+    )
+    run_env = _with_signing_env(base_env, cfg)
     zipalign = find_build_tool(sdk_dir, "zipalign")
     apksigner = find_build_tool(sdk_dir, "apksigner")
-    ks = ensure_bench_keystore(keystore_path, run_env)
+    ensure_bench_keystore(cfg.keystore_path, run_env, signing_config=cfg)
 
     output_apk.parent.mkdir(parents=True, exist_ok=True)
     aligned_tmp = output_apk.with_suffix(".aligned.tmp.apk")
     run_step([str(zipalign), "-p", "-f", "4", str(unsigned_apk), str(aligned_tmp)], cwd=ROOT, env=run_env)
     try:
         run_step(
-            [
-                str(apksigner),
-                "sign",
-                "--v1-signing-enabled",
-                "true",
-                "--v2-signing-enabled",
-                "true",
-                "--v3-signing-enabled",
-                "true",
-                "--ks",
-                str(ks),
-                "--ks-key-alias",
-                BENCH_KEY_ALIAS,
-                "--ks-pass",
-                f"pass:{BENCH_KEY_PASS}",
-                "--key-pass",
-                f"pass:{BENCH_KEY_PASS}",
-                "--out",
-                str(output_apk),
-                str(aligned_tmp),
-            ],
+            build_apksigner_cmd(apksigner, cfg, aligned_tmp, output_apk),
             cwd=ROOT,
             env=run_env,
         )
@@ -268,13 +357,23 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--verify-only", metavar="APK_PATH")
     parser.add_argument("--single-abi", action="store_true")
     parser.add_argument("--keystore", default=str(DEFAULT_BENCH_KEYSTORE))
+    parser.add_argument("--key-alias", default=None)
+    parser.add_argument("--require-release-keystore", action="store_true")
     args = parser.parse_args(argv)
 
     sdk_dir, _ = detect_android_sdk(os.environ)
     require_dual = not args.single_abi
     if args.sign_and_verify:
         src_apk, dst_apk = (Path(args.sign_and_verify[0]), Path(args.sign_and_verify[1]))
-        sign_and_align_apk(sdk_dir, src_apk, dst_apk, Path(args.keystore), env=os.environ)
+        sign_and_align_apk(
+            sdk_dir,
+            src_apk,
+            dst_apk,
+            Path(args.keystore),
+            key_alias=args.key_alias,
+            require_release_keystore=args.require_release_keystore,
+            env=os.environ,
+        )
         summary = validate_apk_artifact(sdk_dir, dst_apk, require_dual_abi=require_dual, env=os.environ)
         print(f"VERIFIED SIGNED APK: {summary}")
         return 0

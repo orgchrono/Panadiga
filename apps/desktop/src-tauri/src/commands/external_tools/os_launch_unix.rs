@@ -30,8 +30,19 @@ fn discover_unix_ghidra_run() -> std::path::PathBuf {
         .unwrap_or_else(|| std::path::PathBuf::from("ghidraRun"))
 }
 
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+pub(super) fn build_gdb_exec_args(socket: &str) -> [String; 5] {
+    [
+        "gdb-multiarch".to_string(),
+        "-ex".to_string(),
+        "set architecture mn10300".to_string(),
+        "-ex".to_string(),
+        format!("target remote {socket}"),
+    ]
+}
+
 #[cfg(target_os = "linux")]
-fn spawn_first_terminal(root: &Path, shell_cmd: Option<&str>) -> Result<(), std::io::Error> {
+fn spawn_first_terminal(root: &Path, exec_args: Option<&[&str]>) -> Result<(), std::io::Error> {
     for (term, exec_flag) in [
         ("x-terminal-emulator", "-e"),
         ("gnome-terminal", "--"),
@@ -45,8 +56,13 @@ fn spawn_first_terminal(root: &Path, shell_cmd: Option<&str>) -> Result<(), std:
         ("lxterminal", "-e"),
         ("xterm", "-e"),
     ] {
-        let result = match shell_cmd {
-            Some(c) => spawn_detached(term, &[exec_flag, "sh", "-lc", c], root),
+        let result = match exec_args {
+            Some(args) => {
+                let mut argv: Vec<&str> = Vec::with_capacity(args.len() + 1);
+                argv.push(exec_flag);
+                argv.extend_from_slice(args);
+                spawn_detached(term, &argv, root)
+            }
             None => spawn_detached(term, &[], root),
         };
         if result.is_ok() {
@@ -68,10 +84,13 @@ pub(super) fn launch_for_current_os(tool: &str, root: &Path) -> IpcResult<String
                 "osascript",
                 &[
                     "-e",
-                    &format!(
-                        "tell application \"Terminal\" to do script \"cd '{}' && gdb-multiarch -ex 'set architecture mn10300' -ex 'target remote {}'\"",
-                        root_str, DEFAULT_GDB_LISTEN_SOCKET
-                    ),
+                    "on run argv",
+                    "-e",
+                    "tell application \"Terminal\" to do script (\"cd \" & quoted form of item 1 of argv & \" && gdb-multiarch -ex 'set architecture mn10300' -ex 'target remote \" & quoted form of item 2 of argv & \"'\")",
+                    "-e",
+                    "end run",
+                    &root_str,
+                    DEFAULT_GDB_LISTEN_SOCKET,
                 ],
                 root,
             )
@@ -125,11 +144,15 @@ pub(super) fn launch_for_current_os(tool: &str, root: &Path) -> IpcResult<String
 pub(super) fn launch_for_current_os(tool: &str, root: &Path) -> IpcResult<String> {
     match tool.to_lowercase().as_str() {
         "gdb" => {
-            let cmd = format!(
-                "gdb-multiarch -ex 'set architecture mn10300' -ex 'target remote {}'; exec bash",
-                DEFAULT_GDB_LISTEN_SOCKET
-            );
-            spawn_first_terminal(root, Some(&cmd)).map_err(|e| {
+            let gdb_args = build_gdb_exec_args(DEFAULT_GDB_LISTEN_SOCKET);
+            let arg_refs: [&str; 5] = [
+                &gdb_args[0],
+                &gdb_args[1],
+                &gdb_args[2],
+                &gdb_args[3],
+                &gdb_args[4],
+            ];
+            spawn_first_terminal(root, Some(&arg_refs)).map_err(|e| {
                 PanadigaIpcError::serial(format!("Falha ao iniciar GDB no terminal Linux: {}", e))
             })?;
             Ok("Sessão GDB Multiarch iniciada no terminal.".to_string())

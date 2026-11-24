@@ -107,11 +107,53 @@ pub(crate) fn validate_ipc_path_input(raw: &str) -> IpcResult<String> {
             trimmed
         )));
     }
+    if trimmed == "~" || trimmed.starts_with("~/") || trimmed.starts_with("~\\") {
+        return Err(PanadigaIpcError::validation(format!(
+            "Expansão de tilde '~' fora do root permitido via IPC: '{}'.",
+            trimmed
+        )));
+    }
     Ok(trimmed.to_string())
+}
+
+fn push_root_variants(out: &mut Vec<String>, root: &Path) {
+    let raw_norm = normalize_path_for_guard(root);
+    if !raw_norm.is_empty() && !out.contains(&raw_norm) {
+        out.push(raw_norm);
+    }
+    if let Ok(canon) = root.canonicalize() {
+        let canon_norm = normalize_path_for_guard(&canon);
+        if !canon_norm.is_empty() && !out.contains(&canon_norm) {
+            out.push(canon_norm);
+        }
+    }
+}
+
+pub(crate) fn allowed_ipc_roots() -> Vec<String> {
+    let mut roots = Vec::new();
+    push_root_variants(&mut roots, &resolve_workspace_root());
+    push_root_variants(&mut roots, &resolve_writable_data_root());
+    push_root_variants(&mut roots, &std::env::temp_dir());
+    roots
+}
+
+pub(crate) fn ensure_within_allowed_ipc_roots(norm: &str, display_raw: &str) -> IpcResult<()> {
+    let allowed = allowed_ipc_roots();
+    let in_bounds = allowed
+        .iter()
+        .any(|root| norm == root || norm.starts_with(&format!("{root}/")));
+    if !in_bounds {
+        return Err(PanadigaIpcError::validation(format!(
+            "Caminho IPC fora dos diretórios permitidos (workspace / data / temp): '{}'.",
+            display_raw
+        )));
+    }
+    Ok(())
 }
 
 fn ensure_safe_write_target(resolved: &Path) -> IpcResult<()> {
     let norm = canonicalize_with_tail(resolved)?;
+    ensure_within_allowed_ipc_roots(&norm, &resolved.display().to_string())?;
     const FORBIDDEN_PREFIXES: &[&str] = &[
         "c:/windows",
         "/etc",
@@ -147,7 +189,7 @@ fn ensure_safe_write_target(resolved: &Path) -> IpcResult<()> {
     Ok(())
 }
 
-pub(crate) fn resolve_read_path(raw: &str) -> PathBuf {
+fn resolve_read_path(raw: &str) -> PathBuf {
     let trimmed = raw.trim();
     let direct = PathBuf::from(trimmed);
     if direct.exists() || direct.is_absolute() {
@@ -178,6 +220,20 @@ pub(crate) fn resolve_safe_read_path(raw: &str) -> IpcResult<PathBuf> {
             raw.trim()
         )));
     }
+    ensure_within_allowed_ipc_roots(&norm, raw.trim())?;
+    Ok(resolved)
+}
+
+/// Validates and resolves a writable directory path supplied over Tauri IPC.
+pub(crate) fn resolve_safe_write_dir(raw: &str) -> IpcResult<PathBuf> {
+    let trimmed = validate_ipc_path_input(raw)?;
+    let path = PathBuf::from(&trimmed);
+    let resolved = if path.is_absolute() {
+        path
+    } else {
+        resolve_workspace_root().join(path)
+    };
+    ensure_safe_write_target(&resolved)?;
     Ok(resolved)
 }
 

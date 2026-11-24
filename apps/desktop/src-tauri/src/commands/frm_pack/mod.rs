@@ -7,7 +7,7 @@ pub use ops::*;
 pub use paths::{
     ExtrheadUnpackReportDto, FrmPackModuleInputDto, PackFrmRequestDto, list_frm_containers_command,
 };
-pub(crate) use paths::{resolve_read_path, resolve_safe_read_path, resolve_write_path};
+pub(crate) use paths::{resolve_safe_read_path, resolve_safe_write_dir, resolve_write_path};
 
 #[cfg(test)]
 mod tests {
@@ -114,9 +114,22 @@ mod tests {
             .is_err()
         );
         #[cfg(windows)]
-        assert!(resolve_write_path("C:\\Windows\\System32\\evil.bin").is_err());
+        {
+            assert!(resolve_write_path("C:\\Windows\\System32\\drivers\\etc\\hosts").is_err());
+            assert!(resolve_safe_read_path("C:\\Windows\\System32\\drivers\\etc\\hosts").is_err());
+        }
         #[cfg(not(windows))]
-        assert!(resolve_write_path("/etc/passwd").is_err());
+        {
+            assert!(resolve_write_path("/etc/passwd").is_err());
+            assert!(resolve_safe_read_path("/etc/passwd").is_err());
+        }
+        assert!(resolve_write_path("~/.ssh/id_rsa").is_err());
+        assert!(resolve_safe_read_path("~/.ssh/id_rsa").is_err());
+        if let Some(home) = std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE")) {
+            let ssh_key = std::path::PathBuf::from(home).join(".ssh").join("id_rsa");
+            assert!(resolve_write_path(&ssh_key.to_string_lossy()).is_err());
+            assert!(resolve_safe_read_path(&ssh_key.to_string_lossy()).is_err());
+        }
 
         let _ = std::fs::remove_dir_all(&safe_dir);
     }

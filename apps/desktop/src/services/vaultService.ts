@@ -26,6 +26,7 @@ import type {
   VaultInitSessionRequest,
   VaultSessionManifest,
 } from '@/models';
+import { mintOperationNonceId } from './benchStreamService';
 import { invokeCommand, listenEvent } from './ipc';
 
 export const initVaultSession = (
@@ -55,18 +56,40 @@ export const runPreWriteEmuGate = (
 ): Promise<PreWriteGateReport> =>
   invokeCommand<PreWriteGateReport>('vault_run_prewrite_emu_gate_command', { request });
 
-export const flashComposedHddSafe = (
+export const flashComposedHddSafe = async (
   request: FlashComposedHddSafeRequest,
-): Promise<ComposedHddFlashReport> =>
-  invokeCommand<ComposedHddFlashReport>('flash_composed_hdd_safe_command', { request });
+): Promise<ComposedHddFlashReport> => {
+  const nonceId = await mintOperationNonceId(
+    'nor_write',
+    request.devicePath.trim(),
+    request.mainSourcePath?.trim() || 'composed_hdd',
+    request.nonceId,
+  );
+  return invokeCommand<ComposedHddFlashReport>('flash_composed_hdd_safe_command', {
+    request: { ...request, ...(nonceId ? { nonceId } : {}) },
+  });
+};
 
 export const inspectOpticalBurners = (): Promise<OpticalBurnerDriveInfo[]> =>
   invokeCommand<OpticalBurnerDriveInfo[]>('inspect_optical_burners_command');
 
-export const createDvdRecoveryDisc = (
+export const createDvdRecoveryDisc = async (
   request: CreateDvdRecoveryDiscRequest,
-): Promise<DvdCreatorReport> =>
-  invokeCommand<DvdCreatorReport>('create_dvd_recovery_disc_command', { request });
+): Promise<DvdCreatorReport> => {
+  const burner = request.burnerId?.trim();
+  const nonceId =
+    burner && !request.dryRun
+      ? await mintOperationNonceId(
+          'sd_kit_build',
+          burner,
+          request.confirmToken?.trim() || 'dvd_burn',
+          request.nonceId,
+        )
+      : request.nonceId;
+  return invokeCommand<DvdCreatorReport>('create_dvd_recovery_disc_command', {
+    request: { ...request, ...(nonceId ? { nonceId } : {}) },
+  });
+};
 
 export const subscribeDvdBurnProgress = (
   handler: (payload: DvdBurnProgressEvent) => void,

@@ -44,4 +44,21 @@ mod tests {
         let err = launch_external_tool_command("nope".to_string()).unwrap_err();
         assert!(err.contains("não suportada"));
     }
+
+    #[test]
+    fn external_tool_argv_builders_avoid_shell_invocations() {
+        let args = os_launch::build_ghidra_sync_args(
+            "C:/proj with spaces",
+            "Panadiga_MN103S",
+            "C:/Panadiga/tools/ghidra",
+        );
+        assert!(
+            args.iter().all(|a| !a.eq_ignore_ascii_case("cmd")
+                && !a.contains('>')
+                && !a.contains("sh -lc"))
+        );
+        assert_eq!(args[0], "C:/proj with spaces");
+        assert_eq!(args[2], "-process");
+        assert_eq!(args[4], "-scriptPath");
+    }
 }

@@ -16,7 +16,7 @@ use tauri::Emitter;
 
 use crate::commands::constants::EVENT_HDD_FLASH_PROGRESS;
 use crate::commands::error::{IpcResult, PanadigaIpcError};
-use crate::commands::frm_pack::resolve_read_path;
+use crate::commands::frm_pack::resolve_safe_read_path;
 use crate::commands::unbrick_dto::{opt_trimmed, resolve_dir_target};
 
 #[derive(Debug, Clone, Deserialize)]
@@ -162,8 +162,10 @@ pub fn build_eh55_flash_request_from_dto(
     )?;
 
     let image_raw = opt_trimmed(&dto.image_path).unwrap_or(DEFAULT_HDD_IMAGE_PATH);
-    let image_path = resolve_read_path(image_raw);
-    let mirror_p1_path = opt_trimmed(&dto.mirror_p1_path).map(resolve_read_path);
+    let image_path = resolve_safe_read_path(image_raw)?;
+    let mirror_p1_path = opt_trimmed(&dto.mirror_p1_path)
+        .map(resolve_safe_read_path)
+        .transpose()?;
     let backup_dir = resolve_dir_target(dto.backup_dir.trim())?;
 
     Ok(Eh55HddFlashRequest {
@@ -210,13 +212,12 @@ pub async fn flash_eh55_hdd_safe_command(
 ) -> IpcResult<Eh55HddFlashReport> {
     let req = build_eh55_flash_request_from_dto(&request)?;
     let image_ref = opt_trimmed(&request.image_path).unwrap_or("default_hdd");
-    crate::commands::hardware_diag::consume_operation_nonce_with_state(
+    crate::commands::hardware_diag::require_destructive_nonce(
         state.inner(),
         request.nonce_id.as_deref(),
         panadiga_core::bench::OpKind::NorWrite,
         req.device_path.trim(),
         image_ref,
-        false,
     )?;
     let req_clone = request.clone();
     run_physical_hdd_flash_task(app, req.device_path, "HDD flash", move |device, emit| {

@@ -65,7 +65,20 @@ pub async fn pico_execute_cold_break_in(
 pub async fn pico_execute_in_circuit_erase(
     state: tauri::State<'_, PanadigaBackendState>,
     port_name: String,
+    nonce_id: Option<String>,
 ) -> IpcResult<String> {
+    let target = if port_name.trim().is_empty() {
+        "auto"
+    } else {
+        port_name.trim()
+    };
+    crate::commands::hardware_diag::require_destructive_nonce(
+        state.inner(),
+        nonce_id.as_deref(),
+        panadiga_core::bench::OpKind::NorWrite,
+        target,
+        "in_circuit_erase",
+    )?;
     let backend = state.inner().clone();
     run_blocking(move || super::super::pico::pico_execute_in_circuit_erase(&backend, port_name))
         .await
@@ -113,9 +126,22 @@ pub async fn pico_set_breakin_mode(
 pub async fn pico_inject_ram_loader(
     state: tauri::State<'_, PanadigaBackendState>,
     port_name: Option<String>,
+    nonce_id: Option<String>,
 ) -> IpcResult<InCircuitNvramEraseResult> {
-    let backend = state.inner().clone();
     let port = port_name.unwrap_or_default();
+    let target = if port.trim().is_empty() {
+        "auto"
+    } else {
+        port.trim()
+    };
+    crate::commands::hardware_diag::require_destructive_nonce(
+        state.inner(),
+        nonce_id.as_deref(),
+        panadiga_core::bench::OpKind::RamProbe,
+        target,
+        "ram_loader",
+    )?;
+    let backend = state.inner().clone();
     run_blocking(move || super::super::pico::pico_execute_in_circuit_erase_full(&backend, port))
         .await
 }
@@ -175,8 +201,22 @@ pub async fn pico_trigger_bootsel_reboot(port_name: String) -> IpcResult<String>
 /// Flashes the embedded P7501 Async UART firmware (RP2040 or RP2350) onto a detected BOOTSEL drive.
 #[tauri::command]
 pub async fn pico_flash_firmware(
+    state: tauri::State<'_, PanadigaBackendState>,
     target_family: Option<String>,
+    nonce_id: Option<String>,
 ) -> IpcResult<panadiga_core::pico::flasher::PicoFlashReport> {
+    let target = target_family
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .unwrap_or("auto");
+    crate::commands::hardware_diag::require_destructive_nonce(
+        state.inner(),
+        nonce_id.as_deref(),
+        panadiga_core::bench::OpKind::NorWrite,
+        target,
+        "pico_uf2",
+    )?;
     run_blocking(move || {
         panadiga_core::pico::flasher::flash_embedded_firmware(target_family.as_deref())
             .map_err(PanadigaIpcError::from)

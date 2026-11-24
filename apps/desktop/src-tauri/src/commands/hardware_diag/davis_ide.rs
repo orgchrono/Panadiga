@@ -24,6 +24,8 @@ pub struct PicoProbeDavisIdeRequestDto {
     pub drive: Option<String>,
     pub boot_mode: Option<String>,
     pub boot_timeout_ms: Option<u32>,
+    #[serde(default)]
+    pub nonce_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -94,6 +96,13 @@ pub async fn pico_probe_davis_ide_command(
 ) -> IpcResult<PicoProbeDavisIdeResponseDto> {
     let clean_port = request.port_name.trim().to_string();
     let _ = parse_davis_drive_selector(opt_trimmed(&request.drive))?;
+    super::bench_control::require_destructive_nonce(
+        state.inner(),
+        request.nonce_id.as_deref(),
+        panadiga_core::bench::OpKind::RamProbe,
+        opt_trimmed(&request.drive).unwrap_or("master"),
+        &clean_port,
+    )?;
     let backend = state.inner().clone();
     let req_clone = request.clone();
 

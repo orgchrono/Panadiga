@@ -17,15 +17,15 @@ use super::eh55_bgo_dto::{
 };
 use crate::commands::constants::EVENT_BGO_REPAIR_PROGRESS;
 use crate::commands::error::{IpcResult, PanadigaIpcError};
-use crate::commands::frm_pack::{resolve_read_path, resolve_write_path};
-use crate::commands::unbrick_dto::{opt_read_path, opt_trimmed};
+use crate::commands::frm_pack::{resolve_safe_read_path, resolve_write_path};
+use crate::commands::unbrick_dto::{opt_safe_read_path, opt_trimmed};
 use crate::state::PanadigaBackendState;
 
 fn load_or_build_bgo_plan(
     req: &PicoEh55BgoRepairRequestDto,
 ) -> IpcResult<(BgoRepairPlan, Option<PathBuf>)> {
     if let Some(plan_raw) = opt_trimmed(&req.plan_path) {
-        let p = resolve_read_path(plan_raw);
+        let p = resolve_safe_read_path(plan_raw)?;
         let plan: BgoRepairPlan = serde_json::from_slice(
             &fs::read(&p).map_err(|e| PanadigaIpcError::io(format!("{e}")))?,
         )
@@ -35,9 +35,9 @@ fn load_or_build_bgo_plan(
     let nor_raw = opt_trimmed(&req.nor_path).ok_or_else(|| {
         PanadigaIpcError::validation("Informe norPath ou planPath para BGO repair.")
     })?;
-    let nor_path = resolve_read_path(nor_raw);
+    let nor_path = resolve_safe_read_path(nor_raw)?;
     let nor = fs::read(&nor_path).map_err(|e| PanadigaIpcError::io(format!("{e}")))?;
-    let ref_nor = opt_read_path(&req.reference_nor_path)
+    let ref_nor = opt_safe_read_path(&req.reference_nor_path)?
         .map(|rp| fs::read(&rp).map_err(|e| PanadigaIpcError::io(format!("{e}"))))
         .transpose()?;
     let plan = build_bgo_repair_plan(&nor, ref_nor.as_deref())

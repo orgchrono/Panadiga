@@ -347,4 +347,5 @@ export interface FlashSdRecoveryCardRequest {
   readonly includePanaSd?: boolean;
   readonly cleanroomOnly?: boolean;
   readonly sessionId?: string;
+  readonly nonceId?: string;
 }

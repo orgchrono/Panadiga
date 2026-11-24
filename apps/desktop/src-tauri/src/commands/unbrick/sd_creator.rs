@@ -20,7 +20,7 @@ use super::vault_session::record_vault_outcome_in;
 use crate::commands::constants::EVENT_SD_FLASH_PROGRESS;
 use crate::commands::error::{IpcResult, PanadigaIpcError};
 use crate::commands::hardware_diag::resolve_auto_backup_file;
-use crate::commands::unbrick_dto::{CommonMediaKitDto, opt_read_path, opt_trimmed};
+use crate::commands::unbrick_dto::{CommonMediaKitDto, opt_safe_read_path, opt_trimmed};
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -31,6 +31,8 @@ pub struct FlashSdRecoveryCardRequestDto {
     pub volume_mb: Option<u32>,
     pub pana_sd_path: Option<String>,
     pub include_pana_sd: Option<bool>,
+    #[serde(default)]
+    pub nonce_id: Option<String>,
     #[serde(flatten)]
     pub media: CommonMediaKitDto,
 }
@@ -77,9 +79,9 @@ fn build_sd_creator_request(
         .to_string();
     let volume_mb = dto.volume_mb.unwrap_or(FAT16_DEFAULT_VOLUME_MB);
 
-    let digadiag_path = opt_read_path(&dto.media.digadiag_path);
-    let pana_sd_path = opt_read_path(&dto.pana_sd_path);
-    let pana_dvd_path = opt_read_path(&dto.media.pana_dvd_path);
+    let digadiag_path = opt_safe_read_path(&dto.media.digadiag_path)?;
+    let pana_sd_path = opt_safe_read_path(&dto.pana_sd_path)?;
+    let pana_dvd_path = opt_safe_read_path(&dto.media.pana_dvd_path)?;
     let include_pana_sd = dto.include_pana_sd.unwrap_or(false);
     let has_proprietary = digadiag_path.is_some()
         || pana_sd_path.is_some()
@@ -192,9 +194,19 @@ pub fn inspect_sd_card_targets_command() -> IpcResult<Vec<SdTargetDriveInfo>> {
 #[tauri::command]
 pub async fn flash_sd_recovery_card_command(
     app: tauri::AppHandle,
+    state: tauri::State<'_, crate::state::PanadigaBackendState>,
     request: FlashSdRecoveryCardRequestDto,
 ) -> IpcResult<SdCardCreatorReport> {
-    let _ = build_sd_creator_request(&request)?;
+    let (req, _) = build_sd_creator_request(&request)?;
+    if let Some(dev) = req.device_path.as_deref() {
+        crate::commands::hardware_diag::require_destructive_nonce(
+            state.inner(),
+            request.nonce_id.as_deref(),
+            panadiga_core::bench::OpKind::SdKitBuild,
+            dev,
+            req.confirm_token.as_deref().unwrap_or("sd_flash"),
+        )?;
+    }
     let app_clone = app.clone();
     let req_clone = request.clone();
     tauri::async_runtime::spawn_blocking(move || {
@@ -230,6 +242,7 @@ mod tests {
             volume_mb: Some(32),
             pana_sd_path: None,
             include_pana_sd: Some(false),
+            nonce_id: None,
             media: CommonMediaKitDto {
                 model: Some("DMR-EH55".to_string()),
                 loader_profile: Some("ver061".to_string()),

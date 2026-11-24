@@ -10,7 +10,7 @@ use panadiga_core::re::{MainPassthroughMode, MainPassthroughReport, patch_main_p
 use serde::{Deserialize, Serialize};
 
 use crate::commands::error::{IpcResult, PanadigaIpcError};
-use crate::commands::frm_pack::{resolve_read_path, resolve_write_path};
+use crate::commands::frm_pack::{resolve_safe_read_path, resolve_write_path};
 use crate::commands::unbrick_dto::opt_trimmed;
 
 pub(crate) const TBC_BYPASS_CONFIRM_TOKEN: &str = "APPLY_MAIN_TBC_COW";
@@ -68,7 +68,7 @@ pub fn apply_main_tbc_bypasses_command(
                     "outputMainPath obrigatório ao informar inputMainPath (CoW estrito).",
                 )
             })?;
-            let in_path = resolve_read_path(in_raw);
+            let in_path = resolve_safe_read_path(in_raw)?;
             let out_path = resolve_write_path(out_raw)?;
             let pt_mode: MainPassthroughMode = opt_trimmed(&request.passthrough_mode)
                 .unwrap_or("av_passthrough")

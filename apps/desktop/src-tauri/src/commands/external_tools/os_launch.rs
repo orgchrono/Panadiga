@@ -36,23 +36,99 @@ pub(super) fn spawn_detached(
     args: &[&str],
     cwd: &Path,
 ) -> Result<(), std::io::Error> {
+    spawn_with_stdio(program, args, cwd, Stdio::null(), Stdio::null(), false)
+}
+
+#[cfg(not(target_os = "android"))]
+fn spawn_with_stdio(
+    program: &str,
+    args: &[&str],
+    cwd: &Path,
+    stdout: Stdio,
+    stderr: Stdio,
+    new_console: bool,
+) -> Result<(), std::io::Error> {
     let mut cmd = Command::new(program);
     cmd.args(args)
         .current_dir(cwd)
         .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null());
+        .stdout(stdout)
+        .stderr(stderr);
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;
         const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-        cmd.creation_flags(CREATE_NO_WINDOW);
+        const CREATE_NEW_CONSOLE: u32 = 0x0000_0010;
+        cmd.creation_flags(if new_console {
+            CREATE_NEW_CONSOLE
+        } else {
+            CREATE_NO_WINDOW
+        });
     }
+    #[cfg(not(windows))]
+    let _ = new_console;
     cmd.spawn().map(|_| ())
 }
 
 #[cfg(target_os = "windows")]
+fn spawn_detached_to_log(
+    program: &str,
+    args: &[&str],
+    cwd: &Path,
+    log_path: &Path,
+) -> Result<(), std::io::Error> {
+    let stdout_file = std::fs::File::create(log_path)?;
+    let stderr_file = stdout_file.try_clone()?;
+    spawn_with_stdio(
+        program,
+        args,
+        cwd,
+        Stdio::from(stdout_file),
+        Stdio::from(stderr_file),
+        false,
+    )
+}
+
+#[cfg(target_os = "windows")]
+fn validate_script_leaf(script: &str) -> Result<(), std::io::Error> {
+    let invalid =
+        script.is_empty() || script.contains('/') || script.contains('\\') || script.contains("..");
+    if invalid {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            format!("nome de script inválido: {script}"),
+        ));
+    }
+    Ok(())
+}
+
+#[cfg(any(target_os = "windows", test))]
+pub(super) fn build_ghidra_sync_args(
+    project_dir: &str,
+    project_name: &str,
+    scripts_path: &str,
+) -> Vec<String> {
+    vec![
+        project_dir.to_string(),
+        project_name.to_string(),
+        "-process".to_string(),
+        "-noanalysis".to_string(),
+        "-scriptPath".to_string(),
+        scripts_path.to_string(),
+        "-postScript".to_string(),
+        "ghidra_am34_memory_map.py".to_string(),
+        "-postScript".to_string(),
+        "ghidra_import_symbols_panadiga.py".to_string(),
+        "-postScript".to_string(),
+        "ghidra_mn103_fix_decompilation.py".to_string(),
+        "-postScript".to_string(),
+        "ghidra_auto_unbrick_audit.py".to_string(),
+    ]
+}
+
+#[cfg(target_os = "windows")]
 fn launch_tools_script(root: &Path, script: &str) -> Result<(), std::io::Error> {
+    validate_script_leaf(script)?;
     let script_path = root.join("tools").join(script);
     if !script_path.is_file() {
         return Err(std::io::Error::new(
@@ -61,7 +137,7 @@ fn launch_tools_script(root: &Path, script: &str) -> Result<(), std::io::Error> 
         ));
     }
     let script_str = script_path.to_string_lossy().to_string();
-    spawn_detached("cmd", &["/c", "start", "", &script_str], root)
+    spawn_with_stdio(&script_str, &[], root, Stdio::null(), Stdio::null(), true)
 }
 
 #[cfg(target_os = "windows")]
@@ -84,16 +160,16 @@ pub(super) fn launch_for_current_os(tool: &str, root: &Path) -> IpcResult<String
                 let cwd = run_bat.parent().unwrap_or(root);
                 if let Some(project) = discovery.project {
                     let gpr_str = project.gpr.to_string_lossy().to_string();
-                    spawn_detached("cmd", &["/c", "call", &run_str, &gpr_str], cwd).map_err(
-                        |e| PanadigaIpcError::io(format!("Falha ao iniciar Ghidra GUI: {}", e)),
-                    )?;
+                    spawn_detached(&run_str, &[&gpr_str], cwd).map_err(|e| {
+                        PanadigaIpcError::io(format!("Falha ao iniciar Ghidra GUI: {}", e))
+                    })?;
                     return Ok(format!(
                         "Ghidra aberto diretamente no projeto {} ({} scripts Jython SSOT sincronizados em ~/ghidra_scripts).",
                         project.gpr.display(),
                         synced
                     ));
                 }
-                spawn_detached("cmd", &["/c", "call", &run_str], cwd).map_err(|e| {
+                spawn_detached(&run_str, &[], cwd).map_err(|e| {
                     PanadigaIpcError::io(format!("Falha ao iniciar Ghidra GUI: {}", e))
                 })?;
                 return Ok(format!(
@@ -123,17 +199,16 @@ pub(super) fn launch_for_current_os(tool: &str, root: &Path) -> IpcResult<String
             })?;
             let scripts_path = root.join("tools").join("ghidra");
             let log_path = project.dir.join("panadiga_jython_sync.log");
-            let batch_line = format!(
-                "\"{}\" \"{}\" \"{}\" -process -noanalysis -scriptPath \"{}\" -postScript ghidra_am34_memory_map.py -postScript ghidra_import_symbols_panadiga.py -postScript ghidra_mn103_fix_decompilation.py -postScript ghidra_auto_unbrick_audit.py > \"{}\" 2>&1",
-                headless.display(),
-                project.dir.display(),
-                project.name,
-                scripts_path.display(),
-                log_path.display(),
+            let owned_args = build_ghidra_sync_args(
+                &project.dir.to_string_lossy(),
+                &project.name,
+                &scripts_path.to_string_lossy(),
             );
-            spawn_detached("cmd", &["/c", &batch_line], root).map_err(|e| {
-                PanadigaIpcError::io(format!("Falha ao executar analyzeHeadless Jython: {}", e))
-            })?;
+            let arg_refs: Vec<&str> = owned_args.iter().map(String::as_str).collect();
+            spawn_detached_to_log(&headless.to_string_lossy(), &arg_refs, root, &log_path)
+                .map_err(|e| {
+                    PanadigaIpcError::io(format!("Falha ao executar analyzeHeadless Jython: {}", e))
+                })?;
             Ok(format!(
                 "Sync Headless Jython iniciado em segundo plano ({} scripts sincronizados; log em {}).",
                 synced,
@@ -168,8 +243,8 @@ pub(super) fn launch_for_current_os(tool: &str, root: &Path) -> IpcResult<String
             }
             if gui_bridge_cmd.is_file() {
                 spawn_detached(
-                    "cmd",
-                    &["/c", "call", &gui_bridge_cmd.to_string_lossy()],
+                    &gui_bridge_cmd.to_string_lossy(),
+                    &[],
                     Path::new(r"C:\ghidra"),
                 )
                 .map_err(|e| {
@@ -188,19 +263,13 @@ pub(super) fn launch_for_current_os(tool: &str, root: &Path) -> IpcResult<String
             Ok("Editor hexadecimal iniciado no workspace.".to_string())
         }
         "terminal" => {
-            let location = format!("Set-Location -LiteralPath '{}'", root.display());
-            spawn_detached(
-                "cmd",
-                &[
-                    "/c",
-                    "start",
-                    "",
-                    "powershell",
-                    "-NoExit",
-                    "-Command",
-                    &location,
-                ],
+            spawn_with_stdio(
+                "powershell.exe",
+                &["-NoExit"],
                 root,
+                Stdio::null(),
+                Stdio::null(),
+                true,
             )
             .map_err(|e| PanadigaIpcError::io(format!("Falha ao abrir terminal: {}", e)))?;
             Ok("Terminal PowerShell iniciado no workspace.".to_string())

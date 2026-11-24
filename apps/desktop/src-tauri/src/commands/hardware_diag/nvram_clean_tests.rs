@@ -26,6 +26,7 @@ fn panamon1_clean_nvram_backs_up_erases_sa134_sa141_only_and_verifies_ff() {
         port_name: "MOCK_COM10".to_string(),
         backup_dir: Some(dir.to_string_lossy().into_owned()),
         session_id: None,
+        nonce_id: None,
     };
 
     let mut events = Vec::new();
@@ -54,6 +55,7 @@ fn panamon1_clean_nvram_rejects_empty_port() {
         port_name: "   ".to_string(),
         backup_dir: None,
         session_id: None,
+        nonce_id: None,
     };
     assert!(run_panamon1_clean_nvram_with_transport(mock, &req, |_| {}).is_err());
 }

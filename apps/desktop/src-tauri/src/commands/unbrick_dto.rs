@@ -1,6 +1,6 @@
 //! Pure DTO validation, request/parameter mapping, and JSON response formatting for Unbrick IPC.
 
-use panadiga_core::constants::{resolve_workspace_root, resolve_writable_data_root};
+use panadiga_core::constants::resolve_writable_data_root;
 use panadiga_core::crypto::parse_u32_radix;
 use panadiga_core::re::{
     MainPassthroughMode, Prog061BgoPatchMode, SdLoaderProfile, SdUnbrickKitRequest,
@@ -14,7 +14,7 @@ use super::constants::{
     DEFAULT_NOR_DUMP_LEN_HEX, DEFAULT_NOR_DUMP_START_HEX, NOR_STUB_HEX_PREVIEW_BYTES,
 };
 use super::error::{IpcResult, PanadigaIpcError};
-use super::frm_pack::resolve_read_path;
+use super::frm_pack::{resolve_safe_read_path, resolve_safe_write_dir};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct SdUnbrickKitRequestDto {
@@ -67,8 +67,8 @@ pub(crate) fn opt_trimmed(raw: &Option<String>) -> Option<&str> {
     raw.as_deref().map(str::trim).filter(|s| !s.is_empty())
 }
 
-pub(crate) fn opt_read_path(raw: &Option<String>) -> Option<PathBuf> {
-    opt_trimmed(raw).map(resolve_read_path)
+pub(crate) fn opt_safe_read_path(raw: &Option<String>) -> IpcResult<Option<PathBuf>> {
+    opt_trimmed(raw).map(resolve_safe_read_path).transpose()
 }
 
 pub(crate) fn resolve_dir_target(raw: &str) -> IpcResult<PathBuf> {
@@ -78,12 +78,7 @@ pub(crate) fn resolve_dir_target(raw: &str) -> IpcResult<PathBuf> {
             "Caminho do diretório SD é obrigatório.",
         ));
     }
-    let p = PathBuf::from(trimmed);
-    Ok(if p.is_absolute() {
-        p
-    } else {
-        resolve_workspace_root().join(p)
-    })
+    resolve_safe_write_dir(trimmed)
 }
 
 pub(crate) fn to_sd_unbrick_kit_request(
@@ -116,17 +111,18 @@ pub(crate) fn to_sd_unbrick_kit_request(
     }
     let out_p = PathBuf::from(out_trimmed);
     let resolved_out = if out_p.is_absolute() {
-        out_p
+        resolve_safe_write_dir(out_trimmed)?
     } else {
-        resolve_writable_data_root().join(out_p)
+        let candidate = resolve_writable_data_root().join(out_p);
+        resolve_safe_write_dir(&candidate.to_string_lossy())?
     };
 
     Ok(SdUnbrickKitRequest {
         output_dir: resolved_out,
-        pana_dvd_path: opt_read_path(&dto.pana_dvd_path),
-        prog061_path: opt_read_path(&dto.prog061_path),
-        main_path: opt_read_path(&dto.main_path),
-        drv_path: opt_read_path(&dto.drv_path),
+        pana_dvd_path: opt_safe_read_path(&dto.pana_dvd_path)?,
+        prog061_path: opt_safe_read_path(&dto.prog061_path)?,
+        main_path: opt_safe_read_path(&dto.main_path)?,
+        drv_path: opt_safe_read_path(&dto.drv_path)?,
         bgo_mode,
         allow_unsafe_auto_format: dto.allow_unsafe_auto_format.unwrap_or(false),
         main_passthrough_mode,

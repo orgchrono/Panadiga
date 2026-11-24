@@ -18,7 +18,7 @@ use crate::commands::{
     constants::EVENT_DVD_BURN_PROGRESS,
     error::{IpcResult, PanadigaIpcError},
     hardware_diag::resolve_auto_backup_file,
-    unbrick_dto::{CommonMediaKitDto, opt_read_path, opt_trimmed},
+    unbrick_dto::{CommonMediaKitDto, opt_safe_read_path, opt_trimmed},
 };
 
 #[derive(Debug, Clone, Serialize)]
@@ -38,6 +38,8 @@ pub struct CreateDvdRecoveryDiscRequestDto {
     pub output_iso_path: Option<String>,
     pub volume_label: Option<String>,
     pub dry_run: Option<bool>,
+    #[serde(default)]
+    pub nonce_id: Option<String>,
     #[serde(flatten)]
     pub media: CommonMediaKitDto,
 }
@@ -70,8 +72,8 @@ fn build_dvd_creator_request(
             .transpose()?
     };
 
-    let digadiag_path = opt_read_path(&dto.media.digadiag_path);
-    let pana_dvd_path = opt_read_path(&dto.media.pana_dvd_path);
+    let digadiag_path = opt_safe_read_path(&dto.media.digadiag_path)?;
+    let pana_dvd_path = opt_safe_read_path(&dto.media.pana_dvd_path)?;
     Ok(DvdCreatorRequest {
         burner_id,
         confirm_token,
@@ -150,9 +152,21 @@ pub fn inspect_optical_burners_command() -> IpcResult<Vec<OpticalBurnerDriveInfo
 #[tauri::command]
 pub async fn create_dvd_recovery_disc_command(
     app: tauri::AppHandle,
+    state: tauri::State<'_, crate::state::PanadigaBackendState>,
     request: CreateDvdRecoveryDiscRequestDto,
 ) -> IpcResult<DvdCreatorReport> {
-    let _ = build_dvd_creator_request(&request)?;
+    let req = build_dvd_creator_request(&request)?;
+    if let Some(burner) = req.burner_id.as_deref()
+        && !req.dry_run
+    {
+        crate::commands::hardware_diag::require_destructive_nonce(
+            state.inner(),
+            request.nonce_id.as_deref(),
+            panadiga_core::bench::OpKind::SdKitBuild,
+            burner,
+            req.confirm_token.as_deref().unwrap_or("dvd_burn"),
+        )?;
+    }
     let app_clone = app.clone();
     let req_clone = request.clone();
     tauri::async_runtime::spawn_blocking(move || {
@@ -181,6 +195,7 @@ mod tests {
             output_iso_path: Some(out_iso.to_string_lossy().into_owned()),
             volume_label: Some("PANADIGA_REC".into()),
             dry_run: Some(false),
+            nonce_id: None,
             media: CommonMediaKitDto {
                 model: Some("DMR-EH55".into()),
                 loader_profile: Some("ver061".into()),

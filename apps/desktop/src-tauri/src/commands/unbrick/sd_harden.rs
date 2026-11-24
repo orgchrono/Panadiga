@@ -14,7 +14,7 @@ use panadiga_core::re::{MainPassthroughMode, Prog061BgoPatchMode};
 use serde::{Deserialize, Serialize};
 
 use crate::commands::error::{IpcResult, PanadigaIpcError};
-use crate::commands::unbrick_dto::{opt_read_path, opt_trimmed, resolve_dir_target};
+use crate::commands::unbrick_dto::{opt_safe_read_path, opt_trimmed, resolve_dir_target};
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -50,10 +50,10 @@ pub fn harden_sd_unbrick_kit_command(
 ) -> IpcResult<HardenSdUnbrickKitResponseDto> {
     let out_dir = resolve_dir_target(request.output_dir.trim())?;
     let mut req = SdUnbrickKitRequest::hardened_panamon1(out_dir);
-    req.pana_dvd_path = opt_read_path(&request.pana_dvd_path);
-    req.prog061_path = opt_read_path(&request.prog061_path);
-    req.main_path = opt_read_path(&request.main_path);
-    req.drv_path = opt_read_path(&request.drv_path);
+    req.pana_dvd_path = opt_safe_read_path(&request.pana_dvd_path)?;
+    req.prog061_path = opt_safe_read_path(&request.prog061_path)?;
+    req.main_path = opt_safe_read_path(&request.main_path)?;
+    req.drv_path = opt_safe_read_path(&request.drv_path)?;
     req.loader_profile = SdLoaderProfile::Ver061RawSd48;
     req.bgo_mode = if request.allow_factory_prog061.unwrap_or(false) {
         Prog061BgoPatchMode::FactoryOriginal

@@ -15,8 +15,8 @@ use panadiga_core::re::{
 use serde::{Deserialize, Serialize};
 
 use crate::commands::error::{IpcResult, PanadigaIpcError};
-use crate::commands::frm_pack::resolve_read_path;
-use crate::commands::unbrick_dto::{opt_read_path, opt_trimmed, resolve_dir_target};
+use crate::commands::frm_pack::resolve_safe_read_path;
+use crate::commands::unbrick_dto::{opt_safe_read_path, opt_trimmed, resolve_dir_target};
 
 pub(crate) const REGION_CALIBRATION_CONFIRM_TOKEN: &str = "CALIBRATE_REGION_COW";
 
@@ -116,10 +116,16 @@ pub fn inspect_region_calibration_command(
         opt_trimmed(&request.preset),
         opt_trimmed(&request.tv_standard),
     )?;
-    let dev_b = read_opt_path_bytes(opt_read_path(&request.dev_bin_path).as_deref(), "DEV.BIN")?;
-    let main_b = read_opt_path_bytes(opt_read_path(&request.main_path).as_deref(), "MAIN")?;
-    let frm_b = read_opt_path_bytes(opt_read_path(&request.frm_path).as_deref(), ".FRM")?;
-    let nv_b = read_opt_path_bytes(opt_read_path(&request.nvram_path).as_deref(), "NVRAM/NOR")?;
+    let dev_b = read_opt_path_bytes(
+        opt_safe_read_path(&request.dev_bin_path)?.as_deref(),
+        "DEV.BIN",
+    )?;
+    let main_b = read_opt_path_bytes(opt_safe_read_path(&request.main_path)?.as_deref(), "MAIN")?;
+    let frm_b = read_opt_path_bytes(opt_safe_read_path(&request.frm_path)?.as_deref(), ".FRM")?;
+    let nv_b = read_opt_path_bytes(
+        opt_safe_read_path(&request.nvram_path)?.as_deref(),
+        "NVRAM/NOR",
+    )?;
 
     inspect_tv_calibration_bundle(
         preset,
@@ -155,7 +161,7 @@ pub fn apply_region_calibration_command(
     let mut dev_out_path = None;
     let mut dev_report = None;
     if let Some(src_raw) = opt_trimmed(&request.dev_bin_path) {
-        let src = resolve_read_path(src_raw);
+        let src = resolve_safe_read_path(src_raw)?;
         let dst = out_dir.join(
             src.file_name()
                 .unwrap_or_else(|| "DEV_calibrated.BIN".as_ref()),
@@ -184,7 +190,7 @@ pub fn apply_region_calibration_command(
     let mut main_out_path = None;
     let mut main_report = None;
     if let Some(src_raw) = opt_trimmed(&request.main_path) {
-        let src = resolve_read_path(src_raw);
+        let src = resolve_safe_read_path(src_raw)?;
         let dst = out_dir.join("MAIN_calibrated.bin");
         ensure_cow_distinct(&src, &dst)?;
         let mut raw = fs::read(&src).map_err(|e| PanadigaIpcError::io(format!("{e}")))?;
@@ -204,7 +210,7 @@ pub fn apply_region_calibration_command(
     let mut frm_out_path = None;
     let mut frm_report = None;
     if let Some(src_raw) = opt_trimmed(&request.frm_path) {
-        let src = resolve_read_path(src_raw);
+        let src = resolve_safe_read_path(src_raw)?;
         let dst = out_dir.join(
             src.file_name()
                 .unwrap_or_else(|| "PANA__SD_calibrated.FRM".as_ref()),

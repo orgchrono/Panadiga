@@ -21,7 +21,7 @@ use panadiga_core::vault::{
 use serde::Deserialize;
 
 use crate::commands::error::{IpcResult, PanadigaIpcError};
-use crate::commands::frm_pack::resolve_read_path;
+use crate::commands::frm_pack::resolve_safe_read_path;
 use crate::commands::unbrick_dto::opt_trimmed;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -124,7 +124,7 @@ pub(crate) fn ingest_file_with_root(
     request: &VaultIngestFileRequestDto,
 ) -> IpcResult<VaultArtifactRecord> {
     let sdir = resolve_vault_session_dir_in(base_root, &request.session_id)?;
-    let src = resolve_read_path(request.source_path.trim());
+    let src = resolve_safe_read_path(request.source_path.trim())?;
     let bucket = parse_bucket_opt(opt_trimmed(&request.bucket_override))?;
     let origin = opt_trimmed(&request.origin).unwrap_or("desktop_manual_ingest");
     auto_classify_and_ingest_file(&sdir, &src, bucket, origin, None)
@@ -142,7 +142,7 @@ pub(crate) fn run_prewrite_emu_gate_with_root(
     let kind = request.target_kind.trim().to_ascii_lowercase();
     let artifact_bytes = opt_trimmed(&request.artifact_path)
         .map(|p| {
-            let path = resolve_read_path(p);
+            let path = resolve_safe_read_path(p)?;
             fs::read(&path).map_err(|e| {
                 PanadigaIpcError::io(format!("Falha lendo artefato '{}': {e}", path.display()))
             })

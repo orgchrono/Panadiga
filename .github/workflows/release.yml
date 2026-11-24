@@ -419,6 +419,12 @@ jobs:
           path: crates/panadiga-core/src/pico/firmware_bins
 
       - name: Build, Sign & Verify Android Release APK
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          PANADIGA_KS_PASS: ${{ secrets.PANADIGA_KS_PASS }}
+          PANADIGA_KEY_PASS: ${{ secrets.PANADIGA_KEY_PASS }}
+          IS_TAGGED_RELEASE: ${{ startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.tag_name != '') }}
         run: |
           export ANDROID_NDK_ROOT=$NDK_HOME
           touch apps/desktop/dist-android/index.html
@@ -437,7 +443,24 @@ jobs:
             echo "ERROR: Android release APK not found under apps/desktop/src-tauri/gen/android." >&2
             exit 1
           fi
-          python3 -m scripts.build_lanes.android_verify --sign-and-verify "$RAW_APK_PATH" release-apk/panadiga-android-arm64.apk
+          SIGN_FLAGS=()
+          TMP_KS=""
+          cleanup_ks() {
+            if [ -n "$TMP_KS" ] && [ -f "$TMP_KS" ]; then
+              rm -f "$TMP_KS"
+            fi
+          }
+          trap cleanup_ks EXIT
+          if [ -n "${ANDROID_KEYSTORE_BASE64:-}" ]; then
+            TMP_KS="$(mktemp /tmp/panadiga-release-XXXXXX.keystore)"
+            printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$TMP_KS"
+            chmod 600 "$TMP_KS"
+            SIGN_FLAGS+=(--keystore "$TMP_KS" --key-alias "${ANDROID_KEY_ALIAS:-panadigarelease}")
+          fi
+          if [ "${IS_TAGGED_RELEASE:-false}" = "true" ]; then
+            SIGN_FLAGS+=(--require-release-keystore)
+          fi
+          python3 -m scripts.build_lanes.android_verify "${SIGN_FLAGS[@]}" --sign-and-verify "$RAW_APK_PATH" release-apk/panadiga-android-arm64.apk
           shasum -a 256 "release-apk/panadiga-android-arm64.apk" > "release-apk/panadiga-android-arm64.apk.sha256"
 
       - name: Upload Android APK Artifact

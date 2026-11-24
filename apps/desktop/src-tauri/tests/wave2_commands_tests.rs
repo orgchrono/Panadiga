@@ -480,6 +480,7 @@ fn eh55_nor_dump_bgo_audit_repair_and_davis_probe_enforce_guards_with_mock() {
             drive: Some("master".into()),
             boot_mode: None,
             boot_timeout_ms: None,
+            nonce_id: None,
         },
     )
     .unwrap();
@@ -589,4 +590,100 @@ fn operation_nonce_requires_single_use_exact_binding() {
         .is_err()
     );
     assert_eq!(state.bench_stream.snapshot().seq, 0);
+}
+
+#[test]
+fn phase_b_security_invariants_csp_capabilities_gdb_and_nonces() {
+    use panadiga_lib::commands::hardware_diag::require_destructive_nonce;
+
+    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let tauri_conf: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(manifest_dir.join("tauri.conf.json")).unwrap())
+            .unwrap();
+    let csp = tauri_conf["app"]["security"]["csp"]
+        .as_str()
+        .expect("CSP must be configured");
+    assert!(!csp.contains("unsafe-inline"));
+    for directive in [
+        "object-src 'none'",
+        "base-uri 'none'",
+        "frame-ancestors 'none'",
+        "form-action 'none'",
+    ] {
+        assert!(
+            csp.contains(directive),
+            "missing CSP directive: {directive}"
+        );
+    }
+
+    let cap: serde_json::Value = serde_json::from_str(
+        &fs::read_to_string(manifest_dir.join("capabilities/default.json")).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(cap["windows"], json!(["main"]));
+    let perms: Vec<&str> = cap["permissions"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(|v| v.as_str())
+        .collect();
+    assert!(perms.contains(&"core:default"));
+    assert!(perms.contains(&"core:event:allow-listen"));
+    assert!(perms.contains(&"core:event:allow-unlisten"));
+    assert!(perms.iter().all(|p| {
+        !p.contains("shell:") && !p.contains("fs:") && !p.contains("dialog:") && !p.contains('*')
+    }));
+
+    let state = panadiga_lib::state::PanadigaBackendState::new();
+    assert!(
+        panadiga_lib::pico::start_gdb_bridge(&state, "COM10".into(), "0.0.0.0:3333".into())
+            .is_err()
+    );
+    assert!(
+        panadiga_lib::pico::start_gdb_bridge(&state, "COM10".into(), "192.168.1.10:3333".into())
+            .is_err()
+    );
+
+    for (kind, target, input_ref) in [
+        (OpKind::NorWrite, "PhysicalDrive2", "hdd_img"),
+        (
+            OpKind::SdKitBuild,
+            "PhysicalDrive9",
+            "CONFIRM-PhysicalDrive9",
+        ),
+        (OpKind::RamProbe, "master", "COM10"),
+    ] {
+        assert!(require_destructive_nonce(&state, None, kind, target, input_ref).is_err());
+        let ch = issue_operation_nonce_with_state(
+            &state,
+            &RequestOperationNonceDto {
+                op_kind: kind,
+                target: target.into(),
+                input_sha256: input_ref.into(),
+            },
+        )
+        .unwrap();
+        assert!(
+            require_destructive_nonce(&state, Some(&ch.nonce_id), kind, "WRONG_TARGET", input_ref)
+                .is_err()
+        );
+        // Failed check consumes nonce; mint fresh valid one and verify single-use replay rejection.
+        let fresh = issue_operation_nonce_with_state(
+            &state,
+            &RequestOperationNonceDto {
+                op_kind: kind,
+                target: target.into(),
+                input_sha256: input_ref.into(),
+            },
+        )
+        .unwrap();
+        assert!(
+            require_destructive_nonce(&state, Some(&fresh.nonce_id), kind, target, input_ref)
+                .is_ok()
+        );
+        assert!(
+            require_destructive_nonce(&state, Some(&fresh.nonce_id), kind, target, input_ref)
+                .is_err()
+        );
+    }
 }

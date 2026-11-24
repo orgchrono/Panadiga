@@ -4,6 +4,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCallback
 import android.bluetooth.BluetoothGattCharacteristic
@@ -226,9 +227,55 @@ class AndroidPicoBridge(
         synchronized(ioLock) { closeUsbLocked() }
     }
 
+    private fun validatePicoCommandOrError(command: String): String? {
+        val trimmed = command.trim()
+        if (trimmed.isEmpty()) {
+            return "Comando Pico vazio."
+        }
+        if (command.any { it == '\r' || it == '\n' || it == '\u0000' }) {
+            return "Caracteres de controle CR/LF/NUL proibidos no comando."
+        }
+        val upper = trimmed.uppercase()
+        val compact = upper.replace("_", "")
+        if (compact.contains("C000100C") || compact.contains("DC0F0000")) {
+            return "Registrador MMIO letal AM34 (0xC000100C / 0xDC0F0000) bloqueado permanentemente."
+        }
+        val iplAddrRegex = Regex("(800[0-3]|840[0-3])[0-9A-F]{4}")
+        val rspWriteBlocked = compact.split('$').drop(1).any { frame ->
+            val isWriteFrame = frame.startsWith("M") ||
+                frame.startsWith("X") ||
+                frame.startsWith("VFLASHERASE:") ||
+                frame.startsWith("VFLASHWRITE:")
+            isWriteFrame && iplAddrRegex.containsMatchIn(frame.take(24))
+        }
+        if (rspWriteBlocked) {
+            return "Gravação/erase GDB RSP em IPL crítico SA0..SA10 bloqueada (E05)."
+        }
+        val writeVerbs = setOf(
+            "P", "PW", "PB", "PH", "PO", "W", "MW", "MB", "MH", "WB", "WH", "WW",
+            "POKE", "ERASE", "FLASH", "PROG", "WRITE", "MEMSET", "MEMW",
+            "WRITEMEM", "FAST_WRITE", "FAST_ERASE", "PATCH", "EW", "SW", "BURN"
+        )
+        val tokens = upper.split(Regex("[\\s,;:=()\\[\\]<>#\"]+")).filter { it.isNotEmpty() }
+        val hasWriteIntent = tokens.any { it in writeVerbs }
+        if (hasWriteIntent && tokens.any { tok ->
+                val cleanHex = tok.removePrefix("0X").removePrefix("$").replace("_", "")
+                iplAddrRegex.matches(cleanHex)
+            }) {
+            return "Gravação em zona IPL crítica SA0..SA10 bloqueada (E05)."
+        }
+        return null
+    }
+
     @JavascriptInterface
     fun sendUsbOtgCommand(command: String, timeoutMs: Int): String {
         val outObj = JSONObject()
+        val blockedReason = validatePicoCommandOrError(command)
+        if (blockedReason != null) {
+            outObj.put("ok", false)
+            outObj.put("output", "BLOCKED (E05): $blockedReason")
+            return outObj.toString()
+        }
         synchronized(ioLock) {
             val conn = usbConn
             val outEp = usbOutEp
@@ -298,6 +345,12 @@ class AndroidPicoBridge(
                 val dev = result.device ?: return
                 scanner.stopScan(this)
                 deviceLabel = dev.name ?: dev.address
+                if (dev.bondState != BluetoothDevice.BOND_BONDED) {
+                    runCatching { dev.createBond() }
+                    failReason = "Pareamento BLE obrigatório (E05): conclua o bonding Android com '$deviceLabel' antes de conectar."
+                    scanLatch.countDown()
+                    return
+                }
                 bleGatt?.close()
                 bleGatt = dev.connectGatt(activity, false, object : BluetoothGattCallback() {
                     override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
@@ -371,11 +424,22 @@ class AndroidPicoBridge(
     @JavascriptInterface
     fun sendBleCommand(command: String, timeoutMs: Int): String {
         val outObj = JSONObject()
+        val blockedReason = validatePicoCommandOrError(command)
+        if (blockedReason != null) {
+            outObj.put("ok", false)
+            outObj.put("output", "BLOCKED (E05): $blockedReason")
+            return outObj.toString()
+        }
         val gatt = bleGatt
         val rx = bleRxChar
         if (gatt == null || rx == null) {
             outObj.put("ok", false)
             outObj.put("output", "BLE NUS não conectado.")
+            return outObj.toString()
+        }
+        if (gatt.device.bondState != BluetoothDevice.BOND_BONDED) {
+            outObj.put("ok", false)
+            outObj.put("output", "BLOCKED (E05): Dispositivo BLE sem bonding ativo (${gatt.device.bondState}).")
             return outObj.toString()
         }
         synchronized(bleRxBuffer) { bleRxBuffer.setLength(0) }

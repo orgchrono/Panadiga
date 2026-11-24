@@ -228,6 +228,13 @@ pub async fn pico_panamon1_clean_nvram_command(
             "portName obrigatório para limpeza ao vivo da NVRAM via Pico.",
         ));
     }
+    super::bench_control::require_destructive_nonce(
+        state.inner(),
+        request.nonce_id.as_deref(),
+        panadiga_core::bench::OpKind::NorWrite,
+        "SA134..SA141",
+        &clean_port,
+    )?;
     let backend = state.inner().clone();
     let app_clone = app.clone();
     let req_clone = request.clone();

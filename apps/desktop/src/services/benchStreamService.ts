@@ -34,6 +34,28 @@ export const requestOperationNonce = (
   invokeCommand<OperationNonceChallenge>('request_operation_nonce', { request });
 
 /**
+ * Shared DRY helper returning `existingNonceId` if provided or minting a fresh nonce for
+ * destructive Tauri IPC calls (`request_operation_nonce`).
+ */
+export async function mintOperationNonceId(
+  opKind: BenchOpKind,
+  target: string,
+  inputSha256: string,
+  existingNonceId?: string,
+): Promise<string | undefined> {
+  const cleanExisting = existingNonceId?.trim();
+  if (cleanExisting) {
+    return cleanExisting;
+  }
+  const challenge = await requestOperationNonce({
+    opKind,
+    target,
+    inputSha256,
+  });
+  return challenge?.nonce_id;
+}
+
+/**
  * Shared DRY helper requesting an ephemeral `nor_write` authorization nonce for EH55 live BGO repair.
  */
 export const requestLiveBgoNonce = (

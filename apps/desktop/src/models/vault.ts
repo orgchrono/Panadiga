@@ -103,6 +103,7 @@ export interface FlashComposedHddSafeRequest {
   readonly expectedMaxGb?: number;
   readonly allowExtended4tb?: boolean;
   readonly sessionId?: string;
+  readonly nonceId?: string;
 }
 
 export interface ComposedHddFlashReport {
@@ -181,6 +182,7 @@ export interface CreateDvdRecoveryDiscRequest {
   readonly cleanroomOnly?: boolean;
   readonly dryRun?: boolean;
   readonly sessionId?: string;
+  readonly nonceId?: string;
 }
 
 export interface DvdCreatorReport {

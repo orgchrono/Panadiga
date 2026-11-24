@@ -21,7 +21,7 @@ use super::eh55_bgo_dto::{
 };
 use crate::commands::constants::EVENT_NOR_DUMP_PROGRESS;
 use crate::commands::error::{IpcResult, PanadigaIpcError};
-use crate::commands::frm_pack::resolve_read_path;
+use crate::commands::frm_pack::resolve_safe_read_path;
 use crate::commands::unbrick_dto::opt_trimmed;
 use crate::state::PanadigaBackendState;
 
@@ -124,7 +124,7 @@ pub fn run_eh55_bgo_audit_with_transport<T: Panamon1Transport>(
             let nor_raw = opt_trimmed(&req.nor_path).ok_or_else(|| {
                 PanadigaIpcError::validation("norPath obrigatório quando sourceMode='DUMP_FILE'.")
             })?;
-            let path = resolve_read_path(nor_raw);
+            let path = resolve_safe_read_path(nor_raw)?;
             let nor = fs::read(&path).map_err(|e| {
                 PanadigaIpcError::io(format!("Falha lendo '{}': {e}", path.display()))
             })?;

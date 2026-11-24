@@ -13,7 +13,7 @@ use serde_json::Value;
 
 use crate::commands::constants::{DEFAULT_MATSHITA_INJECT_MODE, MATSHITA_DRV_PASS_UNLOCK_CMD};
 use crate::commands::error::{IpcResult, PanadigaIpcError};
-use crate::commands::frm_pack::{resolve_read_path, resolve_write_path};
+use crate::commands::frm_pack::{resolve_safe_read_path, resolve_write_path};
 use crate::commands::unbrick_dto::{
     SdUnbrickKitRequestDto, format_nor_dumper_response, opt_trimmed, parse_nor_dumper_params,
     resolve_dir_target, to_sd_unbrick_kit_request,
@@ -54,7 +54,9 @@ pub fn inspect_sd_disk_command(
     {
         clean.to_string()
     } else {
-        resolve_read_path(clean).to_string_lossy().into_owned()
+        resolve_safe_read_path(clean)?
+            .to_string_lossy()
+            .into_owned()
     };
     panadiga_core::re::inspect_sd_target(&resolved_target)
         .map_err(|e| PanadigaIpcError::classify(format!("Falha ao auditar SD '{clean}': {e}")))
