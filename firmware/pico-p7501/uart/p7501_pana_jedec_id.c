@@ -80,6 +80,9 @@ static size_t find_subbytes(const uint8_t *hay, size_t hlen, const char *needle,
     return hlen;
 }
 
+static const uint8_t k_j_sub_sp4[3] = { 0xF8u, 0xFEu, 0xFCu };
+static const uint8_t k_j_add_sp4[3] = { 0xF8u, 0xFEu, 0x04u };
+
 bool p7501_j_append_span_putc_msgs(
     p7501_jedec_buf_t *jb,
     uint32_t load_addr,
@@ -103,11 +106,14 @@ bool p7501_j_append_span_putc_msgs(
     }
 
     const size_t span_off = jb->pos;
+    p7501_j_arr(jb, k_j_sub_sp4, sizeof(k_j_sub_sp4));
+    const size_t span_loop = jb->pos;
     p7501_j_arr(jb, k_span_rd, sizeof(k_span_rd));
     const size_t c_p_sp = jb->pos;
     p7501_j_arr(jb, k_call_placeholder, sizeof(k_call_placeholder));
     p7501_j_arr(jb, k_span_nxt, sizeof(k_span_nxt));
-    p7501_j_br(jb, 0xC9u, span_off);
+    p7501_j_br(jb, 0xC9u, span_loop);
+    p7501_j_arr(jb, k_j_add_sp4, sizeof(k_j_add_sp4));
     p7501_j_arr(jb, k_ret0, sizeof(k_ret0));
 
     const size_t putc_off = jb->pos;
@@ -133,8 +139,9 @@ bool p7501_j_append_span_putc_msgs(
     return true;
 }
 
-size_t p7501_jedec_build_autoselect_stub(
+size_t p7501_jedec_build_autoselect_stub_ex(
     bool is_cfi,
+    bool return_to_caller,
     uint32_t load_addr,
     uint8_t *out_buf,
     size_t out_cap
@@ -156,6 +163,10 @@ size_t p7501_jedec_build_autoselect_stub(
     size_t hdr_s = 0u, hdr_e = 0u, done_s = 0u, done_e = 0u;
     size_t rd_calls[4] = { 0u, 0u, 0u, 0u };
 
+    if (return_to_caller) {
+        static const uint8_t k_prologue[5] = { 0xCFu, 0xF0u, 0xF8u, 0xFEu, 0xFCu };
+        p7501_j_arr(&jb, k_prologue, sizeof(k_prologue));
+    }
     const size_t c_hdr = p7501_j_emit_status_msg(&jb, &hdr_s, &hdr_e);
     if (is_cfi) {
         p7501_j_cmd_a0(&jb, hw_base + 0x00AAUL, 0x98u);
@@ -171,10 +182,18 @@ size_t p7501_jedec_build_autoselect_stub(
     }
     p7501_j_cmd_a0(&jb, hw_base, 0xF0u);
     const size_t c_done = p7501_j_emit_status_msg(&jb, &done_s, &done_e);
-    p7501_j_u8(&jb, 0xCAu); p7501_j_u8(&jb, 0x00u);
+    if (return_to_caller) {
+        static const uint8_t k_epilogue[7] = {
+            0xF8u, 0xFEu, 0x04u, 0xCEu, 0xF0u, 0xF0u, 0xFCu
+        };
+        p7501_j_arr(&jb, k_epilogue, sizeof(k_epilogue));
+    } else {
+        p7501_j_u8(&jb, 0xCAu); p7501_j_u8(&jb, 0x00u);
+    }
 
     /* Read halfword at (A0) -> emit LE low, high bytes via putc(d3) */
     const size_t emit_hw_off = jb.pos;
+    p7501_j_arr(&jb, k_j_sub_sp4, sizeof(k_j_sub_sp4));
     static const uint8_t k_movhu_a0_d2[3] = { 0xF0u, 0x68u, 0x8Bu };
     p7501_j_arr(&jb, k_movhu_a0_d2, sizeof(k_movhu_a0_d2));
     const size_t c_p_lo = jb.pos;
@@ -183,6 +202,7 @@ size_t p7501_jedec_build_autoselect_stub(
     p7501_j_arr(&jb, k_lsr8_d2, sizeof(k_lsr8_d2));
     const size_t c_p_hi = jb.pos;
     p7501_j_arr(&jb, k_call_placeholder, sizeof(k_call_placeholder));
+    p7501_j_arr(&jb, k_j_add_sp4, sizeof(k_j_add_sp4));
     static const uint8_t k_ret0[3] = { 0xDFu, 0x00u, 0x00u };
     p7501_j_arr(&jb, k_ret0, sizeof(k_ret0));
 
@@ -197,6 +217,15 @@ size_t p7501_jedec_build_autoselect_stub(
     p7501_j_patch_s16(&jb, c_p_lo, putc_off);
     p7501_j_patch_s16(&jb, c_p_hi, putc_off);
     return jb.pos;
+}
+
+size_t p7501_jedec_build_autoselect_stub(
+    bool is_cfi,
+    uint32_t load_addr,
+    uint8_t *out_buf,
+    size_t out_cap
+) {
+    return p7501_jedec_build_autoselect_stub_ex(is_cfi, false, load_addr, out_buf, out_cap);
 }
 
 bool p7501_jedec_parse_autoselect_reply(

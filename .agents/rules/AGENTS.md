@@ -7,6 +7,7 @@
 2. **Segurança de Silício e Hardware de Bancada**:
    - No DMR-EH55 `P7501` (`UART 115200 8N1`), os sinais UART/controle (`SW_UART`/`XRESET`/`UARTM2P_T`/`UARTP2M_T`) operam em 3.3V LVTTL, e `GP3` (`Pino 5 NSW5V`, `~5.15V` upstream via `D7510`) deve permanecer **SEMPRE como `Hi-Z Input` sem pulls (NUNCA dirigir push-pull)**.
    - Na Flash NOR Spansion `S29JL064H` (`IC5001`, TSOP-48), a tensão máxima é rigorosamente **3.3V**; `XRESET` (`GP5`) deve ser acionado exclusivamente em **Open-Drain** (sem nunca forçar `+3.3V` push-pull).
+- **Portão Human-in-the-Loop de Standby / VFD Congelado (Bancada Ao Vivo):** Antes de qualquer teste ativo em `P7501`, execute **1 único `STATUS`**. Se detectar `NSW5V=0`, `VDD < 2.50V`, `fault_latch=1` ou `State=STANDBY (P-OFF)` (mesmo que o VFD frontal pareça ligado exibindo `LD FVU`/`PLEASE WAIT` congelado), **PARE IMEDIATAMENTE**, execute apenas `ISOLATE`, reporte em 2 linhas e **AGUARDE interação explícita do usuário** — jamais rode `BOOTTRACE NORMAL`, `XRAY BOOT`, `XRESET`, `MMIO_SNAP` ou retries em loop.
 3. **Padrão de Código e Qualidade**:
    - Zero clones no detector de duplicação `jscpd` (threshold 0).
    - Rust: código idiomático, memory safety estrita (`#![deny(unsafe_code)]` onde aplicável).

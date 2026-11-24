@@ -115,7 +115,9 @@ void p7501_pio_run_session(
         }
 
         uint8_t byte = 0u;
-        while (p7501_pio_pop_rx_byte(&byte)) {
+        uint32_t rx_burst = 0u;
+        while ((rx_burst < 64u) && p7501_pio_pop_rx_byte(&byte)) {
+            rx_burst += 1u;
             const uint32_t b_rel_us = (uint32_t)(time_us_64() - t0_us);
             local.rx_bytes += 1u;
             p7501_usb_mirror_rx_byte(byte);

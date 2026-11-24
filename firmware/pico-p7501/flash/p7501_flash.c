@@ -11,6 +11,7 @@
 
 #include "flash/p7501_flash.h"
 #include "common/p7501_cmd_arena.h"
+#include "flash/p7501_target_bus_panamon.h"
 #include "hal/p7501_hw.h"
 #include "gdb/gdb_rsp.h"
 #include "uart/p7501_pana_jedec.h"
@@ -21,7 +22,35 @@
 #include <stdio.h>
 #include <string.h>
 
+#define P7501_CFI_PANAMON_STUB_VA 0x9043C000UL
+
 static uint8_t s_cfi_stub_buf[P7501_JEDEC_MAX_STUB_SIZE];
+
+static bool query_cfi_via_panamon1_open(panarsp_rx_cap_t *cap, bool *io_pm_ok) {
+    const size_t stub_len = p7501_jedec_build_autoselect_stub_ex(
+        true, true, P7501_CFI_PANAMON_STUB_VA, s_cfi_stub_buf, sizeof(s_cfi_stub_buf)
+    );
+    if (stub_len == 0u) {
+        return false;
+    }
+    if (!p7501_bus_panamon1_buf_matches_open(
+            P7501_CFI_PANAMON_STUB_VA, s_cfi_stub_buf, stub_len, true, io_pm_ok
+        ) &&
+        !p7501_bus_panamon1_write_buf_open(
+            P7501_CFI_PANAMON_STUB_VA, s_cfi_stub_buf, stub_len, true, io_pm_ok
+        )) {
+        return false;
+    }
+    char jcmd[24];
+    snprintf(jcmd, sizeof(jcmd), "J %08lX\r", (unsigned long)P7501_CFI_PANAMON_STUB_VA);
+    size_t rx_len = 0u;
+    const bool ok = p7501_bus_panamon1_cmd_raw_open(
+        jcmd, 1500u, true, cap->buf, sizeof(cap->buf), &rx_len, io_pm_ok
+    );
+    cap->len = rx_len;
+    p7501_bus_panamon1_drain_tail(2u);
+    return ok;
+}
 
 static bool p7501_fingerprint_matches(uint32_t base_a, uint32_t base_b) {
     for (uint32_t i = 0U; i < 4U; ++i) {
@@ -77,37 +106,42 @@ bool p7501_hw_query_cfi(uint32_t *out_size_bytes) {
     if (!p7501_hw_is_target_powered()) {
         return false;
     }
-    const size_t stub_len = p7501_jedec_build_autoselect_stub(
-        true, P7501_JEDEC_STUB_ADDR, s_cfi_stub_buf, sizeof(s_cfi_stub_buf)
-    );
-    if (stub_len == 0u) {
-        return false;
-    }
 
     panarsp_rx_cap_t *const cap = &g_p7501_cmd_arena.panarsp;
     memset(cap, 0, sizeof(*cap));
     p7501_pio_begin_rx_session(P7501_BOOT_ACTION_PASSIVE);
-    p7501_pio_tx_bytes(k_p7501_rsp_handshake, P7501_RSP_HANDSHAKE_LEN, false);
-    panarsp_drain_for_ms(cap, 30u, false, cap->len);
 
-    bool hdr_seen = false;
+    bool pm_ok = false;
     bool done_seen = false;
-    bool to_unused = false;
-    uint32_t rx_bytes = 0u;
-    (void)panarsp_stream_until_tokens(
-        cap,
-        P7501_JEDEC_STUB_ADDR,
-        s_cfi_stub_buf,
-        stub_len,
-        2500u,
-        P7501_CFI_QUERY_MAGIC,
-        "PANADONE",
-        NULL,
-        &hdr_seen,
-        &done_seen,
-        &to_unused,
-        &rx_bytes
-    );
+    if (p7501_bus_panamon1_probe_open(true, &pm_ok)) {
+        done_seen = query_cfi_via_panamon1_open(cap, &pm_ok);
+    } else {
+        const size_t stub_len = p7501_jedec_build_autoselect_stub(
+            true, P7501_JEDEC_STUB_ADDR, s_cfi_stub_buf, sizeof(s_cfi_stub_buf)
+        );
+        if (stub_len > 0u) {
+            p7501_pio_tx_bytes(k_p7501_rsp_handshake, P7501_RSP_HANDSHAKE_LEN, false);
+            panarsp_drain_for_ms(cap, 30u, false, cap->len);
+
+            bool hdr_seen = false;
+            bool to_unused = false;
+            uint32_t rx_bytes = 0u;
+            (void)panarsp_stream_until_tokens(
+                cap,
+                P7501_JEDEC_STUB_ADDR,
+                s_cfi_stub_buf,
+                stub_len,
+                2500u,
+                P7501_CFI_QUERY_MAGIC,
+                "PANADONE",
+                NULL,
+                &hdr_seen,
+                &done_seen,
+                &to_unused,
+                &rx_bytes
+            );
+        }
+    }
     p7501_pio_end_session();
 
     p7501_jedec_id_reply_t rep;

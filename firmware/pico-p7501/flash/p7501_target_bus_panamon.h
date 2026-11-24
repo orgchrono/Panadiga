@@ -29,6 +29,29 @@ bool p7501_bus_panamon1_cmd_open(
     size_t out_cap,
     bool *io_panamon_mode
 );
+bool p7501_bus_panamon1_cmd_raw_open(
+    const char *cmd,
+    uint32_t timeout_ms,
+    bool allow_abort,
+    uint8_t *out_buf,
+    size_t out_cap,
+    size_t *out_len,
+    bool *io_panamon_mode
+);
+bool p7501_bus_panamon1_write_buf_open(
+    uint32_t addr,
+    const uint8_t *buf,
+    size_t len,
+    bool allow_abort,
+    bool *io_panamon_mode
+);
+bool p7501_bus_panamon1_buf_matches_open(
+    uint32_t addr,
+    const uint8_t *buf,
+    size_t len,
+    bool allow_abort,
+    bool *io_panamon_mode
+);
 bool p7501_bus_panamon1_read_chunk_open(
     uint32_t addr,
     uint8_t *out_buf,

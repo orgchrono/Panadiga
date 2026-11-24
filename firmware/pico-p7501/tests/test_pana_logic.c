@@ -251,16 +251,20 @@ static void test_pana_dumpnor_stub_and_args(void) {
     assert(fft.total_blocks == 2u && fft.ff_blocks == 1u);
 }
 
-static bool buf_contains_bytes(const uint8_t *hay, size_t hlen, const void *needle, size_t nlen) {
-    if (nlen == 0u || hlen < nlen) {
-        return false;
+static size_t find_bytes_offset(const uint8_t *hay, size_t hlen, const void *needle, size_t nlen) {
+    if ((hay == NULL) || (needle == NULL) || (nlen == 0u) || (hlen < nlen)) {
+        return hlen;
     }
     for (size_t i = 0u; i <= (hlen - nlen); ++i) {
         if (memcmp(&hay[i], needle, nlen) == 0) {
-            return true;
+            return i;
         }
     }
-    return false;
+    return hlen;
+}
+
+static bool buf_contains_bytes(const uint8_t *hay, size_t hlen, const void *needle, size_t nlen) {
+    return find_bytes_offset(hay, hlen, needle, nlen) < hlen;
 }
 
 static void test_pana_rsp_jedec_and_nor_policy(void) {
@@ -711,6 +715,58 @@ static void test_fast_stream_codec_and_normap(void) {
     assert(strstr(p7501_describe_gdb_target(true, true), "Hazard3") != NULL);
 }
 
+static void test_jedec_autoselect_and_cfi_stubs(void) {
+    uint8_t stub_halt[P7501_JEDEC_MAX_STUB_SIZE];
+    uint8_t stub_ret[P7501_JEDEC_MAX_STUB_SIZE];
+    const size_t len_halt = p7501_jedec_build_autoselect_stub(
+        true, 0x51800000UL, stub_halt, sizeof(stub_halt)
+    );
+    const size_t len_ret = p7501_jedec_build_autoselect_stub_ex(
+        true, true, 0x9043C000UL, stub_ret, sizeof(stub_ret)
+    );
+    assert((len_halt > 100u) && (len_ret == (len_halt + 10u)) && (len_ret <= P7501_JEDEC_MAX_STUB_SIZE));
+    assert((stub_ret[0] == 0xCFu) && (stub_ret[1] == 0xF0u) &&
+           (stub_ret[2] == 0xF8u) && (stub_ret[3] == 0xFEu) && (stub_ret[4] == 0xFCu));
+
+    static const uint8_t k_emit_hw[6] = { 0xF8u, 0xFEu, 0xFCu, 0xF0u, 0x68u, 0x8Bu };
+    const size_t halt_hw_off = find_bytes_offset(stub_halt, len_halt, k_emit_hw, sizeof(k_emit_hw));
+    const size_t ret_hw_off = find_bytes_offset(stub_ret, len_ret, k_emit_hw, sizeof(k_emit_hw));
+    assert((halt_hw_off >= 2u) && (halt_hw_off < len_halt));
+    assert((stub_halt[halt_hw_off - 2u] == 0xCAu) && (stub_halt[halt_hw_off - 1u] == 0x00u));
+    assert((ret_hw_off >= 7u) && (ret_hw_off < len_ret));
+    assert((stub_ret[ret_hw_off - 7u] == 0xF8u) && (stub_ret[ret_hw_off - 6u] == 0xFEu) &&
+           (stub_ret[ret_hw_off - 5u] == 0x04u) && (stub_ret[ret_hw_off - 4u] == 0xCEu) &&
+           (stub_ret[ret_hw_off - 3u] == 0xF0u) && (stub_ret[ret_hw_off - 2u] == 0xF0u) &&
+           (stub_ret[ret_hw_off - 1u] == 0xFCu));
+    static const uint8_t k_span_hdr[6] = { 0xF8u, 0xFEu, 0xFCu, 0xF0u, 0x40u, 0x83u };
+    static const uint8_t k_span_tail[11] = {
+        0x20u, 0x01u, 0xB4u, 0xC9u, 0xF5u, 0xF8u, 0xFEu, 0x04u, 0xDFu, 0x00u, 0x00u
+    };
+    assert(buf_contains_bytes(stub_ret, len_ret, k_span_hdr, sizeof(k_span_hdr)) &&
+           buf_contains_bytes(stub_ret, len_ret, k_span_tail, sizeof(k_span_tail)));
+    assert(buf_contains_bytes(stub_halt, len_halt, P7501_CFI_QUERY_MAGIC, 8u) &&
+           buf_contains_bytes(stub_halt, len_halt, "PANADONE", 8u));
+    assert(buf_contains_bytes(stub_ret, len_ret, P7501_CFI_QUERY_MAGIC, 8u) &&
+           buf_contains_bytes(stub_ret, len_ret, "PANADONE", 8u));
+
+    static const uint8_t k_cfi_reply[] =
+        "J 9043C000\r\nPANACFI1\x51\x00\x52\x00\x59\x00\x17\x00PANADONE\r\nPANAMON1>[B/R/W/D/F/J/E/U/Q]\r\n";
+    p7501_jedec_id_reply_t rep;
+    assert(p7501_jedec_parse_autoselect_reply(k_cfi_reply, sizeof(k_cfi_reply) - 1u, true, &rep));
+    assert(rep.valid && (rep.qry[0] == 'Q') && (rep.qry[1] == 'R') && (rep.qry[2] == 'Y') &&
+           (rep.size_bytes == 8388608UL));
+
+    const size_t len_jid = p7501_jedec_build_autoselect_stub_ex(
+        false, true, 0x9043C000UL, stub_ret, sizeof(stub_ret)
+    );
+    assert((len_jid > 100u) && (len_jid <= P7501_JEDEC_MAX_STUB_SIZE) &&
+           buf_contains_bytes(stub_ret, len_jid, P7501_JEDEC_ID_MAGIC, 8u));
+    static const uint8_t k_jid_reply[] =
+        "PANAJID1\x01\x00\x7E\x22\x02\x22\x01\x22PANADONE\r\nPANAMON1>[B/R/W/D/F/J/E/U/Q]\r\n";
+    assert(p7501_jedec_parse_autoselect_reply(k_jid_reply, sizeof(k_jid_reply) - 1u, false, &rep));
+    assert(rep.valid && (rep.mfg == 0x0001u) && (rep.size_bytes == 8388608UL));
+}
+
 int p7501_run_pana_logic_tests(void) {
     test_pana_rsp_frame_codec();
     test_rsp_boot_prose_does_not_trip_nak();
@@ -718,6 +774,7 @@ int p7501_run_pana_logic_tests(void) {
     test_piologic_analyzer();
     test_flash_geometry_and_bgo();
     test_pana_dumpnor_stub_and_args();
+    test_jedec_autoselect_and_cfi_stubs();
     test_pana_rsp_jedec_and_nor_policy();
     test_bus_policy_hardening_and_bypass_guards();
     test_fast_stream_codec_and_normap();

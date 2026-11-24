@@ -16,6 +16,7 @@
 #include "flash/p7501_flash.h"
 #include "hal/p7501_hw.h"
 #include "uart/p7501_pana_dumpnor.h"
+#include "uart/p7501_uart_pio_engine.h"
 
 #include <inttypes.h>
 #include <stdio.h>
@@ -178,9 +179,10 @@ static void handle_payload_run(p7501_payload_id_t pid, const p7501_payload_info_
         return;
     }
     if (pid == P7501_PAY_VIDEO_MMIO_DUMP) {
-        p7501_mmio_snapshot_t snap;
+        static p7501_mmio_snapshot_t s_vid_snap;
         uint32_t valid_cnt = 0u;
-        if (!p7501_mmio_snap_domain_hw(P7501_SSOT_MMIO_DOM_VIDEO, &snap, &valid_cnt) || (valid_cnt == 0u)) {
+        if (!p7501_mmio_snap_domain_hw(P7501_SSOT_MMIO_DOM_VIDEO, &s_vid_snap, &valid_cnt) ||
+            (valid_cnt == 0u)) {
             p7501_cli_set_result("ERR", "EOFFLINE");
             printf("PAYLOAD: ERROR (target offline for live VIDEO MMIO dump)\n");
             return;
@@ -189,14 +191,28 @@ static void handle_payload_run(p7501_payload_id_t pid, const p7501_payload_info_
         return;
     }
     if (pid == P7501_PAY_FAST_BGO_STREAM) {
-        bool uploaded = false;
-        if (!p7501_hw_is_target_online() || !p7501_fast_stub_upload_and_enter_open(&uploaded)) {
+        if (!p7501_hw_is_target_powered()) {
             p7501_cli_set_result("ERR", "EOFFLINE");
             printf("PAYLOAD: ERROR (fast_bgo_stream requires active PANAMON1>)\n");
             return;
         }
-        (void)p7501_fast_stub_exit_open();
-        printf("[PAYLOAD RUN] fast_bgo_stream verified live (uploaded=%u crc32=0x%08" PRIX32 ")\n",
+        bool uploaded = false;
+        p7501_pio_begin_rx_session(P7501_BOOT_ACTION_PASSIVE);
+        const bool entered = p7501_fast_stub_upload_and_enter_open(&uploaded);
+        if (!entered) {
+            p7501_pio_end_session();
+            p7501_cli_set_result("ERR", "EOFFLINE");
+            printf("PAYLOAD: ERROR (fast_bgo_stream requires active PANAMON1>)\n");
+            return;
+        }
+        const bool exited = p7501_fast_stub_exit_open();
+        p7501_pio_end_session();
+        if (!exited) {
+            p7501_cli_set_result("ERR", "EOFFLINE");
+            printf("PAYLOAD: ERROR (fast_bgo_stream failed returning to PANAMON1>)\n");
+            return;
+        }
+        printf("[PAYLOAD RUN] fast_bgo_stream verified live (uploaded=%u exited=1 crc32=0x%08" PRIX32 ")\n",
                uploaded ? 1u : 0u, info->crc32);
         return;
     }

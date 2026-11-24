@@ -142,6 +142,15 @@ size_t p7501_jedec_build_autoselect_stub(
     size_t out_cap
 );
 
+/** Build autoselect/CFI stub with selectable GDB halt (`BRA +0`) or `PANAMON1>` caller return (`MOVM; RETS`). */
+size_t p7501_jedec_build_autoselect_stub_ex(
+    bool is_cfi,
+    bool return_to_caller,
+    uint32_t load_addr,
+    uint8_t *out_buf,
+    size_t out_cap
+);
+
 /** Parse streamed `"PANAJID1"` or `"PANACFI1"` + 8-byte LE reply + `"PANADONE"`. */
 bool p7501_jedec_parse_autoselect_reply(
     const uint8_t *buf,

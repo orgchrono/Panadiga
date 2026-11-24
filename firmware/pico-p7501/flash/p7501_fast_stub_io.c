@@ -128,30 +128,25 @@ bool p7501_fast_stub_upload_and_enter_open(bool *out_uploaded) {
         /* If PANAMON1> did not answer ?\r, check if our stub is already active. */
         return p7501_fast_stub_ping_open();
     }
-    uint8_t pfx[4] = { 0u, 0u, 0u, 0u };
-    uint8_t sfx[4] = { 0u, 0u, 0u, 0u };
-    const uint32_t tail_va = P7501_FAST_STUB_LOAD_VA + (uint32_t)(P7501_FAST_STUB_LEN - 4u);
-    const bool already_loaded =
-        p7501_bus_panamon1_read_chunk_open(P7501_FAST_STUB_LOAD_VA, pfx, 4u, true, &pm_ok) &&
-        (memcmp(pfx, k_p7501_fast_bgo_stub, 4u) == 0) &&
-        p7501_bus_panamon1_read_chunk_open(tail_va, sfx, 4u, true, &pm_ok) &&
-        (memcmp(sfx, &k_p7501_fast_bgo_stub[P7501_FAST_STUB_LEN - 4u], 4u) == 0);
+    const bool already_loaded = p7501_bus_panamon1_buf_matches_open(
+        P7501_FAST_STUB_LOAD_VA, k_p7501_fast_bgo_stub, P7501_FAST_STUB_LEN, true, &pm_ok
+    );
     if (!already_loaded) {
-        char req[24];
-        char rep[96];
-        for (size_t i = 0u; i < P7501_FAST_STUB_LEN; ++i) {
-            snprintf(
-                req, sizeof(req), "W %08lX,%02X\r",
-                (unsigned long)(P7501_FAST_STUB_LOAD_VA + (uint32_t)i),
-                (unsigned)k_p7501_fast_bgo_stub[i]
-            );
-            if (!p7501_bus_panamon1_cmd_open(req, 250u, true, rep, sizeof(rep), &pm_ok) ||
-                (strstr(rep, "OK:WRITE") == NULL)) {
+        for (size_t off = 0u; off < P7501_FAST_STUB_LEN; off += 64u) {
+            const size_t remain = P7501_FAST_STUB_LEN - off;
+            const size_t chunk = (remain > 64u) ? 64u : remain;
+            if (!p7501_bus_panamon1_write_buf_open(
+                    P7501_FAST_STUB_LOAD_VA + (uint32_t)off,
+                    &k_p7501_fast_bgo_stub[off],
+                    chunk,
+                    true,
+                    &pm_ok
+                )) {
                 return false;
             }
-            if ((((i + 1u) & 63u) == 0u) || ((i + 1u) == P7501_FAST_STUB_LEN)) {
-                p7501_fast_emit_prog_push("STUB", 0u, (uint32_t)(i + 1u), P7501_FAST_STUB_LEN, P7501_FAST_STUB_CRC32);
-            }
+            p7501_fast_emit_prog_push(
+                "STUB", 0u, (uint32_t)(off + chunk), P7501_FAST_STUB_LEN, P7501_FAST_STUB_CRC32
+            );
         }
         if (out_uploaded != NULL) {
             *out_uploaded = true;

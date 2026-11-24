@@ -158,6 +158,70 @@ bool p7501_bus_panamon1_cmd_open(
     );
 }
 
+bool p7501_bus_panamon1_cmd_raw_open(
+    const char *cmd,
+    uint32_t timeout_ms,
+    bool allow_abort,
+    uint8_t *out_buf,
+    size_t out_cap,
+    size_t *out_len,
+    bool *io_panamon_mode
+) {
+    return panamon1_exchange_open(
+        cmd, timeout_ms, allow_abort, (char *)out_buf, out_cap, out_len, io_panamon_mode
+    );
+}
+
+bool p7501_bus_panamon1_write_buf_open(
+    uint32_t addr,
+    const uint8_t *buf,
+    size_t len,
+    bool allow_abort,
+    bool *io_panamon_mode
+) {
+    if ((buf == NULL) || (len == 0u)) {
+        return false;
+    }
+    char req[24];
+    char rx_buf[128];
+    for (size_t i = 0u; i < len; ++i) {
+        snprintf(req, sizeof(req), "W %08lX,%02X\r", (unsigned long)(addr + (uint32_t)i), (unsigned)buf[i]);
+        bool byte_ok = false;
+        for (uint8_t attempt = 0u; attempt < 2u; ++attempt) {
+            if (panamon1_exchange_open(
+                    req, PIO_PANAMON_TIMEOUT_MS, allow_abort, rx_buf, sizeof(rx_buf), NULL, io_panamon_mode
+                ) &&
+                (strstr(rx_buf, "OK:WRITE") != NULL)) {
+                byte_ok = true;
+                break;
+            }
+        }
+        if (!byte_ok) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool p7501_bus_panamon1_buf_matches_open(
+    uint32_t addr,
+    const uint8_t *buf,
+    size_t len,
+    bool allow_abort,
+    bool *io_panamon_mode
+) {
+    if ((buf == NULL) || (len < 4u)) {
+        return false;
+    }
+    uint8_t pfx[4] = { 0u, 0u, 0u, 0u };
+    uint8_t sfx[4] = { 0u, 0u, 0u, 0u };
+    const uint32_t tail_va = addr + (uint32_t)(len - 4u);
+    return p7501_bus_panamon1_read_chunk_open(addr, pfx, 4u, allow_abort, io_panamon_mode) &&
+           (memcmp(pfx, buf, 4u) == 0) &&
+           p7501_bus_panamon1_read_chunk_open(tail_va, sfx, 4u, allow_abort, io_panamon_mode) &&
+           (memcmp(sfx, &buf[len - 4u], 4u) == 0);
+}
+
 static bool panamon1_extract_hex_line(
     const char *reply,
     size_t expected_hex_chars,
@@ -229,28 +293,10 @@ bool p7501_bus_panamon1_write_u32(uint32_t addr, uint32_t data, bool *io_panamon
     if (!p7501_hw_is_nsw5v_high()) {
         return false;
     }
+    uint8_t bytes[4];
+    p7501_write_u32_le(bytes, data);
     p7501_pio_begin_rx_session(P7501_BOOT_ACTION_PASSIVE);
-    bool ok = true;
-    char req[32];
-    char rx_buf[128];
-    for (uint32_t i = 0u; i < 4u; ++i) {
-        const uint8_t byte_val = (uint8_t)((data >> (i * 8u)) & 0xFFu);
-        snprintf(req, sizeof(req), "W %08lX,%02X\r", (unsigned long)(addr + i), (unsigned)byte_val);
-        bool byte_ok = false;
-        for (uint8_t attempt = 0u; attempt < 2u; ++attempt) {
-            if (panamon1_exchange_open(
-                    req, PIO_PANAMON_TIMEOUT_MS, true, rx_buf, sizeof(rx_buf), NULL, io_panamon_mode
-                ) &&
-                (strstr(rx_buf, "OK:WRITE") != NULL)) {
-                byte_ok = true;
-                break;
-            }
-        }
-        if (!byte_ok) {
-            ok = false;
-            break;
-        }
-    }
+    const bool ok = p7501_bus_panamon1_write_buf_open(addr, bytes, sizeof(bytes), true, io_panamon_mode);
     p7501_pio_end_session();
     return ok;
 }

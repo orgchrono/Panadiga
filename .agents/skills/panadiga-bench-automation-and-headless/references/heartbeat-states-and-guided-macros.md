@@ -5,7 +5,7 @@
 | Estado | Critério Determinístico | Significado Físico / Ação |
 | :--- | :--- | :--- |
 | `ONLINE_HEALTHY` | `ping_ok == True` e `2.95 <= VDD <= 3.60 V` | Sonda Pico e alvo AM34 energizados na janela 3.3V LVTTL segura. |
-| `TARGET_OFF_OR_STANDBY` | `ping_ok == True` e (`DCSR == 0xFFFFFFFF`, `VDD < 2.50V`, ou sem senso VDD) | Alvo em Standby (`IC7501`), desligado da tomada AC ou pinos TX/RX desconectados. |
+| `TARGET_OFF_OR_STANDBY` | `ping_ok == True` e (`DCSR == 0xFFFFFFFF`, `VDD < 2.50V`, `NSW5V=0`, `fault_latch=1` ou sem senso VDD) | Alvo em Standby (`IC7501` `P-OFF`, mesmo com VFD congelado em `LD FVU`), AC desligado ou pinos soltos. **PARAR IMEDIATAMENTE, executar `ISOLATE` e AGUARDAR interação do usuário** (jamais rodar `BOOTTRACE NORMAL`/`XRESET`/retries em loop). |
 | `OVERVOLTAGE_ABORT` | `VDD > 3.65 V` | **ABORTAR IMEDIATAMENTE.** Risco elétrico no barramento `P7501`; verificar regulador e isolar `NSW5V` (`GP3` Hi-Z). |
 | `WDT_STALL` | Indício `WDT`/`STALL`/`TIMEOUT` ou `status` falhou sem leitura `VDD` | Watchdog ou barramento debug AM34 travado; aguardar reset ou rodar `passive_triage`. |
 | `DISCONNECTED` | Porta não encontrada ou sem resposta `PONG` | Verificar cabo USB-CDC na sonda Pico (nunca alimentar via `P7501`). |

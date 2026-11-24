@@ -427,29 +427,33 @@ fn wave2_pico_capture_nor_and_davis_probe_mock_offline() {
     assert_eq!(cap.total_len, AM34_NVRAM_SIZE as usize);
     assert_eq!(&fs::read(&out_nvram).unwrap()[..16], b"PANANVRAM_TEST_1");
 
-    let mut dmock = MockPanamon1Transport::new();
-    dmock.bridge_active = true;
-    dmock.map_memory(0x8900_0000, vec![0u8; 0x1000]);
-    dmock.map_memory(0x504F_8234, vec![0u8; 0x40]);
-    dmock.map_memory(0x9050_0000, vec![0u8; 0x3000]);
-    let mut sys = vec![0u8; 0x0C];
-    sys[8..10].copy_from_slice(&0x8002u16.to_le_bytes());
-    dmock.map_memory(0xC000_1000, sys);
-    dmock.write_memory_bytes(DAVIS_STUB_DEFAULT_VA, &[]);
+    let build_mock = |bridge_overflow: bool| -> MockPanamon1Transport {
+        let mut dmock = MockPanamon1Transport::new();
+        dmock.bridge_active = true;
+        dmock.bridge_overflow = bridge_overflow;
+        dmock.map_memory(0x8900_0000, vec![0u8; 0x1000]);
+        dmock.map_memory(0x504F_8234, vec![0u8; 0x40]);
+        dmock.map_memory(0x9050_0000, vec![0u8; 0x3000]);
+        let mut sys = vec![0u8; 0x0C];
+        sys[8..10].copy_from_slice(&0x8002u16.to_le_bytes());
+        dmock.map_memory(0xC000_1000, sys);
+        dmock.write_memory_bytes(DAVIS_STUB_DEFAULT_VA, &[]);
+        dmock
+    };
+    let make_args = |out_ec| DavisProbeArgs {
+        port: "MOCK".to_string(),
+        drive: "master".to_string(),
+        no_identify: true,
+        out_ec,
+        json: None,
+    };
     let out_ec = dir.join("identify.bin");
-    let rep = run_davis_probe_with_transport(
-        dmock,
-        &DavisProbeArgs {
-            port: "MOCK".to_string(),
-            drive: "master".to_string(),
-            no_identify: true,
-            out_ec: Some(out_ec.clone()),
-            json: None,
-        },
-    )
-    .unwrap();
+    let rep = run_davis_probe_with_transport(build_mock(false), &make_args(Some(out_ec.clone())))
+        .unwrap();
     assert!(rep.identify_info.is_none());
     assert!(!out_ec.exists());
+    let overflow_res = run_davis_probe_with_transport(build_mock(true), &make_args(None));
+    assert!(overflow_res.is_err());
     let _ = DAVIS_IDENTIFY_BUF_DEFAULT_VA;
     let _ = DAVIS_IDENTIFY_SENTINEL;
     let _ = fs::remove_dir_all(&dir);

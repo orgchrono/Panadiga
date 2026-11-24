@@ -25,6 +25,7 @@ Esta skill padroniza o monitoramento passivo/guiado da sonda Pico `P7501`, a aut
 1. **Autodescoberta USB Dinâmica (Sem Hardcode de Porta):** `discover_pico_port` consulta `panadiga pico list` e prioriza `VID:2E8A`; `--port <PORT>` (`COM*`, `/dev/ttyACM*`, `/dev/cu.usbmodem*`) é apenas override explícito.
 2. **Bloqueio Rígido `SAFETY_DENIED` (Exit Code `2`):** `--mode guided` bloqueia tokens destrutivos/restritos (`ERASE`, `WRITE`, `FLASH`, `POKE`, `PATCH`, `MEMW`, `W32`/`W16`/`W8`, `CONFIRM_UPPER_NOR`, `0xC000100C`, `0x50409DF2`, `0x50409E65`, `BGO_WRITE`, `NVRAM_WRITE`, `M80`, `X80`, `JOB`) e valida contra Rust `SAFE_BENCH_COMMANDS` via `panadiga pico validate-bench-cmd`.
 3. **Alarme de Sobretensão (`OVERVOLTAGE_ABORT`):** Qualquer `VDD > 3.65V` dispara abort imediato (`GP3`/`NSW5V` permanece sempre `Hi-Z Input` sem pulls).
+4. **Portão `TARGET_OFF_OR_STANDBY` (Pausa Obrigatória / Zero Desperdício de Tokens):** Ao detectar `TARGET_OFF_OR_STANDBY` (`VDD < 2.50V`, `NSW5V=0` ou `fault_latch=1`, mesmo com VFD frontal congelado em `LD FVU`), **PROIBIDO** disparar `XRESET`, `BOOTTRACE NORMAL`, `XRAY BOOT` ou baterias ativas; execute apenas `ISOLATE` e **PARE aguardando interação explícita do usuário** (armando `XRAY WAKE` / `BOOTTRACE ... WAKE` somente após confirmação humana).
 ```bash
 python scripts/pico_heartbeat_ops.py --mode heartbeat --json -
 python scripts/pico_heartbeat_ops.py --mode heartbeat --port COM10 --count 3 --interval-s 1 --json -

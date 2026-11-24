@@ -94,23 +94,36 @@ pub fn run_davis_probe_with_transport<T: Panamon1Transport>(
     };
     let identify_out_va = cfg.identify_out_va;
     let mut client = Panamon1Client::new(transport);
-    let mut report = {
-        let mut engine = DavisProbeEngine::new(&mut client, cfg);
-        engine.run_probe()?
+    let probe_res = (|| -> Result<DavisProbeReport> {
+        let mut report = {
+            let mut engine = DavisProbeEngine::new(&mut client, cfg);
+            engine.run_probe()?
+        };
+        if args.no_identify {
+            report.identify_info = None;
+        } else if let Some(ref out_ec) = args.out_ec
+            && report.identify_info.is_some()
+        {
+            let pio_1024 = client.mem_read_bytes(identify_out_va, 1024)?;
+            let ec_512 = extract_ata_identify_512_from_pio_1024(&pio_1024)?;
+            write_cli_output_bytes(out_ec, &ec_512)?;
+            log_println!(
+                "[OK] Wrote 512-byte ATA IDENTIFY DEVICE payload -> {}",
+                out_ec.display()
+            );
+        }
+        Ok(report)
+    })();
+    let report = match probe_res {
+        Ok(report) => {
+            let _ = client.exit_bridge_checked()?;
+            report
+        }
+        Err(err) => {
+            let _ = client.exit_bridge_raw();
+            return Err(err);
+        }
     };
-    if args.no_identify {
-        report.identify_info = None;
-    } else if let Some(ref out_ec) = args.out_ec
-        && report.identify_info.is_some()
-    {
-        let pio_1024 = client.mem_read_bytes(identify_out_va, 1024)?;
-        let ec_512 = extract_ata_identify_512_from_pio_1024(&pio_1024)?;
-        write_cli_output_bytes(out_ec, &ec_512)?;
-        log_println!(
-            "[OK] Wrote 512-byte ATA IDENTIFY DEVICE payload -> {}",
-            out_ec.display()
-        );
-    }
     log_println!(
         "[DAVIS] class={:?} fe_released={} C0001008=0x{:04X}->0x{:04X} model={:?}",
         report.classification,
