@@ -36,13 +36,10 @@ Sempre comece lendo `.agents/skills/panadiga-skill-orchestrator/SKILL.md`:
 - `.agents/skills/panadiga-adversarial-and-hallucination-auditor/SKILL.md`
 - `.agents/skills/panadiga-validate/SKILL.md`
 - `.agents/skills/panadiga-security-and-violation-guards/SKILL.md`
-- `.agents/skills/panadiga-code-compliance-and-layer-coherence/SKILL.md`
-- `.agents/skills/panadiga-testing-and-feature-delivery/SKILL.md`
-- `.agents/skills/panadiga-prompt-and-adversarial-audit/SKILL.md`
 - `.agents/skills/panadiga-technical-documentation/SKILL.md`
 - `.agents/skills/panadiga-forensic-archival/SKILL.md`
 - `.agents/skills/panadiga-repo-sanitization-and-commit-sync/SKILL.md`
 - `.agents/skills/panadiga-anti-trap-geometry-verification/SKILL.md`
-- `.agents/skills/panadiga-ssot-builder-and-validation/SKILL.md`
+- `.agents/skills/panadiga-device-onboarding/SKILL.md`
 - `.agents/skills/panadiga-contracts-stream-and-journal/SKILL.md`
-- `.agents/skills/panadiga-tool-arsenal-catalog/SKILL.md`
+- `.agents/skills/panadiga-functional-math-and-patterns/SKILL.md`

@@ -1,0 +1,95 @@
+=== PRE_STATUS ===
+VDD: 3.26V (OK)
+[STANDBY] RXD=1 NSW5V=1 TXD=1 XRESET=1 SW_PU=3.27V NSW5V_DROPS=221 | State=POWERED / AWAKE (SW_UART ~3.3V)
+[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=83 wdt_recoveries=0 reboot_src=CLEAN fault_slot=255 fault_stage=IDLE last_cmd=STATUS last_us=1684
+@P7501_RES cmd=STATUS status=OK code=0 elapsed_us=1790
+PANADIGA> 
+[CHECK PRE] prompt=True vdd=3.26V nsw5v=1 drops=221
+=== BOOTTRACE 12000 JIG:2500 ===
+=== BOOTTRACE: window=12000ms boot=2 hold=2500ms sticky=NO no_xrst=NO (8N1 @ 115200) ===
+[BOOTTRACE +  10ms] DDR CHECK: OK
+[BOOTTRACE +  19ms] Chip select = 1
+[BOOTTRACE +  20ms] ***** Loader ver0.61 [06/03/06] *****
+[BOOTTRACE +  24ms] ***** serial boot mode *****
+[BOOTTRACE +  27ms] !!! start fmu to read & exec fvu. !!!
+[BOOTTRACE +  30ms] wait 1 second.
+[BOOTTRACE +1032ms] *** timer correspond initialize ***
+[BOOTTRACE +1037ms] startup reason = [70]
+[BOOTTRACE +1044ms] Main hung-up time changed 255[s].
+[BOOTTRACE +1054ms] SD init start...
+[BOOTTRACE +1146ms] [SDCD] sdcd_insrmv_check:SD Card inserted 
+[BOOTTRACE +1402ms] [SDCD] === This Card Spec ==== 
+[BOOTTRACE +1405ms] .Card type:2(condition:3) wp:0
+[BOOTTRACE +1408ms] .capacity:3c4000[LBA](2021654528Byte) . transfer speed:25000[Kbps]
+[BOOTTRACE +1414ms] .RCA:2 . Bus Width:4(current) 4(support)
+[BOOTTRACE +1418ms] .Multi Max Block Len Read:2[SECT] / Write:2[SECT]
+[BOOTTRACE +1422ms] SD = 0x3C4000[LBA]
+[BOOTTRACE +1424ms] ... SD init end
+[BOOTTRACE +1487ms] *** start diag ***
+[BOOTTRACE +1495ms] ***** Fvu ver0.61 [05/11/01] *****
+[BOOTTRACE +1498ms] PANAMON1>[B/R/W/D/F/J/E/U/Q]
+[BOOTTRACE] UART: bytes=671 first_byte=10230us ferr=0 perr=0 ovf=NO | SW_rel=YES@26254us(SERIAL_BOOT)
+[BOOTTRACE] ADC0_SWUART: min=0.00V max=3.28V (low=3 hiz=3.25..3.28V n=1199) | CtrlEdges: NSW5V=0 TXD=0 XRESET=0 (logged=0)
+BOOTTRACE: OK
+@P7501_RES cmd=BOOTTRACE status=OK code=0 elapsed_us=12021640
+PANADIGA> 
+=== BGO_INSPECT ===
+[BGO_INSPECT] sectors=45 erased=4 valid=40 corrupt=0 dup_lbn=1 zmarker_bad=0 healthy=NO
+BGO_INSPECT: OK
+@P7501_RES cmd=BGO_INSPECT status=OK code=0 elapsed_us=1480107
+PANADIGA> 
+=== PER-SECTOR BGO HEADER DIFF (SA26..SA70 vs eh55_nor_8mb_ic5001_repaired.bin) ===
+SA26 (0x84130000): lbn=0xFFFF +14=fefffefffeffffff +5c=f8fff8fff8fffcff z100=ALL_00 | CHANGED(7B: base_lbn=0xFFFF base_z100=ALL_00 base_+14=fefffefffeffffff base_+5c=f8fff8fff8fffcff)
+SA27 (0x84140000): lbn=0xFFFF +14=fefffefffeffffff +5c=fefffefffeffffff z100=ALL_00 | SAME
+SA28 (0x84150000): lbn=0xFFFF +14=fefffefffeffffff +5c=f8fff8fff8fffcff z100=ALL_00 | CHANGED(5B: base_lbn=0xFFFF base_z100=ALL_00 base_+14=fefffefffeffffff base_+5c=f8fff8fff8fffcff)
+SA29 (0x84160000): lbn=0xFFFF +14=fefffefffeffffff +5c=fefffefffeffffff z100=ALL_00 | CHANGED(10B: base_lbn=0xFFFF base_z100=ALL_00 base_+14=fefffefffeffffff base_+5c=fefffefffeffffff)
+SA30 (0x84170000): lbn=0xFFFF +14=fefffefffeffffff +5c=fefffefffeffffff z100=ALL_00 | SAME
+SA31 (0x84180000): lbn=0xFFFF +14=fefffefffeffffff +5c=fefffefffeffffff z100=ALL_00 | SAME
+SA32 (0x84190000): lbn=0xFFFF +14=fefffefffeffffff +5c=f8fff8fff8fffcff z100=ALL_00 | SAME
+SA33 (0x841A0000): lbn=0xFFFF +14=fefffefffeffffff +5c=fefffefffeffffff z100=ALL_00 | SAME
+SA34 (0x841B0000): lbn=0xFFFF +14=fefffefffeffffff +5c=f8fff8fff8fffcff z100=ALL_00 | CHANGED(1B: base_lbn=0xFFFF base_z100=ALL_00 base_+14=fefffefffeffffff base_+5c=f8fff8fff8fffcff)
+SA35 (0x841C0000): lbn=0xFFFF +14=fefffefffeffffff +5c=f8fff8fff8fffcff z100=ALL_00 | SAME
+SA36 (0x841D0000): lbn=0xFFFF +14=fefffefffeffffff +5c=f8fff8fff8fffcff z100=ALL_00 | SAME
+SA37 (0x841E0000): lbn=0xFFFF +14=fefffefffeffffff +5c=fefffefffeffffff z100=ALL_00 | SAME
+SA38 (0x841F0000): lbn=0xFFFF +14=fefffefffeffffff +5c=f8fff8fff8fffcff z100=ALL_00 | SAME
+SA39 (0x84200000): lbn=0xFFFF +14=fefffefffeffffff +5c=f8fff8fff8fffcff z100=ALL_00 | CHANGED(1B: base_lbn=0xFFFF base_z100=ALL_00 base_+14=fefffefffeffffff base_+5c=f8fff8fff8fffcff)
+SA40 (0x84210000): lbn=0xFFFF +14=fefffefffeffffff +5c=f8fff8fff8fffcff z100=ALL_00 | CHANGED(13B: base_lbn=0xFFFF base_z100=ALL_00 base_+14=fefffefffeffffff base_+5c=f8fff8fff8fffcff)
+SA41 (0x84220000): lbn=0xFFFF +14=fefffefffeffffff +5c=f8fff8fff8fffcff z100=ALL_00 | CHANGED(21B: base_lbn=0xFFFF base_z100=ALL_00 base_+14=ffffffffffffffff base_+5c=ffffffffffffffff)
+SA42 (0x84230000): lbn=0xFFFF +14=ffffffffffffffff +5c=ffffffffffffffff z100=ALL_00 | CHANGED(18B: base_lbn=0xFFFF base_z100=ALL_00 base_+14=fefffefffeffffff base_+5c=fefffefffeffffff)
+SA43 (0x84240000): lbn=0xFFFF +14=fefffefffeffffff +5c=fefffefffeffffff z100=ALL_00 | SAME
+SA44 (0x84250000): lbn=0xFFFF +14=fefffefffeffffff +5c=fefffefffeffffff z100=ALL_00 | SAME
+SA45 (0x84260000): lbn=0xFFFF +14=fefffefffeffffff +5c=fefffefffeffffff z100=ALL_00 | SAME
+SA46 (0x84270000): lbn=0xFFFF +14=fefffefffeffffff +5c=fefffefffeffffff z100=ALL_00 | SAME
+SA47 (0x84280000): lbn=0xFFFF +14=fefffefffeffffff +5c=f8fff8fff8fffcff z100=ALL_00 | SAME
+SA48 (0x84290000): lbn=0xFFFF +14=f8fff8fff8fffcff +5c=f8fff8fff8fffcff z100=ALL_00 | CHANGED(11B: base_lbn=0xFFFF base_z100=ALL_00 base_+14=fefffefffeffffff base_+5c=f8fff8fff8fffcff)
+SA49 (0x842A0000): lbn=0xFFFF +14=fefffefffeffffff +5c=f8fff8fff8fffcff z100=ALL_00 | CHANGED(5B: base_lbn=0xFFFF base_z100=ALL_00 base_+14=fefffefffeffffff base_+5c=f8fff8fff8fffcff)
+SA50 (0x842B0000): lbn=0xFFFF +14=fefffefffeffffff +5c=f8fff8fff8fffcff z100=ALL_00 | SAME
+SA51 (0x842C0000): lbn=0xFFFF +14=fefffefffeffffff +5c=fefffefffeffffff z100=ALL_00 | SAME
+SA52 (0x842D0000): lbn=0xFFFF +14=fefffefffeffffff +5c=f8fff8fff8fffcff z100=ALL_00 | SAME
+SA53 (0x842E0000): lbn=0xFFFF +14=fefffefffeffffff +5c=f8fff8fff8fffcff z100=ALL_00 | CHANGED(5B: base_lbn=0xFFFF base_z100=ALL_00 base_+14=fefffefffeffffff base_+5c=f8fff8fff8fffcff)
+SA54 (0x842F0000): lbn=0xFFFF +14=fefffefffeffffff +5c=f8fff8fff8fffcff z100=ALL_00 | SAME
+SA55 (0x84300000): lbn=0xFFFF +14=fefffefffeffffff +5c=f8fff8fff8fffcff z100=ALL_00 | SAME
+SA56 (0x84310000): lbn=0xFFFF +14=fefffefffeffffff +5c=fefffefffeffffff z100=ALL_00 | SAME
+SA57 (0x84320000): lbn=0xFFFF +14=fefffefffeffffff +5c=f8fff8fff8fffcff z100=ALL_00 | SAME
+SA58 (0x84330000): lbn=0xFFFF +14=fefffefffeffffff +5c=fefffefffeffffff z100=ALL_00 | SAME
+SA59 (0x84340000): lbn=0xFFFF +14=fefffefffeffffff +5c=fefffefffeffffff z100=ALL_00 | SAME
+SA60 (0x84350000): lbn=0xFFFF +14=fefffefffeffffff +5c=f8fff8fff8fffcff z100=ALL_00 | SAME
+SA61 (0x84360000): lbn=0xFFFF +14=fefffefffeffffff +5c=fefffefffeffffff z100=ALL_00 | SAME
+SA62 (0x84370000): lbn=0xFFFF +14=ffffffffffffffff +5c=ffffffffffffffff z100=ALL_00 | CHANGED(21B: base_lbn=0xFFFF base_z100=ALL_00 base_+14=fefffefffeffffff base_+5c=f8fff8fff8fffcff)
+SA63 (0x84380000): lbn=0xFFFF +14=fefffefffeffffff +5c=f8fff8fff8fffcff z100=ALL_00 | CHANGED(5B: base_lbn=0xFFFF base_z100=ALL_00 base_+14=fefffefffeffffff base_+5c=f8fff8fff8fffcff)
+SA64 (0x84390000): lbn=0xFFFF +14=fefffefffeffffff +5c=fefffefffeffffff z100=ALL_00 | SAME
+SA65 (0x843A0000): lbn=0xFFFF +14=fefffefffeffffff +5c=fefffefffeffffff z100=ALL_00 | SAME
+SA66 (0x843B0000): lbn=0xFFFF +14=fefffefffeffffff +5c=fefffefffeffffff z100=ALL_00 | SAME
+SA67 (0x843C0000): lbn=0xFFFF +14=fefffefffeffffff +5c=f8fff8fff8fffcff z100=ALL_00 | CHANGED(21B: base_lbn=0xFFFF base_z100=ALL_00 base_+14=ffffffffffffffff base_+5c=ffffffffffffffff)
+SA68 (0x843D0000): lbn=0xFFFF +14=fefffefffeffffff +5c=f8fff8fff8fffcff z100=ALL_00 | CHANGED(21B: base_lbn=0xFFFF base_z100=ALL_00 base_+14=ffffffffffffffff base_+5c=ffffffffffffffff)
+SA69 (0x843E0000): lbn=0xFFFF +14=ffffffffffffffff +5c=ffffffffffffffff z100=ALL_00 | CHANGED(21B: base_lbn=0xFFFF base_z100=ALL_00 base_+14=fefffefffeffffff base_+5c=f8fff8fff8fffcff)
+SA70 (0x843F0000): lbn=0xFFFF +14=ffffffffffffffff +5c=ffffffffffffffff z100=ALL_00 | SAME
+[SA70+0xE100 CHECK] live=ffffffffffffffffffffffffffffffff base=ffffffffffffffffffffffffffffffff topboot_4mb_zero_marker=False
+[SUMMARY] f101=0 f2xx=0 spares=45 other=0 changed_count=16 changed_sa=[26, 28, 29, 34, 39, 40, 41, 42, 48, 49, 53, 62, 63, 67, 68, 69]
+=== POST_STATUS ===
+VDD: 3.27V (OK)
+[STANDBY] RXD=1 NSW5V=1 TXD=1 XRESET=1 SW_PU=3.28V NSW5V_DROPS=221 | State=POWERED / AWAKE (SW_UART ~3.3V)
+[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=132 wdt_recoveries=0 reboot_src=CLEAN fault_slot=255 fault_stage=IDLE last_cmd=FAST_READ last_us=85449
+@P7501_RES cmd=STATUS status=OK code=0 elapsed_us=1701
+PANADIGA> 
+[CHECK POST] prompt=True vdd=3.27V nsw5v=1 drops=221 (base=221)

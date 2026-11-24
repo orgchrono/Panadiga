@@ -31,7 +31,7 @@ O repositório está estruturado em subsistemas integrados e desacoplados:
    - Scripts Ghidra Jython (`tools/ghidra/`) gerados a partir da SSOT Rust e lançadores em `tools/`.
 5. **Acervo de Engenharia & Manuais (`manuals_and_schematics/`, `docs/`)**:
    - **32 manuais de serviço e datasheets oficiais** em PDF catalogados em [`manuals_and_schematics/README.md`](manuals_and_schematics/README.md) e indexados para busca automatizada.
-   - **41 dossiês técnicos bilíngues canônicos** em `docs/pt-BR/` e `docs/en-US/` (mapa em [`docs/translation_pairs.json`](docs/translation_pairs.json) e [`docs/INDEX.md`](docs/INDEX.md)), kit canônico [`firmware_and_images/sd_unbrick_kit/`](firmware_and_images/README.md) (`--loader-profile ver061`: `262,144 B` raw + `sd48`), auditorias na raiz ([`AUDITORIA_COMPLETA.md`](AUDITORIA_COMPLETA.md) / [`COMPLETE_AUDIT.md`](COMPLETE_AUDIT.md)) + históricas ([`docs/audits/`](docs/audits/README.md)), evidência integral de disassembly/pseudocódigo Ghidra ([`docs/pseudocode/`](docs/pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md)) e **28 capturas/logs reais de bancada** ([`docs/debug_logs/`](docs/debug_logs/README.md)).
+   - **43 dossiês técnicos bilíngues canônicos** em `docs/pt-BR/` e `docs/en-US/` (mapa em [`docs/translation_pairs.json`](docs/translation_pairs.json) e [`docs/INDEX.md`](docs/INDEX.md)), kit canônico [`firmware_and_images/sd_unbrick_kit/`](firmware_and_images/README.md) (`--loader-profile ver061`: `262,144 B` raw + `sd48`), auditorias na raiz ([`AUDITORIA_COMPLETA.md`](AUDITORIA_COMPLETA.md) / [`COMPLETE_AUDIT.md`](COMPLETE_AUDIT.md)) + históricas ([`docs/audits/`](docs/audits/README.md)), evidência integral de disassembly/pseudocódigo Ghidra ([`docs/pseudocode/`](docs/pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md)) e **28 capturas/logs reais de bancada** ([`docs/debug_logs/`](docs/debug_logs/README.md)).
 
 ---
 
@@ -91,7 +91,7 @@ O portão valida de forma automatizada:
 
 ---
 
-## 5. Acervo de Documentação Técnica (Raiz + 41 Pares Bilíngues)
+## 5. Acervo de Documentação Técnica (Raiz + 43 Pares Bilíngues)
 
 * **Portal Mestre & Mapa Bilíngue:** [`docs/INDEX.md`](docs/INDEX.md) · [`docs/translation_pairs.json`](docs/translation_pairs.json)
 * **Auditorias na Raiz & Snapshots:** [`AUDITORIA_COMPLETA.md`](AUDITORIA_COMPLETA.md) ([English: `COMPLETE_AUDIT.md`](COMPLETE_AUDIT.md)) · [`docs/audits/README.md`](docs/audits/README.md)

@@ -1,0 +1,541 @@
+=== BOOTTRACE: window=90000ms boot=1 hold=0ms sticky=NO no_xrst=NO (8N1 @ 115200) ===
+[BOOTTRACE +  10ms] DDR CHECK: OK
+[BOOTTRACE +  19ms] Chip select = 1
+[BOOTTRACE +  20ms] F/E Address = 0x90202000 , Drive(compress) Size = 0xACC50
+[BOOTTRACE +  26ms] uncompress dst=90202000 len=160000 src=84080040 len=acc01
+[BOOTTRACE + 774ms] HEADER:5627DD54, DECOMP:5627DD54
+[BOOTTRACE + 777ms] F/E reset release finish ...
+[BOOTTRACE + 780ms] ***** Loader ver0.61 [06/03/06] *****
+[BOOTTRACE + 783ms] ***** normal mode *****
+[BOOTTRACE + 800ms] !!! start fmu to read & exec fvu. !!!
+[BOOTTRACE + 804ms] wait 1 second.
+[BOOTTRACE +1806ms] *** timer correspond initialize ***
+[BOOTTRACE +1811ms] startup reason = [41]
+[BOOTTRACE +1817ms] Main hung-up time changed 255[s].
+[BOOTTRACE +1829ms] *** RTSC Initialize ***
+[BOOTTRACE +4617ms] [RTSD] ATAPI Software Reset 
+[BOOTTRACE +4620ms] error! startup reason is invalid.
+[BOOTTRACE +6602ms] DDR CHECK: OK
+[BOOTTRACE +6611ms] Chip select = 1
+[BOOTTRACE +6612ms] F/E Address = 0x90202000 , Drive(compress) Size = 0xACC50
+[BOOTTRACE +6618ms] uncompress dst=90202000 len=160000 src=84080040 len=acc01
+[BOOTTRACE +7366ms] HEADER:5627DD54, DECOMP:5627DD54
+[BOOTTRACE +7369ms] F/E reset release finish ...
+[BOOTTRACE +7372ms] ***** Loader ver0.61 [06/03/06] *****
+[BOOTTRACE +7375ms] ***** normal mode *****
+[BOOTTRACE +7392ms] *** RTSC Initialize ***
+[BOOTTRACE +10133ms] [RTSD] ATAPI Software Reset 
+[BOOTTRACE +10146ms] [RTSD] HDD spin-up error (80000404)
+[BOOTTRACE +10150ms] miniboot : system assert!!
+[BOOTTRACE +10152ms] [RTSD] === IDE HOST ERROR === ( E8000000 )
+[BOOTTRACE +10156ms] *** ATAPI DEVICE ERROR
+[BOOTTRACE +10158ms] CDB  [FF EC 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +10162ms] Reg[00 00 00 00 00 00 00 : Err SecC SecN CylL CylH D/H Status] 
+[BOOTTRACE +10168ms] H_STAT [E8] T_STAT [0]
+[BOOTTRACE +10170ms] [RTSD] SRST Command Set
+[BOOTTRACE +10172ms] [RTSD] Reset Failed !! (80000407)
+[BOOTTRACE +10185ms] [RTSD] HDD spin-up error (80000404)
+[BOOTTRACE +10189ms] miniboot : system assert!!
+[BOOTTRACE +10191ms] [RTSD] === IDE HOST ERROR === ( E8000000 )
+[BOOTTRACE +10195ms] *** ATAPI DEVICE ERROR
+[BOOTTRACE +10197ms] CDB  [FF EC 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +10201ms] Reg[00 00 00 00 00 00 00 : Err SecC SecN CylL CylH D/H Status] 
+[BOOTTRACE +10207ms] H_STAT [E8] T_STAT [0]
+[BOOTTRACE +10209ms] [RTSD] SRST Command Set
+[BOOTTRACE +10211ms] [RTSD] Reset Failed !! (80000407)
+[BOOTTRACE +10224ms] [RTSD] HDD spin-up error (80000404)
+[BOOTTRACE +10228ms] miniboot : system assert!!
+[BOOTTRACE +10230ms] [RTSD] === IDE HOST ERROR === ( E8000000 )
+[BOOTTRACE +10234ms] *** ATAPI DEVICE ERROR
+[BOOTTRACE +10236ms] CDB  [FF EC 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +10240ms] Reg[00 00 00 00 00 00 00 : Err SecC SecN CylL CylH D/H Status] 
+[BOOTTRACE +10246ms] H_STAT [E8] T_STAT [0]
+[BOOTTRACE +10248ms] [RTSD] SRST Command Set
+[BOOTTRACE +10250ms] [RTSD] Reset Failed !! (80000407)
+[BOOTTRACE +10254ms] HDD_MAX_LBA get failed[0xE8000000].
+[BOOTTRACE +10257ms] mainsoft data is invalid, so set update flag.
+[BOOTTRACE +10278ms] [nfrom] file_no[17],skip(0),non_skip(1),erase(0),new_write(0).
+[BOOTTRACE +10293ms] !!! start fmu to read & exec fvu. !!!
+[BOOTTRACE +10297ms] wait 1 second.
+[BOOTTRACE +11299ms] *** timer correspond initialize ***
+[BOOTTRACE +11304ms] startup reason = [41]
+[BOOTTRACE +11310ms] Main hung-up time changed 255[s].
+[BOOTTRACE +11319ms] Read fvu program from Update-Disk to 0x90400000.
+[BOOTTRACE +11324ms] SD card check start
+[BOOTTRACE +11326ms] SD init start...
+[BOOTTRACE +11417ms] [SDCD] sdcd_insrmv_check:SD Card inserted 
+[BOOTTRACE +11664ms] [SDCD] === This Card Spec ==== 
+[BOOTTRACE +11667ms] .Card type:2(condition:3) wp:0
+[BOOTTRACE +11670ms] .capacity:3c4000[LBA](2021654528Byte) . transfer speed:25000[Kbps]
+[BOOTTRACE +11676ms] .RCA:2 . Bus Width:4(current) 4(support)
+[BOOTTRACE +11680ms] .Multi Max Block Len Read:2[SECT] / Write:2[SECT]
+[BOOTTRACE +11684ms] SD = 0x3C4000[LBA]
+[BOOTTRACE +11686ms] ... SD init end
+[BOOTTRACE +11694ms] FAT Mount ID = 0x1
+[BOOTTRACE +11699ms] FAT Open Old File ID = 0xC8
+[BOOTTRACE +11701ms] treat as SD.
+[BOOTTRACE +11719ms] File ID[0xC8] seek to 0xB1800.
+[BOOTTRACE +11789ms] File ID[0xC8] read to 0x90400000(size=0x40000).
+[BOOTTRACE +11793ms] cheking for fvu program check-sum[0x21647BA].
+[BOOTTRACE +11879ms] [nfrom] file_no[17],skip(0),non_skip(1),erase(0),new_write(0).
+[BOOTTRACE +11894ms] success to read fvu program from Update-Disc.
+[BOOTTRACE +11929ms] [RTSD] Device Reset Occurred(0x62900) 
+[BOOTTRACE +11932ms] X(80062900)X(80023a00)X(80023a00)X(80023a00)
+[BOOTTRACE +11940ms] *** start fvu ***
+[BOOTTRACE +11948ms] ***** Fvu ver0.61 [05/11/01] *****
+[BOOTTRACE +11965ms] *** RTSC Initialize ***
+[BOOTTRACE +15155ms] [RTSD] ATAPI Software Reset 
+[BOOTTRACE +15158ms] [STAGE2] SATA HDD boot ('F'->FVU)...
+[BOOTTRACE +15662ms] SD init start...
+[BOOTTRACE +15753ms] [SDCD] sdcd_insrmv_check:SD Card inserted 
+[BOOTTRACE +15824ms] [SDCD] === This Card Spec ==== 
+[BOOTTRACE +15828ms] .Card type:2(condition:3) wp:0
+[BOOTTRACE +15830ms] .capacity:3c4000[LBA](2021654528Byte) . transfer speed:25000[Kbps]
+[BOOTTRACE +15837ms] .RCA:2 . Bus Width:4(current) 4(support)
+[BOOTTRACE +15840ms] .Multi Max Block Len Read:2[SECT] / Write:2[SECT]
+[BOOTTRACE +15845ms] SD = 0x3C4000[LBA]
+[BOOTTRACE +15846ms] ... SD init end
+[BOOTTRACE +15852ms] [RTSD] HDD already spin-up 
+[BOOTTRACE +15885ms] [RTSD] HDD Auto Spin up Mode 
+[BOOTTRACE +15892ms] [STAGE2] HDD MAX LBA=0x1D1C5970
+[BOOTTRACE +17801ms] uncompress dst=57000000 len=cce48c src=94000040 len=644ffb
+[BOOTTRACE +21722ms] HEADER:B0352C5C, DECOMP:B0352C5C
+[BOOTTRACE +21725ms] [STAGE2] Boot MAIN @ 0x57000000
+[BOOTTRACE +22267ms] [nfrom] DeviceInfo(EEPROM : 8Kbit)
+[BOOTTRACE +22274ms] **************************************************
+[BOOTTRACE +22279ms] [ftrec]Simple obstacle history
+[BOOTTRACE +22282ms] [ftrec]Running time  : 26134 [s]
+[BOOTTRACE +22285ms] [ftrec]Fault history : 20
+[BOOTTRACE +22287ms] [ftrec]NAND-FROM read error! Fault history clear!
+[BOOTTRACE +22292ms] --------------------------------------------------
+[BOOTTRACE +22297ms] kind, tick, running, other1, other2, other3
+[BOOTTRACE +22301ms] [ 0]0x4 , 2000/01/01 00:00:00 ,     26134 , src/sys_boot.c , 5239 , 0
+[BOOTTRACE +22308ms] [ 1]0x4 , 2000/01/01 00:00:00 ,     26051 , src/avin_funcs_com.c , 3756 , 0
+[BOOTTRACE +22314ms] [ 2]0x4 , 2000/01/01 00:00:00 ,     25987 , src/sys_boot.c , 5239 , 0
+[BOOTTRACE +22321ms] [ 3]0x4 , 2000/01/01 00:00:00 ,     25986 , src/avin_funcs_com.c , 3756 , 0
+[BOOTTRACE +22328ms] [ 4]0x4 , 2000/01/01 00:00:00 ,     25985 , src/sys_boot.c , 5239 , 0
+[BOOTTRACE +22334ms] [ 5]0x4 , 2006/01/01 00:00:00 ,     25982 , src/sys_fip_osd_tools.c , 1174 , 0
+[BOOTTRACE +22342ms] [ 6]0x4 , 2006/01/01 00:00:00 ,     25982 , src/sys_fip_fpc_exe.c , 3158 , 0
+[BOOTTRACE +22349ms] [ 7]0x4 , 2006/01/01 00:00:00 ,     25981 , src/fpcmain.c , 963 , 0
+[BOOTTRACE +22355ms] [ 8]0x4 , 2006/01/01 00:00:00 ,     25981 , src/sys_fip_osd_tools.c , 1174 , 0
+[BOOTTRACE +22362ms] [ 9]0x4 , 2006/01/01 00:00:00 ,     25981 , src/fpcmain.c , 963 , 0
+[BOOTTRACE +22369ms] [10]0x4 , 2006/01/01 00:00:00 ,     25981 , src/sys_fip_osd_tools.c , 1174 , 0
+[BOOTTRACE +22376ms] [11]0x4 , 2006/01/01 00:00:00 ,     25981 , src/sys_fip_fpc_exe.c , 3158 , 0
+[BOOTTRACE +22383ms] [12]0x4 , 2006/01/01 00:00:00 ,     25981 , src/avin_funcs_com.c , 3756 , 0
+[BOOTTRACE +22390ms] [13]0x4 , 2006/01/01 00:00:00 ,     25958 , src/fpcmain.c , 963 , 0
+[BOOTTRACE +22397ms] [14]0x4 , 2006/01/01 00:00:00 ,     25958 , src/sys_app_utility.c , 1812 , 0
+[BOOTTRACE +22404ms] [15]0x4 , 2006/01/01 00:00:00 ,     25958 , src/fpcmain.c , 963 , 0
+[BOOTTRACE +22410ms] [16]0x4 , 2006/01/01 00:00:00 ,     25958 , src/sys_app_utility.c , 1812 , 0
+[BOOTTRACE +22417ms] [17]0x4 , 2006/01/01 00:00:00 ,     25914 , src/fpcmain.c , 963 , 0
+[BOOTTRACE +22423ms] [18]0x4 , 2006/01/01 00:00:00 ,     25914 , src/fpcmain.c , 963 , 0
+[BOOTTRACE +22430ms] [19]0x4 , 2006/01/01 00:00:00 ,     25914 , src/fpcmain.c , 963 , 0
+[BOOTTRACE +22436ms] **************************************************
+[BOOTTRACE +22441ms] PiE-OS --- Personal Information & Entertainment - Operating System
+[BOOTTRACE +22447ms] Copyright (c) 1996-2001 by Matsushita Electric Industrial Co., Ltd.
+[BOOTTRACE +22453ms]   DVD Recorder DMR5x Series System Version : 3060NP (2006/04/27)
+[BOOTTRACE +22459ms]     Factory System Version = 3060NP
+[BOOTTRACE +22462ms]           1394avc.a Ver2.17(2006/02/09) : 1394AVC
+[BOOTTRACE +22467ms]            lnx_dd.a Ver2.01(2005/10/26) : 1394dd
+[BOOTTRACE +22472ms]               hsb.a Ver2.01(2005/09/12) : 1394lib
+[BOOTTRACE +22476ms]            fpc.a V7.1R12.1 (2006/04/27) : FPC(FrontPanelCommunication)
+[BOOTTRACE +22483ms]              log.a Ver1.77 (2006/02/13) : LOG Module
+[BOOTTRACE +22488ms]           ptk.a(M6) 2.2.06 (2006/01/17) : PiE-Toolkit
+[BOOTTRACE +22493ms]            timer.a V4.70.2 (2006/02/26) : Timer
+[BOOTTRACE +22497ms]        TitleSort.a Ver1.00 (2005/08/27) : Title Sort Module
+[BOOTTRACE +22503ms]          tuner.a V7.1R13.2 (2006/03/02) : Tuner I/F
+[BOOTTRACE +22508ms]            vbisl.a V2.0R21 (2005/12/26) : Vbisl Driver
+[BOOTTRACE +22513ms]             avin.a Ver0.82 (2006/02/14) : AVIN Lib.(mv3base)
+[BOOTTRACE +22519ms]         cd_core.a Ver 5.02 (2005/09/14) : CD/VCD CoreSoft
+[BOOTTRACE +22524ms]            davis.a ver2.10 (2006/01/16) : DAVIS
+[BOOTTRACE +22529ms]       decoder.a(DCS) Ver3.10 2005/12/16 : Decorder System Control
+[BOOTTRACE +22535ms]  decoder.a(DCR) DCR Ver2.120 2005/11/30 : DecorderVideoRecording
+[BOOTTRACE +22541ms]          decoder.a Ver0.49 (2005/05/20) : Decorder CD
+[BOOTTRACE +22546ms]    decoder.a(DCO) Ver0.083 (2006/02/17) : Decorder AVOUT
+[BOOTTRACE +22551ms]     decoder.a(DCV) Ver0.23 (2005/12/26) : M6xxx-Series Decorder DVD-Video
+[BOOTTRACE +22558ms]          decoder.a Ver0.73 (2005/11/21) : Decorder Video-CD
+[BOOTTRACE +22563ms]     decoder.a(DCA) Ver0.16 (2005/10/07) : M7xxx-Series Decorder DVD-Audio
+[BOOTTRACE +22570ms]          decoder.a Ver0.49 (2005/10/04) : Decorder MP3
+[BOOTTRACE +22575ms]          decoder.a Ver0.08 (2004/05/21) : Decorder SD MPEG2
+[BOOTTRACE +22581ms]          decoder.a Ver0.03 (2005/05/23) : Decorder GDP3
+[BOOTTRACE +22586ms]              dml.a Ver1.00 (2004/10/20) : DiscManagementLibrary
+[BOOTTRACE +22592ms]              dvdcore.a v0.200(06/02/27) : DVD-Video/AudioCoreSoft
+[BOOTTRACE +22598ms]            dvdcore_ext.a v1.2(05/11/18) : DVD-Video/AudioCoreSoft
+[BOOTTRACE +22604ms]          dvr_core.a Ver0.75(2006/01/24) : DVR CORE
+[BOOTTRACE +22609ms]          dvr_ifo.a Ver0.02 (2003/10/22) : RTR_IFO Manager
+[BOOTTRACE +22614ms]                                                                                                                                                                
+[BOOTTRACE +22630ms]                                                                                              SRISC VerMv3SriscDrs-v0.90r037 (2005/10/11) : ENCODER-SRISC
+[BOOTTRACE +22643ms]                                                                                                                                                                
+[BOOTTRACE +22658ms]                                                                                           ERISC VerMv3RomEriscRAM-v0.90r010 (2005/11/07) : ENCODER-ERISC
+[BOOTTRACE +22672ms]               eif.a Ver0.08(2005/11/08) : Encoder I/F
+[BOOTTRACE +22677ms]              evp.a Ver0.07 (2004/06/08) : EVP Lib.
+[BOOTTRACE +22681ms]            fcore.a Ver0.25 (2006/01/10) : Finalize Core Module
+[BOOTTRACE +22687ms]             flib.a Ver0.28 (2005/12/06) : Finalize-Library.
+[BOOTTRACE +22693ms]         fs.a       Ver0.72a(2006/02/08) : File System (VDM Ver.0.92base)
+[BOOTTRACE +22700ms]         fs.a(HDFS) Ver0.80 (2006/02/07) : File System (HDFS)
+[BOOTTRACE +22705ms]         fs.a(UDF)  Ver0.12 (2005/08/31) : File System (UDF)
+[BOOTTRACE +22711ms]            ftrec.a Ver0.10 (2005/11/01) : FTREC
+[BOOTTRACE +22715ms]        gem_engine.a Ver0.57(2005/10/31) : G-Guide M/W
+[BOOTTRACE +22720ms]              iic.a Ver3.04 (2005/09/29) : IIC Lib.
+[BOOTTRACE +22725ms]         input.a 3.0.5(M6)  (2005/12/19) : PiE Input
+[BOOTTRACE +22730ms]              irq.a Ver0.22 (2005/09/05) : IRQ Lib
+[BOOTTRACE +22734ms]        jpg_core.a Ver4.131 (2005/12/15) : JPEG CoreSoft
+[BOOTTRACE +22740ms]        ld_gen.a Ver 0.14.0 (2005/10/28) : LD_gen - generic file loader
+[BOOTTRACE +22746ms]                lda.a Ver0.28 2005/08/25 : DVD-AUDIO Loader
+[BOOTTRACE +22752ms]      loader_vcd.a Ver 0.13 (2005/08/25) : Loder VCD/CD-DA
+[BOOTTRACE +22757ms]             ldg.a Ver 0.08 (2004/05/21) : Loder SD MPEG2
+[BOOTTRACE +22762ms]             ldm.a Ver 0.13 (2005/08/23) : Loder MP3
+[BOOTTRACE +22767ms]             ldr.a ver 0.203(2005/10/12) : RAM Loader
+[BOOTTRACE +22772ms]             ldu.a Ver 0.12 (2005/08/25) : Loader Guide MP3
+[BOOTTRACE +22778ms]                ldv.a v0.100(2005/12/28) : DVDVideo Loader
+[BOOTTRACE +22783ms]              mbm.a Ver1.48 (2005/11/24) : Memory Back UP System
+[BOOTTRACE +22789ms]        mcm.a ver Ver 2.269 (2006/02/17) : MCM
+[BOOTTRACE +22793ms]           fmupre.a Ver0.28 (2005/11/30) : pre-update-firm
+[BOOTTRACE +22799ms]       mp3_core.a Ver1.09.5 (2005/11/30) : MP3 CoreSoft
+[BOOTTRACE +22804ms]            nfrom.a Ver0.33 (2005/12/06) : Nor-FROM Lib.
+[BOOTTRACE +22809ms]            nmi.a Ver 0.7.0 (2005/12/20) : NMI Handler Lib.
+[BOOTTRACE +22814ms]           robust.a Ver0.038(2003/12/26) : Robust
+[BOOTTRACE +22819ms]             rtscdd.a K0.54 (2006/04/19) : RTSD
+[BOOTTRACE +22823ms]     rtsdauth.a Ver0.15-MV3 (2005/12/14) : Copyright
+[BOOTTRACE +22828ms]           serial.a Ver0.33 (2005/06/28) : Debug Serial
+[BOOTTRACE +22833ms]       sys_boot.a Ver6.0.082(2006/02/17) : sys_boot(M6)
+[BOOTTRACE +22838ms]           sys_cd.a Ver 7.07(2006/01/30) : CD Media App
+[BOOTTRACE +22843ms]    sys_cntl.a Ver6.0.174.03(2006/03/14) : sys_cntl(M6)
+[BOOTTRACE +22849ms]        sys_dvdv.a Ver 1.054(2005/11/02) : M6 :DVD-Video System App 
+[BOOTTRACE +22855ms]        sys_epg.a Ver1.04.16(2006/02/13) : EPG App. (M6:JPN:DVD.HDD)
+[BOOTTRACE +22862ms]    sys_fact.a Ver.M6.077.02(2006/03/22) : Fact App.
+[BOOTTRACE +22867ms]      sys_fip.a Ver1.004.01 (2006/03/02) : FL&OSD Control
+[BOOTTRACE +22872ms]         sys_font.a Ver1.58 (2005/10/21) : sys_font
+[BOOTTRACE +22877ms]       sys_guibar.a Ver2.31 (2006/01/27) : GUIbar Lib (M6)
+[BOOTTRACE +22882ms]     sys_init.a Ver0.163.001(2006/02/23) : Initial Setting(M6Series)
+[BOOTTRACE +22889ms]                                                                                                                                                                
+[BOOTTRACE +22904ms]                                                                                         sys_media.a Ver2.275.6740S_6930S.02 (2006/03/14) : SYS_MEDIA
+[BOOTTRACE +22918ms]        sys_mp3.a Ver 0.48.0(2005/09/28) : MP3 Media App
+[BOOTTRACE +22923ms]          sys_msg.a Ver0.52 (2006/02/10) : MSG TASK(M6Series)
+[BOOTTRACE +22929ms] sys_navi.a Ver 1.03.135.01 (2006/03/02) : navi-gui app.
+[BOOTTRACE +22934ms]         sys_net.a Ver 0.003(2005/09/26) : Network App.(M6)
+[BOOTTRACE +22940ms]    sys_rsv.a Ver1.02.127.02(2006/03/14) : TimerREC App.(M6:JPN:DVD.HDD)
+[BOOTTRACE +22947ms]       sys_serv.a Ver.M6.026(2005/02/21) : Serv App.
+[BOOTTRACE +22951ms]      sys_text.a Ver6.0.007 (2006/02/17) : Soft-Keyboard
+[BOOTTRACE +22957ms]       sys_tun.a Ver0.393.01(2006/02/20) : Tuner App.(M6)
+[BOOTTRACE +22962ms]             time.a V7.0R03 (2005/12/15) : Clock & Calendar
+[BOOTTRACE +22968ms]          version.a Ver0.27  (2004/9/08) : Version Display Lib.
+[BOOTTRACE +22974ms]        wincap.a 4.0.4(M6)  (2005/11/29) : PiE WinCAP
+[BOOTTRACE +22978ms]                 kernel.a Ver 2005/10/11 : Kernel(M6_MV3Base) V2.0-1-5
+[BOOTTRACE +22985ms]          Dub_core.a Ver0.26(2006/01/19) : Dub_core
+[BOOTTRACE +22990ms]              itc.a Ver0.93 (2005/08/30) : itc
+[BOOTTRACE +22994ms]             avrec.a Ver0.13(2005/11/14) : AVREC
+[BOOTTRACE +22998ms]      decoder_jpg.a 0.11.0  (2005/12/02) : Decoder JPEG
+[BOOTTRACE +23004ms]        decoder_thu.a 1.04  (2005/12/06) : Thumbnail(MV3)
+[BOOTTRACE +23009ms]         fs.a(SDM)  Ver1.35 (2005/10/25) : File System (SDM)
+[BOOTTRACE +23014ms]    sys_app_lib.a Ver6.0.312(2006/02/17) : sys_app_lib(M6)
+[BOOTTRACE +23020ms]                gda.a Ver0.93 2005/09/07 : UD Audio Playback
+[BOOTTRACE +23025ms] [SYS_BOOT]FPC_init... 
+[BOOTTRACE +23027ms] [SYS_CNTL]SYS_CNTL_InitDeckMode
+[BOOTTRACE +23030ms] [SYS_CNTL]SYS_CNTL_InitDeckMode completed.
+[BOOTTRACE +23035ms] [FPC]fpc_ChangeKeyCodeInit 
+[BOOTTRACE +23037ms] [FPC]FPC_ReciveTASK() : 00 41 20 01 00 00 27 06 00 02 00 00 00 00 00 91 
+[BOOTTRACE +23044ms] [SYS_BOOT]FPC_GetPowerOnReason 0x41 0x0 0x0
+[BOOTTRACE +23048ms] [SYS_BOOT]RegionCode(EEPROM) [0x04]
+[BOOTTRACE +23051ms] [FPC]FPC_ReciveTASK() : 65 41 07 4D 31 C5 60 00 00 00 00 00 00 00 00 50 
+[BOOTTRACE +23058ms] [FPC]FPC_ReciveTASK() : 7D 00 70 52 41 00 00 05 00 02 02 05 11 02 00 A1 
+[BOOTTRACE +23065ms] [SYS_BOOT]Timer Version [022]
+[BOOTTRACE +23068ms] [FPC]num = 1 size=390 [0x0 0x2 0x3 0x52 0x43]
+[BOOTTRACE +23072ms] [FPC]num = 0 size=390 [0x0 0x2 0x2 0x52 0x41]
+[BOOTTRACE +23076ms] [SYS_BOOT]ITC_init
+[BOOTTRACE +23078ms] [SYS_BOOT]ITC_init success. 
+[BOOTTRACE +23081ms] [SYS_BOOT]reading system info on EEPROM ... ok
+[BOOTTRACE +23085ms] [SYS_BOOT]H/W System  = M6930LB
+[BOOTTRACE +23088ms] [SYS_BOOT]model_code=0x07
+[BOOTTRACE +23091ms] [SYS_BOOT]market_code=PL(0x04)
+[BOOTTRACE +23094ms] [SYS_BOOT]OptionCode  = 0x31 0xC5 0x60 0x00 0x00 0x00
+[BOOTTRACE +23099ms] [SYS_BOOT]H/W Version = 0x0003
+[BOOTTRACE +23102ms] [SYS_CNTL]WakeupReason:[POWER(1)]
+[BOOTTRACE +23105ms] [SYS_CNTL]KeyAction   :NEW[15] OLD[0]
+[BOOTTRACE +23108ms] [SYS_BOOT]AVOUT_init
+[BOOTTRACE +23110ms] [DCS] AVDEC LSI : MV3BASE IROM 32bit
+[BOOTTRACE +23114ms] [DCS] DDR ALIGN_CHECK start....
+[BOOTTRACE +23117ms] [DCS] ALIGN OK 
+[BOOTTRACE +23118ms] [DCS] AVDEC version: avdd=0x5091621, ucode iop=0x809a, setup=0x8097, patch=0xbfc1
+[BOOTTRACE +23170ms] [SYS_BOOT]AVOUT_init() success. 
+[BOOTTRACE +23174ms] [SYS_BOOT]SYS_APP_VoiceGuide_Init()
+[BOOTTRACE +23177ms] [SYS_BOOT]SYS_APP_VoiceGuide_Init() success. 
+[BOOTTRACE +23181ms] [SYS_BOOT]DCJ_Init
+[BOOTTRACE +23183ms] [SYS_BOOT]DCJ_Init() success. 
+[BOOTTRACE +23322ms] [DCS]dco_api :AVOUT_A_Mute_ID: ON_ID[ALL]=2 , [EE]=0
+[BOOTTRACE +23337ms] [DCS]dco_api :AVOUT_V_Mute: onoff=1
+[BOOTTRACE +23354ms] [SYS_BOOT]CAV_Init1394
+[BOOTTRACE +23356ms] [SYS_BOOT]CAV_Init1394 success. 
+[BOOTTRACE +23359ms] [SYS_BOOT]AVIN_init
+[BOOTTRACE +23361ms] [AVIN]0: *** AVIN_init() *** (FF=1,CI=0,TN=2)
+[BOOTTRACE +23366ms] [AVIN] tsk_stat avin0010 inside_v0010 callback0010
+[BOOTTRACE +23372ms] [AVIN]0: avin_hw_input_source_select(SOURCE_TUNER,L/R,0) end.
+[BOOTTRACE +23378ms] [AVIN]1: avin_hw_input_source_select(SOURCE_TUNER,L/R,0) end.
+[BOOTTRACE +23384ms] [AVIN]0: *** AVIN_init() END ***
+[BOOTTRACE +23387ms] [SYS_BOOT]AVIN_init() success. 
+[BOOTTRACE +23390ms] [SYS_BOOT]CAV:N/PAL
+[BOOTTRACE +23392ms] [SYS_BOOT]TIM_Init
+[BOOTTRACE +23394ms] [1394avc]ctl: HSB_ini completion 
+[BOOTTRACE +23397ms] [AVIN]0: set nr->3 [0:off 1:on 2:fdown 3:lv1 4:lv2 5:lv3 6:lv4 7:lv5]
+[BOOTTRACE +23404ms] [DC0]dco_subseq_v_S1s2 call TUN_SelectS1S2: param0=1
+[BOOTTRACE +23421ms] [SYS_BOOT]TUN_Init
+[BOOTTRACE +23425ms] [FPC]FPC_ReciveTASK() : 60 00 01 02 01 00 00 01 00 00 02 05 11 02 00 7F 
+[BOOTTRACE +23432ms] [FPC]FPC_ReciveTASK() : 61 00 00 01 00 01 00 00 00 00 02 05 11 02 00 7D 
+[BOOTTRACE +23539ms] [SYS_BOOT]TUN_Init() success. 
+[BOOTTRACE +23542ms] [SYS_BOOT]VBISL_Task_Init() success
+[BOOTTRACE +23546ms] :::SYS_RSV::: >> nfrom read
+[BOOTTRACE +23548ms] [SYS_CNTL]UION_CH->LAST_CH(81)
+[BOOTTRACE +23551ms] [SYS_TUN]cntl_tuner == 0
+[BOOTTRACE +23554ms] [SYS_TUN]sys_tun_Tuner_Exe_ChangeChannel(chan_index == 81, recorder_id == 0, cntl_tuner == 0)
+[BOOTTRACE +23582ms] [DCS]dco_api :AVOUT_A_Mute_ID: ON_ID[ALL]=2 , [EE]=8
+[BOOTTRACE +23601ms] [AVIN]0: avin_set_now_state() state = STATE_CHG_CHANNEL(2).
+[BOOTTRACE +23607ms] [AVIN] 0_Prefilter = 1
+[BOOTTRACE +23610ms] [TIM]TIM_ChangeChannel(129 0) 
+[BOOTTRACE +23656ms] [SYS_BOOT]MBM_Init() success.
+[BOOTTRACE +23659ms] [SYS_BOOT]VDM_Init() 
+[BOOTTRACE +23742ms] [SDCD] sdcd_insrmv_check:SD Card inserted 
+[BOOTTRACE +23920ms] [AVIN]0: avin_set_now_state() state = STATE_NORMAL(0).
+[BOOTTRACE +23925ms] [AVIN]0: avin_set_now_state() source = SOURCE_LINE(1).
+[BOOTTRACE +23931ms] [AVIN]0: avin_hw_input_source_select(SOURCE_LINE,L/R,0) end.
+[BOOTTRACE +23936ms] [SDCD] === This Card Spec ==== 
+[BOOTTRACE +23939ms] .Card type:2(condition:3) wp:0
+[BOOTTRACE +23942ms] .capacity:3c4000[LBA](2021654528Byte) . transfer speed:25000[Kbps]
+[BOOTTRACE +23949ms] .RCA:2 . Bus Width:4(current) 4(support)
+[BOOTTRACE +23953ms] .Multi Max Block Len Read:2[SECT] / Write:2[SECT]
+[BOOTTRACE +24222ms] [AVIN] target:0 input:0x0 --IIC send error retry 3 all err
+[BOOTTRACE +24228ms] System assert!! File:src/avin_funcs_com.c Line:3756 Err:0
+[BOOTTRACE +24234ms] [AVIN]0: set nr->3 [0:off 1:on 2:fdown 3:lv1 4:lv2 5:lv3 6:lv4 7:lv5]
+[BOOTTRACE +24241ms] [DCS]dco_api :avout_API_MuteID = 0x10
+[BOOTTRACE +24244ms] [DCS]dco_api :AVOUT_A_Mute_ID: OFF_ID[ALL]=2 , [EE]=8
+[BOOTTRACE +24250ms] [AVIN]0: set nr->0 [0:off 1:on 2:fdown 3:lv1 4:lv2 5:lv3 6:lv4 7:lv5]
+[BOOTTRACE +24362ms] [1394avc]ctl: ICN_TASK start completion 
+[BOOTTRACE +24367ms] [1394avc]ctl: CAV_TASK start completion 
+[BOOTTRACE +24372ms] [1394avc]ctl: TAV_TASK start completion 
+[BOOTTRACE +25182ms] [DCS]dco_api :avout_API_MuteID = 0x8
+[BOOTTRACE +25190ms] [DCS]dco_api :AVOUT_A_Mute_ID: OFF_ID[ALL]=2 , [EE]=0
+[BOOTTRACE +25373ms] [1394avc]ctl: BUS Reset Start 
+[BOOTTRACE +25376ms] [1394avc]ctl: BUS Reset END 
+[BOOTTRACE +25379ms] [1394avc]ctl: GETEUI64 OK 
+[BOOTTRACE +25382ms] [1394avc]cold_start: GET EUI64_H = 0080459a 
+[BOOTTRACE +25386ms] [1394avc]cold_start: GET EUI64_L = f1a9801b 
+[BOOTTRACE +25390ms] [1394avc]CTL: Equipment recognition end.
+[BOOTTRACE +25845ms] [RTSD] Device Reset Occurred(0x62900) 
+[BOOTTRACE +25853ms] [RTSD] HDD already spin-up 
+[BOOTTRACE +25884ms] [RTSD] HDD Auto Spin up Mode 
+[BOOTTRACE +25889ms] [RTSD] HDD Model No.  : SAMSUNG HM251JI                          
+[BOOTTRACE +25896ms] [RTSD] HDD Stream feature Not Suport
+[BOOTTRACE +26019ms] [RTSD] Drive Revision : S211 
+[BOOTTRACE +26022ms] [RTSD] Drive Region   : 4    
+[BOOTTRACE +26026ms] [RTSD] Drive Model    : 12
+[BOOTTRACE +26028ms] [RTSD] Temperature    : 17
+[BOOTTRACE +26031ms] [RTSD] CPRM DK: 1, CPPM DK: 1
+[BOOTTRACE +26034ms] [RTSD] HDD Model No.  : SAMSUNG HM251JI                          
+[BOOTTRACE +26040ms] [RTSD] HDD Stream feature Not Suport
+[BOOTTRACE +26044ms] [HDFS]  HDD Offset Sect:0x20000 - Byte:268435456
+[BOOTTRACE +26103ms] [AVIN]0: AVIN task Delayed 3
+[BOOTTRACE +26152ms] [SYS_BOOT]VDM_Init() success. 
+[BOOTTRACE +26155ms] [SYS_BOOT]SDM_Init() success.
+[BOOTTRACE +26204ms] [SYS_BOOT]SDM_Mount() success.
+[BOOTTRACE +26207ms] [SYS_APP]VoiceGuideData[/HDDEX/UDA_M6930_H_JPN_V006] not found! (0x90000001)
+[BOOTTRACE +26216ms] [SYS_BOOT]SYS_APP_VoiceGuide_CheckData() NG!
+[BOOTTRACE +26223ms] System assert!! File:src/sys_boot.c Line:5239 Err:0
+[BOOTTRACE +26228ms] [SYS_BOOT]sys_boot_init_dev_io_pre() success
+[BOOTTRACE +26232ms] [SYS_BOOT]DVR_Init_Core 
+[BOOTTRACE +26346ms] [GEM]:ARCHIVE > load_epgdata_frombackup  start 
+[BOOTTRACE +26352ms] [GEM] ARC: EPG_DATA Not Found
+[BOOTTRACE +26354ms] [GEM]:ARCHIVE > err happened at arc_get_arcfile : err number = -12 
+[BOOTTRACE +26361ms] [GEM] EPGS: Rcv FINISH_FLASH_READ
+[BOOTTRACE +26372ms] [1394avc]ctl: cav_Equipment_Notification() SYS_APP_DV_DISCONNECT
+[BOOTTRACE +26825ms] [SYS_BOOT]DVR_Init_Core() success. 
+[BOOTTRACE +26829ms] [SYS_BOOT]DVD_Core_Init 
+[BOOTTRACE +26831ms] [SYS_BOOT]CD_Init 
+[BOOTTRACE +26833ms] [SYS_BOOT]MP3_Core_Init
+[BOOTTRACE +26835ms] [SYS_BOOT]DUB_Init_Core() success. 
+[BOOTTRACE +26839ms] [JPG_CORE]JPG_CoreInit Success.
+[BOOTTRACE +26842ms] [SYS_BOOT]JPG_CoreInit() success. 
+[BOOTTRACE +26846ms] [SYS_BOOT]REC_InitDevice
+[BOOTTRACE +26848ms] [EIF]0:EIF >>  SDM report(SDRAM OFFSET ADDRESS) = 00000301,
+[BOOTTRACE +26854ms] [EIF]0:EIF >>  SDM report(VBB) = 014C,
+[BOOTTRACE +26858ms] [EIF]0:EIF >>  SDM report(ABB) = 005A,
+[BOOTTRACE +26861ms] [GEM] RSTR: READ FILE OPEN ERR(-12)
+[BOOTTRACE +26865ms] [SYS_BOOT]REC_InitDevice() success. 
+[BOOTTRACE +26875ms] [AVIN]0: set nr->1 [0:off 1:on 2:fdown 3:lv1 4:lv2 5:lv3 6:lv4 7:lv5]
+[BOOTTRACE +26884ms] [REC]0:time over = 4772msec
+[BOOTTRACE +26887ms] [REC]0: -- FREE -> FREE(no cpp info) -- 
+[BOOTTRACE +26960ms] [FPC]FPC_ReciveTASK() : 61 00 00 01 00 01 00 00 00 00 00 00 00 00 00 63 
+[BOOTTRACE +26968ms] [FPC]FPC_ReciveTASK() : 60 00 01 02 01 00 00 01 00 00 00 00 00 00 00 65 
+[BOOTTRACE +27076ms] [SYS_CNTL]TimeZone 9 
+[BOOTTRACE +27084ms] [FPC]FPC_ReciveTASK() : 61 00 00 01 00 01 00 00 00 00 00 00 00 00 00 63 
+[BOOTTRACE +27100ms] [SYS_CNTL][Now Time 2000/1/1 0:0:0]
+[BOOTTRACE +27104ms] [SYS_CNTL]sys_app_nfrom size 9044
+[BOOTTRACE +27107ms] [SYS_CNTL]EASY SETTING[0]
+[BOOTTRACE +27121ms] [SYS_CNTL]set standby status = 0
+[BOOTTRACE +27125ms] [SYS_CNTL]SYS_CNTL_SetSysState[INIT]
+[BOOTTRACE +27128ms] [SYS_CNTL]SYS_CNTL_set_pow_status(SYS_CNTL_POW_OFF_TO_ON)
+[BOOTTRACE +27134ms] [SYS_APP]MainOptionCode
+[BOOTTRACE +27136ms] [SYS_APP]btn     : A[0x0033] B[0x0092] C[0xFFFF] D[0xFFFF]
+[BOOTTRACE +27143ms] [SYS_APP]rcmode  : [0x00]
+[BOOTTRACE +27145ms] [SYS_APP]gui     : A[ 0x10 ] B[ 0x20 ] C[ 0xFF ] D[ 0xFF ]
+[BOOTTRACE +27151ms] [SYS_APP]chmode  : [0x02]
+[BOOTTRACE +27153ms] [SYS_APP]MainOptionCode(gui) setting[0xFF] Nothing!
+[BOOTTRACE +27159ms] [SYS_APP]MainOptionCode(gui) setting[0xFF] Nothing!
+[BOOTTRACE +27186ms] [SYS_CNTL]sys_cntl_set_pow_attr attr[0x1] state[0]
+[BOOTTRACE +27192ms] [FPC]fpc_ChangeKeyCodeInit 
+[BOOTTRACE +27195ms] [FPC]fpc_ChangeKeyCodeWrite beforeKey = 161 : afterKey = 85 
+[BOOTTRACE +27201ms] [FPC]fpc_ChangeKeyCodeWrite beforeKey = 160 : afterKey = 86 
+[BOOTTRACE +27207ms] [SYS_CNTL]SYS_APP_Datatype_t [ 214 <= 255 ]
+[BOOTTRACE +27292ms] [SYS_CNTL].[SYS_TUN]TUN_Ext_Input_AudioModeNotify(line_audio == 1)
+[BOOTTRACE +27380ms] [SYS_TUN]4::::::::::AVIN_AudioSetLR(0)::::::::::
+[BOOTTRACE +27386ms] [SYS_TUN]TUN_Ext_Input_AudioModeNotify(line_audio == 1)
+[BOOTTRACE +27392ms] [SYS_TUN]STEREO
+[BOOTTRACE +27393ms] [SYS_TUN]MUTE_OFF
+[BOOTTRACE +27395ms] :::SYS_RSV::: >> sys_rsv init
+[BOOTTRACE +27399ms] :::SYS_RSV::: >> nowtime[2000/1/1 0:00.00]
+[BOOTTRACE +27403ms] :::SYS_RSV::: >> precision[0x2] gmtoff[9] is_dst[0]
+[BOOTTRACE +27408ms] :::SYS_RSV::: >> nfrom read
+[BOOTTRACE +27414ms] [SYS_EXTD] nfrom back up ok.
+[BOOTTRACE +27419ms] [FPC]FPC_ReciveTASK() : 10 00 00 01 00 01 00 00 00 00 00 00 00 00 00 12 
+[BOOTTRACE +27427ms] :::SYS_RSV::: >> _InitTask() T.SET=OFF
+[BOOTTRACE +27440ms] :::SYS_RSV::: >> nfrom back up ok.
+[BOOTTRACE +27445ms] :::SYS_RSV::: >> _Restore() task-id = 120
+[BOOTTRACE +27449ms] :::SYS_RSV::: >> sys_rsv init success.
+[BOOTTRACE +27462ms] [SYS_APP]MainOptionCode
+[BOOTTRACE +27465ms] [SYS_APP]btn     : A[0x0033] B[0x0092] C[0xFFFF] D[0xFFFF]
+[BOOTTRACE +27475ms] [SYS_APP]rcmode  : [0x00]
+[BOOTTRACE +27478ms] [SYS_APP]gui     : A[ 0x10 ] B[ 0x20 ] C[ 0xFF ] D[ 0xFF ]
+[BOOTTRACE +27484ms] [SYS_APP]chmode  : [0x02]
+[BOOTTRACE +27486ms] [GEM] STR: Rcv HOST_AREA(FFFFFFFF)
+[BOOTTRACE +27489ms] [GEM] STR: Rcv HOST_AREA(FFFFFFFF)
+[BOOTTRACE +27493ms] [GEM] EPGS: Rcv FLASH_WRITE_DISABLE
+[BOOTTRACE +27497ms] [GEM] EPGS: @@@ Data Recv End @@@
+[BOOTTRACE +27500ms] [GEM] STR: Rcv STORAGE_ENABLE(0)
+[BOOTTRACE +27503ms] [SYS_TUN]SYS_TUN_Set_Epg_Callback() called.
+[BOOTTRACE +27507ms] :::SYS_RSV::: >> update rsv list (0)
+[BOOTTRACE +27511ms] [SYS_EPG] EXTD Init has already called.
+[BOOTTRACE +27515ms] [SYS_EPG] sys_epg init success.
+[BOOTTRACE +27580ms] [SYS_EPG] -----------------------
+[BOOTTRACE +27584ms] [SYS_EPG] EPG Download Time Window Refresh !
+[BOOTTRACE +27589ms] [SYS_EPG] start time(10:0) 
+[BOOTTRACE +27591ms] [SYS_EPG] end time  (19:0) 
+[BOOTTRACE +27594ms] [SYS_EPG] -----------------------
+[BOOTTRACE +27597ms] [SYS_CNTL]sys_cntl_CatchScreen() success. task ID 111(sys_fip)
+[BOOTTRACE +27604ms] [SYS_CNTL]VDM_ReportDrv: 2
+[BOOTTRACE +27606ms] [SYS_CNTL]sys_cntl_ChangeKeyAction
+[BOOTTRACE +27610ms] [DCS]dco_api :AVOUT_AV_Select: video=0, audio=0
+[BOOTTRACE +27642ms] [DCS]dco_api :AVOUT_A_Mute_ID: ON_ID[ALL]=3 , [EE]=0
+[BOOTTRACE +27760ms] [DCS]AVDEC Interrupt           :RELOADDONE
+[BOOTTRACE +27765ms] [DCS]AVDEC Interrupt           :RELOADDONE
+[BOOTTRACE +27795ms] [SYS_EPG] [download]_DL_CheckTime -> [type:5]
+[BOOTTRACE +27816ms] [DCS]AVDEC Interrupt           :BBFLUSHST
+[BOOTTRACE +27909ms] [DCO]Audio Output = L/R.
+[BOOTTRACE +27976ms] [DCS]dco_api :avout_API_MuteID = 0x1
+[BOOTTRACE +28012ms] [DCS]dco_api :AVOUT_A_Mute_ID: OFF_ID[ALL]=2 , [EE]=0
+[BOOTTRACE +28110ms] [SYS_CNTL]SetDeckModeStateEx task[sys_cntl(103)] drive[DVD] rec.drive[DVD] deck[READ(0x00000040)]
+[BOOTTRACE +28120ms] [SYS_TUN]SYS_TUN_SysCntl_DeckMode_Callback()
+[BOOTTRACE +28124ms] [SYS_CNTL]SYS_CNTL_tmp_AVOUT_A_eeOutputMode 3 0 3 3
+[BOOTTRACE +28130ms] [SYS_CNTL]sys_cntl_isNowTimerRec 1
+[BOOTTRACE +28133ms] [SYS_CNTL]SYS_CNTL_RESUME_TASK = 0
+[BOOTTRACE +28137ms] [SYS_CNTL]SYS_CNTL_SRAM_RESUME_FLAG = 0
+[BOOTTRACE +28140ms] [DCS]dco_api :avout_API_MuteID = 0x2
+[BOOTTRACE +28259ms] [DCS]dco_api :AVOUT_A_Mute_ID: OFF_ID[ALL]=0 , [EE]=0
+[BOOTTRACE +28276ms] [DCS]dco_api :AVOUT_V_Mute: onoff=0
+[BOOTTRACE +28293ms] [SYS_CNTL]SYS_CNTL_UION_FLAG(1)
+[BOOTTRACE +29540ms] [FS]VDM_ReportMediaEx : slot_id = 0 disc = 1 protect = 0 format = 7
+[BOOTTRACE +29567ms] [MCM |7.45]MCM_resource_Open tid:103 drive:0x02
+[BOOTTRACE +29572ms] [FS]VDM_ReportMediaEx : slot_id = 0 disc = 1 protect = 0 format = 7
+[BOOTTRACE +29580ms] [SYS_CNTL]VDM_OpenDisc(2): OK[0]
+[BOOTTRACE +29583ms] [FS]VDM_ReportMediaEx : slot_id = 0 disc = 1 protect = 0 format = 7
+[BOOTTRACE +29590ms] [SYS_CNTL]VDM_ReportMediaEx(): vdm_res=0x0 
+[BOOTTRACE +29594ms] [SYS_CNTL] disc  =0x00000001  protect=0x00000000 
+[BOOTTRACE +29599ms] [SYS_CNTL] format=0x00000007  authent=0x00000004 
+[BOOTTRACE +29604ms] [SYS_CNTL]HDD is_writable=0x0
+[BOOTTRACE +29607ms] [SYS_CNTL]sys_cntl_ReportMedia. drv_id=0x0
+[BOOTTRACE +29611ms] [SYS_CNTL]apptask_bit=0x200 last_media=0x5a is_writable=0 
+[BOOTTRACE +29617ms] [MCM |7.45]MCM_resource_Open tid:103 drive:0x00
+[BOOTTRACE +29621ms] [MCM |7.45]MCM_resource_Open core[1]:0x00000100
+[BOOTTRACE +29626ms] [FS]VDM_ReportMediaEx : slot_id = 0 disc = 1 protect = 0 format = 7
+[BOOTTRACE +29632ms] [MCM |7.45]MCM_resource_Close tid:103 drive:0x00
+[BOOTTRACE +29637ms] [MCM |7.45]MCM_resource_Close core[1]:0x00000100
+[BOOTTRACE +29642ms] [SYS_CNTL]SYS_CNTL_SRAM_TIMERREC_STATUS 0
+[BOOTTRACE +29646ms] [SYS_CNTL]SysCntl:start_plugin_ATP 
+[BOOTTRACE +29649ms] [SYS_CNTL].. FPC_StartCommunication()
+[BOOTTRACE +29653ms] [SYS_CNTL]SYS_CNTL_set_pow_status(SYS_CNTL_POW_ON)
+[BOOTTRACE +29658ms] [SYS_CNTL]Q task[3(3)] datatype[DV_STAT(57)]
+[BOOTTRACE +29662ms] [SYS_CNTL]sys_cntl_media_dv_disconnect():
+[BOOTTRACE +29666ms] [SYS_CNTL]Q task[sys_fip(111)] datatype[FIP_MODE(158)]
+[BOOTTRACE +29671ms] [SYS_CNTL]SYS_CNTL_FIP_MODE sys_cntl_avout_v_output. =0 0
+[BOOTTRACE +29677ms] [DCS]dco_api :AVOUT_AV_Select: video=0, audio=0
+[BOOTTRACE +29712ms] [SYS_CNTL]### HDD WAKEUP ###
+[BOOTTRACE +29715ms] [SYS_CNTL]Q task[sys_fip(111)] datatype[READY(16)]
+[BOOTTRACE +29720ms] [SYS_CNTL]Q task[sys_tun(125)] datatype[READY(16)]
+[BOOTTRACE +29725ms] [SYS_CNTL]Q task[sys_rsv(120)] datatype[TIMER_REC_CONTROL(157)]
+[BOOTTRACE +29731ms] [SYS_CNTL]SYS_APP_TSET_DISABLE 0 0 
+[BOOTTRACE +29735ms] [SYS_CNTL]sys_cntl_ChangeKeyAction
+[BOOTTRACE +29738ms] [SYS_CNTL]Q task[sys_rsv(120)] datatype[READY(16)]
+[BOOTTRACE +29743ms] [SYS_CNTL]Q task[sys_epg(106)] datatype[READY(16)]
+[BOOTTRACE +29748ms] [SYS_CNTL]Q task[sys_net(117)] datatype[READY(16)]
+[BOOTTRACE +29753ms] [SYS_CNTL]Q task[sys_pcdv(119)] datatype[READY(16)]
+[BOOTTRACE +29758ms] [SYS_CNTL]Q task[sys_fip(111)] datatype[FIP_MODE(158)]
+[BOOTTRACE +29764ms] [SYS_CNTL]SYS_CNTL_FIP_MODE sys_cntl_avout_v_output. =0 1
+[BOOTTRACE +29769ms] [DCS]dco_api :AVOUT_AV_Select: video=1, audio=0
+[BOOTTRACE +29846ms] [SYS_CNTL]Q task[sys_cntl(103)] datatype[PLUGIN_ATP_START(146)]
+[BOOTTRACE +29852ms] [SYS_CNTL]SYS_CNTL_PLUGIN_ATP_START
+[BOOTTRACE +29856ms] [SYS_CNTL]SYS_CNTL_SetSysState[TRANSITION]
+[BOOTTRACE +29860ms] [SYS_CNTL]sys_cntl_manage_apl_start 112 (sys_init)
+[BOOTTRACE +29865ms] [SYS_APP]MainOptionCode
+[BOOTTRACE +29868ms] [SYS_APP]btn     : A[0x0033] B[0x0092] C[0xFFFF] D[0xFFFF]
+[BOOTTRACE +29874ms] [SYS_APP]rcmode  : [0x00]
+[BOOTTRACE +29876ms] [SYS_APP]gui     : A[ 0x10 ] B[ 0x20 ] C[ 0xFF ] D[ 0xFF ]
+[BOOTTRACE +29882ms] [SYS_APP]chmode  : [0x02]
+[BOOTTRACE +29886ms] [SYS_CNTL]Q task[sys_init(112)] datatype[READY(16)]
+[BOOTTRACE +29891ms] [SYS_CNTL]SYS_CNTL_SetSysState[TRANSITION_CANCEL]
+[BOOTTRACE +29896ms] [SYS_CNTL]SYS_CNTL_Mnavi_AppNotify id[14] type[0]
+[BOOTTRACE +29901ms] [SYS_CNTL]Q task[sys_cntl(103)] datatype[MNAVI_APPNOTIFY(212)]
+[BOOTTRACE +29907ms] [SYS_CNTL]sys_cntl_Mnavi_AppNotify_Exe REJECT! unknown id [0]
+[BOOTTRACE +29915ms] :::SYS_RSV::: >> TRecHalt1(COMMON) halt set success id = 112
+[BOOTTRACE +29921ms] :::SYS_RSV::: >> TRecHalt2(COMMON) halt set success id = 112
+[BOOTTRACE +29927ms] [SYS_CNTL]setgui start. tsk=112 mode=6
+[BOOTTRACE +29931ms] [SYS_CNTL]SYS_CNTL_SetGuiMode task ID=0x70 set_gui_fg=0 mode=6
+[BOOTTRACE +29937ms] [SYS_CNTL]Q task[sys_init(112)] datatype[SET_GUI_MODE(134)]
+[BOOTTRACE +29943ms] [SYS_CNTL]callback pre (id==0x70) send=0x75
+[BOOTTRACE +29949ms] send=0x6f
+[BOOTTRACE +29982ms]  pre_end
+[BOOTTRACE +29983ms] [SYS_CNTL]Q task[sys_fip(111)] datatype[FIP_MODE(158)]
+[BOOTTRACE +29990ms] [SYS_CNTL]SYS_CNTL_FIP_MODE sys_cntl_avout_v_output. =1 0
+[BOOTTRACE +29995ms] [DCS]dco_api :AVOUT_AV_Select: video=0, audio=0
+[BOOTTRACE +30004ms] [SYS_CNTL]sys_cntl_CatchScreen() success. task ID 112(sys_init)
+[BOOTTRACE +30113ms] [SYS_CNTL]Q task[sys_init(112)] datatype[SET_GUI_MODE2(135)]
+[BOOTTRACE +30119ms] [SYS_CNTL]SetGuiMode mode=6 task ID=0x70(sys_init) Catch taskID=0x70(sys_init)
+[BOOTTRACE +30127ms] [DCS]dco_api :AVOUT_AV_Select: video=8, audio=1
+[BOOTTRACE +30282ms] [DCS]dco_api :AVOUT_A_Mute_ID: ON_ID[ALL]=1 , [EE]=0
+[BOOTTRACE +30345ms] [DCO]Audio Output = L/R.
+[BOOTTRACE +30395ms] [DCS]dco_api :avout_API_MuteID = 0x1
+[BOOTTRACE +30528ms] [DCS]dco_api :AVOUT_A_Mute_ID: OFF_ID[ALL]=0 , [EE]=0
+[BOOTTRACE +30630ms] [SYS_CNTL]SYS_CNTL_SetSysState[VV]
+[BOOTTRACE +30634ms] [SYS_CNTL]EndGuiFunc not execute! gui_task[112] RunGuiFuncBit[0x00]
+[BOOTTRACE +30640ms] [SYS_CNTL]callback after (id==0x70) send=0x75
+[BOOTTRACE +30645ms] send=0x7d
+[BOOTTRACE +30646ms] [SYS_TUN]SYS_TUN_SysCntl_GuiMode_Callback()
+[BOOTTRACE +30651ms] [SYS_CNTL]SYS_CNTL_cancel_tmp_AVOUT_A_eeOutputMode 0 0 1 0
+[BOOTTRACE +30657ms] send=0x6f
+[BOOTTRACE +30658ms]  after mid
+[BOOTTRACE +30659ms] [SYS_CNTL]PTK_IsWindowEventTask(70) fg=1,tsk_stat=4
+[BOOTTRACE +30665ms]  end
+[BOOTTRACE +30665ms] [SYS_CNTL]setgui end. tsk=112
+[BOOTTRACE +30668ms] [FPC]fpc_ChangeKeyCodeWrite beforeKey = 161 : afterKey = 85 
+[BOOTTRACE +30675ms] [FPC]fpc_ChangeKeyCodeWrite beforeKey = 160 : afterKey = 86 
+[BOOTTRACE +31115ms] [SYS_APP]SYS_APP_VoiceGuide_Play(0,0x00000000,1)
+[BOOTTRACE +31120ms] [SYS_APP]SYS_APP_VoiceGuide_Play(0) GDA_Open error! ret=1
+[BOOTTRACE +37913ms] [FPC]FPC_ReciveTASK() : 08 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+[BOOTTRACE +42913ms] [FPC]FPC_ReciveTASK() : 08 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+[BOOTTRACE] UART: bytes=25084 first_byte=10416us ferr=1 perr=0 ovf=NO | SW_rel=NO
+[BOOTTRACE] ADC0_SWUART: min=0.04V max=3.30V (low=0 hiz=0.04..3.30V n=8998) | CtrlEdges: NSW5V=2 TXD=2 XRESET=2 (logged=6)
+  [CTRL +4647922us] NSW5V=1 TXD=1 XRESET=0
+  [CTRL +4669727us] NSW5V=0 TXD=1 XRESET=0
+  [CTRL +4670573us] NSW5V=0 TXD=0 XRESET=0
+  [CTRL +6415720us] NSW5V=1 TXD=0 XRESET=0
+  [CTRL +6415845us] NSW5V=1 TXD=1 XRESET=0
+  [CTRL +6592115us] NSW5V=1 TXD=1 XRESET=1
+@P7501_BOOT_CLASS verdict=CLEAN_MAIN_OK build=3060NP stage2=1 avout_ok=1 vmute0=1 ntsc=0 rsv_ok=1 hdd_fail=1 bgo_err=0 fpc_err=0 fpc_to=0 iic_err=1 odd_err=0 op7f_cnt=0 op7f=NONE
+BOOTTRACE: OK
+@P7501_RES cmd=BOOTTRACE status=OK code=0 elapsed_us=90022629
+PANADIGA> 

@@ -39,6 +39,6 @@ Sempre comece lendo `.agents/skills/panadiga-skill-orchestrator/SKILL.md`:
 - `.agents/skills/panadiga-bench-automation-and-headless/SKILL.md`
 - `.agents/skills/panadiga-nvram-unbrick/SKILL.md`
 - `.agents/skills/panadiga-pico-flashing/SKILL.md`
-- `.agents/skills/panadiga-pico-heartbeat-and-guided-ops/SKILL.md`
 - `.agents/skills/panadiga-anti-trap-geometry-verification/SKILL.md`
 - `.agents/skills/panadiga-opensource-firmware-dev/SKILL.md`
+- `.agents/skills/panadiga-functional-math-and-patterns/SKILL.md`

@@ -1,0 +1,1971 @@
+=== UARTSTREAM: PIO1 115200 8N1 (window=120000 ms, hold=0 ms) ===
+DDR CHECK: OK
+
+Chip select = 1
+F/E Address = 0x90202000 , Drive(compress) Size = 0xACC50
+uncompress dst=90202000 len=160000 src=84080040 len=acc01
+HEADER:5627DD54, DECOMP:5627DD54
+
+F/E reset release finish ...
+
+***** Loader ver0.61 [06/03/06] *****
+***** normal mode *****
+
+!!! start fmu to read & exec fvu. !!!
+wait 1 second.
+*** timer correspond initialize ***
+startup reason = [41]
+Main hung-up time changed 255[s].
+*** RTSC Initialize ***
+[RTSD] ATAPI Software Reset 
+error! startup reason is invalid.
+UARTSTREAM: OK (527 bytes, framing_err=1, overflow=NO)
+@P7501_RES cmd=UARTSTREAM status=OK code=0 elapsed_us=120020690
+PANADIGA> 
+=== WINDOW 2: UARTSTREAM 90000 NOPULL ===
+=== UARTSTREAM: PIO1 115200 8N1 (window=90000 ms, hold=0 ms) ===
+DDR CHECK: OK
+
+Chip select = 1
+F/E Address = 0x90202000 , Drive(compress) Size = 0xACC50
+uncompress dst=90202000 len=160000 src=84080040 len=acc01
+HEADER:5627DD54, DECOMP:5627DD54
+
+F/E reset release finish ...
+
+***** Loader ver0.61 [06/03/06] *****
+***** normal mode *****
+*** RTSC Initialize ***
+[RTSD] ATAPI Software Reset 
+[RTSD] HDD spin-up error (80000404)
+miniboot : system assert!!
+[RTSD] === IDE HOST ERROR === ( E8000000 )
+*** ATAPI DEVICE ERROR
+CDB  [FF EC 00 00 00 00 00 00 00 00 00 00] 
+Reg[00 00 00 00 00 00 00 : Err SecC SecN CylL CylH D/H Status] 
+H_STAT [E8] T_STAT [0]
+[RTSD] SRST Command Set
+[RTSD] Reset Failed !! (80000407)
+[RTSD] HDD spin-up error (80000404)
+miniboot : system assert!!
+[RTSD] === IDE HOST ERROR === ( E8000000 )
+*** ATAPI DEVICE ERROR
+CDB  [FF EC 00 00 00 00 00 00 00 00 00 00] 
+Reg[00 00 00 00 00 00 00 : Err SecC SecN CylL CylH D/H Status] 
+H_STAT [E8] T_STAT [0]
+[RTSD] SRST Command Set
+[RTSD] Reset Failed !! (80000407)
+[RTSD] HDD spin-up error (80000404)
+miniboot : system assert!!
+[RTSD] === IDE HOST ERROR === ( E8000000 )
+*** ATAPI DEVICE ERROR
+CDB  [FF EC 00 00 00 00 00 00 00 00 00 00] 
+Reg[00 00 00 00 00 00 00 : Err SecC SecN CylL CylH D/H Status] 
+H_STAT [E8] T_STAT [0]
+[RTSD] SRST Command Set
+[RTSD] Reset Failed !! (80000407)
+HDD_MAX_LBA get failed[0xE8000000].
+mainsoft data is invalid, so set update flag.
+[nfrom] file_no[17],skip(0),non_skip(1),erase(0),new_write(0).
+
+!!! start fmu to read & exec fvu. !!!
+wait 1 second.
+*** timer correspond initialize ***
+startup reason = [41]
+Main hung-up time changed 255[s].
+Read fvu program from Update-Disk to 0x90400000.
+SD card check start
+SD init start...
+[SDCD] sdcd_insrmv_check:SD Card inserted 
+[SDCD] === This Card Spec ==== 
+[09]Card type:2(condition:3) wp:0
+[09]capacity:3c4000[LBA](2021654528Byte) [09] transfer speed:25000[Kbps]
+[09]RCA:2 [09] Bus Width:4(current) 4(support)
+[09]Multi Max Block Len Read:2[SECT] / Write:2[SECT]
+SD = 0x3C4000[LBA]
+... SD init end
+FAT Mount ID = 0x1
+FAT Open Old File ID = 0xC8
+treat as SD.
+File ID[0xC8] seek to 0xB1800.
+File ID[0xC8] read to 0x90400000(size=0x40000).
+cheking for fvu program check-sum[0x316E619].
+[nfrom] file_no[17],skip(0),non_skip(1),erase(0),new_write(0).
+success to read fvu program from Update-Disc.
+[RTSD] Device Reset Occurred(0x62900) 
+X(80062900)X(80023a00)X(80023a00)X(80023a00)
+*** start fvu ***
+***** Fvu ver0.61 [05/11/01] *****
+*** RTSC Initialize ***
+[RTSD] ATAPI Software Reset 
+[STAGE2] SATA HDD boot ('F'->FVU)...
+SD init start...
+[SDCD] sdcd_insrmv_check:SD Card inserted 
+[SDCD] === This Card Spec ==== 
+[09]Card type:2(condition:3) wp:0
+[09]capacity:3c4000[LBA](2021654528Byte) [09] transfer speed:25000[Kbps]
+[09]RCA:2 [09] Bus Width:4(current) 4(support)
+[09]Multi Max Block Len Read:2[SECT] / Write:2[SECT]
+SD = 0x3C4000[LBA]
+... SD init end
+[RTSD] HDD already spin-up 
+[RTSD] HDD Auto Spin up Mode 
+[STAGE2] HDD MAX LBA=0x1D1C5970
+UARTSTREAM: OK (2971 bytes, framing_err=1, overflow=NO)
+@P7501_RES cmd=UARTSTREAM status=OK code=0 elapsed_us=90000611
+PANADIGA> 
+=== WINDOW 3: UARTSTREAM 90000 NOPULL ===
+=== UARTSTREAM: PIO1 115200 8N1 (window=90000 ms, hold=0 ms) ===
+uncompress dst=57000000 len=c6692c src=94000040 len=5e7c2a
+HEADER:0094407E, DECOMP:0094407E
+
+[STAGE2] Boot MAIN @ 0x57000000
+[nfrom] DeviceInfo(EEPROM : 8Kbit)
+**************************************************
+[ftrec]Simple obstacle history
+[ftrec]Running time  : 16006 [s]
+[ftrec]Fault history : 20
+[ftrec]NAND-FROM read error! Fault history clear!
+--------------------------------------------------
+kind, tick, running, other1, other2, other3
+[ 0]0x4 , 2006/01/01 00:00:00 ,     16006 , src/sys_fip_fpc_exe.c , 3158 , 0
+[ 1]0x4 , 2006/01/01 00:00:00 ,     16001 , src/sys_fip_osd_tools.c , 1174 , 0
+[ 2]0x4 , 2006/01/01 00:00:00 ,     16001 , src/fpcmain.c , 963 , 0
+[ 3]0x4 , 2006/01/01 00:00:00 ,     16001 , src/sys_fip_osd_tools.c , 1174 , 0
+[ 4]0x4 , 2006/01/01 00:00:00 ,     16001 , src/fpcmain.c , 963 , 0
+[ 5]0x4 , 2006/01/01 00:00:00 ,     16001 , src/sys_fip_osd_tools.c , 1174 , 0
+[ 6]0x4 , 2006/01/01 00:00:00 ,     15999 , src/fpcmain.c , 963 , 0
+[ 7]0x4 , 2006/01/01 00:00:00 ,     15999 , src/fpcmain.c , 963 , 0
+[ 8]0x4 , 2006/01/01 00:00:00 ,     15999 , src/fpcmain.c , 963 , 0
+[ 9]0x4 , 2006/01/01 00:00:00 ,     15999 , src/fpcmain.c , 963 , 0
+[10]0x4 , 2006/01/01 00:00:00 ,     15999 , src/fpcmain.c , 963 , 0
+[11]0x4 , 2006/01/01 00:00:00 ,     15999 , src/fpcmain.c , 963 , 0
+[12]0x4 , 2006/01/01 00:00:00 ,     15999 , src/fpcmain.c , 963 , 0
+[13]0x4 , 2006/01/01 00:00:00 ,     15999 , src/fpcmain.c , 963 , 0
+[14]0x4 , 2006/01/01 00:00:00 ,     15999 , src/fpcmain.c , 963 , 0
+[15]0x4 , 2006/01/01 00:00:00 ,     15999 , src/fpcmain.c , 963 , 0
+[16]0x4 , 2006/01/01 00:00:00 ,     15999 , src/mbm_task.c , 146 , 0
+[17]0x4 , 2006/01/01 00:00:00 ,     15997 , src/mbm_task.c , 146 , 0
+[18]0x4 , 2006/01/01 00:00:00 ,     15994 , src/fpcmain.c , 963 , 0
+[19]0x4 , 2006/01/01 00:00:00 ,     15994 , src/mbm_main.c , 425 , 0
+**************************************************
+PiE-OS --- Personal Information & Entertainment - Operating System
+Copyright (c) 1996-2001 by Matsushita Electric Industrial Co., Ltd.
+  DVD Recorder DMR5x Series System Version : 3410PQ (2006/10/20)
+    Factory System Version = 3410PQ
+          1394avc.a Ver2.17(2006/02/09) : 1394AVC
+           lnx_dd.a Ver2.01(2005/10/26) : 1394dd
+              hsb.a Ver2.01(2005/09/12) : 1394lib
+           fpc.a V7.0R122.8 (2006/6/20) : FPC(FrontPanelCommunication)
+             log.a Ver1.76 (2005/12/05) : LOG Module
+          ptk.a(M6) 2.2.06 (2006/01/17) : PiE-Toolkit
+           timer.a V4.62.4 (2006/02/15) : Timer
+       TitleSort.a Ver1.00 (2005/08/27) : Title Sort Module
+       tuner.a V7.0R104.11 (2006/05/30) : Tuner I/F
+           vbisl.a V2.0R21 (2005/12/26) : Vbisl Driver
+            avin.a Ver0.82 (2006/06/30) : AVIN Lib.(mv3base)
+        cd_core.a Ver 5.02 (2005/09/14) : CD/VCD CoreSoft
+           davis.a ver2.10 (2006/01/16) : DAVIS
+      decoder.a(DCS) Ver3.10 2005/12/16 : Decorder System Control
+ decoder.a(DCR) DCR Ver2.120 2005/11/30 : DecorderVideoRecording
+         decoder.a Ver0.49 (2005/05/20) : Decorder CD
+   decoder.a(DCO) Ver0.078 (2006/04/17) : Decorder AVOUT
+    decoder.a(DCV) Ver0.23 (2005/12/26) : M6xxx-Series Decorder DVD-Video
+         decoder.a Ver0.73 (2005/11/21) : Decorder Video-CD
+    decoder.a(DCA) Ver0.16 (2005/10/07) : M7xxx-Series Decorder DVD-Audio
+         decoder.a Ver0.49 (2005/10/04) : Decorder MP3
+         decoder.a Ver0.08 (2004/05/21) : Decorder SD MPEG2
+         decoder.a Ver0.42 (2006/01/24) : Decorder AVI
+             dml.a Ver1.00 (2004/10/20) : DiscManagementLibrary
+             dvdcore.a v0.190(06/01/27) : DVD-Video/AudioCoreSoft
+           dvdcore_ext.a v1.2(05/11/18) : DVD-Video/AudioCoreSoft
+        dvr_core.a Ver0.781(2006/05/24) : DVR CORE
+         dvr_ifo.a Ver0.02 (2003/10/22) : RTR_IFO Manager
+                                                                                                                                                                                                                                                            SRISC VerMv3SriscDrs-v0.90r037 (2005/10/11) : ENCODER-SRISC
+                                                                                                                                                                                                                                                         ERISC VerMv3RomEriscRAM-v0.90r010 (2005/11/07) : ENCODER-ERISC
+              eif.a Ver0.08(2005/11/08) : Encoder I/F
+             evp.a Ver0.07 (2004/06/08) : EVP Lib.
+           fcore.a Ver0.25 (2006/01/10) : Finalize Core Module
+            flib.a Ver0.28 (2005/12/06) : Finalize-Library.
+       fs.a       Ver0.70e (2006/07/05) : File System (VDM Ver.0.92base)
+        fs.a(HDFS) Ver0.80 (2006/02/07) : File System (HDFS)
+        fs.a(UDF)  Ver0.12 (2005/08/31) : File System (UDF)
+           ftrec.a Ver0.10 (2005/11/01) : FTREC
+             iic.a Ver3.04 (2005/09/29) : IIC Lib.
+        input.a 3.0.5(M6)  (2005/12/19) : PiE Input
+             irq.a Ver0.22 (2005/09/05) : IRQ Lib
+       jpg_core.a Ver4.131 (2005/12/15) : JPEG CoreSoft
+       ld_gen.a Ver 0.14.0 (2005/10/28) : LD_gen - generic file loader
+               lda.a Ver0.28 2005/08/25 : DVD-AUDIO Loader
+     loader_vcd.a Ver 0.13 (2005/08/25) : Loder VCD/CD-DA
+            ldg.a Ver 0.08 (2004/05/21) : Loder SD MPEG2
+            ldm.a Ver 0.13 (2005/08/23) : Loder MP3
+            ldr.a ver 0.203(2005/10/12) : RAM Loader
+               ldv.a v0.100(2005/12/28) : DVDVideo Loader
+             mbm.a Ver1.48 (2005/11/24) : Memory Back UP System
+       mcm.a ver Ver 2.264 (2005/12/19) : MCM
+          fmupre.a Ver0.28 (2005/11/30) : pre-update-firm
+      mp3_core.a Ver1.09.5 (2005/11/30) : MP3 CoreSoft
+           nfrom.a Ver0.33 (2005/12/06) : Nor-FROM Lib.
+          nmi.a Ver 0.10.0 (2006/04/14) : NMI Handler Lib.
+          robust.a Ver0.038(2003/12/26) : Robust
+            rtscdd.a K0.58 (2006/07/05) : RTSD
+    rtsdauth.a Ver0.15-MV3 (2005/12/14) : Copyright
+          serial.a Ver0.33 (2005/06/28) : Debug Serial
+   sys_boot.a Ver6.0.076.03(2006/03/14) : sys_boot(M6)
+          sys_cd.a Ver 7.06(2005/11/02) : CD Media App
+   sys_cntl.a Ver6.0.143.19(2006/05/12) : sys_cntl(M6)
+       sys_dvdv.a Ver 1.054(2005/11/02) : M6 :DVD-Video System App 
+     sys_epgeuro.a Ver0.314(2006/08/03) : sys_epgeuro
+   sys_fact.a Ver.M6.065.09(2006/06/10) : Fact App.
+     sys_fip.a Ver0.093.01 (2006/02/16) : FL&OSD Control
+        sys_font.a Ver1.58 (2005/10/21) : sys_font
+   sys_guibar.a Ver2.27.01 (2006/01/27) : GUIbar Lib (M6)
+    sys_init.a Ver0.128.003(2006/03/02) : Initial Setting(M6920)
+                                                                                                                                                                                                                                                              sys_media.a Ver2.266.6920.06 (2006/05/16) : SYS_MEDIA
+       sys_mp3.a Ver 0.48.0(2005/09/28) : MP3 Media App
+      sys_msg.a Ver0.46.01 (2006/03/23) : MSG TASK(M6Series)
+sys_navi.a Ver 1.03.122.06 (2006/03/17) : navi-gui app.
+   sys_rsv.a Ver1.02.103.10(2006/10/19) : TimerREC App.(M6:PAL:DVD.HDD)
+      sys_serv.a Ver.M6.025(2005/12/28) : Serv App.
+          sys_ss.a Ver0.18 (2005/11/28) : SYS_SS TASK
+     sys_text.a Ver6.0.006 (2006/01/11) : Soft-Keyboard
+      sys_tun.a Ver0.381.02(2006/03/14) : Tuner App.(M6)
+            time.a V7.0R03 (2005/12/15) : Clock & Calendar
+         version.a Ver0.27  (2004/9/08) : Version Display Lib.
+       wincap.a 4.0.4(M6)  (2005/11/29) : PiE WinCAP
+                kernel.a Ver 2005/10/11 : Kernel(M6_MV3Base) V2.0-1-5
+         Dub_core.a Ver0.24(2005/12/21) : Dub_core
+            avrec.a Ver0.13(2005/11/14) : AVREC
+     decoder_jpg.a 0.11.0  (2005/12/02) : Decoder JPEG
+       decoder_thu.a 1.04  (2005/12/06) : Thumbnail(MV3)
+       divx_core.a Ver1.41 (2006/05/08) : DIVX CoreSoft
+        fs.a(SDM)  Ver1.35 (2005/10/25) : File System (SDM)
+                                                                                                                                                                                                                                                               GuideEuro.a Ver0.315/0.55_03(2006/08/03) : GuideEuro
+sys_app_lib.a Ver6.0.270.03(2006/10/19) : sys_app_lib(M6)
+[SYS_BOOT]FPC_init... 
+[SYS_CNTL]SYS_CNTL_InitDeckMode
+[SYS_CNTL]SYS_CNTL_InitDeckMode completed.
+[SYS_CNTL]WakeupReason:[P50(11)]
+[SYS_CNTL]KeyAction   :NEW[15] OLD[0]
+[FPC]fpc_ChangeKeyCodeInit 
+[FPC]FPC_ReciveTASK() : 00 41 20 01 00 00 13 06 00 02 00 00 00 00 00 7D 
+[SYS_BOOT]FPC_GetPowerOnReason 0x41 0x20 0x0
+[SYS_BOOT]RegionCode(EEPROM) [0x04]
+[FPC]FPC_ReciveTASK() : 7F E4 01 01 00 00 14 06 00 02 00 00 00 00 00 81 
+[SYS_CNTL]FPC_CB_ReportEmergency(3)
+[SYS_CNTL]FPC_EMERGENCY_ERROR
+[FPC] !!- OPcode Emergency -!!
+:: Send ::
+  -- 0. task ID = 88 : Func No = 8 
+  --     data =  e5 17 07 4d 31 c5 60 00 00 00 00 04 00 00 00 00
+  -- 1. task ID = 88 : Func No = 7 
+  --     data =  e4 1f 00 19 19 fa 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 88 : Func No = 7 
+  --     data =  e2 06 01 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. task ID = 88 : Func No = 8 
+  --     data =  80 01 ff ff f7 ff ff ff ef ff ff ff 7f ff ff ff
+  -- 4. task ID = 0 : Func No = 0 
+  --     data =  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+:: Receive ::
+  -- 0. task ID = 88 : Func No = 9 
+  --     data =  0e 02 0d 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 1. task ID = 88 : Func No = 9 
+  --     data =  0e 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 0 : Func No = 0 
+  --     data =  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. task ID = 0 : Func No = 0 
+  --     data =  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 0 : Func No = 0 
+  --     data =  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+:: Receive Intr ::
+  -- 0. task ID = 0 : Func No = 0 
+  --     data =  65 e4 07 4d 31 c5 60 00 00 00 00 00 00 00 00 f3
+  -- 1. task ID = 0 : Func No = 0 
+  --     data =  7f e4 01 01 00 00 14 06 00 02 00 00 00 00 00 81
+  -- 2. task ID = 0 : Func No = 0 
+  --     data =  00 41 20 01 00 00 13 06 00 02 00 00 00 00 00 7d
+  -- 3. task ID = 0 : Func No = 0 
+  --     data =  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 0 : Func No = 0 
+  --     data =  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+:: Receive Task ::
+  -- 0. data =  7f e4 01 01 00 00 14 06 00 02 00 00 00 00 00 81
+  -- 1. data =  00 41 20 01 00 00 13 06 00 02 00 00 00 00 00 7d
+  -- 2. data =  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. data =  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. data =  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+System assert!! File:src/fpcmain.c Line:963 Err:0
+[FPC]FPC_ReciveTASK() : 65 E4 07 4D 31 C5 60 00 00 00 00 00 00 00 00 F3 
+[FPC]FPC_ReciveTASK() : 7D 00 70 52 41 00 00 00 00 02 02 05 11 02 00 9C 
+[SYS_BOOT]Timer Version [022]
+[FPC]num = 0 size=247 [0x0 0x2 0x8 0x48 0x41]
+[FPC]FPC_ReciveTASK() : 67 F0 04 11 00 06 86 36 00 00 00 00 00 00 00 2E 
+[SYS_BOOT]reading system info on EEPROM ... ok
+[SYS_BOOT]H/W System  = M6930LB
+[SYS_BOOT]model_code=0x07
+[SYS_BOOT]market_code=PL(0x04)
+[SYS_BOOT]OptionCode  = 0x31 0xC5 0x60 0x00 0x00 0x00
+[SYS_BOOT]H/W Version = 0x0003
+[FPC]FPC_ReciveTASK() : 7F 85 02 11 00 06 86 36 00 00 00 00 00 00 00 D9 
+[SYS_CNTL]FPC_CB_ReportEmergency(3)
+[SYS_CNTL]FPC_EMERGENCY_ERROR
+[FPC] !!- OPcode Emergency -!!
+:: Send ::
+  -- 0. task ID = 88 : Func No = 8 
+  --     data =  f9 0b 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 1. task ID = 88 : Func No = 7 
+  --     data =  85 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 88 : Func No = 8 
+  --     data =  e7 f0 04 11 01 06 00 00 00 00 00 00 00 00 00 00
+  -- 3. task ID = 88 : Func No = 8 
+  --     data =  fd 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 88 : Func No = 8 
+  --     data =  e5 17 07 4d 31 c5 60 00 00 00 00 04 00 00 00 00
+:: Receive ::
+  -- 0. task ID = 88 : Func No = 9 
+  --     data =  0e 02 0f 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 1. task ID = 88 : Func No = 9 
+  --     data =  0e 02 13 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 88 : Func No = 9 
+  --     data =  0e 02 03 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. task ID = 88 : Func No = 9 
+  --     data =  0e 02 0d 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 88 : Func No = 9 
+  --     data =  0e 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+:: Receive Intr ::
+  -- 0. task ID = 0 : Func No = 0 
+  --     data =  7f f9 02 11 00 06 86 36 00 00 00 00 00 00 00 4d
+  -- 1. task ID = 0 : Func No = 0 
+  --     data =  7f 85 02 11 00 06 86 36 00 00 00 00 00 00 00 d9
+  -- 2. task ID = 0 : Func No = 0 
+  --     data =  67 f0 04 11 00 06 86 36 00 00 00 00 00 00 00 2e
+  -- 3. task ID = 0 : Func No = 0 
+  --     data =  7d 00 70 52 41 00 00 00 00 02 02 05 11 02 00 9c
+  -- 4. task ID = 0 : Func No = 0 
+  --     data =  65 e4 07 4d 31 c5 60 00 00 00 00 00 00 00 00 f3
+:: Receive Task ::
+  -- 0. data =  7f 85 02 11 00 06 86 36 00 00 00 00 00 00 00 d9
+  -- 1. data =  67 f0 04 11 00 06 86 36 00 00 00 00 00 00 00 2e
+  -- 2. data =  7d 00 70 52 41 00 00 00 00 02 02 05 11 02 00 9c
+  -- 3. data =  65 e4 07 4d 31 c5 60 00 00 00 00 00 00 00 00 f3
+  -- 4. data =  7f e4 01 01 00 00 14 06 00 02 00 00 00 00 00 81
+System assert!! File:src/fpcmain.c Line:963 Err:0
+[FPC]FPC_ReciveTASK() : 7F F9 02 11 00 06 86 36 00 00 00 00 00 00 00 4D 
+[SYS_CNTL]FPC_CB_ReportEmergency(3)
+[SYS_CNTL]FPC_EMERGENCY_ERROR
+[FPC] !!- OPcode Emergency -!!
+:: Send ::
+  -- 0. task ID = 88 : Func No = 8 
+  --     data =  f9 0b 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 1. task ID = 88 : Func No = 7 
+  --     data =  85 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 88 : Func No = 8 
+  --     data =  e7 f0 04 11 01 06 00 00 00 00 00 00 00 00 00 00
+  -- 3. task ID = 88 : Func No = 8 
+  --     data =  fd 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 88 : Func No = 8 
+  --     data =  e5 17 07 4d 31 c5 60 00 00 00 00 04 00 00 00 00
+:: Receive ::
+  -- 0. task ID = 88 : Func No = 9 
+  --     data =  0e 02 0f 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 1. task ID = 88 : Func No = 9 
+  --     data =  0e 02 13 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 88 : Func No = 9 
+  --     data =  0e 02 03 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. task ID = 88 : Func No = 9 
+  --     data =  0e 02 0d 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 88 : Func No = 9 
+  --     data =  0e 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+:: Receive Intr ::
+  -- 0. task ID = 0 : Func No = 0 
+  --     data =  7f f9 02 11 00 06 86 36 00 00 00 00 00 00 00 4d
+  -- 1. task ID = 0 : Func No = 0 
+  --     data =  7f 85 02 11 00 06 86 36 00 00 00 00 00 00 00 d9
+  -- 2. task ID = 0 : Func No = 0 
+  --     data =  67 f0 04 11 00 06 86 36 00 00 00 00 00 00 00 2e
+  -- 3. task ID = 0 : Func No = 0 
+  --     data =  7d 00 70 52 41 00 00 00 00 02 02 05 11 02 00 9c
+  -- 4. task ID = 0 : Func No = 0 
+  --     data =  65 e4 07 4d 31 c5 60 00 00 00 00 00 00 00 00 f3
+:: Receive Task ::
+  -- 0. data =  7f f9 02 11 00 06 86 36 00 00 00 00 00 00 00 4d
+  -- 1. data =  7f 85 02 11 00 06 86 36 00 00 00 00 00 00 00 d9
+  -- 2. data =  67 f0 04 11 00 06 86 36 00 00 00 00 00 00 00 2e
+  -- 3. data =  7d 00 70 52 41 00 00 00 00 02 02 05 11 02 00 9c
+  -- 4. data =  65 e4 07 4d 31 c5 60 00 00 00 00 00 00 00 00 f3
+System assert!! File:src/fpcmain.c Line:963 Err:0
+[FPC]RCV TIMEOUT GATE=15
+[SYS_CNTL]FPC_CB_ReportEmergency(4)
+[SYS_CNTL]FPC_EMERGENCY_TIMEOUT
+System assert!! File:src/fpcmain.c Line:963 Err:0
+[SYS_CNTL]WakeupReason:[POWER(1)]
+[SYS_CNTL]KeyAction   :NEW[15] OLD[0]
+[SYS_BOOT]AVOUT_init
+[DCS] AVDEC LSI : MV3BASE IROM 32bit
+[DCS] DDR ALIGN_CHECK start....
+[DCS] ALIGN OK 
+[DCS] AVDEC version: avdd=0x5091622, ucode iop=0x809c, setup=0x8097, patch=0x57c
+[FPC]FPC_ReciveTASK() : 7F 9B 02 01 00 00 32 06 00 02 00 00 00 00 00 57 
+[SYS_CNTL]FPC_CB_ReportEmergency(3)
+[SYS_CNTL]FPC_EMERGENCY_ERROR
+[FPC] !!- OPcode Emergency -!!
+:: Send ::
+  -- 0. task ID = 9 : Func No = 7 
+  --     data =  81 00 00 00 00 00 22 00 00 00 00 00 00 00 00 00
+  -- 1. task ID = 88 : Func No = 7 
+  --     data =  a4 00 40 40 00 00 00 00 00 00 00 00 00 80 00 00
+  -- 2. task ID = 88 : Func No = 7 
+  --     data =  a3 00 00 c0 0f 84 8b 80 88 80 88 c4 8c 00 00 00
+  -- 3. task ID = 88 : Func No = 7 
+  --     data =  a9 00 00 02 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 88 : Func No = 7 
+  --     data =  81 00 00 00 01 00 00 00 00 00 00 00 00 00 00 00
+:: Receive ::
+  -- 0. task ID = 9 : Func No = 2 
+  --     data =  08 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 1. task ID = 88 : Func No = 9 
+  --     data =  0e 02 0f 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 88 : Func No = 9 
+  --     data =  0e 02 13 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. task ID = 88 : Func No = 9 
+  --     data =  0e 02 03 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 88 : Func No = 9 
+  --     data =  0e 02 0d 00 00 00 00 00 00 00 00 00 00 00 00 00
+:: Receive Intr ::
+  -- 0. task ID = 0 : Func No = 0 
+  --     data =  7f a9 01 01 00 00 32 06 00 02 00 00 00 00 00 64
+  -- 1. task ID = 0 : Func No = 0 
+  --     data =  7f 9b 02 01 00 00 32 06 00 02 00 00 00 00 00 57
+  -- 2. task ID = 0 : Func No = 0 
+  --     data =  4d 02 30 30 32 30 42 30 30 36 38 36 33 36 00 c0
+  -- 3. task ID = 0 : Func No = 0 
+  --     data =  7f f9 02 11 00 06 86 36 00 00 00 00 00 00 00 4d
+  -- 4. task ID = 0 : Func No = 0 
+  --     data =  7f 85 02 11 00 06 86 36 00 00 00 00 00 00 00 d9
+:: Receive Task ::
+  -- 0. data =  7f 9b 02 01 00 00 32 06 00 02 00 00 00 00 00 57
+  -- 1. data =  0e 0a 01 01 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 2. data =  0e 02 0f 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. data =  4d 02 30 30 32 30 42 30 30 36 38 36 33 36 00 c0
+  -- 4. data =  7f f9 02 11 00 06 86 36 00 00 00 00 00 00 00 4d
+System assert!! File:src/fpcmain.c Line:963 Err:0
+[FPC]FPC_ReciveTASK() : 7F A9 01 01 00 00 32 06 00 02 00 00 00 00 00 64 
+[SYS_CNTL]FPC_CB_ReportEmergency(3)
+[SYS_CNTL]FPC_EMERGENCY_ERROR
+[FPC] !!- OPcode Emergency -!!
+:: Send ::
+  -- 0. task ID = 9 : Func No = 7 
+  --     data =  81 00 00 00 00 00 22 00 00 00 00 00 00 00 00 00
+  -- 1. task ID = 88 : Func No = 7 
+  --     data =  a4 00 40 40 00 00 00 00 00 00 00 00 00 80 00 00
+  -- 2. task ID = 88 : Func No = 7 
+  --     data =  a3 00 00 c0 0f 84 8b 80 88 80 88 c4 8c 00 00 00
+  -- 3. task ID = 88 : Func No = 7 
+  --     data =  a9 00 00 02 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 88 : Func No = 7 
+  --     data =  81 00 00 00 01 00 00 00 00 00 00 00 00 00 00 00
+:: Receive ::
+  -- 0. task ID = 9 : Func No = 2 
+  --     data =  08 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 1. task ID = 88 : Func No = 9 
+  --     data =  0e 02 0f 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 88 : Func No = 9 
+  --     data =  0e 02 13 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. task ID = 88 : Func No = 9 
+  --     data =  0e 02 03 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 88 : Func No = 9 
+  --     data =  0e 02 0d 00 00 00 00 00 00 00 00 00 00 00 00 00
+:: Receive Intr ::
+  -- 0. task ID = 0 : Func No = 0 
+  --     data =  7f a9 01 01 00 00 32 06 00 02 00 00 00 00 00 64
+  -- 1. task ID = 0 : Func No = 0 
+  --     data =  7f 9b 02 01 00 00 32 06 00 02 00 00 00 00 00 57
+  -- 2. task ID = 0 : Func No = 0 
+  --     data =  4d 02 30 30 32 30 42 30 30 36 38 36 33 36 00 c0
+  -- 3. task ID = 0 : Func No = 0 
+  --     data =  7f f9 02 11 00 06 86 36 00 00 00 00 00 00 00 4d
+  -- 4. task ID = 0 : Func No = 0 
+  --     data =  7f 85 02 11 00 06 86 36 00 00 00 00 00 00 00 d9
+:: Receive Task ::
+  -- 0. data =  7f a9 01 01 00 00 32 06 00 02 00 00 00 00 00 64
+  -- 1. data =  7f 9b 02 01 00 00 32 06 00 02 00 00 00 00 00 57
+  -- 2. data =  0e 0a 01 01 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. data =  0e 02 0f 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. data =  4d 02 30 30 32 30 42 30 30 36 38 36 33 36 00 c0
+System assert!! File:src/fpcmain.c Line:963 Err:0
+[SYS_BOOT]AVOUT_init() success. 
+[SYS_BOOT]DCJ_Init
+[SYS_BOOT]DCJ_Init() success. 
+[DCS]dco_api :AVOUT_A_Mute_ID: ON_ID[ALL]=2 , [EE]=0
+[DCS]dco_api :AVOUT_V_Mute: onoff=1
+[SYS_BOOT]CAV_Init1394
+[SYS_BOOT]CAV_Init1394 success. 
+[SYS_BOOT]AVIN_init
+[AVIN]0: *** AVIN_init() *** (FF=1,CI=0,TN=2)
+[AVIN] tsk_stat avin0010 inside_v0010 callback0010
+[AVIN]0: avin_hw_input_source_select(SOURCE_TUNER,L/R,0) end.
+[AVIN]1: avin_hw_input_source_select(SOURCE_TUNER,L/R,0) end.
+[AVIN]0: *** AVIN_init() END ***
+[SYS_BOOT]AVIN_init() success. 
+[SYS_BOOT]CAV:N/PAL
+[SYS_BOOT]TIM_Init
+[1394avc]ctl: HSB_ini completion 
+[AVIN]0: AVIN task Delayed 1
+:: Receive ::
+  -- 0. task ID = 26 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 1. task ID = 9 : Func No = 2 
+  --     data =  08 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 88 : Func No = 9 
+  --     data =  0e 02 0f 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. task ID = 88 : Func No = 9 
+  --     data =  0e 02 13 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 88 : Func No = 9 
+  --     data =  0e 02 03 00 00 00 00 00 00 00 00 00 00 00 00 00
+[AVIN]0: AVIN task Delayed 3
+:: Receive Intr ::
+  -- 0. task ID = 0 : Func No = 0 
+  --     data =  7f e3 02 01 00 00 33 06 00 02 00 00 00 00 00 a0
+  -- 1. task ID = 0 : Func No = 0 
+  --     data =  7f fa 02 01 00 00 33 06 00 02 00 00 00 00 00 b7
+  -- 2. task ID = 0 : Func No = 0 
+  --     data =  7f a9 01 01 00 00 32 06 00 02 00 00 00 00 00 64
+  -- 3. task ID = 0 : Func No = 0 
+  --     data =  7f 9b 02 01 00 00 32 06 00 02 00 00 00 00 00 57
+  -- 4. task ID = 0 : Func No = 0 
+  --     data =  4d 02 30 30 32 30 42 30 30 36 38 36 33 36 00 c0
+:: Receive Task ::
+  -- 0. data =  7f fa 02 01 00 00 33 06 00 02 00 00 00 00 00 b7
+  -- 1. data =  7f a9 01 01 00 00 32 06 00 02 00 00 00 00 00 64
+  -- 2. data =  7f 9b 02 01 00 00 32 06 00 02 00 00 00 00 00 57
+  -- 3. data =  0e 0a 01 01 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. data =  0e 02 0f 00 00 00 00 00 00 00 00 00 00 00 00 00
+System assert!! File:src/fpcmain.c Line:963 Err:0
+[FPC]FPC_ReciveTASK() : 7F E3 02 01 00 00 33 06 00 02 00 00 00 00 00 A0 
+[SYS_CNTL]FPC_CB_ReportEmergency(3)
+[SYS_CNTL]FPC_EMERGENCY_ERROR
+[FPC] !!- OPcode Emergency -!!
+:: Send ::
+  -- 0. task ID = 26 : Func No = 8 
+  --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+  -- 1. task ID = 26 : Func No = 7 
+  --     data =  fa 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 9 : Func No = 7 
+  --     data =  81 00 00 00 00 00 22 00 00 00 00 00 00 00 00 00
+  -- 3. task ID = 88 : Func No = 7 
+  --     data =  a4 00 40 40 00 00 00 00 00 00 00 00 00 80 00 00
+  -- 4. task ID = 88 : Func No = 7 
+  --     data =  a3 00 00 c0 0f 84 8b 80 88 80 88 c4 8c 00 00 00
+[AVIN]0: AVIN task Delayed 2
+:: Receive ::
+  -- 0. task ID = 26 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 1. task ID = 9 : Func No = 2 
+  --     data =  08 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 88 : Func No = 9 
+  --     data =  0e 02 0f 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. task ID = 88 : Func No = 9 
+  --     data =  0e 02 13 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 88 : Func No = 9 
+  --     data =  0e 02 03 00 00 00 00 00 00 00 00 00 00 00 00 00
+:: Receive Intr ::
+  -- 0. task ID = 0 : Func No = 0 
+  --     data =  7f e3 02 01 00 00 33 06 00 02 00 00 00 00 00 a0
+  -- 1. task ID = 0 : Func No = 0 
+  --     data =  7f fa 02 01 00 00 33 06 00 02 00 00 00 00 00 b7
+  -- 2. task ID = 0 : Func No = 0 
+  --     data =  7f a9 01 01 00 00 32 06 00 02 00 00 00 00 00 64
+  -- 3. task ID = 0 : Func No = 0 
+  --     data =  7f 9b 02 01 00 00 32 06 00 02 00 00 00 00 00 57
+  -- 4. task ID = 0 : Func No = 0 
+  --     data =  4d 02 30 30 32 30 42 30 30 36 38 36 33 36 00 c0
+:: Receive Task ::
+  -- 0. data =  7f e3 02 01 00 00 33 06 00 02 00 00 00 00 00 a0
+  -- 1. data =  7f fa 02 01 00 00 33 06 00 02 00 00 00 00 00 b7
+  -- 2. data =  7f a9 01 01 00 00 32 06 00 02 00 00 00 00 00 64
+  -- 3. data =  7f 9b 02 01 00 00 32 06 00 02 00 00 00 00 00 57
+  -- 4. data =  0e 0a 01 01 00 00 00 00 00 00 00 00 00 00 00 00
+System assert!! File:src/fpcmain.c Line:963 Err:0
+[FPC]RCV TIMEOUT GATE=14
+[SYS_CNTL]FPC_CB_ReportEmergency(4)
+[SYS_CNTL]FPC_EMERGENCY_TIMEOUT
+System assert!! File:src/fpcmain.c Line:963 Err:0
+[DC0]dco_subseq_v_S1s2 call TUN_SelectS1S2: param0=1
+[FPC]FPC_ReciveTASK() : 7F DA 01 01 00 00 33 06 00 02 00 00 00 00 00 96 
+[SYS_CNTL]FPC_CB_ReportEmergency(3)
+[SYS_CNTL]FPC_EMERGENCY_ERROR
+[FPC] !!- OPcode Emergency -!!
+:: Send ::
+  -- 0. task ID = 26 : Func No = 7 
+  --     data =  da 72 01 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 1. task ID = 26 : Func No = 7 
+  --     data =  da 71 01 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 26 : Func No = 8 
+  --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+  -- 3. task ID = 26 : Func No = 7 
+  --     data =  fa 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 9 : Func No = 7 
+  --     data =  81 00 00 00 00 00 22 00 00 00 00 00 00 00 00 00
+:: Receive ::
+  -- 0. task ID = 26 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 1. task ID = 9 : Func No = 2 
+  --     data =  08 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 88 : Func No = 9 
+  --     data =  0e 02 0f 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. task ID = 88 : Func No = 9 
+  --     data =  0e 02 13 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 88 : Func No = 9 
+  --     data =  0e 02 03 00 00 00 00 00 00 00 00 00 00 00 00 00
+:: Receive Intr ::
+  -- 0. task ID = 0 : Func No = 0 
+  --     data =  7f da 01 01 00 00 33 06 00 02 00 00 00 00 00 96
+  -- 1. task ID = 0 : Func No = 0 
+  --     data =  7f da 01 01 00 00 33 06 00 02 00 00 00 00 00 96
+  -- 2. task ID = 0 : Func No = 0 
+  --     data =  7f e3 02 01 00 00 33 06 00 02 00 00 00 00 00 a0
+  -- 3. task ID = 0 : Func No = 0 
+  --     data =  7f fa 02 01 00 00 33 06 00 02 00 00 00 00 00 b7
+  -- 4. task ID = 0 : Func No = 0 
+  --     data =  7f a9 01 01 00 00 32 06 00 02 00 00 00 00 00 64
+[AVIN]0: AVIN task Delayed 8
+:: Receive Intr ::
+  -- 0. task ID = 0 : Func No = 0 
+  --     data =  7f da 01 01 00 00 33 06 00 02 00 00 00 00 00 96
+  -- 1. task ID = 0 : Func No = 0 
+  --     data =  7f da 01 01 00 00 33 06 00 02 00 00 00 00 00 96
+  -- 2. task ID = 0 : Func No = 0 
+  --     data =  7f e3 02 01 00 00 33 06 00 02 00 00 00 00 00 a0
+  -- 3. task ID = 0 : Func No = 0 
+  --     data =  7f fa 02 01 00 00 33 06 00 02 00 00 00 00 00 b7
+  -- 4. task ID = 0 : Func No = 0 
+  --     data =  7f a9 01 01 00 00 32 06 00 02 00 00 00 00 00 64
+:: Receive Task ::
+  -- 0. data =  7f da 01 01 00 00 33 06 00 02 00 00 00 00 00 96
+  -- 1. data =  7f da 01 01 00 00 33 06 00 02 00 00 00 00 00 96
+  -- 2. data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. data =  7f e3 02 01 00 00 33 06 00 02 00 00 00 00 00 a0
+  -- 4. data =  7f fa 02 01 00 00 33 06 00 02 00 00 00 00 00 b7
+System assert!! File:src/fpcmain.c Line:963 Err:0
+System assert!! File:src/ftrec_api.c Line:629 Err:0
+[FPC]FPC_ReciveTASK() : 7F FA 02 01 00 00 34 06 00 02 00 00 00 00 00 B8 
+[SYS_CNTL]FPC_CB_ReportEmergency(3)
+[SYS_CNTL]FPC_EMERGENCY_ERROR
+[FPC] !!- OPcode Emergency -!!
+:: Send ::
+  -- 0. task ID = 26 : Func No = 8 
+  --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+  -- 1. task ID = 26 : Func No = 7 
+  --     data =  fa 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 26 : Func No = 7 
+  --     data =  da 72 01 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. task ID = 26 : Func No = 7 
+  --     data =  da 71 01 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 26 : Func No = 8 
+  --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+:: Receive ::
+  -- 0. task ID = 26 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 1. task ID = 26 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 9 : Func No = 2 
+  --     data =  08 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. task ID = 88 : Func No = 9 
+  --     data =  0e 02 0f 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 88 : Func No = 9 
+  --     data =  0e 02 13 00 00 00 00 00 00 00 00 00 00 00 00 00
+[AVIN]0: AVIN task Delayed 8
+:: Receive Intr ::
+  -- 0. task ID = 0 : Func No = 0 
+  --     data =  7f e3 02 01 00 00 34 06 00 02 00 00 00 00 00 a1
+  -- 1. task ID = 0 : Func No = 0 
+  --     data =  7f fa 02 01 00 00 34 06 00 02 00 00 00 00 00 b8
+  -- 2. task ID = 0 : Func No = 0 
+  --     data =  7f da 01 01 00 00 33 06 00 02 00 00 00 00 00 96
+  -- 3. task ID = 0 : Func No = 0 
+  --     data =  7f da 01 01 00 00 33 06 00 02 00 00 00 00 00 96
+  -- 4. task ID = 0 : Func No = 0 
+  --     data =  7f e3 02 01 00 00 33 06 00 02 00 00 00 00 00 a0
+:: Receive Task ::
+  -- 0. data =  7f fa 02 01 00 00 34 06 00 02 00 00 00 00 00 b8
+  -- 1. data =  7f da 01 01 00 00 33 06 00 02 00 00 00 00 00 96
+  -- 2. data =  7f da 01 01 00 00 33 06 00 02 00 00 00 00 00 96
+  -- 3. data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. data =  7f e3 02 01 00 00 33 06 00 02 00 00 00 00 00 a0
+System assert!! File:src/fpcmain.c Line:963 Err:0
+System assert!! File:src/ftrec_api.c Line:629 Err:0
+[FPC]FPC_ReciveTASK() : 7F E3 02 01 00 00 34 06 00 02 00 00 00 00 00 A1 
+[SYS_CNTL]FPC_CB_ReportEmergency(3)
+[SYS_CNTL]FPC_EMERGENCY_ERROR
+[FPC] !!- OPcode Emergency -!!
+:: Send ::
+  -- 0. task ID = 26 : Func No = 8 
+  --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+  -- 1. task ID = 26 : Func No = 7 
+  --     data =  fa 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 26 : Func No = 7 
+  --     data =  da 72 01 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. task ID = 26 : Func No = 7 
+  --     data =  da 71 01 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 26 : Func No = 8 
+  --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+[1394avc]ctl: ICN_TASK start completion 
+[1394avc]ctl: CAV_TASK start completion 
+[1394avc]ctl: TAV_TASK start completion 
+:: Receive ::
+  -- 0. task ID = 26 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 1. task ID = 26 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 9 : Func No = 2 
+  --     data =  08 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. task ID = 88 : Func No = 9 
+  --     data =  0e 02 0f 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 88 : Func No = 9 
+  --     data =  0e 02 13 00 00 00 00 00 00 00 00 00 00 00 00 00
+[AVIN]0: AVIN task Delayed 7
+:: Receive Intr ::
+  -- 0. task ID = 0 : Func No = 0 
+  --     data =  7f e3 02 01 00 00 34 06 00 02 00 00 00 00 00 a1
+  -- 1. task ID = 0 : Func No = 0 
+  --     data =  7f fa 02 01 00 00 34 06 00 02 00 00 00 00 00 b8
+  -- 2. task ID = 0 : Func No = 0 
+  --     data =  7f da 01 01 00 00 33 06 00 02 00 00 00 00 00 96
+  -- 3. task ID = 0 : Func No = 0 
+  --     data =  7f da 01 01 00 00 33 06 00 02 00 00 00 00 00 96
+  -- 4. task ID = 0 : Func No = 0 
+  --     data =  7f e3 02 01 00 00 33 06 00 02 00 00 00 00 00 a0
+:: Receive Task ::
+  -- 0. data =  7f e3 02 01 00 00 34 06 00 02 00 00 00 00 00 a1
+  -- 1. data =  7f fa 02 01 00 00 34 06 00 02 00 00 00 00 00 b8
+  -- 2. data =  7f da 01 01 00 00 33 06 00 02 00 00 00 00 00 96
+  -- 3. data =  7f da 01 01 00 00 33 06 00 02 00 00 00 00 00 96
+  -- 4. data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+System assert!! File:src/fpcmain.c Line:963 Err:0
+System assert!! File:src/ftrec_api.c Line:629 Err:0
+[FPC]RCV TIMEOUT GATE=14
+[SYS_CNTL]FPC_CB_ReportEmergency(4)
+[SYS_CNTL]FPC_EMERGENCY_TIMEOUT
+System assert!! File:src/fpcmain.c Line:963 Err:0
+System assert!! File:src/ftrec_api.c Line:629 Err:0
+[SYS_BOOT]TUN_Init
+[FPC]FPC_ReciveTASK() : 7F E3 02 01 00 00 34 06 00 02 00 00 00 00 00 A1 
+[SYS_CNTL]FPC_CB_ReportEmergency(3)
+[SYS_CNTL]FPC_EMERGENCY_ERROR
+[FPC] !!- OPcode Emergency -!!
+:: Send ::
+  -- 0. task ID = 88 : Func No = 8 
+  --     data =  e3 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 1. task ID = 26 : Func No = 8 
+  --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+  -- 2. task ID = 26 : Func No = 7 
+  --     data =  fa 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00
+  -- 3. task ID = 26 : Func No = 7 
+  --     data =  da 72 01 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 26 : Func No = 7 
+  --     data =  da 71 01 00 00 00 00 00 00 00 00 00 00 00 00 00
+:: Receive ::
+  -- 0. task ID = 88 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 1. task ID = 26 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 26 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. task ID = 9 : Func No = 2 
+  --     data =  08 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 88 : Func No = 9 
+  --     data =  0e 02 0f 00 00 00 00 00 00 00 00 00 00 00 00 00
+:: Receive Intr ::
+  -- 0. task ID = 0 : Func No = 0 
+  --     data =  7f e3 02 01 00 00 34 06 00 02 00 00 00 00 00 a1
+  -- 1. task ID = 0 : Func No = 0 
+  --     data =  7f e3 02 01 00 00 34 06 00 02 00 00 00 00 00 a1
+  -- 2. task ID = 0 : Func No = 0 
+  --     data =  7f fa 02 01 00 00 34 06 00 02 00 00 00 00 00 b8
+  -- 3. task ID = 0 : Func No = 0 
+  --     data =  7f da 01 01 00 00 33 06 00 02 00 00 00 00 00 96
+  -- 4. task ID = 0 : Func No = 0 
+  --     data =  7f da 01 01 00 00 33 06 00 02 00 00 00 00 00 96
+:: Receive Task ::
+  -- 0. data =  7f e3 02 01 00 00 34 06 00 02 00 00 00 00 00 a1
+  -- 1. data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 2. data =  7f e3 02 01 00 00 34 06 00 02 00 00 00 00 00 a1
+  -- 3. data =  7f fa 02 01 00 00 34 06 00 02 00 00 00 00 00 b8
+  -- 4. data =  7f da 01 01 00 00 33 06 00 02 00 00 00 00 00 96
+System assert!! File:src/fpcmain.c Line:963 Err:0
+[FPC]RCV TIMEOUT GATE=14
+[SYS_CNTL]FPC_CB_ReportEmergency(4)
+[SYS_CNTL]FPC_EMERGENCY_TIMEOUT
+System assert!! File:src/fpcmain.c Line:963 Err:0
+System assert!! File:src/ftrec_api.c Line:629 Err:0
+[FPC]FPC_ReciveTASK() : 7F EC 01 01 00 00 35 06 00 02 00 00 00 00 00 AA 
+[SYS_CNTL]FPC_CB_ReportEmergency(3)
+[SYS_CNTL]FPC_EMERGENCY_ERROR
+[FPC] !!- OPcode Emergency -!!
+:: Send ::
+  -- 0. task ID = 88 : Func No = 8 
+  --     data =  ec 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 1. task ID = 88 : Func No = 8 
+  --     data =  e3 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 26 : Func No = 8 
+  --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+  -- 3. task ID = 26 : Func No = 7 
+  --     data =  fa 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 26 : Func No = 7 
+  --     data =  da 72 01 00 00 00 00 00 00 00 00 00 00 00 00 00
+:: Receive ::
+  -- 0. task ID = 88 : Func No = 9 
+  --     data =  0e 02 27 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 1. task ID = 88 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 26 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. task ID = 26 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 9 : Func No = 2 
+  --     data =  08 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+:: Receive Intr ::
+  -- 0. task ID = 0 : Func No = 0 
+  --     data =  7f ec 01 01 00 00 35 06 00 02 00 00 00 00 00 aa
+  -- 1. task ID = 0 : Func No = 0 
+  --     data =  7f e3 02 01 00 00 34 06 00 02 00 00 00 00 00 a1
+  -- 2. task ID = 0 : Func No = 0 
+  --     data =  7f e3 02 01 00 00 34 06 00 02 00 00 00 00 00 a1
+  -- 3. task ID = 0 : Func No = 0 
+  --     data =  7f fa 02 01 00 00 34 06 00 02 00 00 00 00 00 b8
+  -- 4. task ID = 0 : Func No = 0 
+  --     data =  7f da 01 01 00 00 33 06 00 02 00 00 00 00 00 96
+[AVIN]0: AVIN task Delayed 8
+[FPC]RCV TIMEOUT GATE=39
+[SYS_CNTL]FPC_CB_ReportEmergency(4)
+[SYS_CNTL]FPC_EMERGENCY_TIMEOUT
+System assert!! File:src/fpcmain.c Line:963 Err:0
+System assert!! File:src/ftrec_api.c Line:629 Err:0
+[SYS_BOOT]TUN_Init() success. 
+[DCS]dco_api :AVOUT_AV_Select: video=8, audio=1
+[DCS]dco_api :AVOUT_A_Mute_ID: ON_ID[ALL]=3 , [EE]=0
+[DCO]Audio Output = L/R.
+[DCS]dco_api :avout_API_MuteID = 0x1
+[DCS]dco_api :AVOUT_A_Mute_ID: OFF_ID[ALL]=2 , [EE]=0
+[AVIN]0: avin_set_now_state() sys tvsystem = TV_PAL(1).
+[AVIN]0: avin_set_now_state() det tvsystem = TV_PAL(1).
+[AVIN]0: avin_hw_input_source_select(SOURCE_TUNER,L/R,0) end.
+[1394avc]ctl: BUS Reset Start 
+[1394avc]ctl: BUS Reset END 
+[1394avc]ctl: GETEUI64 OK 
+[1394avc]cold_start: GET EUI64_H = 0080459a 
+[1394avc]cold_start: GET EUI64_L = f1a9801b 
+[1394avc]CTL: Equipment recognition end.
+[AVIN] target:0 input:0x0 --IIC send error retry 3 all err
+System assert!! File:src/avin_funcs_com.c Line:3756 Err:0
+[DCS]dco_api :AVOUT_AV_Select: video=0, audio=0
+[DCS]dco_api :AVOUT_A_Mute_ID: ON_ID[ALL]=3 , [EE]=0
+[DCS]AVDEC Interrupt           :RELOADDONE
+[DCS]AVDEC Interrupt           :RELOADDONE
+[DCS]AVDEC Interrupt           :BBFLUSHST
+[DCO]Audio Output = L/R.
+[DCS]dco_api :avout_API_MuteID = 0x1
+[DCS]dco_api :AVOUT_A_Mute_ID: OFF_ID[ALL]=2 , [EE]=0
+[FPC]FPC_ReciveTASK() : 7F FA 02 01 00 00 36 06 00 02 00 00 00 00 00 BA 
+[SYS_CNTL]FPC_CB_ReportEmergency(3)
+[SYS_CNTL]FPC_EMERGENCY_ERROR
+[FPC] !!- OPcode Emergency -!!
+:: Send ::
+  -- 0. task ID = 26 : Func No = 8 
+  --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+  -- 1. task ID = 26 : Func No = 7 
+  --     data =  fa 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 19 : Func No = 7 
+  --     data =  e2 04 01 84 c0 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. task ID = 88 : Func No = 7 
+  --     data =  81 00 00 01 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 88 : Func No = 8 
+  --     data =  ec 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+:: Receive ::
+  -- 0. task ID = 26 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 1. task ID = 88 : Func No = 9 
+  --     data =  0e 02 27 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 88 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. task ID = 26 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 26 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+:: Receive Intr ::
+  -- 0. task ID = 0 : Func No = 0 
+  --     data =  7f e3 02 01 00 00 36 06 00 02 00 00 00 00 00 a3
+  -- 1. task ID = 0 : Func No = 0 
+  --     data =  7f fa 02 01 00 00 36 06 00 02 00 00 00 00 00 ba
+  -- 2. task ID = 0 : Func No = 0 
+  --     data =  7f ec 01 01 00 00 35 06 00 02 00 00 00 00 00 aa
+  -- 3. task ID = 0 : Func No = 0 
+  --     data =  7f e3 02 01 00 00 34 06 00 02 00 00 00 00 00 a1
+  -- 4. task ID = 0 : Func No = 0 
+  --     data =  7f e3 02 01 00 00 34 06 00 02 00 00 00 00 00 a1
+:: Receive Task ::
+  -- 0. data =  7f fa 02 01 00 00 36 06 00 02 00 00 00 00 00 ba
+  -- 1. data =  0e 02 27 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 2. data =  7f ec 01 01 00 00 35 06 00 02 00 00 00 00 00 aa
+  -- 3. data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. data =  7f e3 02 01 00 00 34 06 00 02 00 00 00 00 00 a1
+System assert!! File:src/fpcmain.c Line:963 Err:0
+[FPC]FPC_ReciveTASK() : 7F E3 02 01 00 00 36 06 00 02 00 00 00 00 00 A3 
+[SYS_CNTL]FPC_CB_ReportEmergency(3)
+[SYS_CNTL]FPC_EMERGENCY_ERROR
+[FPC] !!- OPcode Emergency -!!
+:: Send ::
+  -- 0. task ID = 26 : Func No = 8 
+  --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+  -- 1. task ID = 26 : Func No = 7 
+  --     data =  fa 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 19 : Func No = 7 
+  --     data =  e2 04 01 84 c0 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. task ID = 88 : Func No = 7 
+  --     data =  81 00 00 01 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 88 : Func No = 8 
+  --     data =  ec 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[AVIN]0: AVIN task Delayed 1
+:: Receive ::
+  -- 0. task ID = 26 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 1. task ID = 88 : Func No = 9 
+  --     data =  0e 02 27 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 88 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. task ID = 26 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 26 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[1394avc]ctl: cav_Equipment_Notification() SYS_APP_DV_DISCONNECT
+:: Receive Intr ::
+  -- 0. task ID = 0 : Func No = 0 
+  --     data =  7f e3 02 01 00 00 36 06 00 02 00 00 00 00 00 a3
+  -- 1. task ID = 0 : Func No = 0 
+  --     data =  7f fa 02 01 00 00 36 06 00 02 00 00 00 00 00 ba
+  -- 2. task ID = 0 : Func No = 0 
+  --     data =  7f ec 01 01 00 00 35 06 00 02 00 00 00 00 00 aa
+  -- 3. task ID = 0 : Func No = 0 
+  --     data =  7f e3 02 01 00 00 34 06 00 02 00 00 00 00 00 a1
+  -- 4. task ID = 0 : Func No = 0 
+  --     data =  7f e3 02 01 00 00 34 06 00 02 00 00 00 00 00 a1
+:: Receive Task ::
+  -- 0. data =  7f e3 02 01 00 00 36 06 00 02 00 00 00 00 00 a3
+  -- 1. data =  7f fa 02 01 00 00 36 06 00 02 00 00 00 00 00 ba
+  -- 2. data =  0e 02 27 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. data =  7f ec 01 01 00 00 35 06 00 02 00 00 00 00 00 aa
+  -- 4. data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+System assert!! File:src/fpcmain.c Line:963 Err:0
+[FPC]RCV TIMEOUT GATE=14
+[SYS_CNTL]FPC_CB_ReportEmergency(4)
+[SYS_CNTL]FPC_EMERGENCY_TIMEOUT
+System assert!! File:src/fpcmain.c Line:963 Err:0
+[AVIN]0: *** AVIN_Rec656_set_module() TV_NTSC->TV_PAL change start ***
+[AVIN]0: avin_hw_input_source_select(SOURCE_TUNER,L/R,0) end.
+[AVIN]0: avin_hw_input_source_select(SOURCE_TUNER,L/R,0) end.
+[AVIN]0: cpg detect type change to det_type_1
+[SYS_CNTL]SYS_CNTL_PAL_NTSC_Change 1 
+[SYS_CNTL]avout_tv_system = 1
+[DCS]dco_api :AVOUT_AV_Select: video=8, audio=1
+[DCS]dco_api :AVOUT_A_Mute_ID: ON_ID[ALL]=3 , [EE]=0
+[DCO]Audio Output = L/R.
+[DCS]dco_api :avout_API_MuteID = 0x1
+[DCS]dco_api :AVOUT_A_Mute_ID: OFF_ID[ALL]=2 , [EE]=0
+[AVIN]0: avin_set_now_state() sys tvsystem = TV_NTSC(0).
+[AVIN]0: avin_set_now_state() det tvsystem = TV_NTSC(0).
+[AVIN]0: avin_hw_input_source_select(SOURCE_TUNER,L/R,0) end.
+[AVIN]0: set nr->0 [0:off 1:on 2:fdown 3:lv1 4:lv2 5:lv3 6:lv4 7:lv5]
+[DCS]dco_api :AVOUT_AV_Select: video=0, audio=0
+[DCS]dco_api :AVOUT_A_Mute_ID: ON_ID[ALL]=3 , [EE]=0
+[DCS]AVDEC Interrupt           :RELOADDONE
+[DCS]AVDEC Interrupt           :RELOADDONE
+[DCS]AVDEC Interrupt           :BBFLUSHST
+[DCO]Audio Output = L/R.
+[DCS]dco_api :avout_API_MuteID = 0x1
+[DCS]dco_api :AVOUT_A_Mute_ID: OFF_ID[ALL]=2 , [EE]=0
+[AVIN]0: *** AVIN_Rec656_set_module() TV_PAL->TV_NTSC change start ***
+[AVIN]0: avin_hw_input_source_select(SOURCE_TUNER,L/R,0) end.
+[AVIN]0: avin_hw_input_source_select(SOURCE_TUNER,L/R,0) end.
+[AVIN]0: set nr->0 [0:off 1:on 2:fdown 3:lv1 4:lv2 5:lv3 6:lv4 7:lv5]
+[FPC]FPC_ReciveTASK() : 7F FA 02 01 00 00 3B 06 00 02 00 00 00 00 00 BF 
+[SYS_CNTL]FPC_CB_ReportEmergency(3)
+[SYS_CNTL]FPC_EMERGENCY_ERROR
+[FPC] !!- OPcode Emergency -!!
+:: Send ::
+  -- 0. task ID = 26 : Func No = 8 
+  --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+  -- 1. task ID = 26 : Func No = 7 
+  --     data =  fa 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 19 : Func No = 7 
+  --     data =  e2 04 01 84 c0 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. task ID = 26 : Func No = 8 
+  --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+  -- 4. task ID = 26 : Func No = 7 
+  --     data =  fa 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00
+:: Receive ::
+  -- 0. task ID = 26 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 1. task ID = 26 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 88 : Func No = 9 
+  --     data =  0e 02 27 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. task ID = 88 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 26 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[AVIN]0: AVIN task Delayed 3
+:: Receive Intr ::
+  -- 0. task ID = 0 : Func No = 0 
+  --     data =  7f e3 02 01 00 00 3b 06 00 02 00 00 00 00 00 a8
+  -- 1. task ID = 0 : Func No = 0 
+  --     data =  7f fa 02 01 00 00 3b 06 00 02 00 00 00 00 00 bf
+  -- 2. task ID = 0 : Func No = 0 
+  --     data =  7f e3 02 01 00 00 36 06 00 02 00 00 00 00 00 a3
+  -- 3. task ID = 0 : Func No = 0 
+  --     data =  7f fa 02 01 00 00 36 06 00 02 00 00 00 00 00 ba
+  -- 4. task ID = 0 : Func No = 0 
+  --     data =  7f ec 01 01 00 00 35 06 00 02 00 00 00 00 00 aa
+:: Receive Task ::
+  -- 0. data =  7f fa 02 01 00 00 3b 06 00 02 00 00 00 00 00 bf
+  -- 1. data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 2. data =  7f e3 02 01 00 00 36 06 00 02 00 00 00 00 00 a3
+  -- 3. data =  7f fa 02 01 00 00 36 06 00 02 00 00 00 00 00 ba
+  -- 4. data =  0e 02 27 00 00 00 00 00 00 00 00 00 00 00 00 00
+System assert!! File:src/fpcmain.c Line:963 Err:0
+[FPC]FPC_ReciveTASK() : 7F E3 02 01 00 00 3B 06 00 02 00 00 00 00 00 A8 
+[SYS_CNTL]FPC_CB_ReportEmergency(3)
+[SYS_CNTL]FPC_EMERGENCY_ERROR
+[FPC] !!- OPcode Emergency -!!
+:: Send ::
+  -- 0. task ID = 26 : Func No = 8 
+  --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+  -- 1. task ID = 26 : Func No = 7 
+  --     data =  fa 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 19 : Func No = 7 
+  --     data =  e2 04 01 84 c0 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. task ID = 26 : Func No = 8 
+  --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+  -- 4. task ID = 26 : Func No = 7 
+  --     data =  fa 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00
+[AVIN]0: AVIN task Delayed 2
+:: Receive ::
+  -- 0. task ID = 26 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 1. task ID = 26 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 88 : Func No = 9 
+  --     data =  0e 02 27 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. task ID = 88 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 26 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+:: Receive Intr ::
+  -- 0. task ID = 0 : Func No = 0 
+  --     data =  7f e3 02 01 00 00 3b 06 00 02 00 00 00 00 00 a8
+  -- 1. task ID = 0 : Func No = 0 
+  --     data =  7f fa 02 01 00 00 3b 06 00 02 00 00 00 00 00 bf
+  -- 2. task ID = 0 : Func No = 0 
+  --     data =  7f e3 02 01 00 00 36 06 00 02 00 00 00 00 00 a3
+  -- 3. task ID = 0 : Func No = 0 
+  --     data =  7f fa 02 01 00 00 36 06 00 02 00 00 00 00 00 ba
+  -- 4. task ID = 0 : Func No = 0 
+  --     data =  7f ec 01 01 00 00 35 06 00 02 00 00 00 00 00 aa
+:: Receive Task ::
+  -- 0. data =  7f e3 02 01 00 00 3b 06 00 02 00 00 00 00 00 a8
+  -- 1. data =  7f fa 02 01 00 00 3b 06 00 02 00 00 00 00 00 bf
+  -- 2. data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. data =  7f e3 02 01 00 00 36 06 00 02 00 00 00 00 00 a3
+  -- 4. data =  7f fa 02 01 00 00 36 06 00 02 00 00 00 00 00 ba
+System assert!! File:src/fpcmain.c Line:963 Err:0
+[FPC]RCV TIMEOUT GATE=14
+[SYS_CNTL]FPC_CB_ReportEmergency(4)
+[SYS_CNTL]FPC_EMERGENCY_TIMEOUT
+System assert!! File:src/fpcmain.c Line:963 Err:0
+[SYS_CNTL]SYS_CNTL_PAL_NTSC_Change 0 
+[SYS_CNTL]avout_tv_system = 0
+[SYS_BOOT]FPC_GetLastChannel() success
+[FPC]FPC_AutoClockSetting(5)
+[FPC]FPC_ReciveTASK() : 7F C9 02 01 00 00 3B 06 00 02 00 00 00 00 00 8E 
+[SYS_CNTL]FPC_CB_ReportEmergency(3)
+[SYS_CNTL]FPC_EMERGENCY_ERROR
+[FPC] !!- OPcode Emergency -!!
+:: Send ::
+  -- 0. task ID = 88 : Func No = 8 
+  --     data =  84 ff 00 01 ff ff ff ff ff ff ff ff ff ff ff ff
+  -- 1. task ID = 88 : Func No = 7 
+  --     data =  c9 01 05 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 88 : Func No = 7 
+  --     data =  81 00 00 02 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. task ID = 26 : Func No = 8 
+  --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+  -- 4. task ID = 26 : Func No = 7 
+  --     data =  fa 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00
+:: Receive ::
+  -- 0. task ID = 88 : Func No = 9 
+  --     data =  0e 02 1e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 1. task ID = 26 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 26 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. task ID = 88 : Func No = 9 
+  --     data =  0e 02 27 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 88 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[AVIN]0: AVIN task Delayed 4
+:: Receive Intr ::
+  -- 0. task ID = 0 : Func No = 0 
+  --     data =  04 01 00 01 00 00 00 00 00 00 00 00 00 00 00 06
+  -- 1. task ID = 0 : Func No = 0 
+  --     data =  7f c9 02 01 00 00 3b 06 00 02 00 00 00 00 00 8e
+  -- 2. task ID = 0 : Func No = 0 
+  --     data =  7f e3 02 01 00 00 3b 06 00 02 00 00 00 00 00 a8
+  -- 3. task ID = 0 : Func No = 0 
+  --     data =  7f fa 02 01 00 00 3b 06 00 02 00 00 00 00 00 bf
+  -- 4. task ID = 0 : Func No = 0 
+  --     data =  7f e3 02 01 00 00 36 06 00 02 00 00 00 00 00 a3
+:: Receive Task ::
+  -- 0. data =  7f c9 02 01 00 00 3b 06 00 02 00 00 00 00 00 8e
+  -- 1. data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 2. data =  7f e3 02 01 00 00 3b 06 00 02 00 00 00 00 00 a8
+  -- 3. data =  7f fa 02 01 00 00 3b 06 00 02 00 00 00 00 00 bf
+  -- 4. data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+System assert!! File:src/fpcmain.c Line:963 Err:0
+[FPC]FPC_ReciveTASK() : 04 01 00 01 00 00 00 00 00 00 00 00 00 00 00 06 
+[FPC]FPC_TuningWatchStart_inAcs start
+[FPC]FPC_TuningNotify_inAcs false
+[FPC]FPC_LastTuning_inAcs apr->last
+[FPC]FPC_ReciveTASK() : 49 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+[FPC]FPC_ReciveTASK() : 49 00 00 00 00 00 00 00 00 00 00 03 00 00 00 00 
+[FPC]FPC_ReciveTASK() : 7F C9 02 01 00 00 00 06 00 02 00 00 00 00 00 53 
+[SYS_CNTL]FPC_CB_ReportEmergency(3)
+[SYS_CNTL]FPC_EMERGENCY_ERROR
+[FPC] !!- OPcode Emergency -!!
+:: Send ::
+  -- 0. task ID = 13 : Func No = 7 
+  --     data =  c9 00 00 00 00 00 00 00 00 00 00 03 00 00 00 00
+  -- 1. task ID = 88 : Func No = 8 
+  --     data =  84 ff 00 01 ff ff ff ff ff ff ff ff ff ff ff ff
+  -- 2. task ID = 88 : Func No = 7 
+  --     data =  c9 01 05 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. task ID = 88 : Func No = 7 
+  --     data =  81 00 00 02 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 26 : Func No = 8 
+  --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+[AVIN]0: AVIN task Delayed 5
+:: Receive ::
+  -- 0. task ID = 88 : Func No = 9 
+  --     data =  0e 02 1e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 1. task ID = 26 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 26 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. task ID = 88 : Func No = 9 
+  --     data =  0e 02 27 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 88 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+:: Receive Intr ::
+  -- 0. task ID = 0 : Func No = 0 
+  --     data =  7f c9 02 01 00 00 00 06 00 02 00 00 00 00 00 53
+  -- 1. task ID = 0 : Func No = 0 
+  --     data =  04 01 00 01 00 00 00 00 00 00 00 00 00 00 00 06
+  -- 2. task ID = 0 : Func No = 0 
+  --     data =  7f c9 02 01 00 00 3b 06 00 02 00 00 00 00 00 8e
+  -- 3. task ID = 0 : Func No = 0 
+  --     data =  7f e3 02 01 00 00 3b 06 00 02 00 00 00 00 00 a8
+  -- 4. task ID = 0 : Func No = 0 
+  --     data =  7f fa 02 01 00 00 3b 06 00 02 00 00 00 00 00 bf
+[AVIN]0: AVIN task Delayed 1
+:: Receive Task ::
+  -- 0. data =  7f c9 02 01 00 00 00 06 00 02 00 00 00 00 00 53
+  -- 1. data =  49 00 00 00 00 00 00 00 00 00 00 03 00 00 00 00
+  -- 2. data =  49 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. data =  04 01 00 01 00 00 00 00 00 00 00 00 00 00 00 06
+  -- 4. data =  7f c9 02 01 00 00 3b 06 00 02 00 00 00 00 00 8e
+System assert!! File:src/fpcmain.c Line:963 Err:0
+[SYS_BOOT]FPC_AutoClockSetting() success
+[SYS_BOOT]TUN_SetCombFilter() success
+:::SYS_RSV::: >> nfrom read
+:::SYS_RSV::: >> _GetExecMode_Device initialize yet! 
+[SYS_CNTL]LAST_CH->UION_CH(1)
+:::SYS_RSV::: >> nfrom read
+:::SYS_RSV::: >> _GetExecMode_Device initialize yet! 
+[SYS_CNTL]LAST_CH->UION_CH(1)
+[SYS_TUN]cntl_tuner == 0
+[SYS_TUN]sys_tun_Tuner_Exe_ChangeChannel(chan_index == 1, recorder_id == 0, cntl_tuner == 0)
+[DCS]dco_api :AVOUT_A_Mute_ID: ON_ID[ALL]=2 , [EE]=8
+[AVIN]0: avin_set_now_state() state = STATE_CHG_CHANNEL(2).
+[AVIN] 0_Prefilter = 1
+[SYS_CNTL]AVOUT_A_pbOutputMode 7 4 
+[SYS_CNTL]SYS_CNTL_AVOUT_A_eeOutputMode 0 0 0 0
+[FPC]FPC_ReciveTASK() : 7F F0 02 01 00 00 00 06 00 02 00 00 00 00 00 7A 
+[SYS_CNTL]FPC_CB_ReportEmergency(3)
+[SYS_CNTL]FPC_EMERGENCY_ERROR
+[FPC] !!- OPcode Emergency -!!
+:: Send ::
+  -- 0. task ID = 88 : Func No = 7 
+  --     data =  f0 01 00 02 00 0f 01 00 00 00 00 00 00 00 00 00
+  -- 1. task ID = 13 : Func No = 7 
+  --     data =  c9 00 00 00 00 00 00 00 00 00 00 03 00 00 00 00
+  -- 2. task ID = 88 : Func No = 8 
+  --     data =  84 ff 00 01 ff ff ff ff ff ff ff ff ff ff ff ff
+  -- 3. task ID = 88 : Func No = 7 
+  --     data =  c9 01 05 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 88 : Func No = 7 
+  --     data =  81 00 00 02 00 00 00 00 00 00 00 00 00 00 00 00
+[AVIN]0: AVIN task Delayed 1
+:: Receive ::
+  -- 0. task ID = 88 : Func No = 9 
+  --     data =  0e 02 1e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 1. task ID = 26 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 26 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. task ID = 88 : Func No = 9 
+  --     data =  0e 02 27 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 88 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[SYS_BOOT]sys_boot_init_dev_io_pre() success
+:: Receive Intr ::
+  -- 0. task ID = 0 : Func No = 0 
+  --     data =  7f f0 02 01 00 00 00 06 00 02 00 00 00 00 00 7a
+  -- 1. task ID = 0 : Func No = 0 
+  --     data =  7f c9 02 01 00 00 00 06 00 02 00 00 00 00 00 53
+  -- 2. task ID = 0 : Func No = 0 
+  --     data =  04 01 00 01 00 00 00 00 00 00 00 00 00 00 00 06
+  -- 3. task ID = 0 : Func No = 0 
+  --     data =  7f c9 02 01 00 00 3b 06 00 02 00 00 00 00 00 8e
+  -- 4. task ID = 0 : Func No = 0 
+  --     data =  7f e3 02 01 00 00 3b 06 00 02 00 00 00 00 00 a8
+:: Receive Task ::
+  -- 0. data =  7f f0 02 01 00 00 00 06 00 02 00 00 00 00 00 7a
+  -- 1. data =  7f c9 02 01 00 00 00 06 00 02 00 00 00 00 00 53
+  -- 2. data =  49 00 00 00 00 00 00 00 00 00 00 03 00 00 00 00
+  -- 3. data =  49 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. data =  04 01 00 01 00 00 00 00 00 00 00 00 00 00 00 06
+System assert!! File:src/fpcmain.c Line:963 Err:0
+[SYS_BOOT]MBM_Init() success.
+[SYS_BOOT]VDM_Init() 
+[FPC]FPC_ReciveTASK() : 7F AA 01 01 00 00 01 06 00 02 00 00 00 00 00 34 
+[SYS_CNTL]FPC_CB_ReportEmergency(3)
+[SYS_CNTL]FPC_EMERGENCY_ERROR
+[FPC] !!- OPcode Emergency -!!
+:: Send ::
+  -- 0. task ID = 16 : Func No = 7 
+  --     data =  aa 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 1. task ID = 88 : Func No = 7 
+  --     data =  f0 01 00 02 00 0f 01 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 13 : Func No = 7 
+  --     data =  c9 00 00 00 00 00 00 00 00 00 00 03 00 00 00 00
+  -- 3. task ID = 88 : Func No = 8 
+  --     data =  84 ff 00 01 ff ff ff ff ff ff ff ff ff ff ff ff
+  -- 4. task ID = 88 : Func No = 7 
+  --     data =  c9 01 05 00 00 00 00 00 00 00 00 00 00 00 00 00
+:: Receive ::
+  -- 0. task ID = 88 : Func No = 9 
+  --     data =  0e 02 1e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 1. task ID = 26 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 26 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. task ID = 88 : Func No = 9 
+  --     data =  0e 02 27 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 88 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[AVIN]0: AVIN task Delayed 4
+[AVIN]0: avin_set_now_state() state = STATE_NORMAL(0).
+[AVIN]0: avin_hw_input_source_select(SOURCE_TUNER,L/R,0) end.
+[AVIN]0: set nr->0 [0:off 1:on 2:fdown 3:lv1 4:lv2 5:lv3 6:lv4 7:lv5]
+[SDCD] sdcd_insrmv_check:SD Card inserted 
+[SDCD] === This Card Spec ==== 
+[09]Card type:2(condition:3) wp:0
+[09]capacity:3c4000[LBA](2021654528Byte) [09] transfer speed:25000[Kbps]
+[09]RCA:2 [09] Bus Width:4(current) 4(support)
+[09]Multi Max Block Len Read:2[SECT] / Write:2[SECT]
+[DCS]dco_api :avout_API_MuteID = 0x10
+[DCS]dco_api :AVOUT_A_Mute_ID: OFF_ID[ALL]=2 , [EE]=8
+[RTSD] Device Reset Occurred(0x62900) 
+[RTSD] HDD already spin-up 
+[RTSD] HDD Auto Spin up Mode 
+[RTSD] HDD Model No.  : SAMSUNG HM251JI                          
+[RTSD] HDD Stream feature Not Suport
+[RTSD] Drive Revision : S211 
+[RTSD] Drive Region   : 4    
+[RTSD] Drive Model    : 12
+[RTSD] Temperature    : 16
+[RTSD] CPRM DK: 1, CPPM DK: 1
+[RTSD] HDD Model No.  : SAMSUNG HM251JI                          
+[RTSD] HDD Stream feature Not Suport
+[HDFS]  HDD Offset Sect:0x20000 - Byte:268435456
+[SYS_BOOT]VDM_Init() success. 
+[SYS_BOOT]DVR_Init_Core 
+[SYS_BOOT]dvr_state == DVR_WARN && fs_state != VDM_W_POW_FAILURE
+[AVIN]0: AVIN task Delayed 11
+[FS]VDM_ReportMediaEx : slot_id = 1 disc = 80000000 protect = 1 format = 0
+[SYS_BOOT]VDM_OpenDisc DVD err. 
+[DVR CORE] (45.50)RESTORE DVD
+[FS]VDM_ReportMediaEx : slot_id = 1 disc = 80000000 protect = 0 format = 53184420
+[DVR CORE] (45.50)id = 1, MEDIA = NONE, minfo = 80000000
+[DVR CORE] (45.69)RESTORE(DVR_RECOVERY_END)
+[DVR CORE] (45.70)RESTORE HDD
+[FS]VDM_ReportMediaEx : slot_id = 0 disc = 1 protect = 0 format = 7
+[DVR CORE] (45.70)id = 1, MEDIA = HDD, minfo = 1
+[DVR CORE] (45.70)RIGHT DISC. (HDD on VR Format)
+[FPC]FPC_ReciveTASK() : 08 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+[VDM]VDM_UpdateIfo(0,MTV2.IFO) = 0(0) IFO_exist:1 - BUP_exist:1
+[VDM]VDM_UpdateIfo(0,HDD2.IFO) = 0(0) IFO_exist:1 - BUP_exist:1
+[SYS_BOOT]VDM_CloseDisc DVD err. 
+[SYS_BOOT]DVD_Core_Init 
+[SYS_BOOT]CD_Init 
+[SYS_BOOT]MP3_Core_Init
+[SYS_BOOT]DUB_Init_Core() success. 
+[JPG_CORE]JPG_CoreInit Success.
+[SYS_BOOT]JPG_CoreInit() success. 
+[SYS_BOOT]DIVX_Core_Init() success. 
+[SYS_BOOT]REC_InitDevice
+[EIF]0:EIF >>  SDM report(SDRAM OFFSET ADDRESS) = 00000301,
+[EIF]0:EIF >>  SDM report(VBB) = 014C,
+[EIF]0:EIF >>  SDM report(ABB) = 005A,
+[SYS_BOOT]REC_InitDevice() success. 
+[SYS_CNTL]SYS_CNTL_MainVersionUpInitTimer() 
+[FPC]FPC_ReciveTASK() : 7F 89 01 01 00 00 07 06 00 02 00 00 00 00 00 19 
+[SYS_CNTL]FPC_CB_ReportEmergency(3)
+[SYS_CNTL]FPC_EMERGENCY_ERROR
+[FPC] !!- OPcode Emergency -!!
+:: Send ::
+  -- 0. task ID = 26 : Func No = 8 
+  --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+  -- 1. task ID = 26 : Func No = 7 
+  --     data =  fa 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 88 : Func No = 7 
+  --     data =  89 01 0c 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. task ID = 19 : Func No = 7 
+  --     data =  e2 04 01 84 c0 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 16 : Func No = 7 
+  --     data =  aa 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+:: Receive ::
+  -- 0. task ID = 9 : Func No = 2 
+  --     data =  08 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 1. task ID = 88 : Func No = 9 
+  --     data =  0e 02 1e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 26 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. task ID = 26 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 88 : Func No = 9 
+  --     data =  0e 02 27 00 00 00 00 00 00 00 00 00 00 00 00 00
+[AVIN]0: AVIN task Delayed 4
+[REC]0:time over = 48956msec
+[REC]0: -- FREE -> FREE(no cpp info) -- 
+:: Receive Task ::
+  -- 0. data =  7f 89 01 01 00 00 07 06 00 02 00 00 00 00 00 19
+  -- 1. data =  08 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 2. data =  7f aa 01 01 00 00 01 06 00 02 00 00 00 00 00 34
+  -- 3. data =  7f f0 02 01 00 00 00 06 00 02 00 00 00 00 00 7a
+  -- 4. data =  7f c9 02 01 00 00 00 06 00 02 00 00 00 00 00 53
+System assert!! File:src/fpcmain.c Line:963 Err:0
+[FPC]FPC_ReciveTASK() : 7F FA 02 01 00 00 07 06 00 02 00 00 00 00 00 8B 
+[SYS_CNTL]FPC_CB_ReportEmergency(3)
+[SYS_CNTL]FPC_EMERGENCY_ERROR
+[FPC] !!- OPcode Emergency -!!
+:: Send ::
+  -- 0. task ID = 26 : Func No = 8 
+  --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+  -- 1. task ID = 26 : Func No = 7 
+  --     data =  fa 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 88 : Func No = 7 
+  --     data =  89 01 0c 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. task ID = 19 : Func No = 7 
+  --     data =  e2 04 01 84 c0 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 16 : Func No = 7 
+  --     data =  aa 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[AVIN]0: AVIN task Delayed 3
+[REC]0:time over = 134msec
+:: Receive Intr ::
+  -- 0. task ID = 0 : Func No = 0 
+  --     data =  7f e3 02 01 00 00 08 06 00 02 00 00 00 00 00 75
+  -- 1. task ID = 0 : Func No = 0 
+  --     data =  7f fa 02 01 00 00 07 06 00 02 00 00 00 00 00 8b
+  -- 2. task ID = 0 : Func No = 0 
+  --     data =  7f 89 01 01 00 00 07 06 00 02 00 00 00 00 00 19
+  -- 3. task ID = 0 : Func No = 0 
+  --     data =  7f aa 01 01 00 00 01 06 00 02 00 00 00 00 00 34
+  -- 4. task ID = 0 : Func No = 0 
+  --     data =  7f f0 02 01 00 00 00 06 00 02 00 00 00 00 00 7a
+[REC]0:time over = 74msec
+:: Receive Task ::
+  -- 0. data =  7f fa 02 01 00 00 07 06 00 02 00 00 00 00 00 8b
+  -- 1. data =  7f 89 01 01 00 00 07 06 00 02 00 00 00 00 00 19
+  -- 2. data =  08 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. data =  7f aa 01 01 00 00 01 06 00 02 00 00 00 00 00 34
+  -- 4. data =  7f f0 02 01 00 00 00 06 00 02 00 00 00 00 00 7a
+System assert!! File:src/fpcmain.c Line:963 Err:0
+[FPC]FPC_ReciveTASK() : 7F E3 02 01 00 00 08 06 00 02 00 00 00 00 00 75 
+[SYS_CNTL]FPC_CB_ReportEmergency(3)
+[SYS_CNTL]FPC_EMERGENCY_ERROR
+[FPC] !!- OPcode Emergency -!!
+:: Send ::
+  -- 0. task ID = 26 : Func No = 8 
+  --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+  -- 1. task ID = 26 : Func No = 7 
+  --     data =  fa 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 88 : Func No = 7 
+  --     data =  89 01 0c 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. task ID = 19 : Func No = 7 
+  --     data =  e2 04 01 84 c0 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 16 : Func No = 7 
+  --     data =  aa 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[AVIN]0: AVIN task Delayed 6
+[REC]0:time over = 132msec
+:: Receive Intr ::
+  -- 0. task ID = 0 : Func No = 0 
+  --     data =  7f e3 02 01 00 00 08 06 00 02 00 00 00 00 00 75
+  -- 1. task ID = 0 : Func No = 0 
+  --     data =  7f fa 02 01 00 00 07 06 00 02 00 00 00 00 00 8b
+  -- 2. task ID = 0 : Func No = 0 
+  --     data =  7f 89 01 01 00 00 07 06 00 02 00 00 00 00 00 19
+  -- 3. task ID = 0 : Func No = 0 
+  --     data =  7f aa 01 01 00 00 01 06 00 02 00 00 00 00 00 34
+  -- 4. task ID = 0 : Func No = 0 
+  --     data =  7f f0 02 01 00 00 00 06 00 02 00 00 00 00 00 7a
+[REC]0:time over = 70msec
+:: Receive Task ::
+  -- 0. data =  7f e3 02 01 00 00 08 06 00 02 00 00 00 00 00 75
+  -- 1. data =  7f fa 02 01 00 00 07 06 00 02 00 00 00 00 00 8b
+  -- 2. data =  7f 89 01 01 00 00 07 06 00 02 00 00 00 00 00 19
+  -- 3. data =  08 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. data =  7f aa 01 01 00 00 01 06 00 02 00 00 00 00 00 34
+System assert!! File:src/fpcmain.c Line:963 Err:0
+[FPC]RCV TIMEOUT GATE=14
+[SYS_CNTL]FPC_CB_ReportEmergency(4)
+[SYS_CNTL]FPC_EMERGENCY_TIMEOUT
+System assert!! File:src/fpcmain.c Line:963 Err:0
+[FPC]FPC_ReciveTASK() : 7F E3 02 01 00 00 08 06 00 02 00 00 00 00 00 75 
+[SYS_CNTL]FPC_CB_ReportEmergency(3)
+[SYS_CNTL]FPC_EMERGENCY_ERROR
+[FPC] !!- OPcode Emergency -!!
+:: Send ::
+  -- 0. task ID = 88 : Func No = 8 
+  --     data =  e3 00 80 01 00 00 00 00 00 00 00 70 00 00 96 00
+  -- 1. task ID = 26 : Func No = 8 
+  --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+  -- 2. task ID = 26 : Func No = 7 
+  --     data =  fa 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00
+  -- 3. task ID = 88 : Func No = 7 
+  --     data =  89 01 0c 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 19 : Func No = 7 
+  --     data =  e2 04 01 84 c0 00 00 00 00 00 00 00 00 00 00 00
+[AVIN]0: AVIN task Delayed 3
+[REC]0:time over = 154msec
+:: Receive Intr ::
+  -- 0. task ID = 0 : Func No = 0 
+  --     data =  7f e3 02 01 00 00 08 06 00 02 00 00 00 00 00 75
+  -- 1. task ID = 0 : Func No = 0 
+  --     data =  7f e3 02 01 00 00 08 06 00 02 00 00 00 00 00 75
+  -- 2. task ID = 0 : Func No = 0 
+  --     data =  7f fa 02 01 00 00 07 06 00 02 00 00 00 00 00 8b
+  -- 3. task ID = 0 : Func No = 0 
+  --     data =  7f 89 01 01 00 00 07 06 00 02 00 00 00 00 00 19
+  -- 4. task ID = 0 : Func No = 0 
+  --     data =  7f aa 01 01 00 00 01 06 00 02 00 00 00 00 00 34
+[REC]0:time over = 72msec
+:: Receive Task ::
+  -- 0. data =  7f e3 02 01 00 00 08 06 00 02 00 00 00 00 00 75
+  -- 1. data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 2. data =  7f e3 02 01 00 00 08 06 00 02 00 00 00 00 00 75
+  -- 3. data =  7f fa 02 01 00 00 07 06 00 02 00 00 00 00 00 8b
+  -- 4. data =  7f 89 01 01 00 00 07 06 00 02 00 00 00 00 00 19
+System assert!! File:src/fpcmain.c Line:963 Err:0
+[AVIN]0: AVIN task Delayed 2
+[REC]0:time over = 62msec
+[FPC]RCV TIMEOUT GATE=14
+[SYS_CNTL]FPC_CB_ReportEmergency(4)
+[SYS_CNTL]FPC_EMERGENCY_TIMEOUT
+System assert!! File:src/fpcmain.c Line:963 Err:0
+System assert!! File:src/ftrec_api.c Line:629 Err:0
+[SYS_CNTL]AVIN_3YConoff() failed. 
+[FPC]FPC_ReciveTASK() : 61 E3 00 01 00 01 00 00 00 01 00 00 00 00 00 47 
+[FPC]FPC_ReciveTASK() : 60 E3 00 00 01 00 00 00 00 00 00 00 00 00 00 44 
+[nfrom] Status flag change error[1].
+[nfrom] Status change error[-3].
+[nfrom] File rewrite end error[-3].
+[nfrom] Rewrite error[-3].
+:: Receive ::
+  -- 0. task ID = 26 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 1. task ID = 88 : Func No = 9 
+  --     data =  0e 02 01 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 88 : Func No = 9 
+  --     data =  0e 02 02 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. task ID = 88 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 26 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[REC]0:time over = 94msec
+:: Receive Intr ::
+  -- 0. task ID = 0 : Func No = 0 
+  --     data =  7f e3 02 01 00 00 09 06 00 02 00 00 00 00 00 76
+  -- 1. task ID = 0 : Func No = 0 
+  --     data =  7f fa 02 01 00 00 09 06 00 02 00 00 00 00 00 8d
+  -- 2. task ID = 0 : Func No = 0 
+  --     data =  60 e3 00 00 01 00 00 00 00 00 00 00 00 00 00 44
+  -- 3. task ID = 0 : Func No = 0 
+  --     data =  61 e3 00 01 00 01 00 00 00 01 00 00 00 00 00 47
+  -- 4. task ID = 0 : Func No = 0 
+  --     data =  7f e3 02 01 00 00 08 06 00 02 00 00 00 00 00 75
+[REC]0:time over = 68msec
+:: Receive Task ::
+  -- 0. data =  7f fa 02 01 00 00 09 06 00 02 00 00 00 00 00 8d
+  -- 1. data =  60 e3 00 00 01 00 00 00 00 00 00 00 00 00 00 44
+  -- 2. data =  61 e3 00 01 00 01 00 00 00 01 00 00 00 00 00 47
+  -- 3. data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. data =  7f e3 02 01 00 00 08 06 00 02 00 00 00 00 00 75
+System assert!! File:src/fpcmain.c Line:963 Err:0
+[FPC]FPC_ReciveTASK() : 7F E3 02 01 00 00 09 06 00 02 00 00 00 00 00 76 
+[SYS_CNTL]FPC_CB_ReportEmergency(3)
+[SYS_CNTL]FPC_EMERGENCY_ERROR
+[FPC] !!- OPcode Emergency -!!
+:: Send ::
+  -- 0. task ID = 26 : Func No = 8 
+  --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+  -- 1. task ID = 26 : Func No = 7 
+  --     data =  fa 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 88 : Func No = 8 
+  --     data =  e0 04 fb bb 01 00 01 00 00 00 00 00 00 00 00 00
+  -- 3. task ID = 88 : Func No = 7 
+  --     data =  a8 00 00 02 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 88 : Func No = 8 
+  --     data =  e1 08 0f 76 51 01 00 00 00 57 00 00 00 00 00 00
+:: Receive ::
+  -- 0. task ID = 26 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 1. task ID = 88 : Func No = 9 
+  --     data =  0e 02 01 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 88 : Func No = 9 
+  --     data =  0e 02 02 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. task ID = 88 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 26 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[AVIN]0: AVIN task Delayed 7
+[REC]0:time over = 200msec
+:: Receive Intr ::
+  -- 0. task ID = 0 : Func No = 0 
+  --     data =  7f e3 02 01 00 00 09 06 00 02 00 00 00 00 00 76
+  -- 1. task ID = 0 : Func No = 0 
+  --     data =  7f fa 02 01 00 00 09 06 00 02 00 00 00 00 00 8d
+  -- 2. task ID = 0 : Func No = 0 
+  --     data =  60 e3 00 00 01 00 00 00 00 00 00 00 00 00 00 44
+  -- 3. task ID = 0 : Func No = 0 
+  --     data =  61 e3 00 01 00 01 00 00 00 01 00 00 00 00 00 47
+  -- 4. task ID = 0 : Func No = 0 
+  --     data =  7f e3 02 01 00 00 08 06 00 02 00 00 00 00 00 75
+[AVIN]0: AVIN task Delayed 1
+[REC]0:time over = 68msec
+:: Receive Task ::
+  -- 0. data =  7f e3 02 01 00 00 09 06 00 02 00 00 00 00 00 76
+  -- 1. data =  7f fa 02 01 00 00 09 06 00 02 00 00 00 00 00 8d
+  -- 2. data =  60 e3 00 00 01 00 00 00 00 00 00 00 00 00 00 44
+  -- 3. data =  61 e3 00 01 00 01 00 00 00 01 00 00 00 00 00 47
+  -- 4. data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+System assert!! File:src/fpcmain.c Line:963 Err:0
+System assert!! File:src/ftrec_api.c Line:629 Err:0
+[FPC]RCV TIMEOUT GATE=14
+[SYS_CNTL]FPC_CB_ReportEmergency(4)
+[SYS_CNTL]FPC_EMERGENCY_TIMEOUT
+System assert!! File:src/fpcmain.c Line:963 Err:0
+System assert!! File:src/ftrec_api.c Line:629 Err:0
+[REC]0:time over = 90msec
+[SYS_CNTL]sys_cntl_Set_InternalInitInfo(): set to TV
+[SYS_CNTL]set power save
+[FPC]FPC_ReciveTASK() : 7F A9 01 01 00 00 09 06 00 02 00 00 00 00 00 3B 
+[SYS_CNTL]FPC_CB_ReportEmergency(3)
+[SYS_CNTL]FPC_EMERGENCY_ERROR
+[FPC] !!- OPcode Emergency -!!
+:: Send ::
+  -- 0. task ID = 88 : Func No = 8 
+  --     data =  e1 04 53 47 00 57 00 00 00 00 00 00 00 00 00 00
+  -- 1. task ID = 88 : Func No = 7 
+  --     data =  a9 00 00 00 01 00 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 26 : Func No = 8 
+  --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+  -- 3. task ID = 26 : Func No = 7 
+  --     data =  fa 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 88 : Func No = 8 
+  --     data =  e0 04 fb bb 01 00 01 00 00 00 00 00 00 00 00 00
+:: Receive ::
+  -- 0. task ID = 88 : Func No = 9 
+  --     data =  0e 02 02 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 1. task ID = 26 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 88 : Func No = 9 
+  --     data =  0e 02 01 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. task ID = 88 : Func No = 9 
+  --     data =  0e 02 02 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 88 : Func No = 9 
+  --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[AVIN]0: AVIN task Delayed 4
+[REC]0:time over = 146msec
+:: Receive Task ::
+  -- 0. data =  7f a9 01 01 00 00 09 06 00 02 00 00 00 00 00 3b
+  -- 1. data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 2. data =  7f e3 02 01 00 00 09 06 00 02 00 00 00 00 00 76
+  -- 3. data =  7f fa 02 01 00 00 09 06 00 02 00 00 00 00 00 8d
+  -- 4. data =  60 e3 00 00 01 00 00 00 00 00 00 00 00 00 00 44
+System assert!! File:src/fpcmain.c Line:963 Err:0
+System assert!! File:src/ftrec_api.c Line:629 Err:0
+[FPC]FPC_ReciveTASK() : 61 A9 00 01 00 01 00 00 00 01 00 00 00 00 00 0D 
+[REC]0:time over = 76msec
+[SYS_CNTL][Now Time 2006/1/1 0:0:0]
+[SYS_CNTL]sys_app_nfrom size 8812
+[nfrom] bgo_writeD(ID=0xF07) return error(19).
+[nfrom] Map write error[3].
+[nfrom] Power failer recovery error[-2].
+[nfrom] Status recovery error[-2].
+[SYS_CNTL]Power Off Request from task 56 reason 3 
+[SYS_CNTL]SYS_CNTL_SRAM_TIMERREC_STATUS[8]
+[nfrom] bgo_writeD(ID=0xF01) return error(19).
+[nfrom] Status flag change error[3].
+[nfrom] Status change error[-2].
+[nfrom] New file write start error[-2].
+[nfrom] New write error[-2].
+[nfrom] bgo_writeD(ID=0xF07) return error(19).
+[nfrom] Map write error[3].
+[nfrom] Power failer recovery error[-2].
+[nfrom] Status recovery error[-2].
+[SYS_CNTL]Power Off Request from task 56 reason 3 
+[SYS_CNTL]Power Off Request already received.
+[SYS_CNTL]##### NFROMError Power off !!!!! #####
+[SYS_BOOT]FatalErrReboot!
+:::SYS_RSV::: >> sys_rsv-nfrom first writting!
+:::SYS_RSV::: >> sys_rsv-nfrom first writting!
+[nfrom] bgo_writeD(ID=0xF01) return error(19).
+[nfrom] Status flag change error[3].
+[nfrom] Status change error[-2].
+[nfrom] New file write start error[-2].
+[nfrom] New write error[-2].
+[nfrom] bgo_writeD(ID=0xF07) return error(19).
+[nfrom] Map write error[3].
+[nfrom] Power failer recovery error[-2].
+[nfrom] Status recovery error[-2].
+[SYS_CNTL]Power Off Request from task 88 reason 3 
+[SYS_CNTL]Power Off Request already received.
+:::SYS_RSV::: >> nfrom write error!
+System assert!! File:src/sys_rsv_set.c Line:995 Err:0
+System assert!! File:src/ftrec_api.c Line:629 Err:0
+:::SYS_RSV::: >> _StandbyClear(not init)
+[nfrom] bgo_writeD(ID=0xF01) return error(19).
+[nfrom] Status flag change error[3].
+[nfrom] Status change error[-2].
+[nfrom] New file write start error[-2].
+[nfrom] New write error[-2].
+[nfrom] bgo_writeD(ID=0xF07) return error(19).
+[nfrom] Map write error[3].
+[nfrom] Power failer recovery error[-2].
+[nfrom] Status recovery error[-2].
+[SYS_CNTL]Power Off Request from task 88 reason 3 
+[SYS_CNTL]Power Off Request already received.
+:::SYS_RSV::: >> nfrom write error!
+System assert!! File:src/sys_rsv_set.c Line:995 Err:0
+System assert!! File:src/ftrec_api.c Line:629 Err:0
+[REC]0:time over = 80msec
+[nfrom] bgo_writeD(ID=0xF01) return error(19).
+[nfrom] Status flag change error[3].
+[nfrom] Status change error[-2].
+[nfrom] New file write start error[-2].
+[nfrom] New write error[-2].
+[nfrom] bgo_writeD(ID=0xF07) return error(19).
+[nfrom] Map write error[3].
+[nfrom] Power failer recovery error[-2].
+[nfrom] Status recovery error[-2].
+[SYS_CNTL]Power Off Request from task 91 reason 3 
+[SYS_CNTL]Power Off Request already received.
+[SYS_CNTL]set standby status = 0
+[SYS_CNTL]SYS_CNTL_SetSysState[INIT]
+[SYS_CNTL]SYS_CNTL_set_pow_status(SYS_CNTL_POW_OFF_TO_ON)
+[SYS_APP]MainOptionCode
+[SYS_APP]btn     : A[0x0033] B[0x0092] C[0xFFFF] D[0xFFFF]
+[SYS_APP]rcmode  : [0x00]
+[SYS_APP]gui     : A[ 0x10 ] B[ 0x20 ] C[ 0xFF ] D[ 0xFF ]
+[SYS_APP]chmode  : [0x02]
+[SYS_APP]MainOptionCode(gui) setting[0xFF] Nothing!
+[SYS_APP]MainOptionCode(gui) setting[0xFF] Nothing!
+[SYS_CNTL]sys_cntl_set_pow_attr attr[0x1] state[0]
+[FPC]fpc_ChangeKeyCodeInit 
+[FPC]fpc_ChangeKeyCodeWrite beforeKey = 161 : afterKey = 85 
+[FPC]fpc_ChangeKeyCodeWrite beforeKey = 160 : afterKey = 86 
+[SYS_CNTL]SYS_APP_Datatype_t [ 221 <= 255 ]
+[SYS_CNTL].[SYS_CNTL].[RTSD] === DRIVE ACCESS ERROR === ( 80040904 )  [2006/ 1/ 1  0. 0. 0]
+*** CDB  [00 00 00 00 00 00 00 00 00 00 00 00] 
+*** SENSE[70 00 04 00 00 00 00 0A 00 00 83 A7 09 04 00 00 00 00] 
+H_STAT [0] T_STAT [2]
+[SYS_CNTL].[SYS_TUN]SYS_TUN_AMD_NONE
+[SYS_TUN]4::::::::::AVIN_AudioSetLR(0)::::::::::
+[SYS_CNTL]SYS_CNTL_tmp_AVOUT_A_eeOutputMode 0 0 0 0
+[SYS_TUN]MONORAL(UNSETTLE)
+[SYS_TUN]MUTE_OFF
+[SYS_TUN]SYS_TUN_AMD_NONE
+[SYS_TUN]SYS_TUN_AMD_NONE
+[SYS_CNTL]SYS_CNTL_cancel_tmp_AVOUT_A_eeOutputMode 0 0 0 0
+System assert!! File:src/ftrec_api.c Line:629 Err:0
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 0B 06 00 02 00 00 00 00 00 25 
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 0B 06 00 02 00 00 00 00 00 25 
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 0B 06 00 02 00 00 00 00 00 25 
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 0B 06 00 02 00 00 00 00 00 25 
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 0B 06 00 02 00 00 00 00 00 25 
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 0B 06 00 02 00 00 00 00 00 25 
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 0B 06 00 02 00 00 00 00 00 25 
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 0B 06 00 02 00 00 00 00 00 25 
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 0B 06 00 02 00 00 00 00 00 25 
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 0B 06 00 02 00 00 00 00 00 25 
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 0B 06 00 02 00 00 00 00 00 25 
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 0B 06 00 02 00 00 00 00 00 25 
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 0B 06 00 02 00 00 00 00 00 25 
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 0B 06 00 02 00 00 00 00 00 25 
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 0B 06 00 02 00 00 00 00 00 25 
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 0B 06 00 02 00 00 00 00 00 25 
+[SYS_CNTL]sys_cntl_CatchScreen() success. task ID 101(sys_fip)
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 0B 06 00 02 00 00 00 00 00 25 
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 0B 06 00 02 00 00 00 00 00 25 
+[FPC]FPC_ReciveTASK() : 7F A9 01 01 00 00 0C 06 00 02 00 00 00 00 00 3E 
+[SYS_CNTL]FPC_CB_ReportEmergency(3)
+[SYS_CNTL]FPC_EMERGENCY_ERROR
+[FPC] !!- OPcode Emergency -!!
+:: Send ::
+  -- 0. task ID = 105 : Func No = 7 
+  --     data =  a9 03 02 02 02 01 00 00 00 00 00 00 00 00 00 00
+  -- 1. task ID = 108 : Func No = 8 
+  --     data =  90 12 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 108 : Func No = 8 
+  --     data =  90 11 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. task ID = 108 : Func No = 8 
+  --     data =  90 10 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 108 : Func No = 8 
+  --     data =  90 0f 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[REC]0:time over = 106msec
+:: Receive Intr ::
+  -- 0. task ID = 0 : Func No = 0 
+  --     data =  7f a9 01 01 00 00 0c 06 00 02 00 00 00 00 00 3e
+  -- 1. task ID = 0 : Func No = 0 
+  --     data =  10 00 01 01 00 00 0b 06 00 02 00 00 00 00 00 25
+  -- 2. task ID = 0 : Func No = 0 
+  --     data =  10 00 01 01 00 00 0b 06 00 02 00 00 00 00 00 25
+  -- 3. task ID = 0 : Func No = 0 
+  --     data =  10 00 01 01 00 00 0b 06 00 02 00 00 00 00 00 25
+  -- 4. task ID = 0 : Func No = 0 
+  --     data =  10 00 01 01 00 00 0b 06 00 02 00 00 00 00 00 25
+:: Receive Task ::
+  -- 0. data =  7f a9 01 01 00 00 0c 06 00 02 00 00 00 00 00 3e
+  -- 1. data =  10 00 01 01 00 00 0b 06 00 02 00 00 00 00 00 25
+  -- 2. data =  10 00 01 01 00 00 0b 06 00 02 00 00 00 00 00 25
+  -- 3. data =  10 00 01 01 00 00 0b 06 00 02 00 00 00 00 00 25
+  -- 4. data =  10 00 01 01 00 00 0b 06 00 02 00 00 00 00 00 25
+System assert!! File:src/fpcmain.c Line:963 Err:0
+System assert!! File:src/ftrec_api.c Line:629 Err:0
+[AVIN]0: AVIN task Delayed 3
+[REC]0:time over = 146msec
+[FPC]FPC_ReciveTASK() : 10 A9 01 01 00 00 0C 06 00 02 00 00 00 00 00 CF 
+[FPC]FPC_ReciveTASK() : 10 A9 01 01 00 00 0C 06 00 02 00 00 00 00 00 CF 
+[FPC]FPC_ReciveTASK() : 10 A9 01 01 00 00 0C 06 00 02 00 00 00 00 00 CF 
+[FPC]FPC_ReciveTASK() : 10 A9 01 01 00 00 0C 06 00 02 00 00 00 00 00 CF 
+[FPC]FPC_ReciveTASK() : 10 A9 01 01 00 00 0C 06 00 02 00 00 00 00 00 CF 
+[FPC]FPC_ReciveTASK() : 10 A9 01 01 00 00 0C 06 00 02 00 00 00 00 00 CF 
+[FPC]FPC_ReciveTASK() : 10 A9 01 01 00 00 0C 06 00 02 00 00 00 00 00 CF 
+[FPC]FPC_ReciveTASK() : 10 A9 01 01 00 00 0C 06 00 02 00 00 00 00 00 CF 
+[FPC]FPC_ReciveTASK() : 10 A9 01 01 00 00 0C 06 00 02 00 00 00 00 00 CF 
+[FPC]FPC_ReciveTASK() : 10 A9 01 01 00 00 0C 06 00 02 00 00 00 00 00 CF 
+[FPC]FPC_ReciveTASK() : 10 A9 01 01 00 00 0C 06 00 02 00 00 00 00 00 CF 
+[FPC]FPC_ReciveTASK() : 10 A9 01 01 00 00 0C 06 00 02 00 00 00 00 00 CF 
+[FPC]FPC_ReciveTASK() : 10 A9 01 01 00 00 0C 06 00 02 00 00 00 00 00 CF 
+[FPC]FPC_ReciveTASK() : 10 A9 01 01 00 00 0C 06 00 02 00 00 00 00 00 CF 
+:::SYS_RSV::: >> _InitTask() T.SET=OFF
+:::SYS_RSV::: >> _InitTask() ExtLINK.SET=OFF
+[nfrom] bgo_writeD(ID=0xF01) return error(19).
+[nfrom] Status flag change error[3].
+[nfrom] Status change error[-2].
+[nfrom] New file write start error[-2].
+[nfrom] New write error[-2].
+[nfrom] bgo_writeD(ID=0xF07) return error(19).
+[nfrom] Map write error[3].
+[nfrom] Power failer recovery error[-2].
+[nfrom] Status recovery error[-2].
+[SYS_CNTL]Power Off Request from task 108 reason 3 
+[SYS_CNTL]Power Off Request already received.
+:::SYS_RSV::: >> nfrom write error!
+System assert!! File:src/sys_rsv_set.c Line:995 Err:0
+System assert!! File:src/ftrec_api.c Line:629 Err:0
+:::SYS_RSV::: >> _Restore() task-id = 108
+:::SYS_RSV::: >> sys_rsv init success.
+[SYS_CNTL]VDM_ReportDrv: 2
+[SYS_CNTL]sys_cntl_ChangeKeyAction
+[DCS]dco_api :AVOUT_AV_Select: video=0, audio=0
+[FPC]FPC_ReciveTASK() : 7F A9 01 01 00 00 0D 06 00 02 00 00 00 00 00 3F 
+[SYS_CNTL]FPC_CB_ReportEmergency(3)
+[SYS_CNTL]FPC_EMERGENCY_ERROR
+[FPC] !!- OPcode Emergency -!!
+:: Send ::
+  -- 0. task ID = 91 : Func No = 7 
+  --     data =  a9 01 02 02 02 00 00 00 00 00 00 00 00 00 00 00
+  -- 1. task ID = 91 : Func No = 7 
+  --     data =  a4 40 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 91 : Func No = 7 
+  --     data =  a3 00 00 c0 0f 84 8b 80 88 80 88 c4 8c 00 00 00
+  -- 3. task ID = 108 : Func No = 7 
+  --     data =  81 00 00 00 00 00 00 02 00 00 00 00 00 00 00 00
+  -- 4. task ID = 108 : Func No = 7 
+  --     data =  81 00 00 00 00 02 00 00 00 00 00 00 00 00 00 00
+:: Receive ::
+  -- 0. task ID = 108 : Func No = 9 
+  --     data =  0e 02 04 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 1. task ID = 108 : Func No = 9 
+  --     data =  0e 02 04 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 2. task ID = 108 : Func No = 9 
+  --     data =  0e 02 04 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 3. task ID = 108 : Func No = 9 
+  --     data =  0e 02 04 00 00 00 00 00 00 00 00 00 00 00 00 00
+  -- 4. task ID = 108 : Func No = 9 
+  --     data =  0e 02 04 00 00 00 00 00 00 00 00 00 00 00 00 00
+:: Receive Intr ::
+  -- 0. task ID = 0 : Func No = 0 
+  --     data =  7f a9 01 01 00 00 0d 06 00 02 00 00 00 00 00 3f
+  -- 1. task ID = 0 : Func No = 0 
+  --     data =  48 00 01 01 00 00 0d 06 00 02 00 00 00 00 00 5f
+  -- 2. task ID = 0 : Func No = 0 
+  --     data =  10 a9 01 01 00 00 0c 06 00 02 00 00 00 00 00 cf
+  -- 3. task ID = 0 : Func No = 0 
+  --     data =  10 a9 01 01 00 00 0c 06 00 02 00 00 00 00 00 cf
+  -- 4. task ID = 0 : Func No = 0 
+  --     data =  10 a9 01 01 00 00 0c 06 00 02 00 00 00 00 00 cf
+[AVIN]0: AVIN task Delayed 8
+:: Receive Task ::
+  -- 0. data =  7f a9 01 01 00 00 0d 06 00 02 00 00 00 00 00 3f
+  -- 1. data =  48 00 01 01 00 00 0d 06 00 02 00 00 00 00 00 5f
+  -- 2. data =  10 a9 01 01 00 00 0c 06 00 02 00 00 00 00 00 cf
+  -- 3. data =  10 a9 01 01 00 00 0c 06 00 02 00 00 00 00 00 cf
+  -- 4. data =  10 a9 01 01 00 00 0c 06 00 02 00 00 00 00 00 cf
+System assert!! File:src/fpcmain.c Line:963 Err:0
+System assert!! File:src/ftrec_api.c Line:629 Err:0
+[REC]0:time over = 290msec
+[AVIN]0: AVIN task Delayed 2
+[SYS_CNTL]SetDeckModeStateEx task[sys_cntl(91)] drive[DVD] rec.drive[DVD] deck[READ(0x00000040)]
+[SYS_TUN]SYS_TUN_SysCntl_DeckMode_Callback()
+[SYS_TUN]SYS_TUN_AMD_NONE
+[SYS_CNTL]sys_cntl_isNowTimerRec 1
+[SYS_CNTL]SYS_CNTL_RESUME_TASK = 0
+[SYS_CNTL]SYS_CNTL_SRAM_RESUME_FLAG = 0
+[FS]VDM_ReportMediaEx : slot_id = 0 disc = 1 protect = 0 format = 7
+[MCM |54.66]MCM_resource_Open tid:91 drive:0x02
+[FS]VDM_ReportMediaEx : slot_id = 0 disc = 1 protect = 0 format = 7
+[SYS_CNTL]VDM_OpenDisc(2): OK[0]
+[FS]VDM_ReportMediaEx : slot_id = 0 disc = 1 protect = 0 format = 7
+[SYS_CNTL]VDM_ReportMediaEx(): vdm_res=0x0 
+[SYS_CNTL] disc  =0x00000001  protect=0x00000000 
+[SYS_CNTL] format=0x00000007  authent=0x00000004 
+[SYS_CNTL]HDD is_writable=0x0
+[SYS_CNTL]sys_cntl_ReportMedia. drv_id=0x0
+[SYS_CNTL]apptask_bit=0x200 last_media=0x5a is_writable=0 
+[MCM |54.69]MCM_resource_Open tid:91 drive:0x00
+[MCM |54.70]MCM_resource_Open core[1]:0x00000100
+[FS]VDM_ReportMediaEx : slot_id = 0 disc = 1 protect = 0 format = 7
+[MCM |54.70]MCM_resource_Close tid:91 drive:0x00
+[MCM |54.70]MCM_resource_Close core[1]:0x00000100
+[SYS_CNTL]SYS_CNTL_SRAM_TIMERREC_STATUS 8
+[SYS_CNTL]SYS_CNTL_SRAM_REBOOT_STATUS_OK
+[SYS_CNTL]SYS_CNTL_SRAM_TIMERREC_STATUS[8]
+[SYS_CNTL]_DisplayGuiFunc(2)
+[SYS_CNTL]SYS_CNTL_SetSysState[TRANSITION]
+[SYS_CNTL]EndGuiFunc not execute! gui_task[0] RunGuiFuncBit[0x00]
+[SYS_CNTL]SetGuiMode. =1 Catch task ID=0x5b taskID=0x105b
+[SYS_CNTL]callback pre (id==0x5b) send=0x65
+[SYS_TUN]Stop_Timer -> direct channel
+[SYS_TUN]SYS_TUN_AMD_NONE
+[SYS_CNTL]SYS_CNTL_cancel_tmp_AVOUT_A_eeOutputMode 0 0 0 0
+ pre_end
+[SYS_CNTL]M6// sys_cntl_play_condition = 0 new_mode=1 old_mode=1
+[DCS]dco_api :AVOUT_V_Select: video=1
+[DCS]dco_api :AVOUT_AV_Select: video=1, audio=0
+[SYS_CNTL]SYS_CNTL_SetSysState[EE]
+[SYS_CNTL]callback after (id==0x5b) send=0x72
+[SYS_TUN]SYS_TUN_SysCntl_GuiMode_Callback()
+[SYS_TUN]Stop_Timer -> direct channel
+[SYS_TUN]SYS_TUN_AMD_NONE
+[SYS_CNTL]SYS_CNTL_cancel_tmp_AVOUT_A_eeOutputMode 0 0 0 0
+:: Receive Intr ::
+  -- 0. task ID = 0 : Func No = 0 
+  --     data =  7f a9 01 01 00 00 0e 06 00 02 00 00 00 00 00 40
+  -- 1. task ID = 0 : Func No = 0 
+  --     data =  48 00 01 01 00 00 0e 06 00 02 00 00 00 00 00 60
+  -- 2. task ID = 0 : Func No = 0 
+  --     data =  7f a9 01 01 00 00 0d 06 00 02 00 00 00 00 00 3f
+  -- 3. task ID = 0 : Func No = 0 
+  --     data =  48 00 01 01 00 00 0d 06 00 02 00 00 00 00 00 5f
+  -- 4. task ID = 0 : Func No = 0 
+  --     data =  10 a9 01 01 00 00 0c 06 00 02 00 00 00 00 00 cf
+:: Receive Task ::
+  -- 0. data =  7f a9 01 01 00 00 0e 06 00 02 00 00 00 00 00 40
+  -- 1. data =  48 00 01 01 00 00 0e 06 00 02 00 00 00 00 00 60
+  -- 2. data =  7f a9 01 01 00 00 0d 06 00 02 00 00 00 00 00 3f
+  -- 3. data =  48 00 01 01 00 00 0d 06 00 02 00 00 00 00 00 5f
+  -- 4. data =  10 a9 01 01 00 00 0c 06 00 02 00 00 00 00 00 cf
+System assert!! File:src/fpcmain.c Line:963 Err:0
+[AVIN]0: AVIN task Delayed 4
+[AVIN]0: #*#*#*#*# AVIN inside V task Delayed !!!!! #*#*#*#*#
+[REC]0:time over = 148msec
+send=0x65
+[SYS_CNTL]Q task[26(26)] datatype[MOVE_GUI(172)]
+[SYS_CNTL]wait N/P change 1 0
+[SYS_CNTL]Q task[sys_fip(101)] datatype[READY(16)]
+[SYS_CNTL]Q task[sys_tun(114)] datatype[READY(16)]
+[SYS_CNTL]Q task[sys_pcdv(107)] datatype[READY(16)]
+[SYS_CNTL]Q task[sys_rsv(108)] datatype[TIMER_REC_CONTROL(157)]
+[SYS_CNTL]SYS_APP_TSET_DISABLE 0 0 
+[SYS_CNTL]sys_cntl_ChangeKeyAction
+[SYS_CNTL]Q task[sys_rsv(108)] datatype[TIMER_REC_CONTROL(157)]
+[SYS_CNTL]SYS_APP_TSET_EXTLINK_DISABLE 0 0 
+[FPC]FPC_ReciveTASK() : 1C A9 01 01 00 00 0E 06 00 02 00 00 00 00 00 DD 
+[SYS_CNTL]sys_cntl_ChangeKeyAction
+[SYS_CNTL]Q task[sys_rsv(108)] datatype[READY(16)]
+[SYS_CNTL]Q task[3(3)] datatype[DV_STAT(57)]
+[SYS_CNTL]sys_cntl_media_dv_disconnect():
+[SYS_CNTL]Q task[26(26)] datatype[MOVE_GUI(172)]
+ after mid
+[SYS_CNTL]PTK_IsWindowEventTask(5b) fg=0,tsk_stat=1
+ end
+[SYS_CNTL]_DisplayGuiFunc(2) mid
+[SYS_CNTL]sys_cntl_CatchScreen() success. task ID 91(sys_cntl)
+[SYS_CNTL]SYS_CNTL_SetSysState[TRANSITION_CANCEL]
+[SYS_CNTL]sys_cntl_card_blinkcall drv[0x0003(SD)] blink[0xC5(BLINK only 5sec)]
+[FS]BPB:FileSystemType:FAT16
+[FS]CAL:FileSystemType:FAT16
+[FS]VDM_ReportMediaEx : slot_id = 3 disc = 200040 protect = 0 format = 3
+[FS]BPB:FileSystemType:FAT16
+[FS]CAL:FileSystemType:FAT16
+[FS]VDM_ReportMediaEx : slot_id = 3 disc = 200040 protect = 0 format = 3
+[SYS_CNTL]VDM_ReportMediaEx(): vdm_res=0x0 
+[SYS_CNTL] disc  =0x00200040  protect=0x00000000 
+[SYS_CNTL] format=0x00000003  authent=0x00000000 
+[SYS_CNTL]CARD is_writable=0x0
+[SYS_CNTL]sys_cntl_card_blinkcall drv[0x0003(SD)] blink[0x80(ON)]
+[SYS_CNTL]SetDeckModeStateEx task[sys_cntl(91)] drive[SD] rec.drive[SD] deck[STOP2(0x00000000)]
+[SYS_TUN]SYS_TUN_SysCntl_DeckMode_Callback()
+[SYS_TUN]SYS_TUN_AMD_NONE
+[SYS_CNTL].. FPC_StartCommunication()
+[SYS_CNTL]SYS_CNTL_set_pow_status(SYS_CNTL_POW_ON)
+[SYS_TUN]Stop_Timer -> direct channel
+[SYS_TUN]SYS_TUN_AMD_NONE
+[SYS_CNTL]SYS_CNTL_cancel_tmp_AVOUT_A_eeOutputMode 0 0 0 0
+[DCS]dco_api :avout_API_MuteID = 0x2
+[DCS]dco_api :AVOUT_A_Mute_ID: OFF_ID[ALL]=0 , [EE]=8
+[DCS]dco_api :AVOUT_V_Mute: onoff=0
+[SYS_CNTL]Q task[sys_cntl(91)] datatype[MOVE_GUI(172)]
+[SYS_CNTL]n_p_callback end
+[SYS_CNTL]ReleaseScreen() success.  task ID 91(sys_cntl)
+[SYS_CNTL]sys_cntl_CatchScreen() success. task ID 91(sys_cntl)
+[SYS_CNTL]MOVE catch91
+[SYS_CNTL]TransferMode : (0)
+[SYS_CNTL]Q task[40(40)] datatype[PCCARD_CALLBACK(178)]
+[SYS_CNTL]sys_cntl_card_blinkcall drv[0x0003(SD)] blink[0xFF(BLINK continuously 0.25sec)]
+[SYS_CNTL]### HDD WAKEUP ###
+UARTSTREAM: OK (90632 bytes, framing_err=0, overflow=NO)
+@P7501_RES cmd=UARTSTREAM status=OK code=0 elapsed_us=90000577
+PANADIGA> 

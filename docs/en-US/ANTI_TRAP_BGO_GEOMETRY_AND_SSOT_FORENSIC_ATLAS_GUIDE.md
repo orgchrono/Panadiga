@@ -41,10 +41,10 @@ When retargeting factory updater payloads (`PROG061` / `MAIN` / `/BOOT.BIN`) ont
 
 ---
 
-## 3. Auto-Updating `100%` Ghidra Forensic Atlas & New Ecosystem Skills (`35 Skills`)
+## 3. Auto-Updating `100%` Ghidra Forensic Atlas & New Ecosystem Skills (`29 Skills`)
 
 - **Deterministic Forensic Atlas (`scripts/generate_firmware_atlas.py`):** Aggregates `53/53` zero-undef coverage from [`fleet_verify.json`](../audits/zero_undef/fleet_verify.json), curated functions/callers/callees/hex constants/bitwise patterns from `docs/pseudocode/raw/doc_*.txt`, `profiles/symbols/` dictionaries, and SSOT headers/footers (`EXTRHEAD`/`EXTRFOOT`/`MainListHeader`/`MEIHFS`/`FAT16B`/`ISO9660`/`EEMUL`) into [`firmware_forensic_atlas.json`](../../profiles/forensic_atlas/firmware_forensic_atlas.json) and [`FORENSIC_ATLAS_INDEX.md`](../../.agents/skills/panadiga-firmware-forensic-atlas/references/FORENSIC_ATLAS_INDEX.md).
 - **Dedicated Agent Skills (`.agents/skills/`):**
-  - [`panadiga-ssot-builder-and-validation`](../../.agents/skills/panadiga-ssot-builder-and-validation/SKILL.md) — Authoring & fail-closed validation of `profiles/` JSON SSOT.
+  - [`panadiga-device-onboarding`](../../.agents/skills/panadiga-device-onboarding/SKILL.md) — Authoring, `T0..T4` onboarding, and fail-closed validation of `profiles/` JSON SSOT.
   - [`panadiga-anti-trap-geometry-verification`](../../.agents/skills/panadiga-anti-trap-geometry-verification/SKILL.md) — Mandatory `4 MiB` vs `8 MiB` & cross-board geometry guards.
   - [`panadiga-firmware-forensic-atlas`](../../.agents/skills/panadiga-firmware-forensic-atlas/SKILL.md) — Auto-updating Ghidra `100%`-disassembled forensic atlas (`--write` / `--check`).

@@ -1,7 +1,7 @@
 # Panadiga 100%-Disassembled Ghidra Forensic Atlas Index
 
 > Gerado deterministicamente por `python scripts/generate_firmware_atlas.py --write`. Verifique deriva com `--check`.
-> **Atlas Fingerprint (`SHA-256`):** `8d912b5b373b2a72632dcb8a5914a4324fd2e2a7fb925d880ec1d0e9fda15270`
+> **Atlas Fingerprint (`SHA-256`):** `5f077e8dec064afe90e3b8f050e5f29bbf1b80a4490437d3feb6cc0567a69e39`
 > **JSON Completo:** `profiles/forensic_atlas/firmware_forensic_atlas.json`
 
 ## 1. Cobertura Zero-Undef & Totais Indexados
@@ -11,11 +11,11 @@
 | Programas MN103S Zero-Undef | 53 / 55 |
 | Instruções & Funções Frota Ghidra | 75,031,001 insns · 1,083,676 funcs |
 | Funções Curadas (`doc_*.txt`) | 189 |
-| Índices `profiles/symbols/` | 1 |
+| Índices `profiles/symbols/` | 4 |
 | Constantes Hex / MMIO Catalogadas | 160 |
 | Padrões Bitwise Catalogados | 114 |
 | Headers, Footers & Magics SSOT | 31 |
-| Armadilhas Catalogadas (`profiles/traps/`) | 8 |
+| Armadilhas Catalogadas (`profiles/traps/`) | 13 |
 
 ## 2. Headers, Footers, Magics & Fronteiras Físicas
 

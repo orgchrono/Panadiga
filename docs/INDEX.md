@@ -3,11 +3,11 @@
 
 # Panadiga Technical Documentation Index / Índice da Documentação Técnica
 
-All **41** primary technical engineering dossiers in this repository maintain **1:1 bidirectional parity** between [**English (`docs/en-US/`)**](#english-documentation-docsen-us--41-dossiers) and [**Português (BR) (`docs/pt-BR/`)**](#documentação-em-português-docspt-br--41-dossiês), paired automatically with [`translation_pairs.json`](./translation_pairs.json), plus root audits, preserved `2026-11-11` audit snapshots ([`audits/`](./audits/README.md)), Ghidra C/disassembly evidence ([`pseudocode/`](./pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md)), and live `COM10` bench UART logs ([`debug_logs/`](./debug_logs/README.md)).
+All **43** primary technical engineering dossiers in this repository maintain **1:1 bidirectional parity** between [**English (`docs/en-US/`)**](#english-documentation-docsen-us--43-dossiers) and [**Português (BR) (`docs/pt-BR/`)**](#documentação-em-português-docspt-br--43-dossiês), paired automatically with [`translation_pairs.json`](./translation_pairs.json), plus root audits, preserved `2026-11-11` audit snapshots ([`audits/`](./audits/README.md)), Ghidra C/disassembly evidence ([`pseudocode/`](./pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md)), and live `COM10` bench UART logs ([`debug_logs/`](./debug_logs/README.md)).
 
 ---
 
-## English Documentation (`docs/en-US/`) — 41 Dossiers
+## English Documentation (`docs/en-US/`) — 43 Dossiers
 
 | # | Document (`en-US`) | PT-BR Counterpart | Engineering Domain & Scope |
 | :---: | :--- | :--- | :--- |
@@ -52,10 +52,12 @@ All **41** primary technical engineering dossiers in this repository maintain **
 | 39 | [DIGA_LINEUP_HARDWARE_PROFILES_CATALOG_AND_AUDIT.md](en-US/DIGA_LINEUP_HARDWARE_PROFILES_CATALOG_AND_AUDIT.md) | [PT-BR](pt-BR/CATALOGO_E_AUDITORIA_PERFIS_HARDWARE_LINHA_DIGA.md) | 89-model DIGA hardware profile expansion (`T0`->`T4`), CDN/datasheet archive & safety traps |
 | 40 | [WHATS_NEXT_NEW_DEVICE_ONBOARDING.md](en-US/WHATS_NEXT_NEW_DEVICE_ONBOARDING.md) | [PT-BR](pt-BR/WHATS_NEXT_ONBOARDING_NOVOS_APARELHOS.md) | 7-stage onboarding pipeline for new DIGA models (bench capture, `rebuild-from-dump`, Ghidra, SSOT JSON & PR checklist) |
 | 41 | [ANTI_TRAP_BGO_GEOMETRY_AND_SSOT_FORENSIC_ATLAS_GUIDE.md](en-US/ANTI_TRAP_BGO_GEOMETRY_AND_SSOT_FORENSIC_ATLAS_GUIDE.md) | [PT-BR](pt-BR/GUIA_ANTI_ARMADILHAS_GEOMETRIA_BGO_E_ATLAS_FORENSE_SSOT.md) | Anti-trap BGO geometry verification (`4 MiB` vs `8 MiB`, `35` vs `45` sectors, `DIGADIAG` `256K` vs `128K`) & 100%-disassembled Ghidra Forensic Atlas (`SSOT`) |
+| 42 | [HARDWARE_GUIDE_STARTECH_IDE2SAT2_AND_TYPE_B_FFC_CABLE.md](en-US/HARDWARE_GUIDE_STARTECH_IDE2SAT2_AND_TYPE_B_FFC_CABLE.md) | [PT-BR](pt-BR/GUIA_HARDWARE_STARTECH_IDE2SAT2_E_CABO_FFC_TYPE_B.md) | `StarTech IDE2SAT2` (`Marvell 88SA8052`), `P58001`/`P1503` pinout & `Type B` FFC cable tip to flip `N5EZZ0000003` and close case lid |
+| 43 | [RESEARCH_VALIDATION_GATES_SATA_STAGE2_AND_8MB_BGO_RETARGET.md](en-US/RESEARCH_VALIDATION_GATES_SATA_STAGE2_AND_8MB_BGO_RETARGET.md) | [PT-BR](pt-BR/PESQUISA_PORTOES_VALIDACAO_SATA_STAGE2_E_RETARGET_BGO_8MB.md) | Validation Gates `0..4`, ~10h root-cause audit, `MAIN3060NP` `8 MiB` BGO retarget, `MAIN3410PQ` `PAL-M` & `Nor-FROM` VM proof |
 
 ---
 
-## Documentação em Português (`docs/pt-BR/`) — 41 Dossiês
+## Documentação em Português (`docs/pt-BR/`) — 43 Dossiês
 
 | # | Documento (`pt-BR`) | Versão `en-US` | Área / Escopo Técnico |
 | :---: | :--- | :--- | :--- |
@@ -100,6 +102,8 @@ All **41** primary technical engineering dossiers in this repository maintain **
 | 39 | [CATALOGO_E_AUDITORIA_PERFIS_HARDWARE_LINHA_DIGA.md](pt-BR/CATALOGO_E_AUDITORIA_PERFIS_HARDWARE_LINHA_DIGA.md) | [EN-US](en-US/DIGA_LINEUP_HARDWARE_PROFILES_CATALOG_AND_AUDIT.md) | Auditoria de 89 modelos DIGA (`T0`->`T4`), novos downloads/datasheets e alertas físicos |
 | 40 | [WHATS_NEXT_ONBOARDING_NOVOS_APARELHOS.md](pt-BR/WHATS_NEXT_ONBOARDING_NOVOS_APARELHOS.md) | [EN-US](en-US/WHATS_NEXT_NEW_DEVICE_ONBOARDING.md) | Pipeline em 7 estágios para integrar novos aparelhos DIGA (bancada, `rebuild-from-dump`, Ghidra, SSOT JSON e PR) |
 | 41 | [GUIA_ANTI_ARMADILHAS_GEOMETRIA_BGO_E_ATLAS_FORENSE_SSOT.md](pt-BR/GUIA_ANTI_ARMADILHAS_GEOMETRIA_BGO_E_ATLAS_FORENSE_SSOT.md) | [EN-US](en-US/ANTI_TRAP_BGO_GEOMETRY_AND_SSOT_FORENSIC_ATLAS_GUIDE.md) | Verificação anti-armadilhas de geometria BGO (`4 MiB` vs `8 MiB`, `35` vs `45` setores, `DIGADIAG` `256K` vs `128K`) & Atlas Forense Ghidra 100% disassemblado (`SSOT`) |
+| 42 | [GUIA_HARDWARE_STARTECH_IDE2SAT2_E_CABO_FFC_TYPE_B.md](pt-BR/GUIA_HARDWARE_STARTECH_IDE2SAT2_E_CABO_FFC_TYPE_B.md) | [EN-US](en-US/HARDWARE_GUIDE_STARTECH_IDE2SAT2_AND_TYPE_B_FFC_CABLE.md) | Ponte `StarTech IDE2SAT2` (`Marvell 88SA8052`), pinagem `P58001`/`P1503` & dica do cabo FFC `Type B` para virar `N5EZZ0000003` e fechar a case |
+| 43 | [PESQUISA_PORTOES_VALIDACAO_SATA_STAGE2_E_RETARGET_BGO_8MB.md](pt-BR/PESQUISA_PORTOES_VALIDACAO_SATA_STAGE2_E_RETARGET_BGO_8MB.md) | [EN-US](en-US/RESEARCH_VALIDATION_GATES_SATA_STAGE2_AND_8MB_BGO_RETARGET.md) | Portões de Validação `0..4`, investigação ~10h, retarget `MAIN3060NP` BGO `8 MiB`, `MAIN3410PQ` `PAL-M` & prova `Nor-FROM` em VM |
 
 ---
 

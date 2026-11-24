@@ -1,0 +1,1935 @@
+=== BOOTTRACE: window=90000ms boot=1 hold=0ms sticky=NO no_xrst=NO (8N1 @ 115200) ===
+[BOOTTRACE +  10ms] DDR CHECK: OK
+[BOOTTRACE +  19ms] Chip select = 1
+[BOOTTRACE +  20ms] F/E Address = 0x90202000 , Drive(compress) Size = 0xACC50
+[BOOTTRACE +  26ms] uncompress dst=90202000 len=160000 src=84080040 len=acc01
+[BOOTTRACE + 775ms] HEADER:5627DD54, DECOMP:5627DD54
+[BOOTTRACE + 778ms] F/E reset release finish ...
+[BOOTTRACE + 781ms] ***** Loader ver0.61 [06/03/06] *****
+[BOOTTRACE + 785ms] ***** normal mode *****
+[BOOTTRACE + 802ms] *** RTSC Initialize ***
+[BOOTTRACE +3538ms] [RTSD] ATAPI Software Reset 
+[BOOTTRACE +3552ms] [RTSD] HDD spin-up error (80000404)
+[BOOTTRACE +3555ms] miniboot : system assert!!
+[BOOTTRACE +3557ms] [RTSD] === IDE HOST ERROR === ( E8000000 )
+[BOOTTRACE +3561ms] *** ATAPI DEVICE ERROR
+[BOOTTRACE +3564ms] CDB  [FF EC 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +3568ms] Reg[00 00 00 00 00 00 00 : Err SecC SecN CylL CylH D/H Status] 
+[BOOTTRACE +3573ms] H_STAT [E8] T_STAT [0]
+[BOOTTRACE +3575ms] [RTSD] SRST Command Set
+[BOOTTRACE +3578ms] [RTSD] Reset Failed !! (80000407)
+[BOOTTRACE +3591ms] [RTSD] HDD spin-up error (80000404)
+[BOOTTRACE +3594ms] miniboot : system assert!!
+[BOOTTRACE +3597ms] [RTSD] === IDE HOST ERROR === ( E8000000 )
+[BOOTTRACE +3600ms] *** ATAPI DEVICE ERROR
+[BOOTTRACE +3603ms] CDB  [FF EC 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +3607ms] Reg[00 00 00 00 00 00 00 : Err SecC SecN CylL CylH D/H Status] 
+[BOOTTRACE +3612ms] H_STAT [E8] T_STAT [0]
+[BOOTTRACE +3615ms] [RTSD] SRST Command Set
+[BOOTTRACE +3617ms] [RTSD] Reset Failed !! (80000407)
+[BOOTTRACE +3630ms] [RTSD] HDD spin-up error (80000404)
+[BOOTTRACE +3633ms] miniboot : system assert!!
+[BOOTTRACE +3636ms] [RTSD] === IDE HOST ERROR === ( E8000000 )
+[BOOTTRACE +3640ms] *** ATAPI DEVICE ERROR
+[BOOTTRACE +3642ms] CDB  [FF EC 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +3646ms] Reg[00 00 00 00 00 00 00 : Err SecC SecN CylL CylH D/H Status] 
+[BOOTTRACE +3652ms] H_STAT [E8] T_STAT [0]
+[BOOTTRACE +3654ms] [RTSD] SRST Command Set
+[BOOTTRACE +3656ms] [RTSD] Reset Failed !! (80000407)
+[BOOTTRACE +3659ms] HDD_MAX_LBA get failed[0xE8000000].
+[BOOTTRACE +3662ms] mainsoft data is invalid, so set update flag.
+[BOOTTRACE +3684ms] [nfrom] file_no[17],skip(0),non_skip(1),erase(0),new_write(0).
+[BOOTTRACE +3699ms] !!! start fmu to read & exec fvu. !!!
+[BOOTTRACE +3702ms] wait 1 second.
+[BOOTTRACE +4704ms] *** timer correspond initialize ***
+[BOOTTRACE +4710ms] startup reason = [41]
+[BOOTTRACE +4715ms] Main hung-up time changed 255[s].
+[BOOTTRACE +4728ms] Read fvu program from Update-Disk to 0x90400000.
+[BOOTTRACE +4732ms] SD card check start
+[BOOTTRACE +4734ms] SD init start...
+[BOOTTRACE +4826ms] [SDCD] sdcd_insrmv_check:SD Card inserted 
+[BOOTTRACE +4898ms] [SDCD] === This Card Spec ==== 
+[BOOTTRACE +4901ms] .Card type:2(condition:3) wp:0
+[BOOTTRACE +4904ms] .capacity:3c4000[LBA](2021654528Byte) . transfer speed:25000[Kbps]
+[BOOTTRACE +4910ms] .RCA:2 . Bus Width:4(current) 4(support)
+[BOOTTRACE +4913ms] .Multi Max Block Len Read:2[SECT] / Write:2[SECT]
+[BOOTTRACE +4918ms] SD = 0x3C4000[LBA]
+[BOOTTRACE +4920ms] ... SD init end
+[BOOTTRACE +4926ms] FAT Mount ID = 0x1
+[BOOTTRACE +4931ms] FAT Open Old File ID = 0xC8
+[BOOTTRACE +4933ms] treat as SD.
+[BOOTTRACE +4951ms] File ID[0xC8] seek to 0xB1800.
+[BOOTTRACE +5021ms] File ID[0xC8] read to 0x90400000(size=0x40000).
+[BOOTTRACE +5025ms] cheking for fvu program check-sum[0x21647BA].
+[BOOTTRACE +5111ms] [nfrom] file_no[17],skip(0),non_skip(1),erase(0),new_write(0).
+[BOOTTRACE +5126ms] success to read fvu program from Update-Disc.
+[BOOTTRACE +5161ms] [RTSD] Device Reset Occurred(0x62900) 
+[BOOTTRACE +5164ms] X(80062900)X(80023a00)X(80023a00)X(80023a00)
+[BOOTTRACE +5171ms] *** start fvu ***
+[BOOTTRACE +5180ms] ***** Fvu ver0.61 [05/11/01] *****
+[BOOTTRACE +5197ms] *** RTSC Initialize ***
+[BOOTTRACE +8387ms] [RTSD] ATAPI Software Reset 
+[BOOTTRACE +8390ms] [STAGE2] SATA HDD boot ('F'->FVU)...
+[BOOTTRACE +8894ms] SD init start...
+[BOOTTRACE +8986ms] [SDCD] sdcd_insrmv_check:SD Card inserted 
+[BOOTTRACE +9057ms] [SDCD] === This Card Spec ==== 
+[BOOTTRACE +9059ms] .Card type:2(condition:3) wp:0
+[BOOTTRACE +9062ms] .capacity:3c4000[LBA](2021654528Byte) . transfer speed:25000[Kbps]
+[BOOTTRACE +9068ms] .RCA:2 . Bus Width:4(current) 4(support)
+[BOOTTRACE +9072ms] .Multi Max Block Len Read:2[SECT] / Write:2[SECT]
+[BOOTTRACE +9076ms] SD = 0x3C4000[LBA]
+[BOOTTRACE +9078ms] ... SD init end
+[BOOTTRACE +9084ms] [RTSD] HDD already spin-up 
+[BOOTTRACE +9117ms] [RTSD] HDD Auto Spin up Mode 
+[BOOTTRACE +9124ms] [STAGE2] HDD MAX LBA=0x1D1C5970
+[BOOTTRACE +10980ms] uncompress dst=57000000 len=c6692c src=94000040 len=5e7c4d
+[BOOTTRACE +14698ms] HEADER:1D134192, DECOMP:1D134192
+[BOOTTRACE +14701ms] [STAGE2] Boot MAIN @ 0x57000000
+[BOOTTRACE +15289ms] [nfrom] DeviceInfo(EEPROM : 8Kbit)
+[BOOTTRACE +15296ms] **************************************************
+[BOOTTRACE +15300ms] [ftrec]Simple obstacle history
+[BOOTTRACE +15303ms] [ftrec]Running time  : 23157 [s]
+[BOOTTRACE +15306ms] [ftrec]Fault history : 20
+[BOOTTRACE +15309ms] [ftrec]NAND-FROM read error! Fault history clear!
+[BOOTTRACE +15313ms] --------------------------------------------------
+[BOOTTRACE +15318ms] kind, tick, running, other1, other2, other3
+[BOOTTRACE +15322ms] [ 0]0x4 , 2006/01/01 00:00:00 ,     23157 , src/atapi_bios.c , 944 , 0
+[BOOTTRACE +15329ms] [ 1]0x4 , 2006/01/01 00:00:00 ,     23145 , src/fpcmain.c , 963 , 0
+[BOOTTRACE +15335ms] [ 2]0x4 , 2006/01/01 00:00:00 ,     23145 , src/sys_fip_osd_tools.c , 1174 , 0
+[BOOTTRACE +15342ms] [ 3]0x4 , 2006/01/01 00:00:00 ,     23145 , src/sys_fip_fpc_exe.c , 3158 , 0
+[BOOTTRACE +15350ms] [ 4]0x4 , 2006/01/01 00:00:00 ,     23145 , src/fpcmain.c , 963 , 0
+[BOOTTRACE +15356ms] [ 5]0x4 , 2006/01/01 00:00:00 ,     23145 , src/sys_fip_osd_tools.c , 1174 , 0
+[BOOTTRACE +15363ms] [ 6]0x4 , 2006/01/01 00:00:00 ,     23145 , src/sys_fip_fpc_exe.c , 3158 , 0
+[BOOTTRACE +15370ms] [ 7]0x4 , 2006/01/01 00:00:00 ,     23145 , src/sys_fip_osd_tools.c , 1174 , 0
+[BOOTTRACE +15378ms] [ 8]0x4 , 2006/01/01 00:00:00 ,     23145 , src/sys_fip_fpc_exe.c , 3158 , 0
+[BOOTTRACE +15385ms] [ 9]0x4 , 2006/01/01 00:00:00 ,     23145 , src/sys_app_utility.c , 1812 , 0
+[BOOTTRACE +15392ms] [10]0x4 , 2006/01/01 00:00:00 ,     23145 , src/fpcmain.c , 963 , 0
+[BOOTTRACE +15398ms] [11]0x4 , 2006/01/01 00:00:00 ,     23145 , src/sys_fip_osd_tools.c , 1174 , 0
+[BOOTTRACE +15406ms] [12]0x4 , 2006/01/01 00:00:00 ,     23145 , src/sys_fip_fpc_exe.c , 3158 , 0
+[BOOTTRACE +15413ms] [13]0x4 , 2006/01/01 00:00:00 ,     23145 , src/sys_fip_osd_tools.c , 1174 , 0
+[BOOTTRACE +15420ms] [14]0x4 , 2006/01/01 00:00:00 ,     23116 , src/sys_fip_fpc_exe.c , 3158 , 0
+[BOOTTRACE +15427ms] [15]0x4 , 2006/01/01 00:00:00 ,     23113 , src/sys_fip_osd_tools.c , 1174 , 0
+[BOOTTRACE +15434ms] [16]0x4 , 2006/01/01 00:00:00 ,     23113 , src/fpcmain.c , 963 , 0
+[BOOTTRACE +15441ms] [17]0x4 , 2006/01/01 00:00:00 ,     23113 , src/sys_fip_osd_tools.c , 1174 , 0
+[BOOTTRACE +15448ms] [18]0x4 , 2006/01/01 00:00:00 ,     23113 , src/fpcmain.c , 963 , 0
+[BOOTTRACE +15454ms] [19]0x4 , 2006/01/01 00:00:00 ,     23113 , src/sys_fip_osd_tools.c , 1174 , 0
+[BOOTTRACE +15462ms] **************************************************
+[BOOTTRACE +15466ms] PiE-OS --- Personal Information & Entertainment - Operating System
+[BOOTTRACE +15473ms] Copyright (c) 1996-2001 by Matsushita Electric Industrial Co., Ltd.
+[BOOTTRACE +15479ms]   DVD Recorder DMR5x Series System Version : 3410PQ (2006/10/20)
+[BOOTTRACE +15485ms]     Factory System Version = 3410PQ
+[BOOTTRACE +15488ms]           1394avc.a Ver2.17(2006/02/09) : 1394AVC
+[BOOTTRACE +15493ms]            lnx_dd.a Ver2.01(2005/10/26) : 1394dd
+[BOOTTRACE +15497ms]               hsb.a Ver2.01(2005/09/12) : 1394lib
+[BOOTTRACE +15502ms]            fpc.a V7.0R122.8 (2006/6/20) : FPC(FrontPanelCommunication)
+[BOOTTRACE +15509ms]              log.a Ver1.76 (2005/12/05) : LOG Module
+[BOOTTRACE +15514ms]           ptk.a(M6) 2.2.06 (2006/01/17) : PiE-Toolkit
+[BOOTTRACE +15519ms]            timer.a V4.62.4 (2006/02/15) : Timer
+[BOOTTRACE +15523ms]        TitleSort.a Ver1.00 (2005/08/27) : Title Sort Module
+[BOOTTRACE +15529ms]        tuner.a V7.0R104.11 (2006/05/30) : Tuner I/F
+[BOOTTRACE +15533ms]            vbisl.a V2.0R21 (2005/12/26) : Vbisl Driver
+[BOOTTRACE +15539ms]             avin.a Ver0.82 (2006/06/30) : AVIN Lib.(mv3base)
+[BOOTTRACE +15544ms]         cd_core.a Ver 5.02 (2005/09/14) : CD/VCD CoreSoft
+[BOOTTRACE +15550ms]            davis.a ver2.10 (2006/01/16) : DAVIS
+[BOOTTRACE +15554ms]       decoder.a(DCS) Ver3.10 2005/12/16 : Decorder System Control
+[BOOTTRACE +15560ms]  decoder.a(DCR) DCR Ver2.120 2005/11/30 : DecorderVideoRecording
+[BOOTTRACE +15566ms]          decoder.a Ver0.49 (2005/05/20) : Decorder CD
+[BOOTTRACE +15571ms]    decoder.a(DCO) Ver0.078 (2006/04/17) : Decorder AVOUT
+[BOOTTRACE +15577ms]     decoder.a(DCV) Ver0.23 (2005/12/26) : M6xxx-Series Decorder DVD-Video
+[BOOTTRACE +15583ms]          decoder.a Ver0.73 (2005/11/21) : Decorder Video-CD
+[BOOTTRACE +15589ms]     decoder.a(DCA) Ver0.16 (2005/10/07) : M7xxx-Series Decorder DVD-Audio
+[BOOTTRACE +15596ms]          decoder.a Ver0.49 (2005/10/04) : Decorder MP3
+[BOOTTRACE +15601ms]          decoder.a Ver0.08 (2004/05/21) : Decorder SD MPEG2
+[BOOTTRACE +15606ms]          decoder.a Ver0.42 (2006/01/24) : Decorder AVI
+[BOOTTRACE +15612ms]              dml.a Ver1.00 (2004/10/20) : DiscManagementLibrary
+[BOOTTRACE +15618ms]              dvdcore.a v0.190(06/01/27) : DVD-Video/AudioCoreSoft
+[BOOTTRACE +15624ms]            dvdcore_ext.a v1.2(05/11/18) : DVD-Video/AudioCoreSoft
+[BOOTTRACE +15630ms]         dvr_core.a Ver0.781(2006/05/24) : DVR CORE
+[BOOTTRACE +15635ms]          dvr_ifo.a Ver0.02 (2003/10/22) : RTR_IFO Manager
+[BOOTTRACE +15640ms]                                                                                                                                                                
+[BOOTTRACE +15655ms]                                                                                              SRISC VerMv3SriscDrs-v0.90r037 (2005/10/11) : ENCODER-SRISC
+[BOOTTRACE +15669ms]                                                                                                                                                                
+[BOOTTRACE +15683ms]                                                                                           ERISC VerMv3RomEriscRAM-v0.90r010 (2005/11/07) : ENCODER-ERISC
+[BOOTTRACE +15697ms]               eif.a Ver0.08(2005/11/08) : Encoder I/F
+[BOOTTRACE +15702ms]              evp.a Ver0.07 (2004/06/08) : EVP Lib.
+[BOOTTRACE +15707ms]            fcore.a Ver0.25 (2006/01/10) : Finalize Core Module
+[BOOTTRACE +15713ms]             flib.a Ver0.28 (2005/12/06) : Finalize-Library.
+[BOOTTRACE +15718ms]        fs.a       Ver0.70e (2006/07/05) : File System (VDM Ver.0.92base)
+[BOOTTRACE +15725ms]         fs.a(HDFS) Ver0.80 (2006/02/07) : File System (HDFS)
+[BOOTTRACE +15731ms]         fs.a(UDF)  Ver0.12 (2005/08/31) : File System (UDF)
+[BOOTTRACE +15736ms]            ftrec.a Ver0.10 (2005/11/01) : FTREC
+[BOOTTRACE +15741ms]              iic.a Ver3.04 (2005/09/29) : IIC Lib.
+[BOOTTRACE +15745ms]         input.a 3.0.5(M6)  (2005/12/19) : PiE Input
+[BOOTTRACE +15750ms]              irq.a Ver0.22 (2005/09/05) : IRQ Lib
+[BOOTTRACE +15755ms]        jpg_core.a Ver4.131 (2005/12/15) : JPEG CoreSoft
+[BOOTTRACE +15760ms]        ld_gen.a Ver 0.14.0 (2005/10/28) : LD_gen - generic file loader
+[BOOTTRACE +15767ms]                lda.a Ver0.28 2005/08/25 : DVD-AUDIO Loader
+[BOOTTRACE +15772ms]      loader_vcd.a Ver 0.13 (2005/08/25) : Loder VCD/CD-DA
+[BOOTTRACE +15778ms]             ldg.a Ver 0.08 (2004/05/21) : Loder SD MPEG2
+[BOOTTRACE +15783ms]             ldm.a Ver 0.13 (2005/08/23) : Loder MP3
+[BOOTTRACE +15788ms]             ldr.a ver 0.203(2005/10/12) : RAM Loader
+[BOOTTRACE +15793ms]                ldv.a v0.100(2005/12/28) : DVDVideo Loader
+[BOOTTRACE +15798ms]              mbm.a Ver1.48 (2005/11/24) : Memory Back UP System
+[BOOTTRACE +15804ms]        mcm.a ver Ver 2.264 (2005/12/19) : MCM
+[BOOTTRACE +15808ms]           fmupre.a Ver0.28 (2005/11/30) : pre-update-firm
+[BOOTTRACE +15814ms]       mp3_core.a Ver1.09.5 (2005/11/30) : MP3 CoreSoft
+[BOOTTRACE +15819ms]            nfrom.a Ver0.33 (2005/12/06) : Nor-FROM Lib.
+[BOOTTRACE +15824ms]           nmi.a Ver 0.10.0 (2006/04/14) : NMI Handler Lib.
+[BOOTTRACE +15829ms]           robust.a Ver0.038(2003/12/26) : Robust
+[BOOTTRACE +15834ms]             rtscdd.a K0.58 (2006/07/05) : RTSD
+[BOOTTRACE +15838ms]     rtsdauth.a Ver0.15-MV3 (2005/12/14) : Copyright
+[BOOTTRACE +15843ms]           serial.a Ver0.33 (2005/06/28) : Debug Serial
+[BOOTTRACE +15848ms]    sys_boot.a Ver6.0.076.03(2006/03/14) : sys_boot(M6)
+[BOOTTRACE +15853ms]           sys_cd.a Ver 7.06(2005/11/02) : CD Media App
+[BOOTTRACE +15859ms]    sys_cntl.a Ver6.0.143.19(2006/05/12) : sys_cntl(M6)
+[BOOTTRACE +15864ms]        sys_dvdv.a Ver 1.054(2005/11/02) : M6 :DVD-Video System App 
+[BOOTTRACE +15870ms]      sys_epgeuro.a Ver0.314(2006/08/03) : sys_epgeuro
+[BOOTTRACE +15875ms]    sys_fact.a Ver.M6.065.09(2006/06/10) : Fact App.
+[BOOTTRACE +15880ms]      sys_fip.a Ver0.093.01 (2006/02/16) : FL&OSD Control
+[BOOTTRACE +15885ms]         sys_font.a Ver1.58 (2005/10/21) : sys_font
+[BOOTTRACE +15890ms]    sys_guibar.a Ver2.27.01 (2006/01/27) : GUIbar Lib (M6)
+[BOOTTRACE +15895ms]     sys_init.a Ver0.128.003(2006/03/02) : Initial Setting(M6920)
+[BOOTTRACE +15901ms]                                                                                                                                                                
+[BOOTTRACE +15917ms]                                                                                                sys_media.a Ver2.266.6920.06 (2006/05/16) : SYS_MEDIA
+[BOOTTRACE +15931ms]        sys_mp3.a Ver 0.48.0(2005/09/28) : MP3 Media App
+[BOOTTRACE +15936ms]       sys_msg.a Ver0.46.01 (2006/03/23) : MSG TASK(M6Series)
+[BOOTTRACE +15941ms] sys_navi.a Ver 1.03.122.06 (2006/03/17) : navi-gui app.
+[BOOTTRACE +15947ms]    sys_rsv.a Ver1.02.103.10(2006/10/19) : TimerREC App.(M6:PAL:DVD.HDD)
+[BOOTTRACE +15953ms]       sys_serv.a Ver.M6.025(2005/12/28) : Serv App.
+[BOOTTRACE +15958ms]           sys_ss.a Ver0.18 (2005/11/28) : SYS_SS TASK
+[BOOTTRACE +15963ms]      sys_text.a Ver6.0.006 (2006/01/11) : Soft-Keyboard
+[BOOTTRACE +15968ms]       sys_tun.a Ver0.381.02(2006/03/14) : Tuner App.(M6)
+[BOOTTRACE +15974ms]             time.a V7.0R03 (2005/12/15) : Clock & Calendar
+[BOOTTRACE +15979ms]          version.a Ver0.27  (2004/9/08) : Version Display Lib.
+[BOOTTRACE +15985ms]        wincap.a 4.0.4(M6)  (2005/11/29) : PiE WinCAP
+[BOOTTRACE +15990ms]                 kernel.a Ver 2005/10/11 : Kernel(M6_MV3Base) V2.0-1-5
+[BOOTTRACE +15996ms]          Dub_core.a Ver0.24(2005/12/21) : Dub_core
+[BOOTTRACE +16001ms]             avrec.a Ver0.13(2005/11/14) : AVREC
+[BOOTTRACE +16006ms]      decoder_jpg.a 0.11.0  (2005/12/02) : Decoder JPEG
+[BOOTTRACE +16011ms]        decoder_thu.a 1.04  (2005/12/06) : Thumbnail(MV3)
+[BOOTTRACE +16016ms]        divx_core.a Ver1.41 (2006/05/08) : DIVX CoreSoft
+[BOOTTRACE +16021ms]         fs.a(SDM)  Ver1.35 (2005/10/25) : File System (SDM)
+[BOOTTRACE +16027ms]                                                                                                                                                                
+[BOOTTRACE +16041ms]                                                                                                 GuideEuro.a Ver0.315/0.55_03(2006/08/03) : GuideEuro
+[BOOTTRACE +16055ms] sys_app_lib.a Ver6.0.270.03(2006/10/19) : sys_app_lib(M6)
+[BOOTTRACE +16060ms] [SYS_BOOT]FPC_init... 
+[BOOTTRACE +16062ms] [SYS_CNTL]SYS_CNTL_InitDeckMode
+[BOOTTRACE +16066ms] [SYS_CNTL]SYS_CNTL_InitDeckMode completed.
+[BOOTTRACE +16070ms] [SYS_CNTL]WakeupReason:[P50(11)]
+[BOOTTRACE +16073ms] [SYS_CNTL]KeyAction   :NEW[15] OLD[0]
+[BOOTTRACE +16076ms] [FPC]fpc_ChangeKeyCodeInit 
+[BOOTTRACE +16079ms] [FPC]FPC_ReciveTASK() : 00 41 20 01 00 00 2C 06 00 02 00 00 00 00 00 96 
+[BOOTTRACE +16086ms] [SYS_BOOT]FPC_GetPowerOnReason 0x41 0x0 0x0
+[BOOTTRACE +16090ms] [SYS_BOOT]RegionCode(EEPROM) [0x04]
+[BOOTTRACE +16093ms] [FPC]FPC_ReciveTASK() : 7F E4 01 01 00 00 2C 06 00 02 00 00 00 00 00 99 
+[BOOTTRACE +16100ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +16103ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +16106ms] [FPC] !!- OPcode Emergency -!!
+[BOOTTRACE +16109ms] :: Send ::
+[BOOTTRACE +16110ms]   -- 0. task ID = 88 : Func No = 8 
+[BOOTTRACE +16114ms]   --     data =  e5 17 07 4d 31 c5 60 00 00 00 00 04 00 00 00 00
+[BOOTTRACE +16120ms]   -- 1. task ID = 88 : Func No = 7 
+[BOOTTRACE +16123ms]   --     data =  e4 1f 00 19 19 fa 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +16130ms]   -- 2. task ID = 88 : Func No = 7 
+[BOOTTRACE +16133ms]   --     data =  e2 06 01 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +16139ms]   -- 3. task ID = 88 : Func No = 8 
+[BOOTTRACE +16143ms]   --     data =  80 01 ff ff f7 ff ff ff ef ff ff ff 7f ff ff ff
+[BOOTTRACE +16149ms]   -- 4. task ID = 0 : Func No = 0 
+[BOOTTRACE +16152ms]   --     data =  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +16158ms] :: Receive ::
+[BOOTTRACE +16160ms]   -- 0. task ID = 88 : Func No = 9 
+[BOOTTRACE +16163ms]   --     data =  0e 02 0d 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +16169ms]   -- 1. task ID = 88 : Func No = 9 
+[BOOTTRACE +16173ms]   --     data =  0e 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +16179ms]   -- 2. task ID = 0 : Func No = 0 
+[BOOTTRACE +16182ms]   --     data =  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +16188ms]   -- 3. task ID = 0 : Func No = 0 
+[BOOTTRACE +16191ms]   --     data =  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +16197ms]   -- 4. task ID = 0 : Func No = 0 
+[BOOTTRACE +16201ms]   --     data =  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +16207ms] :: Receive Intr ::
+[BOOTTRACE +16208ms]   -- 0. task ID = 0 : Func No = 0 
+[BOOTTRACE +16212ms]   --     data =  65 e4 07 4d 31 c5 60 00 00 00 00 00 00 00 00 f3
+[BOOTTRACE +16218ms]   -- 1. task ID = 0 : Func No = 0 
+[BOOTTRACE +16221ms]   --     data =  7f e4 01 01 00 00 2c 06 00 02 00 00 00 00 00 99
+[BOOTTRACE +16227ms]   -- 2. task ID = 0 : Func No = 0 
+[BOOTTRACE +16230ms]   --     data =  00 41 20 01 00 00 2c 06 00 02 00 00 00 00 00 96
+[BOOTTRACE +16236ms]   -- 3. task ID = 0 : Func No = 0 
+[BOOTTRACE +16240ms]   --     data =  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +16246ms]   -- 4. task ID = 0 : Func No = 0 
+[BOOTTRACE +16249ms]   --     data =  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +16255ms] :: Receive Task ::
+[BOOTTRACE +16257ms]   -- 0. data =  7f e4 01 01 00 00 2c 06 00 02 00 00 00 00 00 99
+[BOOTTRACE +16263ms]   -- 1. data =  00 41 20 01 00 00 2c 06 00 02 00 00 00 00 00 96
+[BOOTTRACE +16269ms]   -- 2. data =  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +16275ms]   -- 3. data =  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +16281ms]   -- 4. data =  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +16287ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +16291ms] [FPC]FPC_ReciveTASK() : 65 E4 07 4D 31 C5 60 00 00 00 00 00 00 00 00 F3 
+[BOOTTRACE +16298ms] [FPC]FPC_ReciveTASK() : 7D 00 70 52 41 00 00 00 00 02 02 05 11 02 00 9C 
+[BOOTTRACE +16305ms] [SYS_BOOT]Timer Version [022]
+[BOOTTRACE +16308ms] [FPC]num = 0 size=247 [0x0 0x2 0x8 0x48 0x41]
+[BOOTTRACE +16312ms] [FPC]FPC_ReciveTASK() : 67 F0 04 11 00 06 82 32 00 00 00 00 00 00 00 26 
+[BOOTTRACE +16319ms] [SYS_BOOT]reading system info on EEPROM ... ok
+[BOOTTRACE +16323ms] [SYS_BOOT]H/W System  = M6930LB
+[BOOTTRACE +16326ms] [SYS_BOOT]model_code=0x07
+[BOOTTRACE +16329ms] [SYS_BOOT]market_code=PL(0x04)
+[BOOTTRACE +16332ms] [SYS_BOOT]OptionCode  = 0x31 0xC5 0x60 0x00 0x00 0x00
+[BOOTTRACE +16337ms] [SYS_BOOT]H/W Version = 0x0003
+[BOOTTRACE +16340ms] [FPC]FPC_ReciveTASK() : 7F 85 02 11 00 06 82 32 00 00 00 00 00 00 00 D1 
+[BOOTTRACE +16346ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +16350ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +16353ms] [FPC] !!- OPcode Emergency -!!
+[BOOTTRACE +16356ms] :: Send ::
+[BOOTTRACE +16357ms]   -- 0. task ID = 88 : Func No = 8 
+[BOOTTRACE +16360ms]   --     data =  f9 0b 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +16366ms]   -- 1. task ID = 88 : Func No = 7 
+[BOOTTRACE +16369ms]   --     data =  85 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +16376ms]   -- 2. task ID = 88 : Func No = 8 
+[BOOTTRACE +16379ms]   --     data =  e7 f0 04 11 01 06 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +16385ms]   -- 3. task ID = 88 : Func No = 8 
+[BOOTTRACE +16388ms]   --     data =  fd 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +16394ms]   -- 4. task ID = 88 : Func No = 8 
+[BOOTTRACE +16398ms]   --     data =  e5 17 07 4d 31 c5 60 00 00 00 00 04 00 00 00 00
+[BOOTTRACE +16404ms] :: Receive ::
+[BOOTTRACE +16405ms]   -- 0. task ID = 88 : Func No = 9 
+[BOOTTRACE +16408ms]   --     data =  0e 02 0f 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +16415ms]   -- 1. task ID = 88 : Func No = 9 
+[BOOTTRACE +16418ms]   --     data =  0e 02 13 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +16424ms]   -- 2. task ID = 88 : Func No = 9 
+[BOOTTRACE +16427ms]   --     data =  0e 02 03 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +16433ms]   -- 3. task ID = 88 : Func No = 9 
+[BOOTTRACE +16437ms]   --     data =  0e 02 0d 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +16443ms]   -- 4. task ID = 88 : Func No = 9 
+[BOOTTRACE +16446ms]   --     data =  0e 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +16452ms] :: Receive Intr ::
+[BOOTTRACE +16454ms]   -- 0. task ID = 0 : Func No = 0 
+[BOOTTRACE +16457ms]   --     data =  7f f9 02 11 00 06 82 32 00 00 00 00 00 00 00 45
+[BOOTTRACE +16463ms]   -- 1. task ID = 0 : Func No = 0 
+[BOOTTRACE +16467ms]   --     data =  7f 85 02 11 00 06 82 32 00 00 00 00 00 00 00 d1
+[BOOTTRACE +16473ms]   -- 2. task ID = 0 : Func No = 0 
+[BOOTTRACE +16476ms]   --     data =  67 f0 04 11 00 06 82 32 00 00 00 00 00 00 00 26
+[BOOTTRACE +16482ms]   -- 3. task ID = 0 : Func No = 0 
+[BOOTTRACE +16485ms]   --     data =  7d 00 70 52 41 00 00 00 00 02 02 05 11 02 00 9c
+[BOOTTRACE +16491ms]   -- 4. task ID = 0 : Func No = 0 
+[BOOTTRACE +16494ms]   --     data =  65 e4 07 4d 31 c5 60 00 00 00 00 00 00 00 00 f3
+[BOOTTRACE +16501ms] :: Receive Task ::
+[BOOTTRACE +16502ms]   -- 0. data =  7f 85 02 11 00 06 82 32 00 00 00 00 00 00 00 d1
+[BOOTTRACE +16508ms]   -- 1. data =  67 f0 04 11 00 06 82 32 00 00 00 00 00 00 00 26
+[BOOTTRACE +16514ms]   -- 2. data =  7d 00 70 52 41 00 00 00 00 02 02 05 11 02 00 9c
+[BOOTTRACE +16520ms]   -- 3. data =  65 e4 07 4d 31 c5 60 00 00 00 00 00 00 00 00 f3
+[BOOTTRACE +16526ms]   -- 4. data =  7f e4 01 01 00 00 2c 06 00 02 00 00 00 00 00 99
+[BOOTTRACE +16532ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +16537ms] [FPC]FPC_ReciveTASK() : 7F F9 02 11 00 06 82 32 00 00 00 00 00 00 00 45 
+[BOOTTRACE +16543ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +16547ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +16550ms] [FPC] !!- OPcode Emergency -!!
+[BOOTTRACE +16553ms] :: Send ::
+[BOOTTRACE +16554ms]   -- 0. task ID = 88 : Func No = 8 
+[BOOTTRACE +16557ms]   --     data =  f9 0b 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +16563ms]   -- 1. task ID = 88 : Func No = 7 
+[BOOTTRACE +16567ms]   --     data =  85 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +16573ms]   -- 2. task ID = 88 : Func No = 8 
+[BOOTTRACE +16576ms]   --     data =  e7 f0 04 11 01 06 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +16582ms]   -- 3. task ID = 88 : Func No = 8 
+[BOOTTRACE +16585ms]   --     data =  fd 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +16591ms]   -- 4. task ID = 88 : Func No = 8 
+[BOOTTRACE +16595ms]   --     data =  e5 17 07 4d 31 c5 60 00 00 00 00 04 00 00 00 00
+[BOOTTRACE +16601ms] :: Receive ::
+[BOOTTRACE +16602ms]   -- 0. task ID = 88 : Func No = 9 
+[BOOTTRACE +16606ms]   --     data =  0e 02 0f 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +16612ms]   -- 1. task ID = 88 : Func No = 9 
+[BOOTTRACE +16615ms]   --     data =  0e 02 13 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +16621ms]   -- 2. task ID = 88 : Func No = 9 
+[BOOTTRACE +16624ms]   --     data =  0e 02 03 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +16630ms]   -- 3. task ID = 88 : Func No = 9 
+[BOOTTRACE +16634ms]   --     data =  0e 02 0d 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +16640ms]   -- 4. task ID = 88 : Func No = 9 
+[BOOTTRACE +16643ms]   --     data =  0e 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +16649ms] :: Receive Intr ::
+[BOOTTRACE +16651ms]   -- 0. task ID = 0 : Func No = 0 
+[BOOTTRACE +16654ms]   --     data =  7f f9 02 11 00 06 82 32 00 00 00 00 00 00 00 45
+[BOOTTRACE +16660ms]   -- 1. task ID = 0 : Func No = 0 
+[BOOTTRACE +16664ms]   --     data =  7f 85 02 11 00 06 82 32 00 00 00 00 00 00 00 d1
+[BOOTTRACE +16670ms]   -- 2. task ID = 0 : Func No = 0 
+[BOOTTRACE +16673ms]   --     data =  67 f0 04 11 00 06 82 32 00 00 00 00 00 00 00 26
+[BOOTTRACE +16679ms]   -- 3. task ID = 0 : Func No = 0 
+[BOOTTRACE +16682ms]   --     data =  7d 00 70 52 41 00 00 00 00 02 02 05 11 02 00 9c
+[BOOTTRACE +16688ms]   -- 4. task ID = 0 : Func No = 0 
+[BOOTTRACE +16692ms]   --     data =  65 e4 07 4d 31 c5 60 00 00 00 00 00 00 00 00 f3
+[BOOTTRACE +16698ms] :: Receive Task ::
+[BOOTTRACE +16699ms]   -- 0. data =  7f f9 02 11 00 06 82 32 00 00 00 00 00 00 00 45
+[BOOTTRACE +16705ms]   -- 1. data =  7f 85 02 11 00 06 82 32 00 00 00 00 00 00 00 d1
+[BOOTTRACE +16711ms]   -- 2. data =  67 f0 04 11 00 06 82 32 00 00 00 00 00 00 00 26
+[BOOTTRACE +16717ms]   -- 3. data =  7d 00 70 52 41 00 00 00 00 02 02 05 11 02 00 9c
+[BOOTTRACE +16723ms]   -- 4. data =  65 e4 07 4d 31 c5 60 00 00 00 00 00 00 00 00 f3
+[BOOTTRACE +16729ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +46154ms] [FPC]RCV TIMEOUT GATE=15
+[BOOTTRACE +46158ms] [SYS_CNTL]FPC_CB_ReportEmergency(4)
+[BOOTTRACE +46162ms] [SYS_CNTL]FPC_EMERGENCY_TIMEOUT
+[BOOTTRACE +46165ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +46169ms] [SYS_CNTL]WakeupReason:[POWER(1)]
+[BOOTTRACE +46173ms] [SYS_CNTL]KeyAction   :NEW[15] OLD[0]
+[BOOTTRACE +46176ms] [SYS_BOOT]AVOUT_init
+[BOOTTRACE +46178ms] [DCS] AVDEC LSI : MV3BASE IROM 32bit
+[BOOTTRACE +46182ms] [DCS] DDR ALIGN_CHECK start....
+[BOOTTRACE +46185ms] [DCS] ALIGN OK 
+[BOOTTRACE +46193ms] [DCS] AVDEC version: avdd=0x5091622, ucode iop=0x809c, setup=0x8097, patch=0x199a
+[BOOTTRACE +46201ms] [FPC]FPC_ReciveTASK() : 7F 9B 02 01 00 00 0E 06 00 02 00 00 00 00 00 33 
+[BOOTTRACE +46208ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +46212ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +46215ms] [FPC] !!- OPcode Emergency -!!
+[BOOTTRACE +46218ms] :: Send ::
+[BOOTTRACE +46220ms]   -- 0. task ID = 9 : Func No = 7 
+[BOOTTRACE +46223ms]   --     data =  81 00 00 00 00 00 22 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +46229ms]   -- 1. task ID = 88 : Func No = 7 
+[BOOTTRACE +46232ms]   --     data =  a4 00 40 40 00 00 00 00 00 00 00 00 00 80 00 00
+[BOOTTRACE +46238ms]   -- 2. task ID = 88 : Func No = 7 
+[BOOTTRACE +46242ms]   --     data =  a3 00 00 c0 0f 84 8b 80 88 80 88 c4 8c 00 00 00
+[BOOTTRACE +46248ms]   -- 3. task ID = 88 : Func No = 7 
+[BOOTTRACE +46251ms]   --     data =  a9 00 00 02 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +46257ms]   -- 4. task ID = 88 : Func No = 7 
+[BOOTTRACE +46261ms]   --     data =  81 00 00 00 01 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +46267ms] :: Receive ::
+[BOOTTRACE +46268ms]   -- 0. task ID = 9 : Func No = 2 
+[BOOTTRACE +46272ms]   --     data =  08 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +46278ms]   -- 1. task ID = 88 : Func No = 9 
+[BOOTTRACE +46281ms]   --     data =  0e 02 0f 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +46287ms]   -- 2. task ID = 88 : Func No = 9 
+[BOOTTRACE +46290ms]   --     data =  0e 02 13 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +46297ms]   -- 3. task ID = 88 : Func No = 9 
+[BOOTTRACE +46300ms]   --     data =  0e 02 03 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +46306ms]   -- 4. task ID = 88 : Func No = 9 
+[BOOTTRACE +46309ms]   --     data =  0e 02 0d 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +46315ms] :: Receive Intr ::
+[BOOTTRACE +46317ms]   -- 0. task ID = 0 : Func No = 0 
+[BOOTTRACE +46321ms]   --     data =  7f a9 01 01 00 00 0e 06 00 02 00 00 00 00 00 40
+[BOOTTRACE +46327ms]   -- 1. task ID = 0 : Func No = 0 
+[BOOTTRACE +46330ms]   --     data =  7f 9b 02 01 00 00 0e 06 00 02 00 00 00 00 00 33
+[BOOTTRACE +46336ms]   -- 2. task ID = 0 : Func No = 0 
+[BOOTTRACE +46340ms]   --     data =  7f f9 02 11 00 06 82 32 00 00 00 00 00 00 00 45
+[BOOTTRACE +46346ms]   -- 3. task ID = 0 : Func No = 0 
+[BOOTTRACE +46349ms]   --     data =  7f 85 02 11 00 06 82 32 00 00 00 00 00 00 00 d1
+[BOOTTRACE +46356ms]   -- 4. task ID = 0 : Func No = 0 
+[BOOTTRACE +46359ms]   --     data =  67 f0 04 11 00 06 82 32 00 00 00 00 00 00 00 26
+[BOOTTRACE +46365ms] :: Receive Task ::
+[BOOTTRACE +46367ms]   -- 0. data =  7f 9b 02 01 00 00 0e 06 00 02 00 00 00 00 00 33
+[BOOTTRACE +46373ms]   -- 1. data =  0e 0a 01 01 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +46379ms]   -- 2. data =  0e 02 0f 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +46385ms]   -- 3. data =  7f f9 02 11 00 06 82 32 00 00 00 00 00 00 00 45
+[BOOTTRACE +46391ms]   -- 4. data =  7f 85 02 11 00 06 82 32 00 00 00 00 00 00 00 d1
+[BOOTTRACE +46397ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +46401ms] [FPC]FPC_ReciveTASK() : 7F A9 01 01 00 00 0E 06 00 02 00 00 00 00 00 40 
+[BOOTTRACE +46408ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +46411ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +46414ms] [FPC] !!- OPcode Emergency -!!
+[BOOTTRACE +46417ms] :: Send ::
+[BOOTTRACE +46418ms]   -- 0. task ID = 9 : Func No = 7 
+[BOOTTRACE +46422ms]   --     data =  81 00 00 00 00 00 22 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +46428ms]   -- 1. task ID = 88 : Func No = 7 
+[BOOTTRACE +46431ms]   --     data =  a4 00 40 40 00 00 00 00 00 00 00 00 00 80 00 00
+[BOOTTRACE +46437ms]   -- 2. task ID = 88 : Func No = 7 
+[BOOTTRACE +46440ms]   --     data =  a3 00 00 c0 0f 84 8b 80 88 80 88 c4 8c 00 00 00
+[BOOTTRACE +46447ms]   -- 3. task ID = 88 : Func No = 7 
+[BOOTTRACE +46450ms]   --     data =  a9 00 00 02 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +46456ms]   -- 4. task ID = 88 : Func No = 7 
+[BOOTTRACE +46459ms]   --     data =  81 00 00 00 01 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +46465ms] :: Receive ::
+[BOOTTRACE +46467ms]   -- 0. task ID = 9 : Func No = 2 
+[BOOTTRACE +46470ms]   --     data =  08 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +46476ms]   -- 1. task ID = 88 : Func No = 9 
+[BOOTTRACE +46479ms]   --     data =  0e 02 0f 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +46486ms]   -- 2. task ID = 88 : Func No = 9 
+[BOOTTRACE +46489ms]   --     data =  0e 02 13 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +46495ms]   -- 3. task ID = 88 : Func No = 9 
+[BOOTTRACE +46498ms]   --     data =  0e 02 03 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +46504ms]   -- 4. task ID = 88 : Func No = 9 
+[BOOTTRACE +46508ms]   --     data =  0e 02 0d 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +46514ms] :: Receive Intr ::
+[BOOTTRACE +46516ms]   -- 0. task ID = 0 : Func No = 0 
+[BOOTTRACE +46519ms]   --     data =  7f a9 01 01 00 00 0e 06 00 02 00 00 00 00 00 40
+[BOOTTRACE +46525ms]   -- 1. task ID = 0 : Func No = 0 
+[BOOTTRACE +46528ms]   --     data =  7f 9b 02 01 00 00 0e 06 00 02 00 00 00 00 00 33
+[BOOTTRACE +46534ms]   -- 2. task ID = 0 : Func No = 0 
+[BOOTTRACE +46538ms]   --     data =  7f f9 02 11 00 06 82 32 00 00 00 00 00 00 00 45
+[BOOTTRACE +46544ms]   -- 3. task ID = 0 : Func No = 0 
+[BOOTTRACE +46547ms]   --     data =  7f 85 02 11 00 06 82 32 00 00 00 00 00 00 00 d1
+[BOOTTRACE +46553ms]   -- 4. task ID = 0 : Func No = 0 
+[BOOTTRACE +46556ms]   --     data =  67 f0 04 11 00 06 82 32 00 00 00 00 00 00 00 26
+[BOOTTRACE +46562ms] :: Receive Task ::
+[BOOTTRACE +46564ms]   -- 0. data =  7f a9 01 01 00 00 0e 06 00 02 00 00 00 00 00 40
+[BOOTTRACE +46570ms]   -- 1. data =  7f 9b 02 01 00 00 0e 06 00 02 00 00 00 00 00 33
+[BOOTTRACE +46576ms]   -- 2. data =  0e 0a 01 01 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +46582ms]   -- 3. data =  0e 02 0f 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +46588ms]   -- 4. data =  7f f9 02 11 00 06 82 32 00 00 00 00 00 00 00 45
+[BOOTTRACE +46594ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +46598ms] [DCS]dco_api :AVOUT_A_Mute_ID: ON_ID[ALL]=2 , [EE]=0
+[BOOTTRACE +46603ms] [DCS]dco_api :AVOUT_V_Mute: onoff=1
+[BOOTTRACE +46607ms] [SYS_BOOT]CAV_Init1394
+[BOOTTRACE +46610ms] [SYS_BOOT]CAV_Init1394 success. 
+[BOOTTRACE +46614ms] [SYS_BOOT]AVIN_init
+[BOOTTRACE +46616ms] [AVIN]0: *** AVIN_init() *** (FF=1,CI=0,TN=2)
+[BOOTTRACE +46620ms] [AVIN] tsk_stat avin0010 inside_v0010 callback0010
+[BOOTTRACE +46625ms] [AVIN]0: avin_hw_input_source_select(SOURCE_TUNER,L/R,0) end.
+[BOOTTRACE +46631ms] [AVIN]1: avin_hw_input_source_select(SOURCE_TUNER,L/R,0) end.
+[BOOTTRACE +46637ms] [AVIN]0: *** AVIN_init() END ***
+[BOOTTRACE +46640ms] [SYS_BOOT]AVIN_init() success. 
+[BOOTTRACE +46643ms] [SYS_BOOT]CAV:N/PAL
+[BOOTTRACE +46645ms] [SYS_BOOT]TIM_Init
+[BOOTTRACE +46647ms] [1394avc]ctl: HSB_ini completion 
+[BOOTTRACE +46650ms] [FPC]FPC_ReciveTASK() : 7F FA 02 01 00 00 0E 06 00 02 00 00 00 00 00 92 
+[BOOTTRACE +46657ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +46660ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +46663ms] [FPC] !!- OPcode Emergency -!!
+[BOOTTRACE +46666ms] :: Send ::
+[BOOTTRACE +46667ms]   -- 0. task ID = 26 : Func No = 8 
+[BOOTTRACE +46671ms]   --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+[BOOTTRACE +46677ms]   -- 1. task ID = 26 : Func No = 7 
+[BOOTTRACE +46680ms]   --     data =  fa 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +46686ms]   -- 2. task ID = 9 : Func No = 7 
+[BOOTTRACE +46690ms]   --     data =  81 00 00 00 00 00 22 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +46696ms]   -- 3. task ID = 88 : Func No = 7 
+[BOOTTRACE +46699ms]   --     data =  a4 00 40 40 00 00 00 00 00 00 00 00 00 80 00 00
+[BOOTTRACE +46705ms]   -- 4. task ID = 88 : Func No = 7 
+[BOOTTRACE +46709ms]   --     data =  a3 00 00 c0 0f 84 8b 80 88 80 88 c4 8c 00 00 00
+[BOOTTRACE +46715ms] :: Receive ::
+[BOOTTRACE +46716ms]   -- 0. task ID = 26 : Func No = 9 
+[BOOTTRACE +46719ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +46725ms]   -- 1. task ID = 9 : Func No = 2 
+[BOOTTRACE +46729ms]   --     data =  08 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +46735ms]   -- 2. task ID = 88 : Func No = 9 
+[BOOTTRACE +46738ms]   --     data =  0e 02 0f 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +46744ms]   -- 3. task ID = 88 : Func No = 9 
+[BOOTTRACE +46748ms]   --     data =  0e 02 13 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +46754ms]   -- 4. task ID = 88 : Func No = 9 
+[BOOTTRACE +46758ms]   --     data =  0e 02 03 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +46764ms] :: Receive Intr ::
+[BOOTTRACE +46766ms]   -- 0. task ID = 0 : Func No = 0 
+[BOOTTRACE +46769ms]   --     data =  7f e3 02 01 00 00 0e 06 00 02 00 00 00 00 00 7b
+[BOOTTRACE +46775ms]   -- 1. task ID = 0 : Func No = 0 
+[BOOTTRACE +46778ms]   --     data =  7f fa 02 01 00 00 0e 06 00 02 00 00 00 00 00 92
+[BOOTTRACE +46784ms]   -- 2. task ID = 0 : Func No = 0 
+[BOOTTRACE +46788ms]   --     data =  7f a9 01 01 00 00 0e 06 00 02 00 00 00 00 00 40
+[BOOTTRACE +46794ms]   -- 3. task ID = 0 : Func No = 0 
+[BOOTTRACE +46797ms]   --     data =  7f 9b 02 01 00 00 0e 06 00 02 00 00 00 00 00 33
+[BOOTTRACE +46803ms]   -- 4. task ID = 0 : Func No = 0 
+[BOOTTRACE +46806ms]   --     data =  7f f9 02 11 00 06 82 32 00 00 00 00 00 00 00 45
+[BOOTTRACE +46813ms] :: Receive Task ::
+[BOOTTRACE +46814ms]   -- 0. data =  7f fa 02 01 00 00 0e 06 00 02 00 00 00 00 00 92
+[BOOTTRACE +46820ms]   -- 1. data =  7f a9 01 01 00 00 0e 06 00 02 00 00 00 00 00 40
+[BOOTTRACE +46826ms]   -- 2. data =  7f 9b 02 01 00 00 0e 06 00 02 00 00 00 00 00 33
+[BOOTTRACE +46832ms]   -- 3. data =  0e 0a 01 01 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +46838ms]   -- 4. data =  0e 02 0f 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +46844ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +46849ms] [FPC]FPC_ReciveTASK() : 7F E3 02 01 00 00 0E 06 00 02 00 00 00 00 00 7B 
+[BOOTTRACE +46856ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +46859ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +46862ms] [FPC] !!- OPcode Emergency -!!
+[BOOTTRACE +46865ms] :: Send ::
+[BOOTTRACE +46866ms]   -- 0. task ID = 26 : Func No = 8 
+[BOOTTRACE +46870ms]   --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+[BOOTTRACE +46876ms]   -- 1. task ID = 26 : Func No = 7 
+[BOOTTRACE +46879ms]   --     data =  fa 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +46885ms]   -- 2. task ID = 9 : Func No = 7 
+[BOOTTRACE +46888ms]   --     data =  81 00 00 00 00 00 22 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +46894ms]   -- 3. task ID = 88 : Func No = 7 
+[BOOTTRACE +46898ms]   --     data =  a4 00 40 40 00 00 00 00 00 00 00 00 00 80 00 00
+[BOOTTRACE +46904ms]   -- 4. task ID = 88 : Func No = 7 
+[BOOTTRACE +46907ms]   --     data =  a3 00 00 c0 0f 84 8b 80 88 80 88 c4 8c 00 00 00
+[BOOTTRACE +46913ms] :: Receive ::
+[BOOTTRACE +46915ms]   -- 0. task ID = 26 : Func No = 9 
+[BOOTTRACE +46919ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +46925ms]   -- 1. task ID = 9 : Func No = 2 
+[BOOTTRACE +46928ms]   --     data =  08 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +46935ms]   -- 2. task ID = 88 : Func No = 9 
+[BOOTTRACE +46938ms]   --     data =  0e 02 0f 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +46944ms]   -- 3. task ID = 88 : Func No = 9 
+[BOOTTRACE +46948ms]   --     data =  0e 02 13 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +46954ms]   -- 4. task ID = 88 : Func No = 9 
+[BOOTTRACE +46957ms]   --     data =  0e 02 03 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +46963ms] :: Receive Intr ::
+[BOOTTRACE +46965ms]   -- 0. task ID = 0 : Func No = 0 
+[BOOTTRACE +46968ms]   --     data =  7f e3 02 01 00 00 0e 06 00 02 00 00 00 00 00 7b
+[BOOTTRACE +46974ms]   -- 1. task ID = 0 : Func No = 0 
+[BOOTTRACE +46978ms]   --     data =  7f fa 02 01 00 00 0e 06 00 02 00 00 00 00 00 92
+[BOOTTRACE +46984ms]   -- 2. task ID = 0 : Func No = 0 
+[BOOTTRACE +46987ms]   --     data =  7f a9 01 01 00 00 0e 06 00 02 00 00 00 00 00 40
+[BOOTTRACE +46993ms]   -- 3. task ID = 0 : Func No = 0 
+[BOOTTRACE +46997ms]   --     data =  7f 9b 02 01 00 00 0e 06 00 02 00 00 00 00 00 33
+[BOOTTRACE +47003ms]   -- 4. task ID = 0 : Func No = 0 
+[BOOTTRACE +47006ms]   --     data =  7f f9 02 11 00 06 82 32 00 00 00 00 00 00 00 45
+[BOOTTRACE +47012ms] :: Receive Task ::
+[BOOTTRACE +47014ms]   -- 0. data =  7f e3 02 01 00 00 0e 06 00 02 00 00 00 00 00 7b
+[BOOTTRACE +47020ms]   -- 1. data =  7f fa 02 01 00 00 0e 06 00 02 00 00 00 00 00 92
+[BOOTTRACE +47026ms]   -- 2. data =  7f a9 01 01 00 00 0e 06 00 02 00 00 00 00 00 40
+[BOOTTRACE +47032ms]   -- 3. data =  7f 9b 02 01 00 00 0e 06 00 02 00 00 00 00 00 33
+[BOOTTRACE +47038ms]   -- 4. data =  0e 0a 01 01 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +47044ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +47050ms] [FPC]RCV TIMEOUT GATE=14
+[BOOTTRACE +47052ms] [SYS_CNTL]FPC_CB_ReportEmergency(4)
+[BOOTTRACE +47056ms] [SYS_CNTL]FPC_EMERGENCY_TIMEOUT
+[BOOTTRACE +47059ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +47063ms] [DC0]dco_subseq_v_S1s2 call TUN_SelectS1S2: param0=1
+[BOOTTRACE +47069ms] [FPC]FPC_ReciveTASK() : 7F DA 01 01 00 00 0F 06 00 02 00 00 00 00 00 72 
+[BOOTTRACE +47076ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +47079ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +47082ms] [FPC] !!- OPcode Emergency -!!
+[BOOTTRACE +47085ms] :: Send ::
+[BOOTTRACE +47086ms]   -- 0. task ID = 26 : Func No = 7 
+[BOOTTRACE +47090ms]   --     data =  da 72 01 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +47096ms]   -- 1. task ID = 26 : Func No = 7 
+[BOOTTRACE +47100ms]   --     data =  da 71 01 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +47106ms]   -- 2. task ID = 26 : Func No = 8 
+[BOOTTRACE +47109ms]   --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+[BOOTTRACE +47115ms]   -- 3. task ID = 26 : Func No = 7 
+[BOOTTRACE +47119ms]   --     data =  fa 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +47125ms]   -- 4. task ID = 9 : Func No = 7 
+[BOOTTRACE +47128ms]   --     data =  81 00 00 00 00 00 22 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +47134ms] :: Receive ::
+[BOOTTRACE +47136ms]   -- 0. task ID = 26 : Func No = 9 
+[BOOTTRACE +47139ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +47145ms]   -- 1. task ID = 9 : Func No = 2 
+[BOOTTRACE +47148ms]   --     data =  08 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +47155ms]   -- 2. task ID = 88 : Func No = 9 
+[BOOTTRACE +47158ms]   --     data =  0e 02 0f 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +47164ms]   -- 3. task ID = 88 : Func No = 9 
+[BOOTTRACE +47168ms]   --     data =  0e 02 13 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +47174ms]   -- 4. task ID = 88 : Func No = 9 
+[BOOTTRACE +47177ms]   --     data =  0e 02 03 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +47183ms] :: Receive Intr ::
+[BOOTTRACE +47185ms]   -- 0. task ID = 0 : Func No = 0 
+[BOOTTRACE +47189ms]   --     data =  7f da 01 01 00 00 0f 06 00 02 00 00 00 00 00 72
+[BOOTTRACE +47195ms]   -- 1. task ID = 0 : Func No = 0 
+[BOOTTRACE +47198ms]   --     data =  7f da 01 01 00 00 0f 06 00 02 00 00 00 00 00 72
+[BOOTTRACE +47204ms]   -- 2. task ID = 0 : Func No = 0 
+[BOOTTRACE +47207ms]   --     data =  7f e3 02 01 00 00 0e 06 00 02 00 00 00 00 00 7b
+[BOOTTRACE +47214ms]   -- 3. task ID = 0 : Func No = 0 
+[BOOTTRACE +47217ms]   --     data =  7f fa 02 01 00 00 0e 06 00 02 00 00 00 00 00 92
+[BOOTTRACE +47223ms]   -- 4. task ID = 0 : Func No = 0 
+[BOOTTRACE +47227ms]   --     data =  7f a9 01 01 00 00 0e 06 00 02 00 00 00 00 00 40
+[BOOTTRACE +47233ms] :: Receive Task ::
+[BOOTTRACE +47235ms]   -- 0. data =  7f da 01 01 00 00 0f 06 00 02 00 00 00 00 00 72
+[BOOTTRACE +47241ms]   -- 1. data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +47247ms]   -- 2. data =  7f e3 02 01 00 00 0e 06 00 02 00 00 00 00 00 7b
+[BOOTTRACE +47253ms]   -- 3. data =  7f fa 02 01 00 00 0e 06 00 02 00 00 00 00 00 92
+[BOOTTRACE +47259ms]   -- 4. data =  7f a9 01 01 00 00 0e 06 00 02 00 00 00 00 00 40
+[BOOTTRACE +47265ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +47270ms] [FPC]FPC_ReciveTASK() : 7F DA 01 01 00 00 0F 06 00 02 00 00 00 00 00 72 
+[BOOTTRACE +47277ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +47280ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +47283ms] [FPC] !!- OPcode Emergency -!!
+[BOOTTRACE +47286ms] :: Send ::
+[BOOTTRACE +47287ms]   -- 0. task ID = 26 : Func No = 8 
+[BOOTTRACE +47290ms]   --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+[BOOTTRACE +47297ms]   -- 1. task ID = 26 : Func No = 7 
+[BOOTTRACE +47300ms]   --     data =  fa 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +47306ms]   -- 2. task ID = 26 : Func No = 7 
+[BOOTTRACE +47310ms]   --     data =  da 72 01 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +47316ms]   -- 3. task ID = 26 : Func No = 7 
+[BOOTTRACE +47319ms]   --     data =  da 71 01 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +47325ms]   -- 4. task ID = 26 : Func No = 8 
+[BOOTTRACE +47328ms]   --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+[BOOTTRACE +47334ms] :: Receive ::
+[BOOTTRACE +47336ms]   -- 0. task ID = 26 : Func No = 9 
+[BOOTTRACE +47339ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +47346ms]   -- 1. task ID = 26 : Func No = 9 
+[BOOTTRACE +47349ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +47355ms]   -- 2. task ID = 9 : Func No = 2 
+[BOOTTRACE +47358ms]   --     data =  08 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +47364ms]   -- 3. task ID = 88 : Func No = 9 
+[BOOTTRACE +47368ms]   --     data =  0e 02 0f 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +47374ms]   -- 4. task ID = 88 : Func No = 9 
+[BOOTTRACE +47377ms]   --     data =  0e 02 13 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +47383ms] :: Receive Intr ::
+[BOOTTRACE +47385ms]   -- 0. task ID = 0 : Func No = 0 
+[BOOTTRACE +47388ms]   --     data =  7f e3 02 01 00 00 0f 06 00 02 00 00 00 00 00 7c
+[BOOTTRACE +47394ms]   -- 1. task ID = 0 : Func No = 0 
+[BOOTTRACE +47398ms]   --     data =  7f fa 02 01 00 00 0f 06 00 02 00 00 00 00 00 93
+[BOOTTRACE +47404ms]   -- 2. task ID = 0 : Func No = 0 
+[BOOTTRACE +47407ms]   --     data =  7f da 01 01 00 00 0f 06 00 02 00 00 00 00 00 72
+[BOOTTRACE +47413ms]   -- 3. task ID = 0 : Func No = 0 
+[BOOTTRACE +47417ms]   --     data =  7f da 01 01 00 00 0f 06 00 02 00 00 00 00 00 72
+[BOOTTRACE +47423ms]   -- 4. task ID = 0 : Func No = 0 
+[BOOTTRACE +47426ms]   --     data =  7f e3 02 01 00 00 0e 06 00 02 00 00 00 00 00 7b
+[BOOTTRACE +47432ms] :: Receive Task ::
+[BOOTTRACE +47434ms]   -- 0. data =  7f da 01 01 00 00 0f 06 00 02 00 00 00 00 00 72
+[BOOTTRACE +47440ms]   -- 1. data =  7f da 01 01 00 00 0f 06 00 02 00 00 00 00 00 72
+[BOOTTRACE +47446ms]   -- 2. data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +47452ms]   -- 3. data =  7f e3 02 01 00 00 0e 06 00 02 00 00 00 00 00 7b
+[BOOTTRACE +47458ms]   -- 4. data =  7f fa 02 01 00 00 0e 06 00 02 00 00 00 00 00 92
+[BOOTTRACE +47464ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +47468ms] [FPC]FPC_ReciveTASK() : 7F FA 02 01 00 00 0F 06 00 02 00 00 00 00 00 93 
+[BOOTTRACE +47475ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +47479ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +47482ms] [FPC] !!- OPcode Emergency -!!
+[BOOTTRACE +47485ms] :: Send ::
+[BOOTTRACE +47486ms]   -- 0. task ID = 26 : Func No = 8 
+[BOOTTRACE +47489ms]   --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+[BOOTTRACE +47495ms]   -- 1. task ID = 26 : Func No = 7 
+[BOOTTRACE +47499ms]   --     data =  fa 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +47505ms]   -- 2. task ID = 26 : Func No = 7 
+[BOOTTRACE +47508ms]   --     data =  da 72 01 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +47514ms]   -- 3. task ID = 26 : Func No = 7 
+[BOOTTRACE +47518ms]   --     data =  da 71 01 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +47524ms]   -- 4. task ID = 26 : Func No = 8 
+[BOOTTRACE +47527ms]   --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+[BOOTTRACE +47533ms] :: Receive ::
+[BOOTTRACE +47534ms]   -- 0. task ID = 26 : Func No = 9 
+[BOOTTRACE +47538ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +47544ms]   -- 1. task ID = 26 : Func No = 9 
+[BOOTTRACE +47547ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +47553ms]   -- 2. task ID = 9 : Func No = 2 
+[BOOTTRACE +47557ms]   --     data =  08 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +47563ms]   -- 3. task ID = 88 : Func No = 9 
+[BOOTTRACE +47566ms]   --     data =  0e 02 0f 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +47572ms]   -- 4. task ID = 88 : Func No = 9 
+[BOOTTRACE +47576ms]   --     data =  0e 02 13 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +47582ms] :: Receive Intr ::
+[BOOTTRACE +47584ms]   -- 0. task ID = 0 : Func No = 0 
+[BOOTTRACE +47587ms]   --     data =  7f e3 02 01 00 00 0f 06 00 02 00 00 00 00 00 7c
+[BOOTTRACE +47593ms]   -- 1. task ID = 0 : Func No = 0 
+[BOOTTRACE +47596ms]   --     data =  7f fa 02 01 00 00 0f 06 00 02 00 00 00 00 00 93
+[BOOTTRACE +47602ms]   -- 2. task ID = 0 : Func No = 0 
+[BOOTTRACE +47606ms]   --     data =  7f da 01 01 00 00 0f 06 00 02 00 00 00 00 00 72
+[BOOTTRACE +47614ms]   -- 3. task ID = 0 : Func No = 0 
+[BOOTTRACE +47618ms]   --     data =  7f da 01 01 00 00 0f 06 00 02 00 00 00 00 00 72
+[BOOTTRACE +47624ms]   -- 4. task ID = 0 : Func No = 0 
+[BOOTTRACE +47627ms]   --     data =  7f e3 02 01 00 00 0e 06 00 02 00 00 00 00 00 7b
+[BOOTTRACE +47633ms] :: Receive Task ::
+[BOOTTRACE +47635ms]   -- 0. data =  7f fa 02 01 00 00 0f 06 00 02 00 00 00 00 00 93
+[BOOTTRACE +47641ms]   -- 1. data =  7f da 01 01 00 00 0f 06 00 02 00 00 00 00 00 72
+[BOOTTRACE +47647ms]   -- 2. data =  7f da 01 01 00 00 0f 06 00 02 00 00 00 00 00 72
+[BOOTTRACE +47653ms]   -- 3. data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +47659ms]   -- 4. data =  7f e3 02 01 00 00 0e 06 00 02 00 00 00 00 00 7b
+[BOOTTRACE +47665ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +47670ms] [FPC]FPC_ReciveTASK() : 7F E3 02 01 00 00 0F 06 00 02 00 00 00 00 00 7C 
+[BOOTTRACE +47676ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +47680ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +47682ms] [FPC] !!- OPcode Emergency -!!
+[BOOTTRACE +47686ms] :: Send ::
+[BOOTTRACE +47687ms]   -- 0. task ID = 26 : Func No = 8 
+[BOOTTRACE +47690ms]   --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+[BOOTTRACE +47697ms]   -- 1. task ID = 26 : Func No = 7 
+[BOOTTRACE +47700ms]   --     data =  fa 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +47706ms]   -- 2. task ID = 26 : Func No = 7 
+[BOOTTRACE +47709ms]   --     data =  da 72 01 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +47715ms]   -- 3. task ID = 26 : Func No = 7 
+[BOOTTRACE +47719ms]   --     data =  da 71 01 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +47725ms]   -- 4. task ID = 26 : Func No = 8 
+[BOOTTRACE +47728ms]   --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+[BOOTTRACE +47734ms] :: Receive ::
+[BOOTTRACE +47736ms]   -- 0. task ID = 26 : Func No = 9 
+[BOOTTRACE +47739ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +47745ms]   -- 1. task ID = 26 : Func No = 9 
+[BOOTTRACE +47749ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +47755ms]   -- 2. task ID = 9 : Func No = 2 
+[BOOTTRACE +47758ms]   --     data =  08 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +47764ms]   -- 3. task ID = 88 : Func No = 9 
+[BOOTTRACE +47767ms]   --     data =  0e 02 0f 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +47774ms]   -- 4. task ID = 88 : Func No = 9 
+[BOOTTRACE +47777ms]   --     data =  0e 02 13 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +47783ms] :: Receive Intr ::
+[BOOTTRACE +47785ms]   -- 0. task ID = 0 : Func No = 0 
+[BOOTTRACE +47788ms]   --     data =  7f e3 02 01 00 00 0f 06 00 02 00 00 00 00 00 7c
+[BOOTTRACE +47794ms]   -- 1. task ID = 0 : Func No = 0 
+[BOOTTRACE +47798ms]   --     data =  7f fa 02 01 00 00 0f 06 00 02 00 00 00 00 00 93
+[BOOTTRACE +47804ms]   -- 2. task ID = 0 : Func No = 0 
+[BOOTTRACE +47807ms]   --     data =  7f da 01 01 00 00 0f 06 00 02 00 00 00 00 00 72
+[BOOTTRACE +47813ms]   -- 3. task ID = 0 : Func No = 0 
+[BOOTTRACE +47816ms]   --     data =  7f da 01 01 00 00 0f 06 00 02 00 00 00 00 00 72
+[BOOTTRACE +47822ms]   -- 4. task ID = 0 : Func No = 0 
+[BOOTTRACE +47826ms]   --     data =  7f e3 02 01 00 00 0e 06 00 02 00 00 00 00 00 7b
+[BOOTTRACE +47832ms] :: Receive Task ::
+[BOOTTRACE +47834ms]   -- 0. data =  7f e3 02 01 00 00 0f 06 00 02 00 00 00 00 00 7c
+[BOOTTRACE +47839ms]   -- 1. data =  7f fa 02 01 00 00 0f 06 00 02 00 00 00 00 00 93
+[BOOTTRACE +47845ms]   -- 2. data =  7f da 01 01 00 00 0f 06 00 02 00 00 00 00 00 72
+[BOOTTRACE +47851ms]   -- 3. data =  7f da 01 01 00 00 0f 06 00 02 00 00 00 00 00 72
+[BOOTTRACE +47857ms]   -- 4. data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +47864ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +47868ms] [FPC]RCV TIMEOUT GATE=14
+[BOOTTRACE +47870ms] [SYS_CNTL]FPC_CB_ReportEmergency(4)
+[BOOTTRACE +47874ms] [SYS_CNTL]FPC_EMERGENCY_TIMEOUT
+[BOOTTRACE +47877ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +47882ms] [SYS_BOOT]TUN_Init
+[BOOTTRACE +47931ms] [FPC]FPC_ReciveTASK() : 7F E3 02 01 00 00 10 06 00 02 00 00 00 00 00 7D 
+[BOOTTRACE +47938ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +47942ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +47944ms] [FPC] !!- OPcode Emergency -!!
+[BOOTTRACE +47947ms] :: Send ::
+[BOOTTRACE +47948ms]   -- 0. task ID = 88 : Func No = 8 
+[BOOTTRACE +47952ms]   --     data =  e3 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +47958ms]   -- 1. task ID = 26 : Func No = 8 
+[BOOTTRACE +47961ms]   --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+[BOOTTRACE +47968ms]   -- 2. task ID = 26 : Func No = 7 
+[BOOTTRACE +47971ms]   --     data =  fa 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +47977ms]   -- 3. task ID = 26 : Func No = 7 
+[BOOTTRACE +47981ms]   --     data =  da 72 01 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +47987ms]   -- 4. task ID = 26 : Func No = 7 
+[BOOTTRACE +47990ms]   --     data =  da 71 01 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +47996ms] :: Receive ::
+[BOOTTRACE +47998ms]   -- 0. task ID = 88 : Func No = 9 
+[BOOTTRACE +48001ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +48007ms]   -- 1. task ID = 26 : Func No = 9 
+[BOOTTRACE +48011ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +48017ms]   -- 2. task ID = 26 : Func No = 9 
+[BOOTTRACE +48020ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +48027ms]   -- 3. task ID = 9 : Func No = 2 
+[BOOTTRACE +48030ms]   --     data =  08 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +48036ms]   -- 4. task ID = 88 : Func No = 9 
+[BOOTTRACE +48040ms]   --     data =  0e 02 0f 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +48046ms] :: Receive Intr ::
+[BOOTTRACE +48048ms]   -- 0. task ID = 0 : Func No = 0 
+[BOOTTRACE +48051ms]   --     data =  7f e3 02 01 00 00 10 06 00 02 00 00 00 00 00 7d
+[BOOTTRACE +48057ms]   -- 1. task ID = 0 : Func No = 0 
+[BOOTTRACE +48061ms]   --     data =  7f e3 02 01 00 00 0f 06 00 02 00 00 00 00 00 7c
+[BOOTTRACE +48067ms]   -- 2. task ID = 0 : Func No = 0 
+[BOOTTRACE +48070ms]   --     data =  7f fa 02 01 00 00 0f 06 00 02 00 00 00 00 00 93
+[BOOTTRACE +48077ms]   -- 3. task ID = 0 : Func No = 0 
+[BOOTTRACE +48080ms]   --     data =  7f da 01 01 00 00 0f 06 00 02 00 00 00 00 00 72
+[BOOTTRACE +48086ms]   -- 4. task ID = 0 : Func No = 0 
+[BOOTTRACE +48090ms]   --     data =  7f da 01 01 00 00 0f 06 00 02 00 00 00 00 00 72
+[BOOTTRACE +48096ms] :: Receive Task ::
+[BOOTTRACE +48098ms]   -- 0. data =  7f e3 02 01 00 00 10 06 00 02 00 00 00 00 00 7d
+[BOOTTRACE +48104ms]   -- 1. data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +48110ms]   -- 2. data =  7f e3 02 01 00 00 0f 06 00 02 00 00 00 00 00 7c
+[BOOTTRACE +48116ms]   -- 3. data =  7f fa 02 01 00 00 0f 06 00 02 00 00 00 00 00 93
+[BOOTTRACE +48122ms]   -- 4. data =  7f da 01 01 00 00 0f 06 00 02 00 00 00 00 00 72
+[BOOTTRACE +48128ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +48225ms] [FPC]RCV TIMEOUT GATE=14
+[BOOTTRACE +48227ms] [SYS_CNTL]FPC_CB_ReportEmergency(4)
+[BOOTTRACE +48231ms] [SYS_CNTL]FPC_EMERGENCY_TIMEOUT
+[BOOTTRACE +48234ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +48239ms] [FPC]FPC_ReciveTASK() : 7F EC 01 01 00 00 10 06 00 02 00 00 00 00 00 85 
+[BOOTTRACE +48246ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +48249ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +48252ms] [FPC] !!- OPcode Emergency -!!
+[BOOTTRACE +48255ms] :: Send ::
+[BOOTTRACE +48256ms]   -- 0. task ID = 88 : Func No = 8 
+[BOOTTRACE +48259ms]   --     data =  ec 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +48266ms]   -- 1. task ID = 88 : Func No = 8 
+[BOOTTRACE +48269ms]   --     data =  e3 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +48275ms]   -- 2. task ID = 26 : Func No = 8 
+[BOOTTRACE +48279ms]   --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+[BOOTTRACE +48285ms]   -- 3. task ID = 26 : Func No = 7 
+[BOOTTRACE +48288ms]   --     data =  fa 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +48294ms]   -- 4. task ID = 26 : Func No = 7 
+[BOOTTRACE +48298ms]   --     data =  da 72 01 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +48304ms] :: Receive ::
+[BOOTTRACE +48305ms]   -- 0. task ID = 88 : Func No = 9 
+[BOOTTRACE +48309ms]   --     data =  0e 02 27 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +48315ms]   -- 1. task ID = 88 : Func No = 9 
+[BOOTTRACE +48318ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +48325ms]   -- 2. task ID = 26 : Func No = 9 
+[BOOTTRACE +48328ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +48334ms]   -- 3. task ID = 26 : Func No = 9 
+[BOOTTRACE +48338ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +48344ms]   -- 4. task ID = 9 : Func No = 2 
+[BOOTTRACE +48347ms]   --     data =  08 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +48353ms] :: Receive Intr ::
+[BOOTTRACE +48355ms]   -- 0. task ID = 0 : Func No = 0 
+[BOOTTRACE +48358ms]   --     data =  7f ec 01 01 00 00 10 06 00 02 00 00 00 00 00 85
+[BOOTTRACE +48364ms]   -- 1. task ID = 0 : Func No = 0 
+[BOOTTRACE +48368ms]   --     data =  7f e3 02 01 00 00 10 06 00 02 00 00 00 00 00 7d
+[BOOTTRACE +48374ms]   -- 2. task ID = 0 : Func No = 0 
+[BOOTTRACE +48377ms]   --     data =  7f e3 02 01 00 00 0f 06 00 02 00 00 00 00 00 7c
+[BOOTTRACE +48383ms]   -- 3. task ID = 0 : Func No = 0 
+[BOOTTRACE +48386ms]   --     data =  7f fa 02 01 00 00 0f 06 00 02 00 00 00 00 00 93
+[BOOTTRACE +48392ms]   -- 4. task ID = 0 : Func No = 0 
+[BOOTTRACE +48396ms]   --     data =  7f da 01 01 00 00 0f 06 00 02 00 00 00 00 00 72
+[BOOTTRACE +48402ms] :: Receive Task ::
+[BOOTTRACE +48404ms]   -- 0. data =  7f ec 01 01 00 00 10 06 00 02 00 00 00 00 00 85
+[BOOTTRACE +48410ms]   -- 1. data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +48416ms]   -- 2. data =  7f e3 02 01 00 00 10 06 00 02 00 00 00 00 00 7d
+[BOOTTRACE +48422ms]   -- 3. data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +48428ms]   -- 4. data =  7f e3 02 01 00 00 0f 06 00 02 00 00 00 00 00 7c
+[BOOTTRACE +48434ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +48525ms] [FPC]RCV TIMEOUT GATE=39
+[BOOTTRACE +48527ms] [SYS_CNTL]FPC_CB_ReportEmergency(4)
+[BOOTTRACE +48531ms] [SYS_CNTL]FPC_EMERGENCY_TIMEOUT
+[BOOTTRACE +48534ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +48539ms] [SYS_BOOT]TUN_Init() success. 
+[BOOTTRACE +48542ms] [DCS]dco_api :AVOUT_AV_Select: video=8, audio=1
+[BOOTTRACE +48585ms] [DCS]dco_api :AVOUT_A_Mute_ID: ON_ID[ALL]=3 , [EE]=0
+[BOOTTRACE +48615ms] [1394avc]ctl: BUS Reset Start 
+[BOOTTRACE +48618ms] [1394avc]ctl: BUS Reset END 
+[BOOTTRACE +48621ms] [1394avc]ctl: GETEUI64 OK 
+[BOOTTRACE +48624ms] [1394avc]cold_start: GET EUI64_H = 0080459a 
+[BOOTTRACE +48628ms] [1394avc]cold_start: GET EUI64_L = f1a9801b 
+[BOOTTRACE +48632ms] [1394avc]CTL: Equipment recognition end.
+[BOOTTRACE +48636ms] [DCO]Audio Output = L/R.
+[BOOTTRACE +48679ms] [DCS]dco_api :avout_API_MuteID = 0x1
+[BOOTTRACE +48715ms] [DCS]dco_api :AVOUT_A_Mute_ID: OFF_ID[ALL]=2 , [EE]=0
+[BOOTTRACE +48827ms] [AVIN]0: avin_set_now_state() sys tvsystem = TV_PAL(1).
+[BOOTTRACE +48832ms] [AVIN]0: avin_set_now_state() det tvsystem = TV_PAL(1).
+[BOOTTRACE +48837ms] [AVIN]0: avin_hw_input_source_select(SOURCE_TUNER,L/R,0) end.
+[BOOTTRACE +49125ms] [AVIN] target:0 input:0x0 --IIC send error retry 3 all err
+[BOOTTRACE +49131ms] System assert!! File:src/avin_funcs_com.c Line:3756 Err:0
+[BOOTTRACE +49137ms] [DCS]dco_api :AVOUT_AV_Select: video=0, audio=0
+[BOOTTRACE +49165ms] [DCS]dco_api :AVOUT_A_Mute_ID: ON_ID[ALL]=3 , [EE]=0
+[BOOTTRACE +49265ms] [DCS]AVDEC Interrupt           :RELOADDONE
+[BOOTTRACE +49269ms] [DCS]AVDEC Interrupt           :RELOADDONE
+[BOOTTRACE +49321ms] [DCS]AVDEC Interrupt           :BBFLUSHST
+[BOOTTRACE +49414ms] [DCO]Audio Output = L/R.
+[BOOTTRACE +49480ms] [DCS]dco_api :avout_API_MuteID = 0x1
+[BOOTTRACE +49515ms] [DCS]dco_api :AVOUT_A_Mute_ID: OFF_ID[ALL]=2 , [EE]=0
+[BOOTTRACE +49533ms] [FPC]FPC_ReciveTASK() : 7F FA 02 01 00 00 11 06 00 02 00 00 00 00 00 95 
+[BOOTTRACE +49540ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +49543ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +49546ms] [FPC] !!- OPcode Emergency -!!
+[BOOTTRACE +49549ms] :: Send ::
+[BOOTTRACE +49550ms]   -- 0. task ID = 26 : Func No = 8 
+[BOOTTRACE +49553ms]   --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+[BOOTTRACE +49559ms]   -- 1. task ID = 26 : Func No = 7 
+[BOOTTRACE +49563ms]   --     data =  fa 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +49569ms]   -- 2. task ID = 19 : Func No = 7 
+[BOOTTRACE +49572ms]   --     data =  e2 04 01 84 c0 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +49578ms]   -- 3. task ID = 88 : Func No = 7 
+[BOOTTRACE +49582ms]   --     data =  81 00 00 01 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +49588ms]   -- 4. task ID = 88 : Func No = 8 
+[BOOTTRACE +49591ms]   --     data =  ec 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +49597ms] :: Receive ::
+[BOOTTRACE +49599ms]   -- 0. task ID = 26 : Func No = 9 
+[BOOTTRACE +49602ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +49608ms]   -- 1. task ID = 88 : Func No = 9 
+[BOOTTRACE +49612ms]   --     data =  0e 02 27 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +49618ms]   -- 2. task ID = 88 : Func No = 9 
+[BOOTTRACE +49622ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +49628ms]   -- 3. task ID = 26 : Func No = 9 
+[BOOTTRACE +49631ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +49638ms]   -- 4. task ID = 26 : Func No = 9 
+[BOOTTRACE +49641ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +49647ms] :: Receive Intr ::
+[BOOTTRACE +49649ms]   -- 0. task ID = 0 : Func No = 0 
+[BOOTTRACE +49652ms]   --     data =  7f e3 02 01 00 00 11 06 00 02 00 00 00 00 00 7e
+[BOOTTRACE +49658ms]   -- 1. task ID = 0 : Func No = 0 
+[BOOTTRACE +49661ms]   --     data =  7f fa 02 01 00 00 11 06 00 02 00 00 00 00 00 95
+[BOOTTRACE +49668ms]   -- 2. task ID = 0 : Func No = 0 
+[BOOTTRACE +49671ms]   --     data =  7f ec 01 01 00 00 10 06 00 02 00 00 00 00 00 85
+[BOOTTRACE +49677ms]   -- 3. task ID = 0 : Func No = 0 
+[BOOTTRACE +49680ms]   --     data =  7f e3 02 01 00 00 10 06 00 02 00 00 00 00 00 7d
+[BOOTTRACE +49686ms]   -- 4. task ID = 0 : Func No = 0 
+[BOOTTRACE +49690ms]   --     data =  7f e3 02 01 00 00 0f 06 00 02 00 00 00 00 00 7c
+[BOOTTRACE +49696ms] :: Receive Task ::
+[BOOTTRACE +49697ms]   -- 0. data =  7f fa 02 01 00 00 11 06 00 02 00 00 00 00 00 95
+[BOOTTRACE +49703ms]   -- 1. data =  0e 02 27 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +49710ms]   -- 2. data =  7f ec 01 01 00 00 10 06 00 02 00 00 00 00 00 85
+[BOOTTRACE +49715ms]   -- 3. data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +49721ms]   -- 4. data =  7f e3 02 01 00 00 10 06 00 02 00 00 00 00 00 7d
+[BOOTTRACE +49727ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +49732ms] [FPC]FPC_ReciveTASK() : 7F E3 02 01 00 00 11 06 00 02 00 00 00 00 00 7E 
+[BOOTTRACE +49739ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +49742ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +49745ms] [FPC] !!- OPcode Emergency -!!
+[BOOTTRACE +49748ms] :: Send ::
+[BOOTTRACE +49749ms]   -- 0. task ID = 26 : Func No = 8 
+[BOOTTRACE +49753ms]   --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+[BOOTTRACE +49759ms]   -- 1. task ID = 26 : Func No = 7 
+[BOOTTRACE +49762ms]   --     data =  fa 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +49768ms]   -- 2. task ID = 19 : Func No = 7 
+[BOOTTRACE +49772ms]   --     data =  e2 04 01 84 c0 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +49778ms]   -- 3. task ID = 88 : Func No = 7 
+[BOOTTRACE +49781ms]   --     data =  81 00 00 01 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +49788ms]   -- 4. task ID = 88 : Func No = 8 
+[BOOTTRACE +49791ms]   --     data =  ec 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +49797ms] :: Receive ::
+[BOOTTRACE +49798ms]   -- 0. task ID = 26 : Func No = 9 
+[BOOTTRACE +49802ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +49808ms]   -- 1. task ID = 88 : Func No = 9 
+[BOOTTRACE +49811ms]   --     data =  0e 02 27 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +49817ms]   -- 2. task ID = 88 : Func No = 9 
+[BOOTTRACE +49820ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +49827ms]   -- 3. task ID = 26 : Func No = 9 
+[BOOTTRACE +49830ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +49836ms]   -- 4. task ID = 26 : Func No = 9 
+[BOOTTRACE +49840ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +49846ms] :: Receive Intr ::
+[BOOTTRACE +49848ms]   -- 0. task ID = 0 : Func No = 0 
+[BOOTTRACE +49851ms]   --     data =  7f e3 02 01 00 00 11 06 00 02 00 00 00 00 00 7e
+[BOOTTRACE +49857ms]   -- 1. task ID = 0 : Func No = 0 
+[BOOTTRACE +49860ms]   --     data =  7f fa 02 01 00 00 11 06 00 02 00 00 00 00 00 95
+[BOOTTRACE +49867ms]   -- 2. task ID = 0 : Func No = 0 
+[BOOTTRACE +49870ms]   --     data =  7f ec 01 01 00 00 10 06 00 02 00 00 00 00 00 85
+[BOOTTRACE +49876ms]   -- 3. task ID = 0 : Func No = 0 
+[BOOTTRACE +49879ms]   --     data =  7f e3 02 01 00 00 10 06 00 02 00 00 00 00 00 7d
+[BOOTTRACE +49885ms]   -- 4. task ID = 0 : Func No = 0 
+[BOOTTRACE +49889ms]   --     data =  7f e3 02 01 00 00 0f 06 00 02 00 00 00 00 00 7c
+[BOOTTRACE +49895ms] :: Receive Task ::
+[BOOTTRACE +49897ms]   -- 0. data =  7f e3 02 01 00 00 11 06 00 02 00 00 00 00 00 7e
+[BOOTTRACE +49902ms]   -- 1. data =  7f fa 02 01 00 00 11 06 00 02 00 00 00 00 00 95
+[BOOTTRACE +49909ms]   -- 2. data =  0e 02 27 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +49915ms]   -- 3. data =  7f ec 01 01 00 00 10 06 00 02 00 00 00 00 00 85
+[BOOTTRACE +49921ms]   -- 4. data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +49926ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +49931ms] [FPC]RCV TIMEOUT GATE=14
+[BOOTTRACE +49933ms] [SYS_CNTL]FPC_CB_ReportEmergency(4)
+[BOOTTRACE +49937ms] [SYS_CNTL]FPC_EMERGENCY_TIMEOUT
+[BOOTTRACE +49940ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +49946ms] [AVIN]0: *** AVIN_Rec656_set_module() TV_NTSC->TV_PAL change start ***
+[BOOTTRACE +49953ms] [AVIN]0: avin_hw_input_source_select(SOURCE_TUNER,L/R,0) end.
+[BOOTTRACE +49959ms] [AVIN]0: avin_hw_input_source_select(SOURCE_TUNER,L/R,0) end.
+[BOOTTRACE +51217ms] [AVIN]0: cpg detect type change to det_type_1
+[BOOTTRACE +51565ms] [SYS_CNTL]SYS_CNTL_PAL_NTSC_Change 1 
+[BOOTTRACE +51569ms] [SYS_CNTL]avout_tv_system = 1
+[BOOTTRACE +51765ms] [DCS]dco_api :AVOUT_AV_Select: video=8, audio=1
+[BOOTTRACE +51835ms] [DCS]dco_api :AVOUT_A_Mute_ID: ON_ID[ALL]=3 , [EE]=0
+[BOOTTRACE +51904ms] [DCO]Audio Output = L/R.
+[BOOTTRACE +51964ms] [DCS]dco_api :avout_API_MuteID = 0x1
+[BOOTTRACE +51995ms] [DCS]dco_api :AVOUT_A_Mute_ID: OFF_ID[ALL]=2 , [EE]=0
+[BOOTTRACE +52137ms] [AVIN]0: avin_set_now_state() sys tvsystem = TV_NTSC(0).
+[BOOTTRACE +52143ms] [AVIN]0: avin_set_now_state() det tvsystem = TV_NTSC(0).
+[BOOTTRACE +52148ms] [AVIN]0: avin_hw_input_source_select(SOURCE_TUNER,L/R,0) end.
+[BOOTTRACE +52154ms] [AVIN]0: set nr->0 [0:off 1:on 2:fdown 3:lv1 4:lv2 5:lv3 6:lv4 7:lv5]
+[BOOTTRACE +52161ms] [DCS]dco_api :AVOUT_AV_Select: video=0, audio=0
+[BOOTTRACE +52185ms] [DCS]dco_api :AVOUT_A_Mute_ID: ON_ID[ALL]=3 , [EE]=0
+[BOOTTRACE +52305ms] [DCS]AVDEC Interrupt           :RELOADDONE
+[BOOTTRACE +52309ms] [DCS]AVDEC Interrupt           :RELOADDONE
+[BOOTTRACE +52353ms] [DCS]AVDEC Interrupt           :BBFLUSHST
+[BOOTTRACE +52444ms] [DCO]Audio Output = L/R.
+[BOOTTRACE +52524ms] [DCS]dco_api :avout_API_MuteID = 0x1
+[BOOTTRACE +52555ms] [DCS]dco_api :AVOUT_A_Mute_ID: OFF_ID[ALL]=2 , [EE]=0
+[BOOTTRACE +52720ms] [AVIN]0: *** AVIN_Rec656_set_module() TV_PAL->TV_NTSC change start ***
+[BOOTTRACE +52727ms] [AVIN]0: avin_hw_input_source_select(SOURCE_TUNER,L/R,0) end.
+[BOOTTRACE +52733ms] [AVIN]0: avin_hw_input_source_select(SOURCE_TUNER,L/R,0) end.
+[BOOTTRACE +52739ms] [AVIN]0: set nr->0 [0:off 1:on 2:fdown 3:lv1 4:lv2 5:lv3 6:lv4 7:lv5]
+[BOOTTRACE +54082ms] [FPC]FPC_ReciveTASK() : 7F FA 02 01 00 00 16 06 00 02 00 00 00 00 00 9A 
+[BOOTTRACE +54089ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +54092ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +54095ms] [FPC] !!- OPcode Emergency -!!
+[BOOTTRACE +54098ms] :: Send ::
+[BOOTTRACE +54099ms]   -- 0. task ID = 26 : Func No = 8 
+[BOOTTRACE +54103ms]   --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+[BOOTTRACE +54109ms]   -- 1. task ID = 26 : Func No = 7 
+[BOOTTRACE +54112ms]   --     data =  fa 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +54118ms]   -- 2. task ID = 19 : Func No = 7 
+[BOOTTRACE +54121ms]   --     data =  e2 04 01 84 c0 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +54128ms]   -- 3. task ID = 26 : Func No = 8 
+[BOOTTRACE +54131ms]   --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+[BOOTTRACE +54137ms]   -- 4. task ID = 26 : Func No = 7 
+[BOOTTRACE +54141ms]   --     data =  fa 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +54147ms] :: Receive ::
+[BOOTTRACE +54148ms]   -- 0. task ID = 26 : Func No = 9 
+[BOOTTRACE +54152ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +54158ms]   -- 1. task ID = 26 : Func No = 9 
+[BOOTTRACE +54161ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +54167ms]   -- 2. task ID = 88 : Func No = 9 
+[BOOTTRACE +54171ms]   --     data =  0e 02 27 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +54177ms]   -- 3. task ID = 88 : Func No = 9 
+[BOOTTRACE +54180ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +54186ms]   -- 4. task ID = 26 : Func No = 9 
+[BOOTTRACE +54190ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +54196ms] :: Receive Intr ::
+[BOOTTRACE +54197ms]   -- 0. task ID = 0 : Func No = 0 
+[BOOTTRACE +54201ms]   --     data =  7f e3 02 01 00 00 16 06 00 02 00 00 00 00 00 83
+[BOOTTRACE +54207ms]   -- 1. task ID = 0 : Func No = 0 
+[BOOTTRACE +54210ms]   --     data =  7f fa 02 01 00 00 16 06 00 02 00 00 00 00 00 9a
+[BOOTTRACE +54216ms]   -- 2. task ID = 0 : Func No = 0 
+[BOOTTRACE +54220ms]   --     data =  7f e3 02 01 00 00 11 06 00 02 00 00 00 00 00 7e
+[BOOTTRACE +54226ms]   -- 3. task ID = 0 : Func No = 0 
+[BOOTTRACE +54229ms]   --     data =  7f fa 02 01 00 00 11 06 00 02 00 00 00 00 00 95
+[BOOTTRACE +54235ms]   -- 4. task ID = 0 : Func No = 0 
+[BOOTTRACE +54238ms]   --     data =  7f ec 01 01 00 00 10 06 00 02 00 00 00 00 00 85
+[BOOTTRACE +54245ms] :: Receive Task ::
+[BOOTTRACE +54246ms]   -- 0. data =  7f fa 02 01 00 00 16 06 00 02 00 00 00 00 00 9a
+[BOOTTRACE +54252ms]   -- 1. data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +54258ms]   -- 2. data =  7f e3 02 01 00 00 11 06 00 02 00 00 00 00 00 7e
+[BOOTTRACE +54264ms]   -- 3. data =  7f fa 02 01 00 00 11 06 00 02 00 00 00 00 00 95
+[BOOTTRACE +54270ms]   -- 4. data =  0e 02 27 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +54276ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +54281ms] [FPC]FPC_ReciveTASK() : 7F E3 02 01 00 00 16 06 00 02 00 00 00 00 00 83 
+[BOOTTRACE +54288ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +54291ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +54294ms] [FPC] !!- OPcode Emergency -!!
+[BOOTTRACE +54297ms] :: Send ::
+[BOOTTRACE +54298ms]   -- 0. task ID = 26 : Func No = 8 
+[BOOTTRACE +54301ms]   --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+[BOOTTRACE +54307ms]   -- 1. task ID = 26 : Func No = 7 
+[BOOTTRACE +54311ms]   --     data =  fa 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +54317ms]   -- 2. task ID = 19 : Func No = 7 
+[BOOTTRACE +54320ms]   --     data =  e2 04 01 84 c0 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +54326ms]   -- 3. task ID = 26 : Func No = 8 
+[BOOTTRACE +54330ms]   --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+[BOOTTRACE +54336ms]   -- 4. task ID = 26 : Func No = 7 
+[BOOTTRACE +54339ms]   --     data =  fa 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +54345ms] :: Receive ::
+[BOOTTRACE +54347ms]   -- 0. task ID = 26 : Func No = 9 
+[BOOTTRACE +54350ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +54356ms]   -- 1. task ID = 26 : Func No = 9 
+[BOOTTRACE +54360ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +54366ms]   -- 2. task ID = 88 : Func No = 9 
+[BOOTTRACE +54369ms]   --     data =  0e 02 27 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +54375ms]   -- 3. task ID = 88 : Func No = 9 
+[BOOTTRACE +54379ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +54385ms]   -- 4. task ID = 26 : Func No = 9 
+[BOOTTRACE +54388ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +54395ms] :: Receive Intr ::
+[BOOTTRACE +54396ms]   -- 0. task ID = 0 : Func No = 0 
+[BOOTTRACE +54400ms]   --     data =  7f e3 02 01 00 00 16 06 00 02 00 00 00 00 00 83
+[BOOTTRACE +54406ms]   -- 1. task ID = 0 : Func No = 0 
+[BOOTTRACE +54409ms]   --     data =  7f fa 02 01 00 00 16 06 00 02 00 00 00 00 00 9a
+[BOOTTRACE +54415ms]   -- 2. task ID = 0 : Func No = 0 
+[BOOTTRACE +54418ms]   --     data =  7f e3 02 01 00 00 11 06 00 02 00 00 00 00 00 7e
+[BOOTTRACE +54425ms]   -- 3. task ID = 0 : Func No = 0 
+[BOOTTRACE +54428ms]   --     data =  7f fa 02 01 00 00 11 06 00 02 00 00 00 00 00 95
+[BOOTTRACE +54434ms]   -- 4. task ID = 0 : Func No = 0 
+[BOOTTRACE +54437ms]   --     data =  7f ec 01 01 00 00 10 06 00 02 00 00 00 00 00 85
+[BOOTTRACE +54443ms] :: Receive Task ::
+[BOOTTRACE +54445ms]   -- 0. data =  7f e3 02 01 00 00 16 06 00 02 00 00 00 00 00 83
+[BOOTTRACE +54452ms]   -- 1. data =  7f fa 02 01 00 00 16 06 00 02 00 00 00 00 00 9a
+[BOOTTRACE +54458ms]   -- 2. data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +54464ms]   -- 3. data =  7f e3 02 01 00 00 11 06 00 02 00 00 00 00 00 7e
+[BOOTTRACE +54470ms]   -- 4. data =  7f fa 02 01 00 00 11 06 00 02 00 00 00 00 00 95
+[BOOTTRACE +54476ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +54481ms] [FPC]RCV TIMEOUT GATE=14
+[BOOTTRACE +54483ms] [SYS_CNTL]FPC_CB_ReportEmergency(4)
+[BOOTTRACE +54487ms] [SYS_CNTL]FPC_EMERGENCY_TIMEOUT
+[BOOTTRACE +54490ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +54494ms] [SYS_CNTL]SYS_CNTL_PAL_NTSC_Change 0 
+[BOOTTRACE +54498ms] [SYS_CNTL]avout_tv_system = 0
+[BOOTTRACE +54501ms] [SYS_BOOT]FPC_GetLastChannel() success
+[BOOTTRACE +54504ms] [FPC]FPC_AutoClockSetting(5)
+[BOOTTRACE +54507ms] [FPC]FPC_ReciveTASK() : 7F C9 02 01 00 00 16 06 00 02 00 00 00 00 00 69 
+[BOOTTRACE +54514ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +54518ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +54520ms] [FPC] !!- OPcode Emergency -!!
+[BOOTTRACE +54524ms] :: Send ::
+[BOOTTRACE +54525ms]   -- 0. task ID = 88 : Func No = 8 
+[BOOTTRACE +54528ms]   --     data =  84 ff 00 01 ff ff ff ff ff ff ff ff ff ff ff ff
+[BOOTTRACE +54535ms]   -- 1. task ID = 88 : Func No = 7 
+[BOOTTRACE +54538ms]   --     data =  c9 01 05 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +54544ms]   -- 2. task ID = 88 : Func No = 7 
+[BOOTTRACE +54548ms]   --     data =  81 00 00 02 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +54554ms]   -- 3. task ID = 26 : Func No = 8 
+[BOOTTRACE +54557ms]   --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+[BOOTTRACE +54563ms]   -- 4. task ID = 26 : Func No = 7 
+[BOOTTRACE +54567ms]   --     data =  fa 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +54573ms] :: Receive ::
+[BOOTTRACE +54574ms]   -- 0. task ID = 88 : Func No = 9 
+[BOOTTRACE +54577ms]   --     data =  0e 02 1e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +54584ms]   -- 1. task ID = 26 : Func No = 9 
+[BOOTTRACE +54587ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +54593ms]   -- 2. task ID = 26 : Func No = 9 
+[BOOTTRACE +54596ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +54602ms]   -- 3. task ID = 88 : Func No = 9 
+[BOOTTRACE +54606ms]   --     data =  0e 02 27 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +54612ms]   -- 4. task ID = 88 : Func No = 9 
+[BOOTTRACE +54615ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +54622ms] :: Receive Intr ::
+[BOOTTRACE +54624ms]   -- 0. task ID = 0 : Func No = 0 
+[BOOTTRACE +54627ms]   --     data =  04 01 00 01 00 00 00 00 00 00 00 00 00 00 00 06
+[BOOTTRACE +54633ms]   -- 1. task ID = 0 : Func No = 0 
+[BOOTTRACE +54636ms]   --     data =  7f c9 02 01 00 00 16 06 00 02 00 00 00 00 00 69
+[BOOTTRACE +54642ms]   -- 2. task ID = 0 : Func No = 0 
+[BOOTTRACE +54646ms]   --     data =  7f e3 02 01 00 00 16 06 00 02 00 00 00 00 00 83
+[BOOTTRACE +54652ms]   -- 3. task ID = 0 : Func No = 0 
+[BOOTTRACE +54655ms]   --     data =  7f fa 02 01 00 00 16 06 00 02 00 00 00 00 00 9a
+[BOOTTRACE +54661ms]   -- 4. task ID = 0 : Func No = 0 
+[BOOTTRACE +54664ms]   --     data =  7f e3 02 01 00 00 11 06 00 02 00 00 00 00 00 7e
+[BOOTTRACE +54670ms] :: Receive Task ::
+[BOOTTRACE +54672ms]   -- 0. data =  7f c9 02 01 00 00 16 06 00 02 00 00 00 00 00 69
+[BOOTTRACE +54678ms]   -- 1. data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +54684ms]   -- 2. data =  7f e3 02 01 00 00 16 06 00 02 00 00 00 00 00 83
+[BOOTTRACE +54690ms]   -- 3. data =  7f fa 02 01 00 00 16 06 00 02 00 00 00 00 00 9a
+[BOOTTRACE +54696ms]   -- 4. data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +54702ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +54707ms] [FPC]FPC_ReciveTASK() : 04 01 00 01 00 00 00 00 00 00 00 00 00 00 00 06 
+[BOOTTRACE +54714ms] [FPC]FPC_TuningWatchStart_inAcs start
+[BOOTTRACE +54717ms] [FPC]FPC_TuningNotify_inAcs false
+[BOOTTRACE +54720ms] [FPC]FPC_LastTuning_inAcs apr->last
+[BOOTTRACE +54724ms] :: Receive Intr ::
+[BOOTTRACE +54726ms]   -- 0. task ID = 0 : Func No = 0 
+[BOOTTRACE +54729ms]   --     data =  7f c9 02 01 00 00 00 00 00 00 00 00 00 00 00 4b
+[BOOTTRACE +54735ms]   -- 1. task ID = 0 : Func No = 0 
+[BOOTTRACE +54738ms]   --     data =  04 01 00 01 00 00 00 00 00 00 00 00 00 00 00 06
+[BOOTTRACE +54744ms]   -- 2. task ID = 0 : Func No = 0 
+[BOOTTRACE +54748ms]   --     data =  7f c9 02 01 00 00 16 06 00 02 00 00 00 00 00 69
+[BOOTTRACE +54754ms]   -- 3. task ID = 0 : Func No = 0 
+[BOOTTRACE +54757ms]   --     data =  7f e3 02 01 00 00 16 06 00 02 00 00 00 00 00 83
+[BOOTTRACE +54763ms]   -- 4. task ID = 0 : Func No = 0 
+[BOOTTRACE +54766ms]   --     data =  7f fa 02 01 00 00 16 06 00 02 00 00 00 00 00 9a
+[BOOTTRACE +54772ms] :: Receive Task ::
+[BOOTTRACE +54774ms]   -- 0. data =  7f c9 02 01 00 00 00 00 00 00 00 00 00 00 00 4b
+[BOOTTRACE +54780ms]   -- 1. data =  49 00 00 00 00 00 00 00 00 00 00 03 00 00 00 00
+[BOOTTRACE +54786ms]   -- 2. data =  49 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +54792ms]   -- 3. data =  04 01 00 01 00 00 00 00 00 00 00 00 00 00 00 06
+[BOOTTRACE +54798ms]   -- 4. data =  7f c9 02 01 00 00 16 06 00 02 00 00 00 00 00 69
+[BOOTTRACE +54804ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +55125ms] [SYS_BOOT]FPC_AutoClockSetting() success
+[BOOTTRACE +55129ms] [SYS_BOOT]TUN_SetCombFilter() success
+[BOOTTRACE +55132ms] :::SYS_RSV::: >> nfrom read
+[BOOTTRACE +55135ms] [SYS_CNTL]UION_CH->LAST_CH(1)
+[BOOTTRACE +55138ms] :::SYS_RSV::: >> nfrom read
+[BOOTTRACE +55141ms] [SYS_CNTL]UION_CH->LAST_CH(1)
+[BOOTTRACE +55143ms] [SYS_TUN]cntl_tuner == 0
+[BOOTTRACE +55146ms] [SYS_TUN]sys_tun_Tuner_Exe_ChangeChannel(chan_index == 1, recorder_id == 0, cntl_tuner == 0)
+[BOOTTRACE +55165ms] [DCS]dco_api :AVOUT_A_Mute_ID: ON_ID[ALL]=2 , [EE]=8
+[BOOTTRACE +55195ms] [AVIN]0: avin_set_now_state() state = STATE_CHG_CHANNEL(2).
+[BOOTTRACE +55201ms] [AVIN] 0_Prefilter = 1
+[BOOTTRACE +55204ms] [SYS_CNTL]AVOUT_A_pbOutputMode 7 4 
+[BOOTTRACE +55207ms] [SYS_CNTL]SYS_CNTL_AVOUT_A_eeOutputMode 0 0 0 0
+[BOOTTRACE +55212ms] [FPC]FPC_ReciveTASK() : 7F F0 02 01 00 00 17 06 00 02 00 00 00 00 00 91 
+[BOOTTRACE +55218ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +55222ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +55225ms] [FPC] !!- OPcode Emergency -!!
+[BOOTTRACE +55227ms] :: Send ::
+[BOOTTRACE +55229ms]   -- 0. task ID = 88 : Func No = 7 
+[BOOTTRACE +55232ms]   --     data =  f0 01 00 02 00 0f 01 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +55238ms]   -- 1. task ID = 13 : Func No = 7 
+[BOOTTRACE +55241ms]   --     data =  c9 00 00 00 00 00 00 00 00 00 00 03 00 00 00 00
+[BOOTTRACE +55248ms]   -- 2. task ID = 88 : Func No = 8 
+[BOOTTRACE +55251ms]   --     data =  84 ff 00 01 ff ff ff ff ff ff ff ff ff ff ff ff
+[BOOTTRACE +55257ms]   -- 3. task ID = 88 : Func No = 7 
+[BOOTTRACE +55260ms]   --     data =  c9 01 05 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +55267ms]   -- 4. task ID = 88 : Func No = 7 
+[BOOTTRACE +55270ms]   --     data =  81 00 00 02 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +55276ms] :: Receive ::
+[BOOTTRACE +55278ms]   -- 0. task ID = 88 : Func No = 9 
+[BOOTTRACE +55281ms]   --     data =  0e 02 1e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +55287ms]   -- 1. task ID = 26 : Func No = 9 
+[BOOTTRACE +55291ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +55297ms]   -- 2. task ID = 26 : Func No = 9 
+[BOOTTRACE +55300ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +55306ms]   -- 3. task ID = 88 : Func No = 9 
+[BOOTTRACE +55310ms]   --     data =  0e 02 27 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +55316ms]   -- 4. task ID = 88 : Func No = 9 
+[BOOTTRACE +55319ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +55325ms] :: Receive Intr ::
+[BOOTTRACE +55327ms]   -- 0. task ID = 0 : Func No = 0 
+[BOOTTRACE +55330ms]   --     data =  7f f0 02 01 00 00 17 06 00 02 00 00 00 00 00 91
+[BOOTTRACE +55337ms]   -- 1. task ID = 0 : Func No = 0 
+[BOOTTRACE +55340ms]   --     data =  7f c9 02 01 00 00 00 00 00 00 00 00 00 00 00 4b
+[BOOTTRACE +55346ms]   -- 2. task ID = 0 : Func No = 0 
+[BOOTTRACE +55350ms]   --     data =  04 01 00 01 00 00 00 00 00 00 00 00 00 00 00 06
+[BOOTTRACE +55356ms]   -- 3. task ID = 0 : Func No = 0 
+[BOOTTRACE +55359ms]   --     data =  7f c9 02 01 00 00 16 06 00 02 00 00 00 00 00 69
+[BOOTTRACE +55365ms]   -- 4. task ID = 0 : Func No = 0 
+[BOOTTRACE +55368ms]   --     data =  7f e3 02 01 00 00 16 06 00 02 00 00 00 00 00 83
+[BOOTTRACE +55374ms] [SYS_BOOT]sys_boot_init_dev_io_pre() success
+[BOOTTRACE +55378ms] :: Receive Task ::
+[BOOTTRACE +55380ms]   -- 0. data =  7f f0 02 01 00 00 17 06 00 02 00 00 00 00 00 91
+[BOOTTRACE +55386ms]   -- 1. data =  7f c9 02 01 00 00 00 00 00 00 00 00 00 00 00 4b
+[BOOTTRACE +55392ms]   -- 2. data =  49 00 00 00 00 00 00 00 00 00 00 03 00 00 00 00
+[BOOTTRACE +55398ms]   -- 3. data =  49 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +55404ms]   -- 4. data =  04 01 00 01 00 00 00 00 00 00 00 00 00 00 00 06
+[BOOTTRACE +55410ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +55415ms] [SYS_BOOT]MBM_Init() success.
+[BOOTTRACE +55417ms] [SYS_BOOT]VDM_Init() 
+[BOOTTRACE +55420ms] [SDCD] sdcd_insrmv_check:SD Card remove 
+[BOOTTRACE +55423ms] [SDCD] === This Card removed ==== 
+[BOOTTRACE +55582ms] [FPC]FPC_ReciveTASK() : 7F AA 01 01 00 00 17 06 00 02 00 00 00 00 00 4A 
+[BOOTTRACE +55589ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +55592ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +55595ms] [FPC] !!- OPcode Emergency -!!
+[BOOTTRACE +55598ms] :: Send ::
+[BOOTTRACE +55599ms]   -- 0. task ID = 16 : Func No = 7 
+[BOOTTRACE +55602ms]   --     data =  aa 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +55608ms]   -- 1. task ID = 88 : Func No = 7 
+[BOOTTRACE +55612ms]   --     data =  f0 01 00 02 00 0f 01 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +55618ms]   -- 2. task ID = 13 : Func No = 7 
+[BOOTTRACE +55621ms]   --     data =  c9 00 00 00 00 00 00 00 00 00 00 03 00 00 00 00
+[BOOTTRACE +55628ms]   -- 3. task ID = 88 : Func No = 8 
+[BOOTTRACE +55632ms]   --     data =  84 ff 00 01 ff ff ff ff ff ff ff ff ff ff ff ff
+[BOOTTRACE +55638ms]   -- 4. task ID = 88 : Func No = 7 
+[BOOTTRACE +55641ms]   --     data =  c9 01 05 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +55647ms] :: Receive ::
+[BOOTTRACE +55649ms]   -- 0. task ID = 88 : Func No = 9 
+[BOOTTRACE +55652ms]   --     data =  0e 02 1e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +55658ms]   -- 1. task ID = 26 : Func No = 9 
+[BOOTTRACE +55662ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +55668ms]   -- 2. task ID = 26 : Func No = 9 
+[BOOTTRACE +55671ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +55677ms]   -- 3. task ID = 88 : Func No = 9 
+[BOOTTRACE +55681ms]   --     data =  0e 02 27 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +55687ms]   -- 4. task ID = 88 : Func No = 9 
+[BOOTTRACE +55690ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +55696ms] :: Receive Intr ::
+[BOOTTRACE +55698ms]   -- 0. task ID = 0 : Func No = 0 
+[BOOTTRACE +55702ms]   --     data =  7f aa 01 01 00 00 17 06 00 02 00 00 00 00 00 4a
+[BOOTTRACE +55708ms]   -- 1. task ID = 0 : Func No = 0 
+[BOOTTRACE +55711ms]   --     data =  7f f0 02 01 00 00 17 06 00 02 00 00 00 00 00 91
+[BOOTTRACE +55717ms]   -- 2. task ID = 0 : Func No = 0 
+[BOOTTRACE +55720ms]   --     data =  7f c9 02 01 00 00 00 00 00 00 00 00 00 00 00 4b
+[BOOTTRACE +55727ms]   -- 3. task ID = 0 : Func No = 0 
+[BOOTTRACE +55730ms]   --     data =  04 01 00 01 00 00 00 00 00 00 00 00 00 00 00 06
+[BOOTTRACE +55736ms]   -- 4. task ID = 0 : Func No = 0 
+[BOOTTRACE +55739ms]   --     data =  7f c9 02 01 00 00 16 06 00 02 00 00 00 00 00 69
+[BOOTTRACE +55745ms] :: Receive Task ::
+[BOOTTRACE +55747ms]   -- 0. data =  7f aa 01 01 00 00 17 06 00 02 00 00 00 00 00 4a
+[BOOTTRACE +55753ms]   -- 1. data =  7f f0 02 01 00 00 17 06 00 02 00 00 00 00 00 91
+[BOOTTRACE +55759ms]   -- 2. data =  7f c9 02 01 00 00 00 00 00 00 00 00 00 00 00 4b
+[BOOTTRACE +55765ms]   -- 3. data =  49 00 00 00 00 00 00 00 00 00 00 03 00 00 00 00
+[BOOTTRACE +55771ms]   -- 4. data =  49 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +55777ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +55782ms] [AVIN]0: avin_set_now_state() state = STATE_NORMAL(0).
+[BOOTTRACE +55787ms] [AVIN]0: avin_hw_input_source_select(SOURCE_TUNER,L/R,0) end.
+[BOOTTRACE +55793ms] [AVIN]0: set nr->0 [0:off 1:on 2:fdown 3:lv1 4:lv2 5:lv3 6:lv4 7:lv5]
+[BOOTTRACE +55799ms] [AVIN]0: AVIN task Delayed 1
+[BOOTTRACE +56447ms] [DCS]dco_api :avout_API_MuteID = 0x10
+[BOOTTRACE +56451ms] [DCS]dco_api :AVOUT_A_Mute_ID: OFF_ID[ALL]=2 , [EE]=8
+[BOOTTRACE +57496ms] [RTSD] Device Reset Occurred(0x62900) 
+[BOOTTRACE +57504ms] [RTSD] HDD already spin-up 
+[BOOTTRACE +57536ms] [RTSD] HDD Auto Spin up Mode 
+[BOOTTRACE +57541ms] [RTSD] HDD Model No.  : SAMSUNG HM251JI                          
+[BOOTTRACE +57547ms] [RTSD] HDD Stream feature Not Suport
+[BOOTTRACE +57662ms] [RTSD] Drive Revision : S211 
+[BOOTTRACE +57666ms] [RTSD] Drive Region   : 4    
+[BOOTTRACE +57668ms] [RTSD] Drive Model    : 12
+[BOOTTRACE +57671ms] [RTSD] Temperature    : 17
+[BOOTTRACE +57673ms] [RTSD] CPRM DK: 1, CPPM DK: 1
+[BOOTTRACE +57676ms] [RTSD] HDD Model No.  : SAMSUNG HM251JI                          
+[BOOTTRACE +57682ms] [RTSD] HDD Stream feature Not Suport
+[BOOTTRACE +57686ms] [HDFS]  HDD Offset Sect:0x20000 - Byte:268435456
+[BOOTTRACE +57739ms] [AVIN]0: AVIN task Delayed 2
+[BOOTTRACE +57746ms] [SYS_BOOT]VDM_Init() success. 
+[BOOTTRACE +57749ms] [SYS_BOOT]DVR_Init_Core 
+[BOOTTRACE +57751ms] [SYS_BOOT]dvr_state == DVR_WARN && fs_state != VDM_W_POW_FAILURE
+[BOOTTRACE +57993ms] [FS]VDM_ReportMediaEx : slot_id = 1 disc = 80000000 protect = 1 format = 0
+[BOOTTRACE +58007ms] [SYS_BOOT]VDM_OpenDisc DVD err. 
+[BOOTTRACE +58011ms] [DVR CORE] (42.87)RESTORE DVD
+[BOOTTRACE +58013ms] [FS]VDM_ReportMediaEx : slot_id = 1 disc = 80000000 protect = 0 format = 53184420
+[BOOTTRACE +58021ms] [DVR CORE] (42.87)id = 1, MEDIA = NONE, minfo = 80000000
+[BOOTTRACE +58426ms] [DVR CORE] (43.29)RESTORE(DVR_RECOVERY_END)
+[BOOTTRACE +58430ms] [DVR CORE] (43.29)RESTORE HDD
+[BOOTTRACE +58433ms] [FS]VDM_ReportMediaEx : slot_id = 0 disc = 1 protect = 0 format = 7
+[BOOTTRACE +58439ms] [DVR CORE] (43.29)id = 1, MEDIA = HDD, minfo = 1
+[BOOTTRACE +58444ms] [DVR CORE] (43.29)RIGHT DISC. (HDD on VR Format)
+[BOOTTRACE +59054ms] [VDM]VDM_UpdateIfo(0,MTV2.IFO) = 0(0) IFO_exist:1 - BUP_exist:1
+[BOOTTRACE +59748ms] [VDM]VDM_UpdateIfo(0,HDD2.IFO) = 0(0) IFO_exist:1 - BUP_exist:1
+[BOOTTRACE +59848ms] [SYS_BOOT]VDM_CloseDisc DVD err. 
+[BOOTTRACE +59851ms] [SYS_BOOT]DVD_Core_Init 
+[BOOTTRACE +59853ms] [SYS_BOOT]CD_Init 
+[BOOTTRACE +59855ms] [SYS_BOOT]MP3_Core_Init
+[BOOTTRACE +59857ms] [SYS_BOOT]DUB_Init_Core() success. 
+[BOOTTRACE +59861ms] [JPG_CORE]JPG_CoreInit Success.
+[BOOTTRACE +59864ms] [SYS_BOOT]JPG_CoreInit() success. 
+[BOOTTRACE +59867ms] [SYS_BOOT]DIVX_Core_Init() success. 
+[BOOTTRACE +59871ms] [SYS_BOOT]REC_InitDevice
+[BOOTTRACE +59873ms] [EIF]0:EIF >>  SDM report(SDRAM OFFSET ADDRESS) = 00000301,
+[BOOTTRACE +59879ms] [EIF]0:EIF >>  SDM report(VBB) = 014C,
+[BOOTTRACE +59882ms] [EIF]0:EIF >>  SDM report(ABB) = 005A,
+[BOOTTRACE +59887ms] [SYS_BOOT]REC_InitDevice() success. 
+[BOOTTRACE +59891ms] [SYS_CNTL]SYS_CNTL_MainVersionUpInitTimer() 
+[BOOTTRACE +59895ms] [REC]0:time over = 44748msec
+[BOOTTRACE +59898ms] [REC]0: -- FREE -> FREE(no cpp info) -- 
+[BOOTTRACE +59902ms] :: Receive ::
+[BOOTTRACE +59903ms]   -- 0. task ID = 26 : Func No = 9 
+[BOOTTRACE +59907ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +59913ms]   -- 1. task ID = 88 : Func No = 9 
+[BOOTTRACE +59916ms]   --     data =  0e 02 1e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +59922ms]   -- 2. task ID = 26 : Func No = 9 
+[BOOTTRACE +59925ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +59931ms]   -- 3. task ID = 26 : Func No = 9 
+[BOOTTRACE +59935ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +59941ms]   -- 4. task ID = 88 : Func No = 9 
+[BOOTTRACE +59945ms]   --     data =  0e 02 27 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +59951ms] :: Receive Intr ::
+[BOOTTRACE +59953ms]   -- 0. task ID = 0 : Func No = 0 
+[BOOTTRACE +59956ms]   --     data =  7f e3 02 01 00 00 1c 06 00 02 00 00 00 00 00 89
+[BOOTTRACE +59962ms]   -- 1. task ID = 0 : Func No = 0 
+[BOOTTRACE +59966ms]   --     data =  7f fa 02 01 00 00 1c 06 00 02 00 00 00 00 00 a0
+[BOOTTRACE +59972ms]   -- 2. task ID = 0 : Func No = 0 
+[BOOTTRACE +59975ms]   --     data =  7f 89 01 01 00 00 1b 06 00 02 00 00 00 00 00 2d
+[BOOTTRACE +59981ms]   -- 3. task ID = 0 : Func No = 0 
+[BOOTTRACE +59984ms]   --     data =  7f aa 01 01 00 00 17 06 00 02 00 00 00 00 00 4a
+[BOOTTRACE +59991ms]   -- 4. task ID = 0 : Func No = 0 
+[BOOTTRACE +59994ms]   --     data =  7f f0 02 01 00 00 17 06 00 02 00 00 00 00 00 91
+[BOOTTRACE +60000ms] :: Receive Task ::
+[BOOTTRACE +60002ms]   -- 0. data =  7f 89 01 01 00 00 1b 06 00 02 00 00 00 00 00 2d
+[BOOTTRACE +60008ms]   -- 1. data =  7f aa 01 01 00 00 17 06 00 02 00 00 00 00 00 4a
+[BOOTTRACE +60014ms]   -- 2. data =  7f f0 02 01 00 00 17 06 00 02 00 00 00 00 00 91
+[BOOTTRACE +60020ms]   -- 3. data =  7f c9 02 01 00 00 00 00 00 00 00 00 00 00 00 4b
+[BOOTTRACE +60026ms]   -- 4. data =  49 00 00 00 00 00 00 00 00 00 00 03 00 00 00 00
+[BOOTTRACE +60032ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +60036ms] [FPC]FPC_ReciveTASK() : 7F FA 02 01 00 00 1C 06 00 02 00 00 00 00 00 A0 
+[BOOTTRACE +60043ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +60046ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +60049ms] [FPC] !!- OPcode Emergency -!!
+[BOOTTRACE +60052ms] :: Send ::
+[BOOTTRACE +60054ms]   -- 0. task ID = 26 : Func No = 8 
+[BOOTTRACE +60057ms]   --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+[BOOTTRACE +60063ms]   -- 1. task ID = 26 : Func No = 7 
+[BOOTTRACE +60066ms]   --     data =  fa 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +60072ms]   -- 2. task ID = 88 : Func No = 7 
+[BOOTTRACE +60076ms]   --     data =  89 01 0c 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +60082ms]   -- 3. task ID = 19 : Func No = 7 
+[BOOTTRACE +60085ms]   --     data =  e2 04 01 84 c0 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +60091ms]   -- 4. task ID = 16 : Func No = 7 
+[BOOTTRACE +60095ms]   --     data =  aa 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +60101ms] :: Receive ::
+[BOOTTRACE +60102ms]   -- 0. task ID = 26 : Func No = 9 
+[BOOTTRACE +60106ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +60112ms]   -- 1. task ID = 88 : Func No = 9 
+[BOOTTRACE +60115ms]   --     data =  0e 02 1e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +60121ms]   -- 2. task ID = 26 : Func No = 9 
+[BOOTTRACE +60125ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +60131ms]   -- 3. task ID = 26 : Func No = 9 
+[BOOTTRACE +60134ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +60140ms]   -- 4. task ID = 88 : Func No = 9 
+[BOOTTRACE +60144ms]   --     data =  0e 02 27 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +60150ms] :: Receive Intr ::
+[BOOTTRACE +60152ms]   -- 0. task ID = 0 : Func No = 0 
+[BOOTTRACE +60155ms]   --     data =  7f e3 02 01 00 00 1c 06 00 02 00 00 00 00 00 89
+[BOOTTRACE +60161ms]   -- 1. task ID = 0 : Func No = 0 
+[BOOTTRACE +60164ms]   --     data =  7f fa 02 01 00 00 1c 06 00 02 00 00 00 00 00 a0
+[BOOTTRACE +60170ms]   -- 2. task ID = 0 : Func No = 0 
+[BOOTTRACE +60174ms]   --     data =  7f 89 01 01 00 00 1b 06 00 02 00 00 00 00 00 2d
+[BOOTTRACE +60180ms]   -- 3. task ID = 0 : Func No = 0 
+[BOOTTRACE +60183ms]   --     data =  7f aa 01 01 00 00 17 06 00 02 00 00 00 00 00 4a
+[BOOTTRACE +60189ms]   -- 4. task ID = 0 : Func No = 0 
+[BOOTTRACE +60193ms]   --     data =  7f f0 02 01 00 00 17 06 00 02 00 00 00 00 00 91
+[BOOTTRACE +60199ms] :: Receive Task ::
+[BOOTTRACE +60201ms]   -- 0. data =  7f fa 02 01 00 00 1c 06 00 02 00 00 00 00 00 a0
+[BOOTTRACE +60206ms]   -- 1. data =  7f 89 01 01 00 00 1b 06 00 02 00 00 00 00 00 2d
+[BOOTTRACE +60212ms]   -- 2. data =  7f aa 01 01 00 00 17 06 00 02 00 00 00 00 00 4a
+[BOOTTRACE +60219ms]   -- 3. data =  7f f0 02 01 00 00 17 06 00 02 00 00 00 00 00 91
+[BOOTTRACE +60224ms]   -- 4. data =  7f c9 02 01 00 00 00 00 00 00 00 00 00 00 00 4b
+[BOOTTRACE +60230ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +60235ms] [FPC]FPC_ReciveTASK() : 7F E3 02 01 00 00 1C 06 00 02 00 00 00 00 00 89 
+[BOOTTRACE +60242ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +60245ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +60248ms] [FPC] !!- OPcode Emergency -!!
+[BOOTTRACE +60251ms] :: Send ::
+[BOOTTRACE +60253ms]   -- 0. task ID = 26 : Func No = 8 
+[BOOTTRACE +60256ms]   --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+[BOOTTRACE +60262ms]   -- 1. task ID = 26 : Func No = 7 
+[BOOTTRACE +60266ms]   --     data =  fa 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +60272ms]   -- 2. task ID = 88 : Func No = 7 
+[BOOTTRACE +60275ms]   --     data =  89 01 0c 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +60281ms]   -- 3. task ID = 19 : Func No = 7 
+[BOOTTRACE +60285ms]   --     data =  e2 04 01 84 c0 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +60291ms]   -- 4. task ID = 16 : Func No = 7 
+[BOOTTRACE +60294ms]   --     data =  aa 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +60300ms] :: Receive ::
+[BOOTTRACE +60302ms]   -- 0. task ID = 26 : Func No = 9 
+[BOOTTRACE +60305ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +60311ms]   -- 1. task ID = 88 : Func No = 9 
+[BOOTTRACE +60315ms]   --     data =  0e 02 1e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +60321ms]   -- 2. task ID = 26 : Func No = 9 
+[BOOTTRACE +60324ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +60330ms]   -- 3. task ID = 26 : Func No = 9 
+[BOOTTRACE +60334ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +60340ms]   -- 4. task ID = 88 : Func No = 9 
+[BOOTTRACE +60343ms]   --     data =  0e 02 27 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +60349ms] :: Receive Intr ::
+[BOOTTRACE +60351ms]   -- 0. task ID = 0 : Func No = 0 
+[BOOTTRACE +60354ms]   --     data =  7f e3 02 01 00 00 1c 06 00 02 00 00 00 00 00 89
+[BOOTTRACE +60360ms]   -- 1. task ID = 0 : Func No = 0 
+[BOOTTRACE +60364ms]   --     data =  7f fa 02 01 00 00 1c 06 00 02 00 00 00 00 00 a0
+[BOOTTRACE +60370ms]   -- 2. task ID = 0 : Func No = 0 
+[BOOTTRACE +60373ms]   --     data =  7f 89 01 01 00 00 1b 06 00 02 00 00 00 00 00 2d
+[BOOTTRACE +60379ms]   -- 3. task ID = 0 : Func No = 0 
+[BOOTTRACE +60382ms]   --     data =  7f aa 01 01 00 00 17 06 00 02 00 00 00 00 00 4a
+[BOOTTRACE +60389ms]   -- 4. task ID = 0 : Func No = 0 
+[BOOTTRACE +60392ms]   --     data =  7f f0 02 01 00 00 17 06 00 02 00 00 00 00 00 91
+[BOOTTRACE +60398ms] :: Receive Task ::
+[BOOTTRACE +60400ms]   -- 0. data =  7f e3 02 01 00 00 1c 06 00 02 00 00 00 00 00 89
+[BOOTTRACE +60406ms]   -- 1. data =  7f fa 02 01 00 00 1c 06 00 02 00 00 00 00 00 a0
+[BOOTTRACE +60412ms]   -- 2. data =  7f 89 01 01 00 00 1b 06 00 02 00 00 00 00 00 2d
+[BOOTTRACE +60418ms]   -- 3. data =  7f aa 01 01 00 00 17 06 00 02 00 00 00 00 00 4a
+[BOOTTRACE +60424ms]   -- 4. data =  7f f0 02 01 00 00 17 06 00 02 00 00 00 00 00 91
+[BOOTTRACE +60430ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +60434ms] [FPC]RCV TIMEOUT GATE=14
+[BOOTTRACE +60437ms] [SYS_CNTL]FPC_CB_ReportEmergency(4)
+[BOOTTRACE +60440ms] [SYS_CNTL]FPC_EMERGENCY_TIMEOUT
+[BOOTTRACE +60443ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +60448ms] [FPC]FPC_ReciveTASK() : 7F E3 02 01 00 00 1C 06 00 02 00 00 00 00 00 89 
+[BOOTTRACE +60455ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +60458ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +60461ms] [FPC] !!- OPcode Emergency -!!
+[BOOTTRACE +60464ms] :: Send ::
+[BOOTTRACE +60465ms]   -- 0. task ID = 88 : Func No = 8 
+[BOOTTRACE +60469ms]   --     data =  e3 00 80 01 00 00 00 00 00 00 00 70 00 00 96 00
+[BOOTTRACE +60475ms]   -- 1. task ID = 26 : Func No = 8 
+[BOOTTRACE +60478ms]   --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+[BOOTTRACE +60484ms]   -- 2. task ID = 26 : Func No = 7 
+[BOOTTRACE +60488ms]   --     data =  fa 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +60494ms]   -- 3. task ID = 88 : Func No = 7 
+[BOOTTRACE +60497ms]   --     data =  89 01 0c 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +60503ms]   -- 4. task ID = 19 : Func No = 7 
+[BOOTTRACE +60506ms]   --     data =  e2 04 01 84 c0 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +60512ms] :: Receive ::
+[BOOTTRACE +60514ms]   -- 0. task ID = 88 : Func No = 9 
+[BOOTTRACE +60517ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +60523ms]   -- 1. task ID = 26 : Func No = 9 
+[BOOTTRACE +60527ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +60533ms]   -- 2. task ID = 88 : Func No = 9 
+[BOOTTRACE +60536ms]   --     data =  0e 02 1e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +60542ms]   -- 3. task ID = 26 : Func No = 9 
+[BOOTTRACE +60546ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +60552ms]   -- 4. task ID = 26 : Func No = 9 
+[BOOTTRACE +60555ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +60561ms] :: Receive Intr ::
+[BOOTTRACE +60563ms]   -- 0. task ID = 0 : Func No = 0 
+[BOOTTRACE +60566ms]   --     data =  7f e3 02 01 00 00 1c 06 00 02 00 00 00 00 00 89
+[BOOTTRACE +60573ms]   -- 1. task ID = 0 : Func No = 0 
+[BOOTTRACE +60576ms]   --     data =  7f e3 02 01 00 00 1c 06 00 02 00 00 00 00 00 89
+[BOOTTRACE +60582ms]   -- 2. task ID = 0 : Func No = 0 
+[BOOTTRACE +60585ms]   --     data =  7f fa 02 01 00 00 1c 06 00 02 00 00 00 00 00 a0
+[BOOTTRACE +60592ms]   -- 3. task ID = 0 : Func No = 0 
+[BOOTTRACE +60595ms]   --     data =  7f 89 01 01 00 00 1b 06 00 02 00 00 00 00 00 2d
+[BOOTTRACE +60602ms]   -- 4. task ID = 0 : Func No = 0 
+[BOOTTRACE +60605ms]   --     data =  7f aa 01 01 00 00 17 06 00 02 00 00 00 00 00 4a
+[BOOTTRACE +60611ms] :: Receive Task ::
+[BOOTTRACE +60613ms]   -- 0. data =  7f e3 02 01 00 00 1c 06 00 02 00 00 00 00 00 89
+[BOOTTRACE +60619ms]   -- 1. data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +60625ms]   -- 2. data =  7f e3 02 01 00 00 1c 06 00 02 00 00 00 00 00 89
+[BOOTTRACE +60631ms]   -- 3. data =  7f fa 02 01 00 00 1c 06 00 02 00 00 00 00 00 a0
+[BOOTTRACE +60637ms]   -- 4. data =  7f 89 01 01 00 00 1b 06 00 02 00 00 00 00 00 2d
+[BOOTTRACE +60643ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +60648ms] [FPC]RCV TIMEOUT GATE=14
+[BOOTTRACE +60650ms] [SYS_CNTL]FPC_CB_ReportEmergency(4)
+[BOOTTRACE +60654ms] [SYS_CNTL]FPC_EMERGENCY_TIMEOUT
+[BOOTTRACE +60657ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +60662ms] System assert!! File:src/ftrec_api.c Line:629 Err:0
+[BOOTTRACE +60666ms] [SYS_CNTL]AVIN_3YConoff() failed. 
+[BOOTTRACE +60670ms] [FPC]FPC_ReciveTASK() : 61 E3 00 00 00 01 00 00 00 01 00 00 00 00 00 46 
+[BOOTTRACE +60677ms] [FPC]FPC_ReciveTASK() : 60 E3 00 00 01 00 00 00 00 00 00 00 00 00 00 44 
+[BOOTTRACE +60689ms] [FPC]FPC_ReciveTASK() : 7F FA 02 00 01 00 00 00 00 00 00 00 00 00 00 7C 
+[BOOTTRACE +60696ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +60699ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +60702ms] [FPC] !!- OPcode Emergency -!!
+[BOOTTRACE +60705ms] :: Send ::
+[BOOTTRACE +60706ms]   -- 0. task ID = 26 : Func No = 8 
+[BOOTTRACE +60710ms]   --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+[BOOTTRACE +60716ms]   -- 1. task ID = 26 : Func No = 7 
+[BOOTTRACE +60719ms]   --     data =  fa 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +60725ms]   -- 2. task ID = 88 : Func No = 8 
+[BOOTTRACE +60729ms]   --     data =  e0 04 fb bb 01 00 01 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +60735ms]   -- 3. task ID = 88 : Func No = 7 
+[BOOTTRACE +60738ms]   --     data =  a8 00 00 02 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +60744ms]   -- 4. task ID = 88 : Func No = 8 
+[BOOTTRACE +60748ms]   --     data =  e1 08 0f 76 51 01 00 00 00 57 00 00 00 00 00 00
+[BOOTTRACE +60754ms] :: Receive ::
+[BOOTTRACE +60756ms]   -- 0. task ID = 26 : Func No = 9 
+[BOOTTRACE +60759ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +60765ms]   -- 1. task ID = 88 : Func No = 9 
+[BOOTTRACE +60769ms]   --     data =  0e 02 01 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +60775ms]   -- 2. task ID = 88 : Func No = 9 
+[BOOTTRACE +60778ms]   --     data =  0e 02 02 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +60784ms]   -- 3. task ID = 88 : Func No = 9 
+[BOOTTRACE +60788ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +60794ms]   -- 4. task ID = 26 : Func No = 9 
+[BOOTTRACE +60797ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +60803ms] :: Receive Intr ::
+[BOOTTRACE +60805ms]   -- 0. task ID = 0 : Func No = 0 
+[BOOTTRACE +60809ms]   --     data =  7f e3 02 00 01 00 00 00 00 00 00 00 00 00 00 65
+[BOOTTRACE +60815ms]   -- 1. task ID = 0 : Func No = 0 
+[BOOTTRACE +60818ms]   --     data =  7f fa 02 00 01 00 00 00 00 00 00 00 00 00 00 7c
+[BOOTTRACE +60824ms]   -- 2. task ID = 0 : Func No = 0 
+[BOOTTRACE +60828ms]   --     data =  60 e3 00 00 01 00 00 00 00 00 00 00 00 00 00 44
+[BOOTTRACE +60834ms]   -- 3. task ID = 0 : Func No = 0 
+[BOOTTRACE +60837ms]   --     data =  61 e3 00 00 00 01 00 00 00 01 00 00 00 00 00 46
+[BOOTTRACE +60843ms]   -- 4. task ID = 0 : Func No = 0 
+[BOOTTRACE +60847ms]   --     data =  7f e3 02 01 00 00 1c 06 00 02 00 00 00 00 00 89
+[BOOTTRACE +60853ms] :: Receive Task ::
+[BOOTTRACE +60855ms]   -- 0. data =  7f fa 02 00 01 00 00 00 00 00 00 00 00 00 00 7c
+[BOOTTRACE +60861ms]   -- 1. data =  60 e3 00 00 01 00 00 00 00 00 00 00 00 00 00 44
+[BOOTTRACE +60867ms]   -- 2. data =  61 e3 00 00 00 01 00 00 00 01 00 00 00 00 00 46
+[BOOTTRACE +60873ms]   -- 3. data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +60879ms]   -- 4. data =  7f e3 02 01 00 00 1c 06 00 02 00 00 00 00 00 89
+[BOOTTRACE +60885ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +60890ms] [FPC]FPC_ReciveTASK() : 7F E3 02 00 01 00 00 00 00 00 00 00 00 00 00 65 
+[BOOTTRACE +60897ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +60900ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +60904ms] [FPC] !!- OPcode Emergency -!!
+[BOOTTRACE +60907ms] :: Send ::
+[BOOTTRACE +60908ms]   -- 0. task ID = 26 : Func No = 8 
+[BOOTTRACE +60911ms]   --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+[BOOTTRACE +60917ms]   -- 1. task ID = 26 : Func No = 7 
+[BOOTTRACE +60921ms]   --     data =  fa 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +60927ms]   -- 2. task ID = 88 : Func No = 8 
+[BOOTTRACE +60930ms]   --     data =  e0 04 fb bb 01 00 01 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +60936ms]   -- 3. task ID = 88 : Func No = 7 
+[BOOTTRACE +60940ms]   --     data =  a8 00 00 02 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +60946ms]   -- 4. task ID = 88 : Func No = 8 
+[BOOTTRACE +60949ms]   --     data =  e1 08 0f 76 51 01 00 00 00 57 00 00 00 00 00 00
+[BOOTTRACE +60955ms] :: Receive ::
+[BOOTTRACE +60957ms]   -- 0. task ID = 26 : Func No = 9 
+[BOOTTRACE +60960ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +60966ms]   -- 1. task ID = 88 : Func No = 9 
+[BOOTTRACE +60970ms]   --     data =  0e 02 01 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +60976ms]   -- 2. task ID = 88 : Func No = 9 
+[BOOTTRACE +60979ms]   --     data =  0e 02 02 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +60985ms]   -- 3. task ID = 88 : Func No = 9 
+[BOOTTRACE +60988ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +60994ms]   -- 4. task ID = 26 : Func No = 9 
+[BOOTTRACE +60998ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +61004ms] :: Receive Intr ::
+[BOOTTRACE +61006ms]   -- 0. task ID = 0 : Func No = 0 
+[BOOTTRACE +61010ms]   --     data =  7f e3 02 00 01 00 00 00 00 00 00 00 00 00 00 65
+[BOOTTRACE +61016ms]   -- 1. task ID = 0 : Func No = 0 
+[BOOTTRACE +61019ms]   --     data =  7f fa 02 00 01 00 00 00 00 00 00 00 00 00 00 7c
+[BOOTTRACE +61026ms]   -- 2. task ID = 0 : Func No = 0 
+[BOOTTRACE +61029ms]   --     data =  60 e3 00 00 01 00 00 00 00 00 00 00 00 00 00 44
+[BOOTTRACE +61035ms]   -- 3. task ID = 0 : Func No = 0 
+[BOOTTRACE +61038ms]   --     data =  61 e3 00 00 00 01 00 00 00 01 00 00 00 00 00 46
+[BOOTTRACE +61044ms]   -- 4. task ID = 0 : Func No = 0 
+[BOOTTRACE +61048ms]   --     data =  7f e3 02 01 00 00 1c 06 00 02 00 00 00 00 00 89
+[BOOTTRACE +61054ms] :: Receive Task ::
+[BOOTTRACE +61056ms]   -- 0. data =  7f e3 02 00 01 00 00 00 00 00 00 00 00 00 00 65
+[BOOTTRACE +61062ms]   -- 1. data =  7f fa 02 00 01 00 00 00 00 00 00 00 00 00 00 7c
+[BOOTTRACE +61068ms]   -- 2. data =  60 e3 00 00 01 00 00 00 00 00 00 00 00 00 00 44
+[BOOTTRACE +61074ms]   -- 3. data =  61 e3 00 00 00 01 00 00 00 01 00 00 00 00 00 46
+[BOOTTRACE +61080ms]   -- 4. data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +61086ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +61090ms] [FPC]RCV TIMEOUT GATE=14
+[BOOTTRACE +61093ms] [SYS_CNTL]FPC_CB_ReportEmergency(4)
+[BOOTTRACE +61096ms] [SYS_CNTL]FPC_EMERGENCY_TIMEOUT
+[BOOTTRACE +61099ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +61104ms] [SYS_CNTL]sys_cntl_Set_InternalInitInfo(): set to TV
+[BOOTTRACE +61109ms] [SYS_CNTL]set power save
+[BOOTTRACE +61111ms] [FPC]FPC_ReciveTASK() : 7F A9 01 01 00 00 1D 06 00 02 00 00 00 00 00 4F 
+[BOOTTRACE +61118ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +61121ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +61124ms] [FPC] !!- OPcode Emergency -!!
+[BOOTTRACE +61127ms] :: Send ::
+[BOOTTRACE +61128ms]   -- 0. task ID = 88 : Func No = 8 
+[BOOTTRACE +61132ms]   --     data =  e1 04 53 47 00 57 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +61138ms]   -- 1. task ID = 88 : Func No = 7 
+[BOOTTRACE +61142ms]   --     data =  a9 00 00 00 01 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +61148ms]   -- 2. task ID = 26 : Func No = 8 
+[BOOTTRACE +61151ms]   --     data =  e3 00 02 fa 00 00 00 00 00 01 00 00 00 00 00 00
+[BOOTTRACE +61158ms]   -- 3. task ID = 26 : Func No = 7 
+[BOOTTRACE +61161ms]   --     data =  fa 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +61167ms]   -- 4. task ID = 88 : Func No = 8 
+[BOOTTRACE +61171ms]   --     data =  e0 04 fb bb 01 00 01 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +61177ms] :: Receive ::
+[BOOTTRACE +61178ms]   -- 0. task ID = 88 : Func No = 9 
+[BOOTTRACE +61182ms]   --     data =  0e 02 02 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +61188ms]   -- 1. task ID = 26 : Func No = 9 
+[BOOTTRACE +61191ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +61198ms]   -- 2. task ID = 88 : Func No = 9 
+[BOOTTRACE +61201ms]   --     data =  0e 02 01 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +61208ms]   -- 3. task ID = 88 : Func No = 9 
+[BOOTTRACE +61211ms]   --     data =  0e 02 02 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +61217ms]   -- 4. task ID = 88 : Func No = 9 
+[BOOTTRACE +61221ms]   --     data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +61227ms] :: Receive Intr ::
+[BOOTTRACE +61229ms]   -- 0. task ID = 0 : Func No = 0 
+[BOOTTRACE +61232ms]   --     data =  61 a9 00 00 00 01 00 00 00 01 00 00 00 00 00 0c
+[BOOTTRACE +61238ms]   -- 1. task ID = 0 : Func No = 0 
+[BOOTTRACE +61241ms]   --     data =  7f a9 01 01 00 00 1d 06 00 02 00 00 00 00 00 4f
+[BOOTTRACE +61248ms]   -- 2. task ID = 0 : Func No = 0 
+[BOOTTRACE +61251ms]   --     data =  7f e3 02 00 01 00 00 00 00 00 00 00 00 00 00 65
+[BOOTTRACE +61257ms]   -- 3. task ID = 0 : Func No = 0 
+[BOOTTRACE +61260ms]   --     data =  7f fa 02 00 01 00 00 00 00 00 00 00 00 00 00 7c
+[BOOTTRACE +61267ms]   -- 4. task ID = 0 : Func No = 0 
+[BOOTTRACE +61270ms]   --     data =  60 e3 00 00 01 00 00 00 00 00 00 00 00 00 00 44
+[BOOTTRACE +61276ms] :: Receive Task ::
+[BOOTTRACE +61278ms]   -- 0. data =  7f a9 01 01 00 00 1d 06 00 02 00 00 00 00 00 4f
+[BOOTTRACE +61284ms]   -- 1. data =  0e 02 0e 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +61290ms]   -- 2. data =  7f e3 02 00 01 00 00 00 00 00 00 00 00 00 00 65
+[BOOTTRACE +61296ms]   -- 3. data =  7f fa 02 00 01 00 00 00 00 00 00 00 00 00 00 7c
+[BOOTTRACE +61302ms]   -- 4. data =  60 e3 00 00 01 00 00 00 00 00 00 00 00 00 00 44
+[BOOTTRACE +61308ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +61313ms] [FPC]FPC_ReciveTASK() : 61 A9 00 00 00 01 00 00 00 01 00 00 00 00 00 0C 
+[BOOTTRACE +61320ms] [FPC]FPC_ReciveTASK() : 61 A9 00 00 00 01 00 00 00 01 00 00 00 00 00 0C 
+[BOOTTRACE +61327ms] [SYS_CNTL][Now Time 2006/1/1 0:0:0]
+[BOOTTRACE +61330ms] [SYS_CNTL]sys_app_nfrom size 8812
+[BOOTTRACE +61333ms] [FPC]FPC_ReciveTASK() : 08 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+[BOOTTRACE +62177ms] [SYS_CNTL]set standby status = 0
+[BOOTTRACE +62179ms] [SYS_CNTL]SYS_CNTL_SetSysState[INIT]
+[BOOTTRACE +62183ms] [SYS_CNTL]SYS_CNTL_set_pow_status(SYS_CNTL_POW_OFF_TO_ON)
+[BOOTTRACE +62189ms] [SYS_APP]MainOptionCode
+[BOOTTRACE +62191ms] [SYS_APP]btn     : A[0x0033] B[0x0092] C[0xFFFF] D[0xFFFF]
+[BOOTTRACE +62197ms] [SYS_APP]rcmode  : [0x00]
+[BOOTTRACE +62199ms] [SYS_APP]gui     : A[ 0x10 ] B[ 0x20 ] C[ 0xFF ] D[ 0xFF ]
+[BOOTTRACE +62205ms] [SYS_APP]chmode  : [0x02]
+[BOOTTRACE +62208ms] [SYS_APP]MainOptionCode(gui) setting[0xFF] Nothing!
+[BOOTTRACE +62215ms] [SYS_APP]MainOptionCode(gui) setting[0xFF] Nothing!
+[BOOTTRACE +62220ms] [SYS_CNTL]sys_cntl_set_pow_attr attr[0x1] state[0]
+[BOOTTRACE +62225ms] [FPC]fpc_ChangeKeyCodeInit 
+[BOOTTRACE +62228ms] [FPC]fpc_ChangeKeyCodeWrite beforeKey = 161 : afterKey = 85 
+[BOOTTRACE +62234ms] [FPC]fpc_ChangeKeyCodeWrite beforeKey = 160 : afterKey = 86 
+[BOOTTRACE +62240ms] [SYS_CNTL]SYS_APP_Datatype_t [ 221 <= 255 ]
+[BOOTTRACE +62315ms] [SYS_CNTL].[SYS_TUN]SYS_TUN_AMD_NONE
+[BOOTTRACE +62333ms] :::SYS_RSV::: >> sys_rsv init
+[BOOTTRACE +62337ms] :::SYS_RSV::: >> nowtime[2006/1/1 0:00.00]
+[BOOTTRACE +62341ms] :::SYS_RSV::: >> precision[0x2] gmtoff[0] is_dst[0]
+[BOOTTRACE +62347ms] :::SYS_RSV::: >> nfrom read
+[BOOTTRACE +62350ms] [SYS_TUN]4::::::::::AVIN_AudioSetLR(0)::::::::::
+[BOOTTRACE +62355ms] [SYS_CNTL]SYS_CNTL_tmp_AVOUT_A_eeOutputMode 0 0 0 0
+[BOOTTRACE +62360ms] [FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 1E 06 00 02 00 00 00 00 00 38 
+[BOOTTRACE +62368ms] [SYS_TUN]MONORAL(UNSETTLE)
+[BOOTTRACE +62370ms] [SYS_TUN]MUTE_OFF
+[BOOTTRACE +62372ms] [SYS_TUN]SYS_TUN_AMD_NONE
+[BOOTTRACE +62375ms] [SYS_TUN]SYS_TUN_AMD_NONE
+[BOOTTRACE +62378ms] [SYS_CNTL]SYS_CNTL_cancel_tmp_AVOUT_A_eeOutputMode 0 0 0 0
+[BOOTTRACE +62384ms] [FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 1E 06 00 02 00 00 00 00 00 38 
+[BOOTTRACE +62391ms] [FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 1E 06 00 02 00 00 00 00 00 38 
+[BOOTTRACE +62399ms] [FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 1E 06 00 02 00 00 00 00 00 38 
+[BOOTTRACE +62407ms] [FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 1E 06 00 02 00 00 00 00 00 38 
+[BOOTTRACE +62414ms] [FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 1E 06 00 02 00 00 00 00 00 38 
+[BOOTTRACE +62421ms] [FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 1E 06 00 02 00 00 00 00 00 38 
+[BOOTTRACE +62429ms] [FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 1E 06 00 02 00 00 00 00 00 38 
+[BOOTTRACE +62437ms] [FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 1E 06 00 02 00 00 00 00 00 38 
+[BOOTTRACE +62444ms] [FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 1E 06 00 02 00 00 00 00 00 38 
+[BOOTTRACE +62453ms] [FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 1E 06 00 02 00 00 00 00 00 38 
+[BOOTTRACE +62460ms] [FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 1E 06 00 02 00 00 00 00 00 38 
+[BOOTTRACE +62467ms] [FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 1E 06 00 02 00 00 00 00 00 38 
+[BOOTTRACE +62474ms] [FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 1E 06 00 02 00 00 00 00 00 38 
+[BOOTTRACE +62481ms] [FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 1E 06 00 02 00 00 00 00 00 38 
+[BOOTTRACE +62488ms] [FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 1E 06 00 02 00 00 00 00 00 38 
+[BOOTTRACE +62495ms] [FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 1E 06 00 02 00 00 00 00 00 38 
+[BOOTTRACE +62501ms] [FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 1E 06 00 02 00 00 00 00 00 38 
+[BOOTTRACE +62509ms] [FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 1E 06 00 02 00 00 00 00 00 38 
+[BOOTTRACE +62515ms] [FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 1E 06 00 02 00 00 00 00 00 38 
+[BOOTTRACE +62523ms] [FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 1E 06 00 02 00 00 00 00 00 38 
+[BOOTTRACE +62531ms] [FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 1E 06 00 02 00 00 00 00 00 38 
+[BOOTTRACE +62538ms] [FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 1E 06 00 02 00 00 00 00 00 38 
+[BOOTTRACE +62545ms] [FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 1E 06 00 02 00 00 00 00 00 38 
+[BOOTTRACE +62552ms] [FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 1E 06 00 02 00 00 00 00 00 38 
+[BOOTTRACE +62561ms] [FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 1E 06 00 02 00 00 00 00 00 38 
+[BOOTTRACE +62568ms] [FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 1E 06 00 02 00 00 00 00 00 38 
+[BOOTTRACE +62575ms] [FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 1E 06 00 02 00 00 00 00 00 38 
+[BOOTTRACE +62582ms] [FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 1E 06 00 02 00 00 00 00 00 38 
+[BOOTTRACE +62589ms] [FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 1E 06 00 02 00 00 00 00 00 38 
+[BOOTTRACE +62596ms] [FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 1E 06 00 02 00 00 00 00 00 38 
+[BOOTTRACE +62603ms] [FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 1E 06 00 02 00 00 00 00 00 38 
+[BOOTTRACE +62610ms] :::SYS_RSV::: >> _InitTask() T.SET=OFF
+[BOOTTRACE +62614ms] :::SYS_RSV::: >> _InitTask() ExtLINK.SET=OFF
+[BOOTTRACE +62619ms] :::SYS_RSV::: >> nfrom back up ok.
+[BOOTTRACE +62622ms] :::SYS_RSV::: >> _Restore() task-id = 108
+[BOOTTRACE +62626ms] :::SYS_RSV::: >> sys_rsv init success.
+[BOOTTRACE +62630ms] [SYS_CNTL]sys_cntl_CatchScreen() success. task ID 101(sys_fip)
+[BOOTTRACE +62638ms] [SYS_CNTL]VDM_ReportDrv: 2
+[BOOTTRACE +62642ms] [SYS_CNTL]sys_cntl_ChangeKeyAction
+[BOOTTRACE +62645ms] [DCS]dco_api :AVOUT_AV_Select: video=0, audio=0
+[BOOTTRACE +62651ms] System assert!! File:src/sys_fip_osd_tools.c Line:1174 Err:0
+[BOOTTRACE +62673ms] [SYS_CNTL]SetDeckModeStateEx task[sys_cntl(91)] drive[DVD] rec.drive[DVD] deck[READ(0x00000040)]
+[BOOTTRACE +62682ms] [SYS_TUN]SYS_TUN_SysCntl_DeckMode_Callback()
+[BOOTTRACE +62687ms] [SYS_TUN]SYS_TUN_AMD_NONE
+[BOOTTRACE +62689ms] :: Receive ::
+[BOOTTRACE +62691ms]   -- 0. task ID = 108 : Func No = 9 
+[BOOTTRACE +62694ms]   --     data =  0e 02 04 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +62700ms]   -- 1. task ID = 108 : Func No = 9 
+[BOOTTRACE +62704ms]   --     data =  0e 02 04 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +62711ms]   -- 2. task ID = 108 : Func No = 9 
+[BOOTTRACE +62714ms]   --     data =  0e 02 04 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +62720ms]   -- 3. task ID = 108 : Func No = 9 
+[BOOTTRACE +62724ms]   --     data =  0e 02 04 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +62730ms]   -- 4. task ID = 108 : Func No = 9 
+[BOOTTRACE +62734ms]   --     data =  0e 02 04 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +62741ms] [SYS_CNTL]sys_cntl_isNowTimerRec 1
+[BOOTTRACE +62744ms] [SYS_CNTL]SYS_CNTL_RESUME_TASK = 0
+[BOOTTRACE +62748ms] [SYS_CNTL]SYS_CNTL_SRAM_RESUME_FLAG = 0
+[BOOTTRACE +62752ms] [FS]VDM_ReportMediaEx : slot_id = 0 disc = 1 protect = 0 format = 7
+[BOOTTRACE +62759ms] :: Receive Task ::
+[BOOTTRACE +62761ms]   -- 0. data =  7f a9 01 01 00 00 1e 06 00 02 00 00 00 00 00 50
+[BOOTTRACE +62768ms]   -- 1. data =  10 00 01 01 00 00 1e 06 00 02 00 00 00 00 00 38
+[BOOTTRACE +62774ms]   -- 2. data =  10 00 01 01 00 00 1e 06 00 02 00 00 00 00 00 38
+[BOOTTRACE +62780ms]   -- 3. data =  10 00 01 01 00 00 1e 06 00 02 00 00 00 00 00 38
+[BOOTTRACE +62787ms]   -- 4. data =  10 00 01 01 00 00 1e 06 00 02 00 00 00 00 00 38
+[BOOTTRACE +62793ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +62797ms] [MCM |47.59]MCM_resource_Open tid:91 drive:0x02
+[BOOTTRACE +62802ms] [FS]VDM_ReportMediaEx : slot_id = 0 disc = 1 protect = 0 format = 7
+[BOOTTRACE +62809ms] [SYS_CNTL]VDM_OpenDisc(2): OK[0]
+[BOOTTRACE +62812ms] [FS]VDM_ReportMediaEx : slot_id = 0 disc = 1 protect = 0 format = 7
+[BOOTTRACE +62820ms] [SYS_CNTL]VDM_ReportMediaEx(): vdm_res=0x0 
+[BOOTTRACE +62824ms] [SYS_CNTL] disc  =0x00000001  protect=0x00000000 
+[BOOTTRACE +62829ms] [SYS_CNTL] format=0x00000007  authent=0x00000004 
+[BOOTTRACE +62834ms] [SYS_CNTL]HDD is_writable=0x0
+[BOOTTRACE +62837ms] [SYS_CNTL]sys_cntl_ReportMedia. drv_id=0x0
+[BOOTTRACE +62841ms] [SYS_CNTL]apptask_bit=0x200 last_media=0x5a is_writable=0 
+[BOOTTRACE +62847ms] [MCM |47.59]MCM_resource_Open tid:91 drive:0x00
+[BOOTTRACE +62852ms] [MCM |47.59]MCM_resource_Open core[1]:0x00000100
+[BOOTTRACE +62857ms] [FS]VDM_ReportMediaEx : slot_id = 0 disc = 1 protect = 0 format = 7
+[BOOTTRACE +62867ms] [MCM |47.59]MCM_resource_Close tid:91 drive:0x00
+[BOOTTRACE +62872ms] [MCM |47.59]MCM_resource_Close core[1]:0x00000100
+[BOOTTRACE +62877ms] [SYS_CNTL]SYS_CNTL_SRAM_TIMERREC_STATUS 0
+[BOOTTRACE +62881ms] [SYS_MEDIA |47.60]Begin function SYS_MEDIA_Init()
+[BOOTTRACE +62886ms] [SYS_CNTL]SYS_CNTL_SetSysState[TRANSITION]
+[BOOTTRACE +62890ms] [SYS_CNTL]startup: HDD opened
+[BOOTTRACE +62893ms] [SYS_CNTL]sys_cntl_card_blinkcall drv[0x0003(SD)] blink[0xC5(BLINK only 5sec)]
+[BOOTTRACE +62901ms] [FS]VDM_ReportMediaEx : slot_id = 3 disc = 10000000 protect = 0 format = 0
+[BOOTTRACE +62908ms] [FS]VDM_ReportMediaEx : slot_id = 3 disc = 10000000 protect = 0 format = 0
+[BOOTTRACE +62915ms] [SYS_CNTL]VDM_ReportMediaEx(): vdm_res=0x0 
+[BOOTTRACE +62919ms] [SYS_CNTL] disc  =0x10000000  protect=0x00000000 
+[BOOTTRACE +62924ms] [SYS_CNTL] format=0x00000000  authent=0x00000000 
+[BOOTTRACE +62929ms] [SYS_CNTL]CARD is_writable=0x1
+[BOOTTRACE +62932ms] [SYS_CNTL]sys_cntl_card_blinkcall drv[0x0003(SD)] blink[0x40(OFF)]
+[BOOTTRACE +62939ms] [SYS_CNTL]SetDeckModeStateEx task[sys_cntl(91)] drive[SD] rec.drive[SD] deck[OPEN(0x00000010)]
+[BOOTTRACE +62948ms] [SYS_TUN]SYS_TUN_SysCntl_DeckMode_Callback()
+[BOOTTRACE +62952ms] [SYS_TUN]SYS_TUN_AMD_NONE
+[BOOTTRACE +62955ms] [SYS_CNTL]startup: NO SDCARD
+[BOOTTRACE +62958ms] [SYS_CNTL]sys_cntl_media_dv_get_status(): dvnum = 0
+[BOOTTRACE +62963ms] [SYS_CNTL]SYS_CNTL_SetSysState[TRANSITION_CANCEL]
+[BOOTTRACE +62967ms] [SYS_CNTL]sys_cntl_card_blinkcall drv[0x0003(SD)] blink[0xC5(BLINK only 5sec)]
+[BOOTTRACE +62975ms] [FS]VDM_ReportMediaEx : slot_id = 3 disc = 10000000 protect = 0 format = 0
+[BOOTTRACE +62982ms] [FS]VDM_ReportMediaEx : slot_id = 3 disc = 10000000 protect = 0 format = 0
+[BOOTTRACE +62989ms] [SYS_CNTL]VDM_ReportMediaEx(): vdm_res=0x0 
+[BOOTTRACE +62993ms] [SYS_CNTL] disc  =0x10000000  protect=0x00000000 
+[BOOTTRACE +62998ms] [SYS_CNTL] format=0x00000000  authent=0x00000000 
+[BOOTTRACE +63003ms] [SYS_CNTL]CARD is_writable=0x1
+[BOOTTRACE +63006ms] [SYS_CNTL]sys_cntl_card_blinkcall drv[0x0003(SD)] blink[0x40(OFF)]
+[BOOTTRACE +63012ms] [SYS_CNTL]SetDeckModeStateEx task[sys_cntl(91)] drive[SD] rec.drive[SD] deck[OPEN(0x00000010)]
+[BOOTTRACE +63021ms] [SYS_TUN]SYS_TUN_SysCntl_DeckMode_Callback()
+[BOOTTRACE +63025ms] [SYS_TUN]SYS_TUN_AMD_NONE
+[BOOTTRACE +63028ms] [SYS_CNTL]SetDeckModeStateEx task[sys_cntl(91)] drive[DVD] rec.drive[DVD] deck[READ(0x00000040)]
+[BOOTTRACE +63037ms] [SYS_TUN]SYS_TUN_SysCntl_DeckMode_Callback()
+[BOOTTRACE +63041ms] [SYS_TUN]SYS_TUN_AMD_NONE
+[BOOTTRACE +63044ms] [FS]VDM_ReportMediaEx : slot_id = 1 disc = 80000000 protect = 0 format = 4
+[BOOTTRACE +63051ms] [SYS_CNTL]VDM_ReportMediaEx(): VDM_MTEX_BREADY 
+[BOOTTRACE +63056ms] [SYS_CNTL].. FPC_StartCommunication()
+[BOOTTRACE +63059ms] [SYS_CNTL]SYS_CNTL_set_pow_status(SYS_CNTL_POW_ON)
+[BOOTTRACE +63064ms] [DCS]dco_api :avout_API_MuteID = 0x2
+[BOOTTRACE +63068ms] [DCS]dco_api :AVOUT_A_Mute_ID: OFF_ID[ALL]=0 , [EE]=8
+[BOOTTRACE +63073ms] [DCS]dco_api :AVOUT_V_Mute: onoff=0
+[BOOTTRACE +63076ms] [SYS_CNTL]SYS_CNTL_UION_FLAG(1)
+[BOOTTRACE +63633ms] [SYS_CNTL]Q task[3(3)] datatype[DV_STAT(57)]
+[BOOTTRACE +63638ms] [SYS_CNTL]sys_cntl_media_dv_disconnect():
+[BOOTTRACE +63642ms] [SYS_CNTL]Q task[26(26)] datatype[MOVE_GUI(172)]
+[BOOTTRACE +63647ms] [SYS_CNTL]### HDD WAKEUP ###
+[BOOTTRACE +63650ms] [SYS_CNTL]Q task[26(26)] datatype[MOVE_GUI(172)]
+[BOOTTRACE +63654ms] [SYS_CNTL]n_p_callback end
+[BOOTTRACE +63657ms] [SYS_CNTL]TransferMode : (0)
+[BOOTTRACE +63660ms] [SYS_CNTL]read disc: 2
+[BOOTTRACE +63662ms] [SYS_CNTL]Q task[sys_fip(101)] datatype[READY(16)]
+[BOOTTRACE +63668ms] [SYS_CNTL]Q task[sys_tun(114)] datatype[READY(16)]
+[BOOTTRACE +63673ms] [SYS_CNTL]Q task[sys_pcdv(107)] datatype[READY(16)]
+[BOOTTRACE +63678ms] [SYS_CNTL]Q task[sys_rsv(108)] datatype[TIMER_REC_CONTROL(157)]
+[BOOTTRACE +63684ms] [SYS_CNTL]SYS_APP_TSET_DISABLE 0 0 
+[BOOTTRACE +63688ms] [SYS_CNTL]sys_cntl_ChangeKeyAction
+[BOOTTRACE +63691ms] [SYS_CNTL]Q task[sys_rsv(108)] datatype[TIMER_REC_CONTROL(157)]
+[BOOTTRACE +63697ms] [SYS_CNTL]SYS_APP_TSET_EXTLINK_DISABLE 0 0 
+[BOOTTRACE +63701ms] System assert!! File:src/sys_fip_osd_tools.c Line:1174 Err:0
+[BOOTTRACE +63708ms] [FPC]FPC_ReciveTASK() : 1C 00 01 01 00 00 1F 06 00 02 00 00 00 00 00 45 
+[BOOTTRACE +63715ms] [SYS_CNTL]sys_cntl_ChangeKeyAction
+[BOOTTRACE +63718ms] [SYS_CNTL]Q task[sys_rsv(108)] datatype[READY(16)]
+[BOOTTRACE +63723ms] [SYS_CNTL]Q task[sys_media(103)] datatype[READY(16)]
+[BOOTTRACE +63728ms] [SYS_CNTL]sys_media SYS_APP_READY
+[BOOTTRACE +63731ms] [SYS_CNTL]SYS_CNTL_SetSysState[EE]
+[BOOTTRACE +63734ms] [SYS_CNTL]SYS_CNTL_SetSysState[TRANSITION_CANCEL]
+[BOOTTRACE +63739ms] [SYS_CNTL]Q task[sys_navi(106)] datatype[READY(16)]
+[BOOTTRACE +63744ms] [SYS_CNTL]sys_cntl_media_app_ready_ex task_id 106
+[BOOTTRACE +63749ms] [SYS_CNTL]start up disc start
+[BOOTTRACE +63752ms] [MCM |48.53]MCM_resource_Open tid:103 drive:0x00
+[BOOTTRACE +63757ms] [MCM |48.53]MCM_resource_Open core[1]:0x00001302
+[BOOTTRACE +63761ms] [FS]VDM_ReportMediaEx : slot_id = 0 disc = 1 protect = 0 format = 7
+[BOOTTRACE +63768ms] [DVR CORE] (48.55)id = 1, MEDIA = HDD, minfo = 1
+[BOOTTRACE +63820ms] [MCM |48.68][RSC] ERR : mcm_resource_makeInitReturn MCM_resource_Init_PP_Info_Motive(drive:2, DVR_PG) return:-1
+[BOOTTRACE +63831ms] [MCM |48.68][RSC] ERR : mcm_resource_makeInitReturn MCM_resource_Init_PP_Info_Motive(drive:2, DVR_PL) return:-1
+[BOOTTRACE +63842ms] [MCM |48.70]MCM_resource_Open core[4]:0x00000202
+[BOOTTRACE +63847ms] [JPG_CORE]STM:jpg_main        Event:5  State:1
+[BOOTTRACE +63853ms] [JPG_CORE][Slot:1]  Open 1  Media 1  Format 1  Protect 0
+[BOOTTRACE +63859ms] [SYS_MEDIA |48.70]Create operationID [0x00000101]
+[BOOTTRACE +63864ms] [SYS_MEDIA |48.70]Create operationID [0x00000b01]
+[BOOTTRACE +63869ms] [SYS_MEDIA |48.70]Create operationID [0x00001501]
+[BOOTTRACE +63874ms] [SYS_MEDIA |48.70]Create operationID [0x00001f01]
+[BOOTTRACE +63879ms] [SYS_MEDIA]sys_media_SetDeckMode() : Not change. now 0x0,drv 2,clr 0x38fff,set 0x0
+[BOOTTRACE +63886ms] [SYS_MEDIA]sys_media_drive_SendRsvReqTRec() : Clear -> cloneID[1]
+[BOOTTRACE +63893ms] [SYS_NAVI][cntl_media] current_media=6.(rec_status=0)
+[BOOTTRACE +63898ms] [SYS_NAVI][cntl_media]     old_media=16.(rec_status=0)
+[BOOTTRACE +63903ms] [SYS_CNTL]setgui start. tsk=106 mode=0
+[BOOTTRACE +63907ms] [SYS_CNTL]sys_cntl_get_catchscreen[255(255)]
+[BOOTTRACE +63911ms] [SYS_CNTL]SYS_CNTL_SetGuiMode task ID=0x6a set_gui_fg=0 mode=0
+[BOOTTRACE +63917ms] [SYS_CNTL]Q task[sys_navi(106)] datatype[SET_GUI_MODE(134)]
+[BOOTTRACE +63923ms] [SYS_CNTL]callback pre (id==0x6a) send=0x65
+[BOOTTRACE +63927ms]  pre_end
+[BOOTTRACE +63928ms] [SYS_CNTL]sys_cntl_CatchScreen() success. task ID 106(sys_navi)
+[BOOTTRACE +63934ms] [SYS_CNTL]Q task[sys_navi(106)] datatype[SET_GUI_MODE2(135)]
+[BOOTTRACE +63940ms] [SYS_CNTL]SetGuiMode mode=0 task ID=0x6a(sys_navi) Catch taskID=0x6a(sys_navi)
+[BOOTTRACE +63947ms] [SYS_CNTL]M6// sys_cntl_play_condition = 0 new_mode=0 old_mode=0
+[BOOTTRACE +63953ms] [DCS]dco_api :AVOUT_V_Select: video=0
+[BOOTTRACE +63957ms] [DCS]dco_api :AVOUT_AV_Select: video=0, audio=0
+[BOOTTRACE +63961ms] System assert!! File:src/sys_fip_osd_tools.c Line:1174 Err:0
+[BOOTTRACE +63991ms] [SYS_CNTL]SYS_CNTL_SetSysState[EE]
+[BOOTTRACE +63994ms] [SYS_CNTL]EndGuiFunc not execute! gui_task[106] RunGuiFuncBit[0x00]
+[BOOTTRACE +64001ms] [SYS_CNTL]callback after (id==0x6a) send=0x72
+[BOOTTRACE +64005ms] [SYS_TUN]SYS_TUN_SysCntl_GuiMode_Callback()
+[BOOTTRACE +64010ms] [SYS_TUN]Stop_Timer -> direct channel
+[BOOTTRACE +64013ms] [SYS_TUN]SYS_TUN_AMD_NONE
+[BOOTTRACE +64016ms] [SYS_CNTL]SYS_CNTL_cancel_tmp_AVOUT_A_eeOutputMode 0 0 0 0
+[BOOTTRACE +64021ms] :: Receive ::
+[BOOTTRACE +64023ms]   -- 0. task ID = 91 : Func No = 9 
+[BOOTTRACE +64026ms]   --     data =  0e 02 1c 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +64033ms]   -- 1. task ID = 108 : Func No = 9 
+[BOOTTRACE +64037ms]   --     data =  0e 02 04 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +64043ms]   -- 2. task ID = 108 : Func No = 9 
+[BOOTTRACE +64047ms]   --     data =  0e 02 04 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +64053ms]   -- 3. task ID = 108 : Func No = 9 
+[BOOTTRACE +64057ms]   --     data =  0e 02 04 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +64063ms]   -- 4. task ID = 108 : Func No = 9 
+[BOOTTRACE +64066ms]   --     data =  0e 02 04 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +64072ms] :: Receive Intr ::
+[BOOTTRACE +64074ms]   -- 0. task ID = 0 : Func No = 0 
+[BOOTTRACE +64078ms]   --     data =  7f a9 01 01 00 00 20 06 00 02 00 00 00 00 00 52
+[BOOTTRACE +64084ms]   -- 1. task ID = 0 : Func No = 0 
+[BOOTTRACE +64087ms]   --     data =  48 00 01 01 00 00 20 06 00 02 00 00 00 00 00 72
+[BOOTTRACE +64093ms]   -- 2. task ID = 0 : Func No = 0 
+[BOOTTRACE +64097ms]   --     data =  1c 00 01 01 00 00 1f 06 00 02 00 00 00 00 00 45
+[BOOTTRACE +64103ms]   -- 3. task ID = 0 : Func No = 0 
+[BOOTTRACE +64107ms]   --     data =  48 00 01 01 00 00 1f 06 00 02 00 00 00 00 00 71
+[BOOTTRACE +64113ms]   -- 4. task ID = 0 : Func No = 0 
+[BOOTTRACE +64116ms]   --     data =  7f a9 01 01 00 00 1e 06 00 02 00 00 00 00 00 50
+[BOOTTRACE +64122ms] :: Receive Task ::
+[BOOTTRACE +64124ms]   -- 0. data =  7f a9 01 01 00 00 20 06 00 02 00 00 00 00 00 52
+[BOOTTRACE +64130ms]   -- 1. data =  48 00 01 01 00 00 20 06 00 02 00 00 00 00 00 72
+[BOOTTRACE +64137ms]   -- 2. data =  1c 00 01 01 00 00 1f 06 00 02 00 00 00 00 00 45
+[BOOTTRACE +64143ms]   -- 3. data =  48 00 01 01 00 00 1f 06 00 02 00 00 00 00 00 71
+[BOOTTRACE +64149ms]   -- 4. data =  7f a9 01 01 00 00 1e 06 00 02 00 00 00 00 00 50
+[BOOTTRACE +64155ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +64160ms] [SYS_TUN]SYS_TUN_AMD_NONE
+[BOOTTRACE +64162ms] send=0x65
+[BOOTTRACE +64163ms] System assert!! File:src/sys_fip_osd_tools.c Line:1174 Err:0
+[BOOTTRACE +64169ms]  after mid
+[BOOTTRACE +64170ms] [SYS_CNTL]PTK_IsWindowEventTask(6a) fg=1,tsk_stat=4
+[BOOTTRACE +64175ms]  end
+[BOOTTRACE +64176ms] [SYS_CNTL]setgui end. tsk=106
+[BOOTTRACE +64327ms] [SYS_CNTL]Q task[sys_media(103)] datatype[DISC_START_OK(81)]
+[BOOTTRACE +64333ms] [SYS_CNTL]sys_cntl_is_MediaDiscSttNon CLR tid = 103,tyep=81
+[BOOTTRACE +64340ms] [SYS_CNTL]disc[2] start OK
+[BOOTTRACE +64343ms] [MCM |49.19]MCM_resource_Open tid:103 drive:0x00
+[BOOTTRACE +64348ms] [MCM |49.19]MCM_resource_Open core[3]:0x00000208
+[BOOTTRACE +64355ms] [MCM |49.19]MCM_resource_Open core[4]:0x00000208
+[BOOTTRACE +64361ms] [JPG_CORE]STM:jpg_main        Event:5  State:1
+[BOOTTRACE +64366ms] [JPG_CORE][Slot:2]  Open 0  Media 7  Format 0  Protect 0
+[BOOTTRACE +64371ms] [MCM |49.19]mcm_resource_JPEGOpen Media not opened. [4]
+[BOOTTRACE +64377ms] [SYS_MEDIA |49.19]Create operationID [0x00000b02]
+[BOOTTRACE +64381ms] [SYS_MEDIA |49.19]Create operationID [0x00001502]
+[BOOTTRACE +64387ms] [SYS_MEDIA |49.20]Create operationID [0x00001f02]
+[BOOTTRACE +64391ms] [SYS_MEDIA]sys_media_drive_SendRsvReqTRec() : Clear -> cloneID[2]
+[BOOTTRACE +64398ms] [SYS_CNTL]Q task[sys_media(103)] datatype[DISC_START_OK(81)]
+[BOOTTRACE +64404ms] [SYS_CNTL]sys_cntl_is_MediaDiscSttNon CLR tid = 103,tyep=81
+[BOOTTRACE +64410ms] [SYS_CNTL]not open disc
+[BOOTTRACE +64412ms] [SYS_CNTL]SYS_CNTL_MEDIA_STARTUP
+[BOOTTRACE +64415ms] [SYS_CNTL]disc[4] start OK
+[BOOTTRACE +64636ms] [SYS_CNTL]read disc: 3
+[BOOTTRACE +64826ms] System assert!! File:src/sys_fip_osd_tools.c Line:1174 Err:0
+[BOOTTRACE +64832ms] System assert!! File:src/sys_fip_osd_tools.c Line:1174 Err:0
+[BOOTTRACE +64838ms] System assert!! File:src/sys_fip_osd_tools.c Line:1174 Err:0
+[BOOTTRACE +65046ms] [RTSD] === DRIVE ACCESS ERROR === ( 80040904 )  [2006/ 1/ 1  0. 0. 0]
+[BOOTTRACE +65052ms] *** CDB  [00 00 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +65057ms] *** SENSE[70 00 04 00 00 00 00 0A 00 00 83 A7 09 04 00 00 00 00] 
+[BOOTTRACE +65063ms] H_STAT [0] T_STAT [2]
+[BOOTTRACE +65636ms] [SYS_CNTL]read disc: 4
+[BOOTTRACE +65638ms] System assert!! File:src/sys_fip_osd_tools.c Line:1174 Err:0
+[BOOTTRACE +65663ms] [SYS_CNTL]SYS_CNTL_ReportMediaCallback called from FS
+[BOOTTRACE +65669ms] [SYS_CNTL]Q task[40(40)] datatype[MEDIA_CALLBACK(180)]
+[BOOTTRACE +65674ms] [SYS_CNTL]SetDeckModeStateEx task[sys_cntl(91)] drive[DVD] rec.drive[DVD] deck[STOP2(0x00000000)]
+[BOOTTRACE +65686ms] [SYS_TUN]SYS_TUN_SysCntl_DeckMode_Callback()
+[BOOTTRACE +65691ms] [SYS_TUN]SYS_TUN_AMD_NONE
+[BOOTTRACE +65693ms] [RTSD] === DRIVE ACCESS ERROR === ( 80040904 )  [2006/ 1/ 1  0. 0. 0]
+[BOOTTRACE +65700ms] *** CDB  [00 00 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +65704ms] *** SENSE[70 00 04 00 00 00 00 0A 00 00 83 A7 09 04 00 00 00 00] 
+[BOOTTRACE +65711ms] H_STAT [0] T_STAT [2]
+[BOOTTRACE +65713ms] System assert!! File:src/sys_fip_osd_tools.c Line:1174 Err:0
+[BOOTTRACE +65719ms] [SYS_TUN]Stop_Timer -> direct channel
+[BOOTTRACE +65722ms] [SYS_TUN]SYS_TUN_AMD_NONE
+[BOOTTRACE +65725ms] [SYS_CNTL]SYS_CNTL_cancel_tmp_AVOUT_A_eeOutputMode 0 0 0 0
+[BOOTTRACE +65730ms] [SYS_TUN]SYS_TUN_AMD_NONE
+[BOOTTRACE +66258ms] [FS]VDM_ReportMediaEx : slot_id = 1 disc = b4 protect = 51b87888 format = 5770dd04
+[BOOTTRACE +66268ms] [SYS_CNTL]VDM_ReportMediaEx(): vdm_res=0x80040904 
+[BOOTTRACE +66272ms] [SYS_CNTL] disc  =0x000000b4  protect=0x51b87888 
+[BOOTTRACE +66277ms] [SYS_CNTL] format=0x5770dd04  authent=0x577096be 
+[BOOTTRACE +66282ms] [SYS_CNTL]sys_cntl_media_status_callbacks end
+[BOOTTRACE +66286ms] System assert!! File:src/sys_fip_osd_tools.c Line:1174 Err:0
+[BOOTTRACE +66292ms] [SYS_TUN]Stop_Timer -> direct channel
+[BOOTTRACE +66296ms] [SYS_TUN]SYS_TUN_AMD_NONE
+[BOOTTRACE +66298ms] [SYS_CNTL]SYS_CNTL_cancel_tmp_AVOUT_A_eeOutputMode 0 0 0 0
+[BOOTTRACE +66304ms] [SYS_TUN]SYS_TUN_AMD_NONE
+[BOOTTRACE +69106ms] System assert!! File:src/sys_fip_fpc_exe.c Line:3158 Err:0
+[BOOTTRACE] UART: bytes=95399 first_byte=10414us ferr=0 perr=0 ovf=NO | SW_rel=NO
+[BOOTTRACE] ADC0_SWUART: min=3.18V max=3.30V (low=0 hiz=3.18..3.30V n=9001) | CtrlEdges: NSW5V=0 TXD=0 XRESET=0 (logged=0)
+BOOTTRACE: OK
+@P7501_RES cmd=BOOTTRACE status=OK code=0 elapsed_us=90021461
+PANADIGA> 

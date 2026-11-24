@@ -34,8 +34,6 @@ Você é o Engenheiro Especialista em Frontend, Arquitetura MVVM e Experiência 
 ## Skills Associadas
 Sempre comece lendo `.agents/skills/panadiga-skill-orchestrator/SKILL.md`:
 - `.agents/skills/panadiga-typescript-frontend-dev/SKILL.md`
-- `.agents/skills/panadiga-ux-ui-and-layout/SKILL.md`
 - `.agents/skills/panadiga-architecture-and-guardrails/SKILL.md`
-- `.agents/skills/panadiga-testing-and-feature-delivery/SKILL.md`
 - `.agents/skills/panadiga-bench-automation-and-headless/SKILL.md`
 - `.agents/skills/panadiga-validate/SKILL.md`

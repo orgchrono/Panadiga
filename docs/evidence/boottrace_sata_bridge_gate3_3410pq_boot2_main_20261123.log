@@ -1,0 +1,576 @@
+=== BOOTTRACE: window=60000ms boot=1 hold=0ms sticky=NO no_xrst=NO (8N1 @ 115200) ===
+[BOOTTRACE +  10ms] DDR CHECK: OK
+[BOOTTRACE +  19ms] Chip select = 1
+[BOOTTRACE +  20ms] F/E Address = 0x90202000 , Drive(compress) Size = 0xACC50
+[BOOTTRACE +  26ms] uncompress dst=90202000 len=160000 src=84080040 len=acc01
+[BOOTTRACE + 775ms] HEADER:5627DD54, DECOMP:5627DD54
+[BOOTTRACE + 778ms] F/E reset release finish ...
+[BOOTTRACE + 781ms] ***** Loader ver0.61 [06/03/06] *****
+[BOOTTRACE + 784ms] ***** normal mode *****
+[BOOTTRACE + 802ms] *** RTSC Initialize ***
+[BOOTTRACE +3528ms] [RTSD] ATAPI Software Reset 
+[BOOTTRACE +3541ms] [RTSD] HDD spin-up error (80000404)
+[BOOTTRACE +3545ms] miniboot : system assert!!
+[BOOTTRACE +3547ms] [RTSD] === IDE HOST ERROR === ( E8000000 )
+[BOOTTRACE +3551ms] *** ATAPI DEVICE ERROR
+[BOOTTRACE +3553ms] CDB  [FF EC 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +3557ms] Reg[00 00 00 00 00 00 00 : Err SecC SecN CylL CylH D/H Status] 
+[BOOTTRACE +3563ms] H_STAT [E8] T_STAT [0]
+[BOOTTRACE +3565ms] [RTSD] SRST Command Set
+[BOOTTRACE +3567ms] [RTSD] Reset Failed !! (80000407)
+[BOOTTRACE +3580ms] [RTSD] HDD spin-up error (80000404)
+[BOOTTRACE +3584ms] miniboot : system assert!!
+[BOOTTRACE +3586ms] [RTSD] === IDE HOST ERROR === ( E8000000 )
+[BOOTTRACE +3590ms] *** ATAPI DEVICE ERROR
+[BOOTTRACE +3592ms] CDB  [FF EC 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +3596ms] Reg[00 00 00 00 00 00 00 : Err SecC SecN CylL CylH D/H Status] 
+[BOOTTRACE +3602ms] H_STAT [E8] T_STAT [0]
+[BOOTTRACE +3604ms] [RTSD] SRST Command Set
+[BOOTTRACE +3606ms] [RTSD] Reset Failed !! (80000407)
+[BOOTTRACE +3619ms] [RTSD] HDD spin-up error (80000404)
+[BOOTTRACE +3623ms] miniboot : system assert!!
+[BOOTTRACE +3625ms] [RTSD] === IDE HOST ERROR === ( E8000000 )
+[BOOTTRACE +3629ms] *** ATAPI DEVICE ERROR
+[BOOTTRACE +3631ms] CDB  [FF EC 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +3635ms] Reg[00 00 00 00 00 00 00 : Err SecC SecN CylL CylH D/H Status] 
+[BOOTTRACE +3641ms] H_STAT [E8] T_STAT [0]
+[BOOTTRACE +3643ms] [RTSD] SRST Command Set
+[BOOTTRACE +3645ms] [RTSD] Reset Failed !! (80000407)
+[BOOTTRACE +3648ms] HDD_MAX_LBA get failed[0xE8000000].
+[BOOTTRACE +3651ms] mainsoft data is invalid, so set update flag.
+[BOOTTRACE +3672ms] [nfrom] file_no[17],skip(0),non_skip(1),erase(0),new_write(0).
+[BOOTTRACE +3688ms] !!! start fmu to read & exec fvu. !!!
+[BOOTTRACE +3691ms] wait 1 second.
+[BOOTTRACE +4693ms] *** timer correspond initialize ***
+[BOOTTRACE +4699ms] startup reason = [41]
+[BOOTTRACE +4703ms] Main hung-up time changed 255[s].
+[BOOTTRACE +4717ms] Read fvu program from Update-Disk to 0x90400000.
+[BOOTTRACE +4722ms] SD card check start
+[BOOTTRACE +4723ms] SD init start...
+[BOOTTRACE +4815ms] [SDCD] sdcd_insrmv_check:SD Card inserted 
+[BOOTTRACE +4887ms] [SDCD] === This Card Spec ==== 
+[BOOTTRACE +4890ms] .Card type:2(condition:3) wp:0
+[BOOTTRACE +4893ms] .capacity:3c4000[LBA](2021654528Byte) . transfer speed:25000[Kbps]
+[BOOTTRACE +4899ms] .RCA:2 . Bus Width:4(current) 4(support)
+[BOOTTRACE +4902ms] .Multi Max Block Len Read:2[SECT] / Write:2[SECT]
+[BOOTTRACE +4907ms] SD = 0x3C4000[LBA]
+[BOOTTRACE +4909ms] ... SD init end
+[BOOTTRACE +4916ms] FAT Mount ID = 0x1
+[BOOTTRACE +4920ms] FAT Open Old File ID = 0xC8
+[BOOTTRACE +4923ms] treat as SD.
+[BOOTTRACE +4939ms] File ID[0xC8] seek to 0xB1800.
+[BOOTTRACE +5007ms] File ID[0xC8] read to 0x90400000(size=0x40000).
+[BOOTTRACE +5011ms] cheking for fvu program check-sum[0x216507A].
+[BOOTTRACE +5097ms] [nfrom] file_no[17],skip(0),non_skip(1),erase(0),new_write(0).
+[BOOTTRACE +5112ms] success to read fvu program from Update-Disc.
+[BOOTTRACE +5147ms] [RTSD] Device Reset Occurred(0x62900) 
+[BOOTTRACE +5151ms] X(80062900)X(80023a00)X(80023a00)X(80023a00)
+[BOOTTRACE +5158ms] *** start fvu ***
+[BOOTTRACE +5166ms] ***** Fvu ver0.61 [05/11/01] *****
+[BOOTTRACE +5184ms] *** RTSC Initialize ***
+[BOOTTRACE +8374ms] [RTSD] ATAPI Software Reset 
+[BOOTTRACE +8377ms] [STAGE2] SATA HDD boot ('F'->FVU)...
+[BOOTTRACE +8880ms] SD init start...
+[BOOTTRACE +8972ms] [SDCD] sdcd_insrmv_check:SD Card inserted 
+[BOOTTRACE +9043ms] [SDCD] === This Card Spec ==== 
+[BOOTTRACE +9046ms] .Card type:2(condition:3) wp:0
+[BOOTTRACE +9049ms] .capacity:3c4000[LBA](2021654528Byte) . transfer speed:25000[Kbps]
+[BOOTTRACE +9055ms] .RCA:2 . Bus Width:4(current) 4(support)
+[BOOTTRACE +9059ms] .Multi Max Block Len Read:2[SECT] / Write:2[SECT]
+[BOOTTRACE +9063ms] SD = 0x3C4000[LBA]
+[BOOTTRACE +9065ms] ... SD init end
+[BOOTTRACE +9070ms] [RTSD] HDD already spin-up 
+[BOOTTRACE +9104ms] [RTSD] HDD Auto Spin up Mode 
+[BOOTTRACE +9111ms] [STAGE2] HDD MAX LBA=0x1D1C5970
+[BOOTTRACE +10970ms] uncompress dst=57000000 len=c6692c src=94000040 len=5e7b57
+[BOOTTRACE +14753ms] HEADER:3A8B3E6F, DECOMP:3A8B3E6F
+[BOOTTRACE +14756ms] [STAGE2] Boot MAIN @ 0x57000000
+[BOOTTRACE +15195ms] [nfrom] BGO driver init failed[1].
+[BOOTTRACE +15198ms] System assert!! File:src/nfd_api.c Line:228 Err:0
+[BOOTTRACE +15203ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15208ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15212ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15217ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15223ms] [nfrom] Error. NFD_Init() not call.
+[BOOTTRACE +15226ms] System assert!! File:src/nfd_api.c Line:332 Err:0
+[BOOTTRACE +15231ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15236ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15239ms] System assert!! File:src/nfd_api.c Line:967 Err:0
+[BOOTTRACE +15244ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15249ms] [nfrom] Error. NFD_Init() not call.
+[BOOTTRACE +15252ms] System assert!! File:src/nfd_api.c Line:332 Err:0
+[BOOTTRACE +15257ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15262ms] [nfrom] Error. NFD_Init() not call.
+[BOOTTRACE +15265ms] System assert!! File:src/nfd_api.c Line:332 Err:0
+[BOOTTRACE +15270ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15275ms] [nfrom] error! DeviceInfo is not initialized.
+[BOOTTRACE +15279ms] System assert!! File:src/devinfo.c Line:181 Err:0
+[BOOTTRACE +15284ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15288ms] [nfrom] Error. NFD_Init() not call.
+[BOOTTRACE +15292ms] System assert!! File:src/nfd_api.c Line:332 Err:0
+[BOOTTRACE +15296ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15301ms] [nfrom] Error. NFD_Init() not call.
+[BOOTTRACE +15305ms] System assert!! File:src/nfd_api.c Line:332 Err:0
+[BOOTTRACE +15309ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15314ms] System assert!! File:src/sys_rsv_set.c Line:1181 Err:0
+[BOOTTRACE +15319ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15324ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15327ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15332ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15337ms] [nfrom] Error. NFD_Init() not call.
+[BOOTTRACE +15340ms] System assert!! File:src/nfd_api.c Line:332 Err:0
+[BOOTTRACE +15345ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15350ms] System assert!! File:src/sys_rsv_set.c Line:1114 Err:0
+[BOOTTRACE +15355ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15360ms] [nfrom] Error. NFD_Init() not call.
+[BOOTTRACE +15363ms] System assert!! File:src/nfd_api.c Line:332 Err:0
+[BOOTTRACE +15368ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15373ms] System assert!! File:src/sys_rsv_set.c Line:995 Err:0
+[BOOTTRACE +15378ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15383ms] System assert!! File:avout/src_a/avout_a_api.c Line:102 Err:0
+[BOOTTRACE +15388ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15393ms] System assert!! File:avout/src_v/dco_vout_api.c Line:1145 Err:0
+[BOOTTRACE +15399ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15404ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15407ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15412ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15417ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15420ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15425ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15430ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15433ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15438ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15442ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15446ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15451ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15455ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15459ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15463ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15468ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15472ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15476ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15481ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15484ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15489ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15494ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15497ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15502ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15507ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15510ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15515ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15520ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15523ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15528ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15533ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15536ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15541ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15545ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15549ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15553ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15558ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15562ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15566ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15571ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15574ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15579ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15584ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15587ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15592ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15597ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15600ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15605ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15610ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15613ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15618ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15623ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15626ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15631ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15636ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15639ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15644ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15648ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15652ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15656ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15661ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15665ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15669ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15674ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15677ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15682ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15687ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15690ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15695ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15700ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15703ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15708ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15713ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15716ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15721ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15726ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15729ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15734ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15739ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15742ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15747ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15751ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15755ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15759ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15764ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15768ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15772ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15777ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15780ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15785ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15790ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15793ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15798ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15803ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15806ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15811ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15816ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15819ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15824ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15829ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15832ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15837ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15841ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15845ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15850ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15854ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15858ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15862ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15867ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15871ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15875ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15880ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15883ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15888ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15893ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15896ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15901ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15906ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15909ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15914ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15919ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15922ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15927ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15932ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15935ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15940ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15944ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15948ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15952ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15957ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15961ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15965ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15970ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15973ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15978ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15983ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15986ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +15991ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +15996ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +15999ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16004ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16009ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16012ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16017ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16022ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16025ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16030ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16035ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16038ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16043ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16047ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16051ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16055ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16060ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16064ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16068ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16073ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16076ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16081ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16086ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16089ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16094ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16099ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16102ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16107ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16112ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16115ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16120ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16125ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16128ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16133ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16137ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16141ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16146ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16150ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16154ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16158ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16163ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16167ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16171ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16176ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16179ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16184ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16189ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16192ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16197ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16202ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16205ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16210ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16215ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16218ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16223ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16228ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16231ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16236ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16240ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16244ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16248ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16253ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16257ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16261ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16266ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16269ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16274ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16279ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16282ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16287ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16292ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16295ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16300ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16305ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16308ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16313ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16318ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16321ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16326ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16331ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16334ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16339ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16343ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16347ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16351ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16357ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16360ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16364ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16369ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16372ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16377ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16382ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16385ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16390ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16395ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16398ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16403ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16408ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16411ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16416ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16421ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16424ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16429ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16433ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16437ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16442ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16447ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16450ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16454ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16459ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16462ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16467ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16472ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16475ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16480ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16485ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16488ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16493ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16498ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16501ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16506ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16511ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16514ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16519ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16524ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16527ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16532ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16537ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16540ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16544ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16549ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16553ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16557ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16562ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16565ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16570ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16575ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16578ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16583ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16588ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16591ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16596ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16601ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16604ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16609ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16614ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16617ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16622ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16627ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16630ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16635ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16639ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16643ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16647ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16652ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16656ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16660ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16665ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16668ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16673ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16678ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16681ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16686ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16691ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16694ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16699ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16704ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16707ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16712ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16717ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16720ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16725ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16729ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16733ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16738ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16742ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16746ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16750ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16755ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16758ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16763ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16768ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16771ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16776ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16781ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16784ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16789ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16794ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16797ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16802ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16807ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16810ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16815ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16820ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16823ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16828ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16832ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16836ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16840ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16845ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16849ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16853ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16858ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16861ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16866ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16871ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16875ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16880ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16884ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16888ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16892ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16898ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16901ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16906ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16911ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16914ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16919ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16924ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16927ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16932ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16936ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16940ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16944ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16949ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16953ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16957ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16962ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16965ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16970ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16975ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +16978ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +16983ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +16988ms] [nfrom] Error. NFD_Init() not call.
+[BOOTTRACE +16991ms] System assert!! File:src/nfd_api.c Line:332 Err:0
+[BOOTTRACE +16996ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +17001ms] System assert!! File:src/sys_rsv_set.c Line:1181 Err:0
+[BOOTTRACE +17006ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +17011ms] [nfrom] error! no call NFD_Init().
+[BOOTTRACE +17014ms] System assert!! File:src/nfd_api.c Line:1019 Err:0
+[BOOTTRACE +17019ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +17024ms] [nfrom] Error. NFD_Init() not call.
+[BOOTTRACE +17027ms] System assert!! File:src/nfd_api.c Line:332 Err:0
+[BOOTTRACE +17032ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +17036ms] [nfrom] Error. NFD_Init() not call.
+[BOOTTRACE +17040ms] System assert!! File:src/nfd_api.c Line:332 Err:0
+[BOOTTRACE +17045ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +17049ms] System assert!! File:src/sys_rsv_set.c Line:1114 Err:0
+[BOOTTRACE +17054ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +17059ms] [nfrom] Error. NFD_Init() not call.
+[BOOTTRACE +17063ms] System assert!! File:src/nfd_api.c Line:332 Err:0
+[BOOTTRACE +17067ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +17072ms] System assert!! File:src/sys_rsv_set.c Line:995 Err:0
+[BOOTTRACE +17077ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +17082ms] System assert!! File:src/ftrec_api.c Line:937 Err:0
+[BOOTTRACE +17087ms] [nfrom] Error. NFD_Init() not call.
+[BOOTTRACE +17090ms] System assert!! File:src/nfd_api.c Line:332 Err:0
+[BOOTTRACE +17095ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +17100ms] [nfrom] Error. NFD_Init() not call.
+[BOOTTRACE +17103ms] System assert!! File:src/nfd_api.c Line:332 Err:0
+[BOOTTRACE +17108ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +17113ms] [LOG] Nand-FROM error!
+[BOOTTRACE +17115ms] System assert!! File:src/LOG_api.c Line:241 Err:0
+[BOOTTRACE +17119ms] System assert!! File:src/ftrec_api.c Line:638 Err:0
+[BOOTTRACE +17554ms] [nfrom] error! DeviceInfo is not initialized.
+[BOOTTRACE +17558ms] System assert!! File:src/devinfDDR CHECK: OK
+[BOOTTRACE +19267ms] Chip select = 1
+[BOOTTRACE +19269ms] F/E Address = 0x90202000 , Drive(compress) Size = 0xACC50
+[BOOTTRACE +19274ms] uncompress dst=90202000 len=160000 src=84080040 len=acc01
+[BOOTTRACE +20023ms] HEADER:5627DD54, DECOMP:5627DD54
+[BOOTTRACE +20027ms] F/E reset release finish ...
+[BOOTTRACE +20029ms] ***** Loader ver0.61 [06/03/06] *****
+[BOOTTRACE +20033ms] ***** normal mode *****
+[BOOTTRACE +20050ms] !!! start fmu to read & exec fvu. !!!
+[BOOTTRACE +20053ms] wait 1 second.
+[BOOTTRACE +21055ms] *** timer correspond initialize ***
+[BOOTTRACE +21061ms] startup reason = [1]
+[BOOTTRACE +21065ms] Main hung-up time changed 255[s].
+[BOOTTRACE +21078ms] *** RTSC Initialize ***
+[BOOTTRACE +23853ms] [RTSD] ATAPI Software Reset 
+[BOOTTRACE +23856ms] error! startup reason is invalid.
+[BOOTTRACE +56693ms] DDR CHECK: OK
+[BOOTTRACE +56702ms] Chip select = 1
+[BOOTTRACE +56703ms] F/E Address = 0x90202000 , Drive(compress) Size = 0xACC50
+[BOOTTRACE +56709ms] uncompress dst=90202000 len=160000 src=84080040 len=acc01
+[BOOTTRACE +57457ms] HEADER:5627DD54, DECOMP:5627DD54
+[BOOTTRACE +57460ms] F/E reset release finish ...
+[BOOTTRACE +57463ms] ***** Loader ver0.61 [06/03/06] *****
+[BOOTTRACE +57467ms] ***** normal mode *****
+[BOOTTRACE +57484ms] *** RTSC Initialize ***
+[BOOTTRACE] UART: bytes=25111 first_byte=10431us ferr=2 perr=0 ovf=NO | SW_rel=NO
+[BOOTTRACE] ADC0_SWUART: min=0.04V max=3.30V (low=0 hiz=0.04..3.30V n=5999) | CtrlEdges: NSW5V=4 TXD=4 XRESET=4 (logged=12)
+  [CTRL +17563050us] NSW5V=1 TXD=1 XRESET=0
+  [CTRL +17584902us] NSW5V=0 TXD=1 XRESET=0
+  [CTRL +17585487us] NSW5V=0 TXD=0 XRESET=0
+  [CTRL +19072920us] NSW5V=1 TXD=0 XRESET=0
+  [CTRL +19073073us] NSW5V=1 TXD=1 XRESET=0
+  [CTRL +19248471us] NSW5V=1 TXD=1 XRESET=1
+  [CTRL +23894732us] NSW5V=1 TXD=1 XRESET=0
+  [CTRL +23925074us] NSW5V=0 TXD=1 XRESET=0
+  [CTRL +23926084us] NSW5V=0 TXD=0 XRESET=0
+  [CTRL +56507245us] NSW5V=1 TXD=0 XRESET=0
+  [CTRL +56507384us] NSW5V=1 TXD=1 XRESET=0
+  [CTRL +56683064us] NSW5V=1 TXD=1 XRESET=1
+BOOTTRACE: OK
+@P7501_RES cmd=BOOTTRACE status=OK code=0 elapsed_us=60022768
+PANADIGA> 

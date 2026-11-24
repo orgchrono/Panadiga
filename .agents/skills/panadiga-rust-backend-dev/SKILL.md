@@ -16,7 +16,7 @@ Esta skill padroniza o desenvolvimento em Rust nos **11 crates** acíclicos do w
 ## 1. Quando Usar & Handoffs
 - Ative ao modificar ou criar módulos em `crates/panadiga-*` ou `apps/desktop/src-tauri/`.
 - Para contratos Plano A/Plano B (`panadiga-bench`, `panadiga-vault`), Zero-Trust IPC e mapa completo dos 11 crates, consulte `.agents/skills/panadiga-contracts-stream-and-journal/SKILL.md`.
-- Para fronteiras FCIS/SSOT/anti-god-modules, consulte `.agents/skills/panadiga-architecture-and-guardrails/SKILL.md`.
+- Para fronteiras FCIS/SSOT/anti-god-modules, consulte `.agents/skills/panadiga-architecture-and-guardrails/SKILL.md`; para refatoração funcional, álgebra de intervalos, detectores de padrões e provas diferenciais, consulte `.agents/skills/panadiga-functional-math-and-patterns/SKILL.md`.
 - Se alterar schemas/tools MCP ou camadas RAG, consulte `.agents/skills/panadiga-rag-and-mcp-engineering/SKILL.md`.
 - Guia de padrões, multi-SO `#[cfg(...)]` e Android em [rust-workspace-patterns.md](./references/rust-workspace-patterns.md).
 

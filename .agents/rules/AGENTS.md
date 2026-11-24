@@ -16,7 +16,7 @@
 ## 4. Orquestração Obrigatória de Skills, Metas, Plan Mode, Testes e Subagentes (Always-On)
 1. **Bootstrap Obrigatório do Orquestrador:**
    - Em qualquer tarefa não-trivial (2+ etapas, bancada, forense, decrypto, RE, código, docs, pesquisa ou testes), **LEIA OBRIGATORIAMENTE primeiro** [`.agents/skills/panadiga-skill-orchestrator/SKILL.md`](../skills/panadiga-skill-orchestrator/SKILL.md) para ativar just-in-time apenas as skills certas pelos caminhos explícitos ali definidos.
-   - O mapa completo e diagrama do ecossistema das 35 skills reside em [`.agents/skills/README.md`](../skills/README.md).
+   - O mapa completo e diagrama do ecossistema das 29 skills reside em [`.agents/skills/README.md`](../skills/README.md).
 2. **Pilares Transversais & Economia de Tokens:**
    - **Segurança & Barreiras:** [`.agents/skills/panadiga-security-and-violation-guards/SKILL.md`](../skills/panadiga-security-and-violation-guards/SKILL.md).
    - **Auditoria Anti-Alucinação & Red-Team:** [`.agents/skills/panadiga-adversarial-and-hallucination-auditor/SKILL.md`](../skills/panadiga-adversarial-and-hallucination-auditor/SKILL.md).

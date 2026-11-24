@@ -473,6 +473,377 @@
       "docs": [
         "docs/pt-BR/DIGADIAG_PANA_SD_E_TBC_AUTONOMO.md"
       ]
+    },
+    {
+      "id": "EV-20261122-019",
+      "level": "N4_HARDWARE",
+      "claim_pt": "Portoes 1 e 2: ponte StarTech IDE2SAT2 (Marvell 88SA8052, jumper MASTER) com FFC P58001 validado (Pin k = ATA(41-k), IORDY=3.34V) enumerou SAMSUNG HM251JI (250 GB SATA) ao vivo em COM10 sem escrever Flash ou espelhos.",
+      "claim_en": "Gates 1 & 2: StarTech IDE2SAT2 (Marvell 88SA8052, MASTER jumper) over continuity-verified P58001 FFC enumerated SAMSUNG HM251JI (250 GB SATA) live on COM10 with zero Flash/mirror writes.",
+      "sites": [
+        "P58001 (Pin k = ATA(41-k), 0x00002004 guard)",
+        "P1503 (DR5V/DR12V)",
+        "Marvell 88SA8052 (~32ms BSY / ~555ms DRDY)"
+      ],
+      "evidence_files": [
+        "docs/evidence/boottrace_sata_bridge_gate2_20261122.log",
+        "docs/evidence/boottrace_sata_bridge_nosd_only_20261122.log",
+        "docs/evidence/boottrace_sata_bridge_nosd_warm_20261122.log"
+      ],
+      "sha256_assertions": [
+        {
+          "path": "docs/evidence/boottrace_sata_bridge_gate2_20261122.log",
+          "sha256": "F8C1B5699986334F1A97EF004319EAEEF880B3447DC4D80D04C1DB82C92D6865",
+          "required": true
+        },
+        {
+          "path": "docs/evidence/boottrace_sata_bridge_nosd_only_20261122.log",
+          "sha256": "3120123E29115694E99B51EB1CF120DAEB346683B36FC5AD5091026B2A34AC2E",
+          "required": true
+        },
+        {
+          "path": "docs/evidence/boottrace_sata_bridge_nosd_warm_20261122.log",
+          "sha256": "15ABE196A8A6A1611907B6EE25F020F47A352F025DCF7B8E8D377D6B0513FAAB",
+          "required": true
+        }
+      ],
+      "docs": [
+        "docs/pt-BR/GUIA_HARDWARE_STARTECH_IDE2SAT2_E_CABO_FFC_TYPE_B.md",
+        "docs/pt-BR/PESQUISA_PORTOES_VALIDACAO_SATA_STAGE2_E_RETARGET_BGO_8MB.md"
+      ]
+    },
+    {
+      "id": "EV-20261122-020",
+      "level": "N4_HARDWARE",
+      "claim_pt": "Portao 3 tentativa 1 expos regressao 4 MiB vs 8 MiB ao vivo: MAIN3060NP sem --main-bgo-retarget falhou em src/nfd_api.c:228 ([nfrom] BGO driver init failed[1].) sobre IC5001 S29JL064H de 8 MiB.",
+      "claim_en": "Gate 3 attempt 1 exposed 4 MiB vs 8 MiB regression on real silicon: un-retargeted MAIN3060NP failed at src/nfd_api.c:228 ([nfrom] BGO driver init failed[1].) on 8 MiB IC5001 S29JL064H.",
+      "sites": [
+        "src/nfd_api.c:228",
+        "0x84200000 (35 sectors) vs 0x84130000 (45 sectors)"
+      ],
+      "evidence_files": [
+        "docs/evidence/boottrace_sata_bridge_gate3_boot1_20261122.log",
+        "docs/evidence/boottrace_sata_bridge_gate3_boot2_20261122.log"
+      ],
+      "sha256_assertions": [
+        {
+          "path": "docs/evidence/boottrace_sata_bridge_gate3_boot1_20261122.log",
+          "sha256": "4BE424BA7E96859B824537E4F6940A777D4D3540C75FA5A7753211DF54C60748",
+          "required": true
+        },
+        {
+          "path": "docs/evidence/boottrace_sata_bridge_gate3_boot2_20261122.log",
+          "sha256": "4D35E08ED4CA9A0CB5E7C7E8C9846494E8966C46831BC57745A473E0935C665E",
+          "required": true
+        }
+      ],
+      "docs": [
+        "docs/pt-BR/PESQUISA_PORTOES_VALIDACAO_SATA_STAGE2_E_RETARGET_BGO_8MB.md"
+      ]
+    },
+    {
+      "id": "EV-20261122-021",
+      "level": "N2_EMULATED",
+      "claim_pt": "Portao 0: retarget BGO 8 MiB do MAIN3060NP (0x1CC4->0x26C4 em 0x531B8000..0x531BC000, cave 165B @ 0x57000320, 12 trampolins, 7 NFD_API, 48 offsets nfd_ctrl) e trava fail-closed CHK_ID_MAIN_BGO_GEOMETRY provados no Mn103Vm (NFD_Read(17/22/12)).",
+      "claim_en": "Gate 0: MAIN3060NP 8 MiB BGO retarget (0x1CC4->0x26C4 at 0x531B8000..0x531BC000, 165B cave @ 0x57000320, 12 trampolines, 7 NFD_API, 48 nfd_ctrl offsets) and fail-closed CHK_ID_MAIN_BGO_GEOMETRY proven in Mn103Vm (NFD_Read(17/22/12)).",
+      "sites": [
+        "VA 0x57000320 (165 B cave)",
+        "BSS 0x531B8000..0x531BC000",
+        "CHK_ID_MAIN_BGO_GEOMETRY"
+      ],
+      "evidence_files": [
+        "crates/panadiga-core/src/re/main_bgo_retarget/mod.rs",
+        "crates/panadiga-core/src/re/unbrick_sd_kit/verify/mod.rs"
+      ],
+      "sha256_assertions": [],
+      "docs": [
+        "docs/pt-BR/PESQUISA_PORTOES_VALIDACAO_SATA_STAGE2_E_RETARGET_BGO_8MB.md"
+      ]
+    },
+    {
+      "id": "EV-20261123-022",
+      "level": "N4_HARDWARE",
+      "claim_pt": "Portao 3 AO VIVO (2026-11-23): Boot 1 gravou Stage-2 + MAIN3060NP 8 MiB BGO nos 2 espelhos MEIHFS (check_sum=0x32836a32, Vefify OK x2); Boot 2 arrancou PiE-OS 3060NP direto do SAMSUNG HM251JI atras da StarTech IDE2SAT2 (39.652 B UART, M6930LB, TM LI, zero BGO fail / U99).",
+      "claim_en": "Gate 3 LIVE PASS (2026-11-23): Boot 1 flashed Stage-2 + 8 MiB BGO MAIN3060NP to both MEIHFS mirrors (check_sum=0x32836a32, Vefify OK x2); Boot 2 cold-booted PiE-OS 3060NP directly from SAMSUNG HM251JI behind StarTech IDE2SAT2 (39,652 B UART, M6930LB, TM LI, zero BGO fail / U99).",
+      "sites": [
+        "FVU) check_sum = 0x32836a32 (0x00010000 & 0x1D1A5970)",
+        "[STAGE2] Boot MAIN @ 0x57000000 (HEADER:81132B55)",
+        "PiE-OS 3060NP + SAMSUNG HM251JI + TM LI"
+      ],
+      "evidence_files": [
+        "docs/evidence/boottrace_sata_bridge_gate3_8mb_boot1_fvu_20261123.log",
+        "docs/evidence/boottrace_sata_bridge_gate3_8mb_boot2_main_20261123.log"
+      ],
+      "sha256_assertions": [
+        {
+          "path": "docs/evidence/boottrace_sata_bridge_gate3_8mb_boot1_fvu_20261123.log",
+          "sha256": "455A86083636CF4BCC2C49D33FFD55BE1391E6E9C12EDB7EBD15791DBDACD2D3",
+          "required": true
+        },
+        {
+          "path": "docs/evidence/boottrace_sata_bridge_gate3_8mb_boot2_main_20261123.log",
+          "sha256": "ACBEE64C1710E015DC32F707BFF4ACD3CE25CB1224575AB38753A7B3FF95595A",
+          "required": true
+        },
+        {
+          "path": "firmware_and_images/sd_unbrick_kit_sata_bridge_stage2/DIGADIAG.FRM",
+          "sha256": "305CC2EEBC09BBAA3BB5C5D75C0395EB16831BED4B9F80EAFD57B9945E6A762D",
+          "required": false
+        },
+        {
+          "path": "firmware_and_images/sd_unbrick_kit_sata_bridge_stage2/PANA__SD.FRM",
+          "sha256": "42B007EB7E35CAEEBA19AFC0D105F92A909312B9B7FD92DA4E29D03076EF8523",
+          "required": false
+        }
+      ],
+      "docs": [
+        "docs/pt-BR/GUIA_HARDWARE_STARTECH_IDE2SAT2_E_CABO_FFC_TYPE_B.md",
+        "docs/pt-BR/PESQUISA_PORTOES_VALIDACAO_SATA_STAGE2_E_RETARGET_BGO_8MB.md"
+      ]
+    },
+    {
+      "id": "EV-20261123-023",
+      "level": "N2_EMULATED",
+      "claim_pt": "Extensao MAIN3410PQ (build europeia M6:PAL:DVD.HDD com NTSC/PAL chaveavel + drivers AIOF PAL_M, 13.003.052 B, BGO nativo 0x84130000 em 0x5756EFD4, patch 1000ms SATA em VA 0x5710A9D0->0x574DF538) e prova Portao 4 Loader ver0.61 Nor-FROM SA11..SA14 (FUN_4400894B..0x44008B98, FUN_4400A1F1, memcpy 0x84040000->0x90400000, SA0..SA10 intactos) em Mn103Vm + SpansionNorFlash.",
+      "claim_en": "MAIN3410PQ extension (European M6:PAL:DVD.HDD build with switchable NTSC/PAL + shared AIOF PAL_M driver symbols, 13,003,052 B, native 0x84130000 BGO at 0x5756EFD4, 1000ms SATA fix at VA 0x5710A9D0->0x574DF538) and Gate 4 Loader ver0.61 Nor-FROM SA11..SA14 boot proof (FUN_4400894B..0x44008B98, FUN_4400A1F1, memcpy 0x84040000->0x90400000, SA0..SA10 untouched) in Mn103Vm + SpansionNorFlash.",
+      "sites": [
+        "MAIN3410PQ VA 0x5710A9D0 -> CALL 0x574DF538",
+        "MAIN3410PQ VA 0x5756EFD4 (0x84130000)",
+        "Loader ver0.61 FUN_4400894B / FUN_4400A1F1 / 0x504800AF (\"fvu.exe\")"
+      ],
+      "evidence_files": [
+        "crates/panadiga-core/src/re/sata_bridge_fix.rs",
+        "crates/panadiga-core/src/re/sata_bridge_stage2/mod.rs",
+        "crates/panadiga-core/src/re/main_bgo_retarget/mod.rs"
+      ],
+      "sha256_assertions": [],
+      "docs": [
+        "docs/pt-BR/PESQUISA_PORTOES_VALIDACAO_SATA_STAGE2_E_RETARGET_BGO_8MB.md",
+        "docs/en-US/RESEARCH_VALIDATION_GATES_SATA_STAGE2_AND_8MB_BGO_RETARGET.md"
+      ]
+    },
+    {
+      "id": "EV-20261123-024",
+      "level": "N1_STATIC",
+      "claim_pt": "Promocao SSOT/RAG/MCP anti-regressao: 11 traps em profiles/traps/geometry_and_binary_traps.json, dicionarios curados LOADER_VER061 / MAIN3060NP / MAIN3410PQ em profiles/symbols/loader_ver061_toc48_main57/ e indexacao direta ssot_atlas.rs no panadiga-rag.",
+      "claim_en": "Anti-regression SSOT/RAG/MCP promotion: 11 traps in profiles/traps/geometry_and_binary_traps.json, curated LOADER_VER061 / MAIN3060NP / MAIN3410PQ symbol dictionaries in profiles/symbols/loader_ver061_toc48_main57/, and direct ssot_atlas.rs indexing in panadiga-rag.",
+      "sites": [
+        "profiles/traps/geometry_and_binary_traps.json",
+        "profiles/symbols/loader_ver061_toc48_main57/",
+        "crates/panadiga-rag/src/indexer/ssot_atlas.rs"
+      ],
+      "evidence_files": [
+        "profiles/traps/geometry_and_binary_traps.json",
+        "profiles/forensic_atlas/firmware_forensic_atlas.json",
+        "crates/panadiga-rag/src/indexer/ssot_atlas.rs"
+      ],
+      "sha256_assertions": [],
+      "docs": [
+        "docs/pt-BR/PESQUISA_PORTOES_VALIDACAO_SATA_STAGE2_E_RETARGET_BGO_8MB.md",
+        "docs/en-US/RESEARCH_VALIDATION_GATES_SATA_STAGE2_AND_8MB_BGO_RETARGET.md"
+      ]
+    },
+    {
+      "id": "EV-20261123-025",
+      "level": "N4_HARDWARE",
+      "claim_pt": "Portao 4 Etapa 1 (dry-run via SD sem gravar NOR): auto-descompactador P4ZU em SDRAM (256 B) + Loader ver0.61 zlib 1.2.2 + trampolim 0x91040000 executaram Fvu ver0.61 (check-sum[0x316E619]) e deram boot completo em MAIN3410PQ via HDD SATA SAMSUNG HM251JI atras da IDE2SAT2 na COM10 (91.312 B UART, overflow=NO, zero escritas na NOR).",
+      "claim_en": "Gate 4 Stage 1 (SD dry-run with zero NOR writes): 256 B P4ZU SDRAM self-unpacker + Loader ver0.61 zlib 1.2.2 + 0x91040000 trampoline executed Fvu ver0.61 (check-sum[0x316E619]) and booted MAIN3410PQ from SAMSUNG HM251JI SATA HDD behind IDE2SAT2 on COM10 (91,312 B UART captured, overflow=NO, zero NOR writes).",
+      "sites": [
+        "cheking for fvu program check-sum[0x316E619].",
+        "***** Fvu ver0.61 [05/11/01] *****",
+        "[STAGE2] Boot MAIN @ 0x57000000 (HEADER:0094407E, System Version : 3410PQ)"
+      ],
+      "evidence_files": [
+        "docs/evidence/com10_portao4_etapa1_sd_dryrun_20261123.log",
+        "crates/panadiga-core/src/re/eh55_bgo/norfrom_install.rs",
+        "crates/panadiga-core/src/re/sata_bridge_stage2/mod.rs"
+      ],
+      "sha256_assertions": [
+        {
+          "path": "docs/evidence/com10_portao4_etapa1_sd_dryrun_20261123.log",
+          "sha256": "87707AFA1E4A63E18EABC62B2008CF7D526E2EFB2284FC8317D77BC3BB82B2E7",
+          "required": true
+        },
+        {
+          "path": "firmware_and_images/sd_unbrick_kit_portao4_sd_dryrun_3410pq/PANA__SD.FRM",
+          "sha256": "182BDE43A00E1620F4769CFA6EC14F7C437A7DF36F4AA8DD7374B962D870715F",
+          "required": false
+        }
+      ],
+      "docs": [
+        "docs/pt-BR/PESQUISA_PORTOES_VALIDACAO_SATA_STAGE2_E_RETARGET_BGO_8MB.md",
+        "docs/en-US/RESEARCH_VALIDATION_GATES_SATA_STAGE2_AND_8MB_BGO_RETARGET.md"
+      ]
+    },
+    {
+      "id": "EV-20261123-026",
+      "level": "N1_STATIC",
+      "claim_pt": "Auditoria forense da tabela config1 0x57AED0A8 no MAIN3410PQ (base RAM 0x53184B44 em 0x5751702A): ID 0x0117 (TV System) fica na Pagina 9 +0x00F0 (config1+0x12F0) com 0x00=TV_NTSC / 0x01=TV_PAL; postmortem da regressao BGO expoe PID 0x000C (Pagina 0 ID 0x00C6 +0x00EC corrompido 0xFF->0x01) e PID 0x01AC (SA55 slot 18 tag 0x0000).",
+      "claim_en": "Forensic audit of MAIN3410PQ config1 table 0x57AED0A8 (RAM base 0x53184B44 at 0x5751702A): ID 0x0117 (TV System) lives at Page 9 +0x00F0 (config1+0x12F0) with 0x00=TV_NTSC / 0x01=TV_PAL; live BGO postmortem isolates PID 0x000C (Page 0 ID 0x00C6 +0x00EC corrupted 0xFF->0x01) and PID 0x01AC (SA55 slot 18 tag 0x0000).",
+      "sites": [
+        "0x5751702A / 0x57AED0A8 ID 0x0117 (+0x12F0 = page 9 + 0x00F0)",
+        "0x57525D89 ID 0x00C6 (+0x00EC on PID 0x000C page 0)",
+        "SA55 (F2_02) slot 18 tag=0x0000 (PID 0x01AC)"
+      ],
+      "evidence_files": [
+        "crates/panadiga-core/src/re/eh55_bgo/live_apply/live_heal.rs",
+        "docs/evidence/bgo_heal_nfrom_ntsc_20261123.log"
+      ],
+      "sha256_assertions": [
+        {
+          "path": "docs/evidence/bgo_heal_nfrom_ntsc_20261123.log",
+          "sha256": "52CD7675528E1B294F6B6098717E2A2428A05B1F89D175042BFAD025DCBF2985",
+          "required": true
+        }
+      ],
+      "docs": [
+        "docs/pt-BR/PESQUISA_PORTOES_VALIDACAO_SATA_STAGE2_E_RETARGET_BGO_8MB.md",
+        "docs/en-US/RESEARCH_VALIDATION_GATES_SATA_STAGE2_AND_8MB_BGO_RETARGET.md"
+      ]
+    },
+    {
+      "id": "EV-20261123-027",
+      "level": "N4_HARDWARE",
+      "claim_pt": "Cirurgia CoW BGO sem apagar setores (SA26..SA70) ao vivo no DMR-EH55PL-S (COM10, VDD=3.26V, NSW5V=1, BGO_INSPECT healthy=YES com 0 furos 0xFFFF): FAT dinamica resolveu P1=SA39 e open=SA37 (active_l2p=1037, blank_sps_total=22), gravando em SA37 slots 32..34 a restauracao de config1[0] (PID 0x0044, +0x0EC=0xFF), config1[9] TV_NTSC (PID 0x003E, +0x0F0=0x00000000) e fs4.dat[131] limpo (PID 0x01AC, SHA-256 B58B55FC010B651869BE74EA35FF6B5D7E413F4FA0F38DDF91C767391AA6271F). Backup pre-cirurgia de 178.176 B e read-back pos-escrita 100% integros (SA37 holes=0); BOOTTRACE 75000 parou em +51263ms (double-reset [41] atrasou STAGE2 ate +49019ms; corte durante FPC RCV TIMEOUT antes de AVOUT_init/0x1AC), e heartbeat passivo pos-boot confirmou ONLINE_HEALTHY (vdd_mv=3258, nsw5v=1, drops=41, POWERED / AWAKE, wdt_recoveries=0, reboot_src=CLEAN).",
+      "claim_en": "Live zero-erase BGO CoW surgery (SA26..SA70) on DMR-EH55PL-S (COM10, VDD=3.26V, NSW5V=1, BGO_INSPECT healthy=YES with 0 intermediate 0xFFFF holes): dynamic FAT walk resolved P1=SA39 and open=SA37 (active_l2p=1037, blank_sps_total=22), writing to SA37 slots 32..34 the restoration of config1[0] (PID 0x0044, +0x0EC=0xFF), config1[9] TV_NTSC (PID 0x003E, +0x0F0=0x00000000), and clean fs4.dat[131] (PID 0x01AC, SHA-256 B58B55FC010B651869BE74EA35FF6B5D7E413F4FA0F38DDF91C767391AA6271F). Pre-surgery 178,176 B backup and post-write readback verified 100% intact (SA37 holes=0); BOOTTRACE 75000 ended at +51263ms ([41] double-reset delayed STAGE2 until +49019ms; window closed during FPC RCV TIMEOUT before AVOUT_init/0x1AC), and post-boot passive heartbeat confirmed ONLINE_HEALTHY (vdd_mv=3258, nsw5v=1, drops=41, POWERED / AWAKE, wdt_recoveries=0, reboot_src=CLEAN).",
+      "sites": [
+        "SA39 (P1 FAT) / SA37 (open block slots 32, 33, 34)",
+        "config1[0] PID 0x0044 (ID 0x00C6 +0x0EC=0xFF) -> SA37 slot 32 L2P tid=0x0004 sp=234",
+        "config1[9] PID 0x003E (ID 0x0117 +0x0F0=0x00000000 TV_NTSC) -> SA37 slot 33 L2P tid=0x0003 sp=235",
+        "fs4.dat[131] PID 0x01AC (restored B58B55FC...) -> SA37 slot 34 L2P tid=0x001A sp=236"
+      ],
+      "evidence_files": [
+        "docs/evidence/bgo_bloco_a_surgery_ntsc_pid0c_pid1ac_20261123.log",
+        "docs/evidence/boottrace_bloco_a_ntsc_cured_20261123.log"
+      ],
+      "sha256_assertions": [
+        {
+          "path": "docs/evidence/bgo_bloco_a_surgery_ntsc_pid0c_pid1ac_20261123.log",
+          "sha256": "DF864EA9FAC42E016F3F2B532A6E26F304A10769D05D34B1E9308D39F62A98D2",
+          "required": true
+        },
+        {
+          "path": "docs/evidence/boottrace_bloco_a_ntsc_cured_20261123.log",
+          "sha256": "113EB37723F551446ECEF41539261857A19F33ED4C080DE59225406D3DC1DFCA",
+          "required": true
+        }
+      ],
+      "docs": [
+        "docs/pt-BR/PESQUISA_PORTOES_VALIDACAO_SATA_STAGE2_E_RETARGET_BGO_8MB.md",
+        "docs/en-US/RESEARCH_VALIDATION_GATES_SATA_STAGE2_AND_8MB_BGO_RETARGET.md"
+      ]
+    },
+    {
+      "id": "EV-20261123-028",
+      "level": "N4_HARDWARE",
+      "claim_pt": "Cirurgia CoW BGO Bloco B ao vivo no DMR-EH55PL-S (COM10, VDD=3.27V, NSW5V=1, BGO_INSPECT healthy=YES, P1=SA41 sp=167, open=SA29): gravacao em SA29 slots 58..59 curou config1[9] para TV_NTSC (+0x0EC=0x01, +0x0F0=01000000 via PID 0x003E) e restaurou fs4.dat[132] (PID 0x01C1, SHA-256 E0B56378...) preservando SA37 slot 19 (0x0F20) e zerando mismatches (0/45 setores com 0 furos). No boot real seguinte (MAIN 3410PQ), AVOUT_init() e avout_tv_system=0 (TV_NTSC(0), AVOUT_V_Mute onoff=0, VFD DV) confirmaram video NTSC curado, enquanto a captura COM10 isolou na linha 1489 [nfrom] Status flag change error[1] -> File rewrite end error[-3] -> 11x bgo_writeD(ID=0xF07/0xF01) return error(19) -> NFROMError Power off.",
+      "claim_en": "Live Bloco B BGO CoW surgery on DMR-EH55PL-S (COM10, VDD=3.27V, NSW5V=1, BGO_INSPECT healthy=YES, P1=SA41 sp=167, open=SA29): writing SA29 slots 58..59 switched config1[9] to TV_NTSC (+0x0EC=0x01, +0x0F0=01000000 via PID 0x003E) and restored fs4.dat[132] (PID 0x01C1, SHA-256 E0B56378...) while preserving SA37 slot 19 (0x0F20) and eliminating L2P mismatches (0 across 45 sectors, 0 holes). Subsequent live MAIN 3410PQ boot confirmed AVOUT_init() success, TV_NTSC(0), avout_tv_system=0, AVOUT_V_Mute onoff=0, and VFD 'DV', while line 1489 captured [nfrom] Status flag change error[1] -> File rewrite end error[-3] -> 11x bgo_writeD(ID=0xF07/0xF01) return error(19) -> NFROMError Power off.",
+      "sites": [
+        "SA41 (P1 sp=167 -> SA29 slots 58, 59; pre-backup 177,664 B SHA256=7576FF4AC4C41C0E0A00AFB4051DB8D19770F8F01CC7E9C9896965B4C26ECF43)",
+        "config1[9] PID 0x003E -> TV_NTSC(0), avout_tv_system = 0, AVOUT_V_Mute: onoff=0, VFD DV",
+        "boottrace line 1489: [nfrom] Status flag change error[1] / bgo_writeD error(19) -> NFROMError Power off"
+      ],
+      "evidence_files": [
+        "docs/evidence/bgo_bloco_b_surgery_ntsc_pid1c1_20261123.log",
+        "docs/evidence/boottrace_bloco_b_ntsc_cured_20261123.log"
+      ],
+      "sha256_assertions": [
+        {
+          "path": "docs/evidence/bgo_bloco_b_surgery_ntsc_pid1c1_20261123.log",
+          "sha256": "A4347281362152EF9F32C512E287879A9B5D42BE1793234F5940B288B44373D8",
+          "required": true
+        },
+        {
+          "path": "docs/evidence/boottrace_bloco_b_ntsc_cured_20261123.log",
+          "sha256": "D5497DA7F15858F42D72C26C9AE5E8AC2F8BC5493E81FCB9A8718AAEB0A77685",
+          "required": true
+        }
+      ],
+      "docs": [
+        "docs/pt-BR/PESQUISA_PORTOES_VALIDACAO_SATA_STAGE2_E_RETARGET_BGO_8MB.md",
+        "docs/en-US/RESEARCH_VALIDATION_GATES_SATA_STAGE2_AND_8MB_BGO_RETARGET.md"
+      ]
+    },
+    {
+      "id": "EV-20261123-029",
+      "level": "N2_EMULATED",
+      "claim_pt": "Diff completo byte a byte contra o IPL nativo 8 MiB (Loader ver0.61) provou exatamente 4 lacunas finais no driver BGO de MAIN3060NP/MAIN3410PQ (S12 cmp 0x1F->0xFF @ 0x574B44C0/0x574ACA0A, S13A mov 0x2000->0x10000 via NOP @ 0x574AFBB8/0x574A8102, S13B P5 memmove 8->4 @ 0x574AFC18/0x574A8162 e S14 cmp 0x20->0x100 @ 0x574B3E59/0x574AC3A3), expandindo a cave em SDRAM para 201 B (0x57000320..0x570003E9). No emulador Mn103Vm para MAIN3060NP e MAIN3410PQ, o controle negativo sem S13A reproduziu rc=-3 + erro[1] de compactacao + File rewrite end error[-3] + lock=1 + bgo_writeD(0xF07) error(19) + rc=-2, enquanto S1..S14+S13A/S13B concluiram avanco Part A (sp=0x28->0x29), rollover Part B (sp=0xFF->0x100, P5[3]=0xFFFF, reserva P5 alocada, assentamento BGO idempotente) e readback NFD_Read(22). Kit SD Stage-2 3410PQ reconstruido em scratch aprovado com 0 falhas em verify-sd --audit-profile hardened (PANA__SD.FRM 7.181.464 B, SHA256=2DC075F2C01FBB8E798D450EAC806ED0DB6113F2B93C1BE31BEF626A99A889DE; MAIN3410PQ interno SHA256=CDA7B2CB960D878B40AE64D768B0138AA855E35F258D67D1A8BEFC47156F0C3A; aguarda teste em silicio real para confirmar eliminacao da falha L1489).",
+      "claim_en": "Exhaustive byte diff against native 8 MiB Loader ver0.61 IPL proved the exact 4 remaining BGO driver gaps in MAIN3060NP/MAIN3410PQ (S12 cmp 0x1F->0xFF @ 0x574B44C0/0x574ACA0A, S13A 0x2000->0x10000 via NOP @ 0x574AFBB8/0x574A8102, S13B P5 memmove 8->4 @ 0x574AFC18/0x574A8162, S14 cmp 0x20->0x100 @ 0x574B3E59/0x574AC3A3), expanding the SDRAM trampoline cave to 201 B (0x57000320..0x570003E9). In Mn103Vm for both MAIN3060NP and MAIN3410PQ, the no-S13A negative control reproduced rc=-3 + compaction error[1] + File rewrite end error[-3] + lock=1 + bgo_writeD(0xF07) error(19) + rc=-2, whereas full S1..S14+S13A/S13B passed Part A write advance (sp>0x1F), Part B rollover (sp=0xFF->0x100, P5[3]=0xFFFF, P5 spare allocated, idempotent BGO remount settlement), and NFD_Read(22) verification. Rebuilt Stage-2 3410PQ SD kit in scratch passed hardened verify-sd with 0 fails (PANA__SD.FRM 7,181,464 B, SHA256=2DC075F2C01FBB8E798D450EAC806ED0DB6113F2B93C1BE31BEF626a99a889de; unpacked MAIN3410PQ SHA256=CDA7B2CB960D878B40AE64D768B0138AA855E35F258D67D1A8BEFC47156F0C3A; physical EH55 bench verification still required to confirm elimination of L1489 on silicon).",
+      "sites": [
+        "S12 @ 0x574B44C0 / 0x574ACA0A (cave 0x570003C5); S14 @ 0x574B3E59 / 0x574AC3A3 (cave 0x570003D7, 201 B total)",
+        "S13A @ 0x574AFBB8..0x574AFBBA / 0x574A8102..0x574A8104 (CB CB CB); S13B @ 0x574AFC18 / 0x574A8162 (0x04)",
+        "Hardened scratch Stage-2 MAIN3410PQ PANA__SD.FRM (7,181,464 B, SHA256=2DC075F2C01FBB8E798D450EAC806ED0DB6113F2B93C1BE31BEF626A99A889DE)"
+      ],
+      "evidence_files": [
+        "crates/panadiga-core/src/re/main_bgo_retarget/mod.rs",
+        "profiles/symbols/loader_ver061_toc48_main57/MAIN3060NP.json",
+        "profiles/traps/geometry_and_binary_traps.json"
+      ],
+      "sha256_assertions": [],
+      "docs": [
+        "docs/pt-BR/PESQUISA_PORTOES_VALIDACAO_SATA_STAGE2_E_RETARGET_BGO_8MB.md",
+        "docs/en-US/RESEARCH_VALIDATION_GATES_SATA_STAGE2_AND_8MB_BGO_RETARGET.md"
+      ]
+    },
+    {
+      "id": "EV-20261123-030",
+      "level": "N4_HARDWARE",
+      "claim_pt": "Validacao em silicio real (COM10, DMR-EH55PL-S) do kit SD Stage-2 MAIN3410PQ com retarget BGO completo S1..S14+S13A/S13B: Boot 1 (WAITTX_FVU, check-sum[0x21647BA], File ID[0xC8] seek 0xF1800 size=0x5E7C98, check_sum=0x2f82c81a) gravou e verificou ambos os espelhos no HDD (Vefify OK em 0x00010000 e 0x1D1A5970, success to update mainsoft.). Boot 2 a frio direto do SAMSUNG HM251JI (BOOTTRACE 90000 NORMAL, 134.268 B / 95.399 B UART, 1.935 linhas, ovf=NO, ferr=0, perr=0, CtrlEdges: NSW5V=0) executou MAIN 3410PQ com TV_NTSC(0), avout_tv_system=0, AVOUT_V_Mute: onoff=0 e completou :::SYS_RSV::: >> nfrom back up ok. (L1690) / sys_rsv init success. (L1692), startup: HDD opened, SYS_CNTL_set_pow_status(SYS_CNTL_POW_ON), ### HDD WAKEUP ###, sys_navi/sys_media READY e setgui end. tsk=106 com 0 erros nfrom/bgo_writeD/NFROMError Power off/U99 e heartbeat pos-boot ONLINE_HEALTHY (VDD=3.26V, NSW5V=1, NSW5V_DROPS=74 inalterado).",
+      "claim_en": "Real-hardware COM10 validation (DMR-EH55PL-S) of rebuilt Stage-2 MAIN3410PQ S1..S14+S13A/S13B SD kit: Boot 1 (WAITTX_FVU, fvu check-sum[0x21647BA], File ID[0xC8] seek 0xF1800 size=0x5E7C98, check_sum=0x2f82c81a) flashed and verified both HDD mirrors (Vefify OK on 0x00010000 and 0x1D1A5970, success to update mainsoft.). Subsequent 90 s cold boot from SAMSUNG HM251JI (BOOTTRACE 90000 NORMAL, 134,268 B / 95,399 B UART, 1,935 lines, ovf=NO, ferr=0, perr=0, CtrlEdges: NSW5V=0) ran MAIN 3410PQ with [SYS_BOOT]AVOUT_init, TV_NTSC(0), avout_tv_system=0, AVOUT_V_Mute: onoff=0, and completed :::SYS_RSV::: >> nfrom back up ok. (L1690) / sys_rsv init success. (L1692), startup: HDD opened, SYS_CNTL_set_pow_status(SYS_CNTL_POW_ON), ### HDD WAKEUP ###, sys_navi/sys_media READY, and setgui end. tsk=106 with 0 occurrences of nfrom/bgo_writeD/NFROMError Power off/U99 and post-boot heartbeat ONLINE_HEALTHY (VDD=3.26V, NSW5V=1, NSW5V_DROPS=74 unchanged).",
+      "sites": [
+        "Boot 1 FVU: size=0x5E7C98, check_sum=0x2f82c81a, fvu program check-sum[0x21647BA], Vefify OK x2 (0x00010000 & 0x1D1A5970)",
+        "Boot 2 MAIN 3410PQ: [STAGE2] Boot MAIN @ 0x57000000, TV_NTSC(0), avout_tv_system=0, AVOUT_V_Mute: onoff=0",
+        "L1690/L1692 :::SYS_RSV::: >> nfrom back up ok. / sys_rsv init success. -> 0 nfrom/bgo_writeD/NFROMError Power off/U99 errors -> setgui end. tsk=106"
+      ],
+      "evidence_files": [
+        "docs/evidence/boottrace_sata_bridge_gate3_3410pq_s14_boot1_fvu_20261123.log",
+        "docs/evidence/boottrace_sata_bridge_gate3_3410pq_s14_boot2_main_20261123.log"
+      ],
+      "sha256_assertions": [
+        {
+          "path": "docs/evidence/boottrace_sata_bridge_gate3_3410pq_s14_boot1_fvu_20261123.log",
+          "sha256": "33B0CC171292CBD02E235609E0BC3748812867D6A1D5281EB7E55CC1A6EF7D12",
+          "required": true
+        },
+        {
+          "path": "docs/evidence/boottrace_sata_bridge_gate3_3410pq_s14_boot2_main_20261123.log",
+          "sha256": "5AD28A99F7B8692D93A36F27F16201340C7AAAA76A7872F9E7D8F7A748EEF30A",
+          "required": true
+        }
+      ],
+      "docs": [
+        "docs/pt-BR/PESQUISA_PORTOES_VALIDACAO_SATA_STAGE2_E_RETARGET_BGO_8MB.md",
+        "docs/en-US/RESEARCH_VALIDATION_GATES_SATA_STAGE2_AND_8MB_BGO_RETARGET.md"
+      ]
+    },
+    {
+      "id": "EV-20261124-001",
+      "level": "N4_HARDWARE",
+      "claim_pt": "Gravacao AO VIVO em bancada (`panadiga-live-bench`, COM10): Boot 1 (`WAITTX`) gravou e verificou MAIN 3060NP `S1..S14` nos 2 espelhos do HDD (`fvu program check-sum[0x21647BA]`, `File ID[0xC8] seek 0xF1800 size=0x645048`, `check_sum = 0x32873975.`, `Vefify OK` x2 em `0x00010000` e `0x1D1A5970`, `success to update mainsoft.`). No Boot 2 subsequente (`BOOTTRACE 90000 NORMAL`), remocao/reinsercao manual do SD e ciclo de reset do operador em `+82.667s..+88.897s` levaram o `Loader ver0.61` a cair em `HDD_MAX_LBA get failed[0xE8000000]` + `SD Card remove` (`+5183ms`) + loop ODD (`80040904` x62) antes de disparar `Fvu ver0.61` em `+89426ms` no encerramento da janela (`@P7501_BOOT_CLASS verdict=HDD_BRIDGE_WAIT_FAIL`); boot limpo do `MAIN 3060NP` aguardando nova janela com SD inserido desde `t=0` e alimentacao ON.",
+      "claim_en": "Live bench flash (`panadiga-live-bench`, COM10): Boot 1 (`WAITTX`) flashed and verified MAIN 3060NP `S1..S14` onto both HDD mirrors (`fvu program check-sum[0x21647BA]`, `File ID[0xC8] seek to 0xF1800`, `size=0x645048`, `check_sum = 0x32873975.`, `Vefify OK` x2 at `0x00010000` & `0x1D1A5970`, `success to update mainsoft.`). During subsequent Boot 2 (`BOOTTRACE 90000 NORMAL`), manual operator SD removal/reinsertion and reset cycle near `+82.667s..+88.897s` caused `Loader ver0.61` to hit `HDD_MAX_LBA get failed[0xE8000000]` + `SD Card remove` (`+5183ms`) + ODD `80040904` x62 before launching `Fvu ver0.61` at `+89426ms` right as the 90 s capture window closed (`@P7501_BOOT_CLASS verdict=HDD_BRIDGE_WAIT_FAIL`); uninterrupted `MAIN 3060NP` Boot 2 trace still pending with SD seated from `t=0` and AC power ON.",
+      "sites": [
+        "Boot 1 FVU: File ID[0xC8] size=0x645048, check_sum = 0x32873975., Vefify OK x2 (0x00010000 & 0x1D1A5970), success to update mainsoft.",
+        "Boot 2: HDD_MAX_LBA get failed[0xE8000000] / SD Card remove (+5183ms) -> operator reset/SD reinsert (+88897ms) -> Fvu ver0.61 (+89426ms)"
+      ],
+      "evidence_files": [
+        "docs/evidence/boottrace_sata_bridge_gate3_3060np_s14_boot1_fvu_20261124.log",
+        "docs/evidence/boottrace_sata_bridge_gate3_3060np_s14_boot2_main_20261124.log"
+      ],
+      "sha256_assertions": [
+        {
+          "path": "docs/evidence/boottrace_sata_bridge_gate3_3060np_s14_boot1_fvu_20261124.log",
+          "sha256": "8701CD4F6CCA6A72269BAA19B21A41DEF65106812A18513094DD3A17FBA49222",
+          "required": true
+        },
+        {
+          "path": "docs/evidence/boottrace_sata_bridge_gate3_3060np_s14_boot2_main_20261124.log",
+          "sha256": "8876FBC4798F8B28FE3315DBA8BDD261D9E11BFADD87D5D5A32DD9506C5E059D",
+          "required": true
+        }
+      ],
+      "docs": [
+        "docs/pt-BR/PESQUISA_PORTOES_VALIDACAO_SATA_STAGE2_E_RETARGET_BGO_8MB.md",
+        "docs/en-US/RESEARCH_VALIDATION_GATES_SATA_STAGE2_AND_8MB_BGO_RETARGET.md"
+      ]
     }
   ]
 }

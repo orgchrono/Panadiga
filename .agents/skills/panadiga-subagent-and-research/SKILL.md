@@ -13,7 +13,7 @@ Esta skill define quando e como delegar trabalho a subagentes, como conduzir inv
 
 ## 1. Quando Usar & Handoffs
 - Use quando uma investigação tocar múltiplos subsistemas, exigir leitura de manuais/logs/binários extensos ou demandar especialistas de domínio.
-- Para desenhar prompts de direcionamento ou auditoria red-team, combine com `panadiga-prompt-and-adversarial-audit`.
+- Para desenhar prompts de direcionamento ou auditoria red-team, combine com `panadiga-adversarial-and-hallucination-auditor`.
 - Para registrar conclusões e provas SHA-256 em disco, acione `panadiga-forensic-archival` e `panadiga-device-onboarding`.
 - Templates de brief e matriz completa de personas em [delegation-and-research-playbooks.md](./references/delegation-and-research-playbooks.md).
 

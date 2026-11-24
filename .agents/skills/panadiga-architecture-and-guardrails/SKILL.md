@@ -14,6 +14,7 @@ Esta skill impede degradação estrutural (god-modules, hardcode de modelos, dup
 ## 1. Quando Usar & Handoffs
 - Ative antes de criar módulos novos, dividir arquivos grandes, alterar fronteiras entre Rust/TS/C11/Python ou investigar regressão/dívida técnica.
 - Para implementação específica por stack, combine com `.agents/skills/panadiga-rust-backend-dev/SKILL.md`, `.agents/skills/panadiga-typescript-frontend-dev/SKILL.md`, `.agents/skills/panadiga-pico-flashing/SKILL.md` ou `.agents/skills/panadiga-rag-and-mcp-engineering/SKILL.md`.
+- Para simplificação de lógica procedural em FSMs puras, matemática sem float e reconhecimento de padrões em C11/Rust, use `.agents/skills/panadiga-functional-math-and-patterns/SKILL.md`.
 - Árvore de decisão de posicionamento de módulos, DAG MVVM e checklist anti-regressão em [architecture-fcis-mvvm-and-anti-patterns.md](./references/architecture-fcis-mvvm-and-anti-patterns.md).
 
 ## 2. Invariantes Arquiteturais Não-Negociáveis

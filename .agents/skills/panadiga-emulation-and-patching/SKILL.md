@@ -17,6 +17,7 @@ Esta skill conduz a geração segura de patches binários (CoW), a validação a
 - Ao persistir artefatos recompilados, passe pelo bucket `recompiled/` em `.agents/skills/panadiga-forensic-archival/SKILL.md`.
 - Para executar em hardware real, entregue para `.agents/skills/panadiga-bench-operations/SKILL.md`.
 - Matriz de limites `Mn103Vm` vs silício, tabela de VAs verificados e protocolo `PANAMON1>` em [emulation-limits-and-silicon-abi.md](./references/emulation-limits-and-silicon-abi.md).
+- Cheatsheet de registradores, `PSW`/`EPSW`, máscara `MOVM`, opcodes e ABI `MN103S/AM34` em [mn103s-am34-assembly-and-abi-cheatsheet.md](../panadiga-opensource-firmware-dev/references/mn103s-am34-assembly-and-abi-cheatsheet.md).
 
 ## 2. Invariantes Não-Negociáveis
 1. **`Mn103Vm` ≠ Prova em Hardware Real (`N2_EMULATED` vs `N4_HARDWARE`):** A VM valida fluxo ISA `MN103S` e fronteiras estáticas de memória — **não** valida timing CFI Spansion (`~700 ms`), mascaramento atômico `CLI`, coerência I/D-cache, DMA ou watchdog `IC7501`.

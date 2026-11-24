@@ -1,0 +1,393 @@
+=== BOOTTRACE: window=75000ms boot=1 hold=0ms sticky=NO no_xrst=NO (8N1 @ 115200) ===
+[BOOTTRACE +  10ms] DDR CHECK: OK
+[BOOTTRACE +  19ms] Chip select = 1
+[BOOTTRACE +  20ms] F/E Address = 0x90202000 , Drive(compress) Size = 0xACC50
+[BOOTTRACE +  26ms] uncompress dst=90202000 len=160000 src=84080040 len=acc01
+[BOOTTRACE + 774ms] HEADER:5627DD54, DECOMP:5627DD54
+[BOOTTRACE + 777ms] F/E reset release finish ...
+[BOOTTRACE + 780ms] ***** Loader ver0.61 [06/03/06] *****
+[BOOTTRACE + 784ms] ***** normal mode *****
+[BOOTTRACE + 801ms] !!! start fmu to read & exec fvu. !!!
+[BOOTTRACE + 804ms] wait 1 second.
+[BOOTTRACE +1806ms] *** timer correspond initialize ***
+[BOOTTRACE +1812ms] startup reason = [41]
+[BOOTTRACE +1818ms] Main hung-up time changed 255[s].
+[BOOTTRACE +1827ms] *** RTSC Initialize ***
+[BOOTTRACE +4585ms] [RTSD] ATAPI Software Reset 
+[BOOTTRACE +4588ms] error! startup reason is invalid.
+[BOOTTRACE +8135ms] DDR CHECK: OK
+[BOOTTRACE +8144ms] Chip select = 1
+[BOOTTRACE +8145ms] F/E Address = 0x90202000 , Drive(compress) Size = 0xACC50
+[BOOTTRACE +8151ms] uncompress dst=90202000 len=160000 src=84080040 len=acc01
+[BOOTTRACE +8900ms] HEADER:5627DD54, DECOMP:5627DD54
+[BOOTTRACE +8903ms] F/E reset release finish ...
+[BOOTTRACE +8906ms] ***** Loader ver0.61 [06/03/06] *****
+[BOOTTRACE +8909ms] ***** normal mode *****
+[BOOTTRACE +8926ms] *** RTSC Initialize ***
+[BOOTTRACE +11633ms] [RTSD] ATAPI Software Reset 
+[BOOTTRACE +11646ms] [RTSD] HDD spin-up error (80000404)
+[BOOTTRACE +11649ms] miniboot : system assert!!
+[BOOTTRACE +11652ms] [RTSD] === IDE HOST ERROR === ( E8000000 )
+[BOOTTRACE +11656ms] *** ATAPI DEVICE ERROR
+[BOOTTRACE +11658ms] CDB  [FF EC 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +11662ms] Reg[00 00 00 00 00 00 00 : Err SecC SecN CylL CylH D/H Status] 
+[BOOTTRACE +11668ms] H_STAT [E8] T_STAT [0]
+[BOOTTRACE +11670ms] [RTSD] SRST Command Set
+[BOOTTRACE +11672ms] [RTSD] Reset Failed !! (80000407)
+[BOOTTRACE +11685ms] [RTSD] HDD spin-up error (80000404)
+[BOOTTRACE +11688ms] miniboot : system assert!!
+[BOOTTRACE +11691ms] [RTSD] === IDE HOST ERROR === ( E8000000 )
+[BOOTTRACE +11695ms] *** ATAPI DEVICE ERROR
+[BOOTTRACE +11697ms] CDB  [FF EC 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +11701ms] Reg[00 00 00 00 00 00 00 : Err SecC SecN CylL CylH D/H Status] 
+[BOOTTRACE +11707ms] H_STAT [E8] T_STAT [0]
+[BOOTTRACE +11709ms] [RTSD] SRST Command Set
+[BOOTTRACE +11711ms] [RTSD] Reset Failed !! (80000407)
+[BOOTTRACE +11724ms] [RTSD] HDD spin-up error (80000404)
+[BOOTTRACE +11727ms] miniboot : system assert!!
+[BOOTTRACE +11730ms] [RTSD] === IDE HOST ERROR === ( E8000000 )
+[BOOTTRACE +11734ms] *** ATAPI DEVICE ERROR
+[BOOTTRACE +11736ms] CDB  [FF EC 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +11740ms] Reg[00 00 00 00 00 00 00 : Err SecC SecN CylL CylH D/H Status] 
+[BOOTTRACE +11746ms] H_STAT [E8] T_STAT [0]
+[BOOTTRACE +11748ms] [RTSD] SRST Command Set
+[BOOTTRACE +11750ms] [RTSD] Reset Failed !! (80000407)
+[BOOTTRACE +11753ms] HDD_MAX_LBA get failed[0xE8000000].
+[BOOTTRACE +11756ms] mainsoft data is invalid, so set update flag.
+[BOOTTRACE +11778ms] [nfrom] file_no[17],skip(0),non_skip(1),erase(0),new_write(0).
+[BOOTTRACE +11793ms] !!! start fmu to read & exec fvu. !!!
+[BOOTTRACE +11796ms] wait 1 second.
+[BOOTTRACE +12798ms] *** timer correspond initialize ***
+[BOOTTRACE +12804ms] startup reason = [41]
+[BOOTTRACE +12810ms] Main hung-up time changed 255[s].
+[BOOTTRACE +12820ms] Read fvu program from Update-Disk to 0x90400000.
+[BOOTTRACE +12824ms] SD card check start
+[BOOTTRACE +12826ms] SD init start...
+[BOOTTRACE +12918ms] [SDCD] sdcd_insrmv_check:SD Card inserted 
+[BOOTTRACE +13174ms] [SDCD] === This Card Spec ==== 
+[BOOTTRACE +13177ms] .Card type:2(condition:3) wp:0
+[BOOTTRACE +13180ms] .capacity:3c4000[LBA](2021654528Byte) . transfer speed:25000[Kbps]
+[BOOTTRACE +13186ms] .RCA:2 . Bus Width:4(current) 4(support)
+[BOOTTRACE +13190ms] .Multi Max Block Len Read:2[SECT] / Write:2[SECT]
+[BOOTTRACE +13194ms] SD = 0x3C4000[LBA]
+[BOOTTRACE +13196ms] ... SD init end
+[BOOTTRACE +13205ms] FAT Mount ID = 0x1
+[BOOTTRACE +13210ms] FAT Open Old File ID = 0xC8
+[BOOTTRACE +13212ms] treat as SD.
+[BOOTTRACE +13229ms] File ID[0xC8] seek to 0xB1800.
+[BOOTTRACE +13297ms] File ID[0xC8] read to 0x90400000(size=0x40000).
+[BOOTTRACE +13301ms] cheking for fvu program check-sum[0x316E619].
+[BOOTTRACE +13387ms] [nfrom] file_no[17],skip(0),non_skip(1),erase(0),new_write(0).
+[BOOTTRACE +13402ms] success to read fvu program from Update-Disc.
+[BOOTTRACE +13437ms] [RTSD] Device Reset Occurred(0x62900) 
+[BOOTTRACE +13441ms] X(80062900)X(80023a00)X(80023a00)X(80023a00)
+[BOOTTRACE +13448ms] *** start fvu ***
+[BOOTTRACE +13655ms] ***** Fvu ver0.61 [05/11/01] *****
+[BOOTTRACE +13696ms] *** RTSC Initialize ***
+[BOOTTRACE +16898ms] [RTSD] ATAPI Software Reset 
+[BOOTTRACE +16902ms] [STAGE2] SATA HDD boot ('F'->FVU)...
+[BOOTTRACE +17407ms] SD init start...
+[BOOTTRACE +17499ms] [SDCD] sdcd_insrmv_check:SD Card inserted 
+[BOOTTRACE +17574ms] [SDCD] === This Card Spec ==== 
+[BOOTTRACE +17578ms] .Card type:2(condition:3) wp:0
+[BOOTTRACE +17581ms] .capacity:3c4000[LBA](2021654528Byte) . transfer speed:25000[Kbps]
+[BOOTTRACE +17588ms] .RCA:2 . Bus Width:4(current) 4(support)
+[BOOTTRACE +17593ms] .Multi Max Block Len Read:2[SECT] / Write:2[SECT]
+[BOOTTRACE +17598ms] SD = 0x3C4000[LBA]
+[BOOTTRACE +17600ms] ... SD init end
+[BOOTTRACE +17613ms] [RTSD] HDD already spin-up 
+[BOOTTRACE +17649ms] [RTSD] HDD Auto Spin up Mode 
+[BOOTTRACE +17658ms] [STAGE2] HDD MAX LBA=0x1D1C5970
+[BOOTTRACE +31873ms] uncompress dst=57000000 len=c6692c src=94000040 len=5e7c2a
+[BOOTTRACE +49015ms] HEADER:0094407E, DECOMP:0094407E
+[BOOTTRACE +49019ms] [STAGE2] Boot MAIN @ 0x57000000
+[BOOTTRACE +49663ms] [nfrom] DeviceInfo(EEPROM : 8Kbit)
+[BOOTTRACE +49676ms] **************************************************
+[BOOTTRACE +49681ms] [ftrec]Simple obstacle history
+[BOOTTRACE +49685ms] [ftrec]Running time  : 14708 [s]
+[BOOTTRACE +49688ms] [ftrec]Fault history : 20
+[BOOTTRACE +49691ms] [ftrec]NAND-FROM read error! Fault history clear!
+[BOOTTRACE +49696ms] --------------------------------------------------
+[BOOTTRACE +49701ms] kind, tick, running, other1, other2, other3
+[BOOTTRACE +49706ms] [ 0]0x4 , 2006/01/01 00:00:00 ,     14708 , src/fpcmain.c , 963 , 0
+[BOOTTRACE +49713ms] [ 1]0x4 , 2006/01/01 00:00:00 ,     14708 , src/sys_fip_fpc_exe.c , 3158 , 0
+[BOOTTRACE +49721ms] [ 2]0x4 , 2006/01/01 00:00:00 ,     14708 , src/sys_fip_osd_tools.c , 1174 , 0
+[BOOTTRACE +49729ms] [ 3]0x4 , 2006/01/01 00:00:00 ,     14708 , src/sys_fip_fpc_exe.c , 3158 , 0
+[BOOTTRACE +49737ms] [ 4]0x4 , 2006/01/01 00:00:00 ,     14708 , src/sys_fip_osd_tools.c , 1174 , 0
+[BOOTTRACE +49745ms] [ 5]0x4 , 2006/01/01 00:00:00 ,     14708 , src/sys_fip_fpc_exe.c , 3158 , 0
+[BOOTTRACE +49753ms] [ 6]0x4 , 2006/01/01 00:00:00 ,     14708 , src/sys_app_utility.c , 1812 , 0
+[BOOTTRACE +49761ms] [ 7]0x4 , 2006/01/01 00:00:00 ,     14708 , src/fpcmain.c , 963 , 0
+[BOOTTRACE +49768ms] [ 8]0x4 , 2006/01/01 00:00:00 ,     14708 , src/sys_fip_osd_tools.c , 1174 , 0
+[BOOTTRACE +49776ms] [ 9]0x4 , 2006/01/01 00:00:00 ,     14708 , src/sys_fip_fpc_exe.c , 3158 , 0
+[BOOTTRACE +49784ms] [10]0x4 , 2006/01/01 00:00:00 ,     14708 , src/sys_fip_osd_tools.c , 1174 , 0
+[BOOTTRACE +49792ms] [11]0x4 , 2006/01/01 00:00:00 ,     14704 , src/sys_fip_fpc_exe.c , 3158 , 0
+[BOOTTRACE +49800ms] [12]0x4 , 2006/01/01 00:00:00 ,     14700 , src/sys_fip_osd_tools.c , 1174 , 0
+[BOOTTRACE +49808ms] [13]0x4 , 2006/01/01 00:00:00 ,     14700 , src/fpcmain.c , 963 , 0
+[BOOTTRACE +49815ms] [14]0x4 , 2006/01/01 00:00:00 ,     14700 , src/sys_fip_osd_tools.c , 1174 , 0
+[BOOTTRACE +49823ms] [15]0x4 , 2006/01/01 00:00:00 ,     14700 , src/fpcmain.c , 963 , 0
+[BOOTTRACE +49830ms] [16]0x4 , 2006/01/01 00:00:00 ,     14700 , src/sys_fip_osd_tools.c , 1174 , 0
+[BOOTTRACE +49838ms] [17]0x4 , 2006/01/01 00:00:00 ,     14697 , src/fpcmain.c , 963 , 0
+[BOOTTRACE +49845ms] [18]0x4 , 2006/01/01 00:00:00 ,     14697 , src/fpcmain.c , 963 , 0
+[BOOTTRACE +49852ms] [19]0x4 , 2006/01/01 00:00:00 ,     14697 , src/fpcmain.c , 963 , 0
+[BOOTTRACE +49859ms] **************************************************
+[BOOTTRACE +49864ms] PiE-OS --- Personal Information & Entertainment - Operating System
+[BOOTTRACE +49871ms] Copyright (c) 1996-2001 by Matsushita Electric Industrial Co., Ltd.
+[BOOTTRACE +49878ms]   DVD Recorder DMR5x Series System Version : 3410PQ (2006/10/20)
+[BOOTTRACE +49885ms]     Factory System Version = 3410PQ
+[BOOTTRACE +49889ms]           1394avc.a Ver2.17(2006/02/09) : 1394AVC
+[BOOTTRACE +49894ms]            lnx_dd.a Ver2.01(2005/10/26) : 1394dd
+[BOOTTRACE +49899ms]               hsb.a Ver2.01(2005/09/12) : 1394lib
+[BOOTTRACE +49904ms]            fpc.a V7.0R122.8 (2006/6/20) : FPC(FrontPanelCommunication)
+[BOOTTRACE +49911ms]              log.a Ver1.76 (2005/12/05) : LOG Module
+[BOOTTRACE +49917ms]           ptk.a(M6) 2.2.06 (2006/01/17) : PiE-Toolkit
+[BOOTTRACE +49922ms]            timer.a V4.62.4 (2006/02/15) : Timer
+[BOOTTRACE +49927ms]        TitleSort.a Ver1.00 (2005/08/27) : Title Sort Module
+[BOOTTRACE +49933ms]        tuner.a V7.0R104.11 (2006/05/30) : Tuner I/F
+[BOOTTRACE +49939ms]            vbisl.a V2.0R21 (2005/12/26) : Vbisl Driver
+[BOOTTRACE +49944ms]             avin.a Ver0.82 (2006/06/30) : AVIN Lib.(mv3base)
+[BOOTTRACE +49950ms]         cd_core.a Ver 5.02 (2005/09/14) : CD/VCD CoreSoft
+[BOOTTRACE +49956ms]            davis.a ver2.10 (2006/01/16) : DAVIS
+[BOOTTRACE +49961ms]       decoder.a(DCS) Ver3.10 2005/12/16 : Decorder System Control
+[BOOTTRACE +49968ms]  decoder.a(DCR) DCR Ver2.120 2005/11/30 : DecorderVideoRecording
+[BOOTTRACE +49975ms]          decoder.a Ver0.49 (2005/05/20) : Decorder CD
+[BOOTTRACE +49980ms]    decoder.a(DCO) Ver0.078 (2006/04/17) : Decorder AVOUT
+[BOOTTRACE +49986ms]     decoder.a(DCV) Ver0.23 (2005/12/26) : M6xxx-Series Decorder DVD-Video
+[BOOTTRACE +49994ms]          decoder.a Ver0.73 (2005/11/21) : Decorder Video-CD
+[BOOTTRACE +50000ms]     decoder.a(DCA) Ver0.16 (2005/10/07) : M7xxx-Series Decorder DVD-Audio
+[BOOTTRACE +50007ms]          decoder.a Ver0.49 (2005/10/04) : Decorder MP3
+[BOOTTRACE +50013ms]          decoder.a Ver0.08 (2004/05/21) : Decorder SD MPEG2
+[BOOTTRACE +50019ms]          decoder.a Ver0.42 (2006/01/24) : Decorder AVI
+[BOOTTRACE +50025ms]              dml.a Ver1.00 (2004/10/20) : DiscManagementLibrary
+[BOOTTRACE +50031ms]              dvdcore.a v0.190(06/01/27) : DVD-Video/AudioCoreSoft
+[BOOTTRACE +50038ms]            dvdcore_ext.a v1.2(05/11/18) : DVD-Video/AudioCoreSoft
+[BOOTTRACE +50045ms]         dvr_core.a Ver0.781(2006/05/24) : DVR CORE
+[BOOTTRACE +50050ms]          dvr_ifo.a Ver0.02 (2003/10/22) : RTR_IFO Manager
+[BOOTTRACE +50056ms]                                                                                                                                                                
+[BOOTTRACE +50072ms]                                                                                              SRISC VerMv3SriscDrs-v0.90r037 (2005/10/11) : ENCODER-SRISC
+[BOOTTRACE +50087ms]                                                                                                                                                                
+[BOOTTRACE +50103ms]                                                                                           ERISC VerMv3RomEriscRAM-v0.90r010 (2005/11/07) : ENCODER-ERISC
+[BOOTTRACE +50119ms]               eif.a Ver0.08(2005/11/08) : Encoder I/F
+[BOOTTRACE +50124ms]              evp.a Ver0.07 (2004/06/08) : EVP Lib.
+[BOOTTRACE +50130ms]            fcore.a Ver0.25 (2006/01/10) : Finalize Core Module
+[BOOTTRACE +50136ms]             flib.a Ver0.28 (2005/12/06) : Finalize-Library.
+[BOOTTRACE +50142ms]        fs.a       Ver0.70e (2006/07/05) : File System (VDM Ver.0.92base)
+[BOOTTRACE +50150ms]         fs.a(HDFS) Ver0.80 (2006/02/07) : File System (HDFS)
+[BOOTTRACE +50156ms]         fs.a(UDF)  Ver0.12 (2005/08/31) : File System (UDF)
+[BOOTTRACE +50162ms]            ftrec.a Ver0.10 (2005/11/01) : FTREC
+[BOOTTRACE +50167ms]              iic.a Ver3.04 (2005/09/29) : IIC Lib.
+[BOOTTRACE +50173ms]         input.a 3.0.5(M6)  (2005/12/19) : PiE Input
+[BOOTTRACE +50178ms]              irq.a Ver0.22 (2005/09/05) : IRQ Lib
+[BOOTTRACE +50183ms]        jpg_core.a Ver4.131 (2005/12/15) : JPEG CoreSoft
+[BOOTTRACE +50188ms]        ld_gen.a Ver 0.14.0 (2005/10/28) : LD_gen - generic file loader
+[BOOTTRACE +50196ms]                lda.a Ver0.28 2005/08/25 : DVD-AUDIO Loader
+[BOOTTRACE +50202ms]      loader_vcd.a Ver 0.13 (2005/08/25) : Loder VCD/CD-DA
+[BOOTTRACE +50208ms]             ldg.a Ver 0.08 (2004/05/21) : Loder SD MPEG2
+[BOOTTRACE +50214ms]             ldm.a Ver 0.13 (2005/08/23) : Loder MP3
+[BOOTTRACE +50219ms]             ldr.a ver 0.203(2005/10/12) : RAM Loader
+[BOOTTRACE +50224ms]                ldv.a v0.100(2005/12/28) : DVDVideo Loader
+[BOOTTRACE +50230ms]              mbm.a Ver1.48 (2005/11/24) : Memory Back UP System
+[BOOTTRACE +50237ms]        mcm.a ver Ver 2.264 (2005/12/19) : MCM
+[BOOTTRACE +50241ms]           fmupre.a Ver0.28 (2005/11/30) : pre-update-firm
+[BOOTTRACE +50247ms]       mp3_core.a Ver1.09.5 (2005/11/30) : MP3 CoreSoft
+[BOOTTRACE +50253ms]            nfrom.a Ver0.33 (2005/12/06) : Nor-FROM Lib.
+[BOOTTRACE +50259ms]           nmi.a Ver 0.10.0 (2006/04/14) : NMI Handler Lib.
+[BOOTTRACE +50265ms]           robust.a Ver0.038(2003/12/26) : Robust
+[BOOTTRACE +50270ms]             rtscdd.a K0.58 (2006/07/05) : RTSD
+[BOOTTRACE +50275ms]     rtsdauth.a Ver0.15-MV3 (2005/12/14) : Copyright
+[BOOTTRACE +50280ms]           serial.a Ver0.33 (2005/06/28) : Debug Serial
+[BOOTTRACE +50286ms]    sys_boot.a Ver6.0.076.03(2006/03/14) : sys_boot(M6)
+[BOOTTRACE +50291ms]           sys_cd.a Ver 7.06(2005/11/02) : CD Media App
+[BOOTTRACE +50297ms]    sys_cntl.a Ver6.0.143.19(2006/05/12) : sys_cntl(M6)
+[BOOTTRACE +50303ms]        sys_dvdv.a Ver 1.054(2005/11/02) : M6 :DVD-Video System App 
+[BOOTTRACE +50310ms]      sys_epgeuro.a Ver0.314(2006/08/03) : sys_epgeuro
+[BOOTTRACE +50315ms]    sys_fact.a Ver.M6.065.09(2006/06/10) : Fact App.
+[BOOTTRACE +50320ms]      sys_fip.a Ver0.093.01 (2006/02/16) : FL&OSD Control
+[BOOTTRACE +50326ms]         sys_font.a Ver1.58 (2005/10/21) : sys_font
+[BOOTTRACE +50331ms]    sys_guibar.a Ver2.27.01 (2006/01/27) : GUIbar Lib (M6)
+[BOOTTRACE +50338ms]     sys_init.a Ver0.128.003(2006/03/02) : Initial Setting(M6920)
+[BOOTTRACE +50345ms]                                                                                                                                                                
+[BOOTTRACE +50363ms]                                                                                                sys_media.a Ver2.266.6920.06 (2006/05/16) : SYS_MEDIA
+[BOOTTRACE +50378ms]        sys_mp3.a Ver 0.48.0(2005/09/28) : MP3 Media App
+[BOOTTRACE +50384ms]       sys_msg.a Ver0.46.01 (2006/03/23) : MSG TASK(M6Series)
+[BOOTTRACE +50390ms] sys_navi.a Ver 1.03.122.06 (2006/03/17) : navi-gui app.
+[BOOTTRACE +50396ms]    sys_rsv.a Ver1.02.103.10(2006/10/19) : TimerREC App.(M6:PAL:DVD.HDD)
+[BOOTTRACE +50403ms]       sys_serv.a Ver.M6.025(2005/12/28) : Serv App.
+[BOOTTRACE +50409ms]           sys_ss.a Ver0.18 (2005/11/28) : SYS_SS TASK
+[BOOTTRACE +50414ms]      sys_text.a Ver6.0.006 (2006/01/11) : Soft-Keyboard
+[BOOTTRACE +50420ms]       sys_tun.a Ver0.381.02(2006/03/14) : Tuner App.(M6)
+[BOOTTRACE +50426ms]             time.a V7.0R03 (2005/12/15) : Clock & Calendar
+[BOOTTRACE +50432ms]          version.a Ver0.27  (2004/9/08) : Version Display Lib.
+[BOOTTRACE +50438ms]        wincap.a 4.0.4(M6)  (2005/11/29) : PiE WinCAP
+[BOOTTRACE +50444ms]                 kernel.a Ver 2005/10/11 : Kernel(M6_MV3Base) V2.0-1-5
+[BOOTTRACE +50451ms]          Dub_core.a Ver0.24(2005/12/21) : Dub_core
+[BOOTTRACE +50456ms]             avrec.a Ver0.13(2005/11/14) : AVREC
+[BOOTTRACE +50461ms]      decoder_jpg.a 0.11.0  (2005/12/02) : Decoder JPEG
+[BOOTTRACE +50467ms]        decoder_thu.a 1.04  (2005/12/06) : Thumbnail(MV3)
+[BOOTTRACE +50473ms]        divx_core.a Ver1.41 (2006/05/08) : DIVX CoreSoft
+[BOOTTRACE +50478ms]         fs.a(SDM)  Ver1.35 (2005/10/25) : File System (SDM)
+[BOOTTRACE +50484ms]                                                                                                                                                                
+[BOOTTRACE +50501ms]                                                                                                 GuideEuro.a Ver0.315/0.55_03(2006/08/03) : GuideEuro
+[BOOTTRACE +50516ms] sys_app_lib.a Ver6.0.270.03(2006/10/19) : sys_app_lib(M6)
+[BOOTTRACE +50522ms] [SYS_BOOT]FPC_init... 
+[BOOTTRACE +50524ms] [SYS_CNTL]SYS_CNTL_InitDeckMode
+[BOOTTRACE +50527ms] [SYS_CNTL]SYS_CNTL_InitDeckMode completed.
+[BOOTTRACE +50532ms] [SYS_CNTL]WakeupReason:[P50(11)]
+[BOOTTRACE +50535ms] [SYS_CNTL]KeyAction   :NEW[15] OLD[0]
+[BOOTTRACE +50539ms] [FPC]fpc_ChangeKeyCodeInit 
+[BOOTTRACE +50542ms] [FPC]FPC_ReciveTASK() : 00 41 20 01 00 00 0D 06 00 02 00 00 00 00 00 77 
+[BOOTTRACE +50549ms] [SYS_BOOT]FPC_GetPowerOnReason 0x41 0x20 0x0
+[BOOTTRACE +50554ms] [SYS_BOOT]RegionCode(EEPROM) [0x04]
+[BOOTTRACE +50558ms] [FPC]FPC_ReciveTASK() : 7F E4 01 01 00 00 0D 06 00 02 00 00 00 00 00 7A 
+[BOOTTRACE +50565ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +50569ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +50572ms] [FPC] !!- OPcode Emergency -!!
+[BOOTTRACE +50575ms] :: Send ::
+[BOOTTRACE +50576ms]   -- 0. task ID = 88 : Func No = 8 
+[BOOTTRACE +50580ms]   --     data =  e5 17 07 4d 31 c5 60 00 00 00 00 04 00 00 00 00
+[BOOTTRACE +50587ms]   -- 1. task ID = 88 : Func No = 7 
+[BOOTTRACE +50591ms]   --     data =  e4 1f 00 19 19 fa 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +50597ms]   -- 2. task ID = 88 : Func No = 7 
+[BOOTTRACE +50601ms]   --     data =  e2 06 01 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +50608ms]   -- 3. task ID = 88 : Func No = 8 
+[BOOTTRACE +50611ms]   --     data =  80 01 ff ff f7 ff ff ff ef ff ff ff 7f ff ff ff
+[BOOTTRACE +50619ms]   -- 4. task ID = 0 : Func No = 0 
+[BOOTTRACE +50623ms]   --     data =  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +50630ms] :: Receive ::
+[BOOTTRACE +50632ms]   -- 0. task ID = 88 : Func No = 9 
+[BOOTTRACE +50635ms]   --     data =  0e 02 0d 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +50642ms]   -- 1. task ID = 88 : Func No = 9 
+[BOOTTRACE +50646ms]   --     data =  0e 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +50653ms]   -- 2. task ID = 0 : Func No = 0 
+[BOOTTRACE +50658ms]   --     data =  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +50664ms]   -- 3. task ID = 0 : Func No = 0 
+[BOOTTRACE +50668ms]   --     data =  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +50675ms]   -- 4. task ID = 0 : Func No = 0 
+[BOOTTRACE +50678ms]   --     data =  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +50685ms] :: Receive Intr ::
+[BOOTTRACE +50687ms]   -- 0. task ID = 0 : Func No = 0 
+[BOOTTRACE +50691ms]   --     data =  65 e4 07 4d 31 c5 60 00 00 00 00 00 00 00 00 f3
+[BOOTTRACE +50698ms]   -- 1. task ID = 0 : Func No = 0 
+[BOOTTRACE +50701ms]   --     data =  7f e4 01 01 00 00 0d 06 00 02 00 00 00 00 00 7a
+[BOOTTRACE +50708ms]   -- 2. task ID = 0 : Func No = 0 
+[BOOTTRACE +50712ms]   --     data =  00 41 20 01 00 00 0d 06 00 02 00 00 00 00 00 77
+[BOOTTRACE +50718ms]   -- 3. task ID = 0 : Func No = 0 
+[BOOTTRACE +50722ms]   --     data =  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +50729ms]   -- 4. task ID = 0 : Func No = 0 
+[BOOTTRACE +50732ms]   --     data =  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +50739ms] :: Receive Task ::
+[BOOTTRACE +50741ms]   -- 0. data =  7f e4 01 01 00 00 0d 06 00 02 00 00 00 00 00 7a
+[BOOTTRACE +50748ms]   -- 1. data =  00 41 20 01 00 00 0d 06 00 02 00 00 00 00 00 77
+[BOOTTRACE +50754ms]   -- 2. data =  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +50761ms]   -- 3. data =  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +50767ms]   -- 4. data =  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +50774ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +50779ms] [FPC]FPC_ReciveTASK() : 65 E4 07 4D 31 C5 60 00 00 00 00 00 00 00 00 F3 
+[BOOTTRACE +50786ms] [FPC]FPC_ReciveTASK() : 7D 00 70 52 41 00 00 00 00 02 02 05 11 02 00 9C 
+[BOOTTRACE +50794ms] [SYS_BOOT]Timer Version [022]
+[BOOTTRACE +50797ms] [FPC]num = 0 size=247 [0x0 0x2 0x8 0x48 0x41]
+[BOOTTRACE +50802ms] [FPC]FPC_ReciveTASK() : 67 F0 04 11 00 06 34 B4 00 00 00 00 00 00 00 5A 
+[BOOTTRACE +50809ms] [SYS_BOOT]reading system info on EEPROM ... ok
+[BOOTTRACE +50814ms] [SYS_BOOT]H/W System  = M6930LB
+[BOOTTRACE +50817ms] [SYS_BOOT]model_code=0x07
+[BOOTTRACE +50820ms] [SYS_BOOT]market_code=PL(0x04)
+[BOOTTRACE +50823ms] [SYS_BOOT]OptionCode  = 0x31 0xC5 0x60 0x00 0x00 0x00
+[BOOTTRACE +50829ms] [SYS_BOOT]H/W Version = 0x0003
+[BOOTTRACE +50832ms] [FPC]FPC_ReciveTASK() : 7F 85 02 11 00 06 34 B4 00 00 00 00 00 00 00 05 
+[BOOTTRACE +50840ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +50843ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +50846ms] [FPC] !!- OPcode Emergency -!!
+[BOOTTRACE +50850ms] :: Send ::
+[BOOTTRACE +50851ms]   -- 0. task ID = 88 : Func No = 8 
+[BOOTTRACE +50855ms]   --     data =  f9 0b 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +50861ms]   -- 1. task ID = 88 : Func No = 7 
+[BOOTTRACE +50865ms]   --     data =  85 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +50872ms]   -- 2. task ID = 88 : Func No = 8 
+[BOOTTRACE +50875ms]   --     data =  e7 f0 04 11 01 06 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +50882ms]   -- 3. task ID = 88 : Func No = 8 
+[BOOTTRACE +50886ms]   --     data =  fd 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +50893ms]   -- 4. task ID = 88 : Func No = 8 
+[BOOTTRACE +50896ms]   --     data =  e5 17 07 4d 31 c5 60 00 00 00 00 04 00 00 00 00
+[BOOTTRACE +50903ms] :: Receive ::
+[BOOTTRACE +50905ms]   -- 0. task ID = 88 : Func No = 9 
+[BOOTTRACE +50908ms]   --     data =  0e 02 0f 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +50915ms]   -- 1. task ID = 88 : Func No = 9 
+[BOOTTRACE +50919ms]   --     data =  0e 02 13 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +50926ms]   -- 2. task ID = 88 : Func No = 9 
+[BOOTTRACE +50929ms]   --     data =  0e 02 03 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +50936ms]   -- 3. task ID = 88 : Func No = 9 
+[BOOTTRACE +50940ms]   --     data =  0e 02 0d 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +50946ms]   -- 4. task ID = 88 : Func No = 9 
+[BOOTTRACE +50950ms]   --     data =  0e 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +50957ms] :: Receive Intr ::
+[BOOTTRACE +50959ms]   -- 0. task ID = 0 : Func No = 0 
+[BOOTTRACE +50963ms]   --     data =  7f f9 02 11 00 06 34 b4 00 00 00 00 00 00 00 79
+[BOOTTRACE +50969ms]   -- 1. task ID = 0 : Func No = 0 
+[BOOTTRACE +50973ms]   --     data =  7f 85 02 11 00 06 34 b4 00 00 00 00 00 00 00 05
+[BOOTTRACE +50980ms]   -- 2. task ID = 0 : Func No = 0 
+[BOOTTRACE +50983ms]   --     data =  67 f0 04 11 00 06 34 b4 00 00 00 00 00 00 00 5a
+[BOOTTRACE +50990ms]   -- 3. task ID = 0 : Func No = 0 
+[BOOTTRACE +50993ms]   --     data =  7d 00 70 52 41 00 00 00 00 02 02 05 11 02 00 9c
+[BOOTTRACE +51000ms]   -- 4. task ID = 0 : Func No = 0 
+[BOOTTRACE +51004ms]   --     data =  65 e4 07 4d 31 c5 60 00 00 00 00 00 00 00 00 f3
+[BOOTTRACE +51010ms] :: Receive Task ::
+[BOOTTRACE +51012ms]   -- 0. data =  7f 85 02 11 00 06 34 b4 00 00 00 00 00 00 00 05
+[BOOTTRACE +51019ms]   -- 1. data =  67 f0 04 11 00 06 34 b4 00 00 00 00 00 00 00 5a
+[BOOTTRACE +51026ms]   -- 2. data =  7d 00 70 52 41 00 00 00 00 02 02 05 11 02 00 9c
+[BOOTTRACE +51032ms]   -- 3. data =  65 e4 07 4d 31 c5 60 00 00 00 00 00 00 00 00 f3
+[BOOTTRACE +51039ms]   -- 4. data =  7f e4 01 01 00 00 0d 06 00 02 00 00 00 00 00 7a
+[BOOTTRACE +51045ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +51050ms] [FPC]FPC_ReciveTASK() : 7F F9 02 11 00 06 34 B4 00 00 00 00 00 00 00 79 
+[BOOTTRACE +51058ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +51061ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +51065ms] [FPC] !!- OPcode Emergency -!!
+[BOOTTRACE +51068ms] :: Send ::
+[BOOTTRACE +51069ms]   -- 0. task ID = 88 : Func No = 8 
+[BOOTTRACE +51073ms]   --     data =  f9 0b 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +51079ms]   -- 1. task ID = 88 : Func No = 7 
+[BOOTTRACE +51083ms]   --     data =  85 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +51090ms]   -- 2. task ID = 88 : Func No = 8 
+[BOOTTRACE +51094ms]   --     data =  e7 f0 04 11 01 06 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +51100ms]   -- 3. task ID = 88 : Func No = 8 
+[BOOTTRACE +51104ms]   --     data =  fd 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +51111ms]   -- 4. task ID = 88 : Func No = 8 
+[BOOTTRACE +51114ms]   --     data =  e5 17 07 4d 31 c5 60 00 00 00 00 04 00 00 00 00
+[BOOTTRACE +51121ms] :: Receive ::
+[BOOTTRACE +51122ms]   -- 0. task ID = 88 : Func No = 9 
+[BOOTTRACE +51126ms]   --     data =  0e 02 0f 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +51133ms]   -- 1. task ID = 88 : Func No = 9 
+[BOOTTRACE +51137ms]   --     data =  0e 02 13 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +51143ms]   -- 2. task ID = 88 : Func No = 9 
+[BOOTTRACE +51147ms]   --     data =  0e 02 03 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +51154ms]   -- 3. task ID = 88 : Func No = 9 
+[BOOTTRACE +51158ms]   --     data =  0e 02 0d 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +51164ms]   -- 4. task ID = 88 : Func No = 9 
+[BOOTTRACE +51168ms]   --     data =  0e 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[BOOTTRACE +51175ms] :: Receive Intr ::
+[BOOTTRACE +51177ms]   -- 0. task ID = 0 : Func No = 0 
+[BOOTTRACE +51180ms]   --     data =  7f f9 02 11 00 06 34 b4 00 00 00 00 00 00 00 79
+[BOOTTRACE +51187ms]   -- 1. task ID = 0 : Func No = 0 
+[BOOTTRACE +51191ms]   --     data =  7f 85 02 11 00 06 34 b4 00 00 00 00 00 00 00 05
+[BOOTTRACE +51197ms]   -- 2. task ID = 0 : Func No = 0 
+[BOOTTRACE +51201ms]   --     data =  67 f0 04 11 00 06 34 b4 00 00 00 00 00 00 00 5a
+[BOOTTRACE +51208ms]   -- 3. task ID = 0 : Func No = 0 
+[BOOTTRACE +51211ms]   --     data =  7d 00 70 52 41 00 00 00 00 02 02 05 11 02 00 9c
+[BOOTTRACE +51218ms]   -- 4. task ID = 0 : Func No = 0 
+[BOOTTRACE +51221ms]   --     data =  65 e4 07 4d 31 c5 60 00 00 00 00 00 00 00 00 f3
+[BOOTTRACE +51228ms] :: Receive Task ::
+[BOOTTRACE +51230ms]   -- 0. data =  7f f9 02 11 00 06 34 b4 00 00 00 00 00 00 00 79
+[BOOTTRACE +51237ms]   -- 1. data =  7f 85 02 11 00 06 34 b4 00 00 00 00 00 00 00 05
+[BOOTTRACE +51243ms]   -- 2. data =  67 f0 04 11 00 06 34 b4 00 00 00 00 00 00 00 5a
+[BOOTTRACE +51250ms]   -- 3. data =  7d 00 70 52 41 00 00 00 00 02 02 05 11 02 00 9c
+[BOOTTRACE +51257ms]   -- 4. data =  65 e4 07 4d 31 c5 60 00 00 00 00 00 00 00 00 f3
+[BOOTTRACE +51263ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE] UART: bytes=19369 first_byte=10417us ferr=1 perr=0 ovf=NO | SW_rel=NO
+[BOOTTRACE] ADC0_SWUART: min=0.04V max=3.30V (low=0 hiz=0.04..3.30V n=7501) | CtrlEdges: NSW5V=2 TXD=2 XRESET=2 (logged=6)
+  [CTRL +4612516us] NSW5V=1 TXD=1 XRESET=0
+  [CTRL +4642338us] NSW5V=0 TXD=1 XRESET=0
+  [CTRL +4644023us] NSW5V=0 TXD=0 XRESET=0
+  [CTRL +7948004us] NSW5V=1 TXD=0 XRESET=0
+  [CTRL +7948219us] NSW5V=1 TXD=1 XRESET=0
+  [CTRL +8125165us] NSW5V=1 TXD=1 XRESET=1
+BOOTTRACE: OK
+@P7501_RES cmd=BOOTTRACE status=OK code=0 elapsed_us=75021956
+PANADIGA> 

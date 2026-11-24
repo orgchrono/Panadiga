@@ -44,4 +44,5 @@ Sempre comece lendo `.agents/skills/panadiga-skill-orchestrator/SKILL.md`:
 - `.agents/skills/panadiga-firmware-decrypto/SKILL.md`
 - `.agents/skills/panadiga-emulation-and-patching/SKILL.md`
 - `.agents/skills/panadiga-opensource-firmware-dev/SKILL.md`
+- `.agents/skills/panadiga-functional-math-and-patterns/SKILL.md`
 - `.agents/skills/panadiga-hardware-forensics/SKILL.md`

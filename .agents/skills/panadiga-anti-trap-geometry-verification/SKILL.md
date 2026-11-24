@@ -13,7 +13,7 @@ Esta skill impede confusões silenciosas entre mapas Flash/BGO de diferentes mod
 
 ## 1. Quando Usar & Handoffs
 - Ative sempre que manipular layouts BGO FTL, scripts/patches `PROG061`/`MAIN`/`Loader`, kits SD (`DIGADIAG.FRM`/`PANA__SD.FRM`), comparações entre séries `EH55` (`8 MiB`), `EH58` (`ver0.63`), `ES35V` ou `EZ485V` (`4 MiB`).
-- Para editar regras/mapas em `profiles/`, use `.agents/skills/panadiga-ssot-builder-and-validation/SKILL.md`.
+- Para editar regras/mapas em `profiles/`, use `.agents/skills/panadiga-device-onboarding/SKILL.md`.
 - Para consultar constantes de pseudocódigo já auditadas, use `.agents/skills/panadiga-firmware-forensic-atlas/SKILL.md`.
 - Tabela comparativa completa em [bgo-4mb-vs-8mb-and-geometry-traps.md](./references/bgo-4mb-vs-8mb-and-geometry-traps.md).
 

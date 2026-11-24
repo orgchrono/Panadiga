@@ -1,0 +1,151 @@
+=== WAITTX: baud=115200 timeout=45000ms hold=0ms trigger="FVU)..." post=45000ms ===
+DDR CHECK: OK
+
+Chip select = 1
+F/E Address = 0x90202000 , Drive(compress) Size = 0xACC50
+uncompress dst=90202000 len=160000 src=84080040 len=acc01
+HEADER:5627DD54, DECOMP:5627DD54
+
+F/E reset release finish ...
+
+***** Loader ver0.61 [06/03/06] *****
+***** normal mode *****
+[nfrom] NOR STATE : Backup -> Original
+
+!!! start fmu to read & exec fvu. !!!
+wait 1 second.
+*** timer correspond initialize ***
+startup reason = [41]
+Main hung-up time changed 255[s].
+*** RTSC Initialize ***
+[RTSD] ATAPI Software Reset 
+error! startup reason is invalid.
+DDR CHECK: OK
+
+Chip select = 1
+F/E Address = 0x90202000 , Drive(compress) Size = 0xACC50
+uncompress dst=90202000 len=160000 src=84080040 len=acc01
+HEADER:5627DD54, DECOMP:5627DD54
+
+F/E reset release finish ...
+
+***** Loader ver0.61 [06/03/06] *****
+***** normal mode *****
+*** RTSC Initialize ***
+[RTSD] ATAPI Software Reset 
+[RTSD] HDD spin-up error (80000404)
+miniboot : system assert!!
+[RTSD] === IDE HOST ERROR === ( E8000000 )
+*** ATAPI DEVICE ERROR
+CDB  [FF EC 00 00 00 00 00 00 00 00 00 00] 
+Reg[00 00 00 00 00 00 00 : Err SecC SecN CylL CylH D/H Status] 
+H_STAT [E8] T_STAT [0]
+[RTSD] SRST Command Set
+[RTSD] Reset Failed !! (80000407)
+[RTSD] HDD spin-up error (80000404)
+miniboot : system assert!!
+[RTSD] === IDE HOST ERROR === ( E8000000 )
+*** ATAPI DEVICE ERROR
+CDB  [FF EC 00 00 00 00 00 00 00 00 00 00] 
+Reg[00 00 00 00 00 00 00 : Err SecC SecN CylL CylH D/H Status] 
+H_STAT [E8] T_STAT [0]
+[RTSD] SRST Command Set
+[RTSD] Reset Failed !! (80000407)
+[RTSD] HDD spin-up error (80000404)
+miniboot : system assert!!
+[RTSD] === IDE HOST ERROR === ( E8000000 )
+*** ATAPI DEVICE ERROR
+CDB  [FF EC 00 00 00 00 00 00 00 00 00 00] 
+Reg[00 00 00 00 00 00 00 : Err SecC SecN CylL CylH D/H Status] 
+H_STAT [E8] T_STAT [0]
+[RTSD] SRST Command Set
+[RTSD] Reset Failed !! (80000407)
+HDD_MAX_LBA get failed[0xE8000000].
+mainsoft data is invalid, so set update flag.
+[nfrom] file_no[17],skip(0),non_skip(1),erase(0),new_write(0).
+
+!!! start fmu to read & exec fvu. !!!
+wait 1 second.
+*** timer correspond initialize ***
+startup reason = [44]
+Main hung-up time changed 255[s].
+Read fvu program from Update-Disk to 0x90400000.
+SD card check start
+SD init start...
+[SDCD] sdcd_insrmv_check:SD Card inserted 
+[SDCD] === This Card Spec ==== 
+[09]Card type:2(condition:3) wp:0
+[09]capacity:3c4000[LBA](2021654528Byte) [09] transfer speed:25000[Kbps]
+[09]RCA:2 [09] Bus Width:4(current) 4(support)
+[09]Multi Max Block Len Read:2[SECT] / Write:2[SECT]
+SD = 0x3C4000[LBA]
+... SD init end
+FAT Mount ID = 0x1
+FAT Open Old File ID = 0xC8
+treat as SD.
+File ID[0xC8] seek to 0xB1800.
+File ID[0xC8] read to 0x90400000(size=0x40000).
+cheking for fvu program check-sum[0x21647BA].
+[nfrom] file_no[17],skip(0),non_skip(1),erase(0),new_write(0).
+success to read fvu program from Update-Disc.
+[RTSD] Device Reset Occurred(0x62900) 
+X(80062900)X(80023a00)X(80023a00)X(80023a00)
+*** start fvu ***
+***** Fvu ver0.61 [05/11/01] *****
+*** RTSC Initialize ***
+[RTSD] ATAPI Software Reset 
+
+[WAITTX] Trigger matched! Injecting payload via Q7514 (SW_UART=Hi-Z)...
+[STAGE2] SATA HDD boot ('F'->FVU)...
+[STAGE2] UART 'F' -> FVU
+SD version up mode.
+Read Firm-list from Update-Disc or HDD.
+treat as SD.
+SD init start...
+[SDCD] sdcd_insrmv_check:SD Card inserted 
+[SDCD] === This Card Spec ==== 
+[09]Card type:2(condition:3) wp:0
+[09]capacity:3c4000[LBA](2021654528Byte) [09] transfer speed:25000[Kbps]
+[09]RCA:2 [09] Bus Width:4(current) 4(support)
+[09]Multi Max Block Len Read:2[SECT] / Write:2[SECT]
+SD = 0x3C4000[LBA]
+... SD init end
+FAT Mount ID = 0x1
+FAT Open Old File ID = 0xC8
+Search for analyze-code.
+Complete to scan Firm-list.
+do not need to update drive-firm.
+Read mainsoft from Update-Disk or HDD to 0x90c00030.
+Read mainsoft data.
+File ID[0xC8] seek to 0xF1800.
+File ID[0xC8] read to 0x90C00030(size=0x645048).
+Cheking for mainsoft check-sum.
+check_sum = 0x32873975.
+Complete to read mainsoft from Update-Disc or HDD.
+start to update mainsoft.
+[RTSD] HDD already spin-up 
+[RTSD] HDD Auto Spin up Mode 
+HDD MAX LBA = 0x1D1C5970.
+[nfrom] file_no[17],skip(0),non_skip(1),erase(0),new_write(0).
+Verify start...
+Vefify OK
+HDD write success(0x00010000-0x00013228 sector).
+mainsoft write success to hdd inner sector[0x10000].
+Verify start...
+Vefify OK
+HDD write success(0x1D1A5970-0x1D1A8B98 sector).
+mainsoft write success to hdd outer sector[0x1D1A5970].
+[nfrom] file_no[17],skip(0),non_skip(1),erase(0),new_write(0).
+success to update mainsoft.
+[nfrom] file_no[17],skip(0),non_skip(1),erase(0),new_write(0).
+do not need to update loader.
+do not need to update Voice.
+do not need to update user-file.
+do not need to update deviceinfo.
+do not need to update STB-data.
+do not need to update VHS-data.
+do not need to update timer-data.
+
+WAITTX: OK (triggered=YES, rx=4786 bytes)
+@P7501_RES cmd=WAITTX status=OK code=0 elapsed_us=59544579
+PANADIGA> 

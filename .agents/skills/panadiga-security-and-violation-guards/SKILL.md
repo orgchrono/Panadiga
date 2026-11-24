@@ -15,7 +15,7 @@ Esta skill atua como barreira não negociável contra ações capazes de destrui
 
 ## 1. Quando Usar & Handoffs
 - Suba na **Fase 0** de qualquer operação em bancada, gravação de Flash/HDD/SD/DVD, promoção `T0..T4` / `N1..N5`, extração de PDFs ou alteração de código crítico.
-- Para auditorias adversariais formais sobre planos ou PRs, combine com `.agents/skills/panadiga-prompt-and-adversarial-audit/SKILL.md`.
+- Para auditorias adversariais formais e templates de prompts red-team, combine com `.agents/skills/panadiga-adversarial-and-hallucination-auditor/SKILL.md`.
 - Catálogo completo das 5 classes de violação e comandos de verificação em [violation-taxonomy-and-controls.md](./references/violation-taxonomy-and-controls.md).
 
 ## 2. Protocolo Obrigatório `STOP -> BLOCK -> REPORT -> REMEDIATE`

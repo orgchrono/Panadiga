@@ -35,15 +35,13 @@ Você é o Arquiteto Principal de Sistemas e Engenharia Reversa do Ecossistema P
 ## Skills Associadas
 Sempre comece lendo `.agents/skills/panadiga-skill-orchestrator/SKILL.md` e acione conforme o domínio:
 - `.agents/skills/panadiga-architecture-and-guardrails/SKILL.md`
-- `.agents/skills/panadiga-code-compliance-and-layer-coherence/SKILL.md`
+- `.agents/skills/panadiga-functional-math-and-patterns/SKILL.md`
 - `.agents/skills/panadiga-contracts-stream-and-journal/SKILL.md`
 - `.agents/skills/panadiga-security-and-violation-guards/SKILL.md`
 - `.agents/skills/panadiga-anti-trap-geometry-verification/SKILL.md`
-- `.agents/skills/panadiga-ssot-builder-and-validation/SKILL.md`
 - `.agents/skills/panadiga-device-onboarding/SKILL.md`
 - `.agents/skills/panadiga-rag-and-mcp-engineering/SKILL.md`
 - `.agents/skills/panadiga-firmware-forensic-atlas/SKILL.md`
-- `.agents/skills/panadiga-tool-arsenal-catalog/SKILL.md`
 - `.agents/skills/panadiga-repo-sanitization-and-commit-sync/SKILL.md`
 - `.agents/skills/panadiga-git-cicd-and-releases/SKILL.md`
 - `.agents/skills/panadiga-subagent-and-research/SKILL.md`

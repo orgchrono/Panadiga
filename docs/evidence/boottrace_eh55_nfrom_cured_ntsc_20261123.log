@@ -1,0 +1,25 @@
+=== BOOTTRACE: window=60000ms boot=1 hold=0ms sticky=NO no_xrst=NO (8N1 @ 115200) ===
+[BOOTTRACE +  10ms] DDR CHECK: OK
+[BOOTTRACE +  19ms] Chip select = 1
+[BOOTTRACE +  20ms] F/E Address = 0x90202000 , Drive(compress) Size = 0xACC50
+[BOOTTRACE +  26ms] uncompress dst=90202000 len=160000 src=84080040 len=acc01
+[BOOTTRACE + 774ms] HEADER:5627DD54, DECOMP:5627DD54
+[BOOTTRACE + 777ms] F/E reset release finish ...
+[BOOTTRACE + 780ms] ***** Loader ver0.61 [06/03/06] *****
+[BOOTTRACE + 784ms] ***** normal mode *****
+[BOOTTRACE + 801ms] !!! start fmu to read & exec fvu. !!!
+[BOOTTRACE + 804ms] wait 1 second.
+[BOOTTRACE +1806ms] *** timer correspond initialize ***
+[BOOTTRACE +1812ms] startup reason = [41]
+[BOOTTRACE +1818ms] Main hung-up time changed 255[s].
+[BOOTTRACE +1826ms] *** RTSC Initialize ***
+[BOOTTRACE +4610ms] [RTSD] ATAPI Software Reset 
+[BOOTTRACE +4613ms] error! startup reason is invalid.
+[BOOTTRACE] UART: bytes=527 first_byte=10422us ferr=1 perr=0 ovf=NO | SW_rel=NO
+[BOOTTRACE] ADC0_SWUART: min=0.04V max=3.30V (low=0 hiz=0.04..3.30V n=6001) | CtrlEdges: NSW5V=1 TXD=1 XRESET=1 (logged=3)
+  [CTRL +4633646us] NSW5V=1 TXD=1 XRESET=0
+  [CTRL +4655336us] NSW5V=0 TXD=1 XRESET=0
+  [CTRL +4656656us] NSW5V=0 TXD=0 XRESET=0
+BOOTTRACE: OK
+@P7501_RES cmd=BOOTTRACE status=OK code=0 elapsed_us=60021708
+PANADIGA> 

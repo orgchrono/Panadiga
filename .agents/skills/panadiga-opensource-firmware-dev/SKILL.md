@@ -1,55 +1,60 @@
 ---
 name: panadiga-opensource-firmware-dev
 description: >-
-  Desenvolvimento completo da firmware open-source bare-metal para Panasonic DIGA AM34 /
-  MN103S (firmware/panadiga-blackbox-fw/ e evolução Stage-1.5/Stage-2): bring-up seguro em
-  SDRAM volátil 0x50400000 sem tocar IPL SA0..SA10, mapa MMIO real verificado (SC0 UART0
-  0xD4002008/0xD400200C, IC7501 TBUS 0xDC010000 keepalive 255s, AIOF 0x88000000, AVDD
-  0x89800000, IIC0 0xD8400000, DAVIS 0x89000400/0x89000C00, SDCD 0x89001800), toolchain
-  mn10300-elf-gcc, HAL + mock MMIO host tests, validação Mn103Vm, roadmap M0->M3 e higiene
-  jurídica (interoperabilidade vs clean-room). Use ao desenvolver a firmware livre do DIGA.
+  Desenvolvimento completo do Panadiga OpenOS bare-metal para Panasonic DIGA AM34 / MN103S
+  (firmware/panadiga-openos/ M0->M4 e predecessor firmware/panadiga-blackbox-fw/ PANAMON2>):
+  boot seguro em SDRAM volátil (Stage-1.5 0x50400000 512 KiB -> Stage-2 0x57000000 16 MiB)
+  sem tocar IPL SA0..SA10, mapa MMIO real (SC0, TBUS 255s, AIOF NTSC/PAL-M/PAL, AVDD, IIC0,
+  SDCD, DAVIS CH1 1000ms IDE2SAT2), toolchain mn10300-elf-gcc C11 freestanding, drivers,
+  ISRs/DMA, descompressão zlib/LZSS sem heap e testes host -DPANADIGA_OPENOS_HOST_TEST=1.
+  Use ao desenvolver o kernel, HAL ou drivers livres do DIGA.
 ---
 
-# Desenvolvimento da Firmware Open-Source Bare-Metal (`AM34 / MN103S`)
+# Desenvolvimento do `Panadiga OpenOS` Bare-Metal (`AM34 / MN103S`)
 
-Esta skill governa a evolução de `firmware/panadiga-blackbox-fw/` de um protótipo mínimo em SDRAM para uma firmware livre modular, testável no host, verificável em `Mn103Vm` e segura para executar em silício real (`VEP79138`).
+Esta skill governa a evolução de **`firmware/panadiga-openos/`** (`OPENOS>`, roadmap `M0 -> M4`) e de seu protótipo mínimo **`firmware/panadiga-blackbox-fw/`** (`PANAMON2>`) de forma modular em ISO C11 + GNU ASM, testável no host, verificável em `Mn103Vm` e segura para execução em SDRAM volátil no silício real (`VEP79138`).
 
 ## 1. Quando Usar & Handoffs
-- Ative ao projetar drivers bare-metal do AM34 (`SC0`, `TBUS`, `IIC0`, `AIOF`, `AVDD`, `SDCD`, `DAVIS`, `S29JL064H`), evoluir o monitor `PANAMON2>`, ajustar `crt0_am34.S`/`am34_sdram.ld` ou construir o Stage-2 open-source.
-- Para empacotar o binário gerado em `DIGADIAG.FRM` (`262.144 B` raw) ou `PANA__SD.FRM` (`sd48`), use `.agents/skills/panadiga-nvram-unbrick/SKILL.md` (`panadiga frm pack --mode digadiag`) e `.agents/skills/panadiga-emulation-and-patching/SKILL.md`.
+- Ative ao projetar ou revisar arquitetura (`M1..M4`), drivers bare-metal (`uart_sc0.c`, `tbus_ic7501.c`, `aiof_video.c`, `davis_sata.c`, `SDCD`, `IIC0`, `AVDD`, `AVFE`/`MPE4`), rotinas de ISR/DMA, descompressão Stage-1.5 -> Stage-2 sem heap, `boot/crt0_am34.S`, `boot/am34_sdram.ld` ou `kernel/openos_main.c`.
+- Para empacotar em `DIGADIAG.FRM` (`262.144 B` raw) ou `PANA__SD.FRM` (`sd48`), use `.agents/skills/panadiga-nvram-unbrick/SKILL.md` (`panadiga frm pack --mode digadiag`) e `.agents/skills/panadiga-emulation-and-patching/SKILL.md`.
 - Para executar e capturar no silício real com segurança SMPS/`ADuM`, use `.agents/skills/panadiga-bench-operations/SKILL.md`.
-- Mapa MMIO real completo, convenções ABI/CRT0/Linker, harness de testes host, roadmap `M0 -> M3` e separação jurídica em [am34-baremetal-bringup-and-roadmap.md](./references/am34-baremetal-bringup-and-roadmap.md).
+- Para FSMs puras em C11, aritmética ponto fixo/modular e simplificação de drivers determinísticos, combine com `.agents/skills/panadiga-functional-math-and-patterns/SKILL.md`.
+- **Referências detalhadas:**
+  - Mapa MMIO real, layout `firmware/panadiga-openos/`, roadmap `M0 -> M4` e separação jurídica em [am34-baremetal-bringup-and-roadmap.md](./references/am34-baremetal-bringup-and-roadmap.md).
+  - Revisão arquitetural em 2 fases, estilo C11 freestanding, design de drivers, disciplina de ISRs/DMA/WDT, descompressão `zlib`/LZSS sem heap e fault injection host em [openos-c11-drivers-isr-and-compression.md](./references/openos-c11-drivers-isr-and-compression.md).
+  - Registradores, `PSW`/`EPSW`, convenção `ABI`, máscara `MOVM`, opcodes e padrões GNU `as` `MN103S/AM34` em [mn103s-am34-assembly-and-abi-cheatsheet.md](./references/mn103s-am34-assembly-and-abi-cheatsheet.md).
 
-## 2. Invariantes de Silício & Proveniência (NÃO NEGOCIÁVEIS)
-1. **Execução Exclusiva em SDRAM Volátil (`0x50400000`, `256 KiB`):** O código nasce na RAM via `DIGADIAG.FRM` / Porta #1 (`JMP 0x50400000`) sem escrever na Flash NOR. Se algo travar, basta ciclar energia — **zero risco de brick permanente**.
-2. **Proibição Absoluta de MMIO Letal & IPL RO:**
-   - **JAMAIS** ler ou escrever **`0xC000_100C..0xC000_100F`** (trava barramento/WDT) nem `0xDC0F_0000..0xDC0F_0FFF`.
-   - **JAMAIS** escrever em **`SA0..SA10`** (`0x8000_0000..0x8003_FFFF` e `0x8400_0000..0x8403_FFFF`).
-3. **Endereços Reais UART0 `SC0` (Nunca Inventar MMIO):** Base `SC0CTR = 0xD400_2000`, `SC0TXB = 0xD400_2008` (escrita 8-bit `uint8_t`/`MOVBU` para não invadir `SC0RXB` em `+0x09`), `SC0STR = 0xD400_200C` (aguardar enquanto `(SC0STR & 0xA0) != 0` com countdown finito `0x0004_0000`, `TXBUSY | TXBF`) — **não** `0x1000_0000` nem inversão de flag `== 0`.
-4. **Sem Hardware MPU + Requisitos para CFI NOR Futura:** Stage-1.5 roda sem MPU de hardware (use wrappers `am34_safe_read/write` com `_Static_assert`). Qualquer futuro driver de Flash CFI (`S29JL064H`) **DEVE** desligar IRQs (`CLI`) e apontar tabela de vetores para SDRAM antes de tirar a NOR de `Read Array` (~`700 ms` por erase + Pino 14 `WP#/ACC` HIGH).
-5. **Keepalive `IC7501 TBUS` (`~44s`):** O supervisor `IC7501` derruba os rails em `~44s` se a firmware livre não enviar os quadros keepalive `255s` em `0xDC01_0010..0xDC01_001F`.
-6. **Higiene Jurídica & Epistêmica:** Todo código em `firmware/panadiga-blackbox-fw/` neste repositório deve ser rotulado honestamente como **Protótipo Open-Source de Interoperabilidade (NOT LEGALLY CLEAN-ROOM)** — jamais usar comentários `"Clean-Room"` indevidos!
+## 2. Invariantes de Silício, Arquitetura & Proveniência (NÃO NEGOCIÁVEIS)
+1. **Execução Exclusiva em SDRAM Volátil (`Stage-1.5 0x50400000` / `Stage-2 0x57000000`):** Stage-1.5 (`512 KiB`, `__stack_top = 0x5047F000`) nasce via `Loader ver0.61` (`DIGADIAG.FRM` `262.144 B` raw) e carrega Stage-2 (`16 MiB`) sem escrever na Flash NOR — zero risco de brick.
+2. **Barreiras Letais & IPL RO (`hal/am34_mmio.h`):** **JAMAIS** ler/escrever `0xC000_100C..0xC000_100F` nem `0xDC0F_0000..0xDC0F_0FFF`; **JAMAIS** escrever em `SA0..SA10` (`0x8000_0000..0x8003_FFFF` e `0x8400_0000..0x8403_FFFF`).
+3. **UART0 `SC0` & `TBUS` Keepalive:** `SC0CTR = 0xD400_2000`, `SC0TXB = 0xD400_2008` (8-bit), `SC0STR = 0xD400_200C` (polling `(SC0STR & 0xA0) != 0` com `AM34_OPENOS_SC0_SPIN_LIMIT = 0x00040000UL`). `IC7501 TBUS` (`0xDC01_0010..0xDC01_001F`) precisa de keepalive `255s` orientado a progresso antes de `~44s`.
+4. **Padrão `AIOF` & Espera `DAVIS CH1`:** `AIOF` inicia por padrão em **`OPENOS_TV_NTSC` (`0x8020`)** com troca em runtime para `PAL-M` (`0x8021`) e `PAL` (`0x8027`). `DAVIS CH1` (`0x8900_0C00`, reset ativo-ALTO) exige **`OPENOS_SATA_BRIDGE_WAIT_MS = 1000 ms`** para a ponte StarTech `IDE2SAT2` antes de consultar `BSY`/`DRDY`.
+5. **Toolchain C11 + Sem MPU/Heap:** `AM34/MN103S` **não tem backend LLVM/Rust** — use `mn10300-elf-gcc` C11 freestanding sem `malloc`; em futura CFI NOR (`S29JL064H`), use **`CLI` + vetores em SDRAM + `WP#/ACC` HIGH (`~700 ms`)**.
+6. **Higiene Jurídica (`NOT LEGALLY CLEAN-ROOM`):** Todo arquivo em `firmware/panadiga-openos/` e `firmware/panadiga-blackbox-fw/` deve declarar explicitamente protótipo de interoperabilidade (`NOT LEGALLY CLEAN-ROOM`), nunca `"Clean-Room"`.
 
-## 3. Arquitetura Modular Alvo (`firmware/panadiga-blackbox-fw/`)
-Separe a firmware livre em camadas limpas e testáveis no host (sem god-file único):
-- `boot/`: `am34_sdram.ld` (`0x50400000..0x5043FFFF`, stack `0x5043C000..0x5043FFFF`), `crt0_am34.S` (alinha `SP`, zera `.bss`, respeita ABI `CALL target, [], 0x00` e convenção de símbolo `main` vs `_main`).
-- `hal/`: `am34_mmio.h` (barramento virtualizável: em silício lê/escreve `volatile uint32_t *`/`uint8_t *` com guardas `0xC000_100C` + IPL; em `-DPANADIGA_FW_HOST_TEST=1` chama mock bus auditável!).
-- `drivers/`: um módulo por periférico (`uart_sc0.c`, `tbus_wdt.c`, `iic_bus.c`, `aiof_tbc.c`, `avdd_video.c`, `sdcd_sd.c`, `davis_ide.c`).
-- `shell/`: monitor `PANAMON2>` extensível, comandos diagnósticos e script de boot M0..M3.
-- `tests/`: suíte C11 host testando guardas MMIO, construção do frame `TBUS` 255s, sequência de inicialização `AIOF`/`IC3001`/`DAVIS` antes de tocar silício.
+## 3. Arquitetura Modular (`firmware/panadiga-openos/`)
+- `boot/`: `am34_sdram.ld` (`SDRAM_STAGE15` + `SDRAM_STAGE2`), `crt0_am34.S` (`_start` -> `.bss` zero -> `openos_kernel_entry`).
+- `hal/`: `am34_mmio.h` (`_Static_assert` + barreiras `am34_mmio_is_forbidden` / `am34_mmio_write_allowed` + seam `-DPANADIGA_OPENOS_HOST_TEST=1`).
+- `drivers/`: `openos_drivers.h`, `uart_sc0.c`, `tbus_ic7501.c`, `aiof_video.c`, `davis_sata.c` (e próximos `iic_bus.c`, `avdd_video.c`, `sdcd_sd.c`, `avfe_mpeg.c`).
+- `kernel/`: `openos_main.c` (`openos_kernel_entry`, futuro scheduler/shell `OPENOS>` e chainloader Stage-2).
+- `tests/`: `test_openos_host.c` (suíte host C11 negativa + positiva).
 
 ## 4. Fluxo de Build, Simulação & Bring-Up em Bancada
 ```bash
-# 1. Testes host C11 (mock MMIO bus verificando zero acessos a 0xC000_100C e IPL)
-# Compilar testes de drivers com -std=c11 -Wall -Wextra -Werror -DPANADIGA_FW_HOST_TEST=1
+# 1. Testes host C11 (barreiras MMIO, TBUS 255s, NTSC/PAL-M, espera 1000ms DAVIS CH1)
+gcc -std=c11 -Wall -Wextra -Werror -DPANADIGA_OPENOS_HOST_TEST=1 -Ifirmware/panadiga-openos \
+  firmware/panadiga-openos/drivers/*.c firmware/panadiga-openos/kernel/openos_main.c \
+  firmware/panadiga-openos/tests/test_openos_host.c -o /tmp/test_openos_host && /tmp/test_openos_host
 
 # 2. Cross-compilação reproduzível em container mn10300-elf-gcc
 mn10300-elf-gcc -std=c11 -Os -Wall -Wextra -Werror -ffreestanding -nostdlib \
-  -T am34_sdram.ld crt0_am34.S <modulos.c> -o panamon2_tbc.elf
-mn10300-elf-objcopy -O binary panamon2_tbc.elf panamon2_tbc.bin
+  -Ifirmware/panadiga-openos -T firmware/panadiga-openos/boot/am34_sdram.ld \
+  firmware/panadiga-openos/boot/crt0_am34.S firmware/panadiga-openos/drivers/*.c \
+  firmware/panadiga-openos/kernel/openos_main.c -o tmp/panadiga_openos.elf
+mn10300-elf-objcopy -O binary tmp/panadiga_openos.elf tmp/panadiga_openos.bin
 
 # 3. Empacotar como DIGADIAG.FRM (262.144 B raw para Loader ver0.61) e validar limites em Mn103Vm
-cargo run -q -p panadiga-cli -- frm pack --mode digadiag -i tmp/panamon2_tbc.bin -o tmp/DIGADIAG.FRM --dst-addr 0x50400000 -j -
+cargo run -q -p panadiga-cli -- frm pack --mode digadiag -i tmp/panadiga_openos.bin -o tmp/DIGADIAG.FRM --dst-addr 0x50400000 -j -
 cargo run -q -p panadiga-cli -- unbrick tbc-plan --mode stage15_digadiag_tbc --standard pal-m -j -
 cargo run -q -p panadiga-cli -- re verify-patches --json
 
@@ -57,5 +62,5 @@ cargo run -q -p panadiga-cli -- re verify-patches --json
 ```
 
 ## 5. Armadilhas & Verificação
-- **Armadilhas:** Bloquear por engano a janela `0x8900_0080..0x8A00_0000` (impede acesso legítimo a `DAVIS CH0/CH1`, `SDCD` e `AVDD`); esquecer tamanho exato `262.144 B` raw em `DIGADIAG.FRM` para `Loader ver0.61`; testar no hardware sem `ADuM3160` ou sem watchdog `TBUS` armado.
-- **Verificação:** `100%` dos testes host MMIO passando (`-Wall -Wextra -Werror`), ELF sem símbolos indefinidos nem extrapolar `256 KiB`, `panadiga re verify-patches` verde em `Mn103Vm` e banner `PANAMON2>` + keepalive estável > 10 min na captura `COM10` antes de avançar de `M0` para `M1..M3`.
+- **Armadilhas:** Usar `volatile` achando que garante atomicidade entre ISR e loop principal; bloquear a janela `0x8900_0080..0x8A00_0000` (`DAVIS`/`SDCD`/`AVDD`); consultar `DAVIS CH1` sem aguardar `1000 ms` atrás do `IDE2SAT2`; alimentar `IC7501 TBUS` de dentro de um timer ISR cego; testar sem `ADuM3160`.
+- **Verificação:** `test_openos_host` (`100%` PASS em `-Wall -Wextra -Werror`), ELF sem símbolos indefinidos nem extrapolar `512 KiB` em Stage-1.5, `panadiga re verify-patches` verde em `Mn103Vm` (`N2_EMULATED`) e `OPENOS>` + `TBUS` estável > 10 min na `COM10` antes de declarar avanço `M0..M4` (`N4_HARDWARE`).

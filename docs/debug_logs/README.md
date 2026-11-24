@@ -31,7 +31,7 @@ Fluxo direto do Pico `P7501` (`UARTMON`, `UARTSTREAM`, `BOOTTRACE`) sem cabeçal
 | [`captura_samsung_2gb_20261115_020351.log`](./captura_samsung_2gb_20261115_020351.log) | 3.238 B | `E1475AA221FF7032563BD0DEE0B35037AEF338DB7F1D0219C3746D5100DBFC21` | `Loader ver0.61 [06/03/06]` · `cd_diag` (UTF-16LE) | `5` | SD `-91006/-90002`; `80020401`, `80040904` (4 SENSE) | `3.24 V` |
 | [`captura_live_20261115_021346.log`](./captura_live_20261115_021346.log) | 283 B | `BA5F1CE793E1D3C258D1824FDFE1336FDB767D89B442CB9BB8BCA35D4B41B8BB` | `PANADIGA>` `UARTMON 30000 ms` (0 bytes) | — | — | — |
 | [`captura_flat_odd_20261115_021446.log`](./captura_flat_odd_20261115_021446.log) | 2.611 B | `B16843875FFD03792483C2650D81751A4BE7FF3A5E15480D27486082CF522955` | `Loader ver0.61 [06/03/06]` · `cd_diag` (`PINCHECK`) | `70` | SD `-90002` | `3.24 V` |
-| [`captura_flat_odd_85s_20261115_021614.log`](./captura_flat_odd_20261115_021614.log) | 4.834 B | `62A9AB97E8123CB744ADC16FCCB789F21F3AD16F71E3187DF1964C626E4C1E08` | `Loader ver0.61 [06/03/06]` · `cd_diag` (`85s`) | `70` | SD `-90002`; `80020401`, `80040904` (14 SENSE `0x83A7`) | — |
+| [`captura_flat_odd_85s_20261115_021614.log`](./captura_flat_odd_85s_20261115_021614.log) | 4.834 B | `62A9AB97E8123CB744ADC16FCCB789F21F3AD16F71E3187DF1964C626E4C1E08` | `Loader ver0.61 [06/03/06]` · `cd_diag` (`85s`) | `70` | SD `-90002`; `80020401`, `80040904` (14 SENSE `0x83A7`) | — |
 | [`captura_sdhc32gb_cd_20261115_022258.log`](./captura_sdhc32gb_cd_20261115_022258.log) | 2.453 B | `852E031F85E091B86ED2A66D5BB0BFAF9A3C50A14D436E625EBBE71587B4C61D` | `Loader ver0.61 [06/03/06]` · `cd_diag` (SDHC 32 GB) | `70` | SD `-90002`; `80020401`, `80040904` (5 SENSE) | `3.24 V` |
 | [`captura_sdhc32gb_cd_75s_20261115_022548.log`](./captura_sdhc32gb_cd_75s_20261115_022548.log) | 12.447 B | `F91215F9B6B1F1C4A2E9EFEBAF5066F8DAFB8E5F2EA062D347B1F936B5B03083` | `Loader ver0.61 [06/03/06]` · `normal` (post retry) | `70` / `BGO=1` | SD `-90002`; `80020401`, `80040904` (52 SENSE) | — |
 | [`captura_retest_cabo_20261115_023052.log`](./captura_retest_cabo_20261115_023052.log) | 8.205 B | `5DE5C4C19DDDC0BCB1EA572FBA722B62797D4EFD41DBF53407782B1FA4E32020` | `Loader ver0.61 [06/03/06]` · `cd_diag` (cable retest) | `70` | SD `-90001` (no card); `80020401`, `80040904` (29 SENSE) | `3.25 V` |
@@ -71,3 +71,19 @@ Operação física de gravação Copy-on-Write (backup prévio de `64 KiB` + ver
 | Arquivo `.log` / File | Tamanho / Size | SHA-256 Verificado | Alvo / Dispositivo | Evidência Empírica Registrada |
 | :--- | ---: | :--- | :--- | :--- |
 | [`hdd_unbrick_flash_250gb_20261119.log`](./hdd_unbrick_flash_250gb_20261119.log) | 3.934 B | `021806054BAE733CB6E2514E604877EB75AB7B6C9E55C1E193339DD30F03B67C` | `\\.\PhysicalDrive1` (`250.059.350.016 B`, `BusType=7`, `488.397.168 LBAs`) | Backup prévio `65.536 B` (`354d38bd...`) substituindo MBR Windows `55aa` (`3db0e904...`); gravação e read-back SHA-256 verificados de `panasonic_dmr_eh55_hdd_250gb_patched.img` (`104.857.600 B`, `4fde753c...`, `LBA 0[16:512]` 100% zeros) + espelho P1 no `LBA 488266096` (`6.173.696 B`, `d932692c...`). |
+
+---
+
+## 4. Capturas de Bancada `COM10` da Campanha `StarTech IDE2SAT2` & Portões `2..3` (`docs/evidence/*.log`)
+
+Além dos `28` logs históricos deduplicados em `docs/debug_logs/*.log` acima, as `7` capturas da campanha `StarTech IDE2SAT2` + Stage-2 (`2026-11-22` / `2026-11-23`) residem em [`docs/evidence/`](../evidence/ledger.json):
+
+| Arquivo em `docs/evidence/` | Tamanho / Size | SHA-256 Verificado | Portão / Resultado Registrado |
+| :--- | ---: | :--- | :--- |
+| [`boottrace_sata_bridge_gate2_20261122.log`](../evidence/boottrace_sata_bridge_gate2_20261122.log) | 7.536 B | `F8C1B5699986334F1A97EF004319EAEEF880B3447DC4D80D04C1DB82C92D6865` | **Portão 2 PASS:** Boot SD com ponte `StarTech IDE2SAT2` (`SAMSUNG HM251JI`) ativo sem escrita em Flash/HDD. |
+| [`boottrace_sata_bridge_nosd_only_20261122.log`](../evidence/boottrace_sata_bridge_nosd_only_20261122.log) | 9.021 B | `3120123E29115694E99B51EB1CF120DAEB346683B36FC5AD5091026B2A34AC2E` | Triagem sem SD com ponte `IDE2SAT2` instalada (`SAMSUNG HM251JI`). |
+| [`boottrace_sata_bridge_nosd_warm_20261122.log`](../evidence/boottrace_sata_bridge_nosd_warm_20261122.log) | 7.536 B | `15ABE196A8A6A1611907B6EE25F020F47A352F025DCF7B8E8D377D6B0513FAAB` | Warm boot sem SD após enumeração SATA. |
+| [`boottrace_sata_bridge_gate3_boot1_20261122.log`](../evidence/boottrace_sata_bridge_gate3_boot1_20261122.log) | 7.557 B | `4BE424BA7E96859B824537E4F6940A777D4D3540C75FA5A7753211DF54C60748` | Portão 3 tentativa 1 (pré-retarget): expôs `[nfrom] BGO driver init failed[1].` em `src/nfd_api.c:228`. |
+| [`boottrace_sata_bridge_gate3_boot2_20261122.log`](../evidence/boottrace_sata_bridge_gate3_boot2_20261122.log) | 7.402 B | `4D35E08ED4CA9A0CB5E7C7E8C9846494E8966C46831BC57745A473E0935C665E` | Portão 3 tentativa 2 (cold boot pré-retarget `4 MiB` sobre Flash `8 MiB`). |
+| [`boottrace_sata_bridge_gate3_8mb_boot1_fvu_20261123.log`](../evidence/boottrace_sata_bridge_gate3_8mb_boot1_fvu_20261123.log) | 4.906 B | `455A86083636CF4BCC2C49D33FFD55BE1391E6E9C12EDB7EBD15791DBDACD2D3` | **Portão 3 Boot 1 (`FVU)`):** gravou `MAIN3060NP` `8 MiB` BGO nos 2 espelhos (`size=0x645028`, `check_sum=0x32836a32`, `Vefify OK` × 2). |
+| [`boottrace_sata_bridge_gate3_8mb_boot2_main_20261123.log`](../evidence/boottrace_sata_bridge_gate3_8mb_boot2_main_20261123.log) | 55.917 B | `ACBEE64C1710E015DC32F707BFF4ACD3CE25CB1224575AB38753A7B3FF95595A` | **Portão 3 Boot 2 PASS:** cold boot direto do `SAMSUNG HM251JI` (`PiE-OS 3060NP`, `39.652 B` UART, `M6930LB`, `TM LI`). |

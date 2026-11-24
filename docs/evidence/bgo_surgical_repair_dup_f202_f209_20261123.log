@@ -1,0 +1,58 @@
+=== PRE_STATUS ===
+VDD: 3.27V (OK)
+[STANDBY] RXD=1 NSW5V=1 TXD=1 XRESET=1 SW_PU=3.28V NSW5V_DROPS=222 | State=POWERED / AWAKE (SW_UART ~3.3V)
+[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=325 wdt_recoveries=0 reboot_src=CLEAN fault_slot=255 fault_stage=IDLE last_cmd=BRIDGE last_us=8316846
+@P7501_RES cmd=STATUS status=OK code=0 elapsed_us=1725
+PANADIGA> 
+[PRE_STATUS] prompt=True vdd=3.27V nsw5v=1 drops=222
+[PRE BGO_INSPECT]
+[BGO_INSPECT] sectors=45 erased=3 valid=41 corrupt=0 dup_lbn=1 zmarker_bad=0 healthy=NO
+BGO_INSPECT: OK
+@P7501_RES cmd=BGO_INSPECT status=OK code=0 elapsed_us=1479999
+PANADIGA>
+[BACKUP] Verified C:\Users\danie\.gemini\antigravity\brain\ba763a20-dd0c-4f98-af99-9bd9ecab874c\scratch\pre_repair_sa29_sa42_sa48_20261123.bin (SHA256=E08462BE4851AF6F595E9E3C7D71F976D879F4435F0924DC7E5D895D80D0CC7B)
+=== PHASE 1: MERGE SA48 SLOTS 16/18/19 -> SA29 (0x84160000) ===
+[PHASE 1] SA29 slot 16 already matches SA48 (skipped).
+[PHASE 1] SA29 slot 18 already matches SA48 (skipped).
+[PHASE 1] SA29 slot 19 already matches SA48 (skipped).
+[PHASE 1 OK] SA29 slots 16, 18, 19 read-back verified 100%.
+=== PHASE 2: RESTORE 0xF209 -> SA42 (0x84230000) ===
+[PHASE 2] SA42 (0xF209) already matches baseline (skipped).
+[PHASE 2 OK] SA42 (0xF209) read-back verified 100% (1024 B exact).
+=== PHASE 3: ERASE SA48 (0x84290000) & FORMAT ZERO-MARKER ===
+=== BRIDGE_ENTER ===
+[BRIDGE] USB CDC <-> P7501 SC0 115200 8N1 ctrl=OFF active (exit: send '~~~' or unplug USB).
+
+[BRIDGE ?] ??
+PANAMON1>[B/R/W/D/F/J/E/U/Q]
+[BRIDGE UNLOCK] U CONFIRM_UPPER_NOR
+OK:NOR_UNLOCK
+PANAMON1>[B/R/W/D/F/J/E/U/Q]
+[BRIDGE ERASE] E 84290000
+OK:ERASE
+PANAMON1>[B/R/W/D/F/J/E/U/Q]
+[BRIDGE LOCK] U LOCK
+OK:NOR_LOCK
+PANAMON1>[B/R/W/D/F/J/E/U/Q]
+=== BRIDGE_EXIT ===
+
+BRIDGE: OK (rx=206 tx=41 ferr=0 ctrl_edges=0 overflow=NO)
+@P7501_RES cmd=BRIDGE status=OK code=0 elapsed_us=23558346
+PANADIGA> 
+[FAST_WRITE 0x84290100 len=128] OK=True
+[FAST_WRITE 0x84290180 len=128] OK=True
+[PHASE 3 OK] SA48 erased and formatted as clean spare (0xFF / ALL_00).
+=== PHASE 4: VERIFY BGO_INSPECT & 100% L2P INTEGRITY ===
+[POST BGO_INSPECT]
+[BGO_INSPECT] sectors=45 erased=4 valid=41 corrupt=0 dup_lbn=0 zmarker_bad=0 healthy=YES
+BGO_INSPECT: OK
+@P7501_RES cmd=BGO_INSPECT status=OK code=0 elapsed_us=1496284
+PANADIGA>
+[L2P VERIFY] active_pages=1031 f2_sectors=40 mismatches=0
+=== POST_STATUS ===
+VDD: 3.27V (OK)
+[STANDBY] RXD=1 NSW5V=1 TXD=1 XRESET=1 SW_PU=3.28V NSW5V_DROPS=222 | State=POWERED / AWAKE (SW_UART ~3.3V)
+[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=392 wdt_recoveries=0 reboot_src=CLEAN fault_slot=255 fault_stage=IDLE last_cmd=FAST_READ last_us=117283
+@P7501_RES cmd=STATUS status=OK code=0 elapsed_us=1692
+PANADIGA> 
+[POST_STATUS] prompt=True vdd=3.27V nsw5v=1 drops=222 (base=222)

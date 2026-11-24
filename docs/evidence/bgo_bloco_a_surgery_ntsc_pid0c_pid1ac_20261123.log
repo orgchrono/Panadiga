@@ -1,0 +1,199 @@
+=== PRE_STATUS ===
+VDD: 3.26V (OK)
+[STANDBY] RXD=1 NSW5V=1 TXD=1 XRESET=1 SW_PU=3.27V NSW5V_DROPS=40 | State=POWERED / AWAKE (SW_UART ~3.3V)
+[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=1762 wdt_recoveries=0 reboot_src=CLEAN fault_slot=255 fault_stage=IDLE last_cmd=BOOTTRACE last_us=12021695
+@P7501_RES cmd=STATUS status=OK code=0 elapsed_us=1696
+PANADIGA> 
+[PRE_STATUS] prompt=True vdd=3.26V nsw5v=1 drops=40
+[INFO] Entering PANAMON1> via BOOTTRACE 12000 JIG:2500...
+=== JIG_BOOT ===
+=== BOOTTRACE: window=12000ms boot=2 hold=2500ms sticky=NO no_xrst=NO (8N1 @ 115200) ===
+[BOOTTRACE +  10ms] DDR CHECK: OK
+[BOOTTRACE +  19ms] Chip select = 1
+[BOOTTRACE +  21ms] ***** Loader ver0.61 [06/03/06] *****
+[BOOTTRACE +  24ms] ***** serial boot mode *****
+[BOOTTRACE +  27ms] !!! start fmu to read & exec fvu. !!!
+[BOOTTRACE +  30ms] wait 1 second.
+[BOOTTRACE +1032ms] *** timer correspond initialize ***
+[BOOTTRACE +1038ms] startup reason = [41]
+[BOOTTRACE +1042ms] Main hung-up time changed 255[s].
+[BOOTTRACE +1057ms] SD init start...
+[BOOTTRACE +1149ms] [SDCD] sdcd_insrmv_check:SD Card inserted 
+[BOOTTRACE +1405ms] [SDCD] === This Card Spec ==== 
+[BOOTTRACE +1408ms] .Card type:2(condition:3) wp:0
+[BOOTTRACE +1411ms] .capacity:3c4000[LBA](2021654528Byte) . transfer speed:25000[Kbps]
+[BOOTTRACE +1417ms] .RCA:2 . Bus Width:4(current) 4(support)
+[BOOTTRACE +1421ms] .Multi Max Block Len Read:2[SECT] / Write:2[SECT]
+[BOOTTRACE +1425ms] SD = 0x3C4000[LBA]
+[BOOTTRACE +1427ms] ... SD init end
+[BOOTTRACE +1489ms] *** start diag ***
+[BOOTTRACE +1498ms] ***** Fvu ver0.61 [05/11/01] *****
+[BOOTTRACE +1501ms] PANAMON1>[B/R/W/D/F/J/E/U/Q]
+[BOOTTRACE] UART: bytes=671 first_byte=10229us ferr=0 perr=0 ovf=NO | SW_rel=YES@26293us(SERIAL_BOOT)
+[BOOTTRACE] ADC0_SWUART: min=0.00V max=3.27V (low=3 hiz=3.26..3.27V n=1199) | CtrlEdges: NSW5V=0 TXD=0 XRESET=0 (logged=0)
+BOOTTRACE: OK
+@P7501_RES cmd=BOOTTRACE status=OK code=0 elapsed_us=12021541
+PANADIGA> 
+[PRE BGO_INSPECT]
+@P7501_BGO_SEC sa=26 va=0x84130000 lbn=0xF211 state=1 z100_ok=1
+@P7501_BGO_SEC sa=27 va=0x84140000 lbn=0xF206 state=1 z100_ok=1
+@P7501_BGO_SEC sa=28 va=0x84150000 lbn=0xF20A state=1 z100_ok=1
+@P7501_BGO_SEC sa=29 va=0x84160000 lbn=0xF20F state=1 z100_ok=1
+@P7501_BGO_SEC sa=30 va=0x84170000 lbn=0xF204 state=1 z100_ok=1
+@P7501_BGO_SEC sa=31 va=0x84180000 lbn=0xF205 state=1 z100_ok=1
+@P7501_BGO_SEC sa=32 va=0x84190000 lbn=0xF21C state=1 z100_ok=1
+@P7501_BGO_SEC sa=33 va=0x841A0000 lbn=0xF207 state=1 z100_ok=1
+@P7501_BGO_SEC sa=34 va=0x841B0000 lbn=0xF214 state=1 z100_ok=1
+@P7501_BGO_SEC sa=35 va=0x841C0000 lbn=0xF225 state=1 z100_ok=1
+@P7501_BGO_SEC sa=36 va=0x841D0000 lbn=0xF219 state=1 z100_ok=1
+@P7501_BGO_SEC sa=37 va=0x841E0000 lbn=0xF202 state=1 z100_ok=1
+@P7501_BGO_SEC sa=38 va=0x841F0000 lbn=0xF21B state=1 z100_ok=1
+@P7501_BGO_SEC sa=39 va=0x84200000 lbn=0xF101 state=1 z100_ok=1
+@P7501_BGO_SEC sa=40 va=0x84210000 lbn=0xF20B state=1 z100_ok=1
+@P7501_BGO_SEC sa=41 va=0x84220000 lbn=0xF208 state=1 z100_ok=1
+@P7501_BGO_SEC sa=42 va=0x84230000 lbn=0xF209 state=1 z100_ok=1
+@P7501_BGO_SEC sa=43 va=0x84240000 lbn=0xF21D state=1 z100_ok=1
+@P7501_BGO_SEC sa=44 va=0x84250000 lbn=0xF21E state=1 z100_ok=1
+@P7501_BGO_SEC sa=45 va=0x84260000 lbn=0xF21F state=1 z100_ok=1
+@P7501_BGO_SEC sa=46 va=0x84270000 lbn=0xF220 state=1 z100_ok=1
+@P7501_BGO_SEC sa=47 va=0x84280000 lbn=0xF218 state=1 z100_ok=1
+@P7501_BGO_SEC sa=48 va=0x84290000 lbn=0xF216 state=1 z100_ok=1
+@P7501_BGO_SEC sa=49 va=0x842A0000 lbn=0xF21A state=1 z100_ok=1
+@P7501_BGO_SEC sa=50 va=0x842B0000 lbn=0xF20C state=1 z100_ok=1
+@P7501_BGO_SEC sa=51 va=0x842C0000 lbn=0xF221 state=1 z100_ok=1
+@P7501_BGO_SEC sa=52 va=0x842D0000 lbn=0xF217 state=1 z100_ok=1
+@P7501_BGO_SEC sa=53 va=0x842E0000 lbn=0xF210 state=1 z100_ok=1
+@P7501_BGO_SEC sa=54 va=0x842F0000 lbn=0xF20D state=1 z100_ok=1
+@P7501_BGO_SEC sa=55 va=0x84300000 lbn=0xFFFF state=0 z100_ok=1
+@P7501_BGO_SEC sa=56 va=0x84310000 lbn=0xF222 state=1 z100_ok=1
+@P7501_BGO_SEC sa=57 va=0x84320000 lbn=0xF215 state=1 z100_ok=1
+@P7501_BGO_SEC sa=58 va=0x84330000 lbn=0xF213 state=1 z100_ok=1
+@P7501_BGO_SEC sa=59 va=0x84340000 lbn=0xF223 state=1 z100_ok=1
+@P7501_BGO_SEC sa=60 va=0x84350000 lbn=0xF224 state=1 z100_ok=1
+@P7501_BGO_SEC sa=61 va=0x84360000 lbn=0xFFFF state=0 z100_ok=1
+@P7501_BGO_SEC sa=62 va=0x84370000 lbn=0xFFFF state=0 z100_ok=1
+@P7501_BGO_SEC sa=63 va=0x84380000 lbn=0xF212 state=1 z100_ok=1
+@P7501_BGO_SEC sa=64 va=0x84390000 lbn=0xF226 state=1 z100_ok=1
+@P7501_BGO_SEC sa=65 va=0x843A0000 lbn=0xF227 state=1 z100_ok=1
+@P7501_BGO_SEC sa=66 va=0x843B0000 lbn=0xF228 state=1 z100_ok=1
+@P7501_BGO_SEC sa=67 va=0x843C0000 lbn=0xF20E state=1 z100_ok=1
+@P7501_BGO_SEC sa=68 va=0x843D0000 lbn=0xF201 state=1 z100_ok=1
+@P7501_BGO_SEC sa=69 va=0x843E0000 lbn=0xFFFF state=0 z100_ok=1
+@P7501_BGO_SEC sa=70 va=0x843F0000 lbn=0xF203 state=1 z100_ok=1
+[BGO_INSPECT] sectors=45 erased=4 valid=41 corrupt=0 dup_lbn=0 zmarker_bad=0 healthy=YES
+BGO_INSPECT: OK
+@P7501_RES cmd=BGO_INSPECT status=OK code=0 elapsed_us=1504106
+PANADIGA>
+[LIVE SCAN] p1_sas=[39] f2_count=40 open_f2_sas=[37]
+[TAG HOLE CHECK] All 40 F2xx sectors have 0 intermediate 0xFFFF holes.
+[P1 SA39 @ 0x84200000] active_l2p=1037 blank_sps_total=22 (next=[234, 235, 236, 237])
+[NFD DIR] config1=(8812, 68) fs4.dat=(168900, 11)
+[FAT CHAINS] config1 len=18 page0=0x0044 page9=0x003E | fs4.dat len=330 page131=0x01AC
+[LIVE TARGETS]
+  cfg0    PID=0x0044 @ SA48 slot=83 tag=0x0044 +0x0EC=0x01
+  cfg9    PID=0x003E @ SA60 slot=60 tag=0x003E +0x0E0..0x100=00 00 00 00 00 00 00 00 00 00 00 01 00 00 00 00 01 00 00 00 01 00 00 00 02 00 08 00 00 00 00 00
+  fs4[131] PID=0x01AC @ SA37 slot=18 tag=0x0000 sha=BEA0419CB9961CA2
+[CFG0 DIFF live vs pre_heal] ['+0x0EC: bak=0xFF live=0x01']
+[REF clean fs4.dat[131]] len=512 sha256=B58B55FC010B651869BE74EA35FF6B5D7E413F4FA0F38DDF91C767391AA6271F
+[BACKUP] C:\Users\danie\.gemini\antigravity\brain\ba763a20-dd0c-4f98-af99-9bd9ecab874c\scratch\pre_bloco_a_bgo_surgery_20261123.bin (178176 B, SHA256=5A6BDC8C5AEBB4EB0FB80AEA549DCFD8CEDCC102528011B2ADBD40B15767B099)
+[CFG9 PLAN] +0x0E0..0x100 before=00 00 00 00 00 00 00 00 00 00 00 01 00 00 00 00 01 00 00 00 01 00 00 00 02 00 08 00 00 00 00 00
+[CFG9 PLAN] +0x0E0..0x100 after =00 00 00 00 00 00 00 00 00 00 00 01 00 00 00 00 00 00 00 00 01 00 00 00 02 00 08 00 00 00 00 00
+[PLAN] 3 CoW page updates queued: ['restore cfg0 ID 0x00C6 (+0x0EC=0xFF)', 'set cfg9 ID 0x0117 (+0x0F0=0x00000000 TV_NTSC)', 'restore fs4.dat[131] (PID 0x01AC)']
+=== COW UPDATE: restore cfg0 ID 0x00C6 (+0x0EC=0xFF) (PID=0x0044) -> SA37 slot 32 ===
+[FAST_WRITE 0x841E4400 len=128] OK=True
+[FAST_WRITE 0x841E4480 len=128] OK=True
+[FAST_WRITE 0x841E4500 len=128] OK=True
+[FAST_WRITE 0x841E4580 len=128] OK=True
+[FAST_WRITE 0x841E0280 len=2] OK=True
+[FAST_WRITE 0x8420EA04 len=36] OK=True
+[FAST_WRITE 0x8420E800 len=4] OK=True
+[FAST_WRITE 0x8420EA00 len=4] OK=True
+[FAST_WRITE 0x8429034C len=2] OK=True
+  OK: L2P tid=0x0004 (sp=232,s=1) -> (sp=234,s=0, word=0x0240); old SA48 slot 83 old_tag=0x0044
+=== COW UPDATE: set cfg9 ID 0x0117 (+0x0F0=0x00000000 TV_NTSC) (PID=0x003E) -> SA37 slot 33 ===
+[FAST_WRITE 0x841E4600 len=128] OK=True
+[FAST_WRITE 0x841E4680 len=128] OK=True
+[FAST_WRITE 0x841E4700 len=128] OK=True
+[FAST_WRITE 0x841E4780 len=128] OK=True
+[FAST_WRITE 0x841E0284 len=2] OK=True
+[FAST_WRITE 0x8420EB04 len=36] OK=True
+[FAST_WRITE 0x8420CA00 len=4] OK=True
+[FAST_WRITE 0x8420EB00 len=4] OK=True
+[FAST_WRITE 0x843502F0 len=2] OK=True
+  OK: L2P tid=0x0003 (sp=202,s=4) -> (sp=235,s=0, word=0x0242); old SA60 slot 60 old_tag=0x003E
+=== COW UPDATE: restore fs4.dat[131] (PID 0x01AC) (PID=0x01AC) -> SA37 slot 34 ===
+[FAST_WRITE 0x841E4800 len=128] OK=True
+[FAST_WRITE 0x841E4880 len=128] OK=True
+[FAST_WRITE 0x841E4900 len=128] OK=True
+[FAST_WRITE 0x841E4980 len=128] OK=True
+[FAST_WRITE 0x841E0288 len=2] OK=True
+[FAST_WRITE 0x8420EC04 len=36] OK=True
+[FAST_WRITE 0x8420B200 len=4] OK=True
+[FAST_WRITE 0x8420EC00 len=4] OK=True
+  OK: L2P tid=0x001A (sp=178,s=3) -> (sp=236,s=0, word=0x0244); old SA37 slot 18 old_tag=0x0000
+=== POST-WRITE READBACK VERIFICATION ===
+[POST BGO_INSPECT]
+@P7501_BGO_SEC sa=26 va=0x84130000 lbn=0xF211 state=1 z100_ok=1
+@P7501_BGO_SEC sa=27 va=0x84140000 lbn=0xF206 state=1 z100_ok=1
+@P7501_BGO_SEC sa=28 va=0x84150000 lbn=0xF20A state=1 z100_ok=1
+@P7501_BGO_SEC sa=29 va=0x84160000 lbn=0xF20F state=1 z100_ok=1
+@P7501_BGO_SEC sa=30 va=0x84170000 lbn=0xF204 state=1 z100_ok=1
+@P7501_BGO_SEC sa=31 va=0x84180000 lbn=0xF205 state=1 z100_ok=1
+@P7501_BGO_SEC sa=32 va=0x84190000 lbn=0xF21C state=1 z100_ok=1
+@P7501_BGO_SEC sa=33 va=0x841A0000 lbn=0xF207 state=1 z100_ok=1
+@P7501_BGO_SEC sa=34 va=0x841B0000 lbn=0xF214 state=1 z100_ok=1
+@P7501_BGO_SEC sa=35 va=0x841C0000 lbn=0xF225 state=1 z100_ok=1
+@P7501_BGO_SEC sa=36 va=0x841D0000 lbn=0xF219 state=1 z100_ok=1
+@P7501_BGO_SEC sa=37 va=0x841E0000 lbn=0xF202 state=1 z100_ok=1
+@P7501_BGO_SEC sa=38 va=0x841F0000 lbn=0xF21B state=1 z100_ok=1
+@P7501_BGO_SEC sa=39 va=0x84200000 lbn=0xF101 state=1 z100_ok=1
+@P7501_BGO_SEC sa=40 va=0x84210000 lbn=0xF20B state=1 z100_ok=1
+@P7501_BGO_SEC sa=41 va=0x84220000 lbn=0xF208 state=1 z100_ok=1
+@P7501_BGO_SEC sa=42 va=0x84230000 lbn=0xF209 state=1 z100_ok=1
+@P7501_BGO_SEC sa=43 va=0x84240000 lbn=0xF21D state=1 z100_ok=1
+@P7501_BGO_SEC sa=44 va=0x84250000 lbn=0xF21E state=1 z100_ok=1
+@P7501_BGO_SEC sa=45 va=0x84260000 lbn=0xF21F state=1 z100_ok=1
+@P7501_BGO_SEC sa=46 va=0x84270000 lbn=0xF220 state=1 z100_ok=1
+@P7501_BGO_SEC sa=47 va=0x84280000 lbn=0xF218 state=1 z100_ok=1
+@P7501_BGO_SEC sa=48 va=0x84290000 lbn=0xF216 state=1 z100_ok=1
+@P7501_BGO_SEC sa=49 va=0x842A0000 lbn=0xF21A state=1 z100_ok=1
+@P7501_BGO_SEC sa=50 va=0x842B0000 lbn=0xF20C state=1 z100_ok=1
+@P7501_BGO_SEC sa=51 va=0x842C0000 lbn=0xF221 state=1 z100_ok=1
+@P7501_BGO_SEC sa=52 va=0x842D0000 lbn=0xF217 state=1 z100_ok=1
+@P7501_BGO_SEC sa=53 va=0x842E0000 lbn=0xF210 state=1 z100_ok=1
+@P7501_BGO_SEC sa=54 va=0x842F0000 lbn=0xF20D state=1 z100_ok=1
+@P7501_BGO_SEC sa=55 va=0x84300000 lbn=0xFFFF state=0 z100_ok=1
+@P7501_BGO_SEC sa=56 va=0x84310000 lbn=0xF222 state=1 z100_ok=1
+@P7501_BGO_SEC sa=57 va=0x84320000 lbn=0xF215 state=1 z100_ok=1
+@P7501_BGO_SEC sa=58 va=0x84330000 lbn=0xF213 state=1 z100_ok=1
+@P7501_BGO_SEC sa=59 va=0x84340000 lbn=0xF223 state=1 z100_ok=1
+@P7501_BGO_SEC sa=60 va=0x84350000 lbn=0xF224 state=1 z100_ok=1
+@P7501_BGO_SEC sa=61 va=0x84360000 lbn=0xFFFF state=0 z100_ok=1
+@P7501_BGO_SEC sa=62 va=0x84370000 lbn=0xFFFF state=0 z100_ok=1
+@P7501_BGO_SEC sa=63 va=0x84380000 lbn=0xF212 state=1 z100_ok=1
+@P7501_BGO_SEC sa=64 va=0x84390000 lbn=0xF226 state=1 z100_ok=1
+@P7501_BGO_SEC sa=65 va=0x843A0000 lbn=0xF227 state=1 z100_ok=1
+@P7501_BGO_SEC sa=66 va=0x843B0000 lbn=0xF228 state=1 z100_ok=1
+@P7501_BGO_SEC sa=67 va=0x843C0000 lbn=0xF20E state=1 z100_ok=1
+@P7501_BGO_SEC sa=68 va=0x843D0000 lbn=0xF201 state=1 z100_ok=1
+@P7501_BGO_SEC sa=69 va=0x843E0000 lbn=0xFFFF state=0 z100_ok=1
+@P7501_BGO_SEC sa=70 va=0x843F0000 lbn=0xF203 state=1 z100_ok=1
+[BGO_INSPECT] sectors=45 erased=4 valid=41 corrupt=0 dup_lbn=0 zmarker_bad=0 healthy=YES
+BGO_INSPECT: OK
+@P7501_RES cmd=BGO_INSPECT status=OK code=0 elapsed_us=1504066
+PANADIGA>
+[READBACK OK] active_l2p=1037 SA37 holes=0
+  cfg0    PID=0x0044 @ SA37 slot=32 tag=0x0044 +0x0EC=0xFF
+  cfg9    PID=0x003E @ SA37 slot=33 tag=0x003E +0x0F0=00000000 (NTSC)
+  fs4[131] PID=0x01AC @ SA37 slot=34 tag=0x01AC sha256=B58B55FC010B651869BE74EA35FF6B5D7E413F4FA0F38DDF91C767391AA6271F
+=== BOOTTRACE 75000 (LIVE NTSC + SATA HDD BOOT) ===
+[BOOTTRACE 75000 SUMMARY] bytes=27588 sha256=113EB37723F551446ECEF41539261857A19F33ED4C080DE59225406D3DC1DFCA
+  nfrom_read_0x1AC_err=0 nfrom_write_0xF01_err=0
+  tv_pal_change_count=0 avout_line='NONE' vmute0=False disc2_ok=False u99_seen=False
+=== POST_STATUS ===
+VDD: 3.27V (OK)
+[STANDBY] RXD=1 NSW5V=1 TXD=1 XRESET=1 SW_PU=3.28V NSW5V_DROPS=41 | State=POWERED / AWAKE (SW_UART ~3.3V)
+[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=1853 wdt_recoveries=0 reboot_src=CLEAN fault_slot=255 fault_stage=IDLE last_cmd=BOOTTRACE last_us=75021956
+@P7501_RES cmd=STATUS status=OK code=0 elapsed_us=1669
+PANADIGA> 
+[POST_STATUS] prompt=True vdd=3.27V nsw5v=1 drops=41 (base=40)
