@@ -86,5 +86,21 @@ mod tests {
                 .is_err()
         );
         assert!(validate_interactive_pico_command("ERASE 80001000").is_err());
+
+        // Hex-encoded lethal register & IPL write smuggling via UARTTXHEX / WAITTX / UARTSEND MUST be blocked
+        assert!(validate_interactive_pico_command("FAST_READ 0xC000100F 4").is_err());
+        assert!(validate_interactive_pico_command("UARTTXHEX 522043303030313030430D").is_err());
+        assert!(
+            validate_interactive_pico_command(
+                "WAITTX 5000 NORMAL \"READY\" 522043303030313030450D"
+            )
+            .is_err()
+        );
+        assert!(validate_interactive_pico_command("UARTSEND E 84000000").is_err());
+        assert!(
+            validate_interactive_pico_command("UARTTXHEX 572038343030303030302C41410D").is_err()
+        );
+        assert!(validate_interactive_pico_command("UARTTXHEX 3F0D").is_ok());
+        assert!(validate_interactive_pico_command("UARTSEND R 847F0000,10").is_ok());
     }
 }

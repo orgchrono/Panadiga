@@ -6,7 +6,9 @@
  */
 
 #include "uart/p7501_uart_interactive.h"
+#include "cli/p7501_cli.h"
 #include "common/p7501_hex.h"
+#include "flash/p7501_bus_policy.h"
 #include "hal/p7501_hw.h"
 #include "hal/p7501_led.h"
 #include "hal/p7501_watchdog.h"
@@ -44,6 +46,13 @@ void p7501_cmd_uart_send(const char *arg) {
     if (p7501_ascii_iprefix(payload, "LOW:")) {
         sw_uart_out_low = true;
         payload += 4;
+    }
+
+    p7501_bus_deny_t deny = P7501_BUS_ALLOW;
+    if (!p7501_bus_check_uart_tx_payload((const uint8_t *)payload, strlen(payload), false, &deny)) {
+        p7501_cli_set_result("ERR", "E05");
+        printf("[UARTSEND] BLOCKED (%s)\n", p7501_bus_deny_name(deny));
+        return;
     }
 
     char tx_str[128];

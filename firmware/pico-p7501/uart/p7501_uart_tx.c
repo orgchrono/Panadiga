@@ -9,6 +9,7 @@
 
 #include "cli/p7501_cli.h"
 #include "common/p7501_hex.h"
+#include "flash/p7501_bus_policy.h"
 #include "hal/p7501_led.h"
 #include "hal/p7501_usb_dual_cdc.h"
 #include "hal/p7501_watchdog.h"
@@ -107,6 +108,12 @@ void p7501_cmd_uart_tx_hex(const char *arg) {
         printf("[UARTTXHEX] ERROR: Invalid hex payload '%s'.\n", payload_tok);
         return;
     }
+    p7501_bus_deny_t deny = P7501_BUS_ALLOW;
+    if (!is_break && !p7501_bus_check_uart_tx_payload(s_tx_buf, tx_len, false, &deny)) {
+        p7501_cli_set_result("ERR", "E05");
+        printf("[UARTTXHEX] BLOCKED (%s)\n", p7501_bus_deny_name(deny));
+        return;
+    }
 
     p7501_wdt_set_stage(P7501_WDT_STAGE_TX_WAIT);
     p7501_led_set_auto_mode(LED_MODE_BUS_ACTIVE);
@@ -138,6 +145,12 @@ void p7501_cmd_waittx(const char *arg) {
     if (!p7501_parse_waittx_args(arg, &spec)) {
         p7501_cli_set_result("ERR", "EINVAL");
         printf("[WAITTX] ERROR: Usage WAITTX <timeout_ms> <NORMAL|JIG|JIG:ms|NOPULL> \"<trigger>\" <hex|BRK> [post_ms]\n");
+        return;
+    }
+    p7501_bus_deny_t deny = P7501_BUS_ALLOW;
+    if (!spec.tx_break && !p7501_bus_check_uart_tx_payload(spec.tx_bytes, spec.tx_len, false, &deny)) {
+        p7501_cli_set_result("ERR", "E05");
+        printf("[WAITTX] BLOCKED (%s)\n", p7501_bus_deny_name(deny));
         return;
     }
 
@@ -238,7 +251,109 @@ static void bridge_tx_duplex(
     (void)bridge_flush_usb_ring(r);
 }
 
+typedef struct bridge_policy_ctx {
+    uint8_t line_buf[128];
+    size_t line_len;
+    uint8_t rsp_buf[256];
+    size_t rsp_len;
+    bool in_rsp;
+    uint8_t rsp_hash_tail;
+} bridge_policy_ctx_t;
+
+static bridge_policy_ctx_t s_bridge_pol;
+
+static void bridge_emit_or_flush(
+    bridge_usb_ring_t *r,
+    uint8_t b,
+    uint8_t *batch,
+    size_t *io_batch_len,
+    size_t batch_cap,
+    uint32_t *io_tx_count
+) {
+    if (*io_batch_len == batch_cap) {
+        bridge_tx_duplex(r, batch, *io_batch_len, io_tx_count);
+        *io_batch_len = 0u;
+    }
+    batch[(*io_batch_len)++] = b;
+}
+
+static void bridge_filter_tx_byte(
+    bridge_usb_ring_t *r,
+    uint8_t b,
+    uint8_t *batch,
+    size_t *io_batch_len,
+    size_t batch_cap,
+    uint32_t *io_tx_count
+) {
+    if (s_bridge_pol.in_rsp || (b == (uint8_t)'$')) {
+        if (!s_bridge_pol.in_rsp) {
+            if (*io_batch_len > 0u) {
+                bridge_tx_duplex(r, batch, *io_batch_len, io_tx_count);
+                *io_batch_len = 0u;
+            }
+            s_bridge_pol.in_rsp = true;
+            s_bridge_pol.rsp_len = 0u;
+            s_bridge_pol.rsp_hash_tail = 0u;
+        }
+        if (s_bridge_pol.rsp_len < sizeof(s_bridge_pol.rsp_buf)) {
+            s_bridge_pol.rsp_buf[s_bridge_pol.rsp_len++] = b;
+        }
+        if (b == (uint8_t)'#') {
+            s_bridge_pol.rsp_hash_tail = 2u;
+        } else if (s_bridge_pol.rsp_hash_tail > 0u) {
+            --s_bridge_pol.rsp_hash_tail;
+        }
+
+        const bool rsp_done = (b == (uint8_t)'\r') || (b == (uint8_t)'\n') ||
+                              (s_bridge_pol.rsp_len >= sizeof(s_bridge_pol.rsp_buf)) ||
+                              ((s_bridge_pol.rsp_len > 3u) &&
+                               (s_bridge_pol.rsp_buf[s_bridge_pol.rsp_len - 3u] == (uint8_t)'#') &&
+                               (s_bridge_pol.rsp_hash_tail == 0u));
+        if (rsp_done) {
+            p7501_bus_deny_t deny = P7501_BUS_ALLOW;
+            if (p7501_bus_check_uart_tx_payload(
+                    s_bridge_pol.rsp_buf, s_bridge_pol.rsp_len, true, &deny)) {
+                bridge_tx_duplex(r, s_bridge_pol.rsp_buf, s_bridge_pol.rsp_len, io_tx_count);
+            } else {
+                printf("\r\n[BRIDGE-POLICY] BLOCKED (%s)\r\n", p7501_bus_deny_name(deny));
+                fflush(stdout);
+            }
+            s_bridge_pol.in_rsp = false;
+            s_bridge_pol.rsp_len = 0u;
+            s_bridge_pol.rsp_hash_tail = 0u;
+        }
+        return;
+    }
+
+    if ((b == (uint8_t)'\r') || (b == (uint8_t)'\n')) {
+        p7501_bus_deny_t deny = P7501_BUS_ALLOW;
+        const bool ok = p7501_bus_check_uart_tx_payload(
+            s_bridge_pol.line_buf, s_bridge_pol.line_len, true, &deny);
+        s_bridge_pol.line_len = 0u;
+        if (!ok) {
+            bridge_emit_or_flush(r, 0x15u, batch, io_batch_len, batch_cap, io_tx_count);
+            printf("\r\n[BRIDGE-POLICY] BLOCKED (%s)\r\n", p7501_bus_deny_name(deny));
+            fflush(stdout);
+            return;
+        }
+        bridge_emit_or_flush(r, b, batch, io_batch_len, batch_cap, io_tx_count);
+        return;
+    }
+
+    if ((b == 0x08u) || (b == 0x7Fu)) {
+        if (s_bridge_pol.line_len > 0u) {
+            --s_bridge_pol.line_len;
+        }
+    } else if ((b == 0x15u) || (b == 0x03u)) {
+        s_bridge_pol.line_len = 0u;
+    } else if (s_bridge_pol.line_len < sizeof(s_bridge_pol.line_buf)) {
+        s_bridge_pol.line_buf[s_bridge_pol.line_len++] = b;
+    }
+    bridge_emit_or_flush(r, b, batch, io_batch_len, batch_cap, io_tx_count);
+}
+
 void p7501_cmd_bridge(const char *arg) {
+    memset(&s_bridge_pol, 0, sizeof(s_bridge_pol));
     const uint32_t orig_baud = p7501_pio_get_baud();
     p7501_bridge_spec_t spec;
     p7501_parse_bridge_args(arg, orig_baud, &spec);
@@ -308,7 +423,7 @@ void p7501_cmd_bridge(const char *arg) {
         /* Flush pending single/double '~' after 250 ms if user wasn't typing '~~~'. */
         if ((tilde_run > 0u) && ((poll_us - tilde_first_us) >= 250000ULL)) {
             while (tilde_run > 0u) {
-                tx_batch[batch_len++] = (uint8_t)'~';
+                bridge_filter_tx_byte(&usb_ring, (uint8_t)'~', tx_batch, &batch_len, sizeof(tx_batch), &tx_count);
                 --tilde_run;
             }
             last_tx_char_us = poll_us;
@@ -335,15 +450,11 @@ void p7501_cmd_bridge(const char *arg) {
                 }
             }
             while (tilde_run > 0u) {
-                if (batch_len == sizeof(tx_batch)) {
-                    bridge_tx_duplex(&usb_ring, tx_batch, batch_len, &tx_count);
-                    batch_len = 0u;
-                }
-                tx_batch[batch_len++] = (uint8_t)'~';
+                bridge_filter_tx_byte(&usb_ring, (uint8_t)'~', tx_batch, &batch_len, sizeof(tx_batch), &tx_count);
                 --tilde_run;
             }
             last_tx_char_us = now_us;
-            tx_batch[batch_len++] = (uint8_t)ch;
+            bridge_filter_tx_byte(&usb_ring, (uint8_t)ch, tx_batch, &batch_len, sizeof(tx_batch), &tx_count);
         }
         if (batch_len > 0u) {
             bridge_tx_duplex(&usb_ring, tx_batch, batch_len, &tx_count);

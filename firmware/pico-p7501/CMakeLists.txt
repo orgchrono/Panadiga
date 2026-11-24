@@ -166,6 +166,12 @@ target_compile_definitions(panasonic_p7501_uart PRIVATE
 
 target_compile_options(panasonic_p7501_uart PRIVATE
     -Os
+    -Wall
+    -Wextra
+    -Wformat=2
+    -Wformat-security
+    -fno-common
+    -fstack-protector-strong
     -ffunction-sections
     -fdata-sections
     -Wframe-larger-than=512

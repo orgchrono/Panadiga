@@ -95,11 +95,17 @@ pub fn start_gdb_bridge(
     } else {
         listen_addr.trim().to_string()
     };
+    let validated_addr = panadiga_core::pico::rsp_codec::parse_loopback_socket_addr(&addr)
+        .map_err(|e| {
+            PanadigaIpcError::validation(format!(
+                "Endereço de escuta GDB inválido (exigido loopback): {e}"
+            ))
+        })?;
 
-    let listener = TcpListener::bind(&addr).map_err(|e| {
+    let listener = TcpListener::bind(validated_addr).map_err(|e| {
         PanadigaIpcError::serial(format!(
             "Falha ao abrir porta TCP GDB {}: {}. Verifique se outra instância do GDB/Ghidra não está utilizando esta porta.",
-            addr, e
+            validated_addr, e
         ))
     })?;
     let _ = listener.set_nonblocking(true);

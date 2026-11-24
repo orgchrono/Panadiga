@@ -20,6 +20,8 @@ pub use encode::{
     build_rsp_write_frame, build_rsp_write_frame_with_policy, rsp_checksum,
 };
 pub use policy::{
-    CRITICAL_IPL_BOOT_RANGES, IPL_READONLY_RANGES, NorWritePolicy, build_am34_gdb_memory_map_xml,
+    CRITICAL_IPL_BOOT_RANGES, HostRspStreamFilterResult, IPL_READONLY_RANGES, NorWritePolicy,
+    build_am34_gdb_memory_map_xml, filter_host_rsp_packet, filter_host_rsp_tcp_stream,
     is_critical_ipl_boot_address, is_ipl_readonly_address, is_nor_write_blocked_with_policy,
+    parse_loopback_socket_addr,
 };

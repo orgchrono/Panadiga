@@ -216,3 +216,40 @@ fn policy_boundaries_match_c11_bus_gate_across_all_capacities() {
         ));
     }
 }
+
+#[test]
+fn loopback_socket_validation_and_host_rsp_filter_enforce_barriers() {
+    assert!(parse_loopback_socket_addr("127.0.0.1:3333").is_ok());
+    assert!(parse_loopback_socket_addr("[::1]:3333").is_ok());
+    assert!(parse_loopback_socket_addr("0.0.0.0:3333").is_err());
+    assert!(parse_loopback_socket_addr("192.168.1.10:3333").is_err());
+    assert!(parse_loopback_socket_addr("[::]:3333").is_err());
+
+    let mut pol = NorWritePolicy::NvramOnly;
+    // Lethal MMIO read/write blocked
+    assert!(filter_host_rsp_packet(b"mC000100C,4", &mut pol).is_some());
+    assert!(filter_host_rsp_packet(b"MC000100C,4:00000000", &mut pol).is_some());
+    // Layer 1 IPL blocked permanently; Upper NOR blocked until explicit unlock
+    assert!(filter_host_rsp_packet(b"M84000000,4:aaaaaaaa", &mut pol).is_some());
+    assert!(filter_host_rsp_packet(b"M84130000,4:aaaaaaaa", &mut pol).is_some());
+    assert!(filter_host_rsp_packet(b"vFlashErase:84000000,10000", &mut pol).is_some());
+    // NVRAM allowed in default policy
+    assert!(filter_host_rsp_packet(b"M847F0000,4:ffffffff", &mut pol).is_none());
+
+    // Unlock permits Upper NOR but keeps SA0..SA10 and lethal MMIO blocked
+    assert!(filter_host_rsp_packet(b"qPanadigaNorUnlock:CONFIRM_UPPER_NOR", &mut pol).is_none());
+    assert_eq!(pol, NorWritePolicy::UpperNorAppUnlocked);
+    assert!(filter_host_rsp_packet(b"M84130000,4:aaaaaaaa", &mut pol).is_none());
+    assert!(filter_host_rsp_packet(b"M84000000,4:aaaaaaaa", &mut pol).is_some());
+    assert!(filter_host_rsp_packet(b"qPanadigaNorLock", &mut pol).is_none());
+    assert_eq!(pol, NorWritePolicy::NvramOnly);
+
+    // Split chunk streaming holds incomplete frame and strips blocked frame cleanly
+    let mut acc = Vec::new();
+    let r1 = filter_host_rsp_tcp_stream(&mut acc, b"+$mC000100C,", &mut pol);
+    assert_eq!(r1.forward_to_serial, b"+");
+    assert!(r1.blocked_host_replies.is_empty());
+    let r2 = filter_host_rsp_tcp_stream(&mut acc, b"4#aa$g#67", &mut pol);
+    assert_eq!(r2.forward_to_serial, b"$g#67");
+    assert_eq!(r2.blocked_host_replies, b"+$E05#aa");
+}

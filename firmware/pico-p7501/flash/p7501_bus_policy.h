@@ -66,6 +66,21 @@ p7501_bus_deny_t p7501_bus_check_access(
 /** Human-readable static denial tag for CLI / audit logs. */
 const char *p7501_bus_deny_name(p7501_bus_deny_t reason);
 
+/**
+ * @brief Pure safety gate for interactive/bridge UART TX payloads (`UARTSEND`, `UARTTXHEX`, `WAITTX`, `BRIDGE`).
+ *
+ * Blocks any lethal AM34 MMIO reference (`0xC000100C..0xC000100F`, `0xDC0F0000..0xDC0F000F`),
+ * GDB RSP write/erase frames or ASCII write commands targeting CS0 alias mirrors, critical IPL
+ * `SA0..SA10`, F14 wireless lock, or locked Upper NOR, while allowing read-only monitor probes
+ * (`MD 80000000`, `$m80000000,4`) and writable NVRAM (`MW 807F0000`).
+ */
+bool p7501_bus_check_uart_tx_payload(
+    const uint8_t *payload,
+    size_t len,
+    bool is_bridge_stream,
+    p7501_bus_deny_t *out_reason
+);
+
 #ifdef __cplusplus
 }
 #endif

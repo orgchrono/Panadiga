@@ -47,28 +47,133 @@ pub fn validate_safe_bench_command(command: &str) -> Result<String> {
     Ok(normalized.to_string())
 }
 
+fn extract_hex_addr_tokens(raw_text: &str) -> Vec<u32> {
+    raw_text
+        .split(|c: char| !(c.is_ascii_alphanumeric() || c == '_'))
+        .filter_map(|tok| {
+            let no_us: String = tok.chars().filter(|&c| c != '_').collect();
+            let upper = no_us.to_ascii_uppercase();
+            let stripped = upper.strip_prefix("0X").unwrap_or(upper.as_str());
+            let has_prefix = upper.starts_with("0X");
+            if (has_prefix && !stripped.is_empty() || stripped.len() == 8)
+                && stripped.len() <= 8
+                && stripped.bytes().all(|b| b.is_ascii_hexdigit())
+            {
+                u32::from_str_radix(stripped, 16).ok()
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+fn contains_lethal_am34_address(upper_text: &str) -> bool {
+    let compact: String = upper_text.chars().filter(|c| *c != '_').collect();
+    if compact.contains("C000100C") || compact.contains("DC0F0000") {
+        return true;
+    }
+    extract_hex_addr_tokens(upper_text)
+        .into_iter()
+        .any(|addr| crate::pico::rsp_codec::policy::is_am34_lethal_mmio_address(addr, 4))
+}
+
+const IPL_SA0_SA10_PREFIXES: &[&str] = &[
+    "8000", "8001", "8002", "8003", "8400", "8401", "8402", "8403",
+];
+
 fn is_ipl_sa0_sa10_token(token: &str) -> bool {
-    let stripped = token
+    let no_us: String = token
         .trim_end_matches([',', ';'])
-        .trim_start_matches("0X")
-        .trim_start_matches('$');
+        .chars()
+        .filter(|&c| c != '_')
+        .collect();
+    let stripped = no_us.trim_start_matches("0X").trim_start_matches('$');
     if stripped.len() < 4 || !stripped.bytes().all(|b| b.is_ascii_hexdigit()) {
         return false;
     }
     if let Ok(addr) = u32::from_str_radix(stripped, 16)
-        && ((0x8000_0000..0x8004_0000).contains(&addr)
-            || (0x8400_0000..0x8404_0000).contains(&addr))
+        && crate::pico::rsp_codec::policy::is_critical_ipl_boot_address(addr, 4)
     {
         return true;
     }
-    stripped.starts_with("8000")
-        || stripped.starts_with("8001")
-        || stripped.starts_with("8002")
-        || stripped.starts_with("8003")
-        || stripped.starts_with("8400")
-        || stripped.starts_with("8401")
-        || stripped.starts_with("8402")
-        || stripped.starts_with("8403")
+    IPL_SA0_SA10_PREFIXES
+        .iter()
+        .any(|prefix| stripped.starts_with(prefix))
+}
+
+fn payload_has_write_intent(upper_text: &str) -> bool {
+    let trimmed = upper_text.trim();
+    if trimmed.starts_with('$') {
+        let body = trimmed.trim_start_matches('$');
+        if body.starts_with('M')
+            || body.starts_with('X')
+            || body.starts_with("VFLASHERASE")
+            || body.starts_with("VFLASHWRITE")
+        {
+            return true;
+        }
+    }
+    let words: Vec<&str> = trimmed
+        .split(|c: char| !(c.is_ascii_alphanumeric() || c == '_' || c == '$'))
+        .filter(|w| !w.is_empty())
+        .collect();
+    words.iter().enumerate().any(|(idx, &w)| {
+        matches!(
+            w,
+            "WRITE" | "ERASE" | "PATCH" | "FAST_WRITE" | "FAST_ERASE" | "WRITEMEM" | "MEMW"
+        ) || (matches!(w, "W" | "E") && idx + 1 < words.len())
+            || (w.starts_with("$M") || w.starts_with("$X"))
+    })
+}
+
+fn decode_hex_ascii_upper(hex_tok: &str) -> Result<String> {
+    let clean = hex_tok.trim();
+    if clean.is_empty()
+        || !clean.len().is_multiple_of(2)
+        || !clean.bytes().all(|b| b.is_ascii_hexdigit())
+    {
+        bail!("Invalid hex payload token '{clean}'");
+    }
+    let decoded = hex::decode(clean)?;
+    Ok(decoded
+        .into_iter()
+        .map(|b| {
+            if b.is_ascii() {
+                (b as char).to_ascii_uppercase()
+            } else {
+                ' '
+            }
+        })
+        .collect())
+}
+
+fn extract_decoded_payload_text(head: &str, normalized_upper: &str) -> Result<Option<String>> {
+    match head {
+        "UARTTXHEX" => {
+            let Some(raw_tok) = normalized_upper.split_whitespace().nth(1) else {
+                return Ok(None);
+            };
+            let payload_tok = raw_tok.strip_prefix("LOW:").unwrap_or(raw_tok);
+            if matches!(payload_tok, "BRK" | "BREAK") {
+                return Ok(None);
+            }
+            Ok(Some(decode_hex_ascii_upper(payload_tok)?))
+        }
+        "WAITTX" => {
+            // Format: WAITTX <timeout_ms> <NORMAL|JIG[:ms]|NOPULL> "<trigger>" <hex|BRK> [post_ms]
+            let Some(after_first_quote) = normalized_upper.split('"').nth(2) else {
+                return Ok(None);
+            };
+            let Some(payload_tok) = after_first_quote.split_whitespace().next() else {
+                return Ok(None);
+            };
+            if matches!(payload_tok, "BRK" | "BREAK") {
+                return Ok(None);
+            }
+            Ok(Some(decode_hex_ascii_upper(payload_tok)?))
+        }
+        _ => Ok(None),
+    }
 }
 
 /// Validates an interactive Pico CDC serial command against the SSOT catalog and hardware barriers.
@@ -79,10 +184,18 @@ pub fn validate_interactive_pico_command(command: &str) -> Result<String> {
     if !crate::ssot::spec::check_known_pico_command_id(head) {
         bail!("Command '{head}' is outside SSOT Pico CLI catalog");
     }
-    let compact: String = upper.chars().filter(|c| *c != '_').collect();
-    if compact.contains("C000100C") || compact.contains("DC0F0000") {
-        bail!("Lethal AM34 MMIO address 0xC000100C / 0xDC0F0000 is permanently blocked");
+
+    let decoded_payload = extract_decoded_payload_text(head, &upper)?;
+    if contains_lethal_am34_address(&upper)
+        || decoded_payload
+            .as_deref()
+            .is_some_and(contains_lethal_am34_address)
+    {
+        bail!(
+            "Lethal AM34 MMIO address 0xC000100C..0xC000100F / 0xDC0F0000 is permanently blocked"
+        );
     }
+
     let is_sector_patch = head == "SECTOR" && upper.split_whitespace().nth(1) == Some("PATCH");
     if matches!(head, "FAST_WRITE" | "FAST_ERASE" | "ERASE" | "WRITEMEM") || is_sector_patch {
         if (matches!(head, "FAST_WRITE" | "FAST_ERASE") || is_sector_patch)
@@ -92,6 +205,27 @@ pub fn validate_interactive_pico_command(command: &str) -> Result<String> {
         }
         if upper.split_whitespace().skip(1).any(is_ipl_sa0_sa10_token) {
             bail!("IPL SA0..SA10 write target is permanently Read-Only (E05)");
+        }
+    }
+
+    if matches!(head, "UARTSEND" | "UARTTXHEX" | "WAITTX" | "PANARSP") {
+        let mut inner_body = upper.split_once(head).map(|(_, r)| r.trim()).unwrap_or("");
+        if let Some(stripped) = inner_body.strip_prefix("LOW:") {
+            inner_body = stripped.trim();
+        }
+        for candidate in [Some(inner_body), decoded_payload.as_deref()]
+            .into_iter()
+            .flatten()
+        {
+            if payload_has_write_intent(candidate)
+                && candidate
+                    .split(|c: char| c.is_whitespace() || c == ':' || c == ',')
+                    .any(is_ipl_sa0_sa10_token)
+            {
+                bail!(
+                    "IPL SA0..SA10 write/erase payload inside {head} is permanently Read-Only (E05)"
+                );
+            }
         }
     }
     Ok(upper)

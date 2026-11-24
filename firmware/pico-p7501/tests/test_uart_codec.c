@@ -9,6 +9,7 @@
 #include "tests/test_pana_logic.h"
 #include "diag/p7501_jigsweep_codec.h"
 #include "diag/p7501_piologic_codec.h"
+#include "flash/p7501_bus_policy.h"
 #include "uart/p7501_fmu_codec.h"
 #include "uart/p7501_uart_autobaud.h"
 #include "uart/p7501_uart_codec.h"
@@ -376,6 +377,46 @@ static void test_wdt_stage_and_fmu_codec(void) {
     assert(!p7501_parse_hex_u32_prefix("80000000z", &u32, &tail));
 }
 
+static void test_uart_tx_bus_policy(void) {
+    p7501_bus_deny_t deny = P7501_BUS_ALLOW;
+    const char *safe_help = "HELP";
+    const char *safe_ipl_read = "MD 80000000 10";
+    const char *safe_nvram_w = "MW 807F0000 1234";
+    const char *safe_mmio_ok = "MD DC0F0080";
+    const char *safe_rsp_r = "$m80000000,4#00";
+    const char *safe_rsp_nvram = "$M807F0000,4:deadbeef#00";
+    const char *lethal_r = "MD C000100C";
+    const char *lethal_w = "MW 0xDC0F0000 0";
+    const char *lethal_rsp = "$mC000100C,4#00";
+    const char *ipl_write = "MW 80000000 DEADBEEF";
+    const char *ipl_uncached = "ERASE 0x84000000";
+    const char *ipl_rsp = "$M80000000,4:deadbeef#00";
+    const char *cs0_mirror_rsp = "$M80800000,4:deadbeef#00";
+
+    assert(p7501_bus_check_uart_tx_payload((const uint8_t *)safe_help, strlen(safe_help), false, &deny));
+    assert(deny == P7501_BUS_ALLOW);
+    assert(p7501_bus_check_uart_tx_payload((const uint8_t *)safe_ipl_read, strlen(safe_ipl_read), true, &deny));
+    assert(p7501_bus_check_uart_tx_payload((const uint8_t *)safe_nvram_w, strlen(safe_nvram_w), false, &deny));
+    assert(p7501_bus_check_uart_tx_payload((const uint8_t *)safe_mmio_ok, strlen(safe_mmio_ok), false, &deny));
+    assert(p7501_bus_check_uart_tx_payload((const uint8_t *)safe_rsp_r, strlen(safe_rsp_r), true, &deny));
+    assert(p7501_bus_check_uart_tx_payload((const uint8_t *)safe_rsp_nvram, strlen(safe_rsp_nvram), true, &deny));
+
+    assert(!p7501_bus_check_uart_tx_payload((const uint8_t *)lethal_r, strlen(lethal_r), false, &deny));
+    assert(deny == P7501_BUS_DENY_LETHAL_MMIO);
+    assert(!p7501_bus_check_uart_tx_payload((const uint8_t *)lethal_w, strlen(lethal_w), true, &deny));
+    assert(deny == P7501_BUS_DENY_LETHAL_MMIO);
+    assert(!p7501_bus_check_uart_tx_payload((const uint8_t *)lethal_rsp, strlen(lethal_rsp), true, &deny));
+    assert(deny == P7501_BUS_DENY_LETHAL_MMIO);
+    assert(!p7501_bus_check_uart_tx_payload((const uint8_t *)ipl_write, strlen(ipl_write), true, &deny));
+    assert(deny == P7501_BUS_DENY_IPL_LAYER1);
+    assert(!p7501_bus_check_uart_tx_payload((const uint8_t *)ipl_uncached, strlen(ipl_uncached), false, &deny));
+    assert(deny == P7501_BUS_DENY_IPL_LAYER1);
+    assert(!p7501_bus_check_uart_tx_payload((const uint8_t *)ipl_rsp, strlen(ipl_rsp), true, &deny));
+    assert(deny == P7501_BUS_DENY_IPL_LAYER1);
+    assert(!p7501_bus_check_uart_tx_payload((const uint8_t *)cs0_mirror_rsp, strlen(cs0_mirror_rsp), true, &deny));
+    assert(deny == P7501_BUS_DENY_CS0_MIRROR);
+}
+
 int p7501_run_uart_codec_tests(void) {
     test_timeout_and_tokens();
     test_hex_and_baud_math();
@@ -383,6 +424,7 @@ int p7501_run_uart_codec_tests(void) {
     test_hex_window_and_led_logic();
     test_framing_ctrl_and_jigsweep();
     test_wdt_stage_and_fmu_codec();
-    printf("[HOST-TEST] test_uart_codec + LED + hex + framing + jigsweep + wdt + fmu passed.\n");
+    test_uart_tx_bus_policy();
+    printf("[HOST-TEST] test_uart_codec + LED + hex + framing + jigsweep + wdt + fmu + tx_policy passed.\n");
     return p7501_run_pana_logic_tests();
 }

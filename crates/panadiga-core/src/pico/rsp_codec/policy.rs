@@ -9,6 +9,8 @@ use crate::constants::{
     SPANSION_MICROSECTOR_SIZE, SPANSION_NVRAM_SIZE_BYTES,
 };
 
+use super::encode::encode_rsp_frame_raw;
+
 pub use crate::constants::AM34_LETHAL_MMIO_ADDR;
 
 /// Strictly read-only IPL NOR windows (`0x80000000..0x807EFFFF` cached & `0x84000000..0x847EFFFF` uncached).
@@ -110,11 +112,13 @@ pub const AM34_LETHAL_MMIO_LEN: usize = 4;
 pub const AM34_CS0_APERTURE_START: u64 = AM34_FLASH_BASE as u64;
 pub const AM34_CS0_APERTURE_END: u64 = AM34_FLASH_UNCACHED_BASE as u64 + 0x0400_0000;
 
-/// Returns `true` when `[addr, addr + length)` touches the lethal AM34 MMIO register `0xC000100C..0xC000100F`.
+/// Returns `true` when `[addr, addr + length)` touches any lethal AM34 MMIO trap (`0xC000100C..0xC000100F` or `0xDC0F0000..0xDC0F000F`).
 pub fn is_am34_lethal_mmio_address(addr: u32, length: usize) -> bool {
-    let lo = AM34_LETHAL_MMIO_ADDR as u64;
-    let hi = lo + AM34_LETHAL_MMIO_LEN as u64;
-    address_overlaps_ranges(addr, length, &[(lo, hi)])
+    let lo1 = AM34_LETHAL_MMIO_ADDR as u64;
+    let hi1 = lo1 + AM34_LETHAL_MMIO_LEN as u64;
+    let lo2 = crate::ssot::pico_header::P7501_AM34_LETHAL_REG2_ADDR_SSOT as u64;
+    let hi2 = lo2 + crate::ssot::pico_header::P7501_AM34_LETHAL_REG2_LEN_SSOT as u64;
+    address_overlaps_ranges(addr, length, &[(lo1, hi1), (lo2, hi2)])
 }
 
 fn is_cs0_alias_mirror_for_flash(addr: u32, length: usize, flash_bytes: u64) -> bool {
@@ -191,6 +195,153 @@ pub fn build_am34_gdb_memory_map_xml(include_sdram: bool, ipl_as_flash_sectors: 
         "<memory type=\"flash\" start=\"0x{AM34_NVRAM_BASE:08X}\" length=\"0x{SPANSION_NVRAM_SIZE_BYTES:08X}\"><property name=\"blocksize\">0x{SPANSION_MICROSECTOR_SIZE:X}</property></memory></memory-map>"
     ));
     xml
+}
+
+/// Validates and parses a GDB RSP listen socket strictly requiring a loopback IP (`127.0.0.1` / `[::1]`).
+pub fn parse_loopback_socket_addr(listen_addr: &str) -> anyhow::Result<std::net::SocketAddr> {
+    let trimmed = listen_addr.trim();
+    let sock_addr: std::net::SocketAddr = trimmed.parse().map_err(|e| {
+        anyhow::anyhow!("Invalid GDB listen socket '{trimmed}' (expected loopback IP:port): {e}")
+    })?;
+    if !sock_addr.ip().is_loopback() {
+        anyhow::bail!(
+            "GDB RSP listener MUST bind strictly to loopback (127.0.0.1 or [::1]), got '{trimmed}'"
+        );
+    }
+    Ok(sock_addr)
+}
+
+fn encode_policy_rsp_reply(payload: &[u8]) -> Vec<u8> {
+    encode_rsp_frame_raw(payload)
+}
+
+fn parse_hex_addr_len_pair(hdr: &str) -> Option<(u32, usize)> {
+    let (addr_s, len_s) = hdr.split_once(',')?;
+    let addr = u32::from_str_radix(addr_s.trim(), 16).ok()?;
+    let len = usize::from_str_radix(len_s.trim(), 16).ok()?;
+    Some((addr, len.max(1)))
+}
+
+/// Validates an inbound host GDB RSP command payload before forwarding to target serial/Pico.
+/// Returns `Some(rsp_error_frame)` when blocked (`E05`/`E01`), or `None` when permitted.
+pub fn filter_host_rsp_packet(
+    cmd_payload: &[u8],
+    nor_policy: &mut NorWritePolicy,
+) -> Option<Vec<u8>> {
+    if cmd_payload == b"qPanadigaNorUnlock:CONFIRM_UPPER_NOR" {
+        *nor_policy = NorWritePolicy::UpperNorAppUnlocked;
+        return None;
+    }
+    if cmd_payload.starts_with(b"qPanadigaNorUnlock") {
+        return Some(encode_policy_rsp_reply(b"E01"));
+    }
+    if cmd_payload == b"qPanadigaNorLock" {
+        *nor_policy = NorWritePolicy::NvramOnly;
+        return None;
+    }
+
+    if let Some(after) = cmd_payload.strip_prefix(b"vFlashErase:") {
+        let Ok(spec) = std::str::from_utf8(after) else {
+            return Some(encode_policy_rsp_reply(b"E05"));
+        };
+        let Some((addr, len)) = parse_hex_addr_len_pair(spec) else {
+            return Some(encode_policy_rsp_reply(b"E05"));
+        };
+        if is_nor_write_blocked_for_flash(addr, len, AM34_FLASH_SIZE as u64, *nor_policy) {
+            return Some(encode_policy_rsp_reply(b"E05"));
+        }
+        return None;
+    }
+
+    if let Some(after) = cmd_payload.strip_prefix(b"vFlashWrite:") {
+        let addr_part = after.split(|&b| b == b':').next().unwrap_or(after);
+        let data_len = after
+            .iter()
+            .position(|&b| b == b':')
+            .map(|p| after.len().saturating_sub(p + 1))
+            .unwrap_or(1)
+            .max(1);
+        let Ok(addr_str) = std::str::from_utf8(addr_part) else {
+            return Some(encode_policy_rsp_reply(b"E05"));
+        };
+        let Ok(addr) = u32::from_str_radix(addr_str.trim(), 16) else {
+            return Some(encode_policy_rsp_reply(b"E05"));
+        };
+        if is_nor_write_blocked_for_flash(addr, data_len, AM34_FLASH_SIZE as u64, *nor_policy) {
+            return Some(encode_policy_rsp_reply(b"E05"));
+        }
+        return None;
+    }
+
+    let first = cmd_payload.first().copied();
+    if matches!(first, Some(b'm' | b'M' | b'X')) {
+        let header_bytes = cmd_payload
+            .split(|&b| b == b':')
+            .next()
+            .unwrap_or(cmd_payload);
+        let Ok(hdr) = std::str::from_utf8(header_bytes) else {
+            return Some(encode_policy_rsp_reply(b"E05"));
+        };
+        let Some((addr, len)) = parse_hex_addr_len_pair(&hdr[1..]) else {
+            return Some(encode_policy_rsp_reply(b"E05"));
+        };
+        if first == Some(b'm') {
+            if is_am34_lethal_mmio_address(addr, len) {
+                return Some(encode_policy_rsp_reply(b"E05"));
+            }
+        } else if is_nor_write_blocked_for_flash(addr, len, AM34_FLASH_SIZE as u64, *nor_policy) {
+            return Some(encode_policy_rsp_reply(b"E05"));
+        }
+    }
+    None
+}
+
+/// Output produced by [`filter_host_rsp_tcp_stream`] for an inbound TCP RSP chunk.
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct HostRspStreamFilterResult {
+    pub forward_to_serial: Vec<u8>,
+    pub blocked_host_replies: Vec<u8>,
+    pub observed_cmds: Vec<Vec<u8>>,
+}
+
+/// Incrementally frames TCP RSP input in `acc`, dropping blocked packets before serial TX.
+pub fn filter_host_rsp_tcp_stream(
+    acc: &mut Vec<u8>,
+    incoming: &[u8],
+    nor_policy: &mut NorWritePolicy,
+) -> HostRspStreamFilterResult {
+    acc.extend_from_slice(incoming);
+    let mut out = HostRspStreamFilterResult::default();
+
+    loop {
+        let Some(dollar) = acc.iter().position(|&b| b == b'$') else {
+            out.forward_to_serial.extend_from_slice(acc);
+            acc.clear();
+            break;
+        };
+        if dollar > 0 {
+            out.forward_to_serial.extend_from_slice(&acc[..dollar]);
+            acc.drain(..dollar);
+        }
+        let Some(hash) = acc[1..].iter().position(|&b| b == b'#').map(|i| i + 1) else {
+            break;
+        };
+        if acc.len() < hash + 3 {
+            break;
+        }
+        let payload = acc[1..hash].to_vec();
+        out.observed_cmds.push(payload.clone());
+        match filter_host_rsp_packet(&payload, nor_policy) {
+            None => out.forward_to_serial.extend_from_slice(&acc[..hash + 3]),
+            Some(err_reply) => {
+                out.blocked_host_replies.push(b'+');
+                out.blocked_host_replies.extend_from_slice(&err_reply);
+            }
+        }
+        acc.drain(..hash + 3);
+    }
+
+    out
 }
 
 #[cfg(test)]

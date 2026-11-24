@@ -8,6 +8,52 @@ use std::time::Duration;
 use anyhow::{Context, Result};
 
 use super::async_gdb_proxy::{GdbBridgeTargetMode, serve_panamon1_tcp_client};
+use super::rsp_codec::{
+    NorWritePolicy, build_nor_lock_frame, filter_host_rsp_tcp_stream, parse_loopback_socket_addr,
+};
+
+fn pump_filtered_tcp_to_serial<R: Read, W: Write, C: Write>(
+    mut tcp_rx: R,
+    mut tcp_tx_err: C,
+    mut serial_tx: W,
+    flag: Arc<AtomicBool>,
+) {
+    let mut buf = [0u8; 2048];
+    let mut acc = Vec::new();
+    let mut nor_policy = NorWritePolicy::NvramOnly;
+
+    while flag.load(Ordering::Relaxed) {
+        match tcp_rx.read(&mut buf) {
+            Ok(0) => {
+                log_println!("{}", "[Bridge] GDB client disconnected.");
+                break;
+            }
+            Ok(n) => {
+                let res = filter_host_rsp_tcp_stream(&mut acc, &buf[..n], &mut nor_policy);
+                if !res.forward_to_serial.is_empty()
+                    && (serial_tx.write_all(&res.forward_to_serial).is_err()
+                        || serial_tx.flush().is_err())
+                {
+                    break;
+                }
+                if !res.blocked_host_replies.is_empty()
+                    && (tcp_tx_err.write_all(&res.blocked_host_replies).is_err()
+                        || tcp_tx_err.flush().is_err())
+                {
+                    break;
+                }
+            }
+            Err(ref e) if e.kind() == std::io::ErrorKind::TimedOut => {}
+            Err(_) => break,
+        }
+    }
+    if nor_policy == NorWritePolicy::UpperNorAppUnlocked {
+        let lock_frame = build_nor_lock_frame();
+        let _ = serial_tx.write_all(&lock_frame);
+        let _ = serial_tx.flush();
+    }
+    flag.store(false, Ordering::Relaxed);
+}
 
 fn pump_stream<R: Read, W: Write>(
     mut reader: R,
@@ -53,12 +99,14 @@ pub fn run_gdb_bridge_with_mode(
     listen_addr: &str,
     mode: GdbBridgeTargetMode,
 ) -> Result<()> {
+    let validated_listen = parse_loopback_socket_addr(listen_addr)?;
+
     log_println!("====================================================================");
     log_println!("   PANASONIC AM34 GDB RSP BRIDGE (P7501 UART 115200 8N1)");
     log_println!("   Host Architecture: Multi-Platform (RP2040 / RP2350 Dual-Core)");
     log_println!("   Serial Interface : {} @ {} baud", port_name, baud_rate);
     log_println!("   Target Mode      : {}", mode.label());
-    log_println!("   TCP GDB Listener : {}", listen_addr);
+    log_println!("   TCP GDB Listener : {}", validated_listen);
     log_println!("====================================================================");
 
     let mut serial_port =
@@ -79,16 +127,16 @@ pub fn run_gdb_bridge_with_mode(
     }
     thread::sleep(Duration::from_millis(120));
 
-    let listener = TcpListener::bind(listen_addr)
-        .with_context(|| format!("Failed to bind TCP listener on '{}'", listen_addr))?;
+    let listener = TcpListener::bind(validated_listen)
+        .with_context(|| format!("Failed to bind TCP listener on '{}'", validated_listen))?;
 
     log_println!(
         "[Bridge] Listening for GDB/Ghidra connections on {}...",
-        listen_addr
+        validated_listen
     );
     log_println!(
         "[Bridge] In Ghidra/GDB console run: target remote {}",
-        listen_addr
+        validated_listen
     );
     log_println!("--------------------------------------------------------------------");
 
@@ -118,18 +166,21 @@ pub fn run_gdb_bridge_with_mode(
                 let tcp_writer = tcp_stream
                     .try_clone()
                     .context("Failed to clone TCP stream handle")?;
+                let tcp_err_writer = tcp_stream
+                    .try_clone()
+                    .context("Failed to clone TCP error-reply handle")?;
                 let running_clone = running.clone();
 
                 let s2t_handle = thread::spawn(move || {
                     pump_stream(serial_reader, tcp_writer, running_clone, None);
                 });
 
-                // Thread 2: TCP -> Serial
-                pump_stream(
+                // Thread 2: Filtered TCP -> Serial (enforcing 0xC000100C & SA0..SA10 barriers)
+                pump_filtered_tcp_to_serial(
                     &mut tcp_stream,
+                    tcp_err_writer,
                     &mut serial_port,
                     running,
-                    Some("[Bridge] GDB client disconnected."),
                 );
 
                 let _ = s2t_handle.join();

@@ -14,7 +14,7 @@ pub fn rsp_checksum(payload: &[u8]) -> u8 {
     payload.iter().fold(0u8, |acc, &b| acc.wrapping_add(b))
 }
 
-fn encode_rsp_frame_raw(payload: &[u8]) -> Vec<u8> {
+pub(super) fn encode_rsp_frame_raw(payload: &[u8]) -> Vec<u8> {
     let csum = rsp_checksum(payload);
     let mut out = Vec::with_capacity(payload.len() + 4);
     out.push(b'$');

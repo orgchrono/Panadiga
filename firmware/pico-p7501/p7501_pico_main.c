@@ -89,6 +89,18 @@ static void process_cli_char(
     }
 }
 
+#if !defined(PICO_HOST_TEST) || (PICO_HOST_TEST == 0)
+/* Bare-metal SSP canary and fail-closed fault handler isolating all P7501 lines Hi-Z. */
+uintptr_t __stack_chk_guard = (uintptr_t)0x50414E41u;
+
+__attribute__((noreturn)) void __stack_chk_fail(void) {
+    p7501_hw_isolate_bus_hiz();
+    for (;;) {
+        tight_loop_contents();
+    }
+}
+#endif
+
 int main(void) {
     /* 1. Hardware safety FIRST: clear GP3 NSW5V pull-down & float all P7501 pins Hi-Z. */
     (void)p7501_hw_init();

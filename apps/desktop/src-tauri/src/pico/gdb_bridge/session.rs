@@ -4,7 +4,9 @@ use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::time::Duration;
 
-use panadiga_core::pico::rsp_codec::NorWritePolicy;
+use panadiga_core::pico::rsp_codec::{
+    NorWritePolicy, build_nor_lock_frame, filter_host_rsp_tcp_stream,
+};
 
 use super::super::rsp_protocol::compute_mock_rsp_response_with_policy;
 use super::controller::GdbBridgeController;
@@ -86,6 +88,8 @@ pub(super) fn handle_serial_session(
 
     let mut s_buf = [0u8; 1024];
     let mut t_buf = [0u8; 1024];
+    let mut tcp_acc: Vec<u8> = Vec::new();
+    let mut nor_policy = NorWritePolicy::NvramOnly;
     let mut last_inbound_was_g = false;
     let mut g_accum_buf = String::with_capacity(128);
 
@@ -93,20 +97,28 @@ pub(super) fn handle_serial_session(
         match read_inbound_tcp_chunk(ctrl, &mut tcp_stream, &mut t_buf) {
             InboundTcpChunk::Closed => break,
             InboundTcpChunk::WouldBlock => {}
-            InboundTcpChunk::Data(packet, n) => {
-                let cmd = packet
-                    .split('$')
-                    .nth(1)
-                    .and_then(|s| s.split('#').next())
-                    .unwrap_or("");
-                if cmd == "g" {
-                    last_inbound_was_g = true;
-                    g_accum_buf.clear();
+            InboundTcpChunk::Data(_packet, n) => {
+                let res = filter_host_rsp_tcp_stream(&mut tcp_acc, &t_buf[..n], &mut nor_policy);
+                for raw_cmd in &res.observed_cmds {
+                    let cmd = String::from_utf8_lossy(raw_cmd);
+                    if cmd == "g" {
+                        last_inbound_was_g = true;
+                        g_accum_buf.clear();
+                    } else if cmd.starts_with('G') {
+                        ctrl.sync_registers(&cmd);
+                    }
                 }
-                if cmd.starts_with('G') {
-                    ctrl.sync_registers(cmd);
+                if !res.forward_to_serial.is_empty() {
+                    let _ = serial_port.write_all(&res.forward_to_serial);
                 }
-                let _ = serial_port.write_all(&t_buf[..n]);
+                if !res.blocked_host_replies.is_empty() {
+                    let reply_str = String::from_utf8_lossy(&res.blocked_host_replies).into_owned();
+                    ctrl.record_telemetry("OUTBOUND", &reply_str);
+                    if tcp_stream.write_all(&res.blocked_host_replies).is_err() {
+                        break;
+                    }
+                    let _ = tcp_stream.flush();
+                }
             }
         }
 
@@ -130,5 +142,11 @@ pub(super) fn handle_serial_session(
             Err(ref e) if crate::pico::is_transient_io_error(e) => {}
             Err(_) => break,
         }
+    }
+
+    if nor_policy == NorWritePolicy::UpperNorAppUnlocked {
+        let lock_frame = build_nor_lock_frame();
+        let _ = serial_port.write_all(&lock_frame);
+        let _ = serial_port.flush();
     }
 }

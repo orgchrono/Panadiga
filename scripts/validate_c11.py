@@ -97,6 +97,12 @@ OPENOS_HOST_SOURCES: tuple[str, ...] = (
     "firmware/panadiga-openos/tests/test_openos_host.c",
 )
 
+C11_HW_HOST_SOURCES: Final[tuple[str, ...]] = (
+    "firmware/pico-p7501/diag/p7501_hotplug_codec.c",
+    "firmware/pico-p7501/hal/p7501_hw.c",
+    "firmware/pico-p7501/tests/test_p7501_hw_host.c",
+)
+
 
 def _compile_c11_target(
     exe_path: Path,
@@ -106,11 +112,14 @@ def _compile_c11_target(
     sources: tuple[str, ...],
     include_dir: str,
     define_macro: str,
+    extra_include_dirs: tuple[str, ...] = (),
     capture_output: bool = False,
 ) -> None:
     """Compile a C11 host test target into an isolated temp directory with strict warnings."""
+    all_includes = (include_dir, *extra_include_dirs)
     for compiler in ("gcc", "clang"):
         if shutil.which(compiler, path=env.get("PATH")):
+            inc_flags = [arg for inc in all_includes for arg in ("-I", inc)]
             cmd = [
                 compiler,
                 "-std=c11",
@@ -118,8 +127,7 @@ def _compile_c11_target(
                 "-Wextra",
                 "-Werror",
                 f"-D{define_macro}=1",
-                "-I",
-                include_dir,
+                *inc_flags,
                 *sources,
                 "-o",
                 str(exe_path),
@@ -131,6 +139,7 @@ def _compile_c11_target(
         msvc_env = load_msvc_env(env)
         if shutil.which("cl", path=msvc_env.get("PATH")):
             obj_dir = work_dir.as_posix().rstrip("/") + "/"
+            inc_flags = [f"/I{inc}" for inc in all_includes]
             run_step(
                 [
                     "cl",
@@ -141,7 +150,7 @@ def _compile_c11_target(
                     "/WX",
                     f"/D{define_macro}=1",
                     "/D_CRT_SECURE_NO_WARNINGS",
-                    f"/I{include_dir}",
+                    *inc_flags,
                     *sources,
                     f"/Fo:{obj_dir}",
                     f"/Fe:{exe_path}",
@@ -179,13 +188,20 @@ def _gate_c11_host(env: Mapping[str, str], *, capture_output: bool = False) -> N
     if not capture_output:
         print_banner("8/9. Compiling & Executing C11 Pico & OpenOS Host Tests (+ ARM Check)")
     ext = ".exe" if sys.platform == "win32" else ""
-    targets: tuple[tuple[str, tuple[str, ...], str, str], ...] = (
-        ("test_gdb_rsp_host", C11_HOST_SOURCES, "firmware/pico-p7501", "PICO_HOST_TEST"),
-        ("test_openos_host", OPENOS_HOST_SOURCES, "firmware/panadiga-openos", "PANADIGA_OPENOS_HOST_TEST"),
+    targets: tuple[tuple[str, tuple[str, ...], str, tuple[str, ...], str], ...] = (
+        ("test_gdb_rsp_host", C11_HOST_SOURCES, "firmware/pico-p7501", (), "PICO_HOST_TEST"),
+        (
+            "test_p7501_hw_host",
+            C11_HW_HOST_SOURCES,
+            "firmware/pico-p7501",
+            ("firmware/pico-p7501/tests/mock_pico_sdk",),
+            "PICO_HOST_TEST",
+        ),
+        ("test_openos_host", OPENOS_HOST_SOURCES, "firmware/panadiga-openos", (), "PANADIGA_OPENOS_HOST_TEST"),
     )
     with tempfile.TemporaryDirectory(prefix="panadiga_c11_") as tmpdir_str:
         base_dir = Path(tmpdir_str)
-        for name, sources, include_dir, macro in targets:
+        for name, sources, include_dir, extra_includes, macro in targets:
             work_dir = base_dir / name
             work_dir.mkdir(parents=True, exist_ok=True)
             exe_path = work_dir / f"{name}{ext}"
@@ -196,6 +212,7 @@ def _gate_c11_host(env: Mapping[str, str], *, capture_output: bool = False) -> N
                 sources=sources,
                 include_dir=include_dir,
                 define_macro=macro,
+                extra_include_dirs=extra_includes,
                 capture_output=capture_output,
             )
             run_step([str(exe_path)], cwd=ROOT, env=env, capture_output=capture_output)
