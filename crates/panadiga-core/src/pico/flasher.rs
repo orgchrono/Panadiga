@@ -15,7 +15,7 @@ pub use io::{
     detect_bootsel_drives, flash_embedded_firmware, flash_uf2_to_drive, merge_unified_uf2,
     trigger_1200_baud_bootsel,
 };
-pub use uf2::{Uf2TargetFamily, extract_uf2_family_slice, validate_uf2_buffer};
+pub use uf2::{Uf2Error, Uf2TargetFamily, extract_uf2_family_slice, validate_uf2_buffer};
 
 /// Magic numbers identifying Microsoft UF2 (USB Flashing Format) containers.
 pub const UF2_MAGIC_START0: u32 = 0x0A32_4655; // "UF2\n" in little-endian

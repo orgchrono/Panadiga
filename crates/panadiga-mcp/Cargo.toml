@@ -2,6 +2,7 @@
 name = "panadiga-mcp"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
 description = "Native Rust Model Context Protocol (MCP) JSON-RPC 2.0 server exposing Panadiga tools, resources, and prompts"
@@ -18,3 +19,6 @@ hex = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tracing = { workspace = true }
+
+[lints]
+workspace = true

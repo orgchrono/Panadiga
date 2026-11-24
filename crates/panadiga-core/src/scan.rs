@@ -209,6 +209,8 @@ pub fn run_deep_scan(
     let resolved = resolve_input_path(file_path)?;
     let file = File::open(&resolved)
         .with_context(|| format!("Failed to open file: {}", resolved.display()))?;
+    // SAFETY: Read-only forensic scan mapping over an opened immutable file handle.
+    #[allow(unsafe_code)]
     let mmap = unsafe { Mmap::map(&file)? };
 
     let keywords: Vec<String> = match custom_keywords {

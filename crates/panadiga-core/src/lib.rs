@@ -1,3 +1,5 @@
+#![deny(unsafe_code)]
+
 //! Panasonic DIGA Core Library (`panadiga-core`)
 //!
 //! Pure cross-platform domain models, hardware SSOT, Matsushita AM34/MN103S constants,

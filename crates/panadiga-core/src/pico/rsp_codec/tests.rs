@@ -253,3 +253,27 @@ fn loopback_socket_validation_and_host_rsp_filter_enforce_barriers() {
     assert_eq!(r2.forward_to_serial, b"$g#67");
     assert_eq!(r2.blocked_host_replies, b"+$E05#aa");
 }
+
+#[test]
+fn typed_rsp_codec_errors_downcast_cleanly() {
+    let e05 = decode_rsp_hex_memory(b"E05").unwrap_err();
+    assert!(matches!(
+        e05.downcast_ref::<RspCodecError>(),
+        Some(RspCodecError::TargetError { code, .. }) if code == "E05"
+    ));
+
+    let odd_hex = decode_rsp_hex_memory(b"abc").unwrap_err();
+    assert_eq!(
+        odd_hex.downcast_ref::<RspCodecError>(),
+        Some(&RspCodecError::InvalidHexLength { len: 3 })
+    );
+
+    let short_g = decode_mn103s_g_registers(b"00112233").unwrap_err();
+    assert_eq!(
+        short_g.downcast_ref::<RspCodecError>(),
+        Some(&RspCodecError::InvalidRegisterFrameSize {
+            expected: G_REGISTER_BYTES,
+            actual: 4
+        })
+    );
+}

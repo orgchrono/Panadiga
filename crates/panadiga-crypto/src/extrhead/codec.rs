@@ -2,7 +2,7 @@
 
 //! `EXTRHEAD`/`EXTRFOOT` header parser, packer, and recursive unpacker.
 
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result};
 
 use super::super::codec::{
     extract_c_ascii, pad_to_block, read_u16_le, read_u32_le, write_padded_ascii,
@@ -12,7 +12,9 @@ use super::crypt::{
     apply_partial_crypt_with_key, compress_payload_by_algo, decompress_payload_by_algo,
     detect_extrhead_key_and_double, resolve_crypt_mode,
 };
-use super::types::{ExtrheadCompressionAlgo, ExtrheadCryptMode, ExtrheadHeader, UnpackedExtrhead};
+use super::types::{
+    ExtrheadCompressionAlgo, ExtrheadCryptMode, ExtrheadError, ExtrheadHeader, UnpackedExtrhead,
+};
 use crate::constants::{
     PANA_EXTRHEAD_MAIN_SRC_ADDR, PANA_FEISTEL_ROUND_KEY_32B, PANA_FEISTEL_SBOX_256,
 };
@@ -20,7 +22,10 @@ use crate::constants::{
 /// Parses a decrypted 64-byte (`0x40`) `EXTRHEAD` header block.
 pub fn parse_extrhead_header(header_bytes: &[u8]) -> Result<ExtrheadHeader> {
     if header_bytes.len() < 0x40 || &header_bytes[..8] != b"EXTRHEAD" {
-        bail!("Invalid EXTRHEAD container header");
+        return Err(ExtrheadError::InvalidHeader {
+            len: header_bytes.len(),
+        }
+        .into());
     }
     Ok(ExtrheadHeader {
         tag: String::from_utf8_lossy(&header_bytes[0x08..0x0C]).into_owned(),
@@ -120,7 +125,10 @@ fn unpack_extrhead_inner(
     depth: u8,
 ) -> Result<UnpackedExtrhead> {
     if raw_container.len() < 0x40 {
-        bail!("Container shorter than 64-byte EXTRHEAD header");
+        return Err(ExtrheadError::InvalidHeader {
+            len: raw_container.len(),
+        }
+        .into());
     }
 
     let is_plain_header = mode == ExtrheadCryptMode::Plain || &raw_container[..8] == b"EXTRHEAD";
@@ -145,7 +153,7 @@ fn unpack_extrhead_inner(
 
     let header = parse_extrhead_header(&hdr_blk)?;
     if header.algo > 3 {
-        bail!("Unsupported EXTRHEAD compression algo: {}", header.algo);
+        return Err(ExtrheadError::UnsupportedCompressionAlgo(header.algo.to_string()).into());
     }
 
     let eff_mode = resolve_crypt_mode(mode, &header.tag, is_plain_header);
@@ -168,11 +176,11 @@ fn unpack_extrhead_inner(
 
     let payload_end = 0x40usize + header.src_len as usize;
     if payload_end > decrypted.len() {
-        bail!(
-            "EXTRHEAD container truncated: expected {} bytes, got {}",
-            payload_end,
-            decrypted.len()
-        );
+        return Err(ExtrheadError::TruncatedContainer {
+            expected: payload_end,
+            actual: decrypted.len(),
+        }
+        .into());
     }
 
     let decompressed = decompress_payload_by_algo(

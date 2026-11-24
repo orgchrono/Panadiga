@@ -52,9 +52,9 @@ pub use bgo_unbrick::{
     validate_bgo_allowlist_invariant,
 };
 pub use eh55_bgo::{
-    BgoSectorGeometry, EH55_BGO_EXPECTED_P2_COUNT, EH55_BGO_FIRST_SA, EH55_BGO_LAST_SA,
-    EH55_BGO_MAX_PID, EH55_BGO_SECTOR_COUNT, Eh55BgoAuditReport, Eh55BgoSectorKind,
-    Eh55BgoSectorReport, Portao4InstallReport as NorAutobootInstallReport,
+    BgoParseError, BgoSectorGeometry, EH55_BGO_EXPECTED_P2_COUNT, EH55_BGO_FIRST_SA,
+    EH55_BGO_LAST_SA, EH55_BGO_MAX_PID, EH55_BGO_SECTOR_COUNT, Eh55BgoAuditReport,
+    Eh55BgoSectorKind, Eh55BgoSectorReport, Portao4InstallReport as NorAutobootInstallReport,
     audit_bgo_nor_with_geometry, audit_eh55_bgo_nor_8mb,
     build_portao4_norfrom_cow_image as build_nor_autoboot_cow_image,
     build_portao4_self_unpacking_prog061 as build_nor_autoboot_capsule, eh55_bgo_sector_offset,

@@ -1,6 +1,6 @@
 //! Panasonic DMR-EH55 DIGA Engineering Suite - Cross-Platform Desktop & Android Backend Library
 
-#![deny(unsafe_code)]
+#![forbid(unsafe_code)]
 #![cfg_attr(not(test), deny(clippy::print_stdout, clippy::print_stderr))]
 
 use tauri::Manager;

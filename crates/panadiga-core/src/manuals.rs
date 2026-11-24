@@ -163,8 +163,10 @@ pub fn search_manuals(
                 let text_upper = text.to_uppercase();
                 for t in &terms {
                     let term_upper = t.to_uppercase();
-                    if text_upper.contains(&term_upper) {
-                        term_matches.get_mut(t).unwrap().push(page_num);
+                    if text_upper.contains(&term_upper)
+                        && let Some(hits) = term_matches.get_mut(t)
+                    {
+                        hits.push(page_num);
                     }
                 }
             }

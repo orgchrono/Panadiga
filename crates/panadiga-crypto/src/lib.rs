@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 //! Cryptographic Forensics, Entropy Analysis & ECB Block Frequency Leak Detection
 //!
 //! Analyzes encrypted Panasonic container formats (`PANA_DVD.FRM`) and correlates
@@ -39,7 +41,7 @@ pub use codebook::{correlate_hdd_partitions, print_codebook};
 pub use codec::{DecodedStbSlot, parse_u32_radix, try_decode_stb_slot};
 pub use entropy::{analyze_8byte_frequencies, analyze_frm_container};
 pub use extrhead::{
-    ExtrheadCompressionAlgo, ExtrheadCryptMode, ExtrheadHeader, UnpackedExtrhead,
+    ExtrheadCompressionAlgo, ExtrheadCryptMode, ExtrheadError, ExtrheadHeader, UnpackedExtrhead,
     compress_pana_lzss, decompress_pana_lzss, pack_extrhead, pack_extrhead_with_options,
     parse_extrhead_header, unpack_extrhead, unpack_extrhead_with_key,
 };

@@ -18,7 +18,7 @@ const INJECTION_PATTERN_STRS: &[&str] = &[
     r"(?i)act\s+as\s+an\s+unrestricted",
 ];
 
-fn compile_static_regex(pattern: &str) -> Regex {
+pub(crate) fn compile_static_regex(pattern: &str) -> Regex {
     #[allow(clippy::expect_used)]
     Regex::new(pattern).expect("compile-time validated regex pattern")
 }

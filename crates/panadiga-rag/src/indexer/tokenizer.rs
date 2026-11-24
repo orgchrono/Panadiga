@@ -4,6 +4,8 @@ use regex::Regex;
 use std::collections::HashSet;
 use std::sync::LazyLock;
 
+use crate::guardrails::compile_static_regex;
+
 pub const STOPWORDS: &[&str] = &[
     "a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are",
     "as", "at", "be", "because", "been", "before", "being", "below", "between", "both", "but",
@@ -19,7 +21,7 @@ pub const STOPWORDS: &[&str] = &[
 ];
 
 static TOKEN_REGEX: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"\b0x[0-9A-Fa-f]+\b|[A-Za-z0-9_#/]+").unwrap());
+    LazyLock::new(|| compile_static_regex(r"\b0x[0-9A-Fa-f]+\b|[A-Za-z0-9_#/]+"));
 
 static STOPWORDS_SET: LazyLock<HashSet<&'static str>> =
     LazyLock::new(|| STOPWORDS.iter().copied().collect());

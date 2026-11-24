@@ -82,7 +82,10 @@ impl MatshitaOddEmulator {
                 bail!("0x3B + 0x3C readback mismatch!");
             }
         }
-        Ok(self.injections.last().expect("recorded injection").clone())
+        self.injections
+            .last()
+            .cloned()
+            .ok_or_else(|| anyhow::anyhow!("Expected recorded write injection after ATAPI write"))
     }
 
     /// Optional target-VA-staged write injection (`0xED 0x91` + `0x3B`/`0xED 0x93` + `0x3C` verify).

@@ -15,6 +15,25 @@ use super::{
     EH55_BGO_SECTOR_STRIDE,
 };
 
+/// Typed errors returned by BGO FTL L2P geometry, sector indexing, and 1->0 verification helpers.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum BgoParseError {
+    #[error("Expected {expected}-byte NOR dump, got {actual}")]
+    InvalidImageLength { expected: usize, actual: usize },
+    #[error("BGO sector SA{sa} outside valid range SA{first_sa}..=SA{last_sa}")]
+    SectorOutOfRange {
+        sa: usize,
+        first_sa: usize,
+        last_sa: usize,
+    },
+    #[error("Duplicate active BGO L2P mapping for pid 0x{pid:04X}")]
+    DuplicateActiveL2pMapping { pid: u16 },
+    #[error("NOR compatibility buffer length mismatch: orig={orig} vs target={target}")]
+    BufferLengthMismatch { orig: usize, target: usize },
+    #[error("0->1 NOR bit violation at offset 0x{offset:06X}: old=0x{old:02X}, new=0x{new:02X}")]
+    NorZeroToOneViolation { offset: usize, old: u8, new: u8 },
+}
+
 /// Parameterized NOR BGO FTL geometry (defaults to DMR-EH55 `SA26..=SA70` in 8 MiB flash).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct BgoSectorGeometry {
@@ -141,11 +160,12 @@ impl BgoSectorGeometry {
     /// Translates a physical sector index inside `[first_sa..=last_sa]` to its NOR byte offset.
     pub fn sector_offset(&self, sa: usize) -> Result<usize> {
         if !(self.first_sa..=self.last_sa).contains(&sa) {
-            bail!(
-                "BGO sector SA{sa} outside valid range SA{}..=SA{}",
-                self.first_sa,
-                self.last_sa
-            );
+            return Err(BgoParseError::SectorOutOfRange {
+                sa,
+                first_sa: self.first_sa,
+                last_sa: self.last_sa,
+            }
+            .into());
         }
         Ok(self.base_offset + (sa - self.first_sa) * self.sector_stride)
     }
@@ -169,7 +189,7 @@ pub fn eh55_bgo_sector_offset(sa: usize) -> Result<usize> {
 /// Returns `true` when the sector at `base` carries a consistent `0xF101` P1 signature and 0x100-byte zero marker.
 #[must_use]
 pub fn is_active_bgo_p1_sector(nor: &[u8], base: usize) -> bool {
-    if base + 0x200 > nor.len() {
+    if base.checked_add(0x200).is_none_or(|end| end > nor.len()) {
         return false;
     }
     let w0 = read_le_u16(nor, base + 4);
@@ -181,7 +201,7 @@ pub fn is_active_bgo_p1_sector(nor: &[u8], base: usize) -> bool {
 /// Evaluates the highest uncommitted migration bitmap slot (`fun_50423540`) at `buf[off..off+38]`.
 #[must_use]
 pub fn eval_bgo_migration_index(buf: &[u8], off: usize) -> Option<usize> {
-    if off + 38 > buf.len() {
+    if off.checked_add(38).is_none_or(|end| end > buf.len()) {
         return None;
     }
     let w0 = read_le_u16(buf, off);
@@ -227,11 +247,11 @@ pub fn parse_bgo_l2p_with_geometry(
     geom: &BgoSectorGeometry,
 ) -> Result<BTreeMap<u16, u16>> {
     if nor.len() != geom.expected_flash_bytes {
-        bail!(
-            "Expected {}-byte NOR dump, got {}",
-            geom.expected_flash_bytes,
-            nor.len()
-        );
+        return Err(BgoParseError::InvalidImageLength {
+            expected: geom.expected_flash_bytes,
+            actual: nor.len(),
+        }
+        .into());
     }
     let mut l2p = BTreeMap::new();
     for sa in geom.first_sa..=geom.last_sa {
@@ -254,7 +274,7 @@ pub fn parse_bgo_l2p_with_geometry(
                         let w = read_le_u16(nor, soff + 4 + usize::from(i) * 2);
                         let pid = tid.wrapping_mul(16).wrapping_add(i);
                         if l2p.insert(pid, w).is_some() {
-                            bail!("Duplicate active BGO L2P mapping for pid 0x{pid:04X}");
+                            return Err(BgoParseError::DuplicateActiveL2pMapping { pid }.into());
                         }
                     }
                 }
@@ -272,16 +292,21 @@ pub fn parse_eh55_bgo_l2p(nor_8mb: &[u8]) -> Result<BTreeMap<u16, u16>> {
 /// Verifies that every byte transition `orig -> target` satisfies pure NOR `1 -> 0` programming (`(o & n) == n`).
 pub fn verify_nor_one_to_zero_compatible(orig: &[u8], target: &[u8]) -> Result<usize> {
     if orig.len() != target.len() {
-        bail!(
-            "NOR compatibility buffer length mismatch: orig={} vs target={}",
-            orig.len(),
-            target.len()
-        );
+        return Err(BgoParseError::BufferLengthMismatch {
+            orig: orig.len(),
+            target: target.len(),
+        }
+        .into());
     }
     let mut modified = 0usize;
     for (idx, (&o, &n)) in orig.iter().zip(target.iter()).enumerate() {
         if (o & n) != n {
-            bail!("0->1 NOR bit violation at offset 0x{idx:06X}: old=0x{o:02X}, new=0x{n:02X}");
+            return Err(BgoParseError::NorZeroToOneViolation {
+                offset: idx,
+                old: o,
+                new: n,
+            }
+            .into());
         }
         if o != n {
             modified += 1;
@@ -331,11 +356,11 @@ pub(crate) fn collect_f2_bases(
     geom: &BgoSectorGeometry,
 ) -> Result<BTreeMap<u16, usize>> {
     if nor.len() != geom.expected_flash_bytes {
-        bail!(
-            "Expected {}-byte NOR dump, got {}",
-            geom.expected_flash_bytes,
-            nor.len()
-        );
+        return Err(BgoParseError::InvalidImageLength {
+            expected: geom.expected_flash_bytes,
+            actual: nor.len(),
+        }
+        .into());
     }
     let mut f2_bases = BTreeMap::new();
     let max_f2_word = 0xF200u16.saturating_add(geom.expected_p2_count as u16);
@@ -487,6 +512,28 @@ mod tests {
         assert_eq!(
             resolve_nfd_file_page_pid(&nor, &geom, "update", 0).unwrap(),
             0x000D
+        );
+    }
+
+    #[test]
+    fn bgo_parse_error_and_overflow_safe_bounds_fail_closed() {
+        assert!(!is_active_bgo_p1_sector(&[0u8; 64], usize::MAX - 8));
+        assert_eq!(eval_bgo_migration_index(&[0u8; 64], usize::MAX - 4), None);
+
+        let err_sa = eh55_bgo_sector_offset(999).unwrap_err();
+        assert!(matches!(
+            err_sa.downcast_ref::<BgoParseError>(),
+            Some(BgoParseError::SectorOutOfRange { sa: 999, .. })
+        ));
+
+        let err_nor = verify_nor_one_to_zero_compatible(&[0x0F], &[0xF0]).unwrap_err();
+        assert_eq!(
+            err_nor.downcast_ref::<BgoParseError>(),
+            Some(&BgoParseError::NorZeroToOneViolation {
+                offset: 0,
+                old: 0x0F,
+                new: 0xF0
+            })
         );
     }
 }

@@ -69,4 +69,23 @@ pub mod pure_meihdfs_tests {
         assert!(rep_full.is_full_hdd_image);
         assert!(rep_full.is_mirror_verified);
     }
+
+    #[test]
+    fn test_meihdfs_short_slice_and_typed_errors() {
+        let fallback = decode_single_meihdfs_record(&[0x00; 3], 1);
+        assert_eq!(fallback.decoded_tag, MEIHDFS_TAG_FREE);
+        assert_eq!(decode_single_meihdfs_record(&[], 0).raw_tag, 0xFF);
+        assert_eq!(
+            try_decode_single_meihdfs_record(&[0xFF; 3], 1).unwrap_err(),
+            MeihdfsError::RecordTooShort {
+                actual: 3,
+                expected: MEIHDFS_RECORD_SIZE
+            }
+        );
+        let region_err = decode_meihdfs_slice(&[0u8; 32], false, "tiny").unwrap_err();
+        assert!(matches!(
+            region_err.downcast_ref::<MeihdfsError>(),
+            Some(MeihdfsError::InvalidRegion { .. })
+        ));
+    }
 }

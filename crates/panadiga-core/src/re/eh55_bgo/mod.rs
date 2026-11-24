@@ -14,10 +14,10 @@ pub use audit::{
     audit_eh55_bgo_nor_8mb,
 };
 pub use audit_helpers::{
-    BgoSectorGeometry, NfdDirEntry, eh55_bgo_sector_offset, eval_bgo_migration_index,
-    eval_bgo_migration_target, find_nfd_dir_entry, is_active_bgo_p1_sector,
-    parse_bgo_l2p_with_geometry, parse_eh55_bgo_l2p, resolve_nfd_file_page_pid,
-    verify_nor_one_to_zero_compatible,
+    BgoParseError, BgoSectorGeometry, NfdDirEntry, eh55_bgo_sector_offset,
+    eval_bgo_migration_index, eval_bgo_migration_target, find_nfd_dir_entry,
+    is_active_bgo_p1_sector, parse_bgo_l2p_with_geometry, parse_eh55_bgo_l2p,
+    resolve_nfd_file_page_pid, verify_nor_one_to_zero_compatible,
 };
 pub use live_apply::{
     BgoApplyStage, BgoLiveApplyProgress, BgoLiveApplyReport, BgoLiveHealCommandPlan,

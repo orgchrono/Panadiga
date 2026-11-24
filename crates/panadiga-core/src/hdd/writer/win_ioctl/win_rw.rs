@@ -1,3 +1,5 @@
+#![allow(unsafe_code)]
+
 //! Sector-aligned Win32 raw disk seek, read, write, and buffer flush operations.
 
 use std::ptr::null_mut;

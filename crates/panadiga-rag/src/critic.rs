@@ -5,14 +5,14 @@ use std::collections::HashSet;
 use std::sync::LazyLock;
 
 use super::config::{ABSTENTION_SIMILARITY_THRESHOLD, MIN_GROUNDEDNESS_RATIO, MIN_RELEVANCE_SCORE};
-use super::guardrails::{KNOWN_COMPONENTS, KNOWN_PINS_AND_SIGNALS};
+use super::guardrails::{KNOWN_COMPONENTS, KNOWN_PINS_AND_SIGNALS, compile_static_regex};
 use super::indexer::technical_tokenize;
 use super::models::{Chunk, CriticReport, EntityType, Query, RetrievalResult};
 use super::safety::extract_voltages_volts;
 
-static HEX_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\b0x[0-9A-Fa-f]+\b").unwrap());
+static HEX_REGEX: LazyLock<Regex> = LazyLock::new(|| compile_static_regex(r"\b0x[0-9A-Fa-f]+\b"));
 
-static WORD_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\b[A-Za-z0-9_#/]+").unwrap());
+static WORD_REGEX: LazyLock<Regex> = LazyLock::new(|| compile_static_regex(r"\b[A-Za-z0-9_#/]+"));
 
 pub struct RetrievalCritic {
     pub threshold: f64,

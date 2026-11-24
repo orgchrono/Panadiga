@@ -1,3 +1,5 @@
+#![allow(unsafe_code)]
+
 //! Windows Win32 `HANDLE` lifecycle and disk metadata/layout IOCTLs for [`OwnedDiskHandle`].
 //!
 //! All Win32 FFI calls here carry explicit `// SAFETY:` justifications.

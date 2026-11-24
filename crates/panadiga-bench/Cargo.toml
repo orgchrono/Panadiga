@@ -2,6 +2,7 @@
 name = "panadiga-bench"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
 description = "L1 unidirectional bench event stream, backpressure publisher, and single-use operation nonces for Panadiga"
@@ -17,3 +18,6 @@ panadiga-constants = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 sha2 = { workspace = true }
+
+[lints]
+workspace = true

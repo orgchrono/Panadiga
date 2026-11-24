@@ -2,8 +2,25 @@
 
 //! Domain types for Panasonic `EXTRHEAD`/`EXTRFOOT` containers.
 
-use anyhow::{Result, bail};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
+
+/// Typed errors returned while parsing or unpacking `EXTRHEAD`/`EXTRFOOT` containers.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum ExtrheadError {
+    #[error("Invalid EXTRHEAD container header ({len} bytes)")]
+    InvalidHeader { len: usize },
+    #[error("Unsupported compression algo '{0}': expected zlib, gzip, lzss, or lzma")]
+    UnsupportedCompressionAlgo(String),
+    #[error("Unsupported unpack mode '{0}': expected auto, main, drv, or plain")]
+    UnsupportedCryptMode(String),
+    #[error("EXTRHEAD nesting exceeded max recursion depth ({max_depth})")]
+    RecursionLimitExceeded { max_depth: u8 },
+    #[error("EXTRHEAD container truncated: expected {expected} bytes, got {actual}")]
+    TruncatedContainer { expected: usize, actual: usize },
+    #[error("EXTRHEAD checksum mismatch: expected 0x{expected:08X}, got 0x{actual:08X}")]
+    ChecksumMismatch { expected: u32, actual: u32 },
+}
 
 /// Partial encryption profile for an `EXTRHEAD`/`EXTRFOOT` container.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -33,9 +50,7 @@ impl std::str::FromStr for ExtrheadCompressionAlgo {
             "gzip" | "gz" | "1" => Ok(Self::Gzip),
             "lzss" | "2" => Ok(Self::Lzss),
             "lzma" | "3" => Ok(Self::Lzma),
-            other => {
-                bail!("Unsupported compression algo '{other}': expected zlib, gzip, lzss, or lzma")
-            }
+            other => Err(ExtrheadError::UnsupportedCompressionAlgo(other.to_string()).into()),
         }
     }
 }
@@ -49,7 +64,7 @@ impl std::str::FromStr for ExtrheadCryptMode {
             "main" => Ok(Self::Main),
             "drv" => Ok(Self::Drv),
             "plain" => Ok(Self::Plain),
-            other => bail!("Unsupported unpack mode '{other}': expected auto, main, drv, or plain"),
+            other => Err(ExtrheadError::UnsupportedCryptMode(other.to_string()).into()),
         }
     }
 }

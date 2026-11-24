@@ -12,8 +12,8 @@ pub mod policy;
 mod tests;
 
 pub use decode::{
-    G_REGISTER_BYTES, ParsedRspFrame, check_rsp_e0x_error, decode_mn103s_g_registers,
-    decode_rsp_hex_memory, parse_rsp_reply, validate_dump_range,
+    G_REGISTER_BYTES, ParsedRspFrame, RspCodecError, check_rsp_e0x_error,
+    decode_mn103s_g_registers, decode_rsp_hex_memory, parse_rsp_reply, validate_dump_range,
 };
 pub use encode::{
     MAX_M_CHUNK, MAX_X_CHUNK, build_nor_lock_frame, build_nor_unlock_frame, build_rsp_frame,

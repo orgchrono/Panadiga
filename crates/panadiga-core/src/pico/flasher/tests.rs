@@ -28,17 +28,28 @@ fn test_uf2_buffer_validation_valid() {
 #[test]
 fn test_uf2_buffer_validation_invalid_magic() {
     let block = vec![0u8; 512];
-    let res = validate_uf2_buffer(&block);
-    assert!(res.is_err());
-    assert!(res.unwrap_err().to_string().contains("Corrupt UF2 block"));
+    let err = validate_uf2_buffer(&block).unwrap_err();
+    assert!(err.to_string().contains("Corrupt UF2 block"));
+    assert_eq!(
+        err.downcast_ref::<Uf2Error>(),
+        Some(&Uf2Error::CorruptMagic {
+            block_index: 0,
+            start0: 0,
+            start1: 0,
+            end_magic: 0,
+        })
+    );
 }
 
 #[test]
 fn test_uf2_buffer_validation_invalid_length() {
     let block = vec![0u8; 400];
-    let res = validate_uf2_buffer(&block);
-    assert!(res.is_err());
-    assert!(res.unwrap_err().to_string().contains("multiple of 512"));
+    let err = validate_uf2_buffer(&block).unwrap_err();
+    assert!(err.to_string().contains("multiple of 512"));
+    assert_eq!(
+        err.downcast_ref::<Uf2Error>(),
+        Some(&Uf2Error::InvalidLength { len: 400 })
+    );
 }
 
 #[test]

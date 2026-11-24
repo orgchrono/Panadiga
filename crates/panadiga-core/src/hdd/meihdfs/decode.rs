@@ -4,7 +4,7 @@
 
 use std::collections::BTreeMap;
 
-use anyhow::{Result, bail};
+use anyhow::Result;
 use byteorder::{ByteOrder, LittleEndian};
 
 use crate::constants::*;
@@ -15,16 +15,40 @@ use super::super::types::{
     MeihdfsExtentSummary,
 };
 
+/// Typed errors returned while decoding MEIHDFS allocation descriptors and regions.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum MeihdfsError {
+    #[error("MEIHDFS descriptor record too short: expected {expected} bytes, got {actual}")]
+    RecordTooShort { actual: usize, expected: usize },
+    #[error("MEIHDFS buffer/region error: {reason}")]
+    InvalidRegion { reason: String },
+}
+
 #[inline]
 fn inv_u16(inv: &[u8; MEIHDFS_RECORD_SIZE], off: usize) -> u16 {
     LittleEndian::read_u16(&inv[off..off + 2])
 }
 
+/// Validates and decodes a single 16-byte bit-inverted MEIHDFS allocation record.
+pub fn try_decode_single_meihdfs_record(
+    raw_chunk: &[u8],
+    index: usize,
+) -> std::result::Result<MeihdfsAllocationRecord, MeihdfsError> {
+    if raw_chunk.len() < MEIHDFS_RECORD_SIZE {
+        return Err(MeihdfsError::RecordTooShort {
+            actual: raw_chunk.len(),
+            expected: MEIHDFS_RECORD_SIZE,
+        });
+    }
+    Ok(decode_single_meihdfs_record(raw_chunk, index))
+}
+
 /// Pure Functional Core: Decodes a single 16-byte bit-inverted MEIHDFS allocation record.
 pub fn decode_single_meihdfs_record(raw_chunk: &[u8], index: usize) -> MeihdfsAllocationRecord {
     let offset = index * MEIHDFS_RECORD_SIZE;
-    let inv: [u8; MEIHDFS_RECORD_SIZE] = std::array::from_fn(|j| raw_chunk[j] ^ 0xFF);
-    let (tag, raw_tag, subtag) = (inv[0], raw_chunk[0], inv[1]);
+    let inv: [u8; MEIHDFS_RECORD_SIZE] =
+        std::array::from_fn(|j| raw_chunk.get(j).copied().unwrap_or(0xFF) ^ 0xFF);
+    let (tag, raw_tag, subtag) = (inv[0], raw_chunk.first().copied().unwrap_or(0xFF), inv[1]);
 
     let (tag_name, extent_id, sector_count, lba_offset, flags, description) = match tag {
         MEIHDFS_TAG_EXTENT_HEADER => {
@@ -253,10 +277,12 @@ pub fn decode_meihdfs_slice(
         let p_start = ALLOCATION_DESCRIPTORS_OFFSET as usize;
         let p_end = p_start + ALLOCATION_DESCRIPTORS_SIZE;
         if file_len < p_end {
-            bail!(
-                "Image slice too small to contain allocation descriptors table at 0x{:08X}",
-                p_start
-            );
+            return Err(MeihdfsError::InvalidRegion {
+                reason: format!(
+                    "Image slice too small to contain allocation descriptors table at 0x{p_start:08X}"
+                ),
+            }
+            .into());
         }
         let desc = &data[p_start..p_end];
 
@@ -270,11 +296,12 @@ pub fn decode_meihdfs_slice(
         (desc, mirror_ok)
     } else {
         if file_len < ALLOCATION_DESCRIPTORS_SIZE {
-            bail!(
-                "Input descriptors buffer too small (expected at least {} bytes, found {})",
-                ALLOCATION_DESCRIPTORS_SIZE,
-                file_len
-            );
+            return Err(MeihdfsError::InvalidRegion {
+                reason: format!(
+                    "Input descriptors buffer too small (expected at least {ALLOCATION_DESCRIPTORS_SIZE} bytes, found {file_len})"
+                ),
+            }
+            .into());
         }
         (&data[..ALLOCATION_DESCRIPTORS_SIZE], false)
     };

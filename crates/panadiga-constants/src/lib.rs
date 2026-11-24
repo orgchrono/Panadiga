@@ -1,3 +1,5 @@
+#![deny(unsafe_code)]
+
 //! Panadiga L0 Leaf Architectural Constants, IPC Event Registry, Telemetry Logger & Pure Forensic Helpers.
 //!
 //! Zero internal workspace dependencies (`panadiga-*`), forming the acyclic foundation for

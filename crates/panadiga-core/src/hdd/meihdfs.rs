@@ -7,8 +7,8 @@ mod io;
 mod tests;
 
 pub use decode::{
-    aggregate_meihdfs_extents, decode_journal_blocks_slice, decode_meihdfs_slice,
-    decode_single_meihdfs_record,
+    MeihdfsError, aggregate_meihdfs_extents, decode_journal_blocks_slice, decode_meihdfs_slice,
+    decode_single_meihdfs_record, try_decode_single_meihdfs_record,
 };
 pub use io::{decode_descriptors, decode_meihdfs_descriptors};
 

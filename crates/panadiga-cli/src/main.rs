@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 //! Panasonic DIGA Engineering CLI Suite (`panadiga`)
 //!
 //! Cross-platform engineering & forensics CLI:
@@ -35,12 +37,8 @@ fn main() -> Result<()> {
 
     let cli = Cli::parse();
 
-    if cli.interactive
-        || cli.command.is_none()
-        || matches!(cli.command, Some(Commands::Interactive))
-    {
-        return run_interactive_pipeline();
+    match cli.command {
+        Some(cmd) if !cli.interactive && !matches!(cmd, Commands::Interactive) => dispatch(cmd),
+        _ => run_interactive_pipeline(),
     }
-
-    dispatch(cli.command.unwrap())
 }

@@ -3,51 +3,58 @@
 use regex::Regex;
 use std::sync::LazyLock;
 
+use crate::guardrails::compile_static_regex;
+
 pub(super) static HEX_PATTERN: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"\b0x[0-9A-Fa-f]+\b").expect("Invalid regex: HEX_PATTERN"));
+    LazyLock::new(|| compile_static_regex(r"\b0x[0-9A-Fa-f]+\b"));
 
 pub(super) static IPL_ERASE_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)\b(?:erase|erasing|wipe|wiping|clear|clearing|destroy|overwrite|program|write|writing)\s+(?:the\s+)?(?:flash\s+)?(?:sectors?\s+)?(?:sa0|sa133|ipl)\b")
-        .expect("Invalid regex: IPL_ERASE_PATTERN")
+    compile_static_regex(
+        r"(?i)\b(?:erase|erasing|wipe|wiping|clear|clearing|destroy|overwrite|program|write|writing)\s+(?:the\s+)?(?:flash\s+)?(?:sectors?\s+)?(?:sa0|sa133|ipl)\b",
+    )
 });
 
 pub(super) static WRITE_ACTION_REGEX: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)\b(?:erase|erasing|wipe|wiping|write|writing|overwrite|overwriting|program|programming|reflash|flashing|clear|clearing|destroy|destroying|modify|modifying|patch|patching)\b|(?i)\bflash\s+(?:a\s+|new\s+|custom\s+|the\s+)?(?:image|binary|firmware|bootloader|rom|data|bytes)?\s*(?:to|at|into)\b")
-        .expect("Invalid regex: WRITE_ACTION_REGEX")
+    compile_static_regex(
+        r"(?i)\b(?:erase|erasing|wipe|wiping|write|writing|overwrite|overwriting|program|programming|reflash|flashing|clear|clearing|destroy|destroying|modify|modifying|patch|patching)\b|(?i)\bflash\s+(?:a\s+|new\s+|custom\s+|the\s+)?(?:image|binary|firmware|bootloader|rom|data|bytes)?\s*(?:to|at|into)\b",
+    )
 });
 
 pub(super) static SYMBOL_CALL_ACTION_REGEX: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)\b(?:call|calling|invoke|invoking|execute|executing|run|running|jump|jumping|branch|branching|trigger|triggering|hook|hooking|patch|patching|chamar|executar|rodar|disparar)\b")
-        .expect("Invalid regex: SYMBOL_CALL_ACTION_REGEX")
+    compile_static_regex(
+        r"(?i)\b(?:call|calling|invoke|invoking|execute|executing|run|running|jump|jumping|branch|branching|trigger|triggering|hook|hooking|patch|patching|chamar|executar|rodar|disparar)\b",
+    )
 });
 
 pub(super) static NEGATION_REGEX: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)\b(?:never|not|no|do\s+not|must\s+not|cannot|prohibited|forbidden|avoid|warning|danger|destroy|damage|destruction|fatal|burn|bricks?|hazard|violation|exceeds|blocks|preserve|preserving|immutable)\b")
-        .expect("Invalid regex: NEGATION_REGEX")
+    compile_static_regex(
+        r"(?i)\b(?:never|not|no|do\s+not|must\s+not|cannot|prohibited|forbidden|avoid|warning|danger|destroy|damage|destruction|fatal|burn|bricks?|hazard|violation|exceeds|blocks|preserve|preserving|immutable)\b",
+    )
 });
 
 pub(super) static NSW5V_TARGET_REGEX: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)\bnsw5v\b|\bp7501\b[^\n.;]{0,32}\bpin(?:o)?\s*5\b|\bgp3\b[^\n.;]{0,32}\b(?:nsw5v|p7501|pin(?:o)?\s*5)\b")
-        .expect("Invalid regex: NSW5V_TARGET_REGEX")
+    compile_static_regex(
+        r"(?i)\bnsw5v\b|\bp7501\b[^\n.;]{0,32}\bpin(?:o)?\s*5\b|\bgp3\b[^\n.;]{0,32}\b(?:nsw5v|p7501|pin(?:o)?\s*5)\b",
+    )
 });
 
 pub(super) static NSW5V_DRIVE_REGEX: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)\b(?:push[\s-]?pull|gpio_out|gpio_set_dir|gpio_pull_(?:up|down)|pull[\s-]?(?:up|down)|output\s+mode|as\s+(?:an?\s+)?output|(?:drive|driving|force|forcing|set|setting|configure|configuring)\s+(?:as\s+)?(?:an?\s+)?(?:output|high|low|3\.3v|5v))\b")
-        .expect("Invalid regex: NSW5V_DRIVE_REGEX")
+    compile_static_regex(
+        r"(?i)\b(?:push[\s-]?pull|gpio_out|gpio_set_dir|gpio_pull_(?:up|down)|pull[\s-]?(?:up|down)|output\s+mode|as\s+(?:an?\s+)?output|(?:drive|driving|force|forcing|set|setting|configure|configuring)\s+(?:as\s+)?(?:an?\s+)?(?:output|high|low|3\.3v|5v))\b",
+    )
 });
 
 static MV_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)(?:^|[^\w])(\d+(?:[.,]\d+)?)\s*m(?:vdc|vac|v|volts?)(?:_[a-z0-9_]+|\b)")
-        .expect("Invalid regex: MV_PATTERN")
+    compile_static_regex(
+        r"(?i)(?:^|[^\w])(\d+(?:[.,]\d+)?)\s*m(?:vdc|vac|v|volts?)(?:_[a-z0-9_]+|\b)",
+    )
 });
 
-static RKM_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)\b(\d+)[vV](\d+)(?:_[a-zA-Z0-9_]+|\b)").expect("Invalid regex: RKM_PATTERN")
-});
+static RKM_PATTERN: LazyLock<Regex> =
+    LazyLock::new(|| compile_static_regex(r"(?i)\b(\d+)[vV](\d+)(?:_[a-zA-Z0-9_]+|\b)"));
 
 static STD_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)\b(\d+(?:[.,]\d+)?)\s*(?:vdc|vac|v|volts?)(?:_[a-zA-Z0-9_]+|\b)")
-        .expect("Invalid regex: STD_PATTERN")
+    compile_static_regex(r"(?i)\b(\d+(?:[.,]\d+)?)\s*(?:vdc|vac|v|volts?)(?:_[a-zA-Z0-9_]+|\b)")
 });
 
 fn floor_char_boundary(s: &str, mut idx: usize) -> usize {

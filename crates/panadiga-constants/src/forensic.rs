@@ -251,6 +251,8 @@ pub fn open_image_buffer_resolved(resolved: &Path) -> Result<ImageBuffer> {
     }
 
     file.seek(SeekFrom::Start(0))?;
+    // SAFETY: Read-only forensic image mapping; callers preserve immutable dump files.
+    #[allow(unsafe_code)]
     let mmap = unsafe { Mmap::map(&file) }
         .with_context(|| format!("Failed creating mmap on: {}", resolved.display()))?;
     Ok(ImageBuffer::Mmap((file, mmap)))
@@ -274,6 +276,8 @@ pub fn open_mmap(path: &Path) -> Result<(File, Mmap)> {
             resolved.display()
         );
     }
+    // SAFETY: Read-only forensic image mapping; callers preserve immutable dump files.
+    #[allow(unsafe_code)]
     let mmap = unsafe { Mmap::map(&file) }
         .with_context(|| format!("Failed creating mmap on: {}", resolved.display()))?;
     Ok((file, mmap))

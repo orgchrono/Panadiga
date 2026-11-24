@@ -2,6 +2,7 @@
 name = "panadiga-ir"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
 description = "L1 Panasonic All-Line Infrared (IR) Kaseikyo engine and keymap catalog for Android APK and tests"
@@ -16,3 +17,6 @@ flate2 = { workspace = true }
 panadiga-crypto = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+
+[lints]
+workspace = true

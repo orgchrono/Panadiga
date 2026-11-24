@@ -10,14 +10,19 @@ use crate::constants::{
 /// Uses a 4096-byte sliding window, 0-initialized, with initial window position `0x0FEE`.
 /// Flag byte: bit 0 indicates literal (1) or 2-byte backreference (0).
 pub fn decompress_pana_lzss(data: &[u8], expected_size: usize) -> Vec<u8> {
-    let mut window = [0u8; 0x1000];
-    let mut dst = if expected_size > 0 {
-        Vec::with_capacity(expected_size)
+    const WINDOW_MASK: usize = PANA_LZSS_WINDOW_SIZE - 1;
+    const MAX_LZSS_PREALLOC_BYTES: usize = 16 * 1024 * 1024;
+    let mut window = [0u8; PANA_LZSS_WINDOW_SIZE];
+    let prealloc = if expected_size > 0 {
+        expected_size
+            .min(data.len().saturating_mul(16).max(PANA_LZSS_WINDOW_SIZE))
+            .min(MAX_LZSS_PREALLOC_BYTES)
     } else {
-        Vec::new()
+        0
     };
+    let mut dst = Vec::with_capacity(prealloc);
     let mut src_i = 0;
-    let mut win_pos = 0x0FEE;
+    let mut win_pos = PANA_LZSS_WINDOW_INIT;
     let mut flags = 0u16;
 
     while src_i < data.len() {
@@ -46,8 +51,8 @@ pub fn decompress_pana_lzss(data: &[u8], expected_size: usize) -> Vec<u8> {
                 let c = window[offset];
                 dst.push(c);
                 window[win_pos] = c;
-                win_pos = (win_pos + 1) & 0x0FFF;
-                offset = (offset + 1) & 0x0FFF;
+                win_pos = (win_pos + 1) & WINDOW_MASK;
+                offset = (offset + 1) & WINDOW_MASK;
                 if expected_size > 0 && dst.len() >= expected_size {
                     return dst;
                 }
@@ -61,7 +66,7 @@ pub fn decompress_pana_lzss(data: &[u8], expected_size: usize) -> Vec<u8> {
             src_i += 1;
             dst.push(c);
             window[win_pos] = c;
-            win_pos = (win_pos + 1) & 0x0FFF;
+            win_pos = (win_pos + 1) & WINDOW_MASK;
             if expected_size > 0 && dst.len() >= expected_size {
                 return dst;
             }

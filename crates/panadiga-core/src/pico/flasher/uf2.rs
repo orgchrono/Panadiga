@@ -8,24 +8,61 @@ use super::{
     UF2_FLAG_FAMILY_ID_PRESENT, UF2_MAGIC_END, UF2_MAGIC_START0, UF2_MAGIC_START1,
 };
 
-fn verify_block_magic(blk: &[u8], blk_idx: usize, label: Option<&str>) -> Result<()> {
-    let start0 = u32::from_le_bytes(blk[0..4].try_into().unwrap());
-    let start1 = u32::from_le_bytes(blk[4..8].try_into().unwrap());
-    let end_magic = u32::from_le_bytes(blk[508..512].try_into().unwrap());
+/// Typed errors returned by UF2 validation, slicing, and unified-image combination.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum Uf2Error {
+    #[error("Invalid UF2 payload length: {len} bytes (must be a positive multiple of 512 bytes)")]
+    InvalidLength { len: usize },
+    #[error("Invalid UF2 image '{label}' (size {len} bytes must be non-empty multiple of 512)")]
+    InvalidLabeledLength { label: String, len: usize },
+    #[error(
+        "Corrupt UF2 block {block_index} magic (expected 0x0A324655/0x9E5D5157/0x0AB16F30, got 0x{start0:08X}/0x{start1:08X}/0x{end_magic:08X})"
+    )]
+    CorruptMagic {
+        block_index: usize,
+        start0: u32,
+        start1: u32,
+        end_magic: u32,
+    },
+    #[error("Corrupt UF2 block {block_index} in '{label}'")]
+    CorruptLabeledMagic { block_index: usize, label: String },
+    #[error("Unified UF2 contains zero blocks matching target {target:?}")]
+    EmptyFamilySlice { target: Uf2TargetFamily },
+}
+
+#[inline]
+fn read_u32_le(blk: &[u8; UF2_BLOCK_SIZE], offset: usize) -> u32 {
+    u32::from_le_bytes([
+        blk[offset],
+        blk[offset + 1],
+        blk[offset + 2],
+        blk[offset + 3],
+    ])
+}
+
+fn verify_block_magic(
+    blk: &[u8; UF2_BLOCK_SIZE],
+    blk_idx: usize,
+    label: Option<&str>,
+) -> Result<()> {
+    let start0 = read_u32_le(blk, 0);
+    let start1 = read_u32_le(blk, 4);
+    let end_magic = read_u32_le(blk, 508);
     if start0 != UF2_MAGIC_START0 || start1 != UF2_MAGIC_START1 || end_magic != UF2_MAGIC_END {
         if let Some(tag) = label {
-            bail!("Corrupt UF2 block {} in '{}'", blk_idx, tag);
+            return Err(Uf2Error::CorruptLabeledMagic {
+                block_index: blk_idx,
+                label: tag.to_string(),
+            }
+            .into());
         }
-        bail!(
-            "Corrupt UF2 block {} magic (expected 0x{:08X}/0x{:08X}/0x{:08X}, got 0x{:08X}/0x{:08X}/0x{:08X})",
-            blk_idx,
-            UF2_MAGIC_START0,
-            UF2_MAGIC_START1,
-            UF2_MAGIC_END,
+        return Err(Uf2Error::CorruptMagic {
+            block_index: blk_idx,
             start0,
             start1,
-            end_magic
-        );
+            end_magic,
+        }
+        .into());
     }
     Ok(())
 }
@@ -93,10 +130,7 @@ pub fn extract_uf2_family_slice(unified_uf2: &[u8], target: Uf2TargetFamily) -> 
         .filter(|blk| target.matches_family_id(block_family_id(blk)))
         .collect();
     if selected.is_empty() {
-        anyhow::bail!(
-            "Unified UF2 contains zero blocks matching target {:?}",
-            target
-        );
+        return Err(Uf2Error::EmptyFamilySlice { target }.into());
     }
     let total_blocks = u32::try_from(selected.len())?;
     let mut out = Vec::with_capacity(selected.len() * UF2_BLOCK_SIZE);
@@ -111,10 +145,7 @@ pub fn extract_uf2_family_slice(unified_uf2: &[u8], target: Uf2TargetFamily) -> 
 
 pub fn validate_uf2_buffer(data: &[u8]) -> Result<(usize, String)> {
     if data.len() < UF2_BLOCK_SIZE || !data.len().is_multiple_of(UF2_BLOCK_SIZE) {
-        bail!(
-            "Invalid UF2 payload length: {} bytes (must be a positive multiple of 512 bytes)",
-            data.len()
-        );
+        return Err(Uf2Error::InvalidLength { len: data.len() }.into());
     }
 
     let num_blocks = data.len() / UF2_BLOCK_SIZE;
@@ -127,7 +158,7 @@ pub fn validate_uf2_buffer(data: &[u8]) -> Result<(usize, String)> {
     for (blk_idx, blk) in data.as_chunks::<UF2_BLOCK_SIZE>().0.iter().enumerate() {
         verify_block_magic(blk, blk_idx, None)?;
 
-        let family_id = u32::from_le_bytes(blk[28..32].try_into().unwrap());
+        let family_id = read_u32_le(blk, 28);
         match family_id {
             RP2040_FAMILY_ID | RP2040_SDK_FAMILY_ID => has_rp2040 = true,
             RP2350_ABS_SDK_FAMILY_ID => has_rp2350_abs = true,
@@ -161,11 +192,11 @@ pub fn validate_uf2_buffer(data: &[u8]) -> Result<(usize, String)> {
 
 fn parse_uf2_blocks(bytes: &[u8], label: &str) -> Result<Vec<[u8; UF2_BLOCK_SIZE]>> {
     if bytes.is_empty() || !bytes.len().is_multiple_of(UF2_BLOCK_SIZE) {
-        bail!(
-            "Invalid UF2 image '{}' (size {} bytes must be non-empty multiple of 512)",
-            label,
-            bytes.len()
-        );
+        return Err(Uf2Error::InvalidLabeledLength {
+            label: label.to_string(),
+            len: bytes.len(),
+        }
+        .into());
     }
     let mut blocks = Vec::with_capacity(bytes.len() / UF2_BLOCK_SIZE);
     for (idx, chunk) in bytes.as_chunks::<UF2_BLOCK_SIZE>().0.iter().enumerate() {
@@ -178,9 +209,9 @@ fn parse_uf2_blocks(bytes: &[u8], label: &str) -> Result<Vec<[u8; UF2_BLOCK_SIZE
 }
 
 fn block_family_id(block: &[u8; UF2_BLOCK_SIZE]) -> u32 {
-    let flags = u32::from_le_bytes(block[8..12].try_into().unwrap());
+    let flags = read_u32_le(block, 8);
     if (flags & UF2_FLAG_FAMILY_ID_PRESENT) != 0 {
-        u32::from_le_bytes(block[28..32].try_into().unwrap())
+        read_u32_le(block, 28)
     } else {
         0
     }

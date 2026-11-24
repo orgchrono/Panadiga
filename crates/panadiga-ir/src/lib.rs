@@ -4,7 +4,7 @@
 //! executables remain free of IR-blaster UI/catalog overhead while sharing canonical Kaseikyo
 //! math with `crypto::pana_fw_go`.
 
-#![deny(unsafe_code)]
+#![forbid(unsafe_code)]
 
 pub(crate) use panadiga_crypto as crypto;
 

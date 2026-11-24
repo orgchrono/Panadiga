@@ -2,7 +2,7 @@
 
 use std::collections::BTreeMap;
 
-use anyhow::{Result, bail};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
 use super::encode::rsp_checksum;
@@ -10,6 +10,26 @@ use super::encode::rsp_checksum;
 /// Canonical MN103S `_dev_SERIAL` `$g` register frame size in bytes (28 x 32-bit LE words).
 pub const G_REGISTER_BYTES: usize = 0x70;
 const G_REGISTER_WORDS: usize = 28;
+
+/// Typed errors returned while decoding or validating GDB RSP frames and dump bounds.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum RspCodecError {
+    #[error("Target returned {code}: {description}")]
+    TargetError {
+        code: String,
+        description: &'static str,
+    },
+    #[error("Invalid even hex payload length: {len}")]
+    InvalidHexLength { len: usize },
+    #[error("Invalid RSP hex payload: {reason}")]
+    InvalidHexPayload { reason: String },
+    #[error("Expected {expected}-byte MN103S $g register frame, got {actual} bytes")]
+    InvalidRegisterFrameSize { expected: usize, actual: usize },
+    #[error("Memory length mismatch: expected {expected} bytes, got {actual} bytes")]
+    MemoryLengthMismatch { expected: usize, actual: usize },
+    #[error("{reason}")]
+    InvalidDumpRange { reason: String },
+}
 
 const E0X_ERRORS: [(&[u8], &str); 6] = [
     (b"E00", "RSP malformed/bad length"),
@@ -37,9 +57,13 @@ pub struct ParsedRspFrame {
 
 /// Returns an error if the RSP reply payload matches `E00`..`E05`.
 pub fn check_rsp_e0x_error(payload: &[u8]) -> Result<()> {
-    if let Some((_, desc)) = E0X_ERRORS.iter().find(|&(code, _)| *code == payload) {
-        let code_str = std::str::from_utf8(payload).unwrap_or("E0?");
-        bail!("Target returned {code_str}: {desc}");
+    if let Some(&(_, desc)) = E0X_ERRORS.iter().find(|&&(code, _)| code == payload) {
+        let code_str = std::str::from_utf8(payload).unwrap_or("E0?").to_string();
+        return Err(RspCodecError::TargetError {
+            code: code_str,
+            description: desc,
+        }
+        .into());
     }
     Ok(())
 }
@@ -148,21 +172,29 @@ pub fn parse_rsp_reply(
 /// Decodes ASCII hex payload returned by `$m`, checking `E00`..`E04`.
 pub fn decode_rsp_hex_memory(payload: &[u8]) -> Result<Vec<u8>> {
     check_rsp_e0x_error(payload)?;
-    let text = std::str::from_utf8(payload)?;
+    let text = std::str::from_utf8(payload).map_err(|e| RspCodecError::InvalidHexPayload {
+        reason: e.to_string(),
+    })?;
     if text.is_empty() || !text.len().is_multiple_of(2) {
-        bail!("Invalid even hex payload length: {}", text.len());
+        return Err(RspCodecError::InvalidHexLength { len: text.len() }.into());
     }
-    Ok(hex::decode(text)?)
+    hex::decode(text).map_err(|e| {
+        RspCodecError::InvalidHexPayload {
+            reason: e.to_string(),
+        }
+        .into()
+    })
 }
 
 /// Decodes a 112-byte (`0x70`, `28 x u32` LE) MN103S `_dev_SERIAL` `$g` register reply (`w00`..`w27`).
 pub fn decode_mn103s_g_registers(payload: &[u8]) -> Result<BTreeMap<String, u32>> {
     let raw = decode_rsp_hex_memory(payload)?;
     if raw.len() != G_REGISTER_BYTES {
-        bail!(
-            "Expected {G_REGISTER_BYTES}-byte MN103S $g register frame, got {} bytes",
-            raw.len()
-        );
+        return Err(RspCodecError::InvalidRegisterFrameSize {
+            expected: G_REGISTER_BYTES,
+            actual: raw.len(),
+        }
+        .into());
     }
     let mut regs = BTreeMap::new();
     for (idx, chunk) in raw
@@ -185,10 +217,18 @@ pub fn validate_dump_range(
     max_chunk_size: usize,
 ) -> Result<()> {
     if total_bytes == 0 {
-        bail!("total_bytes must be positive");
+        return Err(RspCodecError::InvalidDumpRange {
+            reason: "total_bytes must be positive".to_string(),
+        }
+        .into());
     }
     if chunk_size == 0 || chunk_size > max_chunk_size {
-        bail!("chunk_size must be in 1..{max_chunk_size} for reliable UART RSP framing");
+        return Err(RspCodecError::InvalidDumpRange {
+            reason: format!(
+                "chunk_size must be in 1..{max_chunk_size} for reliable UART RSP framing"
+            ),
+        }
+        .into());
     }
     Ok(())
 }

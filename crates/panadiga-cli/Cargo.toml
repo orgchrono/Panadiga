@@ -2,6 +2,7 @@
 name = "panadiga-cli"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
 description = "Unified CLI, interactive TUI, MCP server host, and cross-platform launcher for Panadiga"
@@ -26,3 +27,6 @@ serde_json = { workspace = true }
 serialport = { workspace = true }
 sha2 = { workspace = true }
 tracing = { workspace = true }
+
+[lints]
+workspace = true

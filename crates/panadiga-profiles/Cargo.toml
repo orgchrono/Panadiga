@@ -2,6 +2,7 @@
 name = "panadiga-profiles"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
 description = "Manifest-driven, policy-gated hardware SSOT registry, sector geometry derivation, and JSON Schema generator for Panadiga"
@@ -17,3 +18,6 @@ schemars = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 sha2 = { workspace = true }
+
+[lints]
+workspace = true

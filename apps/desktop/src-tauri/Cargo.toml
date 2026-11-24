@@ -2,6 +2,7 @@
 name = "panadiga-desktop"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
 description = "Tauri 2 Desktop (Windows/Linux/macOS) & Android Mobile Workbench for Panadiga"
@@ -33,3 +34,6 @@ panadiga-core = { path = "../../../crates/panadiga-core", features = ["android-i
 
 [build-dependencies]
 tauri-build = { workspace = true }
+
+[lints]
+workspace = true

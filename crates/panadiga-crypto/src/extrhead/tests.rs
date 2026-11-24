@@ -162,3 +162,22 @@ fn test_extrhead_lzma_algo3_and_raw_size_header_fallback() {
         super::crypt::decompress_payload_by_algo(&raw5_lzma, 3, payload.len()).unwrap();
     assert_eq!(decomp_raw, payload);
 }
+
+#[test]
+fn test_extrhead_typed_errors_and_lzss_prealloc_cap() {
+    assert!(decompress_pana_lzss(b"", usize::MAX / 2).is_empty());
+
+    let header_err = parse_extrhead_header(b"BADHDR").unwrap_err();
+    assert_eq!(
+        header_err.downcast_ref::<ExtrheadError>(),
+        Some(&ExtrheadError::InvalidHeader { len: 6 })
+    );
+
+    let algo_err = "unknown".parse::<ExtrheadCompressionAlgo>().unwrap_err();
+    assert_eq!(
+        algo_err.downcast_ref::<ExtrheadError>(),
+        Some(&ExtrheadError::UnsupportedCompressionAlgo(
+            "unknown".to_string()
+        ))
+    );
+}
