@@ -48,12 +48,12 @@ md-5 = "0.10"
 memmap2 = "0.9"
 opentelemetry = { version = "0.33.1", default-features = false, features = ["trace", "metrics"] }
 opentelemetry_sdk = { version = "0.33.1", default-features = false, features = ["trace", "metrics"] }
-panadiga-bench = { path = "crates/panadiga-bench" }
-panadiga-constants = { path = "crates/panadiga-constants" }
-panadiga-crypto = { path = "crates/panadiga-crypto" }
-panadiga-ir = { path = "crates/panadiga-ir" }
-panadiga-profiles = { path = "crates/panadiga-profiles" }
-panadiga-vault = { path = "crates/panadiga-vault" }
+panadiga-bench = { version = "0.2.0", path = "crates/panadiga-bench" }
+panadiga-constants = { version = "0.2.0", path = "crates/panadiga-constants" }
+panadiga-crypto = { version = "0.2.0", path = "crates/panadiga-crypto" }
+panadiga-ir = { version = "0.2.0", path = "crates/panadiga-ir" }
+panadiga-profiles = { version = "0.2.0", path = "crates/panadiga-profiles" }
+panadiga-vault = { version = "0.2.0", path = "crates/panadiga-vault" }
 proptest = "1.12"
 rayon = "1.12"
 regex = "1.10"

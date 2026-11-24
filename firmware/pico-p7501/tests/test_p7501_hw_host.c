@@ -162,7 +162,12 @@ uint16_t adc_read(void) {
 }
 
 /* ---- Minimal stubs for LED / Watchdog / GDB symbols referenced by p7501_hw.c ---- */
-static p7501_led_state_t g_mock_led_state = { LED_MODE_HEARTBEAT_IDLE, false, false };
+static p7501_led_state_t g_mock_led_state = {
+    .mode = LED_MODE_HEARTBEAT_IDLE,
+    .phase = 0u,
+    .manual_lock = false,
+    .current_on = false,
+};
 
 void p7501_led_set_auto_mode(pico_led_mode_t mode) {
     g_mock_led_state.mode = mode;

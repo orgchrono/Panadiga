@@ -16,9 +16,9 @@ name = "panadiga"
 path = "src/main.rs"
 
 [dependencies]
-panadiga-core = { path = "../panadiga-core" }
-panadiga-rag = { path = "../panadiga-rag" }
-panadiga-mcp = { path = "../panadiga-mcp" }
+panadiga-core = { version = "0.2.0", path = "../panadiga-core" }
+panadiga-rag = { version = "0.2.0", path = "../panadiga-rag" }
+panadiga-mcp = { version = "0.2.0", path = "../panadiga-mcp" }
 anyhow = { workspace = true }
 clap = { workspace = true }
 hex = { workspace = true }

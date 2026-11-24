@@ -12,7 +12,7 @@ name = "panadiga_rag"
 crate-type = ["rlib"]
 
 [dependencies]
-panadiga-core = { path = "../panadiga-core" }
+panadiga-core = { version = "0.2.0", path = "../panadiga-core" }
 dirs = { workspace = true }
 lopdf = { workspace = true }
 rayon = { workspace = true }

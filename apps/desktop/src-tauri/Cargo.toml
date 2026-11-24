@@ -16,8 +16,8 @@ name = "panadiga-desktop"
 path = "src/main.rs"
 
 [dependencies]
-panadiga-core = { path = "../../../crates/panadiga-core" }
-panadiga-rag = { path = "../../../crates/panadiga-rag" }
+panadiga-core = { version = "0.2.0", path = "../../../crates/panadiga-core" }
+panadiga-rag = { version = "0.2.0", path = "../../../crates/panadiga-rag" }
 anyhow = { workspace = true }
 hex = { workspace = true }
 serde = { workspace = true }
@@ -30,7 +30,7 @@ tracing = { workspace = true }
 windows-sys = { workspace = true }
 
 [dev-dependencies]
-panadiga-core = { path = "../../../crates/panadiga-core", features = ["android-ir"] }
+panadiga-core = { version = "0.2.0", path = "../../../crates/panadiga-core", features = ["android-ir"] }
 
 [build-dependencies]
 tauri-build = { workspace = true }

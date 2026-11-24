@@ -256,10 +256,9 @@ uint32_t p7501_format_hex_bitmap_csv(const uint8_t bitmap[32], char *out, size_t
             out[pos++] = ',';
         }
         if ((pos + 2u) < cap) {
-            const uint8_t hi = (uint8_t)((op >> 4u) & 0x0Fu);
-            const uint8_t lo = (uint8_t)(op & 0x0Fu);
-            out[pos++] = (char)(hi < 10u ? ('0' + hi) : ('A' + (hi - 10u)));
-            out[pos++] = (char)(lo < 10u ? ('0' + lo) : ('A' + (lo - 10u)));
+            static const char k_hex_upper[] = "0123456789ABCDEF";
+            out[pos++] = k_hex_upper[(op >> 4u) & 0x0Fu];
+            out[pos++] = k_hex_upper[op & 0x0Fu];
         }
         ++count;
     }

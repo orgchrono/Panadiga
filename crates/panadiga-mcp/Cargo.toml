@@ -12,8 +12,8 @@ name = "panadiga_mcp"
 crate-type = ["rlib"]
 
 [dependencies]
-panadiga-core = { path = "../panadiga-core" }
-panadiga-rag = { path = "../panadiga-rag" }
+panadiga-core = { version = "0.2.0", path = "../panadiga-core" }
+panadiga-rag = { version = "0.2.0", path = "../panadiga-rag" }
 anyhow = { workspace = true }
 hex = { workspace = true }
 serde = { workspace = true }
