@@ -68,7 +68,10 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   useEffect(
     () => () => {
-      activeTimersRef.current.forEach(handle => clearTimeout(handle));
+      activeTimersRef.current.forEach((handle, id) => {
+        clearTimeout(handle);
+        sonnerToast.dismiss(id);
+      });
       activeTimersRef.current.clear();
     },
     [],

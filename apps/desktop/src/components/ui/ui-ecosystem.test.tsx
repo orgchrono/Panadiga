@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import React from 'react';
+import { toast as sonnerToast } from 'sonner';
 import { ToastProvider, useToast } from '@/context/ToastContext';
 import { WorkbenchModeProvider, useWorkbenchMode } from '@/context/WorkbenchModeContext';
 import { SettingsView } from '@/views/SettingsView';
@@ -154,10 +155,23 @@ describe('React UI Ecosystem Primitives (Resizable, RangeDnD, Pipeline, HUD, Son
       </ToastProvider>
     );
 
+    vi.mocked(sonnerToast.success).mockClear();
+    vi.mocked(sonnerToast.dismiss).mockClear();
+
     fireEvent.click(screen.getByRole('button', { name: 'Disparar' }));
     expect(screen.getByTestId('toast-count').textContent).toBe('1');
+    const createdId = store.getState().toast.items[0]?.id;
+    expect(createdId).toBeTruthy();
+    expect(sonnerToast.success).toHaveBeenCalledTimes(1);
+    expect(sonnerToast.success).toHaveBeenCalledWith(
+      'Operação OK',
+      expect.objectContaining({ id: createdId, description: 'Sonner ativo', duration: Infinity }),
+    );
+
     fireEvent.click(screen.getByRole('button', { name: 'Remover' }));
     expect(screen.getByTestId('toast-count').textContent).toBe('0');
+    expect(sonnerToast.dismiss).toHaveBeenCalledTimes(1);
+    expect(sonnerToast.dismiss).toHaveBeenCalledWith(createdId);
   });
 
   it('useWorkbenchMode returns safe defaults without provider', () => {

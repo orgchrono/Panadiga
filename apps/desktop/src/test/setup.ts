@@ -1,11 +1,38 @@
-import { vi } from 'vitest';
+import { afterEach, vi } from 'vitest';
+import { cleanup, configure } from '@testing-library/react';
 import { handleMockCommand, subscribeMockEventStream } from './mocks/mockDispatcher';
 import { installTestIpcBridge } from './mocks/testHostBridges';
 import { resolveTestIpcBridge } from '@/services/hostBridge';
 
+configure({ asyncUtilTimeout: 4000 });
+
+afterEach(() => {
+  cleanup();
+});
+
 installTestIpcBridge({
   invoke: handleMockCommand,
   listen: subscribeMockEventStream,
+});
+
+// Prevent Sonner's internal auto-dismiss timers from firing after jsdom teardown
+vi.mock('sonner', () => {
+  const createToastStub = () =>
+    vi.fn((_title: unknown, opts?: { id?: string | number }) => opts?.id ?? 'mock-toast');
+  return {
+    Toaster: () => null,
+    toast: {
+      success: createToastStub(),
+      error: createToastStub(),
+      warning: createToastStub(),
+      info: createToastStub(),
+      loading: createToastStub(),
+      message: createToastStub(),
+      promise: vi.fn(),
+      custom: createToastStub(),
+      dismiss: vi.fn(),
+    },
+  };
 });
 
 // Route Tauri core & event imports cleanly when mocked directly in unit tests
