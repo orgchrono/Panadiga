@@ -54,9 +54,7 @@ impl FromStr for TbcApplianceMode {
 
     fn from_str(raw: &str) -> Result<Self> {
         match raw.trim().to_ascii_lowercase().as_str() {
-            "stage15" | "stage15_digadiag_tbc" | "digadiag_ram_tbc" | "digadiag" | "tbc" => {
-                Ok(Self::DigadiagRamTbc)
-            }
+            "digadiag_ram_tbc" | "digadiag" | "tbc" => Ok(Self::DigadiagRamTbc),
             "no_jig" | "porta1" | "prog_slot" | "no_jig_pana_sd_prog_slot" => {
                 Ok(Self::NoJigPanaSdProgSlot)
             }

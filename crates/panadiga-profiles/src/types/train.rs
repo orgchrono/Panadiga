@@ -37,7 +37,7 @@ pub struct FrmContainerSpec {
     pub official_frm_sha256: Option<String>,
 }
 
-/// Cryptographic / integrity trust model verified for stage-1.5 `DIGADIAG.FRM` boot.
+/// Cryptographic / integrity trust model verified for SD diagnostic RAM `DIGADIAG.FRM` boot.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum DigadiagTrustModel {
@@ -47,7 +47,7 @@ pub enum DigadiagTrustModel {
     Unknown,
 }
 
-/// SD stage-1.5 `DIGADIAG.FRM` specification declared per firmware train.
+/// SD diagnostic RAM `DIGADIAG.FRM` specification declared per firmware train.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct DigadiagSpec {
@@ -228,11 +228,7 @@ pub struct FirmwareTrainProfile {
     pub bgo_retarget_spec: Option<ProgBgoRetargetSpec>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub prog_sata_bridge_reset_spec: Option<SataBridgeResetSpec>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "stage2_boot_spec"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hdd_autoboot_spec: Option<HddAutobootSpec>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub main_builds: Vec<MainBuildSpec>,

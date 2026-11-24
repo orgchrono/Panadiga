@@ -63,10 +63,10 @@ fn emit_escape_hatch_checks(a: &mut HddAutobootAsm, spec: &HddAutobootTrainSpec)
     a.ld_abs32_d(nor_entry_va, 1);
     a.cmp_d_to_d0(1);
     a.jcc(0xC8, "norfrom_matched");
-    let nor_p4_magic_va = spec
+    let nor_autoboot_magic_va = spec
         .norfrom_fvu_base_va
         .wrapping_add(NOR_AUTOBOOT_CAPSULE_MAGIC_OFFSET as u32);
-    a.ld_abs32_d(nor_p4_magic_va, 0);
+    a.ld_abs32_d(nor_autoboot_magic_va, 0);
     a.cmp_imm32_d0(NOR_AUTOBOOT_CAPSULE_MAGIC_LE);
     a.jcc(0xC9, "skip_sd");
     a.label("norfrom_matched");
@@ -264,16 +264,16 @@ pub fn assemble_hdd_autoboot_payload_for_spec(spec: &HddAutobootTrainSpec) -> Re
     a.call_abs(spec.check_update_flag_va);
     a.code.extend_from_slice(&[0xF2, 0xFC, 0xDF, 0xF0, 0x10]);
 
-    a.intern_cstr("s_banner", b"[STAGE2] SATA HDD boot ('F'->FVU)...\n");
-    a.intern_cstr("s_uart_abort", b"[STAGE2] UART 'F' -> FVU\n");
+    a.intern_cstr("s_banner", b"[HDD_AUTOBOOT] SATA HDD boot ('F'->FVU)...\n");
+    a.intern_cstr("s_uart_abort", b"[HDD_AUTOBOOT] UART 'F' -> FVU\n");
     a.intern_cstr("s_force_file", b"FORCEFVU.TXT");
-    a.intern_cstr("s_force_hit", b"[STAGE2] FORCEFVU.TXT -> FVU\n");
+    a.intern_cstr("s_force_hit", b"[HDD_AUTOBOOT] FORCEFVU.TXT -> FVU\n");
     a.intern_cstr("s_pana_sd", b"PANA__SD.FRM");
-    a.intern_cstr("s_norfrom_sd_hit", b"[STAGE2] Nor-FROM+SD -> FVU\n");
-    a.intern_cstr("s_hdd_fail", b"[STAGE2] HDD_MAX_LBA failed -> FVU\n");
-    a.intern_cstr("s_hdd_lba", b"[STAGE2] HDD MAX LBA=0x%X\n");
-    a.intern_cstr("s_main_bad", b"[STAGE2] HDD MAIN invalid -> FVU\n");
-    a.intern_cstr("s_boot_main", b"[STAGE2] Boot MAIN @ 0x%08X\n");
+    a.intern_cstr("s_norfrom_sd_hit", b"[HDD_AUTOBOOT] Nor-FROM+SD -> FVU\n");
+    a.intern_cstr("s_hdd_fail", b"[HDD_AUTOBOOT] HDD_MAX_LBA failed -> FVU\n");
+    a.intern_cstr("s_hdd_lba", b"[HDD_AUTOBOOT] HDD MAX LBA=0x%X\n");
+    a.intern_cstr("s_main_bad", b"[HDD_AUTOBOOT] HDD MAIN invalid -> FVU\n");
+    a.intern_cstr("s_boot_main", b"[HDD_AUTOBOOT] Boot MAIN @ 0x%08X\n");
 
     let payload = a.finalize()?;
     if payload.len() > max_slack {
@@ -291,14 +291,4 @@ pub fn assemble_hdd_autoboot_payload_for_spec(spec: &HddAutobootTrainSpec) -> Re
 pub fn assemble_prog061_hdd_autoboot_payload() -> Result<Vec<u8>> {
     let spec = hdd_autoboot_spec_for_loader_profile("ver061")?;
     assemble_hdd_autoboot_payload_for_spec(&spec)
-}
-
-#[deprecated(note = "Use assemble_hdd_autoboot_payload_for_spec")]
-pub fn assemble_stage2_payload_for_spec(spec: &HddAutobootTrainSpec) -> Result<Vec<u8>> {
-    assemble_hdd_autoboot_payload_for_spec(spec)
-}
-
-#[deprecated(note = "Use assemble_prog061_hdd_autoboot_payload")]
-pub fn assemble_prog061_stage2_payload() -> Result<Vec<u8>> {
-    assemble_prog061_hdd_autoboot_payload()
 }

@@ -77,7 +77,7 @@ pub fn build_layperson_sd_steps(
     let fw_desc = if has_pana_sd {
         "DIGADIAG.FRM + PANA__SD.FRM recovery stage"
     } else {
-        "DIGADIAG.FRM stage-1.5 loader"
+        "DIGADIAG.FRM diagnostic RAM loader"
     };
     steps.push(format!(
         "3. Insert this SD card into the front SD slot and reconnect AC power; SDDIAG should automatically boot ({fw_desc})."

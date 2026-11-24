@@ -1,6 +1,6 @@
 #![deny(unsafe_code)]
 
-//! SSOT Stage-2 inspection and fail-closed CoW/in-place binary patching.
+//! SSOT pre-FVU SATA HDD autoboot inspection and fail-closed CoW/in-place binary patching.
 
 use anyhow::{Result, bail};
 
@@ -181,53 +181,4 @@ pub fn apply_hdd_autoboot_for_loader_profile_in_place(
 ) -> Result<()> {
     let spec = hdd_autoboot_spec_for_loader_profile(loader_profile_key)?;
     apply_hdd_autoboot_in_place_for_spec(buf, &spec, enable)
-}
-
-#[deprecated(note = "Use inspect_hdd_autoboot_site_for_spec")]
-pub fn inspect_stage2_boot_site_for_spec(
-    buf: &[u8],
-    spec: &HddAutobootTrainSpec,
-) -> Result<Prog061HddAutobootStatus> {
-    inspect_hdd_autoboot_site_for_spec(buf, spec)
-}
-
-#[deprecated(note = "Use hdd_autoboot_spec_for_loader_profile")]
-pub fn stage2_spec_for_loader_profile(loader_profile_key: &str) -> Result<HddAutobootTrainSpec> {
-    hdd_autoboot_spec_for_loader_profile(loader_profile_key)
-}
-
-#[deprecated(note = "Use inspect_prog061_hdd_autoboot_site")]
-pub fn inspect_prog061_stage2_boot_site(buf: &[u8]) -> Result<Prog061HddAutobootStatus> {
-    inspect_prog061_hdd_autoboot_site(buf)
-}
-
-#[deprecated(note = "Use inspect_hdd_autoboot_for_loader_profile")]
-pub fn inspect_stage2_boot_for_loader_profile(
-    buf: &[u8],
-    loader_profile_key: &str,
-) -> Result<Prog061HddAutobootStatus> {
-    inspect_hdd_autoboot_for_loader_profile(buf, loader_profile_key)
-}
-
-#[deprecated(note = "Use apply_hdd_autoboot_in_place_for_spec")]
-pub fn apply_stage2_boot_in_place_for_spec(
-    buf: &mut [u8],
-    spec: &HddAutobootTrainSpec,
-    enable: bool,
-) -> Result<()> {
-    apply_hdd_autoboot_in_place_for_spec(buf, spec, enable)
-}
-
-#[deprecated(note = "Use apply_prog061_hdd_autoboot_in_place")]
-pub fn apply_prog061_stage2_boot_in_place(buf: &mut [u8], enable: bool) -> Result<()> {
-    apply_prog061_hdd_autoboot_in_place(buf, enable)
-}
-
-#[deprecated(note = "Use apply_hdd_autoboot_for_loader_profile_in_place")]
-pub fn apply_stage2_boot_for_loader_profile_in_place(
-    buf: &mut [u8],
-    loader_profile_key: &str,
-    enable: bool,
-) -> Result<()> {
-    apply_hdd_autoboot_for_loader_profile_in_place(buf, loader_profile_key, enable)
 }

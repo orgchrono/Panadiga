@@ -16,6 +16,7 @@
 #include "flash/p7501_fast_stream_codec.h"
 #include "flash/p7501_flash.h"
 #include "flash/p7501_ftl_inspect.h"
+#include "generated/p7501_ssot.h"
 #include "hal/p7501_wireless_codec.h"
 #include "diag/p7501_piologic_codec.h"
 #include "diag/p7501_sds_codec.h"
@@ -929,15 +930,27 @@ static void test_cmd_arena_invariants(void) {
 }
 
 static void test_ftl_bgo_norfrom_inspect(void) {
-    uint8_t blk[64];
+    uint8_t blk[P7501_SSOT_NOR_AUTOBOOT_HDR_BYTES];
     memset(blk, 0xFF, sizeof(blk));
     uint32_t crc = 0u;
     assert(p7501_norfrom_classify_prefix(blk, sizeof(blk), &crc) == P7501_NORFROM_ERASED_FF);
     assert(strcmp(p7501_norfrom_state_name(P7501_NORFROM_ERASED_FF), "ERASED_FF") == 0);
     assert(crc != 0u);
 
-    memcpy(blk, "P4ZU", 4u);
-    assert(p7501_norfrom_classify_prefix(blk, sizeof(blk), &crc) == P7501_NORFROM_P4ZU_STUB);
+    /* Non-FF header with canonical "NAUT" (0x5455414E) stamped at +0xFC */
+    blk[0] = 0xE0u;
+    blk[P7501_SSOT_NOR_AUTOBOOT_MAGIC_OFF + 0u] = 0x4Eu;
+    blk[P7501_SSOT_NOR_AUTOBOOT_MAGIC_OFF + 1u] = 0x41u;
+    blk[P7501_SSOT_NOR_AUTOBOOT_MAGIC_OFF + 2u] = 0x55u;
+    blk[P7501_SSOT_NOR_AUTOBOOT_MAGIC_OFF + 3u] = 0x54u;
+    assert(p7501_norfrom_classify_prefix(blk, sizeof(blk), &crc) == P7501_NORFROM_AUTOBOOT_CAPSULE);
+    assert(strcmp(p7501_norfrom_state_name(P7501_NORFROM_AUTOBOOT_CAPSULE), "NOR_AUTOBOOT") == 0);
+
+    /* Putting "NAUT" at +0x00 with 0xFF at +0xFC must NOT trigger capsule detection */
+    memset(blk, 0xFF, sizeof(blk));
+    memcpy(blk, "NAUT", 4u);
+    assert(p7501_norfrom_classify_prefix(blk, sizeof(blk), &crc) == P7501_NORFROM_NON_EMPTY);
+
     memcpy(blk, "EXTRHEAD", 8u);
     assert(p7501_norfrom_classify_prefix(blk, sizeof(blk), &crc) == P7501_NORFROM_EXTRHEAD);
     blk[0] = 0x12u;

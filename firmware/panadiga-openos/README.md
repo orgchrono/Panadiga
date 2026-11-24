@@ -11,14 +11,14 @@
 ## Architecture & SDRAM Boot Model (`SA0..SA10` IPL Permanently Untouched)
 
 `Panadiga OpenOS` replaces proprietary `PiE-OS` strictly inside **volatile SDRAM** via
-`Loader ver0.61` Stage-1.5 (`DIGADIAG.FRM` raw `262,144 B` at `0x5040_0000`) and Stage-2
+`Loader ver0.61` `DIAG_PROG_RAM` (`DIGADIAG.FRM` raw `262,144 B` at `0x5040_0000`) and `MAIN_OS_RAM`
 (`0x5700_0000`, `16 MiB` SDRAM window):
 
 | Memory Slot | Address Span | Role |
 | :--- | :--- | :--- |
 | **IPL Read-Only** | `0x8000_0000..0x8003_FFFF` / `0x8400_0000..0x8403_FFFF` (`SA0..SA10`) | **NEVER modified (`E05`)**; preserves stock P7501 & SD recovery |
-| **Stage-1.5 RAM** | `0x5040_0000..0x5047_FFFF` (`512 KiB`) | `crt0_am34.S` -> `openos_kernel_entry()` early bring-up & Stage-2 chainloader |
-| **Stage-2 OS** | `0x5700_0000..0x57FF_FFFF` (`16 MiB`) | Full open-source drivers, filesystem, video TBC, and interactive shell |
+| **`DIAG_PROG_RAM`** | `0x5040_0000..0x5047_FFFF` (`512 KiB`) | `crt0_am34.S` -> `openos_kernel_entry()` early bring-up & OS chainloader |
+| **`MAIN_OS_RAM`** | `0x5700_0000..0x57FF_FFFF` (`16 MiB`) | Full open-source drivers, filesystem, video TBC, and interactive shell |
 
 ---
 
@@ -47,7 +47,7 @@
 | **`M0`** | `boot/am34_sdram.ld`, `crt0_am34.S`, `SC0` UART0 (`115200 8N1`), safe HAL | Boot at `0x5040_0000` via `DIGADIAG.FRM`; `OPENOS>` banner on `P7501` |
 | **`M1`** | `IC7501` `TBUS` 255s keepalive + VFD display + IR RX decode | Stable rail uptime > 10 min without ~44 s `IC7501` power drop |
 | **`M2`** | `IIC1` (`IC3001`: `BH7629KS2` `0x90/0x92` BR/NA vs `C1AB00002379` `0x94` EC) + `AIOF` TBC + `AVDD` DAC/colorbar | Clean `NTSC` (`0x8020`) / `PAL-M` (`0x8021`) S-Video color bar & TBC output |
-| **`M3`** | `SDCD` 4-bit FAT16 + `DAVIS` CH0/CH1 ATA (`1000 ms` bridge wait) + `storage_provisioner` FCIS (`M FIRM -> MAIN -> UPDATE -> UPDOK -> FINISH`) | Deterministic auto-sized MEIHFS layout (`5 GB..2 TiB`) + Stage-2 load to `0x5700_0000` |
+| **`M3`** | `SDCD` 4-bit FAT16 + `DAVIS` CH0/CH1 ATA (`1000 ms` bridge wait) + `storage_provisioner` FCIS (`M FIRM -> MAIN -> UPDATE -> UPDOK -> FINISH`) | Deterministic auto-sized MEIHFS layout (`5 GB..2 TiB`) + `MAIN_OS_RAM` load to `0x5700_0000` |
 | **`M4`** | `AVFE` / `MPE4` MPEG-2 encoder/decoder + audio DSP | Capture & playback open-source DVR stream without Panasonic proprietary blobs |
 
 ---

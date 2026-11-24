@@ -21,8 +21,7 @@ pub mod prewrite_gate;
 pub mod prog061_uart_monitor;
 pub mod region_compat;
 pub mod sata_bridge_fix;
-pub mod sata_bridge_stage2;
-pub use sata_bridge_stage2 as sata_hdd_autoboot;
+pub mod sata_hdd_autoboot;
 pub mod sig_locator;
 pub mod ssot_patches;
 pub mod symbol_index;
@@ -55,12 +54,12 @@ pub use bgo_unbrick::{
 pub use eh55_bgo::{
     BgoParseError, BgoSectorGeometry, EH55_BGO_EXPECTED_P2_COUNT, EH55_BGO_FIRST_SA,
     EH55_BGO_LAST_SA, EH55_BGO_MAX_PID, EH55_BGO_SECTOR_COUNT, Eh55BgoAuditReport,
-    Eh55BgoSectorKind, Eh55BgoSectorReport, NOR_AUTOBOOT_CAPSULE_MAGIC_LE,
-    NOR_AUTOBOOT_CAPSULE_MAGIC_OFFSET, NorAutobootInstallReport, audit_bgo_nor_with_geometry,
-    audit_eh55_bgo_nor_8mb, build_nor_autoboot_capsule, build_nor_autoboot_cow_image,
-    eh55_bgo_sector_offset, eval_bgo_migration_index, eval_bgo_migration_target,
-    is_active_bgo_p1_sector, parse_bgo_l2p_with_geometry, parse_eh55_bgo_l2p,
-    unpack_nor_autoboot_capsule, verify_nor_one_to_zero_compatible,
+    Eh55BgoSectorKind, Eh55BgoSectorReport, NOR_AUTOBOOT_CAPSULE_HEADER_BYTES,
+    NOR_AUTOBOOT_CAPSULE_MAGIC_LE, NOR_AUTOBOOT_CAPSULE_MAGIC_OFFSET, NorAutobootInstallReport,
+    audit_bgo_nor_with_geometry, audit_eh55_bgo_nor_8mb, build_nor_autoboot_capsule,
+    build_nor_autoboot_cow_image, eh55_bgo_sector_offset, eval_bgo_migration_index,
+    eval_bgo_migration_target, is_active_bgo_p1_sector, parse_bgo_l2p_with_geometry,
+    parse_eh55_bgo_l2p, unpack_nor_autoboot_capsule, verify_nor_one_to_zero_compatible,
 };
 pub use emu_patch_suite::{
     NorEmuPatchSuiteReport, PatchVerificationCheck, run_nor_emu_patch_verification_suite,
@@ -126,7 +125,7 @@ pub use sata_bridge_fix::{
     inspect_main3060np_sata_bridge_reset_site, inspect_main3410pq_sata_bridge_reset_site,
     inspect_prog_sata_bridge_reset_site_for_profile, inspect_prog061_sata_bridge_reset_site,
 };
-pub use sata_bridge_stage2::{
+pub use sata_hdd_autoboot::{
     HddAutobootTrainSpec, HddAutobootTrainSpec as HddAutobootSpec,
     OFF_PROG061_HDD_AUTOBOOT_HOOK_SITE, ORIG_PROG061_HDD_AUTOBOOT_HOOK_BYTES,
     PROG061_HDD_AUTOBOOT_PAYLOAD_OFFSET, PROG061_HDD_AUTOBOOT_PAYLOAD_VA,
@@ -138,23 +137,10 @@ pub use sata_bridge_stage2::{
     hdd_autoboot_spec_for_loader_profile, inspect_hdd_autoboot_for_loader_profile,
     inspect_hdd_autoboot_site_for_spec, inspect_prog061_hdd_autoboot_site,
 };
-#[allow(deprecated)]
-pub use sata_bridge_stage2::{
-    OFF_PROG061_STAGE2_HOOK_SITE, ORIG_PROG061_STAGE2_HOOK_BYTES, PROG061_STAGE2_PAYLOAD_OFFSET,
-    PROG061_STAGE2_PAYLOAD_VA, PROG061_STAGE2_STATE_ENABLED, PROG061_STAGE2_STATE_FACTORY,
-    PROG061_STAGE2_STATE_MISMATCH, Prog061Stage2BootStatus, Stage2BootTrainSpec,
-    apply_prog061_stage2_boot_in_place, apply_stage2_boot_for_loader_profile_in_place,
-    apply_stage2_boot_in_place_for_spec, assemble_prog061_stage2_payload,
-    assemble_stage2_payload_for_spec, compute_stage2_hook_bytes, inspect_prog061_stage2_boot_site,
-    inspect_stage2_boot_for_loader_profile, inspect_stage2_boot_site_for_spec,
-    stage2_spec_for_loader_profile,
-};
 pub use sig_locator::{
     CfgFunctionCandidate, LocatedFunctionMatch, StringXrefHit, detect_prologue_at,
     discover_cfg_functions, locate_functions_by_string, summarize_function_cfg,
 };
-#[allow(deprecated)]
-pub use ssot_patches::stage2_boot_spec_for_loader;
 pub use ssot_patches::{
     find_main_build_by_id, find_main_build_by_size, find_prog_sata_reset_spec,
     hdd_autoboot_spec_for_loader, verify_main_native_bgo_from_spec,
@@ -202,12 +188,6 @@ pub use eh55_bgo::{
     BgoLiveHealReport, BgoLiveHealRequest, BgoRepairOp, BgoRepairPlan, BgoTvStandardNote,
     apply_bgo_repair_plan_live, audit_bgo_nor_auto, audit_bgo_nor_for_model, build_bgo_repair_plan,
     heal_bgo_live_with_client, plan_live_bgo_heal_commands, validate_and_simulate_bgo_plan,
-};
-#[allow(deprecated)]
-pub use eh55_bgo::{
-    PORTAO4_UNPACKER_MAGIC_LE, PORTAO4_UNPACKER_MAGIC_OFFSET, Portao4InstallReport,
-    build_portao4_norfrom_cow_image, build_portao4_self_unpacking_prog061,
-    unpack_portao4_self_unpacking_prog061,
 };
 pub type BgoFtlAuditReport = Eh55BgoAuditReport;
 pub type BgoFtlSectorKind = Eh55BgoSectorKind;

@@ -14,6 +14,5 @@ pub mod constants;
 pub mod events;
 pub mod forensic;
 
-#[allow(deprecated)]
 pub use constants::*;
 pub use logger::LogLevel;

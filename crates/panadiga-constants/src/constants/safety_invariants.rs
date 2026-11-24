@@ -56,6 +56,4 @@ pub const CHK_ID_MAIN_EXTRHEAD_CHECKSUM: &str = "main_extrhead_checksum";
 pub const CHK_ID_MAIN_EXTRHEAD_SRC_ADDR: &str = "main_extrhead_src_addr";
 pub const CHK_ID_SATA_BRIDGE_RESET_FIX: &str = "sata_bridge_reset_fix";
 pub const CHK_ID_SATA_HDD_AUTOBOOT: &str = "sata_hdd_autoboot";
-#[deprecated(note = "Use CHK_ID_SATA_HDD_AUTOBOOT instead")]
-pub const CHK_ID_SATA_BRIDGE_STAGE2_BOOT: &str = CHK_ID_SATA_HDD_AUTOBOOT;
 pub const CHK_ID_MAIN_BGO_GEOMETRY: &str = "main_bgo_geometry";

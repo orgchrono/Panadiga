@@ -285,7 +285,7 @@
     "severity": "ok",
     "title": "PANAMON1 Interactive UART Monitor Active",
     "native_text": "PANAMON1>",
-    "translation": "Stage-1.5 DIGADIAG monitor running asynchronously over SC0 @ 115200 8N1 (supports R/W/D/E/J/U/Q).",
+    "translation": "DIGADIAG monitor running asynchronously over SC0 @ 115200 8N1 (supports R/W/D/E/J/U/Q).",
     "actions": [
       "Ready for non-blocking dumps and async GDB RSP proxy (`panadiga pico gdb-bridge --port COM10 --target-mode panamon1`)."
     ]

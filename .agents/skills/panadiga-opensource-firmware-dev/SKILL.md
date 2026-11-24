@@ -55,7 +55,7 @@ mn10300-elf-objcopy -O binary tmp/panadiga_openos.elf tmp/panadiga_openos.bin
 
 # 3. Empacotar como DIGADIAG.FRM (262.144 B raw para Loader ver0.61) e validar limites em Mn103Vm
 cargo run -q -p panadiga-cli -- frm pack --mode digadiag -i tmp/panadiga_openos.bin -o tmp/DIGADIAG.FRM --dst-addr 0x50400000 -j -
-cargo run -q -p panadiga-cli -- unbrick tbc-plan --mode stage15_digadiag_tbc --standard pal-m -j -
+cargo run -q -p panadiga-cli -- unbrick tbc-plan --mode digadiag_ram_tbc --standard pal-m -j -
 cargo run -q -p panadiga-cli -- re verify-patches --json
 
 # 4. Execução real sob isolamento ADuM3160 + captura Pico P7501 (115200 8N1)
@@ -63,4 +63,4 @@ cargo run -q -p panadiga-cli -- re verify-patches --json
 
 ## 5. Armadilhas & Verificação
 - **Armadilhas:** Usar `volatile` achando que garante atomicidade entre ISR e loop principal; bloquear a janela `0x8900_0080..0x8A00_0000` (`DAVIS`/`SDCD`/`AVDD`); consultar `DAVIS CH1` sem aguardar `1000 ms` atrás do `IDE2SAT2`; alimentar `IC7501 TBUS` de dentro de um timer ISR cego; testar sem `ADuM3160`.
-- **Verificação:** `test_openos_host` (`100%` PASS em `-Wall -Wextra -Werror`), ELF sem símbolos indefinidos nem extrapolar `512 KiB` em Stage-1.5, `panadiga re verify-patches` verde em `Mn103Vm` (`N2_EMULATED`) e `OPENOS>` + `TBUS` estável > 10 min na `COM10` antes de declarar avanço `M0..M4` (`N4_HARDWARE`).
+- **Verificação:** `test_openos_host` (`100%` PASS em `-Wall -Wextra -Werror`), ELF sem símbolos indefinidos nem extrapolar `512 KiB` em `DIAG_PROG_RAM`, `panadiga re verify-patches` verde em `Mn103Vm` (`N2_EMULATED`) e `OPENOS>` + `TBUS` estável > 10 min na `COM10` antes de declarar avanço `M0..M4` (`N4_HARDWARE`).

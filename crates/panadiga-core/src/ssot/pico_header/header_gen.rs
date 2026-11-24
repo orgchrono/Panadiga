@@ -19,6 +19,10 @@ use crate::re::main_passthrough::{
     DEV_SERIAL_CALLBACK_VA, DEV_SERIAL_HANDSHAKE_BYTES, DEV_SERIAL_ISR_CTX_PTR_VA,
     DEV_SERIAL_PC_OFFSET, passthrough_rsp_payloads,
 };
+use crate::re::{
+    NOR_AUTOBOOT_CAPSULE_HEADER_BYTES, NOR_AUTOBOOT_CAPSULE_MAGIC_LE,
+    NOR_AUTOBOOT_CAPSULE_MAGIC_OFFSET,
+};
 
 use super::super::registry::{
     EvidenceTier, HardwareProfileRegistry, NorRegionKind, sector_range_for_aligned_span,
@@ -369,6 +373,18 @@ pub fn generate_c11_ssot_header() -> String {
         (
             "P7501_SSOT_BGO_SECTOR_COUNT",
             format!("{}u\n", ctx.bgo_sector_count),
+        ),
+        (
+            "P7501_SSOT_NOR_AUTOBOOT_HDR_BYTES",
+            format!("{NOR_AUTOBOOT_CAPSULE_HEADER_BYTES}u"),
+        ),
+        (
+            "P7501_SSOT_NOR_AUTOBOOT_MAGIC_OFF",
+            format!("0x{NOR_AUTOBOOT_CAPSULE_MAGIC_OFFSET:02X}u"),
+        ),
+        (
+            "P7501_SSOT_NOR_AUTOBOOT_MAGIC_LE",
+            format!("0x{NOR_AUTOBOOT_CAPSULE_MAGIC_LE:08X}UL\n"),
         ),
         ("P7501_SSOT_HDD_CLAMP_WIN_LEN", format!("0x{WIN_LEN:02X}u")),
         (

@@ -19,7 +19,7 @@ use super::super::super::super::sata_bridge_fix::{
     OFF_PROG061_SATA_BRIDGE_RESET_WAIT, inspect_main_sata_bridge_reset_site,
     inspect_prog061_sata_bridge_reset_site,
 };
-use super::super::super::super::sata_bridge_stage2::{
+use super::super::super::super::sata_hdd_autoboot::{
     OFF_PROG061_HDD_AUTOBOOT_HOOK_SITE, inspect_prog061_hdd_autoboot_site,
 };
 use super::super::super::super::ssot_patches::find_main_build_by_size;

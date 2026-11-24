@@ -36,7 +36,7 @@ cargo run -q -p panadiga-cli -- re verify-patches --json
 cargo run -q -p panadiga-cli -- unbrick bgo -i tmp/PROG061.bin -o tmp/PROG061_mon.bin -m uart_monitor -j -
 cargo run -q -p panadiga-cli -- hdd patch-capacity -i tmp/MAIN.bin -o tmp/MAIN_250.bin -m dynamic -g 250
 cargo run -q -p panadiga-cli -- unbrick passthrough -i tmp/MAIN.bin -o tmp/MAIN_tbc.bin -m av_passthrough -j -
-cargo run -q -p panadiga-cli -- unbrick tbc-plan --mode stage15_digadiag_tbc --standard pal-m -j -
+cargo run -q -p panadiga-cli -- unbrick tbc-plan --mode digadiag_ram_tbc --standard pal-m -j -
 cargo run -q -p panadiga-cli -- unbrick nor-stub --start 0x84000000 --len 0x800000 -o tmp/nor_stub.bin --wrap-digadiag -j -
 
 # 3. Compatibilidade regional & bundle TV (ifodev2 tail 0x400..0x7FF permanece read-only)

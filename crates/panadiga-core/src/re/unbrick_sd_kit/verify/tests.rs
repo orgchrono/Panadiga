@@ -267,7 +267,7 @@ fn hdd_autoboot_audit_enforces_reset_fix_pairing_and_catches_corruption() {
         SATA_BRIDGE_STATE_FACTORY_2MS, SATA_BRIDGE_STATE_WAIT_1000MS, SataBridgeResetFixMode,
         apply_prog061_sata_bridge_reset_fix_in_place,
     };
-    use crate::re::sata_bridge_stage2::{
+    use crate::re::sata_hdd_autoboot::{
         OFF_PROG061_HDD_AUTOBOOT_HOOK_SITE, PROG061_HDD_AUTOBOOT_STATE_ENABLED,
         PROG061_HDD_AUTOBOOT_STATE_MISMATCH, apply_prog061_hdd_autoboot_in_place,
     };
@@ -329,7 +329,7 @@ fn main_bgo_geometry_audit_enforces_ver061_hdd_autoboot_hardening() {
     use crate::re::main_bgo_retarget::{
         MAIN_BGO_STATE_8MB, MAIN_BGO_STATE_FACTORY_4MB, MAIN_BGO_STATE_MISMATCH,
     };
-    use crate::re::sata_bridge_stage2::PROG061_HDD_AUTOBOOT_STATE_ENABLED;
+    use crate::re::sata_hdd_autoboot::PROG061_HDD_AUTOBOOT_STATE_ENABLED;
 
     let cases = [
         (

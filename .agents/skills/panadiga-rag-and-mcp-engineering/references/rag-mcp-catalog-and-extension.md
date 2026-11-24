@@ -33,7 +33,7 @@
 | :--- | :--- | :--- |
 | `panadiga_region_compat` | Inspeção/patch CoW `<deviceinfo>`, `DEV.BIN`/`ifodev2`, `.FRM` e TV | `action`, `input_path`, `output_path`, `model`, `oem`, `preset`, `tv_standard`, etc. |
 | `panadiga_hdd_flash_inspect` | Planner estritamente dry-run de gravação HDD, lockouts & `mirror_main_lba` | `target_gb`, `allow_extended_4tb`, `disk_bytes`, `mock_disks` |
-| `panadiga_tbc_appliance_plan` | Plano clean-room Diskless/TBC (`stage15_digadiag_tbc` / experimental) | `mode`, `tv_standard`, `experimental_ram_chainload` |
+| `panadiga_tbc_appliance_plan` | Plano clean-room Diskless/TBC (`digadiag_ram_tbc` / experimental) | `mode`, `tv_standard`, `experimental_ram_chainload` |
 | `panadiga_nor_sector_audit` | Auditoria offline de todos os 142 setores Spansion (`SA0..SA141`) | `nor_path*` |
 | `panadiga_eh55_bgo` | Audita BGO 45 setores (`SA26..=SA70`), gera plano CoW ou aplica live | `action*`, `nor_path`, `out_plan_path`, `port`, `backup_dir`, `confirm_upper_nor` |
 | `panadiga_davis_probe` | Probe seguro `DAVIS CH0/CH1` e `0xEC IDENTIFY` (bloqueia `0xC000_100C`) | `action*` (`build_stubs|parse_ec|run_live`), `drive`, `port`, `input_path`, `ec_hex` |

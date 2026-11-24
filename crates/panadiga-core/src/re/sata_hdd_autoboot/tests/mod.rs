@@ -464,7 +464,7 @@ fn mn103vm_executes_escape_hatches_and_fail_closed_fallbacks() {
     );
     assert!(!f_calls.iter().any(|c| c.0 == TAG_HDD_MAX_LBA));
 
-    // 3. Nor-FROM boots (raw SA11..SA14 match or SA11..SA12 compressed 'P4ZU') with/without SD.
+    // 3. Nor-FROM boots (raw SA11..SA14 match or SA11..SA12 compressed 'NAUT') with/without SD.
     for nor_state in [
         NorFromTestState::RawAutoboot,
         NorFromTestState::NorAutobootSa11Magic,

@@ -35,11 +35,11 @@ pub struct SdUnbrickKitRequestDto {
     pub allow_target_mismatch: Option<bool>,
     #[serde(default)]
     pub sata_bridge_reset_fix: Option<bool>,
-    #[serde(default, alias = "sata_bridge_stage2_boot")]
+    #[serde(default)]
     pub sata_hdd_autoboot: Option<bool>,
     #[serde(default)]
     pub main_bgo_retarget: Option<bool>,
-    #[serde(default, alias = "portao4_self_unpack")]
+    #[serde(default)]
     pub nor_autoboot_capsule: Option<bool>,
 }
 

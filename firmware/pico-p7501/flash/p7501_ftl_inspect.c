@@ -16,6 +16,7 @@
 #include "common/p7501_push_stream.h"
 #include "flash/p7501_fast_stream_codec.h"
 #include "flash/p7501_flash.h"
+#include "generated/p7501_ssot.h"
 #include "hal/p7501_hw.h"
 
 #include <inttypes.h>
@@ -33,6 +34,13 @@ static bool all_ff_bytes(const uint8_t *buf, size_t n) {
 
 static uint16_t read_u16_le(const uint8_t *p) {
     return (uint16_t)p[0] | (uint16_t)((uint16_t)p[1] << 8u);
+}
+
+static uint32_t read_u32_le(const uint8_t *p) {
+    return (uint32_t)p[0]
+        | ((uint32_t)p[1] << 8u)
+        | ((uint32_t)p[2] << 16u)
+        | ((uint32_t)p[3] << 24u);
 }
 
 bool p7501_bgo_inspect_headers(
@@ -158,8 +166,8 @@ const char *p7501_norfrom_state_name(p7501_norfrom_slot_state_t st) {
     switch (st) {
         case P7501_NORFROM_ERASED_FF:
             return "ERASED_FF";
-        case P7501_NORFROM_P4ZU_STUB:
-            return "P4ZU_STUB";
+        case P7501_NORFROM_AUTOBOOT_CAPSULE:
+            return "NOR_AUTOBOOT";
         case P7501_NORFROM_EXTRHEAD:
             return "EXTRHEAD";
         default:
@@ -168,23 +176,25 @@ const char *p7501_norfrom_state_name(p7501_norfrom_slot_state_t st) {
 }
 
 p7501_norfrom_slot_state_t p7501_norfrom_classify_prefix(
-    const uint8_t *buf64,
+    const uint8_t *buf,
     size_t len,
     uint32_t *out_crc32
 ) {
     if (out_crc32 != NULL) {
-        *out_crc32 = ((buf64 != NULL) && (len > 0u)) ? p7501_crc32_ieee(buf64, len) : 0u;
+        *out_crc32 = ((buf != NULL) && (len > 0u)) ? p7501_crc32_ieee(buf, len) : 0u;
     }
-    if ((buf64 == NULL) || (len < 8u)) {
+    if ((buf == NULL) || (len < 8u)) {
         return P7501_NORFROM_NON_EMPTY;
     }
-    if (all_ff_bytes(buf64, len)) {
+    if (all_ff_bytes(buf, len)) {
         return P7501_NORFROM_ERASED_FF;
     }
-    if (memcmp(buf64, "P4ZU", 4u) == 0) {
-        return P7501_NORFROM_P4ZU_STUB;
+    if ((len >= P7501_SSOT_NOR_AUTOBOOT_HDR_BYTES) &&
+        (read_u32_le(&buf[P7501_SSOT_NOR_AUTOBOOT_MAGIC_OFF]) ==
+         P7501_SSOT_NOR_AUTOBOOT_MAGIC_LE)) {
+        return P7501_NORFROM_AUTOBOOT_CAPSULE;
     }
-    if (memcmp(buf64, "EXTRHEAD", 8u) == 0) {
+    if (memcmp(buf, "EXTRHEAD", 8u) == 0) {
         return P7501_NORFROM_EXTRHEAD;
     }
     return P7501_NORFROM_NON_EMPTY;
@@ -228,8 +238,7 @@ void p7501_cmd_bgo_inspect(const char *arg) {
     const bool detail = arg_has_token_ci(arg, "DETAIL");
     const bool norfrom = arg_has_token_ci(arg, "NORFROM")
         || arg_has_token_ci(arg, "NOR_AUTOBOOT")
-        || arg_has_token_ci(arg, "FULL")
-        || arg_has_token_ci(arg, "PORTAO4");
+        || arg_has_token_ci(arg, "FULL");
     if (!check_ftl_target_ready("BGO_INSPECT")) {
         return;
     }
@@ -295,15 +304,16 @@ void p7501_cmd_bgo_inspect(const char *arg) {
            rep.healthy_bgo_ftl ? "YES" : "NO");
     if (norfrom) {
         const uint32_t sa11_va = P7501_SSOT_IPL_LAYER1_MIRROR_START + P7501_SSOT_IPL_LAYER1_SIZE;
-        uint8_t sa11_hdr[64];
-        if (!p7501_hw_read_block_checked(sa11_va, sa11_hdr, sizeof(sa11_hdr), true)) {
+        uint8_t *const sa11_hdr = g_p7501_cmd_arena.raw;
+        if (!p7501_hw_read_block_checked(
+                sa11_va, sa11_hdr, P7501_SSOT_NOR_AUTOBOOT_HDR_BYTES, true)) {
             p7501_cli_set_result("ERR", "EBUS");
             printf("BGO_INSPECT: ERROR (Bus read failed at SA11 @ 0x%08" PRIX32 ")\n", sa11_va);
             return;
         }
         uint32_t sa11_crc = 0u;
-        const p7501_norfrom_slot_state_t st11 =
-            p7501_norfrom_classify_prefix(sa11_hdr, sizeof(sa11_hdr), &sa11_crc);
+        const p7501_norfrom_slot_state_t st11 = p7501_norfrom_classify_prefix(
+            sa11_hdr, P7501_SSOT_NOR_AUTOBOOT_HDR_BYTES, &sa11_crc);
         char frame_msg[128];
         (void)snprintf(
             frame_msg, sizeof(frame_msg),

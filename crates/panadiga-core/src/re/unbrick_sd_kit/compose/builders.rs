@@ -29,7 +29,7 @@ use super::super::super::sata_bridge_fix::{
     SataBridgeResetFixMode, apply_main_sata_bridge_reset_fix_in_place,
     apply_prog_sata_bridge_reset_fix_for_profile_in_place,
 };
-use super::super::super::sata_bridge_stage2::{
+use super::super::super::sata_hdd_autoboot::{
     apply_hdd_autoboot_for_loader_profile_in_place, hdd_autoboot_spec_for_loader_profile,
 };
 use super::super::super::ssot_patches::{find_main_build_by_id, find_main_build_by_size};

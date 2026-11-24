@@ -182,7 +182,7 @@ pub fn format_sd_kit_lines(report: &SdUnbrickKitReport) -> Vec<String> {
     }
     if report.nor_autoboot_capsule_applied {
         lines.push(
-            "  NOR Autoboot : PANA__SD.FRM PROG061 wrapped in 256 B SDRAM self-unpacker ('P4ZU') + zlib (0xFF trailer)"
+            "  NOR Autoboot : PANA__SD.FRM PROG061 wrapped in 256 B SDRAM self-unpacker ('NAUT') + zlib (0xFF trailer)"
                 .to_string(),
         );
     }

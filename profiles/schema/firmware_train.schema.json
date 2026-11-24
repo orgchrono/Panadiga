@@ -108,7 +108,7 @@
     },
     "DigadiagSpec": {
       "additionalProperties": false,
-      "description": "SD stage-1.5 `DIGADIAG.FRM` specification declared per firmware train.",
+      "description": "SD diagnostic RAM `DIGADIAG.FRM` specification declared per firmware train.",
       "properties": {
         "bgo_geometry_target": {
           "type": "string"
@@ -166,7 +166,7 @@
       "type": "object"
     },
     "DigadiagTrustModel": {
-      "description": "Cryptographic / integrity trust model verified for stage-1.5 `DIGADIAG.FRM` boot.",
+      "description": "Cryptographic / integrity trust model verified for SD diagnostic RAM `DIGADIAG.FRM` boot.",
       "enum": [
         "checksum32_only",
         "encrypted_toc",

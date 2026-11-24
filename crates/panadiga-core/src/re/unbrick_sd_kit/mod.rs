@@ -90,7 +90,7 @@ pub(crate) fn synthetic_prog061_fixture() -> Vec<u8> {
     use crate::re::sata_bridge_fix::{
         OFF_PROG061_SATA_BRIDGE_RESET_WAIT, ORIG_PROG061_SATA_BRIDGE_RESET_WAIT,
     };
-    use crate::re::sata_bridge_stage2::{
+    use crate::re::sata_hdd_autoboot::{
         OFF_PROG061_HDD_AUTOBOOT_HOOK_SITE, ORIG_PROG061_HDD_AUTOBOOT_HOOK_BYTES,
     };
     let mut prog = vec![0xFFu8; PROG061_EXPECTED_SIZE];

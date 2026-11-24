@@ -293,7 +293,7 @@ function parseBootClassFrame(lines: readonly string[]): PicoBootClassSummary | n
   return {
     verdict: kv.verdict,
     build: kv.build ?? 'UNKNOWN',
-    hdd_autoboot: parseWireBool(kv.hdd_autoboot ?? kv.stage2),
+    hdd_autoboot: parseWireBool(kv.hdd_autoboot),
     avout_ok: parseWireBool(kv.avout_ok),
     vmute0: parseWireBool(kv.vmute0),
     ntsc: parseWireBool(kv.ntsc),

@@ -612,7 +612,7 @@
       ],
       "evidence_files": [
         "crates/panadiga-core/src/re/sata_bridge_fix.rs",
-        "crates/panadiga-core/src/re/sata_bridge_stage2/mod.rs",
+        "crates/panadiga-core/src/re/sata_hdd_autoboot/mod.rs",
         "crates/panadiga-core/src/re/main_bgo_retarget/mod.rs"
       ],
       "sha256_assertions": [],
@@ -655,7 +655,7 @@
       "evidence_files": [
         "docs/evidence/com10_portao4_etapa1_sd_dryrun_20261123.log",
         "crates/panadiga-core/src/re/eh55_bgo/norfrom_install.rs",
-        "crates/panadiga-core/src/re/sata_bridge_stage2/mod.rs"
+        "crates/panadiga-core/src/re/sata_hdd_autoboot/mod.rs"
       ],
       "sha256_assertions": [
         {

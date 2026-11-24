@@ -73,7 +73,7 @@
     },
     {
       "id": "TRAP_DIGADIAG_256K_RAW_VS_128K_EXTRHEAD",
-      "category": "sd_stage15_format",
+      "category": "sd_digadiag_format",
       "severity": "high",
       "wrong_assumption": "Usar formato EXTRHEAD de 128 KiB em loaders ver0.61/ver0.18 ou payload cru de 256 KiB em loader ver0.63.",
       "verified_ground_truth": "Loader ver0.61 (EH55) e ver0.18 (ES35V) carregam DIGADIAG.FRM cru de exatos 262.144 B (0x40000) em 0x90400000 -> JMP 0x50400000 com PANA__SD.FRM sd48 (TOC 0x1800). Loader ver0.63 (EH58) espera DIGADIAG.FRM EXTRHEAD de 131.072 B (0x20000) em 0x93FC0000 + PANA__SD.FRM sd64 (TOC 0x2000).",
@@ -164,7 +164,7 @@
       "automated_guard": "crates/panadiga-core/src/re/sata_bridge_fix.rs + CHK_ID_SATA_BRIDGE_RESET_FIX",
       "evidence_refs": [
         "crates/panadiga-core/src/re/sata_bridge_fix.rs",
-        "crates/panadiga-core/src/re/sata_bridge_stage2/mod.rs",
+        "crates/panadiga-core/src/re/sata_hdd_autoboot/mod.rs",
         "docs/evidence/boottrace_sata_bridge_gate2_20261122.log"
       ]
     },
@@ -178,9 +178,9 @@
         "loader_ver061_toc48_main57",
         "eh55_ver061_on_s29jl064h"
       ],
-      "automated_guard": "crates/panadiga-core/src/re/sata_bridge_stage2/mod.rs (mn103vm_proves_nor_autoboot_loader_ver061_norfrom_boot_and_escape_hatch)",
+      "automated_guard": "crates/panadiga-core/src/re/sata_hdd_autoboot/mod.rs (mn103vm_proves_nor_autoboot_loader_ver061_norfrom_boot_and_escape_hatch)",
       "evidence_refs": [
-        "crates/panadiga-core/src/re/sata_bridge_stage2/mod.rs",
+        "crates/panadiga-core/src/re/sata_hdd_autoboot/mod.rs",
         "firmware_and_images/eh55_loader_ver061_256k.bin",
         "firmware_and_images/eh55_nor_8mb_ic5001_repaired.bin"
       ]

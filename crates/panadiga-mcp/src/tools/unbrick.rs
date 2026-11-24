@@ -192,7 +192,6 @@ pub fn handle_sd_unbrick_kit_with_policy(
                 .unwrap_or(false);
             let sata_hdd_autoboot = args
                 .get("sata_hdd_autoboot")
-                .or_else(|| args.get("sata_bridge_stage2_boot"))
                 .and_then(|v| v.as_bool())
                 .unwrap_or(false);
             let main_bgo_retarget = args
@@ -201,7 +200,6 @@ pub fn handle_sd_unbrick_kit_with_policy(
                 .unwrap_or(false);
             let nor_autoboot_capsule = args
                 .get("nor_autoboot_capsule")
-                .or_else(|| args.get("portao4_self_unpack"))
                 .and_then(|v| v.as_bool())
                 .unwrap_or(false);
 

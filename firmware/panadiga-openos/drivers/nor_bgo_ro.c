@@ -13,8 +13,6 @@
 
 #include <string.h>
 
-#define OPENOS_P4ZU_MAGIC_LE 0x555A3450UL
-
 bool openos_nor_inspect_unbrick(openos_unbrick_status_t *out) {
     if (out == NULL) {
         return false;
@@ -23,11 +21,15 @@ bool openos_nor_inspect_unbrick(openos_unbrick_status_t *out) {
     out->bgo_p1_sa = 0xFFFFu;
 
     uint32_t sa11_w0 = 0UL;
-    if (!am34_mmio_read32(OPENOS_SSOT_NORFROM_SA11_BASE, &sa11_w0)) {
+    uint32_t sa11_magic = 0UL;
+    if (!am34_mmio_read32(OPENOS_SSOT_NORFROM_SA11_BASE, &sa11_w0) ||
+        !am34_mmio_read32(
+            OPENOS_SSOT_NORFROM_SA11_BASE + OPENOS_SSOT_NOR_AUTOBOOT_MAGIC_OFFSET,
+            &sa11_magic)) {
         return false;
     }
-    out->sa11_is_erased = (sa11_w0 == 0xFFFFFFFFUL);
-    out->sa11_has_p4zu = (sa11_w0 == OPENOS_P4ZU_MAGIC_LE);
+    out->sa11_is_erased = (sa11_w0 == 0xFFFFFFFFUL) && (sa11_magic == 0xFFFFFFFFUL);
+    out->sa11_has_autoboot_capsule = (sa11_magic == OPENOS_SSOT_NOR_AUTOBOOT_MAGIC_LE);
 
     for (uint32_t idx = 0UL; idx < OPENOS_SSOT_BGO_SECTOR_COUNT; ++idx) {
         const uint32_t lbn_va =

@@ -29,6 +29,10 @@ use crate::hdd::capacity_patch::specs::DYNAMIC_UNCLAMPED_MAX_BLOCKS_2KB;
 use crate::re::davis_probe::{
     DAVIS_CH0_CONTROL_REG_VA, DAVIS_CH1_CONTROL_REG_VA, DAVIS_CH1_RESET_REG_VA,
 };
+use crate::re::{
+    NOR_AUTOBOOT_CAPSULE_HEADER_BYTES, NOR_AUTOBOOT_CAPSULE_MAGIC_LE,
+    NOR_AUTOBOOT_CAPSULE_MAGIC_OFFSET,
+};
 
 use super::pico_header::{
     P7501_AM34_LETHAL_REG_LEN_SSOT, P7501_AM34_LETHAL_REG2_ADDR_SSOT,
@@ -140,6 +144,24 @@ pub fn generate_openos_ssot_header() -> String {
         &mut out,
         "OPENOS_SSOT_NORFROM_SA11_SIZE",
         u32::try_from(PANA_DIGADIAG_RAW_VER061_SIZE).expect("raw size u32"),
+        true,
+    );
+    push_def_u32(
+        &mut out,
+        "OPENOS_SSOT_NOR_AUTOBOOT_HDR_BYTES",
+        u32::try_from(NOR_AUTOBOOT_CAPSULE_HEADER_BYTES).expect("capsule hdr bytes u32"),
+        false,
+    );
+    push_def_u32(
+        &mut out,
+        "OPENOS_SSOT_NOR_AUTOBOOT_MAGIC_OFFSET",
+        u32::try_from(NOR_AUTOBOOT_CAPSULE_MAGIC_OFFSET).expect("capsule magic off u32"),
+        true,
+    );
+    push_def_u32(
+        &mut out,
+        "OPENOS_SSOT_NOR_AUTOBOOT_MAGIC_LE",
+        NOR_AUTOBOOT_CAPSULE_MAGIC_LE,
         true,
     );
     push_def_u32(
@@ -416,6 +438,8 @@ mod tests {
         assert!(generated.contains("0x80000000UL"));
         assert!(generated.contains("0x84040000UL"));
         assert!(generated.contains("0x84130000UL"));
+        assert!(generated.contains("0x5455414EUL"));
+        assert!(generated.contains("0x000000FCUL"));
         assert!(generated.contains("1000U"));
         assert!(generated.contains("0x0010U"));
     }

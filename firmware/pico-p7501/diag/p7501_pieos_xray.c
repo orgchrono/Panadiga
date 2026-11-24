@@ -43,7 +43,6 @@ static const xray_rule_t k_xray_rules[] = {
     { "FAT Mount ID",           P7501_XRAY_S4_SD_DIAG_FVU,  P7501_XRAY_LVL_OK,   1,  "FAT"   },
     { "PANAMON1>",              P7501_XRAY_S4_SD_DIAG_FVU,  P7501_XRAY_LVL_OK,   1,  "MON"   },
     { "[HDD_AUTOBOOT]",         P7501_XRAY_S4_SD_DIAG_FVU,  P7501_XRAY_LVL_OK,   1,  "HDD"   },
-    { "[STAGE2]",               P7501_XRAY_S4_SD_DIAG_FVU,  P7501_XRAY_LVL_OK,   1,  "SD2"   },
     { "PiE-OS",                 P7501_XRAY_S5_PIE_CRT0,     P7501_XRAY_LVL_OK,   3,  "MAIN"  },
     { "System Version",         P7501_XRAY_S5_PIE_CRT0,     P7501_XRAY_LVL_OK,   3,  "MAIN"  },
     { "H/W System",             P7501_XRAY_S6_SYS_BOOT,     P7501_XRAY_LVL_INFO, 3,  "BOOT"  },

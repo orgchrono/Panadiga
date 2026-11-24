@@ -426,16 +426,16 @@ fn sata_bridge_reset_fix_patches_pana_sd_prog_without_touching_digadiag() {
     .unwrap();
     assert_eq!(mode2, Prog061BgoPatchMode::BypassChecksOnly);
     assert_eq!(
-        crate::re::sata_bridge_stage2::inspect_prog061_hdd_autoboot_site(&sd_autoboot_prog)
+        crate::re::sata_hdd_autoboot::inspect_prog061_hdd_autoboot_site(&sd_autoboot_prog)
             .unwrap()
             .state,
-        crate::re::sata_bridge_stage2::PROG061_HDD_AUTOBOOT_STATE_ENABLED
+        crate::re::sata_hdd_autoboot::PROG061_HDD_AUTOBOOT_STATE_ENABLED
     );
     assert_eq!(
-        crate::re::sata_bridge_stage2::inspect_prog061_hdd_autoboot_site(&diag_bytes)
+        crate::re::sata_hdd_autoboot::inspect_prog061_hdd_autoboot_site(&diag_bytes)
             .unwrap()
             .state,
-        crate::re::sata_bridge_stage2::PROG061_HDD_AUTOBOOT_STATE_FACTORY
+        crate::re::sata_hdd_autoboot::PROG061_HDD_AUTOBOOT_STATE_FACTORY
     );
 
     // Non-3060NP container fails closed when sata_bridge_reset_fix = true or main_bgo_retarget = true.

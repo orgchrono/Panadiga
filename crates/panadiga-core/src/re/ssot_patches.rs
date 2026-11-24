@@ -17,7 +17,7 @@ use crate::ssot::registry::{
 use super::main_bgo_retarget::MainBgoGeometryStatus;
 use super::patch_spec::{PatchApplyAction, PatchSpec, apply_patch_specs_in_place};
 use super::sata_bridge_fix::{SataBridgeResetFixMode, SataBridgeResetSiteStatus, inspect_site};
-use super::sata_bridge_stage2::HddAutobootTrainSpec;
+use super::sata_hdd_autoboot::HddAutobootTrainSpec;
 
 /// Resolves the firmware train + `MainBuildSpec` matching an unpacked `MAIN` byte length.
 #[must_use]
@@ -133,12 +133,6 @@ pub fn hdd_autoboot_spec_for_loader(loader_profile_key: &str) -> Option<HddAutob
         memcpy_va: sym.memcpy_va,
         sleep_10ms_va: sym.sleep_10ms_va,
     })
-}
-
-#[deprecated(note = "Use hdd_autoboot_spec_for_loader")]
-#[must_use]
-pub fn stage2_boot_spec_for_loader(loader_profile_key: &str) -> Option<HddAutobootTrainSpec> {
-    hdd_autoboot_spec_for_loader(loader_profile_key)
 }
 
 fn parse_site_pair(site: &BinaryPatchSiteSpec) -> Result<(Vec<u8>, Vec<u8>)> {

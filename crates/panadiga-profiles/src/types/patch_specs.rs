@@ -164,12 +164,6 @@ pub struct HddAutobootSpec {
     pub symbols: HddAutobootSymbolsSpec,
 }
 
-#[deprecated(note = "Renamed to HddAutobootSymbolsSpec")]
-pub type Stage2BootSymbolsSpec = HddAutobootSymbolsSpec;
-
-#[deprecated(note = "Renamed to HddAutobootSpec")]
-pub type Stage2BootSpec = HddAutobootSpec;
-
 /// Declarative virtual-address and RAM/cave anchors for universal 4 MiB -> 8 MiB BGO retargeting.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]

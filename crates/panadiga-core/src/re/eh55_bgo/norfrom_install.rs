@@ -31,7 +31,7 @@ use crate::re::region_compat::TvStandardKind;
 use crate::re::sata_bridge_fix::{
     SATA_BRIDGE_STATE_WAIT_1000MS, inspect_prog061_sata_bridge_reset_site,
 };
-use crate::re::sata_bridge_stage2::{
+use crate::re::sata_hdd_autoboot::{
     PROG061_HDD_AUTOBOOT_STATE_ENABLED, inspect_prog061_hdd_autoboot_site,
 };
 
@@ -43,14 +43,12 @@ const SELF_UNPACK_HEADER_BYTES: usize = 0x100;
 const TRAMPOLINE_OFFSET: usize = 0xA0;
 const TRAMPOLINE_MAX_BYTES: usize = 0x5C;
 
+/// Exact byte length of the SDRAM self-unpacker prefix preceding the zlib stream (`0x100` / `256 B`).
+pub const NOR_AUTOBOOT_CAPSULE_HEADER_BYTES: usize = SELF_UNPACK_HEADER_BYTES;
 /// Byte offset within the 256 B NOR autoboot self-unpacker header carrying [`NOR_AUTOBOOT_CAPSULE_MAGIC_LE`].
 pub const NOR_AUTOBOOT_CAPSULE_MAGIC_OFFSET: usize = 0xFC;
-#[deprecated(note = "Use NOR_AUTOBOOT_CAPSULE_MAGIC_OFFSET")]
-pub const PORTAO4_UNPACKER_MAGIC_OFFSET: usize = NOR_AUTOBOOT_CAPSULE_MAGIC_OFFSET;
-/// 4-byte little-endian signature (`"P4ZU"`, legacy wire tag) stamped at [`NOR_AUTOBOOT_CAPSULE_MAGIC_OFFSET`] (`+0xFC`).
-pub const NOR_AUTOBOOT_CAPSULE_MAGIC_LE: u32 = u32::from_le_bytes(*b"P4ZU");
-#[deprecated(note = "Use NOR_AUTOBOOT_CAPSULE_MAGIC_LE")]
-pub const PORTAO4_UNPACKER_MAGIC_LE: u32 = NOR_AUTOBOOT_CAPSULE_MAGIC_LE;
+/// Canonical 4-byte little-endian signature (`"NAUT"`, `0x5455_414E`) stamped at [`NOR_AUTOBOOT_CAPSULE_MAGIC_OFFSET`] (`+0xFC`).
+pub const NOR_AUTOBOOT_CAPSULE_MAGIC_LE: u32 = u32::from_le_bytes(*b"NAUT");
 
 const VA_FVU_ENTRY: u32 = 0x5040_0000;
 const VA_FVU_UNCACHED_DST: u32 = 0x9040_0000;
@@ -69,7 +67,6 @@ pub struct NorAutobootInstallReport {
     pub source_nor_sha256: String,
     pub target_nor_sha256: String,
     pub ipl_sha256: String,
-    #[serde(alias = "stage2_sha256")]
     pub payload_sha256: String,
     pub fvu_marker_pid: u16,
     pub update_pid: u16,
@@ -486,27 +483,4 @@ pub fn build_nor_autoboot_cow_image(
             post_audit,
         },
     ))
-}
-
-#[deprecated(note = "Use NorAutobootInstallReport")]
-pub type Portao4InstallReport = NorAutobootInstallReport;
-
-#[deprecated(note = "Use build_nor_autoboot_capsule")]
-pub fn build_portao4_self_unpacking_prog061(autoboot_prog061: &[u8]) -> Result<(Vec<u8>, usize)> {
-    build_nor_autoboot_capsule(autoboot_prog061)
-}
-
-#[deprecated(note = "Use unpack_nor_autoboot_capsule")]
-#[must_use]
-pub fn unpack_portao4_self_unpacking_prog061(buf: &[u8]) -> Option<Vec<u8>> {
-    unpack_nor_autoboot_capsule(buf)
-}
-
-#[deprecated(note = "Use build_nor_autoboot_cow_image")]
-pub fn build_portao4_norfrom_cow_image(
-    nor_8mb: &[u8],
-    autoboot_prog061: &[u8],
-    tv_standard: Option<TvStandardKind>,
-) -> Result<(Vec<u8>, NorAutobootInstallReport)> {
-    build_nor_autoboot_cow_image(nor_8mb, autoboot_prog061, tv_standard)
 }

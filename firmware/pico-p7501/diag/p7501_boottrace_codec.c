@@ -232,7 +232,7 @@ void p7501_boot_classifier_feed_line(p7501_boot_classifier_t *st, const char *li
     st->lines_seen += 1u;
     extract_deep_fields(st, line);
 
-    if ((strstr(line, "[HDD_AUTOBOOT]") != NULL) || (strstr(line, "[STAGE2]") != NULL)) {
+    if (strstr(line, "[HDD_AUTOBOOT]") != NULL) {
         st->hdd_autoboot_seen = true;
         if (strstr(line, "Boot MAIN") != NULL) {
             st->main_entered = true;

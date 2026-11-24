@@ -24,6 +24,7 @@ typedef struct mock_mmio_state {
     uint32_t sdcd_ctrl;
     uint32_t sdcd_cfg4;
     uint32_t sa11_w0;
+    uint32_t sa11_magic_fc;
     uint32_t eemul_w0;
     uint16_t bgo_lbn[45];
     uint32_t tbus_mbox[4];
@@ -72,6 +73,9 @@ uint32_t openos_host_mmio_read32(uint32_t addr) {
     }
     if (addr == OPENOS_SSOT_NORFROM_SA11_BASE) {
         return g_mock.sa11_w0;
+    }
+    if (addr == (OPENOS_SSOT_NORFROM_SA11_BASE + OPENOS_SSOT_NOR_AUTOBOOT_MAGIC_OFFSET)) {
+        return g_mock.sa11_magic_fc;
     }
     if (addr == OPENOS_SSOT_EEMUL_BASE) {
         return g_mock.eemul_w0;
@@ -392,6 +396,7 @@ int main(void) {
     g_mock.sdcd_ctrl = 0x00000001UL;
     g_mock.sdcd_cfg4 = 0x000000B8UL;
     g_mock.sa11_w0 = 0xFFFFFFFFUL;
+    g_mock.sa11_magic_fc = 0xFFFFFFFFUL;
     g_mock.eemul_w0 = OPENOS_SSOT_EEMUL_TAG_1284_LE;
     uint16_t p2_id = 0xF201u;
     for (size_t i = 0u; i < 45u; ++i) {
@@ -412,6 +417,12 @@ int main(void) {
 
     assert(openos_shell_exec_line("bgo"));
     assert(strstr(g_mock.uart_log, "[OPENOS] BGO p1_sa=29 p2=40 erased=4 sa11=FF eemul1284=1 nor_autoboot=READY") != NULL);
+    g_mock.sa11_w0 = 0xE0FEF800UL;
+    g_mock.sa11_magic_fc = OPENOS_SSOT_NOR_AUTOBOOT_MAGIC_LE;
+    openos_unbrick_status_t ub_naut;
+    assert(openos_nor_inspect_unbrick(&ub_naut) && ub_naut.sa11_has_autoboot_capsule && !ub_naut.sa11_is_erased);
+    assert(openos_shell_exec_line("bgo"));
+    assert(strstr(g_mock.uart_log, "sa11=NAUT eemul1284=1 nor_autoboot=NO") != NULL);
     assert(openos_shell_exec_line("ssot"));
     assert(strstr(g_mock.uart_log, "[OPENOS] SSOT=" OPENOS_SSOT_CONTRACT_HASH_STR " IPL_RO=E05") != NULL);
 

@@ -1,6 +1,6 @@
 /**
  * @file openos_main.c
- * @brief Panadiga OpenOS (`M0 -> M3` Bring-Up) Stage-1.5 / Stage-2 Declarative Kernel Entrypoint.
+ * @brief Panadiga OpenOS (`M0 -> M3` Bring-Up) `DIAG_PROG_RAM` / `MAIN_OS_RAM` Declarative Kernel Entrypoint.
  *
  * HARDWARE-INTEROPERABILITY PROTOTYPE -- NOT LEGALLY CLEAN-ROOM.
  *
@@ -239,7 +239,7 @@ static bool cmd_bgo(const char *arg) {
     openos_uart0_puts(" erased=");
     openos_put_u16_dec(st.bgo_erased_count);
     openos_uart0_puts(" sa11=");
-    openos_uart0_puts(st.sa11_is_erased ? "FF" : (st.sa11_has_p4zu ? "P4ZU" : "USED"));
+    openos_uart0_puts(st.sa11_is_erased ? "FF" : (st.sa11_has_autoboot_capsule ? "NAUT" : "USED"));
     openos_uart0_puts(" eemul1284=");
     openos_uart0_puts(st.eemul_has_1284 ? "1" : "0");
     openos_uart0_puts(" nor_autoboot=");

@@ -24,13 +24,10 @@ pub use live_apply::{
     BgoLiveHealReport, BgoLiveHealRequest, BgoTvStandardNote, apply_bgo_repair_plan_live,
     heal_bgo_live_with_client, plan_live_bgo_heal_commands,
 };
-#[allow(deprecated)]
 pub use norfrom_install::{
-    NOR_AUTOBOOT_CAPSULE_MAGIC_LE, NOR_AUTOBOOT_CAPSULE_MAGIC_OFFSET, NorAutobootInstallReport,
-    PORTAO4_UNPACKER_MAGIC_LE, PORTAO4_UNPACKER_MAGIC_OFFSET, Portao4InstallReport,
-    build_nor_autoboot_capsule, build_nor_autoboot_cow_image, build_portao4_norfrom_cow_image,
-    build_portao4_self_unpacking_prog061, unpack_nor_autoboot_capsule,
-    unpack_portao4_self_unpacking_prog061,
+    NOR_AUTOBOOT_CAPSULE_HEADER_BYTES, NOR_AUTOBOOT_CAPSULE_MAGIC_LE,
+    NOR_AUTOBOOT_CAPSULE_MAGIC_OFFSET, NorAutobootInstallReport, build_nor_autoboot_capsule,
+    build_nor_autoboot_cow_image, unpack_nor_autoboot_capsule,
 };
 pub use repair_plan::{
     BgoRepairOp, BgoRepairPlan, build_bgo_repair_plan, hash_bgo_target_sectors,

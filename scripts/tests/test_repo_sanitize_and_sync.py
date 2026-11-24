@@ -16,7 +16,7 @@ def test_commit_plan_maps_six_waves_isolates_excludes_and_never_mutates_git(tmp_
         " M profiles/symbols/loader_ver061_toc48_main57/PROG061.json",
         " M crates/panadiga-bench/src/lib.rs",
         " M crates/panadiga-core/src/re/symbol_index/analyzer.rs",
-        " M crates/panadiga-core/src/re/sata_bridge_stage2.rs",
+        " M crates/panadiga-core/src/re/sata_hdd_autoboot/mod.rs",
         " M crates/panadiga-cli/src/cli/args/re.rs",
         " M crates/panadiga-mcp/src/tools/symbols.rs",
         " M crates/panadiga-rag/src/indexer/symbols.rs",
@@ -28,12 +28,12 @@ def test_commit_plan_maps_six_waves_isolates_excludes_and_never_mutates_git(tmp_
 
     rc, plan = build_commit_plan(
         root=tmp_path,
-        exclude_paths=["crates/panadiga-core/src/re/sata_bridge_stage2.rs"],
+        exclude_paths=["crates/panadiga-core/src/re/sata_hdd_autoboot/mod.rs"],
         status_reader=lambda _root: sample_porcelain,
     )
     assert rc == 0
     assert plan["mutated_git"] is False
-    assert plan["excluded_concurrent"] == ["crates/panadiga-core/src/re/sata_bridge_stage2.rs"]
+    assert plan["excluded_concurrent"] == ["crates/panadiga-core/src/re/sata_hdd_autoboot/mod.rs"]
     assert plan["unclassified"] == []
 
     waves = as_list(plan["waves"])
@@ -42,7 +42,7 @@ def test_commit_plan_maps_six_waves_isolates_excludes_and_never_mutates_git(tmp_
     assert "Cargo.toml" in as_list(by_wave["wave-1"]["files"])
     assert "profiles/symbols/loader_ver061_toc48_main57/PROG061.json" in as_list(by_wave["wave-1"]["files"])
     assert "crates/panadiga-bench/src/lib.rs" in as_list(by_wave["wave-2"]["files"])
-    assert "crates/panadiga-core/src/re/sata_bridge_stage2.rs" not in as_list(by_wave["wave-2"]["files"])
+    assert "crates/panadiga-core/src/re/sata_hdd_autoboot/mod.rs" not in as_list(by_wave["wave-2"]["files"])
     assert "crates/panadiga-mcp/src/tools/symbols.rs" in as_list(by_wave["wave-3"]["files"])
     assert "apps/desktop/src/App.tsx" in as_list(by_wave["wave-4"]["files"])
     assert "scripts/repo_sanitize_and_sync.py" in as_list(by_wave["wave-5"]["files"])

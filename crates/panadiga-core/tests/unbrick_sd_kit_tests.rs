@@ -221,7 +221,7 @@ fn ver061_hdd_autoboot_fails_closed_without_main_bgo_retarget_and_passes_with_8m
     use panadiga_core::crypto::{ExtrheadCryptMode, pack_extrhead};
     use panadiga_core::re::bgo_unbrick::Prog061BgoPatchMode::BypassChecksOnly;
     use panadiga_core::re::main_bgo_retarget::{MAIN_BGO_STATE_8MB, MAIN_BGO_STATE_FACTORY_4MB};
-    use panadiga_core::re::sata_bridge_stage2::apply_prog061_hdd_autoboot_in_place;
+    use panadiga_core::re::sata_hdd_autoboot::apply_prog061_hdd_autoboot_in_place;
 
     let tmp_guard =
         std::env::temp_dir().join(format!("panadiga_autoboot_guard_{}", std::process::id()));
@@ -308,7 +308,7 @@ fn ver061_hdd_autoboot_fails_closed_without_main_bgo_retarget_and_passes_with_8m
 }
 
 #[test]
-fn nor_autoboot_capsule_sd_kit_fails_closed_and_roundtrips_p4zu_payload() {
+fn nor_autoboot_capsule_sd_kit_fails_closed_and_roundtrips_naut_payload() {
     use panadiga_core::constants::{
         CHK_ID_MAIN_BGO_GEOMETRY, CHK_ID_SATA_HDD_AUTOBOOT, PANA_DIGADIAG_RAW_VER061_SIZE,
     };
@@ -319,7 +319,7 @@ fn nor_autoboot_capsule_sd_kit_fails_closed_and_roundtrips_p4zu_payload() {
     };
 
     let tmp_guard =
-        std::env::temp_dir().join(format!("panadiga_p4zu_guard_{}", std::process::id()));
+        std::env::temp_dir().join(format!("panadiga_naut_guard_{}", std::process::id()));
     let _ = fs::remove_dir_all(&tmp_guard);
     let mut guard_req = SdUnbrickKitRequest::hardened_panamon1(tmp_guard.clone());
     guard_req.nor_autoboot_capsule = true;
@@ -334,7 +334,7 @@ fn nor_autoboot_capsule_sd_kit_fails_closed_and_roundtrips_p4zu_payload() {
         return;
     };
 
-    let tmp_ok = std::env::temp_dir().join(format!("panadiga_p4zu_ok_{}", std::process::id()));
+    let tmp_ok = std::env::temp_dir().join(format!("panadiga_naut_ok_{}", std::process::id()));
     let _ = fs::remove_dir_all(&tmp_ok);
     let mut ok_req = SdUnbrickKitRequest::hardened_panamon1(tmp_ok.clone());
     ok_req.pana_dvd_path = Some(dvd);

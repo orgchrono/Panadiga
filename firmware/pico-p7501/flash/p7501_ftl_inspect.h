@@ -44,7 +44,7 @@ typedef struct p7501_bgo_report {
 
 typedef enum p7501_norfrom_slot_state {
     P7501_NORFROM_ERASED_FF = 0,
-    P7501_NORFROM_P4ZU_STUB = 1,
+    P7501_NORFROM_AUTOBOOT_CAPSULE = 1,
     P7501_NORFROM_EXTRHEAD = 2,
     P7501_NORFROM_NON_EMPTY = 3
 } p7501_norfrom_slot_state_t;
@@ -76,9 +76,9 @@ bool p7501_eemul_inspect_slice(
 /** Return canonical ASCII label for `p7501_norfrom_slot_state_t`. */
 const char *p7501_norfrom_state_name(p7501_norfrom_slot_state_t st);
 
-/** Classify first 64 bytes of NOR autoboot capsule slot (`SA11 @ 0x84040000`) & compute CRC32. */
+/** Classify NOR autoboot capsule header (`256 B` at `SA11 @ 0x84040000`) & compute CRC32. */
 p7501_norfrom_slot_state_t p7501_norfrom_classify_prefix(
-    const uint8_t *buf64,
+    const uint8_t *buf,
     size_t len,
     uint32_t *out_crc32
 );

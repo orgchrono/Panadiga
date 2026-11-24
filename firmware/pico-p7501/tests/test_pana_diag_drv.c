@@ -710,7 +710,7 @@ static void test_boottrace_baremetal_classifier(void) {
 
     /* 1. Clean MAIN 3060NP HDD autoboot */
     p7501_boot_classifier_init(&cls);
-    p7501_boot_classifier_feed_line(&cls, "[STAGE2] Boot MAIN @ 0x57000000");
+    p7501_boot_classifier_feed_line(&cls, "[HDD_AUTOBOOT] Boot MAIN @ 0x57000000");
     p7501_boot_classifier_feed_line(&cls, "  DVD Recorder DMR5x Series System Version : 3060NP (2006/04/27)");
     p7501_boot_classifier_feed_line(&cls, "[SYS_BOOT]AVOUT_init() success.");
     p7501_boot_classifier_feed_line(&cls, "[DCS]dco_api :AVOUT_V_Mute: onoff=0");
@@ -723,7 +723,7 @@ static void test_boottrace_baremetal_classifier(void) {
 
     /* 2. European MAIN 3410PQ on Brazilian IC7501 (MN67788RA) */
     p7501_boot_classifier_init(&cls);
-    p7501_boot_classifier_feed_line(&cls, "[STAGE2] Boot MAIN @ 0x57000000");
+    p7501_boot_classifier_feed_line(&cls, "[HDD_AUTOBOOT] Boot MAIN @ 0x57000000");
     p7501_boot_classifier_feed_line(&cls, "  DVD Recorder DMR5x Series System Version : 3410PQ (2006/10/20)");
     p7501_boot_classifier_feed_line(&cls, "[FPC]FPC_ReciveTASK() : 7F A9 01 01 00 00 0E 06 00 02 00 00 00 00 00 40");
     p7501_boot_classifier_feed_line(&cls, "[FPC]FPC_ReciveTASK() : 7F F9 02 11 00 06 82 32 00 00 00 00 00 00 00 45");
@@ -743,7 +743,7 @@ static void test_boottrace_baremetal_classifier(void) {
     p7501_boot_classifier_feed_line(&cls, "[SYS_CNTL]##### NFROMError Power off !!!!! #####");
     assert(p7501_boot_classifier_verdict(&cls) == P7501_BOOT_VERDICT_BGO_NFROM_FAULT);
 
-    /* 4. Cold SATA bridge timeout without Stage-2 hook */
+    /* 4. Cold SATA bridge timeout without HDD autoboot hook */
     p7501_boot_classifier_init(&cls);
     p7501_boot_classifier_feed_line(&cls, "HDD_MAX_LBA get failed[0xE8000000].");
     assert(p7501_boot_classifier_verdict(&cls) == P7501_BOOT_VERDICT_HDD_BRIDGE_WAIT_FAIL);

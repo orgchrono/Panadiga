@@ -150,7 +150,7 @@ typedef struct openos_unbrick_status {
     uint16_t bgo_p2_count;
     uint16_t bgo_erased_count;
     bool sa11_is_erased;
-    bool sa11_has_p4zu;
+    bool sa11_has_autoboot_capsule;
     bool eemul_has_1284;
     bool nor_autoboot_ready;
 } openos_unbrick_status_t;
@@ -177,7 +177,7 @@ bool openos_shell_poll_once(openos_shell_state_t *st, bool *out_cmd_ran);
 /** Execute one interactive `OPENOS>` command line (`help`, `status`, `ntsc`, `palm`, `pal`, `tbc on/off`, `video br/ec/probe`, `dac on/off`, `colorbar on/off`, `provision`, `sd`, `bgo`, `ssot`, `wdt`, `sata`, `vfd <txt>`). */
 bool openos_shell_exec_line(const char *line);
 
-/** Stage-1.5 / Stage-2 C kernel entry invoked by `crt0_am34.S`. */
+/** `DIAG_PROG_RAM` / `MAIN_OS_RAM` C kernel entry invoked by `crt0_am34.S`. */
 void openos_kernel_entry(void);
 
 #ifdef __cplusplus

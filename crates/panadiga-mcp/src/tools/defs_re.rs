@@ -257,7 +257,7 @@ pub(super) fn re_tool_definitions() -> Vec<Value> {
                     },
                     "sata_hdd_autoboot": {
                         "type": "boolean",
-                        "description": "Opt-in pre-FVU SATA HDD autoboot hook in PANA__SD.FRM PROG061 (requires sata_bridge_reset_fix=true, main_bgo_retarget=true, and loader_profile='ver061', default false; legacy alias: sata_bridge_stage2_boot)."
+                        "description": "Opt-in pre-FVU SATA HDD autoboot hook in PANA__SD.FRM PROG061 (requires sata_bridge_reset_fix=true, main_bgo_retarget=true, and loader_profile='ver061', default false)."
                     },
                     "main_bgo_retarget": {
                         "type": "boolean",
@@ -265,7 +265,7 @@ pub(super) fn re_tool_definitions() -> Vec<Value> {
                     },
                     "nor_autoboot_capsule": {
                         "type": "boolean",
-                        "description": "Wrap PANA__SD.FRM PROG061 in 256 B SDRAM self-unpacking NOR autoboot capsule ('P4ZU') + zlib (requires sata_hdd_autoboot=true, default false; legacy alias: portao4_self_unpack)."
+                        "description": "Wrap PANA__SD.FRM PROG061 in 256 B SDRAM self-unpacking NOR autoboot capsule ('NAUT') + zlib (requires sata_hdd_autoboot=true, default false)."
                     }
                 }
             }

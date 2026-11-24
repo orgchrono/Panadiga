@@ -916,22 +916,6 @@ fn universal_patch_hdd_autoboot_and_main_build_specs_enforce_bounds_ipl_and_geom
     }];
     assert!(validate_bundle(&good).valid);
 
-    let legacy_json = serde_json::to_string(&good).unwrap().replacen(
-        "\"hdd_autoboot_spec\"",
-        "\"stage2_boot_spec\"",
-        1,
-    );
-    let legacy_trn: FirmwareTrainProfile = serde_json::from_value(
-        serde_json::from_str::<serde_json::Value>(&legacy_json).unwrap()["firmware_trains"]
-            ["loader_ver061_toc48_main57"]
-            .clone(),
-    )
-    .expect("legacy stage2_boot_spec serde alias must deserialize");
-    assert_eq!(
-        legacy_trn.hdd_autoboot_spec,
-        good.firmware_trains["loader_ver061_toc48_main57"].hdd_autoboot_spec
-    );
-
     let mut bad = good;
     let bad_trn = bad
         .firmware_trains

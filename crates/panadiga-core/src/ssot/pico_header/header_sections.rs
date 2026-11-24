@@ -23,7 +23,8 @@ pub(super) fn compute_fnv1a_u32(bytes: &[u8]) -> u32 {
 }
 
 pub(super) fn write_padded_define(out: &mut String, width: usize, name: &str, value: &str) {
-    let _ = writeln!(out, "#define {name:<width$}{value}");
+    let pad = width.saturating_sub(name.len()).max(1);
+    let _ = writeln!(out, "#define {name}{}{value}", " ".repeat(pad));
 }
 
 pub(super) fn append_c11_struct_decls(out: &mut String, eeprom_count: usize) {

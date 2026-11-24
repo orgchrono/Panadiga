@@ -287,7 +287,7 @@ pub(super) fn handle_panamon1_rsp_bytes_io<T: Read + Write + ?Sized>(
     } else if cmd.starts_with('H') || cmd == "k" {
         "OK".to_string()
     } else if cmd == "g" {
-        // Return 28x32-bit zeroed MN103S snapshot (pc=0x50400000 stage-1.5 entry) cleanly
+        // Return 28x32-bit zeroed MN103S snapshot (pc=0x50400000 DIAG_PROG_RAM entry) cleanly
         let mut regs = "0".repeat(224);
         regs.replace_range(80..88, "00004050");
         regs

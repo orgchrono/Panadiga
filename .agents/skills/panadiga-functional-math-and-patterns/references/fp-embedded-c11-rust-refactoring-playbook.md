@@ -213,7 +213,7 @@ pub fn valid_toc_entries(toc: &[u8], stride: usize) -> impl Iterator<Item = &[u8
 ```
 
 ### B. Receita para Simplificar God-Modules Procedurais (`>450 LOC` em `crates/panadiga-core/src/re/`)
-Quando um arquivo como `main_bgo_retarget.rs` ou `sata_bridge_stage2.rs` mistura dados, busca, patching e verificação:
+Quando um arquivo como `main_bgo_retarget.rs` ou `sata_hdd_autoboot` mistura dados, busca, patching e verificação:
 1. **`spec.rs` (Dados Constantes):** `const` tabelas de assinaturas, offsets esperados e máscaras.
 2. **`plan.rs` (Núcleo Puro):** `fn build_plan(image: &[u8], spec: &Spec) -> Result<Vec<PatchOp>>` — **somente leitura** sobre `&[u8]`, calculando todos os sítios e relocações sem mutar nenhum byte.
 3. **`apply.rs` (Transformação CoW Determinística):** `fn apply_plan(image: &[u8], ops: &[PatchOp]) -> Result<Vec<u8>>` — aplica sobre cópia e valida pré-imagens antes de trocar bytes.

@@ -27,7 +27,7 @@ pub struct VerifySdArgs {
 /// Plans a clean-room Diskless / Standalone TBC execution sequence (`DIGADIAG` or gated RAM chainload).
 #[derive(Args, Debug)]
 pub struct TbcPlanArgs {
-    /// Execution mode: digadiag_ram_tbc (default, legacy alias stage15_digadiag_tbc) or experimental_sd_ram_chainload
+    /// Execution mode: digadiag_ram_tbc (default) or experimental_sd_ram_chainload
     #[arg(long, default_value = "digadiag_ram_tbc", value_name = "MODE")]
     pub mode: String,
 

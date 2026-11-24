@@ -21,7 +21,7 @@ use super::super::main_bgo_retarget::{
     MAIN_BGO_STATE_8MB, MAIN_BGO_STATE_FACTORY_4MB, MAIN_BGO_STATE_MISMATCH,
 };
 use super::super::sata_bridge_fix::{SATA_BRIDGE_STATE_MISMATCH, SATA_BRIDGE_STATE_WAIT_1000MS};
-use super::super::sata_bridge_stage2::{
+use super::super::sata_hdd_autoboot::{
     PROG061_HDD_AUTOBOOT_STATE_ENABLED, PROG061_HDD_AUTOBOOT_STATE_MISMATCH,
 };
 use super::compose::SdLoaderProfile;
@@ -63,11 +63,7 @@ pub struct SdMediaVerificationReport {
     pub pana_sd_main_hdd_capacity_label: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pana_sd_prog061_sata_bridge_fix: Option<String>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "pana_sd_prog061_stage2_boot"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pana_sd_prog061_hdd_autoboot: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pana_sd_main_sata_bridge_fix: Option<String>,
@@ -504,7 +500,7 @@ pub fn verify_sd_buffers_with_profile(
                 "MAIN EXTRHEAD Staging Base (+0x1C) Is Null/Non-Standard"
             },
             format!(
-                "PANA__SD.FRM MAIN EXTRHEAD+0x1C src_addr={src_addr:#010X} (expected {PANA_EXTRHEAD_MAIN_SRC_ADDR:#010X} for direct Loader/Stage-2 HDD boot)."
+                "PANA__SD.FRM MAIN EXTRHEAD+0x1C src_addr={src_addr:#010X} (expected {PANA_EXTRHEAD_MAIN_SRC_ADDR:#010X} for direct Loader/SATA HDD autoboot)."
             ),
         ));
     }

@@ -113,7 +113,7 @@ impl PicoResultFrame {
 pub struct PicoBootClassFrame {
     pub verdict: String,
     pub build: String,
-    #[serde(default, alias = "stage2")]
+    #[serde(default)]
     pub hdd_autoboot: bool,
     pub avout_ok: bool,
     pub vmute0: bool,
@@ -348,7 +348,7 @@ pub fn parse_boot_class_line(input: &str) -> Option<PicoBootClassFrame> {
             .get("build")
             .cloned()
             .unwrap_or_else(|| "UNKNOWN".to_string()),
-        hdd_autoboot: parse_u32_auto(kv.get("hdd_autoboot").or_else(|| kv.get("stage2"))) != 0,
+        hdd_autoboot: parse_u32_auto(kv.get("hdd_autoboot")) != 0,
         avout_ok: parse_u32_auto(kv.get("avout_ok")) != 0,
         vmute0: parse_u32_auto(kv.get("vmute0")) != 0,
         ntsc: parse_u32_auto(kv.get("ntsc")) != 0,
@@ -542,8 +542,6 @@ mod tests {
         assert_eq!(bc.verdict, "FPC_IC7501_MISMATCH");
         assert_eq!(bc.build, "3410PQ");
         assert!(bc.hdd_autoboot && !bc.avout_ok && bc.ntsc);
-        let legacy_bc = parse_boot_class_line("@P7501_BOOT_CLASS verdict=CLEAN_MAIN_OK build=3060NP stage2=1 avout_ok=1 vmute0=1 ntsc=1 rsv_ok=1 hdd_fail=0 bgo_err=0 fpc_err=0 fpc_to=0 iic_err=0 odd_err=0 op7f_cnt=0 op7f=NONE").expect("legacy boot class");
-        assert!(legacy_bc.hdd_autoboot);
         assert_eq!(bc.fpc_err, 29);
         assert_eq!(bc.op7f, vec!["A9", "F9"]);
         assert!(matches!(

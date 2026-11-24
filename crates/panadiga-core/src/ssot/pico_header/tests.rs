@@ -34,6 +34,9 @@ fn generated_pico_ssot_files_match_checked_in_c_files() {
     assert!(header.contains("P7501_SSOT_SDRAM_STUB_RAW_ADDR     0x51800000UL"));
     assert!(header.contains("0x00130000UL"));
     assert!(header.contains("45u"));
+    assert!(header.contains("P7501_SSOT_NOR_AUTOBOOT_HDR_BYTES  256u"));
+    assert!(header.contains("P7501_SSOT_NOR_AUTOBOOT_MAGIC_OFF  0xFCu"));
+    assert!(header.contains("P7501_SSOT_NOR_AUTOBOOT_MAGIC_LE   0x5455414EUL"));
     assert!(header.contains("P7501_SSOT_VDD_NOMINAL_MV          3300u"));
     assert!(tables.contains("k_p7501_ssot_flash_chips"));
     assert!(tables.contains("k_p7501_ssot_target_profiles"));
