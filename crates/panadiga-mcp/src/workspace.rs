@@ -16,6 +16,19 @@ pub fn resolve_workspace_path(root: &Path, raw: &str) -> Result<PathBuf> {
     if trimmed.is_empty() {
         bail!("Path containment violation: empty path is forbidden");
     }
+    if trimmed.starts_with('\\') {
+        bail!("Path containment violation: rooted backslash or UNC path '{trimmed}' is forbidden");
+    }
+    if trimmed.split(['/', '\\']).any(|segment| segment == "..") {
+        bail!("Path containment violation: '..' traversal is forbidden in '{trimmed}'");
+    }
+    #[cfg(not(windows))]
+    if trimmed.len() >= 2
+        && trimmed.as_bytes()[0].is_ascii_alphabetic()
+        && trimmed.as_bytes()[1] == b':'
+    {
+        bail!("Path containment violation: Windows drive-prefixed path '{trimmed}' is forbidden");
+    }
 
     let candidate = Path::new(trimmed);
     if candidate

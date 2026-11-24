@@ -19,7 +19,7 @@
     "check": "run-p -l lint uxlint jscpd test",
     "check:all": "run-p -l lint uxlint jscpd test test:e2e",
     "preview": "vite preview",
-    "tauri": "npx @tauri-apps/cli"
+    "tauri": "npx --yes @tauri-apps/cli@2.12.6"
   },
   "dependencies": {
     "@opentelemetry/api": "^1.10.0",

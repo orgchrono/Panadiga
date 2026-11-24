@@ -30,7 +30,11 @@ fn discover_unix_ghidra_run() -> std::path::PathBuf {
         .unwrap_or_else(|| std::path::PathBuf::from("ghidraRun"))
 }
 
-#[cfg(any(target_os = "linux", target_os = "macos"))]
+#[cfg(all(
+    not(target_os = "windows"),
+    not(target_os = "macos"),
+    not(target_os = "android")
+))]
 pub(super) fn build_gdb_exec_args(socket: &str) -> [String; 5] {
     [
         "gdb-multiarch".to_string(),

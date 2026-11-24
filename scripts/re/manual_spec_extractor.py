@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import importlib
 import re
 from pathlib import Path
-from typing import Final
+from typing import Any, Final
 
 from scripts.panadiga_cli_bridge import JsonDict, JsonValue
 from scripts.panadiga_ops import ROOT
@@ -52,15 +53,18 @@ def extract_specs_with_citations(pages: list[tuple[int, str]]) -> dict[str, dict
 
 def extract_pdf_pages(pdf_path: Path, max_pages: int = 120) -> list[tuple[int, str]]:
     """Read up to `max_pages` searchable PDF pages via PyMuPDF returning 1-based `(page, text)` pairs."""
-    import pymupdf
+    try:
+        pymupdf: Any = importlib.import_module("pymupdf")
+    except ImportError:
+        return []
 
     if hasattr(pymupdf, "TOOLS"):
-        pymupdf.TOOLS.mupdf_display_errors(False)  # type: ignore[no-untyped-call]
-        pymupdf.TOOLS.mupdf_display_warnings(False)  # type: ignore[no-untyped-call]
+        pymupdf.TOOLS.mupdf_display_errors(False)
+        pymupdf.TOOLS.mupdf_display_warnings(False)
 
     pages: list[tuple[int, str]] = []
     try:
-        with pymupdf.open(pdf_path) as doc:  # type: ignore[no-untyped-call]
+        with pymupdf.open(pdf_path) as doc:
             limit = min(len(doc), max_pages)
             for idx in range(limit):
                 try:

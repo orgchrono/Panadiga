@@ -76,6 +76,8 @@ fn test_workspace_root_jail_blocks_traversal_external_and_symlink_escapes() {
     assert!(resolve_workspace_path(&ws, "../../Cargo.toml").is_err());
     assert!(resolve_workspace_path(&ws, &secret.to_string_lossy()).is_err());
     assert!(resolve_workspace_path(&ws, "\\Windows\\System32\\drivers\\etc\\hosts").is_err());
+    assert!(resolve_workspace_path(&ws, "..\\outside\\secret.bin").is_err());
+    assert!(resolve_workspace_path(&ws, "\\\\server\\share\\hosts").is_err());
 
     let inside = resolve_workspace_path(&ws, "subdir/cow_output.bin").unwrap();
     assert!(inside.ends_with(Path::new("subdir").join("cow_output.bin")));

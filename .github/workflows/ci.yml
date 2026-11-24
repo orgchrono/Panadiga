@@ -2,9 +2,9 @@ name: Panadiga CI & Cross-Platform Suite
 
 on:
   push:
-    branches: ["main", "master", "**"]
+    branches: ["main", "master"]
   pull_request:
-    branches: ["main", "master", "**"]
+    branches: ["main", "master"]
   workflow_dispatch:
 
 permissions:
@@ -393,12 +393,19 @@ jobs:
           cargo clippy -p panadiga-core -p panadiga-desktop --lib --target aarch64-linux-android --no-deps -- -D warnings
 
       - name: Initialize, Build & Sign Verified Android APK
+        env:
+          GRADLE_OPTS: "-Dorg.gradle.parallel=false -Dorg.gradle.workers.max=1"
+          npm_config_yes: "true"
         run: |
           export ANDROID_NDK_ROOT=$NDK_HOME
           touch apps/desktop/dist-android/index.html
           cd apps/desktop
+          npx --yes @tauri-apps/cli@2.12.6 --version
           if [ ! -d "src-tauri/gen/android" ]; then
             npx --yes @tauri-apps/cli@2.12.6 android init --ci --skip-targets-install
+          fi
+          if [ -f "src-tauri/gen/android/gradle.properties" ] && ! grep -qxF "org.gradle.parallel=false" "src-tauri/gen/android/gradle.properties"; then
+            printf '\norg.gradle.parallel=false\n' >> "src-tauri/gen/android/gradle.properties"
           fi
           npx --yes @tauri-apps/cli@2.12.6 android build --apk --ci --config src-tauri/tauri.android.conf.json --target aarch64 armv7
           cd ../..
@@ -443,7 +450,22 @@ jobs:
       - name: Install Prebuilt Supply-Chain Scanners
         uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2
         with:
-          tool: cargo-deny,cargo-audit,gitleaks
+          tool: cargo-deny,cargo-audit
+
+      - name: Install Pinned Gitleaks Binary (SHA-256 Verified)
+        env:
+          GITLEAKS_VERSION: "8.30.1"
+          GITLEAKS_SHA256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
+        run: |
+          set -euo pipefail
+          ARCHIVE="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          URL="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${ARCHIVE}"
+          curl --proto '=https' --tlsv1.2 -fsSL "$URL" -o "${RUNNER_TEMP}/${ARCHIVE}"
+          echo "${GITLEAKS_SHA256}  ${RUNNER_TEMP}/${ARCHIVE}" | sha256sum -c -
+          mkdir -p "${RUNNER_TEMP}/gitleaks-bin"
+          tar -xzf "${RUNNER_TEMP}/${ARCHIVE}" -C "${RUNNER_TEMP}/gitleaks-bin" gitleaks
+          chmod +x "${RUNNER_TEMP}/gitleaks-bin/gitleaks"
+          echo "${RUNNER_TEMP}/gitleaks-bin" >> "$GITHUB_PATH"
 
       - name: Verify Dependencies & Licenses (cargo-deny)
         run: cargo deny check
