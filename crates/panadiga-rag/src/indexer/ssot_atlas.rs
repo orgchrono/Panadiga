@@ -96,9 +96,9 @@ fn push_train_patch_chunks(
             1,
         ));
     }
-    if let Some(s2) = &train.stage2_boot_spec {
+    if let Some(s2) = &train.hdd_autoboot_spec {
         let text = format!(
-            "[SSOT Train] {} stage2_boot_spec hook=0x{:08X} payload=0x{:08X} norfrom=0x{:08X} memcpy=0x{:08X} hdd_read=0x{:08X} extrhead_uncomp=0x{:08X}",
+            "[SSOT Train] {} hdd_autoboot_spec hook=0x{:08X} payload=0x{:08X} norfrom=0x{:08X} memcpy=0x{:08X} hdd_read=0x{:08X} extrhead_uncomp=0x{:08X}",
             train_id,
             s2.base_va.wrapping_add(s2.hook_offset),
             s2.base_va.wrapping_add(s2.payload_offset),
@@ -109,10 +109,10 @@ fn push_train_patch_chunks(
         );
         out.push(make_ssot_chunk(
             guard,
-            format!("ssot_train::{train_id}::stage2"),
+            format!("ssot_train::{train_id}::hdd_autoboot"),
             "SSOT Firmware Train Specs",
             path_str,
-            format!("{train_id} Stage-2 Boot Spec"),
+            format!("{train_id} SATA HDD Autoboot Spec"),
             text,
             2,
         ));

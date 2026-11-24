@@ -231,7 +231,7 @@ fn region_calibration_sd_harden_and_tbc_lab_commands_enforce_cow_and_tokens() {
         input_main_path: None,
         output_main_path: None,
         passthrough_mode: None,
-        appliance_mode: Some("stage15_digadiag_tbc".into()),
+        appliance_mode: Some("digadiag_ram_tbc".into()),
         tv_standard: Some("pal-m".into()),
         experimental_ram_chainload: Some(false),
         confirm_token: "APPLY_MAIN_TBC_COW".into(),

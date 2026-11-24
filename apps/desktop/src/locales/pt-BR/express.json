@@ -128,7 +128,7 @@
       "step2Title": "Passo 2 — Escolha o Cartão SD Alvo ou .img",
       "step3Title": "Passo 3 — Gravar / Gerar & Seguir Display do Gravador",
       "modelLabel": "Modelo Panasonic DIGA",
-      "includePanaSdLabel": "Incluir também PANA__SD.FRM (Estágio 2 Completo)",
+      "includePanaSdLabel": "Incluir também PANA__SD.FRM (Updater PROG/MAIN Completo)",
       "targetModeImg": "Arquivo .img Verificado Offline (Padrão Seguro)",
       "targetModePhysical": "Cartão SD Físico (StorageMediaRole::SdCard)",
       "refreshTargetsBtn": "Buscar Leitores SD",

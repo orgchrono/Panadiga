@@ -78,9 +78,9 @@ pub(super) fn handle_prepare_sd(sd: PrepareSdArgs) -> Result<()> {
         }
         hardened.allow_target_mismatch = sd.allow_target_mismatch;
         hardened.sata_bridge_reset_fix = sd.sata_bridge_reset_fix;
-        hardened.sata_bridge_stage2_boot = sd.sata_bridge_stage2_boot;
+        hardened.sata_hdd_autoboot = sd.sata_hdd_autoboot;
         hardened.main_bgo_retarget = sd.main_bgo_retarget;
-        hardened.portao4_self_unpack = sd.portao4_self_unpack;
+        hardened.nor_autoboot_capsule = sd.nor_autoboot_capsule;
         hardened
     } else {
         let bgo_mode: Prog061BgoPatchMode = sd.bgo_mode.parse()?;
@@ -101,9 +101,9 @@ pub(super) fn handle_prepare_sd(sd: PrepareSdArgs) -> Result<()> {
             expected_main_build: sd.expected_main_build,
             allow_target_mismatch: sd.allow_target_mismatch,
             sata_bridge_reset_fix: sd.sata_bridge_reset_fix,
-            sata_bridge_stage2_boot: sd.sata_bridge_stage2_boot,
+            sata_hdd_autoboot: sd.sata_hdd_autoboot,
             main_bgo_retarget: sd.main_bgo_retarget,
-            portao4_self_unpack: sd.portao4_self_unpack,
+            nor_autoboot_capsule: sd.nor_autoboot_capsule,
         }
     };
 

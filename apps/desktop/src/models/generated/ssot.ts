@@ -1213,7 +1213,7 @@ export interface SsotAm34BusConstants {
   readonly nvramCachedBaseHex: string;
   readonly nvramUncachedBaseAddr: number;
   readonly nvramUncachedBaseHex: string;
-  readonly digadiagStage15LoadAddrHex: string;
+  readonly digadiagLoadAddrHex: string;
   readonly sdramStubRawAddrHex: string;
   readonly lethalMmioRegAddr: number;
   readonly lethalMmioRegHex: string;
@@ -1230,7 +1230,7 @@ export const SSOT_AM34_BUS_CONSTANTS: SsotAm34BusConstants = {
   nvramCachedBaseHex: '0x807F0000',
   nvramUncachedBaseAddr: 0x847f0000,
   nvramUncachedBaseHex: '0x847F0000',
-  digadiagStage15LoadAddrHex: '0x50400000',
+  digadiagLoadAddrHex: '0x50400000',
   sdramStubRawAddrHex: '0x51800000',
   lethalMmioRegAddr: 0xc000100c,
   lethalMmioRegHex: '0xC000100C',

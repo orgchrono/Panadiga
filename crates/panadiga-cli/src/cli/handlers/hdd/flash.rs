@@ -1,6 +1,6 @@
 #![deny(unsafe_code)]
 
-//! Handlers for MEIHDFS Stage-2 FRM partition injection and verified EH55 disk flashing.
+//! Handlers for MEIHDFS MAIN/DRV FRM partition injection and verified EH55 disk flashing.
 
 use std::io::{Seek, SeekFrom, Write};
 use std::path::Path;
@@ -26,7 +26,7 @@ use super::super::json_io::emit_json_output;
 use crate::cli::args::hdd::FlashEh55Args;
 
 #[derive(Debug, Clone)]
-pub(crate) struct Stage2Partitions {
+pub(crate) struct FrmMainPartitions {
     pub p1_name: String,
     pub p1_aligned: Vec<u8>,
     pub p1_sha256: String,
@@ -69,7 +69,7 @@ fn align_to_sector(mut payload: Vec<u8>) -> Vec<u8> {
     payload
 }
 
-pub(crate) fn extract_frm_stage2_modules(frm_bytes: &[u8]) -> Result<Stage2Partitions> {
+pub(crate) fn extract_frm_main_modules(frm_bytes: &[u8]) -> Result<FrmMainPartitions> {
     let named: Vec<(String, Vec<u8>)> = match unpack_dvd_frm_to_modules(frm_bytes) {
         Ok(mods) => mods.into_iter().map(|m| (m.name, m.payload)).collect(),
         Err(_) => {
@@ -114,7 +114,7 @@ pub(crate) fn extract_frm_stage2_modules(frm_bytes: &[u8]) -> Result<Stage2Parti
             (n.clone(), aligned, sha)
         });
 
-    Ok(Stage2Partitions {
+    Ok(FrmMainPartitions {
         p1_name,
         p1_aligned,
         p1_sha256,
@@ -135,9 +135,9 @@ pub fn run_format_meihdfs(
     verify_safety_lockout(target, confirm)?;
     let total_sectors = size_gb * 1_000_000_000 / 512;
     let layout = generate_meihdfs_layout(total_sectors, None)?;
-    let stage2 = if let Some(frm_path) = inject_frm {
+    let main_parts = if let Some(frm_path) = inject_frm {
         let frm_buf = open_image_buffer(frm_path)?;
-        Some(extract_frm_stage2_modules(&frm_buf)?)
+        Some(extract_frm_main_modules(&frm_buf)?)
     } else {
         None
     };
@@ -147,11 +147,11 @@ pub fn run_format_meihdfs(
     } else {
         let rep = write_meihdfs_procedural_to_drive(target, &layout, confirm)?;
         log_println!("[OK] {}", rep.message);
-        if let Some(ref s2) = stage2 {
+        if let Some(ref mp) = main_parts {
             let mut dev = open_verified_block_device(target, confirm)?;
             dev.seek(SeekFrom::Start(LBA_PARTITION_1_OFFSET))?;
-            dev.write_all(&s2.p1_aligned)?;
-            if let Some(ref p2) = s2.p2_aligned {
+            dev.write_all(&mp.p1_aligned)?;
+            if let Some(ref p2) = mp.p2_aligned {
                 dev.seek(SeekFrom::Start(LBA_PARTITION_2_OFFSET))?;
                 dev.write_all(p2)?;
             }
@@ -166,15 +166,15 @@ pub fn run_format_meihdfs(
         total_sectors,
         dry_run,
         mbr_bytes_written: mbr_written,
-        p1_module: stage2.as_ref().map(|s| s.p1_name.clone()),
-        p1_bytes_written: stage2.as_ref().map_or(0, |s| s.p1_aligned.len()),
-        p1_sha256: stage2.as_ref().map(|s| s.p1_sha256.clone()),
-        p2_module: stage2.as_ref().and_then(|s| s.p2_name.clone()),
-        p2_bytes_written: stage2
+        p1_module: main_parts.as_ref().map(|s| s.p1_name.clone()),
+        p1_bytes_written: main_parts.as_ref().map_or(0, |s| s.p1_aligned.len()),
+        p1_sha256: main_parts.as_ref().map(|s| s.p1_sha256.clone()),
+        p2_module: main_parts.as_ref().and_then(|s| s.p2_name.clone()),
+        p2_bytes_written: main_parts
             .as_ref()
             .and_then(|s| s.p2_aligned.as_ref())
             .map_or(0, Vec::len),
-        p2_sha256: stage2.as_ref().and_then(|s| s.p2_sha256.clone()),
+        p2_sha256: main_parts.as_ref().and_then(|s| s.p2_sha256.clone()),
         message: if dry_run {
             format!("Dry-run validated MEIHDFS layout for {target} ({size_gb} GB)")
         } else {

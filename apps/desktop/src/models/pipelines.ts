@@ -177,7 +177,7 @@ export interface ApplyRegionCalibrationResponse {
   readonly bundleAudit: TvCalibrationBundleReport;
 }
 
-export type TbcApplianceMode = 'stage15_digadiag_tbc' | 'experimental_sd_ram_chainload';
+export type TbcApplianceMode = 'digadiag_ram_tbc' | 'experimental_sd_ram_chainload';
 
 export interface VerifiedMainPassthroughSiteRef {
   readonly name: string;

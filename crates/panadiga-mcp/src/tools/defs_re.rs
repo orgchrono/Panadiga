@@ -255,13 +255,17 @@ pub(super) fn re_tool_definitions() -> Vec<Value> {
                         "type": "boolean",
                         "description": "Opt-in 2 ms -> 1000 ms post-RESET- wait fix in PANA__SD.FRM PROG061 and MAIN3060NP for slow SATA-PATA bridges (default false)."
                     },
-                    "sata_bridge_stage2_boot": {
+                    "sata_hdd_autoboot": {
                         "type": "boolean",
-                        "description": "Opt-in Stage-2 SATA HDD boot hook in PANA__SD.FRM PROG061 (requires sata_bridge_reset_fix=true, main_bgo_retarget=true, and loader_profile='ver061', default false)."
+                        "description": "Opt-in pre-FVU SATA HDD autoboot hook in PANA__SD.FRM PROG061 (requires sata_bridge_reset_fix=true, main_bgo_retarget=true, and loader_profile='ver061', default false; legacy alias: sata_bridge_stage2_boot)."
                     },
                     "main_bgo_retarget": {
                         "type": "boolean",
-                        "description": "Retarget MAIN3060NP BGO/NFROM tables from 4 MiB Top-Boot (0x84200000) to 8 MiB Uniform EH55 NOR (0x84130000, 45 sectors; required when sata_bridge_stage2_boot=true on ver061, default false)."
+                        "description": "Retarget MAIN3060NP BGO/NFROM tables from 4 MiB Top-Boot (0x84200000) to 8 MiB Uniform EH55 NOR (0x84130000, 45 sectors; required when sata_hdd_autoboot=true on ver061, default false)."
+                    },
+                    "nor_autoboot_capsule": {
+                        "type": "boolean",
+                        "description": "Wrap PANA__SD.FRM PROG061 in 256 B SDRAM self-unpacking NOR autoboot capsule ('P4ZU') + zlib (requires sata_hdd_autoboot=true, default false; legacy alias: portao4_self_unpack)."
                     }
                 }
             }

@@ -266,7 +266,7 @@ fn parses_wire_protocol_ident_prog_evt_and_res_authoritatively() {
     let boot_cls = parse_diagnostic_output(
         "BOOTTRACE",
         "BOOTTRACE 90000 NORMAL",
-        "@P7501_BOOT_CLASS verdict=CLEAN_MAIN_OK build=3060NP stage2=1 avout_ok=1 vmute0=1 ntsc=1 rsv_ok=1 hdd_fail=0 bgo_err=0 fpc_err=0 fpc_to=0 iic_err=0 odd_err=0 op7f_cnt=0 op7f=NONE\n@P7501_TBUS_AUDIT frames=5 br_rejected=1 nak7f=1 ops=A9\nBOOTTRACE: OK\n@P7501_RES cmd=BOOTTRACE status=OK code=0 elapsed_us=90000",
+        "@P7501_BOOT_CLASS verdict=CLEAN_MAIN_OK build=3060NP hdd_autoboot=1 avout_ok=1 vmute0=1 ntsc=1 rsv_ok=1 hdd_fail=0 bgo_err=0 fpc_err=0 fpc_to=0 iic_err=0 odd_err=0 op7f_cnt=0 op7f=NONE\n@P7501_TBUS_AUDIT frames=5 br_rejected=1 nak7f=1 ops=A9\nBOOTTRACE: OK\n@P7501_RES cmd=BOOTTRACE status=OK code=0 elapsed_us=90000",
         90_000,
     );
     assert!(boot_cls.success);

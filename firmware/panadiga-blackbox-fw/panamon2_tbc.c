@@ -1,10 +1,10 @@
 /**
  * Open-Source Hardware-Interoperability Prototype (Matsushita AM34 / MN103S)
  * EXPERIMENTAL FEASIBILITY SPIKE -- NOT LEGALLY CLEAN-ROOM.
- * Target: Stage-1.5 SDRAM (0x50400000) via DIGADIAG.FRM / P7501 UART0 (115200 8N1).
+ * Target: DIAG_PROG_RAM SDRAM (0x50400000) via DIGADIAG.FRM / P7501 UART0 (115200 8N1).
  *
  * Silicon safety notes (enforced by static guards + bench discipline):
- * 1. AM34 Stage-1.5 has no hardware MPU: always access MMIO/Flash via am34_safe_* wrappers.
+ * 1. AM34 DIAG_PROG_RAM has no hardware MPU: always access MMIO/Flash via am34_safe_* wrappers.
  * 2. Before any future Spansion S29JL064H NOR erase/program command, callers MUST mask
  *    maskable IRQs (CLI) and remap exception/IRQ vectors to SDRAM (never fetch from NOR
  *    while Flash is outside Read Array mode).

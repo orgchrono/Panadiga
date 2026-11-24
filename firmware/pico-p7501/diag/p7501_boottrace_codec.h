@@ -47,7 +47,7 @@ typedef struct p7501_boot_classifier {
     uint8_t op7f_bitmap[32];
     uint8_t main_build;
     bool main_entered;
-    bool stage2_seen;
+    bool hdd_autoboot_seen;
     bool avout_init_ok;
     bool avout_vmute_off;
     bool tv_ntsc_seen;

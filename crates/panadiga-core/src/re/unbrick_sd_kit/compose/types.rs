@@ -75,9 +75,9 @@ pub struct SdUnbrickKitRequest {
     pub expected_main_build: Option<String>,
     pub allow_target_mismatch: bool,
     pub sata_bridge_reset_fix: bool,
-    pub sata_bridge_stage2_boot: bool,
+    pub sata_hdd_autoboot: bool,
     pub main_bgo_retarget: bool,
-    pub portao4_self_unpack: bool,
+    pub nor_autoboot_capsule: bool,
 }
 
 /// High-level SD recovery kit preset distinguishing standard builds from the hardened `PANAMON1` `ver0.61` kit.
@@ -134,9 +134,9 @@ impl SdUnbrickKitRequest {
             expected_main_build: None,
             allow_target_mismatch: false,
             sata_bridge_reset_fix: false,
-            sata_bridge_stage2_boot: false,
+            sata_hdd_autoboot: false,
             main_bgo_retarget: false,
-            portao4_self_unpack: false,
+            nor_autoboot_capsule: false,
         }
     }
 }
@@ -165,11 +165,11 @@ pub struct SdUnbrickKitReport {
     #[serde(default)]
     pub sata_bridge_reset_fix_applied: bool,
     #[serde(default)]
-    pub sata_bridge_stage2_boot_applied: bool,
+    pub sata_hdd_autoboot_applied: bool,
     #[serde(default)]
     pub main_bgo_retarget_applied: bool,
     #[serde(default)]
-    pub portao4_self_unpack_applied: bool,
+    pub nor_autoboot_capsule_applied: bool,
     pub digadiag_path: String,
     pub digadiag_sha256: String,
     pub pana_sd_path: Option<String>,

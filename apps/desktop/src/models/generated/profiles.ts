@@ -275,7 +275,7 @@ export interface SataBridgeResetSpec {
   readonly site: BinaryPatchSiteSpec;
 }
 
-export interface Stage2BootSymbolsSpec {
+export interface HddAutobootSymbolsSpec {
   readonly dcache_purge_va: string;
   readonly uart0_getc_nb_va: string;
   readonly uart0_printf_va: string;
@@ -299,7 +299,7 @@ export interface Stage2BootSymbolsSpec {
   readonly sleep_10ms_va: string;
 }
 
-export interface Stage2BootSpec {
+export interface HddAutobootSpec {
   readonly base_va: string;
   readonly expected_size: number;
   readonly hook_offset: string;
@@ -320,7 +320,7 @@ export interface Stage2BootSpec {
   readonly hdd_dma_buf_va: string;
   readonly fvu_load_uncached_va: string;
   readonly norfrom_fvu_base_va: string;
-  readonly symbols: Stage2BootSymbolsSpec;
+  readonly symbols: HddAutobootSymbolsSpec;
 }
 
 export interface MainBgoRetargetAnchors {
@@ -376,7 +376,7 @@ export interface FirmwareTrainProfile {
   readonly pana_rebuild_recipe?: PanaRebuildRecipe | null;
   readonly bgo_retarget_spec?: ProgBgoRetargetSpec | null;
   readonly prog_sata_bridge_reset_spec?: SataBridgeResetSpec | null;
-  readonly stage2_boot_spec?: Stage2BootSpec | null;
+  readonly hdd_autoboot_spec?: HddAutobootSpec | null;
   readonly main_builds?: readonly MainBuildSpec[];
   readonly evidence: ClaimEvidence;
 }

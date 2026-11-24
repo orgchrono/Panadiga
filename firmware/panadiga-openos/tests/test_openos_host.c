@@ -384,7 +384,7 @@ int main(void) {
     assert(openos_shell_exec_line("provision"));
     assert(strstr(g_mock.uart_log, "[OPENOS] PROVISION PLAN OK") != NULL);
 
-    /* 9. Verify SC0 read8 barrier, SDCD 4-bit/1-bit probe, read-only BGO/Portao4/EEMUL & interactive RX shell */
+    /* 9. Verify SC0 read8 barrier, SDCD 4-bit/1-bit probe, read-only BGO/NorAutoboot/EEMUL & interactive RX shell */
     uint8_t b8 = 0u;
     assert(!am34_mmio_read8(0xC000100CUL, &b8));
     assert(!g_mock.forbidden_touched);
@@ -411,7 +411,7 @@ int main(void) {
     g_mock.sdcd_cfg4 = 0x000000B8UL;
 
     assert(openos_shell_exec_line("bgo"));
-    assert(strstr(g_mock.uart_log, "[OPENOS] BGO p1_sa=29 p2=40 erased=4 sa11=FF eemul1284=1 portao4=READY") != NULL);
+    assert(strstr(g_mock.uart_log, "[OPENOS] BGO p1_sa=29 p2=40 erased=4 sa11=FF eemul1284=1 nor_autoboot=READY") != NULL);
     assert(openos_shell_exec_line("ssot"));
     assert(strstr(g_mock.uart_log, "[OPENOS] SSOT=" OPENOS_SSOT_CONTRACT_HASH_STR " IPL_RO=E05") != NULL);
 

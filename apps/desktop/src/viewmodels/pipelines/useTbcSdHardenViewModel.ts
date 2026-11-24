@@ -47,7 +47,7 @@ export function evaluateSd91006Gate(report: SdDiskInspectionReport | null): {
 
 export function useTbcSdHardenViewModel() {
   const { showToast } = useToast();
-  const [applianceMode, setApplianceMode] = useState<TbcApplianceMode>('stage15_digadiag_tbc');
+  const [applianceMode, setApplianceMode] = useState<TbcApplianceMode>('digadiag_ram_tbc');
   const [experimentalRamAck, setExperimentalRamAck] = useState(false);
   const [tvStandard, setTvStandard] = useState<TvStandardSlug>('ntsc');
   const [passthroughMode, setPassthroughMode] = useState<MainPassthroughMode>('av_passthrough');
@@ -68,7 +68,7 @@ export function useTbcSdHardenViewModel() {
   const { checkedPreflightIds, togglePreflight } = usePreflightSelection();
 
   const applyStandaloneTbcPreset = useCallback(() => {
-    setApplianceMode('stage15_digadiag_tbc');
+    setApplianceMode('digadiag_ram_tbc');
     setPassthroughMode('av_passthrough');
     setEnabledBypasses(ALL_BYPASS_IDS);
   }, []);

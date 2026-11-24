@@ -22,8 +22,8 @@
 #define OPENOS_SSOT_EEMUL_BASE                 0x847F0000UL
 #define OPENOS_SSOT_EEMUL_SIZE                 0x00010000UL
 #define OPENOS_SSOT_EEMUL_TAG_1284_LE          0x34383231UL
-#define OPENOS_SSOT_STAGE15_BASE               0x50400000UL
-#define OPENOS_SSOT_STAGE2_BASE                0x57000000UL
+#define OPENOS_SSOT_PROG_RAM_BASE              0x50400000UL
+#define OPENOS_SSOT_MAIN_RAM_BASE              0x57000000UL
 #define OPENOS_SSOT_SC0_CTR                    0xD4002000UL
 #define OPENOS_SSOT_SC0_TXB                    0xD4002008UL
 #define OPENOS_SSOT_SC0_RXB                    0xD4002009UL

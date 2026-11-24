@@ -260,34 +260,34 @@ fn sata_bridge_reset_fix_audit_enforces_symmetry_and_catches_corruption() {
 }
 
 #[test]
-fn stage2_boot_audit_enforces_reset_fix_pairing_and_catches_corruption() {
-    use crate::constants::CHK_ID_SATA_BRIDGE_STAGE2_BOOT;
+fn hdd_autoboot_audit_enforces_reset_fix_pairing_and_catches_corruption() {
+    use crate::constants::CHK_ID_SATA_HDD_AUTOBOOT;
     use crate::re::bgo_unbrick::{Prog061BgoPatchMode, patch_prog061_bgo_in_place};
     use crate::re::sata_bridge_fix::{
         SATA_BRIDGE_STATE_FACTORY_2MS, SATA_BRIDGE_STATE_WAIT_1000MS, SataBridgeResetFixMode,
         apply_prog061_sata_bridge_reset_fix_in_place,
     };
     use crate::re::sata_bridge_stage2::{
-        OFF_PROG061_STAGE2_HOOK_SITE, PROG061_STAGE2_STATE_ENABLED, PROG061_STAGE2_STATE_MISMATCH,
-        apply_prog061_stage2_boot_in_place,
+        OFF_PROG061_HDD_AUTOBOOT_HOOK_SITE, PROG061_HDD_AUTOBOOT_STATE_ENABLED,
+        PROG061_HDD_AUTOBOOT_STATE_MISMATCH, apply_prog061_hdd_autoboot_in_place,
     };
 
     let mut checks = Vec::new();
-    push_stage2_boot_check(
+    push_hdd_autoboot_check(
         &mut checks,
-        Some(PROG061_STAGE2_STATE_ENABLED),
+        Some(PROG061_HDD_AUTOBOOT_STATE_ENABLED),
         Some(SATA_BRIDGE_STATE_WAIT_1000MS),
         Some(SATA_BRIDGE_STATE_WAIT_1000MS),
         SdKitAuditProfile::HardenedRecovery,
     );
     assert_eq!(checks.len(), 1);
-    assert_eq!(checks[0].id, CHK_ID_SATA_BRIDGE_STAGE2_BOOT);
+    assert_eq!(checks[0].id, CHK_ID_SATA_HDD_AUTOBOOT);
     assert_eq!(checks[0].severity, "pass");
 
     checks.clear();
-    push_stage2_boot_check(
+    push_hdd_autoboot_check(
         &mut checks,
-        Some(PROG061_STAGE2_STATE_ENABLED),
+        Some(PROG061_HDD_AUTOBOOT_STATE_ENABLED),
         Some(SATA_BRIDGE_STATE_FACTORY_2MS),
         Some(SATA_BRIDGE_STATE_WAIT_1000MS),
         SdKitAuditProfile::HardenedRecovery,
@@ -295,9 +295,9 @@ fn stage2_boot_audit_enforces_reset_fix_pairing_and_catches_corruption() {
     assert_eq!(checks[0].severity, "fail");
 
     checks.clear();
-    push_stage2_boot_check(
+    push_hdd_autoboot_check(
         &mut checks,
-        Some(PROG061_STAGE2_STATE_MISMATCH),
+        Some(PROG061_HDD_AUTOBOOT_STATE_MISMATCH),
         Some(SATA_BRIDGE_STATE_WAIT_1000MS),
         Some(SATA_BRIDGE_STATE_WAIT_1000MS),
         SdKitAuditProfile::Standard,
@@ -310,38 +310,38 @@ fn stage2_boot_audit_enforces_reset_fix_pairing_and_catches_corruption() {
     patch_prog061_bgo_in_place(&mut sd_prog, Prog061BgoPatchMode::BypassChecksOnly).unwrap();
     apply_prog061_sata_bridge_reset_fix_in_place(&mut sd_prog, SataBridgeResetFixMode::Wait1000Ms)
         .unwrap();
-    apply_prog061_stage2_boot_in_place(&mut sd_prog, true).unwrap();
-    sd_prog[OFF_PROG061_STAGE2_HOOK_SITE] ^= 0x01;
+    apply_prog061_hdd_autoboot_in_place(&mut sd_prog, true).unwrap();
+    sd_prog[OFF_PROG061_HDD_AUTOBOOT_HOOK_SITE] ^= 0x01;
     let sd_bad = pack_ver061_pair_sd48(sd_prog, make_synthetic_main_250gb_ctr());
-    let rep_bad = verify_sd_buffers("/mem/stage2_corrupt", Some(Ok(&mon_prog)), Some(&sd_bad));
+    let rep_bad = verify_sd_buffers("/mem/autoboot_corrupt", Some(Ok(&mon_prog)), Some(&sd_bad));
     assert_eq!(rep_bad.overall_status, "INCOMPLETE_OR_INVALID");
     assert!(
         rep_bad
             .checks
             .iter()
-            .any(|c| c.id == CHK_ID_SATA_BRIDGE_STAGE2_BOOT && c.severity == "fail")
+            .any(|c| c.id == CHK_ID_SATA_HDD_AUTOBOOT && c.severity == "fail")
     );
 }
 
 #[test]
-fn main_bgo_geometry_audit_enforces_ver061_stage2_hardening() {
+fn main_bgo_geometry_audit_enforces_ver061_hdd_autoboot_hardening() {
     use crate::constants::CHK_ID_MAIN_BGO_GEOMETRY;
     use crate::re::main_bgo_retarget::{
         MAIN_BGO_STATE_8MB, MAIN_BGO_STATE_FACTORY_4MB, MAIN_BGO_STATE_MISMATCH,
     };
-    use crate::re::sata_bridge_stage2::PROG061_STAGE2_STATE_ENABLED;
+    use crate::re::sata_bridge_stage2::PROG061_HDD_AUTOBOOT_STATE_ENABLED;
 
     let cases = [
         (
             Some(MAIN_BGO_STATE_8MB),
             Some(SdLoaderProfile::Ver061RawSd48),
-            Some(PROG061_STAGE2_STATE_ENABLED),
+            Some(PROG061_HDD_AUTOBOOT_STATE_ENABLED),
             Some("pass"),
         ),
         (
             Some(MAIN_BGO_STATE_FACTORY_4MB),
             Some(SdLoaderProfile::Ver061RawSd48),
-            Some(PROG061_STAGE2_STATE_ENABLED),
+            Some(PROG061_HDD_AUTOBOOT_STATE_ENABLED),
             Some("fail"),
         ),
         (
@@ -365,9 +365,9 @@ fn main_bgo_geometry_audit_enforces_ver061_stage2_hardening() {
         (None, Some(SdLoaderProfile::Ver061RawSd48), None, None),
     ];
 
-    for (geo, profile, stage2, expected_sev) in cases {
+    for (geo, profile, hdd_autoboot, expected_sev) in cases {
         let mut checks = Vec::new();
-        push_main_bgo_geometry_check(&mut checks, Some("3060NP"), geo, profile, stage2);
+        push_main_bgo_geometry_check(&mut checks, Some("3060NP"), geo, profile, hdd_autoboot);
         assert_eq!(checks.len(), usize::from(expected_sev.is_some()));
         if let Some(sev) = expected_sev {
             assert_eq!(checks[0].id, CHK_ID_MAIN_BGO_GEOMETRY);

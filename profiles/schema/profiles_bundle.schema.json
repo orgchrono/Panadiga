@@ -464,6 +464,16 @@
           ],
           "default": null
         },
+        "hdd_autoboot_spec": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HddAutobootSpec"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "id": {
           "type": "string"
         },
@@ -549,16 +559,6 @@
           "type": [
             "string",
             "null"
-          ]
-        },
-        "stage2_boot_spec": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/Stage2BootSpec"
-            },
-            {
-              "type": "null"
-            }
           ]
         },
         "symbols": {
@@ -795,6 +795,202 @@
           ]
         }
       },
+      "type": "object"
+    },
+    "HddAutobootSpec": {
+      "additionalProperties": false,
+      "description": "Complete declarative SATA HDD autoboot hook contract for a firmware train.",
+      "properties": {
+        "base_va": {
+          "type": "string"
+        },
+        "dcache_purge_base": {
+          "type": "string"
+        },
+        "dcache_purge_len": {
+          "type": "string"
+        },
+        "expected_size": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "feistel_crypt_span": {
+          "type": "string"
+        },
+        "fvu_load_uncached_va": {
+          "type": "string"
+        },
+        "hdd_dma_buf_va": {
+          "type": "string"
+        },
+        "hdd_mirror_lba_delta": {
+          "type": "string"
+        },
+        "hdd_primary_lba": {
+          "type": "string"
+        },
+        "hdd_probe_sectors": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "hook_expect_hex": {
+          "type": "string"
+        },
+        "hook_offset": {
+          "type": "string"
+        },
+        "main_va_max": {
+          "type": "string"
+        },
+        "main_va_min": {
+          "type": "string"
+        },
+        "norfrom_fvu_base_va": {
+          "type": "string"
+        },
+        "payload_offset": {
+          "type": "string"
+        },
+        "require_reset_fix_1000ms": {
+          "type": "boolean"
+        },
+        "sd_info_bss_va": {
+          "type": "string"
+        },
+        "symbols": {
+          "$ref": "#/$defs/HddAutobootSymbolsSpec"
+        },
+        "uart_abort_polls": {
+          "format": "int8",
+          "maximum": 127,
+          "minimum": -128,
+          "type": "integer"
+        },
+        "uart_poll_ticks_10ms": {
+          "format": "int8",
+          "maximum": 127,
+          "minimum": -128,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "base_va",
+        "expected_size",
+        "hook_offset",
+        "hook_expect_hex",
+        "payload_offset",
+        "require_reset_fix_1000ms",
+        "uart_abort_polls",
+        "uart_poll_ticks_10ms",
+        "hdd_primary_lba",
+        "hdd_mirror_lba_delta",
+        "hdd_probe_sectors",
+        "feistel_crypt_span",
+        "main_va_min",
+        "main_va_max",
+        "dcache_purge_base",
+        "dcache_purge_len",
+        "sd_info_bss_va",
+        "hdd_dma_buf_va",
+        "fvu_load_uncached_va",
+        "norfrom_fvu_base_va",
+        "symbols"
+      ],
+      "type": "object"
+    },
+    "HddAutobootSymbolsSpec": {
+      "additionalProperties": false,
+      "description": "Verified `PROG` / bootloader callee virtual addresses required to assemble the SATA HDD autoboot hook.",
+      "properties": {
+        "check_update_flag_va": {
+          "type": "string"
+        },
+        "dcache_purge_va": {
+          "type": "string"
+        },
+        "disable_irq_va": {
+          "type": "string"
+        },
+        "extrhead_check_hdr_va": {
+          "type": "string"
+        },
+        "extrhead_get_entry_va": {
+          "type": "string"
+        },
+        "extrhead_get_size_va": {
+          "type": "string"
+        },
+        "extrhead_get_src_va": {
+          "type": "string"
+        },
+        "extrhead_is_comp_va": {
+          "type": "string"
+        },
+        "extrhead_uncomp_va": {
+          "type": "string"
+        },
+        "fat_close_va": {
+          "type": "string"
+        },
+        "fat_mount_va": {
+          "type": "string"
+        },
+        "fat_open_va": {
+          "type": "string"
+        },
+        "feistel_decrypt_va": {
+          "type": "string"
+        },
+        "hdd_max_lba_va": {
+          "type": "string"
+        },
+        "hdd_read_va": {
+          "type": "string"
+        },
+        "memcpy_va": {
+          "type": "string"
+        },
+        "sd_init_va": {
+          "type": "string"
+        },
+        "sleep_10ms_va": {
+          "type": "string"
+        },
+        "stop_timer_irq_va": {
+          "type": "string"
+        },
+        "uart0_getc_nb_va": {
+          "type": "string"
+        },
+        "uart0_printf_va": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "dcache_purge_va",
+        "uart0_getc_nb_va",
+        "uart0_printf_va",
+        "check_update_flag_va",
+        "hdd_max_lba_va",
+        "hdd_read_va",
+        "sd_init_va",
+        "stop_timer_irq_va",
+        "feistel_decrypt_va",
+        "extrhead_get_size_va",
+        "extrhead_check_hdr_va",
+        "extrhead_is_comp_va",
+        "extrhead_get_src_va",
+        "extrhead_get_entry_va",
+        "extrhead_uncomp_va",
+        "fat_mount_va",
+        "fat_open_va",
+        "fat_close_va",
+        "disable_irq_va",
+        "memcpy_va",
+        "sleep_10ms_va"
+      ],
       "type": "object"
     },
     "LoaderFingerprint": {
@@ -1585,202 +1781,6 @@
         "p7501_uart_baud",
         "p7501_nsw5v_hiz_only",
         "evidence"
-      ],
-      "type": "object"
-    },
-    "Stage2BootSpec": {
-      "additionalProperties": false,
-      "description": "Complete declarative Stage-2 SATA HDD boot hook contract for a firmware train.",
-      "properties": {
-        "base_va": {
-          "type": "string"
-        },
-        "dcache_purge_base": {
-          "type": "string"
-        },
-        "dcache_purge_len": {
-          "type": "string"
-        },
-        "expected_size": {
-          "format": "uint32",
-          "minimum": 0,
-          "type": "integer"
-        },
-        "feistel_crypt_span": {
-          "type": "string"
-        },
-        "fvu_load_uncached_va": {
-          "type": "string"
-        },
-        "hdd_dma_buf_va": {
-          "type": "string"
-        },
-        "hdd_mirror_lba_delta": {
-          "type": "string"
-        },
-        "hdd_primary_lba": {
-          "type": "string"
-        },
-        "hdd_probe_sectors": {
-          "format": "uint32",
-          "minimum": 0,
-          "type": "integer"
-        },
-        "hook_expect_hex": {
-          "type": "string"
-        },
-        "hook_offset": {
-          "type": "string"
-        },
-        "main_va_max": {
-          "type": "string"
-        },
-        "main_va_min": {
-          "type": "string"
-        },
-        "norfrom_fvu_base_va": {
-          "type": "string"
-        },
-        "payload_offset": {
-          "type": "string"
-        },
-        "require_reset_fix_1000ms": {
-          "type": "boolean"
-        },
-        "sd_info_bss_va": {
-          "type": "string"
-        },
-        "symbols": {
-          "$ref": "#/$defs/Stage2BootSymbolsSpec"
-        },
-        "uart_abort_polls": {
-          "format": "int8",
-          "maximum": 127,
-          "minimum": -128,
-          "type": "integer"
-        },
-        "uart_poll_ticks_10ms": {
-          "format": "int8",
-          "maximum": 127,
-          "minimum": -128,
-          "type": "integer"
-        }
-      },
-      "required": [
-        "base_va",
-        "expected_size",
-        "hook_offset",
-        "hook_expect_hex",
-        "payload_offset",
-        "require_reset_fix_1000ms",
-        "uart_abort_polls",
-        "uart_poll_ticks_10ms",
-        "hdd_primary_lba",
-        "hdd_mirror_lba_delta",
-        "hdd_probe_sectors",
-        "feistel_crypt_span",
-        "main_va_min",
-        "main_va_max",
-        "dcache_purge_base",
-        "dcache_purge_len",
-        "sd_info_bss_va",
-        "hdd_dma_buf_va",
-        "fvu_load_uncached_va",
-        "norfrom_fvu_base_va",
-        "symbols"
-      ],
-      "type": "object"
-    },
-    "Stage2BootSymbolsSpec": {
-      "additionalProperties": false,
-      "description": "Verified `PROG` / bootloader callee virtual addresses required to assemble the Stage-2 HDD boot hook.",
-      "properties": {
-        "check_update_flag_va": {
-          "type": "string"
-        },
-        "dcache_purge_va": {
-          "type": "string"
-        },
-        "disable_irq_va": {
-          "type": "string"
-        },
-        "extrhead_check_hdr_va": {
-          "type": "string"
-        },
-        "extrhead_get_entry_va": {
-          "type": "string"
-        },
-        "extrhead_get_size_va": {
-          "type": "string"
-        },
-        "extrhead_get_src_va": {
-          "type": "string"
-        },
-        "extrhead_is_comp_va": {
-          "type": "string"
-        },
-        "extrhead_uncomp_va": {
-          "type": "string"
-        },
-        "fat_close_va": {
-          "type": "string"
-        },
-        "fat_mount_va": {
-          "type": "string"
-        },
-        "fat_open_va": {
-          "type": "string"
-        },
-        "feistel_decrypt_va": {
-          "type": "string"
-        },
-        "hdd_max_lba_va": {
-          "type": "string"
-        },
-        "hdd_read_va": {
-          "type": "string"
-        },
-        "memcpy_va": {
-          "type": "string"
-        },
-        "sd_init_va": {
-          "type": "string"
-        },
-        "sleep_10ms_va": {
-          "type": "string"
-        },
-        "stop_timer_irq_va": {
-          "type": "string"
-        },
-        "uart0_getc_nb_va": {
-          "type": "string"
-        },
-        "uart0_printf_va": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "dcache_purge_va",
-        "uart0_getc_nb_va",
-        "uart0_printf_va",
-        "check_update_flag_va",
-        "hdd_max_lba_va",
-        "hdd_read_va",
-        "sd_init_va",
-        "stop_timer_irq_va",
-        "feistel_decrypt_va",
-        "extrhead_get_size_va",
-        "extrhead_check_hdr_va",
-        "extrhead_is_comp_va",
-        "extrhead_get_src_va",
-        "extrhead_get_entry_va",
-        "extrhead_uncomp_va",
-        "fat_mount_va",
-        "fat_open_va",
-        "fat_close_va",
-        "disable_irq_va",
-        "memcpy_va",
-        "sleep_10ms_va"
       ],
       "type": "object"
     },

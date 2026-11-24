@@ -12,8 +12,8 @@ use crate::constants::{
     CHK_ID_BGO_GEOMETRY_MISMATCH, CHK_ID_DIGADIAG_BYPASS_TRAP, CHK_ID_FVU_PANAMON_TRAP,
     CHK_ID_MAIN_BGO_GEOMETRY, CHK_ID_MAIN_EXTRHEAD_CHECKSUM, CHK_ID_MAIN_EXTRHEAD_SRC_ADDR,
     CHK_ID_RTSD_LBA48_GATE, CHK_ID_RTSD_TARGET_CONSISTENCY, CHK_ID_SATA_BRIDGE_RESET_FIX,
-    CHK_ID_SATA_BRIDGE_STAGE2_BOOT, LBA28_MAX_BLOCKS_2KB, PANA_EXTRHEAD_MAIN_SRC_ADDR,
-    SD_STATUS_INVALID, SD_STATUS_READY, SD_STATUS_READY_WITH_WARNINGS,
+    CHK_ID_SATA_HDD_AUTOBOOT, LBA28_MAX_BLOCKS_2KB, PANA_EXTRHEAD_MAIN_SRC_ADDR, SD_STATUS_INVALID,
+    SD_STATUS_READY, SD_STATUS_READY_WITH_WARNINGS,
 };
 
 use super::super::bgo_unbrick::{find_train_by_loader_key, validate_bgo_allowlist_invariant};
@@ -22,7 +22,7 @@ use super::super::main_bgo_retarget::{
 };
 use super::super::sata_bridge_fix::{SATA_BRIDGE_STATE_MISMATCH, SATA_BRIDGE_STATE_WAIT_1000MS};
 use super::super::sata_bridge_stage2::{
-    PROG061_STAGE2_STATE_ENABLED, PROG061_STAGE2_STATE_MISMATCH,
+    PROG061_HDD_AUTOBOOT_STATE_ENABLED, PROG061_HDD_AUTOBOOT_STATE_MISMATCH,
 };
 use super::compose::SdLoaderProfile;
 
@@ -63,8 +63,12 @@ pub struct SdMediaVerificationReport {
     pub pana_sd_main_hdd_capacity_label: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pana_sd_prog061_sata_bridge_fix: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub pana_sd_prog061_stage2_boot: Option<String>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "pana_sd_prog061_stage2_boot"
+    )]
+    pub pana_sd_prog061_hdd_autoboot: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pana_sd_main_sata_bridge_fix: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -137,39 +141,39 @@ fn push_sata_bridge_fix_check(
     }
 }
 
-fn push_stage2_boot_check(
+fn push_hdd_autoboot_check(
     checks: &mut Vec<SdUnbrickCheck>,
-    stage2_state: Option<&str>,
+    hdd_autoboot_state: Option<&str>,
     prog_reset_state: Option<&str>,
     main_reset_state: Option<&str>,
     audit_profile: SdKitAuditProfile,
 ) {
-    match stage2_state {
-        Some(PROG061_STAGE2_STATE_MISMATCH) => {
+    match hdd_autoboot_state {
+        Some(PROG061_HDD_AUTOBOOT_STATE_MISMATCH) => {
             checks.push(check(
-                CHK_ID_SATA_BRIDGE_STAGE2_BOOT,
+                CHK_ID_SATA_HDD_AUTOBOOT,
                 "fail",
-                "Corrupt/Mismatched PROG061 Stage-2 HDD Boot Hook or Payload",
+                "Corrupt/Mismatched PROG061 SATA HDD Autoboot Hook or Payload",
                 "PANA__SD.FRM PROG061 hook 0x504050D3 and tail payload 0x50439600 failed fail-closed consistency.",
             ));
         }
-        Some(PROG061_STAGE2_STATE_ENABLED) => {
+        Some(PROG061_HDD_AUTOBOOT_STATE_ENABLED) => {
             let prog_reset_ok = prog_reset_state == Some(SATA_BRIDGE_STATE_WAIT_1000MS);
             let main_reset_ok = main_reset_state == Some(SATA_BRIDGE_STATE_WAIT_1000MS);
             if prog_reset_ok && main_reset_ok {
                 checks.push(check(
-                    CHK_ID_SATA_BRIDGE_STAGE2_BOOT,
+                    CHK_ID_SATA_HDD_AUTOBOOT,
                     "pass",
-                    "PROG061 Stage-2 SATA HDD Boot Hook Verified (Pre-FVU)",
-                    "PANA__SD.FRM PROG061 embeds verified Stage-2 HDD boot hook at 0x504050D3 -> 0x50439600 paired with 1000 ms SataBridgeResetFix and escape hatches.",
+                    "PROG061 SATA HDD Autoboot Hook Verified (Pre-FVU)",
+                    "PANA__SD.FRM PROG061 embeds verified SATA HDD autoboot hook at 0x504050D3 -> 0x50439600 paired with 1000 ms SataBridgeResetFix and escape hatches.",
                 ));
             } else if !prog_reset_ok {
                 checks.push(check(
-                    CHK_ID_SATA_BRIDGE_STAGE2_BOOT,
+                    CHK_ID_SATA_HDD_AUTOBOOT,
                     "fail",
-                    "PROG061 Stage-2 Hook Present Without 1000 ms SataBridgeResetFix",
+                    "PROG061 SATA HDD Autoboot Hook Present Without 1000 ms SataBridgeResetFix",
                     format!(
-                        "Stage-2 HDD boot hook requires PROG061 1000 ms SATA-bridge reset wait (prog_reset={prog_reset_state:?}, main_reset={main_reset_state:?})."
+                        "SATA HDD autoboot hook requires PROG061 1000 ms SATA-bridge reset wait (prog_reset={prog_reset_state:?}, main_reset={main_reset_state:?})."
                     ),
                 ));
             } else {
@@ -178,11 +182,11 @@ fn push_stage2_boot_check(
                     SdKitAuditProfile::Standard => "warn",
                 };
                 checks.push(check(
-                    CHK_ID_SATA_BRIDGE_STAGE2_BOOT,
+                    CHK_ID_SATA_HDD_AUTOBOOT,
                     sev,
-                    "PROG061 Stage-2 Paired With Unpatched MAIN SATA-Bridge Wait",
+                    "PROG061 SATA HDD Autoboot Paired With Unpatched MAIN SATA-Bridge Wait",
                     format!(
-                        "PROG061 has Stage-2 + 1000 ms wait, but MAIN SATA-bridge timing is {main_reset_state:?} (expected SATA_BRIDGE_1000MS)."
+                        "PROG061 has SATA HDD autoboot + 1000 ms wait, but MAIN SATA-bridge timing is {main_reset_state:?} (expected SATA_BRIDGE_1000MS)."
                     ),
                 ));
             }
@@ -196,14 +200,14 @@ fn push_main_bgo_geometry_check(
     main_build: Option<&str>,
     main_bgo_geo: Option<&str>,
     loader_profile: Option<SdLoaderProfile>,
-    stage2_state: Option<&str>,
+    hdd_autoboot_state: Option<&str>,
 ) {
     let Some(geo) = main_bgo_geo else {
         return;
     };
     let main_label = format_main_label(main_build);
     let is_ver061 = loader_profile == Some(SdLoaderProfile::Ver061RawSd48);
-    let is_stage2 = stage2_state == Some(PROG061_STAGE2_STATE_ENABLED);
+    let is_hdd_autoboot = hdd_autoboot_state == Some(PROG061_HDD_AUTOBOOT_STATE_ENABLED);
     match geo {
         MAIN_BGO_STATE_8MB => checks.push(check(
             CHK_ID_MAIN_BGO_GEOMETRY,
@@ -222,12 +226,12 @@ fn push_main_bgo_geometry_check(
             ),
         )),
         MAIN_BGO_STATE_FACTORY_4MB => {
-            let (sev, title, detail) = if is_ver061 && is_stage2 {
+            let (sev, title, detail) = if is_ver061 && is_hdd_autoboot {
                 (
                     "fail",
-                    format!("Stock 4 MiB {main_label} BGO Geometry Incompatible With ver061 Stage-2 (8 MiB EH55)"),
+                    format!("Stock 4 MiB {main_label} BGO Geometry Incompatible With ver061 SATA HDD Autoboot (8 MiB EH55)"),
                     format!(
-                        "Stage-2 SATA HDD boot on 8 MiB DMR-EH55 NOR halts in '[nfrom] BGO driver init failed[1].' (src/nfd_api.c:228) unless {main_label} is retargeted via --main-bgo-retarget."
+                        "SATA HDD autoboot on 8 MiB DMR-EH55 NOR halts in '[nfrom] BGO driver init failed[1].' (src/nfd_api.c:228) unless {main_label} is retargeted via --main-bgo-retarget."
                     ),
                 )
             } else if is_ver061 {
@@ -552,9 +556,9 @@ pub fn verify_sd_buffers_with_profile(
         sd.main_sata_bridge_fix.as_deref(),
         audit_profile,
     );
-    push_stage2_boot_check(
+    push_hdd_autoboot_check(
         &mut checks,
-        sd.prog061_stage2_boot.as_deref(),
+        sd.prog061_hdd_autoboot.as_deref(),
         sd.prog061_sata_bridge_fix.as_deref(),
         sd.main_sata_bridge_fix.as_deref(),
         audit_profile,
@@ -564,7 +568,7 @@ pub fn verify_sd_buffers_with_profile(
         sd.main_build.as_deref(),
         sd.main_bgo_geometry.as_deref(),
         sd.detected_profile.or(diag.detected_profile),
-        sd.prog061_stage2_boot.as_deref(),
+        sd.prog061_hdd_autoboot.as_deref(),
     );
 
     let overall_status = if checks.iter().any(|c| c.severity == "fail") {
@@ -594,7 +598,7 @@ pub fn verify_sd_buffers_with_profile(
         pana_sd_prog061_bgo_geometry: sd.prog061_bgo_geometry,
         pana_sd_main_hdd_capacity_label: sd.main_hdd_capacity_label,
         pana_sd_prog061_sata_bridge_fix: sd.prog061_sata_bridge_fix,
-        pana_sd_prog061_stage2_boot: sd.prog061_stage2_boot,
+        pana_sd_prog061_hdd_autoboot: sd.prog061_hdd_autoboot,
         pana_sd_main_sata_bridge_fix: sd.main_sata_bridge_fix,
         pana_sd_main_bgo_geometry: sd.main_bgo_geometry,
         factory_unpatched_prog061_detected,

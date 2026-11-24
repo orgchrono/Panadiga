@@ -17,7 +17,7 @@ use crate::constants::PANA_DIGADIAG_RAW_VER061_SIZE;
 use crate::re::bgo_unbrick::{Prog061BgoPatchMode, inspect_prog061_bgo_sites};
 use crate::re::prewrite_gate::{PreWriteGateReport, PreWriteTarget, require_prewrite_gate};
 
-/// Shared input specification for resolving Stage-1.5/Stage-2 DIGA recovery payloads.
+/// Shared input specification for resolving `DIAG_PROG_RAM` / `PANA__SD` DIGA recovery payloads.
 #[derive(Debug, Clone)]
 pub struct RecoveryPayloadSpec {
     pub loader_profile: SdLoaderProfile,

@@ -15,5 +15,6 @@ pub use crypto_frm::*;
 pub use flash_hdd::*;
 pub use hardware_am34::*;
 pub use paths_runtime::*;
+#[allow(deprecated)]
 pub use safety_invariants::*;
 pub use tbc_mmio::*;

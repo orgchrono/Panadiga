@@ -127,7 +127,7 @@ fn wave2_cli_new_flags_and_subcommands_parse_and_preserve_defaults() {
             "unbrick",
             "tbc-plan",
             "--mode",
-            "stage15_digadiag_tbc",
+            "digadiag_ram_tbc",
             "--standard",
             "pal-m",
         ],
@@ -228,7 +228,7 @@ fn wave2_tbc_plan_and_nor_sector_audit_execute_offline() {
         "unbrick",
         "tbc-plan",
         "--mode",
-        "stage15_digadiag_tbc",
+        "digadiag_ram_tbc",
         "--standard",
         "pal-m",
         "--json",
@@ -239,7 +239,7 @@ fn wave2_tbc_plan_and_nor_sector_audit_execute_offline() {
     assert!(
         fs::read_to_string(&tbc_json)
             .unwrap()
-            .contains("stage15_digadiag_tbc")
+            .contains("digadiag_ram_tbc")
     );
 
     let gated_cli = Cli::try_parse_from([

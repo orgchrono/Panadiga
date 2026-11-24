@@ -128,7 +128,7 @@
       "step2Title": "Step 2 — Select Target SD Card or .img",
       "step3Title": "Step 3 — Flash / Create & Follow Recorder Display",
       "modelLabel": "Panasonic DIGA Model",
-      "includePanaSdLabel": "Also bundle PANA__SD.FRM (Full Stage-2 Firmware)",
+      "includePanaSdLabel": "Also bundle PANA__SD.FRM (Full PROG/MAIN Firmware)",
       "targetModeImg": "Offline Verified .img File (Safe Default)",
       "targetModePhysical": "Physical SD Card (StorageMediaRole::SdCard)",
       "refreshTargetsBtn": "Scan SD Readers",

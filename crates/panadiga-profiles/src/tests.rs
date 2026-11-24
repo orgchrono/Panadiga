@@ -17,11 +17,11 @@ use crate::types::{
     AddressReloc, AuthorizationMode, BinaryPatchSiteSpec, BoardProfile, BusWindow, BytePatchEntry,
     Capability, ClaimEvidence, EepromChipProfile, EepromFunction, EvidenceSource, EvidenceTier,
     FirmwareTrainProfile, FlashChipProfile, FlashHwProtect, FlashJedecId, FlashRwBank,
-    FlashSectorBank, FrmContainerSpec, LAB_OVERRIDE_DISCLAIMER_ACK, LabOverride,
-    MainBgoRetargetAnchors, MainBuildSpec, MediaFormatProfile, ModelClaims, ModelProfileManifest,
-    NorLayoutProfile, NorRegion, NorRegionKind, NorRegionPolicy, OffsetRange, ProfilesBundle,
-    ProgBgoRetargetSpec, RegionSignature, RuntimeFingerprint, SataBridgeResetSpec, SocCoreProfile,
-    SocProfile, Stage2BootSpec, Stage2BootSymbolsSpec,
+    FlashSectorBank, FrmContainerSpec, HddAutobootSpec, HddAutobootSymbolsSpec,
+    LAB_OVERRIDE_DISCLAIMER_ACK, LabOverride, MainBgoRetargetAnchors, MainBuildSpec,
+    MediaFormatProfile, ModelClaims, ModelProfileManifest, NorLayoutProfile, NorRegion,
+    NorRegionKind, NorRegionPolicy, OffsetRange, ProfilesBundle, ProgBgoRetargetSpec,
+    RegionSignature, RuntimeFingerprint, SataBridgeResetSpec, SocCoreProfile, SocProfile,
 };
 use crate::validate::{AM34_LETHAL_MMIO_ADDR, REQUIRED_LVTTL_MV, validate_bundle};
 
@@ -235,7 +235,7 @@ fn sample_bundle() -> ProfilesBundle {
             pana_rebuild_recipe: None,
             bgo_retarget_spec: None,
             prog_sata_bridge_reset_spec: None,
-            stage2_boot_spec: None,
+            hdd_autoboot_spec: None,
             main_builds: Vec::new(),
             evidence: ev(EvidenceTier::BenchVerified, "bench"),
         },
@@ -813,7 +813,7 @@ fn validate_bundle_rejects_4mb_vs_8mb_bgo_flash_and_sector_traps() {
 }
 
 #[test]
-fn universal_patch_stage2_and_main_build_specs_enforce_bounds_ipl_and_geometry() {
+fn universal_patch_hdd_autoboot_and_main_build_specs_enforce_bounds_ipl_and_geometry() {
     let mut good = sample_bundle();
     let trn = good
         .firmware_trains
@@ -836,7 +836,7 @@ fn universal_patch_stage2_and_main_build_specs_enforce_bounds_ipl_and_geometry()
         },
     });
     let sym = |idx: u32| 0x5040_1000 + idx * 0x100;
-    trn.stage2_boot_spec = Some(Stage2BootSpec {
+    trn.hdd_autoboot_spec = Some(HddAutobootSpec {
         base_va: 0x5040_0000,
         expected_size: 262_144,
         hook_offset: 0x0000_5100,
@@ -857,7 +857,7 @@ fn universal_patch_stage2_and_main_build_specs_enforce_bounds_ipl_and_geometry()
         hdd_dma_buf_va: 0x90C1_0000,
         fvu_load_uncached_va: 0x9040_0000,
         norfrom_fvu_base_va: 0x8404_0000,
-        symbols: Stage2BootSymbolsSpec {
+        symbols: HddAutobootSymbolsSpec {
             dcache_purge_va: sym(1),
             uart0_getc_nb_va: sym(2),
             uart0_printf_va: sym(3),
@@ -916,6 +916,22 @@ fn universal_patch_stage2_and_main_build_specs_enforce_bounds_ipl_and_geometry()
     }];
     assert!(validate_bundle(&good).valid);
 
+    let legacy_json = serde_json::to_string(&good).unwrap().replacen(
+        "\"hdd_autoboot_spec\"",
+        "\"stage2_boot_spec\"",
+        1,
+    );
+    let legacy_trn: FirmwareTrainProfile = serde_json::from_value(
+        serde_json::from_str::<serde_json::Value>(&legacy_json).unwrap()["firmware_trains"]
+            ["loader_ver061_toc48_main57"]
+            .clone(),
+    )
+    .expect("legacy stage2_boot_spec serde alias must deserialize");
+    assert_eq!(
+        legacy_trn.hdd_autoboot_spec,
+        good.firmware_trains["loader_ver061_toc48_main57"].hdd_autoboot_spec
+    );
+
     let mut bad = good;
     let bad_trn = bad
         .firmware_trains
@@ -924,7 +940,7 @@ fn universal_patch_stage2_and_main_build_specs_enforce_bounds_ipl_and_geometry()
     let bad_prog = bad_trn.prog_sata_bridge_reset_spec.as_mut().unwrap();
     bad_prog.site.va = 0x5045_0000;
     bad_trn
-        .stage2_boot_spec
+        .hdd_autoboot_spec
         .as_mut()
         .unwrap()
         .norfrom_fvu_base_va = 0x8401_0000;

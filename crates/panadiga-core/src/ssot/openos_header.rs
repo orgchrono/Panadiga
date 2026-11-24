@@ -174,11 +174,16 @@ pub fn generate_openos_ssot_header() -> String {
     );
     push_def_u32(
         &mut out,
-        "OPENOS_SSOT_STAGE15_BASE",
+        "OPENOS_SSOT_PROG_RAM_BASE",
         PANA_DIGADIAG_DEFAULT_LOAD_ADDR,
         true,
     );
-    push_def_u32(&mut out, "OPENOS_SSOT_STAGE2_BASE", AM34_MAIN_BASE_VA, true);
+    push_def_u32(
+        &mut out,
+        "OPENOS_SSOT_MAIN_RAM_BASE",
+        AM34_MAIN_BASE_VA,
+        true,
+    );
 
     push_def_u32(&mut out, "OPENOS_SSOT_SC0_CTR", AM34_SC0_BASE, true);
     push_def_u32(&mut out, "OPENOS_SSOT_SC0_TXB", AM34_SC0_TXB_VA, true);

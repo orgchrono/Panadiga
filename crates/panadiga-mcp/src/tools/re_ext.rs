@@ -239,7 +239,7 @@ pub fn handle_hdd_flash_inspect(args: &Value) -> Result<Value> {
 
 pub fn handle_tbc_appliance_plan(args: &Value) -> Result<Value> {
     let mode: TbcApplianceMode = optional_non_empty_str(args, "mode")
-        .unwrap_or("stage15_digadiag_tbc")
+        .unwrap_or("digadiag_ram_tbc")
         .parse()?;
     let std_kind: TvStandardKind = optional_non_empty_str(args, "tv_standard")
         .unwrap_or("ntsc")

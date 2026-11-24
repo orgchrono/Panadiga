@@ -1,19 +1,19 @@
 #![deny(unsafe_code)]
 
-//! MN103S Stage-2 payload synthesis (escape hatches, mirror reader, bit-walk, teardown).
+//! MN103S pre-FVU SATA HDD autoboot payload synthesis (escape hatches, mirror reader, bit-walk, teardown).
 
 use anyhow::{Result, bail};
 
-use super::super::eh55_bgo::{PORTAO4_UNPACKER_MAGIC_LE, PORTAO4_UNPACKER_MAGIC_OFFSET};
+use super::super::eh55_bgo::{NOR_AUTOBOOT_CAPSULE_MAGIC_LE, NOR_AUTOBOOT_CAPSULE_MAGIC_OFFSET};
 use super::super::mn10300_emit::{emit_and_imm32_d0, emit_ld_w_an_dm, emit_mov_d_to_a};
-use super::apply::stage2_spec_for_loader_profile;
+use super::apply::hdd_autoboot_spec_for_loader_profile;
 use super::asm::{
-    LOC_ALIGNED_SIZE, LOC_ATTEMPT, LOC_ENTRY_ADDR, LOC_LBA, LOC_MAX_LBA, LOC_MOUNT_ID, LOC_SIZE,
-    LOC_SRC_ADDR, Stage2Asm,
+    HddAutobootAsm, LOC_ALIGNED_SIZE, LOC_ATTEMPT, LOC_ENTRY_ADDR, LOC_LBA, LOC_MAX_LBA,
+    LOC_MOUNT_ID, LOC_SIZE, LOC_SRC_ADDR,
 };
-use super::{PROG_TRAILER_RESERVED_BYTES, Stage2BootTrainSpec};
+use super::{HddAutobootTrainSpec, PROG_TRAILER_RESERVED_BYTES};
 
-fn emit_escape_hatch_checks(a: &mut Stage2Asm, spec: &Stage2BootTrainSpec) {
+fn emit_escape_hatch_checks(a: &mut HddAutobootAsm, spec: &HddAutobootTrainSpec) {
     // 1. Pre-HDD UART0 escape hatch: poll SC0RXB for 'F'/'f'.
     a.printf0("s_banner");
     a.mov_imm8_d(2, spec.uart_abort_polls);
@@ -65,9 +65,9 @@ fn emit_escape_hatch_checks(a: &mut Stage2Asm, spec: &Stage2BootTrainSpec) {
     a.jcc(0xC8, "norfrom_matched");
     let nor_p4_magic_va = spec
         .norfrom_fvu_base_va
-        .wrapping_add(PORTAO4_UNPACKER_MAGIC_OFFSET as u32);
+        .wrapping_add(NOR_AUTOBOOT_CAPSULE_MAGIC_OFFSET as u32);
     a.ld_abs32_d(nor_p4_magic_va, 0);
-    a.cmp_imm32_d0(PORTAO4_UNPACKER_MAGIC_LE);
+    a.cmp_imm32_d0(NOR_AUTOBOOT_CAPSULE_MAGIC_LE);
     a.jcc(0xC9, "skip_sd");
     a.label("norfrom_matched");
     a.ld_local(LOC_MOUNT_ID, 0);
@@ -81,7 +81,7 @@ fn emit_escape_hatch_checks(a: &mut Stage2Asm, spec: &Stage2BootTrainSpec) {
     a.label("skip_sd");
 }
 
-fn emit_hdd_mirror_loader(a: &mut Stage2Asm, spec: &Stage2BootTrainSpec) {
+fn emit_hdd_mirror_loader(a: &mut HddAutobootAsm, spec: &HddAutobootTrainSpec) {
     a.lea_a3_disp_d(LOC_MAX_LBA, 0);
     a.call_abs(spec.hdd_max_lba_va);
     a.cmp_imm8_d(0, 0);
@@ -223,8 +223,8 @@ fn emit_hdd_mirror_loader(a: &mut Stage2Asm, spec: &Stage2BootTrainSpec) {
     a.jmp("fallback_fvu");
 }
 
-/// Assembles the self-contained MN103S Stage-2 HDD bootloader for an explicit train spec.
-pub fn assemble_stage2_payload_for_spec(spec: &Stage2BootTrainSpec) -> Result<Vec<u8>> {
+/// Assembles the self-contained MN103S pre-FVU SATA HDD autoboot payload for an explicit train spec.
+pub fn assemble_hdd_autoboot_payload_for_spec(spec: &HddAutobootTrainSpec) -> Result<Vec<u8>> {
     let payload_va = spec.base_va.wrapping_add(spec.payload_offset as u32);
     let slack_limit = spec
         .expected_size
@@ -233,14 +233,14 @@ pub fn assemble_stage2_payload_for_spec(spec: &Stage2BootTrainSpec) -> Result<Ve
         .checked_sub(spec.payload_offset)
         .ok_or_else(|| {
             anyhow::anyhow!(
-                "Stage-2 payload_offset 0x{:X} exceeds usable slack end 0x{:X} for {}",
+                "HDD autoboot payload_offset 0x{:X} exceeds usable slack end 0x{:X} for {}",
                 spec.payload_offset,
                 slack_limit,
                 spec.train_id
             )
         })?;
 
-    let mut a = Stage2Asm::new(payload_va, spec.uart0_printf_va);
+    let mut a = HddAutobootAsm::new(payload_va, spec.uart0_printf_va);
     a.code
         .extend_from_slice(&[0xCF, 0xF0, 0x3F, 0xF8, 0xFE, 0xC0]);
 
@@ -278,7 +278,7 @@ pub fn assemble_stage2_payload_for_spec(spec: &Stage2BootTrainSpec) -> Result<Ve
     let payload = a.finalize()?;
     if payload.len() > max_slack {
         bail!(
-            "Stage-2 payload ({} B) exceeds '{}' slack budget ({} B)",
+            "HDD autoboot payload ({} B) exceeds '{}' slack budget ({} B)",
             payload.len(),
             spec.train_id,
             max_slack
@@ -287,8 +287,18 @@ pub fn assemble_stage2_payload_for_spec(spec: &Stage2BootTrainSpec) -> Result<Ve
     Ok(payload)
 }
 
-/// Assembles the self-contained MN103S Stage-2 HDD bootloader for `Loader ver0.61` from SSOT.
+/// Assembles the self-contained MN103S pre-FVU SATA HDD autoboot payload for `Loader ver0.61` from SSOT.
+pub fn assemble_prog061_hdd_autoboot_payload() -> Result<Vec<u8>> {
+    let spec = hdd_autoboot_spec_for_loader_profile("ver061")?;
+    assemble_hdd_autoboot_payload_for_spec(&spec)
+}
+
+#[deprecated(note = "Use assemble_hdd_autoboot_payload_for_spec")]
+pub fn assemble_stage2_payload_for_spec(spec: &HddAutobootTrainSpec) -> Result<Vec<u8>> {
+    assemble_hdd_autoboot_payload_for_spec(spec)
+}
+
+#[deprecated(note = "Use assemble_prog061_hdd_autoboot_payload")]
 pub fn assemble_prog061_stage2_payload() -> Result<Vec<u8>> {
-    let spec = stage2_spec_for_loader_profile("ver061")?;
-    assemble_stage2_payload_for_spec(&spec)
+    assemble_prog061_hdd_autoboot_payload()
 }

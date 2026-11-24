@@ -57,7 +57,7 @@ fn verify_raw_ver061_digadiag(bytes: &[u8]) -> DigadiagInspection {
     let chk = check(
         "digadiag_container",
         if valid_exec { "pass" } else { "fail" },
-        "DIGADIAG.FRM (Stage-1.5 MN103S SDDIAG — Loader ver0.61)",
+        "DIGADIAG.FRM (SDRAM PROG/SDDIAG — Loader ver0.61)",
         if valid_exec {
             format!(
                 "size={} B (raw_ver061_256k=true), dst=0x{:08X}, format=RAW_VER061, bgo_mode={}",
@@ -131,7 +131,7 @@ pub(crate) fn verify_digadiag_buffer(bytes_opt: Option<Result<&[u8], &str>>) -> 
             check: check(
                 "digadiag_container",
                 "fail",
-                "DIGADIAG.FRM (Stage-1.5 MN103S SDDIAG)",
+                "DIGADIAG.FRM (SDRAM PROG/SDDIAG)",
                 format!(
                     "Invalid DIGADIAG.FRM ({} B): expected 262,144 B raw (Loader ver0.61) or 131,072 B plaintext 'EXTRHEAD' (Loader ver0.63)",
                     bytes.len(),
@@ -154,7 +154,7 @@ pub(crate) fn verify_digadiag_buffer(bytes_opt: Option<Result<&[u8], &str>>) -> 
             let chk = check(
                 "digadiag_container",
                 if ok { "pass" } else { "fail" },
-                "DIGADIAG.FRM (Stage-1.5 MN103S SDDIAG — Loader ver0.63)",
+                "DIGADIAG.FRM (SDRAM PROG/SDDIAG — Loader ver0.63)",
                 format!(
                     "size={} B (exact_128k={}), tag='{}', dst=0x{:08X}, adler_ok={}, footer={}, bgo_mode={}",
                     bytes.len(),
@@ -188,7 +188,7 @@ pub(crate) fn verify_digadiag_buffer(bytes_opt: Option<Result<&[u8], &str>>) -> 
             check: check(
                 "digadiag_container",
                 "fail",
-                "DIGADIAG.FRM (Stage-1.5 MN103S SDDIAG)",
+                "DIGADIAG.FRM (SDRAM PROG/SDDIAG)",
                 format!("Failed to unpack plaintext EXTRHEAD: {e}"),
             ),
         },

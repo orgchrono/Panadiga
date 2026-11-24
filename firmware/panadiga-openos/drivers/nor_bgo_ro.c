@@ -53,7 +53,7 @@ bool openos_nor_inspect_unbrick(openos_unbrick_status_t *out) {
         return false;
     }
     out->eemul_has_1284 = (eemul_w0 == OPENOS_SSOT_EEMUL_TAG_1284_LE);
-    out->ready_for_portao4 =
+    out->nor_autoboot_ready =
         (out->bgo_p1_count >= 1u) && (out->bgo_p2_count >= 40u) && out->sa11_is_erased;
     return true;
 }

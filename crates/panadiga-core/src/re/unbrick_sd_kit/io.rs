@@ -96,25 +96,25 @@ pub fn prepare_sd_unbrick_kit_with_tier_policy(
             "--main-bgo-retarget targets MAIN (3060NP/3410PQ) inside PANA__SD.FRM and cannot be combined with --diag-only"
         );
     }
-    if req.sata_bridge_stage2_boot
+    if req.sata_hdd_autoboot
         && (!req.include_pana_sd
             || !req.sata_bridge_reset_fix
             || req.loader_profile != SdLoaderProfile::Ver061RawSd48)
     {
         bail!(
-            "--sata-bridge-stage2-boot requires PANA__SD.FRM (--include_pana_sd), --sata-bridge-reset-fix, and --loader-profile ver061 (fail-closed)"
+            "--sata-hdd-autoboot requires PANA__SD.FRM (--include_pana_sd), --sata-bridge-reset-fix, and --loader-profile ver061 (fail-closed)"
         );
     }
-    if req.sata_bridge_stage2_boot
+    if req.sata_hdd_autoboot
         && req.loader_profile == SdLoaderProfile::Ver061RawSd48
         && !req.main_bgo_retarget
     {
         bail!(
-            "Refusing ver061 Stage-2 SATA bridge kit without --main-bgo-retarget: stock 4 MiB MAIN (3060NP/3410PQ) fails BGO_Init() on 8 MiB EH55 NOR (src/nfd_api.c:228)"
+            "Refusing ver061 SATA HDD autoboot kit without --main-bgo-retarget: stock 4 MiB MAIN (3060NP/3410PQ) fails BGO_Init() on 8 MiB EH55 NOR (src/nfd_api.c:228)"
         );
     }
-    if req.portao4_self_unpack && !req.sata_bridge_stage2_boot {
-        bail!("--portao4-self-unpack requires --sata-bridge-stage2-boot (fail-closed)");
+    if req.nor_autoboot_capsule && !req.sata_hdd_autoboot {
+        bail!("--nor-autoboot-capsule requires --sata-hdd-autoboot (fail-closed)");
     }
     let ws_root = resolve_workspace_root();
     let sources = discover_sources(&ws_root);
@@ -169,9 +169,9 @@ pub fn prepare_sd_unbrick_kit_with_tier_policy(
     let mut main_passthrough_applied = None;
     let mut hdd_capacity_applied = None;
     let mut sata_bridge_reset_fix_applied = false;
-    let mut sata_bridge_stage2_boot_applied = false;
+    let mut sata_hdd_autoboot_applied = false;
     let mut main_bgo_retarget_applied = false;
-    let mut portao4_self_unpack_applied = false;
+    let mut nor_autoboot_capsule_applied = false;
 
     if req.include_pana_sd {
         let drv_path =
@@ -213,12 +213,12 @@ pub fn prepare_sd_unbrick_kit_with_tier_policy(
             req.allow_unsafe_auto_format,
             allow_unverified_profile,
             req.sata_bridge_reset_fix,
-            req.sata_bridge_stage2_boot,
+            req.sata_hdd_autoboot,
         )?;
-        sata_bridge_stage2_boot_applied = req.sata_bridge_stage2_boot;
-        let pana_sd_prog = if req.portao4_self_unpack {
-            portao4_self_unpack_applied = true;
-            crate::re::eh55_bgo::build_portao4_self_unpacking_prog061(&pana_sd_prog)?.0
+        sata_hdd_autoboot_applied = req.sata_hdd_autoboot;
+        let pana_sd_prog = if req.nor_autoboot_capsule {
+            nor_autoboot_capsule_applied = true;
+            crate::re::eh55_bgo::build_nor_autoboot_capsule(&pana_sd_prog)?.0
         } else {
             pana_sd_prog
         };
@@ -257,9 +257,9 @@ pub fn prepare_sd_unbrick_kit_with_tier_policy(
         main_passthrough_applied,
         hdd_capacity_applied,
         sata_bridge_reset_fix_applied,
-        sata_bridge_stage2_boot_applied,
+        sata_hdd_autoboot_applied,
         main_bgo_retarget_applied,
-        portao4_self_unpack_applied,
+        nor_autoboot_capsule_applied,
         digadiag_path: digadiag_path.to_string_lossy().into_owned(),
         digadiag_sha256,
         pana_sd_path,

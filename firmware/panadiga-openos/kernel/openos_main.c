@@ -242,8 +242,8 @@ static bool cmd_bgo(const char *arg) {
     openos_uart0_puts(st.sa11_is_erased ? "FF" : (st.sa11_has_p4zu ? "P4ZU" : "USED"));
     openos_uart0_puts(" eemul1284=");
     openos_uart0_puts(st.eemul_has_1284 ? "1" : "0");
-    openos_uart0_puts(" portao4=");
-    openos_uart0_puts(st.ready_for_portao4 ? "READY\n" : "NO\n");
+    openos_uart0_puts(" nor_autoboot=");
+    openos_uart0_puts(st.nor_autoboot_ready ? "READY\n" : "NO\n");
     return true;
 }
 

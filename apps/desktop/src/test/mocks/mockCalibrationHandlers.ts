@@ -62,10 +62,10 @@ export function handleMockCalibrationCommand(
       if (token !== TBC_BYPASS_CONFIRM_TOKEN) {
         throw new Error(`Invalid TBC bypass confirm token: expected ${TBC_BYPASS_CONFIRM_TOKEN}`);
       }
-      const modeRaw = readStringProp(req, 'applianceMode') ?? 'stage15_digadiag_tbc';
+      const modeRaw = readStringProp(req, 'applianceMode') ?? 'digadiag_ram_tbc';
       const applianceMode: TbcApplianceMode = isTbcApplianceMode(modeRaw)
         ? modeRaw
-        : 'stage15_digadiag_tbc';
+        : 'digadiag_ram_tbc';
       const passRaw = readStringProp(req, 'passthroughMode') ?? 'av_passthrough';
       const passMode: MainPassthroughMode = isMainPassthroughMode(passRaw)
         ? passRaw

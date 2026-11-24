@@ -136,7 +136,7 @@ fn hdd_flash_inspect_is_readonly_and_tbc_and_nor_audit_work() {
 
     let tbc_ok = execute_tool(
         "panadiga_tbc_appliance_plan",
-        &json!({ "mode": "stage15_digadiag_tbc", "tv_standard": "pal-m" }),
+        &json!({ "mode": "digadiag_ram_tbc", "tv_standard": "pal-m" }),
         &ws,
     )
     .unwrap();

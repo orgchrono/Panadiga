@@ -139,7 +139,7 @@ export const MOCK_UNBRICK_WORKSPACE: UnbrickWorkspaceReport = {
   hardware_facts: [
     {
       topic: 'DIGADIAG.FRM vs PANA__SD.FRM / PANA_DVD.FRM',
-      verdict: 'DISTINCT_STAGE15_VS_STAGE2_CONTAINERS',
+      verdict: 'DISTINCT_DIGADIAG_RAM_VS_FRM_UPDATER_CONTAINERS',
       evidence:
         'DIGADIAG.FRM is fixed 128 KiB plaintext EXTRHEAD ("FVU ", 0x50400000); PANA__SD.FRM holds 64B plaintext TOC modules; PANA_DVD.FRM adds full Feistel encryption.',
     },

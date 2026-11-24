@@ -143,7 +143,7 @@
       "subtitle": "Combines 5 MAIN 3410PQ hardware bypasses, volatile SDRAM TBC planning, and hardened ver0.61 (262,144 B + sd48) SD kit generation.",
       "standalonePresetBtn": "Apply Standalone TBC Preset (No-ODD / No-HDD)",
       "applianceModeLabel": "TBC Execution Architecture",
-      "modeStage15": "Stage-1.5 DIGADIAG.FRM TBC (Volatile SDRAM • Safe)",
+      "modeDiagRam": "DIGADIAG.FRM RAM TBC (Volatile DIAG_PROG_RAM • Safe)",
       "modeRamChainload": "Experimental SD RAM Chainload (0x57000000)",
       "ramChainloadAck": "Acknowledge IC3001 + IC7501 TBUS WDT keepalive prerequisites for experimental RAM chainload",
       "tvStandardLabel": "TBC Color Standard",

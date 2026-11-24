@@ -143,7 +143,7 @@
       "subtitle": "Une 5 bypasses verificados do MAIN 3410PQ, planejamento TBC em SDRAM volátil e geração endurecida ver0.61 (262.144 B + sd48).",
       "standalonePresetBtn": "Aplicar Preset Standalone TBC (Sem ODD / Sem HDD)",
       "applianceModeLabel": "Arquitetura de Execução TBC",
-      "modeStage15": "Stage-1.5 DIGADIAG.FRM TBC (SDRAM Volátil • Seguro)",
+      "modeDiagRam": "DIGADIAG.FRM TBC em SDRAM (DIAG_PROG_RAM • Seguro)",
       "modeRamChainload": "Chainload Experimental RAM SD (0x57000000)",
       "ramChainloadAck": "Confirmar pré-requisitos de keepalive IC3001 + IC7501 TBUS WDT para RAM chainload experimental",
       "tvStandardLabel": "Padrão de Cor TBC",

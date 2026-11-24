@@ -138,7 +138,7 @@
       "category": "nor_bgo_geometry",
       "severity": "critical",
       "wrong_assumption": "Assumir que um binario MAIN3060NP compilado para 4 MiB Top-Boot (0x84200000, 35 setores, P5=8, max_did=0x0A1A) consegue inicializar BGO/NFD no DMR-EH55 de 8 MiB sem relocacao e expansao de structs.",
-      "verified_ground_truth": "No Stage-2 via IDE2SAT2, MAIN3060NP stock aborta em '[nfrom] BGO driver init failed[1].' (src/nfd_api.c:228). Aplicar --main-bgo-retarget expande nfd_ctrl para 0x531B8000..0x531BC000 (14 trampolins S1..S12/S14 + stub cave 201 B em 0x57000320..0x570003E9 + patches inline S13A/S13B (0x574AFBB8/0x574AFC18; 3410PQ: 0x574A8102/0x574A8162, S12 @ 0x574ACA0A, S14 @ 0x574AC3A3) + 48 offsets relativos + P5=4 + crt0/sbrk uncached + 0x2202), eliminando '[nfrom] Status flag change error[1]' / 'File omap update error[1]' / 'bgo_writeD error(19)' no rollover de P1 (sp=0xFF -> 0x100) em Mn103Vm e em hardware real EH55 (check_sum 0x32836a32, PiE-OS 3060NP, VFD TM LI).",
+      "verified_ground_truth": "No boot via IDE2SAT2, MAIN3060NP stock aborta em '[nfrom] BGO driver init failed[1].' (src/nfd_api.c:228). Aplicar --main-bgo-retarget expande nfd_ctrl para 0x531B8000..0x531BC000 (14 trampolins S1..S12/S14 + stub cave 201 B em 0x57000320..0x570003E9 + patches inline S13A/S13B (0x574AFBB8/0x574AFC18; 3410PQ: 0x574A8102/0x574A8162, S12 @ 0x574ACA0A, S14 @ 0x574AC3A3) + 48 offsets relativos + P5=4 + crt0/sbrk uncached + 0x2202), eliminando '[nfrom] Status flag change error[1]' / 'File omap update error[1]' / 'bgo_writeD error(19)' no rollover de P1 (sp=0xFF -> 0x100) em Mn103Vm e em hardware real EH55 (check_sum 0x32836a32, PiE-OS 3060NP, VFD TM LI).",
       "affected_entities": [
         "loader_ver061_toc48_main57",
         "eh55_ver061_on_s29jl064h"
@@ -173,12 +173,12 @@
       "category": "nor_bgo_geometry",
       "severity": "high",
       "wrong_assumption": "Assumir que gravar apenas SA11..SA14 (0x84040000..0x8407FFFF, 256 KiB) faz o Loader ver0.61 bootar fvu.exe da NOR sem o arquivo marcador BGO 'fvu.exe' ou que startup reason invalid apaga arquivos fora dos temporarios BGO.",
-      "verified_ground_truth": "No Loader ver0.61 (eh55_loader_ver061_256k.bin @ 0x4400894B..0x44008B98), FUN_4400A1F1 verifica o arquivo 'fvu.exe' (0x504800AF) via NFD na BGO antes de executar memcpy/memcmp de 0x84040000 para 0x90400000; na NOR reparada SA11..SA14 esta virgem (0xFF) e o Stage-2 exige escape hatches (UART 'F', FORCEFVU.TXT, PANA__SD.FRM em boot Nor-FROM).",
+      "verified_ground_truth": "No Loader ver0.61 (eh55_loader_ver061_256k.bin @ 0x4400894B..0x44008B98), FUN_4400A1F1 verifica o arquivo 'fvu.exe' (0x504800AF) via NFD na BGO antes de executar memcpy/memcmp de 0x84040000 para 0x90400000; na NOR reparada SA11..SA14 esta virgem (0xFF) e o SATA HDD autoboot exige escape hatches (UART 'F', FORCEFVU.TXT, PANA__SD.FRM em boot Nor-FROM).",
       "affected_entities": [
         "loader_ver061_toc48_main57",
         "eh55_ver061_on_s29jl064h"
       ],
-      "automated_guard": "crates/panadiga-core/src/re/sata_bridge_stage2/mod.rs (mn103vm_proves_portao4_loader_ver061_norfrom_boot_and_escape_hatch)",
+      "automated_guard": "crates/panadiga-core/src/re/sata_bridge_stage2/mod.rs (mn103vm_proves_nor_autoboot_loader_ver061_norfrom_boot_and_escape_hatch)",
       "evidence_refs": [
         "crates/panadiga-core/src/re/sata_bridge_stage2/mod.rs",
         "firmware_and_images/eh55_loader_ver061_256k.bin",

@@ -232,8 +232,8 @@ void p7501_boot_classifier_feed_line(p7501_boot_classifier_t *st, const char *li
     st->lines_seen += 1u;
     extract_deep_fields(st, line);
 
-    if (strstr(line, "[STAGE2]") != NULL) {
-        st->stage2_seen = true;
+    if ((strstr(line, "[HDD_AUTOBOOT]") != NULL) || (strstr(line, "[STAGE2]") != NULL)) {
+        st->hdd_autoboot_seen = true;
         if (strstr(line, "Boot MAIN") != NULL) {
             st->main_entered = true;
         }
@@ -305,7 +305,7 @@ p7501_boot_verdict_t p7501_boot_classifier_verdict(const p7501_boot_classifier_t
     if ((st->fpc_err_cnt > 0u) || (st->fpc_to_cnt > 0u) || any_op7f_recorded(st)) {
         return P7501_BOOT_VERDICT_FPC_IC7501_MISMATCH;
     }
-    if ((st->hdd_lba_fail_cnt > 0u) && !st->stage2_seen && !st->main_entered) {
+    if ((st->hdd_lba_fail_cnt > 0u) && !st->hdd_autoboot_seen && !st->main_entered) {
         return P7501_BOOT_VERDICT_HDD_BRIDGE_WAIT_FAIL;
     }
     if (!st->main_entered) {
@@ -372,12 +372,12 @@ size_t p7501_boot_classifier_format_summary(
     const int n = snprintf(
         out,
         cap,
-        "@P7501_BOOT_CLASS verdict=%s build=%s stage2=%u avout_ok=%u vmute0=%u "
+        "@P7501_BOOT_CLASS verdict=%s build=%s hdd_autoboot=%u avout_ok=%u vmute0=%u "
         "ntsc=%u rsv_ok=%u hdd_fail=%u bgo_err=%u fpc_err=%u fpc_to=%u "
         "iic_err=%u odd_err=%u op7f_cnt=%u op7f=%s",
         verdict_name(verdict),
         build_name(st->main_build),
-        st->stage2_seen ? 1u : 0u,
+        st->hdd_autoboot_seen ? 1u : 0u,
         st->avout_init_ok ? 1u : 0u,
         st->avout_vmute_off ? 1u : 0u,
         st->tv_ntsc_seen ? 1u : 0u,

@@ -1,6 +1,6 @@
 #![deny(unsafe_code)]
 
-//! Declarative binary patch sites, SATA-bridge reset specs, Stage-2 HDD boot ABI tables,
+//! Declarative binary patch sites, SATA-bridge reset specs, SATA HDD autoboot ABI tables,
 //! and per-build `MAIN` firmware descriptors stored in `profiles/firmware_trains/*.json`.
 
 use schemars::JsonSchema;
@@ -40,10 +40,10 @@ pub struct SataBridgeResetSpec {
     pub site: BinaryPatchSiteSpec,
 }
 
-/// Verified `PROG` / bootloader callee virtual addresses required to assemble the Stage-2 HDD boot hook.
+/// Verified `PROG` / bootloader callee virtual addresses required to assemble the SATA HDD autoboot hook.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
-pub struct Stage2BootSymbolsSpec {
+pub struct HddAutobootSymbolsSpec {
     #[serde(with = "hex_u32")]
     #[schemars(with = "String")]
     pub dcache_purge_va: u32,
@@ -109,10 +109,10 @@ pub struct Stage2BootSymbolsSpec {
     pub sleep_10ms_va: u32,
 }
 
-/// Complete declarative Stage-2 SATA HDD boot hook contract for a firmware train.
+/// Complete declarative SATA HDD autoboot hook contract for a firmware train.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
-pub struct Stage2BootSpec {
+pub struct HddAutobootSpec {
     #[serde(with = "hex_u32")]
     #[schemars(with = "String")]
     pub base_va: u32,
@@ -161,8 +161,14 @@ pub struct Stage2BootSpec {
     #[serde(with = "hex_u32")]
     #[schemars(with = "String")]
     pub norfrom_fvu_base_va: u32,
-    pub symbols: Stage2BootSymbolsSpec,
+    pub symbols: HddAutobootSymbolsSpec,
 }
+
+#[deprecated(note = "Renamed to HddAutobootSymbolsSpec")]
+pub type Stage2BootSymbolsSpec = HddAutobootSymbolsSpec;
+
+#[deprecated(note = "Renamed to HddAutobootSpec")]
+pub type Stage2BootSpec = HddAutobootSpec;
 
 /// Declarative virtual-address and RAM/cave anchors for universal 4 MiB -> 8 MiB BGO retargeting.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]

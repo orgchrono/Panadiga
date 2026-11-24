@@ -190,12 +190,18 @@ pub fn handle_sd_unbrick_kit_with_policy(
                 .get("sata_bridge_reset_fix")
                 .and_then(|v| v.as_bool())
                 .unwrap_or(false);
-            let sata_bridge_stage2_boot = args
-                .get("sata_bridge_stage2_boot")
+            let sata_hdd_autoboot = args
+                .get("sata_hdd_autoboot")
+                .or_else(|| args.get("sata_bridge_stage2_boot"))
                 .and_then(|v| v.as_bool())
                 .unwrap_or(false);
             let main_bgo_retarget = args
                 .get("main_bgo_retarget")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            let nor_autoboot_capsule = args
+                .get("nor_autoboot_capsule")
+                .or_else(|| args.get("portao4_self_unpack"))
                 .and_then(|v| v.as_bool())
                 .unwrap_or(false);
 
@@ -224,9 +230,9 @@ pub fn handle_sd_unbrick_kit_with_policy(
                 expected_main_build,
                 allow_target_mismatch,
                 sata_bridge_reset_fix,
-                sata_bridge_stage2_boot,
+                sata_hdd_autoboot,
                 main_bgo_retarget,
-                portao4_self_unpack: false,
+                nor_autoboot_capsule,
             })?;
             Ok(serde_json::to_value(rep)?)
         }

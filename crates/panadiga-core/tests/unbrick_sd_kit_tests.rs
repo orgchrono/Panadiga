@@ -53,9 +53,9 @@ fn build_workspace_sd_kit_with_mode(
         expected_main_build: Some("3410PQ".to_string()),
         allow_target_mismatch: false,
         sata_bridge_reset_fix: false,
-        sata_bridge_stage2_boot: false,
+        sata_hdd_autoboot: false,
         main_bgo_retarget: false,
-        portao4_self_unpack: false,
+        nor_autoboot_capsule: false,
     };
     if loader_profile == SdLoaderProfile::Ver063ExtrheadSd64 && allow_unverified_profile {
         let blocked = prepare_sd_unbrick_kit(&req).unwrap_err();
@@ -157,9 +157,9 @@ fn auto_format_bgo_policy_fails_closed_without_explicit_override() {
         expected_main_build: None,
         allow_target_mismatch: false,
         sata_bridge_reset_fix: false,
-        sata_bridge_stage2_boot: false,
+        sata_hdd_autoboot: false,
         main_bgo_retarget: false,
-        portao4_self_unpack: false,
+        nor_autoboot_capsule: false,
     })
     .unwrap_err();
     let _ = fs::remove_dir_all(&tmp);
@@ -201,7 +201,7 @@ fn corrupt_pana_sd_payload_fails_fvu_checksum_verification() {
     assert!(sd_chk.detail.contains("fvu_sums_ok=false"));
 }
 
-fn resolve_stage2_workspace_sources() -> Option<(PathBuf, PathBuf, PathBuf)> {
+fn resolve_autoboot_workspace_sources() -> Option<(PathBuf, PathBuf, PathBuf)> {
     let ws = resolve_workspace_root();
     let dvd = ws.join("firmware_and_images/PANA_DVD.FRM");
     let main_unpacked =
@@ -216,19 +216,19 @@ fn resolve_stage2_workspace_sources() -> Option<(PathBuf, PathBuf, PathBuf)> {
 }
 
 #[test]
-fn ver061_stage2_fails_closed_without_main_bgo_retarget_and_passes_with_8mb_main() {
+fn ver061_hdd_autoboot_fails_closed_without_main_bgo_retarget_and_passes_with_8mb_main() {
     use panadiga_core::constants::CHK_ID_MAIN_BGO_GEOMETRY;
     use panadiga_core::crypto::{ExtrheadCryptMode, pack_extrhead};
     use panadiga_core::re::bgo_unbrick::Prog061BgoPatchMode::BypassChecksOnly;
     use panadiga_core::re::main_bgo_retarget::{MAIN_BGO_STATE_8MB, MAIN_BGO_STATE_FACTORY_4MB};
-    use panadiga_core::re::sata_bridge_stage2::apply_prog061_stage2_boot_in_place;
+    use panadiga_core::re::sata_bridge_stage2::apply_prog061_hdd_autoboot_in_place;
 
     let tmp_guard =
-        std::env::temp_dir().join(format!("panadiga_stage2_guard_{}", std::process::id()));
+        std::env::temp_dir().join(format!("panadiga_autoboot_guard_{}", std::process::id()));
     let _ = fs::remove_dir_all(&tmp_guard);
     let mut req = SdUnbrickKitRequest::hardened_panamon1(tmp_guard.clone());
     req.sata_bridge_reset_fix = true;
-    req.sata_bridge_stage2_boot = true;
+    req.sata_hdd_autoboot = true;
     let err = prepare_sd_unbrick_kit(&req).unwrap_err();
     assert!(
         err.to_string().contains("--main-bgo-retarget"),
@@ -236,18 +236,19 @@ fn ver061_stage2_fails_closed_without_main_bgo_retarget_and_passes_with_8mb_main
     );
     let _ = fs::remove_dir_all(&tmp_guard);
 
-    let Some((dvd, main_unpacked, prog_unpacked)) = resolve_stage2_workspace_sources() else {
+    let Some((dvd, main_unpacked, prog_unpacked)) = resolve_autoboot_workspace_sources() else {
         return;
     };
 
-    let tmp_pass = std::env::temp_dir().join(format!("panadiga_stage2_8mb_{}", std::process::id()));
+    let tmp_pass =
+        std::env::temp_dir().join(format!("panadiga_autoboot_8mb_{}", std::process::id()));
     let _ = fs::remove_dir_all(&tmp_pass);
     let mut pass_req = SdUnbrickKitRequest::hardened_panamon1(tmp_pass.clone());
     pass_req.pana_dvd_path = Some(dvd);
     pass_req.prog061_path = Some(prog_unpacked.clone());
     pass_req.main_path = Some(main_unpacked.clone());
     pass_req.sata_bridge_reset_fix = true;
-    pass_req.sata_bridge_stage2_boot = true;
+    pass_req.sata_hdd_autoboot = true;
     pass_req.main_bgo_retarget = true;
     let ok_rep = prepare_sd_unbrick_kit(&pass_req).unwrap();
     assert!(ok_rep.main_bgo_retarget_applied);
@@ -264,15 +265,15 @@ fn ver061_stage2_fails_closed_without_main_bgo_retarget_and_passes_with_8mb_main
     );
     let _ = fs::remove_dir_all(&tmp_pass);
 
-    // Construct an in-memory ver061 Stage-2 kit pairing Stage-2 PROG061 with factory 4 MiB MAIN3060NP:
+    // Construct an in-memory ver061 kit pairing SATA HDD autoboot PROG061 with factory 4 MiB MAIN3060NP:
     // verify_sd_buffers must fail closed with CHK_ID_MAIN_BGO_GEOMETRY == "fail".
-    let mut prog_stage2 = fs::read(prog_unpacked).unwrap();
+    let mut prog_autoboot = fs::read(prog_unpacked).unwrap();
     let bgo_done = panadiga_core::re::bgo_unbrick::patch_prog061_bgo_in_place(
-        &mut prog_stage2,
+        &mut prog_autoboot,
         BypassChecksOnly,
     );
     bgo_done.unwrap();
-    apply_prog061_stage2_boot_in_place(&mut prog_stage2, true).unwrap();
+    apply_prog061_hdd_autoboot_in_place(&mut prog_autoboot, true).unwrap();
     let main_4mb_ctr = pack_extrhead(
         &fs::read(main_unpacked).unwrap(),
         "MAIN",
@@ -283,7 +284,7 @@ fn ver061_stage2_fails_closed_without_main_bgo_retarget_and_passes_with_8mb_main
         1,
     )
     .unwrap();
-    let mut m_prog = FrmPackModule::new("PROG061 ", prog_stage2);
+    let mut m_prog = FrmPackModule::new("PROG061 ", prog_autoboot);
     m_prog.hardware_family = "M6930LB".to_string();
     m_prog.hardware_family_aliases = vec!["M6930".to_string()];
     m_prog.model_prefix = b'M';
@@ -292,7 +293,7 @@ fn ver061_stage2_fails_closed_without_main_bgo_retarget_and_passes_with_8mb_main
     m_main.hardware_family_aliases = vec!["M6930".to_string()];
     m_main.model_prefix = b'M';
     let (bad_sd, _) = pack_frm(&[m_prog, m_main], FrmContainerMode::Sd48, None).unwrap();
-    let bad_rep = verify_sd_buffers("/mem/stage2_4mb_fail", None, Some(&bad_sd));
+    let bad_rep = verify_sd_buffers("/mem/autoboot_4mb_fail", None, Some(&bad_sd));
     assert_eq!(bad_rep.overall_status, "INCOMPLETE_OR_INVALID");
     assert_eq!(
         bad_rep.pana_sd_main_bgo_geometry.as_deref(),
@@ -307,29 +308,29 @@ fn ver061_stage2_fails_closed_without_main_bgo_retarget_and_passes_with_8mb_main
 }
 
 #[test]
-fn portao4_self_unpack_sd_kit_fails_closed_and_roundtrips_p4zu_payload() {
+fn nor_autoboot_capsule_sd_kit_fails_closed_and_roundtrips_p4zu_payload() {
     use panadiga_core::constants::{
-        CHK_ID_MAIN_BGO_GEOMETRY, CHK_ID_SATA_BRIDGE_STAGE2_BOOT, PANA_DIGADIAG_RAW_VER061_SIZE,
+        CHK_ID_MAIN_BGO_GEOMETRY, CHK_ID_SATA_HDD_AUTOBOOT, PANA_DIGADIAG_RAW_VER061_SIZE,
     };
     use panadiga_core::crypto::parse_sd_frm_toc_with_layout;
     use panadiga_core::re::{
-        PORTAO4_UNPACKER_MAGIC_LE, PORTAO4_UNPACKER_MAGIC_OFFSET, inspect_prog061_stage2_boot_site,
-        unpack_portao4_self_unpacking_prog061,
+        NOR_AUTOBOOT_CAPSULE_MAGIC_LE, NOR_AUTOBOOT_CAPSULE_MAGIC_OFFSET,
+        inspect_prog061_hdd_autoboot_site, unpack_nor_autoboot_capsule,
     };
 
     let tmp_guard =
         std::env::temp_dir().join(format!("panadiga_p4zu_guard_{}", std::process::id()));
     let _ = fs::remove_dir_all(&tmp_guard);
     let mut guard_req = SdUnbrickKitRequest::hardened_panamon1(tmp_guard.clone());
-    guard_req.portao4_self_unpack = true;
+    guard_req.nor_autoboot_capsule = true;
     let err = prepare_sd_unbrick_kit(&guard_req).unwrap_err();
     let _ = fs::remove_dir_all(&tmp_guard);
     assert!(
-        err.to_string().contains("--sata-bridge-stage2-boot"),
-        "expected fail-closed --sata-bridge-stage2-boot guard, got: {err}"
+        err.to_string().contains("--sata-hdd-autoboot"),
+        "expected fail-closed --sata-hdd-autoboot guard, got: {err}"
     );
 
-    let Some((dvd, main_unpacked, prog_unpacked)) = resolve_stage2_workspace_sources() else {
+    let Some((dvd, main_unpacked, prog_unpacked)) = resolve_autoboot_workspace_sources() else {
         return;
     };
 
@@ -340,13 +341,13 @@ fn portao4_self_unpack_sd_kit_fails_closed_and_roundtrips_p4zu_payload() {
     ok_req.prog061_path = Some(prog_unpacked);
     ok_req.main_path = Some(main_unpacked);
     ok_req.sata_bridge_reset_fix = true;
-    ok_req.sata_bridge_stage2_boot = true;
+    ok_req.sata_hdd_autoboot = true;
     ok_req.main_bgo_retarget = true;
-    ok_req.portao4_self_unpack = true;
+    ok_req.nor_autoboot_capsule = true;
     let rep = prepare_sd_unbrick_kit(&ok_req).unwrap();
-    assert!(rep.portao4_self_unpack_applied);
+    assert!(rep.nor_autoboot_capsule_applied);
     assert_eq!(rep.verification.overall_status, "READY_WITH_HW_WARNINGS");
-    for chk_id in [CHK_ID_MAIN_BGO_GEOMETRY, CHK_ID_SATA_BRIDGE_STAGE2_BOOT] {
+    for chk_id in [CHK_ID_MAIN_BGO_GEOMETRY, CHK_ID_SATA_HDD_AUTOBOOT] {
         assert!(
             rep.verification
                 .checks
@@ -368,14 +369,14 @@ fn portao4_self_unpack_sd_kit_fails_closed_and_roundtrips_p4zu_payload() {
     assert_eq!(sz, PANA_DIGADIAG_RAW_VER061_SIZE);
     let slot = &sd_bytes[off..off + sz];
     assert_eq!(
-        &slot[PORTAO4_UNPACKER_MAGIC_OFFSET..PORTAO4_UNPACKER_MAGIC_OFFSET + 4],
-        &PORTAO4_UNPACKER_MAGIC_LE.to_le_bytes()
+        &slot[NOR_AUTOBOOT_CAPSULE_MAGIC_OFFSET..NOR_AUTOBOOT_CAPSULE_MAGIC_OFFSET + 4],
+        &NOR_AUTOBOOT_CAPSULE_MAGIC_LE.to_le_bytes()
     );
     assert!(slot[0x2_0000..].iter().all(|&b| b == 0xFF));
-    let inner = unpack_portao4_self_unpacking_prog061(slot).expect("valid zlib self-unpacker");
+    let inner = unpack_nor_autoboot_capsule(slot).expect("valid zlib self-unpacker");
     assert_eq!(
-        inspect_prog061_stage2_boot_site(&inner).unwrap().state,
-        "STAGE2_HDD_BOOT"
+        inspect_prog061_hdd_autoboot_site(&inner).unwrap().state,
+        "SATA_HDD_AUTOBOOT"
     );
     let _ = fs::remove_dir_all(&tmp_ok);
 }

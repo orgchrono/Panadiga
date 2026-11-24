@@ -255,7 +255,7 @@ pub fn generate_ts_ssot_module() -> String {
          \x20 readonly nvramCachedBaseHex: string;\n\
          \x20 readonly nvramUncachedBaseAddr: number;\n\
          \x20 readonly nvramUncachedBaseHex: string;\n\
-         \x20 readonly digadiagStage15LoadAddrHex: string;\n\
+         \x20 readonly digadiagLoadAddrHex: string;\n\
          \x20 readonly sdramStubRawAddrHex: string;\n\
          \x20 readonly lethalMmioRegAddr: number;\n\
          \x20 readonly lethalMmioRegHex: string;\n\
@@ -286,7 +286,7 @@ pub fn generate_ts_ssot_module() -> String {
     );
     let _ = writeln!(
         out,
-        "  digadiagStage15LoadAddrHex: '0x{PANA_DIGADIAG_DEFAULT_LOAD_ADDR:08X}',"
+        "  digadiagLoadAddrHex: '0x{PANA_DIGADIAG_DEFAULT_LOAD_ADDR:08X}',"
     );
     let _ = writeln!(
         out,

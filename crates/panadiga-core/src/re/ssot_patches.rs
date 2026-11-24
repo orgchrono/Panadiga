@@ -3,7 +3,7 @@
 //! Universal SSOT lookup and fail-closed patch dispatch over `profiles/firmware_trains/*.json`.
 //!
 //! Eliminates per-build size/VA switches in Rust by resolving `MainBuildSpec`,
-//! `SataBridgeResetSpec`, `Stage2BootSpec`, and native BGO checks directly from the
+//! `SataBridgeResetSpec`, `HddAutobootSpec`, and native BGO checks directly from the
 //! compile-time validated [`HardwareProfileRegistry`].
 
 use anyhow::{Context, Result, bail};
@@ -17,7 +17,7 @@ use crate::ssot::registry::{
 use super::main_bgo_retarget::MainBgoGeometryStatus;
 use super::patch_spec::{PatchApplyAction, PatchSpec, apply_patch_specs_in_place};
 use super::sata_bridge_fix::{SataBridgeResetFixMode, SataBridgeResetSiteStatus, inspect_site};
-use super::sata_bridge_stage2::Stage2BootTrainSpec;
+use super::sata_bridge_stage2::HddAutobootTrainSpec;
 
 /// Resolves the firmware train + `MainBuildSpec` matching an unpacked `MAIN` byte length.
 #[must_use]
@@ -75,21 +75,21 @@ pub fn find_prog_sata_reset_spec(
         })
 }
 
-/// Converts a declarative SSOT `Stage2BootSpec` into a runtime [`Stage2BootTrainSpec`].
+/// Converts a declarative SSOT `HddAutobootSpec` into a runtime [`HddAutobootTrainSpec`].
 #[must_use]
-pub fn stage2_boot_spec_for_loader(loader_profile_key: &str) -> Option<Stage2BootTrainSpec> {
+pub fn hdd_autoboot_spec_for_loader(loader_profile_key: &str) -> Option<HddAutobootTrainSpec> {
     let key = loader_profile_key.trim();
     let train = HardwareProfileRegistry::builtin()
         .bundle()
         .firmware_trains
         .values()
         .find(|t| t.loader_profile_key == key)?;
-    let s = train.stage2_boot_spec.as_ref()?;
+    let s = train.hdd_autoboot_spec.as_ref()?;
     let hook_vec = parse_hex_bytes(&s.hook_expect_hex).ok()?;
     let hook_expect: [u8; 7] = hook_vec.try_into().ok()?;
     let sym = &s.symbols;
 
-    Some(Stage2BootTrainSpec {
+    Some(HddAutobootTrainSpec {
         train_id: train.id.as_str(),
         base_va: s.base_va,
         expected_size: s.expected_size as usize,
@@ -133,6 +133,12 @@ pub fn stage2_boot_spec_for_loader(loader_profile_key: &str) -> Option<Stage2Boo
         memcpy_va: sym.memcpy_va,
         sleep_10ms_va: sym.sleep_10ms_va,
     })
+}
+
+#[deprecated(note = "Use hdd_autoboot_spec_for_loader")]
+#[must_use]
+pub fn stage2_boot_spec_for_loader(loader_profile_key: &str) -> Option<HddAutobootTrainSpec> {
+    hdd_autoboot_spec_for_loader(loader_profile_key)
 }
 
 fn parse_site_pair(site: &BinaryPatchSiteSpec) -> Result<(Vec<u8>, Vec<u8>)> {

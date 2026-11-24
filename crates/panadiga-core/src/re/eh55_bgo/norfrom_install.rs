@@ -1,8 +1,8 @@
 #![deny(unsafe_code)]
 
-//! Pure CoW Portão 4 (`Nor-FROM` self-extracting `SA11..SA12` + `update` `case 3 = 0xFF`) installer.
+//! Pure CoW NOR autoboot capsule (`Nor-FROM` self-extracting `SA11..SA12` + `update` `case 3 = 0xFF`) installer.
 //!
-//! Compresses Stage-2 `PROG061` with `zlib` behind a 256 B MN103S self-unpacker into `SA11..=SA12`
+//! Compresses SATA HDD autoboot `PROG061` with `zlib` behind a 256 B MN103S self-unpacker into `SA11..=SA12`
 //! (`0x8404_0000..0x8405_FFFF`), leaving `SA13..=SA14` (`0x8406_0000..0x8407_FFFF`) 100% virgin
 //! `0xFF` for `MAIN` `NFD_NMI` power-fail recovery and keeping `SA0..=SA10` strictly untouched.
 
@@ -32,7 +32,7 @@ use crate::re::sata_bridge_fix::{
     SATA_BRIDGE_STATE_WAIT_1000MS, inspect_prog061_sata_bridge_reset_site,
 };
 use crate::re::sata_bridge_stage2::{
-    PROG061_STAGE2_STATE_ENABLED, inspect_prog061_stage2_boot_site,
+    PROG061_HDD_AUTOBOOT_STATE_ENABLED, inspect_prog061_hdd_autoboot_site,
 };
 
 const SA11_12_OFFSET: usize = 0x4_0000;
@@ -43,15 +43,19 @@ const SELF_UNPACK_HEADER_BYTES: usize = 0x100;
 const TRAMPOLINE_OFFSET: usize = 0xA0;
 const TRAMPOLINE_MAX_BYTES: usize = 0x5C;
 
-/// Byte offset within the 256 B Portão 4 self-unpacker header carrying [`PORTAO4_UNPACKER_MAGIC_LE`].
-pub const PORTAO4_UNPACKER_MAGIC_OFFSET: usize = 0xFC;
-/// 4-byte little-endian signature (`"P4ZU"`) stamped at [`PORTAO4_UNPACKER_MAGIC_OFFSET`] (`+0xFC`).
-pub const PORTAO4_UNPACKER_MAGIC_LE: u32 = u32::from_le_bytes(*b"P4ZU");
+/// Byte offset within the 256 B NOR autoboot self-unpacker header carrying [`NOR_AUTOBOOT_CAPSULE_MAGIC_LE`].
+pub const NOR_AUTOBOOT_CAPSULE_MAGIC_OFFSET: usize = 0xFC;
+#[deprecated(note = "Use NOR_AUTOBOOT_CAPSULE_MAGIC_OFFSET")]
+pub const PORTAO4_UNPACKER_MAGIC_OFFSET: usize = NOR_AUTOBOOT_CAPSULE_MAGIC_OFFSET;
+/// 4-byte little-endian signature (`"P4ZU"`, legacy wire tag) stamped at [`NOR_AUTOBOOT_CAPSULE_MAGIC_OFFSET`] (`+0xFC`).
+pub const NOR_AUTOBOOT_CAPSULE_MAGIC_LE: u32 = u32::from_le_bytes(*b"P4ZU");
+#[deprecated(note = "Use NOR_AUTOBOOT_CAPSULE_MAGIC_LE")]
+pub const PORTAO4_UNPACKER_MAGIC_LE: u32 = NOR_AUTOBOOT_CAPSULE_MAGIC_LE;
 
 const VA_FVU_ENTRY: u32 = 0x5040_0000;
 const VA_FVU_UNCACHED_DST: u32 = 0x9040_0000;
-const VA_STAGE2_UNPACK_DST: u32 = 0x9100_0000;
-const VA_STAGE2_TRAMP_DST: u32 = 0x9104_0000;
+const VA_AUTOBOOT_UNPACK_DST: u32 = 0x9100_0000;
+const VA_AUTOBOOT_TRAMP_DST: u32 = 0x9104_0000;
 const VA_RAM_TRAMP_SRC: u32 = 0x9040_00A0;
 const VA_RAM_ZLIB_SRC: u32 = 0x9040_0100;
 const VA_LOADER_UNCOMPRESS: u32 = 0x4402_834D;
@@ -59,13 +63,14 @@ const VA_LOADER_MEMCPY: u32 = 0x4402_A34A;
 const VA_LOADER_MEDIA_GATE: u32 = 0x4400_8BC5;
 const VA_AM34_CHCTR: u32 = 0xC000_0070;
 
-/// Summary report emitted by [`build_portao4_norfrom_cow_image`].
+/// Summary report emitted by [`build_nor_autoboot_cow_image`].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Portao4InstallReport {
+pub struct NorAutobootInstallReport {
     pub source_nor_sha256: String,
     pub target_nor_sha256: String,
     pub ipl_sha256: String,
-    pub stage2_sha256: String,
+    #[serde(alias = "stage2_sha256")]
+    pub payload_sha256: String,
     pub fvu_marker_pid: u16,
     pub update_pid: u16,
     pub config1_page9_pid: Option<u16>,
@@ -89,7 +94,7 @@ fn assemble_sa11_12_self_unpacker(zlen: usize) -> Result<[u8; SELF_UNPACK_HEADER
     let _ = emit_mov_imm32(&mut p1, 0xCC, zlen32);
     p1.extend_from_slice(&[0x42, 0x10]);
     p1.extend_from_slice(&[0x3C, 0x20, 0x18, 0xF1, 0xD1]);
-    let _ = emit_mov_imm32(&mut p1, 0xCC, VA_STAGE2_UNPACK_DST);
+    let _ = emit_mov_imm32(&mut p1, 0xCC, VA_AUTOBOOT_UNPACK_DST);
     emit_call32_abs(&mut p1, VA_FVU_ENTRY, VA_LOADER_UNCOMPRESS);
     emit_cmp_imm(&mut p1, 0, 0);
     let bne1 = p1.len();
@@ -99,10 +104,10 @@ fn assemble_sa11_12_self_unpacker(zlen: usize) -> Result<[u8; SELF_UNPACK_HEADER
     let bne2 = p1.len();
     p1.extend_from_slice(&[0xC9, 0x00]);
     p1.extend_from_slice(&[0x80, TRAMPOLINE_MAX_BYTES as u8, 0x42, 0x0C]);
-    let _ = emit_mov_imm32(&mut p1, 0xCC, VA_STAGE2_TRAMP_DST);
+    let _ = emit_mov_imm32(&mut p1, 0xCC, VA_AUTOBOOT_TRAMP_DST);
     let _ = emit_mov_imm32(&mut p1, 0xCD, VA_RAM_TRAMP_SRC);
     emit_call32_abs(&mut p1, VA_FVU_ENTRY, VA_LOADER_MEMCPY);
-    let _ = emit_mov_imm32(&mut p1, 0xDC, VA_STAGE2_TRAMP_DST);
+    let _ = emit_mov_imm32(&mut p1, 0xDC, VA_AUTOBOOT_TRAMP_DST);
     p1.extend_from_slice(&[0xF0, 0xF4]);
     let fail = p1.len();
     p1[bne1 + 1] = u8::try_from(i8::try_from(fail - bne1)?)?;
@@ -122,8 +127,8 @@ fn assemble_sa11_12_self_unpacker(zlen: usize) -> Result<[u8; SELF_UNPACK_HEADER
     let _ = emit_mov_imm32(&mut p2, 0xCC, PROG061_EXPECTED_SIZE as u32);
     p2.extend_from_slice(&[0x42, 0x0C]);
     let _ = emit_mov_imm32(&mut p2, 0xCC, VA_FVU_UNCACHED_DST);
-    let _ = emit_mov_imm32(&mut p2, 0xCD, VA_STAGE2_UNPACK_DST);
-    emit_call32_abs(&mut p2, VA_STAGE2_TRAMP_DST, VA_LOADER_MEMCPY);
+    let _ = emit_mov_imm32(&mut p2, 0xCD, VA_AUTOBOOT_UNPACK_DST);
+    emit_call32_abs(&mut p2, VA_AUTOBOOT_TRAMP_DST, VA_LOADER_MEMCPY);
     let _ = emit_mov_imm32(&mut p2, 0xDC, VA_AM34_CHCTR);
     p2.extend_from_slice(&[0xF0, 0x60, 0xFA, 0xE0, 0xFC, 0xFF, 0xF0, 0x70]);
     p2.extend_from_slice(&[0xF0, 0x60, 0xF8, 0xE0, 0x0C, 0xC9, 0xFB]);
@@ -139,8 +144,8 @@ fn assemble_sa11_12_self_unpacker(zlen: usize) -> Result<[u8; SELF_UNPACK_HEADER
         );
     }
     hdr[TRAMPOLINE_OFFSET..TRAMPOLINE_OFFSET + p2.len()].copy_from_slice(&p2);
-    hdr[PORTAO4_UNPACKER_MAGIC_OFFSET..SELF_UNPACK_HEADER_BYTES]
-        .copy_from_slice(&PORTAO4_UNPACKER_MAGIC_LE.to_le_bytes());
+    hdr[NOR_AUTOBOOT_CAPSULE_MAGIC_OFFSET..SELF_UNPACK_HEADER_BYTES]
+        .copy_from_slice(&NOR_AUTOBOOT_CAPSULE_MAGIC_LE.to_le_bytes());
     Ok(hdr)
 }
 
@@ -317,26 +322,27 @@ fn commit_bgo_pages_to_cow(
     Ok(())
 }
 
-/// Packs a validated Stage-2 `PROG061` (1000ms + Stage-2 HDD boot) into a universal 256 KiB
-/// Portão 4 SDRAM self-unpacking container (bootable identically via `PANA__SD.FRM` or `SA11..SA12`),
+/// Packs a validated pre-FVU SATA HDD autoboot `PROG061` into a universal 256 KiB
+/// NOR autoboot SDRAM self-unpacking container (bootable identically via `PANA__SD.FRM` or `SA11..SA12`),
 /// leaving the trailing 128 KiB (`0x2_0000..0x4_0000` / `SA13..SA14`) 100% `0xFF`.
-pub fn build_portao4_self_unpacking_prog061(stage2_prog061: &[u8]) -> Result<(Vec<u8>, usize)> {
-    if stage2_prog061.len() != PROG061_EXPECTED_SIZE {
+pub fn build_nor_autoboot_capsule(autoboot_prog061: &[u8]) -> Result<(Vec<u8>, usize)> {
+    if autoboot_prog061.len() != PROG061_EXPECTED_SIZE {
         bail!(
-            "Invalid Stage-2 PROG061 buffer size: {} B (expected {} B)",
-            stage2_prog061.len(),
+            "Invalid SATA HDD autoboot PROG061 buffer size: {} B (expected {} B)",
+            autoboot_prog061.len(),
             PROG061_EXPECTED_SIZE
         );
     }
-    if inspect_prog061_sata_bridge_reset_site(stage2_prog061)?.state
+    if inspect_prog061_sata_bridge_reset_site(autoboot_prog061)?.state
         != SATA_BRIDGE_STATE_WAIT_1000MS
-        || inspect_prog061_stage2_boot_site(stage2_prog061)?.state != PROG061_STAGE2_STATE_ENABLED
+        || inspect_prog061_hdd_autoboot_site(autoboot_prog061)?.state
+            != PROG061_HDD_AUTOBOOT_STATE_ENABLED
     {
-        bail!("PROG061 payload must carry both 1000ms SATA reset fix and Stage-2 HDD boot hook");
+        bail!("PROG061 payload must carry both 1000ms SATA reset fix and SATA HDD autoboot hook");
     }
 
     let mut encoder = ZlibEncoder::new(Vec::new(), Compression::best());
-    encoder.write_all(stage2_prog061)?;
+    encoder.write_all(autoboot_prog061)?;
     let compressed = encoder.finish()?;
     let sa11_12_compressed_bytes = compressed.len();
     if SELF_UNPACK_HEADER_BYTES + sa11_12_compressed_bytes > SA11_12_END - SA11_12_OFFSET {
@@ -354,14 +360,14 @@ pub fn build_portao4_self_unpacking_prog061(stage2_prog061: &[u8]) -> Result<(Ve
     Ok((out, sa11_12_compressed_bytes))
 }
 
-/// If `buf` is a Portão 4 self-unpacking 256 KiB `PROG061` container, decompresses the inner Stage-2 binary.
+/// If `buf` is a NOR autoboot self-unpacking 256 KiB `PROG061` container, decompresses the inner payload.
 #[must_use]
-pub fn unpack_portao4_self_unpacking_prog061(buf: &[u8]) -> Option<Vec<u8>> {
+pub fn unpack_nor_autoboot_capsule(buf: &[u8]) -> Option<Vec<u8>> {
     if buf.len() != PROG061_EXPECTED_SIZE {
         return None;
     }
-    if buf.get(PORTAO4_UNPACKER_MAGIC_OFFSET..SELF_UNPACK_HEADER_BYTES)?
-        != PORTAO4_UNPACKER_MAGIC_LE.to_le_bytes()
+    if buf.get(NOR_AUTOBOOT_CAPSULE_MAGIC_OFFSET..SELF_UNPACK_HEADER_BYTES)?
+        != NOR_AUTOBOOT_CAPSULE_MAGIC_LE.to_le_bytes()
     {
         return None;
     }
@@ -375,12 +381,12 @@ pub fn unpack_portao4_self_unpacking_prog061(buf: &[u8]) -> Option<Vec<u8>> {
     (out.len() == PROG061_EXPECTED_SIZE).then_some(out)
 }
 
-/// Builds a verified CoW 8 MiB NOR image with self-extracting Portão 4 (`SA11..SA12` + `fvu.exe` + `update` `case 3 = 0xFF`).
-pub fn build_portao4_norfrom_cow_image(
+/// Builds a verified CoW 8 MiB NOR image with self-extracting NOR autoboot (`SA11..SA12` + `fvu.exe` + `update` `case 3 = 0xFF`).
+pub fn build_nor_autoboot_cow_image(
     nor_8mb: &[u8],
-    stage2_prog061: &[u8],
+    autoboot_prog061: &[u8],
     tv_standard: Option<TvStandardKind>,
-) -> Result<(Vec<u8>, Portao4InstallReport)> {
+) -> Result<(Vec<u8>, NorAutobootInstallReport)> {
     if nor_8mb.len() != AM34_FLASH_SIZE as usize {
         bail!(
             "Invalid NOR input buffer size: {} B (expected {} B)",
@@ -389,11 +395,11 @@ pub fn build_portao4_norfrom_cow_image(
         );
     }
     let (self_unpack_256k, sa11_12_compressed_bytes) =
-        build_portao4_self_unpacking_prog061(stage2_prog061)?;
+        build_nor_autoboot_capsule(autoboot_prog061)?;
 
     let (_, source_nor_sha256) = calculate_hashes(nor_8mb);
     let (_, ipl_sha256) = calculate_hashes(&nor_8mb[..AM34_FLASH_CRITICAL_IPL_SIZE as usize]);
-    let (_, stage2_sha256) = calculate_hashes(stage2_prog061);
+    let (_, payload_sha256) = calculate_hashes(autoboot_prog061);
     let mut cow = nor_8mb.to_vec();
     let sa11_12_needed_erase = !cow[SA11_12_OFFSET..SA11_12_END].iter().all(|&b| b == 0xFF);
     let window = SA11_12_END - SA11_12_OFFSET;
@@ -401,13 +407,15 @@ pub fn build_portao4_norfrom_cow_image(
 
     let sa13_14_preserved_blank = cow[SA13_14_OFFSET..SA13_14_END].iter().all(|&b| b == 0xFF);
     if !sa13_14_preserved_blank {
-        bail!("Portão 4 CoW safety violation: SA13..SA14 NFD_NMI window must remain 0xFF blank");
+        bail!(
+            "NOR autoboot CoW safety violation: SA13..SA14 NFD_NMI window must remain 0xFF blank"
+        );
     }
 
     let geom = BgoSectorGeometry::eh55_default();
     let pre_audit = audit_bgo_nor_with_geometry(&cow, &geom)?;
     if !pre_audit.healthy {
-        bail!("Refusing Portão 4 CoW build on unhealthy BGO NOR (heal BGO FTL first)");
+        bail!("Refusing NOR autoboot CoW build on unhealthy BGO NOR (heal BGO FTL first)");
     }
     let p1_sa = pre_audit
         .sectors
@@ -435,7 +443,7 @@ pub fn build_portao4_norfrom_cow_image(
             TvStandardKind::Ntsc => 0x01u8,
             TvStandardKind::PalM => 0x00u8,
             other => bail!(
-                "Portão 4 config1 TV system supports 'ntsc' or 'pal-m', got '{}'",
+                "NOR autoboot config1 TV system supports 'ntsc' or 'pal-m', got '{}'",
                 other.as_str()
             ),
         };
@@ -450,7 +458,7 @@ pub fn build_portao4_norfrom_cow_image(
     commit_bgo_pages_to_cow(&mut cow, &geom, p1_sa, &f2_bases, &mut l2p, &queued)?;
 
     if calculate_hashes(&cow[..AM34_FLASH_CRITICAL_IPL_SIZE as usize]).1 != ipl_sha256 {
-        bail!("Portão 4 CoW safety violation: SA0..SA10 IPL hash mutated");
+        bail!("NOR autoboot CoW safety violation: SA0..SA10 IPL hash mutated");
     }
     let post_audit = audit_bgo_nor_with_geometry(&cow, &geom)?;
     if !post_audit.healthy
@@ -458,16 +466,16 @@ pub fn build_portao4_norfrom_cow_image(
         || post_audit.l2p_tag_mismatches != 0
         || post_audit.fat_mirror_mismatches != 0
     {
-        bail!("Portão 4 CoW post-audit failed");
+        bail!("NOR autoboot CoW post-audit failed");
     }
     let (_, target_nor_sha256) = calculate_hashes(&cow);
     Ok((
         cow,
-        Portao4InstallReport {
+        NorAutobootInstallReport {
             source_nor_sha256,
             target_nor_sha256,
             ipl_sha256,
-            stage2_sha256,
+            payload_sha256,
             fvu_marker_pid,
             update_pid,
             config1_page9_pid,
@@ -478,4 +486,27 @@ pub fn build_portao4_norfrom_cow_image(
             post_audit,
         },
     ))
+}
+
+#[deprecated(note = "Use NorAutobootInstallReport")]
+pub type Portao4InstallReport = NorAutobootInstallReport;
+
+#[deprecated(note = "Use build_nor_autoboot_capsule")]
+pub fn build_portao4_self_unpacking_prog061(autoboot_prog061: &[u8]) -> Result<(Vec<u8>, usize)> {
+    build_nor_autoboot_capsule(autoboot_prog061)
+}
+
+#[deprecated(note = "Use unpack_nor_autoboot_capsule")]
+#[must_use]
+pub fn unpack_portao4_self_unpacking_prog061(buf: &[u8]) -> Option<Vec<u8>> {
+    unpack_nor_autoboot_capsule(buf)
+}
+
+#[deprecated(note = "Use build_nor_autoboot_cow_image")]
+pub fn build_portao4_norfrom_cow_image(
+    nor_8mb: &[u8],
+    autoboot_prog061: &[u8],
+    tv_standard: Option<TvStandardKind>,
+) -> Result<(Vec<u8>, NorAutobootInstallReport)> {
+    build_nor_autoboot_cow_image(nor_8mb, autoboot_prog061, tv_standard)
 }

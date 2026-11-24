@@ -27,9 +27,10 @@ pub use model::{
     CapabilitySummary, ClaimAxis, ModelClaims, ModelProfileManifest, ProfilesBundle,
     RegistryValidationReport, ResolvedModelProfile,
 };
+#[allow(deprecated)]
 pub use patch_specs::{
-    BinaryPatchSiteSpec, MainBgoRetargetAnchors, MainBuildSpec, SataBridgeResetSpec,
-    Stage2BootSpec, Stage2BootSymbolsSpec,
+    BinaryPatchSiteSpec, HddAutobootSpec, HddAutobootSymbolsSpec, MainBgoRetargetAnchors,
+    MainBuildSpec, SataBridgeResetSpec, Stage2BootSpec, Stage2BootSymbolsSpec,
 };
 pub use soc::{BusWindow, SocCoreProfile, SocProfile};
 pub use train::{

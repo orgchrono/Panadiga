@@ -63,7 +63,7 @@ export const TbcBypassLabSection: React.FC<TbcBypassLabSectionProps> = (props) =
         <div className="space-y-1">
           <label htmlFor="tbc-appliance-mode" className="text-slate-400 block">{t('pipelines.tbcSd.applianceModeLabel')}</label>
           <Select id="tbc-appliance-mode" data-testid="tbc-appliance-mode" value={props.applianceMode} onChange={e => { if (isTbcApplianceMode(e.target.value)) props.setApplianceMode(e.target.value); }}>
-            <option value="stage15_digadiag_tbc">{t('pipelines.tbcSd.modeStage15')}</option>
+            <option value="digadiag_ram_tbc">{t('pipelines.tbcSd.modeDiagRam')}</option>
             <option value="experimental_sd_ram_chainload">{t('pipelines.tbcSd.modeRamChainload')}</option>
           </Select>
         </div>

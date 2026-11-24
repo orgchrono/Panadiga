@@ -321,7 +321,7 @@ size_t p7501_gps_build_route(
         target = env->nvram_base;
         payload = "jedec_nvram_erase";
         op_mask = P7501_SSOT_TRAP_W;
-        next = (env->bgo_err > 0u) ? "JOB_UNBRICK_STAGE2" : "EEMUL_INSPECT";
+        next = (env->bgo_err > 0u) ? "BGO_INSPECT NORFROM" : "EEMUL_INSPECT";
     } else {
         dom_str = "UNBRICK";
         target = (env->bgo_err > 0u) ? env->nvram_base : P7501_SSOT_AIOF_BASE;

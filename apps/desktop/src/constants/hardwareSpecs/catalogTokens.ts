@@ -36,8 +36,8 @@ export const AM34_FLASH_BASE_HEX = SSOT_AM34_BUS_CONSTANTS.flashCachedBaseHex;
 export const AM34_NVRAM_BASE_HEX = SSOT_AM34_BUS_CONSTANTS.nvramCachedBaseHex;
 export const AM34_FLASH_UNCACHED_ADDR_HEX = SSOT_AM34_BUS_CONSTANTS.flashUncachedBaseHex;
 export const AM34_FLASH_SIZE_HEX = '0x800000';
-export const AM34_SDRAM_STUB_WRAP_ADDR = SSOT_AM34_BUS_CONSTANTS.digadiagStage15LoadAddrHex;
-export const DIGADIAG_STAGE15_LOAD_ADDR_HEX = SSOT_AM34_BUS_CONSTANTS.digadiagStage15LoadAddrHex;
+export const AM34_SDRAM_STUB_WRAP_ADDR = SSOT_AM34_BUS_CONSTANTS.digadiagLoadAddrHex;
+export const DIGADIAG_LOAD_ADDR_HEX = SSOT_AM34_BUS_CONSTANTS.digadiagLoadAddrHex;
 export const AM34_SDRAM_STUB_RAW_ADDR = SSOT_AM34_BUS_CONSTANTS.sdramStubRawAddrHex;
 
 export function formatHexU32(value: number, upperCase = true): string {

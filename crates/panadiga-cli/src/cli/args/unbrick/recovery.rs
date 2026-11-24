@@ -147,17 +147,17 @@ pub struct PrepareSdArgs {
     #[arg(long)]
     pub sata_bridge_reset_fix: bool,
 
-    /// Embed pre-FVU Stage-2 SATA HDD boot hook in PANA__SD.FRM PROG061 (requires --sata-bridge-reset-fix & ver061)
-    #[arg(long)]
-    pub sata_bridge_stage2_boot: bool,
+    /// Embed pre-FVU SATA HDD autoboot hook in PANA__SD.FRM PROG061 (requires --sata-bridge-reset-fix & ver061)
+    #[arg(long, alias = "sata-bridge-stage2-boot")]
+    pub sata_hdd_autoboot: bool,
 
     /// Retarget 4 MiB MAIN builds (3060NP/3410PQ) to 8 MiB EH55 NOR (0x84130000) via SSOT bgo_retarget_anchors
     #[arg(long)]
     pub main_bgo_retarget: bool,
 
-    /// Wrap PANA__SD.FRM Stage-2 PROG061 in universal Portão 4 SDRAM self-unpacker (256 B + zlib, zero NOR writes SD dry-run)
-    #[arg(long)]
-    pub portao4_self_unpack: bool,
+    /// Wrap PANA__SD.FRM PROG061 in universal NOR autoboot SDRAM self-unpacker (256 B + zlib, zero NOR writes SD dry-run)
+    #[arg(long, alias = "portao4-self-unpack")]
+    pub nor_autoboot_capsule: bool,
 
     /// Exports structured JSON build & verification report
     #[arg(short, long, value_name = "JSON_FILE")]

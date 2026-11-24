@@ -115,7 +115,7 @@ pub(crate) fn hardware_facts_catalog() -> Vec<UnbrickHardwareFact> {
     vec![
         UnbrickHardwareFact {
             topic: "DIGADIAG.FRM vs PANA__SD.FRM / PANA_DVD.FRM".to_string(),
-            verdict: "DISTINCT_STAGE15_VS_STAGE2_CONTAINERS".to_string(),
+            verdict: "DISTINCT_DIGADIAG_RAM_VS_FRM_UPDATER_CONTAINERS".to_string(),
             evidence: "DMR-EH55 Loader ver0.61 [06/03/06] loads 256 KiB (0x40000) raw DIGADIAG.FRM directly to 0x90400000 (JMP 0x50400000) and expects 48B TOC (0x1800) PANA__SD.FRM (sd48). Later Loader ver0.63 (DMR-EH58 BOOT.BIN) reads 128 KiB (0x20000) plaintext EXTRHEAD DIGADIAG.FRM and 64B TOC PANA__SD.FRM. PANA_DVD.FRM uses 48B Feistel TOC + full Feistel payload.".to_string(),
         },
         UnbrickHardwareFact {

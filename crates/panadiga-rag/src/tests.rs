@@ -382,7 +382,7 @@ fn test_symbol_dictionary_indexed_in_rag_and_blocks_unguarded_bgo_calls() {
 }
 
 #[test]
-fn test_ssot_traps_and_gate4_symbols_indexed_for_fast_rag_lookup() {
+fn test_ssot_traps_and_nor_autoboot_symbols_indexed_for_fast_rag_lookup() {
     let trap_ans = shared_query(
         "TRAP_MAIN3060NP_4MB_BGO_ON_8MB_EH55 0x531B8000 TRAP_SATA_BRIDGE_2MS_POST_RESET_RACE",
     );
@@ -396,7 +396,7 @@ fn test_ssot_traps_and_gate4_symbols_indexed_for_fast_rag_lookup() {
     assert!(sym_ans.confidence > 0.0);
 
     let train_ans = shared_query(
-        "MAIN3410PQ stage2_boot_spec BGO_45SEC_8MB_0X84130000 0x5710A9D0 0x574DF538 pal_m",
+        "MAIN3410PQ hdd_autoboot_spec BGO_45SEC_8MB_0X84130000 0x5710A9D0 0x574DF538 pal_m",
     );
     assert!(!train_ans.is_abstained);
     assert!(train_ans.confidence > 0.0);

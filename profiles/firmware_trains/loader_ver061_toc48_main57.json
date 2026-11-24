@@ -480,7 +480,7 @@
       "symbol_ref": "rtsd_sleep_10ms"
     }
   },
-  "stage2_boot_spec": {
+  "hdd_autoboot_spec": {
     "base_va": "0x50400000",
     "expected_size": 262144,
     "hook_offset": "0x000050D3",

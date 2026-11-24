@@ -708,7 +708,7 @@ static void test_boottrace_baremetal_classifier(void) {
     p7501_boot_classifier_t cls;
     char buf[224];
 
-    /* 1. Clean MAIN 3060NP Stage-2 boot */
+    /* 1. Clean MAIN 3060NP HDD autoboot */
     p7501_boot_classifier_init(&cls);
     p7501_boot_classifier_feed_line(&cls, "[STAGE2] Boot MAIN @ 0x57000000");
     p7501_boot_classifier_feed_line(&cls, "  DVD Recorder DMR5x Series System Version : 3060NP (2006/04/27)");
@@ -717,7 +717,7 @@ static void test_boottrace_baremetal_classifier(void) {
     p7501_boot_classifier_feed_line(&cls, ":::SYS_RSV::: >> nfrom back up ok.");
     assert(p7501_boot_classifier_verdict(&cls) == P7501_BOOT_VERDICT_CLEAN_MAIN_OK);
     (void)p7501_boot_classifier_format_summary(&cls, buf, sizeof(buf));
-    assert(strstr(buf, "verdict=CLEAN_MAIN_OK build=3060NP stage2=1 avout_ok=1 vmute0=1") != NULL);
+    assert(strstr(buf, "verdict=CLEAN_MAIN_OK build=3060NP hdd_autoboot=1 avout_ok=1 vmute0=1") != NULL);
     assert(strstr(buf, "rsv_ok=1 hdd_fail=0 bgo_err=0 fpc_err=0") != NULL);
     assert(strstr(buf, "op7f_cnt=0 op7f=NONE") != NULL);
 

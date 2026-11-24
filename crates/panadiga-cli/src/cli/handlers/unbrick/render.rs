@@ -6,7 +6,7 @@ use panadiga_core::re::matshita_emu::{
     WriteInjectionRecord,
 };
 use panadiga_core::re::ssot_patches::{
-    find_main_build_by_id, find_prog_sata_reset_spec, stage2_boot_spec_for_loader,
+    find_main_build_by_id, find_prog_sata_reset_spec, hdd_autoboot_spec_for_loader,
 };
 use panadiga_core::re::{
     FrmModuleExtractionReport, MainPassthroughReport, MainPassthroughRspPlan, Prog061BgoInspection,
@@ -153,8 +153,8 @@ pub fn format_sd_kit_lines(report: &SdUnbrickKitReport) -> Vec<String> {
             "  SATA Bridge  : SataBridgeResetFix (1000 ms @ PROG061 0x{prog_va:08X} + {main_part})"
         ));
     }
-    if report.sata_bridge_stage2_boot_applied {
-        let (hook_va, payload_va) = stage2_boot_spec_for_loader(&report.loader_profile_applied)
+    if report.sata_hdd_autoboot_applied {
+        let (hook_va, payload_va) = hdd_autoboot_spec_for_loader(&report.loader_profile_applied)
             .map_or((0x5040_50D3, 0x5043_9600), |s| {
                 (
                     s.base_va.wrapping_add(s.hook_offset as u32),
@@ -162,7 +162,7 @@ pub fn format_sd_kit_lines(report: &SdUnbrickKitReport) -> Vec<String> {
                 )
             });
         lines.push(format!(
-            "  Stage-2 HDD  : PROG061 @ 0x{hook_va:08X} -> 0x{payload_va:08X} (Pre-FVU SATA HDD Boot Hook)"
+            "  SATA Autoboot: PROG061 @ 0x{hook_va:08X} -> 0x{payload_va:08X} (Pre-FVU SATA HDD Boot Hook)"
         ));
     }
     if report.main_bgo_retarget_applied {
@@ -180,9 +180,9 @@ pub fn format_sd_kit_lines(report: &SdUnbrickKitReport) -> Vec<String> {
         };
         lines.push(format!("  MAIN BGO     : {bgo_desc}"));
     }
-    if report.portao4_self_unpack_applied {
+    if report.nor_autoboot_capsule_applied {
         lines.push(
-            "  Portão 4 SD  : PANA__SD.FRM PROG061 wrapped in 256 B SDRAM self-unpacker ('P4ZU') + zlib (0xFF trailer)"
+            "  NOR Autoboot : PANA__SD.FRM PROG061 wrapped in 256 B SDRAM self-unpacker ('P4ZU') + zlib (0xFF trailer)"
                 .to_string(),
         );
     }

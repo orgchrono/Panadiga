@@ -37,7 +37,7 @@ function makeBootClassFinding(bc: NonNullable<ParsedWireProtocolSummary['bootCla
     code: `BOOT_CLASS_${bc.verdict}`,
     severity: bootClassSeverity(bc.verdict),
     summary: `@P7501_BOOT_CLASS ${bc.verdict} (MAIN ${bc.build}, avout_ok=${bc.avout_ok ? '1' : '0'}, fpc_err=${bc.fpc_err}, bgo_err=${bc.bgo_err})`,
-    detail: `stage2=${bc.stage2 ? '1' : '0'} | op7f=${bc.op7f.join(',') || 'NONE'}`,
+    detail: `hdd_autoboot=${bc.hdd_autoboot ? '1' : '0'} | op7f=${bc.op7f.join(',') || 'NONE'}`,
   };
 }
 

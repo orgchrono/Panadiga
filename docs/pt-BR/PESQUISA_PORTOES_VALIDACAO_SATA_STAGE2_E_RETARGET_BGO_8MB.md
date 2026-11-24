@@ -4,7 +4,9 @@
 
 > `[PROVADO EM HARDWARE REAL]` · `[EVD: EV-20261122-019..EV-20261123-029 + Mn103Vm + P7501 COM10]`
 
-Este dossiê registra a investigação técnica completa (~10 horas de depuração sistemática sem risco ao IPL da NOR) que resolveu o boot direto de um HDD SATA atrás da ponte `StarTech IDE2SAT2` no **Panasonic DMR-EH55LB-S** (`8 MiB` NOR `S29JL064H`, `Loader ver0.61`, placa `VEP79138`), documenta os **Portões de Validação `0..4`**, detalha o **retarget binário `4 MiB -> 8 MiB` BGO** do `MAIN3060NP`, consolida as regras de **hardening anti-regressão**, estende o suporte ao **`MAIN3410PQ`** (build europeia `M6:PAL:DVD.HDD` com chaveamento `NTSC`/`PAL`) e documenta a prova do **Portão 4 (`Nor-FROM` / Etapa 1 `P4ZU` sem gravação na NOR)**.
+> **Nota de Nomenclatura Canônica (Deprecada $\rightarrow$ Atual):** Os apelidos históricos de campanha deste dossiê foram padronizados no código e CLI/MCP sem quebra de compatibilidade via aliases legados: **`Portão 4` $\rightarrow$ `NorAutoboot` / `NORFROM`** (`--nor-autoboot-capsule`, `BGO_INSPECT NORFROM`), **`Stage-1.5` $\rightarrow$ `DIAG_PROG_RAM`** (`0x50400000`, `digadiag_ram_tbc`) e **`Stage-2` $\rightarrow$ `HddAutoboot` / `MAIN_OS_RAM`** (`--sata-hdd-autoboot`, `0x57000000`).
+
+Este dossiê registra a investigação técnica completa (~10 horas de depuração sistemática sem risco ao IPL da NOR) que resolveu o boot direto de um HDD SATA atrás da ponte `StarTech IDE2SAT2` no **Panasonic DMR-EH55LB-S** (`8 MiB` NOR `S29JL064H`, `Loader ver0.61`, placa `VEP79138`), documenta os **Portões de Validação `0..4`**, detalha o **retarget binário `4 MiB -> 8 MiB` BGO** do `MAIN3060NP`, consolida as regras de **hardening anti-regressão**, estende o suporte ao **`MAIN3410PQ`** (build europeia `M6:PAL:DVD.HDD` com chaveamento `NTSC`/`PAL`) e documenta a prova do **Portão 4 (`NorAutoboot` / `Nor-FROM` `P4ZU` sem gravação na NOR)**.
 
 ---
 
@@ -76,7 +78,7 @@ Para impedir que regressões como `4 MiB` vs `8 MiB` ou espera `2 ms` × `555 ms
 
 ## 5. Portão 4: Prova em Emulador `Mn103Vm` da Carga `Nor-FROM` (`Loader ver0.61`)
 
-O teste **`mn103vm_proves_portao4_loader_ver061_norfrom_boot_and_escape_hatch`** em [`sata_bridge_stage2/mod.rs`](../../crates/panadiga-core/src/re/sata_bridge_stage2/mod.rs) executa as instruções reais do **`Loader ver0.61`** (`eh55_loader_ver061_256k.bin`) sobre uma cópia **Copy-on-Write** da NOR completa de `8 MiB` (`eh55_nor_8mb_ic5001_repaired.bin`) no emulador **`Mn103Vm` + `SpansionNorFlash`**, garantindo **`SA0..SA10` intactos**:
+O teste **`mn103vm_proves_nor_autoboot_loader_ver061_norfrom_boot_and_escape_hatch`** em [`sata_bridge_stage2/mod.rs`](../../crates/panadiga-core/src/re/sata_bridge_stage2/mod.rs) executa as instruções reais do **`Loader ver0.61`** (`eh55_loader_ver061_256k.bin`) sobre uma cópia **Copy-on-Write** da NOR completa de `8 MiB` (`eh55_nor_8mb_ic5001_repaired.bin`) no emulador **`Mn103Vm` + `SpansionNorFlash`**, garantindo **`SA0..SA10` intactos**:
 
 1. **Descoberta exata de ABI em `FUN_4400894B` (`0x4400894B..0x44008B98`):**
    - `loaded_from_nor` (`-12(A3)`) inicia em `0`.

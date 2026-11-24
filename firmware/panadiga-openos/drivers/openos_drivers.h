@@ -152,7 +152,7 @@ typedef struct openos_unbrick_status {
     bool sa11_is_erased;
     bool sa11_has_p4zu;
     bool eemul_has_1284;
-    bool ready_for_portao4;
+    bool nor_autoboot_ready;
 } openos_unbrick_status_t;
 
 /** Inspect live NOR flash `SA11`, `SA26..SA70` headers, and `EEMUL` tag strictly read-only. */

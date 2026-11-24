@@ -171,7 +171,7 @@ export interface DiagnosticFinding {
 export interface PicoBootClassSummary {
   verdict: string;
   build: string;
-  stage2: boolean;
+  hdd_autoboot: boolean;
   avout_ok: boolean;
   vmute0: boolean;
   ntsc: boolean;

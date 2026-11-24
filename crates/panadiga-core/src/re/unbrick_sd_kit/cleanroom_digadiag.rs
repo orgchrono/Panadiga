@@ -2,7 +2,7 @@
 
 //! Clean-room bare-metal `DIGADIAG.FRM` generator (`PANAMON1>` + `IC7501` TBUS WDT keepalive).
 //!
-//! Produces a self-contained Stage-1.5 SDDIAG payload with ZERO Panasonic proprietary binary blobs,
+//! Produces a self-contained SDRAM `DIAG_PROG_RAM` SDDIAG payload with ZERO Panasonic proprietary binary blobs,
 //! strictly verified by the `Mn103Vm` pre-write gate before returning.
 
 use anyhow::{Result, bail};

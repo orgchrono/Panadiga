@@ -36,8 +36,8 @@ extern "C" {
 #define AM34_OPENOS_IPL_CS1_END             OPENOS_SSOT_IPL_CS1_END
 
 /* SDRAM Boot Slots */
-#define AM34_OPENOS_STAGE15_BASE            OPENOS_SSOT_STAGE15_BASE
-#define AM34_OPENOS_STAGE2_BASE             OPENOS_SSOT_STAGE2_BASE
+#define AM34_OPENOS_PROG_RAM_BASE            OPENOS_SSOT_PROG_RAM_BASE
+#define AM34_OPENOS_MAIN_RAM_BASE            OPENOS_SSOT_MAIN_RAM_BASE
 
 /* Verified AM34 Peripheral Apertures (SSOT) */
 #define AM34_OPENOS_SC0_CTR                 OPENOS_SSOT_SC0_CTR

@@ -81,7 +81,7 @@ pub enum HddActions {
         #[arg(short, long, default_value_t = 160, value_name = "SIZE_GB")]
         size_gb: u64,
 
-        /// Optional path to PANA_DVD.FRM to inject Stage-2 AM34 OS kernel into Partition 1
+        /// Optional path to PANA_DVD.FRM to inject MAIN AM34 OS kernel into Partition 1
         #[arg(long, value_name = "FRM_FILE")]
         inject_frm: Option<PathBuf>,
 
@@ -89,7 +89,7 @@ pub enum HddActions {
         #[arg(long, value_name = "TOKEN")]
         confirm: String,
 
-        /// Validate lockout, MEIHDFS layout, and FRM Stage-2 payloads without writing target
+        /// Validate lockout, MEIHDFS layout, and FRM MAIN OS payloads without writing target
         #[arg(long)]
         dry_run: bool,
 

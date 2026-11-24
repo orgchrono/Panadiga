@@ -408,7 +408,7 @@ static void test_math_gps_and_pieos_xray(void) {
     assert(p7501_xray_feed_line(&s_tr, &s_env, 7500ULL, "Main hung-up time changed 255[s].", &ev));
     assert((ev.stage == P7501_XRAY_S2_LOADER) && (ev.level == P7501_XRAY_LVL_INFO) && (s_tr.errors_seen == 0u));
     assert(p7501_xray_feed_line(&s_tr, &s_env, 9000ULL, "PANAMON1>[B/R/W/D/F/J/E/Q]", &ev));
-    assert((ev.stage == P7501_XRAY_S4_STAGE2_SD) && (ev.level == P7501_XRAY_LVL_OK));
+    assert((ev.stage == P7501_XRAY_S4_SD_DIAG_FVU) && (ev.level == P7501_XRAY_LVL_OK));
     assert(p7501_xray_feed_line(&s_tr, &s_env, 12000ULL, "System Version : 3060NP", &ev));
     assert(ev.stage == P7501_XRAY_S5_PIE_CRT0);
     assert(p7501_xray_feed_line(&s_tr, &s_env, 25000ULL, "AVOUT_init() success.", &ev));

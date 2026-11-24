@@ -1,13 +1,13 @@
 #![deny(unsafe_code)]
 
-//! Declarative patch-site, SATA-bridge reset, Stage-2 boot ABI, and `MAIN` build validation
+//! Declarative patch-site, SATA-bridge reset, HDD autoboot ABI, and `MAIN` build validation
 //! for firmware train manifests (`validate_patches.rs`).
 
 use std::collections::HashSet;
 
 use crate::hex_serde::parse_hex_bytes;
 use crate::types::{
-    BinaryPatchSiteSpec, FirmwareTrainProfile, MainBuildSpec, SataBridgeResetSpec, Stage2BootSpec,
+    BinaryPatchSiteSpec, FirmwareTrainProfile, HddAutobootSpec, MainBuildSpec, SataBridgeResetSpec,
 };
 use crate::validate::{CheckTracker, MIN_CRITICAL_IPL_GUARD_BYTES, check_hex_digest};
 use crate::validate_bgo::parse_bgo_geometry_tag;
@@ -75,8 +75,8 @@ fn validate_sata_reset_spec(owner: &str, spec: &SataBridgeResetSpec, tr: &mut Ch
     validate_patch_site(owner, spec.base_va, spec.expected_size, &spec.site, tr);
 }
 
-fn validate_stage2_boot_spec(train_id: &str, spec: &Stage2BootSpec, tr: &mut CheckTracker) {
-    let owner = format!("train '{train_id}' stage2_boot_spec");
+fn validate_hdd_autoboot_spec(train_id: &str, spec: &HddAutobootSpec, tr: &mut CheckTracker) {
+    let owner = format!("train '{train_id}' hdd_autoboot_spec");
     let hook_bytes = parse_hex_bytes(&spec.hook_expect_hex);
     tr.check(hook_bytes.as_ref().is_ok_and(|b| b.len() == 7), || {
         format!("{owner}: hook_expect_hex must decode to exactly 7 bytes")
@@ -129,7 +129,7 @@ fn validate_stage2_boot_spec(train_id: &str, spec: &Stage2BootSpec, tr: &mut Che
         s.sleep_10ms_va,
     ];
     tr.check(symbol_vas.iter().all(|&va| va != 0), || {
-        format!("{owner}: all 21 stage2_boot_spec.symbols VAs must be non-zero")
+        format!("{owner}: all 21 hdd_autoboot_spec.symbols VAs must be non-zero")
     });
 }
 
@@ -239,8 +239,8 @@ pub(super) fn validate_train_patch_specs(trn: &FirmwareTrainProfile, tr: &mut Ch
         let owner = format!("train '{}' prog_sata_bridge_reset_spec", trn.id);
         validate_sata_reset_spec(&owner, reset_spec, tr);
     }
-    if let Some(stage2) = &trn.stage2_boot_spec {
-        validate_stage2_boot_spec(&trn.id, stage2, tr);
+    if let Some(autoboot) = &trn.hdd_autoboot_spec {
+        validate_hdd_autoboot_spec(&trn.id, autoboot, tr);
     }
     let mut seen_ids = HashSet::new();
     let mut seen_sizes = HashSet::new();

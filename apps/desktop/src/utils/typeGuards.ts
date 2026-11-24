@@ -140,7 +140,7 @@ export const isLbsRegionPresetSlug: (value: unknown) => value is LbsRegionPreset
 ] as const);
 
 export const isTbcApplianceMode: (value: unknown) => value is TbcApplianceMode = oneOfGuard([
-  'stage15_digadiag_tbc',
+  'digadiag_ram_tbc',
   'experimental_sd_ram_chainload',
 ] as const);
 

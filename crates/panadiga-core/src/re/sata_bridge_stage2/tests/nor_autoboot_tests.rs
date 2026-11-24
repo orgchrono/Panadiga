@@ -2,15 +2,15 @@ use byteorder::{ByteOrder, LittleEndian};
 
 use super::*;
 
-struct Portao4Eh55Fixtures {
+struct NorAutobootEh55Fixtures {
     root: PathBuf,
     loader: Vec<u8>,
     base_nor: Vec<u8>,
-    stage2_prog: Vec<u8>,
-    stage2_sha: String,
+    autoboot_prog: Vec<u8>,
+    autoboot_sha: String,
 }
 
-fn load_portao4_eh55_fixtures() -> Option<Portao4Eh55Fixtures> {
+fn load_nor_autoboot_eh55_fixtures() -> Option<NorAutobootEh55Fixtures> {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("..")
         .join("..");
@@ -23,30 +23,30 @@ fn load_portao4_eh55_fixtures() -> Option<Portao4Eh55Fixtures> {
     }
     let loader = std::fs::read(&loader_path).unwrap();
     let base_nor = std::fs::read(&nor_path).unwrap();
-    let (stage2_prog, stage2_sha) = build_portao4_stage2_prog(&prog_path);
-    Some(Portao4Eh55Fixtures {
+    let (autoboot_prog, autoboot_sha) = build_nor_autoboot_prog(&prog_path);
+    Some(NorAutobootEh55Fixtures {
         root,
         loader,
         base_nor,
-        stage2_prog,
-        stage2_sha,
+        autoboot_prog,
+        autoboot_sha,
     })
 }
 
 #[test]
-fn mn103vm_proves_portao4_loader_ver061_norfrom_boot_and_escape_hatch() {
+fn mn103vm_proves_nor_autoboot_loader_ver061_norfrom_boot_and_escape_hatch() {
     use crate::constants::{
         AM34_FLASH_CRITICAL_IPL_SIZE, AM34_FLASH_SIZE, AM34_FLASH_UNCACHED_BASE,
     };
     use crate::pico::rsp_codec::policy::NorWritePolicy;
 
-    let Some(Portao4Eh55Fixtures {
+    let Some(NorAutobootEh55Fixtures {
         loader,
         base_nor,
-        stage2_prog,
-        stage2_sha,
+        autoboot_prog,
+        autoboot_sha,
         ..
-    }) = load_portao4_eh55_fixtures()
+    }) = load_nor_autoboot_eh55_fixtures()
     else {
         return;
     };
@@ -73,8 +73,8 @@ fn mn103vm_proves_portao4_loader_ver061_norfrom_boot_and_escape_hatch() {
         loader_img[0xA1F1..0xA1F1 + stub_exists.len()].copy_from_slice(&stub_exists);
 
         let mut nor_cow = base_nor.clone();
-        // Program Stage-2 PROG061 in SA11..SA14 (0x40000..0x80000) in CoW memory only.
-        nor_cow[0x4_0000..0x8_0000].copy_from_slice(&stage2_prog);
+        // Program SATA HDD autoboot PROG061 in SA11..SA14 (0x40000..0x80000) in CoW memory only.
+        nor_cow[0x4_0000..0x8_0000].copy_from_slice(&autoboot_prog);
         let ipl_sha_before = calculate_hashes(&nor_cow[..AM34_FLASH_CRITICAL_IPL_SIZE as usize]).1;
 
         let mut data_seg = vec![0u8; 0x2000];
@@ -122,15 +122,15 @@ fn mn103vm_proves_portao4_loader_ver061_norfrom_boot_and_escape_hatch() {
     assert_eq!(neg_flag, 0);
     assert!(neg_ram.iter().all(|&b| b == 0xAA));
 
-    // 2. Positive Portao 4 proof: real Loader memcpy/memcmp copies SA11..SA14 -> 0x9040_0000 byte-for-byte.
+    // 2. Positive Nor-FROM proof: real Loader memcpy/memcmp copies SA11..SA14 -> 0x9040_0000 byte-for-byte.
     let (pos_pc, pos_ram, pos_nor, pos_flag) = run_norfrom_stage(0);
     assert_eq!(pos_pc, 0x4400_8B98);
     assert_eq!(pos_flag, 1);
-    assert_eq!(calculate_hashes(&pos_ram).1, stage2_sha);
+    assert_eq!(calculate_hashes(&pos_ram).1, autoboot_sha);
     assert_eq!(pos_ram, pos_nor);
 
-    // 3. Chain into copied Stage-2 payload: without SD boots HDD MAIN; with PANA__SD.FRM hits Nor-FROM escape hatch.
-    assert_stage2_ram_boots_hdd_and_escapes(&pos_ram, NorFromTestState::RawStage2);
+    // 3. Chain into copied HDD autoboot payload: without SD boots HDD MAIN; with PANA__SD.FRM hits Nor-FROM escape hatch.
+    assert_hdd_autoboot_ram_boots_and_escapes(&pos_ram, NorFromTestState::RawAutoboot);
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -139,8 +139,8 @@ fn prove_self_unpacker_phase_c(
     data_seg: &[u8],
     nor_backing: &[u8],
     packed_ram_256k: Vec<u8>,
-    stage2_prog: &[u8],
-    stage2_sha: &str,
+    autoboot_prog: &[u8],
+    autoboot_sha: &str,
     label: &str,
 ) -> Vec<u8> {
     use crate::constants::AM34_FLASH_UNCACHED_BASE;
@@ -192,32 +192,32 @@ fn prove_self_unpacker_phase_c(
         "{label} must cause ZERO NOR writes"
     );
     let unpacked_ram = vm.segment_bytes(0x9040_0000).unwrap().to_vec();
-    assert_eq!(calculate_hashes(&unpacked_ram).1, stage2_sha);
-    assert_eq!(unpacked_ram.as_slice(), stage2_prog);
+    assert_eq!(calculate_hashes(&unpacked_ram).1, autoboot_sha);
+    assert_eq!(unpacked_ram.as_slice(), autoboot_prog);
     unpacked_ram
 }
 
 #[test]
-fn mn103vm_proves_portao4_full_loader_ver061_case3_zero_u99_zero_sd_boot() {
+fn mn103vm_proves_nor_autoboot_full_loader_ver061_case3_zero_u99_zero_sd_boot() {
     use std::collections::VecDeque;
 
     use crate::constants::{AM34_FLASH_CRITICAL_IPL_SIZE, AM34_FLASH_UNCACHED_BASE};
     use crate::pico::rsp_codec::policy::NorWritePolicy;
-    use crate::re::eh55_bgo::build_portao4_norfrom_cow_image;
+    use crate::re::eh55_bgo::build_nor_autoboot_cow_image;
     use crate::re::region_compat::TvStandardKind;
 
-    let Some(Portao4Eh55Fixtures {
+    let Some(NorAutobootEh55Fixtures {
         root,
         loader,
         base_nor,
-        stage2_prog,
-        stage2_sha,
-    }) = load_portao4_eh55_fixtures()
+        autoboot_prog,
+        autoboot_sha,
+    }) = load_nor_autoboot_eh55_fixtures()
     else {
         return;
     };
     let (cow_nor, report) =
-        build_portao4_norfrom_cow_image(&base_nor, &stage2_prog, Some(TvStandardKind::Ntsc))
+        build_nor_autoboot_cow_image(&base_nor, &autoboot_prog, Some(TvStandardKind::Ntsc))
             .unwrap();
 
     assert!(report.post_audit.healthy);
@@ -398,31 +398,32 @@ fn mn103vm_proves_portao4_full_loader_ver061_case3_zero_u99_zero_sd_boot() {
                 &loader[0x3_52A0..0x3_5DD8],
                 &cow_nor,
                 ram_copy,
-                &stage2_prog,
-                &stage2_sha,
-                "Etapa 2 Phase C SA11..SA12 self-unpacker",
+                &autoboot_prog,
+                &autoboot_sha,
+                "Nor-FROM Phase C SA11..SA12 self-unpacker",
             );
-            assert_stage2_ram_boots_hdd_and_escapes(
+            assert_hdd_autoboot_ram_boots_and_escapes(
                 &unpacked_ram,
-                NorFromTestState::Portao4Sa11Magic,
+                NorFromTestState::NorAutobootSa11Magic,
             );
         }
     }
 
-    // Etapa 1 physical SD dry-run proof: identical universal 256 KiB self-unpacker loaded from SD
+    // Physical SD dry-run proof: identical universal 256 KiB self-unpacker loaded from SD
     // against virgin SA11..SA14 blank NOR (zero NOR writes, boots HDD even with PANA__SD.FRM in slot).
     let (sd_self_unpack_256k, _) =
-        crate::re::eh55_bgo::build_portao4_self_unpacking_prog061(&stage2_prog).unwrap();
+        crate::re::eh55_bgo::build_nor_autoboot_capsule(&autoboot_prog).unwrap();
     let unpacked_sd = prove_self_unpacker_phase_c(
         &loader_stubbed,
         &loader[0x3_52A0..0x3_5DD8],
         &base_nor,
         sd_self_unpack_256k,
-        &stage2_prog,
-        &stage2_sha,
-        "Etapa 1 SD dry-run self-unpacker (zero NOR writes)",
+        &autoboot_prog,
+        &autoboot_sha,
+        "SD dry-run self-unpacker (zero NOR writes)",
     );
-    let mut h_sd_boot = Stage2VmHarness::new_with_nor_state(&unpacked_sd, NorFromTestState::Blank);
+    let mut h_sd_boot =
+        HddAutobootVmHarness::new_with_nor_state(&unpacked_sd, NorFromTestState::Blank);
     h_sd_boot.vm.write_u32(VM_CFG_SD_INIT_RC, 0).unwrap();
     h_sd_boot.vm.write_u32(VM_CFG_FAT_MOUNT_RC, 1).unwrap();
     h_sd_boot.vm.write_u32(VM_CFG_PANA_OPEN_RC, 0xC8).unwrap();
@@ -432,7 +433,7 @@ fn mn103vm_proves_portao4_full_loader_ver061_case3_zero_u99_zero_sd_boot() {
             .calls()
             .iter()
             .any(|&(t, lba, off)| t == TAG_HDD_READ && lba == 0x10000 && off == 0),
-        "Etapa 1 SD dry-run must NOT false-trigger Nor-FROM escape hatch and must boot HDD MAIN"
+        "SD dry-run must NOT false-trigger Nor-FROM escape hatch and must boot HDD MAIN"
     );
 
     let main3060_path =
@@ -461,20 +462,23 @@ fn mn103vm_proves_portao4_full_loader_ver061_case3_zero_u99_zero_sd_boot() {
 }
 
 #[test]
-fn ssot_stage2_spec_matches_ver061_contract_field_for_field() {
-    let from_ssot =
-        stage2_spec_for_loader_profile("ver061").expect("SSOT must resolve ver061 stage2 spec");
+fn ssot_hdd_autoboot_spec_matches_ver061_contract_field_for_field() {
+    let from_ssot = hdd_autoboot_spec_for_loader_profile("ver061")
+        .expect("SSOT must resolve ver061 hdd autoboot spec");
     assert_eq!(from_ssot.train_id, "loader_ver061_toc48_main57");
     assert_eq!(from_ssot.base_va, PROG061_BASE_VA);
     assert_eq!(from_ssot.expected_size, PROG061_EXPECTED_SIZE);
-    assert_eq!(from_ssot.hook_offset, OFF_PROG061_STAGE2_HOOK_SITE);
-    assert_eq!(from_ssot.hook_expect, ORIG_PROG061_STAGE2_HOOK_BYTES);
-    assert_eq!(from_ssot.payload_offset, PROG061_STAGE2_PAYLOAD_OFFSET);
+    assert_eq!(from_ssot.hook_offset, OFF_PROG061_HDD_AUTOBOOT_HOOK_SITE);
+    assert_eq!(from_ssot.hook_expect, ORIG_PROG061_HDD_AUTOBOOT_HOOK_BYTES);
+    assert_eq!(
+        from_ssot.payload_offset,
+        PROG061_HDD_AUTOBOOT_PAYLOAD_OFFSET
+    );
     assert!(from_ssot.require_reset_fix_1000ms);
 }
 
 #[test]
-fn mn103vm_proves_main3410pq_stage2_bitwalk_and_hdd_boot() {
+fn mn103vm_proves_main3410pq_hdd_autoboot_bitwalk_and_boot() {
     use crate::constants::AM34_MAIN_BASE_VA;
     use crate::crypto::{ExtrheadCryptMode, pack_extrhead, unpack_extrhead};
     use crate::hdd::{HddCapacityPatchMode, apply_capacity_patch_in_place};
@@ -557,11 +561,11 @@ fn mn103vm_proves_main3410pq_stage2_bitwalk_and_hdd_boot() {
     let repacked = unpack_extrhead(&packed, ExtrheadCryptMode::Main).unwrap();
     assert_eq!(repacked.header.src_addr, 0x9400_0000);
 
-    // Execute Stage-2 assembly in Mn103Vm with REAL MAIN3410PQ mapped at 0x5700_0000
-    // (no synthetic bit-walk stub — Stage-2 walks MAIN3410PQ's real *(0x5700_0008) table).
-    let prog = build_stage2_prog_fixture();
+    // Execute SATA HDD autoboot assembly in Mn103Vm with REAL MAIN3410PQ mapped at 0x5700_0000
+    // (no synthetic bit-walk stub — payload walks MAIN3410PQ's real *(0x5700_0008) table).
+    let prog = build_hdd_autoboot_prog_fixture();
     let mut h =
-        Stage2VmHarness::new_full(&prog, NorFromTestState::Blank, Some(repacked.decompressed));
+        HddAutobootVmHarness::new_full(&prog, NorFromTestState::Blank, Some(repacked.decompressed));
     h.vm.write_u32(VM_CFG_ENTRY_VA, repacked.header.dst_addr)
         .unwrap();
     h.vm.write_u32(VM_CFG_PRIMARY_SRC, repacked.header.src_addr)

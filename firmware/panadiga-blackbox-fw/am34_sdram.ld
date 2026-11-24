@@ -1,9 +1,9 @@
-/* Open-Source Hardware-Interop GNU LD Script for Panasonic DIGA AM34 / MN103S Stage-1.5 SDRAM (0x50400000) */
+/* Open-Source Hardware-Interop GNU LD Script for Panasonic DIGA AM34 / MN103S DIAG_PROG_RAM SDRAM (0x50400000) */
 ENTRY(_start)
 
 MEMORY
 {
-    /* Stage-1.5 PROG execution window inside cached SDRAM (256 KiB) */
+    /* DIAG_PROG_RAM execution window inside cached SDRAM (256 KiB) */
     PROG_SDRAM (rwx) : ORIGIN = 0x50400000, LENGTH = 0x00040000
     /* Dedicated stack tail region inside upper PROG_SDRAM slot */
     STACK_RAM  (rw)  : ORIGIN = 0x5043C000, LENGTH = 0x00004000

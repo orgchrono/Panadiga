@@ -4,7 +4,9 @@
 
 > `[PROVEN ON REAL HARDWARE]` · `[EVD: EV-20261122-019..EV-20261123-029 + Mn103Vm + P7501 COM10]`
 
-This technical paper documents the systematic ~10-hour engineering investigation that achieved cold SATA HDD boot behind a `StarTech IDE2SAT2` bridge on a real **Panasonic DMR-EH55LB-S** (`8 MiB` Spansion `S29JL064H` NOR, `Loader ver0.61`, `VEP79138` board) with **zero physical writes to NOR `SA0..SA14`**. It details **Validation Gates `0..4`**, the full **`MAIN3060NP` `4 MiB -> 8 MiB` BGO retarget anatomy**, fail-closed regression hardening, **`MAIN3410PQ`** (`M6:PAL:DVD.HDD` European build with switchable `NTSC`/`PAL` + shared `AIOF` `PAL_M` driver symbols) support, and the **`Mn103Vm` + Gate 4 Stage-1 `P4ZU` silicon proof (`Nor-FROM` dry-run)**.
+> **Canonical Naming Note (Deprecated $\rightarrow$ Current):** Historical validation campaign nicknames in this report map directly to canonical symbols and flags (legacy aliases remain accepted): **`Portão 4` $\rightarrow$ `NorAutoboot` / `NORFROM`** (`--nor-autoboot-capsule`, `BGO_INSPECT NORFROM`), **`Stage-1.5` $\rightarrow$ `DIAG_PROG_RAM`** (`0x50400000`, `digadiag_ram_tbc`), and **`Stage-2` $\rightarrow$ `HddAutoboot` / `MAIN_OS_RAM`** (`--sata-hdd-autoboot`, `0x57000000`).
+
+This technical paper documents the systematic ~10-hour engineering investigation that achieved cold SATA HDD boot behind a `StarTech IDE2SAT2` bridge on a real **Panasonic DMR-EH55LB-S** (`8 MiB` Spansion `S29JL064H` NOR, `Loader ver0.61`, `VEP79138` board) with **zero physical writes to NOR `SA0..SA14`**. It details **Validation Gates `0..4`**, the full **`MAIN3060NP` `4 MiB -> 8 MiB` BGO retarget anatomy**, fail-closed regression hardening, **`MAIN3410PQ`** (`M6:PAL:DVD.HDD` European build with switchable `NTSC`/`PAL` + shared `AIOF` `PAL_M` driver symbols) support, and the **`Mn103Vm` + `NorAutoboot` `P4ZU` silicon proof (`Nor-FROM` dry-run)**.
 
 ---
 
@@ -75,7 +77,7 @@ Extracted from the European reference HDD firmware partition (`hdd_partition_fir
 
 ## 5. Gate 4: `Mn103Vm` Emulator Proof of `Loader ver0.61` `Nor-FROM` Boot
 
-Test **`mn103vm_proves_portao4_loader_ver061_norfrom_boot_and_escape_hatch`** in [`sata_bridge_stage2/mod.rs`](../../crates/panadiga-core/src/re/sata_bridge_stage2/mod.rs) executes real **`Loader ver0.61`** machine code (`eh55_loader_ver061_256k.bin`) against a **Copy-on-Write** `8 MiB` NOR dump (`eh55_nor_8mb_ic5001_repaired.bin`) inside **`Mn103Vm` + `SpansionNorFlash`**, leaving **`SA0..SA10` byte-identical**:
+Test **`mn103vm_proves_nor_autoboot_loader_ver061_norfrom_boot_and_escape_hatch`** in [`sata_bridge_stage2/mod.rs`](../../crates/panadiga-core/src/re/sata_bridge_stage2/mod.rs) executes real **`Loader ver0.61`** machine code (`eh55_loader_ver061_256k.bin`) against a **Copy-on-Write** `8 MiB` NOR dump (`eh55_nor_8mb_ic5001_repaired.bin`) inside **`Mn103Vm` + `SpansionNorFlash`**, leaving **`SA0..SA10` byte-identical**:
 
 1. **Exact `FUN_4400894B` (`0x4400894B..0x44008B98`) ABI flow:**
    - Initializes `loaded_from_nor` (`-12(A3)`) to `0`, then calls **`FUN_4400A1F1`** (`NFD_FileExists` — exact entry **`0x4400A1F1`**, not `0xA1F2`) passing `.data` string **`0x504800AF`** (`"fvu.exe\0"`).

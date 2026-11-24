@@ -133,7 +133,7 @@ pub fn handle_hdd(args: HddArgs) -> Result<()> {
             )?;
             if summary.p1_bytes_written > 0 {
                 log_println!(
-                    "  [+] Stage-2 Injected: P1={} ({} B, sha256={}), P2={:?} ({} B)",
+                    "  [+] MAIN OS Injected: P1={} ({} B, sha256={}), P2={:?} ({} B)",
                     summary.p1_module.as_deref().unwrap_or("MAIN"),
                     summary.p1_bytes_written,
                     summary.p1_sha256.as_deref().unwrap_or(""),
@@ -142,7 +142,7 @@ pub fn handle_hdd(args: HddArgs) -> Result<()> {
                 );
             } else {
                 log_println!(
-                    "  [!] [AVISO MANDATORIO DE ESTAGIO 2]: Particoes 1 e 2 inicializadas vazias.\n\
+                    "  [!] [AVISO MANDATORIO DE MAIN OS]: Particoes 1 e 2 inicializadas vazias.\n\
                      O gravador exibira U99 / HDD ERR no boot inicial a menos que uma midia oficial\n\
                      PANA_DVD.FRM seja inserida no drive optico para instalacao pelo IPL da Flash NOR."
                 );

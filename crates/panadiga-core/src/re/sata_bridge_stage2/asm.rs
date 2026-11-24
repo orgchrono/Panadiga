@@ -1,6 +1,6 @@
 #![deny(unsafe_code)]
 
-//! Minimal relocatable MN103S assembler used to build Stage-2 payloads and test stubs.
+//! Minimal relocatable MN103S assembler used to build pre-FVU SATA HDD autoboot payloads and test stubs.
 
 use std::collections::BTreeMap;
 
@@ -26,7 +26,7 @@ const fn invert_cc(cc_op: u8) -> u8 {
     }
 }
 
-pub(super) struct Stage2Asm {
+pub(super) struct HddAutobootAsm {
     pub(super) base_va: u32,
     pub(super) printf_va: u32,
     pub(super) code: Vec<u8>,
@@ -36,7 +36,7 @@ pub(super) struct Stage2Asm {
     strings: Vec<(&'static str, &'static [u8])>,
 }
 
-impl Stage2Asm {
+impl HddAutobootAsm {
     pub(super) fn new(base_va: u32, printf_va: u32) -> Self {
         Self {
             base_va,
@@ -177,14 +177,14 @@ impl Stage2Asm {
             let tgt_off = *self
                 .labels
                 .get(target)
-                .ok_or_else(|| anyhow::anyhow!("Unknown Stage-2 branch target '{target}'"))?;
+                .ok_or_else(|| anyhow::anyhow!("Unknown HDD autoboot branch target '{target}'"))?;
             patch_s16_rel(&mut self.code, insn_off, tgt_off, target)?;
         }
         for (imm_off, target) in self.imm32_fixups {
             let tgt_off = *self
                 .labels
                 .get(target)
-                .ok_or_else(|| anyhow::anyhow!("Unknown Stage-2 string label '{target}'"))?;
+                .ok_or_else(|| anyhow::anyhow!("Unknown HDD autoboot string label '{target}'"))?;
             let va = self.base_va + tgt_off as u32;
             LittleEndian::write_u32(&mut self.code[imm_off..imm_off + 4], va);
         }

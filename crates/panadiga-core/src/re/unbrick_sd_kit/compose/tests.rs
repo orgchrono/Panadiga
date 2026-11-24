@@ -401,7 +401,7 @@ fn sata_bridge_reset_fix_patches_pana_sd_prog_without_touching_digadiag() {
         SATA_BRIDGE_STATE_WAIT_1000MS
     );
 
-    // Stage-2 fail-closed without reset fix, and patches only PROG061 (leaving DIGADIAG untouched) when enabled.
+    // SATA HDD autoboot fails closed without reset fix, and patches only PROG061 (leaving DIGADIAG untouched) when enabled.
     assert!(
         super::compose_pana_sd_prog061_with_tier_policy(
             &prog,
@@ -414,7 +414,7 @@ fn sata_bridge_reset_fix_patches_pana_sd_prog_without_touching_digadiag() {
         )
         .is_err()
     );
-    let (sd_stage2_prog, mode2) = super::compose_pana_sd_prog061_with_tier_policy(
+    let (sd_autoboot_prog, mode2) = super::compose_pana_sd_prog061_with_tier_policy(
         &prog,
         Prog061BgoPatchMode::UartMonitor,
         SdLoaderProfile::Ver061RawSd48,
@@ -426,16 +426,16 @@ fn sata_bridge_reset_fix_patches_pana_sd_prog_without_touching_digadiag() {
     .unwrap();
     assert_eq!(mode2, Prog061BgoPatchMode::BypassChecksOnly);
     assert_eq!(
-        crate::re::sata_bridge_stage2::inspect_prog061_stage2_boot_site(&sd_stage2_prog)
+        crate::re::sata_bridge_stage2::inspect_prog061_hdd_autoboot_site(&sd_autoboot_prog)
             .unwrap()
             .state,
-        crate::re::sata_bridge_stage2::PROG061_STAGE2_STATE_ENABLED
+        crate::re::sata_bridge_stage2::PROG061_HDD_AUTOBOOT_STATE_ENABLED
     );
     assert_eq!(
-        crate::re::sata_bridge_stage2::inspect_prog061_stage2_boot_site(&diag_bytes)
+        crate::re::sata_bridge_stage2::inspect_prog061_hdd_autoboot_site(&diag_bytes)
             .unwrap()
             .state,
-        crate::re::sata_bridge_stage2::PROG061_STAGE2_STATE_FACTORY
+        crate::re::sata_bridge_stage2::PROG061_HDD_AUTOBOOT_STATE_FACTORY
     );
 
     // Non-3060NP container fails closed when sata_bridge_reset_fix = true or main_bgo_retarget = true.

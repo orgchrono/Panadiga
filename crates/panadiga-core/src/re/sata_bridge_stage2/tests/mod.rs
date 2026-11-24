@@ -10,14 +10,14 @@ use crate::re::sata_bridge_fix::{
     ORIG_PROG061_SATA_BRIDGE_RESET_WAIT, apply_prog061_sata_bridge_reset_fix_in_place,
 };
 pub(super) use crate::re::{
-    PORTAO4_UNPACKER_MAGIC_LE, PORTAO4_UNPACKER_MAGIC_OFFSET, PROG061_BASE_VA,
+    NOR_AUTOBOOT_CAPSULE_MAGIC_LE, NOR_AUTOBOOT_CAPSULE_MAGIC_OFFSET, PROG061_BASE_VA,
     PROG061_EXPECTED_SIZE,
 };
 
-use super::asm::Stage2Asm;
+use super::asm::HddAutobootAsm;
 use super::*;
 
-mod portao4_tests;
+mod nor_autoboot_tests;
 
 pub(super) const VM_CALL_LOG_BASE: u32 = 0x5048_F000;
 pub(super) const VM_CALL_COUNT_ADDR: u32 = 0x5048_EFFC;
@@ -58,7 +58,7 @@ pub(super) const TAG_CHK_UPDATE: u32 = 21;
 pub(super) const VA_MAIN_BITWALK_TABLE: u32 = 0x5700_0200;
 
 /// Logs `[tag, D3 (saved D1), D2 (saved D0)]` at `VM_CALL_LOG_BASE + slot * 16`, preserving `D2`/`D3`.
-fn emit_record_call(a: &mut Stage2Asm, tag: u32) {
+fn emit_record_call(a: &mut HddAutobootAsm, tag: u32) {
     a.mov_imm32_a(0, VM_CALL_COUNT_ADDR);
     emit_ld_w_an_dm(&mut a.code, 0, 0); // D0 = slot_idx
     emit_mov_d_to_a(&mut a.code, 0, 1); // A1 = slot_idx
@@ -81,13 +81,13 @@ const VM_STUB_SLOT_SIZE: usize = 0x100;
 
 struct VmStubAllocator<'a> {
     prog_seg: &'a mut [u8],
-    spec: &'a Stage2BootTrainSpec,
+    spec: &'a HddAutobootTrainSpec,
     stub_pool: Vec<u8>,
     slot_idx: usize,
 }
 
 impl<'a> VmStubAllocator<'a> {
-    fn new(prog_seg: &'a mut [u8], spec: &'a Stage2BootTrainSpec) -> Self {
+    fn new(prog_seg: &'a mut [u8], spec: &'a HddAutobootTrainSpec) -> Self {
         Self {
             prog_seg,
             spec,
@@ -99,13 +99,13 @@ impl<'a> VmStubAllocator<'a> {
     fn install_custom(
         &mut self,
         entry_va: u32,
-        build_fn: impl FnOnce(&mut Stage2Asm, &Stage2BootTrainSpec),
+        build_fn: impl FnOnce(&mut HddAutobootAsm, &HddAutobootTrainSpec),
     ) {
         let slot_off = self.slot_idx * VM_STUB_SLOT_SIZE;
         let slot_va = VM_STUB_POOL_BASE + slot_off as u32;
         self.slot_idx += 1;
 
-        let mut a = Stage2Asm::new(slot_va, self.spec.uart0_printf_va);
+        let mut a = HddAutobootAsm::new(slot_va, self.spec.uart0_printf_va);
         a.code.extend_from_slice(&[0xCF, 0xC0]); // MOVM [D2, D3], (SP)
         a.mov_d_to_d(0, 2); // D2 = saved D0
         a.mov_d_to_d(1, 3); // D3 = saved D1
@@ -148,22 +148,22 @@ impl<'a> VmStubAllocator<'a> {
 #[derive(Clone, Copy)]
 pub(super) enum NorFromTestState {
     Blank,
-    RawStage2,
-    Portao4Sa11Magic,
+    RawAutoboot,
+    NorAutobootSa11Magic,
 }
 
-pub(super) struct Stage2VmHarness {
+pub(super) struct HddAutobootVmHarness {
     pub(super) vm: Mn103Vm,
 }
 
-impl Stage2VmHarness {
+impl HddAutobootVmHarness {
     fn new(prog061: &[u8]) -> Self {
         Self::new_full(prog061, NorFromTestState::Blank, None)
     }
 
-    fn new_with_nor(prog061: &[u8], nor_has_stage2: bool) -> Self {
-        let state = if nor_has_stage2 {
-            NorFromTestState::RawStage2
+    fn new_with_nor(prog061: &[u8], nor_has_autoboot: bool) -> Self {
+        let state = if nor_has_autoboot {
+            NorFromTestState::RawAutoboot
         } else {
             NorFromTestState::Blank
         };
@@ -180,7 +180,7 @@ impl Stage2VmHarness {
         real_main: Option<Vec<u8>>,
     ) -> Self {
         let has_real_main = real_main.is_some();
-        let s = &stage2_spec_for_loader_profile("ver061").unwrap();
+        let s = &hdd_autoboot_spec_for_loader_profile("ver061").unwrap();
         let mut vm = Mn103Vm::new();
         let mut prog_seg = prog061.to_vec();
 
@@ -301,10 +301,11 @@ impl Stage2VmHarness {
         let mut nor_base_bytes = vec![0xFFu8; 0x100];
         let nor_entry_bytes = match nor_state {
             NorFromTestState::Blank => vec![0xFFu8; 0x100],
-            NorFromTestState::RawStage2 => ram_entry_bytes.clone(),
-            NorFromTestState::Portao4Sa11Magic => {
-                nor_base_bytes[PORTAO4_UNPACKER_MAGIC_OFFSET..PORTAO4_UNPACKER_MAGIC_OFFSET + 4]
-                    .copy_from_slice(&PORTAO4_UNPACKER_MAGIC_LE.to_le_bytes());
+            NorFromTestState::RawAutoboot => ram_entry_bytes.clone(),
+            NorFromTestState::NorAutobootSa11Magic => {
+                nor_base_bytes
+                    [NOR_AUTOBOOT_CAPSULE_MAGIC_OFFSET..NOR_AUTOBOOT_CAPSULE_MAGIC_OFFSET + 4]
+                    .copy_from_slice(&NOR_AUTOBOOT_CAPSULE_MAGIC_LE.to_le_bytes());
                 vec![0xFFu8; 0x100]
             }
         };
@@ -360,34 +361,34 @@ impl Stage2VmHarness {
     }
 }
 
-fn build_stage2_prog_fixture() -> Vec<u8> {
+fn build_hdd_autoboot_prog_fixture() -> Vec<u8> {
     let mut buf = vec![0u8; PROG061_EXPECTED_SIZE];
-    buf[PROG061_STAGE2_PAYLOAD_OFFSET..PROG061_EXPECTED_SIZE - PROG_TRAILER_RESERVED_BYTES]
+    buf[PROG061_HDD_AUTOBOOT_PAYLOAD_OFFSET..PROG061_EXPECTED_SIZE - PROG_TRAILER_RESERVED_BYTES]
         .fill(PROG_SLACK_FILL_BYTE);
     buf[0x01_D928..0x01_D928 + 11].copy_from_slice(&ORIG_PROG061_SATA_BRIDGE_RESET_WAIT);
-    buf[OFF_PROG061_STAGE2_HOOK_SITE..OFF_PROG061_STAGE2_HOOK_SITE + 7]
-        .copy_from_slice(&ORIG_PROG061_STAGE2_HOOK_BYTES);
+    buf[OFF_PROG061_HDD_AUTOBOOT_HOOK_SITE..OFF_PROG061_HDD_AUTOBOOT_HOOK_SITE + 7]
+        .copy_from_slice(&ORIG_PROG061_HDD_AUTOBOOT_HOOK_BYTES);
     apply_prog061_sata_bridge_reset_fix_in_place(&mut buf, SataBridgeResetFixMode::Wait1000Ms)
         .unwrap();
-    apply_prog061_stage2_boot_in_place(&mut buf, true).unwrap();
+    apply_prog061_hdd_autoboot_in_place(&mut buf, true).unwrap();
     buf
 }
 
 #[test]
 fn hook_bytes_match_ver061_call32_displacement() {
     assert_eq!(
-        compute_stage2_hook_bytes(&stage2_spec_for_loader_profile("ver061").unwrap()),
+        compute_hdd_autoboot_hook_bytes(&hdd_autoboot_spec_for_loader_profile("ver061").unwrap()),
         [0xDD, 0x2D, 0x45, 0x03, 0x00, 0x00, 0x00]
     );
 }
 
 #[test]
-fn mn103vm_executes_stage2_primary_and_mirror_hdd_boot_paths() {
-    let prog = build_stage2_prog_fixture();
+fn mn103vm_executes_hdd_autoboot_primary_and_mirror_paths() {
+    let prog = build_hdd_autoboot_prog_fixture();
 
-    // 1. Portao 3 happy path: SD + PANA__SD.FRM present while Nor-FROM (0x8407_9600) is virgin 0xFF
+    // 1. Direct SD PANA__SD.FRM happy path while Nor-FROM (0x8407_9600) is virgin 0xFF
     //    -> must NOT trigger Nor-FROM+SD fallback, must boot MAIN @ 0x5700_0000 with Loader teardown.
-    let mut h = Stage2VmHarness::new(&prog);
+    let mut h = HddAutobootVmHarness::new(&prog);
     h.vm.write_u32(VM_CFG_SD_INIT_RC, 0).unwrap();
     h.vm.write_u32(VM_CFG_FAT_MOUNT_RC, 1).unwrap();
     h.vm.write_u32(VM_CFG_PANA_OPEN_RC, 0xC8).unwrap();
@@ -406,7 +407,7 @@ fn mn103vm_executes_stage2_primary_and_mirror_hdd_boot_paths() {
     assert!(idx_dc < idx_tmr && idx_tmr < idx_irq);
 
     // 2. Primary src_addr == 0 rejected -> outer mirror fallback (0x1D1A_5970) succeeds.
-    let mut h_mir = Stage2VmHarness::new(&prog);
+    let mut h_mir = HddAutobootVmHarness::new(&prog);
     h_mir.vm.write_u32(VM_CFG_PRIMARY_FAIL, 1).unwrap();
     h_mir.run(0x5700_0000).unwrap();
     let mir_calls = h_mir.calls();
@@ -416,8 +417,8 @@ fn mn103vm_executes_stage2_primary_and_mirror_hdd_boot_paths() {
             .any(|&(t, lba, off)| t == TAG_HDD_READ && lba == 0x1D1A_5970 && off == 0)
     );
 
-    // 3. Portao 4 Nor-FROM happy path: *(0x8407_9600) == *(0x9043_9600) with no SD card -> boots HDD MAIN.
-    let mut h_nf_ok = Stage2VmHarness::new_with_nor(&prog, true);
+    // 3. Nor-FROM happy path: *(0x8407_9600) == *(0x9043_9600) with no SD card -> boots HDD MAIN.
+    let mut h_nf_ok = HddAutobootVmHarness::new_with_nor(&prog, true);
     h_nf_ok.run(0x5700_0000).unwrap();
     assert!(
         h_nf_ok
@@ -429,11 +430,11 @@ fn mn103vm_executes_stage2_primary_and_mirror_hdd_boot_paths() {
 
 #[test]
 fn mn103vm_executes_escape_hatches_and_fail_closed_fallbacks() {
-    let prog = build_stage2_prog_fixture();
-    let hook_ret_pc = PROG061_BASE_VA + OFF_PROG061_STAGE2_HOOK_SITE as u32 + 7;
+    let prog = build_hdd_autoboot_prog_fixture();
+    let hook_ret_pc = PROG061_BASE_VA + OFF_PROG061_HDD_AUTOBOOT_HOOK_SITE as u32 + 7;
 
     // 1. UART0 'F' abort via real SC0 RX code -> fallback FVU (no HDD reads or teardown).
-    let mut h_uart = Stage2VmHarness::new(&prog);
+    let mut h_uart = HddAutobootVmHarness::new(&prog);
     h_uart.vm.queue_uart_rx(b"F");
     h_uart.run(hook_ret_pc).unwrap();
     let u_calls = h_uart.calls();
@@ -450,7 +451,7 @@ fn mn103vm_executes_escape_hatches_and_fail_closed_fallbacks() {
     );
 
     // 2. SD FORCEFVU.TXT with FAT_MOUNT == 0 (regression check: mount_id == 0 must succeed).
-    let mut h_force = Stage2VmHarness::new(&prog);
+    let mut h_force = HddAutobootVmHarness::new(&prog);
     h_force.vm.write_u32(VM_CFG_SD_INIT_RC, 0).unwrap();
     h_force.vm.write_u32(VM_CFG_FAT_MOUNT_RC, 0).unwrap();
     h_force.vm.write_u32(VM_CFG_FORCE_OPEN_RC, 0xC8).unwrap();
@@ -465,14 +466,14 @@ fn mn103vm_executes_escape_hatches_and_fail_closed_fallbacks() {
 
     // 3. Nor-FROM boots (raw SA11..SA14 match or SA11..SA12 compressed 'P4ZU') with/without SD.
     for nor_state in [
-        NorFromTestState::RawStage2,
-        NorFromTestState::Portao4Sa11Magic,
+        NorFromTestState::RawAutoboot,
+        NorFromTestState::NorAutobootSa11Magic,
     ] {
-        assert_stage2_ram_boots_hdd_and_escapes(&prog, nor_state);
+        assert_hdd_autoboot_ram_boots_and_escapes(&prog, nor_state);
     }
 
     // 4. Both mirrors invalid (src_addr == 0 everywhere) -> clean fallback to FVU.
-    let mut h_bad = Stage2VmHarness::new(&prog);
+    let mut h_bad = HddAutobootVmHarness::new(&prog);
     h_bad.vm.write_u32(VM_CFG_PRIMARY_SRC, 0).unwrap();
     h_bad.run(hook_ret_pc).unwrap();
     let bad_calls = h_bad.calls();
@@ -481,7 +482,7 @@ fn mn103vm_executes_escape_hatches_and_fail_closed_fallbacks() {
     assert!(!bad_calls.iter().any(|c| c.0 == TAG_DISABLE_IRQ));
 
     // 5. Bit-walk failure at *(entry + 8) on both mirrors -> clean fallback to FVU.
-    let mut h_bw = Stage2VmHarness::new(&prog);
+    let mut h_bw = HddAutobootVmHarness::new(&prog);
     h_bw.vm.write_u32(VM_CFG_BITWALK_FAIL, 1).unwrap();
     h_bw.run(hook_ret_pc).unwrap();
     let bw_calls = h_bw.calls();
@@ -491,14 +492,15 @@ fn mn103vm_executes_escape_hatches_and_fail_closed_fallbacks() {
 }
 
 #[test]
-fn stage2_patch_enforces_fail_closed_preconditions_and_real_prog061_roundtrip() {
+fn hdd_autoboot_patch_enforces_fail_closed_preconditions_and_real_prog061_roundtrip() {
     let mut raw_prog = vec![0u8; PROG061_EXPECTED_SIZE];
-    raw_prog[PROG061_STAGE2_PAYLOAD_OFFSET..PROG061_EXPECTED_SIZE - PROG_TRAILER_RESERVED_BYTES]
+    raw_prog
+        [PROG061_HDD_AUTOBOOT_PAYLOAD_OFFSET..PROG061_EXPECTED_SIZE - PROG_TRAILER_RESERVED_BYTES]
         .fill(PROG_SLACK_FILL_BYTE);
     raw_prog[0x01_D928..0x01_D928 + 11].copy_from_slice(&ORIG_PROG061_SATA_BRIDGE_RESET_WAIT);
-    raw_prog[OFF_PROG061_STAGE2_HOOK_SITE..OFF_PROG061_STAGE2_HOOK_SITE + 7]
-        .copy_from_slice(&ORIG_PROG061_STAGE2_HOOK_BYTES);
-    assert!(apply_prog061_stage2_boot_in_place(&mut raw_prog, true).is_err());
+    raw_prog[OFF_PROG061_HDD_AUTOBOOT_HOOK_SITE..OFF_PROG061_HDD_AUTOBOOT_HOOK_SITE + 7]
+        .copy_from_slice(&ORIG_PROG061_HDD_AUTOBOOT_HOOK_BYTES);
+    assert!(apply_prog061_hdd_autoboot_in_place(&mut raw_prog, true).is_err());
 
     let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("..")
@@ -509,16 +511,16 @@ fn stage2_patch_enforces_fail_closed_preconditions_and_real_prog061_roundtrip() 
         let (_, orig_sha) = calculate_hashes(&orig);
         let mut work = orig;
         assert_eq!(
-            inspect_prog061_stage2_boot_site(&work).unwrap().state,
-            PROG061_STAGE2_STATE_FACTORY
+            inspect_prog061_hdd_autoboot_site(&work).unwrap().state,
+            PROG061_HDD_AUTOBOOT_STATE_FACTORY
         );
         apply_prog061_sata_bridge_reset_fix_in_place(&mut work, SataBridgeResetFixMode::Wait1000Ms)
             .unwrap();
-        apply_prog061_stage2_boot_in_place(&mut work, true).unwrap();
-        let status = inspect_prog061_stage2_boot_site(&work).unwrap();
-        assert_eq!(status.state, PROG061_STAGE2_STATE_ENABLED);
+        apply_prog061_hdd_autoboot_in_place(&mut work, true).unwrap();
+        let status = inspect_prog061_hdd_autoboot_site(&work).unwrap();
+        assert_eq!(status.state, PROG061_HDD_AUTOBOOT_STATE_ENABLED);
         assert!(status.payload_present);
-        apply_prog061_stage2_boot_in_place(&mut work, false).unwrap();
+        apply_prog061_hdd_autoboot_in_place(&mut work, false).unwrap();
         apply_prog061_sata_bridge_reset_fix_in_place(
             &mut work,
             SataBridgeResetFixMode::FactoryOriginal,
@@ -528,23 +530,26 @@ fn stage2_patch_enforces_fail_closed_preconditions_and_real_prog061_roundtrip() 
     }
 }
 
-pub(super) fn build_portao4_stage2_prog(prog_path: &std::path::Path) -> (Vec<u8>, String) {
+pub(super) fn build_nor_autoboot_prog(prog_path: &std::path::Path) -> (Vec<u8>, String) {
     use crate::re::bgo_unbrick::{Prog061BgoPatchMode, patch_prog061_bgo_in_place};
 
-    let mut stage2_prog = std::fs::read(prog_path).unwrap();
-    patch_prog061_bgo_in_place(&mut stage2_prog, Prog061BgoPatchMode::BypassChecksOnly).unwrap();
+    let mut autoboot_prog = std::fs::read(prog_path).unwrap();
+    patch_prog061_bgo_in_place(&mut autoboot_prog, Prog061BgoPatchMode::BypassChecksOnly).unwrap();
     apply_prog061_sata_bridge_reset_fix_in_place(
-        &mut stage2_prog,
+        &mut autoboot_prog,
         SataBridgeResetFixMode::Wait1000Ms,
     )
     .unwrap();
-    apply_prog061_stage2_boot_in_place(&mut stage2_prog, true).unwrap();
-    let sha = calculate_hashes(&stage2_prog).1;
-    (stage2_prog, sha)
+    apply_prog061_hdd_autoboot_in_place(&mut autoboot_prog, true).unwrap();
+    let sha = calculate_hashes(&autoboot_prog).1;
+    (autoboot_prog, sha)
 }
 
-pub(super) fn assert_stage2_ram_boots_hdd_and_escapes(pos_ram: &[u8], nor_state: NorFromTestState) {
-    let mut h_boot = Stage2VmHarness::new_with_nor_state(pos_ram, nor_state);
+pub(super) fn assert_hdd_autoboot_ram_boots_and_escapes(
+    pos_ram: &[u8],
+    nor_state: NorFromTestState,
+) {
+    let mut h_boot = HddAutobootVmHarness::new_with_nor_state(pos_ram, nor_state);
     h_boot.run(0x5700_0000).unwrap();
     assert!(
         h_boot
@@ -552,11 +557,11 @@ pub(super) fn assert_stage2_ram_boots_hdd_and_escapes(pos_ram: &[u8], nor_state:
             .iter()
             .any(|&(t, lba, off)| t == TAG_HDD_READ && lba == 0x10000 && off == 0)
     );
-    let mut h_escape = Stage2VmHarness::new_with_nor_state(pos_ram, nor_state);
+    let mut h_escape = HddAutobootVmHarness::new_with_nor_state(pos_ram, nor_state);
     h_escape.vm.write_u32(VM_CFG_SD_INIT_RC, 0).unwrap();
     h_escape.vm.write_u32(VM_CFG_FAT_MOUNT_RC, 0).unwrap();
     h_escape.vm.write_u32(VM_CFG_PANA_OPEN_RC, 0xC8).unwrap();
-    let hook_ret_pc = PROG061_BASE_VA + OFF_PROG061_STAGE2_HOOK_SITE as u32 + 7;
+    let hook_ret_pc = PROG061_BASE_VA + OFF_PROG061_HDD_AUTOBOOT_HOOK_SITE as u32 + 7;
     h_escape.run(hook_ret_pc).unwrap();
     let esc_calls = h_escape.calls();
     assert!(esc_calls.iter().any(|c| c.0 == TAG_FAT_OPEN_PANA));

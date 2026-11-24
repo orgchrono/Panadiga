@@ -35,7 +35,7 @@ pub struct ApplyMainTbcBypassesResponseDto {
     pub cow_output_path: Option<String>,
 }
 
-/// Plans a clean-room Diskless/TBC pipeline (`Stage15DigadiagTbc` or gated RAM chainload) and
+/// Plans a clean-room Diskless/TBC pipeline (`DigadiagRamTbc` or gated RAM chainload) and
 /// optionally applies Copy-on-Write AV TBC bypass patches (`0x5011B33B`/`0x5011B40C`/`0x5011B522`) to `MAIN`.
 #[tauri::command]
 pub fn apply_main_tbc_bypasses_command(
@@ -49,7 +49,7 @@ pub fn apply_main_tbc_bypasses_command(
     }
 
     let app_mode: TbcApplianceMode = opt_trimmed(&request.appliance_mode)
-        .unwrap_or("stage15_digadiag_tbc")
+        .unwrap_or("digadiag_ram_tbc")
         .parse()
         .map_err(|e| PanadigaIpcError::validation(format!("Modo TBC inválido: {e}")))?;
     let tv_std: TvStandardKind = opt_trimmed(&request.tv_standard)

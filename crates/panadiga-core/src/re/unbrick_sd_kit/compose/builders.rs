@@ -30,7 +30,7 @@ use super::super::super::sata_bridge_fix::{
     apply_prog_sata_bridge_reset_fix_for_profile_in_place,
 };
 use super::super::super::sata_bridge_stage2::{
-    apply_stage2_boot_for_loader_profile_in_place, stage2_spec_for_loader_profile,
+    apply_hdd_autoboot_for_loader_profile_in_place, hdd_autoboot_spec_for_loader_profile,
 };
 use super::super::super::ssot_patches::{find_main_build_by_id, find_main_build_by_size};
 use super::super::super::unbrick_workbench::{load_main_binary_and_meta, load_prog061_from_bytes};
@@ -96,14 +96,14 @@ pub(crate) fn compose_pana_sd_prog061_with_tier_policy(
     allow_unsafe_auto_format: bool,
     allow_unverified_profile: bool,
     sata_bridge_reset_fix: bool,
-    sata_bridge_stage2_boot: bool,
+    sata_hdd_autoboot: bool,
 ) -> Result<(Vec<u8>, Prog061BgoPatchMode)> {
-    if sata_bridge_stage2_boot && !sata_bridge_reset_fix {
-        bail!("--sata-bridge-stage2-boot requires --sata-bridge-reset-fix (fail-closed)");
+    if sata_hdd_autoboot && !sata_bridge_reset_fix {
+        bail!("--sata-hdd-autoboot requires --sata-bridge-reset-fix (fail-closed)");
     }
-    if sata_bridge_stage2_boot && stage2_spec_for_loader_profile(loader_profile.as_str()).is_err() {
+    if sata_hdd_autoboot && hdd_autoboot_spec_for_loader_profile(loader_profile.as_str()).is_err() {
         bail!(
-            "--sata-bridge-stage2-boot requires an SSOT stage2_boot_spec for loader '{}'",
+            "--sata-hdd-autoboot requires an SSOT hdd_autoboot_spec for loader '{}'",
             loader_profile.as_str()
         );
     }
@@ -128,8 +128,8 @@ pub(crate) fn compose_pana_sd_prog061_with_tier_policy(
             SataBridgeResetFixMode::Wait1000Ms,
         )?;
     }
-    if sata_bridge_stage2_boot {
-        apply_stage2_boot_for_loader_profile_in_place(
+    if sata_hdd_autoboot {
+        apply_hdd_autoboot_for_loader_profile_in_place(
             &mut prog_patched,
             loader_profile.as_str(),
             true,

@@ -226,7 +226,10 @@ static bool check_ftl_target_ready(const char *tag) {
 
 void p7501_cmd_bgo_inspect(const char *arg) {
     const bool detail = arg_has_token_ci(arg, "DETAIL");
-    const bool portao4 = arg_has_token_ci(arg, "PORTAO4") || arg_has_token_ci(arg, "FULL");
+    const bool norfrom = arg_has_token_ci(arg, "NORFROM")
+        || arg_has_token_ci(arg, "NOR_AUTOBOOT")
+        || arg_has_token_ci(arg, "FULL")
+        || arg_has_token_ci(arg, "PORTAO4");
     if (!check_ftl_target_ready("BGO_INSPECT")) {
         return;
     }
@@ -290,7 +293,7 @@ void p7501_cmd_bgo_inspect(const char *arg) {
            (unsigned)rep.valid_count, (unsigned)rep.corrupt_count,
            (unsigned)rep.duplicate_lbn_count, (unsigned)zero_marker_bad,
            rep.healthy_bgo_ftl ? "YES" : "NO");
-    if (portao4) {
+    if (norfrom) {
         const uint32_t sa11_va = P7501_SSOT_IPL_LAYER1_MIRROR_START + P7501_SSOT_IPL_LAYER1_SIZE;
         uint8_t sa11_hdr[64];
         if (!p7501_hw_read_block_checked(sa11_va, sa11_hdr, sizeof(sa11_hdr), true)) {
@@ -311,7 +314,7 @@ void p7501_cmd_bgo_inspect(const char *arg) {
         );
         (void)p7501_push_emit_str("UNBRICK_READY", frame_msg);
         (void)p7501_push_flush_global();
-        printf("[PORTAO4] SA11_0x%08" PRIX32 "=%s crc32=0x%08" PRIX32 " p1_sa=%u\n",
+        printf("[NORFROM] SA11_0x%08" PRIX32 "=%s crc32=0x%08" PRIX32 " p1_sa=%u\n",
                sa11_va, p7501_norfrom_state_name(st11), sa11_crc, (unsigned)rep.p1_sa_index);
     }
     printf("BGO_INSPECT: OK\n");

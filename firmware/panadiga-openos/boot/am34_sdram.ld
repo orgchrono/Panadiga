@@ -10,8 +10,8 @@ ENTRY(_start)
 
 MEMORY
 {
-    SDRAM_STAGE15 (rwx) : ORIGIN = 0x50400000, LENGTH = 512K
-    SDRAM_STAGE2  (rwx) : ORIGIN = 0x57000000, LENGTH = 16M
+    SDRAM_PROG    (rwx) : ORIGIN = 0x50400000, LENGTH = 512K
+    SDRAM_MAIN    (rwx) : ORIGIN = 0x57000000, LENGTH = 16M
 }
 
 SECTIONS
@@ -23,12 +23,12 @@ SECTIONS
         KEEP(*(.text.startup))
         *(.text*)
         *(.rodata*)
-    } > SDRAM_STAGE15
+    } > SDRAM_PROG
 
     .data : ALIGN(4)
     {
         *(.data*)
-    } > SDRAM_STAGE15
+    } > SDRAM_PROG
 
     .bss (NOLOAD) : ALIGN(4)
     {
@@ -37,9 +37,9 @@ SECTIONS
         *(COMMON)
         . = ALIGN(4);
         __bss_end = .;
-    } > SDRAM_STAGE15
+    } > SDRAM_PROG
 
-    . = ORIGIN(SDRAM_STAGE15) + LENGTH(SDRAM_STAGE15);
+    . = ORIGIN(SDRAM_PROG) + LENGTH(SDRAM_PROG);
     __stack_top = 0x5047F000;
 
     /DISCARD/ :

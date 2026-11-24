@@ -53,11 +53,11 @@ pub(super) fn re_ext_tool_definitions() -> Vec<Value> {
         }),
         json!({
             "name": "panadiga_tbc_appliance_plan",
-            "description": "Generates declarative clean-room Diskless/TBC appliance plan (Stage-1.5 DIGADIAG TBC default; experimental_sd_ram_chainload gated).",
+            "description": "Generates declarative clean-room Diskless/TBC appliance plan (DIGADIAG RAM TBC default; experimental_sd_ram_chainload gated).",
             "inputSchema": {
                 "type": "object",
                 "properties": {
-                    "mode": { "type": "string", "enum": ["stage15_digadiag_tbc", "experimental_sd_ram_chainload"] },
+                    "mode": { "type": "string", "enum": ["digadiag_ram_tbc", "experimental_sd_ram_chainload"] },
                     "tv_standard": { "type": "string", "enum": ["ntsc", "pal-m", "pal", "secam"] },
                     "experimental_ram_chainload": { "type": "boolean", "description": "Explicit opt-in required for experimental_sd_ram_chainload." }
                 }

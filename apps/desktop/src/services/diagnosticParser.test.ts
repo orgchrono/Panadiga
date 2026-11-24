@@ -213,7 +213,7 @@ describe('diagnosticParser & Hardware SSOT Consistency', () => {
 
   it('decodes @P7501_BOOT_CLASS and @P7501_TBUS_AUDIT telemetry frames', () => {
     const raw = [
-      '@P7501_BOOT_CLASS verdict=CLEAN_MAIN_OK build=3060NP stage2=1 avout_ok=1 vmute0=1 ntsc=1 rsv_ok=1 hdd_fail=0 bgo_err=0 fpc_err=0 fpc_to=0 iic_err=0 odd_err=0 op7f_cnt=0 op7f=NONE',
+      '@P7501_BOOT_CLASS verdict=CLEAN_MAIN_OK build=3060NP hdd_autoboot=1 avout_ok=1 vmute0=1 ntsc=1 rsv_ok=1 hdd_fail=0 bgo_err=0 fpc_err=0 fpc_to=0 iic_err=0 odd_err=0 op7f_cnt=0 op7f=NONE',
       '@P7501_TBUS_AUDIT frames=6 br_rejected=1 nak7f=1 ops=A9',
       'BOOTTRACE: OK',
       '@P7501_RES cmd=BOOTTRACE status=OK code=0 elapsed_us=12000',

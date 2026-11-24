@@ -1,6 +1,6 @@
 #![deny(unsafe_code)]
 
-//! Clean-room Diskless / Standalone TBC Appliance Planner (`Stage15DigadiagTbc` &
+//! Clean-room Diskless / Standalone TBC Appliance Planner (`DigadiagRamTbc` &
 //! gated `ExperimentalSdRamChainload`) for Panasonic `DMR-EH55` (`VEP79138` + Main PCB).
 //!
 //! Strictly volatile SDRAM / MMIO planning: `IC5001` bootloader sectors `SA0..SA3` remain
@@ -30,8 +30,8 @@ use super::region_compat::{MmioWriteOp, TvStandardKind, build_tv_calibration_mmi
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TbcApplianceMode {
-    /// Verified safe Stage-1.5 bare-metal `DIGADIAG.FRM` (`262,144 B` @ `0x5040_0000`) TBC mode.
-    Stage15DigadiagTbc,
+    /// Verified safe bare-metal `DIGADIAG.FRM` (`262,144 B` @ `0x5040_0000`) TBC mode.
+    DigadiagRamTbc,
     /// Hardware-proven Door #1 (`EV-20261119-004`): headless `PANA__SD.FRM` `sd48` `PROG061` slot (`0x0B1800`) without `SW_UART` JIG.
     NoJigPanaSdProgSlot,
     /// Experimental RAM-only chainload (`PANA__SD.FRM` / `MAIN` -> `0x5700_0000`) bypassing `CH1` HDD.
@@ -42,7 +42,7 @@ impl TbcApplianceMode {
     /// Canonical lowercase mode slug.
     pub const fn as_str(self) -> &'static str {
         match self {
-            Self::Stage15DigadiagTbc => "stage15_digadiag_tbc",
+            Self::DigadiagRamTbc => "digadiag_ram_tbc",
             Self::NoJigPanaSdProgSlot => "no_jig_pana_sd_prog_slot",
             Self::ExperimentalSdRamChainload => "experimental_sd_ram_chainload",
         }
@@ -54,7 +54,9 @@ impl FromStr for TbcApplianceMode {
 
     fn from_str(raw: &str) -> Result<Self> {
         match raw.trim().to_ascii_lowercase().as_str() {
-            "stage15" | "stage15_digadiag_tbc" | "digadiag" | "tbc" => Ok(Self::Stage15DigadiagTbc),
+            "stage15" | "stage15_digadiag_tbc" | "digadiag_ram_tbc" | "digadiag" | "tbc" => {
+                Ok(Self::DigadiagRamTbc)
+            }
             "no_jig" | "porta1" | "prog_slot" | "no_jig_pana_sd_prog_slot" => {
                 Ok(Self::NoJigPanaSdProgSlot)
             }
@@ -62,7 +64,7 @@ impl FromStr for TbcApplianceMode {
                 Ok(Self::ExperimentalSdRamChainload)
             }
             other => bail!(
-                "Unsupported TBC appliance mode '{other}': expected stage15_digadiag_tbc, no_jig_pana_sd_prog_slot, or experimental_sd_ram_chainload"
+                "Unsupported TBC appliance mode '{other}': expected digadiag_ram_tbc, no_jig_pana_sd_prog_slot, or experimental_sd_ram_chainload"
             ),
         }
     }
@@ -198,7 +200,7 @@ pub fn build_tbc_appliance_plan(
     ];
 
     let steps = match mode {
-        TbcApplianceMode::Stage15DigadiagTbc => {
+        TbcApplianceMode::DigadiagRamTbc => {
             let mut s = vec![
                 format!(
                     "1. Strap P7501 SW_UART=LOW (JIG:2500 / PREJIG) on <=2 GiB SDSC FAT16 so Loader ver0.61 loads {} B raw DIGADIAG.FRM to 0x{:08X} (uncached 0x90400000) without touching CH1 HDD or BGO.",
@@ -225,12 +227,12 @@ pub fn build_tbc_appliance_plan(
         }
         TbcApplianceMode::ExperimentalSdRamChainload => {
             warnings.push(
-                "EXPERIMENTAL RAM CHAINLOAD: main_passthrough sites (0x5771ABFB, 0x574F7B8C, 0x574F7C5C) only execute AFTER MAIN is loaded to SDRAM and do not fix Loader ver0.61 CH1 HDD hangs unless SD Stage-1.5 performs the RAM chainload directly."
+                "EXPERIMENTAL RAM CHAINLOAD: main_passthrough sites (0x5771ABFB, 0x574F7B8C, 0x574F7C5C) only execute AFTER MAIN is loaded to SDRAM and do not fix Loader ver0.61 CH1 HDD hangs unless SD DIGADIAG.FRM performs the RAM chainload directly."
                     .to_string(),
             );
             vec![
                 format!(
-                    "1. Boot Stage-1.5 monitor/loader via DIGADIAG.FRM @ 0x{:08X} (volatile SDRAM; SA0..SA3 never flashed).",
+                    "1. Boot DIGADIAG monitor/loader via DIGADIAG.FRM @ 0x{:08X} (volatile SDRAM; SA0..SA3 never flashed).",
                     AM34_PROG061_BASE_VA
                 ),
                 format!(

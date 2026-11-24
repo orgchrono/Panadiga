@@ -5,9 +5,9 @@
 use super::*;
 
 #[test]
-fn stage15_tbc_plan_preserves_sa0_to_sa3_and_forbids_lethal_reg() {
+fn digadiag_ram_tbc_plan_preserves_sa0_to_sa3_and_forbids_lethal_reg() {
     let plan = build_tbc_appliance_plan(
-        TbcApplianceMode::Stage15DigadiagTbc,
+        TbcApplianceMode::DigadiagRamTbc,
         TvStandardKind::PalM,
         false,
     )

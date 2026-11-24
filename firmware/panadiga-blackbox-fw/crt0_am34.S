@@ -1,4 +1,4 @@
-/* Open-Source Hardware-Interop MN103S / AM34 Stage-1.5 SDRAM CRT0 (0x50400000) */
+/* Open-Source Hardware-Interop MN103S / AM34 DIAG_PROG_RAM SDRAM CRT0 (0x50400000) */
     .section .vectors, "ax", @progbits
     .global _start
     .extern _main

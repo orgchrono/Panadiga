@@ -45,7 +45,7 @@
     "model_prefix_byte": "0x4D",
     "sources_from_panamon_dump": [
       "nor_drv_extrhead",
-      "sd_prog_stage15",
+      "sd_prog_diag",
       "hdd_part1_main"
     ]
   },

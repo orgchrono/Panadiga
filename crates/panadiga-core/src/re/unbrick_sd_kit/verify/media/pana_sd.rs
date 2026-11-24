@@ -20,7 +20,7 @@ use super::super::super::super::sata_bridge_fix::{
     inspect_prog061_sata_bridge_reset_site,
 };
 use super::super::super::super::sata_bridge_stage2::{
-    OFF_PROG061_STAGE2_HOOK_SITE, inspect_prog061_stage2_boot_site,
+    OFF_PROG061_HDD_AUTOBOOT_HOOK_SITE, inspect_prog061_hdd_autoboot_site,
 };
 use super::super::super::super::ssot_patches::find_main_build_by_size;
 use super::super::super::compose::SdLoaderProfile;
@@ -34,7 +34,7 @@ pub(crate) struct PanaSdInspection {
     pub prog061_mode: Option<String>,
     pub prog061_bgo_geometry: Option<String>,
     pub prog061_sata_bridge_fix: Option<String>,
-    pub prog061_stage2_boot: Option<String>,
+    pub prog061_hdd_autoboot: Option<String>,
     pub factory_unpatched_prog061: bool,
     pub main_build: Option<String>,
     pub main_passthrough_mode: Option<String>,
@@ -58,7 +58,7 @@ pub(crate) fn verify_pana_sd_buffer(bytes_opt: Option<&[u8]>) -> PanaSdInspectio
             prog061_mode: None,
             prog061_bgo_geometry: None,
             prog061_sata_bridge_fix: None,
-            prog061_stage2_boot: None,
+            prog061_hdd_autoboot: None,
             factory_unpatched_prog061: false,
             main_build: None,
             main_passthrough_mode: None,
@@ -93,7 +93,7 @@ pub(crate) fn verify_pana_sd_buffer(bytes_opt: Option<&[u8]>) -> PanaSdInspectio
     let mut prog061_mode = None;
     let mut prog061_bgo_geometry = None;
     let mut prog061_sata_bridge_fix = None;
-    let mut prog061_stage2_boot = None;
+    let mut prog061_hdd_autoboot = None;
     let mut factory_unpatched_prog061 = false;
     let mut main_build = None;
     let mut main_passthrough_mode = None;
@@ -120,9 +120,7 @@ pub(crate) fn verify_pana_sd_buffer(bytes_opt: Option<&[u8]>) -> PanaSdInspectio
                     .ok()
                     .map(|u| u.decompressed)
             } else {
-                super::super::super::super::eh55_bgo::unpack_portao4_self_unpacking_prog061(
-                    mod_slice,
-                )
+                super::super::super::super::eh55_bgo::unpack_nor_autoboot_capsule(mod_slice)
             };
             let prog_buf = unpacked_prog.as_deref().unwrap_or(mod_slice);
             if let Ok(b) = inspect_prog061_bgo_sites(prog_buf) {
@@ -145,12 +143,13 @@ pub(crate) fn verify_pana_sd_buffer(bytes_opt: Option<&[u8]>) -> PanaSdInspectio
                 if should_inspect && let Ok(st) = inspect_prog061_sata_bridge_reset_site(prog_buf) {
                     prog061_sata_bridge_fix = Some(st.state);
                 }
-                let hook_slice =
-                    prog_buf.get(OFF_PROG061_STAGE2_HOOK_SITE..OFF_PROG061_STAGE2_HOOK_SITE + 7);
+                let hook_slice = prog_buf.get(
+                    OFF_PROG061_HDD_AUTOBOOT_HOOK_SITE..OFF_PROG061_HDD_AUTOBOOT_HOOK_SITE + 7,
+                );
                 if is_populated_slice(hook_slice)
-                    && let Ok(s2) = inspect_prog061_stage2_boot_site(prog_buf)
+                    && let Ok(s2) = inspect_prog061_hdd_autoboot_site(prog_buf)
                 {
-                    prog061_stage2_boot = Some(s2.state);
+                    prog061_hdd_autoboot = Some(s2.state);
                 }
             }
             if is_factory_unpatched_prog061(prog_buf, prog061_mode.as_deref()) {
@@ -256,7 +255,7 @@ pub(crate) fn verify_pana_sd_buffer(bytes_opt: Option<&[u8]>) -> PanaSdInspectio
         prog061_mode,
         prog061_bgo_geometry,
         prog061_sata_bridge_fix,
-        prog061_stage2_boot,
+        prog061_hdd_autoboot,
         factory_unpatched_prog061,
         main_build,
         main_passthrough_mode,

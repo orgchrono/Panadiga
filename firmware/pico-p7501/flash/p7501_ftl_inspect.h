@@ -76,7 +76,7 @@ bool p7501_eemul_inspect_slice(
 /** Return canonical ASCII label for `p7501_norfrom_slot_state_t`. */
 const char *p7501_norfrom_state_name(p7501_norfrom_slot_state_t st);
 
-/** Classify first 64 bytes of Portao 4 Nor-FROM slot (`SA11 @ 0x84040000`) & compute CRC32. */
+/** Classify first 64 bytes of NOR autoboot capsule slot (`SA11 @ 0x84040000`) & compute CRC32. */
 p7501_norfrom_slot_state_t p7501_norfrom_classify_prefix(
     const uint8_t *buf64,
     size_t len,

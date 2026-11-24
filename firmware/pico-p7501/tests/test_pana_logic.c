@@ -928,7 +928,7 @@ static void test_cmd_arena_invariants(void) {
     assert(p7501_arena_current_owner() == P7501_ARENA_FREE);
 }
 
-static void test_ftl_bgo_portao4_inspect(void) {
+static void test_ftl_bgo_norfrom_inspect(void) {
     uint8_t blk[64];
     memset(blk, 0xFF, sizeof(blk));
     uint32_t crc = 0u;
@@ -980,7 +980,7 @@ int p7501_run_pana_logic_tests(void) {
     test_wrap_and_protocol_bypass_matrix();
     test_cmd_arena_invariants();
     test_fast_stream_codec_and_normap();
-    test_ftl_bgo_portao4_inspect();
+    test_ftl_bgo_norfrom_inspect();
     p7501_run_pana_diag_drv_tests();
     test_sds_bus_sniffer_codec();
     printf("[HOST-TEST] PANARSP + BusPolicy + ProbeFSM + Arena + FastStream + NOR_MAP + REGS + DUMPNOR + DIAGWATCH + DRVPANA + FlashGeo + PIOLOGIC + SDSNIFF passed.\n");

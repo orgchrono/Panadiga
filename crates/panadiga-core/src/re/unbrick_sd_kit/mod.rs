@@ -91,7 +91,7 @@ pub(crate) fn synthetic_prog061_fixture() -> Vec<u8> {
         OFF_PROG061_SATA_BRIDGE_RESET_WAIT, ORIG_PROG061_SATA_BRIDGE_RESET_WAIT,
     };
     use crate::re::sata_bridge_stage2::{
-        OFF_PROG061_STAGE2_HOOK_SITE, ORIG_PROG061_STAGE2_HOOK_BYTES,
+        OFF_PROG061_HDD_AUTOBOOT_HOOK_SITE, ORIG_PROG061_HDD_AUTOBOOT_HOOK_BYTES,
     };
     let mut prog = vec![0xFFu8; PROG061_EXPECTED_SIZE];
     prog[0..4].copy_from_slice(&[0xDC, 0x14, 0x00, 0x00]);
@@ -101,8 +101,8 @@ pub(crate) fn synthetic_prog061_fixture() -> Vec<u8> {
     prog[OFF_BGO_INIT_FAIL_HOOK..OFF_BGO_INIT_FAIL_HOOK + 20].copy_from_slice(&ORIG_A2CD_HOOK);
     prog[OFF_PROG061_SATA_BRIDGE_RESET_WAIT..OFF_PROG061_SATA_BRIDGE_RESET_WAIT + 11]
         .copy_from_slice(&ORIG_PROG061_SATA_BRIDGE_RESET_WAIT);
-    prog[OFF_PROG061_STAGE2_HOOK_SITE..OFF_PROG061_STAGE2_HOOK_SITE + 7]
-        .copy_from_slice(&ORIG_PROG061_STAGE2_HOOK_BYTES);
+    prog[OFF_PROG061_HDD_AUTOBOOT_HOOK_SITE..OFF_PROG061_HDD_AUTOBOOT_HOOK_SITE + 7]
+        .copy_from_slice(&ORIG_PROG061_HDD_AUTOBOOT_HOOK_BYTES);
     prog
 }
 
