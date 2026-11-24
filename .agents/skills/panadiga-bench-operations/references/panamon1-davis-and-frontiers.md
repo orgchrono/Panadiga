@@ -16,17 +16,16 @@
 - **Lei Física `P58001` (`vol2_schematics.pdf` p. 113):** `Pin_P58001(k) = ATA(41 - k)`. Combinar FFC **`Type B`** + adaptador `N5EZZ0000003` girado `180°` restaura o mapeamento 1:1 sem torcer o cabo, exigindo jumper **`MASTER`** na `StarTech IDE2SAT2`.
 - **Checks de Alimentação `CH1` (`P1503`):** Medir `Pin 4 DR5V = +5.1V` e `Pin 1 DR12V = +12.3V` antes de culpar o firmware.
 
-## 3. Diagnóstico Pós-`2026-11-22` (`hdmi_flat` Breakthrough & Mistério Aberto)
-| Fato Observado em `2026-11-22` (`docs/evidence/*hdmi_flat*`) | Status | Detalhe Técnico |
+## 3. Diagnóstico `2026-11-22..2026-11-24` (Resolução `IDE2SAT2` + `N4_HARDWARE` `MAIN` + Rodada 4)
+| Fato Observado (`docs/evidence/`) | Status | Detalhe Técnico |
 | :--- | :---: | :--- |
-| Liberação FE (`C0001008: 0x007F -> 0x807F`) + `CH1 raw` | **OK** | `status=0x50`, `altstat=0x50`, `devsel=0xA0`, scratchpad `0x55`/`0xAA` |
-| **`0xEC IDENTIFY DEVICE` ao vivo (`ch1_identify_ec_hdmi_flat_20261122.bin`)** | **OK** | `SAMSUNG HM251JI` (`488.397.168` LBA48, `MWDMA2`, `mirror_main_lba=488266096`) |
-| **`FUN_5041CD4D(1)` (`DAVIS_Connect_IDE(1)`)** | **FALHA** | Retorna `rc=0x00000000`, `is_ata_m=0` mesmo com `0xEC` funcionando logo antes! |
-| **Boot frio `RTSC` (`boottrace_*_20261122.log`)** | **FALHA** | `0` `U99`, valida `MAIN3060NP`/`3410PQ`, falha com `[RTSD] 80000404` / `E8000000` `Reg[00..00]` |
+| Liberação FE (`C0001008: 0x007F -> 0x807F`) + `0xEC IDENTIFY` (`EV-20261122-022` / `EV-20261124-003`) | **OK** | `SAMSUNG HM251JI` (`488.397.168` LBA48, `UDMA2`, `mirror_main_lba=488266096`, `ata_ready`) e saída limpa de `BRIDGE` em `davis-probe` + `ISOLATE` |
+| **`FUN_5041CD4D(1)` (`DAVIS_Connect_IDE(1)`) em `PROG061` stock (`EV-20261122-022` / `EV-20261124-003`)** | **ESPERADO (`is_ata_m=0`)** | No `PROG061` sem `sata_bridge_fix`, `FUN_5041D928` espera apenas `2 ms` após `RESET-`, antes de `IDE2SAT2` afirmar `BSY` (`~32 ms`) / `DRDY` (`~555 ms`) |
+| **Boot frio `MAIN3410PQ` & `MAIN3060NP` `S1..S14+S13A/S13B` (`EV-20261123-030`, `EV-20261124-002`)** | **OK (`N4_HARDWARE`)** | Patch `1000 ms` (`sata_bridge_fix`) + retarget BGO `8 MiB` `S1..S14+S13A/S13B` concluíram `nfrom back up ok.`, `sys_rsv init success.` e `CLEAN_MAIN_OK` direto do SATA |
 
-## 4. As 6 Fronteiras Abertas do Projeto (Daqui pra Frente)
-1. Isolar a divergência entre `0xEC` vivo funcional vs `FUN_5041CD4D(1)` (`is_ata_m=0`) / `RTSC` frio (`80000404`) — desbloqueando o primeiro boot completo de `MAIN` por HDD em silício real.
-2. Validar em hardware real `PAL-M` (`AIOF`/`IC3001`) + `Stage15DigadiagTbc` (`M0` keepalive `TBUS`) após `CH1`.
+## 4. As 6 Fronteiras Abertas do Projeto (Pós-`2026-11-24`)
+1. **Portão 4 Etapa 2 (opt-in `Nor-FROM` `SA11..SA14` sem cartão SD):** hoje provado em `Mn103Vm` + Etapa 1 dry-run via SD `P4ZU` (`EV-20261123-025`); requer backup `8 MiB` SHA-256 + `--confirm-upper-nor` + autorização explícita do operador.
+2. **Validação em hardware real de `PAL-M` (`AIOF`/`IC3001`) + `Stage15DigadiagTbc` (`M0` keepalive `TBUS`)** após estabilização SATA/`CH1`.
 3. Implementar parser completo de Upper `EEMUL` (`SA71..SA133`, tags `"1284"`).
 4. Extrair chave `PANAEUSB.FRM` do `DMR-EX97` (`libfmupre.so` / ARMv7).
 5. Estender `profiles/schema/` v2.1 para SLC NAND / eMMC (`XW300`, `BS/XS`, `BW/BWT`).

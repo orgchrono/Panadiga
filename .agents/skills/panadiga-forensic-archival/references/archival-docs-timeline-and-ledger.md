@@ -30,7 +30,7 @@
   ]
 }
 ```
-- **Estado atual:** `18` entradas (`EV-20261119-001`..`EV-20261120-018`: `9` `N4_HARDWARE`, `5` `N2_EMULATED`, `4` `N1_STATIC`, `0` `N5_REPRODUCED`).
+- **Estado atual:** `36` entradas (`EV-20261119-001`..`EV-20261124-003`: `22` `N4_HARDWARE`, `8` `N2_EMULATED`, `6` `N1_STATIC`, `0` `N5_REPRODUCED`).
 
 ## 3. Manutenção de Timeline & Paridade Documental
 - **Linha do Tempo Cronológica:** Registre marcos datados (refutações, dumps ouro, reparos BGO, probes `CH1`) em `HISTORICO_UNBRICK_*`, `COMPENDIO_GLOBAL_*` §5 e snapshots datados em `docs/audits/` (sem editar snapshots históricos).

@@ -38,3 +38,10 @@ regexes = [
   '''^\s*AES Key\s*:\s*0x(?:A692605194CF7F4917E50521C1DF0BBA|62A39E1C5594AE09244EB326EF7938FA)\s*$''',
   '''^\s*-\s*AES-128 Key:\s*`26E096D3EF8A8FBBAA5E516F7726C22C`\s*$''',
 ]
+
+[[allowlists]]
+description = "Public Panasonic 64-bit Feistel .FRM key table telemetry from Pico CRYPTO KEYS"
+regexTarget = "line"
+regexes = [
+  '''^\s*@P7501_FRAME\s+.*type=CRYPTO_KEY\s+.*idx=\d+\s+name=[a-z0-9_]+\s+key=[0-9a-f]{16}\s*$''',
+]

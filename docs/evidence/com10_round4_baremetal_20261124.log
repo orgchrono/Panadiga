@@ -1,0 +1,232 @@
+=== INITIAL BANNER ===
+PANADIGA> 
+
+=== CMD: PING ===
+PONG
+@P7501_RES cmd=PING status=OK code=0 elapsed_us=60
+PANADIGA> 
+
+=== CMD: STATUS ===
+VDD: 3.25V (OK)
+[STANDBY] RXD=1 NSW5V=1 TXD=1 XRESET=1 SW_PU=3.26V NSW5V_DROPS=0 fault_latch=0 recoveries=0 | State=POWERED / AWAKE (SW_UART ~3.3V)
+[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=5 wdt_recoveries=0 reboot_src=CLEAN fault_slot=255 fault_stage=IDLE last_cmd=PING last_us=60
+@P7501_RES cmd=STATUS status=OK code=0 elapsed_us=1891
+PANADIGA> 
+
+=== CMD: SURG ASM 51800000 MOV 0x12345678,D0 ===
+@P7501_SURG op=ASM va=0x51800000 len=6 hex=fccc78563412 dec="MOV 0x12345678,D0"
+@P7501_FRAME seq=1 ts_us=1883444386 type=SURG len=67 crc32=D5E7A1C5 op=ASM va=0x51800000 len=6 hex=fccc78563412 dec="MOV 0x12345678,D0"
+SURG: OK
+@P7501_RES cmd=SURG status=OK code=0 elapsed_us=1216
+PANADIGA> 
+
+=== CMD: SURG ASM 51800006 JMP 0x51800100 ===
+@P7501_SURG op=ASM va=0x51800006 len=3 hex=ccfa00 dec="JMP 0x51800100"
+@P7501_FRAME seq=2 ts_us=1883448297 type=SURG len=58 crc32=6A16BB83 op=ASM va=0x51800006 len=3 hex=ccfa00 dec="JMP 0x51800100"
+SURG: OK
+@P7501_RES cmd=SURG status=OK code=0 elapsed_us=850
+PANADIGA> 
+
+=== CMD: SURG ASM 5180000B CALL 0x51800200 ===
+@P7501_SURG op=ASM va=0x5180000B len=5 hex=cdf5010000 dec="CALL 0x51800200"
+@P7501_FRAME seq=3 ts_us=1883452592 type=SURG len=63 crc32=D8335F07 op=ASM va=0x5180000B len=5 hex=cdf5010000 dec="CALL 0x51800200"
+SURG: OK
+@P7501_RES cmd=SURG status=OK code=0 elapsed_us=797
+PANADIGA> 
+
+=== CMD: SURG ASM 51800012 NOP ===
+@P7501_SURG op=ASM va=0x51800012 len=1 hex=cb dec="NOP"
+@P7501_FRAME seq=4 ts_us=1883455829 type=SURG len=43 crc32=8F5BE0F5 op=ASM va=0x51800012 len=1 hex=cb dec="NOP"
+SURG: OK
+@P7501_RES cmd=SURG status=OK code=0 elapsed_us=566
+PANADIGA> 
+
+=== CMD: SURG ASM 51800013 RETS ===
+@P7501_SURG op=ASM va=0x51800013 len=2 hex=f0fc dec="RETS"
+@P7501_FRAME seq=5 ts_us=1883459043 type=SURG len=46 crc32=94EF90E8 op=ASM va=0x51800013 len=2 hex=f0fc dec="RETS"
+SURG: OK
+@P7501_RES cmd=SURG status=OK code=0 elapsed_us=566
+PANADIGA> 
+
+=== CMD: CRYPTO SELFTEST ===
+@P7501_FRAME seq=6 ts_us=1883462133 type=CRYPTO len=21 crc32=3176CE90 selftest=PASS keys=12
+CRYPTO: OK
+@P7501_RES cmd=CRYPTO status=OK code=0 elapsed_us=600
+PANADIGA> 
+
+=== CMD: CRYPTO KEYS ===
+@P7501_FRAME seq=7 ts_us=1883465281 type=CRYPTO_KEY len=40 crc32=0EE32BBE idx=0 name=old_df72 key=df7215c7427fd010
+@P7501_FRAME seq=8 ts_us=1883465432 type=CRYPTO_KEY len=43 crc32=B54A19F3 idx=1 name=le2011_08e0 key=08e03d859af9f3ee
+@P7501_FRAME seq=9 ts_us=1883465564 type=CRYPTO_KEY len=42 crc32=1E222693 idx=2 name=y2011_af4d key=af4d5b16c298c16d
+@P7501_FRAME seq=10 ts_us=1883465670 type=CRYPTO_KEY len=42 crc32=9B249E98 idx=3 name=y2012_9407 key=9407311b7561f97e
+@P7501_FRAME seq=11 ts_us=1883465780 type=CRYPTO_KEY len=42 crc32=D2C0AC4D idx=4 name=y2012_5d88 key=5d88719745a4efff
+@P7501_FRAME seq=12 ts_us=1883465885 type=CRYPTO_KEY len=42 crc32=E8E574C2 idx=5 name=y2013_38bb key=38bb0c17d362701f
+@P7501_FRAME seq=13 ts_us=1883465995 type=CRYPTO_KEY len=42 crc32=E39BEF24 idx=6 name=y2013_ec23 key=ec238cd791456646
+@P7501_FRAME seq=14 ts_us=1883466102 type=CRYPTO_KEY len=42 crc32=56CD3E0B idx=7 name=hualu_0a1e key=0a1ee6c5bdc4933f
+@P7501_FRAME seq=15 ts_us=1883466213 type=CRYPTO_KEY len=42 crc32=25321411 idx=8 name=y2014_8f8c key=8f8ca88482e43d9b
+@P7501_FRAME seq=16 ts_us=1883466317 type=CRYPTO_KEY len=42 crc32=3014BBBF idx=9 name=y2014_21fc key=21fca17361e66b4e
+@P7501_FRAME seq=17 ts_us=1883466426 type=CRYPTO_KEY len=43 crc32=0535DD3A idx=10 name=y2016_fdfe key=fdfe0bee4c90fa2c
+@P7501_FRAME seq=18 ts_us=1883466530 type=CRYPTO_KEY len=43 crc32=D0170235 idx=11 name=y2018_06c9 key=06c943f3b997f7e0
+CRYPTO: OK
+@P7501_RES cmd=CRYPTO status=OK code=0 elapsed_us=3630
+PANADIGA> 
+
+=== CMD: CRYPTO ENC 0 4558545248454144 ===
+@P7501_FRAME seq=19 ts_us=1883471719 type=CRYPTO len=48 crc32=0F58EE02 mode=ENC key=old_df72 len=8 out=5187138d5b0afb22
+CRYPTO: OK
+@P7501_RES cmd=CRYPTO status=OK code=0 elapsed_us=665
+PANADIGA> 
+
+=== CMD: CRYPTO DEC 0 5187138d5b0afb22 ===
+@P7501_FRAME seq=20 ts_us=1883475106 type=CRYPTO len=48 crc32=BE34A318 mode=DEC key=old_df72 len=8 out=4558545248454144
+CRYPTO: OK
+@P7501_RES cmd=CRYPTO status=OK code=0 elapsed_us=779
+PANADIGA> 
+
+=== CMD: CRYPTO ADLER32 1 50414E4144494741 ===
+@P7501_FRAME seq=21 ts_us=1883478501 type=CRYPTO len=48 crc32=5B3B9963 len=8 pana_strided=0x0A220236 rfc1950=0x0A220236
+CRYPTO: OK
+@P7501_RES cmd=CRYPTO status=OK code=0 elapsed_us=514
+PANADIGA> 
+
+=== CMD: DECOMP SELFTEST ===
+@P7501_FRAME seq=22 ts_us=1883481886 type=DECOMP len=27 crc32=405D6BA3 selftest=PASS lzss=1 zlib=1
+DECOMP: OK
+@P7501_RES cmd=DECOMP status=OK code=0 elapsed_us=833
+PANADIGA> 
+
+=== CMD: DECOMP LZSS_ENC 50414E414449474150414E414449474150414E41 ===
+@P7501_FRAME seq=23 ts_us=1883485443 type=DECOMP len=73 crc32=1232FCD1 algo=LZSS_ENC in=20 out=12 crc32=0xE2993943 data=ff50414e414449474100eef9
+DECOMP: OK
+@P7501_RES cmd=DECOMP status=OK code=0 elapsed_us=713
+PANADIGA> 
+
+=== CMD: DECOMP LZSS ff50414e414449474100eef9 ===
+@P7501_FRAME seq=24 ts_us=1883488935 type=DECOMP len=85 crc32=74C47C83 algo=LZSS in=12 out=20 crc32=0x873103DC data=50414e414449474150414e414449474150414e41
+DECOMP: OK
+@P7501_RES cmd=DECOMP status=OK code=0 elapsed_us=591
+PANADIGA> 
+
+=== CMD: DECOMP ZLIB_ENC 50414E414449474150414E4144494741 ===
+@P7501_FRAME seq=25 ts_us=1883492424 type=DECOMP len=103 crc32=11D08A6C algo=ZLIB_ENC in=16 out=27 crc32=0xF67E7321 data=7801011000efff50414e414449474150414e414449474125ec046b
+DECOMP: OK
+@P7501_RES cmd=DECOMP status=OK code=0 elapsed_us=660
+PANADIGA> 
+
+=== CMD: DECOMP ZLIB 7801011000efff50414e414449474150414e414449474125ec046b ===
+@P7501_FRAME seq=26 ts_us=1883496158 type=DECOMP len=77 crc32=B9DF93F7 algo=ZLIB in=27 out=16 crc32=0xA4712F8C data=50414e414449474150414e4144494741
+DECOMP: OK
+@P7501_RES cmd=DECOMP status=OK code=0 elapsed_us=730
+PANADIGA> 
+
+=== CMD: SURG HDD_PLAN 488397168 13003052 ===
+@P7501_SURG op=HDD_PLAN total_lba=488397168 primary=0x00010000 mirror=0x1D1A5970 data_lba=0x00016338 usable_2kb=122043790 rtsd_2kb=0x0747165C
+@P7501_FRAME seq=27 ts_us=1883499839 type=SURG len=129 crc32=0D1789AD op=HDD_PLAN total_lba=488397168 primary=0x00010000 mirror=0x1D1A5970 data_lba=0x00016338 usable_2kb=122043790 rtsd_2kb=0x0747165C
+SURG: OK
+@P7501_RES cmd=SURG status=OK code=0 elapsed_us=978
+PANADIGA> 
+
+=== CMD: TRAP LIST ===
+[TRAP #1] id=LETHAL_MMIO_C000100C start=0xC000100C len=0x00000004 mask=0x07 sev=DENY reason=AM34 WDT/bus hardware hang on read/write/erase
+[TRAP #2] id=LETHAL_MMIO_DC0F0000 start=0xDC0F0000 len=0x00000010 mask=0x07 sev=DENY reason=AM34 SysCtrl/DAVIS bus-stall trap range
+[TRAP #3] id=IPL_L1_CACHED_RO start=0x80000000 len=0x00040000 mask=0x06 sev=DENY reason=SA0..SA10 critical boot IPL permanently read-only (E05)
+[TRAP #4] id=IPL_L1_UNCACHED_RO start=0x84000000 len=0x00040000 mask=0x06 sev=DENY reason=SA0..SA10 uncached boot IPL permanently read-only (E05)
+[TRAP #5] id=CS0_MIRROR_CACHED start=0x80800000 len=0x03800000 mask=0x06 sev=DENY reason=8MB flash CS0 cached alias mirror (blocks phantom wrap writes)
+[TRAP #6] id=CS0_MIRROR_UNCACHED start=0x84800000 len=0x03800000 mask=0x06 sev=DENY reason=8MB flash CS0 uncached alias mirror (blocks phantom wrap writes)
+[TRAP #7] id=BGO_4MB_ALIAS_TRAP start=0x84200000 len=0x00010000 mask=0x06 sev=WARN reason=BGO_4MB_ALIAS_TRAP_USE_84130000 (SA39 mid-FTL vs EH55 0x84130000 SA26)
+@P7501_FRAME seq=28 ts_us=1883502972 type=TRAP len=128 crc32=6652CD91 id=LETHAL_MMIO_C000100C start=0xC000100C len=0x00000004 mask=0x07 sev=DENY reason=AM34 WDT/bus hardware hang on read/write/erase
+@P7501_FRAME seq=29 ts_us=1883503479 type=TRAP len=121 crc32=A9811636 id=LETHAL_MMIO_DC0F0000 start=0xDC0F0000 len=0x00000010 mask=0x07 sev=DENY reason=AM34 SysCtrl/DAVIS bus-stall trap range
+@P7501_FRAME seq=30 ts_us=1883503997 type=TRAP len=133 crc32=C0FEAD9B id=IPL_L1_CACHED_RO start=0x80000000 len=0x00040000 mask=0x06 sev=DENY reason=SA0..SA10 critical boot IPL permanently read-only (E05)
+@P7501_FRAME seq=31 ts_us=1883504501 type=TRAP len=135 crc32=FE72A0C7 id=IPL_L1_UNCACHED_RO start=0x84000000 len=0x00040000 mask=0x06 sev=DENY reason=SA0..SA10 uncached boot IPL permanently read-only (E05)
+@P7501_FRAME seq=32 ts_us=1883505029 type=TRAP len=141 crc32=B711F783 id=CS0_MIRROR_CACHED start=0x80800000 len=0x03800000 mask=0x06 sev=DENY reason=8MB flash CS0 cached alias mirror (blocks phantom wrap writes)
+@P7501_FRAME seq=33 ts_us=1883505524 type=TRAP len=145 crc32=AB237C34 id=CS0_MIRROR_UNCACHED start=0x84800000 len=0x03800000 mask=0x06 sev=DENY reason=8MB flash CS0 uncached alias mirror (blocks phantom wrap writes)
+@P7501_FRAME seq=34 ts_us=1883506057 type=TRAP len=150 crc32=229803AF id=BGO_4MB_ALIAS_TRAP start=0x84200000 len=0x00010000 mask=0x06 sev=WARN reason=BGO_4MB_ALIAS_TRAP_USE_84130000 (SA39 mid-FTL vs EH55 0x84130000 SA26)
+@P7501_RES cmd=TRAP status=OK code=0 elapsed_us=6031
+PANADIGA> 
+
+=== CMD: TRAP CHECK 0xC000100C 4 R ===
+@P7501_FRAME seq=35 ts_us=1883511685 type=TRAP len=155 crc32=6400B178 addr=0xC000100C len=0x4 op=R verdict=DENY trap=LETHAL_MMIO_C000100C bus_policy=LETHAL_MMIO_0xC000100C reason=AM34 WDT/bus hardware hang on read/write/erase
+[TRAP] CHECK addr=0xC000100C len=0x4 op=R verdict=DENY trap=LETHAL_MMIO_C000100C bus_policy=LETHAL_MMIO_0xC000100C reason=AM34 WDT/bus hardware hang on read/write/erase
+@P7501_RES cmd=TRAP status=ERR code=E05 elapsed_us=1288
+PANADIGA> 
+
+=== CMD: TRAP CHECK 0x84000000 4 W ===
+@P7501_FRAME seq=36 ts_us=1883516034 type=TRAP len=153 crc32=3F1763EE addr=0x84000000 len=0x4 op=W verdict=DENY trap=IPL_L1_UNCACHED_RO bus_policy=IPL_LAYER1_RO reason=SA0..SA10 uncached boot IPL permanently read-only (E05)
+[TRAP] CHECK addr=0x84000000 len=0x4 op=W verdict=DENY trap=IPL_L1_UNCACHED_RO bus_policy=IPL_LAYER1_RO reason=SA0..SA10 uncached boot IPL permanently read-only (E05)
+@P7501_RES cmd=TRAP status=ERR code=E05 elapsed_us=1262
+PANADIGA> 
+
+=== CMD: PAYLOAD VERIFY ALL ===
+[PAYLOAD VERIFY] name=fast_bgo_stream ok=1 load_va=0x9043A000 len=606 crc32=0x3D2D3D4A
+[PAYLOAD VERIFY] name=video_mmio_dump ok=1 load_va=0x51800000 len=300 crc32=0xD1A85691
+[PAYLOAD VERIFY] name=tbc_passthrough ok=1 load_va=0x51800000 len=26 crc32=0x77EB1714
+[PAYLOAD VERIFY] name=jedec_nvram_erase ok=1 load_va=0x51800000 len=260 crc32=0x09A60ECF
+[PAYLOAD VERIFY] name=jedec_probe_id ok=1 load_va=0x51800000 len=212 crc32=0x00F1B7A7
+@P7501_FRAME seq=37 ts_us=1883520172 type=PAYLOAD len=69 crc32=981390E1 name=fast_bgo_stream ok=1 load_va=0x9043A000 len=606 crc32=0x3D2D3D4A
+@P7501_FRAME seq=38 ts_us=1883520837 type=PAYLOAD len=69 crc32=5E9F6FB2 name=video_mmio_dump ok=1 load_va=0x51800000 len=300 crc32=0xD1A85691
+@P7501_FRAME seq=39 ts_us=1883521210 type=PAYLOAD len=68 crc32=9B7F317B name=tbc_passthrough ok=1 load_va=0x51800000 len=26 crc32=0x77EB1714
+@P7501_FRAME seq=40 ts_us=1883522124 type=PAYLOAD len=71 crc32=E977C9C1 name=jedec_nvram_erase ok=1 load_va=0x51800000 len=260 crc32=0x09A60ECF
+@P7501_FRAME seq=41 ts_us=1883522700 type=PAYLOAD len=68 crc32=F732C353 name=jedec_probe_id ok=1 load_va=0x51800000 len=212 crc32=0x00F1B7A7
+@P7501_RES cmd=PAYLOAD status=OK code=0 elapsed_us=4475
+PANADIGA> 
+
+=== CMD: PAYLOAD RUN video_mmio_dump ===
+@P7501_FRAME seq=42 ts_us=1883545386 type=MMIO len=71 crc32=939E4564 reg=AIOF_VMOD addr=0x88000000 val=0x00008020 dom=0x02 mode=NTSC(0x8020)
+@P7501_FRAME seq=43 ts_us=1883559100 type=MMIO len=71 crc32=F5967249 reg=AIOF_FS0 addr=0x8800002C val=0x000040F1 dom=0x02 fs0=CUSTOM(0x40F1)
+@P7501_FRAME seq=44 ts_us=1883572740 type=MMIO len=53 crc32=FC6A0CD1 reg=AIOF_SDET addr=0x88000030 val=0x00000000 dom=0x02
+@P7501_FRAME seq=45 ts_us=1883586351 type=MMIO len=53 crc32=09F56075 reg=AIOF_VDET addr=0x88000038 val=0x00004100 dom=0x02
+@P7501_FRAME seq=46 ts_us=1883599978 type=MMIO len=53 crc32=DF1EC273 reg=AIOF_VOUT addr=0x8800005C val=0x00018040 dom=0x02
+@P7501_FRAME seq=47 ts_us=1883613617 type=MMIO len=76 crc32=DF512DFF reg=AIOF_YC3V addr=0x88000064 val=0x80391504 dom=0x02 line_tbc=0 clk_start=1
+@P7501_FRAME seq=48 ts_us=1883627241 type=MMIO len=53 crc32=1BF78997 reg=AIOF_TST1 addr=0x8800006C val=0x00018040 dom=0x02
+@P7501_FRAME seq=49 ts_us=1883640868 type=MMIO len=53 crc32=213477DE reg=AIOF_RDET addr=0x88000084 val=0xC000C100 dom=0x02
+@P7501_FRAME seq=50 ts_us=1883654536 type=MMIO len=64 crc32=45120339 reg=AIOF_CONT addr=0x880000A4 val=0x40404000 dom=0x02 setup=0IRE
+@P7501_FRAME seq=51 ts_us=1883668180 type=MMIO len=65 crc32=048BB8DB reg=AVDD_DAC1 addr=0x89800404 val=0x00000D00 dom=0x02 lo16=0x0D00
+@P7501_FRAME seq=52 ts_us=1883681798 type=MMIO len=65 crc32=E6161478 reg=AVDD_VOUT addr=0x89800484 val=0x00000000 dom=0x02 lo16=0x0000
+@P7501_FRAME seq=53 ts_us=1883695401 type=MMIO len=65 crc32=9B6E83AD reg=AVDD_NPAL addr=0x89800624 val=0x00050000 dom=0x02 lo16=0x0000
+@P7501_FRAME seq=54 ts_us=1883709014 type=MMIO len=65 crc32=7841C58D reg=AVDD_VDEC addr=0x89800858 val=0x44643263 dom=0x02 lo16=0x3263
+@P7501_FRAME seq=55 ts_us=1883722644 type=MMIO len=53 crc32=32F2214A reg=IIC0_BASE addr=0xD8400000 val=0x00000000 dom=0x02
+@P7501_FRAME seq=56 ts_us=1883736246 type=MMIO len=53 crc32=4C8E47C4 reg=IIC1_BASE addr=0xD8401000 val=0x00000000 dom=0x02
+[PAYLOAD RUN] video_mmio_dump complete (valid_regs=15)
+@P7501_RES cmd=PAYLOAD status=OK code=0 elapsed_us=212803
+PANADIGA> 
+
+=== CMD: PAYLOAD RUN jedec_probe_id ===
+[PAYLOAD RUN] jedec_probe_id CFI size=8388608 bytes
+@P7501_RES cmd=PAYLOAD status=OK code=0 elapsed_us=47900
+PANADIGA> 
+
+=== CMD: CFI ===
+[CFI] Spansion QRY valid: 8388608 bytes (8 MB).
+CFI: OK (8 MB)
+@P7501_RES cmd=CFI status=OK code=0 elapsed_us=47657
+PANADIGA> 
+
+=== CMD: PAYLOAD RUN fast_bgo_stream ===
+[PAYLOAD RUN] fast_bgo_stream verified live (uploaded=0 exited=1 crc32=0x3D2D3D4A)
+@P7501_RES cmd=PAYLOAD status=OK code=0 elapsed_us=76970
+PANADIGA> 
+
+=== CMD: STATUS ===
+VDD: 3.25V (OK)
+[STANDBY] RXD=1 NSW5V=1 TXD=1 XRESET=1 SW_PU=3.26V NSW5V_DROPS=0 fault_latch=0 recoveries=0 | State=POWERED / AWAKE (SW_UART ~3.3V)
+[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=30 wdt_recoveries=0 reboot_src=CLEAN fault_slot=255 fault_stage=IDLE last_cmd=PAYLOAD last_us=76970
+@P7501_RES cmd=STATUS status=OK code=0 elapsed_us=1865
+PANADIGA> 
+=== ROUND4_BAREMETAL_AND_PANAMON1_OK ===
+
+=== FINAL ISOLATE & STATUS ===
+=== INITIAL BANNER ===
+PANADIGA> 
+
+=== CMD: ISOLATE ===
+[BUS] P7501 pins placed in High-Impedance Isolation (NSW5V/XRESET Hi-Z, GP26 ADC0).
+@P7501_RES cmd=ISOLATE status=OK code=0 elapsed_us=122
+PANADIGA> 
+
+=== CMD: STATUS ===
+VDD: 3.25V (OK)
+[STANDBY] RXD=1 NSW5V=1 TXD=1 XRESET=1 SW_PU=3.26V NSW5V_DROPS=0 fault_latch=0 recoveries=0 | State=POWERED / AWAKE (SW_UART ~3.3V)
+[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=37 wdt_recoveries=0 reboot_src=CLEAN fault_slot=255 fault_stage=IDLE last_cmd=ISOLATE last_us=122
+@P7501_RES cmd=STATUS status=OK code=0 elapsed_us=1868
+PANADIGA> 
+=== CLEAN_ISOLATE_AND_STATUS_VERIFIED ===

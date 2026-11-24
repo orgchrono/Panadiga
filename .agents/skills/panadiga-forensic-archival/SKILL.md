@@ -24,7 +24,7 @@ Esta skill garante preservação imutável de binários/logs, rigor epistêmico 
    - `frm/`: aceita apenas `.frm`; **imutável** por SHA-256.
    - `recompiled/`: **falha fechado** se `PreWriteGateReport.passed != true` (`Mn103Vm`).
 2. **Regra Epistêmica & Ledger (`docs/evidence/ledger.json`):** Todo documento `docs/pt-BR/*.md` com a tag `[PROVADO EM HARDWARE REAL]` **DEVE** ter ao menos uma entrada `N4_HARDWARE` ou `N5_REPRODUCED` no `ledger.json` (`test_docs_parity.py`), com todos os `sha256_assertions` batendo em disco.
-3. **Paridade Bilíngue 1:1 & `git check-ignore`:** `docs/pt-BR/*.md`, `docs/en-US/*.md`, `docs/translation_pairs.json` e `docs/INDEX.md` mantêm exatamente **40 pares** (atualizando os 4 juntos se adicionar novo par), e nenhum link de doc/ledger pode apontar para caminho ignorado pelo `.gitignore`.
+3. **Paridade Bilíngue 1:1 & `git check-ignore`:** `docs/pt-BR/*.md`, `docs/en-US/*.md`, `docs/translation_pairs.json` e `docs/INDEX.md` mantêm exatamente **44 pares** (atualizando os 4 juntos se adicionar novo par), e nenhum link de doc/ledger pode apontar para caminho ignorado pelo `.gitignore`.
 4. **Dumps Pesados Fora do Git:** Imagens acima do limite Git vão para Releases (`firmware-pack-v0.1.0`) mantendo apenas `SHA256SUMS.txt` e guias no repositório.
 
 ## 3. Workflow Canônico (CLI, RAG & Paridade)
@@ -48,9 +48,9 @@ python -m pytest scripts/tests/test_docs_parity.py
 ```
 - **MCP:** `panadiga_search_manuals`, `panadiga_search_visuals`, `panadiga_rag_query`.
 
-## 4. Cuidados com Timeline & Pendências Atuais (`2026-11-22`)
-- **Pendência Conhecida:** Os arquivos recentes `docs/evidence/*20261122*` (incluindo o breakthrough `davis_probe_ch1_hdmi_flat_20261122.json`, `ch1_identify_ec_hdmi_flat_20261122.bin` e `boottrace_*_20261122.log`) ainda não foram formalizados em `docs/evidence/ledger.json` nem movidos/curados em `docs/debug_logs/README.md`.
-- **Sincronização de Contagens (`test_docs_parity.py`):** Ao criar novo log curado ou par de dossiês, atualize `docs/debug_logs/README.md`, `docs/INDEX.md`, `docs/STATUS.md` (note que `STATUS.md` ainda exibe contagens antigas), `README.md`, `README.pt-BR.md`, `AGENTS.md`, `.github/RELEASE_NOTES.md` e `EXPECTED_PAIRS`/`EXPECTED_LOGS` quando aplicável.
+## 4. Cuidados com Timeline & Estado Atual (`2026-11-24`)
+- **Consolidação Atualizada:** O backfill de `2026-11-22..2026-11-24` (incluindo `hdmi_flat`, cirurgia CoW Bloco A/B, `MAIN3410PQ` `S1..S14`, `MAIN3060NP` `S14` `CLEAN_MAIN_OK` e Rodada 4 Pico + `davis-probe` com saída limpa de `BRIDGE`) está formalizado em `docs/evidence/ledger.json` (`36` entradas até `EV-20261124-003`) e espelhado em `docs/STATUS.md`.
+- **Sincronização de Contagens (`test_docs_parity.py`):** Ao criar novo log curado em `docs/debug_logs/` (`28`) ou par de dossiês (`44`), atualize `docs/debug_logs/README.md`, `docs/INDEX.md`, `docs/STATUS.md`, `README.md`, `README.pt-BR.md`, `AGENTS.md`, `.github/RELEASE_NOTES.md` e `EXPECTED_PAIRS`/`EXPECTED_LOGS` juntos.
 
 ## 5. Verificação
-- `python -m pytest scripts/tests/test_docs_parity.py` `100% passed` (valida `40` pares, `28` logs + SHA-256, `ledger.json`, zero `stale hash`, badges EN/PT e `git check-ignore`).
+- `python -m pytest scripts/tests/test_docs_parity.py` `100% passed` (valida `44` pares, `28` logs + SHA-256, `ledger.json`, zero `stale hash`, badges EN/PT e `git check-ignore`).

@@ -1041,6 +1041,43 @@
         "docs/pt-BR/PESQUISA_PORTOES_VALIDACAO_SATA_STAGE2_E_RETARGET_BGO_8MB.md",
         "docs/en-US/RESEARCH_VALIDATION_GATES_SATA_STAGE2_AND_8MB_BGO_RETARGET.md"
       ]
+    },
+    {
+      "id": "EV-20261124-003",
+      "level": "N4_HARDWARE",
+      "claim_pt": "Validacao Rodada 4 AO VIVO (COM10, DMR-EH55LB-S, UF2 Pico unificado SHA-256 735B88F8C76041F77C2F2852C9E74598B7A5DE1AC734BCEFABAE59AD2804923C, somente leitura NOR/HDD): bare-metal SURG ASM (5 instrucoes), CRYPTO (SELFTEST/KEYS/ENC/DEC/ADLER32), DECOMP (SELFTEST/LZSS/ZLIB), SURG HDD_PLAN (mirror=0x1D1A5970), TRAP (0xC000100C e 0x84000000 DENY/E05), PAYLOAD VERIFY ALL (5/5 ok=1), payloads PANAMON1> (video_mmio_dump valid_regs=15, jedec_probe_id 8388608 B com 0 $g#67, CFI: OK (8 MB), fast_bgo_stream exited=1), e E2E panadiga pico davis-probe -p COM10 --drive master -j - (SAMSUNG HM251JI 488397168 LBA48, classification=ata_ready, IDENTIFY 0xEC 512 B) com saida limpa de BRIDGE confirmada por ISOLATE + STATUS diretos em PANADIGA> (VDD=3.25V, NSW5V=1, wdt_recoveries=0).",
+      "claim_en": "Live Round 4 bench validation (COM10, DMR-EH55LB-S, unified Pico UF2 SHA-256 735B88F8C76041F77C2F2852C9E74598B7A5DE1AC734BCEFABAE59AD2804923C, read-only NOR/HDD): bare-metal SURG ASM (5 instructions), CRYPTO (SELFTEST/KEYS/ENC/DEC/ADLER32), DECOMP (SELFTEST/LZSS/ZLIB), SURG HDD_PLAN (mirror=0x1D1A5970), TRAP (0xC000100C and 0x84000000 DENY/E05), PAYLOAD VERIFY ALL (5/5 ok=1), live PANAMON1> payloads (video_mmio_dump valid_regs=15, jedec_probe_id 8388608 B with zero $g#67, CFI: OK (8 MB), fast_bgo_stream exited=1), plus E2E panadiga pico davis-probe -p COM10 --drive master -j - (SAMSUNG HM251JI 488397168 LBA48, classification=ata_ready, 512 B IDENTIFY 0xEC) with clean BRIDGE exit verified via direct ISOLATE + STATUS at PANADIGA> (VDD=3.25V, NSW5V=1, wdt_recoveries=0).",
+      "sites": [
+        "PANADIGA> SURG ASM/CRYPTO/DECOMP/HDD_PLAN/TRAP/PAYLOAD",
+        "PANAMON1> video_mmio_dump (valid_regs=15), jedec_probe_id (CFI 8388608 B), fast_bgo_stream (exited=1)",
+        "davis-probe CH1 SAMSUNG HM251JI (488397168 LBA48) -> clean BRIDGE exit -> ISOLATE/STATUS"
+      ],
+      "evidence_files": [
+        "docs/evidence/com10_round4_baremetal_20261124.log",
+        "docs/evidence/davis_probe_ch1_clean_exit_20261124.json",
+        "docs/evidence/ch1_identify_ec_live_20261124.bin"
+      ],
+      "sha256_assertions": [
+        {
+          "path": "docs/evidence/com10_round4_baremetal_20261124.log",
+          "sha256": "25701FE10E03586FBF42194B095DCB301133F7095B0D09BC1F5BAB16BFCBB6E0",
+          "required": true
+        },
+        {
+          "path": "docs/evidence/davis_probe_ch1_clean_exit_20261124.json",
+          "sha256": "87A55662E0BCA0D59DCFFC1CE66876E5CA48F8896ACDDCB66FF779887111F6AE",
+          "required": true
+        },
+        {
+          "path": "docs/evidence/ch1_identify_ec_live_20261124.bin",
+          "sha256": "4D2676880380D351429BC6AF2331B0B7F47F17ACD5F7B6F1914B5CC82B81CD7D",
+          "required": true
+        }
+      ],
+      "docs": [
+        "docs/pt-BR/FIRMWARE_PICO_P7501_GUIA.md",
+        "docs/en-US/PICO_P7501_FIRMWARE_GUIDE.md"
+      ]
     }
   ]
 }
