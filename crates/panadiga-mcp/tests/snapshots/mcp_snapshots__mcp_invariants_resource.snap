@@ -1,0 +1,26 @@
+---
+source: crates/panadiga-mcp/tests/mcp_snapshots.rs
+expression: parsed
+---
+{
+  "forbidden_lethal_register": "0xC000100C",
+  "forensic_raw_dumps_immutable": true,
+  "ipl_layer1_ro_bytes": 262144,
+  "ipl_layer1_ro_sectors": "SA0..SA10 (8x8K + 3x64K = 256 KiB permanent E05)",
+  "max_nominal_voltage_v": 3.299999952316284,
+  "max_safe_voltage_v": 3.450000047683716,
+  "min_safe_voltage_v": 3.0,
+  "min_vdd_threshold_v": 2.5,
+  "nvram_mutable_bus_base": "0x807F0000",
+  "nvram_mutable_size_bytes": 65536,
+  "p7501_never_power_pico": true,
+  "pin1_sw_uart_gp26_max_ma": 10,
+  "pin2_xreset_gp5_open_drain_only": true,
+  "pin5_nsw5v_gp3_hiz_only": true,
+  "pin6_uartp2m_rx_gp2": true,
+  "spansion_bus_base": "0x80000000",
+  "spansion_total_bytes": 8388608,
+  "spansion_uncached_bus_base": "0x84000000",
+  "upper_nor_layer2_default_ro_bytes": 8060928,
+  "upper_nor_layer2_unlock_token": "CONFIRM_UPPER_NOR"
+}

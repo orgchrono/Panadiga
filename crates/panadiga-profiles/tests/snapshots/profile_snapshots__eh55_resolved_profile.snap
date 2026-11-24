@@ -1,0 +1,24 @@
+---
+source: crates/panadiga-profiles/tests/profile_snapshots.rs
+expression: summary
+---
+{
+  "bgo_region": "0x130000..0x3FFFFF",
+  "capabilities": {
+    "customRecoveryMedia": true,
+    "inspectReadOnly": true,
+    "labOverrideOfflineCowEligible": true,
+    "nvramSanitizeOfflineCow": true,
+    "nvramWriteLive": true,
+    "officialFrmPassThrough": true,
+    "upperNorPatchOfflineCow": true,
+    "upperNorWriteLive": true
+  },
+  "flash_id": "spansion_s29jl064h_8mb",
+  "ipl_region": "0x000000..0x03FFFF",
+  "model_id": "DMR-EH55",
+  "nvram_region": "0x7F0000..0x7FFFFF",
+  "sector_count": 142,
+  "soc_id": "mn2ds0009",
+  "total_bytes": 8388608
+}

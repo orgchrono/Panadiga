@@ -48,6 +48,7 @@ panadiga-ir = { workspace = true }
 
 [dev-dependencies]
 panadiga-ir = { workspace = true }
+proptest = { workspace = true }
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = [

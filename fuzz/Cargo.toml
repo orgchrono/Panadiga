@@ -1,0 +1,48 @@
+[package]
+name = "panadiga-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+panadiga-core = { path = "../crates/panadiga-core" }
+panadiga-crypto = { path = "../crates/panadiga-crypto" }
+
+[[bin]]
+name = "fuzz_meihdfs_decode"
+path = "fuzz_targets/fuzz_meihdfs_decode.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_extrhead_unpack"
+path = "fuzz_targets/fuzz_extrhead_unpack.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_uf2_validate"
+path = "fuzz_targets/fuzz_uf2_validate.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_rsp_parse"
+path = "fuzz_targets/fuzz_rsp_parse.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_bgo_audit"
+path = "fuzz_targets/fuzz_bgo_audit.rs"
+test = false
+doc = false
+bench = false

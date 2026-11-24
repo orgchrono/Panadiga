@@ -8,6 +8,10 @@
 /target/
 Cargo.lock.orig
 **/*.rs.bk
+/fuzz/target/
+/fuzz/artifacts/
+/fuzz/corpus/
+*.snap.new
 
 # ------------------------------------------------------------------------------
 # 2. Desktop Application (Tauri v2 + Vite + React + TypeScript)

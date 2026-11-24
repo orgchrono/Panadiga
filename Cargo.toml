@@ -1,5 +1,6 @@
 [workspace]
 resolver = "2"
+exclude = ["fuzz"]
 members = [
     "crates/panadiga-constants",
     "crates/panadiga-bench",
@@ -40,6 +41,7 @@ clap = { version = "4.5", features = ["derive"] }
 dirs = "7.0.0"
 flate2 = { version = "1.0", default-features = false, features = ["rust_backend"] }
 hex = "0.4"
+insta = { version = "1.49", features = ["json"] }
 lopdf = "0.47.0"
 lzma-rs = "0.3"
 md-5 = "0.10"
@@ -52,6 +54,7 @@ panadiga-crypto = { path = "crates/panadiga-crypto" }
 panadiga-ir = { path = "crates/panadiga-ir" }
 panadiga-profiles = { path = "crates/panadiga-profiles" }
 panadiga-vault = { path = "crates/panadiga-vault" }
+proptest = "1.12"
 rayon = "1.12"
 regex = "1.10"
 schemars = "1"
