@@ -126,6 +126,7 @@ pub(super) fn chunk_visual_manifest(guard: &QueryGuard, path: &Path) -> Vec<Chun
                 hierarchy: vec!["Visual Catalog".to_string(), item.category, item.filename],
                 line_start: idx + 1,
                 line_end: idx + 1,
+                page: None,
                 subsystem: SubsystemType::Hardware,
                 extracted_entities,
             },

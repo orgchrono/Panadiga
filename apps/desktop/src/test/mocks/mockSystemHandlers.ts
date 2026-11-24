@@ -59,16 +59,19 @@ export function handleMockSystemCommand(
       return {
         query: q,
         answer:
-          'Error U99 indicates NVRAM corruption on the Spansion S29JL064H NOR Flash (micro-sectors SA134..SA141). Erase sectors SA134..SA141 (0x007F0000..0x007FFFFF) to restore virgin 0xFF state while preserving bootloader IPL at SA0..SA133.',
+          'Error U99 indicates NVRAM corruption on the Spansion S29JL064H NOR Flash (micro-sectors SA134..SA141). Erase sectors SA134..SA141 (0x007F0000..0x007FFFFF) to restore virgin 0xFF state while preserving Layer 1 Critical Boot IPL SA0..SA10 and guarded Layer 2 Upper NOR SA11..SA133.',
         confidence: 0.98,
         groundedness_score: 1.0,
         is_abstained: false,
         abstention_reason: null,
         citations: [
           {
-            doc: 'manuals_and_schematics/dmr-eh55/service/panasonic_dmr_eh55p9_eh55pc9_service_manual_north_america.pdf',
+            doc: 'panasonic dmreh55p9 eh55pc9 service manual north america',
+            file_path:
+              'manuals_and_schematics/dmr-eh55/service/panasonic_dmr_eh55p9_eh55pc9_service_manual_north_america.pdf',
             section: 'Self-Diagnostic and Error Codes',
-            lines: 'P.21-22',
+            lines: 'Page 21',
+            page: 21,
             excerpt: 'U99: System microprocessor communication fault or NVRAM checksum mismatch.',
           },
         ],

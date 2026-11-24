@@ -169,6 +169,7 @@ fn make_ssot_chunk(
             hierarchy: vec!["Profiles".to_string(), "SSOT".to_string()],
             line_start: line_num,
             line_end: line_num,
+            page: None,
             subsystem: SubsystemType::ReverseEngineering,
             extracted_entities,
         },
@@ -299,4 +300,85 @@ pub(super) fn chunk_ssot_traps_or_atlas(guard: &QueryGuard, path: &Path) -> Vec<
     }
 
     Vec::new()
+}
+
+/// Summarizes a v2 relational SSOT JSON (`models/`, `boards/`, `flash_chips/`, `socs/`, `nor_layouts/`)
+/// into one dense searchable RAG chunk while preserving exact file path provenance.
+pub(crate) fn chunk_profile_json(guard: &QueryGuard, file_path: &Path) -> Vec<Chunk> {
+    let Ok(raw) = fs::read_to_string(file_path) else {
+        return Vec::new();
+    };
+    let Ok(val) = serde_json::from_str::<serde_json::Value>(&raw) else {
+        return Vec::new();
+    };
+    let Some(obj) = val.as_object() else {
+        return Vec::new();
+    };
+    let stem = file_path
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("profile");
+    let collection = file_path
+        .parent()
+        .and_then(|p| p.file_name())
+        .and_then(|s| s.to_str())
+        .unwrap_or("profiles");
+    let entity_id = obj
+        .get("model_id")
+        .or_else(|| obj.get("id"))
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or(stem);
+
+    let mut summary_parts = Vec::new();
+    for (k, v) in obj {
+        if let Some(s) = v.as_str() {
+            if !s.trim().is_empty() && s.len() <= 160 {
+                summary_parts.push(format!("{k}={s}"));
+            }
+        } else if v.is_number() || v.is_boolean() {
+            summary_parts.push(format!("{k}={v}"));
+        } else if let Some(arr) = v.as_array() {
+            let short: Vec<&str> = arr
+                .iter()
+                .filter_map(serde_json::Value::as_str)
+                .take(6)
+                .collect();
+            if !short.is_empty() {
+                summary_parts.push(format!("{k}=[{}]", short.join(", ")));
+            }
+        } else if k == "claims"
+            && let Some(claims_obj) = v.as_object()
+        {
+            let tiers: Vec<String> = claims_obj
+                .iter()
+                .filter_map(|(axis, cv)| {
+                    cv.get("tier")
+                        .and_then(serde_json::Value::as_str)
+                        .map(|tier| format!("{axis}:{tier}"))
+                })
+                .collect();
+            if !tiers.is_empty() {
+                summary_parts.push(format!("claims=[{}]", tiers.join(", ")));
+            }
+        } else if k == "evidence"
+            && let Some(tier) = v.get("tier").and_then(serde_json::Value::as_str)
+        {
+            summary_parts.push(format!("evidence_tier={tier}"));
+        }
+    }
+
+    let path_str = file_path.to_string_lossy().to_string();
+    let text = format!(
+        "[SSOT Profile ({collection})] {entity_id} | {}",
+        summary_parts.join(" | ")
+    );
+    vec![make_ssot_chunk(
+        guard,
+        format!("ssot_profile::{collection}::{entity_id}"),
+        &format!("SSOT Profile Catalog ({collection})"),
+        &path_str,
+        format!("{collection}/{entity_id}"),
+        text,
+        1,
+    )]
 }

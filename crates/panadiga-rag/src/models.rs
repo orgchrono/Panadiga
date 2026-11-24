@@ -44,6 +44,8 @@ pub struct ChunkMetadata {
     pub hierarchy: Vec<String>,
     pub line_start: usize,
     pub line_end: usize,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub page: Option<usize>,
     pub subsystem: SubsystemType,
     pub extracted_entities: Vec<Entity>,
 }
@@ -102,6 +104,8 @@ pub struct Citation {
     pub file_path: String,
     pub section_title: String,
     pub line_range: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub page: Option<usize>,
     pub excerpt: String,
 }
 
@@ -139,8 +143,11 @@ pub struct RagQueryResultDto {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RagCitationDto {
     pub doc: String,
+    pub file_path: String,
     pub section: String,
     pub lines: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub page: Option<usize>,
     pub excerpt: String,
 }
 
@@ -171,8 +178,10 @@ impl RagAnswer {
                 .iter()
                 .map(|c| RagCitationDto {
                     doc: c.doc_title.clone(),
+                    file_path: c.file_path.clone(),
                     section: c.section_title.clone(),
                     lines: c.line_range.clone(),
+                    page: c.page,
                     excerpt: c.excerpt.clone(),
                 })
                 .collect(),

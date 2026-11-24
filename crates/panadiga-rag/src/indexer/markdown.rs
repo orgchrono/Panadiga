@@ -7,15 +7,19 @@ use super::super::guardrails::QueryGuard;
 use super::super::models::{Chunk, ChunkMetadata, SubsystemType};
 use super::tokenizer::technical_tokenize;
 
-#[allow(clippy::too_many_arguments)]
-pub fn flush_lines_chunk(
+pub(crate) struct ChunkFlushTarget<'a> {
+    pub file_path: &'a Path,
+    pub doc_title: &'a str,
+    pub subsystem: SubsystemType,
+    pub section_title: &'a str,
+    pub hierarchy: &'a [String],
+    pub page: Option<usize>,
+}
+
+pub(crate) fn flush_lines_chunk_with_page(
     chunks: &mut Vec<Chunk>,
     guard: &QueryGuard,
-    file_path: &Path,
-    doc_title: &str,
-    subsystem: SubsystemType,
-    current_section: &str,
-    current_hierarchy: &[String],
+    target: &ChunkFlushTarget<'_>,
     lines_buf: &mut Vec<(usize, String)>,
     end_line: usize,
 ) {
@@ -32,22 +36,27 @@ pub fn flush_lines_chunk(
 
     if text_block.len() >= 30 {
         let start_line = lines_buf[0].0;
-        let stem = file_path
+        let stem = target
+            .file_path
             .file_stem()
             .and_then(|s| s.to_str())
             .unwrap_or("doc");
-        let cid = format!("{}::L{}-L{}", stem, start_line, end_line);
+        let cid = match target.page {
+            Some(page_num) => format!("{stem}::P{page_num}::L{start_line}-L{end_line}"),
+            None => format!("{stem}::L{start_line}-L{end_line}"),
+        };
 
         let meta_query = guard.process(&text_block);
 
         let meta = ChunkMetadata {
-            doc_title: doc_title.to_string(),
-            file_path: file_path.to_string_lossy().to_string(),
-            section_title: current_section.to_string(),
-            hierarchy: current_hierarchy.to_vec(),
+            doc_title: target.doc_title.to_string(),
+            file_path: target.file_path.to_string_lossy().to_string(),
+            section_title: target.section_title.to_string(),
+            hierarchy: target.hierarchy.to_vec(),
             line_start: start_line,
             line_end: end_line,
-            subsystem,
+            page: target.page,
+            subsystem: target.subsystem,
             extracted_entities: meta_query.extracted_entities,
         };
 
@@ -60,6 +69,29 @@ pub fn flush_lines_chunk(
         });
     }
     lines_buf.clear();
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn flush_lines_chunk(
+    chunks: &mut Vec<Chunk>,
+    guard: &QueryGuard,
+    file_path: &Path,
+    doc_title: &str,
+    subsystem: SubsystemType,
+    current_section: &str,
+    current_hierarchy: &[String],
+    lines_buf: &mut Vec<(usize, String)>,
+    end_line: usize,
+) {
+    let target = ChunkFlushTarget {
+        file_path,
+        doc_title,
+        subsystem,
+        section_title: current_section,
+        hierarchy: current_hierarchy,
+        page: None,
+    };
+    flush_lines_chunk_with_page(chunks, guard, &target, lines_buf, end_line);
 }
 
 pub fn chunk_markdown_file(

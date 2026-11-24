@@ -12,6 +12,7 @@ crate-type = ["rlib"]
 
 [dependencies]
 panadiga-core = { path = "../panadiga-core" }
+dirs = { workspace = true }
 lopdf = { workspace = true }
 rayon = { workspace = true }
 regex = { workspace = true }

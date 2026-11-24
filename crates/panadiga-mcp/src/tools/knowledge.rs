@@ -60,9 +60,11 @@ pub fn handle_search_manuals(args: &Value, workspace_root: &Path) -> Result<Valu
                 json!({
                     "file": res.chunk.metadata.doc_title,
                     "path": res.chunk.metadata.file_path,
-                    "page": res.chunk.metadata.line_start,
+                    "page": res.chunk.metadata.page.unwrap_or(res.chunk.metadata.line_start),
                     "section": res.chunk.metadata.section_title,
                     "score": (res.score * 1000.0).round() / 1000.0,
+                    "untrusted_data": true,
+                    "boundary": "UNTRUSTED_DOCUMENT",
                     "excerpt": excerpt,
                 })
             })

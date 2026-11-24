@@ -2598,6 +2598,7 @@ dependencies = [
 name = "panadiga-rag"
 version = "0.2.0"
 dependencies = [
+ "dirs",
  "lopdf",
  "panadiga-core",
  "rayon",

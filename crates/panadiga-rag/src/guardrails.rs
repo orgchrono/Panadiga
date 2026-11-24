@@ -7,27 +7,39 @@ use std::sync::LazyLock;
 use super::models::{Entity, EntityType, Query};
 use super::safety::extract_voltages_volts;
 
+const INJECTION_PATTERN_STRS: &[&str] = &[
+    r"(?i)ignore\s+(all\s+)?(previous\s+)?instructions",
+    r"(?i)disregard\s+(all\s+)?(safety\s+)?rules",
+    r"(?i)bypass\s+(hardware\s+)?safety",
+    r"(?i)override\s+(system\s+)?(policy|limits?)",
+    r"(?i)jailbreak",
+    r"(?i)you\s+are\s+now\s+in\s+developer\s+mode",
+    r"(?i)do\s+anything\s+now",
+    r"(?i)act\s+as\s+an\s+unrestricted",
+];
+
+fn compile_static_regex(pattern: &str) -> Regex {
+    #[allow(clippy::expect_used)]
+    Regex::new(pattern).expect("compile-time validated regex pattern")
+}
+
 static INJECTION_PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new(|| {
-    vec![
-        Regex::new(r"(?i)ignore\s+(all\s+)?(previous\s+)?instructions").unwrap(),
-        Regex::new(r"(?i)disregard\s+(all\s+)?(safety\s+)?rules").unwrap(),
-        Regex::new(r"(?i)bypass\s+(hardware\s+)?safety").unwrap(),
-        Regex::new(r"(?i)override\s+(system\s+)?(policy|limits?)").unwrap(),
-        Regex::new(r"(?i)jailbreak").unwrap(),
-        Regex::new(r"(?i)you\s+are\s+now\s+in\s+developer\s+mode").unwrap(),
-        Regex::new(r"(?i)do\s+anything\s+now").unwrap(),
-        Regex::new(r"(?i)act\s+as\s+an\s+unrestricted").unwrap(),
-    ]
+    INJECTION_PATTERN_STRS
+        .iter()
+        .copied()
+        .map(compile_static_regex)
+        .collect()
 });
 
 static HEX_REGEX: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"\b0x[0-9A-Fa-f]{1,16}\b").unwrap());
+    LazyLock::new(|| compile_static_regex(r"\b0x[0-9A-Fa-f]{1,16}\b"));
 
-static ERROR_CODE_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)\bU\d{2}\b").unwrap());
+static ERROR_CODE_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| compile_static_regex(r"(?i)\bU\d{2}\b"));
 
-static LBA_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)\bLBA\s*\d+\b").unwrap());
+static LBA_REGEX: LazyLock<Regex> = LazyLock::new(|| compile_static_regex(r"(?i)\bLBA\s*\d+\b"));
 
-static WORD_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\b[A-Za-z0-9_#/]+").unwrap());
+static WORD_REGEX: LazyLock<Regex> = LazyLock::new(|| compile_static_regex(r"\b[A-Za-z0-9_#/]+"));
 
 pub const KNOWN_COMPONENTS: &[&str] = &[
     "AM34",
@@ -35,9 +47,7 @@ pub const KNOWN_COMPONENTS: &[&str] = &[
     "S29JL064H70TFI00",
     "VEP79138",
     "P7501",
-    "P7501",
     "P59001",
-    "AM34",
     "UNIPHIER",
     "MN103S",
     "AN22111A",

@@ -5,8 +5,10 @@
 
 export interface RagCitation {
   readonly doc: string;
+  readonly file_path?: string;
   readonly section: string;
   readonly lines: string;
+  readonly page?: number | null;
   readonly excerpt: string;
 }
 

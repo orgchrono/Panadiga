@@ -62,6 +62,14 @@ impl ZeroErrorRagEngine {
         top_k: usize,
     ) -> Vec<RetrievalResult> {
         let q = self.guard.process(raw_query);
+        if q.is_injection
+            || !self
+                .safety_validator
+                .validate(&q.sanitized_text, true)
+                .is_safe
+        {
+            return Vec::new();
+        }
         let pool_size = (top_k * 12).max(60);
         let retriever = HybridRetriever::new(&self.indexer);
         retriever

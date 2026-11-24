@@ -116,6 +116,12 @@ impl HierarchicalIndexer {
                 root.join("profiles").join("traps"),
                 root.join("profiles").join("forensic_atlas"),
                 root.join("profiles").join("firmware_trains"),
+                root.join("profiles").join("models"),
+                root.join("profiles").join("boards"),
+                root.join("profiles").join("flash_chips"),
+                root.join("profiles").join("socs"),
+                root.join("profiles").join("nor_layouts"),
+                root.join(".agents").join("skills"),
                 root.join("crates"),
                 root.join("apps")
                     .join("desktop")
@@ -224,6 +230,19 @@ impl HierarchicalIndexer {
                 || path_lower.contains("/firmware_trains/")))
         {
             IndexedBucket::Symbols(ssot_atlas::chunk_ssot_traps_or_atlas(&self.guard, path))
+        } else if fname.ends_with(".json")
+            && !path_lower.contains("\\staging\\")
+            && !path_lower.contains("/staging/")
+            && !path_lower.contains("\\schema\\")
+            && !path_lower.contains("/schema/")
+            && ["models", "boards", "flash_chips", "socs", "nor_layouts"]
+                .iter()
+                .any(|dir| {
+                    path_lower.contains(&format!("\\{dir}\\"))
+                        || path_lower.contains(&format!("/{dir}/"))
+                })
+        {
+            IndexedBucket::Symbols(ssot_atlas::chunk_profile_json(&self.guard, path))
         } else if fname.to_lowercase().ends_with(".pdf") {
             let subsystem = self.determine_subsystem(path, "");
             let parsed = pdf::chunk_pdf_file(&self.guard, subsystem, path, pdf_cache);
