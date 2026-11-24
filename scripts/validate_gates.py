@@ -210,8 +210,9 @@ def run_sequential_gates(env: Mapping[str, str], *, ghidra_smoke: bool = False) 
 
 
 def run_parallel_lanes(env: Mapping[str, str], max_jobs: int, *, ghidra_smoke: bool = False) -> None:
-    """Execute all 9 Quality Gates via thread-pool DAG without SSOT write-races."""
+    """Execute all 9 Quality Gates via thread-pool DAG without SSOT races or Vite starvation."""
     ghidra_lane_label = "7/9 SSOT + Ghidra Native Export"
+    playwright_lane_label = "6/9 Playwright E2E"
     pytest_lane_label = "9b/9 Python Compile + Pytest"
     initial_list: list[tuple[str, Callable[[Mapping[str, str]], None]]] = [
         ("1/9 Rust Workspace", lambda e: _gate_rust(e, capture_output=True)),
@@ -219,14 +220,13 @@ def run_parallel_lanes(env: Mapping[str, str], max_jobs: int, *, ghidra_smoke: b
         ("3/9 Vitest Unit Suite", lambda e: _gate_vitest(e, capture_output=True)),
         ("4/9 Copy/Paste (jscpd 0%)", lambda e: _gate_jscpd(e, capture_output=True)),
         ("5/9 UI/UX State Lint", lambda e: _gate_uxlint(e, capture_output=True)),
-        ("6/9 Playwright E2E", lambda e: _gate_playwright(e, capture_output=True)),
         ("8/9 C11 Firmware Host Tests", lambda e: _gate_c11_host(e, capture_output=True)),
         ("9a/9 Python Mypy Strict", lambda e: _gate_python_mypy(e, capture_output=True)),
     ]
     if ghidra_smoke:
         initial_list.append(("10/9 Ghidra Headless Smoke", lambda e: _gate_ghidra_smoke(e, capture_output=True)))
     initial_lanes = tuple(initial_list)
-    total_lanes = len(initial_lanes) + 2
+    total_lanes = len(initial_lanes) + 3
     worker_count = max(1, min(max_jobs, total_lanes))
     print_banner(
         f"PANADIGA PARALLEL QUALITY GATES ({total_lanes} lanes | max_workers={worker_count})"
@@ -255,13 +255,14 @@ def run_parallel_lanes(env: Mapping[str, str], max_jobs: int, *, ghidra_smoke: b
                         done_label, dt = fut.result()
                         print_status("PASS", f"{done_label} ({dt:.2f}s)", "32")
                         if done_label == ghidra_lane_label:
-                            py_fut = pool.submit(
-                                _timed_run,
-                                pytest_lane_label,
-                                lambda e: _gate_python_compile_and_pytest(e, capture_output=True),
+                            post_ssot_lanes: tuple[tuple[str, Callable[[Mapping[str, str]], None]], ...] = (
+                                (playwright_lane_label, lambda e: _gate_playwright(e, capture_output=True)),
+                                (pytest_lane_label, lambda e: _gate_python_compile_and_pytest(e, capture_output=True)),
                             )
-                            future_map[py_fut] = pytest_lane_label
-                            pending.add(py_fut)
+                            for post_label, post_fn in post_ssot_lanes:
+                                post_fut = pool.submit(_timed_run, post_label, post_fn)
+                                future_map[post_fut] = post_label
+                                pending.add(post_fut)
                     except subprocess.CalledProcessError as exc:
                         for p in pending:
                             p.cancel()

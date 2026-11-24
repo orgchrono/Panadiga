@@ -5,10 +5,13 @@ from __future__ import annotations
 from pathlib import Path
 import subprocess
 import sys
+import threading
+from typing import Mapping
 import zipfile
 import pytest
 
 from scripts.build import detect_android_sdk, parse_args
+import scripts.validate_gates as validate_gates
 from scripts.build_lanes.android_verify import validate_apk_artifact
 from scripts.panadiga_cache import (
     compute_tree_digest,
@@ -213,3 +216,51 @@ def test_validate_apk_artifact_checks_signatures_abis_and_sdk(
     state["sig"] = apksig_good
     with pytest.raises(RuntimeError, match="armeabi-v7a"):
         validate_apk_artifact(sdk_dir, single_apk, require_dual_abi=True, env={})
+
+
+def test_validate_parallel_lanes_schedules_playwright_after_ssot(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    lock = threading.Lock()
+    order: list[str] = []
+
+    def _rec(name: str) -> object:
+        def _fake(_env: Mapping[str, str], *, capture_output: bool = False) -> None:
+            _ = capture_output
+            with lock:
+                order.append(name)
+
+        return _fake
+
+    for attr, key in (
+        ("_gate_rust", "rust"),
+        ("_gate_typescript", "ts"),
+        ("_gate_vitest", "vitest"),
+        ("_gate_jscpd", "jscpd"),
+        ("_gate_uxlint", "uxlint"),
+        ("_gate_playwright", "playwright"),
+        ("_gate_ghidra", "ghidra"),
+        ("_gate_c11_host", "c11"),
+        ("_gate_python_mypy", "mypy"),
+        ("_gate_python_compile_and_pytest", "pytest"),
+    ):
+        monkeypatch.setattr(validate_gates, attr, _rec(key))
+
+    validate_gates.run_parallel_lanes({}, max_jobs=4, ghidra_smoke=False)
+
+    assert set(order) == {
+        "rust",
+        "ts",
+        "vitest",
+        "jscpd",
+        "uxlint",
+        "c11",
+        "mypy",
+        "ghidra",
+        "playwright",
+        "pytest",
+    }
+    for lane in ("rust", "ts", "vitest", "jscpd", "uxlint", "c11", "mypy"):
+        assert order.index(lane) < order.index("ghidra")
+    assert order.index("ghidra") < order.index("playwright")
+    assert order.index("ghidra") < order.index("pytest")
