@@ -67,6 +67,34 @@ where
     }
 }
 
+const LOPDF_SILENCE_DIRECTIVE: &str = "lopdf=error";
+
+pub(crate) fn build_env_filter(level: LogLevel) -> EnvFilter {
+    if level == LogLevel::Off {
+        EnvFilter::new("off")
+    } else {
+        EnvFilter::new(format!(
+            "{},{LOPDF_SILENCE_DIRECTIVE}",
+            level.as_filter_directive()
+        ))
+    }
+}
+
+pub(crate) fn resolve_startup_filter(default_level: LogLevel) -> EnvFilter {
+    let Ok(raw_env) = std::env::var("PANADIGA_LOG") else {
+        return build_env_filter(default_level);
+    };
+    let Ok(mut filter) = EnvFilter::try_new(&raw_env) else {
+        return build_env_filter(default_level);
+    };
+    if !raw_env.contains("lopdf")
+        && let Ok(directive) = LOPDF_SILENCE_DIRECTIVE.parse()
+    {
+        filter = filter.add_directive(directive);
+    }
+    filter
+}
+
 /// Initializes the global `tracing` + `tracing-subscriber` + `opentelemetry_sdk` telemetry pipeline once.
 pub fn init_telemetry(default_level: LogLevel) {
     if RELOAD_HANDLE.get().is_some() {
@@ -74,8 +102,7 @@ pub fn init_telemetry(default_level: LogLevel) {
         return;
     }
 
-    let filter = EnvFilter::try_from_env("PANADIGA_LOG")
-        .unwrap_or_else(|_| EnvFilter::new(default_level.as_filter_directive()));
+    let filter = resolve_startup_filter(default_level);
     let (filter_layer, reload_handle) = reload::Layer::new(filter);
 
     let provider = SdkTracerProvider::builder().build();
@@ -111,7 +138,7 @@ pub fn ensure_telemetry_initialized() {
 pub fn set_level(level: LogLevel) {
     CURRENT_LEVEL.store(level as u8, Ordering::Release);
     if let Some(handle) = RELOAD_HANDLE.get() {
-        let _ = handle.reload(EnvFilter::new(level.as_filter_directive()));
+        let _ = handle.reload(build_env_filter(level));
     }
 }
 

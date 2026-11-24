@@ -14,6 +14,7 @@ pub use panadiga_core::pico::diag_rows::{
     BusTransitionRowSpec as BusTransitionRowDto, DumpWordRowSpec as DumpWordRowDto,
     PincheckRowSpec as PincheckRowDto,
 };
+use panadiga_core::pico::protocol::PicoBootClassFrame;
 
 /// Semantic boot stage or watchdog finding extracted from diagnostic output.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -55,6 +56,8 @@ pub struct PicoDiagnosticResultDto {
     pub progress_steps: Vec<String>,
     #[serde(default)]
     pub wire_events: Vec<String>,
+    #[serde(default)]
+    pub boot_class: Option<PicoBootClassFrame>,
 }
 
 /// Validates command ID & optional argument against SSOT catalog and prevents CDC injection.

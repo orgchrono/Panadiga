@@ -168,6 +168,31 @@ export interface DiagnosticFinding {
   detail: string;
 }
 
+export interface PicoBootClassSummary {
+  verdict: string;
+  build: string;
+  stage2: boolean;
+  avout_ok: boolean;
+  vmute0: boolean;
+  ntsc: boolean;
+  rsv_ok: boolean;
+  hdd_fail: number;
+  bgo_err: number;
+  fpc_err: number;
+  fpc_to: number;
+  iic_err: number;
+  odd_err: number;
+  op7f_cnt: number;
+  op7f: string[];
+}
+
+export interface PicoTbusAuditSummary {
+  frames: number;
+  br_rejected: number;
+  nak7f: number;
+  ops: string[];
+}
+
 export interface PicoDiagnosticResult {
   command_id: string;
   raw_command: string;
@@ -190,6 +215,7 @@ export interface PicoDiagnosticResult {
   ident_loader?: string | null;
   progress_steps?: string[];
   wire_events?: string[];
+  boot_class?: PicoBootClassSummary | null;
 }
 
 export interface FlashReport {

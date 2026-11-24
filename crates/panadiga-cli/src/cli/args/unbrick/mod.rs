@@ -5,8 +5,8 @@ pub mod payloads;
 pub mod recovery;
 
 pub use ext::{
-    BgoAuditArgs, BgoLiveApplyArgs, BgoRepairPlanArgs, RegionCompatAction, TbcPlanArgs,
-    VerifySdArgs,
+    BgoAuditArgs, BgoLiveApplyArgs, BgoLiveHealArgs, BgoRepairPlanArgs, RegionCompatAction,
+    TbcPlanArgs, VerifySdArgs,
 };
 pub use payloads::{DecodeNorDumpArgs, ExtractFrmArgs, MatshitaEmuAction, NorStubArgs};
 pub use recovery::{BgoArgs, PassthroughArgs, PrepareSdArgs, RebuildFromDumpArgs};
@@ -62,6 +62,9 @@ pub enum UnbrickActions {
 
     /// Applies a verified BgoRepairPlan live via Pico PANAMON1> (requires --confirm-upper-nor)
     BgoLiveApply(BgoLiveApplyArgs),
+
+    /// Plans or executes a 1-command BGO FTL + tag-hole heal (optional --dry-run and --tv-standard)
+    BgoLiveHeal(BgoLiveHealArgs),
 
     /// Audits raw SD card MBR/GPT/Superfloppy, FAT16 BPB, 8.3 root entries, and cluster chain
     InspectSd {

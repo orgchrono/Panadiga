@@ -598,8 +598,17 @@
         "arg_placeholder": "SELF_CHECK"
       },
       "MMIO_SNAP": {
-        "label": "Snapshot MMIO Seguro",
-        "description": "Lê registradores de diagnóstico AM34 seguros (excluindo estritamente 0xC000100C)."
+        "label": "Snapshot MMIO Multi-Domínio",
+        "description": "Lê e decodifica registradores seguros AM34 por domínio (CORE/VIDEO/STORAGE/ALL/DIFF), excluindo estritamente 0xC000100C e 0xDC0F0000.",
+        "arg_label": "Domínio MMIO",
+        "arg_placeholder": "CORE",
+        "options": {
+          "core": "CORE (UART/OCD/Sys)",
+          "video": "VIDEO (AIOF/AVDD/IIC)",
+          "storage": "STORAGE (DAVIS/SDCD/TBUS)",
+          "all": "ALL (Todos Domínios)",
+          "diff": "DIFF (Somente Alterados)"
+        }
       },
       "PWROSC": {
         "label": "Osciloscópio VDD & Temp",
@@ -667,6 +676,94 @@
         "description": "Valida monotonicidade 1->0 no Pico antes de destravar Upper NOR, grava via stub 0x9043A000 e reloca com U LOCK.",
         "arg_label": "VA, Hex e Confirmação",
         "arg_placeholder": "843F0100 0000 CONFIRM_UPPER_NOR"
+      },
+      "HOTPLUG": {
+        "label": "Monitor Hotplug & Auto-Cura NSW5V",
+        "description": "Gerencia eventos @P7501_FRAME HOTPLUG automáticos e exibe telemetria da recuperação debounced de LED/NSW5V.",
+        "arg_label": "Modo Hotplug",
+        "arg_placeholder": "STATUS",
+        "options": {
+          "status": "STATUS",
+          "on": "ON (Push Automático)",
+          "off": "OFF (Silencioso)"
+        }
+      },
+      "LIVE_MAP": {
+        "label": "Mapeamento Determinístico Ao Vivo",
+        "description": "Captura elétrica, domínios MMIO (CORE/VIDEO/STORAGE), endereçamento IC3001, cabeçalhos NOR/BGO e UART enviando quadros CRC32 ao host.",
+        "arg_label": "Perfil e Janela (ms)",
+        "arg_placeholder": "FULL 3000",
+        "options": {
+          "full3s": "FULL 3000 (Completo 3 s)",
+          "mmio": "MMIO 0 (Registradores + IC3001)",
+          "nor": "NOR 0 (Setores + EEMUL)",
+          "passive": "PASSIVE 3000 (Elétrico + UART)"
+        }
+      },
+      "STREAM": {
+        "label": "Barramento Push SRAM -> Host",
+        "description": "Consulta estatísticas de ring buffer SRAM 4 KiB (@P7501_FRAME), dispara flush teste com CRC32 ou zera contadores.",
+        "arg_label": "Ação Stream",
+        "arg_placeholder": "STATUS",
+        "options": {
+          "status": "STATUS",
+          "test": "TEST (Quadro CRC32)",
+          "reset": "RESET (Zerar Contadores)"
+        }
+      },
+      "TRAP": {
+        "label": "Auditor de Armadilhas Hardware",
+        "description": "Lista ou verifica faixas críticas SSOT (0xC000100C, 0xDC0F0000, IPL SA0..SA10, CS0 mirrors, alias 0x84200000 vs 0x84130000).",
+        "arg_label": "Operação Trap",
+        "arg_placeholder": "LIST"
+      },
+      "PAYLOAD": {
+        "label": "Catálogo de Payloads Prontos",
+        "description": "Lista, valida integridade CRC32 ou executa payloads embutidos na sonda (video_mmio_dump, tbc_passthrough, fast_bgo_stream, jedec).",
+        "arg_label": "Operação Payload",
+        "arg_placeholder": "LIST"
+      },
+      "SECTOR": {
+        "label": "Localizador & Cirurgia de Setores",
+        "description": "Resolve geometria SA0..SA141, busca assinaturas/chaves Feistel na NOR e aplica patches com guarda 1->0, pré-imagem e trava E05.",
+        "arg_label": "Operação Setor",
+        "arg_placeholder": "INFO 84130000"
+      },
+      "CRYPTO": {
+        "label": "Motor Feistel 64-bit & Adler-32",
+        "description": "Executa cifra/decifra Feistel Matsushita, autodetecção das 12 chaves SSOT e Adler-32 strided/RFC1950 direto na sonda.",
+        "arg_label": "Operação Crypto",
+        "arg_placeholder": "SELFTEST"
+      },
+      "DECOMP": {
+        "label": "Motor LZSS Okumura & zlib/DEFLATE",
+        "description": "Descomprime streams Okumura LZSS (0x0FEE) e zlib/DEFLATE (stored/fixed/dynamic) na arena SRAM sem malloc.",
+        "arg_label": "Operação Decomp",
+        "arg_placeholder": "SELFTEST"
+      },
+      "GPS": {
+        "label": "Bússola & GPS Matemático PiE-OS",
+        "description": "Calibra âncoras PiE-OS por deslocamento afim ao vivo, mede entropia Shannon em ponto fixo e decodifica prólogos/CALLs/MMIO MN103S.",
+        "arg_label": "Subcomando GPS",
+        "arg_placeholder": "CAL"
+      },
+      "ROUTE": {
+        "label": "Roteador Determinístico de Domínio",
+        "description": "Sintetiza rota afim calibrada, payload, guarda de armadilhas e próximo passo para BOOT, VIDEO, BGO, HDD, NVRAM ou UNBRICK.",
+        "arg_label": "Domínio da Rota",
+        "arg_placeholder": "BOOT"
+      },
+      "XRAY": {
+        "label": "Raio-X & Metabolismo de Boot PiE-OS",
+        "description": "Rastreia os 12 estágios do boot PiE-OS em tempo real com timestamps em ms, deltas, função/caller e níveis ANSI opcionais.",
+        "arg_label": "Modo XRAY",
+        "arg_placeholder": "3000"
+      },
+      "SURG": {
+        "label": "Microcirurgia & Time-Travel AO VIVO (SDRAM)",
+        "description": "Busca com curingas, disassembler MN103S, álgebra bitwise, substituição de timeout/hook in-place, pause/jump e undo/redo reversível em SDRAM.",
+        "arg_label": "Operação Microcirurgia",
+        "arg_placeholder": "LOG"
       }
     }
   }

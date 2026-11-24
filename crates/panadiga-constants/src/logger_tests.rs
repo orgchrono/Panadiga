@@ -35,3 +35,19 @@ fn test_logger_custom_sink_and_tracing_bridge() {
     raw(format_args!("PANADIGA_SINK_TEST_MESSAGE"));
     assert!(captured.load(Ordering::Acquire));
 }
+
+#[test]
+fn test_env_filter_silences_lopdf_glyph_warnings() {
+    let info_filter = logger_tracing::build_env_filter(LogLevel::Info).to_string();
+    assert!(
+        info_filter.contains("lopdf=error"),
+        "expected lopdf=error directive in {info_filter}"
+    );
+    assert!(info_filter.contains("info"));
+
+    let off_filter = logger_tracing::build_env_filter(LogLevel::Off).to_string();
+    assert_eq!(off_filter, "off");
+
+    let resolved = logger_tracing::resolve_startup_filter(LogLevel::Warn).to_string();
+    assert!(!resolved.is_empty());
+}

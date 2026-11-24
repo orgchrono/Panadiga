@@ -13,6 +13,7 @@ pub mod patch_specs;
 pub mod soc;
 pub mod train;
 
+pub use crate::i18n::{TrapCatalog, TrapRecord};
 pub use board::BoardProfile;
 pub use eeprom::{EepromChipProfile, EepromFunction};
 pub use evidence::{
@@ -27,7 +28,8 @@ pub use model::{
     RegistryValidationReport, ResolvedModelProfile,
 };
 pub use patch_specs::{
-    BinaryPatchSiteSpec, MainBuildSpec, SataBridgeResetSpec, Stage2BootSpec, Stage2BootSymbolsSpec,
+    BinaryPatchSiteSpec, MainBgoRetargetAnchors, MainBuildSpec, SataBridgeResetSpec,
+    Stage2BootSpec, Stage2BootSymbolsSpec,
 };
 pub use soc::{BusWindow, SocCoreProfile, SocProfile};
 pub use train::{

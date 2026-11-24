@@ -95,6 +95,7 @@ pub fn handle_unbrick(args: UnbrickArgs) -> Result<()> {
         UnbrickActions::BgoAudit(args) => bgo_tbc::handle_bgo_audit(args),
         UnbrickActions::BgoRepairPlan(args) => bgo_tbc::handle_bgo_repair_plan(args),
         UnbrickActions::BgoLiveApply(args) => bgo_tbc::handle_bgo_live_apply(args),
+        UnbrickActions::BgoLiveHeal(args) => bgo_tbc::handle_bgo_live_heal(args),
         UnbrickActions::InspectSd { target, json } => {
             let report = inspect_sd_target(&target)?;
             print_lines(&format_sd_disk_inspection_lines(&report));

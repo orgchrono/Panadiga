@@ -2,7 +2,7 @@
 
 //! CoW reconstruction helpers for missing `F2` sectors, `SA41+0x14` migration, and corrupt spares.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use anyhow::{Result, bail};
 
@@ -184,6 +184,115 @@ fn compact_p1_sectors_in_cow(
     Ok(())
 }
 
+/// Merges split/duplicate Partition-2 (`0xF2xx`) slots mapped in active `0xF101` L2P back into
+/// the authoritative primary sector in `cow` before corrupt duplicate sectors are erased/reclaimed.
+fn merge_split_or_duplicate_f2_sectors_in_cow(
+    corrupt_nor: &[u8],
+    cow: &mut [u8],
+    audit: &Eh55BgoAuditReport,
+    geom: &BgoSectorGeometry,
+    l2p: &BTreeMap<u16, u16>,
+) -> Result<()> {
+    let min_sector_bytes = 0x400usize
+        .checked_add(126usize * 0x200usize)
+        .ok_or_else(|| anyhow::anyhow!("BGO sector size arithmetic overflow"))?;
+    if geom.sector_stride < min_sector_bytes {
+        bail!(
+            "BGO sector stride 0x{:X} smaller than required 0x{:X}",
+            geom.sector_stride,
+            min_sector_bytes
+        );
+    }
+
+    let mut primary_f2_sas: BTreeMap<u16, usize> = BTreeMap::new();
+    for s in &audit.sectors {
+        if s.kind == Eh55BgoSectorKind::Partition2 {
+            primary_f2_sas.entry(s.sector_id & 0xFF).or_insert(s.sa);
+        }
+    }
+
+    let mut merged_primary_sas: BTreeSet<usize> = BTreeSet::new();
+    for (&pid, &w) in l2p {
+        if w == 0xFFFF {
+            continue;
+        }
+        let fid = w >> 8;
+        let slot = usize::from(w & 0xFF) >> 1;
+        if !(1..=geom.expected_p2_count).contains(&usize::from(fid)) || slot >= 126 {
+            bail!("Invalid BGO L2P mapping for pid 0x{pid:04X}: w=0x{w:04X}");
+        }
+        let Some(&pri_sa) = primary_f2_sas.get(&fid) else {
+            continue;
+        };
+        let pri_base = geom.sector_offset(pri_sa)?;
+        let tag_rel = 0x200usize + slot * 4;
+        let page_rel = 0x400usize + slot * 0x200usize;
+        let pri_tag_off = pri_base
+            .checked_add(tag_rel)
+            .ok_or_else(|| anyhow::anyhow!("Primary tag offset overflow"))?;
+        let pri_page_off = pri_base
+            .checked_add(page_rel)
+            .ok_or_else(|| anyhow::anyhow!("Primary page offset overflow"))?;
+        if pri_tag_off + 4 > cow.len() || pri_page_off + 0x200 > cow.len() {
+            bail!("Primary sector SA{pri_sa} slot {slot} exceeds NOR bounds");
+        }
+        if read_le_u16(cow, pri_tag_off) == pid {
+            continue;
+        }
+
+        let target_hdr_id = 0xF200u16 | fid;
+        for sa in geom.first_sa..=geom.last_sa {
+            if sa == pri_sa {
+                continue;
+            }
+            let dup_base = geom.sector_offset(sa)?;
+            let dup_tag_off = dup_base + tag_rel;
+            let dup_page_off = dup_base + page_rel;
+            let hdr_ok = corrupt_nor
+                .get(dup_base + 4..dup_base + 6)
+                .is_some_and(|b| u16::from_le_bytes([b[0], b[1]]) == target_hdr_id);
+            let tag_ok = corrupt_nor
+                .get(dup_tag_off..dup_tag_off + 2)
+                .is_some_and(|b| u16::from_le_bytes([b[0], b[1]]) == pid);
+            if hdr_ok
+                && tag_ok
+                && let (Some(src_tag), Some(src_page)) = (
+                    corrupt_nor.get(dup_tag_off..dup_tag_off + 4),
+                    corrupt_nor.get(dup_page_off..dup_page_off + 0x200),
+                )
+            {
+                cow[pri_tag_off..pri_tag_off + 4].copy_from_slice(src_tag);
+                cow[pri_page_off..pri_page_off + 0x200].copy_from_slice(src_page);
+                merged_primary_sas.insert(pri_sa);
+                break;
+            }
+        }
+    }
+
+    // Close intermediate `0xFFFF` tag holes below `max_used_slot` on merged or open-append F2 sectors
+    // so `FUN_4401ff89`'s non-0xFFFF slot counter matches the append cursor (prevents `[nfrom] error(19)`).
+    for &pri_sa in primary_f2_sas.values() {
+        let pri_base = geom.sector_offset(pri_sa)?;
+        let is_open_append =
+            cow.get(pri_base + 0xFC..pri_base + 0x100) == Some(&[0x00, 0x00, 0xFF, 0xFF]);
+        if !merged_primary_sas.contains(&pri_sa) && !is_open_append {
+            continue;
+        }
+        let Some(max_used_slot) =
+            (0..126usize).rfind(|&s| read_le_u16(cow, pri_base + 0x200 + s * 4) != 0xFFFF)
+        else {
+            continue;
+        };
+        for s in 0..max_used_slot {
+            let tag_off = pri_base + 0x200 + s * 4;
+            if read_le_u16(cow, tag_off) == 0xFFFF {
+                cow[tag_off..tag_off + 2].copy_from_slice(&[0x00, 0x00]);
+            }
+        }
+    }
+    Ok(())
+}
+
 /// Reconstructs corrupt/missing F2 sectors inside a CoW buffer using discovered BGO sector geometry.
 pub fn reconstruct_corrupt_bgo_in_cow_with_geometry(
     corrupt_nor: &[u8],
@@ -196,6 +305,8 @@ pub fn reconstruct_corrupt_bgo_in_cow_with_geometry(
     if pre_audit.healthy {
         return Ok((cow, Vec::new(), Vec::new()));
     }
+
+    merge_split_or_duplicate_f2_sectors_in_cow(corrupt_nor, &mut cow, &pre_audit, geom, &l2p)?;
 
     let mut clean_spares = pre_audit.spare_sas.clone();
     for &sa in &pre_audit.corrupt_sas {

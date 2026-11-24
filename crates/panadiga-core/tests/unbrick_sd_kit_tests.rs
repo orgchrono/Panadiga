@@ -6,6 +6,7 @@ use panadiga_core::re::{
     verify_sd_unbrick_media,
 };
 use std::fs;
+use std::path::PathBuf;
 
 #[test]
 fn verify_sd_media_flags_missing_root() {
@@ -54,6 +55,7 @@ fn build_workspace_sd_kit_with_mode(
         sata_bridge_reset_fix: false,
         sata_bridge_stage2_boot: false,
         main_bgo_retarget: false,
+        portao4_self_unpack: false,
     };
     if loader_profile == SdLoaderProfile::Ver063ExtrheadSd64 && allow_unverified_profile {
         let blocked = prepare_sd_unbrick_kit(&req).unwrap_err();
@@ -157,6 +159,7 @@ fn auto_format_bgo_policy_fails_closed_without_explicit_override() {
         sata_bridge_reset_fix: false,
         sata_bridge_stage2_boot: false,
         main_bgo_retarget: false,
+        portao4_self_unpack: false,
     })
     .unwrap_err();
     let _ = fs::remove_dir_all(&tmp);
@@ -198,6 +201,20 @@ fn corrupt_pana_sd_payload_fails_fvu_checksum_verification() {
     assert!(sd_chk.detail.contains("fvu_sums_ok=false"));
 }
 
+fn resolve_stage2_workspace_sources() -> Option<(PathBuf, PathBuf, PathBuf)> {
+    let ws = resolve_workspace_root();
+    let dvd = ws.join("firmware_and_images/PANA_DVD.FRM");
+    let main_unpacked =
+        ws.join("firmware_and_images/extracted_partitions/frm_unpacked/main3060np_unpacked.bin");
+    let prog_unpacked =
+        ws.join("firmware_and_images/extracted_partitions/frm_unpacked/prog061_unpacked.bin");
+    (dvd.is_file() && main_unpacked.is_file() && prog_unpacked.is_file()).then_some((
+        dvd,
+        main_unpacked,
+        prog_unpacked,
+    ))
+}
+
 #[test]
 fn ver061_stage2_fails_closed_without_main_bgo_retarget_and_passes_with_8mb_main() {
     use panadiga_core::constants::CHK_ID_MAIN_BGO_GEOMETRY;
@@ -219,15 +236,9 @@ fn ver061_stage2_fails_closed_without_main_bgo_retarget_and_passes_with_8mb_main
     );
     let _ = fs::remove_dir_all(&tmp_guard);
 
-    let ws = resolve_workspace_root();
-    let dvd = ws.join("firmware_and_images/PANA_DVD.FRM");
-    let main_unpacked =
-        ws.join("firmware_and_images/extracted_partitions/frm_unpacked/main3060np_unpacked.bin");
-    let prog_unpacked =
-        ws.join("firmware_and_images/extracted_partitions/frm_unpacked/prog061_unpacked.bin");
-    if !dvd.is_file() || !main_unpacked.is_file() || !prog_unpacked.is_file() {
+    let Some((dvd, main_unpacked, prog_unpacked)) = resolve_stage2_workspace_sources() else {
         return;
-    }
+    };
 
     let tmp_pass = std::env::temp_dir().join(format!("panadiga_stage2_8mb_{}", std::process::id()));
     let _ = fs::remove_dir_all(&tmp_pass);
@@ -293,4 +304,78 @@ fn ver061_stage2_fails_closed_without_main_bgo_retarget_and_passes_with_8mb_main
             .iter()
             .any(|c| c.id == CHK_ID_MAIN_BGO_GEOMETRY && c.severity == "fail")
     );
+}
+
+#[test]
+fn portao4_self_unpack_sd_kit_fails_closed_and_roundtrips_p4zu_payload() {
+    use panadiga_core::constants::{
+        CHK_ID_MAIN_BGO_GEOMETRY, CHK_ID_SATA_BRIDGE_STAGE2_BOOT, PANA_DIGADIAG_RAW_VER061_SIZE,
+    };
+    use panadiga_core::crypto::parse_sd_frm_toc_with_layout;
+    use panadiga_core::re::{
+        PORTAO4_UNPACKER_MAGIC_LE, PORTAO4_UNPACKER_MAGIC_OFFSET, inspect_prog061_stage2_boot_site,
+        unpack_portao4_self_unpacking_prog061,
+    };
+
+    let tmp_guard =
+        std::env::temp_dir().join(format!("panadiga_p4zu_guard_{}", std::process::id()));
+    let _ = fs::remove_dir_all(&tmp_guard);
+    let mut guard_req = SdUnbrickKitRequest::hardened_panamon1(tmp_guard.clone());
+    guard_req.portao4_self_unpack = true;
+    let err = prepare_sd_unbrick_kit(&guard_req).unwrap_err();
+    let _ = fs::remove_dir_all(&tmp_guard);
+    assert!(
+        err.to_string().contains("--sata-bridge-stage2-boot"),
+        "expected fail-closed --sata-bridge-stage2-boot guard, got: {err}"
+    );
+
+    let Some((dvd, main_unpacked, prog_unpacked)) = resolve_stage2_workspace_sources() else {
+        return;
+    };
+
+    let tmp_ok = std::env::temp_dir().join(format!("panadiga_p4zu_ok_{}", std::process::id()));
+    let _ = fs::remove_dir_all(&tmp_ok);
+    let mut ok_req = SdUnbrickKitRequest::hardened_panamon1(tmp_ok.clone());
+    ok_req.pana_dvd_path = Some(dvd);
+    ok_req.prog061_path = Some(prog_unpacked);
+    ok_req.main_path = Some(main_unpacked);
+    ok_req.sata_bridge_reset_fix = true;
+    ok_req.sata_bridge_stage2_boot = true;
+    ok_req.main_bgo_retarget = true;
+    ok_req.portao4_self_unpack = true;
+    let rep = prepare_sd_unbrick_kit(&ok_req).unwrap();
+    assert!(rep.portao4_self_unpack_applied);
+    assert_eq!(rep.verification.overall_status, "READY_WITH_HW_WARNINGS");
+    for chk_id in [CHK_ID_MAIN_BGO_GEOMETRY, CHK_ID_SATA_BRIDGE_STAGE2_BOOT] {
+        assert!(
+            rep.verification
+                .checks
+                .iter()
+                .any(|c| c.id == chk_id && c.severity == "pass"),
+            "Missing pass check {chk_id}: {:?}",
+            rep.verification.checks
+        );
+    }
+
+    let sd_bytes = fs::read(rep.pana_sd_path.as_deref().unwrap()).unwrap();
+    let (_, toc) = parse_sd_frm_toc_with_layout(&sd_bytes);
+    let prog_entry = toc
+        .iter()
+        .find(|e| e.module_name.trim() == "PROG061")
+        .expect("PROG061 TOC slot");
+    let off = prog_entry.module_offset as usize;
+    let sz = prog_entry.module_size as usize;
+    assert_eq!(sz, PANA_DIGADIAG_RAW_VER061_SIZE);
+    let slot = &sd_bytes[off..off + sz];
+    assert_eq!(
+        &slot[PORTAO4_UNPACKER_MAGIC_OFFSET..PORTAO4_UNPACKER_MAGIC_OFFSET + 4],
+        &PORTAO4_UNPACKER_MAGIC_LE.to_le_bytes()
+    );
+    assert!(slot[0x2_0000..].iter().all(|&b| b == 0xFF));
+    let inner = unpack_portao4_self_unpacking_prog061(slot).expect("valid zlib self-unpacker");
+    assert_eq!(
+        inspect_prog061_stage2_boot_site(&inner).unwrap().state,
+        "STAGE2_HDD_BOOT"
+    );
+    let _ = fs::remove_dir_all(&tmp_ok);
 }

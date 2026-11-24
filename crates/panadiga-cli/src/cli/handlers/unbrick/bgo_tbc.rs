@@ -10,7 +10,8 @@ use anyhow::{Context, Result, bail};
 use panadiga_core::constants::{DEFAULT_BAUD_RATE, SD_STATUS_INVALID};
 use panadiga_core::pico::panamon1::{Panamon1Client, Panamon1Transport, SerialPanamon1Transport};
 use panadiga_core::re::eh55_bgo::{
-    BgoRepairPlan, apply_bgo_repair_plan_live, build_bgo_repair_plan,
+    BgoLiveHealRequest, BgoRepairPlan, apply_bgo_repair_plan_live, build_bgo_repair_plan,
+    heal_bgo_live_with_client,
 };
 use panadiga_core::re::region_compat::{
     LbsRegionPresetId, TvStandardKind, inspect_tv_calibration_bundle,
@@ -28,8 +29,8 @@ use super::render::{
     emit_json_if_requested, format_sd_kit_lines, format_sd_verification_lines, print_lines,
 };
 use crate::cli::args::unbrick::{
-    BgoAuditArgs, BgoLiveApplyArgs, BgoRepairPlanArgs, PrepareSdArgs, RebuildFromDumpArgs,
-    TbcPlanArgs, VerifySdArgs,
+    BgoAuditArgs, BgoLiveApplyArgs, BgoLiveHealArgs, BgoRepairPlanArgs, PrepareSdArgs,
+    RebuildFromDumpArgs, TbcPlanArgs, VerifySdArgs,
 };
 
 pub(crate) fn parse_lbs_preset(raw: &str) -> Result<LbsRegionPresetId> {
@@ -79,6 +80,7 @@ pub(super) fn handle_prepare_sd(sd: PrepareSdArgs) -> Result<()> {
         hardened.sata_bridge_reset_fix = sd.sata_bridge_reset_fix;
         hardened.sata_bridge_stage2_boot = sd.sata_bridge_stage2_boot;
         hardened.main_bgo_retarget = sd.main_bgo_retarget;
+        hardened.portao4_self_unpack = sd.portao4_self_unpack;
         hardened
     } else {
         let bgo_mode: Prog061BgoPatchMode = sd.bgo_mode.parse()?;
@@ -101,6 +103,7 @@ pub(super) fn handle_prepare_sd(sd: PrepareSdArgs) -> Result<()> {
             sata_bridge_reset_fix: sd.sata_bridge_reset_fix,
             sata_bridge_stage2_boot: sd.sata_bridge_stage2_boot,
             main_bgo_retarget: sd.main_bgo_retarget,
+            portao4_self_unpack: sd.portao4_self_unpack,
         }
     };
 
@@ -273,4 +276,58 @@ pub(super) fn handle_bgo_live_apply(args: BgoLiveApplyArgs) -> Result<()> {
     let transport =
         SerialPanamon1Transport::open(&args.port, DEFAULT_BAUD_RATE, Duration::from_millis(1_500))?;
     handle_bgo_live_apply_with_transport(transport, args)
+}
+
+pub fn handle_bgo_live_heal_with_transport<T: Panamon1Transport>(
+    transport: Option<T>,
+    args: BgoLiveHealArgs,
+) -> Result<()> {
+    let nor_bytes =
+        fs::read(&args.nor).with_context(|| format!("Reading {}", args.nor.display()))?;
+    let tv_standard = args
+        .tv_standard
+        .as_deref()
+        .map(str::parse::<TvStandardKind>)
+        .transpose()?;
+    let req = BgoLiveHealRequest {
+        confirm_upper_nor: args.confirm_upper_nor,
+        tv_standard,
+        dry_run: args.dry_run,
+    };
+    let mut client = transport.map(Panamon1Client::new);
+    let report = heal_bgo_live_with_client(
+        client.as_mut(),
+        &nor_bytes,
+        &args.backup_dir,
+        &req,
+        &mut |p| {
+            println!(
+                "[BGO HEAL {}/{}] {:?}: {}",
+                p.current, p.total, p.stage, p.detail
+            )
+        },
+    )?;
+    println!(
+        "BGO Live Heal: dry_run={} erased={:?} write={} B post_healthy={} commands={}",
+        report.dry_run,
+        report.erased_sas,
+        report.total_write_bytes,
+        report.post_healthy,
+        report.command_plan.commands.len()
+    );
+    emit_json_if_requested(&report, args.json.as_deref())
+}
+
+pub(super) fn handle_bgo_live_heal(args: BgoLiveHealArgs) -> Result<()> {
+    if args.dry_run {
+        handle_bgo_live_heal_with_transport::<SerialPanamon1Transport>(None, args)
+    } else {
+        let port = args
+            .port
+            .as_deref()
+            .context("--port <PORT> is required unless --dry-run is specified")?;
+        let transport =
+            SerialPanamon1Transport::open(port, DEFAULT_BAUD_RATE, Duration::from_millis(1_500))?;
+        handle_bgo_live_heal_with_transport(Some(transport), args)
+    }
 }

@@ -104,6 +104,38 @@ pub struct BgoLiveApplyArgs {
     pub json: Option<PathBuf>,
 }
 
+/// 1-command BGO FTL + tag-hole heal over Pico `PANAMON1>` (supports `--dry-run` + optional TV selector).
+#[derive(Args, Debug)]
+pub struct BgoLiveHealArgs {
+    /// Pico serial port identifier (e.g. COM10 or /dev/ttyACM0; required unless --dry-run is set)
+    #[arg(short, long, value_name = "PORT")]
+    pub port: Option<String>,
+
+    /// Path to 8 MiB IC5001 NOR baseline dump used to derive the deterministic heal plan
+    #[arg(long, value_name = "BIN")]
+    pub nor: PathBuf,
+
+    /// Mandatory directory to store verified pre-repair CoW NOR backup
+    #[arg(long, value_name = "DIR")]
+    pub backup_dir: PathBuf,
+
+    /// Explicit operator confirmation unlocking Upper NOR (`SA26..=SA70`; `SA0..=SA10` remain locked E05)
+    #[arg(long)]
+    pub confirm_upper_nor: bool,
+
+    /// Optional `[nfrom]` TV standard target metadata (`ntsc` or `pal`)
+    #[arg(long, value_name = "STANDARD")]
+    pub tv_standard: Option<String>,
+
+    /// Plan commands offline without mutating target Flash hardware
+    #[arg(long)]
+    pub dry_run: bool,
+
+    /// Exports structured JSON live heal report (`-` emits stdout JSON)
+    #[arg(short, long, value_name = "JSON_FILE")]
+    pub json: Option<PathBuf>,
+}
+
 #[derive(Subcommand, Debug)]
 pub enum RegionCompatAction {
     /// Inspects MAIN (3410PQ / 3060NP) src/fmupre/pre_update_firm.c model & OEM comparison guard

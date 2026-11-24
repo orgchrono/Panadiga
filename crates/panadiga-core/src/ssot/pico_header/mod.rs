@@ -37,12 +37,312 @@ pub const P7501_VDD_FLOATING_CEIL_MV: u32 = 3450;
 pub const P7501_WDT_TIMEOUT_MS_SSOT: u32 = 4000;
 /// Canonical CLI command line maximum capacity (bytes, including NUL).
 pub const P7501_CLI_LINE_MAX_SSOT: u32 = 512;
+/// Canonical CLI `FAST_WRITE` max raw binary bytes per single-line command (`<= 128 B` fits `P7501_CLI_LINE_MAX_SSOT`).
+pub const P7501_MAX_FAST_WRITE_BYTES_SSOT: u32 = 128;
+/// Canonical fast binary stub (`0x9043A000`) NOR page window size (bytes).
+pub const P7501_FAST_STUB_PAGE_BYTES_SSOT: u32 = 256;
 /// Canonical default JIG SW_UART LOW hold duration (ms).
 pub const P7501_JIG_DEFAULT_HOLD_MS_SSOT: u32 = 2500;
 /// Canonical GDB RSP sector write-buffer cache size (bytes, bounded for RP2040/RP2350 WDT safety).
 pub const P7501_GDB_SECTOR_CACHE_SIZE_SSOT: u32 = 512;
 /// Canonical lethal AM34 MMIO register span (bytes: `0xC000100C..0xC000100F`).
 pub const P7501_AM34_LETHAL_REG_LEN_SSOT: u32 = 4;
+/// Secondary AM34 lethal MMIO trap (`0xDC0F0000..0xDC0F000F`, DAVIS/SysCtrl stall range; keeps `0xDC0F0080` safe).
+pub const P7501_AM34_LETHAL_REG2_ADDR_SSOT: u32 = 0xDC0F_0000;
+pub const P7501_AM34_LETHAL_REG2_LEN_SSOT: u32 = 0x10;
+
+/// Verified `IC3001` (`BH7629KS2` BR/NA vs `C1AB00002379` EC) 7-bit I2C addresses.
+pub const P7501_IC3001_BR_NA_ADDR7_L_SSOT: u8 = 0x48;
+pub const P7501_IC3001_BR_NA_ADDR7_H_SSOT: u8 = 0x49;
+
+/// Domain flags for `k_p7501_ssot_mmio_regs[]`.
+pub const P7501_MMIO_DOM_CORE: u8 = 1;
+pub const P7501_MMIO_DOM_VIDEO: u8 = 2;
+pub const P7501_MMIO_DOM_STORAGE: u8 = 4;
+
+/// Binary signature locator table exported to Pico C11 (`k_p7501_ssot_sigs[]`).
+pub(super) const PICO_SSOT_SIGNATURES: &[(&str, &[u8])] = &[
+    ("EXTRHEAD", b"EXTRHEAD"),
+    ("EXTRFOOT", b"EXTRFOOT"),
+    ("BGO_P1", &[0x01, 0xF1]),
+    ("EEMUL_1284", b"1284"),
+    ("MEIHFS_SH", b"SH"),
+    ("AVIN_IIC_94", &[0x2D, 0x94, 0x00, 0xDD]),
+    ("LOADER_061", b"Loader ver0.61"),
+    ("MAIN_PIE", b"PiE-OS"),
+];
+
+pub(super) const P7501_TRAP_R: u8 = 1;
+pub(super) const P7501_TRAP_W: u8 = 2;
+pub(super) const P7501_TRAP_E: u8 = 4;
+pub(super) const P7501_TRAP_SEV_WARN: u8 = 1;
+pub(super) const P7501_TRAP_SEV_DENY: u8 = 2;
+
+pub(super) const fn pico_trap_specs() -> [(&'static str, u32, u32, u8, u8, &'static str); 7] {
+    use crate::constants::{
+        AM34_FLASH_BASE, AM34_FLASH_BGO_BASE, AM34_FLASH_CRITICAL_IPL_SIZE, AM34_FLASH_SIZE,
+        AM34_FLASH_UNCACHED_BASE, AM34_LETHAL_MMIO_ADDR,
+    };
+    let cs0_mirror_len = 0x0400_0000 - AM34_FLASH_SIZE;
+    [
+        (
+            "LETHAL_MMIO_C000100C",
+            AM34_LETHAL_MMIO_ADDR,
+            P7501_AM34_LETHAL_REG_LEN_SSOT,
+            P7501_TRAP_R | P7501_TRAP_W | P7501_TRAP_E,
+            P7501_TRAP_SEV_DENY,
+            "AM34 WDT/bus hardware hang on read/write/erase",
+        ),
+        (
+            "LETHAL_MMIO_DC0F0000",
+            P7501_AM34_LETHAL_REG2_ADDR_SSOT,
+            P7501_AM34_LETHAL_REG2_LEN_SSOT,
+            P7501_TRAP_R | P7501_TRAP_W | P7501_TRAP_E,
+            P7501_TRAP_SEV_DENY,
+            "AM34 SysCtrl/DAVIS bus-stall trap range",
+        ),
+        (
+            "IPL_L1_CACHED_RO",
+            AM34_FLASH_BASE,
+            AM34_FLASH_CRITICAL_IPL_SIZE,
+            P7501_TRAP_W | P7501_TRAP_E,
+            P7501_TRAP_SEV_DENY,
+            "SA0..SA10 critical boot IPL permanently read-only (E05)",
+        ),
+        (
+            "IPL_L1_UNCACHED_RO",
+            AM34_FLASH_UNCACHED_BASE,
+            AM34_FLASH_CRITICAL_IPL_SIZE,
+            P7501_TRAP_W | P7501_TRAP_E,
+            P7501_TRAP_SEV_DENY,
+            "SA0..SA10 uncached boot IPL permanently read-only (E05)",
+        ),
+        (
+            "CS0_MIRROR_CACHED",
+            AM34_FLASH_BASE + AM34_FLASH_SIZE,
+            cs0_mirror_len,
+            P7501_TRAP_W | P7501_TRAP_E,
+            P7501_TRAP_SEV_DENY,
+            "8MB flash CS0 cached alias mirror (blocks phantom wrap writes)",
+        ),
+        (
+            "CS0_MIRROR_UNCACHED",
+            AM34_FLASH_UNCACHED_BASE + AM34_FLASH_SIZE,
+            cs0_mirror_len,
+            P7501_TRAP_W | P7501_TRAP_E,
+            P7501_TRAP_SEV_DENY,
+            "8MB flash CS0 uncached alias mirror (blocks phantom wrap writes)",
+        ),
+        (
+            "BGO_4MB_ALIAS_TRAP",
+            AM34_FLASH_BGO_BASE,
+            0x0001_0000,
+            P7501_TRAP_W | P7501_TRAP_E,
+            P7501_TRAP_SEV_WARN,
+            "BGO_4MB_ALIAS_TRAP_USE_84130000 (SA39 mid-FTL vs EH55 0x84130000 SA26)",
+        ),
+    ]
+}
+
+pub(super) const fn pico_mmio_reg_specs() -> [(u32, &'static str, u8, u8); 27] {
+    use crate::constants::{
+        AIOF_CONT_OFF, AIOF_FS0_OFF, AIOF_RDDET_OFF, AIOF_SDET_OFF, AIOF_TEST1_OFF,
+        AIOF_VMODDET_OFF, AIOF_VMODESEL_OFF, AIOF_VOUTSEL_OFF, AIOF_YC3_OFF, AM34_AIOF_BASE,
+        AM34_AVDD_BASE, AM34_DAVIS_PRI_MMIO_BASE, AM34_DAVIS_SEC_MMIO_BASE, AM34_IC7501_TBUS_BASE,
+        AM34_IIC0_BASE, AM34_IIC1_BASE, AM34_SC0_BASE, AM34_SC0_STR_VA, AM34_SC0_TXB_VA,
+        AM34_SDCD_MMIO_BASE, AM34_SYS_STATUS_REG, AM34_WDBC_REG, AVDD_DACOUT1_OFF,
+        AVDD_NPALCTL0_OFF, AVDD_VDECCTL1_OFF, AVDD_VOUTMODE0_OFF,
+    };
+    use crate::re::main_passthrough::{DEV_SERIAL_CALLBACK_VA, DEV_SERIAL_ISR_CTX_PTR_VA};
+    let c = P7501_MMIO_DOM_CORE;
+    let v = P7501_MMIO_DOM_VIDEO;
+    let s = P7501_MMIO_DOM_STORAGE;
+    [
+        // Core (8) — preserves exact CORE snapshot backwards compatibility
+        (AM34_SC0_TXB_VA, "SC0TXB", c, 32),
+        (AM34_SC0_BASE, "SC0CTR", c, 32),
+        (AM34_SC0_STR_VA, "SC0STR", c, 32),
+        (AM34_WDBC_REG, "OCD_CTRL", c, 32),
+        (AM34_SYS_STATUS_REG, "OCD_STAT", c, 32),
+        (0x1000_0000, "SYS_ID", c, 32),
+        (DEV_SERIAL_CALLBACK_VA, "SER_CB", c, 32),
+        (DEV_SERIAL_ISR_CTX_PTR_VA, "ISR_CTX", c, 32),
+        // Video (15) — strictly 32-bit aligned; AIOF_YC3_VCLK bundles +0x64 (YC3) & +0x66 (AIOF_V)
+        (AM34_AIOF_BASE + AIOF_VMODESEL_OFF, "AIOF_VMOD", v, 16),
+        (AM34_AIOF_BASE + AIOF_FS0_OFF, "AIOF_FS0", v, 16),
+        (AM34_AIOF_BASE + AIOF_SDET_OFF, "AIOF_SDET", v, 16),
+        (AM34_AIOF_BASE + AIOF_VMODDET_OFF, "AIOF_VDET", v, 16),
+        (AM34_AIOF_BASE + AIOF_VOUTSEL_OFF, "AIOF_VOUT", v, 16),
+        (AM34_AIOF_BASE + AIOF_YC3_OFF, "AIOF_YC3V", v, 32),
+        (AM34_AIOF_BASE + AIOF_TEST1_OFF, "AIOF_TST1", v, 16),
+        (AM34_AIOF_BASE + AIOF_RDDET_OFF, "AIOF_RDET", v, 16),
+        (AM34_AIOF_BASE + AIOF_CONT_OFF, "AIOF_CONT", v, 16),
+        (AM34_AVDD_BASE + AVDD_DACOUT1_OFF, "AVDD_DAC1", v, 16),
+        (AM34_AVDD_BASE + AVDD_VOUTMODE0_OFF, "AVDD_VOUT", v, 16),
+        (AM34_AVDD_BASE + AVDD_NPALCTL0_OFF, "AVDD_NPAL", v, 16),
+        (AM34_AVDD_BASE + AVDD_VDECCTL1_OFF, "AVDD_VDEC", v, 16),
+        (AM34_IIC0_BASE, "IIC0_BASE", v, 32),
+        (AM34_IIC1_BASE, "IIC1_BASE", v, 32),
+        // Storage / Sys (4)
+        (AM34_DAVIS_PRI_MMIO_BASE, "DAVIS_PRI", s, 32),
+        (AM34_DAVIS_SEC_MMIO_BASE, "DAVIS_SEC", s, 32),
+        (AM34_SDCD_MMIO_BASE, "SDCD_BASE", s, 32),
+        (AM34_IC7501_TBUS_BASE, "TBUS_BASE", s, 32),
+    ]
+}
+
+/// Verified PiE-OS / Loader call-chain anchors (`LOADER_VER061`, `MAIN3060NP`, `MAIN3410PQ`).
+/// Tuple: `(name, va_3060np, va_3410pq, mmio_ref, stage_id, flags, caller)`.
+pub(super) const fn pico_pieos_anchor_specs()
+-> [(&'static str, u32, u32, u32, u8, u8, &'static str); 11] {
+    [
+        (
+            "uart0_printf",
+            0x4400_5DEE,
+            0x4400_5DEE,
+            0xD400_2000,
+            1,
+            0x01,
+            "loader_main",
+        ),
+        (
+            "norfrom_fvu_load_check",
+            0x4400_894B,
+            0x4400_894B,
+            0x8404_0000,
+            2,
+            0x01,
+            "loader_main",
+        ),
+        (
+            "nfd_file_exists",
+            0x4400_A1F1,
+            0x4400_A1F1,
+            0x8413_0000,
+            2,
+            0x01,
+            "norfrom_fvu_load_check",
+        ),
+        (
+            "crt0_data_copy_bss",
+            0x5700_0B08,
+            0x5700_0B08,
+            0x531B_C000,
+            5,
+            0x00,
+            "main_entry",
+        ),
+        (
+            "aiof_ic3001_pal_m_setup",
+            0x0000_0000,
+            0x570D_627E,
+            0x8800_0000,
+            8,
+            0x04,
+            "sys_boot",
+        ),
+        (
+            "rtsd_ata_hard_reset_wait",
+            0x5711_226E,
+            0x5710_A98C,
+            0x8900_0C00,
+            3,
+            0x04,
+            "rtsd_hdd_init",
+        ),
+        (
+            "NFD_Init",
+            0x574A_68E9,
+            0x0000_0000,
+            0x8413_0000,
+            7,
+            0x02,
+            "BGO_Init_entry",
+        ),
+        (
+            "BGO_Init_entry",
+            0x574A_F2F0,
+            0x0000_0000,
+            0x8413_0000,
+            7,
+            0x00,
+            "sys_boot",
+        ),
+        (
+            "hdd_cmd_rtsd_capacity",
+            0x574E_499C,
+            0x574D_D1FC,
+            0x8900_0D00,
+            9,
+            0x00,
+            "rtsd_mount",
+        ),
+        (
+            "rtsd_sleep_10ms",
+            0x574E_6BBD,
+            0x574D_F538,
+            0x0000_0000,
+            3,
+            0x00,
+            "rtsd_ata_hard_reset_wait",
+        ),
+        (
+            "av_passthrough_tbc_gates",
+            0x0000_0000,
+            0x574F_7B8C,
+            0x8800_0000,
+            8,
+            0x04,
+            "av_passthrough_tbc_entry",
+        ),
+    ]
+}
+
+/// Canonical regional model suffixes projected from `panadiga_profiles::region` into C11 `.rodata`.
+pub(super) const CANONICAL_REGION_SUFFIXES: &[&str] = &[
+    "LB", "LBS", "P", "VP", "PC", "EC", "EB", "EG", "EP", "EF", "EE", "GC", "GCS", "GN",
+];
+
+pub(super) struct PicoRegionRuleSpec {
+    pub suffix: &'static str,
+    pub tv_standard: String,
+    pub line_system: String,
+    pub aiof_vmodesel: u16,
+    pub dvd_region: u8,
+    pub oem_marker: char,
+    pub ic3001_addr7_primary: u8,
+    pub ic3001_addr7_alt: u8,
+}
+
+pub(super) fn pico_region_rule_specs() -> Vec<PicoRegionRuleSpec> {
+    CANONICAL_REGION_SUFFIXES
+        .iter()
+        .map(|&code| {
+            let v =
+                panadiga_profiles::region::interpolate_region_variant(code, "DMR-EH55", "", None);
+            let aiof_vmodesel =
+                u16::from_str_radix(v.aiof_vmodesel_hex.trim_start_matches("0x"), 16)
+                    .expect("valid aiof_vmodesel hex");
+            let oem_marker = v.oem_marker.chars().next().unwrap_or('E');
+            let (ic3001_addr7_primary, ic3001_addr7_alt) =
+                if matches!(code, "LB" | "LBS" | "P" | "VP" | "PC") {
+                    (0x48, 0x49)
+                } else {
+                    (0x4A, 0x48)
+                };
+            PicoRegionRuleSpec {
+                suffix: code,
+                tv_standard: v.tv_standard,
+                line_system: v.video_line_system,
+                aiof_vmodesel,
+                dvd_region: v.dvd_region_code,
+                oem_marker,
+                ic3001_addr7_primary,
+                ic3001_addr7_alt,
+            }
+        })
+        .collect()
+}
 
 /// Canonical UART boot diagnostic signature rule (`needle`, `c11_event_macro`).
 pub const DIAG_SIGNATURE_RULES: &[(&str, &str)] = &[

@@ -80,12 +80,15 @@ pub fn validate_interactive_pico_command(command: &str) -> Result<String> {
         bail!("Command '{head}' is outside SSOT Pico CLI catalog");
     }
     let compact: String = upper.chars().filter(|c| *c != '_').collect();
-    if compact.contains("C000100C") {
-        bail!("Lethal AM34 MMIO address 0xC000100C is permanently blocked");
+    if compact.contains("C000100C") || compact.contains("DC0F0000") {
+        bail!("Lethal AM34 MMIO address 0xC000100C / 0xDC0F0000 is permanently blocked");
     }
-    if matches!(head, "FAST_WRITE" | "ERASE" | "WRITEMEM") {
-        if head == "FAST_WRITE" && !upper.split_whitespace().any(|t| t == "CONFIRM_UPPER_NOR") {
-            bail!("FAST_WRITE requires explicit CONFIRM_UPPER_NOR token");
+    let is_sector_patch = head == "SECTOR" && upper.split_whitespace().nth(1) == Some("PATCH");
+    if matches!(head, "FAST_WRITE" | "FAST_ERASE" | "ERASE" | "WRITEMEM") || is_sector_patch {
+        if (matches!(head, "FAST_WRITE" | "FAST_ERASE") || is_sector_patch)
+            && !upper.split_whitespace().any(|t| t == "CONFIRM_UPPER_NOR")
+        {
+            bail!("{head} requires explicit CONFIRM_UPPER_NOR token");
         }
         if upper.split_whitespace().skip(1).any(is_ipl_sa0_sa10_token) {
             bail!("IPL SA0..SA10 write target is permanently Read-Only (E05)");

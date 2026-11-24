@@ -304,6 +304,34 @@ pub fn handle_pico_catalog(args: &Value) -> Value {
         "flash_geometries": spec.flash_geometries,
         "memory_regions": spec.memory_regions,
         "pico_commands": commands,
+        "wire_frames": [
+            "@P7501_IDENT",
+            "@PROG",
+            "@EVT",
+            "@P7501_RES",
+            "@P7501_BOOT_CLASS",
+            "@P7501_TBUS_AUDIT"
+        ],
+        "openos_shell_commands": [
+            "help",
+            "status",
+            "ntsc",
+            "palm",
+            "pal",
+            "tbc on",
+            "tbc off",
+            "video br",
+            "video ec",
+            "video probe",
+            "dac on",
+            "dac off",
+            "colorbar on",
+            "colorbar off",
+            "provision",
+            "wdt",
+            "sata",
+            "vfd <7ch>"
+        ],
     })
 }
 

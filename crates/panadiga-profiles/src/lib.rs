@@ -6,6 +6,7 @@ pub mod blob_b64;
 pub mod derive;
 pub mod gate;
 pub mod hex_serde;
+pub mod i18n;
 pub mod loader;
 pub mod loader_resolve;
 pub mod promote;
@@ -28,6 +29,11 @@ pub use derive::{
 };
 pub use gate::CapabilityGate;
 pub use hex_serde::{parse_hex_bytes, parse_prefixed_u64};
+pub use i18n::{
+    LocaleCatalog, LocaleFile, LocaleId, TrapCatalog, TrapRecord, ValidationFailure,
+    interpolate_ssot_template, load_locales_from_dir, load_optional_traps_from_dir,
+    validate_locale_catalog,
+};
 pub use loader::{
     ENTITY_SUBDIRS, PROFILES_SCHEMA_VERSION, list_resolved_models, load_bundle_from_dir,
     load_bundle_from_str, merge_overlay_dir, model_storage_key, resolve_model_in_bundle,

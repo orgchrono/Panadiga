@@ -263,6 +263,26 @@ pub(super) fn decode_log_file(file: PathBuf, json: Option<PathBuf>) -> Result<()
             s.interpretation
         );
     }
+    if let Some(ref bc) = report.boot_class {
+        log_println!(
+            "BootClass      : verdict={} build={} avout_ok={} fpc_err={} bgo_err={} op7f={:?}",
+            bc.verdict,
+            bc.build,
+            bc.avout_ok,
+            bc.fpc_err,
+            bc.bgo_err,
+            bc.op7f
+        );
+    }
+    if let Some(ref ta) = report.tbus_audit {
+        log_println!(
+            "TbusAudit      : frames={} br_rejected={} nak7f={} ops={:?}",
+            ta.frames,
+            ta.br_rejected,
+            ta.nak7f,
+            ta.ops
+        );
+    }
     if let Some(v) = report.vdd_volts {
         log_println!("VDD Telemetry  : {v:.2} V");
     }

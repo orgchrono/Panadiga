@@ -467,5 +467,41 @@ fn test_re_audit_and_pico_decode_log_handlers_roundtrip() {
     assert!(log_out.contains("80045300"));
     assert!(log_out.contains("bgo_failed_code"));
 
+    let diag_log = dir.join("bootclass.log");
+    std::fs::write(
+        &diag_log,
+        "@P7501_BOOT_CLASS verdict=CLEAN_MAIN_OK build=3060NP stage2=1 avout_ok=1 vmute0=1 ntsc=1 rsv_ok=1 hdd_fail=0 bgo_err=0 fpc_err=0 fpc_to=0 iic_err=0 odd_err=0 op7f_cnt=0 op7f=NONE\r\n\
+         @P7501_TBUS_AUDIT frames=4 br_rejected=1 nak7f=1 ops=A9\r\n",
+    )
+    .unwrap();
+    let bc_json = dir.join("bootclass.json");
+    let ta_json = dir.join("tbus_audit.json");
+    for (kind, out_p) in [("bootclass", &bc_json), ("tbus-audit", &ta_json)] {
+        panadiga_cli::cli::handlers::dispatch(
+            Cli::try_parse_from([
+                "panadiga",
+                "pico",
+                "parse-diag",
+                "--kind",
+                kind,
+                "-f",
+                diag_log.to_str().unwrap(),
+                "--json",
+                out_p.to_str().unwrap(),
+            ])
+            .unwrap()
+            .command
+            .unwrap(),
+        )
+        .unwrap();
+    }
+    let bc_val: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(&bc_json).unwrap()).unwrap();
+    assert_eq!(bc_val["verdict"], "CLEAN_MAIN_OK");
+    let ta_val: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(&ta_json).unwrap()).unwrap();
+    assert_eq!(ta_val["frames"], 4);
+    assert_eq!(ta_val["br_rejected"], 1);
+
     let _ = std::fs::remove_dir_all(&dir);
 }

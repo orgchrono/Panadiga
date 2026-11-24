@@ -598,8 +598,17 @@
         "arg_placeholder": "SELF_CHECK"
       },
       "MMIO_SNAP": {
-        "label": "Safe MMIO Snapshot",
-        "description": "Reads safe AM34 diagnostic registers (strictly excluding 0xC000100C)."
+        "label": "Multi-Domain MMIO Snapshot",
+        "description": "Reads and decodes safe AM34 diagnostic registers by domain (CORE/VIDEO/STORAGE/ALL/DIFF), strictly excluding 0xC000100C and 0xDC0F0000.",
+        "arg_label": "MMIO Domain",
+        "arg_placeholder": "CORE",
+        "options": {
+          "core": "CORE (UART/OCD/Sys)",
+          "video": "VIDEO (AIOF/AVDD/IIC)",
+          "storage": "STORAGE (DAVIS/SDCD/TBUS)",
+          "all": "ALL (Every Domain)",
+          "diff": "DIFF (Changed Only)"
+        }
       },
       "PWROSC": {
         "label": "VDD Ripple & Die Temp",
@@ -667,6 +676,94 @@
         "description": "Pre-validates 1->0 monotonicity on-probe before unlocking Upper NOR, programs via 0x9043A000 stub, and relocks via U LOCK.",
         "arg_label": "VA, Hex, and Confirmation",
         "arg_placeholder": "843F0100 0000 CONFIRM_UPPER_NOR"
+      },
+      "HOTPLUG": {
+        "label": "Hotplug Monitor & NSW5V Auto-Heal",
+        "description": "Toggles automatic @P7501_FRAME HOTPLUG push events and reports debounced NSW5V/LED recovery counters.",
+        "arg_label": "Hotplug Mode",
+        "arg_placeholder": "STATUS",
+        "options": {
+          "status": "STATUS",
+          "on": "ON (Auto Push)",
+          "off": "OFF (Quiet)"
+        }
+      },
+      "LIVE_MAP": {
+        "label": "Deterministic Live Hardware Map",
+        "description": "Captures rail electricals, CORE/VIDEO/STORAGE MMIO domains, IC3001 map, NOR/BGO headers, and UART into CRC32 push frames.",
+        "arg_label": "Profile & Window (ms)",
+        "arg_placeholder": "FULL 3000",
+        "options": {
+          "full3s": "FULL 3000 (Full 3 s)",
+          "mmio": "MMIO 0 (Registers + IC3001)",
+          "nor": "NOR 0 (Sectors + EEMUL)",
+          "passive": "PASSIVE 3000 (Elec + UART)"
+        }
+      },
+      "STREAM": {
+        "label": "SRAM Push-Frame Bus",
+        "description": "Queries 4 KiB SRAM push-ring telemetry (@P7501_FRAME), triggers a CRC32 test flush, or resets counters.",
+        "arg_label": "Stream Action",
+        "arg_placeholder": "STATUS",
+        "options": {
+          "status": "STATUS",
+          "test": "TEST (CRC32 Frame)",
+          "reset": "RESET (Clear Counters)"
+        }
+      },
+      "TRAP": {
+        "label": "Hardware Trap Auditor",
+        "description": "Lists or checks SSOT trap ranges (0xC000100C, 0xDC0F0000, IPL SA0..SA10, CS0 mirrors, 0x84200000 vs 0x84130000).",
+        "arg_label": "Trap Command",
+        "arg_placeholder": "LIST"
+      },
+      "PAYLOAD": {
+        "label": "On-Probe Ready Payload Catalog",
+        "description": "Lists, verifies CRC32 integrity, or executes embedded probe payloads (video_mmio_dump, tbc_passthrough, fast_bgo_stream, jedec).",
+        "arg_label": "Payload Command",
+        "arg_placeholder": "LIST"
+      },
+      "SECTOR": {
+        "label": "Sector Locator & Safe Patcher",
+        "description": "Resolves SA0..SA141 geometry, scans NOR signatures/Feistel keys, and patches bytes with 1->0, pre-image, and E05 guards.",
+        "arg_label": "Sector Command",
+        "arg_placeholder": "INFO 84130000"
+      },
+      "CRYPTO": {
+        "label": "64-bit Feistel & Adler-32 Engine",
+        "description": "Runs Matsushita 64-bit Feistel crypt, 12-key SSOT autodetection, and strided/RFC1950 Adler-32 on-probe.",
+        "arg_label": "Crypto Command",
+        "arg_placeholder": "SELFTEST"
+      },
+      "DECOMP": {
+        "label": "Okumura LZSS & zlib/DEFLATE Engine",
+        "description": "Decompresses Okumura LZSS (0x0FEE) and zlib/DEFLATE (stored/fixed/dynamic) payloads in SRAM arena with zero malloc.",
+        "arg_label": "Decomp Command",
+        "arg_placeholder": "SELFTEST"
+      },
+      "GPS": {
+        "label": "PiE-OS Mathematical Compass & GPS",
+        "description": "Calibrates PiE-OS anchors via live affine shift, computes fixed-point Shannon entropy, and decodes MN103S prologues/CALLs/MMIO.",
+        "arg_label": "GPS Subcommand",
+        "arg_placeholder": "CAL"
+      },
+      "ROUTE": {
+        "label": "Deterministic Domain Route Planner",
+        "description": "Synthesizes calibrated VA routes, payloads, trap guards, and next actions across BOOT, VIDEO, BGO, HDD, NVRAM, and UNBRICK.",
+        "arg_label": "Route Domain",
+        "arg_placeholder": "BOOT"
+      },
+      "XRAY": {
+        "label": "12-Stage PiE-OS Boot Metabolism X-Ray",
+        "description": "Traces 12-stage PiE-OS boot telemetry on Pico with millisecond timestamps, deltas, call-chain attribution, and optional ANSI log colors.",
+        "arg_label": "XRAY Mode",
+        "arg_placeholder": "3000"
+      },
+      "SURG": {
+        "label": "Live Runtime Microsurgeon & Time-Travel (SDRAM)",
+        "description": "Wildcard search, MN103S disassembler, bitwise algebra, in-place timeout/hook injection, live pause/jump, and undo/redo in SDRAM.",
+        "arg_label": "Surgery Operation",
+        "arg_placeholder": "LOG"
       }
     }
   }

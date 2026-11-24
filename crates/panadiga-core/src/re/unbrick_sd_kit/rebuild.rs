@@ -351,6 +351,7 @@ pub fn rebuild_sd_kit_from_dump(req: &RebuildFromDumpRequest) -> Result<RebuildF
         sata_bridge_reset_fix: false,
         sata_bridge_stage2_boot: false,
         main_bgo_retarget: false,
+        portao4_self_unpack: false,
     };
 
     let kit_result = prepare_sd_unbrick_kit_with_tier_policy(&sd_req, req.allow_unverified_profile);

@@ -138,16 +138,17 @@
       "category": "nor_bgo_geometry",
       "severity": "critical",
       "wrong_assumption": "Assumir que um binario MAIN3060NP compilado para 4 MiB Top-Boot (0x84200000, 35 setores, P5=8, max_did=0x0A1A) consegue inicializar BGO/NFD no DMR-EH55 de 8 MiB sem relocacao e expansao de structs.",
-      "verified_ground_truth": "No Stage-2 via IDE2SAT2, MAIN3060NP stock aborta em '[nfrom] BGO driver init failed[1].' (src/nfd_api.c:228). Aplicar --main-bgo-retarget expande nfd_ctrl para 0x531B8000..0x531BC000 (12 trampolins + stub cave 165 B em 0x57000320..0x570003C5 + 48 offsets relativos + P5=4 + crt0/sbrk uncached + 0x2202), provado em Mn103Vm e em hardware real EH55 (check_sum 0x32836a32, PiE-OS 3060NP, VFD TM LI). Ja MAIN3410PQ possui BGO 8 MiB nativo (0x5756EFD4=0x84130000).",
+      "verified_ground_truth": "No Stage-2 via IDE2SAT2, MAIN3060NP stock aborta em '[nfrom] BGO driver init failed[1].' (src/nfd_api.c:228). Aplicar --main-bgo-retarget expande nfd_ctrl para 0x531B8000..0x531BC000 (14 trampolins S1..S12/S14 + stub cave 201 B em 0x57000320..0x570003E9 + patches inline S13A/S13B (0x574AFBB8/0x574AFC18; 3410PQ: 0x574A8102/0x574A8162, S12 @ 0x574ACA0A, S14 @ 0x574AC3A3) + 48 offsets relativos + P5=4 + crt0/sbrk uncached + 0x2202), eliminando '[nfrom] Status flag change error[1]' / 'File omap update error[1]' / 'bgo_writeD error(19)' no rollover de P1 (sp=0xFF -> 0x100) em Mn103Vm e em hardware real EH55 (check_sum 0x32836a32, PiE-OS 3060NP, VFD TM LI).",
       "affected_entities": [
         "loader_ver061_toc48_main57",
         "eh55_ver061_on_s29jl064h"
       ],
-      "automated_guard": "crates/panadiga-core/src/re/main_bgo_retarget.rs + CHK_ID_MAIN_BGO_GEOMETRY",
+      "automated_guard": "crates/panadiga-core/src/re/main_bgo_retarget/mod.rs + CHK_ID_MAIN_BGO_GEOMETRY",
       "evidence_refs": [
-        "crates/panadiga-core/src/re/main_bgo_retarget.rs",
+        "crates/panadiga-core/src/re/main_bgo_retarget/mod.rs",
         "crates/panadiga-core/src/re/unbrick_sd_kit/verify/mod.rs",
-        "docs/evidence/boottrace_sata_bridge_gate3_8mb_boot2_main_20261123.log"
+        "docs/evidence/boottrace_sata_bridge_gate3_8mb_boot2_main_20261123.log",
+        "docs/evidence/boottrace_bloco_b_ntsc_cured_20261123.log"
       ]
     },
     {
@@ -163,7 +164,7 @@
       "automated_guard": "crates/panadiga-core/src/re/sata_bridge_fix.rs + CHK_ID_SATA_BRIDGE_RESET_FIX",
       "evidence_refs": [
         "crates/panadiga-core/src/re/sata_bridge_fix.rs",
-        "crates/panadiga-core/src/re/sata_bridge_stage2.rs",
+        "crates/panadiga-core/src/re/sata_bridge_stage2/mod.rs",
         "docs/evidence/boottrace_sata_bridge_gate2_20261122.log"
       ]
     },
@@ -177,11 +178,45 @@
         "loader_ver061_toc48_main57",
         "eh55_ver061_on_s29jl064h"
       ],
-      "automated_guard": "crates/panadiga-core/src/re/sata_bridge_stage2.rs (mn103vm_proves_portao4_loader_ver061_norfrom_boot_and_escape_hatch)",
+      "automated_guard": "crates/panadiga-core/src/re/sata_bridge_stage2/mod.rs (mn103vm_proves_portao4_loader_ver061_norfrom_boot_and_escape_hatch)",
       "evidence_refs": [
-        "crates/panadiga-core/src/re/sata_bridge_stage2.rs",
+        "crates/panadiga-core/src/re/sata_bridge_stage2/mod.rs",
         "firmware_and_images/eh55_loader_ver061_256k.bin",
         "firmware_and_images/eh55_nor_8mb_ic5001_repaired.bin"
+      ]
+    },
+    {
+      "id": "TRAP_MAIN3410PQ_FALSE_POSITIVE_84130000",
+      "category": "nor_bgo_geometry",
+      "severity": "critical",
+      "wrong_assumption": "Assumir que o literal 0x84130000 em 0x5756EFD4 no MAIN3410PQ indica driver BGO/NFROM nativo de 8 MiB dispensando retarget.",
+      "verified_ground_truth": "Na execucao real em COM10, MAIN3410PQ sem retarget falhou com [nfrom] BGO driver init failed[1]. (src/nfd_api.c:228). A tabela real .rodata BGO em 0x57A51CF0..0x57A51E58 (0x57A51D78 = 0x84200000, P1=3, P2=28, max_did=0x0A1A) e 4 MiB Top-Boot isomorfica a MAIN3060NP e exige retarget 4 MiB -> 8 MiB na Flash Spansion S29JL064H.",
+      "affected_entities": [
+        "loader_ver061_toc48_main57",
+        "eh55_ver061_on_s29jl064h"
+      ],
+      "automated_guard": "crates/panadiga-core/src/re/main_bgo_retarget/mod.rs (mn103vm_proves_main3410pq_bgo_8mb_retarget_against_real_eh55_nor)",
+      "evidence_refs": [
+        "docs/evidence/boottrace_sata_bridge_gate3_3410pq_boot2_main_20261123.log",
+        "crates/panadiga-core/src/re/main_bgo_retarget/mod.rs",
+        "profiles/firmware_trains/loader_ver061_toc48_main57.json"
+      ]
+    },
+    {
+      "id": "TRAP_4MB_BGO_PARTIAL_MOUNT_WHEN_F101_IN_UPPER_WINDOW",
+      "category": "nor_bgo_geometry",
+      "severity": "critical",
+      "wrong_assumption": "Assumir que um firmware MAIN compilado para 4 MiB Top-Boot (0x84200000) nunca grava na BGO se falhar em BGO_Init(), ou que sempre falha de forma limpa sem deixar setores duplicados.",
+      "verified_ground_truth": "Quando o Loader ver0.61 (8 MiB) move P1 (0xF101) para um setor dentro da janela 0x84200000..0x843FFFFF (como SA40 @ 0x84210000), o MAIN 4 MiB encontra 0xF101, monta parcialmente a FTL com indexacao 4 MiB, apaga setor valido na janela (SA42 / 0xF209) e divide escrevendo paginas novas de 0xF202 em SA48 enquanto SA29 (< 0x84200000) retem o 0xF202 original — gerando dup_lbn=1 no Loader ver0.61 subsequente.",
+      "affected_entities": [
+        "loader_ver061_toc48_main57",
+        "eh55_ver061_on_s29jl064h"
+      ],
+      "automated_guard": "crates/panadiga-core/src/re/eh55_bgo/repair_plan/reconstruct.rs (merge_split_or_duplicate_f2_sectors_in_cow)",
+      "evidence_refs": [
+        "docs/evidence/bgo_inspect_post_3410pq_20261123.log",
+        "docs/evidence/bgo_surgical_repair_dup_f202_f209_20261123.log",
+        "crates/panadiga-core/src/re/eh55_bgo/repair_plan/reconstruct.rs"
       ]
     }
   ]

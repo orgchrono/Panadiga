@@ -10,7 +10,7 @@
     "hex_constants_indexed": 160,
     "bitwise_patterns_indexed": 114,
     "headers_and_footers_indexed": 31,
-    "traps_indexed": 11
+    "traps_indexed": 13
   },
   "fleet_programs": [
     {
@@ -8888,5 +8888,5 @@
       ]
     }
   ],
-  "atlas_sha256": "dcecb0a046c18dc03811d2726b3c4574704ffef9c107a70363ba3c940baa7e9f"
+  "atlas_sha256": "5f077e8dec064afe90e3b8f050e5f29bbf1b80a4490437d3feb6cc0567a69e39"
 }

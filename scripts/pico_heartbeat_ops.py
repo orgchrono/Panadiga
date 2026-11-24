@@ -58,6 +58,7 @@ _LIST_PORT_RE: Final[re.Pattern[str]] = re.compile(
 )
 _VDD_RE: Final[re.Pattern[str]] = re.compile(r"VDD:\s*([0-9]+(?:\.[0-9]+)?)\s*V", re.IGNORECASE)
 _DCSR_RE: Final[re.Pattern[str]] = re.compile(r"DCSR:\s*(0x[0-9A-Fa-f]{8})", re.IGNORECASE)
+_WDT_RECOVERY_NONZERO_RE: Final[re.Pattern[str]] = re.compile(r"\bWDT_RECOVERIES=[1-9]\d*\b")
 
 CommandRunner = Callable[[Sequence[str]], tuple[int, str, str]]
 BenchValidator = Callable[[str], str]
@@ -88,6 +89,15 @@ class HeartbeatSample:
     detail: str
     ping_raw: str
     status_raw: str
+    ping_lines: list[str]
+    status_lines: list[str]
+
+
+def _split_lines(raw: str) -> list[str]:
+    """Normalize CRLF/CR line endings into clean individual lines."""
+    if not raw:
+        return []
+    return raw.replace("\r\n", "\n").replace("\r", "\n").splitlines()
 
 
 def default_cli_runner(args: Sequence[str]) -> tuple[int, str, str]:
@@ -125,12 +135,13 @@ def parse_pico_list_output(output: str) -> list[DetectedSerialPort]:
 def discover_pico_port(
     explicit_port: str | None,
     *,
-    runner: CommandRunner = default_cli_runner,
+    runner: CommandRunner | None = None,
 ) -> tuple[str | None, str, list[DetectedSerialPort]]:
     """Resolve Pico serial port without hardcoding `COM10`, preferring VID `2E8A`."""
     if explicit_port is not None and explicit_port.strip():
         return explicit_port.strip(), "explicit", []
-    rc, stdout, _ = runner(["pico", "list"])
+    active_runner = runner if runner is not None else default_cli_runner
+    rc, stdout, _ = active_runner(["pico", "list"])
     if rc != 0:
         return None, "discovery_failed", []
     detected = parse_pico_list_output(stdout)
@@ -171,7 +182,16 @@ def grade_heartbeat(
     if vdd_volts is not None and vdd_volts > 3.65:
         return "OVERVOLTAGE_ABORT", f"Target VDD {vdd_volts:.2f}V exceeds 3.65V safety ceiling"
     upper = combined_text.upper()
-    if "WDT" in upper or "STALL" in upper or "TIMEOUT" in upper and not ping_ok:
+    wdt_fault = (
+        ("STALL" in upper)
+        or ("WDT_STALL" in upper)
+        or ("WDT_TRIP" in upper)
+        or ("WATCHDOG TIMEOUT" in upper)
+        or ("REBOOT_SRC=WDT" in upper)
+        or (_WDT_RECOVERY_NONZERO_RE.search(upper) is not None)
+        or ("TIMEOUT" in upper and not ping_ok)
+    )
+    if wdt_fault:
         return "WDT_STALL", "Probe or target reported stall/watchdog timeout"
     if ping_rc != 0 or not ping_ok:
         return "DISCONNECTED", "Pico did not reply with PONG"
@@ -192,16 +212,17 @@ def run_heartbeat(
     baud: int = 115200,
     count: int = 1,
     interval_s: float = 0.0,
-    runner: CommandRunner = default_cli_runner,
+    runner: CommandRunner | None = None,
     sleep_fn: Callable[[float], None] = time.sleep,
 ) -> tuple[int, JsonDict]:
     """Execute 1..N Pico heartbeat samples and return `(exit_code, report_dict)`."""
+    active_runner = runner if runner is not None else default_cli_runner
     samples: list[HeartbeatSample] = []
     worst_exit = 0
     iterations = max(1, count)
 
     for idx in range(iterations):
-        resolved_port, port_source, detected = discover_pico_port(port, runner=runner)
+        resolved_port, port_source, detected = discover_pico_port(port, runner=active_runner)
         if resolved_port is None:
             samples.append(
                 HeartbeatSample(
@@ -215,12 +236,14 @@ def run_heartbeat(
                     detail=f"No serial Pico port detected (candidates={len(detected)})",
                     ping_raw="",
                     status_raw="",
+                    ping_lines=[],
+                    status_lines=[],
                 )
             )
             worst_exit = 2
         else:
-            p_rc, p_out, p_err = runner(["pico", "ping", "-p", resolved_port, "--baud", str(baud)])
-            s_rc, s_out, s_err = runner(["pico", "status", "-p", resolved_port, "--baud", str(baud)])
+            p_rc, p_out, p_err = active_runner(["pico", "ping", "-p", resolved_port, "--baud", str(baud)])
+            s_rc, s_out, s_err = active_runner(["pico", "status", "-p", resolved_port, "--baud", str(baud)])
             ping_raw = (p_out or p_err).strip()
             status_raw = (s_out or s_err).strip()
             combined = f"{ping_raw}\n{status_raw}"
@@ -251,6 +274,8 @@ def run_heartbeat(
                     detail=detail,
                     ping_raw=ping_raw,
                     status_raw=status_raw,
+                    ping_lines=_split_lines(ping_raw),
+                    status_lines=_split_lines(status_raw),
                 )
             )
         if idx + 1 < iterations and interval_s > 0.0:
@@ -273,10 +298,11 @@ def run_guided(
     port: str | None = None,
     baud: int = 115200,
     dry_run: bool = False,
-    runner: CommandRunner = default_cli_runner,
+    runner: CommandRunner | None = None,
     validator: BenchValidator = validate_safe_bench_command,
 ) -> tuple[int, JsonDict]:
     """Validate and dispatch a read-only guided bench profile or single safe command."""
+    active_runner = runner if runner is not None else default_cli_runner
     if profile not in SAFE_GUIDED_PROFILES:
         return 2, {
             "mode": "guided",
@@ -322,7 +348,7 @@ def run_guided(
             "steps": list(validated_steps),
         }
 
-    resolved_port, port_source, _ = discover_pico_port(port, runner=runner)
+    resolved_port, port_source, _ = discover_pico_port(port, runner=active_runner)
     if resolved_port is None:
         return 2, {
             "mode": "guided",
@@ -333,7 +359,7 @@ def run_guided(
             "steps": list(validated_steps),
         }
 
-    rc, out, err = runner(["pico", "status", "-p", resolved_port, "--baud", str(baud)])
+    rc, out, err = active_runner(["pico", "status", "-p", resolved_port, "--baud", str(baud)])
     return (0 if rc == 0 else 1), {
         "mode": "guided",
         "status": "EXECUTED" if rc == 0 else "CLI_ERROR",
@@ -358,6 +384,60 @@ def emit_json_payload(payload: JsonDict, json_target: str | None) -> None:
         print(text)
 
 
+def _format_raw_block(lines: list[str], fallback_raw: str) -> list[str]:
+    """Render raw multiline probe output with indentation and real line breaks."""
+    source = lines if lines else _split_lines(fallback_raw)
+    return [f"  {line}" for line in source] if source else ["  (empty)"]
+
+
+def format_report_human(payload: JsonDict) -> str:
+    """Render heartbeat or guided telemetry as clean multiline human-readable text."""
+    mode = str(payload.get("mode", "heartbeat"))
+    out: list[str] = []
+    if mode == "heartbeat":
+        out.append(
+            f"[HEARTBEAT] overall_health={payload.get('overall_health', 'UNKNOWN')} "
+            f"baud={payload.get('baud', 115200)} samples={payload.get('sample_count', 0)}"
+        )
+        raw_samples = payload.get("samples", [])
+        if isinstance(raw_samples, list):
+            for entry in raw_samples:
+                if not isinstance(entry, dict):
+                    continue
+                idx = entry.get("sample_index", "?")
+                port = entry.get("port") or "(none)"
+                vdd = entry.get("vdd_volts")
+                vdd_str = f"{vdd:.2f}V" if isinstance(vdd, (int, float)) else "N/A"
+                out.append(
+                    f"\n--- Sample #{idx} port={port} ({entry.get('port_source', '')}) "
+                    f"health={entry.get('health', '')} VDD={vdd_str} ---"
+                )
+                out.append(f"Detail: {entry.get('detail', '')}")
+                ping_l = entry.get("ping_lines")
+                ping_lines = [str(x) for x in ping_l] if isinstance(ping_l, list) else []
+                out.append("PING:")
+                out.extend(_format_raw_block(ping_lines, str(entry.get("ping_raw", ""))))
+                st_l = entry.get("status_lines")
+                st_lines = [str(x) for x in st_l] if isinstance(st_l, list) else []
+                out.append("STATUS:")
+                out.extend(_format_raw_block(st_lines, str(entry.get("status_raw", ""))))
+        return "\n".join(out)
+
+    out.append(
+        f"[GUIDED] status={payload.get('status', '')} profile={payload.get('profile', '')} "
+        f"port={payload.get('port') or '(none)'}"
+    )
+    if "reason" in payload:
+        out.append(f"Reason: {payload['reason']}")
+    steps_raw = payload.get("steps")
+    if isinstance(steps_raw, list) and steps_raw:
+        out.append(f"Steps: {', '.join(str(s) for s in steps_raw)}")
+    if "cli_output" in payload:
+        out.append("Output:")
+        out.extend(_format_raw_block([], str(payload.get("cli_output", ""))))
+    return "\n".join(out)
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """CLI entrypoint for Pico P7501 heartbeat probing and safe guided execution."""
     parser = argparse.ArgumentParser(
@@ -375,7 +455,17 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     parser.add_argument("--cmd", default=None, help="Additional read-only bench command to validate")
     parser.add_argument("--dry-run", action="store_true")
-    parser.add_argument("--json", default="-", help="JSON output file path or '-' for stdout")
+    parser.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="Console output format when --json path is not given (default: text)",
+    )
+    parser.add_argument(
+        "--json",
+        default=None,
+        help="Optional JSON output file path or '-' for JSON stdout",
+    )
     args = parser.parse_args(argv)
 
     if args.mode == "heartbeat":
@@ -393,7 +483,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             baud=args.baud,
             dry_run=args.dry_run,
         )
-    emit_json_payload(payload, args.json)
+    if args.json is not None or args.format == "json":
+        emit_json_payload(payload, args.json or "-")
+    else:
+        print(format_report_human(payload))
     return code
 
 

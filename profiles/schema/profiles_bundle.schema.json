@@ -818,6 +818,63 @@
       ],
       "type": "object"
     },
+    "MainBgoRetargetAnchors": {
+      "additionalProperties": false,
+      "description": "Declarative virtual-address and RAM/cave anchors for universal 4 MiB -> 8 MiB BGO retargeting.",
+      "properties": {
+        "bss_cached_end_orig": {
+          "type": "string"
+        },
+        "bss_cached_end_site_va": {
+          "type": "string"
+        },
+        "bss_nfd_ctrl_base_va": {
+          "type": "string"
+        },
+        "bss_reserved_base_va": {
+          "type": "string"
+        },
+        "bss_uncached_end_orig": {
+          "type": "string"
+        },
+        "cave_va": {
+          "type": "string"
+        },
+        "crt0_uncached_end_site_va": {
+          "type": "string"
+        },
+        "factory_geometry_id": {
+          "type": "string"
+        },
+        "nfd_text_base_va": {
+          "type": "string"
+        },
+        "rodata_table_base_va": {
+          "type": "string"
+        },
+        "sbrk_uncached_end_site_va": {
+          "type": "string"
+        },
+        "target_geometry_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "factory_geometry_id",
+        "target_geometry_id",
+        "nfd_text_base_va",
+        "rodata_table_base_va",
+        "bss_nfd_ctrl_base_va",
+        "bss_reserved_base_va",
+        "bss_cached_end_site_va",
+        "bss_cached_end_orig",
+        "crt0_uncached_end_site_va",
+        "sbrk_uncached_end_site_va",
+        "bss_uncached_end_orig",
+        "cave_va"
+      ],
+      "type": "object"
+    },
     "MainBuildSpec": {
       "additionalProperties": false,
       "description": "Declarative descriptor for an individual `MAIN` firmware build belonging to a firmware train.",
@@ -830,6 +887,16 @@
         },
         "base_va": {
           "type": "string"
+        },
+        "bgo_retarget_anchors": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MainBgoRetargetAnchors"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "build_id": {
           "type": "string"
@@ -1716,6 +1783,79 @@
         "sleep_10ms_va"
       ],
       "type": "object"
+    },
+    "TrapCatalog": {
+      "additionalProperties": false,
+      "description": "Trap catalog deserialized from `profiles/traps/geometry_and_binary_traps.json`.",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "schema_version": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "traps": {
+          "items": {
+            "$ref": "#/$defs/TrapRecord"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema_version",
+        "description",
+        "traps"
+      ],
+      "type": "object"
+    },
+    "TrapRecord": {
+      "additionalProperties": false,
+      "description": "Single physical/geometry/decompiler trap record in `profiles/traps/geometry_and_binary_traps.json`.",
+      "properties": {
+        "affected_entities": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "automated_guard": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "id": {
+          "type": "string"
+        },
+        "severity": {
+          "type": "string"
+        },
+        "verified_ground_truth": {
+          "type": "string"
+        },
+        "wrong_assumption": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "category",
+        "severity",
+        "wrong_assumption",
+        "verified_ground_truth",
+        "affected_entities",
+        "automated_guard",
+        "evidence_refs"
+      ],
+      "type": "object"
     }
   },
   "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -1786,6 +1926,16 @@
         "$ref": "#/$defs/SocProfile"
       },
       "type": "object"
+    },
+    "traps": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TrapCatalog"
+        },
+        {
+          "type": "null"
+        }
+      ]
     }
   },
   "required": [

@@ -10,6 +10,7 @@ use panadiga_core::pico::bench_decoders::{
     summarize_ab_runs, validate_safe_bench_command,
 };
 use panadiga_core::pico::describe_boot_fat_error_code;
+use panadiga_core::pico::protocol::{parse_boot_class_line, parse_tbus_audit_line};
 use panadiga_core::pico::rsp_codec::{
     MAX_M_CHUNK, build_rsp_frame, build_rsp_write_frame, decode_mn103s_g_registers,
     decode_rsp_hex_memory, is_ipl_readonly_address, parse_rsp_reply, rsp_checksum,
@@ -64,8 +65,18 @@ pub fn handle_parse_diag(
         "busdiag" => emit_json_output(&parse_busdiag_report(&text), json.as_deref()),
         "piologic" => emit_json_output(&parse_piologic_report(&text), json.as_deref()),
         "panarsp" => emit_json_output(&parse_panarsp_report(&text), json.as_deref()),
+        "bootclass" => {
+            let parsed =
+                parse_boot_class_line(&text).context("No @P7501_BOOT_CLASS line found in input")?;
+            emit_json_output(&parsed, json.as_deref())
+        }
+        "tbus-audit" => {
+            let parsed =
+                parse_tbus_audit_line(&text).context("No @P7501_TBUS_AUDIT line found in input")?;
+            emit_json_output(&parsed, json.as_deref())
+        }
         other => bail!(
-            "Unknown diag kind '{other}'. Expected status|pincheck|busdiag|piologic|panarsp|fat-error"
+            "Unknown diag kind '{other}'. Expected status|pincheck|busdiag|piologic|panarsp|bootclass|tbus-audit|raw-log|fat-error"
         ),
     }
 }

@@ -157,4 +157,9 @@ class RegistryValidationReportDict(TypedDict):
     safetyChecksPassed: int
     errors: list[str]
 
-SSOT_CONTRACT_HASH_STR: Final[str] = "A6F75ECE"
+
+P7501_SSOT_CLI_LINE_MAX: Final[int] = 512
+P7501_SSOT_MAX_FAST_WRITE_BYTES: Final[int] = 128
+P7501_SSOT_FAST_STUB_PAGE_BYTES: Final[int] = 256
+
+SSOT_CONTRACT_HASH_STR: Final[str] = "C22028D7"

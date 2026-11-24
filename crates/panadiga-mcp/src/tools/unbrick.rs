@@ -207,6 +207,7 @@ pub fn handle_sd_unbrick_kit(args: &Value, workspace_root: &Path) -> Result<Valu
                 sata_bridge_reset_fix,
                 sata_bridge_stage2_boot,
                 main_bgo_retarget,
+                portao4_self_unpack: false,
             })?;
             Ok(serde_json::to_value(rep)?)
         }

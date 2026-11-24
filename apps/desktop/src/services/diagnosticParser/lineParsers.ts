@@ -4,7 +4,13 @@
  */
 
 import { FLASH_CANDIDATE_SIZES_MB } from '@/constants';
-import type { BusTransitionRow, DumpWordRow, PincheckRow } from '@/models/pico';
+import type {
+  BusTransitionRow,
+  DumpWordRow,
+  PicoBootClassSummary,
+  PicoTbusAuditSummary,
+  PincheckRow,
+} from '@/models/pico';
 
 const MIN_PINCHECK_COLUMNS = 5;
 const PIN_COL_STATE_INDEX = 4;
@@ -196,6 +202,14 @@ const FLASH_CHIP_SIZE_RULES: ReadonlyArray<readonly [ReadonlyArray<string>, numb
   [['27V802', '1MB'], FLASH_MB_1],
 ]);
 
+const WIRE_BOOL_ZERO = 0;
+
+export interface PicoTaggedWireFrame {
+  readonly tag: string;
+  readonly summary: string;
+  readonly kv: Readonly<Record<string, string>>;
+}
+
 export interface ParsedWireProtocolSummary {
   readonly resStatus: string | null;
   readonly resCode: string | null;
@@ -207,6 +221,9 @@ export interface ParsedWireProtocolSummary {
   readonly identFlashMb: number | null;
   readonly progressSteps: string[];
   readonly wireEvents: string[];
+  readonly bootClass: PicoBootClassSummary | null;
+  readonly tbusAudit: PicoTbusAuditSummary | null;
+  readonly taggedFrames: ReadonlyArray<PicoTaggedWireFrame>;
 }
 
 function parseWireKvPairs(rest: string): Readonly<Record<string, string>> {
@@ -220,6 +237,27 @@ function parseWireKvPairs(rest: string): Readonly<Record<string, string>> {
     return [[key, value]];
   });
   return Object.fromEntries(entries);
+}
+
+function parseWireInt(raw: string | undefined): number {
+  const n = raw ? Number.parseInt(raw, DECIMAL_RADIX) : NaN;
+  return Number.isFinite(n) ? n : WIRE_BOOL_ZERO;
+}
+
+function parseWireBool(raw: string | undefined): boolean {
+  return parseWireInt(raw) !== WIRE_BOOL_ZERO;
+}
+
+function parseCsvHexOps(raw: string | undefined): string[] {
+  const trimmed = (raw ?? '').trim();
+  if (!trimmed || trimmed.toUpperCase() === 'NONE') {
+    return [];
+  }
+  return trimmed
+    .split(',')
+    .map(tok => tok.trim())
+    .filter(tok => tok.length > WIRE_BOOL_ZERO && tok.toUpperCase() !== 'NONE')
+    .map(tok => tok.toUpperCase());
 }
 
 function inferFlashMbFromChip(flashPart: string | undefined): number | null {
@@ -239,8 +277,82 @@ function formatEvtLine(kv: Readonly<Record<string, string>>): ReadonlyArray<stri
   return [attrs ? `${kind} (${attrs})` : kind];
 }
 
+function findLastPrefixedLine(lines: readonly string[], prefix: string): string | undefined {
+  return lines.reduce<string | undefined>((acc, candidate) => (candidate.startsWith(prefix) ? candidate : acc), undefined);
+}
+
+function parseBootClassFrame(lines: readonly string[]): PicoBootClassSummary | null {
+  const matchLine = findLastPrefixedLine(lines, '@P7501_BOOT_CLASS ');
+  if (!matchLine) {
+    return null;
+  }
+  const kv = parseWireKvPairs(matchLine.slice('@P7501_BOOT_CLASS '.length));
+  if (!kv.verdict) {
+    return null;
+  }
+  return {
+    verdict: kv.verdict,
+    build: kv.build ?? 'UNKNOWN',
+    stage2: parseWireBool(kv.stage2),
+    avout_ok: parseWireBool(kv.avout_ok),
+    vmute0: parseWireBool(kv.vmute0),
+    ntsc: parseWireBool(kv.ntsc),
+    rsv_ok: parseWireBool(kv.rsv_ok),
+    hdd_fail: parseWireInt(kv.hdd_fail),
+    bgo_err: parseWireInt(kv.bgo_err),
+    fpc_err: parseWireInt(kv.fpc_err),
+    fpc_to: parseWireInt(kv.fpc_to),
+    iic_err: parseWireInt(kv.iic_err),
+    odd_err: parseWireInt(kv.odd_err),
+    op7f_cnt: parseWireInt(kv.op7f_cnt),
+    op7f: parseCsvHexOps(kv.op7f),
+  };
+}
+
+function parseTbusAuditFrame(lines: readonly string[]): PicoTbusAuditSummary | null {
+  const matchLine = findLastPrefixedLine(lines, '@P7501_TBUS_AUDIT ');
+  if (!matchLine) {
+    return null;
+  }
+  const kv = parseWireKvPairs(matchLine.slice('@P7501_TBUS_AUDIT '.length));
+  if (kv.frames === undefined) {
+    return null;
+  }
+  return {
+    frames: parseWireInt(kv.frames),
+    br_rejected: parseWireInt(kv.br_rejected),
+    nak7f: parseWireInt(kv.nak7f),
+    ops: parseCsvHexOps(kv.ops),
+  };
+}
+
+const TAGGED_PREFIX_RULES: ReadonlyArray<readonly [string, string]> = Object.freeze([
+  ['@P7501_FRAME ', 'FRAME'],
+  ['@P7501_HOTPLUG ', 'HOTPLUG'],
+  ['@P7501_LIVE_MAP ', 'LIVE_MAP'],
+  ['@P7501_DIAG_DEEP ', 'DIAG_DEEP'],
+  ['@P7501_GPS_ENV ', 'GPS_ENV'],
+  ['@P7501_ROUTE ', 'ROUTE'],
+  ['@P7501_XRAY ', 'XRAY'],
+  ['@P7501_SURG ', 'SURG'],
+]);
+
+function parseTaggedWireFrames(lines: readonly string[]): PicoTaggedWireFrame[] {
+  return lines.flatMap(line => {
+    const matched = TAGGED_PREFIX_RULES.find(([prefix]) => line.startsWith(prefix));
+    if (!matched) {
+      return [];
+    }
+    const [prefix, tag] = matched;
+    const raw = line.slice(prefix.length).trim();
+    const kv = parseWireKvPairs(raw);
+    const label = tag === 'FRAME' && kv.type ? `FRAME:${kv.type}` : tag;
+    return [{ tag, summary: `${label} (${raw})`, kv }];
+  });
+}
+
 /**
- * Extracts structured `@P7501_IDENT`, `@PROG`, `@EVT`, and `@P7501_RES` frames cleanly.
+ * Extracts structured `@P7501_*`, `@PROG`, and `@EVT` frames cleanly.
  */
 export function parseWireProtocolSummary(rawOutput: string): ParsedWireProtocolSummary {
   const lines = rawOutput.split(/\r?\n/).map(line => line.trim());
@@ -260,9 +372,26 @@ export function parseWireProtocolSummary(rawOutput: string): ParsedWireProtocolS
       return kv.step ? [`${kv.step}${kv.msg ? ` ${kv.msg}` : ''}`] : [];
     });
 
-  const wireEvents = lines
+  const bootClass = parseBootClassFrame(lines);
+  const tbusAudit = parseTbusAuditFrame(lines);
+  const taggedFrames = parseTaggedWireFrames(lines);
+  const evtLabels = lines
     .filter(line => line.startsWith('@EVT '))
     .flatMap(line => formatEvtLine(parseWireKvPairs(line.slice('@EVT '.length))));
+  const wireEvents = [
+    ...evtLabels,
+    ...(bootClass
+      ? [
+          `BOOT_CLASS (verdict=${bootClass.verdict} build=${bootClass.build} avout_ok=${bootClass.avout_ok ? '1' : '0'} fpc_err=${bootClass.fpc_err} bgo_err=${bootClass.bgo_err})`,
+        ]
+      : []),
+    ...(tbusAudit
+      ? [
+          `TBUS_AUDIT (frames=${tbusAudit.frames} br_rejected=${tbusAudit.br_rejected} nak7f=${tbusAudit.nak7f})`,
+        ]
+      : []),
+    ...taggedFrames.map(frame => frame.summary),
+  ];
 
   return {
     resStatus: resKv.status ?? null,
@@ -275,5 +404,8 @@ export function parseWireProtocolSummary(rawOutput: string): ParsedWireProtocolS
     identFlashMb: inferFlashMbFromChip(identKv.flash),
     progressSteps,
     wireEvents,
+    bootClass,
+    tbusAudit,
+    taggedFrames,
   };
 }

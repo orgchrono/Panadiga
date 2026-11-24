@@ -60,10 +60,10 @@ pub struct DecodeLogArgs {
     pub json: Option<PathBuf>,
 }
 
-/// Parses structured Pico CLI telemetry replies (`status`, `pincheck`, `busdiag`, `piologic`, `panarsp`, `fat-error`).
+/// Parses structured Pico CLI telemetry replies (`status`, `pincheck`, `busdiag`, `piologic`, `panarsp`, `bootclass`, `tbus-audit`, `fat-error`).
 #[derive(Args, Debug)]
 pub struct ParseDiagArgs {
-    /// Kind: status|pincheck|busdiag|piologic|panarsp|fat-error
+    /// Kind: status|pincheck|busdiag|piologic|panarsp|bootclass|tbus-audit|raw-log|fat-error
     #[arg(long, value_name = "KIND")]
     pub kind: String,
 

@@ -10,7 +10,7 @@
   "functions": [
     {
       "va": "0x57000320",
-      "end_va": "0x570003C5",
+      "end_va": "0x570003E9",
       "name": "bgo_retarget_trampoline_cave",
       "abi": "internal_stub",
       "abi_detail": {
@@ -19,14 +19,14 @@
         "frame_bytes": 0
       },
       "ret": "void",
-      "callers": ["0x574AE800", "0x574AF2F0"],
+      "callers": ["0x574AE800", "0x574AF2F0", "0x574B3E59", "0x574B44C0"],
       "callees": [],
       "string_xrefs": [],
       "mmio_xrefs": ["0x531B8000", "0x531BC000"],
       "side_effects": "read_only",
       "side_effect_reasons": [],
       "evidence_tier": "mn103vm_verified",
-      "notes": "165-byte SDRAM stub cave serving 12 trampolines for expanded struct nfd_ctrl (0x531B8000..0x531BC000) in --main-bgo-retarget."
+      "notes": "201-byte SDRAM stub cave serving 14 trampolines (S1..S12, S14; including S12 P1 subpage ceiling 0x1F->0xFF and S14 P1 rollover cmp 0x20->0x100) alongside inline byte patches S13A (0x574AFBB8..0x574AFBBA, 0x2000->0x10000 P1 allocation) and S13B (0x574AFC18, P5 memmove 8->4) for expanded struct nfd_ctrl (0x531B8000..0x531BC000) in --main-bgo-retarget."
     },
     {
       "va": "0x57000B08",

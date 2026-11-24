@@ -39,6 +39,8 @@ pub struct SdUnbrickKitRequestDto {
     pub sata_bridge_stage2_boot: Option<bool>,
     #[serde(default)]
     pub main_bgo_retarget: Option<bool>,
+    #[serde(default)]
+    pub portao4_self_unpack: Option<bool>,
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -138,6 +140,7 @@ pub(crate) fn to_sd_unbrick_kit_request(
         sata_bridge_reset_fix: dto.sata_bridge_reset_fix.unwrap_or(false),
         sata_bridge_stage2_boot: dto.sata_bridge_stage2_boot.unwrap_or(false),
         main_bgo_retarget: dto.main_bgo_retarget.unwrap_or(false),
+        portao4_self_unpack: dto.portao4_self_unpack.unwrap_or(false),
     })
 }
 

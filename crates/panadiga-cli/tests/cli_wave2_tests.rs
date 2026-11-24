@@ -359,6 +359,34 @@ fn wave2_bgo_audit_repair_plan_and_mock_live_apply_enforce_e05() {
             .unwrap()
             .contains("backup_sha256")
     );
+
+    let heal_json = dir.join("heal_dry_run.json");
+    dispatch(
+        Cli::try_parse_from([
+            "panadiga",
+            "unbrick",
+            "bgo-live-heal",
+            "--nor",
+            nor_path.to_str().unwrap(),
+            "--backup-dir",
+            dir.join("heal_bkp").to_str().unwrap(),
+            "--tv-standard",
+            "ntsc",
+            "--dry-run",
+            "--json",
+            heal_json.to_str().unwrap(),
+        ])
+        .unwrap()
+        .command
+        .unwrap(),
+    )
+    .unwrap();
+    let heal_raw = fs::read_to_string(&heal_json).unwrap();
+    assert!(heal_raw.contains("\"max_fast_write_bytes\": 128"));
+    assert!(heal_raw.contains("BGO_INSPECT DETAIL"));
+    assert!(heal_raw.contains("\"page_offset_hex\": \"0x00F0\""));
+    assert!(heal_raw.contains("\"value_byte_hex\": \"0x00\""));
+
     let _ = fs::remove_dir_all(&dir);
 }
 

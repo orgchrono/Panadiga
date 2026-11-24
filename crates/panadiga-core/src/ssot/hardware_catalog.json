@@ -506,7 +506,15 @@
     {
       "id": "MMIO_SNAP",
       "category": "ocd_flash",
-      "syntax": "MMIO_SNAP [DIFF]",
+      "syntax": "MMIO_SNAP [CORE|VIDEO|STORAGE|ALL|DIFF]",
+      "default_arg": "CORE",
+      "options": [
+        ["core", "CORE"],
+        ["video", "VIDEO"],
+        ["storage", "STORAGE"],
+        ["all", "ALL"],
+        ["diff", "DIFF"]
+      ],
       "timeout": "query_default"
     },
     {
@@ -588,6 +596,108 @@
       "category": "ocd_flash",
       "syntax": "FAST_WRITE <hex_va> <even_hex_bytes> CONFIRM_UPPER_NOR",
       "default_arg": "843F0100 0000 CONFIRM_UPPER_NOR",
+      "dangerous": true,
+      "timeout": "capture_long"
+    },
+    {
+      "id": "HOTPLUG",
+      "category": "electrical",
+      "syntax": "HOTPLUG [ON|OFF|STATUS]",
+      "default_arg": "STATUS",
+      "options": [
+        ["status", "STATUS"],
+        ["on", "ON"],
+        ["off", "OFF"]
+      ],
+      "timeout": "probe_fast"
+    },
+    {
+      "id": "LIVE_MAP",
+      "category": "probe",
+      "syntax": "LIVE_MAP [PASSIVE|MMIO|NOR|FULL] [ms]",
+      "default_arg": "FULL 3000",
+      "options": [
+        ["full3s", "FULL 3000"],
+        ["mmio", "MMIO 0"],
+        ["nor", "NOR 0"],
+        ["passive", "PASSIVE 3000"]
+      ],
+      "timeout": "capture_long"
+    },
+    {
+      "id": "STREAM",
+      "category": "probe",
+      "syntax": "STREAM [STATUS|TEST|RESET]",
+      "default_arg": "STATUS",
+      "options": [
+        ["status", "STATUS"],
+        ["test", "TEST"],
+        ["reset", "RESET"]
+      ],
+      "timeout": "probe_fast"
+    },
+    {
+      "id": "TRAP",
+      "category": "ocd_flash",
+      "syntax": "TRAP <LIST|CHECK <hex_va> [hex_len] [R|W|E]>",
+      "default_arg": "LIST",
+      "timeout": "query_default"
+    },
+    {
+      "id": "PAYLOAD",
+      "category": "ocd_flash",
+      "syntax": "PAYLOAD <LIST|INFO <name>|VERIFY|RUN <name>>",
+      "default_arg": "LIST",
+      "timeout": "capture_medium"
+    },
+    {
+      "id": "SECTOR",
+      "category": "ocd_flash",
+      "syntax": "SECTOR <INFO <sa|va>|FIND <sig|hex> [sa0] [sa1]|PATCH <va> <exp> <new> [CONFIRM_UPPER_NOR]>",
+      "default_arg": "INFO 84130000",
+      "dangerous": true,
+      "timeout": "wdt_ceiling"
+    },
+    {
+      "id": "CRYPTO",
+      "category": "probe",
+      "syntax": "CRYPTO <SELFTEST|KEYS|DEC <k|hex> <hex>|ENC <k|hex> <hex>|AUTODETECT <hex16>|ADLER32 <stride> <hex>>",
+      "default_arg": "SELFTEST",
+      "timeout": "query_default"
+    },
+    {
+      "id": "DECOMP",
+      "category": "probe",
+      "syntax": "DECOMP <SELFTEST|LZSS <hex>|LZSS_ENC <hex>|ZLIB <hex>|ZLIB_ENC <hex>|RAW <hex>>",
+      "default_arg": "SELFTEST",
+      "timeout": "query_default"
+    },
+    {
+      "id": "GPS",
+      "category": "probe",
+      "syntax": "GPS <CAL|ENV|AUTOCAL <model+suffix>|PATTERNS <va> <len>|ENTROPY <va> <len>|CALLS <va> <len>|RESOLVE <name|va>>",
+      "default_arg": "CAL",
+      "timeout": "query_default"
+    },
+    {
+      "id": "ROUTE",
+      "category": "probe",
+      "syntax": "ROUTE [BOOT|VIDEO|BGO|HDD|NVRAM|UNBRICK]",
+      "default_arg": "BOOT",
+      "timeout": "query_default"
+    },
+    {
+      "id": "XRAY",
+      "category": "probe",
+      "syntax": "XRAY [ms|BOOT [ms]|SUMMARY|COLOR <ON|OFF>]",
+      "default_arg": "3000",
+      "timeout": "capture_long"
+    },
+    {
+      "id": "SURG",
+      "category": "probe",
+      "syntax": "SURG <SEARCH|DISASM|ASM|BIT|PATCH|TIMEOUT|HOOK|UNHOOK|PAUSE|CONT|JUMP|STEP|UNDO|REDO|REWIND|LOG|MEIHFS|HDD_PLAN|HDD_UNLOCK> ...",
+      "default_arg": "LOG",
       "dangerous": true,
       "timeout": "capture_long"
     }

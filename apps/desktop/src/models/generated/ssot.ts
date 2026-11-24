@@ -93,8 +93,8 @@ export const DIGA_MODEL_IDS = [
 ] as const;
 export type DigaModelId = (typeof DIGA_MODEL_IDS)[number];
 
-export const SSOT_CONTRACT_HASH_U32 = 0xA6F75ECE;
-export const SSOT_CONTRACT_HASH_STR = 'A6F75ECE';
+export const SSOT_CONTRACT_HASH_U32 = 0xC22028D7;
+export const SSOT_CONTRACT_HASH_STR = 'C22028D7';
 
 export const SSOT_IPC_EVENTS = {
   PICO_SERIAL_LOG: 'pico://serial-log',
@@ -185,6 +185,18 @@ export const PICO_COMMAND_IDS = [
   'NOR_MAP',
   'FAST_READ',
   'FAST_WRITE',
+  'HOTPLUG',
+  'LIVE_MAP',
+  'STREAM',
+  'TRAP',
+  'PAYLOAD',
+  'SECTOR',
+  'CRYPTO',
+  'DECOMP',
+  'GPS',
+  'ROUTE',
+  'XRAY',
+  'SURG',
 ] as const;
 export type PicoCommandId = (typeof PICO_COMMAND_IDS)[number];
 

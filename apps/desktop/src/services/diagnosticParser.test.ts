@@ -210,4 +210,50 @@ describe('diagnosticParser & Hardware SSOT Consistency', () => {
     expect(codes).toContain('PANAMON_ACTIVE');
     expect(codes).toContain('HUNG_U99');
   });
+
+  it('decodes @P7501_BOOT_CLASS and @P7501_TBUS_AUDIT telemetry frames', () => {
+    const raw = [
+      '@P7501_BOOT_CLASS verdict=CLEAN_MAIN_OK build=3060NP stage2=1 avout_ok=1 vmute0=1 ntsc=1 rsv_ok=1 hdd_fail=0 bgo_err=0 fpc_err=0 fpc_to=0 iic_err=0 odd_err=0 op7f_cnt=0 op7f=NONE',
+      '@P7501_TBUS_AUDIT frames=6 br_rejected=1 nak7f=1 ops=A9',
+      'BOOTTRACE: OK',
+      '@P7501_RES cmd=BOOTTRACE status=OK code=0 elapsed_us=12000',
+    ].join('\n');
+    const parsed = parseDiagnosticOutput('BOOTTRACE', 'BOOTTRACE 90000 NORMAL', raw, 12000);
+    expect(parsed.success).toBe(true);
+    expect(parsed.boot_class?.verdict).toBe('CLEAN_MAIN_OK');
+    expect(parsed.boot_class?.build).toBe('3060NP');
+    expect(parsed.boot_class?.avout_ok).toBe(true);
+    expect(parsed.boot_class?.op7f).toEqual([]);
+    const codes = (parsed.findings ?? []).map(f => f.code);
+    expect(codes).toContain('BOOT_CLASS_CLEAN_MAIN_OK');
+    expect(codes).toContain('TBUS_AUDIT');
+    expect(parsed.wire_events).toContain('BOOT_CLASS (verdict=CLEAN_MAIN_OK build=3060NP avout_ok=1 fpc_err=0 bgo_err=0)');
+  });
+
+  it('captures thin @P7501_FRAME, @P7501_HOTPLUG, @P7501_LIVE_MAP, and @P7501_DIAG_DEEP envelopes', () => {
+    const raw = [
+      '@P7501_FRAME seq=1 ts_us=500 type=MMIO len=20 crc32=1234ABCD reg=AIOF_VMOD val=0x8020',
+      '@P7501_HOTPLUG event=ONLINE_AWAKE vdd_mv=3260 nsw5v=1 recoveries=1',
+      '@P7501_LIVE_MAP mode=FULL bus=PANAMON1 frames=12 crc_err=0',
+      '@P7501_DIAG_DEEP hw=M6930LB market=PL cav=N/PAL avsel=8/1 gui=6 avin_iic=0:0x0@3756',
+      '@P7501_GPS_ENV build=3060NP hw=M6930LB cal=0x03 affine=1 delta=0',
+      '@P7501_ROUTE dom=VIDEO target=0x88000000 payload=video_mmio_dump guard=ALLOW next=PAYLOAD_RUN',
+      '@P7501_XRAY max_stage=S10_VFD_VV fault_stage=NONE stages_mask=0x07FF events=12 errors=0',
+      '@P7501_SURG op=LOG entries=2 cursor=2 undo=2 redo=0',
+      'LIVE_MAP: OK',
+      '@P7501_RES cmd=LIVE_MAP status=OK code=0 elapsed_us=3100',
+    ].join('\n');
+    const parsed = parseDiagnosticOutput('LIVE_MAP', 'LIVE_MAP FULL 3000', raw, 3100);
+    expect(parsed.success).toBe(true);
+    expect(parsed.wire_events).toEqual([
+      'FRAME:MMIO (seq=1 ts_us=500 type=MMIO len=20 crc32=1234ABCD reg=AIOF_VMOD val=0x8020)',
+      'HOTPLUG (event=ONLINE_AWAKE vdd_mv=3260 nsw5v=1 recoveries=1)',
+      'LIVE_MAP (mode=FULL bus=PANAMON1 frames=12 crc_err=0)',
+      'DIAG_DEEP (hw=M6930LB market=PL cav=N/PAL avsel=8/1 gui=6 avin_iic=0:0x0@3756)',
+      'GPS_ENV (build=3060NP hw=M6930LB cal=0x03 affine=1 delta=0)',
+      'ROUTE (dom=VIDEO target=0x88000000 payload=video_mmio_dump guard=ALLOW next=PAYLOAD_RUN)',
+      'XRAY (max_stage=S10_VFD_VV fault_stage=NONE stages_mask=0x07FF events=12 errors=0)',
+      'SURG (op=LOG entries=2 cursor=2 undo=2 redo=0)',
+    ]);
+  });
 });

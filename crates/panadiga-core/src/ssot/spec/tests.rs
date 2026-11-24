@@ -73,7 +73,7 @@ fn ssot_thresholds_match_firmware_and_platform_constants() {
     assert_eq!(spec.flash_geometries[1].nvram_base_hex, "0x803F0000");
     assert_eq!(spec.flash_geometries[2].nvram_base_hex, "0x807F0000");
     assert_eq!(spec.flash_geometries[3].nvram_base_hex, "0x80FE0000");
-    assert_eq!(spec.pico_commands.len(), 67);
+    assert_eq!(spec.pico_commands.len(), 79);
 
     for cmd in &spec.pico_commands {
         assert!(

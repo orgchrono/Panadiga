@@ -4,10 +4,14 @@ from __future__ import annotations
 
 from typing import Sequence
 
+import pytest
+
 from scripts.pico_heartbeat_ops import (
     SAFE_GUIDED_PROFILES,
     check_command_safety,
     discover_pico_port,
+    format_report_human,
+    main,
     run_guided,
     run_heartbeat,
 )
@@ -70,6 +74,36 @@ def test_heartbeat_grades_healthy_standby_overvoltage_and_missing() -> None:
     assert rep_empty["overall_health"] == "DISCONNECTED"
 
 
+def test_heartbeat_accepts_healthy_wdt_active_and_flags_real_wdt_faults() -> None:
+    def live_healthy_runner(args: Sequence[str]) -> tuple[int, str, str]:
+        if args[1] == "ping":
+            return (
+                0,
+                "VDD: 3.26V (OK)\n[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=1750 "
+                "wdt_recoveries=0 reboot_src=CLEAN fault_slot=255 fault_stage=IDLE\n",
+                "",
+            )
+        return _mock_list_runner(args)
+
+    rc_live, rep_live = run_heartbeat(port="COM10", runner=live_healthy_runner)
+    assert rc_live == 0
+    assert rep_live["overall_health"] == "ONLINE_HEALTHY"
+
+    for fault_banner in (
+        "VDD: 3.26V\nwdt_recoveries=1 reboot_src=WDT\n",
+        "VDD: 3.26V\nWDT_TRIP detected\n",
+        "VDD: 3.26V\nSTALL in flash task\n",
+    ):
+        def fault_runner(args: Sequence[str], banner: str = fault_banner) -> tuple[int, str, str]:
+            if args[1] == "ping":
+                return 0, banner, ""
+            return _mock_list_runner(args)
+
+        rc_fault, rep_fault = run_heartbeat(port="COM10", runner=fault_runner)
+        assert rc_fault == 1
+        assert rep_fault["overall_health"] == "WDT_STALL"
+
+
 def test_guided_hard_blocks_forbidden_tokens_with_safety_denied() -> None:
     dangerous = [
         "ERASE 0x807F0000",
@@ -109,3 +143,32 @@ def test_guided_dry_run_validates_safe_profiles() -> None:
         assert rc == 0
         assert rep["status"] == "DRY_RUN_READY"
         assert rep["port"] == "COM12"
+
+
+def test_heartbeat_human_multiline_and_json_cli_modes(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rc, rep = run_heartbeat(runner=_mock_list_runner)
+    assert rc == 0
+    samples = rep["samples"]
+    assert isinstance(samples, list) and isinstance(samples[0], dict)
+    assert samples[0]["status_lines"] == [
+        "PING: PONG OK",
+        "VDD: 3.31 V",
+        "DCSR: 0x00000001 -> HALTED",
+    ]
+    human = format_report_human(rep)
+    assert "\\n" not in human
+    assert "PING: PONG OK\n  VDD: 3.31 V\n  DCSR: 0x00000001 -> HALTED" in human
+
+    monkeypatch.setattr("scripts.pico_heartbeat_ops.default_cli_runner", _mock_list_runner)
+    assert main(["--mode", "heartbeat"]) == 0
+    out_text = capsys.readouterr().out
+    assert "[HEARTBEAT] overall_health=ONLINE_HEALTHY" in out_text
+    assert "\\n" not in out_text
+
+    assert main(["--mode", "heartbeat", "--json", "-"]) == 0
+    out_json = capsys.readouterr().out
+    assert '"status_lines"' in out_json
+    assert '"overall_health": "ONLINE_HEALTHY"' in out_json

@@ -6,6 +6,7 @@
 mod audit;
 mod audit_helpers;
 pub mod live_apply;
+pub mod norfrom_install;
 pub mod repair_plan;
 
 pub use audit::{
@@ -13,12 +14,20 @@ pub use audit::{
     audit_eh55_bgo_nor_8mb,
 };
 pub use audit_helpers::{
-    BgoSectorGeometry, eh55_bgo_sector_offset, eval_bgo_migration_index, eval_bgo_migration_target,
-    is_active_bgo_p1_sector, parse_bgo_l2p_with_geometry, parse_eh55_bgo_l2p,
+    BgoSectorGeometry, NfdDirEntry, eh55_bgo_sector_offset, eval_bgo_migration_index,
+    eval_bgo_migration_target, find_nfd_dir_entry, is_active_bgo_p1_sector,
+    parse_bgo_l2p_with_geometry, parse_eh55_bgo_l2p, resolve_nfd_file_page_pid,
     verify_nor_one_to_zero_compatible,
 };
 pub use live_apply::{
-    BgoApplyStage, BgoLiveApplyProgress, BgoLiveApplyReport, apply_bgo_repair_plan_live,
+    BgoApplyStage, BgoLiveApplyProgress, BgoLiveApplyReport, BgoLiveHealCommandPlan,
+    BgoLiveHealReport, BgoLiveHealRequest, BgoTvStandardNote, apply_bgo_repair_plan_live,
+    heal_bgo_live_with_client, plan_live_bgo_heal_commands,
+};
+pub use norfrom_install::{
+    PORTAO4_UNPACKER_MAGIC_LE, PORTAO4_UNPACKER_MAGIC_OFFSET, Portao4InstallReport,
+    build_portao4_norfrom_cow_image, build_portao4_self_unpacking_prog061,
+    unpack_portao4_self_unpacking_prog061,
 };
 pub use repair_plan::{
     BgoRepairOp, BgoRepairPlan, build_bgo_repair_plan, hash_bgo_target_sectors,

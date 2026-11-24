@@ -112,6 +112,21 @@ export interface Stage2BootSpec {
   readonly symbols: Stage2BootSymbolsSpec;
 }
 
+export interface MainBgoRetargetAnchors {
+  readonly factory_geometry_id: string;
+  readonly target_geometry_id: string;
+  readonly nfd_text_base_va: string;
+  readonly rodata_table_base_va: string;
+  readonly bss_nfd_ctrl_base_va: string;
+  readonly bss_reserved_base_va: string;
+  readonly bss_cached_end_site_va: string;
+  readonly bss_cached_end_orig: string;
+  readonly crt0_uncached_end_site_va: string;
+  readonly sbrk_uncached_end_site_va: string;
+  readonly bss_uncached_end_orig: string;
+  readonly cave_va: string;
+}
+
 export interface MainBuildSpec {
   readonly build_id: string;
   readonly slot_name: string;
@@ -125,6 +140,7 @@ export interface MainBuildSpec {
   readonly native_bgo_detect_va?: string | null;
   readonly native_bgo_flash_base_va?: string | null;
   readonly supports_bgo_retarget_to?: readonly string[];
+  readonly bgo_retarget_anchors?: MainBgoRetargetAnchors | null;
   readonly sata_bridge_reset_spec?: SataBridgeResetSpec | null;
   readonly av_passthrough_sites?: readonly BinaryPatchSiteSpec[];
   readonly unpacked_sha256?: string | null;
@@ -302,4 +318,8 @@ export interface NorFingerprintReport {
   readonly dumpSizeBytes: number;
   readonly candidates: readonly FingerprintCandidate[];
 }
+
+export const P7501_SSOT_CLI_LINE_MAX = 512 as const;
+export const P7501_SSOT_MAX_FAST_WRITE_BYTES = 128 as const;
+export const P7501_SSOT_FAST_STUB_PAGE_BYTES = 256 as const;
 "#;

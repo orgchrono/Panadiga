@@ -180,6 +180,12 @@ pub fn format_sd_kit_lines(report: &SdUnbrickKitReport) -> Vec<String> {
         };
         lines.push(format!("  MAIN BGO     : {bgo_desc}"));
     }
+    if report.portao4_self_unpack_applied {
+        lines.push(
+            "  Portão 4 SD  : PANA__SD.FRM PROG061 wrapped in 256 B SDRAM self-unpacker ('P4ZU') + zlib (0xFF trailer)"
+                .to_string(),
+        );
+    }
     lines
 }
 

@@ -3,7 +3,17 @@
 use std::fmt::Write as _;
 
 use crate::constants::{
-    AM34_SDRAM_BASE, AM34_SDRAM_SIZE, AM34_SDRAM_STUB_RAW_ADDR, PANA_DIGADIAG_DEFAULT_LOAD_ADDR,
+    AM34_AIOF_BASE, AM34_AVDD_BASE, AM34_IC7501_TBUS_BASE, AM34_IIC0_BASE, AM34_IIC1_BASE,
+    AM34_SDRAM_BASE, AM34_SDRAM_SIZE, AM34_SDRAM_STUB_RAW_ADDR, IC3001_I2C_ADDR_7BIT,
+    LBA_PARTITION_1_SECTOR, PANA_DIGADIAG_DEFAULT_LOAD_ADDR, PANA_LZSS_WINDOW_INIT,
+    PANA_LZSS_WINDOW_SIZE,
+};
+use crate::hdd::capacity_patch::specs::{
+    DYNAMIC_UNCLAMPED_MAX_BLOCKS_2KB, OFF_CLAMP_BRANCH_OP, OFF_SLOT_200GB, OFF_SLOT_400GB,
+    OFF_SLOT_FALLBACK, OPCODE_BLS, OPCODE_BRA, WIN_LEN,
+};
+use crate::re::davis_probe::{
+    DAVIS_IDENTIFY_BUF_DEFAULT_VA, DAVIS_IDENTIFY_META_DEFAULT_VA, DAVIS_IDENTIFY_SENTINEL,
 };
 use crate::re::main_passthrough::{
     DEV_SERIAL_CALLBACK_VA, DEV_SERIAL_HANDSHAKE_BYTES, DEV_SERIAL_ISR_CTX_PTR_VA,
@@ -18,12 +28,14 @@ use super::header_sections::{
     append_c11_struct_decls, append_diag_enums_and_externs, write_padded_define,
 };
 use super::{
-    DEV_SERIAL_NAK_BYTE, P7501_AM34_LETHAL_REG_LEN_SSOT, P7501_CLI_LINE_MAX_SSOT,
+    DEV_SERIAL_NAK_BYTE, P7501_AM34_LETHAL_REG_LEN_SSOT, P7501_AM34_LETHAL_REG2_ADDR_SSOT,
+    P7501_AM34_LETHAL_REG2_LEN_SSOT, P7501_CLI_LINE_MAX_SSOT, P7501_FAST_STUB_PAGE_BYTES_SSOT,
     P7501_GDB_SECTOR_CACHE_SIZE_SSOT, P7501_GPIO_NSW5V_HIZ_GP3, P7501_GPIO_RX_GP2,
     P7501_GPIO_SW_UART_GP26, P7501_GPIO_TX_GP4, P7501_GPIO_XRESET_OD_GP5,
-    P7501_JIG_DEFAULT_HOLD_MS_SSOT, P7501_VDD_FLOATING_CEIL_MV, P7501_VDD_MIN_MV,
-    P7501_VDD_NOMINAL_MV, P7501_VDD_PULLDOWN_MIN_MV, P7501_VDD_SAFE_MIN_MV, P7501_VDD_WAKE_MIN_MV,
-    P7501_WDT_TIMEOUT_MS_SSOT, compute_pico_ssot_hash,
+    P7501_IC3001_BR_NA_ADDR7_H_SSOT, P7501_IC3001_BR_NA_ADDR7_L_SSOT,
+    P7501_JIG_DEFAULT_HOLD_MS_SSOT, P7501_MAX_FAST_WRITE_BYTES_SSOT, P7501_VDD_FLOATING_CEIL_MV,
+    P7501_VDD_MIN_MV, P7501_VDD_NOMINAL_MV, P7501_VDD_PULLDOWN_MIN_MV, P7501_VDD_SAFE_MIN_MV,
+    P7501_VDD_WAKE_MIN_MV, P7501_WDT_TIMEOUT_MS_SSOT, compute_pico_ssot_hash,
 };
 
 /// Renders the master declarative C11 SSOT header `firmware/pico-p7501/generated/p7501_ssot.h`.
@@ -114,6 +126,14 @@ pub fn generate_c11_ssot_header() -> String {
         (
             "P7501_SSOT_CLI_LINE_MAX",
             format!("{P7501_CLI_LINE_MAX_SSOT}u"),
+        ),
+        (
+            "P7501_SSOT_MAX_FAST_WRITE_BYTES",
+            format!("{P7501_MAX_FAST_WRITE_BYTES_SSOT}u"),
+        ),
+        (
+            "P7501_SSOT_FAST_STUB_PAGE_BYTES",
+            format!("{P7501_FAST_STUB_PAGE_BYTES_SSOT}u"),
         ),
         (
             "P7501_SSOT_JIG_DEFAULT_HOLD_MS",
@@ -228,6 +248,42 @@ pub fn generate_c11_ssot_header() -> String {
             format!("{P7501_AM34_LETHAL_REG_LEN_SSOT}UL"),
         ),
         (
+            "P7501_SSOT_AM34_LETHAL_REG2_ADDR",
+            format!("0x{P7501_AM34_LETHAL_REG2_ADDR_SSOT:08X}UL"),
+        ),
+        (
+            "P7501_SSOT_AM34_LETHAL_REG2_LEN",
+            format!("0x{P7501_AM34_LETHAL_REG2_LEN_SSOT:08X}UL"),
+        ),
+        (
+            "P7501_SSOT_LZSS_WINDOW_SIZE",
+            format!("0x{PANA_LZSS_WINDOW_SIZE:04X}u"),
+        ),
+        (
+            "P7501_SSOT_LZSS_WINDOW_INIT",
+            format!("0x{PANA_LZSS_WINDOW_INIT:04X}u"),
+        ),
+        (
+            "P7501_SSOT_IC3001_BR_NA_ADDR7_L",
+            format!("0x{P7501_IC3001_BR_NA_ADDR7_L_SSOT:02X}u"),
+        ),
+        (
+            "P7501_SSOT_IC3001_BR_NA_ADDR7_H",
+            format!("0x{P7501_IC3001_BR_NA_ADDR7_H_SSOT:02X}u"),
+        ),
+        (
+            "P7501_SSOT_IC3001_EC_ADDR7",
+            format!("0x{IC3001_I2C_ADDR_7BIT:02X}u"),
+        ),
+        ("P7501_SSOT_AIOF_BASE", format!("0x{AM34_AIOF_BASE:08X}UL")),
+        ("P7501_SSOT_AVDD_BASE", format!("0x{AM34_AVDD_BASE:08X}UL")),
+        ("P7501_SSOT_IIC0_BASE", format!("0x{AM34_IIC0_BASE:08X}UL")),
+        ("P7501_SSOT_IIC1_BASE", format!("0x{AM34_IIC1_BASE:08X}UL")),
+        (
+            "P7501_SSOT_TBUS_BASE",
+            format!("0x{AM34_IC7501_TBUS_BASE:08X}UL"),
+        ),
+        (
             "P7501_SSOT_AM34_SC0_CTR_ADDR",
             format!("0x{:08X}UL", soc.mmio["sc0_uart"]),
         ),
@@ -266,6 +322,49 @@ pub fn generate_c11_ssot_header() -> String {
         (
             "P7501_SSOT_BGO_SECTOR_COUNT",
             format!("{}u\n", bgo_sa1 - bgo_sa0 + 1),
+        ),
+        ("P7501_SSOT_HDD_CLAMP_WIN_LEN", format!("0x{WIN_LEN:02X}u")),
+        (
+            "P7501_SSOT_HDD_CLAMP_OFF_400GB",
+            format!("0x{OFF_SLOT_400GB:02X}u"),
+        ),
+        (
+            "P7501_SSOT_HDD_CLAMP_OFF_200GB",
+            format!("0x{OFF_SLOT_200GB:02X}u"),
+        ),
+        (
+            "P7501_SSOT_HDD_CLAMP_OFF_FALLBACK",
+            format!("0x{OFF_SLOT_FALLBACK:02X}u"),
+        ),
+        (
+            "P7501_SSOT_HDD_CLAMP_OFF_BRANCH",
+            format!("0x{OFF_CLAMP_BRANCH_OP:02X}u"),
+        ),
+        ("P7501_SSOT_HDD_OPCODE_BLS", format!("0x{OPCODE_BLS:02X}u")),
+        ("P7501_SSOT_HDD_OPCODE_BRA", format!("0x{OPCODE_BRA:02X}u")),
+        (
+            "P7501_SSOT_HDD_DYNAMIC_MAX_2KB",
+            format!("0x{DYNAMIC_UNCLAMPED_MAX_BLOCKS_2KB:08X}UL"),
+        ),
+        (
+            "P7501_SSOT_MEIHFS_PRIMARY_FW_LBA",
+            format!("0x{LBA_PARTITION_1_SECTOR:08X}UL"),
+        ),
+        (
+            "P7501_SSOT_MEIHFS_MIRROR_DELTA_LBA",
+            "0x00020000UL".to_string(),
+        ),
+        (
+            "P7501_SSOT_DAVIS_IDENTIFY_BUF_VA",
+            format!("0x{DAVIS_IDENTIFY_BUF_DEFAULT_VA:08X}UL"),
+        ),
+        (
+            "P7501_SSOT_DAVIS_IDENTIFY_META_VA",
+            format!("0x{DAVIS_IDENTIFY_META_DEFAULT_VA:08X}UL"),
+        ),
+        (
+            "P7501_SSOT_DAVIS_IDENTIFY_SENTINEL",
+            format!("0x{DAVIS_IDENTIFY_SENTINEL:08X}UL\n"),
         ),
     ];
     for (name, val) in addr_defs {

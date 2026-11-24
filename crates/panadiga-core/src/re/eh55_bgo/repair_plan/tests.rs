@@ -144,3 +144,88 @@ fn rejects_non_monotonic_write_and_out_of_bgo_bounds_e05() {
         .to_string();
     assert!(err_flip.contains("0->1"), "err={err_flip}");
 }
+
+#[test]
+fn reconstructs_split_duplicate_f202_and_missing_f209_without_reference_or_overflow() {
+    let (_orig_corrupt, mut corrupt) = build_synthetic_bgo_test_pair();
+    let sa29 = eh55_bgo_sector_offset(29).unwrap();
+
+    // Map pid 0x013F (tid=0x13, idx=15) -> slot 16 (0x0220), pid 0x01AC (tid=0x1A, idx=12) -> slot 18 (0x0224),
+    // and pid 0x01C1 (tid=0x1C, idx=1) -> slot 19 (0x0226) in free subpages sp=3..5.
+    for (sp_idx, tid, idx, word) in [
+        (3usize, 0x0013u16, 15usize, 0x0220u16),
+        (4usize, 0x001Au16, 12usize, 0x0224u16),
+        (5usize, 0x001Cu16, 1usize, 0x0226u16),
+    ] {
+        let sp = sa29 + sp_idx * 0x100;
+        corrupt[sp..sp + 4].copy_from_slice(&[0x00, 0x00, 0x00, 0x01]);
+        let soff = sp + 4;
+        corrupt[soff..soff + 2].copy_from_slice(&tid.to_le_bytes());
+        corrupt[soff + 2..soff + 4].copy_from_slice(&0x0001u16.to_le_bytes());
+        corrupt[soff + 4 + idx * 2..soff + 6 + idx * 2].copy_from_slice(&word.to_le_bytes());
+    }
+
+    // Mark SA27 (fid=2, 0xF202) historical slots 1..=13 as superseded 0x0000 and place split duplicate
+    // slots 16, 18, 19 in spare SA68 (leaving blank tag holes at slots 14, 15, 17); erase SA34 (0xF209).
+    let sa27 = eh55_bgo_sector_offset(27).unwrap();
+    for slot in 1..=13usize {
+        corrupt[sa27 + 0x200 + slot * 4..sa27 + 0x200 + slot * 4 + 2]
+            .copy_from_slice(&[0x00, 0x00]);
+    }
+    let sa68 = eh55_bgo_sector_offset(68).unwrap();
+    for i in 0..4 {
+        corrupt[sa68 + 0x04 + i * 4..sa68 + 0x08 + i * 4]
+            .copy_from_slice(&[0x02, 0xF2, 0xFF, 0xFF]);
+    }
+    for (slot, pid) in [
+        (16usize, 0x013Fu16),
+        (18usize, 0x01ACu16),
+        (19usize, 0x01C1u16),
+    ] {
+        corrupt[sa68 + 0x200 + slot * 4..sa68 + 0x200 + slot * 4 + 2]
+            .copy_from_slice(&pid.to_le_bytes());
+        corrupt[sa68 + 0x400 + slot * 0x200..sa68 + 0x400 + (slot + 1) * 0x200].fill(0xA5);
+    }
+
+    let sa34 = eh55_bgo_sector_offset(34).unwrap();
+    corrupt[sa34..sa34 + EH55_BGO_SECTOR_STRIDE].fill(0xFF);
+    corrupt[sa34 + 0x100..sa34 + 0x200].fill(0x00);
+
+    let plan = build_bgo_repair_plan(&corrupt, None).unwrap();
+    assert!(plan.post_audit.healthy);
+    assert!(plan.post_audit.p2_missing_ids.is_empty());
+    assert!(plan.post_audit.corrupt_sas.is_empty());
+    assert_eq!(plan.post_audit.l2p_tag_mismatches, 0);
+    assert_eq!(plan.erased_sas, vec![68]);
+
+    let repaired = plan.repaired_nor_image.as_ref().unwrap();
+    for slot in 0..=19usize {
+        let tag_pid = read_le_u16(repaired, sa27 + 0x200 + slot * 4);
+        assert_ne!(
+            tag_pid, 0xFFFF,
+            "SA27 slot {slot} must not retain 0xFFFF hole"
+        );
+    }
+    for hole_slot in [14usize, 15, 17] {
+        assert_eq!(
+            read_le_u16(repaired, sa27 + 0x200 + hole_slot * 4),
+            0x0000,
+            "SA27 hole slot {hole_slot} must be zeroed"
+        );
+    }
+    for (slot, pid) in [
+        (16usize, 0x013Fu16),
+        (18usize, 0x01ACu16),
+        (19usize, 0x01C1u16),
+    ] {
+        assert_eq!(
+            &repaired[sa27 + 0x200 + slot * 4..sa27 + 0x200 + slot * 4 + 2],
+            &pid.to_le_bytes()
+        );
+        assert!(
+            repaired[sa27 + 0x400 + slot * 0x200..sa27 + 0x400 + (slot + 1) * 0x200]
+                .iter()
+                .all(|&b| b == 0xA5)
+        );
+    }
+}

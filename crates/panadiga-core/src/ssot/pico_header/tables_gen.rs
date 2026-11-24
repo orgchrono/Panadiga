@@ -2,11 +2,17 @@
 
 use std::fmt::Write as _;
 
+use crate::constants::{PANA_FEISTEL_KEYSCHED_IV, PANA_FEISTEL_SBOX_256};
+use panadiga_crypto::feistel::PANA_DVD_KEY_CATALOG;
+
 use super::super::registry::{
     EvidenceTier, FlashChipProfile, HardwareProfileRegistry, NorRegionKind, NorRegionPolicy,
     sector_range_for_aligned_span,
 };
-use super::{FLASH_CHIPS_ORDER, LOADER_FINGERPRINTS, TARGET_PROFILES_ORDER};
+use super::{
+    FLASH_CHIPS_ORDER, LOADER_FINGERPRINTS, PICO_SSOT_SIGNATURES, TARGET_PROFILES_ORDER,
+    pico_mmio_reg_specs, pico_pieos_anchor_specs, pico_region_rule_specs, pico_trap_specs,
+};
 
 fn flash_enum_for_id(id: &str) -> &'static str {
     FLASH_CHIPS_ORDER
@@ -219,7 +225,7 @@ fn append_eeprom_chips_table(out: &mut String, reg: &HardwareProfileRegistry) {
             is_opt,
         );
     }
-    out.push_str("};\n");
+    out.push_str("};\n\n");
 }
 
 fn append_loader_fingerprints_table(out: &mut String, reg: &HardwareProfileRegistry) {
@@ -248,7 +254,113 @@ fn append_loader_fingerprints_table(out: &mut String, reg: &HardwareProfileRegis
             "    {{ \"{needle}\", {c_enum}, \"{hw_board}\", \"{tv_system}\", {lock_xip_main_ro} }},"
         );
     }
-    out.push_str("};\n");
+    out.push_str("};\n\n");
+}
+
+fn format_hex_byte_list(bytes: &[u8]) -> String {
+    bytes
+        .iter()
+        .map(|b| format!("0x{b:02X}u"))
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+fn append_feistel_tables(out: &mut String) {
+    out.push_str("const uint8_t k_p7501_ssot_feistel_sbox[256] = {\n");
+    for chunk in PANA_FEISTEL_SBOX_256.chunks(16) {
+        let _ = writeln!(out, "    {},", format_hex_byte_list(chunk));
+    }
+    out.push_str("};\n\n");
+
+    let _ = writeln!(
+        out,
+        "const uint8_t k_p7501_ssot_feistel_iv[4] = {{ {} }};\n",
+        format_hex_byte_list(&PANA_FEISTEL_KEYSCHED_IV)
+    );
+
+    out.push_str(
+        "const p7501_ssot_feistel_key_t k_p7501_ssot_feistel_keys[P7501_SSOT_FEISTEL_KEY_COUNT] = {\n",
+    );
+    for (name, key8) in PANA_DVD_KEY_CATALOG {
+        let _ = writeln!(
+            out,
+            "    {{ \"{name}\", {{ {} }} }},",
+            format_hex_byte_list(key8)
+        );
+    }
+    out.push_str("};\n\n");
+}
+
+fn append_traps_mmio_and_sigs_tables(out: &mut String) {
+    out.push_str("const p7501_ssot_trap_t k_p7501_ssot_traps[P7501_SSOT_TRAP_COUNT] = {\n");
+    for (id, start, len, mask, sev, reason) in pico_trap_specs() {
+        let _ = writeln!(
+            out,
+            "    {{ \"{id}\", 0x{start:08X}UL, 0x{len:08X}UL, 0x{mask:02X}u, {sev}u, \"{reason}\" }},"
+        );
+    }
+    out.push_str("};\n\n");
+
+    out.push_str(
+        "const p7501_ssot_mmio_reg_t k_p7501_ssot_mmio_regs[P7501_SSOT_MMIO_REG_COUNT] = {\n",
+    );
+    for (addr, name, dom, width) in pico_mmio_reg_specs() {
+        let _ = writeln!(
+            out,
+            "    {{ 0x{addr:08X}UL, \"{name}\", {dom}u, {width}u }},"
+        );
+    }
+    out.push_str("};\n\n");
+
+    out.push_str("const p7501_ssot_sig_t k_p7501_ssot_sigs[P7501_SSOT_SIG_COUNT] = {\n");
+    for &(name, raw) in PICO_SSOT_SIGNATURES {
+        let mut padded = [0u8; 16];
+        let copy_len = raw.len().min(padded.len());
+        padded[..copy_len].copy_from_slice(&raw[..copy_len]);
+        let _ = writeln!(
+            out,
+            "    {{ \"{name}\", {}u, {{ {} }} }},",
+            raw.len(),
+            format_hex_byte_list(&padded)
+        );
+    }
+    out.push_str("};\n\n");
+
+    out.push_str(
+        "const p7501_ssot_pieos_anchor_t k_p7501_ssot_pieos_anchors[P7501_SSOT_PIEOS_ANCHOR_COUNT] = {\n",
+    );
+    for (name, va3060, va3410, mmio_ref, stage, flags, caller) in pico_pieos_anchor_specs() {
+        let _ = writeln!(
+            out,
+            "    {{ \"{name}\", 0x{va3060:08X}UL, 0x{va3410:08X}UL, 0x{mmio_ref:08X}UL, {stage}u, 0x{flags:02X}u, \"{caller}\" }},"
+        );
+    }
+    out.push_str("};\n\n");
+
+    out.push_str(
+        "const p7501_ssot_region_rule_t k_p7501_ssot_region_rules[P7501_SSOT_REGION_RULE_COUNT] = {\n",
+    );
+    for r in pico_region_rule_specs() {
+        let _ = writeln!(
+            out,
+            "    {{ \"{}\", \"{}\", \"{}\", 0x{:04X}u, {}u, '{}', 0x{:02X}u, 0x{:02X}u }},",
+            r.suffix,
+            r.tv_standard,
+            r.line_system,
+            r.aiof_vmodesel,
+            r.dvd_region,
+            r.oem_marker,
+            r.ic3001_addr7_primary,
+            r.ic3001_addr7_alt,
+        );
+    }
+    out.push_str("};\n\n");
+
+    out.push_str("const uint8_t k_p7501_ssot_hdd_clamp_prefix[14] = { ");
+    out.push_str(&format_hex_byte_list(
+        &crate::hdd::capacity_patch::specs::PREFIX_SIG,
+    ));
+    out.push_str(" };\n");
 }
 
 /// Renders `firmware/pico-p7501/generated/p7501_ssot_tables.c` defining single-copy `.rodata` tables.
@@ -272,5 +384,7 @@ pub fn generate_c11_ssot_tables() -> String {
     append_target_profiles_table(&mut out, reg, ipl_l1_size);
     append_eeprom_chips_table(&mut out, reg);
     append_loader_fingerprints_table(&mut out, reg);
+    append_feistel_tables(&mut out);
+    append_traps_mmio_and_sigs_tables(&mut out);
     out
 }

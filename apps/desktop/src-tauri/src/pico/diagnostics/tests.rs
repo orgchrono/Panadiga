@@ -262,4 +262,28 @@ fn parses_wire_protocol_ident_prog_evt_and_res_authoritatively() {
         30,
     );
     assert!(i2c_ok.success);
+
+    let boot_cls = parse_diagnostic_output(
+        "BOOTTRACE",
+        "BOOTTRACE 90000 NORMAL",
+        "@P7501_BOOT_CLASS verdict=CLEAN_MAIN_OK build=3060NP stage2=1 avout_ok=1 vmute0=1 ntsc=1 rsv_ok=1 hdd_fail=0 bgo_err=0 fpc_err=0 fpc_to=0 iic_err=0 odd_err=0 op7f_cnt=0 op7f=NONE\n@P7501_TBUS_AUDIT frames=5 br_rejected=1 nak7f=1 ops=A9\nBOOTTRACE: OK\n@P7501_RES cmd=BOOTTRACE status=OK code=0 elapsed_us=90000",
+        90_000,
+    );
+    assert!(boot_cls.success);
+    assert_eq!(
+        boot_cls.boot_class.as_ref().map(|b| b.verdict.as_str()),
+        Some("CLEAN_MAIN_OK")
+    );
+    assert!(
+        boot_cls
+            .findings
+            .iter()
+            .any(|f| f.code == "BOOT_CLASS_CLEAN_MAIN_OK" && f.severity == "info")
+    );
+    assert!(
+        boot_cls
+            .findings
+            .iter()
+            .any(|f| f.code == "TBUS_AUDIT" && f.severity == "error")
+    );
 }

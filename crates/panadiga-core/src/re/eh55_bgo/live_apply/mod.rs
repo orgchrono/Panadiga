@@ -14,8 +14,14 @@ use crate::pico::panamon1::{Panamon1Client, Panamon1Transport};
 use crate::pico::{StreamProgressTelemetry, compute_rate_and_eta};
 
 mod backup;
+pub mod live_heal;
 #[cfg(test)]
 mod tests;
+
+pub use live_heal::{
+    BgoLiveHealCommandPlan, BgoLiveHealReport, BgoLiveHealRequest, BgoTvStandardNote,
+    heal_bgo_live_with_client, plan_live_bgo_heal_commands,
+};
 
 use backup::{
     emit_progress, emit_progress_telemetry, read_and_hash_bgo_sectors, write_verified_cow_backup,

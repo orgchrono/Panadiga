@@ -68,6 +68,7 @@ mod tests {
         assert!(
             validate_interactive_pico_command("FAST_WRITE 843F0100 0000 CONFIRM_UPPER_NOR").is_ok()
         );
+        assert!(validate_interactive_pico_command("FAST_ERASE 843F0000 CONFIRM_UPPER_NOR").is_ok());
 
         assert!(validate_interactive_pico_command("").is_err());
         assert!(validate_interactive_pico_command("STATUS\r\nPING").is_err());
@@ -76,6 +77,10 @@ mod tests {
         assert!(validate_interactive_pico_command("PANARSP MEM:C000100C,4").is_err());
         assert!(validate_interactive_pico_command("FAST_READ 0xC000_100C 10").is_err());
         assert!(validate_interactive_pico_command("FAST_WRITE 843F0100 0000").is_err());
+        assert!(validate_interactive_pico_command("FAST_ERASE 843F0000").is_err());
+        assert!(
+            validate_interactive_pico_command("FAST_ERASE 84000000 CONFIRM_UPPER_NOR").is_err()
+        );
         assert!(
             validate_interactive_pico_command("FAST_WRITE 84000000 0000 CONFIRM_UPPER_NOR")
                 .is_err()

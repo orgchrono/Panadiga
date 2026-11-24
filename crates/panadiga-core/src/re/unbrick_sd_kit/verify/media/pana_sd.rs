@@ -120,7 +120,9 @@ pub(crate) fn verify_pana_sd_buffer(bytes_opt: Option<&[u8]>) -> PanaSdInspectio
                     .ok()
                     .map(|u| u.decompressed)
             } else {
-                None
+                super::super::super::super::eh55_bgo::unpack_portao4_self_unpacking_prog061(
+                    mod_slice,
+                )
             };
             let prog_buf = unpacked_prog.as_deref().unwrap_or(mod_slice);
             if let Ok(b) = inspect_prog061_bgo_sites(prog_buf) {

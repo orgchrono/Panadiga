@@ -189,3 +189,22 @@ fn decodes_multi_reset_tray_cycles_spinup_and_ctrl_edges() {
     assert!(rep.boot_stages.contains(&"ODD_TRAY_CLOSE".to_string()));
     assert!(rep.notes.iter().any(|n| n.contains("2 DDR reset cycle(s)")));
 }
+
+#[test]
+fn decodes_wire_boot_class_and_tbus_audit_frames() {
+    let sample = concat!(
+        "[BOOTTRACE +  10ms] DDR CHECK: OK\r\n",
+        "@P7501_BOOT_CLASS verdict=CLEAN_MAIN_OK build=3060NP stage2=1 avout_ok=1 vmute0=1 ntsc=1 rsv_ok=1 hdd_fail=0 bgo_err=0 fpc_err=0 fpc_to=0 iic_err=0 odd_err=0 op7f_cnt=0 op7f=NONE\r\n",
+        "@P7501_TBUS_AUDIT frames=12 br_rejected=0 nak7f=0 ops=NONE\r\n",
+        "BOOTTRACE: OK\r\n",
+    );
+    let rep = parse_bench_log_text(sample);
+    let bc = rep.boot_class.expect("boot_class parsed");
+    assert_eq!(bc.verdict, "CLEAN_MAIN_OK");
+    assert_eq!(bc.build, "3060NP");
+    assert!(bc.avout_ok);
+    assert!(bc.op7f.is_empty());
+    let ta = rep.tbus_audit.expect("tbus_audit parsed");
+    assert_eq!(ta.frames, 12);
+    assert_eq!(ta.br_rejected, 0);
+}

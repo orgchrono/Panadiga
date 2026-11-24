@@ -158,4 +158,9 @@ class RegistryValidationReportDict(TypedDict):
     checksFailed: int
     safetyChecksPassed: int
     errors: list[str]
+
+
+P7501_SSOT_CLI_LINE_MAX: Final[int] = 512
+P7501_SSOT_MAX_FAST_WRITE_BYTES: Final[int] = 128
+P7501_SSOT_FAST_STUB_PAGE_BYTES: Final[int] = 256
 "#;

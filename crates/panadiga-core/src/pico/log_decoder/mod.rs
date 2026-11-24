@@ -9,6 +9,9 @@ mod tests;
 use serde::{Deserialize, Serialize};
 
 use super::cdc::{parse_pico_dump_lines, parse_vdd_reply};
+use super::protocol::{
+    PicoBootClassFrame, PicoTbusAuditFrame, parse_boot_class_line, parse_tbus_audit_line,
+};
 use diagnosis::{
     BootDiagnosisContext, build_boot_stages, build_diagnostic_notes, classify_boot_diagnosis,
 };
@@ -61,6 +64,10 @@ pub struct Am34BootLogReport {
     pub dump_line_count: usize,
     pub panarsp_summaries: Vec<String>,
     pub notes: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub boot_class: Option<PicoBootClassFrame>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tbus_audit: Option<PicoTbusAuditFrame>,
 }
 
 /// Parses an offline AM34 / Pico capture text buffer into structured boot & diagnostic telemetry.
@@ -103,6 +110,8 @@ pub fn parse_bench_log_text(text: &str) -> Am34BootLogReport {
     let vdd_volts = parse_vdd_reply(text);
     let dump_line_count = parse_pico_dump_lines(text).len();
     let notes = build_diagnostic_notes(&ctx, vdd_volts);
+    let boot_class = parse_boot_class_line(text);
+    let tbus_audit = parse_tbus_audit_line(text);
 
     Am34BootLogReport {
         loader_version: parsed.loader_version,
@@ -134,5 +143,7 @@ pub fn parse_bench_log_text(text: &str) -> Am34BootLogReport {
         dump_line_count,
         panarsp_summaries: parsed.panarsp_summaries,
         notes,
+        boot_class,
+        tbus_audit,
     }
 }

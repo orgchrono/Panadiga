@@ -54,9 +54,13 @@ pub use bgo_unbrick::{
 pub use eh55_bgo::{
     BgoSectorGeometry, EH55_BGO_EXPECTED_P2_COUNT, EH55_BGO_FIRST_SA, EH55_BGO_LAST_SA,
     EH55_BGO_MAX_PID, EH55_BGO_SECTOR_COUNT, Eh55BgoAuditReport, Eh55BgoSectorKind,
-    Eh55BgoSectorReport, audit_bgo_nor_with_geometry, audit_eh55_bgo_nor_8mb,
-    eh55_bgo_sector_offset, eval_bgo_migration_index, eval_bgo_migration_target,
-    is_active_bgo_p1_sector, parse_bgo_l2p_with_geometry, parse_eh55_bgo_l2p,
+    Eh55BgoSectorReport, Portao4InstallReport as NorAutobootInstallReport,
+    audit_bgo_nor_with_geometry, audit_eh55_bgo_nor_8mb,
+    build_portao4_norfrom_cow_image as build_nor_autoboot_cow_image,
+    build_portao4_self_unpacking_prog061 as build_nor_autoboot_capsule, eh55_bgo_sector_offset,
+    eval_bgo_migration_index, eval_bgo_migration_target, is_active_bgo_p1_sector,
+    parse_bgo_l2p_with_geometry, parse_eh55_bgo_l2p,
+    unpack_portao4_self_unpacking_prog061 as unpack_nor_autoboot_capsule,
     verify_nor_one_to_zero_compatible,
 };
 pub use emu_patch_suite::{
@@ -64,10 +68,11 @@ pub use emu_patch_suite::{
 };
 pub use main_bgo_retarget::{
     BytePatchSite, MAIN_BGO_STATE_8MB, MAIN_BGO_STATE_FACTORY_4MB, MAIN_BGO_STATE_MISMATCH,
-    MAIN3060NP_BGO_8MB_SPEC, MainBgoGeometryStatus, MainBgoRetargetSpec, U32RelocSpec,
-    WordPatchSite, apply_main_bgo_retarget_for_spec_in_place, apply_main_bgo_retarget_in_place,
+    MainBgoGeometryStatus, MainBgoRetargetSpec, OwnedMainBgoRetargetSpec, OwnedSlicePatchSite,
+    U32RelocSpec, WordPatchSite, apply_main_bgo_retarget_for_spec_in_place,
+    apply_main_bgo_retarget_in_place, build_main_bgo_retarget_spec_from_ssot,
     inspect_main_bgo_geometry, inspect_main_bgo_geometry_for_spec,
-    inspect_or_verify_main_bgo_geometry, verify_main3410pq_native_8mb_bgo,
+    inspect_or_verify_main_bgo_geometry,
 };
 pub use main_passthrough::{
     DEV_SERIAL_CALLBACK_VA, DEV_SERIAL_HANDSHAKE_BYTES, DEV_SERIAL_ISR_CTX_PTR_VA,
@@ -125,11 +130,12 @@ pub use sata_bridge_fix::{
 pub use sata_bridge_stage2::{
     PROG061_STAGE2_PAYLOAD_OFFSET, PROG061_STAGE2_PAYLOAD_VA, PROG061_STAGE2_STATE_ENABLED,
     PROG061_STAGE2_STATE_FACTORY, PROG061_STAGE2_STATE_MISMATCH, Prog061Stage2BootStatus,
-    Stage2BootTrainSpec, VER061_STAGE2_BOOT_SPEC, apply_prog061_stage2_boot_in_place,
-    apply_stage2_boot_for_loader_profile_in_place, apply_stage2_boot_in_place_for_spec,
-    assemble_prog061_stage2_payload, assemble_stage2_payload_for_spec, compute_stage2_hook_bytes,
-    inspect_prog061_stage2_boot_site, inspect_stage2_boot_for_loader_profile,
-    inspect_stage2_boot_site_for_spec, stage2_spec_for_loader_profile,
+    Stage2BootTrainSpec, Stage2BootTrainSpec as HddAutobootSpec,
+    apply_prog061_stage2_boot_in_place, apply_stage2_boot_for_loader_profile_in_place,
+    apply_stage2_boot_in_place_for_spec, assemble_prog061_stage2_payload,
+    assemble_stage2_payload_for_spec, compute_stage2_hook_bytes, inspect_prog061_stage2_boot_site,
+    inspect_stage2_boot_for_loader_profile, inspect_stage2_boot_site_for_spec,
+    stage2_spec_for_loader_profile,
 };
 pub use sig_locator::{
     CfgFunctionCandidate, LocatedFunctionMatch, StringXrefHit, detect_prologue_at,
@@ -178,8 +184,12 @@ pub use verify_loop::{VerifyExpectation, VerifyLoopReport, VerifySegment, run_ve
 
 /// Domain-neutral aliases over [`eh55_bgo`] and model-aware BGO FTL entrypoints.
 pub use eh55_bgo::{
-    BgoApplyStage, BgoLiveApplyProgress, BgoLiveApplyReport, BgoRepairOp, BgoRepairPlan,
+    BgoApplyStage, BgoLiveApplyProgress, BgoLiveApplyReport, BgoLiveHealCommandPlan,
+    BgoLiveHealReport, BgoLiveHealRequest, BgoRepairOp, BgoRepairPlan, BgoTvStandardNote,
+    PORTAO4_UNPACKER_MAGIC_LE, PORTAO4_UNPACKER_MAGIC_OFFSET, Portao4InstallReport,
     apply_bgo_repair_plan_live, audit_bgo_nor_auto, audit_bgo_nor_for_model, build_bgo_repair_plan,
+    build_portao4_norfrom_cow_image, build_portao4_self_unpacking_prog061,
+    heal_bgo_live_with_client, plan_live_bgo_heal_commands, unpack_portao4_self_unpacking_prog061,
     validate_and_simulate_bgo_plan,
 };
 pub type BgoFtlAuditReport = Eh55BgoAuditReport;

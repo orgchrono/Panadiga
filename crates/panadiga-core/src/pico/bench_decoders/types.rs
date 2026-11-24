@@ -39,6 +39,9 @@ pub const SAFE_BENCH_COMMANDS: &[&str] = &[
     "PANARSP",
     "DRVPANA",
     "IRTX",
+    "GPS",
+    "ROUTE",
+    "XRAY",
 ];
 
 pub(super) const FORBIDDEN_WRITE_TOKENS: [&str; 5] =

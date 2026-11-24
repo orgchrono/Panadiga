@@ -907,6 +907,63 @@
       ],
       "type": "object"
     },
+    "MainBgoRetargetAnchors": {
+      "additionalProperties": false,
+      "description": "Declarative virtual-address and RAM/cave anchors for universal 4 MiB -> 8 MiB BGO retargeting.",
+      "properties": {
+        "bss_cached_end_orig": {
+          "type": "string"
+        },
+        "bss_cached_end_site_va": {
+          "type": "string"
+        },
+        "bss_nfd_ctrl_base_va": {
+          "type": "string"
+        },
+        "bss_reserved_base_va": {
+          "type": "string"
+        },
+        "bss_uncached_end_orig": {
+          "type": "string"
+        },
+        "cave_va": {
+          "type": "string"
+        },
+        "crt0_uncached_end_site_va": {
+          "type": "string"
+        },
+        "factory_geometry_id": {
+          "type": "string"
+        },
+        "nfd_text_base_va": {
+          "type": "string"
+        },
+        "rodata_table_base_va": {
+          "type": "string"
+        },
+        "sbrk_uncached_end_site_va": {
+          "type": "string"
+        },
+        "target_geometry_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "factory_geometry_id",
+        "target_geometry_id",
+        "nfd_text_base_va",
+        "rodata_table_base_va",
+        "bss_nfd_ctrl_base_va",
+        "bss_reserved_base_va",
+        "bss_cached_end_site_va",
+        "bss_cached_end_orig",
+        "crt0_uncached_end_site_va",
+        "sbrk_uncached_end_site_va",
+        "bss_uncached_end_orig",
+        "cave_va"
+      ],
+      "type": "object"
+    },
     "MainBuildSpec": {
       "additionalProperties": false,
       "description": "Declarative descriptor for an individual `MAIN` firmware build belonging to a firmware train.",
@@ -919,6 +976,16 @@
         },
         "base_va": {
           "type": "string"
+        },
+        "bgo_retarget_anchors": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MainBgoRetargetAnchors"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "build_id": {
           "type": "string"

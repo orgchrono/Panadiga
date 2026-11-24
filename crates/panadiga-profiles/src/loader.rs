@@ -91,6 +91,7 @@ pub fn empty_bundle() -> ProfilesBundle {
         boards: BTreeMap::new(),
         models: BTreeMap::new(),
         blobs: BTreeMap::new(),
+        traps: None,
     }
 }
 
@@ -203,6 +204,7 @@ fn load_tree_raw(root: &Path, required: bool) -> Result<ProfilesBundle> {
         &mut b.models,
     )?;
     load_referenced_blobs(root, &mut b, required)?;
+    b.traps = crate::i18n::load_optional_traps_from_dir(root)?;
     Ok(b)
 }
 
@@ -210,6 +212,13 @@ fn load_tree_raw(root: &Path, required: bool) -> Result<ProfilesBundle> {
 pub fn load_bundle_from_dir(root: &Path) -> Result<ProfilesBundle> {
     let bundle = load_tree_raw(root, true)?;
     ensure_bundle_valid(&bundle)?;
+    if root.join("locales").is_dir() {
+        let locales = crate::i18n::load_locales_from_dir(root)?;
+        if let Err(failures) = crate::i18n::validate_locale_catalog(&locales, &bundle) {
+            let summary: Vec<String> = failures.into_iter().map(|f| f.to_string()).collect();
+            bail!("SSOT locale validation failed: {}", summary.join("; "));
+        }
+    }
     Ok(bundle)
 }
 

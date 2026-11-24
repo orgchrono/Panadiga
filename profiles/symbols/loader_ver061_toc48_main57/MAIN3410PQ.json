@@ -109,9 +109,9 @@
       "notes": "AV passthrough TBC E-E monitor gate sites (0x574F7B8C and 0x574F7C5C) in MAIN3410PQ."
     },
     {
-      "va": "0x5756EFD4",
-      "end_va": "0x5756F040",
-      "name": "bgo_native_8mb_table_setup",
+      "va": "0x57A51D78",
+      "end_va": "0x57A51E58",
+      "name": "bgo_factory_4mb_table_rodata",
       "abi": "internal",
       "abi_detail": {
         "params": [],
@@ -122,11 +122,11 @@
       "callers": [],
       "callees": [],
       "string_xrefs": [],
-      "mmio_xrefs": ["0x84130000", "0x843A0000", "0x84430000"],
+      "mmio_xrefs": ["0x84200000", "0x84380000", "0x843D0000"],
       "side_effects": "read_only",
       "side_effect_reasons": [],
-      "evidence_tier": "static_cfg_inferred",
-      "notes": "MAIN3410PQ natively compiles 8 MiB EH55 BGO bounds (0x84130000 @ 0x5756EFD4), requiring no struct nfd_ctrl relocation."
+      "evidence_tier": "mn103vm_verified",
+      "notes": "MAIN3410PQ is factory-compiled for 4 MiB Top-Boot (0x84200000, P1=3, P2=28) and retargeted to BGO_45SEC_8MB_0X84130000 via SSOT bgo_retarget_anchors (0x5756EFD4 was Trap #12 false positive)."
     },
     {
       "va": "0x5771ABFB",

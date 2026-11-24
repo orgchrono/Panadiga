@@ -103,6 +103,7 @@ pub const INTERNAL_OR_ALIAS_CLI_COMMANDS: &[&str] = &[
     "PROBE",
     "AUTOPROBE",
     "IR",
+    "FAST_ERASE",
 ];
 
 // ============================================================================

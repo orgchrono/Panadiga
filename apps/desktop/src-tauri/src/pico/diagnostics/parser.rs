@@ -190,6 +190,7 @@ pub fn parse_diagnostic_output(
     let mut findings = build_diagnostic_findings(raw_output);
     let mut progress_steps = Vec::new();
     let mut wire_events = Vec::new();
+    let mut boot_class = None;
     for line in raw_output.lines() {
         match parse_wire_line(line) {
             Some(PicoWireMessage::Progress(p)) => {
@@ -214,6 +215,55 @@ pub fn parse_diagnostic_output(
                     });
                 }
                 wire_events.push(formatted);
+            }
+            Some(PicoWireMessage::BootClass(bc)) => {
+                let severity = match bc.verdict.as_str() {
+                    "CLEAN_MAIN_OK" => "info",
+                    "BGO_NFROM_FAULT" | "FPC_IC7501_MISMATCH" => "error",
+                    _ => "warning",
+                };
+                findings.push(DiagnosticFindingDto {
+                    code: format!("BOOT_CLASS_{}", bc.verdict),
+                    severity: severity.to_string(),
+                    summary: format!(
+                        "@P7501_BOOT_CLASS {} (MAIN {}, avout_ok={}, fpc_err={}, bgo_err={})",
+                        bc.verdict,
+                        bc.build,
+                        u8::from(bc.avout_ok),
+                        bc.fpc_err,
+                        bc.bgo_err
+                    ),
+                    detail: line.trim().to_string(),
+                });
+                wire_events.push(format!(
+                    "BOOT_CLASS (verdict={} build={} avout_ok={} fpc_err={} bgo_err={})",
+                    bc.verdict,
+                    bc.build,
+                    u8::from(bc.avout_ok),
+                    bc.fpc_err,
+                    bc.bgo_err
+                ));
+                boot_class = Some(bc);
+            }
+            Some(PicoWireMessage::TbusAudit(ta)) => {
+                findings.push(DiagnosticFindingDto {
+                    code: "TBUS_AUDIT".to_string(),
+                    severity: if ta.br_rejected > 0 || ta.nak7f > 0 {
+                        "error"
+                    } else {
+                        "info"
+                    }
+                    .to_string(),
+                    summary: format!(
+                        "@P7501_TBUS_AUDIT frames={} br_rejected={} nak7f={}",
+                        ta.frames, ta.br_rejected, ta.nak7f
+                    ),
+                    detail: line.trim().to_string(),
+                });
+                wire_events.push(format!(
+                    "TBUS_AUDIT (frames={} br_rejected={} nak7f={})",
+                    ta.frames, ta.br_rejected, ta.nak7f
+                ));
             }
             _ => {}
         }
@@ -295,5 +345,6 @@ pub fn parse_diagnostic_output(
         ident_loader: ident_frame.as_ref().map(|id| id.loader.clone()),
         progress_steps,
         wire_events,
+        boot_class,
     }
 }

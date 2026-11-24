@@ -184,6 +184,8 @@ export interface SdUnbrickKitRequestDto {
   allow_target_mismatch?: boolean;
   sata_bridge_reset_fix?: boolean;
   sata_bridge_stage2_boot?: boolean;
+  main_bgo_retarget?: boolean;
+  portao4_self_unpack?: boolean;
 }
 
 export interface SdUnbrickKitReport {
@@ -197,6 +199,7 @@ export interface SdUnbrickKitReport {
   hdd_capacity_applied: string | null;
   sata_bridge_reset_fix_applied?: boolean;
   sata_bridge_stage2_boot_applied?: boolean;
+  portao4_self_unpack_applied?: boolean;
   digadiag_path: string;
   digadiag_sha256: string;
   pana_sd_path: string | null;

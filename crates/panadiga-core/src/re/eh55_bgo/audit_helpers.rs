@@ -5,8 +5,10 @@
 use std::collections::BTreeMap;
 
 use anyhow::{Result, bail};
+use serde::{Deserialize, Serialize};
 
 use crate::constants::{AM34_EH55_FLASH_BGO_BASE, AM34_FLASH_SIZE, AM34_FLASH_UNCACHED_BASE};
+use crate::crypto::codec::extract_c_ascii;
 
 use super::{
     EH55_BGO_EXPECTED_P2_COUNT, EH55_BGO_FIRST_SA, EH55_BGO_LAST_SA, EH55_BGO_MAX_PID,
@@ -208,6 +210,17 @@ pub fn eval_bgo_migration_target(buf: &[u8], off: usize) -> u16 {
     }
 }
 
+/// Decodes the 4-bit status nibble of a BGO Partition-1 (`0xF101`) L2P slot (`8 == valid`).
+pub(crate) fn p1_slot_state(b: &[u8], s: usize, t2: u16) -> u8 {
+    if t2 == 0 {
+        return 0;
+    }
+    (((b[3] >> s) & 1) << 3)
+        | (((b[2] >> s) & 1) << 2)
+        | (((b[1] >> s) & 1) << 1)
+        | ((b[0] >> s) & 1)
+}
+
 /// Parses active L2P page-to-slot mappings across all `0xF101` BGO Partition-1 sectors in `geom`.
 pub fn parse_bgo_l2p_with_geometry(
     nor: &[u8],
@@ -236,15 +249,7 @@ pub fn parse_bgo_l2p_with_geometry(
                 let soff = off + 4 + s * 0x24;
                 let tid = read_le_u16(nor, soff);
                 let t2 = read_le_u16(nor, soff + 2);
-                let st = if t2 == 0 {
-                    0u8
-                } else {
-                    (((b[3] >> s) & 1) << 3)
-                        | (((b[2] >> s) & 1) << 2)
-                        | (((b[1] >> s) & 1) << 1)
-                        | ((b[0] >> s) & 1)
-                };
-                if st == 8 {
+                if p1_slot_state(b, s, t2) == 8 {
                     for i in 0..16u16 {
                         let w = read_le_u16(nor, soff + 4 + usize::from(i) * 2);
                         let pid = tid.wrapping_mul(16).wrapping_add(i);
@@ -285,7 +290,8 @@ pub fn verify_nor_one_to_zero_compatible(orig: &[u8], target: &[u8]) -> Result<u
     Ok(modified)
 }
 
-pub(super) fn read_bgo_page<'a>(
+/// Reads the live 512-byte BGO payload page for logical `pid` if both L2P and F2 tag match.
+pub(crate) fn read_bgo_page<'a>(
     nor_8mb: &'a [u8],
     l2p: &BTreeMap<u16, u16>,
     f2_bases: &BTreeMap<u16, usize>,
@@ -309,8 +315,135 @@ pub(super) fn read_bgo_page<'a>(
     nor_8mb.get(poff..poff + 0x200)
 }
 
+/// Decoded 16-byte NFD directory entry inside `PID 0x0F02..=0x0F04`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct NfdDirEntry {
+    pub dir_pid: u16,
+    pub slot_idx: usize,
+    pub name: String,
+    pub byte_size: u32,
+    pub start_pid: u16,
+}
+
+/// Collects valid `0xF2xx` Partition-2 sector bases (`fid -> flash_offset`) in `geom`.
+pub(crate) fn collect_f2_bases(
+    nor: &[u8],
+    geom: &BgoSectorGeometry,
+) -> Result<BTreeMap<u16, usize>> {
+    if nor.len() != geom.expected_flash_bytes {
+        bail!(
+            "Expected {}-byte NOR dump, got {}",
+            geom.expected_flash_bytes,
+            nor.len()
+        );
+    }
+    let mut f2_bases = BTreeMap::new();
+    let max_f2_word = 0xF200u16.saturating_add(geom.expected_p2_count as u16);
+    for sa in geom.first_sa..=geom.last_sa {
+        let base = geom.sector_offset(sa)?;
+        let w0 = read_le_u16(nor, base + 4);
+        let consistent = (0..4).all(|i| read_le_u16(nor, base + 4 + i * 4) == w0);
+        let zero_marker_ok = nor[base + 0x100..base + 0x200].iter().all(|&b| b == 0);
+        let mig_target = eval_bgo_migration_target(nor, base + 0x14);
+        if consistent
+            && zero_marker_ok
+            && (0xF201..=max_f2_word).contains(&w0)
+            && mig_target == 0xFFFF
+        {
+            let fid = w0 & 0xFF;
+            if f2_bases.insert(fid, base).is_some() {
+                bail!("Duplicate active Partition-2 sector ID 0xF2{fid:02X} at SA{sa}");
+            }
+        }
+    }
+    Ok(f2_bases)
+}
+
+/// Concatenates the 15 Primary NFD FAT pages (`0x0F07..=0x0F15`), failing closed if any is absent.
+pub(crate) fn read_primary_fat(
+    nor: &[u8],
+    l2p: &BTreeMap<u16, u16>,
+    f2_bases: &BTreeMap<u16, usize>,
+) -> Result<Vec<u8>> {
+    let mut fat = Vec::with_capacity(15 * 0x200);
+    for idx in 0..15u16 {
+        let fat_pid = 0x0F07 + idx;
+        let pg = read_bgo_page(nor, l2p, f2_bases, fat_pid)
+            .ok_or_else(|| anyhow::anyhow!("Missing BGO Primary FAT page 0x{fat_pid:04X}"))?;
+        fat.extend_from_slice(pg);
+    }
+    Ok(fat)
+}
+
+/// Scans `PID 0x0F02`, `0x0F03`, and `0x0F04` (`16` entries x `16` bytes) for `target_name`.
+#[must_use]
+pub fn find_nfd_dir_entry(
+    nor: &[u8],
+    l2p: &BTreeMap<u16, u16>,
+    f2_bases: &BTreeMap<u16, usize>,
+    target_name: &str,
+) -> Option<NfdDirEntry> {
+    for dir_pid in [0x0F02u16, 0x0F03, 0x0F04] {
+        let Some(dp) = read_bgo_page(nor, l2p, f2_bases, dir_pid) else {
+            continue;
+        };
+        for slot_idx in 0..16usize {
+            let ent = &dp[slot_idx * 16..(slot_idx + 1) * 16];
+            if ent[0] == 0 || ent[0] == 0xFF {
+                continue;
+            }
+            let name = extract_c_ascii(&ent[..8]);
+            if name == target_name {
+                return Some(NfdDirEntry {
+                    dir_pid,
+                    slot_idx,
+                    name,
+                    byte_size: u32::from_le_bytes([ent[8], ent[9], ent[10], ent[11]]),
+                    start_pid: read_le_u16(ent, 12),
+                });
+            }
+        }
+    }
+    None
+}
+
+/// Resolves the logical BGO page ID for `filename` at `page_index` by walking the Primary FAT.
+pub fn resolve_nfd_file_page_pid(
+    nor: &[u8],
+    geom: &BgoSectorGeometry,
+    filename: &str,
+    page_index: usize,
+) -> Result<u16> {
+    let l2p = parse_bgo_l2p_with_geometry(nor, geom)?;
+    let f2_bases = collect_f2_bases(nor, geom)?;
+    let entry = find_nfd_dir_entry(nor, &l2p, &f2_bases, filename)
+        .ok_or_else(|| anyhow::anyhow!("BGO NFD file '{filename}' not found in directory"))?;
+    let total_pages = (entry.byte_size as usize).div_ceil(0x200);
+    if page_index >= total_pages {
+        bail!(
+            "BGO NFD file '{filename}' page index {page_index} out of bounds (pages={total_pages}, size={})",
+            entry.byte_size
+        );
+    }
+    let fat = read_primary_fat(nor, &l2p, &f2_bases)?;
+    let mut cur = entry.start_pid;
+    for step in 0..page_index {
+        let off = usize::from(cur.saturating_sub(1)) * 2;
+        if cur == 0 || cur == 0xFFFF || cur == 0xFFED || off + 2 > fat.len() {
+            bail!("Broken BGO FAT chain for '{filename}' at hop {step}: cur=0x{cur:04X}");
+        }
+        cur = read_le_u16(&fat, off);
+    }
+    if cur == 0 || cur == 0xFFFF || cur == 0xFFED {
+        bail!("Invalid resolved PID 0x{cur:04X} for '{filename}' page {page_index}");
+    }
+    Ok(cur)
+}
+
 #[cfg(test)]
 mod tests {
+    use std::path::PathBuf;
+
     use super::*;
 
     #[test]
@@ -332,5 +465,28 @@ mod tests {
         let l2p = parse_eh55_bgo_l2p(&nor).unwrap();
         assert_eq!(l2p.get(&0x0000), Some(&0x0204));
         assert_eq!(l2p.get(&0x0010), Some(&0x0306));
+    }
+
+    #[test]
+    fn resolve_nfd_file_page_pid_walks_repaired_nor_fat_chains() {
+        let nor_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../firmware_and_images/eh55_nor_8mb_ic5001_repaired.bin");
+        if !nor_path.is_file() {
+            return;
+        }
+        let nor = std::fs::read(&nor_path).unwrap();
+        let geom = BgoSectorGeometry::eh55_default();
+        assert_eq!(
+            resolve_nfd_file_page_pid(&nor, &geom, "config1", 0).unwrap(),
+            0x0018
+        );
+        assert_eq!(
+            resolve_nfd_file_page_pid(&nor, &geom, "config1", 9).unwrap(),
+            0x000C
+        );
+        assert_eq!(
+            resolve_nfd_file_page_pid(&nor, &geom, "update", 0).unwrap(),
+            0x000D
+        );
     }
 }

@@ -20,18 +20,36 @@ def test_collect_arsenal_matches_live_workspace_entities() -> None:
     assert req_int(counts, "mcp_tools") == 26
     assert req_int(counts, "mcp_resource_families") >= 9
     assert req_int(counts, "mcp_prompts") == 4
-    assert req_int(counts, "skills") == 35
+    assert req_int(counts, "skills") == 29
     assert req_int(counts, "agents") == 6
 
     mcp_tools = [str(x) for x in as_list(inv["mcp_tools"])]
     assert "panadiga_symbol_lookup" in mcp_tools
+    pico_codecs = [str(x) for x in as_list(inv["pico_c11_codecs"])]
+    assert "firmware/pico-p7501/diag/p7501_boottrace_codec.c" in pico_codecs
+    assert "firmware/pico-p7501/diag/p7501_tbus_codec.c" in pico_codecs
+    openos_mods = [str(x) for x in as_list(inv["openos_modules"])]
+    assert "firmware/panadiga-openos/drivers/avdd_iic_video.c" in openos_mods
+    shell_cmds = set(str(x) for x in as_list(inv["openos_shell_commands"]))
+    assert {
+        "status",
+        "video br",
+        "video ec",
+        "video probe",
+        "dac on",
+        "dac off",
+        "colorbar on",
+        "colorbar off",
+        "provision",
+    }.issubset(shell_cmds)
     skill_names = {str(as_dict(s)["name"]) for s in as_list(inv["skills"])}
     assert {
         "panadiga-contracts-stream-and-journal",
-        "panadiga-pico-heartbeat-and-guided-ops",
+        "panadiga-bench-automation-and-headless",
         "panadiga-repo-sanitization-and-commit-sync",
-        "panadiga-tool-arsenal-catalog",
-        "panadiga-ssot-builder-and-validation",
+        "panadiga-device-onboarding",
+        "panadiga-opensource-firmware-dev",
+        "panadiga-functional-math-and-patterns",
         "panadiga-anti-trap-geometry-verification",
         "panadiga-firmware-forensic-atlas",
     }.issubset(skill_names)

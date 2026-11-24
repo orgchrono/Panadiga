@@ -190,6 +190,48 @@ fn validate_main_build_spec(train_id: &str, build: &MainBuildSpec, tr: &mut Chec
     for site in &build.av_passthrough_sites {
         validate_patch_site(&owner, build.base_va, build.unpacked_size, site, tr);
     }
+    if let Some(a) = &build.bgo_retarget_anchors {
+        let (f_cap, f_va) = parse_bgo_geometry_tag(&a.factory_geometry_id);
+        let (t_cap, t_va) = parse_bgo_geometry_tag(&a.target_geometry_id);
+        tr.check(f_cap.is_some() && f_va.is_some(), || {
+            format!(
+                "{owner}: invalid bgo_retarget_anchors.factory_geometry_id '{}'",
+                a.factory_geometry_id
+            )
+        });
+        tr.check(t_cap.is_some() && t_va.is_some(), || {
+            format!(
+                "{owner}: invalid bgo_retarget_anchors.target_geometry_id '{}'",
+                a.target_geometry_id
+            )
+        });
+        for (field, va) in [
+            ("nfd_text_base_va", a.nfd_text_base_va),
+            ("rodata_table_base_va", a.rodata_table_base_va),
+            ("bss_cached_end_site_va", a.bss_cached_end_site_va),
+            ("crt0_uncached_end_site_va", a.crt0_uncached_end_site_va),
+            ("sbrk_uncached_end_site_va", a.sbrk_uncached_end_site_va),
+            ("cave_va", a.cave_va),
+        ] {
+            let in_bounds = va
+                .checked_sub(build.base_va)
+                .and_then(|off| off.checked_add(4))
+                .is_some_and(|end| end <= build.unpacked_size);
+            tr.check(in_bounds, || {
+                format!("{owner}: bgo_retarget_anchors.{field} 0x{va:08X} out of MAIN bounds")
+            });
+        }
+        tr.check(
+            a.bss_reserved_base_va > a.bss_cached_end_orig
+                && (a.bss_reserved_base_va & 0x0FFF) == 0,
+            || {
+                format!(
+                    "{owner}: bgo_retarget_anchors.bss_reserved_base_va 0x{:08X} must be 4 KiB aligned and > bss_cached_end_orig 0x{:08X}",
+                    a.bss_reserved_base_va, a.bss_cached_end_orig
+                )
+            },
+        );
+    }
 }
 
 pub(super) fn validate_train_patch_specs(trn: &FirmwareTrainProfile, tr: &mut CheckTracker) {

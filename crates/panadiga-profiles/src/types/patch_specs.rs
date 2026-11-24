@@ -164,6 +164,44 @@ pub struct Stage2BootSpec {
     pub symbols: Stage2BootSymbolsSpec,
 }
 
+/// Declarative virtual-address and RAM/cave anchors for universal 4 MiB -> 8 MiB BGO retargeting.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct MainBgoRetargetAnchors {
+    pub factory_geometry_id: String,
+    pub target_geometry_id: String,
+    #[serde(with = "hex_u32")]
+    #[schemars(with = "String")]
+    pub nfd_text_base_va: u32,
+    #[serde(with = "hex_u32")]
+    #[schemars(with = "String")]
+    pub rodata_table_base_va: u32,
+    #[serde(with = "hex_u32")]
+    #[schemars(with = "String")]
+    pub bss_nfd_ctrl_base_va: u32,
+    #[serde(with = "hex_u32")]
+    #[schemars(with = "String")]
+    pub bss_reserved_base_va: u32,
+    #[serde(with = "hex_u32")]
+    #[schemars(with = "String")]
+    pub bss_cached_end_site_va: u32,
+    #[serde(with = "hex_u32")]
+    #[schemars(with = "String")]
+    pub bss_cached_end_orig: u32,
+    #[serde(with = "hex_u32")]
+    #[schemars(with = "String")]
+    pub crt0_uncached_end_site_va: u32,
+    #[serde(with = "hex_u32")]
+    #[schemars(with = "String")]
+    pub sbrk_uncached_end_site_va: u32,
+    #[serde(with = "hex_u32")]
+    #[schemars(with = "String")]
+    pub bss_uncached_end_orig: u32,
+    #[serde(with = "hex_u32")]
+    #[schemars(with = "String")]
+    pub cave_va: u32,
+}
+
 /// Declarative descriptor for an individual `MAIN` firmware build belonging to a firmware train.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -192,6 +230,8 @@ pub struct MainBuildSpec {
     pub native_bgo_flash_base_va: Option<u32>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub supports_bgo_retarget_to: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bgo_retarget_anchors: Option<MainBgoRetargetAnchors>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub sata_bridge_reset_spec: Option<SataBridgeResetSpec>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]

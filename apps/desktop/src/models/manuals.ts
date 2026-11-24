@@ -3,6 +3,8 @@
  * Matches src/manuals.rs & src/constants.rs
  */
 
+import type { PicoBootClassSummary, PicoTbusAuditSummary } from './pico';
+
 export interface SearchMatchSnippet {
   term: string;
   page: number;
@@ -88,4 +90,6 @@ export interface Am34BootLogReport {
   notes: string[];
   diagnosis?: string;
   boot_stages?: string[];
+  boot_class?: PicoBootClassSummary | null;
+  tbus_audit?: PicoTbusAuditSummary | null;
 }

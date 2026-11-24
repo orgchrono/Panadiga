@@ -12,15 +12,10 @@
 use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
 
-use super::bgo_unbrick::{PROG061_BASE_VA, PROG061_EXPECTED_SIZE};
-use super::main_passthrough::{EXPECTED_MAIN_3410PQ_SIZE, MAIN_BASE_VA};
-use super::patch_spec::{
-    PatchApplyAction, PatchSpec, apply_patch_specs_in_place, classify_patch_site,
-};
-use super::region_compat::EXPECTED_MAIN_3060NP_SIZE;
+use super::patch_spec::{PatchSpec, classify_patch_site};
 use super::ssot_patches::{
-    apply_ssot_sata_reset_fix_in_place, find_main_build_by_size, find_prog_sata_reset_spec,
-    inspect_ssot_sata_reset_site,
+    apply_ssot_sata_reset_fix_in_place, find_main_build_by_id, find_main_build_by_size,
+    find_prog_sata_reset_spec, inspect_ssot_sata_reset_site,
 };
 
 /// File offset inside raw `PROG061` (`262,144 B`, `VA 0x5041D928`) of the `2000 us` post-reset wait.
@@ -58,39 +53,6 @@ pub const PATCH_MAIN3410PQ_SATA_BRIDGE_RESET_WAIT: [u8; 11] = [
 pub const SATA_BRIDGE_STATE_FACTORY_2MS: &str = "FACTORY_2MS";
 pub const SATA_BRIDGE_STATE_WAIT_1000MS: &str = "SATA_BRIDGE_1000MS";
 pub const SATA_BRIDGE_STATE_MISMATCH: &str = "UNKNOWN_OR_MISMATCH";
-
-const SPEC_PROG061_SATA_BRIDGE_RESET_WAIT: PatchSpec<'static> = PatchSpec {
-    name: "prog061_sata_bridge_reset_wait",
-    description: "PROG061 FUN_5041d8e4 post-RESET- 2 ms udelay -> 1000 ms RTOS wait (0x50431303)",
-    va: PROG061_BASE_VA + OFF_PROG061_SATA_BRIDGE_RESET_WAIT as u32,
-    base_va: PROG061_BASE_VA,
-    expect: &ORIG_PROG061_SATA_BRIDGE_RESET_WAIT,
-    replace: &PATCH_PROG061_SATA_BRIDGE_RESET_WAIT,
-    required_len: Some(PROG061_EXPECTED_SIZE),
-    input_sha256: None,
-};
-
-const SPEC_MAIN3060NP_SATA_BRIDGE_RESET_WAIT: PatchSpec<'static> = PatchSpec {
-    name: "main3060np_sata_bridge_reset_wait",
-    description: "MAIN3060NP FUN_5711226E post-RESET- 2 ms udelay -> 1000 ms RTOS wait (0x574E6BBD)",
-    va: MAIN_BASE_VA + OFF_MAIN3060NP_SATA_BRIDGE_RESET_WAIT as u32,
-    base_va: MAIN_BASE_VA,
-    expect: &ORIG_MAIN3060NP_SATA_BRIDGE_RESET_WAIT,
-    replace: &PATCH_MAIN3060NP_SATA_BRIDGE_RESET_WAIT,
-    required_len: Some(EXPECTED_MAIN_3060NP_SIZE),
-    input_sha256: None,
-};
-
-const SPEC_MAIN3410PQ_SATA_BRIDGE_RESET_WAIT: PatchSpec<'static> = PatchSpec {
-    name: "main3410pq_sata_bridge_reset_wait",
-    description: "MAIN3410PQ FUN_5710A98C post-RESET- 2 ms udelay -> 1000 ms RTOS wait (0x574DF538)",
-    va: MAIN_BASE_VA + OFF_MAIN3410PQ_SATA_BRIDGE_RESET_WAIT as u32,
-    base_va: MAIN_BASE_VA,
-    expect: &ORIG_MAIN3410PQ_SATA_BRIDGE_RESET_WAIT,
-    replace: &PATCH_MAIN3410PQ_SATA_BRIDGE_RESET_WAIT,
-    required_len: Some(EXPECTED_MAIN_3410PQ_SIZE),
-    input_sha256: None,
-};
 
 /// Mode selecting factory `2 ms` wait vs SATA-bridge `1000 ms` post-reset wait.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -131,17 +93,19 @@ pub(crate) fn inspect_site(
     })
 }
 
-fn apply_site(buf: &mut [u8], spec: &PatchSpec<'_>, mode: SataBridgeResetFixMode) -> Result<()> {
-    let action = match mode {
-        SataBridgeResetFixMode::Wait1000Ms => PatchApplyAction::ApplyReplace,
-        SataBridgeResetFixMode::FactoryOriginal => PatchApplyAction::RestoreExpect,
-    };
-    apply_patch_specs_in_place(buf, &[(spec, action)])
+fn find_main_reset_spec(
+    build_id: &str,
+) -> Result<&'static crate::ssot::registry::SataBridgeResetSpec> {
+    let (_, build) = find_main_build_by_id(build_id)
+        .with_context(|| format!("No SSOT main_build entry for '{build_id}'"))?;
+    build.sata_bridge_reset_spec.as_ref().with_context(|| {
+        format!("MAIN{build_id} SSOT entry does not define sata_bridge_reset_spec")
+    })
 }
 
 /// Inspects `PROG061` `0x5041D928` for factory `2 ms` vs `SATA_BRIDGE_1000MS` (`fail-closed` bounds).
 pub fn inspect_prog061_sata_bridge_reset_site(buf: &[u8]) -> Result<SataBridgeResetSiteStatus> {
-    inspect_site("PROG061", buf, &SPEC_PROG061_SATA_BRIDGE_RESET_WAIT)
+    inspect_prog_sata_bridge_reset_site_for_profile(buf, "ver061")
 }
 
 /// Inspects an unpacked `PROG` binary against the SSOT SATA-bridge reset spec for `loader_profile_key`.
@@ -160,12 +124,12 @@ pub fn inspect_prog_sata_bridge_reset_site_for_profile(
 
 /// Inspects unpacked `MAIN3060NP` `0x571122B2` for factory `2 ms` vs `SATA_BRIDGE_1000MS`.
 pub fn inspect_main3060np_sata_bridge_reset_site(buf: &[u8]) -> Result<SataBridgeResetSiteStatus> {
-    inspect_site("MAIN3060NP", buf, &SPEC_MAIN3060NP_SATA_BRIDGE_RESET_WAIT)
+    inspect_ssot_sata_reset_site(buf, find_main_reset_spec("3060NP")?)
 }
 
 /// Inspects unpacked `MAIN3410PQ` `0x5710A9D0` (Brazilian `PAL-M`) for factory `2 ms` vs `SATA_BRIDGE_1000MS`.
 pub fn inspect_main3410pq_sata_bridge_reset_site(buf: &[u8]) -> Result<SataBridgeResetSiteStatus> {
-    inspect_site("MAIN3410PQ", buf, &SPEC_MAIN3410PQ_SATA_BRIDGE_RESET_WAIT)
+    inspect_ssot_sata_reset_site(buf, find_main_reset_spec("3410PQ")?)
 }
 
 /// Inspects any SSOT-registered `MAIN` binary (`3060NP`, `3410PQ`, etc.) for factory `2 ms` vs `SATA_BRIDGE_1000MS`.
@@ -190,7 +154,7 @@ pub fn apply_prog061_sata_bridge_reset_fix_in_place(
     buf: &mut [u8],
     mode: SataBridgeResetFixMode,
 ) -> Result<()> {
-    apply_site(buf, &SPEC_PROG061_SATA_BRIDGE_RESET_WAIT, mode)
+    apply_prog_sata_bridge_reset_fix_for_profile_in_place(buf, "ver061", mode)
 }
 
 /// Applies or restores the SSOT SATA-bridge reset wait on a `PROG` binary for `loader_profile_key`.
@@ -213,7 +177,7 @@ pub fn apply_main3060np_sata_bridge_reset_fix_in_place(
     buf: &mut [u8],
     mode: SataBridgeResetFixMode,
 ) -> Result<()> {
-    apply_site(buf, &SPEC_MAIN3060NP_SATA_BRIDGE_RESET_WAIT, mode)
+    apply_ssot_sata_reset_fix_in_place(buf, find_main_reset_spec("3060NP")?, mode)
 }
 
 /// Applies or restores the `1000 ms` SATA-bridge reset wait in `MAIN3410PQ` (`fail-closed`).
@@ -221,7 +185,7 @@ pub fn apply_main3410pq_sata_bridge_reset_fix_in_place(
     buf: &mut [u8],
     mode: SataBridgeResetFixMode,
 ) -> Result<()> {
-    apply_site(buf, &SPEC_MAIN3410PQ_SATA_BRIDGE_RESET_WAIT, mode)
+    apply_ssot_sata_reset_fix_in_place(buf, find_main_reset_spec("3410PQ")?, mode)
 }
 
 /// Applies or restores the `1000 ms` SATA-bridge reset wait on any SSOT-registered `MAIN` build.
@@ -249,7 +213,10 @@ mod tests {
     use std::path::PathBuf;
 
     use crate::nvram::calculate_hashes;
+    use crate::re::bgo_unbrick::PROG061_EXPECTED_SIZE;
+    use crate::re::main_passthrough::{EXPECTED_MAIN_3410PQ_SIZE, MAIN_BASE_VA};
     use crate::re::mn10300_emu::Mn103Vm;
+    use crate::re::region_compat::EXPECTED_MAIN_3060NP_SIZE;
 
     use super::*;
 

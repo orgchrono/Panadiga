@@ -543,6 +543,20 @@
       "supports_bgo_retarget_to": [
         "BGO_45SEC_8MB_0X84130000"
       ],
+      "bgo_retarget_anchors": {
+        "factory_geometry_id": "BGO_35SEC_4MB_0X84200000",
+        "target_geometry_id": "BGO_45SEC_8MB_0X84130000",
+        "nfd_text_base_va": "0x574A68E9",
+        "rodata_table_base_va": "0x579ED2CC",
+        "bss_nfd_ctrl_base_va": "0x52FE6CE0",
+        "bss_reserved_base_va": "0x531B8000",
+        "bss_cached_end_site_va": "0x574B61B3",
+        "bss_cached_end_orig": "0x531B7774",
+        "crt0_uncached_end_site_va": "0x57000B08",
+        "sbrk_uncached_end_site_va": "0x5777DE0F",
+        "bss_uncached_end_orig": "0x931B7DF8",
+        "cave_va": "0x57000320"
+      },
       "sata_bridge_reset_spec": {
         "target_name": "MAIN3060NP",
         "base_va": "0x57000000",
@@ -573,10 +587,26 @@
         "DMR-EH55"
       ],
       "chassis_family": "M6930LB",
-      "native_bgo_geometry_id": "BGO_45SEC_8MB_0X84130000",
-      "native_bgo_detect_va": "0x5756EFD4",
-      "native_bgo_flash_base_va": "0x84130000",
-      "supports_bgo_retarget_to": [],
+      "native_bgo_geometry_id": "BGO_35SEC_4MB_0X84200000",
+      "native_bgo_detect_va": "0x57A51D78",
+      "native_bgo_flash_base_va": "0x84200000",
+      "supports_bgo_retarget_to": [
+        "BGO_45SEC_8MB_0X84130000"
+      ],
+      "bgo_retarget_anchors": {
+        "factory_geometry_id": "BGO_35SEC_4MB_0X84200000",
+        "target_geometry_id": "BGO_45SEC_8MB_0X84130000",
+        "nfd_text_base_va": "0x5749EE33",
+        "rodata_table_base_va": "0x57A51CF0",
+        "bss_nfd_ctrl_base_va": "0x530FB180",
+        "bss_reserved_base_va": "0x534E4000",
+        "bss_cached_end_site_va": "0x574AE707",
+        "bss_cached_end_orig": "0x534E2E44",
+        "crt0_uncached_end_site_va": "0x57000B08",
+        "sbrk_uncached_end_site_va": "0x577D909B",
+        "bss_uncached_end_orig": "0x934E34C8",
+        "cave_va": "0x57000320"
+      },
       "sata_bridge_reset_spec": {
         "target_name": "MAIN3410PQ",
         "base_va": "0x57000000",

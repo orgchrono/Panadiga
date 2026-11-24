@@ -77,6 +77,7 @@ pub struct SdUnbrickKitRequest {
     pub sata_bridge_reset_fix: bool,
     pub sata_bridge_stage2_boot: bool,
     pub main_bgo_retarget: bool,
+    pub portao4_self_unpack: bool,
 }
 
 /// High-level SD recovery kit preset distinguishing standard builds from the hardened `PANAMON1` `ver0.61` kit.
@@ -135,6 +136,7 @@ impl SdUnbrickKitRequest {
             sata_bridge_reset_fix: false,
             sata_bridge_stage2_boot: false,
             main_bgo_retarget: false,
+            portao4_self_unpack: false,
         }
     }
 }
@@ -166,6 +168,8 @@ pub struct SdUnbrickKitReport {
     pub sata_bridge_stage2_boot_applied: bool,
     #[serde(default)]
     pub main_bgo_retarget_applied: bool,
+    #[serde(default)]
+    pub portao4_self_unpack_applied: bool,
     pub digadiag_path: String,
     pub digadiag_sha256: String,
     pub pana_sd_path: Option<String>,

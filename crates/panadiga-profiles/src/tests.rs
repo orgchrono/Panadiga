@@ -17,11 +17,11 @@ use crate::types::{
     AddressReloc, AuthorizationMode, BinaryPatchSiteSpec, BoardProfile, BusWindow, BytePatchEntry,
     Capability, ClaimEvidence, EepromChipProfile, EepromFunction, EvidenceSource, EvidenceTier,
     FirmwareTrainProfile, FlashChipProfile, FlashHwProtect, FlashJedecId, FlashRwBank,
-    FlashSectorBank, FrmContainerSpec, LAB_OVERRIDE_DISCLAIMER_ACK, LabOverride, MainBuildSpec,
-    MediaFormatProfile, ModelClaims, ModelProfileManifest, NorLayoutProfile, NorRegion,
-    NorRegionKind, NorRegionPolicy, OffsetRange, ProfilesBundle, ProgBgoRetargetSpec,
-    RegionSignature, RuntimeFingerprint, SataBridgeResetSpec, SocCoreProfile, SocProfile,
-    Stage2BootSpec, Stage2BootSymbolsSpec,
+    FlashSectorBank, FrmContainerSpec, LAB_OVERRIDE_DISCLAIMER_ACK, LabOverride,
+    MainBgoRetargetAnchors, MainBuildSpec, MediaFormatProfile, ModelClaims, ModelProfileManifest,
+    NorLayoutProfile, NorRegion, NorRegionKind, NorRegionPolicy, OffsetRange, ProfilesBundle,
+    ProgBgoRetargetSpec, RegionSignature, RuntimeFingerprint, SataBridgeResetSpec, SocCoreProfile,
+    SocProfile, Stage2BootSpec, Stage2BootSymbolsSpec,
 };
 use crate::validate::{AM34_LETHAL_MMIO_ADDR, REQUIRED_LVTTL_MV, validate_bundle};
 
@@ -894,6 +894,20 @@ fn universal_patch_stage2_and_main_build_specs_enforce_bounds_ipl_and_geometry()
         native_bgo_detect_va: Some(0x5756_EFD4),
         native_bgo_flash_base_va: Some(0x8413_0000),
         supports_bgo_retarget_to: Vec::new(),
+        bgo_retarget_anchors: Some(MainBgoRetargetAnchors {
+            factory_geometry_id: "BGO_35SEC_4MB_0X84200000".to_string(),
+            target_geometry_id: "BGO_45SEC_8MB_0X84130000".to_string(),
+            nfd_text_base_va: 0x5740_1000,
+            rodata_table_base_va: 0x5780_1000,
+            bss_nfd_ctrl_base_va: 0x5301_0000,
+            bss_reserved_base_va: 0x534F_0000,
+            bss_cached_end_site_va: 0x5741_1000,
+            bss_cached_end_orig: 0x534E_0000,
+            crt0_uncached_end_site_va: 0x5700_1000,
+            sbrk_uncached_end_site_va: 0x5770_1000,
+            bss_uncached_end_orig: 0x934E_0000,
+            cave_va: 0x5700_0400,
+        }),
         sata_bridge_reset_spec: None,
         av_passthrough_sites: Vec::new(),
         unpacked_sha256: Some(
@@ -915,6 +929,12 @@ fn universal_patch_stage2_and_main_build_specs_enforce_bounds_ipl_and_geometry()
         .unwrap()
         .norfrom_fvu_base_va = 0x8401_0000;
     bad_trn.main_builds[0].native_bgo_flash_base_va = Some(0x8420_0000);
+    let bad_anc = bad_trn.main_builds[0]
+        .bgo_retarget_anchors
+        .as_mut()
+        .unwrap();
+    bad_anc.bss_reserved_base_va = 0x534F_0004;
+    bad_anc.nfd_text_base_va = 0x5800_0000;
     bad_trn.main_builds[0]
         .av_passthrough_sites
         .push(BinaryPatchSiteSpec {
@@ -934,5 +954,97 @@ fn universal_patch_stage2_and_main_build_specs_enforce_bounds_ipl_and_geometry()
         rep.errors
             .iter()
             .any(|e| e.contains("native_bgo_flash_base_va"))
+    );
+    assert!(
+        rep.errors
+            .iter()
+            .any(|e| e.contains("bss_reserved_base_va"))
+    );
+    assert!(rep.errors.iter().any(|e| e.contains("out of MAIN bounds")));
+}
+
+#[test]
+fn locales_catalog_matches_traps_and_interpolates_bilingual() {
+    let profiles_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../profiles");
+    let bundle = load_bundle_from_dir(&profiles_dir).expect("load real profiles");
+    let catalog = crate::i18n::load_locales_from_dir(&profiles_dir).expect("load locales");
+    crate::i18n::validate_locale_catalog(&catalog, &bundle)
+        .expect("real profiles locales must pass parity, no-hex, and trap coverage");
+
+    let mut params = BTreeMap::new();
+    params.insert(
+        "factory_geometry_id",
+        "BGO_35SEC_4MB_0X84200000".to_string(),
+    );
+    params.insert("target_geometry_id", "BGO_45SEC_8MB_0X84130000".to_string());
+    params.insert("base_va", "0x84130000".to_string());
+    params.insert("sector_count", "45".to_string());
+
+    let pt = catalog
+        .render(
+            crate::i18n::LocaleId::PtBr,
+            "train.loader_ver061_toc48_main57.bgo_retarget_notes",
+            &params,
+        )
+        .expect("pt-BR render");
+    let en = catalog
+        .render(
+            crate::i18n::LocaleId::EnUs,
+            "train.loader_ver061_toc48_main57.bgo_retarget_notes",
+            &params,
+        )
+        .expect("en-US render");
+    assert!(pt.contains("45 setores uniformes"));
+    assert!(en.contains("45 uniform 64 KiB sectors"));
+
+    params.remove("sector_count");
+    assert!(
+        catalog
+            .render(
+                crate::i18n::LocaleId::EnUs,
+                "train.loader_ver061_toc48_main57.bgo_retarget_notes",
+                &params,
+            )
+            .is_err()
+    );
+}
+
+#[test]
+fn validate_locale_catalog_rejects_mismatch_hardcoded_hex_and_missing_trap() {
+    let profiles_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../profiles");
+    let bundle = load_bundle_from_dir(&profiles_dir).expect("load real profiles");
+    let mut bad = crate::i18n::load_locales_from_dir(&profiles_dir).expect("load locales");
+
+    bad.en_us.entries.insert(
+        "train.loader_ver061_toc48_main57.bgo_retarget_notes".to_string(),
+        "Retarget {factory_geometry_id} -> {target_geometry_id} at {wrong_var}".to_string(),
+    );
+    bad.pt_br.entries.insert(
+        "trap.TRAP_BGO_4MB_VS_8MB.preventive_guard".to_string(),
+        "Hardcoded 0x84200000 inside {guard_paths}".to_string(),
+    );
+    bad.en_us.entries.remove("trap.TRAP_BGO_4MB_VS_8MB.title");
+
+    let failures = crate::i18n::validate_locale_catalog(&bad, &bundle)
+        .expect_err("tampered catalog must fail validation");
+    assert!(
+        failures
+            .iter()
+            .any(|f| f.rule == "locale_placeholder_parity"),
+        "expected locale_placeholder_parity in {failures:?}"
+    );
+    assert!(
+        failures
+            .iter()
+            .any(|f| f.rule == "locale_no_hardcoded_hex_address"),
+        "expected locale_no_hardcoded_hex_address in {failures:?}"
+    );
+    assert!(
+        failures.iter().any(|f| f.rule == "locale_key_parity"),
+        "expected locale_key_parity in {failures:?}"
+    );
+    assert!(
+        failures.iter().any(|f| f.rule == "locale_trap_coverage"),
+        "expected locale_trap_coverage in {failures:?}"
     );
 }

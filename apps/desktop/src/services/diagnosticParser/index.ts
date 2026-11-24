@@ -4,7 +4,7 @@
  */
 
 import { PICO_FLOATING_PIN_VOLTS_THRESHOLD } from '@/constants';
-import type { PicoDiagnosticResult } from '@/models/pico';
+import type { DiagnosticFinding, PicoDiagnosticResult } from '@/models/pico';
 import { extractTelemetryFindings } from './findingsRules';
 import {
   parseCapturedBytes,
@@ -15,9 +15,49 @@ import {
   parseTransitionRows,
   parseVddVolts,
   parseWireProtocolSummary,
+  type ParsedWireProtocolSummary,
 } from './lineParsers';
 
 export { extractTelemetryFindings, parseP7501DumpBytes };
+
+const WIRE_FLAG_ZERO = 0;
+
+function bootClassSeverity(verdict: string): DiagnosticFinding['severity'] {
+  if (verdict === 'CLEAN_MAIN_OK') {
+    return 'info';
+  }
+  if (verdict === 'BGO_NFROM_FAULT' || verdict === 'FPC_IC7501_MISMATCH') {
+    return 'error';
+  }
+  return 'warning';
+}
+
+function makeBootClassFinding(bc: NonNullable<ParsedWireProtocolSummary['bootClass']>): DiagnosticFinding {
+  return {
+    code: `BOOT_CLASS_${bc.verdict}`,
+    severity: bootClassSeverity(bc.verdict),
+    summary: `@P7501_BOOT_CLASS ${bc.verdict} (MAIN ${bc.build}, avout_ok=${bc.avout_ok ? '1' : '0'}, fpc_err=${bc.fpc_err}, bgo_err=${bc.bgo_err})`,
+    detail: `stage2=${bc.stage2 ? '1' : '0'} | op7f=${bc.op7f.join(',') || 'NONE'}`,
+  };
+}
+
+function makeTbusAuditFinding(ta: NonNullable<ParsedWireProtocolSummary['tbusAudit']>): DiagnosticFinding {
+  const sev: DiagnosticFinding['severity'] =
+    ta.br_rejected > WIRE_FLAG_ZERO || ta.nak7f > WIRE_FLAG_ZERO ? 'error' : 'info';
+  return {
+    code: 'TBUS_AUDIT',
+    severity: sev,
+    summary: `@P7501_TBUS_AUDIT frames=${ta.frames} br_rejected=${ta.br_rejected} nak7f=${ta.nak7f}`,
+    detail: `ops=${ta.ops.join(',') || 'NONE'}`,
+  };
+}
+
+function buildWireFindings(wire: ParsedWireProtocolSummary): DiagnosticFinding[] {
+  return [
+    ...(wire.bootClass ? [makeBootClassFinding(wire.bootClass)] : []),
+    ...(wire.tbusAudit ? [makeTbusAuditFinding(wire.tbusAudit)] : []),
+  ];
+}
 
 function resolvePincheckVdd(rows: ReturnType<typeof parsePincheckRows>['rows']): number | null {
   const vddRow = rows.find(
@@ -89,6 +129,7 @@ export function parseDiagnosticOutput(
   const displayLines = meaningfulLines.filter(l => !l.startsWith('@P7501_RES '));
 
   const vddVolts = parseVddVolts(rawOutput) ?? resolvePincheckVdd(pinData.rows) ?? wire.identVddVolts;
+  const wireFindings = buildWireFindings(wire);
 
   return {
     command_id: norm,
@@ -107,7 +148,7 @@ export function parseDiagnosticOutput(
     transition_rows: transitionRows,
     dump_rows: dumpRows,
     captured_bytes: parseCapturedBytes(rawOutput),
-    findings: extractTelemetryFindings(rawOutput),
+    findings: [...extractTelemetryFindings(rawOutput), ...wireFindings],
     protocol_code: wire.resCode,
     protocol_elapsed_us: wire.resElapsedUs,
     ident_model: wire.identModel,
@@ -115,5 +156,6 @@ export function parseDiagnosticOutput(
     ident_loader: wire.identLoader,
     progress_steps: wire.progressSteps,
     wire_events: wire.wireEvents,
+    boot_class: wire.bootClass,
   };
 }

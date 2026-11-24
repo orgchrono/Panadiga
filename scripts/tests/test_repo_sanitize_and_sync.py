@@ -22,7 +22,7 @@ def test_commit_plan_maps_six_waves_isolates_excludes_and_never_mutates_git(tmp_
         " M apps/desktop/src/App.tsx",
         "?? scripts/repo_sanitize_and_sync.py",
         " M AGENTS.md",
-        "?? .agents/skills/panadiga-tool-arsenal-catalog/SKILL.md",
+        "?? .agents/skills/panadiga-repo-sanitization-and-commit-sync/SKILL.md",
     ]
 
     rc, plan = build_commit_plan(

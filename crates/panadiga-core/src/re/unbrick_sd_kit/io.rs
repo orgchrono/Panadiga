@@ -88,12 +88,12 @@ pub fn prepare_sd_unbrick_kit_with_tier_policy(
 ) -> Result<SdUnbrickKitReport> {
     if req.sata_bridge_reset_fix && !req.include_pana_sd {
         bail!(
-            "--sata-bridge-reset-fix targets PANA__SD.FRM (PROG061 FVU + MAIN3060NP) and cannot be combined with --diag-only"
+            "--sata-bridge-reset-fix targets PANA__SD.FRM (PROG061 FVU + MAIN 3060NP/3410PQ) and cannot be combined with --diag-only"
         );
     }
     if req.main_bgo_retarget && !req.include_pana_sd {
         bail!(
-            "--main-bgo-retarget targets MAIN3060NP inside PANA__SD.FRM and cannot be combined with --diag-only"
+            "--main-bgo-retarget targets MAIN (3060NP/3410PQ) inside PANA__SD.FRM and cannot be combined with --diag-only"
         );
     }
     if req.sata_bridge_stage2_boot
@@ -110,8 +110,11 @@ pub fn prepare_sd_unbrick_kit_with_tier_policy(
         && !req.main_bgo_retarget
     {
         bail!(
-            "Refusing ver061 Stage-2 SATA bridge kit without --main-bgo-retarget: stock 4 MiB MAIN3060NP fails BGO_Init() on 8 MiB EH55 NOR (src/nfd_api.c:228)"
+            "Refusing ver061 Stage-2 SATA bridge kit without --main-bgo-retarget: stock 4 MiB MAIN (3060NP/3410PQ) fails BGO_Init() on 8 MiB EH55 NOR (src/nfd_api.c:228)"
         );
+    }
+    if req.portao4_self_unpack && !req.sata_bridge_stage2_boot {
+        bail!("--portao4-self-unpack requires --sata-bridge-stage2-boot (fail-closed)");
     }
     let ws_root = resolve_workspace_root();
     let sources = discover_sources(&ws_root);
@@ -168,6 +171,7 @@ pub fn prepare_sd_unbrick_kit_with_tier_policy(
     let mut sata_bridge_reset_fix_applied = false;
     let mut sata_bridge_stage2_boot_applied = false;
     let mut main_bgo_retarget_applied = false;
+    let mut portao4_self_unpack_applied = false;
 
     if req.include_pana_sd {
         let drv_path =
@@ -212,6 +216,12 @@ pub fn prepare_sd_unbrick_kit_with_tier_policy(
             req.sata_bridge_stage2_boot,
         )?;
         sata_bridge_stage2_boot_applied = req.sata_bridge_stage2_boot;
+        let pana_sd_prog = if req.portao4_self_unpack {
+            portao4_self_unpack_applied = true;
+            crate::re::eh55_bgo::build_portao4_self_unpacking_prog061(&pana_sd_prog)?.0
+        } else {
+            pana_sd_prog
+        };
         let (sd_bytes, sd_sha) = compose_pana_sd_container(
             drv_bytes,
             pana_sd_prog,
@@ -249,6 +259,7 @@ pub fn prepare_sd_unbrick_kit_with_tier_policy(
         sata_bridge_reset_fix_applied,
         sata_bridge_stage2_boot_applied,
         main_bgo_retarget_applied,
+        portao4_self_unpack_applied,
         digadiag_path: digadiag_path.to_string_lossy().into_owned(),
         digadiag_sha256,
         pana_sd_path,

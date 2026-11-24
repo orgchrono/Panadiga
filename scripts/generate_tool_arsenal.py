@@ -21,7 +21,7 @@ from scripts.panadiga_ops import ROOT
 from scripts.pico_heartbeat_ops import emit_json_payload
 
 DEFAULT_ARSENAL_REL: Final[Path] = (
-    Path(".agents") / "skills" / "panadiga-tool-arsenal-catalog" / "references" / "ARSENAL_INDEX.md"
+    Path(".agents") / "skills" / "panadiga-repo-sanitization-and-commit-sync" / "references" / "ARSENAL_INDEX.md"
 )
 _FRONTMATTER_RE: Final[re.Pattern[str]] = re.compile(r"^---\r?\n(.*?)\r?\n---", re.DOTALL)
 
@@ -157,6 +157,49 @@ def _discover_pico_catalog(root: Path) -> list[dict[str, str]]:
     return out
 
 
+def _discover_pico_c11_codecs(root: Path) -> list[str]:
+    pico_root = root / "firmware" / "pico-p7501"
+    if not pico_root.is_dir():
+        return []
+    return sorted(
+        p.relative_to(root).as_posix()
+        for folder in ("common", "diag", "flash", "gdb", "uart")
+        for p in (pico_root / folder).glob("*codec*.c")
+    )
+
+
+def _discover_openos_modules(root: Path) -> list[str]:
+    openos_root = root / "firmware" / "panadiga-openos"
+    if not openos_root.is_dir():
+        return []
+    return sorted(
+        p.relative_to(root).as_posix()
+        for folder in ("boot", "hal", "drivers", "kernel")
+        for p in (openos_root / folder).iterdir()
+        if p.is_file() and p.suffix in {".c", ".h", ".S", ".ld"}
+    )
+
+
+def _discover_openos_shell_commands(root: Path) -> list[str]:
+    main_c = root / "firmware" / "panadiga-openos" / "kernel" / "openos_main.c"
+    if not main_c.is_file():
+        return []
+    text = _read_text(main_c)
+    cmds: list[str] = []
+    for name, has_arg in re.findall(r'\{\s*"([^"]+)"\s*,\s*(true|false)\s*,', text):
+        tok = f"{name.strip()} <arg>" if has_arg == "true" else name
+        if tok not in cmds:
+            cmds.append(tok)
+    for m in re.findall(r'strcmp\(\s*line\s*,\s*"([^"]+)"\s*\)', text):
+        if m not in cmds:
+            cmds.append(m)
+    for m in re.findall(r'strncmp\(\s*line\s*,\s*"([^"]+)"\s*,', text):
+        tok = f"{m.strip()} <arg>"
+        if tok not in cmds:
+            cmds.append(tok)
+    return cmds
+
+
 def collect_arsenal(root: Path = ROOT) -> JsonDict:
     """Introspect live workspace tooling across Rust, Tauri, Pico, Python, Ghidra, Skills & Agents."""
     crates = _discover_workspace_crates(root)
@@ -164,6 +207,9 @@ def collect_arsenal(root: Path = ROOT) -> JsonDict:
     mcp_tools, mcp_resources, mcp_prompts = _discover_mcp(root)
     tauri_ipc = _discover_tauri_ipc(root)
     pico_cmds = _discover_pico_catalog(root)
+    pico_c11_codecs = _discover_pico_c11_codecs(root)
+    openos_modules = _discover_openos_modules(root)
+    openos_shell_commands = _discover_openos_shell_commands(root)
 
     py_scripts = sorted(
         p.relative_to(root).as_posix()
@@ -193,6 +239,9 @@ def collect_arsenal(root: Path = ROOT) -> JsonDict:
         "mcp_prompts": len(mcp_prompts),
         "tauri_ipc_commands": len(tauri_ipc),
         "pico_catalog_commands": len(pico_cmds),
+        "pico_c11_codecs": len(pico_c11_codecs),
+        "openos_modules": len(openos_modules),
+        "openos_shell_commands": len(openos_shell_commands),
         "python_scripts": len(py_scripts),
         "ghidra_scripts": len(ghidra_scripts),
         "skills": len(skills),
@@ -207,6 +256,9 @@ def collect_arsenal(root: Path = ROOT) -> JsonDict:
         "mcp_prompts": [str(x) for x in mcp_prompts],
         "tauri_ipc_commands": [str(x) for x in tauri_ipc],
         "pico_catalog_commands": [dict(p) for p in pico_cmds],
+        "pico_c11_codecs": [str(x) for x in pico_c11_codecs],
+        "openos_modules": [str(x) for x in openos_modules],
+        "openos_shell_commands": [str(x) for x in openos_shell_commands],
         "python_scripts": [str(x) for x in py_scripts],
         "ghidra_scripts": [str(x) for x in ghidra_scripts],
         "skills": [dict(s) for s in skills],
@@ -235,6 +287,9 @@ def render_arsenal_markdown(inventory: JsonDict) -> str:
     mcp_prompts = [str(x) for x in _jlist(inventory["mcp_prompts"]) if isinstance(x, str)]
     tauri_ipc = [str(x) for x in _jlist(inventory["tauri_ipc_commands"]) if isinstance(x, str)]
     pico_cmds = [x for x in _jlist(inventory["pico_catalog_commands"]) if isinstance(x, dict)]
+    pico_codecs = [str(x) for x in _jlist(inventory["pico_c11_codecs"]) if isinstance(x, str)]
+    openos_mods = [str(x) for x in _jlist(inventory["openos_modules"]) if isinstance(x, str)]
+    openos_cmds = [str(x) for x in _jlist(inventory["openos_shell_commands"]) if isinstance(x, str)]
     py_scripts = [str(x) for x in _jlist(inventory["python_scripts"]) if isinstance(x, str)]
     ghidra_scripts = [str(x) for x in _jlist(inventory["ghidra_scripts"]) if isinstance(x, str)]
     skills = [x for x in _jlist(inventory["skills"]) if isinstance(x, dict)]
@@ -258,6 +313,9 @@ def render_arsenal_markdown(inventory: JsonDict) -> str:
         f"| Prompts MCP | {counts['mcp_prompts']} | `crates/panadiga-mcp/src/prompts.rs` |",
         f"| Comandos IPC Tauri 2 | {counts['tauri_ipc_commands']} | `apps/desktop/src-tauri/src/lib.rs` |",
         f"| Comandos Sonda Pico `P7501` | {counts['pico_catalog_commands']} | `crates/panadiga-core/src/ssot/hardware_catalog.json` |",
+        f"| Codecs C11 Pico `P7501` | {counts['pico_c11_codecs']} | `firmware/pico-p7501/**/*codec*.c` |",
+        f"| Módulos `Panadiga OpenOS` | {counts['openos_modules']} | `firmware/panadiga-openos/` |",
+        f"| Comandos Shell `OpenOS` | {counts['openos_shell_commands']} | `firmware/panadiga-openos/kernel/openos_main.c` |",
         f"| Scripts Python Operacionais | {counts['python_scripts']} | `scripts/**/*.py` |",
         f"| Scripts Ghidra Jython | {counts['ghidra_scripts']} | `tools/ghidra/*.py` |",
         f"| Skills `.agents/skills/` | {counts['skills']} | `.agents/skills/*/SKILL.md` |",
@@ -293,6 +351,12 @@ def render_arsenal_markdown(inventory: JsonDict) -> str:
         "- **Scripts Ghidra:** " + ", ".join(f"`{g}`" for g in ghidra_scripts),
         "- **Skills:** " + ", ".join(f"`{s['name']}`" for s in skills),
         "- **Subagentes:** " + ", ".join(f"`{a['name']}`" for a in agents),
+        "",
+        "## 6. Firmware Bare-Metal (`Pico P7501 C11` & `Panadiga OpenOS AM34`)",
+        "",
+        "- **Codecs C11 Pico:** " + ", ".join(f"`{c}`" for c in pico_codecs),
+        "- **Módulos OpenOS AM34:** " + ", ".join(f"`{m}`" for m in openos_mods),
+        "- **Comandos Shell OpenOS:** " + ", ".join(f"`{cmd}`" for cmd in openos_cmds),
         "",
     ]
     return "\n".join(lines)

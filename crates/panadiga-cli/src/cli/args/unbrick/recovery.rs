@@ -151,9 +151,13 @@ pub struct PrepareSdArgs {
     #[arg(long)]
     pub sata_bridge_stage2_boot: bool,
 
-    /// Retarget 4 MiB MAIN builds (3060NP) to 8 MiB EH55 NOR (0x84130000) or verify native 8 MiB MAIN builds (3410PQ)
+    /// Retarget 4 MiB MAIN builds (3060NP/3410PQ) to 8 MiB EH55 NOR (0x84130000) via SSOT bgo_retarget_anchors
     #[arg(long)]
     pub main_bgo_retarget: bool,
+
+    /// Wrap PANA__SD.FRM Stage-2 PROG061 in universal Portão 4 SDRAM self-unpacker (256 B + zlib, zero NOR writes SD dry-run)
+    #[arg(long)]
+    pub portao4_self_unpack: bool,
 
     /// Exports structured JSON build & verification report
     #[arg(short, long, value_name = "JSON_FILE")]
