@@ -73,3 +73,9 @@ def test_render_deterministic_and_check_detects_drift(tmp_path: Path) -> None:
     rc_drift, rep_drift = sync_or_check_arsenal(root=ROOT, out_path=target, write=False)
     assert rc_drift == 1
     assert rep_drift["status"] == "DRIFT_DETECTED"
+
+
+def test_live_workspace_arsenal_is_in_sync() -> None:
+    rc, rep = sync_or_check_arsenal(root=ROOT, write=False)
+    assert rc == 0, f"ARSENAL_INDEX drift detected: {rep}"
+    assert rep["status"] == "IN_SYNC"

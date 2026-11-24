@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Sequence
 
 from scripts.panadiga_cli_bridge import JsonDict, as_dict, as_list, req_str
+from scripts.panadiga_ops import ROOT
 from scripts.repo_sanitize_and_sync import build_commit_plan, run_check, run_sync
 
 
@@ -81,3 +82,11 @@ def test_sync_executes_ssot_ghidra_and_arsenal_in_order(tmp_path: Path) -> None:
     assert seen[0][-4:] == ["ssot", "export-all", "--root", str(tmp_path)]
     assert seen[1][-4:] == ["ghidra", "export-all", "--dir", str(tmp_path / "tools" / "ghidra")]
     assert seen[2][-1] == "--write"
+
+
+def test_live_workspace_has_zero_prohibited_artifacts_or_fail_god_modules() -> None:
+    rc, rep = run_check(root=ROOT)
+    assert rc == 0, f"Live repo sanitize check failed: {rep}"
+    assert as_list(rep["prohibited_artifacts"]) == []
+    gods = [as_dict(item) for item in as_list(rep["god_modules"])]
+    assert [g for g in gods if req_str(g, "severity") == "fail"] == []

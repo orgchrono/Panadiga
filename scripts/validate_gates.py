@@ -19,6 +19,7 @@ from scripts.panadiga_ops import (
     print_banner,
     print_status,
     run_step,
+    sha256_file,
     use_process_tracker,
 )
 from scripts.validate_c11 import C11_HOST_SOURCES as C11_HOST_SOURCES, _gate_c11_host as _gate_c11_host
@@ -94,6 +95,25 @@ def _gate_playwright(env: Mapping[str, str], *, capture_output: bool = False) ->
         print_status("PASS", "All Playwright E2E browser tests passed!", "32")
 
 
+def _snapshot_generated_ssot_hashes(root: Path) -> dict[str, str]:
+    candidates: list[Path] = [
+        root / "firmware" / "pico-p7501" / "generated" / "p7501_ssot.h",
+        root / "firmware" / "pico-p7501" / "generated" / "p7501_ssot_tables.c",
+        root / "firmware" / "pico-p7501" / "uart" / "p7501_pana_rsp_ssot.h",
+        root / "apps" / "desktop" / "src" / "models" / "generated" / "ssot.ts",
+        root / "apps" / "desktop" / "src" / "models" / "generated" / "profiles.ts",
+        root / "scripts" / "profiles_types.py",
+        *sorted((root / "profiles" / "schema").glob("*.json")),
+        *sorted((root / "tools" / "ghidra").glob("*.py")),
+        root / "tools" / "ghidra" / "ghidra_ssot_maps.json",
+    ]
+    return {
+        p.relative_to(root).as_posix(): sha256_file(p)
+        for p in candidates
+        if p.is_file()
+    }
+
+
 def _gate_ghidra(env: Mapping[str, str], *, capture_output: bool = False) -> None:
     if not capture_output:
         print_banner("7/9. Validating SSOT & Ghidra Native Generator (panadiga ssot / ghidra)")
@@ -101,6 +121,7 @@ def _gate_ghidra(env: Mapping[str, str], *, capture_output: bool = False) -> Non
     target_dir = Path(env.get("CARGO_TARGET_DIR") or str(ROOT / "target"))
     cli_bin = target_dir / "debug" / panadiga_binary_name()
     prefix = [str(cli_bin)] if cli_bin.is_file() else ["cargo", "run", "-p", "panadiga-cli", "--"]
+    before = _snapshot_generated_ssot_hashes(ROOT)
     run_step(
         [*prefix, "ssot", "export-all", "--root", str(ROOT)],
         cwd=ROOT,
@@ -113,6 +134,14 @@ def _gate_ghidra(env: Mapping[str, str], *, capture_output: bool = False) -> Non
         env=env,
         capture_output=capture_output,
     )
+    after = _snapshot_generated_ssot_hashes(ROOT)
+    drifted = sorted(
+        key for key in (set(before) | set(after)) if before.get(key) != after.get(key)
+    )
+    if drifted:
+        raise RuntimeError(
+            "Gate 7 SSOT/Ghidra zero-drift violation in: " + ", ".join(drifted)
+        )
     if not capture_output:
         print_status("PASS", "C11/TS/Schema/Ghidra SSOT projections generated cleanly from Rust!", "32")
 

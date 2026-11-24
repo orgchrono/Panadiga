@@ -53,3 +53,9 @@ def test_collect_forensic_atlas_and_drift_detection(tmp_path: Path) -> None:
     rc_drift, rep_drift = sync_or_check_atlas(root=ROOT, json_out=json_out, md_out=md_out, write=False)
     assert rc_drift == 1
     assert rep_drift["status"] == "DRIFT_DETECTED"
+
+
+def test_live_workspace_forensic_atlas_is_in_sync() -> None:
+    rc, rep = sync_or_check_atlas(root=ROOT, write=False)
+    assert rc == 0, f"Forensic atlas drift detected: {rep}"
+    assert rep["status"] == "IN_SYNC"

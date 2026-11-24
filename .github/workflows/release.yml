@@ -106,11 +106,20 @@ jobs:
           key: pico-sdk-2.1.1-${{ runner.os }}
 
       - name: Clone Raspberry Pi Pico SDK
+        env:
+          PICO_SDK_SHA: "bddd20f928ce76142793bef434d4f75f4af6e433"
         run: |
           if [ ! -d "${{ runner.temp }}/pico-sdk/.git" ]; then
-            git clone --depth 1 --branch 2.1.1 https://github.com/raspberrypi/pico-sdk.git ${{ runner.temp }}/pico-sdk
-            cd ${{ runner.temp }}/pico-sdk
-            git submodule update --init --depth 1
+            git init "${{ runner.temp }}/pico-sdk"
+            git -C "${{ runner.temp }}/pico-sdk" remote add origin https://github.com/raspberrypi/pico-sdk.git
+            git -C "${{ runner.temp }}/pico-sdk" fetch --depth 1 origin "$PICO_SDK_SHA"
+            git -C "${{ runner.temp }}/pico-sdk" checkout --detach "$PICO_SDK_SHA"
+            git -C "${{ runner.temp }}/pico-sdk" submodule update --init --depth 1
+          fi
+          ACTUAL_SHA="$(git -C "${{ runner.temp }}/pico-sdk" rev-parse HEAD)"
+          if [ "$ACTUAL_SHA" != "$PICO_SDK_SHA" ]; then
+            echo "ERROR: pico-sdk SHA mismatch (expected $PICO_SDK_SHA, got $ACTUAL_SHA)" >&2
+            exit 1
           fi
 
       - name: Build Firmware in Parallel (RP2040 & RP2350) + Unified UF2 Merge
@@ -243,6 +252,8 @@ jobs:
 
       - name: Package Unix Artifacts (Linux / macOS)
         if: runner.os != 'Windows'
+        env:
+          RAW_VERSION: ${{ inputs.tag_name || github.ref_name }}
         run: |
           staging="staging_release"
           mkdir -p "$staging/tools" "$staging/icons"
@@ -317,7 +328,7 @@ jobs:
               > "$deb_dir/DEBIAN/postinst"
             cp "$deb_dir/DEBIAN/postinst" "$deb_dir/DEBIAN/postrm"
             chmod 755 "$deb_dir/DEBIAN/postinst" "$deb_dir/DEBIAN/postrm"
-            RAW_VERSION="${{ inputs.tag_name || github.ref_name }}"
+            RAW_VERSION="${RAW_VERSION:-}"
             DEB_VERSION="${RAW_VERSION#v}"
             if ! printf '%s' "$DEB_VERSION" | grep -Eq '^[0-9][0-9A-Za-z.+~-]*$'; then
               DEB_VERSION="$(grep -m1 '^version = ' Cargo.toml | cut -d'"' -f2)"
@@ -430,9 +441,9 @@ jobs:
           touch apps/desktop/dist-android/index.html
           cd apps/desktop
           if [ ! -d "src-tauri/gen/android" ]; then
-            npx --yes @tauri-apps/cli android init --ci --skip-targets-install
+            npx --yes @tauri-apps/cli@2.12.6 android init --ci --skip-targets-install
           fi
-          npx --yes @tauri-apps/cli android build --apk --ci --config src-tauri/tauri.android.conf.json --target aarch64 armv7
+          npx --yes @tauri-apps/cli@2.12.6 android build --apk --ci --config src-tauri/tauri.android.conf.json --target aarch64 armv7
           cd ../..
           mkdir -p release-apk
           RAW_APK_PATH=$(find apps/desktop/src-tauri/gen/android/app/build/outputs/apk -type f -path "*/universal/release/*.apk" | head -n 1)
