@@ -2546,7 +2546,7 @@ dependencies = [
  "panadiga-constants",
  "serde",
  "serde_json",
- "sha2 0.10.9",
+ "sha2 0.11.1",
 ]
 
 [[package]]
@@ -2562,7 +2562,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serialport",
- "sha2 0.10.9",
+ "sha2 0.11.1",
  "tracing",
 ]
 
@@ -2580,7 +2580,7 @@ dependencies = [
  "rayon",
  "serde",
  "serde_json",
- "sha2 0.10.9",
+ "sha2 0.11.1",
  "tracing",
  "tracing-opentelemetry",
  "tracing-subscriber",
@@ -2612,7 +2612,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serialport",
- "sha2 0.10.9",
+ "sha2 0.11.1",
  "thiserror 2.0.21",
  "tracing",
  "tracing-opentelemetry",
@@ -2634,7 +2634,7 @@ dependencies = [
  "rayon",
  "serde",
  "serde_json",
- "sha2 0.10.9",
+ "sha2 0.11.1",
  "thiserror 2.0.21",
 ]
 
@@ -2690,7 +2690,7 @@ dependencies = [
  "schemars 1.2.3",
  "serde",
  "serde_json",
- "sha2 0.10.9",
+ "sha2 0.11.1",
 ]
 
 [[package]]
@@ -2715,7 +2715,7 @@ dependencies = [
  "panadiga-bench",
  "serde",
  "serde_json",
- "sha2 0.10.9",
+ "sha2 0.11.1",
  "thiserror 2.0.21",
 ]
 
