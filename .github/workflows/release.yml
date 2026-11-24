@@ -183,13 +183,13 @@ jobs:
           lfs: true
 
       - name: Download Shared Frontend Dist & Fresh Pico UF2 Binaries
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: release-frontend-dist
           path: apps/desktop/dist
 
       - name: Download Compiled Pico UF2 Firmware Images
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: panasonic_p7501_uart_firmware_binaries
           path: crates/panadiga-core/src/pico/firmware_bins
@@ -418,13 +418,13 @@ jobs:
           npm ci --prefer-offline
 
       - name: Download Shared Android Frontend Dist
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: release-frontend-android-dist
           path: apps/desktop/dist-android
 
       - name: Download Compiled Pico UF2s for Android Embedding
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: panasonic_p7501_uart_firmware_binaries
           path: crates/panadiga-core/src/pico/firmware_bins
@@ -502,13 +502,13 @@ jobs:
           sparse-checkout: .github/RELEASE_NOTES.md
 
       - name: Download Pico Firmware Artifact
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: panasonic_p7501_uart_firmware_binaries
           path: dist-release
 
       - name: Download Desktop & Android Artifacts
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: "panadiga-*"
           merge-multiple: true
