@@ -73,7 +73,7 @@ panadiga unbrick rebuild-from-dump \
   --json tmp/rebuild_report.json
 ```
 
-`rebuild-from-dump` fails closed on corrupt/byte-swapped/mirrored NOR dumps, IPL loader version mismatches, bad `DRV` checksums, or unrecognized `MAIN` builds (`--allow-unverified-mix` overrides cross-build compatibility checks only). For experimental SDRAM bring-up harnesses, see [`firmware/panadiga-blackbox-fw/README.md`](../../firmware/panadiga-blackbox-fw/README.md) (explicitly marked as an open-source hardware-interoperability spike, **not** legally clean-room).
+`rebuild-from-dump` fails closed on corrupt/byte-swapped/mirrored NOR dumps, IPL loader version mismatches, bad `DRV` checksums, or unrecognized `MAIN` builds (`--allow-unverified-mix` overrides cross-build compatibility checks only). For experimental SDRAM bring-up harnesses, see [`firmware/digaos/README.md`](../../firmware/digaos/README.md) (explicitly marked as an open-source hardware-interoperability prototype, **NOT LEGALLY CLEAN-ROOM**).
 
 ### Stage 4 — Quarantined PDF Manual Proposals (`T1`)
 
@@ -116,6 +116,6 @@ Remember that **`Mn103Vm` validates MN103S ISA control flow and synthetic bounds
 With `S11` verified on real silicon and `BGO` (`p1_sa=41`, 45/45 healthy) + `SDCD_CFG4` (`0x000040B8` `4BIT`) captured live in [`com10_round5_live_unbrick_sd_trace_20261124.log`](../evidence/com10_round5_live_unbrick_sd_trace_20261124.log), the immediate engineering gates are:
 
 1. **Opt-In `NorAutoboot` `SA11..SA14` (`--nor-autoboot-capsule`, SD-Less `Nor-FROM` Boot):** `NOR_MAP` and `BGO_INSPECT NORFROM` proved `SA11 0x84040000 = ERASED_FF` (`norfrom_used=0`), explaining why `MAIN` still relies on the inserted SD card for pre-FVU SATA HDD autoboot launch. When explicitly authorized by the operator, program `SA11..SA14` (keeping `SA0..SA10` `E05` RO) via `--sata-hdd-autoboot --nor-autoboot-capsule` + `--confirm-upper-nor` after a full SHA-256-verified NOR backup.
-2. **Live `Panadiga OpenOS` SDRAM Bring-Up (`M1 -> M3`):** Package `firmware/panadiga-openos` (`SSOT=C045CA85`, `openos_shell_poll_once()`, `sd`/`bgo`/`ssot` commands) as a raw `262,144 B` `DIGADIAG.FRM` image at `0x5040_0000` and validate live interactive shell + `IC7501` `255s` keepalive without touching NOR.
+2. **Live `DigaOS` SDRAM Bring-Up (`M1 -> M3`):** Package `firmware/digaos` (`digaos_ssot.h`, `digaos_shell_poll_once()`, `sd`/`bgo`/`ssot` commands, `DIGAOS>`) as a raw `262,144 B` `DIGADIAG.FRM` image at `0x5040_0000` and validate live interactive shell + `IC7501` `255s` keepalive without touching NOR.
 3. **Full `Upper EEMUL` (`SA71..SA133` `"1284"`) Parser:** Decode the `7` active and `11` superseded records observed by `NOR_MAP` for fine-grained NV configuration auditing beyond `SA134`.
 4. **`PANAEUSB.FRM` & NAND/eMMC `Schema v2.1` Expansion:** Extend USB installer container unpacking and non-NOR flash SSOT schemas across `T1 -> T4` hardware profiles.

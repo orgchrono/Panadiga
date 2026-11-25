@@ -5,7 +5,7 @@
 | Stack | Local & Comando | Padrão Obrigatório |
 | :--- | :--- | :--- |
 | **Rust** | `crates/*/src/**` (`#[cfg(test)]`) & `crates/*/tests/` · `cargo test --workspace` | Helpers de temp dir com `format!("panadiga_<escopo>_{}_{}", std::process::id(), COUNTER.fetch_add(1, Ordering::Relaxed))` + RAII drop guard |
-| **C11 Pico** | `firmware/pico-p7501/tests/` (`test_*.c`) · Gate 8 `validate_c11.py` | Compila com `-std=c11 -Wall -Wextra -Werror -DPICO_HOST_TEST=1`; usar stubs `hal/` deterministicos |
+| **C11 PicoFW / DigaOS** | `firmware/picofw/tests/` + `firmware/digaos/tests/` (`test_*.c`) · Gate 8 `validate_c11.py` | Compila com `-std=c11 -Wall -Wextra -Werror`; usar stubs `hal/` determinísticos |
 | **Vitest TS** | `apps/desktop/src/**/*.test.{ts,tsx}` · `npm --prefix apps/desktop test` | Mocks exclusivamente em `src/test/mocks/`; testar estados `isLoading`, vazio, erro e paridade `translations.test.ts` |
 | **Playwright E2E** | `apps/desktop/e2e/*.spec.ts` · `npm --prefix apps/desktop run test:e2e` | `getByRole`/`getByTestId`; `webServer` gerenciado (`reuseExistingServer` atento a porta ocupada); **0 `waitForTimeout`** |
 | **Python** | `scripts/tests/test_*.py` · `python -m pytest scripts/tests` + `mypy --strict scripts` | `tmp_path` fixture nativa do pytest; `MockBenchTransport` em bancada; nunca deixar subprocessos órfãos |

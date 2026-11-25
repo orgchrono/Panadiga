@@ -1,6 +1,6 @@
 {
   "pico": {
-    "title": "Bancada Raspberry Pi Pico — P7501 UART (115200 8N1)",
+    "title": "Bancada Sonda PicoFW — UART Assíncrona P7501 (PICO>, 115200 8N1)",
     "port": "Porta Serial COM",
     "connect": "Conectar",
     "disconnect": "Desconectar",

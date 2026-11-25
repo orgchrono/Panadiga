@@ -67,7 +67,7 @@ Interconnecting the **Raspberry Pi Pico (RP2040 / RP2350)** to `P7501` requires 
 
 The **PIO (`PIO0`)** subsystem deterministically samples bytes from `UARTP2M_T` (`GP2`, `P7501` Pin 6) at **`115200 8N1`** (8x oversampling at `921,600 Hz`) with zero ARM CPU interrupt overhead and without ever touching `GP3` (`NSW5V`).
 
-### Verified PIO Assembly Source ([`firmware/pico-p7501/p7501_uart.pio`](../../firmware/pico-p7501/p7501_uart.pio))
+### Verified PIO Assembly Source ([`firmware/picofw/picofw_uart.pio`](../../firmware/picofw/picofw_uart.pio))
 
 ```pio
 .program p7501_uart_rx
@@ -101,7 +101,7 @@ good_stop:
 
 ## 4. Discrete Boot Timing (`SW_UART` + `XRESET`) & `P7501` Primitives
 
-When running `JIGBOOT` or discrete boot profiles via [`p7501_uart_bitbang.h`](../../firmware/pico-p7501/uart/p7501_uart_bitbang.h):
+When running `JIGBOOT` or discrete boot profiles via [`p7501_uart_bitbang.h`](../../firmware/picofw/uart/picofw_uart_bitbang.h):
 
 1. **Open-Drain Pulse on `XRESET` (`GP5`):** `p7501_hw_reset_assert()` pulls `0V` for `15 ms`, and `p7501_hw_reset_release()` releases `GP5` to `Hi-Z` (~`20 µs` rise time via `QR7503`).
 2. **Boot Sampling & UART Capture (`115200 8N1`):** Under `JIGBOOT` (`SW_UART = LOW` across reset release), the bootloader outputs `<00>DDR CHECK: OK` followed by `CD diag boot mode` on `GP2` (`UARTP2M_T`), reporting optical mechanism sense telemetry (`X(80020401)59...` $\rightarrow$ `X(80040904)` $\rightarrow$ `Drive start failed[-2147219196]`).
@@ -143,7 +143,7 @@ In 16-bit word mode (`BYTE# = High`), standard 16-bit JEDEC unlock addresses (`0
 * **Erase Targets (8 x 8 KB `EEMUL` micro-sectors):**
   * `0x807F0000` (`SA134`) through `0x807FE000` (`SA141`)
 
-### Position-Independent C11 Source ([`firmware/pico-p7501/flash/ram_loader_am34_target.c`](../../firmware/pico-p7501/flash/ram_loader_am34_target.c))
+### Position-Independent C11 Source ([`firmware/picofw/flash/ram_loader_am34_target.c`](../../firmware/picofw/flash/ram_loader_am34_target.c))
 
 ```c
 /**

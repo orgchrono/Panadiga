@@ -41,12 +41,21 @@ pub struct MainRegionCompatReport {
     pub sha256: String,
 }
 
-/// Decoded/verified `DEV.BIN` (`512`-byte) device descriptor report.
+/// Decoded/verified `DEV.BIN` (`512`-byte) or NFROM `ifodev2` (`2048`-byte) device descriptor report.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DevBinReport {
     pub size_bytes: usize,
     pub model: String,
     pub oem: String,
+    pub option_code_hex: String,
+    pub hw_version_u16: u16,
+    pub model_code: u8,
+    pub market_code: u8,
+    pub market_code_name: String,
+    pub main_option_btn: [u16; 4],
+    pub main_option_rcmode: u8,
+    pub main_option_gui: [u8; 4],
+    pub main_option_chmode: u8,
     pub signature: String,
     pub md5: String,
     pub sha256: String,

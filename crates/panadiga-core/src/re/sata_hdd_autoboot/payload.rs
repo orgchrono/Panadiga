@@ -119,6 +119,23 @@ fn emit_hdd_mirror_loader(a: &mut HddAutobootAsm, spec: &HddAutobootTrainSpec) {
     a.cmp_imm8_d(0, 0);
     a.jcc(0xC8, "next_mirror");
 
+    // Turnkey 1-SD gate: if builder stamped an expected EXTRHEAD+0x28 checksum
+    // (neither 0 nor 0xFFFFFFFF) at (base_va + payload_offset - 4), require HDD
+    // MAIN's header checksum to match so Boot 1 auto-falls back to FVU and flashes.
+    let expected_csum_va = spec
+        .base_va
+        .wrapping_add(spec.payload_offset as u32)
+        .wrapping_sub(4);
+    a.ld_abs32_d(expected_csum_va, 0);
+    a.cmp_imm32_d0(u32::MAX);
+    a.jcc(0xC8, "hdr_csum_ok");
+    a.cmp_imm8_d(0, 0);
+    a.jcc(0xC8, "hdr_csum_ok");
+    a.ld_abs32_d(spec.hdd_dma_buf_va.wrapping_add(0x28), 1);
+    a.cmp_d_to_d0(1);
+    a.jcc(0xC9, "next_mirror");
+    a.label("hdr_csum_ok");
+
     a.mov_imm32_d(0, spec.hdd_dma_buf_va);
     a.call_abs(spec.extrhead_get_entry_va);
     a.st_local(0, LOC_ENTRY_ADDR);

@@ -2,7 +2,7 @@
 
 use std::time::Duration;
 
-use panadiga_core::pico::cdc::parse_vdd_reply;
+use panadiga_core::pico::cdc::{PICO_PROMPT_STOP_TOKENS, contains_pico_prompt, parse_vdd_reply};
 use panadiga_core::pico::diag_rows::parse_wdt_status;
 
 use crate::commands::constants::{
@@ -25,13 +25,13 @@ fn ensure_default_uart_and_probe_target(
     let framing_out = panadiga_core::pico::cdc::send_and_read_until(
         port,
         DEFAULT_PIO_UART_FRAMING_8N1_CMD,
-        &["FRAMING: OK", "FRAMING: ERROR", "PANADIGA>"],
+        &["FRAMING: OK", "FRAMING: ERROR", "PICO>", "P7501>"],
         Duration::from_millis(SERIAL_UART_SYNC_TIMEOUT_MS),
     );
     let baud_out = panadiga_core::pico::cdc::send_and_read_until(
         port,
         DEFAULT_PIO_UART_BAUD_115200_CMD,
-        &["BAUD: OK", "BAUD: ERROR", "PANADIGA>"],
+        &["BAUD: OK", "BAUD: ERROR", "PICO>", "P7501>"],
         Duration::from_millis(SERIAL_UART_SYNC_TIMEOUT_MS),
     );
     let uart_synced = framing_out.contains("FRAMING: OK") && baud_out.contains("BAUD: OK");
@@ -42,10 +42,12 @@ fn ensure_default_uart_and_probe_target(
         port,
         "IDENTIFY 80",
         &[
+            "@PICO_RES",
             "@P7501_RES",
             "IDENTIFY: OK",
             "IDENTIFY: OFFLINE",
-            "PANADIGA>",
+            "PICO>",
+            "P7501>",
         ],
         Duration::from_millis(SERIAL_AUTODETECT_TIMEOUT_MS),
     );
@@ -59,7 +61,7 @@ fn ensure_default_uart_and_probe_target(
             let autodetect_out = panadiga_core::pico::cdc::send_and_read_until(
                 port,
                 "AUTODETECT",
-                &["[AUTODETECT]", "AUTODETECT: OK", "PANADIGA>"],
+                &["[AUTODETECT]", "AUTODETECT: OK", "PICO>", "P7501>"],
                 Duration::from_millis(SERIAL_AUTODETECT_TIMEOUT_MS),
             );
             autodetect_out
@@ -96,7 +98,7 @@ fn pico_connect_and_test_unlocked(
     let mut vdd_text = panadiga_core::pico::cdc::send_and_read_until(
         &mut *port,
         "STATUS",
-        &["PANADIGA>", "P7501>"],
+        PICO_PROMPT_STOP_TOKENS,
         Duration::from_millis(SERIAL_PING_STATUS_TIMEOUT_MS),
     );
     let mut vdd_reading = parse_vdd_reply(&vdd_text);
@@ -105,14 +107,14 @@ fn pico_connect_and_test_unlocked(
         vdd_text = panadiga_core::pico::cdc::send_and_read_until(
             &mut *port,
             "STATUS",
-            &["PANADIGA>", "P7501>"],
+            PICO_PROMPT_STOP_TOKENS,
             Duration::from_millis(SERIAL_PING_STATUS_TIMEOUT_MS),
         );
         vdd_reading = parse_vdd_reply(&vdd_text);
     }
     let wdt = parse_wdt_status(&vdd_text);
 
-    let has_pong = response_text.contains("PONG") || response_text.contains("PANADIGA");
+    let has_pong = response_text.contains("PONG") || contains_pico_prompt(&response_text);
     if (!has_pong && vdd_reading.is_none()) || (response_text.is_empty() && vdd_reading.is_none()) {
         return Err(PanadigaIpcError::serial(format!(
             "O Pico em {} abriu a porta mas não respondeu a PING/STATUS (firmware Panadiga ausente ou DTR não aceito). \

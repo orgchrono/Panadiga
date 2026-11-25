@@ -31,19 +31,19 @@ pub fn execute_baseline_safety_step(
     let ping = send_and_read_until(
         port,
         "PING",
-        &["PANADIGA>", "P7501>"],
+        crate::pico::cdc::PICO_PROMPT_STOP_TOKENS,
         Duration::from_millis(900),
     );
     let status = send_and_read_until(
         port,
         "STATUS",
-        &["PANADIGA>", "P7501>"],
+        crate::pico::cdc::PICO_PROMPT_STOP_TOKENS,
         Duration::from_millis(900),
     );
     let pincheck = send_and_read_until(
         port,
         "PINCHECK",
-        &["PANADIGA>", "P7501>"],
+        crate::pico::cdc::PICO_PROMPT_STOP_TOKENS,
         Duration::from_millis(2500),
     );
     let st = parse_status_output_report(&status);
@@ -92,9 +92,21 @@ pub fn execute_wake_trace_step_profile(
 ) -> (WakeTraceSummary, GuidedStepEvidence) {
     let cmd = profile.build_pico_command(window_ms, jig_hold_ms, wake_timeout_ms);
     let terminators: &[&str] = if matches!(profile, BootWakeProfile::DiagWatchPreJigWake) {
-        &["DIAGWATCH: OK", "DIAGWATCH: ERROR", "PANADIGA>", "P7501>"]
+        &[
+            "DIAGWATCH: OK",
+            "DIAGWATCH: ERROR",
+            "PICO>",
+            "PANADIGA>",
+            "P7501>",
+        ]
     } else {
-        &["BOOTTRACE: OK", "BOOTTRACE: ERR", "PANADIGA>", "P7501>"]
+        &[
+            "BOOTTRACE: OK",
+            "BOOTTRACE: ERR",
+            "PICO>",
+            "PANADIGA>",
+            "P7501>",
+        ]
     };
     let total_wait_ms = u64::from(window_ms) + u64::from(wake_timeout_ms) + 2500;
     let raw = send_and_read_until(
@@ -165,7 +177,7 @@ pub fn execute_baudscan_step_with_wake(
     let raw = send_and_read_until(
         port,
         &cmd,
-        &["BAUDSCAN: OK", "PANADIGA>", "P7501>"],
+        &["BAUDSCAN: OK", "PICO>", "PANADIGA>", "P7501>"],
         Duration::from_millis(total_wait_ms),
     );
     let parsed = parse_baudscan_output(&raw);

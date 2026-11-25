@@ -190,6 +190,9 @@ fn validate_main_build_spec(train_id: &str, build: &MainBuildSpec, tr: &mut Chec
     for site in &build.av_passthrough_sites {
         validate_patch_site(&owner, build.base_va, build.unpacked_size, site, tr);
     }
+    for site in &build.region_localization_sites {
+        validate_patch_site(&owner, build.base_va, build.unpacked_size, site, tr);
+    }
     if let Some(a) = &build.bgo_retarget_anchors {
         let (f_cap, f_va) = parse_bgo_geometry_tag(&a.factory_geometry_id);
         let (t_cap, t_va) = parse_bgo_geometry_tag(&a.target_geometry_id);

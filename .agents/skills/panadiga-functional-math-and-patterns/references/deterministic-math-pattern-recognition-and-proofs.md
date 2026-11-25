@@ -1,6 +1,6 @@
 # Matemática Determinística, Reconhecimento de Padrões & Provas Algébricas
 
-Guia matemático e algorítmico para diagnósticos físicos (`Pico P7501`), kernel/drivers (`Panadiga OpenOS`), forense de dumps/storage (`MEIHFS`/`NOR`/`FRM`) e verificação de equivalência sem *flakiness* em `C11` e `Rust`.
+Guia matemático e algorítmico para diagnósticos físicos (`PicoFW`), kernel/drivers (`DigaOS`), forense de dumps/storage (`MEIHFS`/`NOR`/`FRM`) e verificação de equivalência sem *flakiness* em `C11` e `Rust`.
 
 ---
 

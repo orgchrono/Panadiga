@@ -28,6 +28,8 @@ fn tv_standard_mmio_plans_emit_verified_aiof_vmodesel_values() {
     assert_eq!(ntsc[1].value, u32::from(AIOF_VMODESEL_NTSC));
     assert_eq!(ntsc[1].value, 0x8020);
     assert_eq!(ntsc[4].value, 0x8000);
+    assert_eq!(ntsc[5].addr, AM34_AVDD_BASE + AVDD_NPALCTL0_OFF);
+    assert_eq!(ntsc[5].value, 0x0005_0000);
 
     let palm = build_tv_calibration_mmio_plan(TvStandardKind::PalM);
     assert_eq!(palm[0].addr, AM34_AIOF_BASE + AIOF_V_OFF);
@@ -39,13 +41,16 @@ fn tv_standard_mmio_plans_emit_verified_aiof_vmodesel_values() {
     assert_eq!(palm[4].addr, AM34_AIOF_BASE + AIOF_CONT_OFF);
     assert_eq!(palm[4].value, 0x4000);
     assert_eq!(palm[5].addr, AM34_AVDD_BASE + AVDD_NPALCTL0_OFF);
+    assert_eq!(palm[5].value, 0x0005_0000);
 
     let pal = build_tv_calibration_mmio_plan(TvStandardKind::Pal);
     assert_eq!(pal[1].value, u32::from(AIOF_VMODESEL_PAL));
     assert_eq!(pal[1].value, 0x8027);
+    assert_eq!(pal[5].value, 0x0005_0001);
 
     let secam = build_tv_calibration_mmio_plan(TvStandardKind::Secam);
     assert!(secam[1].note.contains("SECAM0..1"));
+    assert_eq!(secam[5].value, 0x0005_0001);
 }
 
 #[test]

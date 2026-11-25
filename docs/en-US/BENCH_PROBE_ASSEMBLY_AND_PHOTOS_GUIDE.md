@@ -171,7 +171,7 @@ Before touching the Raspberry Pi Pico:
    - Measure resistance between `Pin 5 (NSW5V)`, `Pin 1 (SW_UART)`, `Pin 6 (UARTP2M_T)`, and `GND` (`Pin 4`): verify open circuit (no $0\,\Omega$ bridges!).
 
 ### Step 4: Connecting to Raspberry Pi Pico & Launching Workbench
-1. Confirm Pico firmware built from `firmware/pico-p7501/` is flashed and re-check `GP2`, `GP3 (Hi-Z!)`, `GP4`, `GP5 (OD)`, `GP26`, `GND`.
+1. Confirm Pico firmware built from `firmware/picofw/` is flashed and re-check `GP2`, `GP3 (Hi-Z!)`, `GP4`, `GP5 (OD)`, `GP26`, `GND`.
 2. Connect Pico USB cable to the workstation (NEVER back-power Pico through `P7501`) and start Panadiga Desktop:
    ```powershell
    npm start

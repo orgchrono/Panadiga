@@ -37,7 +37,8 @@
     "apps/desktop/src-tauri/src",
     "packages/oxlint-plugin-panadiga/src",
     "crates",
-    "firmware/pico-p7501",
+    "firmware/picofw",
+    "firmware/digaos",
     "tools",
     "scripts"
   ]

@@ -1,6 +1,6 @@
 # Playbook Prático: Programação Funcional & Refatoração em `C11` Bare-Metal e `Rust`
 
-Exemplos concretos de simplificação de código procedural complexo para núcleos funcionais determinísticos, sem heap, voltados para **`firmware/panadiga-openos/` (`AM34`)**, **`firmware/pico-p7501/` (`RP2040/RP2350`)** e **`crates/panadiga-*` (`Rust Edition 2024`)**.
+Exemplos concretos de simplificação de código procedural complexo para núcleos funcionais determinísticos, sem heap, voltados para **`firmware/digaos/` (`AM34`)**, **`firmware/picofw/` (`RP2040/RP2350`)** e **`crates/panadiga-*` (`Rust Edition 2024`)**.
 
 ---
 
@@ -120,7 +120,7 @@ static davis_step_t davis_fsm_step(davis_fsm_t st, davis_ev_t ev) {
     }
 }
 ```
-- **Ganho concreto:** Testável no host (`-DPANADIGA_OPENOS_HOST_TEST=1`) com rollover `now_ms = 0xFFFF_FC00 -> 0x0000_0200` sem hardware ligado; casca imperativa só executa `am34_mmio_write16` / `am34_mmio_read16` com barreiras de segurança.
+- **Ganho concreto:** Testável no host (`-DPANADIGA_DIGAOS_HOST_TEST=1`) com rollover `now_ms = 0xFFFF_FC00 -> 0x0000_0200` sem hardware ligado; casca imperativa só executa `am34_mmio_write16` / `am34_mmio_read16` com barreiras de segurança.
 
 ---
 
@@ -146,19 +146,19 @@ int tv_mode_to_vmodesel(const char *name, uint16_t *out_reg) {
 ```
 
 ### ✅ Depois: Tabela Declarativa `static const` em `.rodata` + Functor/Lookup Puro
-(Padrão já aplicado com sucesso em `firmware/pico-p7501/uart/p7501_diag_watch_codec.c` e `k_crc32_nibble_lut` em `p7501_crc_csum.c`.)
+(Padrão já aplicado com sucesso em `firmware/picofw/uart/picofw_diag_watch_codec.c` e `k_crc32_nibble_lut` em `firmware/picofw/common/picofw_crc_csum.c`.)
 
 ```c
 typedef struct {
     const char *name;
-    openos_tv_system_t sys;
+    digaos_tv_system_t sys;
     uint16_t vmodesel;
 } tv_preset_row_t;
 
 static const tv_preset_row_t k_tv_presets[] = {
-    { "ntsc",  OPENOS_TV_NTSC,  0x8020U },
-    { "pal-m", OPENOS_TV_PAL_M, 0x8021U },
-    { "pal",   OPENOS_TV_PAL,   0x8027U },
+    { "ntsc",  DIGAOS_TV_NTSC,  0x8020U },
+    { "pal-m", DIGAOS_TV_PAL_M, 0x8021U },
+    { "pal",   DIGAOS_TV_PAL,   0x8027U },
 };
 _Static_assert((sizeof(k_tv_presets) / sizeof(k_tv_presets[0])) == 3u,
                "Tabela AIOF deve cobrir exatamente NTSC, PAL-M e PAL");
@@ -168,7 +168,7 @@ static const tv_preset_row_t *find_tv_preset(const char *name) {
         return NULL;
     }
     for (size_t i = 0u; i < (sizeof(k_tv_presets) / sizeof(k_tv_presets[0])); ++i) {
-        if (p7501_ascii_ieq(name, k_tv_presets[i].name)) {
+        if (picofw_ascii_ieq(name, k_tv_presets[i].name)) {
             return &k_tv_presets[i];
         }
     }
@@ -225,7 +225,7 @@ Quando um arquivo como `main_bgo_retarget.rs` ou `sata_hdd_autoboot` mistura dad
 
 | # | Erro Comum | ❌ Padrão Problemático | ✅ Correção Determinística |
 | :-: | :--- | :--- | :--- |
-| **1** | **Heap oculto em nome de imutabilidade** | `Vec::clone()` dentro de loop por byte/setor ou `malloc()` em `panadiga-openos` | Retorne *slices* `&[u8]`, `iter()`, `try_fold`; em C11 use buffers estáticos em `.bss` ou structs pequenas por valor |
+| **1** | **Heap oculto em nome de imutabilidade** | `Vec::clone()` dentro de loop por byte/setor ou `malloc()` em `firmware/digaos/` | Retorne *slices* `&[u8]`, `iter()`, `try_fold`; em C11 use buffers estáticos em `.bss` ou structs pequenas por valor |
 | **2** | **Recursão em firmware sem TCO garantido** | Parser de árvores/LZSS recursivo no `AM34` ou `RP2040` (`-Os` pode não otimizar TCO) | Converta toda recursão em loop `for`/`while` com **teto máximo explícito** (`MAX_STEPS` / `SC0_SPIN_LIMIT`) |
 | **3** | **Overflow `u32` em `addr + len`** | `if (addr + len <= 0x80040000U)` (`0x80050000 + 0xFFFF0000` dá wrap e burla guarda!) | Use `uint64_t end = (uint64_t)addr + (uint64_t)len;` ou `checked_add` / `AddrSpan` em `u64` |
 | **4** | **Timer `now >= deadline` e UB *signed*** | `int32_t dt = t1 - t0;` ou `now >= start + wait` (overflow *signed* é UB em C11!) | Use exclusivamente subtração `uint32_t`: `(uint32_t)(now_ms - start_ms) >= wait_ms` |

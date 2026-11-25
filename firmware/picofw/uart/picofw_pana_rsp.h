@@ -1,0 +1,150 @@
+/**
+ * @file picofw_pana_rsp.h
+ * @brief Panasonic AM34 `_dev_SERIAL` RSP client/probe (`FUN_574f0590` / `FUN_574f0775`).
+ *
+ * Implements pure C11 8-bit RSP frame construction/verification and PIO1 UART probe
+ * sequences (`0x15` NAK, `0x0E 0x04 0x02` 3-byte state handshake from Rust SSOT `picofw_pana_rsp_ssot.h`,
+ * `$g#67`, `$Z0#8A`, `$Z1#8B`, `$m<addr>,<len>#XX`, `$x<addr>,<len>#XX`, `$M<addr>,4:<val>#XX`).
+ *
+ * @standard ISO/IEC 9899:2011 (C11)
+ */
+
+#ifndef PICOFW_PANA_RSP_H
+#define PICOFW_PANA_RSP_H
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+#include "flash/picofw_flash.h"
+#include "uart/picofw_pana_rsp_ssot.h"
+#include "uart/picofw_uart_codec.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#define PICOFW_RSP_MAX_FRAME    256u
+#define PICOFW_RSP_MAX_TRIG     PICOFW_WAITTX_MAX_TRIGGER
+#define PICOFW_RSP_MAX_RAW_TX   64u
+
+/** Verified 3-byte UART state-machine entry sequence (`0 -> 2 -> 4`, paired with `0x15` NAK). */
+extern const uint8_t k_picofw_rsp_handshake[PICOFW_RSP_HANDSHAKE_LEN];
+
+typedef struct picofw_rsp_frame_info {
+    bool found;
+    bool ack_plus;
+    bool nak_minus;
+    bool raw_nak_0x15;
+    bool checksum_ok;
+    uint8_t expected_csum;
+    uint8_t actual_csum;
+    size_t payload_offset;
+    size_t payload_len;
+} picofw_rsp_frame_info_t;
+
+typedef enum picofw_pana_rsp_action {
+    PANA_RSP_ACT_SEQ = 0,
+    PANA_RSP_ACT_G,
+    PANA_RSP_ACT_Z0,
+    PANA_RSP_ACT_Z1,
+    PANA_RSP_ACT_MEM,
+    PANA_RSP_ACT_XMEM,
+    PANA_RSP_ACT_NAK,
+    PANA_RSP_ACT_MAGIC,
+    PANA_RSP_ACT_RAW,
+    PANA_RSP_ACT_HEX,
+    PANA_RSP_ACT_WMEM,
+    PANA_RSP_ACT_WRITE32,
+    PANA_RSP_ACT_PASSTHROUGH,
+    PANA_RSP_ACT_CALL,
+    PANA_RSP_ACT_DUMPNOR,
+    PANA_RSP_ACT_REGS,
+    PANA_RSP_ACT_NOR_POLICY,
+    PANA_RSP_ACT_JEDEC_ERASE,
+    PANA_RSP_ACT_JEDEC_PROG,
+    PANA_RSP_ACT_JEDEC_ID,
+    PANA_RSP_ACT_CFI_QUERY,
+    PANA_RSP_ACT_CRC32_NOR,
+    PANA_RSP_ACT_BLANK_CHECK,
+    PANA_RSP_ACT_BGO_BITCLEAR,
+    PANA_RSP_ACT_FAST_DUMPNOR,
+    PANA_RSP_ACT_DUMPNOR_RESUME
+} picofw_pana_rsp_action_t;
+
+typedef struct picofw_pana_rsp_spec {
+    uint32_t timeout_ms;
+    picofw_boot_action_t boot_action;
+    uint32_t jig_hold_ms;
+    bool send_nak_prefix;
+    bool send_magic_prefix;
+    bool wait_trigger_enabled;
+    bool nor_unlocked_effective;
+    bool auto_relock_nor;
+    bool rejected_e05;
+    picofw_policy_req_t policy_req;
+    uint32_t baud;
+    char trigger[PICOFW_RSP_MAX_TRIG + 1u];
+    picofw_pana_rsp_action_t action;
+    char payload[128];
+    uint8_t raw_bytes[PICOFW_RSP_MAX_RAW_TX];
+    size_t raw_len;
+    uint32_t addr;
+    uint32_t value_u32;
+    uint8_t data_bytes[16];
+    size_t data_len;
+} picofw_pana_rsp_spec_t;
+
+/** Format `<payload>` as `$<payload>#<xx>` (lowercase hex checksum); returns byte count or 0 on overflow. */
+size_t picofw_rsp_build_frame(const char *payload, char *out, size_t out_cap);
+
+/** Format a raw byte slice write as `$M<addr>,<len>:<hex>#<xx>`. */
+size_t picofw_rsp_build_write_mem(
+    uint32_t addr,
+    const uint8_t *data,
+    size_t len,
+    char *out,
+    size_t out_cap
+);
+
+/** Format a 32-bit little-endian word write as `$M<addr>,4:<hex>#<xx>`. */
+size_t picofw_rsp_build_write_u32(uint32_t addr, uint32_t value_le, char *out, size_t out_cap);
+
+/** Inspect RX buffer from `start_offset` for `$<payload>#<xx>` RSP reply and validate 8-bit sum. */
+bool picofw_rsp_inspect_frame_from(
+    const uint8_t *buf,
+    size_t len,
+    size_t start_offset,
+    picofw_rsp_frame_info_t *out
+);
+
+/** Inspect RX buffer from index 0 for `$<payload>#<xx>` RSP reply (plus `+`/`-` or raw `0x15`). */
+bool picofw_rsp_inspect_frame(const uint8_t *buf, size_t len, picofw_rsp_frame_info_t *out);
+
+/** Decode 48-byte (96 hex chars) or 112-byte `_dev_SERIAL` (224 hex chars) MN103S GDB `$g` register reply. */
+bool picofw_rsp_decode_mn103_regs(const uint8_t *payload, size_t len, uint32_t out_regs[12]);
+
+/** Purely parse `PANARSP` args against explicit unlock context (zero global mutation). */
+bool picofw_panarsp_parse_args_ctx(
+    const char *arg,
+    bool session_unlocked,
+    picofw_pana_rsp_spec_t *out
+);
+
+/** Parse `PANARSP [ms] [NORMAL|JIG[:ms]|NOPULL] [MAGIC] [NONAK|NAK] [WAIT:<trig>] <action>` args purely. */
+bool picofw_panarsp_parse_args(const char *arg, picofw_pana_rsp_spec_t *out);
+
+/** Apply parsed policy request (`NORUNLOCK:CONFIRM_UPPER_NOR` / `NORLOCK`) to active session. */
+void picofw_panarsp_apply_policy(const picofw_pana_rsp_spec_t *spec);
+
+/** Apply one-shot Upper NOR auto-relock upon completion of a mutating `PANARSP` command. */
+bool picofw_panarsp_finish_action(const picofw_pana_rsp_spec_t *spec);
+
+/** CLI command `PANARSP`: actively probes MAIN `FUN_574f0590`/`FUN_574f0775` RSP stub over PIO1. */
+void picofw_cmd_pana_rsp(const char *arg);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* PICOFW_PANA_RSP_H */

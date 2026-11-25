@@ -87,7 +87,7 @@ Os artefatos exclusivos de Android IR (`DIGA IR Commander` e o catálogo de `80.
 O módulo [`crates/panadiga-ir/src/adapter.rs`](../../crates/panadiga-ir/src/adapter.rs) gera payloads Kaseikyo (`37.010 Hz` em [`kaseikyo.rs`](../../crates/panadiga-ir/src/kaseikyo.rs)) compatíveis com cada controlador infravermelho e com o fallback da sonda Pico:
 * **Exynos `SM-T805M` (`universal5420` / `chagall`):** seleciona o modo **`PeriodScaled`** (`1_000_000 / hz`), impondo teto seguro `MAX_AOSP_XMIT_TIME_US = 1_900_000` e `MAX_HARDWARE_TRAIL_SPACE_US = 45_000`.
 * **Exynos Legado `GT-N8000` (`smdk4x12`):** seleciona o modo **`CarrierCycles`** para o microcontrolador IR acoplado ao kernel Samsung antigo.
-* **Fallback Pico via USB-OTG / BLE:** traduz qualquer comando do catálogo para o protocolo `IRTX <DEVSUB>:<CMD> GP<pin> <repeat>` no firmware C11 ([`p7501_ir_codec.c`](../../firmware/pico-p7501/diag/p7501_ir_codec.c)), restrito aos GPIOs livres seguros (`GP6..9` / `GP16..22`) com código de dispositivo `>= 0x01`.
+* **Fallback Pico via USB-OTG / BLE:** traduz qualquer comando do catálogo para o protocolo `IRTX <DEVSUB>:<CMD> GP<pin> <repeat>` no firmware C11 ([`p7501_ir_codec.c`](../../firmware/picofw/diag/picofw_ir_codec.c)), restrito aos GPIOs livres seguros (`GP6..9` / `GP16..22`) com código de dispositivo `>= 0x01`.
 
 ---
 

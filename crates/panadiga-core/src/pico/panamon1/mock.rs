@@ -55,8 +55,8 @@ impl MockPanamon1Transport {
             recorded_sleeps: Vec::new(),
             bridge_active: false,
             nor_unlocked: false,
-            status_reply: "[STANDBY] RXD=1 NSW5V=1 VDD=3.24V fault_latch=0 dropouts=0\r\nVDD: 3.24V (OK)\r\n@P7501_RES cmd=STATUS status=OK\r\nPANADIGA> ".to_string(),
-            pincheck_reply: "PINCHECK: OK\r\nPANADIGA> ".to_string(),
+            status_reply: "[STANDBY] RXD=1 NSW5V=1 VDD=3.24V fault_latch=0 dropouts=0\r\nVDD: 3.24V (OK)\r\n@PICO_RES cmd=STATUS status=OK\r\nPICO> ".to_string(),
+            pincheck_reply: "PINCHECK: OK\r\nPICO> ".to_string(),
             boottrace_reply: format!("BOOTTRACE: OK\r\n{PANAMON1_FULL_PROMPT}\r\n"),
             bridge_ctrl_edges: 0,
             bridge_ferr: 0,
@@ -145,16 +145,14 @@ impl Panamon1Transport for MockPanamon1Transport {
             .unwrap_or_default()
             .to_ascii_uppercase();
         Ok(match head.as_str() {
-            "PING" => "PONG\r\nPANADIGA> ".to_string(),
+            "PING" => "PONG\r\nPICO> ".to_string(),
             "STATUS" => self.status_reply.clone(),
             "PINCHECK" => self.pincheck_reply.clone(),
             "ISOLATE" => {
                 self.bridge_active = false;
-                "ISOLATE: OK\r\n@P7501_RES cmd=ISOLATE status=OK\r\nPANADIGA> ".to_string()
+                "ISOLATE: OK\r\n@PICO_RES cmd=ISOLATE status=OK\r\nPICO> ".to_string()
             }
-            "FAULTACK" => {
-                "FAULTACK: OK\r\n@P7501_RES cmd=FAULTACK status=OK\r\nPANADIGA> ".to_string()
-            }
+            "FAULTACK" => "FAULTACK: OK\r\n@PICO_RES cmd=FAULTACK status=OK\r\nPICO> ".to_string(),
             "BRIDGE" => {
                 self.bridge_active = self.auto_bridge_ping_ready;
                 "[BRIDGE] USB CDC <-> P7501 SC0 115200 PASSIVE active\r\n".to_string()
@@ -165,7 +163,7 @@ impl Panamon1Transport for MockPanamon1Transport {
                 }
                 self.boottrace_reply.clone()
             }
-            _ => "PANADIGA> ".to_string(),
+            _ => "PICO> ".to_string(),
         })
     }
 
@@ -175,11 +173,11 @@ impl Panamon1Transport for MockPanamon1Transport {
         if was_active {
             let ovf = if self.bridge_overflow { "YES" } else { "NO" };
             Ok(format!(
-                "BRIDGE: OK (rx=128 tx=64 ferr={} ctrl_edges={} overflow={})\r\nPANADIGA>",
+                "BRIDGE: OK (rx=128 tx=64 ferr={} ctrl_edges={} overflow={})\r\nPICO>",
                 self.bridge_ferr, self.bridge_ctrl_edges, ovf
             ))
         } else {
-            Ok("PANADIGA>".to_string())
+            Ok("PICO>".to_string())
         }
     }
 

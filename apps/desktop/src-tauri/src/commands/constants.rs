@@ -225,7 +225,8 @@ pub const COMPLETION_MARKERS: &[&str] = &[
     "PONG",
     "FAULTACK: OK",
     "FAULTACK: ERROR",
-    P7501_WIRE_TAG_RES,
+    PICOFW_WIRE_TAG_RES,
+    LEGACY_P7501_WIRE_TAG_RES,
 ];
 
 // ============================================================================

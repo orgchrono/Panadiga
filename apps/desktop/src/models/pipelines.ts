@@ -89,6 +89,15 @@ export interface DevBinReport {
   readonly size_bytes: number;
   readonly model: string;
   readonly oem: string;
+  readonly option_code_hex?: string;
+  readonly hw_version_u16?: number;
+  readonly model_code?: number;
+  readonly market_code?: number;
+  readonly market_code_name?: string;
+  readonly main_option_btn?: readonly number[];
+  readonly main_option_rcmode?: number;
+  readonly main_option_gui?: readonly number[];
+  readonly main_option_chmode?: number;
   readonly signature: string;
   readonly md5: string;
   readonly sha256: string;

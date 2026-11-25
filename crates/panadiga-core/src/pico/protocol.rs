@@ -1,6 +1,7 @@
-//! Thin-Host Structured `@P7501_*` Wire Protocol Parser (`@P7501_IDENT`, `@PROG`, `@EVT`, `@P7501_RES`).
+//! Thin-Host Structured `@PICO_*` (and legacy `@P7501_*`) Wire Protocol Parser
+//! (`@PICO_IDENT`, `@PROG`, `@EVT`, `@PICO_RES`).
 //!
-//! Decodes deterministic single-line key=value frames emitted by the Pico C11 Smart Probe
+//! Decodes deterministic single-line key=value frames emitted by PicoFW
 //! without regex dependencies or multi-line heuristics.
 
 use std::collections::BTreeMap;
@@ -237,14 +238,18 @@ fn parse_u32_auto(raw: Option<&String>) -> u32 {
     }
 }
 
-/// Parses a `@P7501_IDENT ...` line (or finds the first `@P7501_IDENT` line inside a multi-line response).
+fn strip_any_prefix<'a>(line: &'a str, prefixes: &[&str]) -> Option<&'a str> {
+    prefixes.iter().find_map(|p| line.strip_prefix(p))
+}
+
+/// Parses a `@PICO_IDENT ...` (or legacy `@P7501_IDENT ...`) line inside a multi-line response.
 #[must_use]
 pub fn parse_ident_line(input: &str) -> Option<PicoIdentFrame> {
-    let line = input
+    let rest = input
         .lines()
         .map(str::trim)
-        .find(|l| l.starts_with("@P7501_IDENT "))?;
-    let kv = parse_kv_tokens(&line["@P7501_IDENT ".len()..]);
+        .find_map(|l| strip_any_prefix(l, &["@PICO_IDENT ", "@P7501_IDENT "]))?;
+    let kv = parse_kv_tokens(rest);
     Some(PicoIdentFrame {
         vdd_mv: parse_u32_auto(kv.get("vdd_mv")),
         nsw5v: parse_u32_auto(kv.get("nsw5v")) != 0,
@@ -291,15 +296,15 @@ pub fn parse_evt_line(line: &str) -> Option<PicoEventFrame> {
     Some(PicoEventFrame { kind, fields })
 }
 
-/// Parses a `@P7501_RES cmd=<NAME> status=<OK|ERR> code=<...> elapsed_us=<u64>` line.
+/// Parses a `@PICO_RES cmd=<NAME> status=<OK|ERR> code=<...> elapsed_us=<u64>` (or legacy `@P7501_RES`) line.
 #[must_use]
 pub fn parse_res_line(input: &str) -> Option<PicoResultFrame> {
-    let line = input
+    let rest = input
         .lines()
         .rev()
         .map(str::trim)
-        .find(|l| l.starts_with("@P7501_RES "))?;
-    let mut fields = parse_kv_tokens(&line["@P7501_RES ".len()..]);
+        .find_map(|l| strip_any_prefix(l, &["@PICO_RES ", "@P7501_RES "]))?;
+    let mut fields = parse_kv_tokens(rest);
     let cmd = fields.remove("cmd")?;
     let status = fields.remove("status").unwrap_or_else(|| "OK".to_string());
     let code = fields.remove("code").unwrap_or_else(|| "0".to_string());
@@ -332,15 +337,15 @@ fn parse_csv_hex_ops(raw: Option<&String>) -> Vec<String> {
         .collect()
 }
 
-/// Parses a `@P7501_BOOT_CLASS ...` line (selecting the final matching summary if multiple exist).
+/// Parses a `@PICO_BOOT_CLASS ...` (or legacy `@P7501_BOOT_CLASS ...`) line (selecting the final matching summary).
 #[must_use]
 pub fn parse_boot_class_line(input: &str) -> Option<PicoBootClassFrame> {
-    let line = input
+    let rest = input
         .lines()
         .rev()
         .map(str::trim)
-        .find(|l| l.starts_with("@P7501_BOOT_CLASS "))?;
-    let kv = parse_kv_tokens(&line["@P7501_BOOT_CLASS ".len()..]);
+        .find_map(|l| strip_any_prefix(l, &["@PICO_BOOT_CLASS ", "@P7501_BOOT_CLASS "]))?;
+    let kv = parse_kv_tokens(rest);
     let verdict = kv.get("verdict")?.clone();
     Some(PicoBootClassFrame {
         verdict,
@@ -364,15 +369,15 @@ pub fn parse_boot_class_line(input: &str) -> Option<PicoBootClassFrame> {
     })
 }
 
-/// Parses a `@P7501_TBUS_AUDIT ...` line (selecting the final matching summary if multiple exist).
+/// Parses a `@PICO_TBUS_AUDIT ...` (or legacy `@P7501_TBUS_AUDIT ...`) line (selecting the final matching summary).
 #[must_use]
 pub fn parse_tbus_audit_line(input: &str) -> Option<PicoTbusAuditFrame> {
-    let line = input
+    let rest = input
         .lines()
         .rev()
         .map(str::trim)
-        .find(|l| l.starts_with("@P7501_TBUS_AUDIT "))?;
-    let kv = parse_kv_tokens(&line["@P7501_TBUS_AUDIT ".len()..]);
+        .find_map(|l| strip_any_prefix(l, &["@PICO_TBUS_AUDIT ", "@P7501_TBUS_AUDIT "]))?;
+    let kv = parse_kv_tokens(rest);
     if !kv.contains_key("frames") {
         return None;
     }
@@ -384,10 +389,10 @@ pub fn parse_tbus_audit_line(input: &str) -> Option<PicoTbusAuditFrame> {
     })
 }
 
-/// Parses a `@P7501_FRAME seq=<u32> ts_us=<u64> type=<TAG> len=<u16> crc32=<hex8> <payload>` envelope.
+/// Parses a `@PICO_FRAME seq=<u32> ts_us=<u64> type=<TAG> len=<u16> crc32=<hex8> <payload>` envelope (or legacy `@P7501_FRAME`).
 #[must_use]
 pub fn parse_push_frame_line(line: &str) -> Option<PicoPushFrame> {
-    let rest = line.trim().strip_prefix("@P7501_FRAME ")?;
+    let rest = strip_any_prefix(line.trim(), &["@PICO_FRAME ", "@P7501_FRAME "])?;
     let mut kv = parse_kv_tokens(rest);
     let seq = kv.remove("seq").and_then(|s| s.parse::<u32>().ok())?;
     let ts_us = kv.remove("ts_us").and_then(|s| s.parse::<u64>().ok())?;
@@ -416,20 +421,20 @@ pub fn parse_push_frame_line(line: &str) -> Option<PicoPushFrame> {
     })
 }
 
-/// Parses `@P7501_HOTPLUG`, `@P7501_LIVE_MAP`, or `@P7501_DIAG_DEEP` as pure thin KV map.
+/// Parses `@PICO_*` (and legacy `@P7501_*`) KV telemetry envelopes (`HOTPLUG`, `LIVE_MAP`, `DIAG_DEEP`, `GPS_ENV`, `ROUTE`, `XRAY`, `SURG`).
 #[must_use]
 pub fn parse_tagged_kv_line(line: &str) -> Option<PicoTaggedKvFrame> {
     let trimmed = line.trim();
-    for (prefix, tag) in [
-        ("@P7501_HOTPLUG ", "HOTPLUG"),
-        ("@P7501_LIVE_MAP ", "LIVE_MAP"),
-        ("@P7501_DIAG_DEEP ", "DIAG_DEEP"),
-        ("@P7501_GPS_ENV ", "GPS_ENV"),
-        ("@P7501_ROUTE ", "ROUTE"),
-        ("@P7501_XRAY ", "XRAY"),
-        ("@P7501_SURG ", "SURG"),
+    for (p1, p2, tag) in [
+        ("@PICO_HOTPLUG ", "@P7501_HOTPLUG ", "HOTPLUG"),
+        ("@PICO_LIVE_MAP ", "@P7501_LIVE_MAP ", "LIVE_MAP"),
+        ("@PICO_DIAG_DEEP ", "@P7501_DIAG_DEEP ", "DIAG_DEEP"),
+        ("@PICO_GPS_ENV ", "@P7501_GPS_ENV ", "GPS_ENV"),
+        ("@PICO_ROUTE ", "@P7501_ROUTE ", "ROUTE"),
+        ("@PICO_XRAY ", "@P7501_XRAY ", "XRAY"),
+        ("@PICO_SURG ", "@P7501_SURG ", "SURG"),
     ] {
-        if let Some(rest) = trimmed.strip_prefix(prefix) {
+        if let Some(rest) = strip_any_prefix(trimmed, &[p1, p2]) {
             return Some(PicoTaggedKvFrame {
                 tag: tag.to_string(),
                 fields: parse_kv_tokens(rest),
@@ -439,35 +444,26 @@ pub fn parse_tagged_kv_line(line: &str) -> Option<PicoTaggedKvFrame> {
     None
 }
 
-/// Classifies any single structured `@P7501_*` / `@PROG` / `@EVT` wire line.
+/// Classifies any single structured `@PICO_*` / `@P7501_*` / `@PROG` / `@EVT` wire line.
 #[must_use]
 pub fn parse_wire_line(line: &str) -> Option<PicoWireMessage> {
     let trimmed = line.trim();
-    if trimmed.starts_with("@P7501_IDENT ") {
-        parse_ident_line(trimmed).map(PicoWireMessage::Ident)
+    if let Some(ident) = parse_ident_line(trimmed) {
+        Some(PicoWireMessage::Ident(ident))
     } else if trimmed.starts_with("@PROG ") {
         parse_prog_line(trimmed).map(PicoWireMessage::Progress)
     } else if trimmed.starts_with("@EVT ") {
         parse_evt_line(trimmed).map(PicoWireMessage::Event)
-    } else if trimmed.starts_with("@P7501_BOOT_CLASS ") {
-        parse_boot_class_line(trimmed).map(PicoWireMessage::BootClass)
-    } else if trimmed.starts_with("@P7501_TBUS_AUDIT ") {
-        parse_tbus_audit_line(trimmed).map(PicoWireMessage::TbusAudit)
-    } else if trimmed.starts_with("@P7501_FRAME ") {
-        parse_push_frame_line(trimmed).map(PicoWireMessage::PushFrame)
-    } else if trimmed.starts_with("@P7501_HOTPLUG ")
-        || trimmed.starts_with("@P7501_LIVE_MAP ")
-        || trimmed.starts_with("@P7501_DIAG_DEEP ")
-        || trimmed.starts_with("@P7501_GPS_ENV ")
-        || trimmed.starts_with("@P7501_ROUTE ")
-        || trimmed.starts_with("@P7501_XRAY ")
-        || trimmed.starts_with("@P7501_SURG ")
-    {
-        parse_tagged_kv_line(trimmed).map(PicoWireMessage::TaggedKv)
-    } else if trimmed.starts_with("@P7501_RES ") {
-        parse_res_line(trimmed).map(PicoWireMessage::Result)
+    } else if let Some(bc) = parse_boot_class_line(trimmed) {
+        Some(PicoWireMessage::BootClass(bc))
+    } else if let Some(ta) = parse_tbus_audit_line(trimmed) {
+        Some(PicoWireMessage::TbusAudit(ta))
+    } else if let Some(pf) = parse_push_frame_line(trimmed) {
+        Some(PicoWireMessage::PushFrame(pf))
+    } else if let Some(kv) = parse_tagged_kv_line(trimmed) {
+        Some(PicoWireMessage::TaggedKv(kv))
     } else {
-        None
+        parse_res_line(trimmed).map(PicoWireMessage::Result)
     }
 }
 

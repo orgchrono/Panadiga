@@ -26,11 +26,11 @@ def test_collect_arsenal_matches_live_workspace_entities() -> None:
     mcp_tools = [str(x) for x in as_list(inv["mcp_tools"])]
     assert "panadiga_symbol_lookup" in mcp_tools
     pico_codecs = [str(x) for x in as_list(inv["pico_c11_codecs"])]
-    assert "firmware/pico-p7501/diag/p7501_boottrace_codec.c" in pico_codecs
-    assert "firmware/pico-p7501/diag/p7501_tbus_codec.c" in pico_codecs
-    openos_mods = [str(x) for x in as_list(inv["openos_modules"])]
-    assert "firmware/panadiga-openos/drivers/avdd_iic_video.c" in openos_mods
-    shell_cmds = set(str(x) for x in as_list(inv["openos_shell_commands"]))
+    assert "firmware/picofw/diag/picofw_boottrace_codec.c" in pico_codecs
+    assert "firmware/picofw/diag/picofw_tbus_codec.c" in pico_codecs
+    digaos_mods = [str(x) for x in as_list(inv["digaos_modules"])]
+    assert "firmware/digaos/drivers/avdd_iic_video.c" in digaos_mods
+    shell_cmds = set(str(x) for x in as_list(inv["digaos_shell_commands"]))
     assert {
         "status",
         "video br",

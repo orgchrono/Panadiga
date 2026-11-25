@@ -56,7 +56,7 @@ A interconexão física entre o **Raspberry Pi Pico** e o conector **`P7501`** d
 
 * **Padrão Físico do Conector `P7501`:** Conector **JST ZR de 6 pinos com passo (*pitch*) de `1.5 mm`**, modelo original Panasonic **`B6B-ZR-3R4`** (*through-hole top entry*, legenda **`TO JIGU`** no esquemático `VEP79138`).
 * **Como Comprar o Chicote Pronto:** Procure por **Cabo JST ZR / ZH `1.5 mm` 6 pinos Fêmea para Dupont `2.54 mm`** (alojamento `ZHR-6` com terminais `SZH-002T-P0.5`). Evite padrões incompatíveis como JST SH (`1.0 mm`), JST PH (`2.0 mm`) ou JST XH (`2.54 mm`).
-* **Compatibilidade Pico 1 (`RP2040`) e Pico 2 (`RP2350`):** Ambas as famílias (incluindo variantes sem fio `Pico W` / `Pico 2 W`) são nativamente suportadas pelo firmware [`firmware/pico-p7501/`](../../firmware/pico-p7501/).
+* **Compatibilidade Pico 1 (`RP2040`) e Pico 2 (`RP2350`):** Ambas as famílias (incluindo variantes sem fio `Pico W` / `Pico 2 W`) são nativamente suportadas pelo firmware [`firmware/picofw/`](../../firmware/picofw/).
 * **Alerta Crítico de Protocolo (`P7501` Async UART vs. JTAG / `DWire32A`):** Os **5 manuais de serviço oficiais do DMR-EH55 (`30` PDFs no acervo)** e capturas ao vivo (`COM10`) provam que `P7501` **NÃO** possui linhas JTAG (`TDI/TDO/TMS`) nem `DWire32A` síncrono (`SDATA`/`SCLK`). Pino 6 (`UARTP2M_T`) é RX passivo a `115200 8N1`, Pino 3 (`UARTM2P_T`) é TX ativo (liberado por `Q7514` quando `SW_UART = Hi-Z`), e Pino 5 (`NSW5V`) vem do nó de `~5.15V` via `D7510` — **NUNCA** deve ser dirigido pelo Pico.
 
 ### 2.1 Esquema Elétrico Completo de Bancada (Referência Oficial Panasonic `VEP79138`)
@@ -414,7 +414,7 @@ Antes de ligar o aparelho à rede elétrica ou plugar o cabo USB do Pico ao comp
                                         ▼
     ┌────────────────────────────────────────────────────────────────────────┐
     │ 2. VALIDAÇÃO ELÉTRICA NO PICO (USB Conectado ao PC)                   │
-    │    Console PANADIGA> STATUS e PINCHECK:                                │
+    │    Console PICO> STATUS e PINCHECK:                                │
     │    - Confirmar SW_UART ~3.25V Hi-Z / ~2.69V PD / ~3.27V PU             │
     │    - Confirmar GP3 (NSW5V) bloqueado como Hi-Z Input sem pulls!        │
     └───────────────────────────────────┬────────────────────────────────────┘

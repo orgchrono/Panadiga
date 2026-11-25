@@ -263,4 +263,38 @@ pub enum RegionCompatAction {
         #[arg(short, long, value_name = "JSON_FILE")]
         json: Option<PathBuf>,
     },
+
+    /// Inspects SSOT Brazilian (`M6930LB`) localization sites in unpacked `MAIN` (`3060NP` / `3410PQ`)
+    InspectLocalization {
+        /// Unpacked MAIN binary path
+        #[arg(short, long, value_name = "MAIN_BIN")]
+        input: PathBuf,
+
+        /// Exports structured JSON report (`-` emits stdout JSON)
+        #[arg(short, long, value_name = "JSON_FILE")]
+        json: Option<PathBuf>,
+    },
+
+    /// Applies or restores SSOT Brazilian (`M6930LB`) localization sites in unpacked `MAIN`
+    PatchLocalization {
+        /// Unpacked MAIN input binary path
+        #[arg(short, long, value_name = "MAIN_BIN")]
+        input: PathBuf,
+
+        /// Patched MAIN output path (Copy-on-Write)
+        #[arg(short, long, value_name = "OUT_BIN")]
+        output: PathBuf,
+
+        /// Mode: m6930lb_brazil (default) or factory_original
+        #[arg(long, default_value = "m6930lb_brazil", value_name = "MODE")]
+        mode: String,
+
+        /// Also patch MAIN `<deviceinfo>` model & OEM guard to `bypass_model_and_oem`
+        #[arg(long)]
+        bypass_devinfo: bool,
+
+        /// Exports structured JSON report (`-` emits stdout JSON)
+        #[arg(short, long, value_name = "JSON_FILE")]
+        json: Option<PathBuf>,
+    },
 }

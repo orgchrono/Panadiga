@@ -26,6 +26,8 @@ export type ViewKey =
   | 'nvram'
   | 'hdd'
   | 'picobench'
+  | 'ssotstudio'
+  | 'siliconexplorer'
   | 'frmcrypto'
   | 'unbrick'
   | 'manuals'

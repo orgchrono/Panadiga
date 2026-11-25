@@ -1,6 +1,6 @@
 /**
- * Raspberry Pi Pico (RP2040 / RP2350) P7501 Async UART (115200 8N1) Hardware Bench Models
- * Matches firmware/pico-p7501/p7501_types.h & p7501_pico_main.c
+ * Raspberry Pi Pico (RP2040 / RP2350) PicoFW P7501 Async UART (115200 8N1) Hardware Bench Models
+ * Matches firmware/picofw/picofw_types.h & picofw_pico_main.c
  */
 
 export type ColdBreakinMode = 0 | 1 | 2 | 3;

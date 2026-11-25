@@ -354,6 +354,7 @@ export interface MainBuildSpec {
   readonly bgo_retarget_anchors?: MainBgoRetargetAnchors | null;
   readonly sata_bridge_reset_spec?: SataBridgeResetSpec | null;
   readonly av_passthrough_sites?: readonly BinaryPatchSiteSpec[];
+  readonly region_localization_sites?: readonly BinaryPatchSiteSpec[];
   readonly unpacked_sha256?: string | null;
 }
 

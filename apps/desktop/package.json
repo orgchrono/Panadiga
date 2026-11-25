@@ -14,7 +14,7 @@
     "test:e2e": "playwright test",
     "lint": "oxlint src --deny-warnings && tsc --noEmit",
     "uxlint": "ux-guard scan src --fail-on info",
-    "jscpd": "jscpd src --threshold 0",
+    "jscpd": "jscpd --ignore \"**/models/generated/**\" src --threshold 0",
     "check:ci": "run-p -l lint test",
     "check": "run-p -l lint uxlint jscpd test",
     "check:all": "run-p -l lint uxlint jscpd test test:e2e",

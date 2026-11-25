@@ -186,6 +186,12 @@ pub fn format_sd_kit_lines(report: &SdUnbrickKitReport) -> Vec<String> {
                 .to_string(),
         );
     }
+    if report.m6930lb_localization_applied {
+        lines.push(
+            "  Localization : M6930LB Brazil (OSD market unlock + IC3001 BH7629 + FPC/GATE15 + <deviceinfo> bypass)"
+                .to_string(),
+        );
+    }
     lines
 }
 

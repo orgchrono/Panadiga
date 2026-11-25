@@ -204,7 +204,7 @@ flowchart LR
   ├─────────────────────────────────────────────────────────────────────┤
   │ 2. CONEXÃO JST ZR-6: Plugue encaixado em P7501 + USB no Pico        │
   ├─────────────────────────────────────────────────────────────────────┤
-  │ 3. TERMINAL (115200 bps): Abrir console -> Prompt 'PANADIGA> '      │
+  │ 3. TERMINAL (115200 bps): Abrir console -> Prompt 'PICO> '      │
   ├─────────────────────────────────────────────────────────────────────┤
   │ 4. CHECK ELÉTRICO ('STATUS' e 'PINCHECK'): ~3.25V Hi-Z / ~2.69V PD  │
   ├─────────────────────────────────────────────────────────────────────┤
@@ -227,36 +227,36 @@ flowchart LR
 1. Conecte o cabo `ZHR-6` (`1.5 mm`) ao conector `P7501` mapeando exatamente os 6 pinos (`1->GP26`, `2->GP5`, `3->GP4`, `4->GND`, `5->GP3`, `6->GP2`).
 2. Alimente o Pico exclusivamente pelo cabo **USB** conectado ao computador (ou celular Android via OTG / Bluetooth BLE se estiver em Pico W / 2 W).
 
-### Passo 3: Energização e Abertura do Console (`PANADIGA> `)
+### Passo 3: Energização e Abertura do Console (`PICO> `)
 1. Conecte o gravador Panasonic à tomada AC e ligue o cabo USB do Pico.
 2. Abra a porta serial do Pico no aplicativo desktop (`panadiga-desktop`), na CLI (`panadiga`) ou terminal serial a `115200 bps`.
-3. Pressione `<ENTER>` e confirme o prompt **`PANADIGA> `**.
+3. Pressione `<ENTER>` e confirme o prompt **`PICO> `**.
 
 ### Passo 4: Verificação Elétrica (`STATUS` e `PINCHECK`)
 ```text
-PANADIGA> PING
+PICO> PING
 PONG
-PANADIGA> STATUS
+PICO> STATUS
 VDD: 3.25V (OK)
-PANADIGA> PINCHECK
+PICO> PINCHECK
 ```
 * **Leitura esperada em `PINCHECK`:** `SW_UART` (`GP26`) marca `~3.25V` em `Hi-Z`, `~2.69V` sob pull-down (grampeado via junção B-C de `Q7510`) e `~3.27V` sob pull-up; `XRESET` (`GP5`) sobe em `~20 µs` ao soltar; `NSW5V` (`GP3`) reportado estritamente em `Hi-Z Input`; `GP2` (`UARTP2M_T`) acusa centenas de bordas seriais ativas durante boot.
 
 ### Passo 5: Captura de Boot (`UARTSTREAM` / `BOOTTRACE` / `HEXCAP` / `BAUDSCAN`)
 ```text
-PANADIGA> BAUDSCAN 3500 NORMAL
-PANADIGA> UARTSTREAM 12000 JIG:2500
-PANADIGA> BOOTTRACE 15000 NOJIG
+PICO> BAUDSCAN 3500 NORMAL
+PICO> UARTSTREAM 12000 JIG:2500
+PICO> BOOTTRACE 15000 NOJIG
 ```
 * A captura determinística PIO1 em `GP2` (`115200 8N1`) exibirá a telemetria completa do bootloader AM34 (`<00>DDR CHECK: OK`, `SD init`, `CD diag boot mode`, códigos `X(80020401)` / `X(80040904)` e estágio `*** RTSC Initialize ***`). *(Para **`Loader ver0.61`**, `UARTSTREAM 12000 JIG:2500` mantém `SW_UART` em `LOW` tempo suficiente para atravessar `DDR CHECK: OK` e carregar `DIGADIAG.FRM` antes de liberar `GP26`; alternativamente, comandos legados PIO0 `JIGBOOT`/`BOOTCAP`/`UARTMON` seguem disponíveis.)*
 
 ### Passo 6: Transmissão Serial Interativa (`ENGAGE` + `UARTSEND` / `DIAGWATCH` / `PANARSP`) e Restauração (`UARTPROBE 8` + `ISOLATE`)
 ```text
-PANADIGA> ENGAGE
+PICO> ENGAGE
 [BUS] P7501 UART TX (GP4) engaged idle HIGH; NSW5V (GP3) kept Hi-Z Input.
-PANADIGA> UARTSEND VER
-PANADIGA> UARTPROBE 8
-PANADIGA> ISOLATE
+PICO> UARTSEND VER
+PICO> UARTPROBE 8
+PICO> ISOLATE
 [BUS] P7501 pins placed in High-Impedance Isolation (NSW5V/XRESET Hi-Z, GP26 ADC0).
 ```
 *(Lembre-se: `UARTSEND` mantendo `SW_UART = Hi-Z` permite a passagem por `Q7514`; ao concluir, rodar `UARTPROBE 8` + `ISOLATE` restaura a leitura limpa de `GP26 / ADC0` para os próximos comandos `STATUS`.)*
@@ -290,7 +290,7 @@ PANADIGA> ISOLATE
 * **Alerta Elétrico:** Não ligue conversores USB-Serial genéricos diretamente ao `P7501` sem garantir nível `3.3V` estrito, Open-Drain real em `XRESET` e isolamento completo do Pino 5 (`NSW5V`).
 
 ### 7.2. Compatibilidade com Outros Fabricantes de NOR Flash (Padrão JEDEC CFI)
-O payload alvo [`ram_loader_am34_target.c`](../../firmware/pico-p7501/flash/ram_loader_am34_target.c) e o motor `panadiga nvram clean` suportam geometrias Top-Boot padrão JEDEC/CFI de **Spansion** (`S29JL064H`, `S29GL064N`, `S29AL016D`), **ST/Numonyx** (`M29W640FB`/`FT`), **Macronix** (`MX29LV640DT`), **Fujitsu** (`MBM29LV640`) e **Toshiba/Winbond**.
+O payload alvo [`ram_loader_am34_target.c`](../../firmware/picofw/flash/ram_loader_am34_target.c) e o motor `panadiga nvram clean` suportam geometrias Top-Boot padrão JEDEC/CFI de **Spansion** (`S29JL064H`, `S29GL064N`, `S29AL016D`), **ST/Numonyx** (`M29W640FB`/`FT`), **Macronix** (`MX29LV640DT`), **Fujitsu** (`MBM29LV640`) e **Toshiba/Winbond**.
 
 ### 7.3. Compatibilidade com Outros Gravadores da Família Panasonic DIGA
 Referência de partições NVRAM Top-Boot (`EEMUL`) em gerações DIGA:
@@ -327,4 +327,4 @@ Antes de qualquer comando de alteração ou intervenção invasiva:
 4. **Passo 4 — Reparo Graduado `U99` (In-Circuit com IPL `E05` $\rightarrow$ Contingência TSOP-48):** Com backup de `8 MiB` salvo em disco, execute a cura in-circuit em `PANAMON1>` (`SA134..SA141` `EEMUL` liberada; Camada 2 BGO `SA26..SA70` mediante aceite explícito `U CONFIRM_UPPER_NOR` + aguardo ~`700 ms` / `0xFF × 32`, mantendo **Camada 1 IPL `SA0..SA10` travada em `E05`**). Em aparelhos já bricados em `U99`, esta tentativa sem dessolda é segura contra brick de bootrom; recorra à remoção física da `IC5001` (`XGecu T48` / `SVOD 4` + `panadiga nvram clean`) somente se o IPL `SA0..SA10` ou o leitor SD estiverem fisicamente danificados.
 
 > [!TIP]
-> Para a referência integral de **todos os comandos bare-metal `PANADIGA>`** e o **glossário operacional (`PANAMON`/`PANAMON1>`, `WAITTX`, `JIG`/`PREJIG`, `BOOTREC`, `OpenOS` e subcomandos `panadiga pico`)**, consulte as **Seções 6 e 11 de [`FIRMWARE_PICO_P7501_GUIA.md`](./FIRMWARE_PICO_P7501_GUIA.md)**.
+> Para a referência integral de **todos os comandos bare-metal `PICO>`** e o **glossário operacional (`PANAMON`/`PANAMON1>`, `WAITTX`, `JIG`/`PREJIG`, `BOOTREC`, `OpenOS` e subcomandos `panadiga pico`)**, consulte as **Seções 6 e 11 de [`FIRMWARE_PICO_P7501_GUIA.md`](./FIRMWARE_PICO_P7501_GUIA.md)**.

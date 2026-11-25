@@ -146,7 +146,7 @@ fn ssot_thresholds_match_firmware_and_platform_constants() {
 #[test]
 fn c11_firmware_and_catalog_ssot_parity() {
     let spec = build_hardware_ssot_spec();
-    let c11_cli = repo_file("firmware/pico-p7501/cli/p7501_cli.c");
+    let c11_cli = repo_file("firmware/picofw/cli/picofw_cli.c");
     let c11_names = extract_c11_cli_names(&c11_cli);
     let c11_set: HashSet<&str> = c11_names.iter().map(String::as_str).collect();
     let ssot_set: HashSet<&str> = spec.pico_commands.iter().map(|c| c.id.as_str()).collect();
@@ -166,11 +166,11 @@ fn c11_firmware_and_catalog_ssot_parity() {
         );
     }
 
-    let wdt_hdr = repo_file("firmware/pico-p7501/common/p7501_wdt_logic.h");
-    let wdt_max_c: u64 = extract_c_define_token(&wdt_hdr, "P7501_WDT_MAX_CMD_WINDOW_MS")
+    let wdt_hdr = repo_file("firmware/picofw/common/picofw_wdt_logic.h");
+    let wdt_max_c: u64 = extract_c_define_token(&wdt_hdr, "PICOFW_WDT_MAX_CMD_WINDOW_MS")
         .trim_end_matches(&['u', 'U', 'l', 'L'][..])
         .parse()
-        .expect("numeric P7501_WDT_MAX_CMD_WINDOW_MS");
+        .expect("numeric PICOFW_WDT_MAX_CMD_WINDOW_MS");
     assert_eq!(wdt_max_c, P7501_WDT_MAX_CMD_WINDOW_MS);
     assert_eq!(
         hardware_catalog()
@@ -180,19 +180,19 @@ fn c11_firmware_and_catalog_ssot_parity() {
         Some(P7501_WDT_MAX_CMD_WINDOW_MS)
     );
 
-    let types_hdr = repo_file("firmware/pico-p7501/p7501_types.h");
-    let baud_c: u32 = extract_c_define_token(&types_hdr, "P7501_UART_BAUD_RATE")
+    let types_hdr = repo_file("firmware/picofw/picofw_types.h");
+    let baud_c: u32 = extract_c_define_token(&types_hdr, "PICOFW_UART_BAUD_RATE")
         .trim_end_matches(&['u', 'U', 'l', 'L'][..])
         .parse()
-        .expect("numeric P7501_UART_BAUD_RATE");
-    let vdd_min_c: f32 = extract_c_define_token(&types_hdr, "P7501_VDD_THRESHOLD_V")
+        .expect("numeric PICOFW_UART_BAUD_RATE");
+    let vdd_min_c: f32 = extract_c_define_token(&types_hdr, "PICOFW_VDD_THRESHOLD_V")
         .trim_end_matches(&['f', 'F'][..])
         .parse()
-        .expect("f32 P7501_VDD_THRESHOLD_V");
-    let vdd_ceil_c: f32 = extract_c_define_token(&types_hdr, "P7501_VDD_FLOATING_CEIL_V")
+        .expect("f32 PICOFW_VDD_THRESHOLD_V");
+    let vdd_ceil_c: f32 = extract_c_define_token(&types_hdr, "PICOFW_VDD_FLOATING_CEIL_V")
         .trim_end_matches(&['f', 'F'][..])
         .parse()
-        .expect("f32 P7501_VDD_FLOATING_CEIL_V");
+        .expect("f32 PICOFW_VDD_FLOATING_CEIL_V");
     assert_eq!(baud_c, spec.thresholds.default_baud_rate);
     assert!((vdd_min_c - spec.thresholds.min_vdd_threshold_volts).abs() < f32::EPSILON);
     assert!((vdd_ceil_c - spec.thresholds.max_vdd_ceiling_volts).abs() < f32::EPSILON);

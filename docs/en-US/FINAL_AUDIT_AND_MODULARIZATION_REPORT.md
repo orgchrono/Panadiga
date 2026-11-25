@@ -272,13 +272,13 @@ python scripts/validate.py
 | **Frontend RAG** | `apps/desktop/src/components/rag/` | Decoupled AI assistant panel |
 | **Profiles SSOT v2** | `crates/panadiga-profiles/` & `profiles/` | **89 models**, **12 JSON Schemas**, and Deterministic `T0..T4` Gate for TS/C11 codegen |
 | **Vault & Express** | `crates/panadiga-core/src/{vault,ingest,re/prewrite_gate}/` | `raw`/`frm`/`recompiled` segregation, `Mn103Vm` gate, and `ExpressView.tsx` (`components/express/`) |
-| **Zero-Gadget Firmware** | `firmware/pico-p7501/{cli,common,diag,flash,gdb,generated,hal,tests,uart}/` | Zero external OLED/buzzer (`P0_FW_RO 256 KiB`): `VAULT VERIFY`, `IR VERIFY`, `DUMPNOR ff_blocks`, LUT CRC32 |
+| **Zero-Gadget Firmware** | `firmware/picofw/{cli,common,diag,flash,gdb,generated,hal,tests,uart}/` | Zero external OLED/buzzer (`P0_FW_RO 256 KiB`): `VAULT VERIFY`, `IR VERIFY`, `DUMPNOR ff_blocks`, LUT CRC32 |
 | **Frontend MVVM** | `apps/desktop/src/viewmodels/useRagViewModel.ts` | Isolated RAG assistant state machine |
 
 ```mermaid
 flowchart LR
     PROFILES["panadiga-profiles (89 models / 12 Schemas / T0..T4)"] --> TSGEN["apps/desktop/src/models/generated/ (TypeScript SSOT)"]
-    PROFILES --> CGEN["firmware/pico-p7501/generated/p7501_ssot.h (C11 SSOT)"]
+    PROFILES --> CGEN["firmware/picofw/generated/picofw_ssot.h (C11 SSOT)"]
     PROFILES --> CORE["panadiga-core (100% Deterministic: Vault + Mn103Vm + Thread-Local Logger)"]
     CORE --> HOST["Desktop Tauri 2 (ExpressView) & Android APK (OTG/BLE/IR)"]
     HOST --> PICO["Zero-Gadget Probe (P0_FW_RO 256 KiB: RP2040 160 KiB / RP2350 157 KiB)"]

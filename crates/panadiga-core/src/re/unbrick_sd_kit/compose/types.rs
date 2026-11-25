@@ -78,6 +78,7 @@ pub struct SdUnbrickKitRequest {
     pub sata_hdd_autoboot: bool,
     pub main_bgo_retarget: bool,
     pub nor_autoboot_capsule: bool,
+    pub m6930lb_localization: bool,
 }
 
 /// High-level SD recovery kit preset distinguishing standard builds from the hardened `PANAMON1` `ver0.61` kit.
@@ -137,6 +138,7 @@ impl SdUnbrickKitRequest {
             sata_hdd_autoboot: false,
             main_bgo_retarget: false,
             nor_autoboot_capsule: false,
+            m6930lb_localization: false,
         }
     }
 }
@@ -170,6 +172,8 @@ pub struct SdUnbrickKitReport {
     pub main_bgo_retarget_applied: bool,
     #[serde(default)]
     pub nor_autoboot_capsule_applied: bool,
+    #[serde(default)]
+    pub m6930lb_localization_applied: bool,
     pub digadiag_path: String,
     pub digadiag_sha256: String,
     pub pana_sd_path: Option<String>,
@@ -180,10 +184,12 @@ pub struct SdUnbrickKitReport {
 
 pub(crate) struct ComposedMainArtifact {
     pub container: Vec<u8>,
+    pub header_checksum: u32,
     pub slot_name: String,
     pub build_version_u16: u16,
     pub passthrough_applied: String,
     pub hdd_capacity_applied: Option<String>,
     pub sata_bridge_reset_fix_applied: bool,
     pub main_bgo_retarget_applied: bool,
+    pub m6930lb_localization_applied: bool,
 }

@@ -33,7 +33,7 @@ from scripts.panadiga_ops import (
     update_sha256_manifest,
 )
 
-UF2_NAMES: Final[tuple[str, ...]] = ("panasonic_p7501_uart_unified.uf2",)
+UF2_NAMES: Final[tuple[str, ...]] = ("picofw_unified.uf2",)
 STALE_DIST_ITEMS: Final[tuple[str, ...]] = (
     "run.cmd",
     "run.ps1",
@@ -158,7 +158,7 @@ def _copy_release_binary(bin_name: str, dist_dir: Path) -> Path:
 
 
 def sync_firmware_bins_to_dist(dist_dir: Path) -> None:
-    """Copy compiled P7501 UF2 images from firmware_bins/ into dist/ when dist/ is present."""
+    """Copy compiled PicoFW UF2 images from firmware_bins/ into dist/ when dist/ is present."""
     fw_bins_dir = ROOT / "crates" / "panadiga-core" / "src" / "pico" / "firmware_bins"
     for uf2_name in UF2_NAMES:
         uf2_src = fw_bins_dir / uf2_name
@@ -203,6 +203,14 @@ def build_desktop(
 
     cli_bin = _copy_release_binary(panadiga_binary_name(), dist_dir)
     gui_bin = _copy_release_binary(panadiga_desktop_binary_name(), dist_dir)
+
+    for stale_uf2 in dist_dir.glob("*.uf2"):
+        if stale_uf2.name not in UF2_NAMES:
+            stale_uf2.unlink(missing_ok=True)
+
+    for stale_uf2 in dist_dir.glob("*.uf2"):
+        if stale_uf2.name not in UF2_NAMES:
+            stale_uf2.unlink(missing_ok=True)
 
     _stage_tools_directory(dist_dir)
     sync_firmware_bins_to_dist(dist_dir)

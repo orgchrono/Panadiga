@@ -20,7 +20,7 @@
 ## 3. Violações de Integridade Forense, Quarentena & Epistemologia
 - **Mutação In-Place:** Nunca modificar dumps `.bin`/`.img`/`.FRM` originais; bucket `raw/` e `frm/` do Vault falham fechado em colisão de hash para mesmo arquivo; bucket `recompiled/` falha fechado sem `PreWriteGateReport.passed == true`.
 - **Quarentena PDF (`manual_spec_extractor.py`):** `direct_profile_writes == 0`; escreve apenas em `profiles/staging/manual_proposals/` com `requires_human_review: true` e `page_citations`.
-- **Epistemologia:** Não declarar `[PROVADO EM HARDWARE REAL]` sem entrada `N4_HARDWARE`/`N5_REPRODUCED` no `docs/evidence/ledger.json`; não vender `Mn103Vm` (`N2_EMULATED`) como prova de silício; não descrever `firmware/panadiga-blackbox-fw` como clean-room; manter `0` tokens banidos (`test_profiles_ssot.py`, `test_docs_parity.py`).
+- **Epistemologia:** Não declarar `[PROVADO EM HARDWARE REAL]` sem entrada `N4_HARDWARE`/`N5_REPRODUCED` no `docs/evidence/ledger.json`; não vender `Mn103Vm` (`N2_EMULATED`) como prova de silício; não descrever `firmware/digaos` como clean-room; manter `0` tokens banidos (`test_profiles_ssot.py`, `test_docs_parity.py`).
 
 ## 4. Violações de Código, AppSec & Paridade
 - `#![deny(unsafe_code)]` em módulos não-FFI; `#![cfg_attr(not(test), deny(clippy::print_stdout, clippy::print_stderr))]`.

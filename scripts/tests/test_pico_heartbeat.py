@@ -24,13 +24,13 @@ def _mock_list_runner(args: Sequence[str]) -> tuple[int, str, str]:
             "\n".join(
                 [
                     "Port: COM3 | Generic USB Serial | VID:1A86 PID:7523 | CH340",
-                    "Port: /dev/ttyACM0 | RP2350 (Pico 2) | VID:2E8A PID:000F | Panadiga P7501",
+                    "Port: /dev/ttyACM0 | RP2350 (Pico 2) | VID:2E8A PID:000F | Panadiga PicoFW P7501",
                 ]
             ),
             "",
         )
     if list(args[:2]) == ["pico", "ping"]:
-        return 0, "PONG fw=P7501_ZERO_GADGET", ""
+        return 0, "PONG fw=PICOFW_ZERO_GADGET", ""
     if list(args[:2]) == ["pico", "status"]:
         return 0, "PING: PONG OK\nVDD: 3.31 V\nDCSR: 0x00000001 -> HALTED", ""
     return 1, "", "unexpected cmd"

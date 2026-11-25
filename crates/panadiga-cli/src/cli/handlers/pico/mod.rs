@@ -128,6 +128,8 @@ pub fn handle_pico(args: PicoArgs) -> Result<()> {
         }
         PicoActions::CaptureNor(c) => live_ops::handle_capture_nor(c)?,
         PicoActions::DavisProbe(d) => live_ops::handle_davis_probe(d)?,
+        PicoActions::SiliconReplay(r) => live_ops::handle_silicon_replay(r)?,
+        PicoActions::SiliconSnapshot(s) => live_ops::handle_silicon_snapshot(s)?,
     }
     Ok(())
 }

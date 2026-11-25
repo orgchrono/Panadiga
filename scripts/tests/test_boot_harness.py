@@ -27,7 +27,7 @@ class _SequenceBootTransport(TransportProtocol):
         self.commands.append(command)
         head = command.split()[0].upper()
         if head == "ISOLATE":
-            return "ISOLATE: OK\r\nP7501> "
+            return "ISOLATE: OK\r\nPICO> "
         if head == "BOOTCAP":
             return (
                 "BOOTCAP\r\n"
@@ -35,7 +35,7 @@ class _SequenceBootTransport(TransportProtocol):
                 "***** Loader ver0.61 [06/03/06] *****\r\n"
                 "***** normal mode *****\r\n"
                 "BGO driver init failed[1].\r\n"
-                "P7501> "
+                "PICO> "
             )
         if head == "JIGBOOT":
             resp = self._jig_responses[self._jig_idx % len(self._jig_responses)]
@@ -57,7 +57,7 @@ def test_ab_harness_tracks_intermittent_sd_and_83a7_counts() -> None:
                 "[SDCD]SetBusWidth:SD Status ERROR -91006\r\n"
                 "SD init failed[-90002].\r\n"
                 "*** SENSE[70 00 04 00 00 00 00 0A 00 00 83 A7 09 04 00 00 00 00]\r\n"
-                "P7501> "
+                "PICO> "
             ),
             (
                 "DDR CHECK: OK\r\n"
@@ -65,7 +65,7 @@ def test_ab_harness_tracks_intermittent_sd_and_83a7_counts() -> None:
                 "SDCD:sdcd_insrmv_check:No Card[-90001]\r\n"
                 "SD init failed[-90002].\r\n"
                 "*** SENSE[70 00 04 00 00 00 00 0A 00 00 83 A7 09 04 00 00 00 00]\r\n"
-                "P7501> "
+                "PICO> "
             ),
         ]
     )

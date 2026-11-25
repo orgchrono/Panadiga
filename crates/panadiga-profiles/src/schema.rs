@@ -10,8 +10,8 @@ use schemars::schema_for;
 use serde_json::Value;
 
 use crate::types::{
-    Authorization, BoardProfile, EepromChipProfile, FirmwareTrainProfile, FlashChipProfile,
-    MediaFormatProfile, ModelProfileManifest, NorLayoutProfile, ProfilesBundle,
+    Authorization, BoardProfile, DigaOsConfigSpec, EepromChipProfile, FirmwareTrainProfile,
+    FlashChipProfile, MediaFormatProfile, ModelProfileManifest, NorLayoutProfile, ProfilesBundle,
     ResolvedModelProfile, SocCoreProfile, SocProfile,
 };
 
@@ -67,6 +67,10 @@ pub fn generate_all_schemas() -> Vec<(&'static str, String)> {
         (
             "model_manifest.schema.json",
             render_schema_value::<ModelProfileManifest>,
+        ),
+        (
+            "digaos_config.schema.json",
+            render_schema_value::<DigaOsConfigSpec>,
         ),
     ];
     entries

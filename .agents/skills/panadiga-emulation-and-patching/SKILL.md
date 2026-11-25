@@ -23,7 +23,7 @@ Esta skill conduz a geração segura de patches binários (CoW), a validação a
 1. **`Mn103Vm` ≠ Prova em Hardware Real (`N2_EMULATED` vs `N4_HARDWARE`):** A VM valida fluxo ISA `MN103S` e fronteiras estáticas de memória — **não** valida timing CFI Spansion (`~700 ms`), mascaramento atômico `CLI`, coerência I/D-cache, DMA ou watchdog `IC7501`.
 2. **Proibição de Escrita no IPL & MMIO Letal:** `rsp-codec` e `gdb-bridge` mantêm `SA0..SA10` (`0x80000000..0x8003FFFF` / `0x84000000..0x8403FFFF`) bloqueados (`E05`) e proíbem acesso a `0xC000_100C`.
 3. **Armadilha GDB vs `PANAMON1>`:** **JAMAIS** envie `$m...#B1` quando o alvo está parado em `PANAMON1>` — o caractere `'B'` em `#B1` aciona `'B'` (`OK:BYPASS`) no monitor! Sempre sonde com `?\r` antes e escolha `--target-mode` exato.
-4. **Enquadramento Honesto de `PANAMON2` (`firmware/panadiga-blackbox-fw`):** Protótipo experimental de interoperabilidade em SDRAM (`0x50400000`), **não** *clean-room* jurídico; compilável apenas em container `mn10300-elf-gcc`.
+4. **Enquadramento Honesto do `DigaOS` (`firmware/digaos`, sucessor consolidado do protótipo bare-metal):** Sistema operacional open-source experimental em SDRAM (`0x50400000`, `DIGAOS>`), **não** *clean-room* jurídico; compilável em host test C11 ou container `mn10300-elf-gcc`.
 
 ## 3. Workflow Canônico (CLI, Launchers & MCP)
 

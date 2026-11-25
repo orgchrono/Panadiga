@@ -48,16 +48,16 @@ fn describe_dcsr_state(dcsr: u32) -> &'static str {
 
 pub(super) fn query_pico_dcsr_flow(port: &str, baud: u32, cmd: &str) -> Result<()> {
     let mut ser = open_cdc(port, baud, Duration::from_millis(1200))?;
-    let prompt_stops = ["PANADIGA>", "P7501>"];
-    let ping = send_and_read_until(&mut *ser, "PING", &prompt_stops, Duration::from_millis(800));
+    let prompt_stops = panadiga_core::pico::cdc::PICO_PROMPT_STOP_TOKENS;
+    let ping = send_and_read_until(&mut *ser, "PING", prompt_stops, Duration::from_millis(800));
     let vdd_raw = send_and_read_until(
         &mut *ser,
         "STATUS",
-        &prompt_stops,
+        prompt_stops,
         Duration::from_millis(800),
     );
     let vdd = parse_vdd_reply(&vdd_raw);
-    let reply = send_and_read_until(&mut *ser, cmd, &prompt_stops, Duration::from_millis(2500));
+    let reply = send_and_read_until(&mut *ser, cmd, prompt_stops, Duration::from_millis(2500));
 
     log_println!("====================================================================");
     log_println!("   PANADIGA PICO P7501 ASYNC UART TELEMETRY ({})", port);
@@ -117,7 +117,7 @@ pub(super) fn dump_pico_aperture(
         let reply = send_and_read_until(
             &mut *ser,
             &cmd,
-            &["PANADIGA>", "P7501>", "ERR"],
+            &["PICO>", "P7501>", "ERR"],
             Duration::from_millis(5000),
         );
         let chunk_bytes = parse_pico_dump_hex_to_bytes(&reply);
@@ -194,10 +194,10 @@ pub(super) fn flash_pico_firmware(port: Option<String>, file: Option<PathBuf>) -
         )
     } else {
         let candidates = [
-            "crates/panadiga-core/src/pico/firmware_bins/panasonic_p7501_uart_unified.uf2",
-            "target/pico-build/panasonic_p7501_uart_unified.uf2",
-            "firmware/pico-p7501/panasonic_p7501_uart_unified.uf2",
-            "dist/panasonic_p7501_uart_unified.uf2",
+            "crates/panadiga-core/src/pico/firmware_bins/picofw_unified.uf2",
+            "target/pico-build/picofw_unified.uf2",
+            "firmware/picofw/picofw_unified.uf2",
+            "dist/picofw_unified.uf2",
         ];
         candidates
             .iter()

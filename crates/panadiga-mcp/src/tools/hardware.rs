@@ -304,14 +304,18 @@ pub fn handle_pico_catalog(args: &Value) -> Value {
         "memory_regions": spec.memory_regions,
         "pico_commands": commands,
         "wire_frames": [
-            "@P7501_IDENT",
+            "@PICO_IDENT",
             "@PROG",
             "@EVT",
+            "@PICO_RES",
+            "@PICO_BOOT_CLASS",
+            "@PICO_TBUS_AUDIT",
+            "@P7501_IDENT",
             "@P7501_RES",
             "@P7501_BOOT_CLASS",
             "@P7501_TBUS_AUDIT"
         ],
-        "openos_shell_commands": [
+        "digaos_shell_commands": [
             "help",
             "status",
             "ntsc",

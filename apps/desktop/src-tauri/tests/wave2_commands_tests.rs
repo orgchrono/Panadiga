@@ -441,7 +441,7 @@ fn eh55_nor_dump_bgo_audit_repair_and_davis_probe_enforce_guards_with_mock() {
     let mut mock_ok = MockPanamon1Transport::new();
     mock_ok.bridge_active = true;
     mock_ok.map_memory(AM34_FLASH_UNCACHED_BASE, nor);
-    mock_ok.boottrace_reply = "***** normal mode *****\r\nBOOTTRACE: OK\r\nPANADIGA> ".into();
+    mock_ok.boottrace_reply = "***** normal mode *****\r\nBOOTTRACE: OK\r\nPICO> ".into();
     let mut bgo_events = Vec::new();
     let live_bgo = run_eh55_bgo_repair_with_transport(
         &PicoEh55BgoRepairRequestDto {

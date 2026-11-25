@@ -1,15 +1,15 @@
-# Panadiga v0.2.0 — Live Hardware-Proven EH55 Recovery, Relational SSOT, Silicon-Audited P7501 Probe & Zero-Trust Workbench
+# Panadiga v0.2.0 — Live Hardware-Proven EH55 Recovery, Relational SSOT, Silicon-Audited PicoFW (P7501) Probe & Zero-Trust Workbench
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Rust Workspace](https://img.shields.io/badge/Rust-Edition%202024%20(11%20Crates)-orange.svg)](Cargo.toml)
-[![Pico Probe](https://img.shields.io/badge/Pico-RP2040%20%2F%20RP2350%20%2F%20Pico%20W-green.svg)](firmware/pico-p7501/)
+[![PicoFW Probe](https://img.shields.io/badge/PicoFW-RP2040%20%2F%20RP2350%20%2F%20Pico%20W-green.svg)](firmware/picofw/)
 [![CI & Security](https://img.shields.io/badge/Quality%20Gates-9%2F9%20Pass-brightgreen.svg)](scripts/validate.py)
 
 | Overview | Verified Scope |
 | :--- | :--- |
 | **Release Version** | `v0.2.0` |
 | **Hardware Catalog** | `89` Panasonic DIGA models · `12` SoCs · `5` core architectures (`MN10300/AM34`, `MN10300/AM33-2`, `ARM Cortex-A9`, `ARM64 Cortex-A53`, `SPARC v8 Domino`) |
-| **Core Stack** | **11 Rust crates** (Edition 2024) · **C11 Bare-Metal** (`RP2040`/`RP2350`/Pico W/2 W + OpenOS/Blackbox AM34 prototypes) · **Tauri 2.12.7 + React 19.3.1 + Tailwind CSS 4.3.5 + Vite 8.3.6** · **Python 3.10+ (`mypy --strict`)** |
+| **Core Stack** | **11 Rust crates** (Edition 2024) · **C11 Bare-Metal** (`PicoFW` `RP2040`/`RP2350`/Pico W/2 W + `DigaOS` AM34) · **Tauri 2.12.7 + React 19.3.1 + Tailwind CSS 4.3.5 + Vite 8.3.6** · **Python 3.10+ (`mypy --strict`)** |
 | **Evidence Ledger** | **`36` audited claims** (`EV-20261119-001` .. `EV-20261124-003`) with SHA-256 assertions in [`docs/evidence/ledger.json`](docs/evidence/ledger.json) & [`docs/STATUS.md`](docs/STATUS.md) |
 | **MCP Integration** | Native Rust stdio JSON-RPC 2.0 server exposing **26** JSON-RPC 2.0 stdio tools |
 
@@ -30,14 +30,16 @@ Real-hardware bench validation (`COM10`, `StarTech IDE2SAT2` + `Type B` FFC adap
 - **Single Source of Truth (`panadiga ssot export-all`):**
   - Centralizes **`89` model manifests**, **`12` SoCs**, **`5` cores**, **`31` mainboards**, **`18` parallel NOR chips**, **`6` I2C EEPROMs**, **`4` NOR layouts**, **`18` firmware trains**, **`3` media formats**, [`geometry_and_binary_traps.json`](profiles/traps/geometry_and_binary_traps.json), `profiles/forensic_atlas/`, and **`12` JSON Schema Draft 2020-12** definitions (`profiles/schema/`).
   - Enforces a deterministic **`T0`–`T4` Capability Gate** (`panadiga profiles validate|show|authorize|export-schema`) respecting hardware WP/OTP ceilings and `256 KiB` IPL RO floors.
-  - Projects one canonical contract across **Rust**, **C11** (`p7501_ssot.h`, `openos_ssot.h`), **TypeScript** (`apps/desktop/src/models/generated/{ssot,profiles}.ts`), **Python** (`scripts/profiles_types.py`), and **Ghidra Jython** (`tools/ghidra/`).
+  - Projects one canonical contract across **Rust**, **C11** (`picofw_ssot.h`, `digaos_ssot.h`), **TypeScript** (`apps/desktop/src/models/generated/{ssot,profiles,digaos}.ts`), **Python** (`scripts/profiles_types.py`), and **Ghidra Jython** (`tools/ghidra/`).
 
-### 1.3 Embedded Firmware Ecosystem (`pico-p7501`, `panadiga-openos` & `panadiga-blackbox-fw`)
-- **Silicon-Audited `P7501` Pico Probe (`RP2040`, `RP2350` & `Pico W / 2 W`):**
-  - **Electrical & Pin Safety:** `p7501_hw_init()` clears reset pull-downs on `GP3 (NSW5V)` before `gpio_init(GP3)`; unconditional falling-edge IRQ isolates `GP2/GP3/GP4/GP5/GP26/GP6/GP7` on target power drop; boot-time QSPI CRC32 self-check (`SAFE_HIZ` fail-closed); `8 µs` contention detection (`ECONTENTION`) and anti-backpowering guards (`EPWR`).
-  - **Unified Security & Protocol Hardening:** Finite-state probe machine (`p7501_probe_fsm.{c,h}`), TX/bus guards (`p7501_bus_tx_guard.c`, `p7501_bus_policy.c`), golden wire contract (`tests/golden/p7501_wire_contract.json`), RSP/Watch abuse guards (`p7501_pana_rsp_guard.c`), unconditional Upper NOR auto-relock + `F14` wireless fail-closed gate, `BOOTTRACE` & `PiE-OS` X-Ray codecs (`p7501_boottrace_codec.c`, `p7501_pieos_xray.c`), SRAM-resident Core 1 sampler, bounded `512 B` GDB sector cache, zero external probe gadgets (`P0_FW_RO = 256 KiB`), atomic ping-pong A/B `P2_VAULT`, and RP2350 `P6_NOR_MIRROR`.
-- **Hardware-Interoperability Prototypes:**
-  - Updated [`firmware/panadiga-openos/`](firmware/panadiga-openos/README.md) (`openos_ssot.h` sharing `resolve_eh55_verified_nor_context()`, `nor_bgo_ro.c`, `sdcd_sd.c`, `tbus_ic7501.c`, `uart_sc0.c`, `test_openos_host.c`) and [`firmware/panadiga-blackbox-fw/`](firmware/panadiga-blackbox-fw/README.md) (`panamon2_tbc.c`).
+### 1.3 Embedded Firmware Ecosystem (`PicoFW` & `DigaOS`)
+- **Silicon-Audited `PicoFW` Probe for `P7501` (`RP2040`, `RP2350` & `Pico W / 2 W`):**
+  - **Electrical & Pin Safety:** `picofw_hw_init()` clears reset pull-downs on `GP3 (NSW5V)` before `gpio_init(GP3)`; unconditional falling-edge IRQ isolates `GP2/GP3/GP4/GP5/GP26/GP6/GP7` on target power drop; boot-time QSPI CRC32 self-check (`SAFE_HIZ` fail-closed); `8 µs` contention detection (`ECONTENTION`) and anti-backpowering guards (`EPWR`).
+  - **Unified Security & Protocol Hardening:** Finite-state probe machine (`picofw_probe_fsm.{c,h}`), TX/bus guards (`picofw_bus_tx_guard.c`, `picofw_bus_policy.c`), golden wire contract (`tests/golden/picofw_wire_contract.json`), RSP/Watch abuse guards (`picofw_pana_rsp_guard.c`), unconditional Upper NOR auto-relock + `F14` wireless fail-closed gate, `BOOTTRACE` & `PiE-OS` X-Ray codecs (`picofw_boottrace_codec.c`, `picofw_pieos_xray.c`), SRAM-resident Core 1 sampler, bounded `512 B` GDB sector cache, zero external probe gadgets (`P0_FW_RO = 256 KiB`), atomic ping-pong A/B `P2_VAULT`, and RP2350 `P6_NOR_MIRROR`.
+- **Bare-Metal DIGA SoC Operating System (`DigaOS`):**
+  - Unified bare-metal SoC OS in [`firmware/digaos/`](firmware/digaos/README.md) (`digaos_ssot.h` sharing `resolve_eh55_verified_nor_context()`, `nor_bgo_ro.c`, `sdcd_sd.c`, `tbus_ic7501.c`, `uart_sc0.c`, `digaos_main.c`, `test_digaos_host.c`, absorbing TBC/SECAM baseline & `SW_GUARDS` from the retired bare-metal prototype).
+- **Visual SSOT Studio & Hot Bare-Metal Silicon Explorer (`SsotStudioView`, `SiliconExplorerView`):**
+  - Added real Tauri 2 IPC-backed **Visual SSOT Schema & DigaOS Customizer Studio** (`ssot_studio.rs`) and **Hot Bare-Metal Silicon Explorer** (`silicon_explorer.rs`, `ndb>` parser/session, `pico silicon-replay`, `pico silicon-snapshot`) with `OLD -> NEW` hot-diff telemetry and zero production demo mode.
 
 ### 1.4 Express Rescue Workbench, Forensic Vault & Modernized Stack (Desktop + Android)
 - **Express Rescue & Strict Vault (`ExpressView`):** Guided missions for **U99 Quick Rescue**, **SD Recovery Media**, **NOR Dump & CoW Patch**, and **Strict Vault Pipeline**, backed by immutable `raw/` vs `frm/` segregation, `ops.jsonl` append-only journal (`panadiga-vault`), WORM ingest, real SHA-256 staging/promotion, `Mn103Vm` pre-write gate, cleanroom `panadiga sd create` / `dvd create`, and safe multi-OS `panadiga hdd flash-composed`.
@@ -56,11 +58,11 @@ Real-hardware bench validation (`COM10`, `StarTech IDE2SAT2` + `Type B` FFC adap
 
 | Platform | Asset(s) | Contents |
 | :--- | :--- | :--- |
-| **Windows (x86_64)** | `panadiga-windows-x86_64.zip` (+ `.sha256`) | `panadiga.exe`, `panadiga-desktop.exe`, `panasonic_p7501_uart_unified.uf2`, `tools/ghidra/` & `.cmd` launchers |
-| **Linux (x86_64)** | `panadiga-linux-x86_64.tar.gz`, `panadiga-linux-amd64.deb` (+ `.sha256`) | `panadiga`, `panadiga-desktop`, `panasonic_p7501_uart_unified.uf2`, `tools/ghidra/`, desktop integration & icons |
-| **macOS (Apple Silicon ARM64)** | `panadiga-macos-aarch64.tar.gz` (+ `.sha256`) | `panadiga`, `panadiga-desktop`, `panasonic_p7501_uart_unified.uf2`, `tools/ghidra/` |
+| **Windows (x86_64)** | `panadiga-windows-x86_64.zip` (+ `.sha256`) | `panadiga.exe`, `panadiga-desktop.exe`, `picofw_unified.uf2`, `tools/ghidra/` & `.cmd` launchers |
+| **Linux (x86_64)** | `panadiga-linux-x86_64.tar.gz`, `panadiga-linux-amd64.deb` (+ `.sha256`) | `panadiga`, `panadiga-desktop`, `picofw_unified.uf2`, `tools/ghidra/`, desktop integration & icons |
+| **macOS (Apple Silicon ARM64)** | `panadiga-macos-aarch64.tar.gz` (+ `.sha256`) | `panadiga`, `panadiga-desktop`, `picofw_unified.uf2`, `tools/ghidra/` |
 | **Android (ARM64 APK)** | `panadiga-android-arm64.apk` (+ `.sha256`) | Signed Tauri 2 APK with USB-C OTG CDC-ACM, BLE Nordic UART Service, and **DIGA IR Commander** |
-| **Raspberry Pi Pico Probe** | `panasonic_p7501_uart_unified.uf2` (+ `.sha256`) | Dual-family unified C11 + PIO UF2 supporting both `RP2040` and `RP2350` (auto-sliced by `INFO_UF2.TXT`; verify digest via `panasonic_p7501_uart_unified.uf2.sha256`) |
+| **Raspberry Pi Pico Probe** | `picofw_unified.uf2` (+ `.sha256`) | Dual-family unified C11 + PIO UF2 supporting both `RP2040` and `RP2350` (auto-sliced by `INFO_UF2.TXT`; verify digest via `picofw_unified.uf2.sha256`) |
 | **Master Manifest** | `SHA256SUMS.txt` | Authoritative POSIX SHA-256 manifest covering every released binary asset |
 | **Companion Firmware Pack** | [Release `firmware-pack-v0.1.0`](https://github.com/orgchrono/Panadiga/releases/tag/firmware-pack-v0.1.0) | Verified factory/repaired NOR, HDD, EEPROM & plaintext AM34 images + `FIRMWARE_SHA256SUMS.txt` |
 
@@ -79,7 +81,7 @@ Get-Content .\panadiga-windows-x86_64.zip.sha256
 
 ## 3. Non-Negotiable Physical & Forensic Safety Invariants
 
-1. **Voltage Ceiling & `NSW5V` Protection (`P7501`):** Logic signals operate at `3.3V LVTTL`; Pin 5 (`NSW5V` / `GP3`) stays strictly **`Hi-Z Input` without pulls** (cleared before `gpio_init`); Pin 2 (`XRESET` / `GP5`) is **strictly Open-Drain**; `p7501_nsw5v_falling_irq()` isolates `GP2/GP3/GP4/GP5/GP26/GP6/GP7` unconditionally on target power drop (`STANDBY_GATE_STOP`).
+1. **Voltage Ceiling & `NSW5V` Protection (`P7501`):** Logic signals operate at `3.3V LVTTL`; Pin 5 (`NSW5V` / `GP3`) stays strictly **`Hi-Z Input` without pulls** (cleared before `gpio_init`); Pin 2 (`XRESET` / `GP5`) is **strictly Open-Drain**; `picofw_nsw5v_falling_irq()` isolates `GP2/GP3/GP4/GP5/GP26/GP6/GP7` unconditionally on target power drop (`STANDBY_GATE_STOP`).
 2. **Zero Probe Back-Powering:** Never power the Raspberry Pi Pico from `P7501` Pin 1 (`< 10 mA` sense line); supply power exclusively via USB or `VSYS`.
 3. **3-Zone NOR Protection (`E05`) + `0xC000100C` + `F14`:** Bootloader/IPL (`SA0..SA10`), `DMR-ES35V` `MAIN_XIP`, Full-RO profiles, CS0 alias mirrors, and lethal MMIO `0xC000100C..0xC000100F` are blocked; Upper NOR writes require explicit unlock (`CONFIRM_UPPER_NOR`) with auto-relock on exit; wireless origins (`BLE_NUS`/`WIFI_TCP`) are fail-closed (`F14`).
 4. **Forensic Copy-on-Write:** Original `.bin` / `.FRM` images are never modified in place; live erases require double-read SHA-256 + `fsync` + disk readback verification.
@@ -96,7 +98,7 @@ Get-Content .\panadiga-windows-x86_64.zip.sha256
 ✅ Gate 5   — ux-guard UI/UX Completeness & State Integrity Audit (100/100, 0 issues)
 ✅ Gate 6   — Playwright E2E Chromium Headless Suite (33 tests across 9 specs)
 ✅ Gate 7   — Multi-Language SSOT + Ghidra Jython Exporter (Idempotent export verification)
-✅ Gate 8   — C11 Pico & OpenOS Host Tests + ARM RP2040 / RP2350 Dual-Target Builds
+✅ Gate 8   — C11 PicoFW & DigaOS Host Tests + ARM RP2040 / RP2350 Dual-Target Builds
 ✅ Gate 9   — Python (py_compile, mypy --strict scripts, pytest scripts/tests — 75 tests incl. SSOT/FP & docs parity)
 ✅ Multi-CI — Windows x86_64 · Ubuntu x86_64 (.tar.gz + .deb) · macOS ARM64 · Android ARM64 APK · Pico UF2 · Supply-Chain (cargo-deny / cargo-audit / gitleaks)
 ```

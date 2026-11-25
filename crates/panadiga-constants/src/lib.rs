@@ -15,4 +15,5 @@ pub mod events;
 pub mod forensic;
 
 pub use constants::*;
+pub use events::*;
 pub use logger::LogLevel;

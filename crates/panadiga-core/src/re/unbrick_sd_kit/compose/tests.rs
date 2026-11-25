@@ -77,6 +77,7 @@ fn compose_and_verify_digadiag_and_manifest_in_memory() {
             false,
             false,
             false,
+            false,
         )
         .is_err()
     );
@@ -90,6 +91,7 @@ fn compose_and_verify_digadiag_and_manifest_in_memory() {
             false,
             false,
             false,
+            false,
         )
         .is_err()
     );
@@ -102,6 +104,7 @@ fn compose_and_verify_digadiag_and_manifest_in_memory() {
             None,
             true,
             true,
+            false,
             false,
         )
         .is_err()
@@ -242,6 +245,7 @@ fn compose_patched_main_gives_hdd_target_gb_precedence_over_dynamic() {
         true,
         false,
         false,
+        false,
     )
     .unwrap();
     assert_eq!(composed.hdd_capacity_applied.as_deref(), Some("cap_250gb"));
@@ -277,6 +281,7 @@ fn compose_patched_main_accepts_3060np_and_3410pq_and_explicit_frm_precedence() 
         false,
         false,
         false,
+        false,
     )
     .unwrap();
     assert_eq!(out_3060.build_version_u16, 0x96AA);
@@ -291,6 +296,7 @@ fn compose_patched_main_accepts_3060np_and_3410pq_and_explicit_frm_precedence() 
         true,
         None,
         req.expected_main_build.as_deref(),
+        false,
         false,
         false,
         false,
@@ -349,6 +355,7 @@ fn compose_patched_main_accepts_3060np_and_3410pq_and_explicit_frm_precedence() 
         false,
         Some(200),
         None,
+        false,
         false,
         false,
         false,
@@ -450,6 +457,7 @@ fn sata_bridge_reset_fix_patches_pana_sd_prog_without_touching_digadiag() {
             true,
             true,
             false,
+            false,
         )
         .is_err()
     );
@@ -463,7 +471,97 @@ fn sata_bridge_reset_fix_patches_pana_sd_prog_without_touching_digadiag() {
             true,
             false,
             true,
+            false,
         )
         .is_err()
+    );
+}
+
+#[test]
+fn m6930lb_localization_flag_patches_main3060np_and_main3410pq_cleanly() {
+    use crate::constants::AM34_MAIN_BASE_VA;
+    use crate::crypto::{ExtrheadCryptMode, unpack_extrhead};
+    use crate::re::region_compat::{
+        OFF_FMU_DEVINFO_3060NP, OFF_FMU_DEVINFO_3410PQ, ORIG_FMU_DEVINFO_3060NP,
+        ORIG_FMU_DEVINFO_3410PQ, inspect_main_localization, inspect_main_region_compat,
+    };
+
+    let mut raw_3060 = vec![0u8; crate::re::EXPECTED_MAIN_3060NP_SIZE];
+    raw_3060[OFF_FMU_DEVINFO_3060NP..][..21].copy_from_slice(&ORIG_FMU_DEVINFO_3060NP);
+    raw_3060[0x570D_F34A - AM34_MAIN_BASE_VA as usize..][..5]
+        .copy_from_slice(&[0xCF, 0xF2, 0xF8, 0xFE, 0xE8]);
+    let composed_3060 = compose_patched_main_container(
+        &raw_3060,
+        MainPassthroughMode::FactoryOriginal,
+        false,
+        None,
+        None,
+        false,
+        false,
+        false,
+        true,
+    )
+    .unwrap();
+    assert!(composed_3060.m6930lb_localization_applied);
+    let unpacked_3060 = unpack_extrhead(&composed_3060.container, ExtrheadCryptMode::Main).unwrap();
+    assert_eq!(
+        inspect_main_localization(&unpacked_3060.decompressed)
+            .unwrap()
+            .overall_state,
+        "M6930LB_BRAZIL"
+    );
+    assert_eq!(
+        inspect_main_region_compat(&unpacked_3060.decompressed)
+            .unwrap()
+            .state,
+        "BYPASS_MODEL_AND_OEM"
+    );
+
+    let mut raw_3410 = vec![0u8; crate::re::main_passthrough::EXPECTED_MAIN_3410PQ_SIZE];
+    raw_3410[crate::re::OFF_FPC_STATUS_CTRL..][..crate::re::ORIG_FPC_STATUS_CTRL.len()]
+        .copy_from_slice(&crate::re::ORIG_FPC_STATUS_CTRL);
+    raw_3410[crate::re::OFF_ODD_STATE_BRANCH..][..crate::re::ORIG_ODD_STATE_BRANCH.len()]
+        .copy_from_slice(&crate::re::ORIG_ODD_STATE_BRANCH);
+    raw_3410[crate::re::OFF_ODD_INIT_STATUS..][..crate::re::ORIG_ODD_INIT_STATUS.len()]
+        .copy_from_slice(&crate::re::ORIG_ODD_INIT_STATUS);
+    raw_3410[OFF_FMU_DEVINFO_3410PQ..][..21].copy_from_slice(&ORIG_FMU_DEVINFO_3410PQ);
+    raw_3410[0x574F_71F9 - AM34_MAIN_BASE_VA as usize..][..2].copy_from_slice(&[0xC2, 0x2E]);
+    raw_3410[0x570D_625E - AM34_MAIN_BASE_VA as usize..][..5]
+        .copy_from_slice(&[0xCF, 0xF2, 0xF8, 0xFE, 0xE8]);
+    raw_3410[0x5706_13C7 - AM34_MAIN_BASE_VA as usize..][..7]
+        .copy_from_slice(&[0xDD, 0x0B, 0x7D, 0x00, 0x00, 0x00, 0x00]);
+    raw_3410[0x5706_B337 - AM34_MAIN_BASE_VA as usize..][..7]
+        .copy_from_slice(&[0xDD, 0x9B, 0xDD, 0xFF, 0xFF, 0x00, 0x00]);
+    raw_3410[0x574F_659D - AM34_MAIN_BASE_VA as usize..][..7]
+        .copy_from_slice(&[0xDD, 0x1E, 0x08, 0x02, 0x00, 0x00, 0x00]);
+    raw_3410[0x574F_4BF5 - AM34_MAIN_BASE_VA as usize..][..7]
+        .copy_from_slice(&[0xDD, 0x53, 0x39, 0xB7, 0xFF, 0x00, 0x00]);
+    raw_3410[0x5750_BD6A - AM34_MAIN_BASE_VA as usize..][..2].copy_from_slice(&[0xF1, 0xE2]);
+    raw_3410[0x5713_09CF - AM34_MAIN_BASE_VA as usize..][..2].copy_from_slice(&[0xF1, 0xE2]);
+    let composed_3410 = compose_patched_main_container(
+        &raw_3410,
+        MainPassthroughMode::FactoryOriginal,
+        false,
+        None,
+        None,
+        false,
+        false,
+        false,
+        true,
+    )
+    .unwrap();
+    assert!(composed_3410.m6930lb_localization_applied);
+    let unpacked_3410 = unpack_extrhead(&composed_3410.container, ExtrheadCryptMode::Main).unwrap();
+    assert_eq!(
+        inspect_main_localization(&unpacked_3410.decompressed)
+            .unwrap()
+            .overall_state,
+        "M6930LB_BRAZIL"
+    );
+    assert_eq!(
+        inspect_main_region_compat(&unpacked_3410.decompressed)
+            .unwrap()
+            .state,
+        "BYPASS_MODEL_AND_OEM"
     );
 }

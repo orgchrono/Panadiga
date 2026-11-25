@@ -129,7 +129,7 @@ Para a interface física via RP2040/RP2350 (Pico probe) conectada ao conector JS
    - Comunicação serial assíncrona em **`115200 bps, 8N1`** implementada por UART/PIO determinístico no RP2040/RP2350 com ponte GDB RSP segura.
 
 **Pergunta de Auditoria 3**:
-A implementação no firmware C11 (`firmware/pico-p7501/`, com isolamento inicial em `Hi-Z`, proteção rígida de `GP3`/`NSW5V` e controle Open-Drain em `XRESET`) satisfaz integralmente os requisitos de segurança elétrica do circuito `Q7510`/`Q7514`/`QR7503`/`IC1506` do DMR-EH55?
+A implementação no firmware C11 (`firmware/picofw/`, com isolamento inicial em `Hi-Z`, proteção rígida de `GP3`/`NSW5V` e controle Open-Drain em `XRESET`) satisfaz integralmente os requisitos de segurança elétrica do circuito `Q7510`/`Q7514`/`QR7503`/`IC1506` do DMR-EH55?
 
 ---
 

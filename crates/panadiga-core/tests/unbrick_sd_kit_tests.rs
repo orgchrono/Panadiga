@@ -56,6 +56,7 @@ fn build_workspace_sd_kit_with_mode(
         sata_hdd_autoboot: false,
         main_bgo_retarget: false,
         nor_autoboot_capsule: false,
+        m6930lb_localization: false,
     };
     if loader_profile == SdLoaderProfile::Ver063ExtrheadSd64 && allow_unverified_profile {
         let blocked = prepare_sd_unbrick_kit(&req).unwrap_err();
@@ -160,6 +161,7 @@ fn auto_format_bgo_policy_fails_closed_without_explicit_override() {
         sata_hdd_autoboot: false,
         main_bgo_retarget: false,
         nor_autoboot_capsule: false,
+        m6930lb_localization: false,
     })
     .unwrap_err();
     let _ = fs::remove_dir_all(&tmp);

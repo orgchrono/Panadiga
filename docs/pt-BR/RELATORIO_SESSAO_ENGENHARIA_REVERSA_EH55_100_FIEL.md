@@ -45,7 +45,7 @@
 | **6** | `UARTP2M_T` (`MAX TXD`) | `GP2` (RX Pico) | Saída `UARTP2M` do SoC AM34 via `P59001` com `R7572 (10 kΩ)`. | **Única linha UART ativa:** `872` / `1006` transições em `250 ms`; **`2124`** (`normal`) / **`3308`** (`JIG`) em `0..1.3 s` @ `115200 8N1`. | Leitura `Hi-Z` + pull-up interno fraco. |
 
 * **Bug Descoberto no Firmware do Pico (`COM10`):**  
-  Após rodar `JIGBOOT`, `UARTMON` ou `UARTSEND`, o comando subsequente `ISOLATE` deixava `GP26` (`VDD_ADC`) configurado em SIO/saída LOW, fazendo `STATUS` reportar **`VDD: 0.02V (LOW)`** mesmo com a placa alimentada. Na bancada, executar **`UARTPROBE 8` seguido de `ISOLATE`** restaurava `adc_gpio_init(GP26)` $\rightarrow$ `VDD: 2.70V (OK)` (`PINCHECK: 3.25V | 2.69V | 3.27V`). O bug foi corrigido definitivamente no código C11 em `firmware/pico-p7501/hal/p7501_hw.c` (`p7501_hw_read_vdd` e `p7501_hw_isolate_bus_hiz`).
+  Após rodar `JIGBOOT`, `UARTMON` ou `UARTSEND`, o comando subsequente `ISOLATE` deixava `GP26` (`VDD_ADC`) configurado em SIO/saída LOW, fazendo `STATUS` reportar **`VDD: 0.02V (LOW)`** mesmo com a placa alimentada. Na bancada, executar **`UARTPROBE 8` seguido de `ISOLATE`** restaurava `adc_gpio_init(GP26)` $\rightarrow$ `VDD: 2.70V (OK)` (`PINCHECK: 3.25V | 2.69V | 3.27V`). O bug foi corrigido definitivamente no código C11 em `firmware/picofw/hal/picofw_hw.c` (`p7501_hw_read_vdd` e `p7501_hw_isolate_bus_hiz`).
 
 ---
 
@@ -92,7 +92,7 @@ Todas as capturas abaixo foram preservadas em `scratch/` e decodificadas integra
 | Todos os pinos de `P7501` puxariam para `D3R3V` ou precisariam FT232RL simples. | Análise CAD `NA p.55/62/63/64/83` + `PINCHECK`. | **Refinada com precisão.** `Pino 5 (NSW5V)` vem de `IC1506 (~5.15V)` / `D7510` (manter `GP3` em `Hi-Z`!); `Pino 1` lê `~3.25V` Hi-Z e grampeia em `~2.69V` via junção B-C de `Q7510` (`3.30V - V_BC`). |
 | `UARTSEND VER` com `SW_UART=LOW` receberia prompt `FMU`/AMOBP no `wait 1 second.`. | Teste ao vivo `UARTSEND` (`0 bytes`) + CAD `Q7510`/`Q7514` + `step47_final_decode.py`. | **Duplamente refutada.** Em hardware, `SW_UART=LOW` corta `Q7514` isolando `GP4`. Em software, `BOOT.BIN` faz `delay_ms(1000)` simples e `uart_gets` (`0x4400488a`) tem **0 chamadores**. |
 | `80040904` / `** can not close tray **` vinha de tampa aberta ou flag IDE em NVRAM/EEPROM `IC7404`. | Testes sem cabo IDE/Molex, tampa parafusada, `step15b`..`step50`. | **Refutada.** Duas supostas xrefs (`0x4006f5e1`, `0x401385eb`) eram `call32 printf/strlen`; `0x83A7` é falha física de emissão laser `0.5 mW` com HF ON (`DRV` + OPU), e `BOOT.BIN` não acessa `IC7404` I2C. |
-| Após `JIGBOOT`/`UARTSEND`, `0.02V` em `STATUS` significava desligamento da placa. | Comparação `PINCHECK` + `UARTPROBE 8` em `COM10` + leitura de `firmware/pico-p7501/hal/p7501_hw.c`. | **Bug de firmware Pico identificado e corrigido.** `p7501_hw_isolate_bus_hiz()` e `p7501_hw_read_vdd()` agora limpam SIO e chamam `adc_gpio_init(GP26)` ao retornar ao ADC. |
+| Após `JIGBOOT`/`UARTSEND`, `0.02V` em `STATUS` significava desligamento da placa. | Comparação `PINCHECK` + `UARTPROBE 8` em `COM10` + leitura de `firmware/picofw/hal/picofw_hw.c`. | **Bug de firmware Pico identificado e corrigido.** `p7501_hw_isolate_bus_hiz()` e `p7501_hw_read_vdd()` agora limpam SIO e chamam `adc_gpio_init(GP26)` ao retornar ao ADC. |
 
 ---
 

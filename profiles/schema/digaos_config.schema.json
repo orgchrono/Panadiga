@@ -1,0 +1,313 @@
+{
+  "$defs": {
+    "DigaOsMenuItemSpec": {
+      "additionalProperties": false,
+      "description": "Declarative menu item inside a `DigaOS` interactive/OSD menu.",
+      "properties": {
+        "command": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "label_key": {
+          "type": "string"
+        },
+        "min_safety_tier": {
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "requires_unlock": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "label_key",
+        "command",
+        "kind",
+        "min_safety_tier",
+        "requires_unlock"
+      ],
+      "type": "object"
+    },
+    "DigaOsMenuSpec": {
+      "additionalProperties": false,
+      "description": "Declarative `DigaOS` menu group containing ordered menu items.",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/DigaOsMenuItemSpec"
+          },
+          "type": "array"
+        },
+        "title_key": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title_key",
+        "items"
+      ],
+      "type": "object"
+    },
+    "DigaOsMmioRangeSpec": {
+      "additionalProperties": false,
+      "description": "Auditable MMIO write range permitted for a `DigaOS` hardware power profile.",
+      "properties": {
+        "note": {
+          "type": "string"
+        },
+        "size": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "start": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "start",
+        "size",
+        "note"
+      ],
+      "type": "object"
+    },
+    "DigaOsPowerProfileSpec": {
+      "additionalProperties": false,
+      "description": "Declarative hardware-power tuning preset (TBC/AIOF, AVDD gain, SATA UDMA, DRAM, UART)\nbound to explicit safety barrier flags and audited MMIO write ranges.",
+      "properties": {
+        "aiof_fs0_mode": {
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "allowed_mmio_writes": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/DigaOsMmioRangeSpec"
+          },
+          "type": "array"
+        },
+        "avdd_gain_preset": {
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "dram_refresh_preset": {
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "ipl_ro_guard": {
+          "type": "boolean"
+        },
+        "lethal_mmio_guard": {
+          "type": "boolean"
+        },
+        "name_key": {
+          "type": "string"
+        },
+        "sata_udma_mode": {
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "soc_core_id": {
+          "type": "string"
+        },
+        "tbc_mode": {
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "uart_baud": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "unlock_required": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "name_key",
+        "soc_core_id",
+        "tbc_mode",
+        "aiof_fs0_mode",
+        "avdd_gain_preset",
+        "sata_udma_mode",
+        "dram_refresh_preset",
+        "uart_baud",
+        "unlock_required",
+        "lethal_mmio_guard",
+        "ipl_ro_guard"
+      ],
+      "type": "object"
+    },
+    "DigaOsSocTargetSpec": {
+      "additionalProperties": false,
+      "description": "Multi-SoC capability & bring-up readiness entry projected to C11 `DigaOS` HAL guards.",
+      "properties": {
+        "is_big_endian": {
+          "type": "boolean"
+        },
+        "is_primary_executable": {
+          "type": "boolean"
+        },
+        "isa": {
+          "type": "string"
+        },
+        "logic_voltage_mv": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "mmio_verified": {
+          "type": "boolean"
+        },
+        "soc_core_id": {
+          "type": "string"
+        },
+        "soc_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "soc_core_id",
+        "soc_id",
+        "isa",
+        "is_big_endian",
+        "mmio_verified",
+        "is_primary_executable",
+        "logic_voltage_mv"
+      ],
+      "type": "object"
+    },
+    "DigaOsThemeSpec": {
+      "additionalProperties": false,
+      "description": "Declarative RGB565 visual palette & OSD geometry preset for `DigaOS`.",
+      "properties": {
+        "accent_rgb565": {
+          "type": "string"
+        },
+        "bg_rgb565": {
+          "type": "string"
+        },
+        "contrast_level": {
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "danger_rgb565": {
+          "type": "string"
+        },
+        "fg_rgb565": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name_key": {
+          "type": "string"
+        },
+        "osd_font_mode": {
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "overscan_px": {
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "warn_rgb565": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name_key",
+        "bg_rgb565",
+        "fg_rgb565",
+        "accent_rgb565",
+        "warn_rgb565",
+        "danger_rgb565",
+        "osd_font_mode",
+        "overscan_px",
+        "contrast_level"
+      ],
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Root declarative `DigaOS` SSOT configuration bundle (`profiles/digaos/default_digaos_config.json`).",
+  "properties": {
+    "menus": {
+      "items": {
+        "$ref": "#/$defs/DigaOsMenuSpec"
+      },
+      "type": "array"
+    },
+    "power_profiles": {
+      "items": {
+        "$ref": "#/$defs/DigaOsPowerProfileSpec"
+      },
+      "type": "array"
+    },
+    "prompt": {
+      "type": "string"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "soc_targets": {
+      "items": {
+        "$ref": "#/$defs/DigaOsSocTargetSpec"
+      },
+      "type": "array"
+    },
+    "themes": {
+      "items": {
+        "$ref": "#/$defs/DigaOsThemeSpec"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "prompt",
+    "menus",
+    "themes",
+    "power_profiles",
+    "soc_targets"
+  ],
+  "title": "DigaOsConfigSpec",
+  "type": "object"
+}

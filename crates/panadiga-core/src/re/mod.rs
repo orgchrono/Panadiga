@@ -104,10 +104,12 @@ pub use prog061_uart_monitor::{
     UART_MONITOR_MAX_SLACK_BYTES, build_prog061_uart_monitor_payload,
 };
 pub use region_compat::{
-    DevBinReport, EXPECTED_MAIN_3060NP_SIZE, FrmRetargetReport, MainRegionCompatReport,
+    DevBinReport, EXPECTED_MAIN_3060NP_SIZE, FrmRetargetReport, LocalizationPatchMode,
+    MainLocalizationReport, MainLocalizationSiteReport, MainRegionCompatReport,
     OFF_FMU_DEVINFO_3060NP, OFF_FMU_DEVINFO_3410PQ, ORIG_FMU_DEVINFO_3060NP,
     ORIG_FMU_DEVINFO_3410PQ, PATCH_FMU_DEVINFO_3060NP, PATCH_FMU_DEVINFO_3410PQ, RegionCompatMode,
-    inspect_dev_bin_bytes, inspect_main_region_compat, patch_dev_bin_bytes,
+    decode_market_code_name, inspect_dev_bin_bytes, inspect_main_localization,
+    inspect_main_region_compat, patch_dev_bin_bytes, patch_main_localization_in_place,
     patch_main_region_compat_in_place, retarget_frm_toc_bytes,
 };
 pub use sata_bridge_fix::{
@@ -128,14 +130,16 @@ pub use sata_bridge_fix::{
 pub use sata_hdd_autoboot::{
     HddAutobootTrainSpec, HddAutobootTrainSpec as HddAutobootSpec,
     OFF_PROG061_HDD_AUTOBOOT_HOOK_SITE, ORIG_PROG061_HDD_AUTOBOOT_HOOK_BYTES,
-    PROG061_HDD_AUTOBOOT_PAYLOAD_OFFSET, PROG061_HDD_AUTOBOOT_PAYLOAD_VA,
-    PROG061_HDD_AUTOBOOT_STATE_ENABLED, PROG061_HDD_AUTOBOOT_STATE_FACTORY,
-    PROG061_HDD_AUTOBOOT_STATE_MISMATCH, Prog061HddAutobootStatus,
-    apply_hdd_autoboot_for_loader_profile_in_place, apply_hdd_autoboot_in_place_for_spec,
-    apply_prog061_hdd_autoboot_in_place, assemble_hdd_autoboot_payload_for_spec,
-    assemble_prog061_hdd_autoboot_payload, compute_hdd_autoboot_hook_bytes,
-    hdd_autoboot_spec_for_loader_profile, inspect_hdd_autoboot_for_loader_profile,
-    inspect_hdd_autoboot_site_for_spec, inspect_prog061_hdd_autoboot_site,
+    PROG061_HDD_AUTOBOOT_EXPECTED_MAIN_CSUM_OFFSET, PROG061_HDD_AUTOBOOT_PAYLOAD_OFFSET,
+    PROG061_HDD_AUTOBOOT_PAYLOAD_VA, PROG061_HDD_AUTOBOOT_STATE_ENABLED,
+    PROG061_HDD_AUTOBOOT_STATE_FACTORY, PROG061_HDD_AUTOBOOT_STATE_MISMATCH,
+    Prog061HddAutobootStatus, apply_hdd_autoboot_for_loader_profile_in_place,
+    apply_hdd_autoboot_in_place_for_spec, apply_prog061_hdd_autoboot_in_place,
+    assemble_hdd_autoboot_payload_for_spec, assemble_prog061_hdd_autoboot_payload,
+    compute_hdd_autoboot_hook_bytes, hdd_autoboot_spec_for_loader_profile,
+    inspect_hdd_autoboot_for_loader_profile, inspect_hdd_autoboot_site_for_spec,
+    inspect_prog061_hdd_autoboot_site, stamp_hdd_autoboot_expected_main_checksum_for_profile,
+    stamp_hdd_autoboot_expected_main_checksum_for_spec,
 };
 pub use sig_locator::{
     CfgFunctionCandidate, LocatedFunctionMatch, StringXrefHit, detect_prologue_at,

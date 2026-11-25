@@ -54,6 +54,7 @@ pub fn compose_hardened_panamon1_kit(
         allow_target_mismatch,
         false,
         false,
+        false,
     )?;
     let (pana_sd_bytes, pana_sd_sha256) = compose_pana_sd_container(
         drv_bytes,

@@ -171,7 +171,7 @@ Antes de ligar o conector ao Raspberry Pi Pico:
    - Meça resistência entre `Pino 5 (NSW5V)`, `Pino 1 (SW_UART)`, `Pino 6 (UARTP2M_T)` e `GND` (`Pino 4`): não pode acusar curto ($0\,\Omega$)!
 
 ### Etapa 4: Conexão ao Raspberry Pi Pico e Inicialização
-1. Certifique-se de que o firmware em `firmware/pico-p7501/` esteja gravado no Pico e confira o mapeamento `GP2`, `GP3 (Hi-Z!)`, `GP4`, `GP5 (OD)`, `GP26`, `GND`.
+1. Certifique-se de que o firmware em `firmware/picofw/` esteja gravado no Pico e confira o mapeamento `GP2`, `GP3 (Hi-Z!)`, `GP4`, `GP5 (OD)`, `GP26`, `GND`.
 2. Conecte o cabo USB do Pico ao computador (NUNCA alimente o Pico pelo `P7501`) e inicie o Workbench do Panadiga Desktop:
    ```powershell
    npm start

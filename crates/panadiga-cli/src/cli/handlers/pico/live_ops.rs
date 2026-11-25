@@ -10,12 +10,15 @@ use panadiga_core::constants::{
 };
 use panadiga_core::crypto::parse_u32_radix;
 use panadiga_core::log_println;
+use panadiga_core::pico::ndb::{NdbSession, SerialNdbTransport, replay_ndb_evidence_log};
 use panadiga_core::pico::panamon1::{Panamon1Client, Panamon1Transport, SerialPanamon1Transport};
 use panadiga_core::re::davis_probe::{DavisProbeConfig, DavisProbeEngine, DavisProbeReport};
 use panadiga_core::re::nor_dumper::{NorCaptureOrchestrator, NorCaptureResult, NorSlicePreset};
 
 use super::super::json_io::{emit_json_output, write_cli_output_bytes};
-use crate::cli::args::pico::{CaptureNorArgs, DavisProbeArgs};
+use crate::cli::args::pico::{
+    CaptureNorArgs, DavisProbeArgs, SiliconReplayArgs, SiliconSnapshotArgs,
+};
 
 pub(crate) fn parse_nor_slice_preset(
     slice: &str,
@@ -124,5 +127,49 @@ pub(crate) fn handle_davis_probe(args: DavisProbeArgs) -> Result<()> {
     let transport =
         SerialPanamon1Transport::open(&args.port, DEFAULT_BAUD_RATE, Duration::from_millis(1_500))?;
     let _ = run_davis_probe_with_transport(transport, &args)?;
+    Ok(())
+}
+
+pub(crate) fn handle_silicon_replay(args: SiliconReplayArgs) -> Result<()> {
+    let raw_bytes = super::super::json_io::read_cli_input_bytes(&args.log)?;
+    let raw_text = panadiga_core::pico::decode_captured_log_bytes(&raw_bytes);
+    let label = args
+        .log
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or("log");
+    let summary = replay_ndb_evidence_log(&raw_text, label)?;
+    log_println!(
+        "[SILICON REPLAY] {} | dd_reads={} write_echoes={} standby_gate={} bcu_fault={:?}",
+        summary.source_name,
+        summary.dd_reads.len(),
+        summary.write_echoes.len(),
+        summary.standby_gate_tripped,
+        summary
+            .bcu_fault
+            .as_ref()
+            .map(|f| (&f.bcberr_hex, f.fault_address))
+    );
+    if let Some(ref caveat) = summary.main3060np_osd_caveat {
+        log_println!("Note: {caveat}");
+    }
+    emit_json_output(&summary, args.json.as_deref())?;
+    Ok(())
+}
+
+pub(crate) fn handle_silicon_snapshot(args: SiliconSnapshotArgs) -> Result<()> {
+    let va = parse_u32_radix(&args.addr)?;
+    let transport = SerialNdbTransport::connect_and_enter_bridge(&args.port)?;
+    let mut session = NdbSession::new(transport);
+    let snap = session.read_words(va, args.len.max(4))?;
+    let mut tr = session.into_transport();
+    let _ = tr.close_safely();
+    log_println!(
+        "[SILICON DD] 0x{:08X} ({} B): {:02X?}",
+        snap.base_va,
+        snap.bytes.len(),
+        snap.bytes
+    );
+    emit_json_output(&snap, args.json.as_deref())?;
     Ok(())
 }

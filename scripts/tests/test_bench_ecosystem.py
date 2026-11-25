@@ -369,10 +369,10 @@ def test_golden_wire_contract_cross_stack_python_parity() -> None:
     contract_path = (
         Path(__file__).resolve().parents[2]
         / "firmware"
-        / "pico-p7501"
+        / "picofw"
         / "tests"
         / "golden"
-        / "p7501_wire_contract.json"
+        / "picofw_wire_contract.json"
     )
     doc = json.loads(contract_path.read_text(encoding="utf-8"))
 
@@ -412,14 +412,17 @@ def test_golden_wire_contract_cross_stack_python_parity() -> None:
     mock = MockBenchTransport(vdd_volts=3.24, nsw5v_high=True, fault_latch=True, dropouts=2)
     with BenchSession(mock) as session:
         st_out = session.send("STATUS")
-        assert "fault_latch=1" in st_out and "@P7501_RES cmd=STATUS status=OK" in st_out
+        assert "fault_latch=1" in st_out and "@PICO_RES cmd=STATUS status=OK" in st_out
         ack_out = session.send("FAULTACK")
-        assert "@P7501_RES cmd=FAULTACK status=OK" in ack_out
+        assert "@PICO_RES cmd=FAULTACK status=OK" in ack_out
         iso_out = session.send("ISOLATE")
-        assert "@P7501_RES cmd=ISOLATE status=OK" in iso_out
+        assert "@PICO_RES cmd=ISOLATE status=OK" in iso_out
         assert mock.fault_latch is False
 
-    from scripts.profiles_types import P7501_RES_CODES, P7501_WIRE_TAGS
+    from scripts.bench.protocol import resolve_picofw_str_table
 
-    assert doc["wire_tags"] == P7501_WIRE_TAGS
-    assert doc["res_codes"] == P7501_RES_CODES
+    picofw_wire_tags = resolve_picofw_str_table("PICOFW_WIRE_TAGS", "P7501_WIRE_TAGS")
+    picofw_res_codes = resolve_picofw_str_table("PICOFW_RES_CODES", "P7501_RES_CODES")
+
+    assert doc["wire_tags"] == picofw_wire_tags
+    assert doc["res_codes"] == picofw_res_codes

@@ -203,6 +203,11 @@ pub fn handle_sd_unbrick_kit_with_policy(
                 .and_then(|v| v.as_bool())
                 .unwrap_or(false);
 
+            let m6930lb_localization = args
+                .get("m6930lb_localization")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+
             let rep = prepare_sd_unbrick_kit(&SdUnbrickKitRequest {
                 output_dir: resolved_out_dir,
                 pana_dvd_path: optional_non_empty_str(args, "pana_dvd_path")
@@ -231,6 +236,7 @@ pub fn handle_sd_unbrick_kit_with_policy(
                 sata_hdd_autoboot,
                 main_bgo_retarget,
                 nor_autoboot_capsule,
+                m6930lb_localization,
             })?;
             Ok(serde_json::to_value(rep)?)
         }

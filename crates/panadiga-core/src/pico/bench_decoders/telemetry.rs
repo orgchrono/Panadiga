@@ -106,14 +106,41 @@ fn extract_hex_addr_tokens(raw_text: &str) -> Vec<u32> {
         .collect()
 }
 
+fn parse_span_token_max_bytes(tok: &str) -> Option<u32> {
+    let trimmed = tok.trim_matches(|c: char| !c.is_ascii_alphanumeric());
+    let clean = trimmed.strip_prefix("0X").unwrap_or(trimmed);
+    if clean.is_empty() || clean.len() > 4 {
+        return None;
+    }
+    let dec = clean.parse::<u32>().ok().unwrap_or(0);
+    let hex = u32::from_str_radix(clean, 16).ok().unwrap_or(0);
+    let best = dec.max(hex).min(4096);
+    (best > 0).then_some(best)
+}
+
 fn contains_lethal_am34_address(upper_text: &str) -> bool {
     let compact: String = upper_text.chars().filter(|c| *c != '_').collect();
     if compact.contains("C000100C") || compact.contains("DC0F0000") {
         return true;
     }
-    extract_hex_addr_tokens(upper_text)
-        .into_iter()
-        .any(|addr| crate::pico::rsp_codec::policy::is_am34_lethal_mmio_address(addr, 4))
+    let tokens: Vec<&str> = upper_text
+        .split(|c: char| !(c.is_ascii_alphanumeric() || c == '_'))
+        .filter(|t| !t.is_empty())
+        .collect();
+    for (idx, &tok) in tokens.iter().enumerate() {
+        let span = tokens
+            .get(idx + 1)
+            .and_then(|next| parse_span_token_max_bytes(next))
+            .unwrap_or(4)
+            .max(4) as usize;
+        if extract_hex_addr_tokens(tok)
+            .into_iter()
+            .any(|addr| crate::pico::rsp_codec::policy::is_am34_lethal_mmio_address(addr, span))
+        {
+            return true;
+        }
+    }
+    false
 }
 
 const IPL_SA0_SA10_PREFIXES: &[&str] = &[
@@ -176,6 +203,7 @@ fn payload_has_write_intent(upper_text: &str) -> bool {
                 | "PB"
                 | "PH"
                 | "PO"
+                | "EB"
                 | "EW"
                 | "SW"
                 | "POKE"

@@ -152,7 +152,7 @@ Adversarial auditing of schematics (`vol2_schematics.pdf` pp. 46, 52, 113, 125�
 Critical verified architectural distinction:
 * **Pre-MAIN (`/BOOT.BIN` and `PROG061`):** `uart0_getc @ 0x4400479F` and `FUN_50404c78` have **zero callers** — **no interactive pre-MAIN RX console exists**. All pre-MAIN injection acts via **Pins (`SW_UART JIG:2500`, `P01`, `P10`)** or by loading a **`DIGADIAG.FRM` binary** into SDRAM (`0x50400000`).
 * **Post-MAIN (`EH55_MAIN_3410PQ.bin`, driver `_dev_SERIAL` @ `0x574F0775`):** once execution reaches `MAIN` (with ISR vector `0x15 -> 0x574F0F9F` armed), the kernel exposes a **complete UART GDB RSP stub at `115200 8N1`**:
-  * **Hex Read `$m<addr>,<len>#<csum>` / Fast Binary Read `$x<addr>,<len>#<csum>` (`FUN_574f0a33` @ `0x574F0A33`):** reads `0x400` B chunks (`$m`) or unescaped raw `0x440` (`1,088`) B chunks (`$x`), returning `+$<payload>#<sum8>`. On Pico (`PANADIGA>`), use `XMEM:<addr>:<len>`.
+  * **Hex Read `$m<addr>,<len>#<csum>` / Fast Binary Read `$x<addr>,<len>#<csum>` (`FUN_574f0a33` @ `0x574F0A33`):** reads `0x400` B chunks (`$m`) or unescaped raw `0x440` (`1,088`) B chunks (`$x`), returning `+$<payload>#<sum8>`. On Pico (`PICO>`), use `XMEM:<addr>:<len>`.
   * **Register Dump `$g#<csum>` (`FUN_574f0da3` @ `0x574F0DA3`):** returns `0x70` (`112`) bytes (`28` 32-bit LE words).
   * **RAM Write / Hot Write I/O (`FUN_574f0c63` @ `0x574F0C63`):**
     * **Hex:** `$M<addr_hex>,<len_hex>:<data_hex>#<sum8>` → writes arbitrary bytes into **SDRAM** (`0x50000000..0x57FFFFFF`, e.g., live RAM patching or uploading stubs at `0x51800000`) and replies **`+$OK#9A`**.
@@ -205,7 +205,7 @@ Many enthusiasts repurpose Panasonic DIGA recorders as a **Time Base Corrector (
 
 ### 8.2 Consolidating the 4 Open Loose Ends & Autonomous Pico Upgrade (`PANARSP`)
 
-To eliminate underutilization of the **Raspberry Pi Pico (RP2040 / RP2350)** on the bench (`COM10`), the C11 firmware under `firmware/pico-p7501/` and the Rust workspace (`panadiga-core` + `panadiga-mcp`, now exposing **`18` MCP tools**) consolidate the 4 critical fronts:
+To eliminate underutilization of the **Raspberry Pi Pico (RP2040 / RP2350)** on the bench (`COM10`), the C11 firmware under `firmware/picofw/` and the Rust workspace (`panadiga-core` + `panadiga-mcp`, now exposing **`18` MCP tools**) consolidate the 4 critical fronts:
 
 1. **Pre-MAIN Unblocking (`SDDIAG -91006` / `CDDIAG 0x83A7`) & `PANAMON1` Monitor:**
    * `DIGADIAG.FRM` (`panadiga_bgo_unbrick` / `panadiga_sd_unbrick_kit`) defaults to **`262,144 B` (`0x40000`) raw** (`RAW_VER061` for real DMR-EH55 `Loader ver0.61`) or builds **`EXTRHEAD` $\le 131,072$ B** (`ver0.63`) with valid strided Adler-32 in modes `inspect`, `bypass` (`bypass_only`), **`uart_monitor`** (**`PANAMON1>[B/R/W/D/F/J/E/U/Q]`** at `0x50439494`: `B`=bypass BGO, `R`/`W`=peek/poke `u32` with `E05` guard, `D`=dump 8 MB NOR, `F`=`nfrom_format`, `J`=JEDEC, `E`=sector erase, `U`=unlock Upper NOR `SA4..SA133`, `Q`=abort — updated to MN103S compiler `CALL ..., [], 0` ABI + `46 B` `PUTC_D3_BYTES` `SC0STR & 0xA0`/`0x00040000` after `COM10` `641 B` capture proved `BGO driver init failed[1].` was bypassed), and `auto_format` (`0x50401F3C`, blocked fail-closed without `--allow-unsafe-bgo-format`).

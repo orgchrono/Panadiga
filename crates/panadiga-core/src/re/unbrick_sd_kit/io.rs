@@ -172,6 +172,7 @@ pub fn prepare_sd_unbrick_kit_with_tier_policy(
     let mut sata_hdd_autoboot_applied = false;
     let mut main_bgo_retarget_applied = false;
     let mut nor_autoboot_capsule_applied = false;
+    let mut m6930lb_localization_applied = false;
 
     if req.include_pana_sd {
         let drv_path =
@@ -192,11 +193,13 @@ pub fn prepare_sd_unbrick_kit_with_tier_policy(
             req.allow_target_mismatch,
             req.sata_bridge_reset_fix,
             req.main_bgo_retarget,
+            req.m6930lb_localization,
         )?;
         main_passthrough_applied = Some(composed_main.passthrough_applied);
         hdd_capacity_applied = composed_main.hdd_capacity_applied;
         sata_bridge_reset_fix_applied = composed_main.sata_bridge_reset_fix_applied;
         main_bgo_retarget_applied = composed_main.main_bgo_retarget_applied;
+        m6930lb_localization_applied = composed_main.m6930lb_localization_applied;
 
         let drv_bytes = match drv_path {
             Some(dp) => {
@@ -206,7 +209,7 @@ pub fn prepare_sd_unbrick_kit_with_tier_policy(
             None => None,
         };
 
-        let (pana_sd_prog, pana_sd_bgo_mode) = compose_pana_sd_prog061_with_tier_policy(
+        let (mut pana_sd_prog, pana_sd_bgo_mode) = compose_pana_sd_prog061_with_tier_policy(
             &prog_raw,
             req.bgo_mode,
             req.loader_profile,
@@ -216,6 +219,17 @@ pub fn prepare_sd_unbrick_kit_with_tier_policy(
             req.sata_hdd_autoboot,
         )?;
         sata_hdd_autoboot_applied = req.sata_hdd_autoboot;
+        if req.sata_hdd_autoboot {
+            let profile_id = match req.loader_profile {
+                SdLoaderProfile::Ver061RawSd48 => "ver061",
+                SdLoaderProfile::Ver063ExtrheadSd64 => "ver063",
+            };
+            crate::re::sata_hdd_autoboot::stamp_hdd_autoboot_expected_main_checksum_for_profile(
+                &mut pana_sd_prog,
+                profile_id,
+                composed_main.header_checksum,
+            )?;
+        }
         let pana_sd_prog = if req.nor_autoboot_capsule {
             nor_autoboot_capsule_applied = true;
             crate::re::eh55_bgo::build_nor_autoboot_capsule(&pana_sd_prog)?.0
@@ -260,6 +274,7 @@ pub fn prepare_sd_unbrick_kit_with_tier_policy(
         sata_hdd_autoboot_applied,
         main_bgo_retarget_applied,
         nor_autoboot_capsule_applied,
+        m6930lb_localization_applied,
         digadiag_path: digadiag_path.to_string_lossy().into_owned(),
         digadiag_sha256,
         pana_sd_path,

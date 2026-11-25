@@ -9,7 +9,7 @@ Firmware oficial do controlador de bancada baseado em **Raspberry Pi Pico (RP204
 
 ## 1. Visão Geral do Sistema (Arquitetura Zero-Gadget em `P0_FW_RO`)
 
-O firmware modular em [`firmware/pico-p7501/`](../../firmware/pico-p7501/) implementa em hardware e ISO C11 estrito módulos desacoplados em `cli/`, `common/`, `diag/`, `flash/`, `gdb/`, `generated/` (`p7501_ssot.h`), `hal/`, `tests/` e `uart/`:
+O firmware modular em [`firmware/picofw/`](../../firmware/picofw/) implementa em hardware e ISO C11 estrito módulos desacoplados em `cli/`, `common/`, `diag/`, `flash/`, `gdb/`, `generated/` (`p7501_ssot.h`), `hal/`, `tests/` e `uart/`:
 
 > [!NOTE]
 > **Decisão Arquitetural Zero-Gadget (v0.2.0):** A sonda Raspberry Pi Pico (`RP2040` / `RP2350`) opera com **zero periféricos autônomos extras** (sem display OLED `SSD1306`, buzzer ou botões dedicados na sonda). Todo visor, síntese áudio/visual e painel **DIGA Commander IR** rodam no **Smartphone Android (via USB-C OTG / BLE NUS)** ou **Workbench Desktop Tauri 2**, mantendo a sonda enxuta dentro da partição `P0_FW_RO` (`256 KiB`: `RP2040` `text=223.336 B` / `bss=81.416 B` / `slice=223.488 B`; `RP2350` `text=220.528 B` / `bss=81.036 B` / `slice=220.672 B`).
@@ -22,7 +22,7 @@ O firmware modular em [`firmware/pico-p7501/`](../../firmware/pico-p7501/) imple
    * **`GP3` (`NSW5V` / `X_SW_5R2V`):** Provém de `IC1506` (`~5.15V` upstream via `D7510`, repouso em `~3.29V` nos resistores `R7570`/`R7572`). **PERMANECE SEMPRE como `Hi-Z Input` sem pull-up/pull-down** e nunca é dirigido em push-pull.
    * **`GP26` (`SW_UART`):** Amostra a tensão via `ADC0` (`~3.24–3.25V` em Hi-Z, `~2.70V` sob pull-down, `~3.26V` sob pull-up) e força nível `LOW` apenas pelo intervalo exato de entrada em modo serial boot (`XFWE`, ex. `JIG:350`), restaurando `ADC0 Hi-Z` via `p7501_hw_restore_sw_uart_adc0()` quando TX em `GP4` precisa cruzar `Q7514`.
 4. **Driver de LED Não-Bloqueante com Trava Manual (`hal/p7501_led.c` & `hal/p7501_led_logic.c`):** Máquina de estados pura (10 Hz) alimentada por `repeating_timer` IRQ-safe (`GP25` em Pico/RP2040 e Pico 2/RP2350; fallback por tick para `CYW43_WL_GPIO_LED_PIN` em Pico W / Pico 2 W), com `MANUAL_LOCK` para impedir que polls `STATUS` sobrescrevam o modo escolhido pelo operador (`LED <IDLE|ACTIVE|GDB|FAULT|OFF|AUTO>`).
-5. **Console Serial USB CDC + BLE Opcional (`PANADIGA> `):** Interface interativa a `115200 bps` compatível com terminais padrão (PuTTY, TeraTerm), `panadiga` CLI e aplicativo desktop/Android Tauri (`panadiga-desktop` / APK). Placas `pico_w` e `pico2_w` habilitam também ponte Bluetooth LE Nordic UART Service (`PANADIGA_BLE_ENABLED=1`).
+5. **Console Serial USB CDC + BLE Opcional (`PICO> `):** Interface interativa a `115200 bps` compatível com terminais padrão (PuTTY, TeraTerm), `panadiga` CLI e aplicativo desktop/Android Tauri (`panadiga-desktop` / APK). Placas `pico_w` e `pico2_w` habilitam também ponte Bluetooth LE Nordic UART Service (`PANADIGA_BLE_ENABLED=1`).
 6. **Ponte GDB RSP & Injeção/Sanitização Fail-Loud (Política NOR em 2 Camadas):** Inclui servidor **GNU Remote Serial Protocol (RSP)** (`GDB`) e primitivas `AUTODETECT` / `INJECT_LOADER CONFIRM` / `ERASE_NVRAM CONFIRM` que recusam operar no vazio se `DCSR=0xFFFFFFFF`. Para unidades já bricadas em `U99`, a rota primária sem dessolda combina **`SDDIAG` (`DIGADIAG.FRM` + `PANA__SD.FRM` `ver0.61` com `JIG:2500`)** ou entrada headless **Porta #1 (`0x0B1800`)** $\rightarrow$ **`PANAMON1>`**, exigindo backup prévio de **8 MiB** (`PANADMP1` + SHA-256) e mantendo a **Camada 1 IPL (`SA0..SA10`) permanentemente bloqueada (`E05`)** enquanto autoriza explicitamente `CONFIRM_UPPER_NOR` (reservando `SVOD 4` / `XGecu T48` como contingência física se IPL ou slot SD falharem).
 
 ---
@@ -33,13 +33,13 @@ Para compilar o firmware a partir do código-fonte:
 * **CMake** $\ge$ 3.13 (disponível no `PATH`)
 * **Compilador ARM GCC:** `arm-none-eabi-gcc` $\ge$ 10.3
 * **Build System:** `Ninja` (recomendado) ou `MinGW Makefiles`
-* **Raspberry Pi Pico SDK:** configurada via variável de ambiente `PICO_SDK_PATH` (importada por `firmware/pico-p7501/pico_sdk_import.cmake`)
+* **Raspberry Pi Pico SDK:** configurada via variável de ambiente `PICO_SDK_PATH` (importada por `firmware/picofw/pico_sdk_import.cmake`)
 
 ---
 
 ## 3. Como Compilar o Firmware Multi-Plataforma (RP2040 e RP2350)
 
-O subsistema em [`firmware/pico-p7501/`](../../firmware/pico-p7501/) possui suporte nativo multi-placa (`pico`, `pico_w`, `pico2`, `pico2_w`), orquestrado pelo builder multiplataforma `scripts/build.py` e pela CLI Rust nativa (compilando *out-of-tree* em `target/pico-build/`):
+O subsistema em [`firmware/picofw/`](../../firmware/picofw/) possui suporte nativo multi-placa (`pico`, `pico_w`, `pico2`, `pico2_w`), orquestrado pelo builder multiplataforma `scripts/build.py` e pela CLI Rust nativa (compilando *out-of-tree* em `target/pico-build/`):
 
 ### Opção A: Builder Unificado do Repositório (Windows / Linux / macOS)
 ```bash
@@ -51,10 +51,10 @@ python scripts/build.py --pico
 
 ### Opção B: CMake Manual + Fusão UF2 Nativa via Rust CLI
 ```bash
-cmake -S firmware/pico-p7501 -B target/pico-build/pico -G Ninja -DCMAKE_BUILD_TYPE=Release -DPICO_BOARD=pico
+cmake -S firmware/picofw -B target/pico-build/pico -G Ninja -DCMAKE_BUILD_TYPE=Release -DPICO_BOARD=pico
 cmake --build target/pico-build/pico --config Release
 
-cmake -S firmware/pico-p7501 -B target/pico-build/pico2 -G Ninja -DCMAKE_BUILD_TYPE=Release -DPICO_BOARD=pico2
+cmake -S firmware/picofw -B target/pico-build/pico2 -G Ninja -DCMAKE_BUILD_TYPE=Release -DPICO_BOARD=pico2
 cmake --build target/pico-build/pico2 --config Release
 
 cargo run -p panadiga-cli -- pico merge-uf2 \
@@ -71,7 +71,7 @@ A compilação sincroniza o contêiner unificado em `crates/panadiga-core/src/pi
 * Imagens auxiliares (`.elf`, `.bin`, `.hex`, `.map`) geradas por `pico_add_extra_outputs(panasonic_p7501_uart)` permanecem em `target/pico-build/`.
 
 ### Integração Contínua (CI/CD)
-A esteira em [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) e a validação local (`python scripts/validate.py` / `npm run validate`) executam **38 suítes/funções de teste host C11 em 4 módulos** ([`test_gdb_rsp_host.c`](../../firmware/pico-p7501/tests/test_gdb_rsp_host.c), [`test_pana_diag_drv.c`](../../firmware/pico-p7501/tests/test_pana_diag_drv.c), [`test_pana_logic.c`](../../firmware/pico-p7501/tests/test_pana_logic.c) e [`test_uart_codec.c`](../../firmware/pico-p7501/tests/test_uart_codec.c)) com `-Wall -Wextra -Werror` + check ARM dual-target RP2040/RP2350, além dos demais Quality Gates (Rust `337` testes em `6` crates, Vitest `128`, E2E `27`, `uxlint` `386`, `jscpd` `0%`, Python `mypy`/`pytest`).
+A esteira em [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) e a validação local (`python scripts/validate.py` / `npm run validate`) executam **38 suítes/funções de teste host C11 em 4 módulos** ([`test_gdb_rsp_host.c`](../../firmware/picofw/tests/test_gdb_rsp_host.c), [`test_pana_diag_drv.c`](../../firmware/picofw/tests/test_pana_diag_drv.c), [`test_pana_logic.c`](../../firmware/picofw/tests/test_pana_logic.c) e [`test_uart_codec.c`](../../firmware/picofw/tests/test_uart_codec.c)) com `-Wall -Wextra -Werror` + check ARM dual-target RP2040/RP2350, além dos demais Quality Gates (Rust `337` testes em `6` crates, Vitest `128`, E2E `27`, `uxlint` `386`, `jscpd` `0%`, Python `mypy`/`pytest`).
 
 ```mermaid
 flowchart TD
@@ -106,7 +106,7 @@ O microcontrolador RP2040 / RP2350 possui bootloader USB nativo em ROM (**UF2 Bo
   └───────────────────────────────────────────────────────────┘
 ```
 
-*(Com o firmware já rodando em USB CDC, também é possível enviar o comando `BOOTSEL` no prompt `PANADIGA> ` para entrar diretamente em modo UF2 sem pressionar o botão físico.)*
+*(Com o firmware já rodando em USB CDC, também é possível enviar o comando `BOOTSEL` no prompt `PICO> ` para entrar diretamente em modo UF2 sem pressionar o botão físico.)*
 
 ---
 
@@ -116,7 +116,7 @@ Após a reinicialização, o Pico enumera uma porta serial USB CDC (`COMx` no Wi
 * **Baud Rate:** `115200` (USB CDC 12 Mbps nativo)
 * **Configuração:** 8 bits de dados, sem paridade, 1 stop bit (`8N1`), sem controle de fluxo
 
-Ao conectar ou pressionar `<ENTER>`, o console exibe o banner oficial de [`p7501_cli_help.c`](../../firmware/pico-p7501/cli/p7501_cli_help.c):
+Ao conectar ou pressionar `<ENTER>`, o console exibe o banner oficial de [`p7501_cli_help.c`](../../firmware/picofw/cli/picofw_cli_help.c):
 
 ```text
 ====================================================================
@@ -127,7 +127,7 @@ Ao conectar ou pressionar `<ENTER>`, o console exibe o banner oficial de [`p7501
    Type HELP for available P7501 UART, PIO1, FMU, diag, Flash, LED & GDB commands.
 ====================================================================
 
-PANADIGA> 
+PICO> 
 ```
 
 ---
@@ -162,7 +162,7 @@ O firmware atende tanto operadores humanos quanto automação em Rust (`panadiga
 | **`PANARSP`** | `PANARSP [ms] [boot] [WAIT:x] <act>` | Cliente `_dev_SERIAL` RSP (`REGS`, `MEM`, `WMEM`, `DUMPNOR`, `CALL`, `NORUNLOCK:CONFIRM_UPPER_NOR`, `NORLOCK`, `JEDEC_ERASE:<addr>`, `JEDEC_PROG:<addr>,<hex>`). |
 | **`DIAGWATCH`** | `DIAGWATCH [ms] [boot] [act] [WAKE]` | Watchdog autônomo em `SC0` e monitor residente `PANAMON1>` (`NORUNLOCK:CONFIRM_UPPER_NOR` / `NORLOCK` com sequência em duas etapas `'U'` → `'W'`/`'E'`). |
 | **`DRVPANA`** | `DRVPANA [ms] [boot] [NOPASS] <cmd>` | Interface CLI de fábrica do drive óptico Matshita `R6-MV4` com envio automático de desbloqueio `PASS 0x4d415453 0x48495441` (ou `NOPASS`). |
-| **`IR` / `IRTX` / `IRRX`** | `IR [TX\|RX\|VERIFY <12hex>]` \| `IRTX ...` | Emissor PWM 38 kHz Kaseikyo ([`p7501_ir_codec.c`](../../firmware/pico-p7501/diag/p7501_ir_codec.c)) em `GP6..9`/`GP16..22`, captura e verificação estrita offline (`IR VERIFY <12hex>`: OEM `0x02,0x20`, vendor parity + XOR `dev ^ sub ^ cmd` $\rightarrow$ `parity=OK\|ERR`). |
+| **`IR` / `IRTX` / `IRRX`** | `IR [TX\|RX\|VERIFY <12hex>]` \| `IRTX ...` | Emissor PWM 38 kHz Kaseikyo ([`p7501_ir_codec.c`](../../firmware/picofw/diag/picofw_ir_codec.c)) em `GP6..9`/`GP16..22`, captura e verificação estrita offline (`IR VERIFY <12hex>`: OEM `0x02,0x20`, vendor parity + XOR `dev ^ sub ^ cmd` $\rightarrow$ `parity=OK\|ERR`). |
 | **`VAULT`** | `VAULT [STATUS\|VERIFY <1..3>\|DUMP\|ERASE]` | Cofre A/B na QSPI (`P6_NOR_MIRROR`, `P7501_VAULT_PAYLOAD_SLOTS=3`, slot `0` = manifesto). `VAULT VERIFY <1..3>` calcula `CRC32` IEEE nibble-LUT via XIP (`p7501_qspi_crc32_fast`) + contagem `non_ff` emitindo `sub=VERIFY` (`ENOENT`/`ECRC` se ausente/corrupto). |
 | **`DUMPNOR` (`ff_blocks`)** | `PANARSP DUMPNOR ...` \| `FAST_DUMPNOR` | Contagem inline de blocos `0xFF` (512 B) via `p7501_dumpnor_ff_tracker_t` emitindo `ff_blocks=<u32>` em `@P7501_RES` e resumo `PANARSP:`. |
 | **`FMUSCAN` / `FMUTEST` / `FMUBATCH`** | `FMUSCAN` \| `FMUTEST` \| `FMUBATCH` | Sondas de temporização e varredura de bytes na Bootrom/FMU via `P7501`. |
@@ -197,39 +197,39 @@ O firmware atende tanto operadores humanos quanto automação em Rust (`panadiga
 
 ### Exemplo 1: Inspeção Elétrica Inicial (Modo Seguro sem TX Ativo)
 ```text
-PANADIGA> PING
+PICO> PING
 PONG
-PANADIGA> STATUS
+PICO> STATUS
 VDD: 3.25V (OK)
-PANADIGA> PINCHECK
+PICO> PINCHECK
 ...
-PANADIGA> ISOLATE
+PICO> ISOLATE
 [BUS] P7501 pins placed in High-Impedance Isolation (NSW5V/XRESET Hi-Z, GP26 ADC0).
 ```
 
 ### Exemplo 2: Captura Multi-Baud PIO1, JIG Temporizado & Controle LED
 ```text
-PANADIGA> LED GDB
+PICO> LED GDB
 [LED] Pico GP25 (Standard Pico / RP2040 / RP2350) | mode=GDB_RSP | lock=MANUAL | pin=1
 LED: OK (GDB_RSP, MANUAL_LOCK)
 
-PANADIGA> BAUDSCAN 3500 NORMAL
+PICO> BAUDSCAN 3500 NORMAL
 ... edges=2124 min_low_us=8 max_low_us=54 raw_bps=125000 snapped_baud=115200
 BAUDSCAN: OK
 
-PANADIGA> HEXCAP 3000 NORMAL
+PICO> HEXCAP 3000 NORMAL
 ... (348 bytes em RAM sem drop: DDR CHECK: OK .. Loader ver0.61 [06/03/06]) ...
 HEXCAP: OK (348 bytes, framing_err=0, overflow=NO)
 
-PANADIGA> PWRTRACE 3000 JIG:350
+PICO> PWRTRACE 3000 JIG:350
 ... GP26_SWUART: min=3.21V max=3.30V | Edges: RXD=2124 NSW5V=0 TXD=0 (final NSW5V=1)
 PWRTRACE: OK
 
-PANADIGA> WAITTX 8000 JIG:350 "wait 1" 0D 4000
+PICO> WAITTX 8000 JIG:350 "wait 1" 0D 4000
 ... [WAITTX] Trigger matched! Injecting payload via Q7514 (SW_UART=Hi-Z)...
 WAITTX: OK (triggered=YES, rx=715 bytes)
 
-PANADIGA> LED AUTO
+PICO> LED AUTO
 [LED] Pico GP25 (Standard Pico / RP2040 / RP2350) | mode=HEARTBEAT_IDLE | lock=AUTO | pin=1
 LED: OK (HEARTBEAT_IDLE, AUTO)
 ```
@@ -239,13 +239,13 @@ LED: OK (HEARTBEAT_IDLE, AUTO)
 
 ### Exemplo 3: Injeção / Apagamento com Trava `CONFIRM` e Conformidade `U99` Sem Dessolda
 ```text
-PANADIGA> INJECT_LOADER CONFIRM
+PICO> INJECT_LOADER CONFIRM
 [INJECT_LOADER] Target Address : 0x00004000 (AM34 Internal SRAM)
 [INJECT_LOADER] Flash Geometry : 8 MB (NVRAM Window: 0x807F0000..0x807FFFFF)
 ...
 INJECT_LOADER: OK
 
-PANADIGA> ERASE_NVRAM CONFIRM
+PICO> ERASE_NVRAM CONFIRM
 [ERASE_NVRAM] Launching JEDEC Sector Erase on Spansion Flash (8 MB)
 [ERASE_NVRAM] Target Memory Range: 0x807F0000 to 0x807FFFFF (64 KB)
 [ERASE_NVRAM] Micro-sectors      : SA134 to SA141 (8 x 8 KB)
@@ -259,7 +259,7 @@ ERASE_NVRAM: OK
 
 ## 8. Modo Ponte GDB RSP (Depuração Interativa com Ghidra / IDA Pro)
 
-O firmware embarca um servidor **GNU Remote Serial Protocol (RSP)** controlado por [`gdb/gdb_rsp.h`](../../firmware/pico-p7501/gdb/gdb_rsp.h), [`gdb_rsp_codec.c`](../../firmware/pico-p7501/gdb/gdb_rsp_codec.c) e [`gdb_rsp_memory.c`](../../firmware/pico-p7501/gdb/gdb_rsp_memory.c):
+O firmware embarca um servidor **GNU Remote Serial Protocol (RSP)** controlado por [`gdb/gdb_rsp.h`](../../firmware/picofw/gdb/gdb_rsp.h), [`gdb_rsp_codec.c`](../../firmware/picofw/gdb/gdb_rsp_codec.c) e [`gdb_rsp_memory.c`](../../firmware/picofw/gdb/gdb_rsp_memory.c):
 * Comando serial: `GDB` (ou autodetecção de pacotes iniciados por `$`).
 * Pacotes de controle Upper NOR no protocolo RSP:
   * `$qPanadigaNorUnlock:CONFIRM_UPPER_NOR#<xx>` — autoriza temporariamente escrita na **Camada 2 (`SA4..SA133`)**.
@@ -281,7 +281,7 @@ O firmware embarca um servidor **GNU Remote Serial Protocol (RSP)** controlado p
 
 ## 9. Política NOR em Duas Camadas & Gravação JEDEC Real via Stub SRAM
 
-O subsistema Flash ([`p7501_flash.c`](../../firmware/pico-p7501/flash/p7501_flash.c)) espelha integralmente [`NorWritePolicy`](../../crates/panadiga-core/src/pico/rsp_codec/policy.rs) sobre a Spansion `S29JL064H` (`0x80000000..0x807FFFFF` / espelho *uncached* `0x84000000..0x847FFFFF`):
+O subsistema Flash ([`p7501_flash.c`](../../firmware/picofw/flash/picofw_flash.c)) espelha integralmente [`NorWritePolicy`](../../crates/panadiga-core/src/pico/rsp_codec/policy.rs) sobre a Spansion `S29JL064H` (`0x80000000..0x807FFFFF` / espelho *uncached* `0x84000000..0x847FFFFF`):
 
 | Camada | Setores & Faixa de Barramento | Política no Firmware Pico | Comandos de Controle / Observação |
 | :--- | :--- | :--- | :--- |
@@ -290,7 +290,7 @@ O subsistema Flash ([`p7501_flash.c`](../../firmware/pico-p7501/flash/p7501_flas
 | **Camada 3 — NVRAM / EEMUL Topo** | `SA134..SA141` (`0x807F0000..0x807FFFFF`, setores de `8 KiB`) | **Autorizada por padrão** | No EH55 real, `SA134` (`0x847F0000`) contém cabeçalho `"1284"` (`0ff00000002c`, `6 B`) e `SA135..SA141` estão `0xFF`. |
 
 * **Stubs JEDEC em SRAM (`0x51800000`), Espelho *Uncached* (`0x90400000`) & Temporização `S29JL064H` (~700 ms):**
-  * Os comandos `PANARSP JEDEC_ERASE:<addr>` e `PANARSP JEDEC_PROG:<addr>,<hex>` (`1..=16` bytes por chamada) carregam o stub [`p7501_pana_jedec.h`](../../firmware/pico-p7501/uart/p7501_pana_jedec.h) / [`p7501_pana_jedec_stubs.c`](../../firmware/pico-p7501/uart/p7501_pana_jedec_stubs.c) em `0x51800000`, concluindo com **`PANAJEDEC_OK`** ou **`PANAJEDEC_TO`**. No monitor `PANAMON1>`, o [`p7501_diag_watch.c`](../../firmware/pico-p7501/uart/p7501_diag_watch.c) dispara `'U'` antes de `'W'`/`'E'`.
+  * Os comandos `PANARSP JEDEC_ERASE:<addr>` e `PANARSP JEDEC_PROG:<addr>,<hex>` (`1..=16` bytes por chamada) carregam o stub [`p7501_pana_jedec.h`](../../firmware/picofw/uart/picofw_pana_jedec.h) / [`p7501_pana_jedec_stubs.c`](../../firmware/picofw/uart/picofw_pana_jedec_stubs.c) em `0x51800000`, concluindo com **`PANAJEDEC_OK`** ou **`PANAJEDEC_TO`**. No monitor `PANAMON1>`, o [`p7501_diag_watch.c`](../../firmware/picofw/uart/picofw_diag_watch.c) dispara `'U'` antes de `'W'`/`'E'`.
   * **Coerência `0x90400000` (SDRAM *Uncached*):** ao modificar código em execução na SDRAM do `PROG061` (`0x50400000`), escreva no alias *uncached* **`0x90400000`** (ex.: limites `MOV` do `PANADMP1` em `0x9043950E` $\rightarrow$ `J 904394FA`, ou stub de teste em `0x90439B40`) para evitar desfasamento de D-cache/I-cache.
   * **Temporização real de Erase (~700 ms) vs Polling DQ7:** o apagamento de `64 KiB` na Spansion `S29JL064H` leva ~`700 ms`; como o laço DQ7 limitado (`0x00100000` iterações) em `jedec_emit.rs` pode retornar `OK:ERASE` antes do término interno, aguarde readback `0xFF` × 32 antes de programar bytes `W`.
 * **Fallback Offline Copy-on-Write:** Patches em arquivo usam `panadiga nvram patch-upper-nor` ([`nvram.rs`](../../crates/panadiga-cli/src/cli/handlers/nvram.rs)) com `--backup` SHA-256 obrigatório (mantendo os `256 KiB` iniciais bloqueados salvo `--allow-critical-ipl` offline).
@@ -300,7 +300,7 @@ O subsistema Flash ([`p7501_flash.c`](../../firmware/pico-p7501/flash/p7501_flas
 
 ## 10. Contrato Wire Cross-Language SSOT (`C045CA85`) & Prova AO VIVO Rodada 5 (`EV-20261124-004`)
 
-* **Contrato SSOT Único (Rust $\rightarrow$ C11 Pico / C11 OpenOS / TypeScript / Python):** As tags `@P7501_RES`, `@P7501_EVT`, `@P7501_FRAME`, `@P7501_IDENT`, `@P7501_SURG`, `@P7501_BOOT_CLASS` (`hdd_autoboot=`, estágio XRAY `S4_SD_DIAG_FVU`) e os códigos de resultado (`0`, `EINVAL`, `E05`, `EOFFLINE`, `ETIMEOUT`, `EDROPOUT`, `EBUS_POLICY`, `EFaultLatched`) residem em [`crates/panadiga-constants/src/events.rs`](../../crates/panadiga-constants/src/events.rs), são dobrados em `SSOT_CONTRACT_HASH` e projetados automaticamente via `panadiga ssot export-all` para `p7501_ssot.h`, `openos_ssot.h`, `ssot.ts` e `profiles_types.py`, validados pelo contrato golden [`p7501_wire_contract.json`](../../firmware/pico-p7501/tests/golden/p7501_wire_contract.json) (`schema_version: 2`).
+* **Contrato SSOT Único (Rust $\rightarrow$ C11 `PicoFW` / C11 `DigaOS` / TypeScript / Python):** As tags `@PICO_RES`, `@PICO_EVT`, `@PICO_FRAME`, `@PICO_IDENT`, `@PICO_SURG`, `@PICO_BOOT_CLASS` (`hdd_autoboot=`, estágio XRAY `S4_SD_DIAG_FVU`) e os códigos de resultado (`0`, `EINVAL`, `E05`, `EOFFLINE`, `ETIMEOUT`, `EDROPOUT`, `EBUS_POLICY`, `EFaultLatched`) residem em [`crates/panadiga-constants/src/events.rs`](../../crates/panadiga-constants/src/events.rs), são dobrados em `SSOT_CONTRACT_HASH` e projetados automaticamente via `panadiga ssot export-all` para `picofw_ssot.h`, `digaos_ssot.h`, `ssot.ts`, `digaos.ts` e `profiles_types.py`, validados pelo contrato golden [`picofw_wire_contract.json`](../../firmware/picofw/tests/golden/picofw_wire_contract.json) (`schema_version: 2`).
 * **Evidência AO VIVO `COM10` (`EV-20261124-004`, [`com10_round5_live_unbrick_sd_trace_20261124.log`](../evidence/com10_round5_live_unbrick_sd_trace_20261124.log), 100% RO em NOR/HDD):**
   1. `IDENTIFY` confirmou `ssot=C045CA85`, `ipl_crc32=0xECBB4B55` e `vdd_mv=3251`.
   2. `PAYLOAD RUN jedec_probe_id` fechou `S11` em silício real (`mfg=0x0001 dev=0x227E:0x2202:0x2201 verified=YES`).
@@ -309,7 +309,7 @@ O subsistema Flash ([`p7501_flash.c`](../../firmware/pico-p7501/flash/p7501_flas
 
 ---
 
-## 11. Glossário Técnico (`PANAMON`, `WAITTX`, `JIG`, `BOOTREC`, `OpenOS`) & CLI Host (`panadiga pico`)
+## 11. Glossário Técnico (`PANAMON`, `WAITTX`, `JIG`, `BOOTREC`, `DigaOS`) & CLI Host (`panadiga pico`)
 
 Esta seção consolida os termos do ecossistema que conectam a sonda Pico (`P7501`), a Bootrom AM34 e os payloads carregados em SDRAM/NOR:
 
@@ -336,25 +336,25 @@ Esta seção consolida os termos do ecossistema que conectam a sonda Pico (`P750
   * **`PREJIG [ms] WAKE`**: aguarda o despertar natural de standby `IC7501` **sem** pulsar `XRESET` (evitando reset prematuro em trilho desligado), disparando captura e pino JIG somente quando `NSW5V` e `VDD` sobem.
 
 ### 11.3 `WAITTX` (Injeção Determinística em Hardware por Gatilho RX)
-* **O que é:** Comando bare-metal [`WAITTX <ms> <NORMAL|JIG[:ms]|NOPULL> "<trig>" <hex|BRK> [post_ms]`](../../firmware/pico-p7501/cli/p7501_cli.c) executado integralmente dentro do RP2040/RP2350 sobre `PIO1`.
+* **O que é:** Comando bare-metal [`WAITTX <ms> <NORMAL|JIG[:ms]|NOPULL> "<trig>" <hex|BRK> [post_ms]`](../../firmware/picofw/cli/picofw_cli.c) executado integralmente dentro do RP2040/RP2350 sobre `PIO1`.
 * **Por que existe:** Strings efêmeras do bootloader (`"wait 1"` durante o boot para entrar em console de serviço, prompts `FVU)` ou `PANAMON1>`) expiram em poucos milissegundos e sofrem atraso se o PC host precisar ler USB-CDC e enviar bytes de volta. O `WAITTX` combina estado de boot + detector de substring em `PIO1 RX` + transmissão imediata em `PIO1 TX` (`<hex>` arbitrários ou pulso **`BRK`** de `120 ms` — **Pino 3 TX**, mantendo `GP3 NSW5V` sempre `Hi-Z`) e captura a resposta durante `[post_ms]`.
 
 ### 11.4 `BOOTREC` (Cadeia de Boot Recovery & Comandos de Captura)
-Embora `BOOTREC` não seja um comando único literal no prompt `PANADIGA>`, ele designa o conjunto de **fluxos de recuperação de boot (`Boot Recovery`)** distribuídos entre a Sonda Pico, o Cartão SD e o host Rust:
+Embora `BOOTREC` não seja um comando único literal no prompt `PICO>`, ele designa o conjunto de **fluxos de recuperação de boot (`Boot Recovery`)** distribuídos entre a Sonda Pico, o Cartão SD e o host Rust:
 1. **Fluxo no Gravador (Target Boot Recovery):**
    * **Camada 1 `IPL` (`SA0..SA10`)**: código imutável de fábrica protegido em `E05` que inicia UART `P7501` e leitor `SDCD`.
    * **`SDDIAG` (`DIGADIAG.FRM` + `PANA__SD.FRM` `ver0.61`)**: carregado do cartão SDSC FAT16 em modo **4-bit** (`SDCD_CFG4 0x89001850`) para `0x50400000` (`262.144 B`), abrindo `PANAMON1>` via **`JIG:2500`** ou via **Porta #1** (slot `PROG` `0x0B1800` sem pino JIG quando o HDD falha em `HDD_MAX_LBA`).
    * **`NorAutoboot` / `Nor-FROM` (`SA11..SA14` em `0x84040000`)**: estágio gravável opt-in para boot autônomo `cápsula NAUT -> FVU -> MAIN` **sem depender do cartão SD** (estado atual auditável em [`BGO_INSPECT NORFROM`](#6-referência-completa-de-comandos-p7501_clic--p7501_cli_helpc)).
 2. **Comandos de Captura e Recuperação de Boot:**
-   * Na sonda (`PANADIGA>`): `BOOTCAP` (reset `XRESET` com `SW_UART=Hi-Z` + captura UART), `JIGBOOT` (boot em JIG mode), `BOOTTRACE` (captura correlacionada UART + `GP3..5` + `ADC0`, emitindo veredito `@P7501_BOOT_CLASS`), `BREAK_IN` / `BOOT_PROFILE` (`0..3`), `XRAY BOOT` e `BOOTSEL` (modo bootloader UF2 USB do próprio Pico).
+   * Na sonda (`PICO>`): `BOOTCAP` (reset `XRESET` com `SW_UART=Hi-Z` + captura UART), `JIGBOOT` (boot em JIG mode), `BOOTTRACE` (captura correlacionada UART + `GP3..5` + `ADC0`, emitindo veredito `@PICO_BOOT_CLASS`), `BREAK_IN` / `BOOT_PROFILE` (`0..3`), `XRAY BOOT` e `BOOTSEL` (modo bootloader UF2 USB do próprio Pico).
    * No host Rust (`panadiga unbrick`): `prepare-sd`, `rebuild-from-dump`, `verify-sd`, `bgo-audit`, `bgo-repair-plan`, `bgo-live-apply` e `bgo-live-heal`.
 
-### 11.5 `OpenOS` (`Panadiga OpenOS` vs `panadiga-blackbox-fw` vs `PiE-OS`)
-* **O que é:** O **`Panadiga OpenOS`** ([`firmware/panadiga-openos/`](../../firmware/panadiga-openos/README.md), milestones `M0..M4`) é um firmware aberto de substituição e interoperabilidade para o SoC `AM34` (`MN103S`), escrito em ISO C11 + assembly GNU com **zero binários proprietários Matsushita** — explicitamente classificado como **`HARDWARE-INTEROPERABILITY PROTOTYPE -- NOT LEGALLY CLEAN-ROOM`** por coexistir no mesmo repositório da pesquisa de engenharia reversa.
+### 11.5 `DigaOS` (Sistema Operacional Bare-Metal vs `PANAMON1>` vs `PiE-OS`)
+* **O que é:** O **`DigaOS`** ([`firmware/digaos/`](../../firmware/digaos/README.md), milestones `M0..M4`) é um firmware aberto de substituição e interoperabilidade para o SoC `AM34` (`MN103S`), escrito em ISO C11 + assembly GNU com **zero binários proprietários Matsushita** — explicitamente classificado como **`HARDWARE-INTEROPERABILITY PROTOTYPE -- NOT LEGALLY CLEAN-ROOM`** por coexistir no mesmo repositório da pesquisa de engenharia reversa.
 * **Como roda e se diferencia:**
-  * Executa **somente em SDRAM volátil** (`0x50400000` `DIAG_PROG_RAM` via `DIGADIAG.FRM` + `0x57000000` `MAIN_OS_RAM`), **nunca** tocando na Flash IPL `SA0..SA10` (protegida por `am34_mmio_is_forbidden()` junto com as barreiras letais `0xC000100C` e `0xDC0F0000`).
-  * Consome o cabeçalho gerado [`generated/openos_ssot.h`](../../firmware/panadiga-openos/generated/openos_ssot.h) (`SSOT=C045CA85`), traz shell interativo não-bloqueante **`OPENOS>`** via `SC0` RX (`0xD400200C & 0x0010` $\rightarrow$ `SC0RXB 0xD4002009`) com heartbeat automático **`IC7501` `255 s`** anti-desligamento (~`44 s`), vídeo `AIOF`/`AVDD`/`IC3001` (`NTSC`/`PAL-M`/`PAL`, TBC, barras de cor), `DAVIS CH1` com espera pós-reset de `1000 ms`, `sd` (`SDCD_CFG4`), `bgo` (`SA11..SA70`/`EEMUL`) e `ssot`.
-  * Enquanto o **`PANAMON1>`** é o monitor enxuto da Panasonic/patchado para inspeção/escrita cirúrgica e o [`panadiga-blackbox-fw`](../../firmware/panadiga-blackbox-fw/README.md) foi a prova de conceito inicial em `DIAG_PROG_RAM` (`PANAMON2>`), o **`OpenOS`** é o sistema completo de interoperabilidade (`M0 -> M4`) em evolução no host `AM34`.
+  * Executa **somente em SDRAM volátil** (`0x50400000` `DIAG_PROG_RAM` via `DIGADIAG.FRM` + `0x57000000` `MAIN_OS_RAM`), **nunca** tocando na Flash IPL `SA0..SA10` (protegida por `am34_mmio_is_forbidden()` junto com as barreiras letais `0xC000100C` e `0xDC0F0000..0xDC0F0FFF`).
+  * Consome o cabeçalho gerado [`generated/digaos_ssot.h`](../../firmware/digaos/generated/digaos_ssot.h) (`digaos_ssot_tables.c` + stubs multi-SoC fail-closed `UNVERIFIED_MMIO`), traz shell interativo não-bloqueante **`DIGAOS>`** via `SC0` RX (`0xD400200C & 0x0010` $\rightarrow$ `SC0RXB 0xD4002009`) com heartbeat automático **`IC7501` `255 s`** anti-desligamento (~`44 s`), vídeo `AIOF`/`AVDD`/`IC3001` (`NTSC`/`PAL-M`/`PAL`/`SECAM`, TBC, barras de cor), `DAVIS CH1` com espera pós-reset de `1000 ms`, `sd` (`SDCD_CFG4`), `bgo` (`SA11..SA70`/`EEMUL`) e `ssot`.
+  * Enquanto o **`PANAMON1>`** é o monitor enxuto da Panasonic/patchado para inspeção/escrita cirúrgica, o **`DigaOS`** absorve os protótipos Stage-1.5 legados (`SW_GUARDS`, `DIGAOS_TV_SECAM`, `probe_tbc_aiof_baseline`) como sistema completo de interoperabilidade (`M0 -> M4`) no host `AM34`.
 
 ### 11.6 Resumo dos Subcomandos CLI no Host (`panadiga pico <subcomando>`)
 | Subcomando Host | Ação na Sonda / Host |

@@ -1,4 +1,4 @@
-//! `.rodata` table emitter for `firmware/pico-p7501/generated/p7501_ssot_tables.c`.
+//! `.rodata` table emitter for `firmware/picofw/generated/picofw_ssot_tables.c`.
 
 use std::fmt::Write as _;
 
@@ -48,7 +48,7 @@ fn derive_flash_chip_nvram_meta(
 
 fn append_flash_chips_table(out: &mut String, reg: &HardwareProfileRegistry, ipl_l1_size: u32) {
     out.push_str(
-        "const p7501_ssot_flash_chip_t k_p7501_ssot_flash_chips[P7501_FLASH_ID_COUNT] = {\n",
+        "const picofw_ssot_flash_chip_t k_picofw_ssot_flash_chips[PICOFW_FLASH_ID_COUNT] = {\n",
     );
     for &(chip_id, c_enum) in FLASH_CHIPS_ORDER {
         let chip = reg
@@ -108,7 +108,7 @@ fn append_flash_chips_table(out: &mut String, reg: &HardwareProfileRegistry, ipl
 
 fn append_target_profiles_table(out: &mut String, reg: &HardwareProfileRegistry, ipl_l1_size: u32) {
     out.push_str(
-        "const p7501_ssot_target_profile_t k_p7501_ssot_target_profiles[P7501_TARGET_PROFILE_COUNT] = {\n",
+        "const picofw_ssot_target_profile_t k_picofw_ssot_target_profiles[PICOFW_TARGET_PROFILE_COUNT] = {\n",
     );
     for &(model_id, c_enum) in TARGET_PROFILES_ORDER {
         let resolved = reg
@@ -206,7 +206,7 @@ fn append_target_profiles_table(out: &mut String, reg: &HardwareProfileRegistry,
 
 fn append_eeprom_chips_table(out: &mut String, reg: &HardwareProfileRegistry) {
     out.push_str(
-        "const p7501_ssot_eeprom_chip_t k_p7501_ssot_eeprom_chips[P7501_SSOT_EEPROM_COUNT] = {\n",
+        "const picofw_ssot_eeprom_chip_t k_picofw_ssot_eeprom_chips[PICOFW_SSOT_EEPROM_COUNT] = {\n",
     );
     for eep in reg.bundle().eeprom_chips.values() {
         let fn_str = serde_json::to_string(&eep.function).unwrap_or_else(|_| "\"unknown\"".into());
@@ -230,7 +230,7 @@ fn append_eeprom_chips_table(out: &mut String, reg: &HardwareProfileRegistry) {
 
 fn append_loader_fingerprints_table(out: &mut String, reg: &HardwareProfileRegistry) {
     out.push_str(
-        "const p7501_ssot_loader_fp_t k_p7501_ssot_loader_fingerprints[P7501_SSOT_LOADER_FP_COUNT] = {\n",
+        "const picofw_ssot_loader_fp_t k_picofw_ssot_loader_fingerprints[PICOFW_SSOT_LOADER_FP_COUNT] = {\n",
     );
     for &(needle, model_id, c_enum, lock_xip_main_ro) in LOADER_FINGERPRINTS {
         let resolved = reg
@@ -266,7 +266,7 @@ fn format_hex_byte_list(bytes: &[u8]) -> String {
 }
 
 fn append_feistel_tables(out: &mut String) {
-    out.push_str("const uint8_t k_p7501_ssot_feistel_sbox[256] = {\n");
+    out.push_str("const uint8_t k_picofw_ssot_feistel_sbox[256] = {\n");
     for chunk in PANA_FEISTEL_SBOX_256.chunks(16) {
         let _ = writeln!(out, "    {},", format_hex_byte_list(chunk));
     }
@@ -274,12 +274,12 @@ fn append_feistel_tables(out: &mut String) {
 
     let _ = writeln!(
         out,
-        "const uint8_t k_p7501_ssot_feistel_iv[4] = {{ {} }};\n",
+        "const uint8_t k_picofw_ssot_feistel_iv[4] = {{ {} }};\n",
         format_hex_byte_list(&PANA_FEISTEL_KEYSCHED_IV)
     );
 
     out.push_str(
-        "const p7501_ssot_feistel_key_t k_p7501_ssot_feistel_keys[P7501_SSOT_FEISTEL_KEY_COUNT] = {\n",
+        "const picofw_ssot_feistel_key_t k_picofw_ssot_feistel_keys[PICOFW_SSOT_FEISTEL_KEY_COUNT] = {\n",
     );
     for (name, key8) in PANA_DVD_KEY_CATALOG {
         let _ = writeln!(
@@ -292,7 +292,7 @@ fn append_feistel_tables(out: &mut String) {
 }
 
 fn append_traps_mmio_and_sigs_tables(out: &mut String) {
-    out.push_str("const p7501_ssot_trap_t k_p7501_ssot_traps[P7501_SSOT_TRAP_COUNT] = {\n");
+    out.push_str("const picofw_ssot_trap_t k_picofw_ssot_traps[PICOFW_SSOT_TRAP_COUNT] = {\n");
     for (id, start, len, mask, sev, reason) in pico_trap_specs() {
         let _ = writeln!(
             out,
@@ -302,7 +302,7 @@ fn append_traps_mmio_and_sigs_tables(out: &mut String) {
     out.push_str("};\n\n");
 
     out.push_str(
-        "const p7501_ssot_mmio_reg_t k_p7501_ssot_mmio_regs[P7501_SSOT_MMIO_REG_COUNT] = {\n",
+        "const picofw_ssot_mmio_reg_t k_picofw_ssot_mmio_regs[PICOFW_SSOT_MMIO_REG_COUNT] = {\n",
     );
     for (addr, name, dom, width) in pico_mmio_reg_specs() {
         let _ = writeln!(
@@ -312,7 +312,7 @@ fn append_traps_mmio_and_sigs_tables(out: &mut String) {
     }
     out.push_str("};\n\n");
 
-    out.push_str("const p7501_ssot_sig_t k_p7501_ssot_sigs[P7501_SSOT_SIG_COUNT] = {\n");
+    out.push_str("const picofw_ssot_sig_t k_picofw_ssot_sigs[PICOFW_SSOT_SIG_COUNT] = {\n");
     for &(name, raw) in PICO_SSOT_SIGNATURES {
         let mut padded = [0u8; 16];
         let copy_len = raw.len().min(padded.len());
@@ -327,7 +327,7 @@ fn append_traps_mmio_and_sigs_tables(out: &mut String) {
     out.push_str("};\n\n");
 
     out.push_str(
-        "const p7501_ssot_pieos_anchor_t k_p7501_ssot_pieos_anchors[P7501_SSOT_PIEOS_ANCHOR_COUNT] = {\n",
+        "const picofw_ssot_pieos_anchor_t k_picofw_ssot_pieos_anchors[PICOFW_SSOT_PIEOS_ANCHOR_COUNT] = {\n",
     );
     for (name, va3060, va3410, mmio_ref, stage, flags, caller) in pico_pieos_anchor_specs() {
         let _ = writeln!(
@@ -338,7 +338,7 @@ fn append_traps_mmio_and_sigs_tables(out: &mut String) {
     out.push_str("};\n\n");
 
     out.push_str(
-        "const p7501_ssot_region_rule_t k_p7501_ssot_region_rules[P7501_SSOT_REGION_RULE_COUNT] = {\n",
+        "const picofw_ssot_region_rule_t k_picofw_ssot_region_rules[PICOFW_SSOT_REGION_RULE_COUNT] = {\n",
     );
     for r in pico_region_rule_specs() {
         let _ = writeln!(
@@ -356,14 +356,14 @@ fn append_traps_mmio_and_sigs_tables(out: &mut String) {
     }
     out.push_str("};\n\n");
 
-    out.push_str("const uint8_t k_p7501_ssot_hdd_clamp_prefix[14] = { ");
+    out.push_str("const uint8_t k_picofw_ssot_hdd_clamp_prefix[14] = { ");
     out.push_str(&format_hex_byte_list(
         &crate::hdd::capacity_patch::specs::PREFIX_SIG,
     ));
     out.push_str(" };\n");
 }
 
-/// Renders `firmware/pico-p7501/generated/p7501_ssot_tables.c` defining single-copy `.rodata` tables.
+/// Renders `firmware/picofw/generated/picofw_ssot_tables.c` defining single-copy `.rodata` tables.
 pub fn generate_c11_ssot_tables() -> String {
     let reg = HardwareProfileRegistry::builtin();
     let eh55 = reg
@@ -379,7 +379,7 @@ pub fn generate_c11_ssot_tables() -> String {
     out.push_str(
         "/* AUTO-GENERATED BY panadiga-core::ssot::pico_header -- DO NOT EDIT MANUALLY. */\n",
     );
-    out.push_str("#include \"generated/p7501_ssot.h\"\n\n");
+    out.push_str("#include \"generated/picofw_ssot.h\"\n\n");
     append_flash_chips_table(&mut out, reg, ipl_l1_size);
     append_target_profiles_table(&mut out, reg, ipl_l1_size);
     append_eeprom_chips_table(&mut out, reg);

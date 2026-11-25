@@ -300,22 +300,22 @@ pub fn parse_diagnostic_output(
         });
     }
 
-    let summary = if let Some(last_meaningful) =
-        raw_output
-            .lines()
-            .rev()
-            .map(str::trim)
-            .find(|l| {
-                !l.is_empty()
-                    && !l.starts_with("PANADIGA>")
-                    && !l.starts_with("P7501>")
-                    && !l.starts_with("@P7501_RES ")
-            })
-            .or_else(|| {
-                raw_output.lines().rev().map(str::trim).find(|l| {
-                    !l.is_empty() && !l.starts_with("PANADIGA>") && !l.starts_with("P7501>")
-                })
-            }) {
+    let is_prompt_line =
+        |l: &str| l.starts_with("PICO>") || l.starts_with("PANADIGA>") || l.starts_with("P7501>");
+    let is_res_line = |l: &str| l.starts_with("@PICO_RES ") || l.starts_with("@P7501_RES ");
+
+    let summary = if let Some(last_meaningful) = raw_output
+        .lines()
+        .rev()
+        .map(str::trim)
+        .find(|l| !l.is_empty() && !is_prompt_line(l) && !is_res_line(l))
+        .or_else(|| {
+            raw_output
+                .lines()
+                .rev()
+                .map(str::trim)
+                .find(|l| !l.is_empty() && !is_prompt_line(l))
+        }) {
         last_meaningful.to_string()
     } else if raw_output.trim().is_empty() {
         format!("Sem resposta no barramento para '{}'", raw_command)

@@ -128,7 +128,7 @@ For the physical interface via RP2040/RP2350 (Pico probe) connected to the JST Z
    - `SW_UART` Interlock Window: Hold LOW during reset to latch `XFWE` serial/`CDDIAG` boot mode, then restore `Hi-Z` so `Q7514` enables `UARTM2P_T` TX.
 
 **Audit Question 3**:
-Does the state machine implemented in the C11 firmware (`firmware/pico-p7501/`, using RP2040/RP2350 PIO UART `115200 8N1` + Open-Drain `XRESET` + `NSW5V` Hi-Z protection) satisfy all electrical safety and timing requirements verified against the `VEP79138` schematic?
+Does the state machine implemented in the C11 firmware (`firmware/picofw/`, using RP2040/RP2350 PIO UART `115200 8N1` + Open-Drain `XRESET` + `NSW5V` Hi-Z protection) satisfy all electrical safety and timing requirements verified against the `VEP79138` schematic?
 
 ---
 

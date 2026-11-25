@@ -1,0 +1,40 @@
+; Panasonic P7501 High-Resolution 4-Channel Logic Edge Sampler (PIO0)
+;
+; Samples contiguous P7501 lines into 32-bit packed nibbles (8 samples/word) without CPU polling:
+;   bit 0 = GP2 (RXD / UARTP2M_T)
+;   bit 1 = GP3 (NSW5V Sense - STRICTLY Hi-Z Input, NEVER pio_gpio_init)
+;   bit 2 = GP4 (TXD / UARTM2P_T)
+;   bit 3 = GP5 (XRESET Open-Drain)
+
+.program picofw_logic_sampler
+
+.wrap_target
+    in pins, 4
+.wrap
+
+% c-sdk {
+#include "hardware/clocks.h"
+
+static inline void picofw_logic_sampler_program_init(
+    PIO pio,
+    uint sm,
+    uint offset,
+    uint pin_base,
+    uint sample_hz
+) {
+    pio_sm_config c = picofw_logic_sampler_program_get_default_config(offset);
+    sm_config_set_in_pins(&c, pin_base);
+    sm_config_set_in_shift(&c, true, true, 32);
+    sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
+    const uint32_t sys_hz = clock_get_hz(clk_sys);
+    const uint32_t eff_hz = (sample_hz > 0u) ? sample_hz : 1u;
+    uint32_t div_fp8 = (uint32_t)((((uint64_t)sys_hz * 256ULL) + ((uint64_t)eff_hz / 2ULL)) / (uint64_t)eff_hz);
+    if (div_fp8 < 256u) {
+        div_fp8 = 256u;
+    } else if (div_fp8 > 0x00FFFFFFUL) {
+        div_fp8 = 0x00FFFFFFUL;
+    }
+    sm_config_set_clkdiv_int_frac(&c, (uint16_t)(div_fp8 >> 8u), (uint8_t)(div_fp8 & 0xFFu));
+    pio_sm_init(pio, sm, offset, &c);
+}
+%}

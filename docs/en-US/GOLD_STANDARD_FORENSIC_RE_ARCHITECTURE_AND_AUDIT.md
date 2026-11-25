@@ -2,7 +2,7 @@
 
 # Gold Standard for Forensic Reverse Engineering Architecture & Point-by-Point Panadiga Audit
 
-> **Scope & Methodology:** This document establishes the **Gold Standard** for operationalizing hardware and firmware reverse engineering research with forensic rigor across **7 dimensions** (*Archive, File Organization, Code, Architecture, Design, Security, and AI Agent Operations*) and cross-audits every criterion point by point against the verified `Panadiga` repository state at the post-sync baseline (`a343cdc`, including modularized `main_bgo_retarget/` & `sata_bridge_stage2/`, skill consolidation to 29 skills, `firmware/panadiga-openos/`, and [`docs/audits/GIT_FILTER_REPO_PLAN.md`](../audits/GIT_FILTER_REPO_PLAN.md)).
+> **Scope & Methodology:** This document establishes the **Gold Standard** for operationalizing hardware and firmware reverse engineering research with forensic rigor across **7 dimensions** (*Archive, File Organization, Code, Architecture, Design, Security, and AI Agent Operations*) and cross-audits every criterion point by point against the verified `Panadiga` repository state at the post-sync baseline (`a343cdc`, including modularized `main_bgo_retarget/` & `sata_bridge_stage2/`, skill consolidation to 29 skills, `firmware/digaos/`, and [`docs/audits/GIT_FILTER_REPO_PLAN.md`](../audits/GIT_FILTER_REPO_PLAN.md)).
 
 ---
 
@@ -198,7 +198,7 @@ flowchart TD
 1. **Compile-Time SSOT & `SSOT_CONTRACT_HASH` Gate** ([build.rs](../../crates/panadiga-core/build.rs)): validates 89 models and 12 Draft 2020-12 JSON Schemas during `cargo build` and verifies Rust/TS/C11 contract parity.
 2. **CI Epistemic Anti-Overclaiming Gate** ([test_docs_parity.py](../../scripts/tests/test_docs_parity.py)): rejects unbacked hardware proof badges, SHA-256 checks all 28 curated `docs/debug_logs/` captures, and enforces 1:1 bilingual pair integrity.
 3. **AST-Enforced Frontend Architecture** (`packages/oxlint-plugin-panadiga`): 7 custom Oxlint rules enforcing MVVM, immutability, zero-hardcode, zero unsafe casts, and `ux-guard` 100/100 + zero `console.*` + Android asset isolation in `vite.config.ts`.
-4. **Pico C11 Silicon Guardrails** ([p7501_bus_policy.c](../../firmware/pico-p7501/flash/p7501_bus_policy.c)): authoritative bus gate (`0xC000100C..F`, `SA0..SA10` E05, F14), `NSW5V` falling-edge isolation (`p7501_hw.c`), GDB command allowlist, `-Wframe-larger-than=512`, and zero `strcpy`/`sprintf`.
+4. **Pico C11 Silicon Guardrails** ([p7501_bus_policy.c](../../firmware/picofw/flash/picofw_bus_policy.c)): authoritative bus gate (`0xC000100C..F`, `SA0..SA10` E05, F14), `NSW5V` falling-edge isolation (`p7501_hw.c`), GDB command allowlist, `-Wframe-larger-than=512`, and zero `strcpy`/`sprintf`.
 5. **Ready-to-Wire Foundational Modules**: `panadiga-vault` (`ops.jsonl` + `.vault.lock`), `panadiga-bench` (coalescing stream + `OperationNonceStore`), hash-bound symbol indexes, 12-defect SLEIGH patch, 65 SHA-40 Actions, zero DRM/CPRM circumvention, and clean Python (`0` `shell=True`/`eval`/`pickle`).
 
 ---

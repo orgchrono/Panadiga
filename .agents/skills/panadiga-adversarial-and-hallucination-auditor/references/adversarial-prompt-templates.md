@@ -41,7 +41,7 @@ Audite <DOC_OU_LEDGER> contra os artefatos reais em docs/debug_logs/, docs/evide
 1. Todo [PROVADO EM HARDWARE REAL] no doc possui entrada N4_HARDWARE/N5_REPRODUCED correspondente no ledger.json com SHA-256 batendo?
 2. Existem hashes obsoletos ou contagens dessincronizadas entre README, INDEX, STATUS e translation_pairs.json?
 3. Alguma descoberta recente (ex.: 2026-11-22) está citada em relatório sem estar ancorada em evidência rastreável ou contradiz achado posterior?
-4. Projetos experimentais (firmware/panadiga-blackbox-fw) e limites de Mn103Vm estão declarados com honestidade técnica e jurídica?
+4. Projetos experimentais (`firmware/digaos`, `NOT LEGALLY CLEAN-ROOM`) e limites de Mn103Vm estão declarados com honestidade técnica e jurídica?
 ```
 
 ## Template 4 — Direcionamento Preciso de Tarefa de Engenharia

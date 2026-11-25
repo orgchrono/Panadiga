@@ -110,7 +110,7 @@ mod tests {
     fn golden_wire_contract_matches_rust_decoders_and_gates() {
         let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
         let raw = std::fs::read_to_string(
-            root.join("firmware/pico-p7501/tests/golden/p7501_wire_contract.json"),
+            root.join("firmware/picofw/tests/golden/picofw_wire_contract.json"),
         )
         .expect("missing golden wire contract json");
         let doc: serde_json::Value = serde_json::from_str(&raw).expect("valid golden json");

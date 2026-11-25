@@ -8,7 +8,8 @@ use std::path::Path;
 use anyhow::{Context, Result};
 use panadiga_core::re::region_compat::{TvStandardKind, inspect_tv_calibration_bundle};
 use panadiga_core::re::{
-    RegionCompatMode, inspect_dev_bin_bytes, inspect_main_region_compat, patch_dev_bin_bytes,
+    LocalizationPatchMode, RegionCompatMode, inspect_dev_bin_bytes, inspect_main_localization,
+    inspect_main_region_compat, patch_dev_bin_bytes, patch_main_localization_in_place,
     patch_main_region_compat_in_place, retarget_frm_toc_bytes,
 };
 
@@ -65,8 +66,16 @@ pub fn handle_region_compat(action: RegionCompatAction) -> Result<()> {
             let bytes = fs::read(&input).with_context(|| format!("Reading {}", input.display()))?;
             let rep = inspect_dev_bin_bytes(&bytes)?;
             println!(
-                "DEV.BIN: model='{}' oem='{}' sig='{}' md5={} sha256={}",
-                rep.model, rep.oem, rep.signature, rep.md5, rep.sha256
+                "DEV.BIN: model='{}' oem='{}' market={}(0x{:02X}) model_code=0x{:02X} option={} sig='{}' md5={} sha256={}",
+                rep.model,
+                rep.oem,
+                rep.market_code_name,
+                rep.market_code,
+                rep.model_code,
+                rep.option_code_hex,
+                rep.signature,
+                rep.md5,
+                rep.sha256
             );
             emit_json_if_requested(&rep, json.as_deref())
         }
@@ -166,6 +175,54 @@ pub fn handle_region_compat(action: RegionCompatAction) -> Result<()> {
                 println!("  [WARN] {w}");
             }
             emit_json_if_requested(&rep, json.as_deref())
+        }
+        RegionCompatAction::InspectLocalization { input, json } => {
+            let bytes = fs::read(&input).with_context(|| format!("Reading {}", input.display()))?;
+            let rep = inspect_main_localization(&bytes)?;
+            println!(
+                "MAIN Localization [{}]: state={} sites={} ({})",
+                rep.build_profile, rep.overall_state, rep.site_count, rep.sha256
+            );
+            for site in &rep.sites {
+                println!(
+                    "  {} @ {} ({}): state={} actual={}",
+                    site.name, site.va_hex, site.file_offset_hex, site.state, site.actual_hex
+                );
+            }
+            emit_json_if_requested(&rep, json.as_deref())
+        }
+        RegionCompatAction::PatchLocalization {
+            input,
+            output,
+            mode,
+            bypass_devinfo,
+            json,
+        } => {
+            let mut bytes =
+                fs::read(&input).with_context(|| format!("Reading {}", input.display()))?;
+            let parsed_mode: LocalizationPatchMode = mode.parse()?;
+            let rep = patch_main_localization_in_place(&mut bytes, parsed_mode)?;
+            if bypass_devinfo {
+                let _ = patch_main_region_compat_in_place(
+                    &mut bytes,
+                    RegionCompatMode::BypassModelAndOem,
+                )?;
+            }
+            let mut lines = vec![format!(
+                "Patched MAIN Localization [{}] -> {} ({} sites, bypass_devinfo={}) -> {}",
+                rep.build_profile,
+                rep.overall_state,
+                rep.site_count,
+                bypass_devinfo,
+                output.display()
+            )];
+            for site in &rep.sites {
+                lines.push(format!(
+                    "  {} @ {}: {} ({})",
+                    site.name, site.va_hex, site.state, site.actual_hex
+                ));
+            }
+            write_and_report(&output, &bytes, &rep, &lines, json.as_deref())
         }
     }
 }

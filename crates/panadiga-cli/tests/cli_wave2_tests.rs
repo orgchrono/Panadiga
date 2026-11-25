@@ -341,7 +341,7 @@ fn wave2_bgo_audit_repair_plan_and_mock_live_apply_enforce_e05() {
     let mut mock_ok = MockPanamon1Transport::new();
     mock_ok.bridge_active = true;
     mock_ok.map_memory(AM34_FLASH_UNCACHED_BASE, corrupt);
-    mock_ok.boottrace_reply = "***** normal mode *****\r\nPANADIGA> ".to_string();
+    mock_ok.boottrace_reply = "***** normal mode *****\r\nPICO> ".to_string();
     let out_json = dir.join("live_rep.json");
     handle_bgo_live_apply_with_transport(
         mock_ok,
@@ -496,7 +496,7 @@ fn wave2_pico_capture_nor_and_davis_probe_mock_offline() {
 
     let mut standby_mock = build_mock(false);
     standby_mock.status_reply =
-        "[STANDBY] RXD=1 NSW5V=0 VDD=0.00V fault_latch=0 dropouts=0\r\n@P7501_RES cmd=STATUS status=OK\r\nPANADIGA> "
+        "[STANDBY] RXD=1 NSW5V=0 VDD=0.00V fault_latch=0 dropouts=0\r\n@PICO_RES cmd=STATUS status=OK\r\nPICO> "
             .to_string();
     let mut standby_client = Panamon1Client::new(standby_mock);
     let standby_err = DavisProbeEngine::new(&mut standby_client, DavisProbeConfig::default())

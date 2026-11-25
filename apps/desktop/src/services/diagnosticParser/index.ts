@@ -125,8 +125,16 @@ export function parseDiagnosticOutput(
   const meaningfulLines = rawOutput
     .split(/\r?\n/)
     .map(l => l.trim())
-    .filter(l => l.length > 0 && !l.startsWith('PANADIGA>') && !l.startsWith('P7501>'));
-  const displayLines = meaningfulLines.filter(l => !l.startsWith('@P7501_RES '));
+    .filter(
+      l =>
+        l.length > 0 &&
+        !l.startsWith('PICO>') &&
+        !l.startsWith('PANADIGA>') &&
+        !l.startsWith('P7501>'),
+    );
+  const displayLines = meaningfulLines.filter(
+    l => !l.startsWith('@PICO_RES ') && !l.startsWith('@P7501_RES '),
+  );
 
   const vddVolts = parseVddVolts(rawOutput) ?? resolvePincheckVdd(pinData.rows) ?? wire.identVddVolts;
   const wireFindings = buildWireFindings(wire);

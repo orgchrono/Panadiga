@@ -1,6 +1,6 @@
 # Cheatsheet de Assembly & ABI `MN103S / AM34` (`mn10300-elf-gcc` & Stubs)
 
-Referência prática verificada diretamente no emulador Rust (`crates/panadiga-core/src/re/mn10300_emu/`), no emissor (`mn10300_emit.rs`), no decoder (`mn10300/mod.rs`), no patch SLEIGH (`tools/ghidra/sleigh_patches/am33_panadiga_zero_undef.patch`) e no `firmware/panadiga-openos/boot/crt0_am34.S`.
+Referência prática verificada diretamente no emulador Rust (`crates/panadiga-core/src/re/mn10300_emu/`), no emissor (`mn10300_emit.rs`), no decoder (`mn10300/mod.rs`), no patch SLEIGH (`tools/ghidra/sleigh_patches/am33_panadiga_zero_undef.patch`) e no `firmware/digaos/boot/crt0_am34.S`.
 
 ---
 
@@ -27,7 +27,7 @@ Referência prática verificada diretamente no emulador Rust (`crates/panadiga-c
   - `AND imm16, PSW`: `0xFA 0xFC <u16_le>` · `OR imm16, PSW`: `0xFA 0xFD <u16_le>`
   - `AND imm32, EPSW`: `0xFC 0xFC <u32_le>` · `OR imm32, EPSW`: `0xFC 0xFD <u32_le>`
   *(Nota: no SLEIGH stock do Ghidra antes do nosso patch, `0xFC 0xFC` fazia `|` em vez de `&`!)*
-- **Aviso Epistêmico Obrigatório (Antes de IRQs / CFI NOR em Silício):** O `Mn103Vm` não modela interrupções nem `RTI` (`Mn103Fault::InvalidOpcode`). Antes de implementar `CLI`/`STI`, `RTI` ou remapeamento da tabela de vetores em SDRAM no `Panadiga OpenOS` (obrigatório antes de tirar a NOR `S29JL064H` de `Read Array`), confirme no disassembly real de `MAIN` / `Loader ver0.61` os bits exatos de máscara/nível de IRQ em `PSW`/`EPSW` (`0x0F00`) e o registrador/endereço base real dos vetores no `AM34`.
+- **Aviso Epistêmico Obrigatório (Antes de IRQs / CFI NOR em Silício):** O `Mn103Vm` não modela interrupções nem `RTI` (`Mn103Fault::InvalidOpcode`). Antes de implementar `CLI`/`STI`, `RTI` ou remapeamento da tabela de vetores em SDRAM no `DigaOS` (obrigatório antes de tirar a NOR `S29JL064H` de `Read Array`), confirme no disassembly real de `MAIN` / `Loader ver0.61` os bits exatos de máscara/nível de IRQ em `PSW`/`EPSW` (`0x0F00`) e o registrador/endereço base real dos vetores no `AM34`.
 
 ---
 
@@ -90,13 +90,13 @@ Referência prática verificada diretamente no emulador Rust (`crates/panadiga-c
 
 ## 5. Padrões GNU `as` (`mn10300-elf`) & Armadilhas de Escrita Manual
 
-1. **Startup Bare-Metal (`firmware/panadiga-openos/boot/crt0_am34.S`):**
+1. **Startup Bare-Metal (`firmware/digaos/boot/crt0_am34.S`):**
    ```asm
        mov     __stack_top, a0
        mov     a0, sp
        /* Zerar .bss byte a byte com movbu d0, (a0); inc a0 */
        clr     d0
-       call    openos_kernel_entry, [], 0x00
+       call    digaos_kernel_entry, [], 0x00
    ```
 2. **Alinhamento Estrito em Memória:** Acessos 16-bit (`MOVHU`) exigem `addr & 1 == 0`; acessos 32-bit (`MOV` word) exigem `addr & 3 == 0` (`Mn103Fault::AlignError`).
 3. **Largura Exata em `SC0` UART0 (`0xD400_2008`/`2009`):** Use `movbu` (8-bit) ao escrever `SC0TXB` (`0xD400_2008`) — escrita 16/32-bit invade `SC0RXB` (`0xD400_2009`).

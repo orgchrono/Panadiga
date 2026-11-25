@@ -84,7 +84,7 @@ Ghidra é a ferramenta primária de descompilação de código estático e anál
 
 ### 2.3 Ponte Nativa Assíncrona GDB RSP (`panadiga pico gdb-bridge`)
 * **Arquitetura Alvo:** Matsushita **`mn10300`** (`AM34 / MN103S`), evitando abstrações genéricas incompatíveis com JTAG ARM padrão.
-* **Por que `P7501` exige Ponte Assíncrona:** O conector `P7501` transporta **UART assíncrona `115200 8N1`** (`UARTP2M_T` Pino 6 / `UARTM2P_T` Pino 3) sem linha síncrona `DWire32A`. No modo `ocd` legado (`GDB`), [`p7501_bus_protocol.c`](../../firmware/pico-p7501/protocol/p7501_bus_protocol.c) retorna `0xFFFFFFFF` por falta de clock síncrono.
+* **Por que `P7501` exige Ponte Assíncrona:** O conector `P7501` transporta **UART assíncrona `115200 8N1`** (`UARTP2M_T` Pino 6 / `UARTM2P_T` Pino 3) sem linha síncrona `DWire32A`. No modo `ocd` legado (`GDB`), [`p7501_bus_protocol.c`](../../firmware/picofw/protocol/picofw_bus_protocol.c) retorna `0xFFFFFFFF` por falta de clock síncrono.
 * **Três Modos Selecionáveis (`--target-mode`):**
   - **`panamon1`** (`panadiga pico gdb-bridge --port COM10 --target-mode panamon1`): aciona `BRIDGE 115200 PASSIVE` no Pico e traduz pacotes RSP síncronos do Ghidra (`$qSupported`, `$qXfer:memory-map:read`, `$g`, `$m`, `$M` com guarda IPL) em comandos assíncronos `R`/`W` no monitor **`PANAMON1>`** (`DIGADIAG.FRM`).
   - **`panarsp`** (`--target-mode panarsp`): encaminha frames RSP direto ao stub `_dev_SERIAL` quando o `MAIN` está ativo.

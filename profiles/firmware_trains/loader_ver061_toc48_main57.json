@@ -574,6 +574,15 @@
         }
       },
       "av_passthrough_sites": [],
+      "region_localization_sites": [
+        {
+          "name": "m6930lb_3060np_ic3001_bh7629_iic",
+          "description": "MAIN3060NP aiof_sub_dd.c I2C 0x94 video switch bypass for M6930LB IC3001 BH7629KS2 -> mov 0, d0; rets; nop",
+          "va": "0x570DF34A",
+          "expect_hex": "cff2f8fee8",
+          "replace_hex": "8000f0fccb"
+        }
+      ],
       "unpacked_sha256": "075f552ed583ba1835c0d44d1b533ff5a016b8d81d15d7166240098461ddcca7"
     },
     {
@@ -644,6 +653,64 @@
           "va": "0x574F7C5C",
           "expect_hex": "ddcd3c00000000",
           "replace_hex": "8000cbcbcbcbcb"
+        }
+      ],
+      "region_localization_sites": [
+        {
+          "name": "m6930lb_3410pq_market_osd_unlock",
+          "description": "MAIN3410PQ sys_boot.c market_code 0x00..0x06 (PL=0x04) -> EG(0x80) at 0x53186DBC via 0x574F7224 to unlock Portugues/Espanol/English OSD",
+          "va": "0x574F71F9",
+          "expect_hex": "c22e",
+          "replace_hex": "ca2b"
+        },
+        {
+          "name": "m6930lb_3410pq_ic3001_bh7629_iic",
+          "description": "MAIN3410PQ aiof_sub_dd.c I2C 0x94 video switch bypass for M6930LB IC3001 BH7629KS2 -> mov 0, d0; rets; nop",
+          "va": "0x570D625E",
+          "expect_hex": "cff2f8fee8",
+          "replace_hex": "8000f0fccb"
+        },
+        {
+          "name": "m6930lb_3410pq_fpc_0x7f_rcv_ignore",
+          "description": "MAIN3410PQ fpcrcv.c MN67788RA 0x7F reply -> bra 0x570613F5 skipping OPcode Emergency and assert",
+          "va": "0x570613C7",
+          "expect_hex": "dd0b7d00000000",
+          "replace_hex": "ca2ecbcbcbcbcb"
+        },
+        {
+          "name": "m6930lb_3410pq_fpc_0x7f_snd_ignore",
+          "description": "MAIN3410PQ fpcsnd.c MN67788RA 0x7F -> bra 0x5706B35B skipping OPcode Emergency and assert",
+          "va": "0x5706B337",
+          "expect_hex": "dd9bddffff0000",
+          "replace_hex": "ca24cbcbcbcbcb"
+        },
+        {
+          "name": "m6930lb_3410pq_fpc_autoclock_skip",
+          "description": "MAIN3410PQ sys_boot.c skip European FPC_AutoClockSetting GATE=15 timeout -> bra 0x574F6600 (AVOUT_init)",
+          "va": "0x574F659D",
+          "expect_hex": "dd1e0802000000",
+          "replace_hex": "ca63cbcbcbcbcb"
+        },
+        {
+          "name": "m6930lb_3410pq_fpc_p50_gate15_skip",
+          "description": "MAIN3410PQ skip pre-WakeupReason FPC 0xF9 GATE=15 (call 0x57068548) to eliminate ~30s boot timeout",
+          "va": "0x574F4BF5",
+          "expect_hex": "dd5339b7ff0000",
+          "replace_hex": "00cbcbcbcbcbcb"
+        },
+        {
+          "name": "m6930lb_3410pq_tv_system_60hz_ntsc",
+          "description": "MAIN3410PQ SYS_CNTL_PAL_NTSC_Change force d2=0 (TV_NTSC 525-line 480i 60Hz) on M6930LB hardware",
+          "va": "0x5750BD6A",
+          "expect_hex": "f1e2",
+          "replace_hex": "8a00"
+        },
+        {
+          "name": "m6930lb_3410pq_avout_vmute_unmute",
+          "description": "MAIN3410PQ AVOUT_V_Mute(onoff) force d2=0 so AVDD_DACOUT1 stays unmuted (0x0D00) with avout_v_initialized=1",
+          "va": "0x571309CF",
+          "expect_hex": "f1e2",
+          "replace_hex": "8a00"
         }
       ],
       "unpacked_sha256": "c3275d39549b68f48db16bc5fd043c6f8a373d4ba416826de09be5c55dc991b1"

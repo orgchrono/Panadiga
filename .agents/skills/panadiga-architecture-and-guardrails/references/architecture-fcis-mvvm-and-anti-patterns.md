@@ -8,7 +8,7 @@
 | Regra pura de parsing, crypto, MEIHFS, BGO, NOR, RE | `crates/panadiga-core/src/<domínio>/` (módulos coesos, sem IO de UI) | Colocar lógica de domínio em `apps/desktop/src/` ou handlers CLI/MCP |
 | Subcomando CLI / Tool MCP / Comando Tauri IPC | Casca fina em `panadiga-cli` / `panadiga-mcp` / `apps/desktop/src-tauri` delegando a `panadiga-core` | Duplicar lógica entre CLI, MCP e `src-tauri` (`jscpd`!) |
 | Nova camada/indexador ou regra RAG | `crates/panadiga-rag/src/{indexer,safety}/` | Enfraquecer `HardwareSafetyValidator` ou misturar logs em `stdout` |
-| Driver/diagnóstico da sonda RP2040/RP2350 | `firmware/pico-p7501/{cli,common,diag,flash,gdb,hal,uart,tests}/` | Inchar `cli/`, editar `generated/` à mão ou exceder `256 KiB` `P0_FW_RO` |
+| Driver/diagnóstico da sonda RP2040/RP2350 (`PicoFW`) | `firmware/picofw/{cli,common,diag,flash,gdb,hal,uart,tests}/` | Inchar `cli/`, editar `generated/` à mão ou exceder `256 KiB` `P0_FW_RO` |
 | Nova feature no Workbench Desktop/Android | `apps/desktop/src/{models,constants,locales,utils,services,store,hooks,viewmodels,components,views}/` | Saltar camadas do DAG MVVM ou colocar mocks fora de `src/test/mocks/` |
 | Pipeline batch RE/Ghidra/bancada/PDF | `scripts/re/`, `scripts/bench/` com `mypy --strict` + testes em `scripts/tests/` | Escrever direto em `profiles/boards/` sem quarentena |
 

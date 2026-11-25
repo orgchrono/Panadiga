@@ -1,4 +1,4 @@
-"""C11 Pico firmware host test compiler and Gate 8 runner for Panadiga."""
+"""C11 PicoFW and DigaOS firmware host test compiler and Gate 8 runner for Panadiga."""
 
 from __future__ import annotations
 
@@ -12,100 +12,109 @@ from scripts.build_lanes.pico import compile_pico_boards_parallel, prepare_pico_
 from scripts.panadiga_ops import ROOT, load_msvc_env, print_banner, print_status, run_step
 
 C11_HOST_SOURCES: Final[tuple[str, ...]] = (
-    "firmware/pico-p7501/generated/p7501_ssot_tables.c",
-    "firmware/pico-p7501/common/p7501_cmd_arena.c",
-    "firmware/pico-p7501/common/p7501_hex.c",
-    "firmware/pico-p7501/common/p7501_crc_csum.c",
-    "firmware/pico-p7501/common/p7501_probe_fsm.c",
-    "firmware/pico-p7501/common/p7501_push_stream.c",
-    "firmware/pico-p7501/common/p7501_spsc_ring.c",
-    "firmware/pico-p7501/common/p7501_wdt_logic.c",
-    "firmware/pico-p7501/crypto/p7501_feistel.c",
-    "firmware/pico-p7501/crypto/p7501_compress.c",
-    "firmware/pico-p7501/crypto/p7501_decomp.c",
-    "firmware/pico-p7501/hal/p7501_bootsel_logic.c",
-    "firmware/pico-p7501/hal/p7501_led_logic.c",
-    "firmware/pico-p7501/hal/p7501_wireless_codec.c",
-    "firmware/pico-p7501/gdb/gdb_rsp_codec.c",
-    "firmware/pico-p7501/gdb/gdb_rsp_memory.c",
-    "firmware/pico-p7501/gdb/gdb_rsp_cpu.c",
-    "firmware/pico-p7501/uart/p7501_uart_autobaud.c",
-    "firmware/pico-p7501/uart/p7501_uart_codec.c",
-    "firmware/pico-p7501/uart/p7501_uart_args.c",
-    "firmware/pico-p7501/uart/p7501_fmu_codec.c",
-    "firmware/pico-p7501/flash/p7501_blackbox_codec.c",
-    "firmware/pico-p7501/flash/p7501_bus_policy.c",
-    "firmware/pico-p7501/flash/p7501_bus_tx_guard.c",
-    "firmware/pico-p7501/flash/p7501_flash_geo.c",
-    "firmware/pico-p7501/flash/p7501_fast_stream_codec.c",
-    "firmware/pico-p7501/flash/p7501_normap_codec.c",
-    "firmware/pico-p7501/flash/p7501_ftl_inspect.c",
-    "firmware/pico-p7501/flash/p7501_job_codec.c",
-    "firmware/pico-p7501/flash/p7501_payloads.c",
-    "firmware/pico-p7501/flash/p7501_trap_guard.c",
-    "firmware/pico-p7501/flash/p7501_probe_cfg_codec.c",
-    "firmware/pico-p7501/flash/p7501_qspi_map.c",
-    "firmware/pico-p7501/flash/p7501_sector_ops.c",
-    "firmware/pico-p7501/flash/p7501_vault_codec.c",
-    "firmware/pico-p7501/flash/p7501_target_bus.c",
-    "firmware/pico-p7501/uart/p7501_pana_dumpnor.c",
-    "firmware/pico-p7501/uart/p7501_pana_dumpnor_verify.c",
-    "firmware/pico-p7501/uart/p7501_pana_jedec_stubs.c",
-    "firmware/pico-p7501/uart/p7501_pana_jedec_exec.c",
-    "firmware/pico-p7501/uart/p7501_pana_jedec_id.c",
-    "firmware/pico-p7501/uart/p7501_pana_rsp_codec.c",
-    "firmware/pico-p7501/uart/p7501_pana_rsp_guard.c",
-    "firmware/pico-p7501/uart/p7501_pana_rsp_parse.c",
-    "firmware/pico-p7501/uart/p7501_pana_rsp_tokens.c",
-    "firmware/pico-p7501/uart/p7501_diag_watch_codec.c",
-    "firmware/pico-p7501/uart/p7501_diag_watch_events.c",
-    "firmware/pico-p7501/uart/p7501_drv_pana_codec.c",
-    "firmware/pico-p7501/diag/p7501_i2c_codec.c",
-    "firmware/pico-p7501/diag/p7501_identify_codec.c",
-    "firmware/pico-p7501/diag/p7501_mmio_snapshot_codec.c",
-    "firmware/pico-p7501/diag/p7501_piologic_codec.c",
-    "firmware/pico-p7501/diag/p7501_pwrosc_codec.c",
-    "firmware/pico-p7501/diag/p7501_sds_codec.c",
-    "firmware/pico-p7501/diag/p7501_jigsweep_codec.c",
-    "firmware/pico-p7501/diag/p7501_ir_codec.c",
-    "firmware/pico-p7501/diag/p7501_serv_macro_codec.c",
-    "firmware/pico-p7501/diag/p7501_tbus_codec.c",
-    "firmware/pico-p7501/diag/p7501_boottrace_codec.c",
-    "firmware/pico-p7501/diag/p7501_hotplug_codec.c",
-    "firmware/pico-p7501/diag/p7501_bitwise_search.c",
-    "firmware/pico-p7501/diag/p7501_hdd_unlock.c",
-    "firmware/pico-p7501/diag/p7501_math_gps.c",
-    "firmware/pico-p7501/diag/p7501_math_stats.c",
-    "firmware/pico-p7501/diag/p7501_meihfs_probe.c",
-    "firmware/pico-p7501/diag/p7501_microsurgery.c",
-    "firmware/pico-p7501/diag/p7501_mn103_asm.c",
-    "firmware/pico-p7501/diag/p7501_mn103_disasm.c",
-    "firmware/pico-p7501/diag/p7501_pieos_xray.c",
-    "firmware/pico-p7501/tests/test_uart_codec.c",
-    "firmware/pico-p7501/tests/test_pana_logic.c",
-    "firmware/pico-p7501/tests/test_pana_diag_drv.c",
-    "firmware/pico-p7501/tests/test_pico_autonomous.c",
-    "firmware/pico-p7501/tests/test_gdb_rsp_host.c",
+    "firmware/picofw/generated/picofw_ssot_tables.c",
+    "firmware/picofw/common/picofw_cmd_arena.c",
+    "firmware/picofw/common/picofw_hex.c",
+    "firmware/picofw/common/picofw_crc_csum.c",
+    "firmware/picofw/common/picofw_probe_fsm.c",
+    "firmware/picofw/common/picofw_push_stream.c",
+    "firmware/picofw/common/picofw_spsc_ring.c",
+    "firmware/picofw/common/picofw_wdt_logic.c",
+    "firmware/picofw/crypto/picofw_feistel.c",
+    "firmware/picofw/crypto/picofw_compress.c",
+    "firmware/picofw/crypto/picofw_decomp.c",
+    "firmware/picofw/hal/picofw_bootsel_logic.c",
+    "firmware/picofw/hal/picofw_led_logic.c",
+    "firmware/picofw/hal/picofw_wireless_codec.c",
+    "firmware/picofw/gdb/gdb_rsp_codec.c",
+    "firmware/picofw/gdb/gdb_rsp_memory.c",
+    "firmware/picofw/gdb/gdb_rsp_cpu.c",
+    "firmware/picofw/uart/picofw_uart_autobaud.c",
+    "firmware/picofw/uart/picofw_uart_codec.c",
+    "firmware/picofw/uart/picofw_uart_args.c",
+    "firmware/picofw/uart/picofw_fmu_codec.c",
+    "firmware/picofw/flash/picofw_blackbox_codec.c",
+    "firmware/picofw/flash/picofw_bus_policy.c",
+    "firmware/picofw/flash/picofw_bus_tx_guard.c",
+    "firmware/picofw/flash/picofw_flash_geo.c",
+    "firmware/picofw/flash/picofw_fast_stream_codec.c",
+    "firmware/picofw/flash/picofw_normap_codec.c",
+    "firmware/picofw/flash/picofw_ftl_inspect.c",
+    "firmware/picofw/flash/picofw_job_codec.c",
+    "firmware/picofw/flash/picofw_payloads.c",
+    "firmware/picofw/flash/picofw_trap_guard.c",
+    "firmware/picofw/flash/picofw_probe_cfg_codec.c",
+    "firmware/picofw/flash/picofw_qspi_map.c",
+    "firmware/picofw/flash/picofw_sector_ops.c",
+    "firmware/picofw/flash/picofw_vault_codec.c",
+    "firmware/picofw/flash/picofw_target_bus.c",
+    "firmware/picofw/uart/picofw_pana_dumpnor.c",
+    "firmware/picofw/uart/picofw_pana_dumpnor_verify.c",
+    "firmware/picofw/uart/picofw_pana_jedec_stubs.c",
+    "firmware/picofw/uart/picofw_pana_jedec_exec.c",
+    "firmware/picofw/uart/picofw_pana_jedec_id.c",
+    "firmware/picofw/uart/picofw_pana_rsp_codec.c",
+    "firmware/picofw/uart/picofw_pana_rsp_guard.c",
+    "firmware/picofw/uart/picofw_pana_rsp_parse.c",
+    "firmware/picofw/uart/picofw_pana_rsp_tokens.c",
+    "firmware/picofw/uart/picofw_diag_watch_codec.c",
+    "firmware/picofw/uart/picofw_diag_watch_events.c",
+    "firmware/picofw/uart/picofw_drv_pana_codec.c",
+    "firmware/picofw/diag/picofw_i2c_codec.c",
+    "firmware/picofw/diag/picofw_identify_codec.c",
+    "firmware/picofw/diag/picofw_mmio_snapshot_codec.c",
+    "firmware/picofw/diag/picofw_piologic_codec.c",
+    "firmware/picofw/diag/picofw_pwrosc_codec.c",
+    "firmware/picofw/diag/picofw_sds_codec.c",
+    "firmware/picofw/diag/picofw_jigsweep_codec.c",
+    "firmware/picofw/diag/picofw_ir_codec.c",
+    "firmware/picofw/diag/picofw_serv_macro_codec.c",
+    "firmware/picofw/diag/picofw_tbus_codec.c",
+    "firmware/picofw/diag/picofw_boottrace_codec.c",
+    "firmware/picofw/diag/picofw_hotplug_codec.c",
+    "firmware/picofw/diag/picofw_bitwise_search.c",
+    "firmware/picofw/diag/picofw_hdd_unlock.c",
+    "firmware/picofw/diag/picofw_math_gps.c",
+    "firmware/picofw/diag/picofw_math_stats.c",
+    "firmware/picofw/diag/picofw_meihfs_probe.c",
+    "firmware/picofw/diag/picofw_microsurgery.c",
+    "firmware/picofw/diag/picofw_mn103_asm.c",
+    "firmware/picofw/diag/picofw_mn103_disasm.c",
+    "firmware/picofw/diag/picofw_pieos_xray.c",
+    "firmware/picofw/tests/test_uart_codec.c",
+    "firmware/picofw/tests/test_pana_logic.c",
+    "firmware/picofw/tests/test_pana_diag_drv.c",
+    "firmware/picofw/tests/test_pico_autonomous.c",
+    "firmware/picofw/tests/test_gdb_rsp_host.c",
 )
 
-OPENOS_HOST_SOURCES: tuple[str, ...] = (
-    "firmware/panadiga-openos/drivers/uart_sc0.c",
-    "firmware/panadiga-openos/drivers/tbus_ic7501.c",
-    "firmware/panadiga-openos/drivers/aiof_video.c",
-    "firmware/panadiga-openos/drivers/avdd_iic_video.c",
-    "firmware/panadiga-openos/drivers/davis_sata.c",
-    "firmware/panadiga-openos/drivers/storage_provisioner.c",
-    "firmware/panadiga-openos/drivers/sdcd_sd.c",
-    "firmware/panadiga-openos/drivers/nor_bgo_ro.c",
-    "firmware/panadiga-openos/kernel/openos_main.c",
-    "firmware/panadiga-openos/tests/test_openos_host.c",
-)
+
+def _discover_digaos_host_sources(root: Path = ROOT) -> tuple[str, ...]:
+    """Collect all host-testable DigaOS C11 sources (generated SSOT, multi-SoC HAL, drivers, kernel, test entry)."""
+    digaos_dir = root / "firmware" / "digaos"
+    if not digaos_dir.is_dir():
+        return ()
+    sources: list[str] = []
+    for subdir in ("generated", "hal", "drivers", "kernel"):
+        sub_path = digaos_dir / subdir
+        if sub_path.is_dir():
+            sources.extend(
+                p.relative_to(root).as_posix()
+                for p in sorted(sub_path.glob("*.c"))
+            )
+    test_entry = digaos_dir / "tests" / "test_digaos_host.c"
+    if test_entry.is_file():
+        sources.append(test_entry.relative_to(root).as_posix())
+    return tuple(sources)
+
+
+DIGAOS_HOST_SOURCES: Final[tuple[str, ...]] = _discover_digaos_host_sources()
 
 C11_HW_HOST_SOURCES: Final[tuple[str, ...]] = (
-    "firmware/pico-p7501/common/p7501_probe_fsm.c",
-    "firmware/pico-p7501/diag/p7501_hotplug_codec.c",
-    "firmware/pico-p7501/hal/p7501_hw.c",
-    "firmware/pico-p7501/tests/test_p7501_hw_host.c",
+    "firmware/picofw/common/picofw_probe_fsm.c",
+    "firmware/picofw/diag/picofw_hotplug_codec.c",
+    "firmware/picofw/hal/picofw_hw.c",
+    "firmware/picofw/tests/test_picofw_hw_host.c",
 )
 
 
@@ -176,13 +185,13 @@ def _compile_c11_host_test(
     *,
     capture_output: bool = False,
 ) -> None:
-    """Compile C11 Pico RSP host test suite into an isolated temp directory with strict warnings."""
+    """Compile C11 PicoFW RSP host test suite into an isolated temp directory with strict warnings."""
     _compile_c11_target(
         exe_path,
         work_dir,
         env,
         sources=C11_HOST_SOURCES,
-        include_dir="firmware/pico-p7501",
+        include_dir="firmware/picofw",
         define_macro="PICO_HOST_TEST",
         capture_output=capture_output,
     )
@@ -191,18 +200,21 @@ def _compile_c11_host_test(
 def _gate_c11_host(env: Mapping[str, str], *, capture_output: bool = False) -> None:
     """Compile & execute the C11 host test suites and optional RP2040/RP2350 ARM compilation."""
     if not capture_output:
-        print_banner("8/9. Compiling & Executing C11 Pico & OpenOS Host Tests (+ ARM Check)")
+        print_banner("8/9. Compiling & Executing C11 PicoFW & DigaOS Host Tests (+ ARM Check)")
+    digaos_sources = _discover_digaos_host_sources(ROOT) or DIGAOS_HOST_SOURCES
+    if not digaos_sources:
+        raise FileNotFoundError("Missing firmware/digaos C11 host sources")
     ext = ".exe" if sys.platform == "win32" else ""
     targets: tuple[tuple[str, tuple[str, ...], str, tuple[str, ...], str], ...] = (
-        ("test_gdb_rsp_host", C11_HOST_SOURCES, "firmware/pico-p7501", (), "PICO_HOST_TEST"),
+        ("test_gdb_rsp_host", C11_HOST_SOURCES, "firmware/picofw", (), "PICO_HOST_TEST"),
         (
-            "test_p7501_hw_host",
+            "test_picofw_hw_host",
             C11_HW_HOST_SOURCES,
-            "firmware/pico-p7501",
-            ("firmware/pico-p7501/tests/mock_pico_sdk",),
+            "firmware/picofw",
+            ("firmware/picofw/tests/mock_pico_sdk",),
             "PICO_HOST_TEST",
         ),
-        ("test_openos_host", OPENOS_HOST_SOURCES, "firmware/panadiga-openos", (), "PANADIGA_OPENOS_HOST_TEST"),
+        ("test_digaos_host", digaos_sources, "firmware/digaos", (), "PANADIGA_DIGAOS_HOST_TEST"),
     )
     with tempfile.TemporaryDirectory(prefix="panadiga_c11_") as tmpdir_str:
         base_dir = Path(tmpdir_str)
@@ -233,4 +245,4 @@ def _gate_c11_host(env: Mapping[str, str], *, capture_output: bool = False) -> N
             "33",
         )
     if not capture_output:
-        print_status("PASS", "All C11 Pico firmware host tests (+ ARM compile check) passed!", "32")
+        print_status("PASS", "All C11 PicoFW & DigaOS firmware host tests (+ ARM compile check) passed!", "32")

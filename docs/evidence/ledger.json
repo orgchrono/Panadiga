@@ -1108,6 +1108,80 @@
         "docs/pt-BR/WHATS_NEXT_ONBOARDING_NOVOS_APARELHOS.md",
         "docs/en-US/WHATS_NEXT_NEW_DEVICE_ONBOARDING.md"
       ]
+    },
+    {
+      "id": "EV-20261124-005",
+      "level": "N4_HARDWARE",
+      "claim_pt": "Sessao ao vivo COM10 (DMR-EH55LB-S M6930LB / VEP79138) em 2026-11-24: (1) diagnostico volatil ndb> em MAIN3060NP (dd 570df348 16 -> F2CF20F0 F5E8FEF8) + patch volatil IC3001/AVDD/AIOF (eb 570df34a..4e -> 80 00 F0 FC CB, ew 89800402=4FB3, 89800404=0D00, 8800002C=40F0, halt=0.702s); (2) Boot 1 FVU (BOOTTRACE 65000 NORMAL) gravou MAIN3410PQ localizado para M6930LB (check_sum=0x2f84d497) com Vefify OK x2 nos dois espelhos do HDD SAMSUNG HM251JI (0x00010000-0x00012F3E e 0x1D1A5970-0x1D1A88AE, success to update mainsoft., ferr=0); (3) Boot 2 ([HDD_AUTOBOOT] Boot MAIN @ 0x57000000, HDD MAX LBA=0x1D1C5970) subiu MAIN 3410PQ direto do HDD e leitura ndb> em 0.311s provou 0x53186DBC=0x00000080 (PL 0x04 -> EG 0x80 via 0x574F71F9, 0 asserts sys_fip_osd_tools.c), 0x570D625C=008020F0 F5CBFCF0 (IC3001 I2C bypass, iic_err=0), 0 ocorrencias de OPcode Emergency em pacotes FPC 0x7F e bgo_err=0/U99=0, observando ainda ramo 0x574F658E->0x574F65A9 mantendo espera GATE=15 (~29.8s) e avout_tv_system=1 (TV_PAL 0x8027) com encerramento seguro em ISOLATE + STATUS (VDD=3.26V, NSW5V=1, fault_latch=0).",
+      "claim_en": "Live COM10 bench session (DMR-EH55LB-S M6930LB / VEP79138) on 2026-11-24: (1) volatile ndb> diagnostic on MAIN3060NP (dd 570df348 16 -> F2CF20F0 F5E8FEF8) + live IC3001/AVDD/AIOF patch (eb 570df34a..4e -> 80 00 F0 FC CB, ew 89800402=4FB3, 89800404=0D00, 8800002C=40F0, halt=0.702s); (2) Boot 1 FVU (BOOTTRACE 65000 NORMAL) flashed M6930LB-localized MAIN3410PQ (check_sum=0x2f84d497) with Vefify OK x2 across both SAMSUNG HM251JI mirrors (0x00010000-0x00012F3E and 0x1D1A5970-0x1D1A88AE, success to update mainsoft., ferr=0); (3) Boot 2 ([HDD_AUTOBOOT] Boot MAIN @ 0x57000000, HDD MAX LBA=0x1D1C5970) booted MAIN 3410PQ directly from HDD and 0.311s read-only ndb> check proved 0x53186DBC=0x00000080 (PL 0x04 -> EG 0x80 via 0x574F71F9, 0 sys_fip_osd_tools.c asserts), 0x570D625C=008020F0 F5CBFCF0 (IC3001 I2C bypass, iic_err=0), 0 occurrences of OPcode Emergency on 0x7F packets, and bgo_err=0/U99=0, while recording that branch 0x574F658E->0x574F65A9 still waits through GATE=15 (~29.8s) and initializes avout_tv_system=1 (TV_PAL 0x8027), closing safely in ISOLATE + STATUS (VDD=3.26V, NSW5V=1, fault_latch=0).",
+      "sites": [
+        "VOLATILE 3060NP: eb 570df34a..4e -> 80 00 F0 FC CB + AVDD 0x4FB3/0x0D00 + AIOF_FS0 0x40F0",
+        "BOOT 1 FVU: check_sum=0x2f84d497, Vefify OK x2 (0x00010000 & 0x1D1A5970), success to update mainsoft.",
+        "BOOT 2 [HDD_AUTOBOOT]: Boot MAIN3410PQ @ 0x57000000, iic_err=0, bgo_err=0, 0 OPcode Emergency",
+        "ndb> LIVE 3410PQ: 0x53186DBC=0x00000080, 0x574F71F8=A02BCA03 C02AC800, 0x570D625C=008020F0 F5CBFCF0"
+      ],
+      "evidence_files": [
+        "docs/evidence/com10_live_video_osd_diag_20261124.log",
+        "docs/evidence/com10_live_volatile_patch_20261124.log",
+        "docs/evidence/com10_m6930lb_3410pq_boot1_fvu_20261124.log",
+        "docs/evidence/com10_m6930lb_3410pq_boot2_main_20261124.log"
+      ],
+      "sha256_assertions": [
+        {
+          "path": "docs/evidence/com10_live_video_osd_diag_20261124.log",
+          "sha256": "FA9EA01E82C8AC7EF0AE8A4B8B300EE6AE2BD818AE17EC6A7E0B596F4B11CB82",
+          "required": true
+        },
+        {
+          "path": "docs/evidence/com10_live_volatile_patch_20261124.log",
+          "sha256": "BD4B0F32A0D1F9A993C4CCCDF0C9ADB9F8772E7B175427608FA72465746A1365",
+          "required": true
+        },
+        {
+          "path": "docs/evidence/com10_m6930lb_3410pq_boot1_fvu_20261124.log",
+          "sha256": "1543B9B3D0322509723F985DD657464B09579D2276058549DF224E490EDE2536",
+          "required": true
+        },
+        {
+          "path": "docs/evidence/com10_m6930lb_3410pq_boot2_main_20261124.log",
+          "sha256": "245562E6B3F4DE9A29462C8338E80889E2B48DFAA01D1E9C01EC7B6DE6F1FBE5",
+          "required": true
+        }
+      ],
+      "docs": [
+        "docs/pt-BR/HISTORICO_UNBRICK_EH55_BGO_CH1_DAVIS_E_REGIAO.md",
+        "docs/en-US/EH55_UNBRICK_BREAKTHROUGH_BGO_CH1_DAVIS_AND_REGION.md",
+        "docs/pt-BR/PESQUISA_PORTOES_VALIDACAO_SATA_STAGE2_E_RETARGET_BGO_8MB.md",
+        "docs/en-US/RESEARCH_VALIDATION_GATES_SATA_STAGE2_AND_8MB_BGO_RETARGET.md"
+      ]
+    },
+    {
+      "id": "EV-20261125-001",
+      "level": "N4_HARDWARE",
+      "claim_pt": "Sessao ao vivo COM10 (DMR-EH55LB-S M6930LB / VEP79138) + promocao SSOT 3410PQ + turnkey 1-SD-card autoboot em 2026-11-25: (1) Ao vivo na COM10 em MAIN3410PQ, apos forcar TV_NTSC (0x515CD08C=0, AIOF 0x88000000=0x8020 480i 60Hz) e DACOUT1 unmute (0x89800404=0x0D00), test_avout_init1_on_com10.py provou que 0x89800404=0x0D00 e 0x515CD08C=0 permanecem estaveis mesmo com avout_v_initialized=1 (0x515A2444=1), encerrando em ISOLATE+STATUS (VDD=3.24V, NSW5V=1, fault_latch=0); (2) Promovidos 3 novos sitios SSOT em loader_ver061_toc48_main57.json (MAIN3410PQ de 5 para 8 sitios): m6930lb_3410pq_fpc_p50_gate15_skip @ 0x574F4BF5 (dd5339b7ff0000->00cbcbcbcbcbcb), m6930lb_3410pq_tv_system_60hz_ntsc @ 0x5750BD6A (f1e2->8a00 em SYS_CNTL_PAL_NTSC_Change) e m6930lb_3410pq_avout_vmute_unmute @ 0x571309CF (f1e2->8a00 em AVOUT_V_Mute), provados em Mn103Vm; (3) Implementada sincronizacao turnkey 1-SD-card em [HDD_AUTOBOOT] (0x504395FC carimba EXTRHEAD+0x28 esperado=0x86F2435C em PROG061): Boot 1 rejeita MAIN antigo no HDD e cai no FVU automaticamente; Boot 2+ sobe direto do HDD SATA sem trocar cartao SD ou apertar 'F' via UART, validado no Mn103Vm e em sd_unbrick_kit_m6930lb_br/PANA__SD.FRM (7.181.488 B, SHA-256 03a47de8c0c32401c03806bbc27333a722c4bdd777bc6f57b6fcd80322d2fb76, verify-sd --audit-profile hardened PASS).",
+      "claim_en": "Live COM10 session (DMR-EH55LB-S M6930LB / VEP79138) + MAIN3410PQ SSOT promotion + turnkey 1-SD-card autoboot on 2026-11-25: (1) Live on COM10 in MAIN3410PQ, after forcing TV_NTSC (0x515CD08C=0, AIOF 0x88000000=0x8020 480i 60Hz) and DACOUT1 unmute (0x89800404=0x0D00), test_avout_init1_on_com10.py proved 0x89800404=0x0D00 and 0x515CD08C=0 remain held with avout_v_initialized=1 (0x515A2444=1), closing safely in ISOLATE+STATUS (VDD=3.24V, NSW5V=1, fault_latch=0); (2) Promoted 3 new SSOT sites in loader_ver061_toc48_main57.json (MAIN3410PQ 5 -> 8 sites): m6930lb_3410pq_fpc_p50_gate15_skip @ 0x574F4BF5 (dd5339b7ff0000->00cbcbcbcbcbcb), m6930lb_3410pq_tv_system_60hz_ntsc @ 0x5750BD6A (f1e2->8a00 in SYS_CNTL_PAL_NTSC_Change), and m6930lb_3410pq_avout_vmute_unmute @ 0x571309CF (f1e2->8a00 in AVOUT_V_Mute), proven in Mn103Vm; (3) Implemented turnkey 1-SD-card [HDD_AUTOBOOT] EXTRHEAD+0x28 checksum sync (0x504395FC stamped with expected=0x86F2435C in PROG061): Boot 1 rejects stale HDD MAIN and falls through to FVU automatically; Boot 2+ boots straight from SATA HDD without swapping SD cards or pressing UART 'F', proven in Mn103Vm and rebuilt sd_unbrick_kit_m6930lb_br/PANA__SD.FRM (7,181,488 B, SHA-256 03a47de8c0c32401c03806bbc27333a722c4bdd777bc6f57b6fcd80322d2fb76, verify-sd --audit-profile hardened PASS).",
+      "sites": [
+        "COM10 LIVE VIDEO: 0x515A2444=1, 0x515CD08C=0, 0x88000000=0x8020 (480i 60Hz), 0x89800404=0x0D00 (DACOUT1 unmuted)",
+        "SSOT 3410PQ (8 sites): +0x574F4BF5 (GATE=15 skip), +0x5750BD6A (TV_NTSC 60Hz), +0x571309CF (AVOUT_V_Mute d2=0)",
+        "TURNKEY 1-SD [HDD_AUTOBOOT]: PROG061 0x504395FC stamped 0x86F2435C vs *(hdd_dma_buf_va+0x28)",
+        "REBUILT PANA__SD.FRM: 7181488 B, SHA-256 03a47de8c0c32401c03806bbc27333a722c4bdd777bc6f57b6fcd80322d2fb76"
+      ],
+      "evidence_files": [
+        "docs/evidence/com10_m6930lb_3410pq_live_video_fix_20261125.log"
+      ],
+      "sha256_assertions": [
+        {
+          "path": "docs/evidence/com10_m6930lb_3410pq_live_video_fix_20261125.log",
+          "sha256": "8986CE243A0F314CF97D6AB21388817F3CD146A23230A218AE91636D72114487",
+          "required": true
+        }
+      ],
+      "docs": [
+        "docs/pt-BR/HISTORICO_UNBRICK_EH55_BGO_CH1_DAVIS_E_REGIAO.md",
+        "docs/en-US/EH55_UNBRICK_BREAKTHROUGH_BGO_CH1_DAVIS_AND_REGION.md",
+        "docs/pt-BR/PESQUISA_PORTOES_VALIDACAO_SATA_STAGE2_E_RETARGET_BGO_8MB.md",
+        "docs/en-US/RESEARCH_VALIDATION_GATES_SATA_STAGE2_AND_8MB_BGO_RETARGET.md"
+      ]
     }
   ]
 }

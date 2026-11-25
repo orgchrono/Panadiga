@@ -97,11 +97,16 @@ def _gate_playwright(env: Mapping[str, str], *, capture_output: bool = False) ->
 
 def _snapshot_generated_ssot_hashes(root: Path) -> dict[str, str]:
     candidates: list[Path] = [
-        root / "firmware" / "pico-p7501" / "generated" / "p7501_ssot.h",
-        root / "firmware" / "pico-p7501" / "generated" / "p7501_ssot_tables.c",
-        root / "firmware" / "pico-p7501" / "uart" / "p7501_pana_rsp_ssot.h",
+        root / "firmware" / "picofw" / "generated" / "picofw_ssot.h",
+        root / "firmware" / "picofw" / "generated" / "picofw_ssot.c",
+        root / "firmware" / "picofw" / "generated" / "picofw_ssot_tables.c",
+        root / "firmware" / "picofw" / "uart" / "picofw_pana_rsp_ssot.h",
+        root / "firmware" / "digaos" / "generated" / "digaos_ssot.h",
+        root / "firmware" / "digaos" / "generated" / "digaos_ssot.c",
+        root / "firmware" / "digaos" / "generated" / "digaos_ssot_tables.c",
         root / "apps" / "desktop" / "src" / "models" / "generated" / "ssot.ts",
         root / "apps" / "desktop" / "src" / "models" / "generated" / "profiles.ts",
+        root / "apps" / "desktop" / "src" / "models" / "generated" / "digaos.ts",
         root / "scripts" / "profiles_types.py",
         *sorted((root / "profiles" / "schema").glob("*.json")),
         *sorted((root / "tools" / "ghidra").glob("*.py")),

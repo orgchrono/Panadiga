@@ -33,7 +33,8 @@ pub use apply::{
     apply_hdd_autoboot_for_loader_profile_in_place, apply_hdd_autoboot_in_place_for_spec,
     apply_prog061_hdd_autoboot_in_place, hdd_autoboot_spec_for_loader_profile,
     inspect_hdd_autoboot_for_loader_profile, inspect_hdd_autoboot_site_for_spec,
-    inspect_prog061_hdd_autoboot_site,
+    inspect_prog061_hdd_autoboot_site, stamp_hdd_autoboot_expected_main_checksum_for_profile,
+    stamp_hdd_autoboot_expected_main_checksum_for_spec,
 };
 pub use payload::{assemble_hdd_autoboot_payload_for_spec, assemble_prog061_hdd_autoboot_payload};
 
@@ -42,6 +43,8 @@ pub const OFF_PROG061_HDD_AUTOBOOT_HOOK_SITE: usize = 0x0000_50D3;
 /// Exact 7-byte factory instruction at `0x5040_50D3` (`CALL 0x5040_9FDB,[],0`).
 pub const ORIG_PROG061_HDD_AUTOBOOT_HOOK_BYTES: [u8; 7] =
     [0xDD, 0x08, 0x4F, 0x00, 0x00, 0x00, 0x00];
+/// File offset inside `PROG061` tail slack (`0x395FC`) holding expected `MAIN` `EXTRHEAD+0x28` checksum.
+pub const PROG061_HDD_AUTOBOOT_EXPECTED_MAIN_CSUM_OFFSET: usize = 0x0003_95FC;
 /// File offset inside `PROG061` zero-padded tail slack (`0x39494..0x3FFFF`) hosting SATA HDD autoboot code.
 pub const PROG061_HDD_AUTOBOOT_PAYLOAD_OFFSET: usize = 0x0003_9600;
 /// MN103S virtual address of the embedded SATA HDD autoboot entry (`0x5043_9600`).
@@ -120,4 +123,6 @@ pub struct Prog061HddAutobootStatus {
     pub state: String,
     pub payload_present: bool,
     pub hook_bytes_hex: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expected_main_extrhead_crc_hex: Option<String>,
 }

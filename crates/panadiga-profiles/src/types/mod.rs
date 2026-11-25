@@ -3,6 +3,7 @@
 //! Domain types for normalized hardware, firmware train, NOR layout, and policy-gated models.
 
 pub mod board;
+pub mod digaos;
 pub mod eeprom;
 pub mod evidence;
 pub mod flash;
@@ -15,6 +16,10 @@ pub mod train;
 
 pub use crate::i18n::{TrapCatalog, TrapRecord};
 pub use board::BoardProfile;
+pub use digaos::{
+    DigaOsConfigSpec, DigaOsMenuItemSpec, DigaOsMenuSpec, DigaOsMmioRangeSpec,
+    DigaOsPowerProfileSpec, DigaOsSocTargetSpec, DigaOsThemeSpec,
+};
 pub use eeprom::{EepromChipProfile, EepromFunction};
 pub use evidence::{
     Authorization, AuthorizationMode, Capability, ClaimEvidence, Denial, EvidenceSource,

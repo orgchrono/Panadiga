@@ -110,7 +110,8 @@ impl HierarchicalIndexer {
             let default_entries = [
                 root.join("docs"),
                 root.join("manuals_and_schematics"),
-                root.join("firmware").join("pico-p7501"),
+                root.join("firmware").join("picofw"),
+                root.join("firmware").join("digaos"),
                 root.join("tools").join("ghidra"),
                 root.join("profiles").join("symbols"),
                 root.join("profiles").join("traps"),

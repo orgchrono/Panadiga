@@ -16,6 +16,7 @@ pub mod staging;
 pub mod types;
 pub mod validate;
 mod validate_bgo;
+pub mod validate_digaos;
 mod validate_layout;
 mod validate_patches;
 
@@ -54,3 +55,4 @@ pub use validate::{
     AM34_LETHAL_MMIO_ADDR, MIN_CRITICAL_IPL_GUARD_BYTES, REQUIRED_LVTTL_MV, ensure_bundle_valid,
     validate_bundle,
 };
+pub use validate_digaos::validate_digaos_config;

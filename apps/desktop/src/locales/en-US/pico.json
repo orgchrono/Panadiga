@@ -1,6 +1,6 @@
 {
   "pico": {
-    "title": "Raspberry Pi Pico Bench — P7501 Async UART (115200 8N1)",
+    "title": "PicoFW Probe Bench — P7501 Async UART (PICO>, 115200 8N1)",
     "port": "Serial COM Port",
     "connect": "Connect",
     "disconnect": "Disconnect",

@@ -170,8 +170,8 @@ def frontend_digest_and_outputs(root: Path, *, android: bool = False) -> tuple[s
 
 
 def pico_digest_and_outputs(root: Path, env: Mapping[str, str]) -> tuple[str, tuple[Path, ...]]:
-    """Compute input digest and UF2 output paths for RP2040/RP2350 Pico firmware."""
-    fw_dir = root / "firmware" / "pico-p7501"
+    """Compute input digest and UF2 output paths for RP2040/RP2350 PicoFW firmware."""
+    fw_dir = root / "firmware" / "picofw"
     dest_dir = root / "crates" / "panadiga-core" / "src" / "pico" / "firmware_bins"
     salt = (
         f"pico_sdk={env.get('PICO_SDK_PATH', '')}",
@@ -179,7 +179,7 @@ def pico_digest_and_outputs(root: Path, env: Mapping[str, str]) -> tuple[str, tu
     )
     exts = frozenset({".c", ".h", ".pio", ".cmake", "CMakeLists.txt"})
     inputs = (fw_dir,)
-    outputs = (dest_dir / "panasonic_p7501_uart_unified.uf2",)
+    outputs = (dest_dir / "picofw_unified.uf2",)
     return compute_tree_digest(root, inputs, extensions=exts, extra_salt=salt), outputs
 
 

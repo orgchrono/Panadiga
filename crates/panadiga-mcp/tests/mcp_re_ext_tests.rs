@@ -241,7 +241,7 @@ fn eh55_bgo_and_davis_probe_tools_enforce_guards_with_mock_transport() {
     let mut mock_bgo = MockPanamon1Transport::new();
     mock_bgo.bridge_active = true;
     mock_bgo.map_memory(AM34_FLASH_UNCACHED_BASE, nor);
-    mock_bgo.boottrace_reply = "***** normal mode *****\r\nBOOTTRACE: OK\r\nPANADIGA> ".to_string();
+    mock_bgo.boottrace_reply = "***** normal mode *****\r\nBOOTTRACE: OK\r\nPICO> ".to_string();
     let live_bgo = handle_eh55_bgo_with_policy(
         &json!({
             "action": "live_apply",

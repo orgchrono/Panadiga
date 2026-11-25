@@ -26,7 +26,7 @@ Esta skill centraliza a entrega ponta a ponta de novas funcionalidades (do contr
 2. **Implementação FCIS/MVVM & Pareamento (Happy Path + Fail-Closed):**
    - **Rust:** testes unitários puros + integração rejeitando entradas inválidas (`E05`, `0xC000_100C`, path traversal, versões inválidas).
    - **Frontend TS & E2E:** Vitest cobrindo `loading`/`empty`/`error`/sucesso; specs Playwright em `apps/desktop/e2e/` com `getByRole`/`data-testid`.
-   - **Pico C11 & Python:** suíte host `-DPICO_HOST_TEST=1` em `firmware/pico-p7501/tests/` e `scripts/tests/` (`mypy --strict`).
+   - **PicoFW / DigaOS C11 & Python:** suíte host `-DPICO_HOST_TEST=1` em `firmware/picofw/tests/` + `firmware/digaos/tests/` e `scripts/tests/` (`mypy --strict`).
 3. **Diretórios Temporários Exclusivos:** Nunca use `temp_dir().join("fixo")` nem apenas `process::id()` em testes concorrentes — inclua contador `AtomicU64` por chamada ou `TempDir` RAII.
 4. **Zero `sleep` / `waitForTimeout` & Sem Vazamento de Mocks:** Use polling condicional/eventos explícitos; mocks ficam exclusivamente em `apps/desktop/src/test/mocks/` ou atrás de `--mock` explícito em `scripts/bench/runner.py`.
 5. **Sem Teatro de Testes:** Todo teste que valida contrato entre Rust e TS/C11/Python deve realmente **ler/parsear ambos os lados** ou executar o binário gerado, e falhar quando a guarda é quebrada.

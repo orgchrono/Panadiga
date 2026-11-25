@@ -3,9 +3,9 @@
 //! Shared across CLI, Desktop/Android UI (`apps/desktop/src-tauri`), MCP server, and RAG engine.
 
 pub mod catalog;
+pub mod digaos_header;
 pub mod events;
 pub mod fingerprint;
-pub mod openos_header;
 pub mod pico_header;
 pub mod profiles_codegen;
 pub mod registry;
@@ -16,12 +16,18 @@ pub use catalog::{
     DigaModelProfileDto, detect_diga_model_from_slice, get_diga_model_catalog_dto,
     is_valid_nor_flash_size,
 };
+pub use digaos_header::{
+    DEFAULT_DIGAOS_CONFIG_JSON, DIGAOS_SSOT_CONTRACT_HASH, DigaOsConfigSpec, DigaOsMmioRangeSpec,
+    compute_digaos_contract_hash_for_raw, export_digaos_ssot_files, export_ts_digaos_module,
+    generate_digaos_ssot_header, generate_digaos_ssot_header_for, generate_digaos_ssot_tables,
+    generate_digaos_ssot_tables_for, generate_ts_digaos_module, generate_ts_digaos_module_for,
+    load_digaos_config_from_root, validate_digaos_config,
+};
 pub use events::*;
 pub use fingerprint::{
     FingerprintCandidate, NorFingerprintReport, detect_diga_model_from_slice_safe,
     fingerprint_nor_or_firmware,
 };
-pub use openos_header::{export_openos_ssot_header, generate_openos_ssot_header};
 pub use pico_header::{
     DEV_SERIAL_NAK_BYTE, compute_pico_ssot_hash, export_pico_rsp_ssot_header,
     export_pico_ssot_files, generate_c11_ssot_header, generate_c11_ssot_tables,
@@ -35,10 +41,11 @@ pub use ts_codegen::{export_ts_ssot_module, generate_ts_ssot_module};
 
 /// Regenerates all deterministic multi-language SSOT projections (`C11`, `TypeScript`, `Python`, `JSON Schema`, `Ghidra`) under `root`.
 pub fn export_all_ssot_projections(root: &std::path::Path) -> anyhow::Result<()> {
-    export_pico_ssot_files(&root.join("firmware/pico-p7501"))?;
-    export_openos_ssot_header(&root.join("firmware/panadiga-openos/generated/openos_ssot.h"))?;
+    export_pico_ssot_files(&root.join("firmware/picofw"))?;
+    export_digaos_ssot_files(&root.join("firmware/digaos"), Some(root))?;
     export_ts_ssot_module(&root.join("apps/desktop/src/models/generated/ssot.ts"))?;
     export_ts_profiles_module(&root.join("apps/desktop/src/models/generated/profiles.ts"))?;
+    export_ts_digaos_module(&root.join("apps/desktop/src/models/generated/digaos.ts"))?;
     export_python_profiles_types(&root.join("scripts/profiles_types.py"))?;
     export_schemas_to_dir(&root.join("profiles/schema"))?;
     crate::ghidra::export_all_ghidra_scripts(&root.join("tools/ghidra"))?;

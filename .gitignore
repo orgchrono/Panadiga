@@ -43,16 +43,23 @@ test_out.txt
 AUDIT_DOSSIER_*.md
 
 # ------------------------------------------------------------------------------
-# 4. Raspberry Pi Pico Firmware & CMake Build Artifacts (RP2040 / RP2350)
+# 4. Embedded Firmware & CMake/Cross Build Artifacts (PicoFW RP2040/RP2350 & DigaOS)
 # ------------------------------------------------------------------------------
 pico-sdk/
-firmware/pico-p7501/build*/
-firmware/pico-p7501/*.uf2
-firmware/pico-p7501/*.elf
-firmware/pico-p7501/*.bin
-firmware/pico-p7501/*.hex
-firmware/pico-p7501/*.map
-firmware/pico-p7501/*.dis
+firmware/picofw/build*/
+firmware/picofw/*.uf2
+firmware/picofw/*.elf
+firmware/picofw/*.bin
+firmware/picofw/*.hex
+firmware/picofw/*.map
+firmware/picofw/*.dis
+firmware/digaos/build*/
+firmware/digaos/*.elf
+firmware/digaos/*.bin
+firmware/digaos/*.hex
+firmware/digaos/*.map
+firmware/digaos/*.dis
+firmware/digaos/*.o
 compile_commands.json
 .ninja_*
 CMakeCache.txt

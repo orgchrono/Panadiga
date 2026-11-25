@@ -53,13 +53,13 @@ pub fn generate_python_profiles_types() -> String {
     }
     let _ = writeln!(
         out,
-        ")\n\nSSOT_CONTRACT_HASH_STR: Final[str] = \"{ssot_hash:08X}\"\n\nP7501_WIRE_TAGS: Final[dict[str, str]] = {{"
+        ")\n\nSSOT_CONTRACT_HASH_STR: Final[str] = \"{ssot_hash:08X}\"\n\nPICOFW_WIRE_TAGS: Final[dict[str, str]] = {{"
     );
-    for &(sym, tag) in crate::constants::events::P7501_WIRE_TAGS {
+    for &(sym, tag) in crate::constants::events::PICOFW_WIRE_TAGS {
         let _ = writeln!(out, "    \"{sym}\": \"{tag}\",");
     }
-    out.push_str("}\n\nP7501_RES_CODES: Final[dict[str, str]] = {\n");
-    for &(sym, code) in crate::constants::events::P7501_RES_CODES {
+    out.push_str("}\n\nPICOFW_RES_CODES: Final[dict[str, str]] = {\n");
+    for &(sym, code) in crate::constants::events::PICOFW_RES_CODES {
         let _ = writeln!(out, "    \"{sym}\": \"{code}\",");
     }
     out.push_str("}\n");

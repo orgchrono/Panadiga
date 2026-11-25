@@ -236,6 +236,8 @@ pub struct MainBuildSpec {
     pub sata_bridge_reset_spec: Option<SataBridgeResetSpec>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub av_passthrough_sites: Vec<BinaryPatchSiteSpec>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub region_localization_sites: Vec<BinaryPatchSiteSpec>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub unpacked_sha256: Option<String>,
 }

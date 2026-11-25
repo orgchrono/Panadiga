@@ -476,7 +476,7 @@ pub fn verify_sd_buffers_with_profile(
             CHK_ID_DIGADIAG_BYPASS_TRAP,
             sev,
             "DIGADIAG.FRM Uses BYPASS_CHECKS_ONLY Instead of Interactive PANAMON1 Monitor",
-            "JIG diagnostic boot DIGADIAG.FRM expects UART_MONITOR_PANAMON1 (or bare-metal PANAMON2); BYPASS_CHECKS_ONLY will attempt FVU installation instead of dropping to serial prompt.",
+            "JIG diagnostic boot DIGADIAG.FRM expects UART_MONITOR_PANAMON1 (or bare-metal DigaOS); BYPASS_CHECKS_ONLY will attempt FVU installation instead of dropping to serial prompt.",
         ));
     }
 

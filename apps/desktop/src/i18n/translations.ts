@@ -13,6 +13,7 @@ import enSsot from '../locales/en-US/ssot.json';
 import enErrors from '../locales/en-US/errors.json';
 import enExpress from '../locales/en-US/express.json';
 import enPipelines from '../locales/en-US/pipelines.json';
+import enStudio from '../locales/en-US/studio.json';
 import ptCore from '../locales/pt-BR/core.json';
 import ptWorkspace from '../locales/pt-BR/workspace.json';
 import ptHdd from '../locales/pt-BR/hdd.json';
@@ -22,6 +23,7 @@ import ptSsot from '../locales/pt-BR/ssot.json';
 import ptErrors from '../locales/pt-BR/errors.json';
 import ptExpress from '../locales/pt-BR/express.json';
 import ptPipelines from '../locales/pt-BR/pipelines.json';
+import ptStudio from '../locales/pt-BR/studio.json';
 import irEnUSJson from '../locales/ir/en-US.json';
 import irPtBRJson from '../locales/ir/pt-BR.json';
 
@@ -35,6 +37,7 @@ const enUSJson = {
   ...enErrors,
   ...enExpress,
   ...enPipelines,
+  ...enStudio,
 } as const;
 
 const ptBRJson = {
@@ -47,6 +50,7 @@ const ptBRJson = {
   ...ptErrors,
   ...ptExpress,
   ...ptPipelines,
+  ...ptStudio,
 } as const;
 
 export type Locale = 'en-US' | 'pt-BR';

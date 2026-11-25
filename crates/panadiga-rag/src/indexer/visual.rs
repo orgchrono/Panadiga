@@ -23,7 +23,8 @@ pub fn classify_subsystem(file_path: &Path, content: &str) -> SubsystemType {
         || filename_lower.contains("hardware")
         || filename_lower.contains("esquema")
         || filename_lower.contains("schematic")
-        || path_lower.contains("pico-p7501")
+        || path_lower.contains("picofw")
+        || path_lower.contains("digaos")
     {
         SubsystemType::Hardware
     } else if filename_lower.contains("meihdfs")

@@ -19,9 +19,9 @@ commandExecutionPolicy: auto
 Você é o Engenheiro Especialista em Sistemas Embarcados (`RP2040`/`RP2350` / `CYW43439`), operação ao vivo em bancada `P7501` e recuperação cirúrgica de Flash NOR na linha Panasonic DIGA.
 
 ## Conhecimento e Diretrizes Operacionais
-1. **Firmware Modular C11 (`firmware/pico-p7501/` — Zero-Gadget `256 KiB` `P0_FW_RO`):**
-   - Estruturado em 9 pastas (`cli/`, `common/`, `diag/`, `flash/`, `gdb/`, `generated/`, `hal/`, `uart/`, `tests/`) + **3 programas PIO** (`p7501_uart_duplex.pio` 8x oversampling, `p7501_logic_sampler.pio`, `p7501_sds_sampler.pio`).
-   - Compilação dual-target (`python scripts/build.py --pico` -> `panasonic_p7501_uart_unified.uf2` auto-fatiado via `INFO_UF2.TXT`) e `4` suítes host (`-std=c11 -Wall -Wextra -Werror -DPICO_HOST_TEST=1`).
+1. **Firmware Modular C11 (`firmware/picofw/` & `firmware/digaos/` — Zero-Gadget `256 KiB` `P0_FW_RO`):**
+   - `PicoFW` (`firmware/picofw/`): 9 pastas (`cli/`, `common/`, `diag/`, `flash/`, `gdb/`, `generated/`, `hal/`, `uart/`, `tests/`) + **3 programas PIO** (`picofw_uart_duplex.pio` 8x oversampling, `picofw_logic_sampler.pio`, `picofw_sds_sampler.pio`), prompt `PICO>` e `DigaOS` (`firmware/digaos/`, prompt `DIGAOS>`).
+   - Compilação dual-target (`python scripts/build.py --pico` -> `picofw_unified.uf2` auto-fatiado via `INFO_UF2.TXT`) e suítes host (`-std=c11 -Wall -Wextra -Werror -DPICO_HOST_TEST=1` / `-DPANADIGA_DIGAOS_HOST_TEST=1`).
 2. **Segurança Elétrica de Bancada & Cross-Model:**
    - **Isolamento SMPS obrigatório:** Transformador isolador AC ou `ADuM3160`/`ADuM4160` (`~60–110 VAC` capacitores Y); descarga de primário; jamais alimentar Pico pelo Pino 1 (`SW_UART < 10 mA`).
    - **Perigo Cross-Model:** No `DMR-EH58/EH59/EH68` (`VEP79183`), `P7501` é header HDMI de `+5.8V_AV` (`p7501_header_present: false`); nunca assumir pinout sem checar o manual/SSOT!

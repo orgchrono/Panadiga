@@ -28,12 +28,12 @@ Specific MN103S / AM33 Sleigh behaviors verified verbatim in the disassembly gap
 
 ## 2. Pico `P7501` C11 Firmware Upgrades & Rebuilt UF2 Artifacts
 
-Modular C11 modules under [`firmware/pico-p7501/`](../../firmware/pico-p7501/) (strict `-Wall -Wextra -Werror`, all production `.c/.h` files <= `339` lines) were compiled for RP2040 + RP2350 via `python scripts/build.py --pico --no-cache` and embedded in `crates/panadiga-core/src/pico/firmware_bins/`:
+Modular C11 modules under [`firmware/picofw/`](../../firmware/picofw/) (strict `-Wall -Wextra -Werror`, all production `.c/.h` files <= `339` lines) were compiled for RP2040 + RP2350 via `python scripts/build.py --pico --no-cache` and embedded in `crates/panadiga-core/src/pico/firmware_bins/`:
 - **Unified UF2 (`panasonic_p7501_uart_unified.uf2`):** `522,752 B` (`SHA-256: 2d568f7f4c1d3b12c83721eef4a5666a59666ead5fe8ee7359915e45962aa405`)
 - **RP2040 UF2 (`panasonic_p7501_uart_rp2040.uf2`):** `268,288 B` (`SHA-256: 0f216f39a5eb863eee4a93b7a957bea872f467cc0c050c7d897a33a73d50e0d2`)
 - **RP2350 UF2 (`panasonic_p7501_uart_rp2350.uf2`):** `254,464 B` (`SHA-256: c0cd3f9bd90401ea2699cfeeb2e8c067608c0db489ec4d724cf550ac74dab99d`)
 
-Key bench command enhancements verified by host tests (`firmware/pico-p7501/tests/test_pana_diag_drv.c`):
+Key bench command enhancements verified by host tests (`firmware/picofw/tests/test_pana_diag_drv.c`):
 1. **`DIAGWATCH [ms] [NORMAL|JIG[:ms]|NOPULL] <action> [RELEASE|HOLD]`:** supports parameterized `PANAMON1>` TX payloads `READ[:a[,n]]`, `WRITE:<a,v>`, `JUMP:<a>`, and `ERASE:<a_nvram>` alongside `AUTO`/`BYPASS`/`FORMAT`/`DUMP`/`QUIT`/`NONE`. Shared flash boundary helpers enforce IPL Read-Only protection (`0x80000000..=0x807EFFFF`, `0x84000000..=0x847EFFFF`) and restrict `ERASE` strictly to `64 KB` NVRAM (`0x807F0000..=0x807FFFFF`, `0x847F0000..=0x847FFFFF`).
 2. **`PANARSP REGS`:** decodes 12 MN103S 32-bit registers (`96` hex chars LE32) via `p7501_rsp_decode_mn103_regs`.
 3. **`DRVPANA [ms] [NORMAL|JIG[:ms]|NOPULL] [NOPASS] <cmd>`:** dispatches `Matshita R6-MV4` Factory Drive CLI commands with automatic `PASS 0x4d415453 0x48495441` unlock unless `NOPASS` or an explicit `PASS` command is provided.

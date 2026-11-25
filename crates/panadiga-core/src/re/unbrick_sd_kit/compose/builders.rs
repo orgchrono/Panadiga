@@ -6,7 +6,8 @@ use anyhow::{Result, bail};
 
 use crate::constants::PANA_DIGADIAG_FRM_SIZE;
 use crate::crypto::{
-    ExtrheadCryptMode, FrmContainerMode, FrmPackModule, build_digadiag_frm, pack_extrhead, pack_frm,
+    ExtrheadCryptMode, FrmContainerMode, FrmPackModule, build_digadiag_frm, pack_extrhead,
+    pack_frm, unpack_extrhead,
 };
 use crate::hdd::{
     HDD_CMD_M7920_200GB_BLOCKS, HDD_CMD_M7920_400GB_BLOCKS, HddCapacityPatchMode,
@@ -24,6 +25,10 @@ use super::super::super::main_bgo_retarget::{
 use super::super::super::main_passthrough::{
     EXPECTED_MAIN_3410PQ_SIZE, MAIN_BASE_VA, MainPassthroughMode, apply_main_passthrough_in_place,
     inspect_main_firmware_identity, inspect_main_passthrough_sites,
+};
+use super::super::super::region_compat::{
+    LocalizationPatchMode, RegionCompatMode, patch_main_localization_in_place,
+    patch_main_region_compat_in_place,
 };
 use super::super::super::sata_bridge_fix::{
     SataBridgeResetFixMode, apply_main_sata_bridge_reset_fix_in_place,
@@ -149,6 +154,7 @@ pub(crate) fn compose_patched_main_container(
     allow_target_mismatch: bool,
     sata_bridge_reset_fix: bool,
     main_bgo_retarget: bool,
+    m6930lb_localization: bool,
 ) -> Result<ComposedMainArtifact> {
     let (mut main_bin, build_name, flag, adler_step) = load_main_binary_and_meta(raw_main)?;
     let identity = inspect_main_firmware_identity(&main_bin, Some(&build_name));
@@ -247,6 +253,14 @@ pub(crate) fn compose_patched_main_container(
         }
     }
 
+    if m6930lb_localization {
+        let _ =
+            patch_main_localization_in_place(&mut main_bin, LocalizationPatchMode::M6930LbBrazil)?;
+        let _ =
+            patch_main_region_compat_in_place(&mut main_bin, RegionCompatMode::BypassModelAndOem)?;
+        modified = true;
+    }
+
     let resolved_build = if identity.build_id != "UNKNOWN" {
         identity.build_id
     } else if !build_name.is_empty() {
@@ -284,14 +298,20 @@ pub(crate) fn compose_patched_main_container(
         )
     };
 
+    let header_checksum = unpack_extrhead(&container, ExtrheadCryptMode::Main)?
+        .header
+        .header_checksum;
+
     Ok(ComposedMainArtifact {
         container,
+        header_checksum,
         slot_name,
         build_version_u16,
         passthrough_applied,
         hdd_capacity_applied,
         sata_bridge_reset_fix_applied: sata_bridge_reset_fix,
         main_bgo_retarget_applied: main_bgo_retarget,
+        m6930lb_localization_applied: m6930lb_localization,
     })
 }
 

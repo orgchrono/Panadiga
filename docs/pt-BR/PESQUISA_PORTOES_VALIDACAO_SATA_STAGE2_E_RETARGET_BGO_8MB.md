@@ -61,6 +61,20 @@ O kit `firmware_and_images/sd_unbrick_kit_sata_bridge_stage2` foi recompilado co
 
 ---
 
+### 3.4 Por Que Existem **Boot 1** (Instalador `FVU`) e **Boot 2** (Operacional `[HDD_AUTOBOOT]`)
+
+Uma dúvida comum ao operar o kit de recuperação com ponte SATA (`StarTech IDE2SAT2`) é por que o processo envolve **dois boots** inicialmente:
+
+| Etapa | Papel Arquitetural | O Que o Cartão SD Faz | Quando Acontece |
+| :--- | :--- | :--- | :--- |
+| **Boot 1 — Instalador (`Fvu ver0.61` $\rightarrow$ `SD version up mode.`)** | O sistema operacional principal (`MAIN`, `~13 MiB` descomprimido) **não fica na Flash NOR** (`8 MiB`) nem executa diretamente do cartão SD — ele mora nas **duas partições de firmware MEIHFS do próprio HDD** (`0x00010000` e espelho `0x1D1A5970`). | Carrega o gravador `FVU` em RAM, lê o `MAIN` embutido em `PANA__SD.FRM` (`File ID[0xC8] seek 0xF1800`) e grava/verifica (`Vefify OK` × 2) ambos os espelhos do HDD usando a espera corrigida de `1000 ms` da ponte SATA. | **Somente 1 vez**, ao instalar ou trocar de versão/bypasses de `MAIN` (ou quando forçado via UART `'F'` / arquivo `FORCEFVU.TXT`). |
+| **Boot 2+ — Operação Diária (`[HDD_AUTOBOOT]`)** | Como a IPL física **`Loader ver0.61` (`SA0..SA10` RO)** gravada em fábrica na NOR espera apenas **`2 ms`** após `RESET-` ATA — enquanto o chip **`Marvell 88SA8052`** da `StarTech IDE2SAT2` leva **`~555 ms`** para responder — o boot frio da NOR falha com `HDD_MAX_LBA get failed[0xE8000000]` e cai para o leitor SD. | **`PROG061`** dentro de `PANA__SD.FRM` roda o gancho pré-FVU **`[HDD_AUTOBOOT]`** (`0x504050D3 -> 0x50439600`) com espera de **`1000 ms`** na ponte SATA **sem regravar o HDD**: lê direto do espelho `0x00010000` (ou fallback `max_lba - 0x20000`), descomprime `MAIN @ 0x57000000` e entrega o controle ao gravador. | **Em toda inicialização normal do aparelho** após o Boot 1 ter gravado o HDD (**1 único boot** por ligada). |
+
+> [!NOTE]
+> Kits montados **sem** `--sata-hdd-autoboot` entram automaticamente em `SD version up mode.` (útil para forçar Boot 1). Já no kit definitivo com **`--sata-hdd-autoboot`**, um **único cartão SD** cumpre os dois papéis: ele inicializa o `MAIN` do HDD em todo power-on normal (**Boot 2+**) e só abre o instalador `FVU` se o operador segurar `'F'` na UART ou colocar `FORCEFVU.TXT` na raiz do SD.
+
+---
+
 ## 4. Extensão `MAIN3410PQ` (Europeu `M6:PAL:DVD.HDD` c/ `NTSC`/`PAL`) & Hardening Anti-Regressão
 
 ### 4.1 Suporte ao `MAIN3410PQ` (`13.003.052 B`)
@@ -155,6 +169,12 @@ O teste **`mn103vm_proves_nor_autoboot_loader_ver061_norfrom_boot_and_escape_hat
 | `main3060np_unpacked.bin` | `13.427.852` | `075f552ed583ba1835c0d44d1b533ff5a016b8d81d15d7166240098461ddcca7` | Base `MAIN3060NP` pré-retarget |
 | `hdd_partition_firmware_0x02000000.bin` | `6.173.264` | `6ec63de059c00b287a0e8a1a4102a8007bbccf3210a552bfb45118a03b85c898` | Partição HDD `0x02000000` (dump referência europeu `M6:PAL:DVD.HDD`) |
 | `eh55_main3410pq_unpacked.bin` | `13.003.052` | `c3275d39549b68f48db16bc5fd043c6f8a373d4ba416826de09be5c55dc991b1` | `MAIN3410PQ` (europeu `M6:PAL` c/ `NTSC`/`PAL` + drivers `AIOF PAL_M`) extraído |
+| [`com10_live_video_osd_diag_20261124.log`](../evidence/com10_live_video_osd_diag_20261124.log) | `23.096` | `FA9EA01E82C8AC7EF0AE8A4B8B300EE6AE2BD818AE17EC6A7E0B596F4B11CB82` | Diagnóstico volátil `ndb>` em `MAIN3060NP` + evento `STANDBY_GATE_STOP` (`EV-20261124-005`) |
+| [`com10_live_volatile_patch_20261124.log`](../evidence/com10_live_volatile_patch_20261124.log) | `6.404` | `BD4B0F32A0D1F9A993C4CCCDF0C9ADB9F8772E7B175427608FA72465746A1365` | Patch volátil SDRAM `IC3001`/`AVDD`/`AIOF_FS0` em `MAIN3060NP` (`0.702s`, `EV-20261124-005`) |
+| [`com10_m6930lb_3410pq_boot1_fvu_20261124.log`](../evidence/com10_m6930lb_3410pq_boot1_fvu_20261124.log) | `10.355` | `1543B9B3D0322509723F985DD657464B09579D2276058549DF224E490EDE2536` | **Boot 1 `FVU` AO VIVO `MAIN3410PQ` `M6930LB` (`check_sum=0x2f84d497`, `Vefify OK` × 2, `EV-20261124-005`)** |
+| [`com10_m6930lb_3410pq_boot2_main_20261124.log`](../evidence/com10_m6930lb_3410pq_boot2_main_20261124.log) | `42.889` | `245562E6B3F4DE9A29462C8338E80889E2B48DFAA01D1E9C01EC7B6DE6F1FBE5` | **Boot 2 `[HDD_AUTOBOOT]` `MAIN3410PQ` `M6930LB` + `ndb>` (`0x53186DBC=0x80`, `iic_err=0`, `EV-20261124-005`)** |
+| [`com10_m6930lb_3410pq_live_video_fix_20261125.log`](../evidence/com10_m6930lb_3410pq_live_video_fix_20261125.log) | `16.510` | `8986CE243A0F314CF97D6AB21388817F3CD146A23230A218AE91636D72114487` | **Prova ao vivo `480i 60 Hz` (`0x88000000=0x8020`, `0x515CD08C=0`) + `AVDD_DACOUT1=0x0D00` com `0x515A2444=1` (`EV-20261125-001`)** |
+| `sd_unbrick_kit_m6930lb_br/PANA__SD.FRM` | `7.181.488` | `03a47de8c0c32401c03806bbc27333a722c4bdd777bc6f57b6fcd80322d2fb76` | Kit turnkey 1-SD-card `MAIN3410PQ` 8 sítios `M6930LB` + carimbo `0x504395FC=0x86F2435C` (`verify-sd --audit-profile hardened` PASS, `EV-20261125-001`) |
 
 ---
 

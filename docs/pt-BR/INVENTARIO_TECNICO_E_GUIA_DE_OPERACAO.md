@@ -20,7 +20,7 @@ O ecossistema de recuperação e engenharia reversa do gravador digital **Panaso
 2. **Migração para Plataforma Nativa em Rust (`panadiga` CLI & Workspace):** Antigos utilitários Python avulsos de análise (`clean_spansion_nvram.py`, `inspect_hdd_image.py`, `analyze_deep.py`, `inspect_firmware_headers.py`, `search_manuals.py`) foram integralmente substituídos pelo binário nativo Rust multiplataforma (`panadiga nvram clean`, `panadiga hdd inspect`/`extract`/`decode-descriptors`, `panadiga frm`, `panadiga headers`, `panadiga scan`, `panadiga manuals`, `panadiga rag`, `panadiga mcp`). A automação em Python ficou restrita aos orquestradores tipados (`mypy --strict`) em `scripts/build.py`, `scripts/validate.py`, `scripts/panadiga_ops.py` e suítes em `scripts/bench/` e `scripts/re/`.
 3. **Ferramentas Auxiliares:** O lançador [`tools/Abrir_HxD.cmd`](../../tools/Abrir_HxD.cmd) e os scripts `.cmd` em `tools/` foram padronizados para resolução relativa portátil no Windows, ao lado dos geradores nativos Ghidra gerados a partir da SSOT em Rust (`tools/ghidra/`).
 4. **Acervo de Manuais Técnicos:** Todos os **30 PDFs** (manuais de serviço, guias de operação e datasheets em `manuals_and_schematics/`) foram catalogados em [`manuals_and_schematics/README.md`](../../manuals_and_schematics/README.md) e indexados pelo motor RAG nativo em Rust (`crates/panadiga-rag`).
-5. **Subsistema `P7501` Async UART (`firmware/pico-p7501/`):** Verificado eletricamente contra os esquemáticos da placa `VEP79138` e medições de bancada em `COM10`. Confirmou-se que `P7501` (`B6B-ZR-3R4`, `TO JIGU`) opera em **UART Assíncrona `115200 8N1`** + controle discreto (`SW_UART`, `XRESET` Open-Drain e guarda estrita `Hi-Z Input` sem pulls no pino 5 **`NSW5V` / `GP3`**).
+5. **Subsistema `P7501` Async UART (`firmware/picofw/`):** Verificado eletricamente contra os esquemáticos da placa `VEP79138` e medições de bancada em `COM10`. Confirmou-se que `P7501` (`B6B-ZR-3R4`, `TO JIGU`) opera em **UART Assíncrona `115200 8N1`** + controle discreto (`SW_UART`, `XRESET` Open-Drain e guarda estrita `Hi-Z Input` sem pulls no pino 5 **`NSW5V` / `GP3`**).
 
 ---
 
@@ -47,10 +47,10 @@ Abaixo encontra-se o inventário dos artefatos binários imutáveis, executávei
 | `firmware_and_images/` | `eh55_nvram_64k_raw.bin` | 65,536 | `803d1465f48fb32e17d3e478e02b2a9a7e707bbb675bb424b02c5c1df92f3643` | Recorte dos 64 KiB finais da `IC5001` (`0x847F0000..0x847FFFFF`, `SA134..SA141`: cabeçalho `"1284"` + `0xFF`). | Homologado |
 | `firmware_and_images/` | `PANA_DVD.FRM` | 7,531,744 | `a596d52a8220a9113777c9caf271ac4d518202d0639d6118a4d0bc03b9a6367f` | Imagem binária oficial de atualização de firmware via disco óptico. | Homologado |
 | `firmware_and_images/` | `UPDATE_EH55.zip` | 7,474,766 | `07589e79722409413c5da25c700227a9a04cef39f0178ffa08df3d8d3f7debd4` | Arquivo compactado oficial Matsushita contendo `PANA_DVD.FRM`. | Homologado |
-| `firmware/pico-p7501/` | `p7501_uart.pio` | 1,861 | `2d08a2621bb116bde5b23c06ee9879deddb85229d74ce5a0ffa82bc056412528` | Máquina de estados PIO RX `115200 8N1` para `GP2` (`P7501` Pino 6 `UARTP2M_T`). | Homologado |
-| `firmware/pico-p7501/` | `p7501_pico_main.c` | 2,154 | `4c5335e053dd0461ad72082d4db54ed98c5ecbf0d6fd44cd7365f3f9c76fa4e6` | Entrypoint C11 RP2040/RP2350 orquestrando HAL `P7501`, USB CDC/BLE CLI e ponte GDB RSP. | Homologado |
-| `firmware/pico-p7501/flash/` | `ram_loader_am34_target.c` | 7,071 | `9013ffd3bbd12d1a4a41019a8838f65f90ebe6da3f97d4185df040582c634bf8` | Micro-driver C nativo AM34/MN103S de posição independente para erase JEDEC na Spansion. | Homologado |
-| `firmware/pico-p7501/` | `CMakeLists.txt` | Dinâmico | Homologado | Build CMake modular dual-target (`RP2040` / `RP2350` + BLE em `pico_w`/`pico2_w`). | Homologado |
+| `firmware/picofw/` | `p7501_uart.pio` | 1,861 | `2d08a2621bb116bde5b23c06ee9879deddb85229d74ce5a0ffa82bc056412528` | Máquina de estados PIO RX `115200 8N1` para `GP2` (`P7501` Pino 6 `UARTP2M_T`). | Homologado |
+| `firmware/picofw/` | `p7501_pico_main.c` | 2,154 | `4c5335e053dd0461ad72082d4db54ed98c5ecbf0d6fd44cd7365f3f9c76fa4e6` | Entrypoint C11 RP2040/RP2350 orquestrando HAL `P7501`, USB CDC/BLE CLI e ponte GDB RSP. | Homologado |
+| `firmware/picofw/flash/` | `ram_loader_am34_target.c` | 7,071 | `9013ffd3bbd12d1a4a41019a8838f65f90ebe6da3f97d4185df040582c634bf8` | Micro-driver C nativo AM34/MN103S de posição independente para erase JEDEC na Spansion. | Homologado |
+| `firmware/picofw/` | `CMakeLists.txt` | Dinâmico | Homologado | Build CMake modular dual-target (`RP2040` / `RP2350` + BLE em `pico_w`/`pico2_w`). | Homologado |
 | `crates/panadiga-core/src/pico/firmware_bins/` | `panasonic_p7501_uart_unified.uf2` | 522,752 | `2d568f7f4c1d3b12c83721eef4a5666a59666ead5fe8ee7359915e45962aa405` | Imagem UF2 universal concatenando targets `RP2040` + `RP2350` (ARM GNU Toolchain `14.2 rel1`). | Homologado |
 | `crates/panadiga-core/src/pico/firmware_bins/` | `panasonic_p7501_uart_rp2040.uf2` | 268,288 | `0f216f39a5eb863eee4a93b7a957bea872f467cc0c050c7d897a33a73d50e0d2` | Imagem UF2 dedicada ao Raspberry Pi Pico (`RP2040`). | Homologado |
 | `crates/panadiga-core/src/pico/firmware_bins/` | `panasonic_p7501_uart_rp2350.uf2` | 254,464 | `c0cd3f9bd90401ea2699cfeeb2e8c067608c0db489ec4d724cf550ac74dab99d` | Imagem UF2 dedicada ao Raspberry Pi Pico 2 (`RP2350`). | Homologado |
@@ -129,7 +129,7 @@ Abaixo encontra-se o inventário dos artefatos binários imutáveis, executávei
 
 ---
 
-### 3.4. Firmware Pico & Interface `P7501` Async UART (`firmware/pico-p7501/`)
+### 3.4. Firmware Pico & Interface `P7501` Async UART (`firmware/picofw/`)
 
 O conector de 6 pinos **`P7501` (`B6B-ZR-3R4`, legenda `TO JIGU`)** na placa do **Panasonic DMR-EH55** opera via **UART Assíncrona `115200 8N1`** acoplada ao circuito discreto de boot/reset (`Q7510`, `Q7514`, `QR7503`, `IC1506`, `D7510`) conectado ao SoC **Matsushita `AM34` / `MN103S`** e ao Syscon **`IC7501`**:
 

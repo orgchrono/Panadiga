@@ -87,7 +87,7 @@ Android-only IR assets (`DIGA IR Commander` and the `80,047`-command catalog) **
 [`crates/panadiga-ir/src/adapter.rs`](../../crates/panadiga-ir/src/adapter.rs) emits Kaseikyo payloads (`37,010 Hz` carrier in [`kaseikyo.rs`](../../crates/panadiga-ir/src/kaseikyo.rs)) tailored to the underlying IR hardware or Pico fallback:
 * **Exynos `SM-T805M` (`universal5420` / `chagall`):** selects **`PeriodScaled`** (`1_000_000 / hz`), clamping total transmit time to `MAX_AOSP_XMIT_TIME_US = 1_900_000` and trail gap to `MAX_HARDWARE_TRAIL_SPACE_US = 45_000`.
 * **Legacy Exynos `GT-N8000` (`smdk4x12`):** selects **`CarrierCycles`** for older Samsung kernel IR drivers.
-* **Pico USB-OTG / BLE Fallback:** translates any catalog command into `IRTX <DEVSUB>:<CMD> GP<pin> <repeat>` on the Pico C11 firmware ([`p7501_ir_codec.c`](../../firmware/pico-p7501/diag/p7501_ir_codec.c)), constrained to safe spare GPIOs (`GP6..9` / `GP16..22`) with device byte `>= 0x01`.
+* **Pico USB-OTG / BLE Fallback:** translates any catalog command into `IRTX <DEVSUB>:<CMD> GP<pin> <repeat>` on the Pico C11 firmware ([`p7501_ir_codec.c`](../../firmware/picofw/diag/picofw_ir_codec.c)), constrained to safe spare GPIOs (`GP6..9` / `GP16..22`) with device byte `>= 0x01`.
 
 ---
 

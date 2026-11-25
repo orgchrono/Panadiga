@@ -89,14 +89,12 @@ export function usePicoTelemetryEffects({
                       ? prev.vdd_volts
                       : incoming.vdd_volts;
                 const powered = isTargetPowered(preservedVdd, PICO_MIN_VDD_THRESHOLD_VOLTS);
-                const updated: PicoDeviceStatus = {
+                return {
                   ...(prev || DEFAULT_DISCONNECTED_STATUS),
                   ...incoming,
                   vdd_volts: preservedVdd,
                   target_powered: powered,
                 };
-                updatePicoSessionStatus(updated);
-                return updated;
               });
             }
           }).catch((err) => {

@@ -10,6 +10,8 @@ use crate::constants::{
 use super::types::{LbsRegionPresetId, MmioWriteOp, TvCalibrationProfile, TvStandardKind};
 
 pub(super) const AVDD_NPALCTL0_OFF: u32 = 0x0624;
+/// Upper 16-bit control halfword observed live on DMR-EH55 `0x89800624 = 0x00050000`.
+pub const AVDD_NPALCTL0_PRESERVED_HI_WORD: u32 = 0x0005_0000;
 
 fn mmio_op(
     addr: u32,
@@ -91,9 +93,9 @@ pub fn build_tv_calibration_mmio_plan(standard: TvStandardKind) -> Vec<MmioWrite
         mmio_op(
             AM34_AVDD_BASE + AVDD_NPALCTL0_OFF,
             32,
-            npal_hint,
+            AVDD_NPALCTL0_PRESERVED_HI_WORD | npal_hint,
             "AVDD_NPALCTL0",
-            "Declarative 525/625-line AVDD back-end anchor (requires live M1 RMW verification before unattended write)",
+            "Declarative 525/625-line AVDD back-end anchor preserving live high halfword 0x0005_0000",
         ),
     ]
 }

@@ -219,18 +219,28 @@ FORBIDDEN_BENCH_TOKENS: Final[tuple[str, ...]] = (
     "DC0F0000",
 )
 
-SSOT_CONTRACT_HASH_STR: Final[str] = "C045CA85"
+SSOT_CONTRACT_HASH_STR: Final[str] = "8B6162D3"
 
-P7501_WIRE_TAGS: Final[dict[str, str]] = {
-    "RES": "@P7501_RES",
-    "EVT": "@P7501_EVT",
-    "FRAME": "@P7501_FRAME",
-    "IDENT": "@P7501_IDENT",
-    "SURG": "@P7501_SURG",
-    "BOOT_CLASS": "@P7501_BOOT_CLASS",
+PICOFW_WIRE_TAGS: Final[dict[str, str]] = {
+    "RES": "@PICO_RES",
+    "EVT": "@PICO_EVT",
+    "FRAME": "@PICO_FRAME",
+    "IDENT": "@PICO_IDENT",
+    "SURG": "@PICO_SURG",
+    "BOOT_CLASS": "@PICO_BOOT_CLASS",
+    "DIAG_DEEP": "@PICO_DIAG_DEEP",
+    "TBUS_AUDIT": "@PICO_TBUS_AUDIT",
+    "HOTPLUG": "@PICO_HOTPLUG",
+    "LIVE_MAP": "@PICO_LIVE_MAP",
+    "GPS_ENV": "@PICO_GPS_ENV",
+    "ROUTE": "@PICO_ROUTE",
+    "XRAY": "@PICO_XRAY",
+    "PROG": "@PICO_PROG",
+    "CHUNK": "@PICO_CHUNK",
+    "BGO_SEC": "@PICO_BGO_SEC",
 }
 
-P7501_RES_CODES: Final[dict[str, str]] = {
+PICOFW_RES_CODES: Final[dict[str, str]] = {
     "OK": "0",
     "EINVAL": "EINVAL",
     "E05": "E05",

@@ -47,7 +47,7 @@ fn live_apply_verifies_pre_sha_saves_backup_locks_and_verifies_post_sha() {
     let mut mock = MockPanamon1Transport::new();
     mock.bridge_active = true;
     mock.map_memory(AM34_FLASH_UNCACHED_BASE, corrupt);
-    mock.boottrace_reply = "***** normal mode *****\r\nBOOTTRACE: OK\r\nPANADIGA> ".to_string();
+    mock.boottrace_reply = "***** normal mode *****\r\nBOOTTRACE: OK\r\nPICO> ".to_string();
     let mut client = Panamon1Client::new(mock);
 
     let report = apply_bgo_repair_plan_live(

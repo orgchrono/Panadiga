@@ -1,4 +1,4 @@
-"""Pico P7501 heartbeat probe and read-only guided command dispatcher."""
+"""PicoFW (P7501) heartbeat probe and read-only guided command dispatcher."""
 
 from __future__ import annotations
 
@@ -153,8 +153,57 @@ def discover_pico_port(
 
 
 _WRITE_VERB_WORDS: Final[frozenset[str]] = frozenset(
-    {"MW", "MB", "MH", "WB", "WH", "WW", "PW", "PB", "PH", "PO", "EW", "SW"}
+    {"MW", "MB", "MH", "WB", "WH", "WW", "PW", "PB", "PH", "PO", "EB", "EW", "SW"}
 )
+_LETHAL_MMIO_RANGES: Final[tuple[tuple[int, int], ...]] = (
+    (0xC000_100C, 0xC000_1010),
+    (0xDC0F_0000, 0xDC0F_0010),
+)
+
+
+def _parse_hex_addr_token(tok: str) -> int | None:
+    clean = tok.strip().replace("_", "")
+    if clean.startswith("0X"):
+        raw = clean[2:]
+        if not raw or len(raw) > 8 or any(c not in "0123456789ABCDEF" for c in raw):
+            return None
+        return int(raw, 16)
+    if 6 <= len(clean) <= 8 and all(c in "0123456789ABCDEF" for c in clean):
+        return int(clean, 16)
+    return None
+
+
+def _parse_span_len_token(tok: str) -> int | None:
+    clean = tok.strip().replace("_", "")
+    if not clean:
+        return None
+    if clean.startswith("0X"):
+        raw = clean[2:]
+        if not raw or len(raw) > 8 or any(c not in "0123456789ABCDEF" for c in raw):
+            return None
+        return min(int(raw, 16), 0x10000)
+    if clean.isdigit():
+        return min(int(clean, 10), 0x10000)
+    if len(clean) <= 4 and all(c in "0123456789ABCDEF" for c in clean):
+        return min(int(clean, 16), 0x10000)
+    return None
+
+
+def _contains_lethal_am34_address(tokens: Sequence[str]) -> bool:
+    for idx, tok in enumerate(tokens):
+        addr = _parse_hex_addr_token(tok)
+        if addr is None:
+            continue
+        span_len = 4
+        if idx + 1 < len(tokens):
+            parsed_len = _parse_span_len_token(tokens[idx + 1])
+            if parsed_len is not None and parsed_len > 0:
+                span_len = max(span_len, parsed_len)
+        end = addr + span_len
+        for lo, hi in _LETHAL_MMIO_RANGES:
+            if addr < hi and end > lo:
+                return True
+    return False
 
 
 def _decode_uart_hex_upper(head: str, tokens: list[str]) -> str | None:
@@ -189,6 +238,8 @@ def check_command_safety(cmd: str) -> tuple[bool, str]:
         for bad in FORBIDDEN_TOKENS:
             if bad in candidate_toks or (bad.startswith("0X") and bad in candidate_full) or bad in candidate_full:
                 return False, f"SAFETY_DENIED: forbidden token '{bad}' in command '{normalized}'"
+        if _contains_lethal_am34_address(candidate_toks):
+            return False, f"SAFETY_DENIED: lethal AM34 MMIO span in command '{normalized}'"
         if head in {"UARTSEND", "UARTTXHEX", "WAITTX", "PANARSP"} and any(
             t in _WRITE_VERB_WORDS or t.startswith(("$M", "$X")) for t in candidate_toks
         ):
@@ -468,9 +519,9 @@ def format_report_human(payload: JsonDict) -> str:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """CLI entrypoint for Pico P7501 heartbeat probing and safe guided execution."""
+    """CLI entrypoint for PicoFW (P7501) heartbeat probing and safe guided execution."""
     parser = argparse.ArgumentParser(
-        description="Panadiga Pico P7501 heartbeat monitor and read-only guided ops."
+        description="Panadiga PicoFW (P7501) heartbeat monitor and read-only guided ops."
     )
     parser.add_argument("--mode", choices=("heartbeat", "guided"), default="heartbeat")
     parser.add_argument("--port", default=None, help="Explicit serial port override (e.g. /dev/ttyACM0)")

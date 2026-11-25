@@ -41,6 +41,8 @@ pub struct SdUnbrickKitRequestDto {
     pub main_bgo_retarget: Option<bool>,
     #[serde(default)]
     pub nor_autoboot_capsule: Option<bool>,
+    #[serde(default)]
+    pub m6930lb_localization: Option<bool>,
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -137,6 +139,7 @@ pub(crate) fn to_sd_unbrick_kit_request(
         sata_hdd_autoboot: dto.sata_hdd_autoboot.unwrap_or(false),
         main_bgo_retarget: dto.main_bgo_retarget.unwrap_or(false),
         nor_autoboot_capsule: dto.nor_autoboot_capsule.unwrap_or(false),
+        m6930lb_localization: dto.m6930lb_localization.unwrap_or(false),
     })
 }
 

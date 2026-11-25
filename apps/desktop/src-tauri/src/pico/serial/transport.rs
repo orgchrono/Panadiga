@@ -3,7 +3,7 @@
 use serialport::SerialPortType;
 use std::time::{Duration, Instant};
 
-use panadiga_core::pico::cdc::strip_leading_prompts;
+use panadiga_core::pico::cdc::{PICO_PROMPT_STOP_TOKENS, strip_leading_prompts};
 
 use crate::commands::constants::{
     COMPLETION_MARKERS, SERIAL_CHUNK_READ_TIMEOUT_MS, SERIAL_READ_CHUNK_BYTES,
@@ -30,7 +30,10 @@ pub(crate) fn serial_response_has_completed(out: &str) -> bool {
         return false;
     }
     let trimmed_end = body.trim_end();
-    if trimmed_end.ends_with("PANADIGA>") || trimmed_end.ends_with("P7501>") {
+    if PICO_PROMPT_STOP_TOKENS
+        .iter()
+        .any(|tok| trimmed_end.ends_with(tok))
+    {
         return true;
     }
     if trimmed_end == "PONG" {
@@ -41,17 +44,20 @@ pub(crate) fn serial_response_has_completed(out: &str) -> bool {
     if !out.ends_with('\n') && !out.ends_with('\r') {
         return false;
     }
-    if body
-        .lines()
-        .any(|line| line.trim_start().starts_with("@P7501_RES "))
-    {
+    if body.lines().any(|line| {
+        let t = line.trim_start();
+        t.starts_with("@PICO_RES ") || t.starts_with("@P7501_RES ")
+    }) {
         return true;
     }
-    // When structured @P7501_ / @PROG / @EVT frames are present, wait for @P7501_RES or prompt
+    // When structured @PICO_ / @P7501_ / @PROG / @EVT frames are present, wait for @PICO_RES / @P7501_RES or prompt
     // rather than breaking early on a human summary line like `<CMD>: OK`.
     let has_structured_frames = body.lines().any(|line| {
         let t = line.trim_start();
-        t.starts_with("@P7501_") || t.starts_with("@PROG ") || t.starts_with("@EVT ")
+        t.starts_with("@PICO_")
+            || t.starts_with("@P7501_")
+            || t.starts_with("@PROG ")
+            || t.starts_with("@EVT ")
     });
     if has_structured_frames {
         return false;
@@ -65,7 +71,7 @@ pub(crate) fn serial_response_has_completed(out: &str) -> bool {
 }
 
 /// Reads multi-chunk USB CDC serial output into a bounded byte buffer until a structured
-/// `@P7501_RES ...\n` epilogue, interactive prompt (`PANADIGA>` / `P7501>`), or legacy
+/// `@PICO_RES ...\n` / `@P7501_RES ...\n` epilogue, interactive prompt (`PICO>` or legacy), or
 /// completion line is received (or `max_wait` expires).
 pub fn read_serial_response_complete(
     port: &mut dyn serialport::SerialPort,
@@ -279,22 +285,26 @@ mod tests {
     #[test]
     fn serial_completion_waits_for_structured_res_newline_or_prompt() {
         assert!(!serial_response_has_completed(""));
-        assert!(!serial_response_has_completed("PANADIGA> "));
-        // Intermediate VDD line from STATUS must NOT terminate read before [STANDBY]/[WDT]/@P7501_RES
+        assert!(!serial_response_has_completed("PICO> "));
+        // Intermediate VDD line from STATUS must NOT terminate read before [STANDBY]/[WDT]/@PICO_RES
         assert!(!serial_response_has_completed("VDD: 3.28V (OK)\n"));
-        // Partial @P7501_RES line split across USB packets must NOT terminate before '\n'
+        // Partial @PICO_RES line split across USB packets must NOT terminate before '\n'
         assert!(!serial_response_has_completed(
-            "VDD: 3.28V (OK)\n@P7501_RES cmd=STATUS status=OK"
+            "VDD: 3.28V (OK)\n@PICO_RES cmd=STATUS status=OK"
         ));
         assert!(serial_response_has_completed(
-            "VDD: 3.28V (OK)\n@P7501_RES cmd=STATUS status=OK code=0 elapsed_us=120\n"
+            "VDD: 3.28V (OK)\n@PICO_RES cmd=STATUS status=OK code=0 elapsed_us=120\n"
         ));
-        assert!(serial_response_has_completed("PONG\nPANADIGA> "));
+        assert!(serial_response_has_completed("PONG\nPICO> "));
+        assert!(serial_response_has_completed("PONG\nP7501> "));
         assert!(serial_response_has_completed("PONG"));
         assert!(serial_response_has_completed("DUMP: OK\n"));
         assert!(!serial_response_has_completed("IDENTIFY: OK"));
         assert!(!serial_response_has_completed(
-            "@P7501_IDENT model=DMR-EH55\nIDENTIFY: OK (model=DMR-EH55)\n"
+            "@PICO_IDENT model=DMR-EH55\nIDENTIFY: OK (model=DMR-EH55)\n"
+        ));
+        assert!(serial_response_has_completed(
+            "@PICO_IDENT model=DMR-EH55\nIDENTIFY: OK (model=DMR-EH55)\n@PICO_RES cmd=IDENTIFY status=OK code=0 elapsed_us=95000\n"
         ));
         assert!(serial_response_has_completed(
             "@P7501_IDENT model=DMR-EH55\nIDENTIFY: OK (model=DMR-EH55)\n@P7501_RES cmd=IDENTIFY status=OK code=0 elapsed_us=95000\n"

@@ -28,12 +28,12 @@ Evidências exatas do módulo Sleigh MN103S / AM33 capturadas nos gaps:
 
 ## 2. Upgrades C11 no Firmware Pico `P7501` e UF2s Recompilados
 
-Os módulos em [`firmware/pico-p7501/`](../../firmware/pico-p7501/) (ISO C11 estrito com `-Wall -Wextra -Werror`, todos os arquivos de produção <= `339` linhas) foram recompilados para hardware real (`RP2040` e `RP2350`) via `python scripts/build.py --pico --no-cache` e incorporados em `crates/panadiga-core/src/pico/firmware_bins/`:
+Os módulos em [`firmware/picofw/`](../../firmware/picofw/) (ISO C11 estrito com `-Wall -Wextra -Werror`, todos os arquivos de produção <= `339` linhas) foram recompilados para hardware real (`RP2040` e `RP2350`) via `python scripts/build.py --pico --no-cache` e incorporados em `crates/panadiga-core/src/pico/firmware_bins/`:
 - **UF2 Unificado (`panasonic_p7501_uart_unified.uf2`):** `522.752 B` (`SHA-256: 2d568f7f4c1d3b12c83721eef4a5666a59666ead5fe8ee7359915e45962aa405`)
 - **UF2 RP2040 (`panasonic_p7501_uart_rp2040.uf2`):** `268.288 B` (`SHA-256: 0f216f39a5eb863eee4a93b7a957bea872f467cc0c050c7d897a33a73d50e0d2`)
 - **UF2 RP2350 (`panasonic_p7501_uart_rp2350.uf2`):** `254.464 B` (`SHA-256: c0cd3f9bd90401ea2699cfeeb2e8c067608c0db489ec4d724cf550ac74dab99d`)
 
-Principais evoluções validadas nos testes de host (`firmware/pico-p7501/tests/test_pana_diag_drv.c`):
+Principais evoluções validadas nos testes de host (`firmware/picofw/tests/test_pana_diag_drv.c`):
 1. **`DIAGWATCH [ms] [NORMAL|JIG[:ms]|NOPULL] <ação> [RELEASE|HOLD]`:** suporta payloads parametrizados no prompt `PANAMON1>`: `READ[:a[,n]]`, `WRITE:<a,v>`, `JUMP:<a>` e `ERASE:<a_nvram>`, além de `AUTO`/`BYPASS`/`FORMAT`/`DUMP`/`QUIT`/`NONE`. Travas compartilhadas impedem gravação na Flash IPL Spansion (`0x80000000..=0x807EFFFF`, `0x84000000..=0x847EFFFF` → `E05`) e restringem `ERASE` estritamente aos `64 KB` de NVRAM (`0x807F0000..=0x807FFFFF`, `0x847F0000..=0x847FFFFF`).
 2. **`PANARSP REGS`:** decodifica 12 registradores MN103S de 32 bits (`96` caracteres hex LE32) via `p7501_rsp_decode_mn103_regs`.
 3. **`DRVPANA [ms] [NORMAL|JIG[:ms]|NOPULL] [NOPASS] <cmd>`:** envia comandos de fábrica do drive `Matshita R6-MV4` com desbloqueio automático opcional via `PASS 0x4d415453 0x48495441` (ou sem senha com `NOPASS`).

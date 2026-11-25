@@ -14,7 +14,9 @@ mod tests;
 mod types;
 
 pub use inspect::inspect_tv_calibration_bundle;
-pub use mmio::{build_tv_calibration_mmio_plan, build_tv_calibration_profile};
+pub use mmio::{
+    AVDD_NPALCTL0_PRESERVED_HI_WORD, build_tv_calibration_mmio_plan, build_tv_calibration_profile,
+};
 pub use types::{
     FrmTocInspectionSummary, Ifodev2TailMetadata, LbsRegionPresetId, MmioWriteOp,
     TvCalibrationBundleReport, TvCalibrationProfile, TvStandardKind,

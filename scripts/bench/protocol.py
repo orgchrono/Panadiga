@@ -1,4 +1,4 @@
-"""Non-destructive transport and session management for Pico P7501 bench probing."""
+"""Non-destructive transport and session management for PicoFW P7501 bench probing."""
 
 from __future__ import annotations
 
@@ -8,14 +8,27 @@ import time
 from typing import Final, Protocol, cast
 
 from scripts.panadiga_cli_bridge import PanadigaCliError, run_panadiga_json
+import scripts.profiles_types as _profiles_types
 from scripts.profiles_types import (
     FORBIDDEN_BENCH_TOKENS as FORBIDDEN_BENCH_TOKENS,
-    P7501_RES_CODES,
-    P7501_WIRE_TAGS,
     SAFE_BENCH_COMMANDS as SAFE_BENCH_COMMANDS,
 )
 
-_PROMPT_MARKERS: Final[tuple[str, ...]] = ("P7501>", "PANADIGA>")
+
+def resolve_picofw_str_table(primary_attr: str, fallback_attr: str) -> dict[str, str]:
+    """Resolve PicoFW SSOT string table from scripts.profiles_types with legacy P7501_* fallback."""
+    raw: object = getattr(_profiles_types, primary_attr, None)
+    if raw is None:
+        raw = getattr(_profiles_types, fallback_attr)
+    if not isinstance(raw, dict):
+        raise TypeError(f"Expected dict for {primary_attr}/{fallback_attr}")
+    return {str(k): str(v) for k, v in raw.items()}
+
+
+PICOFW_WIRE_TAGS: Final[dict[str, str]] = resolve_picofw_str_table("PICOFW_WIRE_TAGS", "P7501_WIRE_TAGS")
+PICOFW_RES_CODES: Final[dict[str, str]] = resolve_picofw_str_table("PICOFW_RES_CODES", "P7501_RES_CODES")
+
+_PROMPT_MARKERS: Final[tuple[str, ...]] = ("PICO>", "P7501>")
 
 
 class BenchSafetyError(RuntimeError):
@@ -117,7 +130,7 @@ class MockBenchTransport:
     _gp26_latched_low: bool = field(init=False, default=False)
 
     def exchange(self, command: str, timeout_s: float = 4.0) -> str:
-        """Simulate Pico P7501 command execution offline for CI and regression tests."""
+        """Simulate PicoFW P7501 command execution offline for CI and regression tests."""
         del timeout_s
         cmd = validate_safe_bench_command(command)
         self.history.append(cmd)
@@ -125,30 +138,30 @@ class MockBenchTransport:
         head = parts[0].upper()
 
         if head == "PING":
-            return "PING\r\nPONG\r\nP7501> "
+            return "PING\r\nPONG\r\nPICO> "
         if head == "FAULTACK":
-            res_tag = P7501_WIRE_TAGS["RES"]
+            res_tag = PICOFW_WIRE_TAGS["RES"]
             if self.nsw5v_high:
                 self.fault_latch = False
-                return f"FAULTACK\r\nFAULTACK: OK\r\n{res_tag} cmd=FAULTACK status=OK\r\nPANADIGA> "
-            err_code = P7501_RES_CODES["EFAULT_LATCHED"]
-            return f"FAULTACK\r\nFAULTACK: ERROR\r\n{res_tag} cmd=FAULTACK status=ERR code={err_code}\r\nPANADIGA> "
+                return f"FAULTACK\r\nFAULTACK: OK\r\n{res_tag} cmd=FAULTACK status=OK\r\nPICO> "
+            err_code = PICOFW_RES_CODES["EFAULT_LATCHED"]
+            return f"FAULTACK\r\nFAULTACK: ERROR\r\n{res_tag} cmd=FAULTACK status=ERR code={err_code}\r\nPICO> "
         if head in ("ISOLATE", "UARTPROBE"):
             if self.simulate_gp26_sticky_low and head == "UARTPROBE":
                 self._gp26_latched_low = False
             if head == "ISOLATE":
-                res_tag = P7501_WIRE_TAGS["RES"]
+                res_tag = PICOFW_WIRE_TAGS["RES"]
                 return (
                     "ISOLATE\r\n"
                     "ISOLATE: OK (All 6 pins in High-Impedance Hi-Z mode; unified JST ZR-6 plug is electrically invisible)\r\n"
                     f"{res_tag} cmd=ISOLATE status=OK\r\n"
-                    "P7501> "
+                    "PICO> "
                 )
-            return "=== UARTPROBE MODE 8 CAPTURE (0 bytes) ===\r\nUARTPROBE: OK\r\nP7501> "
+            return "=== UARTPROBE MODE 8 CAPTURE (0 bytes) ===\r\nUARTPROBE: OK\r\nPICO> "
         if head in ("STATUS", "VDD"):
             vdd = 0.02 if self._gp26_latched_low else self.vdd_volts
             state = "OK" if (self.nsw5v_high and not self.fault_latch and vdd >= 2.50) else "LOW"
-            res_tag = P7501_WIRE_TAGS["RES"]
+            res_tag = PICOFW_WIRE_TAGS["RES"]
             return (
                 f"{head}\r\n"
                 f"[STANDBY] RXD=1 NSW5V={1 if self.nsw5v_high else 0} VDD={vdd:.2f}V "
@@ -156,7 +169,7 @@ class MockBenchTransport:
                 f"VDD: {vdd:.2f}V ({state})\r\n"
                 "  [STATUS] Lines static: GP2=1, GP3=1, GP4=1, GP5=1.\r\n"
                 f"{res_tag} cmd={head} status=OK\r\n"
-                "P7501> "
+                "PICO> "
             )
         if head == "PINCHECK":
             return self._render_pincheck()
@@ -168,7 +181,7 @@ class MockBenchTransport:
                 "GP4 (Pin3 MAX RXD / UART TX): 0 transitions (R7570 10k idle HIGH)\r\n"
                 "GP5 (Pin2 XRESET): STRONG HIGH, XRESET Release Rise Time (Hi-Z) : 20 us\r\n"
                 "BUSDIAG: OK\r\n"
-                "P7501> "
+                "PICO> "
             )
         if head in ("BOOTCAP", "JIGBOOT", "UARTMON", "UARTSEND"):
             if self.simulate_gp26_sticky_low:
@@ -178,7 +191,7 @@ class MockBenchTransport:
             return self._render_piologic()
         if head == "PANARSP":
             return self._render_panarsp(cmd)
-        return f"{cmd}\r\nOK\r\nP7501> "
+        return f"{cmd}\r\nOK\r\nPICO> "
 
     def _render_piologic(self) -> str:
         return (
@@ -192,7 +205,7 @@ class MockBenchTransport:
             "[PIOLOGIC] XRESET_rise -> first_RXD_fall: 482 us\r\n"
             "[PIOLOGIC] TXD_fall -> RXD_fall turnaround: min=120 us max=120 us\r\n"
             "PIOLOGIC: OK\r\n"
-            "P7501> "
+            "PICO> "
         )
 
     def _render_panarsp(self, cmd: str) -> str:
@@ -205,7 +218,7 @@ class MockBenchTransport:
             f"[PANARSP] Frame: ack=+ nak=no nak0x15=yes | payload=\"{payload}\" | csum=0x{csum:02X}/0x{csum:02X} (VALID)\r\n"
             f"[PANARSP] PayloadHex: {payload}\r\n"
             f"PANARSP: OK (rx={len(payload) + 6} bytes, rsp=VALID, fifo_ovf=NO)\r\n"
-            "P7501> "
+            "PICO> "
         )
 
     def _render_pincheck(self) -> str:
@@ -222,7 +235,7 @@ class MockBenchTransport:
             "GP4 (Pin3 MAX RXD ) | 3.28V | 2.91V | 3.29V | Idle HIGH (R7570 10k / Q7514)\r\n"
             "GP5 (Pin2 XRESET  ) | 3.29V | 2.85V | 3.30V | STRONG HIGH (Open-Drain control)\r\n"
             "PINCHECK: OK\r\n"
-            "P7501> "
+            "PICO> "
         )
 
     def _render_capture(self, head: str) -> str:
@@ -249,7 +262,7 @@ class MockBenchTransport:
                 "*** SENSE[70 00 04 00 00 00 00 0A 00 00 83 A7 09 04 00 00 00 00] \r\n"
                 "X(80040904)0,Drive start failed[-2147219196].\r\n"
                 f"{head}: OK\r\n"
-                "P7501> "
+                "PICO> "
             )
         bgo_line = "BGO driver init failed[1].\r\n" if self.target_is_normal_bgo_brick else "BGO driver init OK\r\n"
         return (
@@ -259,7 +272,7 @@ class MockBenchTransport:
             "***** normal mode *****\r\n"
             f"{bgo_line}"
             f"{head}: OK\r\n"
-            "P7501> "
+            "PICO> "
         )
 
     def close(self) -> None:

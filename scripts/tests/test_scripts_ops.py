@@ -135,7 +135,7 @@ def test_recursive_root_cache_roundtrip_and_tui_plan(tmp_path: Path) -> None:
     inventory = discover_workspace_inventory(ROOT, {})
     assert "crates/panadiga-core" in inventory.crates
     assert "apps/desktop" in inventory.apps
-    assert "firmware/pico-p7501" in inventory.firmware_targets
+    assert "firmware/picofw" in inventory.firmware_targets
 
     plan = build_execution_plan(
         PipelineSelection(ci=True, frontend=True, pico=True, desktop=True, android=True),

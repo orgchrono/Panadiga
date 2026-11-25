@@ -24,11 +24,23 @@ fn parses_upgraded_baudscan_and_wake_trace_telemetry() {
     // Opening banner must not prematurely complete before footer `BOOTTRACE: OK`
     assert!(!reply_has_completed(
         "=== BOOTTRACE: window=1500ms boot=0 hold=0ms sticky=NO (8N1 @ 115200) ===\n",
-        &["BOOTTRACE: OK", "BOOTTRACE: ERR", "PANADIGA>", "P7501>"]
+        &[
+            "BOOTTRACE: OK",
+            "BOOTTRACE: ERR",
+            "PICO>",
+            "PANADIGA>",
+            "P7501>"
+        ]
     ));
     assert!(reply_has_completed(
         "=== BOOTTRACE: window=1500ms ===\nBOOTTRACE: OK\n",
-        &["BOOTTRACE: OK", "BOOTTRACE: ERR", "PANADIGA>", "P7501>"]
+        &[
+            "BOOTTRACE: OK",
+            "BOOTTRACE: ERR",
+            "PICO>",
+            "PANADIGA>",
+            "P7501>"
+        ]
     ));
 
     let raw_baud = "[BAUDSCAN] edges=312 min_low_us=9 min_high_us=9 raw_bps=111111 snapped_baud=115200 cluster_hits=84 confidence=72% glitches=1 rx_bytes=42 ascii=40 framing_errs=0\nBAUDSCAN: OK\n";

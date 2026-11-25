@@ -2,7 +2,7 @@
 
 # Padrão Ouro para Arquitetura Forense de Engenharia Reversa & Auditoria Ponto a Ponto do Panadiga
 
-> **Escopo & Metodologia:** Este documento define o **Padrão Ouro (Gold Standard)** para operacionalizar pesquisa técnica de engenharia reversa de hardware/firmware com rigor forense em **7 dimensões** (*Acervo, Arquivo, Código, Arquitetura, Design, Segurança e Uso de Agentes*) e cruza cada critério, ponto a ponto, com o estado verificado do repositório `Panadiga` na linha de base pós-sync (`a343cdc`, incluindo a decomposição de `main_bgo_retarget/` & `sata_bridge_stage2/`, consolidação para 29 skills, `firmware/panadiga-openos/` e plano documental [`docs/audits/GIT_FILTER_REPO_PLAN.md`](../audits/GIT_FILTER_REPO_PLAN.md)).
+> **Escopo & Metodologia:** Este documento define o **Padrão Ouro (Gold Standard)** para operacionalizar pesquisa técnica de engenharia reversa de hardware/firmware com rigor forense em **7 dimensões** (*Acervo, Arquivo, Código, Arquitetura, Design, Segurança e Uso de Agentes*) e cruza cada critério, ponto a ponto, com o estado verificado do repositório `Panadiga` na linha de base pós-sync (`a343cdc`, incluindo a decomposição de `main_bgo_retarget/` & `sata_bridge_stage2/`, consolidação para 29 skills, `firmware/digaos/` e plano documental [`docs/audits/GIT_FILTER_REPO_PLAN.md`](../audits/GIT_FILTER_REPO_PLAN.md)).
 
 ---
 
@@ -198,7 +198,7 @@ flowchart TD
 1. **Gate de Compilação SSOT & `SSOT_CONTRACT_HASH`** ([build.rs](../../crates/panadiga-core/build.rs)): valida 89 modelos e 12 JSON Schemas Draft 2020-12 em tempo de compilação e verifica paridade de contrato entre Rust, TS e C11.
 2. **Guarda Epistêmica Anti-Alucinação em CI** ([test_docs_parity.py](../../scripts/tests/test_docs_parity.py)): bloqueia dossiês sem entrada de ledger correspondente, audita SHA-256 das 28 capturas em `docs/debug_logs/` e exige paridade 1:1 dos pares bilíngues.
 3. **Governança Arquitetural via AST no Frontend** (`packages/oxlint-plugin-panadiga`): 7 regras customizadas impondo MVVM estrito, imutabilidade, `zero-hardcode`, zero casts inseguros e `ux-guard` 100/100 + zero `console.*` + isolamento de assets Android no `vite.config.ts`.
-4. **Proteção de Silício em C11** ([p7501_bus_policy.c](../../firmware/pico-p7501/flash/p7501_bus_policy.c)): gate autoritativo para `0xC000100C..F`, IPL `SA0..SA10`, F14 sem fio, IRQ de queda `NSW5V` (`p7501_hw.c`), allowlist GDB RSP, `-Wframe-larger-than=512` e zero `strcpy`/`sprintf`.
+4. **Proteção de Silício em C11** ([p7501_bus_policy.c](../../firmware/picofw/flash/picofw_bus_policy.c)): gate autoritativo para `0xC000100C..F`, IPL `SA0..SA10`, F14 sem fio, IRQ de queda `NSW5V` (`p7501_hw.c`), allowlist GDB RSP, `-Wframe-larger-than=512` e zero `strcpy`/`sprintf`.
 5. **Blocos Fundacionais Prontos para Integração**: `panadiga-vault` (`ops.jsonl` encadeado + lock), `panadiga-bench` (coalescing stream + `OperationNonceStore`), `PROG061.json` / `MAIN3060NP.json` / `MAIN3410PQ.json` hash-bound, patch SLEIGH 12 defeitos, 65 Actions SHA-40, zero DRM/CPRM e zero `shell=True`/`eval`/`pickle` em Python.
 
 ---

@@ -23,8 +23,8 @@ O repositório está estruturado em subsistemas integrados e desacoplados:
    - **Alvo Desktop**: Windows (x64), Linux (`.deb` / `tar.gz`), macOS (ARM64) via binário `panadiga-desktop`.
    - **Alvo Mobile**: Android APK (`aarch64-linux-android`, crate `[lib] name = "panadiga"` permanente) com HAL nativa em Rust + bridge USB-OTG / BLE Nordic UART Service sem necessidade de mutação de `Cargo.toml`.
    - Fornece **Modo Express Rescue** (`ExpressView.tsx`), visualização do HDD MEIHFS, cirurgia de NVRAM Spansion com captura ao vivo via Pico (`CDDIAG`/`DUMP`/`pico://nvram-live-capture`), telemetria do Pico, **DIGA Commander IR**, navegador interativo de documentação/logs/pseudocódigo e terminal serial desacoplado.
-3. **Firmware C11 & Sonda Pico (`firmware/pico-p7501/`)**:
-   - Firmware C11 modular para Raspberry Pi Pico (`RP2040`) e Pico 2 (`RP2350`) com suporte a rádio sem fio (`Pico W` / `Pico 2W` via CYW43439), operando **zero gadgets externos na sonda** (smartphone via USB-C OTG/BLE e Workbench Desktop atuam como visor, áudio e controlador IR, mantendo a sonda confortavelmente em `P0_FW_RO` de `256 KiB` com `VAULT VERIFY <1..3>`, `IR VERIFY`/`IRTX`/`IRRX` e `DUMPNOR ff_blocks` via CRC32 nibble-LUT).
+3. **Firmware C11 & Sonda PicoFW (`firmware/picofw/`):**
+   - Firmware C11 modular para Raspberry Pi Pico (`RP2040`) e Pico 2 (`RP2350`) com suporte a rádio sem fio (`Pico W` / `Pico 2W` via CYW43439), operando **zero gadgets externos na sonda** (smartphone via USB-C OTG/BLE e Workbench Desktop atuam como visor, áudio e controlador IR, mantendo a sonda confortavelmente em `P0_FW_RO` de `256 KiB` com `VAULT VERIFY <1..3>`, `IR VERIFY`/`IRTX`/`IRRX` e `DUMPNOR ff_blocks` via CRC32 nibble-LUT, prompt canônico `PICO>` / tags `@PICO_*`), mais **DigaOS** bare-metal (`firmware/digaos/`, prompt `DIGAOS>`, `digaos_ssot.{h,c}` + `digaos.ts`).
    - Implementa a interface verificada **UART assíncrona `P7501` (`115200 8N1` + controle discreto `SW_UART` / `XRESET` / proteção `NSW5V` + PIO `p7501_uart_duplex.pio`, `p7501_logic_sampler.pio`, `p7501_sds_sampler.pio`)** e servidor GDB Remote Serial Protocol (RSP).
 4. **Automação, Ghidra & Ferramentas de Bancada (`tools/`, `scripts/`)**:
    - Orquestração cross-platform de build (`scripts/build.py`), validação (`scripts/validate.py`), tipagem estrita (`mypy --strict`) e testes em `scripts/tests/`.
@@ -83,7 +83,7 @@ O portão valida de forma automatizada:
 1. **Rust Workspace (11 crates)**: `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets --no-deps -- -D warnings` & `cargo test --workspace` (**337 testes**).
 2. **TypeScript Strict + Oxlint**: `oxlint --deny-warnings && tsc --noEmit` (`npm run lint`) em `apps/desktop` com zero erros.
 3. **Vitest Frontend**: `npm test` em `apps/desktop` (**128 testes em 39 arquivos** em `apps/desktop/src/**/*.test.*`).
-4. **Detector de Duplicação (jscpd)**: `.jscpd.json` com limiar estrito de **0% de duplicação** (0 clones permitidos entre `apps/desktop/src`, `apps/desktop/src-tauri/src`, `crates`, `firmware/pico-p7501`, `tools`, `scripts`).
+4. **Detector de Duplicação (jscpd)**: `.jscpd.json` com limiar estrito de **0% de duplicação** (0 clones permitidos entre `apps/desktop/src`, `apps/desktop/src-tauri/src`, `crates`, `firmware/picofw`, `firmware/digaos`, `tools`, `scripts`).
 5. **Linter de UX (uxlint)**: Auditoria completa de estados de interface (`100/100`, `0` issues em **386 arquivos**).
 6. **Playwright E2E**: Testes ponta a ponta com Chromium headless (**27 testes em 9 specs** em `apps/desktop/e2e/`).
 7. **Ghidra Native Generator**: Exportação idempotente de scripts a partir da SSOT em Rust (`cargo run -p panadiga-cli -- ghidra export-all`).

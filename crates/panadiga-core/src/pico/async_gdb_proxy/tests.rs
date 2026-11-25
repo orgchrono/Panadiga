@@ -137,7 +137,7 @@ fn roundtrips_m_read_and_bytewise_nvram_m_write_against_mock_panamon1() {
 fn replays_real_com10_panamon1_boottrace_and_rw_session_transcript() {
     let transcript = concat!(
         "BOOTTRACE: OK\r\n",
-        "PANADIGA>\r\n",
+        "PICO>\r\n",
         "[BRIDGE] PANAMON1> prompt confirmed active.\r\n",
         "R 90439B00,10\r\n",
         "000180500000000000000000CAFE0001\r\n",

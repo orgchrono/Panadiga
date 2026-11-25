@@ -277,16 +277,35 @@ function formatEvtLine(kv: Readonly<Record<string, string>>): ReadonlyArray<stri
   return [attrs ? `${kind} (${attrs})` : kind];
 }
 
-function findLastPrefixedLine(lines: readonly string[], prefix: string): string | undefined {
-  return lines.reduce<string | undefined>((acc, candidate) => (candidate.startsWith(prefix) ? candidate : acc), undefined);
+function findLastPrefixedLine(
+  lines: readonly string[],
+  prefixes: readonly string[],
+): { line: string; body: string } | undefined {
+  return lines.reduce<{ line: string; body: string } | undefined>((acc, candidate) => {
+    const matchedPrefix = prefixes.find(prefix => candidate.startsWith(prefix));
+    return matchedPrefix ? { line: candidate, body: candidate.slice(matchedPrefix.length) } : acc;
+  }, undefined);
+}
+
+function findFirstPrefixedLine(
+  lines: readonly string[],
+  prefixes: readonly string[],
+): string | undefined {
+  const matched = lines
+    .map(candidate => ({
+      candidate,
+      prefix: prefixes.find(p => candidate.startsWith(p)),
+    }))
+    .find(entry => entry.prefix !== undefined);
+  return matched?.prefix ? matched.candidate.slice(matched.prefix.length) : undefined;
 }
 
 function parseBootClassFrame(lines: readonly string[]): PicoBootClassSummary | null {
-  const matchLine = findLastPrefixedLine(lines, '@P7501_BOOT_CLASS ');
-  if (!matchLine) {
+  const matched = findLastPrefixedLine(lines, ['@PICO_BOOT_CLASS ', '@P7501_BOOT_CLASS ']);
+  if (!matched) {
     return null;
   }
-  const kv = parseWireKvPairs(matchLine.slice('@P7501_BOOT_CLASS '.length));
+  const kv = parseWireKvPairs(matched.body);
   if (!kv.verdict) {
     return null;
   }
@@ -310,11 +329,11 @@ function parseBootClassFrame(lines: readonly string[]): PicoBootClassSummary | n
 }
 
 function parseTbusAuditFrame(lines: readonly string[]): PicoTbusAuditSummary | null {
-  const matchLine = findLastPrefixedLine(lines, '@P7501_TBUS_AUDIT ');
-  if (!matchLine) {
+  const matched = findLastPrefixedLine(lines, ['@PICO_TBUS_AUDIT ', '@P7501_TBUS_AUDIT ']);
+  if (!matched) {
     return null;
   }
-  const kv = parseWireKvPairs(matchLine.slice('@P7501_TBUS_AUDIT '.length));
+  const kv = parseWireKvPairs(matched.body);
   if (kv.frames === undefined) {
     return null;
   }
@@ -327,6 +346,14 @@ function parseTbusAuditFrame(lines: readonly string[]): PicoTbusAuditSummary | n
 }
 
 const TAGGED_PREFIX_RULES: ReadonlyArray<readonly [string, string]> = Object.freeze([
+  ['@PICO_FRAME ', 'FRAME'],
+  ['@PICO_HOTPLUG ', 'HOTPLUG'],
+  ['@PICO_LIVE_MAP ', 'LIVE_MAP'],
+  ['@PICO_DIAG_DEEP ', 'DIAG_DEEP'],
+  ['@PICO_GPS_ENV ', 'GPS_ENV'],
+  ['@PICO_ROUTE ', 'ROUTE'],
+  ['@PICO_XRAY ', 'XRAY'],
+  ['@PICO_SURG ', 'SURG'],
   ['@P7501_FRAME ', 'FRAME'],
   ['@P7501_HOTPLUG ', 'HOTPLUG'],
   ['@P7501_LIVE_MAP ', 'LIVE_MAP'],
@@ -352,17 +379,16 @@ function parseTaggedWireFrames(lines: readonly string[]): PicoTaggedWireFrame[] 
 }
 
 /**
- * Extracts structured `@P7501_*`, `@PROG`, and `@EVT` frames cleanly.
+ * Extracts structured `@PICO_*`, legacy `@P7501_*`, `@PROG`, and `@EVT` frames cleanly.
  */
 export function parseWireProtocolSummary(rawOutput: string): ParsedWireProtocolSummary {
   const lines = rawOutput.split(/\r?\n/).map(line => line.trim());
-  const resLines = lines.filter(line => line.startsWith('@P7501_RES '));
-  const lastResLine = resLines.at(-1);
-  const resKv = lastResLine ? parseWireKvPairs(lastResLine.slice('@P7501_RES '.length)) : {};
+  const lastRes = findLastPrefixedLine(lines, ['@PICO_RES ', '@P7501_RES ']);
+  const resKv = lastRes ? parseWireKvPairs(lastRes.body) : {};
   const elapsed = resKv.elapsed_us ? Number.parseInt(resKv.elapsed_us, DECIMAL_RADIX) : NaN;
 
-  const identLine = lines.find(line => line.startsWith('@P7501_IDENT '));
-  const identKv = identLine ? parseWireKvPairs(identLine.slice('@P7501_IDENT '.length)) : {};
+  const identBody = findFirstPrefixedLine(lines, ['@PICO_IDENT ', '@P7501_IDENT ']);
+  const identKv = identBody ? parseWireKvPairs(identBody) : {};
   const vddMv = identKv.vdd_mv ? Number.parseInt(identKv.vdd_mv, DECIMAL_RADIX) : NaN;
 
   const progressSteps = lines

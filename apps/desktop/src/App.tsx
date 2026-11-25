@@ -30,6 +30,8 @@ const DashboardView = lazy(() => import('./views/DashboardView').then((m) => ({ 
 const NvramView = lazy(() => import('./views/NvramView').then((m) => ({ default: m.NvramView })));
 const HddStorageView = lazy(() => import('./views/HddStorageView').then((m) => ({ default: m.HddStorageView })));
 const PicoBenchView = lazy(() => import('./views/PicoBenchView').then((m) => ({ default: m.PicoBenchView })));
+const SsotStudioView = lazy(() => import('./views/SsotStudioView').then((m) => ({ default: m.SsotStudioView })));
+const SiliconExplorerView = lazy(() => import('./views/SiliconExplorerView').then((m) => ({ default: m.SiliconExplorerView })));
 const FrmCryptoView = lazy(() => import('./views/FrmCryptoView').then((m) => ({ default: m.FrmCryptoView })));
 const ManualsView = lazy(() => import('./views/ManualsView').then((m) => ({ default: m.ManualsView })));
 const HexInspectorView = lazy(() => import('./views/HexInspectorView').then((m) => ({ default: m.HexInspectorView })));
@@ -64,6 +66,8 @@ const ActiveViewSwitch: React.FC<ActiveViewSwitchProps> = ({ currentView, onNavi
     case 'nvram': return <NvramView onNavigate={onNavigate} />;
     case 'hdd': return <HddStorageView onNavigate={onNavigate} />;
     case 'picobench': return <PicoBenchView onNavigate={onNavigate} />;
+    case 'ssotstudio': return <SsotStudioView />;
+    case 'siliconexplorer': return <SiliconExplorerView />;
     case 'frmcrypto': return <FrmCryptoView />;
     case 'manuals': return <ManualsView />;
     case 'hexinspector': return <HexInspectorView />;
@@ -105,6 +109,8 @@ const AppShell: React.FC = () => {
     nvram: t('shell.viewTitles.nvram'),
     hdd: t('shell.viewTitles.hdd'),
     picobench: t('shell.viewTitles.picobench'),
+    ssotstudio: t('shell.viewTitles.ssotstudio'),
+    siliconexplorer: t('shell.viewTitles.siliconexplorer'),
     frmcrypto: t('shell.viewTitles.frmcrypto'),
     manuals: t('shell.viewTitles.manuals', { count: manualsCountLabel }),
     hexinspector: t('shell.viewTitles.hexinspector'),

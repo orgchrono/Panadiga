@@ -1,4 +1,4 @@
-//! Deterministic C11 SSOT header & `.rodata` table generator for Pico `P7501` (`generated/p7501_ssot.h`).
+//! Deterministic C11 SSOT header & `.rodata` table generator for `PicoFW` (`generated/picofw_ssot.h`).
 
 mod header_gen;
 mod header_sections;
@@ -48,7 +48,7 @@ pub const P7501_JIG_DEFAULT_HOLD_MS_SSOT: u32 = 2500;
 pub const P7501_GDB_SECTOR_CACHE_SIZE_SSOT: u32 = 512;
 /// Canonical lethal AM34 MMIO register span (bytes: `0xC000100C..0xC000100F`).
 pub const P7501_AM34_LETHAL_REG_LEN_SSOT: u32 = 4;
-/// Secondary AM34 lethal MMIO trap (`0xDC0F0000..0xDC0F000F`, DAVIS/SysCtrl stall range; keeps `0xDC0F0080` safe).
+/// Secondary AM34 lethal MMIO trap (`0xDC0F0000..0xDC0F000F`; preserves safe `0xDC0F0080` DAVIS stub).
 pub const P7501_AM34_LETHAL_REG2_ADDR_SSOT: u32 = 0xDC0F_0000;
 pub const P7501_AM34_LETHAL_REG2_LEN_SSOT: u32 = 0x10;
 
@@ -357,97 +357,106 @@ pub(super) fn pico_region_rule_specs() -> Vec<PicoRegionRuleSpec> {
 
 /// Canonical UART boot diagnostic signature rule (`needle`, `c11_event_macro`).
 pub const DIAG_SIGNATURE_RULES: &[(&str, &str)] = &[
-    ("DDR CHECK: OK", "P7501_SSOT_DIAG_EVT_DDR_OK"),
-    ("serial boot mode", "P7501_SSOT_DIAG_EVT_SERIAL_BOOT"),
-    ("... SD init end", "P7501_SSOT_DIAG_EVT_SD_HW_OK"),
-    ("-91006", "P7501_SSOT_DIAG_EVT_SD_ERR"),
-    ("-90002", "P7501_SSOT_DIAG_EVT_SD_ERR"),
-    ("-90001", "P7501_SSOT_DIAG_EVT_SD_ERR"),
-    ("FAT Mount failed", "P7501_SSOT_DIAG_EVT_FAT_FAIL"),
-    ("FAT Open(", "P7501_SSOT_DIAG_EVT_FAT_FAIL"),
+    ("DDR CHECK: OK", "PICOFW_SSOT_DIAG_EVT_DDR_OK"),
+    ("serial boot mode", "PICOFW_SSOT_DIAG_EVT_SERIAL_BOOT"),
+    ("... SD init end", "PICOFW_SSOT_DIAG_EVT_SD_HW_OK"),
+    ("-91006", "PICOFW_SSOT_DIAG_EVT_SD_ERR"),
+    ("-90002", "PICOFW_SSOT_DIAG_EVT_SD_ERR"),
+    ("-90001", "PICOFW_SSOT_DIAG_EVT_SD_ERR"),
+    ("FAT Mount failed", "PICOFW_SSOT_DIAG_EVT_FAT_FAIL"),
+    ("FAT Open(", "PICOFW_SSOT_DIAG_EVT_FAT_FAIL"),
     (
         "SD diag load failed",
-        "P7501_SSOT_DIAG_EVT_SD_DIAG_LOAD_FAIL",
+        "PICOFW_SSOT_DIAG_EVT_SD_DIAG_LOAD_FAIL",
     ),
     (
         "diag loader uncompress failed",
-        "P7501_SSOT_DIAG_EVT_SD_UNCOMPRESS_FAIL",
+        "PICOFW_SSOT_DIAG_EVT_SD_UNCOMPRESS_FAIL",
     ),
     (
         "fvu uncompress failed",
-        "P7501_SSOT_DIAG_EVT_SD_UNCOMPRESS_FAIL",
+        "PICOFW_SSOT_DIAG_EVT_SD_UNCOMPRESS_FAIL",
     ),
-    ("no header!", "P7501_SSOT_DIAG_EVT_SD_UNCOMPRESS_FAIL"),
-    ("no footer!", "P7501_SSOT_DIAG_EVT_SD_UNCOMPRESS_FAIL"),
+    ("no header!", "PICOFW_SSOT_DIAG_EVT_SD_UNCOMPRESS_FAIL"),
+    ("no footer!", "PICOFW_SSOT_DIAG_EVT_SD_UNCOMPRESS_FAIL"),
     (
         "check sum mismatch",
-        "P7501_SSOT_DIAG_EVT_SD_UNCOMPRESS_FAIL",
+        "PICOFW_SSOT_DIAG_EVT_SD_UNCOMPRESS_FAIL",
     ),
-    ("*** start diag ***", "P7501_SSOT_DIAG_EVT_DIAG_EXEC"),
-    ("diag loader is preserved", "P7501_SSOT_DIAG_EVT_DIAG_EXEC"),
-    ("** open tray **", "P7501_SSOT_DIAG_EVT_ODD_OPEN"),
-    ("can not close tray", "P7501_SSOT_DIAG_EVT_ODD_TRAY_FAIL"),
-    ("80045300", "P7501_SSOT_DIAG_EVT_ODD_TRAY_FAIL"),
-    ("80040904", "P7501_SSOT_DIAG_EVT_CD_APC_ERR"),
-    ("83A7", "P7501_SSOT_DIAG_EVT_CD_APC_ERR"),
-    ("BGO driver init failed", "P7501_SSOT_DIAG_EVT_BGO_FAIL"),
-    ("hung-up time changed", "P7501_SSOT_DIAG_EVT_HUNG_U99"),
-    ("PANAMON1>", "P7501_SSOT_DIAG_EVT_PANAMON"),
+    ("*** start diag ***", "PICOFW_SSOT_DIAG_EVT_DIAG_EXEC"),
+    ("diag loader is preserved", "PICOFW_SSOT_DIAG_EVT_DIAG_EXEC"),
+    ("** open tray **", "PICOFW_SSOT_DIAG_EVT_ODD_OPEN"),
+    ("can not close tray", "PICOFW_SSOT_DIAG_EVT_ODD_TRAY_FAIL"),
+    ("80045300", "PICOFW_SSOT_DIAG_EVT_ODD_TRAY_FAIL"),
+    ("80040904", "PICOFW_SSOT_DIAG_EVT_CD_APC_ERR"),
+    ("83A7", "PICOFW_SSOT_DIAG_EVT_CD_APC_ERR"),
+    ("BGO driver init failed", "PICOFW_SSOT_DIAG_EVT_BGO_FAIL"),
+    ("hung-up time changed", "PICOFW_SSOT_DIAG_EVT_HUNG_U99"),
+    ("PANAMON1>", "PICOFW_SSOT_DIAG_EVT_PANAMON"),
 ];
 
 pub(super) const FLASH_CHIPS_ORDER: &[(&str, &str)] = &[
-    ("spansion_s29jl064h_8mb", "P7501_FLASH_ID_S29JL064H_8MB"),
-    ("spansion_s29jl032h_4mb_top", "P7501_FLASH_ID_S29JL032H_4MB"),
-    ("spansion_s29al032d_4mb_top", "P7501_FLASH_ID_S29AL032D_4MB"),
-    ("spansion_s29al016d_2mb_top", "P7501_FLASH_ID_S29AL016D_2MB"),
-    ("spansion_s29gl128n_16mb", "P7501_FLASH_ID_S29GL128N_16MB"),
+    ("spansion_s29jl064h_8mb", "PICOFW_FLASH_ID_S29JL064H_8MB"),
+    (
+        "spansion_s29jl032h_4mb_top",
+        "PICOFW_FLASH_ID_S29JL032H_4MB",
+    ),
+    (
+        "spansion_s29al032d_4mb_top",
+        "PICOFW_FLASH_ID_S29AL032D_4MB",
+    ),
+    (
+        "spansion_s29al016d_2mb_top",
+        "PICOFW_FLASH_ID_S29AL016D_2MB",
+    ),
+    ("spansion_s29gl128n_16mb", "PICOFW_FLASH_ID_S29GL128N_16MB"),
     (
         "macronix_mx29lv320_4mb_bottom",
-        "P7501_FLASH_ID_MX29LV320B_4MB",
+        "PICOFW_FLASH_ID_MX29LV320B_4MB",
     ),
     (
         "macronix_mx29lv320_4mb_top",
-        "P7501_FLASH_ID_MX29LV320T_4MB",
+        "PICOFW_FLASH_ID_MX29LV320T_4MB",
     ),
-    ("oki_mr27v802_1mb_otp", "P7501_FLASH_ID_OKI_MR27V802_1MB"),
+    ("oki_mr27v802_1mb_otp", "PICOFW_FLASH_ID_OKI_MR27V802_1MB"),
 ];
 
 pub(super) const TARGET_PROFILES_ORDER: &[(&str, &str)] = &[
-    ("DMR-EH55", "P7501_TARGET_PROFILE_DMR_EH55"),
-    ("DMR-ES35V", "P7501_TARGET_PROFILE_DMR_ES35V"),
-    ("DMR-EZ485V", "P7501_TARGET_PROFILE_DMR_EZ485V"),
-    ("DMR-ES10", "P7501_TARGET_PROFILE_DMR_ES10"),
+    ("DMR-EH55", "PICOFW_TARGET_PROFILE_DMR_EH55"),
+    ("DMR-ES35V", "PICOFW_TARGET_PROFILE_DMR_ES35V"),
+    ("DMR-EZ485V", "PICOFW_TARGET_PROFILE_DMR_EZ485V"),
+    ("DMR-ES10", "PICOFW_TARGET_PROFILE_DMR_ES10"),
 ];
 
 pub(super) const LOADER_FINGERPRINTS: &[(&str, &str, &str, bool)] = &[
     (
         "Loader ver0.61",
         "DMR-EH55",
-        "P7501_TARGET_PROFILE_DMR_EH55",
+        "PICOFW_TARGET_PROFILE_DMR_EH55",
         false,
     ),
     (
         "ver0.18",
         "DMR-ES35V",
-        "P7501_TARGET_PROFILE_DMR_ES35V",
+        "PICOFW_TARGET_PROFILE_DMR_ES35V",
         true,
     ),
     (
         "EZ485",
         "DMR-EZ485V",
-        "P7501_TARGET_PROFILE_DMR_EZ485V",
+        "PICOFW_TARGET_PROFILE_DMR_EZ485V",
         true,
     ),
-    ("ES10", "DMR-ES10", "P7501_TARGET_PROFILE_DMR_ES10", true),
+    ("ES10", "DMR-ES10", "PICOFW_TARGET_PROFILE_DMR_ES10", true),
 ];
 
 /// Computes the deterministic FNV-1a contract hash over generated Pico C11 SSOT tables & wire contracts.
 #[must_use]
 pub fn compute_pico_ssot_hash() -> u32 {
     let mut material = generate_c11_ssot_tables().into_bytes();
-    for &(sym, val) in crate::constants::events::P7501_WIRE_TAGS
+    for &(sym, val) in crate::constants::events::PICOFW_WIRE_TAGS
         .iter()
-        .chain(crate::constants::events::P7501_RES_CODES.iter())
+        .chain(crate::constants::events::PICOFW_RES_CODES.iter())
     {
         material.push(0);
         material.extend_from_slice(sym.as_bytes());
@@ -457,14 +466,14 @@ pub fn compute_pico_ssot_hash() -> u32 {
     header_sections::compute_fnv1a_u32(&material)
 }
 
-/// Renders compatibility wrapper `firmware/pico-p7501/uart/p7501_pana_rsp_ssot.h` forwarding to `generated/p7501_ssot.h`.
+/// Renders compatibility wrapper `firmware/picofw/uart/picofw_pana_rsp_ssot.h` forwarding to `generated/picofw_ssot.h`.
 pub fn generate_pana_rsp_ssot_header() -> String {
     String::from(
         "/* AUTO-GENERATED BY panadiga-core::ssot::pico_header -- DO NOT EDIT MANUALLY. */\n\
-         #ifndef P7501_PANA_RSP_SSOT_H\n\
-         #define P7501_PANA_RSP_SSOT_H\n\n\
-         #include \"generated/p7501_ssot.h\"\n\n\
-         #endif /* P7501_PANA_RSP_SSOT_H */\n",
+         #ifndef PICOFW_PANA_RSP_SSOT_H\n\
+         #define PICOFW_PANA_RSP_SSOT_H\n\n\
+         #include \"generated/picofw_ssot.h\"\n\n\
+         #endif /* PICOFW_PANA_RSP_SSOT_H */\n",
     )
 }
 
@@ -483,23 +492,23 @@ pub(super) fn write_if_changed_or_create(path: &Path, content: &str) -> Result<(
     fs::write(path, content).with_context(|| format!("Failed writing {}", path.display()))
 }
 
-/// Writes `p7501_pana_rsp_ssot.h` compatibility header to the given path.
+/// Writes `picofw_pana_rsp_ssot.h` compatibility header to the given path.
 pub fn export_pico_rsp_ssot_header(output_path: &Path) -> Result<()> {
     write_if_changed_or_create(output_path, &generate_pana_rsp_ssot_header())
 }
 
-/// Exports `generated/p7501_ssot.h`, `generated/p7501_ssot_tables.c`, and `uart/p7501_pana_rsp_ssot.h` under `pico_dir`.
+/// Exports `generated/picofw_ssot.h`, `generated/picofw_ssot_tables.c`, and `uart/picofw_pana_rsp_ssot.h` under `pico_dir`.
 pub fn export_pico_ssot_files(pico_dir: &Path) -> Result<()> {
     write_if_changed_or_create(
-        &pico_dir.join("generated/p7501_ssot.h"),
+        &pico_dir.join("generated/picofw_ssot.h"),
         &generate_c11_ssot_header(),
     )?;
     write_if_changed_or_create(
-        &pico_dir.join("generated/p7501_ssot_tables.c"),
+        &pico_dir.join("generated/picofw_ssot_tables.c"),
         &generate_c11_ssot_tables(),
     )?;
     write_if_changed_or_create(
-        &pico_dir.join("uart/p7501_pana_rsp_ssot.h"),
+        &pico_dir.join("uart/picofw_pana_rsp_ssot.h"),
         &generate_pana_rsp_ssot_header(),
     )?;
     Ok(())

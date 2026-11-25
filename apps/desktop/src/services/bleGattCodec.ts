@@ -19,8 +19,10 @@ export const BLE_CMD_TIMEOUT_MS = 4000;
 export const BLE_MIN_TIMEOUT_MS = 400;
 export const BLE_GATT_CHUNK_BYTES = 20;
 
-const BLE_RES_PREFIX = SSOT_WIRE_TERMINAL_MARKERS[0];
-const BLE_PROMPTS: readonly string[] = SSOT_WIRE_TERMINAL_MARKERS.slice(1);
+const BLE_RES_PREFIXES: readonly string[] = SSOT_WIRE_TERMINAL_MARKERS.filter((m) =>
+  m.startsWith('@'),
+);
+const BLE_PROMPTS: readonly string[] = SSOT_WIRE_TERMINAL_MARKERS.filter((m) => !m.startsWith('@'));
 const BLE_LEGACY_CLI_STATUS_RE =
   /^[A-Z0-9_]+:\s+(?:OK|ERROR|ERR|FAILED|OFFLINE|TIMEOUT|DONE)\b/;
 
@@ -72,12 +74,17 @@ export function isBleReplyComplete(buffer: string): boolean {
     return false;
   }
   const lines = buffer.split(/\r?\n/);
-  if (lines.some((line) => line.trimStart().startsWith(BLE_RES_PREFIX))) {
+  if (lines.some((line) => BLE_RES_PREFIXES.some((prefix) => line.trimStart().startsWith(prefix)))) {
     return true;
   }
   const hasStructuredFrames = lines.some((line) => {
     const t = line.trimStart();
-    return t.startsWith('@P7501_') || t.startsWith('@PROG ') || t.startsWith('@EVT ');
+    return (
+      t.startsWith('@PICO_') ||
+      t.startsWith('@P7501_') ||
+      t.startsWith('@PROG ') ||
+      t.startsWith('@EVT ')
+    );
   });
   if (hasStructuredFrames) {
     return false;

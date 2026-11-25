@@ -10,7 +10,8 @@ Do **not** include private bench logs, secret keystores, or unredacted device se
 | :--- | :--- |
 | Rust Core / CLI / MCP (`crates/`) | `main` (`0.2.x`) |
 | Desktop & Android Workbench (`apps/desktop`) | `main` (`0.2.x`) |
-| Pico Probe C11 Firmware (`firmware/pico-p7501`) | `main` (`P0_FW_RO` unified RP2040/RP2350) |
+| PicoFW Probe C11 Firmware (`firmware/picofw`) | `main` (`P0_FW_RO` unified RP2040/RP2350, `PICO>`) |
+| DigaOS Bare-Metal Target OS (`firmware/digaos`) | `main` (`DIGAOS>` + multi-SoC HAL) |
 
 ## Non-Negotiable Physical Bench Interlocks
 Any bug that weakens the hardware safety gates below is treated as **Critical (P0)**:

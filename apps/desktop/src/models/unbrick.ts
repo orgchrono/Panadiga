@@ -186,6 +186,7 @@ export interface SdUnbrickKitRequestDto {
   sata_hdd_autoboot?: boolean;
   main_bgo_retarget?: boolean;
   nor_autoboot_capsule?: boolean;
+  m6930lb_localization?: boolean;
 }
 
 export interface SdUnbrickKitReport {
@@ -198,6 +199,7 @@ export interface SdUnbrickKitReport {
   main_passthrough_applied: string | null;
   hdd_capacity_applied: string | null;
   sata_bridge_reset_fix_applied?: boolean;
+  m6930lb_localization_applied?: boolean;
   sata_hdd_autoboot_applied?: boolean;
   nor_autoboot_capsule_applied?: boolean;
   digadiag_path: string;

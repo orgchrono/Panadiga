@@ -10,7 +10,7 @@ import {
   PICO_SAFE_OPERATING_MIN_VOLTS,
 } from '@/constants';
 import type { DigaModelProfile, PicoDeviceStatus } from '@/models';
-import { getPicoSessionSnapshot, updatePicoSessionStatus } from '@/store/picoSessionBridge';
+import { getPicoSessionSnapshot } from '@/store/picoSessionBridge';
 import { isTargetPowered, isTargetVoltageNominal } from '@/utils/formatters';
 import {
   DEFAULT_DISCONNECTED_STATUS,
@@ -41,7 +41,6 @@ export function usePicoDevice({ onLog }: UsePicoDeviceOptions = {}) {
   const applyMeasuredVoltage = useCallback(
     (vddVolts: number, commandId?: string, commandSuccess?: boolean) => {
       if (typeof vddVolts !== 'number' || isNaN(vddVolts)) return;
-      const powered = isTargetPowered(vddVolts, PICO_MIN_VDD_THRESHOLD_VOLTS);
       setDeviceStatus((prev) => {
         if (!prev) return prev;
         const nextVdd =
@@ -51,7 +50,7 @@ export function usePicoDevice({ onLog }: UsePicoDeviceOptions = {}) {
               ? vddVolts
               : prev.vdd_volts;
         const nextPowered = isTargetPowered(nextVdd, PICO_MIN_VDD_THRESHOLD_VOLTS);
-        const updated: PicoDeviceStatus = {
+        return {
           ...prev,
           vdd_volts: nextVdd,
           target_powered: nextPowered,
@@ -62,12 +61,6 @@ export function usePicoDevice({ onLog }: UsePicoDeviceOptions = {}) {
             commandSuccess,
           ),
         };
-        updatePicoSessionStatus(
-          nextPowered || !prev.connected
-            ? updated
-            : { ...updated, vdd_volts: vddVolts, target_powered: powered },
-        );
-        return updated;
       });
     },
     [],

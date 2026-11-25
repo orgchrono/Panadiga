@@ -67,7 +67,7 @@ A interconexão entre o **Raspberry Pi Pico (RP2040 / RP2350)** e o conector `P7
 
 O subsistema **PIO (`PIO0`)** realiza amostragem determinística dos bytes enviados por `UARTP2M_T` (`GP2`, `P7501` Pino 6) a **`115200 8N1`** (oversampling 8x a `921.600 Hz`) sem carregar interrupções da CPU ARM e sem jamais tocar no pino `GP3` (`NSW5V`).
 
-### Código PIO Assembly Verificado ([`firmware/pico-p7501/p7501_uart.pio`](../../firmware/pico-p7501/p7501_uart.pio))
+### Código PIO Assembly Verificado ([`firmware/picofw/picofw_uart.pio`](../../firmware/picofw/picofw_uart.pio))
 
 ```pio
 .program p7501_uart_rx
@@ -101,7 +101,7 @@ good_stop:
 
 ## 4. Temporização Discreta de Boot (`SW_UART` + `XRESET`) & Primitivas `P7501`
 
-Ao executar `JIGBOOT` ou perfis discretos de inicialização via [`p7501_uart_bitbang.h`](../../firmware/pico-p7501/uart/p7501_uart_bitbang.h):
+Ao executar `JIGBOOT` ou perfis discretos de inicialização via [`p7501_uart_bitbang.h`](../../firmware/picofw/uart/picofw_uart_bitbang.h):
 
 1. **Pulso Open-Drain em `XRESET` (`GP5`):** `p7501_hw_reset_assert()` força `0V` por `15 ms`, e `p7501_hw_reset_release()` devolve `GP5` a `Hi-Z` (~`20 µs` de subida via `QR7503`).
 2. **Amostragem de Boot & Captura UART (`115200 8N1`):** Em `JIGBOOT` (`SW_UART = LOW` durante a subida do reset), o bootloader imprime `<00>DDR CHECK: OK` seguido de `CD diag boot mode` em `GP2` (`UARTP2M_T`), exibindo a telemetria de sense do mecanismo óptico (`X(80020401)59...` $\rightarrow$ `X(80040904)` $\rightarrow$ `Drive start failed[-2147219196]`).
@@ -143,7 +143,7 @@ No modo de palavra de 16 bits (`BYTE# = High`), os endereços JEDEC de 16 bits (
 * **Alvos de Apagamento (8 micro-setores de 8 KB da `EEMUL`):**
   * `0x807F0000` (`SA134`) a `0x807FE000` (`SA141`)
 
-### Código C Nativo Independente de Posição ([`firmware/pico-p7501/flash/ram_loader_am34_target.c`](../../firmware/pico-p7501/flash/ram_loader_am34_target.c))
+### Código C Nativo Independente de Posição ([`firmware/picofw/flash/ram_loader_am34_target.c`](../../firmware/picofw/flash/ram_loader_am34_target.c))
 
 ```c
 /**

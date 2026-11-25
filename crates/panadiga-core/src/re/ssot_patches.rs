@@ -135,7 +135,7 @@ pub fn hdd_autoboot_spec_for_loader(loader_profile_key: &str) -> Option<HddAutob
     })
 }
 
-fn parse_site_pair(site: &BinaryPatchSiteSpec) -> Result<(Vec<u8>, Vec<u8>)> {
+pub(crate) fn parse_site_pair(site: &BinaryPatchSiteSpec) -> Result<(Vec<u8>, Vec<u8>)> {
     let expect = parse_hex_bytes(&site.expect_hex)
         .map_err(|e| anyhow::anyhow!("Invalid expect_hex on '{}': {e}", site.name))?;
     let replace = parse_hex_bytes(&site.replace_hex)

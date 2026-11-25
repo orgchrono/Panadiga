@@ -93,8 +93,8 @@ export const DIGA_MODEL_IDS = [
 ] as const;
 export type DigaModelId = (typeof DIGA_MODEL_IDS)[number];
 
-export const SSOT_CONTRACT_HASH_U32 = 0xC045CA85;
-export const SSOT_CONTRACT_HASH_STR = 'C045CA85';
+export const SSOT_CONTRACT_HASH_U32 = 0x8B6162D3;
+export const SSOT_CONTRACT_HASH_STR = '8B6162D3';
 
 export const SSOT_IPC_EVENTS = {
   PICO_SERIAL_LOG: 'pico://serial-log',
@@ -117,16 +117,26 @@ export const SSOT_IPC_EVENTS = {
 } as const;
 export type SsotIpcEventName = (typeof SSOT_IPC_EVENTS)[keyof typeof SSOT_IPC_EVENTS];
 
-export const SSOT_P7501_WIRE_TAGS = {
-  RES: '@P7501_RES',
-  EVT: '@P7501_EVT',
-  FRAME: '@P7501_FRAME',
-  IDENT: '@P7501_IDENT',
-  SURG: '@P7501_SURG',
-  BOOT_CLASS: '@P7501_BOOT_CLASS',
+export const SSOT_PICOFW_WIRE_TAGS = {
+  RES: '@PICO_RES',
+  EVT: '@PICO_EVT',
+  FRAME: '@PICO_FRAME',
+  IDENT: '@PICO_IDENT',
+  SURG: '@PICO_SURG',
+  BOOT_CLASS: '@PICO_BOOT_CLASS',
+  DIAG_DEEP: '@PICO_DIAG_DEEP',
+  TBUS_AUDIT: '@PICO_TBUS_AUDIT',
+  HOTPLUG: '@PICO_HOTPLUG',
+  LIVE_MAP: '@PICO_LIVE_MAP',
+  GPS_ENV: '@PICO_GPS_ENV',
+  ROUTE: '@PICO_ROUTE',
+  XRAY: '@PICO_XRAY',
+  PROG: '@PICO_PROG',
+  CHUNK: '@PICO_CHUNK',
+  BGO_SEC: '@PICO_BGO_SEC',
 } as const;
 
-export const SSOT_P7501_RES_CODES = {
+export const SSOT_PICOFW_RES_CODES = {
   OK: '0',
   EINVAL: 'EINVAL',
   E05: 'E05',
@@ -1172,35 +1182,36 @@ export interface SsotDiagSignatureRule {
 }
 
 export const SSOT_DIAG_SIGNATURE_RULES: readonly SsotDiagSignatureRule[] = [
-  { needle: 'DDR CHECK: OK', eventSymbol: 'P7501_SSOT_DIAG_EVT_DDR_OK' },
-  { needle: 'serial boot mode', eventSymbol: 'P7501_SSOT_DIAG_EVT_SERIAL_BOOT' },
-  { needle: '... SD init end', eventSymbol: 'P7501_SSOT_DIAG_EVT_SD_HW_OK' },
-  { needle: '-91006', eventSymbol: 'P7501_SSOT_DIAG_EVT_SD_ERR' },
-  { needle: '-90002', eventSymbol: 'P7501_SSOT_DIAG_EVT_SD_ERR' },
-  { needle: '-90001', eventSymbol: 'P7501_SSOT_DIAG_EVT_SD_ERR' },
-  { needle: 'FAT Mount failed', eventSymbol: 'P7501_SSOT_DIAG_EVT_FAT_FAIL' },
-  { needle: 'FAT Open(', eventSymbol: 'P7501_SSOT_DIAG_EVT_FAT_FAIL' },
-  { needle: 'SD diag load failed', eventSymbol: 'P7501_SSOT_DIAG_EVT_SD_DIAG_LOAD_FAIL' },
-  { needle: 'diag loader uncompress failed', eventSymbol: 'P7501_SSOT_DIAG_EVT_SD_UNCOMPRESS_FAIL' },
-  { needle: 'fvu uncompress failed', eventSymbol: 'P7501_SSOT_DIAG_EVT_SD_UNCOMPRESS_FAIL' },
-  { needle: 'no header!', eventSymbol: 'P7501_SSOT_DIAG_EVT_SD_UNCOMPRESS_FAIL' },
-  { needle: 'no footer!', eventSymbol: 'P7501_SSOT_DIAG_EVT_SD_UNCOMPRESS_FAIL' },
-  { needle: 'check sum mismatch', eventSymbol: 'P7501_SSOT_DIAG_EVT_SD_UNCOMPRESS_FAIL' },
-  { needle: '*** start diag ***', eventSymbol: 'P7501_SSOT_DIAG_EVT_DIAG_EXEC' },
-  { needle: 'diag loader is preserved', eventSymbol: 'P7501_SSOT_DIAG_EVT_DIAG_EXEC' },
-  { needle: '** open tray **', eventSymbol: 'P7501_SSOT_DIAG_EVT_ODD_OPEN' },
-  { needle: 'can not close tray', eventSymbol: 'P7501_SSOT_DIAG_EVT_ODD_TRAY_FAIL' },
-  { needle: '80045300', eventSymbol: 'P7501_SSOT_DIAG_EVT_ODD_TRAY_FAIL' },
-  { needle: '80040904', eventSymbol: 'P7501_SSOT_DIAG_EVT_CD_APC_ERR' },
-  { needle: '83A7', eventSymbol: 'P7501_SSOT_DIAG_EVT_CD_APC_ERR' },
-  { needle: 'BGO driver init failed', eventSymbol: 'P7501_SSOT_DIAG_EVT_BGO_FAIL' },
-  { needle: 'hung-up time changed', eventSymbol: 'P7501_SSOT_DIAG_EVT_HUNG_U99' },
-  { needle: 'PANAMON1>', eventSymbol: 'P7501_SSOT_DIAG_EVT_PANAMON' },
+  { needle: 'DDR CHECK: OK', eventSymbol: 'PICOFW_SSOT_DIAG_EVT_DDR_OK' },
+  { needle: 'serial boot mode', eventSymbol: 'PICOFW_SSOT_DIAG_EVT_SERIAL_BOOT' },
+  { needle: '... SD init end', eventSymbol: 'PICOFW_SSOT_DIAG_EVT_SD_HW_OK' },
+  { needle: '-91006', eventSymbol: 'PICOFW_SSOT_DIAG_EVT_SD_ERR' },
+  { needle: '-90002', eventSymbol: 'PICOFW_SSOT_DIAG_EVT_SD_ERR' },
+  { needle: '-90001', eventSymbol: 'PICOFW_SSOT_DIAG_EVT_SD_ERR' },
+  { needle: 'FAT Mount failed', eventSymbol: 'PICOFW_SSOT_DIAG_EVT_FAT_FAIL' },
+  { needle: 'FAT Open(', eventSymbol: 'PICOFW_SSOT_DIAG_EVT_FAT_FAIL' },
+  { needle: 'SD diag load failed', eventSymbol: 'PICOFW_SSOT_DIAG_EVT_SD_DIAG_LOAD_FAIL' },
+  { needle: 'diag loader uncompress failed', eventSymbol: 'PICOFW_SSOT_DIAG_EVT_SD_UNCOMPRESS_FAIL' },
+  { needle: 'fvu uncompress failed', eventSymbol: 'PICOFW_SSOT_DIAG_EVT_SD_UNCOMPRESS_FAIL' },
+  { needle: 'no header!', eventSymbol: 'PICOFW_SSOT_DIAG_EVT_SD_UNCOMPRESS_FAIL' },
+  { needle: 'no footer!', eventSymbol: 'PICOFW_SSOT_DIAG_EVT_SD_UNCOMPRESS_FAIL' },
+  { needle: 'check sum mismatch', eventSymbol: 'PICOFW_SSOT_DIAG_EVT_SD_UNCOMPRESS_FAIL' },
+  { needle: '*** start diag ***', eventSymbol: 'PICOFW_SSOT_DIAG_EVT_DIAG_EXEC' },
+  { needle: 'diag loader is preserved', eventSymbol: 'PICOFW_SSOT_DIAG_EVT_DIAG_EXEC' },
+  { needle: '** open tray **', eventSymbol: 'PICOFW_SSOT_DIAG_EVT_ODD_OPEN' },
+  { needle: 'can not close tray', eventSymbol: 'PICOFW_SSOT_DIAG_EVT_ODD_TRAY_FAIL' },
+  { needle: '80045300', eventSymbol: 'PICOFW_SSOT_DIAG_EVT_ODD_TRAY_FAIL' },
+  { needle: '80040904', eventSymbol: 'PICOFW_SSOT_DIAG_EVT_CD_APC_ERR' },
+  { needle: '83A7', eventSymbol: 'PICOFW_SSOT_DIAG_EVT_CD_APC_ERR' },
+  { needle: 'BGO driver init failed', eventSymbol: 'PICOFW_SSOT_DIAG_EVT_BGO_FAIL' },
+  { needle: 'hung-up time changed', eventSymbol: 'PICOFW_SSOT_DIAG_EVT_HUNG_U99' },
+  { needle: 'PANAMON1>', eventSymbol: 'PICOFW_SSOT_DIAG_EVT_PANAMON' },
 ];
 
 export const SSOT_WIRE_TERMINAL_MARKERS = [
+  '@PICO_RES ',
+  'PICO>',
   '@P7501_RES ',
-  'PANADIGA>',
   'P7501>',
 ] as const;
 

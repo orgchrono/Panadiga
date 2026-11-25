@@ -40,8 +40,8 @@ regexes = [
 ]
 
 [[allowlists]]
-description = "Public Panasonic 64-bit Feistel .FRM key table telemetry from Pico CRYPTO KEYS"
+description = "Public Panasonic 64-bit Feistel .FRM key table telemetry from PicoFW CRYPTO KEYS (@PICO_FRAME and legacy @P7501_FRAME)"
 regexTarget = "line"
 regexes = [
-  '''^\s*@P7501_FRAME\s+.*type=CRYPTO_KEY\s+.*idx=\d+\s+name=[a-z0-9_]+\s+key=[0-9a-f]{16}\s*$''',
+  '''^\s*@(?:PICO|P7501)_FRAME\s+.*type=CRYPTO_KEY\s+.*idx=\d+\s+name=[a-z0-9_]+\s+key=[0-9a-f]{16}\s*$''',
 ]

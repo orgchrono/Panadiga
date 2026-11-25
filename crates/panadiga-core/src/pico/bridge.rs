@@ -135,7 +135,7 @@ pub fn run_gdb_bridge_with_mode(
     let status_reply = send_and_read_until(
         &mut *serial_port,
         "STATUS",
-        &["@P7501_RES cmd=STATUS", "VDD:", "PANADIGA>"],
+        crate::pico::cdc::PICO_STATUS_STOP_TOKENS,
         Duration::from_millis(1_500),
     );
     let status_report = parse_status_output_report(&status_reply);

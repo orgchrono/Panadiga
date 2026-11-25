@@ -1,7 +1,8 @@
 # Require explicit maintainer review for hardware interlocks, capabilities, profiles, CI, and AI guardrails.
 * @orgchrono
 
-/firmware/pico-p7501/ @orgchrono
+/firmware/picofw/ @orgchrono
+/firmware/digaos/ @orgchrono
 /crates/panadiga-core/src/pico/ @orgchrono
 /crates/panadiga-mcp/src/policy.rs @orgchrono
 /crates/panadiga-rag/src/safety/ @orgchrono

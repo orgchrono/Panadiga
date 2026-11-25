@@ -7,7 +7,7 @@ pub mod trace_cmds;
 pub use flash_cmds::{
     BreakInArgs, GdbBridgeArgs, GdbConfigArgs, MergeUf2Args, PicoDumpArgs, PicoFlashArgs,
 };
-pub use live_cmds::{CaptureNorArgs, DavisProbeArgs};
+pub use live_cmds::{CaptureNorArgs, DavisProbeArgs, SiliconReplayArgs, SiliconSnapshotArgs};
 pub use trace_cmds::{
     AbBootArgs, BenchWizardArgs, DecodeLogArgs, ParseDiagArgs, RspCodecArgs, ValidateBenchCmdArgs,
 };
@@ -118,4 +118,12 @@ pub enum PicoActions {
 
     /// Probes AM34 DAVIS CH0/CH1 taskfiles and 0xEC IDENTIFY via Pico PANAMON1> (guards 0xC000_100C)
     DavisProbe(DavisProbeArgs),
+
+    /// Replays a captured `ndb>` COM10 Silicon Explorer evidence log deterministically
+    #[command(name = "silicon-replay", alias = "silicon_replay")]
+    SiliconReplay(SiliconReplayArgs),
+
+    /// Reads an `ndb> dd` SDRAM/MMIO snapshot over live PicoFW `BRIDGE` with lethal/BCU/standby barriers
+    #[command(name = "silicon-snapshot", alias = "silicon_snapshot")]
+    SiliconSnapshot(SiliconSnapshotArgs),
 }

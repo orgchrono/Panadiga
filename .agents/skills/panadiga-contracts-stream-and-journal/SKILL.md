@@ -21,7 +21,7 @@ Esta skill consolida os contratos estáticos (**Plano A** + compliance cross-lay
   - Mapa da arquitetura SSOT unificada e dívidas cross-layer em [cross-layer-contracts-and-ssot-coherence.md](./references/cross-layer-contracts-and-ssot-coherence.md).
 
 ## 2. Plano A, Compliance Cross-Layer & Simetria SSOT
-1. **SSOT Declarativa Única & Codegen (Sem Silos Órfãos):** `panadiga-constants`, `panadiga-profiles` e `panadiga-core::ssot` compilam a IR estática para TypeScript (`apps/desktop/src/models/generated/profiles.ts` + `SSOT_CONTRACT_HASH_STR`), Python (`scripts/profiles_types.py`), Ghidra (`tools/ghidra/`) e C11 (`firmware/pico-p7501/generated/p7501_ssot_tables.*`) via `panadiga ssot export-all`. **Nunca** mantenha especificações paralelas à mão nem edite arquivos em `*/generated/`.
+1. **SSOT Declarativa Única & Codegen (Sem Silos Órfãos):** `panadiga-constants`, `panadiga-profiles` e `panadiga-core::ssot` compilam a IR estática para TypeScript (`apps/desktop/src/models/generated/{profiles,ssot,digaos}.ts` + `SSOT_CONTRACT_HASH_STR`), Python (`scripts/profiles_types.py`), Ghidra (`tools/ghidra/`) e C11 (`firmware/picofw/generated/picofw_ssot_tables.*` + `firmware/digaos/generated/digaos_ssot_tables.*`) via `panadiga ssot export-all`. **Nunca** mantenha especificações paralelas à mão nem edite arquivos em `*/generated/`.
 2. **Simetria de Segurança Entre C11, Rust & TS:** Faixas de segurança física (GPIOs livres de IR `GP6..9 | GP16..22`, teto de timeout NOR `185_000 ms`, `SA0..SA10` IPL RO) devem ser idênticas nas 3 camadas — jamais mais frouxas no Rust do que no C11.
 3. **Isolamento de UI/Idioma & Verificação de Contrato:** `panadiga-core` **não deve** depender de `apps/desktop/src/locales/pt-BR/` via `include_str!` (prose pertence a `locales/`). Toda camada valida `ProfilesBundle.schema_version` (`validate.rs`), `SSOT_CONTRACT_HASH` e `P7501_SSOT_HASH` (macros + tabelas no handshake `IDENTIFY`).
 
@@ -41,7 +41,7 @@ Esta skill consolida os contratos estáticos (**Plano A** + compliance cross-lay
 ```bash
 cargo run -q -p panadiga-cli -- profiles validate -j -
 cargo run -q -p panadiga-cli -- ssot export-all --root .
-git diff --stat apps/desktop/src/models/generated/ firmware/pico-p7501/generated/ tools/ghidra/ profiles/schema/
+git diff --stat apps/desktop/src/models/generated/ firmware/picofw/generated/ firmware/digaos/generated/ tools/ghidra/ profiles/schema/
 cargo test --workspace && cargo clippy --workspace --all-targets --no-deps -- -D warnings
 npm --prefix apps/desktop run lint && npx --prefix apps/desktop jscpd --config .jscpd.json
 python -m mypy --strict scripts && python scripts/repo_sanitize_and_sync.py --check

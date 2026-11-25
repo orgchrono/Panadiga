@@ -37,6 +37,8 @@ export interface GuidedPipelineBarProps {
 const VIEW_GUIDANCE_HINT_MAP: Partial<Record<ViewKey, TranslationKey>> = {
   dashboard: 'pipeline.guidance.hintDashboard',
   picobench: 'pipeline.guidance.hintPico',
+  ssotstudio: 'pipeline.guidance.hintSsotStudio',
+  siliconexplorer: 'pipeline.guidance.hintSiliconExplorer',
   nvram: 'pipeline.guidance.hintNvram',
   hdd: 'pipeline.guidance.hintHdd',
   frmcrypto: 'pipeline.guidance.hintFrm',

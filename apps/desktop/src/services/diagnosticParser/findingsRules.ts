@@ -27,7 +27,7 @@ const TELEMETRY_FINDING_RULES: ReadonlyArray<TelemetryFindingRule> = [
   {
     code: 'SD_HW_OK',
     severity: 'info',
-    eventSymbol: 'P7501_SSOT_DIAG_EVT_SD_HW_OK',
+    eventSymbol: 'PICOFW_SSOT_DIAG_EVT_SD_HW_OK',
     summary: 'Stage-1 SD hardware 4-bit init OK',
     detail:
       'BOOT.BIN initialized SD card interface cleanly (... SD init end) before attempting DIGADIAG.FRM load.',
@@ -35,7 +35,7 @@ const TELEMETRY_FINDING_RULES: ReadonlyArray<TelemetryFindingRule> = [
   {
     code: 'FAT_FAIL',
     severity: 'error',
-    eventSymbol: 'P7501_SSOT_DIAG_EVT_FAT_FAIL',
+    eventSymbol: 'PICOFW_SSOT_DIAG_EVT_FAT_FAIL',
     summary: 'Stage-1 FAT16 Mount/Open error on SD card (-10010/-10020/-10025)',
     detail:
       'BOOT.BIN failed to mount FAT16 or open DIGADIAG.FRM on the SD card (verify FAT16 SDSC formatting and root filename).',
@@ -43,7 +43,7 @@ const TELEMETRY_FINDING_RULES: ReadonlyArray<TelemetryFindingRule> = [
   {
     code: 'SD_DIAG_LOAD_FAIL',
     severity: 'error',
-    eventSymbol: 'P7501_SSOT_DIAG_EVT_SD_DIAG_LOAD_FAIL',
+    eventSymbol: 'PICOFW_SSOT_DIAG_EVT_SD_DIAG_LOAD_FAIL',
     summary: 'Stage-1 SD DIAG load failed (`DIGADIAG.FRM`)',
     detail:
       'FUN_4400a97c could not read 128 KiB from DIGADIAG.FRM (Mount/Open OK -> fat_read 0x20000 failed or <128 KiB).',
@@ -51,7 +51,7 @@ const TELEMETRY_FINDING_RULES: ReadonlyArray<TelemetryFindingRule> = [
   {
     code: 'SD_UNCOMPRESS_FAIL',
     severity: 'error',
-    eventSymbol: 'P7501_SSOT_DIAG_EVT_SD_UNCOMPRESS_FAIL',
+    eventSymbol: 'PICOFW_SSOT_DIAG_EVT_SD_UNCOMPRESS_FAIL',
     pattern: /SDDIAG\s+UNCOMPRESS\s+FAIL|fat\s+uncompress\s+error/i,
     summary: 'Stage-1 DIGADIAG.FRM EXTRHEAD/zlib unpack failed',
     detail:
@@ -60,7 +60,7 @@ const TELEMETRY_FINDING_RULES: ReadonlyArray<TelemetryFindingRule> = [
   {
     code: 'DIAG_EXEC',
     severity: 'info',
-    eventSymbol: 'P7501_SSOT_DIAG_EVT_DIAG_EXEC',
+    eventSymbol: 'PICOFW_SSOT_DIAG_EVT_DIAG_EXEC',
     pattern: /Start\s+SDDIAG/i,
     summary: 'Stage-1 DIGADIAG.FRM decompressed & jumped (EXEC)',
     detail:
@@ -69,7 +69,7 @@ const TELEMETRY_FINDING_RULES: ReadonlyArray<TelemetryFindingRule> = [
   {
     code: 'PANAMON_ACTIVE',
     severity: 'info',
-    eventSymbol: 'P7501_SSOT_DIAG_EVT_PANAMON',
+    eventSymbol: 'PICOFW_SSOT_DIAG_EVT_PANAMON',
     summary: 'PANAMON1> debug monitor active on SC0',
     detail:
       'Custom DIGADIAG.FRM monitor prompt PANAMON1> is online on P7501 SC0 UART and ready for memory/flash inspection.',
@@ -77,7 +77,7 @@ const TELEMETRY_FINDING_RULES: ReadonlyArray<TelemetryFindingRule> = [
   {
     code: 'ODD_NO_TRAY_80045300',
     severity: 'warning',
-    eventSymbol: 'P7501_SSOT_DIAG_EVT_ODD_TRAY_FAIL',
+    eventSymbol: 'PICOFW_SSOT_DIAG_EVT_ODD_TRAY_FAIL',
     summary: 'ODD cannot close tray / no disc (80045300)',
     detail:
       'Matshita optical drive reported tray/media absence (80045300) during boot probe.',
@@ -85,7 +85,7 @@ const TELEMETRY_FINDING_RULES: ReadonlyArray<TelemetryFindingRule> = [
   {
     code: 'BGO_INIT_HALT',
     severity: 'warning',
-    eventSymbol: 'P7501_SSOT_DIAG_EVT_BGO_FAIL',
+    eventSymbol: 'PICOFW_SSOT_DIAG_EVT_BGO_FAIL',
     summary: 'BGO driver init failed -> BOOT halted in NORMAL mode (RSP offline)',
     detail:
       'FUN_4400836f (bgo_driver_init) failed and routed BOOT.BIN into boot_panic_or_halt_7812 before fmu_sd_dispatcher(1), leaving MAIN / _dev_SERIAL (PANARSP) unstarted.',
@@ -93,7 +93,7 @@ const TELEMETRY_FINDING_RULES: ReadonlyArray<TelemetryFindingRule> = [
   {
     code: 'HUNG_U99',
     severity: 'warning',
-    eventSymbol: 'P7501_SSOT_DIAG_EVT_HUNG_U99',
+    eventSymbol: 'PICOFW_SSOT_DIAG_EVT_HUNG_U99',
     summary: 'AM34 Main hung-up timer trap / U99 condition observed',
     detail:
       'Main firmware emitted hung-up time changed telemetry associated with U99 watchdog recovery stall.',
@@ -101,7 +101,7 @@ const TELEMETRY_FINDING_RULES: ReadonlyArray<TelemetryFindingRule> = [
   {
     code: 'LASER_APC_05MW_83A7',
     severity: 'error',
-    eventSymbol: 'P7501_SSOT_DIAG_EVT_CD_APC_ERR',
+    eventSymbol: 'PICOFW_SSOT_DIAG_EVT_CD_APC_ERR',
     pattern: /\b83[\s:-]?A7\b/i,
     summary: 'Drive laser APC fault 0x83A7 / 80040904 (0.5mW check prior to spin-up)',
     detail:
@@ -110,7 +110,7 @@ const TELEMETRY_FINDING_RULES: ReadonlyArray<TelemetryFindingRule> = [
   {
     code: 'SD_STATUS_MINUS_91006',
     severity: 'warning',
-    eventSymbol: 'P7501_SSOT_DIAG_EVT_SD_ERR',
+    eventSymbol: 'PICOFW_SSOT_DIAG_EVT_SD_ERR',
     pattern: /\b-0x1637e\b/i,
     summary: 'GetSD_Status ACMD13 rejected SD card (-91006 / -0x1637e)',
     detail:

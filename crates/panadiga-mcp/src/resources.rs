@@ -85,8 +85,8 @@ pub fn list_resources(workspace_root: &Path) -> Vec<Value> {
         }),
         json!({
             "uri": "panadiga://pico-commands",
-            "name": "Pico P7501 Async UART Serial Protocol Command Catalog",
-            "description": "Complete command set implemented by firmware/pico-p7501 (PING, STATUS, PINCHECK, BUSDIAG, BOOTCAP, JIGBOOT, UARTMON, UARTSEND, ISOLATE, LIVE_CAPTURE, GDB RSP).",
+            "name": "PicoFW P7501 Async UART Serial Protocol Command Catalog",
+            "description": "Complete command set implemented by firmware/picofw (PING, STATUS, PINCHECK, BUSDIAG, BOOTCAP, JIGBOOT, UARTMON, UARTSEND, ISOLATE, LIVE_CAPTURE, BRIDGE, GDB RSP).",
             "mimeType": "application/json"
         }),
     ];

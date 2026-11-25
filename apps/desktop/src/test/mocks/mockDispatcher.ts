@@ -12,6 +12,7 @@ import { subscribeMockChannel } from './mockEventBus';
 import { handleMockHddCommand } from './mockHddHandlers';
 import { handleMockIrCommand } from './mockIrHandlers';
 import { handleMockPicoCommand, buildMockPicoStatus } from './mockPicoHandlers';
+import { handleMockStudioExplorerCommand } from './mockStudioExplorerHandlers';
 import { handleMockSystemCommand } from './mockSystemHandlers';
 import { handleMockUnbrickCommand } from './mockUnbrickHandlers';
 import { handleMockVaultCommand } from './mockVaultHandlers';
@@ -24,6 +25,7 @@ const DOMAIN_HANDLERS: MockDomainHandler[] = [
   handleMockCryptoCommand,
   handleMockPicoCommand,
   handleMockBenchExtensionsCommand,
+  handleMockStudioExplorerCommand,
   handleMockUnbrickCommand,
   handleMockCalibrationCommand,
   handleMockIrCommand,

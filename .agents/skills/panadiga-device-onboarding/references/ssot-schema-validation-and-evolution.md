@@ -26,4 +26,4 @@
    - Extrai capacidade declarada (`_4MB_` -> `4 MiB`, `_8MB_` -> `8 MiB`, `_16MB_` -> `16 MiB`) e base VA (`_0X<HEX>`) do identificador de geometria (`BGO_35SEC_4MB_0X84200000` vs `BGO_45SEC_8MB_0X84130000`).
    - Impede que um `FirmwareTrainProfile` ou `bgo_retarget_spec` de `8 MiB` seja emparelhado a uma Flash de `4 MiB` (ou vice-versa), valida `word[12]` / `word[13]` / `word[31]` da tabela BGO e confere o tamanho esperado do `DIGADIAG.FRM` (`raw_256k_prog061` = `262144`, `extrhead_128k` = `131072`).
 3. **Derivação Unificada (`panadiga ssot export-all`):**
-   - Atualiza `scripts/profiles_types.py`, projeções TypeScript em `apps/desktop/src/` (incluindo `SSOT_CONTRACT_HASH_STR`), tabelas C11 em `firmware/pico-p7501/generated/` e `tools/ghidra/` em passo único determinístico.
+   - Atualiza `scripts/profiles_types.py`, projeções TypeScript em `apps/desktop/src/` (incluindo `SSOT_CONTRACT_HASH_STR`), tabelas C11 em `firmware/picofw/generated/` + `firmware/digaos/generated/` e `tools/ghidra/` em passo único determinístico.

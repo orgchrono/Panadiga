@@ -573,3 +573,54 @@ pub(super) fn assert_hdd_autoboot_ram_boots_and_escapes(
     assert!(esc_calls.iter().any(|c| c.0 == TAG_CHK_UPDATE));
     assert!(!esc_calls.iter().any(|c| c.0 == TAG_HDD_MAX_LBA));
 }
+
+#[test]
+fn mn103vm_proves_single_sd_card_expected_main_checksum_sync_then_autoboot() {
+    let spec = hdd_autoboot_spec_for_loader_profile("ver061").unwrap();
+    let mut prog = build_hdd_autoboot_prog_fixture();
+    let expected_crc = 0xABCD_1234u32;
+    stamp_hdd_autoboot_expected_main_checksum_for_profile(&mut prog, "ver061", expected_crc)
+        .unwrap();
+    assert_eq!(
+        inspect_prog061_hdd_autoboot_site(&prog)
+            .unwrap()
+            .expected_main_extrhead_crc_hex
+            .as_deref(),
+        Some("0xABCD1234")
+    );
+
+    // Boot 1: HDD still holds stale factory MAIN checksum -> both primary and mirror reject
+    // and fall back cleanly to FVU (flash new MAIN from SD onto HDD without UART 'F').
+    let hook_ret_pc = PROG061_BASE_VA + OFF_PROG061_HDD_AUTOBOOT_HOOK_SITE as u32 + 7;
+    let mut h_boot1 = HddAutobootVmHarness::new(&prog);
+    h_boot1
+        .vm
+        .write_u32(spec.hdd_dma_buf_va.wrapping_add(0x28), 0x1111_2222)
+        .unwrap();
+    h_boot1.run(hook_ret_pc).unwrap();
+    let b1_calls = h_boot1.calls();
+    assert_eq!(
+        b1_calls
+            .iter()
+            .filter(|c| c.0 == TAG_HDD_READ && c.2 == 0)
+            .count(),
+        2
+    );
+    assert!(b1_calls.iter().any(|c| c.0 == TAG_CHK_UPDATE));
+    assert!(!b1_calls.iter().any(|c| c.0 == TAG_DISABLE_IRQ));
+
+    // Boot 2: Same SD card untouched -> HDD primary now carries matching EXTRHEAD+0x28 CRC
+    // -> autoboot loads and boots MAIN @ 0x5700_0000 straight from SATA HDD.
+    let mut h_boot2 = HddAutobootVmHarness::new(&prog);
+    h_boot2
+        .vm
+        .write_u32(spec.hdd_dma_buf_va.wrapping_add(0x28), expected_crc)
+        .unwrap();
+    h_boot2.run(0x5700_0000).unwrap();
+    assert!(
+        h_boot2
+            .calls()
+            .iter()
+            .any(|&(t, lba, off)| t == TAG_HDD_READ && lba == 0x10000 && off == 0)
+    );
+}

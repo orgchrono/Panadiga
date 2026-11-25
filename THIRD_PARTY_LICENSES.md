@@ -7,7 +7,7 @@ This file records external works, SDKs, datasets, and vendor references present 
 | Asset / Component | Origin / Author | License / Terms | Notes |
 | :--- | :--- | :--- | :--- |
 | `firmware_and_images/Panasonic_DVD_TV.ir` | `Flipper-IRDB` (`emptythevoid`) | Public community IR capture database | Panasonic Kaseikyo IR frame reference used for `SYS_SERV` telemetry and IR Commander validation |
-| Raspberry Pi Pico SDK (`RP2040` / `RP2350`) | Raspberry Pi Ltd | BSD-3-Clause | External build dependency for `firmware/pico-p7501/` |
+| Raspberry Pi Pico SDK (`RP2040` / `RP2350`) | Raspberry Pi Ltd | BSD-3-Clause | External build dependency for `firmware/picofw/` |
 | Ghidra Software Reverse Engineering Suite | National Security Agency (NSA) | Apache-2.0 | Processor sleigh patch (`tools/ghidra/sleigh_patches/`) and headless Jython analysis integration |
 | Rust Crate Ecosystem (`Cargo.lock`) | Respective crate authors (crates.io) | Various OSI-approved (MIT / Apache-2.0 / BSD / MPL-2.0) | Pinned in `Cargo.lock` |
 | Node / TypeScript Dependencies (`apps/desktop/package-lock.json`) | Respective npm authors | Various OSI-approved | Pinned in `apps/desktop/package-lock.json` |

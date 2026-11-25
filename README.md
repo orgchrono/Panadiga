@@ -149,19 +149,20 @@ Panadiga/
 ├── tools/                                            <-- Lab Utilities & Ghidra AM34/MN103S Scripts (Generated from Rust SSOT)
 ├── scripts/                                          <-- Cross-Platform Build & 9-Gate Validation Suite (`build.py`, `validate.py`, `bench/`)
 └── firmware/
-    └── pico-p7501/                                   <-- RP2040/RP2350 C11 Zero-Gadget P7501 Probe Firmware (`P0_FW_RO = 256 KiB`)
-        ├── cli/                                      <-- Interactive USB-CDC / BLE `PANADIGA>` Parser & Help (`IR`, `VAULT`, `DUMPNOR`)
-        ├── common/                                   <-- Pure C11 Hex, SPSC Ring, WDT, Nibble-LUT CRC32 & `ff_blocks` Helpers
-        ├── diag/                                     <-- `PIOLOGIC` 4-Ch Sampler, `SDSNIFF`, `JIGSWEEP`, `IRTX`/`IRRX`/`IR VERIFY`
-        ├── flash/                                    <-- QSPI Vault A/B (`VAULT VERIFY <1..3>`), Spansion NOR CFI & `E05` Bus Policy
-        ├── gdb/                                      <-- Deterministic GDB RSP Protocol Codec & Server
-        ├── generated/                                <-- Generated `p7501_ssot.h` / `p7501_ssot_tables.c` from Rust SSOT
-        ├── hal/                                      <-- Open-Drain `XRESET`, `SW_UART` (GP26), `NSW5V` (GP3 Hi-Z IRQ) & LED HAL
-        ├── tests/                                    <-- Host C11 Unit Test Suite (`PICO_HOST_TEST=1`, 4 modules / 38 test suites)
-        ├── uart/                                     <-- PIO1 UART Engine, `DIAGWATCH`, `DRVPANA`, `PANARSP` & `DUMPNOR` `ff_blocks`
-        ├── p7501_uart_duplex.pio / p7501_logic_sampler.pio / p7501_sds_sampler.pio <-- PIO State Machines
-        ├── p7501_pico_main.c                         <-- Entrypoint & Main Diagnostic Loop
-        └── CMakeLists.txt                            <-- Dual-Target Bare-Metal RP2040/RP2350 CMake Pipeline
+    ├── picofw/                                       <-- RP2040/RP2350 C11 Zero-Gadget P7501 Probe Firmware (`P0_FW_RO = 256 KiB`)
+    │   ├── cli/                                      <-- Interactive USB-CDC / BLE `PICO>` Parser & Help (`IR`, `VAULT`, `DUMPNOR`)
+    │   ├── common/                                   <-- Pure C11 Hex, SPSC Ring, WDT, Nibble-LUT CRC32 & `ff_blocks` Helpers
+    │   ├── diag/                                     <-- `PIOLOGIC` 4-Ch Sampler, `SDSNIFF`, `JIGSWEEP`, `IRTX`/`IRRX`/`IR VERIFY`
+    │   ├── flash/                                    <-- QSPI Vault A/B (`VAULT VERIFY <1..3>`), Spansion NOR CFI & `E05` Bus Policy
+    │   ├── gdb/                                      <-- Deterministic GDB RSP Protocol Codec & Server
+    │   ├── generated/                                <-- Generated `picofw_ssot.h` / `picofw_ssot_tables.c` from Rust SSOT
+    │   ├── hal/                                      <-- Open-Drain `XRESET`, `SW_UART` (GP26), `NSW5V` (GP3 Hi-Z IRQ) & LED HAL
+    │   ├── tests/                                    <-- Host C11 Unit Test Suite (`PICO_HOST_TEST=1`)
+    │   ├── uart/                                     <-- PIO1 UART Engine, `DIAGWATCH`, `DRVPANA`, `PANARSP` & `DUMPNOR` `ff_blocks`
+    │   ├── picofw_uart_duplex.pio / picofw_logic_sampler.pio / picofw_sds_sampler.pio <-- PIO State Machines
+    │   ├── picofw_pico_main.c                        <-- Entrypoint & Main Diagnostic Loop
+    │   └── CMakeLists.txt                            <-- Dual-Target Bare-Metal RP2040/RP2350 CMake Pipeline
+    └── digaos/                                       <-- Bare-Metal `DigaOS` (`DIGAOS>`, SDRAM Stage-1.5/2, `-DPANADIGA_DIGAOS_HOST_TEST=1`)
 ```
 
 ---
@@ -589,7 +590,7 @@ All official documentation is cataloged and hierarchically structured in `manual
 The repository maintains **44 synchronized bilingual (`en-US` / `pt-BR`) engineering dossiers** (indexed in [`docs/INDEX.md`](docs/INDEX.md) and [`docs/translation_pairs.json`](docs/translation_pairs.json)), root technical audits ([`COMPLETE_AUDIT.md`](COMPLETE_AUDIT.md) / [`AUDITORIA_COMPLETA.md`](AUDITORIA_COMPLETA.md)), historical audit snapshots ([`docs/audits/`](docs/audits/README.md)), full MN103S Ghidra pseudocode/disassembly ([`docs/pseudocode/`](docs/pseudocode/INDICE_EVIDENCIA_PSEUDOCODIGO_GHIDRA.md) & [`docs/pseudocode/raw/`](docs/pseudocode/raw/)), and 28 deduplicated live `COM10` / bench logs ([`docs/debug_logs/`](docs/debug_logs/README.md)):
 
 * 📋 **[Consolidated Root Technical Audit](COMPLETE_AUDIT.md)** ([Português: `AUDITORIA_COMPLETA.md`](AUDITORIA_COMPLETA.md))
-  *Live repository audit (`crates/`, `firmware/pico-p7501/`, `scripts/`), rebuilt RP2040/RP2350/Unified UF2 hashes, Ghidra `??` root-cause summary, Python-to-Rust parity, and 9 Quality Gates.*
+  *Live repository audit (`crates/`, `firmware/picofw/`, `firmware/digaos/`, `scripts/`), rebuilt RP2040/RP2350/Unified UF2 hashes, Ghidra `??` root-cause summary, Python-to-Rust parity, and 9 Quality Gates.*
 * 🏛️ **[Systems Architecture &amp; Engineering Blueprint](docs/en-US/SYSTEM_ARCHITECTURE_AND_ENGINEERING_BLUEPRINT.md)** ([Portuguese Mirror](docs/pt-BR/ARQUITETURA_E_BLUEPRINT_DE_ENGENHARIA.md))
   *Master specification: modular decomposition, Pure FP domain, strict MVVM, GDB ring buffer, and silicon invariants.*
 * 📱 **[Android APK &amp; Bluetooth Architecture](docs/en-US/ANDROID_APK_AND_BLUETOOTH_ARCHITECTURE.md)** ([Portuguese Mirror](docs/pt-BR/ARQUITETURA_MOBILE_ANDROID_E_BLUETOOTH.md))

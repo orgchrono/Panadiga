@@ -158,7 +158,7 @@ def _discover_pico_catalog(root: Path) -> list[dict[str, str]]:
 
 
 def _discover_pico_c11_codecs(root: Path) -> list[str]:
-    pico_root = root / "firmware" / "pico-p7501"
+    pico_root = root / "firmware" / "picofw"
     if not pico_root.is_dir():
         return []
     return sorted(
@@ -168,20 +168,21 @@ def _discover_pico_c11_codecs(root: Path) -> list[str]:
     )
 
 
-def _discover_openos_modules(root: Path) -> list[str]:
-    openos_root = root / "firmware" / "panadiga-openos"
-    if not openos_root.is_dir():
+def _discover_digaos_modules(root: Path) -> list[str]:
+    digaos_root = root / "firmware" / "digaos"
+    if not digaos_root.is_dir():
         return []
     return sorted(
         p.relative_to(root).as_posix()
         for folder in ("boot", "hal", "drivers", "kernel")
-        for p in (openos_root / folder).iterdir()
+        if (digaos_root / folder).is_dir()
+        for p in (digaos_root / folder).iterdir()
         if p.is_file() and p.suffix in {".c", ".h", ".S", ".ld"}
     )
 
 
-def _discover_openos_shell_commands(root: Path) -> list[str]:
-    main_c = root / "firmware" / "panadiga-openos" / "kernel" / "openos_main.c"
+def _discover_digaos_shell_commands(root: Path) -> list[str]:
+    main_c = root / "firmware" / "digaos" / "kernel" / "digaos_main.c"
     if not main_c.is_file():
         return []
     text = _read_text(main_c)
@@ -208,8 +209,8 @@ def collect_arsenal(root: Path = ROOT) -> JsonDict:
     tauri_ipc = _discover_tauri_ipc(root)
     pico_cmds = _discover_pico_catalog(root)
     pico_c11_codecs = _discover_pico_c11_codecs(root)
-    openos_modules = _discover_openos_modules(root)
-    openos_shell_commands = _discover_openos_shell_commands(root)
+    digaos_modules = _discover_digaos_modules(root)
+    digaos_shell_commands = _discover_digaos_shell_commands(root)
 
     py_scripts = sorted(
         p.relative_to(root).as_posix()
@@ -240,8 +241,8 @@ def collect_arsenal(root: Path = ROOT) -> JsonDict:
         "tauri_ipc_commands": len(tauri_ipc),
         "pico_catalog_commands": len(pico_cmds),
         "pico_c11_codecs": len(pico_c11_codecs),
-        "openos_modules": len(openos_modules),
-        "openos_shell_commands": len(openos_shell_commands),
+        "digaos_modules": len(digaos_modules),
+        "digaos_shell_commands": len(digaos_shell_commands),
         "python_scripts": len(py_scripts),
         "ghidra_scripts": len(ghidra_scripts),
         "skills": len(skills),
@@ -257,8 +258,8 @@ def collect_arsenal(root: Path = ROOT) -> JsonDict:
         "tauri_ipc_commands": [str(x) for x in tauri_ipc],
         "pico_catalog_commands": [dict(p) for p in pico_cmds],
         "pico_c11_codecs": [str(x) for x in pico_c11_codecs],
-        "openos_modules": [str(x) for x in openos_modules],
-        "openos_shell_commands": [str(x) for x in openos_shell_commands],
+        "digaos_modules": [str(x) for x in digaos_modules],
+        "digaos_shell_commands": [str(x) for x in digaos_shell_commands],
         "python_scripts": [str(x) for x in py_scripts],
         "ghidra_scripts": [str(x) for x in ghidra_scripts],
         "skills": [dict(s) for s in skills],
@@ -288,8 +289,8 @@ def render_arsenal_markdown(inventory: JsonDict) -> str:
     tauri_ipc = [str(x) for x in _jlist(inventory["tauri_ipc_commands"]) if isinstance(x, str)]
     pico_cmds = [x for x in _jlist(inventory["pico_catalog_commands"]) if isinstance(x, dict)]
     pico_codecs = [str(x) for x in _jlist(inventory["pico_c11_codecs"]) if isinstance(x, str)]
-    openos_mods = [str(x) for x in _jlist(inventory["openos_modules"]) if isinstance(x, str)]
-    openos_cmds = [str(x) for x in _jlist(inventory["openos_shell_commands"]) if isinstance(x, str)]
+    digaos_mods = [str(x) for x in _jlist(inventory["digaos_modules"]) if isinstance(x, str)]
+    digaos_cmds = [str(x) for x in _jlist(inventory["digaos_shell_commands"]) if isinstance(x, str)]
     py_scripts = [str(x) for x in _jlist(inventory["python_scripts"]) if isinstance(x, str)]
     ghidra_scripts = [str(x) for x in _jlist(inventory["ghidra_scripts"]) if isinstance(x, str)]
     skills = [x for x in _jlist(inventory["skills"]) if isinstance(x, dict)]
@@ -312,10 +313,10 @@ def render_arsenal_markdown(inventory: JsonDict) -> str:
         f"| Famílias de Resources MCP | {counts['mcp_resource_families']} | `crates/panadiga-mcp/src/resources.rs` |",
         f"| Prompts MCP | {counts['mcp_prompts']} | `crates/panadiga-mcp/src/prompts.rs` |",
         f"| Comandos IPC Tauri 2 | {counts['tauri_ipc_commands']} | `apps/desktop/src-tauri/src/lib.rs` |",
-        f"| Comandos Sonda Pico `P7501` | {counts['pico_catalog_commands']} | `crates/panadiga-core/src/ssot/hardware_catalog.json` |",
-        f"| Codecs C11 Pico `P7501` | {counts['pico_c11_codecs']} | `firmware/pico-p7501/**/*codec*.c` |",
-        f"| Módulos `Panadiga OpenOS` | {counts['openos_modules']} | `firmware/panadiga-openos/` |",
-        f"| Comandos Shell `OpenOS` | {counts['openos_shell_commands']} | `firmware/panadiga-openos/kernel/openos_main.c` |",
+        f"| Comandos Sonda `PicoFW` (`P7501`) | {counts['pico_catalog_commands']} | `crates/panadiga-core/src/ssot/hardware_catalog.json` |",
+        f"| Codecs C11 `PicoFW` | {counts['pico_c11_codecs']} | `firmware/picofw/**/*codec*.c` |",
+        f"| Módulos `DigaOS` | {counts['digaos_modules']} | `firmware/digaos/` |",
+        f"| Comandos Shell `DigaOS` | {counts['digaos_shell_commands']} | `firmware/digaos/kernel/digaos_main.c` |",
         f"| Scripts Python Operacionais | {counts['python_scripts']} | `scripts/**/*.py` |",
         f"| Scripts Ghidra Jython | {counts['ghidra_scripts']} | `tools/ghidra/*.py` |",
         f"| Skills `.agents/skills/` | {counts['skills']} | `.agents/skills/*/SKILL.md` |",
@@ -334,11 +335,11 @@ def render_arsenal_markdown(inventory: JsonDict) -> str:
         "- **MCP Resources:** " + ", ".join(f"`{r}`" for r in mcp_res),
         "- **MCP Prompts:** " + ", ".join(f"`{p}`" for p in mcp_prompts),
         "",
-        "## 4. Comandos IPC Tauri 2 & Catálogo Pico `P7501`",
+        "## 4. Comandos IPC Tauri 2 & Catálogo `PicoFW` (`P7501`)",
         "",
         "- **Tauri IPC (`generate_handler!`):** " + ", ".join(f"`{c}`" for c in tauri_ipc),
         "",
-        "| Comando `P7501` | Categoria | Sintaxe | Restrito |",
+        "| Comando `PicoFW` | Categoria | Sintaxe | Restrito |",
         "| :--- | :--- | :--- | :--- |",
         *[
             f"| `{p['id']}` | `{p['category']}` | `{p['syntax']}` | {p['dangerous']} |"
@@ -352,11 +353,11 @@ def render_arsenal_markdown(inventory: JsonDict) -> str:
         "- **Skills:** " + ", ".join(f"`{s['name']}`" for s in skills),
         "- **Subagentes:** " + ", ".join(f"`{a['name']}`" for a in agents),
         "",
-        "## 6. Firmware Bare-Metal (`Pico P7501 C11` & `Panadiga OpenOS AM34`)",
+        "## 6. Firmware Bare-Metal (`PicoFW C11` & `DigaOS`)",
         "",
-        "- **Codecs C11 Pico:** " + ", ".join(f"`{c}`" for c in pico_codecs),
-        "- **Módulos OpenOS AM34:** " + ", ".join(f"`{m}`" for m in openos_mods),
-        "- **Comandos Shell OpenOS:** " + ", ".join(f"`{cmd}`" for cmd in openos_cmds),
+        "- **Codecs C11 PicoFW:** " + ", ".join(f"`{c}`" for c in pico_codecs),
+        "- **Módulos DigaOS:** " + ", ".join(f"`{m}`" for m in digaos_mods),
+        "- **Comandos Shell DigaOS:** " + ", ".join(f"`{cmd}`" for cmd in digaos_cmds),
         "",
     ]
     return "\n".join(lines)

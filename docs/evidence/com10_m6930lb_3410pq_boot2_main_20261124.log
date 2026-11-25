@@ -1,0 +1,687 @@
+=== PRE_STATUS [2026-11-25T02:24:29Z] ok=True ===
+VDD: 3.25V (OK)
+[STANDBY] RXD=1 NSW5V=1 TXD=1 XRESET=1 SW_PU=3.26V NSW5V_DROPS=123 fault_latch=0 recoveries=63 | State=POWERED / AWAKE (SW_UART ~3.3V)
+[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=91 wdt_recoveries=0 reboot_src=CLEAN fault_slot=255 fault_stage=IDLE last_cmd=IDENTIFY last_us=356367
+@P7501_RES cmd=STATUS status=OK code=0 elapsed_us=1764
+PANADIGA>
+
+
+=== BOOTTRACE 90000 NORMAL [2026-11-25T02:24:29Z] complete=True ===
+=== BOOTTRACE: window=90000ms boot=1 hold=0ms sticky=NO no_xrst=NO (8N1 @ 115200) ===
+[BOOTTRACE +  10ms] DDR CHECK: OK
+[BOOTTRACE +  19ms] Chip select = 1
+[BOOTTRACE +  20ms] F/E Address = 0x90202000 , Drive(compress) Size = 0xACC50
+[BOOTTRACE +  26ms] uncompress dst=90202000 len=160000 src=84080040 len=acc01
+[BOOTTRACE + 774ms] HEADER:5627DD54, DECOMP:5627DD54
+[BOOTTRACE + 777ms] F/E reset release finish ...
+[BOOTTRACE + 780ms] ***** Loader ver0.61 [06/03/06] *****
+[BOOTTRACE + 784ms] ***** normal mode *****
+[BOOTTRACE + 800ms] !!! start fmu to read & exec fvu. !!!
+[BOOTTRACE + 804ms] wait 1 second.
+[BOOTTRACE +1806ms] *** timer correspond initialize ***
+[BOOTTRACE +1811ms] startup reason = [41]
+[BOOTTRACE +1815ms] Main hung-up time changed 255[s].
+[BOOTTRACE +1827ms] *** RTSC Initialize ***
+[BOOTTRACE +4606ms] [RTSD] ATAPI Software Reset 
+[BOOTTRACE +4609ms] error! startup reason is invalid.
+[BOOTTRACE +7023ms] DDR CHECK: OK
+[BOOTTRACE +7032ms] Chip select = 1
+[BOOTTRACE +7034ms] F/E Address = 0x90202000 , Drive(compress) Size = 0xACC50
+[BOOTTRACE +7039ms] uncompress dst=90202000 len=160000 src=84080040 len=acc01
+[BOOTTRACE +7787ms] HEADER:5627DD54, DECOMP:5627DD54
+[BOOTTRACE +7791ms] F/E reset release finish ...
+[BOOTTRACE +7794ms] ***** Loader ver0.61 [06/03/06] *****
+[BOOTTRACE +7797ms] ***** normal mode *****
+[BOOTTRACE +7814ms] *** RTSC Initialize ***
+[BOOTTRACE +10547ms] [RTSD] ATAPI Software Reset 
+[BOOTTRACE +10560ms] [RTSD] HDD spin-up error (80000404)
+[BOOTTRACE +10564ms] miniboot : system assert!!
+[BOOTTRACE +10566ms] [RTSD] === IDE HOST ERROR === ( E8000000 )
+[BOOTTRACE +10570ms] *** ATAPI DEVICE ERROR
+[BOOTTRACE +10572ms] CDB  [FF EC 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +10576ms] Reg[00 00 00 00 00 00 00 : Err SecC SecN CylL CylH D/H Status] 
+[BOOTTRACE +10582ms] H_STAT [E8] T_STAT [0]
+[BOOTTRACE +10584ms] [RTSD] SRST Command Set
+[BOOTTRACE +10586ms] [RTSD] Reset Failed !! (80000407)
+[BOOTTRACE +10599ms] [RTSD] HDD spin-up error (80000404)
+[BOOTTRACE +10603ms] miniboot : system assert!!
+[BOOTTRACE +10605ms] [RTSD] === IDE HOST ERROR === ( E8000000 )
+[BOOTTRACE +10609ms] *** ATAPI DEVICE ERROR
+[BOOTTRACE +10611ms] CDB  [FF EC 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +10615ms] Reg[00 00 00 00 00 00 00 : Err SecC SecN CylL CylH D/H Status] 
+[BOOTTRACE +10621ms] H_STAT [E8] T_STAT [0]
+[BOOTTRACE +10623ms] [RTSD] SRST Command Set
+[BOOTTRACE +10625ms] [RTSD] Reset Failed !! (80000407)
+[BOOTTRACE +10638ms] [RTSD] HDD spin-up error (80000404)
+[BOOTTRACE +10642ms] miniboot : system assert!!
+[BOOTTRACE +10644ms] [RTSD] === IDE HOST ERROR === ( E8000000 )
+[BOOTTRACE +10648ms] *** ATAPI DEVICE ERROR
+[BOOTTRACE +10650ms] CDB  [FF EC 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +10654ms] Reg[00 00 00 00 00 00 00 : Err SecC SecN CylL CylH D/H Status] 
+[BOOTTRACE +10660ms] H_STAT [E8] T_STAT [0]
+[BOOTTRACE +10662ms] [RTSD] SRST Command Set
+[BOOTTRACE +10664ms] [RTSD] Reset Failed !! (80000407)
+[BOOTTRACE +10668ms] HDD_MAX_LBA get failed[0xE8000000].
+[BOOTTRACE +10671ms] mainsoft data is invalid, so set update flag.
+[BOOTTRACE +10692ms] [nfrom] file_no[17],skip(0),non_skip(1),erase(0),new_write(0).
+[BOOTTRACE +10707ms] !!! start fmu to read & exec fvu. !!!
+[BOOTTRACE +10711ms] wait 1 second.
+[BOOTTRACE +11712ms] *** timer correspond initialize ***
+[BOOTTRACE +11717ms] startup reason = [41]
+[BOOTTRACE +11723ms] Main hung-up time changed 255[s].
+[BOOTTRACE +11737ms] Read fvu program from Update-Disk to 0x90400000.
+[BOOTTRACE +11742ms] SD card check start
+[BOOTTRACE +11743ms] SD init start...
+[BOOTTRACE +11765ms] [SDCD] sdcd_insrmv_check:SD Card remove 
+[BOOTTRACE +11769ms] [SDCD] === This Card removed ==== 
+[BOOTTRACE +11772ms] ... SD init end
+[BOOTTRACE +11774ms] SD info get failed[-90001]. But, DVD-RAM/CD verup check start.
+[BOOTTRACE +11810ms] [RTSD] Device Reset Occurred(0x62900) 
+[BOOTTRACE +11814ms] X(80062900)X(80023a00)** startup drive **
+[BOOTTRACE +11831ms] X(80020401)59,X(80020401)58,X(80020401)57,X(80020401)56,X(80020401)55,X(80020401)54,X(80020401)53,X(80020401)52,[RTSD] === DRIVE ACCESS ERROR === ( 80040904 )
+[BOOTTRACE +19928ms] *** CDB  [00 00 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +19932ms] *** SENSE[70 00 04 00 00 00 00 0A 00 00 83 A7 09 04 00 00 00 00] 
+[BOOTTRACE +19938ms] H_STAT [0] T_STAT [2]
+[BOOTTRACE +19940ms] X(80040904)51,[RTSD] === DRIVE ACCESS ERROR === ( 80040904 )
+[BOOTTRACE +20952ms] *** CDB  [00 00 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +20956ms] *** SENSE[70 00 04 00 00 00 00 0A 00 00 83 A7 09 04 00 00 00 00] 
+[BOOTTRACE +20962ms] H_STAT [0] T_STAT [2]
+[BOOTTRACE +20964ms] X(80040904)50,[RTSD] === DRIVE ACCESS ERROR === ( 80040904 )
+[BOOTTRACE +21976ms] *** CDB  [00 00 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +21980ms] *** SENSE[70 00 04 00 00 00 00 0A 00 00 83 A7 09 04 00 00 00 00] 
+[BOOTTRACE +21986ms] H_STAT [0] T_STAT [2]
+[BOOTTRACE +21988ms] X(80040904)49,[RTSD] === DRIVE ACCESS ERROR === ( 80040904 )
+[BOOTTRACE +23000ms] *** CDB  [00 00 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +23004ms] *** SENSE[70 00 04 00 00 00 00 0A 00 00 83 A7 09 04 00 00 00 00] 
+[BOOTTRACE +23010ms] H_STAT [0] T_STAT [2]
+[BOOTTRACE +23012ms] X(80040904)48,[RTSD] === DRIVE ACCESS ERROR === ( 80040904 )
+[BOOTTRACE +24024ms] *** CDB  [00 00 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +24028ms] *** SENSE[70 00 04 00 00 00 00 0A 00 00 83 A7 09 04 00 00 00 00] 
+[BOOTTRACE +24034ms] H_STAT [0] T_STAT [2]
+[BOOTTRACE +24036ms] X(80040904)47,[RTSD] === DRIVE ACCESS ERROR === ( 80040904 )
+[BOOTTRACE +25048ms] *** CDB  [00 00 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +25052ms] *** SENSE[70 00 04 00 00 00 00 0A 00 00 83 A7 09 04 00 00 00 00] 
+[BOOTTRACE +25058ms] H_STAT [0] T_STAT [2]
+[BOOTTRACE +25060ms] X(80040904)46,[RTSD] === DRIVE ACCESS ERROR === ( 80040904 )
+[BOOTTRACE +26072ms] *** CDB  [00 00 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +26076ms] *** SENSE[70 00 04 00 00 00 00 0A 00 00 83 A7 09 04 00 00 00 00] 
+[BOOTTRACE +26082ms] H_STAT [0] T_STAT [2]
+[BOOTTRACE +26084ms] X(80040904)45,[RTSD] === DRIVE ACCESS ERROR === ( 80040904 )
+[BOOTTRACE +27096ms] *** CDB  [00 00 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +27100ms] *** SENSE[70 00 04 00 00 00 00 0A 00 00 83 A7 09 04 00 00 00 00] 
+[BOOTTRACE +27106ms] H_STAT [0] T_STAT [2]
+[BOOTTRACE +27108ms] X(80040904)44,[RTSD] === DRIVE ACCESS ERROR === ( 80040904 )
+[BOOTTRACE +28120ms] *** CDB  [00 00 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +28124ms] *** SENSE[70 00 04 00 00 00 00 0A 00 00 83 A7 09 04 00 00 00 00] 
+[BOOTTRACE +28130ms] H_STAT [0] T_STAT [2]
+[BOOTTRACE +28132ms] X(80040904)43,[RTSD] === DRIVE ACCESS ERROR === ( 80040904 )
+[BOOTTRACE +29144ms] *** CDB  [00 00 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +29148ms] *** SENSE[70 00 04 00 00 00 00 0A 00 00 83 A7 09 04 00 00 00 00] 
+[BOOTTRACE +29154ms] H_STAT [0] T_STAT [2]
+[BOOTTRACE +29156ms] X(80040904)42,DDR CHECK: OK
+[BOOTTRACE +31603ms] Chip select = 1
+[BOOTTRACE +31605ms] F/E Address = 0x90202000 , Drive(compress) Size = 0xACC50
+[BOOTTRACE +31610ms] uncompress dst=90202000 len=160000 src=84080040 len=acc01
+[BOOTTRACE +32359ms] HEADER:5627DD54, DECOMP:5627DD54
+[BOOTTRACE +32363ms] F/E reset release finish ...
+[BOOTTRACE +32365ms] ***** Loader ver0.61 [06/03/06] *****
+[BOOTTRACE +32369ms] ***** normal mode *****
+[BOOTTRACE +32386ms] !!! start fmu to read & exec fvu. !!!
+[BOOTTRACE +32390ms] wait 1 second.
+[BOOTTRACE +33391ms] *** timer correspond initialize ***
+[BOOTTRACE +33398ms] startup reason = [41]
+[BOOTTRACE +33404ms] Main hung-up time changed 255[s].
+[BOOTTRACE +33412ms] *** RTSC Initialize ***
+[BOOTTRACE +36192ms] [RTSD] ATAPI Software Reset 
+[BOOTTRACE +36195ms] error! startup reason is invalid.
+[BOOTTRACE +37766ms] DDR CHECK: OK
+[BOOTTRACE +37775ms] Chip select = 1
+[BOOTTRACE +37777ms] F/E Address = 0x90202000 , Drive(compress) Size = 0xACC50
+[BOOTTRACE +37783ms] uncompress dst=90202000 len=160000 src=84080040 len=acc01
+[BOOTTRACE +38530ms] HEADER:5627DD54, DECOMP:5627DD54
+[BOOTTRACE +38534ms] F/E reset release finish ...
+[BOOTTRACE +38537ms] ***** Loader ver0.61 [06/03/06] *****
+[BOOTTRACE +38540ms] ***** normal mode *****
+[BOOTTRACE +38557ms] *** RTSC Initialize ***
+[BOOTTRACE +41289ms] [RTSD] ATAPI Software Reset 
+[BOOTTRACE +41302ms] [RTSD] HDD spin-up error (80000404)
+[BOOTTRACE +41306ms] miniboot : system assert!!
+[BOOTTRACE +41308ms] [RTSD] === IDE HOST ERROR === ( E8000000 )
+[BOOTTRACE +41312ms] *** ATAPI DEVICE ERROR
+[BOOTTRACE +41314ms] CDB  [FF EC 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +41319ms] Reg[00 00 00 00 00 00 00 : Err SecC SecN CylL CylH D/H Status] 
+[BOOTTRACE +41324ms] H_STAT [E8] T_STAT [0]
+[BOOTTRACE +41326ms] [RTSD] SRST Command Set
+[BOOTTRACE +41328ms] [RTSD] Reset Failed !! (80000407)
+[BOOTTRACE +41342ms] [RTSD] HDD spin-up error (80000404)
+[BOOTTRACE +41345ms] miniboot : system assert!!
+[BOOTTRACE +41348ms] [RTSD] === IDE HOST ERROR === ( E8000000 )
+[BOOTTRACE +41352ms] *** ATAPI DEVICE ERROR
+[BOOTTRACE +41353ms] CDB  [FF EC 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +41358ms] Reg[00 00 00 00 00 00 00 : Err SecC SecN CylL CylH D/H Status] 
+[BOOTTRACE +41364ms] H_STAT [E8] T_STAT [0]
+[BOOTTRACE +41365ms] [RTSD] SRST Command Set
+[BOOTTRACE +41368ms] [RTSD] Reset Failed !! (80000407)
+[BOOTTRACE +41381ms] [RTSD] HDD spin-up error (80000404)
+[BOOTTRACE +41384ms] miniboot : system assert!!
+[BOOTTRACE +41387ms] [RTSD] === IDE HOST ERROR === ( E8000000 )
+[BOOTTRACE +41391ms] *** ATAPI DEVICE ERROR
+[BOOTTRACE +41393ms] CDB  [FF EC 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +41397ms] Reg[00 00 00 00 00 00 00 : Err SecC SecN CylL CylH D/H Status] 
+[BOOTTRACE +41403ms] H_STAT [E8] T_STAT [0]
+[BOOTTRACE +41405ms] [RTSD] SRST Command Set
+[BOOTTRACE +41407ms] [RTSD] Reset Failed !! (80000407)
+[BOOTTRACE +41410ms] HDD_MAX_LBA get failed[0xE8000000].
+[BOOTTRACE +41413ms] mainsoft data is invalid, so set update flag.
+[BOOTTRACE +41434ms] [nfrom] file_no[17],skip(0),non_skip(1),erase(0),new_write(0).
+[BOOTTRACE +41449ms] !!! start fmu to read & exec fvu. !!!
+[BOOTTRACE +41453ms] wait 1 second.
+[BOOTTRACE +42454ms] *** timer correspond initialize ***
+[BOOTTRACE +42460ms] startup reason = [41]
+[BOOTTRACE +42466ms] Main hung-up time changed 255[s].
+[BOOTTRACE +42475ms] Read fvu program from Update-Disk to 0x90400000.
+[BOOTTRACE +42480ms] SD card check start
+[BOOTTRACE +42481ms] SD init start...
+[BOOTTRACE +42573ms] [SDCD] sdcd_insrmv_check:SD Card inserted 
+[BOOTTRACE +42830ms] [SDCD] === This Card Spec ==== 
+[BOOTTRACE +42833ms] .Card type:2(condition:3) wp:0
+[BOOTTRACE +42836ms] .capacity:3c4000[LBA](2021654528Byte) . transfer speed:25000[Kbps]
+[BOOTTRACE +42842ms] .RCA:2 . Bus Width:4(current) 4(support)
+[BOOTTRACE +42845ms] .Multi Max Block Len Read:2[SECT] / Write:2[SECT]
+[BOOTTRACE +42850ms] SD = 0x3C4000[LBA]
+[BOOTTRACE +42851ms] ... SD init end
+[BOOTTRACE +42859ms] FAT Mount ID = 0x1
+[BOOTTRACE +42864ms] FAT Open Old File ID = 0xC8
+[BOOTTRACE +42867ms] treat as SD.
+[BOOTTRACE +42886ms] File ID[0xC8] seek to 0xB1800.
+[BOOTTRACE +42954ms] File ID[0xC8] read to 0x90400000(size=0x40000).
+[BOOTTRACE +42959ms] cheking for fvu program check-sum[0x2162766].
+[BOOTTRACE +43044ms] [nfrom] file_no[17],skip(0),non_skip(1),erase(0),new_write(0).
+[BOOTTRACE +43060ms] success to read fvu program from Update-Disc.
+[BOOTTRACE +43095ms] [RTSD] Device Reset Occurred(0x62900) 
+[BOOTTRACE +43099ms] X(80062900)X(80023a00)X(80023a00)X(80023a00)
+[BOOTTRACE +43106ms] *** start fvu ***
+[BOOTTRACE +43114ms] ***** Fvu ver0.61 [05/11/01] *****
+[BOOTTRACE +43131ms] *** RTSC Initialize ***
+[BOOTTRACE +46321ms] [RTSD] ATAPI Software Reset 
+[BOOTTRACE +46324ms] [HDD_AUTOBOOT] SATA HDD boot ('F'->FVU)...
+[BOOTTRACE +46828ms] SD init start...
+[BOOTTRACE +46920ms] [SDCD] sdcd_insrmv_check:SD Card inserted 
+[BOOTTRACE +46991ms] [SDCD] === This Card Spec ==== 
+[BOOTTRACE +46994ms] .Card type:2(condition:3) wp:0
+[BOOTTRACE +46997ms] .capacity:3c4000[LBA](2021654528Byte) . transfer speed:25000[Kbps]
+[BOOTTRACE +47003ms] .RCA:2 . Bus Width:4(current) 4(support)
+[BOOTTRACE +47007ms] .Multi Max Block Len Read:2[SECT] / Write:2[SECT]
+[BOOTTRACE +47011ms] SD = 0x3C4000[LBA]
+[BOOTTRACE +47013ms] ... SD init end
+[BOOTTRACE +47018ms] [RTSD] HDD already spin-up 
+[BOOTTRACE +47052ms] [RTSD] HDD Auto Spin up Mode 
+[BOOTTRACE +47058ms] [HDD_AUTOBOOT] HDD MAX LBA=0x1D1C5970
+[BOOTTRACE +48916ms] uncompress dst=57000000 len=c6692c src=94000040 len=5e7c5b
+[BOOTTRACE +52632ms] HEADER:BE98443E, DECOMP:BE98443E
+[BOOTTRACE +52635ms] [HDD_AUTOBOOT] Boot MAIN @ 0x57000000
+[BOOTTRACE +53219ms] [nfrom] DeviceInfo(EEPROM : 8Kbit)
+[BOOTTRACE +53225ms] **************************************************
+[BOOTTRACE +53230ms] [ftrec]Simple obstacle history
+[BOOTTRACE +53233ms] [ftrec]Running time  : 60374 [s]
+[BOOTTRACE +53236ms] [ftrec]Fault history : 20
+[BOOTTRACE +53239ms] [ftrec]NAND-FROM read error! Fault history clear!
+[BOOTTRACE +53243ms] --------------------------------------------------
+[BOOTTRACE +53248ms] kind, tick, running, other1, other2, other3
+[BOOTTRACE +53252ms] [ 0]0x4 , 2006/01/01 00:00:00 ,     60374 , src/fpcmain.c , 963 , 0
+[BOOTTRACE +53259ms] [ 1]0x4 , 2006/01/01 00:00:00 ,     60374 , src/fpcmain.c , 963 , 0
+[BOOTTRACE +53265ms] [ 2]0x4 , 2006/01/01 00:00:00 ,     60374 , src/fpcmain.c , 963 , 0
+[BOOTTRACE +53271ms] [ 3]0x4 , 2006/01/01 00:00:00 ,     60366 , src/fpcmain.c , 963 , 0
+[BOOTTRACE +53278ms] [ 4]0x4 , 2006/01/01 00:00:00 ,     60366 , src/fpcmain.c , 963 , 0
+[BOOTTRACE +53284ms] [ 5]0x4 , 2006/01/01 00:00:00 ,     60366 , src/fpcmain.c , 963 , 0
+[BOOTTRACE +53290ms] [ 6]0x4 , 2006/01/01 00:00:00 ,     60365 , src/fpcmain.c , 963 , 0
+[BOOTTRACE +53296ms] [ 7]0x4 , 2006/01/01 00:00:00 ,     60365 , src/fpcmain.c , 963 , 0
+[BOOTTRACE +53303ms] [ 8]0x4 , 2006/01/01 00:00:00 ,     60365 , src/fpcmain.c , 963 , 0
+[BOOTTRACE +53309ms] [ 9]0x4 , 2006/01/01 00:00:00 ,     60335 , src/fpcmain.c , 963 , 0
+[BOOTTRACE +53315ms] [10]0x4 , 2006/01/01 00:00:00 ,     60335 , src/fpcmain.c , 963 , 0
+[BOOTTRACE +53322ms] [11]0x4 , 2006/01/01 00:00:00 ,     60335 , src/fpcmain.c , 963 , 0
+[BOOTTRACE +53328ms] [12]0x4 , 2006/01/01 00:00:00 ,     60328 , src/fpcmain.c , 963 , 0
+[BOOTTRACE +53334ms] [13]0x4 , 2006/01/01 00:00:00 ,     60327 , src/fpcmain.c , 963 , 0
+[BOOTTRACE +53341ms] [14]0x4 , 2006/01/01 00:00:00 ,     60327 , src/fpcmain.c , 963 , 0
+[BOOTTRACE +53347ms] [15]0x4 , 2006/01/01 00:00:00 ,     60327 , src/fpcmain.c , 963 , 0
+[BOOTTRACE +53353ms] [16]0x4 , 2006/01/01 00:00:00 ,     60327 , src/fpcmain.c , 963 , 0
+[BOOTTRACE +53359ms] [17]0x4 , 2006/01/01 00:00:00 ,     60327 , src/fpcmain.c , 963 , 0
+[BOOTTRACE +53366ms] [18]0x4 , 2006/01/01 00:00:00 ,     60297 , src/fpcmain.c , 963 , 0
+[BOOTTRACE +53372ms] [19]0x4 , 2006/01/01 00:00:00 ,     60297 , src/fpcmain.c , 963 , 0
+[BOOTTRACE +53378ms] **************************************************
+[BOOTTRACE +53383ms] PiE-OS --- Personal Information & Entertainment - Operating System
+[BOOTTRACE +53389ms] Copyright (c) 1996-2001 by Matsushita Electric Industrial Co., Ltd.
+[BOOTTRACE +53396ms]   DVD Recorder DMR5x Series System Version : 3410PQ (2006/10/20)
+[BOOTTRACE +53402ms]     Factory System Version = 3410PQ
+[BOOTTRACE +53405ms]           1394avc.a Ver2.17(2006/02/09) : 1394AVC
+[BOOTTRACE +53410ms]            lnx_dd.a Ver2.01(2005/10/26) : 1394dd
+[BOOTTRACE +53414ms]               hsb.a Ver2.01(2005/09/12) : 1394lib
+[BOOTTRACE +53419ms]            fpc.a V7.0R122.8 (2006/6/20) : FPC(FrontPanelCommunication)
+[BOOTTRACE +53425ms]              log.a Ver1.76 (2005/12/05) : LOG Module
+[BOOTTRACE +53430ms]           ptk.a(M6) 2.2.06 (2006/01/17) : PiE-Toolkit
+[BOOTTRACE +53435ms]            timer.a V4.62.4 (2006/02/15) : Timer
+[BOOTTRACE +53440ms]        TitleSort.a Ver1.00 (2005/08/27) : Title Sort Module
+[BOOTTRACE +53445ms]        tuner.a V7.0R104.11 (2006/05/30) : Tuner I/F
+[BOOTTRACE +53450ms]            vbisl.a V2.0R21 (2005/12/26) : Vbisl Driver
+[BOOTTRACE +53455ms]             avin.a Ver0.82 (2006/06/30) : AVIN Lib.(mv3base)
+[BOOTTRACE +53461ms]         cd_core.a Ver 5.02 (2005/09/14) : CD/VCD CoreSoft
+[BOOTTRACE +53466ms]            davis.a ver2.10 (2006/01/16) : DAVIS
+[BOOTTRACE +53471ms]       decoder.a(DCS) Ver3.10 2005/12/16 : Decorder System Control
+[BOOTTRACE +53477ms]  decoder.a(DCR) DCR Ver2.120 2005/11/30 : DecorderVideoRecording
+[BOOTTRACE +53483ms]          decoder.a Ver0.49 (2005/05/20) : Decorder CD
+[BOOTTRACE +53488ms]    decoder.a(DCO) Ver0.078 (2006/04/17) : Decorder AVOUT
+[BOOTTRACE +53493ms]     decoder.a(DCV) Ver0.23 (2005/12/26) : M6xxx-Series Decorder DVD-Video
+[BOOTTRACE +53500ms]          decoder.a Ver0.73 (2005/11/21) : Decorder Video-CD
+[BOOTTRACE +53506ms]     decoder.a(DCA) Ver0.16 (2005/10/07) : M7xxx-Series Decorder DVD-Audio
+[BOOTTRACE +53513ms]          decoder.a Ver0.49 (2005/10/04) : Decorder MP3
+[BOOTTRACE +53518ms]          decoder.a Ver0.08 (2004/05/21) : Decorder SD MPEG2
+[BOOTTRACE +53523ms]          decoder.a Ver0.42 (2006/01/24) : Decorder AVI
+[BOOTTRACE +53528ms]              dml.a Ver1.00 (2004/10/20) : DiscManagementLibrary
+[BOOTTRACE +53534ms]              dvdcore.a v0.190(06/01/27) : DVD-Video/AudioCoreSoft
+[BOOTTRACE +53540ms]            dvdcore_ext.a v1.2(05/11/18) : DVD-Video/AudioCoreSoft
+[BOOTTRACE +53547ms]         dvr_core.a Ver0.781(2006/05/24) : DVR CORE
+[BOOTTRACE +53551ms]          dvr_ifo.a Ver0.02 (2003/10/22) : RTR_IFO Manager
+[BOOTTRACE +53557ms]                                                                                                                                                                
+[BOOTTRACE +53572ms]                                                                                              SRISC VerMv3SriscDrs-v0.90r037 (2005/10/11) : ENCODER-SRISC
+[BOOTTRACE +53586ms]                                                                                                                                                                
+[BOOTTRACE +53601ms]                                                                                           ERISC VerMv3RomEriscRAM-v0.90r010 (2005/11/07) : ENCODER-ERISC
+[BOOTTRACE +53615ms]               eif.a Ver0.08(2005/11/08) : Encoder I/F
+[BOOTTRACE +53619ms]              evp.a Ver0.07 (2004/06/08) : EVP Lib.
+[BOOTTRACE +53624ms]            fcore.a Ver0.25 (2006/01/10) : Finalize Core Module
+[BOOTTRACE +53629ms]             flib.a Ver0.28 (2005/12/06) : Finalize-Library.
+[BOOTTRACE +53635ms]        fs.a       Ver0.70e (2006/07/05) : File System (VDM Ver.0.92base)
+[BOOTTRACE +53642ms]         fs.a(HDFS) Ver0.80 (2006/02/07) : File System (HDFS)
+[BOOTTRACE +53647ms]         fs.a(UDF)  Ver0.12 (2005/08/31) : File System (UDF)
+[BOOTTRACE +53653ms]            ftrec.a Ver0.10 (2005/11/01) : FTREC
+[BOOTTRACE +53657ms]              iic.a Ver3.04 (2005/09/29) : IIC Lib.
+[BOOTTRACE +53662ms]         input.a 3.0.5(M6)  (2005/12/19) : PiE Input
+[BOOTTRACE +53667ms]              irq.a Ver0.22 (2005/09/05) : IRQ Lib
+[BOOTTRACE +53672ms]        jpg_core.a Ver4.131 (2005/12/15) : JPEG CoreSoft
+[BOOTTRACE +53677ms]        ld_gen.a Ver 0.14.0 (2005/10/28) : LD_gen - generic file loader
+[BOOTTRACE +53684ms]                lda.a Ver0.28 2005/08/25 : DVD-AUDIO Loader
+[BOOTTRACE +53689ms]      loader_vcd.a Ver 0.13 (2005/08/25) : Loder VCD/CD-DA
+[BOOTTRACE +53694ms]             ldg.a Ver 0.08 (2004/05/21) : Loder SD MPEG2
+[BOOTTRACE +53700ms]             ldm.a Ver 0.13 (2005/08/23) : Loder MP3
+[BOOTTRACE +53704ms]             ldr.a ver 0.203(2005/10/12) : RAM Loader
+[BOOTTRACE +53709ms]                ldv.a v0.100(2005/12/28) : DVDVideo Loader
+[BOOTTRACE +53715ms]              mbm.a Ver1.48 (2005/11/24) : Memory Back UP System
+[BOOTTRACE +53721ms]        mcm.a ver Ver 2.264 (2005/12/19) : MCM
+[BOOTTRACE +53725ms]           fmupre.a Ver0.28 (2005/11/30) : pre-update-firm
+[BOOTTRACE +53730ms]       mp3_core.a Ver1.09.5 (2005/11/30) : MP3 CoreSoft
+[BOOTTRACE +53735ms]            nfrom.a Ver0.33 (2005/12/06) : Nor-FROM Lib.
+[BOOTTRACE +53741ms]           nmi.a Ver 0.10.0 (2006/04/14) : NMI Handler Lib.
+[BOOTTRACE +53746ms]           robust.a Ver0.038(2003/12/26) : Robust
+[BOOTTRACE +53751ms]             rtscdd.a K0.58 (2006/07/05) : RTSD
+[BOOTTRACE +53755ms]     rtsdauth.a Ver0.15-MV3 (2005/12/14) : Copyright
+[BOOTTRACE +53760ms]           serial.a Ver0.33 (2005/06/28) : Debug Serial
+[BOOTTRACE +53765ms]    sys_boot.a Ver6.0.076.03(2006/03/14) : sys_boot(M6)
+[BOOTTRACE +53770ms]           sys_cd.a Ver 7.06(2005/11/02) : CD Media App
+[BOOTTRACE +53775ms]    sys_cntl.a Ver6.0.143.19(2006/05/12) : sys_cntl(M6)
+[BOOTTRACE +53780ms]        sys_dvdv.a Ver 1.054(2005/11/02) : M6 :DVD-Video System App 
+[BOOTTRACE +53787ms]      sys_epgeuro.a Ver0.314(2006/08/03) : sys_epgeuro
+[BOOTTRACE +53792ms]    sys_fact.a Ver.M6.065.09(2006/06/10) : Fact App.
+[BOOTTRACE +53797ms]      sys_fip.a Ver0.093.01 (2006/02/16) : FL&OSD Control
+[BOOTTRACE +53802ms]         sys_font.a Ver1.58 (2005/10/21) : sys_font
+[BOOTTRACE +53807ms]    sys_guibar.a Ver2.27.01 (2006/01/27) : GUIbar Lib (M6)
+[BOOTTRACE +53812ms]     sys_init.a Ver0.128.003(2006/03/02) : Initial Setting(M6920)
+[BOOTTRACE +53818ms]                                                                                                                                                                
+[BOOTTRACE +53835ms]                                                                                                sys_media.a Ver2.266.6920.06 (2006/05/16) : SYS_MEDIA
+[BOOTTRACE +53848ms]        sys_mp3.a Ver 0.48.0(2005/09/28) : MP3 Media App
+[BOOTTRACE +53853ms]       sys_msg.a Ver0.46.01 (2006/03/23) : MSG TASK(M6Series)
+[BOOTTRACE +53859ms] sys_navi.a Ver 1.03.122.06 (2006/03/17) : navi-gui app.
+[BOOTTRACE +53864ms]    sys_rsv.a Ver1.02.103.10(2006/10/19) : TimerREC App.(M6:PAL:DVD.HDD)
+[BOOTTRACE +53871ms]       sys_serv.a Ver.M6.025(2005/12/28) : Serv App.
+[BOOTTRACE +53875ms]           sys_ss.a Ver0.18 (2005/11/28) : SYS_SS TASK
+[BOOTTRACE +53880ms]      sys_text.a Ver6.0.006 (2006/01/11) : Soft-Keyboard
+[BOOTTRACE +53886ms]       sys_tun.a Ver0.381.02(2006/03/14) : Tuner App.(M6)
+[BOOTTRACE +53891ms]             time.a V7.0R03 (2005/12/15) : Clock & Calendar
+[BOOTTRACE +53897ms]          version.a Ver0.27  (2004/9/08) : Version Display Lib.
+[BOOTTRACE +53903ms]        wincap.a 4.0.4(M6)  (2005/11/29) : PiE WinCAP
+[BOOTTRACE +53908ms]                 kernel.a Ver 2005/10/11 : Kernel(M6_MV3Base) V2.0-1-5
+[BOOTTRACE +53914ms]          Dub_core.a Ver0.24(2005/12/21) : Dub_core
+[BOOTTRACE +53919ms]             avrec.a Ver0.13(2005/11/14) : AVREC
+[BOOTTRACE +53923ms]      decoder_jpg.a 0.11.0  (2005/12/02) : Decoder JPEG
+[BOOTTRACE +53929ms]        decoder_thu.a 1.04  (2005/12/06) : Thumbnail(MV3)
+[BOOTTRACE +53934ms]        divx_core.a Ver1.41 (2006/05/08) : DIVX CoreSoft
+[BOOTTRACE +53939ms]         fs.a(SDM)  Ver1.35 (2005/10/25) : File System (SDM)
+[BOOTTRACE +53945ms]                                                                                                                                                                
+[BOOTTRACE +53960ms]                                                                                                 GuideEuro.a Ver0.315/0.55_03(2006/08/03) : GuideEuro
+[BOOTTRACE +53974ms] sys_app_lib.a Ver6.0.270.03(2006/10/19) : sys_app_lib(M6)
+[BOOTTRACE +53978ms] [SYS_BOOT]FPC_init... 
+[BOOTTRACE +53980ms] [SYS_CNTL]SYS_CNTL_InitDeckMode
+[BOOTTRACE +53983ms] [SYS_CNTL]SYS_CNTL_InitDeckMode completed.
+[BOOTTRACE +53987ms] [SYS_CNTL]WakeupReason:[P50(11)]
+[BOOTTRACE +53990ms] [SYS_CNTL]KeyAction   :NEW[15] OLD[0]
+[BOOTTRACE +53994ms] [FPC]fpc_ChangeKeyCodeInit 
+[BOOTTRACE +53997ms] [FPC]FPC_ReciveTASK() : 00 41 20 01 00 00 12 06 00 02 00 00 00 00 00 7C 
+[BOOTTRACE +54004ms] [SYS_BOOT]FPC_GetPowerOnReason 0x41 0x20 0x0
+[BOOTTRACE +54008ms] [SYS_BOOT]RegionCode(EEPROM) [0x04]
+[BOOTTRACE +54011ms] [FPC]FPC_ReciveTASK() : 7F E4 01 01 00 00 12 06 00 02 00 00 00 00 00 7F 
+[BOOTTRACE +54018ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +54021ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +54024ms] [FPC]FPC_ReciveTASK() : 65 E4 07 4D 31 C5 60 00 00 00 00 00 00 00 00 F3 
+[BOOTTRACE +54031ms] [FPC]FPC_ReciveTASK() : 7D 00 70 52 41 00 00 00 00 02 02 05 11 02 00 9C 
+[BOOTTRACE +54038ms] [SYS_BOOT]Timer Version [022]
+[BOOTTRACE +54040ms] [FPC]num = 0 size=247 [0x0 0x2 0x8 0x48 0x41]
+[BOOTTRACE +54045ms] [FPC]FPC_ReciveTASK() : 67 F0 04 11 00 06 35 85 00 00 00 00 00 00 00 2C 
+[BOOTTRACE +54052ms] [SYS_BOOT]reading system info on EEPROM ... ok
+[BOOTTRACE +54056ms] [SYS_BOOT]H/W System  = M6930LB
+[BOOTTRACE +54059ms] [SYS_BOOT]model_code=0x07
+[BOOTTRACE +54061ms] [SYS_BOOT]market_code=PL(0x04)
+[BOOTTRACE +54064ms] [SYS_BOOT]OptionCode  = 0x31 0xC5 0x60 0x00 0x00 0x00
+[BOOTTRACE +54069ms] [SYS_BOOT]H/W Version = 0x0003
+[BOOTTRACE +54072ms] [FPC]FPC_ReciveTASK() : 7F 85 02 11 00 06 35 85 00 00 00 00 00 00 00 D7 
+[BOOTTRACE +54079ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +54082ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +54085ms] [FPC]FPC_ReciveTASK() : 7F F9 02 11 00 06 35 85 00 00 00 00 00 00 00 4B 
+[BOOTTRACE +54092ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +54095ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +83885ms] [FPC]RCV TIMEOUT GATE=15
+[BOOTTRACE +83888ms] [SYS_CNTL]FPC_CB_ReportEmergency(4)
+[BOOTTRACE +83892ms] [SYS_CNTL]FPC_EMERGENCY_TIMEOUT
+[BOOTTRACE +83895ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +83900ms] [SYS_CNTL]WakeupReason:[POWER(1)]
+[BOOTTRACE +83903ms] [SYS_CNTL]KeyAction   :NEW[15] OLD[0]
+[BOOTTRACE +83907ms] [SYS_BOOT]AVOUT_init
+[BOOTTRACE +83908ms] [DCS] AVDEC LSI : MV3BASE IROM 32bit
+[BOOTTRACE +83912ms] [DCS] DDR ALIGN_CHECK start....
+[BOOTTRACE +83915ms] [DCS] ALIGN OK 
+[BOOTTRACE +83916ms] [DCS] AVDEC version: avdd=0x5091622, ucode iop=0x809c, setup=0x8097, patch=0x199a
+[BOOTTRACE +83926ms] [FPC]FPC_ReciveTASK() : 7F 9B 02 01 00 00 30 06 00 02 00 00 00 00 00 55 
+[BOOTTRACE +83933ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +83936ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +83939ms] [FPC]FPC_ReciveTASK() : 7F A9 01 01 00 00 30 06 00 02 00 00 00 00 00 62 
+[BOOTTRACE +83946ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +83949ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +84133ms] [SYS_BOOT]AVOUT_init() success. 
+[BOOTTRACE +84137ms] [SYS_BOOT]DCJ_Init
+[BOOTTRACE +84138ms] [SYS_BOOT]DCJ_Init() success. 
+[BOOTTRACE +84285ms] [DCS]dco_api :AVOUT_A_Mute_ID: ON_ID[ALL]=2 , [EE]=0
+[BOOTTRACE +84300ms] [DCS]dco_api :AVOUT_V_Mute: onoff=1
+[BOOTTRACE +84317ms] [SYS_BOOT]CAV_Init1394
+[BOOTTRACE +84319ms] [SYS_BOOT]CAV_Init1394 success. 
+[BOOTTRACE +84323ms] [SYS_BOOT]AVIN_init
+[BOOTTRACE +84324ms] [AVIN]0: *** AVIN_init() *** (FF=1,CI=0,TN=2)
+[BOOTTRACE +84329ms] [AVIN] tsk_stat avin0010 inside_v0010 callback0010
+[BOOTTRACE +84335ms] [AVIN]0: avin_hw_input_source_select(SOURCE_TUNER,L/R,0) end.
+[BOOTTRACE +84341ms] [AVIN]1: avin_hw_input_source_select(SOURCE_TUNER,L/R,0) end.
+[BOOTTRACE +84347ms] [AVIN]0: *** AVIN_init() END ***
+[BOOTTRACE +84350ms] [SYS_BOOT]AVIN_init() success. 
+[BOOTTRACE +84353ms] [SYS_BOOT]CAV:N/PAL
+[BOOTTRACE +84355ms] [SYS_BOOT]TIM_Init
+[BOOTTRACE +84357ms] [1394avc]ctl: HSB_ini completion 
+[BOOTTRACE +84360ms] [FPC]FPC_ReciveTASK() : 7F FA 02 01 00 00 30 06 00 02 00 00 00 00 00 B4 
+[BOOTTRACE +84367ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +84370ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +84373ms] [FPC]FPC_ReciveTASK() : 7F E3 02 01 00 00 30 06 00 02 00 00 00 00 00 9D 
+[BOOTTRACE +84380ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +84383ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +84635ms] [FPC]RCV TIMEOUT GATE=14
+[BOOTTRACE +84637ms] [SYS_CNTL]FPC_CB_ReportEmergency(4)
+[BOOTTRACE +84641ms] [SYS_CNTL]FPC_EMERGENCY_TIMEOUT
+[BOOTTRACE +84645ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +84649ms] [DC0]dco_subseq_v_S1s2 call TUN_SelectS1S2: param0=1
+[BOOTTRACE +84654ms] [FPC]FPC_ReciveTASK() : 7F DA 01 01 00 00 30 06 00 02 00 00 00 00 00 93 
+[BOOTTRACE +84661ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +84665ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +84667ms] [FPC]FPC_ReciveTASK() : 7F DA 01 01 00 00 30 06 00 02 00 00 00 00 00 93 
+[BOOTTRACE +84675ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +84678ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +84770ms] [FPC]FPC_ReciveTASK() : 7F FA 02 01 00 00 31 06 00 02 00 00 00 00 00 B5 
+[BOOTTRACE +84778ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +84781ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +84784ms] [FPC]FPC_ReciveTASK() : 7F E3 02 01 00 00 31 06 00 02 00 00 00 00 00 9E 
+[BOOTTRACE +84791ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +84794ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +85065ms] [FPC]RCV TIMEOUT GATE=14
+[BOOTTRACE +85067ms] [SYS_CNTL]FPC_CB_ReportEmergency(4)
+[BOOTTRACE +85071ms] [SYS_CNTL]FPC_EMERGENCY_TIMEOUT
+[BOOTTRACE +85074ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +85079ms] [SYS_BOOT]TUN_Init
+[BOOTTRACE +85087ms] [FPC]FPC_ReciveTASK() : 7F E3 02 01 00 00 31 06 00 02 00 00 00 00 00 9E 
+[BOOTTRACE +85094ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +85097ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +85325ms] [1394avc]ctl: ICN_TASK start completion 
+[BOOTTRACE +85330ms] [1394avc]ctl: CAV_TASK start completion 
+[BOOTTRACE +85335ms] [1394avc]ctl: TAV_TASK start completion 
+[BOOTTRACE +85385ms] [FPC]RCV TIMEOUT GATE=14
+[BOOTTRACE +85388ms] [SYS_CNTL]FPC_CB_ReportEmergency(4)
+[BOOTTRACE +85391ms] [SYS_CNTL]FPC_EMERGENCY_TIMEOUT
+[BOOTTRACE +85394ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +85399ms] [FPC]FPC_ReciveTASK() : 7F EC 01 01 00 00 31 06 00 02 00 00 00 00 00 A6 
+[BOOTTRACE +85406ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +85409ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +85685ms] [FPC]RCV TIMEOUT GATE=39
+[BOOTTRACE +85688ms] [SYS_CNTL]FPC_CB_ReportEmergency(4)
+[BOOTTRACE +85692ms] [SYS_CNTL]FPC_EMERGENCY_TIMEOUT
+[BOOTTRACE +85695ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +85699ms] [SYS_BOOT]TUN_Init() success. 
+[BOOTTRACE +85702ms] [DCS]dco_api :AVOUT_AV_Select: video=8, audio=1
+[BOOTTRACE +85755ms] [DCS]dco_api :AVOUT_A_Mute_ID: ON_ID[ALL]=3 , [EE]=0
+[BOOTTRACE +85802ms] [DCO]Audio Output = L/R.
+[BOOTTRACE +85852ms] [DCS]dco_api :avout_API_MuteID = 0x1
+[BOOTTRACE +85885ms] [DCS]dco_api :AVOUT_A_Mute_ID: OFF_ID[ALL]=2 , [EE]=0
+[BOOTTRACE +85999ms] [AVIN]0: avin_set_now_state() sys tvsystem = TV_PAL(1).
+[BOOTTRACE +86005ms] [AVIN]0: avin_set_now_state() det tvsystem = TV_PAL(1).
+[BOOTTRACE +86010ms] [AVIN]0: avin_hw_input_source_select(SOURCE_TUNER,L/R,0) end.
+[BOOTTRACE +86016ms] [DCS]dco_api :AVOUT_AV_Select: video=0, audio=0
+[BOOTTRACE +86055ms] [DCS]dco_api :AVOUT_A_Mute_ID: ON_ID[ALL]=3 , [EE]=0
+[BOOTTRACE +86154ms] [DCS]AVDEC Interrupt           :RELOADDONE
+[BOOTTRACE +86158ms] [DCS]AVDEC Interrupt           :RELOADDONE
+[BOOTTRACE +86209ms] [DCS]AVDEC Interrupt           :BBFLUSHST
+[BOOTTRACE +86303ms] [DCO]Audio Output = L/R.
+[BOOTTRACE +86336ms] [1394avc]ctl: BUS Reset Start 
+[BOOTTRACE +86340ms] [1394avc]ctl: BUS Reset END 
+[BOOTTRACE +86342ms] [1394avc]ctl: GETEUI64 OK 
+[BOOTTRACE +86345ms] [1394avc]cold_start: GET EUI64_H = 0080459a 
+[BOOTTRACE +86349ms] [1394avc]cold_start: GET EUI64_L = f1a9801b 
+[BOOTTRACE +86354ms] [1394avc]CTL: Equipment recognition end.
+[BOOTTRACE +86369ms] [DCS]dco_api :avout_API_MuteID = 0x1
+[BOOTTRACE +86405ms] [DCS]dco_api :AVOUT_A_Mute_ID: OFF_ID[ALL]=2 , [EE]=0
+[BOOTTRACE +86422ms] [FPC]FPC_ReciveTASK() : 7F FA 02 01 00 00 32 06 00 02 00 00 00 00 00 B6 
+[BOOTTRACE +86429ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +86432ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +86435ms] [FPC]FPC_ReciveTASK() : 7F E3 02 01 00 00 32 06 00 02 00 00 00 00 00 9F 
+[BOOTTRACE +86442ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +86445ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +86715ms] [FPC]RCV TIMEOUT GATE=14
+[BOOTTRACE +86718ms] [SYS_CNTL]FPC_CB_ReportEmergency(4)
+[BOOTTRACE +86721ms] [SYS_CNTL]FPC_EMERGENCY_TIMEOUT
+[BOOTTRACE +86724ms] System assert!! File:src/fpcmain.c Line:963 Err:0
+[BOOTTRACE +86819ms] [AVIN]0: *** AVIN_Rec656_set_module() TV_NTSC->TV_PAL change start ***
+[BOOTTRACE +86826ms] [AVIN]0: avin_hw_input_source_select(SOURCE_TUNER,L/R,0) end.
+[BOOTTRACE +86832ms] [AVIN]0: avin_hw_input_source_select(SOURCE_TUNER,L/R,0) end.
+[BOOTTRACE +87335ms] [1394avc]ctl: cav_Equipment_Notification() SYS_APP_DV_DISCONNECT
+[BOOTTRACE +88089ms] [AVIN]0: cpg detect type change to det_type_1
+[BOOTTRACE +88437ms] [SYS_CNTL]SYS_CNTL_PAL_NTSC_Change 1 
+[BOOTTRACE +88441ms] [SYS_CNTL]avout_tv_system = 1
+[BOOTTRACE +88635ms] [DCS]dco_api :AVOUT_AV_Select: video=8, audio=1
+[BOOTTRACE +88695ms] [DCS]dco_api :AVOUT_A_Mute_ID: ON_ID[ALL]=3 , [EE]=0
+[BOOTTRACE +88756ms] [DCO]Audio Output = L/R.
+[BOOTTRACE +88816ms] [DCS]dco_api :avout_API_MuteID = 0x1
+[BOOTTRACE +88855ms] [DCS]dco_api :AVOUT_A_Mute_ID: OFF_ID[ALL]=2 , [EE]=0
+[BOOTTRACE +88970ms] [DCS]dco_api :AVOUT_AV_Select: video=0, audio=0
+[BOOTTRACE +89075ms] [DCS]dco_api :AVOUT_A_Mute_ID: ON_ID[ALL]=3 , [EE]=0
+[BOOTTRACE +89177ms] [DCS]AVDEC Interrupt           :RELOADDONE
+[BOOTTRACE +89181ms] [DCS]AVDEC Interrupt           :RELOADDONE
+[BOOTTRACE +89245ms] [DCS]AVDEC Interrupt           :BBFLUSHST
+[BOOTTRACE +89336ms] [DCO]Audio Output = L/R.
+[BOOTTRACE +89416ms] [DCS]dco_api :avout_API_MuteID = 0x1
+[BOOTTRACE +89455ms] [DCS]dco_api :AVOUT_A_Mute_ID: OFF_ID[ALL]=2 , [EE]=0
+[BOOTTRACE +89557ms] [SYS_BOOT]FPC_GetLastChannel() success
+[BOOTTRACE +89562ms] [FPC]FPC_AutoClockSetting(5)
+[BOOTTRACE +89564ms] [FPC]FPC_ReciveTASK() : 7F C9 02 01 00 00 35 06 00 02 00 00 00 00 00 88 
+[BOOTTRACE +89572ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +89575ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE +89578ms] [FPC]FPC_ReciveTASK() : 04 01 00 01 00 00 00 00 00 00 00 00 00 00 00 06 
+[BOOTTRACE +89587ms] [FPC]FPC_TuningWatchStart_inAcs start
+[BOOTTRACE +89590ms] [FPC]FPC_TuningNotify_inAcs false
+[BOOTTRACE +89593ms] [FPC]FPC_LastTuning_inAcs apr->last
+[BOOTTRACE +89596ms] [FPC]FPC_ReciveTASK() : 49 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+[BOOTTRACE +89603ms] [FPC]FPC_ReciveTASK() : 49 00 00 00 00 00 00 00 00 00 00 03 00 00 00 00 
+[BOOTTRACE +89610ms] [FPC]FPC_ReciveTASK() : 7F C9 02 01 00 00 00 00 00 00 00 00 00 00 00 4B 
+[BOOTTRACE +89617ms] [SYS_CNTL]FPC_CB_ReportEmergency(3)
+[BOOTTRACE +89620ms] [SYS_CNTL]FPC_EMERGENCY_ERROR
+[BOOTTRACE] UART: bytes=24146 first_byte=10408us ferr=3 perr=0 ovf=NO | SW_rel=NO
+[BOOTTRACE] ADC0_SWUART: min=0.04V max=3.30V (low=0 hiz=0.04..3.30V n=8999) | CtrlEdges: NSW5V=6 TXD=6 XRESET=6 (logged=18)
+  [CTRL +4634233us] NSW5V=1 TXD=1 XRESET=0
+  [CTRL +4656350us] NSW5V=0 TXD=1 XRESET=0
+  [CTRL +4657681us] NSW5V=0 TXD=0 XRESET=0
+  [CTRL +6838143us] NSW5V=1 TXD=0 XRESET=0
+  [CTRL +6838313us] NSW5V=1 TXD=1 XRESET=0
+  [CTRL +7013404us] NSW5V=1 TXD=1 XRESET=1
+  [CTRL +29800458us] NSW5V=1 TXD=1 XRESET=0
+  [CTRL +29822061us] NSW5V=0 TXD=1 XRESET=0
+  [CTRL +29823776us] NSW5V=0 TXD=0 XRESET=0
+  [CTRL +31408797us] NSW5V=1 TXD=0 XRESET=0
+  [CTRL +31409057us] NSW5V=1 TXD=1 XRESET=0
+  [CTRL +31584097us] NSW5V=1 TXD=1 XRESET=1
+  [CTRL +36230749us] NSW5V=1 TXD=1 XRESET=0
+  [CTRL +36261659us] NSW5V=0 TXD=1 XRESET=0
+  [CTRL +36262496us] NSW5V=0 TXD=0 XRESET=0
+  [CTRL +37581138us] NSW5V=1 TXD=0 XRESET=0
+@P7501_BOOT_CLASS verdict=FPC_IC7501_MISMATCH build=3410PQ stage2=0 avout_ok=1 vmute0=0 ntsc=0 rsv_ok=0 hdd_fail=2 bgo_err=0 fpc_err=17 fpc_to=6 iic_err=0 odd_err=11 op7f_cnt=10 op7f=85,9B,A9,C9,DA,E3,E4,EC,F9,FA
+@P7501_DIAG_DEEP hw=M6930LB market=PL(0x04) timer=022 region=0x04 cav=N/PAL avsel=0/0 gui=NONE sys=NONE hdd_wr=NONE hdd_fmt=NONE drv=NONE avin_iic=NONE
+@P7501_FRAME seq=138 ts_us=24016465673 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@P7501_FRAME seq=139 ts_us=24022646579 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@P7501_FRAME seq=140 ts_us=24028210225 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@P7501_FRAME seq=141 ts_us=24100780752 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@P7501_FRAME seq=142 ts_us=24107746336 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@P7501_FRAME seq=143 ts_us=24557138491 type=DIAG_DEEP len=134 crc32=69BFDEA6 hw=M6930LB market=PL(0x04) timer=022 region=0x04 cav=N/PAL avsel=0/0 gui=NONE sys=NONE hdd_wr=NONE hdd_fmt=NONE drv=NONE avin_iic=NONE
+BOOTTRACE: OK
+@P7501_RES cmd=BOOTTRACE status=OK code=0 elapsed_us=90025654
+PANADIGA>
+
+
+=== POST_BOOTTRACE_STATUS [2026-11-25T02:25:59Z] ok=True ===
+VDD: 3.26V (OK)
+[STANDBY] RXD=1 NSW5V=1 TXD=1 XRESET=1 SW_PU=3.27V NSW5V_DROPS=126 fault_latch=0 recoveries=64 | State=POWERED / AWAKE (SW_UART ~3.3V)
+[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=93 wdt_recoveries=0 reboot_src=CLEAN fault_slot=255 fault_stage=IDLE last_cmd=BOOTTRACE last_us=90025654
+@P7501_RES cmd=STATUS status=OK code=0 elapsed_us=1805
+PANADIGA>
+
+
+=== NDB_READONLY_CHECK [2026-11-25T02:25:59Z] ===
+>>> PANARSP ok=True
+=== PANARSP PIO1 (baud=115200 ms=1200 boot=0 hold=0 action=4) ===
+[PANARSP] RX (459 bytes, pretrig_dropped=0, inspect_from=0):
+  0000: 20 20 20 44 30 3A 30 30 30 30 30 30 30 30 2C 20  |   D0:00000000, |
+  0010: 20 20 44 31 3A 30 30 30 30 30 46 30 31 2C 20 20  |  D1:00000F01,  |
+  0020: 20 44 32 3A 30 30 30 30 30 30 30 30 2C 20 20 20  | D2:00000000,   |
+  0030: 44 33 3A 30 30 30 30 30 30 30 30 0D 0A 20 20 20  |D3:00000000..   |
+  0040: 41 30 3A 35 32 32 42 36 43 32 30 2C 20 20 20 41  |A0:522B6C20,   A|
+  0050: 31 3A 35 31 42 31 32 43 38 38 2C 20 20 20 41 32  |1:51B12C88,   A2|
+  0060: 3A 30 30 30 30 30 30 30 30 2C 20 20 20 41 33 3A  |:00000000,   A3:|
+  0070: 30 30 30 30 30 30 30 30 0D 0A 20 20 20 45 30 3A  |00000000..   E0:|
+  0080: 30 30 30 30 30 30 30 30 2C 20 20 20 45 31 3A 30  |00000000,   E1:0|
+  0090: 30 30 30 30 30 38 30 2C 20 20 20 45 32 3A 30 30  |0000080,   E2:00|
+  00A0: 30 30 30 30 30 30 2C 20 20 20 45 33 3A 35 33 34  |000000,   E3:534|
+  00B0: 45 37 39 30 30 0D 0A 20 20 20 45 34 3A 30 30 30  |E7900..   E4:000|
+  00C0: 30 30 30 30 30 2C 20 20 20 45 35 3A 30 30 30 30  |00000,   E5:0000|
+  00D0: 30 30 30 30 2C 20 20 20 45 36 3A 30 30 30 30 30  |0000,   E6:00000|
+  00E0: 30 30 30 2C 20 20 20 45 37 3A 30 30 30 30 30 30  |000,   E7:000000|
+  00F0: 30 30 0D 0A 20 45 50 53 57 3A 30 30 30 30 30 46  |00.. EPSW:00000F|
+  0100: 30 31 2C 20 20 4C 41 52 3A 35 37 37 31 30 44 34  |01,  LAR:57710D4|
+  0110: 44 2C 20 20 4C 49 52 3A 46 43 32 31 35 30 36 34  |D,  LIR:FC215064|
+  0120: 2C 20 20 4D 44 52 3A 35 37 37 30 45 44 33 35 0D  |,  MDR:5770ED35.|
+  0130: 0A 20 4D 43 56 46 3A 30 30 30 30 30 30 30 30 2C  |. MCVF:00000000,|
+  0140: 20 4D 43 52 4C 3A 36 41 45 37 30 38 30 35 2C 20  | MCRL:6AE70805, |
+  0150: 4D 43 52 48 3A 30 34 38 33 42 38 34 43 2C 20 4D  |MCRH:0483B84C, M|
+  0160: 44 52 51 3A 30 37 30 35 31 44 41 31 0D 0A 20 20  |DRQ:07051DA1..  |
+  0170: 20 50 43 3A 35 37 37 31 30 37 35 33 2C 20 20 20  | PC:57710753,   |
+  0180: 53 50 3A 35 32 32 42 36 43 31 43 0D 0A 0D 0A 35  |SP:522B6C1C....5|
+  0190: 37 37 31 30 37 35 33 3A 20 43 41 30 30 20 20 20  |7710753: CA00   |
+  01A0: 20 20 20 20 20 20 20 20 62 72 61 20 20 20 20 20  |        bra     |
+  01B0: 30 35 37 37 31 30 37 35 33 0D 0A 0D 0A 1B 5B 33  |057710753.....[3|
+  01C0: 31 6D 6E 64 62 3E 20 1B 5B 6D 39                 |1mndb> .[m9|
+[PANARSP] Frame: none (ack=no nak=no nak0x15=no)
+PANARSP: OK (rx=459 bytes, rsp=NO_REPLY, fifo_ovf=NO)
+@P7501_RES cmd=PANARSP status=OK code=0 elapsed_us=846838
+PANADIGA>
+>>> BRIDGE ok=True
+[BRIDGE] USB CDC <-> P7501 SC0 115200 8N1 ctrl=OFF active (exit: send '~~~' or unplug USB).
+>>> [bs-bs-cr] ok=True
+[31mndb> [m
+>>> dd 53186dbc 4 ok=True
+dd 53186dbc 4
+53186DBC: 00000080
+[31mndb> [m
+>>> dd 574f71f8 8 ok=True
+dd 574f71f8 8
+574F71F8: A02BCA03 C02AC800
+[31mndb> [m
+>>> dd 570d625c 8 ok=True
+dd 570d625c 8
+570D625C: 008020F0 F5CBFCF0
+[31mndb> [m
+>>> dd 89800400 16 ok=True
+dd 89800400 16
+89800400: 4FB30000 00000D00 01E002D0 28000242
+[31mndb> [m
+>>> dd 89800624 4 ok=True
+dd 89800624 4
+89800624: 00050000
+[31mndb> [m
+>>> dd 88000000 16 ok=True
+dd 88000000 16
+88000000: 00008027 00000000 00003C50 0000057D
+[31mndb> [m
+>>> dd 88000028 8 ok=True
+dd 88000028 8
+88000028: 00008005 0000C0F0
+[31mndb> [m
+>>> g (halt=0.311s)
+g
+[SYS_BOOT]FPC_AutoClockSetting() success
+[SYS_BOOT]TUN_SetCombFilter() success
+:::SYS_RSV::: >> nfrom read
+:::SYS_RSV::: >> _GetExecMode_Device initialize yet! 
+[SYS_CNTL]LAST_CH->UION_CH(103)
+:::SYS_RSV::: >> nfrom read
+:::SYS_RSV::: >> _GetExecMode_Device initialize yet! 
+[SYS_CNTL]LAST_CH->UION_CH(103)
+[DCS]dco_api :AVOUT_A_Mute_ID: ON_ID[ALL]=2 , [EE]=8
+
+>>> BRIDGE_EXIT ok=True
+[AVIN]0: avin_set_now_state() state = STATE_CHG_CHANNEL(2).
+[AVIN] 0_Prefilter = 1
+[SYS_CNTL]AVOUT_A_pbOutputMode 7 4 
+[SYS_CNTL]SYS_CNTL_AVOUT_A_eeOutputMode 0 0 0 0
+[FPC]FPC_ReciveTASK() : 7F F0 02 01 00 00 38 06 00 02 00 00 00 00 00 B2 
+[SYS_CNTL]FPC_CB_ReportEmergency(3)
+[SYS_CNTL]FPC_EMERGENCY_ERROR
+[SYS_BOOT]sys_boot_init_dev_io_pre() success
+[FPC]FPC_ReciveTASK() : 67 F1 0B AF 00 C9 B6 70 83 81 68 6C E5 00 00 BE 
+[SYS_BOOT]MBM_Init() success.
+[SYS_BOOT]VDM_Init() 
+[SDCD] sdcd_insrmv_check:SD Card inserted 
+[SDCD] === This Card Spec ==== 
+	Card type:2(condition:3) wp:0
+	capacity:3c4000[LBA](2021654528Byte) 	 transfer speed:25000[Kbps]
+	RCA:2 	 Bus Width:4(current) 4(support)
+	Multi Max Block Len Read:2[SECT] / Write:2[SECT]
+[FPC]FPC_ReciveTASK() : 7F AA 01 AF 00 C9 B6 70 83 81 68 6C E5 00 00 85 
+[SYS_CNTL]FPC_CB_ReportEmergency(3)
+[SYS_CNTL]FPC_EMERGENCY_ERROR
+[AVIN]0: avin_set_now_state() state = STATE_NORMAL(0).
+[AVIN]0: avin_set_now_state() source = SOURCE_LINE(1).
+[AVIN]0: avin_hw_input_source_select(SOURCE_LINE,L/R,0) end.
+
+BRIDGE: OK (rx=1879 tx=103 ferr=0 ctrl_edges=0 overflow=NO)
+@P7501_RES cmd=BRIDGE status=OK code=0 elapsed_us=2079959
+PANADIGA>
+
+
+=== POST_ISOLATE [2026-11-25T02:26:02Z] ok=True ===
+[BUS] P7501 pins placed in High-Impedance Isolation (NSW5V/XRESET Hi-Z, GP26 ADC0).
+@P7501_RES cmd=ISOLATE status=OK code=0 elapsed_us=167
+PANADIGA>
+
+
+=== POST_STATUS [2026-11-25T02:26:02Z] ok=True ===
+VDD: 3.26V (OK)
+[STANDBY] RXD=1 NSW5V=1 TXD=1 XRESET=1 SW_PU=3.27V NSW5V_DROPS=126 fault_latch=0 recoveries=64 | State=POWERED / AWAKE (SW_UART ~3.3V)
+[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=97 wdt_recoveries=0 reboot_src=CLEAN fault_slot=255 fault_stage=IDLE last_cmd=ISOLATE last_us=167
+@P7501_RES cmd=STATUS status=OK code=0 elapsed_us=1803
+PANADIGA>
+

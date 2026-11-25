@@ -56,3 +56,35 @@ pub struct DavisProbeArgs {
     #[arg(short, long, value_name = "JSON_FILE")]
     pub json: Option<PathBuf>,
 }
+
+/// Deterministically replays a raw COM10 / `ndb>` evidence log (LE words, diffs, BCU fault & STANDBY gate).
+#[derive(Args, Debug)]
+pub struct SiliconReplayArgs {
+    /// Path to raw COM10 / `ndb>` transcript log
+    #[arg(short, long, value_name = "LOG_FILE")]
+    pub log: PathBuf,
+
+    /// Optional JSON summary export (`-` emits stdout JSON)
+    #[arg(short, long, value_name = "JSON_FILE")]
+    pub json: Option<PathBuf>,
+}
+
+/// Captures a safe read-only `ndb> dd` hot bare-metal word snapshot via PicoFW `BRIDGE` under `STANDBY_GATE_STOP`.
+#[derive(Args, Debug)]
+pub struct SiliconSnapshotArgs {
+    /// Pico serial port identifier (e.g. COM10 or /dev/ttyACM0)
+    #[arg(short, long, value_name = "PORT")]
+    pub port: String,
+
+    /// Target AM34 virtual address in hex (blocks lethal MMIO and BCU fault aperture)
+    #[arg(short, long, value_name = "HEX")]
+    pub addr: String,
+
+    /// Byte count to read (rounded up to 4-byte words; default 16)
+    #[arg(short, long, default_value_t = 16)]
+    pub len: usize,
+
+    /// Optional JSON summary export (`-` emits stdout JSON)
+    #[arg(short, long, value_name = "JSON_FILE")]
+    pub json: Option<PathBuf>,
+}

@@ -570,9 +570,10 @@ fn real_profiles_dir_and_schemas_stay_synchronized() {
         .filter_map(Result::ok)
         .filter(|e| e.path().extension().and_then(|s| s.to_str()) == Some("json"))
         .count();
+    let expected_schema_count = crate::schema::generate_all_schemas().len();
     assert_eq!(
-        schema_count, 12,
-        "profiles/schema must contain all 12 schemas"
+        schema_count, expected_schema_count,
+        "profiles/schema must contain all {expected_schema_count} schemas"
     );
     verify_schemas_match_dir(&schema_dir).expect("Committed JSON Schemas match schemars");
 }
@@ -910,6 +911,7 @@ fn universal_patch_hdd_autoboot_and_main_build_specs_enforce_bounds_ipl_and_geom
         }),
         sata_bridge_reset_spec: None,
         av_passthrough_sites: Vec::new(),
+        region_localization_sites: Vec::new(),
         unpacked_sha256: Some(
             "c3275d39549b68f48db16bc5fd043c6f8a373d4ba416826de09be5c55dc991b1".to_string(),
         ),

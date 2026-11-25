@@ -498,15 +498,18 @@ class AndroidPicoBridge(
     private fun isWireReplyComplete(text: String): Boolean {
         val trimmedEnd = text.trimEnd()
         if (trimmedEnd.isEmpty()) return false
-        if (trimmedEnd.endsWith("PANADIGA>") || trimmedEnd.endsWith("P7501>")) return true
+        if (trimmedEnd.endsWith("PICO>") || trimmedEnd.endsWith("PANADIGA>") || trimmedEnd.endsWith("P7501>")) return true
         if (!text.endsWith("\n") && !text.endsWith("\r")) return false
         val lines = text.lines()
-        if (lines.any { it.trimStart().startsWith("@P7501_RES ") }) {
+        if (lines.any {
+                val t = it.trimStart()
+                t.startsWith("@PICO_RES ") || t.startsWith("@P7501_RES ")
+            }) {
             return true
         }
         val hasStructuredFrames = lines.any { line ->
             val t = line.trimStart()
-            t.startsWith("@P7501_") || t.startsWith("@PROG ") || t.startsWith("@EVT ")
+            t.startsWith("@PICO_") || t.startsWith("@P7501_") || t.startsWith("@PROG ") || t.startsWith("@EVT ")
         }
         if (hasStructuredFrames) return false
         return lines.any { line ->

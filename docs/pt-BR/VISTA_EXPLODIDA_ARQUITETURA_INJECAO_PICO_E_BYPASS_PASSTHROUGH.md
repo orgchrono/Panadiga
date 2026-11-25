@@ -152,7 +152,7 @@ A auditoria adversarial provou nos esquemáticos (`vol2_schematics.pdf` pp. 46, 
 Importante distinção arquitetural verificada:
 * **Pré-MAIN (`/BOOT.BIN` e `PROG061`):** `uart0_getc @ 0x4400479F` e `FUN_50404c78` possuem **zero chamadores** — **não existe console RX pré-MAIN**. Toda injeção pré-MAIN ocorre via **Pinos (`SW_UART JIG:2500`, `P01`, `P10`)** ou carga de **binário `DIGADIAG.FRM`** na SDRAM (`0x50400000`).
 * **Pós-MAIN (`EH55_MAIN_3410PQ.bin`, driver `_dev_SERIAL` @ `0x574F0775`):** quando o sistema alcança o `MAIN` (com ISR vetor `0x15 -> 0x574F0F9F` ativa), o kernel expõe um **stub GDB RSP completo por UART a `115200 8N1`**:
-  * **Leitura Hex `$m<addr>,<len>#<csum>` / Binária Rápida `$x<addr>,<len>#<csum>` (`FUN_574f0a33` @ `0x574F0A33`):** blocos de `0x400` B (`$m`) ou `0x440` (`1.088`) B crus sem escape (`$x`), com retorno `+$<payload>#<sum8>`. No Pico (`PANADIGA>`), usar `XMEM:<addr>:<len>`.
+  * **Leitura Hex `$m<addr>,<len>#<csum>` / Binária Rápida `$x<addr>,<len>#<csum>` (`FUN_574f0a33` @ `0x574F0A33`):** blocos de `0x400` B (`$m`) ou `0x440` (`1.088`) B crus sem escape (`$x`), com retorno `+$<payload>#<sum8>`. No Pico (`PICO>`), usar `XMEM:<addr>:<len>`.
   * **Dump de Registradores `$g#<csum>` (`FUN_574f0da3` @ `0x574F0DA3`):** lê `0x70` (`112`) bytes (`28` palavras LE de `32` bits).
   * **Escrita em RAM / Hot Write I/O (`FUN_574f0c63` @ `0x574F0C63`):**
     * **Hex:** `$M<addr_hex>,<len_hex>:<dados_hex>#<sum8>` → grava bytes arbitrários em **SDRAM** (`0x50000000..0x57FFFFFF`, p.ex. patching ao vivo de rotinas em RAM ou carga de stubs em `0x51800000`) e responde **`+$OK#9A`**.
@@ -205,7 +205,7 @@ Muitos entusiastas utilizam gravadores Panasonic DIGA como **Time Base Corrector
 
 ### 8.2 Consolidação das 4 Pontas Soltas e Upgrade Autônomo do Raspberry Pi Pico (`PANARSP`)
 
-Para eliminar a subutilização do microcontrolador **Raspberry Pi Pico (RP2040 / RP2350)** na bancada (`COM10`), o firmware C11 em `firmware/pico-p7501/` e o workspace Rust (`panadiga-core` + `panadiga-mcp`, agora com **`18` ferramentas MCP**) consolidam as soluções das 4 frentes críticas:
+Para eliminar a subutilização do microcontrolador **Raspberry Pi Pico (RP2040 / RP2350)** na bancada (`COM10`), o firmware C11 em `firmware/picofw/` e o workspace Rust (`panadiga-core` + `panadiga-mcp`, agora com **`18` ferramentas MCP**) consolidam as soluções das 4 frentes críticas:
 
 1. **Destravamento Pré-MAIN (`SDDIAG -91006` / `CDDIAG 0x83A7`) & Monitor `PANAMON1`:**
    * `DIGADIAG.FRM` (`panadiga_bgo_unbrick` / `panadiga_sd_unbrick_kit`) gera por padrão **`262.144` B (`0x40000`) brutos** (`RAW_VER061` para `Loader ver0.61` do DMR-EH55) ou contêiner **`EXTRHEAD` $\le 131.072$ B** (`ver0.63`) com Adler-32 strided válido nos modos `inspect`, `bypass` (`bypass_only`), **`uart_monitor`** (**`PANAMON1>[B/R/W/D/F/J/E/U/Q]`** em `0x50439494`: `B`=bypass BGO, `R`/`W`=peek/poke `u32` com guarda `E05`, `D`=dump 8 MB NOR, `F`=`nfrom_format`, `J`=JEDEC, `E`=erase setor, `U`=unlock Upper NOR `SA4..SA133`, `Q`=abortar — atualizado para ABI `CALL ..., [], 0` + `PUTC_D3_BYTES` `46 B` `SC0STR & 0xA0`/`0x00040000` após captura `COM10` `641 B` que comprovou desvio de `BGO driver init failed[1].`) e `auto_format` (`0x50401F3C`, bloqueado fail-closed sem `--allow-unsafe-bgo-format`).

@@ -89,6 +89,8 @@ function buildNavGroups(
       label: t('nav.groups.picoProbe'),
       items: [
         { key: 'picobench', label: t('nav.picobench'), sublabel: t('nav.picobench.sub'), icon: <Radio className="w-3.5 h-3.5" />, badge: `${vddVolts.toFixed(1)}V`, badgeVariant: powered ? 'success' : 'warning' },
+        { key: 'ssotstudio', label: t('nav.ssotstudio'), sublabel: t('nav.ssotstudio.sub'), icon: <Layers className="w-3.5 h-3.5" />, badge: 'DigaOS', badgeVariant: 'secondary' },
+        { key: 'siliconexplorer', label: t('nav.siliconexplorer'), sublabel: t('nav.siliconexplorer.sub'), icon: <Activity className="w-3.5 h-3.5" />, badge: 'ndb>', badgeVariant: 'warning' },
         ...(showIr ? [{ key: 'ircommander' as const, label: t('nav.ircommander'), sublabel: t('nav.ircommander.sub'), icon: <Smartphone className="w-3.5 h-3.5" />, badge: 'IR APK', badgeVariant: 'default' as const }] : []),
       ],
     },

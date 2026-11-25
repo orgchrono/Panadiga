@@ -1,4 +1,4 @@
-//! USB CDC ACM port opening helper for the Panadiga P7501 Async UART probe controller.
+//! USB CDC ACM port opening helper for the PicoFW probe controller (P7501 Async UART).
 //!
 //! Single Responsibility: guarantees that every host-side serial session toward the
 //! Pico asserts DTR/RTS right after `open()`. The Pico SDK `stdio_usb` driver only
@@ -141,14 +141,42 @@ pub fn parse_pico_dump_hex_to_bytes(ascii_dump: &str) -> Vec<u8> {
     binary
 }
 
-/// Strips leading CLI prompt tokens (`PANADIGA>`, `P7501>`) and surrounding whitespace
-/// left in-flight from prior commands so prompt-only bursts never truncate active replies.
+/// Canonical PicoFW prompt (`PICO>`) followed by legacy probe prompt fallbacks (`PANADIGA>`, `P7501>`).
+pub const PICO_PROMPT_STOP_TOKENS: &[&str] = &["PICO>", "PANADIGA>", "P7501>"];
+
+/// Canonical `STATUS` stop tokens accepting both `@PICO_RES` and legacy `@P7501_RES`.
+pub const PICO_STATUS_STOP_TOKENS: &[&str] =
+    &["@PICO_RES cmd=STATUS", "@P7501_RES cmd=STATUS", "VDD:"];
+
+/// Canonical `ISOLATE` stop tokens accepting both `@PICO_RES` and legacy `@P7501_RES`.
+pub const PICO_ISOLATE_STOP_TOKENS: &[&str] = &[
+    "ISOLATE: OK",
+    "@PICO_RES cmd=ISOLATE",
+    "@P7501_RES cmd=ISOLATE",
+];
+
+/// Returns `true` when `text` contains any PicoFW (`PICO>`) or legacy probe prompt token.
+#[must_use]
+pub fn contains_pico_prompt(text: &str) -> bool {
+    PICO_PROMPT_STOP_TOKENS.iter().any(|tok| text.contains(tok))
+}
+
+/// Returns `true` when `text` confirms `ISOLATE` completion via text or `@PICO_RES`/`@P7501_RES`.
+#[must_use]
+pub fn is_isolate_confirmed(text: &str) -> bool {
+    text.contains("ISOLATE: OK")
+        || text.contains("@PICO_RES cmd=ISOLATE status=OK")
+        || text.contains("@P7501_RES cmd=ISOLATE status=OK")
+}
+
+/// Strips leading CLI prompt tokens (`PICO>` and legacy `PANADIGA>` / `P7501>`) and surrounding
+/// whitespace left in-flight from prior commands so prompt-only bursts never truncate active replies.
 pub fn strip_leading_prompts(mut raw: &str) -> &str {
     loop {
         let trimmed = raw.trim_start();
-        if let Some(rest) = trimmed
-            .strip_prefix("PANADIGA>")
-            .or_else(|| trimmed.strip_prefix("P7501>"))
+        if let Some(rest) = PICO_PROMPT_STOP_TOKENS
+            .iter()
+            .find_map(|tok| trimmed.strip_prefix(tok))
         {
             raw = rest;
         } else {
@@ -165,7 +193,7 @@ pub fn reply_has_completed(raw: &str, stop_tokens: &[&str]) -> bool {
         return false;
     }
     if stop_tokens.iter().any(|tok| {
-        if matches!(*tok, "PANADIGA>" | "P7501>") {
+        if PICO_PROMPT_STOP_TOKENS.contains(tok) {
             body.contains(tok)
         } else {
             body.find(tok).is_some_and(|idx| body[idx..].contains('\n'))
@@ -173,9 +201,35 @@ pub fn reply_has_completed(raw: &str, stop_tokens: &[&str]) -> bool {
     }) {
         return true;
     }
-    body.rsplit_once("PANADIGA>")
-        .or_else(|| body.rsplit_once("P7501>"))
-        .is_some_and(|(prefix, _)| !prefix.trim().is_empty())
+    PICO_PROMPT_STOP_TOKENS
+        .iter()
+        .filter_map(|tok| body.rsplit_once(tok))
+        .any(|(prefix, _)| !prefix.trim().is_empty())
+}
+
+/// Reads bytes from an open serial port until `stop_fn(&accumulated)` returns `true` or `max_wait` expires.
+pub(crate) fn read_port_until<F>(
+    port: &mut dyn SerialPort,
+    max_wait: Duration,
+    mut stop_fn: F,
+) -> String
+where
+    F: FnMut(&str) -> bool,
+{
+    let deadline = std::time::Instant::now() + max_wait;
+    let mut out = String::new();
+    let mut buf = [0u8; 1024];
+    while std::time::Instant::now() < deadline {
+        if let Ok(n) = port.read(&mut buf)
+            && n > 0
+        {
+            out.push_str(&String::from_utf8_lossy(&buf[..n]));
+            if stop_fn(&out) {
+                break;
+            }
+        }
+    }
+    out
 }
 
 /// Sends a single command line over CDC and collects the reply until any stop token or timeout.
@@ -196,18 +250,8 @@ pub fn send_and_read_until(
     let _ = port.set_timeout(Duration::from_millis(120));
 
     let deadline = std::time::Instant::now() + max_wait;
-    let mut out = String::new();
+    let mut out = read_port_until(port, max_wait, |acc| reply_has_completed(acc, stop_tokens));
     let mut buf = [0u8; 1024];
-    while std::time::Instant::now() < deadline {
-        if let Ok(n) = port.read(&mut buf)
-            && n > 0
-        {
-            out.push_str(&String::from_utf8_lossy(&buf[..n]));
-            if reply_has_completed(&out, stop_tokens) {
-                break;
-            }
-        }
-    }
     let cmd_trimmed = command.trim();
     let is_streaming_cmd = cmd_trimmed
         .get(..6)
@@ -219,7 +263,7 @@ pub fn send_and_read_until(
         let prompt_deadline = deadline.min(std::time::Instant::now() + Duration::from_millis(250));
         while std::time::Instant::now() < prompt_deadline {
             let body = strip_leading_prompts(&out);
-            if body.contains("PANADIGA>") || body.contains("P7501>") {
+            if contains_pico_prompt(body) {
                 break;
             }
             if let Ok(n) = port.read(&mut buf)
@@ -244,6 +288,10 @@ mod tests {
     #[test]
     fn parses_vdd_with_unit_and_status() {
         assert_eq!(
+            parse_vdd_reply("PICO> STATUS\r\nVDD: 3.25V (OK)\r\n"),
+            Some(3.25)
+        );
+        assert_eq!(
             parse_vdd_reply("PANADIGA> STATUS\r\nVDD: 3.24V (OK)\r\n"),
             Some(3.24)
         );
@@ -267,17 +315,26 @@ mod tests {
     #[test]
     fn stale_leading_prompt_does_not_abort_status_read() {
         assert_eq!(
+            strip_leading_prompts("PICO> \r\nVDD: 3.25V (OK)\r\n"),
+            "VDD: 3.25V (OK)\r\n"
+        );
+        assert_eq!(
             strip_leading_prompts("PANADIGA> \r\nVDD: 3.24V (OK)\r\n"),
             "VDD: 3.24V (OK)\r\n"
         );
+        assert!(!reply_has_completed("PICO> ", &["VDD:"]));
         assert!(!reply_has_completed("PANADIGA> ", &["VDD:"]));
         assert!(!reply_has_completed("P7501> \r\n", &["VDD:"]));
+        assert!(reply_has_completed(
+            "PICO> \r\nVDD: 3.25V (OK)\r\nPICO> ",
+            &["VDD:"]
+        ));
         assert!(reply_has_completed(
             "PANADIGA> \r\nVDD: 3.24V (OK)\r\nPANADIGA> ",
             &["VDD:"]
         ));
         assert!(reply_has_completed(
-            "[CLI] Unknown command\r\nPANADIGA> ",
+            "[CLI] Unknown command\r\nPICO> ",
             &["VDD:"]
         ));
     }

@@ -19,20 +19,23 @@ describe('bleService framing and GATT MTU chunking', () => {
     expect(reassembled).toBe(SAMPLE_LONG_COMMAND);
   });
 
-  it('requires SSOT terminal framing (@P7501_RES newline, prompt, or legacy line) before completing', () => {
+  it('requires SSOT terminal framing (@PICO_RES / @P7501_RES newline, prompt, or legacy line) before completing', () => {
     expect(isBleReplyComplete('')).toBe(false);
     expect(isBleReplyComplete('VDD: 3.28V (OK)\n')).toBe(false);
     // Bootloader "DDR CHECK: OK" must NEVER terminate BOOTCAP/DIAGWATCH prematurely!
     expect(isBleReplyComplete('DDR CHECK: OK\r\n***** Loader ver0.61 *****\r\n')).toBe(false);
     // Partial line without trailing newline must not terminate across 20B BLE chunks
     expect(isBleReplyComplete('JOB: OK')).toBe(false);
-    // Structured @P7501_IDENT frame must wait for @P7501_RES or prompt
+    // Structured @PICO_IDENT / @P7501_IDENT frame must wait for @PICO_RES / @P7501_RES or prompt
     expect(
-      isBleReplyComplete('@P7501_IDENT model=DMR-EH55\nIDENTIFY: OK (model=DMR-EH55)\n'),
+      isBleReplyComplete('@PICO_IDENT model=DMR-EH55\nIDENTIFY: OK (model=DMR-EH55)\n'),
     ).toBe(false);
+    expect(isBleReplyComplete('@PICO_RES cmd=STATUS status=OK')).toBe(false);
+    expect(isBleReplyComplete('@PICO_RES cmd=STATUS status=OK code=0 elapsed_us=100\n')).toBe(true);
     expect(isBleReplyComplete('@P7501_RES cmd=STATUS status=OK')).toBe(false);
     expect(isBleReplyComplete('@P7501_RES cmd=STATUS status=OK code=0 elapsed_us=100\n')).toBe(true);
-    expect(isBleReplyComplete('VDD: 3.28V (OK)\nPANADIGA> ')).toBe(true);
+    expect(isBleReplyComplete('VDD: 3.28V (OK)\nPICO> ')).toBe(true);
+    expect(isBleReplyComplete('VDD: 3.28V (OK)\nP7501> ')).toBe(true);
     expect(isBleReplyComplete('PONG\n')).toBe(true);
     expect(isBleReplyComplete('JOB: ERROR code=E05\n')).toBe(true);
   });

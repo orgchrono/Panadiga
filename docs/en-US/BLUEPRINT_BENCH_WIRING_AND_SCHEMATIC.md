@@ -56,7 +56,7 @@ The physical link between the **Raspberry Pi Pico** and header **`P7501`** on bo
 
 * **Physical Header Standard for `P7501`:** 6-pin **JST ZR connector with `1.5 mm` pitch**, OEM Panasonic part number **`B6B-ZR-3R4`** (through-hole top entry, silkscreen/schematic legend **`TO JIGU`** on `VEP79138`).
 * **Purchasing Pre-Assembled Harness:** Search commercially for **JST ZR / ZH `1.5 mm` 6-pin Female to Dupont `2.54 mm` cable** (`ZHR-6` housing with `SZH-002T-P0.5` crimp terminals). Avoid incompatible pitches such as JST SH (`1.0 mm`), JST PH (`2.0 mm`), or JST XH (`2.54 mm`).
-* **Pico 1 (`RP2040`) vs. Pico 2 (`RP2350`) Compatibility:** Both families (including wireless `Pico W` / `Pico 2 W` variants) are natively supported by the C11 firmware in [`firmware/pico-p7501/`](../../firmware/pico-p7501/).
+* **Pico 1 (`RP2040`) vs. Pico 2 (`RP2350`) Compatibility:** Both families (including wireless `Pico W` / `Pico 2 W` variants) are natively supported by the C11 firmware in [`firmware/picofw/`](../../firmware/picofw/).
 * **Critical Protocol Alert (`P7501` Async UART vs. JTAG / `DWire32A`):** All **5 official DMR-EH55 service manuals (`30` indexed technical PDFs)** and live `COM10` captures prove that `P7501` does **NOT** expose JTAG (`TDI`/`TDO`/`TMS`) or synchronous `DWire32A` (`SDATA`/`SCLK`). Pin 6 (`UARTP2M_T`) is passive `115200 8N1` RX, Pin 3 (`UARTM2P_T`) is active TX (enabled through `Q7514` when `SW_UART = Hi-Z`), and Pin 5 (`NSW5V`) connects to the `~5.15V` node through `D7510` — **NEVER** drive Pin 5 from the Pico.
 
 ### 2.1 Complete Bench Electrical Schematic (Official Panasonic `VEP79138` Reference)
@@ -414,7 +414,7 @@ Before connecting AC mains to the recorder or USB to the Pico, complete this thr
                                         ▼
     ┌────────────────────────────────────────────────────────────────────────┐
     │ 2. PICO ELECTRICAL SELF-TEST (USB Connected to PC)                     │
-    │    PANADIGA> STATUS and PINCHECK console:                              │
+    │    PICO> STATUS and PINCHECK console:                              │
     │    - Confirm SW_UART ~3.25V Hi-Z / ~2.69V PD / ~3.27V PU               │
     │    - Confirm GP3 (NSW5V) locked as Hi-Z Input with pulls disabled!     │
     └───────────────────────────────────┬────────────────────────────────────┘

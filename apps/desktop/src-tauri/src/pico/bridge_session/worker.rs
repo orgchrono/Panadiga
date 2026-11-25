@@ -86,6 +86,7 @@ pub(super) fn run_bridge_worker(
                 if text.contains("BRIDGE: OK")
                     || text.contains("BRIDGE: ERROR")
                     || text.contains("BRIDGE: ERR")
+                    || text.contains("@PICO_RES cmd=BRIDGE")
                     || text.contains("@P7501_RES cmd=BRIDGE")
                 {
                     saw_bridge_res = true;

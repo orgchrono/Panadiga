@@ -1,0 +1,318 @@
+{
+  "schema_version": "1.0.0",
+  "prompt": "DIGAOS>",
+  "menus": [
+    {
+      "id": "core_diagnostics",
+      "title_key": "digaos.menu.core_diagnostics",
+      "items": [
+        {
+          "id": "cmd_status",
+          "label_key": "digaos.item.status",
+          "command": "status",
+          "kind": 0,
+          "min_safety_tier": 0,
+          "requires_unlock": false
+        },
+        {
+          "id": "cmd_ssot",
+          "label_key": "digaos.item.ssot",
+          "command": "ssot",
+          "kind": 0,
+          "min_safety_tier": 0,
+          "requires_unlock": false
+        },
+        {
+          "id": "cmd_wdt",
+          "label_key": "digaos.item.wdt",
+          "command": "wdt",
+          "kind": 0,
+          "min_safety_tier": 0,
+          "requires_unlock": false
+        },
+        {
+          "id": "cmd_vfd_banner",
+          "label_key": "digaos.item.vfd_banner",
+          "command": "vfd DIGAOS ",
+          "kind": 1,
+          "min_safety_tier": 1,
+          "requires_unlock": false
+        }
+      ]
+    },
+    {
+      "id": "video_tbc_studio",
+      "title_key": "digaos.menu.video_tbc_studio",
+      "items": [
+        {
+          "id": "cmd_ntsc_mode",
+          "label_key": "digaos.item.ntsc_mode",
+          "command": "ntsc",
+          "kind": 1,
+          "min_safety_tier": 1,
+          "requires_unlock": false
+        },
+        {
+          "id": "cmd_palm_mode",
+          "label_key": "digaos.item.palm_mode",
+          "command": "palm",
+          "kind": 1,
+          "min_safety_tier": 1,
+          "requires_unlock": false
+        },
+        {
+          "id": "cmd_pal_mode",
+          "label_key": "digaos.item.pal_mode",
+          "command": "pal",
+          "kind": 1,
+          "min_safety_tier": 1,
+          "requires_unlock": false
+        },
+        {
+          "id": "cmd_secam_probe",
+          "label_key": "digaos.item.secam_probe",
+          "command": "secam",
+          "kind": 2,
+          "min_safety_tier": 2,
+          "requires_unlock": false
+        },
+        {
+          "id": "cmd_tbc_enable",
+          "label_key": "digaos.item.tbc_enable",
+          "command": "tbc on",
+          "kind": 1,
+          "min_safety_tier": 1,
+          "requires_unlock": false
+        },
+        {
+          "id": "cmd_colorbar_enable",
+          "label_key": "digaos.item.colorbar_enable",
+          "command": "colorbar on",
+          "kind": 1,
+          "min_safety_tier": 1,
+          "requires_unlock": false
+        }
+      ]
+    },
+    {
+      "id": "storage_power_rescue",
+      "title_key": "digaos.menu.storage_power_rescue",
+      "items": [
+        {
+          "id": "cmd_sd_probe",
+          "label_key": "digaos.item.sd_probe",
+          "command": "sd",
+          "kind": 0,
+          "min_safety_tier": 0,
+          "requires_unlock": false
+        },
+        {
+          "id": "cmd_bgo_inspect",
+          "label_key": "digaos.item.bgo_inspect",
+          "command": "bgo",
+          "kind": 0,
+          "min_safety_tier": 0,
+          "requires_unlock": false
+        },
+        {
+          "id": "cmd_sata_probe",
+          "label_key": "digaos.item.sata_probe",
+          "command": "sata",
+          "kind": 0,
+          "min_safety_tier": 1,
+          "requires_unlock": false
+        },
+        {
+          "id": "cmd_provision_hdd",
+          "label_key": "digaos.item.provision_hdd",
+          "command": "provision",
+          "kind": 3,
+          "min_safety_tier": 3,
+          "requires_unlock": true
+        }
+      ]
+    },
+    {
+      "id": "hardware_power_tuning",
+      "title_key": "digaos.menu.hardware_power_tuning",
+      "items": [
+        {
+          "id": "cmd_theme_list",
+          "label_key": "digaos.item.theme_list",
+          "command": "themes",
+          "kind": 0,
+          "min_safety_tier": 0,
+          "requires_unlock": false
+        },
+        {
+          "id": "cmd_power_list",
+          "label_key": "digaos.item.power_list",
+          "command": "power",
+          "kind": 0,
+          "min_safety_tier": 0,
+          "requires_unlock": false
+        },
+        {
+          "id": "cmd_soc_targets",
+          "label_key": "digaos.item.soc_targets",
+          "command": "targets",
+          "kind": 0,
+          "min_safety_tier": 0,
+          "requires_unlock": false
+        },
+        {
+          "id": "cmd_menu_tree",
+          "label_key": "digaos.item.menu_tree",
+          "command": "menus",
+          "kind": 0,
+          "min_safety_tier": 0,
+          "requires_unlock": false
+        }
+      ]
+    }
+  ],
+  "themes": [
+    {
+      "id": "amber_vfd_lab",
+      "name_key": "digaos.theme.amber_vfd_lab",
+      "bg_rgb565": "0x0841",
+      "fg_rgb565": "0xFFE0",
+      "accent_rgb565": "0xFC00",
+      "warn_rgb565": "0xFE00",
+      "danger_rgb565": "0xF800",
+      "osd_font_mode": 0,
+      "overscan_px": 16,
+      "contrast_level": 82
+    },
+    {
+      "id": "emerald_phosphor_crt",
+      "name_key": "digaos.theme.emerald_phosphor_crt",
+      "bg_rgb565": "0x0000",
+      "fg_rgb565": "0x07E0",
+      "accent_rgb565": "0x07FF",
+      "warn_rgb565": "0xFFE0",
+      "danger_rgb565": "0xF81F",
+      "osd_font_mode": 1,
+      "overscan_px": 12,
+      "contrast_level": 90
+    },
+    {
+      "id": "high_contrast_service",
+      "name_key": "digaos.theme.high_contrast_service",
+      "bg_rgb565": "0x001F",
+      "fg_rgb565": "0xFFFF",
+      "accent_rgb565": "0xFFE0",
+      "warn_rgb565": "0xFD20",
+      "danger_rgb565": "0xF800",
+      "osd_font_mode": 2,
+      "overscan_px": 8,
+      "contrast_level": 100
+    }
+  ],
+  "power_profiles": [
+    {
+      "id": "am34_safe_baseline",
+      "name_key": "digaos.power.am34_safe_baseline",
+      "soc_core_id": "mn10300_am34",
+      "tbc_mode": 1,
+      "aiof_fs0_mode": 0,
+      "avdd_gain_preset": 1,
+      "sata_udma_mode": 2,
+      "dram_refresh_preset": 1,
+      "uart_baud": 115200,
+      "unlock_required": false,
+      "lethal_mmio_guard": true,
+      "ipl_ro_guard": true,
+      "allowed_mmio_writes": [
+        {
+          "start": "0x8800002C",
+          "size": 2,
+          "note": "AIOF_FS0 standard broadcast frame-sync preset (0x40F0)"
+        },
+        {
+          "start": "0x89800404",
+          "size": 2,
+          "note": "AVDD_DACOUT1 output enable"
+        }
+      ]
+    },
+    {
+      "id": "am34_max_hardware_power",
+      "name_key": "digaos.power.am34_max_hardware_power",
+      "soc_core_id": "mn10300_am34",
+      "tbc_mode": 2,
+      "aiof_fs0_mode": 1,
+      "avdd_gain_preset": 3,
+      "sata_udma_mode": 5,
+      "dram_refresh_preset": 2,
+      "uart_baud": 115200,
+      "unlock_required": true,
+      "lethal_mmio_guard": true,
+      "ipl_ro_guard": true,
+      "allowed_mmio_writes": [
+        {
+          "start": "0x88000000",
+          "size": 192,
+          "note": "AIOF full TBC/MVAGC/VMODESEL/chroma aperture (excludes lethal ranges)"
+        },
+        {
+          "start": "0x89800400",
+          "size": 1152,
+          "note": "AVDD DACOUT1/VOUTMODE0/REC656IN/NPALCTL0/VDECCTL1 safe tuning window"
+        },
+        {
+          "start": "0x89000C00",
+          "size": 64,
+          "note": "DAVIS CH1 SATA/IDE UDMA timing window"
+        }
+      ]
+    }
+  ],
+  "soc_targets": [
+    {
+      "soc_core_id": "mn10300_am34",
+      "soc_id": "mn2ds0009",
+      "isa": "MN103S / AM34",
+      "is_big_endian": false,
+      "mmio_verified": true,
+      "is_primary_executable": true,
+      "logic_voltage_mv": 3300
+    },
+    {
+      "soc_core_id": "mn10300_am33_2",
+      "soc_id": "mn2ds0010h",
+      "isa": "MN10300 / AM33-2",
+      "is_big_endian": false,
+      "mmio_verified": false,
+      "is_primary_executable": false,
+      "logic_voltage_mv": 3300
+    },
+    {
+      "soc_core_id": "arm_cortex_a9_uniphier",
+      "soc_id": "mn2ws0030",
+      "isa": "ARMv7 Cortex-A9 UniPhier",
+      "is_big_endian": false,
+      "mmio_verified": false,
+      "is_primary_executable": false,
+      "logic_voltage_mv": 3300
+    },
+    {
+      "soc_core_id": "arm64_cortex_a53_uniphier",
+      "soc_id": "uniphier_ld20_pxs3",
+      "isa": "AArch64 Cortex-A53 UniPhier",
+      "is_big_endian": false,
+      "mmio_verified": false,
+      "is_primary_executable": false,
+      "logic_voltage_mv": 3300
+    },
+    {
+      "soc_core_id": "sparc_v8_domino",
+      "soc_id": "lsi_domino_zebra64",
+      "isa": "SPARC v8 DoMiNo",
+      "is_big_endian": true,
+      "mmio_verified": false,
+      "is_primary_executable": false,
+      "logic_voltage_mv": 3300
+    }
+  ]
+}

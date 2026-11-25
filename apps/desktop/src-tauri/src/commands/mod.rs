@@ -20,6 +20,8 @@ pub mod hardware_diag;
 #[cfg(any(target_os = "android", test))]
 pub mod ir;
 pub mod settings;
+pub mod silicon_explorer;
+pub mod ssot_studio;
 pub mod storage;
 pub mod unbrick;
 pub mod unbrick_dto;
@@ -37,6 +39,8 @@ pub use hardware_diag::*;
 #[cfg(any(target_os = "android", test))]
 pub use ir::*;
 pub use settings::*;
+pub use silicon_explorer::*;
+pub use ssot_studio::*;
 pub use storage::*;
 pub use unbrick::*;
 pub use unbrick_dto::*;

@@ -64,7 +64,7 @@ def _build_single_pico_board(
         env=pico_env,
         capture_output=True,
     )
-    built_uf2 = bdir / "panasonic_p7501_uart.uf2"
+    built_uf2 = bdir / "picofw.uf2"
     if not built_uf2.is_file():
         raise FileNotFoundError(f"Expected compiled UF2 missing: {built_uf2}")
     return board, built_uf2, f"{log_a}{log_b}"
@@ -72,7 +72,7 @@ def _build_single_pico_board(
 
 def compile_pico_boards_parallel(pico_env: Mapping[str, str]) -> tuple[Path, Path]:
     """Build RP2040 and RP2350 CMake/Ninja targets simultaneously."""
-    fw_dir = ROOT / "firmware" / "pico-p7501"
+    fw_dir = ROOT / "firmware" / "picofw"
     build_root = ROOT / "target" / "pico-build"
     results = run_concurrent_tasks(
         [
@@ -102,7 +102,7 @@ def merge_and_sync_pico_uf2(
     build_root = ROOT / "target" / "pico-build"
     dest_dir = ROOT / "crates" / "panadiga-core" / "src" / "pico" / "firmware_bins"
     dest_dir.mkdir(parents=True, exist_ok=True)
-    staged_unified = build_root / "panasonic_p7501_uart_unified.uf2"
+    staged_unified = build_root / "picofw_unified.uf2"
 
     existing_cli = locate_panadiga_binary()
     if existing_cli is not None:
@@ -127,9 +127,10 @@ def merge_and_sync_pico_uf2(
         cwd=ROOT,
         env=pico_env,
     )
-    for obsolete_name in ("panasonic_p7501_uart_rp2040.uf2", "panasonic_p7501_uart_rp2350.uf2"):
-        (dest_dir / obsolete_name).unlink(missing_ok=True)
-    changed_unified = copy_if_changed(staged_unified, dest_dir / "panasonic_p7501_uart_unified.uf2")
+    for stale_uf2 in dest_dir.glob("*.uf2"):
+        if stale_uf2.name != "picofw_unified.uf2":
+            stale_uf2.unlink(missing_ok=True)
+    changed_unified = copy_if_changed(staged_unified, dest_dir / "picofw_unified.uf2")
     dist_dir = ROOT / "dist"
     if dist_dir.is_dir():
         sync_firmware_bins_to_dist(dist_dir)

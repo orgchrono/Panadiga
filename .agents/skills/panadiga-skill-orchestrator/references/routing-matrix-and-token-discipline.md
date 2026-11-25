@@ -43,7 +43,7 @@
 1. `.agents/skills/panadiga-opensource-firmware-dev/SKILL.md` + `.agents/skills/panadiga-functional-math-and-patterns/SKILL.md` (Stage-1.5 `0x50400000` -> Stage-2 `0x57000000`, `hal/am34_mmio.h`, FSMs puras em C11 freestanding, ponto fixo/modular sem `float`, ISRs/DMA/WDT, `zlib`/LZSS sem heap, `-DPANADIGA_OPENOS_HOST_TEST=1`, `M0 -> M4`)
 2. `.agents/skills/panadiga-ghidra-workflow/SKILL.md` (confirmar mapas MMIO reais do hardware alvo)
 3. `.agents/skills/panadiga-emulation-and-patching/SKILL.md` + `.agents/skills/panadiga-nvram-unbrick/SKILL.md` (empacotar `DIGADIAG.FRM` / testar limites `Mn103Vm`)
-4. `.agents/skills/panadiga-bench-operations/SKILL.md` + `.agents/skills/panadiga-bench-automation-and-headless/SKILL.md` (`ADuM3160` + `BOOTTRACE` + `OPENOS>` / `PANAMON2>`)
+4. `.agents/skills/panadiga-bench-operations/SKILL.md` + `.agents/skills/panadiga-bench-automation-and-headless/SKILL.md` (`ADuM3160` + `BOOTTRACE` + `DIGAOS>`)
 5. `.agents/skills/panadiga-forensic-archival/SKILL.md` (arquivar capturas UART + atualizar `ledger.json`)
 
 ---

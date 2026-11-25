@@ -204,7 +204,7 @@ flowchart LR
   ├─────────────────────────────────────────────────────────────────────┤
   │ 2. JST ZR-6 MATE: Plug harness into P7501 + USB into Pico           │
   ├─────────────────────────────────────────────────────────────────────┤
-  │ 3. TERMINAL (115200 bps): Open console -> Prompt 'PANADIGA> '       │
+  │ 3. TERMINAL (115200 bps): Open console -> Prompt 'PICO> '       │
   ├─────────────────────────────────────────────────────────────────────┤
   │ 4. ELECTRICAL CHECK ('STATUS' & 'PINCHECK'): ~3.25V Hi-Z / ~2.69V PD│
   ├─────────────────────────────────────────────────────────────────────┤
@@ -227,36 +227,36 @@ flowchart LR
 1. Plug the `ZHR-6` (`1.5 mm`) connector into `P7501`, double-checking exact 6-pin mapping (`1->GP26`, `2->GP5`, `3->GP4`, `4->GND`, `5->GP3`, `6->GP2`).
 2. Power the Pico strictly from its **USB** port connected to the workstation (or Android OTG / BLE on Pico W / 2 W).
 
-### Step 3: Power-On & Opening the Console (`PANADIGA> `)
+### Step 3: Power-On & Opening the Console (`PICO> `)
 1. Plug the Panasonic recorder into AC mains and connect Pico USB.
 2. Open the Pico serial port in the Desktop app (`panadiga-desktop`), CLI (`panadiga`), or serial terminal at `115200 bps`.
-3. Press `<ENTER>` and verify prompt **`PANADIGA> `**.
+3. Press `<ENTER>` and verify prompt **`PICO> `**.
 
 ### Step 4: Electrical Health Check (`STATUS` & `PINCHECK`)
 ```text
-PANADIGA> PING
+PICO> PING
 PONG
-PANADIGA> STATUS
+PICO> STATUS
 VDD: 3.25V (OK)
-PANADIGA> PINCHECK
+PICO> PINCHECK
 ```
 * **Expected `PINCHECK` values:** `SW_UART` (`GP26`) reads `~3.25V` `Hi-Z`, `~2.69V` pull-down (clamped via `Q7510` B-C junction), and `~3.27V` pull-up; `XRESET` (`GP5`) rises in `~20 µs` on release; `NSW5V` (`GP3`) reports strictly `Hi-Z Input`; `GP2` (`UARTP2M_T`) shows hundreds of active UART edges during boot.
 
 ### Step 5: Live Boot Capture (`UARTSTREAM` / `BOOTTRACE` / `HEXCAP` / `BAUDSCAN`)
 ```text
-PANADIGA> BAUDSCAN 3500 NORMAL
-PANADIGA> UARTSTREAM 12000 JIG:2500
-PANADIGA> BOOTTRACE 15000 NOJIG
+PICO> BAUDSCAN 3500 NORMAL
+PICO> UARTSTREAM 12000 JIG:2500
+PICO> BOOTTRACE 15000 NOJIG
 ```
 * Deterministic PIO1 capture on `GP2` (`115200 8N1`) displays complete AM34 bootloader telemetry (`<00>DDR CHECK: OK`, `SD init`, `CD diag boot mode`, `X(80020401)` / `X(80040904)` codes, and `*** RTSC Initialize ***`). *(For **`Loader ver0.61`**, timed `UARTSTREAM 12000 JIG:2500` holds `SW_UART` LOW long enough to clear `DDR CHECK: OK` and load `DIGADIAG.FRM` before releasing `GP26`; legacy PIO0 `JIGBOOT`/`BOOTCAP`/`UARTMON` remain available.)*
 
 ### Step 6: Interactive Serial TX (`ENGAGE` + `UARTSEND` / `DIAGWATCH` / `PANARSP`) & Cleanup (`UARTPROBE 8` + `ISOLATE`)
 ```text
-PANADIGA> ENGAGE
+PICO> ENGAGE
 [BUS] P7501 UART TX (GP4) engaged idle HIGH; NSW5V (GP3) kept Hi-Z Input.
-PANADIGA> UARTSEND VER
-PANADIGA> UARTPROBE 8
-PANADIGA> ISOLATE
+PICO> UARTSEND VER
+PICO> UARTPROBE 8
+PICO> ISOLATE
 [BUS] P7501 pins placed in High-Impedance Isolation (NSW5V/XRESET Hi-Z, GP26 ADC0).
 ```
 *(Remember: `UARTSEND` keeps `SW_UART = Hi-Z` so signals pass through `Q7514`; upon completion, `UARTPROBE 8` + `ISOLATE` leaves `GP26 / ADC0` clean for subsequent `STATUS` checks.)*
@@ -290,7 +290,7 @@ PANADIGA> ISOLATE
 * **Electrical Warning:** Never connect generic USB-Serial dongles directly to `P7501` without strict `3.3V` compliance, true Open-Drain on `XRESET`, and complete isolation of Pin 5 (`NSW5V`).
 
 ### 7.2. Compatibility Across NOR Flash Vendors (JEDEC CFI)
-Target stub [`ram_loader_am34_target.c`](../../firmware/pico-p7501/flash/ram_loader_am34_target.c) and `panadiga nvram clean` support JEDEC/CFI Top-Boot geometries across **Spansion** (`S29JL064H`, `S29GL064N`, `S29AL016D`), **ST/Numonyx** (`M29W640FB`/`FT`), **Macronix** (`MX29LV640DT`), **Fujitsu** (`MBM29LV640`), and **Toshiba/Winbond**.
+Target stub [`ram_loader_am34_target.c`](../../firmware/picofw/flash/ram_loader_am34_target.c) and `panadiga nvram clean` support JEDEC/CFI Top-Boot geometries across **Spansion** (`S29JL064H`, `S29GL064N`, `S29AL016D`), **ST/Numonyx** (`M29W640FB`/`FT`), **Macronix** (`MX29LV640DT`), **Fujitsu** (`MBM29LV640`), and **Toshiba/Winbond**.
 
 ### 7.3. Compatibility Across the Panasonic DIGA Family
 Top-Boot NVRAM (`EEMUL`) window layout across DIGA generations:
@@ -327,4 +327,4 @@ Before attempting any invasive write or recovery command:
 4. **Step 4 — Graduated `U99` Repair (In-Circuit under `E05` IPL Lock $\rightarrow$ TSOP-48 Fallback):** With the 8 MiB backup safely on disk, perform in-circuit repair inside `PANAMON1>` (`SA134..SA141` `EEMUL` enabled by default; Layer 2 BGO `SA26..SA70` unlocked only via explicit `U CONFIRM_UPPER_NOR` + ~`700 ms` / `0xFF × 32` erase polling, keeping **Layer 1 IPL `SA0..SA10` permanently locked with `E05`**). For an already-bricked `U99` recorder, trying this no-desolder recovery first carries zero risk to bootrom IPL; resort to physical TSOP-48 removal (**XGecu T48** / **SVOD 4** + `panadiga nvram clean`) only if `SA0..SA10` IPL or the SD slot hardware has failed.
 
 > [!TIP]
-> For the complete **bare-metal `PANADIGA>` command reference** and the **operational glossary (`PANAMON`/`PANAMON1>`, `WAITTX`, `JIG`/`PREJIG`, `BOOTREC`, `OpenOS`, and host `panadiga pico` subcommands)**, see **Sections 6 and 11 of [`PICO_P7501_FIRMWARE_GUIDE.md`](./PICO_P7501_FIRMWARE_GUIDE.md)**.
+> For the complete **bare-metal `PICO>` command reference** and the **operational glossary (`PANAMON`/`PANAMON1>`, `WAITTX`, `JIG`/`PREJIG`, `BOOTREC`, `OpenOS`, and host `panadiga pico` subcommands)**, see **Sections 6 and 11 of [`PICO_P7501_FIRMWARE_GUIDE.md`](./PICO_P7501_FIRMWARE_GUIDE.md)**.

@@ -40,9 +40,8 @@ pub const RP2350_SDK_FAMILY_ID: u32 = RP2350_ABS_SDK_FAMILY_ID;
 pub const RP2350_ARM_S_SDK_FAMILY_ID: u32 = 0xE48B_FF59;
 pub const RP2350_RISCV_SDK_FAMILY_ID: u32 = 0xE48B_FF5A;
 
-/// Pre-compiled P7501 Async UART unified firmware container embedded into the application executable.
-pub const EMBEDDED_UNIFIED_UF2: &[u8] =
-    include_bytes!("firmware_bins/panasonic_p7501_uart_unified.uf2");
+/// Pre-compiled PicoFW unified firmware container (`picofw_unified.uf2`) embedded into the application executable.
+pub const EMBEDDED_UNIFIED_UF2: &[u8] = include_bytes!("firmware_bins/picofw_unified.uf2");
 
 /// Result summary of an automated Pico flashing operation.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

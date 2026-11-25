@@ -21,26 +21,26 @@ fn generated_pico_ssot_files_match_checked_in_c_files() {
     let tables = generate_c11_ssot_tables();
     let shim = generate_pana_rsp_ssot_header();
 
-    assert_file_matches("firmware/pico-p7501/generated/p7501_ssot.h", &header);
-    assert_file_matches("firmware/pico-p7501/generated/p7501_ssot_tables.c", &tables);
-    assert_file_matches("firmware/pico-p7501/uart/p7501_pana_rsp_ssot.h", &shim);
+    assert_file_matches("firmware/picofw/generated/picofw_ssot.h", &header);
+    assert_file_matches("firmware/picofw/generated/picofw_ssot_tables.c", &tables);
+    assert_file_matches("firmware/picofw/uart/picofw_pana_rsp_ssot.h", &shim);
 
     assert!(header.contains("0x80000000UL"));
     assert!(header.contains("0x8003FFFFUL"));
     assert!(header.contains("0x84000000UL"));
     assert!(header.contains("0x8403FFFFUL"));
     assert!(header.contains("0xC000100CUL"));
-    assert!(header.contains("P7501_SSOT_DIGADIAG_LOAD_ADDR      0x50400000UL"));
-    assert!(header.contains("P7501_SSOT_SDRAM_STUB_RAW_ADDR     0x51800000UL"));
+    assert!(header.contains("PICOFW_SSOT_DIGADIAG_LOAD_ADDR     0x50400000UL"));
+    assert!(header.contains("PICOFW_SSOT_SDRAM_STUB_RAW_ADDR    0x51800000UL"));
     assert!(header.contains("0x00130000UL"));
     assert!(header.contains("45u"));
-    assert!(header.contains("P7501_SSOT_NOR_AUTOBOOT_HDR_BYTES  256u"));
-    assert!(header.contains("P7501_SSOT_NOR_AUTOBOOT_MAGIC_OFF  0xFCu"));
-    assert!(header.contains("P7501_SSOT_NOR_AUTOBOOT_MAGIC_LE   0x5455414EUL"));
-    assert!(header.contains("P7501_SSOT_VDD_NOMINAL_MV          3300u"));
-    assert!(tables.contains("k_p7501_ssot_flash_chips"));
-    assert!(tables.contains("k_p7501_ssot_target_profiles"));
-    assert!(tables.contains("k_p7501_ssot_eeprom_chips"));
+    assert!(header.contains("PICOFW_SSOT_NOR_AUTOBOOT_HDR_BYTES 256u"));
+    assert!(header.contains("PICOFW_SSOT_NOR_AUTOBOOT_MAGIC_OFF 0xFCu"));
+    assert!(header.contains("PICOFW_SSOT_NOR_AUTOBOOT_MAGIC_LE  0x5455414EUL"));
+    assert!(header.contains("PICOFW_SSOT_VDD_NOMINAL_MV         3300u"));
+    assert!(tables.contains("k_picofw_ssot_flash_chips"));
+    assert!(tables.contains("k_picofw_ssot_target_profiles"));
+    assert!(tables.contains("k_picofw_ssot_eeprom_chips"));
     assert!(!tables.contains("Loader ver0.63"));
     assert!(!tables.contains("VEP79142"));
     assert!(!tables.contains("VEP79179"));

@@ -159,6 +159,10 @@ pub struct PrepareSdArgs {
     #[arg(long)]
     pub nor_autoboot_capsule: bool,
 
+    /// Apply SSOT M6930LB Brazilian localization patches (`market_code`/OSD, `IC3001 BH7629`, `FPC 0x7F`/`GATE=15`) + `<deviceinfo>` bypass on `MAIN`
+    #[arg(long)]
+    pub m6930lb_localization: bool,
+
     /// Exports structured JSON build & verification report
     #[arg(short, long, value_name = "JSON_FILE")]
     pub json: Option<PathBuf>,

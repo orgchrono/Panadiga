@@ -610,6 +610,12 @@
         "native_bgo_geometry_id": {
           "type": "string"
         },
+        "region_localization_sites": {
+          "items": {
+            "$ref": "#/$defs/BinaryPatchSiteSpec"
+          },
+          "type": "array"
+        },
         "region_tv_standard": {
           "type": [
             "string",

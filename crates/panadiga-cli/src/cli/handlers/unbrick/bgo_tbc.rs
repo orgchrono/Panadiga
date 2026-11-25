@@ -81,6 +81,7 @@ pub(super) fn handle_prepare_sd(sd: PrepareSdArgs) -> Result<()> {
         hardened.sata_hdd_autoboot = sd.sata_hdd_autoboot;
         hardened.main_bgo_retarget = sd.main_bgo_retarget;
         hardened.nor_autoboot_capsule = sd.nor_autoboot_capsule;
+        hardened.m6930lb_localization = sd.m6930lb_localization;
         hardened
     } else {
         let bgo_mode: Prog061BgoPatchMode = sd.bgo_mode.parse()?;
@@ -104,6 +105,7 @@ pub(super) fn handle_prepare_sd(sd: PrepareSdArgs) -> Result<()> {
             sata_hdd_autoboot: sd.sata_hdd_autoboot,
             main_bgo_retarget: sd.main_bgo_retarget,
             nor_autoboot_capsule: sd.nor_autoboot_capsule,
+            m6930lb_localization: sd.m6930lb_localization,
         }
     };
 
@@ -123,7 +125,12 @@ pub(super) fn handle_prepare_sd(sd: PrepareSdArgs) -> Result<()> {
 
     if lbs_preset.is_some() || tv_std.is_some() {
         let preset = lbs_preset.unwrap_or(LbsRegionPresetId::CustomInspected);
-        let main_bytes = report.main_source.as_deref().map(fs::read).transpose()?;
+        let main_bytes = report
+            .main_source
+            .as_deref()
+            .filter(|p| Path::new(p).is_file())
+            .map(fs::read)
+            .transpose()?;
         let frm_bytes = report.pana_sd_path.as_deref().map(fs::read).transpose()?;
         let tv_rep = inspect_tv_calibration_bundle(
             preset,

@@ -100,7 +100,7 @@ impl Panamon1Transport for SerialPanamon1Transport {
         let mut buf = [0u8; 1024];
 
         while Instant::now() < total_deadline {
-            if out.contains("PANADIGA>") || out.contains("P7501>") {
+            if super::cdc::contains_pico_prompt(&out) {
                 break;
             }
             if !out.contains("BRIDGE: OK") && Instant::now() >= tilde_deadline {
@@ -113,7 +113,7 @@ impl Panamon1Transport for SerialPanamon1Transport {
             }
         }
 
-        if !out.contains("BRIDGE: OK") && !out.contains("PANADIGA>") && !out.contains("P7501>") {
+        if !out.contains("BRIDGE: OK") && !super::cdc::contains_pico_prompt(&out) {
             self.port.write_all(b"\x03")?;
             self.port.flush()?;
             let ctrl_c_deadline = total_deadline.max(Instant::now() + Duration::from_millis(400));
@@ -122,7 +122,7 @@ impl Panamon1Transport for SerialPanamon1Transport {
                     && n > 0
                 {
                     out.push_str(&String::from_utf8_lossy(&buf[..n]));
-                    if out.contains("PANADIGA>") || out.contains("P7501>") {
+                    if super::cdc::contains_pico_prompt(&out) {
                         break;
                     }
                 }

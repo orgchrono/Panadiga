@@ -73,7 +73,7 @@ panadiga unbrick rebuild-from-dump \
   --json tmp/rebuild_report.json
 ```
 
-O comando verifica integridade da NOR (bloqueando dumps com byte-swap ou espelhamento), consistência de versão IPL vs `firmware_train`, integridade checksum de `DRV` e identidade `MAIN` antes de empacotar (use `--allow-unverified-mix` somente em laboratório para combinações cross-build). Para protótipos experimentais em SDRAM (`panamon2`), veja [`firmware/panadiga-blackbox-fw/README.md`](../../firmware/panadiga-blackbox-fw/README.md) (aviso: protótipo de interoperabilidade, **não** *clean-room* jurídico).
+O comando verifica integridade da NOR (bloqueando dumps com byte-swap ou espelhamento), consistência de versão IPL vs `firmware_train`, integridade checksum de `DRV` e identidade `MAIN` antes de empacotar (use `--allow-unverified-mix` somente em laboratório para combinações cross-build). Para protótipos experimentais em SDRAM (`DigaOS`), veja [`firmware/digaos/README.md`](../../firmware/digaos/README.md) (aviso: protótipo de interoperabilidade, **NOT LEGALLY CLEAN-ROOM**).
 
 ### Estágio 4 — Quarentena de Especificações via Manuais PDF (`T1`)
 
@@ -116,6 +116,6 @@ O emulador `Mn103Vm` valida apenas fluxo de controle ISA (`MN103S`) e fronteiras
 Com o bloqueio `S11` encerrado em silício real e o mapa completo `BGO` (`p1_sa=41`, `45/45` saudáveis) + `SDCD_CFG4` (`0x000040B8` `4BIT`) verificados em [`com10_round5_live_unbrick_sd_trace_20261124.log`](../evidence/com10_round5_live_unbrick_sd_trace_20261124.log), as frentes imediatas de evolução são:
 
 1. **NorAutoboot `SA11..SA14` Opt-In (`--nor-autoboot-capsule`, Boot Sem SD via `Nor-FROM`):** `NOR_MAP` e `BGO_INSPECT NORFROM` confirmaram `SA11 0x84040000 = ERASED_FF` (`norfrom_used=0`), explicando por que o `MAIN` ainda depende do SD inserido para carregar o hook pré-FVU. Quando houver autorização explícita do operador, gravar `SA11..SA14` (protegendo `SA0..SA10` com `E05`) via `--sata-hdd-autoboot --nor-autoboot-capsule` + `--confirm-upper-nor` com backup SHA-256 completo.
-2. **Bring-Up AO VIVO do `Panadiga OpenOS` (`M1 -> M3`) em SDRAM:** empacotar `firmware/panadiga-openos` (`SSOT=C045CA85`, `openos_shell_poll_once()`, comandos `sd`/`bgo`/`ssot`) como `DIGADIAG.FRM` (`262.144 B` `@ 0x5040_0000`) e validar boot e keepalive `IC7501` `255s` em bancada sem tocar em `SA0..SA141`.
+2. **Bring-Up AO VIVO do `DigaOS` (`M1 -> M3`) em SDRAM:** empacotar `firmware/digaos` (`digaos_ssot.h`, `digaos_shell_poll_once()`, comandos `sd`/`bgo`/`ssot`, `DIGAOS>`) como `DIGADIAG.FRM` (`262.144 B` `@ 0x5040_0000`) e validar boot e keepalive `IC7501` `255s` em bancada sem tocar em `SA0..SA141`.
 3. **Parser Completo `Upper EEMUL` (`SA71..SA133` `"1284"`):** decodificar os `7` registros ativos e `11` superseded identificados pelo `NOR_MAP` para auditoria fina de calibração/opções além de `SA134`.
 4. **`PANAEUSB.FRM` & Expansão NAND/eMMC (`Schema v2.1`):** estender extração/desofuscação USB e modelagem SSOT de armazenamento não-NOR nos perfis de modelos `T1 -> T4`.

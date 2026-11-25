@@ -550,7 +550,7 @@ SECAO 17: CONTEINERES `.FRM` (`DIGADIAG.FRM` vs `PANA_DVD.FRM` vs `PANA__SD.FRM`
       - Stub `_dev_SERIAL`: handshake `0E 02 02 04` (`0x515B2E60`) + `0x15` NAK,
         ponteiro de callback serial `0x515B2E40` e contexto de ISR `0x5316AE8C` (`+0x64`).
 
-  - Upgrade Autonomo do Firmware Pico `P7501` (`firmware/pico-p7501/uart/p7501_pana_rsp.*`):
+  - Upgrade Autonomo do Firmware Pico `P7501` (`firmware/picofw/uart/picofw_pana_rsp.*`):
     * Novos subcomandos em `PANARSP`:
       - `WMEM:<addr>,<hex>` (emite `$M<addr>,<len>:<hex>#<xx>`)
       - `WRITE32:<addr>,<u32>` (emite `$M<addr>,4:<le_hex>#<xx>`)

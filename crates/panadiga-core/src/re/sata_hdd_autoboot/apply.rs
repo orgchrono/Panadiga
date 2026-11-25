@@ -49,6 +49,21 @@ pub fn inspect_hdd_autoboot_site_for_spec(
         PROG061_HDD_AUTOBOOT_STATE_ENABLED if payload_present => PROG061_HDD_AUTOBOOT_STATE_ENABLED,
         _ => PROG061_HDD_AUTOBOOT_STATE_MISMATCH,
     };
+    let expected_main_extrhead_crc_hex = if spec.payload_offset >= 4 {
+        let crc = u32::from_le_bytes(
+            buf[spec.payload_offset - 4..spec.payload_offset]
+                .try_into()
+                .unwrap_or([0xFF; 4]),
+        );
+        if crc != 0 && crc != u32::MAX {
+            Some(format!("0x{crc:08X}"))
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
     Ok(Prog061HddAutobootStatus {
         hook_va_hex: format!("0x{:08X}", cls.va),
         payload_va_hex: format!(
@@ -59,6 +74,7 @@ pub fn inspect_hdd_autoboot_site_for_spec(
         state: state.to_string(),
         payload_present,
         hook_bytes_hex: hex::encode(cls.actual_bytes),
+        expected_main_extrhead_crc_hex,
     })
 }
 
@@ -129,6 +145,9 @@ pub fn apply_hdd_autoboot_in_place_for_spec(
     let hook_cls = classify_patch_site(buf, &hook_spec, PROG061_HDD_AUTOBOOT_STATE_ENABLED)?;
     let tail_slice = &buf[spec.payload_offset..end];
 
+    if spec.payload_offset < 4 {
+        bail!("SATA HDD autoboot payload_offset must be >= 4 bytes");
+    }
     if enable {
         if hook_cls.state == PROG061_HDD_AUTOBOOT_STATE_ENABLED && tail_slice == payload.as_slice()
         {
@@ -152,6 +171,7 @@ pub fn apply_hdd_autoboot_in_place_for_spec(
                 PROG_SLACK_FILL_BYTE
             );
         }
+        buf[spec.payload_offset - 4..spec.payload_offset].fill(PROG_SLACK_FILL_BYTE);
         buf[spec.payload_offset..end].copy_from_slice(&payload);
         apply_patch_specs_in_place(buf, &[(&hook_spec, PatchApplyAction::ApplyReplace)])?;
     } else {
@@ -163,9 +183,40 @@ pub fn apply_hdd_autoboot_in_place_for_spec(
             bail!("Refusing to revert non-matching SATA HDD autoboot hook/payload");
         }
         apply_patch_specs_in_place(buf, &[(&hook_spec, PatchApplyAction::RestoreExpect)])?;
-        buf[spec.payload_offset..end].fill(PROG_SLACK_FILL_BYTE);
+        buf[spec.payload_offset - 4..end].fill(PROG_SLACK_FILL_BYTE);
     }
     Ok(())
+}
+
+/// Stamps the expected `MAIN` `EXTRHEAD+0x28` header checksum into `(base_va + payload_offset - 4)`.
+pub fn stamp_hdd_autoboot_expected_main_checksum_for_spec(
+    buf: &mut [u8],
+    spec: &HddAutobootTrainSpec,
+    expected_extrhead_crc: u32,
+) -> Result<()> {
+    if spec.payload_offset < 4 {
+        bail!("SATA HDD autoboot payload_offset must be >= 4 bytes");
+    }
+    let status = inspect_hdd_autoboot_site_for_spec(buf, spec)?;
+    if status.state != PROG061_HDD_AUTOBOOT_STATE_ENABLED || !status.payload_present {
+        bail!(
+            "Cannot stamp expected MAIN checksum before enabling SATA HDD autoboot (state={})",
+            status.state
+        );
+    }
+    buf[spec.payload_offset - 4..spec.payload_offset]
+        .copy_from_slice(&expected_extrhead_crc.to_le_bytes());
+    Ok(())
+}
+
+/// Stamps the expected `MAIN` `EXTRHEAD+0x28` header checksum for a loader profile (`ver061`, etc.).
+pub fn stamp_hdd_autoboot_expected_main_checksum_for_profile(
+    buf: &mut [u8],
+    profile_id: &str,
+    expected_extrhead_crc: u32,
+) -> Result<()> {
+    let spec = hdd_autoboot_spec_for_loader_profile(profile_id)?;
+    stamp_hdd_autoboot_expected_main_checksum_for_spec(buf, &spec, expected_extrhead_crc)
 }
 
 /// Applies or removes the `PROG061` (`Loader ver0.61`) SATA HDD autoboot hook atomically via SSOT.

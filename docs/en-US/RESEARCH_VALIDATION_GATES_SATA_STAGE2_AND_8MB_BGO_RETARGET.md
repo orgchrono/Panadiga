@@ -61,6 +61,20 @@ Rebuilding `firmware_and_images/sd_unbrick_kit_sata_bridge_stage2` with `--loade
 
 ---
 
+### 3.4 Why **Boot 1** (`FVU` Installer) and **Boot 2** (`[HDD_AUTOBOOT]` Runtime) Are Separate
+
+A frequent question when operating the SATA bridge recovery kit (`StarTech IDE2SAT2`) is why initial deployment is split into **two boots**:
+
+| Phase | Architectural Role | What the SD Card Does | When It Happens |
+| :--- | :--- | :--- | :--- |
+| **Boot 1 — One-Time Flash (`Fvu ver0.61` $\rightarrow$ `SD version up mode.`)** | The main OS (`MAIN`, `~13 MiB` unpacked) **does not fit inside the `8 MiB` NOR** and does not execute in-place from SD — it resides inside the **two MEIHFS firmware partitions on the HDD** (`0x00010000` and outer mirror `0x1D1A5970`). | Loads the `FVU` updater into SDRAM, reads the `MAIN` payload inside `PANA__SD.FRM` (`File ID[0xC8] seek 0xF1800`), and flashes/verifies (`Vefify OK` × 2) both HDD mirrors using the `1000 ms` SATA bridge reset wait. | **Once only**, whenever installing or switching `MAIN` builds/patches (or explicitly triggered via UART `'F'` or `FORCEFVU.TXT`). |
+| **Boot 2+ — Normal Everyday Startup (`[HDD_AUTOBOOT]`)** | Because factory IPL **`Loader ver0.61` (`SA0..SA10` RO)** only waits **`2 ms`** after ATA `RESET-` — while the **`Marvell 88SA8052`** inside `StarTech IDE2SAT2` needs **`~555 ms`** to assert `DRDY` — cold NOR boot fails with `HDD_MAX_LBA get failed[0xE8000000]` and falls back to SD. | **`PROG061`** inside `PANA__SD.FRM` runs the pre-FVU **`[HDD_AUTOBOOT]`** hook (`0x504050D3 -> 0x50439600`) with **`1000 ms`** SATA bridge wait **without modifying HDD mirrors**: reads `MAIN` straight from `0x00010000` (or `max_lba - 0x20000`), decompresses to `0x57000000`, and boots the recorder. | **Every normal power-on** once Boot 1 has populated the HDD (**1 single boot** per power cycle). |
+
+> [!NOTE]
+> Kits built **without** `--sata-hdd-autoboot` always fall straight into `SD version up mode.` (useful when forcing a clean Boot 1 flash). Once rebuilt with **`--sata-hdd-autoboot`**, a **single SD card** handles both roles permanently: it boots `MAIN` straight from the HDD on every normal power-on (**Boot 2+**) and only enters `FVU` if the operator holds `'F'` on UART or puts `FORCEFVU.TXT` on the SD root.
+
+---
+
 ## 4. `MAIN3410PQ` (`M6:PAL:DVD.HDD` with `NTSC`/`PAL` Switch) Extension & SSOT/RAG Hardening
 
 ### 4.1 `MAIN3410PQ` (`13,003,052 B`) support
@@ -153,6 +167,12 @@ Test **`mn103vm_proves_nor_autoboot_loader_ver061_norfrom_boot_and_escape_hatch`
 | `main3060np_unpacked.bin` | `13,427,852` | `075f552ed583ba1835c0d44d1b533ff5a016b8d81d15d7166240098461ddcca7` | Stock unpacked `MAIN3060NP` |
 | `hdd_partition_firmware_0x02000000.bin` | `6,173,264` | `6ec63de059c00b287a0e8a1a4102a8007bbccf3210a552bfb45118a03b85c898` | European reference HDD partition `0x02000000` (`M6:PAL:DVD.HDD`) |
 | `eh55_main3410pq_unpacked.bin` | `13,003,052` | `c3275d39549b68f48db16bc5fd043c6f8a373d4ba416826de09be5c55dc991b1` | Unpacked `MAIN3410PQ` (`M6:PAL` w/ `NTSC`/`PAL` + `AIOF PAL_M` drivers) |
+| [`com10_live_video_osd_diag_20261124.log`](../evidence/com10_live_video_osd_diag_20261124.log) | `23,096` | `FA9EA01E82C8AC7EF0AE8A4B8B300EE6AE2BD818AE17EC6A7E0B596F4B11CB82` | Live volatile `ndb>` diagnostic on `MAIN3060NP` + `STANDBY_GATE_STOP` trace (`EV-20261124-005`) |
+| [`com10_live_volatile_patch_20261124.log`](../evidence/com10_live_volatile_patch_20261124.log) | `6,404` | `BD4B0F32A0D1F9A993C4CCCDF0C9ADB9F8772E7B175427608FA72465746A1365` | Live volatile `IC3001`/`AVDD`/`AIOF_FS0` SDRAM patch in `MAIN3060NP` (`0.702s`, `EV-20261124-005`) |
+| [`com10_m6930lb_3410pq_boot1_fvu_20261124.log`](../evidence/com10_m6930lb_3410pq_boot1_fvu_20261124.log) | `10,355` | `1543B9B3D0322509723F985DD657464B09579D2276058549DF224E490EDE2536` | **LIVE Boot 1 `FVU` `MAIN3410PQ` `M6930LB` (`check_sum=0x2f84d497`, `Vefify OK` × 2, `EV-20261124-005`)** |
+| [`com10_m6930lb_3410pq_boot2_main_20261124.log`](../evidence/com10_m6930lb_3410pq_boot2_main_20261124.log) | `42,889` | `245562E6B3F4DE9A29462C8338E80889E2B48DFAA01D1E9C01EC7B6DE6F1FBE5` | **LIVE Boot 2 `[HDD_AUTOBOOT]` `MAIN3410PQ` `M6930LB` + `ndb>` (`0x53186DBC=0x80`, `iic_err=0`, `EV-20261124-005`)** |
+| [`com10_m6930lb_3410pq_live_video_fix_20261125.log`](../evidence/com10_m6930lb_3410pq_live_video_fix_20261125.log) | `16,510` | `8986CE243A0F314CF97D6AB21388817F3CD146A23230A218AE91636D72114487` | **LIVE `480i 60 Hz` (`0x88000000=0x8020`, `0x515CD08C=0`) + `AVDD_DACOUT1=0x0D00` w/ `0x515A2444=1` (`EV-20261125-001`)** |
+| `sd_unbrick_kit_m6930lb_br/PANA__SD.FRM` | `7,181,488` | `03a47de8c0c32401c03806bbc27333a722c4bdd777bc6f57b6fcd80322d2fb76` | Turnkey 1-SD-card `MAIN3410PQ` 8-site `M6930LB` kit w/ `0x504395FC=0x86F2435C` stamp (`verify-sd --audit-profile hardened` PASS, `EV-20261125-001`) |
 
 ---
 

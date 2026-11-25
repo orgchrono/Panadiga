@@ -1,0 +1,172 @@
+=== PRE_STATUS [2026-11-25T02:10:05Z] ok=True ===
+VDD: 3.26V (OK)
+[STANDBY] RXD=1 NSW5V=1 TXD=1 XRESET=1 SW_PU=3.27V NSW5V_DROPS=118 fault_latch=0 recoveries=58 | State=POWERED / AWAKE (SW_UART ~3.3V)
+[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=82 wdt_recoveries=0 reboot_src=CLEAN fault_slot=255 fault_stage=IDLE last_cmd=IDENTIFY last_us=604012
+@P7501_RES cmd=STATUS status=OK code=0 elapsed_us=1767
+PANADIGA>
+
+
+=== BOOTTRACE 65000 NORMAL [2026-11-25T02:10:05Z] complete=True ===
+=== BOOTTRACE: window=65000ms boot=1 hold=0ms sticky=NO no_xrst=NO (8N1 @ 115200) ===
+[BOOTTRACE +  10ms] DDR CHECK: OK
+[BOOTTRACE +  19ms] Chip select = 1
+[BOOTTRACE +  20ms] F/E Address = 0x90202000 , Drive(compress) Size = 0xACC50
+[BOOTTRACE +  26ms] uncompress dst=90202000 len=160000 src=84080040 len=acc01
+[BOOTTRACE + 774ms] HEADER:5627DD54, DECOMP:5627DD54
+[BOOTTRACE + 777ms] F/E reset release finish ...
+[BOOTTRACE + 781ms] ***** Loader ver0.61 [06/03/06] *****
+[BOOTTRACE + 784ms] ***** normal mode *****
+[BOOTTRACE + 801ms] *** RTSC Initialize ***
+[BOOTTRACE +3537ms] [RTSD] ATAPI Software Reset 
+[BOOTTRACE +3551ms] [RTSD] HDD spin-up error (80000404)
+[BOOTTRACE +3554ms] miniboot : system assert!!
+[BOOTTRACE +3557ms] [RTSD] === IDE HOST ERROR === ( E8000000 )
+[BOOTTRACE +3560ms] *** ATAPI DEVICE ERROR
+[BOOTTRACE +3562ms] CDB  [FF EC 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +3567ms] Reg[00 00 00 00 00 00 00 : Err SecC SecN CylL CylH D/H Status] 
+[BOOTTRACE +3573ms] H_STAT [E8] T_STAT [0]
+[BOOTTRACE +3574ms] [RTSD] SRST Command Set
+[BOOTTRACE +3577ms] [RTSD] Reset Failed !! (80000407)
+[BOOTTRACE +3590ms] [RTSD] HDD spin-up error (80000404)
+[BOOTTRACE +3593ms] miniboot : system assert!!
+[BOOTTRACE +3596ms] [RTSD] === IDE HOST ERROR === ( E8000000 )
+[BOOTTRACE +3600ms] *** ATAPI DEVICE ERROR
+[BOOTTRACE +3602ms] CDB  [FF EC 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +3606ms] Reg[00 00 00 00 00 00 00 : Err SecC SecN CylL CylH D/H Status] 
+[BOOTTRACE +3612ms] H_STAT [E8] T_STAT [0]
+[BOOTTRACE +3614ms] [RTSD] SRST Command Set
+[BOOTTRACE +3616ms] [RTSD] Reset Failed !! (80000407)
+[BOOTTRACE +3629ms] [RTSD] HDD spin-up error (80000404)
+[BOOTTRACE +3632ms] miniboot : system assert!!
+[BOOTTRACE +3635ms] [RTSD] === IDE HOST ERROR === ( E8000000 )
+[BOOTTRACE +3639ms] *** ATAPI DEVICE ERROR
+[BOOTTRACE +3641ms] CDB  [FF EC 00 00 00 00 00 00 00 00 00 00] 
+[BOOTTRACE +3645ms] Reg[00 00 00 00 00 00 00 : Err SecC SecN CylL CylH D/H Status] 
+[BOOTTRACE +3651ms] H_STAT [E8] T_STAT [0]
+[BOOTTRACE +3653ms] [RTSD] SRST Command Set
+[BOOTTRACE +3655ms] [RTSD] Reset Failed !! (80000407)
+[BOOTTRACE +3658ms] HDD_MAX_LBA get failed[0xE8000000].
+[BOOTTRACE +3662ms] mainsoft data is invalid, so set update flag.
+[BOOTTRACE +3682ms] [nfrom] file_no[17],skip(0),non_skip(1),erase(0),new_write(0).
+[BOOTTRACE +3698ms] !!! start fmu to read & exec fvu. !!!
+[BOOTTRACE +3701ms] wait 1 second.
+[BOOTTRACE +4703ms] *** timer correspond initialize ***
+[BOOTTRACE +4708ms] startup reason = [5]
+[BOOTTRACE +4714ms] Main hung-up time changed 255[s].
+[BOOTTRACE +4725ms] Read fvu program from Update-Disk to 0x90400000.
+[BOOTTRACE +4730ms] SD card check start
+[BOOTTRACE +4731ms] SD init start...
+[BOOTTRACE +4823ms] [SDCD] sdcd_insrmv_check:SD Card inserted 
+[BOOTTRACE +4895ms] [SDCD] === This Card Spec ==== 
+[BOOTTRACE +4898ms] .Card type:2(condition:3) wp:0
+[BOOTTRACE +4901ms] .capacity:3c4000[LBA](2021654528Byte) . transfer speed:25000[Kbps]
+[BOOTTRACE +4907ms] .RCA:2 . Bus Width:4(current) 4(support)
+[BOOTTRACE +4910ms] .Multi Max Block Len Read:2[SECT] / Write:2[SECT]
+[BOOTTRACE +4915ms] SD = 0x3C4000[LBA]
+[BOOTTRACE +4916ms] ... SD init end
+[BOOTTRACE +4923ms] FAT Mount ID = 0x1
+[BOOTTRACE +4928ms] FAT Open Old File ID = 0xC8
+[BOOTTRACE +4931ms] treat as SD.
+[BOOTTRACE +4949ms] File ID[0xC8] seek to 0xB1800.
+[BOOTTRACE +5018ms] File ID[0xC8] read to 0x90400000(size=0x40000).
+[BOOTTRACE +5023ms] cheking for fvu program check-sum[0x2189E34].
+[BOOTTRACE +5108ms] [nfrom] file_no[17],skip(0),non_skip(1),erase(0),new_write(0).
+[BOOTTRACE +5124ms] success to read fvu program from Update-Disc.
+[BOOTTRACE +5159ms] [RTSD] Device Reset Occurred(0x62900) 
+[BOOTTRACE +5163ms] X(80062900)X(80023a00)X(80023a00)X(80023a00)
+[BOOTTRACE +5170ms] *** start fvu ***
+[BOOTTRACE +5178ms] ***** Fvu ver0.61 [05/11/01] *****
+[BOOTTRACE +5196ms] *** RTSC Initialize ***
+[BOOTTRACE +8385ms] [RTSD] ATAPI Software Reset 
+[BOOTTRACE +8388ms] SD version up mode.
+[BOOTTRACE +8390ms] Read Firm-list from Update-Disc or HDD.
+[BOOTTRACE +8394ms] treat as SD.
+[BOOTTRACE +8395ms] SD init start...
+[BOOTTRACE +8487ms] [SDCD] sdcd_insrmv_check:SD Card inserted 
+[BOOTTRACE +8558ms] [SDCD] === This Card Spec ==== 
+[BOOTTRACE +8561ms] .Card type:2(condition:3) wp:0
+[BOOTTRACE +8564ms] .capacity:3c4000[LBA](2021654528Byte) . transfer speed:25000[Kbps]
+[BOOTTRACE +8570ms] .RCA:2 . Bus Width:4(current) 4(support)
+[BOOTTRACE +8574ms] .Multi Max Block Len Read:2[SECT] / Write:2[SECT]
+[BOOTTRACE +8578ms] SD = 0x3C4000[LBA]
+[BOOTTRACE +8580ms] ... SD init end
+[BOOTTRACE +8583ms] FAT Mount ID = 0x1
+[BOOTTRACE +8586ms] FAT Open Old File ID = 0xC8
+[BOOTTRACE +8604ms] Search for analyze-code.
+[BOOTTRACE +8607ms] Complete to scan Firm-list.
+[BOOTTRACE +8609ms] do not need to update drive-firm.
+[BOOTTRACE +8612ms] Read mainsoft from Update-Disk or HDD to 0x90c00030.
+[BOOTTRACE +8617ms] Read mainsoft data.
+[BOOTTRACE +8619ms] File ID[0xC8] seek to 0xF1800.
+[BOOTTRACE +9767ms] File ID[0xC8] read to 0x90C00030(size=0x5E7CA8).
+[BOOTTRACE +9772ms] Cheking for mainsoft check-sum.
+[BOOTTRACE +11547ms] check_sum = 0x2f84d497.
+[BOOTTRACE +11549ms] Complete to read mainsoft from Update-Disc or HDD.
+[BOOTTRACE +11554ms] start to update mainsoft.
+[BOOTTRACE +11556ms] [RTSD] HDD already spin-up 
+[BOOTTRACE +11590ms] [RTSD] HDD Auto Spin up Mode 
+[BOOTTRACE +11596ms] HDD MAX LBA = 0x1D1C5970.
+[BOOTTRACE +11603ms] [nfrom] file_no[17],skip(0),non_skip(1),erase(0),new_write(0).
+[BOOTTRACE +11960ms] Verify start...
+[BOOTTRACE +13172ms] Vefify OK
+[BOOTTRACE +13173ms] HDD write success(0x00010000-0x00012F3E sector).
+[BOOTTRACE +13177ms] mainsoft write success to hdd inner sector[0x10000].
+[BOOTTRACE +13615ms] Verify start...
+[BOOTTRACE +14827ms] Vefify OK
+[BOOTTRACE +14828ms] HDD write success(0x1D1A5970-0x1D1A88AE sector).
+[BOOTTRACE +14832ms] mainsoft write success to hdd outer sector[0x1D1A5970].
+[BOOTTRACE +14841ms] [nfrom] file_no[17],skip(0),non_skip(1),erase(0),new_write(0).
+[BOOTTRACE +14867ms] success to update mainsoft.
+[BOOTTRACE +16874ms] [nfrom] file_no[17],skip(0),non_skip(1),erase(0),new_write(0).
+[BOOTTRACE +16900ms] do not need to update loader.
+[BOOTTRACE +16903ms] do not need to update Voice.
+[BOOTTRACE +16906ms] do not need to update user-file.
+[BOOTTRACE +16908ms] do not need to update deviceinfo.
+[BOOTTRACE +16912ms] do not need to update STB-data.
+[BOOTTRACE +16914ms] do not need to update VHS-data.
+[BOOTTRACE +16917ms] do not need to update timer-data.
+[BOOTTRACE] UART: bytes=4154 first_byte=10407us ferr=0 perr=0 ovf=NO | SW_rel=NO
+[BOOTTRACE] ADC0_SWUART: min=3.22V max=3.30V (low=0 hiz=3.22..3.30V n=6500) | CtrlEdges: NSW5V=0 TXD=0 XRESET=0 (logged=0)
+@P7501_BOOT_CLASS verdict=HDD_BRIDGE_WAIT_FAIL build=UNKNOWN stage2=0 avout_ok=0 vmute0=0 ntsc=0 rsv_ok=0 hdd_fail=1 bgo_err=0 fpc_err=0 fpc_to=0 iic_err=0 odd_err=0 op7f_cnt=0 op7f=NONE
+@P7501_DIAG_DEEP hw=UNKNOWN market=UNKNOWN timer=NONE region=NONE cav=NONE avsel=NONE gui=NONE sys=NONE hdd_wr=NONE hdd_fmt=NONE drv=NONE avin_iic=NONE
+@P7501_FRAME seq=115 ts_us=14660715595 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@P7501_FRAME seq=116 ts_us=14667065694 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@P7501_FRAME seq=117 ts_us=14925698760 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@P7501_FRAME seq=118 ts_us=14935771577 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@P7501_FRAME seq=119 ts_us=14956401762 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@P7501_FRAME seq=120 ts_us=14967245973 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@P7501_FRAME seq=121 ts_us=19536760627 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@P7501_FRAME seq=122 ts_us=19546357162 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@P7501_FRAME seq=123 ts_us=21475963288 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@P7501_FRAME seq=124 ts_us=21487177141 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@P7501_FRAME seq=125 ts_us=22427167597 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@P7501_FRAME seq=126 ts_us=22432785191 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@P7501_FRAME seq=127 ts_us=22459579594 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@P7501_FRAME seq=128 ts_us=22476786614 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@P7501_FRAME seq=129 ts_us=22483146114 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@P7501_FRAME seq=130 ts_us=22503608413 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@P7501_FRAME seq=131 ts_us=22524498019 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@P7501_FRAME seq=132 ts_us=22553335514 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@P7501_FRAME seq=133 ts_us=22579720600 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@P7501_FRAME seq=134 ts_us=22682882657 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@P7501_FRAME seq=135 ts_us=22727986037 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@P7501_FRAME seq=136 ts_us=22730492841 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@P7501_FRAME seq=137 ts_us=23668280330 type=DIAG_DEEP len=134 crc32=956B1176 hw=UNKNOWN market=UNKNOWN timer=NONE region=NONE cav=NONE avsel=NONE gui=NONE sys=NONE hdd_wr=NONE hdd_fmt=NONE drv=NONE avin_iic=NONE
+BOOTTRACE: OK
+@P7501_RES cmd=BOOTTRACE status=OK code=0 elapsed_us=65026284
+PANADIGA>
+
+
+=== POST_ISOLATE [2026-11-25T02:11:10Z] ok=True ===
+[BUS] P7501 pins placed in High-Impedance Isolation (NSW5V/XRESET Hi-Z, GP26 ADC0).
+@P7501_RES cmd=ISOLATE status=OK code=0 elapsed_us=181
+PANADIGA>
+
+
+=== POST_STATUS [2026-11-25T02:11:10Z] ok=True ===
+VDD: 3.26V (OK)
+[STANDBY] RXD=1 NSW5V=1 TXD=1 XRESET=1 SW_PU=3.27V NSW5V_DROPS=118 fault_latch=0 recoveries=58 | State=POWERED / AWAKE (SW_UART ~3.3V)
+[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=85 wdt_recoveries=0 reboot_src=CLEAN fault_slot=255 fault_stage=IDLE last_cmd=ISOLATE last_us=181
+@P7501_RES cmd=STATUS status=OK code=0 elapsed_us=1757
+PANADIGA>
+
