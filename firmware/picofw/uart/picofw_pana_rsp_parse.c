@@ -97,7 +97,8 @@ bool picofw_panarsp_parse_args_ctx(
             explicit_nak_only = true;
         } else if (picofw_ascii_iprefix(tok, "WAIT:") && tok[5] != '\0') {
             out->wait_trigger_enabled = true;
-            snprintf(out->trigger, sizeof(out->trigger), "%s", tok + 5);
+            snprintf(out->trigger, sizeof(out->trigger), "%.*s",
+                     (int)(sizeof(out->trigger) - 1u), tok + 5);
         } else if (!saw_boot && picofw_is_boot_spec_token(tok)) {
             out->boot_action = picofw_parse_boot_spec(tok, &out->jig_hold_ms);
             saw_boot = true;

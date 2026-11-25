@@ -156,3 +156,8 @@ firmware_and_images/*.img
 !tools/ghidra/java/
 !tools/ghidra/java/**/*.java
 !tools/ghidra/java/README.md
+
+firmware_and_images/sd_unbrick_kit_m6930lb_br/
+firmware_and_images/sd_unbrick_kit_m6930lb_ntscj/
+firmware_and_images/sd_unbrick_kit_m6930lb_palm/
+firmware_and_images/sd_unbrick_kit_m6930lb_pal/

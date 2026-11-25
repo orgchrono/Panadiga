@@ -189,7 +189,7 @@ Equipamento de bancada suportado: **Multímetro DC/Continuidade**, **Adaptadores
    * `0x0D..0x13` (`option_code_hex`): `"31c560000000"` · `0x18..0x1A` BE (`hw_version_u16`): `0x0003` · `0x30` (`model_code`): `0x07` · `0x31` (`market_code`): `0x04` (`"PL"` na LUT canônica de 19 entradas `JP=0x00, P=0x01, PC=0x02, PP=0x03, PL=0x04, PX=0x05, GT=0x06, EG=0x80, GCS=0x81, GN=0x82, EB=0x83, EF=0x85, EBL=0x86, EE=0x87, EP=0x88, GC=0x89, GK=0x8A, EC=0x8B, --=0xFF`);
    * `0x50..0x57` BE (`main_option_btn`): `[0x0033, 0x0092, 0xFFFF, 0xFFFF]` · `0x58` (`rcmode`): `0x00` · `0x59..0x5C` (`gui`): `[0x10, 0x20, 0xFF, 0xFF]` · `0x5D` (`chmode`): `0x02`. A cauda `0x400..0x7FF` permanece `metadata_and_dev_oem_only = true`.
 3. **Suíte SSOT `region_localization_sites` (`profiles/firmware_trains/loader_ver061_toc48_main57.json`) `[PROVADO EM EMULADOR Mn103Vm]`:**
-   * **`MAIN3410PQ` (8 sítios):**
+   * **`MAIN3410PQ` (11 sítios):**
      1. `m6930lb_3410pq_market_osd_unlock` @ `0x574F71F9` (`c22e` $\rightarrow$ `ca2b`, mapeia `PL=0x04` para `EG=0x80` em `0x53186DBC` via `0x574F7224`, desbloqueando menus `Português`/`Español`/`English`);
      2. `m6930lb_3410pq_ic3001_bh7629_iic` @ `0x570D625E` (`cff2f8fee8` $\rightarrow$ `8000f0fccb`, bypass I²C `0x94` `BH7629KS2`, retorno `D0 = 0`);
      3. `m6930lb_3410pq_fpc_0x7f_rcv_ignore` @ `0x570613C7` (`dd0b7d00000000` $\rightarrow$ `ca2ecbcbcbcbcb` $\rightarrow$ `0x570613F5`);
@@ -198,6 +198,10 @@ Equipamento de bancada suportado: **Multímetro DC/Continuidade**, **Adaptadores
      6. `m6930lb_3410pq_fpc_p50_gate15_skip` @ `0x574F4BF5` (`dd5339b7ff0000` $\rightarrow$ `00cbcbcbcbcbcb`, pula `FPC 0xF9 GATE=15` em `0x57068548` antes de `WakeupReason` / `AVOUT_init`, eliminando a trava de `~29,8 s`);
      7. `m6930lb_3410pq_tv_system_60hz_ntsc` @ `0x5750BD6A` (`f1e2` $\rightarrow$ `8a00`, força `d2=0` `TV_NTSC` 525 linhas `480i 60 Hz` em `SYS_CNTL_PAL_NTSC_Change`);
      8. `m6930lb_3410pq_avout_vmute_unmute` @ `0x571309CF` (`f1e2` $\rightarrow$ `8a00`, força `d2=0` em `AVOUT_V_Mute(onoff)` para manter `AVDD_DACOUT1` aberto em `0x0D00` com `avout_v_initialized=1`).
+      9. `m6930lb_3410pq_config1_default_ntsc` @ `0x57AEFBAC` (`00` $\\rightarrow$ `01`, padrão ROM `TV_SYSTEM = 1 (TV_NTSC)` para todos os 75 chamadores de `config1 key 0x0117`) **`[PROVADO EM HARDWARE REAL 2026-11-25]`**;
+      10. `m6930lb_3410pq_cav_boot_ntsc` @ `0x574F6F2D` (`f8bb13a3c90388` $\\rightarrow$ `cbcbcbcbcbcbcb`, 7 nops `0xCB`, neutraliza força `TV_PAL` em `[SYS_BOOT]CAV:N`) **`[PROVADO EM HARDWARE REAL 2026-11-25]`**;
+      11. `m6930lb_3410pq_boot_pal_ntsc_force` @ `0x575041FF` (`c91b` $\\rightarrow$ `cbcb`, nop;nop converte `blt+0x1b` em queda direta para `SYS_CNTL_PAL_NTSC_Change(0)`) **`[PROVADO EM HARDWARE REAL 2026-11-25]`**.
+    * Os sítios 7–11 (TV-related) têm `"tv_profiles": ["ntsc-m","ntsc-j","pal-m"]` — aplicados automaticamente a perfis não-PAL; o perfil `pal` mantém o ROM europeu intacto.
    * **`MAIN3060NP` (1 sítio):** `m6930lb_3060np_ic3001_bh7629_iic` @ `0x570DF34A` (`cff2f8fee8` $\rightarrow$ `8000f0fccb`).
    * Exposto via `panadiga unbrick region-compat inspect-localization|patch-localization` e integrado em `panadiga unbrick prepare-sd --m6930lb-localization`.
 

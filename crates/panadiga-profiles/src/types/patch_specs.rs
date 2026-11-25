@@ -21,6 +21,10 @@ pub struct BinaryPatchSiteSpec {
     pub replace_hex: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub symbol_ref: Option<String>,
+    /// If present, this site is only applied for the listed TV profiles (`ntsc-m`, `ntsc-j`, `pal-m`, `pal`).
+    /// If absent (or empty), the site applies to all TV profiles.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tv_profiles: Vec<String>,
 }
 
 /// Declarative post-`RESET-` ATA/SATA bridge polling wait site specification (`2 ms -> 1000 ms`).

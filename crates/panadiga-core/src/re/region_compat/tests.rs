@@ -217,7 +217,7 @@ fn m6930lb_ssot_localization_executes_cleanly_in_mn103vm_and_roundtrips() {
     use crate::re::ssot_patches::find_main_build_by_size;
 
     let (_, build_3410) = find_main_build_by_size(EXPECTED_MAIN_3410PQ_SIZE).unwrap();
-    assert_eq!(build_3410.region_localization_sites.len(), 8);
+    assert_eq!(build_3410.region_localization_sites.len(), 11);
     let mut main_3410 = vec![0xFFu8; EXPECTED_MAIN_3410PQ_SIZE];
     let market_window = hex::decode(
         "14a006c31cfac88000c024fac88300c340fac88b00c118fac88500c012ca32a003c22ea000c82ac0068503ca24fccce42aae5715dda5fdffff000000ddfefdffff00008064dd586c210000002d8000fc86bc6d1853",
@@ -238,6 +238,11 @@ fn m6930lb_ssot_localization_executes_cleanly_in_mn103vm_and_roundtrips() {
         .copy_from_slice(&[0xDD, 0x53, 0x39, 0xB7, 0xFF, 0x00, 0x00]);
     main_3410[0x5750_BD6A - AM34_MAIN_BASE_VA as usize..][..2].copy_from_slice(&[0xF1, 0xE2]);
     main_3410[0x5713_09CF - AM34_MAIN_BASE_VA as usize..][..2].copy_from_slice(&[0xF1, 0xE2]);
+    // Sites 8-10 (added 2026-11-25): config1 default, cav_boot_ntsc, boot_pal_ntsc_force
+    main_3410[0x57AE_FBAC - AM34_MAIN_BASE_VA as usize..][..1].copy_from_slice(&[0x00]);
+    main_3410[0x574F_6F2D - AM34_MAIN_BASE_VA as usize..][..7]
+        .copy_from_slice(&[0xF8, 0xBB, 0x13, 0xA3, 0xC9, 0x03, 0x88]);
+    main_3410[0x5750_41FF - AM34_MAIN_BASE_VA as usize..][..2].copy_from_slice(&[0xC9, 0x1B]);
     let orig_3410_sha = inspect_main_localization(&main_3410).unwrap().sha256;
     assert_eq!(
         inspect_main_localization(&main_3410).unwrap().overall_state,

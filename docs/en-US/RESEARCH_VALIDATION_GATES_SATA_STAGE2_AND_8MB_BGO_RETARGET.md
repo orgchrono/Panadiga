@@ -172,7 +172,10 @@ Test **`mn103vm_proves_nor_autoboot_loader_ver061_norfrom_boot_and_escape_hatch`
 | [`com10_m6930lb_3410pq_boot1_fvu_20261124.log`](../evidence/com10_m6930lb_3410pq_boot1_fvu_20261124.log) | `10,355` | `1543B9B3D0322509723F985DD657464B09579D2276058549DF224E490EDE2536` | **LIVE Boot 1 `FVU` `MAIN3410PQ` `M6930LB` (`check_sum=0x2f84d497`, `Vefify OK` × 2, `EV-20261124-005`)** |
 | [`com10_m6930lb_3410pq_boot2_main_20261124.log`](../evidence/com10_m6930lb_3410pq_boot2_main_20261124.log) | `42,889` | `245562E6B3F4DE9A29462C8338E80889E2B48DFAA01D1E9C01EC7B6DE6F1FBE5` | **LIVE Boot 2 `[HDD_AUTOBOOT]` `MAIN3410PQ` `M6930LB` + `ndb>` (`0x53186DBC=0x80`, `iic_err=0`, `EV-20261124-005`)** |
 | [`com10_m6930lb_3410pq_live_video_fix_20261125.log`](../evidence/com10_m6930lb_3410pq_live_video_fix_20261125.log) | `16,510` | `8986CE243A0F314CF97D6AB21388817F3CD146A23230A218AE91636D72114487` | **LIVE `480i 60 Hz` (`0x88000000=0x8020`, `0x515CD08C=0`) + `AVDD_DACOUT1=0x0D00` w/ `0x515A2444=1` (`EV-20261125-001`)** |
-| `sd_unbrick_kit_m6930lb_br/PANA__SD.FRM` | `7,181,488` | `03a47de8c0c32401c03806bbc27333a722c4bdd777bc6f57b6fcd80322d2fb76` | Turnkey 1-SD-card `MAIN3410PQ` 8-site `M6930LB` kit w/ `0x504395FC=0x86F2435C` stamp (`verify-sd --audit-profile hardened` PASS, `EV-20261125-001`) |
+| `sd_unbrick_kit_m6930lb_br/PANA__SD.FRM` | `7,181,488` | `03a47de8c0c32401c03806bbc27333a722c4bdd777bc6f57b6fcd80322d2fb76` | Turnkey 1-SD-card `MAIN3410PQ` **11-site** `M6930LB` kit — `NTSC-M 7.5 IRE` (Brazil default) + `0x504395FC=0x86F2435C` stamp (`verify-sd --audit-profile hardened` PASS, `EV-20261125-001`) |
+| `sd_unbrick_kit_m6930lb_ntscj/PANA__SD.FRM` | `7,181,488` | `03a47de8c0c32401c03806bbc27333a722c4bdd777bc6f57b6fcd80322d2fb76` | `NTSC-J` (Japan / 0 IRE) variant — same `M6930LB` localization, TV site 9 `VA=0x574F6F2D` (`EV-20261125-003`) |
+| `sd_unbrick_kit_m6930lb_palm/PANA__SD.FRM` | `7,181,488` | `03a47de8c0c32401c03806bbc27333a722c4bdd777bc6f57b6fcd80322d2fb76` | `PAL-M` (Brazil legacy) variant — TV site 10 `VA=0x575041FF`, `std=pal_m`, 0 warnings (`EV-20261125-003`) |
+| `sd_unbrick_kit_m6930lb_pal/PANA__SD.FRM` | `7,181,488` | `03a47de8c0c32401c03806bbc27333a722c4bdd777bc6f57b6fcd80322d2fb76` | `PAL` (EU/generic) variant — `std=pal`, M6930LB localization, `mmio_ops=6`, 0 warnings (`EV-20261125-003`) |
 
 ---
 

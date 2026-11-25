@@ -306,6 +306,7 @@ The flash subsystem ([`p7501_flash.c`](../../firmware/picofw/flash/picofw_flash.
   2. `PAYLOAD RUN jedec_probe_id` closed `S11` on live silicon (`mfg=0x0001 dev=0x227E:0x2202:0x2201 verified=YES`).
   3. `MMIO_SNAP STORAGE` + `LIVE_MAP` sampled `31/31` registers with SD inserted: `SDCD_CFG4 0x89001850 = 0x000040B8` (`sd_bus=4BIT`), `DAVIS_PRST = 0x00000003` (`ch0_rst=RELEASED`), `DAVIS_SRST = 0x00000003` (`ch1_rst=HELD`), and `TBUS_MBX0 0xDC010010 = 0x840000A3`.
   4. `BGO_INSPECT PORTAO4` (canonical `BGO_INSPECT NORFROM`) + `NOR_MAP` confirmed 45/45 healthy BGO sectors (`p1_sa=41`, `bgo_corrupt=0`), healthy top `EEMUL` (`hdr_dirty=1%`), and `SA11 0x84040000 = ERASED_FF` (`norfrom_used=0`), concluding with `davis-probe` (`SAMSUNG HM251JI`) and safe `ISOLATE` + `STATUS` (`NSW5V=1`, `VDD=3.25V`, `fault_latch=0`).
+* **Live `COM10` PicoFW Reflash (`ssot=8B6162D3`, `EV-20261125-002`, 2026-11-25):** RP2040 UF2 rebuilt with 4 NSW5V SSOT constants (`PICOFW_SSOT_NSW5V_UPSTREAM_MV=5150`, `PICOFW_SSOT_NSW5V_MEASURED_MV=3290`, `PICOFW_SSOT_NSW5V_GPIO_MODE="HI_Z_INPUT_NO_PULL"`, `PICOFW_SSOT_NSW5V_FUNCTION="POWER_GOOD_STANDBY_SENSE"`) and 4-variant TV localization sites 8-10 for `M6930LB` (`NTSC-M 7.5 IRE`, `NTSC-J`, `PAL-M`). Flashed to `COM10` via `1200 bps BOOTSEL`. `IDENTIFY` confirmed `ssot=8B6162D3`, `NSW5V=1`, `VDD=3.26V`.
 
 ---
 

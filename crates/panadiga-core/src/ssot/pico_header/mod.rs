@@ -56,6 +56,19 @@ pub const P7501_AM34_LETHAL_REG2_LEN_SSOT: u32 = 0x10;
 pub const P7501_IC3001_BR_NA_ADDR7_L_SSOT: u8 = 0x48;
 pub const P7501_IC3001_BR_NA_ADDR7_H_SSOT: u8 = 0x49;
 
+/// P7501 **Pin 5 — `NSW5V`** functional coverage constants (GP3 Hi-Z Input, never driven push-pull).
+///
+/// Physical origin: `IC1506` upstream ~5.15 V via `D7510`; measured in-circuit ~3.29 V.
+/// GPIO mode invariant: `gpio_set_dir(GP3, GPIO_IN)` + `gpio_disable_pulls(GP3)` — NEVER push-pull.
+/// Semantic function: power-good / soft-standby sense (`DI_P_ON` on DMR-EH55 `VEP79138`).
+pub const P7501_NSW5V_UPSTREAM_MV_SSOT: u32 = 5_150;
+/// P7501 Pin 5 NSW5V measured voltage in-circuit (mV, typical at `VEP79138` junction).
+pub const P7501_NSW5V_MEASURED_MV_SSOT: u32 = 3_290;
+/// P7501 Pin 5 NSW5V GPIO mode descriptor: Hi-Z Input, NO pull-up, NO pull-down, NEVER driven.
+pub const P7501_NSW5V_GPIO_MODE_SSOT: &str = "HI_Z_INPUT_NO_PULL";
+/// P7501 Pin 5 NSW5V semantic function: power-good / soft-standby sense for `SYS_CNTL_POW_*`.
+pub const P7501_NSW5V_FUNCTION_SSOT: &str = "POWER_GOOD_STANDBY_SENSE";
+
 /// Domain flags for `k_p7501_ssot_mmio_regs[]`.
 pub const P7501_MMIO_DOM_CORE: u8 = 1;
 pub const P7501_MMIO_DOM_VIDEO: u8 = 2;

@@ -39,6 +39,13 @@
             "null"
           ]
         },
+        "tv_profiles": {
+          "description": "If present, this site is only applied for the listed TV profiles (`ntsc-m`, `ntsc-j`, `pal-m`, `pal`).\nIf absent (or empty), the site applies to all TV profiles.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "va": {
           "type": "string"
         }

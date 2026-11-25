@@ -580,7 +580,8 @@
           "description": "MAIN3060NP aiof_sub_dd.c I2C 0x94 video switch bypass for M6930LB IC3001 BH7629KS2 -> mov 0, d0; rets; nop",
           "va": "0x570DF34A",
           "expect_hex": "cff2f8fee8",
-          "replace_hex": "8000f0fccb"
+          "replace_hex": "8000f0fccb",
+          "tv_profiles": ["ntsc-m", "ntsc-j", "pal-m"]
         }
       ],
       "unpacked_sha256": "075f552ed583ba1835c0d44d1b533ff5a016b8d81d15d7166240098461ddcca7"
@@ -668,7 +669,8 @@
           "description": "MAIN3410PQ aiof_sub_dd.c I2C 0x94 video switch bypass for M6930LB IC3001 BH7629KS2 -> mov 0, d0; rets; nop",
           "va": "0x570D625E",
           "expect_hex": "cff2f8fee8",
-          "replace_hex": "8000f0fccb"
+          "replace_hex": "8000f0fccb",
+          "tv_profiles": ["ntsc-m", "ntsc-j", "pal-m"]
         },
         {
           "name": "m6930lb_3410pq_fpc_0x7f_rcv_ignore",
@@ -703,14 +705,40 @@
           "description": "MAIN3410PQ SYS_CNTL_PAL_NTSC_Change force d2=0 (TV_NTSC 525-line 480i 60Hz) on M6930LB hardware",
           "va": "0x5750BD6A",
           "expect_hex": "f1e2",
-          "replace_hex": "8a00"
+          "replace_hex": "8a00",
+          "tv_profiles": ["ntsc-m", "ntsc-j", "pal-m"]
         },
         {
           "name": "m6930lb_3410pq_avout_vmute_unmute",
           "description": "MAIN3410PQ AVOUT_V_Mute(onoff) force d2=0 so AVDD_DACOUT1 stays unmuted (0x0D00) with avout_v_initialized=1",
           "va": "0x571309CF",
           "expect_hex": "f1e2",
-          "replace_hex": "8a00"
+          "replace_hex": "8a00",
+          "tv_profiles": ["ntsc-m", "ntsc-j", "pal-m"]
+        },
+        {
+          "name": "m6930lb_3410pq_config1_default_ntsc",
+          "description": "MAIN3410PQ config1 key 0x0117 (TV_SYSTEM) ROM default = 1 (TV_NTSC) for all 75 callers — bench-verified 2026-11-25",
+          "va": "0x57AEFBAC",
+          "expect_hex": "00",
+          "replace_hex": "01",
+          "tv_profiles": ["ntsc-m", "ntsc-j", "pal-m"]
+        },
+        {
+          "name": "m6930lb_3410pq_cav_boot_ntsc",
+          "description": "MAIN3410PQ [SYS_BOOT]CAV:N/PAL forces d0=0 TV_NTSC at boot — 7 nop stubs (0xCB) — bench-verified 2026-11-25",
+          "va": "0x574F6F2D",
+          "expect_hex": "f8bb13a3c90388",
+          "replace_hex": "cbcbcbcbcbcbcb",
+          "tv_profiles": ["ntsc-m", "ntsc-j", "pal-m"]
+        },
+        {
+          "name": "m6930lb_3410pq_boot_pal_ntsc_force",
+          "description": "MAIN3410PQ unconditionally calls SYS_CNTL_PAL_NTSC_Change(0) at boot (blt+0x1b patched to nop;nop) — bench-verified 2026-11-25",
+          "va": "0x575041FF",
+          "expect_hex": "c91b",
+          "replace_hex": "cbcb",
+          "tv_profiles": ["ntsc-m", "ntsc-j", "pal-m"]
         }
       ],
       "unpacked_sha256": "c3275d39549b68f48db16bc5fd043c6f8a373d4ba416826de09be5c55dc991b1"

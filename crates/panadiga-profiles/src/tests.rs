@@ -834,6 +834,7 @@ fn universal_patch_hdd_autoboot_and_main_build_specs_enforce_bounds_ipl_and_geom
             expect_hex: "2cd00789ddbadaffff0000".to_string(),
             replace_hex: "2c640089ddd73901000000".to_string(),
             symbol_ref: None,
+            tv_profiles: vec![],
         },
     });
     let sym = |idx: u32| 0x5040_1000 + idx * 0x100;
@@ -946,6 +947,7 @@ fn universal_patch_hdd_autoboot_and_main_build_specs_enforce_bounds_ipl_and_geom
             expect_hex: "ZZ".to_string(),
             replace_hex: "00".to_string(),
             symbol_ref: None,
+            tv_profiles: vec![],
         });
     let rep = validate_bundle(&bad);
     assert!(!rep.valid);

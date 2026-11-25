@@ -538,6 +538,11 @@ fn m6930lb_localization_flag_patches_main3060np_and_main3410pq_cleanly() {
         .copy_from_slice(&[0xDD, 0x53, 0x39, 0xB7, 0xFF, 0x00, 0x00]);
     raw_3410[0x5750_BD6A - AM34_MAIN_BASE_VA as usize..][..2].copy_from_slice(&[0xF1, 0xE2]);
     raw_3410[0x5713_09CF - AM34_MAIN_BASE_VA as usize..][..2].copy_from_slice(&[0xF1, 0xE2]);
+    // Sites 8-10 (added 2026-11-25): config1 default, cav_boot_ntsc, boot_pal_ntsc_force
+    raw_3410[0x57AE_FBAC - AM34_MAIN_BASE_VA as usize..][..1].copy_from_slice(&[0x00]);
+    raw_3410[0x574F_6F2D - AM34_MAIN_BASE_VA as usize..][..7]
+        .copy_from_slice(&[0xF8, 0xBB, 0x13, 0xA3, 0xC9, 0x03, 0x88]);
+    raw_3410[0x5750_41FF - AM34_MAIN_BASE_VA as usize..][..2].copy_from_slice(&[0xC9, 0x1B]);
     let composed_3410 = compose_patched_main_container(
         &raw_3410,
         MainPassthroughMode::FactoryOriginal,

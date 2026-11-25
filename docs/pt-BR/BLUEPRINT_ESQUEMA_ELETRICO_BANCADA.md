@@ -546,6 +546,59 @@ Como a partição `EEMUL` do DMR-EH55 abrange até `0x7FFFFF` (`SA134..SA141`), 
 
 ---
 
+## 11. Pino 5 do P7501 (`NSW5V`) — Cobertura Funcional Completa via SSOT
+
+> [!IMPORTANT]
+> `NSW5V` (Pino 5 do `P7501`, `GP3` no Pico) **deve permanecer permanentemente como `Hi-Z Input` sem pulls ativos**. É um **rail de sense de alimentação**, não uma GPIO de propósito geral. Conduzi-lo em push-pull pode destruir irreversivelmente o SoC AM34 e o `IC7501`.
+
+### 11.1 Origem Elétrica e Tensões Medidas In-Circuit
+
+| Parâmetro | Valor | Observações |
+| :--- | :--- | :--- |
+| Fonte upstream | LDO `IC1506` → Schottky `D7510` | Medida na saída do regulador |
+| Tensão upstream (`PICOFW_SSOT_NSW5V_UPSTREAM_MV`) | **5150 mV** | Pré-diodo em `IC1506` |
+| Tensão in-circuit em repouso (`PICOFW_SSOT_NSW5V_MEASURED_MV`) | **3290 mV** | No `P7501 Pino 5` com DIGA ligado |
+| `NSW5V = 1` → alvo ligado | In-circuit ≥ ~2,5 V | Keepalive TBUS `IC7501` ativo |
+| `NSW5V = 0` → alvo em standby / sem tensão | In-circuit < ~2,5 V | Aciona protocolo de parada `STANDBY_GATE` |
+
+### 11.2 Política de GPIO (`PICOFW_SSOT_NSW5V_GPIO_MODE` / `PICOFW_SSOT_NSW5V_FUNCTION`)
+
+```c
+/* firmware/picofw/generated/picofw_ssot.h — GERADO AUTOMATICAMENTE por panadiga ssot export-all */
+#define PICOFW_SSOT_GPIO_NSW5V_HIZ_GP3     3u
+#define PICOFW_SSOT_NSW5V_UPSTREAM_MV      5150UL      /* tensão no nó IC1506 → D7510 (mV) */
+#define PICOFW_SSOT_NSW5V_MEASURED_MV      3290UL      /* tensão em repouso no P7501 Pino 5 (mV) */
+#define PICOFW_SSOT_NSW5V_GPIO_MODE        "HI_Z_INPUT_NO_PULL"
+#define PICOFW_SSOT_NSW5V_FUNCTION         "POWER_GOOD_STANDBY_SENSE"
+```
+
+Fonte Rust SSOT correspondente: [`crates/panadiga-core/src/ssot/pico_header/mod.rs`](../../crates/panadiga-core/src/ssot/pico_header/mod.rs) — constantes `P7501_NSW5V_UPSTREAM_MV_SSOT`, `P7501_NSW5V_MEASURED_MV_SSOT`, `P7501_NSW5V_GPIO_MODE_SSOT`, `P7501_NSW5V_FUNCTION_SSOT`.
+
+### 11.3 Funções de Firmware Cobertas
+
+As seguintes funções C11 em `firmware/picofw/` impõem estas invariantes automaticamente em cada cold boot:
+
+| Função | Arquivo | Invariante garantida |
+| :--- | :--- | :--- |
+| `picofw_hw_enforce_nsw5v_hiz()` | `hw/picofw_hw.c` | Chama `gpio_init(3)` + `gpio_set_dir(3, false)` + `gpio_disable_pulls(3)` |
+| Detecção de dropout ADC0 | `monitor/picofw_adc_mon.c` | `NSW5V < DROPOUT_MV` → seta `nsw5v_dropout_latch=1` |
+| `STATUS` / `IDENTIFY` | `cli/picofw_cli.c` | Emite `NSW5V=<0|1>` lido do ADC0 em `GP3` |
+| `PREJIG [ms] WAKE` | `cli/picofw_cli.c` | Arma captura somente após `NSW5V` subir |
+| Protocolo de parada `STANDBY_GATE` | `monitor/picofw_adc_mon.c` | Paralisa todos os comandos ativos quando `NSW5V=0` |
+
+### 11.4 Rastreabilidade Cross-Language SSOT
+
+As 4 constantes NSW5V fluem de Rust → C11 → TypeScript → Python via `panadiga ssot export-all`:
+
+```
+Rust (pico_header/mod.rs)
+  └─► picofw_ssot.h       (PICOFW_SSOT_NSW5V_UPSTREAM_MV, _MEASURED_MV, _GPIO_MODE, _FUNCTION)
+  └─► ssot.ts             (NSW5V_UPSTREAM_MV, NSW5V_MEASURED_MV, NSW5V_GPIO_MODE, NSW5V_FUNCTION)
+  └─► profiles_types.py   (NSW5V_UPSTREAM_MV, NSW5V_MEASURED_MV, NSW5V_GPIO_MODE, NSW5V_FUNCTION)
+```
+
+---
+
 ## 14. Referências Técnicas Oficiais e Normas de Engenharia
 
 1. **Matsushita Electric Industrial Co., Ltd. / Panasonic:**
