@@ -45,3 +45,10 @@ regexTarget = "line"
 regexes = [
   '''^\s*@(?:PICO|P7501)_FRAME\s+.*type=CRYPTO_KEY\s+.*idx=\d+\s+name=[a-z0-9_]+\s+key=[0-9a-f]{16}\s*$''',
 ]
+
+[[allowlists]]
+description = "Synthetic unit-test dummy key=0123456789abcdef in Rust/Python CRYPTO_KEY telemetry contract tests"
+regexTarget = "line"
+regexes = [
+  '''idx=0\s+name=(?:k0|test_key)\s+key=0123456789abcdef''',
+]
