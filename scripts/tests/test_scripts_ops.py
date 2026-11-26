@@ -270,8 +270,9 @@ def test_validate_parallel_lanes_schedules_playwright_after_ssot(
         "playwright",
         "pytest",
     }
-    for lane in ("rust", "ts", "vitest", "jscpd", "uxlint", "c11", "mypy"):
+    for lane in ("rust", "ts", "jscpd", "uxlint", "c11", "mypy"):
         assert order.index(lane) < order.index("ghidra")
+    assert order.index("ghidra") < order.index("vitest")
     assert order.index("ghidra") < order.index("playwright")
     assert order.index("ghidra") < order.index("pytest")
 

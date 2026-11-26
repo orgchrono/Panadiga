@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from concurrent.futures import FIRST_EXCEPTION, Future, ThreadPoolExecutor, wait
+from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 import importlib.util
 import os
 from pathlib import Path
@@ -247,12 +247,13 @@ def run_sequential_gates(env: Mapping[str, str], *, ghidra_smoke: bool = False) 
 def run_parallel_lanes(env: Mapping[str, str], max_jobs: int, *, ghidra_smoke: bool = False) -> None:
     """Execute all 9 Quality Gates via thread-pool DAG without SSOT races or Vite starvation."""
     ghidra_lane_label = "7/9 SSOT + Ghidra Native Export"
+    vitest_lane_label = "3/9 Vitest Unit Suite"
     playwright_lane_label = "6/9 Playwright E2E"
     pytest_lane_label = "9b/9 Python Compile + Pytest"
+    rust_env: Mapping[str, str] = {**env, "CARGO_BUILD_JOBS": str(max(1, (os.cpu_count() or 4) - 2))}
     initial_list: list[tuple[str, Callable[[Mapping[str, str]], None]]] = [
-        ("1/9 Rust Workspace", lambda e: _gate_rust(e, capture_output=True)),
+        ("1/9 Rust Workspace", lambda _e: _gate_rust(rust_env, capture_output=True)),
         ("2/9 Oxlint + TypeScript", lambda e: _gate_typescript(e, capture_output=True)),
-        ("3/9 Vitest Unit Suite", lambda e: _gate_vitest(e, capture_output=True)),
         ("4/9 Copy/Paste (jscpd 0%)", lambda e: _gate_jscpd(e, capture_output=True)),
         ("5/9 UI/UX State Lint", lambda e: _gate_uxlint(e, capture_output=True)),
         ("8/9 C11 Firmware Host Tests", lambda _e: _gate_c11_host(c11_env, capture_output=True)),
@@ -261,7 +262,7 @@ def run_parallel_lanes(env: Mapping[str, str], max_jobs: int, *, ghidra_smoke: b
     if ghidra_smoke:
         initial_list.append(("10/9 Ghidra Headless Smoke", lambda e: _gate_ghidra_smoke(e, capture_output=True)))
     initial_lanes = tuple(initial_list)
-    total_lanes = len(initial_lanes) + 3
+    total_lanes = len(initial_lanes) + 4
     worker_count = max(1, min(max_jobs, total_lanes))
     print_banner(
         f"PANADIGA PARALLEL QUALITY GATES ({total_lanes} lanes | max_workers={worker_count})"
@@ -284,7 +285,7 @@ def run_parallel_lanes(env: Mapping[str, str], max_jobs: int, *, ghidra_smoke: b
         pending: set[Future[tuple[str, float]]] = set(future_map)
         try:
             while pending:
-                done, pending = wait(pending, return_when=FIRST_EXCEPTION)
+                done, pending = wait(pending, return_when=FIRST_COMPLETED)
                 for fut in done:
                     label = future_map[fut]
                     try:
@@ -292,6 +293,7 @@ def run_parallel_lanes(env: Mapping[str, str], max_jobs: int, *, ghidra_smoke: b
                         print_status("PASS", f"{done_label} ({dt:.2f}s)", "32")
                         if done_label == ghidra_lane_label:
                             post_ssot_lanes: tuple[tuple[str, Callable[[Mapping[str, str]], None]], ...] = (
+                                (vitest_lane_label, lambda e: _gate_vitest(e, capture_output=True)),
                                 (playwright_lane_label, lambda e: _gate_playwright(e, capture_output=True)),
                                 (pytest_lane_label, lambda e: _gate_python_compile_and_pytest(e, capture_output=True)),
                             )

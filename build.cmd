@@ -87,20 +87,26 @@ rem ----------------------------------------------------------------------------
 if defined PANADIGA_PYTHON (
     call :check_python_cmd "%PANADIGA_PYTHON%" "" && exit /b 0
 )
+if defined VIRTUAL_ENV (
+    call :check_python_cmd "%VIRTUAL_ENV%\Scripts\python.exe" "" && exit /b 0
+)
+if defined pythonLocation (
+    call :check_python_cmd "%pythonLocation%\python.exe" "" && exit /b 0
+)
 if exist "%PANADIGA_ROOT%\.venv\Scripts\python.exe" (
     call :check_python_cmd "%PANADIGA_ROOT%\.venv\Scripts\python.exe" "" && exit /b 0
 )
 if exist "%PANADIGA_ROOT%\venv\Scripts\python.exe" (
     call :check_python_cmd "%PANADIGA_ROOT%\venv\Scripts\python.exe" "" && exit /b 0
 )
-for /f "delims=" %%P in ('where py 2^>nul') do (
-    call :check_python_cmd "%%~fP" "-3" && exit /b 0
-)
 for /f "delims=" %%P in ('where python 2^>nul') do (
     call :check_python_cmd "%%~fP" "" && exit /b 0
 )
 for /f "delims=" %%P in ('where python3 2^>nul') do (
     call :check_python_cmd "%%~fP" "" && exit /b 0
+)
+for /f "delims=" %%P in ('where py 2^>nul') do (
+    call :check_python_cmd "%%~fP" "-3" && exit /b 0
 )
 if exist "%ProgramFiles%\PyManager\python.exe" (
     call :check_python_cmd "%ProgramFiles%\PyManager\python.exe" "" && exit /b 0
