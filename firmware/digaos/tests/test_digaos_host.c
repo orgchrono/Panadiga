@@ -42,14 +42,22 @@ typedef struct mock_mmio_state {
     uint16_t aiof_yc3;
     uint16_t aiof_cont;
     uint16_t avdd_npalctl0;
+    uint32_t avdd_npalctl0_32;
+    uint16_t avdd_clk;
+    uint32_t avdd_active_size;
+    uint32_t avdd_sync;
     uint16_t avdd_voutmode0;
     uint16_t avdd_dacout1;
+    uint8_t iic0_writes[16];
+    size_t iic0_write_count;
     uint8_t iic1_writes[8];
     size_t iic1_write_count;
     uint8_t iic1_last_tx;
     uint8_t iic1_nack_addr_a;
     uint8_t iic1_nack_addr_b;
     bool iic1_nack_all;
+    uint16_t davis_ch0_rst;
+    uint16_t davis_ch0_status;
     uint16_t davis_ch1_rst;
     uint32_t slept_ms_total;
     bool forbidden_touched;
@@ -87,6 +95,15 @@ uint32_t digaos_host_mmio_read32(uint32_t addr) {
     if (addr == DIGAOS_SSOT_EEMUL_BASE) {
         return g_mock.eemul_w0;
     }
+    if (addr == (AM34_DIGAOS_AVDD_BASE + 0x0408UL)) {
+        return g_mock.avdd_active_size;
+    }
+    if (addr == (AM34_DIGAOS_AVDD_BASE + 0x040CUL)) {
+        return g_mock.avdd_sync;
+    }
+    if (addr == (AM34_DIGAOS_AVDD_BASE + AM34_DIGAOS_AVDD_NPALCTL0_OFF)) {
+        return g_mock.avdd_npalctl0_32;
+    }
     return 0u;
 }
 
@@ -97,8 +114,26 @@ uint16_t digaos_host_mmio_read16(uint32_t addr) {
     if (addr == AM34_DIGAOS_SC0_STR) {
         return (g_mock.rx_head < g_mock.rx_tail) ? AM34_DIGAOS_SC0_RX_READY_MASK : 0x0000U;
     }
+    if (addr == AM34_DIGAOS_DAVIS_CH0_BASE) {
+        return g_mock.davis_ch0_status;
+    }
     if (addr == AM34_DIGAOS_DAVIS_CH1_BASE) {
         return 0x0050U; /* DRDY | DSC */
+    }
+    if (addr == (AM34_DIGAOS_AIOF_BASE + AM34_DIGAOS_AIOF_VMODESEL_OFF)) {
+        return g_mock.aiof_vmodesel;
+    }
+    if (addr == (AM34_DIGAOS_AIOF_BASE + AM34_DIGAOS_AIOF_CONT_OFF)) {
+        return g_mock.aiof_cont;
+    }
+    if (addr == (AM34_DIGAOS_AVDD_BASE + AM34_DIGAOS_AVDD_CLK_OFF)) {
+        return g_mock.avdd_clk;
+    }
+    if (addr == (AM34_DIGAOS_AVDD_BASE + AM34_DIGAOS_AVDD_DACOUT1_OFF)) {
+        return g_mock.avdd_dacout1;
+    }
+    if (addr == (AM34_DIGAOS_AVDD_BASE + AM34_DIGAOS_AVDD_VOUTMODE0_OFF)) {
+        return g_mock.avdd_voutmode0;
     }
     if ((addr >= (DIGAOS_SSOT_BGO_BASE + 4UL)) &&
         (((addr - DIGAOS_SSOT_BGO_BASE) % DIGAOS_SSOT_BGO_SECTOR_BYTES) == 4UL)) {
@@ -143,6 +178,12 @@ void digaos_host_mmio_write32(uint32_t addr, uint32_t val) {
             dst[6] = (char)((g_mock.tbus_mbox[2] >> 8u) & 0xFFu);
             dst[7] = '\0';
         }
+    } else if (addr == (AM34_DIGAOS_AVDD_BASE + 0x0408UL)) {
+        g_mock.avdd_active_size = val;
+    } else if (addr == (AM34_DIGAOS_AVDD_BASE + 0x040CUL)) {
+        g_mock.avdd_sync = val;
+    } else if (addr == (AM34_DIGAOS_AVDD_BASE + AM34_DIGAOS_AVDD_NPALCTL0_OFF)) {
+        g_mock.avdd_npalctl0_32 = val;
     }
 }
 
@@ -161,12 +202,16 @@ void digaos_host_mmio_write16(uint32_t addr, uint16_t val) {
         g_mock.aiof_yc3 = val;
     } else if (addr == (AM34_DIGAOS_AIOF_BASE + AM34_DIGAOS_AIOF_CONT_OFF)) {
         g_mock.aiof_cont = val;
+    } else if (addr == (AM34_DIGAOS_AVDD_BASE + AM34_DIGAOS_AVDD_CLK_OFF)) {
+        g_mock.avdd_clk = val;
     } else if (addr == (AM34_DIGAOS_AVDD_BASE + AM34_DIGAOS_AVDD_NPALCTL0_OFF)) {
         g_mock.avdd_npalctl0 = val;
     } else if (addr == (AM34_DIGAOS_AVDD_BASE + AM34_DIGAOS_AVDD_VOUTMODE0_OFF)) {
         g_mock.avdd_voutmode0 = val;
     } else if (addr == (AM34_DIGAOS_AVDD_BASE + AM34_DIGAOS_AVDD_DACOUT1_OFF)) {
         g_mock.avdd_dacout1 = val;
+    } else if (addr == AM34_DIGAOS_DAVIS_CH0_RST) {
+        g_mock.davis_ch0_rst = val;
     } else if (addr == AM34_DIGAOS_DAVIS_CH1_RST) {
         g_mock.davis_ch1_rst = val;
     }
@@ -180,6 +225,10 @@ void digaos_host_mmio_write8(uint32_t addr, uint8_t val) {
     if ((addr == AM34_DIGAOS_SC0_TXB) && (g_mock.uart_len + 1u < sizeof(g_mock.uart_log))) {
         g_mock.uart_log[g_mock.uart_len++] = (char)val;
         g_mock.uart_log[g_mock.uart_len] = '\0';
+    } else if (addr == (AM34_DIGAOS_IIC0_BASE + AM34_DIGAOS_IIC_TX_OFF)) {
+        if (g_mock.iic0_write_count < sizeof(g_mock.iic0_writes)) {
+            g_mock.iic0_writes[g_mock.iic0_write_count++] = val;
+        }
     } else if (addr == (AM34_DIGAOS_IIC1_BASE + AM34_DIGAOS_IIC_TX_OFF)) {
         g_mock.iic1_last_tx = val;
         if (g_mock.iic1_write_count < sizeof(g_mock.iic1_writes)) {
@@ -288,11 +337,14 @@ int main(void) {
 
     assert(digaos_shell_exec_line("help"));
     assert(digaos_shell_exec_line("palm"));
+    assert(g_mock.aiof_fs0 == AM34_DIGAOS_AIOF_FS0_STD);
     assert(digaos_shell_exec_line("secam"));
+    assert(g_mock.aiof_fs0 == AM34_DIGAOS_AIOF_FS0_NONSTD);
     assert(strstr(g_mock.uart_log, "[DIGAOS] TV=SECAM TBC=PROBE") != NULL);
     assert(digaos_shell_exec_line("tbc on"));
     assert(digaos_shell_exec_line("tbc off"));
     assert(digaos_shell_exec_line("ntsc"));
+    assert(g_mock.aiof_fs0 == AM34_DIGAOS_AIOF_FS0_STD);
     assert(digaos_shell_exec_line("vfd READY"));
     assert(digaos_shell_exec_line("wdt"));
     assert(digaos_shell_exec_line("sata"));
@@ -339,18 +391,41 @@ int main(void) {
     assert(digaos_ic3001_addr8(DIGAOS_VIDEO_IC_BH7629KS2_BR_NA, false) == 0x90u);
     assert(digaos_ic3001_addr8(DIGAOS_VIDEO_IC_BH7629KS2_BR_NA, true) == 0x92u);
     assert(digaos_ic3001_addr8(DIGAOS_VIDEO_IC_C1AB2379_EC, false) == 0x94u);
-    assert(g_mock.avdd_dacout1 == 0x0007U);
+    assert(g_mock.avdd_dacout1 == AM34_DIGAOS_AVDD_DACOUT1_ENABLE);
     assert(!digaos_iic_write_reg_checked(0xC0001000UL, 0x90u, 0x00u, 0x00u));
 
     g_mock.iic1_write_count = 0u;
     assert(digaos_shell_exec_line("video ec"));
     assert(g_mock.avdd_npalctl0 == 0x0002U);
+    assert(g_mock.avdd_clk == AM34_DIGAOS_AVDD_CLK_576I);
+    assert(g_mock.avdd_active_size == AM34_DIGAOS_AVDD_ACTIVE_SIZE_576I);
+    assert(g_mock.avdd_sync == AM34_DIGAOS_AVDD_SYNC_576I);
     assert(digaos_shell_exec_line("dac off"));
-    assert(g_mock.avdd_voutmode0 == 0x0000U && g_mock.avdd_dacout1 == 0x0000U);
+    assert(g_mock.avdd_voutmode0 == 0x0000U && g_mock.avdd_dacout1 == AM34_DIGAOS_AVDD_DACOUT1_MUTE);
+    assert(digaos_shell_exec_line("video status"));
+    assert(strstr(g_mock.uart_log, "state=MUTED") != NULL);
     assert(digaos_shell_exec_line("dac on"));
-    assert(g_mock.avdd_voutmode0 == 0x0001U && g_mock.avdd_dacout1 == 0x0007U);
+    assert(g_mock.avdd_voutmode0 == 0x0001U && g_mock.avdd_dacout1 == AM34_DIGAOS_AVDD_DACOUT1_ENABLE);
+    assert(digaos_shell_exec_line("video status"));
+    assert(strstr(g_mock.uart_log, "state=UNMUTED") != NULL);
+    g_mock.iic0_write_count = 0u;
     assert(digaos_shell_exec_line("video br"));
     assert(g_mock.avdd_npalctl0 == 0x0000U);
+    assert(g_mock.avdd_clk == AM34_DIGAOS_AVDD_CLK_480I);
+    assert(g_mock.avdd_dacout1 == 0x0DDFU);
+    static const uint8_t k_expected_iic0_av[12] = {
+        0x90u, 0x10u, 0x08u, 0x07u, 0x63u, 0xC0u, 0x30u,
+        0x84u, 0x03u, 0x80u, 0x00u, 0x22u
+    };
+    assert(g_mock.iic0_write_count == sizeof(k_expected_iic0_av));
+    assert(memcmp(g_mock.iic0_writes, k_expected_iic0_av, sizeof(k_expected_iic0_av)) == 0);
+
+    uint8_t poff81[16];
+    uint8_t poff83[16];
+    digaos_tbus_build_start_poff_frame(poff81);
+    digaos_tbus_build_poff_bye_frame(poff83);
+    assert(poff81[0] == 0x81u && poff81[2] == 0x01u && digaos_tbus_opcode_safe_for_br_ic7501(poff81[0]));
+    assert(poff83[0] == 0x83u && digaos_tbus_opcode_safe_for_br_ic7501(poff83[0]));
 
     uint8_t probed = 0u;
     assert(!digaos_iic_probe_ic3001(DIGAOS_VIDEO_IC_BH7629KS2_BR_NA, NULL));
@@ -420,6 +495,91 @@ int main(void) {
     }
     assert(sh.keepalives_sent == 1UL);
     assert(!digaos_shell_exec_line("bogus"));
+
+    /* 9. Verify M6930LB GPIO BH7629 bring-up, 3-Tier bootmap, and barrier-guarded peek/poke16/poke32 */
+    assert(digaos_shell_exec_line("bootmap"));
+    assert(strstr(g_mock.uart_log, "TIER2=NOR_SA11_SA14(0x84040000,256K,NO_SD_UART=ON)") != NULL);
+    g_mock.iic1_write_count = 0u;
+    assert(digaos_shell_exec_line("video gpio"));
+    assert(g_mock.iic1_write_count == 0u);
+    assert(g_mock.avdd_clk == AM34_DIGAOS_AVDD_CLK_480I);
+    assert(g_mock.avdd_active_size == AM34_DIGAOS_AVDD_ACTIVE_SIZE_480I);
+    assert(g_mock.avdd_sync == AM34_DIGAOS_AVDD_SYNC_480I);
+    assert(g_mock.avdd_npalctl0_32 == AM34_DIGAOS_AVDD_NPALCTL0_HI_KEEP);
+    assert(digaos_shell_exec_line("peek 0x88000000"));
+    assert(strstr(g_mock.uart_log, "[DIGAOS] PEEK 0x88000000=0xA10F0001") != NULL);
+    assert(digaos_shell_exec_line("poke16 0x88000000 0x8021"));
+    assert(g_mock.aiof_vmodesel == 0x8021U);
+    assert(!digaos_shell_exec_line("peek 0xC000100C"));
+    assert(!digaos_shell_exec_line("poke32 0xC000100C 0x0"));
+    assert(!digaos_shell_exec_line("poke32 0xDC0F0000 0x0"));
+    assert(!digaos_shell_exec_line("poke32 0x80000000 0x12345678"));
+    assert(!digaos_shell_exec_line("poke32 0x8403FFFC 0x12345678"));
+    assert(!g_mock.forbidden_touched);
+
+    /* 10. Verify auto-IC3001 fallback, TBUS RX non-fatal 0x7F, WakeupReason, ODD bypass, & 3410PQ helpers */
+    digaos_board_video_ic_t auto_ic = DIGAOS_VIDEO_IC_C1AB2379_EC;
+    g_mock.iic1_nack_all = true;
+    assert(digaos_video_auto_bringup(DIGAOS_TV_NTSC, &auto_ic));
+    assert(auto_ic == DIGAOS_VIDEO_IC_BH7629KS2_GPIO_M6930LB);
+    assert(g_mock.avdd_clk == AM34_DIGAOS_AVDD_CLK_480I);
+    assert(g_mock.avdd_dacout1 == AM34_DIGAOS_AVDD_DACOUT1_ENABLE);
+    g_mock.iic1_nack_all = false;
+
+    static const uint8_t rx_7f_e3[16] = {
+        0x7Fu, 0xE3u, 0x02u, 0x30u, 0x46u, 0x46u, 0x30u, 0x30u,
+        0x30u, 0x36u, 0x30u, 0x30u, 0x30u, 0x30u, 0x00u, 0xA6u
+    };
+    static const uint8_t rx_key_3d[16] = {
+        0x40u, 0xB0u, 0x00u, 0x3Du, 0x00u, 0x00u, 0x00u, 0x00u,
+        0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x2Du
+    };
+    static const uint8_t rx_rtc_10[16] = {
+        0x10u, 0x00u, 0x01u, 0x01u, 0x00u, 0x00u, 0x2Fu, 0x06u,
+        0x00u, 0x02u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x49u
+    };
+    digaos_tbus_rx_event_t rx_ev;
+    assert(digaos_tbus_classify_rx_frame(rx_7f_e3, &rx_ev));
+    assert((rx_ev.kind == DIGAOS_TBUS_RX_UNSUPPORTED_0X7F) && (rx_ev.rejected_opcode == 0xE3u) && rx_ev.non_fatal);
+    assert(digaos_tbus_classify_rx_frame(rx_key_3d, &rx_ev));
+    assert((rx_ev.kind == DIGAOS_TBUS_RX_KEY_EVENT) && (rx_ev.key_code == 0x3Du));
+    assert(digaos_tbus_classify_rx_frame(rx_rtc_10, &rx_ev));
+    assert(rx_ev.kind == DIGAOS_TBUS_RX_RTC_HEARTBEAT);
+    uint8_t bad_rx[16];
+    memcpy(bad_rx, rx_7f_e3, sizeof(bad_rx));
+    bad_rx[15] ^= 0x01u;
+    assert(!digaos_tbus_classify_rx_frame(bad_rx, &rx_ev));
+    assert(rx_ev.kind == DIGAOS_TBUS_RX_INVALID);
+
+    assert(digaos_classify_wakeup_reason(AM34_DIGAOS_WAKEUP_XRESET_INVALID) == DIGAOS_WAKEUP_XRESET_70_HAZARD);
+    assert(digaos_classify_wakeup_reason(0x41u) == DIGAOS_WAKEUP_NORMAL_UION);
+    assert(digaos_classify_wakeup_reason(0x00u) == DIGAOS_WAKEUP_UNKNOWN);
+    assert(digaos_shell_exec_line("fpc"));
+    assert(strstr(g_mock.uart_log, "RX_0X7F=NON_FATAL WAKEUP=NORMAL_UION HAZARD=0x70") != NULL);
+
+    g_mock.davis_ch0_status = 0x0051U; /* ERR bit set (ODD 80040904) */
+    digaos_davis_status_t odd_st;
+    assert(digaos_davis_probe_channel(false, &odd_st));
+    assert((odd_st.state == DIGAOS_DAVIS_ERR_DEGRADED) && odd_st.degraded_odd_bypass);
+    assert(digaos_shell_exec_line("odd"));
+    assert(strstr(g_mock.uart_log, "[DIGAOS] ODD=DEGRADED_BYPASS status=0x0051") != NULL);
+
+    assert(digaos_tv_from_main3410_cfg0117(AM34_DIGAOS_MAIN3410_CFG_ID0117_NTSC) == DIGAOS_TV_NTSC);
+    assert(digaos_tv_from_main3410_cfg0117(AM34_DIGAOS_MAIN3410_CFG_ID0117_PAL) == DIGAOS_TV_PAL);
+    digaos_tv_system_t avout_tv = DIGAOS_TV_PAL;
+    assert(digaos_tv_from_avout_tv_system(0UL, &avout_tv) && (avout_tv == DIGAOS_TV_NTSC));
+    assert(digaos_tv_from_avout_tv_system(1UL, &avout_tv) && (avout_tv == DIGAOS_TV_PAL));
+    assert(!digaos_tv_from_avout_tv_system(28359UL, &avout_tv));
+    assert(digaos_autoboot_stamp_matches(0xDC434247UL, 0xDC434247UL));
+    assert(!digaos_autoboot_stamp_matches(0xDC434247UL, 0xEF7A4404UL));
+    assert(!digaos_autoboot_stamp_matches(0UL, 0UL));
+    assert(!digaos_autoboot_stamp_matches(0xFFFFFFFFUL, 0xFFFFFFFFUL));
+
+    assert(digaos_tbus_send_frame_checked(poff81));
+    assert(digaos_tbus_send_frame_checked(poff83));
+    const uint8_t stream4[4] = { 0x03u, 0x80u, 0x00u, 0x22u };
+    assert(digaos_iic_write_stream_checked(AM34_DIGAOS_IIC0_BASE, 0x84u, stream4, sizeof(stream4)));
+    assert(!digaos_iic_write_stream_checked(0xC0001000UL, 0x84u, stream4, sizeof(stream4)));
 
     printf("[PASS] test_digaos_host: MMIO barriers, multi-SoC UNVERIFIED_MMIO stubs, SECAM/TBC, SSOT tables, storage, SDCD/BGO RO & DIGAOS> shell verified.\n");
     return 0;

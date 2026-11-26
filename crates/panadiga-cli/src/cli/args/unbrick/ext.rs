@@ -270,6 +270,10 @@ pub enum RegionCompatAction {
         #[arg(short, long, value_name = "MAIN_BIN")]
         input: PathBuf,
 
+        /// Optional target TV localization profile: `ntsc-m` (default), `ntsc-j`, `pal-m`, or `pal`
+        #[arg(long, value_name = "PROFILE")]
+        tv_profile: Option<String>,
+
         /// Exports structured JSON report (`-` emits stdout JSON)
         #[arg(short, long, value_name = "JSON_FILE")]
         json: Option<PathBuf>,
@@ -288,6 +292,10 @@ pub enum RegionCompatAction {
         /// Mode: m6930lb_brazil (default) or factory_original
         #[arg(long, default_value = "m6930lb_brazil", value_name = "MODE")]
         mode: String,
+
+        /// Optional target TV localization profile: `ntsc-m` (default), `ntsc-j`, `pal-m`, or `pal`
+        #[arg(long, value_name = "PROFILE")]
+        tv_profile: Option<String>,
 
         /// Also patch MAIN `<deviceinfo>` model & OEM guard to `bypass_model_and_oem`
         #[arg(long)]

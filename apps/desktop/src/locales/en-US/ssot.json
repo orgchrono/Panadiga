@@ -340,6 +340,16 @@
           "normal4500": "4.5s NORMAL"
         }
       },
+      "BOOTFOLLOW": {
+        "label": "Passive Continuous Boot Follower",
+        "description": "Passively monitors PIO1 UART boot stream without driving XRESET/SW_UART and resets relative clock on real target boot cycles.",
+        "arg_label": "Idle Report (ms)",
+        "arg_placeholder": "8000",
+        "options": {
+          "idle8": "8s Idle",
+          "idle15": "15s Idle"
+        }
+      },
       "FRAMING": {
         "label": "PIO1 UART Framing (8N1/8E1/8O1)",
         "description": "Queries or configures hardware-timed parity framing (zero extra PIO slots) on PIO1 RX/TX state machines.",

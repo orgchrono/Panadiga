@@ -182,6 +182,7 @@ static const picofw_cli_cmd_entry_t k_cli_commands[] = {
     { "WAITTX",         picofw_cmd_waittx },
     { "PWRTRACE",       picofw_cmd_pwrtrace },
     { "BOOTTRACE",      picofw_cmd_boottrace },
+    { "BOOTFOLLOW",     picofw_cmd_bootfollow },
     { "PIOLOGIC",       picofw_cmd_piologic },
     { "SDSNIFF",        picofw_cmd_sdsniff },
     { "JIGSWEEP",       picofw_cmd_jigsweep },

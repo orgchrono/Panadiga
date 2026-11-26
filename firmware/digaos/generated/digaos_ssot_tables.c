@@ -7,15 +7,20 @@ const digaos_menu_item_t k_digaos_ssot_menu_items[DIGAOS_SSOT_MENU_ITEM_COUNT] =
     { "cmd_ssot", "digaos.item.ssot", "ssot", 0u, 0u, 0u },
     { "cmd_wdt", "digaos.item.wdt", "wdt", 0u, 0u, 0u },
     { "cmd_vfd_banner", "digaos.item.vfd_banner", "vfd DIGAOS ", 1u, 1u, 0u },
+    { "cmd_bootmap", "digaos.item.bootmap", "bootmap", 0u, 0u, 0u },
+    { "cmd_fpc_policy", "digaos.item.fpc_policy", "fpc", 0u, 0u, 0u },
     { "cmd_ntsc_mode", "digaos.item.ntsc_mode", "ntsc", 1u, 1u, 0u },
     { "cmd_palm_mode", "digaos.item.palm_mode", "palm", 1u, 1u, 0u },
     { "cmd_pal_mode", "digaos.item.pal_mode", "pal", 1u, 1u, 0u },
     { "cmd_secam_probe", "digaos.item.secam_probe", "secam", 2u, 2u, 0u },
     { "cmd_tbc_enable", "digaos.item.tbc_enable", "tbc on", 1u, 1u, 0u },
     { "cmd_colorbar_enable", "digaos.item.colorbar_enable", "colorbar on", 1u, 1u, 0u },
+    { "cmd_video_gpio", "digaos.item.video_gpio", "video gpio", 1u, 1u, 0u },
+    { "cmd_video_status", "digaos.item.video_status", "video status", 0u, 0u, 0u },
     { "cmd_sd_probe", "digaos.item.sd_probe", "sd", 0u, 0u, 0u },
     { "cmd_bgo_inspect", "digaos.item.bgo_inspect", "bgo", 0u, 0u, 0u },
     { "cmd_sata_probe", "digaos.item.sata_probe", "sata", 0u, 1u, 0u },
+    { "cmd_odd_probe", "digaos.item.odd_probe", "odd", 0u, 0u, 0u },
     { "cmd_provision_hdd", "digaos.item.provision_hdd", "provision", 3u, 3u, 1u },
     { "cmd_theme_list", "digaos.item.theme_list", "themes", 0u, 0u, 0u },
     { "cmd_power_list", "digaos.item.power_list", "power", 0u, 0u, 0u },
@@ -24,10 +29,10 @@ const digaos_menu_item_t k_digaos_ssot_menu_items[DIGAOS_SSOT_MENU_ITEM_COUNT] =
 };
 
 const digaos_menu_t k_digaos_ssot_menus[DIGAOS_SSOT_MENU_COUNT] = {
-    { "core_diagnostics", "digaos.menu.core_diagnostics", 0u, 4u },
-    { "video_tbc_studio", "digaos.menu.video_tbc_studio", 4u, 6u },
-    { "storage_power_rescue", "digaos.menu.storage_power_rescue", 10u, 4u },
-    { "hardware_power_tuning", "digaos.menu.hardware_power_tuning", 14u, 4u },
+    { "core_diagnostics", "digaos.menu.core_diagnostics", 0u, 6u },
+    { "video_tbc_studio", "digaos.menu.video_tbc_studio", 6u, 8u },
+    { "storage_power_rescue", "digaos.menu.storage_power_rescue", 14u, 5u },
+    { "hardware_power_tuning", "digaos.menu.hardware_power_tuning", 19u, 4u },
 };
 
 const digaos_theme_t k_digaos_ssot_themes[DIGAOS_SSOT_THEME_COUNT] = {

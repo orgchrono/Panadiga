@@ -1,7 +1,9 @@
 //! Compiled firmware train contracts (bootloaders, `.FRM` TOC geometry, Feistel ciphers, SDRAM load VAs, and binary symbols).
 
 use super::evidence::ClaimEvidence;
-use super::patch_specs::{HddAutobootSpec, MainBuildSpec, SataBridgeResetSpec};
+use super::patch_specs::{
+    HddAutobootSpec, MainBuildSpec, NorLoaderSataBridgeResetSpec, SataBridgeResetSpec,
+};
 use crate::hex_serde::{hex_i32, hex_u8, hex_u32, hex_u32_map, hex_u32_vec, opt_hex_u32};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -35,6 +37,12 @@ pub struct FrmContainerSpec {
     pub key_id: Option<String>,
     #[serde(default)]
     pub official_frm_sha256: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rebuilt_sd_frm_sha256: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rebuilt_sd_frm_bytes: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rebuilt_dvd_frm_sha256: Option<String>,
 }
 
 /// Cryptographic / integrity trust model verified for SD diagnostic RAM `DIGADIAG.FRM` boot.
@@ -70,12 +78,33 @@ pub struct DigadiagSpec {
     pub trust_model: Option<DigadiagTrustModel>,
 }
 
+/// Slot entry sourced from `PANA_DVD.FRM` for deterministic `PANA__SD.FRM` reconstruction.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct PanaDvdSourceSlot {
+    pub slot_name: String,
+    #[serde(with = "hex_u32")]
+    #[schemars(with = "String")]
+    pub offset: u32,
+    pub size: u32,
+    #[serde(with = "hex_u32")]
+    #[schemars(with = "String")]
+    pub checksum32: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "opt_hex_u32")]
+    #[schemars(with = "Option<String>")]
+    pub extrhead_adler32_stride16: Option<u32>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub patches_applied: Vec<String>,
+}
+
 /// Container rebuild recipe defining `PANA__SD.FRM` / `PANA_DVD.FRM` assembly from live dumps.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct PanaRebuildRecipe {
     pub output_container: String,
     pub toc_format: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tag: Option<String>,
     #[serde(default)]
     pub family_aliases: Vec<String>,
     #[serde(with = "hex_u8")]
@@ -83,6 +112,37 @@ pub struct PanaRebuildRecipe {
     pub model_prefix_byte: u8,
     #[serde(default)]
     pub sources_from_panamon_dump: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub sources_from_pana_dvd: Vec<PanaDvdSourceSlot>,
+}
+
+/// Native BGO table specification inside a `PROG` binary when no geometry retarget is needed.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ProgBgoNativeSpec {
+    pub native_geometry_id: String,
+    #[serde(with = "hex_u32")]
+    #[schemars(with = "String")]
+    pub bgo_table_offset: u32,
+    pub retarget_required: bool,
+    #[serde(with = "hex_u32")]
+    #[schemars(with = "String")]
+    pub bgo_table_marker: u32,
+    #[serde(with = "hex_u32_vec")]
+    #[schemars(with = "Vec<String>")]
+    pub bgo_table_words: Vec<u32>,
+    #[serde(with = "hex_u32")]
+    #[schemars(with = "String")]
+    pub detect_flash_base: u32,
+    #[serde(with = "hex_u32")]
+    #[schemars(with = "String")]
+    pub detect_flash_end: u32,
+    #[serde(with = "hex_u32")]
+    #[schemars(with = "String")]
+    pub detect_logical_sectors: u32,
+    #[serde(with = "hex_u32")]
+    #[schemars(with = "String")]
+    pub expected_prog_size: u32,
 }
 
 /// Half-open byte offset range `[start, end)` inside an unpacked `PROG` binary.
@@ -227,7 +287,11 @@ pub struct FirmwareTrainProfile {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bgo_retarget_spec: Option<ProgBgoRetargetSpec>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bgo_native_spec: Option<ProgBgoNativeSpec>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub prog_sata_bridge_reset_spec: Option<SataBridgeResetSpec>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub nor_loader_sata_bridge_reset_spec: Option<NorLoaderSataBridgeResetSpec>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hdd_autoboot_spec: Option<HddAutobootSpec>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]

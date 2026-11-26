@@ -177,7 +177,11 @@ def _fallback_numeric_prompt(inventory: WorkspaceInventory, env: Mapping[str, st
     print("  5) Somente Pico Firmware")
     print("  6) Limpar Cache Panadiga")
     print("  q) Sair")
-    choice = input("Escolha [1-6/q]: ").strip().lower()
+    try:
+        choice = input("Escolha [1-6/q]: ").strip().lower()
+    except (EOFError, KeyboardInterrupt):
+        print()
+        return None
     if choice == "1":
         return default_all_selection(inventory, include_ci=True)
     if choice == "2":

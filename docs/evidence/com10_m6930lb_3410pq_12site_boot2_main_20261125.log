@@ -1,0 +1,143 @@
+=== COM10 12-SITE SD KIT BOOT2 MAIN+NDB SESSION 2026-11-25T10:28:22Z ===
+[PRECHECK_PANARSP]
+=== PANARSP PIO1 (baud=115200 ms=1200 boot=0 hold=0 action=4) ===
+[PANARSP] RX (459 bytes, pretrig_dropped=0, inspect_from=0):
+  0000: 20 20 20 44 30 3A 30 30 30 30 30 30 30 30 2C 20  |   D0:00000000, |
+  0010: 20 20 44 31 3A 30 30 30 30 30 46 30 31 2C 20 20  |  D1:00000F01,  |
+  0020: 20 44 32 3A 30 30 30 30 30 30 30 30 2C 20 20 20  | D2:00000000,   |
+  0030: 44 33 3A 30 30 30 30 30 30 30 30 0D 0A 20 20 20  |D3:00000000..   |
+  0040: 41 30 3A 35 32 32 42 36 43 32 30 2C 20 20 20 41  |A0:522B6C20,   A|
+  0050: 31 3A 35 31 42 31 32 43 38 38 2C 20 20 20 41 32  |1:51B12C88,   A2|
+  0060: 3A 30 30 30 30 30 30 30 30 2C 20 20 20 41 33 3A  |:00000000,   A3:|
+  0070: 30 30 30 30 30 30 30 30 0D 0A 20 20 20 45 30 3A  |00000000..   E0:|
+  0080: 30 30 30 30 30 30 30 30 2C 20 20 20 45 31 3A 30  |00000000,   E1:0|
+  0090: 30 30 30 30 30 38 30 2C 20 20 20 45 32 3A 30 30  |0000080,   E2:00|
+  00A0: 30 30 30 30 30 30 2C 20 20 20 45 33 3A 35 33 34  |000000,   E3:534|
+  00B0: 45 37 39 30 30 0D 0A 20 20 20 45 34 3A 30 30 30  |E7900..   E4:000|
+  00C0: 30 30 30 30 30 2C 20 20 20 45 35 3A 30 30 30 30  |00000,   E5:0000|
+  00D0: 30 30 30 30 2C 20 20 20 45 36 3A 30 30 30 30 30  |0000,   E6:00000|
+  00E0: 30 30 30 2C 20 20 20 45 37 3A 30 30 30 30 30 30  |000,   E7:000000|
+  00F0: 30 30 0D 0A 20 45 50 53 57 3A 30 30 30 30 30 46  |00.. EPSW:00000F|
+  0100: 30 31 2C 20 20 4C 41 52 3A 35 37 37 31 30 44 34  |01,  LAR:57710D4|
+  0110: 44 2C 20 20 4C 49 52 3A 46 43 32 31 35 30 36 34  |D,  LIR:FC215064|
+  0120: 2C 20 20 4D 44 52 3A 35 37 37 30 45 44 33 35 0D  |,  MDR:5770ED35.|
+  0130: 0A 20 4D 43 56 46 3A 30 30 30 30 30 30 30 30 2C  |. MCVF:00000000,|
+  0140: 20 4D 43 52 4C 3A 36 41 45 37 30 38 30 35 2C 20  | MCRL:6AE70805, |
+  0150: 4D 43 52 48 3A 30 34 38 33 42 38 34 43 2C 20 4D  |MCRH:0483B84C, M|
+  0160: 44 52 51 3A 30 37 34 35 30 44 41 31 0D 0A 20 20  |DRQ:07450DA1..  |
+  0170: 20 50 43 3A 35 37 37 31 30 37 35 33 2C 20 20 20  | PC:57710753,   |
+  0180: 53 50 3A 35 32 32 42 36 43 31 43 0D 0A 0D 0A 35  |SP:522B6C1C....5|
+  0190: 37 37 31 30 37 35 33 3A 20 43 41 30 30 20 20 20  |7710753: CA00   |
+  01A0: 20 20 20 20 20 20 20 20 62 72 61 20 20 20 20 20  |        bra     |
+  01B0: 30 35 37 37 31 30 37 35 33 0D 0A 0D 0A 1B 5B 33  |057710753.....[3|
+  01C0: 31 6D 6E 64 62 3E 20 1B 5B 6D 39                 |1mndb> .[m9|
+[PANARSP] Frame: none (ack=no nak=no nak0x15=no)
+PANARSP: OK (rx=459 bytes, rsp=NO_REPLY, fifo_ovf=NO)
+@PICO_RES cmd=PANARSP status=OK code=0 elapsed_us=846817
+PICO>
+[PRECHECK_BRIDGE]
+[BRIDGE] USB CDC <-> P7501 SC0 115200 8N1 ctrl=OFF active (exit: send '~~~' or unplug USB).
+>>> dd 57aefbac 4  # precheck 0x57AEFBAC
+dd 57aefbac 4
+57AEFBAC: 00000001
+[31mndb> [m
+>>> dd 570d6748 16  # precheck 0x570D674D
+dd 570d6748 16
+570D6748: 4A1212CA 8D54800C DDF10ACA 0C4A1215
+[31mndb> [m
+>>> dd 570d679c 12  # precheck 0x570D679F
+dd 570d679c 12
+570D679C: 800C4A00 43CD8D02 BA00000F
+[31mndb> [m
+[PRECHECK_VALS] aefbac=dd 57aefbac 4
+57AEFBAC: 00000001
+[31mndb> [m ped=dd 570d6748 16
+570D6748: 4A1212CA 8D54800C DDF10ACA 0C4A1215
+[31mndb> [m cps=dd 570d679c 12
+570D679C: 800C4A00 43CD8D02 BA00000F
+[31mndb> [m
+[BRIDGE_EXIT]
+g
+
+BRIDGE: OK (rx=211 tx=48 ferr=0 ctrl_edges=0 overflow=NO)
+@PICO_RES cmd=BRIDGE status=OK code=0 elapsed_us=669947
+PICO>
+=== PRE_BOOT2_STATUS ===
+PICO> VDD: 3.26V (OK)
+[STANDBY] RXD=1 NSW5V=1 TXD=1 XRESET=1 SW_PU=3.27V NSW5V_DROPS=44 fault_latch=0 recoveries=44 | State=POWERED / AWAKE (SW_UART ~3.3V)
+[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=92 wdt_recoveries=0 reboot_src=CLEAN fault_slot=255 fault_stage=IDLE last_cmd=ISOLATE last_us=196
+@PICO_RES cmd=STATUS status=OK code=0 elapsed_us=1771
+PICO>
+[GATE] VDD=3.26V NSW5V=1 OK
+=== BOOTTRACE 90000 NORMAL ===
+=== BOOTTRACE: window=90000ms boot=1 hold=0ms sticky=NO no_xrst=NO (8N1 @ 115200) ===
+[BOOTTRACE +  10ms] DDR CHECK: OK
+[BOOTTRACE +  19ms] Chip select = 1
+[BOOTTRACE +  20ms] F/E Address = 0x90202000 , Drive(compress) Size = 0xACC50
+[BOOTTRACE +  26ms] uncompress dst=90202000 len=160000 src=84080040 len=acc01
+[BOOTTRACE + 775ms] HEADER:5627DD54, DECOMP:5627DD54
+[BOOTTRACE + 778ms] F/E reset release finish ...
+[BOOTTRACE + 781ms] ***** Loader ver0.61 [06/03/06] *****
+[BOOTTRACE + 785ms] ***** normal mode *****
+[BOOTTRACE + 802ms] !!! start fmu to read & exec fvu. !!!
+[BOOTTRACE + 806ms] wait 1 second.
+[BOOTTRACE +1807ms] *** timer correspond initialize ***
+[BOOTTRACE +1813ms] startup reason = [70]
+[BOOTTRACE +1817ms] Main hung-up time changed 255[s].
+[BOOTTRACE +1830ms] *** RTSC Initialize ***
+[BOOTTRACE +4614ms] [RTSD] ATAPI Software Reset 
+[BOOTTRACE +4616ms] error! startup reason is invalid.
+[BOOTTRACE] UART: bytes=527 first_byte=10448us ferr=1 perr=0 ovf=NO | SW_rel=NO
+[BOOTTRACE] ADC0_SWUART: min=0.04V max=3.30V (low=0 hiz=0.04..3.30V n=8998) | CtrlEdges: NSW5V=1 TXD=1 XRESET=1 (logged=3)
+  [CTRL +4639919us] NSW5V=1 TXD=1 XRESET=0
+  [CTRL +4662905us] NSW5V=0 TXD=1 XRESET=0
+  [CTRL +4663366us] NSW5V=0 TXD=0 XRESET=0
+@PICO_BOOT_CLASS verdict=LOADER_ONLY build=UNKNOWN hdd_autoboot=0 avout_ok=0 vmute0=0 ntsc=0 rsv_ok=0 hdd_fail=0 bgo_err=0 fpc_err=0 fpc_to=0 iic_err=0 odd_err=0 op7f_cnt=0 op7f=NONE
+@PICO_DIAG_DEEP hw=UNKNOWN market=UNKNOWN timer=NONE region=NONE cav=NONE avsel=NONE gui=NONE sys=NONE hdd_wr=NONE hdd_fmt=NONE drv=NONE avin_iic=NONE
+@PICO_FRAME seq=21 ts_us=2175590204 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@PICO_FRAME seq=22 ts_us=2182487031 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@PICO_FRAME seq=23 ts_us=2286475431 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@PICO_FRAME seq=24 ts_us=2310091345 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@PICO_FRAME seq=25 ts_us=2403788435 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@PICO_FRAME seq=26 ts_us=2412074306 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@PICO_FRAME seq=27 ts_us=2501672430 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@PICO_FRAME seq=28 ts_us=2507923802 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@PICO_FRAME seq=29 ts_us=2740707461 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@PICO_FRAME seq=30 ts_us=2747455254 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@PICO_FRAME seq=31 ts_us=3026898822 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@PICO_FRAME seq=32 ts_us=3036583552 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@PICO_FRAME seq=33 ts_us=3061898504 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@PICO_FRAME seq=34 ts_us=3076485105 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@PICO_FRAME seq=35 ts_us=3312701682 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@PICO_FRAME seq=36 ts_us=3319449803 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@PICO_FRAME seq=37 ts_us=3600844966 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@PICO_FRAME seq=38 ts_us=3945781422 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@PICO_FRAME seq=39 ts_us=3952520308 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@PICO_FRAME seq=40 ts_us=4342954799 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@PICO_FRAME seq=41 ts_us=4349920986 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@PICO_FRAME seq=42 ts_us=12174717962 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@PICO_FRAME seq=43 ts_us=12312221299 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@PICO_FRAME seq=44 ts_us=12317790494 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@PICO_FRAME seq=45 ts_us=12450325373 type=FAULT len=15 crc32=4D7EF9E0 nsw5v_dropout=1
+@PICO_FRAME seq=46 ts_us=12716427930 type=DIAG_DEEP len=134 crc32=956B1176 hw=UNKNOWN market=UNKNOWN timer=NONE region=NONE cav=NONE avsel=NONE gui=NONE sys=NONE hdd_wr=NONE hdd_fmt=NONE drv=NONE avin_iic=NONE
+BOOTTRACE: OK
+@PICO_RES cmd=BOOTTRACE status=OK code=0 elapsed_us=90026818
+PICO>
+=== PRE_NDB_STATUS ===
+PICO> VDD: 0.04V (LOW / UNPOWERED)
+[STANDBY] RXD=0 NSW5V=0 TXD=0 XRESET=0 SW_PU=0.04V NSW5V_DROPS=45 fault_latch=1 recoveries=44 | State=STANDBY (P-OFF) OR TW7501 CLAMPED LOW (NSW5V=0)
+[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=94 wdt_recoveries=0 reboot_src=CLEAN fault_slot=255 fault_stage=IDLE last_cmd=BOOTTRACE last_us=90026818
+@PICO_RES cmd=STATUS status=OK code=0 elapsed_us=1159
+PICO>
+[GATE] NSW5V=0 (standby detected)
+STANDBY_GATE_STOP before NDB: NSW5V=0 (standby detected)
+=== FINAL_ISOLATE ===
+[BUS] P7501 pins placed in High-Impedance Isolation (NSW5V/XRESET Hi-Z, GP26 ADC0).
+@PICO_RES cmd=ISOLATE status=OK code=0 elapsed_us=159
+PICO>
+=== FINAL_STATUS ===
+PICO> VDD: 0.04V (LOW / UNPOWERED)
+[STANDBY] RXD=0 NSW5V=0 TXD=0 XRESET=0 SW_PU=0.04V NSW5V_DROPS=45 fault_latch=1 recoveries=44 | State=STANDBY (P-OFF) OR TW7501 CLAMPED LOW (NSW5V=0)
+[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=96 wdt_recoveries=0 reboot_src=CLEAN fault_slot=255 fault_stage=IDLE last_cmd=ISOLATE last_us=159
+@PICO_RES cmd=STATUS status=OK code=0 elapsed_us=1148
+PICO>

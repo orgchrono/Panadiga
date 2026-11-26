@@ -59,3 +59,10 @@ bool digaos_nor_inspect_unbrick(digaos_unbrick_status_t *out) {
         (out->bgo_p1_count >= 1u) && (out->bgo_p2_count >= 40u) && out->sa11_is_erased;
     return true;
 }
+
+bool digaos_autoboot_stamp_matches(uint32_t prog_stamp_0x504395fc, uint32_t hdd_extrhead_0x28) {
+    if ((prog_stamp_0x504395fc == 0UL) || (prog_stamp_0x504395fc == 0xFFFFFFFFUL)) {
+        return false;
+    }
+    return prog_stamp_0x504395fc == hdd_extrhead_0x28;
+}

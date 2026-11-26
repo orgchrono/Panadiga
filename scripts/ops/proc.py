@@ -9,8 +9,11 @@ import shutil
 import signal
 import subprocess
 import sys
+import tempfile
 import threading
 from typing import Final, Iterator, Mapping, Sequence, TypedDict
+
+AnyPopen = subprocess.Popen[bytes] | subprocess.Popen[str]
 
 ROOT: Final[Path] = Path(__file__).resolve().parent.parent.parent
 _PRINT_LOCK = threading.Lock()
@@ -48,7 +51,7 @@ def _subprocess_group_kwargs() -> _SubprocessGroupKwargs:
     return {"start_new_session": True}
 
 
-def _terminate_process_tree(proc: subprocess.Popen[str]) -> None:
+def _terminate_process_tree(proc: AnyPopen) -> None:
     """Force-terminate a child process and its descendants without raising if already exited."""
     if proc.poll() is not None:
         return
@@ -80,14 +83,14 @@ class ProcessTracker:
     def __init__(self) -> None:
         self._lock = threading.Lock()
         self._aborted = False
-        self._procs: set[subprocess.Popen[str]] = set()
+        self._procs: set[AnyPopen] = set()
 
     def is_aborted(self) -> bool:
         """Return True once sibling cancellation has been triggered."""
         with self._lock:
             return self._aborted
 
-    def register(self, proc: subprocess.Popen[str]) -> bool:
+    def register(self, proc: AnyPopen) -> bool:
         """Track a newly spawned process; returns False and terminates if already aborted."""
         with self._lock:
             if self._aborted:
@@ -100,7 +103,7 @@ class ProcessTracker:
             return False
         return True
 
-    def unregister(self, proc: subprocess.Popen[str]) -> None:
+    def unregister(self, proc: AnyPopen) -> None:
         """Stop tracking a finished child process."""
         with self._lock:
             self._procs.discard(proc)
@@ -131,6 +134,62 @@ def use_process_tracker(tracker: ProcessTracker | None) -> Iterator[None]:
         _TRACKER_LOCAL.tracker = previous
 
 
+def _run_captured_with_tempfile(
+    argv: list[str],
+    cwd_str: str,
+    env_dict: dict[str, str] | None,
+    tracker: ProcessTracker | None,
+    cmd_label: str,
+) -> str:
+    """Run subprocess redirecting stdout+stderr to a temp file so background daemons cannot hang PIPE EOF."""
+    with tempfile.TemporaryFile(mode="w+b") as log_fh:
+        if tracker is None:
+            proc = subprocess.run(
+                argv,
+                cwd=cwd_str,
+                env=env_dict,
+                stdin=subprocess.DEVNULL,
+                stdout=log_fh,
+                stderr=subprocess.STDOUT,
+                check=False,
+            )
+            log_fh.seek(0)
+            output = log_fh.read().decode("utf-8", errors="replace")
+            if proc.returncode != 0:
+                raise subprocess.CalledProcessError(proc.returncode, argv, output=output)
+            return output
+
+        group_kwargs = _subprocess_group_kwargs()
+        child: subprocess.Popen[bytes] = subprocess.Popen(
+            argv,
+            cwd=cwd_str,
+            env=env_dict,
+            stdin=subprocess.DEVNULL,
+            stdout=log_fh,
+            stderr=subprocess.STDOUT,
+            **group_kwargs,
+        )
+        if not tracker.register(child):
+            try:
+                child.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                pass
+            raise ProcessAbortedError(f"Aborted step during launch: {cmd_label}")
+
+        try:
+            returncode = child.wait()
+        finally:
+            tracker.unregister(child)
+
+        log_fh.seek(0)
+        stdout_data = log_fh.read().decode("utf-8", errors="replace")
+        if returncode != 0:
+            if tracker.is_aborted():
+                raise ProcessAbortedError(f"Terminated aborted step: {cmd_label}")
+            raise subprocess.CalledProcessError(returncode, argv, output=stdout_data)
+        return stdout_data
+
+
 def _run_step_untracked(
     argv: list[str],
     cwd_str: str,
@@ -138,18 +197,7 @@ def _run_step_untracked(
     capture_output: bool,
 ) -> str:
     if capture_output:
-        proc = subprocess.run(
-            argv,
-            cwd=cwd_str,
-            env=env_dict,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            check=True,
-        )
-        return proc.stdout or ""
+        return _run_captured_with_tempfile(argv, cwd_str, env_dict, None, argv[0])
     subprocess.run(argv, cwd=cwd_str, env=env_dict, check=True)
     return ""
 
@@ -173,19 +221,17 @@ def run_step(
     env_dict = dict(env) if env else None
     cwd_str = str(cwd or ROOT)
 
+    if capture_output:
+        return _run_captured_with_tempfile(argv, cwd_str, env_dict, tracker, cmd[0])
     if tracker is None:
-        return _run_step_untracked(argv, cwd_str, env_dict, capture_output)
+        return _run_step_untracked(argv, cwd_str, env_dict, False)
 
     group_kwargs = _subprocess_group_kwargs()
-    child: subprocess.Popen[str] = subprocess.Popen(
+    child: subprocess.Popen[bytes] = subprocess.Popen(
         argv,
         cwd=cwd_str,
         env=env_dict,
-        stdout=subprocess.PIPE if capture_output else None,
-        stderr=subprocess.STDOUT if capture_output else None,
-        text=True,
-        encoding="utf-8" if capture_output else None,
-        errors="replace" if capture_output else None,
+        stdin=subprocess.DEVNULL,
         **group_kwargs,
     )
     if not tracker.register(child):
@@ -196,15 +242,15 @@ def run_step(
         raise ProcessAbortedError(f"Aborted step during launch: {cmd[0]}")
 
     try:
-        stdout_data, _ = child.communicate()
+        returncode = child.wait()
     finally:
         tracker.unregister(child)
 
-    if child.returncode != 0:
+    if returncode != 0:
         if tracker.is_aborted():
             raise ProcessAbortedError(f"Terminated aborted step: {cmd[0]}")
-        raise subprocess.CalledProcessError(child.returncode, argv, output=stdout_data)
-    return stdout_data or ""
+        raise subprocess.CalledProcessError(returncode, argv, output="")
+    return ""
 
 
 def print_banner(title: str, ansi_color: str = "36") -> None:

@@ -72,7 +72,34 @@ fn validate_sata_reset_spec(owner: &str, spec: &SataBridgeResetSpec, tr: &mut Ch
     tr.check(spec.sleep_callee_va != 0, || {
         format!("{owner}: sleep_callee_va must be non-zero")
     });
+    tr.check(check_hex_digest(spec.orig_sha256.as_deref()), || {
+        format!("{owner}: invalid orig_sha256")
+    });
+    tr.check(check_hex_digest(spec.patched_sha256.as_deref()), || {
+        format!("{owner}: invalid patched_sha256")
+    });
     validate_patch_site(owner, spec.base_va, spec.expected_size, &spec.site, tr);
+}
+
+fn validate_nor_loader_sata_reset_spec(
+    owner: &str,
+    spec: &crate::types::NorLoaderSataBridgeResetSpec,
+    tr: &mut CheckTracker,
+) {
+    tr.check(spec.expected_nor_size > 0, || {
+        format!("{owner}: expected_nor_size must be > 0")
+    });
+    tr.check(spec.patched_wait_ms > spec.factory_wait_ms, || {
+        format!(
+            "{owner}: patched_wait_ms ({}) must exceed factory_wait_ms ({})",
+            spec.patched_wait_ms, spec.factory_wait_ms
+        )
+    });
+    tr.check(
+        check_hex_digest(spec.nor_dump_repaired_sha256.as_deref()),
+        || format!("{owner}: invalid nor_dump_repaired_sha256"),
+    );
+    validate_patch_site(owner, spec.base_va, spec.expected_nor_size, &spec.site, tr);
 }
 
 fn validate_hdd_autoboot_spec(train_id: &str, spec: &HddAutobootSpec, tr: &mut CheckTracker) {
@@ -104,6 +131,27 @@ fn validate_hdd_autoboot_spec(train_id: &str, spec: &HddAutobootSpec, tr: &mut C
             spec.norfrom_fvu_base_va, MIN_CRITICAL_IPL_GUARD_BYTES
         )
     });
+    if let Some(bypass) = &spec.norfrom_sd_trap_bypass {
+        let exp = parse_hex_bytes(&bypass.expect_hex);
+        let rep = parse_hex_bytes(&bypass.replace_hex);
+        tr.check(
+            exp.as_ref()
+                .is_ok_and(|e| rep.as_ref().is_ok_and(|r| e.len() == r.len())),
+            || format!("{owner}: norfrom_sd_trap_bypass expect_hex/replace_hex invalid or unequal length"),
+        );
+        tr.check(
+            bypass
+                .va
+                .checked_sub(spec.base_va)
+                .is_some_and(|off| off < spec.expected_size),
+            || {
+                format!(
+                    "{owner}: norfrom_sd_trap_bypass VA 0x{:08X} out of bounds",
+                    bypass.va
+                )
+            },
+        );
+    }
     let s = &spec.symbols;
     let symbol_vas = [
         s.dcache_purge_va,
@@ -153,6 +201,10 @@ fn validate_main_build_spec(train_id: &str, build: &MainBuildSpec, tr: &mut Chec
     tr.check(check_hex_digest(build.unpacked_sha256.as_deref()), || {
         format!("{owner}: invalid unpacked_sha256")
     });
+    tr.check(
+        check_hex_digest(build.patched_unpacked_sha256.as_deref()),
+        || format!("{owner}: invalid patched_unpacked_sha256"),
+    );
     if let Some(detect_va) = build.native_bgo_detect_va {
         let in_bounds = detect_va
             .checked_sub(build.base_va)
@@ -241,6 +293,10 @@ pub(super) fn validate_train_patch_specs(trn: &FirmwareTrainProfile, tr: &mut Ch
     if let Some(reset_spec) = &trn.prog_sata_bridge_reset_spec {
         let owner = format!("train '{}' prog_sata_bridge_reset_spec", trn.id);
         validate_sata_reset_spec(&owner, reset_spec, tr);
+    }
+    if let Some(nor_spec) = &trn.nor_loader_sata_bridge_reset_spec {
+        let owner = format!("train '{}' nor_loader_sata_bridge_reset_spec", trn.id);
+        validate_nor_loader_sata_reset_spec(&owner, nor_spec, tr);
     }
     if let Some(autoboot) = &trn.hdd_autoboot_spec {
         validate_hdd_autoboot_spec(&trn.id, autoboot, tr);

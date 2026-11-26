@@ -21,7 +21,7 @@ def test_collect_arsenal_matches_live_workspace_entities() -> None:
     assert req_int(counts, "mcp_resource_families") >= 9
     assert req_int(counts, "mcp_prompts") == 4
     assert req_int(counts, "skills") == 29
-    assert req_int(counts, "agents") == 6
+    assert req_int(counts, "agents") == 7
 
     mcp_tools = [str(x) for x in as_list(inv["mcp_tools"])]
     assert "panadiga_symbol_lookup" in mcp_tools
@@ -53,6 +53,8 @@ def test_collect_arsenal_matches_live_workspace_entities() -> None:
         "panadiga-anti-trap-geometry-verification",
         "panadiga-firmware-forensic-atlas",
     }.issubset(skill_names)
+    agent_names = {str(as_dict(a)["name"]) for a in as_list(inv["agents"])}
+    assert "panadiga-functional-math" in agent_names
 
 
 def test_render_deterministic_and_check_detects_drift(tmp_path: Path) -> None:

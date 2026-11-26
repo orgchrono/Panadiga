@@ -121,6 +121,35 @@ pub(super) fn validate_bgo_retarget_spec(
 ) {
     validate_digadiag_and_layout_pairing(bundle, trn, tr);
 
+    if let Some(native) = &trn.bgo_native_spec {
+        tr.check(native.bgo_table_words.len() == 64, || {
+            format!(
+                "train '{}': bgo_native_spec.bgo_table_words must have 64 words (got {})",
+                trn.id,
+                native.bgo_table_words.len()
+            )
+        });
+        tr.check(
+            (native.bgo_table_offset as usize).saturating_add(native.bgo_table_words.len() * 4)
+                <= native.expected_prog_size as usize,
+            || {
+                format!(
+                    "train '{}': bgo_native_spec.bgo_table_offset 0x{:X} exceeds expected_prog_size 0x{:X}",
+                    trn.id, native.bgo_table_offset, native.expected_prog_size
+                )
+            },
+        );
+        tr.check(
+            (native.detect_flash_base & 0x00FF_FFFF) >= MIN_CRITICAL_IPL_GUARD_BYTES,
+            || {
+                format!(
+                    "train '{}': bgo_native_spec.detect_flash_base 0x{:08X} enters 256 KiB IPL guard",
+                    trn.id, native.detect_flash_base
+                )
+            },
+        );
+    }
+
     let Some(spec) = &trn.bgo_retarget_spec else {
         return;
     };

@@ -1,7 +1,7 @@
 # Panadiga Auto-Generated Tool Arsenal Index
 
 > Gerado deterministicamente por `python scripts/generate_tool_arsenal.py --write`. Verifique deriva com `--check`.
-> **Arsenal Fingerprint (`SHA-256`):** `4b4d3dba7cfe1c6930d8a4d9956450f61482216b47c2cc87f36a45240f1f0a0a`
+> **Arsenal Fingerprint (`SHA-256`):** `8f41cb2eea5c265825bc7fd0f8f2fbfaf297988485857075c9a723f49a776261`
 
 ## 1. Resumo Quantitativo
 
@@ -13,14 +13,14 @@
 | Famílias de Resources MCP | 9 | `crates/panadiga-mcp/src/resources.rs` |
 | Prompts MCP | 4 | `crates/panadiga-mcp/src/prompts.rs` |
 | Comandos IPC Tauri 2 | 131 | `apps/desktop/src-tauri/src/lib.rs` |
-| Comandos Sonda `PicoFW` (`P7501`) | 79 | `crates/panadiga-core/src/ssot/hardware_catalog.json` |
+| Comandos Sonda `PicoFW` (`P7501`) | 80 | `crates/panadiga-core/src/ssot/hardware_catalog.json` |
 | Codecs C11 `PicoFW` | 24 | `firmware/picofw/**/*codec*.c` |
 | Módulos `DigaOS` | 15 | `firmware/digaos/` |
-| Comandos Shell `DigaOS` | 26 | `firmware/digaos/kernel/digaos_main.c` |
-| Scripts Python Operacionais | 53 | `scripts/**/*.py` |
+| Comandos Shell `DigaOS` | 34 | `firmware/digaos/kernel/digaos_main.c` |
+| Scripts Python Operacionais | 55 | `scripts/**/*.py` |
 | Scripts Ghidra Jython | 9 | `tools/ghidra/*.py` |
 | Skills `.agents/skills/` | 29 | `.agents/skills/*/SKILL.md` |
-| Subagentes `.agents/agents/` | 6 | `.agents/agents/*.md` |
+| Subagentes `.agents/agents/` | 7 | `.agents/agents/*.md` |
 
 ## 2. Crates Rust Workspace
 
@@ -77,6 +77,7 @@
 | `WAITTX` | `uart_fmu` | `WAITTX <ms> <NORMAL|JIG[:ms]|NOPULL> <trigger> <hex|BRK> [post_ms]` | no |
 | `PWRTRACE` | `electrical` | `PWRTRACE [ms] [NORMAL|JIG[:ms]|NOPULL]` | no |
 | `BOOTTRACE` | `electrical` | `BOOTTRACE [ms] [NORMAL|JIG[:ms]|NOPULL]` | no |
+| `BOOTFOLLOW` | `electrical` | `BOOTFOLLOW [idle_ms]` | no |
 | `PIOLOGIC` | `electrical` | `PIOLOGIC [ms] [NORMAL|JIG[:ms]|NOPULL] [khz] [CTRL]` | no |
 | `SDSNIFF` | `electrical` | `SDSNIFF [ms] [NORMAL|JIG[:ms]|NOPULL] [LEN:64|512]` | no |
 | `JIGSWEEP` | `electrical` | `JIGSWEEP [HOLD|DELAY|PREBOOT] [ms..]` | no |
@@ -133,13 +134,13 @@
 
 ## 5. Scripts Python, Ghidra Jython, Skills & Subagentes
 
-- **Scripts Python:** `scripts/bench/boot_harness.py`, `scripts/bench/decoders.py`, `scripts/bench/nor_dumper.py`, `scripts/bench/protocol.py`, `scripts/bench/rsp_dump.py`, `scripts/bench/rsp_frames.py`, `scripts/bench/runner.py`, `scripts/build.py`, `scripts/build_cache/inventory.py`, `scripts/build_cache/steps.py`, `scripts/build_lanes/android.py`, `scripts/build_lanes/android_verify.py`, `scripts/build_lanes/concurrency.py`, `scripts/build_lanes/dag.py`, `scripts/build_lanes/desktop.py`, `scripts/build_lanes/pico.py`, `scripts/dev/cad_primitives.py`, `scripts/dev/generate_schematics_and_cad.py`, `scripts/dev/schematic_sheet.py`, `scripts/generate_firmware_atlas.py`, `scripts/generate_tool_arsenal.py`, `scripts/ops/proc.py`, `scripts/ops/toolchain.py`, `scripts/panadiga_cache.py`, `scripts/panadiga_cli_bridge.py`, `scripts/panadiga_ops.py`, `scripts/pico_heartbeat_ops.py`, `scripts/profiles_types.py`, `scripts/re/_discovery_common.py`, `scripts/re/fleet_decrypt/catalog.py`, `scripts/re/fleet_decrypt/discovery.py`, `scripts/re/fleet_decrypt/unpacker.py`, `scripts/re/fleet_decryptor.py`, `scripts/re/frm_train_harvester.py`, `scripts/re/ghidra_fleet/drift_smoke.py`, `scripts/re/ghidra_fleet/isa_resolver.py`, `scripts/re/ghidra_fleet/pyghidra_runner.py`, `scripts/re/ghidra_fleet/report_export.py`, `scripts/re/ghidra_fleet_orchestrator.py`, `scripts/re/manual_spec_extractor.py`, `scripts/re/mn10300.py`, `scripts/re/mn103_traps.py`, `scripts/re/nor_intake_analyzer.py`, `scripts/re/pana_frm.py`, `scripts/repo_sanitize_and_sync.py`, `scripts/tui.py`, `scripts/tui_plan.py`, `scripts/tui_term.py`, `scripts/validate.py`, `scripts/validate_c11.py`, `scripts/validate_gates.py`, `scripts/validate_ssot_and_fp.py`, `scripts/verify_geometry_traps.py`
+- **Scripts Python:** `scripts/bench/boot_harness.py`, `scripts/bench/decoders.py`, `scripts/bench/nor_dumper.py`, `scripts/bench/protocol.py`, `scripts/bench/rsp_dump.py`, `scripts/bench/rsp_frames.py`, `scripts/bench/runner.py`, `scripts/bootstrap_deps.py`, `scripts/build.py`, `scripts/build_cache/disk_guard.py`, `scripts/build_cache/inventory.py`, `scripts/build_cache/steps.py`, `scripts/build_lanes/android.py`, `scripts/build_lanes/android_verify.py`, `scripts/build_lanes/concurrency.py`, `scripts/build_lanes/dag.py`, `scripts/build_lanes/desktop.py`, `scripts/build_lanes/pico.py`, `scripts/dev/cad_primitives.py`, `scripts/dev/generate_schematics_and_cad.py`, `scripts/dev/schematic_sheet.py`, `scripts/generate_firmware_atlas.py`, `scripts/generate_tool_arsenal.py`, `scripts/ops/proc.py`, `scripts/ops/toolchain.py`, `scripts/panadiga_cache.py`, `scripts/panadiga_cli_bridge.py`, `scripts/panadiga_ops.py`, `scripts/pico_heartbeat_ops.py`, `scripts/profiles_types.py`, `scripts/re/_discovery_common.py`, `scripts/re/fleet_decrypt/catalog.py`, `scripts/re/fleet_decrypt/discovery.py`, `scripts/re/fleet_decrypt/unpacker.py`, `scripts/re/fleet_decryptor.py`, `scripts/re/frm_train_harvester.py`, `scripts/re/ghidra_fleet/drift_smoke.py`, `scripts/re/ghidra_fleet/isa_resolver.py`, `scripts/re/ghidra_fleet/pyghidra_runner.py`, `scripts/re/ghidra_fleet/report_export.py`, `scripts/re/ghidra_fleet_orchestrator.py`, `scripts/re/manual_spec_extractor.py`, `scripts/re/mn10300.py`, `scripts/re/mn103_traps.py`, `scripts/re/nor_intake_analyzer.py`, `scripts/re/pana_frm.py`, `scripts/repo_sanitize_and_sync.py`, `scripts/tui.py`, `scripts/tui_plan.py`, `scripts/tui_term.py`, `scripts/validate.py`, `scripts/validate_c11.py`, `scripts/validate_gates.py`, `scripts/validate_ssot_and_fp.py`, `scripts/verify_geometry_traps.py`
 - **Scripts Ghidra:** `tools/ghidra/ghidra_am34_memory_map.py`, `tools/ghidra/ghidra_auto_unbrick_audit.py`, `tools/ghidra/ghidra_conectar_debugger.py`, `tools/ghidra/ghidra_connect_debugger.py`, `tools/ghidra/ghidra_export_pseudocode_bundle.py`, `tools/ghidra/ghidra_import_symbols_panadiga.py`, `tools/ghidra/ghidra_importar_simbolos_panadiga.py`, `tools/ghidra/ghidra_mn103_fix_decompilation.py`, `tools/ghidra/ghidra_zero_undef_pipeline.py`
 - **Skills:** `panadiga-adversarial-and-hallucination-auditor`, `panadiga-anti-trap-geometry-verification`, `panadiga-architecture-and-guardrails`, `panadiga-bench-automation-and-headless`, `panadiga-bench-operations`, `panadiga-contracts-stream-and-journal`, `panadiga-device-onboarding`, `panadiga-emulation-and-patching`, `panadiga-extract-partitions`, `panadiga-firmware-decrypto`, `panadiga-firmware-forensic-atlas`, `panadiga-forensic-archival`, `panadiga-functional-math-and-patterns`, `panadiga-ghidra-workflow`, `panadiga-git-cicd-and-releases`, `panadiga-hardware-forensics`, `panadiga-nvram-unbrick`, `panadiga-opensource-firmware-dev`, `panadiga-pico-flashing`, `panadiga-rag-and-mcp-engineering`, `panadiga-repo-sanitization-and-commit-sync`, `panadiga-rust-backend-dev`, `panadiga-security-and-violation-guards`, `panadiga-skill-authoring`, `panadiga-skill-orchestrator`, `panadiga-subagent-and-research`, `panadiga-technical-documentation`, `panadiga-typescript-frontend-dev`, `panadiga-validate`
-- **Subagentes:** `panadiga-architect`, `panadiga-desktop-ui`, `panadiga-firmware-re`, `panadiga-hardware-embedded`, `panadiga-qa-auditor`, `panadiga-storage-forensics`
+- **Subagentes:** `panadiga-architect`, `panadiga-desktop-ui`, `panadiga-firmware-re`, `panadiga-functional-math`, `panadiga-hardware-embedded`, `panadiga-qa-auditor`, `panadiga-storage-forensics`
 
 ## 6. Firmware Bare-Metal (`PicoFW C11` & `DigaOS`)
 
 - **Codecs C11 PicoFW:** `firmware/picofw/diag/picofw_boottrace_codec.c`, `firmware/picofw/diag/picofw_hotplug_codec.c`, `firmware/picofw/diag/picofw_i2c_codec.c`, `firmware/picofw/diag/picofw_identify_codec.c`, `firmware/picofw/diag/picofw_ir_codec.c`, `firmware/picofw/diag/picofw_jigsweep_codec.c`, `firmware/picofw/diag/picofw_mmio_snapshot_codec.c`, `firmware/picofw/diag/picofw_piologic_codec.c`, `firmware/picofw/diag/picofw_pwrosc_codec.c`, `firmware/picofw/diag/picofw_sds_codec.c`, `firmware/picofw/diag/picofw_serv_macro_codec.c`, `firmware/picofw/diag/picofw_tbus_codec.c`, `firmware/picofw/flash/picofw_blackbox_codec.c`, `firmware/picofw/flash/picofw_fast_stream_codec.c`, `firmware/picofw/flash/picofw_job_codec.c`, `firmware/picofw/flash/picofw_normap_codec.c`, `firmware/picofw/flash/picofw_probe_cfg_codec.c`, `firmware/picofw/flash/picofw_vault_codec.c`, `firmware/picofw/gdb/gdb_rsp_codec.c`, `firmware/picofw/uart/picofw_diag_watch_codec.c`, `firmware/picofw/uart/picofw_drv_pana_codec.c`, `firmware/picofw/uart/picofw_fmu_codec.c`, `firmware/picofw/uart/picofw_pana_rsp_codec.c`, `firmware/picofw/uart/picofw_uart_codec.c`
 - **Módulos DigaOS:** `firmware/digaos/boot/am34_sdram.ld`, `firmware/digaos/boot/crt0_am34.S`, `firmware/digaos/drivers/aiof_video.c`, `firmware/digaos/drivers/avdd_iic_video.c`, `firmware/digaos/drivers/davis_sata.c`, `firmware/digaos/drivers/digaos_drivers.h`, `firmware/digaos/drivers/nor_bgo_ro.c`, `firmware/digaos/drivers/sdcd_sd.c`, `firmware/digaos/drivers/storage_provisioner.c`, `firmware/digaos/drivers/tbus_ic7501.c`, `firmware/digaos/drivers/uart_sc0.c`, `firmware/digaos/hal/am34_mmio.h`, `firmware/digaos/hal/digaos_soc_stubs.c`, `firmware/digaos/hal/digaos_soc_stubs.h`, `firmware/digaos/kernel/digaos_main.c`
-- **Comandos Shell DigaOS:** `help`, `status`, `ntsc`, `palm`, `pal`, `secam`, `tbc on`, `tbc off`, `video br`, `video ec`, `video probe`, `dac on`, `dac off`, `colorbar on`, `colorbar off`, `provision`, `sd`, `bgo`, `ssot`, `menus`, `themes`, `power`, `targets`, `wdt`, `sata`, `vfd <arg>`
+- **Comandos Shell DigaOS:** `help`, `status`, `bootmap`, `fpc`, `ntsc`, `palm`, `pal`, `secam`, `tbc on`, `tbc off`, `video br`, `video ec`, `video gpio`, `video probe`, `video status`, `dac on`, `dac off`, `colorbar on`, `colorbar off`, `provision`, `sd`, `bgo`, `ssot`, `menus`, `themes`, `power`, `targets`, `wdt`, `sata`, `odd`, `peek <arg>`, `poke16 <arg>`, `poke32 <arg>`, `vfd <arg>`

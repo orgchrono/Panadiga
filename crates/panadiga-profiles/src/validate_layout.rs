@@ -237,6 +237,14 @@ pub(super) fn validate_train_board_layout_model(bundle: &ProfilesBundle, tr: &mu
             tr.check(check_hex_digest(frm.official_frm_sha256.as_deref()), || {
                 format!("train '{}': invalid official_frm_sha256", trn.id)
             });
+            tr.check(
+                check_hex_digest(frm.rebuilt_sd_frm_sha256.as_deref()),
+                || format!("train '{}': invalid rebuilt_sd_frm_sha256", trn.id),
+            );
+            tr.check(
+                check_hex_digest(frm.rebuilt_dvd_frm_sha256.as_deref()),
+                || format!("train '{}': invalid rebuilt_dvd_frm_sha256", trn.id),
+            );
         }
         validate_bgo_retarget_spec(bundle, trn, tr);
         validate_train_patch_specs(trn, tr);

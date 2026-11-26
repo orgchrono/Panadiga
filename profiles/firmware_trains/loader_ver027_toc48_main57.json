@@ -1,0 +1,242 @@
+{
+  "id": "loader_ver027_toc48_main57",
+  "soc_core_ref": "mn10300_am34",
+  "loader_version": "0.27",
+  "loader_date": "05/11/01",
+  "loader_profile_key": "ver027",
+  "loader_fingerprint": {
+    "offset_start": "0x0000_0000",
+    "offset_end": "0x0004_0000",
+    "ascii_marker": "05/11/01"
+  },
+  "frm": {
+    "toc_entry_bytes": 48,
+    "toc_size": "0x1800",
+    "cipher": "feistel64_ecb",
+    "key_id": "pana_dvd_eh55",
+    "official_frm_sha256": "aeff6c81ee7397a5eecbd3e0b943159be3d1ab4b680d8539b2df2c278bf2ec9e",
+    "rebuilt_sd_frm_sha256": "503e4f4cc4dfdfb4fd592510b88ed4a673bc052fb5a184434fe68237f8683bc7",
+    "rebuilt_sd_frm_bytes": 10847224
+  },
+  "prog_load_va": "0x5040_0000",
+  "main_load_va": "0x5700_0000",
+  "drv_load_va": "0x9020_2000",
+  "symbols": {
+    "bgo_table": "0x5043_62E4",
+    "feistel_decrypt_va": "0x5040_EAEB",
+    "dcache_purge_va": "0x5040_08A6",
+    "uart0_getc_nb_va": "0x5040_4CEF",
+    "uart0_printf_va": "0x5040_4DCD",
+    "check_update_flag_va": "0x5040_A118",
+    "hdd_max_lba_va": "0x5040_CFE8",
+    "hdd_read_va": "0x5040_D132",
+    "extrhead_get_size_va": "0x5041_00D1",
+    "extrhead_check_hdr_va": "0x5041_0146",
+    "extrhead_is_comp_va": "0x5041_01B9",
+    "extrhead_get_src_va": "0x5041_01DE",
+    "extrhead_get_entry_va": "0x5041_0212",
+    "extrhead_uncomp_va": "0x5041_02B9",
+    "fat_mount_va": "0x5041_0F79",
+    "fat_open_va": "0x5041_114E",
+    "fat_close_va": "0x5041_1252",
+    "disable_irq_va": "0x5041_5F90",
+    "memcpy_va": "0x5042_CA12",
+    "sleep_10ms_va": "0x5043_0A43"
+  },
+  "sd_boot_filenames": [
+    "DIGADIAG.FRM",
+    "PANA__SD.FRM"
+  ],
+  "digadiag_raw_bytes": 262144,
+  "media_refs": [
+    "sd_fat16b_0x06",
+    "dvd_iso9660_level1",
+    "hdd_meihdfs_v1"
+  ],
+  "pana_rebuild_recipe": {
+    "output_container": "PANA__SD.FRM",
+    "toc_format": "sd48",
+    "tag": "UP-306",
+    "family_aliases": [
+      "M6930LB",
+      "M6930",
+      "M6930P",
+      "M6930PC"
+    ],
+    "model_prefix_byte": "0x4D",
+    "sources_from_pana_dvd": [
+      {
+        "slot_name": "PROG027",
+        "offset": "0x00001800",
+        "size": 262144,
+        "checksum32": "0x021E0254",
+        "patches_applied": [
+          "prog027_sata_bridge_reset_wait"
+        ]
+      },
+      {
+        "slot_name": "MAIN3050UP",
+        "offset": "0x00041800",
+        "size": 6384616,
+        "checksum32": "0x3113077D",
+        "extrhead_adler32_stride16": "0x860A2D17",
+        "patches_applied": [
+          "main3050up_sata_bridge_reset_wait"
+        ]
+      },
+      {
+        "slot_name": "USER040",
+        "offset": "0x006583E8",
+        "size": 4194320,
+        "checksum32": "0x3731F768",
+        "patches_applied": []
+      }
+    ]
+  },
+  "bgo_native_spec": {
+    "native_geometry_id": "BGO_45SEC_8MB_0X84130000",
+    "retarget_required": false,
+    "expected_prog_size": "0x0004_0000",
+    "bgo_table_offset": "0x0003_62E4",
+    "bgo_table_marker": "0x8000_0000",
+    "detect_logical_sectors": "0x0000_0028",
+    "detect_flash_base": "0x8413_0000",
+    "detect_flash_end": "0x8440_0000",
+    "bgo_table_words": [
+      "0x80000000",
+      "0x00000000",
+      "0x00000001",
+      "0x00000028",
+      "0x00000000",
+      "0x00000000",
+      "0x00000000",
+      "0x00000F24",
+      "0x00000000",
+      "0x00010000",
+      "0x00000001",
+      "0x0000002E",
+      "0x84130000",
+      "0x84400000",
+      "0x00010000",
+      "0xFFFFFFFF",
+      "0xFFFFFFFF",
+      "0xFFFFFFFF",
+      "0xFFFFFFFF",
+      "0x00010000",
+      "0xFFFFFFFF",
+      "0xFFFFFFFF",
+      "0xFFFFFFFF",
+      "0xFFFFFFFF",
+      "0x00010000",
+      "0xFFFFFFFF",
+      "0xFFFFFFFF",
+      "0xFFFFFFFF",
+      "0xFFFFFFFF",
+      "0x00000000",
+      "0x00000003",
+      "0x0000002D",
+      "0x0000002D",
+      "0x0000002D",
+      "0x504F8DC0",
+      "0x504F9220",
+      "0x504F9210",
+      "0x504F9318",
+      "0x504F9316",
+      "0x504F91F0",
+      "0xFFFFFFFF",
+      "0x00000000",
+      "0x00000028",
+      "0x00000028",
+      "0x00000028",
+      "0x00000028",
+      "0x00000001",
+      "0x84130000",
+      "0xFFFFFFFF",
+      "0xFFFFFFFF",
+      "0xFFFFFFFF",
+      "0xFFFFFFFF",
+      "0xFFFFFFFF",
+      "0xFFFFFFFF",
+      "0xFFFFFFFF",
+      "0x00000001",
+      "0x84130000",
+      "0xFFFFFFFF",
+      "0xFFFFFFFF",
+      "0xFFFFFFFF",
+      "0xFFFFFFFF",
+      "0xFFFFFFFF",
+      "0xFFFFFFFF",
+      "0xFFFFFFFF"
+    ]
+  },
+  "prog_sata_bridge_reset_spec": {
+    "target_name": "PROG027",
+    "base_va": "0x50400000",
+    "expected_size": 262144,
+    "factory_wait_ms": 2,
+    "patched_wait_ms": 1000,
+    "sleep_callee_va": "0x50430A43",
+    "site": {
+      "name": "prog027_sata_bridge_reset_wait",
+      "description": "PROG027 post-RESET- 2 ms udelay -> 1000 ms RTOS wait (rtsd_sleep_10ms @ 0x50430A43)",
+      "va": "0x5041D153",
+      "expect_hex": "2cd00789ddbadaffff0000",
+      "replace_hex": "2c640089ddec3801000000",
+      "symbol_ref": "rtsd_sleep_10ms"
+    },
+    "orig_sha256": "dd94535f2a279889e3074701cf4e895684ca59537a83a5f0f32b8f44eca9b5b9",
+    "patched_sha256": "38caf7b37df371357cfe30a71b2391e06d13e8f99b819269bc049c7f5c100dec"
+  },
+  "main_builds": [
+    {
+      "build_id": "3050UP",
+      "slot_name": "MAIN3050UP",
+      "frm_version_u16": "0xA405",
+      "frm_version_u16_pc": "0x808F",
+      "base_va": "0x57000000",
+      "unpacked_size": 13776604,
+      "region_tv_standard": "ntsc",
+      "model_markers": [
+        "M6930",
+        "3050UP"
+      ],
+      "chassis_family": "M6930P",
+      "native_bgo_geometry_id": "BGO_45SEC_8MB_0X84130000",
+      "native_bgo_detect_va": "0x57B9BD58",
+      "native_bgo_flash_base_va": "0x84130000",
+      "supports_bgo_retarget_to": [],
+      "sata_bridge_reset_spec": {
+        "target_name": "MAIN3050UP",
+        "base_va": "0x57000000",
+        "expected_size": 13776604,
+        "factory_wait_ms": 2,
+        "patched_wait_ms": 1000,
+        "sleep_callee_va": "0x574EC4A3",
+        "site": {
+          "name": "main3050up_sata_bridge_reset_wait",
+          "description": "MAIN3050UP post-RESET- 2 ms udelay -> 1000 ms RTOS wait (rtsd_sleep_10ms @ 0x574EC4A3)",
+          "va": "0x57107B99",
+          "expect_hex": "2cd00789dda7c9ffff0000",
+          "replace_hex": "2c640089dd06493e000000",
+          "symbol_ref": "rtsd_sleep_10ms"
+        }
+      },
+      "av_passthrough_sites": [],
+      "region_localization_sites": [],
+      "unpacked_sha256": "206a49a06c6384e84c4281f32504eaf65ca5ae3c7ede601978cc4f209728b9a6",
+      "patched_unpacked_sha256": "78b4f67ea8168c3185e979f144b07db6824ab15d37012130208a3c27faf9067a"
+    }
+  ],
+  "evidence": {
+    "tier": "official_frm_verified",
+    "sources": [
+      {
+        "kind": "official_frm",
+        "reference": "firmware_and_images/dmr-eh55/PANA_DVD.FRM",
+        "sha256": "aeff6c81ee7397a5eecbd3e0b943159be3d1ab4b680d8539b2df2c278bf2ec9e",
+        "notes": "UP-306 Dvd48B Feistel64 (pana_dvd_eh55): PROG027 (05/11/01, 262144 B), MAIN3050UP (M6930P NTSC, native 8 MiB BGO 0x84130000), USER040."
+      }
+    ],
+    "notes": "UP-306 Dvd48B Feistel64 (pana_dvd_eh55): PROG027 (05/11/01, 262144 B), MAIN3050UP (M6930P NTSC, native 8 MiB BGO 0x84130000), USER040."
+  }
+}

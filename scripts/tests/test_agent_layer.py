@@ -55,9 +55,9 @@ def test_all_29_skills_have_valid_frontmatter_and_zero_broken_links() -> None:
     assert broken_links == [], f"Broken local skill links found: {broken_links}"
 
 
-def test_all_6_agents_valid_and_qa_auditor_is_read_only() -> None:
+def test_all_7_agents_valid_and_qa_auditor_is_read_only() -> None:
     agent_files = sorted((ROOT / ".agents" / "agents").glob("*.md"))
-    assert len(agent_files) == 6
+    assert len(agent_files) == 7
     for agent_md in agent_files:
         fm = _extract_frontmatter(agent_md)
         assert re.search(r"^name:\s*\S+", fm, re.MULTILINE), f"{agent_md}: missing agent name"

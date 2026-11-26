@@ -50,7 +50,7 @@
 
 Driven by non-blocking `SC0` RX polling (`SC0STR 0xD400_200C & 0x0010` -> `SC0RXB 0xD400_2009`) in `digaos_shell_poll_once()`:
 
-- **Core & SSOT:** `help`, `status`, `wdt`, `sata`, `vfd <7ch>`, `ssot`, `menus`, `themes`, `power`, `targets`
-- **Read-Only Hardware Triage:** `sd`, `bgo`
-- **Video & TBC:** `ntsc`, `palm`, `pal`, `secam`, `tbc on`, `tbc off`, `video br`, `video ec`, `video probe`, `dac on`, `dac off`, `colorbar on`, `colorbar off`
+- **Core & SSOT:** `help`, `status`, `bootmap`, `fpc`, `wdt`, `sata`, `odd`, `vfd <7ch>`, `ssot`, `menus`, `themes`, `power`, `targets`
+- **Read-Only Hardware Triage & Bus Peek/Poke:** `sd`, `bgo`, `peek <addr>`, `poke16 <addr> <u16>`, `poke32 <addr> <u32>`
+- **Video & TBC (Auto-`IC3001` `0x90`/`0x92` -> `0x94` -> `GPIO_M6930LB`, Real Silicon `DACOUT1` `0x0DDF`/`0x8D00`, `480i`/`576i`):** `ntsc`, `palm`, `pal`, `secam`, `tbc on`, `tbc off`, `video br`, `video ec`, `video gpio`, `video probe`, `video status`, `dac on`, `dac off`, `colorbar on`, `colorbar off`
 - **Full-Storage Auto-Provisioner:** `provision`

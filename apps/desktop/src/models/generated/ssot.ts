@@ -174,6 +174,7 @@ export const PICO_COMMAND_IDS = [
   'WAITTX',
   'PWRTRACE',
   'BOOTTRACE',
+  'BOOTFOLLOW',
   'PIOLOGIC',
   'SDSNIFF',
   'JIGSWEEP',

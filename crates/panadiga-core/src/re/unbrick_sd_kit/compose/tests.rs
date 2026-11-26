@@ -78,6 +78,7 @@ fn compose_and_verify_digadiag_and_manifest_in_memory() {
             false,
             false,
             false,
+            None,
         )
         .is_err()
     );
@@ -92,6 +93,7 @@ fn compose_and_verify_digadiag_and_manifest_in_memory() {
             false,
             false,
             false,
+            None,
         )
         .is_err()
     );
@@ -106,6 +108,7 @@ fn compose_and_verify_digadiag_and_manifest_in_memory() {
             true,
             false,
             false,
+            None,
         )
         .is_err()
     );
@@ -246,6 +249,7 @@ fn compose_patched_main_gives_hdd_target_gb_precedence_over_dynamic() {
         false,
         false,
         false,
+        None,
     )
     .unwrap();
     assert_eq!(composed.hdd_capacity_applied.as_deref(), Some("cap_250gb"));
@@ -282,6 +286,7 @@ fn compose_patched_main_accepts_3060np_and_3410pq_and_explicit_frm_precedence() 
         false,
         false,
         false,
+        None,
     )
     .unwrap();
     assert_eq!(out_3060.build_version_u16, 0x96AA);
@@ -300,6 +305,7 @@ fn compose_patched_main_accepts_3060np_and_3410pq_and_explicit_frm_precedence() 
         false,
         false,
         false,
+        None,
     )
     .unwrap();
     assert_eq!(out_3410.build_version_u16, 0x3410);
@@ -359,6 +365,7 @@ fn compose_patched_main_accepts_3060np_and_3410pq_and_explicit_frm_precedence() 
         false,
         false,
         false,
+        None,
     )
     .unwrap();
     assert_eq!(
@@ -458,6 +465,7 @@ fn sata_bridge_reset_fix_patches_pana_sd_prog_without_touching_digadiag() {
             true,
             false,
             false,
+            None,
         )
         .is_err()
     );
@@ -472,6 +480,7 @@ fn sata_bridge_reset_fix_patches_pana_sd_prog_without_touching_digadiag() {
             false,
             true,
             false,
+            None,
         )
         .is_err()
     );
@@ -500,6 +509,7 @@ fn m6930lb_localization_flag_patches_main3060np_and_main3410pq_cleanly() {
         false,
         false,
         true,
+        None,
     )
     .unwrap();
     assert!(composed_3060.m6930lb_localization_applied);
@@ -538,11 +548,23 @@ fn m6930lb_localization_flag_patches_main3060np_and_main3410pq_cleanly() {
         .copy_from_slice(&[0xDD, 0x53, 0x39, 0xB7, 0xFF, 0x00, 0x00]);
     raw_3410[0x5750_BD6A - AM34_MAIN_BASE_VA as usize..][..2].copy_from_slice(&[0xF1, 0xE2]);
     raw_3410[0x5713_09CF - AM34_MAIN_BASE_VA as usize..][..2].copy_from_slice(&[0xF1, 0xE2]);
-    // Sites 8-10 (added 2026-11-25): config1 default, cav_boot_ntsc, boot_pal_ntsc_force
+    // Sites 8-15: config1 default, cav_boot_ntsc, boot_pal_ntsc_force, AIOF 7.5 IRE, AIOF cps_pal_m, setinfo lock, sysboot AVOUT
     raw_3410[0x57AE_FBAC - AM34_MAIN_BASE_VA as usize..][..1].copy_from_slice(&[0x00]);
     raw_3410[0x574F_6F2D - AM34_MAIN_BASE_VA as usize..][..7]
         .copy_from_slice(&[0xF8, 0xBB, 0x13, 0xA3, 0xC9, 0x03, 0x88]);
     raw_3410[0x5750_41FF - AM34_MAIN_BASE_VA as usize..][..2].copy_from_slice(&[0xC9, 0x1B]);
+    raw_3410[0x570D_674D - AM34_MAIN_BASE_VA as usize..][..2].copy_from_slice(&[0x80, 0x55]);
+    raw_3410[0x570D_679F - AM34_MAIN_BASE_VA as usize..][..2].copy_from_slice(&[0x80, 0x02]);
+    raw_3410[0x57AE_E214 - AM34_MAIN_BASE_VA as usize..][..8]
+        .copy_from_slice(&[0x30, 0x5E, 0x18, 0x53, 0x4D, 0x6C, 0x51, 0x57]);
+    raw_3410[0x574F_6920 - AM34_MAIN_BASE_VA as usize..][..8]
+        .copy_from_slice(&[0xFB, 0xD8, 0x00, 0x00, 0xC9, 0x04, 0x8A, 0x01]);
+    let (_, build_3410) = crate::re::ssot_patches::find_main_build_by_size(raw_3410.len()).unwrap();
+    for site in &build_3410.region_localization_sites {
+        let bytes = hex::decode(&site.expect_hex).unwrap();
+        let off = (site.va - AM34_MAIN_BASE_VA) as usize;
+        raw_3410[off..off + bytes.len()].copy_from_slice(&bytes);
+    }
     let composed_3410 = compose_patched_main_container(
         &raw_3410,
         MainPassthroughMode::FactoryOriginal,
@@ -553,9 +575,14 @@ fn m6930lb_localization_flag_patches_main3060np_and_main3410pq_cleanly() {
         false,
         false,
         true,
+        None,
     )
     .unwrap();
     assert!(composed_3410.m6930lb_localization_applied);
+    assert_eq!(
+        composed_3410.localization_tv_profile_applied.as_deref(),
+        Some("ntsc-m")
+    );
     let unpacked_3410 = unpack_extrhead(&composed_3410.container, ExtrheadCryptMode::Main).unwrap();
     assert_eq!(
         inspect_main_localization(&unpacked_3410.decompressed)
@@ -569,4 +596,23 @@ fn m6930lb_localization_flag_patches_main3060np_and_main3410pq_cleanly() {
             .state,
         "BYPASS_MODEL_AND_OEM"
     );
+
+    let composed_palm = compose_patched_main_container(
+        &raw_3410,
+        MainPassthroughMode::FactoryOriginal,
+        false,
+        None,
+        None,
+        false,
+        false,
+        false,
+        true,
+        Some("pal-m"),
+    )
+    .unwrap();
+    assert_eq!(
+        composed_palm.localization_tv_profile_applied.as_deref(),
+        Some("pal-m")
+    );
+    assert_ne!(composed_palm.container, composed_3410.container);
 }

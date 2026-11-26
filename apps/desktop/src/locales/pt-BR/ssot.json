@@ -340,6 +340,16 @@
           "normal4500": "4.5s NORMAL"
         }
       },
+      "BOOTFOLLOW": {
+        "label": "Seguidor Contínuo Passivo de Boot",
+        "description": "Monitora boot UART PIO1 passivamente sem pulso XRESET/SW_UART e reinicia relógio relativo por ciclos reais.",
+        "arg_label": "Silêncio Relatório (ms)",
+        "arg_placeholder": "8000",
+        "options": {
+          "idle8": "8s Silêncio",
+          "idle15": "15s Silêncio"
+        }
+      },
       "FRAMING": {
         "label": "Framing UART PIO1 (8N1/8E1/8O1)",
         "description": "Configura ou consulta paridade por hardware (zero instruções PIO extras) na máquina RX/TX PIO1.",

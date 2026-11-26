@@ -1,0 +1,334 @@
+--- STATUS #1 ---
+PICO> VDD: 3.25V (OK)
+[STANDBY] RXD=1 NSW5V=1 TXD=1 XRESET=1 SW_PU=3.26V NSW5V_DROPS=80 fault_latch=0 recoveries=80 | State=POWERED / AWAKE (SW_UART ~3.3V)
+[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=129 wdt_recoveries=0 reboot_src=CLEAN fault_slot=255 fault_stage=IDLE last_cmd=STATUS last_us=1757
+@PICO_RES cmd=STATUS status=OK code=0 elapsed_us=1810
+PICO>
+--- PASSIVE BRIDGE SNIFF (0 TX, up to 25s) ---
+[BRIDGE] USB CDC <-> P7501 SC0 115200 8N1 ctrl=OFF active (exit: send '~~~' or unplug USB).
+jFGATE=14
+[SYS_CNTL]FPC_CB_ReportEmergency(4)
+[SYS_CNTL]FPC_EMERGENCY_TIMEOUT
+System assert!! File:src/fpcmain.c Line:963 Err:0
+[FPC]FPC_ReciveTASK() : 7F E3 02 30 46 46 30 30 30 36 30 30 30 30 00 A6 
+[SYS_CNTL]FPC_CB_ReportEmergency(3)
+[SYS_CNTL]FPC_EMERGENCY_ERROR
+[FPC]RCV TIMEOUT GATE=14
+[SYS_CNTL]FPC_CB_ReportEmergency(4)
+[SYS_CNTL]FPC_EMERGENCY_TIMEOUT
+System assert!! File:src/fpcmain.c Line:963 Err:0
+[SYS_CNTL]AVIN_3YConoff() failed. 
+[FPC]FPC_ReciveTASK() : 61 E3 00 00 00 01 00 00 00 01 30 30 30 30 00 06 
+[FPC]FPC_ReciveTASK() : 60 E3 00 00 01 00 00 00 00 00 30 30 30 30 00 04
+--- PASSIVE RX (10621 bytes) ---
+[FPC]FPC_ReciveTASK() : 7F FA 02 00 01 00 00 00 00 00 30 30 30 30 00 3C 
+[SYS_CNTL]FPC_CB_ReportEmergency(3)
+[SYS_CNTL]FPC_EMERGENCY_ERROR
+[FPC]FPC_ReciveTASK() : 7F E3 02 00 01 00 00 00 00 00 30 30 30 30 00 25 
+[SYS_CNTL]FPC_CB_ReportEmergency(3)
+[SYS_CNTL]FPC_EMERGENCY_ERROR
+[FPC]RCV TIMEOUT GATE=14
+[SYS_CNTL]FPC_CB_ReportEmergency(4)
+[SYS_CNTL]FPC_EMERGENCY_TIMEOUT
+System assert!! File:src/fpcmain.c Line:963 Err:0
+[SYS_CNTL]sys_cntl_Set_InternalInitInfo(): set to TV
+[SYS_CNTL]set power save
+[FPC]FPC_ReciveTASK() : 7F A9 01 01 00 00 2E 06 00 02 00 00 00 00 00 60 
+[SYS_CNTL]FPC_CB_ReportEmergency(3)
+[SYS_CNTL]FPC_EMERGENCY_ERROR
+[FPC]FPC_ReciveTASK() : 61 A9 00 00 00 01 00 00 00 01 00 00 00 00 00 0C 
+[FPC]FPC_ReciveTASK() : 61 A9 00 00 00 01 00 00 00 01 00 00 00 00 00 0C 
+[SYS_CNTL][Now Time 2006/1/1 0:0:0]
+[SYS_CNTL]sys_app_nfrom size 8812
+[SYS_CNTL]SYS_CNTL_PAL_NTSC_Change 28359 
+[SYS_CNTL]avout_tv_system = 28359
+[FPC]FPC_ReciveTASK() : 08 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+[SYS_CNTL]set standby status = 0
+[SYS_CNTL]SYS_CNTL_SetSysState[INIT]
+[SYS_CNTL]SYS_CNTL_set_pow_status(SYS_CNTL_POW_OFF_TO_ON)
+[SYS_APP]MainOptionCode
+[SYS_APP]btn     : A[0x0033] B[0x0092] C[0xFFFF] D[0xFFFF]
+[SYS_APP]rcmode  : [0x00]
+[SYS_APP]gui     : A[ 0x10 ] B[ 0x20 ] C[ 0xFF ] D[ 0xFF ]
+[SYS_APP]chmode  : [0x02]
+[SYS_APP]MainOptionCode(gui) setting[0xFF] Nothing!
+[SYS_APP]MainOptionCode(gui) setting[0xFF] Nothing!
+[SYS_CNTL]sys_cntl_set_pow_attr attr[0x1] state[0]
+[FPC]fpc_ChangeKeyCodeInit 
+[FPC]fpc_ChangeKeyCodeWrite beforeKey = 161 : afterKey = 85 
+[FPC]fpc_ChangeKeyCodeWrite beforeKey = 160 : afterKey = 86 
+[SYS_CNTL]SYS_APP_Datatype_t [ 221 <= 255 ]
+[SYS_CNTL].[SYS_TUN]SYS_TUN_AMD_NONE
+:::SYS_RSV::: >> sys_rsv init
+:::SYS_RSV::: >> nowtime[2006/1/1 0:00.00]
+:::SYS_RSV::: >> precision[0x2] gmtoff[0] is_dst[0]
+:::SYS_RSV::: >> nfrom read
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 2F 06 00 02 00 00 00 00 00 49 
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 2F 06 00 02 00 00 00 00 00 49 
+[SYS_TUN]4::::::::::AVIN_AudioSetLR(0)::::::::::
+[SYS_CNTL]SYS_CNTL_tmp_AVOUT_A_eeOutputMode 0 0 0 0
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 2F 06 00 02 00 00 00 00 00 49 
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 2F 06 00 02 00 00 00 00 00 49 
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 2F 06 00 02 00 00 00 00 00 49 
+[SYS_TUN]MONORAL(UNSETTLE)
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 2F 06 00 02 00 00 00 00 00 49 
+[SYS_TUN]MUTE_OFF
+[SYS_TUN]SYS_TUN_AMD_NONE
+[SYS_TUN]SYS_TUN_AMD_NONE
+[SYS_CNTL]SYS_CNTL_cancel_tmp_AVOUT_A_eeOutputMode 0 0 0 0
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 2F 06 00 02 00 00 00 00 00 49 
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 2F 06 00 02 00 00 00 00 00 49 
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 2F 06 00 02 00 00 00 00 00 49 
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 2F 06 00 02 00 00 00 00 00 49 
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 2F 06 00 02 00 00 00 00 00 49 
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 2F 06 00 02 00 00 00 00 00 49 
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 2F 06 00 02 00 00 00 00 00 49 
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 2F 06 00 02 00 00 00 00 00 49 
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 2F 06 00 02 00 00 00 00 00 49 
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 2F 06 00 02 00 00 00 00 00 49 
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 2F 06 00 02 00 00 00 00 00 49 
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 2F 06 00 02 00 00 00 00 00 49 
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 2F 06 00 02 00 00 00 00 00 49 
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 2F 06 00 02 00 00 00 00 00 49 
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 2F 06 00 02 00 00 00 00 00 49 
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 2F 06 00 02 00 00 00 00 00 49 
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 2F 06 00 02 00 00 00 00 00 49 
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 2F 06 00 02 00 00 00 00 00 49 
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 2F 06 00 02 00 00 00 00 00 49 
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 2F 06 00 02 00 00 00 00 00 49 
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 2F 06 00 02 00 00 00 00 00 49 
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 2F 06 00 02 00 00 00 00 00 49 
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 2F 06 00 02 00 00 00 00 00 49 
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 2F 06 00 02 00 00 00 00 00 49 
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 2F 06 00 02 00 00 00 00 00 49 
+[FPC]FPC_ReciveTASK() : 10 00 01 01 00 00 2F 06 00 02 00 00 00 00 00 49 
+:::SYS_RSV::: >> _InitTask() T.SET=OFF
+:::SYS_RSV::: >> _InitTask() ExtLINK.SET=OFF
+:::SYS_RSV::: >> nfrom back up ok.
+:::SYS_RSV::: >> _Restore() task-id = 108
+:::SYS_RSV::: >> sys_rsv init success.
+[SYS_CNTL]sys_cntl_CatchScreen() success. task ID 101(sys_fip)
+[SYS_CNTL]VDM_ReportDrv: 2
+[SYS_CNTL]sys_cntl_ChangeKeyAction
+[DCS]dco_api :AVOUT_AV_Select: video=0, audio=0
+[SYS_CNTL]SetDeckModeStateEx task[sys_cntl(91)] drive[DVD] rec.drive[DVD] deck[READ(0x00000040)]
+[SYS_TUN]SYS_TUN_SysCntl_DeckMode_Callback()
+[SYS_TUN]SYS_TUN_AMD_NONE
+[FPC]FPC_ReciveTASK() : 7F A9 01 01 00 00 2F 06 00 02 00 00 00 00 00 61 
+[SYS_CNTL]FPC_CB_ReportEmergency(3)
+[SYS_CNTL]FPC_EMERGENCY_ERROR
+[SYS_CNTL]sys_cntl_isNowTimerRec 1
+[SYS_CNTL]SYS_CNTL_RESUME_TASK = 0
+[SYS_CNTL]SYS_CNTL_SRAM_RESUME_FLAG = 0
+[FS]VDM_ReportMediaEx : slot_id = 0 disc = 1 protect = 0 format = 407
+[MCM |16.39]MCM_resource_Open tid:91 drive:0x02
+[FS]VDM_ReportMediaEx : slot_id = 0 disc = 1 protect = 0 format = 407
+[SYS_CNTL]VDM_OpenDisc(2): OK[0]
+[FS]VDM_ReportMediaEx : slot_id = 0 disc = 1 protect = 0 format = 407
+[SYS_CNTL]VDM_ReportMediaEx(): vdm_res=0x0 
+[SYS_CNTL] disc  =0x00000001  protect=0x00000000 
+[SYS_CNTL] format=0x00000407  authent=0x00000004 
+[SYS_CNTL]HDD is_writable=0x0
+[SYS_CNTL]sys_cntl_ReportMedia. drv_id=0x0
+[SYS_CNTL]apptask_bit=0x200 last_media=0x5a is_writable=0 
+[MCM |16.40]MCM_resource_Open tid:91 drive:0x00
+[MCM |16.40]MCM_resource_Open core[1]:0x00000100
+[FS]VDM_ReportMediaEx : slot_id = 0 disc = 1 protect = 0 format = 407
+[MCM |16.40]MCM_resource_Close tid:91 drive:0x00
+[MCM |16.40]MCM_resource_Close core[1]:0x00000100
+[SYS_CNTL]SYS_CNTL_SRAM_TIMERREC_STATUS 8
+[SYS_CNTL]SYS_CNTL_SRAM_REBOOT_STATUS_OK
+[SYS_CNTL]SYS_CNTL_SRAM_TIMERREC_STATUS[8]
+[SYS_CNTL]_DisplayGuiFunc(2)
+[SYS_CNTL]SYS_CNTL_SetSysState[TRANSITION]
+[SYS_CNTL]EndGuiFunc not execute! gui_task[0] RunGuiFuncBit[0x00]
+[SYS_CNTL]SetGuiMode. =1 Catch task ID=0x5b taskID=0x105b
+[SYS_CNTL]callback pre (id==0x5b) send=0x65
+[SYS_TUN]Stop_Timer -> direct channel
+[SYS_TUN]SYS_TUN_AMD_NONE
+[SYS_CNTL]SYS_CNTL_cancel_tmp_AVOUT_A_eeOutputMode 0 0 0 0
+ pre_end
+[SYS_CNTL]M6// sys_cntl_play_condition = 0 new_mode=1 old_mode=1
+[DCS]dco_api :AVOUT_V_Select: video=1
+[DCS]dco_api :AVOUT_AV_Select: video=1, audio=0
+[SYS_CNTL]SYS_CNTL_SetSysState[EE]
+[SYS_CNTL]callback after (id==0x5b) send=0x72
+[SYS_TUN]SYS_TUN_SysCntl_GuiMode_Callback()
+[SYS_TUN]Stop_Timer -> direct channel
+[SYS_TUN]SYS_TUN_AMD_NONE
+[SYS_CNTL]SYS_CNTL_cancel_tmp_AVOUT_A_eeOutputMode 0 0 0 0
+send=0x65
+[SYS_CNTL]Q task[sys_tun(114)] datatype[READY(16)]
+[SYS_CNTL]Q task[sys_pcdv(107)] datatype[READY(16)]
+[SYS_CNTL]Q task[sys_rsv(108)] datatype[TIMER_REC_CONTROL(157)]
+[SYS_CNTL]SYS_APP_TSET_DISABLE 0 0 
+[SYS_CNTL]sys_cntl_ChangeKeyAction
+[SYS_CNTL]Q task[sys_rsv(108)] datatype[TIMER_REC_CONTROL(157)]
+[SYS_CNTL]SYS_APP_TSET_EXTLINK_DISABLE 0 0 
+[FPC]FPC_ReciveTASK() : 1C A9 01 01 00 00 30 06 00 02 00 00 00 00 00 FF 
+[SYS_CNTL]sys_cntl_ChangeKeyAction
+[SYS_CNTL]Q task[sys_rsv(108)] datatype[READY(16)]
+[SYS_CNTL]Q task[3(3)] datatype[DV_STAT(57)]
+[SYS_CNTL]sys_cntl_media_dv_disconnect():
+[SYS_CNTL]Q task[26(26)] datatype[MOVE_GUI(172)]
+[SYS_CNTL]Q task[26(26)] datatype[MOVE_GUI(172)]
+[SYS_CNTL]Q task[sys_cntl(91)] datatype[MOVE_GUI(172)]
+[SYS_CNTL]wait N/P change 1 0
+[SYS_CNTL]Q task[sys_fip(101)] datatype[READY(16)]
+ after mid
+[SYS_CNTL]PTK_IsWindowEventTask(5b) fg=0,tsk_stat=1
+ end
+[SYS_CNTL]_DisplayGuiFunc(2) mid
+[SYS_CNTL]sys_cntl_CatchScreen() success. task ID 91(sys_cntl)
+[SYS_CNTL]SYS_CNTL_SetSysState[TRANSITION_CANCEL]
+[SYS_CNTL]sys_cntl_card_blinkcall drv[0x0003(SD)] blink[0xC5(BLINK only 5sec)]
+[FS]BPB:FileSystemType:FAT16
+[FS]CAL:FileSystemType:FAT16
+[FS]VDM_ReportMediaEx : slot_id = 3 disc = 200040 protect = 0 format = 3
+[FS]BPB:FileSystemType:FAT16
+[FS]CAL:FileSystemType:FAT16
+[FS]VDM_ReportMediaEx : slot_id = 3 disc = 200040 protect = 0 format = 3
+[SYS_CNTL]VDM_ReportMediaEx(): vdm_res=0x0 
+[SYS_CNTL] disc  =0x00200040  protect=0x00000000 
+[SYS_CNTL] format=0x00000003  authent=0x00000000 
+[SYS_CNTL]CARD is_writable=0x0
+[SYS_CNTL]sys_cntl_card_blinkcall drv[0x0003(SD)] blink[0x80(ON)]
+[SYS_CNTL]SetDeckModeStateEx task[sys_cntl(91)] drive[SD] rec.drive[SD] deck[STOP2(0x00000000)]
+[SYS_TUN]SYS_TUN_SysCntl_DeckMode_Callback()
+[SYS_TUN]SYS_TUN_AMD_NONE
+[SYS_CNTL].. FPC_StartCommunication()
+[SYS_CNTL]SYS_CNTL_set_pow_status(SYS_CNTL_POW_ON)
+[SYS_TUN]Stop_Timer -> direct channel
+[SYS_TUN]SYS_TUN_AMD_NONE
+[SYS_CNTL]SYS_CNTL_cancel_tmp_AVOUT_A_eeOutputMode 0 0 0 0
+[DCS]dco_api :avout_API_MuteID = 0x2
+[DCS]dco_api :AVOUT_A_Mute_ID: OFF_ID[ALL]=0 , [EE]=8
+[DCS]dco_api :AVOUT_V_Mute: onoff=0
+[SYS_CNTL]SYS_CNTL_UION_FLAG(1)
+[SYS_CNTL]Q task[sys_cntl(91)] datatype[MOVE_GUI(172)]
+[SYS_CNTL]n_p_callback end
+[SYS_CNTL]ReleaseScreen() success.  task ID 91(sys_cntl)
+[SYS_CNTL]sys_cntl_CatchScreen() success. task ID 91(sys_cntl)
+[SYS_CNTL]MOVE catch91
+[SYS_CNTL]TransferMode : (0)
+[SYS_CNTL]Q task[40(40)] datatype[PCCARD_CALLBACK(178)]
+[SYS_CNTL]sys_cntl_card_blinkcall drv[0x0003(SD)] blink[0xFF(BLINK continuously 0.25sec)]
+[SYS_CNTL]### HDD WAKEUP ###
+[RTSD] === DRIVE ACCESS ERROR === ( 80040904 )  [2006/ 1/ 1  0. 0. 0]
+*** CDB  [00 00 00 00 00 00 00 00 00 00 00 00] 
+*** SENSE[70 00 04 00 00 00 00 0A 00 00 83 A7 09 04 00 00 00 00] 
+H_STAT [0] T_STAT [2]
+[SDCD] sdcd_insrmv_check:SD Card remove 
+[SDCD] === This Card removed ==== 
+
+[SYS_CNTL]CARD[3] Callback: 8
+[SYS_CNTL]Q task[40(40)] datatype[PCCARD_CALLBACK(178)]
+[SYS_CNTL]SetDeckModeStateEx task[sys_cntl(91)] drive[SD] rec.drive[SD] deck[OPEN(0x00000010)]
+[SYS_TUN]SYS_TUN_SysCntl_DeckMode_Callback()
+[SYS_TUN]SYS_TUN_AMD_NONE
+[SYS_CNTL]sys_cntl_card_blinkcall drv[0x0003(SD)] blink[0x40(OFF)]
+[SYS_CNTL]sys_cntl_card_chg_callbacks end
+[SYS_TUN]Stop_Timer -> direct channel
+[SYS_TUN]SYS_TUN_AMD_NONE
+[SYS_CNTL]SYS_CNTL_cancel_tmp_AVOUT_A_eeOutputMode 0 0 0 0
+[SYS_CNTL]sys_cntl_card_blinkcall drv[0x0003(SD)] blink[0x40(OFF)]
+BRIDGE: OK (rx=11226 tx=0 ferr=9 ctrl_edges=0 overflow=NO)
+@PICO_RES cmd=BRIDGE status=OK code=0 elapsed_us=11371925
+PICO>
+--- STATUS #2 ---
+VDD: 3.26V (OK)
+[STANDBY] RXD=1 NSW5V=1 TXD=1 XRESET=1 SW_PU=3.27V NSW5V_DROPS=80 fault_latch=0 recoveries=80 | State=POWERED / AWAKE (SW_UART ~3.3V)
+[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=131 wdt_recoveries=0 reboot_src=CLEAN fault_slot=255 fault_stage=IDLE last_cmd=BRIDGE last_us=11371925
+@PICO_RES cmd=STATUS status=OK code=0 elapsed_us=1784
+PICO>
+--- PANARSP ---
+=== PANARSP PIO1 (baud=115200 ms=1200 boot=0 hold=0 action=4) ===
+[PANARSP] RX (459 bytes, pretrig_dropped=0, inspect_from=0):
+  0000: 20 20 20 44 30 3A 30 30 30 30 30 30 30 30 2C 20  |   D0:00000000, |
+  0010: 20 20 44 31 3A 30 30 30 30 30 46 30 31 2C 20 20  |  D1:00000F01,  |
+  0020: 20 44 32 3A 30 30 30 30 30 30 30 30 2C 20 20 20  | D2:00000000,   |
+  0030: 44 33 3A 30 30 30 30 30 30 30 30 0D 0A 20 20 20  |D3:00000000..   |
+  0040: 41 30 3A 35 32 32 42 36 43 32 30 2C 20 20 20 41  |A0:522B6C20,   A|
+  0050: 31 3A 35 31 42 31 32 43 38 38 2C 20 20 20 41 32  |1:51B12C88,   A2|
+  0060: 3A 30 30 30 30 30 30 30 30 2C 20 20 20 41 33 3A  |:00000000,   A3:|
+  0070: 30 30 30 30 30 30 30 30 0D 0A 20 20 20 45 30 3A  |00000000..   E0:|
+  0080: 30 30 30 30 30 30 30 30 2C 20 20 20 45 31 3A 30  |00000000,   E1:0|
+  0090: 30 30 30 30 30 38 30 2C 20 20 20 45 32 3A 30 30  |0000080,   E2:00|
+  00A0: 30 30 30 30 30 30 2C 20 20 20 45 33 3A 35 33 34  |000000,   E3:534|
+  00B0: 45 37 39 30 30 0D 0A 20 20 20 45 34 3A 30 30 30  |E7900..   E4:000|
+  00C0: 30 30 30 30 30 2C 20 20 20 45 35 3A 30 30 30 30  |00000,   E5:0000|
+  00D0: 30 30 30 30 2C 20 20 20 45 36 3A 30 30 30 30 30  |0000,   E6:00000|
+  00E0: 30 30 30 2C 20 20 20 45 37 3A 30 30 30 30 30 30  |000,   E7:000000|
+  00F0: 30 30 0D 0A 20 45 50 53 57 3A 30 30 30 30 30 46  |00.. EPSW:00000F|
+  0100: 30 31 2C 20 20 4C 41 52 3A 35 37 37 31 30 44 34  |01,  LAR:57710D4|
+  0110: 44 2C 20 20 4C 49 52 3A 46 43 32 31 35 30 36 34  |D,  LIR:FC215064|
+  0120: 2C 20 20 4D 44 52 3A 35 37 37 30 45 44 33 35 0D  |,  MDR:5770ED35.|
+  0130: 0A 20 4D 43 56 46 3A 30 30 30 30 30 30 30 30 2C  |. MCVF:00000000,|
+  0140: 20 4D 43 52 4C 3A 36 41 45 37 30 38 30 35 2C 20  | MCRL:6AE70805, |
+  0150: 4D 43 52 48 3A 30 34 38 33 41 38 34 43 2C 20 4D  |MCRH:0483A84C, M|
+  0160: 44 52 51 3A 30 37 30 35 31 44 41 31 0D 0A 20 20  |DRQ:07051DA1..  |
+  0170: 20 50 43 3A 35 37 37 31 30 37 35 33 2C 20 20 20  | PC:57710753,   |
+  0180: 53 50 3A 35 32 32 42 36 43 31 43 0D 0A 0D 0A 35  |SP:522B6C1C....5|
+  0190: 37 37 31 30 37 35 33 3A 20 43 41 30 30 20 20 20  |7710753: CA00   |
+  01A0: 20 20 20 20 20 20 20 20 62 72 61 20 20 20 20 20  |        bra     |
+  01B0: 30 35 37 37 31 30 37 35 33 0D 0A 0D 0A 1B 5B 33  |057710753.....[3|
+  01C0: 31 6D 6E 64 62 3E 20 1B 5B 6D 39                 |1mndb> .[m9|
+[PANARSP] Frame: none (ack=no nak=no nak0x15=no)
+PANARSP: OK (rx=459 bytes, rsp=NO_REPLY, fifo_ovf=NO)
+@PICO_RES cmd=PANARSP status=OK code=0 elapsed_us=846882
+PICO>
+--- BRIDGE #2 ---
+[BRIDGE] USB CDC <-> P7501 SC0 115200 8N1 ctrl=OFF active (exit: send '~~~' or unplug USB).
+[31mndb> [m
+>>> dd 57aee210 16
+dd 57aee210 16
+57AEE210: 00000001 57AEFBAC 5750C377 57516C9F
+[31mndb> [m
+>>> dd 574f6920 16
+dd 574f6920 16
+574F6920: CBCBCBCB CBCBCBCB 01850880 C392D4DD
+[31mndb> [m
+>>> dd 57aefbac 4
+dd 57aefbac 4
+57AEFBAC: 00000001
+[31mndb> [m
+>>> dd 570d674c 8
+dd 570d674c 8
+570D674C: 8D54800C DDF10ACA
+[31mndb> [m
+>>> dd 515cd4e0 8
+dd 515cd4e0 8
+515CD4E0: 00000000 00000000
+[31mndb> [m
+>>> dd 53185e28 16
+dd 53185e28 16
+53185E28: 00000000 01000000 00000001 00000001
+[31mndb> [m
+>>> dd 53186dbc 8
+dd 53186dbc 8
+53186DBC: 00000080 00000065
+[31mndb> [m
+>>> dd 88000000 16
+dd 88000000 16
+88000000: 00008020 00000C00 00003C50 0000057C
+[31mndb> [m
+>>> dd 880000a0 16
+dd 880000a0 16
+880000A0: 00000000 00004000 00004040 0000402B
+[31mndb> [m
+>>> dd 89800400 16
+dd 89800400 16
+89800400: 4FB30000 00000D00 01E002D0 28000242
+[31mndb> [m
+g
+BRIDGE: OK (rx=693 tx=149 ferr=0 ctrl_edges=0 overflow=NO)
+@PICO_RES cmd=BRIDGE status=OK code=0 elapsed_us=6889384
+PICO>
+[BUS] P7501 pins placed in High-Impedance Isolation (NSW5V/XRESET Hi-Z, GP26 ADC0).
+@PICO_RES cmd=ISOLATE status=OK code=0 elapsed_us=185
+PICO>
+VDD: 3.26V (OK)
+[STANDBY] RXD=1 NSW5V=1 TXD=1 XRESET=1 SW_PU=3.27V NSW5V_DROPS=80 fault_latch=0 recoveries=80 | State=POWERED / AWAKE (SW_UART ~3.3V)
+[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=135 wdt_recoveries=0 reboot_src=CLEAN fault_slot=255 fault_stage=IDLE last_cmd=ISOLATE last_us=185
+@PICO_RES cmd=STATUS status=OK code=0 elapsed_us=1795
+PICO>

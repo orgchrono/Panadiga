@@ -307,3 +307,137 @@ def test_discover_msvc_delta_does_not_cache_transient_timeout(
     assert toolchain._discover_msvc_delta() == {"INCLUDE": "C:\\inc", "PATH": "C:\\msvc\\bin"}
     assert toolchain._discover_msvc_delta() == {"INCLUDE": "C:\\inc", "PATH": "C:\\msvc\\bin"}
     assert calls == 2
+
+
+def test_normalize_argv_expands_launcher_aliases_and_preserves_flags() -> None:
+    from scripts.build_lanes.dag import normalize_argv
+
+    assert normalize_argv(["pico", "--no-cache"]) == ["--pico", "--no-cache"]
+    assert normalize_argv(["all-ci"]) == ["--all", "--ci"]
+    assert normalize_argv(["desktop"]) == ["--desktop"]
+    assert normalize_argv(["cache"]) == ["--cache-status"]
+    assert normalize_argv(["cli", "pico", "list"]) == ["--cli", "pico", "list"]
+    assert normalize_argv(["--pico"]) == ["--pico"]
+    assert normalize_argv([]) == []
+
+
+def test_run_step_does_not_hang_when_grandchild_inherits_stdout(tmp_path: Path) -> None:
+    import time
+    from scripts.ops.proc import ProcessTracker, run_step, use_process_tracker
+
+    grandchild_code = "import time; time.sleep(6)"
+    parent_code = (
+        "import subprocess, sys; "
+        f"subprocess.Popen([sys.executable, '-c', {grandchild_code!r}]); "
+        "print('parent-done', flush=True)"
+    )
+    t0 = time.monotonic()
+    with use_process_tracker(ProcessTracker()):
+        out = run_step([sys.executable, "-c", parent_code], cwd=tmp_path, capture_output=True)
+    elapsed = time.monotonic() - t0
+    assert "parent-done" in out
+    assert elapsed < 3.5, f"run_step blocked on grandchild keeping stdout open ({elapsed:.2f}s)"
+
+
+def test_bootstrap_deps_and_launchers_idempotency(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import scripts.bootstrap_deps as bootstrap_deps
+
+    assert bootstrap_deps.needs_bootstrap(["--help"]) is False
+    assert bootstrap_deps.needs_bootstrap(["--cache-status"]) is False
+    assert bootstrap_deps.needs_bootstrap(["--pico"]) is True
+    assert bootstrap_deps.needs_bootstrap(["--ci"]) is True
+
+    fake_root = tmp_path / "repo"
+    nm = fake_root / "apps" / "desktop" / "node_modules"
+    ext = ".cmd" if sys.platform == "win32" else ""
+    (nm / ".bin").mkdir(parents=True)
+    (nm / "@orgchrono" / "oxlint-plugin").mkdir(parents=True)
+    (nm / ".package-lock.json").write_text("{}", encoding="utf-8")
+    (nm / ".bin" / f"vite{ext}").write_text("", encoding="utf-8")
+    (nm / ".bin" / f"tsc{ext}").write_text("", encoding="utf-8")
+    (nm / ".bin" / f"oxlint{ext}").write_text("", encoding="utf-8")
+    (nm / "@orgchrono" / "oxlint-plugin" / "package.json").write_text("{}", encoding="utf-8")
+    assert bootstrap_deps.ensure_frontend_node_modules(fake_root, env={"PATH": ""}) is True
+
+    monkeypatch.setenv("PANADIGA_NO_BOOTSTRAP", "1")
+    missing_root = tmp_path / "empty_repo"
+    missing_root.mkdir()
+    assert bootstrap_deps.ensure_frontend_node_modules(missing_root, env={"PATH": ""}) is False
+
+    build_sh_bytes = (ROOT / "build.sh").read_bytes()
+    assert b"\r" not in build_sh_bytes, "build.sh must remain strictly LF (no CRLF)"
+
+    if sys.platform == "win32":
+        res_nul = subprocess.run(
+            ["cmd", "/c", "build.cmd"],
+            cwd=ROOT,
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        assert res_nul.returncode == 0, res_nul.stdout + res_nul.stderr
+        assert "EOFError" not in res_nul.stdout + res_nul.stderr
+
+        res_help = subprocess.run(
+            ["cmd", "/c", "build.cmd", "help"],
+            cwd=ROOT,
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        assert res_help.returncode == 0
+        assert "Panadiga unified build" in res_help.stdout
+
+    git_sh = Path(r"C:\Program Files\Git\bin\sh.exe") if sys.platform == "win32" else Path("/bin/sh")
+    if git_sh.is_file():
+        res_sh = subprocess.run(
+            [str(git_sh), "./build.sh", "help"],
+            cwd=ROOT,
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        assert res_sh.returncode == 0, res_sh.stdout + res_sh.stderr
+        assert "Panadiga unified build" in res_sh.stdout
+
+
+def test_ensure_disk_headroom_prunes_stale_target_dirs(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import shutil
+    from types import SimpleNamespace
+    from scripts.build_cache.disk_guard import ensure_disk_headroom
+
+    v020 = tmp_path / "target" / "v020"
+    inc = tmp_path / "target" / "debug" / "incremental"
+    pico = tmp_path / "target" / "pico-build"
+    dist = tmp_path / "dist"
+    for folder in (v020, inc, pico, dist):
+        folder.mkdir(parents=True)
+        (folder / "artifact.bin").write_bytes(b"x" * 2048)
+
+    # Return low disk space until both v020 and debug/incremental have been deleted.
+    def fake_disk_usage(_path: Path) -> SimpleNamespace:
+        if v020.exists() or inc.exists():
+            return SimpleNamespace(total=100 * 1024**3, used=99 * 1024**3, free=1 * 1024**3)
+        return SimpleNamespace(total=100 * 1024**3, used=80 * 1024**3, free=20 * 1024**3)
+
+    monkeypatch.delenv("PANADIGA_NO_DISK_GUARD", raising=False)
+    monkeypatch.setattr(shutil, "disk_usage", fake_disk_usage)
+
+    reclaimed = ensure_disk_headroom(tmp_path, min_free_gb=12.0)
+    assert reclaimed >= 4096
+    assert not v020.exists()
+    assert not inc.exists()
+    assert pico.exists()
+    assert dist.exists()

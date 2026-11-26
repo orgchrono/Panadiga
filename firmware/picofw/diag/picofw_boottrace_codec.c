@@ -472,3 +472,157 @@ size_t picofw_boot_classifier_format_deep(
     }
     return ((size_t)n < cap) ? (size_t)n : (cap - 1u);
 }
+
+/* ------------------------------------------------------------------------- *
+ * Boot-cycle detector (`BOOTFOLLOW`)
+ * ------------------------------------------------------------------------- */
+
+void picofw_boot_cycle_init(picofw_boot_cycle_t *cy, uint32_t idle_report_ms, uint8_t ctrl3) {
+    if (cy == NULL) {
+        return;
+    }
+    memset(cy, 0, sizeof(*cy));
+    cy->idle_report_us = idle_report_ms * 1000u;
+    cy->prev_ctrl3 = ctrl3;
+}
+
+static void cycle_open(picofw_boot_cycle_t *cy, uint64_t start_us, uint8_t reason, uint32_t first_lines) {
+    cy->had_previous = cy->active;
+    if (cy->active) {
+        cy->prev_cycle_no = cy->cycle_no;
+        cy->prev_lines = cy->lines_in_cycle;
+        cy->prev_start_us = cy->start_us;
+    }
+    cy->cycle_no += 1u;
+    cy->active = true;
+    cy->start_reason = reason;
+    cy->end_reason = PICOFW_CYCLE_REASON_NONE;
+    cy->start_us = start_us;
+    cy->last_activity_us = start_us;
+    cy->lines_in_cycle = first_lines;
+    cy->report_pending = (first_lines > 0u);
+}
+
+void picofw_boot_cycle_attach(picofw_boot_cycle_t *cy, uint64_t now_us) {
+    if (cy == NULL) {
+        return;
+    }
+    cycle_open(cy, now_us, PICOFW_CYCLE_REASON_ATTACH, 0u);
+}
+
+/* A reset/wake edge opens a cycle unless the open one has not printed anything yet (debounce). */
+static picofw_cycle_event_t cycle_try_edge_start(
+    picofw_boot_cycle_t *cy,
+    uint64_t now_us,
+    uint8_t reason
+) {
+    if (cy->active && (cy->lines_in_cycle == 0u)) {
+        return PICOFW_CYCLE_EV_NONE;
+    }
+    cycle_open(cy, now_us, reason, 0u);
+    return PICOFW_CYCLE_EV_START;
+}
+
+picofw_cycle_event_t picofw_boot_cycle_on_ctrl(picofw_boot_cycle_t *cy, uint64_t now_us, uint8_t ctrl3) {
+    if (cy == NULL) {
+        return PICOFW_CYCLE_EV_NONE;
+    }
+    const uint8_t old = cy->prev_ctrl3;
+    cy->prev_ctrl3 = ctrl3;
+    const uint8_t fell = (uint8_t)(old & (uint8_t)~ctrl3);
+    const uint8_t rose = (uint8_t)((uint8_t)~old & ctrl3);
+
+    if ((fell & PICOFW_CTRL3_NSW5V) != 0u) {
+        if (cy->active) {
+            cy->active = false;
+            cy->report_pending = false;
+            cy->end_reason = PICOFW_CYCLE_REASON_STANDBY_FALL;
+            return PICOFW_CYCLE_EV_END;
+        }
+        return PICOFW_CYCLE_EV_NONE;
+    }
+    if ((fell & PICOFW_CTRL3_XRESET) != 0u) {
+        return cycle_try_edge_start(cy, now_us, PICOFW_CYCLE_REASON_XRESET_FALL);
+    }
+    if ((rose & PICOFW_CTRL3_NSW5V) != 0u) {
+        return cycle_try_edge_start(cy, now_us, PICOFW_CYCLE_REASON_WAKE_RISE);
+    }
+    return PICOFW_CYCLE_EV_NONE;
+}
+
+picofw_cycle_event_t picofw_boot_cycle_on_line(
+    picofw_boot_cycle_t *cy,
+    uint64_t line_start_us,
+    const char *line
+) {
+    if ((cy == NULL) || (line == NULL) || (line[0] == '\0')) {
+        return PICOFW_CYCLE_EV_NONE;
+    }
+    const bool banner = (strstr(line, PICOFW_BOOT_BANNER_LINE) != NULL);
+
+    if (!cy->active) {
+        cycle_open(
+            cy,
+            line_start_us,
+            banner ? PICOFW_CYCLE_REASON_BOOT_BANNER : PICOFW_CYCLE_REASON_ACTIVITY,
+            1u
+        );
+        return PICOFW_CYCLE_EV_START;
+    }
+    if (banner && (cy->lines_in_cycle > 0u)) {
+        cycle_open(cy, line_start_us, PICOFW_CYCLE_REASON_BOOT_BANNER, 1u);
+        return PICOFW_CYCLE_EV_START;
+    }
+    cy->lines_in_cycle += 1u;
+    cy->last_activity_us = line_start_us;
+    cy->report_pending = true;
+    return PICOFW_CYCLE_EV_NONE;
+}
+
+picofw_cycle_event_t picofw_boot_cycle_tick(picofw_boot_cycle_t *cy, uint64_t now_us) {
+    if ((cy == NULL) || !cy->active || !cy->report_pending || (cy->idle_report_us == 0u)) {
+        return PICOFW_CYCLE_EV_NONE;
+    }
+    if ((now_us >= cy->last_activity_us) && ((now_us - cy->last_activity_us) >= cy->idle_report_us)) {
+        cy->report_pending = false;
+        return PICOFW_CYCLE_EV_IDLE_REPORT;
+    }
+    return PICOFW_CYCLE_EV_NONE;
+}
+
+uint32_t picofw_boot_cycle_rel_us(const picofw_boot_cycle_t *cy, uint64_t abs_us) {
+    if ((cy == NULL) || (abs_us < cy->start_us)) {
+        return 0u;
+    }
+    const uint64_t d = abs_us - cy->start_us;
+    return (d > 0xFFFFFFFFULL) ? 0xFFFFFFFFu : (uint32_t)d;
+}
+
+uint32_t picofw_boot_cycle_rel_ms(const picofw_boot_cycle_t *cy, uint64_t abs_us) {
+    if ((cy == NULL) || (abs_us < cy->start_us)) {
+        return 0u;
+    }
+    const uint64_t d = (abs_us - cy->start_us) / 1000ULL;
+    return (d > 0xFFFFFFFFULL) ? 0xFFFFFFFFu : (uint32_t)d;
+}
+
+const char *picofw_boot_cycle_reason_name(uint8_t reason) {
+    switch ((picofw_cycle_reason_t)reason) {
+        case PICOFW_CYCLE_REASON_ATTACH:
+            return "ATTACH";
+        case PICOFW_CYCLE_REASON_XRESET_FALL:
+            return "XRESET_FALL";
+        case PICOFW_CYCLE_REASON_WAKE_RISE:
+            return "WAKE_RISE";
+        case PICOFW_CYCLE_REASON_BOOT_BANNER:
+            return "BOOT_BANNER";
+        case PICOFW_CYCLE_REASON_ACTIVITY:
+            return "ACTIVITY";
+        case PICOFW_CYCLE_REASON_STANDBY_FALL:
+            return "STANDBY_FALL";
+        case PICOFW_CYCLE_REASON_ABORT:
+            return "ABORT";
+        default:
+            return "NONE";
+    }
+}

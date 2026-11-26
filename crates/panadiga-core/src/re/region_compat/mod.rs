@@ -22,7 +22,9 @@ pub use dev_bin::{
 pub use frm_retarget::retarget_frm_toc_bytes;
 pub use localization::{
     LocalizationPatchMode, MainLocalizationReport, MainLocalizationSiteReport,
-    inspect_main_localization, patch_main_localization_in_place,
+    inspect_main_localization, inspect_main_localization_for_tv_profile,
+    normalize_localization_tv_profile, patch_main_localization_for_tv_profile_in_place,
+    patch_main_localization_in_place,
 };
 pub use main_fmu::{
     EXPECTED_MAIN_3060NP_SIZE, OFF_FMU_DEVINFO_3060NP, OFF_FMU_DEVINFO_3410PQ,

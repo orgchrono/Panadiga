@@ -27,8 +27,8 @@ use super::super::super::main_passthrough::{
     inspect_main_firmware_identity, inspect_main_passthrough_sites,
 };
 use super::super::super::region_compat::{
-    LocalizationPatchMode, RegionCompatMode, patch_main_localization_in_place,
-    patch_main_region_compat_in_place,
+    LocalizationPatchMode, RegionCompatMode, normalize_localization_tv_profile,
+    patch_main_localization_for_tv_profile_in_place, patch_main_region_compat_in_place,
 };
 use super::super::super::sata_bridge_fix::{
     SataBridgeResetFixMode, apply_main_sata_bridge_reset_fix_in_place,
@@ -155,6 +155,7 @@ pub(crate) fn compose_patched_main_container(
     sata_bridge_reset_fix: bool,
     main_bgo_retarget: bool,
     m6930lb_localization: bool,
+    localization_tv_profile: Option<&str>,
 ) -> Result<ComposedMainArtifact> {
     let (mut main_bin, build_name, flag, adler_step) = load_main_binary_and_meta(raw_main)?;
     let identity = inspect_main_firmware_identity(&main_bin, Some(&build_name));
@@ -253,13 +254,20 @@ pub(crate) fn compose_patched_main_container(
         }
     }
 
-    if m6930lb_localization {
-        let _ =
-            patch_main_localization_in_place(&mut main_bin, LocalizationPatchMode::M6930LbBrazil)?;
+    let localization_tv_profile_applied = if m6930lb_localization {
+        let prof = normalize_localization_tv_profile(localization_tv_profile)?;
+        let _ = patch_main_localization_for_tv_profile_in_place(
+            &mut main_bin,
+            LocalizationPatchMode::M6930LbBrazil,
+            Some(prof),
+        )?;
         let _ =
             patch_main_region_compat_in_place(&mut main_bin, RegionCompatMode::BypassModelAndOem)?;
         modified = true;
-    }
+        Some(prof.to_string())
+    } else {
+        None
+    };
 
     let resolved_build = if identity.build_id != "UNKNOWN" {
         identity.build_id
@@ -312,6 +320,7 @@ pub(crate) fn compose_patched_main_container(
         sata_bridge_reset_fix_applied: sata_bridge_reset_fix,
         main_bgo_retarget_applied: main_bgo_retarget,
         m6930lb_localization_applied: m6930lb_localization,
+        localization_tv_profile_applied,
     })
 }
 

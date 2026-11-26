@@ -37,6 +37,22 @@
           "kind": 1,
           "min_safety_tier": 1,
           "requires_unlock": false
+        },
+        {
+          "id": "cmd_bootmap",
+          "label_key": "digaos.item.bootmap",
+          "command": "bootmap",
+          "kind": 0,
+          "min_safety_tier": 0,
+          "requires_unlock": false
+        },
+        {
+          "id": "cmd_fpc_policy",
+          "label_key": "digaos.item.fpc_policy",
+          "command": "fpc",
+          "kind": 0,
+          "min_safety_tier": 0,
+          "requires_unlock": false
         }
       ]
     },
@@ -91,6 +107,22 @@
           "kind": 1,
           "min_safety_tier": 1,
           "requires_unlock": false
+        },
+        {
+          "id": "cmd_video_gpio",
+          "label_key": "digaos.item.video_gpio",
+          "command": "video gpio",
+          "kind": 1,
+          "min_safety_tier": 1,
+          "requires_unlock": false
+        },
+        {
+          "id": "cmd_video_status",
+          "label_key": "digaos.item.video_status",
+          "command": "video status",
+          "kind": 0,
+          "min_safety_tier": 0,
+          "requires_unlock": false
         }
       ]
     },
@@ -120,6 +152,14 @@
           "command": "sata",
           "kind": 0,
           "min_safety_tier": 1,
+          "requires_unlock": false
+        },
+        {
+          "id": "cmd_odd_probe",
+          "label_key": "digaos.item.odd_probe",
+          "command": "odd",
+          "kind": 0,
+          "min_safety_tier": 0,
           "requires_unlock": false
         },
         {

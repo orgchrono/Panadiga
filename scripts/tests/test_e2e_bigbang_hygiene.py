@@ -379,4 +379,4 @@ def test_m6930lb_localization_41_artifacts_and_docs_counts_preserved() -> None:
     assert len(list((ROOT / "docs" / "pt-BR").glob("*.md"))) == 44
     assert len(list((ROOT / "docs" / "debug_logs").glob("*.log"))) == 28
     assert len(list((ROOT / ".agents" / "skills").glob("*/SKILL.md"))) == 29
-    assert len(list((ROOT / ".agents" / "agents").glob("*.md"))) == 6
+    assert len(list((ROOT / ".agents" / "agents").glob("*.md"))) == 7

@@ -9,7 +9,7 @@
     "symbol_index_files": 4,
     "hex_constants_indexed": 160,
     "bitwise_patterns_indexed": 114,
-    "headers_and_footers_indexed": 31,
+    "headers_and_footers_indexed": 33,
     "traps_indexed": 13
   },
   "fleet_programs": [
@@ -392,6 +392,18 @@
       "kind": "bootloader_header",
       "signature": "ascii='Loader ver0.18' [0x0000_0000..0x0004_0000]",
       "notes": "loader_profile_key=ver018"
+    },
+    {
+      "artifact": "loader_ver027_toc48_main57:FRM_TOC",
+      "kind": "feistel64_ecb",
+      "signature": "entry=48B toc_size=0x1800",
+      "notes": "key_id=pana_dvd_eh55"
+    },
+    {
+      "artifact": "loader_ver027_toc48_main57:IPL_BANNER",
+      "kind": "bootloader_header",
+      "signature": "ascii='05/11/01' [0x0000_0000..0x0004_0000]",
+      "notes": "loader_profile_key=ver027"
     },
     {
       "artifact": "loader_ver061_toc48_main57:FRM_TOC",
@@ -8888,5 +8900,5 @@
       ]
     }
   ],
-  "atlas_sha256": "5f077e8dec064afe90e3b8f050e5f29bbf1b80a4490437d3feb6cc0567a69e39"
+  "atlas_sha256": "b2891a0bbd2fddf48d61216423595ff32ce09ef098632ac8bc55ff6124c5054d"
 }

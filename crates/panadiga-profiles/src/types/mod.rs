@@ -34,10 +34,11 @@ pub use model::{
 };
 pub use patch_specs::{
     BinaryPatchSiteSpec, HddAutobootSpec, HddAutobootSymbolsSpec, MainBgoRetargetAnchors,
-    MainBuildSpec, SataBridgeResetSpec,
+    MainBuildSpec, NorFromSdTrapBypassSpec, NorLoaderSataBridgeResetSpec, SataBridgeResetSpec,
 };
 pub use soc::{BusWindow, SocCoreProfile, SocProfile};
 pub use train::{
     AddressReloc, BytePatchEntry, DigadiagSpec, DigadiagTrustModel, FirmwareTrainProfile,
-    FrmContainerSpec, LoaderFingerprint, OffsetRange, PanaRebuildRecipe, ProgBgoRetargetSpec,
+    FrmContainerSpec, LoaderFingerprint, OffsetRange, PanaDvdSourceSlot, PanaRebuildRecipe,
+    ProgBgoNativeSpec, ProgBgoRetargetSpec,
 };

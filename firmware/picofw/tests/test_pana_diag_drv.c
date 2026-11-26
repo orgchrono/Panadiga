@@ -749,6 +749,63 @@ static void test_boottrace_baremetal_classifier(void) {
     assert(picofw_boot_classifier_verdict(&cls) == PICOFW_BOOT_VERDICT_HDD_BRIDGE_WAIT_FAIL);
 }
 
+static void test_boot_cycle_follow_fsm(void) {
+    picofw_boot_cycle_t cy;
+    const uint64_t ms = 1000u;
+
+    /* Attach while target is already running: cycle 1 opens at attach time (idempotent start). */
+    picofw_boot_cycle_init(&cy, 8000u, PICOFW_CTRL3_NSW5V | PICOFW_CTRL3_XRESET);
+    assert(!cy.active);
+    picofw_boot_cycle_attach(&cy, 5000u * ms);
+    assert(cy.active && (cy.cycle_no == 1u) && (cy.start_reason == PICOFW_CYCLE_REASON_ATTACH));
+    assert(!cy.had_previous);
+    assert(picofw_boot_cycle_on_line(&cy, 5100u * ms, "[HDD_AUTOBOOT] Boot MAIN") == PICOFW_CYCLE_EV_NONE);
+    assert(cy.lines_in_cycle == 1u);
+    assert(picofw_boot_cycle_rel_ms(&cy, 5100u * ms) == 100u);
+    assert(picofw_boot_cycle_rel_ms(&cy, 4000u * ms) == 0u);
+
+    /* Real reset: XRESET falls -> new cycle, previous snapshot preserved, clock restarts at +0. */
+    assert(picofw_boot_cycle_on_ctrl(&cy, 6000u * ms, PICOFW_CTRL3_NSW5V) == PICOFW_CYCLE_EV_START);
+    assert(cy.cycle_no == 2u && cy.had_previous && (cy.prev_cycle_no == 1u) && (cy.prev_lines == 1u));
+    assert(cy.start_reason == PICOFW_CYCLE_REASON_XRESET_FALL);
+    assert(picofw_boot_cycle_rel_us(&cy, 6000u * ms + 10u * ms) == 10000u);
+
+    /* XRESET release (rising) must not open a cycle; banner right after the edge only confirms it. */
+    assert(picofw_boot_cycle_on_ctrl(&cy, 6050u * ms, PICOFW_CTRL3_NSW5V | PICOFW_CTRL3_XRESET) == PICOFW_CYCLE_EV_NONE);
+    assert(picofw_boot_cycle_on_line(&cy, 6060u * ms, "DDR CHECK: OK") == PICOFW_CYCLE_EV_NONE);
+    assert(cy.cycle_no == 2u && cy.lines_in_cycle == 1u);
+
+    /* Banner without any control edge (reset not wired/observed) still restarts the cycle at +0. */
+    assert(picofw_boot_cycle_on_line(&cy, 7000u * ms, "Chip select = 1") == PICOFW_CYCLE_EV_NONE);
+    assert(picofw_boot_cycle_on_line(&cy, 9000u * ms, "DDR CHECK: OK") == PICOFW_CYCLE_EV_START);
+    assert(cy.cycle_no == 3u && cy.had_previous && (cy.prev_cycle_no == 2u) && (cy.prev_lines == 2u));
+    assert(cy.start_reason == PICOFW_CYCLE_REASON_BOOT_BANNER);
+    assert(picofw_boot_cycle_rel_ms(&cy, 9000u * ms) == 0u);
+
+    /* Idle report fires once after silence, then stays quiet until new lines arrive. */
+    assert(picofw_boot_cycle_tick(&cy, 12000u * ms) == PICOFW_CYCLE_EV_NONE);
+    assert(picofw_boot_cycle_tick(&cy, 17000u * ms) == PICOFW_CYCLE_EV_IDLE_REPORT);
+    assert(picofw_boot_cycle_tick(&cy, 30000u * ms) == PICOFW_CYCLE_EV_NONE);
+    assert(picofw_boot_cycle_on_line(&cy, 31000u * ms, "late line") == PICOFW_CYCLE_EV_NONE);
+    assert(picofw_boot_cycle_tick(&cy, 40000u * ms) == PICOFW_CYCLE_EV_IDLE_REPORT);
+
+    /* Standby (NSW5V falls) ends the cycle; UART text afterwards opens an ACTIVITY cycle. */
+    assert(picofw_boot_cycle_on_ctrl(&cy, 41000u * ms, PICOFW_CTRL3_XRESET) == PICOFW_CYCLE_EV_END);
+    assert(!cy.active && (cy.end_reason == PICOFW_CYCLE_REASON_STANDBY_FALL));
+    assert(picofw_boot_cycle_on_ctrl(&cy, 41500u * ms, PICOFW_CTRL3_XRESET) == PICOFW_CYCLE_EV_NONE);
+    assert(picofw_boot_cycle_tick(&cy, 99000u * ms) == PICOFW_CYCLE_EV_NONE);
+
+    /* Wake from standby (NSW5V rises) opens the next cycle. */
+    assert(picofw_boot_cycle_on_ctrl(&cy, 50000u * ms, PICOFW_CTRL3_XRESET | PICOFW_CTRL3_NSW5V) == PICOFW_CYCLE_EV_START);
+    assert(cy.cycle_no == 4u && !cy.had_previous && (cy.start_reason == PICOFW_CYCLE_REASON_WAKE_RISE));
+
+    /* Attach in standby: nothing open until a real event; text while closed opens ACTIVITY. */
+    picofw_boot_cycle_init(&cy, 8000u, 0u);
+    assert(picofw_boot_cycle_on_line(&cy, 100u * ms, "stray line") == PICOFW_CYCLE_EV_START);
+    assert(cy.cycle_no == 1u && (cy.start_reason == PICOFW_CYCLE_REASON_ACTIVITY));
+    assert(strcmp(picofw_boot_cycle_reason_name(PICOFW_CYCLE_REASON_XRESET_FALL), "XRESET_FALL") == 0);
+}
+
 static void test_tbus_br_ic7501_audit(void) {
     static const uint8_t k_expected_rejected[13] = {
         0x85u, 0x89u, 0x9Bu, 0xA9u, 0xAAu, 0xC9u, 0xDAu,
@@ -787,5 +844,6 @@ void picofw_run_pana_diag_drv_tests(void) {
     test_identify_job_f14_and_bootsel();
     test_vault_ab_p6_mmio_pwrosc_and_disconnect_relock();
     test_boottrace_baremetal_classifier();
+    test_boot_cycle_follow_fsm();
     test_tbus_br_ic7501_audit();
 }

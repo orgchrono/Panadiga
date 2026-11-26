@@ -353,6 +353,7 @@ pub fn rebuild_sd_kit_from_dump(req: &RebuildFromDumpRequest) -> Result<RebuildF
         main_bgo_retarget: false,
         nor_autoboot_capsule: false,
         m6930lb_localization: false,
+        localization_tv_profile: None,
     };
 
     let kit_result = prepare_sd_unbrick_kit_with_tier_policy(&sd_req, req.allow_unverified_profile);

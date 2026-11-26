@@ -24,6 +24,9 @@ def prepare_android_env(base_env: Mapping[str, str]) -> tuple[dict[str, str], Pa
     env = dict(base_env)
     env["ANDROID_HOME"] = str(sdk_dir)
     env.setdefault("CARGO_TARGET_DIR", str(ROOT / "target" / "android-cargo"))
+    gradle_opts = env.get("GRADLE_OPTS", "")
+    if "org.gradle.daemon" not in gradle_opts:
+        env["GRADLE_OPTS"] = f"{gradle_opts} -Dorg.gradle.daemon=false".strip()
     if ndk_dir is not None:
         env["NDK_HOME"] = str(ndk_dir)
         env["ANDROID_NDK_ROOT"] = str(ndk_dir)
@@ -99,7 +102,7 @@ def build_android(
 
     if not (gen_android / "app").is_dir() or not (gen_android / "tauri.settings.gradle").is_file():
         init_out = run_step(
-            ["npx", "--yes", "@tauri-apps/cli", "android", "init", "--ci", "--skip-targets-install"],
+            ["npx", "--yes", "@tauri-apps/cli@2.12.6", "android", "init", "--ci", "--skip-targets-install"],
             cwd=desktop_dir,
             env=env,
             capture_output=capture_output,
@@ -119,7 +122,7 @@ def build_android(
     android_cmd = [
         "npx",
         "--yes",
-        "@tauri-apps/cli",
+        "@tauri-apps/cli@2.12.6",
         "android",
         "build",
         "--apk",

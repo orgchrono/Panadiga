@@ -173,6 +173,7 @@ pub fn prepare_sd_unbrick_kit_with_tier_policy(
     let mut main_bgo_retarget_applied = false;
     let mut nor_autoboot_capsule_applied = false;
     let mut m6930lb_localization_applied = false;
+    let mut localization_tv_profile_applied = None;
 
     if req.include_pana_sd {
         let drv_path =
@@ -194,12 +195,14 @@ pub fn prepare_sd_unbrick_kit_with_tier_policy(
             req.sata_bridge_reset_fix,
             req.main_bgo_retarget,
             req.m6930lb_localization,
+            req.localization_tv_profile.as_deref(),
         )?;
         main_passthrough_applied = Some(composed_main.passthrough_applied);
         hdd_capacity_applied = composed_main.hdd_capacity_applied;
         sata_bridge_reset_fix_applied = composed_main.sata_bridge_reset_fix_applied;
         main_bgo_retarget_applied = composed_main.main_bgo_retarget_applied;
         m6930lb_localization_applied = composed_main.m6930lb_localization_applied;
+        localization_tv_profile_applied = composed_main.localization_tv_profile_applied;
 
         let drv_bytes = match drv_path {
             Some(dp) => {
@@ -275,6 +278,7 @@ pub fn prepare_sd_unbrick_kit_with_tier_policy(
         main_bgo_retarget_applied,
         nor_autoboot_capsule_applied,
         m6930lb_localization_applied,
+        localization_tv_profile_applied,
         digadiag_path: digadiag_path.to_string_lossy().into_owned(),
         digadiag_sha256,
         pana_sd_path,

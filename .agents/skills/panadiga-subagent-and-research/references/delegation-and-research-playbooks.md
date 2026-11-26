@@ -29,6 +29,7 @@ Formato de entrega:
 | `panadiga-firmware-re` | Ghidra MN103S/multi-ISA, criptoanálise `.FRM`/Feistel/AES, patches em máquina virtual |
 | `panadiga-hardware-embedded` | Firmware C11 Pico, PIOs, `P7501`, `IC7501`, `DAVIS`, bancada elétrica |
 | `panadiga-desktop-ui` | Tauri 2, React 18.3, TS 7, Oxlint MVVM, Vitest, Playwright, Android APK |
+| `panadiga-functional-math` | Eliminação de código procedural (`C11`/`Rust`), blindagem de tabelas, ponto fixo/intervalos `u64`, padrões e provas diferenciais |
 | `panadiga-qa-auditor` | Auditoria adversarial, Quality Gates 1–9, invariantes de segurança, `ledger.json` |
 
 ## 3. Recuperação Determinística de Quedas (`429` / Timeout)

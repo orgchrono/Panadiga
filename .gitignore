@@ -60,6 +60,7 @@ firmware/digaos/*.hex
 firmware/digaos/*.map
 firmware/digaos/*.dis
 firmware/digaos/*.o
+firmware/*.zip
 compile_commands.json
 .ninja_*
 CMakeCache.txt
@@ -123,6 +124,11 @@ keys.local.ukf
 
 # Runtime & Bench Backups
 /backups/
+/logs/
+/sessions/
+/logs/
+/sessions/
+firmware_and_images/dmr-eh55/
 
 # ------------------------------------------------------------------------------
 # 8. Operating System & Temporary Files

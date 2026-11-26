@@ -1,0 +1,232 @@
+# COM10 Live Bench Capture — DMR-EH55LB-S (M6930LB / VEP79138) "SETUP" Post-[nfrom] TV_PAL Override
+# Timestamp: 2026-11-25
+# Firmware on HDD/SDRAM: MAIN3410PQ (12-site ntsc-m SD kit prior to Site 14)
+
+=== Live ndb> Read-Only Register Dump During VFD "SETUP" (SYS_CNTL_POW = 9) ===
+515CD4E0: 00000009 00000000                  # SYS_CNTL_POW = 9 (ACTIVE IN SETUP)
+515CD080: 00000000 00000000 00000000 0000F8F8
+515CD090: 00000000 00000001 00000000 00000001
+515A2440: 0003FFFF 00000001 00000029 00000287  # avout_v_initialized = 1
+53185E28: 00000000 01000000 00000000 00000001  # 0x53185E30 = 0x00 (TV_PAL loaded from [nfrom] config1!)
+53186DBC: 00000080 00000000                  # market_code = 0x80 (EG OSD unlocked)
+88000000: 00008027 00000000 00003C50 0000057D  # AIOF = 0x8027 (PAL 576i 50Hz)
+88000060: 00000433 00009500 00000209 00008040  # 0x88000066 = 0x0000
+880000A0: 00000000 00004000 00004040 0000402B  # 0x880000A4 = 0x4000 (0 IRE)
+89800400: 4BB10000 00008D00 01E002D0 28000642  # AVDD/DCO = PAL_4BB1 (0x8D00 DACOUT1 MUTED, 0x28000642 625-line)
+
+=== COM10 Bench Safety Gate Check (2026-11-25) ===
+--- STATUS ---
+PICO> VDD: 3.26V (OK)
+[STANDBY] RXD=1 NSW5V=1 TXD=1 XRESET=1 SW_PU=3.27V NSW5V_DROPS=61 fault_latch=0 recoveries=61 | State=POWERED / AWAKE (SW_UART ~3.3V)
+[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=106 wdt_recoveries=0 reboot_src=CLEAN fault_slot=255 fault_stage=IDLE last_cmd=STATUS last_us=1358
+@PICO_RES cmd=STATUS status=OK code=0 elapsed_us=1783
+PICO>
+--- ISOLATE (STANDBY_GATE_STOP) ---
+[BUS] P7501 pins placed in High-Impedance Isolation (NSW5V/XRESET Hi-Z, GP26 ADC0).
+@PICO_RES cmd=ISOLATE status=OK code=0 elapsed_us=183
+PICO>
+RESULT: Unit in STANDBY -> ISOLATE sent, zero active probes issued.
+
+=== Live Bench Unmute & Post-Check (COM10, zero XRESET) ===
+--- STATUS ---
+PICO> VDD: 3.26V (OK)
+[STANDBY] RXD=1 NSW5V=1 TXD=1 XRESET=1 SW_PU=3.27V NSW5V_DROPS=63 fault_latch=0 recoveries=63 | State=POWERED / AWAKE (SW_UART ~3.3V)
+[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=108 wdt_recoveries=0 reboot_src=CLEAN fault_slot=255 fault_stage=IDLE last_cmd=ISOLATE last_us=183
+@PICO_RES cmd=STATUS status=OK code=0 elapsed_us=1766
+PICO>
+--- PANARSP 1200 PASSIVE MAGIC MEM:57000000,4 ---
+=== PANARSP PIO1 (baud=115200 ms=1200 boot=0 hold=0 action=4) ===
+[PANARSP] RX (769 bytes, pretrig_dropped=0, inspect_from=0):
+  0000: 20 3D 3D 3D 20 28 20 45 38 30 30 30 30 30 30 20  | === ( E8000000 |
+  0010: 29 0D 0A 2A 2A 2A 20 41 54 41 50 49 20 44 45 56  |)..*** ATAPI DEV|
+  0020: 49 43 45 20 45 52 52 4F 52 0D 0A 43 44 42 20 20  |ICE ERROR..CDB  |
+  0030: 5B 46 46 20 45 43 20 30 30 20 30 30 20 30 30 20  |[FF EC 00 00 00 |
+  0040: 30 30 20 30 30 20 30 30 20 30 30 20 30 30 20 30  |00 00 00 00 00 0|
+  0050: 30 20 30 30 5D 20 0D 0A 52 65 67 5B 30 30 20 30  |0 00] ..Reg[00 0|
+  0060: 30 20 30 30 20 30 30 20 30 30 20 30 30 20 30 30  |0 00 00 00 00 00|
+  0070: 20 3A 20 45 72 72 20 53 65 63 43 20 53 65 63 4E  | : Err SecC SecN|
+  0080: 20 43 79 6C 4C 20 43 79 6C 48 20 44 2F 48 20 53  | CylL CylH D/H S|
+  0090: 74 61 74 75 73 5D 20 0D 0A 48 5F 53 54 41 54 20  |tatus] ..H_STAT |
+  00A0: 5B 45 38 5D 20 54 5F 53 54 41 54 20 5B 30 5D 0D  |[E8] T_STAT [0].|
+  00B0: 0A 5B 52 54 53 44 5D 20 53 52 53 54 20 43 6F 6D  |.[RTSD] SRST Com|
+  00C0: 6D 61 6E 64 20 53 65 74 0D 0A 5B 52 54 53 44 5D  |mand Set..[RTSD]|
+  00D0: 20 52 65 73 65 74 20 46 61 69 6C 65 64 20 21 21  | Reset Failed !!|
+  00E0: 20 28 38 30 30 30 30 34 30 37 29 0D 0A 5B 52 54  | (80000407)..[RT|
+  00F0: 53 44 5D 20 48 44 44 20 73 70 69 6E 2D 75 70 20  |SD] HDD spin-up |
+  0100: 65 72 72 6F 72 20 28 38 30 30 30 30 34 30 34 29  |error (80000404)|
+  0110: 0D 0A 6D 69 6E 69 62 6F 6F 74 20 3A 20 73 79 73  |..miniboot : sys|
+  0120: 74 65 6D 20 61 73 73 65 72 74 21 21 0D 0A 5B 52  |tem assert!!..[R|
+  0130: 54 53 44 5D 20 3D 3D 3D 20 49 44 45 20 48 4F 53  |TSD] === IDE HOS|
+  0140: 54 20 45 52 52 4F 52 20 3D 3D 3D 20 28 20 45 38  |T ERROR === ( E8|
+  0150: 30 30 30 30 30 30 20 29 0D 0A 2A 2A 2A 20 41 54  |000000 )..*** AT|
+  0160: 41 50 49 20 44 45 56 49 43 45 20 45 52 52 4F 52  |API DEVICE ERROR|
+  0170: 0D 0A 43 44 42 20 20 5B 46 46 20 45 43 20 30 30  |..CDB  [FF EC 00|
+  0180: 20 30 30 20 30 30 20 30 30 20 30 30 20 30 30 20  | 00 00 00 00 00 |
+  0190: 30 30 20 30 30 20 30 30 20 30 30 5D 20 0D 0A 52  |00 00 00 00] ..R|
+  01A0: 65 67 5B 30 30 20 30 30 20 30 30 20 30 30 20 30  |eg[00 00 00 00 0|
+  01B0: 30 20 30 30 20 30 30 20 3A 20 45 72 72 20 53 65  |0 00 00 : Err Se|
+  01C0: 63 43 20 53 65 63 4E 20 43 79 6C 4C 20 43 79 6C  |cC SecN CylL Cyl|
+  01D0: 48 20 44 2F 48 20 53 74 61 74 75 73 5D 20 0D 0A  |H D/H Status] ..|
+  01E0: 48 5F 53 54 41 54 20 5B 45 38 5D 20 54 5F 53 54  |H_STAT [E8] T_ST|
+  01F0: 41 54 20 5B 30 5D 0D 0A 5B 52 54 53 44 5D 20 53  |AT [0]..[RTSD] S|
+  0200: 52 53 54 20 43 6F 6D 6D 61 6E 64 20 53 65 74 0D  |RST Command Set.|
+  0210: 0A 5B 52 54 53 44 5D 20 52 65 73 65 74 20 46 61  |.[RTSD] Reset Fa|
+  0220: 69 6C 65 64 20 21 21 20 28 38 30 30 30 30 34 30  |iled !! (8000040|
+  0230: 37 29 0D 0A 48 44 44 5F 4D 41 58 5F 4C 42 41 20  |7)..HDD_MAX_LBA |
+  0240: 67 65 74 20 66 61 69 6C 65 64 5B 30 78 45 38 30  |get failed[0xE80|
+  0250: 30 30 30 30 30 5D 2E 0D 0A 6D 61 69 6E 73 6F 66  |00000]...mainsof|
+  0260: 74 20 64 61 74 61 20 69 73 20 69 6E 76 61 6C 69  |t data is invali|
+  0270: 64 2C 20 73 6F 20 73 65 74 20 75 70 64 61 74 65  |d, so set update|
+  0280: 20 66 6C 61 67 2E 0D 0A 5B 6E 66 72 6F 6D 5D 20  | flag...[nfrom] |
+  0290: 66 69 6C 65 5F 6E 6F 5B 31 37 5D 2C 73 6B 69 70  |file_no[17],skip|
+  02A0: 28 30 29 2C 6E 6F 6E 5F 73 6B 69 70 28 31 29 2C  |(0),non_skip(1),|
+  02B0: 65 72 61 73 65 28 30 29 2C 6E 65 77 5F 77 72 69  |erase(0),new_wri|
+  02C0: 74 65 28 30 29 2E 0D 0A 0D 0A 21 21 21 20 73 74  |te(0).....!!! st|
+  02D0: 61 72 74 20 66 6D 75 20 74 6F 20 72 65 61 64 20  |art fmu to read |
+  02E0: 26 20 65 78 65 63 20 66 76 75 2E 20 21 21 21 0D  |& exec fvu. !!!.|
+  02F0: 0A 77 61 69 74 20 31 20 73 65 63 6F 6E 64 2E 0D  |.wait 1 second..|
+  0300: 0A                                               |.|
+[PANARSP] Frame: none (ack=no nak=no nak0x15=no)
+PANARSP: OK (rx=769 bytes, rsp=NO_REPLY, fifo_ovf=NO)
+@PICO_RES cmd=PANARSP status=OK code=0 elapsed_us=868656
+PICO>
+[BRIDGE] USB CDC <-> P7501 SC0 115200 8N1 ctrl=OFF active (exit: send '~~~' or unplug USB).
+--- ndb> entry ---
+[RTSD] ATAPI Software Reset 
+[HDD_AUTOBOOT] SATA HDD boot ('F'->FVU)...
+SD init start...
+[SDCD] sdcd_insrmv_check:SD Card inserted 
+[SDCD] === This Card Spec ==== 
+	Card type:2(condition:3) wp:0
+	capacity:3c4000[LBA](2021654528Byte) 	 transfer speed:25000[Kbps]
+	RCA:2 	 Bus Width:4(current) 4(support)
+	Multi Max Block Len Read:2[SECT] / Write:2[SECT]
+SD = 0x3C4000[LBA]
+... SD init end
+[RTSD] HDD already spin-up 
+[RTSD] HDD Auto Spin up Mode 
+[HDD_AUTOBOOT] HDD MAX LBA=0x1D1C5970
+BRIDGE: OK (rx=498 tx=1 ferr=0 ctrl_edges=0 overflow=NO)
+@PICO_RES cmd=BRIDGE status=OK code=0 elapsed_us=3815424
+PICO>
+[BUS] P7501 pins placed in High-Impedance Isolation (NSW5V/XRESET Hi-Z, GP26 ADC0).
+@PICO_RES cmd=ISOLATE status=OK code=0 elapsed_us=185
+PICO>
+VDD: 3.26V (OK)
+[STANDBY] RXD=1 NSW5V=1 TXD=1 XRESET=1 SW_PU=3.27V NSW5V_DROPS=63 fault_latch=0 recoveries=63 | State=POWERED / AWAKE (SW_UART ~3.3V)
+[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=112 wdt_recoveries=0 reboot_src=CLEAN fault_slot=255 fault_stage=IDLE last_cmd=ISOLATE last_us=185
+@PICO_RES cmd=STATUS status=OK code=0 elapsed_us=1814
+PICO>
+
+=== Live Bench Check 2 (Post-Boot ndb> Unmute Attempt) ===
+--- STATUS ---
+PICO> VDD: 3.26V (OK)
+[STANDBY] RXD=1 NSW5V=1 TXD=1 XRESET=1 SW_PU=3.27V NSW5V_DROPS=63 fault_latch=0 recoveries=63 | State=POWERED / AWAKE (SW_UART ~3.3V)
+[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=113 wdt_recoveries=0 reboot_src=CLEAN fault_slot=255 fault_stage=IDLE last_cmd=STATUS last_us=1814
+@PICO_RES cmd=STATUS status=OK code=0 elapsed_us=1956
+PICO>
+--- PANARSP ---
+=== PANARSP PIO1 (baud=115200 ms=1200 boot=0 hold=0 action=4) ===
+[PANARSP] RX (459 bytes, pretrig_dropped=0, inspect_from=0):
+  0000: 20 20 20 44 30 3A 30 30 30 30 30 30 30 30 2C 20  |   D0:00000000, |
+  0010: 20 20 44 31 3A 30 30 30 30 30 46 30 31 2C 20 20  |  D1:00000F01,  |
+  0020: 20 44 32 3A 30 30 30 30 30 30 30 30 2C 20 20 20  | D2:00000000,   |
+  0030: 44 33 3A 30 30 30 30 30 30 30 30 0D 0A 20 20 20  |D3:00000000..   |
+  0040: 41 30 3A 35 32 32 42 36 43 32 30 2C 20 20 20 41  |A0:522B6C20,   A|
+  0050: 31 3A 35 31 42 31 32 43 38 38 2C 20 20 20 41 32  |1:51B12C88,   A2|
+  0060: 3A 30 30 30 30 30 30 30 30 2C 20 20 20 41 33 3A  |:00000000,   A3:|
+  0070: 30 30 30 30 30 30 30 30 0D 0A 20 20 20 45 30 3A  |00000000..   E0:|
+  0080: 30 30 30 30 30 30 30 30 2C 20 20 20 45 31 3A 30  |00000000,   E1:0|
+  0090: 30 30 30 30 30 38 30 2C 20 20 20 45 32 3A 30 30  |0000080,   E2:00|
+  00A0: 30 30 30 30 30 30 2C 20 20 20 45 33 3A 35 33 34  |000000,   E3:534|
+  00B0: 45 37 39 30 30 0D 0A 20 20 20 45 34 3A 30 30 30  |E7900..   E4:000|
+  00C0: 30 30 30 30 30 2C 20 20 20 45 35 3A 30 30 30 30  |00000,   E5:0000|
+  00D0: 30 30 30 30 2C 20 20 20 45 36 3A 30 30 30 30 30  |0000,   E6:00000|
+  00E0: 30 30 30 2C 20 20 20 45 37 3A 30 30 30 30 30 30  |000,   E7:000000|
+  00F0: 30 30 0D 0A 20 45 50 53 57 3A 30 30 30 30 30 46  |00.. EPSW:00000F|
+  0100: 30 31 2C 20 20 4C 41 52 3A 35 37 37 31 30 44 34  |01,  LAR:57710D4|
+  0110: 44 2C 20 20 4C 49 52 3A 46 43 32 31 35 30 36 34  |D,  LIR:FC215064|
+  0120: 2C 20 20 4D 44 52 3A 35 37 37 30 45 44 33 35 0D  |,  MDR:5770ED35.|
+  0130: 0A 20 4D 43 56 46 3A 30 30 30 30 30 30 30 30 2C  |. MCVF:00000000,|
+  0140: 20 4D 43 52 4C 3A 36 41 45 37 30 38 32 35 2C 20  | MCRL:6AE70825, |
+  0150: 4D 43 52 48 3A 30 34 38 33 42 38 34 43 2C 20 4D  |MCRH:0483B84C, M|
+  0160: 44 52 51 3A 30 37 30 35 31 44 41 31 0D 0A 20 20  |DRQ:07051DA1..  |
+  0170: 20 50 43 3A 35 37 37 31 30 37 35 33 2C 20 20 20  | PC:57710753,   |
+  0180: 53 50 3A 35 32 32 42 36 43 31 43 0D 0A 0D 0A 35  |SP:522B6C1C....5|
+  0190: 37 37 31 30 37 35 33 3A 20 43 41 30 30 20 20 20  |7710753: CA00   |
+  01A0: 20 20 20 20 20 20 20 20 62 72 61 20 20 20 20 20  |        bra     |
+  01B0: 30 35 37 37 31 30 37 35 33 0D 0A 0D 0A 1B 5B 33  |057710753.....[3|
+  01C0: 31 6D 6E 64 62 3E 20 1B 5B 6D 39                 |1mndb> .[m9|
+[PANARSP] Frame: none (ack=no nak=no nak0x15=no)
+PANARSP: OK (rx=459 bytes, rsp=NO_REPLY, fifo_ovf=NO)
+@PICO_RES cmd=PANARSP status=OK code=0 elapsed_us=846785
+PICO>
+[BRIDGE] USB CDC <-> P7501 SC0 115200 8N1 ctrl=OFF active (exit: send '~~~' or unplug USB).
+--- ndb> ---
+[31mndb> [m
+d 515cd4e0 8
+[31mndb> [m
+d 53185e28 16
+[31mndb> [m
+d 89800400 16
+[31mndb> [m
+d 88000000 16
+[31mndb> [m
+eb 53185e30 01
+53185E30: 00 -> 01
+[31mndb> [m
+ed 515cd08c 00000000
+515CD08C: 00006EC7 -> 00000000
+[31mndb> [m
+ew 88000066 8001
+88000066: 9121 -> 8001
+[31mndb> [m
+ew 88000000 8020
+88000000: 8027 -> 8020
+[31mndb> [m
+ew 88000004 0c00
+88000004: 0000 -> 0C00
+[31mndb> [m
+ew 88000008 3c50
+88000008: 3C50 -> 3C50
+[31mndb> [m
+ew 8800000c 057c
+8800000C: 057D -> 057C
+[31mndb> [m
+ew 8800002c 40f0
+8800002C: C0F0 -> 40F0
+[31mndb> [m
+ew 880000a4 8000
+880000A4: 4000 -> 8000
+[31mndb> [m
+ew 89800402 4fb3
+89800402: 4FB3 -> 4FB3
+[31mndb> [m
+ed 89800404 00000d00
+89800404: 00000D00 -> 00000D00
+[31mndb> [m
+ed 89800408 01e002d0
+89800408: 01E002D0 -> 01E002D0
+[31mndb> [m
+ed 8980040c 28000242
+8980040C: 28000242 -> 28000242
+[31mndb> [m
+ed 89800624 00050000
+89800624: 00050000 -> 00050000
+[31mndb> [m
+d 89800400 16
+[31mndb> [m
+d 88000000 16
+[31mndb> [m
+g
+BRIDGE: OK (rx=1009 tx=342 ferr=0 ctrl_edges=0 overflow=NO)
+@PICO_RES cmd=BRIDGE status=OK code=0 elapsed_us=39681805
+PICO>
+[BUS] P7501 pins placed in High-Impedance Isolation (NSW5V/XRESET Hi-Z, GP26 ADC0).
+@PICO_RES cmd=ISOLATE status=OK code=0 elapsed_us=197
+PICO>
+VDD: 3.26V (OK)
+[STANDBY] RXD=1 NSW5V=1 TXD=1 XRESET=1 SW_PU=3.27V NSW5V_DROPS=63 fault_latch=0 recoveries=63 | State=POWERED / AWAKE (SW_UART ~3.3V)
+[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=117 wdt_recoveries=0 reboot_src=CLEAN fault_slot=255 fault_stage=IDLE last_cmd=ISOLATE last_us=197
+@PICO_RES cmd=STATUS status=OK code=0 elapsed_us=1808
+PICO>

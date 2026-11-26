@@ -21,12 +21,20 @@ static uint32_t load_le32(const uint8_t *p) {
            ((uint32_t)p[2] << 16u) | ((uint32_t)p[3] << 24u);
 }
 
-uint8_t digaos_tbus_checksum15(const uint8_t body15[15]) {
+static uint32_t digaos_tbus_sum15(const uint8_t body15[15]) {
     uint32_t sum = 0u;
     for (size_t i = 0u; i < 15u; ++i) {
         sum += (uint32_t)body15[i];
     }
-    return (uint8_t)((sum - IC7501_CHECKSUM_BIAS) & 0xFFu);
+    return sum;
+}
+
+uint8_t digaos_tbus_checksum15(const uint8_t body15[15]) {
+    return (uint8_t)((digaos_tbus_sum15(body15) - IC7501_CHECKSUM_BIAS) & 0xFFu);
+}
+
+uint8_t digaos_tbus_rx_checksum15(const uint8_t body15[15]) {
+    return (uint8_t)(digaos_tbus_sum15(body15) & 0xFFu);
 }
 
 void digaos_tbus_build_wdt_255s_frame(uint8_t out16[16]) {
@@ -56,6 +64,25 @@ void digaos_tbus_build_vfd_frame(const char *ascii7, uint8_t out16[16]) {
     out16[15] = digaos_tbus_checksum15(out16);
 }
 
+void digaos_tbus_build_start_poff_frame(uint8_t out16[16]) {
+    if (out16 == NULL) {
+        return;
+    }
+    memset(out16, 0, 16u);
+    out16[0] = AM34_DIGAOS_TBUS_START_POFF_CMD;
+    out16[2] = 0x01u;
+    out16[15] = digaos_tbus_checksum15(out16);
+}
+
+void digaos_tbus_build_poff_bye_frame(uint8_t out16[16]) {
+    if (out16 == NULL) {
+        return;
+    }
+    memset(out16, 0, 16u);
+    out16[0] = AM34_DIGAOS_TBUS_POFF_BYE_CMD;
+    out16[15] = digaos_tbus_checksum15(out16);
+}
+
 bool digaos_tbus_opcode_safe_for_br_ic7501(uint8_t opcode) {
     switch (opcode) {
         case 0x85u:
@@ -75,6 +102,42 @@ bool digaos_tbus_opcode_safe_for_br_ic7501(uint8_t opcode) {
         default:
             return true;
     }
+}
+
+bool digaos_tbus_classify_rx_frame(const uint8_t rx16[16], digaos_tbus_rx_event_t *out) {
+    if ((rx16 == NULL) || (out == NULL)) {
+        return false;
+    }
+    memset(out, 0, sizeof(*out));
+    out->opcode = rx16[0];
+    if (rx16[15] != digaos_tbus_rx_checksum15(rx16)) {
+        out->kind = DIGAOS_TBUS_RX_INVALID;
+        return false;
+    }
+    out->non_fatal = true;
+    if (rx16[0] == 0x7Fu) {
+        /* MN67788RA rejects EU-only commands (e.g. 0xE3/0xF9/0xA9/0xFA) with 0x7F; never trigger U99. */
+        out->kind = DIGAOS_TBUS_RX_UNSUPPORTED_0X7F;
+        out->rejected_opcode = rx16[1];
+    } else if ((rx16[0] == 0x40u) && (rx16[1] == 0xB0u)) {
+        out->kind = DIGAOS_TBUS_RX_KEY_EVENT;
+        out->key_code = rx16[3];
+    } else if ((rx16[0] == 0x10u) && (rx16[1] == 0x00u)) {
+        out->kind = DIGAOS_TBUS_RX_RTC_HEARTBEAT;
+    } else {
+        out->kind = DIGAOS_TBUS_RX_TELEMETRY_OTHER;
+    }
+    return true;
+}
+
+digaos_wakeup_policy_t digaos_classify_wakeup_reason(uint8_t reason_code) {
+    if (reason_code == AM34_DIGAOS_WAKEUP_XRESET_INVALID) {
+        return DIGAOS_WAKEUP_XRESET_70_HAZARD;
+    }
+    if ((reason_code == 0x00u) || (reason_code == 0xFFu)) {
+        return DIGAOS_WAKEUP_UNKNOWN;
+    }
+    return DIGAOS_WAKEUP_NORMAL_UION;
 }
 
 bool digaos_tbus_send_frame_checked(const uint8_t frame16[16]) {

@@ -192,6 +192,9 @@ export interface FrmContainerSpec {
   readonly cipher?: string | null;
   readonly key_id?: string | null;
   readonly official_frm_sha256?: string | null;
+  readonly rebuilt_sd_frm_sha256?: string | null;
+  readonly rebuilt_sd_frm_bytes?: number | null;
+  readonly rebuilt_dvd_frm_sha256?: string | null;
 }
 
 export type DigadiagTrustModel = 'checksum32_only' | 'encrypted_toc' | 'rsa_signed' | 'unknown';
@@ -209,12 +212,35 @@ export interface DigadiagSpec {
   readonly trust_model?: DigadiagTrustModel | null;
 }
 
+export interface PanaDvdSourceSlot {
+  readonly slot_name: string;
+  readonly offset: string;
+  readonly size: number;
+  readonly checksum32: string;
+  readonly extrhead_adler32_stride16?: string | null;
+  readonly patches_applied?: readonly string[];
+}
+
 export interface PanaRebuildRecipe {
   readonly output_container: string;
   readonly toc_format: string;
+  readonly tag?: string | null;
   readonly family_aliases?: readonly string[];
   readonly model_prefix_byte: string;
   readonly sources_from_panamon_dump?: readonly string[];
+  readonly sources_from_pana_dvd?: readonly PanaDvdSourceSlot[];
+}
+
+export interface ProgBgoNativeSpec {
+  readonly native_geometry_id: string;
+  readonly retarget_required: boolean;
+  readonly expected_prog_size: string;
+  readonly bgo_table_offset: string;
+  readonly bgo_table_marker: string;
+  readonly detect_logical_sectors: string;
+  readonly detect_flash_base: string;
+  readonly detect_flash_end: string;
+  readonly bgo_table_words: readonly string[];
 }
 
 "#;

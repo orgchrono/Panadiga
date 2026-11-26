@@ -42,4 +42,8 @@ __all__ = [
 ]
 
 if __name__ == "__main__":
+    from scripts.bootstrap_deps import ensure_dependencies
+    from scripts.build_lanes.dag import normalize_argv
+
+    ensure_dependencies(normalize_argv(sys.argv[1:]))
     raise SystemExit(main())

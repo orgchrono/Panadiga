@@ -237,6 +237,11 @@ pub fn handle_sd_unbrick_kit_with_policy(
                 main_bgo_retarget,
                 nor_autoboot_capsule,
                 m6930lb_localization,
+                localization_tv_profile: args
+                    .get("tv_standard")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.trim().to_string())
+                    .filter(|s| !s.is_empty()),
             })?;
             Ok(serde_json::to_value(rep)?)
         }

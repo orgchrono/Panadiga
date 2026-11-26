@@ -1205,11 +1205,6 @@
           "path": "firmware_and_images/sd_unbrick_kit_m6930lb_br/DIGADIAG.FRM",
           "sha256": "305CC2EEBC09BBAA3BB5C5D75C0395EB16831BED4B9F80EAFD57B9945E6A762D",
           "required": false
-        },
-        {
-          "path": "firmware_and_images/sd_unbrick_kit_m6930lb_br/PANA__SD.FRM",
-          "sha256": "03A47DE8C0C32401C03806BBC27333A722C4BDD777BC6F57B6FCD80322D2FB76",
-          "required": false
         }
       ],
       "docs": [
@@ -1217,6 +1212,289 @@
         "docs/pt-BR/BLUEPRINT_ESQUEMA_ELETRICO_BANCADA.md",
         "docs/en-US/PICO_P7501_FIRMWARE_GUIDE.md",
         "docs/pt-BR/FIRMWARE_PICO_P7501_GUIA.md"
+      ]
+    },
+    {
+      "id": "EV-20261125-004",
+      "level": "N3_LIVE_PROBE",
+      "claim_pt": "Mapa completo config1/U88/VFD vazio/cristais M6930LB + motor real tv_profiles de 13 sitios gerando 4 kits distintos (br 74C36D04..., ntscj A32EEB48..., palm F29445B0..., pal 9C8DBB0F...) + diretriz DigaOS 3 camadas (SA11..SA14 Sem-SD UART P7501 + peek/poke16/poke32/bootmap/video gpio) + captura passiva COM10 em Soft-Standby (VDD=3.26V, NSW5V=1, ENOREPLY).",
+      "claim_en": "Complete config1/U88/blank-VFD/M6930LB crystal map + real 13-site tv_profiles filtering yielding 4 distinct kits (br 74C36D04..., ntscj A32EEB48..., palm F29445B0..., pal 9C8DBB0F...) + 3-tier DigaOS directive (SA11..SA14 No-SD P7501 UART + peek/poke16/poke32/bootmap/video gpio) + passive COM10 Soft-Standby capture (VDD=3.26V, NSW5V=1, ENOREPLY).",
+      "sites": [
+        "0x57AED0A0 (config1 descriptor table -> RAM 0x53184B44)",
+        "0x57571136 (SYS_FIP_FLDisplay_for_BOOT: case 10='U88   ', case 0='      ')",
+        "0x570D674D (AIOF_Set_VideoOut 7.5 IRE ntsc-m: 8055->8054)",
+        "0x570D679F (AIOF_Set_CPS_NTSC cps_pal_m pal-m: 8002->8003)",
+        "0x84040000..0x8407FFFF (DigaOS Tier-2 SA11..SA14 No-SD UART boot)"
+      ],
+      "evidence_files": [
+        "docs/evidence/com10_full_tv_config1_u88_map_20261125.log",
+        "profiles/firmware_trains/loader_ver061_toc48_main57.json",
+        "firmware/digaos/generated/digaos_ssot.h"
+      ],
+      "sha256_assertions": [
+        {
+          "path": "docs/evidence/com10_full_tv_config1_u88_map_20261125.log",
+          "sha256": "A6E6ADB188D59D39B6E16AF066471166D97AD13713CB5E20DE546D977D8111B7",
+          "required": true
+        }
+      ],
+      "docs": [
+        "docs/pt-BR/HISTORICO_UNBRICK_EH55_BGO_CH1_DAVIS_E_REGIAO.md",
+        "docs/en-US/EH55_UNBRICK_BREAKTHROUGH_BGO_CH1_DAVIS_AND_REGION.md",
+        "docs/pt-BR/PESQUISA_PORTOES_VALIDACAO_SATA_STAGE2_E_RETARGET_BGO_8MB.md",
+        "docs/en-US/RESEARCH_VALIDATION_GATES_SATA_STAGE2_AND_8MB_BGO_RETARGET.md",
+        "docs/pt-BR/DIGADIAG_PANA_SD_E_TBC_AUTONOMO.md",
+        "docs/en-US/DIGADIAG_PANA_SD_AND_STANDALONE_TBC.md"
+      ]
+    },
+    {
+      "id": "EV-20261125-005",
+      "level": "N4_HARDWARE",
+      "claim_pt": "Prova em silicio na COM10 do kit 12-sitios M6930LB NTSC-M (sd_unbrick_kit_m6930lb_br) em SDRAM apos FVU no HDD: ndb> precheck leu ao vivo 0x57AEFBAC = 0x01 (TV_NTSC default), 0x570D674D = 80 54 (AIOF 7.5 IRE) e 0x570D679F = 80 02 (cps_ntsc); na sequencia BOOTTRACE 90000 via XRESET acionou startup reason = [70] -> error! startup reason is invalid. -> P-OFF (NSW5V=0, VDD=0.04V), bloqueado por STANDBY_GATE_STOP e encerrado em ISOLATE+STATUS.",
+      "claim_en": "Live COM10 silicon proof of the 12-site M6930LB NTSC-M kit (sd_unbrick_kit_m6930lb_br) in SDRAM after HDD FVU flash: ndb> precheck read live 0x57AEFBAC = 0x01 (TV_NTSC default), 0x570D674D = 80 54 (AIOF 7.5 IRE), and 0x570D679F = 80 02 (cps_ntsc); subsequent XRESET BOOTTRACE 90000 hit startup reason = [70] -> error! startup reason is invalid. -> P-OFF (NSW5V=0, VDD=0.04V), halted cleanly by STANDBY_GATE_STOP into ISOLATE+STATUS.",
+      "sites": [
+        "0x57AEFBAC = 00000001 (live SDRAM config1[0x0117] TV_NTSC)",
+        "0x570D6748..57 = 4A1212CA 8D54800C (live 0x570D674D = 80 54 = 7.5 IRE NTSC-M)",
+        "0x570D679C..A7 = 800C4A00 43CD8D02 (live 0x570D679F = 80 02 = cps_ntsc)",
+        "Loader ver0.61 startup reason = [70] -> error! startup reason is invalid. -> STANDBY_GATE_STOP"
+      ],
+      "evidence_files": [
+        "docs/evidence/com10_m6930lb_3410pq_12site_boot1_fvu_20261125.log",
+        "docs/evidence/com10_m6930lb_3410pq_12site_boot2_main_20261125.log"
+      ],
+      "sha256_assertions": [
+        {
+          "path": "docs/evidence/com10_m6930lb_3410pq_12site_boot1_fvu_20261125.log",
+          "sha256": "CF09E1514B809C1C11D5D59657A8CCC861E1EE14D6A8183A9226D39FF858B242",
+          "required": true
+        },
+        {
+          "path": "docs/evidence/com10_m6930lb_3410pq_12site_boot2_main_20261125.log",
+          "sha256": "4232E077619B1F87C0704A07258433DF33BEFBAD86D2CA6BE97BA16FC0718C51",
+          "required": true
+        }
+      ],
+      "docs": [
+        "docs/pt-BR/HISTORICO_UNBRICK_EH55_BGO_CH1_DAVIS_E_REGIAO.md",
+        "docs/en-US/EH55_UNBRICK_BREAKTHROUGH_BGO_CH1_DAVIS_AND_REGION.md",
+        "docs/pt-BR/PESQUISA_PORTOES_VALIDACAO_SATA_STAGE2_E_RETARGET_BGO_8MB.md",
+        "docs/en-US/RESEARCH_VALIDATION_GATES_SATA_STAGE2_AND_8MB_BGO_RETARGET.md"
+      ]
+    },
+    {
+      "id": "EV-20261125-006",
+      "level": "N4_HARDWARE",
+      "claim_pt": "Diagnostico ao vivo COM10 em SETUP (SYS_CNTL_POW=9) + fix permanente Sitios 14-15 em MAIN3410PQ: ndb> provou que [nfrom] da NOR BGO sobrescreve 0x53185E30=0x00 (TV_PAL) apos o boot, levando AIOF (0x88000000=0x8027) e PAL_4BB1_fn (0x89800400=4BB10000, 0x89800404=0x8D00 DACOUT1 mudo, 0x28000642) a cortar o video no SETUP. Unmute volátil zero-reset aplicado (0x8020/7.5 IRE/0x53185E30=0x01) + promovidos Sitio 14 (0x57AEE214 -> 0x57AEFBAC + 0x5750C377) e Sitio 15 (0x574F6920 % 16 == 0 -> 8x NOP), provados no Mn103Vm e gerando 4 kits distintos (br 4C37C2E0..., carimbo 0xEF7A4404 != 0x04A44434).",
+      "claim_en": "Live COM10 diagnosis in SETUP (SYS_CNTL_POW=9) + permanent MAIN3410PQ Sites 14-15 fix: ndb> proved BGO NOR [nfrom] overwrites 0x53185E30=0x00 (TV_PAL) over ROM defaults, forcing AIOF (0x88000000=0x8027) and PAL_4BB1_fn (0x89800400=4BB10000, 0x89800404=0x8D00 DACOUT1 muted, 0x28000642) in SETUP. Applied zero-reset live unmute (0x8020/7.5 IRE/0x53185E30=0x01) + promoted Site 14 (0x57AEE214 -> 0x57AEFBAC + 0x5750C377) and Site 15 (0x574F6920 % 16 == 0 -> 8x NOP), proven in Mn103Vm and yielding 4 distinct hardened kits (br 4C37C2E0..., stamp 0xEF7A4404 != 0x04A44434).",
+      "sites": [
+        "0x53185E30 = 0x00 live [nfrom] override in SETUP -> AIOF 0x8027 / AVDD 0x4BB1 / DACOUT1 0x8D00",
+        "0x57AEE214 (305e18534d6c5157 -> acfbae5777c35057: descriptor[0x0117] lock to 0x57AEFBAC + 0x5750C377)",
+        "0x574F6920 (fbd80000c9048a01 -> cbcbcbcbcbcbcbcb: sys_boot AVOUT NTSC + EXTRHEAD+0x28 0xEF7A4404)"
+      ],
+      "evidence_files": [
+        "docs/evidence/com10_m6930lb_setup_nfrom_pal_rootcause_20261125.log",
+        "profiles/firmware_trains/loader_ver061_toc48_main57.json",
+        "crates/panadiga-core/src/re/region_compat/tests.rs"
+      ],
+      "sha256_assertions": [
+        {
+          "path": "docs/evidence/com10_m6930lb_setup_nfrom_pal_rootcause_20261125.log",
+          "sha256": "99E6F10C0EF1DF278997D0A4C277A25B0CDA741E4A7E5A7F55A2E340B9294AA4",
+          "required": true
+        }
+      ],
+      "docs": [
+        "docs/pt-BR/HISTORICO_UNBRICK_EH55_BGO_CH1_DAVIS_E_REGIAO.md",
+        "docs/en-US/EH55_UNBRICK_BREAKTHROUGH_BGO_CH1_DAVIS_AND_REGION.md",
+        "docs/pt-BR/PESQUISA_PORTOES_VALIDACAO_SATA_STAGE2_E_RETARGET_BGO_8MB.md",
+        "docs/en-US/RESEARCH_VALIDATION_GATES_SATA_STAGE2_AND_8MB_BGO_RETARGET.md"
+      ]
+    },
+    {
+      "id": "EV-20261125-007",
+      "level": "N4_HARDWARE",
+      "claim_pt": "Prova em silicio real na COM10 apos insercao do SD 14-sitios M6930LB NTSC-M (sd_unbrick_kit_m6930lb_br): [HDD_AUTOBOOT] concluiu Boot 1 -> Boot 2 em SDRAM sem UART 'F', confirmando via ndb> dd: 0x57AEE210 = 00000001 57AEFBAC 5750C377 57516C9F (Sitio 14), 0x574F6920 = CBCBCBCB CBCBCBCB (Sitio 15), 0x570D674C = 8D54800C (7.5 IRE), 0x53185E30 = 0x01, 0x53186DBC = 0x80 (EG), AIOF 0x88000000 = 0x8020 (480i 60 Hz) e AVDD 0x89800400 = 4FB30000 00000D00 01E002D0 28000242 (DACOUT1 desmutado nativamente no boot antes de qualquer pokedev).",
+      "claim_en": "Real silicon proof on COM10 after inserting the 14-site M6930LB NTSC-M SD kit (sd_unbrick_kit_m6930lb_br): [HDD_AUTOBOOT] completed Boot 1 -> Boot 2 in SDRAM without UART 'F', verified via ndb> dd: 0x57AEE210 = 00000001 57AEFBAC 5750C377 57516C9F (Site 14), 0x574F6920 = CBCBCBCB CBCBCBCB (Site 15), 0x570D674C = 8D54800C (7.5 IRE), 0x53185E30 = 0x01, 0x53186DBC = 0x80 (EG), native AIOF 0x88000000 = 0x8020 (480i 60 Hz), and native unmuted AVDD 0x89800400 = 4FB30000 00000D00 01E002D0 28000242 on cold boot prior to any poke.",
+      "sites": [
+        "0x57AEE210 = 00000001 57AEFBAC 5750C377 57516C9F (live Site 14)",
+        "0x574F6920 = CBCBCBCB CBCBCBCB (live Site 15)",
+        "0x88000000 = 00008020 00000C00 00003C50 0000057C (live AIOF 480i 60 Hz)",
+        "0x89800400 = 4FB30000 00000D00 01E002D0 28000242 (live AVDD unmuted DACOUT1)"
+      ],
+      "evidence_files": [
+        "docs/evidence/com10_m6930lb_14site_sd_boot_verify_20261125.log"
+      ],
+      "sha256_assertions": [
+        {
+          "path": "docs/evidence/com10_m6930lb_14site_sd_boot_verify_20261125.log",
+          "sha256": "BF46426CF836347897E09A9E484DE3780E18F6121FE2FE36C1E7BAC38AA70B88",
+          "required": true
+        }
+      ],
+      "docs": [
+        "docs/pt-BR/HISTORICO_UNBRICK_EH55_BGO_CH1_DAVIS_E_REGIAO.md",
+        "docs/en-US/EH55_UNBRICK_BREAKTHROUGH_BGO_CH1_DAVIS_AND_REGION.md",
+        "docs/pt-BR/PESQUISA_PORTOES_VALIDACAO_SATA_STAGE2_E_RETARGET_BGO_8MB.md",
+        "docs/en-US/RESEARCH_VALIDATION_GATES_SATA_STAGE2_AND_8MB_BGO_RETARGET.md"
+      ]
+    },
+    {
+      "id": "EV-20261125-008",
+      "level": "N2_EMULATED",
+      "claim_pt": "Erradicacao na raiz do travamento 'HELLO', reboot 'U99' e desligamento automatico 'BYE' em MAIN3410PQ (29 sitios SSOT, Mn103Vm + verify-sd --audit-profile hardened PASS): (1) correcao de 8A 00 (d2) -> 9A 00 (mov 0, a2) nos Sitios 7 (0x5750BD6A) e 8 (0x571309CF), eliminando lixo 28359 em SYS_CNTL_PAL_NTSC_Change/wait N/P change e mute AVOUT_V_Mute=1; (2) neutralizacao 00 F0 FC CB CB de FPC_SetPALSetting (0x570675F8), FPC_GetPALSetting (0x57067931), 5 funcoes 0xF9 GATE=15 (0x570683FF/43D/499/4E0/548), FPC_CB_ReportEmergency (0x5750971C) e sys_cntl_fpc_emergency_reboot/sys_cntl_err_reboot (0x57509770, % 16 == 0); (3) WakeupReason 0x57504B28 (c411->ca11 -> 0x57512331 UI-ON) + supressao de auto-poff MEDIA RESET ODD 80040904 (0x57506476/64B0/1EAB3/1EB37) preservando [POWER] (SYS_CNTL_Power). 4 kits M6930LB regenerados (br DC3115EE..., carimbo EXTRHEAD+0x28 = 0xDC434247 != 0xEF7A4404); COM10 STATUS leu STANDBY (VDD=0.04V, NSW5V=0) -> ISOLATE.",
+      "claim_en": "Root-cause eradication of MAIN3410PQ 'HELLO' freeze, 'U99' emergency reboot, and 'BYE' auto-shutdown (29 SSOT sites, Mn103Vm + verify-sd --audit-profile hardened PASS): (1) fixed 8A 00 (d2) -> 9A 00 (mov 0, a2) at Sites 7 (0x5750BD6A) & 8 (0x571309CF), eliminating uninitialized 28359 in SYS_CNTL_PAL_NTSC_Change/wait N/P change and AVOUT_V_Mute=1; (2) stubbed (00 F0 FC CB CB) FPC_SetPALSetting (0x570675F8), FPC_GetPALSetting (0x57067931), 5x 0xF9 GATE=15 handlers (0x570683FF/43D/499/4E0/548), FPC_CB_ReportEmergency (0x5750971C), and sys_cntl_fpc_emergency_reboot/sys_cntl_err_reboot (0x57509770, % 16 == 0); (3) WakeupReason 0x57504B28 (c411->ca11 -> 0x57512331 UI-ON) + ODD 80040904 MEDIA RESET auto-poff suppression (0x57506476/64B0/1EAB3/1EB37) keeping [POWER] (SYS_CNTL_Power) intact. Regenerated 4 M6930LB kits (br DC3115EE..., EXTRHEAD+0x28 stamp 0xDC434247 != 0xEF7A4404); COM10 STATUS read STANDBY (VDD=0.04V, NSW5V=0) -> ISOLATE.",
+      "sites": [
+        "0x5750BD6A & 0x571309CF (f1e2 -> 9a00: mov 0, a2)",
+        "0x570675F8 / 0x57067931 / 0x570683FF..8548 / 0x5750971C / 0x57509770 (00f0fccbcb)",
+        "0x57504B28 (c411 -> ca11: WakeupReason -> 0x57512331 Normal UI-ON)",
+        "0x57506476 / 0x575064B0 / 0x5751EAB3 / 0x5751EB37 (ODD 80040904 MEDIA RESET auto-poff suppressed)"
+      ],
+      "evidence_files": [
+        "docs/evidence/com10_m6930lb_14site_sd_boot_verify_20261125.log",
+        "profiles/firmware_trains/loader_ver061_toc48_main57.json",
+        "crates/panadiga-core/src/re/region_compat/tests.rs",
+        "crates/panadiga-core/src/re/unbrick_sd_kit/compose/tests.rs"
+      ],
+      "sha256_assertions": [],
+      "docs": [
+        "docs/pt-BR/HISTORICO_UNBRICK_EH55_BGO_CH1_DAVIS_E_REGIAO.md",
+        "docs/en-US/EH55_UNBRICK_BREAKTHROUGH_BGO_CH1_DAVIS_AND_REGION.md",
+        "docs/pt-BR/PESQUISA_PORTOES_VALIDACAO_SATA_STAGE2_E_RETARGET_BGO_8MB.md",
+        "docs/en-US/RESEARCH_VALIDATION_GATES_SATA_STAGE2_AND_8MB_BGO_RETARGET.md"
+      ]
+    },
+    {
+      "id": "EV-20261125-009",
+      "level": "N1_STATIC",
+      "claim_pt": "Complementacao do DigaOS bare-metal (hal/am34_mmio.h, drivers/{tbus_ic7501,aiof_video,avdd_iic_video,davis_sata,nor_bgo_ro}.c, kernel/digaos_main.c, test_digaos_host.c, profiles/digaos/default_digaos_config.json + digaos_ssot.h/.ts) com todos os achados de silicio EV-20261125-004..008: DACOUT1 real 0x0D00 (desmutado) / 0x8D00 (mudo), geometria AVDD 480i (0x4FB3) e 576i (0x4BB1), auto-deteccao IC3001 com fallback DIGAOS_VIDEO_IC_BH7629KS2_GPIO_M6930LB e comando 'video status', classificador TBUS RX zero-bias (0x7F nao-fatal, teclas 40 B0, RTC 10 00) e politica WakeupReason (hazard 0x70 / NORMAL_UION) + comando 'fpc', sondagem tolerante a falha DAVIS CH0 ('odd' 80040904 -> degraded_odd_bypass), decodificadores MAIN3410PQ cfg0117/avout_tv_system (rejeitando lixo 28359) e predicado de carimbo [HDD_AUTOBOOT] 0x504395FC, validados na suite host C11 (-Wall -Wextra -Werror) e paridade SSOT Rust/TS.",
+      "claim_en": "DigaOS bare-metal upgrade (hal/am34_mmio.h, drivers/{tbus_ic7501,aiof_video,avdd_iic_video,davis_sata,nor_bgo_ro}.c, kernel/digaos_main.c, test_digaos_host.c, profiles/digaos/default_digaos_config.json + digaos_ssot.h/.ts) integrating all EV-20261125-004..008 silicon findings: real silicon DACOUT1 0x0D00 (unmuted) / 0x8D00 (muted), AVDD 480i (0x4FB3) vs 576i (0x4BB1) geometry, IC3001 auto-bringup falling back to DIGAOS_VIDEO_IC_BH7629KS2_GPIO_M6930LB + 'video status' telemetry, zero-bias TBUS RX classifier (non-fatal 0x7F, 40 B0 keys, 10 00 RTC) and WakeupReason policy (0x70 XRESET hazard / NORMAL_UION) + 'fpc' command, fault-tolerant DAVIS CH0 probe ('odd' 80040904 -> degraded_odd_bypass), MAIN3410PQ cfg0117/avout_tv_system decoders (rejecting 28359 garbage), and [HDD_AUTOBOOT] 0x504395FC stamp matcher, verified via C11 host tests (-Wall -Wextra -Werror) and Rust/TS SSOT parity.",
+      "sites": [
+        "AVDD_DACOUT1 0x89800404 (0x0D00 unmuted / 0x8D00 muted) + 480i 0x4FB3 / 576i 0x4BB1 + video status",
+        "digaos_video_auto_bringup -> DIGAOS_VIDEO_IC_BH7629KS2_GPIO_M6930LB",
+        "digaos_tbus_classify_rx_frame (sum15 zero bias, 0x7F non-fatal) + digaos_classify_wakeup_reason (0x70 hazard / NORMAL_UION) + fpc",
+        "digaos_davis_probe_channel (CH0 ODD degraded_odd_bypass) + odd + digaos_autoboot_stamp_matches"
+      ],
+      "evidence_files": [
+        "profiles/digaos/default_digaos_config.json",
+        "firmware/digaos/generated/digaos_ssot.h",
+        "firmware/digaos/kernel/digaos_main.c",
+        "firmware/digaos/tests/test_digaos_host.c"
+      ],
+      "sha256_assertions": [],
+      "docs": [
+        "docs/pt-BR/DIGADIAG_PANA_SD_E_TBC_AUTONOMO.md",
+        "docs/en-US/DIGADIAG_PANA_SD_AND_STANDALONE_TBC.md"
+      ]
+    },
+    {
+      "id": "EV-20261125-010",
+      "level": "N2_EMULATED",
+      "claim_pt": "Erradicacao do fallback PAL 625 sem video (inclusive em SETUP) e da trava 'PLEASE WAIT' de ~32s ao desligar em MAIN3410PQ (49 sitios SSOT sem colisao com main_passthrough 0x5771ABFB; Mn103Vm 10/10 PASS + verify-sd --audit-profile hardened PASS): (1) Avdd_dvdvr_Init 0x57724096->DCO_NTSC_525 0x570B623C, 0x570B98EE 0x0384, 0x5772546D 0x0000 (0x8980040C=0x0242), 0x57725518 0x4FB3 e 0x5772553F 0x0D00 DAC ativo + AIOF_Init (0x570D6630/B1/E3/ED/F7 incluindo AIOF_FS0 0x8800002C=0x40F0 espelhado em DigaOS) + AVIN/AIOF (0x570D7C07/CE1) + AVIN_3YConoff 0x570CE4F2->0x09C4; (2) stubs 00 F0 FC para TUN_NotifyTVSystem (0x570DC732), sys_cntl_Standby Euro EPG/GATE=28/tuner/GuidePlus (0x570634B2/34F7, 0x570AC466, 0x576AF438), FPC 0xC2 GATE=21 B (0x5771AB1B) e set_power_save (0x57517163). Kits M6930LB regenerados (br 7.181.504 B, SHA-256 83714CAB..., stamp_0x504395FC=0x01264222 != 0xDC434247); captura passiva COM10 confirmou unidade viva em MAIN3410PQ (SYS_CNTL_PL_NTSC) antes de ISOLATE.",
+      "claim_en": "Root-cause fix for PAL 625 blank-video fallback (including in SETUP) and ~32s 'PLEASE WAIT' shutdown hang in MAIN3410PQ (49 SSOT sites avoiding collision with main_passthrough 0x5771ABFB; Mn103Vm 10/10 PASS + verify-sd --audit-profile hardened PASS): (1) Avdd_dvdvr_Init 0x57724096->DCO_NTSC_525 0x570B623C, 0x570B98EE 0x0384, 0x5772546D 0x0000 (0x8980040C=0x0242), 0x57725518 0x4FB3, and 0x5772553F 0x0D00 unmuted DAC + AIOF_Init (0x570D6630/B1/E3/ED/F7 incl. AIOF_FS0 0x8800002C=0x40F0 mirrored in DigaOS) + AVIN/AIOF (0x570D7C07/CE1) + AVIN_3YConoff 0x570CE4F2->0x09C4; (2) 00 F0 FC stubs for TUN_NotifyTVSystem (0x570DC732), sys_cntl_Standby EU EPG/GATE=28/tuner/GuidePlus (0x570634B2/34F7, 0x570AC466, 0x576AF438), FPC 0xC2 GATE=21 B (0x5771AB1B), and set_power_save (0x57517163). Regenerated 4 M6930LB kits (br 7,181,504 B, SHA-256 83714CAB..., stamp_0x504395FC=0x01264222 != 0xDC434247); passive COM10 capture verified board awake in MAIN3410PQ (SYS_CNTL_PL_NTSC) prior to ISOLATE.",
+      "sites": [
+        "0x57724096 / 0x570B98EE / 0x5772546D / 0x57725518 / 0x5772553F (AVDD NTSC 525 4FB3/0D00/0242/0384)",
+        "0x570D6630 / B1 / E3 / ED / F7 + 0x570D7C07 / CE1 + 0x570CE4F2 (AIOF_Init/FS0 40F0 + AVIN_3YConoff 0x09C4)",
+        "0x570DC732 / 0x570634B2 / 0x570634F7 / 0x570AC466 / 0x576AF438 / 0x5771AB1B / 0x57517163 (00f0fc Standby/TUN stubs)"
+      ],
+      "evidence_files": [
+        "docs/evidence/com10_m6930lb_ntsc525_poff_verify_20261125.log",
+        "profiles/firmware_trains/loader_ver061_toc48_main57.json",
+        "crates/panadiga-core/src/re/region_compat/tests.rs",
+        "firmware/digaos/drivers/aiof_video.c"
+      ],
+      "sha256_assertions": [
+        {
+          "path": "docs/evidence/com10_m6930lb_ntsc525_poff_verify_20261125.log",
+          "sha256": "5BE66242F962EB667C243BE6EB420B8F74563CE5D68187427502A31A47E03DC3",
+          "required": true
+        }
+      ],
+      "docs": [
+        "docs/pt-BR/HISTORICO_UNBRICK_EH55_BGO_CH1_DAVIS_E_REGIAO.md",
+        "docs/en-US/EH55_UNBRICK_BREAKTHROUGH_BGO_CH1_DAVIS_AND_REGION.md",
+        "docs/pt-BR/DIGADIAG_PANA_SD_E_TBC_AUTONOMO.md",
+        "docs/en-US/DIGADIAG_PANA_SD_AND_STANDALONE_TBC.md"
+      ]
+    },
+    {
+      "id": "EV-20261125-011",
+      "level": "N4_HARDWARE",
+      "claim_pt": "Telemetria ao vivo na COM10 em MAIN3410PQ (DMR-EH55LB-S M6930LB / VEP79138): capturas passivas de teclas frontais, [POWER] (75s) e verificacao ndb> provaram 0x89800404=0x0DDF (bit15=0 + byte baixo 0xDF ligando os 6 DACs de video em vez de 0x0D00), 0x89800402=0x4FB3, 0x8800002C=0x40F0 e 0x8980041C=0x0384 estaveis em silicio, alem de registrar M6// FPC_VIDEO_OUT_ON -> FPC_PLAYCondition 0xA9 (7F A9), ATP_START em [CH UP]+[CH DOWN] e os timeouts GATE=30/GATE=19 + Soft-Standby 0x81 0x02 no desligamento, encerrando em ISOLATE+STATUS (VDD=3.26V, NSW5V=1, fault_latch=0).",
+      "claim_en": "Live COM10 telemetry in MAIN3410PQ (DMR-EH55LB-S M6930LB / VEP79138): passive front-panel key, [POWER] (75s), and ndb> captures proved 0x89800404=0x0DDF (bit15=0 + low byte 0xDF powering all 6 video DACs instead of 0x0D00), 0x89800402=0x4FB3, 0x8800002C=0x40F0, and 0x8980041C=0x0384 stable on silicon, while capturing M6// FPC_VIDEO_OUT_ON -> FPC_PLAYCondition 0xA9 (7F A9), ATP_START on [CH UP]+[CH DOWN], and GATE=30/GATE=19 + Soft-Standby 0x81 0x02 during power-off, closing in ISOLATE+STATUS (VDD=3.26V, NSW5V=1, fault_latch=0).",
+      "sites": [
+        "COM10 LIVE AVDD/AIOF: 0x89800402=0x4FB3, 0x89800404=0x0DDF (6 video DACs enabled), 0x8800002C=0x40F0, 0x8980041C=0x0384",
+        "M6// FPC_VIDEO_OUT_ON @ 0x5750EE35 -> FPC 0xA9 (7F A9); [CH UP]+[CH DOWN] -> ATP_START @ 0x57507927",
+        "SysCntl_FPC_PowerOff -> 0x57062BD7 (GATE=30) + 2x 0x57065E05 (GATE=19) + 0x570626A0 (0x81 mode 0x02)"
+      ],
+      "evidence_files": [
+        "docs/evidence/com10_m6930lb_keys_poff_passive_20261125.log",
+        "docs/evidence/com10_m6930lb_power_btn_75s_20261125.log",
+        "docs/evidence/com10_m6930lb_bh7629_iic5_live_20261125.log"
+      ],
+      "sha256_assertions": [
+        {
+          "path": "docs/evidence/com10_m6930lb_keys_poff_passive_20261125.log",
+          "sha256": "695F618B19041BCB80D0980A8B9AA2FB5D387D7E61F9FB07226B2E1C5E56B72D",
+          "required": true
+        },
+        {
+          "path": "docs/evidence/com10_m6930lb_power_btn_75s_20261125.log",
+          "sha256": "03256D69C3ECD398A0E5CC930C7F73AB15D8D995C407AEF4810FBFC49FB38CF2",
+          "required": true
+        },
+        {
+          "path": "docs/evidence/com10_m6930lb_bh7629_iic5_live_20261125.log",
+          "sha256": "F1F67575CE7A74F131F49C9266311E1893E5B9AFCE754EB4A43A2D68C931F427",
+          "required": true
+        }
+      ],
+      "docs": [
+        "docs/pt-BR/HISTORICO_UNBRICK_EH55_BGO_CH1_DAVIS_E_REGIAO.md",
+        "docs/en-US/EH55_UNBRICK_BREAKTHROUGH_BGO_CH1_DAVIS_AND_REGION.md"
+      ]
+    },
+    {
+      "id": "EV-20261125-012",
+      "level": "N2_EMULATED",
+      "claim_pt": "Promocao SSOT de 58 sitios em MAIN3410PQ + upgrade DigaOS C11 + 4 kits M6930LB endurecidos (Mn103Vm 11/11 + C11 Gate 8 + verify-sd --audit-profile hardened PASS): (1) 0x5772553F -> 0x0DDF, 3x AIOF_Set_Standard* (0x570D731E/74/9A -> 0x40F0) e cave de 58 B em 0x57000A20 chamada em 0x5750EE35 invocando iic5_write (0x57400722) para IC3001 BH7629KS2 (0x90: 10 08 07 63 C0 30, provado pela execucao de tim_iic_init + tim_Video_sel_set_all do MAIN3060NP no Mn103Vm) e chave de audio (0x84: 03 80 00 22); (2) desligamento instantaneo 'BYE' e Standby real NSW5V=0 liberando SERV/TEST (0x57062BD7, 0x57065E05 -> 00f0fccbcb; 0x570626A0 -> 8001) + bypass ATP_START em [CH UP]+[CH DOWN] (0x57507927 -> 0x57507B86); (3) DigaOS atualizado com DIGAOS_AVDD_DACOUT1_UNMUTED=0x0DDF, digaos_iic5_init_m6930lb_av e frames TBUS 0x81/0x83; (4) kits regenerados com carimbo [HDD_AUTOBOOT] 0x504395FC=0x7137448B (br SHA-256 275B743B..., 7.181.576 B).",
+      "claim_en": "58-site MAIN3410PQ SSOT promotion + DigaOS C11 upgrade + 4 hardened M6930LB SD kits (Mn103Vm 11/11 + C11 Gate 8 + verify-sd --audit-profile hardened PASS): (1) 0x5772553F -> 0x0DDF, 3x AIOF_Set_Standard* (0x570D731E/74/9A -> 0x40F0), and 58-byte zero-slack cave at 0x57000A20 hooked at 0x5750EE35 calling iic5_write (0x57400722) for IC3001 BH7629KS2 (0x90: 10 08 07 63 C0 30, proven by executing MAIN3060NP tim_iic_init + tim_Video_sel_set_all in Mn103Vm) and audio switch (0x84: 03 80 00 22); (2) instant 'BYE' shutdown & true NSW5V=0 Standby unlocking SERV/TEST (0x57062BD7, 0x57065E05 -> 00f0fccbcb; 0x570626A0 -> 8001) + [CH UP]+[CH DOWN] ATP_START skip (0x57507927 -> 0x57507B86); (3) DigaOS upgraded with DIGAOS_AVDD_DACOUT1_UNMUTED=0x0DDF, digaos_iic5_init_m6930lb_av, and TBUS 0x81/0x83 builders; (4) regenerated kits with [HDD_AUTOBOOT] stamp 0x504395FC=0x7137448B (br SHA-256 275B743B..., 7,181,576 B).",
+      "sites": [
+        "0x5772553F (0x0DDF) + 0x570D731E / 0x570D7374 / 0x570D739A (0x40F0)",
+        "0x5750EE35 -> 0x57000A20 -> 0x57400722 (IIC5 0x90: 10 08 07 63 C0 30; 0x84: 03 80 00 22)",
+        "0x57062BD7 / 0x57065E05 (00f0fccbcb) + 0x570626A0 (8001 NSW5V=0 Standby) + 0x57507927 -> 0x57507B86 (ATP skip)"
+      ],
+      "evidence_files": [
+        "profiles/firmware_trains/loader_ver061_toc48_main57.json",
+        "crates/panadiga-core/src/re/region_compat/tests.rs",
+        "firmware/digaos/drivers/avdd_iic_video.c",
+        "firmware/digaos/drivers/tbus_ic7501.c",
+        "firmware/digaos/tests/test_digaos_host.c"
+      ],
+      "sha256_assertions": [
+        {
+          "path": "firmware_and_images/sd_unbrick_kit_m6930lb_br/PANA__SD.FRM",
+          "sha256": "275B743BDED23DC8377884E9E04C05CBCE44BF983D9790F25AFCC870E7E9CE3D",
+          "required": false
+        },
+        {
+          "path": "firmware_and_images/sd_unbrick_kit_m6930lb_ntscj/PANA__SD.FRM",
+          "sha256": "829B38B6127FEF70C84CBA0A90869CA2C5F62C7289293733E6CAAE63D400935E",
+          "required": false
+        },
+        {
+          "path": "firmware_and_images/sd_unbrick_kit_m6930lb_palm/PANA__SD.FRM",
+          "sha256": "C6EFA39D2AB26F40F7BC8DEAC3827D63B97A8E3D6DE4A2CDE18A29ADD965D796",
+          "required": false
+        },
+        {
+          "path": "firmware_and_images/sd_unbrick_kit_m6930lb_pal/PANA__SD.FRM",
+          "sha256": "A8B7EFCFBE64763469F5141A22B49301691F736834A75E31BBDE642E4DB7730A",
+          "required": false
+        }
+      ],
+      "docs": [
+        "docs/pt-BR/HISTORICO_UNBRICK_EH55_BGO_CH1_DAVIS_E_REGIAO.md",
+        "docs/en-US/EH55_UNBRICK_BREAKTHROUGH_BGO_CH1_DAVIS_AND_REGION.md"
       ]
     }
   ]

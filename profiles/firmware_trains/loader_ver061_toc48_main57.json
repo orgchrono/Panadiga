@@ -14,7 +14,10 @@
     "toc_size": "0x1800",
     "cipher": "feistel64_ecb",
     "key_id": "pana_dvd_eh55",
-    "official_frm_sha256": null
+    "official_frm_sha256": "aeff6c81ee7397a5eecbd3e0b943159be3d1ab4b680d8539b2df2c278bf2ec9e",
+    "rebuilt_sd_frm_sha256": "8c2cb646d1faae997451356324d9b59d0888674499086f91e59158b8e5f82996",
+    "rebuilt_sd_frm_bytes": 11568392,
+    "rebuilt_dvd_frm_sha256": "eda473f02c867c8fea301b5f32a0e092b0979ce007e81bd238b6c387b23e281f"
   },
   "prog_load_va": "0x5040_0000",
   "main_load_va": "0x5700_0000",
@@ -56,7 +59,8 @@
     "sources_from_panamon_dump": [
       "nor_sa15_sa25_drv",
       "sd_prog061_retargeted",
-      "hdd_part1_main"
+      "hdd_part1_main",
+      "dvd_user040_tvgos"
     ]
   },
   "bgo_retarget_spec": {
@@ -486,6 +490,15 @@
     "hook_offset": "0x000050D3",
     "hook_expect_hex": "dd084f00000000",
     "payload_offset": "0x00039600",
+    "expected_main_adler32_offset": "0x000395FC",
+    "expected_main_adler32_value": "0xE07837F4",
+    "forcefvu_trigger_file": "FORCEFVU.TXT",
+    "norfrom_sd_trap_bypass": {
+      "va": "0x5043969D",
+      "expect_hex": "fca400",
+      "replace_hex": "cc5100",
+      "description": "Skip unconditional Nor-FROM+SD -> FVU trap, jump to 0x504396EE HDD boot"
+    },
     "require_reset_fix_1000ms": true,
     "uart_abort_polls": 50,
     "uart_poll_ticks_10ms": 1,
@@ -580,11 +593,238 @@
           "description": "MAIN3060NP aiof_sub_dd.c I2C 0x94 video switch bypass for M6930LB IC3001 BH7629KS2 -> mov 0, d0; rets; nop",
           "va": "0x570DF34A",
           "expect_hex": "cff2f8fee8",
-          "replace_hex": "8000f0fccb",
-          "tv_profiles": ["ntsc-m", "ntsc-j", "pal-m"]
+          "replace_hex": "8000f0fccb"
         }
       ],
       "unpacked_sha256": "075f552ed583ba1835c0d44d1b533ff5a016b8d81d15d7166240098461ddcca7"
+    },
+    {
+      "build_id": "3050UP",
+      "slot_name": "MAIN3050UP",
+      "frm_version_u16": "0xA405",
+      "base_va": "0x57000000",
+      "unpacked_size": 13776604,
+      "region_tv_standard": "ntsc",
+      "model_markers": [
+        "DMR-EH55"
+      ],
+      "chassis_family": "M6930LB",
+      "native_bgo_geometry_id": "BGO_45SEC_8MB_0X84130000",
+      "native_bgo_detect_va": "0x57B9BD58",
+      "native_bgo_flash_base_va": "0x84130000",
+      "supports_bgo_retarget_to": [],
+      "sata_bridge_reset_spec": {
+        "target_name": "MAIN3050UP",
+        "base_va": "0x57000000",
+        "expected_size": 13776604,
+        "factory_wait_ms": 2,
+        "patched_wait_ms": 1000,
+        "sleep_callee_va": "0x574EC4A3",
+        "site": {
+          "name": "main3050up_sata_bridge_reset_wait",
+          "description": "MAIN3050UP post-RESET- 2 ms udelay -> 1000 ms RTOS wait (0x574EC4A3)",
+          "va": "0x57107B99",
+          "expect_hex": "2cd00789dda7c9ffff0000",
+          "replace_hex": "2c640089dd06493e000000",
+          "symbol_ref": "rtsd_sleep_10ms"
+        }
+      },
+      "av_passthrough_sites": [
+        {
+          "name": "m6930lb_3050up_fpc_status_ctrl",
+          "description": "Front-panel status control -> mov 1, d0; ret",
+          "va": "0x578E893E",
+          "expect_hex": "cfe0f8fed082",
+          "replace_hex": "8001f0fccbcb"
+        },
+        {
+          "name": "m6930lb_3050up_odd_state_branch",
+          "description": "ODD state branch -> jmp16 +0x95 (0x57503C2C)",
+          "va": "0x57503B97",
+          "expect_hex": "bf03c110",
+          "replace_hex": "cc9500cb"
+        },
+        {
+          "name": "m6930lb_3050up_odd_init_status",
+          "description": "ODD init return status -> clr d0",
+          "va": "0x57503C2C",
+          "expect_hex": "dd203100000000",
+          "replace_hex": "8000cbcbcbcbcb"
+        }
+      ],
+      "region_localization_sites": [
+        {
+          "name": "m6930lb_3050up_odd_media_reset_ok_no_poff",
+          "description": "SYS_APP_MEDIA_RESET_OK skip sys_cntl_pow_request_poff",
+          "va": "0x575111DD",
+          "expect_hex": "dd7b8a02000000",
+          "replace_hex": "ca10cbcbcbcbcb"
+        },
+        {
+          "name": "m6930lb_3050up_odd_media_reset_ng_no_poff",
+          "description": "SYS_APP_MEDIA_RESET_NG skip sys_cntl_pow_request_poff",
+          "va": "0x57511217",
+          "expect_hex": "dd418a02000000",
+          "replace_hex": "ca10cbcbcbcbcb"
+        },
+        {
+          "name": "m6930lb_3050up_odd_media_reset_wait_a_no_poff",
+          "description": "MEDIA RESET Wait A suppress sys_cntl_pow_request_poff",
+          "va": "0x5752810A",
+          "expect_hex": "dd4e1b01000000",
+          "replace_hex": "00cbcbcbcbcbcb"
+        },
+        {
+          "name": "m6930lb_3050up_odd_media_reset_wait_b_no_poff",
+          "description": "MEDIA RESET Wait B suppress sys_cntl_pow_request_poff",
+          "va": "0x5752818E",
+          "expect_hex": "ddca1a01000000",
+          "replace_hex": "00cbcbcbcbcbcb"
+        },
+        {
+          "name": "m6930lb_3050up_fpc_0x7f_rcv_ignore",
+          "description": "fpcrcv.c MN67788RA 0x7F reply -> bra 0x57061606",
+          "va": "0x570615BC",
+          "expect_hex": "dd314f00000000",
+          "replace_hex": "ca4acbcbcbcbcb"
+        },
+        {
+          "name": "m6930lb_3050up_fpc_0x7f_snd_ignore",
+          "description": "fpcsnd.c MN67788RA 0x7F -> bra 0x570686A6 epilogue",
+          "va": "0x57068670",
+          "expect_hex": "dd7ddeffff0000",
+          "replace_hex": "ca36cbcbcbcbcb"
+        },
+        {
+          "name": "m6930lb_3050up_fpc_report_emergency_noop",
+          "description": "FPC_CB_ReportEmergency suppress emergency escalation",
+          "va": "0x57513CFA",
+          "expect_hex": "cf80f8fef4",
+          "replace_hex": "00f0fccbcb"
+        },
+        {
+          "name": "m6930lb_3050up_fpc_emergency_u99_noop",
+          "description": "sys_cntl_fpc_emergency_reboot suppress U88/U61/U99 forced reboot",
+          "va": "0x57513D4E",
+          "expect_hex": "cf80f8feec",
+          "replace_hex": "00f0fccbcb"
+        },
+        {
+          "name": "m6930lb_3050up_ic3001_bh7629_iic",
+          "description": "aiof_sub_dd.c I2C 0x94 bypass for M6930LB IC3001 BH7629KS2",
+          "va": "0x570D09BE",
+          "expect_hex": "cff2f8fee8",
+          "replace_hex": "8000f0fccb"
+        },
+        {
+          "name": "m6930lb_3050up_avin_aiof_iic_no_assert",
+          "description": "avin_aiof_sub_input_com (src/avin_funcs_com.c:3759) bra +0x25 to epilogue 0x570D593D instead of kernel ASSERT on IIC send error",
+          "va": "0x570D5918",
+          "expect_hex": "c825",
+          "replace_hex": "ca25"
+        },
+        {
+          "name": "m6930lb_3050up_avout_vmute_unmute",
+          "description": "AVOUT_V_Mute force unmute",
+          "va": "0x5712E1D7",
+          "expect_hex": "f1e2",
+          "replace_hex": "9a00"
+        },
+        {
+          "name": "m6930lb_3050up_avdd_dacout1_unmute_0d00",
+          "description": "Avdd_Set_DacOut write 0x0DDF instead of 0x8D00",
+          "va": "0x578F2CEC",
+          "expect_hex": "fccc008d0000",
+          "replace_hex": "fcccdf0d0000"
+        },
+        {
+          "name": "m6930lb_3050up_skip_tvgos_first_time_setup",
+          "description": "Skip US TVGOS Start Guide First Time Setup (mode 19 / sys_gem_tvc) -> fall through to jmp16 0x575126B8",
+          "va": "0x57512634",
+          "expect_hex": "c805",
+          "replace_hex": "cbcb"
+        },
+        {
+          "name": "m6930lb_3050up_iic5_bh7629_av_init_cave",
+          "description": "v13 cave calling TIM_Init (0x5709B5AF), populating BH7629KS2 shadow 0x52427D80, calling iic5_write (0x90 & 0x84), calling FPC_VMUTE2Control(0) (0x5706442A), and logging live iic90/iic84 return codes via TIM log_printf",
+          "va": "0x57000A20",
+          "expect_hex": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "replace_hex": "cfc0f8fee0dd8aab090000008010fc82807d42528008fc82817d42528007fc82827d42528063fc82837d42522cc000fc82847d42528030fc82857d42528006420cfccd807d42522c9000dd82ce40000000f1e28004420cfccdb00a00572c8400dd6cce40000000f1e300dda039060000004a0c4e10fccdc00a0057fccc00800000ddd7af0900000000dfc028cbcbcbcb038000220000000000000000000000005631332069696339303d25782069696338343d25780a00"
+        },
+        {
+          "name": "m6930lb_3050up_sysboot_tim_init_iic5_hook",
+          "description": "sys_boot.c TIM_Init call redirected to v13 cave (0x57000A20)",
+          "va": "0x57502C6A",
+          "expect_hex": "dd4589b9ff0000",
+          "replace_hex": "ddb6ddafff0000"
+        },
+        {
+          "name": "m6930lb_3050up_nmi_skip_all_tasks_dump",
+          "description": "nmi.a skip 120-task dump (call 0x574BB125) so NMICR, sISR, Register Dump and Current task backtrace print immediately if an exception occurs",
+          "va": "0x574BBE9C",
+          "expect_hex": "cd89f20000",
+          "replace_hex": "cbcbcbcbcb"
+        },
+        {
+          "name": "m6930lb_3050up_skip_plugin_atp_setup",
+          "description": "sys_cntl skip SysCntl:start_plugin_ATP (EASY SETTING[0] / shipping condition SETUP lockout) -> bra +0x2E (0x575101BF)",
+          "va": "0x57510191",
+          "expect_hex": "c92e",
+          "replace_hex": "ca2e"
+        },
+        {
+          "name": "m6930lb_3050up_skip_upd_rec_check_rn_pg",
+          "description": "sys_media_drive_StartBlock skip call 0x5761CFE4 (sys_media_rec_CheckRnPgSizeTable) which smashed stack on erased BGO record",
+          "va": "0x5761097B",
+          "expect_hex": "dd69c600000000",
+          "replace_hex": "cbcbcbcbcbcbcb"
+        },
+        {
+          "name": "m6930lb_3050up_avdd_dacout1_unmute_0b9f9a",
+          "description": "AVDD_DACOUT1 (0x89800404) site 0x570B9F9A write 0x0DDF instead of 0x0D00",
+          "va": "0x570B9F8F",
+          "expect_hex": "2c000d",
+          "replace_hex": "2cdf0d"
+        },
+        {
+          "name": "m6930lb_3050up_avdd_dacout1_unmute_8f631a",
+          "description": "AVDD_DACOUT1 (0x89800404) site 0x578F631A write 0x0DDF instead of 0x0D00",
+          "va": "0x578F630F",
+          "expect_hex": "2c000d",
+          "replace_hex": "2cdf0d"
+        },
+        {
+          "name": "m6930lb_3050up_avout_v_freemute_unmute",
+          "description": "AVOUT_V_FreeMute_Set force Mute=0 (f1 e2 -> 9a 00)",
+          "va": "0x5712F5A7",
+          "expect_hex": "f1e2",
+          "replace_hex": "9a00"
+        },
+        {
+          "name": "m6930lb_3050up_unmask_video_ic_log",
+          "description": "tim_Video_sel_set unmask VIDEO IC DATA 1-6[%x %x %x %x %x %x] (mask 0x0200 -> 0xFFFF8000)",
+          "va": "0x5709C12D",
+          "expect_hex": "2c0002",
+          "replace_hex": "2c0080"
+        },
+        {
+          "name": "m6930lb_3050up_unmask_audio_ic_log",
+          "description": "tim_audio_sel_set unmask AUDIO IC DATA 1-4[%x %x %x %x] (mask 0x0200 -> 0xFFFF8000)",
+          "va": "0x5709BDCC",
+          "expect_hex": "2c0002",
+          "replace_hex": "2c0080"
+        },
+        {
+          "name": "m6930lb_3050up_unmask_fpc_avmute_log",
+          "description": "FPC_AVMuteControl unmask FPC_AVMuteControl(%d) (mask 0x01 -> 0xFFFFFF80)",
+          "va": "0x57062809",
+          "expect_hex": "8001",
+          "replace_hex": "8080"
+        }
+      ],
+      "unpacked_sha256": "206a49a06c6384e84c4281f32504eaf65ca5ae3c7ede601978cc4f209728b9a6",
+      "patched_unpacked_sha256": "4f39a0acc10cafc0d1cce2bae045b8227fe60127574636a1963aad8a969ef277",
+      "patched_adler32_stride16": "0xE07837F4"
     },
     {
       "build_id": "3410PQ",
@@ -669,8 +909,7 @@
           "description": "MAIN3410PQ aiof_sub_dd.c I2C 0x94 video switch bypass for M6930LB IC3001 BH7629KS2 -> mov 0, d0; rets; nop",
           "va": "0x570D625E",
           "expect_hex": "cff2f8fee8",
-          "replace_hex": "8000f0fccb",
-          "tv_profiles": ["ntsc-m", "ntsc-j", "pal-m"]
+          "replace_hex": "8000f0fccb"
         },
         {
           "name": "m6930lb_3410pq_fpc_0x7f_rcv_ignore",
@@ -702,19 +941,22 @@
         },
         {
           "name": "m6930lb_3410pq_tv_system_60hz_ntsc",
-          "description": "MAIN3410PQ SYS_CNTL_PAL_NTSC_Change force d2=0 (TV_NTSC 525-line 480i 60Hz) on M6930LB hardware",
+          "description": "MAIN3410PQ SYS_CNTL_PAL_NTSC_Change force a2=0 -> d2=0 (TV_NTSC 525-line 480i 60Hz) on M6930LB hardware",
           "va": "0x5750BD6A",
           "expect_hex": "f1e2",
-          "replace_hex": "8a00",
-          "tv_profiles": ["ntsc-m", "ntsc-j", "pal-m"]
+          "replace_hex": "9a00",
+          "tv_profiles": [
+            "ntsc-m",
+            "ntsc-j",
+            "pal-m"
+          ]
         },
         {
           "name": "m6930lb_3410pq_avout_vmute_unmute",
-          "description": "MAIN3410PQ AVOUT_V_Mute(onoff) force d2=0 so AVDD_DACOUT1 stays unmuted (0x0D00) with avout_v_initialized=1",
+          "description": "MAIN3410PQ AVOUT_V_Mute(onoff) force a2=0 -> d2=0 so AVDD_DACOUT1 stays unmuted (0x0D00) with avout_v_initialized=1",
           "va": "0x571309CF",
           "expect_hex": "f1e2",
-          "replace_hex": "8a00",
-          "tv_profiles": ["ntsc-m", "ntsc-j", "pal-m"]
+          "replace_hex": "9a00"
         },
         {
           "name": "m6930lb_3410pq_config1_default_ntsc",
@@ -722,7 +964,11 @@
           "va": "0x57AEFBAC",
           "expect_hex": "00",
           "replace_hex": "01",
-          "tv_profiles": ["ntsc-m", "ntsc-j", "pal-m"]
+          "tv_profiles": [
+            "ntsc-m",
+            "ntsc-j",
+            "pal-m"
+          ]
         },
         {
           "name": "m6930lb_3410pq_cav_boot_ntsc",
@@ -730,7 +976,11 @@
           "va": "0x574F6F2D",
           "expect_hex": "f8bb13a3c90388",
           "replace_hex": "cbcbcbcbcbcbcb",
-          "tv_profiles": ["ntsc-m", "ntsc-j", "pal-m"]
+          "tv_profiles": [
+            "ntsc-m",
+            "ntsc-j",
+            "pal-m"
+          ]
         },
         {
           "name": "m6930lb_3410pq_boot_pal_ntsc_force",
@@ -738,7 +988,420 @@
           "va": "0x575041FF",
           "expect_hex": "c91b",
           "replace_hex": "cbcb",
-          "tv_profiles": ["ntsc-m", "ntsc-j", "pal-m"]
+          "tv_profiles": [
+            "ntsc-m",
+            "ntsc-j",
+            "pal-m"
+          ]
+        },
+        {
+          "name": "m6930lb_3410pq_aiof_pedestal_75ire",
+          "description": "MAIN3410PQ AIOF_Set_VideoOut (src/aiof_sub_dd.c) cmd 0x55 (ntsc_setup_lighter 0 IRE) -> 0x54 (ntsc_setup_darker 7.5 IRE) for NTSC-M",
+          "va": "0x570D674D",
+          "expect_hex": "8055",
+          "replace_hex": "8054",
+          "tv_profiles": [
+            "ntsc-m"
+          ]
+        },
+        {
+          "name": "m6930lb_3410pq_aiof_cps_palm",
+          "description": "MAIN3410PQ AIOF_Set_CPS_NTSC (src/aiof_sub_dd.c) cmd 0x02 (cps_ntsc 0x8020 3.579545MHz) -> 0x03 (cps_pal_m 0x8021 3.575611MHz) for Brazilian PAL-M",
+          "va": "0x570D679F",
+          "expect_hex": "8002",
+          "replace_hex": "8003",
+          "tv_profiles": [
+            "pal-m"
+          ]
+        },
+        {
+          "name": "m6930lb_3410pq_setinfo_tv_system_lock_ntsc",
+          "description": "MAIN3410PQ sys_cntl_setinfo.c descriptor 0x0117 (TV_SYSTEM) ram_va -> 0x57AEFBAC (0x01) + no-op setter 0x5750C377 so [nfrom] BGO config1 cannot revert to TV_PAL",
+          "va": "0x57AEE214",
+          "expect_hex": "305e18534d6c5157",
+          "replace_hex": "acfbae5777c35057",
+          "tv_profiles": [
+            "ntsc-m",
+            "ntsc-j",
+            "pal-m"
+          ]
+        },
+        {
+          "name": "m6930lb_3410pq_sysboot_avout_ntsc",
+          "description": "MAIN3410PQ sys_boot.c AVOUT_SetInitParam (0x5712FC00) keep d2=0 (AVOUT_TV_SYSTEM_NTSC) via 8x nop (0xCB) at 16B-aligned VA 0x574F6920",
+          "va": "0x574F6920",
+          "expect_hex": "fbd80000c9048a01",
+          "replace_hex": "cbcbcbcbcbcbcbcb",
+          "tv_profiles": [
+            "ntsc-m",
+            "ntsc-j",
+            "pal-m"
+          ]
+        },
+        {
+          "name": "m6930lb_3410pq_fpc_e3_set_pal_skip",
+          "description": "MAIN3410PQ fpcpal.c FPC_SetPALSetting skip European 0xE3 GATE=14 + 0xEC GATE=39 -> clr d0; rets; nop; nop",
+          "va": "0x570675F8",
+          "expect_hex": "cfe0f8fecc",
+          "replace_hex": "00f0fccbcb"
+        },
+        {
+          "name": "m6930lb_3410pq_fpc_e3_get_pal_skip",
+          "description": "MAIN3410PQ fpcpal.c FPC_GetPALSetting skip European 0xE3 GATE=14 + 0xEC GATE=39 -> clr d0; rets; nop; nop",
+          "va": "0x57067931",
+          "expect_hex": "cff2f8fecc",
+          "replace_hex": "00f0fccbcb"
+        },
+        {
+          "name": "m6930lb_3410pq_fpc_f9_gate15_fn1_skip",
+          "description": "MAIN3410PQ fpctun.c FPC_0xF9_fn1 skip European 0xF9 GATE=15 30s timeout -> clr d0; rets; nop; nop",
+          "va": "0x570683FF",
+          "expect_hex": "cfa0f8fed0",
+          "replace_hex": "00f0fccbcb"
+        },
+        {
+          "name": "m6930lb_3410pq_fpc_f9_gate15_fn2_skip",
+          "description": "MAIN3410PQ fpctun.c FPC_0xF9_fn2 skip European 0xF9 GATE=15 30s timeout -> clr d0; rets; nop; nop",
+          "va": "0x5706843D",
+          "expect_hex": "cff0f8fed0",
+          "replace_hex": "00f0fccbcb"
+        },
+        {
+          "name": "m6930lb_3410pq_fpc_f9_gate15_fn3_skip",
+          "description": "MAIN3410PQ fpctun.c FPC_0xF9_fn3 (P50ReceiveCntl) skip European 0xF9 GATE=15 30s timeout -> clr d0; rets; nop; nop",
+          "va": "0x57068499",
+          "expect_hex": "cfa0f8fed0",
+          "replace_hex": "00f0fccbcb"
+        },
+        {
+          "name": "m6930lb_3410pq_fpc_f9_gate15_fn4_skip",
+          "description": "MAIN3410PQ fpctun.c FPC_0xF9_fn4 skip European 0xF9 GATE=15 30s timeout -> clr d0; rets; nop; nop",
+          "va": "0x570684E0",
+          "expect_hex": "cfe0f8fed0",
+          "replace_hex": "00f0fccbcb"
+        },
+        {
+          "name": "m6930lb_3410pq_fpc_f9_gate15_fn5_skip",
+          "description": "MAIN3410PQ fpctun.c FPC_0xF9_fn5 (WakeupReason) skip European 0xF9 GATE=15 30s timeout -> clr d0; rets; nop; nop",
+          "va": "0x57068548",
+          "expect_hex": "cfa0f8fed0",
+          "replace_hex": "00f0fccbcb"
+        },
+        {
+          "name": "m6930lb_3410pq_fpc_report_emergency_noop",
+          "description": "MAIN3410PQ FPC_CB_ReportEmergency suppress MN67788RA 0x7F / timeout emergency escalation -> clr d0; rets; nop; nop",
+          "va": "0x5750971C",
+          "expect_hex": "cf80f8fef4",
+          "replace_hex": "00f0fccbcb"
+        },
+        {
+          "name": "m6930lb_3410pq_fpc_emergency_u99_noop",
+          "description": "MAIN3410PQ sys_cntl_fpc_emergency_reboot / sys_cntl_err_reboot suppress U88/U61/U99 forced reboot -> clr d0; rets; nop; nop",
+          "va": "0x57509770",
+          "expect_hex": "cf80f8fee8",
+          "replace_hex": "00f0fccbcb"
+        },
+        {
+          "name": "m6930lb_3410pq_wakeup_force_uion_normal",
+          "description": "MAIN3410PQ sys_cntl_boot WakeupReason bra 0x57504B39 (0x57512331 Normal UI-ON) avoiding UIOFF HELLO->BYE trap",
+          "va": "0x57504B28",
+          "expect_hex": "c411",
+          "replace_hex": "ca11"
+        },
+        {
+          "name": "m6930lb_3410pq_odd_media_reset_ok_no_poff",
+          "description": "MAIN3410PQ SYS_APP_MEDIA_RESET_OK bra 0x57506486 timer cleanup skipping auto-poff on bench ODD 80040904",
+          "va": "0x57506476",
+          "expect_hex": "dd8ca402000000",
+          "replace_hex": "ca10cbcbcbcbcb"
+        },
+        {
+          "name": "m6930lb_3410pq_odd_media_reset_ng_no_poff",
+          "description": "MAIN3410PQ SYS_APP_MEDIA_RESET_NG bra 0x575064C0 epilogue skipping auto-poff and error reboot on bench ODD 80040904",
+          "va": "0x575064B0",
+          "expect_hex": "dd52a402000000",
+          "replace_hex": "ca10cbcbcbcbcb"
+        },
+        {
+          "name": "m6930lb_3410pq_odd_media_reset_wait_a_no_poff",
+          "description": "MAIN3410PQ sys_cntl MEDIA RESET Wait A suppress sys_cntl_pow_request_poff(3, 1) on bench ODD 80040904",
+          "va": "0x5751EAB3",
+          "expect_hex": "dd4f1e01000000",
+          "replace_hex": "00cbcbcbcbcbcb"
+        },
+        {
+          "name": "m6930lb_3410pq_odd_media_reset_wait_b_no_poff",
+          "description": "MAIN3410PQ sys_cntl MEDIA RESET Wait B suppress sys_cntl_pow_request_poff(3, 0) on bench ODD 80040904",
+          "va": "0x5751EB37",
+          "expect_hex": "ddcb1d01000000",
+          "replace_hex": "00cbcbcbcbcbcb"
+        },
+        {
+          "name": "m6930lb_3410pq_avdd_dvdvr_init_ntsc525",
+          "description": "MAIN3410PQ Avdd_dvdvr_Init call DCO_NTSC_525 (0x570B623C) instead of DCO_PAL_625 (0x570B9873)",
+          "va": "0x57724096",
+          "expect_hex": "dddd5799ff0000",
+          "replace_hex": "dda62199ff0000",
+          "tv_profiles": [
+            "ntsc-m",
+            "ntsc-j",
+            "pal-m"
+          ]
+        },
+        {
+          "name": "m6930lb_3410pq_dco_pal625_clamp_525",
+          "description": "MAIN3410PQ DCO_PAL_625 load 525-line clock constant 0x0384 instead of 0x0410 for 0x8980041C",
+          "va": "0x570B98EE",
+          "expect_hex": "2c1004",
+          "replace_hex": "2c8403",
+          "tv_profiles": [
+            "ntsc-m",
+            "ntsc-j",
+            "pal-m"
+          ]
+        },
+        {
+          "name": "m6930lb_3410pq_avdd_mode_a2_ntsc",
+          "description": "MAIN3410PQ Avdd_Set_Mode write 0x0000 to 0x898004A2 so 0x570B9ADC selects 0x0242 (NTSC 525)",
+          "va": "0x5772546D",
+          "expect_hex": "2c0002",
+          "replace_hex": "2c0000",
+          "tv_profiles": [
+            "ntsc-m",
+            "ntsc-j",
+            "pal-m"
+          ]
+        },
+        {
+          "name": "m6930lb_3410pq_avdd_voutmode0_ntsc_4fb3",
+          "description": "MAIN3410PQ Avdd_Set_VoutMode write 0x4FB3 (NTSC) instead of 0x4BB1 (PAL) to 0x89800402",
+          "va": "0x57725518",
+          "expect_hex": "2cb14b",
+          "replace_hex": "2cb34f",
+          "tv_profiles": [
+            "ntsc-m",
+            "ntsc-j",
+            "pal-m"
+          ]
+        },
+        {
+          "name": "m6930lb_3410pq_avdd_dacout1_unmute_0d00",
+          "description": "MAIN3410PQ Avdd_Set_DacOut write 0x0DDF instead of 0x8D00 muted in 0x89800404",
+          "va": "0x5772553F",
+          "expect_hex": "fccc008d0000",
+          "replace_hex": "fcccdf0d0000"
+        },
+        {
+          "name": "m6930lb_3410pq_aiof_init_force_ntsc",
+          "description": "MAIN3410PQ AIOF_Init force NTSC branch (bra +0x6f) instead of PAL check",
+          "va": "0x570D6630",
+          "expect_hex": "c86f",
+          "replace_hex": "ca6f",
+          "tv_profiles": [
+            "ntsc-m",
+            "ntsc-j",
+            "pal-m"
+          ]
+        },
+        {
+          "name": "m6930lb_3410pq_aiof_init_cps_palm",
+          "description": "MAIN3410PQ AIOF_Init select PAL-M color subcarrier 0x8003 at 0x570D66B1",
+          "va": "0x570D66B1",
+          "expect_hex": "8002",
+          "replace_hex": "8003",
+          "tv_profiles": [
+            "pal-m"
+          ]
+        },
+        {
+          "name": "m6930lb_3410pq_aiof_init_pedestal_75ire",
+          "description": "MAIN3410PQ AIOF_Init select NTSC-M 7.5 IRE pedestal table index 0x8052",
+          "va": "0x570D66E3",
+          "expect_hex": "8051",
+          "replace_hex": "8052",
+          "tv_profiles": [
+            "ntsc-m"
+          ]
+        },
+        {
+          "name": "m6930lb_3410pq_aiof_init_reg2c_40f0",
+          "description": "MAIN3410PQ AIOF_Init select 0x40F0 for 0x8800002C (AIOF_OUTCTL NTSC 525)",
+          "va": "0x570D66ED",
+          "expect_hex": "8057",
+          "replace_hex": "8056",
+          "tv_profiles": [
+            "ntsc-m",
+            "ntsc-j",
+            "pal-m"
+          ]
+        },
+        {
+          "name": "m6930lb_3410pq_aiof_set_standard_reg2c_40f0_a",
+          "description": "MAIN3410PQ AIOF_Set_Standard runtime mov 0x57 -> 0x56 for 0x8800002C",
+          "va": "0x570D731E",
+          "expect_hex": "8057",
+          "replace_hex": "8056",
+          "tv_profiles": [
+            "ntsc-m",
+            "ntsc-j",
+            "pal-m"
+          ]
+        },
+        {
+          "name": "m6930lb_3410pq_aiof_set_standard_reg2c_40f0_b",
+          "description": "MAIN3410PQ AIOF_Set_Standard_CPS_CPN runtime mov 0x57 -> 0x56 for 0x8800002C (path 1)",
+          "va": "0x570D7374",
+          "expect_hex": "8057",
+          "replace_hex": "8056",
+          "tv_profiles": [
+            "ntsc-m",
+            "ntsc-j",
+            "pal-m"
+          ]
+        },
+        {
+          "name": "m6930lb_3410pq_aiof_set_standard_reg2c_40f0_c",
+          "description": "MAIN3410PQ AIOF_Set_Standard_CPS_CPN runtime mov 0x57 -> 0x56 for 0x8800002C (path 2)",
+          "va": "0x570D739A",
+          "expect_hex": "8057",
+          "replace_hex": "8056",
+          "tv_profiles": [
+            "ntsc-m",
+            "ntsc-j",
+            "pal-m"
+          ]
+        },
+        {
+          "name": "m6930lb_3410pq_aiof_init_vout_75ire",
+          "description": "MAIN3410PQ AIOF_Init select NTSC-M 7.5 IRE VOUT amplitude index 0x8054",
+          "va": "0x570D66F7",
+          "expect_hex": "8053",
+          "replace_hex": "8054",
+          "tv_profiles": [
+            "ntsc-m"
+          ]
+        },
+        {
+          "name": "m6930lb_3410pq_avin_aiof_caller1_ntsc",
+          "description": "MAIN3410PQ AVIN/AIOF path 1 force NTSC table 0x503C2000 instead of PAL",
+          "va": "0x570D7C07",
+          "expect_hex": "aa01c911",
+          "replace_hex": "cbcbca11",
+          "tv_profiles": [
+            "ntsc-m",
+            "ntsc-j",
+            "pal-m"
+          ]
+        },
+        {
+          "name": "m6930lb_3410pq_avin_aiof_caller2_ntsc",
+          "description": "MAIN3410PQ AVIN/AIOF path 2 force NTSC table 0x503C2000 instead of PAL",
+          "va": "0x570D7CE1",
+          "expect_hex": "ba01c910",
+          "replace_hex": "cbcbca10",
+          "tv_profiles": [
+            "ntsc-m",
+            "ntsc-j",
+            "pal-m"
+          ]
+        },
+        {
+          "name": "m6930lb_3410pq_avin_3yconoff_ok",
+          "description": "MAIN3410PQ AVIN_3YConoff return AVIN_OK (0x09C4) so AVIN does not stall in Delayed loop",
+          "va": "0x570CE4F2",
+          "expect_hex": "cff2f8fedc",
+          "replace_hex": "2cc409f0fc"
+        },
+        {
+          "name": "m6930lb_3410pq_tun_notify_tvsystem_noop",
+          "description": "MAIN3410PQ TUN_NotifyTVSystem return 0 immediately (no Euro PAL tuner override)",
+          "va": "0x570DC732",
+          "expect_hex": "cfc0f8feec",
+          "replace_hex": "00f0fccbcb"
+        },
+        {
+          "name": "m6930lb_3410pq_standby_epg_wait_skip",
+          "description": "MAIN3410PQ sys_cntl_Standby Euro EPG wait return 0 (avoids 32s PLEASE WAIT hang)",
+          "va": "0x570634B2",
+          "expect_hex": "cfc0f8fee8",
+          "replace_hex": "00f0fccbcb"
+        },
+        {
+          "name": "m6930lb_3410pq_standby_epg_gate28_skip",
+          "description": "MAIN3410PQ sys_cntl_Standby Euro FPC GATE=28 stub return 0",
+          "va": "0x570634F7",
+          "expect_hex": "cff2f8feb0",
+          "replace_hex": "00f0fccbcb"
+        },
+        {
+          "name": "m6930lb_3410pq_standby_tun_fpc_skip",
+          "description": "MAIN3410PQ sys_cntl_Standby Euro tuner FPC wait return 0",
+          "va": "0x570AC466",
+          "expect_hex": "f8fee00042",
+          "replace_hex": "00f0fccbcb"
+        },
+        {
+          "name": "m6930lb_3410pq_standby_guideplus_skip",
+          "description": "MAIN3410PQ GuidePlus Standby Euro hang stub return 0",
+          "va": "0x576AF438",
+          "expect_hex": "cf20f8fef0",
+          "replace_hex": "00f0fccbcb"
+        },
+        {
+          "name": "m6930lb_3410pq_fpc_status_ctrl_b_skip",
+          "description": "MAIN3410PQ FPC 0xC2 GATE=21 standby sync B return 0",
+          "va": "0x5771AB1B",
+          "expect_hex": "cf20f8fed0f1",
+          "replace_hex": "00f0fccbcbcb"
+        },
+        {
+          "name": "m6930lb_3410pq_sys_set_power_save_skip",
+          "description": "MAIN3410PQ sys_cntl set_power_save FPC 0xA9 stub return 0",
+          "va": "0x57517163",
+          "expect_hex": "cf80f8fee4",
+          "replace_hex": "00f0fccbcb"
+        },
+        {
+          "name": "m6930lb_3410pq_fpc_set_p50_acceptability_skip",
+          "description": "MAIN3410PQ FPC_SetP50Acceptability Euro GATE=30 (30 s) wait return 0",
+          "va": "0x57062BD7",
+          "expect_hex": "cff2f8fee0",
+          "replace_hex": "00f0fccbcb"
+        },
+        {
+          "name": "m6930lb_3410pq_fpc_shutdown_gate19_skip",
+          "description": "MAIN3410PQ FPC_ShutDown Euro GATE=19 waiter return 0",
+          "va": "0x57065E05",
+          "expect_hex": "cf80f8fed0",
+          "replace_hex": "00f0fccbcb"
+        },
+        {
+          "name": "m6930lb_3410pq_fpc_start_poff_epgdl_mode1",
+          "description": "MAIN3410PQ FPC_StartPowerOff_InEPGDL send [0x81,0x00,0x01] hardware Standby",
+          "va": "0x570626A0",
+          "expect_hex": "8002",
+          "replace_hex": "8001"
+        },
+        {
+          "name": "m6930lb_3410pq_iic5_bh7629_av_init_cave",
+          "description": "MAIN3410PQ zero-filled vector slack cave calling iic5_write (0x57400722) to unmute IC3001 BH7629KS2 (0x90) and audio switch (0x84)",
+          "va": "0x57000A20",
+          "expect_hex": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "replace_hex": "f8feecfcdc500a0057430c2c90008506ddf2fc3f000000fcdc560a0057430c2c84008504dddefc3f00000000df0014cb10080763c03003800022"
+        },
+        {
+          "name": "m6930lb_3410pq_fpc_play_condition_iic5_hook",
+          "description": "MAIN3410PQ M6// FPC_VIDEO_OUT_ON hook replacing rejected Euro FPC_PLAYCondition (0xA9 -> 7F A9) with 0x57000A20",
+          "va": "0x5750EE35",
+          "expect_hex": "dd6161b5ff0000",
+          "replace_hex": "ddeb1bafff0000"
+        },
+        {
+          "name": "m6930lb_3410pq_atp_frontpanel_setup_skip",
+          "description": "MAIN3410PQ skip Euro ATP_START auto-preset lockout on front-panel [CH UP]+[CH DOWN]",
+          "va": "0x57507927",
+          "expect_hex": "dde51a01000000",
+          "replace_hex": "00cc5e02cbcbcb"
         }
       ],
       "unpacked_sha256": "c3275d39549b68f48db16bc5fd043c6f8a373d4ba416826de09be5c55dc991b1"
@@ -753,5 +1416,24 @@
         "sha256": "c1faee798f60545853eefdba0d15f23678b471466dc2bc84f522bc972f15a02d"
       }
     ]
+  },
+  "nor_loader_sata_bridge_reset_spec": {
+    "target_name": "NOR_IC5001_LOADER_VER061",
+    "nor_dump_repaired_sha256": "bd089ed1a062c48756c60407e6555463e8646cde094b0328b88a253e4f1d4121",
+    "base_va": "0x84000000",
+    "expected_nor_size": 8388608,
+    "factory_wait_ms": 2,
+    "patched_wait_ms": 1000,
+    "sleep_callee_nor_offset": "0x02E37B",
+    "sleep_callee_va": "0x8402E37B",
+    "site": {
+      "name": "nor_loader061_sata_bridge_reset_wait",
+      "description": "NOR IC5001 Loader ver0.61 post-RESET- 2 ms udelay (0x0184C1) -> 1000 ms RTOS wait (rtsd_sleep_10ms @ 0x02E37B)",
+      "nor_offset": "0x01AA40",
+      "va": "0x8401AA40",
+      "expect_hex": "2cd00789dd7ddaffff0000",
+      "replace_hex": "2c640089dd373901000000",
+      "symbol_ref": "rtsd_sleep_10ms"
+    }
   }
 }

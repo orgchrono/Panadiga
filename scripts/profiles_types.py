@@ -71,9 +71,23 @@ class ModelProfileManifestDict(_ModelProfileManifestOptional):
     claims: ModelClaimsDict
 
 
+class _PanaDvdSourceSlotOptional(TypedDict, total=False):
+    extrhead_adler32_stride16: str | None
+    patches_applied: list[str]
+
+
+class PanaDvdSourceSlotDict(_PanaDvdSourceSlotOptional):
+    slot_name: str
+    offset: str
+    size: int
+    checksum32: str
+
+
 class _PanaRebuildRecipeOptional(TypedDict, total=False):
+    tag: str | None
     family_aliases: list[str]
     sources_from_panamon_dump: list[str]
+    sources_from_pana_dvd: list[PanaDvdSourceSlotDict]
 
 
 class PanaRebuildRecipeDict(_PanaRebuildRecipeOptional):
@@ -188,6 +202,7 @@ SAFE_BENCH_COMMANDS: Final[tuple[str, ...]] = (
     "WAITTX",
     "PWRTRACE",
     "BOOTTRACE",
+    "BOOTFOLLOW",
     "PIOLOGIC",
     "SDSNIFF",
     "JIGSWEEP",

@@ -1,0 +1,40 @@
+>>> STATUS
+VDD: 3.26V (OK)
+[STANDBY] RXD=1 NSW5V=1 TXD=1 XRESET=1 SW_PU=3.27V NSW5V_DROPS=103 fault_latch=0 recoveries=103 | State=POWERED / AWAKE (SW_UART ~3.3V)
+[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=147 wdt_recoveries=0 reboot_src=CLEAN fault_slot=255 fault_stage=IDLE last_cmd=ISOLATE last_us=163
+@PICO_RES cmd=STATUS status=OK code=0 elapsed_us=1753
+PICO>
+POWERED / AWAKE confirmed. Entering BRIDGE.
+>>> BRIDGE
+[BRIDGE] USB CDC <-> P7501 SC0 115200 8N1 ctrl=OFF active (exit: send '~~~' or unplug USB).
+[FS]VDM_ReportMediaEx : slot_id = 1 disc = 57b4361e protect = 0 format = 1
+[SYS_CNTL]sys_cntl MEDIA RESET Wait State.
+[SYS_CNTL]>>> SYS_CNTL_Power(src/sys_cntl_keyaction/sys_cntl_keyact_func.c:876)
+[SYS_CNTL]Q task[sys_init(102)] datatype[EXIT(18)]
+[SYS_CNTL]shipping condition end 
+[RTSD] === DRIVE ACCESS ERROR === ( 80040904 )  [2006/ 1/ 1  0. 0. 0]
+*** CDB  [00 00 00 00 00 00 00 00 00 00 00 00] 
+*** SENSE[70 00 04 00 00 00 00 0A 00 00 83
+>>> <CR>
+A7 09 04 00 00 00 00] 
+H_STAT [0] T_STAT [2]
+[SYS_CNTL]SYS_CNTL_PL_NTSC 0 1 
+[SYS_NAVI][sort] SYS_MEDIA_Sort_Contents(): drive=2,type=1,sort=0
+[SYS_CNTL]setgui start. tsk=106 mode=0
+[SYS_CNTL]sys_cntl_get_catchscreen[106(sys_navi)]
+[SYS_CNTL]setgui continue. mode=0 tsk=106
+[SYS_MEDIA |225.94]Create operationID [0x00002001]
+[SYS_MEDIA |225.94]Create operationID [0x00001601]
+[SYS_MEDIA |225.94]Create operationID [0x00000c01]
+[SYS_MEDIA |225.94]Create operationID [0x00000201]
+[MCM |225.94]MCM_resource_Close tid:103 drive:0x00
+[MCM |225.94]MCM_resource_Close core[1]:0x00001302
+No ndb> prompt received on <CR> (likely running MAIN already; passive capture only).
+
+BRIDGE: OK (rx=1044 tx=2 ferr=0 ctrl_edges=0 overflow=NO)
+@PICO_RES cmd=BRIDGE status=OK code=0 elapsed_us=851467
+PICO> PICO> 
+>>> ISOLATE
+[BUS] P7501 pins placed in High-Impedance Isolation (NSW5V/XRESET Hi-Z, GP26 ADC0).
+@PICO_RES cmd=ISOLATE status=OK code=0 elapsed_us=175
+PICO>

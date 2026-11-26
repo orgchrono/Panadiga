@@ -13,7 +13,8 @@ import subprocess
 import time
 from typing import Mapping
 
-from scripts.panadiga_ops import build_env, print_banner, print_status
+from scripts.build_cache.disk_guard import ensure_disk_headroom
+from scripts.panadiga_ops import ROOT, build_env, print_banner, print_status
 from scripts.validate_gates import (
     C11_HOST_SOURCES,
     DESKTOP_DIR,
@@ -62,6 +63,7 @@ def run_validation(
 ) -> float:
     """Execute all 9 Quality Gates (plus optional Ghidra smoke gate) and return total elapsed seconds."""
     start = time.monotonic()
+    ensure_disk_headroom(ROOT)
     jobs = max_jobs if max_jobs is not None else max(2, min(9, os.cpu_count() or 4))
     if sequential:
         run_sequential_gates(env, ghidra_smoke=ghidra_smoke)

@@ -31,6 +31,7 @@ pub const SAFE_BENCH_COMMANDS: &[&str] = &[
     "WAITTX",
     "PWRTRACE",
     "BOOTTRACE",
+    "BOOTFOLLOW",
     "PIOLOGIC",
     "SDSNIFF",
     "JIGSWEEP",

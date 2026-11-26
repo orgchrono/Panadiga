@@ -1,7 +1,7 @@
 # Panadiga 100%-Disassembled Ghidra Forensic Atlas Index
 
 > Gerado deterministicamente por `python scripts/generate_firmware_atlas.py --write`. Verifique deriva com `--check`.
-> **Atlas Fingerprint (`SHA-256`):** `5f077e8dec064afe90e3b8f050e5f29bbf1b80a4490437d3feb6cc0567a69e39`
+> **Atlas Fingerprint (`SHA-256`):** `b2891a0bbd2fddf48d61216423595ff32ce09ef098632ac8bc55ff6124c5054d`
 > **JSON Completo:** `profiles/forensic_atlas/firmware_forensic_atlas.json`
 
 ## 1. Cobertura Zero-Undef & Totais Indexados
@@ -14,7 +14,7 @@
 | Índices `profiles/symbols/` | 4 |
 | Constantes Hex / MMIO Catalogadas | 160 |
 | Padrões Bitwise Catalogados | 114 |
-| Headers, Footers & Magics SSOT | 31 |
+| Headers, Footers & Magics SSOT | 33 |
 | Armadilhas Catalogadas (`profiles/traps/`) | 13 |
 
 ## 2. Headers, Footers, Magics & Fronteiras Físicas
@@ -29,6 +29,8 @@
 | `sd_fat16b_0x06` | `sd_card` | `magic_hex=0x55AA @ start_lba=63` | fs=FAT16B, sector=512 B |
 | `eh50_ecb64_frm:FRM_TOC` | `feistel64_ecb` | `entry=48B toc_size=0x1800` | key_id=le2011_08e0 |
 | `loader_ver018_xip_main52df6:IPL_BANNER` | `bootloader_header` | `ascii='Loader ver0.18' [0x0000_0000..0x0004_0000]` | loader_profile_key=ver018 |
+| `loader_ver027_toc48_main57:FRM_TOC` | `feistel64_ecb` | `entry=48B toc_size=0x1800` | key_id=pana_dvd_eh55 |
+| `loader_ver027_toc48_main57:IPL_BANNER` | `bootloader_header` | `ascii='05/11/01' [0x0000_0000..0x0004_0000]` | loader_profile_key=ver027 |
 | `loader_ver061_toc48_main57:FRM_TOC` | `feistel64_ecb` | `entry=48B toc_size=0x1800` | key_id=pana_dvd_eh55 |
 | `loader_ver061_toc48_main57:IPL_BANNER` | `bootloader_header` | `ascii='Loader ver0.61' [0x0000_0000..0x0004_0000]` | loader_profile_key=ver061 |
 | `loader_ver063_bootbin:IPL_BANNER` | `bootloader_header` | `ascii='Loader ver0.63' [0x0000_0000..0x0004_0000]` | loader_profile_key=ver063 |

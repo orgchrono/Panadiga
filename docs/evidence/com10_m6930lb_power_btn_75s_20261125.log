@@ -1,0 +1,24 @@
+>>> STATUS
+VDD: 3.26V (OK)
+[STANDBY] RXD=1 NSW5V=1 TXD=1 XRESET=1 SW_PU=3.27V NSW5V_DROPS=114 fault_latch=0 recoveries=114 | State=POWERED / AWAKE (SW_UART ~3.3V)
+[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=179 wdt_recoveries=0 reboot_src=CLEAN fault_slot=255 fault_stage=IDLE last_cmd=STATUS last_us=1774
+@PICO_RES cmd=STATUS status=OK code=0 elapsed_us=1770
+PICO>
+>>> BRIDGE
+[BRIDGE] USB CDC <-> P7501 SC0 115200 8N1 ctrl=OFF active (exit: send '~~~' or unplug USB).
+=== PASSIVE 75s POWER-OFF ===
+[ 30.05s] [[ 30.05s] F[ 30.05s] P[ 30.05s] C[ 30.05s] ][ 30.05s] F[ 30.05s] P[ 30.05s] C[ 30.05s] _[ 30.05s] R[ 30.05s] e[ 30.05s] c[ 30.05s] i[ 30.05s] v[ 30.05s] e[ 30.05s] T[ 30.06s] A[ 30.06s] S[ 30.06s] K[ 30.06s] ([ 30.06s] )[ 30.06s]  [ 30.06s] :[ 30.06s]  0[ 30.06s] 8[ 30.06s]  [ 30.06s] 0[ 30.06s] 1[ 30.06s]  [ 30.06s] 0[ 30.06s] 0[ 30.06s]  [ 30.06s] 0[ 30.06s] 0[ 30.06s]  [ 30.06s] 0[ 30.06s] 0[ 30.06s]  [ 30.06s] 0[ 30.06s] 0[ 30.06s]  [ 30.06s] 0[ 30.06s] 0[ 30.06s]  [ 30.06s] 0[ 30.06s] 0[ 30.06s]  [ 30.06s] 0[ 30.06s] 0[ 30.06s]  [ 30.06s] 0[ 30.06s] 0[ 30.06s]  [ 30.06s] 0[ 30.06s] 0[ 30.06s]  [ 30.06s] 0[ 30.06s] 0[ 30.06s]  [ 30.06s] 0[ 30.06s] 0[ 30.06s]  [ 30.06s] 0[ 30.06s] 0[ 30.06s]  [ 30.06s] 0[ 30.06s] 0 [ 30.06s] 0[ 30.06s] 0[ 30.06s]  [ 30.06s] [ 30.06s] 
+
+BRIDGE: OK (rx=74 tx=1 ferr=0 ctrl_edges=0 overflow=NO)
+@PICO_RES cmd=BRIDGE status=OK code=0 elapsed_us=75552088
+PICO> PICO>
+>>> ISOLATE
+[BUS] P7501 pins placed in High-Impedance Isolation (NSW5V/XRESET Hi-Z, GP26 ADC0).
+@PICO_RES cmd=ISOLATE status=OK code=0 elapsed_us=164
+PICO>
+>>> STATUS
+VDD: 3.26V (OK)
+[STANDBY] RXD=1 NSW5V=1 TXD=1 XRESET=1 SW_PU=3.27V NSW5V_DROPS=114 fault_latch=0 recoveries=114 | State=POWERED / AWAKE (SW_UART ~3.3V)
+[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=182 wdt_recoveries=0 reboot_src=CLEAN fault_slot=255 fault_stage=IDLE last_cmd=ISOLATE last_us=164
+@PICO_RES cmd=STATUS status=OK code=0 elapsed_us=1782
+PICO>

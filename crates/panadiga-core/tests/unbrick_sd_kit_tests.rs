@@ -57,6 +57,7 @@ fn build_workspace_sd_kit_with_mode(
         main_bgo_retarget: false,
         nor_autoboot_capsule: false,
         m6930lb_localization: false,
+        localization_tv_profile: None,
     };
     if loader_profile == SdLoaderProfile::Ver063ExtrheadSd64 && allow_unverified_profile {
         let blocked = prepare_sd_unbrick_kit(&req).unwrap_err();
@@ -162,6 +163,7 @@ fn auto_format_bgo_policy_fails_closed_without_explicit_override() {
         main_bgo_retarget: false,
         nor_autoboot_capsule: false,
         m6930lb_localization: false,
+        localization_tv_profile: None,
     })
     .unwrap_err();
     let _ = fs::remove_dir_all(&tmp);

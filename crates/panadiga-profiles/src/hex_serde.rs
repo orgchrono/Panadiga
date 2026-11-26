@@ -140,6 +140,24 @@ pub mod hex_u16 {
     }
 }
 
+pub mod opt_hex_u16 {
+    use super::*;
+
+    pub fn serialize<S: Serializer>(val: &Option<u16>, ser: S) -> Result<S::Ok, S::Error> {
+        match val {
+            Some(v) => ser.serialize_str(&format!("0x{v:04X}")),
+            None => ser.serialize_none(),
+        }
+    }
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(de: D) -> Result<Option<u16>, D::Error> {
+        Option::<StringOrInt>::deserialize(de)?
+            .map(decode_u16)
+            .transpose()
+            .map_err(D::Error::custom)
+    }
+}
+
 pub mod hex_i32 {
     use super::*;
 

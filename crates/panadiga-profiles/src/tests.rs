@@ -223,6 +223,9 @@ fn sample_bundle() -> ProfilesBundle {
                 cipher: Some("feistel64_ecb".to_string()),
                 key_id: Some("pana_dvd_eh55".to_string()),
                 official_frm_sha256: None,
+                rebuilt_sd_frm_sha256: None,
+                rebuilt_sd_frm_bytes: None,
+                rebuilt_dvd_frm_sha256: None,
             }),
             prog_load_va: Some(0x5040_0000),
             main_load_va: Some(0x5700_0000),
@@ -234,7 +237,9 @@ fn sample_bundle() -> ProfilesBundle {
             digadiag_spec: None,
             pana_rebuild_recipe: None,
             bgo_retarget_spec: None,
+            bgo_native_spec: None,
             prog_sata_bridge_reset_spec: None,
+            nor_loader_sata_bridge_reset_spec: None,
             hdd_autoboot_spec: None,
             main_builds: Vec::new(),
             evidence: ev(EvidenceTier::BenchVerified, "bench"),
@@ -830,12 +835,15 @@ fn universal_patch_hdd_autoboot_and_main_build_specs_enforce_bounds_ipl_and_geom
         site: BinaryPatchSiteSpec {
             name: "prog061_sata_reset".to_string(),
             description: "2 ms -> 1000 ms".to_string(),
+            nor_offset: None,
             va: 0x5041_D928,
             expect_hex: "2cd00789ddbadaffff0000".to_string(),
             replace_hex: "2c640089ddd73901000000".to_string(),
             symbol_ref: None,
             tv_profiles: vec![],
         },
+        orig_sha256: None,
+        patched_sha256: None,
     });
     let sym = |idx: u32| 0x5040_1000 + idx * 0x100;
     trn.hdd_autoboot_spec = Some(HddAutobootSpec {
@@ -844,6 +852,10 @@ fn universal_patch_hdd_autoboot_and_main_build_specs_enforce_bounds_ipl_and_geom
         hook_offset: 0x0000_5100,
         hook_expect_hex: "dd084f00000000".to_string(),
         payload_offset: 0x0003_A000,
+        expected_main_adler32_offset: None,
+        expected_main_adler32_value: None,
+        forcefvu_trigger_file: None,
+        norfrom_sd_trap_bypass: None,
         require_reset_fix_1000ms: true,
         uart_abort_polls: 25,
         uart_poll_ticks_10ms: 2,
@@ -887,6 +899,7 @@ fn universal_patch_hdd_autoboot_and_main_build_specs_enforce_bounds_ipl_and_geom
         build_id: "3410PQ".to_string(),
         slot_name: "MAIN3410PQ".to_string(),
         frm_version_u16: 0x3410,
+        frm_version_u16_pc: None,
         base_va: 0x5700_0000,
         unpacked_size: 13_003_052,
         region_tv_standard: Some("pal_m".to_string()),
@@ -916,6 +929,8 @@ fn universal_patch_hdd_autoboot_and_main_build_specs_enforce_bounds_ipl_and_geom
         unpacked_sha256: Some(
             "c3275d39549b68f48db16bc5fd043c6f8a373d4ba416826de09be5c55dc991b1".to_string(),
         ),
+        patched_unpacked_sha256: None,
+        patched_adler32_stride16: None,
     }];
     assert!(validate_bundle(&good).valid);
 
@@ -943,6 +958,7 @@ fn universal_patch_hdd_autoboot_and_main_build_specs_enforce_bounds_ipl_and_geom
         .push(BinaryPatchSiteSpec {
             name: "bad_hex_site".to_string(),
             description: "malformed hex test".to_string(),
+            nor_offset: None,
             va: 0x5700_0000,
             expect_hex: "ZZ".to_string(),
             replace_hex: "00".to_string(),

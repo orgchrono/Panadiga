@@ -17,7 +17,7 @@ typedef bool (*digaos_cmd_handler_fn)(const char *arg);
 
 typedef struct digaos_shell_cmd {
     const char *name;
-    bool has_arg;
+    const char *arg_hint;
     digaos_cmd_handler_fn handler;
 } digaos_shell_cmd_t;
 
@@ -52,6 +52,50 @@ static void digaos_put_u16_dec(uint16_t val) {
     while (idx > 0u) {
         (void)digaos_uart0_putc(buf[--idx]);
     }
+}
+
+static bool digaos_parse_hex_u32(const char *s, uint32_t *out_val, const char **out_rest) {
+    if ((s == NULL) || (out_val == NULL)) {
+        return false;
+    }
+    while (*s == ' ') {
+        ++s;
+    }
+    if ((s[0] == '0') && ((s[1] == 'x') || (s[1] == 'X'))) {
+        s += 2;
+    }
+    uint32_t acc = 0UL;
+    size_t digits = 0u;
+    while (*s != '\0' && *s != ' ') {
+        const char ch = *s;
+        uint32_t nib = 0UL;
+        if ((ch >= '0') && (ch <= '9')) {
+            nib = (uint32_t)(ch - '0');
+        } else if ((ch >= 'a') && (ch <= 'f')) {
+            nib = 10UL + (uint32_t)(ch - 'a');
+        } else if ((ch >= 'A') && (ch <= 'F')) {
+            nib = 10UL + (uint32_t)(ch - 'A');
+        } else {
+            return false;
+        }
+        if (digits >= 8u) {
+            return false;
+        }
+        acc = (acc << 4u) | nib;
+        ++digits;
+        ++s;
+    }
+    if (digits == 0u) {
+        return false;
+    }
+    *out_val = acc;
+    if (out_rest != NULL) {
+        while (*s == ' ') {
+            ++s;
+        }
+        *out_rest = s;
+    }
+    return true;
 }
 
 static bool digaos_apply_standard_and_vfd(digaos_tv_system_t sys, const char *vfd_label, const char *msg) {
@@ -361,33 +405,187 @@ static bool cmd_vfd(const char *arg) {
     return ok;
 }
 
+static bool cmd_video_gpio(const char *arg) {
+    (void)arg;
+    const bool ok = digaos_video_bringup_board(
+        DIGAOS_VIDEO_IC_BH7629KS2_GPIO_M6930LB, DIGAOS_TV_NTSC, false, true
+    );
+    if (ok) {
+        digaos_uart0_puts("[DIGAOS] VIDEO=BH7629KS2_GPIO_M6930LB NTSC_525_60 XTAL=3579545Hz\n");
+    }
+    return ok;
+}
+
+static bool cmd_bootmap(const char *arg) {
+    (void)arg;
+    digaos_uart0_puts("[DIGAOS] BOOTMAP TIER1=SD_DIGADIAG(0x50400000) TIER2=NOR_SA11_SA14(0x84040000,256K,NO_SD_UART=ON) TIER3=SATA_HDD(0x57000000,DUALBOOT)\n");
+    digaos_uart0_puts("[DIGAOS] M6930LB XTAL_NTSC=3579545Hz XTAL_PALM=3575611Hz P7501=115200_8N1 NSW5V=HIZ_INPUT\n");
+    return true;
+}
+
+static bool cmd_video_status(const char *arg) {
+    (void)arg;
+    digaos_video_status_t vst;
+    if (!digaos_video_inspect_status(&vst)) {
+        return false;
+    }
+    digaos_uart0_puts("[DIGAOS] VIDEO_STATUS aiof=");
+    digaos_put_hex_u16(vst.aiof_vmodesel);
+    digaos_uart0_puts(" cont=");
+    digaos_put_hex_u16(vst.aiof_cont);
+    digaos_uart0_puts(" clk=");
+    digaos_put_hex_u16(vst.avdd_clk);
+    digaos_uart0_puts(" dac=");
+    digaos_put_hex_u16(vst.avdd_dacout1);
+    digaos_uart0_puts(" size=");
+    digaos_put_hex_u32(vst.avdd_active_size);
+    digaos_uart0_puts(vst.dac_unmuted ? " state=UNMUTED\n" : " state=MUTED\n");
+    return true;
+}
+
+static bool cmd_odd(const char *arg) {
+    (void)arg;
+    digaos_davis_status_t st;
+    if (!digaos_davis_probe_channel(false, &st)) {
+        return false;
+    }
+    digaos_uart0_puts("[DIGAOS] ODD=");
+    if (st.state == DIGAOS_DAVIS_READY) {
+        digaos_uart0_puts("READY");
+    } else if (st.degraded_odd_bypass) {
+        digaos_uart0_puts("DEGRADED_BYPASS");
+    } else {
+        digaos_uart0_puts("FAULT");
+    }
+    digaos_uart0_puts(" status=");
+    digaos_put_hex_u16(st.status_word);
+    digaos_uart0_putc('\n');
+    return true;
+}
+
+static bool cmd_fpc(const char *arg) {
+    (void)arg;
+    digaos_uart0_puts("[DIGAOS] FPC=MN67788RA TX_BLOCKED=13(0xE3,0xF9,0xA9,0xFA) RX_0X7F=NON_FATAL WAKEUP=NORMAL_UION HAZARD=0x70 WDT=255s\n");
+    return true;
+}
+
+static bool cmd_peek(const char *arg) {
+    uint32_t addr = 0UL;
+    const char *rest = NULL;
+    if (!digaos_parse_hex_u32(arg, &addr, &rest) || (*rest != '\0')) {
+        digaos_uart0_puts("[DIGAOS] ERR syntax: peek <addr_hex>\n");
+        return false;
+    }
+    if (am34_mmio_is_forbidden(addr)) {
+        digaos_uart0_puts("[DIGAOS] ERR BARRIER_LOCKED\n");
+        return false;
+    }
+    if ((addr & 3UL) == 0UL) {
+        uint32_t v32 = 0UL;
+        if (!am34_mmio_read32(addr, &v32)) {
+            digaos_uart0_puts("[DIGAOS] ERR BARRIER_LOCKED\n");
+            return false;
+        }
+        digaos_uart0_puts("[DIGAOS] PEEK ");
+        digaos_put_hex_u32(addr);
+        digaos_uart0_putc('=');
+        digaos_put_hex_u32(v32);
+        digaos_uart0_putc('\n');
+        return true;
+    }
+    if ((addr & 1UL) == 0UL) {
+        uint16_t v16 = 0U;
+        if (!am34_mmio_read16(addr, &v16)) {
+            digaos_uart0_puts("[DIGAOS] ERR BARRIER_LOCKED\n");
+            return false;
+        }
+        digaos_uart0_puts("[DIGAOS] PEEK ");
+        digaos_put_hex_u32(addr);
+        digaos_uart0_putc('=');
+        digaos_put_hex_u16(v16);
+        digaos_uart0_putc('\n');
+        return true;
+    }
+    uint8_t v8 = 0U;
+    if (!am34_mmio_read8(addr, &v8)) {
+        digaos_uart0_puts("[DIGAOS] ERR BARRIER_LOCKED\n");
+        return false;
+    }
+    digaos_uart0_puts("[DIGAOS] PEEK ");
+    digaos_put_hex_u32(addr);
+    digaos_uart0_putc('=');
+    digaos_put_hex_u16((uint16_t)v8);
+    digaos_uart0_putc('\n');
+    return true;
+}
+
+static bool digaos_poke_checked(const char *arg, bool width32) {
+    uint32_t addr = 0UL;
+    uint32_t val = 0UL;
+    const char *rest = NULL;
+    const char *tail = NULL;
+    if (!digaos_parse_hex_u32(arg, &addr, &rest) ||
+        !digaos_parse_hex_u32(rest, &val, &tail) ||
+        (*tail != '\0')) {
+        digaos_uart0_puts("[DIGAOS] ERR syntax: poke <addr_hex> <val_hex>\n");
+        return false;
+    }
+    if ((width32 && ((addr & 3UL) != 0UL)) || (!width32 && (((addr & 1UL) != 0UL) || (val > 0xFFFFUL)))) {
+        digaos_uart0_puts("[DIGAOS] ERR ALIGN_OR_RANGE\n");
+        return false;
+    }
+    const bool ok = width32 ? am34_mmio_write32(addr, val) : am34_mmio_write16(addr, (uint16_t)val);
+    if (!ok) {
+        digaos_uart0_puts("[DIGAOS] ERR BARRIER_LOCKED\n");
+        return false;
+    }
+    digaos_uart0_puts("[DIGAOS] POKE OK\n");
+    return true;
+}
+
+static bool cmd_poke16(const char *arg) {
+    return digaos_poke_checked(arg, false);
+}
+
+static bool cmd_poke32(const char *arg) {
+    return digaos_poke_checked(arg, true);
+}
+
 static const digaos_shell_cmd_t k_shell_cmds[] = {
-    { "help",         false, cmd_help },
-    { "status",       false, cmd_status },
-    { "ntsc",         false, cmd_ntsc },
-    { "palm",         false, cmd_palm },
-    { "pal",          false, cmd_pal },
-    { "secam",        false, cmd_secam },
-    { "tbc on",       false, cmd_tbc_on },
-    { "tbc off",      false, cmd_tbc_off },
-    { "video br",     false, cmd_video_br },
-    { "video ec",     false, cmd_video_ec },
-    { "video probe",  false, cmd_video_probe },
-    { "dac on",       false, cmd_dac_on },
-    { "dac off",      false, cmd_dac_off },
-    { "colorbar on",  false, cmd_colorbar_on },
-    { "colorbar off", false, cmd_colorbar_off },
-    { "provision",    false, cmd_provision },
-    { "sd",           false, cmd_sd },
-    { "bgo",          false, cmd_bgo },
-    { "ssot",         false, cmd_ssot },
-    { "menus",        false, cmd_menus },
-    { "themes",       false, cmd_themes },
-    { "power",        false, cmd_power },
-    { "targets",      false, cmd_targets },
-    { "wdt",          false, cmd_wdt },
-    { "sata",         false, cmd_sata },
-    { "vfd ",         true,  cmd_vfd },
+    { "help",         NULL,              cmd_help },
+    { "status",       NULL,              cmd_status },
+    { "bootmap",      NULL,              cmd_bootmap },
+    { "fpc",          NULL,              cmd_fpc },
+    { "ntsc",         NULL,              cmd_ntsc },
+    { "palm",         NULL,              cmd_palm },
+    { "pal",          NULL,              cmd_pal },
+    { "secam",        NULL,              cmd_secam },
+    { "tbc on",       NULL,              cmd_tbc_on },
+    { "tbc off",      NULL,              cmd_tbc_off },
+    { "video br",     NULL,              cmd_video_br },
+    { "video ec",     NULL,              cmd_video_ec },
+    { "video gpio",   NULL,              cmd_video_gpio },
+    { "video probe",  NULL,              cmd_video_probe },
+    { "video status", NULL,              cmd_video_status },
+    { "dac on",       NULL,              cmd_dac_on },
+    { "dac off",      NULL,              cmd_dac_off },
+    { "colorbar on",  NULL,              cmd_colorbar_on },
+    { "colorbar off", NULL,              cmd_colorbar_off },
+    { "provision",    NULL,              cmd_provision },
+    { "sd",           NULL,              cmd_sd },
+    { "bgo",          NULL,              cmd_bgo },
+    { "ssot",         NULL,              cmd_ssot },
+    { "menus",        NULL,              cmd_menus },
+    { "themes",       NULL,              cmd_themes },
+    { "power",        NULL,              cmd_power },
+    { "targets",      NULL,              cmd_targets },
+    { "wdt",          NULL,              cmd_wdt },
+    { "sata",         NULL,              cmd_sata },
+    { "odd",          NULL,              cmd_odd },
+    { "peek ",        "<addr>",          cmd_peek },
+    { "poke16 ",      "<addr> <u16>",    cmd_poke16 },
+    { "poke32 ",      "<addr> <u32>",    cmd_poke32 },
+    { "vfd ",         "<7ch>",           cmd_vfd },
 };
 
 static bool cmd_help(const char *arg) {
@@ -396,8 +594,8 @@ static bool cmd_help(const char *arg) {
     for (size_t i = 0u; i < (sizeof(k_shell_cmds) / sizeof(k_shell_cmds[0])); ++i) {
         (void)digaos_uart0_putc(' ');
         digaos_uart0_puts(k_shell_cmds[i].name);
-        if (k_shell_cmds[i].has_arg) {
-            digaos_uart0_puts("<7ch>");
+        if (k_shell_cmds[i].arg_hint != NULL) {
+            digaos_uart0_puts(k_shell_cmds[i].arg_hint);
         }
     }
     (void)digaos_uart0_putc('\n');
@@ -411,7 +609,7 @@ bool digaos_shell_exec_line(const char *line) {
     }
     for (size_t i = 0u; i < (sizeof(k_shell_cmds) / sizeof(k_shell_cmds[0])); ++i) {
         const digaos_shell_cmd_t *cmd = &k_shell_cmds[i];
-        if (cmd->has_arg) {
+        if (cmd->arg_hint != NULL) {
             const size_t prefix_len = strlen(cmd->name);
             if (strncmp(line, cmd->name, prefix_len) == 0) {
                 return cmd->handler(line + prefix_len);
@@ -487,17 +685,20 @@ void digaos_kernel_entry(void) {
     digaos_uart0_puts("SW_GUARDS: 0xC000100C=LOCKED 0xDC0F0000=LOCKED IPL_RO=LOCKED\n");
     (void)probe_tbc_aiof_baseline(DIGAOS_TV_NTSC);
 
+    digaos_board_video_ic_t boot_ic = DIGAOS_VIDEO_IC_BH7629KS2_GPIO_M6930LB;
     const bool tbus_ok = digaos_tbus_send_keepalive_255s();
     const bool vfd_ok = digaos_tbus_send_vfd_text("DIGAOS");
-    const bool video_ok = digaos_video_bringup_board(
-        DIGAOS_VIDEO_IC_BH7629KS2_BR_NA, DIGAOS_TV_NTSC, false, true
-    );
+    const bool video_ok = digaos_video_auto_bringup(DIGAOS_TV_NTSC, &boot_ic);
 
     uint32_t ch1_wait_ms = 0u;
     const bool davis_ok = digaos_davis_reset_and_wait_ready(true, &ch1_wait_ms);
 
     if (tbus_ok && vfd_ok && video_ok && davis_ok && (ch1_wait_ms == DIGAOS_SATA_BRIDGE_WAIT_MS)) {
-        digaos_uart0_puts("[DIGAOS] M0..M3 bring-up OK (TV=NTSC, SATA_WAIT=1000ms, IPL=RO_E05)\n");
+        digaos_uart0_puts(
+            (boot_ic == DIGAOS_VIDEO_IC_BH7629KS2_GPIO_M6930LB)
+                ? "[DIGAOS] M0..M3 bring-up OK (TV=NTSC, IC3001=GPIO_M6930LB, SATA_WAIT=1000ms, IPL=RO_E05)\n"
+                : "[DIGAOS] M0..M3 bring-up OK (TV=NTSC, SATA_WAIT=1000ms, IPL=RO_E05)\n"
+        );
     } else {
         digaos_uart0_puts("[DIGAOS] WARN: Peripheral bring-up incomplete\n");
     }

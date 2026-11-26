@@ -11,6 +11,7 @@ import zipfile
 from pathlib import Path
 from typing import Final, Mapping, Sequence
 
+from scripts.bootstrap_deps import ensure_frontend_node_modules
 from scripts.build_cache.steps import (
     copy_if_changed,
     frontend_digest_and_outputs,
@@ -61,6 +62,7 @@ def build_frontend(
             print_status("CACHE", f"Frontend Vite UI cache hit ({out_label} unchanged).", "36")
         return True
 
+    ensure_frontend_node_modules(ROOT, env=env)
     out = run_step(
         ["npm", "--prefix", "apps/desktop", "run", npm_script],
         cwd=ROOT,
@@ -208,10 +210,6 @@ def build_desktop(
         if stale_uf2.name not in UF2_NAMES:
             stale_uf2.unlink(missing_ok=True)
 
-    for stale_uf2 in dist_dir.glob("*.uf2"):
-        if stale_uf2.name not in UF2_NAMES:
-            stale_uf2.unlink(missing_ok=True)
-
     _stage_tools_directory(dist_dir)
     sync_firmware_bins_to_dist(dist_dir)
 
@@ -234,9 +232,25 @@ def launch_gui(env: Mapping[str, str], rebuild: bool = False) -> None:
     print_status("INFO", f"Launching Panadiga Desktop: {binary}", "36")
     if sys.platform == "win32":
         flags = getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
-        subprocess.Popen([str(binary)], cwd=str(binary.parent), creationflags=flags)
+        subprocess.Popen(
+            [str(binary)],
+            cwd=str(binary.parent),
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            close_fds=True,
+            creationflags=flags,
+        )
     else:
-        subprocess.Popen([str(binary)], cwd=str(binary.parent), start_new_session=True)
+        subprocess.Popen(
+            [str(binary)],
+            cwd=str(binary.parent),
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            close_fds=True,
+            start_new_session=True,
+        )
 
 
 def run_cli(cli_args: Sequence[str], env: Mapping[str, str]) -> int:

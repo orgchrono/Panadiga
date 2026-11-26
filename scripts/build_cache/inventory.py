@@ -6,10 +6,12 @@ from dataclasses import dataclass
 import os
 import platform
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 from typing import Final, Mapping
 
+from scripts.bootstrap_deps import augment_host_paths
 from scripts.panadiga_ops import ROOT, load_msvc_env
 
 BUILD_IGNORE_DIRS: Final[frozenset[str]] = frozenset(
@@ -145,33 +147,19 @@ def _discover_android_paths(env: Mapping[str, str]) -> tuple[Path | None, Path |
     return sdk_dir, ndk_dir
 
 
-def _augment_windows_toolchain_path(env: dict[str, str]) -> None:
-    """Prepend standard Windows ARM GCC and VS CMake/Ninja folders if not yet on PATH."""
-    if sys.platform != "win32":
-        return
-    extra_dirs: list[Path] = []
-    current_path = env.get("PATH", "")
-    if not shutil.which("arm-none-eabi-gcc", path=current_path):
-        for arm_base in (
-            Path(r"C:\Program Files (x86)\Arm GNU Toolchain arm-none-eabi"),
-            Path(r"C:\Program Files\Arm GNU Toolchain arm-none-eabi"),
-        ):
-            if arm_base.is_dir():
-                for bin_dir in sorted(arm_base.glob("*/bin"), reverse=True):
-                    if (bin_dir / "arm-none-eabi-gcc.exe").is_file():
-                        extra_dirs.append(bin_dir)
-                        break
-    vs_cmake = Path(
-        r"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake"
-    )
-    if not shutil.which("cmake", path=current_path) and (vs_cmake / "CMake" / "bin").is_dir():
-        extra_dirs.append(vs_cmake / "CMake" / "bin")
-    if not shutil.which("ninja", path=current_path) and (vs_cmake / "Ninja").is_dir():
-        extra_dirs.append(vs_cmake / "Ninja")
-
-    if extra_dirs:
-        prefix = os.pathsep.join(str(d) for d in extra_dirs)
-        env["PATH"] = f"{prefix}{os.pathsep}{current_path}" if current_path else prefix
+def _sccache_works(sccache_bin: str, env: Mapping[str, str]) -> bool:
+    try:
+        proc = subprocess.run(
+            [sccache_bin, "--version"],
+            env=dict(env),
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            timeout=3,
+            check=False,
+        )
+        return proc.returncode == 0
+    except (OSError, subprocess.TimeoutExpired):
+        return False
 
 
 def resolve_tool(name: str, env: Mapping[str, str]) -> str | None:
@@ -206,7 +194,7 @@ def optimize_build_env(
     if sys.platform != "win32":
         env.setdefault("MAKEFLAGS", f"-j{jobs}")
 
-    _augment_windows_toolchain_path(env)
+    augment_host_paths(env)
 
     pico_sdk = discover_pico_sdk(root, env)
     if pico_sdk is not None:
@@ -214,7 +202,7 @@ def optimize_build_env(
 
     if use_cache:
         sccache_bin = resolve_tool("sccache", env)
-        if sccache_bin and not env.get("RUSTC_WRAPPER"):
+        if sccache_bin and not env.get("RUSTC_WRAPPER") and _sccache_works(sccache_bin, env):
             env["RUSTC_WRAPPER"] = sccache_bin
             active["rustc_wrapper"] = sccache_bin
         ccache_bin = resolve_tool("ccache", env)
@@ -223,8 +211,8 @@ def optimize_build_env(
             env.setdefault("CCACHE_COMPILERCHECK", "content")
             active["ccache"] = ccache_bin
         lock_src = root / "apps" / "desktop" / "package-lock.json"
-        lock_dst = root / "apps" / "desktop" / "node_modules" / ".package-lock.json"
-        if lock_src.is_file() and lock_dst.is_file():
+        nm_dir = root / "apps" / "desktop" / "node_modules"
+        if lock_src.is_file() and (nm_dir / ".package-lock.json").is_file() and (nm_dir / ".bin").is_dir():
             env.setdefault("npm_config_prefer_offline", "true")
             active["npm_offline"] = "true"
         active["step_cache"] = "enabled"

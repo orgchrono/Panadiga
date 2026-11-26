@@ -6,7 +6,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::hex_serde::{hex_u16, hex_u32, opt_hex_u32};
+use crate::hex_serde::{hex_u16, hex_u32, opt_hex_u16, opt_hex_u32};
 
 /// Single fail-closed machine-code patch site inside a firmware image (`VA`, expected bytes, replacement).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -14,6 +14,9 @@ use crate::hex_serde::{hex_u16, hex_u32, opt_hex_u32};
 pub struct BinaryPatchSiteSpec {
     pub name: String,
     pub description: String,
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "opt_hex_u32")]
+    #[schemars(with = "Option<String>")]
+    pub nor_offset: Option<u32>,
     #[serde(with = "hex_u32")]
     #[schemars(with = "String")]
     pub va: u32,
@@ -42,6 +45,44 @@ pub struct SataBridgeResetSpec {
     #[schemars(with = "String")]
     pub sleep_callee_va: u32,
     pub site: BinaryPatchSiteSpec,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub orig_sha256: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub patched_sha256: Option<String>,
+}
+
+/// Offline reference specification for NOR bootloader post-`RESET-` SATA bridge polling delay.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct NorLoaderSataBridgeResetSpec {
+    pub target_name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub nor_dump_repaired_sha256: Option<String>,
+    #[serde(with = "hex_u32")]
+    #[schemars(with = "String")]
+    pub base_va: u32,
+    pub expected_nor_size: u32,
+    pub factory_wait_ms: u32,
+    pub patched_wait_ms: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "opt_hex_u32")]
+    #[schemars(with = "Option<String>")]
+    pub sleep_callee_nor_offset: Option<u32>,
+    #[serde(with = "hex_u32")]
+    #[schemars(with = "String")]
+    pub sleep_callee_va: u32,
+    pub site: BinaryPatchSiteSpec,
+}
+
+/// Declarative bypass site skipping an unconditional `Nor-FROM + SD -> FVU` branch inside HDD autoboot.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct NorFromSdTrapBypassSpec {
+    #[serde(with = "hex_u32")]
+    #[schemars(with = "String")]
+    pub va: u32,
+    pub expect_hex: String,
+    pub replace_hex: String,
+    pub description: String,
 }
 
 /// Verified `PROG` / bootloader callee virtual addresses required to assemble the SATA HDD autoboot hook.
@@ -128,6 +169,16 @@ pub struct HddAutobootSpec {
     #[serde(with = "hex_u32")]
     #[schemars(with = "String")]
     pub payload_offset: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "opt_hex_u32")]
+    #[schemars(with = "Option<String>")]
+    pub expected_main_adler32_offset: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "opt_hex_u32")]
+    #[schemars(with = "Option<String>")]
+    pub expected_main_adler32_value: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub forcefvu_trigger_file: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub norfrom_sd_trap_bypass: Option<NorFromSdTrapBypassSpec>,
     pub require_reset_fix_1000ms: bool,
     pub uart_abort_polls: i8,
     pub uart_poll_ticks_10ms: i8,
@@ -215,6 +266,9 @@ pub struct MainBuildSpec {
     #[serde(with = "hex_u16")]
     #[schemars(with = "String")]
     pub frm_version_u16: u16,
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "opt_hex_u16")]
+    #[schemars(with = "Option<String>")]
+    pub frm_version_u16_pc: Option<u16>,
     #[serde(with = "hex_u32")]
     #[schemars(with = "String")]
     pub base_va: u32,
@@ -244,4 +298,9 @@ pub struct MainBuildSpec {
     pub region_localization_sites: Vec<BinaryPatchSiteSpec>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub unpacked_sha256: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub patched_unpacked_sha256: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "opt_hex_u32")]
+    #[schemars(with = "Option<String>")]
+    pub patched_adler32_stride16: Option<u32>,
 }

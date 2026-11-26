@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import argparse
+import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import time
-from typing import Callable, Mapping, Sequence
+from typing import Callable, Final, Mapping, Sequence
 
+from scripts.bootstrap_deps import ensure_selection_dependencies
 from scripts.build_cache.inventory import discover_workspace_inventory, optimize_build_env
 from scripts.build_cache.steps import (
     clear_caches,
@@ -38,7 +41,9 @@ def run_build_pipeline(
 ) -> list[tuple[str, str, float]]:
     """Execute dependency-aware build & CI DAG: parallel when independent, serial at locks."""
     total_start = time.monotonic()
-    env, accel = optimize_build_env(base_env, root=ROOT, use_cache=selection.use_cache)
+    boot_env = dict(base_env)
+    ensure_selection_dependencies(selection, ROOT, boot_env)
+    env, accel = optimize_build_env(boot_env, root=ROOT, use_cache=selection.use_cache)
     accel_desc = ", ".join(f"{k}={v}" for k, v in accel.items())
     print_banner(f"PANADIGA PIPELINE DAG | {accel_desc}")
 
@@ -181,8 +186,41 @@ def run_build_pipeline(
     return summary
 
 
-def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
-    """Parse Panadiga build orchestrator CLI arguments."""
+_ALIASES: Final[dict[str, tuple[str, ...]]] = {
+    "tui": ("--tui",),
+    "all": ("--all",),
+    "all-ci": ("--all", "--ci"),
+    "ci": ("--ci",),
+    "desktop": ("--desktop",),
+    "frontend": ("--frontend",),
+    "pico": ("--pico",),
+    "android": ("--android",),
+    "run": ("--run",),
+    "rebuild": ("--rebuild-run",),
+    "cache": ("--cache-status",),
+    "clean-cache": ("--clean-cache",),
+    "clean-all": ("--clean-all-caches",),
+    "help": ("--help",),
+    "cli": ("--cli",),
+}
+
+
+def normalize_argv(argv: Sequence[str]) -> list[str]:
+    """Expand a leading launcher alias (`pico`, `all-ci`, ...) into its flag form.
+
+    The `.cmd`/`.sh` launchers forward arguments untouched, so alias handling lives here once
+    (no shell quoting, delayed-expansion, or `!`/`&` pitfalls).
+    """
+    items = list(argv)
+    if items:
+        alias = _ALIASES.get(items[0].lower())
+        if alias is not None:
+            return [*alias, *items[1:]]
+    return items
+
+
+def build_parser() -> argparse.ArgumentParser:
+    """Build the Panadiga build orchestrator argument parser."""
     parser = argparse.ArgumentParser(description="Panadiga unified build, CI, cache, and TUI orchestrator.")
     parser.add_argument("--tui", action="store_true", help="Launch interactive TUI menu to choose targets, CI, and cache.")
     parser.add_argument("--ci", action="store_true", help="Execute 9 parallel Quality Gates in the pipeline.")
@@ -199,12 +237,25 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--run", action="store_true", help="Launch Desktop GUI (auto-builds if missing).")
     parser.add_argument("--rebuild-run", action="store_true", help="Force rebuild Desktop release and launch GUI.")
     parser.add_argument("--cli", nargs=argparse.REMAINDER, help="Forward remaining arguments to the native Panadiga CLI.")
-    return parser.parse_args(argv)
+    return parser
+
+
+def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
+    """Parse Panadiga build orchestrator CLI arguments (launcher aliases accepted)."""
+    raw = list(sys.argv[1:] if argv is None else argv)
+    return build_parser().parse_args(normalize_argv(raw))
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     """Dispatch build/CI/cache/TUI/run actions according to CLI flags."""
-    args = parse_args(argv)
+    raw_argv = list(sys.argv[1:] if argv is None else argv)
+    if not raw_argv:
+        if sys.stdin.isatty() and sys.stdout.isatty():
+            raw_argv = ["--tui"]
+        else:
+            build_parser().print_help()
+            return 0
+    args = parse_args(raw_argv)
     base_env = build_env()
     use_cache = not args.no_cache
     env, _ = optimize_build_env(base_env, root=ROOT, use_cache=use_cache)
@@ -271,4 +322,15 @@ def main(argv: Sequence[str] | None = None) -> int:
             elif isinstance(raw_diag, str) and raw_diag.strip():
                 flush_output(raw_diag.strip())
         print_status("FAIL", f"Build pipeline failed: {exc}", "31")
+        return 1
+    except KeyboardInterrupt:
+        print_status("WARN", "Interrompido pelo usuario.", "33")
+        return 130
+    except EOFError:
+        print_status("WARN", "Entrada encerrada (sem terminal interativo); nada a executar.", "33")
+        return 0
+    except Exception as exc:  # noqa: BLE001 - launcher must report, never dump a raw traceback
+        if os.environ.get("PANADIGA_DEBUG"):
+            raise
+        print_status("FAIL", f"Erro inesperado ({type(exc).__name__}): {exc}", "31")
         return 1

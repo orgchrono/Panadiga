@@ -109,7 +109,9 @@ pub use region_compat::{
     OFF_FMU_DEVINFO_3060NP, OFF_FMU_DEVINFO_3410PQ, ORIG_FMU_DEVINFO_3060NP,
     ORIG_FMU_DEVINFO_3410PQ, PATCH_FMU_DEVINFO_3060NP, PATCH_FMU_DEVINFO_3410PQ, RegionCompatMode,
     decode_market_code_name, inspect_dev_bin_bytes, inspect_main_localization,
-    inspect_main_region_compat, patch_dev_bin_bytes, patch_main_localization_in_place,
+    inspect_main_localization_for_tv_profile, inspect_main_region_compat,
+    normalize_localization_tv_profile, patch_dev_bin_bytes,
+    patch_main_localization_for_tv_profile_in_place, patch_main_localization_in_place,
     patch_main_region_compat_in_place, retarget_frm_toc_bytes,
 };
 pub use sata_bridge_fix::{

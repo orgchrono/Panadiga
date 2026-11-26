@@ -10,7 +10,7 @@
 | **Release Version** | `v0.2.0` |
 | **Hardware Catalog** | `89` Panasonic DIGA models · `12` SoCs · `5` core architectures (`MN10300/AM34`, `MN10300/AM33-2`, `ARM Cortex-A9`, `ARM64 Cortex-A53`, `SPARC v8 Domino`) |
 | **Core Stack** | **11 Rust crates** (Edition 2024) · **C11 Bare-Metal** (`PicoFW` `RP2040`/`RP2350`/Pico W/2 W + `DigaOS` AM34) · **Tauri 2.12.7 + React 19.3.1 + Tailwind CSS 4.3.5 + Vite 8.3.6** · **Python 3.10+ (`mypy --strict`)** |
-| **Evidence Ledger** | **`36` audited claims** (`EV-20261119-001` .. `EV-20261124-003`) with SHA-256 assertions in [`docs/evidence/ledger.json`](docs/evidence/ledger.json) & [`docs/STATUS.md`](docs/STATUS.md) |
+| **Evidence Ledger** | **`49` audited claims** (`EV-20261119-001` .. `EV-20261125-012`) with SHA-256 assertions in [`docs/evidence/ledger.json`](docs/evidence/ledger.json) & [`docs/STATUS.md`](docs/STATUS.md) |
 | **MCP Integration** | Native Rust stdio JSON-RPC 2.0 server exposing **26** JSON-RPC 2.0 stdio tools |
 
 ---
@@ -22,22 +22,24 @@ Real-hardware bench validation (`COM10`, `StarTech IDE2SAT2` + `Type B` FFC adap
 - **Full `8 MiB` `S1..S14` + `S13A/S13B` BGO Retarget Proven Live (`EV-20261123-030` & `EV-20261124-002`):**
   - Bootstrapped both `MAIN3410PQ` and `MAIN3060NP` cleanly from SATA HDD mirrors (`AVOUT_V_Mute: onoff=0`, `sys_rsv init success`, `setgui end. tsk=106`, **`0` BGO/`U99` errors**, `CLEAN_MAIN_OK` verdict).
 - **NOR Autoboot & Hardened Recovery Pipelines:**
-  - Added NOR autoboot test suites and hardening across [`nor_autoboot_tests.rs`](crates/panadiga-core/src/re/sata_bridge_stage2/tests/nor_autoboot_tests.rs), [`norfrom_install.rs`](crates/panadiga-core/src/re/eh55_bgo/norfrom_install.rs), [`sata_bridge_stage2`](crates/panadiga-core/src/re/sata_bridge_stage2/mod.rs), standalone TBC calibration ([`tbc_appliance`](crates/panadiga-core/src/re/tbc_appliance/mod.rs)), and [`unbrick_sd_kit`](crates/panadiga-core/src/re/unbrick_sd_kit/mod.rs).
+  - Added NOR autoboot test suites and hardening across [`nor_autoboot_tests.rs`](crates/panadiga-core/src/re/sata_hdd_autoboot/tests/nor_autoboot_tests.rs), [`norfrom_install.rs`](crates/panadiga-core/src/re/eh55_bgo/norfrom_install.rs), [`sata_hdd_autoboot`](crates/panadiga-core/src/re/sata_hdd_autoboot/mod.rs), standalone TBC calibration ([`tbc_appliance`](crates/panadiga-core/src/re/tbc_appliance/mod.rs)), and [`unbrick_sd_kit`](crates/panadiga-core/src/re/unbrick_sd_kit/mod.rs).
 - **Round 4 & Round 5 Live Pico + `DAVIS CH1` Proofs (`EV-20261124-003` & [`com10_round5_live_unbrick_sd_trace_20261124.log`](docs/evidence/com10_round5_live_unbrick_sd_trace_20261124.log)):**
   - Verified bare-metal self-tests (`SURG ASM`/`CRYPTO`/`DECOMP`/`HDD_PLAN`/`TRAP`/`PAYLOAD VERIFY ALL`), live `PANAMON1>` CFI & `fast_bgo_stream`, live `DAVIS CH1` `0xEC IDENTIFY DEVICE` capture (`512 B`), and clean `BRIDGE` exit confirmed via direct `ISOLATE` + `STATUS` (`VDD=3.25V`, `NSW5V=1`, `0` WDT recoveries).
+- **Live `M6930LB` 4-Standard TV Localization, `IC3001 BH7629KS2` IIC5 Unmute & `NSW5V` Standby (`EV-20261125-003` .. `EV-20261125-012`):**
+  - Promoted `58` declarative `MAIN3410PQ` sites plus `MAIN3050UP` (`UP-306` / `PROG027`) into SSOT with `tv_profiles` filtering (`ntsc-m`, `ntsc-j`, `pal-m`, `pal`), `AVDD_DACOUT1=0x0DDF` + `IC3001 BH7629KS2` (`IIC5` `0x90` / audio `0x84`) cave initialization, instant `'BYE'` true `NSW5V=0` Standby unlocking `SERV`/`TEST`, `[HDD_AUTOBOOT]` `FORCEFVU.TXT` / `Nor-FROM+SD` trap bypass, and passive multi-cycle `BOOTFOLLOW` probe telemetry (`scripts/run_bootfollow.ps1`).
 
 ### 1.2 Relational Hardware Profiles SSOT (`profiles/` & `panadiga-profiles`)
 - **Single Source of Truth (`panadiga ssot export-all`):**
-  - Centralizes **`89` model manifests**, **`12` SoCs**, **`5` cores**, **`31` mainboards**, **`18` parallel NOR chips**, **`6` I2C EEPROMs**, **`4` NOR layouts**, **`18` firmware trains**, **`3` media formats**, [`geometry_and_binary_traps.json`](profiles/traps/geometry_and_binary_traps.json), `profiles/forensic_atlas/`, and **`12` JSON Schema Draft 2020-12** definitions (`profiles/schema/`).
+  - Centralizes **`89` model manifests**, **`12` SoCs**, **`5` cores**, **`31` mainboards**, **`18` parallel NOR chips**, **`6` I2C EEPROMs**, **`4` NOR layouts**, **`19` firmware trains** (including `loader_ver027_toc48_main57`), **`3` media formats**, [`geometry_and_binary_traps.json`](profiles/traps/geometry_and_binary_traps.json), `profiles/forensic_atlas/`, and **`13` JSON Schema Draft 2020-12** definitions (`profiles/schema/`).
   - Enforces a deterministic **`T0`–`T4` Capability Gate** (`panadiga profiles validate|show|authorize|export-schema`) respecting hardware WP/OTP ceilings and `256 KiB` IPL RO floors.
-  - Projects one canonical contract across **Rust**, **C11** (`picofw_ssot.h`, `digaos_ssot.h`), **TypeScript** (`apps/desktop/src/models/generated/{ssot,profiles,digaos}.ts`), **Python** (`scripts/profiles_types.py`), and **Ghidra Jython** (`tools/ghidra/`).
+  - Projects one canonical contract across **Rust**, **C11** (`picofw_ssot.h`, `digaos_ssot.{h,c}`), **TypeScript** (`apps/desktop/src/models/generated/{ssot,profiles,digaos}.ts`), **Python** (`scripts/profiles_types.py`), and **Ghidra Jython** (`tools/ghidra/`).
 
 ### 1.3 Embedded Firmware Ecosystem (`PicoFW` & `DigaOS`)
 - **Silicon-Audited `PicoFW` Probe for `P7501` (`RP2040`, `RP2350` & `Pico W / 2 W`):**
   - **Electrical & Pin Safety:** `picofw_hw_init()` clears reset pull-downs on `GP3 (NSW5V)` before `gpio_init(GP3)`; unconditional falling-edge IRQ isolates `GP2/GP3/GP4/GP5/GP26/GP6/GP7` on target power drop; boot-time QSPI CRC32 self-check (`SAFE_HIZ` fail-closed); `8 µs` contention detection (`ECONTENTION`) and anti-backpowering guards (`EPWR`).
-  - **Unified Security & Protocol Hardening:** Finite-state probe machine (`picofw_probe_fsm.{c,h}`), TX/bus guards (`picofw_bus_tx_guard.c`, `picofw_bus_policy.c`), golden wire contract (`tests/golden/picofw_wire_contract.json`), RSP/Watch abuse guards (`picofw_pana_rsp_guard.c`), unconditional Upper NOR auto-relock + `F14` wireless fail-closed gate, `BOOTTRACE` & `PiE-OS` X-Ray codecs (`picofw_boottrace_codec.c`, `picofw_pieos_xray.c`), SRAM-resident Core 1 sampler, bounded `512 B` GDB sector cache, zero external probe gadgets (`P0_FW_RO = 256 KiB`), atomic ping-pong A/B `P2_VAULT`, and RP2350 `P6_NOR_MIRROR`.
+  - **Unified Security & Protocol Hardening:** Finite-state probe machine (`picofw_probe_fsm.{c,h}`), TX/bus guards (`picofw_bus_tx_guard.c`, `picofw_bus_policy.c`), golden wire contract (`tests/golden/picofw_wire_contract.json`), RSP/Watch abuse guards (`picofw_pana_rsp_guard.c`), unconditional Upper NOR auto-relock + `F14` wireless fail-closed gate, `BOOTTRACE`, passive `BOOTFOLLOW` & `PiE-OS` X-Ray codecs (`picofw_boottrace_codec.c`, `picofw_diag_boottrace.c`, `picofw_pieos_xray.c`), SRAM-resident Core 1 sampler, bounded `512 B` GDB sector cache, zero external probe gadgets (`P0_FW_RO = 256 KiB`), atomic ping-pong A/B `P2_VAULT`, and RP2350 `P6_NOR_MIRROR`.
 - **Bare-Metal DIGA SoC Operating System (`DigaOS`):**
-  - Unified bare-metal SoC OS in [`firmware/digaos/`](firmware/digaos/README.md) (`digaos_ssot.h` sharing `resolve_eh55_verified_nor_context()`, `nor_bgo_ro.c`, `sdcd_sd.c`, `tbus_ic7501.c`, `uart_sc0.c`, `digaos_main.c`, `test_digaos_host.c`, absorbing TBC/SECAM baseline & `SW_GUARDS` from the retired bare-metal prototype).
+  - Unified bare-metal SoC OS in [`firmware/digaos/`](firmware/digaos/README.md) (`generated/digaos_ssot.h`, `generated/digaos_ssot_tables.c`, `drivers/aiof_video.c`, `drivers/avdd_iic_video.c`, `drivers/davis_sata.c`, `drivers/nor_bgo_ro.c`, `drivers/tbus_ic7501.c`, `kernel/digaos_main.c`, `tests/test_digaos_host.c`, including `digaos_iic5_init_m6930lb_av`, `TBUS` `0x81`/`0x83` builders, and interactive `peek`/`poke16`/`poke32`/`bootmap`/`video` console).
 - **Visual SSOT Studio & Hot Bare-Metal Silicon Explorer (`SsotStudioView`, `SiliconExplorerView`):**
   - Added real Tauri 2 IPC-backed **Visual SSOT Schema & DigaOS Customizer Studio** (`ssot_studio.rs`) and **Hot Bare-Metal Silicon Explorer** (`silicon_explorer.rs`, `ndb>` parser/session, `pico silicon-replay`, `pico silicon-snapshot`) with `OLD -> NEW` hot-diff telemetry and zero production demo mode.
 
@@ -91,15 +93,15 @@ Get-Content .\panadiga-windows-x86_64.zip.sha256
 ## 4. Quality Gates & Cross-Platform CI (`9/9` Local + `7/7` GitHub Actions)
 
 ```text
-✅ Gate 1   — Rust Workspace (11 crates: cargo fmt, clippy --all-targets -D warnings, tests, proptest/insta)
-✅ Gate 2   — Oxlint (0 warnings/errors across 390 files, 224 rules) + TypeScript Strict (tsc --noEmit)
-✅ Gate 3   — Vitest Frontend MVVM / Redux / Express / BLE / Parser Suite (133 tests across 40 files)
-✅ Gate 4   — jscpd Clone Detector (0 clones / 0.00% duplication across 1,245 files)
-✅ Gate 5   — ux-guard UI/UX Completeness & State Integrity Audit (100/100, 0 issues)
-✅ Gate 6   — Playwright E2E Chromium Headless Suite (33 tests across 9 specs)
-✅ Gate 7   — Multi-Language SSOT + Ghidra Jython Exporter (Idempotent export verification)
+✅ Gate 1   — Rust Workspace (11 crates: cargo fmt, clippy --all-targets -D warnings, 475+ tests, proptest/insta)
+✅ Gate 2   — Oxlint (0 warnings/errors across 400 files, 224 rules) + TypeScript Strict (tsc --noEmit)
+✅ Gate 3   — Vitest Frontend MVVM / Redux / Express / Studio / BLE / Parser Suite (135 tests across 41 files)
+✅ Gate 4   — jscpd Clone Detector (0 clones / 0.00% duplication across 1,280+ files)
+✅ Gate 5   — ux-guard UI/UX Completeness & State Integrity Audit (100/100, 0 issues across 328 files)
+✅ Gate 6   — Playwright E2E Chromium Headless Suite (37 tests across 10 specs)
+✅ Gate 7   — Multi-Language SSOT + Ghidra Jython Exporter (Idempotent zero-drift export verification)
 ✅ Gate 8   — C11 PicoFW & DigaOS Host Tests + ARM RP2040 / RP2350 Dual-Target Builds
-✅ Gate 9   — Python (py_compile, mypy --strict scripts, pytest scripts/tests — 75 tests incl. SSOT/FP & docs parity)
+✅ Gate 9   — Python (py_compile, mypy --strict across 80 files, pytest scripts/tests — 91+ tests incl. SSOT/FP & docs parity)
 ✅ Multi-CI — Windows x86_64 · Ubuntu x86_64 (.tar.gz + .deb) · macOS ARM64 · Android ARM64 APK · Pico UF2 · Supply-Chain (cargo-deny / cargo-audit / gitleaks)
 ```
 

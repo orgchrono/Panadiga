@@ -1,0 +1,424 @@
+>>> STATUS
+VDD: 3.25V (OK)
+[STANDBY] RXD=1 NSW5V=1 TXD=1 XRESET=1 SW_PU=3.27V NSW5V_DROPS=112 fault_latch=0 recoveries=112 | State=POWERED / AWAKE (SW_UART ~3.3V)
+[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=174 wdt_recoveries=0 reboot_src=CLEAN fault_slot=255 fault_stage=IDLE last_cmd=STATUS last_us=1780
+@PICO_RES cmd=STATUS status=OK code=0 elapsed_us=1781
+PICO>
+>>> PANARSP 1200 NOPULL MAGIC MEM:57000000,4
+=== PANARSP PIO1 (baud=115200 ms=1200 boot=0 hold=0 action=4) ===
+[PANARSP] RX (459 bytes, pretrig_dropped=0, inspect_from=0):
+  0000: 20 20 20 44 30 3A 30 30 30 30 30 30 30 30 2C 20  |   D0:00000000, |
+  0010: 20 20 44 31 3A 30 30 30 30 30 46 30 31 2C 20 20  |  D1:00000F01,  |
+  0020: 20 44 32 3A 30 30 30 30 30 30 30 30 2C 20 20 20  | D2:00000000,   |
+  0030: 44 33 3A 30 30 30 30 30 30 30 30 0D 0A 20 20 20  |D3:00000000..   |
+  0040: 41 30 3A 35 32 32 42 36 43 32 30 2C 20 20 20 41  |A0:522B6C20,   A|
+  0050: 31 3A 35 31 42 31 32 43 38 38 2C 20 20 20 41 32  |1:51B12C88,   A2|
+  0060: 3A 30 30 30 30 30 30 30 30 2C 20 20 20 41 33 3A  |:00000000,   A3:|
+  0070: 30 30 30 30 30 30 30 30 0D 0A 20 20 20 45 30 3A  |00000000..   E0:|
+  0080: 30 30 30 30 30 30 30 30 2C 20 20 20 45 31 3A 30  |00000000,   E1:0|
+  0090: 30 30 30 30 30 38 30 2C 20 20 20 45 32 3A 30 30  |0000080,   E2:00|
+  00A0: 30 30 30 30 30 30 2C 20 20 20 45 33 3A 35 33 34  |000000,   E3:534|
+  00B0: 45 37 39 30 30 0D 0A 20 20 20 45 34 3A 30 30 30  |E7900..   E4:000|
+  00C0: 30 30 30 30 30 2C 20 20 20 45 35 3A 30 30 30 30  |00000,   E5:0000|
+  00D0: 30 30 30 30 2C 20 20 20 45 36 3A 30 30 30 30 30  |0000,   E6:00000|
+  00E0: 30 30 30 2C 20 20 20 45 37 3A 30 30 30 30 30 30  |000,   E7:000000|
+  00F0: 30 30 0D 0A 20 45 50 53 57 3A 30 30 30 30 30 46  |00.. EPSW:00000F|
+  0100: 30 31 2C 20 20 4C 41 52 3A 35 37 37 31 30 44 34  |01,  LAR:57710D4|
+  0110: 44 2C 20 20 4C 49 52 3A 46 43 32 31 35 30 36 34  |D,  LIR:FC215064|
+  0120: 2C 20 20 4D 44 52 3A 35 37 37 30 45 44 33 35 0D  |,  MDR:5770ED35.|
+  0130: 0A 20 4D 43 56 46 3A 30 30 30 30 30 30 30 30 2C  |. MCVF:00000000,|
+  0140: 20 4D 43 52 4C 3A 36 41 45 37 30 38 32 35 2C 20  | MCRL:6AE70825, |
+  0150: 4D 43 52 48 3A 30 34 38 33 42 38 34 43 2C 20 4D  |MCRH:0483B84C, M|
+  0160: 44 52 51 3A 30 37 34 35 31 44 41 31 0D 0A 20 20  |DRQ:07451DA1..  |
+  0170: 20 50 43 3A 35 37 37 31 30 37 35 33 2C 20 20 20  | PC:57710753,   |
+  0180: 53 50 3A 35 32 32 42 36 43 31 43 0D 0A 0D 0A 35  |SP:522B6C1C....5|
+  0190: 37 37 31 30 37 35 33 3A 20 43 41 30 30 20 20 20  |7710753: CA00   |
+  01A0: 20 20 20 20 20 20 20 20 62 72 61 20 20 20 20 20  |        bra     |
+  01B0: 30 35 37 37 31 30 37 35 33 0D 0A 0D 0A 1B 5B 33  |057710753.....[3|
+  01C0: 31 6D 6E 64 62 3E 20 1B 5B 6D 39                 |1mndb> .[m9|
+[PANARSP] Frame: none (ack=no nak=no nak0x15=no)
+PANARSP: OK (rx=459 bytes, rsp=NO_REPLY, fifo_ovf=NO)
+@PICO_RES cmd=PANARSP status=OK code=0 elapsed_us=846914
+PICO>
+>>> BRIDGE
+[BRIDGE] USB CDC <-> P7501 SC0 115200 8N1 ctrl=OFF active (exit: send '~~~' or unplug USB).
+=== PASSIVE 90s ===
+g
+[RTSD] === DRIVE ACCESS ERROR === ( 80040904 )  [2006/ 1/ 1  0. 0. 0]
+*** CDB  [00 00 00 00 00 00 00 00 00 00 00 00] 
+*** SENSE[70 00 04 00 00 00 00 0A 00 00 83 A7 09 04 00 00 00 00] 
+H_STAT [0] T_STAT [2]
+[SYS_CNTL]read disc: 7
+[SYS_CNTL]SYS_CNTL_ReportMediaCallback called from FS
+[SYS_CNTL]Q task[40(40)] datatype[MEDIA_CALLBACK(180)]
+[SYS_CNTL]SetDeckModeStateEx task[sys_cntl(91)] drive[DVD] rec.drive[DVD] deck[STOP2(0x00000000)]
+[SYS_TUN]SYS_TUN_SysCntl_DeckMode_Callback()
+[RTSD] === DRIVE ACCESS ERROR === ( 80040904 )  [2006/ 1/ 1  0. 0. 0]
+*** CDB  [00 00 00 00 00 00 00 00 00 00 00 00] 
+*** SENSE[70 00 04 00 00 00 00 0A 00 00 83 A7 09 04 00 00 00 00] 
+H_STAT [0] T_STAT [2]
+[SYS_TUN]Stop_Timer -> direct channel
+[FS]VDM_ReportMediaEx : slot_id = 1 disc = b4 protect = 51b87888 format = 5770dd04
+[SYS_CNTL]VDM_ReportMediaEx(): vdm_res=0x80040904 
+[SYS_CNTL] disc  =0x000000b4  protect=0x51b87888 
+[SYS_CNTL] format=0x5770dd04  authent=0x577096be 
+[SYS_CNTL]sys_cntl_media_status_callbacks end
+[SYS_TUN]Stop_Timer -> direct channel
+[FPC]FPC_ReciveTASK() : 08 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+[FPC]FPC_ReciveTASK() : 40 B0 00 34 00 00 00 00 00 00 00 00 00 00 00 24 
+[SYS_CNTL]SYS_CNTL_AnyKeyPressAction(key=276,key_act=0)
+[SYS_TUN]Stop_Timer -> direct channel
+[SYS_TUN]cntl_tuner == 0
+[SYS_TUN]sys_tun_Tuner_Exe_ChangeChannel(chan_index == 100, recorder_id == 0, cntl_tuner == 0)
+[AVIN]0: avin_set_now_state() state = STATE_CHG_CHANNEL(2).
+[AVIN] 0_Prefilter = 1
+[FPC]FPC_ReciveTASK() : 7F F0 02 34 00 00 00 00 00 00 00 00 00 00 00 A5 
+[FPC]FPC_ReciveTASK() : 67 F1 0B AF 00 D9 B6 70 83 81 68 6C E5 00 00 CE 
+[FPC]FPC_ReciveTASK() : 40 B0 00 FF 00 00 00 00 00 00 00 00 00 00 00 EF 
+[FPC]FPC_ReciveTASK() : 7F AA 01 01 00 00 2E 06 00 02 00 00 00 00 00 61 
+[AVIN]0: avin_set_now_state() state = STATE_NORMAL(0).
+[AVIN]0: avin_set_now_state() source = SOURCE_LINE(1).
+[AVIN]0: avin_hw_input_source_select(SOURCE_LINE,L/R,0) end.
+[AVIN]0: set nr->0 [0:off 1:on 2:fdown 3:lv1 4:lv2 5:lv3 6:lv4 7:lv5]
+[AVIN]0: set nr->1 [0:off 1:on 2:fdown 3:lv1 4:lv2 5:lv3 6:lv4 7:lv5]
+[SYS_CNTL]sys_cntl_isNowTimerRec 1
+[SYS_CNTL]AVIN_DETECT_VBID_MV Callback Called !!
+[FPC]FPC_ReciveTASK() : 40 B0 00 34 00 00 00 00 00 00 00 00 00 00 00 24 
+[SYS_CNTL]SYS_CNTL_AnyKeyPressAction(key=276,key_act=0)
+[SYS_TUN]Stop_Timer -> direct channel
+[SYS_TUN]cntl_tuner == 0
+[SYS_TUN]sys_tun_Tuner_Exe_ChangeChannel(chan_index == 101, recorder_id == 0, cntl_tuner == 0)
+[AVIN]0: avin_set_now_state() state = STATE_CHG_CHANNEL(2).
+[AVIN] 0_Prefilter = 1
+[FPC]FPC_ReciveTASK() : 7F F0 02 30 46 46 42 30 30 36 38 36 33 36 00 DC 
+[FPC]FPC_ReciveTASK() : 67 F1 0B AF 00 D9 B6 70 83 81 68 6C E5 00 00 CE 
+[FPC]FPC_ReciveTASK() : 40 B0 00 FF 00 00 00 00 00 00 00 00 00 00 00 EF 
+[FPC]FPC_ReciveTASK() : 7F AA 01 FF 00 00 00 00 00 00 00 00 00 00 00 29 
+[AVIN]0: avin_set_now_state() state = STATE_NORMAL(0).
+[AVIN]0: avin_hw_input_source_select(SOURCE_LINE,L/R,0) end.
+[AVIN]0: set nr->1 [0:off 1:on 2:fdown 3:lv1 4:lv2 5:lv3 6:lv4 7:lv5]
+[SYS_CNTL]sys_cntl_isNowTimerRec 1
+[SYS_CNTL]AVIN_DETECT_VBID_MV Callback Called !!
+[FPC]FPC_ReciveTASK() : 40 B0 00 34 00 00 00 00 00 00 00 00 00 00 00 24 
+[SYS_CNTL]SYS_CNTL_AnyKeyPressAction(key=276,key_act=0)
+[SYS_TUN]Stop_Timer -> direct channel
+[SYS_TUN]cntl_tuner == 0
+[SYS_TUN]sys_tun_Tuner_Exe_ChangeChannel(chan_index == 102, recorder_id == 0, cntl_tuner == 0)
+[AVIN]0: avin_set_now_state() state = STATE_CHG_CHANNEL(2).
+[AVIN] 0_Prefilter = 1
+[FPC]FPC_ReciveTASK() : 7F F0 02 34 00 00 00 00 00 00 00 00 00 00 00 A5 
+[FPC]FPC_ReciveTASK() : 67 F1 0B AF 00 D9 B6 70 83 81 68 6C E5 00 00 CE 
+[FPC]FPC_ReciveTASK() : 40 B0 00 FF 00 00 00 00 00 00 00 00 00 00 00 EF 
+[FPC]FPC_ReciveTASK() : 7F AA 01 FF 00 00 00 00 00 00 00 00 00 00 00 29 
+[AVIN]0: avin_set_now_state() state = STATE_NORMAL(0).
+[AVIN]0: avin_hw_input_source_select(SOURCE_LINE,L/R,0) end.
+[AVIN]0: set nr->1 [0:off 1:on 2:fdown 3:lv1 4:lv2 5:lv3 6:lv4 7:lv5]
+[SYS_CNTL]sys_cntl_isNowTimerRec 1
+[SYS_CNTL]AVIN_DETECT_VBID_MV Callback Called !!
+[FPC]FPC_ReciveTASK() : 40 B0 00 34 00 00 00 00 00 00 00 00 00 00 00 24 
+[SYS_CNTL]SYS_CNTL_AnyKeyPressAction(key=276,key_act=0)
+[SYS_TUN]Stop_Timer -> direct channel
+[SYS_TUN]cntl_tuner == 0
+[SYS_TUN]sys_tun_Tuner_Exe_ChangeChannel(chan_index == 103, recorder_id == 0, cntl_tuner == 0)
+[AVIN]0: avin_set_now_state() state = STATE_CHG_CHANNEL(2).
+[AVIN] 0_Prefilter = 1
+[FPC]FPC_ReciveTASK() : 7F F0 02 34 00 00 00 00 00 00 00 00 00 00 00 A5 
+[FPC]FPC_ReciveTASK() : 67 F1 0B AF 00 D9 B6 70 83 81 68 6C E5 00 00 CE 
+[FPC]FPC_ReciveTASK() : 40 B0 00 FF 00 00 00 00 00 00 00 00 00 00 00 EF 
+[FPC]FPC_ReciveTASK() : 7F AA 01 FF 00 00 00 00 00 00 00 00 00 00 00 29 
+[AVIN]0: avin_set_now_state() state = STATE_NORMAL(0).
+[AVIN]0: avin_hw_input_source_select(SOURCE_LINE,L/R,0) end.
+[AVIN]0: set nr->1 [0:off 1:on 2:fdown 3:lv1 4:lv2 5:lv3 6:lv4 7:lv5]
+[SYS_CNTL]sys_cntl_isNowTimerRec 1
+[SYS_CNTL]AVIN_DETECT_VBID_MV Callback Called !!
+[FPC]FPC_ReciveTASK() : 40 B0 00 34 00 00 00 00 00 00 00 00 00 00 00 24 
+[SYS_CNTL]SYS_CNTL_AnyKeyPressAction(key=276,key_act=0)
+[SYS_TUN]Stop_Timer -> direct channel
+[SYS_TUN]cntl_tuner == 0
+[SYS_TUN]dv open.
+[AVIN]0: avin_set_now_state() state = STATE_CHG_CHANNEL(2).
+[AVIN] 0_Prefilter = 1
+[AVIN]0: avin_set_now_state() state = STATE_NORMAL(0).
+[AVIN]0: avin_set_now_state() input = INPUT_REC656(3).
+[AVIN]0: avin_set_now_state() source = SOURCE_DV(5).
+[AVIN]0: avin waits 3V for stop of decoder input.
+[AVIN]0 DvcBlkReset
+[AVIN]0: avin_hw_input_source_select(SOURCE_DV,L/R,0) end.
+[1394avc]ctl:PrepareDVRead() =Start....
+[1394avc][D] dvcodec exec start
+[1394avc][D] idle on
+[FPC]FPC_ReciveTASK() : 7F F0 02 34 00 00 00 00 00 00 00 00 00 00 00 A5 
+[FPC]FPC_ReciveTASK() : 7F A9 01 34 00 00 00 00 00 00 00 00 00 00 00 5D 
+[1394avc]ctl:Connection establishment result = ICN_EST_OK
+[1394avc]ctl: Establishment Connection = 1 
+[1394avc]ctl: PrepareDVRead2():Operation result= 0 
+[REC]0: -- FREE(no cpp info) -> FREE -- 
+[FPC]FPC_ReciveTASK() : 67 F1 0B AF 00 D9 B6 70 83 81 68 6C E5 00 00 CE 
+[FPC]FPC_ReciveTASK() : 40 B0 00 FF 00 00 00 00 00 00 00 00 00 00 00 EF 
+[SYS_TUN]STEREO
+[SYS_TUN]MUTE_OFF
+[FPC]FPC_ReciveTASK() : 40 B0 00 34 00 00 00 00 00 00 00 00 00 00 00 24 
+[SYS_CNTL]SYS_CNTL_AnyKeyPressAction(key=276,key_act=0)
+[SYS_TUN]Stop_Timer -> direct channel
+[SYS_TUN]cntl_tuner == 0
+[1394avc]ctl:UnprepareDVRead() =Start....
+[1394avc]ctl: Establishment Connection = 0 
+[1394avc][D] dvcodec exec stop
+[1394avc]ctl: UnprepareDVRead()():Operation result= 0 
+[SYS_TUN]dv close.
+[SYS_TUN]sys_tun_Tuner_Exe_ChangeChannel(chan_index == 1, recorder_id == 0, cntl_tuner == 0)
+[FPC]FPC_ReciveTASK() : 7F A9 01 34 00 00 00 00 00 00 00 00 00 00 00 5D 
+[AVIN]0: avin_set_now_state() input = INPUT_COMPOSITE(0).
+[AVIN]0: avin_set_now_state() source = SOURCE_LINE(1).
+[AVIN]0: avin_hw_input_source_select(SOURCE_LINE,L/R,0) end.
+[AVIN]0: set nr->0 [0:off 1:on 2:fdown 3:lv1 4:lv2 5:lv3 6:lv4 7:lv5]
+[AVIN]0: avin_set_now_state() state = STATE_CHG_CHANNEL(2).
+[AVIN] 0_Prefilter = 1
+[FPC]FPC_ReciveTASK() : 7F F0 02 01 00 00 33 06 00 02 00 00 00 00 00 AD 
+[FPC]FPC_ReciveTASK() : 40 B0 00 FF 00 00 00 00 00 00 00 00 00 00 00 EF 
+[FPC]FPC_ReciveTASK() : 7F AA 01 FF 00 00 00 00 00 00 00 00 00 00 00 29 
+[AVIN]0: avin_set_now_state() state = STATE_NORMAL(0).
+[AVIN]0: avin_set_now_state() source = SOURCE_TUNER(0).
+[AVIN]0: avin_hw_input_source_select(SOURCE_TUNER,L/R,0) end.
+[AVIN]0: set nr->0 [0:off 1:on 2:fdown 3:lv1 4:lv2 5:lv3 6:lv4 7:lv5]
+[REC]0: -- FREE -> FREE(no cpp info) -- 
+[SYS_CNTL]sys_cntl_isNowTimerRec 1
+[SYS_CNTL]AVIN_DETECT_VBID_MV Callback Called !!
+[FPC]FPC_ReciveTASK() : 40 B0 00 08 00 00 00 00 00 00 00 00 00 00 00 F8 
+[SYS_CNTL]SYS_CNTL_AnyKeyPressAction(key=401,key_act=0)
+[SYS_CNTL]SYS_CNTL_Record() sysstate = 0x2, deck_mode = 0x0 
+[SYS_MEDIA |420.68]Create operationID [0x00000d01]
+[SYS_MEDIA |420.68]Create operationID [0x00000301]
+:::SYS_RSV::: >> TRecHalt1(RECORDER) halt set success id = -1
+[SYS_MEDIA |420.69]Call MCM_REC_Start()
+[MCM |420.69]MCM_resource_Open tid:103 drive:0x00
+[MCM |420.69]MCM_resource_Open core[1]:0x00000400
+[FS]VDM_ReportMediaEx : slot_id = 0 disc = 1 protect = 0 format = 407
+[DML]**************[RATE-RSV-IFO-ALC]***************
+[DML]VR:       9542     638592        768  121723776
+[DML]M4:          0          0          0          0
+[DML]DB:          0          0          0          0
+[DML]OT:          0          0          0          0
+[DML]***********************************************
+[MCM |420.70]mcm_vr_Rec DVR_Rec_Movie call. drive:2 core_id:1 encLimitTime:-1
+[REC]0:MPEG2
+[EIF]0:EIF >>  SDM report(SDRAM OFFSET ADDRESS) = 00000301,
+[EIF]0:EIF >>  SDM report(VBB) = 014C,
+[EIF]0:EIF >>  SDM report(ABB) = 005A,
+[SYS_MEDIA]sys_media_SetDeckMode_Recorder() : now 0x0 -> drv 2,rec 0,clr 0x7000,set 0x4000
+[SYS_CNTL]SetDeckModeStateEx task[0(0)] drive[NONE] rec.drive[HDD] deck[TRANS_REC(0x00004000)]
+[SYS_TUN]SYS_TUN_SysCntl_DeckMode_Callback()
+[SYS_CNTL]SYS_CNTL_SetSysState[REC]
+[FPC]FPC_ReciveTASK() : 7F 89 01 08 00 00 00 00 00 00 00 00 00 00 00 11 
+[FPC]FPC_ReciveTASK() : 7F 9B 02 08 00 00 00 00 00 00 00 00 00 00 00 24 
+[REC]0:Encoder Reset send success
+[REC]0:Encoder Reset Complete
+[SYS_TUN]Stop_Timer -> direct channel
+[FPC]FPC_ReciveTASK() : 40 B0 00 FF 00 00 00 00 00 00 00 00 00 00 00 EF 
+[REC]0:Stop Mode Complete
+[REC]0:SetConfig audio rate = 1024
+[FS]VDM_ReportMediaEx : slot_id = 0 disc = 1 protect = 0 format = 407
+[REC]enc_no = 0  ------------------------------------------------
+[REC]Encoder ID = 513
+[REC]video_channel = REC_VIDEO_CHANNEL_A
+[REC]bit_rate_max = 10080
+[REC]bit_rate_average = 9542
+[REC]resolution = REC_RESOLUTION_NTSC_720_480
+[REC]audio_channel = REC_AUDIO_CHANNEL_A
+[REC]audio_format = REC_AUDIO_FORMAT_AC3
+[REC]audio_bit_rate = REC_ENCFUNC_A_BITRATE_BPS_384K 
+[REC]media_type = REC_MEDIA_TYPE_HDD
+[REC]recodig_format = REC_RECODING_FORMAT_VR
+[REC]tv_system = REC_TV_SYSTEM_NTSC
+[REC]frame_field_switch = REC_FRAME_STRUCTURE 
+[REC]base_for_dubbing_type = REC_DUBBING_TYPE_SET_THROUGH 
+[REC]type_of_picture = REC_MOVIE_PICTURE 
+[REC]aspect = 4:3 
+[REC]mpeg_format = MPEG2 
+[REC]still_ifq = 0
+[REC]--------------------------------------------------------
+[REC]0:Call REC_StartMovie
+[REC]0:recording frame count = 864000
+[REC]0:Setting command send success
+[REC]0:Rec_Start command send success
+[MCM |420.97]mcm_vr_Rec DVR_Rec_Movie return. result:0 pp_id:15
+[SYS_MEDIA |420.99]Callback from mcm : MCM_EVENT_REC_STATE_START_NORMAL opeId[0x0301] result[0]
+[SYS_MEDIA]sys_media_SetDeckMode_Recorder() : now 0x4000 -> drv 2,rec 0,clr 0x7000,set 0x1000
+[SYS_CNTL]SetDeckModeStateEx task[0(0)] drive[NONE] rec.drive[HDD] deck[REC(0x00001000)]
+[SYS_TUN]SYS_TUN_SysCntl_DeckMode_Callback()
+[SYS_CNTL]SYS_CNTL_SetSysState[REC]
+[SYS_CNTL]Q task[sys_media(103)] datatype[CLR_COPYRIGHT(33)]
+[SYS_CNTL]SYS_APP_CLR_COPYRIGHT
+[SYS_CNTL]sys_cntl_isNowTimerRec2 1 4
+[FPC]FPC_ReciveTASK() : 7F 9B 02 01 00 00 35 06 00 02 00 00 00 00 00 5A 
+[SYS_TUN]Stop_Timer -> direct channel
+[RTSD] (41443) AVWrite(type:0) start. storedsize : 43008
+[MCM |421.73]DVR_E_MAKE_PG
+[FPC]FPC_ReciveTASK() : 40 B0 00 08 00 00 00 00 00 00 00 00 00 00 00 F8 
+[SYS_CNTL]SYS_CNTL_AnyKeyPressAction(key=401,key_act=0)
+[SYS_CNTL]SYS_CNTL_Record() sysstate = 0x7, deck_mode = 0x2000000 
+[SYS_MEDIA |422.16]Create operationID [0x00000d01]
+[FPC]FPC_ReciveTASK() : 7F A9 01 08 00 00 00 00 00 00 00 00 00 00 00 31 
+[FPC]FPC_ReciveTASK() : 40 B0 00 FF 00 00 00 00 00 00 00 00 00 00 00 EF 
+[VDM]VDM_UpdateIfo(0,HDD2.IFO) = 0(0) IFO_exist:1 - BUP_exist:1
+[FPC]FPC_ReciveTASK() : 40 B0 00 0A 00 00 00 00 00 00 00 00 00 00 00 FA 
+[SYS_CNTL]SYS_CNTL_AnyKeyPressAction(key=251,key_act=0)
+[SYS_MEDIA |423.03]Create operationID [0x00000d01]
+[SYS_CNTL]SYS_CNTL_PL_NTSC 0 1 
+[SYS_CNTL]setgui start. tsk=106 mode=8
+[SYS_CNTL]SYS_CNTL_SetGuiMode task ID=0x6a set_gui_fg=0 mode=8
+[SYS_CNTL]Q task[sys_navi(106)] datatype[SET_GUI_MODE(134)]
+[SYS_CNTL]callback pre (id==0x6a) send=0x65
+ pre_end
+[SYS_CNTL]sys_cntl_CatchScreen() already. task ID 106(sys_navi)
+[SYS_CNTL]Q task[sys_navi(106)] datatype[SET_GUI_MODE2(135)]
+[SYS_CNTL]SetGuiMode mode=8 task ID=0x6a(sys_navi) Catch taskID=0x6a(sys_navi)
+[SYS_CNTL]M6// sys_cntl_play_condition = 0 new_mode=8 old_mode=0
+[SYS_CNTL]M6// FPC_VIDEO_OUT_ON
+[DCS]dco_api :AVOUT_AV_Select: video=2, audio=1
+[FPC]FPC_ReciveTASK() : 7F A9 01 0A 00 00 00 00 00 00 00 00 00 00 00 33 
+[DCS]dco_api :AVOUT_A_Mute_ID: ON_ID[ALL]=1 , [EE]=8
+[DCO]Audio Output = L/R.
+[FPC]FPC_ReciveTASK() : 40 B0 00 FF 00 00 00 00 00 00 00 00 00 00 00 EF 
+[DCS]dco_api :avout_API_MuteID = 0x1
+[DCS]dco_api :AVOUT_A_Mute_ID: OFF_ID[ALL]=0 , [EE]=8
+[SYS_CNTL]SYS_CNTL_SetSysState[VV]
+[SYS_CNTL]EndGuiFunc not execute! gui_task[106] RunGuiFuncBit[0x00]
+[SYS_CNTL]callback after (id==0x6a) send=0x72
+[SYS_TUN]SYS_TUN_SysCntl_GuiMode_Callback()
+[SYS_TUN]Stop_Timer -> direct channel
+send=0x65
+ after mid
+[SYS_CNTL]PTK_IsWindowEventTask(6a) fg=1,tsk_stat=4
+ end
+[SYS_CNTL]setgui end. tsk=106
+[FPC]fpc_ChangeKeyCodeWrite beforeKey = 161 : afterKey = 161 
+[FPC]fpc_ChangeKeyCodeWrite beforeKey = 160 : afterKey = 160 
+[SYS_MEDIA |423.45]Create operationID [0x00000d01]
+[SYS_MEDIA |423.46]Create operationID [0x00000d01]
+[SYS_MEDIA |423.46]Call MCM_PLAY_Start()
+[MCM |423.46]MCM_resource_Open tid:103 drive:0x00
+[MCM |423.46]MCM_resource_Open core[1]:0x00000800
+[MCM |423.48]mcm_vr_Play drive:2 disc_stat:0 resume_exist_flg:1 start.pp_flag:0 size:0
+[MCM |423.48]mcm_vr_Play DVR_Ply_At call. core_id:1 playcmd:0x00000100
+[MCM |423.52]mcm_vr_Play DVR_Ply_At return. result:0
+[SYS_MEDIA]sys_media_SetDeckMode() : now 0x0->drv 2,clr 0x8703,set 0x8000
+[SYS_CNTL]SetDeckModeStateEx task[sys_media(103)] drive[HDD] rec.drive[HDD] deck[REC|TRANS(0x00009000)]
+[SYS_TUN]SYS_TUN_SysCntl_DeckMode_Callback()
+[SYS_CNTL]SYS_CNTL_SetSysState[REC]
+[FPC]FPC_ReciveTASK() : 7F 89 01 FF 00 00 00 00 00 00 00 00 00 00 00 08 
+[SYS_TUN]Stop_Timer -> direct channel
+[FPC]FPC_ReciveTASK() : 7F 9B 02 FF 00 00 00 00 00 00 00 00 00 00 00 1B 
+[FPC]FPC_ReciveTASK() : 40 B0 00 00 00 00 00 00 00 00 00 00 00 00 00 F0 
+[SYS_CNTL]SYS_CNTL_AnyKeyPressAction(key=242,key_act=0)
+[SYS_MEDIA |423.80]Create operationID [0x00000d01]
+[SYS_MEDIA |423.80]Call MCM_PLAY_Stop()
+[MCM |423.80]mcm_vr_Play DVR_Stop_Ply call. core_id:1
+[MCM |423.83]mcm_vr_Stop DVR_Stop_Ply return result:0
+[FPC]FPC_ReciveTASK() : 40 B0 00 FF 00 00 00 00 00 00 00 00 00 00 00 EF 
+[FS]VDM_VobClose, start ( fid=d2 )
+[MCM |424.15]DVR_E_STOP_PLAY
+[MCM |424.15]DVR_E_STOP_PLAY
+[MCM |424.15]DVR_E_STOP_PLAY
+[SYS_MEDIA |424.15]Callback from mcm : MCM_EVENT_PLAY[0x0000004a] opeId[0x0d01] result[0]
+[SYS_MEDIA |424.15]cntId[0x120000f] chapId[0xffffffff] speed[6] state[3]
+[SYS_MEDIA]sys_media_SetDeckMode() : now 0x8000->drv 2,clr 0x8700,set 0x1
+[SYS_CNTL]SetDeckModeStateEx task[sys_media(103)] drive[HDD] rec.drive[HDD] deck[STOP1|REC(0x00001001)]
+[SYS_TUN]SYS_TUN_SysCntl_DeckMode_Callback()
+[SYS_CNTL]SYS_CNTL_SetSysState[REC]
+[FPC]FPC_ReciveTASK() : 7F 89 01 30 46 46 42 30 30 36 38 36 33 36 00 74 
+[FPC]FPC_ReciveTASK() : 7F 9B 02 30 46 46 42 30 30 36 38 36 33 36 00 87 
+[SYS_TUN]Stop_Timer -> direct channel
+[SYS_CNTL]SYS_CNTL_PL_NTSC 0 1 
+[SYS_NAVI][sort] SYS_MEDIA_Sort_Contents(): drive=2,type=1,sort=0
+[SYS_CNTL]setgui start. tsk=106 mode=0
+[SYS_CNTL]SYS_CNTL_SetGuiMode task ID=0x6a set_gui_fg=0 mode=0
+[SYS_CNTL]Q task[sys_navi(106)] datatype[SET_GUI_MODE(134)]
+[SYS_CNTL]callback pre (id==0x6a) send=0x65
+ pre_end
+[SYS_CNTL]sys_cntl_CatchScreen() already. task ID 106(sys_navi)
+[SYS_CNTL]Q task[sys_navi(106)] datatype[SET_GUI_MODE2(135)]
+[SYS_CNTL]SetGuiMode mode=0 task ID=0x6a(sys_navi) Catch taskID=0x6a(sys_navi)
+[SYS_CNTL]M6// sys_cntl_play_condition = 1 new_mode=0 old_mode=8
+[SYS_CNTL]M6// FPC_VIDEO_OUT_OFF
+[DCS]dco_api :AVOUT_AV_Select: video=0, audio=0
+[FPC]FPC_ReciveTASK() : 7F A9 01 30 46 46 42 30 30 36 38 36 33 36 00 94 
+[DCS]dco_api :AVOUT_A_Mute_ID: ON_ID[ALL]=1 , [EE]=8
+[DCS]AVDEC Interrupt           :RELOADDONE
+[DCS]AVDEC Interrupt           :RELOADDONE
+[DCS]AVDEC Interrupt           :BBFLUSHST
+[DCO]Audio Output = L/R.
+[DCS]dco_api :avout_API_MuteID = 0x1
+[DCS]dco_api :AVOUT_A_Mute_ID: OFF_ID[ALL]=0 , [EE]=8
+[SYS_CNTL]SYS_CNTL_SetSysState[EE]
+[SYS_CNTL]syswakeup 1 34603008
+[SYS_CNTL]EndGuiFunc not execute! gui_task[106] RunGuiFuncBit[0x00]
+[SYS_CNTL]callback after (id==0x6a) send=0x72
+[SYS_TUN]SYS_TUN_SysCntl_GuiMode_Callback()
+[SYS_TUN]Stop_Timer -> direct channel
+send=0x65
+[FPC]FPC_ReciveTASK() : 40 B0 00 00 00 00 00 00 00 00 00 00 00 00 00 F0 
+ after mid
+[SYS_CNTL]PTK_IsWindowEventTask(6a) fg=1,tsk_stat=4
+ end
+[SYS_CNTL]setgui end. tsk=106
+[FPC]fpc_ChangeKeyCodeWrite beforeKey = 161 : afterKey = 85 
+[FPC]fpc_ChangeKeyCodeWrite beforeKey = 160 : afterKey = 86 
+[FPC]FPC_ReciveTASK() : 40 B0 00 FF 00 00 00 00 00 00 00 00 00 00 00 EF 
+[SYS_CNTL]SYS_CNTL_AnyKeyPressAction(key=242,key_act=0)
+[SYS_MEDIA |424.80]Create operationID [0x00000d01]
+[FPC]FPC_ReciveTASK() : 40 B0 00 2C 00 00 00 00 00 00 00 00 00 00 00 1C 
+[SYS_CNTL]SYS_CNTL_AnyKeyPressAction(key=467,key_act=0)
+[SYS_CNTL]sys_cntl_get_catchscreen[106(sys_navi)]
+[SYS_MEDIA |425.19]Create operationID [0x00000d01]
+[SYS_CNTL]sys_cntl_drv_chginq_callbacks end ret=0
+[FPC]FPC_ReciveTASK() : 40 B0 00 FF 00 00 00 00 00 00 00 00 00 00 00 EF 
+[FPC]FPC_ReciveTASK() : 40 B0 00 2C 00 00 00 00 00 00 00 00 00 00 00 1C 
+[SYS_CNTL]SYS_CNTL_AnyKeyPressAction(key=467,key_act=0)
+[SYS_CNTL]sys_cntl_get_catchscreen[106(sys_navi)]
+[SYS_MEDIA |425.86]Create operationID [0x00000d01]
+[SYS_CNTL]sys_cntl_drv_chginq_callbacks end ret=0
+[FPC]FPC_ReciveTASK() : 40 B0 00 FF 00 00 00 00 00 00 00 00 00 00 00 EF 
+[FPC]FPC_ReciveTASK() : 40 B0 00 2C 00 00 00 00 00 00 00 00 00 00 00 1C 
+[SYS_CNTL]SYS_CNTL_AnyKeyPressAction(key=467,key_act=0)
+[SYS_CNTL]sys_cntl_get_catchscreen[106(sys_navi)]
+[SYS_MEDIA |426.34]Create operationID [0x00000d01]
+[SYS_CNTL]sys_cntl_drv_chginq_callbacks end ret=0
+[FPC]FPC_ReciveTASK() : 40 B0 00 FF 00 00 00 00 00 00 00 00 00 00 00 EF 
+[FPC]FPC_ReciveTASK() : 40 B0 00 00 00 00 00 00 00 00 00 00 00 00 00 F0 
+[SYS_CNTL]SYS_CNTL_AnyKeyPressAction(key=242,key_act=0)
+[SYS_CNTL]>>> KeyCheckInvalid(242):QUICK_DRIVE_CHANGE
+[SYS_CNTL]>>> sys_cntl_key_check_by_state(src/sys_cntl_keyaction/sys_cntl_key_check_main.c:3882)
+[FPC]FPC_ReciveTASK() : 7F A9 01 30 46 46 42 30 30 36 38 36 33 36 00 94 
+[SYS_CNTL]QuickDriveChange TimeOut OK !!
+[SYS_CNTL]## HDD_DVD key
+[SYS_CNTL]sys_cntl_get_catchscreen[106(sys_navi)]
+[SYS_CNTL]>>> SYS_CNTL_HDD_DVD(src/sys_cntl_keyaction/sys_cntl_keyact_func.c:9626)
+[FPC]FPC_ReciveTASK() : 40 B0 00 FF 00 00 00 00 00 00 00 00 00 00 00 EF 
+[FPC]FPC_ReciveTASK() : 40 B0 00 34 00 00 00 00 00 00 00 00 00 00 00 24 
+[SYS_CNTL]SYS_CNTL_AnyKeyPressAction(key=276,key_act=0)
+[FPC]FPC_ReciveTASK() : 40 B0 00 EF 00 00 00 00 00 00 00 00 00 00 00 DF 
+[SYS_CNTL]SYS_CNTL_AnyKeyPressAction(key=419,key_act=0)
+[FPC]FPC_ReciveTASK() : 40 B0 00 FF 00 00 00 00 00 00 00 00 00 00 00 EF 
+[FPC]FPC_ReciveTASK() : 40 B0 00 34 00 00 00 00 00 00 00 00 00 00 00 24 
+[SYS_CNTL]SYS_CNTL_AnyKeyPressAction(key=276,key_act=0)
+[SYS_CNTL]KeyRepeat[276]
+[SYS_CNTL]KeyRepeat[276]
+[SYS_CNTL]KeyRepeat[276]
+[FPC]FPC_ReciveTASK() : 40 B0 00 EF 00 00 00 00 00 00 00 00 00 00 00 DF 
+[SYS_CNTL]SYS_CNTL_AnyKeyPressAction(key=419,key_act=0)
+[FPC]FPC_ReciveTASK() : 08 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+[FPC]FPC_ReciveTASK() : 40 B0 00 FF 00 00 00 00 00 00 00 00 00 00 00 EF 
+[FPC]FPC_ReciveTASK() : 40 B0 00 EF 00 00 00 00 00 00 00 00 00 00 00 DF 
+[SYS_CNTL]SYS_CNTL_AnyKeyPressAction(key=419,key_act=0)
+
+>>> ISOLATE
+[BUS] P7501 pins placed in High-Impedance Isolation (NSW5V/XRESET Hi-Z, GP26 ADC0).
+@PICO_RES cmd=ISOLATE status=OK code=0 elapsed_us=174
+PICO>
+>>> STATUS
+VDD: 3.25V (OK)
+[STANDBY] RXD=1 NSW5V=1 TXD=1 XRESET=1 SW_PU=3.26V NSW5V_DROPS=112 fault_latch=0 recoveries=112 | State=POWERED / AWAKE (SW_UART ~3.3V)
+[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=178 wdt_recoveries=0 reboot_src=CLEAN fault_slot=255 fault_stage=IDLE last_cmd=ISOLATE last_us=174
+@PICO_RES cmd=STATUS status=OK code=0 elapsed_us=1774
+PICO>

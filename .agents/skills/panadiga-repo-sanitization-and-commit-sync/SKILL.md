@@ -3,7 +3,7 @@ name: panadiga-repo-sanitization-and-commit-sync
 description: >-
   Sanitização programática do repositório, catálogo auto-atualizável do arsenal completo
   (crates Rust, subcomandos CLI, tools/resources/prompts MCP, comandos IPC Tauri 2, catálogo
-  Pico P7501, scripts Python/Ghidra, 29 skills e 6 subagentes), sincronia SSOT/Ghidra/Arsenal
+  Pico P7501, scripts Python/Ghidra, 29 skills e 7 subagentes), sincronia SSOT/Ghidra/Arsenal
   (--sync), auditoria de higiene/keystores/god-modules (--check) e planejamento read-only de
   commits atômicos em 6 ondas (--commit-plan com --exclude). Nunca executa git commit/push.
 ---

@@ -1,0 +1,27 @@
+=== COM10 FULL TV/CONFIG1/U88 PROBE SESSION 2026-11-25T08:44:34Z ===
+=== Port: COM10 | Baud: 115200 | Mode: ZERO_NOR_WRITES + VOLATILE_NTSC_M ===
+=== INITIAL STATUS ===
+PICO> VDD: 3.26V (OK)
+[STANDBY] RXD=1 NSW5V=1 TXD=1 XRESET=1 SW_PU=3.27V NSW5V_DROPS=40 fault_latch=0 recoveries=40 | State=POWERED / AWAKE (SW_UART ~3.3V)
+[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=79 wdt_recoveries=0 reboot_src=CLEAN fault_slot=255 fault_stage=IDLE last_cmd=ISOLATE last_us=188
+@PICO_RES cmd=STATUS status=OK code=0 elapsed_us=1782
+PICO>
+[GATE_OK] VDD=3.26V NSW5V=1 OK
+[ENTRY1_PANARSP] === PANARSP PIO1 (baud=115200 ms=700 boot=0 hold=0 action=4) ===
+[PANARSP] RX (0 bytes, pretrig_dropped=0, inspect_from=0):
+[PANARSP] Frame: none (ack=no nak=no nak0x15=no)
+PANARSP: ERROR (rx=0 bytes, rsp=NO_REPLY, fifo_ovf=NO)
+@PICO_RES cmd=PANARSP status=ERR code=ENOREPLY elapsed_us=814176
+PICO>
+[INFO] PANARSP did not reach ndb>; sniffing BRIDGE passively for 1.5s
+=== PASSIVE_BRIDGE_SNIFF_1.5S ===
+[BRIDGE] USB CDC <-> P7501 SC0 115200 8N1 ctrl=OFF active (exit: send '~~~' or unplug USB).
+=== CLEANUP ===
+[BUS] P7501 pins placed in High-Impedance Isolation (NSW5V/XRESET Hi-Z, GP26 ADC0).
+@PICO_RES cmd=ISOLATE status=OK code=0 elapsed_us=193
+PICO>
+VDD: 3.26V (OK)
+[STANDBY] RXD=1 NSW5V=1 TXD=1 XRESET=1 SW_PU=3.27V NSW5V_DROPS=40 fault_latch=0 recoveries=40 | State=POWERED / AWAKE (SW_UART ~3.3V)
+[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=83 wdt_recoveries=0 reboot_src=CLEAN fault_slot=255 fault_stage=IDLE last_cmd=ISOLATE last_us=193
+@PICO_RES cmd=STATUS status=OK code=0 elapsed_us=1951
+PICO>

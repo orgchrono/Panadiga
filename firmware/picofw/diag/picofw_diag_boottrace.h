@@ -20,6 +20,12 @@ void picofw_boottrace_emit_reports(const picofw_boot_classifier_t *cls);
 /** Execute `BOOTTRACE [ms] [NORMAL|JIG[:ms]|NOPULL]` correlated UART + control/rail trace. */
 void picofw_cmd_boottrace(const char *arg);
 
+/**
+ * Execute `BOOTFOLLOW [idle_ms]`: passive (never drives XRESET/SW_UART), unbounded boot trace.
+ * Cycles restart the relative clock on real XRESET/wake/`DDR CHECK: OK` events. Stop with Ctrl+C.
+ */
+void picofw_cmd_bootfollow(const char *arg);
+
 #ifdef __cplusplus
 }
 #endif

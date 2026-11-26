@@ -25,6 +25,37 @@ use super::header_gen::{push_def_u8, push_def_u16, push_def_u32};
 const DIGAOS_DAVIS_CH0_BASE_ADDR: u32 = 0x8900_0400;
 const DIGAOS_MIN_DISK_LBA_5GB: u32 = 0x0093_0E20;
 const DIGAOS_SATA_BRIDGE_WAIT_MS: u32 = 1_000;
+const DIGAOS_XTAL_NTSC_M_HZ: u32 = 3_579_545;
+const DIGAOS_XTAL_PAL_M_HZ: u32 = 3_575_611;
+const DIGAOS_P7501_NSW5V_UPSTREAM_MV: u32 = 5_150;
+const DIGAOS_P7501_NSW5V_MEASURED_MV: u32 = 3_290;
+const DIGAOS_AIOF_REC656_OFF: u32 = 0x0004;
+const DIGAOS_AIOF_REC656_NTSC: u16 = 0x0C00;
+const DIGAOS_AIOF_COMMON_OFF: u32 = 0x0008;
+const DIGAOS_AIOF_COMMON_525: u16 = 0x3C50;
+const DIGAOS_AIOF_SYNC_OFF: u32 = 0x000C;
+const DIGAOS_AIOF_SYNC_525: u16 = 0x057C;
+const DIGAOS_AVDD_CLK_OFF: u32 = 0x0402;
+const DIGAOS_AVDD_CLK_480I: u16 = 0x4FB3;
+const DIGAOS_AVDD_ACTIVE_SIZE_480I: u32 = 0x01E0_02D0;
+const DIGAOS_AVDD_SYNC_480I: u32 = 0x2800_0242;
+const DIGAOS_AVDD_CLK_576I: u16 = 0x4BB1;
+const DIGAOS_AVDD_ACTIVE_SIZE_576I: u32 = 0x0240_02D0;
+const DIGAOS_AVDD_SYNC_576I: u32 = 0x2800_0642;
+const DIGAOS_AVDD_DACOUT1_UNMUTED: u16 = 0x0DDF;
+const DIGAOS_AVDD_DACOUT1_MUTED: u16 = 0x8D00;
+const DIGAOS_AVDD_DACOUT1_MUTE_BIT: u16 = 0x8000;
+const DIGAOS_AVDD_NPALCTL0_HI_KEEP: u32 = 0x0005_0000;
+const DIGAOS_MAIN3410_CONFIG1_RAM: u32 = 0x5318_4B44;
+const DIGAOS_MAIN3410_CFG_PON_REBOOT_VA: u32 = 0x5318_4C04;
+const DIGAOS_MAIN3410_CFG_U88_CODE_VA: u32 = 0x5318_59A8;
+const DIGAOS_MAIN3410_CFG_TV_SYS_VA: u32 = 0x5318_5E30;
+const DIGAOS_MAIN3410_AVOUT_TV_SYS_VA: u32 = 0x515C_D08C;
+const DIGAOS_MAIN3410_SYS_POW_STATE_VA: u32 = 0x515C_D4E0;
+const DIGAOS_MAIN3410_MARKET_CODE_VA: u32 = 0x5318_6DBC;
+const DIGAOS_PROG061_AUTOBOOT_STAMP_VA: u32 = 0x5043_95FC;
+const DIGAOS_WAKEUP_XRESET_INVALID: u8 = 0x70;
+const DIGAOS_STAGE15_NOR_BYTES: u32 = 0x0004_0000;
 
 pub(super) fn append_peripherals_storage_and_tables(out: &mut String, cfg: &DigaOsConfigSpec) {
     let total_menu_items: usize = cfg.menus.iter().map(|m| m.items.len()).sum();
@@ -61,6 +92,46 @@ pub(super) fn append_peripherals_storage_and_tables(out: &mut String, cfg: &Diga
     push_def_u16(out, "DIGAOS_SSOT_VMODESEL_NTSC", AIOF_VMODESEL_NTSC);
     push_def_u16(out, "DIGAOS_SSOT_VMODESEL_PAL_M", AIOF_VMODESEL_PAL_M);
     push_def_u16(out, "DIGAOS_SSOT_VMODESEL_PAL", AIOF_VMODESEL_PAL);
+    push_def_u32(
+        out,
+        "DIGAOS_SSOT_XTAL_NTSC_M_HZ",
+        DIGAOS_XTAL_NTSC_M_HZ,
+        false,
+    );
+    push_def_u32(
+        out,
+        "DIGAOS_SSOT_XTAL_PAL_M_HZ",
+        DIGAOS_XTAL_PAL_M_HZ,
+        false,
+    );
+    push_def_u32(
+        out,
+        "DIGAOS_SSOT_P7501_NSW5V_UPSTREAM_MV",
+        DIGAOS_P7501_NSW5V_UPSTREAM_MV,
+        false,
+    );
+    push_def_u32(
+        out,
+        "DIGAOS_SSOT_P7501_NSW5V_MEASURED_MV",
+        DIGAOS_P7501_NSW5V_MEASURED_MV,
+        false,
+    );
+    push_def_u32(
+        out,
+        "DIGAOS_SSOT_AIOF_REC656_OFF",
+        DIGAOS_AIOF_REC656_OFF,
+        true,
+    );
+    push_def_u16(out, "DIGAOS_SSOT_AIOF_REC656_NTSC", DIGAOS_AIOF_REC656_NTSC);
+    push_def_u32(
+        out,
+        "DIGAOS_SSOT_AIOF_COMMON_OFF",
+        DIGAOS_AIOF_COMMON_OFF,
+        true,
+    );
+    push_def_u16(out, "DIGAOS_SSOT_AIOF_COMMON_525", DIGAOS_AIOF_COMMON_525);
+    push_def_u32(out, "DIGAOS_SSOT_AIOF_SYNC_OFF", DIGAOS_AIOF_SYNC_OFF, true);
+    push_def_u16(out, "DIGAOS_SSOT_AIOF_SYNC_525", DIGAOS_AIOF_SYNC_525);
 
     push_def_u32(out, "DIGAOS_SSOT_AVDD_BASE", AM34_AVDD_BASE, true);
     push_def_u32(out, "DIGAOS_SSOT_AVDD_DACOUT1_OFF", AVDD_DACOUT1_OFF, true);
@@ -86,6 +157,113 @@ pub(super) fn append_peripherals_storage_and_tables(out: &mut String, cfg: &Diga
         out,
         "DIGAOS_SSOT_AVDD_VDECCTL1_OFF",
         AVDD_VDECCTL1_OFF,
+        true,
+    );
+    push_def_u32(out, "DIGAOS_SSOT_AVDD_CLK_OFF", DIGAOS_AVDD_CLK_OFF, true);
+    push_def_u16(out, "DIGAOS_SSOT_AVDD_CLK_480I", DIGAOS_AVDD_CLK_480I);
+    push_def_u32(
+        out,
+        "DIGAOS_SSOT_AVDD_ACTIVE_SIZE_480I",
+        DIGAOS_AVDD_ACTIVE_SIZE_480I,
+        true,
+    );
+    push_def_u32(
+        out,
+        "DIGAOS_SSOT_AVDD_SYNC_480I",
+        DIGAOS_AVDD_SYNC_480I,
+        true,
+    );
+    push_def_u16(out, "DIGAOS_SSOT_AVDD_CLK_576I", DIGAOS_AVDD_CLK_576I);
+    push_def_u32(
+        out,
+        "DIGAOS_SSOT_AVDD_ACTIVE_SIZE_576I",
+        DIGAOS_AVDD_ACTIVE_SIZE_576I,
+        true,
+    );
+    push_def_u32(
+        out,
+        "DIGAOS_SSOT_AVDD_SYNC_576I",
+        DIGAOS_AVDD_SYNC_576I,
+        true,
+    );
+    push_def_u16(
+        out,
+        "DIGAOS_SSOT_AVDD_DACOUT1_UNMUTED",
+        DIGAOS_AVDD_DACOUT1_UNMUTED,
+    );
+    push_def_u16(
+        out,
+        "DIGAOS_SSOT_AVDD_DACOUT1_MUTED",
+        DIGAOS_AVDD_DACOUT1_MUTED,
+    );
+    push_def_u16(
+        out,
+        "DIGAOS_SSOT_AVDD_DACOUT1_MUTE_BIT",
+        DIGAOS_AVDD_DACOUT1_MUTE_BIT,
+    );
+    push_def_u32(
+        out,
+        "DIGAOS_SSOT_AVDD_NPALCTL0_HI_KEEP",
+        DIGAOS_AVDD_NPALCTL0_HI_KEEP,
+        true,
+    );
+    push_def_u32(
+        out,
+        "DIGAOS_SSOT_MAIN3410_CONFIG1_RAM",
+        DIGAOS_MAIN3410_CONFIG1_RAM,
+        true,
+    );
+    push_def_u32(
+        out,
+        "DIGAOS_SSOT_MAIN3410_CFG_PON_REBOOT_VA",
+        DIGAOS_MAIN3410_CFG_PON_REBOOT_VA,
+        true,
+    );
+    push_def_u32(
+        out,
+        "DIGAOS_SSOT_MAIN3410_CFG_U88_CODE_VA",
+        DIGAOS_MAIN3410_CFG_U88_CODE_VA,
+        true,
+    );
+    push_def_u32(
+        out,
+        "DIGAOS_SSOT_MAIN3410_CFG_TV_SYS_VA",
+        DIGAOS_MAIN3410_CFG_TV_SYS_VA,
+        true,
+    );
+    push_def_u32(
+        out,
+        "DIGAOS_SSOT_MAIN3410_AVOUT_TV_SYS_VA",
+        DIGAOS_MAIN3410_AVOUT_TV_SYS_VA,
+        true,
+    );
+    push_def_u32(
+        out,
+        "DIGAOS_SSOT_MAIN3410_SYS_POW_STATE_VA",
+        DIGAOS_MAIN3410_SYS_POW_STATE_VA,
+        true,
+    );
+    push_def_u32(
+        out,
+        "DIGAOS_SSOT_MAIN3410_MARKET_CODE_VA",
+        DIGAOS_MAIN3410_MARKET_CODE_VA,
+        true,
+    );
+    push_def_u32(
+        out,
+        "DIGAOS_SSOT_PROG061_AUTOBOOT_STAMP_VA",
+        DIGAOS_PROG061_AUTOBOOT_STAMP_VA,
+        true,
+    );
+    push_def_u8(
+        out,
+        "DIGAOS_SSOT_WAKEUP_XRESET_INVALID",
+        DIGAOS_WAKEUP_XRESET_INVALID,
+    );
+    push_def_u32(
+        out,
+        "DIGAOS_SSOT_STAGE15_NOR_BYTES",
+        DIGAOS_STAGE15_NOR_BYTES,
         true,
     );
 

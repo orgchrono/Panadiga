@@ -16,7 +16,9 @@
 #include "cli/picofw_cli.h"
 #include "common/picofw_cmd_arena.h"
 #include "common/picofw_push_stream.h"
+#include "common/picofw_wdt_logic.h"
 #include "hal/picofw_led.h"
+#include "hal/picofw_watchdog.h"
 #include "picofw_types.h"
 #include "uart/picofw_pio_loop.h"
 #include "uart/picofw_uart_codec.h"
@@ -235,4 +237,206 @@ void picofw_cmd_boottrace(const char *arg) {
     }
     picofw_boottrace_emit_reports(&ctx->classifier);
     printf("BOOTTRACE: OK%s\n", m.aborted ? " (aborted=YES)" : "");
+}
+
+/* ------------------------------------------------------------------------- *
+ * BOOTFOLLOW: passive, unbounded, boot-cycle-aware trace
+ *
+ * - Never drives XRESET / SW_UART / NSW5V (PASSIVE session, `NOPULL` equivalent).
+ * - Runs until Ctrl+C. The PIO RX session stays open across internal segments, so the RX DMA
+ *   ring keeps buffering between segments: no byte is lost and no timestamp is rewound.
+ * - Cycles follow the target: XRESET falling edge, NSW5V rising edge (wake) or a fresh
+ *   `DDR CHECK: OK` banner restart the relative clock at +0 ms; NSW5V falling ends the cycle.
+ * ------------------------------------------------------------------------- */
+
+#define BOOTFOLLOW_SEGMENT_MS      30000u
+#define BOOTFOLLOW_DEFAULT_IDLE_MS 8000u
+
+typedef struct follow_ctx {
+    picofw_boot_cycle_t cycle;
+    picofw_boot_classifier_t classifier;
+    char line[160];
+    size_t line_len;
+    uint64_t line_start_us;
+    uint64_t follow_t0_us;
+    absolute_time_t next_led_t;
+} follow_ctx_t;
+
+static void follow_close_cycle(
+    follow_ctx_t *f,
+    uint32_t cycle_no,
+    uint64_t start_us,
+    uint32_t lines,
+    const char *reason,
+    uint64_t end_us
+) {
+    const uint32_t dur_ms = (end_us >= start_us) ? (uint32_t)((end_us - start_us) / 1000ULL) : 0u;
+    printf("[FOLLOW] CYCLE %" PRIu32 " END reason=%s dur=%" PRIu32 "ms lines=%" PRIu32 "\n",
+           cycle_no, reason, dur_ms, lines);
+    picofw_boottrace_emit_reports(&f->classifier);
+    picofw_boot_classifier_init(&f->classifier);
+}
+
+static void follow_apply(follow_ctx_t *f, picofw_cycle_event_t ev, uint64_t now_us) {
+    const picofw_boot_cycle_t *cy = &f->cycle;
+    switch (ev) {
+        case PICOFW_CYCLE_EV_START:
+            if (cy->had_previous) {
+                follow_close_cycle(f, cy->prev_cycle_no, cy->prev_start_us, cy->prev_lines,
+                                   "NEW_BOOT", cy->start_us);
+            }
+            picofw_boot_classifier_init(&f->classifier);
+            printf("[FOLLOW] CYCLE %" PRIu32 " START reason=%s t_abs=%" PRIu32 "ms\n",
+                   cy->cycle_no, picofw_boot_cycle_reason_name(cy->start_reason),
+                   (uint32_t)((cy->start_us - f->follow_t0_us) / 1000ULL));
+            break;
+        case PICOFW_CYCLE_EV_END:
+            follow_close_cycle(f, cy->cycle_no, cy->start_us, cy->lines_in_cycle,
+                               picofw_boot_cycle_reason_name(cy->end_reason), now_us);
+            break;
+        case PICOFW_CYCLE_EV_IDLE_REPORT:
+            printf("[FOLLOW] CYCLE %" PRIu32 " IDLE_REPORT lines=%" PRIu32 " t=%" PRIu32 "ms\n",
+                   cy->cycle_no, cy->lines_in_cycle, picofw_boot_cycle_rel_ms(cy, now_us));
+            picofw_boottrace_emit_reports(&f->classifier);
+            break;
+        default:
+            return;
+    }
+    fflush(stdout);
+}
+
+static void follow_flush_line(follow_ctx_t *f) {
+    if (f->line_len == 0u) {
+        return;
+    }
+    f->line[f->line_len] = '\0';
+    follow_apply(f, picofw_boot_cycle_on_line(&f->cycle, f->line_start_us, f->line), f->line_start_us);
+    printf("[BOOTTRACE +%4" PRIu32 "ms] %s\n",
+           picofw_boot_cycle_rel_ms(&f->cycle, f->line_start_us), f->line);
+    picofw_boot_classifier_feed_line(&f->classifier, f->line);
+    f->line_len = 0u;
+    fflush(stdout);
+}
+
+static void follow_on_byte(void *raw_ctx, uint8_t byte, uint32_t rel_us, bool *out_stop) {
+    (void)rel_us;
+    (void)out_stop;
+    follow_ctx_t *f = (follow_ctx_t *)raw_ctx;
+    if ((byte == '\r') || (byte == '\n')) {
+        follow_flush_line(f);
+        return;
+    }
+    if (f->line_len == 0u) {
+        f->line_start_us = time_us_64();
+    }
+    if (f->line_len < (sizeof(f->line) - 1u)) {
+        f->line[f->line_len++] = ((byte >= 0x20u) && (byte < 0x7Fu)) ? (char)byte : '.';
+    }
+    if (f->line_len >= (sizeof(f->line) - 1u)) {
+        follow_flush_line(f);
+    }
+}
+
+static void follow_on_tick(void *raw_ctx, uint32_t rel_us, bool *out_stop) {
+    (void)rel_us;
+    (void)out_stop;
+    follow_ctx_t *f = (follow_ctx_t *)raw_ctx;
+    const uint64_t now_us = time_us_64();
+
+    const uint8_t ctrl3 = read_ctrl3();
+    if (ctrl3 != f->cycle.prev_ctrl3) {
+        follow_apply(f, picofw_boot_cycle_on_ctrl(&f->cycle, now_us, ctrl3), now_us);
+        printf("  [CTRL +%7" PRIu32 "us] NSW5V=%u TXD=%u XRESET=%u\n",
+               picofw_boot_cycle_rel_us(&f->cycle, now_us),
+               (ctrl3 >> 0) & 1u, (ctrl3 >> 1) & 1u, (ctrl3 >> 2) & 1u);
+        fflush(stdout);
+    }
+    follow_apply(f, picofw_boot_cycle_tick(&f->cycle, now_us), now_us);
+
+    if (time_reached(f->next_led_t)) {
+        f->next_led_t = make_timeout_time_ms(10u);
+        picofw_led_tick();
+    }
+}
+
+void picofw_cmd_bootfollow(const char *arg) {
+    uint32_t idle_ms = BOOTFOLLOW_DEFAULT_IDLE_MS;
+    char tok[24] = {0};
+    if (picofw_next_token(arg, tok, sizeof(tok)) != NULL) {
+        idle_ms = picofw_parse_uint32_clamped(tok, BOOTFOLLOW_DEFAULT_IDLE_MS, 1000u, 120000u);
+    }
+
+    _Static_assert(sizeof(follow_ctx_t) <= sizeof(g_picofw_cmd_arena.raw),
+                   "follow_ctx_t must fit inside shared command arena");
+    follow_ctx_t *const f = (follow_ctx_t *)(void *)g_picofw_cmd_arena.raw;
+    memset(f, 0, sizeof(*f));
+    picofw_boot_classifier_init(&f->classifier);
+    const uint8_t ctrl3 = read_ctrl3();
+    picofw_boot_cycle_init(&f->cycle, idle_ms, ctrl3);
+    f->follow_t0_us = time_us_64();
+    f->next_led_t = make_timeout_time_ms(10u);
+
+    printf("=== BOOTFOLLOW: passive continuous, idle_report=%" PRIu32 "ms, never drives XRESET/SW_UART; Ctrl+C to stop ===\n",
+           idle_ms);
+    fflush(stdout);
+
+    picofw_wdt_set_stage(PICOFW_WDT_STAGE_RESET_SYNC);
+    picofw_led_set_auto_mode(LED_MODE_BUS_ACTIVE);
+    picofw_pio_begin_rx_session_cfg(PICOFW_BOOT_ACTION_PASSIVE, 0u, false);
+    picofw_wdt_set_stage(PICOFW_WDT_STAGE_RX_WAIT);
+
+    if ((ctrl3 & PICOFW_CTRL3_NSW5V) != 0u) {
+        picofw_boot_cycle_attach(&f->cycle, f->follow_t0_us);
+        follow_apply(f, PICOFW_CYCLE_EV_START, f->follow_t0_us);
+    } else {
+        printf("[FOLLOW] armed: target in standby (NSW5V=0), waiting for wake/boot\n");
+        fflush(stdout);
+    }
+
+    const picofw_pio_loop_cfg_t cfg = {
+        .window_ms = BOOTFOLLOW_SEGMENT_MS,
+        .boot_action = PICOFW_BOOT_ACTION_PASSIVE,
+        .jig_hold_ms = 0u,
+        .manage_session = false,
+        .no_xreset = false,
+        .auto_release_serial_boot = false,
+        .allow_cdc_abort = true,
+        .on_rx_byte = follow_on_byte,
+        .on_tick = follow_on_tick,
+        .on_sw_rel = NULL,
+        .ctx = f,
+    };
+
+    uint32_t total_rx = 0u;
+    uint32_t total_ferr = 0u;
+    uint32_t total_perr = 0u;
+    uint32_t overflow_segments = 0u;
+    picofw_pio_loop_metrics_t m;
+    do {
+        memset(&m, 0, sizeof(m));
+        picofw_pio_run_session(&cfg, &m);
+        total_rx += m.rx_bytes;
+        total_ferr += m.framing_errors;
+        total_perr += m.parity_errors;
+        if (m.overflow) {
+            ++overflow_segments;
+            printf("[FOLLOW] WARN rx_overflow (host too slow draining CDC)\n");
+            fflush(stdout);
+        }
+    } while (!m.aborted);
+
+    const uint64_t end_us = time_us_64();
+    follow_flush_line(f);
+    if (f->cycle.active) {
+        follow_close_cycle(f, f->cycle.cycle_no, f->cycle.start_us, f->cycle.lines_in_cycle,
+                           picofw_boot_cycle_reason_name(PICOFW_CYCLE_REASON_ABORT), end_us);
+    }
+    printf("[FOLLOW] session: cycles=%" PRIu32 " rx_bytes=%" PRIu32 " ferr=%" PRIu32 " perr=%" PRIu32
+           " overflow_segments=%" PRIu32 "\n",
+           f->cycle.cycle_no, total_rx, total_ferr, total_perr, overflow_segments);
+
+    picofw_wdt_set_stage(PICOFW_WDT_STAGE_CLEANUP);
+    picofw_pio_end_session();
+    picofw_led_set_auto_mode(LED_MODE_HEARTBEAT_IDLE);
+    printf("BOOTFOLLOW: OK (aborted=YES)\n");
 }

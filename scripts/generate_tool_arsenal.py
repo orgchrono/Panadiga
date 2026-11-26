@@ -187,8 +187,9 @@ def _discover_digaos_shell_commands(root: Path) -> list[str]:
         return []
     text = _read_text(main_c)
     cmds: list[str] = []
-    for name, has_arg in re.findall(r'\{\s*"([^"]+)"\s*,\s*(true|false)\s*,', text):
-        tok = f"{name.strip()} <arg>" if has_arg == "true" else name
+    for name, arg_tok in re.findall(r'\{\s*"([^"]+)"\s*,\s*(true|false|NULL|"[^"]*")\s*,', text):
+        has_arg = arg_tok == "true" or (arg_tok.startswith('"') and len(arg_tok) > 2)
+        tok = f"{name.strip()} <arg>" if has_arg else name
         if tok not in cmds:
             cmds.append(tok)
     for m in re.findall(r'strcmp\(\s*line\s*,\s*"([^"]+)"\s*\)', text):

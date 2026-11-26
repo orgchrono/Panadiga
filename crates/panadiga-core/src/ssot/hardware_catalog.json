@@ -243,6 +243,14 @@
       "timeout": "capture_long"
     },
     {
+      "id": "BOOTFOLLOW",
+      "category": "electrical",
+      "syntax": "BOOTFOLLOW [idle_ms]",
+      "default_arg": "8000",
+      "options": [["idle8", "8000"], ["idle15", "15000"]],
+      "timeout": "wdt_ceiling"
+    },
+    {
       "id": "PIOLOGIC",
       "category": "electrical",
       "syntax": "PIOLOGIC [ms] [NORMAL|JIG[:ms]|NOPULL] [khz] [CTRL]",

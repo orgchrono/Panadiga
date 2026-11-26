@@ -82,6 +82,7 @@ pub(super) fn handle_prepare_sd(sd: PrepareSdArgs) -> Result<()> {
         hardened.main_bgo_retarget = sd.main_bgo_retarget;
         hardened.nor_autoboot_capsule = sd.nor_autoboot_capsule;
         hardened.m6930lb_localization = sd.m6930lb_localization;
+        hardened.localization_tv_profile = sd.tv_standard.clone();
         hardened
     } else {
         let bgo_mode: Prog061BgoPatchMode = sd.bgo_mode.parse()?;
@@ -106,6 +107,7 @@ pub(super) fn handle_prepare_sd(sd: PrepareSdArgs) -> Result<()> {
             main_bgo_retarget: sd.main_bgo_retarget,
             nor_autoboot_capsule: sd.nor_autoboot_capsule,
             m6930lb_localization: sd.m6930lb_localization,
+            localization_tv_profile: sd.tv_standard.clone(),
         }
     };
 

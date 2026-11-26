@@ -48,10 +48,12 @@ export interface ProgBgoRetargetSpec {
 export interface BinaryPatchSiteSpec {
   readonly name: string;
   readonly description: string;
+  readonly nor_offset?: string | null;
   readonly va: string;
   readonly expect_hex: string;
   readonly replace_hex: string;
   readonly symbol_ref?: string | null;
+  readonly tv_profiles?: readonly string[];
 }
 
 export interface SataBridgeResetSpec {
@@ -62,6 +64,27 @@ export interface SataBridgeResetSpec {
   readonly patched_wait_ms: number;
   readonly sleep_callee_va: string;
   readonly site: BinaryPatchSiteSpec;
+  readonly orig_sha256?: string | null;
+  readonly patched_sha256?: string | null;
+}
+
+export interface NorLoaderSataBridgeResetSpec {
+  readonly target_name: string;
+  readonly nor_dump_repaired_sha256?: string | null;
+  readonly base_va: string;
+  readonly expected_nor_size: number;
+  readonly factory_wait_ms: number;
+  readonly patched_wait_ms: number;
+  readonly sleep_callee_nor_offset?: string | null;
+  readonly sleep_callee_va: string;
+  readonly site: BinaryPatchSiteSpec;
+}
+
+export interface NorFromSdTrapBypassSpec {
+  readonly va: string;
+  readonly expect_hex: string;
+  readonly replace_hex: string;
+  readonly description: string;
 }
 
 export interface HddAutobootSymbolsSpec {
@@ -94,6 +117,10 @@ export interface HddAutobootSpec {
   readonly hook_offset: string;
   readonly hook_expect_hex: string;
   readonly payload_offset: string;
+  readonly expected_main_adler32_offset?: string | null;
+  readonly expected_main_adler32_value?: string | null;
+  readonly forcefvu_trigger_file?: string | null;
+  readonly norfrom_sd_trap_bypass?: NorFromSdTrapBypassSpec | null;
   readonly require_reset_fix_1000ms: boolean;
   readonly uart_abort_polls: number;
   readonly uart_poll_ticks_10ms: number;
@@ -131,6 +158,7 @@ export interface MainBuildSpec {
   readonly build_id: string;
   readonly slot_name: string;
   readonly frm_version_u16: string;
+  readonly frm_version_u16_pc?: string | null;
   readonly base_va: string;
   readonly unpacked_size: number;
   readonly region_tv_standard?: string | null;
@@ -145,6 +173,8 @@ export interface MainBuildSpec {
   readonly av_passthrough_sites?: readonly BinaryPatchSiteSpec[];
   readonly region_localization_sites?: readonly BinaryPatchSiteSpec[];
   readonly unpacked_sha256?: string | null;
+  readonly patched_unpacked_sha256?: string | null;
+  readonly patched_adler32_stride16?: string | null;
 }
 
 export interface FirmwareTrainProfile {
@@ -165,7 +195,9 @@ export interface FirmwareTrainProfile {
   readonly digadiag_spec?: DigadiagSpec | null;
   readonly pana_rebuild_recipe?: PanaRebuildRecipe | null;
   readonly bgo_retarget_spec?: ProgBgoRetargetSpec | null;
+  readonly bgo_native_spec?: ProgBgoNativeSpec | null;
   readonly prog_sata_bridge_reset_spec?: SataBridgeResetSpec | null;
+  readonly nor_loader_sata_bridge_reset_spec?: NorLoaderSataBridgeResetSpec | null;
   readonly hdd_autoboot_spec?: HddAutobootSpec | null;
   readonly main_builds?: readonly MainBuildSpec[];
   readonly evidence: ClaimEvidence;

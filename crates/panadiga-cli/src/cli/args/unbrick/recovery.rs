@@ -127,7 +127,7 @@ pub struct PrepareSdArgs {
     #[arg(long)]
     pub save_sources: bool,
 
-    /// Optional analog TV standard overlay metadata (ntsc, pal-m, pal, or secam)
+    /// Optional analog TV standard / M6930LB localization profile (`ntsc-m`, `ntsc-j`, `pal-m`, `pal`, or `secam`)
     #[arg(long, value_name = "STANDARD")]
     pub tv_standard: Option<String>,
 

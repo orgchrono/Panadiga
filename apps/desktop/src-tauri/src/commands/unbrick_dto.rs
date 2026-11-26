@@ -140,6 +140,7 @@ pub(crate) fn to_sd_unbrick_kit_request(
         main_bgo_retarget: dto.main_bgo_retarget.unwrap_or(false),
         nor_autoboot_capsule: dto.nor_autoboot_capsule.unwrap_or(false),
         m6930lb_localization: dto.m6930lb_localization.unwrap_or(false),
+        localization_tv_profile: None,
     })
 }
 

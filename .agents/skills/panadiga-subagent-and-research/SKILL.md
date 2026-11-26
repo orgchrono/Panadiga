@@ -1,7 +1,7 @@
 ---
 name: panadiga-subagent-and-research
 description: >-
-  Gestão de subagentes (research, self e as 6 personas panadiga-*), protocolo de pesquisa
+  Gestão de subagentes (research, self e as 7 personas panadiga-*), protocolo de pesquisa
   técnica em 5 fontes com refutação empírica e consolidação estruturada de conhecimento para
   SSOT, ledger, dossiês e skills. Use para investigações amplas, paralelização de levantamentos
   ou síntese de descobertas de bancada e engenharia reversa.

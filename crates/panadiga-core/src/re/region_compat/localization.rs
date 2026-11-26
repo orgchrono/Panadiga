@@ -52,6 +52,22 @@ impl FromStr for LocalizationPatchMode {
     }
 }
 
+/// Canonicalizes a regional analog TV localization profile slug (`ntsc-m`, `ntsc-j`, `pal-m`, or `pal`).
+pub fn normalize_localization_tv_profile(raw: Option<&str>) -> Result<&'static str> {
+    match raw.map(str::trim).filter(|s| !s.is_empty()) {
+        None => Ok("ntsc-m"),
+        Some(val) => match val.to_ascii_lowercase().as_str() {
+            "ntsc" | "ntsc-m" | "ntsc_m" | "m" | "br-ntsc" => Ok("ntsc-m"),
+            "ntsc-j" | "ntsc_j" | "ntscj" | "jp" => Ok("ntsc-j"),
+            "pal-m" | "pal_m" | "palm" | "br-pal-m" => Ok("pal-m"),
+            "pal" | "pal-bdghi" | "pal-i" | "eu-pal" => Ok("pal"),
+            other => bail!(
+                "Unsupported localization TV profile '{other}' (expected ntsc-m|ntsc-j|pal-m|pal)"
+            ),
+        },
+    }
+}
+
 /// Per-site status inside an unpacked `MAIN` binary for `region_localization_sites`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MainLocalizationSiteReport {
@@ -61,12 +77,16 @@ pub struct MainLocalizationSiteReport {
     pub file_offset_hex: String,
     pub state: String,
     pub actual_hex: String,
+    #[serde(default)]
+    pub tv_profiles: Vec<String>,
 }
 
 /// Aggregated inspection or patch summary for SSOT `region_localization_sites`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MainLocalizationReport {
     pub build_profile: String,
+    #[serde(default)]
+    pub tv_profile: String,
     pub size_bytes: usize,
     pub overall_state: String,
     pub site_count: usize,
@@ -97,9 +117,20 @@ fn resolve_localization_build(buf: &[u8]) -> Result<&'static MainBuildSpec> {
     Ok(build)
 }
 
-fn prepare_sites(build: &'static MainBuildSpec) -> Result<Vec<PreparedSite<'static>>> {
+fn prepare_sites_for_profile(
+    build: &'static MainBuildSpec,
+    tv_profile: &str,
+) -> Result<Vec<PreparedSite<'static>>> {
     let mut prepared = Vec::with_capacity(build.region_localization_sites.len());
     for site in &build.region_localization_sites {
+        let matches_profile = site.tv_profiles.is_empty()
+            || site
+                .tv_profiles
+                .iter()
+                .any(|p| p.eq_ignore_ascii_case(tv_profile));
+        if !matches_profile {
+            continue;
+        }
         let (expect, replace) = parse_site_pair(site)?;
         prepared.push(PreparedSite {
             spec_ref: site,
@@ -126,6 +157,7 @@ fn as_patch_spec<'a>(build: &MainBuildSpec, entry: &'a PreparedSite<'a>) -> Patc
 fn evaluate_localization_report(
     buf: &[u8],
     build: &MainBuildSpec,
+    tv_profile: &str,
     prepared: &[PreparedSite<'_>],
 ) -> Result<MainLocalizationReport> {
     let mut site_reports = Vec::with_capacity(prepared.len());
@@ -147,6 +179,7 @@ fn evaluate_localization_report(
             file_offset_hex: format!("0x{:06X}", cls.file_offset),
             state: cls.state.to_string(),
             actual_hex: hex::encode(&cls.actual_bytes),
+            tv_profiles: entry.spec_ref.tv_profiles.clone(),
         });
     }
     let overall_state = if all_patched {
@@ -159,6 +192,7 @@ fn evaluate_localization_report(
     let (_, sha256) = calculate_hashes(buf);
     Ok(MainLocalizationReport {
         build_profile: build.build_id.clone(),
+        tv_profile: tv_profile.to_string(),
         size_bytes: buf.len(),
         overall_state: overall_state.to_string(),
         site_count: site_reports.len(),
@@ -167,20 +201,31 @@ fn evaluate_localization_report(
     })
 }
 
-/// Inspects all SSOT `region_localization_sites` on an unpacked `MAIN` binary without mutating it.
-pub fn inspect_main_localization(buf: &[u8]) -> Result<MainLocalizationReport> {
+/// Inspects SSOT `region_localization_sites` filtered by optional `tv_profile` (`ntsc-m` default).
+pub fn inspect_main_localization_for_tv_profile(
+    buf: &[u8],
+    tv_profile: Option<&str>,
+) -> Result<MainLocalizationReport> {
+    let resolved_profile = normalize_localization_tv_profile(tv_profile)?;
     let build = resolve_localization_build(buf)?;
-    let prepared = prepare_sites(build)?;
-    evaluate_localization_report(buf, build, &prepared)
+    let prepared = prepare_sites_for_profile(build, resolved_profile)?;
+    evaluate_localization_report(buf, build, resolved_profile, &prepared)
 }
 
-/// Atomically applies or restores all SSOT `region_localization_sites` on an unpacked `MAIN` binary.
-pub fn patch_main_localization_in_place(
+/// Inspects all default (`ntsc-m`) SSOT `region_localization_sites` on an unpacked `MAIN` binary without mutating it.
+pub fn inspect_main_localization(buf: &[u8]) -> Result<MainLocalizationReport> {
+    inspect_main_localization_for_tv_profile(buf, None)
+}
+
+/// Atomically applies or restores SSOT `region_localization_sites` filtered by `tv_profile` (`ntsc-m` default).
+pub fn patch_main_localization_for_tv_profile_in_place(
     buf: &mut [u8],
     mode: LocalizationPatchMode,
+    tv_profile: Option<&str>,
 ) -> Result<MainLocalizationReport> {
+    let resolved_profile = normalize_localization_tv_profile(tv_profile)?;
     let build = resolve_localization_build(buf)?;
-    let prepared = prepare_sites(build)?;
+    let prepared = prepare_sites_for_profile(build, resolved_profile)?;
     let action = match mode {
         LocalizationPatchMode::M6930LbBrazil => PatchApplyAction::ApplyReplace,
         LocalizationPatchMode::FactoryOriginal => PatchApplyAction::RestoreExpect,
@@ -192,5 +237,13 @@ pub fn patch_main_localization_in_place(
     let pairs: Vec<(&PatchSpec<'_>, PatchApplyAction)> =
         specs.iter().map(|spec| (spec, action)).collect();
     apply_patch_specs_in_place(buf, &pairs)?;
-    evaluate_localization_report(buf, build, &prepared)
+    evaluate_localization_report(buf, build, resolved_profile, &prepared)
+}
+
+/// Atomically applies or restores default (`ntsc-m`) SSOT `region_localization_sites` on an unpacked `MAIN` binary.
+pub fn patch_main_localization_in_place(
+    buf: &mut [u8],
+    mode: LocalizationPatchMode,
+) -> Result<MainLocalizationReport> {
+    patch_main_localization_for_tv_profile_in_place(buf, mode, None)
 }

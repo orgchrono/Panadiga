@@ -8,9 +8,10 @@ use std::path::Path;
 use anyhow::{Context, Result};
 use panadiga_core::re::region_compat::{TvStandardKind, inspect_tv_calibration_bundle};
 use panadiga_core::re::{
-    LocalizationPatchMode, RegionCompatMode, inspect_dev_bin_bytes, inspect_main_localization,
-    inspect_main_region_compat, patch_dev_bin_bytes, patch_main_localization_in_place,
-    patch_main_region_compat_in_place, retarget_frm_toc_bytes,
+    LocalizationPatchMode, RegionCompatMode, inspect_dev_bin_bytes,
+    inspect_main_localization_for_tv_profile, inspect_main_region_compat, patch_dev_bin_bytes,
+    patch_main_localization_for_tv_profile_in_place, patch_main_region_compat_in_place,
+    retarget_frm_toc_bytes,
 };
 
 use super::bgo_tbc::parse_lbs_preset;
@@ -176,12 +177,16 @@ pub fn handle_region_compat(action: RegionCompatAction) -> Result<()> {
             }
             emit_json_if_requested(&rep, json.as_deref())
         }
-        RegionCompatAction::InspectLocalization { input, json } => {
+        RegionCompatAction::InspectLocalization {
+            input,
+            tv_profile,
+            json,
+        } => {
             let bytes = fs::read(&input).with_context(|| format!("Reading {}", input.display()))?;
-            let rep = inspect_main_localization(&bytes)?;
+            let rep = inspect_main_localization_for_tv_profile(&bytes, tv_profile.as_deref())?;
             println!(
-                "MAIN Localization [{}]: state={} sites={} ({})",
-                rep.build_profile, rep.overall_state, rep.site_count, rep.sha256
+                "MAIN Localization [{} / {}]: state={} sites={} ({})",
+                rep.build_profile, rep.tv_profile, rep.overall_state, rep.site_count, rep.sha256
             );
             for site in &rep.sites {
                 println!(
@@ -195,13 +200,18 @@ pub fn handle_region_compat(action: RegionCompatAction) -> Result<()> {
             input,
             output,
             mode,
+            tv_profile,
             bypass_devinfo,
             json,
         } => {
             let mut bytes =
                 fs::read(&input).with_context(|| format!("Reading {}", input.display()))?;
             let parsed_mode: LocalizationPatchMode = mode.parse()?;
-            let rep = patch_main_localization_in_place(&mut bytes, parsed_mode)?;
+            let rep = patch_main_localization_for_tv_profile_in_place(
+                &mut bytes,
+                parsed_mode,
+                tv_profile.as_deref(),
+            )?;
             if bypass_devinfo {
                 let _ = patch_main_region_compat_in_place(
                     &mut bytes,
@@ -209,8 +219,9 @@ pub fn handle_region_compat(action: RegionCompatAction) -> Result<()> {
                 )?;
             }
             let mut lines = vec![format!(
-                "Patched MAIN Localization [{}] -> {} ({} sites, bypass_devinfo={}) -> {}",
+                "Patched MAIN Localization [{} / {}] -> {} ({} sites, bypass_devinfo={}) -> {}",
                 rep.build_profile,
+                rep.tv_profile,
                 rep.overall_state,
                 rep.site_count,
                 bypass_devinfo,

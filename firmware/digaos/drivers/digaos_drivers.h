@@ -32,8 +32,35 @@ bool digaos_uart0_try_getc(char *out_ch);
 /** Transmit NUL-terminated string via `SC0` normalizing `\n` -> `\r\n`. */
 void digaos_uart0_puts(const char *str);
 
-/** Compute `IC7501` `TBUS` 8-bit frame checksum: `(sum(body15[0..15]) - 0x5B) mod 256`. */
+/** Compute `IC7501` `TBUS` TX 8-bit checksum (`(sum(body15[0..15]) - 0x5B) mod 256`). */
 uint8_t digaos_tbus_checksum15(const uint8_t body15[15]);
+
+/** Compute `IC7501` `TBUS` RX 8-bit checksum (`sum(body15[0..15]) mod 256`, zero bias). */
+uint8_t digaos_tbus_rx_checksum15(const uint8_t body15[15]);
+
+/** Classified `IC7501` (`MN67788RA`) `TBUS` RX packet classes. */
+typedef enum digaos_tbus_rx_kind {
+    DIGAOS_TBUS_RX_INVALID = 0,
+    DIGAOS_TBUS_RX_UNSUPPORTED_0X7F = 1,
+    DIGAOS_TBUS_RX_KEY_EVENT = 2,
+    DIGAOS_TBUS_RX_RTC_HEARTBEAT = 3,
+    DIGAOS_TBUS_RX_TELEMETRY_OTHER = 4
+} digaos_tbus_rx_kind_t;
+
+typedef struct digaos_tbus_rx_event {
+    digaos_tbus_rx_kind_t kind;
+    uint8_t opcode;
+    uint8_t rejected_opcode;
+    uint8_t key_code;
+    bool non_fatal;
+} digaos_tbus_rx_event_t;
+
+/** Wakeup reason handling policy avoiding `[70]` reset-loop `P-OFF` and `UIOFF -> BYE`. */
+typedef enum digaos_wakeup_policy {
+    DIGAOS_WAKEUP_UNKNOWN = 0,
+    DIGAOS_WAKEUP_NORMAL_UION = 1,
+    DIGAOS_WAKEUP_XRESET_70_HAZARD = 2
+} digaos_wakeup_policy_t;
 
 /** Build 16-byte `IC7501` 255-second hung-up WDT keepalive frame (`[0x8A, 0x02, ..., 0x30]`). */
 void digaos_tbus_build_wdt_255s_frame(uint8_t out16[16]);
@@ -41,8 +68,20 @@ void digaos_tbus_build_wdt_255s_frame(uint8_t out16[16]);
 /** Build 16-byte `IC7501` VFD 7-character ASCII display frame (`cmd = 0xA3`). */
 void digaos_tbus_build_vfd_frame(const char *ascii7, uint8_t out16[16]);
 
+/** Build 16-byte `IC7501` true hardware Standby pre-shutdown frame (`[0x81, 0x00, 0x01, ...]`, `NSW5V=0`). */
+void digaos_tbus_build_start_poff_frame(uint8_t out16[16]);
+
+/** Build 16-byte `IC7501` final `"BYE"` power-off frame (`[0x83, 0x00, ...]`, `NSW5V=0`). */
+void digaos_tbus_build_poff_bye_frame(uint8_t out16[16]);
+
 /** Return `false` for European-only TBUS opcodes rejected (`0x7F`) by Brazilian `IC7501`. */
 bool digaos_tbus_opcode_safe_for_br_ic7501(uint8_t opcode);
+
+/** Classify a 16-byte `IC7501` RX frame (`0x7F` treated as strictly non-fatal). */
+bool digaos_tbus_classify_rx_frame(const uint8_t rx16[16], digaos_tbus_rx_event_t *out);
+
+/** Classify front-panel MCU wakeup reason (`0x70` XRESET hazard vs normal interactive UI-ON). */
+digaos_wakeup_policy_t digaos_classify_wakeup_reason(uint8_t reason_code);
 
 /** Send a prebuilt 16-byte TBUS frame after verifying checksum and Brazilian `IC7501` opcode policy. */
 bool digaos_tbus_send_frame_checked(const uint8_t frame16[16]);
@@ -55,6 +94,12 @@ bool digaos_tbus_send_keepalive_255s(void);
 
 /** Map `[nfrom]` `config1 + 0x12F0` (`page 9 + 0x00F0`, `ID 0x0117`) value to `digaos_tv_system_t`. */
 digaos_tv_system_t digaos_tv_from_nfrom_id0117(uint32_t raw_id0117);
+
+/** Map inverted `MAIN3410PQ` `config1[0x0117]` RAM (`0x53185E30`: `0x01=NTSC`, `0x00=PAL`). */
+digaos_tv_system_t digaos_tv_from_main3410_cfg0117(uint8_t cfg_byte);
+
+/** Map `MAIN3410PQ` `avout_tv_system` (`0x515CD08C`: `0=NTSC`, `1=PAL`), rejecting garbage like `28359`. */
+bool digaos_tv_from_avout_tv_system(uint32_t raw_avout, digaos_tv_system_t *out_sys);
 
 /** Configure `AIOF` video output standard (`DIGAOS_TV_NTSC`, `DIGAOS_TV_PAL_M`, `DIGAOS_TV_PAL`, `DIGAOS_TV_SECAM`). */
 bool digaos_aiof_select_tv_system(digaos_tv_system_t sys);
@@ -71,11 +116,24 @@ uint8_t digaos_ic3001_addr8(digaos_board_video_ic_t ic, bool adr_high);
 /** Probe `IC3001` on `IIC1` (`0x90`/`0x92` BR/NA or `0x94` EC) returning the responsive 8-bit address. */
 bool digaos_iic_probe_ic3001(digaos_board_video_ic_t ic, uint8_t *out_addr8);
 
+/** Write an N-byte payload stream over verified AM34 `IIC0`/`IIC1` (`0xD8400000`/`0xD8401000`) controller. */
+bool digaos_iic_write_stream_checked(uint32_t iic_base, uint8_t slave_addr8, const uint8_t *buf, size_t len);
+
 /** Write one register over verified AM34 `IIC0`/`IIC1` controller after MMIO safety barrier check. */
 bool digaos_iic_write_reg_checked(uint32_t iic_base, uint8_t slave_addr8, uint8_t reg, uint8_t val);
 
-/** Program `AVDD` `NPALCTL0`, `VOUTMODE0`, and `DACOUT1` video output/mute registers. */
+/** Initialize `M6930LB` 5V `IIC5` (`0xD8400000`) `IC3001` (`BH7629KS2` `0x90`, 6B) and Audio (`0x84`, 4B). */
+bool digaos_iic5_init_m6930lb_av(void);
+
+
+/** Program `AVDD` `NPALCTL0`, `VOUTMODE0`, and `DACOUT1` (`0x0DDF` unmuted/all-DACs-on vs `0x8D00` muted) registers. */
 bool digaos_avdd_configure_output(digaos_tv_system_t sys, bool unmute_dac);
+
+/** Program full `480i` (`0x4FB3`) or `576i` (`0x4BB1`) `AVDD` geometry keeping `NPALCTL0` `0x00050000`. */
+bool digaos_avdd_configure_geometry(digaos_tv_system_t sys, bool unmute_dac);
+
+/** Program full `M6930LB` 525/60 `480i` `AVDD` geometry while preserving `NPALCTL0` hi-word `0x00050000`. */
+bool digaos_avdd_configure_480i_m6930lb(digaos_tv_system_t sys, bool unmute_dac);
 
 /** Toggle `AVDD` prototype colorbar pattern (`VOUTMODE0_COLORBAR` vs `VOUTMODE0_NORMAL`). */
 bool digaos_avdd_set_colorbar(bool enable);
@@ -88,8 +146,47 @@ bool digaos_video_bringup_board(
     bool mvagc_line_tbc
 );
 
+/** Auto-detect board video switch (`0x90`/`0x92` -> `0x94` -> `M6930LB` GPIO fallback) and bring up video. */
+bool digaos_video_auto_bringup(digaos_tv_system_t sys, digaos_board_video_ic_t *out_ic);
+
+/** Read-only `AIOF` + `AVDD` live pipeline telemetry (`0x88000000` / `0x89800400`). */
+typedef struct digaos_video_status {
+    uint16_t aiof_vmodesel;
+    uint16_t aiof_cont;
+    uint16_t avdd_clk;
+    uint16_t avdd_dacout1;
+    uint16_t avdd_voutmode0;
+    uint32_t avdd_active_size;
+    uint32_t avdd_sync;
+    bool dac_unmuted;
+} digaos_video_status_t;
+
+/** Inspect live `AIOF` + `AVDD` video registers strictly read-only. */
+bool digaos_video_inspect_status(digaos_video_status_t *out);
+
+/** Fault-tolerant `DAVIS` `CH0` (`ODD`) / `CH1` (`SATA`) channel states. */
+typedef enum digaos_davis_state {
+    DIGAOS_DAVIS_READY = 0,
+    DIGAOS_DAVIS_FLOATING_ABSENT = 1,
+    DIGAOS_DAVIS_BUSY_TIMEOUT = 2,
+    DIGAOS_DAVIS_ERR_DEGRADED = 3
+} digaos_davis_state_t;
+
+typedef struct digaos_davis_status {
+    uint32_t waited_ms;
+    uint16_t status_word;
+    digaos_davis_state_t state;
+    bool degraded_odd_bypass;
+} digaos_davis_status_t;
+
 /** Assert/release `DAVIS` ATA reset and apply safe bridge wait (`1000 ms` for `CH1` `IDE2SAT2`). */
 bool digaos_davis_reset_and_wait_ready(bool is_ch1_sata_bridge, uint32_t *out_waited_ms);
+
+/** Reset and classify `DAVIS` `CH0` (`ODD`, tolerant of `80040904`) or `CH1` (`SATA` `1000 ms`). */
+bool digaos_davis_probe_channel(bool is_ch1_sata_bridge, digaos_davis_status_t *out);
+
+/** Return `true` when non-blank `PROG061 0x504395FC` stamp matches HDD `EXTRHEAD+0x28` checksum. */
+bool digaos_autoboot_stamp_matches(uint32_t prog_stamp_0x504395fc, uint32_t hdd_extrhead_0x28);
 
 /** Deterministic full-disk MEIHFS provisioning VFD stages (`M FIRM -> MAIN -> UPDATE -> UPDOK -> FINISH`). */
 typedef enum digaos_provision_stage {

@@ -1,0 +1,16 @@
+=== COM10 12-SITE SD KIT BOOT1 FVU SESSION 2026-11-25T10:28:22Z ===
+=== PRE_STATUS [2026-11-25T10:28:22Z] ===
+PICO> VDD: 3.26V (OK)
+[STANDBY] RXD=1 NSW5V=1 TXD=1 XRESET=1 SW_PU=3.27V NSW5V_DROPS=44 fault_latch=0 recoveries=44 | State=POWERED / AWAKE (SW_UART ~3.3V)
+[WDT] wdt=ACTIVE(4000ms,NON_OVERRIDABLE) seq=87 wdt_recoveries=0 reboot_src=CLEAN fault_slot=255 fault_stage=IDLE last_cmd=IDENTIFY last_us=355858
+@PICO_RES cmd=STATUS status=OK code=0 elapsed_us=1854
+PICO>
+[GATE] VDD=3.26V NSW5V=1 OK
+=== PHASE0_PASSIVE_BRIDGE ===
+[BRIDGE] USB CDC <-> P7501 SC0 115200 8N1 ctrl=OFF active (exit: send '~~~' or unplug USB).
+
+[BRIDGE_EXIT]
+BRIDGE: OK (rx=0 tx=1 ferr=0 ctrl_edges=0 overflow=NO)
+@PICO_RES cmd=BRIDGE status=OK code=0 elapsed_us=2624671
+PICO>
+[INFO] Detected patched 0x57AEFBAC (low byte 0x01) already running in SDRAM!

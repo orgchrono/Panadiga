@@ -65,6 +65,7 @@ Ao propor scripts, comandos de bancada ou modificações de firmware:
 | **`panadiga-firmware-re`** | `.agents/agents/panadiga-firmware-re.md` | Engenharia reversa Matsushita AM34, scripts Ghidra, criptoanálise CPRM e entropia |
 | **`panadiga-hardware-embedded`** | `.agents/agents/panadiga-hardware-embedded.md` | Firmware RP2040/RP2350 C11, UART Assíncrona P7501 (115200 8N1), GDB RSP e BLE |
 | **`panadiga-desktop-ui`** | `.agents/agents/panadiga-desktop-ui.md` | Interface Tauri 2 (Desktop e Android APK), React, TypeScript, testes Vitest e Playwright |
+| **`panadiga-functional-math`** | `.agents/agents/panadiga-functional-math.md` | FP embarcada zero-heap (C11 `DigaOS`/`PicoFW` e Rust), blindagem de tabelas, matemática sem float e provas algébricas |
 | **`panadiga-qa-auditor`** | `.agents/agents/panadiga-qa-auditor.md` | Guardião dos 9 Quality Gates, conformidade de tipos (`mypy --strict`), tolerância zero a duplicação (`jscpd`) |
 
 ---

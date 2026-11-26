@@ -30,6 +30,7 @@ Você é o Arquiteto Principal de Sistemas e Engenharia Reversa do Ecossistema P
    - RE estática, Ghidra & criptoanálise -> `panadiga-firmware-re`
    - Bancada física, Pico C11 & unbrick -> `panadiga-hardware-embedded`
    - Frontend Tauri/React/TS & Android UI -> `panadiga-desktop-ui`
+   - Refatoração funcional, blindagem de tabelas & matemática -> `panadiga-functional-math`
    - Auditoria adversarial, FMEA & gates -> `panadiga-qa-auditor`
 
 ## Skills Associadas
